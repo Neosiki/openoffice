@@ -41,6 +41,8 @@ interface Props {
   computed: ComputedSnapshot
   /** live pokes not yet written to the source; newer than the snapshot, which round-trips through the frame */
   pending: Record<string, string | null>
+  /** elements in the selection; above 1 the tools that act on one element step aside */
+  count: number
   /** the element has one editable text run */
   canEditText: boolean
   /** the element can carry an AI instruction (structural nodes cannot) */
@@ -306,7 +308,8 @@ export function FloatToolbar(p: Props) {
       aria-label={t('elementToolbar')}
       onMouseDown={(e) => e.stopPropagation()}
     >
-      {p.tag === 'img' ? <ImageTools {...p} /> : <TextTools {...p} />}
+      {p.count > 1 && <span className="hx-float-count">{t('multiSelected', { n: p.count })}</span>}
+      {p.tag === 'img' && p.count === 1 ? <ImageTools {...p} /> : <TextTools {...p} />}
       {p.canEditText && (
         <button
           type="button"
@@ -322,6 +325,7 @@ export function FloatToolbar(p: Props) {
         className="hx-float-btn"
         data-tip={t('elementMoveUp')}
         aria-label={t('elementMoveUp')}
+        disabled={p.count > 1}
         onMouseDown={stop}
         onClick={() => p.onMove(-1)}
       >
@@ -332,6 +336,7 @@ export function FloatToolbar(p: Props) {
         className="hx-float-btn"
         data-tip={t('elementMoveDown')}
         aria-label={t('elementMoveDown')}
+        disabled={p.count > 1}
         onMouseDown={stop}
         onClick={() => p.onMove(1)}
       >

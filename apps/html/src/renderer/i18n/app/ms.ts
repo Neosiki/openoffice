@@ -59,6 +59,7 @@ export const ms = {
   elementMoveUp: 'Naik',
   elementMoveDown: 'Turun',
   elementToolbar: 'Bar alat elemen',
+  multiSelected: '{n} dipilih',
   elementPath: 'Laluan elemen',
   fmtBold: 'Tebal',
   fmtItalic: 'Condong',

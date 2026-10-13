@@ -62,6 +62,7 @@ export const fr = {
   elementMoveUp: 'Monter',
   elementMoveDown: 'Descendre',
   elementToolbar: "Barre d'outils de l'élément",
+  multiSelected: '{n} sélectionnés',
   elementPath: "Chemin de l'élément",
   fmtBold: 'Gras',
   fmtItalic: 'Italique',

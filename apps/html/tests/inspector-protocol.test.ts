@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { isFromInspector, readPaperReport } from '../src/renderer/preview/inspector-protocol'
+import {
+  isFromInspector,
+  readExtraSids,
+  readPaperReport,
+} from '../src/renderer/preview/inspector-protocol'
 
 describe('isFromInspector', () => {
   it('accepts well-formed inspector messages', () => {
@@ -16,6 +20,19 @@ describe('isFromInspector', () => {
     expect(isFromInspector({ type: 'gx:ready', title: 't' })).toBe(false)
     expect(isFromInspector({ type: 'gx:ready', version: '3' })).toBe(false)
     expect(isFromInspector({ type: 'gx:ready', version: Number.NaN })).toBe(false)
+  })
+})
+
+describe('readExtraSids', () => {
+  it('keeps the sids in click order, once each', () => {
+    expect(readExtraSids([7, 3, 7, 12])).toEqual([7, 3, 12])
+    expect(readExtraSids([])).toEqual([])
+  })
+
+  it('drops what is not a sid and caps a list nobody clicked together', () => {
+    expect(readExtraSids('7')).toEqual([])
+    expect(readExtraSids([null, '4', 2.5, -1, 9])).toEqual([9])
+    expect(readExtraSids(Array.from({ length: 5000 }, (_, i) => i))).toHaveLength(200)
   })
 })
 

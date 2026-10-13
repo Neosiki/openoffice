@@ -60,6 +60,7 @@ export const en = {
   elementMoveUp: 'Move up',
   elementMoveDown: 'Move down',
   elementToolbar: 'Element toolbar',
+  multiSelected: '{n} selected',
   elementPath: 'Element path',
   fmtBold: 'Bold',
   fmtItalic: 'Italic',

@@ -62,6 +62,7 @@ export const pt = {
   elementMoveUp: 'Mover para cima',
   elementMoveDown: 'Mover para baixo',
   elementToolbar: 'Barra de ferramentas do elemento',
+  multiSelected: '{n} selecionados',
   elementPath: 'Caminho do elemento',
   fmtBold: 'Negrito',
   fmtItalic: 'Itálico',

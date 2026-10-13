@@ -3333,6 +3333,26 @@ html.genoffice-popover-open .ribbon-tabs {
   padding: 0 8px;
 }
 
+.hx-float-btn:disabled {
+  color: var(--text-tertiary);
+  cursor: default;
+}
+
+.hx-float-btn:disabled:hover {
+  background: none;
+}
+
+/* how many elements the toolbar is acting on, when it is more than one */
+.hx-float-count {
+  padding: 0 8px;
+  border-radius: 5px;
+  background: var(--accent-soft);
+  color: var(--text-primary);
+  font-size: 12px;
+  line-height: 24px;
+  white-space: nowrap;
+}
+
 .hx-float-btn:hover {
   background: var(--hover);
 }

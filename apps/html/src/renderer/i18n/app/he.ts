@@ -58,6 +58,7 @@ export const he = {
   elementMoveUp: 'העלה',
   elementMoveDown: 'הורד',
   elementToolbar: 'סרגל כלים של אלמנט',
+  multiSelected: 'נבחרו: {n}',
   elementPath: 'נתיב הרכיב',
   fmtBold: 'מודגש',
   fmtItalic: 'נטוי',

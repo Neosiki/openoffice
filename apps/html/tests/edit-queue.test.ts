@@ -103,4 +103,20 @@ describe('buildQueueInstruction', () => {
       `Apply this to the element sid=${sidOf('p')} <p> ("First paragraph"), addressing it by sid in apply_ops:\nmake it bold`,
     )
   })
+
+  it('sends one request to every element of a multiple selection', () => {
+    const map = buildParseMap(html, 1)
+    const [entry] = liveItems(
+      resolveQueue(buildProjection(html, map), map, [item('a', 'p', 'make it bold')]),
+    )
+    const other = { sid: 41, tag: 'li', excerpt: 'Second item', start: 90 }
+    expect(buildSelectionInstruction(entry!.target, 'make it bold', [other])).toBe(
+      [
+        'The user selected 2 elements. Apply this to each of them, addressing each by sid in one apply_ops batch:',
+        `- sid=${sidOf('p')} <p> ("First paragraph")`,
+        '- sid=41 <li> ("Second item")',
+        'make it bold',
+      ].join('\n'),
+    )
+  })
 })
