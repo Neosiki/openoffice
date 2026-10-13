@@ -45,6 +45,15 @@ Kad yang menyatakan **Sudah log masuk, tetapi bukan dengan langganan** membawa a
 - Kebenaran anda diingati untuk program itu sahaja. Ia dipadamkan apabila program itu dilog keluar atau log masuknya berubah.
 - Jika anda mahu menggunakan langganan anda, log masuk ke program itu dengan akaun langganan anda dan tekan **Semak semula**.
 
+## Menukar akaun atau log keluar
+
+Apabila program itu telah log masuk, kadnya memaparkan akaun yang digunakan di sebelah nama pelan, jika program melaporkannya. Kad itu juga mempunyai dua butang.
+
+- **Log masuk dengan akaun lain** memulakan semula log masuk program itu sendiri. Selesaikannya dalam tetingkap yang terbuka, dengan akaun yang lain.
+- **Log keluar** menjalankan log keluar program itu sendiri. Selepas itu kad memaparkan **Belum log masuk**.
+- Kedua-duanya terpakai kepada program itu pada seluruh PC ini, bukan hanya GenOffice. Jika anda turut menggunakan Claude Code atau Codex dalam terminal, di sana juga ia dilog keluar atau bertukar kepada akaun yang lain. Oleh itu GenOffice meminta pengesahan anda terlebih dahulu.
+- Akaun dan dua butang ini hanya ada di sini, di bawah Tetapan ▸ AI. GenOffice hanya memaparkan akaun itu dan tidak menyimpannya di mana-mana.
+
 ## AI mana yang digunakan
 
 **AI yang digunakan**, di bawah Tetapan ▸ AI, bermula pada **Automatik**. Automatik memutuskan mengikut urutan ini:
@@ -56,6 +65,8 @@ Kad yang menyatakan **Sudah log masuk, tetapi bukan dengan langganan** membawa a
 Automatik tidak pernah memilih apa-apa yang mengenakan kos tambahan: bukan kunci API, dan bukan log masuk bayar ikut guna. Kedua-duanya digunakan hanya selagi anda sendiri memilihnya.
 
 Anda juga boleh memilih satu AI sendiri, di tempat yang sama atau dalam senarai model di bahagian bawah panel AI. Jika AI yang anda pilih berhenti berfungsi, GenOffice tidak beralih secara senyap kepada yang lain. Ia memberitahu anda apa yang berlaku dan menunjukkan cara menyambung semula.
+
+Senarai model memaparkan model yang dilaporkan oleh program itu sendiri: setiap satu dengan namanya dan ID model yang tepat di sebelahnya, dan **Model lalai** menyatakan model yang diwakilinya sekarang. Label di bahagian bawah panel AI dan **AI yang digunakan** turut menamakan model itu. Membaca senarai ini tidak bertanya apa-apa kepada AI, jadi ia tidak dikira dalam pelan anda. Jika program terlalu lama untuk melaporkan modelnya, senarai ringkas terbina dalam dipaparkan sebagai ganti.
 
 Di mana-mana sahaja Codex boleh dipilih, satu baris dipaparkan bersamanya: "Menggunakan langganan Codex di dalam aplikasi bukan kaedah yang disyorkan secara rasmi oleh OpenAI." Buatlah keputusan dengan mengambil kira perkara itu.
 

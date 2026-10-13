@@ -129,6 +129,70 @@ describe('aiSubscriptionCardView', () => {
     expect(view.actions).toEqual([])
   })
 
+  describe('the account (Settings card only)', () => {
+    const signedIn = { planName: 'max', account: 'user@example.com' }
+
+    it('is not part of the view unless the card asks for it', () => {
+      const view = aiSubscriptionCardView(status('claude-code', 'ready', signedIn))
+      expect(view.account).toBeUndefined()
+      expect(view.statusKey).toBe('cardReadyPlan')
+      expect(view.actions).toEqual([])
+      expect(JSON.stringify(view)).not.toContain('user@example.com')
+    })
+
+    it('is shown next to the plan name, which then leaves the state line', () => {
+      const view = aiSubscriptionCardView(status('claude-code', 'ready', signedIn), {
+        account: true,
+      })
+      expect(view.account).toBe('user@example.com')
+      expect(view.planName).toBe('max')
+      expect(view.statusKey).toBe('cardReady')
+      // without an account the plan stays where it was
+      const noAccount = aiSubscriptionCardView(status('codex', 'ready', { planName: 'plus' }), {
+        account: true,
+      })
+      expect(noAccount.account).toBeUndefined()
+      expect(noAccount.statusKey).toBe('cardReadyPlan')
+    })
+
+    it('is shown for a metered login too, and for no state without a login', () => {
+      const metered = aiSubscriptionCardView(
+        status('codex', 'metered', { account: 'user@example.com' }),
+        { account: true },
+      )
+      expect(metered.account).toBe('user@example.com')
+      for (const state of ['checking', 'not-installed', 'signed-out', 'error'] as const) {
+        const view = aiSubscriptionCardView(
+          status('codex', state, { account: 'user@example.com' }),
+          { account: true, accountActions: true },
+        )
+        expect(view.account, state).toBeUndefined()
+        expect(view.actions, state).not.toContain('logout')
+        expect(view.actions, state).not.toContain('switch-account')
+      }
+    })
+
+    it('offers "sign in with another account" and "sign out" while signed in, after any other action', () => {
+      const options = { accountActions: true }
+      expect(aiSubscriptionCardView(status('claude-code', 'ready'), options).actions).toEqual([
+        'switch-account',
+        'logout',
+      ])
+      expect(aiSubscriptionCardView(status('codex', 'metered'), options).actions).toEqual([
+        'accept-metered',
+        'switch-account',
+        'logout',
+      ])
+      expect(
+        aiSubscriptionCardView(status('codex', 'metered', { meteredAccepted: true }), options)
+          .actions,
+      ).toEqual(['switch-account', 'logout'])
+      expect(aiSubscriptionCardView(status('codex', 'signed-out'), options).actions).toEqual([
+        'login',
+      ])
+    })
+  })
+
   it('error: a sentence chosen by the kind of failure and a re-check button', () => {
     expect(
       aiSubscriptionCardView(

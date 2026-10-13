@@ -120,6 +120,13 @@ function installSubscription(
     statuses: vi.fn(async () => current),
     recheck: vi.fn(async () => current),
     login: vi.fn(launch),
+    // the main process looks again before it answers: the CLI is signed out by then
+    logout: vi.fn(async (provider: AiSubscriptionProviderId) => {
+      if (options.launchOk === false) return { ok: false, reason: 'failed' as const }
+      current = { ...current, [provider]: status(provider, 'signed-out') }
+      for (const listener of listeners) listener(current)
+      return { ok: true }
+    }),
     install: vi.fn(launch),
     setMeteredAccepted: vi.fn(async (provider: AiSubscriptionProviderId, accepted: boolean) => {
       current = { ...current, [provider]: { ...current[provider], meteredAccepted: accepted } }
@@ -539,6 +546,226 @@ describe('the connect cards', () => {
     await click(button('Install', card('claude-code')))
     const failed = host.querySelector('.set-sub-failed[data-provider="claude-code"]')
     expect(failed?.textContent).toContain('The install command could not be started.')
+  })
+})
+
+// ── the account on a card ─────────────────────────────────
+
+describe('the account on a card', () => {
+  const ACCOUNT = 'user@example.com'
+  const signedIn = (): SubscriptionStatusMap => ({
+    'claude-code': status('claude-code', 'ready', { planName: 'max', account: ACCOUNT }),
+    codex: status('codex', 'metered', { account: 'other@example.com' }),
+  })
+  const confirmBox = (): HTMLElement | null => host.querySelector('.set-sub-confirm')
+
+  it('shows the signed-in account next to the plan name, on the card only', async () => {
+    installHome(defaultAiSettings())
+    installSubscription(signedIn())
+    await openModal()
+    // the account section sums up the state and names nobody
+    expect(host.textContent).not.toContain(ACCOUNT)
+
+    await openAiSection()
+    expect(card('claude-code').querySelector('.ai-sub-account')?.textContent).toBe(
+      `${ACCOUNT} · max`,
+    )
+    expect(card('codex').querySelector('.ai-sub-account')?.textContent).toBe('other@example.com')
+    // nothing of it is offered as a setting or written anywhere
+    expect(setAiSettings).not.toHaveBeenCalled()
+  })
+
+  it('offers both account actions while a login is known, and neither otherwise', async () => {
+    installHome(defaultAiSettings())
+    const subscription = installSubscription(signedIn())
+    await openModal()
+    await openAiSection()
+    expect(button('Sign in with another account', card('claude-code'))).toBeTruthy()
+    expect(button('Sign out', card('claude-code'))).toBeTruthy()
+    expect(button('Sign out', card('codex'))).toBeTruthy()
+
+    await act(async () => subscription.emit(statusMap('signed-out', 'not-installed')))
+    await flush()
+    expect(button('Sign out', card('claude-code'))).toBeUndefined()
+    expect(button('Sign in with another account', card('codex'))).toBeUndefined()
+  })
+
+  it('asks before signing out, says it applies to the whole PC, and runs nothing on cancel', async () => {
+    installHome(defaultAiSettings())
+    const subscription = installSubscription(signedIn())
+    await openModal()
+    await openAiSection()
+
+    await click(button('Sign out', card('claude-code')))
+    expect(subscription.logout).not.toHaveBeenCalled()
+    const box = confirmBox()!
+    expect(box.getAttribute('role')).toBe('alertdialog')
+    expect(box.dataset.provider).toBe('claude-code')
+    expect(box.textContent).toContain(
+      'This signs Claude Code out on this PC. Claude Code in a terminal is signed out as well.',
+    )
+
+    await click(button('Cancel', box))
+    expect(confirmBox()).toBeNull()
+    expect(subscription.logout).not.toHaveBeenCalled()
+    expect(subscription.login).not.toHaveBeenCalled()
+    expect(card('claude-code').dataset.state).toBe('ready')
+  })
+
+  it('signs out only once confirmed, with the vendor logout, and shows the new state', async () => {
+    installHome(defaultAiSettings())
+    const subscription = installSubscription(signedIn())
+    await openModal()
+    await openAiSection()
+
+    await click(button('Sign out', card('codex')))
+    expect(confirmBox()!.textContent).toContain(
+      'This signs Codex out on this PC. Codex in a terminal is signed out as well.',
+    )
+    await click(button('Sign out', confirmBox()!))
+    expect(subscription.logout).toHaveBeenCalledExactlyOnceWith('codex')
+    expect(confirmBox()).toBeNull()
+    expect(card('codex').dataset.state).toBe('signed-out')
+    expect(card('codex').textContent).not.toContain('other@example.com')
+    // the other program was not touched, and no settings were written
+    expect(card('claude-code').dataset.state).toBe('ready')
+    expect(setAiSettings).not.toHaveBeenCalled()
+  })
+
+  it('asks before signing in with another account, then runs the vendor login again', async () => {
+    installHome(defaultAiSettings())
+    const subscription = installSubscription(signedIn())
+    await openModal()
+    await openAiSection()
+
+    await click(button('Sign in with another account', card('claude-code')))
+    expect(subscription.login).not.toHaveBeenCalled()
+    expect(confirmBox()!.textContent).toContain(
+      'This signs Claude Code in again on this PC with another account. The account Claude Code uses in a terminal changes as well.',
+    )
+    await click(button('Cancel', confirmBox()!))
+    expect(subscription.login).not.toHaveBeenCalled()
+
+    await click(button('Sign in with another account', card('claude-code')))
+    await click(button('Sign in with another account', confirmBox()!))
+    expect(subscription.login).toHaveBeenCalledExactlyOnceWith('claude-code')
+    expect(subscription.logout).not.toHaveBeenCalled()
+    expect(confirmBox()).toBeNull()
+
+    // the login window is elsewhere: coming back checks once, not at every later focus
+    subscription.recheck.mockClear()
+    await act(async () => window.dispatchEvent(new Event('focus')))
+    await flush()
+    expect(subscription.recheck).toHaveBeenCalledExactlyOnceWith(['claude-code'])
+    await act(async () => window.dispatchEvent(new Event('focus')))
+    await flush()
+    expect(subscription.recheck).toHaveBeenCalledTimes(1)
+  })
+
+  it('asks about one account at a time', async () => {
+    installHome(defaultAiSettings())
+    installSubscription(signedIn())
+    await openModal()
+    await openAiSection()
+    await click(button('Sign out', card('claude-code')))
+    await click(button('Sign in with another account', card('codex')))
+    expect(host.querySelectorAll('.set-sub-confirm')).toHaveLength(1)
+    expect(confirmBox()!.dataset.provider).toBe('codex')
+    expect(confirmBox()!.textContent).toContain('Codex')
+  })
+
+  it('says so when the sign-out failed, in a sentence of its own', async () => {
+    installHome(defaultAiSettings())
+    const subscription = installSubscription(signedIn(), { launchOk: false })
+    await openModal()
+    await openAiSection()
+    await click(button('Sign out', card('claude-code')))
+    await click(button('Sign out', confirmBox()!))
+    expect(subscription.logout).toHaveBeenCalledWith('claude-code')
+    const failed = host.querySelector('.set-sub-failed[data-provider="claude-code"]')
+    expect(failed?.textContent).toBe('The sign-out could not be completed. Try again in a moment.')
+    expect(host.textContent).not.toMatch(/spawn|ENOENT|EPERM/)
+  })
+
+  it('words the confirmations as the product specifies, in Korean', async () => {
+    installHome(defaultAiSettings())
+    installSubscription(signedIn())
+    await act(async () => {
+      root.render(
+        createElement(
+          LocaleProvider,
+          { initial: 'ko' },
+          createElement(SettingsModal, { onClose: vi.fn(), target: { section: 'aiModel' } }),
+        ),
+      )
+      await Promise.resolve()
+    })
+    await flush()
+    await click(button('로그아웃', card('claude-code')))
+    expect(confirmBox()!.textContent).toContain(
+      '이 PC의 Claude Code에서 로그아웃합니다. 터미널에서 쓰는 Claude Code도 함께 로그아웃됩니다.',
+    )
+    await click(button('취소', confirmBox()!))
+    await click(button('다른 계정으로 로그인', card('codex')))
+    expect(confirmBox()!.textContent).toContain(
+      '이 PC의 Codex에 다른 계정으로 다시 로그인합니다. 터미널에서 쓰는 Codex의 계정도 함께 바뀝니다.',
+    )
+  })
+
+  it('a preload without the sign-out reports a failure instead of throwing', async () => {
+    installHome(defaultAiSettings())
+    const subscription = installSubscription(signedIn())
+    delete (subscription as { logout?: unknown }).logout
+    await openModal()
+    await openAiSection()
+    await click(button('Sign out', card('claude-code')))
+    await click(button('Sign out', confirmBox()!))
+    expect(host.querySelector('.set-sub-failed[data-provider="claude-code"]')).not.toBeNull()
+    await flush()
+    expect(unhandled).toEqual([])
+  })
+})
+
+describe('the model the selection runs on', () => {
+  const withModels = (): SubscriptionStatusMap => ({
+    'claude-code': status('claude-code', 'ready', {
+      models: [
+        { id: '', label: 'Default (recommended)', resolved: 'claude-opus-5-5', isDefault: true },
+        { id: 'opus', label: 'Opus 5.5', resolved: 'claude-opus-5-5' },
+        { id: 'fable', label: 'Fable 5.1', resolved: 'claude-fable-5-1' },
+      ],
+    }),
+    codex: status('codex', 'ready', {
+      models: [{ id: 'gpt-next-codex', label: 'GPT-Next-Codex', isDefault: true }],
+    }),
+  })
+
+  it('is named in "AI to use", under automatic too', async () => {
+    const settings = defaultAiSettings()
+    settings.providers['claude-code'] = { apiKey: '', model: 'fable' }
+    installHome(settings)
+    installSubscription(withModels())
+    await openModal()
+    await openAiSection()
+    expect(dropdown('AI to use')?.textContent).toBe('Automatic · Claude · Fable 5.1')
+    expect(await optionsOf('AI to use')).toEqual([
+      { label: 'Automatic · Claude · Fable 5.1', disabled: false },
+      { label: 'Claude · Fable 5.1 · Subscription', disabled: false },
+      { label: 'Codex · GPT-Next-Codex · Subscription', disabled: false },
+    ])
+  })
+
+  it('follows the list when it arrives after the status', async () => {
+    installHome(defaultAiSettings())
+    const subscription = installSubscription(statusMap('ready', 'signed-out'))
+    await openModal()
+    await openAiSection()
+    expect(dropdown('AI to use')?.textContent).toBe('Automatic · Claude')
+    await act(async () =>
+      subscription.emit({ ...withModels(), codex: status('codex', 'signed-out') }),
+    )
+    await flush()
+    expect(dropdown('AI to use')?.textContent).toBe('Automatic · Claude · Opus 5.5')
   })
 })
 

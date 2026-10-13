@@ -45,6 +45,15 @@ Una tarjeta que dice **Sesión iniciada, pero no con una suscripción** lleva un
 - Su permiso se recuerda solo para ese programa. Se borra cuando se cierra la sesión del programa o cambia su inicio de sesión.
 - Para usar su suscripción en su lugar, inicie sesión en el programa con la cuenta de su suscripción y pulse **Comprobar de nuevo**.
 
+## Cambiar de cuenta o cerrar sesión
+
+Cuando el programa tiene la sesión iniciada, su tarjeta muestra la cuenta en uso junto al nombre del plan, si el programa la comunica. También tiene dos botones.
+
+- **Iniciar sesión con otra cuenta** vuelve a poner en marcha el inicio de sesión del propio programa. Complételo en la ventana que se abre, con la otra cuenta.
+- **Cerrar sesión** ejecuta el cierre de sesión del propio programa. Después, la tarjeta indica **Sesión no iniciada**.
+- Ambas acciones se aplican a ese programa en todo este PC, no solo a GenOffice. Si también usa Claude Code o Codex en una terminal, allí también se cierra la sesión o se cambia a la otra cuenta. Por eso GenOffice le pide confirmación antes.
+- La cuenta y estos dos botones solo aparecen aquí, en Configuración ▸ IA. GenOffice muestra la cuenta y no la guarda en ningún sitio.
+
 ## Qué IA se usa
 
 **IA que se usa**, en Configuración ▸ IA, empieza en **Automático**. Automático decide en este orden:
@@ -56,6 +65,8 @@ Una tarjeta que dice **Sesión iniciada, pero no con una suscripción** lleva un
 Automático nunca elige nada que cueste dinero adicional: ni una clave de API ni un inicio de sesión de pago por consumo. Estos solo se usan mientras usted mismo los elija.
 
 También puede elegir usted una IA, en el mismo sitio o en la lista de modelos de la parte inferior del panel de IA. Si la que eligió deja de funcionar, GenOffice no pasa a otra sin avisar. Le dice qué ha ocurrido y le muestra cómo volver a conectar.
+
+La lista de modelos muestra los modelos que comunica el propio programa: cada uno con su nombre y, al lado, su identificador exacto, y **Modelo predeterminado** indica a qué modelo corresponde en ese momento. La etiqueta de la parte inferior del panel de IA y **IA que se usa** también nombran ese modelo. Leer la lista no le pregunta nada a la IA, así que no cuenta para su plan. Si el programa es demasiado antiguo para comunicar sus modelos, se muestra en su lugar una lista breve integrada.
 
 Allí donde se puede elegir Codex, se muestra una línea junto a él: «Usar una suscripción de Codex dentro de una aplicación no es un método recomendado oficialmente por OpenAI.» Decida teniéndolo en cuenta.
 

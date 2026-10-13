@@ -92,6 +92,8 @@ function connectionOf(map: SubscriptionStatusMap): SubscriptionConnection {
     codexImageAvailable: false,
     install: vi.fn(),
     login: vi.fn(),
+    switchAccount: vi.fn(),
+    logout: vi.fn(),
     recheck: vi.fn(),
     refresh: vi.fn(),
     acceptMetered: vi.fn(async () => undefined),
@@ -227,6 +229,73 @@ describe('ask panel without a connection', () => {
     const failed = host.querySelector<HTMLElement>('.kb-ask-error[role="alert"]')!
     expect(failed.dataset.provider).toBe('codex')
     expect(failed.textContent).toBe(strings.en.setSubLoginFailed)
+  })
+})
+
+describe('ask panel while the connection is still being checked', () => {
+  it('holds the question and starts it by itself once the check says it can run', async () => {
+    await renderPanel({ connection: connectionOf(statuses('checking', 'checking')) })
+    await type(QUESTION)
+    await send()
+
+    // nothing went out, nothing was refused: no connect prompt on a guess
+    expect(aiStream).not.toHaveBeenCalled()
+    expect(composer().value).toBe(QUESTION)
+    expect(host.querySelector('.ai-sub-prompt')).toBeNull()
+
+    await renderPanel({ connection: connectionOf(statuses('ready', 'signed-out')) })
+    await act(async () => {
+      for (let i = 0; i < 5; i++) await new Promise((resolve) => setTimeout(resolve, 0))
+    })
+    expect(aiStream).toHaveBeenCalledTimes(1)
+    expect(aiStream.mock.calls[0]![0].messages.at(-1)).toMatchObject({ role: 'user' })
+    expect(composer().value).toBe('')
+  })
+
+  it('drops the held question and shows the connect prompt when the check says it cannot', async () => {
+    await renderPanel({ connection: connectionOf(statuses('checking', 'checking')) })
+    await type(QUESTION)
+    await send()
+
+    await renderPanel({ connection: connectionOf(statuses('signed-out', 'not-installed')) })
+    expect(aiStream).not.toHaveBeenCalled()
+    expect(composer().value).toBe(QUESTION)
+    expect(host.querySelector('.ai-sub-prompt')).not.toBeNull()
+
+    // connecting later starts nothing by itself: the question is asked again
+    await renderPanel({ connection: connectionOf(statuses('ready', 'not-installed')) })
+    await act(async () => {
+      for (let i = 0; i < 5; i++) await new Promise((resolve) => setTimeout(resolve, 0))
+    })
+    expect(aiStream).not.toHaveBeenCalled()
+  })
+
+  it('holds while the settings are not read yet, too', async () => {
+    const connection = connectionOf(statuses('ready', 'ready'))
+    await renderPanel({ connection, aiSettings: null })
+    await type(QUESTION)
+    await send()
+    expect(aiStream).not.toHaveBeenCalled()
+
+    await renderPanel({ connection, aiSettings: stored })
+    await act(async () => {
+      for (let i = 0; i < 5; i++) await new Promise((resolve) => setTimeout(resolve, 0))
+    })
+    expect(aiStream).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not start a held question in front of the first-connection notice', async () => {
+    const connection = connectionOf(statuses('ready', 'signed-out'))
+    await renderPanel({ connection: connectionOf(statuses('checking', 'checking')) })
+    await type(QUESTION)
+    await send()
+    await renderPanel({ connection, noticeDue: true })
+    await renderPanel({ connection, noticeDue: false })
+    await act(async () => {
+      for (let i = 0; i < 5; i++) await new Promise((resolve) => setTimeout(resolve, 0))
+    })
+    expect(aiStream).not.toHaveBeenCalled()
+    expect(composer().value).toBe(QUESTION)
   })
 })
 

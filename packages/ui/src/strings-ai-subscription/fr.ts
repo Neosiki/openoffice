@@ -23,6 +23,8 @@ export const fr = {
   actionInstallHelp: 'Guide d’installation officiel',
   actionOpenSettings: 'Ouvrir les paramètres',
   actionDismiss: 'Fermer',
+  actionSwitchAccount: 'Se connecter avec un autre compte',
+  actionLogout: 'Se déconnecter',
   installNote:
     'La commande d’installation officielle de {vendor} s’exécute dans une nouvelle fenêtre de terminal.',
   loginNote: 'La page de connexion qui s’ouvre est celle de {vendor}.',
@@ -69,7 +71,9 @@ export const fr = {
   truncatedNotice: 'L’entrée était trop longue : une partie a été coupée avant l’envoi.',
   pickerAuto: 'Automatique',
   pickerAutoUsing: 'Automatique · {provider}',
+  pickerAutoUsingModel: 'Automatique · {provider} · {model}',
   pickerDefaultModel: 'Modèle par défaut',
+  pickerDefaultModelNamed: 'Modèle par défaut · {model}',
   pickerSubscription: 'Abonnement',
   pickerPaid: 'Payant',
   pickerPaidTitle: 'Facturé à l’usage, non couvert par un abonnement',

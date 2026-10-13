@@ -45,7 +45,25 @@ export type AiSubscriptionState =
 /** how the CLI is signed in; `unknown` is handled as `metered` */
 export type AiSubscriptionLoginMethod = 'subscription' | 'metered' | 'unknown'
 
-/** Connection status of one subscription provider. Carries no account identity (email, organisation). */
+/**
+ * One model a subscription CLI offers, as the CLI itself lists it. Display
+ * data for the model picker: only `id` ever becomes a setting.
+ */
+export interface AiSubscriptionModel {
+  /** the value the CLI takes and the selection that is stored; '' is the CLI's own default */
+  id: string
+  /** the name the CLI shows for it */
+  label: string
+  /** the concrete model the entry runs on, when the CLI tells */
+  resolved?: string | undefined
+  /** this is the model an empty selection runs on */
+  isDefault?: boolean | undefined
+}
+
+/**
+ * Connection status of one subscription provider. The only account identity it
+ * carries is `account`, for display; the organisation is never part of it.
+ */
 export interface AiSubscriptionStatus {
   provider: AiSubscriptionProviderId
   /** `ready` only when loginMethod is `subscription`; `metered` covers the metered and unknown logins */
@@ -56,6 +74,14 @@ export interface AiSubscriptionStatus {
   loginMethod?: AiSubscriptionLoginMethod | undefined
   /** plan name the CLI reported, display only */
   planName?: string | undefined
+  /**
+   * The signed-in account the CLI named (an e-mail address), on `ready` and
+   * `metered`. Display only: it lives in this status in memory and is never
+   * written to a setting, a record, a log or a command's output.
+   */
+  account?: string | undefined
+  /** the models the CLI lists, on `ready` and `metered`; absent until it answered, or when it cannot */
+  models?: AiSubscriptionModel[] | undefined
   /** the user chose "use anyway" for this metered login */
   meteredAccepted: boolean
   /** what went wrong, on state `error` */

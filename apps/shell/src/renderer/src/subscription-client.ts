@@ -23,8 +23,8 @@ declare global {
   }
 }
 
-/** a login or install that could not be started */
-export type SubscriptionLaunchKind = 'install' | 'login'
+/** a login or install that could not be started, or a sign-out that did not go through */
+export type SubscriptionLaunchKind = 'install' | 'login' | 'logout'
 
 export interface SubscriptionConnection {
   readonly statuses: SubscriptionStatusMap
@@ -36,6 +36,17 @@ export interface SubscriptionConnection {
   readonly codexImageAvailable: boolean
   readonly install: (provider: AiSubscriptionProviderId) => void
   readonly login: (provider: AiSubscriptionProviderId) => void
+  /**
+   * Sign in with another account: the program's own sign-in, started again
+   * while it is signed in. It changes the account for the whole PC, so the
+   * screen asks the user before it calls this.
+   */
+  readonly switchAccount: (provider: AiSubscriptionProviderId) => void
+  /**
+   * Sign out: the program's own sign-out, for the whole PC. The screen asks
+   * the user before it calls this.
+   */
+  readonly logout: (provider: AiSubscriptionProviderId) => void
   readonly recheck: (provider: AiSubscriptionProviderId) => void
   /** read the last known statuses again without starting a check (another view may have changed them) */
   readonly refresh: () => void
@@ -60,7 +71,9 @@ async function attempt<T>(call: (api: SubscriptionApi) => Promise<T>): Promise<T
  * settings dialog, the app frame): the statuses are read and re-checked when it opens, follow
  * the main process's change events, and are checked again each time the window
  * regains focus after a login or an install was started, since both happen in
- * another window.
+ * another window. A sign-in with another account leaves the state as it is, so
+ * it is checked once on the next return and after that by the main process,
+ * which looks again when the sign-in window closes.
  */
 export function useSubscriptionConnection(): SubscriptionConnection {
   const [statuses, setStatuses] = useState<SubscriptionStatusMap>(checkingSubscriptionStatuses)
@@ -70,13 +83,16 @@ export function useSubscriptionConnection(): SubscriptionConnection {
   const alive = useRef(true)
   const statusesRef = useRef(statuses)
   statusesRef.current = statuses
-  /** providers with a login or install under way, and the state each was in when it started */
-  const launched = useRef(new Map<AiSubscriptionProviderId, AiSubscriptionState>())
+  /**
+   * providers with a login or install under way, and the state each was in when it started;
+   * null for a sign-in with another account, which is checked once on the next return
+   */
+  const launched = useRef(new Map<AiSubscriptionProviderId, AiSubscriptionState | null>())
 
   const apply = useCallback((next: SubscriptionStatusMap | null) => {
     if (!next || !alive.current) return
     for (const [provider, state] of launched.current) {
-      if (next[provider].state !== state) launched.current.delete(provider)
+      if (state !== null && next[provider].state !== state) launched.current.delete(provider)
     }
     setStatuses(next)
   }, [])
@@ -101,7 +117,11 @@ export function useSubscriptionConnection(): SubscriptionConnection {
       // no event source: the statuses still follow the checks above
     }
     const onFocus = () => {
-      if (launched.current.size > 0) void check([...launched.current.keys()])
+      if (launched.current.size === 0) return
+      void check([...launched.current.keys()])
+      for (const [provider, state] of launched.current) {
+        if (state === null) launched.current.delete(provider)
+      }
     }
     window.addEventListener('focus', onFocus)
     return () => {
@@ -112,14 +132,14 @@ export function useSubscriptionConnection(): SubscriptionConnection {
   }, [apply, check])
 
   const launch = useCallback(
-    (kind: SubscriptionLaunchKind, provider: AiSubscriptionProviderId) => {
+    (kind: 'install' | 'login', provider: AiSubscriptionProviderId, sameState = false) => {
       setBusy(true)
       setFailed((current) => ({ ...current, [provider]: undefined }))
       void attempt((api) => (kind === 'install' ? api.install(provider) : api.login(provider)))
         .then((result) => {
           if (!alive.current) return
           if (result?.ok) {
-            launched.current.set(provider, statusesRef.current[provider].state)
+            launched.current.set(provider, sameState ? null : statusesRef.current[provider].state)
             return
           }
           setFailed((current) => ({ ...current, [provider]: kind }))
@@ -140,6 +160,27 @@ export function useSubscriptionConnection(): SubscriptionConnection {
   const login = useCallback(
     (provider: AiSubscriptionProviderId) => launch('login', provider),
     [launch],
+  )
+  const switchAccount = useCallback(
+    (provider: AiSubscriptionProviderId) => launch('login', provider, true),
+    [launch],
+  )
+  const logout = useCallback(
+    (provider: AiSubscriptionProviderId) => {
+      setBusy(true)
+      setFailed((current) => ({ ...current, [provider]: undefined }))
+      void attempt((api) => api.logout(provider))
+        .then((result) => {
+          if (!alive.current) return
+          if (!result?.ok) setFailed((current) => ({ ...current, [provider]: 'logout' }))
+          // the main process looked again before it answered: show what it found
+          return attempt((api) => api.statuses()).then(apply)
+        })
+        .finally(() => {
+          if (alive.current) setBusy(false)
+        })
+    },
+    [apply],
   )
   const recheck = useCallback(
     (provider: AiSubscriptionProviderId) => {
@@ -173,6 +214,8 @@ export function useSubscriptionConnection(): SubscriptionConnection {
     codexImageAvailable,
     install,
     login,
+    switchAccount,
+    logout,
     recheck,
     refresh,
     acceptMetered,

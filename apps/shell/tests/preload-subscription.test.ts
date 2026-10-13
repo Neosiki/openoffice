@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { SUBSCRIPTION_IPC_CHANNELS } from '@genoffice/ai-provider/browser'
 import type { SubscriptionApi } from '../src/shared/subscription-api'
@@ -88,6 +90,63 @@ describe('subscription preload API', () => {
     expect(electronMocks.invoke).toHaveBeenLastCalledWith(SUBSCRIPTION_IPC_CHANNELS.install, {
       provider: 'codex',
     })
+  })
+
+  it('asks for a sign-out on the shared channel and keeps the error text out', async () => {
+    electronMocks.invoke.mockResolvedValue({ ok: true })
+    await expect(api.logout('codex')).resolves.toEqual({ ok: true })
+    expect(electronMocks.invoke).toHaveBeenLastCalledWith(SUBSCRIPTION_IPC_CHANNELS.logout, {
+      provider: 'codex',
+    })
+    expect(SUBSCRIPTION_IPC_CHANNELS.logout).toBe('ai:subscription-logout')
+
+    electronMocks.invoke.mockResolvedValue({
+      ok: false,
+      reason: 'failed',
+      error: 'spawn C:\\Users\\someone\\AppData\\claude.exe EPERM',
+    })
+    await expect(api.logout('claude-code')).resolves.toEqual({ ok: false, reason: 'failed' })
+    // an answer of no known shape is a plain failure, never a success
+    electronMocks.invoke.mockResolvedValue(undefined)
+    await expect(api.logout('claude-code')).resolves.toEqual({ ok: false, reason: 'failed' })
+  })
+
+  it('passes the account and the model list of a status on only in their own shape', async () => {
+    const models = [{ id: 'opus', label: 'Opus 5.5', resolved: 'claude-opus-5-5' }]
+    electronMocks.invoke.mockResolvedValue({
+      'claude-code': {
+        ...READY['claude-code'],
+        account: 'user@example.com',
+        models: [...models, { id: '--flag', label: 'x' }],
+      },
+      codex: { ...READY.codex, account: 'user@example.com', models },
+    })
+    const statuses = await api.statuses()
+    expect(statuses['claude-code']).toEqual({
+      ...READY['claude-code'],
+      account: 'user@example.com',
+      models,
+    })
+    // signed out: neither belongs to it
+    expect(statuses.codex).toEqual(READY.codex)
+
+    electronMocks.invoke.mockResolvedValue({
+      'claude-code': { ...READY['claude-code'], account: 'Example Research Org', models: 'opus' },
+    })
+    expect((await api.statuses())['claude-code']).toEqual(READY['claude-code'])
+  })
+
+  it('is the only preload that can ask for a sign-out: no editor window exposes it', () => {
+    const preloadOf = (app: string): string =>
+      readFileSync(
+        fileURLToPath(new URL(`../../${app}/src/preload/index.ts`, import.meta.url)),
+        'utf8',
+      )
+    const asksForLogout = /SUBSCRIPTION_IPC_CHANNELS\.logout|subscription-logout/
+    expect(preloadOf('shell')).toMatch(asksForLogout)
+    for (const app of ['docs', 'sheets', 'slides', 'pdf', 'markdown', 'html']) {
+      expect(preloadOf(app), app).not.toMatch(asksForLogout)
+    }
   })
 
   it('sends the metered choice and returns the statuses that come back', async () => {

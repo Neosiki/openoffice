@@ -45,6 +45,15 @@ Um cartão que diz **Login feito, mas não com uma assinatura** traz um aviso: �
 - A sua permissão é lembrada apenas para esse programa. É apagada quando a sessão do programa é terminada ou o login dele muda.
 - Para usar antes a sua assinatura, inicie sessão no programa com a conta da assinatura e clique em **Verificar novamente**.
 
+## Mudar de conta ou sair
+
+Quando o programa tem sessão iniciada, o cartão mostra a conta em uso ao lado do nome do plano, se o programa a indicar. Tem também dois botões.
+
+- **Entrar com outra conta** volta a iniciar o login do próprio programa. Conclua-o na janela que se abre, com a outra conta.
+- **Sair** executa o fim de sessão do próprio programa. Depois disso, o cartão indica **Sem login**.
+- Ambas as ações aplicam-se a esse programa em todo este PC, e não só ao GenOffice. Se também usa o Claude Code ou o Codex num terminal, aí a sessão também é terminada ou passa para a outra conta. Por isso, o GenOffice pede-lhe confirmação primeiro.
+- A conta e estes dois botões só aparecem aqui, em Configurações ▸ IA. O GenOffice mostra a conta e não a guarda em lado nenhum.
+
 ## Que IA é usada
 
 **IA em uso**, em Configurações ▸ IA, começa em **Automático**. O Automático decide por esta ordem:
@@ -56,6 +65,8 @@ Um cartão que diz **Login feito, mas não com uma assinatura** traz um aviso: �
 O Automático nunca escolhe nada que custe dinheiro extra: nem uma chave de API, nem um login de pagamento por consumo. Esses só são usados enquanto os escolher por si.
 
 Também pode escolher uma IA por si, no mesmo sítio ou na lista de modelos ao fundo do painel de IA. Se a que escolheu deixar de funcionar, o GenOffice não passa discretamente para outra. Diz-lhe o que aconteceu e mostra como voltar a conectar.
+
+A lista de modelos mostra os modelos que o próprio programa indica: cada um com o seu nome e, ao lado, o identificador exato, e **Modelo padrão** indica a que modelo corresponde neste momento. A etiqueta na parte inferior do painel de IA e **IA em uso** também indicam esse modelo. Ler a lista não pergunta nada à IA, pelo que não conta para o seu plano. Se o programa for demasiado antigo para indicar os seus modelos, é mostrada em vez disso uma lista curta incorporada.
 
 Onde quer que o Codex possa ser escolhido, aparece junto dele uma linha: «Usar uma assinatura do Codex dentro de um aplicativo não é um método oficialmente recomendado pela OpenAI.» Decida tendo isso em conta.
 

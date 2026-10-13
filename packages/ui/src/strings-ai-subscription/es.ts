@@ -21,6 +21,8 @@ export const es = {
   actionInstallHelp: 'Guía oficial de instalación',
   actionOpenSettings: 'Abrir ajustes',
   actionDismiss: 'Cerrar',
+  actionSwitchAccount: 'Iniciar sesión con otra cuenta',
+  actionLogout: 'Cerrar sesión',
   installNote:
     'El comando de instalación oficial de {vendor} se ejecuta en una nueva ventana de terminal.',
   loginNote: 'La página de inicio de sesión que se abre es la de {vendor}.',
@@ -69,7 +71,9 @@ export const es = {
     'La entrada era demasiado larga, así que se recortó una parte antes de enviarla.',
   pickerAuto: 'Automático',
   pickerAutoUsing: 'Automático · {provider}',
+  pickerAutoUsingModel: 'Automático · {provider} · {model}',
   pickerDefaultModel: 'Modelo predeterminado',
+  pickerDefaultModelNamed: 'Modelo predeterminado · {model}',
   pickerSubscription: 'Suscripción',
   pickerPaid: 'De pago',
   pickerPaidTitle: 'Se cobra por consumo, no lo cubre una suscripción',

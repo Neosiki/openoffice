@@ -59,7 +59,19 @@ app's own features:
   vendor's unmodified program, which signs in by itself.
 - When it asks those programs whether you are signed in, it keeps only the
   program's version, the kind of login (subscription or billed by usage) and
-  the plan name. The account e-mail address the programs report is discarded.
+  the plan name. The account e-mail address the programs report is shown on
+  the connection card under Settings → AI and nowhere else, so you can see
+  which account is signed in. It is held in memory while the app runs and is
+  never stored: not in a settings file, a log or a record, and not in the
+  output of a terminal command or an MCP tool. The organisation name the
+  programs report is discarded.
+- The connection card can sign the vendor's program out, or sign it in with
+  another account. Both run the vendor's own command and apply to that
+  program on the whole PC, so the app asks you first. It still never sees the
+  login itself.
+- It asks those programs which models they offer, to show their real names in
+  the model list. That question goes to the program on your PC; it is not an
+  AI request and sends none of your content.
 - It never moves your AI chat to a connection that costs money on its own.
   API-key providers, and a Claude or Codex login that is billed by usage, are
   used only after you choose them yourself.

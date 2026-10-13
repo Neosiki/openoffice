@@ -12,6 +12,7 @@ import {
   aiSubscriptionProviderName,
   aiSubscriptionStatusOf,
   aiSubscriptionVendorName,
+  isAiSubscriptionAccountAction,
   type AiSubscriptionCardAction,
 } from './ai-subscription'
 import { AiMark } from './AiMark'
@@ -38,12 +39,20 @@ const ACTION_LABELS: Record<AiSubscriptionCardAction, AiSubscriptionStringKey> =
   login: 'actionLogin',
   'accept-metered': 'actionAcceptMetered',
   recheck: 'actionRecheck',
+  'switch-account': 'actionSwitchAccount',
+  logout: 'actionLogout',
 }
 
 /**
  * One subscription provider's connection: its state and the one thing to do
  * about it. The provider is named in text; the mark beside it is the neutral
  * AI glyph, never a vendor logo.
+ *
+ * The signed-in account and the two actions on it (sign in with another
+ * account, sign out) belong to the card in Settings alone. They appear only
+ * when asked for, by `showAccount` and by the two handlers, and never on a
+ * compact card: an AI panel does not name the account. Both actions change the
+ * vendor program for the whole PC, so the caller confirms before it runs one.
  */
 export function AiSubscriptionCard({
   status,
@@ -55,6 +64,9 @@ export function AiSubscriptionCard({
   onRecheck,
   onAcceptMetered,
   onOpenInstallHelp,
+  showAccount = false,
+  onSwitchAccount,
+  onLogout,
 }: AiSubscriptionCardActions & {
   readonly status: AiSubscriptionStatus
   readonly lang: Lang
@@ -62,8 +74,17 @@ export function AiSubscriptionCard({
   readonly compact?: boolean | undefined
   /** an action is already in flight: the buttons stay visible but inert */
   readonly disabled?: boolean | undefined
+  /** Settings only: show the signed-in account the CLI named, next to the plan name */
+  readonly showAccount?: boolean | undefined
+  /** Settings only: the user asked to sign in with another account (the CLI's own login, again) */
+  readonly onSwitchAccount?: ((provider: AiSubscriptionProviderId) => void) | undefined
+  /** Settings only: the user asked to sign out (the CLI's own logout) */
+  readonly onLogout?: ((provider: AiSubscriptionProviderId) => void) | undefined
 }): React.JSX.Element {
-  const view = aiSubscriptionCardView(status)
+  const view = aiSubscriptionCardView(status, {
+    account: showAccount && !compact,
+    accountActions: !compact && onSwitchAccount !== undefined && onLogout !== undefined,
+  })
   const provider = view.provider
   const params = {
     vendor: aiSubscriptionVendorName(provider),
@@ -76,6 +97,8 @@ export function AiSubscriptionCard({
     login: onLogin,
     'accept-metered': onAcceptMetered,
     recheck: onRecheck,
+    'switch-account': (id) => onSwitchAccount?.(id),
+    logout: (id) => onLogout?.(id),
   }
   return (
     <div
@@ -93,6 +116,12 @@ export function AiSubscriptionCard({
           {aiSubscriptionText(lang, view.statusKey, params)}
         </span>
       </div>
+      {view.account && (
+        <p className="ai-sub-account">
+          <bdi>{view.account}</bdi>
+          {view.planName ? ` · ${view.planName}` : ''}
+        </p>
+      )}
       {view.noteKeys.map((key) => (
         <p key={key} className="ai-sub-note" data-note={key}>
           {aiSubscriptionText(lang, key, params)}
@@ -120,7 +149,11 @@ export function AiSubscriptionCard({
               <button
                 key={action}
                 type="button"
-                className={`ai-sub-btn${index === 0 && view.tone !== 'warning' ? ' primary' : ''}`}
+                className={`ai-sub-btn${
+                  index === 0 && view.tone !== 'warning' && !isAiSubscriptionAccountAction(action)
+                    ? ' primary'
+                    : ''
+                }`}
                 data-action={action}
                 disabled={disabled}
                 onClick={() => handlers[action](provider)}

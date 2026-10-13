@@ -45,6 +45,15 @@ Karta se stavem **Přihlášeno, ale ne přes předplatné** obsahuje varování
 - Váš souhlas se pamatuje jen pro tento program. Zruší se, když se program odhlásí nebo se jeho přihlášení změní.
 - Chcete-li místo toho používat předplatné, přihlaste program účtem s předplatným a stiskněte **Zkontrolovat znovu**.
 
+## Změna účtu a odhlášení
+
+Když je program přihlášený, jeho karta ukazuje vedle názvu tarifu účet, kterým je přihlášený, pokud ho program hlásí. Má také dvě tlačítka.
+
+- **Přihlásit se jiným účtem** znovu spustí přihlášení samotného programu. Dokončete ho v okně, které se otevře, druhým účtem.
+- **Odhlásit se** spustí odhlášení samotného programu. Karta pak ukazuje **Nepřihlášeno**.
+- Obojí platí pro daný program v celém tomto počítači, nejen pro GenOffice. Pokud Claude Code nebo Codex používáte i v terminálu, odhlásí se nebo přejde na druhý účet i tam. GenOffice si proto nejdřív vyžádá potvrzení.
+- Účet a tato dvě tlačítka jsou jen tady, v Nastavení ▸ AI. GenOffice účet jen zobrazuje a nikam ho neukládá.
+
 ## Která AI se používá
 
 Volba **Používaná AI** v Nastavení ▸ AI je zpočátku nastavena na **Automaticky**. Automatický režim rozhoduje v tomto pořadí:
@@ -56,6 +65,8 @@ Volba **Používaná AI** v Nastavení ▸ AI je zpočátku nastavena na **Autom
 Automatický režim nikdy nevybere nic, co stojí peníze navíc: ani klíč API, ani přihlášení s platbou podle spotřeby. Ty se používají jen tehdy, když je zvolíte sami.
 
 Jednu AI si můžete zvolit i sami, na stejném místě nebo v seznamu modelů ve spodní části panelu AI. Pokud vámi zvolená AI přestane fungovat, GenOffice potichu nepřejde na jinou. Oznámí, co se stalo, a ukáže, jak se znovu připojit.
+
+Seznam modelů ukazuje modely, které hlásí sám program: každý s názvem a vedle něj s přesným identifikátorem, a u položky **Výchozí model** je uvedeno, kterému modelu právě odpovídá. Tento model uvádí i štítek dole v panelu AI a volba **Používaná AI**. Načtení seznamu se AI na nic neptá, takže se nezapočítává do vašeho tarifu. Pokud je program příliš starý na to, aby své modely hlásil, zobrazí se místo toho krátký vestavěný seznam.
 
 Všude, kde lze zvolit Codex, je u něj uveden jeden řádek: „Používání předplatného Codex uvnitř aplikace není způsob, který OpenAI oficiálně doporučuje.“ Při rozhodování na to pamatujte.
 

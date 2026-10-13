@@ -14,15 +14,21 @@ import {
   buildClaudeCodeInput,
   chatClaudeCodeCli,
   claudeCodeCliLaunchArgs,
+  claudeCodeModels,
   claudeCodeOutputSchema,
   claudeCodeUsage,
+  listClaudeCodeModels,
   parseClaudeCodeTurn,
   streamClaudeCodeCli,
   type ClaudeCodeCliDeps,
 } from '../src/claude-code-cli'
 import { MAX_SSE_LINE_BYTES, MAX_STREAM_TOOL_CALLS } from '../src/protocols/shared'
 import { AiRunError } from '../src/run-error'
-import { createSubscriptionChildRegistry, type SubscriptionProgram } from '../src/subscription'
+import {
+  createSubscriptionChildRegistry,
+  subscriptionModelsOf,
+  type SubscriptionProgram,
+} from '../src/subscription'
 import type { AiProviderConfig, AiSubscriptionUsage, AiTokenUsage } from '../src/types'
 import { AiTimeoutError, createStreamWatchdog } from '../src/watchdog'
 
@@ -1237,6 +1243,180 @@ describe('Claude Code bridge: cancelling and process lifetime', () => {
       .catch((error: unknown) => error)
     expect(failure).toBeInstanceOf(AiTimeoutError)
     expect(record.killed).toEqual([record.child])
+  })
+})
+
+/** The `models` of the initialize response, as Claude Code 2.1.287 gives them */
+const LISTED_MODELS = [
+  {
+    value: 'default',
+    resolvedModel: 'claude-opus-5-5',
+    displayName: 'Default (recommended)',
+    description: 'Opus 5.5 · Best for everyday, complex tasks',
+  },
+  { value: 'opus', resolvedModel: 'claude-opus-5-5', displayName: 'Opus 5.5' },
+  { value: 'fable', resolvedModel: 'claude-fable-5-1', displayName: 'Fable 5.1' },
+  { value: 'sonnet', resolvedModel: 'claude-sonnet-5-5', displayName: 'Sonnet 5.5' },
+  { value: 'haiku', resolvedModel: 'claude-haiku-4-5-20251001', displayName: 'Haiku 4.5' },
+  { value: 'claude-sonnet-5', displayName: 'Sonnet 5' },
+]
+
+function initializeWith(response: unknown): FakeScript {
+  return {
+    onInitialize: (child, request) =>
+      child.send({
+        type: 'control_response',
+        response: { subtype: 'success', request_id: request.request_id, response },
+      }),
+  }
+}
+
+describe('Claude Code bridge: the model list', () => {
+  const list = (
+    record: RunRecord,
+    request: Partial<Parameters<typeof listClaudeCodeModels>[0]> = {},
+  ) => listClaudeCodeModels({ signal: record.callbacks.signal, ...request }, record.deps)
+
+  it('maps what the CLI lists: the value it takes, its name, what it resolves to', async () => {
+    const record = harness(
+      initializeWith({
+        commands: [],
+        models: LISTED_MODELS,
+        account: { email: 'jun.il@school.kr', organization: 'Acme Hagwon Seoul' },
+      }),
+    )
+    const models = await list(record)
+    expect(models).toEqual([
+      // the CLI's own default is what an empty selection runs
+      { id: '', label: 'Default (recommended)', resolved: 'claude-opus-5-5', isDefault: true },
+      { id: 'opus', label: 'Opus 5.5', resolved: 'claude-opus-5-5' },
+      { id: 'fable', label: 'Fable 5.1', resolved: 'claude-fable-5-1' },
+      { id: 'sonnet', label: 'Sonnet 5.5', resolved: 'claude-sonnet-5-5' },
+      { id: 'haiku', label: 'Haiku 4.5', resolved: 'claude-haiku-4-5-20251001' },
+      { id: 'claude-sonnet-5', label: 'Sonnet 5' },
+    ])
+    // the account in the same response is not read
+    expect(JSON.stringify(models)).not.toMatch(/school|Acme/)
+  })
+
+  it('starts the CLI the way a turn does, and sends the initialize request and nothing else', async () => {
+    const record = harness(initializeWith({ models: LISTED_MODELS }), {
+      baseEnv: { PATH: '/usr/bin', ANTHROPIC_API_KEY: 'sk-ant', CLAUDE_CODE_USE_BEDROCK: '1' },
+    })
+    await list(record)
+    const child = record.child!
+    expect(record.command).toBe(PROGRAM.command)
+    expect(record.args).toEqual(claudeCodeCliLaunchArgs(''))
+    expect(record.args).not.toContain('--model')
+    expect(record.options?.shell).toBeUndefined()
+    // an empty directory of its own, removed afterwards (checked by the afterEach above)
+    expect(String(record.options?.cwd)).toMatch(/genoffice-claude-code-/)
+    const env = record.options?.env as NodeJS.ProcessEnv
+    expect(env.ANTHROPIC_API_KEY).toBeUndefined()
+    expect(env.CLAUDE_CODE_USE_BEDROCK).toBeUndefined()
+
+    expect(child.lines).toHaveLength(1)
+    expect(child.lines[0]).toMatchObject({
+      type: 'control_request',
+      request: { subtype: 'initialize' },
+    })
+    // no user message: no model was asked anything
+    expect(child.lines.some((line) => line.type === 'user')).toBe(false)
+    // the process was told to leave, and left
+    expect(child.stdinEnded).toBe(true)
+    expect(record.killed).toEqual([])
+  })
+
+  it('ends a CLI that does not leave after it answered', async () => {
+    const record = harness({
+      ...initializeWith({ models: LISTED_MODELS }),
+      onStdinEnd: () => undefined,
+    })
+    expect(await list(record)).toHaveLength(LISTED_MODELS.length)
+    await vi.waitFor(() => expect(record.killed).toEqual([record.child]))
+  })
+
+  it('reads a missing or malformed list as no list', async () => {
+    for (const response of [
+      { commands: [] },
+      { models: 'opus' },
+      { models: [null, 7, { displayName: 'No value' }, { value: '--flag', displayName: 'x' }] },
+      'not an object',
+      undefined,
+    ]) {
+      const record = harness(initializeWith(response))
+      expect(await list(record), JSON.stringify(response)).toEqual([])
+      expect(record.child!.lines.some((line) => line.type === 'user')).toBe(false)
+    }
+  })
+
+  it('reads a CLI that rejects the request as no list', async () => {
+    const record = harness({
+      onInitialize: (child, request) =>
+        child.send({
+          type: 'control_response',
+          response: { subtype: 'error', request_id: request.request_id, error: 'unknown' },
+        }),
+    })
+    expect(await list(record)).toEqual([])
+    expect(record.child!.stdinEnded).toBe(true)
+  })
+
+  it('gives up on a CLI that does not answer in time and ends its process tree', async () => {
+    const record = harness({ onInitialize: () => undefined })
+    const failure = await list(record, { timeoutMs: 30 }).catch((error: unknown) => error)
+    expect(failure).toBeInstanceOf(Error)
+    expect(record.killed).toEqual([record.child])
+    expect(record.child!.lines.some((line) => line.type === 'user')).toBe(false)
+  })
+
+  it('ends the process tree when the caller gives up', async () => {
+    const controller = new AbortController()
+    const record = harness(
+      { onInitialize: () => setTimeout(() => controller.abort(), 10) },
+      { signal: controller.signal },
+    )
+    await expect(list(record)).rejects.toMatchObject({ name: 'AbortError' })
+    expect(record.killed).toEqual([record.child])
+
+    const already = new AbortController()
+    already.abort()
+    const unstarted = harness(initializeWith({ models: LISTED_MODELS }), { signal: already.signal })
+    await expect(list(unstarted)).rejects.toMatchObject({ name: 'AbortError' })
+    expect(unstarted.child).toBeUndefined()
+  })
+
+  it('stops a CLI that does anything but answer the request', async () => {
+    for (const event of [
+      { type: 'control_request', request_id: 'x', request: { subtype: 'can_use_tool' } },
+      { type: 'assistant', message: { content: [{ type: 'text', text: 'Hello' }] } },
+      resultEvent('Hello'),
+    ]) {
+      const record = harness({ onInitialize: (child) => child.send(event) })
+      await expect(list(record)).rejects.toBeInstanceOf(Error)
+      expect(record.killed).toEqual([record.child])
+      // nothing was answered and nothing was sent after the request
+      expect(record.child!.lines).toHaveLength(1)
+    }
+  })
+
+  it('reports a CLI that exits before answering, without repeating what it printed', async () => {
+    const record = harness({
+      onInitialize: (child) => {
+        child.stderr.write('Error: organization Acme Hagwon Seoul has disabled Claude Code\n')
+        child.exit(1)
+      },
+    })
+    const failure = (await list(record).catch((error: unknown) => error)) as Error
+    expect(failure).toBeInstanceOf(Error)
+    expect(failure.message).not.toMatch(/Acme|Seoul/)
+  })
+
+  it('is the model source of the status check for Claude', async () => {
+    const record = harness(initializeWith({ models: LISTED_MODELS }))
+    const models = claudeCodeModels({ models: LISTED_MODELS })
+    expect(await list(record)).toEqual(models)
+    expect(subscriptionModelsOf(models)).toEqual(models)
   })
 })
 

@@ -4,6 +4,10 @@
  * window of their own and belong to the vendor from there on; the app only
  * learns the outcome from the next status check.
  *
+ * And the one a user can start from a provider that is: the CLI's own logout,
+ * a short command that needs no window. Signing in with another account is the
+ * same login as above, run again.
+ *
  * Node cannot give a child process a console window of its own on Windows (a
  * detached child gets no console at all), so both go through a system program
  * that can: `Start-Process` for the login, `start` for the install command.
@@ -24,12 +28,14 @@ import {
   type SubscriptionProgram,
 } from './locate'
 import {
+  runSubscriptionProgram,
   sharedSubscriptionChildRegistry,
   spawnSubscriptionProgram,
   windowsSystemDir,
   windowsSystemTool,
   type SubscriptionChildLike,
   type SubscriptionChildRegistry,
+  type SubscriptionRunner,
   type SubscriptionSpawn,
 } from './process'
 
@@ -37,6 +43,40 @@ import {
 const LOGIN_ARGS: Record<AiSubscriptionProviderId, string[]> = {
   'claude-code': ['auth', 'login'],
   codex: ['login'],
+}
+
+/** The CLI's own sign-out command */
+const LOGOUT_ARGS: Record<AiSubscriptionProviderId, string[]> = {
+  'claude-code': ['auth', 'logout'],
+  codex: ['logout'],
+}
+
+/** A logout that has not finished by then is given up and its program ended */
+export const SUBSCRIPTION_LOGOUT_TIMEOUT_MS = 20_000
+
+const loginChangeListeners = new Set<(provider: AiSubscriptionProviderId) => void>()
+
+/**
+ * Be told when the app ran a CLI's login or logout to its end. A process
+ * started before that may still hold the login it started with, so a bridge
+ * that keeps one running listens here. Returns a function that stops the listening.
+ */
+export function onSubscriptionLoginChange(
+  listener: (provider: AiSubscriptionProviderId) => void,
+): () => void {
+  loginChangeListeners.add(listener)
+  return () => loginChangeListeners.delete(listener)
+}
+
+/** Tell the listeners of `onSubscriptionLoginChange`; one that throws does not stop the others */
+export function notifySubscriptionLoginChange(provider: AiSubscriptionProviderId): void {
+  for (const listener of [...loginChangeListeners]) {
+    try {
+      listener(provider)
+    } catch {
+      /* keep telling the others */
+    }
+  }
 }
 
 /** Carry the program and its arguments to the login window script as data */
@@ -188,11 +228,66 @@ export async function launchSubscriptionLogin(
     const child = startLogin(program, options)
     const failure = await startFailure(child)
     if (failure) return { ok: false, reason: 'failed', error: failure }
+    // whoever is signed in now, it may not be who was before
+    child.once('exit', () => notifySubscriptionLoginChange(provider))
     if (options.onExit) child.once('exit', options.onExit)
     child.unref?.()
     return { ok: true }
   } catch (error) {
     return { ok: false, reason: 'failed', error: message(error) }
+  }
+}
+
+export interface SubscriptionLogoutOptions {
+  /** the user's own path to the CLI (the Codex `cliPath` setting) */
+  configuredPath?: string | undefined
+  timeoutMs?: number | undefined
+  locate?: SubscriptionLocator | undefined
+  /** runs the command to its end; `runSubscriptionProgram` when absent */
+  run?: SubscriptionRunner | undefined
+  spawn?: SubscriptionSpawn | undefined
+  baseEnv?: NodeJS.ProcessEnv | undefined
+}
+
+/**
+ * Run the CLI's own logout (`claude auth logout`, `codex logout`) to its end:
+ * the located file, an argument list, the sanitised environment, no shell, no
+ * window, and a bounded time. The app removes nothing itself and never sees
+ * the login; what the command did shows in the next status check.
+ *
+ * The logout is the CLI's, for the whole PC: a terminal using the same program
+ * is signed out with it. Asking the user first is the caller's part.
+ */
+export async function launchSubscriptionLogout(
+  provider: AiSubscriptionProviderId,
+  options: SubscriptionLogoutOptions = {},
+): Promise<SubscriptionLaunchResult> {
+  if (!isSubscriptionProvider(provider)) return { ok: false, reason: 'invalid' }
+  let program
+  try {
+    program = await (options.locate ?? locateSubscriptionProgram)(provider, {
+      configuredPath: options.configuredPath,
+    })
+  } catch (error) {
+    return { ok: false, reason: 'failed', error: message(error) }
+  }
+  if (!program) {
+    return { ok: false, reason: 'not-installed', installUrl: SUBSCRIPTION_INSTALL_URLS[provider] }
+  }
+  try {
+    const result = await (options.run ?? runSubscriptionProgram)(program, LOGOUT_ARGS[provider], {
+      signal: new AbortController().signal,
+      timeoutMs: options.timeoutMs ?? SUBSCRIPTION_LOGOUT_TIMEOUT_MS,
+      baseEnv: options.baseEnv,
+      spawn: options.spawn,
+    })
+    // what the CLI printed stays here: it may name the account
+    return result.code === 0 ? { ok: true } : { ok: false, reason: 'failed' }
+  } catch (error) {
+    return { ok: false, reason: 'failed', error: message(error) }
+  } finally {
+    // run to its end or not, the login may no longer be the one a running process holds
+    notifySubscriptionLoginChange(provider)
   }
 }
 

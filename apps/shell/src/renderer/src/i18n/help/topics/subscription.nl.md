@@ -45,6 +45,15 @@ Een kaart met **Aangemeld, maar niet met een abonnement** bevat een waarschuwing
 - Je toestemming wordt alleen voor dat programma onthouden. Die vervalt zodra het programma wordt afgemeld of de aanmelding verandert.
 - Wil je toch je abonnement gebruiken, meld het programma dan aan met het account van je abonnement en druk op **Opnieuw controleren**.
 
+## Van account wisselen of afmelden
+
+Als het programma is aangemeld, toont de kaart het account waarmee het is aangemeld, naast de naam van het abonnement, als het programma dat doorgeeft. Er staan ook twee knoppen op.
+
+- **Aanmelden met een ander account** start de aanmelding van het programma zelf opnieuw. Rond die af in het venster dat opent, met het andere account.
+- **Afmelden** voert de afmelding van het programma zelf uit. Daarna staat op de kaart **Niet aangemeld**.
+- Beide gelden voor dat programma op deze hele pc, niet alleen voor GenOffice. Gebruik je Claude Code of Codex ook in een terminal, dan wordt het daar ook afgemeld of naar het andere account overgezet. GenOffice vraagt je daarom eerst om bevestiging.
+- Het account en deze twee knoppen staan alleen hier, onder Instellingen ▸ AI. GenOffice toont het account en slaat het nergens op.
+
 ## Welke AI wordt gebruikt
 
 **AI die wordt gebruikt**, onder Instellingen ▸ AI, staat eerst op **Automatisch**. Automatisch beslist in deze volgorde:
@@ -56,6 +65,8 @@ Een kaart met **Aangemeld, maar niet met een abonnement** bevat een waarschuwing
 Automatisch kiest nooit iets wat extra geld kost: geen API-sleutel en geen aanmelding met betaling per verbruik. Die worden alleen gebruikt zolang je ze zelf kiest.
 
 Je kunt ook zelf één AI kiezen, op dezelfde plek of in de modellenlijst onder in het AI-paneel. Werkt de AI die je hebt gekozen niet meer, dan stapt GenOffice niet stilletjes over op een andere. Het meldt wat er is gebeurd en laat zien hoe je opnieuw verbindt.
+
+De modellenlijst toont de modellen die het programma zelf doorgeeft: elk met zijn naam en de exacte model-ID ernaast, en bij **Standaardmodel** staat voor welk model het op dit moment staat. Het label onder in het AI-paneel en **AI die wordt gebruikt** noemen dat model ook. Het lezen van de lijst vraagt de AI niets en telt dus niet mee voor je abonnement. Is het programma te oud om zijn modellen door te geven, dan wordt in plaats daarvan een korte ingebouwde lijst getoond.
 
 Overal waar je Codex kunt kiezen, staat er één regel bij: "Een Codex-abonnement gebruiken in een app is geen methode die OpenAI officieel aanbeveelt." Houd daar rekening mee bij je keuze.
 

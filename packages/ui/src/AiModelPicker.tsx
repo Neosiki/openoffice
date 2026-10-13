@@ -4,6 +4,7 @@ import type { AiSettings, AiSubscriptionStatuses } from '@genoffice/ai-provider/
 import {
   aiProviderPickerGroups,
   aiProviderPickerSelection,
+  aiSubscriptionModelName,
   withAiProviderSelection,
   type AiProviderPickerGroup,
   type AiProviderPickerSelection,
@@ -133,13 +134,31 @@ export function AiModelPicker({
   const currentGroup = groups.find(sameGroup)
   const paid = aiSubscriptionText(lang, 'pickerPaid')
   const paidTitle = aiSubscriptionText(lang, 'pickerPaidTitle')
-  const chipText = !(currentUsable && current)
+  const usable = currentUsable && current
+  // the concrete model a subscription runs on, when its CLI listed its models: under
+  // "automatic" too, so the chip tells what will answer
+  const running = usable ? picked?.resolved : undefined
+  const modelName = aiSubscriptionModelName(settings, subscriptionStatuses ?? {}, running)
+  const runningGroup = groups.find((g) => g.kind === 'subscription' && g.id === running)
+  const modelId = runningGroup?.details?.get(picked?.model ?? '')?.concrete
+  const chipText = !usable
     ? subscriptionStatuses
       ? aiSubscriptionText(lang, 'pickerNotConnected')
       : strings.choose
     : currentGroup?.kind === 'auto'
-      ? aiSubscriptionText(lang, 'pickerAutoUsing', { provider: currentGroup.label })
-      : current.model || (currentGroup?.label ?? '')
+      ? modelName
+        ? aiSubscriptionText(lang, 'pickerAutoUsingModel', {
+            provider: currentGroup.label,
+            model: modelName,
+          })
+        : aiSubscriptionText(lang, 'pickerAutoUsing', { provider: currentGroup.label })
+      : modelName && currentGroup
+        ? `${currentGroup.label} · ${modelName}`
+        : current.model || (currentGroup?.label ?? '')
+  // a narrow panel cuts the chip short: the tooltip carries the whole text and the model id
+  const chipTip = modelName
+    ? `${strings.title}: ${chipText}${modelId ? ` (${modelId})` : ''}`
+    : strings.title
 
   return (
     <div
@@ -159,7 +178,7 @@ export function AiModelPicker({
         onClick={toggle}
         aria-haspopup="listbox"
         aria-expanded={open}
-        data-tip={strings.title}
+        data-tip={chipTip}
         aria-label={`${strings.title}: ${chipText}`}
       >
         {currentUsable && currentGroup && <PickerMark group={currentGroup} />}
@@ -214,6 +233,12 @@ export function AiModelPicker({
                 )}
                 {(g.models.length > 0 ? g.models : ['']).map((m) => {
                   const selected = sameGroup(g) && (g.kind === 'auto' || current?.model === m)
+                  // what the CLI itself says about this model, when it listed its models
+                  const detail = g.details?.get(m)
+                  const autoModel =
+                    g.kind === 'auto'
+                      ? aiSubscriptionModelName(settings, subscriptionStatuses ?? {}, g.resolved)
+                      : undefined
                   return (
                     <button
                       key={`${g.id}:${g.endpoint ?? ''}:${m}`}
@@ -226,10 +251,27 @@ export function AiModelPicker({
                       {g.kind === 'auto' && <PickerMark group={g} />}
                       <span className="ai-model-item-text">
                         {g.kind === 'auto'
-                          ? aiSubscriptionText(lang, 'pickerAutoUsing', { provider: g.label })
+                          ? autoModel
+                            ? aiSubscriptionText(lang, 'pickerAutoUsingModel', {
+                                provider: g.label,
+                                model: autoModel,
+                              })
+                            : aiSubscriptionText(lang, 'pickerAutoUsing', { provider: g.label })
                           : g.kind === 'subscription'
-                            ? m || aiSubscriptionText(lang, 'pickerDefaultModel')
+                            ? m
+                              ? (detail?.name ?? m)
+                              : detail
+                                ? aiSubscriptionText(lang, 'pickerDefaultModelNamed', {
+                                    model: detail.name,
+                                  })
+                                : aiSubscriptionText(lang, 'pickerDefaultModel')
                             : m || g.label}
+                        {detail?.concrete && (
+                          <>
+                            {' '}
+                            <span className="ai-model-item-id">{detail.concrete}</span>
+                          </>
+                        )}
                       </span>
                       {selected && (
                         <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden>
