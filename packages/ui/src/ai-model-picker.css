@@ -12,8 +12,9 @@
   gap: 5px;
   height: 24px;
   max-width: 200px;
+  min-width: 0;
   padding: 0 7px 0 6px;
-  flex-shrink: 0;
+  flex-shrink: 1;
   border: 1px solid transparent;
   border-radius: var(--radius-30);
   background: none;

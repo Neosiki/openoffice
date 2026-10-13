@@ -921,13 +921,16 @@ describe('AiModelPicker under the subscription contract', () => {
 
     it('shows the concrete model on the chip under the automatic selection', async () => {
       await mountIn('en', defaultAiSettings())
-      expect(chip()).toBe('Automatic · Claude · Opus 5.5')
+      // the footer is narrow: the chip names the model, the tooltip adds the provider and the id
+      expect(chip()).toBe('Automatic · Opus 5.5')
+      expect(tip()).toContain('Automatic · Claude · Opus 5.5')
       expect(tip()).toContain('claude-opus-5-5')
       await mountIn('ko', defaultAiSettings())
-      expect(chip()).toBe('자동 · Claude · Opus 5.5')
+      expect(chip()).toBe('자동 · Opus 5.5')
+      expect(tip()).toContain('자동 · Claude · Opus 5.5')
       // the model the provider under "automatic" has stored is the one named
       await mountIn('en', { ...picked('claude-code', 'fable'), provider: 'auto' })
-      expect(chip()).toBe('Automatic · Claude · Fable 5.1')
+      expect(chip()).toBe('Automatic · Fable 5.1')
     })
 
     it('shows the provider and the concrete model on the chip for an explicit selection', async () => {

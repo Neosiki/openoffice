@@ -141,7 +141,7 @@ export function AiModelPicker({
   const modelName = aiSubscriptionModelName(settings, subscriptionStatuses ?? {}, running)
   const runningGroup = groups.find((g) => g.kind === 'subscription' && g.id === running)
   const modelId = runningGroup?.details?.get(picked?.model ?? '')?.concrete
-  const chipText = !usable
+  const fullText = !usable
     ? subscriptionStatuses
       ? aiSubscriptionText(lang, 'pickerNotConnected')
       : strings.choose
@@ -155,9 +155,14 @@ export function AiModelPicker({
       : modelName && currentGroup
         ? `${currentGroup.label} · ${modelName}`
         : current.model || (currentGroup?.label ?? '')
-  // a narrow panel cuts the chip short: the tooltip carries the whole text and the model id
+  // The composer footer is narrow: under automatic the chip names the model and leaves the
+  // provider to the tooltip and the list, so the model is not the part that gets cut off.
+  const chipText =
+    usable && currentGroup?.kind === 'auto' && modelName
+      ? aiSubscriptionText(lang, 'pickerAutoUsing', { provider: modelName })
+      : fullText
   const chipTip = modelName
-    ? `${strings.title}: ${chipText}${modelId ? ` (${modelId})` : ''}`
+    ? `${strings.title}: ${fullText}${modelId ? ` (${modelId})` : ''}`
     : strings.title
 
   return (
@@ -179,7 +184,7 @@ export function AiModelPicker({
         aria-haspopup="listbox"
         aria-expanded={open}
         data-tip={chipTip}
-        aria-label={`${strings.title}: ${chipText}`}
+        aria-label={`${strings.title}: ${fullText}`}
       >
         {currentUsable && currentGroup && <PickerMark group={currentGroup} />}
         <span className="ai-model-chip-text">{chipText}</span>
