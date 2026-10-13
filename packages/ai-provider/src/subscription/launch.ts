@@ -1,0 +1,247 @@
+/**
+ * The two things a user can start from a provider that is not connected: the
+ * CLI's own login, and the vendor's install command. Both open a terminal
+ * window of their own and belong to the vendor from there on; the app only
+ * learns the outcome from the next status check.
+ *
+ * Node cannot give a child process a console window of its own on Windows (a
+ * detached child gets no console at all), so both go through a system program
+ * that can: `Start-Process` for the login, `start` for the install command.
+ */
+import { spawn as nodeSpawn } from 'node:child_process'
+import { isSubscriptionProvider } from '../provider-selection'
+import type { AiSubscriptionProviderId } from '../types'
+import {
+  SUBSCRIPTION_INSTALL_COMMANDS,
+  SUBSCRIPTION_INSTALL_URLS,
+  type SubscriptionLaunchResult,
+} from './contract'
+import { subscriptionChildEnv } from './env'
+import {
+  locateSubscriptionProgram,
+  type SubscriptionLocator,
+  type SubscriptionProgram,
+} from './locate'
+import {
+  sharedSubscriptionChildRegistry,
+  spawnSubscriptionProgram,
+  windowsSystemTool,
+  type SubscriptionChildLike,
+  type SubscriptionChildRegistry,
+  type SubscriptionSpawn,
+} from './process'
+
+/** The CLI's own sign-in command */
+const LOGIN_ARGS: Record<AiSubscriptionProviderId, string[]> = {
+  'claude-code': ['auth', 'login'],
+  codex: ['login'],
+}
+
+/** Carry the program and its arguments to the login window script as data */
+export const SUBSCRIPTION_LOGIN_EXE_ENV = 'GENOFFICE_SUBSCRIPTION_LOGIN_EXE'
+export const SUBSCRIPTION_LOGIN_ARGS_ENV = 'GENOFFICE_SUBSCRIPTION_LOGIN_ARGS'
+
+/**
+ * Opens the login program in a console window of its own and waits for it.
+ * A constant: the program path and its arguments arrive in two environment
+ * variables and are handed to `Start-Process` as values, so nothing the user
+ * configured is ever read as PowerShell code. The two variables are removed
+ * before the program starts.
+ */
+const LOGIN_WINDOW_SCRIPT = [
+  `$exe = $env:${SUBSCRIPTION_LOGIN_EXE_ENV}`,
+  `$arguments = $env:${SUBSCRIPTION_LOGIN_ARGS_ENV} -split "\`n"`,
+  `Remove-Item Env:${SUBSCRIPTION_LOGIN_EXE_ENV}, Env:${SUBSCRIPTION_LOGIN_ARGS_ENV}`,
+  'Start-Process -FilePath $exe -ArgumentList $arguments -Wait',
+].join('; ')
+
+/** `Start-Process` joins its argument list with spaces, so an argument with a space is quoted here */
+function quoteWindowsArgument(argument: string): string {
+  if (!/[\s"]/.test(argument)) return argument
+  return `"${argument.replace(/(\\*)"/g, '$1$1\\"').replace(/(\\+)$/, '$1$1')}"`
+}
+
+/** How long a child without a pid is given to say why it did not start */
+const START_FAILURE_WAIT_MS = 300
+
+function message(error: unknown): string {
+  return error instanceof Error ? error.message : String(error)
+}
+
+/** Null when the child started; the reason when it did not */
+function startFailure(child: SubscriptionChildLike): Promise<string | null> {
+  return new Promise((resolve) => {
+    let settled = false
+    const settle = (failure: string | null): void => {
+      if (settled) return
+      settled = true
+      resolve(failure)
+    }
+    // a later error (the window was closed, the program crashed) is not a failed start
+    child.once('error', (error: unknown) => settle(message(error)))
+    if (child.pid !== undefined) {
+      settle(null)
+      return
+    }
+    const timer = setTimeout(
+      () => settle('The program could not be started'),
+      START_FAILURE_WAIT_MS,
+    )
+    timer.unref?.()
+  })
+}
+
+export interface SubscriptionLoginOptions {
+  /** the user's own path to the CLI (the Codex `cliPath` setting) */
+  configuredPath?: string | undefined
+  /** called once when the login has ended, however it ended */
+  onExit?: (() => void) | undefined
+  locate?: SubscriptionLocator | undefined
+  spawn?: SubscriptionSpawn | undefined
+  platform?: NodeJS.Platform | undefined
+  baseEnv?: NodeJS.ProcessEnv | undefined
+  /** where the login is registered for shutdown; the shared registry when absent, null for none */
+  registry?: SubscriptionChildRegistry | null | undefined
+}
+
+function startLogin(
+  program: SubscriptionProgram,
+  options: SubscriptionLoginOptions,
+): SubscriptionChildLike {
+  const platform = options.platform ?? process.platform
+  const args = LOGIN_ARGS[program.provider]
+  if (platform !== 'win32') {
+    // the CLI opens the browser itself; there is no terminal to show
+    return spawnSubscriptionProgram(program, args, {
+      stdio: 'ignore',
+      platform,
+      baseEnv: options.baseEnv,
+      spawn: options.spawn,
+      registry: options.registry,
+    })
+  }
+  const env = subscriptionChildEnv({
+    base: options.baseEnv,
+    platform,
+    command: program.command,
+    extra: {
+      ...program.env,
+      [SUBSCRIPTION_LOGIN_EXE_ENV]: program.command,
+      [SUBSCRIPTION_LOGIN_ARGS_ENV]: [...program.prefixArgs, ...args]
+        .map(quoteWindowsArgument)
+        .join('\n'),
+    },
+  })
+  const spawn = options.spawn ?? nodeSpawn
+  const launcher = windowsSystemTool(env, 'WindowsPowerShell', 'v1.0', 'powershell.exe')
+  const child = spawn(
+    launcher,
+    [
+      '-NoProfile',
+      '-NonInteractive',
+      '-NoLogo',
+      '-WindowStyle',
+      'Hidden',
+      '-Command',
+      LOGIN_WINDOW_SCRIPT,
+    ],
+    { env, stdio: 'ignore', windowsHide: true },
+  )
+  // The login program is a child of this launcher, so ending the launcher's tree ends it.
+  // The launcher is what gets recorded: it is the process whose pid the app holds.
+  const registry =
+    options.registry === undefined ? sharedSubscriptionChildRegistry() : options.registry
+  registry?.track(child, { provider: program.provider, command: launcher })
+  return child
+}
+
+/**
+ * Start the CLI's own login (`claude auth login`, `codex login`) with the
+ * sanitised environment. On Windows it runs in a console window of its own,
+ * where the vendor's flow prints its link and takes a pasted code; elsewhere
+ * the flow runs in the browser the CLI opens. The app shows no login form and
+ * never sees the credentials. A window the user closes without signing in
+ * simply leaves the provider `signed-out`.
+ */
+export async function launchSubscriptionLogin(
+  provider: AiSubscriptionProviderId,
+  options: SubscriptionLoginOptions = {},
+): Promise<SubscriptionLaunchResult> {
+  if (!isSubscriptionProvider(provider)) return { ok: false, reason: 'invalid' }
+  let program
+  try {
+    program = await (options.locate ?? locateSubscriptionProgram)(provider, {
+      configuredPath: options.configuredPath,
+    })
+  } catch (error) {
+    return { ok: false, reason: 'failed', error: message(error) }
+  }
+  if (!program) {
+    return { ok: false, reason: 'not-installed', installUrl: SUBSCRIPTION_INSTALL_URLS[provider] }
+  }
+  try {
+    const child = startLogin(program, options)
+    const failure = await startFailure(child)
+    if (failure) return { ok: false, reason: 'failed', error: failure }
+    if (options.onExit) child.once('exit', options.onExit)
+    child.unref?.()
+    return { ok: true }
+  } catch (error) {
+    return { ok: false, reason: 'failed', error: message(error) }
+  }
+}
+
+/**
+ * The command line of the install window: `start` opens a new console, and the
+ * PowerShell in it runs the vendor command and stays open. Built only from the
+ * constant in `SUBSCRIPTION_INSTALL_COMMANDS`.
+ */
+export function subscriptionInstallCommandLine(provider: AiSubscriptionProviderId): string {
+  return `start "" powershell.exe -NoLogo -NoExit -Command "${SUBSCRIPTION_INSTALL_COMMANDS[provider]}"`
+}
+
+export interface SubscriptionInstallOptions {
+  spawn?: SubscriptionSpawn | undefined
+  platform?: NodeJS.Platform | undefined
+  env?: NodeJS.ProcessEnv | undefined
+}
+
+/**
+ * Run the vendor's install command in a new, visible terminal window that
+ * stays open, so the user sees it work or fail. This is the one place a shell
+ * interprets a command line, and the line is a constant: it is looked up by
+ * provider id and contains no setting, path or other outside text.
+ *
+ * The app downloads nothing itself and does not wait for the installer. If the
+ * command fails (no winget, no network) the provider simply stays
+ * `not-installed`; `installUrl` is where to install by hand. The commands are
+ * Windows ones: other systems get `unsupported` and the same link.
+ */
+export async function launchSubscriptionInstall(
+  provider: AiSubscriptionProviderId,
+  options: SubscriptionInstallOptions = {},
+): Promise<SubscriptionLaunchResult> {
+  if (!isSubscriptionProvider(provider)) return { ok: false, reason: 'invalid' }
+  const installUrl = SUBSCRIPTION_INSTALL_URLS[provider]
+  if ((options.platform ?? process.platform) !== 'win32') {
+    return { ok: false, reason: 'unsupported', installUrl }
+  }
+  const env = options.env ?? process.env
+  try {
+    const spawn = options.spawn ?? nodeSpawn
+    const child = spawn(subscriptionInstallCommandLine(provider), [], {
+      env,
+      // cmd.exe by full path; it exits as soon as `start` has opened the window
+      shell: windowsSystemTool(env, 'cmd.exe'),
+      stdio: 'ignore',
+      windowsHide: true,
+    })
+    const failure = await startFailure(child)
+    if (failure) return { ok: false, reason: 'failed', error: failure, installUrl }
+    // the installer window is the user's: it is not tracked and not ended with the app
+    child.unref?.()
+    return { ok: true }
+  } catch (error) {
+    return { ok: false, reason: 'failed', error: message(error), installUrl }
+  }
+}

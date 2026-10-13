@@ -47,6 +47,25 @@ export {
 } from './image-backend'
 export type { AiImageBackend, AiImageBackendContext } from './image-backend'
 export {
+  SUBSCRIPTION_INSTALL_COMMANDS,
+  SUBSCRIPTION_INSTALL_URLS,
+  SUBSCRIPTION_IPC_CHANNELS,
+  checkingSubscriptionStatus,
+  subscriptionStatusErrorKind,
+} from './subscription/contract'
+export type {
+  SubscriptionIpcChannel,
+  SubscriptionIpcContract,
+  SubscriptionLaunchFailure,
+  SubscriptionLaunchResult,
+  SubscriptionMeteredRequest,
+  SubscriptionMeteredResult,
+  SubscriptionProviderRequest,
+  SubscriptionRecheckRequest,
+  SubscriptionStatusErrorKind,
+  SubscriptionStatusMap,
+} from './subscription/contract'
+export {
   AI_PROVIDERS,
   activeProvider,
   cloudToolsEnabled,
