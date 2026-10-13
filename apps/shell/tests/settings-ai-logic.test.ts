@@ -1,0 +1,334 @@
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { AI_MEDIA_PROVIDERS, AI_PROVIDERS, defaultAiSettings } from '@genoffice/ai-provider'
+import type { AiSettings, AiSubscriptionStatus } from '@genoffice/ai-provider'
+import {
+  advancedProviderIds,
+  aiSelectionChoices,
+  aiSelectionValue,
+  changeAiSettings,
+  initialAdvancedProvider,
+  mediaKeyProviders,
+  mediaSelection,
+  mediaSpecialChoices,
+  withAiSelection,
+  withLiveSelectionFields,
+} from '../src/renderer/src/settings-ai'
+import {
+  checkingSubscriptionStatuses,
+  subscriptionLaunchResultOf,
+  subscriptionStatusMapOf,
+} from '../src/shared/subscription-api'
+
+/**
+ * The rules behind the AI part of Settings (src/renderer/src/settings-ai.ts):
+ * which connections "AI to use" lists, what picking one writes, and which
+ * choices the media blocks offer.
+ */
+
+function status(
+  provider: AiSubscriptionStatus['provider'],
+  state: AiSubscriptionStatus['state'],
+  meteredAccepted = false,
+): AiSubscriptionStatus {
+  return { provider, state, meteredAccepted }
+}
+
+function settingsWith(patch: Partial<AiSettings> = {}): AiSettings {
+  return { ...defaultAiSettings(), ...patch }
+}
+
+function withOpenAiKey(settings: AiSettings): AiSettings {
+  return {
+    ...settings,
+    providers: { ...settings.providers, openai: { apiKey: 'sk-test', model: 'gpt-test' } },
+  }
+}
+
+describe('"AI to use" choices', () => {
+  it('always offers auto, and names what it runs on only while a subscription is ready', () => {
+    const none = aiSelectionChoices(settingsWith(), checkingSubscriptionStatuses())
+    expect(none.map((choice) => choice.value)).toEqual(['auto'])
+    expect(none[0]!.name).toBeUndefined()
+
+    const ready = aiSelectionChoices(settingsWith(), {
+      'claude-code': status('claude-code', 'ready'),
+      codex: status('codex', 'ready'),
+    })
+    expect(ready.map((choice) => choice.value)).toEqual(['auto', 'claude-code', 'codex'])
+    expect(ready[0]!.name).toBe('Claude')
+    expect(ready.every((choice) => !choice.metered && !choice.unavailable)).toBe(true)
+  })
+
+  it('never offers a metered login the user has not accepted', () => {
+    const choices = aiSelectionChoices(settingsWith(), {
+      'claude-code': status('claude-code', 'ready'),
+      codex: status('codex', 'metered'),
+    })
+    expect(choices.map((choice) => choice.value)).toEqual(['auto', 'claude-code'])
+  })
+
+  it('needs the acceptance in both the settings and the status before a metered login is listed', () => {
+    const statuses = {
+      'claude-code': status('claude-code', 'signed-out'),
+      codex: status('codex', 'metered', true),
+    }
+    // the status says accepted, the settings do not: a flag that outlived its login
+    expect(aiSelectionChoices(settingsWith(), statuses).map((c) => c.value)).toEqual(['auto'])
+
+    const accepted = aiSelectionChoices(
+      settingsWith({ meteredAccepted: { codex: true } }),
+      statuses,
+    )
+    expect(accepted.map((choice) => choice.value)).toEqual(['auto', 'codex'])
+    expect(accepted[1]).toMatchObject({ kind: 'subscription', metered: true })
+    // auto never lands on a connection that costs money
+    expect(accepted[0]!.name).toBeUndefined()
+  })
+
+  it('lists a key provider only once its settings are filled in', () => {
+    const statuses = checkingSubscriptionStatuses()
+    expect(aiSelectionChoices(settingsWith(), statuses).map((c) => c.value)).toEqual(['auto'])
+    const configured = aiSelectionChoices(withOpenAiKey(settingsWith()), statuses)
+    expect(configured.map((choice) => choice.value)).toEqual(['auto', 'openai'])
+    expect(configured[1]).toMatchObject({ kind: 'key', metered: false })
+  })
+
+  it('keeps a stored selection that cannot run in the list, marked and not pickable', () => {
+    const settings = settingsWith({ provider: 'codex' })
+    const choices = aiSelectionChoices(settings, {
+      'claude-code': status('claude-code', 'ready'),
+      codex: status('codex', 'metered'),
+    })
+    expect(aiSelectionValue(settings)).toBe('codex')
+    const stored = choices.find((choice) => choice.value === 'codex')
+    expect(stored).toMatchObject({ unavailable: true, name: 'Codex' })
+    // an unavailable entry writes nothing
+    expect(withAiSelection(settingsWith({ provider: 'auto' }), stored!).provider).toBe('auto')
+  })
+
+  it('reads a removed provider id as auto', () => {
+    const settings = settingsWith({ provider: 'genspark' })
+    expect(aiSelectionValue(settings)).toBe('auto')
+    const choices = aiSelectionChoices(settings, checkingSubscriptionStatuses())
+    expect(choices.map((choice) => choice.value)).toEqual(['auto'])
+  })
+
+  it('lists each self-hosted endpoint on its own and selects it by id', () => {
+    const settings = settingsWith({
+      customEndpoints: [
+        { id: 'ep-a', name: 'Local', baseUrl: 'http://127.0.0.1:1/v1', apiKey: '', model: 'a' },
+        { id: 'ep-b', name: 'Lab', baseUrl: 'http://127.0.0.1:2/v1', apiKey: '', model: 'b' },
+      ],
+      customEndpoint: 'ep-a',
+    })
+    const choices = aiSelectionChoices(settings, checkingSubscriptionStatuses())
+    expect(choices.map((choice) => choice.value)).toEqual(['auto', 'custom::ep-a', 'custom::ep-b'])
+    const next = withAiSelection(settings, choices[2]!)
+    expect(next.provider).toBe('custom')
+    expect(next.customEndpoint).toBe('ep-b')
+    expect(next.providers.custom.model).toBe('b')
+    expect(aiSelectionValue(next)).toBe('custom::ep-b')
+  })
+})
+
+describe('picking a choice', () => {
+  const statuses = {
+    'claude-code': status('claude-code', 'ready'),
+    codex: status('codex', 'ready'),
+  }
+
+  it('writes auto or the explicit provider id and nothing else', () => {
+    const settings = withOpenAiKey(settingsWith())
+    const choices = aiSelectionChoices(settings, statuses)
+    const pick = (value: string) =>
+      withAiSelection(
+        settings,
+        choices.find((choice) => choice.value === value)!,
+      )
+
+    expect(pick('claude-code').provider).toBe('claude-code')
+    expect(pick('codex').provider).toBe('codex')
+    expect(pick('openai').provider).toBe('openai')
+    expect(pick('auto').provider).toBe('auto')
+    expect(pick('openai').providers).toEqual(settings.providers)
+  })
+})
+
+describe('a key pane save', () => {
+  it('takes the fields the visible part writes from the file as it is now', () => {
+    const draft = settingsWith({ provider: 'auto', headlessSubscriptionEnabled: false })
+    const latest = settingsWith({
+      provider: 'codex',
+      headlessSubscriptionEnabled: true,
+      subscriptionNoticeSeen: true,
+      meteredAccepted: { codex: true },
+    })
+    const merged = withLiveSelectionFields({ ...draft, maxOutputTokens: 9216 }, latest)
+    expect(merged).toMatchObject({
+      provider: 'codex',
+      headlessSubscriptionEnabled: true,
+      subscriptionNoticeSeen: true,
+      meteredAccepted: { codex: true },
+      maxOutputTokens: 9216,
+    })
+    // nothing readable: the draft goes out as it is
+    expect(withLiveSelectionFields(draft, null)).toBe(draft)
+  })
+})
+
+describe('a change saved at once', () => {
+  afterEach(() => vi.unstubAllGlobals())
+
+  function stubSettingsFile(initial: AiSettings | null) {
+    const file = { stored: initial, writes: 0 }
+    vi.stubGlobal('window', {
+      aiOffice: {
+        getAiSettings: async () => {
+          // a real read crosses to the main process: let other work interleave
+          await new Promise((resolve) => setTimeout(resolve, 5))
+          if (!file.stored) throw new Error("No handler registered for 'ai:get-settings'")
+          return file.stored
+        },
+        setAiSettings: async (next: AiSettings) => {
+          file.stored = next
+          file.writes += 1
+        },
+      },
+    })
+    return file
+  }
+
+  it('starts from the file as it is, so two quick changes both land', async () => {
+    const file = stubSettingsFile(settingsWith())
+    const [first, second] = await Promise.all([
+      changeAiSettings((current) => ({ ...current, headlessSubscriptionEnabled: true })),
+      changeAiSettings((current) => ({ ...current, provider: 'codex' })),
+    ])
+    expect(first).toMatchObject({ headlessSubscriptionEnabled: true, provider: 'auto' })
+    expect(second).toMatchObject({ headlessSubscriptionEnabled: true, provider: 'codex' })
+    expect(file.stored).toMatchObject({ headlessSubscriptionEnabled: true, provider: 'codex' })
+    expect(file.writes).toBe(2)
+  })
+
+  it('writes neither a removed selection nor the removed switch', async () => {
+    const legacy = settingsWith({ provider: 'genspark', gskToolsEnabled: false })
+    legacy.search = { ...legacy.search!, provider: 'genspark' }
+    const file = stubSettingsFile(legacy)
+    await changeAiSettings((current) => ({ ...current, subscriptionNoticeSeen: true }))
+    expect(file.stored).toMatchObject({ provider: 'auto', subscriptionNoticeSeen: true })
+    expect(file.stored!.search?.provider).toBe('parallel')
+    expect('gskToolsEnabled' in file.stored!).toBe(false)
+  })
+
+  it('writes nothing, and does not throw, when the file cannot be read', async () => {
+    const file = stubSettingsFile(null)
+    await expect(changeAiSettings((current) => current)).resolves.toBeNull()
+    expect(file.writes).toBe(0)
+  })
+})
+
+describe('the Advanced key pane', () => {
+  it('lists neither the removed provider nor Claude, and keeps Codex for its path', () => {
+    const listed = advancedProviderIds(AI_PROVIDERS)
+    expect(listed).not.toContain('genspark')
+    expect(listed).not.toContain('claude-code')
+    expect(listed).toContain('codex')
+    expect(listed).toContain('custom')
+    expect(listed).toContain('openai')
+  })
+
+  it('opens on the selected provider, or on the first one that takes a key', () => {
+    expect(initialAdvancedProvider({ provider: 'openai' }, AI_PROVIDERS)).toBe('openai')
+    expect(initialAdvancedProvider({ provider: 'codex' }, AI_PROVIDERS)).toBe('codex')
+    const first = initialAdvancedProvider({ provider: 'auto' }, AI_PROVIDERS)
+    expect(first).toBe(
+      AI_PROVIDERS.find((m) => !['genspark', 'claude-code', 'codex'].includes(m.id))!.id,
+    )
+    // a subscription or a removed id selected: the pane still opens on a key provider
+    expect(initialAdvancedProvider({ provider: 'claude-code' }, AI_PROVIDERS)).toBe(first)
+    expect(initialAdvancedProvider({ provider: 'genspark' }, AI_PROVIDERS)).toBe(first)
+  })
+})
+
+describe('media choices', () => {
+  it('offers the Codex subscription for image generation only when the build can do it', () => {
+    expect(mediaSpecialChoices('image', true)).toEqual(['codex', 'none'])
+    expect(mediaSpecialChoices('image', false)).toEqual(['none'])
+  })
+
+  it('offers "ask the current AI" for image analysis and "none" for video analysis', () => {
+    expect(mediaSpecialChoices('analysis', true)).toEqual(['chat'])
+    expect(mediaSpecialChoices('video', true)).toEqual(['none'])
+  })
+
+  it('leaves the removed provider out of every key list', () => {
+    for (const block of ['image', 'analysis', 'video'] as const) {
+      const ids = mediaKeyProviders(block, AI_MEDIA_PROVIDERS).map((meta) => meta.id)
+      expect(ids).not.toContain('genspark')
+      expect(ids.length).toBeGreaterThan(0)
+    }
+  })
+
+  it('shows a stored Codex image selection as "none" where Codex cannot generate', () => {
+    const settings = settingsWith()
+    settings.media = { ...settings.media!, imageProvider: 'codex' }
+    expect(mediaSelection('image', settings, AI_MEDIA_PROVIDERS, true)).toBe('codex')
+    expect(mediaSelection('image', settings, AI_MEDIA_PROVIDERS, false)).toBe('none')
+  })
+
+  it('shows a stored key provider as it is, and anything else as the default', () => {
+    const image = mediaKeyProviders('image', AI_MEDIA_PROVIDERS)[0]!.id
+    const video = mediaKeyProviders('video', AI_MEDIA_PROVIDERS)[0]!.id
+    const settings = settingsWith()
+    settings.media = {
+      ...settings.media!,
+      imageProvider: image,
+      analysisProvider: 'genspark',
+      videoAnalysisProvider: video,
+    }
+    expect(mediaSelection('image', settings, AI_MEDIA_PROVIDERS, false)).toBe(image)
+    expect(mediaSelection('analysis', settings, AI_MEDIA_PROVIDERS, false)).toBe('chat')
+    expect(mediaSelection('video', settings, AI_MEDIA_PROVIDERS, false)).toBe(video)
+    settings.media = { ...settings.media, videoAnalysisProvider: 'genspark' }
+    expect(mediaSelection('video', settings, AI_MEDIA_PROVIDERS, false)).toBe('none')
+  })
+})
+
+describe('IPC answers', () => {
+  it('reads a missing or malformed status as checking', () => {
+    expect(subscriptionStatusMapOf(undefined)).toEqual(checkingSubscriptionStatuses())
+    expect(subscriptionStatusMapOf('nope')).toEqual(checkingSubscriptionStatuses())
+    const partial = subscriptionStatusMapOf({
+      'claude-code': { provider: 'claude-code', state: 'ready', planName: 'max' },
+      codex: { provider: 'codex', state: 'no-such-state' },
+    })
+    expect(partial['claude-code']).toEqual({
+      provider: 'claude-code',
+      state: 'ready',
+      planName: 'max',
+      meteredAccepted: false,
+    })
+    expect(partial.codex).toEqual({ provider: 'codex', state: 'checking', meteredAccepted: false })
+  })
+
+  it('drops the spawn error text of a failed launch', () => {
+    expect(subscriptionLaunchResultOf({ ok: true })).toEqual({ ok: true })
+    expect(
+      subscriptionLaunchResultOf({
+        ok: false,
+        reason: 'unsupported',
+        error: 'spawn C:\\Users\\someone\\codex.exe ENOENT',
+        installUrl: 'https://developers.openai.com/codex/cli',
+      }),
+    ).toEqual({
+      ok: false,
+      reason: 'unsupported',
+      installUrl: 'https://developers.openai.com/codex/cli',
+    })
+    expect(subscriptionLaunchResultOf(null)).toEqual({ ok: false, reason: 'failed' })
+    expect(subscriptionLaunchResultOf({ ok: false, reason: 'weird' })).toEqual({
+      ok: false,
+      reason: 'failed',
+    })
+  })
+})

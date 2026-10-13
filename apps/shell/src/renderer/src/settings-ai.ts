@@ -1,0 +1,290 @@
+/**
+ * What the AI part of Settings offers and writes, as plain functions over the
+ * settings and the connection statuses: the "AI to use" choices, the media
+ * provider choices, and the shape of what gets saved. The components only lay
+ * these results out, so the rules are testable without a DOM.
+ */
+import {
+  AI_PROVIDERS,
+  REMOVED_AI_PROVIDER_IDS,
+  activeCustomEndpoint,
+  customEndpointLabel,
+  imageProviderSelection,
+  isSubscriptionProvider,
+  normalizeAiSettings,
+  providerSelectionOf,
+  resolveCustomEndpoints,
+  selectCustomEndpoint,
+} from '@genoffice/ai-provider/browser'
+import type {
+  AiProviderId,
+  AiProviderSelection,
+  AiSettings,
+  AiSubscriptionStatuses,
+} from '@genoffice/ai-provider/browser'
+import type { AiMediaProviderMeta } from '@genoffice/ai-provider'
+import { aiProviderDisplayName, aiProviderPickerGroups } from '@genoffice/ui'
+
+/**
+ * Whether the first-connection notice carries the sentence that Codex may keep
+ * conversation content on this PC. It stays in until the Codex bridge is known
+ * to prevent that: saying it needlessly is the safe side of the two.
+ */
+export const CODEX_MAY_KEEP_HISTORY = true
+
+// ── reading and writing ───────────────────────────────────
+
+/**
+ * The settings file as the screen works with it; null when it cannot be read.
+ * A file written before the subscription providers existed names a removed
+ * provider in its selections: those fall to their defaults here, and the
+ * removed cloud-tools switch is left out.
+ */
+export async function readAiSettings(): Promise<AiSettings | null> {
+  try {
+    const stored = await window.aiOffice.getAiSettings?.()
+    return stored ? normalizeAiSettings(stored) : null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Save a draft. It is normalized once more on the way out, so no edit path can
+ * write a removed selection or the removed cloud-tools switch back. Resolves
+ * to what was written.
+ */
+export async function writeAiSettings(draft: AiSettings): Promise<AiSettings> {
+  const next = normalizeAiSettings(draft)
+  await window.aiOffice.setAiSettings?.(next)
+  return next
+}
+
+/** the last read-change-write still under way; the next one waits for it */
+let lastChange: Promise<unknown> = Promise.resolve()
+
+/**
+ * Read, change, write: for the controls that save at once. Starting from the
+ * file as it is now keeps an edit made elsewhere (a composer chip, another
+ * window), and running one change at a time keeps two quick clicks from
+ * reading the same file and undoing each other. Resolves to what was written,
+ * or null when nothing could be.
+ */
+export function changeAiSettings(
+  change: (settings: AiSettings) => AiSettings,
+): Promise<AiSettings | null> {
+  const run = lastChange.then(async () => {
+    const current = await readAiSettings()
+    if (!current) return null
+    try {
+      return await writeAiSettings(change(current))
+    } catch {
+      return null
+    }
+  })
+  lastChange = run
+  return run
+}
+
+/**
+ * The fields the always-visible part of the AI screen writes at once (which AI
+ * to use, the accepted metered logins, the automatic-requests switch, the
+ * notice flag). A key pane saves a draft it loaded earlier; taking these from
+ * the file as it is now keeps that save from undoing them.
+ */
+export function withLiveSelectionFields(draft: AiSettings, latest: AiSettings | null): AiSettings {
+  if (!latest) return draft
+  return {
+    ...draft,
+    provider: latest.provider,
+    meteredAccepted: latest.meteredAccepted,
+    headlessSubscriptionEnabled: latest.headlessSubscriptionEnabled,
+    subscriptionNoticeSeen: latest.subscriptionNoticeSeen,
+  }
+}
+
+/** An id that older settings files and the catalogs still carry but that selects nothing any more */
+export function isRemovedProviderId(id: string): boolean {
+  return (REMOVED_AI_PROVIDER_IDS as readonly string[]).includes(id)
+}
+
+// ── which AI to use ───────────────────────────────────────
+
+/** separates the provider from the endpoint id in a choice value; no provider id contains it */
+const ENDPOINT_SEPARATOR = '::'
+
+export interface AiSelectionChoice {
+  /** dropdown value: the selection, plus the endpoint id for a self-hosted endpoint */
+  readonly value: string
+  readonly kind: 'auto' | 'subscription' | 'key'
+  readonly provider: AiProviderSelection
+  readonly endpoint?: string | undefined
+  /** the provider's name; on `auto`, the provider it runs on right now (absent while none is connected) */
+  readonly name?: string | undefined
+  /** an accepted metered login: selectable, shown with a cost marker */
+  readonly metered: boolean
+  /** the stored selection, listed although it cannot run right now; shown, never offered */
+  readonly unavailable: boolean
+}
+
+function choiceValue(provider: AiProviderSelection, endpoint?: string): string {
+  return endpoint ? `${provider}${ENDPOINT_SEPARATOR}${endpoint}` : provider
+}
+
+/** The value of the stored selection among `aiSelectionChoices` */
+export function aiSelectionValue(input: AiSettings): string {
+  const settings = resolveCustomEndpoints(input)
+  const provider = providerSelectionOf(settings)
+  return choiceValue(provider, provider === 'custom' ? settings.customEndpoint : undefined)
+}
+
+/**
+ * What "AI to use" lists. `auto` is always there. After it come the
+ * connections that can run now: a subscription that is `ready`, a metered
+ * login the user accepted (marked), and each key provider whose settings are
+ * filled in. A metered login that was not accepted is never among them. When
+ * the stored selection is none of these it is appended as `unavailable`, so
+ * the control shows what is stored instead of pretending it moved elsewhere.
+ */
+export function aiSelectionChoices(
+  input: AiSettings,
+  statuses: AiSubscriptionStatuses,
+): AiSelectionChoice[] {
+  const settings = resolveCustomEndpoints(input)
+  const groups = aiProviderPickerGroups(settings, statuses)
+  const auto = groups.find((group) => group.kind === 'auto')
+  const choices: AiSelectionChoice[] = [
+    {
+      value: 'auto',
+      kind: 'auto',
+      provider: 'auto',
+      name: auto?.label,
+      metered: false,
+      unavailable: false,
+    },
+  ]
+  for (const group of groups) {
+    if (group.kind === 'auto') continue
+    choices.push({
+      value: choiceValue(group.id, group.endpoint),
+      kind: group.kind,
+      provider: group.id,
+      endpoint: group.endpoint,
+      name: group.label,
+      metered: group.metered,
+      unavailable: false,
+    })
+  }
+  const current = aiSelectionValue(settings)
+  if (!choices.some((choice) => choice.value === current)) {
+    const provider = providerSelectionOf(settings) as AiProviderId
+    const endpoint = provider === 'custom' ? activeCustomEndpoint(settings) : undefined
+    choices.push({
+      value: current,
+      kind: isSubscriptionProvider(provider) ? 'subscription' : 'key',
+      provider,
+      endpoint: endpoint?.id,
+      name: endpoint
+        ? customEndpointLabel(endpoint, aiProviderDisplayName(provider))
+        : aiProviderDisplayName(provider),
+      metered: false,
+      unavailable: true,
+    })
+  }
+  return choices
+}
+
+/** Settings after picking a choice; an `unavailable` one changes nothing */
+export function withAiSelection(settings: AiSettings, choice: AiSelectionChoice): AiSettings {
+  if (choice.unavailable) return settings
+  if (choice.provider === 'auto') return { ...settings, provider: 'auto' }
+  if (choice.provider === 'custom' && choice.endpoint) {
+    return { ...selectCustomEndpoint(settings, choice.endpoint), provider: 'custom' }
+  }
+  return { ...settings, provider: choice.provider }
+}
+
+// ── key providers (Advanced) ──────────────────────────────
+
+/**
+ * Providers the Advanced key pane lists: everything that has something to
+ * fill in there. Claude runs on its own login and has no field of its own;
+ * Codex stays for the path of a custom install.
+ */
+export function advancedProviderIds(catalog: readonly { id: string }[]): AiProviderId[] {
+  const known = new Set<string>(AI_PROVIDERS.map((meta) => meta.id))
+  return catalog
+    .map((entry) => entry.id)
+    .filter(
+      (id) => known.has(id) && !isRemovedProviderId(id) && id !== 'claude-code',
+    ) as AiProviderId[]
+}
+
+/**
+ * The provider the key pane opens on: the stored selection when it is one of
+ * the listed providers, else the first one that takes a key. Opening the pane
+ * never changes which AI is in use.
+ */
+export function initialAdvancedProvider(
+  settings: Pick<AiSettings, 'provider'>,
+  catalog: readonly { id: string; needsCliPath?: boolean | undefined }[],
+): AiProviderId | undefined {
+  const listed = advancedProviderIds(catalog)
+  const selected = providerSelectionOf(settings)
+  if (selected !== 'auto' && listed.includes(selected)) return selected
+  return listed.find((id) => !catalog.find((entry) => entry.id === id)?.needsCliPath) ?? listed[0]
+}
+
+// ── image generation, image analysis, video analysis ──────
+
+export type MediaBlock = 'image' | 'analysis' | 'video'
+
+/** A selection that is not a key provider: the Codex subscription, the chat AI itself, or nothing */
+export type MediaSpecialChoice = 'codex' | 'chat' | 'none'
+
+/**
+ * The choices a media block offers ahead of the key providers. The Codex
+ * subscription is listed for image generation only when the main process says
+ * this build can do it.
+ */
+export function mediaSpecialChoices(
+  block: MediaBlock,
+  codexImageAvailable: boolean,
+): MediaSpecialChoice[] {
+  if (block === 'image') return codexImageAvailable ? ['codex', 'none'] : ['none']
+  if (block === 'analysis') return ['chat']
+  return ['none']
+}
+
+/** Key providers able to serve a media block */
+export function mediaKeyProviders(
+  block: MediaBlock,
+  catalog: readonly AiMediaProviderMeta[],
+): AiMediaProviderMeta[] {
+  return catalog.filter(
+    (meta) =>
+      !isRemovedProviderId(meta.id) &&
+      (block === 'image'
+        ? !!meta.imageProtocol
+        : block === 'video'
+          ? !!meta.analysisProtocol && meta.videoAnalysis
+          : !!meta.analysisProtocol),
+  )
+}
+
+/** The selection a media block shows: a special choice or a key provider id */
+export function mediaSelection(
+  block: MediaBlock,
+  settings: Pick<AiSettings, 'media'>,
+  catalog: readonly AiMediaProviderMeta[],
+  codexImageAvailable: boolean,
+): string {
+  if (block === 'image') return imageProviderSelection(settings, codexImageAvailable)
+  const stored: string | undefined =
+    block === 'video' ? settings.media?.videoAnalysisProvider : settings.media?.analysisProvider
+  const fallback = block === 'video' ? 'none' : 'chat'
+  if (stored === fallback) return fallback
+  return mediaKeyProviders(block, catalog).some((meta) => meta.id === stored)
+    ? (stored as string)
+    : fallback
+}

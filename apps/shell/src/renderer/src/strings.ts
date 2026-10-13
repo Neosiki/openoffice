@@ -257,6 +257,37 @@ export const strings = {
     setMcpLogEmpty: '暂无日志',
     setSecAbout: '关于',
     setSecIntegrations: '集成',
+    setSecAi: 'AI',
+    setSubTitle: '订阅连接',
+    setSubManage: '管理连接',
+    setSubInstallFailed: '无法运行安装命令。请按照官方安装说明进行安装。',
+    setSubLoginFailed: '无法开始登录。请确认程序已安装后重试。',
+    setAiUse: '使用的 AI',
+    setAiUseDesc:
+      '“自动”会使用已连接的订阅：优先 Claude，其次 Codex。它不会自动选择需要付费的连接。',
+    setAiUseUnavailable: '{provider} · 目前无法使用',
+    setAiNotice: '首次连接说明',
+    setAiNoticeView: '再次查看',
+    setAiAdvanced: '高级',
+    setAiAdvancedDesc:
+      'API Key、自建服务器、生图与搜索服务商，以及自动调用设置。大多数人无需更改。',
+    setAiKeyNote:
+      '使用该服务商的对话会用你自己填写的 key，并由该服务商向你收费。只有在“使用的 AI”中亲自选择它时才会使用。',
+    setAiHeadless: '允许自动调用使用订阅',
+    setAiHeadlessDesc:
+      '允许由终端命令或其他程序（MCP）发起的生图和图片解析使用你的 Claude 或 Codex 订阅。关闭时，这类请求只使用 key 方式的服务商。',
+    setAiHeadlessWarning: '两家公司都不建议让程序自动使用订阅，你的账号可能会受到限制。',
+    setAiHeadlessConfirm: '仍然开启',
+    setAiImageCodex: 'Codex 订阅',
+    setAiImageCodexHint:
+      'Codex 订阅已连接时，用该订阅生成图片。无法使用时，改用已设置好的 key 方式服务商。',
+    setAiMediaNone: '未选择',
+    setAiImageNoneHint:
+      '未选择服务商，因此使用第一个能够生成图片的服务商。如果都未设置，则无法生成图片。',
+    setAiAnalysisChat: '直接交给当前 AI',
+    setAiAnalysisChatHint: '图片会直接展示给正在对话的 AI，无需另外的 key。',
+    setAiVideoNoneHint:
+      '视频和音频解析需要支持视频的 key 方式服务商。在这里选择一个并填写 key 后即可使用。',
     intgHeroTitle: '在 AI 助手里使用 GenOffice',
     intgHeroDesc:
       '接好后，Claude Code、Codex、Cursor、Claude Desktop 等助手就能替你创建、转换、读取和编辑 Word、Excel、PowerPoint、PDF 和 Markdown 文件。全部在本机完成，不会上传任何内容。',
@@ -691,6 +722,41 @@ export const strings = {
     setMcpLogEmpty: 'No log entries yet',
     setSecAbout: 'About',
     setSecIntegrations: 'Integrations',
+    setSecAi: 'AI',
+    setSubTitle: 'Subscription connection',
+    setSubManage: 'Manage connections',
+    setSubInstallFailed:
+      'The install command could not be started. Follow the official install guide instead.',
+    setSubLoginFailed:
+      'The sign-in could not be started. Check that the program is installed, then try again.',
+    setAiUse: 'AI to use',
+    setAiUseDesc:
+      'Automatic uses a connected subscription: Claude first, then Codex. It never picks a connection that costs money.',
+    setAiUseUnavailable: '{provider} · cannot be used right now',
+    setAiNotice: 'First-connection notice',
+    setAiNoticeView: 'View again',
+    setAiAdvanced: 'Advanced',
+    setAiAdvancedDesc:
+      'API keys, self-hosted endpoints, image and search providers, and automatic requests. Most people never need these.',
+    setAiKeyNote:
+      'Chats on this provider use your own key, and that provider charges you for them. It is used only while you choose it yourself under "AI to use".',
+    setAiHeadless: 'Let automatic requests use a subscription',
+    setAiHeadlessDesc:
+      'Allows image generation and image analysis requested by a terminal command or another program (MCP) to run on your Claude or Codex subscription. When off, those requests use key providers only.',
+    setAiHeadlessWarning:
+      'Neither company recommends letting a program use your subscription automatically, and your account may be restricted.',
+    setAiHeadlessConfirm: 'Turn on anyway',
+    setAiImageCodex: 'Codex subscription',
+    setAiImageCodexHint:
+      'Images are generated on your Codex subscription while it is connected. When it cannot be used, a key provider that is set up is used instead.',
+    setAiMediaNone: 'None selected',
+    setAiImageNoneHint:
+      'No provider is chosen, so the first one that can generate images is used. If none is set up, image generation is unavailable.',
+    setAiAnalysisChat: 'Ask the current AI directly',
+    setAiAnalysisChatHint:
+      'Images are shown to the AI you are chatting with. No separate key is needed.',
+    setAiVideoNoneHint:
+      'Video and audio analysis needs a key provider that supports video. Choose one here and enter its key to use it.',
     intgHeroTitle: 'Use GenOffice from your AI assistant',
     intgHeroDesc:
       'Once connected, Claude Code, Codex, Cursor, Claude Desktop and similar assistants can create, convert, read and edit Word, Excel, PowerPoint, PDF and Markdown files for you. Everything runs on this computer; nothing is uploaded.',
@@ -1135,6 +1201,40 @@ export const strings = {
     setMcpLogEmpty: 'Chưa có mục nhật ký nào',
     setSecAbout: 'Giới thiệu',
     setSecIntegrations: 'Tích hợp',
+    setSecAi: 'AI',
+    setSubTitle: 'Kết nối gói đăng ký',
+    setSubManage: 'Quản lý kết nối',
+    setSubInstallFailed: 'Không thể chạy lệnh cài đặt. Hãy làm theo hướng dẫn cài đặt chính thức.',
+    setSubLoginFailed:
+      'Không thể bắt đầu đăng nhập. Hãy kiểm tra xem chương trình đã được cài đặt chưa rồi thử lại.',
+    setAiUse: 'AI sử dụng',
+    setAiUseDesc:
+      '"Tự động" dùng gói đăng ký đã kết nối: Claude trước, sau đó đến Codex. Chế độ này không bao giờ tự chọn kết nối phải trả phí.',
+    setAiUseUnavailable: '{provider} · hiện không dùng được',
+    setAiNotice: 'Thông báo khi kết nối lần đầu',
+    setAiNoticeView: 'Xem lại',
+    setAiAdvanced: 'Nâng cao',
+    setAiAdvancedDesc:
+      'Khóa API, máy chủ tự vận hành, nhà cung cấp hình ảnh và tìm kiếm, cùng thiết lập yêu cầu tự động. Hầu hết mọi người không cần đến các mục này.',
+    setAiKeyNote:
+      'Các cuộc trò chuyện qua nhà cung cấp này dùng khóa của riêng bạn và nhà cung cấp đó sẽ tính phí. Nhà cung cấp này chỉ được dùng khi bạn tự chọn trong mục "AI sử dụng".',
+    setAiHeadless: 'Cho phép yêu cầu tự động dùng gói đăng ký',
+    setAiHeadlessDesc:
+      'Cho phép việc tạo hình ảnh và phân tích hình ảnh do lệnh terminal hoặc chương trình khác (MCP) yêu cầu chạy bằng gói đăng ký Claude hoặc Codex của bạn. Khi tắt, các yêu cầu đó chỉ dùng nhà cung cấp theo khóa.',
+    setAiHeadlessWarning:
+      'Cả hai công ty đều không khuyến nghị để chương trình tự động dùng gói đăng ký, và tài khoản của bạn có thể bị hạn chế.',
+    setAiHeadlessConfirm: 'Vẫn bật',
+    setAiImageCodex: 'Gói đăng ký Codex',
+    setAiImageCodexHint:
+      'Hình ảnh được tạo bằng gói đăng ký Codex khi gói này đang kết nối. Khi không dùng được, nhà cung cấp theo khóa đã thiết lập sẽ được dùng thay thế.',
+    setAiMediaNone: 'Chưa chọn',
+    setAiImageNoneHint:
+      'Chưa chọn nhà cung cấp nào, nên nhà cung cấp đầu tiên có thể tạo hình ảnh sẽ được dùng. Nếu chưa thiết lập nhà cung cấp nào thì không thể tạo hình ảnh.',
+    setAiAnalysisChat: 'Hỏi trực tiếp AI hiện tại',
+    setAiAnalysisChatHint:
+      'Hình ảnh được đưa trực tiếp cho AI mà bạn đang trò chuyện. Không cần khóa riêng.',
+    setAiVideoNoneHint:
+      'Phân tích video và âm thanh cần một nhà cung cấp theo khóa có hỗ trợ video. Hãy chọn một nhà cung cấp ở đây và nhập khóa để sử dụng.',
     intgHeroTitle: 'Sử dụng GenOffice từ trợ lý AI của bạn',
     intgHeroDesc:
       'Sau khi kết nối, Claude Code, Codex, Cursor, Claude Desktop và các trợ lý tương tự có thể tạo, chuyển đổi, đọc và chỉnh sửa các tệp Word, Excel, PowerPoint, PDF và Markdown cho bạn. Mọi thứ đều chạy trên máy tính này; không có gì được tải lên.',
@@ -1594,6 +1694,40 @@ export const strings = {
     setMcpLogEmpty: 'ログはまだありません',
     setSecAbout: '情報',
     setSecIntegrations: '連携',
+    setSecAi: 'AI',
+    setSubTitle: 'サブスクリプションの接続',
+    setSubManage: '接続を管理',
+    setSubInstallFailed:
+      'インストールコマンドを実行できませんでした。公式のインストール手順に沿ってインストールしてください。',
+    setSubLoginFailed:
+      'ログインを開始できませんでした。プログラムがインストールされているか確認してから、もう一度お試しください。',
+    setAiUse: '使用する AI',
+    setAiUseDesc:
+      '「自動」は接続済みのサブスクリプションを使います。Claude が優先で、なければ Codex です。料金が発生する接続を自動で選ぶことはありません。',
+    setAiUseUnavailable: '{provider} · 現在は使用できません',
+    setAiNotice: '初回接続時の案内',
+    setAiNoticeView: 'もう一度見る',
+    setAiAdvanced: '詳細設定',
+    setAiAdvancedDesc:
+      'APIキー、自分で運用するサーバー、画像・検索のプロバイダー、自動呼び出しの設定です。ほとんどの場合、変更する必要はありません。',
+    setAiKeyNote:
+      'このプロバイダーでの会話には自分で入力したキーが使われ、料金はそのプロバイダーから請求されます。「使用する AI」で自分で選んでいる間だけ使われます。',
+    setAiHeadless: '自動呼び出しでサブスクリプションを使う',
+    setAiHeadlessDesc:
+      'ターミナルのコマンドや他のプログラム（MCP）から要求された画像生成と画像解析を、Claude または Codex のサブスクリプションで処理できるようにします。オフの場合、こうした要求にはキー方式のプロバイダーだけが使われます。',
+    setAiHeadlessWarning:
+      'プログラムがサブスクリプションを自動的に使うことは両社とも推奨しておらず、アカウントが制限される可能性があります。',
+    setAiHeadlessConfirm: 'それでもオンにする',
+    setAiImageCodex: 'Codex のサブスクリプション',
+    setAiImageCodexHint:
+      'Codex のサブスクリプションが接続されている間は、そのサブスクリプションで画像を生成します。使えないときは、設定済みのキー方式のプロバイダーを代わりに使います。',
+    setAiMediaNone: '選択なし',
+    setAiImageNoneHint:
+      'プロバイダーが選ばれていないため、画像を生成できる最初のプロバイダーを使います。設定済みのものがなければ、画像生成は利用できません。',
+    setAiAnalysisChat: '現在の AI に直接見せる',
+    setAiAnalysisChatHint: '画像は会話中の AI に直接渡されます。別のキーは必要ありません。',
+    setAiVideoNoneHint:
+      '動画と音声の解析には、動画に対応したキー方式のプロバイダーが必要です。ここで 1 つ選んでキーを入力すると使えるようになります。',
     intgHeroTitle: 'AI アシスタントから GenOffice を使う',
     intgHeroDesc:
       '接続すると、Claude Code、Codex、Cursor、Claude Desktop などのアシスタントが Word、Excel、PowerPoint、PDF、Markdown ファイルの作成・変換・読み取り・編集を代行します。すべてこの PC 上で完結し、何もアップロードされません。',
@@ -2049,6 +2183,39 @@ export const strings = {
     setMcpLogEmpty: '로그가 아직 없습니다',
     setSecAbout: '정보',
     setSecIntegrations: '연동',
+    setSecAi: 'AI',
+    setSubTitle: '구독 연결',
+    setSubManage: '연결 관리',
+    setSubInstallFailed: '설치 명령을 실행하지 못했습니다. 공식 설치 안내를 보고 설치해 주세요.',
+    setSubLoginFailed:
+      '로그인을 시작하지 못했습니다. 프로그램이 설치되어 있는지 확인한 뒤 다시 시도하세요.',
+    setAiUse: '사용할 AI',
+    setAiUseDesc:
+      '자동은 연결된 구독을 씁니다. Claude가 먼저이고, 없으면 Codex입니다. 요금이 나가는 연결은 자동으로 고르지 않습니다.',
+    setAiUseUnavailable: '{provider} · 지금 쓸 수 없음',
+    setAiNotice: '첫 연결 안내',
+    setAiNoticeView: '다시 보기',
+    setAiAdvanced: '고급',
+    setAiAdvancedDesc:
+      'API 키, 직접 운영하는 서버, 이미지·검색 제공업체, 자동 호출 설정입니다. 대부분은 바꿀 필요가 없습니다.',
+    setAiKeyNote:
+      '이 제공업체로 하는 대화는 직접 넣은 키를 쓰고, 요금은 그 회사에서 청구됩니다. "사용할 AI"에서 직접 고른 동안에만 쓰입니다.',
+    setAiHeadless: '자동 호출에 구독 사용',
+    setAiHeadlessDesc:
+      '터미널 명령이나 다른 프로그램(MCP)이 요청한 이미지 생성·이미지 분석을 Claude 또는 Codex 구독으로 처리하도록 허용합니다. 꺼져 있으면 그런 요청은 키 방식 제공업체만 씁니다.',
+    setAiHeadlessWarning:
+      '프로그램이 자동으로 구독을 쓰는 것은 두 회사가 권장하지 않으며, 계정에 제한이 걸릴 수 있습니다.',
+    setAiHeadlessConfirm: '그래도 켜기',
+    setAiImageCodex: 'Codex 구독',
+    setAiImageCodexHint:
+      'Codex 구독이 연결되어 있으면 그 구독으로 이미지를 만듭니다. 쓸 수 없을 때는 설정해 둔 키 방식 제공업체를 대신 씁니다.',
+    setAiMediaNone: '선택 없음',
+    setAiImageNoneHint:
+      '고른 제공업체가 없으므로, 이미지를 만들 수 있는 첫 번째 제공업체를 씁니다. 설정된 것이 없으면 이미지 생성을 쓸 수 없습니다.',
+    setAiAnalysisChat: '현재 AI에게 직접 보여 주기',
+    setAiAnalysisChatHint: '대화 중인 AI에게 이미지를 직접 보여 줍니다. 별도의 키가 필요 없습니다.',
+    setAiVideoNoneHint:
+      '동영상·음성 분석은 동영상을 지원하는 키 방식 제공업체가 있어야 합니다. 여기서 하나를 고르고 키를 넣으면 쓸 수 있습니다.',
     intgHeroTitle: 'AI 어시스턴트에서 GenOffice 사용하기',
     intgHeroDesc:
       '연결하면 Claude Code, Codex, Cursor, Claude Desktop 등의 어시스턴트가 Word, Excel, PowerPoint, PDF, Markdown 파일을 대신 만들고 변환하고 읽고 편집합니다. 모두 이 컴퓨터에서 처리되며 어떤 내용도 업로드되지 않습니다.',
@@ -2508,6 +2675,41 @@ export const strings = {
     setMcpLogEmpty: 'Journal vide',
     setSecAbout: 'À propos',
     setSecIntegrations: 'Intégrations',
+    setSecAi: 'IA',
+    setSubTitle: 'Connexion par abonnement',
+    setSubManage: 'Gérer les connexions',
+    setSubInstallFailed:
+      'La commande d’installation n’a pas pu être lancée. Suivez plutôt le guide d’installation officiel.',
+    setSubLoginFailed:
+      'La connexion n’a pas pu être lancée. Vérifiez que le programme est installé, puis réessayez.',
+    setAiUse: 'IA à utiliser',
+    setAiUseDesc:
+      '« Automatique » utilise un abonnement connecté : Claude d’abord, puis Codex. Ce mode ne choisit jamais une connexion payante.',
+    setAiUseUnavailable: '{provider} · inutilisable pour le moment',
+    setAiNotice: 'Avis de première connexion',
+    setAiNoticeView: 'Revoir',
+    setAiAdvanced: 'Avancé',
+    setAiAdvancedDesc:
+      'Clés API, serveurs auto-hébergés, fournisseurs d’images et de recherche, et requêtes automatiques. La plupart des utilisateurs n’en ont jamais besoin.',
+    setAiKeyNote:
+      'Les conversations avec ce fournisseur utilisent votre propre clé, et c’est lui qui vous les facture. Il n’est utilisé que si vous le choisissez vous-même sous « IA à utiliser ».',
+    setAiHeadless: 'Autoriser les requêtes automatiques à utiliser un abonnement',
+    setAiHeadlessDesc:
+      'Permet à la génération et à l’analyse d’images demandées par une commande du terminal ou par un autre programme (MCP) de passer par votre abonnement Claude ou Codex. Lorsque l’option est désactivée, ces requêtes n’utilisent que les fournisseurs à clé.',
+    setAiHeadlessWarning:
+      'Aucune des deux entreprises ne recommande de laisser un programme utiliser automatiquement votre abonnement, et votre compte pourrait être restreint.',
+    setAiHeadlessConfirm: 'Activer quand même',
+    setAiImageCodex: 'Abonnement Codex',
+    setAiImageCodexHint:
+      'Les images sont générées avec votre abonnement Codex tant qu’il est connecté. S’il ne peut pas être utilisé, un fournisseur à clé déjà configuré prend le relais.',
+    setAiMediaNone: 'Aucune sélection',
+    setAiImageNoneHint:
+      'Aucun fournisseur n’est choisi : le premier capable de générer des images est utilisé. Si aucun n’est configuré, la génération d’images est indisponible.',
+    setAiAnalysisChat: 'Demander directement à l’IA actuelle',
+    setAiAnalysisChatHint:
+      'Les images sont montrées à l’IA avec laquelle vous discutez. Aucune clé distincte n’est nécessaire.',
+    setAiVideoNoneHint:
+      'L’analyse vidéo et audio nécessite un fournisseur à clé qui prend en charge la vidéo. Choisissez-en un ici et saisissez sa clé pour l’utiliser.',
     intgHeroTitle: 'Utiliser GenOffice depuis votre assistant IA',
     intgHeroDesc:
       'Une fois connectés, Claude Code, Codex, Cursor, Claude Desktop et les assistants similaires peuvent créer, convertir, lire et modifier vos fichiers Word, Excel, PowerPoint, PDF et Markdown. Tout se passe sur cet ordinateur ; rien n’est envoyé.',
@@ -2978,6 +3180,41 @@ export const strings = {
     setMcpLogEmpty: 'Keine Einträge',
     setSecAbout: 'Über',
     setSecIntegrations: 'Integrationen',
+    setSecAi: 'KI',
+    setSubTitle: 'Abonnement-Verbindung',
+    setSubManage: 'Verbindungen verwalten',
+    setSubInstallFailed:
+      'Der Installationsbefehl konnte nicht gestartet werden. Folgen Sie stattdessen der offiziellen Installationsanleitung.',
+    setSubLoginFailed:
+      'Die Anmeldung konnte nicht gestartet werden. Prüfen Sie, ob das Programm installiert ist, und versuchen Sie es erneut.',
+    setAiUse: 'Verwendete KI',
+    setAiUseDesc:
+      '„Automatisch“ verwendet ein verbundenes Abonnement: zuerst Claude, dann Codex. Eine kostenpflichtige Verbindung wird nie automatisch gewählt.',
+    setAiUseUnavailable: '{provider} · derzeit nicht nutzbar',
+    setAiNotice: 'Hinweis zur ersten Verbindung',
+    setAiNoticeView: 'Erneut anzeigen',
+    setAiAdvanced: 'Erweitert',
+    setAiAdvancedDesc:
+      'API-Schlüssel, selbst betriebene Server, Anbieter für Bilder und Suche sowie automatische Anfragen. Die meisten benötigen diese Einstellungen nie.',
+    setAiKeyNote:
+      'Chats über diesen Anbieter verwenden Ihren eigenen Schlüssel und werden von diesem Anbieter berechnet. Er wird nur verwendet, solange Sie ihn unter „Verwendete KI“ selbst auswählen.',
+    setAiHeadless: 'Automatische Anfragen dürfen ein Abonnement nutzen',
+    setAiHeadlessDesc:
+      'Erlaubt, dass Bildgenerierung und Bildanalyse, die ein Terminalbefehl oder ein anderes Programm (MCP) anfordert, über Ihr Claude- oder Codex-Abonnement laufen. Ist die Option aus, nutzen solche Anfragen nur Anbieter mit Schlüssel.',
+    setAiHeadlessWarning:
+      'Keines der beiden Unternehmen empfiehlt, ein Programm das Abonnement automatisch nutzen zu lassen, und Ihr Konto kann eingeschränkt werden.',
+    setAiHeadlessConfirm: 'Trotzdem einschalten',
+    setAiImageCodex: 'Codex-Abonnement',
+    setAiImageCodexHint:
+      'Bilder werden über Ihr Codex-Abonnement erzeugt, solange es verbunden ist. Kann es nicht genutzt werden, wird stattdessen ein eingerichteter Anbieter mit Schlüssel verwendet.',
+    setAiMediaNone: 'Keine Auswahl',
+    setAiImageNoneHint:
+      'Es ist kein Anbieter gewählt, daher wird der erste verwendet, der Bilder erzeugen kann. Ist keiner eingerichtet, steht die Bildgenerierung nicht zur Verfügung.',
+    setAiAnalysisChat: 'Direkt die aktuelle KI fragen',
+    setAiAnalysisChatHint:
+      'Bilder werden der KI gezeigt, mit der Sie gerade chatten. Ein eigener Schlüssel ist nicht nötig.',
+    setAiVideoNoneHint:
+      'Die Video- und Audioanalyse benötigt einen Anbieter mit Schlüssel, der Video unterstützt. Wählen Sie hier einen aus und tragen Sie seinen Schlüssel ein, um sie zu nutzen.',
     intgHeroTitle: 'GenOffice aus Ihrem KI-Assistenten nutzen',
     intgHeroDesc:
       'Einmal verbunden, können Claude Code, Codex, Cursor, Claude Desktop und ähnliche Assistenten Word-, Excel-, PowerPoint-, PDF- und Markdown-Dateien für Sie erstellen, konvertieren, lesen und bearbeiten. Alles läuft auf diesem Rechner; nichts wird hochgeladen.',
@@ -3446,6 +3683,41 @@ export const strings = {
     setMcpLogEmpty: 'Aún sin entradas',
     setSecAbout: 'Acerca de',
     setSecIntegrations: 'Integraciones',
+    setSecAi: 'IA',
+    setSubTitle: 'Conexión por suscripción',
+    setSubManage: 'Gestionar conexiones',
+    setSubInstallFailed:
+      'No se pudo iniciar el comando de instalación. Sigue la guía oficial de instalación.',
+    setSubLoginFailed:
+      'No se pudo iniciar el inicio de sesión. Comprueba que el programa esté instalado y vuelve a intentarlo.',
+    setAiUse: 'IA que se usa',
+    setAiUseDesc:
+      '«Automático» usa una suscripción conectada: primero Claude y después Codex. Nunca elige una conexión de pago.',
+    setAiUseUnavailable: '{provider} · no se puede usar ahora',
+    setAiNotice: 'Aviso de primera conexión',
+    setAiNoticeView: 'Ver de nuevo',
+    setAiAdvanced: 'Avanzado',
+    setAiAdvancedDesc:
+      'Claves de API, servidores propios, proveedores de imágenes y de búsqueda, y solicitudes automáticas. La mayoría de las personas no los necesita nunca.',
+    setAiKeyNote:
+      'Los chats con este proveedor usan tu propia clave y es ese proveedor quien te los cobra. Solo se usa mientras lo elijas tú mismo en «IA que se usa».',
+    setAiHeadless: 'Permitir que las solicitudes automáticas usen una suscripción',
+    setAiHeadlessDesc:
+      'Permite que la generación y el análisis de imágenes que pide un comando del terminal u otro programa (MCP) se ejecuten con tu suscripción de Claude o Codex. Si está desactivado, esas solicitudes solo usan proveedores con clave.',
+    setAiHeadlessWarning:
+      'Ninguna de las dos empresas recomienda que un programa use tu suscripción automáticamente, y tu cuenta podría quedar restringida.',
+    setAiHeadlessConfirm: 'Activar de todos modos',
+    setAiImageCodex: 'Suscripción de Codex',
+    setAiImageCodexHint:
+      'Las imágenes se generan con tu suscripción de Codex mientras esté conectada. Si no se puede usar, se utiliza en su lugar un proveedor con clave ya configurado.',
+    setAiMediaNone: 'Sin selección',
+    setAiImageNoneHint:
+      'No hay ningún proveedor elegido, así que se usa el primero que pueda generar imágenes. Si no hay ninguno configurado, la generación de imágenes no está disponible.',
+    setAiAnalysisChat: 'Preguntar directamente a la IA actual',
+    setAiAnalysisChatHint:
+      'Las imágenes se muestran a la IA con la que estás chateando. No hace falta una clave aparte.',
+    setAiVideoNoneHint:
+      'El análisis de vídeo y audio necesita un proveedor con clave compatible con vídeo. Elige uno aquí e introduce su clave para usarlo.',
     intgHeroTitle: 'Usa GenOffice desde tu asistente de IA',
     intgHeroDesc:
       'Una vez conectados, Claude Code, Codex, Cursor, Claude Desktop y asistentes similares pueden crear, convertir, leer y editar archivos Word, Excel, PowerPoint, PDF y Markdown por ti. Todo ocurre en este equipo; no se sube nada.',
@@ -3898,6 +4170,40 @@ export const strings = {
     setMcpLogEmpty: 'ยังไม่มีปูม',
     setSecAbout: 'เกี่ยวกับ',
     setSecIntegrations: 'การเชื่อมต่อ',
+    setSecAi: 'AI',
+    setSubTitle: 'การเชื่อมต่อการสมัครสมาชิก',
+    setSubManage: 'จัดการการเชื่อมต่อ',
+    setSubInstallFailed:
+      'ไม่สามารถเรียกใช้คำสั่งติดตั้งได้ โปรดทำตามคู่มือการติดตั้งอย่างเป็นทางการแทน',
+    setSubLoginFailed:
+      'ไม่สามารถเริ่มการเข้าสู่ระบบได้ โปรดตรวจสอบว่าติดตั้งโปรแกรมแล้ว จากนั้นลองอีกครั้ง',
+    setAiUse: 'AI ที่ใช้',
+    setAiUseDesc:
+      '"อัตโนมัติ" จะใช้การสมัครสมาชิกที่เชื่อมต่อไว้ โดยใช้ Claude ก่อน แล้วจึงเป็น Codex และจะไม่เลือกการเชื่อมต่อที่มีค่าใช้จ่ายให้เอง',
+    setAiUseUnavailable: '{provider} · ยังใช้ไม่ได้ในขณะนี้',
+    setAiNotice: 'ประกาศเมื่อเชื่อมต่อครั้งแรก',
+    setAiNoticeView: 'ดูอีกครั้ง',
+    setAiAdvanced: 'ขั้นสูง',
+    setAiAdvancedDesc:
+      'คีย์ API เซิร์ฟเวอร์ที่ดูแลเอง ผู้ให้บริการภาพและการค้นหา และการตั้งค่าคำขออัตโนมัติ คนส่วนใหญ่ไม่จำเป็นต้องใช้ส่วนนี้',
+    setAiKeyNote:
+      'แชตที่ใช้ผู้ให้บริการรายนี้จะใช้คีย์ของคุณเอง และผู้ให้บริการรายนั้นจะเรียกเก็บค่าบริการจากคุณ โดยจะถูกใช้เฉพาะเมื่อคุณเลือกเองในหัวข้อ "AI ที่ใช้" เท่านั้น',
+    setAiHeadless: 'อนุญาตให้คำขออัตโนมัติใช้การสมัครสมาชิก',
+    setAiHeadlessDesc:
+      'อนุญาตให้การสร้างภาพและการวิเคราะห์ภาพที่ร้องขอจากคำสั่งในเทอร์มินัลหรือโปรแกรมอื่น (MCP) ทำงานด้วยการสมัครสมาชิก Claude หรือ Codex ของคุณ เมื่อปิดอยู่ คำขอเหล่านั้นจะใช้เฉพาะผู้ให้บริการแบบใช้คีย์',
+    setAiHeadlessWarning:
+      'ทั้งสองบริษัทไม่แนะนำให้โปรแกรมใช้การสมัครสมาชิกของคุณโดยอัตโนมัติ และบัญชีของคุณอาจถูกจำกัดการใช้งาน',
+    setAiHeadlessConfirm: 'เปิดต่อไป',
+    setAiImageCodex: 'การสมัครสมาชิก Codex',
+    setAiImageCodexHint:
+      'ระบบจะสร้างภาพด้วยการสมัครสมาชิก Codex ของคุณขณะที่เชื่อมต่ออยู่ หากใช้ไม่ได้ จะใช้ผู้ให้บริการแบบใช้คีย์ที่ตั้งค่าไว้แทน',
+    setAiMediaNone: 'ไม่ได้เลือก',
+    setAiImageNoneHint:
+      'ยังไม่ได้เลือกผู้ให้บริการ จึงใช้รายแรกที่สร้างภาพได้ หากยังไม่ได้ตั้งค่ารายใดไว้ จะไม่สามารถสร้างภาพได้',
+    setAiAnalysisChat: 'ถาม AI ปัจจุบันโดยตรง',
+    setAiAnalysisChatHint: 'ภาพจะถูกส่งให้ AI ที่คุณกำลังสนทนาอยู่โดยตรง ไม่ต้องใช้คีย์แยกต่างหาก',
+    setAiVideoNoneHint:
+      'การวิเคราะห์วิดีโอและเสียงต้องใช้ผู้ให้บริการแบบใช้คีย์ที่รองรับวิดีโอ เลือกผู้ให้บริการที่นี่แล้วกรอกคีย์เพื่อใช้งาน',
     intgHeroTitle: 'ใช้ GenOffice จากผู้ช่วย AI ของคุณ',
     intgHeroDesc:
       'เมื่อเชื่อมต่อแล้ว Claude Code, Codex, Cursor, Claude Desktop และผู้ช่วยลักษณะเดียวกันจะสร้าง แปลง อ่าน และแก้ไขไฟล์ Word, Excel, PowerPoint, PDF และ Markdown แทนคุณได้ ทุกอย่างทำงานบนคอมพิวเตอร์เครื่องนี้ ไม่มีการอัปโหลดใด ๆ',
@@ -4352,6 +4658,41 @@ export const strings = {
     setMcpLogEmpty: 'Belum ada log',
     setSecAbout: 'Tentang',
     setSecIntegrations: 'Integrasi',
+    setSecAi: 'AI',
+    setSubTitle: 'Koneksi langganan',
+    setSubManage: 'Kelola koneksi',
+    setSubInstallFailed:
+      'Perintah pemasangan tidak dapat dijalankan. Ikuti panduan pemasangan resmi sebagai gantinya.',
+    setSubLoginFailed:
+      'Proses masuk tidak dapat dimulai. Pastikan programnya sudah terpasang, lalu coba lagi.',
+    setAiUse: 'AI yang digunakan',
+    setAiUseDesc:
+      '"Otomatis" memakai langganan yang terhubung: Claude lebih dulu, lalu Codex. Mode ini tidak pernah memilih koneksi yang berbayar.',
+    setAiUseUnavailable: '{provider} · belum bisa digunakan saat ini',
+    setAiNotice: 'Pemberitahuan koneksi pertama',
+    setAiNoticeView: 'Lihat lagi',
+    setAiAdvanced: 'Lanjutan',
+    setAiAdvancedDesc:
+      'Kunci API, server yang dikelola sendiri, penyedia gambar dan pencarian, serta permintaan otomatis. Kebanyakan orang tidak pernah memerlukannya.',
+    setAiKeyNote:
+      'Percakapan lewat penyedia ini memakai kunci Anda sendiri, dan penyedia itulah yang menagih Anda. Penyedia ini hanya dipakai selama Anda sendiri memilihnya di "AI yang digunakan".',
+    setAiHeadless: 'Izinkan permintaan otomatis memakai langganan',
+    setAiHeadlessDesc:
+      'Mengizinkan pembuatan gambar dan analisis gambar yang diminta oleh perintah terminal atau program lain (MCP) berjalan dengan langganan Claude atau Codex Anda. Jika dimatikan, permintaan tersebut hanya memakai penyedia berbasis kunci.',
+    setAiHeadlessWarning:
+      'Kedua perusahaan tidak menyarankan program memakai langganan Anda secara otomatis, dan akun Anda bisa dibatasi.',
+    setAiHeadlessConfirm: 'Tetap aktifkan',
+    setAiImageCodex: 'Langganan Codex',
+    setAiImageCodexHint:
+      'Gambar dibuat dengan langganan Codex Anda selama langganan itu terhubung. Jika tidak bisa digunakan, penyedia berbasis kunci yang sudah disiapkan dipakai sebagai gantinya.',
+    setAiMediaNone: 'Tidak ada yang dipilih',
+    setAiImageNoneHint:
+      'Tidak ada penyedia yang dipilih, jadi yang dipakai adalah penyedia pertama yang bisa membuat gambar. Jika belum ada yang disiapkan, pembuatan gambar tidak tersedia.',
+    setAiAnalysisChat: 'Tanyakan langsung ke AI saat ini',
+    setAiAnalysisChatHint:
+      'Gambar diperlihatkan langsung kepada AI yang sedang Anda ajak bercakap. Tidak perlu kunci terpisah.',
+    setAiVideoNoneHint:
+      'Analisis video dan audio memerlukan penyedia berbasis kunci yang mendukung video. Pilih salah satu di sini dan masukkan kuncinya untuk menggunakannya.',
     intgHeroTitle: 'Gunakan GenOffice dari asisten AI Anda',
     intgHeroDesc:
       'Setelah terhubung, Claude Code, Codex, Cursor, Claude Desktop, dan asisten serupa dapat membuat, mengonversi, membaca, dan mengedit file Word, Excel, PowerPoint, PDF, dan Markdown untuk Anda. Semuanya berjalan di komputer ini; tidak ada yang diunggah.',
@@ -4808,6 +5149,41 @@ export const strings = {
     setMcpLogEmpty: 'Записей пока нет',
     setSecAbout: 'О программе',
     setSecIntegrations: 'Интеграции',
+    setSecAi: 'ИИ',
+    setSubTitle: 'Подключение по подписке',
+    setSubManage: 'Управление подключениями',
+    setSubInstallFailed:
+      'Не удалось запустить команду установки. Воспользуйтесь официальной инструкцией по установке.',
+    setSubLoginFailed:
+      'Не удалось начать вход. Убедитесь, что программа установлена, и повторите попытку.',
+    setAiUse: 'Используемый ИИ',
+    setAiUseDesc:
+      '«Автоматически» использует подключённую подписку: сначала Claude, затем Codex. Платное подключение автоматически никогда не выбирается.',
+    setAiUseUnavailable: '{provider} · сейчас недоступно',
+    setAiNotice: 'Уведомление при первом подключении',
+    setAiNoticeView: 'Показать снова',
+    setAiAdvanced: 'Дополнительно',
+    setAiAdvancedDesc:
+      'API-ключи, собственные серверы, провайдеры изображений и поиска, а также автоматические запросы. Большинству пользователей это не нужно.',
+    setAiKeyNote:
+      'Чаты через этого провайдера используют ваш собственный ключ, и оплату взимает этот провайдер. Он используется, только пока вы сами выбираете его в пункте «Используемый ИИ».',
+    setAiHeadless: 'Разрешить автоматическим запросам использовать подписку',
+    setAiHeadlessDesc:
+      'Разрешает выполнять генерацию и анализ изображений, запрошенные командой терминала или другой программой (MCP), по вашей подписке Claude или Codex. Если параметр выключен, такие запросы используют только провайдеров с ключом.',
+    setAiHeadlessWarning:
+      'Ни одна из двух компаний не рекомендует позволять программе автоматически использовать подписку, и ваш аккаунт может быть ограничен.',
+    setAiHeadlessConfirm: 'Всё равно включить',
+    setAiImageCodex: 'Подписка Codex',
+    setAiImageCodexHint:
+      'Изображения создаются по вашей подписке Codex, пока она подключена. Если использовать её нельзя, вместо неё применяется настроенный провайдер с ключом.',
+    setAiMediaNone: 'Не выбрано',
+    setAiImageNoneHint:
+      'Провайдер не выбран, поэтому используется первый, который может создавать изображения. Если ни один не настроен, генерация изображений недоступна.',
+    setAiAnalysisChat: 'Спросить текущий ИИ напрямую',
+    setAiAnalysisChatHint:
+      'Изображения показываются тому ИИ, с которым вы общаетесь. Отдельный ключ не нужен.',
+    setAiVideoNoneHint:
+      'Для анализа видео и аудио нужен провайдер с ключом, поддерживающий видео. Выберите его здесь и введите ключ, чтобы пользоваться анализом.',
     intgHeroTitle: 'Используйте GenOffice из своего ИИ-ассистента',
     intgHeroDesc:
       'После подключения Claude Code, Codex, Cursor, Claude Desktop и похожие ассистенты смогут создавать, конвертировать, читать и редактировать файлы Word, Excel, PowerPoint, PDF и Markdown за вас. Всё выполняется на этом компьютере; ничего не загружается.',
@@ -5265,6 +5641,39 @@ export const strings = {
     setMcpLogEmpty: 'لا توجد سجلات بعد',
     setSecAbout: 'حول',
     setSecIntegrations: 'التكاملات',
+    setSecAi: 'الذكاء الاصطناعي',
+    setSubTitle: 'الاتصال بالاشتراك',
+    setSubManage: 'إدارة الاتصالات',
+    setSubInstallFailed: 'تعذّر تشغيل أمر التثبيت. اتبع دليل التثبيت الرسمي بدلًا من ذلك.',
+    setSubLoginFailed: 'تعذّر بدء تسجيل الدخول. تأكد من أن البرنامج مثبّت ثم حاول مجددًا.',
+    setAiUse: 'الذكاء الاصطناعي المستخدم',
+    setAiUseDesc:
+      'يستخدم الخيار «تلقائي» اشتراكًا متصلًا: Claude أولًا ثم Codex. ولا يختار أبدًا اتصالًا تترتب عليه رسوم.',
+    setAiUseUnavailable: '{provider} · غير متاح للاستخدام حاليًا',
+    setAiNotice: 'إشعار الاتصال الأول',
+    setAiNoticeView: 'عرض مجددًا',
+    setAiAdvanced: 'خيارات متقدمة',
+    setAiAdvancedDesc:
+      'مفاتيح API والخوادم المستضافة ذاتيًا ومزوّدو الصور والبحث وإعدادات الطلبات التلقائية. معظم المستخدمين لا يحتاجون إليها أبدًا.',
+    setAiKeyNote:
+      'تستخدم المحادثات عبر هذا المزوّد مفتاحك الخاص، وهذا المزوّد هو من يحتسب رسومها عليك. ولا يُستخدم إلا عندما تختاره بنفسك ضمن «الذكاء الاصطناعي المستخدم».',
+    setAiHeadless: 'السماح للطلبات التلقائية باستخدام الاشتراك',
+    setAiHeadlessDesc:
+      'يسمح بتنفيذ توليد الصور وتحليل الصور اللذين يطلبهما أمر في الطرفية أو برنامج آخر (MCP) عبر اشتراكك في Claude أو Codex. عند إيقاف هذا الخيار تستخدم تلك الطلبات المزوّدين الذين يعملون بمفتاح فقط.',
+    setAiHeadlessWarning:
+      'لا توصي أيٌّ من الشركتين بأن يستخدم برنامجٌ اشتراكك تلقائيًا، وقد تُفرض قيود على حسابك.',
+    setAiHeadlessConfirm: 'تشغيل على أي حال',
+    setAiImageCodex: 'اشتراك Codex',
+    setAiImageCodexHint:
+      'تُولَّد الصور عبر اشتراكك في Codex ما دام متصلًا. وإذا تعذّر استخدامه يُستخدم بدلًا منه مزوّد يعمل بمفتاح تم إعداده.',
+    setAiMediaNone: 'لا يوجد اختيار',
+    setAiImageNoneHint:
+      'لم يُختر أي مزوّد، لذا يُستخدم أول مزوّد قادر على توليد الصور. وإذا لم يكن أي مزوّد مُعدًّا فلن يكون توليد الصور متاحًا.',
+    setAiAnalysisChat: 'سؤال الذكاء الاصطناعي الحالي مباشرةً',
+    setAiAnalysisChatHint:
+      'تُعرض الصور مباشرةً على الذكاء الاصطناعي الذي تحادثه. ولا حاجة إلى مفتاح منفصل.',
+    setAiVideoNoneHint:
+      'يتطلب تحليل الفيديو والصوت مزوّدًا يعمل بمفتاح ويدعم الفيديو. اختر واحدًا هنا وأدخل مفتاحه لاستخدامه.',
     intgHeroTitle: 'استخدم GenOffice من مساعد الذكاء الاصطناعي',
     intgHeroDesc:
       'بعد الربط، يمكن لـ Claude Code وCodex وCursor وClaude Desktop والمساعدين المشابهين إنشاء ملفات Word وExcel وPowerPoint وPDF وMarkdown وتحويلها وقراءتها وتحريرها نيابةً عنك. كل شيء يعمل على هذا الجهاز؛ لا يُرفع أي شيء.',
@@ -5713,6 +6122,41 @@ export const strings = {
     setMcpLogEmpty: 'Ainda sem registros',
     setSecAbout: 'Sobre',
     setSecIntegrations: 'Integrações',
+    setSecAi: 'IA',
+    setSubTitle: 'Conexão por assinatura',
+    setSubManage: 'Gerenciar conexões',
+    setSubInstallFailed:
+      'Não foi possível iniciar o comando de instalação. Siga o guia oficial de instalação.',
+    setSubLoginFailed:
+      'Não foi possível iniciar o login. Verifique se o programa está instalado e tente novamente.',
+    setAiUse: 'IA em uso',
+    setAiUseDesc:
+      '"Automático" usa uma assinatura conectada: primeiro o Claude, depois o Codex. Ele nunca escolhe uma conexão paga.',
+    setAiUseUnavailable: '{provider} · não pode ser usado agora',
+    setAiNotice: 'Aviso da primeira conexão',
+    setAiNoticeView: 'Ver novamente',
+    setAiAdvanced: 'Avançado',
+    setAiAdvancedDesc:
+      'Chaves de API, servidores próprios, provedores de imagem e de pesquisa e solicitações automáticas. A maioria das pessoas nunca precisa disso.',
+    setAiKeyNote:
+      'As conversas com este provedor usam a sua própria chave, e é ele quem cobra por elas. Ele só é usado enquanto você mesmo o escolhe em "IA em uso".',
+    setAiHeadless: 'Permitir que solicitações automáticas usem uma assinatura',
+    setAiHeadlessDesc:
+      'Permite que a geração e a análise de imagens pedidas por um comando do terminal ou por outro programa (MCP) sejam feitas com a sua assinatura do Claude ou do Codex. Quando desativado, essas solicitações usam apenas provedores com chave.',
+    setAiHeadlessWarning:
+      'Nenhuma das duas empresas recomenda deixar um programa usar a sua assinatura automaticamente, e a sua conta pode sofrer restrições.',
+    setAiHeadlessConfirm: 'Ativar mesmo assim',
+    setAiImageCodex: 'Assinatura do Codex',
+    setAiImageCodexHint:
+      'As imagens são geradas com a sua assinatura do Codex enquanto ela estiver conectada. Quando ela não puder ser usada, um provedor com chave já configurado é usado no lugar.',
+    setAiMediaNone: 'Nenhuma seleção',
+    setAiImageNoneHint:
+      'Nenhum provedor foi escolhido, então é usado o primeiro capaz de gerar imagens. Se nenhum estiver configurado, a geração de imagens fica indisponível.',
+    setAiAnalysisChat: 'Perguntar diretamente à IA atual',
+    setAiAnalysisChatHint:
+      'As imagens são mostradas à IA com a qual você está conversando. Não é necessária uma chave separada.',
+    setAiVideoNoneHint:
+      'A análise de vídeo e áudio precisa de um provedor com chave que ofereça suporte a vídeo. Escolha um aqui e informe a chave para usá-lo.',
     intgHeroTitle: 'Use o GenOffice a partir do seu assistente de IA',
     intgHeroDesc:
       'Depois de conectados, Claude Code, Codex, Cursor, Claude Desktop e assistentes semelhantes podem criar, converter, ler e editar arquivos Word, Excel, PowerPoint, PDF e Markdown por você. Tudo roda neste computador; nada é enviado.',
@@ -6166,6 +6610,41 @@ export const strings = {
     setMcpLogEmpty: 'Nessuna voce di registro',
     setSecAbout: 'Informazioni',
     setSecIntegrations: 'Integrazioni',
+    setSecAi: 'IA',
+    setSubTitle: 'Connessione con abbonamento',
+    setSubManage: 'Gestisci connessioni',
+    setSubInstallFailed:
+      'Impossibile avviare il comando di installazione. Segui invece la guida ufficiale all’installazione.',
+    setSubLoginFailed:
+      'Impossibile avviare l’accesso. Verifica che il programma sia installato, quindi riprova.',
+    setAiUse: 'IA da usare',
+    setAiUseDesc:
+      '"Automatico" usa un abbonamento connesso: prima Claude, poi Codex. Non sceglie mai una connessione a pagamento.',
+    setAiUseUnavailable: '{provider} · al momento non utilizzabile',
+    setAiNotice: 'Avviso della prima connessione',
+    setAiNoticeView: 'Rivedi',
+    setAiAdvanced: 'Avanzate',
+    setAiAdvancedDesc:
+      'Chiavi API, server gestiti in proprio, provider di immagini e di ricerca e richieste automatiche. La maggior parte delle persone non ne ha mai bisogno.',
+    setAiKeyNote:
+      'Le chat con questo provider usano la tua chiave ed è il provider ad addebitartele. Viene usato solo finché lo scegli tu in "IA da usare".',
+    setAiHeadless: 'Consenti alle richieste automatiche di usare un abbonamento',
+    setAiHeadlessDesc:
+      'Consente alla generazione e all’analisi di immagini richieste da un comando del terminale o da un altro programma (MCP) di usare il tuo abbonamento Claude o Codex. Se disattivata, queste richieste usano solo i provider con chiave.',
+    setAiHeadlessWarning:
+      'Nessuna delle due aziende consiglia di lasciare che un programma usi automaticamente il tuo abbonamento, e il tuo account potrebbe subire limitazioni.',
+    setAiHeadlessConfirm: 'Attiva comunque',
+    setAiImageCodex: 'Abbonamento Codex',
+    setAiImageCodexHint:
+      'Le immagini vengono generate con il tuo abbonamento Codex finché è connesso. Se non può essere usato, viene utilizzato al suo posto un provider con chiave già configurato.',
+    setAiMediaNone: 'Nessuna selezione',
+    setAiImageNoneHint:
+      'Non è stato scelto alcun provider, quindi viene usato il primo in grado di generare immagini. Se non ne è configurato nessuno, la generazione di immagini non è disponibile.',
+    setAiAnalysisChat: 'Chiedi direttamente all’IA attuale',
+    setAiAnalysisChatHint:
+      'Le immagini vengono mostrate all’IA con cui stai chattando. Non serve una chiave separata.',
+    setAiVideoNoneHint:
+      'L’analisi di video e audio richiede un provider con chiave che supporti i video. Scegline uno qui e inserisci la sua chiave per usarla.',
     intgHeroTitle: 'Usa GenOffice dal tuo assistente IA',
     intgHeroDesc:
       'Una volta collegati, Claude Code, Codex, Cursor, Claude Desktop e assistenti simili possono creare, convertire, leggere e modificare file Word, Excel, PowerPoint, PDF e Markdown per te. Tutto avviene su questo computer; nulla viene caricato.',
@@ -6616,6 +7095,41 @@ export const strings = {
     setMcpLogEmpty: 'Brak wpisów',
     setSecAbout: 'O aplikacji',
     setSecIntegrations: 'Integracje',
+    setSecAi: 'AI',
+    setSubTitle: 'Połączenie z subskrypcją',
+    setSubManage: 'Zarządzaj połączeniami',
+    setSubInstallFailed:
+      'Nie udało się uruchomić polecenia instalacji. Skorzystaj z oficjalnej instrukcji instalacji.',
+    setSubLoginFailed:
+      'Nie udało się rozpocząć logowania. Sprawdź, czy program jest zainstalowany, i spróbuj ponownie.',
+    setAiUse: 'Używane AI',
+    setAiUseDesc:
+      '„Automatycznie” korzysta z połączonej subskrypcji: najpierw Claude, potem Codex. Nigdy nie wybiera połączenia płatnego.',
+    setAiUseUnavailable: '{provider} · obecnie nie można użyć',
+    setAiNotice: 'Informacja przy pierwszym połączeniu',
+    setAiNoticeView: 'Pokaż ponownie',
+    setAiAdvanced: 'Zaawansowane',
+    setAiAdvancedDesc:
+      'Klucze API, własne serwery, dostawcy obrazów i wyszukiwania oraz żądania automatyczne. Większość osób nigdy tego nie potrzebuje.',
+    setAiKeyNote:
+      'Rozmowy przez tego dostawcę korzystają z twojego własnego klucza i to on pobiera za nie opłaty. Jest używany tylko wtedy, gdy samodzielnie wybierzesz go w polu „Używane AI”.',
+    setAiHeadless: 'Zezwól żądaniom automatycznym na korzystanie z subskrypcji',
+    setAiHeadlessDesc:
+      'Pozwala, aby generowanie i analiza obrazów zlecane przez polecenie terminala lub inny program (MCP) korzystały z twojej subskrypcji Claude lub Codex. Gdy opcja jest wyłączona, takie żądania korzystają wyłącznie z dostawców z kluczem.',
+    setAiHeadlessWarning:
+      'Żadna z tych dwóch firm nie zaleca, aby program automatycznie korzystał z subskrypcji, a twoje konto może zostać ograniczone.',
+    setAiHeadlessConfirm: 'Włącz mimo to',
+    setAiImageCodex: 'Subskrypcja Codex',
+    setAiImageCodexHint:
+      'Obrazy są generowane w ramach twojej subskrypcji Codex, dopóki jest połączona. Gdy nie można jej użyć, zamiast niej używany jest skonfigurowany dostawca z kluczem.',
+    setAiMediaNone: 'Nie wybrano',
+    setAiImageNoneHint:
+      'Nie wybrano dostawcy, więc używany jest pierwszy, który potrafi generować obrazy. Jeśli żaden nie jest skonfigurowany, generowanie obrazów jest niedostępne.',
+    setAiAnalysisChat: 'Zapytaj bezpośrednio bieżące AI',
+    setAiAnalysisChatHint:
+      'Obrazy są pokazywane AI, z którym rozmawiasz. Osobny klucz nie jest potrzebny.',
+    setAiVideoNoneHint:
+      'Analiza wideo i dźwięku wymaga dostawcy z kluczem, który obsługuje wideo. Wybierz go tutaj i wpisz jego klucz, aby z niej korzystać.',
     intgHeroTitle: 'Używaj GenOffice ze swojego asystenta AI',
     intgHeroDesc:
       'Po połączeniu Claude Code, Codex, Cursor, Claude Desktop i podobni asystenci mogą tworzyć, konwertować, czytać i edytować pliki Word, Excel, PowerPoint, PDF i Markdown za Ciebie. Wszystko działa na tym komputerze; nic nie jest przesyłane.',
@@ -7032,6 +7546,41 @@ export const strings = {
     setMcpLogEmpty: 'Zatím žádné záznamy',
     setSecAbout: 'O aplikaci',
     setSecIntegrations: 'Integrace',
+    setSecAi: 'AI',
+    setSubTitle: 'Připojení předplatného',
+    setSubManage: 'Spravovat připojení',
+    setSubInstallFailed:
+      'Instalační příkaz se nepodařilo spustit. Postupujte prosím podle oficiálního návodu k instalaci.',
+    setSubLoginFailed:
+      'Přihlášení se nepodařilo spustit. Zkontrolujte, zda je program nainstalovaný, a zkuste to znovu.',
+    setAiUse: 'Používaná AI',
+    setAiUseDesc:
+      '„Automaticky“ používá připojené předplatné: nejprve Claude, potom Codex. Placené připojení nikdy samo nevybere.',
+    setAiUseUnavailable: '{provider} · nyní nelze použít',
+    setAiNotice: 'Upozornění při prvním připojení',
+    setAiNoticeView: 'Zobrazit znovu',
+    setAiAdvanced: 'Pokročilé',
+    setAiAdvancedDesc:
+      'Klíče API, vlastní servery, poskytovatelé obrázků a vyhledávání a automatické požadavky. Většina lidí je nikdy nepotřebuje.',
+    setAiKeyNote:
+      'Konverzace přes tohoto poskytovatele používají váš vlastní klíč a účtuje je tento poskytovatel. Používá se jen tehdy, když ho sami vyberete v položce „Používaná AI“.',
+    setAiHeadless: 'Povolit automatickým požadavkům používat předplatné',
+    setAiHeadlessDesc:
+      'Umožní, aby generování a analýza obrázků vyžádané příkazem v terminálu nebo jiným programem (MCP) běžely na vašem předplatném Claude nebo Codex. Když je volba vypnutá, tyto požadavky používají jen poskytovatele s klíčem.',
+    setAiHeadlessWarning:
+      'Ani jedna z obou společností nedoporučuje, aby program používal předplatné automaticky, a váš účet může být omezen.',
+    setAiHeadlessConfirm: 'Přesto zapnout',
+    setAiImageCodex: 'Předplatné Codex',
+    setAiImageCodexHint:
+      'Obrázky se generují přes vaše předplatné Codex, dokud je připojené. Když ho nelze použít, použije se místo něj nastavený poskytovatel s klíčem.',
+    setAiMediaNone: 'Nic nevybráno',
+    setAiImageNoneHint:
+      'Není vybrán žádný poskytovatel, proto se použije první, který umí generovat obrázky. Pokud není nastaven žádný, generování obrázků není dostupné.',
+    setAiAnalysisChat: 'Zeptat se přímo aktuální AI',
+    setAiAnalysisChatHint:
+      'Obrázky se ukážou AI, se kterou si právě píšete. Samostatný klíč není potřeba.',
+    setAiVideoNoneHint:
+      'Analýza videa a zvuku vyžaduje poskytovatele s klíčem, který podporuje video. Vyberte ho zde a zadejte jeho klíč, abyste ji mohli používat.',
     intgHeroTitle: 'Používejte GenOffice ze svého AI asistenta',
     intgHeroDesc:
       'Po připojení mohou Claude Code, Codex, Cursor, Claude Desktop a podobní asistenti za vás vytvářet, převádět, číst a upravovat soubory Word, Excel, PowerPoint, PDF a Markdown. Vše běží na tomto počítači; nic se neodesílá.',
@@ -7512,6 +8061,41 @@ export const strings = {
     setMcpLogEmpty: 'Nog geen logregels',
     setSecAbout: 'Over',
     setSecIntegrations: 'Integraties',
+    setSecAi: 'AI',
+    setSubTitle: 'Abonnementsverbinding',
+    setSubManage: 'Verbindingen beheren',
+    setSubInstallFailed:
+      'De installatieopdracht kon niet worden gestart. Volg in plaats daarvan de officiële installatiehandleiding.',
+    setSubLoginFailed:
+      'Het aanmelden kon niet worden gestart. Controleer of het programma is geïnstalleerd en probeer het opnieuw.',
+    setAiUse: 'AI die wordt gebruikt',
+    setAiUseDesc:
+      '"Automatisch" gebruikt een verbonden abonnement: eerst Claude, daarna Codex. Er wordt nooit vanzelf een betaalde verbinding gekozen.',
+    setAiUseUnavailable: '{provider} · nu niet te gebruiken',
+    setAiNotice: 'Melding bij de eerste verbinding',
+    setAiNoticeView: 'Opnieuw bekijken',
+    setAiAdvanced: 'Geavanceerd',
+    setAiAdvancedDesc:
+      'API-sleutels, zelf gehoste servers, providers voor afbeeldingen en zoeken, en automatische verzoeken. De meeste mensen hebben dit nooit nodig.',
+    setAiKeyNote:
+      'Chats via deze provider gebruiken je eigen sleutel en worden door die provider in rekening gebracht. De provider wordt alleen gebruikt zolang je hem zelf kiest bij "AI die wordt gebruikt".',
+    setAiHeadless: 'Automatische verzoeken een abonnement laten gebruiken',
+    setAiHeadlessDesc:
+      'Staat toe dat het genereren en analyseren van afbeeldingen, aangevraagd door een terminalopdracht of een ander programma (MCP), via je Claude- of Codex-abonnement verloopt. Als dit uit staat, gebruiken zulke verzoeken alleen providers met een sleutel.',
+    setAiHeadlessWarning:
+      'Geen van beide bedrijven raadt aan een programma je abonnement automatisch te laten gebruiken, en je account kan worden beperkt.',
+    setAiHeadlessConfirm: 'Toch inschakelen',
+    setAiImageCodex: 'Codex-abonnement',
+    setAiImageCodexHint:
+      'Afbeeldingen worden gegenereerd met je Codex-abonnement zolang het verbonden is. Als het niet kan worden gebruikt, wordt in plaats daarvan een ingestelde provider met een sleutel gebruikt.',
+    setAiMediaNone: 'Niets geselecteerd',
+    setAiImageNoneHint:
+      'Er is geen provider gekozen, dus de eerste die afbeeldingen kan genereren wordt gebruikt. Als er geen is ingesteld, is het genereren van afbeeldingen niet beschikbaar.',
+    setAiAnalysisChat: 'Rechtstreeks aan de huidige AI vragen',
+    setAiAnalysisChatHint:
+      'Afbeeldingen worden getoond aan de AI waarmee je chat. Een aparte sleutel is niet nodig.',
+    setAiVideoNoneHint:
+      'Video- en audioanalyse vereist een provider met een sleutel die video ondersteunt. Kies er hier een en vul de sleutel in om het te gebruiken.',
     intgHeroTitle: 'GenOffice gebruiken vanuit uw AI-assistent',
     intgHeroDesc:
       'Eenmaal verbonden kunnen Claude Code, Codex, Cursor, Claude Desktop en vergelijkbare assistenten Word-, Excel-, PowerPoint-, PDF- en Markdown-bestanden voor je maken, converteren, lezen en bewerken. Alles draait op deze computer; er wordt niets geüpload.',
@@ -7962,6 +8546,41 @@ export const strings = {
     setMcpLogEmpty: 'Belum ada log',
     setSecAbout: 'Perihal',
     setSecIntegrations: 'Integrasi',
+    setSecAi: 'AI',
+    setSubTitle: 'Sambungan langganan',
+    setSubManage: 'Urus sambungan',
+    setSubInstallFailed:
+      'Arahan pemasangan tidak dapat dijalankan. Sila ikut panduan pemasangan rasmi.',
+    setSubLoginFailed:
+      'Log masuk tidak dapat dimulakan. Pastikan program telah dipasang, kemudian cuba lagi.',
+    setAiUse: 'AI yang digunakan',
+    setAiUseDesc:
+      '"Automatik" menggunakan langganan yang disambungkan: Claude dahulu, kemudian Codex. Mod ini tidak sekali-kali memilih sambungan yang berbayar.',
+    setAiUseUnavailable: '{provider} · tidak dapat digunakan sekarang',
+    setAiNotice: 'Notis sambungan pertama',
+    setAiNoticeView: 'Lihat semula',
+    setAiAdvanced: 'Lanjutan',
+    setAiAdvancedDesc:
+      'Kunci API, pelayan yang dihoskan sendiri, penyedia imej dan carian, serta permintaan automatik. Kebanyakan orang tidak memerlukannya.',
+    setAiKeyNote:
+      'Sembang melalui penyedia ini menggunakan kunci anda sendiri, dan penyedia itu yang mengenakan caj kepada anda. Penyedia ini hanya digunakan selagi anda sendiri memilihnya di bawah "AI yang digunakan".',
+    setAiHeadless: 'Benarkan permintaan automatik menggunakan langganan',
+    setAiHeadlessDesc:
+      'Membenarkan penjanaan imej dan analisis imej yang diminta oleh arahan terminal atau program lain (MCP) dijalankan dengan langganan Claude atau Codex anda. Apabila dimatikan, permintaan tersebut hanya menggunakan penyedia berasaskan kunci.',
+    setAiHeadlessWarning:
+      'Kedua-dua syarikat tidak mengesyorkan program menggunakan langganan anda secara automatik, dan akaun anda mungkin dihadkan.',
+    setAiHeadlessConfirm: 'Hidupkan juga',
+    setAiImageCodex: 'Langganan Codex',
+    setAiImageCodexHint:
+      'Imej dijana dengan langganan Codex anda selagi langganan itu disambungkan. Apabila langganan itu tidak dapat digunakan, penyedia berasaskan kunci yang telah disediakan digunakan sebagai ganti.',
+    setAiMediaNone: 'Tiada pilihan',
+    setAiImageNoneHint:
+      'Tiada penyedia dipilih, maka penyedia pertama yang boleh menjana imej digunakan. Jika tiada yang disediakan, penjanaan imej tidak tersedia.',
+    setAiAnalysisChat: 'Tanya terus AI semasa',
+    setAiAnalysisChatHint:
+      'Imej ditunjukkan terus kepada AI yang sedang bersembang dengan anda. Kunci berasingan tidak diperlukan.',
+    setAiVideoNoneHint:
+      'Analisis video dan audio memerlukan penyedia berasaskan kunci yang menyokong video. Pilih satu di sini dan masukkan kuncinya untuk menggunakannya.',
     intgHeroTitle: 'Gunakan GenOffice daripada pembantu AI anda',
     intgHeroDesc:
       'Setelah disambungkan, Claude Code, Codex, Cursor, Claude Desktop dan pembantu serupa boleh mencipta, menukar, membaca dan mengedit fail Word, Excel, PowerPoint, PDF dan Markdown untuk anda. Semuanya berjalan di komputer ini; tiada apa yang dimuat naik.',
@@ -8410,6 +9029,39 @@ export const strings = {
     setMcpLogEmpty: 'עדיין אין רישומים',
     setSecAbout: 'אודות',
     setSecIntegrations: 'שילובים',
+    setSecAi: 'AI',
+    setSubTitle: 'חיבור מינוי',
+    setSubManage: 'ניהול חיבורים',
+    setSubInstallFailed:
+      'לא ניתן היה להפעיל את פקודת ההתקנה. פעלו במקום זאת לפי מדריך ההתקנה הרשמי.',
+    setSubLoginFailed: 'לא ניתן היה להתחיל את הכניסה. ודאו שהתוכנה מותקנת ונסו שוב.',
+    setAiUse: 'ה-AI שבשימוש',
+    setAiUseDesc:
+      'האפשרות "אוטומטי" משתמשת במינוי מחובר: קודם Claude ואחריו Codex. היא לעולם לא בוחרת חיבור שכרוך בתשלום.',
+    setAiUseUnavailable: '{provider} · לא ניתן להשתמש כרגע',
+    setAiNotice: 'הודעת החיבור הראשון',
+    setAiNoticeView: 'הצגה חוזרת',
+    setAiAdvanced: 'מתקדם',
+    setAiAdvancedDesc:
+      'מפתחות API, שרתים באירוח עצמי, ספקי תמונות וחיפוש ובקשות אוטומטיות. רוב האנשים לא צריכים אותם אף פעם.',
+    setAiKeyNote:
+      'שיחות דרך הספק הזה משתמשות במפתח שלכם, והספק הוא שמחייב אתכם עליהן. הוא נמצא בשימוש רק כל עוד בחרתם בו בעצמכם תחת "ה-AI שבשימוש".',
+    setAiHeadless: 'לאפשר לבקשות אוטומטיות להשתמש במינוי',
+    setAiHeadlessDesc:
+      'מאפשר ליצירת תמונות ולניתוח תמונות שמבקשים פקודת מסוף או תוכנה אחרת (MCP) לפעול דרך מינוי Claude או Codex שלכם. כשהאפשרות כבויה, בקשות כאלה משתמשות רק בספקים עם מפתח.',
+    setAiHeadlessWarning:
+      'אף אחת משתי החברות אינה ממליצה לאפשר לתוכנה להשתמש במינוי באופן אוטומטי, והחשבון שלכם עלול להיות מוגבל.',
+    setAiHeadlessConfirm: 'להפעיל בכל זאת',
+    setAiImageCodex: 'מינוי Codex',
+    setAiImageCodexHint:
+      'תמונות נוצרות דרך מינוי Codex שלכם כל עוד הוא מחובר. כשאי אפשר להשתמש בו, נעשה במקומו שימוש בספק עם מפתח שהוגדר.',
+    setAiMediaNone: 'לא נבחר דבר',
+    setAiImageNoneHint:
+      'לא נבחר ספק, ולכן נעשה שימוש בספק הראשון שמסוגל ליצור תמונות. אם לא הוגדר אף ספק, יצירת תמונות אינה זמינה.',
+    setAiAnalysisChat: 'לשאול ישירות את ה-AI הנוכחי',
+    setAiAnalysisChatHint: 'התמונות מוצגות ישירות ל-AI שאיתו אתם משוחחים. אין צורך במפתח נפרד.',
+    setAiVideoNoneHint:
+      'ניתוח וידאו ושמע דורש ספק עם מפתח שתומך בווידאו. בחרו כאן ספק והזינו את המפתח שלו כדי להשתמש בו.',
     intgHeroTitle: 'שימוש ב-GenOffice מתוך עוזר ה-AI שלכם',
     intgHeroDesc:
       'לאחר החיבור, Claude Code‏, Codex‏, Cursor‏, Claude Desktop ועוזרים דומים יכולים ליצור, להמיר, לקרוא ולערוך עבורך קובצי Word‏, Excel‏, PowerPoint‏, PDF ו‑Markdown. הכול פועל במחשב זה; דבר אינו נשלח.',
@@ -8850,6 +9502,41 @@ export const strings = {
     setMcpLogEmpty: 'अभी कोई लॉग नहीं',
     setSecAbout: 'जानकारी',
     setSecIntegrations: 'इंटीग्रेशन',
+    setSecAi: 'AI',
+    setSubTitle: 'सदस्यता कनेक्शन',
+    setSubManage: 'कनेक्शन प्रबंधित करें',
+    setSubInstallFailed:
+      'इंस्टॉल कमांड शुरू नहीं हो सका। इसके बजाय आधिकारिक इंस्टॉल गाइड का पालन करें।',
+    setSubLoginFailed:
+      'साइन-इन शुरू नहीं हो सका। जाँचें कि प्रोग्राम इंस्टॉल है, फिर दोबारा कोशिश करें।',
+    setAiUse: 'उपयोग किया जाने वाला AI',
+    setAiUseDesc:
+      '"स्वचालित" कनेक्ट की गई सदस्यता का उपयोग करता है: पहले Claude, फिर Codex। यह कभी भी ऐसा कनेक्शन नहीं चुनता जिस पर शुल्क लगता हो।',
+    setAiUseUnavailable: '{provider} · अभी उपयोग नहीं किया जा सकता',
+    setAiNotice: 'पहले कनेक्शन की सूचना',
+    setAiNoticeView: 'फिर से देखें',
+    setAiAdvanced: 'उन्नत',
+    setAiAdvancedDesc:
+      'API कुंजियाँ, स्वयं होस्ट किए गए सर्वर, इमेज और खोज प्रदाता, और स्वचालित अनुरोध। अधिकांश लोगों को इनकी कभी ज़रूरत नहीं पड़ती।',
+    setAiKeyNote:
+      'इस प्रदाता के ज़रिए होने वाली चैट आपकी अपनी कुंजी का उपयोग करती हैं और उनका शुल्क वही प्रदाता लेता है। इसका उपयोग तभी होता है जब आप इसे "उपयोग किया जाने वाला AI" में स्वयं चुनते हैं।',
+    setAiHeadless: 'स्वचालित अनुरोधों को सदस्यता का उपयोग करने दें',
+    setAiHeadlessDesc:
+      'टर्मिनल कमांड या किसी अन्य प्रोग्राम (MCP) द्वारा माँगे गए इमेज जनरेशन और इमेज विश्लेषण को आपकी Claude या Codex सदस्यता पर चलने देता है। बंद होने पर ऐसे अनुरोध केवल कुंजी वाले प्रदाताओं का उपयोग करते हैं।',
+    setAiHeadlessWarning:
+      'दोनों में से कोई भी कंपनी यह सुझाव नहीं देती कि कोई प्रोग्राम आपकी सदस्यता का अपने-आप उपयोग करे, और आपके खाते पर प्रतिबंध लग सकता है।',
+    setAiHeadlessConfirm: 'फिर भी चालू करें',
+    setAiImageCodex: 'Codex सदस्यता',
+    setAiImageCodexHint:
+      'जब तक आपकी Codex सदस्यता कनेक्ट है, इमेज उसी से बनाई जाती हैं। जब उसका उपयोग नहीं हो सकता, तो उसकी जगह सेट किया गया कुंजी वाला प्रदाता उपयोग होता है।',
+    setAiMediaNone: 'कोई चयन नहीं',
+    setAiImageNoneHint:
+      'कोई प्रदाता नहीं चुना गया है, इसलिए इमेज बना सकने वाला पहला प्रदाता उपयोग होता है। यदि कोई भी सेट नहीं है, तो इमेज जनरेशन उपलब्ध नहीं है।',
+    setAiAnalysisChat: 'मौजूदा AI से सीधे पूछें',
+    setAiAnalysisChatHint:
+      'इमेज सीधे उसी AI को दिखाई जाती हैं जिससे आप चैट कर रहे हैं। अलग कुंजी की ज़रूरत नहीं है।',
+    setAiVideoNoneHint:
+      'वीडियो और ऑडियो विश्लेषण के लिए ऐसा कुंजी वाला प्रदाता चाहिए जो वीडियो का समर्थन करता हो। इसका उपयोग करने के लिए यहाँ एक चुनें और उसकी कुंजी दर्ज करें।',
     intgHeroTitle: 'अपने AI असिस्टेंट से GenOffice इस्तेमाल करें',
     intgHeroDesc:
       'कनेक्ट होने के बाद Claude Code, Codex, Cursor, Claude Desktop और ऐसे ही सहायक आपके लिए Word, Excel, PowerPoint, PDF और Markdown फ़ाइलें बना, बदल, पढ़ और संपादित कर सकते हैं। सब कुछ इसी कंप्यूटर पर चलता है; कुछ भी अपलोड नहीं होता।',
@@ -9288,6 +9975,37 @@ export const strings = {
     setMcpLogEmpty: '尚無日誌',
     setSecAbout: '關於',
     setSecIntegrations: '整合',
+    setSecAi: 'AI',
+    setSubTitle: '訂閱連線',
+    setSubManage: '管理連線',
+    setSubInstallFailed: '無法執行安裝指令。請依照官方安裝說明進行安裝。',
+    setSubLoginFailed: '無法開始登入。請確認程式已安裝後再試一次。',
+    setAiUse: '使用的 AI',
+    setAiUseDesc:
+      '「自動」會使用已連線的訂閱：優先 Claude，其次 Codex。它不會自動選擇需要付費的連線。',
+    setAiUseUnavailable: '{provider} · 目前無法使用',
+    setAiNotice: '首次連線說明',
+    setAiNoticeView: '再次檢視',
+    setAiAdvanced: '進階',
+    setAiAdvancedDesc:
+      'API Key、自架伺服器、生圖與搜尋服務商，以及自動呼叫設定。大多數人不需要變更。',
+    setAiKeyNote:
+      '使用該服務商的對話會用你自己填寫的 key，並由該服務商向你收費。只有在「使用的 AI」中親自選擇它時才會使用。',
+    setAiHeadless: '允許自動呼叫使用訂閱',
+    setAiHeadlessDesc:
+      '允許由終端機指令或其他程式（MCP）發起的生圖和圖片解析使用你的 Claude 或 Codex 訂閱。關閉時，這類請求只使用 key 方式的服務商。',
+    setAiHeadlessWarning: '兩家公司都不建議讓程式自動使用訂閱，你的帳號可能會受到限制。',
+    setAiHeadlessConfirm: '仍要開啟',
+    setAiImageCodex: 'Codex 訂閱',
+    setAiImageCodexHint:
+      'Codex 訂閱已連線時，會用該訂閱產生圖片。無法使用時，改用已設定好的 key 方式服務商。',
+    setAiMediaNone: '未選擇',
+    setAiImageNoneHint:
+      '未選擇服務商，因此使用第一個能夠產生圖片的服務商。如果都未設定，則無法產生圖片。',
+    setAiAnalysisChat: '直接交給目前的 AI',
+    setAiAnalysisChatHint: '圖片會直接顯示給正在對話的 AI，不需要另外的 key。',
+    setAiVideoNoneHint:
+      '影片和音訊解析需要支援影片的 key 方式服務商。在這裡選擇一個並填寫 key 後即可使用。',
     intgHeroTitle: '在 AI 助理中使用 GenOffice',
     intgHeroDesc:
       '接好後，Claude Code、Codex、Cursor、Claude Desktop 等助理就能替你建立、轉換、讀取和編輯 Word、Excel、PowerPoint、PDF 和 Markdown 檔案。全部在本機完成，不會上傳任何內容。',

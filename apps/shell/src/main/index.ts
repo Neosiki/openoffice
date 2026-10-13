@@ -65,6 +65,7 @@ import {
   checkUpdatesMenuItem,
   setUpdateCheckInvoker,
   installRendererProtocol,
+  safeExternalUrl,
 } from '@genoffice/electron-utils'
 import {
   readAppSettings,
@@ -281,6 +282,12 @@ import {
 } from '@genoffice/ui/ai-panel-prefs'
 import type { TabKind } from '../shared/tabs-api'
 import { TABS_CHANNELS } from '../shared/tabs-api'
+import { SHELL_SUBSCRIPTION_CHANNELS, isSubscriptionProviderId } from '../shared/subscription-api'
+import {
+  SUBSCRIPTION_INSTALL_URLS,
+  initSubscriptionChildTracking,
+  shutdownSubscriptionChildren,
+} from '@genoffice/ai-provider/subscription'
 import { showErrorDialog } from './error-dialog'
 import { startRendererWatchdog } from './renderer-watchdog'
 import {
@@ -4526,6 +4533,16 @@ function registerHomeIpc(): void {
     })
   })
 
+  // the page is the vendor's fixed install guide; the renderer only names the provider
+  ipcMain.handle(SHELL_SUBSCRIPTION_CHANNELS.openInstallHelp, (_event, provider: unknown) => {
+    if (!isSubscriptionProviderId(provider)) return
+    const url = safeExternalUrl(SUBSCRIPTION_INSTALL_URLS[provider])
+    if (!url) return
+    shell.openExternal(url).catch(() => {
+      // no browser handler available; nothing actionable for the user here
+    })
+  })
+
   ipcMain.handle(HOME_CHANNELS.githubStars, () => fetchGithubStars())
 
   // returning true also counts as "shown": the renderer displays it
@@ -5854,6 +5871,9 @@ app.whenReady().then(async () => {
     for (const w of BrowserWindow.getAllWindows())
       w.webContents.send(HOME_CHANNELS.accountLoginEvent, { phase: 'success' })
   })
+  // a subscription CLI a force-killed previous run left behind is ended, then
+  // this run records the ones it starts (userData is final by now)
+  void initSubscriptionChildTracking(app.getPath('userData')).catch(() => undefined)
   // a registry left by a crashed instance must not block genoffice writes
   ownsOpenDocumentsRegistry = true
   publishOpenDocuments(OPEN_DOCUMENTS_PATH(), [])
@@ -6067,4 +6087,11 @@ app.on('will-quit', () => {
   controlServer?.close()
   // a second instance that lost the lock quits too; it must not delete the running editor's list
   if (ownsOpenDocumentsRegistry) clearOpenDocuments(OPEN_DOCUMENTS_PATH())
+  shutdownSubscriptionChildren()
 })
+
+// app.exit() and process.exit() skip before-quit / will-quit (the headless
+// export ends that way, and so does an exit on a fatal error); 'exit' is the
+// one event every such way out still emits, so no subscription CLI outlives
+// the app. A process killed outright runs nothing: the next start cleans up.
+process.on('exit', () => shutdownSubscriptionChildren())

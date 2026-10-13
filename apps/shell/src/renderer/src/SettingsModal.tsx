@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import {
   AI_CUSTOM_FONT_MAX_PX,
   AI_CUSTOM_FONT_MIN_PX,
+  AiCodexNotice,
   DEFAULT_AI_PANEL_PREFS,
   Dropdown,
   aiPanelFontPx,
@@ -10,6 +11,7 @@ import {
 } from '@genoffice/ui'
 import type { AiFontSize, AiPanelPrefs, AiPanelSide } from '@genoffice/ui'
 import { PRODUCT_REPO_SLUG } from '@genoffice/i18n'
+import type { Lang } from '@genoffice/i18n'
 import type { DecisionEndpoint, DefaultAppStatus, FileSearchSettings } from '../../shared/home-api'
 import type { UpdateUiState } from '../../shared/update-api'
 import {
@@ -20,6 +22,7 @@ import {
   clampMaxOutputTokens,
   customEndpointLabel,
   newCustomEndpointId,
+  normalizeAiSettings,
   removeCustomEndpoint,
   selectCustomEndpoint,
   upsertCustomEndpoint,
@@ -28,6 +31,7 @@ import type {
   AiMediaProviderId,
   AiMediaProviderMeta,
   AiMediaSettings,
+  AiProviderId,
   AiSearchProviderMeta,
   AiSearchSettings,
   AiSettings,
@@ -37,6 +41,20 @@ import type { StringKey, TFunc } from './locale'
 import type { AccountStatus, AiCatalogEntry, DocTheme, UiTheme } from '../../shared/home-api'
 import { ProviderLogo } from './provider-logos'
 import { IntegrationsPane, skillUpdateDue } from './IntegrationsPane'
+import { AiSection, SubscriptionSummary } from './SettingsAiSection'
+import { useSubscriptionConnection } from './subscription-client'
+import {
+  advancedProviderIds,
+  initialAdvancedProvider,
+  isRemovedProviderId,
+  mediaKeyProviders,
+  mediaSelection,
+  mediaSpecialChoices,
+  readAiSettings,
+  withLiveSelectionFields,
+  writeAiSettings,
+} from './settings-ai'
+import type { MediaSpecialChoice } from './settings-ai'
 import './settings.css'
 
 // ── Settings modal (opened from the account menu) ─────────
@@ -160,8 +178,8 @@ export type SectionId = 'account' | 'aiModel' | 'aiMedia' | 'general' | 'integra
 
 const SECTIONS: readonly { id: SectionId; labelKey: StringKey }[] = [
   { id: 'account', labelKey: 'setSecAccount' },
-  { id: 'aiModel', labelKey: 'setSecAiModel' },
-  { id: 'aiMedia', labelKey: 'setSecAiMedia' },
+  // one AI entry: 'aiMedia' stays a valid target and opens it on the Advanced media area
+  { id: 'aiModel', labelKey: 'setSecAi' },
   { id: 'general', labelKey: 'setSecGeneral' },
   { id: 'integrations', labelKey: 'setSecIntegrations' },
   { id: 'about', labelKey: 'setSecAbout' },
@@ -289,12 +307,18 @@ function foldModels(providerId: string, models: string[]) {
     )
 }
 
-/** AI model pane: provider / model / key / base URL, saved to userData/ai-settings.json */
+/**
+ * AI model pane (Advanced): provider / model / key / base URL, saved to
+ * userData/ai-settings.json. The provider picked here is the one being filled
+ * in; which AI is in use is chosen in the section above, never here.
+ */
 function AiModelPane({ t }: { t: TFunc }) {
   const [catalog, setCatalog] = useState<AiCatalogEntry[]>(
     () => window.aiOffice.getAiProviders?.() ?? [],
   )
   const [settings, setSettings] = useState<AiSettings | null>(null)
+  /** the provider whose fields are shown; null until the user picks one */
+  const [editing, setEditing] = useState<AiProviderId | null>(null)
   const [dirty, setDirty] = useState(false)
   const [saved, setSaved] = useState(false)
   const [testing, setTesting] = useState(false)
@@ -332,14 +356,8 @@ function AiModelPane({ t }: { t: TFunc }) {
         setTesting(false)
         setTestResult(null)
         setSaved(false)
-        // The switch is disabled with genspark, so never present it stranded
-        // off. Display-only: s.provider may be the activeProvider fallback for
-        // a half-configured BYOK selection, so writing anything back here would
-        // clobber the stored choice — the main process heals a genuine legacy
-        // genspark+off file itself, judged on the raw stored provider.
-        if (s.provider === 'genspark' && s.gskToolsEnabled === false) {
-          s = { ...s, gskToolsEnabled: true }
-        }
+        // selections an older settings file made among removed providers read as their defaults
+        s = normalizeAiSettings(s)
         setSettings(s)
         const codex = s.providers.codex
         if (codex) {
@@ -360,12 +378,15 @@ function AiModelPane({ t }: { t: TFunc }) {
   // A user-hosted endpoint gets the same live model list as Codex, asked of the
   // endpoint itself. Keyed on the catalog's `needsBaseUrl` flag rather than on
   // the literal 'custom' id, so it follows the slot rather than the name, and
-  // stays a no-op while any other provider is selected — a local server saved
-  // months ago is never contacted while Genspark is in use.
+  // stays a no-op while any other provider is shown — a local server saved
+  // months ago is never contacted while another provider is being set up.
+  const editProvider = settings
+    ? (editing ?? initialAdvancedProvider(settings, catalog))
+    : undefined
   const endpointProvider = catalog.find(
-    (entry) => entry.id === settings?.provider && entry.needsBaseUrl,
+    (entry) => entry.id === editProvider && entry.needsBaseUrl,
   )?.id
-  const endpointConfig = settings ? settings.providers[settings.provider] : undefined
+  const endpointConfig = settings && editProvider ? settings.providers[editProvider] : undefined
   const endpointBaseUrl = (endpointConfig?.baseUrl ?? '').trim()
   const endpointApiKey = endpointConfig?.apiKey ?? ''
   // The stored model decides where the pin goes below, but changing it must not
@@ -415,8 +436,9 @@ function AiModelPane({ t }: { t: TFunc }) {
     }
   }, [endpointProvider, endpointBaseUrl, endpointApiKey])
 
-  if (!settings) return null
-  const provider = settings.provider
+  if (!settings || !editProvider) return null
+  const provider = editProvider
+  const listed = advancedProviderIds(catalog)
   const meta = catalog.find((c) => c.id === provider)
   const config = settings.providers[provider] ?? {
     apiKey: '',
@@ -424,7 +446,6 @@ function AiModelPane({ t }: { t: TFunc }) {
     baseUrl: undefined,
     cliPath: undefined,
   }
-  const isGenspark = provider === 'genspark'
   const isCodex = provider === 'codex'
 
   const touch = () => {
@@ -486,14 +507,10 @@ function AiModelPane({ t }: { t: TFunc }) {
     setSettings({ ...settings, maxOutputTokens: next })
     touch()
   }
-  const selectProvider = (id: AiSettings['provider']) => {
-    // cloud tools cannot be off with genspark (chat runs through gsk anyway)
-    setSettings({
-      ...settings,
-      provider: id,
-      ...(id === 'genspark' ? { gskToolsEnabled: true } : {}),
-    })
-    touch()
+  const selectProvider = (id: AiProviderId) => {
+    // switches the fields on show; the settings (and the AI in use) are untouched
+    setEditing(id)
+    setTestResult(null)
   }
   const save = () => {
     let toSave = settings
@@ -501,10 +518,10 @@ function AiModelPane({ t }: { t: TFunc }) {
       const live = (meta?.models ?? []).filter((m) => m !== endpoint.model)
       if (live.length > 0) toSave = upsertCustomEndpoint(settings, { ...endpoint, models: live })
     }
-    window.aiOffice
-      .setAiSettings?.(toSave)
-      .then(() => {
-        setSettings(toSave)
+    readAiSettings()
+      .then((latest) => writeAiSettings(withLiveSelectionFields(toSave, latest)))
+      .then((written) => {
+        setSettings(written)
         setDirty(false)
         setSaved(true)
       })
@@ -517,7 +534,8 @@ function AiModelPane({ t }: { t: TFunc }) {
     setTesting(true)
     setTestResult(null)
     window.aiOffice
-      .testAiSettings?.(settings)
+      // the round trip goes to the provider on show, whichever AI is in use
+      .testAiSettings?.({ ...settings, provider })
       .then((r) => {
         if (seq !== testSeqRef.current) return
         setTestResult(r ?? { ok: false })
@@ -568,21 +586,23 @@ function AiModelPane({ t }: { t: TFunc }) {
           className="set-dd"
           value={provider}
           ariaLabel={t('setAiProvider')}
-          options={catalog.map((c) => ({
-            value: c.id,
-            label: c.label,
-            render: (
-              <>
-                <ProviderLogo id={c.id} />
-                {c.label}
-              </>
-            ),
-          }))}
-          onPick={(v) => selectProvider(v as AiSettings['provider'])}
+          options={catalog
+            .filter((c) => listed.includes(c.id))
+            .map((c) => ({
+              value: c.id,
+              label: c.label,
+              render: (
+                <>
+                  <ProviderLogo id={c.id} />
+                  {c.label}
+                </>
+              ),
+            }))}
+          onPick={(v) => selectProvider(v as AiProviderId)}
         />
       </div>
       <div className="set-field-desc set-ai-note">
-        {isGenspark ? t('setAiGensparkHint') : isCodex ? t('setAiCodexHint') : t('setAiByokNote')}
+        {isCodex ? t('setAiCodexHint') : t('setAiKeyNote')}
       </div>
       {meta?.needsBaseUrl && (
         <>
@@ -685,7 +705,7 @@ function AiModelPane({ t }: { t: TFunc }) {
             }}
           />
         </div>
-      ) : !isGenspark ? (
+      ) : (
         <>
           <div className="set-field">
             <div className="set-field-text">
@@ -729,7 +749,7 @@ function AiModelPane({ t }: { t: TFunc }) {
             />
           </div>
         </>
-      ) : null}
+      )}
       <div className="set-field">
         <div className="set-field-text">
           <div className="set-field-stack">
@@ -749,26 +769,6 @@ function AiModelPane({ t }: { t: TFunc }) {
           value={maxTokensDraft ?? String(settings.maxOutputTokens ?? DEFAULT_MAX_OUTPUT_TOKENS)}
           onChange={(e) => setMaxTokensDraft(e.target.value)}
           onBlur={commitMaxTokens}
-        />
-      </div>
-      <div className="set-field">
-        <div className="set-field-text">
-          <div className="set-field-stack">
-            <div className="set-field-label">{t('setAiGskTools')}</div>
-            <div className="set-field-desc">{t('setAiGskToolsDesc')}</div>
-          </div>
-        </div>
-        {/* locked on with the genspark provider — chat runs through gsk anyway */}
-        <button
-          className="set-switch"
-          role="switch"
-          aria-checked={settings.gskToolsEnabled !== false}
-          aria-label={t('setAiGskTools')}
-          disabled={isGenspark}
-          onClick={() => {
-            setSettings({ ...settings, gskToolsEnabled: settings.gskToolsEnabled === false })
-            touch()
-          }}
         />
       </div>
     </>
@@ -803,21 +803,30 @@ const DECISION_ENDPOINTS: { value: DecisionEndpoint; label: string }[] = [
  * provider / model / key / base URL rows as the AI Model pane. A vendor's key
  * and base URL are stored once and shared by every block that picks it.
  * Saved into the same ai-settings.json as the chat provider.
+ *
+ * The media blocks also offer what needs no key: the Codex subscription for
+ * image generation (only in a build that can do it), the chat AI itself for
+ * image analysis, and nothing at all.
  */
 function AiMediaPane({
   t,
+  lang,
+  codexImageAvailable,
   onFileSearchChange,
   focusBlock,
 }: {
   t: TFunc
+  lang: Lang
+  /** the main process can generate images through the Codex subscription */
+  codexImageAvailable: boolean
   onFileSearchChange?: () => void
   focusBlock?: TestedBlock
 }) {
-  const [mediaCatalog] = useState<AiMediaProviderMeta[]>(
-    () => window.aiOffice.getAiMediaProviders?.() ?? [],
+  const [mediaCatalog] = useState<AiMediaProviderMeta[]>(() =>
+    (window.aiOffice.getAiMediaProviders?.() ?? []).filter((m) => !isRemovedProviderId(m.id)),
   )
-  const [searchCatalog] = useState<AiSearchProviderMeta[]>(
-    () => window.aiOffice.getAiSearchProviders?.() ?? [],
+  const [searchCatalog] = useState<AiSearchProviderMeta[]>(() =>
+    (window.aiOffice.getAiSearchProviders?.() ?? []).filter((m) => !isRemovedProviderId(m.id)),
   )
   const [settings, setSettings] = useState<AiSettings | null>(null)
   const [fileSearch, setFileSearchState] = useState<FileSearchSettings | null>(null)
@@ -846,7 +855,7 @@ function AiMediaPane({
         setTesting(false)
         setTestResults(null)
         setSaved(false)
-        setSettings(s)
+        setSettings(normalizeAiSettings(s))
       })
     }
     load()
@@ -903,9 +912,13 @@ function AiMediaPane({
       providers: { ...media.providers, [id]: { ...mediaConfigOf(id), ...patch } },
     })
 
+  /** what a media block shows as selected: a key provider id, or `codex` / `chat` / `none` */
+  const selectionOf = (cap: Exclude<Capability, 'search'>) =>
+    mediaSelection(cap, settings, mediaCatalog, codexImageAvailable)
+
   const save = () => {
     Promise.all([
-      window.aiOffice.setAiSettings?.(settings),
+      readAiSettings().then((latest) => writeAiSettings(withLiveSelectionFields(settings, latest))),
       fileSearch ? window.aiOffice.setFileSearchSettings?.(fileSearch) : undefined,
     ])
       .then(() => {
@@ -947,10 +960,12 @@ function AiMediaPane({
                 : (search.providers[search.provider]?.apiKey ?? ''),
           }) ?? Promise.resolve(fallback),
       ],
-      ['image', () => vendorCheck(media.imageProvider as AiMediaProviderId)],
-      ['analysis', () => vendorCheck(media.analysisProvider as AiMediaProviderId)],
-      ['video', () => vendorCheck(media.videoAnalysisProvider as AiMediaProviderId)],
     ]
+    // a block on the subscription, the chat AI or nothing has no key to check
+    for (const cap of ['image', 'analysis', 'video'] as const) {
+      const vendor = mediaCatalog.find((m) => m.id === selectionOf(cap))
+      if (vendor) blocks.push([cap, () => vendorCheck(vendor.id)])
+    }
     if (fileSearch?.rerank) {
       blocks.push([
         'rerank',
@@ -989,12 +1004,7 @@ function AiMediaPane({
       return DECISION_ENDPOINTS.find((e) => e.value === fileSearch?.endpoint)?.label ?? ''
     if (block === 'search')
       return searchCatalog.find((m) => m.id === search.provider)?.label ?? search.provider
-    const id =
-      block === 'image'
-        ? media.imageProvider
-        : block === 'video'
-          ? media.videoAnalysisProvider
-          : media.analysisProvider
+    const id = selectionOf(block)
     return mediaCatalog.find((m) => m.id === id)?.label ?? id
   }
   const blockStatus = (block: TestedBlock): AiStatus | null => {
@@ -1175,6 +1185,21 @@ function AiMediaPane({
     </div>
   )
 
+  const specialLabel = (choice: MediaSpecialChoice) =>
+    choice === 'codex'
+      ? t('setAiImageCodex')
+      : choice === 'chat'
+        ? t('setAiAnalysisChat')
+        : t('setAiMediaNone')
+  const specialHint = (cap: Exclude<Capability, 'search'>, choice: MediaSpecialChoice) =>
+    choice === 'codex'
+      ? t('setAiImageCodexHint')
+      : choice === 'chat'
+        ? t('setAiAnalysisChatHint')
+        : cap === 'image'
+          ? t('setAiImageNoneHint')
+          : t('setAiVideoNoneHint')
+
   /** one media block: provider → model → key → base URL (key/base URL shared per vendor) */
   const mediaBlock = (cap: Exclude<Capability, 'search'>) => {
     const title =
@@ -1183,54 +1208,48 @@ function AiMediaPane({
         : cap === 'analysis'
           ? t('setAiCapAnalysis')
           : t('setAiCapVideo')
-    const options = mediaCatalog.filter((m) =>
-      cap === 'image'
-        ? !!m.imageProtocol
-        : cap === 'video'
-          ? !!m.analysisProtocol && m.videoAnalysis
-          : !!m.analysisProtocol,
-    )
-    const current =
-      cap === 'image'
-        ? media.imageProvider
-        : cap === 'video'
-          ? media.videoAnalysisProvider
-          : media.analysisProvider
-    const meta = options.find((m) => m.id === current) ?? options[0]!
-    const id = meta.id
-    const config = mediaConfigOf(id)
+    const options = mediaKeyProviders(cap, mediaCatalog)
+    const specials = mediaSpecialChoices(cap, codexImageAvailable)
+    const current = selectionOf(cap)
+    // absent while the block is on the subscription, the chat AI or nothing
+    const meta = options.find((m) => m.id === current)
     const pick = (next: string) => {
-      const p = next as AiMediaProviderId
       setMedia(
         cap === 'image'
-          ? { ...media, imageProvider: p }
+          ? { ...media, imageProvider: next as AiMediaSettings['imageProvider'] }
           : cap === 'video'
-            ? { ...media, videoAnalysisProvider: p }
-            : { ...media, analysisProvider: p },
+            ? { ...media, videoAnalysisProvider: next as AiMediaSettings['videoAnalysisProvider'] }
+            : { ...media, analysisProvider: next as AiMediaSettings['analysisProvider'] },
       )
     }
     const modelField = cap === 'image' ? 'imageModel' : 'analysisModel'
     return (
       <section key={cap}>
         {subhead(cap, title)}
-        {providerRow(title, id, options, pick)}
+        {providerRow(
+          title,
+          current,
+          [...specials.map((id) => ({ id, label: specialLabel(id) })), ...options],
+          pick,
+        )}
         <div className="set-field-desc set-ai-note">
-          {id === 'genspark' ? t('setAiMediaGensparkHint') : meta.description}
+          {meta ? meta.description : specialHint(cap, current as MediaSpecialChoice)}
         </div>
-        {id !== 'genspark' && (
+        {specials.includes('codex') && <AiCodexNotice lang={lang} />}
+        {meta && (
           <>
             {modelRow(
               `set-ai-${cap}-model`,
               cap === 'image' ? meta.imageModels : meta.analysisModels,
               cap === 'image' ? meta.defaultImageModel : meta.defaultAnalysisModel,
-              config[modelField],
-              (m) => updateMediaConfig(id, { [modelField]: m }),
+              mediaConfigOf(meta.id)[modelField],
+              (m) => updateMediaConfig(meta.id, { [modelField]: m }),
             )}
-            {keyRow(`set-ai-${cap}-key`, config.apiKey, meta.keyPlaceholder, (v) =>
-              updateMediaConfig(id, { apiKey: v }),
+            {keyRow(`set-ai-${cap}-key`, mediaConfigOf(meta.id).apiKey, meta.keyPlaceholder, (v) =>
+              updateMediaConfig(meta.id, { apiKey: v }),
             )}
-            {baseUrlRow(`set-ai-${cap}-base-url`, meta, config.baseUrl ?? '', (v) =>
-              updateMediaConfig(id, { baseUrl: v }),
+            {baseUrlRow(`set-ai-${cap}-base-url`, meta, mediaConfigOf(meta.id).baseUrl ?? '', (v) =>
+              updateMediaConfig(meta.id, { baseUrl: v }),
             )}
           </>
         )}
@@ -1263,15 +1282,13 @@ function AiMediaPane({
           setSearch({ ...search, provider: v as AiSearchSettings['provider'] }),
         )}
         <div className="set-field-desc set-ai-note">
-          {search.provider === 'genspark'
-            ? t('setAiSearchGensparkHint')
-            : search.provider === 'parallel'
-              ? t('setAiSearchParallelHint')
-              : search.provider === 'serply'
-                ? t('setAiSearchSerplyHint')
-                : searchMeta?.imageSearch
-                  ? t('setAiSearchSerperHint')
-                  : t('setAiSearchTavilyHint')}
+          {search.provider === 'parallel'
+            ? t('setAiSearchParallelHint')
+            : search.provider === 'serply'
+              ? t('setAiSearchSerplyHint')
+              : searchMeta?.imageSearch
+                ? t('setAiSearchSerperHint')
+                : t('setAiSearchTavilyHint')}
         </div>
         {search.provider !== 'genspark' &&
           keyRow('set-ai-search-key', searchKey, searchMeta?.keyPlaceholder ?? 'API Key', (v) =>
@@ -1424,21 +1441,20 @@ function AiStatusPill({ status }: { status: AiStatus | null }) {
 }
 
 export interface SettingsModalProps {
-  status: AccountStatus | null
-  loggingOut: boolean
-  /** browser sign-in in progress (spinner shows on the account entry) */
-  loginWaiting: boolean
-  /** device auth URL while waiting — rescue actions when the browser did not auto-open */
-  loginUrl: string | null
-  urlCopied: boolean
-  onOpenLoginUrl: () => void
-  onCopyLoginUrl: () => void
+  // The account props below belonged to the sign-in this dialog used to host. It
+  // no longer reads them; they stay optional until the home screen stops passing them.
+  status?: AccountStatus | null
+  loggingOut?: boolean
+  loginWaiting?: boolean
+  loginUrl?: string | null
+  urlCopied?: boolean
+  onOpenLoginUrl?: () => void
+  onCopyLoginUrl?: () => void
+  onLogin?: () => void
+  onLogout?: () => void
   onClose: () => void
   /** the decision-model search settings were saved; the home search re-judges or drops its current order */
   onFileSearchChange?: () => void
-  /** closes the modal and launches the Genspark login flow (progress shows on the account entry) */
-  onLogin: () => void
-  onLogout: () => void
   /** an installed skill is older than the bundled one: dot on the Integrations entry */
   skillUpdateDue?: boolean
   onSkillUpdateDue?: (due: boolean) => void
@@ -1447,17 +1463,8 @@ export interface SettingsModalProps {
 }
 
 export function SettingsModal({
-  status,
-  loggingOut,
-  loginWaiting,
-  loginUrl,
-  urlCopied,
-  onOpenLoginUrl,
-  onCopyLoginUrl,
   onClose,
   onFileSearchChange,
-  onLogin,
-  onLogout,
   skillUpdateDue: updateDue = false,
   onSkillUpdateDue,
   target,
@@ -1481,6 +1488,8 @@ export function SettingsModal({
   const [appVersion, setAppVersion] = useState('')
   const [githubStars, setGithubStars] = useState<number | null>(null)
   const [updateState, setUpdateState] = useState<UpdateUiState | null>(null)
+  // one live view of the two subscription connections for the whole dialog
+  const connection = useSubscriptionConnection()
 
   useEffect(() => {
     let alive = true
@@ -1588,6 +1597,9 @@ export function SettingsModal({
       .finally(() => setDefaultAppBusy(false))
   }
 
+  // the media area is part of the AI section: a target naming it lights the AI entry
+  const navSection: SectionId = section === 'aiMedia' ? 'aiModel' : section
+
   const defaultAppDesc = (() => {
     if (!defaultApp) return ''
     if (defaultAppFailed) return t('setDefaultAppFailed')
@@ -1596,9 +1608,6 @@ export function SettingsModal({
       return t('setDefaultAppOther', { app: defaultApp.others.join(', ') })
     return t('setDefaultAppDesc')
   })()
-
-  const loggedIn = status?.loggedIn ?? false
-  const email = status?.email ?? ''
 
   return (
     <div
@@ -1626,8 +1635,8 @@ export function SettingsModal({
             {SECTIONS.map((s) => (
               <button
                 key={s.id}
-                className={`set-nav-item${section === s.id ? ' active' : ''}`}
-                aria-current={section === s.id}
+                className={`set-nav-item${navSection === s.id ? ' active' : ''}`}
+                aria-current={navSection === s.id}
                 onClick={() => setSection(s.id)}
               >
                 <SectionIcon id={s.id} />
@@ -1640,59 +1649,32 @@ export function SettingsModal({
           </nav>
           <div className="set-pane">
             {section === 'account' && (
-              <>
-                <h3 className="set-pane-title">{t('setSecAccount')}</h3>
-                <Field label={t('setEmail')} value={loggedIn ? email : t('setNotLoggedIn')} />
-                {loggedIn && (
-                  <Field
-                    label={t('credits')}
-                    value={
-                      status?.creditBalance === undefined
-                        ? '—'
-                        : Math.floor(status.creditBalance).toLocaleString('en-US')
-                    }
-                    action={
-                      <button
-                        className="set-btn"
-                        data-tip={t('creditsTip')}
-                        onClick={() => void window.aiOffice.openCreditUsage?.()}
-                      >
-                        {t('setViewUsage')}
-                      </button>
-                    }
-                  />
-                )}
-                <div className="set-pane-footer">
-                  {loggedIn ? (
-                    <button className="set-btn danger" disabled={loggingOut} onClick={onLogout}>
-                      {loggingOut ? t('loggingOut') : t('logout')}
-                    </button>
-                  ) : (
-                    <>
-                      {loginWaiting && loginUrl && (
-                        <>
-                          <button className="set-btn" onClick={onOpenLoginUrl}>
-                            {t('loginOpenManually')}
-                          </button>
-                          <button className="set-btn" onClick={onCopyLoginUrl}>
-                            {urlCopied ? t('loginCopied') : t('loginCopyUrl')}
-                          </button>
-                        </>
-                      )}
-                      <button className="set-btn primary" onClick={onLogin}>
-                        {loginWaiting ? t('waitingShort') : t('loginGenspark')}
-                      </button>
-                    </>
-                  )}
-                </div>
-              </>
-            )}
-            {section === 'aiModel' && <AiModelPane t={t} />}
-            {section === 'aiMedia' && (
-              <AiMediaPane
+              <SubscriptionSummary
                 t={t}
-                onFileSearchChange={onFileSearchChange}
-                focusBlock={target?.block}
+                lang={lang}
+                connection={connection}
+                onManage={() => setSection('aiModel')}
+              />
+            )}
+            {navSection === 'aiModel' && (
+              <AiSection
+                t={t}
+                lang={lang}
+                connection={connection}
+                openTab={section === 'aiMedia' ? 'media' : undefined}
+                advanced={(tab) =>
+                  tab === 'model' ? (
+                    <AiModelPane t={t} />
+                  ) : (
+                    <AiMediaPane
+                      t={t}
+                      lang={lang}
+                      codexImageAvailable={connection.codexImageAvailable}
+                      onFileSearchChange={onFileSearchChange}
+                      focusBlock={target?.block}
+                    />
+                  )
+                }
               />
             )}
             {section === 'general' && (

@@ -85,8 +85,8 @@ function installApi(settings: AiSettings): void {
     githubStars: async () => null,
     getAiProviders: () => [
       {
-        id: 'genspark',
-        label: 'Genspark',
+        id: 'openai',
+        label: 'OpenAI',
         models: [],
         defaultModel: '',
         keyPlaceholder: 'k',
@@ -131,10 +131,12 @@ async function openAiPane(): Promise<void> {
     )
     await Promise.resolve()
   })
-  const nav = Array.from(host.querySelectorAll<HTMLButtonElement>('.set-nav-item')).find((button) =>
-    button.textContent?.includes('AI Model'),
+  const nav = Array.from(host.querySelectorAll<HTMLButtonElement>('.set-nav-item')).find(
+    (button) => button.textContent?.trim() === 'AI',
   )
   await click(nav!)
+  // the key pane lives under Advanced, closed until asked for
+  await click(host.querySelector<HTMLButtonElement>('.set-adv-toggle')!)
 }
 
 async function click(button: HTMLButtonElement): Promise<void> {
@@ -319,8 +321,8 @@ describe('the fold', () => {
     await answer(0, ['alpha', 'beta'])
     expect(modelBox()).toBeNull()
 
-    await pickProvider('Genspark')
-    expect(modelBox()).not.toBeNull() // genspark still has no model list
+    await pickProvider('OpenAI')
+    expect(modelBox()).not.toBeNull() // the other entry still has no model list
   })
 })
 
@@ -328,14 +330,14 @@ describe('the fold', () => {
 
 describe('scope', () => {
   it('does not probe a saved endpoint while another provider is selected', async () => {
-    installApi(storedSettings({ provider: 'genspark' }))
+    installApi(storedSettings({ provider: 'openai' }))
     await openAiPane()
     await tick()
     expect(calls).toEqual([])
   })
 
   it('probes as soon as the provider dropdown switches to the endpoint', async () => {
-    installApi(storedSettings({ provider: 'genspark' }))
+    installApi(storedSettings({ provider: 'openai' }))
     await openAiPane()
     await tick()
     expect(calls).toEqual([])
@@ -458,7 +460,7 @@ describe('request discipline', () => {
     await tick()
     expect(calls).toHaveLength(1) // out, and holding
 
-    await pickProvider('Genspark')
+    await pickProvider('OpenAI')
     await answer(0, ['alpha', 'beta']) // the endpoint answers too late to matter
 
     await pickProvider('Custom')
