@@ -93,12 +93,14 @@ import {
   sheetCsvToXlsxBuffer,
 } from '@genoffice/xlsx-gateway/gateway/csv-import'
 import {
+  abortMediaCalls,
   aiToolCapabilities,
   readAiSettingsFile,
   webSearchTool,
   imageSearchTool,
   generateImageTool,
   localMediaRoots,
+  withMediaCallSignal,
   type AiToolCapabilities,
 } from '@genoffice/ai-search'
 import { parseFileToText } from '@genoffice/file-parse'
@@ -2563,16 +2565,20 @@ export function registerSheetsIpc(): void {
   ipcMain.handle(
     IPC_CHANNELS.aiGenerateImage,
     (event, op: { prompt?: unknown; aspectRatio?: unknown }) =>
-      generateImageTool(
-        SETTINGS_PATH(),
-        {
-          prompt: String(op?.prompt ?? ''),
-          ...(op?.aspectRatio ? { aspectRatio: String(op.aspectRatio) } : {}),
-        },
-        {
-          mediaRoots: sheetsMediaRoots(event.sender.id),
-          context: { path: 'screen', statuses: sharedSubscriptionStatuses() },
-        },
+      // ends with its tab, or when the tab's AI run is stopped
+      withMediaCallSignal(event.sender, (signal) =>
+        generateImageTool(
+          SETTINGS_PATH(),
+          {
+            prompt: String(op?.prompt ?? ''),
+            ...(op?.aspectRatio ? { aspectRatio: String(op.aspectRatio) } : {}),
+          },
+          {
+            mediaRoots: sheetsMediaRoots(event.sender.id),
+            context: { path: 'screen', statuses: sharedSubscriptionStatuses() },
+            signal,
+          },
+        ),
       ),
   )
 
@@ -3741,6 +3747,8 @@ export function registerSheetsAiIpc(): void {
   ipcMain.handle(IPC_CHANNELS.aiStreamCancel, (event, requestId: unknown) => {
     const entry = sessionFor(event)
     entry.aiStreams.get(z.string().min(1).parse(requestId))?.abort()
+    // Stop while a tool runs names a turn that already ended: end the tab's media calls too
+    abortMediaCalls(event.sender.id)
   })
 
   // Shared search tools (content + images): Serper with DuckDuckGo fallback

@@ -6,6 +6,7 @@ AI가 쓰는 부가 도구(웹 검색, 이미지 검색, 이미지 생성, 미�
 
 - 검색: `webSearch`·`imageSearch`와 백엔드별 구현(`src/index.ts`), 설정 파일을 읽어 옵션으로 바꾸는 `webSearchTool`·`imageSearchTool`·`searchOptionsFromSettings`(`src/search-tools.ts`), 키 없는 Parallel 검색(`src/parallel-mcp.ts`).
 - 이미지 생성과 미디어 분석: `generateImageTool`·`analyzeMediaTool`(`src/media-tools.ts`), 채팅 제공자에게 이미지를 보여 주는 분석(`src/chat-analysis.ts`).
+- 이미지 생성·미디어 분석 호출의 취소: 진행 중인 호출을 창(webContents id)별로 기억해 두고, 창이 사라지거나 그 창의 AI 실행이 중단되면 끊는 `withMediaCallSignal`·`abortMediaCalls`(`src/media-call-abort.ts`).
 - 경로 결정: `resolveImageRoute`·`resolveImageAnalysisRoute`·`resolveVideoAnalysisRoute`·`headlessSubscriptionBlocked`(`src/tool-routing.ts`)와 같은 함수로 만든 가용성 보고 `aiToolCapabilities`(`src/tool-capabilities.ts`).
 - 자동 호출 경로의 구독 사용 한도: `runHeadlessSubscriptionCall`·`headlessSubscriptionUsage`(`src/headless-ledger.ts`).
 - Codex 이미지 생성기가 스스로 등록하는 자리 `registerCodexImageGenerator`(`src/codex-image-generator.ts`).

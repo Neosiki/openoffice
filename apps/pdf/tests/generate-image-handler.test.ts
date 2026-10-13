@@ -1,4 +1,5 @@
 // @vitest-environment node
+import { EventEmitter } from 'node:events'
 import { join } from 'node:path'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { SubscriptionStatusMap } from '@genoffice/ai-provider/browser'
@@ -8,15 +9,19 @@ type Handler = (event: { sender: FakeContents }, ...args: any[]) => any
 const handlers = new Map<string, Handler>()
 let lastContents: FakeContents
 let nextId = 500
-class FakeContents {
+class FakeContents extends EventEmitter {
   id = ++nextId
-  once = vi.fn()
-  on = vi.fn()
   setWindowOpenHandler = vi.fn()
   loadURL = vi.fn()
   loadFile = vi.fn()
-  isDestroyed = () => false
+  destroyed = false
+  isDestroyed = () => this.destroyed
   send = vi.fn()
+  /** the tab or window was closed */
+  destroy(): void {
+    this.destroyed = true
+    this.emit('destroyed')
+  }
 }
 vi.mock('electron', () => ({
   app: {
@@ -49,6 +54,7 @@ vi.mock('@genoffice/ai-provider/subscription', async (importOriginal) => ({
   sharedSubscriptionStatuses: () => sharedSubscriptionStatuses(),
 }))
 
+import { abortMediaCalls } from '@genoffice/ai-search'
 import { createPdfView } from '../src/main/pdf-main'
 
 const STATUSES: SubscriptionStatusMap = {
@@ -110,5 +116,56 @@ describe('pdf:generate-image handler', () => {
     createPdfView('/docs/report.pdf')
     await handlers.get(PDF_CHANNELS.generateImage)!({ sender: lastContents }, undefined)
     expect(generateImageTool.mock.calls[0]![1]).toEqual({ prompt: '', aspectRatio: undefined })
+  })
+
+  describe('cancelling', () => {
+    /** a request that stays in flight until the test answers it */
+    function startRequest() {
+      let answer!: (result: { url?: string; error?: string }) => void
+      generateImageTool.mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            answer = resolve
+          }),
+      )
+      createPdfView('/docs/report.pdf')
+      const sender = lastContents
+      const result = handlers.get(PDF_CHANNELS.generateImage)!({ sender }, { prompt: 'a red kite' })
+      const signal: AbortSignal = generateImageTool.mock.calls.at(-1)![2].signal
+      return { sender, signal, result, answer }
+    }
+
+    beforeEach(() => {
+      sharedSubscriptionStatuses.mockReturnValue(STATUSES)
+    })
+
+    it('hands the tool a signal that stays live while nothing is cancelled', async () => {
+      const request = startRequest()
+      expect(request.signal).toBeInstanceOf(AbortSignal)
+      request.answer({ url: 'file:///fake/out.png' })
+      expect(await request.result).toEqual({ url: 'file:///fake/out.png' })
+      expect(request.signal.aborted).toBe(false)
+    })
+
+    it('aborts when the tab that asked is closed', async () => {
+      const request = startRequest()
+      request.sender.destroy()
+      expect(request.signal.aborted).toBe(true)
+      request.answer({ error: 'cancelled' })
+      await request.result
+    })
+
+    it('aborts when the AI run of its tab is stopped, and leaves another tab alone', async () => {
+      const stopped = startRequest()
+      const other = startRequest()
+      // what the AI handlers do on the stop message (ai:stream-cancel) of a tab
+      abortMediaCalls(stopped.sender.id)
+      expect(stopped.signal.aborted).toBe(true)
+      expect(other.signal.aborted).toBe(false)
+      stopped.answer({ error: 'cancelled' })
+      other.answer({ url: 'file:///fake/out.png' })
+      expect(await other.result).toEqual({ url: 'file:///fake/out.png' })
+      await stopped.result
+    })
   })
 })

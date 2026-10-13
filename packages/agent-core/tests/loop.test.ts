@@ -516,6 +516,9 @@ describe('AgentLoop', () => {
     // The turn is over without the tool ever settling
     expect(onDone).toHaveBeenCalledTimes(1)
     expect(onDone).toHaveBeenCalledWith({ text: 'working', cancelled: true, turnLimit: false })
+    // The stop still reaches the transport, for the turn that already ended: the main
+    // process ends the window's in-flight media tool calls on that message
+    expect(transport.cancels).toBe(1)
     expect(loop.busy).toBe(false)
     expect(transport.requests).toHaveLength(1)
     // The second tool never ran, and both calls keep a paired result

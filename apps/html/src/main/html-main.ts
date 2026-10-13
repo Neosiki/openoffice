@@ -47,7 +47,7 @@ import {
   sharedSubscriptionStatuses,
   shutdownSubscriptionChildren,
 } from '@genoffice/ai-provider/subscription'
-import { generateImageTool, documentMediaRoots } from '@genoffice/ai-search'
+import { generateImageTool, documentMediaRoots, withMediaCallSignal } from '@genoffice/ai-search'
 import { parseFileToText } from '@genoffice/file-parse'
 import { convertHtmlToDocx } from '../../../../packages/html2docx/src'
 import { atomicWriteFile } from './atomic-write'
@@ -1575,20 +1575,24 @@ function registerHtmlIpc(): void {
   ipcMain.handle(
     HTML_CHANNELS.aiGenerateImage,
     (e, op: { prompt?: unknown; aspectRatio?: unknown }) =>
-      generateImageTool(
-        join(app.getPath('userData'), 'ai-settings.json'),
-        {
-          prompt: String(op?.prompt ?? ''),
-          aspectRatio: op?.aspectRatio ? String(op.aspectRatio) : undefined,
-        },
-        {
-          mediaRoots: documentMediaRoots(
-            htmlFilePath(e.sender.id),
-            join(app.getPath('temp'), 'genoffice-pasted'),
-          ),
-          // screen path: the statuses of the process-wide subscription service decide the route
-          context: { path: 'screen', statuses: sharedSubscriptionStatuses() },
-        },
+      // ends with its tab, or when the tab's AI run is stopped
+      withMediaCallSignal(e.sender, (signal) =>
+        generateImageTool(
+          join(app.getPath('userData'), 'ai-settings.json'),
+          {
+            prompt: String(op?.prompt ?? ''),
+            aspectRatio: op?.aspectRatio ? String(op.aspectRatio) : undefined,
+          },
+          {
+            mediaRoots: documentMediaRoots(
+              htmlFilePath(e.sender.id),
+              join(app.getPath('temp'), 'genoffice-pasted'),
+            ),
+            // screen path: the statuses of the process-wide subscription service decide the route
+            context: { path: 'screen', statuses: sharedSubscriptionStatuses() },
+            signal,
+          },
+        ),
       ),
   )
 

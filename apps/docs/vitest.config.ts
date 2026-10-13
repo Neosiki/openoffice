@@ -24,6 +24,15 @@ export default defineConfig({
       ),
       '@genoffice/electron-utils': local('../../packages/electron-utils/src/index.ts'),
       '@genoffice/ai-provider/browser': local('../../packages/ai-provider/src/browser.ts'),
+      '@genoffice/ai-provider/codex-app-server': local(
+        '../../packages/ai-provider/src/codex-app-server.ts',
+      ),
+      '@genoffice/ai-provider/custom-models': local(
+        '../../packages/ai-provider/src/custom-models.ts',
+      ),
+      '@genoffice/ai-provider/subscription': local(
+        '../../packages/ai-provider/src/subscription.ts',
+      ),
       '@genoffice/ai-provider': local('../../packages/ai-provider/src/index.ts'),
       '@genoffice/i18n': local('../../packages/i18n/src/index.ts'),
       '@genoffice/ui': local('../../packages/ui/src/index.ts'),

@@ -112,6 +112,7 @@ import {
   shutdownSubscriptionChildren,
 } from '@genoffice/ai-provider/subscription'
 import {
+  abortMediaCalls,
   aiToolCapabilities,
   generateImageTool,
   testSearchProvider,
@@ -119,6 +120,7 @@ import {
   imageSearchTool,
   analyzeMediaTool,
   documentMediaRoots,
+  withMediaCallSignal,
   type AiToolCallContext,
   type AiToolCapabilities,
 } from '@genoffice/ai-search'
@@ -3883,8 +3885,11 @@ export function registerAiIpc(): void {
     }
   })
 
-  ipcMain.handle('ai:stream-cancel', (_event, requestId: string) => {
+  ipcMain.handle('ai:stream-cancel', (event, requestId: string) => {
     activeAiStreams.get(requestId)?.abort()
+    // Stop while a tool runs names a turn that already ended: end the tab's media calls too
+    // (whichever editor main started them; this handler answers every editor in the suite)
+    abortMediaCalls(event.sender.id)
   })
 
   // shared search tools (content + images): Serper with DuckDuckGo fallback (same source as slides/sheets)
@@ -3914,9 +3919,9 @@ export function registerAiIpc(): void {
   // media understanding (pictures in the document, attachments, local files): the selected
   // key media provider, or for pictures the connected chat provider (see tool-routing).
   // docs-prefixed: slides registers its own ai:analyze-media in the same shell process.
-  ipcMain.handle(
-    'docs:analyze-media',
-    async (event, op: { mediaUrls: string[]; requirements: string }) => {
+  // Ends with its tab, or when the tab's AI run is stopped.
+  ipcMain.handle('docs:analyze-media', (event, op: { mediaUrls: string[]; requirements: string }) =>
+    withMediaCallSignal(event.sender, async (signal) => {
       const mediaUrls = (op.mediaUrls ?? []).map(String).filter(Boolean)
       // a picture opened lazily from a large docx is only addressable by its main-process
       // store; hand its bytes over as a data URL so the loader can read them like any other
@@ -3931,9 +3936,9 @@ export function registerAiIpc(): void {
           mediaUrls: resolved,
           requirements: String(op.requirements ?? ''),
         },
-        { mediaRoots: docsMediaRoots(event.sender.id), context: screenToolContext() },
+        { mediaRoots: docsMediaRoots(event.sender.id), context: screenToolContext(), signal },
       )
-    },
+    }),
   )
 
   // download image from URL → base64+mime (download in the main process avoids CORS; the renderer builds the image node and measures size itself)
@@ -3966,13 +3971,15 @@ export function registerAiIpc(): void {
   ipcMain.handle(
     'docs:ai-generate-image',
     (event, op: { prompt?: unknown; aspectRatio?: unknown }) =>
-      generateImageTool(
-        SETTINGS_PATH(),
-        {
-          prompt: String(op?.prompt ?? ''),
-          aspectRatio: op?.aspectRatio ? String(op.aspectRatio) : undefined,
-        },
-        { mediaRoots: docsMediaRoots(event.sender.id), context: screenToolContext() },
+      withMediaCallSignal(event.sender, (signal) =>
+        generateImageTool(
+          SETTINGS_PATH(),
+          {
+            prompt: String(op?.prompt ?? ''),
+            aspectRatio: op?.aspectRatio ? String(op.aspectRatio) : undefined,
+          },
+          { mediaRoots: docsMediaRoots(event.sender.id), context: screenToolContext(), signal },
+        ),
       ),
   )
 

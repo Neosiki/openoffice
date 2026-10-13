@@ -150,6 +150,31 @@ describe('analyze_media, image analysis through the AI provider (`chat`)', () =>
     expect(r.text).toBeUndefined()
     expect(r.error).toEqual(expect.any(String))
   })
+
+  it('ends the provider run when the caller cancels, and answers with an error instead of throwing', async () => {
+    let providerSignal: AbortSignal | undefined
+    stream.mockImplementation(
+      (_provider, _config, _system, _messages, _tools, _max, cb) =>
+        new Promise<void>((_resolve, reject) => {
+          providerSignal = cb.signal
+          // what a subscription bridge does on abort: it ends its program, then rejects
+          cb.signal.addEventListener('abort', () => reject(new Error('cancelled')), { once: true })
+        }),
+    )
+    const controller = new AbortController()
+    const pending = analyzeMediaTool(
+      writeSettings(),
+      { mediaUrls: [dataUrl(8)], requirements: 'describe' },
+      { context: claudeReady, signal: controller.signal },
+    )
+    await vi.waitFor(() => expect(stream).toHaveBeenCalledTimes(1))
+    expect(providerSignal!.aborted).toBe(false)
+    controller.abort()
+    const r = await pending
+    expect(providerSignal!.aborted).toBe(true)
+    expect(r.text).toBeUndefined()
+    expect(r.error).toEqual(expect.any(String))
+  })
 })
 
 describe('analyze_media, key analysis provider', () => {
