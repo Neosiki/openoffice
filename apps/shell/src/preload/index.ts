@@ -4,6 +4,7 @@ import {
   AI_MEDIA_PROVIDERS,
   AI_PROVIDERS,
   AI_SEARCH_PROVIDERS,
+  SUBSCRIPTION_IPC_CHANNELS,
   getProviderAdapter,
 } from '@genoffice/ai-provider/browser'
 import type { AiSettings, CodexModelCatalog } from '@genoffice/ai-provider/browser'
@@ -36,6 +37,12 @@ import type {
 } from '../shared/integrations-api'
 import type { TabsApi, TabSummary } from '../shared/tabs-api'
 import { TABS_CHANNELS } from '../shared/tabs-api'
+import type { SubscriptionApi } from '../shared/subscription-api'
+import {
+  SHELL_SUBSCRIPTION_CHANNELS,
+  subscriptionLaunchResultOf,
+  subscriptionStatusMapOf,
+} from '../shared/subscription-api'
 
 const UI_LANGUAGES: readonly UiLanguage[] = [
   'zh',
@@ -629,6 +636,54 @@ const integrationsApi: IntegrationsApi = {
   },
 }
 contextBridge.exposeInMainWorld('aiOfficeIntegrations', integrationsApi)
+
+// Subscription channels are registered once for the whole app by the docs main.
+// Until that handler exists an invoke rejects; the renderer reads that as
+// "still checking" (see renderer/src/subscription-client.ts).
+const subscriptionApi: SubscriptionApi = {
+  async statuses() {
+    return subscriptionStatusMapOf(await ipcRenderer.invoke(SUBSCRIPTION_IPC_CHANNELS.statuses))
+  },
+  async recheck(providers) {
+    return subscriptionStatusMapOf(
+      await ipcRenderer.invoke(
+        SUBSCRIPTION_IPC_CHANNELS.recheck,
+        providers ? { providers } : undefined,
+      ),
+    )
+  },
+  async login(provider) {
+    return subscriptionLaunchResultOf(
+      await ipcRenderer.invoke(SUBSCRIPTION_IPC_CHANNELS.login, { provider }),
+    )
+  },
+  async install(provider) {
+    return subscriptionLaunchResultOf(
+      await ipcRenderer.invoke(SUBSCRIPTION_IPC_CHANNELS.install, { provider }),
+    )
+  },
+  async setMeteredAccepted(provider, accepted) {
+    const result: unknown = await ipcRenderer.invoke(SUBSCRIPTION_IPC_CHANNELS.metered, {
+      provider,
+      accepted,
+    })
+    const raw = (result ?? {}) as { ok?: unknown; statuses?: unknown }
+    return { ok: raw.ok === true, statuses: subscriptionStatusMapOf(raw.statuses) }
+  },
+  async codexImageAvailable() {
+    return (await ipcRenderer.invoke(SUBSCRIPTION_IPC_CHANNELS.codexImage)) === true
+  },
+  onChanged(handler) {
+    const listener = (_event: IpcRendererEvent, statuses: unknown) =>
+      handler(subscriptionStatusMapOf(statuses))
+    ipcRenderer.on(SUBSCRIPTION_IPC_CHANNELS.changed, listener)
+    return () => ipcRenderer.removeListener(SUBSCRIPTION_IPC_CHANNELS.changed, listener)
+  },
+  async openInstallHelp(provider) {
+    await ipcRenderer.invoke(SHELL_SUBSCRIPTION_CHANNELS.openInstallHelp, provider)
+  },
+}
+contextBridge.exposeInMainWorld('aiOfficeSubscription', subscriptionApi)
 
 const tabsApi: TabsApi = {
   async list() {

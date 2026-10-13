@@ -893,3 +893,126 @@
   flex: 1;
   min-width: 0;
 }
+
+/* ── AI section: subscription connection first, keys under Advanced ── */
+
+.set-sub-title {
+  margin-top: 0;
+}
+
+/* the two connect cards (@genoffice/ui ai-sub-card) stacked, with room before the rows */
+.set-sub-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 8px 0 6px;
+}
+
+/* a login or install that could not be started, under its card */
+.set-sub-failed {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--danger);
+}
+
+.set-link {
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  color: var(--text-secondary);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.set-link:hover {
+  color: var(--text-primary);
+}
+
+/* notices from @genoffice/ui sit between rows: keep them off the hairlines */
+.set-pane .ai-sub-notice {
+  margin: 8px 0;
+}
+
+/* "Advanced" disclosure: a heading-weight toggle with a caret that turns when open */
+.set-adv-toggle {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  gap: 8px;
+  margin: 24px 0 4px;
+  padding: 4px 8px 4px 4px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.set-adv-toggle:hover {
+  background: var(--bg-hover);
+}
+
+.set-adv-toggle svg {
+  flex-shrink: 0;
+  color: var(--text-secondary);
+  transition: transform 0.15s ease;
+}
+
+.set-adv-toggle[aria-expanded='true'] svg {
+  transform: rotate(90deg);
+}
+
+.set-adv-warning {
+  color: var(--danger);
+}
+
+/* the warning that has to be passed before automatic requests may use a subscription */
+.set-adv-confirm {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 4px 0 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--danger-border);
+  border-radius: 8px;
+  background: var(--danger-bg);
+}
+
+/* the two key areas inside Advanced */
+.set-adv-tabs {
+  display: flex;
+  gap: 4px;
+  margin: 16px 0 4px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.set-adv-tab {
+  margin-bottom: -1px;
+  padding: 6px 10px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: none;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.set-adv-tab:hover {
+  color: var(--text-primary);
+}
+
+.set-adv-tab.active {
+  border-bottom-color: var(--text-primary);
+  color: var(--text-primary);
+}
