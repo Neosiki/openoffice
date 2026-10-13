@@ -7,7 +7,8 @@
  * A status also carries two things for display that a CLI tells about a login
  * it is signed in with: the account, and the list of its models. The list is
  * read after the status and added when it arrives, so it never delays or fails
- * a check.
+ * a check. It is read only for a login the app may use: a metered login gets
+ * its list when the user accepts it, not before.
  */
 import { AI_SUBSCRIPTION_PROVIDERS } from '../providers'
 import type {
@@ -57,14 +58,27 @@ export interface SubscriptionStatusServiceDeps {
   timeoutMs?: number | undefined
 }
 
+export interface SubscriptionCheckOptions {
+  /**
+   * The answer must come from a check that started after this call, as after a
+   * login or logout the app ran. A check already under way may have asked the
+   * CLI before the change: it is waited for, then the CLI is asked once more.
+   */
+  fresh?: boolean | undefined
+}
+
 export interface SubscriptionStatusService {
   /** The last known statuses; `checking` for a provider no check has answered for yet */
   getStatuses(): SubscriptionStatusMap
   /**
    * Ask the CLIs again (both, at the same time, unless `providers` narrows it)
-   * and resolve with the new statuses. Calls that overlap share one check.
+   * and resolve with the new statuses. Calls that overlap share one check,
+   * unless `fresh` asks for one of its own time.
    */
-  check(providers?: AiSubscriptionProviderId[]): Promise<SubscriptionStatusMap>
+  check(
+    providers?: AiSubscriptionProviderId[],
+    options?: SubscriptionCheckOptions,
+  ): Promise<SubscriptionStatusMap>
   /**
    * Record or withdraw "use anyway". Accepting is refused (`ok: false`) unless
    * the provider's last detected state is `metered`.
@@ -73,12 +87,30 @@ export interface SubscriptionStatusService {
     provider: AiSubscriptionProviderId,
     accepted: boolean,
   ): Promise<SubscriptionMeteredResult>
+  /**
+   * Remove whatever acceptance is stored for the provider, the setting and the
+   * remembered kind of login, whatever login is detected. For a login or logout
+   * the app itself ran: "use anyway" was given for the login before it, and the
+   * kind of login cannot tell that one from another account of the same kind.
+   * Nothing is written, and nothing announced, when nothing was accepted.
+   */
+  clearMeteredAcceptance(provider: AiSubscriptionProviderId): Promise<void>
   onChange(listener: (statuses: SubscriptionStatusMap) => void): () => void
 }
 
-/** A login is known for these states: the account and the model list belong to them alone */
+/** A login is known for these states: the account belongs to them alone */
 function signedIn(detection: SubscriptionDetection): boolean {
   return detection.state === 'ready' || detection.state === 'metered'
+}
+
+/**
+ * A login the app may use: a subscription, or a metered login the user said
+ * "use anyway" to. The model list is read and shown for these alone. Reading
+ * it is no model call, but it starts the CLI on that login, and a pay-per-use
+ * login nobody agreed to use is not started for it.
+ */
+function usable(status: Pick<AiSubscriptionStatus, 'state' | 'meteredAccepted'>): boolean {
+  return status.state === 'ready' || (status.state === 'metered' && status.meteredAccepted)
 }
 
 /** A detection as the status the contract defines: no field beyond those it lists */
@@ -89,6 +121,7 @@ function toStatus(
 ): AiSubscriptionStatus {
   // a detection can come from an injected detector: its account is checked again
   const account = signedIn(detection) ? subscriptionAccountOf(detection.account) : undefined
+  const accepted = detection.state === 'metered' && meteredAccepted
   return {
     provider: detection.provider,
     state: detection.state,
@@ -96,8 +129,10 @@ function toStatus(
     ...(detection.loginMethod ? { loginMethod: detection.loginMethod } : {}),
     ...(detection.planName ? { planName: detection.planName } : {}),
     ...(account ? { account } : {}),
-    ...(signedIn(detection) && models?.length ? { models } : {}),
-    meteredAccepted: detection.state === 'metered' && meteredAccepted,
+    ...(usable({ state: detection.state, meteredAccepted: accepted }) && models?.length
+      ? { models }
+      : {}),
+    meteredAccepted: accepted,
     ...(detection.state === 'error' && detection.error ? { error: detection.error } : {}),
   }
 }
@@ -110,6 +145,8 @@ export function createSubscriptionStatusService(
     AI_SUBSCRIPTION_PROVIDERS.map((provider) => [provider, checkingSubscriptionStatus(provider)]),
   ) as SubscriptionStatusMap
   const detections = new Map<AiSubscriptionProviderId, SubscriptionDetection>()
+  /** the configured CLI path each of `detections` was made with */
+  const detectedPaths = new Map<AiSubscriptionProviderId, string | undefined>()
   const inFlight = new Map<AiSubscriptionProviderId, Promise<void>>()
   /** the list each CLI gave last; kept for the process, replaced when a later reading differs */
   const models = new Map<AiSubscriptionProviderId, AiSubscriptionModel[]>()
@@ -174,13 +211,15 @@ export function createSubscriptionStatusService(
     })
 
   /**
-   * Read the provider's model list, off to the side of the check that asked.
-   * The status is already out; the list is added to it, with a change event,
-   * only when it differs from the one at hand. One reading at a time.
+   * Read the provider's model list, off to the side of the check or the
+   * acceptance that asked. The status is already out; the list is added to it,
+   * with a change event, only when it differs from the one at hand. One
+   * reading at a time, and none for a login the app may not use.
    */
-  const refreshModels = (provider: AiSubscriptionProviderId, configuredPath?: string): void => {
+  const refreshModels = (provider: AiSubscriptionProviderId): void => {
     const listModels = deps.listModels
-    if (!listModels) return
+    if (!listModels || !usable(statuses[provider])) return
+    const configuredPath = detectedPaths.get(provider)
     const epoch = loginEpoch.get(provider) ?? 0
     if (modelReading.get(provider) === epoch) return
     modelReading.set(provider, epoch)
@@ -194,7 +233,8 @@ export function createSubscriptionStatusService(
         if (JSON.stringify(models.get(provider)) === JSON.stringify(list)) return
         models.set(provider, list)
         const detection = detections.get(provider)
-        if (!detection || !signedIn(detection)) return
+        // the acceptance may have been taken back while the list was read
+        if (!detection || !usable(statuses[provider])) return
         statuses[provider] = toStatus(detection, statuses[provider].meteredAccepted, list)
         announce()
       })
@@ -221,8 +261,9 @@ export function createSubscriptionStatusService(
           error: subscriptionStatusErrorText('failed', 'The status check failed'),
         }
       }
+      detectedPaths.set(provider, configuredPath)
       await applyDetection(detection)
-      if (signedIn(detection)) refreshModels(provider, configuredPath)
+      refreshModels(provider)
     })().finally(() => inFlight.delete(provider))
     inFlight.set(provider, task)
     return task
@@ -230,9 +271,16 @@ export function createSubscriptionStatusService(
 
   return {
     getStatuses: snapshot,
-    async check(providers) {
+    async check(providers, options) {
       const wanted = providers?.length ? providers : AI_SUBSCRIPTION_PROVIDERS
-      await Promise.all(wanted.map((provider) => checkOne(provider)))
+      await Promise.all(
+        wanted.map(async (provider) => {
+          // A check under way may have asked the CLI before this call: let it end. Whatever
+          // runs after that started after this call, so one wait and one check is all it takes.
+          if (options?.fresh) await inFlight.get(provider)
+          await checkOne(provider)
+        }),
+      )
       return snapshot()
     },
     setMeteredAccepted(provider, accepted) {
@@ -251,7 +299,32 @@ export function createSubscriptionStatusService(
         }
         if (detection) statuses[provider] = toStatus(detection, accepted, models.get(provider))
         announce()
+        // a login the app may use from now on: its list was not read while it was not
+        if (accepted) refreshModels(provider)
         return { ok: true, statuses: snapshot() }
+      })
+    },
+    clearMeteredAcceptance(provider) {
+      return queued(async () => {
+        try {
+          // the remembered kind first: a flag left behind without it is no acceptance, and
+          // the next check removes it
+          const record = await deps.acceptanceStore.read()
+          if (record[provider]) {
+            delete record[provider]
+            await deps.acceptanceStore.write(record)
+          }
+          const settings = await deps.getSettings()
+          if (settings.meteredAccepted?.[provider] === true) {
+            await deps.setMeteredAccepted(provider, false)
+          }
+        } catch {
+          // the status below still stops showing it as accepted
+        }
+        const detection = detections.get(provider)
+        if (!detection || !statuses[provider].meteredAccepted) return
+        statuses[provider] = toStatus(detection, false, models.get(provider))
+        announce()
       })
     },
     onChange(listener) {

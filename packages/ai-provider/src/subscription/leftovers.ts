@@ -8,7 +8,7 @@
  * A pid that was reused, by anything at all, fails that check. A Claude or
  * Codex the user runs on their own was never recorded and is never looked at.
  */
-import { spawn } from 'node:child_process'
+import { spawn, type ChildProcess, type SpawnOptions } from 'node:child_process'
 import { readFile, readdir, readlink, realpath, rm } from 'node:fs/promises'
 import { join } from 'node:path'
 import { AI_SUBSCRIPTION_PROVIDERS } from '../providers'
@@ -17,6 +17,7 @@ import {
   SUBSCRIPTION_OWNER_STARTED_AT,
   killProcessTree,
   sharedSubscriptionChildRegistry,
+  windowsSystemDir,
   windowsSystemTool,
   type LeftoverChildRecord,
   type LeftoverRecord,
@@ -215,13 +216,29 @@ export async function initSubscriptionChildTracking(
 
 // ── Asking the system about processes ──
 
+/** Starts a system tool; lets tests pass a stand-in for `spawn` */
+type ToolSpawn = (
+  command: string,
+  args: string[],
+  options: SpawnOptions,
+) => Pick<ChildProcess, 'stdout' | 'kill' | 'once'>
+
+/** Stand-ins for the tests; the system this process runs on when absent */
+export interface ProcessInspectionDeps {
+  platform?: NodeJS.Platform | undefined
+  env?: NodeJS.ProcessEnv | undefined
+  spawn?: ToolSpawn | undefined
+}
+
 function runTool(
   command: string,
   args: string[],
   env: NodeJS.ProcessEnv,
+  options: { cwd?: string | undefined; spawn?: ToolSpawn | undefined } = {},
 ): Promise<{ code: number | null; stdout: string }> {
   return new Promise((resolve, reject) => {
-    const child = spawn(command, args, {
+    const child = (options.spawn ?? spawn)(command, args, {
+      cwd: options.cwd,
       stdio: ['ignore', 'pipe', 'ignore'],
       windowsHide: true,
       env,
@@ -253,8 +270,14 @@ function runTool(
  * Windows has no process tool that reports a creation time, so this asks CIM
  * through PowerShell, started by full path with an argument list. The script
  * is fixed; the only variable part is the list of pids, which are integers.
+ * It starts in the system directory: the folder the app was started in may be
+ * a document's, and nothing is to be looked up there.
  */
-async function inspectWindows(pids: number[]): Promise<Map<number, ProcessInfo>> {
+async function inspectWindows(
+  pids: number[],
+  deps: ProcessInspectionDeps,
+): Promise<Map<number, ProcessInfo>> {
+  const env = deps.env ?? process.env
   const filter = pids.map((pid) => `ProcessId=${pid}`).join(' OR ')
   const script = [
     "$ErrorActionPreference='SilentlyContinue'",
@@ -262,9 +285,10 @@ async function inspectWindows(pids: number[]): Promise<Map<number, ProcessInfo>>
     `Get-CimInstance Win32_Process -Filter "${filter}" | ForEach-Object { $t=''; if ($_.CreationDate) { $t=([DateTimeOffset]$_.CreationDate).ToUnixTimeMilliseconds() }; '{0}|{1}|{2}' -f $_.ProcessId,$t,$_.ExecutablePath }`,
   ].join('; ')
   const { stdout } = await runTool(
-    windowsSystemTool(process.env, 'WindowsPowerShell', 'v1.0', 'powershell.exe'),
+    windowsSystemTool(env, 'WindowsPowerShell', 'v1.0', 'powershell.exe'),
     ['-NoProfile', '-NonInteractive', '-NoLogo', '-Command', script],
-    process.env,
+    env,
+    { cwd: windowsSystemDir(env), spawn: deps.spawn },
   )
   const found = new Map<number, ProcessInfo>()
   for (const line of stdout.split(/\r?\n/)) {
@@ -316,10 +340,14 @@ async function inspectWithPs(pids: number[]): Promise<Map<number, ProcessInfo>> 
 }
 
 /** Start time and program file of each of `pids` that is running */
-export const inspectProcesses: ProcessInspector = async (pids) => {
+export const inspectProcesses = async (
+  pids: number[],
+  deps: ProcessInspectionDeps = {},
+): Promise<Map<number, ProcessInfo>> => {
   const valid = [...new Set(pids.filter(validPid))]
   if (valid.length === 0) return new Map()
-  if (process.platform === 'win32') return inspectWindows(valid)
-  if (process.platform === 'linux') return inspectLinux(valid)
+  const platform = deps.platform ?? process.platform
+  if (platform === 'win32') return inspectWindows(valid, deps)
+  if (platform === 'linux') return inspectLinux(valid)
   return inspectWithPs(valid)
 }

@@ -471,26 +471,27 @@ describe('Claude Code bridge: what goes over stdin', () => {
     const input = buildClaudeCodeInput('system', messages, tools, 2048)
     expect(input.truncated).toBe(false)
     const blocks = input.user.message.content as Array<Record<string, any>>
-    expect(blocks).toHaveLength(5)
+    // one block per event and nothing after the last one, a trailing tool result included
+    expect(blocks).toHaveLength(4)
     expect(blocks[0].text).toContain('2048')
     expect(JSON.parse(blocks[2].text)).toEqual({
       role: 'assistant',
       text: 'Fixing.',
       toolCalls: [{ id: 'c1', name: 'replace_text', input: { before: 'teh', after: 'the' } }],
     })
-    expect(JSON.parse(blocks[3].text)).toEqual({
+    // a tool event says its calls already ran, so they are not requested again
+    const toolEvent = JSON.parse(blocks[3].text)
+    expect(toolEvent).toEqual({
       role: 'tool',
       results: [{ id: 'c1', name: 'replace_text', output: 'ok' }],
+      note: expect.any(String),
     })
-    // a turn that ends on tool results says they already ran, so they are not requested again
-    expect(blocks[4].type).toBe('text')
-    expect(blocks[4].text).toMatch(/already run those calls exactly once/)
-    expect(blocks[4].text).toMatch(/do not request them again/)
-    // an earlier turn's blocks are a prefix of the next turn's, so the prompt cache can hit
-    const earlier = buildClaudeCodeInput('system', messages.slice(0, 1), tools, 2048)
-    expect(blocks.slice(0, 2)).toEqual(earlier.user.message.content)
-    // the closing note is not part of that prefix: it only follows a trailing tool result
-    expect(earlier.user.message.content).toHaveLength(2)
+    expect(toolEvent.note).toMatch(/already run those calls exactly once/)
+    expect(toolEvent.note).toMatch(/do not request them again/)
+    expect(toolEvent.note).toMatch(/only the further calls that are still needed/)
+    expect(toolEvent.note).toMatch(/empty "toolCalls" array/)
+    // the note is the last thing of the event, so the last thing read when the turn ends on it
+    expect(Object.keys(toolEvent).at(-1)).toBe('note')
     const answered = buildClaudeCodeInput(
       'system',
       [...messages, { role: 'assistant', text: 'Fixed.' }],
@@ -498,11 +499,63 @@ describe('Claude Code bridge: what goes over stdin', () => {
       2048,
     )
     expect(answered.user.message.content).toHaveLength(5)
-    expect(answered.user.message.content.slice(0, 4)).toEqual(blocks.slice(0, 4))
+    expect(answered.user.message.content.slice(0, 4)).toEqual(blocks)
     expect(JSON.parse((answered.user.message.content[4] as { text: string }).text)).toEqual({
       role: 'assistant',
       text: 'Fixed.',
     })
+  })
+
+  it('every earlier turn of a tool loop is an exact prefix of the next one', () => {
+    const messages: AgentMessage[] = [
+      { role: 'user', text: 'Fix both typos.' },
+      {
+        role: 'assistant',
+        text: 'First one.',
+        toolCalls: [{ id: 'c1', name: 'replace_text', input: { before: 'teh', after: 'the' } }],
+      },
+      { role: 'tool', results: [{ id: 'c1', name: 'replace_text', output: 'ok' }] },
+      {
+        role: 'assistant',
+        text: 'Second one.',
+        toolCalls: [{ id: 'c2', name: 'replace_text', input: { before: 'adn', after: 'and' } }],
+      },
+      { role: 'tool', results: [{ id: 'c2', name: 'replace_text', output: 'ok' }] },
+    ]
+    const blocksOf = (count: number) =>
+      buildClaudeCodeInput('system', messages.slice(0, count), tools, 2048).user.message.content
+    const whole = blocksOf(messages.length)
+    expect(whole).toHaveLength(1 + messages.length)
+    // the prompt cache is keyed on the blocks up to the last one: a turn that ended on a tool
+    // result (3 events) must be found again, block for block, at the start of the next turn
+    for (let count = 1; count < messages.length; count++) {
+      const shorter = blocksOf(count)
+      expect(shorter).toHaveLength(1 + count)
+      expect(whole.slice(0, shorter.length), `${count} events`).toEqual(shorter)
+    }
+    // the same text on every tool event, whether or not it is the last one
+    const notes = [whole[3], whole[5]].map((block) => JSON.parse((block as { text: string }).text))
+    expect(notes[0].note).toBe(notes[1].note)
+    expect(notes[0].note).toMatch(/do not request them again/)
+  })
+
+  it('a conversation without tool events carries the note nowhere', () => {
+    const input = buildClaudeCodeInput(
+      'system',
+      [
+        { role: 'user', text: 'Fix the typo.' },
+        { role: 'assistant', text: 'Which one?' },
+        { role: 'user', text: 'The first.' },
+      ],
+      tools,
+      2048,
+    )
+    expect(input.user.message.content).toHaveLength(4)
+    const sent = [
+      ...input.initialize.request.systemPrompt,
+      ...input.user.message.content.map((block) => (block.type === 'text' ? block.text : '')),
+    ].join('\n')
+    expect(sent).not.toMatch(/already run|request them again|"note"/)
   })
 
   it('passes user images as image blocks right after the event that lists them', () => {

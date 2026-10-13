@@ -14,6 +14,7 @@ import {
   SUBSCRIPTION_LEFTOVER_FILE_PREFIX,
   cleanupLeftoverSubscriptionChildren,
   createSubscriptionChildRegistry,
+  inspectProcesses,
   killProcessTree,
   leftoverRecordFile,
   runSubscriptionProgram,
@@ -109,6 +110,22 @@ describe('killProcessTree', () => {
     expect(spawned[0]!.command.toLowerCase()).toContain('taskkill')
     expect(spawned[0]!.args).toEqual(['/PID', '4242', '/T', '/F'])
     expect(spawned[0]!.options.shell).toBeUndefined()
+  })
+
+  it('on Windows starts taskkill in the system directory, not the folder the app was started in', () => {
+    const spawned: Array<{ command: string; options: Record<string, unknown> }> = []
+    killProcessTree(4242, {
+      platform: 'win32',
+      env: { SystemRoot: 'D:\\WinNT' },
+      spawn: (command, _args, options) => {
+        spawned.push({ command, options: { ...options } })
+        return new FakeChild(1)
+      },
+    })
+    expect(spawned[0]!.command).toBe('D:\\WinNT\\System32\\taskkill.exe')
+    // the app may have been started in a document's folder: nothing is looked up there
+    expect(spawned[0]!.options.cwd).toBe('D:\\WinNT\\System32')
+    expect(spawned[0]!.options.cwd).not.toBe(process.cwd())
   })
 
   it('elsewhere signals the process group', () => {
@@ -454,6 +471,32 @@ describe('what a force-killed app left behind', () => {
       killTree: () => undefined,
     })
     expect(absent).toEqual({ killed: [], skipped: [] })
+  })
+
+  it('asks Windows about processes from the system directory, not the folder the app was started in', async () => {
+    const spawned: Array<{ command: string; args: string[]; options: Record<string, unknown> }> = []
+    const found = await inspectProcesses([4242], {
+      platform: 'win32',
+      env: { SystemRoot: 'D:\\WinNT' },
+      spawn: (command, args, options) => {
+        spawned.push({ command, args, options: { ...options } })
+        const child = Object.assign(new FakeChild(1), { stdout: new EventEmitter() })
+        setImmediate(() => {
+          child.stdout.emit('data', Buffer.from('4242|1700000100000|C:\\npm\\claude.exe\r\n'))
+          child.emit('close', 0)
+        })
+        return child as never
+      },
+    })
+    expect(spawned).toHaveLength(1)
+    expect(spawned[0]!.command).toBe('D:\\WinNT\\System32\\WindowsPowerShell\\v1.0\\powershell.exe')
+    expect(spawned[0]!.options.shell).toBeUndefined()
+    // the app may have been started in a document's folder: nothing is looked up there
+    expect(spawned[0]!.options.cwd).toBe('D:\\WinNT\\System32')
+    expect(spawned[0]!.options.cwd).not.toBe(process.cwd())
+    expect(found).toEqual(
+      new Map([[4242, { startedAt: 1_700_000_100_000, image: 'C:\\npm\\claude.exe' }]]),
+    )
   })
 
   it('a registry writes down what it started, and takes it back when it ends', async () => {

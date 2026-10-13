@@ -14,6 +14,7 @@ import {
   checkingSubscriptionStatus,
   createSubscriptionIpcDeps,
   ensureSubscriptionIpc,
+  notifySubscriptionLoginChange,
   registerSubscriptionIpc,
   resetSharedSubscriptionIpc,
   setSubscriptionModelSource,
@@ -75,13 +76,18 @@ function setup(): {
         log.push('getStatuses')
         return READY
       },
-      check: async (providers) => {
-        log.push(`check:${providers ? providers.join(',') : 'all'}`)
+      check: async (providers, options) => {
+        log.push(
+          `check:${providers ? providers.join(',') : 'all'}${options?.fresh ? ':fresh' : ''}`,
+        )
         return READY
       },
       setMeteredAccepted: async (provider, accepted): Promise<SubscriptionMeteredResult> => {
         log.push(`metered:${provider}:${accepted}`)
         return { ok: true, statuses: READY }
+      },
+      clearMeteredAcceptance: async (provider) => {
+        log.push(`clear:${provider}`)
       },
       onChange: (listener) => {
         listeners.add(listener)
@@ -265,7 +271,8 @@ describe('registerSubscriptionIpc', () => {
     expect(await ipc.invoke(SUBSCRIPTION_IPC_CHANNELS.logout, { provider: 'codex' })).toEqual({
       ok: true,
     })
-    expect(log).toEqual(['logout:codex', 'check:codex'])
+    // a check that started after the logout: one already under way may hold the old login
+    expect(log).toEqual(['logout:codex', 'check:codex:fresh'])
   })
 
   it('checks again after a logout that failed too: the CLI may be signed out all the same', async () => {
@@ -274,15 +281,15 @@ describe('registerSubscriptionIpc', () => {
       log.push(`logout:${provider}`)
       return { ok: false, reason: 'failed' }
     }
-    deps.service.check = async (providers) => {
-      log.push(`check:${providers ? providers.join(',') : 'all'}`)
+    deps.service.check = async (providers, options) => {
+      log.push(`check:${providers ? providers.join(',') : 'all'}${options?.fresh ? ':fresh' : ''}`)
       throw new Error('the check failed')
     }
     registerSubscriptionIpc(ipc, deps)
     expect(await ipc.invoke(SUBSCRIPTION_IPC_CHANNELS.logout, { provider: 'claude-code' })).toEqual(
       { ok: false, reason: 'failed' },
     )
-    expect(log).toEqual(['logout:claude-code', 'check:claude-code'])
+    expect(log).toEqual(['logout:claude-code', 'check:claude-code:fresh'])
   })
 
   it('routes set-metered-acceptance to the service', async () => {
@@ -348,6 +355,17 @@ describe('registerSubscriptionIpc', () => {
     expect(await ipc.invoke(SUBSCRIPTION_IPC_CHANNELS.logout, { provider: 'codex' })).toMatchObject(
       { ok: false, reason: 'failed' },
     )
+  })
+
+  it('a login or logout the app ran withdraws the metered acceptance of that provider', () => {
+    const { ipc, deps, log } = setup()
+    const unregister = registerSubscriptionIpc(ipc, deps)
+    // what the launchers do when a login window closed or a logout command ended
+    notifySubscriptionLoginChange('codex')
+    expect(log).toEqual(['clear:codex'])
+    unregister()
+    notifySubscriptionLoginChange('codex')
+    expect(log).toEqual(['clear:codex'])
   })
 
   it('announces status changes on the event channel', () => {

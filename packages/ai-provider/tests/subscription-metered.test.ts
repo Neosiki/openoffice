@@ -295,6 +295,72 @@ describe('the status service', () => {
     expect(h.record['claude-code']).toBeUndefined()
   })
 
+  it('clears the acceptance on request whatever the login is, and writes nothing when there is none', async () => {
+    const h = harness()
+    h.login.codex = { provider: 'codex', state: 'metered', loginMethod: 'metered' }
+    await h.service.check()
+    await h.service.setMeteredAccepted('claude-code', true)
+    await h.service.setMeteredAccepted('codex', true)
+    const before = h.changes.length
+
+    await h.service.clearMeteredAcceptance('claude-code')
+    expect(h.service.getStatuses()['claude-code']).toMatchObject({
+      state: 'metered',
+      meteredAccepted: false,
+    })
+    expect(h.settings.meteredAccepted).toEqual({ 'claude-code': false, codex: true })
+    expect(h.record).toEqual({ codex: 'metered:unknown' })
+    expect(h.changes).toHaveLength(before + 1)
+    expect(h.changes.at(-1)!['claude-code']?.meteredAccepted).toBe(false)
+    // the same login, seen again: it is not the one that was accepted any more
+    const rechecked = await h.service.check()
+    expect(rechecked['claude-code'].meteredAccepted).toBe(false)
+    expect(rechecked.codex.meteredAccepted).toBe(true)
+
+    // nothing accepted: the settings and the record are not written, nothing is announced
+    const writes: string[] = []
+    const untouched = createSubscriptionStatusService({
+      getSettings: () => defaultAiSettings(),
+      setMeteredAccepted: (provider) => void writes.push(`setting:${provider}`),
+      acceptanceStore: {
+        read: async () => ({}),
+        write: async () => void writes.push('record'),
+      },
+      detect: async (provider) => h.login[provider],
+      onChange: () => void writes.push('change'),
+    })
+    await untouched.clearMeteredAcceptance('claude-code')
+    await untouched.check()
+    writes.length = 0
+    await untouched.clearMeteredAcceptance('claude-code')
+    expect(writes).toEqual([])
+  })
+
+  it('a flag that cannot be cleared in the settings counts for nothing once the remembered kind is gone', async () => {
+    const h = harness()
+    await h.service.check()
+    await h.service.setMeteredAccepted('claude-code', true)
+    const service = createSubscriptionStatusService({
+      getSettings: () => h.settings,
+      setMeteredAccepted: () => {
+        throw new Error('EACCES')
+      },
+      acceptanceStore: {
+        read: async () => ({ ...h.record }),
+        write: async (record) => {
+          h.record = { ...record }
+        },
+      },
+      detect: async (provider) => h.login[provider],
+    })
+    expect((await service.check())['claude-code'].meteredAccepted).toBe(true)
+    await service.clearMeteredAcceptance('claude-code')
+    expect(service.getStatuses()['claude-code'].meteredAccepted).toBe(false)
+    // the remembered kind went first, so the flag that stayed behind counts for nothing
+    expect(h.record['claude-code']).toBeUndefined()
+    expect((await service.check())['claude-code'].meteredAccepted).toBe(false)
+  })
+
   it('checks one provider without touching the other', async () => {
     const h = harness()
     await h.service.check()
@@ -320,6 +386,44 @@ describe('the status service', () => {
     const [first, second] = await Promise.all([service.check(), service.check()])
     expect(first).toEqual(second)
     expect(detections).toBe(2)
+  })
+
+  it('a fresh check does not share one already under way: it waits for that one, then asks again', async () => {
+    const answers: Array<(detection: SubscriptionDetection) => void> = []
+    const service = createSubscriptionStatusService({
+      getSettings: () => defaultAiSettings(),
+      setMeteredAccepted: () => undefined,
+      acceptanceStore: { read: async () => ({}), write: async () => undefined },
+      detect: (provider) =>
+        provider === 'claude-code'
+          ? new Promise((resolve) => answers.push(resolve))
+          : Promise.resolve({ provider, state: 'not-installed' }),
+    })
+    const asked = (count: number) =>
+      new Promise<void>((resolve) => {
+        const poll = (): void => void (answers.length >= count ? resolve() : setTimeout(poll, 1))
+        poll()
+      })
+    const shared = service.check(['claude-code'])
+    await asked(1)
+    // asked while the first is under way: neither may be answered by it
+    const fresh = service.check(['claude-code'], { fresh: true })
+    const alsoFresh = service.check(['claude-code'], { fresh: true })
+    answers[0]!(subscriptionLogin)
+    expect((await shared)['claude-code'].state).toBe('ready')
+    await asked(2)
+    answers[1]!(signedOut)
+    expect((await fresh)['claude-code'].state).toBe('signed-out')
+    expect((await alsoFresh)['claude-code'].state).toBe('signed-out')
+    // one check after the one under way, shared by both: no check per caller, no loop
+    expect(answers).toHaveLength(2)
+
+    // with nothing under way a fresh check is just a check
+    const plain = service.check(['claude-code'], { fresh: true })
+    await asked(3)
+    answers[2]!(subscriptionLogin)
+    expect((await plain)['claude-code'].state).toBe('ready')
+    expect(answers).toHaveLength(3)
   })
 
   it('passes the configured Codex path to the detection', async () => {
