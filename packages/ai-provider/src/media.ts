@@ -23,20 +23,6 @@ export const DEEPSEEK_MEDIA_BASE_URL = 'https://api.deepseek.com/v1'
 // models in step with the chat catalog in providers.ts.
 export const AI_MEDIA_PROVIDERS: AiMediaProviderMeta[] = [
   {
-    id: 'genspark',
-    label: 'Genspark',
-    description: 'Image generation, media analysis and search through your Genspark sign-in',
-    keyPlaceholder: 'Not required - sign in to Genspark',
-    defaultBaseUrl: '',
-    imageProtocol: 'openai-images',
-    imageModels: [],
-    defaultImageModel: '',
-    analysisProtocol: 'openai-chat',
-    analysisModels: [],
-    defaultAnalysisModel: '',
-    videoAnalysis: true,
-  },
-  {
     id: 'openai',
     label: 'OpenAI',
     description: 'GPT Image for generation and editing; GPT chat models for image analysis',
@@ -235,9 +221,9 @@ export function defaultAiMediaSettings(): AiMediaSettings {
     }
   }
   return {
-    imageProvider: 'genspark',
-    analysisProvider: 'genspark',
-    videoAnalysisProvider: 'genspark',
+    imageProvider: 'codex',
+    analysisProvider: 'chat',
+    videoAnalysisProvider: 'none',
     providers,
   }
 }
@@ -289,95 +275,43 @@ export function mediaConfigUsable(
   config: AiMediaProviderConfig | undefined,
 ): boolean {
   if (!config) return false
-  // Trim-aware like activeProvider: whitespace-only survivors of in-memory
+  // Trim-aware like isKeyProviderConfigured: whitespace-only survivors of in-memory
   // settings are not usable configs.
   if (meta.needsBaseUrl) return !!config.baseUrl?.trim()
   return !!config.apiKey?.trim()
 }
 
 /**
- * The stored provider for one capability, honored only when it exists, has
- * that capability and is usable; anything else falls back to genspark so a
- * half-filled setup degrades to the signed-in default.
- *
- * Pre-subscription contract: the selections that name no key provider
- * (`codex`, `chat`, `none`) read as genspark here. Image requests choose their
- * backend with resolveImageBackend.
+ * The stored key provider for one capability, honored only when it exists, has
+ * that capability and is usable; null otherwise, which includes the selections
+ * that name no key provider (`codex`, `chat`, `none`). Image requests choose
+ * their backend with resolveImageBackend.
  */
 export function activeMediaProvider(
   settings: Pick<AiSettings, 'media'>,
   capability: MediaCapability,
-): AiMediaProviderId {
+): AiMediaProviderId | null {
   const media = settings.media
-  if (!media) return 'genspark'
+  if (!media) return null
   const id =
     capability === 'image'
       ? media.imageProvider
       : capability === 'video'
         ? media.videoAnalysisProvider
         : media.analysisProvider
-  if (!id || id === 'genspark') return 'genspark'
+  if (!id) return null
   const meta = getMediaProviderMeta(id)
-  if (!meta || !providerHasCapability(meta, capability)) return 'genspark'
-  if (!mediaConfigUsable(meta, media.providers?.[meta.id])) return 'genspark'
+  if (!meta || !providerHasCapability(meta, capability)) return null
+  if (!mediaConfigUsable(meta, media.providers?.[meta.id])) return null
   return meta.id
 }
 
-/** the active BYOK config for one capability, or null when it runs through Genspark */
+/** the active BYOK config for one capability, or null when no key provider is selected and usable */
 export function activeMediaConfig(
   settings: Pick<AiSettings, 'media'>,
   capability: MediaCapability,
-): { provider: Exclude<AiMediaProviderId, 'genspark'>; config: AiMediaProviderConfig } | null {
+): { provider: AiMediaProviderId; config: AiMediaProviderConfig } | null {
   const provider = activeMediaProvider(settings, capability)
-  if (provider === 'genspark') return null
+  if (!provider) return null
   return { provider, config: settings.media!.providers[provider] }
-}
-
-function byokModel(
-  settings: Pick<AiSettings, 'media'>,
-  capability: MediaCapability,
-): string | null {
-  const active = activeMediaConfig(settings, capability)
-  if (!active) return null
-  const meta = getMediaProviderMeta(active.provider)!
-  return capability === 'image'
-    ? active.config.imageModel || meta.defaultImageModel
-    : active.config.analysisModel || meta.defaultAnalysisModel
-}
-
-function capabilityAvailable(
-  settings: Pick<AiSettings, 'media' | 'gskToolsEnabled'> | null | undefined,
-  gskLoggedIn: boolean,
-  capability: MediaCapability,
-): boolean {
-  if (!settings) return gskLoggedIn
-  const model = byokModel(settings, capability)
-  if (model !== null) return model !== ''
-  return gskLoggedIn && settings.gskToolsEnabled !== false
-}
-
-/** live predicate for the generate_image tool: BYOK image model configured, or gsk login + cloud tools on */
-export function imageGenerationAvailable(
-  settings: Pick<AiSettings, 'media' | 'gskToolsEnabled'> | null | undefined,
-  gskLoggedIn: boolean,
-): boolean {
-  return capabilityAvailable(settings, gskLoggedIn, 'image')
-}
-
-/** live predicate for the analyze_media tool: image analysis or video analysis reachable */
-export function mediaAnalysisAvailable(
-  settings: Pick<AiSettings, 'media' | 'gskToolsEnabled'> | null | undefined,
-  gskLoggedIn: boolean,
-): boolean {
-  return (
-    capabilityAvailable(settings, gskLoggedIn, 'analysis') ||
-    capabilityAvailable(settings, gskLoggedIn, 'video')
-  )
-}
-
-export function videoAnalysisAvailable(
-  settings: Pick<AiSettings, 'media' | 'gskToolsEnabled'> | null | undefined,
-  gskLoggedIn: boolean,
-): boolean {
-  return capabilityAvailable(settings, gskLoggedIn, 'video')
 }

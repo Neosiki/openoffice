@@ -44,7 +44,6 @@ describe('aiToolCapabilities', () => {
       expect(c.videoAnalysis).toMatchObject(off)
       for (const capability of [c.imageGeneration, c.imageAnalysis, c.videoAnalysis]) {
         expect(capability.message).toMatch(/Settings/)
-        expect(capability.message).not.toMatch(/genspark/i)
       }
     }
   })

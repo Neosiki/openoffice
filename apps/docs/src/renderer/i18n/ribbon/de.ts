@@ -1,7 +1,6 @@
 import type { zh } from './zh'
 
 export const de = {
-  ribbonAiCreditNote: 'Ruft KI auf und verbraucht Guthaben',
   ribbonAiRewriteConfirm:
     'Diese Aktion ruft die KI auf und kann den gesamten Inhalt umschreiben. Fortfahren? (Sie werden nicht erneut gefragt.)',
   ribbonTabFile: 'Datei',

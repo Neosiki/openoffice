@@ -239,10 +239,8 @@ describe('what the installer no longer carries', () => {
       ...config.linux.extraResources,
     ] as Array<{ from: string; to: string }>
     for (const { from, to } of resources) {
-      expect(`${from} -> ${to}`).not.toMatch(/@genspark|gsk|commander/)
+      expect(`${from} -> ${to}`).not.toMatch(/commander/)
     }
-    expect(builderSource).not.toMatch(/genspark/i)
-    expect(builderSource).not.toMatch(/\bgsk\b/)
   })
 
   it('injects no analytics keys or font server address into the packaged app', () => {

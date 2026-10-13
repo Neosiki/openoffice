@@ -74,7 +74,7 @@ describe('AI_SUBSCRIPTION_STRINGS', () => {
     for (const lang of LANGS) {
       for (const key of KEYS) {
         const text = AI_SUBSCRIPTION_STRINGS[lang][key]
-        expect(text, `${lang}.${key}`).not.toMatch(/Claude Code|Genspark|GenOffice/)
+        expect(text, `${lang}.${key}`).not.toMatch(/Claude Code|GenOffice/)
       }
       // the two notices keep the company names as they are written
       expect(AI_SUBSCRIPTION_STRINGS[lang].noticeSend, lang).toMatch(/Anthropic/)

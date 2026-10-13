@@ -193,7 +193,7 @@ describe('home screen without the removed areas', () => {
     await renderHome(statuses({ state: 'ready' }, { state: 'ready' }))
     expect(host.querySelectorAll('.sidebar-nav .nav-item')).toHaveLength(3)
     expect(host.querySelector('.login-hint, .cloud-projects, .nav-external')).toBeNull()
-    expect(host.textContent).not.toMatch(/genspark|credits|sign in/i)
+    expect(host.textContent).not.toMatch(/credits|sign in/i)
   })
 })
 

@@ -683,7 +683,6 @@ export const zhTW = {
   appFormatPaneDetail: '座標軸、類別間距、分裂',
   appGroupChartActions: '圖表操作',
   appRemoveFromSheet: '從工作表中刪除',
-  appGroupAiAssistant: 'AI 助理',
   appAiOpenPanelDetail: '側欄對話',
   appGroupAiStarters: '快速開始',
   appAiStarterDetail: '傳送到 AI 面板',

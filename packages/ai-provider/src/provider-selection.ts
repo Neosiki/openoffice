@@ -9,7 +9,6 @@
  * API-key providers and metered CLI logins run only when the user selected
  * them, and a selected provider that cannot run is reported, never replaced.
  */
-import { REMOVED_AI_PROVIDER_IDS } from './legacy-settings'
 import { AI_PROVIDERS, AI_SUBSCRIPTION_PROVIDERS } from './providers'
 import type {
   AiProviderId,
@@ -88,7 +87,7 @@ export function isKeyProviderConfigured(
   settings: Pick<AiSettings, 'providers'>,
   provider: AiProviderId,
 ): boolean {
-  if (isSubscriptionProvider(provider) || isRemovedProvider(provider)) return false
+  if (isSubscriptionProvider(provider)) return false
   const meta = AI_PROVIDERS.find((m) => m.id === provider)
   const config = settings.providers?.[provider]
   if (!meta || !config) return false
@@ -97,14 +96,9 @@ export function isKeyProviderConfigured(
   return !!config.apiKey?.trim()
 }
 
-function isRemovedProvider(id: unknown): boolean {
-  return (REMOVED_AI_PROVIDER_IDS as readonly unknown[]).includes(id)
-}
-
-/** The stored selection as understood: removed and unknown ids read as `auto` */
+/** The stored selection as understood: unknown ids (a removed provider among them) read as `auto` */
 export function providerSelectionOf(settings: Pick<AiSettings, 'provider'>): AiProviderSelection {
   const stored: unknown = settings.provider
-  if (isRemovedProvider(stored)) return 'auto'
   return AI_PROVIDERS.find((m) => m.id === stored)?.id ?? 'auto'
 }
 

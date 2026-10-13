@@ -17,7 +17,6 @@ import {
   AI_INVALID_SETTINGS_ERROR,
   aiChatFailure,
   aiStreamErrorChunk,
-  isRemovedAiProviderId,
   resolveAiRun,
   subscriptionStreamCallbacks,
   withMeteredAccepted,
@@ -107,9 +106,15 @@ describe('resolveAiRun', () => {
     expect(target.ok).toBe(false)
   })
 
-  it('a removed selection reads as auto', () => {
-    const target = resolveAiRun(settings({ provider: 'genspark' }), BOTH_READY, TEXTS)
-    expect(target.ok && target.provider).toBe('claude-code')
+  it('a request naming a selection this build does not know is refused, not rerouted', () => {
+    // a renderer reads normalised settings, so it never sends such an id; a file on disk
+    // that still holds one reads as auto (see "stored settings" below)
+    const target = resolveAiRun(
+      settings({ provider: 'retired-provider' as never }),
+      BOTH_READY,
+      TEXTS,
+    )
+    expect(target).toEqual({ ok: false, refusal: { error: AI_INVALID_SETTINGS_ERROR } })
   })
 
   it('a selected subscription that is signed out is reported, never replaced', () => {
@@ -188,13 +193,9 @@ describe('resolveAiRun', () => {
   })
 
   it('hands back the normalised settings of the request', () => {
-    const target = resolveAiRun(
-      { ...settings(), gskToolsEnabled: false, provider: 'genspark' },
-      BOTH_READY,
-      TEXTS,
-    )
+    const target = resolveAiRun({ ...settings(), retiredSwitch: false }, BOTH_READY, TEXTS)
     expect(target.ok && target.settings.provider).toBe('auto')
-    expect(target.ok && 'gskToolsEnabled' in target.settings).toBe(false)
+    expect(target.ok && 'retiredSwitch' in target.settings).toBe(false)
   })
 })
 
@@ -264,14 +265,14 @@ describe('aiChatFailure', () => {
 })
 
 describe('stored settings', () => {
-  it('a legacy file reads as the new defaults without the removed switch', () => {
+  it('a legacy file reads as the new defaults without the switch that was removed', () => {
     const read = normalizeAiSettings({
-      provider: 'genspark',
+      provider: 'retired-provider',
       providers: defaultAiSettings().providers,
-      gskToolsEnabled: false,
+      retiredSwitch: false,
     })
     expect(read.provider).toBe('auto')
-    expect('gskToolsEnabled' in read).toBe(false)
+    expect('retiredSwitch' in read).toBe(false)
     expect(read.meteredAccepted).toEqual({ 'claude-code': false, codex: false })
     expect(read.subscriptionNoticeSeen).toBe(false)
   })
@@ -311,12 +312,16 @@ describe('stored settings', () => {
 
   it('recording an answer on a legacy file also drops the removed switch', () => {
     const next = withMeteredAccepted(
-      { provider: 'genspark', providers: defaultAiSettings().providers, gskToolsEnabled: true },
+      {
+        provider: 'retired-provider',
+        providers: defaultAiSettings().providers,
+        retiredSwitch: true,
+      },
       'codex',
       true,
     )
     expect(next.provider).toBe('auto')
-    expect('gskToolsEnabled' in next).toBe(false)
+    expect('retiredSwitch' in next).toBe(false)
     expect(next.meteredAccepted?.codex).toBe(true)
   })
 
@@ -329,13 +334,5 @@ describe('stored settings', () => {
     expect(normalizeAiSettings(JSON.parse(JSON.stringify(next))).meteredAccepted).toEqual(
       next.meteredAccepted,
     )
-  })
-})
-
-describe('isRemovedAiProviderId', () => {
-  it('knows the removed id and nothing else', () => {
-    expect(isRemovedAiProviderId('genspark')).toBe(true)
-    expect(isRemovedAiProviderId('parallel')).toBe(false)
-    expect(isRemovedAiProviderId(undefined)).toBe(false)
   })
 })

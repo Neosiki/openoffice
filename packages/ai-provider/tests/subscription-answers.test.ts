@@ -30,7 +30,17 @@ describe('isSubscriptionProviderId', () => {
   it('accepts the two subscription providers only', () => {
     expect(isSubscriptionProviderId('claude-code')).toBe(true)
     expect(isSubscriptionProviderId('codex')).toBe(true)
-    for (const value of ['auto', 'openai', 'genspark', '', 'Codex', null, undefined, 1, {}]) {
+    for (const value of [
+      'auto',
+      'openai',
+      'retired-provider',
+      '',
+      'Codex',
+      null,
+      undefined,
+      1,
+      {},
+    ]) {
       expect(isSubscriptionProviderId(value)).toBe(false)
     }
   })

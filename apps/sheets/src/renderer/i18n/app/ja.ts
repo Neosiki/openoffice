@@ -812,7 +812,6 @@ export const ja = {
   appGroupChartActions: 'グラフの操作',
   appRemoveFromSheet: 'シートから削除',
   // AI Tab
-  appGroupAiAssistant: 'AI アシスタント',
   appAiOpenPanelDetail: 'サイドバーで会話',
   appGroupAiStarters: 'クイック スタート',
   appAiStarterDetail: 'AI パネルに送信',

@@ -768,7 +768,6 @@ export const id = {
   appFormatPaneDetail: 'Sumbu, lebar celah, pemisahan',
   appGroupChartActions: 'Tindakan bagan',
   appRemoveFromSheet: 'Hapus dari lembar',
-  appGroupAiAssistant: 'Asisten AI',
   appAiOpenPanelDetail: 'Bilah samping obrolan',
   appGroupAiStarters: 'Mulai cepat',
   appAiStarterDetail: 'Kirim ke panel AI',

@@ -2523,7 +2523,6 @@ export const aiSettingsInputSchema = z
     providers: z.record(z.string(), aiProviderConfigSchema),
     customEndpoints: z.array(aiCustomEndpointSchema).optional(),
     customEndpoint: z.string().optional(),
-    gskToolsEnabled: z.boolean().optional(),
     media: z
       .object({
         imageProvider: z.string().min(1).optional(),

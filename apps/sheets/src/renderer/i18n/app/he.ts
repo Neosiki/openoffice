@@ -714,7 +714,6 @@ export const he = {
   appFormatPaneDetail: 'צירים, רוחב מרווח, הפרדה',
   appGroupChartActions: 'פעולות תרשים',
   appRemoveFromSheet: 'הסר מהגיליון',
-  appGroupAiAssistant: 'עוזר AI',
   appAiOpenPanelDetail: 'סרגל צד לשיחה',
   appGroupAiStarters: 'התחלה מהירה',
   appAiStarterDetail: 'שלח ללוח ה-AI',

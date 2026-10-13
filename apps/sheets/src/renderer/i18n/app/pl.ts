@@ -794,7 +794,6 @@ export const pl = {
   appFormatPaneDetail: 'Osie, szerokość przerwy, rozsunięcie',
   appGroupChartActions: 'Akcje wykresu',
   appRemoveFromSheet: 'Usuń z arkusza',
-  appGroupAiAssistant: 'Asystent AI',
   appAiOpenPanelDetail: 'Pasek boczny czatu',
   appGroupAiStarters: 'Szybki start',
   appAiStarterDetail: 'Wyślij do panelu AI',

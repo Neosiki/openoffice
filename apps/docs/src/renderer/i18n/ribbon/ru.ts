@@ -1,7 +1,6 @@
 import type { zh } from './zh'
 
 export const ru = {
-  ribbonAiCreditNote: 'Использует ИИ и расходует кредиты',
   ribbonAiRewriteConfirm:
     'Это действие вызывает ИИ, и всё содержимое может быть переписано. Продолжить? (Вопрос больше не появится.)',
   ribbonTabFile: 'Файл',

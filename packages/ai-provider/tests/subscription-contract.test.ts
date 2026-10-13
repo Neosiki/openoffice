@@ -1,7 +1,6 @@
 /**
- * The subscription contract sits next to the Genspark one until every caller
- * has moved: Claude Code joins the providers, the settings learn the new
- * values, and the old helpers keep answering the way unmigrated callers expect.
+ * The subscription contract: Claude Code joins the providers and the settings
+ * carry the subscription values.
  */
 import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -9,12 +8,7 @@ import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import { sanitizeAiSettings } from '../src/ai-settings-guard'
 import { chatForProvider } from '../src/chat'
-import {
-  AI_PROVIDERS,
-  activeProvider,
-  defaultAiSettings,
-  resolveAiSettings,
-} from '../src/providers'
+import { AI_PROVIDERS, defaultAiSettings, resolveAiSettings } from '../src/providers'
 import { AI_PROVIDER_ADAPTERS, getProviderAdapter } from '../src/registry'
 import { AiRunError, aiStreamErrorFields } from '../src/run-error'
 import { AiCreditsError } from '../src/stream'
@@ -32,12 +26,11 @@ describe('claude-code provider', () => {
     })
   })
 
-  it('sits next to Codex, ahead of the key providers, and keeps the old ids', () => {
+  it('sits next to Codex, ahead of the key providers', () => {
     const ids = AI_PROVIDERS.map((meta) => meta.id)
-    expect(ids.slice(0, 3)).toEqual(['genspark', 'claude-code', 'codex'])
+    expect(ids.slice(0, 3)).toEqual(['claude-code', 'codex', 'anthropic'])
     expect(Object.keys(AI_PROVIDER_ADAPTERS).sort()).toEqual([...ids].sort())
     expect(AI_PROVIDER_ADAPTERS.codex.capabilities.auth).toBe('codex-chatgpt')
-    expect(AI_PROVIDER_ADAPTERS.genspark.capabilities.auth).toBe('gsk-login')
     expect(AI_PROVIDER_ADAPTERS.anthropic.capabilities.auth).toBe('api-key')
   })
 
@@ -53,28 +46,13 @@ describe('claude-code provider', () => {
   })
 })
 
-describe('defaults and the not-yet-migrated activeProvider', () => {
+describe('defaults', () => {
   it('new settings default to auto with the subscription settings off', () => {
     const settings = defaultAiSettings()
     expect(settings.provider).toBe('auto')
     expect(settings.meteredAccepted).toEqual({ 'claude-code': false, codex: false })
     expect(settings.headlessSubscriptionEnabled).toBe(false)
     expect(settings.subscriptionNoticeSeen).toBe(false)
-  })
-
-  it('activeProvider answers genspark for auto, as it did for the old default', () => {
-    expect(activeProvider(defaultAiSettings())).toBe('genspark')
-  })
-
-  it('activeProvider never routes to claude-code, which unmigrated callers cannot run', () => {
-    expect(activeProvider({ ...defaultAiSettings(), provider: 'claude-code' })).toBe('genspark')
-  })
-
-  it('activeProvider still honors Codex and configured key providers', () => {
-    const settings = defaultAiSettings()
-    expect(activeProvider({ ...settings, provider: 'codex' })).toBe('codex')
-    settings.providers.openai = { apiKey: 'sk-live', model: 'gpt-5.6-terra' }
-    expect(activeProvider({ ...settings, provider: 'openai' })).toBe('openai')
   })
 
   it('resolveAiSettings carries the subscription settings from disk', () => {

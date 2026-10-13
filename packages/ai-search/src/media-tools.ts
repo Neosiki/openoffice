@@ -253,8 +253,6 @@ export async function loadMediaReference(
 }
 
 export interface MediaToolOptions {
-  /** ignored: it replaced the signed-out message of a route that no longer exists */
-  notLoggedInError?: string
   /** directories a bare local path may be read from; omitted = extension check only */
   mediaRoots?: readonly string[]
   /** who is asking; omitted = the screen path with no subscription connected (key routes only) */

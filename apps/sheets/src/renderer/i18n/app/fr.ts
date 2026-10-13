@@ -832,7 +832,6 @@ export const fr = {
   appFormatPaneDetail: "Axes, largeur d'intervalle, éclatement",
   appGroupChartActions: 'Actions du graphique',
   appRemoveFromSheet: 'Supprimer de la feuille',
-  appGroupAiAssistant: 'Assistant IA',
   appAiOpenPanelDetail: 'Volet de discussion',
   appGroupAiStarters: 'Démarrage rapide',
   appAiStarterDetail: 'Envoyer au volet IA',

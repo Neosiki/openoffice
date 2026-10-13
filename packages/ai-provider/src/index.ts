@@ -18,7 +18,6 @@ export type {
   AiStreamChunk,
   AiStreamRequest,
   AiTokenUsage,
-  GenSparkAccountStatus,
   LegacyAiSettings,
   AiAnalysisProviderSelection,
   AiImageProviderSelection,
@@ -49,7 +48,6 @@ export {
   DEFAULT_AI_PROVIDER_SELECTION,
   DEFAULT_AI_SEARCH_PROVIDER,
   DEFAULT_AI_VIDEO_ANALYSIS_PROVIDER,
-  REMOVED_AI_PROVIDER_IDS,
   normalizeAiSettings,
 } from './legacy-settings'
 export {
@@ -88,12 +86,9 @@ export { AiRunError, aiStreamErrorFields } from './run-error'
 export {
   AI_PROVIDERS,
   DEFAULT_MAX_OUTPUT_TOKENS,
-  GENSPARK_LLM_BASE_URLS,
   MAX_MAX_OUTPUT_TOKENS,
   MIN_MAX_OUTPUT_TOKENS,
-  activeProvider,
   clampMaxOutputTokens,
-  cloudToolsEnabled,
   defaultAiSettings,
   maxOutputTokensOf,
   resolveAiSettings,
@@ -115,12 +110,9 @@ export {
   activeMediaProvider,
   defaultAiMediaSettings,
   getMediaProviderMeta,
-  imageGenerationAvailable,
-  mediaAnalysisAvailable,
   mediaConfigUsable,
   providerHasCapability,
   resolveAiMediaSettings,
-  videoAnalysisAvailable,
 } from './media'
 export type { MediaCapability } from './media'
 export {

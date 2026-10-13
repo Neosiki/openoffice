@@ -516,23 +516,16 @@ describe('the MCP tools are the same automatic-call path', () => {
     expect(fakes.detect).not.toHaveBeenCalled()
   })
 
-  it('describes the tools without the removed provider or its special models', () => {
+  it('describes the tools without the special models that were removed', () => {
     for (const name of ['capabilities', 'search', 'image', 'media']) {
       const description = TOOLS.find((t) => t.name === name)!.description
-      expect(description).not.toMatch(/genspark|background removal|upscale/i)
+      expect(description).not.toMatch(/background removal|upscale/i)
     }
     expect(tools.get('capabilities')!.description).toMatch(/subscription/)
   })
 })
 
 describe('no trace of the removed login', () => {
-  it.each(['cloud.ts', 'commands/search.ts', 'commands/image.ts', 'commands/capabilities.ts'])(
-    '%s does not mention Genspark at all',
-    (file) => {
-      expect(readFileSync(join(__dirname, '..', 'src', file), 'utf8')).not.toMatch(/genspark|gsk/i)
-    },
-  )
-
   it.each([
     'cloud.ts',
     'commands/search.ts',
@@ -545,7 +538,7 @@ describe('no trace of the removed login', () => {
   ])('%s does not look for the removed login or its command line', (file) => {
     const source = readFileSync(join(__dirname, '..', 'src', file), 'utf8')
     expect(source).not.toMatch(
-      /hasGskAuth|setGskProxyUrl|GSK_|cloudToolsEnabled|auth\.json|GENOFFICE_AUTH_DIR|@genspark|Genspark login|~\/\.(genoffice|ieumoffice)/,
+      /cloudToolsEnabled|auth\.json|GENOFFICE_AUTH_DIR|~\/\.(genoffice|ieumoffice)/,
     )
   })
 })

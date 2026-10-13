@@ -27,7 +27,7 @@ const NO_SEARCH_KEYS = {
 } satisfies SearchOptions
 
 /** The keyless chain and nothing else: free Parallel search, then DuckDuckGo. */
-const FREE_SEARCH_OPTIONS: SearchOptions = { useGsk: false, ...NO_SEARCH_KEYS, prefer: 'parallel' }
+const FREE_SEARCH_OPTIONS: SearchOptions = { ...NO_SEARCH_KEYS, prefer: 'parallel' }
 
 /**
  * The key search provider the user selected, with the key it runs on, or null
@@ -41,8 +41,8 @@ export function selectedSearchKey(
 ): { provider: KeySearchProviderId; key: string } | null {
   const stored: unknown = settings.search?.provider
   const provider = AI_SEARCH_PROVIDERS.find((meta) => meta.id === stored)?.id
-  // nothing usable is selected: an unknown id, or one that was removed
-  if (!provider || provider === 'genspark') return null
+  // nothing usable is selected: an unknown id (one that was removed among them)
+  if (!provider) return null
   const storedKey = settings.search?.providers?.[provider]?.apiKey?.trim() ?? ''
   const key = storedKey || (provider === 'parallel' ? '' : searchEnvKey(provider))
   return key ? { provider, key } : null
@@ -52,7 +52,6 @@ export function searchOptionsFromSettings(settings: AiSettings): SearchOptions {
   const selected = selectedSearchKey(settings)
   if (!selected) return { ...FREE_SEARCH_OPTIONS }
   return {
-    useGsk: false,
     ...NO_SEARCH_KEYS,
     [`${selected.provider}Key`]: selected.key,
     prefer: selected.provider,
@@ -72,11 +71,9 @@ export async function testSearchProvider(
   provider: AiSearchProviderId,
   apiKey: string,
 ): Promise<{ ok: boolean; error?: string }> {
-  if (provider === 'genspark') return { ok: true }
   apiKey = apiKey.trim()
   if (!apiKey && provider !== 'parallel') return { ok: false, error: 'API key is empty' }
   const options: SearchOptions = {
-    useGsk: false,
     serperKey: provider === 'serper' ? apiKey : '',
     serplyKey: provider === 'serply' ? apiKey : '',
     tavilyKey: provider === 'tavily' ? apiKey : '',

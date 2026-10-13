@@ -760,7 +760,6 @@ export const vi = {
   appFormatPaneDetail: 'Trục, độ rộng khoảng cách, tách điểm',
   appGroupChartActions: 'Hành động biểu đồ',
   appRemoveFromSheet: 'Xóa khỏi trang tính',
-  appGroupAiAssistant: 'Trợ lý AI',
   appAiOpenPanelDetail: 'Thanh trò chuyện bên lề',
   appGroupAiStarters: 'Bắt đầu nhanh',
   appAiStarterDetail: 'Gửi tới bảng AI',

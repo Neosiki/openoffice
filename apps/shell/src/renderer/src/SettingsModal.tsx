@@ -46,7 +46,6 @@ import { useSubscriptionConnection } from './subscription-client'
 import {
   advancedProviderIds,
   initialAdvancedProvider,
-  isRemovedProviderId,
   mediaKeyProviders,
   mediaSelection,
   mediaSpecialChoices,
@@ -58,7 +57,7 @@ import type { MediaSpecialChoice } from './settings-ai'
 import './settings.css'
 
 // ── Settings modal (opened from the account menu) ─────────
-// Genspark-style two-pane dialog: section nav on the left, fields on the right.
+// Two-pane dialog: section nav on the left, fields on the right.
 // All values go through the existing home IPC; nothing is stored locally.
 
 // sorted by ISO 639 language code — native-script labels have no natural
@@ -814,11 +813,11 @@ function AiMediaPane({
   onFileSearchChange?: () => void
   focusBlock?: TestedBlock
 }) {
-  const [mediaCatalog] = useState<AiMediaProviderMeta[]>(() =>
-    (window.aiOffice.getAiMediaProviders?.() ?? []).filter((m) => !isRemovedProviderId(m.id)),
+  const [mediaCatalog] = useState<AiMediaProviderMeta[]>(
+    () => window.aiOffice.getAiMediaProviders?.() ?? [],
   )
-  const [searchCatalog] = useState<AiSearchProviderMeta[]>(() =>
-    (window.aiOffice.getAiSearchProviders?.() ?? []).filter((m) => !isRemovedProviderId(m.id)),
+  const [searchCatalog] = useState<AiSearchProviderMeta[]>(
+    () => window.aiOffice.getAiSearchProviders?.() ?? [],
   )
   const [settings, setSettings] = useState<AiSettings | null>(null)
   const [fileSearch, setFileSearchState] = useState<FileSearchSettings | null>(null)
@@ -946,10 +945,7 @@ function AiMediaPane({
         () =>
           window.aiOffice.testAiSearchSettings?.({
             provider: search.provider,
-            apiKey:
-              search.provider === 'genspark'
-                ? ''
-                : (search.providers[search.provider]?.apiKey ?? ''),
+            apiKey: search.providers[search.provider]?.apiKey ?? '',
           }) ?? Promise.resolve(fallback),
       ],
     ]
@@ -1250,8 +1246,7 @@ function AiMediaPane({
   }
 
   const searchMeta = searchCatalog.find((m) => m.id === search.provider)
-  const searchKey =
-    search.provider === 'genspark' ? '' : (search.providers[search.provider]?.apiKey ?? '')
+  const searchKey = search.providers[search.provider]?.apiKey ?? ''
 
   return (
     <>
@@ -1282,13 +1277,12 @@ function AiMediaPane({
                 ? t('setAiSearchSerperHint')
                 : t('setAiSearchTavilyHint')}
         </div>
-        {search.provider !== 'genspark' &&
-          keyRow('set-ai-search-key', searchKey, searchMeta?.keyPlaceholder ?? 'API Key', (v) =>
-            setSearch({
-              ...search,
-              providers: { ...search.providers, [search.provider]: { apiKey: v } },
-            }),
-          )}
+        {keyRow('set-ai-search-key', searchKey, searchMeta?.keyPlaceholder ?? 'API Key', (v) =>
+          setSearch({
+            ...search,
+            providers: { ...search.providers, [search.provider]: { apiKey: v } },
+          }),
+        )}
       </section>
       {fileSearch && (
         <section>

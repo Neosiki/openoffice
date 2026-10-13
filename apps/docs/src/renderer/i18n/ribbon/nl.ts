@@ -1,7 +1,6 @@
 import type { zh } from './zh'
 
 export const nl = {
-  ribbonAiCreditNote: 'Gebruikt AI en verbruikt tegoed',
   ribbonAiRewriteConfirm:
     'Deze actie roept AI aan en kan de volledige inhoud herschrijven. Doorgaan? (U wordt niet opnieuw gevraagd.)',
   ribbonTabFile: 'Bestand',

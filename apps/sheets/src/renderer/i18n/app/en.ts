@@ -748,7 +748,6 @@ export const en = {
   appFormatPaneDetail: 'Axis, gap width, explosion',
   appGroupChartActions: 'Chart actions',
   appRemoveFromSheet: 'Remove from sheet',
-  appGroupAiAssistant: 'AI assistant',
   appAiOpenPanelDetail: 'Chat sidebar',
   appGroupAiStarters: 'Quick start',
   appAiStarterDetail: 'Send to AI panel',

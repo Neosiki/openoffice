@@ -193,7 +193,6 @@ describe('initDocsAutoUpdater', () => {
 
   it('names no vendor feed, CDN or URL', () => {
     const source = readFileSync(join(__dirname, '../src/main/updater.ts'), 'utf8')
-    expect(source).not.toMatch(/genspark/i)
     expect(source).not.toMatch(/azure/i)
     expect(source).not.toContain('GENOFFICE_UPDATE_URL')
     expect(source).not.toMatch(/https?:\/\//)

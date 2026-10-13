@@ -804,7 +804,6 @@ export const nl = {
   appFormatPaneDetail: 'Assen, tussenruimte, uitlichten',
   appGroupChartActions: 'Grafiekacties',
   appRemoveFromSheet: 'Van werkblad verwijderen',
-  appGroupAiAssistant: 'AI-assistent',
   appAiOpenPanelDetail: 'Chatzijbalk',
   appGroupAiStarters: 'Snel starten',
   appAiStarterDetail: 'Naar het AI-deelvenster sturen',

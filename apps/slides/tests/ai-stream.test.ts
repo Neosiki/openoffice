@@ -8,7 +8,6 @@ import {
   AiRunError,
   AiTimeoutError,
   defaultAiSettings,
-  REMOVED_AI_PROVIDER_IDS,
   sanitizeAiSettings,
   type AiSettings,
   type AiStreamChunk,
@@ -262,7 +261,7 @@ describe('runAiStream', () => {
 
 describe('settings as the main process reads and writes them', () => {
   it('a file written before the subscription providers existed falls to the new defaults', () => {
-    for (const removed of REMOVED_AI_PROVIDER_IDS) {
+    for (const removed of ['retired-provider']) {
       const settings = storedAiSettings({
         provider: removed,
         providers: { anthropic: { apiKey: 'k', model: 'm' } },

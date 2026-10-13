@@ -704,7 +704,6 @@ export const zh = {
   appGroupChartActions: '图表操作',
   appRemoveFromSheet: '从工作表中删除',
   // AI Tab
-  appGroupAiAssistant: 'AI 助手',
   appAiOpenPanelDetail: '侧栏对话',
   appGroupAiStarters: '快速开始',
   appAiStarterDetail: '发送到 AI 面板',

@@ -810,7 +810,6 @@ export const es = {
   appFormatPaneDetail: 'Ejes, ancho del intervalo, separación',
   appGroupChartActions: 'Acciones del gráfico',
   appRemoveFromSheet: 'Quitar de la hoja',
-  appGroupAiAssistant: 'Asistente de IA',
   appAiOpenPanelDetail: 'Barra lateral de chat',
   appGroupAiStarters: 'Inicio rápido',
   appAiStarterDetail: 'Enviar al panel de IA',

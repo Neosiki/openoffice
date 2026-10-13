@@ -1,7 +1,6 @@
 import type { zh } from './zh'
 
 export const cs = {
-  ribbonAiCreditNote: 'Používá AI a spotřebovává kredity',
   ribbonAiRewriteConfirm:
     'Tato akce volá asistenta AI a může přepsat celý obsah. Pokračovat? (Znovu se už nezeptáme.)',
   ribbonTabFile: 'Soubor',

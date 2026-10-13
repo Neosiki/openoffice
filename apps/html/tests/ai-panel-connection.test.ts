@@ -588,6 +588,6 @@ describe('AI panel during a turn', () => {
     const label = aiSubscriptionText(LANG, 'aiAssistant')
     expect(host.querySelector('.ai-panel-title')!.textContent).toBe(label)
     expect(host.querySelector('.ai-panel-resizer')!.getAttribute('aria-label')).toBe(label)
-    expect(label).not.toMatch(/Claude|Codex|Genspark/)
+    expect(label).not.toMatch(/Claude|Codex/)
   })
 })

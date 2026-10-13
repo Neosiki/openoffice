@@ -109,7 +109,6 @@ describe('no trace of the upstream update service', () => {
 
   it.each(sources)('%s names no vendor feed, CDN or URL', (file) => {
     const text = readFileSync(join(ROOT, file), 'utf8')
-    expect(text).not.toMatch(/genspark/i)
     expect(text).not.toMatch(/azure/i)
     expect(text).not.toContain('GENOFFICE_UPDATE_URL')
     // no literal address at all: every link comes from the repository constants
