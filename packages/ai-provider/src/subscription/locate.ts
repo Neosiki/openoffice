@@ -143,13 +143,23 @@ function isInside(path: string, root: string, platform: NodeJS.Platform): boolea
   return pathValue === rootValue || pathValue.startsWith(`${rootValue}${sep}`)
 }
 
+/**
+ * A directory named in full. A relative one (`.`, `tools`) would be completed
+ * from the working directory, which is the document's folder when the app was
+ * started by opening a file. `\tools` is absolute to Node, yet Windows
+ * completes it from the drive of the working directory.
+ */
+function isFullDir(dir: string): boolean {
+  return isAbsolute(dir) && !(sep === '\\' && /^[\\/](?![\\/])/.test(dir))
+}
+
 function pathDirs(env: NodeJS.ProcessEnv, platform: NodeJS.Platform): string[] {
   const value = env.PATH ?? env.Path ?? env.path ?? ''
   if (!value) return []
   return value
     .split(platform === 'win32' ? ';' : delimiter)
     .map((dir) => cleanCliPath(dir))
-    .filter(Boolean)
+    .filter(isFullDir)
 }
 
 function native(
