@@ -1,9 +1,12 @@
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 /**
  * Main-process auto-updater flow (src/main/updater.ts): silent background
- * download over the generic CDN feed, one native dialog once the update is
- * downloaded, install-on-restart or defer until quit.
+ * download from the feed baked into the package, one native dialog once the
+ * update is downloaded, install-on-restart or defer until quit. A failed
+ * check never shows anything.
  */
 
 const appState = { isPackaged: true }
@@ -52,6 +55,7 @@ vi.mock('electron-updater', () => ({
 }))
 
 const FIRST_CHECK_DELAY_MS = 15_000
+const RECHECK_INTERVAL_MS = 4 * 60 * 60 * 1000
 
 let platformSpy: { restore: () => void } | null = null
 
@@ -82,7 +86,8 @@ beforeEach(() => {
   updaterState.autoInstallOnAppQuit = false
   updaterState.disableDifferentialDownload = false
   showMessageBox.mockReset()
-  checkForUpdates.mockClear()
+  checkForUpdates.mockReset()
+  checkForUpdates.mockImplementation(() => Promise.resolve(null))
   quitAndInstall.mockClear()
   setPlatform('darwin')
 })
@@ -152,6 +157,46 @@ describe('initDocsAutoUpdater', () => {
     downloaded({ version: '0.3.0' })
     await flushAsync()
     expect(showMessageBox).toHaveBeenCalledTimes(2)
+  })
+
+  // electron-updater reports a failed check twice: it emits 'error' and it
+  // rejects the checkForUpdates() promise
+  const failingCheck = (error: Error) => () => {
+    updaterState.listeners.get('error')?.(error)
+    return Promise.reject(error)
+  }
+
+  it.each([
+    [
+      'the feed has no release at all',
+      Object.assign(new Error('No published versions on GitHub'), {
+        code: 'ERR_XML_MISSED_ELEMENT',
+      }),
+    ],
+    ['the feed answers 404', Object.assign(new Error('404'), { code: 'HTTP_ERROR_404' })],
+    ['there is no network', new Error('net::ERR_INTERNET_DISCONNECTED')],
+  ])('shows nothing and keeps checking when %s', async (_name, error) => {
+    checkForUpdates.mockImplementation(failingCheck(error) as never)
+    const { initDocsAutoUpdater } = await loadUpdater()
+    initDocsAutoUpdater(() => null)
+    vi.advanceTimersByTime(FIRST_CHECK_DELAY_MS)
+    await flushAsync()
+    expect(checkForUpdates).toHaveBeenCalledTimes(1)
+    expect(showMessageBox).not.toHaveBeenCalled()
+    expect(quitAndInstall).not.toHaveBeenCalled()
+
+    vi.advanceTimersByTime(RECHECK_INTERVAL_MS)
+    await flushAsync()
+    expect(checkForUpdates).toHaveBeenCalledTimes(2)
+    expect(showMessageBox).not.toHaveBeenCalled()
+  })
+
+  it('names no vendor feed, CDN or URL', () => {
+    const source = readFileSync(join(__dirname, '../src/main/updater.ts'), 'utf8')
+    expect(source).not.toMatch(/genspark/i)
+    expect(source).not.toMatch(/azure/i)
+    expect(source).not.toContain('GENOFFICE_UPDATE_URL')
+    expect(source).not.toMatch(/https?:\/\//)
   })
 
   it('is idempotent across repeated init calls', async () => {

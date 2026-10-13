@@ -5,14 +5,16 @@ import type { UpdateInfo } from 'electron-updater'
 import { createI18n, getUiLang } from '@genoffice/i18n'
 
 /**
- * Full-package auto-update for the standalone GenOffice Docs app over the generic
- * provider (Azure CDN).
+ * Full-package auto-update for the standalone GenOffice Docs app.
  *
- * electron-builder bakes the publish URL into resources/app-update.yml at
+ * electron-builder bakes the publish config into resources/app-update.yml at
  * package time and emits the update feed (latest.yml on Windows,
- * latest-mac.yml on macOS) next to the installers; the release pipeline
- * uploads both to the CDN. Standalone docs builds currently ship without a
- * publish config, so packaged runs simply log the missing-feed error.
+ * latest-mac.yml on macOS) next to the installers; a release publishes both.
+ * Standalone docs builds currently ship without a publish config, so packaged
+ * runs simply log the missing-feed error. The product itself updates through
+ * the shell (apps/shell/src/main/updater.ts) from the GitHub Releases of its
+ * repository; like there, a failed check or a feed without any release is
+ * passed over quietly.
  *
  * Unlike the shell's modal update window, docs keeps the flow minimal:
  * updates download silently in the background and a single native dialog
@@ -224,7 +226,7 @@ export function initDocsAutoUpdater(getWindow: () => BrowserWindow | null): void
   if (started) return
   started = true
 
-  // Unpacked runs have no app-update.yml and must not hit the CDN with a dev
+  // Unpacked runs have no app-update.yml and must not ask the feed with a dev
   // version. Windows updates via NSIS (latest.yml); macOS via the zip target
   // (latest-mac.yml) — Squirrel.Mac additionally requires a signed app, so
   // unsigned local builds check but never install.

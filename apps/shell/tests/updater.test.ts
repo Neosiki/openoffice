@@ -1,10 +1,25 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { HttpError } from 'builder-util-runtime'
+// deep import on purpose: 'electron-updater' itself is mocked below, the
+// provider that talks to GitHub is the dependency's real code
+import { GitHubProvider } from 'electron-updater/out/providers/GitHubProvider'
+import {
+  GITHUB_LATEST_RELEASE_URL,
+  GITHUB_REPO_NAME,
+  GITHUB_REPO_OWNER,
+  githubReleaseTagUrl,
+} from '@genoffice/electron-utils'
 import type { UpdateUiState } from '../src/shared/update-api'
 
 /**
  * Main-process auto-updater flow (src/main/updater.ts): manual-download policy
  * driven by the strong-guidance update window — the renderer's Download /
  * Install / Later actions come back through update-window.ts callbacks.
+ *
+ * The feed is the GitHub Releases of the product repository. Where a test is
+ * about what that feed answers, the mocked `checkForUpdates` runs
+ * electron-updater's real GitHubProvider over canned github.com responses, so
+ * the errors and the release it picks are the dependency's own.
  */
 
 const appState = { isPackaged: true }
@@ -13,8 +28,6 @@ const openExternal = vi.hoisted(() => vi.fn())
 const showMessageBox = vi.hoisted(() =>
   vi.fn<(opts: unknown) => Promise<{ response: number }>>(() => Promise.resolve({ response: 0 })),
 )
-const readFileSyncMock = vi.hoisted(() => vi.fn<(...args: unknown[]) => string>())
-
 vi.mock('electron', () => ({
   app: {
     get isPackaged() {
@@ -30,10 +43,6 @@ vi.mock('electron', () => ({
   },
 }))
 
-vi.mock('node:fs', () => ({
-  readFileSync: (...args: unknown[]) => readFileSyncMock(...args),
-}))
-
 type Listener = (...args: unknown[]) => unknown
 
 const updaterState = {
@@ -43,6 +52,7 @@ const updaterState = {
   disableDifferentialDownload: false,
   channel: null as string | null,
   allowDowngrade: false,
+  allowPrerelease: null as boolean | null,
 }
 const checkForUpdates = vi.fn(() => Promise.resolve(null))
 const downloadUpdate = vi.fn<(token?: FakeCancellationToken) => Promise<unknown>>(() =>
@@ -88,6 +98,12 @@ vi.mock('electron-updater', () => ({
     },
     get allowDowngrade() {
       return updaterState.allowDowngrade
+    },
+    set allowPrerelease(v: boolean) {
+      updaterState.allowPrerelease = v
+    },
+    get allowPrerelease() {
+      return updaterState.allowPrerelease ?? false
     },
   },
 }))
@@ -143,6 +159,140 @@ function lastShownActions(): UpdateActions {
   return showUpdateWindow.mock.calls.at(-1)![2]
 }
 
+/** the version the mocked app reports (see the electron mock above) */
+const CURRENT_VERSION = '0.1.0'
+const RELEASES_PATH = `/${GITHUB_REPO_OWNER}/${GITHUB_REPO_NAME}/releases`
+
+/**
+ * What github.com answered for the product repository before its first
+ * release (recorded 2026-10-13): HTTP 200 and an Atom feed without a single
+ * entry. `GET <releases>/latest` answered 302 to the release list at the same
+ * time, and `<releases>/latest/download/latest.yml` answered 404.
+ */
+const EMPTY_RELEASES_ATOM = `<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xmlns:media="http://search.yahoo.com/mrss/" xml:lang="en-US">
+  <id>tag:github.com,2008:https://github.com/pblsketch/openoffice/releases</id>
+  <link type="text/html" rel="alternate" href="https://github.com/pblsketch/openoffice/releases"/>
+  <link type="application/atom+xml" rel="self" href="https://github.com/pblsketch/openoffice/releases.atom"/>
+  <title>Release notes from openoffice</title>
+  <updated>2026-10-13T06:34:27Z</updated>
+</feed>
+`
+
+/** A stand-in for the repository's release list as github.com serves it. */
+interface FakeGitHub {
+  /** tags of the published releases, newest first (the Atom feed's order) */
+  tags: string[]
+  /** the tag GitHub marks "Latest" — its newest full release; null while only
+   * pre-releases exist, which makes `<releases>/latest` redirect to the list */
+  latest: string | null
+  /** update feed files attached to each release: tag → file name → version */
+  assets: Record<string, Record<string, string>>
+  /** the release list itself does not answer as a feed */
+  listAnswers?: 'not-found' | 'server-error' | 'not-a-feed'
+}
+
+const NO_RELEASE: FakeGitHub = { tags: [], latest: null, assets: {} }
+
+function releasesAtom(tags: string[]): string {
+  const entries = tags.map(
+    (tag) => `  <entry>
+    <id>tag:github.com,2008:Repository/1/${tag}</id>
+    <updated>2026-10-13T00:00:00Z</updated>
+    <link rel="alternate" type="text/html" href="https://github.com${RELEASES_PATH}/tag/${tag}"/>
+    <title>${tag}</title>
+    <content type="html">notes</content>
+  </entry>
+`,
+  )
+  return EMPTY_RELEASES_ATOM.replace('</feed>', `${entries.join('')}</feed>`)
+}
+
+function feedFile(version: string): string {
+  const installer = `IeumOffice-Setup-${version}.exe`
+  return [
+    `version: ${version}`,
+    'files:',
+    `  - url: ${installer}`,
+    '    sha512: c2hhNTEy',
+    '    size: 1',
+    `path: ${installer}`,
+    'sha512: c2hhNTEy',
+    "releaseDate: '2026-10-13T00:00:00.000Z'",
+    '',
+  ].join('\n')
+}
+
+const isNewer = (a: string, b: string): boolean =>
+  a.localeCompare(b, undefined, { numeric: true }) > 0
+
+/**
+ * Routes the mocked `checkForUpdates` through electron-updater's real GitHub
+ * provider, answering its requests from `github`. The provider reads the
+ * channel and pre-release switch the code under test set on the updater, and —
+ * like AppUpdater.checkForUpdates — a failure is both emitted as 'error' and
+ * rejected, a newer version is announced through 'update-available'.
+ * Returns the request paths in the order they were made.
+ */
+function checkAgainstGitHub(github: FakeGitHub): string[] {
+  const requested: string[] = []
+  const answer = (path: string): string => {
+    requested.push(path)
+    if (path === `${RELEASES_PATH}.atom`) {
+      if (github.listAnswers === 'not-found') throw new HttpError(404)
+      if (github.listAnswers === 'server-error') throw new HttpError(500)
+      if (github.listAnswers === 'not-a-feed') return '<!DOCTYPE html><html><body>Sign in</body>'
+      return releasesAtom(github.tags)
+    }
+    if (path === `${RELEASES_PATH}/latest`) {
+      // electron-updater asks for JSON; without a full release GitHub
+      // redirects to the HTML release list instead, which the executor follows
+      return github.latest === null
+        ? '<!DOCTYPE html><html><body>Releases</body></html>'
+        : JSON.stringify({ tag_name: github.latest })
+    }
+    const download = /\/download\/([^/]+)\/([^/]+)$/.exec(path)
+    const version = download ? github.assets[download[1]]?.[download[2]] : undefined
+    if (version === undefined) throw new HttpError(404)
+    return feedFile(version)
+  }
+  checkForUpdates.mockImplementation((async () => {
+    const provider = new GitHubProvider(
+      { provider: 'github', owner: GITHUB_REPO_OWNER, repo: GITHUB_REPO_NAME },
+      {
+        channel: updaterState.channel,
+        allowPrerelease: updaterState.allowPrerelease ?? false,
+        currentVersion: CURRENT_VERSION,
+        fullChangelog: false,
+      } as never,
+      {
+        isUseMultipleRangeRequest: false,
+        platform: 'win32',
+        executor: { request: async (options: { path: string }) => answer(options.path) },
+      } as never,
+    )
+    try {
+      const updateInfo = await provider.getLatestVersion()
+      const isUpdateAvailable = isNewer(updateInfo.version, CURRENT_VERSION)
+      if (isUpdateAvailable) updaterState.listeners.get('update-available')?.(updateInfo)
+      return { isUpdateAvailable, updateInfo }
+    } catch (err) {
+      updaterState.listeners.get('error')?.(err)
+      throw err
+    }
+  }) as never)
+  return requested
+}
+
+/** a check that cannot reach the network at all */
+function checkOffline(): void {
+  checkForUpdates.mockImplementation(() => {
+    const err = new Error('net::ERR_INTERNET_DISCONNECTED')
+    updaterState.listeners.get('error')?.(err)
+    return Promise.reject(err)
+  })
+}
+
 beforeEach(() => {
   vi.resetModules()
   vi.useFakeTimers()
@@ -154,7 +304,9 @@ beforeEach(() => {
   updaterState.disableDifferentialDownload = false
   updaterState.channel = null
   updaterState.allowDowngrade = false
-  checkForUpdates.mockClear()
+  updaterState.allowPrerelease = null
+  checkForUpdates.mockReset()
+  checkForUpdates.mockImplementation(() => Promise.resolve(null))
   downloadUpdate.mockReset()
   downloadUpdate.mockImplementation(() => Promise.resolve([]))
   quitAndInstall.mockClear()
@@ -164,10 +316,6 @@ beforeEach(() => {
   openExternal.mockClear()
   showMessageBox.mockReset()
   showMessageBox.mockImplementation(() => Promise.resolve({ response: 0 }))
-  readFileSyncMock.mockReset()
-  readFileSyncMock.mockImplementation(() => {
-    throw new Error('no app-update.yml')
-  })
   setPlatform('darwin')
 })
 
@@ -312,6 +460,9 @@ describe('initAutoUpdater', () => {
     // must never allow a downgrade, despite electron-updater's channel setter
     // side effect
     expect(updaterState.allowDowngrade).toBe(false)
+    // set explicitly: electron-updater turns it on by itself when the
+    // installed version is a pre-release
+    expect(updaterState.allowPrerelease).toBe(false)
   })
 
   it('starts on the beta feed when the beta channel is passed in', async () => {
@@ -321,6 +472,8 @@ describe('initAutoUpdater', () => {
     // must never allow a downgrade, despite electron-updater's channel setter
     // side effect
     expect(updaterState.allowDowngrade).toBe(false)
+    // on GitHub the beta channel is the repository's pre-releases
+    expect(updaterState.allowPrerelease).toBe(true)
   })
 
   it('applyUpdateChannel switches the feed and re-checks immediately', async () => {
@@ -330,10 +483,12 @@ describe('initAutoUpdater', () => {
     applyUpdateChannel('beta')
     expect(updaterState.channel).toBe('beta')
     expect(updaterState.allowDowngrade).toBe(false)
+    expect(updaterState.allowPrerelease).toBe(true)
     expect(checkForUpdates).toHaveBeenCalledTimes(1)
     applyUpdateChannel('stable')
     expect(updaterState.channel).toBe('latest')
     expect(updaterState.allowDowngrade).toBe(false)
+    expect(updaterState.allowPrerelease).toBe(false)
     expect(checkForUpdates).toHaveBeenCalledTimes(2)
   })
 
@@ -418,24 +573,14 @@ describe('initAutoUpdater', () => {
 })
 
 describe('manual download fallback', () => {
-  const macFiles = [
-    { url: 'GenOffice-0.2.0-arm64.zip' },
-    { url: 'GenOffice-0.2.0.zip' },
-    { url: 'GenOffice-0.2.0-arm64.dmg' },
-    { url: 'GenOffice-0.2.0.dmg' },
-  ]
-
-  function setArch(arch: string): () => void {
-    const original = Object.getOwnPropertyDescriptor(process, 'arch')!
-    Object.defineProperty(process, 'arch', { value: arch })
-    return () => Object.defineProperty(process, 'arch', original)
-  }
-
-  async function failTwiceIntoManual(files: { url: string }[]): Promise<UpdateActions> {
+  async function failTwiceIntoManual(info: {
+    version: string
+    files?: { url: string }[]
+  }): Promise<UpdateActions> {
     downloadUpdate.mockImplementation(() => Promise.reject(new Error('team id changed')))
     const { initAutoUpdater } = await loadUpdater()
     initAutoUpdater(() => null)
-    updaterState.listeners.get('update-available')!({ version: '0.2.0', files })
+    updaterState.listeners.get('update-available')!(info)
     const actions = lastShownActions()
     actions.onDownload()
     await flushAsync()
@@ -446,129 +591,268 @@ describe('manual download fallback', () => {
     return actions
   }
 
-  it('opens the feed-derived installer matching channel base URL and arm64 arch', async () => {
-    Object.defineProperty(process, 'resourcesPath', { value: '/res', configurable: true })
-    readFileSyncMock.mockReturnValue('provider: generic\nurl: https://cdn.example.com/mac/\n')
-    const restoreArch = setArch('arm64')
-    try {
-      const actions = await failTwiceIntoManual(macFiles)
-      actions.onOpenDownload()
-      expect(openExternal).toHaveBeenCalledWith(
-        'https://cdn.example.com/mac/GenOffice-0.2.0-arm64.dmg',
-      )
-    } finally {
-      restoreArch()
-    }
+  it("opens the latest release page of the product's repository", async () => {
+    const actions = await failTwiceIntoManual({ version: '0.2.0' })
+    actions.onOpenDownload()
+    expect(openExternal).toHaveBeenCalledTimes(1)
+    expect(openExternal).toHaveBeenCalledWith(GITHUB_LATEST_RELEASE_URL)
+    expect(GITHUB_LATEST_RELEASE_URL).toBe(
+      'https://github.com/pblsketch/openoffice/releases/latest',
+    )
   })
 
-  it('picks the arch-less dmg for x64 installs', async () => {
-    Object.defineProperty(process, 'resourcesPath', { value: '/res', configurable: true })
-    readFileSyncMock.mockReturnValue('url: https://cdn.example.com/mac\n')
-    const restoreArch = setArch('x64')
-    try {
-      const actions = await failTwiceIntoManual(macFiles)
-      actions.onOpenDownload()
-      expect(openExternal).toHaveBeenCalledWith('https://cdn.example.com/mac/GenOffice-0.2.0.dmg')
-    } finally {
-      restoreArch()
-    }
+  it('never follows a download URL supplied by the update metadata', async () => {
+    const actions = await failTwiceIntoManual({
+      version: '0.2.0',
+      files: [
+        { url: 'https://attacker.example/IeumOffice-Setup-0.2.0.exe' },
+        { url: 'IeumOffice-Setup-0.2.0.exe' },
+      ],
+    })
+    actions.onOpenDownload()
+    expect(openExternal).toHaveBeenCalledWith(GITHUB_LATEST_RELEASE_URL)
   })
 
-  const winFiles = [
-    { url: 'GenOfficeSetup-v0.2.0.exe' },
-    { url: 'GenOfficeSetup-v0.2.0-arm64.exe' },
+  it('opens the release page of a pre-release, which is never the "latest" one', async () => {
+    const actions = await failTwiceIntoManual({ version: '0.3.0-beta.1' })
+    actions.onOpenDownload()
+    expect(openExternal).toHaveBeenCalledWith(githubReleaseTagUrl('0.3.0-beta.1'))
+    expect(githubReleaseTagUrl('0.3.0-beta.1')).toBe(
+      'https://github.com/pblsketch/openoffice/releases/tag/v0.3.0-beta.1',
+    )
+  })
+})
+
+describe('GitHub Releases feed', () => {
+  const STABLE_ONLY: FakeGitHub = {
+    tags: ['v0.2.0'],
+    latest: 'v0.2.0',
+    assets: { 'v0.2.0': { 'latest.yml': '0.2.0' } },
+  }
+  // electron-builder names the feed file latest.yml for every version it
+  // packages for the github provider (it derives a channel file name from a
+  // pre-release version only for other providers), so that is what a
+  // pre-release built from this repository carries
+  const BETA_AHEAD: FakeGitHub = {
+    tags: ['v0.3.0-beta.1', 'v0.2.0'],
+    latest: 'v0.2.0',
+    assets: {
+      'v0.3.0-beta.1': { 'latest.yml': '0.3.0-beta.1' },
+      'v0.2.0': { 'latest.yml': '0.2.0' },
+    },
+  }
+
+  async function firstCheck(github: FakeGitHub, channel?: 'stable' | 'beta'): Promise<string[]> {
+    const requested = checkAgainstGitHub(github)
+    const { initAutoUpdater } = await loadUpdater()
+    initAutoUpdater(() => null, channel)
+    vi.advanceTimersByTime(FIRST_CHECK_DELAY_MS)
+    await flushAsync()
+    return requested
+  }
+
+  beforeEach(() => {
+    platformSpy?.restore()
+    setPlatform('win32')
+  })
+
+  it("offers the repository's latest release from its latest.yml", async () => {
+    const requested = await firstCheck(STABLE_ONLY)
+    expect(requested).toEqual([
+      `${RELEASES_PATH}.atom`,
+      `${RELEASES_PATH}/latest`,
+      `${RELEASES_PATH}/download/v0.2.0/latest.yml`,
+    ])
+    expect(showUpdateWindow).toHaveBeenCalledTimes(1)
+    expect(lastShownState().phase).toBe('available')
+    expect(lastShownState().version).toBe('0.2.0')
+    expect(showMessageBox).not.toHaveBeenCalled()
+  })
+
+  it('keeps a pre-release away from the stable channel', async () => {
+    await firstCheck(BETA_AHEAD)
+    expect(showUpdateWindow).toHaveBeenCalledTimes(1)
+    expect(lastShownState().version).toBe('0.2.0')
+  })
+
+  it('offers a pre-release on the beta channel', async () => {
+    const requested = await firstCheck(BETA_AHEAD, 'beta')
+    // no "latest" lookup: the newest entry of the release list is taken, and
+    // its beta.yml is asked for before the latest.yml it actually carries
+    expect(requested).toEqual([
+      `${RELEASES_PATH}.atom`,
+      `${RELEASES_PATH}/download/v0.3.0-beta.1/beta.yml`,
+      `${RELEASES_PATH}/download/v0.3.0-beta.1/latest.yml`,
+    ])
+    expect(showUpdateWindow).toHaveBeenCalledTimes(1)
+    expect(lastShownState().version).toBe('0.3.0-beta.1')
+  })
+
+  it('still follows full releases on the beta channel', async () => {
+    const requested = await firstCheck(
+      {
+        tags: ['v0.4.0', 'v0.3.0-beta.1'],
+        latest: 'v0.4.0',
+        assets: {
+          'v0.4.0': { 'latest.yml': '0.4.0' },
+          'v0.3.0-beta.1': { 'latest.yml': '0.3.0-beta.1' },
+        },
+      },
+      'beta',
+    )
+    expect(requested.slice(-2)).toEqual([
+      `${RELEASES_PATH}/download/v0.4.0/beta.yml`,
+      `${RELEASES_PATH}/download/v0.4.0/latest.yml`,
+    ])
+    expect(lastShownState().version).toBe('0.4.0')
+  })
+
+  // the rehearsal docs/releasing.ko.md describes: a release ticked "pre-release"
+  // on GitHub is not the repository's latest one, whatever its version says
+  it('shows a release marked pre-release on GitHub to the beta channel only', async () => {
+    const rehearsal: FakeGitHub = {
+      tags: ['v0.2.0'],
+      latest: null,
+      assets: { 'v0.2.0': { 'latest.yml': '0.2.0' } },
+    }
+    await firstCheck(rehearsal)
+    expect(showUpdateWindow).not.toHaveBeenCalled()
+    expect(showMessageBox).not.toHaveBeenCalled()
+
+    const { applyUpdateChannel } = await loadUpdater()
+    applyUpdateChannel('beta')
+    await flushAsync()
+    expect(showUpdateWindow).toHaveBeenCalledTimes(1)
+    expect(lastShownState().version).toBe('0.2.0')
+  })
+
+  it('drives the download phases for a release found on GitHub', async () => {
+    await firstCheck(STABLE_ONLY)
+    lastShownActions().onDownload()
+    expect(pushUpdateState).toHaveBeenLastCalledWith({ phase: 'downloading', percent: 0 })
+    updaterState.listeners.get('download-progress')!({ percent: 64 })
+    expect(pushUpdateState).toHaveBeenLastCalledWith({ phase: 'downloading', percent: 64 })
+    updaterState.listeners.get('update-downloaded')!({ version: '0.2.0' })
+    expect(pushUpdateState).toHaveBeenLastCalledWith({ phase: 'downloaded', percent: 100 })
+    lastShownActions().onInstall()
+    vi.advanceTimersByTime(0)
+    expect(quitAndInstall).toHaveBeenCalledWith(true, true)
+  })
+})
+
+/**
+ * spec 4.13: a missing release or a failed check is passed over quietly and
+ * never gets in the way of using the app. Each case names what the update
+ * feed did and what a user who asked for the check is told: "you're up to
+ * date" when the repository has nothing for this install, "couldn't check"
+ * when the check could not run.
+ */
+describe('quiet failure', () => {
+  const cases: {
+    name: string
+    arrange: () => void
+    manualAnswer: 'up-to-date' | 'could-not-check'
+  }[] = [
+    {
+      name: 'the repository has no release at all',
+      arrange: () => checkAgainstGitHub(NO_RELEASE),
+      manualAnswer: 'up-to-date',
+    },
+    {
+      name: 'only a pre-release exists and the channel is stable',
+      arrange: () =>
+        checkAgainstGitHub({
+          tags: ['v0.2.0-beta.1'],
+          latest: null,
+          assets: { 'v0.2.0-beta.1': { 'latest.yml': '0.2.0-beta.1' } },
+        }),
+      manualAnswer: 'up-to-date',
+    },
+    {
+      name: 'the latest release carries no latest.yml',
+      arrange: () => checkAgainstGitHub({ tags: ['v0.2.0'], latest: 'v0.2.0', assets: {} }),
+      manualAnswer: 'up-to-date',
+    },
+    {
+      name: 'GitHub answers 404 for the release list',
+      arrange: () => checkAgainstGitHub({ ...NO_RELEASE, listAnswers: 'not-found' }),
+      manualAnswer: 'up-to-date',
+    },
+    {
+      name: 'there is no network',
+      arrange: checkOffline,
+      manualAnswer: 'could-not-check',
+    },
+    {
+      name: 'GitHub answers with a server error',
+      arrange: () => checkAgainstGitHub({ ...NO_RELEASE, listAnswers: 'server-error' }),
+      manualAnswer: 'could-not-check',
+    },
+    {
+      // e.g. a captive portal's page. electron-updater reports it exactly like
+      // an empty release list (no <entry> in what it parsed), so the two
+      // cannot be told apart and it reads as "nothing newer".
+      name: 'an HTML page answers instead of the release list',
+      arrange: () => checkAgainstGitHub({ ...NO_RELEASE, listAnswers: 'not-a-feed' }),
+      manualAnswer: 'up-to-date',
+    },
   ]
 
-  it('picks the arm64 installer on Windows arm64', async () => {
-    Object.defineProperty(process, 'resourcesPath', { value: '/res', configurable: true })
-    readFileSyncMock.mockReturnValue('url: https://cdn.example.com/win\n')
+  beforeEach(() => {
     platformSpy?.restore()
     setPlatform('win32')
-    const restoreArch = setArch('arm64')
-    try {
-      const actions = await failTwiceIntoManual(winFiles)
-      actions.onOpenDownload()
-      expect(openExternal).toHaveBeenCalledWith(
-        'https://cdn.example.com/win/GenOfficeSetup-v0.2.0-arm64.exe',
-      )
-    } finally {
-      restoreArch()
-    }
   })
 
-  it('picks the arch-less installer on Windows x64 even when arm64 is listed', async () => {
-    Object.defineProperty(process, 'resourcesPath', { value: '/res', configurable: true })
-    readFileSyncMock.mockReturnValue('url: https://cdn.example.com/win\n')
-    platformSpy?.restore()
-    setPlatform('win32')
-    const restoreArch = setArch('x64')
-    try {
-      const actions = await failTwiceIntoManual([...winFiles].reverse())
-      actions.onOpenDownload()
-      expect(openExternal).toHaveBeenCalledWith(
-        'https://cdn.example.com/win/GenOfficeSetup-v0.2.0.exe',
-      )
-    } finally {
-      restoreArch()
-    }
-  })
+  for (const { name, arrange, manualAnswer } of cases) {
+    it(`background check shows nothing when ${name}`, async () => {
+      arrange()
+      const { initAutoUpdater } = await loadUpdater()
+      initAutoUpdater(() => null)
+      vi.advanceTimersByTime(FIRST_CHECK_DELAY_MS)
+      await flushAsync()
 
-  it('falls back to the x64 installer on Windows arm64 when the feed predates arm64', async () => {
-    Object.defineProperty(process, 'resourcesPath', { value: '/res', configurable: true })
-    readFileSyncMock.mockReturnValue('url: https://cdn.example.com/win\n')
-    platformSpy?.restore()
-    setPlatform('win32')
-    const restoreArch = setArch('arm64')
-    try {
-      const actions = await failTwiceIntoManual([{ url: 'GenOfficeSetup-v0.2.0.exe' }])
-      actions.onOpenDownload()
-      expect(openExternal).toHaveBeenCalledWith(
-        'https://cdn.example.com/win/GenOfficeSetup-v0.2.0.exe',
-      )
-    } finally {
-      restoreArch()
-    }
-  })
+      expect(checkForUpdates).toHaveBeenCalledTimes(1)
+      expect(showMessageBox).not.toHaveBeenCalled()
+      expect(showUpdateWindow).not.toHaveBeenCalled()
+      expect(pushUpdateState).not.toHaveBeenCalled()
+      expect(openExternal).not.toHaveBeenCalled()
 
-  it('rebuilds absolute metadata URLs against the trusted feed base', async () => {
-    Object.defineProperty(process, 'resourcesPath', { value: '/res', configurable: true })
-    readFileSyncMock.mockReturnValue('url: https://cdn.example.com/mac\n')
-    const restoreArch = setArch('arm64')
-    try {
-      const actions = await failTwiceIntoManual([
-        { url: 'https://attacker.example/GenOffice-0.2.0-arm64.zip' },
-        { url: 'https://attacker.example/GenOffice-0.2.0-arm64.dmg' },
-        { url: 'https://attacker.example/GenOffice-0.2.0.dmg' },
-      ])
-      actions.onOpenDownload()
-      expect(openExternal).toHaveBeenCalledWith(
-        'https://cdn.example.com/mac/GenOffice-0.2.0-arm64.dmg',
-      )
-    } finally {
-      restoreArch()
-    }
-  })
+      // the app goes on, and so does checking: a release published later is
+      // picked up by the next periodic check
+      checkAgainstGitHub({
+        tags: ['v0.2.0'],
+        latest: 'v0.2.0',
+        assets: { 'v0.2.0': { 'latest.yml': '0.2.0' } },
+      })
+      vi.advanceTimersByTime(RECHECK_INTERVAL_MS)
+      await flushAsync()
+      expect(showUpdateWindow).toHaveBeenCalledTimes(1)
+      expect(lastShownState().version).toBe('0.2.0')
+      expect(showMessageBox).not.toHaveBeenCalled()
+    })
 
-  it('rejects a non-HTTPS baked feed URL', async () => {
-    Object.defineProperty(process, 'resourcesPath', { value: '/res', configurable: true })
-    readFileSyncMock.mockReturnValue('url: http://cdn.example.com/mac\n')
-    const actions = await failTwiceIntoManual(macFiles)
-    actions.onOpenDownload()
-    expect(openExternal).toHaveBeenCalledWith(
-      'https://github.com/genspark-ai/genoffice/releases/latest',
-    )
-  })
+    it(`a requested check answers "${manualAnswer}" when ${name}`, async () => {
+      arrange()
+      const { initAutoUpdater, checkForUpdatesNow } = await loadUpdater()
+      initAutoUpdater(() => null)
 
-  it('falls back to the generic download page when the feed base cannot be read', async () => {
-    // readFileSyncMock throws by default (no app-update.yml)
-    const actions = await failTwiceIntoManual([
-      { url: 'https://attacker.example/GenOffice-0.2.0-arm64.dmg' },
-    ])
-    actions.onOpenDownload()
-    expect(openExternal).toHaveBeenCalledWith(
-      'https://github.com/genspark-ai/genoffice/releases/latest',
-    )
-  })
+      await expect(checkForUpdatesNow()).resolves.toBeUndefined()
+
+      expect(showUpdateWindow).not.toHaveBeenCalled()
+      expect(showMessageBox).toHaveBeenCalledTimes(1)
+      const opts = showMessageBox.mock.calls[0][0] as { type: string; message: string }
+      if (manualAnswer === 'up-to-date') {
+        expect(opts.type).toBe('info')
+        expect(opts.message).toContain(CURRENT_VERSION)
+      } else {
+        expect(opts.type).toBe('warning')
+        expect(opts.message).not.toContain(CURRENT_VERSION)
+      }
+      // never an error box, and nothing that has to be answered to keep working
+      expect(opts.type).not.toBe('error')
+      expect(openExternal).not.toHaveBeenCalled()
+    })
+  }
 })
 
 describe('initAutoUpdater (fake update preview)', () => {
@@ -623,9 +907,7 @@ describe('checkForUpdatesNow (r148 manual check)', () => {
 
     expect(showMessageBox).toHaveBeenCalledTimes(1)
     expect(lastDialogOpts().buttons.length).toBe(2)
-    expect(openExternal).toHaveBeenCalledWith(
-      'https://github.com/genspark-ai/genoffice/releases/latest',
-    )
+    expect(openExternal).toHaveBeenCalledWith(GITHUB_LATEST_RELEASE_URL)
     expect(checkForUpdates).not.toHaveBeenCalled()
   })
 
