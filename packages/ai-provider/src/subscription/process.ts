@@ -43,10 +43,28 @@ function validPid(pid: unknown): pid is number {
   return typeof pid === 'number' && Number.isInteger(pid) && pid > 0
 }
 
+/**
+ * A drive path made of plain file names. Anything else is not taken as the
+ * Windows directory: a relative value would be completed from the working
+ * directory, and the value also goes onto the install command line.
+ */
+const WINDOWS_ROOT_PATTERN = /^[A-Za-z]:(?:\\[^\\/:*?"<>|%\r\n]+)+\\?$/
+
+/**
+ * The Windows system directory (`%SystemRoot%\System32`). It is also the
+ * working directory of the system tools the app starts: the folder the app was
+ * started in may be a document's, and a program must not be looked up there.
+ */
+export function windowsSystemDir(env: NodeJS.ProcessEnv): string {
+  const root = [env.SystemRoot, env.SYSTEMROOT, env.windir].find(
+    (value) => value !== undefined && WINDOWS_ROOT_PATTERN.test(value),
+  )
+  return win32.join(root ?? 'C:\\Windows', 'System32')
+}
+
 /** Windows system tools are started by full path: PATH is not trusted to find them */
 export function windowsSystemTool(env: NodeJS.ProcessEnv, ...segments: string[]): string {
-  const root = env.SystemRoot ?? env.SYSTEMROOT ?? env.windir ?? 'C:\\Windows'
-  return win32.join(root, 'System32', ...segments)
+  return win32.join(windowsSystemDir(env), ...segments)
 }
 
 /**

@@ -133,6 +133,64 @@ describe('check-no-genspark', () => {
     expect(r.stdout).toContain('0 files scanned')
   })
 
+  it('reports a file or a folder named after the removed vendor, whatever the file holds', () => {
+    commit({
+      'src/genspark/login.ts': 'export const a = 1\n',
+      'docs/gsk-setup.md': '# Setup\n',
+      'art/Genspark-logo.png': 'not text',
+      'src/GskAuthError.ts': 'export const b = 1\n',
+      'data/mainfunc.dat': Buffer.from([0, 1, 2]),
+    })
+    const r = check()
+    expect(r.code).toBe(1)
+    expect(r.stderr).toContain('  src/genspark/login.ts: path: genspark\n')
+    expect(r.stderr).toContain('  docs/gsk-setup.md: path: gsk\n')
+    expect(r.stderr).toContain('  art/Genspark-logo.png: path: Genspark\n')
+    expect(r.stderr).toContain('  src/GskAuthError.ts: path: Gsk\n')
+    expect(r.stderr).toContain('  data/mainfunc.dat: path: mainfunc\n')
+    expect(r.stderr).toMatch(/5 hits in 5 files/)
+  })
+
+  it('reports a path once for each time it names the vendor, next to the hits inside the file', () => {
+    commit({ 'genspark/genspark.ts': 'const key = gskApiKey()\n' })
+    const r = check()
+    expect(r.code).toBe(1)
+    expect(r.stderr.match(/^ {2}genspark\/genspark\.ts: path: genspark$/gm)).toHaveLength(2)
+    expect(reportedLines(r.stderr, 'genspark/genspark.ts')).toEqual([1])
+    expect(r.stderr).toMatch(/3 hits in 1 file/)
+  })
+
+  it('passes paths that keep their name or merely contain the letters', () => {
+    commit({
+      'packages/genoffice-ai/src/genofficeAiSettings.ts': 'export const a = 1\n',
+      'src/i18n/markeringskleur.ts': 'export const b = 1\n',
+      'src/LOGSKIP.ts': 'export const c = 1\n',
+      'src/mainFunction.ts': 'export const d = 1\n',
+    })
+    const r = check()
+    expect(r.stderr).toBe('')
+    expect(r.code).toBe(0)
+    expect(r.stdout).toContain('0 allowlisted hits')
+  })
+
+  it('applies the allowlist to a path as it does to a line: only this check keeps its name', () => {
+    commit({
+      'tools/check-no-genspark.mjs': 'export const a = 1\n',
+      'packages/cli/tests/check-no-genspark.test.ts': 'export const b = 1\n',
+    })
+    const own = check()
+    expect(own.stderr).toBe('')
+    expect(own.code).toBe(0)
+    expect(own.stdout).toContain('2 allowlisted hits')
+
+    // an entry for a file's contents does not cover a differently named file
+    commit({ 'tools/genspark-check.mjs': 'export const c = 1\n' })
+    const other = check()
+    expect(other.code).toBe(1)
+    expect(other.stderr).toContain('  tools/genspark-check.mjs: path: genspark\n')
+    expect(other.stderr).toMatch(/1 hit in 1 file/)
+  })
+
   it('allows the licence files and counts what it let through', () => {
     commit({
       LICENSE: '   Copyright 2026 Mainfunc, Inc.\n',

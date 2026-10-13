@@ -476,7 +476,7 @@ describe('AI panel: a send while the connection is still being checked', () => {
     expect(container.querySelector('.ai-sub-prompt')).not.toBeNull()
     expect(container.querySelector('.ai-msg-error')).toBeNull()
 
-    await harness.setStatuses(statuses('checking', 'ready'))
+    await harness.setStatuses(statuses('signed-out', 'ready'))
     expect(harness.requests).toHaveLength(1)
     expect(harness.composerText()).toBe('')
     expect(container.textContent).toContain('hello')

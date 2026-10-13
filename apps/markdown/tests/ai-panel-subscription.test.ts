@@ -253,7 +253,7 @@ describe('AiPanel under the subscription contract', () => {
     expect(bridge.api.aiStream).not.toHaveBeenCalled()
     expect(composerText(container)).toBe('summarize this')
 
-    act(() => bridge.setStatuses(statusMap('checking', 'ready')))
+    act(() => bridge.setStatuses(statusMap('signed-out', 'ready')))
     await settle()
     expect(bridge.api.aiStream).toHaveBeenCalledTimes(1)
     expect(composerText(container)).toBe('')

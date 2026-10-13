@@ -124,6 +124,7 @@ describe('resolveAiRunTarget', () => {
 
   it('reads a provider id this build does not know as automatic', () => {
     const target = resolveAiRunTarget(file({ provider: 'retired-provider' }), {
+      'claude-code': status('claude-code', 'signed-out'),
       codex: status('codex', 'ready'),
     })
     expect(target.ok && target.provider).toBe('codex')

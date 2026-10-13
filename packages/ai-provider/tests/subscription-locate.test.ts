@@ -2,9 +2,9 @@
  * Finding the program to start. Layouts are built in temp dirs: nothing here
  * runs or looks for the CLIs installed on the machine.
  */
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { chmod, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { delimiter, join, sep } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { AiRunError } from '../src/run-error'
 import { locateSubscriptionProgram, resolveSubscriptionProgram } from '../src/subscription'
@@ -35,6 +35,8 @@ function windowsEnv(extra: NodeJS.ProcessEnv = {}): NodeJS.ProcessEnv {
     ...extra,
   }
 }
+
+const COMMAND_NAMES = { 'claude-code': 'claude', codex: 'codex' } as const
 
 const CLAUDE_SHIM = [
   '@ECHO off',
@@ -215,6 +217,64 @@ describe('locateSubscriptionProgram on Windows', () => {
     const env = windowsEnv({ PATH: `${join(root, 'missing')};${join(root, 'tools')}` })
     const program = await locateSubscriptionProgram('claude-code', { env, platform: 'win32' })
     expect(program).toMatchObject({ command: onPath, source: 'path' })
+  })
+})
+
+describe('PATH entries that are not full paths', () => {
+  let startedIn: string
+
+  beforeEach(() => {
+    startedIn = process.cwd()
+    // the folder the app was started in: a document's, when a file was double-clicked
+    process.chdir(root)
+  })
+
+  afterEach(() => {
+    process.chdir(startedIn)
+  })
+
+  it('never finds a program planted next to the document', async () => {
+    await touch(join(root, 'claude.cmd'), CLAUDE_SHIM)
+    await touch(join(root, 'node_modules', '@anthropic-ai', 'claude-code', 'bin', 'claude.exe'))
+    await touch(join(root, 'codex.exe'))
+    await touch(join(root, 'tools', 'claude.exe'))
+    await touch(join(root, 'tools', 'codex.exe'))
+    for (const PATH of ['.', 'tools', `.${sep}tools`, ';.;', '"."', ` ;tools;.${sep}`]) {
+      const env = windowsEnv({ PATH })
+      for (const provider of ['claude-code', 'codex'] as const) {
+        expect(await locateSubscriptionProgram(provider, { env, platform: 'win32' })).toBeNull()
+        // a bare command name set by the user is searched in the same places
+        const named = { env, platform: 'win32' as const, configuredPath: COMMAND_NAMES[provider] }
+        expect(await locateSubscriptionProgram(provider, named)).toBeNull()
+      }
+    }
+  })
+
+  it('still finds the program in a full entry listed after them', async () => {
+    await touch(join(root, 'codex.exe'))
+    const real = await touch(join(root, 'tools', 'codex.exe'))
+    const env = windowsEnv({ PATH: `.;tools;${join(root, 'tools')}` })
+    const program = await locateSubscriptionProgram('codex', { env, platform: 'win32' })
+    expect(program).toMatchObject({ command: real, source: 'path' })
+  })
+
+  // `\tools` is absolute to Node, yet Windows completes it from the drive of the working directory
+  it.runIf(process.platform === 'win32')('skips an entry without a drive', async () => {
+    await touch(join(root, 'tools', 'codex.exe'))
+    const driveless = join(root, 'tools').replace(/^[A-Za-z]:/, '')
+    expect(driveless.startsWith(sep)).toBe(true)
+    const env = windowsEnv({ PATH: driveless })
+    expect(await locateSubscriptionProgram('codex', { env, platform: 'win32' })).toBeNull()
+  })
+
+  it('applies elsewhere too', async () => {
+    await chmod(await touch(join(root, 'tools', 'claude'), '#!/bin/sh\n'), 0o755)
+    const program = await locateSubscriptionProgram('claude-code', {
+      env: { HOME: root, PATH: ['.', 'tools', ''].join(delimiter) },
+      platform: 'linux',
+      commonDirs: [],
+    })
+    expect(program).toBeNull()
   })
 })
 

@@ -9,6 +9,7 @@
  * that can: `Start-Process` for the login, `start` for the install command.
  */
 import { spawn as nodeSpawn } from 'node:child_process'
+import { tmpdir } from 'node:os'
 import { isSubscriptionProvider } from '../provider-selection'
 import type { AiSubscriptionProviderId } from '../types'
 import {
@@ -25,6 +26,7 @@ import {
 import {
   sharedSubscriptionChildRegistry,
   spawnSubscriptionProgram,
+  windowsSystemDir,
   windowsSystemTool,
   type SubscriptionChildLike,
   type SubscriptionChildRegistry,
@@ -113,6 +115,8 @@ function startLogin(
   if (platform !== 'win32') {
     // the CLI opens the browser itself; there is no terminal to show
     return spawnSubscriptionProgram(program, args, {
+      // not the folder the app was started in: no project-level configuration of it applies
+      cwd: tmpdir(),
       stdio: 'ignore',
       platform,
       baseEnv: options.baseEnv,
@@ -145,7 +149,8 @@ function startLogin(
       '-Command',
       LOGIN_WINDOW_SCRIPT,
     ],
-    { env, stdio: 'ignore', windowsHide: true },
+    // the login program inherits this directory, not the folder the app was started in
+    { cwd: windowsSystemDir(env), env, stdio: 'ignore', windowsHide: true },
   )
   // The login program is a child of this launcher, so ending the launcher's tree ends it.
   // The launcher is what gets recorded: it is the process whose pid the app holds.
@@ -194,10 +199,16 @@ export async function launchSubscriptionLogin(
 /**
  * The command line of the install window: `start` opens a new console, and the
  * PowerShell in it runs the vendor command and stays open. Built only from the
- * constant in `SUBSCRIPTION_INSTALL_COMMANDS`.
+ * constant in `SUBSCRIPTION_INSTALL_COMMANDS` and the full path of PowerShell
+ * in the system directory: `start` looks for a bare program name in the working
+ * directory before anywhere else.
  */
-export function subscriptionInstallCommandLine(provider: AiSubscriptionProviderId): string {
-  return `start "" powershell.exe -NoLogo -NoExit -Command "${SUBSCRIPTION_INSTALL_COMMANDS[provider]}"`
+export function subscriptionInstallCommandLine(
+  provider: AiSubscriptionProviderId,
+  env: NodeJS.ProcessEnv = process.env,
+): string {
+  const powershell = windowsSystemTool(env, 'WindowsPowerShell', 'v1.0', 'powershell.exe')
+  return `start "" "${powershell}" -NoLogo -NoExit -Command "${SUBSCRIPTION_INSTALL_COMMANDS[provider]}"`
 }
 
 export interface SubscriptionInstallOptions {
@@ -229,7 +240,9 @@ export async function launchSubscriptionInstall(
   const env = options.env ?? process.env
   try {
     const spawn = options.spawn ?? nodeSpawn
-    const child = spawn(subscriptionInstallCommandLine(provider), [], {
+    const child = spawn(subscriptionInstallCommandLine(provider, env), [], {
+      // the installer starts in the system directory, not the folder the app was started in
+      cwd: windowsSystemDir(env),
       env,
       // cmd.exe by full path; it exits as soon as `start` has opened the window
       shell: windowsSystemTool(env, 'cmd.exe'),

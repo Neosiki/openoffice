@@ -4,6 +4,7 @@
  * window the user can see).
  */
 import { EventEmitter } from 'node:events'
+import { tmpdir } from 'node:os'
 import { describe, expect, it } from 'vitest'
 import {
   SUBSCRIPTION_INSTALL_COMMANDS,
@@ -53,8 +54,18 @@ function recorder(): {
   }
 }
 
-const POWERSHELL = 'C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe'
+const SYSTEM32 = 'C:\\Windows\\System32'
+const POWERSHELL = `${SYSTEM32}\\WindowsPowerShell\\v1.0\\powershell.exe`
 const WINDOWS = { SystemRoot: 'C:\\Windows' }
+/** Values a system directory must not be taken from: completed from the working directory, or not a path */
+const NOT_FULL_PATHS = [
+  '.',
+  'Windows',
+  '\\Windows',
+  'C:Windows',
+  'C:\\x" & calc.exe & "',
+  'C:\\%X%',
+]
 
 function program(provider: AiSubscriptionProviderId): SubscriptionProgram {
   const command = provider === 'codex' ? 'C:\\npm\\codex.exe' : 'C:\\npm\\claude.exe'
@@ -89,6 +100,9 @@ describe('launchSubscriptionLogin', () => {
       expect(call.args.at(-1)).toContain('Start-Process')
       expect(call.options.shell).toBeUndefined()
       expect(call.options.windowsHide).toBe(true)
+      // not the folder the app was started in (the document's, on a double-click)
+      expect(call.options.cwd).toBe(SYSTEM32)
+      expect(call.options.cwd).not.toBe(process.cwd())
       scripts.push(call.args.at(-1)!)
       // the program and its arguments travel as data, not as script text
       expect(envOf(call)[SUBSCRIPTION_LOGIN_EXE_ENV]).toBe(program(provider).command)
@@ -153,7 +167,24 @@ describe('launchSubscriptionLogin', () => {
     expect(calls[0]!.command).toBe(program('claude-code').command)
     expect(calls[0]!.args).toEqual(['auth', 'login'])
     expect(calls[0]!.options.shell).toBeUndefined()
+    expect(calls[0]!.options.cwd).toBe(tmpdir())
+    expect(calls[0]!.options.cwd).not.toBe(process.cwd())
     expect(envOf(calls[0]!).ANTHROPIC_API_KEY).toBeUndefined()
+  })
+
+  it('does not take the system directory from a value that is not a full path', async () => {
+    for (const SystemRoot of NOT_FULL_PATHS) {
+      const { calls, spawn } = recorder()
+      await launchSubscriptionLogin('codex', {
+        locate: async () => program('codex'),
+        spawn,
+        platform: 'win32',
+        baseEnv: { SystemRoot },
+        registry: null,
+      })
+      expect(calls[0]!.command).toBe(POWERSHELL)
+      expect(calls[0]!.options.cwd).toBe(SYSTEM32)
+    }
   })
 
   it('keeps the launcher arguments of a CLI that runs on a Node runtime', async () => {
@@ -271,12 +302,24 @@ describe('launchSubscriptionInstall', () => {
   })
 
   it('the command line is a constant per provider, built from the vendor command alone', () => {
-    expect(subscriptionInstallCommandLine('claude-code')).toBe(
-      'start "" powershell.exe -NoLogo -NoExit -Command "irm https://claude.ai/install.ps1 | iex"',
+    // PowerShell by full path: `start` looks for a bare name in the working directory first
+    expect(subscriptionInstallCommandLine('claude-code', WINDOWS)).toBe(
+      `start "" "${POWERSHELL}" -NoLogo -NoExit -Command "irm https://claude.ai/install.ps1 | iex"`,
     )
-    expect(subscriptionInstallCommandLine('codex')).toBe(
-      'start "" powershell.exe -NoLogo -NoExit -Command "winget install OpenAI.Codex"',
+    expect(subscriptionInstallCommandLine('codex', WINDOWS)).toBe(
+      `start "" "${POWERSHELL}" -NoLogo -NoExit -Command "winget install OpenAI.Codex"`,
     )
+    expect(subscriptionInstallCommandLine('codex', { SystemRoot: 'D:\\WinNT' })).toBe(
+      'start "" "D:\\WinNT\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -NoLogo -NoExit -Command "winget install OpenAI.Codex"',
+    )
+  })
+
+  it('a system directory that is not a full path never reaches the command line', () => {
+    const standard = subscriptionInstallCommandLine('codex', WINDOWS)
+    for (const SystemRoot of NOT_FULL_PATHS) {
+      expect(subscriptionInstallCommandLine('codex', { SystemRoot })).toBe(standard)
+    }
+    expect(subscriptionInstallCommandLine('codex', {})).toBe(standard)
   })
 
   it('runs the fixed command in a new terminal window that stays open', async () => {
@@ -292,7 +335,11 @@ describe('launchSubscriptionInstall', () => {
       const call = calls[0]!
       // the only shell in the module: cmd.exe by full path, given one constant line
       expect(call.options.shell).toBe('C:\\Windows\\System32\\cmd.exe')
-      expect(call.command).toBe(subscriptionInstallCommandLine(provider))
+      expect(call.command).toBe(subscriptionInstallCommandLine(provider, WINDOWS))
+      expect(call.command).toContain(`"${POWERSHELL}"`)
+      // not the folder the app was started in (the document's, on a double-click)
+      expect(call.options.cwd).toBe(SYSTEM32)
+      expect(call.options.cwd).not.toBe(process.cwd())
       expect(call.args).toEqual([])
       expect(call.command).toContain('-NoExit')
       // the installer window belongs to the user: the app does not hold on to it
@@ -313,7 +360,7 @@ describe('launchSubscriptionInstall', () => {
       env: { ...WINDOWS, PATH: 'C:\\evil & calc.exe' },
       ...({ command: 'calc.exe', args: ['x'], configuredPath: 'calc.exe' } as object),
     })
-    expect(calls[0]!.command).toBe(subscriptionInstallCommandLine('codex'))
+    expect(calls[0]!.command).toBe(subscriptionInstallCommandLine('codex', WINDOWS))
     expect(calls[0]!.args).toEqual([])
     expect(calls[0]!.command).not.toContain('calc')
   })

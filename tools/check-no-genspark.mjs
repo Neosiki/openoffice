@@ -7,7 +7,9 @@
  * call, a pricing link or a `gsk` helper back in. This check fails on the
  * change that does so.
  *
- * Every tracked text file is scanned, the lockfile included. What may still
+ * Every tracked text file is scanned, the lockfile included, and so is the
+ * path of every tracked file, binary or not: a file or a folder named after
+ * the vendor fails like a line that names it. What may still
  * name the vendor is listed in ALLOW below, each entry with its reason: the
  * licence and attribution texts, identifiers stored inside saved documents,
  * and this tool. Keep that list short. The summary prints how many hits it
@@ -59,6 +61,8 @@ const OPAQUE = [/\bsha(?:1|256|384|512)-[A-Za-z0-9+/]+={0,2}/g, /;base64,[A-Za-z
  *   - `section`  a hit in the Markdown section whose heading matches
  *   - `patterns` a hit of one of these pattern names
  *   - none of the above: every hit in the file
+ * The path of a file is checked as one more line of that file (under no
+ * heading), so the same entries decide about it.
  */
 const ALLOW = [
   {
@@ -191,7 +195,20 @@ const allowedCounts = ALLOW.map(() => 0)
 let scanned = 0
 
 for (const file of git.stdout.split('\0')) {
-  if (!file || BINARY_EXT.test(file)) continue
+  if (!file) continue
+  const entries = ALLOW.map((entry, index) => [index, entry]).filter(([, entry]) =>
+    pathMatches(entry, file),
+  )
+  for (const hit of hitsIn(file)) {
+    const allowed = allowedBy(entries, hit, file, () => '')
+    if (allowed >= 0) {
+      allowedCounts[allowed]++
+      continue
+    }
+    violatingFiles.add(file)
+    violations.push(`  ${file}: path: ${file.slice(hit.start, hit.end)}`)
+  }
+  if (BINARY_EXT.test(file)) continue
   let bytes
   try {
     bytes = readFileSync(join(root, file))
@@ -200,9 +217,6 @@ for (const file of git.stdout.split('\0')) {
   }
   if (looksBinary(bytes)) continue
   scanned++
-  const entries = ALLOW.map((entry, index) => [index, entry]).filter(([, entry]) =>
-    pathMatches(entry, file),
-  )
   let heading = ''
   bytes
     .toString('utf8')

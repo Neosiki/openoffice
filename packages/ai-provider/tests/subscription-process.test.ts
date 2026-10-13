@@ -20,6 +20,8 @@ import {
   shutdownSubscriptionChildren,
   spawnSubscriptionProgram,
   trackedSubscriptionChildCount,
+  windowsSystemDir,
+  windowsSystemTool,
   type ProcessInfo,
   type SubscriptionProgram,
 } from '../src/subscription'
@@ -65,6 +67,32 @@ function nodeProgram(): SubscriptionProgram {
     source: 'configured',
   }
 }
+
+describe('Windows system tools', () => {
+  const SYSTEM32 = 'C:\\Windows\\System32'
+
+  it('are named by full path in the system directory', () => {
+    expect(windowsSystemDir({ SystemRoot: 'C:\\Windows' })).toBe(SYSTEM32)
+    expect(windowsSystemTool({ SystemRoot: 'D:\\WinNT' }, 'cmd.exe')).toBe(
+      'D:\\WinNT\\System32\\cmd.exe',
+    )
+    expect(windowsSystemDir({ windir: 'D:\\WinNT\\' })).toBe('D:\\WinNT\\System32')
+    expect(windowsSystemDir({})).toBe(SYSTEM32)
+  })
+
+  it('never from a value that the working directory would complete', () => {
+    for (const SystemRoot of ['', '.', 'Windows', '\\Windows', 'C:Windows', 'C:/Windows', 'C:\\']) {
+      expect(windowsSystemDir({ SystemRoot })).toBe(SYSTEM32)
+      expect(windowsSystemDir({ SystemRoot, windir: 'D:\\WinNT' })).toBe('D:\\WinNT\\System32')
+    }
+  })
+
+  it('never from a value a command line would read as more than a path', () => {
+    for (const SystemRoot of ['C:\\x" & calc.exe & "', 'C:\\%X%', 'C:\\a|b', 'C:\\a\nb']) {
+      expect(windowsSystemTool({ SystemRoot }, 'cmd.exe')).toBe(`${SYSTEM32}\\cmd.exe`)
+    }
+  })
+})
 
 describe('killProcessTree', () => {
   it('on Windows asks taskkill for the whole tree, by argument list', () => {

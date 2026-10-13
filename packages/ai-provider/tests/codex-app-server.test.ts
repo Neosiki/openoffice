@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { AgentToolDef } from '@genoffice/agent-core'
+import { PRODUCT_NAME, UPSTREAM_PRODUCT_NAME } from '@genoffice/i18n'
 import { MAX_STREAM_TOOL_CALLS, MAX_TOOL_JSON_CHARS } from '../src/protocols/shared'
 import {
   activePermissionProfileId,
@@ -115,6 +116,40 @@ describe('Codex app-server bridge', () => {
     expect(prompt).toContain('replace_text')
     expect(prompt).toContain('"output":"done"')
     expect(prompt).toContain('8192 output tokens')
+  })
+
+  // What Codex forwards to OpenAI names this product, never the project it is based on
+  it('names the product as the service and in the base instructions of a thread', () => {
+    const config = { apiKey: '', model: 'gpt-5.6-terra' }
+    for (const mode of ['profile', 'read-only'] as const) {
+      const params = codexThreadStartParams(config, '/tmp/codex-x', mode)
+      expect(params.serviceName).toBe(PRODUCT_NAME.toLowerCase())
+      expect(params.serviceName).toMatch(/^[a-z0-9]+$/)
+      const instructions = String(params.baseInstructions)
+      expect(instructions).toContain(`embedded in ${PRODUCT_NAME}.`)
+      expect(instructions).toContain(`${PRODUCT_NAME} itself executes document tools`)
+      for (const sent of [String(params.serviceName), instructions]) {
+        expect(sent.toLowerCase()).not.toContain(UPSTREAM_PRODUCT_NAME.toLowerCase())
+      }
+    }
+  })
+
+  it('names the product in the turn prompt and wraps the payload in its own tag', () => {
+    const prompt = buildCodexAppServerPrompt(
+      'Edit only when requested.',
+      [{ role: 'user', text: 'Change A to B.' }],
+      tools,
+      8192,
+    )
+    expect(prompt).toContain(`the new ${PRODUCT_NAME} conversation events`)
+    expect(prompt).toContain(`${PRODUCT_NAME} will execute only the tool calls`)
+    expect(prompt).toContain(`requested ${PRODUCT_NAME} tool calls`)
+    const tag = `${PRODUCT_NAME.toLowerCase()}_payload`
+    const lines = prompt.split('\n')
+    expect(lines.at(-3)).toBe(`<${tag}>`)
+    expect(JSON.parse(lines.at(-2)!)).toMatchObject({ system: 'Edit only when requested.' })
+    expect(lines.at(-1)).toBe(`</${tag}>`)
+    expect(prompt.toLowerCase()).not.toContain(UPSTREAM_PRODUCT_NAME.toLowerCase())
   })
 
   it('parses text and JSON-encoded GenOffice tool arguments', () => {

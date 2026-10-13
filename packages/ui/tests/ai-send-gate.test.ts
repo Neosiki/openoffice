@@ -62,12 +62,34 @@ describe('aiSendGate', () => {
     )
   })
 
-  it('auto: runs as soon as one subscription is ready, even while the other is checked', () => {
-    const gate = aiSendGate(seen(), statuses('checking', 'ready'))
-    expect(gate).toEqual({
+  it('auto: runs on a ready Claude even while Codex is checked', () => {
+    expect(aiSendGate(seen(), statuses('ready', 'checking'))).toEqual({
       kind: 'run',
-      choice: { connected: true, provider: 'codex', metered: false },
+      choice: { connected: true, provider: 'claude-code', metered: false },
     })
+  })
+
+  // Codex answering first must not take a request that Claude would have run
+  it('auto: holds the request while Claude is checked, even with Codex ready', () => {
+    const pending = aiSendGate(seen(), statuses('checking', 'ready'))
+    expect(pending).toEqual({
+      kind: 'checking',
+      choice: {
+        connected: false,
+        selection: 'auto',
+        reason: 'no-subscription',
+        errorKind: 'not-connected',
+      },
+    })
+    expect(aiHoldReason(pending)).toBe('checking')
+    expect(aiSendGate(seen(), { codex: status('codex', 'ready') }).kind).toBe('checking')
+    // the held request starts on whichever provider the answer leaves
+    const claude = aiSendGate(seen(), statuses('ready', 'ready'))
+    expect(claude).toMatchObject({ kind: 'run', choice: { provider: 'claude-code' } })
+    expect(aiHeldRequestStep('checking', claude)).toEqual({ action: 'start' })
+    const codex = aiSendGate(seen(), statuses('signed-out', 'ready'))
+    expect(codex).toMatchObject({ kind: 'run', choice: { provider: 'codex' } })
+    expect(aiHeldRequestStep('checking', codex)).toEqual({ action: 'start' })
   })
 
   it('auto: asks to connect once both checks answered and neither is ready', () => {

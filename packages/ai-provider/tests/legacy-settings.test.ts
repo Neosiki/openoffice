@@ -217,7 +217,9 @@ describe('normalizeAiSettings', () => {
   it('a normalized Genspark-era file selects a ready subscription', () => {
     const settings = normalizeAiSettings(gensparkEraFile())
     const ready = { provider: 'codex', state: 'ready', meteredAccepted: false } as const
-    expect(selectAiProvider(settings, { codex: ready })).toEqual({
+    // Claude's check answered too: `auto` decides nothing while it is still out
+    const out = { provider: 'claude-code', state: 'signed-out', meteredAccepted: false } as const
+    expect(selectAiProvider(settings, { 'claude-code': out, codex: ready })).toEqual({
       connected: true,
       provider: 'codex',
       metered: false,

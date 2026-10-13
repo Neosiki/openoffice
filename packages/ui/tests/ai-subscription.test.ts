@@ -176,7 +176,10 @@ describe('aiSubscriptionCardView', () => {
 
 describe('aiConnectPromptView', () => {
   it('is absent while a provider can run', () => {
-    const choice = selectAiProvider(defaultAiSettings(), { codex: status('codex', 'ready') })
+    const choice = selectAiProvider(defaultAiSettings(), {
+      'claude-code': status('claude-code', 'signed-out'),
+      codex: status('codex', 'ready'),
+    })
     expect(aiConnectPromptView(choice)).toBeNull()
   })
 
