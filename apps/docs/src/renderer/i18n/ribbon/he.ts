@@ -2,8 +2,7 @@ import type { zh } from './zh'
 
 export const he = {
   ribbonAiCreditNote: 'משתמש ב-AI וצורך קרדיטים',
-  ribbonAiRewriteConfirm:
-    'פעולה זו מפעילה AI: היא צורכת קרדיטים ועשויה לשכתב את כל התוכן. להמשיך? (לא תישאל שוב.)',
+  ribbonAiRewriteConfirm: 'פעולה זו מפעילה AI ועשויה לשכתב את כל התוכן. להמשיך? (לא תישאל שוב.)',
   ribbonTabFile: 'קובץ',
   ribbonTabHome: 'בית',
   ribbonTabInsert: 'הוספה',
@@ -182,7 +181,7 @@ export const he = {
   ribbonReplaceTip: 'חיפוש והחלפה של טקסט',
   ribbonSelectAll: 'בחר הכול',
   ribbonSelectAllTip: 'בחירת המסמך כולו',
-  ribbonAiAssistant: 'Genspark',
+  ribbonAiAssistant: 'עוזר AI',
   ribbonAiAssistantTip: 'פתח את עוזר ה-AI',
   ribbonRemoveTableStyleTip: 'הסר סגנון טבלה',
   ribbonNoStyle: 'ללא סגנון',

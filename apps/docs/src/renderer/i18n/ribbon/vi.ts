@@ -3,7 +3,7 @@ import type { zh } from './zh'
 export const vi = {
   ribbonAiCreditNote: 'Sử dụng AI và tiêu tốn tín dụng',
   ribbonAiRewriteConfirm:
-    'Thao tác này sẽ gọi trợ lý AI: tiêu tốn tín dụng và có thể viết lại toàn bộ nội dung. Tiếp tục? (Bạn sẽ không được hỏi lại nữa.)',
+    'Thao tác này sẽ gọi trợ lý AI và có thể viết lại toàn bộ nội dung. Tiếp tục? (Bạn sẽ không được hỏi lại nữa.)',
   ribbonTabFile: 'Tệp',
   ribbonTabHome: 'Trang đầu',
   ribbonTabInsert: 'Chèn',
@@ -182,7 +182,7 @@ export const vi = {
   ribbonReplaceTip: 'Tìm và thay thế văn bản',
   ribbonSelectAll: 'Chọn tất cả',
   ribbonSelectAllTip: 'Chọn toàn bộ tài liệu',
-  ribbonAiAssistant: 'Genspark',
+  ribbonAiAssistant: 'Trợ lý AI',
   ribbonAiAssistantTip: 'Mở trợ lý AI',
   ribbonRemoveTableStyleTip: 'Xóa kiểu bảng',
   ribbonNoStyle: 'Không có kiểu',

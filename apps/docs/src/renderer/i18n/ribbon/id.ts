@@ -3,7 +3,7 @@ import type { zh } from './zh'
 export const id = {
   ribbonAiCreditNote: 'Menggunakan AI dan menghabiskan kredit',
   ribbonAiRewriteConfirm:
-    'Tindakan ini memanggil AI: menghabiskan kredit dan dapat menulis ulang seluruh konten. Lanjutkan? (Tidak akan ditanya lagi.)',
+    'Tindakan ini memanggil AI dan dapat menulis ulang seluruh konten. Lanjutkan? (Tidak akan ditanya lagi.)',
   ribbonTabFile: 'File',
   ribbonTabHome: 'Beranda',
   ribbonTabInsert: 'Sisipkan',
@@ -185,7 +185,7 @@ export const id = {
   ribbonReplaceTip: 'Temukan dan ganti teks',
   ribbonSelectAll: 'Pilih Semua',
   ribbonSelectAllTip: 'Pilih seluruh dokumen',
-  ribbonAiAssistant: 'Genspark',
+  ribbonAiAssistant: 'Asisten AI',
   ribbonAiAssistantTip: 'Buka asisten AI',
   ribbonRemoveTableStyleTip: 'Hapus gaya tabel',
   ribbonNoStyle: 'Tanpa Gaya',

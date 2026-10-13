@@ -1,8 +1,7 @@
 /** ribbon strings, zh: defines the key set every other locale shard must match. */
 export const zh = {
   ribbonAiCreditNote: '将调用 AI 并消耗额度',
-  ribbonAiRewriteConfirm:
-    '此操作将调用 AI：会消耗额度，并可能改写整篇内容。是否继续？（确认后不再提示）',
+  ribbonAiRewriteConfirm: '此操作将调用 AI，并可能改写整篇内容。是否继续？（确认后不再提示）',
   // Tabs
   ribbonTabFile: '文件',
   ribbonTabHome: '开始',
@@ -188,7 +187,7 @@ export const zh = {
   ribbonSelectAll: '全选',
   ribbonSelectAllTip: '选择整个文档',
   // Home · AI
-  ribbonAiAssistant: 'Genspark',
+  ribbonAiAssistant: 'AI 助手',
   ribbonAiAssistantTip: '打开 AI 助手',
   // Table Design
   ribbonRemoveTableStyleTip: '移除表格样式',

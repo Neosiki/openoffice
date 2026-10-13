@@ -3,7 +3,7 @@ import type { zh } from './zh'
 export const cs = {
   ribbonAiCreditNote: 'Používá AI a spotřebovává kredity',
   ribbonAiRewriteConfirm:
-    'Tato akce volá asistenta AI: spotřebovává kredity a může přepsat celý obsah. Pokračovat? (Znovu se už nezeptáme.)',
+    'Tato akce volá asistenta AI a může přepsat celý obsah. Pokračovat? (Znovu se už nezeptáme.)',
   ribbonTabFile: 'Soubor',
   ribbonTabHome: 'Domů',
   ribbonTabInsert: 'Vložení',
@@ -183,7 +183,7 @@ export const cs = {
   ribbonReplaceTip: 'Najít a nahradit text',
   ribbonSelectAll: 'Vybrat vše',
   ribbonSelectAllTip: 'Vybrat celý dokument',
-  ribbonAiAssistant: 'Genspark',
+  ribbonAiAssistant: 'Asistent AI',
   ribbonAiAssistantTip: 'Otevřít asistenta AI',
   ribbonRemoveTableStyleTip: 'Odebrat styl tabulky',
   ribbonNoStyle: 'Bez stylu',

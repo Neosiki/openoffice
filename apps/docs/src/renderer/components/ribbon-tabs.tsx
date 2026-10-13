@@ -855,7 +855,7 @@ export function ReviewTab({
           <button
             className="rb-big"
             disabled={!hasDoc}
-            data-tip={`${t('ribbonEditorTip')} — ${t('ribbonAiCreditNote')}`}
+            data-tip={t('ribbonEditorTip')}
             onClick={() => {
               if (hasRangeSelection()) onAiPreset(t('ribbonEditorSelectionPrompt'))
               else if (confirmAiRewrite()) onAiPreset(t('ribbonEditorPrompt'))
@@ -891,7 +891,7 @@ export function ReviewTab({
             <button
               className="rb-big"
               disabled={!hasDoc}
-              data-tip={`${t('ribbonTranslateTip')} — ${t('ribbonAiCreditNote')}`}
+              data-tip={t('ribbonTranslateTip')}
               onClick={() => toggleDropdown(setDropdown, 'translate')}
             >
               <span className="rb-big-icon">
@@ -1023,7 +1023,7 @@ export function ReviewTab({
           <button
             className="rb-big"
             disabled={!hasDoc || openCommentCount === 0}
-            data-tip={`${t('ribbonAiCommentsTip', { count: openCommentCount })} — ${t('ribbonAiCreditNote')}`}
+            data-tip={t('ribbonAiCommentsTip', { count: openCommentCount })}
             onClick={() => onAiPreset(t('ribbonAiCommentsPrompt'))}
           >
             <span className="rb-big-icon">
@@ -1195,7 +1195,7 @@ export function ReviewTab({
           <button
             className="rb-big"
             disabled={!hasDoc || revisionCount === 0}
-            data-tip={`${t('ribbonAiRevisionsTip', { count: revisionCount })} — ${t('ribbonAiCreditNote')}`}
+            data-tip={t('ribbonAiRevisionsTip', { count: revisionCount })}
             onClick={() => onAiPreset(t('ribbonAiRevisionsPrompt'))}
           >
             <span className="rb-big-icon">

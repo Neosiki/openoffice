@@ -3,7 +3,7 @@ import type { zh } from './zh'
 export const pl = {
   ribbonAiCreditNote: 'Używa AI i zużywa kredyty',
   ribbonAiRewriteConfirm:
-    'Ta akcja wywołuje AI: zużywa kredyty i może przepisać całą treść. Kontynuować? (Nie zapytamy ponownie.)',
+    'Ta akcja wywołuje AI i może przepisać całą treść. Kontynuować? (Nie zapytamy ponownie.)',
   ribbonTabFile: 'Plik',
   ribbonTabHome: 'Narzędzia główne',
   ribbonTabInsert: 'Wstawianie',
@@ -185,7 +185,7 @@ export const pl = {
   ribbonReplaceTip: 'Znajdź i zamień tekst',
   ribbonSelectAll: 'Zaznacz wszystko',
   ribbonSelectAllTip: 'Zaznacz cały dokument',
-  ribbonAiAssistant: 'Genspark',
+  ribbonAiAssistant: 'Asystent AI',
   ribbonAiAssistantTip: 'Otwórz asystenta AI',
   ribbonRemoveTableStyleTip: 'Usuń styl tabeli',
   ribbonNoStyle: 'Brak stylu',

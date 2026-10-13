@@ -1,9 +1,23 @@
-import { createIpcTransport, type AgentTransport } from '@genoffice/agent-core'
+import {
+  createIpcTransport,
+  type AgentTransport,
+  type IpcTransportOptions,
+} from '@genoffice/agent-core'
+import { aiRunErrorText } from '@genoffice/ui'
 import type { AiSettings } from '../../shared/ipc'
-import { t } from '../i18n/locale'
+import { getLang, t } from '../i18n/locale'
+
+/** what the panel wants to hear from a turn besides its text: the failure cause, usage, a cut input */
+export type ElectronTransportHooks = Pick<
+  IpcTransportOptions<AiSettings>,
+  'onStreamError' | 'onSubscriptionUsage' | 'onInputTruncated'
+>
 
 /** The shared IPC transport wired to the docs preload bridge (window.desktop). */
-export function createElectronTransport(getSettings: () => AiSettings): AgentTransport {
+export function createElectronTransport(
+  getSettings: () => AiSettings,
+  hooks: ElectronTransportHooks = {},
+): AgentTransport {
   return createIpcTransport<AiSettings>({
     onStream: (listener) => window.desktop.onAiStream(listener),
     start: (request) => window.desktop.aiStream(request),
@@ -11,8 +25,10 @@ export function createElectronTransport(getSettings: () => AiSettings): AgentTra
     getSettings,
     unknownErrorText: () => t('aiUnknownError'),
     timeoutErrorText: () => t('aiTimeoutError'),
-    creditsErrorText: () => t('aiCreditsExhausted'),
     networkErrorText: () => t('aiNetworkError'),
     overloadedErrorText: () => t('aiOverloadedError'),
+    // the subscription causes are worded once for every editor
+    errorText: (cause) => aiRunErrorText(getLang(), cause),
+    ...hooks,
   })
 }

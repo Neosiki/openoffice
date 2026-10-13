@@ -2,8 +2,7 @@ import type { zh } from './zh'
 
 export const zhTW = {
   ribbonAiCreditNote: '將呼叫 AI 並消耗額度',
-  ribbonAiRewriteConfirm:
-    '此操作將呼叫 AI：會消耗額度，並可能改寫整篇內容。是否繼續？（確認後不再提示）',
+  ribbonAiRewriteConfirm: '此操作將呼叫 AI，並可能改寫整篇內容。是否繼續？（確認後不再提示）',
   ribbonTabFile: '檔案',
   ribbonTabHome: '常用',
   ribbonTabInsert: '插入',
@@ -180,7 +179,7 @@ export const zhTW = {
   ribbonReplaceTip: '尋找並取代文字',
   ribbonSelectAll: '全選',
   ribbonSelectAllTip: '選取整份文件',
-  ribbonAiAssistant: 'Genspark',
+  ribbonAiAssistant: 'AI 助理',
   ribbonAiAssistantTip: '開啟 AI 助理',
   ribbonRemoveTableStyleTip: '移除表格樣式',
   ribbonNoStyle: '無樣式',

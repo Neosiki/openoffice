@@ -82,18 +82,13 @@ import { parseFileToText } from '@genoffice/file-parse'
 import { convertHtmlToDocx } from '../../../../packages/html2docx/src'
 import { ElectronBrowserDriver } from '../../../../packages/html2docx/src/drivers/electron'
 import {
-  AiCreditsError,
-  AiTimeoutError,
-  isAiNetworkError,
   isAiOverloadedError,
   chatForProvider,
-  defaultAiSettings,
-  activeProvider,
+  normalizeAiSettings,
   testMediaProvider,
   type AiMediaProviderConfig,
   type AiMediaProviderId,
   type AiSearchProviderId,
-  resolveAiSettings,
   maxOutputTokensOf,
   sanitizeAiSettings,
   sanitizeCliPath,
@@ -104,24 +99,26 @@ import {
   type AiSettings,
   type AiStreamChunk,
   type AiStreamRequest,
-  type GenSparkAccountStatus,
-  type LegacyAiSettings,
+  type AiSubscriptionProviderId,
 } from '@genoffice/ai-provider'
 import { listCodexModels, shutdownCodexAppServers } from '@genoffice/ai-provider/codex-app-server'
 import { listCustomModelsForIpc } from '@genoffice/ai-provider/custom-models'
 import {
-  ensureGenofficeLogin,
-  noteGskCallFailure,
-  setGenofficeLoginOpener,
-  gskApiKey,
+  ensureSubscriptionIpc,
+  initSubscriptionChildTracking,
+  sharedSubscriptionStatuses,
+  shutdownSubscriptionChildren,
+} from '@genoffice/ai-provider/subscription'
+import {
+  aiToolCapabilities,
   generateImageTool,
   testSearchProvider,
-  gskLoginInfo,
-  hasGskAuth,
   webSearchTool,
   imageSearchTool,
   analyzeMediaTool,
   documentMediaRoots,
+  type AiToolCallContext,
+  type AiToolCapabilities,
 } from '@genoffice/ai-search'
 import type {
   AiDocContent,
@@ -141,6 +138,15 @@ import type {
 import { ATTACHMENT_IMAGE_EXTS } from '../shared/ipc'
 import { ClickClaims } from '../shared/context-menu-claims'
 import { findDocxPath } from '../shared/open-file'
+import {
+  aiChatFailure,
+  aiStreamErrorChunk,
+  isRemovedAiProviderId,
+  resolveAiRun,
+  subscriptionStreamCallbacks,
+  withMeteredAccepted,
+  type AiRunTexts,
+} from './ai-run'
 import { atomicWriteFile, looksLikeZip } from './atomic-write'
 import {
   adoptLazyMediaHashes,
@@ -3793,46 +3799,52 @@ function broadcastAiSettingsChanged(): void {
  * register them exactly once for all window types (docs, sheets, home) —
  * sheets' standalone AI handlers use the same channel names.
  */
+/** the settings file as every reader gets it: removed and unknown selections read as their defaults */
+function storedAiSettings(): AiSettings {
+  return normalizeAiSettings(readJson<unknown>(SETTINGS_PATH(), {}))
+}
+
+/** where the image and media tools may run: the screen path, with the live subscription statuses */
+function screenToolContext(): AiToolCallContext {
+  return { path: 'screen', statuses: sharedSubscriptionStatuses() }
+}
+
+const AI_RUN_TEXTS: AiRunTexts = {
+  noApiKey: (provider) => tm('errNoApiKey', { provider }),
+  noModel: () => tm('errNoModel'),
+}
+
 export function registerAiIpc(): void {
   app.once('before-quit', shutdownCodexAppServers)
-  ipcMain.handle('ai:get-settings', async (): Promise<AiSettings> => {
-    const stored = readJson<Partial<AiSettings> & LegacyAiSettings>(SETTINGS_PATH(), {})
-    // pre-lock legacy file: genspark selected with cloud tools opted out. The
-    // settings UI locks the tools switch on with genspark and apps read this
-    // file live, so heal the stored flag once. Judged on the *stored* provider
-    // — never the activeProvider fallback below, which must not leak into the
-    // file and clobber a saved (half-configured) BYOK selection.
-    if ((stored.provider ?? 'genspark') === 'genspark' && stored.gskToolsEnabled === false) {
-      stored.gskToolsEnabled = true
-      writeJsonAtomic(SETTINGS_PATH(), stored)
-    }
-    const settings = resolveAiSettings(stored, defaultAiSettings())
-    // a stored BYOK provider is honored when usable; half-filled configs fall back to genspark
-    settings.provider = activeProvider(settings)
-    return settings
-  })
-
-  // Genspark account (gsk login state): auth source for AI features; the frontend uses it to prompt login when logged out
-  ipcMain.handle(
-    'ai:gsk-status',
-    async (_event, withEmail?: boolean): Promise<GenSparkAccountStatus> => {
-      if (!hasGskAuth()) return { loggedIn: false }
-      if (!withEmail) return { loggedIn: true }
-      const info = await gskLoginInfo()
-      return info?.email ? { loggedIn: true, email: info.email } : { loggedIn: true }
+  // the subscription channels (statuses, recheck, login, install, metered) exist once per
+  // process: whichever editor main asks first registers them and starts the first check
+  ensureSubscriptionIpc(ipcMain, {
+    getSettings: storedAiSettings,
+    setMeteredAccepted: (provider: AiSubscriptionProviderId, accepted: boolean) => {
+      writeJsonAtomic(
+        SETTINGS_PATH(),
+        withMeteredAccepted(readJson<unknown>(SETTINGS_PATH(), {}), provider, accepted),
+      )
+      broadcastAiSettingsChanged()
     },
-  )
-
-  // a 401 on the gsk key opens the device-code login once (genoffice-auth recovery)
-  setGenofficeLoginOpener((url) => void shell.openExternal(url))
-
-  ipcMain.handle('ai:gsk-login', () => {
-    ensureGenofficeLogin((url) => void shell.openExternal(url))
+    dataDir: app.getPath('userData'),
+    broadcast: (channel, statuses) => {
+      for (const wc of webContents.getAllWebContents())
+        if (!wc.isDestroyed()) wc.send(channel, statuses)
+    },
   })
+
+  ipcMain.handle('ai:get-settings', async (): Promise<AiSettings> => storedAiSettings())
+
+  // what the search and media tools can do right now, for the renderers that gate
+  // generate_image / analyze_media on it (docs, pdf, markdown, html)
+  ipcMain.handle('ai:tool-capabilities', (): AiToolCapabilities =>
+    aiToolCapabilities(storedAiSettings(), screenToolContext()),
+  )
 
   ipcMain.handle('ai:set-settings', (_event, settings: AiSettings) => {
     // SECURITY.md: payloads are schema-checked in the main process. The settings
-    // file feeds cliPath into spawn() and baseUrl receives the gsk bearer token,
+    // file feeds cliPath into spawn() and baseUrl receives the provider's API key,
     // so the renderer's copy is sanitized before it touches disk.
     const sanitized = sanitizeAiSettings(settings)
     if (!sanitized) {
@@ -3855,42 +3867,20 @@ export function registerAiIpc(): void {
     // per-request settings get the same schema check as the persisted ones: a
     // compromised renderer could otherwise hand cliPath/baseUrl straight to
     // the provider layer without ever touching the settings file
-    const settings = sanitizeAiSettings(request.settings)
-    if (!settings) {
-      event.sender.send('ai:stream-chunk', {
-        requestId: request.requestId,
-        type: 'error',
-        error: 'invalid AI settings payload',
-      } satisfies AiStreamChunk)
-      return
-    }
     const { requestId, system, messages } = request
-    const tools = request.tools ?? []
-    const maxTokens = request.maxTokens ?? maxOutputTokensOf(settings)
-    const provider = settings.provider
-    let config = settings.providers?.[provider]
-    // the genspark key never enters the settings file; requests take it from the gsk login state
-    // set only when the gsk key was injected: a 401 then means that key expired
-    let gskKey = ''
-    if (provider === 'genspark' && config && !config.apiKey) {
-      gskKey = gskApiKey()
-      config = { ...config, apiKey: gskKey }
-    }
     const send = (chunk: AiStreamChunk) => {
       if (!event.sender.isDestroyed()) event.sender.send('ai:stream-chunk', chunk)
     }
-    if (!config || (provider !== 'codex' && !config.apiKey)) {
-      send({
-        requestId,
-        type: 'error',
-        error: provider === 'genspark' ? tm('errGskNotLoggedIn') : tm('errNoApiKey', { provider }),
-      })
+    // the selection decides, and nothing stands in for a provider that cannot run:
+    // the refusal names its cause so the renderer shows how to connect instead
+    const target = resolveAiRun(request.settings, sharedSubscriptionStatuses(), AI_RUN_TEXTS)
+    if (!target.ok) {
+      send({ requestId, type: 'error', ...target.refusal })
       return
     }
-    if (provider !== 'codex' && !config.model) {
-      send({ requestId, type: 'error', error: tm('errNoModel') })
-      return
-    }
+    const { settings, provider, config } = target
+    const tools = request.tools ?? []
+    const maxTokens = request.maxTokens ?? maxOutputTokensOf(settings)
     const controller = new AbortController()
     activeAiStreams.set(requestId, controller)
     const unwatchSender = abortOnDestroyed(event.sender, controller)
@@ -3915,28 +3905,14 @@ export function registerAiIpc(): void {
           stopReason = reason
         },
         onUsage: (usage) => send({ requestId, type: 'usage', usage }),
+        ...subscriptionStreamCallbacks(requestId, send),
       })
       send({ requestId, type: 'done', stopReason })
     } catch (err) {
       if (controller.signal.aborted) {
         send({ requestId, type: 'done' })
       } else {
-        // an expired/revoked key drops to signed-out so the inline sign-in button shows
-        noteGskCallFailure(gskKey, err)
-        send({
-          requestId,
-          type: 'error',
-          error: err instanceof Error ? err.message : String(err),
-          ...(err instanceof AiTimeoutError
-            ? { errorCode: 'timeout' as const }
-            : err instanceof AiCreditsError
-              ? { errorCode: 'credits' as const }
-              : isAiNetworkError(err)
-                ? { errorCode: 'network' as const }
-                : isAiOverloadedError(err)
-                  ? { errorCode: 'overloaded' as const }
-                  : {}),
-        })
+        send(aiStreamErrorChunk(requestId, err))
       }
     } finally {
       unwatchSender()
@@ -3972,8 +3948,8 @@ export function registerAiIpc(): void {
     }
   })
 
-  // media understanding (pictures in the document, attachments, local files): BYOK media
-  // provider when one is configured, otherwise the Genspark CLI behind its login gate.
+  // media understanding (pictures in the document, attachments, local files): the selected
+  // key media provider, or for pictures the connected chat provider (see tool-routing).
   // docs-prefixed: slides registers its own ai:analyze-media in the same shell process.
   ipcMain.handle(
     'docs:analyze-media',
@@ -3992,7 +3968,7 @@ export function registerAiIpc(): void {
           mediaUrls: resolved,
           requirements: String(op.requirements ?? ''),
         },
-        { mediaRoots: docsMediaRoots(event.sender.id) },
+        { mediaRoots: docsMediaRoots(event.sender.id), context: screenToolContext() },
       )
     },
   )
@@ -4033,64 +4009,47 @@ export function registerAiIpc(): void {
           prompt: String(op?.prompt ?? ''),
           aspectRatio: op?.aspectRatio ? String(op.aspectRatio) : undefined,
         },
-        { mediaRoots: docsMediaRoots(event.sender.id) },
+        { mediaRoots: docsMediaRoots(event.sender.id), context: screenToolContext() },
       ),
   )
 
   ipcMain.handle('ai:search-test', (_event, input: unknown) => {
     const { provider, apiKey } = (input ?? {}) as { provider?: AiSearchProviderId; apiKey?: string }
-    if (!provider || provider === 'genspark') {
-      return hasGskAuth() ? { ok: true } : { ok: false, error: tm('errGskNotLoggedIn') }
+    if (!provider || isRemovedAiProviderId(provider)) {
+      return { ok: false, error: 'No search provider to test' }
     }
     return testSearchProvider(provider, String(apiKey ?? ''))
   })
 
-  // settings-UI connection test for the media provider (genspark = the gsk login state)
+  // settings-UI connection test for a key media provider
   ipcMain.handle('ai:media-test', (_event, input: unknown) => {
     const { provider, config } = (input ?? {}) as {
       provider?: AiMediaProviderId
       config?: AiMediaProviderConfig
     }
-    if (!provider || provider === 'genspark') {
-      return hasGskAuth() ? { ok: true } : { ok: false, error: tm('errGskNotLoggedIn') }
+    if (!provider || isRemovedAiProviderId(provider)) {
+      return { ok: false, error: 'No media provider to test' }
     }
     if (!config) return { ok: false, error: 'No media provider configuration' }
     return testMediaProvider(provider, config)
   })
 
   ipcMain.handle('ai:chat', async (_event, request: AiChatRequest) => {
-    // same schema check as ai:stream: one-shot requests would otherwise act on
-    // the renderer's settings copy verbatim
-    const settings = sanitizeAiSettings(request.settings)
-    if (!settings) return { ok: false, error: 'invalid AI settings payload' }
+    // same schema check and provider choice as ai:stream: one-shot requests would
+    // otherwise act on the renderer's settings copy verbatim
+    const target = resolveAiRun(request.settings, sharedSubscriptionStatuses(), AI_RUN_TEXTS)
+    if (!target.ok) return { ok: false, ...target.refusal }
     const { system, user } = request
-    const provider = settings.provider
-    let config = settings.providers?.[provider]
-    // set only when the gsk key was injected: a 401 then means that key expired
-    let gskKey = ''
-    if (provider === 'genspark' && config && !config.apiKey) {
-      gskKey = gskApiKey()
-      config = { ...config, apiKey: gskKey }
-    }
-    if (!config || (provider !== 'codex' && !config.apiKey)) {
-      return {
-        ok: false,
-        error: provider === 'genspark' ? tm('errGskNotLoggedIn') : tm('errNoApiKey', { provider }),
-      }
-    }
-    if (provider !== 'codex' && !config.model) return { ok: false, error: tm('errNoModel') }
     try {
-      const result = await chatForProvider(provider, config, system, user)
+      const result = await chatForProvider(target.provider, target.config, system, user)
       // the one-shot path reports HTTP failures as ok:false with the raw body —
       // replace capacity/rate-limit dumps with the localized "busy" message
       if (!result.ok && isAiOverloadedError(result.error)) {
         return { ok: false, error: tm('errAiBusy') }
       }
-      if (!result.ok) noteGskCallFailure(gskKey, result.error)
       return result
     } catch (err) {
-      noteGskCallFailure(gskKey, err)
-      return { ok: false, error: isAiOverloadedError(err) ? tm('errAiBusy') : String(err) }
+      return aiChatFailure(err, () => tm('errAiBusy'))
     }
   })
 }
@@ -4303,7 +4262,7 @@ export function registerDocsIpc(): void {
   void app.whenReady().then(registerLazyMediaProtocol)
   // Node fetch (undici) direct connections get reset under VPN/tun setups; retry over Chromium's stack
   setRescueFetch((url, init) => net.fetch(url, init))
-  setAiUserAgent(`GenOffice/${app.getVersion()}`)
+  setAiUserAgent(`${PRODUCT_NAME}/${app.getVersion()}`)
 
   // shared with the other editor modules — last (identical) registration wins
   ipcMain.removeHandler('app:get-language')
@@ -6148,6 +6107,10 @@ export function startDocsStandalone(): void {
   registerDocsIpc()
 
   app.whenReady().then(() => {
+    // Standalone only: the shell does this once for its own process and never runs
+    // this entry, so without it a force-killed standalone run would leave its
+    // subscription CLIs behind with nothing to end them at the next start.
+    void initSubscriptionChildTracking(app.getPath('userData')).catch(() => undefined)
     installRendererProtocol({ docs: join(__dirname, '../renderer') })
     setUiLang(normalizeLang(process.env.GENOFFICE_LANG ?? app.getLocale()))
     // packaged builds get the Dock icon from icon.icns; dev shows Electron's default
@@ -6165,4 +6128,10 @@ export function startDocsStandalone(): void {
   app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') app.quit()
   })
+
+  // No subscription CLI this app started outlives it. app.exit() and
+  // process.exit() skip will-quit, and 'exit' is the one event every such way
+  // out still emits (the shell hooks the same two for its own process).
+  app.on('will-quit', () => shutdownSubscriptionChildren())
+  process.on('exit', () => shutdownSubscriptionChildren())
 }

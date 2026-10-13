@@ -715,7 +715,7 @@ function makeGapNotesEl(
 }
 
 const DEFAULT_SETTINGS: AiSettings = {
-  provider: 'anthropic',
+  provider: 'auto',
   providers: Object.fromEntries(
     AI_PROVIDERS.map((p) => [
       p.id,
