@@ -43,6 +43,10 @@ import {
   type PrintDialogOutcome,
 } from '@genoffice/electron-utils'
 import { createI18n, getUiLang } from '@genoffice/i18n'
+import {
+  sharedSubscriptionStatuses,
+  shutdownSubscriptionChildren,
+} from '@genoffice/ai-provider/subscription'
 import { generateImageTool, documentMediaRoots } from '@genoffice/ai-search'
 import { parseFileToText } from '@genoffice/file-parse'
 import { convertHtmlToDocx } from '../../../../packages/html2docx/src'
@@ -1582,6 +1586,8 @@ function registerHtmlIpc(): void {
             htmlFilePath(e.sender.id),
             join(app.getPath('temp'), 'genoffice-pasted'),
           ),
+          // screen path: the statuses of the process-wide subscription service decide the route
+          context: { path: 'screen', statuses: sharedSubscriptionStatuses() },
         },
       ),
   )
@@ -1981,4 +1987,6 @@ export function startHtmlStandalone(): void {
     void win.loadURL(rendererUrl(runtime.rendererUrl, 'html'))
   })
   app.on('window-all-closed', () => app.quit())
+  // standalone has no shell to do it: no subscription program may outlive the app
+  app.on('will-quit', () => shutdownSubscriptionChildren())
 }

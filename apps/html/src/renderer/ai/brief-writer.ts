@@ -1,11 +1,12 @@
 import { streamText, type AgentMessage, type AgentTransport } from '@genoffice/agent-core'
+import { brandText } from '@genoffice/i18n'
 import type { PlanMode } from './tools'
 
 /**
  * The brief (directions, sections, reference material) is drafted by its own
  * tool-less request whose reply body IS the JSON. A brief-sized tool argument is
  * buffered server-side and arrives in bursts with minute-long silences, which
- * the Genspark gateway cuts as an idle connection (observed: 4.6k chars, 64 s
+ * a gateway cuts as an idle connection (observed: 4.6k chars, 64 s
  * without a byte). Text deltas stream continuously, so the same content is safe.
  */
 export const BRIEF_MAX_CHARS = 40_000
@@ -92,7 +93,7 @@ export function buildBriefWriterRequest(
       ? `\n\n## Current page (head and start of body)\n${clip(spec.page, PAGE_CAP)}`
       : ''
   return {
-    system: SYSTEM + langDirective,
+    system: brandText(SYSTEM, 'en') + langDirective,
     user: `## Conversation\n${transcriptOf(messages)}\n\n## Task\n${MODE_TASK[spec.mode]}${notes}${page}\n\nWrite the brief JSON now.`,
   }
 }

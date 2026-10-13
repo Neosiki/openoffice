@@ -2,10 +2,54 @@ import type { AiPanelPrefs } from '@genoffice/ui'
 import { contextBridge, ipcRenderer, webUtils } from 'electron'
 import type { Lang } from '@genoffice/i18n'
 import type { AiStreamChunk } from '@genoffice/ai-provider'
+import { SUBSCRIPTION_IPC_CHANNELS } from '@genoffice/ai-provider/browser'
 import type { ProjectApi } from '@genoffice/project-store'
 import { installDropOpenBridge } from '@genoffice/electron-utils/drop-open'
 import { AI_CHANNELS, HTML_CHANNELS } from '../shared/ipc'
 import type { AutoSaveDefault, ExportFormat, HtmlApi, SaveMode, UiTheme } from '../shared/ipc'
+import {
+  SUBSCRIPTION_INSTALL_HELP_CHANNEL,
+  subscriptionLaunchResultOf,
+  subscriptionMeteredResultOf,
+  subscriptionStatusMapOf,
+} from '../shared/subscription-api'
+import type { HtmlSubscriptionApi } from '../shared/subscription-api'
+
+// The subscription channels are registered once for the whole app by the docs
+// main. Without that handler (standalone run, older shell) an invoke rejects;
+// the renderer reads that as "still checking" (renderer/ai/subscription-client.ts).
+const subscription: HtmlSubscriptionApi = {
+  statuses: async () =>
+    subscriptionStatusMapOf(await ipcRenderer.invoke(SUBSCRIPTION_IPC_CHANNELS.statuses)),
+  recheck: async (providers) =>
+    subscriptionStatusMapOf(
+      await ipcRenderer.invoke(
+        SUBSCRIPTION_IPC_CHANNELS.recheck,
+        providers ? { providers } : undefined,
+      ),
+    ),
+  login: async (provider) =>
+    subscriptionLaunchResultOf(
+      await ipcRenderer.invoke(SUBSCRIPTION_IPC_CHANNELS.login, { provider }),
+    ),
+  install: async (provider) =>
+    subscriptionLaunchResultOf(
+      await ipcRenderer.invoke(SUBSCRIPTION_IPC_CHANNELS.install, { provider }),
+    ),
+  setMeteredAccepted: async (provider, accepted) =>
+    subscriptionMeteredResultOf(
+      await ipcRenderer.invoke(SUBSCRIPTION_IPC_CHANNELS.metered, { provider, accepted }),
+    ),
+  onChanged: (handler) => {
+    const listener = (_e: Electron.IpcRendererEvent, statuses: unknown) =>
+      handler(subscriptionStatusMapOf(statuses))
+    ipcRenderer.on(SUBSCRIPTION_IPC_CHANNELS.changed, listener)
+    return () => ipcRenderer.removeListener(SUBSCRIPTION_IPC_CHANNELS.changed, listener)
+  },
+  openInstallHelp: async (provider) => {
+    await ipcRenderer.invoke(SUBSCRIPTION_INSTALL_HELP_CHANNEL, provider)
+  },
+}
 
 const api: HtmlApi = {
   consumePending: () => ipcRenderer.invoke(HTML_CHANNELS.consumePending),
@@ -106,7 +150,7 @@ const api: HtmlApi = {
     return () => ipcRenderer.removeListener(AI_CHANNELS.settingsChanged, listener)
   },
   openAiModelSettings: () => ipcRenderer.invoke(AI_CHANNELS.openModelSettings),
-  aiGskStatus: () => ipcRenderer.invoke(AI_CHANNELS.gskStatus),
+  subscription,
   aiStream: (request) => ipcRenderer.invoke(AI_CHANNELS.stream, request),
   aiStreamCancel: (requestId) => ipcRenderer.invoke(AI_CHANNELS.streamCancel, requestId),
   onAiStream: (handler) => {

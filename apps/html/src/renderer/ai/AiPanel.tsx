@@ -3,12 +3,22 @@ import {
   AiPanelSideButton,
   AiModelPicker,
   type AiModelPickerBridge,
+  AiBlockedNotice,
+  AiConnectPrompt,
+  AiFirstConnectionNotice,
+  AiInputTruncatedNotice,
+  AiMark,
+  AiSubscriptionUsageLine,
 } from '@genoffice/ui'
 import { useEffect, useRef, useState } from 'react'
 import type { PointerEvent as ReactPointerEvent, ReactElement, ReactNode } from 'react'
 import { AgentLoop, composeSkills } from '@genoffice/agent-core'
-import type { AgentImage } from '@genoffice/agent-core'
-import type { AiSettings } from '@genoffice/ai-provider'
+import type { AgentImage, IpcStreamError } from '@genoffice/agent-core'
+import type {
+  AiSettings,
+  AiSubscriptionProviderId,
+  AiSubscriptionUsage,
+} from '@genoffice/ai-provider'
 import { ATTACHMENT_IMAGE_EXTS } from '../../shared/ipc'
 import type { AttachmentAddResult, AttachmentMeta } from '../../shared/ipc'
 import {
@@ -60,6 +70,18 @@ import { BriefCard } from '../components/BriefCard'
 import { createSearchSkill } from './search-skill'
 import { pastedBase64Image } from './base64-paste'
 import { createElectronTransport } from './transport'
+import {
+  aiPanelGate,
+  blockedRunFor,
+  blockedRunOf,
+  gateAllowsSend,
+  mergeSubscriptionUsage,
+  withContinueProvider,
+  withSubscriptionNoticeSeen,
+  writerMayRetry,
+  type BlockedRun,
+} from './connection'
+import { useSubscriptionConnection } from './subscription-client'
 import { DOC_NAV_SCHEME, parseDocNavHref } from './doc-nav'
 import { EditQueueCard } from './EditQueueCard'
 import {
@@ -215,6 +237,8 @@ interface ChatEntry {
   text: string
   streaming?: boolean
   isError?: boolean
+  /** the run stopped because its connection cannot go on: rendered as the blocked notice */
+  blocked?: BlockedRun
   /** the run failed and this user message was rolled back out of the model context */
   undelivered?: boolean
   /** instruction actually sent when it differs from the bubble text (sid-pinned Ask AI / queue batch); retries resend this */
@@ -281,7 +305,6 @@ const MODEL_BRIDGE: AiModelPickerBridge = {
   getSettings: () => window.htmlApi.getAiSettings(),
   setSettings: (settings) => window.htmlApi.setAiSettings(settings),
   onSettingsChanged: (handler) => window.htmlApi.onAiSettingsChanged(handler),
-  gskLoggedIn: () => window.htmlApi.aiGskStatus().then((s) => !!s?.loggedIn),
   openModelSettings: () => window.htmlApi.openAiModelSettings().catch(() => {}),
 }
 
@@ -314,16 +337,64 @@ export function AiPanel({
   const [chat, setChat] = useState<ChatEntry[]>([])
   const [prompt, setPrompt] = useState('')
   const [busy, setBusy] = useState(false)
+  /** Claude / Codex connection: live statuses and the connect-card actions */
+  const subscription = useSubscriptionConnection()
+  /** the shared AI settings as last read; null until the first read answered */
+  const [aiSettings, setAiSettings] = useState<AiSettings | null>(null)
+  useEffect(() => {
+    let alive = true
+    const refresh = () => {
+      void window.htmlApi
+        .getAiSettings()
+        .then((next) => {
+          if (alive) setAiSettings(next)
+        })
+        .catch(() => {
+          /* no settings bridge: the gate stays pending and the main process decides */
+        })
+    }
+    refresh()
+    const off = window.htmlApi.onAiSettingsChanged(refresh)
+    window.addEventListener('focus', refresh)
+    return () => {
+      alive = false
+      off()
+      window.removeEventListener('focus', refresh)
+    }
+  }, [])
+  /** "Got it" pressed in this panel: holds even when the settings could not be saved, so the notice never locks the composer */
+  const [noticeAcknowledged, setNoticeAcknowledged] = useState(false)
+  const gateOf = (settings: AiSettings | null) =>
+    aiPanelGate(
+      settings && noticeAcknowledged ? withSubscriptionNoticeSeen(settings) : settings,
+      subscription.statuses,
+    )
+  /** what a request would meet right now: a provider, the connect prompt, or the first-connection notice */
+  const gate = gateOf(aiSettings)
+  const gateRef = useRef(gate)
+  gateRef.current = gate
+  /** holds the connect prompt / first-connection notice; a refused send moves focus into it */
+  const connectDockRef = useRef<HTMLDivElement>(null)
+  /** rate-limit windows the subscription program reported (latest per window) */
+  const [subscriptionUsage, setSubscriptionUsage] = useState<AiSubscriptionUsage[]>([])
+  /** the last turn's input was cut to fit a limit; shown until dismissed */
+  const [inputTruncated, setInputTruncated] = useState(false)
+  /** structured cause of the last failed stream (chat turn or page/brief writer) */
+  const lastStreamErrorRef = useRef<IpcStreamError | null>(null)
+  /** set when a writer stopped the run on a blocked connection: onDone renders the notice instead of "Stopped" */
+  const blockedStopRef = useRef<BlockedRun | null>(null)
   /** messages queued while a reply runs; the pump re-runs them through send on settle */
   const msgQueue = useChatRunQueue<AttachmentMeta[]>({
     busy,
     submit: (text, atts) => {
       const loop = loopRef.current
-      if (!loop || loop.busy) return false
-      send(text, text, false, atts, undefined)
-      return true
+      // a queued message waits for a connection instead of being refused and dropped
+      if (!loop || loop.busy || !gateAllowsSend(gateRef.current)) return false
+      return send(text, text, false, atts, undefined)
     },
   })
+  const msgQueueRef = useRef(msgQueue)
+  msgQueueRef.current = msgQueue
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null)
   const [snapshots, setSnapshots] = useState<Snapshot[]>([])
   /** questionnaire / brief cards docked in the composer slot while a tool waits for the user */
@@ -582,7 +653,28 @@ export function AiPanel({
   // The loop is built once; every mutable value goes through a ref getter
   const transportRef = useRef<ReturnType<typeof createElectronTransport> | null>(null)
   if (!transportRef.current) {
-    transportRef.current = createElectronTransport(() => settingsRef.current!)
+    transportRef.current = createElectronTransport(() => settingsRef.current!, {
+      getLang: () => langRef.current,
+      onStreamError: (error) => {
+        lastStreamErrorRef.current = error
+      },
+      onSubscriptionUsage: (usage) =>
+        setSubscriptionUsage((prev) => mergeSubscriptionUsage(prev, usage)),
+      onInputTruncated: () => setInputTruncated(true),
+    })
+  }
+
+  /**
+   * A writer that got nothing because its connection is blocked (limit used up,
+   * signed out, nothing connected) ends the run right there, with the same
+   * notice a blocked chat turn gets, instead of handing the model a failure to
+   * paraphrase on a connection that cannot answer.
+   */
+  const stopRunIfBlocked = (): void => {
+    const blocked = blockedRunOf(lastStreamErrorRef.current)
+    if (!blocked) return
+    blockedStopRef.current = blocked
+    loopRef.current?.cancel()
   }
 
   /**
@@ -609,8 +701,9 @@ export function AiPanel({
         ),
       }))
     }
-    const attempt = () =>
-      streamPage({
+    const attempt = () => {
+      lastStreamErrorRef.current = null
+      return streamPage({
         transport: transportRef.current!,
         system,
         user,
@@ -621,8 +714,15 @@ export function AiPanel({
           if (timer === null) timer = window.setTimeout(flush, DRAFT_PREVIEW_MS)
         },
       })
+    }
     let outcome = await attempt()
-    if (outcome.status === 'empty' && !signal?.aborted) outcome = await attempt()
+    // a blocked connection would only fail the same way again
+    if (
+      outcome.status === 'empty' &&
+      !signal?.aborted &&
+      writerMayRetry(lastStreamErrorRef.current)
+    )
+      outcome = await attempt()
     // nothing may touch the mirror after this point, or the overlay would outlive the landed page
     closed = true
     if (timer !== null) window.clearTimeout(timer)
@@ -634,6 +734,7 @@ export function AiPanel({
     }
     if (outcome.status === 'empty') {
       done()
+      stopRunIfBlocked()
       return { ok: false, error: outcome.error }
     }
     // the draft stays visible while the user decides what to do with it
@@ -643,6 +744,8 @@ export function AiPanel({
       setActivePartial({ lines: outcome.html.split('\n').length })
     })
     done()
+    // a kept partial page still lands; the next turn reports the blocked connection itself
+    if (!keep) stopRunIfBlocked()
     return keep
       ? { ok: true, html: outcome.html, truncated: true }
       : {
@@ -668,9 +771,14 @@ export function AiPanel({
         tl.running ? { ...tl, summary: tGlobal('aiDraftingBrief') } : tl,
       ),
     }))
-    const attempt = () => streamBrief({ transport: transportRef.current!, system, user, signal })
+    const attempt = () => {
+      lastStreamErrorRef.current = null
+      return streamBrief({ transport: transportRef.current!, system, user, signal })
+    }
     let result = await attempt()
-    if (!result.ok && !signal?.aborted) result = await attempt()
+    if (!result.ok && !signal?.aborted && writerMayRetry(lastStreamErrorRef.current))
+      result = await attempt()
+    if (!result.ok) stopRunIfBlocked()
     return result
   }
   const runBriefWriterRef = useRef(runBriefWriter)
@@ -763,6 +871,24 @@ export function AiPanel({
           patchLast({ usage: runUsageRef.current })
         },
         onDone: ({ text, cancelled, turnLimit, truncated }) => {
+          const blocked = cancelled ? blockedStopRef.current : null
+          blockedStopRef.current = null
+          if (blocked) {
+            // a writer stopped the run on a blocked connection: show why, not "Stopped"
+            msgQueueRef.current.hold()
+            patchLast((last) => ({
+              streaming: false,
+              text: blocked.message,
+              isError: true,
+              blocked,
+              tools: last.tools?.filter((tl) => !tl.running),
+            }))
+            depsRef.current.clearHighlights()
+            depsRef.current.onRunDone(runMutatedRef.current)
+            queueRunRef.current = false
+            setBusy(false)
+            return
+          }
           const base = turnLimit
             ? [text, tGlobal('aiTurnLimit')].filter(Boolean).join('\n\n')
             : text || (cancelled ? tGlobal('aiStopped') : '')
@@ -785,6 +911,10 @@ export function AiPanel({
           setBusy(false)
         },
         onError: (error) => {
+          // a connection that cannot go on gets the blocked notice (with "continue with …") instead of an error line
+          const blocked = blockedRunFor(error, lastStreamErrorRef.current)
+          // the next queued message would only meet the same block
+          if (blocked) msgQueueRef.current.hold()
           // once a tool ran the message was delivered; a later turn failing is not a send failure
           const undelivered = runToolsRef.current.length === 0
           setChat((prev) => {
@@ -803,6 +933,7 @@ export function AiPanel({
                 streaming: false,
                 text: error,
                 isError: true,
+                ...(blocked ? { blocked } : {}),
                 tools: last.tools?.filter((tl) => !tl.running),
               }
             }
@@ -926,6 +1057,14 @@ export function AiPanel({
     const instruction = text.trim()
     const loop = loopRef.current
     if (!instruction || !loop || loop.busy) return false
+    // nothing connected, or the first-connection notice not acknowledged: nothing is sent, and the dock above the composer says what to do
+    if (!gateAllowsSend(gateRef.current)) {
+      connectDockRef.current?.querySelector('button')?.focus()
+      return false
+    }
+    lastStreamErrorRef.current = null
+    blockedStopRef.current = null
+    setInputTruncated(false)
     // the message consumes the composer attachments: echoed on the bubble, images multimodal, files via the skill
     const sentAtts = attachmentsOverride ?? attachmentsRef.current
     if (sentAtts.length > 0) {
@@ -1066,6 +1205,46 @@ export function AiPanel({
     )
   }
 
+  /** "Continue with …" on a blocked run: that provider becomes the selection (the picker shows it) and the request runs again */
+  const continueWith = (provider: AiSubscriptionProviderId): void => {
+    void (async () => {
+      try {
+        const next = withContinueProvider(await window.htmlApi.getAiSettings(), provider)
+        await window.htmlApi.setAiSettings(next)
+        if (!mountedRef.current) return
+        setAiSettings(next)
+        gateRef.current = gateOf(next)
+        // the blocked request again, with the attachments and scope it was sent with
+        const last = [...chat].reverse().find((entry) => entry.role === 'user')
+        if (last)
+          send(
+            last.instruction ?? last.text,
+            last.text,
+            last.queueRun,
+            last.attachments ?? [],
+            last.scope,
+          )
+        else retry()
+      } catch {
+        /* the settings could not be saved: the notice stays and nothing is rerun on another provider */
+      }
+    })()
+  }
+
+  /** "Got it" on the first-connection notice: remembered in the shared settings, shown once */
+  const acknowledgeNotice = (): void => {
+    setNoticeAcknowledged(true)
+    void (async () => {
+      try {
+        const next = withSubscriptionNoticeSeen(await window.htmlApi.getAiSettings())
+        await window.htmlApi.setAiSettings(next)
+        if (mountedRef.current) setAiSettings(next)
+      } catch {
+        /* not saved: acknowledged for this panel only, asked again next time */
+      }
+    })()
+  }
+
   /** [label](htmlnav://sid/N) links in replies select that element */
   const docNav = {
     scheme: DOC_NAV_SCHEME,
@@ -1094,7 +1273,9 @@ export function AiPanel({
     presetNonceRef.current = preset.nonce
     // while a run is active the request lands in the composer as the user phrased it, never as protocol text
     if (loopRef.current?.busy) setPrompt(preset.displayText ?? preset.text)
-    else send(preset.text, preset.displayText, false, undefined, preset.scope)
+    else if (!send(preset.text, preset.displayText, false, undefined, preset.scope))
+      // refused (nothing connected yet): the request waits in the composer instead of being lost
+      setPrompt(preset.displayText ?? preset.text)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [preset])
 
@@ -1184,8 +1365,8 @@ export function AiPanel({
       />
       <header className="ai-panel-header">
         <span className="ai-panel-title">
-          <GensparkMark size={22} />
-          Genspark
+          <AiMark size={22} />
+          AI
         </span>
         <div className="ai-panel-header-actions">
           <AiPanelSideButton
@@ -1335,6 +1516,18 @@ export function AiPanel({
                 <span className="ai-typing-row">
                   <AiTypingIndicator label={hasTools ? t('aiWorking') : t('aiThinking')} />
                 </span>
+              ) : entry.blocked && isLast && !busy && aiSettings ? (
+                // only the run that just stopped offers "continue with …": it reruns the last request
+                <AiBlockedNotice
+                  kind={entry.blocked.kind}
+                  provider={entry.blocked.provider}
+                  resetsAt={entry.blocked.resetsAt}
+                  message={entry.text}
+                  settings={aiSettings}
+                  statuses={subscription.statuses}
+                  lang={lang}
+                  onContinueWith={continueWith}
+                />
               ) : (
                 entry.text && (
                   <div dir="auto">
@@ -1487,6 +1680,30 @@ export function AiPanel({
           </div>
         </div>
       )}
+      {(gate.kind === 'connect' || gate.kind === 'notice') && (
+        <div className="ai-composer" ref={connectDockRef}>
+          {gate.kind === 'connect' ? (
+            <AiConnectPrompt
+              choice={gate.choice}
+              statuses={subscription.statuses}
+              lang={lang}
+              disabled={subscription.busy}
+              onOpenSettings={() => void window.htmlApi.openAiModelSettings().catch(() => {})}
+              onInstall={subscription.install}
+              onLogin={subscription.login}
+              onRecheck={subscription.recheck}
+              onAcceptMetered={subscription.acceptMetered}
+              onOpenInstallHelp={subscription.openInstallHelp}
+            />
+          ) : (
+            <AiFirstConnectionNotice
+              lang={lang}
+              codexKeepsHistory={false}
+              onAcknowledge={acknowledgeNotice}
+            />
+          )}
+        </div>
+      )}
       <div
         className="ai-composer"
         style={activeClarify || activeBrief || activePartial ? { display: 'none' } : undefined}
@@ -1562,6 +1779,9 @@ export function AiPanel({
           </div>
         )}
         {attachNotice && <div className="ai-attach-notice">{attachNotice}</div>}
+        {inputTruncated && (
+          <AiInputTruncatedNotice lang={lang} onDismiss={() => setInputTruncated(false)} />
+        )}
         <AiComposer
           queueStrip={
             <AiQueueStrip
@@ -1596,7 +1816,12 @@ export function AiPanel({
           onPasteText={onPasteText}
           footerStart={
             <>
-              <AiModelPicker bridge={MODEL_BRIDGE} lang={lang} />
+              <AiModelPicker
+                bridge={MODEL_BRIDGE}
+                lang={lang}
+                subscriptionStatuses={subscription.statuses}
+              />
+              <AiSubscriptionUsageLine usage={subscriptionUsage} lang={lang} />
               {sessionUsage && <AiUsageChip usage={sessionUsage} session lang={lang} />}
               <button
                 type="button"
@@ -1810,25 +2035,6 @@ function IconClock(): ReactElement {
     >
       <circle cx="8" cy="8" r="6" />
       <path d="M8 4.8V8l2.2 1.6" />
-    </svg>
-  )
-}
-
-/** Genspark brand mark, inline for crisp device-resolution rendering */
-export function GensparkMark({ size = 18 }: { size?: number }): React.JSX.Element {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 130 130.025"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      aria-hidden
-    >
-      <path
-        d="M105.115 0H24.6428C11.0443 0 0 11.0686 0 24.6915V105.334C0 118.981 11.0199 130.025 24.6428 130.025H105.115C118.714 130.025 129.758 118.957 129.758 105.334V24.6915C129.758 11.0443 118.714 0 105.115 0ZM71.5201 35.2735C85.5078 33.1571 86.7729 31.9164 88.865 17.88C88.938 17.4421 89.3028 17.1259 89.7407 17.1259C90.1786 17.1259 90.5435 17.4421 90.6164 17.88C92.7328 31.8921 93.9735 33.1571 107.961 35.2735C108.399 35.3465 108.715 35.7114 108.715 36.1493C108.715 36.5871 108.399 36.952 107.961 37.025C93.9249 39.1414 92.7085 40.4064 90.5677 54.6131C90.5191 54.9537 90.2516 55.197 89.911 55.197C89.5704 55.197 89.3028 54.9537 89.2542 54.6131C87.1134 40.4064 85.5565 39.1658 71.4958 37.025C71.0579 36.952 70.7417 36.5871 70.7417 36.1493C70.7417 35.7114 71.0579 35.3465 71.4958 35.2735H71.5201ZM101.758 78.5261C101.758 78.8181 101.563 79.037 101.271 79.0856C92.3193 80.4236 91.5652 81.2264 90.2029 90.2759C90.1786 90.4948 89.9839 90.6408 89.7893 90.6408C89.5703 90.6408 89.4001 90.4948 89.3758 90.2759C88.0135 81.2507 87.0161 80.4479 78.0883 79.0856C77.7964 79.037 77.6017 78.7937 77.6017 78.5261C77.6017 78.2342 77.7964 78.0153 78.0883 77.9666C86.9918 76.6287 87.7703 75.8259 89.1326 66.898C89.1812 66.6061 89.4244 66.4115 89.692 66.4115C89.9839 66.4115 90.2028 66.6061 90.2515 66.898C91.5894 75.8259 92.3923 76.6043 101.296 77.9666C101.588 78.0153 101.782 78.2585 101.782 78.5261H101.758ZM16.5178 54.8077C16.5178 54.1023 17.0286 53.4941 17.7341 53.3968C40.1388 50.0154 42.1093 47.9963 45.4907 25.5672C45.588 24.8861 46.1961 24.3509 46.9016 24.3509C47.6071 24.3509 48.191 24.8617 48.3126 25.5672C51.694 47.9963 53.6887 50.0154 76.0691 53.3968C76.7503 53.4941 77.2855 54.1023 77.2855 54.8077C77.2855 55.5132 76.7746 56.1214 76.0691 56.2187C53.5914 59.6244 51.6696 61.6192 48.2639 84.3645C48.1909 84.8754 47.7287 85.2889 47.2179 85.2889C46.707 85.2889 46.2448 84.8997 46.1718 84.3645C42.7418 61.6435 40.2604 59.6244 17.7584 56.2187C17.0772 56.1214 16.542 55.5132 16.542 54.8077H16.5178ZM112.097 109.591C112.097 111.416 110.613 112.9 108.813 112.9H21.2614C19.4369 112.9 17.9774 111.416 17.9774 109.591V102.658C17.9774 100.834 19.4612 99.3497 21.2614 99.3497H108.813C110.637 99.3497 112.097 100.834 112.097 102.658V109.591Z"
-        fill="currentColor"
-      />
     </svg>
   )
 }
