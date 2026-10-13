@@ -2,6 +2,7 @@ import type { IFunctionInfo } from '@univerjs/engine-formula'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { platformShortcuts } from '@genoffice/i18n'
 import {
+  AiMark,
   Dropdown,
   SHAPE_GALLERY_GROUPS,
   ShapePreview,
@@ -22,7 +23,6 @@ import {
   BorderThickOuterIcon,
   BorderTopIcon,
   CaretIcon,
-  GensparkMark,
   RIBBON_GLYPH_ICONS,
   RedoIcon,
   SaveAsIcon,
@@ -73,7 +73,8 @@ import { stepFontSize } from './font-size-ladder'
 import type { ChartSeriesVisualState } from '@genoffice/xlsx-gateway/domain/chart-visual'
 import type { ChangePlan } from '@genoffice/xlsx-gateway/domain/workbook.types'
 import type { AttachmentMeta } from '../shared/desktop-api'
-import { AiChatPanel, type AiChatMessage } from './ai/AiChatPanel'
+import { AiChatPanel, type AiChatMessage, type AiPanelSubscription } from './ai/AiChatPanel'
+import { aiGateAllowsSend } from './ai/subscription-state'
 import { AiSelectionAsk } from './ai/AiSelectionAsk'
 import type { SelectionAskAnchor } from './ai/selection-ask'
 import {
@@ -240,6 +241,8 @@ interface ExcelShellProps {
   readonly aiBusy: boolean
   /** tokens billed across the session, shown beside the composer */
   readonly sessionUsage?: AiTokenUsageView
+  /** subscription connection as the AI panel shows it */
+  readonly aiSubscription: AiPanelSubscription
   readonly chat: readonly AiChatMessage[]
   readonly historicChat?: readonly AiChatMessage[]
   /// Chat attachments (chips + 📎 button + drag-and-drop), same structure as the
@@ -452,6 +455,7 @@ export function ExcelShell({
   sheetHasContent,
   aiBusy,
   sessionUsage,
+  aiSubscription,
   chat,
   historicChat,
   attachments,
@@ -958,10 +962,12 @@ export function ExcelShell({
           preview={preview}
           aiBusy={aiBusy}
           sessionUsage={sessionUsage}
+          subscription={aiSubscription}
           onPromptChange={onPromptChange}
           onSend={onSend}
           onSendQueued={(text, atts) => {
-            if (aiBusy) return false
+            // stays queued while the panel is asking to connect or showing the first-use notice
+            if (aiBusy || !aiGateAllowsSend(aiSubscription.gate)) return false
             onSend(text, atts)
             return true
           }}
@@ -3332,10 +3338,10 @@ function Ribbon({
           onClick={onAiToggle}
         >
           <span className="tool-icon-row">
-            <GensparkMark size={26} />
+            <AiMark size={26} />
           </span>
           <span>
-            <strong>Genspark AI</strong>
+            <strong>AI</strong>
           </span>
         </button>
         <button

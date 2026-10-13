@@ -25,8 +25,11 @@ export default defineConfig({
   },
   preload: {
     // Sandboxed preload scripts cannot require arbitrary npm packages at
-    // runtime, so the drop-open bridge must be bundled, not externalized.
-    plugins: [externalizeDepsPlugin({ exclude: ['@genoffice/electron-utils'] })],
+    // runtime, so the drop-open bridge and the subscription channel names
+    // (@genoffice/ai-provider/browser) must be bundled, not externalized.
+    plugins: [
+      externalizeDepsPlugin({ exclude: ['@genoffice/electron-utils', '@genoffice/ai-provider'] }),
+    ],
   },
   renderer: {
     plugins: [react()],

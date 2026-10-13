@@ -136,8 +136,13 @@ import {
   COMPLETED_VIA_TOOLS_TEXT,
   composeSkills,
   type AgentImage,
+  type IpcStreamError,
 } from '@genoffice/agent-core'
-import { imageGenerationAvailable, type AiSettings } from '@genoffice/ai-provider/browser'
+import type {
+  AiSettings,
+  AiSubscriptionProviderId,
+  AiSubscriptionUsage,
+} from '@genoffice/ai-provider/browser'
 import { type WorkbookOperation } from '@genoffice/xlsx-gateway/domain/workbook-dsl'
 import {
   columnLabel,
@@ -176,6 +181,16 @@ import {
 import { moveOutlineEntries, shiftOutlineEntries } from './outline-model'
 import type { ApplyOutcome, ChangePlan } from '@genoffice/xlsx-gateway/domain/workbook.types'
 import { createElectronTransport } from './ai/transport'
+import { useSubscriptionConnection } from './ai/subscription-client'
+import {
+  aiBlockedRunOf,
+  aiGateAllowsSend,
+  aiPanelGate,
+  blockedRunSourceIndex,
+  imageGenerationOffered,
+  withContinueProvider,
+  withSubscriptionNoticeSeen,
+} from './ai/subscription-state'
 import {
   MAX_READ_RANGE_CELLS,
   type ActiveSheetInfo,
@@ -1051,15 +1066,20 @@ export function App({
   const aiSettingsRef = useRef<AiSettings | null>(null)
   aiSettingsRef.current = aiSettings
 
-  /** gsk login state for the cloud-tools gate (refreshed on mount and window focus) */
-  const gskLoggedInRef = useRef(false)
+  /** connection of the subscription providers (Claude, Codex) and the connect actions */
+  const subscription = useSubscriptionConnection()
+  const subscriptionStatusesRef = useRef(subscription.statuses)
+  subscriptionStatusesRef.current = subscription.statuses
+  /** whether the main process can route generate_image right now (refreshed
+   *  with the settings, the connection, and on window focus) */
+  const imageGenRef = useRef(false)
   useEffect(() => {
     let alive = true
     const refresh = () => {
-      void window.desktopApi
-        ?.aiGskStatus()
-        .then((s) => {
-          if (alive) gskLoggedInRef.current = !!s?.loggedIn
+      void Promise.resolve()
+        .then(() => window.desktopApi.aiToolCapabilities())
+        .then((capabilities) => {
+          if (alive) imageGenRef.current = imageGenerationOffered(capabilities)
         })
         .catch(() => {})
     }
@@ -1069,7 +1089,13 @@ export function App({
       alive = false
       window.removeEventListener('focus', refresh)
     }
-  }, [])
+  }, [aiSettings, subscription.statuses])
+  /** rate-limit windows the subscription provider reported on its latest turn */
+  const [subscriptionUsage, setSubscriptionUsage] = useState<readonly AiSubscriptionUsage[]>([])
+  /** the input of the current run was cut to fit a limit: the user is told */
+  const [inputTruncated, setInputTruncated] = useState(false)
+  /** cause of the failed turn, handed over by the transport right before the loop reports it */
+  const streamErrorRef = useRef<IpcStreamError | null>(null)
   const [aiBusy, setAiBusy] = useState(false)
   // Display history survives restarts via localStorage; the AgentLoop's model
   // context does not, so restored turns are read-only transcript.
@@ -1364,7 +1390,13 @@ export function App({
   const agentLoopRef = useRef<AgentLoop | null>(null)
   if (!agentLoopRef.current) {
     agentLoopRef.current = new AgentLoop({
-      transport: createElectronTransport(() => aiSettingsRef.current!),
+      transport: createElectronTransport(() => aiSettingsRef.current!, {
+        onStreamError: (error) => {
+          streamErrorRef.current = error
+        },
+        onSubscriptionUsage: setSubscriptionUsage,
+        onInputTruncated: () => setInputTruncated(true),
+      }),
       systemSuffix: aiLangDirective,
       skill: composeSkills('sheets+files', '', [
         createWorkbookSkill(sheetsSkillDeps()),
@@ -1378,9 +1410,7 @@ export function App({
           },
         }),
         createSearchSkill(),
-        createImageSkill(() =>
-          imageGenerationAvailable(aiSettingsRef.current, gskLoggedInRef.current),
-        ),
+        createImageSkill(() => imageGenRef.current),
       ]),
       events: {
         onText: (text) => {
@@ -1498,6 +1528,9 @@ export function App({
           void autoSaveCompletedAiRun().finally(() => setAiBusy(false))
         },
         onError: (error) => {
+          // a run its connection cannot carry on gets the blocked notice instead of the error line
+          const blocked = aiBlockedRunOf(streamErrorRef.current, error)
+          streamErrorRef.current = null
           setMessage(error)
           setChat((previous) => {
             const next = [...previous]
@@ -1517,29 +1550,11 @@ export function App({
                 isError: true,
                 streaming: false,
                 tools: last.tools.filter((tl) => !tl.running),
+                ...(blocked ? { blocked } : {}),
               }
             }
             return next
           })
-          // Signed-out failures get an inline sign-in button; detected via
-          // gsk status rather than matching the localized error text — but only
-          // when Genspark is the provider: a BYOK user's error (e.g. their own
-          // provider's rate limit) must not advertise a Genspark sign-in (#1948)
-          void window.desktopApi
-            .aiGskStatus()
-            .then((status) => {
-              if (status.loggedIn) return
-              if ((aiSettingsRef.current?.provider ?? 'genspark') !== 'genspark') return
-              setChat((previous) => {
-                const next = [...previous]
-                const last = next.at(-1)
-                if (last?.role === 'assistant' && last.isError) {
-                  next[next.length - 1] = { ...last, loginRequired: true }
-                }
-                return next
-              })
-            })
-            .catch(() => {})
           setAiRunScope(undefined)
           void autoSaveCompletedAiRun().finally(() => setAiBusy(false))
         },
@@ -1548,14 +1563,30 @@ export function App({
   }
 
   function isAgentConfigured(): boolean {
+    return aiPanelGate(aiSettingsRef.current, subscriptionStatusesRef.current).kind === 'ready'
+  }
+
+  /** Save AI settings changed from the panel; the ref is updated at once for a run started right after. */
+  function saveAiSettings(next: AiSettings): void {
+    aiSettingsRef.current = next
+    setAiSettingsState(next)
+    void window.desktopApi.setAiSettings(next).catch(() => {})
+  }
+
+  function handleAcknowledgeSubscriptionNotice(): void {
     const settings = aiSettingsRef.current
-    if (!settings) return false
-    const config = settings.providers[settings.provider]
-    if (!config?.model) return false
-    // Genspark's key never lands in the settings file; the main process injects
-    // it from the gsk login state. When logged out, requests return an error
-    // guiding sign-in — not intercepted here.
-    return settings.provider === 'genspark' || !!config.apiKey
+    if (settings) saveAiSettings(withSubscriptionNoticeSeen(settings))
+  }
+
+  /** "Continue with <provider>" on a blocked reply: that provider becomes the
+   *  selection (the model picker shows it) and the failed request is sent again. */
+  function handleContinueWith(provider: AiSubscriptionProviderId, replyIndex: number): void {
+    const settings = aiSettingsRef.current
+    if (!settings || aiBusy) return
+    saveAiSettings(withContinueProvider(settings, provider))
+    const sourceIndex = blockedRunSourceIndex(chat, replyIndex)
+    const source = chat[sourceIndex]
+    if (source) handleSend(source.text, source.attachments ?? [], sourceIndex)
   }
 
   /** Image attachments read as base64 and sent multimodal with this user message
@@ -1594,6 +1625,8 @@ export function App({
     aiApplyPromisesRef.current = []
     runLastTextRef.current = ''
     runMutatedRef.current = false
+    streamErrorRef.current = null
+    setInputTruncated(false)
     setAiBusy(true)
     setMessage(t('appAiThinking'))
     appendChat({ role: 'assistant', text: '', tools: [], streaming: true })
@@ -3383,6 +3416,11 @@ export function App({
   ): void {
     const instruction = (overrideInstruction ?? prompt).trim()
     if (!instruction || aiBusy) return
+    // No provider can run, or the first-use notice of a subscription is pending:
+    // the panel shows what to do about it and nothing is sent (the draft is kept).
+    if (!aiGateAllowsSend(aiPanelGate(aiSettingsRef.current, subscriptionStatusesRef.current))) {
+      return
+    }
     runToolsRef.current = []
     runUsageRef.current = undefined
     // The message consumes the composer attachments: they ride along (echoed on the
@@ -5072,6 +5110,18 @@ export function App({
         onDismissEmptyCsvNotice={() => setEmptyCsvNotice(false)}
         aiBusy={aiBusy}
         {...(sessionUsage !== undefined ? { sessionUsage } : {})}
+        aiSubscription={{
+          settings: aiSettings,
+          statuses: subscription.statuses,
+          gate: aiPanelGate(aiSettings, subscription.statuses),
+          busy: subscription.busy,
+          actions: subscription.actions,
+          usage: subscriptionUsage,
+          inputTruncated,
+          onDismissTruncated: () => setInputTruncated(false),
+          onAcknowledgeNotice: handleAcknowledgeSubscriptionNotice,
+          onContinueWith: handleContinueWith,
+        }}
         chat={chat}
         historicChat={historicChat}
         attachments={attachments}

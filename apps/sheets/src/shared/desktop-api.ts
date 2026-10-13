@@ -33,9 +33,10 @@ import type {
   AiSettings,
   AiStreamChunk,
   AiStreamRequest,
-  GenSparkAccountStatus,
 } from '@genoffice/ai-provider'
+import type { AiToolCapabilities } from '@genoffice/ai-search'
 import type { AiPanelPrefs } from '@genoffice/ui'
+import type { SubscriptionApi } from './subscription-api'
 
 // edit schemas shared with the xlsx gateway package; re-exported so IPC consumers keep one import site
 export {
@@ -2545,6 +2546,11 @@ export const aiSettingsInputSchema = z
     // rejects nonsense (this object is .strict(), so an omitted key here would
     // make the whole settings save fail)
     maxOutputTokens: z.number().int().positive().optional(),
+    // subscription connection (this object is .strict(): a key missing here
+    // would make every save of settings that carry it fail)
+    meteredAccepted: z.record(z.string(), z.boolean()).optional(),
+    headlessSubscriptionEnabled: z.boolean().optional(),
+    subscriptionNoticeSeen: z.boolean().optional(),
   })
   .strict()
 
@@ -2998,17 +3004,16 @@ export interface DesktopApi {
   /// start a streaming AI call; deltas arrive via onAiStream with the same requestId
   aiStream(request: AiStreamRequest): Promise<void>
   aiStreamCancel(requestId: string): Promise<void>
-  /// Genspark account status (gsk login state); withEmail also returns the email
-  /// (needs a network request, slower)
-  aiGskStatus(withEmail?: boolean): Promise<GenSparkAccountStatus>
-  /// Opens the browser to sign in to Genspark (fire-and-forget; aiGskStatus
-  /// becomes signed-in on completion)
-  aiGskLogin(): Promise<void>
+  /// Subscription connection (Claude, Codex): statuses, connect actions and
+  /// change events (shared main-process channels)
+  aiSubscription: SubscriptionApi
+  /// What the image and search tools can do right now (sheets-owned channel)
+  aiToolCapabilities(): Promise<AiToolCapabilities>
   /// Web search (main-process Serper/DuckDuckGo, shared with docs/slides)
   webSearch(query: string, maxResults?: number): Promise<WebSearchResult>
   /// Image search (same shared main-process channel as docs/slides)
   imageSearch(query: string, maxResults?: number): Promise<ImageSearchResponse>
-  /// AI image generation via the Genspark account (sheets-owned channel)
+  /// AI image generation (sheets-owned channel)
   generateImage(op: { prompt: string; aspectRatio?: string }): Promise<GenerateImageResult>
   /// Downloads an image URL in the main process (SSRF-guarded); null on failure
   fetchImage(url: string): Promise<{ base64: string; mime: string } | null>

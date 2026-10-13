@@ -1,12 +1,9 @@
 import type { AiPanelPrefs } from '@genoffice/ui'
 import { contextBridge, ipcRenderer, webUtils } from 'electron'
 
-import type {
-  AiChatResponse,
-  AiSettings,
-  AiStreamChunk,
-  GenSparkAccountStatus,
-} from '@genoffice/ai-provider'
+import type { AiChatResponse, AiSettings, AiStreamChunk } from '@genoffice/ai-provider'
+import { SUBSCRIPTION_IPC_CHANNELS } from '@genoffice/ai-provider/browser'
+import type { AiToolCapabilities } from '@genoffice/ai-search'
 import type { ProjectApi } from '@genoffice/project-store'
 import type {
   AttachmentAddResult,
@@ -58,7 +55,58 @@ import {
   MAX_SAVE_EDITS_TOTAL,
   SAVE_EDITS_CHUNK_JSON_MAX,
 } from '../shared/ipc-channels'
+import {
+  isSubscriptionProviderId,
+  subscriptionLaunchResultOf,
+  subscriptionStatusMapOf,
+  type SubscriptionApi,
+} from '../shared/subscription-api'
 import { installDropOpenBridge } from '@genoffice/electron-utils/drop-open'
+
+// Subscription channels are registered once per process (by the docs main in
+// the shell). Until that handler exists an invoke rejects; the renderer reads
+// that as "still checking" (see renderer/ai/subscription-client.ts).
+const aiSubscription: SubscriptionApi = {
+  async statuses() {
+    return subscriptionStatusMapOf(await ipcRenderer.invoke(SUBSCRIPTION_IPC_CHANNELS.statuses))
+  },
+  async recheck(providers) {
+    const named = Array.isArray(providers) ? providers.filter(isSubscriptionProviderId) : []
+    return subscriptionStatusMapOf(
+      await ipcRenderer.invoke(
+        SUBSCRIPTION_IPC_CHANNELS.recheck,
+        named.length > 0 ? { providers: named } : undefined,
+      ),
+    )
+  },
+  async login(provider) {
+    if (!isSubscriptionProviderId(provider)) throw new Error('Invalid subscription provider.')
+    return subscriptionLaunchResultOf(
+      await ipcRenderer.invoke(SUBSCRIPTION_IPC_CHANNELS.login, { provider }),
+    )
+  },
+  async install(provider) {
+    if (!isSubscriptionProviderId(provider)) throw new Error('Invalid subscription provider.')
+    return subscriptionLaunchResultOf(
+      await ipcRenderer.invoke(SUBSCRIPTION_IPC_CHANNELS.install, { provider }),
+    )
+  },
+  async setMeteredAccepted(provider, accepted) {
+    if (!isSubscriptionProviderId(provider)) throw new Error('Invalid subscription provider.')
+    const result: unknown = await ipcRenderer.invoke(SUBSCRIPTION_IPC_CHANNELS.metered, {
+      provider,
+      accepted: accepted === true,
+    })
+    const raw = isRecord(result) ? result : {}
+    return { ok: raw.ok === true, statuses: subscriptionStatusMapOf(raw.statuses) }
+  },
+  onChanged(handler) {
+    const listener = (_event: unknown, statuses: unknown): void =>
+      handler(subscriptionStatusMapOf(statuses))
+    ipcRenderer.on(SUBSCRIPTION_IPC_CHANNELS.changed, listener)
+    return () => ipcRenderer.removeListener(SUBSCRIPTION_IPC_CHANNELS.changed, listener)
+  },
+}
 
 const desktopApi: DesktopApi = {
   getLanguage: () => ipcRenderer.invoke('app:get-language'),
@@ -526,15 +574,13 @@ const desktopApi: DesktopApi = {
     if (!requestId) throw new Error('Invalid AI stream request id.')
     await ipcRenderer.invoke(IPC_CHANNELS.aiStreamCancel, requestId)
   },
-  async aiGskStatus(withEmail) {
-    const result: unknown = await ipcRenderer.invoke(IPC_CHANNELS.aiGskStatus, withEmail)
-    if (!isRecord(result) || typeof result.loggedIn !== 'boolean') {
-      throw new Error('Invalid Genspark account status response.')
+  aiSubscription,
+  async aiToolCapabilities() {
+    const result: unknown = await ipcRenderer.invoke(IPC_CHANNELS.aiToolCapabilities)
+    if (!isRecord(result) || !isRecord(result.imageGeneration)) {
+      throw new Error('Invalid AI tool capabilities response.')
     }
-    return result as unknown as GenSparkAccountStatus
-  },
-  async aiGskLogin() {
-    await ipcRenderer.invoke(IPC_CHANNELS.aiGskLogin)
+    return result as unknown as AiToolCapabilities
   },
   async webSearch(query, maxResults) {
     if (typeof query !== 'string' || !query.trim() || query.length > 512) {
