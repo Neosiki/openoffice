@@ -147,6 +147,7 @@ const subscriptionApi: SubscriptionApi = {
 
 const api: SlidesApi = {
   getLanguage: () => ipcRenderer.invoke('app:get-language'),
+  fontFamilyInfo: (families) => ipcRenderer.invoke('app:font-family-info', families),
   onLanguageChanged: (handler) => {
     const listener = (
       _event: IpcRendererEvent,

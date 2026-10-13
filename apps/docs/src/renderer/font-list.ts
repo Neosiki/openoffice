@@ -6,8 +6,12 @@ import type { Lang } from '@genoffice/i18n'
  */
 export {
   BUILTIN_FONT_FAMILIES,
+  familyForTypedName,
+  findFontMatch,
   fontFamiliesFor,
+  fontFamilyLabel,
   partitionFontFamilies,
+  splitHangulFamilies,
   systemFamiliesBesidesCandidates,
 } from '@genoffice/ui'
 

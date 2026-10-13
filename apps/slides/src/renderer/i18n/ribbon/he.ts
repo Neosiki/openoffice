@@ -69,6 +69,7 @@ export const he = {
   ribbonAddSectionTip: 'מוסיף מקטע לפני השקופית הנוכחית לארגון מצגות ארוכות',
   ribbonGroupFont: 'גופן',
   ribbonFontsSystem: 'גופני מערכת',
+  ribbonFontsHangul: 'גופנים קוריאניים',
   ribbonFontInstallLocal: 'התקנת קובץ גופן…',
   fontMissingBanner: 'מצגת זו משתמשת בגופנים שאינם מותקנים:',
   fontMissingDismiss: 'התעלם',

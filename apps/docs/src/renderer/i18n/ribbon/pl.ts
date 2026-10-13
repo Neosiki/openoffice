@@ -88,6 +88,7 @@ export const pl = {
   ribbonFontFamilyTip: 'Czcionka',
   ribbonFontsCommon: 'Popularne czcionki',
   ribbonFontsSystem: 'Czcionki systemowe',
+  ribbonFontsHangul: 'Czcionki koreańskie',
   ribbonFontSizeTip: 'Rozmiar czcionki',
   ribbonGrowFont: 'Zwiększ rozmiar czcionki',
   ribbonShrinkFont: 'Zmniejsz rozmiar czcionki',

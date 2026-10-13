@@ -74,6 +74,7 @@ export const it = {
     'Aggiunge una sezione prima della diapositiva corrente per organizzare presentazioni lunghe',
   ribbonGroupFont: 'Carattere',
   ribbonFontsSystem: 'Caratteri di sistema',
+  ribbonFontsHangul: 'Caratteri coreani',
   ribbonFontInstallLocal: 'Installa file di carattere…',
   fontMissingBanner: 'Questa presentazione usa caratteri non installati:',
   fontMissingDismiss: 'Ignora',

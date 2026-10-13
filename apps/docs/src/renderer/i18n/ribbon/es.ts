@@ -88,6 +88,7 @@ export const es = {
   ribbonFontFamilyTip: 'Fuente',
   ribbonFontsCommon: 'Fuentes comunes',
   ribbonFontsSystem: 'Fuentes del sistema',
+  ribbonFontsHangul: 'Fuentes coreanas',
   ribbonFontSizeTip: 'Tamaño de fuente',
   ribbonGrowFont: 'Aumentar tamaño de fuente',
   ribbonShrinkFont: 'Disminuir tamaño de fuente',

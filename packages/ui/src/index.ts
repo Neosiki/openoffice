@@ -72,9 +72,16 @@ export { FILE_NAV_SCHEME, createFileNav, fileNavHref, parseFileNavHref } from '.
 export { isSymbolFontFamily } from './symbol-fonts'
 export {
   BUILTIN_FONT_FAMILIES,
+  familyForTypedName,
+  findFontMatch,
   fontFamiliesFor,
+  fontFamilyLabel,
+  matchesFontQuery,
   partitionFontFamilies,
+  splitHangulFamilies,
   systemFamiliesBesidesCandidates,
+  type FontFamilyInfo,
+  type FontFamilyInfoMap,
 } from './font-list'
 export {
   WORDART_PRESETS,

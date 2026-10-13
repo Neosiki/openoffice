@@ -1512,6 +1512,13 @@ html.genoffice-popover-open .ribbon-tabs {
   white-space: nowrap;
 }
 
+/* the font's own Korean name beside the English one the system reports */
+.rb-font-family-menu .rb-font-ko {
+  margin-left: 8px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
 .rb-font-family-menu button.active {
   background: none;
   color: var(--text);

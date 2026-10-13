@@ -72,6 +72,7 @@ export const ms = {
     'Menambah seksyen sebelum slaid semasa untuk mengatur persembahan yang panjang',
   ribbonGroupFont: 'Fon',
   ribbonFontsSystem: 'Fon sistem',
+  ribbonFontsHangul: 'Fon Korea',
   ribbonFontInstallLocal: 'Pasang fail fon…',
   fontMissingBanner: 'Persembahan ini menggunakan fon yang belum dipasang:',
   fontMissingDismiss: 'Abaikan',

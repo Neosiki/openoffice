@@ -87,6 +87,7 @@ export const ar = {
   ribbonFontFamilyTip: 'الخط',
   ribbonFontsCommon: 'الخطوط الشائعة',
   ribbonFontsSystem: 'خطوط النظام',
+  ribbonFontsHangul: 'خطوط كورية',
   ribbonFontSizeTip: 'حجم الخط',
   ribbonGrowFont: 'تكبير الخط',
   ribbonShrinkFont: 'تصغير الخط',

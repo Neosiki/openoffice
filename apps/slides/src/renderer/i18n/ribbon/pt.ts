@@ -73,6 +73,7 @@ export const pt = {
     'Adiciona uma seção antes do slide atual para organizar apresentações longas',
   ribbonGroupFont: 'Fonte',
   ribbonFontsSystem: 'Fontes do sistema',
+  ribbonFontsHangul: 'Fontes coreanas',
   ribbonFontInstallLocal: 'Instalar arquivo de fonte…',
   fontMissingBanner: 'Esta apresentação usa fontes não instaladas:',
   fontMissingDismiss: 'Dispensar',

@@ -68,7 +68,11 @@ import {
   readBodyCapped,
   writeJsonAtomic,
 } from '@genoffice/electron-utils'
-import { configureMetricsCache, familyVerticalMetrics } from '@genoffice/font-metrics'
+import {
+  configureMetricsCache,
+  familyInfoFor,
+  familyVerticalMetrics,
+} from '@genoffice/font-metrics'
 import { createI18n, getUiLang, normalizeLang, PRODUCT_NAME, setUiLang } from '@genoffice/i18n'
 import { ProjectStore } from '@genoffice/project-store'
 import type {
@@ -4246,6 +4250,9 @@ export function registerDocsIpc(): void {
   ipcMain.handle('docs:font-metrics', (_event, family: string) =>
     typeof family === 'string' ? familyVerticalMetrics(family) : null,
   )
+  // shared with the other editor modules — last (identical) registration wins
+  ipcMain.removeHandler('app:font-family-info')
+  ipcMain.handle('app:font-family-info', (_event, families: unknown) => familyInfoFor(families))
 
   ipcMain.handle('docs:open', async (event) => {
     const result = await openDialog(event, {

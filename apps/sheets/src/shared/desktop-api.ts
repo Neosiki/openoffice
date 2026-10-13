@@ -35,7 +35,7 @@ import type {
   AiStreamRequest,
 } from '@genoffice/ai-provider'
 import type { AiToolCapabilities } from '@genoffice/ai-search'
-import type { AiPanelPrefs } from '@genoffice/ui'
+import type { AiPanelPrefs, FontFamilyInfo } from '@genoffice/ui'
 import type { SubscriptionApi } from './subscription-api'
 
 // edit schemas shared with the xlsx gateway package; re-exported so IPC consumers keep one import site
@@ -2876,6 +2876,9 @@ export interface McpCommandResult {
 export interface DesktopApi {
   /** open any shell-routed document path (an AI answer's filenav citation) */
   openSourcePath(path: string): Promise<void>
+  /** Korean name and Hangul coverage of the enumerated families (read from the font
+   *  files); families that are not Korean are left out */
+  fontFamilyInfo(families: readonly string[]): Promise<Array<[string, FontFamilyInfo]>>
   /** current UI language (persisted by the shell in app-settings.json) */
   getLanguage(): Promise<'zh' | 'en' | 'ja' | 'ko' | 'fr' | 'de' | 'es' | 'th' | 'id' | 'ru' | 'ar'>
   /** language switched from the shell home page */

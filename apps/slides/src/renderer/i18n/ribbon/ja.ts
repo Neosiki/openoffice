@@ -75,6 +75,7 @@ export const ja = {
   // Home: font
   ribbonGroupFont: 'フォント',
   ribbonFontsSystem: 'システムフォント',
+  ribbonFontsHangul: '韓国語フォント',
   ribbonFontInstallLocal: 'フォントファイルをインストール…',
   fontMissingBanner: 'このプレゼンテーションには未インストールのフォントが使われています:',
   fontMissingDismiss: '閉じる',

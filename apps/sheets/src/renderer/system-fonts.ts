@@ -1,12 +1,25 @@
 import { useCallback, useState } from 'react'
 
-import { BUILTIN_FONT_FAMILIES, partitionFontFamilies } from '@genoffice/ui'
+import {
+  BUILTIN_FONT_FAMILIES,
+  partitionFontFamilies,
+  splitHangulFamilies,
+  type FontFamilyInfoMap,
+} from '@genoffice/ui'
 
 /** Suite-wide font dropdown candidates, kept under the historical sheets-side name. */
 export const DEFAULT_FONT_FAMILIES: readonly string[] = BUILTIN_FONT_FAMILIES
 
-let cached: readonly string[] | null = null
-let pending: Promise<readonly string[]> | null = null
+interface SystemFonts {
+  readonly families: readonly string[]
+  /** Korean name / Hangul coverage per family; empty until the main process answers */
+  readonly info: FontFamilyInfoMap
+}
+
+const NONE: SystemFonts = { families: [], info: new Map() }
+
+let cached: SystemFonts | null = null
+let pending: Promise<SystemFonts> | null = null
 
 async function queryFamilies(): Promise<readonly string[]> {
   const query = (window as { queryLocalFonts?: () => Promise<{ readonly family: string }[]> })
@@ -22,11 +35,22 @@ async function queryFamilies(): Promise<readonly string[]> {
   }
 }
 
-function loadSystemFontFamilies(): Promise<readonly string[]> {
+/// The enumeration names every family in English only, so the main process
+/// reads the Korean names from the font files; without them the list still works.
+async function queryInfo(families: readonly string[]): Promise<FontFamilyInfoMap> {
+  if (families.length === 0) return NONE.info
+  try {
+    return new Map(await window.desktopApi.fontFamilyInfo(families))
+  } catch {
+    return NONE.info
+  }
+}
+
+function loadSystemFonts(): Promise<SystemFonts> {
   if (cached) return Promise.resolve(cached)
-  pending ??= queryFamilies().then((families) => {
-    cached = families
-    return families
+  pending ??= queryFamilies().then(async (families) => {
+    cached = { families, info: await queryInfo(families) }
+    return cached
   })
   return pending
 }
@@ -36,26 +60,32 @@ function loadSystemFontFamilies(): Promise<readonly string[]> {
 /// and on failure the pickers just keep the default list. Returns every
 /// family: candidates vs system section is decided per render by
 /// partitionFontFamilies (which also hides candidates the machine lacks).
-export function useSystemFontFamilies(): {
-  readonly families: readonly string[]
-  readonly load: () => void
-} {
-  const [families, setFamilies] = useState<readonly string[]>(cached ?? [])
+export function useSystemFontFamilies(): SystemFonts & { readonly load: () => void } {
+  const [fonts, setFonts] = useState<SystemFonts>(cached ?? NONE)
   const load = useCallback(() => {
-    void loadSystemFontFamilies().then(setFamilies)
+    void loadSystemFonts().then(setFonts)
   }, [])
-  return { families, load }
+  return { families: fonts.families, info: fonts.info, load }
 }
 
-/// The echoed value stays listed even when uninstalled (document echo).
+/// The echoed value stays listed even when uninstalled (document echo). With
+/// `hangulInfo` (the Korean UI passes it) the installed Korean fonts are split
+/// out of the system section so they can be listed right below the common ones.
 export function fontFamilyGroups(
   systemFamilies: readonly string[],
   echoFamily: string | null | undefined,
-): { readonly common: readonly string[]; readonly system: readonly string[] } {
+  hangulInfo?: FontFamilyInfoMap,
+): {
+  readonly common: readonly string[]
+  readonly hangul: readonly string[]
+  readonly system: readonly string[]
+} {
   const { builtin, system } = partitionFontFamilies(DEFAULT_FONT_FAMILIES, systemFamilies)
   const known = !echoFamily || builtin.includes(echoFamily) || systemFamilies.includes(echoFamily)
+  const { hangul, other } = splitHangulFamilies(system, hangulInfo)
   return {
     common: known ? builtin : [echoFamily, ...builtin],
-    system,
+    hangul,
+    system: other,
   }
 }

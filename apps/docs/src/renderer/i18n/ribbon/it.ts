@@ -89,6 +89,7 @@ export const it = {
   ribbonFontFamilyTip: 'Tipo di carattere',
   ribbonFontsCommon: 'Caratteri comuni',
   ribbonFontsSystem: 'Caratteri di sistema',
+  ribbonFontsHangul: 'Caratteri coreani',
   ribbonFontSizeTip: 'Dimensione carattere',
   ribbonGrowFont: 'Aumenta dimensione carattere',
   ribbonShrinkFont: 'Riduci dimensione carattere',

@@ -88,6 +88,7 @@ export const de = {
   ribbonFontFamilyTip: 'Schriftart',
   ribbonFontsCommon: 'Gängige Schriftarten',
   ribbonFontsSystem: 'Systemschriftarten',
+  ribbonFontsHangul: 'Koreanische Schriftarten',
   ribbonFontSizeTip: 'Schriftgrad',
   ribbonGrowFont: 'Schriftgrad vergrößern',
   ribbonShrinkFont: 'Schriftgrad verkleinern',

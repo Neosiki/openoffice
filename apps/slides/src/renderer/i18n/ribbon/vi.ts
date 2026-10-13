@@ -71,6 +71,7 @@ export const vi = {
   ribbonAddSectionTip: 'Thêm phần trước trang chiếu hiện tại để sắp xếp bài thuyết trình dài',
   ribbonGroupFont: 'Phông chữ',
   ribbonFontsSystem: 'Phông chữ hệ thống',
+  ribbonFontsHangul: 'Phông chữ tiếng Hàn',
   ribbonFontInstallLocal: 'Cài đặt tệp phông chữ…',
   fontMissingBanner: 'Bài trình bày này sử dụng các phông chữ chưa được cài đặt:',
   fontMissingDismiss: 'Bỏ qua',

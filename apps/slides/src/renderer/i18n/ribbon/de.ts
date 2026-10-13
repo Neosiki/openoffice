@@ -74,6 +74,7 @@ export const de = {
     'Abschnitt vor der aktuellen Folie hinzufügen (zum Organisieren langer Präsentationen)',
   ribbonGroupFont: 'Schriftart',
   ribbonFontsSystem: 'Systemschriftarten',
+  ribbonFontsHangul: 'Koreanische Schriftarten',
   ribbonFontInstallLocal: 'Schriftdatei installieren…',
   fontMissingBanner: 'Diese Präsentation verwendet nicht installierte Schriftarten:',
   fontMissingDismiss: 'Ignorieren',

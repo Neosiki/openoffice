@@ -4562,6 +4562,14 @@ body.vib .slide-list {
   font-weight: 600;
 }
 
+/* the font's own Korean name beside the English one the system reports */
+.rb-font-menu .rb-font-ko {
+  margin-left: 8px;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text-secondary);
+}
+
 .rb-menu-group-label {
   padding: 8px 12px 3px;
   font-size: 11px;

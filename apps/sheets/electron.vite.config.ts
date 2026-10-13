@@ -15,6 +15,7 @@ export default defineConfig({
           '@genoffice/ai-search',
           '@genoffice/docx-engine',
           '@genoffice/file-parse',
+          '@genoffice/font-metrics',
           '@genoffice/electron-utils',
           '@genoffice/i18n',
           '@genoffice/pptx-render',

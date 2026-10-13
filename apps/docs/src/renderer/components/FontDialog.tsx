@@ -3,7 +3,12 @@ import type { Editor } from '@tiptap/core'
 import type { Selection, Transaction } from '@tiptap/pm/state'
 import { Dropdown, isSymbolFontFamily, type DropdownOption } from '@genoffice/ui'
 import { useI18n, type StringKey } from '../i18n/locale'
-import { fontFamiliesFor, systemFamiliesBesidesCandidates } from '../font-list'
+import {
+  fontFamiliesFor,
+  fontFamilyLabel,
+  splitHangulFamilies,
+  systemFamiliesBesidesCandidates,
+} from '../font-list'
 import { fontSizeLabel, fontSizeOptions, parseFontSize } from '../font-sizes'
 import { useSystemFontFamilies } from '../system-fonts'
 import { charScaleEm, cssFontFamily, wordKerns } from '../line-metrics'
@@ -172,12 +177,22 @@ export function FontDialog({ editor, onClose }: { editor: Editor; onClose: () =>
   const modalKeys = useModalKeys(onClose)
   const fontFamilies = fontFamiliesFor(lang)
   const sizeOptions = fontSizeOptions(lang)
-  const { families: allSystemFontFamilies, load: loadSystemFonts } = useSystemFontFamilies()
+  const {
+    families: allSystemFontFamilies,
+    info: fontInfo,
+    load: loadSystemFonts,
+  } = useSystemFontFamilies()
   // the dialog opens from a click, so activation is still live here
   useEffect(() => loadSystemFonts(), [loadSystemFonts])
   // every candidate stays listed (the machine may genuinely lack some), so the
   // system section is the candidates-deduped remainder: no builtin is listed twice
-  const systemFontFamilies = systemFamiliesBesidesCandidates(fontFamilies, allSystemFontFamilies)
+  // Korean UI: installed Korean fonts first, each with its Korean name (as in the ribbon)
+  const koFontInfo = lang === 'ko' ? fontInfo : undefined
+  const systemSplit = splitHangulFamilies(
+    systemFamiliesBesidesCandidates(fontFamilies, allSystemFontFamilies),
+    koFontInfo,
+  )
+  const systemFontFamilies = [...systemSplit.hangul, ...systemSplit.other]
   const textAttrs = editor.getAttributes('docTextStyle')
   const initialStyle = editor.isActive('bold')
     ? editor.isActive('italic')
@@ -270,16 +285,18 @@ export function FontDialog({ editor, onClose }: { editor: Editor; onClose: () =>
         options={[
           ...fontFamilies.map((f): DropdownOption => ({
             value: f,
-            label: f,
-            render: <span style={{ fontFamily: cssFontFamily(f) }}>{f}</span>,
+            label: fontFamilyLabel(f, koFontInfo),
+            render: (
+              <span style={{ fontFamily: cssFontFamily(f) }}>{fontFamilyLabel(f, koFontInfo)}</span>
+            ),
           })),
           ...systemFontFamilies.map((f): DropdownOption => ({
             value: f,
-            label: f,
+            label: fontFamilyLabel(f, koFontInfo),
             render: (
               // symbol fonts would render their own name as pictographs
               <span style={{ fontFamily: isSymbolFontFamily(f) ? undefined : cssFontFamily(f) }}>
-                {f}
+                {fontFamilyLabel(f, koFontInfo)}
               </span>
             ),
           })),

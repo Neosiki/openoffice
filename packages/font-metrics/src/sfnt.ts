@@ -166,6 +166,11 @@ function* fontFiles(dir: string, depth: number): Generator<string> {
   }
 }
 
+/** Every font file under the platform's font directories */
+export function* systemFontFiles(): Generator<string> {
+  for (const dir of fontDirs()) yield* fontFiles(dir, 2)
+}
+
 /** Offsets of every face's offset table within the file (many for .ttc, [0] otherwise) */
 export function faceOffsets(fd: number): number[] {
   if (readAt(fd, 0, 4).readUInt32BE(0) !== TTC_TAG) return [0]
@@ -214,7 +219,7 @@ let index: FontIndex | null = null
 export function getFontIndex(): FontIndex {
   if (!index) {
     index = { byPs: new Map(), byFamily: new Map() }
-    for (const dir of fontDirs()) for (const path of fontFiles(dir, 2)) indexFile(path, index)
+    for (const path of systemFontFiles()) indexFile(path, index)
   }
   return index
 }
