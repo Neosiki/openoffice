@@ -1144,7 +1144,8 @@ async function runCodexAppServer(
   const ephemeral = cb.sessionId === undefined
   const run = async (client: CodexAppServerClient): Promise<void> => {
     await assertRunnableAccount(client)
-    const signature = sessionSignature(system, tools, config.model.trim())
+    const model = config.model.trim() || (await defaultModelFor(client))
+    const signature = sessionSignature(system, tools, model)
     let session = client.getSession(nativeSessionId)
     let nextMessages = incrementalMessages(session, signature, messages)
     if (!session || nextMessages === null) {
@@ -1152,7 +1153,7 @@ async function runCodexAppServer(
       const tempDir = await mkdtemp(join(tmpdir(), CODEX_TEMP_PREFIX))
       let threadId: string
       try {
-        threadId = await startNativeThread(client, config, tempDir)
+        threadId = await startNativeThread(client, { ...config, model }, tempDir)
       } catch (error) {
         await rm(tempDir, { recursive: true, force: true }).catch(() => undefined)
         throw error
@@ -1303,31 +1304,78 @@ export async function listCodexModels(cliPath?: string): Promise<CodexModelCatal
     if (account?.requiresOpenaiAuth === true && account.account == null) {
       throw signedOutError()
     }
-    const models: string[] = []
-    let defaultModel = ''
-    let cursor: string | null = null
-    for (let page = 0; page < MAX_MODEL_PAGES; page++) {
-      const result = objectValue(
-        await client.request('model/list', { cursor, limit: 100, includeHidden: false }),
-      )
-      const data = Array.isArray(result?.data) ? result.data : []
-      for (const value of data) {
-        const entry = objectValue(value) as ModelEntry | undefined
-        if (!entry || entry.hidden === true) continue
-        const id =
-          typeof entry.id === 'string'
-            ? entry.id
-            : typeof entry.model === 'string'
-              ? entry.model
-              : ''
-        if (!id || models.includes(id)) continue
-        models.push(id)
-        if (entry.isDefault === true) defaultModel = id
-      }
-      cursor = typeof result?.nextCursor === 'string' ? result.nextCursor : null
-      if (!cursor) break
-    }
-    if (!defaultModel) defaultModel = models[0] ?? ''
-    return { models, defaultModel }
+    return readModelCatalog(client)
   })
+}
+
+async function readModelCatalog(client: CodexAppServerClient): Promise<CodexModelCatalog> {
+  const models: string[] = []
+  let defaultModel = ''
+  let cursor: string | null = null
+  for (let page = 0; page < MAX_MODEL_PAGES; page++) {
+    const result = objectValue(
+      await client.request('model/list', { cursor, limit: 100, includeHidden: false }),
+    )
+    const data = Array.isArray(result?.data) ? result.data : []
+    for (const value of data) {
+      const entry = objectValue(value) as ModelEntry | undefined
+      if (!entry || entry.hidden === true) continue
+      const id =
+        typeof entry.id === 'string' ? entry.id : typeof entry.model === 'string' ? entry.model : ''
+      if (!id || models.includes(id)) continue
+      models.push(id)
+      if (entry.isDefault === true) defaultModel = id
+    }
+    cursor = typeof result?.nextCursor === 'string' ? result.nextCursor : null
+    if (!cursor) break
+  }
+  if (!defaultModel) defaultModel = models[0] ?? ''
+  return { models, defaultModel }
+}
+
+/**
+ * How `rpcError` words a request Codex does not know: "method not found", or
+ * "invalid request", which is what `codex app-server` answers for an unknown
+ * method name.
+ */
+const RPC_UNSUPPORTED = /^Codex app-server error \((?:-32601|-32600)\)/
+
+/** The default model each running process listed; an entry is gone with its process */
+const defaultModels = new WeakMap<CodexAppServerClient, Promise<string>>()
+
+/**
+ * The model of a run whose configuration names none. Left out of the thread,
+ * Codex takes the model from the user's own `config.toml`, the file this bridge
+ * otherwise overrides, and that one may only exist at the provider the user
+ * configured there. So a model is always named: the default of the list Codex
+ * itself gives. The list is read once per process. Without a default the run
+ * fails rather than leave the choice to that file.
+ */
+function defaultModelFor(client: CodexAppServerClient): Promise<string> {
+  const known = defaultModels.get(client)
+  if (known) return known
+  const reading = readModelCatalog(client).then(
+    ({ defaultModel }) => {
+      if (defaultModel) return defaultModel
+      throw new Error('Codex listed no model, so there is no default model to run with')
+    },
+    (error: unknown) => {
+      if (error instanceof AiRunError) throw error
+      const detail = error instanceof Error ? error.message : String(error)
+      if (RPC_UNSUPPORTED.test(detail)) {
+        throw new AiRunError(
+          'needs-update',
+          'Codex is too old for this app: it cannot list its models, so there is no default model to run with',
+          { provider: 'codex' },
+        )
+      }
+      throw new Error(`Codex could not report its default model: ${detail}`, { cause: error })
+    },
+  )
+  defaultModels.set(client, reading)
+  // a failed reading is not kept: the next run asks again
+  reading.catch(() => {
+    if (defaultModels.get(client) === reading) defaultModels.delete(client)
+  })
+  return reading
 }

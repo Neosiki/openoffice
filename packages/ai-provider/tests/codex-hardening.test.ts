@@ -860,3 +860,187 @@ describe('Codex usage windows', () => {
     ).resolves.toEqual({ ok: true, content: 'hello' })
   })
 })
+
+describe('Codex default model', () => {
+  const NO_MODEL = { apiKey: '', model: '' }
+  const MODELS = {
+    data: [
+      { id: 'gpt-hidden', hidden: true, isDefault: true },
+      { id: 'gpt-other', hidden: false, isDefault: false },
+      { id: 'gpt-default', hidden: false, isDefault: true },
+    ],
+    nextCursor: null,
+  }
+  type Messages = Parameters<typeof streamCodexAppServer>[2]
+  const sent = (child: FakeCodex, method: string) =>
+    child.requests.filter((request) => request.method === method)
+  const models = (child: FakeCodex, method: string) =>
+    sent(child, method).map((request) => (request.params as { model?: unknown }).model)
+  const stream = (
+    config: { apiKey: string; model: string },
+    cb: StreamCallbacks,
+    messages: Messages = [{ role: 'user', text: 'hi' }],
+  ) => streamCodexAppServer(config, 'system', messages, [], 1024, cb)
+  const chat = (config: { apiKey: string; model: string }) =>
+    chatCodexAppServer(config, 'system', 'hi', new AbortController().signal)
+
+  it.each([
+    ['empty', ''],
+    ['blank', '  '],
+  ])('names the default Codex itself lists when the model is %s', async (_label, model) => {
+    const h = harness({ 'model/list': () => MODELS })
+    const { cb, deltas } = callbacks()
+    await stream({ apiKey: '', model }, cb)
+    expect(deltas).toEqual(['hello'])
+    const child = h.child()
+    expect(sent(child, 'model/list')).toHaveLength(1)
+    expect(models(child, 'thread/start')).toEqual(['gpt-default'])
+    expect(child.methods().indexOf('model/list')).toBeLessThan(
+      child.methods().indexOf('thread/start'),
+    )
+  })
+
+  it('names it in the read-only fallback thread too', async () => {
+    const h = harness({
+      'model/list': () => MODELS,
+      // the permission profile was not applied, so the thread is started again
+      'thread/start': () => ({ thread: { id: 'th-1' } }),
+    })
+    await stream(NO_MODEL, callbacks().cb)
+    expect(models(h.child(), 'thread/start')).toEqual(['gpt-default', 'gpt-default'])
+  })
+
+  it('names it for a one-shot chat', async () => {
+    const h = harness({ 'model/list': () => MODELS })
+    await expect(chat(NO_MODEL)).resolves.toEqual({ ok: true, content: 'hello' })
+    expect(sent(h.child(), 'model/list')).toHaveLength(1)
+    expect(models(h.child(), 'thread/start')).toEqual(['gpt-default'])
+  })
+
+  it('asks for the list once per process', async () => {
+    const h = harness({ 'model/list': () => MODELS })
+    await stream(NO_MODEL, callbacks().cb)
+    await stream(NO_MODEL, callbacks().cb)
+    await chat(NO_MODEL)
+    const child = h.child()
+    expect(sent(child, 'model/list')).toHaveLength(1)
+    expect(models(child, 'thread/start')).toEqual(['gpt-default', 'gpt-default', 'gpt-default'])
+  })
+
+  it('asks once for runs that start together', async () => {
+    const h = harness({ 'model/list': () => MODELS })
+    await Promise.all([stream(NO_MODEL, callbacks().cb), stream(NO_MODEL, callbacks().cb)])
+    expect(sent(h.child(), 'model/list')).toHaveLength(1)
+    expect(models(h.child(), 'thread/start')).toEqual(['gpt-default', 'gpt-default'])
+  })
+
+  it('asks again after the process was replaced', async () => {
+    let listed = 0
+    const h = harness({
+      'model/list': () => ({
+        data: [{ id: `gpt-default-${++listed}`, isDefault: true }],
+        nextCursor: null,
+      }),
+    })
+    await stream(NO_MODEL, callbacks().cb)
+    shutdownCodexAppServers()
+    await stream(NO_MODEL, callbacks().cb)
+    expect(h.children).toHaveLength(2)
+    expect(models(h.children[0]!, 'thread/start')).toEqual(['gpt-default-1'])
+    expect(sent(h.children[1]!, 'model/list')).toHaveLength(1)
+    expect(models(h.children[1]!, 'thread/start')).toEqual(['gpt-default-2'])
+  })
+
+  it('passes a configured model on unchanged, without asking for the list', async () => {
+    const h = harness({ 'model/list': () => MODELS })
+    await stream({ apiKey: '', model: ' gpt-5.6-luna ' }, callbacks().cb)
+    await chat(CONFIG)
+    expect(h.child().methods()).not.toContain('model/list')
+    expect(models(h.child(), 'thread/start')).toEqual(['gpt-5.6-luna', 'gpt-5.6-luna'])
+  })
+
+  it('keeps a session only while the model that runs stays the same', async () => {
+    const h = harness({ 'model/list': () => MODELS })
+    const history: Messages = [{ role: 'user', text: 'hi' }]
+    const turn = async (model: string) => {
+      await stream({ apiKey: '', model }, { ...callbacks().cb, sessionId: 'session-1' }, [
+        ...history,
+      ])
+      history.push({ role: 'assistant', text: 'hello' }, { role: 'user', text: 'more' })
+    }
+    await turn('')
+    await turn('')
+    const child = h.child()
+    expect(models(child, 'thread/start')).toEqual(['gpt-default'])
+    // the default under its own name is the same model, so the same thread
+    await turn('gpt-default')
+    expect(models(child, 'thread/start')).toEqual(['gpt-default'])
+    await turn('gpt-other')
+    expect(models(child, 'thread/start')).toEqual(['gpt-default', 'gpt-other'])
+    await turn('')
+    expect(models(child, 'thread/start')).toEqual(['gpt-default', 'gpt-other', 'gpt-default'])
+    expect(sent(child, 'model/list')).toHaveLength(1)
+  })
+
+  it.each([
+    ['lists no model', { data: [], nextCursor: null }],
+    ['lists only hidden models', { data: [{ id: 'gpt-hidden', hidden: true }], nextCursor: null }],
+    ['answers with something else', null],
+  ])('fails the run when Codex %s, and starts no thread', async (_label, list) => {
+    const h = harness({ 'model/list': () => list })
+    const error = await failure(stream(NO_MODEL, callbacks().cb))
+    expect(error).toBeInstanceOf(Error)
+    expect((error as Error).message).toMatch(/default model/i)
+    await expect(chat(NO_MODEL)).rejects.toThrow(/default model/i)
+    expect(h.child().methods()).not.toContain('thread/start')
+    expect(h.child().methods()).not.toContain('turn/start')
+  })
+
+  it.each([
+    ['method not found', { code: -32601, message: 'Method not found' }],
+    // what `codex app-server` answers for a method name it does not know
+    ['invalid request', { code: -32600, message: 'Invalid request: unknown variant `model/list`' }],
+  ])('reports a Codex that cannot list its models (%s) as needing an update', async (_l, reply) => {
+    const h = harness({
+      'model/list': () => {
+        throw reply
+      },
+    })
+    const error = await failure(stream(NO_MODEL, callbacks().cb))
+    expect(error).toBeInstanceOf(AiRunError)
+    expect(error).toMatchObject({ kind: 'needs-update', provider: 'codex' })
+    expect(h.child().methods()).toContain('model/list')
+    expect(h.child().methods()).not.toContain('thread/start')
+  })
+
+  it('fails the run when the list cannot be read, and asks again on the next run', async () => {
+    let available = false
+    const h = harness({
+      'model/list': () => {
+        if (!available) throw { code: -32000, message: 'unavailable' }
+        return MODELS
+      },
+    })
+    const error = await failure(stream(NO_MODEL, callbacks().cb))
+    expect(error).not.toBeInstanceOf(AiRunError)
+    expect((error as Error).message).toMatch(/default model/i)
+    expect((error as Error).message).toContain('unavailable')
+    expect(h.child().methods()).not.toContain('thread/start')
+    available = true
+    await stream(NO_MODEL, callbacks().cb)
+    expect(sent(h.child(), 'model/list')).toHaveLength(2)
+    expect(models(h.child(), 'thread/start')).toEqual(['gpt-default'])
+  })
+
+  it('checks the login before it asks for the list', async () => {
+    const h = harness({
+      'account/read': () => ({ account: null, requiresOpenaiAuth: true }),
+      'model/list': () => MODELS,
+    })
+    expect(await failure(stream(NO_MODEL, callbacks().cb))).toMatchObject({
+      kind: 'signed-out',
+      provider: 'codex',
+    })
+    expect(h.child().methods()).not.toContain('model/list')
+  })
+})
