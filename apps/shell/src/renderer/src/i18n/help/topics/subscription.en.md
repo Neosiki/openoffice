@@ -45,6 +45,15 @@ A card that says **Signed in, but not with a subscription** carries a warning: "
 - Your permission is remembered for that program only. It is cleared when the program is signed out or its login changes.
 - To use your subscription instead, sign the program in with your subscription account and press **Check again**.
 
+## Changing the account or signing out
+
+A card whose program is signed in shows the account it is signed in with, next to the plan name, when the program reports it. It also has two buttons.
+
+- **Sign in with another account** starts the program's own sign-in again. Finish it in the window that opens, with the other account.
+- **Sign out** runs the program's own sign-out. The card then says **Not signed in**.
+- Both apply to that program on this whole PC, not only to GenOffice. If you also use Claude Code or Codex in a terminal, it is signed out there too, or moved to the other account. GenOffice asks you to confirm first.
+- The account and these two buttons appear only here, under Settings ▸ AI. GenOffice shows the account and does not save it anywhere.
+
 ## Which AI is used
 
 **AI to use**, under Settings ▸ AI, starts on **Automatic**. Automatic decides in this order:
@@ -56,6 +65,8 @@ A card that says **Signed in, but not with a subscription** carries a warning: "
 Automatic never picks anything that costs extra money: not an API key, and not a pay-as-you-go login. Those are used only while you choose them yourself.
 
 You can also choose one AI yourself, in the same place or in the model list at the bottom of the AI panel. If the one you chose stops working, GenOffice does not quietly move to another. It tells you what happened and shows how to reconnect.
+
+The model list shows the models the program itself reports: each by its name, with its exact model ID beside it, and **Default model** with the model it currently stands for. The chip at the bottom of the AI panel and **AI to use** name that model too. Reading the list asks the AI nothing, so it does not count against your plan. If the program is too old to report its models, a short built-in list is shown instead.
 
 Wherever Codex can be chosen, one line is shown with it: "Using a Codex subscription inside an app is not a method officially recommended by OpenAI." Decide with that in mind.
 

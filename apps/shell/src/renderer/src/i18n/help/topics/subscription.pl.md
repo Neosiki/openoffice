@@ -45,6 +45,15 @@ Karta z napisem **Zalogowano, ale nie w ramach subskrypcji** zawiera ostrzeżeni
 - Zgoda jest zapamiętywana tylko dla tego programu. Znika, gdy program zostanie wylogowany albo zmieni się jego logowanie.
 - Aby zamiast tego korzystać z subskrypcji, zaloguj program na konto z subskrypcją i naciśnij **Sprawdź ponownie**.
 
+## Zmiana konta i wylogowanie
+
+Gdy program jest zalogowany, jego karta pokazuje obok nazwy planu konto, na które jest zalogowany, jeśli program je podaje. Ma też dwa przyciski.
+
+- **Zaloguj się na inne konto** ponownie uruchamia logowanie samego programu. Dokończ je w oknie, które się otworzy, używając drugiego konta.
+- **Wyloguj się** uruchamia wylogowanie samego programu. Potem na karcie widać **Nie zalogowano**.
+- Obie czynności dotyczą tego programu na całym komputerze, a nie tylko GenOffice. Jeśli używasz Claude Code lub Codex także w terminalu, tam również nastąpi wylogowanie albo zmiana konta. Dlatego GenOffice najpierw prosi o potwierdzenie.
+- Konto i te dwa przyciski są tylko tutaj, w Ustawienia ▸ AI. GenOffice pokazuje konto i nigdzie go nie zapisuje.
+
 ## Które AI jest używane
 
 Pole **Używane AI** w Ustawienia ▸ AI jest początkowo ustawione na **Automatycznie**. Tryb automatyczny decyduje w tej kolejności:
@@ -56,6 +65,8 @@ Pole **Używane AI** w Ustawienia ▸ AI jest początkowo ustawione na **Automat
 Tryb automatyczny nigdy nie wybiera niczego, co kosztuje dodatkowo: ani klucza API, ani logowania rozliczanego za zużycie. Są one używane tylko wtedy, gdy wybierzesz je samodzielnie.
 
 Możesz też samodzielnie wybrać jedno AI — w tym samym miejscu albo na liście modeli u dołu panelu AI. Jeśli wybrane AI przestanie działać, GenOffice nie przejdzie po cichu na inne. Poinformuje, co się stało, i pokaże, jak połączyć się ponownie.
+
+Lista modeli pokazuje modele podawane przez sam program: każdy z nazwą i dokładnym identyfikatorem obok, a przy pozycji **Model domyślny** widać, któremu modelowi ona teraz odpowiada. Etykieta u dołu panelu AI i pole **Używane AI** również podają ten model. Odczytanie listy o nic nie pyta AI, więc nie wlicza się do twojego planu. Jeśli program jest zbyt stary, by podać swoje modele, zamiast tego pokazywana jest krótka wbudowana lista.
 
 Wszędzie tam, gdzie można wybrać Codex, towarzyszy mu jedno zdanie: „Korzystanie z subskrypcji Codex wewnątrz aplikacji nie jest metodą oficjalnie zalecaną przez OpenAI.” Weź to pod uwagę przy wyborze.
 

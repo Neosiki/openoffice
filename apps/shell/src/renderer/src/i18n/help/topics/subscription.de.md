@@ -45,6 +45,15 @@ Eine Karte mit **Angemeldet, aber nicht mit einem Abonnement** trägt eine Warnu
 - Ihre Erlaubnis gilt nur für dieses eine Programm. Sie erlischt, wenn das Programm abgemeldet wird oder sich seine Anmeldung ändert.
 - Möchten Sie stattdessen Ihr Abonnement nutzen, melden Sie das Programm mit dem Konto Ihres Abonnements an und klicken Sie auf **Erneut prüfen**.
 
+## Konto wechseln oder abmelden
+
+Ist das Programm angemeldet, zeigt seine Karte neben dem Namen des Tarifs das angemeldete Konto an, wenn das Programm es meldet. Außerdem hat sie zwei Schaltflächen.
+
+- **Mit anderem Konto anmelden** startet die Anmeldung des Programms erneut. Schließen Sie sie im Fenster, das sich öffnet, mit dem anderen Konto ab.
+- **Abmelden** führt die Abmeldung des Programms selbst aus. Danach steht auf der Karte **Nicht angemeldet**.
+- Beides gilt für dieses Programm auf dem ganzen PC, nicht nur für GenOffice. Wenn Sie Claude Code oder Codex auch im Terminal verwenden, wird es dort ebenfalls abgemeldet oder auf das andere Konto umgestellt. GenOffice fragt deshalb vorher nach.
+- Das Konto und diese beiden Schaltflächen gibt es nur hier, unter Einstellungen ▸ KI. GenOffice zeigt das Konto an und speichert es nirgends.
+
 ## Welche KI verwendet wird
 
 **Verwendete KI** unter Einstellungen ▸ KI steht anfangs auf **Automatisch**. Automatisch entscheidet in dieser Reihenfolge:
@@ -56,6 +65,8 @@ Eine Karte mit **Angemeldet, aber nicht mit einem Abonnement** trägt eine Warnu
 Automatisch wählt nie etwas, das zusätzlich Geld kostet: keinen API-Schlüssel und keine Anmeldung mit Abrechnung nach Verbrauch. Beides wird nur verwendet, solange Sie es selbst auswählen.
 
 Sie können auch selbst eine KI festlegen, an derselben Stelle oder in der Modellliste unten im KI-Bereich. Wenn die gewählte KI nicht mehr funktioniert, wechselt GenOffice nicht stillschweigend zu einer anderen. Die App sagt Ihnen, was passiert ist, und zeigt, wie Sie die Verbindung wiederherstellen.
+
+Die Modellliste zeigt die Modelle, die das Programm selbst meldet: jedes mit seinem Namen und der genauen Modell-ID daneben, und bei **Standardmodell** steht, für welches Modell es gerade steht. Auch das Feld unten im KI-Bereich und **Verwendete KI** nennen dieses Modell. Das Lesen der Liste stellt der KI keine Frage und zählt deshalb nicht zu Ihrem Tarif. Ist das Programm zu alt, um seine Modelle zu melden, wird stattdessen eine kurze eingebaute Liste angezeigt.
 
 Überall, wo sich Codex auswählen lässt, steht eine Zeile dabei: „Ein Codex-Abonnement in einer App zu nutzen, ist keine von OpenAI offiziell empfohlene Methode.“ Berücksichtigen Sie das bei Ihrer Entscheidung.
 
