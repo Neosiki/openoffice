@@ -1,11 +1,10 @@
-import { readFileSync } from 'node:fs'
-import path from 'node:path'
 import { app, dialog, shell } from 'electron'
 import type { BrowserWindow } from 'electron'
 import { autoUpdater, CancellationToken } from 'electron-updater'
 import { installResumeDownload } from './update-resume'
 import type { UpdateInfo } from 'electron-updater'
 import { createI18n, getUiLang, htmlLang } from '@genoffice/i18n'
+import { GITHUB_LATEST_RELEASE_URL, githubReleaseTagUrl } from '@genoffice/electron-utils'
 import type {
   UpdateChannel,
   UpdatePhase,
@@ -22,22 +21,24 @@ import {
 } from './update-window'
 
 /**
- * Full-package auto-update over the generic provider (Azure CDN).
+ * Full-package auto-update from the GitHub Releases of the product's public
+ * repository.
  *
- * The release pipeline publishes `latest.yml` + the versioned installer to
- * the update channel prefix (production builds only). The packaged app reads
- * that URL from resources/app-update.yml, which electron-builder bakes in
- * from the `publish` config in apps/shell/electron-builder.cjs — the URL
- * itself is injected at build time via the GENOFFICE_UPDATE_URL env var and
- * is intentionally not committed to the repo.
+ * A release carries the versioned installer and its `latest.yml`
+ * (docs/releasing.ko.md is the procedure). The packaged app reads the
+ * repository from resources/app-update.yml, which electron-builder bakes in
+ * from the `publish` config in apps/shell/electron-builder.cjs (provider
+ * `github`); nothing is injected at build time and no token is involved. A
+ * repository without any release, an unreachable network, or any other
+ * failed check is passed over quietly: nothing is shown and the next check
+ * runs as scheduled.
  *
  * UX is the strong-guidance modal card (update-window.ts), not a native
  * dialog. Windows updates through the NSIS installer (latest.yml); macOS
  * through the zip target (latest-mac.yml); Linux through the AppImage
- * target (latest-linux.yml) — all published by the internal release
- * pipeline. On Linux only AppImage runs self-update (electron-updater
- * replaces the .AppImage file in place, no root needed); deb installs have
- * no updater — users upgrade via `apt install ./<new>.deb`.
+ * target (latest-linux.yml). On Linux only AppImage runs self-update
+ * (electron-updater replaces the .AppImage file in place, no root needed);
+ * deb installs have no updater — users upgrade via `apt install ./<new>.deb`.
  *
  * Dev preview: GENOFFICE_FAKE_UPDATE=<version> in an unpacked run opens the
  * window with a simulated download so the UI can be exercised end to end.
@@ -407,66 +408,32 @@ const RECHECK_INTERVAL_MS = 4 * 60 * 60 * 1000
 // code-signing identity (Apple Team ID) change, which Squirrel.Mac rejects
 // on every retry while the error looks like a download failure to the user.
 const MANUAL_FALLBACK_AFTER = 2
-// Last-resort manual link only: the GitHub Latest release tracks one channel
-// and signing track, so a stable/legacy-track user could land on the wrong
-// build. Preferred is the CDN installer derived from the user's own update
-// feed (see manualDownloadUrlFor), which matches channel, track, and arch.
-const DOWNLOAD_PAGE_URL = 'https://github.com/genspark-ai/genoffice/releases/latest'
-
-/// Trusted HTTPS base URL baked into resources/app-update.yml. Manual download
-/// links are always rebuilt from this base rather than trusting URLs supplied
-/// by remotely fetched update metadata.
-function updateFeedBaseUrl(): string | null {
-  try {
-    const yml = readFileSync(path.join(process.resourcesPath, 'app-update.yml'), 'utf8')
-    const value = /^url:\s*['"]?([^'"\s]+)/m.exec(yml)?.[1]
-    if (!value) return null
-    const url = new URL(value)
-    if (url.protocol !== 'https:' || url.username || url.password) return null
-    url.pathname = `${url.pathname.replace(/\/+$/, '')}/`
-    url.search = ''
-    url.hash = ''
-    return url.toString()
-  } catch {
-    return null
-  }
+// Where a manual install starts: the repository's own release pages, never a
+// URL taken from remotely fetched update metadata. "Latest" is GitHub's newest
+// full release, so a pre-release (beta channel) gets its own page instead.
+function manualDownloadUrlFor(version: string | null): string {
+  return version !== null && version.includes('-')
+    ? githubReleaseTagUrl(version)
+    : GITHUB_LATEST_RELEASE_URL
 }
 
-/// Picks the manual-install artifact for this platform/arch from the update
-/// feed's file list: macOS wants the dmg matching process.arch (the zip is
-/// Squirrel-only), Windows the NSIS exe matching process.arch (the arm64 one
-/// carries an -arm64 suffix, the x64 one no arch), Linux the AppImage. Served feeds may
-/// carry either feed-relative names or absolute CDN URLs (mac-release-upload
-/// rewrites every url: entry to absolute), but only their basename is used.
-/// The final URL is always rebuilt against the trusted baked feed base.
-function manualDownloadUrlFor(info: UpdateInfo): string | null {
-  const basenames = (info.files ?? []).flatMap((file) => {
-    try {
-      const pathname = new URL(file.url, 'https://metadata.invalid/').pathname
-      const basename = pathname.slice(pathname.lastIndexOf('/') + 1)
-      return basename ? [decodeURIComponent(basename)] : []
-    } catch {
-      return []
-    }
-  })
-  const pick = (match: (basename: string) => boolean): string | null =>
-    basenames.find(match) ?? null
-  let chosen: string | null
-  if (process.platform === 'darwin') {
-    const arm =
-      pick((name) => name.endsWith('-arm64.dmg')) ?? pick((name) => name.endsWith('-universal.dmg'))
-    const x64 = pick((name) => name.endsWith('.dmg') && !/-(arm64|universal)\.dmg$/.test(name))
-    chosen = process.arch === 'arm64' ? (arm ?? x64) : (x64 ?? arm)
-  } else if (process.platform === 'win32') {
-    const arm = pick((name) => name.endsWith('-arm64.exe'))
-    const x64 = pick((name) => name.endsWith('.exe') && !name.endsWith('-arm64.exe'))
-    chosen = process.arch === 'arm64' ? (arm ?? x64) : (x64 ?? arm)
-  } else {
-    chosen = pick((name) => name.endsWith('.AppImage'))
-  }
-  if (chosen === null) return null
-  const base = updateFeedBaseUrl()
-  return base === null ? null : new URL(encodeURIComponent(chosen), base).toString()
+// electron-updater error codes that mean "the repository has nothing to offer
+// this install" rather than "the check could not run": an empty release list
+// (ERR_XML_MISSED_ELEMENT — what GitHub serves before the first release), no
+// full release for "latest" to resolve to, a release without this platform's
+// feed file, or a 404 for the list itself.
+const NO_RELEASE_ERROR_CODES = new Set([
+  'ERR_XML_MISSED_ELEMENT',
+  'ERR_UPDATER_NO_PUBLISHED_VERSIONS',
+  'ERR_UPDATER_INVALID_RELEASE_FEED',
+  'ERR_UPDATER_LATEST_VERSION_NOT_FOUND',
+  'ERR_UPDATER_CHANNEL_FILE_NOT_FOUND',
+  'HTTP_ERROR_404',
+])
+
+function isNoReleaseError(err: unknown): boolean {
+  const code = (err as { code?: unknown } | null)?.code
+  return typeof code === 'string' && NO_RELEASE_ERROR_CODES.has(code)
 }
 
 let started = false
@@ -481,7 +448,10 @@ let resetDownloadFlow: (() => void) | null = null
 
 // electron-updater feed name per user-facing channel. The platform suffix is
 // appended by electron-updater itself: 'beta' resolves to beta.yml on
-// Windows, beta-mac.yml on macOS, beta-linux.yml on Linux x64.
+// Windows, beta-mac.yml on macOS, beta-linux.yml on Linux x64. On GitHub the
+// beta channel is the repository's pre-releases (see selectChannel); a
+// release there carries latest.yml whatever its version, and the provider
+// falls back to that file when the release has no beta.yml.
 const CHANNEL_FEED: Record<UpdateChannel, string> = { stable: 'latest', beta: 'beta' }
 
 // true once the packaged-run updater is configured; channel switches before
@@ -520,13 +490,22 @@ function initialState(version: string): UpdateUiState {
   }
 }
 
-export function applyUpdateChannel(channel: UpdateChannel): void {
-  if (!updaterActive) return
-  resetDownloadFlow?.()
+function selectChannel(channel: UpdateChannel): void {
   autoUpdater.channel = CHANNEL_FEED[channel]
   // the channel setter unconditionally flips allowDowngrade to true; force it
   // back off since a beta user switching to stable must not downgrade
   autoUpdater.allowDowngrade = false
+  // The GitHub provider resolves stable to the repository's "latest" release,
+  // which is never a pre-release, and only looks at pre-releases when this is
+  // on. Set both ways: electron-updater turns it on by itself whenever the
+  // installed version is a pre-release.
+  autoUpdater.allowPrerelease = channel === 'beta'
+}
+
+export function applyUpdateChannel(channel: UpdateChannel): void {
+  if (!updaterActive) return
+  resetDownloadFlow?.()
+  selectChannel(channel)
   log('channel switched:', channel)
   autoUpdater.checkForUpdates().catch((err) => log('check failed:', err?.message ?? err))
 }
@@ -535,9 +514,10 @@ export function applyUpdateChannel(channel: UpdateChannel): void {
  * Unlike the silent launch/periodic checks, every outcome gets explicit
  * feedback: an available update opens the standard update window (even a
  * version dismissed with "later" this session — the user just asked for it),
- * up-to-date and failure each get a dialog, and installs with no self-update
- * mechanism (dev runs, Linux .deb) are pointed at the download page instead
- * of being told they're current. */
+ * up-to-date and failure each get a dialog (a repository with no release to
+ * offer counts as up-to-date, not as a failure), and installs with no
+ * self-update mechanism (dev runs, Linux .deb) are pointed at the download
+ * page instead of being told they're current. */
 export async function checkForUpdatesNow(): Promise<void> {
   if (manualCheckInFlight) return
   manualCheckInFlight = true
@@ -556,7 +536,7 @@ export async function checkForUpdatesNow(): Promise<void> {
         defaultId: 0,
         cancelId: 0,
       })
-      if (response === 1) void shell.openExternal(DOWNLOAD_PAGE_URL)
+      if (response === 1) void shell.openExternal(GITHUB_LATEST_RELEASE_URL)
       return
     }
     dismissedVersion = null
@@ -566,19 +546,21 @@ export async function checkForUpdatesNow(): Promise<void> {
       if (result === null) throw new Error('Update check was skipped')
     } catch (err) {
       log('manual check failed:', (err as Error)?.message ?? err)
-      await dialog.showMessageBox({
-        type: 'warning',
-        title: tUpd(lang, 'updTitle'),
-        message: tUpd(lang, 'updCheckFailed'),
-        buttons: ['OK'],
-        defaultId: 0,
-        cancelId: 0,
-      })
-      return
+      if (!isNoReleaseError(err)) {
+        await dialog.showMessageBox({
+          type: 'warning',
+          title: tUpd(lang, 'updTitle'),
+          message: tUpd(lang, 'updCheckFailed'),
+          buttons: ['OK'],
+          defaultId: 0,
+          cancelId: 0,
+        })
+        return
+      }
     }
     // an available update already opened the update window via the
     // 'update-available' handler; only "nothing new" needs a dialog here
-    if (result.isUpdateAvailable) return
+    if (result?.isUpdateAvailable) return
     await dialog.showMessageBox({
       type: 'info',
       title: tUpd(lang, 'updTitle'),
@@ -605,7 +587,7 @@ export function initAutoUpdater(
     initFakeUpdate(getWindow, process.env.GENOFFICE_FAKE_UPDATE)
     return
   }
-  // Unpacked runs have no app-update.yml and must not hit the CDN with a
+  // Unpacked runs have no app-update.yml and must not ask GitHub with a
   // dev version. Windows updates via NSIS (latest.yml), macOS via the zip
   // target + latest-mac.yml (Squirrel.Mac requires a signed, notarized app
   // — dmg is first-install only), Linux via the AppImage target +
@@ -617,22 +599,16 @@ export function initAutoUpdater(
   if (process.platform !== 'win32' && process.platform !== 'darwin' && !isLinuxAppImage) return
 
   updaterActive = true
-  autoUpdater.channel = CHANNEL_FEED[initialChannel]
-  // the channel setter unconditionally flips allowDowngrade to true; force it
-  // back off since a beta user switching to stable must not downgrade
-  autoUpdater.allowDowngrade = false
+  selectChannel(initialChannel)
   autoUpdater.autoDownload = false
   // if the user picked "later" after download, install on normal quit
   autoUpdater.autoInstallOnAppQuit = true
   // full-package policy: never attempt blockmap differential downloads
-  // (CI does not publish .blockmap files)
+  // (a release then needs only the installer and its latest.yml)
   autoUpdater.disableDifferentialDownload = true
   installResumeDownload(autoUpdater as unknown as Parameters<typeof installResumeDownload>[0])
 
   let latestSeenVersion: string | null = null
-  // CDN installer link for latestSeenVersion (channel/track/arch-correct);
-  // null falls back to the generic download page
-  let manualDownloadUrl: string | null = null
   // consecutive failed attempts for latestSeenVersion; a download can fail
   // through the downloadUpdate() rejection OR only through the 'error' event
   // (macOS: Squirrel.Mac reports signature/apply failures natively), so both
@@ -674,7 +650,6 @@ export function initAutoUpdater(
     downloadToken = null
     downloadGen += 1
     latestSeenVersion = null
-    manualDownloadUrl = null
     failedAttempts = 0
     downloadInFlight = false
     phase = 'available'
@@ -706,7 +681,7 @@ export function initAutoUpdater(
       closeUpdateWindow()
     },
     onOpenDownload: () => {
-      void shell.openExternal(manualDownloadUrl ?? DOWNLOAD_PAGE_URL)
+      void shell.openExternal(manualDownloadUrlFor(latestSeenVersion))
     },
   }
 
@@ -740,7 +715,6 @@ export function initAutoUpdater(
       percent = 0
     }
     latestSeenVersion = info.version
-    manualDownloadUrl = manualDownloadUrlFor(info)
     log('update available:', info.version)
     // a periodic recheck resolving to the version the open dialog already
     // shows must not reset its phase to 'available' — that would wipe an
