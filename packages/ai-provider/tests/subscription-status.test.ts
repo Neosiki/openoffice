@@ -126,6 +126,7 @@ describe('the six states (spec 4.1)', () => {
       loginMethod: 'subscription',
       planName: 'max',
       loginKind: 'claude.ai/firstParty',
+      account: EMAIL,
     })
     expect(await codex(ok('', 'Logged in using ChatGPT\n'))).toEqual({
       provider: 'codex',
@@ -215,13 +216,14 @@ describe('the two invariants (spec 5.2)', () => {
   })
 })
 
-describe('account identity is read and dropped', () => {
-  it('never reaches the detection of a signed-in Claude', async () => {
+describe('account identity is read and dropped, but for the e-mail address shown on the card', () => {
+  it('only the address reaches the detection of a signed-in Claude', async () => {
     const detection = await claude(ok(claudeStatus({})))
-    const text = JSON.stringify(detection)
+    expect(detection.account).toBe(EMAIL)
+    const text = JSON.stringify({ ...detection, account: undefined })
     for (const secret of [EMAIL, ORG_ID, ORG_NAME, 'someone']) expect(text).not.toContain(secret)
     expect(Object.keys(detection).sort()).toEqual(
-      ['loginKind', 'loginMethod', 'planName', 'provider', 'state', 'version'].sort(),
+      ['account', 'loginKind', 'loginMethod', 'planName', 'provider', 'state', 'version'].sort(),
     )
   })
 
@@ -256,6 +258,7 @@ describe('account identity is read and dropped', () => {
       loginMethod: 'subscription',
       planName: 'max',
       loginKind: 'claude.ai/firstParty',
+      account: EMAIL,
     })
     expect(
       parseClaudeAuthStatus('warning: something\n' + claudeStatus({ loggedIn: false })),
@@ -426,7 +429,7 @@ describe('both providers at once', () => {
 })
 
 describe('the Codex account type from the app-server', () => {
-  it('reads account/read without keeping the email', () => {
+  it('reads account/read: the kind of login, the plan and the address for the card', () => {
     expect(
       codexAccountInfo({
         account: { type: 'chatgpt', email: EMAIL, planType: 'plus' },
@@ -437,6 +440,7 @@ describe('the Codex account type from the app-server', () => {
       loginMethod: 'subscription',
       planName: 'plus',
       loginKind: 'chatgpt',
+      account: EMAIL,
     })
     expect(codexAccountInfo({ account: { type: 'apiKey' }, requiresOpenaiAuth: true })).toEqual({
       signedIn: true,
@@ -457,7 +461,7 @@ describe('the Codex account type from the app-server', () => {
     expect(codexAccountInfo('nonsense')).toBeNull()
   })
 
-  it('adds the plan name to a ChatGPT login', async () => {
+  it('adds the plan name and the address to a ChatGPT login', async () => {
     const cli = fakeCli({ version: CODEX_VERSION, status: ok('', 'Logged in using ChatGPT') })
     const detection = await detectSubscriptionLogin('codex', {
       locate: found,
@@ -471,8 +475,8 @@ describe('the Codex account type from the app-server', () => {
       state: 'ready',
       loginMethod: 'subscription',
       planName: 'pro',
+      account: EMAIL,
     })
-    expect(JSON.stringify(detection)).not.toContain(EMAIL)
   })
 
   it('never upgrades a login either side calls metered', async () => {
@@ -501,6 +505,8 @@ describe('the Codex account type from the app-server', () => {
       }),
     })
     expect(chatgptAccount).toMatchObject({ state: 'metered', loginMethod: 'metered' })
+    // the reading that lost says nothing about who is signed in
+    expect(JSON.stringify(chatgptAccount)).not.toContain(EMAIL)
   })
 
   it('a failing account source leaves the CLI answer standing', async () => {

@@ -13,9 +13,15 @@ import {
   type SubscriptionMeteredResult,
   type SubscriptionStatusMap,
 } from './contract'
-import { launchSubscriptionInstall, launchSubscriptionLogin } from './launch'
+import {
+  launchSubscriptionInstall,
+  launchSubscriptionLogin,
+  launchSubscriptionLogout,
+} from './launch'
 import { createMeteredAcceptanceFileStore } from './metered'
+import { listSubscriptionModels, type SubscriptionModelLister } from './models'
 import { createSubscriptionStatusService, type SubscriptionStatusService } from './service'
+import type { SubscriptionDetector } from './status'
 
 /** The part of Electron's `ipcMain` this helper uses */
 export interface SubscriptionIpcMain {
@@ -26,6 +32,8 @@ export interface SubscriptionIpcMain {
 export interface SubscriptionIpcDeps {
   service: SubscriptionStatusService
   launchLogin(provider: AiSubscriptionProviderId): Promise<SubscriptionLaunchResult>
+  /** run the CLI's own logout to its end */
+  launchLogout(provider: AiSubscriptionProviderId): Promise<SubscriptionLaunchResult>
   launchInstall(provider: AiSubscriptionProviderId): Promise<SubscriptionLaunchResult>
   /** send an event to every window; called with the `changed` channel when a status changes */
   broadcast?: ((channel: string, payload: SubscriptionStatusMap) => void) | undefined
@@ -90,6 +98,16 @@ export function registerSubscriptionIpc(
     // a function per call, so a launcher replaced on `deps` later is the one that runs
     [SUBSCRIPTION_IPC_CHANNELS.login]: (event, payload) =>
       launch((provider) => deps.launchLogin(provider))(event, payload),
+    // the provider is looked at again before the answer goes back, so the window that asked
+    // already shows the outcome; a logout that failed may have signed the CLI out all the same
+    [SUBSCRIPTION_IPC_CHANNELS.logout]: (event, payload) =>
+      launch(async (provider) => {
+        try {
+          return await deps.launchLogout(provider)
+        } finally {
+          await service.check([provider]).catch(() => undefined)
+        }
+      })(event, payload),
     [SUBSCRIPTION_IPC_CHANNELS.install]: (event, payload) =>
       launch((provider) => deps.launchInstall(provider))(event, payload),
     [SUBSCRIPTION_IPC_CHANNELS.metered]: async (
@@ -125,18 +143,25 @@ export interface SubscriptionIpcSetup {
   /** the app's userData directory: the metered acceptance record is kept here */
   dataDir: string
   broadcast?: ((channel: string, payload: SubscriptionStatusMap) => void) | undefined
+  /** stand-in for tests; `detectSubscriptionLogin` when absent */
+  detect?: SubscriptionDetector | undefined
+  /** stand-in for tests; the lists the bridges registered (`listSubscriptionModels`) when absent */
+  listModels?: SubscriptionModelLister | undefined
 }
 
 /**
  * The real dependencies for `registerSubscriptionIpc`: a status service over
- * the app's settings, and the launchers. After a login window closes the
- * provider is checked again, so the UI follows without being asked.
+ * the app's settings that also reads each CLI's model list, and the launchers.
+ * After a login window closes the provider is checked again, so the UI follows
+ * without being asked.
  */
 export function createSubscriptionIpcDeps(setup: SubscriptionIpcSetup): SubscriptionIpcDeps {
   const service = createSubscriptionStatusService({
     getSettings: setup.getSettings,
     setMeteredAccepted: setup.setMeteredAccepted,
     acceptanceStore: createMeteredAcceptanceFileStore(setup.dataDir),
+    detect: setup.detect,
+    listModels: setup.listModels ?? listSubscriptionModels,
   })
   return {
     service,
@@ -144,6 +169,10 @@ export function createSubscriptionIpcDeps(setup: SubscriptionIpcSetup): Subscrip
       launchSubscriptionLogin(provider, {
         configuredPath: setup.getSettings().providers?.[provider]?.cliPath,
         onExit: () => void service.check([provider]).catch(() => undefined),
+      }),
+    launchLogout: (provider) =>
+      launchSubscriptionLogout(provider, {
+        configuredPath: setup.getSettings().providers?.[provider]?.cliPath,
       }),
     launchInstall: (provider) => launchSubscriptionInstall(provider),
     broadcast: setup.broadcast,
@@ -174,9 +203,22 @@ export function ensureSubscriptionIpc(
   return deps
 }
 
-/** The statuses of the process-wide registration; empty until `ensureSubscriptionIpc` ran. */
+/**
+ * The statuses of the process-wide registration, as the main process decides
+ * on them (which provider runs, which route a tool takes); empty until
+ * `ensureSubscriptionIpc` ran. The account a CLI names is left out: it is for
+ * the windows to show and has no part in any decision, so it does not travel
+ * with the run and tool contexts built from this.
+ */
 export function sharedSubscriptionStatuses(): Partial<SubscriptionStatusMap> {
-  return sharedRegistration?.deps.service.getStatuses() ?? {}
+  const statuses: Partial<SubscriptionStatusMap> = {}
+  const known = sharedRegistration?.deps.service.getStatuses()
+  for (const status of Object.values(known ?? {})) {
+    const copy = { ...status }
+    delete copy.account
+    statuses[copy.provider] = copy
+  }
+  return statuses
 }
 
 /** Drop the process-wide registration (tests, and an app that tears its IPC down). */

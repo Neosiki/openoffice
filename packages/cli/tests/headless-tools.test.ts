@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { setCodexImageGenerationAvailable } from '@genoffice/ai-provider'
@@ -302,6 +302,30 @@ describe('media on the automatic-call path', () => {
       codex: { provider: 'codex', state: 'ready' },
     })
     expect(fakes.detect.mock.calls.map((call) => call[0]).sort()).toEqual(['claude-code', 'codex'])
+  })
+
+  it('keeps the account a CLI names out of the tool context, the result and the audit log', async () => {
+    const ACCOUNT = 'jun.il@school.kr'
+    fakes.detect.mockImplementation(async (provider: string) => ({
+      ...READY[provider]!,
+      account: ACCOUNT,
+    }))
+    const tool = vi.spyOn(aiSearch, 'analyzeMediaTool').mockResolvedValue({ text: 'A cat.' })
+    const { env, dir } = dataFolder({ headlessSubscriptionEnabled: true })
+    const audit = join(dir, 'audit.jsonl')
+    const r = await run(['media', photo(), '--json'], {
+      env: { ...env, GENOFFICE_AUDIT_LOG: audit },
+    })
+    expect(r.code).toBe(0)
+    const context = tool.mock.calls[0]![2]!.context!
+    expect(context.statuses?.['claude-code']).toMatchObject({ state: 'ready' })
+    expect(JSON.stringify(context)).not.toContain('school.kr')
+    expect(`${r.stdout}\n${r.stderr}`).not.toContain('school.kr')
+    expect(readFileSync(audit, 'utf8')).not.toContain('school.kr')
+    // nothing was written next to the settings either
+    for (const name of readdirSync(dir)) {
+      expect(readFileSync(join(dir, name), 'utf8'), name).not.toContain('school.kr')
+    }
   })
 
   it('behaves as not connected when the status check fails', async () => {

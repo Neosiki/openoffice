@@ -4,6 +4,7 @@
  * feed output that is NOT in the expected shape, where a "scrub the known
  * patterns" approach lets an organisation name through.
  */
+import { EventEmitter } from 'node:events'
 import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -11,16 +12,25 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { defaultAiSettings } from '../src/providers'
 import {
   METERED_LOGIN_FINGERPRINTS,
+  SUBSCRIPTION_ACCOUNT_MAX_LENGTH,
   SUBSCRIPTION_LOGIN_KINDS,
   SUBSCRIPTION_METERED_FILE,
   codexAccountInfo,
   createMeteredAcceptanceFileStore,
+  createSubscriptionChildRegistry,
   createSubscriptionStatusService,
   detectSubscriptionLogin,
+  ensureSubscriptionIpc,
+  leftoverRecordFile,
   meteredLoginFingerprint,
   parseClaudeAuthStatus,
   parseCodexLoginStatus,
+  resetSharedSubscriptionIpc,
+  sharedSubscriptionStatuses,
+  spawnSubscriptionProgram,
+  subscriptionAccountOf,
   subscriptionStatusErrorKind,
+  subscriptionStatusMapOf,
   type MeteredAcceptanceRecord,
   type SubscriptionCommandResult,
   type SubscriptionDetection,
@@ -160,10 +170,20 @@ describe('output that is not in the expected shape', () => {
       account: { type: 'jun.il@school.kr Acme Org', planType: 'Acme Hagwon Seoul' },
     })
     expect(odd).toEqual({ signedIn: true, loginMethod: 'unknown', loginKind: 'unknown' })
+    // the e-mail is the one value passed on (for the Settings card); the free-text plan is not
     const plan = codexAccountInfo({
       account: { type: 'chatgpt', email: 'jun.il@school.kr', planType: 'Acme Hagwon Seoul' },
     })
-    expect(plan).toEqual({ signedIn: true, loginMethod: 'subscription', loginKind: 'chatgpt' })
+    expect(plan).toEqual({
+      signedIn: true,
+      loginMethod: 'subscription',
+      loginKind: 'chatgpt',
+      account: 'jun.il@school.kr',
+    })
+    const noEmail = codexAccountInfo({
+      account: { type: 'chatgpt', email: 'Acme Hagwon Seoul', planType: 'Acme Hagwon Seoul' },
+    })
+    expect(noEmail).toEqual({ signedIn: true, loginMethod: 'subscription', loginKind: 'chatgpt' })
   })
 
   it('Claude fields with unexpected values are not copied either', async () => {
@@ -369,5 +389,245 @@ describe('accepting a metered login of an unrecognised kind', () => {
     expect(statuses.codex.state).toBe('error')
     expect(subscriptionStatusErrorKind(statuses.codex)).toBe('failed')
     expectNoIdentity(statuses)
+  })
+})
+
+/**
+ * The one piece of identity that is passed on: the account's e-mail address,
+ * for the Settings card. It lives in the status in memory and goes to the
+ * windows; it is written nowhere.
+ */
+describe('the account shown on the Settings card', () => {
+  const ACCOUNT = 'jun.il@school.kr'
+  const CLAUDE_READY = JSON.stringify({
+    loggedIn: true,
+    authMethod: 'claude.ai',
+    apiProvider: 'firstParty',
+    email: ACCOUNT,
+    orgId: '0f8fad5b-d9cb-469f-a165-70867728950e',
+    orgName: 'Acme Hagwon Seoul',
+    subscriptionType: 'max',
+  })
+  const CLAUDE_METERED = JSON.stringify({
+    loggedIn: true,
+    authMethod: 'api_key',
+    apiProvider: 'firstParty',
+    email: ACCOUNT,
+    orgName: 'Acme Hagwon Seoul',
+  })
+
+  let dir: string
+  beforeEach(async () => {
+    dir = await mkdtemp(join(tmpdir(), 'subscription-account-'))
+  })
+  afterEach(async () => {
+    resetSharedSubscriptionIpc()
+    await rm(dir, { recursive: true, force: true })
+  })
+
+  it('is the e-mail address the CLI names, and nothing else of the identity', async () => {
+    const detection = await claude({ code: 0, stdout: CLAUDE_READY, stderr: '' })
+    expect(detection).toMatchObject({ state: 'ready', planName: 'max', account: ACCOUNT })
+    expectNoIdentity({ ...detection, account: undefined })
+
+    const viaCodex = await detectSubscriptionLogin('codex', {
+      locate: found,
+      run: cli({ code: 0, stdout: '', stderr: 'Logged in using ChatGPT\n' }, 'codex-cli 0.159.2\n'),
+      codexAccount: async () => ({
+        account: { type: 'chatgpt', email: ACCOUNT, planType: 'plus' },
+        requiresOpenaiAuth: true,
+      }),
+    })
+    expect(viaCodex).toMatchObject({ state: 'ready', planName: 'plus', account: ACCOUNT })
+  })
+
+  it('is absent for anything that is not a plausible address of bounded length', () => {
+    const long = `${'a'.repeat(64)}@${'b'.repeat(SUBSCRIPTION_ACCOUNT_MAX_LENGTH)}.kr`
+    const malformed: unknown[] = [
+      'Acme Hagwon Seoul',
+      `${ACCOUNT} (Acme Org)`,
+      `Jun Il <${ACCOUNT}>`,
+      `${ACCOUNT}\nAcme Org`,
+      'jun.il@school',
+      '@school.kr',
+      'jun.il@',
+      long,
+      '',
+      42,
+      null,
+      { email: ACCOUNT },
+      [ACCOUNT],
+    ]
+    for (const email of malformed) {
+      expect(subscriptionAccountOf(email), JSON.stringify(email)).toBeUndefined()
+      const parsed = parseClaudeAuthStatus(
+        JSON.stringify({
+          loggedIn: true,
+          authMethod: 'claude.ai',
+          apiProvider: 'firstParty',
+          email,
+          subscriptionType: 'max',
+        }),
+      )
+      expect(parsed).toMatchObject({ signedIn: true, loginMethod: 'subscription' })
+      expect(parsed && 'account' in parsed).toBe(false)
+      const fromCodex = codexAccountInfo({ account: { type: 'chatgpt', email, planType: 'plus' } })
+      expect(fromCodex && 'account' in fromCodex).toBe(false)
+    }
+    expect(subscriptionAccountOf(` ${ACCOUNT} `)).toBe(ACCOUNT)
+  })
+
+  it('is not carried by a provider that is signed out, or whose readings disagree', async () => {
+    const signedOut = await claude({
+      code: 1,
+      stdout: JSON.stringify({ loggedIn: false, email: ACCOUNT }),
+      stderr: '',
+    })
+    expect(signedOut.state).toBe('signed-out')
+    expectNoIdentity(signedOut)
+    // a metered Codex login takes no account from a ChatGPT reading it contradicts
+    const metered = await detectSubscriptionLogin('codex', {
+      locate: found,
+      run: cli(
+        { code: 0, stdout: '', stderr: 'Logged in using an API key - sk-***ABCD\n' },
+        'codex-cli 0.159.2\n',
+      ),
+      codexAccount: async () => ({
+        account: { type: 'chatgpt', email: ACCOUNT, planType: 'plus' },
+      }),
+    })
+    expect(metered.state).toBe('metered')
+    expectNoIdentity(metered)
+  })
+
+  it('reaches the status, and no file: not the settings, not the acceptance record', async () => {
+    const settings = defaultAiSettings()
+    const settingsWrites: unknown[] = []
+    const service = createSubscriptionStatusService({
+      getSettings: () => settings,
+      setMeteredAccepted: (provider, accepted) => {
+        settingsWrites.push([provider, accepted])
+        settings.meteredAccepted = { ...settings.meteredAccepted, [provider]: accepted }
+      },
+      acceptanceStore: createMeteredAcceptanceFileStore(dir),
+      detect: (provider, options) =>
+        detectSubscriptionLogin(provider, {
+          ...options,
+          locate: async (id) => (id === 'claude-code' ? program(id) : null),
+          run: cli({ code: 0, stdout: CLAUDE_METERED, stderr: '' }, '2.1.287 (Claude Code)\n'),
+        }),
+    })
+    const checked = await service.check()
+    expect(checked['claude-code']).toMatchObject({ state: 'metered', account: ACCOUNT })
+    const accepted = await service.setMeteredAccepted('claude-code', true)
+    expect(accepted.statuses['claude-code']).toMatchObject({
+      meteredAccepted: true,
+      account: ACCOUNT,
+    })
+
+    expect(JSON.parse(await readFile(join(dir, SUBSCRIPTION_METERED_FILE), 'utf8'))).toEqual({
+      'claude-code': 'metered:api_key/firstParty',
+    })
+    for (const name of await readdir(dir)) {
+      expectNoIdentity(await readFile(join(dir, name), 'utf8'))
+    }
+    // what the service hands the settings store is a provider id and a boolean
+    expect(settingsWrites).toEqual([['claude-code', true]])
+    expectNoIdentity([settings, settingsWrites])
+  })
+
+  it('is gone from the status once the CLI is signed out', async () => {
+    let stdout = CLAUDE_READY
+    const service = createSubscriptionStatusService({
+      getSettings: () => defaultAiSettings(),
+      setMeteredAccepted: () => undefined,
+      acceptanceStore: { read: async () => ({}), write: async () => undefined },
+      detect: (provider, options) =>
+        detectSubscriptionLogin(provider, {
+          ...options,
+          locate: async (id) => (id === 'claude-code' ? program(id) : null),
+          run: async (_program, args) =>
+            args[0] === '--version'
+              ? { code: 0, stdout: '2.1.287 (Claude Code)\n', stderr: '' }
+              : { code: 0, stdout, stderr: '' },
+        }),
+    })
+    expect((await service.check())['claude-code'].account).toBe(ACCOUNT)
+    stdout = JSON.stringify({ loggedIn: false })
+    const after = await service.check()
+    expect(after['claude-code'].state).toBe('signed-out')
+    expectNoIdentity(after)
+  })
+
+  it('is not in the record of started programs', async () => {
+    const registry = createSubscriptionChildRegistry({ killTree: () => undefined })
+    registry.recordIn(dir)
+    const child = Object.assign(new EventEmitter(), { pid: 4711, kill: () => true })
+    spawnSubscriptionProgram(program('claude-code'), ['auth', 'status', '--json'], {
+      spawn: () => child,
+      registry,
+      baseEnv: { PATH: '/usr/bin' },
+    })
+    await registry.flushed()
+    const record = await readFile(leftoverRecordFile(dir), 'utf8')
+    expect(JSON.parse(record).children).toHaveLength(1)
+    expectNoIdentity(record)
+    registry.shutdown()
+  })
+
+  it('stays out of what the main process decides on: only the windows are sent it', async () => {
+    const statuses = {
+      'claude-code': {
+        provider: 'claude-code' as const,
+        state: 'ready' as const,
+        loginMethod: 'subscription' as const,
+        planName: 'max',
+        account: ACCOUNT,
+        meteredAccepted: false,
+      },
+      codex: { provider: 'codex' as const, state: 'signed-out' as const, meteredAccepted: false },
+    }
+    const handlers = new Map<string, (event: unknown, payload?: unknown) => unknown>()
+    ensureSubscriptionIpc(
+      { handle: (channel, handler) => void handlers.set(channel, handler) },
+      { getSettings: () => defaultAiSettings(), setMeteredAccepted: () => undefined, dataDir: dir },
+      () => ({
+        service: {
+          getStatuses: () => statuses,
+          check: async () => statuses,
+          setMeteredAccepted: async () => ({ ok: true, statuses }),
+          onChange: () => () => undefined,
+        },
+        launchLogin: async () => ({ ok: true }),
+        launchLogout: async () => ({ ok: true }),
+        launchInstall: async () => ({ ok: true }),
+      }),
+    )
+    // tool routing and run selection read this copy
+    expect(sharedSubscriptionStatuses()['claude-code']).toMatchObject({
+      state: 'ready',
+      planName: 'max',
+    })
+    expectNoIdentity(sharedSubscriptionStatuses())
+    // the windows get it, through the sanitiser every preload uses
+    const sent = subscriptionStatusMapOf(await handlers.get('ai:subscription-statuses')!({}))
+    expect(sent['claude-code'].account).toBe(ACCOUNT)
+  })
+
+  it('the renderer sanitiser passes a valid account on and drops any other value', () => {
+    const ready = { provider: 'claude-code', state: 'ready', meteredAccepted: false }
+    expect(
+      subscriptionStatusMapOf({ 'claude-code': { ...ready, account: ACCOUNT } })['claude-code'],
+    ).toEqual({ ...ready, account: ACCOUNT })
+    for (const account of ['Acme Hagwon Seoul', `${ACCOUNT} (Acme Org)`, 7, { a: 1 }]) {
+      const read = subscriptionStatusMapOf({ 'claude-code': { ...ready, account } })
+      expect(read['claude-code']).toEqual(ready)
+      expect('account' in read['claude-code']).toBe(false)
+    }
+    // a state that names no login carries no account, whatever main sent
+    const signedOut = subscriptionStatusMapOf({
+      'claude-code': { ...ready, state: 'signed-out', account: ACCOUNT },
+    })
+    expect('account' in signedOut['claude-code']).toBe(false)
   })
 })

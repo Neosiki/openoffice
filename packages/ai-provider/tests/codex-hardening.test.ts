@@ -10,15 +10,20 @@ import type { SubscriptionProgram } from '../src/subscription/locate'
 import type { SubscriptionChildLike } from '../src/subscription/process'
 import { SUBSCRIPTION_STRIPPED_ENV_VARS } from '../src/subscription/env'
 import { codexAccountInfo, detectSubscriptionLogin } from '../src/subscription/status'
+import { subscriptionModelsOf } from '../src/subscription/contract'
+import { notifySubscriptionLoginChange } from '../src/subscription/launch'
+import { listSubscriptionModels } from '../src/subscription/models'
 import {
   chatCodexAppServer,
   codexAppServerLaunchArgs,
   codexAttachedMcpServers,
   codexMcpServerOverrides,
   codexRunError,
+  codexSubscriptionModels,
   codexSubscriptionUsage,
   codexThreadStartParams,
   listCodexModels,
+  listCodexSubscriptionModels,
   MAX_RPC_LINE_BYTES,
   readCodexAccount,
   setCodexAppServerRuntime,
@@ -574,9 +579,12 @@ describe('Codex account', () => {
       }),
     })
     // the plan name exists only in account/read, so it proves the bridge was asked
-    expect(detection).toMatchObject({ state: 'ready', planName: 'plus' })
+    expect(detection).toMatchObject({
+      state: 'ready',
+      planName: 'plus',
+      account: 'someone@example.com',
+    })
     expect(h.child().methods()).toContain('account/read')
-    expect(JSON.stringify(detection)).not.toContain('someone@example.com')
   })
 
   it('refuses to run when Codex is signed out', async () => {
@@ -1065,5 +1073,113 @@ describe('Codex default model', () => {
       provider: 'codex',
     })
     expect(h.child().methods()).not.toContain('model/list')
+  })
+})
+
+describe('Codex model list for the status', () => {
+  const LIST = {
+    data: [
+      { id: 'gpt-hidden', model: 'gpt-hidden', displayName: 'Hidden', hidden: true },
+      {
+        id: 'gpt-next-codex',
+        model: 'gpt-next-codex',
+        displayName: 'GPT-Next-Codex',
+        description: 'Latest agentic coding model',
+        isDefault: true,
+        supportedReasoningEfforts: [{ reasoningEffort: 'medium', description: 'Balanced' }],
+      },
+      { id: 'gpt-next', model: 'gpt-next-2026-09-01', displayName: 'GPT-Next', isDefault: false },
+      { model: 'gpt-mini' },
+      { id: '--flag', displayName: 'Not an id' },
+      'nonsense',
+    ],
+    nextCursor: null,
+  }
+
+  it('maps the entries Codex lists: id, display name, the concrete model, the default', () => {
+    expect(codexSubscriptionModels(LIST.data)).toEqual([
+      { id: 'gpt-next-codex', label: 'GPT-Next-Codex', isDefault: true },
+      { id: 'gpt-next', label: 'GPT-Next', resolved: 'gpt-next-2026-09-01' },
+      { id: 'gpt-mini', label: 'gpt-mini' },
+    ])
+    expect(codexSubscriptionModels([])).toEqual([])
+    expect(codexSubscriptionModels('nonsense')).toEqual([])
+  })
+
+  it('marks the first entry as the default when Codex flags none, as a run does', () => {
+    expect(
+      codexSubscriptionModels([
+        { id: 'gpt-a', displayName: 'A' },
+        { id: 'gpt-b', displayName: 'B' },
+      ]),
+    ).toEqual([
+      { id: 'gpt-a', label: 'A', isDefault: true },
+      { id: 'gpt-b', label: 'B' },
+    ])
+  })
+
+  it('reads the list from the running app-server, with no thread and no turn', async () => {
+    const h = harness({ 'model/list': () => LIST })
+    const models = await listCodexSubscriptionModels()
+    expect(models.map((model) => model.id)).toEqual(['gpt-next-codex', 'gpt-next', 'gpt-mini'])
+    const methods = h.child().methods()
+    expect(methods).toContain('model/list')
+    expect(methods).not.toContain('thread/start')
+    expect(methods).not.toContain('turn/start')
+    // the list passes the bounds every status goes through
+    expect(subscriptionModelsOf(models)).toEqual(models)
+  })
+
+  it('is what the status check asks for Codex models', async () => {
+    harness({ 'model/list': () => LIST })
+    const models = await listSubscriptionModels('codex')
+    expect(models?.[0]).toEqual({ id: 'gpt-next-codex', label: 'GPT-Next-Codex', isDefault: true })
+  })
+
+  it('a Codex too old to list its models gives no list', async () => {
+    harness()
+    await expect(listCodexSubscriptionModels()).rejects.toThrow()
+    expect(await listSubscriptionModels('codex')).toBeUndefined()
+  })
+})
+
+describe('Codex after a login or logout the app ran', () => {
+  it('ends an idle app-server, so the next request starts on the new login', async () => {
+    const h = harness()
+    await readCodexAccount(undefined)
+    expect(h.children).toHaveLength(1)
+    notifySubscriptionLoginChange('codex')
+    expect(h.treeKills).toEqual([h.children[0]])
+    await readCodexAccount(undefined)
+    expect(h.children).toHaveLength(2)
+  })
+
+  it('lets a run in flight finish before the process is ended', async () => {
+    let finishTurn: (() => void) | undefined
+    const h = harness({
+      'turn/start': (_params, child) => {
+        finishTurn = () => completedTurn(ANSWER).forEach((message) => child.send(message))
+        return { turn: { id: 't1' } }
+      },
+    })
+    const { cb, deltas } = callbacks()
+    const running = run(cb)
+    await vi.waitFor(() => expect(finishTurn).toBeDefined())
+    notifySubscriptionLoginChange('codex')
+    expect(h.treeKills).toEqual([])
+    finishTurn!()
+    await running
+    expect(deltas).toEqual(['hello'])
+    expect(h.treeKills).toEqual([h.children[0]])
+    // a request made meanwhile, or after, gets a process of its own
+    await readCodexAccount(undefined)
+    expect(h.children).toHaveLength(2)
+  })
+
+  it('leaves Codex alone when it was Claude that changed', async () => {
+    const h = harness()
+    await readCodexAccount(undefined)
+    notifySubscriptionLoginChange('claude-code')
+    expect(h.treeKills).toEqual([])
   })
 })
