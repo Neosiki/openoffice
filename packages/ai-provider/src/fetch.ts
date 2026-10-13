@@ -7,6 +7,7 @@
  * fails at the network layer, the request is retried once over the Chromium
  * stack. Renderers never inject one (their fetch already is Chromium's).
  */
+import { PRODUCT_NAME } from '@genoffice/i18n'
 
 type FetchLike = (url: string, init?: RequestInit) => Promise<Response>
 
@@ -22,7 +23,7 @@ export function setRescueFetch(fn: FetchLike | null): void {
  * clients to identify themselves and flags "broad" user agents). Main
  * processes refine the default with the app version.
  */
-export const AI_DEFAULT_USER_AGENT = 'GenOffice'
+export const AI_DEFAULT_USER_AGENT = PRODUCT_NAME
 
 let userAgent = AI_DEFAULT_USER_AGENT
 

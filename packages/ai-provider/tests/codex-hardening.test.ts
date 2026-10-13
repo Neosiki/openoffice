@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { EventEmitter } from 'node:events'
 import { PassThrough } from 'node:stream'
 import type { SpawnOptions } from 'node:child_process'
+import { PRODUCT_NAME, UPSTREAM_PRODUCT_NAME } from '@genoffice/i18n'
 import { AiRunError } from '../src/run-error'
 import type { StreamCallbacks } from '../src/protocols/shared'
 import type { AiSubscriptionUsage } from '../src/types'
@@ -225,6 +226,28 @@ describe('Codex app-server launch', () => {
     const names = Object.keys(options.env ?? {}).map((name) => name.toUpperCase())
     for (const name of SUBSCRIPTION_STRIPPED_ENV_VARS) expect(names).not.toContain(name)
     expect(Object.values(options.env ?? {})).not.toContain('secret-value')
+  })
+
+  it('introduces itself to Codex as this product, not as the project it is based on', async () => {
+    const h = harness()
+    await run(callbacks().cb)
+    const child = h.child()
+    const product = PRODUCT_NAME.toLowerCase()
+    expect(child.paramsOf('initialize')).toMatchObject({
+      clientInfo: { name: product, title: PRODUCT_NAME, version: '0.1.0' },
+    })
+    const thread = child.paramsOf('thread/start')!
+    expect(thread.serviceName).toBe(product)
+    expect(String(thread.baseInstructions)).toContain(PRODUCT_NAME)
+    const turn = child.paramsOf('turn/start')!
+    const sent = JSON.stringify([
+      child.paramsOf('initialize'),
+      thread.serviceName,
+      thread.baseInstructions,
+      turn.input,
+    ])
+    expect(sent).toContain(PRODUCT_NAME)
+    expect(sent.toLowerCase()).not.toContain(UPSTREAM_PRODUCT_NAME.toLowerCase())
   })
 
   it('switches off what the user configuration would bring into the run', () => {
