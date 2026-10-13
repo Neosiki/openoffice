@@ -71,12 +71,8 @@ export const zh = {
   // Home: font
   ribbonGroupFont: '字体',
   ribbonFontsSystem: '系统字体',
-  ribbonFontsDownloadable: '可下载字体',
   ribbonFontInstallLocal: '安装字体文件…',
-  ribbonFontDownloading: '下载中…',
-  ribbonFontDownloadFailed: '下载失败,点击重试',
   fontMissingBanner: '此文稿使用了未安装的字体:',
-  fontMissingDownloadAll: '全部下载',
   fontMissingDismiss: '忽略',
   ribbonGroupParagraph: '段落',
   ribbonCharSpacing: '字符间距',

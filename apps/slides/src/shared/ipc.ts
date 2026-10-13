@@ -11,8 +11,6 @@ import type { AiPanelPrefs } from '@genoffice/ui'
 import type { RenderSlide } from '@genoffice/pptx-render'
 import type { CustGeomPathCmd, SlideComment, SectionInfo } from '@genoffice/pptx-engine'
 import type { FontSizeStep } from '@genoffice/pptx-ops/font-size'
-// the font catalog's shape is the store's to declare, not a copy kept in step by hand
-import type { CatalogEntry as FontCatalogEntry } from '@genoffice/electron-utils/font-store'
 import type { LayoutSkeleton } from '../renderer/ai/layout-skeleton'
 import type { AiSettings, AiStreamChunk, AiStreamRequest } from '@genoffice/ai-provider'
 import type { AiToolCapabilities } from '@genoffice/ai-search'
@@ -1304,20 +1302,9 @@ export interface SlidesApi {
   >
   /** Single-face sfnt bytes for one private face (null = gone/unreadable) */
   privateFontData: (id: string) => Promise<ArrayBuffer | null>
-  /**
-   * Curated downloadable (OFL) font catalog with per-family install state and
-   * what each family would cost. Typed from the store that produces it rather
-   * than restated here: `ipcMain.handle` is untyped, so a drifted copy of this
-   * shape passes typecheck and fails at the point of use.
-   */
-  fontCatalog: () => Promise<FontCatalogEntry[]>
-  /** Download a catalog family into the user font store; layouts refresh via deck-changed */
-  fontDownload: (family: string) => Promise<{ ok: boolean; error?: string }>
   /** File picker → install local font files into the user font store */
   fontInstallLocal: () => Promise<{ families: string[] }>
-  /** Families this deck references that are missing locally but downloadable */
-  fontMissing: () => Promise<string[]>
-  /** The user font store changed (download/local install): re-sync private FontFaces */
+  /** The user font store changed (local install): re-sync private FontFaces */
   onFontsChanged: (handler: () => void) => () => void
   consumePendingOpen: (fitWidthPx: number) => Promise<OpenResult | null>
   /** Headless export mode: the PDF path this hidden renderer must export to, null in normal use */

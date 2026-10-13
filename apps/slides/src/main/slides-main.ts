@@ -276,13 +276,7 @@ import {
 import { registerAiIpc, registerSlidesOnlyAiIpc } from './ai-ipc'
 import { listPrivateFontFaces, getPrivateFontData, registerEmbeddedFonts } from './fonts'
 import { listMetafileFonts } from './metafile-fonts'
-import {
-  downloadFontFamily,
-  initFontStore,
-  installLocalFontFiles,
-  listFontCatalog,
-  missingCatalogFonts,
-} from './font-store'
+import { initFontStore, installLocalFontFiles } from './font-store'
 
 /** One slide, copied from any deck open in this process, waiting to be pasted into another. */
 let slideClipboard: { bundles: SlideBundle[]; pngs?: string[] } | null = null
@@ -1309,7 +1303,7 @@ export function registerSlidesIpc(): void {
   ipcMain.handle('slides:private-font-data', (_e, id: string) => getPrivateFontData(id))
 
   initFontStore()
-  // Fonts changed (download or local install): rebuild every open session with a fresh
+  // Fonts changed (local install): rebuild every open session with a fresh
   // registry and push the relaid-out slides + a re-sync ping to all attached windows.
   const afterFontsChanged = (): void => {
     resetFontMetrics()
@@ -1327,16 +1321,6 @@ export function registerSlidesIpc(): void {
     }
     for (const wc of webContents.getAllWebContents()) wc.send('slides:fonts-changed')
   }
-  ipcMain.handle('slides:font-catalog', () => listFontCatalog())
-  ipcMain.handle('slides:font-download', async (_e, family: string) => {
-    try {
-      await downloadFontFamily(family)
-      afterFontsChanged()
-      return { ok: true }
-    } catch (err) {
-      return { ok: false, error: err instanceof Error ? err.message : String(err) }
-    }
-  })
   ipcMain.handle('slides:font-install-local', async () => {
     const r = await showOpenDialogWithMemory(dialog, dialogParent(), {
       properties: ['openFile', 'multiSelections'],
@@ -1346,10 +1330,6 @@ export function registerSlidesIpc(): void {
     const families = installLocalFontFiles(r.filePaths)
     if (families.length) afterFontsChanged()
     return { families }
-  })
-  ipcMain.handle('slides:font-missing', (e) => {
-    const session = sessions.get(e.sender.id)
-    return session ? missingCatalogFonts(session.opened) : []
   })
 
   // Shared shim core: one undo step wrapping a transaction; on failure the step is

@@ -75,12 +75,8 @@ export const ja = {
   // Home: font
   ribbonGroupFont: 'フォント',
   ribbonFontsSystem: 'システムフォント',
-  ribbonFontsDownloadable: 'ダウンロード可能なフォント',
   ribbonFontInstallLocal: 'フォントファイルをインストール…',
-  ribbonFontDownloading: 'ダウンロード中…',
-  ribbonFontDownloadFailed: 'ダウンロード失敗 — クリックで再試行',
   fontMissingBanner: 'このプレゼンテーションには未インストールのフォントが使われています:',
-  fontMissingDownloadAll: 'すべてダウンロード',
   fontMissingDismiss: '閉じる',
   ribbonGroupParagraph: '段落',
   ribbonCharSpacing: '文字の間隔',
