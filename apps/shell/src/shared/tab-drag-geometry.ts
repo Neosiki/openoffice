@@ -73,12 +73,16 @@ export function pointInRect(x: number, y: number, rect: Rect): boolean {
  * the shell: the tab strip at the top of the shell window's content area,
  * grown by `slack` above and below.
  */
-export function dockBand(shellContentBounds: Rect, slack: number = DOCK_BAND_SLACK): Rect {
+export function dockBand(
+  shellContentBounds: Rect,
+  slack: number = DOCK_BAND_SLACK,
+  scale = 1,
+): Rect {
   return {
     x: shellContentBounds.x,
     y: shellContentBounds.y - slack,
     width: shellContentBounds.width,
-    height: TAB_STRIP_HEIGHT + 2 * slack,
+    height: tabStripHeight(scale) + 2 * slack,
   }
 }
 

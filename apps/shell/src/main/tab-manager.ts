@@ -148,10 +148,8 @@ export class TabManager {
     /** localized placeholder title for a tab that has no file yet */
     private readonly untitledTitleFor?: (kind: TabKind) => string,
     /**
-     * The live interface scale (genoffice#1913). A getter rather than a value so a
-     * change made from the View menu reaches the next layout without rebuilding
-     * this; the tab strip is scaled with it and the views sit below the scaled
-     * height. Defaults to 1 until the interface-scale feature is ported.
+     * The live interface scale (genoffice#1913). A getter rather than a value so a change
+     * made from the View menu reaches the next layout without rebuilding this.
      */
     private readonly uiScale: () => number = () => 1,
     /** fired whenever the split appears, changes or goes away (roles + memory) */
