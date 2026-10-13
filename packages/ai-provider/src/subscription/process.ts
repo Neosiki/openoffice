@@ -93,8 +93,11 @@ export function killProcessTree(
     // not ended first; it is ended directly only when taskkill cannot run.
     try {
       const spawn = options.spawn ?? nodeSpawn
-      const tool = windowsSystemTool(options.env ?? process.env, 'taskkill.exe')
+      const env = options.env ?? process.env
+      const tool = windowsSystemTool(env, 'taskkill.exe')
       const killer = spawn(tool, ['/PID', String(pid), '/T', '/F'], {
+        // not the folder the app was started in, which may be a document's
+        cwd: windowsSystemDir(env),
         stdio: 'ignore',
         windowsHide: true,
       })
