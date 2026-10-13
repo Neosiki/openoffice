@@ -2,11 +2,9 @@
 
 ## Einstellungen öffnen
 
-Die Kontenzeile unten links auf der Startseite öffnet den Einstellungsbereich (wenn Sie abgemeldet sind, steht dort „Anmelden“). Er hat sechs Abschnitte: Konto, KI-Modell, KI-Medien & Suche, Allgemein, Integrationen und Über.
+Die Zeile unten links auf der Startseite öffnet den Einstellungsbereich (solange keine KI verbunden ist, steht dort „KI verbinden“). Er hat fünf Abschnitte: Konto, KI, Allgemein, Integrationen und Über.
 
-![Einstellungen ▸ Allgemein, wo Sprache, Design, AutoSave und der Schalter für die Nutzungsstatistik liegen](img/settings-general.png)
-
-Die Modellkonfiguration hat einen eigenen Artikel; unter **KI-Medien & Suche** schalten Sie je nach Anbieter Bildgenerierung, Bildanalyse, Videoanalyse, Websuche und lokale Dateisuche ein.
+**Konto** zeigt, wie es um Ihre Claude- und Codex-Abonnements steht, und **Verbindungen verwalten** führt zum Abschnitt KI. Zur KI gibt es eigene Artikel: [Abonnement-Verbindung](help://subscription) und [KI-Modelle und Einstellungen](help://ai-models).
 
 ## Sprache
 
@@ -19,22 +17,24 @@ Hell / Dunkel / System folgen. „System folgen“ richtet sich nach dem Erschei
 
 ## Allgemein
 
-- **Anonyme Nutzungsstatistiken senden** — standardmäßig aktiviert. Verwendet Google Analytics 4 und sendet Ihre öffentliche IP-Adresse und Transportmetadaten; Dokumentinhalte und Dateinamen werden nie erhoben, und jedes Ereignis trägt nur einen Typ wie „eine .docx geöffnet“. Sie können das hier jederzeit abschalten.
 - **Position der KI-Seitenleiste** (links oder rechts), **Textgröße im KI-Bereich** und **Rechtschreibprüfung im KI-Chat**.
 - **KI-Panel in neuen Dokumenten öffnen** — aus, ein neues Dokument startet mit eingeklapptem Panel, einen Klick entfernt.
 - **Alle Dokumente automatisch speichern** schaltet AutoSave in jedem Editor standardmäßig ein; für ein einzelnes Fenster können Sie es weiterhin abschalten.
 - **Speicherort** mit der Schaltfläche **Ändern** und **Standard-App für Office-Dokumente**, um .docx / .xlsx / .pptx für GenOffice zu beanspruchen.
 
-## KI-Medien & Suche
+GenOffice erhebt und sendet keine Nutzungsstatistiken; deshalb gibt es dafür auch keinen Schalter.
 
-Keine Schalter — jede Fähigkeit wählt den Anbieter, der sie bedient, und Schlüssel und Basis-URL eines Anbieters werden einmal eingetragen und gemeinsam genutzt:
+## KI ▸ Erweitert
+
+Geschlossen, bis Sie den Bereich öffnen; die meisten brauchen ihn nie. Der Tab **KI-Modell** enthält API-Schlüssel und selbst betriebene Server für den Chat. Auf dem Tab **KI-Medien & Suche** wählt jede Fähigkeit den Anbieter, der sie bedient, und Schlüssel und Basis-URL eines Anbieters werden einmal eingetragen und gemeinsam genutzt:
 
 - **Websuche**, **Bildgenerierung**, **Bildanalyse** und **Videoanalyse**, jede mit Anbieter, Modell, Schlüssel und Basis-URL.
 - **Lokale Dateisuche** läuft auf diesem Rechner. Darunter ist **Jev-Such-Reranking** **standardmäßig aus**. Ein schaltet es ein, gehen die Auszüge der Top-20-Treffer — bis zu 1.200 Zeichen je Dokument, plus Datei- und Ordnernamen — an den von Ihnen gewählten Entscheidungs-Endpunkt (Jev über OpenRouter oder TypeSafe, Perplexity, Liquid AI d1, Cloudflare, ein lokales Modell oder eine eigene URL) und werden nach Relevanz neu geordnet. Aus bleibt alles auf dem Gerät.
+- **Automatische Anfragen dürfen ein Abonnement nutzen** ist **standardmäßig aus**. Der Schalter legt fest, ob eine Anfrage von der Kommandozeile oder von einem angebundenen Coding-Agenten Ihr Claude- oder Codex-Abonnement nutzen darf; siehe [Einen Coding-Agenten anbinden](help://mcp).
 
 ## Über
 
-- **Version**, der GitHub-Link des Projekts und eine Schaltfläche **Auf GitHub Stern geben**.
+- **Version**, die GitHub-Adresse des Projekts und eine Zeile, die das Open-Source-Projekt nennt, auf dem diese App basiert.
 - **Update-Kanal**: Stabil oder Beta. Eine Änderung wirkt sofort und prüft auf ein Update; eine Beta-Installation wird nicht auf Stabil zurückgestuft.
 
 ## Standard-App-Zuordnungen
@@ -46,24 +46,16 @@ Die Einstellungen können GenOffice als Programm für .docx / .xlsx / .pptx / .p
 - Hilfe ▸ Hinweise zu Drittanbietersoftware: das vollständige Verzeichnis der mitgelieferten Open-Source-Lizenzen.
 - Hilfe ▸ Nach Updates suchen: löst eine manuelle Prüfung aus; bei einer neueren Version werden Sie zur Installation aufgefordert.
 
-## Bei Genspark anmelden
-
-- Der Anmeldeeinstieg (Einstellungen oder Liste der Cloud-Projekte) nutzt ein **Gerätecode**-Verfahren: GenOffice zeigt einen Code und öffnet die Anmeldung im Browser; danach geht es automatisch weiter.
-- Die Anmeldung wird nur genutzt für: die Liste der Cloud-Projekte und die gehosteten Modelle von Genspark. Ohne sie funktionieren alle lokalen Funktionen und benutzerdefinierten Modelle weiter.
-- Das Abmelden ist in den Einstellungen ein Klick.
-
 ## MCP-Integration (für erfahrene Anwender / KI-Clients)
 
 **Integrationen** ist der Bereich, der GenOffice mit einem Coding-Agenten verbindet, und er hat einen eigenen Artikel: Einen Coding-Agenten anbinden. Die Kurzfassung — wählen Sie einen Weg (die Kommandozeile oder MCP), folgen Sie dem jeweiligen Abschnitt und starten Sie dann einen neuen Chat.
-
-![Einstellungen ▸ Integrationen: die drei Schritte, dann die Skill-Zeilen und die MCP-Optionen](img/settings-integrations.png)
 
 Unter **Lokaler HTTP-Server** kann die App den Server auch selbst betreiben — ein Schalter zum Aktivieren und ein Port —, während **Erweitert** die Zustandsprüfung-URL und die Protokolldatei hinzufügt, statt ihn dem Assistenten zu überlassen. Er lauscht nur auf localhost.
 
 ## Spickzettel für die Kommandozeile
 
-| Befehl             | Was er bewirkt             |
-| ------------------ | -------------------------- |
-| `genoffice <file>` | eine Datei öffnen          |
-| `genoffice mcp`    | lokalen MCP-Server starten |
-| `genoffice --help` | alle Befehle und Optionen  |
+| Befehl              | Was er bewirkt             |
+| ------------------- | -------------------------- |
+| `ieumoffice <file>` | eine Datei öffnen          |
+| `ieumoffice mcp`    | lokalen MCP-Server starten |
+| `ieumoffice --help` | alle Befehle und Optionen  |

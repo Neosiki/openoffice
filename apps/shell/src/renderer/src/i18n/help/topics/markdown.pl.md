@@ -13,8 +13,6 @@ Edytor Markdown otwiera .md / .markdown — oraz .txt / .json, od razu w widoku 
 
 Jeden rząd przycisków nad edytorem (najedź, aby zobaczyć opisy):
 
-![Pasek narzędzi Markdown](img/md-toolbar.png)
-
 - **Plik i historia**: Zapisz, Zapisz jako…, Cofnij, Ponów, Znajdź; przełącznik **Autozapisu** po prawej zapisuje zmiany na dysku w określonych odstępach czasu.
 - **Przycisk AI**: otwiera panel AI; obok są ustawienia wstępne przepisz / rozwiń / przetłumacz.
 - **Styl akapitu** (lista rozwijana): przełączanie między tekstem głównym a poziomami nagłówków.

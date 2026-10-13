@@ -13,8 +13,6 @@ O editor Markdown abre .md / .markdown — e .txt / .json, direto na visão de c
 
 Uma fila de botões por cima do editor (passe o cursor para ver as dicas):
 
-![A barra de ferramentas do Markdown](img/md-toolbar.png)
-
 - **Ficheiro e histórico**: Salvar, Salvar Como…, Desfazer, Refazer, Localizar; o interruptor de **Salvamento automático** à direita grava as alterações periodicamente no disco.
 - **Botão de IA**: abre o painel de IA; ao lado ficam as opções de reescrever / desenvolver / traduzir.
 - **Estilo de parágrafo** (menu suspenso): alterna entre o texto do corpo e os vários níveis de título.

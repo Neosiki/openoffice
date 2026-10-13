@@ -13,8 +13,6 @@ De Markdown-editor opent .md / .markdown — en .txt / .json, rechtstreeks in de
 
 Eén rij knoppen boven de editor (zweef voor tooltips):
 
-![De Markdown-werkbalk](img/md-toolbar.png)
-
 - **Bestand en geschiedenis**: Opslaan, Opslaan als…, Ongedaan maken, Opnieuw, Zoeken; de schakelaar **Automatisch opslaan** rechts schrijft wijzigingen op een timer naar schijf.
 - **AI-knop**: opent het AI-paneel; ernaast staan de voorinstellingen herschrijven / uitbreiden / vertalen.
 - **Alineastijl** (keuzelijst): wisselen tussen bodytekst en de verschillende kopniveaus.

@@ -15,29 +15,27 @@ GenOffice는 Model Context Protocol을 말하므로, 코딩 에이전트가 앱�
 같은 일을 터미널에서도 할 수 있습니다. 이것이 고급 경로이고, 패널이 찾지 못하는 곳에 에이전트가 있을 때 쓰는 방법입니다.
 
 ```sh
-genoffice mcp install all
+ieumoffice mcp install all
 ```
 
-이 컴퓨터에 있는 코딩 에이전트를 찾아, 각자의 설정에 stdio 서버 항목을 씁니다. 그 파일의 나머지는 있는 그대로 둡니다.
+이 컴퓨터에 있는 코딩 에이전트를 찾아, 각자의 설정에 stdio 서버 항목을 씁니다. 그 파일의 나머지는 있는 그대로 둡니다. 항목 이름은 `ieumoffice`입니다. Claude Code에 손으로 등록한다면 `claude mcp add --transport stdio ieumoffice -- ieumoffice mcp`가 같은 일을 합니다.
 
 ```sh
-genoffice mcp list             # where each agent stands
-genoffice mcp install cursor    # just one
-genoffice mcp uninstall cursor  # take it back out
+ieumoffice mcp list             # where each agent stands
+ieumoffice mcp install cursor    # just one
+ieumoffice mcp uninstall cursor  # take it back out
 ```
 
 평소와 다른 곳에 설치한 에이전트에는 `--dir <path>`를 줍니다. `--force`는 이미 있는 항목을 다시 씁니다.
 
-서버가 받는 것은 한 화면에 다 들어 있습니다. 등록, 제거, 목록 형태, HTTP로 서비스하기, 그리고 두 스키마 플래그까지.
-
-![genoffice mcp --help의 실제 출력: install·uninstall·list 형태와 --http, --host, --token, --compact-schemas, --dir, --force 옵션](img/mcp.png)
+서버가 받는 것은 `ieumoffice mcp --help` 한 화면에 다 들어 있습니다. 등록, 제거, 목록 형태, HTTP로 서비스하기, 그리고 두 스키마 플래그까지.
 
 ## 어시스턴트 없이 실행하기
 
 다른 컴퓨터에 있는 클라이언트라면 HTTP로 내보내세요.
 
 ```sh
-genoffice mcp --http 8765 --token <secret>
+ieumoffice mcp --http 8765 --token <secret>
 ```
 
 `--host <addr>`는 어디에서 받을지를 바꿉니다. 클라이언트에는 같은 토큰을 넘기세요.
@@ -52,21 +50,40 @@ HTTP로도 파일이 오갑니다. `PUT /files/<name>`으로 하나를 올리고
 - **`render`** — 한 페이지에 한 장씩 PNG를, 앱의 렌더러가 배치한 그대로 내보내므로 에이전트가 슬라이드를 추측하지 않고 볼 수 있습니다.
 - **`pdf`** — 앱 프로세스 없이 PDF의 텍스트 층을 한 페이지씩 읽습니다.
 - **`info`** — 메타데이터와 구조 요약으로, 낯선 파일에 대한 첫 호출로는 거의 항상 가장 쌉니다.
-- **`search`, `image`, `media`** — 앱에 설정된 제공자들이라 에이전트가 따로 키를 준비할 필요가 없습니다.
+- **`search`, `image`, `media`** — 웹·이미지 검색, 이미지 생성, 미디어 분석을 앱에 설정해 둔 것으로 처리하므로 에이전트가 따로 키를 준비할 필요가 없습니다. 무엇을 쓸 수 있는지는 다음 절에 있습니다.
 - **`merge`** — `{{key}}` 템플릿을 채웁니다.
+
+## 검색·이미지·미디어: 에이전트가 쓸 수 있는 것
+
+`ieumoffice` 명령이나 MCP 클라이언트에서 들어온 요청은 사용자가 앱 화면에서 직접 시킨 것이 아닙니다. 그래서 GenOffice는 이런 요청을 조심해서 다룹니다.
+
+- **검색**은 언제나 되고, 기본은 무료입니다. 검색 제공업체의 키는 골라 둔 경우에만 씁니다.
+- **그림 만들기**에는 이미지 제공업체의 키가 필요합니다. 이 버전에서는 구독으로 이미지를 만들지 않습니다.
+- **그림 설명하기**는 설정해 둔 키 방식 제공업체가 있으면 그것을 씁니다. Claude나 Codex 구독은 **허용하기 전에는 쓰지 않습니다**.
+- **동영상과 음성**에는 동영상을 지원하는 키 방식 제공업체가 필요합니다.
+
+구독을 쓰게 하려면 설정 ▸ AI ▸ **고급**에서 **자동 호출에 구독 사용**을 켭니다. 켜기 전에 경고가 먼저 나옵니다. "프로그램이 자동으로 구독을 쓰는 것은 두 회사가 권장하지 않으며, 계정에 제한이 걸릴 수 있습니다." **그래도 켜기**를 눌러야 켜집니다.
+
+켜 둔 뒤에도 다음은 지켜집니다.
+
+- 요청은 한 번에 하나씩 처리합니다. 나머지는 차례를 기다립니다.
+- 구독을 쓰는 요청은 한 시간에 20건까지만 처리합니다. 명령을 따로따로 실행해도, MCP로 호출해도 모두 합쳐서 셉니다. 넘으면 요청은 실패하고, 언제부터 다시 되는지 알려 주는 오류가 돌아옵니다.
+- **그래도 사용**으로 허용해 둔 "쓴 만큼 요금이 나가는 로그인"은 여기서 구독으로 치지 않습니다. 키와 똑같이 다룹니다. 그것을 사용할 AI로 골라 두었다면 그림 설명 요청은 스위치와 상관없이, 시간당 제한 없이 그 로그인으로 처리되고, 요청마다 요금이 나갑니다.
+
+스위치가 꺼져 있고 설정해 둔 키도 없으면, 도구는 그 기능을 쓸 수 없다고 답하면서 이 설정의 위치를 알려 줍니다. 에이전트는 `capabilities` 도구로 미리 확인할 수 있습니다. [명령줄과 에이전트](help://cli)를 보세요.
 
 ## 스키마와 더 작은 예산
 
-`apply`와 `create`는 `ops`, `cells`, `data` 매개변수를 op마다 타입이 붙은 스키마로 알립니다. 그 스키마는 `genoffice guide <domain> --json`에서 만들어집니다. 정확하지만 크지는 않습니다. 컨텍스트 창이 좁은 클라이언트는 대신 단순 배열을 요청할 수 있습니다:
+`apply`와 `create`는 `ops`, `cells`, `data` 매개변수를 op마다 타입이 붙은 스키마로 알립니다. 그 스키마는 `ieumoffice guide <domain> --json`에서 만들어집니다. 정확하지만 크지는 않습니다. 컨텍스트 창이 좁은 클라이언트는 대신 단순 배열을 요청할 수 있습니다:
 
 ```sh
-genoffice mcp --compact-schemas
-GENOFFICE_MCP_COMPACT_SCHEMAS=1 genoffice mcp
+ieumoffice mcp --compact-schemas
+GENOFFICE_MCP_COMPACT_SCHEMAS=1 ieumoffice mcp
 ```
 
 ## 스킬이 필요한 이유
 
-op 어휘를 모르는 에이전트는 추측합니다. 스킬에는 레퍼런스와 디자인 가이드가 들어 있습니다. `genoffice guide`가 출력하는 것과 같은 내용이라, 어시스턴트가 실제로 읽어 본 스펙에 맞춰 op를 쓰게 됩니다. 위 패널에서 설치하거나, 터미널의 `genoffice skill`로 넣으세요.
+op 어휘를 모르는 에이전트는 추측합니다. 스킬에는 레퍼런스와 디자인 가이드가 들어 있습니다. `ieumoffice guide`가 출력하는 것과 같은 내용이라, 어시스턴트가 실제로 읽어 본 스펙에 맞춰 op를 쓰게 됩니다. 위 패널에서 설치하거나, 터미널의 `ieumoffice skill`로 넣으세요.
 
 ## 앱 안에서 무엇에 닿을 수 있나
 

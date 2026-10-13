@@ -38,9 +38,7 @@ Sei strumenti: **inchiostro, rettangolo, ellisse, freccia, nota**, più il **riq
 - **L'oscuramento, il flusso completo** (per nascondere una riga di testo):
 
   1. Scheda Annota ▸ fai clic su **Oscura area** (lo strumento si attiva).
-  2. **Trascina un riquadro sul contenuto** — viene coperto da un segno tratteggiato e nella barra degli strumenti compaiono i pulsanti **cancella contrassegni / applica oscuramenti**:
-
-  ![La pagina dopo aver segnato un'oscuramento](img/pdf-redact.png)
+  2. **Trascina un riquadro sul contenuto** — viene coperto da un segno tratteggiato e nella barra degli strumenti compaiono i pulsanti **cancella contrassegni / applica oscuramenti**.
 
   3. Fai clic su **Applica oscuramenti** e conferma — il risultato è una copia di lavoro in cui il testo e le immagini coperti vengono rimossi fisicamente (non semplicemente coperti) e l'operazione non è annullabile; il documento originale resta intatto.
 

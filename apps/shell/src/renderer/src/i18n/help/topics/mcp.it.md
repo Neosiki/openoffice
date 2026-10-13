@@ -15,29 +15,27 @@ GenOffice parla il Model Context Protocol, così un agente di programmazione pu�
 La stessa cosa da un terminale: questo è il percorso avanzato, quello da usare quando l'agente si trova dove il pannello non può cercarlo:
 
 ```sh
-genoffice mcp install all
+ieumoffice mcp install all
 ```
 
-Trova gli agenti di programmazione su questa macchina e scrive la voce del server stdio nella configurazione di ciascuno, lasciando intatto tutto il resto del file.
+Trova gli agenti di programmazione su questa macchina e scrive la voce del server stdio nella configurazione di ciascuno, lasciando intatto tutto il resto del file. La voce si chiama `ieumoffice`. Fatta a mano per Claude Code, la stessa registrazione è `claude mcp add --transport stdio ieumoffice -- ieumoffice mcp`.
 
 ```sh
-genoffice mcp list             # where each agent stands
-genoffice mcp install cursor    # just one
-genoffice mcp uninstall cursor  # take it back out
+ieumoffice mcp list             # where each agent stands
+ieumoffice mcp install cursor    # just one
+ieumoffice mcp uninstall cursor  # take it back out
 ```
 
 Un agente installato in una posizione non convenzionale richiede `--dir <path>`; `--force` riscrive una voce già presente.
 
-Tutto ciò che il server accetta sta su una sola schermata: le forme per installare, rimuovere e elencare, l'erogazione via HTTP e le due opzioni sugli schemi:
-
-![L'output reale di genoffice mcp --help: le forme install, uninstall e list, con le opzioni --http, --host, --token, --compact-schemas, --dir e --force](img/mcp.png)
+`ieumoffice mcp --help` mette su una sola schermata tutto ciò che il server accetta: le forme per installare, rimuovere e elencare, l'erogazione via HTTP e le due opzioni sugli schemi.
 
 ## Eseguirlo senza un assistente
 
 Per un client su un'altra macchina, pubblicalo via HTTP:
 
 ```sh
-genoffice mcp --http 8765 --token <secret>
+ieumoffice mcp --http 8765 --token <secret>
 ```
 
 `--host <addr>` cambia l'indirizzo su cui è in ascolto. Passa lo stesso token al client.
@@ -52,21 +50,40 @@ Ogni comando è uno strumento. Quelli più interessanti:
 - **`render`** — un PNG per pagina, impaginato dal renderer dell'app, così l'agente può guardare una slide invece di indovinarla.
 - **`pdf`** — il livello di testo di un PDF, pagina per pagina, senza processi dell'app.
 - **`info`** — metadati e un riepilogo della struttura, di solito la chiamata più economica su un file non noto.
-- **`search`, `image`, `media`** — i provider configurati nell'app, così l'agente non ha bisogno delle proprie chiavi.
+- **`search`, `image`, `media`** — ricerca web e di immagini, generazione di immagini e analisi dei media tramite ciò che è configurato nell'app, così l'agente non ha bisogno delle proprie chiavi. La sezione successiva dice che cosa possono usare.
 - **`merge`** — compila un modello `{{key}}`.
+
+## Ricerca, immagini e media: che cosa può usare un agente
+
+Una richiesta che arriva dal comando `ieumoffice` o da un client MCP non l'hai digitata tu nell'app, quindi GenOffice la tratta con cautela.
+
+- **La ricerca** funziona sempre ed è gratuita per impostazione predefinita. La chiave di un provider di ricerca viene usata solo se ne hai selezionata una.
+- **Generare un'immagine** richiede la chiave di un provider di immagini. In questa versione un abbonamento non genera immagini.
+- **Descrivere un'immagine** usa un provider con chiave quando ce n'è uno configurato. Il tuo abbonamento Claude o Codex **non viene usato a meno che tu non lo consenta**.
+- **Video e audio** richiedono un provider con chiave che supporta i video.
+
+Per consentire l'uso dell'abbonamento, apri Impostazioni ▸ IA ▸ **Avanzate** e attiva **Consenti alle richieste automatiche di usare un abbonamento**. Prima compare un avviso — «Nessuna delle due aziende consiglia di lasciare che un programma usi automaticamente il tuo abbonamento, e il tuo account potrebbe subire limitazioni.» — e l'interruttore si attiva solo dopo **Attiva comunque**.
+
+Anche con l'interruttore attivo:
+
+- Le richieste vengono gestite una alla volta. Le altre aspettano il proprio turno.
+- Vengono gestite al massimo 20 richieste con abbonamento all'ora. Il conteggio è comune a tutte le esecuzioni del comando e a tutte le chiamate MCP. Oltre questa soglia, la richiesta fallisce con un errore che dice quando le richieste tornano possibili.
+- Un accesso a consumo che hai consentito con **Usa comunque** qui non conta come abbonamento. Viene trattato come una chiave: se lo hai scelto come IA da usare, le descrizioni di immagini passano da lì qualunque cosa dica l'interruttore, senza il limite orario, e ognuna viene addebitata.
+
+Con l'interruttore disattivato e nessuna chiave configurata, lo strumento risponde che la funzione non è disponibile e indica questa impostazione. Un agente può controllare prima con lo strumento `capabilities`; vedi [Riga di comando e agenti](help://cli).
 
 ## Schemi e un budget più piccolo
 
-`apply` e `create` annunciano i loro parametri `ops`, `cells` e `data` con lo schema tipizzato per ogni op, generato da `genoffice guide <domain> --json`. È preciso e non è piccolo. Un client con una finestra di contesto ridotta può chiedere invece semplici array:
+`apply` e `create` annunciano i loro parametri `ops`, `cells` e `data` con lo schema tipizzato per ogni op, generato da `ieumoffice guide <domain> --json`. È preciso e non è piccolo. Un client con una finestra di contesto ridotta può chiedere invece semplici array:
 
 ```sh
-genoffice mcp --compact-schemas
-GENOFFICE_MCP_COMPACT_SCHEMAS=1 genoffice mcp
+ieumoffice mcp --compact-schemas
+GENOFFICE_MCP_COMPACT_SCHEMAS=1 ieumoffice mcp
 ```
 
 ## Perché la skill
 
-Un agente che non conosce il vocabolario delle op indovinerà. La skill porta con sé il riferimento e le guide di progettazione — lo stesso materiale che stampa `genoffice guide` —, così l'assistente scrive op di cui ha davvero letto la specifica. Installala dal pannello qui sopra, oppure con `genoffice skill` da un terminale.
+Un agente che non conosce il vocabolario delle op indovinerà. La skill porta con sé il riferimento e le guide di progettazione — lo stesso materiale che stampa `ieumoffice guide` —, così l'assistente scrive op di cui ha davvero letto la specifica. Installala dal pannello qui sopra, oppure con `ieumoffice skill` da un terminale.
 
 ## Che cosa raggiunge nell'app
 

@@ -13,8 +13,6 @@ Penyunting Markdown membuka .md / .markdown — dan .txt / .json, terus ke papar
 
 Satu baris butang di atas editor (halakan penuding ke atasnya untuk melihat tooltip):
 
-![Bar alat Markdown](img/md-toolbar.png)
-
 - **Fail dan sejarah**: Simpan, Simpan Sebagai, Buat Asal, Buat Semula, dan Cari. Togol **Autosimpan** di sebelah kanan menulis perubahan ke cakera secara berkala.
 - **Butang AI** membuka panel AI, dan bersetunya terdapat tetapan awal untuk menulis semula, melanjutkan, dan menterjemah.
 - **Gaya perenggan** dalam senarai lungsur membolehkan anda bertukar antara teks biasa dan pelbagai tahap tajuk.

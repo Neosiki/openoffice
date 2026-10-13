@@ -4,13 +4,18 @@ Ogni editor può richiamare il pannello IA: seleziona qualcosa, dai un'istruzion
 
 ## Come aprirlo e usarlo
 
-![Il pannello IA in Docs](img/ai-panel.png)
-
+- Il pannello ha bisogno di un'IA collegata. Se non ce n'è nessuna, mostra le schede di collegamento invece di un errore; vedi [Connessione con abbonamento](help://subscription).
 - Punti d'ingresso: il **pulsante AI** nella barra multifunzione di ogni editor, **Chiedi all'IA** nei menu contestuali oppure Chiedi all'IA sulla barra di annotazione.
 - Descrivi l'attività in linguaggio naturale (riscrivi questo / trasforma questa colonna in percentuali / riorganizza l'impaginazione di questa pagina...) e premi Invio.
 - Le risposte vengono renderizzate **in streaming**; quando l'IA ha bisogno di strumenti (leggere il documento, modificarlo) li usa e prosegue fino alla fine.
 - **Interrompi**: interrompe il turno in corso in qualsiasi momento.
 - **Coda**: mentre arriva una risposta, Invio mette in coda il messaggio invece di scartarlo — una striscia sopra il campo di input li conta; aprila per modificare, rimuovere, riordinare, sospendere o svuotare. Il messaggio successivo parte da solo a fine turno; Esc ferma comunque il turno.
+
+## Quale IA risponde
+
+- L'elenco dei modelli in fondo al pannello mostra l'IA in uso e ti permette di sceglierne un'altra: prima i tuoi abbonamenti, poi i provider con chiave che hai configurato.
+- Quando hai usato l'80% o più del limite di un abbonamento, nel pannello compare una riga come «85% usato · si azzera alle 15:00».
+- Se una richiesta viene interrotta — il limite è esaurito, o l'accesso è scaduto — il pannello dice perché e non passa da solo a un'altra IA. Quando l'altro tuo abbonamento è collegato, un pulsante **Continua con …** lo propone.
 
 ## Cosa sa fare
 
@@ -36,5 +41,6 @@ Ogni editor può richiamare il pannello IA: seleziona qualcosa, dai un'istruzion
 
 ## Privacy
 
-- Le istruzioni e il contenuto del documento pertinente vengono inviati al **servizio modello che hai configurato** (Genspark ospitato o un endpoint personalizzato, capitolo successivo); senza configurazione non viene inviato nulla.
-- I file locali non vengono caricati da nessun'altra parte; le chiavi BYOK sono memorizzate nel file delle impostazioni dell'app su questa macchina e inviate solo nelle intestazioni delle richieste.
+- Le istruzioni e il contenuto del documento pertinente vengono inviati all'**IA che stai usando**: ad Anthropic o a OpenAI con il tuo account quando usi un abbonamento, oppure al provider di cui hai inserito la chiave. Se nessuna IA è collegata, non viene inviato nulla.
+- L'uso dei contenuti di un abbonamento per addestrare l'IA dipende dalle impostazioni del tuo account presso quell'azienda.
+- I file locali non vengono caricati da nessun'altra parte; le chiavi API sono memorizzate nel file delle impostazioni dell'app su questa macchina e inviate solo nelle intestazioni delle richieste.

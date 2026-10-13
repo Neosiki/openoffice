@@ -38,9 +38,7 @@ Seis herramientas: **Dibujar, Rectángulo, Elipse, Flecha, Nota**, más **Censur
 - **La censura, el procedimiento completo** (para ocultar una línea de texto):
 
   1. Pestaña Anotar ▸ haga clic en **Censurar área** (la herramienta se activa).
-  2. **Arrastre un rectángulo sobre el contenido**: queda cubierto por una marca rayada y la barra de herramientas gana los botones **borrar marcas / aplicar censura**:
-
-  ![La página después de marcar una censura](img/pdf-redact.png)
+  2. **Arrastre un rectángulo sobre el contenido**: queda cubierto por una marca rayada y la barra de herramientas gana los botones **borrar marcas / aplicar censura**.
 
   3. Haga clic en **Aplicar censura** y confirme: el resultado es una copia de trabajo en la que el texto y las imágenes cubiertos se han eliminado físicamente (no solo ocultos) y no se puede deshacer; el documento original queda intacto.
 

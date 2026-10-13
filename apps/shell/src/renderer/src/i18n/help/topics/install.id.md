@@ -1,67 +1,37 @@
 # Memasang GenOffice
 
-Setiap build dipublikasikan di [halaman Rilis](https://github.com/genspark-ai/genoffice/releases/latest). Semuanya berasal dari `main`; installer untuk macOS dan Windows sudah ditandatangani.
+Setiap versi dipublikasikan di [halaman Rilis](https://github.com/pblsketch/openoffice/releases/latest) proyek ini di GitHub. Versi ini dirilis untuk Windows.
 
 ## Pilih berkas untuk komputer Anda
 
-| Platform                             | Kebutuhan                                             | Berkas                 |
-| ------------------------------------ | ----------------------------------------------------- | ---------------------- |
-| **macOS** — Apple Silicon            | macOS 11+                                             | `.dmg` (arm64)         |
-| **macOS** — Intel                    | macOS 11+                                             | `.dmg` (x64)           |
-| **Windows** — kebanyakan PC          | Windows 10+, Intel/AMD                                | installer `-x64.exe`   |
-| **Windows** di Arm                   | Windows 11 di Arm (Snapdragon X dan sejenisnya)       | installer `-arm64.exe` |
-| **Linux** — Debian / Ubuntu          | x86_64, glibc 2.34+ (Ubuntu 22.04 atau lebih baru)    | `.deb`                 |
-| **Linux** — Fedora / RHEL / openSUSE | x86_64, glibc 2.34+ (Fedora 35+, RHEL 9+, Leap 15.6+) | `.rpm`                 |
-| **Linux** — lainnya                  | x86_64, glibc 2.34+, FUSE 2                           | `.AppImage`            |
+| Platform    | Kebutuhan                                    | Berkas                          |
+| ----------- | -------------------------------------------- | ------------------------------- |
+| **Windows** | Windows 10 atau lebih baru, Intel/AMD 64-bit | `GenOffice-Setup-<version>.exe` |
 
 Versi lama tetap ada di halaman Rilis.
 
-## Di macOS
-
-Buka `.dmg` lalu seret **GenOffice** ke Applications. Pada build Intel, peluncuran pertama meminta Anda mengonfirmasi pembukaan: klik kanan aplikasinya di Applications ▸ Buka. Itu Gatekeeper bertemu citra disk yang tampak tidak ditandatangani, bukan unduhan yang rusak.
-
 ## Di Windows
 
-Jalankan installer `.exe`. Ia menaruh GenOffice di menu Start dan mendaftarkan `.docx`, `.xlsx`, `.pptx`, `.pdf` dan sejenisnya sehingga klik ganda pada berkas langsung membukanya.
+1. Unduh `GenOffice-Setup-<version>.exe` dari halaman Rilis.
+2. Jalankan. Installer ini tidak ditandatangani secara digital, sehingga Windows mungkin lebih dulu menampilkan jendela biru "Windows melindungi PC Anda". Pilih **Info selengkapnya**, lalu **Tetap jalankan**. Kata-kata persisnya bergantung pada versi Windows Anda.
+3. Ikuti installer sampai selesai.
 
-## Di Linux
+Installer menaruh GenOffice di menu Start dan mendaftarkan `.docx`, `.xlsx`, `.pptx`, `.pdf` dan sejenisnya sehingga klik ganda pada berkas langsung membukanya.
 
-**Debian / Ubuntu**
+Karena installer tidak ditandatangani, jalankan hanya installer yang Anda unduh dari halaman Rilis di atas.
 
-```sh
-sudo apt install ./genoffice_<version>_amd64.deb
-```
+## Pembaruan
 
-**Fedora / RHEL / openSUSE**
-
-```sh
-sudo dnf install ./genoffice-<version>.x86_64.rpm     # Fedora / RHEL family
-sudo zypper install ./genoffice-<version>.x86_64.rpm  # openSUSE
-```
-
-**AppImage** — berjalan di mana pun diletakkan, tanpa langkah pemasangan:
-
-```sh
-chmod +x GenOffice-<version>.AppImage
-./GenOffice-<version>.AppImage
-```
-
-Ia membutuhkan runtime FUSE 2. Jika Anda lebih suka tidak memasangnya, jalankan dengan `--appimage-extract-and-run` dan sandbox tetap berjalan dari direktori hasil ekstrak.
+- GenOffice mencari versi yang lebih baru di halaman Rilis GitHub yang sama. Ketika ada yang diterbitkan, **Pengaturan ▸ Tentang** menawarkannya: tekan **Perbarui ke …**, tunggu unduhannya, lalu tekan **Mulai ulang & instal**.
+- **Bantuan ▸ Periksa Pembaruan…** memeriksa kapan pun Anda minta.
+- Ketika pemeriksaan gagal — tidak ada jaringan, atau belum ada yang diterbitkan — tidak terjadi apa-apa, dan aplikasi tetap berjalan seperti sebelumnya.
+- **Saluran Pembaruan**, juga di Pengaturan ▸ Tentang, berisi Stabil atau Beta. Mengubahnya langsung berlaku dan memeriksa pembaruan; ini tidak akan menurunkan instalasi Beta kembali ke Stabil.
+- Pembaruan juga tidak ditandatangani secara digital. Sebelum memasangnya, aplikasi mencocokkan berkas yang diunduh dengan checksum yang diterbitkan bersama rilis itu.
 
 ## Build yang sedang Anda jalankan
 
-**Pengaturan ▸ Tentang** adalah tempat aplikasi melaporkan build yang Anda pakai, kanal yang diikutinya, dan letak proyeknya. Ketika build yang lebih baru diterbitkan di kanal itu, panel yang sama menawarkan pembaruan; instalasi Flatpak, Nix, atau Docker tidak, karena semuanya digantikan oleh alat yang memasang mereka di sana.
-
-![Pengaturan ▸ Tentang, menampilkan versi terpasang, kanal pembaruan yang diikuti aplikasi, dan tautan GitHub proyek](img/install.png)
-
-## Tiga jalur lain
-
-Ketiganya membungkus artefak yang sudah diterbitkan, bukan membangun ulang aplikasinya, sehingga selalu mengikuti biner resmi.
-
-- **Flatpak** — memasang `.deb` lewat mekanisme `extra-data` milik Flatpak dan menjalankannya di bawah Zypak, yang menyesuaikan sandbox bawaan Electron. Pohon `/app` bersifat hanya-baca, jadi pembaruan lewat Flatpak, bukan lewat dialog pembaruan di dalam aplikasi.
-- **Nix** — ekspresi paket yang bisa Anda build dari salinan lokal repositori dengan `nix-build packaging/nix`; lihat `packaging/nix`.
-- **Docker** — citra konversi massal tanpa antarmuka (`packaging/docker`). Ia mengonversi seluruh pohon dokumen Office, Markdown, dan HTML ke PDF lewat jalur ekspor milik aplikasi itu sendiri, sehingga hasilnya sama dengan yang dihasilkan File ▸ Ekspor. Ini utilitas baris perintah, bukan server.
+**Pengaturan ▸ Tentang** adalah tempat aplikasi melaporkan versi yang Anda pakai, saluran yang diikutinya, dan letak proyeknya. Di sana juga disebutkan proyek sumber terbuka yang menjadi dasar aplikasi ini.
 
 ## Baris perintahnya sudah ikut
 
-Setiap pemasangan membawa perintah `genoffice` yang berbicara dengan mesin yang sama dengan jendela, sehingga keduanya tidak pernah berbeda pendapat tentang sebuah berkas. Di macOS dan Windows perintahnya berada di dalam bundel aplikasi; `genoffice install-cli` menaruhnya di `PATH` Anda. Lihat **Perintah baris perintah dan agen** untuk mengetahui apa saja yang dapat dilaukannya.
+Setiap pemasangan membawa perintah `ieumoffice` yang berbicara dengan mesin yang sama dengan jendela, sehingga keduanya tidak pernah berbeda pendapat tentang sebuah berkas. `ieumoffice install-cli` menaruhnya di `PATH` Anda. Lihat [Baris perintah dan agen](help://cli) untuk mengetahui apa saja yang dapat dilakukannya.

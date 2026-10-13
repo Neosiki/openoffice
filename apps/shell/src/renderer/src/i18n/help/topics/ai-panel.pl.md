@@ -4,13 +4,18 @@ Każdy edytor może przywołać panel AI: zaznacz coś, wydaj polecenie i obserw
 
 ## Otwieranie i używanie
 
-![Panel AI w Docs](img/ai-panel.png)
-
+- Panel wymaga połączonego AI. Gdy żadne nie jest połączone, zamiast błędu pokazuje karty połączenia; zobacz [Połączenie z subskrypcją](help://subscription).
 - Wejścia: **przycisk AI** na wstążce każdego edytora, **Zapytaj AI** w menu kontekstowych albo Zapytaj AI na pasku oznaczeń.
 - Opisz zadanie zwykłymi słowami (przepisz to / zamień tę kolumnę na procenty / ułóż tę stronę od nowa...) i naciśnij Enter.
 - Odpowiedzi są renderowane **strumieniowo**; gdy AI potrzebuje narzędzi (odczytać dokument, go zmienić), wykonuje je i kontynuuje aż do końca.
 - **Zatrzymaj**: w każdej chwili przerywa bieżącą turę.
 - **Kolejka**: gdy odpowiedź się generuje, Enter odkłada wiadomość do kolejki zamiast ją porzucać — pasek nad polem ввода je liczy; rozwiń, aby edytować, usuwać, zmieniać kolejność, wstrzymać lub wyczyścić. Następna wiadomość wyśle się sama po zakończeniu tury; Esc nadal przerywa turę.
+
+## Które AI odpowiada
+
+- Lista modeli u dołu panelu pokazuje używane AI i pozwala wybrać inne: najpierw twoje subskrypcje, potem skonfigurowanych dostawców z kluczem.
+- Gdy wykorzystasz 80% limitu subskrypcji lub więcej, w panelu pojawia się wiersz taki jak „Wykorzystano 85% · odnowienie o 15:00”.
+- Jeśli żądanie zostanie zatrzymane — limit został wyczerpany albo logowanie wygasło — panel podaje przyczynę i sam nie przełącza się na inne AI. Gdy połączona jest twoja druga subskrypcja, proponuje ją przycisk **Kontynuuj z …**.
 
 ## Co potrafi
 
@@ -36,5 +41,6 @@ Każdy edytor może przywołać panel AI: zaznacz coś, wydaj polecenie i obserw
 
 ## Prywatność
 
-- Polecenia i odpowiednia treść dokumentu trafiają do **usługi modelu, którą skonfigurowałeś** (Genspark w chmurze lub własny punkt końcowy, następny rozdział); bez konfiguracji nic nie jest wysyłane.
-- Pliki lokalne nie są nigdzie indziej przesyłane; klucze BYK są przechowywane w pliku ustawień aplikacji na tym komputerze i wysyłane wyłącznie w nagłówkach żądań.
+- Polecenia i odpowiednia treść dokumentu trafiają do **AI, z którego korzystasz**: do Anthropic lub OpenAI z twojego własnego konta, gdy używasz subskrypcji, albo do dostawcy, którego klucz został wpisany. Gdy żadne AI nie jest połączone, nic nie jest wysyłane.
+- To, czy treści wysyłane w ramach subskrypcji służą do trenowania AI, zależy od ustawień twojego konta w danej firmie.
+- Pliki lokalne nie są nigdzie indziej przesyłane; klucze API są przechowywane w pliku ustawień aplikacji na tym komputerze i wysyłane wyłącznie w nagłówkach żądań.

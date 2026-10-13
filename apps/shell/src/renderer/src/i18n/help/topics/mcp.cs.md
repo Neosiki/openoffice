@@ -15,29 +15,27 @@ Uděláte to v **Nastavení ▸ Integrace**. Panel má dvě poloviny a můžete 
 Totéž z terminálu — to je pokročilá cesta, po které sáhnete, když je agent tam, kde panel nemůže najít:
 
 ```sh
-genoffice mcp install all
+ieumoffice mcp install all
 ```
 
-Najde programové agenty v tomto počítači a zapíše záznam stdio serveru do vlastní konfigurace každého z nich, zatímco zbytek souboru nechá být, jak ho našel.
+Najde programové agenty v tomto počítači a zapíše záznam stdio serveru do vlastní konfigurace každého z nich, zatímco zbytek souboru nechá být, jak ho našel. Záznam se jmenuje `ieumoffice`. Ručně pro Claude Code vypadá stejná registrace takto: `claude mcp add --transport stdio ieumoffice -- ieumoffice mcp`.
 
 ```sh
-genoffice mcp list             # where each agent stands
-genoffice mcp install cursor    # just one
-genoffice mcp uninstall cursor  # take it back out
+ieumoffice mcp list             # where each agent stands
+ieumoffice mcp install cursor    # just one
+ieumoffice mcp uninstall cursor  # take it back out
 ```
 
 Agent nainstalovaný na neobvyklém místě vyžaduje `--dir <path>`; `--force` přepíše záznam, který tam už je.
 
-Všechno, co server přijímá, se vejde na jednu obrazovku — tvary pro registraci, odebrání a výpis, poskytování přes HTTP a dva přepínače schémat:
-
-![Skutečný výstup genoffice mcp --help: tvary install, uninstall a list s volbami --http, --host, --token, --compact-schemas, --dir a --force](img/mcp.png)
+`ieumoffice mcp --help` ukáže na jedné obrazovce všechno, co server přijímá: tvary pro registraci, odebrání a výpis, poskytování přes HTTP a dva přepínače schémat.
 
 ## Spuštění vlastníma rukama
 
 Pro klienta v jiném počítači jej místo toho vystavte přes HTTP:
 
 ```sh
-genoffice mcp --http 8765 --token <secret>
+ieumoffice mcp --http 8765 --token <secret>
 ```
 
 `--host <addr>` mění, kde naslouchá. Klientovi předáte stejný token.
@@ -52,21 +50,40 @@ Každý příkaz je nástroj. Zajímavé jsou tyto:
 - **`render`** — jeden PNG na stránku, vykreslený vykreslovačem aplikace, takže agent se může na snímek podívat, místo aby ho hádal.
 - **`pdf`** — textová vrstva PDF, stránka po stránce, bez procesu aplikace.
 - **`info`** — metadata a souhrn struktury, obvykle nejlevnější první volání na neznámém souboru.
-- **`search`, `image`, `media`** — poskytovatelé nastavení v aplikaci, takže agent nepotřebuje vlastní klíče.
+- **`search`, `image`, `media`** — vyhledávání na webu a vyhledávání obrázků, generování obrázků a analýza médií přes to, co je nastaveno v aplikaci, takže agent nepotřebuje vlastní klíče. Další část říká, co smějí použít.
 - **`merge`** — vyplní šablonu `{{key}}`.
+
+## Vyhledávání, obrázky a média: co smí agent použít
+
+Požadavek z příkazu `ieumoffice` nebo od klienta MCP jste v aplikaci nenapsali vy, a proto s ním GenOffice zachází opatrně.
+
+- **Vyhledávání** funguje vždy a ve výchozím stavu je zdarma. Klíč poskytovatele vyhledávání se použije jen tehdy, pokud jste nějaký vybrali.
+- **Generování obrázku** potřebuje klíč poskytovatele obrázků. V této verzi předplatné obrázky negeneruje.
+- **Popis obrázku** používá poskytovatele s klíčem, pokud je nastaven. Vaše předplatné Claude nebo Codex se **nepoužije, dokud to nepovolíte**.
+- **Video a zvuk** potřebují poskytovatele s klíčem, který podporuje video.
+
+Chcete-li používání předplatného povolit, otevřete Nastavení ▸ AI ▸ **Pokročilé** a zapněte **Povolit automatickým požadavkům používat předplatné**. Nejprve se zobrazí varování — „Ani jedna z obou společností nedoporučuje, aby program používal předplatné automaticky, a váš účet může být omezen.“ — a přepínač se zapne až po volbě **Přesto zapnout**.
+
+I se zapnutým přepínačem platí:
+
+- Požadavky se vyřizují po jednom. Ostatní čekají, až na ně přijde řada.
+- Za hodinu se vyřídí nejvýše 20 požadavků přes předplatné. Počet je společný pro všechna spuštění příkazů a všechna volání MCP. Po jeho překročení požadavek skončí chybou, která říká, kdy budou požadavky znovu možné.
+- Přihlášení s platbou podle spotřeby, které jste povolili volbou **Přesto použít**, se zde za předplatné nepočítá. Zachází se s ním jako s klíčem: pokud jste ho zvolili jako používanou AI, popisy obrázků jdou přes něj bez ohledu na přepínač, bez hodinového limitu, a každý se účtuje.
+
+Je-li přepínač vypnutý a není nastaven žádný klíč, nástroj odpoví, že funkce není dostupná, a uvede toto nastavení. Agent si to může předem ověřit nástrojem `capabilities`; viz [Příkazová řádka a agenti](help://cli).
 
 ## Schémata a menší rozpočet
 
-`apply` a `create` oznamují své parametry `ops`, `cells` a `data` s typovaným schématem pro každou op, vygenerovaným z `genoffice guide <domain> --json`. Je to přesné a ne malé. Klient s úzkým kontextovým oknem si může místo toho požádat o prostá pole:
+`apply` a `create` oznamují své parametry `ops`, `cells` a `data` s typovaným schématem pro každou op, vygenerovaným z `ieumoffice guide <domain> --json`. Je to přesné a ne malé. Klient s úzkým kontextovým oknem si může místo toho požádat o prostá pole:
 
 ```sh
-genoffice mcp --compact-schemas
-GENOFFICE_MCP_COMPACT_SCHEMAS=1 genoffice mcp
+ieumoffice mcp --compact-schemas
+GENOFFICE_MCP_COMPACT_SCHEMAS=1 ieumoffice mcp
 ```
 
 ## Proč skill
 
-Agent, který nezná slovní zásobu op, bude hádat. Skill přináší referenční příručku a návrhové průvodce — přesně ty materiály, které vypíše `genoffice guide` —, takže asistent píše ops, jejichž specifikaci si opravdu přečetl. Nainstalujte ho z panelu nahoře nebo příkazem `genoffice skill` z terminálu.
+Agent, který nezná slovní zásobu op, bude hádat. Skill přináší referenční příručku a návrhové průvodce — přesně ty materiály, které vypíše `ieumoffice guide` —, takže asistent píše ops, jejichž specifikaci si opravdu přečetl. Nainstalujte ho z panelu nahoře nebo příkazem `ieumoffice skill` z terminálu.
 
 ## Čeho se v aplikaci dostane
 

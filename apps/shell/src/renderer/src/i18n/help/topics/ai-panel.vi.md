@@ -4,13 +4,18 @@ Mọi trình soạn thảo đều có thể gọi bảng AI: chọn một nội 
 
 ## Mở và sử dụng
 
-![Bảng AI trong Docs](img/ai-panel.png)
-
+- Bảng này cần một AI đã kết nối. Khi chưa có, nó hiển thị các thẻ kết nối thay vì báo lỗi; xem [Kết nối gói đăng ký](help://subscription).
 - Các lối vào: **nút AI** trên dải ruy-bâng của từng trình soạn thảo, **Hỏi AI** trong menu ngữ cảnh, hoặc Hỏi AI trên thanh đánh dấu.
 - Mô tả công việc bằng ngôn ngữ tự nhiên (viết lại đoạn này / biến cột này thành phần trăm / bố cục lại trang này...) rồi nhấn Enter.
 - Câu trả lời hiển thị **dạng luồng**; khi AI cần công cụ (đọc tài liệu, sửa tài liệu) thì nó thực thi và tiếp tục cho tới khi xong.
 - **Dừng**: có thể ngắt lượt hiện tại bất cứ lúc nào.
 - **Hàng đợi**: khi phản hồi đang truyền, Enter đưa tin nhắn của bạn vào hàng đợi thay vì bỏ đi — dải phía trên ô nhập đếm chúng; mở ra để sửa, bỏ, đổi thứ tự, tạm dừng hay dọn sạch. Tin tiếp theo tự gửi khi lượt kết thúc; Esc vẫn dừng lượt như cũ.
+
+## AI nào trả lời
+
+- Danh sách mô hình ở cuối bảng cho thấy AI đang được dùng và cho phép bạn chọn AI khác: các gói đăng ký của bạn trước, rồi đến các nhà cung cấp dùng khóa mà bạn đã thiết lập.
+- Khi bạn đã dùng từ 80% một giới hạn của gói đăng ký trở lên, một dòng như "Đã dùng 85% · đặt lại lúc 15:00" sẽ xuất hiện trong bảng.
+- Nếu một yêu cầu bị dừng — giới hạn đã dùng hết, hoặc phiên đăng nhập đã hết hạn — bảng sẽ nói rõ lý do và không tự chuyển sang AI khác. Khi gói đăng ký còn lại của bạn đang được kết nối, một nút **Tiếp tục với …** sẽ đề nghị dùng gói đó.
 
 ## AI có thể làm gì
 
@@ -36,5 +41,6 @@ Mọi trình soạn thảo đều có thể gọi bảng AI: chọn một nội 
 
 ## Quyền riêng tư
 
-- Chỉ dẫn và nội dung tài liệu liên quan được gửi tới **dịch vụ mô hình mà bạn đã cấu hình** (Genspark đám mây hoặc một điểm cuối tùy chỉnh, xem chương sau); không cấu hình thì không gửi gì.
-- Tập tin cục bộ không được tải lên nơi khác; khóa BYOK được lưu trong tệp cài đặt của ứng dụng trên máy này và chỉ được gửi trong phần đầu yêu cầu.
+- Chỉ dẫn và nội dung tài liệu liên quan được gửi tới **AI mà bạn đang dùng**: tới Anthropic hoặc OpenAI bằng chính tài khoản của bạn khi bạn dùng gói đăng ký, hoặc tới nhà cung cấp mà bạn đã nhập khóa. Khi chưa có AI nào được kết nối thì không có gì được gửi đi.
+- Nội dung gửi qua gói đăng ký có được dùng để huấn luyện AI hay không tùy thuộc vào cài đặt tài khoản của bạn tại công ty đó.
+- Tập tin cục bộ không được tải lên nơi khác; khóa API được lưu trong tệp cài đặt của ứng dụng trên máy này và chỉ được gửi trong phần đầu yêu cầu.

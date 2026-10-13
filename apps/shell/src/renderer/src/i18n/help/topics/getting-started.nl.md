@@ -4,8 +4,6 @@ GenOffice is een kantoorsuite die volledig op je eigen computer draait: één ve
 
 ## Overzicht van de interface
 
-![Het startscherm](img/home-screen.png)
-
 Het venster bestaat uit drie delen:
 
 - **Tabbladenbalk (boven)**: elk geopend bestand is een tabblad. Het meest linkse Start-tabblad is er altijd en kan niet worden gesloten; de andere tabbladen zijn je documenten. Dubbelklik op een tabblad om de bestandsnaam ter plekke te hernoemen.
@@ -26,7 +24,7 @@ Een nieuw document opent zonder titel; het bestand op schijf wordt pas aangemaak
 
 - Menu **Bestand ▸ Openen…** (⌘O/ctrl+O) opent de systeemkiezer: .docx / .doc / .xlsx / .xls / .csv / .tsv / .pptx / .ppt / .pdf / .md / .html.
 - Klik op een willekeurig item in de lijst **Recent** op Start.
-- Ook `genoffice <bestand>` in een terminal opent bestanden.
+- Ook `ieumoffice <bestand>` in een terminal opent bestanden.
 
 ## Het opslagmodel
 
@@ -88,4 +86,5 @@ Daarmee blijft ⌥⌘D vrij voor GenOffice om op macOS te gebruiken, als een toe
 - Waar je bestanden staan: [Het startscherm](help://home-screen).
 - Veel geopende bestanden beheren: [Tabbladen en vensterbeheer](help://tabs-and-windows).
 - Het werk door de AI laten doen: [Het AI-assistentpaneel](help://ai-panel).
+- Eerst de AI verbinden: [Abonnementsverbinding](help://subscription).
 - Taal, thema, standaardapps: [Instellingen, taal, thema en MCP-integraties](help://settings-integrations).

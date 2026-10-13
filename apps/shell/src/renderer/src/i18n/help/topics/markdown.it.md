@@ -13,8 +13,6 @@ L'editor Markdown apre .md / .markdown — e .txt / .json, dritti nella vista so
 
 Una riga di pulsanti sopra l'editor (passa il puntatore per le descrizioni):
 
-![La barra degli strumenti Markdown](img/md-toolbar.png)
-
 - **File e cronologia**: Salva, Salva con nome…, Annulla, Ripeti, Trova; a destra l'interruttore **Salvataggio automatico** scrive le modifiche su disco a intervalli regolari.
 - **Pulsante AI**: apre il pannello IA; accanto trovi le impostazioni predefinite riscrivi / estendi / traduci.
 - **Stile paragrafo** (menu a tendina): passa dal testo del corpo ai vari livelli di titolo.

@@ -4,8 +4,6 @@ GenOffice è una suite per ufficio che funziona interamente sulla tua macchina: 
 
 ## Panoramica dell'interfaccia
 
-![La schermata Home](img/home-screen.png)
-
 La finestra è composta da tre parti:
 
 - **Barra delle schede (in alto)**: ogni file aperto è una scheda. La scheda Home, all'estrema sinistra, è sempre presente e non può essere chiusa; le altre schede sono i tuoi documenti. Fai doppio clic su una scheda per rinominare il file direttamente lì.
@@ -26,7 +24,7 @@ Un nuovo documento si apre senza titolo; il file su disco viene creato solo al p
 
 - Il menu **File ▸ Apri…** (⌘O/ctrl+O) apre il selettore di sistema: .docx / .doc / .xlsx / .xls / .csv / .tsv / .pptx / .ppt / .pdf / .md / .html.
 - Fai clic su qualsiasi voce dell'elenco **Recenti** di Home.
-- Anche `genoffice <file>` eseguito da un terminale apre i file.
+- Anche `ieumoffice <file>` eseguito da un terminale apre i file.
 
 ## Il modello di salvataggio
 
@@ -88,4 +86,5 @@ Così ⌥⌘D resta libero perché GenOffice lo usi su macOS, se un futuro coman
 - Dove si trovano i file: [La schermata Home](help://home-screen).
 - Gestire molti file aperti: [Schede e gestione delle finestre](help://tabs-and-windows).
 - Far fare il lavoro all'IA: [Il pannello dell'assistente IA](help://ai-panel).
+- Collegare prima l'IA: [Connessione con abbonamento](help://subscription).
 - Lingua, tema, app predefinite: [Impostazioni, lingua, tema e integrazioni MCP](help://settings-integrations).

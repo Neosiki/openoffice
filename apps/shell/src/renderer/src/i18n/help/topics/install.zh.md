@@ -1,67 +1,37 @@
 # 安装 GenOffice
 
-每个构建都发布在 [Releases 页面](https://github.com/genspark-ai/genoffice/releases/latest)。它们全部出自 `main`；macOS 与 Windows 的安装包已签名。
+每个版本都发布在项目 GitHub 的 [Releases 页面](https://github.com/pblsketch/openoffice/releases/latest)上。这个版本面向 Windows 发布。
 
 ## 选择适合你机器的文件
 
-| 平台                                 | 需求                                                   | 文件                |
-| ------------------------------------ | ------------------------------------------------------ | ------------------- |
-| **macOS** — Apple Silicon            | macOS 11+                                              | `.dmg` (arm64)      |
-| **macOS** — Intel                    | macOS 11+                                              | `.dmg` (x64)        |
-| **Windows** — 大多数 PC              | Windows 10+、Intel/AMD                                 | `-x64.exe` 安装包   |
-| **Windows** on Arm                   | Arm 版 Windows 11（Snapdragon X 等）                   | `-arm64.exe` 安装包 |
-| **Linux** — Debian / Ubuntu          | x86_64、glibc 2.34+（Ubuntu 22.04 或更新）             | `.deb`              |
-| **Linux** — Fedora / RHEL / openSUSE | x86_64、glibc 2.34+（Fedora 35+、RHEL 9+、Leap 15.6+） | `.rpm`              |
-| **Linux** — 其他                     | x86_64、glibc 2.34+、FUSE 2                            | `.AppImage`         |
+| 平台        | 需求                                   | 文件                            |
+| ----------- | -------------------------------------- | ------------------------------- |
+| **Windows** | Windows 10 或更高版本，64 位 Intel/AMD | `GenOffice-Setup-<version>.exe` |
 
 旧版本仍保留在 Releases 页面上。
 
-## 在 macOS 上
-
-打开 `.dmg`，把 **GenOffice** 拖进「应用程序」文件夹。Intel 版首次启动时会请你确认打开：在「应用程序」里右键点这个应用 ▸ 打开。这只是 Gatekeeper 遇到一个看起来未签名的磁盘映像，并不是下载损坏。
-
 ## 在 Windows 上
 
-运行 `.exe` 安装程序。它会把 GenOffice 放进开始菜单，并注册 `.docx`、`.xlsx`、`.pptx`、`.pdf` 等格式，双击文件就会用 GenOffice 打开。
+1. 从 Releases 页面下载 `GenOffice-Setup-<version>.exe`。
+2. 运行它。安装程序没有代码签名，所以 Windows 可能会先弹出一个蓝色的“Windows 已保护你的电脑”窗口。点**更多信息**，再点**仍要运行**。具体文字因 Windows 版本而异。
+3. 按照安装程序的提示一直走到最后。
 
-## 在 Linux 上
+它会把 GenOffice 放进开始菜单，并注册 `.docx`、`.xlsx`、`.pptx`、`.pdf` 等格式，双击文件就会用 GenOffice 打开。
 
-**Debian / Ubuntu**
+因为安装程序没有签名，请只运行从上面的 Releases 页面下载的文件。
 
-```sh
-sudo apt install ./genoffice_<version>_amd64.deb
-```
+## 更新
 
-**Fedora / RHEL / openSUSE**
-
-```sh
-sudo dnf install ./genoffice-<version>.x86_64.rpm     # Fedora / RHEL family
-sudo zypper install ./genoffice-<version>.x86_64.rpm  # openSUSE
-```
-
-**AppImage** — 免安装，放在哪儿就在哪儿运行：
-
-```sh
-chmod +x GenOffice-<version>.AppImage
-./GenOffice-<version>.AppImage
-```
-
-它需要 FUSE 2 运行时。如果不想安装它，可以用 `--appimage-extract-and-run` 来运行，沙箱会从解压出来的目录工作。
+- GenOffice 在同一个 GitHub Releases 页面上查找新版本。有新版本发布时，**设置 ▸ 关于**会给出更新：点**更新到 …**，等下载完成，再点**重启并安装**。
+- **帮助 ▸ 检查更新**会在你需要的时候立即检查。
+- 检查失败时——没有网络，或者还没有发布任何版本——什么都不会发生，应用照常使用。
+- **更新通道**也在 设置 ▸ 关于 里，分为稳定版和 Beta 版。改完立即生效并检查更新；它不会把 Beta 版安装退回稳定版。
+- 更新包同样没有代码签名。安装之前，应用会把下载的文件与随该版本一同发布的校验和进行比对。
 
 ## 你正在运行的构建
 
-**设置 ▸ 关于** 是应用报告你所用的构建、它跟随的更新渠道以及项目所在地的地方。当该渠道上发布了更新的构建时，同一个面板会提示更新；Flatpak、Nix 或 Docker 安装则不会，因为这些安装会被当初装上它们的工具替换掉。
-
-![设置 ▸ 关于，其中显示已安装的版本、应用跟随的更新渠道，以及项目的 GitHub 链接](img/install.png)
-
-## 另外三条路
-
-这三种方式都只是包装已发布的构建产物，而不是重新编译应用，所以跟的是官方二进制。
-
-- **Flatpak** — 通过 Flatpak 的 `extra-data` 机制安装 `.deb`，并在 Zypak 沙箱下运行，由 Zypak 适配 Electron 自带的沙箱。`/app` 目录是只读的，所以更新要走 Flatpak，而不是应用内的更新对话框。
-- **Nix** — 一个包表达式，用 `nix-build packaging/nix` 从源码检出构建；详见 `packaging/nix`。
-- **Docker** — 一个无头批量转换镜像（`packaging/docker`）。它通过应用自己的导出流程，把整棵目录树里的 Office、Markdown 和 HTML 文档转成 PDF，产出的结果与 文件 ▸ 导出 相同。它是一个命令行工具，不是服务器。
+**设置 ▸ 关于** 是应用报告你所用的版本、它跟随的更新通道以及项目所在地的地方。这里还写明了本应用所基于的开源项目。
 
 ## 命令行随包附带
 
-每个安装版本都带一个 `genoffice` 命令，它和窗口调用的是同一套引擎，因此两者对同一个文件不会给出不同的结果。在 macOS 和 Windows 上它位于应用包内；`genoffice install-cli` 会把它放进你的 `PATH`。它能做什么，见**命令行与代理**。
+每个安装版本都带一个 `ieumoffice` 命令，它和窗口调用的是同一套引擎，因此两者对同一个文件不会给出不同的结果。`ieumoffice install-cli` 会把它放进你的 `PATH`。它能做什么，见[命令行与智能体](help://cli)。

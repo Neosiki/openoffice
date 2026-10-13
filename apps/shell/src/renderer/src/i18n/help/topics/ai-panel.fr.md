@@ -4,13 +4,18 @@ Chaque éditeur peut appeler le panneau IA: sélectionnez quelque chose, donnez 
 
 ## L’ouvrir et s’en servir
 
-![Le panneau IA dans Docs](img/ai-panel.png)
-
+- Le panneau a besoin d’une IA connectée. Si aucune ne l’est, il affiche les cartes de connexion au lieu d’une erreur ; voir [Connexion par abonnement](help://subscription).
 - Entrées: le **bouton IA** du ruban de chaque éditeur, **Demander à l’IA** dans les menus contextuels, ou Demander à l’IA sur la barre de marquage.
 - Décrivez la tâche en langage naturel (réécrire ceci / transformer cette colonne en pourcentages / remettre cette page en page…) et appuyez sur Entrée.
 - Les réponses sont rendues **en flux**; lorsque l’IA a besoin d’outils (lire le document, le modifier), elle les exécute et continue jusqu’au bout.
 - **Arrêter**: interrompez le tour en cours à tout moment.
 - **File d'attente** : pendant qu'une réponse arrive, Entrée met votre message en file plutôt que de le jeter — une bande au-dessus de la saisie les compte ; ouvrez-la pour modifier, retirer, réordonner, mettre en pause ou vider. Le message suivant part tout seul à la fin du tour ; Échap arrête toujours le tour.
+
+## Quelle IA répond
+
+- La liste des modèles en bas du panneau montre l’IA utilisée et permet d’en choisir une autre : vos abonnements d’abord, puis les fournisseurs à clé que vous avez configurés.
+- Dès que vous avez utilisé 80 % ou plus de la limite d’un abonnement, une ligne telle que « 85 % utilisés · réinitialisation à 15:00 » apparaît dans le panneau.
+- Si une requête est arrêtée — la limite est atteinte, ou la connexion au compte a expiré —, le panneau dit pourquoi et ne bascule pas de lui-même vers une autre IA. Lorsque votre autre abonnement est connecté, un bouton **Continuer avec …** le propose.
 
 ## Ce qu’il sait faire
 
@@ -36,5 +41,6 @@ Chaque éditeur peut appeler le panneau IA: sélectionnez quelque chose, donnez 
 
 ## Confidentialité
 
-- Les instructions et le contenu pertinent du document vont au **service de modèle que vous avez configuré** (Genspark hébergé ou un point de terminaison personnalisé, chapitre suivant); sans configuration, rien n’est envoyé.
-- Les fichiers locaux ne sont envoyés nulle part ailleurs; les clés BYOK sont stockées dans le fichier de paramètres de l'application sur cet ordinateur et envoyées uniquement dans les en-têtes de requête.
+- Les instructions et le contenu pertinent du document vont à l’**IA que vous utilisez** : à Anthropic ou à OpenAI sous votre propre compte lorsque vous utilisez un abonnement, ou au fournisseur dont vous avez saisi la clé. Si aucune IA n’est connectée, rien n’est envoyé.
+- L’utilisation du contenu d’un abonnement pour entraîner l’IA dépend des paramètres de votre propre compte auprès de cette société.
+- Les fichiers locaux ne sont envoyés nulle part ailleurs; les clés API sont stockées dans le fichier de paramètres de l'application sur cet ordinateur et envoyées uniquement dans les en-têtes de requête.

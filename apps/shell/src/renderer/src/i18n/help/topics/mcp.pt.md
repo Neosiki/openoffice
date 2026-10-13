@@ -15,29 +15,27 @@ O GenOffice fala o Model Context Protocol, por isso um agente de programação c
 A mesma coisa a partir de um terminal — esta é a via avançada, e a que deve usar quando o agente está num sítio onde o painel o não consegue encontrar:
 
 ```sh
-genoffice mcp install all
+ieumoffice mcp install all
 ```
 
-Encontra os agentes de programação desta máquina e escreve a entrada do servidor stdio na configuração de cada um deles, deixando o resto desse ficheiro como o encontrou.
+Encontra os agentes de programação desta máquina e escreve a entrada do servidor stdio na configuração de cada um deles, deixando o resto desse ficheiro como o encontrou. A entrada chama-se `ieumoffice`. Feito à mão para o Claude Code, o mesmo registo é `claude mcp add --transport stdio ieumoffice -- ieumoffice mcp`.
 
 ```sh
-genoffice mcp list             # where each agent stands
-genoffice mcp install cursor    # just one
-genoffice mcp uninstall cursor  # take it back out
+ieumoffice mcp list             # where each agent stands
+ieumoffice mcp install cursor    # just one
+ieumoffice mcp uninstall cursor  # take it back out
 ```
 
 Um agente instalado num sítio fora do comum precisa de `--dir <path>`; e `--force` reescreve uma entrada que já lá está.
 
-Tudo aquilo que o servidor aceita cabe num ecrã — as formas de instalar, remover e listar, a publicação por HTTP e as duas opções de esquema:
-
-![A saída real de genoffice mcp --help: as formas install, uninstall e list, com as opções --http, --host, --token, --compact-schemas, --dir e --force](img/mcp.png)
+`ieumoffice mcp --help` põe num único ecrã tudo aquilo que o servidor aceita: as formas de instalar, remover e listar, a publicação por HTTP e as duas opções de esquema.
 
 ## Executá-lo sem um assistente
 
 Para um cliente noutra máquina, sirva-o por HTTP:
 
 ```sh
-genoffice mcp --http 8765 --token <secret>
+ieumoffice mcp --http 8765 --token <secret>
 ```
 
 `--host <addr>` muda o endereço onde escuta. Passe o mesmo token ao cliente.
@@ -52,21 +50,40 @@ Cada comando é uma ferramenta. As interessantes:
 - **`render`** — um PNG por página, disposto pelo renderizador da aplicação, para que o agente possa olhar para um slide em vez de adivinhar.
 - **`pdf`** — a camada de texto de um PDF, página a página, sem qualquer processo da aplicação.
 - **`info`** — metadados e um resumo da estrutura, normalmente a primeira chamada mais barata para um ficheiro desconhecido.
-- **`search`, `image`, `media`** — os fornecedores configurados na aplicação, por isso o agente não precisa das suas próprias chaves.
+- **`search`, `image`, `media`** — pesquisa na web e de imagens, geração de imagens e análise de multimédia através do que está configurado na aplicação, por isso o agente não precisa das suas próprias chaves. A secção seguinte diz o que podem usar.
 - **`merge`** — preencher um modelo `{{key}}`.
+
+## Pesquisa, imagens e multimédia: o que um agente pode usar
+
+Um pedido que chega do comando `ieumoffice` ou de um cliente MCP não foi escrito por si na aplicação, por isso o GenOffice trata-o com cuidado.
+
+- **A pesquisa** funciona sempre e é gratuita por predefinição. A chave de um fornecedor de pesquisa só é usada se tiver selecionado uma.
+- **Gerar uma imagem** precisa da chave de um fornecedor de imagens. Nesta versão, uma assinatura não gera imagens.
+- **Descrever uma imagem** usa um fornecedor com chave quando há um configurado. A sua assinatura do Claude ou do Codex **não é usada a menos que o autorize**.
+- **Vídeo e áudio** precisam de um fornecedor com chave que suporte vídeo.
+
+Para autorizar o uso da assinatura, abra Configurações ▸ IA ▸ **Avançado** e ligue **Permitir que solicitações automáticas usem uma assinatura**. Primeiro aparece um aviso — «Nenhuma das duas empresas recomenda deixar um programa usar a sua assinatura automaticamente, e a sua conta pode sofrer restrições.» — e o interruptor só fica ligado depois de **Ativar mesmo assim**.
+
+Mesmo com o interruptor ligado:
+
+- Os pedidos são tratados um de cada vez. Os outros esperam pela sua vez.
+- São tratados no máximo 20 pedidos com assinatura por hora. A contagem é partilhada por todas as execuções do comando e por todas as chamadas MCP. Ultrapassada, o pedido falha com um erro que diz quando os pedidos voltam a ser possíveis.
+- Um login de pagamento por consumo que autorizou com **Usar mesmo assim** não conta aqui como assinatura. É tratado como uma chave: se o escolheu como IA em uso, as descrições de imagens passam por ele diga o interruptor o que disser, sem o limite horário, e cada uma é cobrada.
+
+Com o interruptor desligado e sem nenhuma chave configurada, a ferramenta responde que a funcionalidade está indisponível e indica esta definição. Um agente pode verificar primeiro com a ferramenta `capabilities`; consulte [Linha de comandos e agentes](help://cli).
 
 ## Esquemas, e um orçamento mais pequeno
 
-`apply` e `create` anunciam os seus parâmetros `ops`, `cells` e `data` com o esquema tipado de cada operação, gerado a partir de `genoffice guide <domain> --json`. É preciso, mas não é pequeno. Um cliente com uma janela de contexto apertada pode pedir matrizes simples em vez disso:
+`apply` e `create` anunciam os seus parâmetros `ops`, `cells` e `data` com o esquema tipado de cada operação, gerado a partir de `ieumoffice guide <domain> --json`. É preciso, mas não é pequeno. Um cliente com uma janela de contexto apertada pode pedir matrizes simples em vez disso:
 
 ```sh
-genoffice mcp --compact-schemas
-GENOFFICE_MCP_COMPACT_SCHEMAS=1 genoffice mcp
+ieumoffice mcp --compact-schemas
+GENOFFICE_MCP_COMPACT_SCHEMAS=1 ieumoffice mcp
 ```
 
 ## Porque é que a skill
 
-Um agente que não conhece o vocabulário das operações vai adivinhar. A skill traz a referência e os guias de design — o mesmo material que o `genoffice guide` imprime —, de modo que o assistente escreve operações cuja especificação leu mesmo. Instale-a a partir do painel acima, ou com `genoffice skill` a partir de um terminal.
+Um agente que não conhece o vocabulário das operações vai adivinhar. A skill traz a referência e os guias de design — o mesmo material que o `ieumoffice guide` imprime —, de modo que o assistente escreve operações cuja especificação leu mesmo. Instale-a a partir do painel acima, ou com `ieumoffice skill` a partir de um terminal.
 
 ## O que consegue alcançar na aplicação
 

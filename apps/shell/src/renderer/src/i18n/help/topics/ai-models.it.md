@@ -1,21 +1,42 @@
 # Modelli IA e impostazioni
 
-## Provider e modelli
+## Dove si trovano le impostazioni
 
-Modelli e chiavi si configurano nelle impostazioni (la riga dell'account in basso a sinistra in Home):
+Apri **Impostazioni** dalla riga in basso a sinistra in Home e scegli **IA**. La prima cosa che vedi è la connessione con abbonamento. Alla maggior parte delle persone non serve altro, e ha un articolo tutto suo: [Connessione con abbonamento](help://subscription).
 
-![La finestra Impostazioni](img/settings-general.png)
+Tutto ciò che richiede una chiave si trova sotto **Avanzate**, in fondo alla stessa pagina. Resta chiuso finché non lo apri.
 
-- **Genspark ospitato**: effettua l'accesso (flusso con codice dispositivo) e usalo — nessuna configurazione richiesta.
-- **Endpoint personalizzati (BYOK)**: Impostazioni ▸ IA accetta un URL di base e una chiave API per ogni protocollo — compatibile con OpenAI, Anthropic, Gemini, DeepSeek, DashScope (qwen) e altro. Le chiavi sono memorizzate nel file delle impostazioni dell'app su questa macchina e inviate solo nelle intestazioni delle richieste. Atlas Cloud figura tra i protocolli integrati.
-- Puoi scegliere un modello diverso per ciascuna capacità: chat/generazione, generazione di immagini, analisi delle immagini.
+## L'impostazione predefinita: il tuo abbonamento
+
+- **IA da usare** parte da **Automatico**: prima un abbonamento Claude collegato, poi Codex.
+- Automatico non sceglie mai nulla che costi denaro in più. Una chiave API viene usata solo finché scegli tu quel provider in **IA da usare**.
+- L'elenco dei modelli in fondo a ogni pannello IA mostra prima gli abbonamenti, poi i provider con chiave che hai finito di configurare. Sotto un abbonamento, **Modello predefinito** è il modello standard di quell'abbonamento.
+
+## Chiavi API (Avanzate ▸ Modello IA)
+
+Per chi preferisce pagare direttamente un provider o far girare un proprio modello.
+
+- Scegli un **Provider**, inserisci la sua **Chiave API** (e un **Base URL** se il provider lo richiede), scegli un **Modello**, poi premi **Salva**. L'elenco comprende server compatibili con OpenAI, Anthropic, Gemini, DeepSeek, DashScope (qwen), Atlas Cloud e altri.
+- Qui l'elenco **Provider** decide soltanto di chi sono i campi mostrati. Non cambia l'IA in uso; quella è sempre **IA da usare**.
+- Le chat con un provider con chiave usano la tua chiave, ed è quel provider ad addebitartele.
+- Le chiavi sono memorizzate nel file delle impostazioni dell'app su questa macchina e inviate solo nelle intestazioni delle richieste.
 - **Prova connessione**: verifica che l'endpoint sia raggiungibile e che il modello sia visibile prima di salvare.
 - Gli URL di base possono contenere un percorso e una stringa di query (stile gateway); i percorsi degli endpoint vengono aggiunti correttamente.
+- Per i server che gestisci tu si possono salvare più **endpoint** e passare dall'uno all'altro in qualsiasi momento.
+- **Eseguibile Codex** serve solo per un programma Codex installato in una posizione insolita. Lascialo vuoto e il programma viene trovato automaticamente.
 
-## Integrazione con la CLI (classe Codex)
+## Che cosa serve a ogni funzione
 
-- Le impostazioni accettano il percorso di un programma CLI locale (le directory home non ASCII e il prefisso ~ funzionano; ~ viene espanso automaticamente); Rileva modelli interroga la CLI sui modelli disponibili.
-- La convalida verifica solo l'esistenza — nessuna restrizione sul set di caratteri.
+| Funzione                        | Su che cosa si basa                                                                                                                                                                                                              |
+| ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Chat e modifica nel pannello IA | Il tuo abbonamento, oppure un provider con chiave che hai scelto tu.                                                                                                                                                             |
+| Capire un'immagine              | L'IA con cui stai chattando guarda direttamente l'immagine. Non serve nessuna chiave in più. In Avanzate si può scegliere un provider di analisi separato.                                                                       |
+| Generare un'immagine            | **Solo con una chiave, in questa versione.** Configura un provider di immagini in Avanzate ▸ Media e ricerca IA. Senza, la generazione di immagini non è disponibile, e Slides usa al suo posto immagini trovate con la ricerca. |
+| Analisi di video e audio        | Un provider con chiave che supporta i video, scelto in Avanzate ▸ Media e ricerca IA.                                                                                                                                            |
+| Ricerca web e di immagini       | Gratuita per impostazione predefinita, senza chiave. La chiave di un provider di ricerca è facoltativa.                                                                                                                          |
+| Ricerca nei tuoi file           | Gira su questa macchina. Il riordinamento dei risultati tramite un servizio è facoltativo e disattivato per impostazione predefinita.                                                                                            |
+
+In **Avanzate ▸ Media e ricerca IA**, la chiave e l'URL di base di un provider si inseriscono una volta sola e sono condivisi da tutte le funzioni che usano quel provider.
 
 ## Quando hanno effetto le modifiche
 

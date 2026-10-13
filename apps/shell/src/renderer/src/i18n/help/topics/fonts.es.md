@@ -1,25 +1,26 @@
-# Fuentes: tipos de letra del sistema y familias descargables
+# Fuentes: fuentes del sistema e instalación de archivos de fuente
 
 ## Las listas de fuentes
 
-Los controles de fuente están en la pestaña Inicio de cada editor (abajo: el grupo de fuentes de Slides):
-
-![El grupo de fuentes en la cinta de opciones de Slides](img/fonts.png)
+Los controles de fuente están en la pestaña Inicio de cada editor.
 
 El selector de fuentes de cada editor combina: fuentes instaladas en el equipo + los candidatos habituales de la plataforma (las familias habituales de Windows y macOS, tanto latinas como de Asia oriental, incluidos los nombres localizados que las fuentes de Asia oriental declaran en su sistema de origen). Cuando el sistema puede enumerar las fuentes locales, la lista se agrupa por lo que existe realmente; si no, degrada a la lista completa de candidatos.
 
-## Fuentes descargables (Slides)
+Todas las fuentes de la lista están instaladas en este PC o vienen con la aplicación. No se descarga nada.
 
-- El selector de fuentes de Slides abre un **catálogo de fuentes**: una selección curada de OFL que abarca muchos sistemas de escritura; cada familia incluye los grosores normal y negrita.
-- Elegir una la descarga y la instala desde el CDN (fijada por suma de comprobación) en el almacén de fuentes de la aplicación: disponible después para todos los documentos y sin instalación a nivel de sistema.
-- Las instalaciones residen en un directorio privado de la aplicación y desaparecen junto con ella.
+## Instalar un archivo de fuente (Slides)
+
+- Al final de la lista de fuentes de Slides, **Instalar archivo de fuente…** añade archivos de fuente que ya tiene: .ttf, .otf, .ttc u .otc.
+- Los archivos se copian en la carpeta de fuentes propia de la aplicación. Solo funcionan en esta aplicación; no se instala nada en el sistema. Las presentaciones abiertas se vuelven a componer con la nueva fuente.
+- Cuando los archivos contienen una sola familia de fuentes, se aplica de inmediato a lo que tenga seleccionado.
+- Una fuente instalada así no aparece en la lista. Para usarla más adelante, escriba su nombre en el cuadro de fuente.
+- Se pueden instalar a la vez varios grosores de una misma familia.
+- La aplicación no tiene ningún comando para quitar una fuente instalada así.
+
+## Fuentes que un documento necesita pero usted no tiene
+
+- Un documento que usa una fuente no instalada se muestra con una fuente sustituta.
 
 ## Tipografía de Asia oriental
 
 - Las fuentes de Asia oriental en Docs obtienen la compresión de signos y las reglas de salto de línea de Word (véase el capítulo de Docs).
-- Las familias de Asia oriental del catálogo abarcan chino simplificado y tradicional, japonés y coreano, con y sin remates.
-
-## Gestionar las fuentes locales
-
-- La entrada «Instalar archivo de fuente…» carga archivos .ttf/.otf del disco en el almacén de fuentes de la aplicación.
-- El almacén archiva por familia; varios grosores de una misma familia conviven.

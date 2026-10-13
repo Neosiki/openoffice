@@ -13,8 +13,6 @@ Editor Markdown otevírá .md / .markdown — a .txt / .json, rovnou v zobrazen�
 
 Jeden řádek tlačítek nad editorem (nápovědy zobrazíte po najetí):
 
-![Pruh nástrojů Markdown](img/md-toolbar.png)
-
 - **Soubor a historie**: Uložit, Uložit jako…, Zpět, Znovu, Najít; přepínač **Automatické ukládání** vpravo zapisuje změny na disk v pravidelných intervalech.
 - **Tlačítko AI**: otevře panel AI; vedle něj jsou předvolby přepsat / rozšířit / přeložit.
 - **Styl odstavce** (rozbalovací seznam): přechod mezi základním textem a úrovněmi nadpisů.

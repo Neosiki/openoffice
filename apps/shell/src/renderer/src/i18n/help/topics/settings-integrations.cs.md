@@ -2,11 +2,9 @@
 
 ## Otevření nastavení
 
-Řádek účtu vlevo dole na domovské stránce otevře panel nastavení (při nepřihlášení ukazuje Přihlásit se). Má šest částí: Účet, Model AI, AI média a vyhledávání, Obecné, Integrace a O aplikaci.
+Řádek vlevo dole na domovské stránce otevře panel nastavení (dokud není připojena žádná AI, ukazuje Připojit AI). Má pět částí: Účet, AI, Obecné, Integrace a O aplikaci.
 
-![Nastavení ▸ Obecné, kde žijí jazyk, motiv, automatické ukládání a přepínač statistik používání](img/settings-general.png)
-
-Konfigurace modelů má vlastní kapitolu; v části **AI média a vyhledávání** zapínáte pro každého poskytovatele generování obrázků, analýzu obrázků, analýzu videí, webové vyhledávání a hledání místních souborů.
+**Účet** ukazuje, jak jsou na tom vaše předplatná Claude a Codex, a **Spravovat připojení** vás zavede do části AI. AI má vlastní kapitoly: [Připojení předplatného](help://subscription) a [Modely AI a nastavení](help://ai-models).
 
 ## Jazyk
 
@@ -19,22 +17,24 @@ Světlý / Tmavý / Podle systému. Volba Podle systému sleduje vzhled operačn
 
 ## Obecné
 
-- **Odesílat anonymní statistiky používání** — ve výchozím stavu zapnuto. Používá Google Analytics 4 a odesílá vaši veřejnou IP adresu a přenosová metadata; obsah dokumentů ani názvy souborů se nikdy neshromažďují a každá událost nese jen typ, například „otevřen soubor .docx“. Kdykoli to zde vypnete.
 - **Pozice postranního panelu AI** (vlevo nebo vpravo), **Velikost textu panelu AI** a **Kontrola pravopisu v chatu AI**.
 - **Otevírat panel AI v nových dokumentech** — vypnuto, nový dokument začíná se složeným panelem, na jedno kliknutí.
 - **Automaticky ukládat všechny dokumenty** zapne ve výchozím stavu automatické ukládání v každém editoru; pro jedno okno ho můžete i nadále vypnout.
 - **Umístění pro ukládání** s tlačítkem **Změnit** a **Výchozí aplikace pro dokumenty Office**, aby GenOffice přebíral .docx / .xlsx / .pptx.
 
-## AI média a vyhledávání
+GenOffice neshromažďuje ani neodesílá statistiky používání, takže pro ně není žádný přepínač.
 
-Nejsou to přepínače — každá schopnost si vybere dodavatele, který ji poskytuje, a klíč i základní URL dodavatele se zadávají jednou a sdílejí se:
+## AI ▸ Pokročilé
+
+Tato část je sbalená, dokud ji neotevřete; většina lidí ji nikdy nepotřebuje. Karta **Model AI** obsahuje klíče API a servery, které provozujete sami, pro chat. Na kartě **AI média a vyhledávání** si každá schopnost vybere dodavatele, který ji poskytuje, a klíč i základní URL dodavatele se zadávají jednou a sdílejí se:
 
 - **Webové vyhledávání**, **Generování obrázků**, **Analýza obrázků** a **Analýza videí**, každá s poskytovatelem, modelem, klíčem a základní URL.
 - **Lokální hledání souborů** běží na tomto stroji. Pod ním je **Jev přeřazení výsledků** ve výchozím stavu **vypnuté**. Zapnete-li ho, výtahy top 20 lokálních zásahů — až 1 200 znaků na dokument plus názvy souborů a složek — míří na zvolený rozhodovací endpoint (Jev přes OpenRouter nebo TypeSafe, Perplexity, Liquid AI d1, Cloudflare, lokální engine nebo vlastní URL) a přeřadí se podle relevance. Vypnuté ze zařízení nic neodchází.
+- **Povolit automatickým požadavkům používat předplatné** je ve výchozím stavu **vypnuté**. Určuje, zda požadavek z příkazové řádky nebo od připojeného programového agenta smí použít vaše předplatné Claude nebo Codex; viz [Připojení programového agenta](help://mcp).
 
 ## O aplikaci
 
-- **Verze**, odkaz na projekt na GitHubu a tlačítko **Dát hvězdičku na GitHubu**.
+- **Verze**, adresa projektu na GitHubu a řádek, který uvádí open-source projekt, na kterém je tato aplikace založena.
 - **Kanál aktualizací**: Stabilní nebo Beta. Změna se projeví ihned a vyvolá kontrolu aktualizace; instalaci z kanálu Beta nevrátí zpět na Stabilní.
 
 ## Přiřazení jako výchozí aplikace
@@ -46,24 +46,16 @@ Nastavení může zaregistrovat GenOffice jako aplikaci pro soubory .docx / .xls
 - Nápověda ▸ Informace o softwaru třetích stran: úplný přehled licencí open source dodávaných s aplikací.
 - Nápověda ▸ Zkontrolovat aktualizace…: spustí ruční kontrolu; novější verze vyzve k instalaci.
 
-## Přihlášení ke Genspark
-
-- Místo přihlášení (v nastavení nebo v seznamu cloudových projektů) používá postup s **kódem zařízení**: GenOffice zobrazí kód a otevře přihlašovací stránku v prohlížeči; po dokončení postup pokračuje automaticky.
-- Přihlášení slouží pouze k: seznamu cloudových projektů a modelům hostovaným Gensparkem. Bez něj fungují dál všechny místní funkce i vlastní modely.
-- Odhlášení je jedno kliknutí v nastavení.
-
 ## Integrace MCP (pro pokročilé uživatele a klienty AI)
 
 **Integrace** je panel, který propojí GenOffice s programovým agentem, a má o tom vlastní kapitolu: Připojení programového agenta. Zkrátka — vyberte cestu (příkazová řádka, nebo MCP), řiďte se danou částí a pak začněte nový chat a zeptejte se.
-
-![Nastavení ▸ Integrace: tři kroky, pak řádky dovedností a možnosti MCP](img/settings-integrations.png)
 
 Pod **Místní HTTP server** umí aplikace server spustit sama — přepínač zapnutí a port — a část **Pokročilé** přidá adresu pro kontrolu stavu a soubor protokolu, místo aby ho nechala na pomocníkovi. Naslouchá pouze na localhostu.
 
 ## Přehled příkazů
 
-| Příkaz               | Co dělá                     |
-| -------------------- | --------------------------- |
-| `genoffice <soubor>` | otevře soubor               |
-| `genoffice mcp`      | spustí místní server MCP    |
-| `genoffice --help`   | všechny příkazy a přepínače |
+| Příkaz                | Co dělá                     |
+| --------------------- | --------------------------- |
+| `ieumoffice <soubor>` | otevře soubor               |
+| `ieumoffice mcp`      | spustí místní server MCP    |
+| `ieumoffice --help`   | všechny příkazy a přepínače |

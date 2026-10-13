@@ -1,0 +1,91 @@
+# Connexion par abonnement
+
+GenOffice fait fonctionner son IA avec un abonnement que vous avez déjà : un abonnement Claude (Anthropic) ou un abonnement Codex (OpenAI). Codex est le programme d’OpenAI, et vous vous y connectez avec votre forfait ChatGPT. Vous n’avez pas besoin de clé API, et GenOffice n’a pas de compte propre auquel s’inscrire.
+
+## Comment ça marche
+
+- L’IA n’est pas intégrée à GenOffice. Un programme de la société est installé sur ce PC — **Claude Code** pour un abonnement Claude, **Codex** pour un abonnement ChatGPT — et GenOffice lui demande la réponse.
+- Ce programme est connecté avec votre propre compte : chaque requête est donc décomptée de votre propre forfait.
+- GenOffice n’affiche jamais de formulaire de connexion à lui et ne lit ni n’enregistre jamais vos identifiants. Vous vous connectez dans le programme et sur la page web de la société.
+
+## Avant de commencer
+
+Il vous faut l’un des deux. Avoir les deux convient très bien.
+
+- Un abonnement Claude, et le programme Claude Code installé et connecté sur ce PC.
+- Un abonnement ChatGPT, et le programme Codex installé et connecté sur ce PC.
+
+Si le programme n’est pas encore installé, ou pas encore connecté, les boutons de la section suivante s’en chargent.
+
+## Établir la connexion
+
+1. Ouvrez **Paramètres** depuis la ligne en bas à gauche de l’accueil et choisissez **IA**. Sous **Connexion par abonnement** se trouvent une carte pour Claude et une pour Codex.
+2. Lisez ce qu’indique la carte et appuyez sur son bouton. Le tableau ci-dessous explique chaque état.
+3. Revenez à la fenêtre de GenOffice. La carte se revérifie d’elle-même, et **Vérifier à nouveau** lance la vérification tout de suite.
+
+Les mêmes cartes apparaissent à la deuxième étape des écrans de bienvenue au premier lancement, et dans le panneau IA lorsqu’aucune IA n’est connectée. Vous pouvez les passer et établir la connexion plus tard.
+
+| Ce qu’indique la carte                    | Ce que cela signifie                                                                                                         | Que faire                                                                                                                                                                                                                                                                                                      |
+| ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Vérification…**                         | GenOffice demande au programme où il en est.                                                                                 | Patientez un instant.                                                                                                                                                                                                                                                                                          |
+| **Non installé**                          | Le programme est introuvable sur ce PC.                                                                                      | Appuyez sur **Installer**. La commande d’installation officielle de la société s’exécute dans une nouvelle fenêtre de terminal : vous voyez ainsi ce qu’elle fait. GenOffice ne télécharge rien de lui-même. Pour installer à la main, **Guide d’installation officiel** ouvre les instructions de la société. |
+| **Non connecté**                          | Le programme est là, mais aucun compte n’y est connecté.                                                                     | Appuyez sur **Se connecter**. La connexion du programme démarre dans une nouvelle fenêtre et ouvre la page de connexion de la société dans votre navigateur. Terminez-la là.                                                                                                                                   |
+| **Connecté**                              | Une connexion par abonnement a été confirmée. Le nom du forfait s’affiche lorsque le programme l’indique.                    | Rien. L’IA est prête.                                                                                                                                                                                                                                                                                          |
+| **Connecté, mais pas avec un abonnement** | Le programme est connecté avec une clé API ou un compte facturé à l’usage, ou le type de connexion n’a pas pu être confirmé. | Voir « Connexions facturées à l’usage » ci-dessous.                                                                                                                                                                                                                                                            |
+| **Impossible de vérifier la connexion**   | La vérification elle-même a échoué. La raison figure sur la carte.                                                           | Appuyez sur **Vérifier à nouveau**. Si la carte indique que le programme est trop ancien, mettez-le à jour puis vérifiez à nouveau.                                                                                                                                                                            |
+
+La connexion est vérifiée au démarrage de l’application, à l’ouverture des Paramètres et lorsque vous revenez à la fenêtre après avoir lancé une installation ou une connexion.
+
+## Connexions facturées à l’usage
+
+Une carte qui indique **Connecté, mais pas avec un abonnement** porte un avertissement : « Ce n’est pas un abonnement : vous payez ce que vous consommez. »
+
+- GenOffice n’utilise pas cette connexion tant que vous n’avez pas appuyé sur **Utiliser quand même**. Dès lors, chaque requête est facturée à ce compte.
+- Même alors, elle n’est jamais choisie automatiquement. Choisissez-la vous-même sous **IA à utiliser**, où elle porte la mention **Payant**.
+- Votre autorisation n’est retenue que pour ce programme. Elle est effacée lorsque le programme est déconnecté ou que sa connexion change.
+- Pour utiliser plutôt votre abonnement, connectez le programme avec le compte de votre abonnement et appuyez sur **Vérifier à nouveau**.
+
+## Quelle IA est utilisée
+
+**IA à utiliser**, sous Paramètres ▸ IA, est réglé au départ sur **Automatique**. Automatique décide dans cet ordre :
+
+1. Claude, lorsque sa carte indique Connecté.
+2. Sinon Codex, lorsque sa carte indique Connecté.
+3. Sinon aucune IA n’est connectée, et le panneau IA affiche les cartes de connexion au lieu d’une erreur.
+
+Automatique ne choisit jamais rien qui coûte de l’argent en plus : ni une clé API, ni une connexion facturée à l’usage. Celles-ci ne servent que tant que vous les choisissez vous-même.
+
+Vous pouvez aussi choisir une IA vous-même, au même endroit ou dans la liste des modèles en bas du panneau IA. Si celle que vous avez choisie cesse de fonctionner, GenOffice ne passe pas discrètement à une autre. Il vous dit ce qui s’est passé et montre comment rétablir la connexion.
+
+Partout où Codex peut être choisi, une ligne l’accompagne : « Utiliser un abonnement Codex dans une application n’est pas une méthode officiellement recommandée par OpenAI. » Décidez en connaissance de cause.
+
+## Quand une requête est arrêtée
+
+Une requête s’arrête lorsque la limite du forfait est atteinte, lorsque la connexion au compte a expiré ou lorsque le programme n’est plus là. GenOffice ne bascule pas de lui-même vers une autre IA.
+
+- La raison s’affiche là où la réponse s’est arrêtée. Pour une limite atteinte, l’heure de réinitialisation s’affiche aussi, lorsque le programme l’indique.
+- Si votre autre abonnement est connecté, un bouton **Continuer avec …** apparaît, par exemple **Continuer avec Codex**. Appuyer dessus en fait l’IA à utiliser — la liste des modèles montre le changement — et relance la requête.
+- Si la seule autre connexion est une connexion facturée à l’usage que vous avez autorisée, le même bouton s’accompagne d’une note sur le coût.
+- Il n’y a jamais de bouton qui vous fasse passer à une clé API.
+
+## La ligne d’utilisation
+
+Dès que vous avez utilisé 80 % ou plus d’une limite, le panneau IA affiche une ligne telle que « 85 % utilisés · réinitialisation à 15:00 ». Claude indique une limite sur 5 heures et une limite sur 7 jours, et Codex est présenté de la même façon lorsqu’il les indique. En dessous de 80 %, ou lorsque le programme n’indique rien, aucune ligne ne s’affiche.
+
+## Ce qui est envoyé, et où
+
+La première fois qu’un abonnement peut être utilisé, GenOffice affiche un avis, une seule fois. Pour le relire, allez dans Paramètres ▸ IA ▸ **Avis de première connexion** et appuyez sur **Revoir**. Il dit trois choses :
+
+- Le contenu du document et votre conversation sont envoyés à Anthropic ou à OpenAI sous votre propre compte.
+- L’utilisation de ce contenu pour entraîner l’IA dépend des paramètres de votre propre compte auprès de cette société, et non de GenOffice.
+- GenOffice désactive l’enregistrement de l’historique des conversations de Codex, mais Codex peut tout de même conserver ses propres journaux de diagnostic sur ce PC.
+
+Tout ce que vous avez masqué avec **Masquer la sélection à l'IA** n’est pas envoyé, quelle que soit l’IA utilisée.
+
+## Bon à savoir
+
+- **Vitesse.** Une réponse par abonnement démarre quelques secondes plus tard qu’avec une clé API, car le programme de la société doit d’abord se lancer.
+- **Forfait ChatGPT gratuit.** Il apparaît comme Connecté, mais ses limites sont faibles : les requêtes s’arrêtent donc plus tôt. La ligne d’utilisation ne s’affiche pas pour lui.
+- **Génération d’images.** Dans cette version, un abonnement ne génère pas d’images, quel que soit le forfait. Il faut pour cela la clé d’un fournisseur d’images ; voir [Modèles IA et paramètres](help://ai-models).
+- **Proxys.** Claude Code et Codex ne reprennent pas les réglages de proxy de GenOffice. Ils utilisent le proxy défini pour ce PC, par exemple la variable d’environnement `HTTPS_PROXY`, exactement comme lorsque vous les lancez dans un terminal. S’ils ne parviennent pas à se connecter dans un terminal, ils n’y parviendront pas non plus d’ici.
+- **Commandes et autres programmes.** Une requête qui arrive de la commande `ieumoffice` ou d’un agent de programmation connecté n’utilise pas votre abonnement, sauf si vous l’autorisez. Voir [Connecter un agent de codage](help://mcp).

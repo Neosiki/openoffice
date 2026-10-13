@@ -15,29 +15,27 @@ Robisz to w **Ustawienia ▸ Integracje**. Panel ma dwie połowy i możesz skorz
 To samo z terminala — to jest ścieżka zaawansowana, po którą sięgasz, gdy agent jest tam, gdzie panel nie potrafi go znaleźć:
 
 ```sh
-genoffice mcp install all
+ieumoffice mcp install all
 ```
 
-Znajduje agentów programistycznych na tym komputerze i zapisuje wpis serwera stdio we własnej konfiguracji każdego z nich, nie ruszając reszty pliku.
+Znajduje agentów programistycznych na tym komputerze i zapisuje wpis serwera stdio we własnej konfiguracji każdego z nich, nie ruszając reszty pliku. Wpis nosi nazwę `ieumoffice`. Wykonana ręcznie dla Claude Code ta sama rejestracja to `claude mcp add --transport stdio ieumoffice -- ieumoffice mcp`.
 
 ```sh
-genoffice mcp list             # where each agent stands
-genoffice mcp install cursor    # just one
-genoffice mcp uninstall cursor  # take it back out
+ieumoffice mcp list             # where each agent stands
+ieumoffice mcp install cursor    # just one
+ieumoffice mcp uninstall cursor  # take it back out
 ```
 
 Agent zainstalowany w nietypowym miejscu wymaga `--dir <path>`; `--force` przepisuje wpis, który już tam jest.
 
-Wszystko, co przyjmuje serwer, mieści się na jednym ekranie — formularze rejestracji, usuwania i listowania, udostępnianie przez HTTP oraz dwie flagi schematów:
-
-![Prawdziwe wyjście genoffice mcp --help: formularze install, uninstall i list wraz z opcjami --http, --host, --token, --compact-schemas, --dir i --force](img/mcp.png)
+`ieumoffice mcp --help` mieści na jednym ekranie wszystko, co przyjmuje serwer: formularze rejestracji, usuwania i listowania, udostępnianie przez HTTP oraz dwie flagi schematów.
 
 ## Uruchamianie samodzielne
 
 Dla klienta na innym komputerze udostępnij go przez HTTP:
 
 ```sh
-genoffice mcp --http 8765 --token <secret>
+ieumoffice mcp --http 8765 --token <secret>
 ```
 
 `--host <addr>` zmienia adres nasłuchu. Przekaż ten sam token klientowi.
@@ -52,21 +50,40 @@ Każde polecenie jest narzędziem. Najciekawsze:
 - **`render`** — jeden PNG na stronę, ułożony przez renderujący aplikacji, więc agent może obejrzeć slajdę, zamiast ją zgadywać.
 - **`pdf`** — warstwa tekstowa PDF-a, strona po stronie, bez procesu aplikacji.
 - **`info`** — metadane i podsumowanie struktury, zwykle najtańsze pierwsze wywołanie przy nieznanym pliku.
-- **`search`, `image`, `media`** — dostawcy skonfigurowani w aplikacji, więc agent nie potrzebuje własnych kluczy.
+- **`search`, `image`, `media`** — wyszukiwanie w sieci i wyszukiwanie obrazów, generowanie obrazów i analiza mediów przez to, co skonfigurowano w aplikacji, więc agent nie potrzebuje własnych kluczy. Następna część mówi, z czego mogą korzystać.
 - **`merge`** — wypełnia szablon `{{key}}`.
+
+## Wyszukiwanie, obrazy i media: z czego agent może korzystać
+
+Żądanie z polecenia `ieumoffice` albo od klienta MCP nie zostało wpisane przez ciebie w aplikacji, więc GenOffice traktuje je ostrożnie.
+
+- **Wyszukiwanie** działa zawsze i domyślnie jest bezpłatne. Klucz dostawcy wyszukiwania jest używany tylko wtedy, gdy został wybrany.
+- **Generowanie obrazu** wymaga klucza dostawcy obrazów. W tej wersji subskrypcja nie generuje obrazów.
+- **Opisywanie obrazu** korzysta z dostawcy z kluczem, jeśli jest skonfigurowany. Twoja subskrypcja Claude lub Codex **nie jest używana, dopóki na to nie pozwolisz**.
+- **Wideo i dźwięk** wymagają dostawcy z kluczem obsługującego wideo.
+
+Aby pozwolić na korzystanie z subskrypcji, otwórz Ustawienia ▸ AI ▸ **Zaawansowane** i włącz **Zezwól żądaniom automatycznym na korzystanie z subskrypcji**. Najpierw pojawia się ostrzeżenie — „Żadna z tych dwóch firm nie zaleca, aby program automatycznie korzystał z subskrypcji, a twoje konto może zostać ograniczone.” — a przełącznik włącza się dopiero po wybraniu **Włącz mimo to**.
+
+Nawet przy włączonym przełączniku:
+
+- Żądania są obsługiwane pojedynczo. Pozostałe czekają na swoją kolej.
+- W ciągu godziny obsługiwanych jest najwyżej 20 żądań w ramach subskrypcji. Licznik jest wspólny dla wszystkich uruchomień poleceń i wszystkich wywołań MCP. Po jego przekroczeniu żądanie kończy się błędem, który podaje, kiedy żądania znów będą możliwe.
+- Logowanie rozliczane za zużycie, dopuszczone przez **Użyj mimo to**, nie liczy się tutaj jako subskrypcja. Jest traktowane jak klucz: jeśli zostało wybrane jako używane AI, opisy obrazów przechodzą przez nie bez względu na położenie przełącznika, bez limitu godzinnego, a każdy z nich jest płatny.
+
+Gdy przełącznik jest wyłączony i nie skonfigurowano żadnego klucza, narzędzie odpowiada, że funkcja jest niedostępna, i wskazuje to ustawienie. Agent może to wcześniej sprawdzić narzędziem `capabilities`; zobacz [Wiersz poleceń i agenci](help://cli).
 
 ## Schematy i mniejszy budżet
 
-`apply` i `create` deklarują parametry `ops`, `cells` i `data` wraz z typowanym schematem dla każdej op, wygenerowanym z `genoffice guide <domain> --json`. To jest precyzyjne, ale nie małe. Klient o ciasnym oknie kontekstowym może zamiast tego poprosić o zwykłe tablice:
+`apply` i `create` deklarują parametry `ops`, `cells` i `data` wraz z typowanym schematem dla każdej op, wygenerowanym z `ieumoffice guide <domain> --json`. To jest precyzyjne, ale nie małe. Klient o ciasnym oknie kontekstowym może zamiast tego poprosić o zwykłe tablice:
 
 ```sh
-genoffice mcp --compact-schemas
-GENOFFICE_MCP_COMPACT_SCHEMAS=1 genoffice mcp
+ieumoffice mcp --compact-schemas
+GENOFFICE_MCP_COMPACT_SCHEMAS=1 ieumoffice mcp
 ```
 
 ## Po co jest skill
 
-Agent, który nie zna słownictwa op, będzie zgadywał. Skill zabiera ze sobą referencję i przewodniki projektowe — dokładnie te materiały, które wypisuje `genoffice guide` —, więc asystent pisze op, których specyfikację naprawdę przeczytał. Zainstaluj go z panelu powyżej albo poleceniem `genoffice skill` z terminala.
+Agent, który nie zna słownictwa op, będzie zgadywał. Skill zabiera ze sobą referencję i przewodniki projektowe — dokładnie te materiały, które wypisuje `ieumoffice guide` —, więc asystent pisze op, których specyfikację naprawdę przeczytał. Zainstaluj go z panelu powyżej albo poleceniem `ieumoffice skill` z terminala.
 
 ## Do czego sięga w aplikacji
 

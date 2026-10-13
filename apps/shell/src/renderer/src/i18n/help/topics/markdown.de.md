@@ -13,8 +13,6 @@ Der Markdown-Editor öffnet .md / .markdown — und .txt / .json, direkt in der 
 
 Eine Zeile Schaltflächen über dem Editor (zum Tooltip mit der Maus darüberfahren):
 
-![Die Markdown-Werkzeugleiste](img/md-toolbar.png)
-
 - **Datei und Verlauf**: Speichern, Speichern unter, Rückgängig, Wiederholen, Suchen; der Schalter **AutoSpeichern** rechts schreibt Änderungen in regelmäßigen Abständen auf den Datenträger.
 - **KI-Schaltfläche**: öffnet den KI-Bereich; daneben liegen die Voreinstellungen zum Umformulieren, Ausbauen und Übersetzen.
 - **Absatzformat** (Dropdown): zwischen Fließtext und den Überschriftebenen wechseln.

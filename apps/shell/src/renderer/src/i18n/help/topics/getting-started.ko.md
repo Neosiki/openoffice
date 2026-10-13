@@ -4,8 +4,6 @@ GenOffice는 전적으로 내 컴퓨터에서 동작하는 오피스 스위트�
 
 ## 화면 개요
 
-![홈 화면](img/home-screen.png)
-
 창은 세 부분으로 나뉩니다.
 
 - **탭 바(위)**: 열려 있는 파일마다 탭 하나가 됩니다. 맨 왼쪽 홈 탭은 항상 있으며 닫을 수 없습니다. 나머지 탭은 내가 연 문서입니다. 탭을 더블클릭하면 파일 이름을 그 자리에서 바꿀 수 있습니다.
@@ -26,7 +24,7 @@ GenOffice는 전적으로 내 컴퓨터에서 동작하는 오피스 스위트�
 
 - 메뉴 **파일 ▸ 열기**(⌘O/ctrl+O)는 시스템 선택 창을 엽니다. .docx / .doc / .xlsx / .xls / .csv / .tsv / .pptx / .ppt / .pdf / .md / .html을 지원합니다.
 - 홈의 **최근 사용** 목록에서 아무 항목이나 누릅니다.
-- 터미널에서 `genoffice <file>`을 실행해도 열 수 있습니다.
+- 터미널에서 `ieumoffice <file>`을 실행해도 열 수 있습니다.
 
 ## 저장 방식
 
@@ -88,4 +86,5 @@ Windows가 Mac 쪽 두 개를 그대로 옮긴 것은 아닙니다. Excel for Ma
 - 파일이 어디에 있는지: [홈 화면](help://home-screen).
 - 열어 둔 파일이 많을 때 관리하기: [탭과 창 관리](help://tabs-and-windows).
 - AI에게 일을 맡기기: [AI 어시스턴트 패널](help://ai-panel).
+- 먼저 AI 연결하기: [구독 연결](help://subscription).
 - 언어, 테마, 기본 앱: [설정, 언어, 테마와 MCP 연동](help://settings-integrations).

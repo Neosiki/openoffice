@@ -49,7 +49,8 @@ Nabídka závisí na místě, kde jste klikli pravým tlačítkem:
 
 ## Generování pomocí AI
 
-- Karta AI Slides na domovské stránce: zadejte téma nebo osnovu a AI sestaví prezentaci; pokud selže generování v cloudu, použije se místní generování.
+- Karta AI Slides na domovské stránce: zadejte téma nebo osnovu a AI sestaví prezentaci.
+- Bez klíče poskytovatele obrázků AI obrázky generovat nemůže a prezentace místo toho použije obrázky nalezené vyhledáváním obrázků; viz [Modely AI a nastavení](help://ai-models).
 - Dál můžete upravovat panelem AI.
 - Pravý klik na výběr textu nebo prvek obrázek/video/audio ▸ **Skrýt výběr před AI** ho schová před očima modelu (detaily v kapitole o AI panelu); snímek se skrytým obsahem přeskočí automatickou kontrolu snímkem.
 

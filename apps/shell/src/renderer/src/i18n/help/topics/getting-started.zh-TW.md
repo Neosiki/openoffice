@@ -4,8 +4,6 @@ GenOffice 是一套完全在你電腦上運作的辦公套件：單一視窗、�
 
 ## 介面總覽
 
-![首頁畫面](img/home-screen.png)
-
 視窗分成三塊：
 
 - **分頁列（上方）**：每個開啟中的檔案都是一個分頁。最左邊的「首頁」分頁永遠存在、無法關閉；其餘分頁就是你開啟的文件。在分頁上按兩下可直接重新命名檔案。
@@ -26,7 +24,7 @@ GenOffice 是一套完全在你電腦上運作的辦公套件：單一視窗、�
 
 - 選單 **檔案 ▸ 開啟**（⌘O/ctrl+O）會開啟系統選擇視窗：.docx / .doc / .xlsx / .xls / .csv / .tsv / .pptx / .ppt / .pdf / .md / .html。
 - 直接點首頁「最近」的任一項目。
-- 終端機裡執行 `genoffice <file>` 也能開啟檔案。
+- 終端機裡執行 `ieumoffice <file>` 也能開啟檔案。
 
 ## 儲存模式
 
@@ -88,4 +86,5 @@ Windows 並不是把 Mac 上那兩個組合改寫一次。Excel for Mac 給 Shee
 - 檔案放在哪裡：[首頁（Home）：檔案都在哪裡](help://home-screen)。
 - 同時管理多個開啟中的檔案：[分頁與視窗管理](help://tabs-and-windows)。
 - 想讓 AI 幫你做事：[AI 助理面板](help://ai-panel)。
+- 想先把 AI 連結好：[訂閱連線](help://subscription)。
 - 語言、主題、預設應用程式：[設定、語言、主題與 MCP 整合](help://settings-integrations)。

@@ -1,4 +1,4 @@
-# Menghubungkan agen pemrograman
+# Menghubungkan agen coding
 
 GenOffice berbicara dalam Model Context Protocol, jadi agen pemrograman dapat membaca, menulis, dan merender dokumen Anda lewat mesin yang sama dengan yang dipakai aplikasi. Agen itu tidak sedang menebak-nebak format berkas: ia memperoleh skema op bertipe dari definisi yang sama dengan yang dipakai eksekutor untuk memvalidasi.
 
@@ -15,29 +15,27 @@ Inilah tempatnya: **Pengaturan ▸ Integrasi**. Panel ini punya dua bagian, dan 
 Hal yang sama dari sebuah terminal — inilah jalur mahir, dan yang sebaiknya dipakai ketika agen ada di tempat yang tidak bisa ditemukan panel:
 
 ```sh
-genoffice mcp install all
+ieumoffice mcp install all
 ```
 
-Perintah ini menemukan agen pemrograman di komputer ini — Claude Code, Codex, Cursor, Gemini CLI, Copilot CLI, OpenCode, Windsurf — dan menulis entri server stdio ke dalam konfigurasi masing-masing, meninggalkan sisa berkas itu persis seperti ditemukannya.
+Perintah ini menemukan agen pemrograman di komputer ini — Claude Code, Codex, Cursor, Gemini CLI, Copilot CLI, OpenCode, Windsurf — dan menulis entri server stdio ke dalam konfigurasi masing-masing, meninggalkan sisa berkas itu persis seperti ditemukannya. Entri itu bernama `ieumoffice`. Jika dilakukan secara manual untuk Claude Code, pendaftaran yang sama adalah `claude mcp add --transport stdio ieumoffice -- ieumoffice mcp`.
 
 ```sh
-genoffice mcp list             # where each agent stands
-genoffice mcp install cursor    # just one
-genoffice mcp uninstall cursor  # take it back out
+ieumoffice mcp list             # where each agent stands
+ieumoffice mcp install cursor    # just one
+ieumoffice mcp uninstall cursor  # take it back out
 ```
 
 Agen yang Anda pasang di lokasi tidak biasa menerima `--dir <path>`; `--force` menulis ulang entri yang sudah ada di sana.
 
-Semua yang diterima server ada dalam satu layar — bentuk untuk mendaftar, melepas, dan mencantumkan, menyajikan lewat HTTP, serta dua opsi skema:
-
-![Keluaran nyata dari genoffice mcp --help: bentuk install, uninstall, dan list, beserta opsi --http, --host, --token, --compact-schemas, --dir, dan --force](img/mcp.png)
+`ieumoffice mcp --help` menampilkan semua yang diterima server dalam satu layar: bentuk untuk mendaftar, melepas, dan mencantumkan, menyajikan lewat HTTP, serta dua opsi skema.
 
 ## Menjalankannya tanpa asisten
 
 Untuk klien di komputer lain, sajikan lewat HTTP sebagai gantinya:
 
 ```sh
-genoffice mcp --http 8765 --token <secret>
+ieumoffice mcp --http 8765 --token <secret>
 ```
 
 `--host <addr>` menentukan ke mana ia mendengarkan. Berikan token yang sama kepada kliennya.
@@ -52,21 +50,40 @@ Setiap perintah adalah sebuah alat. Yang menarik:
 - **`render`** — satu PNG per halaman, diletakkan oleh perender aplikasi, jadi agen bisa melihat sebuah slide alih-alih menebaknya.
 - **`pdf`** — lapisan teks sebuah PDF, halaman demi halaman, tanpa proses aplikasi.
 - **`info`** — metadata dan ringkasan struktur, yang biasanya merupakan panggilan pertama yang paling murah untuk berkas yang belum dikenal.
-- **`search`, `image`, `media`** — penyedia yang dikonfigurasi di aplikasi, jadi agen tidak memerlukan kunci sendiri.
+- **`search`, `image`, `media`** — pencarian web dan gambar, pembuatan gambar, dan analisis media lewat apa yang disiapkan di aplikasi, jadi agen tidak memerlukan kunci sendiri. Bagian berikutnya menjelaskan apa yang boleh dipakainya.
 - **`merge`** — mengisi templat `{{key}}`.
+
+## Pencarian, gambar, dan media: apa yang boleh dipakai agen
+
+Permintaan dari perintah `ieumoffice` atau dari klien MCP tidak Anda ketik sendiri di aplikasi, jadi GenOffice memperlakukannya dengan hati-hati.
+
+- **Pencarian** selalu berfungsi dan gratis secara bawaan. Kunci penyedia pencarian hanya dipakai jika Anda memilihnya.
+- **Membuat gambar** memerlukan kunci penyedia gambar. Pada versi ini langganan tidak membuat gambar.
+- **Mendeskripsikan gambar** memakai penyedia berbasis kunci bila ada yang disiapkan. Langganan Claude atau Codex Anda **tidak dipakai kecuali Anda mengizinkannya**.
+- **Video dan audio** memerlukan penyedia berbasis kunci yang mendukung video.
+
+Untuk mengizinkan pemakaian langganan, buka Pengaturan ▸ AI ▸ **Lanjutan** lalu aktifkan **Izinkan permintaan otomatis memakai langganan**. Peringatan muncul lebih dulu — "Kedua perusahaan tidak menyarankan program memakai langganan Anda secara otomatis, dan akun Anda bisa dibatasi." — dan sakelar baru aktif setelah Anda memilih **Tetap aktifkan**.
+
+Bahkan saat sakelar aktif:
+
+- Permintaan ditangani satu per satu. Yang lain menunggu giliran.
+- Paling banyak 20 permintaan langganan ditangani per jam. Hitungannya dipakai bersama oleh setiap perintah yang dijalankan dan setiap panggilan MCP. Setelah melewatinya, permintaan gagal dengan galat yang menyebutkan kapan permintaan bisa dilakukan lagi.
+- Login bayar sesuai pemakaian yang Anda izinkan dengan **Tetap gunakan** tidak dihitung sebagai langganan di sini. Login itu diperlakukan seperti kunci: jika Anda memilihnya sebagai AI yang digunakan, deskripsi gambar berjalan lewat login itu apa pun posisi sakelarnya, tanpa batas per jam, dan masing-masing ditagih.
+
+Jika sakelar nonaktif dan tidak ada kunci yang disiapkan, alat menjawab bahwa fiturnya tidak tersedia dan menyebutkan pengaturan ini. Agen bisa memeriksa lebih dulu dengan alat `capabilities`; lihat [Baris perintah dan agen](help://cli).
 
 ## Skema, dan anggaran yang lebih kecil
 
-`apply` dan `create` mengumumkan parameter `ops`, `cells`, dan `data` dengan skema bertipe per-op, yang dibangkitkan dari `genoffice guide <domain> --json`. Itu akurat, dan ukurannya tidak kecil. Klien dengan jendela konteks sempit bisa meminta larik biasa sebagai gantinya:
+`apply` dan `create` mengumumkan parameter `ops`, `cells`, dan `data` dengan skema bertipe per-op, yang dibangkitkan dari `ieumoffice guide <domain> --json`. Itu akurat, dan ukurannya tidak kecil. Klien dengan jendela konteks sempit bisa meminta larik biasa sebagai gantinya:
 
 ```sh
-genoffice mcp --compact-schemas
-GENOFFICE_MCP_COMPACT_SCHEMAS=1 genoffice mcp
+ieumoffice mcp --compact-schemas
+GENOFFICE_MCP_COMPACT_SCHEMAS=1 ieumoffice mcp
 ```
 
 ## Mengapa perlu skill
 
-Agen yang tidak mengenal kosakata op akan menebak. Skill itu membawa referensi dan panduan desain — materi yang sama dengan yang dicetak `genoffice guide` —, sehingga asisten menulis op yang spesifikasinya memang sudah dibacanya. Pasang dari panel di atas, atau dengan `genoffice skill` dari terminal.
+Agen yang tidak mengenal kosakata op akan menebak. Skill itu membawa referensi dan panduan desain — materi yang sama dengan yang dicetak `ieumoffice guide` —, sehingga asisten menulis op yang spesifikasinya memang sudah dibacanya. Pasang dari panel di atas, atau dengan `ieumoffice skill` dari terminal.
 
 ## Apa yang bisa dicapainya di dalam aplikasi
 

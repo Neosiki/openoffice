@@ -4,13 +4,18 @@ Todos os editores podem chamar o painel de IA: selecione algo, dê uma instruç�
 
 ## Abrir e usar
 
-![O painel de IA no Docs](img/ai-panel.png)
-
+- O painel precisa de uma IA conectada. Se não houver nenhuma, mostra os cartões de conexão em vez de um erro; consulte [Conexão por assinatura](help://subscription).
 - Pontos de entrada: o **botão de IA** no friso de cada editor, **Perguntar à IA** nos menus de contexto, ou Perguntar à IA na barra de marcação.
 - Descreva a tarefa por palavras normais (reescrever isto / transformar esta coluna em percentagens / refazer a disposição desta página...) e prima Enter.
 - As respostas são renderizadas **em fluxo**; quando a IA precisa de ferramentas (ler o documento, editá-lo), executa-as e continua até terminar.
 - **Parar**: interrompe a volta em curso a qualquer momento.
 - **Fila de espera**: enquanto uma resposta chega, Enter coloca sua mensagem na fila em vez de descartá-la — uma faixa acima do campo de entrada conta quantas; abra-a para editar, remover, reordenar, pausar ou limpar. A mensagem seguinte parte sozinha ao fim do turno; Esc continua parando o turno.
+
+## Que IA responde
+
+- A lista de modelos ao fundo do painel mostra a IA em uso e permite escolher outra: primeiro as suas assinaturas, depois os fornecedores com chave que configurou.
+- Depois de ter usado 80% ou mais do limite de uma assinatura, aparece no painel uma linha como «85% usado · redefine às 15:00».
+- Se um pedido for interrompido — o limite esgotou-se, ou o login expirou —, o painel diz porquê e não muda sozinho para outra IA. Quando a sua outra assinatura está conectada, um botão **Continuar com …** propõe-na.
 
 ## O que sabe fazer
 
@@ -36,5 +41,6 @@ Todos os editores podem chamar o painel de IA: selecione algo, dê uma instruç�
 
 ## Privacidade
 
-- As instruções e o conteúdo relevante do documento vão para **o serviço de modelo que configurou** (Genspark ou um endpoint personalizado, ver o capítulo seguinte); sem configuração, nada é enviado.
-- Os ficheiros locais não são carregados para lado nenhum; as chaves BYOK ficam guardadas no ficheiro de definições da aplicação nesta máquina e são enviadas apenas nos cabeçalhos dos pedidos.
+- As instruções e o conteúdo relevante do documento vão para **a IA que está a usar**: para a Anthropic ou a OpenAI pela sua própria conta quando usa uma assinatura, ou para o fornecedor cuja chave introduziu. Sem nenhuma IA conectada, nada é enviado.
+- Se o conteúdo de uma assinatura é usado para treinar IA depende das configurações da sua própria conta nessa empresa.
+- Os ficheiros locais não são carregados para lado nenhum; as chaves de API ficam guardadas no ficheiro de definições da aplicação nesta máquina e são enviadas apenas nos cabeçalhos dos pedidos.

@@ -4,8 +4,6 @@ GenOffice je kancelářský balík, který běží celý na vašem počítači: 
 
 ## Přehled rozhraní
 
-![Obrazovka domovské stránky](img/home-screen.png)
-
 Okno má tři části:
 
 - **Pruh karet (nahoře)**: každý otevřený soubor je jedna karta. Karta Domů, úplně vlevo, je vždy přítomná a nelze ji zavřít; ostatní karty jsou vaše dokumenty. Dvojklikem na kartu přejmenujete soubor přímo na místě.
@@ -26,7 +24,7 @@ Nový dokument se otevře bez názvu; soubor na disku vznikne až při prvním u
 
 - Nabídka **Soubor ▸ Otevřít…** (⌘O/ctrl+O) otevře systémový výběr: .docx / .doc / .xlsx / .xls / .csv / .tsv / .pptx / .ppt / .pdf / .md / .html.
 - Klikněte na cokoliv v seznamu **Nedávné** na domovské stránce.
-- Také `genoffice <soubor>` z terminálu soubory otevírá.
+- Také `ieumoffice <soubor>` z terminálu soubory otevírá.
 
 ## Model ukládání
 
@@ -88,4 +86,5 @@ Tím pádem zůstává ⌥⌘D volný, aby ho GenOffice na macOS mohla použít,
 - Kde jsou soubory: [Obrazovka domovské stránky](help://home-screen).
 - Správa mnoha otevřených souborů: [Karty a správa oken](help://tabs-and-windows).
 - Nechat práci udělat AI: [Panel AI asistenta](help://ai-panel).
+- Nejdřív připojit AI: [Připojení předplatného](help://subscription).
 - Jazyk, motiv, výchozí aplikace: [Nastavení, jazyk, motiv a integrace MCP](help://settings-integrations).

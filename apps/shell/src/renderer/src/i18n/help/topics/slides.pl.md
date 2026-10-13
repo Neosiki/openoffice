@@ -49,7 +49,8 @@ Menu zależy od miejsca, w którym klikniesz prawym przyciskiem:
 
 ## Generowanie przez AI
 
-- Karta AI Slides na stronie głównej: podaj temat lub konspekt, a AI zbuduje prezentację; gdy generowanie w chmurze się nie powiedzie, następuje powrót do generowania lokalnego.
+- Karta AI Slides na stronie głównej: podaj temat lub konspekt, a AI zbuduje prezentację.
+- Bez klucza dostawcy obrazów AI nie może generować obrazów, a prezentacja korzysta zamiast tego z obrazów znalezionych przez wyszukiwanie obrazów; zobacz [Modele AI i ustawienia](help://ai-models).
 - Dalej możesz dopracowywać materiał panelem AI.
 - Prawy przycisk na zaznaczeniu tekstu lub elemencie obraz/wideo/audio ▸ **Ukryj zaznaczenie przed AI** chowa go przed oczami modelu (szczegóły w rozdziale o panelu AI); slajd z ukrytą treścią pomija automatyczne sprawdzanie zrzutem.
 

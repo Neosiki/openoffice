@@ -15,29 +15,27 @@ GenOffice 支援 Model Context Protocol，因此程式開發代理可以透過�
 同樣的事，在終端機裡也做得到——這是進階路線，當代理裝在面板找不到的地方時，就該走這條：
 
 ```sh
-genoffice mcp install all
+ieumoffice mcp install all
 ```
 
-它會找出本機上的程式開發代理，把 stdio 伺服器項目寫進各自的設定檔，其餘部分維持原樣。
+它會找出本機上的程式開發代理，把 stdio 伺服器項目寫進各自的設定檔，其餘部分維持原樣。項目的名稱是 `ieumoffice`。如果要替 Claude Code 手動註冊，同樣的操作是 `claude mcp add --transport stdio ieumoffice -- ieumoffice mcp`。
 
 ```sh
-genoffice mcp list             # where each agent stands
-genoffice mcp install cursor    # just one
-genoffice mcp uninstall cursor  # take it back out
+ieumoffice mcp list             # where each agent stands
+ieumoffice mcp install cursor    # just one
+ieumoffice mcp uninstall cursor  # take it back out
 ```
 
 裝在不常見位置的代理要加上 `--dir <path>`；`--force` 會改寫已經存在的項目。
 
-伺服器能接受的東西都列在一個畫面上——註冊、移除與列出這三種形式，改用 HTTP 提供服務，以及兩個 schema 開關：
-
-![genoffice mcp --help 的真實輸出：install、uninstall 與 list 三種形式，以及 --http、--host、--token、--compact-schemas、--dir 和 --force 選項](img/mcp.png)
+`ieumoffice mcp --help` 會把伺服器能接受的東西都列在一個畫面上：註冊、移除與列出這三種形式，改用 HTTP 提供服務，以及兩個 schema 開關。
 
 ## 沒有助理也能執行
 
 如果用戶端在另一台電腦上，就改用 HTTP 提供服務：
 
 ```sh
-genoffice mcp --http 8765 --token <secret>
+ieumoffice mcp --http 8765 --token <secret>
 ```
 
 `--host <addr>` 決定它監聽的位址。把同一個權杖傳給用戶端。
@@ -52,21 +50,40 @@ genoffice mcp --http 8765 --token <secret>
 - **`render`** — 每頁一張 PNG，由應用程式的算繪器排版，這樣代理可以直接看投影片，而不是靠猜。
 - **`pdf`** — 逐頁讀取 PDF 的文字層，不需要應用程式行程。
 - **`info`** — 中繼資料與結構摘要，通常是拿到陌生檔案後最省事的第一通呼叫。
-- **`search`、`image`、`media`** — 應用程式裡已設定的供應商，代理不必再自備金鑰。
+- **`search`、`image`、`media`** — 透過應用程式裡設定好的內容進行網頁與圖片搜尋、產生圖片以及媒體解析，代理不必再自備金鑰。它們可以使用什麼，請見下一節。
 - **`merge`** — 填入 `{{key}}` 範本。
+
+## 搜尋、圖片與媒體：代理可以使用什麼
+
+來自 `ieumoffice` 命令或 MCP 用戶端的要求，並不是你在應用程式裡親手輸入的，所以 GenOffice 會格外謹慎地處理。
+
+- **搜尋**一律可用，而且預設免費。只有在你選用了某個搜尋服務商的金鑰時才會用到它。
+- **產生圖片**需要生圖服務商的金鑰。在這個版本裡，訂閱無法產生圖片。
+- **描述圖片**在已設定金鑰服務商時會使用它。你的 Claude 或 Codex 訂閱**除非你允許，否則不會使用**。
+- **影片與音訊**需要支援影片的金鑰服務商。
+
+要允許使用訂閱，請開啟 設定 ▸ AI ▸ **進階**，然後開啟**允許自動呼叫使用訂閱**。會先出現一則警告——「兩家公司都不建議讓程式自動使用訂閱，你的帳號可能會受到限制。」——要按下**仍要開啟**之後，開關才會開啟。
+
+即使開關已經開啟：
+
+- 要求一次只處理一個，其餘的會排隊等候。
+- 每小時最多處理 20 個使用訂閱的要求。這個次數由每一次命令執行和每一次 MCP 呼叫共用。超過之後，要求會失敗，錯誤訊息會說明什麼時候可以再提出要求。
+- 你用**仍要使用**允許的依用量付費登入，在這裡不算訂閱。它會被當成金鑰看待：如果你把它選為使用的 AI，那麼不論開關是開還是關，描述圖片都會透過它進行，不受每小時上限的限制，而且每一次都會計費。
+
+開關關閉、又沒有設定任何金鑰時，工具會回覆這項功能無法使用，並指出這項設定。代理可以先用 `capabilities` 工具查看；請見[命令列與智慧代理](help://cli)。
 
 ## Schema 與更小的預算
 
-`apply` 與 `create` 會用逐 op 的型別化 schema 宣告它們的 `ops`、`cells` 與 `data` 參數，schema 由 `genoffice guide <domain> --json` 產生。這樣很精確，但體積不小。上下文視窗吃緊的用戶端可以改用單純的陣列：
+`apply` 與 `create` 會用逐 op 的型別化 schema 宣告它們的 `ops`、`cells` 與 `data` 參數，schema 由 `ieumoffice guide <domain> --json` 產生。這樣很精確，但體積不小。上下文視窗吃緊的用戶端可以改用單純的陣列：
 
 ```sh
-genoffice mcp --compact-schemas
-GENOFFICE_MCP_COMPACT_SCHEMAS=1 genoffice mcp
+ieumoffice mcp --compact-schemas
+GENOFFICE_MCP_COMPACT_SCHEMAS=1 ieumoffice mcp
 ```
 
 ## 為什麼需要技能
 
-不熟悉 op 詞彙的代理只能靠猜。技能裡附著參考手冊與設計指南——和 `genoffice guide` 印出來的是同一份材料——所以助理寫下的 op，它的規格是真的讀過的。可以從上面的面板安裝，也可以用終端機裡的 `genoffice skill`。
+不熟悉 op 詞彙的代理只能靠猜。技能裡附著參考手冊與設計指南——和 `ieumoffice guide` 印出來的是同一份材料——所以助理寫下的 op，它的規格是真的讀過的。可以從上面的面板安裝，也可以用終端機裡的 `ieumoffice skill`。
 
 ## 它在應用程式裡能碰到什麼
 

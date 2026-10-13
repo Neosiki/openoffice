@@ -4,8 +4,6 @@ GenOffice là bộ ứng dụng văn phòng chạy hoàn toàn trên máy của 
 
 ## Tổng quan giao diện
 
-![Màn hình Trang chủ](img/home-screen.png)
-
 Cửa sổ gồm ba phần:
 
 - **Dải thẻ (phía trên)**: mỗi tập tin đang mở là một thẻ. Thẻ Trang chủ ngoài cùng bên trái luôn tồn tại và không thể đóng; các thẻ còn lại là tài liệu của bạn. Nhấp đúp vào một thẻ để đổi tên tập tin ngay tại chỗ.
@@ -26,7 +24,7 @@ Tài liệu mới mở ra chưa có tiêu đề; tập tin trên đĩa chỉ đ�
 
 - Menu **File ▸ Mở** (⌘O/ctrl+O) mở bộ chọn của hệ thống: .docx / .doc / .xlsx / .xls / .csv / .tsv / .pptx / .ppt / .pdf / .md / .html.
 - Nhấp vào bất kỳ mục nào trong danh sách **Gần đây** của Trang chủ.
-- `genoffice <file>` từ terminal cũng mở được tập tin.
+- `ieumoffice <file>` từ terminal cũng mở được tập tin.
 
 ## Mô hình lưu
 
@@ -88,4 +86,5 @@ Như vậy ⌥⌘D vẫn còn trống để GenOffice dùng trên macOS, nếu m
 - Tập tin nằm ở đâu: [Màn hình Trang chủ](help://home-screen).
 - Quản lý nhiều tập tin đang mở: [Quản lý thẻ và cửa sổ](help://tabs-and-windows).
 - Để AI làm việc giúp: [Bảng điều khiển trợ lý AI](help://ai-panel).
+- Kết nối AI trước đã: [Kết nối gói đăng ký](help://subscription).
 - Ngôn ngữ, chủ đề, ứng dụng mặc định: [Cài đặt, ngôn ngữ, chủ đề và tích hợp MCP](help://settings-integrations).
