@@ -37,17 +37,22 @@ type Reply = (request: AiStreamRequest, nth: number) => Array<Partial<AiStreamCh
 
 function fakeMain(opts: { settings: AiSettings; statuses: SubscriptionStatusMap; reply?: Reply }) {
   let settings = opts.settings
+  let statuses = opts.statuses
   const settingsListeners = new Set<() => void>()
+  const statusListeners = new Set<(next: SubscriptionStatusMap) => void>()
   let streamListener: ((chunk: AiStreamChunk) => void) | null = null
   const requests: AiStreamRequest[] = []
   const saved: AiSettings[] = []
   const subscription = {
-    statuses: vi.fn(async () => opts.statuses),
-    recheck: vi.fn(async () => opts.statuses),
+    statuses: vi.fn(async () => statuses),
+    recheck: vi.fn(async () => statuses),
     login: vi.fn(async (_provider: AiSubscriptionProviderId) => ({ ok: true })),
     install: vi.fn(async (_provider: AiSubscriptionProviderId) => ({ ok: true })),
-    setMeteredAccepted: vi.fn(async () => ({ ok: true, statuses: opts.statuses })),
-    onChanged: () => () => undefined,
+    setMeteredAccepted: vi.fn(async () => ({ ok: true, statuses })),
+    onChanged: (listener: (next: SubscriptionStatusMap) => void) => {
+      statusListeners.add(listener)
+      return () => statusListeners.delete(listener)
+    },
     openInstallHelp: vi.fn(async () => undefined),
   }
   const htmlApi = {
@@ -82,7 +87,21 @@ function fakeMain(opts: { settings: AiSettings; statuses: SubscriptionStatusMap;
     },
     aiStreamCancel: async () => undefined,
   }
-  return { htmlApi, subscription, requests, saved }
+  return {
+    htmlApi,
+    subscription,
+    requests,
+    saved,
+    /** the main process reports a status change */
+    setStatuses: (next: SubscriptionStatusMap) => {
+      statuses = next
+      for (const listener of statusListeners) listener(next)
+    },
+    /** what is stored changes behind the panel's back (no change event reaches it) */
+    storeSilently: (next: AiSettings) => {
+      settings = next
+    },
+  }
 }
 
 function fakeDeps(): HtmlAiDeps {
@@ -124,8 +143,18 @@ afterEach(() => {
   act(() => root.unmount())
   host.remove()
   delete (window as { htmlApi?: unknown }).htmlApi
+  delete (Element.prototype as { scrollIntoView?: unknown }).scrollIntoView
   vi.unstubAllGlobals()
 })
+
+/** records what the panel scrolls into view (jsdom implements no scrolling of its own) */
+function watchScrollIntoView(): Element[] {
+  const scrolled: Element[] = []
+  Element.prototype.scrollIntoView = function (this: Element) {
+    scrolled.push(this)
+  }
+  return scrolled
+}
 
 /** let the panel's promise chains (settings read, status read, stream chunks) settle */
 async function settle() {
@@ -158,6 +187,21 @@ async function mountPanel(main: ReturnType<typeof fakeMain>) {
 
 const composer = () => host.querySelector<HTMLTextAreaElement>('.ai-input-box textarea')!
 
+/** type a message and press Enter: while a reply runs, that queues it */
+async function typeAndEnter(text: string) {
+  const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set
+  act(() => {
+    setter?.call(composer(), text)
+    composer().dispatchEvent(new Event('input', { bubbles: true }))
+  })
+  act(() => {
+    composer().dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }),
+    )
+  })
+  await settle()
+}
+
 async function sendMessage(text: string) {
   const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set
   act(() => {
@@ -176,17 +220,34 @@ const ready = (patch: Partial<AiSettings> = {}): AiSettings => ({
 
 describe('AI panel without a connection', () => {
   it('shows the connect prompt with both cards and sends nothing', async () => {
+    const scrolled = watchScrollIntoView()
     const main = fakeMain({ settings: ready(), statuses: statusMap('signed-out', 'not-installed') })
     await mountPanel(main)
     const prompt = host.querySelector('.ai-sub-prompt')
     expect(prompt).not.toBeNull()
     expect(prompt!.querySelectorAll('.ai-sub-card')).toHaveLength(2)
+    expect(scrolled).toEqual([])
 
     await sendMessage('make it blue')
     expect(main.requests).toHaveLength(0)
     // the request is not lost: it stays in the composer, and no error bubble appears
     expect(composer().value).toBe('make it blue')
     expect(host.querySelector('.ai-msg-error')).toBeNull()
+    // the refused send points at the prompt
+    expect(scrolled).toContain(host.querySelector('.ai-sub-prompt'))
+  })
+
+  it('does not send the refused request once a subscription connects', async () => {
+    const main = fakeMain({ settings: ready(), statuses: statusMap('signed-out', 'not-installed') })
+    await mountPanel(main)
+    await sendMessage('make it blue')
+
+    act(() => main.setStatuses(statusMap('ready', 'not-installed')))
+    await settle()
+    // minutes may have passed at the sign-in page: the run must be asked for again
+    expect(main.requests).toHaveLength(0)
+    expect(composer().value).toBe('make it blue')
+    expect(host.querySelector('.ai-sub-prompt')).toBeNull()
   })
 
   it('wires the card actions to the subscription bridge', async () => {
@@ -204,15 +265,54 @@ describe('AI panel without a connection', () => {
     expect(main.subscription.install).toHaveBeenCalledWith('codex')
   })
 
-  it('shows nothing and lets the main process decide while the statuses are unknown', async () => {
+  it('holds a send made while the statuses are still being checked, and starts it once a provider can run', async () => {
+    const main = fakeMain({ settings: ready(), statuses: statusMap('checking', 'checking') })
+    await mountPanel(main)
+    // nobody is waiting on the check yet: no prompt flashes up
+    expect(host.querySelector('.ai-sub-prompt')).toBeNull()
+
+    await sendMessage('make it blue')
+    // held: not sent, not dropped; the cards show the check the request waits for
+    expect(main.requests).toHaveLength(0)
+    expect(composer().value).toBe('make it blue')
+    expect(host.querySelector('.ai-sub-prompt')).not.toBeNull()
+    expect(host.querySelector('.ai-msg-error')).toBeNull()
+
+    act(() => main.setStatuses(statusMap('checking', 'ready')))
+    await settle()
+    expect(main.requests).toHaveLength(1)
+    expect(composer().value).toBe('')
+    expect(host.querySelector('.ai-sub-prompt')).toBeNull()
+  })
+
+  it('a send held during the status check falls to the connect prompt when the answer is "not connected"', async () => {
+    const scrolled = watchScrollIntoView()
+    const main = fakeMain({ settings: ready(), statuses: statusMap('checking', 'checking') })
+    await mountPanel(main)
+    await sendMessage('make it blue')
+
+    act(() => main.setStatuses(statusMap('signed-out', 'not-installed')))
+    await settle()
+    expect(main.requests).toHaveLength(0)
+    const prompt = host.querySelector('.ai-sub-prompt')
+    expect(prompt).not.toBeNull()
+    expect(scrolled).toContain(prompt)
+    expect(composer().value).toBe('make it blue')
+
+    // and nothing starts by itself after the sign-in
+    act(() => main.setStatuses(statusMap('ready', 'not-installed')))
+    await settle()
+    expect(main.requests).toHaveLength(0)
+  })
+
+  it('shows the blocked notice when the main process refuses a run after all', async () => {
+    // the panel saw a ready subscription; the main process, which decides again, did not
     const main = fakeMain({
       settings: ready(),
-      statuses: statusMap('checking', 'checking'),
+      statuses: statusMap('ready', 'not-installed'),
       reply: () => [{ type: 'error', errorCode: 'not-connected' }],
     })
     await mountPanel(main)
-    expect(host.querySelector('.ai-sub-prompt')).toBeNull()
-
     await sendMessage('make it blue')
     expect(main.requests).toHaveLength(1)
     // the answer is the blocked notice with the shared wording, not a raw error line
@@ -238,14 +338,59 @@ describe('AI panel on a first subscription use', () => {
 
     await sendMessage('make it blue')
     expect(main.requests).toHaveLength(0)
+    expect(composer().value).toBe('make it blue')
 
     act(() => host.querySelector<HTMLButtonElement>('.ai-sub-first button')!.click())
     await settle()
     expect(main.saved.at(-1)?.subscriptionNoticeSeen).toBe(true)
     expect(host.querySelector('.ai-sub-first')).toBeNull()
 
-    await sendMessage('make it blue')
+    // the held request went out by itself: no second press of send
     expect(main.requests).toHaveLength(1)
+    expect(composer().value).toBe('')
+  })
+
+  it('sends nothing and keeps the text when the notice goes away without an acknowledgement', async () => {
+    const main = fakeMain({
+      settings: ready({ subscriptionNoticeSeen: false }),
+      statuses: statusMap('ready', 'not-installed'),
+    })
+    await mountPanel(main)
+    await sendMessage('make it blue')
+
+    // the user picks a filled-in key provider instead of answering the notice
+    const base = defaultAiSettings()
+    await act(async () =>
+      main.htmlApi.setAiSettings({
+        ...base,
+        provider: 'openai',
+        providers: { ...base.providers, openai: { apiKey: 'sk-test', model: 'gpt-test' } },
+      }),
+    )
+    await settle()
+    expect(host.querySelector('.ai-sub-first')).toBeNull()
+    expect(main.requests).toHaveLength(0)
+    expect(composer().value).toBe('make it blue')
+  })
+
+  it('writes the acknowledgement onto the settings stored now, not onto the panel copy', async () => {
+    const main = fakeMain({
+      settings: ready({ subscriptionNoticeSeen: false }),
+      statuses: statusMap('ready', 'not-installed'),
+    })
+    await mountPanel(main)
+    // the settings page stored a key after this panel read its copy
+    const base = defaultAiSettings()
+    main.storeSilently({
+      ...base,
+      providers: { ...base.providers, openai: { apiKey: 'stored-later', model: 'gpt-later' } },
+    })
+
+    act(() => host.querySelector<HTMLButtonElement>('.ai-sub-first button')!.click())
+    await settle()
+    expect(main.saved).toHaveLength(1)
+    expect(main.saved[0]!.subscriptionNoticeSeen).toBe(true)
+    expect(main.saved[0]!.providers.openai).toEqual({ apiKey: 'stored-later', model: 'gpt-later' })
   })
 })
 
@@ -293,8 +438,64 @@ describe('AI panel when a run is blocked', () => {
     const sent = (request: AiStreamRequest) =>
       request.messages.filter((m) => m.role === 'user').at(-1)?.text
     expect(sent(main.requests[1]!)).toContain('make it blue')
-    expect(host.querySelector('.ai-sub-blocked')).toBeNull()
+    // the offer belonged to the run that had just stopped: the older reply keeps its reason only
+    expect(host.querySelector('.ai-sub-blocked')).not.toBeNull()
+    expect(host.querySelector('[data-action="continue-with"]')).toBeNull()
     expect(host.textContent).toContain('done on the other one')
+  })
+
+  it('offers to continue on the most recent blocked reply only', async () => {
+    const main = fakeMain({
+      settings: ready(),
+      statuses: statusMap('ready', 'ready'),
+      reply: () => [{ type: 'error', errorCode: 'rate-limit', errorProvider: 'claude-code' }],
+    })
+    await mountPanel(main)
+    await sendMessage('make it blue')
+    expect(host.querySelectorAll('[data-action="continue-with"]')).toHaveLength(1)
+
+    await sendMessage('try once more')
+    expect(main.requests).toHaveLength(2)
+    const blocked = [...host.querySelectorAll('.ai-sub-blocked')]
+    expect(blocked).toHaveLength(2)
+    expect(blocked[0]!.querySelector('[data-action="continue-with"]')).toBeNull()
+    expect(blocked[1]!.querySelector('[data-action="continue-with"]')).not.toBeNull()
+  })
+
+  it('pauses the message queue, so the next message does not run into the same wall', async () => {
+    let fail: (() => void) | null = null
+    const main = fakeMain({ settings: ready(), statuses: statusMap('ready', 'ready') })
+    // the first turn stays in flight until the test fails it
+    const aiStream = main.htmlApi.aiStream
+    let listener: ((chunk: AiStreamChunk) => void) | null = null
+    const onAiStream = main.htmlApi.onAiStream
+    main.htmlApi.onAiStream = (next) => {
+      listener = next
+      return onAiStream(next)
+    }
+    main.htmlApi.aiStream = async (request) => {
+      if (main.requests.length > 0) return aiStream(request)
+      main.requests.push(request)
+      fail = () =>
+        listener?.({
+          requestId: request.requestId,
+          type: 'error',
+          errorCode: 'rate-limit',
+          errorProvider: 'claude-code',
+        } as AiStreamChunk)
+    }
+    await mountPanel(main)
+    await sendMessage('make it blue')
+    expect(main.requests).toHaveLength(1)
+    // typed while the reply runs: it waits in the queue
+    await typeAndEnter('then make it bold')
+    expect(host.querySelector('.ai-queue-strip')).not.toBeNull()
+
+    act(() => fail!())
+    await settle()
+    expect(host.querySelector('.ai-sub-blocked')).not.toBeNull()
+    expect(main.requests).toHaveLength(1)
+    expect(host.querySelector('.ai-queue-strip')?.getAttribute('data-paused')).toBe('true')
   })
 
   it('stops the run where the brief writer was blocked, without a retry or another turn', async () => {
@@ -383,6 +584,10 @@ describe('AI panel during a turn', () => {
   it('names no vendor in the panel header', async () => {
     const main = fakeMain({ settings: ready(), statuses: statusMap('ready', 'ready') })
     await mountPanel(main)
-    expect(host.querySelector('.ai-panel-title')!.textContent).toBe('AI')
+    // the shared AI entry label, the same in all six editors
+    const label = aiSubscriptionText(LANG, 'aiAssistant')
+    expect(host.querySelector('.ai-panel-title')!.textContent).toBe(label)
+    expect(host.querySelector('.ai-panel-resizer')!.getAttribute('aria-label')).toBe(label)
+    expect(label).not.toMatch(/Claude|Codex|Genspark/)
   })
 })

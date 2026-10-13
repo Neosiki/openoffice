@@ -1,36 +1,12 @@
 /**
  * The AI panel's decisions under the subscription contract, kept free of React
- * so they can be tested on their own: what pressing send does, when a failed
- * run is shown as a blocked notice, and the settings each button writes.
+ * so they can be tested on their own: when a failed run is shown as a blocked
+ * notice, and which usage reports are kept. What pressing send does is the send
+ * gate every editor shares (`useAiSendGate` in @genoffice/ui).
  */
-import {
-  isSubscriptionProvider,
-  selectAiProvider,
-  type AiProviderId,
-  type AiSettings,
-  type AiSubscriptionProviderId,
-  type AiSubscriptionStatuses,
-  type AiSubscriptionUsage,
-} from '@genoffice/ai-provider/browser'
+import type { AiProviderId, AiSubscriptionUsage } from '@genoffice/ai-provider/browser'
 import type { IpcStreamError } from '@genoffice/agent-core'
-import { isAiBlockedRunKind, withAiProviderSelection, type AiBlockedRunKind } from '@genoffice/ui'
-
-/**
- * What a send does right now.
- * `connect`: no provider can run — the connect prompt is shown and nothing is sent.
- * `notice`: a subscription provider is about to be used for the first time — the
- * first-connection notice is shown and the request waits for its acknowledgement.
- * `run`: the request goes out.
- */
-export type AiSendGate = 'connect' | 'notice' | 'run'
-
-export function aiSendGate(settings: AiSettings, statuses: AiSubscriptionStatuses): AiSendGate {
-  const choice = selectAiProvider(settings, statuses)
-  if (!choice.connected) return 'connect'
-  return isSubscriptionProvider(choice.provider) && !settings.subscriptionNoticeSeen
-    ? 'notice'
-    : 'run'
-}
+import { isAiBlockedRunKind, type AiBlockedRunKind } from '@genoffice/ui'
 
 /** Why a run stopped, when its connection cannot go on (shown as the blocked notice) */
 export interface AiBlockedRun {
@@ -54,25 +30,6 @@ export function aiBlockedRunOf(error: IpcStreamError | null | undefined): AiBloc
       ? { resetsAt: error.resetsAt }
       : {}),
   }
-}
-
-/**
- * Settings after "continue with <provider>": that provider becomes the stored
- * selection (so the model picker shows it), keeping the model it last used.
- */
-export function withContinuedProvider(
-  settings: AiSettings,
-  provider: AiSubscriptionProviderId,
-): AiSettings {
-  return withAiProviderSelection(settings, {
-    provider,
-    model: settings.providers?.[provider]?.model ?? '',
-  })
-}
-
-/** Settings after the first-connection notice was acknowledged */
-export function withSubscriptionNoticeSeen(settings: AiSettings): AiSettings {
-  return { ...settings, subscriptionNoticeSeen: true }
 }
 
 /**

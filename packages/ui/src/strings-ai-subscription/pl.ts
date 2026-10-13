@@ -1,6 +1,7 @@
 import type { zh } from './zh'
 
 export const pl = {
+  aiAssistant: 'Asystent AI',
   cardChecking: 'Sprawdzanie…',
   cardNotInstalled: 'Nie zainstalowano',
   cardSignedOut: 'Nie zalogowano',
@@ -9,6 +10,10 @@ export const pl = {
   cardMetered: 'Zalogowano, ale nie w ramach subskrypcji',
   cardMeteredAccepted: 'W użyciu · opłata za zużycie',
   cardError: 'Nie udało się sprawdzić połączenia',
+  cardErrNeedsUpdate:
+    'Program {provider} na tym komputerze jest zbyt stary. Zaktualizuj go, a potem sprawdź ponownie.',
+  cardErrTimeout: 'Program {provider} nie odpowiedział na czas. Sprawdź ponownie za chwilę.',
+  cardErrFailed: 'Podczas sprawdzania {provider} wystąpił problem. Sprawdź ponownie.',
   actionInstall: 'Zainstaluj',
   actionLogin: 'Zaloguj się',
   actionRecheck: 'Sprawdź ponownie',

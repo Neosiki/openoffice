@@ -28,6 +28,8 @@ import {
   AiTypingIndicator,
   AiUsageChip,
   addTokenUsage,
+  aiSubscriptionText,
+  useAiSendGate,
   useChatRunQueue,
   type AiScopeQuoteData,
   type AiTokenUsageView,
@@ -40,14 +42,7 @@ import sendEnterOff from '../assets/send-enter-off.png'
 import sendStop from '../assets/send-stop.png'
 import { createPdfSkill } from './pdf-skill'
 import { createElectronTransport } from './transport'
-import {
-  aiBlockedRunOf,
-  aiSendGate,
-  mergeSubscriptionUsage,
-  withContinuedProvider,
-  withSubscriptionNoticeSeen,
-  type AiBlockedRun,
-} from './ai-connection'
+import { aiBlockedRunOf, mergeSubscriptionUsage, type AiBlockedRun } from './ai-connection'
 import { useSubscriptionConnection } from './useSubscriptionConnection'
 import { PDF_NAV_SCHEME, parsePdfNavHref } from './pdf-nav'
 import type { FileOpConfirm, PdfAiDeps, PdfAppDeps } from './tools'
@@ -151,11 +146,9 @@ export function AiPanel({
     submit: (text) => {
       const loop = loopRef.current
       if (!loop || loop.busy) return false
-      // nothing can run (or the first-connection notice is due): the queue waits, paused
-      if (sendGate() !== 'run') {
-        msgQueueRef.current?.setPaused(true)
-        return false
-      }
+      // nothing can run right now: the message stays queued, and in front of "not connected"
+      // the queue is paused so it does not start by itself after a sign-in
+      if (!sendGate.admitQueued(() => msgQueueRef.current?.setPaused(true))) return false
       send(text, null)
       return true
     },
@@ -363,15 +356,19 @@ export function AiPanel({
   }, [refreshImageGen])
   // a connection change moves the image route too (the Codex subscription generates images)
   useEffect(refreshImageGen, [refreshImageGen, connection.statuses])
-  /** what a send does right now; settings not read yet = let the main process answer */
-  const sendGate = () =>
-    aiSettingsRef.current
-      ? aiSendGate(aiSettingsRef.current, connectionRef.current.statuses)
-      : 'run'
-  /** a send was refused for want of a connection: the connect prompt stays until one can run */
-  const [connectAsked, setConnectAsked] = useState(false)
-  /** the first-connection notice is up, holding the scope of the request that raised it */
-  const [noticeFor, setNoticeFor] = useState<{ scope?: AiScopeQuoteData | null } | null>(null)
+  /** The send gate every editor shares: holds a request made during a status check or in front
+      of the first-connection notice, refuses in front of "not connected", and writes this
+      panel's settings changes ("continue with …", the acknowledged notice) onto the stored ones */
+  const sendGate = useAiSendGate<{ text: string; scope: AiScopeQuoteData | null | undefined }>({
+    settings: aiSettings,
+    statuses: connection.statuses,
+    store: MODEL_BRIDGE,
+    start: (held) => send(held.text, held.scope),
+    onSettingsSaved: (next) => {
+      aiSettingsRef.current = next
+      setAiSettings(next)
+    },
+  })
   /** rate-limit windows the subscription CLI reported (latest per provider and window) */
   const [subscriptionUsage, setSubscriptionUsage] = useState<AiSubscriptionUsage[]>([])
   /** the last turn's input was cut to fit a limit */
@@ -380,11 +377,6 @@ export function AiPanel({
   const streamErrorRef = useRef<AiBlockedRun | null>(null)
   /** the provider a request would run on right now (null until the settings are read) */
   const providerChoice = aiSettings ? selectAiProvider(aiSettings, connection.statuses) : null
-  const aiConnected = providerChoice?.connected === true
-  // once a provider can run again the connect prompt has done its job
-  useEffect(() => {
-    if (aiConnected) setConnectAsked(false)
-  }, [aiConnected])
   const langRef = useRef(lang)
   langRef.current = lang
   const apiRef = useRef(api)
@@ -580,12 +572,11 @@ export function AiPanel({
           if (blocked) {
             // queued messages must not be fired into the same blocked connection
             msgQueueRef.current?.hold()
-            // the shown status may be stale (a login that expired mid-run): look again,
-            // and offer the connect cards if the provider turns out to be unusable
+            // the shown status may be stale (a login that expired mid-run): look again;
+            // the connect cards show up if the provider turns out to be unusable
             if (blocked.provider && isSubscriptionProvider(blocked.provider)) {
               connectionRef.current.recheck(blocked.provider)
             }
-            setConnectAsked(true)
           }
           setChat((prev) => {
             const next = [...prev]
@@ -619,7 +610,7 @@ export function AiPanel({
     if (stickToBottomRef.current) {
       chatRef.current?.scrollTo({ top: chatRef.current.scrollHeight })
     }
-  }, [chat, busy, fileOpConfirm, connectAsked, noticeFor, inputTruncated])
+  }, [chat, busy, fileOpConfirm, sendGate.connectChoice, sendGate.noticeDue, inputTruncated])
 
   const onChatScroll = (): void => {
     const el = chatRef.current
@@ -633,16 +624,13 @@ export function AiPanel({
     const loop = loopRef.current
     if (!instruction || !loop || loop.busy) return
     stickToBottomRef.current = true
-    const gate = sendGate()
-    if (gate !== 'run') {
+    if (!sendGate.admit({ text: instruction, scope: retryScope })) {
       // nothing is sent: the request stays in the composer while the panel shows what
-      // is missing (a connection) or what must be read first (the first-connection notice)
+      // is missing (a connection) or what must be read first (the first-connection notice).
+      // A request held for the status check or the notice starts by itself once the way is clear.
       setPrompt(instruction)
-      if (gate === 'connect') setConnectAsked(true)
-      else setNoticeFor({ scope: retryScope })
       return
     }
-    setNoticeFor(null)
     setInputTruncated(false)
     streamErrorRef.current = null
     const scope = retryScope !== undefined ? (retryScope ?? undefined) : selectionScopeQuote()
@@ -680,39 +668,13 @@ export function AiPanel({
     loopRef.current?.cancel()
   }
 
-  /** "Got it" on the first-connection notice: remember it, then send what was held back */
-  const acknowledgeNotice = (): void => {
-    const held = noticeFor
-    const text = prompt
-    setNoticeFor(null)
-    void (async () => {
-      try {
-        const next = withSubscriptionNoticeSeen(await window.pdfApi.getAiSettings())
-        await window.pdfApi.setAiSettings(next)
-        aiSettingsRef.current = next
-        setAiSettings(next)
-      } catch {
-        return
-      }
-      if (held) send(text, held.scope)
-    })()
-  }
-
   /** "Continue with <provider>" on a blocked run: select that provider and rerun the request */
   const continueWith = (provider: AiSubscriptionProviderId): void => {
     if (loopRef.current?.busy) return
     const request = [...chat].reverse().find((entry) => entry.role === 'user')
-    void (async () => {
-      try {
-        const next = withContinuedProvider(await window.pdfApi.getAiSettings(), provider)
-        await window.pdfApi.setAiSettings(next)
-        aiSettingsRef.current = next
-        setAiSettings(next)
-      } catch {
-        return
-      }
+    sendGate.continueWith(provider, () => {
       if (request) send(request.text, request.scope ?? null)
-    })()
+    })
   }
 
   /** Enter while a reply runs: the draft joins the queue above the composer */
@@ -828,12 +790,12 @@ export function AiPanel({
         onPointerDown={startResize}
         role="separator"
         aria-orientation="vertical"
-        aria-label={t('ribbonAiAssistant')}
+        aria-label={aiSubscriptionText(lang, 'aiAssistant')}
       />
       <header className="ai-panel-header">
         <span className="ai-panel-title">
           <AiMark size={22} />
-          {t('ribbonAiAssistant')}
+          {aiSubscriptionText(lang, 'aiAssistant')}
         </span>
         <div className="ai-panel-header-actions">
           <AiPanelSideButton
@@ -847,6 +809,7 @@ export function AiPanel({
                 stop()
                 loopRef.current?.reset()
                 msgQueue.clear()
+                sendGate.reset()
                 setBusy(false)
                 setChat([])
               }}
@@ -977,12 +940,13 @@ export function AiPanel({
             </div>
           </div>
         )}
-        {connectAsked && providerChoice && !providerChoice.connected && (
+        {sendGate.connectChoice && (
           <AiConnectPrompt
-            choice={providerChoice}
+            choice={sendGate.connectChoice}
             statuses={connection.statuses}
             lang={lang}
             disabled={connection.busy}
+            attention={sendGate.connectAttention}
             onOpenSettings={() => void window.pdfApi.openAiModelSettings().catch(() => {})}
             onInstall={connection.install}
             onLogin={connection.login}
@@ -991,11 +955,11 @@ export function AiPanel({
             onOpenInstallHelp={connection.openInstallHelp}
           />
         )}
-        {noticeFor && aiConnected && (
+        {sendGate.noticeDue && (
           <AiFirstConnectionNotice
             lang={lang}
             codexKeepsHistory={false}
-            onAcknowledge={acknowledgeNotice}
+            onAcknowledge={sendGate.acknowledgeNotice}
           />
         )}
         {inputTruncated && (

@@ -9,7 +9,6 @@ export const pt = {
   aiStarterContinue: 'Continue escrevendo de onde o documento parou',
   aiStarterFillTemplate: 'Encontre e preencha os espaços reservados do documento',
   aiGskLoginBtn: 'Entrar no Genspark',
-  aiPanelTitle: 'Assistente de IA',
   aiOpenAssistant: 'Abrir assistente de IA',
   aiSummarizeBtn: 'Resumo IA',
   aiSummarizePrompt: 'Resuma o conteúdo principal e os pontos-chave deste documento',

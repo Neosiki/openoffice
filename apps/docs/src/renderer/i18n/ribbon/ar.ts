@@ -183,7 +183,6 @@ export const ar = {
   ribbonReplaceTip: 'البحث عن نص واستبداله',
   ribbonSelectAll: 'تحديد الكل',
   ribbonSelectAllTip: 'تحديد المستند بالكامل',
-  ribbonAiAssistant: 'مساعد الذكاء الاصطناعي',
   ribbonAiAssistantTip: 'فتح مساعد الذكاء الاصطناعي',
   ribbonRemoveTableStyleTip: 'إزالة نمط الجدول',
   ribbonNoStyle: 'بلا نمط',

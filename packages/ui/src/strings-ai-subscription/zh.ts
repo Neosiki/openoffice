@@ -1,4 +1,5 @@
 export const zh = {
+  aiAssistant: 'AI 助手',
   cardChecking: '正在检查…',
   cardNotInstalled: '未安装',
   cardSignedOut: '未登录',
@@ -7,6 +8,9 @@ export const zh = {
   cardMetered: '已登录，但不是订阅方式',
   cardMeteredAccepted: '使用中 · 按用量计费',
   cardError: '无法检查连接状态',
+  cardErrNeedsUpdate: '此电脑上的 {provider} 程序版本过低。请更新后重新检查。',
+  cardErrTimeout: '{provider} 程序未及时响应。请稍后重新检查。',
+  cardErrFailed: '检查 {provider} 时出现问题。请重新检查。',
   actionInstall: '安装',
   actionLogin: '登录',
   actionRecheck: '重新检查',

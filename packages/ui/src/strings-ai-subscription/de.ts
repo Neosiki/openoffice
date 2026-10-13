@@ -1,6 +1,7 @@
 import type { zh } from './zh'
 
 export const de = {
+  aiAssistant: 'KI-Assistent',
   cardChecking: 'Wird geprüft…',
   cardNotInstalled: 'Nicht installiert',
   cardSignedOut: 'Nicht angemeldet',
@@ -9,6 +10,12 @@ export const de = {
   cardMetered: 'Angemeldet, aber nicht mit einem Abonnement',
   cardMeteredAccepted: 'In Verwendung · Abrechnung nach Verbrauch',
   cardError: 'Die Verbindung konnte nicht geprüft werden',
+  cardErrNeedsUpdate:
+    'Das Programm {provider} auf diesem PC ist zu alt. Aktualisieren Sie es und prüfen Sie dann erneut.',
+  cardErrTimeout:
+    'Das Programm {provider} hat nicht rechtzeitig geantwortet. Prüfen Sie es gleich noch einmal.',
+  cardErrFailed:
+    'Bei der Prüfung von {provider} ist ein Problem aufgetreten. Prüfen Sie es erneut.',
   actionInstall: 'Installieren',
   actionLogin: 'Anmelden',
   actionRecheck: 'Erneut prüfen',

@@ -1,6 +1,7 @@
 import type { zh } from './zh'
 
 export const ja = {
+  aiAssistant: 'AI アシスタント',
   cardChecking: '確認中…',
   cardNotInstalled: '未インストール',
   cardSignedOut: '未ログイン',
@@ -9,6 +10,11 @@ export const ja = {
   cardMetered: 'ログイン済みですが、サブスクリプションではありません',
   cardMeteredAccepted: '使用中 · 従量課金',
   cardError: '接続を確認できませんでした',
+  cardErrNeedsUpdate:
+    'この PC の {provider} のプログラムが古すぎます。更新してから、もう一度確認してください。',
+  cardErrTimeout:
+    '{provider} のプログラムから時間内に応答がありませんでした。しばらくしてから、もう一度確認してください。',
+  cardErrFailed: '{provider} の確認中に問題が発生しました。もう一度確認してください。',
   actionInstall: 'インストール',
   actionLogin: 'ログイン',
   actionRecheck: '再確認',

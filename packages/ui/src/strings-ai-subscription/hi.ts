@@ -1,6 +1,7 @@
 import type { zh } from './zh'
 
 export const hi = {
+  aiAssistant: 'AI सहायक',
   cardChecking: 'जाँच हो रही है…',
   cardNotInstalled: 'इंस्टॉल नहीं है',
   cardSignedOut: 'साइन इन नहीं है',
@@ -9,6 +10,10 @@ export const hi = {
   cardMetered: 'साइन इन है, पर सदस्यता से नहीं',
   cardMeteredAccepted: 'उपयोग में · उपयोग के अनुसार शुल्क',
   cardError: 'कनेक्शन की जाँच नहीं हो सकी',
+  cardErrNeedsUpdate:
+    'इस पीसी पर {provider} प्रोग्राम बहुत पुराना है। इसे अपडेट करके फिर से जाँचें।',
+  cardErrTimeout: '{provider} प्रोग्राम ने समय पर जवाब नहीं दिया। थोड़ी देर बाद फिर से जाँचें।',
+  cardErrFailed: '{provider} की जाँच करते समय कोई समस्या हुई। फिर से जाँचें।',
   actionInstall: 'इंस्टॉल करें',
   actionLogin: 'साइन इन करें',
   actionRecheck: 'फिर से जाँचें',

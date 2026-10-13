@@ -1,6 +1,7 @@
 import type { zh } from './zh'
 
 export const th = {
+  aiAssistant: 'ผู้ช่วย AI',
   cardChecking: 'กำลังตรวจสอบ…',
   cardNotInstalled: 'ยังไม่ได้ติดตั้ง',
   cardSignedOut: 'ยังไม่ได้เข้าสู่ระบบ',
@@ -9,6 +10,9 @@ export const th = {
   cardMetered: 'เข้าสู่ระบบแล้ว แต่ไม่ใช่ด้วยการสมัครสมาชิก',
   cardMeteredAccepted: 'กำลังใช้งาน · คิดค่าบริการตามการใช้งาน',
   cardError: 'ตรวจสอบการเชื่อมต่อไม่ได้',
+  cardErrNeedsUpdate: 'โปรแกรม {provider} บนพีซีเครื่องนี้เก่าเกินไป โปรดอัปเดตแล้วตรวจสอบอีกครั้ง',
+  cardErrTimeout: 'โปรแกรม {provider} ไม่ตอบกลับภายในเวลาที่กำหนด โปรดตรวจสอบอีกครั้งในอีกสักครู่',
+  cardErrFailed: 'เกิดปัญหาขณะตรวจสอบ {provider} โปรดตรวจสอบอีกครั้ง',
   actionInstall: 'ติดตั้ง',
   actionLogin: 'เข้าสู่ระบบ',
   actionRecheck: 'ตรวจสอบอีกครั้ง',

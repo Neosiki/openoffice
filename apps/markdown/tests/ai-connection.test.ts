@@ -5,13 +5,8 @@ import {
   type AiSubscriptionStatus,
   type AiSubscriptionStatuses,
 } from '@genoffice/ai-provider/browser'
-import {
-  aiSendGate,
-  blockedRunOf,
-  readImageGenerationAvailable,
-  withContinueProvider,
-  withSubscriptionNoticeSeen,
-} from '../src/renderer/ai/ai-connection'
+import { aiSendGate, withAiContinueProvider, withAiSubscriptionNoticeSeen } from '@genoffice/ui'
+import { blockedRunOf, readImageGenerationAvailable } from '../src/renderer/ai/ai-connection'
 import {
   checkingSubscriptionStatuses,
   subscriptionLaunchResultOf,
@@ -37,56 +32,58 @@ const settings = (patch: Partial<AiSettings> = {}): AiSettings => ({
   ...patch,
 })
 
+// The gate itself is the one every editor shares (@genoffice/ui); these pin it on the
+// settings and statuses the markdown panel hands it.
 describe('aiSendGate', () => {
-  it('lets the send through while settings or statuses are still unknown', () => {
-    expect(aiSendGate(null, statuses('ready', 'ready'))).toEqual({ action: 'run' })
-    expect(aiSendGate(settings(), null)).toEqual({ action: 'run' })
+  it('holds the send while settings or statuses are still unknown', () => {
+    expect(aiSendGate(null, statuses('ready', 'ready')).kind).toBe('checking')
+    expect(aiSendGate(settings(), null).kind).toBe('checking')
   })
 
   it('asks to connect when automatic finds no ready subscription', () => {
     const gate = aiSendGate(settings(), statuses('signed-out', 'not-installed'))
-    expect(gate.action).toBe('connect')
-    if (gate.action !== 'connect') return
+    expect(gate.kind).toBe('connect')
+    if (gate.kind !== 'connect') return
     expect(gate.choice).toMatchObject({ connected: false, reason: 'no-subscription' })
   })
 
   it('never falls back from automatic to a configured key provider', () => {
     const withKey = settings()
     withKey.providers.openai = { apiKey: 'sk-test', model: 'gpt-5' }
-    expect(aiSendGate(withKey, statuses('signed-out', 'signed-out')).action).toBe('connect')
+    expect(aiSendGate(withKey, statuses('signed-out', 'signed-out')).kind).toBe('connect')
   })
 
-  it('reads a missing handler (every status checking) as not connected', () => {
-    expect(aiSendGate(settings(), checkingSubscriptionStatuses()).action).toBe('connect')
+  it('reads a missing handler (every status checking) as still being checked', () => {
+    expect(aiSendGate(settings(), checkingSubscriptionStatuses()).kind).toBe('checking')
   })
 
   it('shows the first-connection notice before a subscription is used for the first time', () => {
-    expect(aiSendGate(settings(), statuses('ready', 'not-installed'))).toEqual({
-      action: 'notice',
+    expect(aiSendGate(settings(), statuses('ready', 'not-installed'))).toMatchObject({
+      kind: 'notice',
       provider: 'claude-code',
     })
-    expect(aiSendGate(settings(), statuses('signed-out', 'ready'))).toEqual({
-      action: 'notice',
+    expect(aiSendGate(settings(), statuses('signed-out', 'ready'))).toMatchObject({
+      kind: 'notice',
       provider: 'codex',
     })
   })
 
   it('runs on a subscription once the notice was acknowledged', () => {
-    const seen = withSubscriptionNoticeSeen(settings())
+    const seen = withAiSubscriptionNoticeSeen(settings())
     expect(seen.subscriptionNoticeSeen).toBe(true)
-    expect(aiSendGate(seen, statuses('ready', 'ready'))).toEqual({ action: 'run' })
+    expect(aiSendGate(seen, statuses('ready', 'ready')).kind).toBe('run')
   })
 
   it('runs a selected, configured key provider without the subscription notice', () => {
     const withKey = settings({ provider: 'openai' })
     withKey.providers.openai = { apiKey: 'sk-test', model: 'gpt-5' }
-    expect(aiSendGate(withKey, checkingSubscriptionStatuses())).toEqual({ action: 'run' })
+    expect(aiSendGate(withKey, checkingSubscriptionStatuses()).kind).toBe('run')
   })
 
   it('reports a selected subscription that cannot run instead of using the other one', () => {
     const gate = aiSendGate(settings({ provider: 'codex' }), statuses('ready', 'signed-out'))
-    expect(gate.action).toBe('connect')
-    if (gate.action !== 'connect') return
+    expect(gate.kind).toBe('connect')
+    if (gate.kind !== 'connect') return
     expect(gate.choice).toMatchObject({ provider: 'codex', reason: 'signed-out' })
   })
 })
@@ -120,11 +117,11 @@ describe('blockedRunOf', () => {
   })
 })
 
-describe('withContinueProvider', () => {
+describe('"continue with" settings', () => {
   it('stores the provider as the selection and keeps its model', () => {
     const base = settings({ provider: 'claude-code' })
     base.providers.codex = { apiKey: '', model: 'gpt-5.5' }
-    const next = withContinueProvider(base, 'codex')
+    const next = withAiContinueProvider(base, 'codex')
     expect(next.provider).toBe('codex')
     expect(next.providers.codex?.model).toBe('gpt-5.5')
     // the input is not mutated
@@ -132,7 +129,7 @@ describe('withContinueProvider', () => {
   })
 
   it('leaves the model empty (the program default) when none was chosen', () => {
-    const next = withContinueProvider(settings(), 'claude-code')
+    const next = withAiContinueProvider(settings(), 'claude-code')
     expect(next.provider).toBe('claude-code')
     expect(next.providers['claude-code']?.model).toBe('')
   })

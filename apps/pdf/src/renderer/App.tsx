@@ -167,6 +167,7 @@ import {
   AiMark,
   Dropdown,
   aiPanelInitiallyOpen,
+  aiSubscriptionText,
   rememberAiPanelOpen,
   useDismissablePopover,
   useRibbonCollapse,
@@ -7363,7 +7364,7 @@ export default function App() {
                     <span className="rb-big-icon">
                       <AiMark size={26} />
                     </span>
-                    <span>{t('ribbonAiAssistant')}</span>
+                    <span>{aiSubscriptionText(lang, 'aiAssistant')}</span>
                   </button>
                   <button
                     className="rb-big ai-entry"

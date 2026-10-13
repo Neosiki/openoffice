@@ -21,15 +21,18 @@ import {
   type AiScopeQuoteData,
   type AiSubscriptionCardActions,
   type AiTokenUsageView,
+  type ChatRunQueue,
+  aiSubscriptionText,
   useChatRunQueue,
 } from '@genoffice/ui'
 import type {
+  AiProviderChoice,
   AiSettings,
   AiSubscriptionProviderId,
   AiSubscriptionStatuses,
   AiSubscriptionUsage,
 } from '@genoffice/ai-provider/browser'
-import { aiGateAllowsSend, type AiBlockedRun, type AiPanelGate } from './subscription-state'
+import type { AiBlockedRun } from './subscription-state'
 import type { ChangePlan } from '@genoffice/xlsx-gateway/domain/workbook.types'
 import { ATTACHMENT_IMAGE_EXTS, type AttachmentMeta } from '../../shared/desktop-api'
 import { useI18n, type TFunc } from '../i18n/locale'
@@ -251,8 +254,14 @@ export interface AiPanelSubscription {
   /** null until the settings are read */
   readonly settings: AiSettings | null
   readonly statuses: AiSubscriptionStatuses
-  /** where the panel stands: connect prompt, first-use notice, or ready to send */
-  readonly gate: AiPanelGate
+  /** what the connect prompt shows; null while nothing asks to connect */
+  readonly connectChoice: Extract<AiProviderChoice, { connected: false }> | null
+  /** counts the sends the connect prompt answered: each one scrolls it into view */
+  readonly connectAttention: number
+  /** a subscription is about to be used for the first time: its notice is shown */
+  readonly noticeDue: boolean
+  /** whether a queued message may start now; pauses the queue in front of "not connected" */
+  readonly admitQueued: (pauseQueue: () => void) => boolean
   /** a connect action is in flight */
   readonly busy: boolean
   /** the connect cards' buttons */
@@ -270,6 +279,8 @@ export interface AiPanelSubscription {
 
 /** a blocked notice drawn before the settings are read offers no metered connection */
 const NO_METERED_ACCEPTED: Pick<AiSettings, 'meteredAccepted'> = {}
+/** an older blocked reply offers no connection to continue on */
+const NO_STATUSES: AiSubscriptionStatuses = {}
 
 export function AiChatPanel({
   isOpen,
@@ -353,11 +364,30 @@ export function AiChatPanel({
   readonly onCollapse: () => void
 }): React.JSX.Element {
   const { t, lang } = useI18n()
+  // A reply that stopped because its connection cannot go on: the queue is paused, so the next
+  // message does not run into the same wall. Declared ahead of the queue so that it runs before
+  // the queue's own settle pump when both land in one commit.
+  const msgQueueRef = useRef<ChatRunQueue<readonly AttachmentMeta[]> | null>(null)
+  const lastEntry = chat.at(-1)
+  const lastReplyBlocked = lastEntry?.role === 'assistant' && lastEntry.blocked !== undefined
+  useEffect(() => {
+    if (lastReplyBlocked) msgQueueRef.current?.hold()
+  }, [lastReplyBlocked])
+  const subscriptionRef = useRef(subscription)
+  subscriptionRef.current = subscription
   /** messages queued while a reply runs; the pump re-sends them through onSend on settle */
   const msgQueue = useChatRunQueue<readonly AttachmentMeta[]>({
     busy: aiBusy,
-    submit: (text, atts) => onSendQueued?.(text, atts) ?? false,
+    submit: (text, atts) => {
+      // nothing can run right now: the message stays queued, and in front of "not connected"
+      // the queue is paused so it does not start by itself after a sign-in
+      const admitted = subscriptionRef.current.admitQueued(() =>
+        msgQueueRef.current?.setPaused(true),
+      )
+      return admitted ? (onSendQueued?.(text, atts) ?? false) : false
+    },
   })
+  msgQueueRef.current = msgQueue
   // Panel chrome follows the UI language; message text follows its own content (dir=auto below)
   const isRtl = lang === 'ar' || lang === 'he'
   const chatRef = useRef<HTMLDivElement | null>(null)
@@ -535,16 +565,11 @@ export function AiChatPanel({
     void window.desktopApi.openSourcePath(path)
   })
 
-  const { gate } = subscription
-
   const send = (): void => {
     if (!canSend) return
     stickToBottomRef.current = true
-    // nothing is sent while the panel asks to connect: bring that prompt into view instead
-    if (!aiGateAllowsSend(gate)) {
-      chatRef.current?.scrollTo({ top: chatRef.current.scrollHeight })
-      return
-    }
+    // while nothing can run the send is answered by the connect prompt or the first-use
+    // notice instead (see the send gate in App.tsx); the draft stays in the composer
     onSend()
   }
 
@@ -607,12 +632,12 @@ export function AiChatPanel({
         onPointerDown={startResize}
         role="separator"
         aria-orientation="vertical"
-        aria-label={t('appGroupAiAssistant')}
+        aria-label={aiSubscriptionText(lang, 'aiAssistant')}
       />
       <header className="ai-panel-header">
         <span className="ai-panel-title">
           <AiMark size={22} />
-          {t('appGroupAiAssistant')}
+          {aiSubscriptionText(lang, 'aiAssistant')}
         </span>
         <div className="ai-panel-header-actions">
           <AiPanelSideButton
@@ -664,7 +689,7 @@ export function AiChatPanel({
             <div className="ai-history-sep">{t('aiHistorySep')}</div>
           </>
         )}
-        {chat.length === 0 && historicChat.length === 0 && gate.kind !== 'connect' && (
+        {chat.length === 0 && historicChat.length === 0 && !subscription.connectChoice && (
           <div className="ai-chat-empty">
             <div className="ai-chat-empty-title">
               {t(hasContent ? 'aiEmptyTitle' : 'aiEmptyBuildTitle')}
@@ -715,7 +740,10 @@ export function AiChatPanel({
                     resetsAt={entry.blocked.resetsAt}
                     message={entry.text}
                     settings={subscription.settings ?? NO_METERED_ACCEPTED}
-                    statuses={subscription.statuses}
+                    // only the run that just stopped can be continued on another connection
+                    statuses={
+                      index === chat.length - 1 && !aiBusy ? subscription.statuses : NO_STATUSES
+                    }
                     lang={lang}
                     onContinueWith={(provider) => subscription.onContinueWith(provider, index)}
                   />
@@ -805,12 +833,13 @@ export function AiChatPanel({
         )}
 
         {/* no provider can run: how to connect, in place of an error */}
-        {gate.kind === 'connect' && (
+        {subscription.connectChoice && (
           <AiConnectPrompt
-            choice={gate.choice}
+            choice={subscription.connectChoice}
             statuses={subscription.statuses}
             lang={lang}
             disabled={subscription.busy}
+            attention={subscription.connectAttention}
             onOpenSettings={() => void window.desktopApi.openAiModelSettings().catch(() => {})}
             {...subscription.actions}
           />
@@ -818,7 +847,7 @@ export function AiChatPanel({
       </div>
 
       <div className="ai-composer">
-        {gate.kind === 'notice' && (
+        {subscription.noticeDue && (
           <AiFirstConnectionNotice
             lang={lang}
             codexKeepsHistory={false}

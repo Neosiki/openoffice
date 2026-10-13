@@ -1,6 +1,7 @@
 import type { zh } from './zh'
 
 export const vi = {
+  aiAssistant: 'Trợ lý AI',
   cardChecking: 'Đang kiểm tra…',
   cardNotInstalled: 'Chưa cài đặt',
   cardSignedOut: 'Chưa đăng nhập',
@@ -9,6 +10,10 @@ export const vi = {
   cardMetered: 'Đã đăng nhập nhưng không phải bằng gói đăng ký',
   cardMeteredAccepted: 'Đang dùng · tính phí theo mức sử dụng',
   cardError: 'Không kiểm tra được kết nối',
+  cardErrNeedsUpdate:
+    'Chương trình {provider} trên máy tính này quá cũ. Hãy cập nhật rồi kiểm tra lại.',
+  cardErrTimeout: 'Chương trình {provider} không trả lời kịp thời. Hãy kiểm tra lại sau giây lát.',
+  cardErrFailed: 'Đã xảy ra sự cố khi kiểm tra {provider}. Hãy kiểm tra lại.',
   actionInstall: 'Cài đặt',
   actionLogin: 'Đăng nhập',
   actionRecheck: 'Kiểm tra lại',

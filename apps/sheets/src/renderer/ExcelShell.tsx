@@ -9,6 +9,7 @@ import {
   useDismissablePopover,
   useRibbonCollapse,
   aiPanelInitiallyOpen,
+  aiSubscriptionText,
   rememberAiPanelOpen,
   type AiTokenUsageView,
 } from '@genoffice/ui'
@@ -74,7 +75,6 @@ import type { ChartSeriesVisualState } from '@genoffice/xlsx-gateway/domain/char
 import type { ChangePlan } from '@genoffice/xlsx-gateway/domain/workbook.types'
 import type { AttachmentMeta } from '../shared/desktop-api'
 import { AiChatPanel, type AiChatMessage, type AiPanelSubscription } from './ai/AiChatPanel'
-import { aiGateAllowsSend } from './ai/subscription-state'
 import { AiSelectionAsk } from './ai/AiSelectionAsk'
 import type { SelectionAskAnchor } from './ai/selection-ask'
 import {
@@ -966,8 +966,9 @@ export function ExcelShell({
           onPromptChange={onPromptChange}
           onSend={onSend}
           onSendQueued={(text, atts) => {
-            // stays queued while the panel is asking to connect or showing the first-use notice
-            if (aiBusy || !aiGateAllowsSend(aiSubscription.gate)) return false
+            // the panel asks the send gate first: a message stays queued while it asks to
+            // connect or shows the first-use notice
+            if (aiBusy) return false
             onSend(text, atts)
             return true
           }}
@@ -1906,7 +1907,7 @@ function Ribbon({
   readonly onRefreshPivot: () => string | null
   readonly onIsSelectionInPivot: () => boolean
 }): React.JSX.Element {
-  const { t } = useI18n()
+  const { t, lang } = useI18n()
   const [fontColor, setFontColor] = useState('#C00000')
   const [fillColor, setFillColor] = useState('#FFF2CC')
   const [borderColor, setBorderColor] = useState('#000000')
@@ -3331,7 +3332,7 @@ function Ribbon({
     : [...fontSizes, echoSize].sort((a, b) => a - b)
   return (
     <div className="ribbon" data-ribbon-body="">
-      <RibbonGroup label={t('appGroupAiAssistant')}>
+      <RibbonGroup label={aiSubscriptionText(lang, 'aiAssistant')}>
         <button
           className={`ribbon-tool as-button large ai-entry ${aiOpen ? 'active' : ''}`}
           data-tip={t('aiOpenAssistant')}
@@ -3341,7 +3342,7 @@ function Ribbon({
             <AiMark size={26} />
           </span>
           <span>
-            <strong>AI</strong>
+            <strong>{aiSubscriptionText(lang, 'aiAssistant')}</strong>
           </span>
         </button>
         <button

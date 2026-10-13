@@ -1,59 +1,14 @@
 /**
  * What the sheets AI panel does about the subscription connection, as plain
- * data: whether a message may be sent and what is shown when it may not, which
- * failed run gets the blocked notice, and what "continue with …" changes. The
- * panel and App.tsx only lay these answers out, so the rules are testable
- * without a browser.
+ * data: which failed run gets the blocked notice, and which message "continue
+ * with …" sends again. Whether a message may be sent, and what is shown when it
+ * may not, is the send gate every editor shares (`useAiSendGate` in
+ * @genoffice/ui). The panel and App.tsx only lay these answers out, so the
+ * rules are testable without a browser.
  */
 import type { IpcStreamError } from '@genoffice/agent-core'
-import {
-  isSubscriptionProvider,
-  selectAiProvider,
-  type AiProviderChoice,
-  type AiProviderId,
-  type AiRunErrorKind,
-  type AiSettings,
-  type AiSubscriptionProviderId,
-  type AiSubscriptionStatuses,
-} from '@genoffice/ai-provider/browser'
-import { isAiBlockedRunKind, withAiProviderSelection } from '@genoffice/ui'
-
-export type AiPanelGate =
-  /** the settings have not been read yet */
-  | { readonly kind: 'loading' }
-  /** no provider can run: the panel shows the connect prompt instead of sending */
-  | { readonly kind: 'connect'; readonly choice: AiProviderChoice }
-  /** a subscription is about to be used for the first time: its notice comes first */
-  | { readonly kind: 'notice'; readonly provider: AiSubscriptionProviderId }
-  | { readonly kind: 'ready'; readonly provider: AiProviderId; readonly metered: boolean }
-
-/** Where the panel stands, from the settings and the connection statuses */
-export function aiPanelGate(
-  settings: AiSettings | null,
-  statuses: AiSubscriptionStatuses,
-): AiPanelGate {
-  if (!settings) return { kind: 'loading' }
-  const choice = selectAiProvider(settings, statuses)
-  if (!choice.connected) return { kind: 'connect', choice }
-  if (isSubscriptionProvider(choice.provider) && settings.subscriptionNoticeSeen !== true) {
-    return { kind: 'notice', provider: choice.provider }
-  }
-  return { kind: 'ready', provider: choice.provider, metered: choice.metered }
-}
-
-/**
- * Whether a message may be sent. Not while the panel asks to connect or shows
- * the first-use notice; `loading` keeps the path the app takes before the
- * settings are read.
- */
-export function aiGateAllowsSend(gate: AiPanelGate): boolean {
-  return gate.kind === 'ready' || gate.kind === 'loading'
-}
-
-/** The settings after the first-connection notice was acknowledged */
-export function withSubscriptionNoticeSeen(settings: AiSettings): AiSettings {
-  return { ...settings, subscriptionNoticeSeen: true }
-}
+import type { AiRunErrorKind, AiSubscriptionProviderId } from '@genoffice/ai-provider/browser'
+import { isAiBlockedRunKind } from '@genoffice/ui'
 
 /** Why a run stopped, kept on its chat message so the blocked notice can be drawn */
 export interface AiBlockedRun {
@@ -80,20 +35,6 @@ export function aiBlockedRunOf(
     ...(error.provider !== undefined ? { provider: error.provider } : {}),
     ...(error.resetsAt !== undefined ? { resetsAt: error.resetsAt } : {}),
   }
-}
-
-/**
- * The settings after "continue with <provider>": that provider becomes the
- * stored selection (so the model picker shows it), on the model it last used.
- */
-export function withContinueProvider(
-  settings: AiSettings,
-  provider: AiSubscriptionProviderId,
-): AiSettings {
-  return withAiProviderSelection(settings, {
-    provider,
-    model: settings.providers[provider]?.model ?? '',
-  })
 }
 
 /** The part of a chat message the rerun needs */

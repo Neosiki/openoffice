@@ -185,7 +185,6 @@ export const fr = {
   ribbonReplaceTip: 'Rechercher et remplacer du texte',
   ribbonSelectAll: 'Tout sélectionner',
   ribbonSelectAllTip: 'Sélectionner tout le document',
-  ribbonAiAssistant: 'Assistant IA',
   ribbonAiAssistantTip: "Ouvrir l'assistant IA",
   ribbonRemoveTableStyleTip: 'Supprimer le style de tableau',
   ribbonNoStyle: 'Aucun style',

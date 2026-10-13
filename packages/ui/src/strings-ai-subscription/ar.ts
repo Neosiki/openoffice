@@ -1,6 +1,7 @@
 import type { zh } from './zh'
 
 export const ar = {
+  aiAssistant: 'مساعد الذكاء الاصطناعي',
   cardChecking: 'جارٍ التحقق…',
   cardNotInstalled: 'غير مثبَّت',
   cardSignedOut: 'لم يتم تسجيل الدخول',
@@ -9,6 +10,9 @@ export const ar = {
   cardMetered: 'تم تسجيل الدخول، لكن ليس عبر اشتراك',
   cardMeteredAccepted: 'قيد الاستخدام · الرسوم حسب الاستخدام',
   cardError: 'تعذّر التحقق من الاتصال',
+  cardErrNeedsUpdate: 'برنامج {provider} على هذا الحاسوب قديم جدًا. حدّثه ثم تحقق مرة أخرى.',
+  cardErrTimeout: 'لم يستجب برنامج {provider} في الوقت المحدد. تحقق مرة أخرى بعد قليل.',
+  cardErrFailed: 'حدث خطأ أثناء التحقق من {provider}. تحقق مرة أخرى.',
   actionInstall: 'تثبيت',
   actionLogin: 'تسجيل الدخول',
   actionRecheck: 'التحقق مرة أخرى',

@@ -1,6 +1,7 @@
 import type { zh } from './zh'
 
 export const ms = {
+  aiAssistant: 'Pembantu AI',
   cardChecking: 'Sedang menyemak…',
   cardNotInstalled: 'Belum dipasang',
   cardSignedOut: 'Belum log masuk',
@@ -9,6 +10,11 @@ export const ms = {
   cardMetered: 'Sudah log masuk, tetapi bukan dengan langganan',
   cardMeteredAccepted: 'Sedang digunakan · dicaj mengikut penggunaan',
   cardError: 'Sambungan tidak dapat disemak',
+  cardErrNeedsUpdate:
+    'Program {provider} pada PC ini terlalu lama. Kemas kini, kemudian semak semula.',
+  cardErrTimeout:
+    'Program {provider} tidak menjawab dalam masa yang ditetapkan. Semak semula sebentar lagi.',
+  cardErrFailed: 'Masalah berlaku semasa menyemak {provider}. Semak semula.',
   actionInstall: 'Pasang',
   actionLogin: 'Log masuk',
   actionRecheck: 'Semak semula',

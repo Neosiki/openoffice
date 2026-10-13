@@ -11,13 +11,12 @@ import {
   type AiSubscriptionStatuses,
 } from '@genoffice/ai-provider/browser'
 import {
-  aiPanelGate,
-  blockedRunOf,
-  connectPromptVisible,
-  toolGatesOf,
-  withContinuedProvider,
-  withSubscriptionNoticeSeen,
-} from '../src/renderer/ai/subscription'
+  aiConnectPromptChoice,
+  aiSendGate,
+  withAiContinueProvider,
+  withAiSubscriptionNoticeSeen,
+} from '@genoffice/ui'
+import { blockedRunOf, toolGatesOf } from '../src/renderer/ai/subscription'
 import { settingsSupportVision } from '../src/renderer/ai/slide-qc'
 import {
   checkingSubscriptionStatuses,
@@ -44,47 +43,53 @@ const withAnthropicKey = (settings: AiSettings): AiSettings => ({
   providers: { ...settings.providers, anthropic: { apiKey: 'sk-test', model: 'claude-test' } },
 })
 
+// The gate itself is the one every editor shares (@genoffice/ui); these pin it on the
+// settings and statuses the slides panel hands it.
 describe('the gate in front of a run', () => {
   it('nothing connected → the connect prompt, with the choice it is built from', () => {
-    const gate = aiPanelGate(settingsWith(), statuses('not-installed', 'signed-out'))
+    const gate = aiSendGate(settingsWith(), statuses('not-installed', 'signed-out'))
     expect(gate.kind).toBe('connect')
     expect(gate).toMatchObject({ choice: { connected: false, reason: 'no-subscription' } })
   })
 
   it('a key provider alone never satisfies auto (it must be selected by the user)', () => {
     const settings = withAnthropicKey(settingsWith())
-    expect(aiPanelGate(settings, statuses('signed-out', 'signed-out')).kind).toBe('connect')
-    expect(aiPanelGate({ ...settings, provider: 'anthropic' }, {})).toEqual({
-      kind: 'ready',
-      provider: 'anthropic',
+    expect(aiSendGate(settings, statuses('signed-out', 'signed-out')).kind).toBe('connect')
+    expect(aiSendGate({ ...settings, provider: 'anthropic' }, {})).toMatchObject({
+      kind: 'run',
+      choice: { provider: 'anthropic' },
     })
   })
 
   it('a subscription about to be used for the first time shows the notice once', () => {
     const fresh = settingsWith()
-    expect(aiPanelGate(fresh, statuses('ready', 'ready'))).toEqual({
-      kind: 'first-notice',
+    expect(aiSendGate(fresh, statuses('ready', 'ready'))).toMatchObject({
+      kind: 'notice',
       provider: 'claude-code',
     })
-    expect(aiPanelGate(fresh, statuses('signed-out', 'ready'))).toEqual({
-      kind: 'first-notice',
+    expect(aiSendGate(fresh, statuses('signed-out', 'ready'))).toMatchObject({
+      kind: 'notice',
       provider: 'codex',
     })
-    const seen = withSubscriptionNoticeSeen(fresh)
+    const seen = withAiSubscriptionNoticeSeen(fresh)
     expect(seen.subscriptionNoticeSeen).toBe(true)
     expect(fresh.subscriptionNoticeSeen).toBe(false)
-    expect(aiPanelGate(seen, statuses('ready', 'ready'))).toEqual({
-      kind: 'ready',
-      provider: 'claude-code',
+    expect(aiSendGate(seen, statuses('ready', 'ready'))).toMatchObject({
+      kind: 'run',
+      choice: { provider: 'claude-code' },
     })
   })
 
   it('a selected provider that cannot run is never replaced by one that could', () => {
-    const gate = aiPanelGate(settingsWith({ provider: 'codex' }), statuses('ready', 'signed-out'))
+    const gate = aiSendGate(settingsWith({ provider: 'codex' }), statuses('ready', 'signed-out'))
     expect(gate).toMatchObject({
       kind: 'connect',
       choice: { connected: false, provider: 'codex', reason: 'signed-out' },
     })
+  })
+
+  it('a status check still running is neither "run" nor "connect": a request waits for it', () => {
+    expect(aiSendGate(settingsWith(), checkingSubscriptionStatuses()).kind).toBe('checking')
   })
 })
 
@@ -92,27 +97,25 @@ describe('when the connect prompt is on screen', () => {
   const settings = settingsWith()
 
   it('stays hidden while the first status check is still running', () => {
-    const checking = checkingSubscriptionStatuses()
-    const gate = aiPanelGate(settings, checking)
-    expect(connectPromptVisible(gate, checking, false)).toBe(false)
-    // unless the user already asked for a run
-    expect(connectPromptVisible(gate, checking, true)).toBe(true)
+    const gate = aiSendGate(settings, checkingSubscriptionStatuses())
+    expect(aiConnectPromptChoice(gate, false)).toBeNull()
+    // unless a request is waiting for the answer
+    expect(aiConnectPromptChoice(gate, true)).not.toBeNull()
   })
 
   it('shows once the check answered that nothing is connected', () => {
-    const answered = statuses('not-installed', 'signed-out')
-    expect(connectPromptVisible(aiPanelGate(settings, answered), answered, false)).toBe(true)
+    const gate = aiSendGate(settings, statuses('not-installed', 'signed-out'))
+    expect(aiConnectPromptChoice(gate, false)).not.toBeNull()
   })
 
   it('shows for an unfinished key provider whatever the status check is doing', () => {
-    const checking = checkingSubscriptionStatuses()
-    const gate = aiPanelGate(settingsWith({ provider: 'anthropic' }), checking)
-    expect(connectPromptVisible(gate, checking, false)).toBe(true)
+    const gate = aiSendGate(settingsWith({ provider: 'anthropic' }), checkingSubscriptionStatuses())
+    expect(aiConnectPromptChoice(gate, false)).toMatchObject({ reason: 'not-configured' })
   })
 
   it('is never shown while a provider can run', () => {
-    const ready = statuses('ready', 'ready')
-    expect(connectPromptVisible(aiPanelGate(settings, ready), ready, true)).toBe(false)
+    const gate = aiSendGate(settings, statuses('ready', 'ready'))
+    expect(aiConnectPromptChoice(gate, true)).toBeNull()
   })
 })
 
@@ -139,14 +142,14 @@ describe('a run that stopped because its connection cannot go on', () => {
   it('"continue with" stores that provider as the selection and keeps its model', () => {
     const before = settingsWith({ provider: 'claude-code' })
     before.providers.codex = { ...before.providers.codex, model: 'codex-test-model' }
-    const after = withContinuedProvider(before, 'codex')
+    const after = withAiContinueProvider(before, 'codex')
     expect(after.provider).toBe('codex')
     expect(after.providers.codex.model).toBe('codex-test-model')
     expect(before.provider).toBe('claude-code')
     // the gate follows the new selection at once
-    expect(aiPanelGate(withSubscriptionNoticeSeen(after), statuses('signed-out', 'ready'))).toEqual(
-      { kind: 'ready', provider: 'codex' },
-    )
+    expect(
+      aiSendGate(withAiSubscriptionNoticeSeen(after), statuses('signed-out', 'ready')),
+    ).toMatchObject({ kind: 'run', choice: { provider: 'codex' } })
   })
 })
 

@@ -1,6 +1,7 @@
 import type { zh } from './zh'
 
 export const es = {
+  aiAssistant: 'Asistente de IA',
   cardChecking: 'Comprobando…',
   cardNotInstalled: 'No instalado',
   cardSignedOut: 'Sesión no iniciada',
@@ -9,6 +10,10 @@ export const es = {
   cardMetered: 'Sesión iniciada, pero no con una suscripción',
   cardMeteredAccepted: 'En uso · se cobra por consumo',
   cardError: 'No se pudo comprobar la conexión',
+  cardErrNeedsUpdate:
+    'El programa {provider} de este PC es demasiado antiguo. Actualízalo y comprueba de nuevo.',
+  cardErrTimeout: 'El programa {provider} no respondió a tiempo. Comprueba de nuevo en un momento.',
+  cardErrFailed: 'Algo salió mal al comprobar {provider}. Comprueba de nuevo.',
   actionInstall: 'Instalar',
   actionLogin: 'Iniciar sesión',
   actionRecheck: 'Comprobar de nuevo',

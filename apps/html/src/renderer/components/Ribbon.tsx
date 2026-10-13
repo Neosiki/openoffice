@@ -3,6 +3,7 @@ import {
   AiMark,
   RibbonCollapseButton,
   RibbonExpandButton,
+  aiSubscriptionText,
   useDismissablePopover,
   useRibbonCollapse,
 } from '@genoffice/ui'
@@ -132,7 +133,7 @@ const TABLE_PICKER_COLS = 10
 const ICON = 20
 
 export function Ribbon(p: Props) {
-  const { t } = useI18n()
+  const { t, lang } = useI18n()
   const collapse = useRibbonCollapse('htmlapp.ribbonCollapsed', {
     collapse: t('ribbonCollapse'),
     expand: t('ribbonExpand'),
@@ -288,7 +289,7 @@ export function Ribbon(p: Props) {
               <span className="rb-big-icon">
                 <AiMark size={26} />
               </span>
-              <span>AI</span>
+              <span>{aiSubscriptionText(lang, 'aiAssistant')}</span>
             </button>
             <button
               type="button"

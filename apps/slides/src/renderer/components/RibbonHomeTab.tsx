@@ -1,7 +1,14 @@
 /** Home tab of the slides ribbon. Extracted from Ribbon.tsx. */
 import { useState } from 'react'
 import { platformShortcuts } from '@genoffice/i18n'
-import { AiMark, ColorPicker, isSymbolFontFamily, partitionFontFamilies } from '@genoffice/ui'
+import {
+  AiMark,
+  ColorPicker,
+  aiSubscriptionText,
+  isSymbolFontFamily,
+  partitionFontFamilies,
+} from '@genoffice/ui'
+import { useI18n } from '../i18n/locale'
 import { saveEditSelection } from '../TextEditOverlay'
 import { armColorInput } from '../color-input'
 import { displayFontFamily } from '../konva-adapter'
@@ -77,6 +84,7 @@ const fontPreviewFamily = (f: string): string | undefined =>
   isSymbolFontFamily(f) ? undefined : displayFontFamily(f)
 
 export function RibbonHomeTab({ rb }: { rb: RibbonTabCtx }) {
+  const { lang } = useI18n()
   const {
     aiOpen,
     brushMode,
@@ -207,7 +215,7 @@ export function RibbonHomeTab({ rb }: { rb: RibbonTabCtx }) {
   }
   return (
     <>
-      <Group label={t('ribbonAiAssistant')}>
+      <Group label={aiSubscriptionText(lang, 'aiAssistant')}>
         <button
           className={`rb-big ai-entry${aiOpen ? ' active' : ''}`}
           data-tip={t('aiOpenAssistant')}
@@ -216,7 +224,7 @@ export function RibbonHomeTab({ rb }: { rb: RibbonTabCtx }) {
           <span className="rb-big-icon">
             <AiMark size={26} />
           </span>
-          <span>{t('ribbonAiAssistant')}</span>
+          <span>{aiSubscriptionText(lang, 'aiAssistant')}</span>
         </button>
         <button
           className="rb-big ai-entry"

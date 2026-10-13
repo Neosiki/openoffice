@@ -187,7 +187,6 @@ export const zh = {
   ribbonSelectAll: '全选',
   ribbonSelectAllTip: '选择整个文档',
   // Home · AI
-  ribbonAiAssistant: 'AI 助手',
   ribbonAiAssistantTip: '打开 AI 助手',
   // Table Design
   ribbonRemoveTableStyleTip: '移除表格样式',

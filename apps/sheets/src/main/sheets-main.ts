@@ -61,6 +61,7 @@ import {
   writeJsonAtomic,
 } from '@genoffice/electron-utils'
 import {
+  brandText,
   createI18n,
   getUiLang,
   type Lang,
@@ -1603,7 +1604,11 @@ async function createStandaloneSheetsDocument(
   request: SheetsAiHostDocumentRequest,
 ): Promise<WorkbookCreateDocumentResult> {
   if (request.type === 'docx') {
-    return { ok: false, error: 'Creating DOCX files requires the GenOffice shell or Docs app.' }
+    // read by the model as the tool's answer: English, with the product's own name
+    return {
+      ok: false,
+      error: brandText('Creating DOCX files requires the GenOffice shell or Docs app.', 'en'),
+    }
   }
   const title = sanitizeGeneratedFileBase(request.title)
   try {

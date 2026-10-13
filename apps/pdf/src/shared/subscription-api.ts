@@ -4,15 +4,19 @@
 // registered once for the whole app by the docs main (pdf registers none), so
 // every answer is read defensively: a missing handler is "still checking".
 
-import { checkingSubscriptionStatus } from '@genoffice/ai-provider/browser'
 import type {
   AiSubscriptionProviderId,
-  AiSubscriptionState,
-  AiSubscriptionStatus,
-  SubscriptionLaunchFailure,
   SubscriptionLaunchResult,
   SubscriptionMeteredResult,
   SubscriptionStatusMap,
+} from '@genoffice/ai-provider/browser'
+
+// Reading an IPC answer is the same in every app: one implementation, in the shared contract
+export {
+  checkingSubscriptionStatuses,
+  subscriptionLaunchResultOf,
+  subscriptionMeteredResultOf,
+  subscriptionStatusMapOf,
 } from '@genoffice/ai-provider/browser'
 
 /** exposed as `window.pdfApi.subscription` by the pdf preload (same shape as the shell's) */
@@ -47,77 +51,8 @@ export const SUBSCRIPTION_INSTALL_HELP_CHANNEL = 'home:open-subscription-install
  */
 export const AI_TOOL_CAPABILITIES_CHANNEL = 'ai:tool-capabilities'
 
-const STATES: readonly AiSubscriptionState[] = [
-  'checking',
-  'not-installed',
-  'signed-out',
-  'ready',
-  'metered',
-  'error',
-]
-
-const LAUNCH_FAILURES: readonly SubscriptionLaunchFailure[] = [
-  'not-installed',
-  'unsupported',
-  'failed',
-  'invalid',
-]
-
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value)
-}
-
-/** Both providers `checking`: what is shown while nothing has answered */
-export function checkingSubscriptionStatuses(): SubscriptionStatusMap {
-  return {
-    'claude-code': checkingSubscriptionStatus('claude-code'),
-    codex: checkingSubscriptionStatus('codex'),
-  }
-}
-
-/**
- * An IPC answer as a status map with both providers present. A provider whose
- * entry is missing or malformed reads as `checking`, so the renderer never has
- * to guard against a half-filled answer.
- */
-export function subscriptionStatusMapOf(result: unknown): SubscriptionStatusMap {
-  const raw = isRecord(result) ? result : {}
-  const statusOf = (provider: AiSubscriptionProviderId): AiSubscriptionStatus => {
-    const status = raw[provider]
-    if (!isRecord(status) || !STATES.includes(status.state as AiSubscriptionState)) {
-      return checkingSubscriptionStatus(provider)
-    }
-    return {
-      ...(status as unknown as AiSubscriptionStatus),
-      provider,
-      meteredAccepted: status.meteredAccepted === true,
-    }
-  }
-  return { 'claude-code': statusOf('claude-code'), codex: statusOf('codex') }
-}
-
-/**
- * An IPC answer as a launch result; anything unreadable is a plain failure.
- * The spawn error text is left behind: it can carry an executable path, and the
- * UI shows its own translated sentence instead.
- */
-export function subscriptionLaunchResultOf(result: unknown): SubscriptionLaunchResult {
-  const raw = isRecord(result) ? result : {}
-  if (raw.ok === true) return { ok: true }
-  const reason = LAUNCH_FAILURES.includes(raw.reason as SubscriptionLaunchFailure)
-    ? (raw.reason as SubscriptionLaunchFailure)
-    : 'failed'
-  return {
-    ok: false,
-    reason,
-    ...(typeof raw.installUrl === 'string' ? { installUrl: raw.installUrl } : {}),
-  }
-}
-
-/** An IPC answer as a metered-acceptance result */
-export function subscriptionMeteredResultOf(result: unknown): SubscriptionMeteredResult {
-  const raw = isRecord(result) ? result : {}
-  return { ok: raw.ok === true, statuses: subscriptionStatusMapOf(raw.statuses) }
 }
 
 /**

@@ -207,6 +207,17 @@
   white-space: normal;
 }
 
+/* inside a menu: small print under the group it belongs to, without a box of its own */
+.ai-sub-notice.compact {
+  padding: 0 8px 4px;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  color: var(--text-dim);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
 .ai-sub-notice.warning {
   border-color: var(--danger-border);
   background: var(--danger-bg);

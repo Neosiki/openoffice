@@ -9,13 +9,15 @@ import {
   type AiSubscriptionUsage,
 } from '@genoffice/ai-provider'
 import {
-  aiPanelGate,
+  aiHoldReason,
+  aiSendGate,
+  withAiContinueProvider,
+  withAiSubscriptionNoticeSeen,
+} from '@genoffice/ui'
+import {
   blockedRunFor,
   blockedRunOf,
-  gateAllowsSend,
   mergeSubscriptionUsage,
-  withContinueProvider,
-  withSubscriptionNoticeSeen,
   writerMayRetry,
 } from '../src/renderer/ai/connection'
 
@@ -39,33 +41,35 @@ const settings = (patch: Partial<AiSettings> = {}): AiSettings => ({
   ...patch,
 })
 
-describe('aiPanelGate', () => {
-  it('lets the main process decide while the settings have not been read', () => {
-    const gate = aiPanelGate(null, statuses('ready', 'ready'))
-    expect(gate.kind).toBe('pending')
-    expect(gateAllowsSend(gate)).toBe(true)
+// The gate itself is the one every editor shares (@genoffice/ui); these pin it on the
+// settings and statuses the html panel hands it.
+describe('the send gate', () => {
+  it('holds a request while the settings have not been read', () => {
+    const gate = aiSendGate(null, statuses('ready', 'ready'))
+    expect(gate.kind).toBe('checking')
+    expect(aiHoldReason(gate)).toBe('checking')
   })
 
-  it('stays pending while a status check has not reported, so a missing handler never locks the panel', () => {
-    expect(aiPanelGate(settings(), {}).kind).toBe('pending')
-    expect(aiPanelGate(settings(), statuses('checking', 'checking')).kind).toBe('pending')
-    expect(aiPanelGate(settings(), statuses('not-installed', 'checking')).kind).toBe('pending')
-    expect(aiPanelGate(settings({ provider: 'codex' }), statuses('ready', 'checking')).kind).toBe(
-      'pending',
+  it('holds a request while a status check has not reported', () => {
+    expect(aiSendGate(settings(), {}).kind).toBe('checking')
+    expect(aiSendGate(settings(), statuses('checking', 'checking')).kind).toBe('checking')
+    expect(aiSendGate(settings(), statuses('not-installed', 'checking')).kind).toBe('checking')
+    expect(aiSendGate(settings({ provider: 'codex' }), statuses('ready', 'checking')).kind).toBe(
+      'checking',
     )
   })
 
   it('shows the connect prompt instead of sending when no subscription is connected', () => {
-    const gate = aiPanelGate(settings(), statuses('not-installed', 'signed-out'))
+    const gate = aiSendGate(settings(), statuses('not-installed', 'signed-out'))
     expect(gate.kind).toBe('connect')
-    expect(gateAllowsSend(gate)).toBe(false)
+    expect(aiHoldReason(gate)).toBeNull()
     if (gate.kind !== 'connect') throw new Error('unreachable')
     expect(gate.choice.selection).toBe('auto')
     expect(gate.choice.provider).toBeUndefined()
   })
 
   it('never falls back from an explicit selection that cannot run', () => {
-    const gate = aiPanelGate(settings({ provider: 'claude-code' }), statuses('signed-out', 'ready'))
+    const gate = aiSendGate(settings({ provider: 'claude-code' }), statuses('signed-out', 'ready'))
     expect(gate.kind).toBe('connect')
     if (gate.kind !== 'connect') throw new Error('unreachable')
     expect(gate.choice.provider).toBe('claude-code')
@@ -77,30 +81,29 @@ describe('aiPanelGate', () => {
     const withKey = settings({
       providers: { ...base.providers, openai: { apiKey: 'sk-test', model: 'gpt-test' } },
     })
-    expect(aiPanelGate(withKey, statuses('not-installed', 'not-installed')).kind).toBe('connect')
+    expect(aiSendGate(withKey, statuses('not-installed', 'not-installed')).kind).toBe('connect')
   })
 
   it('runs on Claude first, then Codex, under the automatic selection', () => {
-    const both = aiPanelGate(settings(), statuses('ready', 'ready'))
-    expect(both).toMatchObject({ kind: 'ready', choice: { provider: 'claude-code' } })
-    const codexOnly = aiPanelGate(settings({ meteredAccepted: { 'claude-code': true } }), {
+    const both = aiSendGate(settings(), statuses('ready', 'ready'))
+    expect(both).toMatchObject({ kind: 'run', choice: { provider: 'claude-code' } })
+    const codexOnly = aiSendGate(settings({ meteredAccepted: { 'claude-code': true } }), {
       'claude-code': status('claude-code', 'metered', { meteredAccepted: true }),
       codex: status('codex', 'ready'),
     })
-    expect(codexOnly).toMatchObject({ kind: 'ready', choice: { provider: 'codex' } })
+    expect(codexOnly).toMatchObject({ kind: 'run', choice: { provider: 'codex' } })
   })
 
   it('holds the first request on a subscription until the notice was acknowledged', () => {
     const unseen = settings({ subscriptionNoticeSeen: false })
-    const gate = aiPanelGate(unseen, statuses('ready', 'not-installed'))
+    const gate = aiSendGate(unseen, statuses('ready', 'not-installed'))
     expect(gate.kind).toBe('notice')
-    expect(gateAllowsSend(gate)).toBe(false)
-    const acknowledged = aiPanelGate(
-      withSubscriptionNoticeSeen(unseen),
+    expect(aiHoldReason(gate)).toBe('notice')
+    const acknowledged = aiSendGate(
+      withAiSubscriptionNoticeSeen(unseen),
       statuses('ready', 'not-installed'),
     )
-    expect(acknowledged.kind).toBe('ready')
-    expect(gateAllowsSend(acknowledged)).toBe(true)
+    expect(acknowledged.kind).toBe('run')
   })
 
   it('runs a selected, configured key provider without the subscription notice', () => {
@@ -110,15 +113,15 @@ describe('aiPanelGate', () => {
       provider: 'openai' as const,
       providers: { ...base.providers, openai: { apiKey: 'sk-test', model: 'gpt-test' } },
     }
-    expect(aiPanelGate(keyed, {})).toMatchObject({
-      kind: 'ready',
+    expect(aiSendGate(keyed, {})).toMatchObject({
+      kind: 'run',
       choice: { provider: 'openai', metered: false },
     })
   })
 
   it('sends a selected key provider that is not filled in to the connect prompt', () => {
     const base = settings()
-    const gate = aiPanelGate(
+    const gate = aiSendGate(
       {
         ...base,
         provider: 'openai',
@@ -188,7 +191,7 @@ describe('settings changes made from the panel', () => {
       ...base,
       providers: { ...base.providers, codex: { ...base.providers.codex, model: 'gpt-codex' } },
     }
-    const next = withContinueProvider(before, 'codex')
+    const next = withAiContinueProvider(before, 'codex')
     expect(next.provider).toBe('codex')
     expect(next.providers.codex.model).toBe('gpt-codex')
     expect(next.providers['claude-code']).toEqual(before.providers['claude-code'])
@@ -197,7 +200,7 @@ describe('settings changes made from the panel', () => {
 
   it('remembers the acknowledged notice without touching anything else', () => {
     const before = settings({ subscriptionNoticeSeen: false, provider: 'codex' })
-    const next = withSubscriptionNoticeSeen(before)
+    const next = withAiSubscriptionNoticeSeen(before)
     expect(next).toEqual({ ...before, subscriptionNoticeSeen: true })
     expect(before.subscriptionNoticeSeen).toBe(false)
   })

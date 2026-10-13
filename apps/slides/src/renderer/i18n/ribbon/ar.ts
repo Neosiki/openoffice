@@ -174,7 +174,6 @@ export const ar = {
   ribbonFlipH: 'انعكاس أفقي',
   ribbonFlipV: 'انعكاس رأسي',
   ribbonDistributeHint: '{title} (حدد 3 عناصر على الأقل)',
-  ribbonAiAssistant: 'مساعد الذكاء الاصطناعي',
   ribbonAiAssistantTip: 'إظهار أو إخفاء لوحة مساعد الذكاء الاصطناعي',
   ribbonGroupTable: 'جدول',
   ribbonInsertTableTip: 'إدراج جدول (نمط افتراضي؛ اختر الصفوف والأعمدة)',

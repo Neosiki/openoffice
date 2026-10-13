@@ -10,6 +10,7 @@ import {
   AI_SUBSCRIPTION_PROVIDERS,
   isSubscriptionProvider,
   subscriptionConnection,
+  subscriptionStatusErrorKind,
   type AiProviderChoice,
   type AiProviderId,
   type AiRunErrorKind,
@@ -20,6 +21,7 @@ import {
   type AiSubscriptionStatuses,
   type AiSubscriptionUsage,
   type AiUsageWindow,
+  type SubscriptionStatusErrorKind,
 } from '@genoffice/ai-provider/browser'
 import { htmlLang, type Lang } from '@genoffice/i18n'
 import { aiSubscriptionText, type AiSubscriptionStringKey } from './strings-ai-subscription'
@@ -77,10 +79,19 @@ export interface AiSubscriptionCardView {
   readonly planName?: string | undefined
   /** explanatory lines under the state, in order */
   readonly noteKeys: readonly AiSubscriptionStringKey[]
-  /** the status check's own error text, on `error` */
-  readonly detail?: string | undefined
+  /**
+   * what went wrong, on `error`: a sentence of ours chosen by the kind of
+   * failure. The status's own text (English, possibly naming a path) is never shown.
+   */
+  readonly detailKey?: AiSubscriptionStringKey | undefined
   /** buttons and links, in order; the first one is the primary action */
   readonly actions: readonly AiSubscriptionCardAction[]
+}
+
+const STATUS_ERROR_KEYS: Record<SubscriptionStatusErrorKind, AiSubscriptionStringKey> = {
+  'needs-update': 'cardErrNeedsUpdate',
+  timeout: 'cardErrTimeout',
+  failed: 'cardErrFailed',
 }
 
 /** The spec table of connection states: what one provider's card shows in each of the six */
@@ -139,7 +150,7 @@ export function aiSubscriptionCardView(status: AiSubscriptionStatus): AiSubscrip
         tone: 'error',
         statusKey: 'cardError',
         noteKeys: [],
-        detail: status.error?.trim() || undefined,
+        detailKey: STATUS_ERROR_KEYS[subscriptionStatusErrorKind(status) ?? 'failed'],
         actions: ['recheck'],
       }
   }

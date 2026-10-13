@@ -38,13 +38,18 @@ function installBridge(options: {
   const settingsListeners = new Set<() => void>()
   const streamListeners = new Set<(chunk: Chunk) => void>()
   const requests: StreamRequest[] = []
+  let statuses = options.statuses ?? statusMap('checking', 'checking')
+  const statusListeners = new Set<(next: SubscriptionStatusMap) => void>()
   const subscription = {
-    statuses: vi.fn(async () => options.statuses ?? statusMap('checking', 'checking')),
-    recheck: vi.fn(async () => options.statuses ?? statusMap('checking', 'checking')),
+    statuses: vi.fn(async () => statuses),
+    recheck: vi.fn(async () => statuses),
     login: vi.fn(async () => ({ ok: true })),
     install: vi.fn(async () => ({ ok: true })),
     setMeteredAccepted: vi.fn(async () => ({ ok: true, statuses: options.statuses })),
-    onChanged: vi.fn(() => () => {}),
+    onChanged: vi.fn((listener: (next: SubscriptionStatusMap) => void) => {
+      statusListeners.add(listener)
+      return () => statusListeners.delete(listener)
+    }),
     openInstallHelp: vi.fn(async () => {}),
   }
   const api = {
@@ -82,6 +87,15 @@ function installBridge(options: {
     subscription,
     requests,
     emit: (chunk: Chunk) => [...streamListeners].forEach((listener) => listener(chunk)),
+    /** the main process reports a status change */
+    setStatuses: (next: SubscriptionStatusMap) => {
+      statuses = next
+      statusListeners.forEach((listener) => listener(next))
+    },
+    /** what is stored changes behind the panel's back (no change event reaches it) */
+    storeSilently: (next: AiSettings) => {
+      settings = next
+    },
   }
 }
 
@@ -124,6 +138,22 @@ async function sendMessage(container: HTMLElement, text: string): Promise<void> 
   await settle()
 }
 
+/** type a message and press Enter: while a reply runs, that queues it */
+async function typeAndEnter(container: HTMLElement, text: string): Promise<void> {
+  const textarea = container.querySelector<HTMLTextAreaElement>('textarea')!
+  const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!
+  act(() => {
+    setter.call(textarea, text)
+    textarea.dispatchEvent(new Event('input', { bubbles: true }))
+  })
+  act(() => {
+    textarea.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }),
+    )
+  })
+  await settle()
+}
+
 async function click(container: HTMLElement, selector: string): Promise<void> {
   const target = container.querySelector<HTMLElement>(selector)
   expect(target, selector).not.toBeNull()
@@ -142,22 +172,39 @@ afterEach(() => {
     act(() => root.unmount())
     container.remove()
   }
+  delete (Element.prototype as { scrollIntoView?: unknown }).scrollIntoView
   vi.unstubAllGlobals()
 })
 
+/** records what the panel scrolls into view (jsdom implements no scrolling of its own) */
+function watchScrollIntoView(): Element[] {
+  const scrolled: Element[] = []
+  Element.prototype.scrollIntoView = function (this: Element) {
+    scrolled.push(this)
+  }
+  return scrolled
+}
+
+const composerText = (container: HTMLElement) =>
+  container.querySelector<HTMLTextAreaElement>('textarea')!.value
+
 describe('AiPanel under the subscription contract', () => {
   it('shows the connect prompt and starts no run while nothing is connected', async () => {
+    const scrolled = watchScrollIntoView()
     const bridge = installBridge({ statuses: statusMap('signed-out', 'not-installed') })
     const container = await mountPanel()
 
     const prompt = container.querySelector('.ai-sub-prompt')
     expect(prompt?.getAttribute('data-reason')).toBe('no-subscription')
+    expect(scrolled).toEqual([])
 
     await sendMessage(container, 'summarize this')
     expect(bridge.api.aiStream).not.toHaveBeenCalled()
     // the request stays in the composer for after the connection is made
-    expect(container.querySelector<HTMLTextAreaElement>('textarea')!.value).toBe('summarize this')
+    expect(composerText(container)).toBe('summarize this')
     expect(container.querySelector('.ai-msg-user')).toBeNull()
+    // the refused send points at the prompt
+    expect(scrolled).toContain(container.querySelector('.ai-sub-prompt'))
 
     await click(container, '.ai-sub-prompt [data-action="login"]')
     expect(bridge.subscription.login).toHaveBeenCalledWith('claude-code')
@@ -165,17 +212,79 @@ describe('AiPanel under the subscription contract', () => {
     expect(bridge.subscription.install).toHaveBeenCalledWith('codex')
   })
 
+  it('does not send the refused request once a subscription connects', async () => {
+    const bridge = installBridge({
+      settings: { subscriptionNoticeSeen: true },
+      statuses: statusMap('signed-out', 'not-installed'),
+    })
+    const container = await mountPanel()
+    await sendMessage(container, 'summarize this')
+
+    act(() => bridge.setStatuses(statusMap('ready', 'not-installed')))
+    await settle()
+    // minutes may have passed at the sign-in page: the run must be asked for again
+    expect(bridge.api.aiStream).not.toHaveBeenCalled()
+    expect(composerText(container)).toBe('summarize this')
+    expect(container.querySelector('.ai-sub-prompt')).toBeNull()
+  })
+
   it('reads a bridge without subscription handlers as still checking', async () => {
     const bridge = installBridge({})
     bridge.subscription.statuses.mockRejectedValue(new Error('No handler registered'))
     const container = await mountPanel()
 
-    expect(container.querySelector('.ai-sub-prompt')).not.toBeNull()
+    // nobody is waiting on the check yet: no prompt flashes up
+    expect(container.querySelector('.ai-sub-prompt')).toBeNull()
     await sendMessage(container, 'hello')
+    // held: nothing is sent, and the cards show the check the request waits for
+    expect(bridge.api.aiStream).not.toHaveBeenCalled()
+    expect(composerText(container)).toBe('hello')
+    expect(container.querySelector('.ai-sub-prompt')).not.toBeNull()
+    expect(container.querySelector('.ai-msg-error')).toBeNull()
+  })
+
+  it('holds a send made during the status check and starts it once a provider can run', async () => {
+    const bridge = installBridge({
+      settings: { subscriptionNoticeSeen: true },
+      statuses: statusMap('checking', 'checking'),
+    })
+    const container = await mountPanel()
+    await sendMessage(container, 'summarize this')
+    expect(bridge.api.aiStream).not.toHaveBeenCalled()
+    expect(composerText(container)).toBe('summarize this')
+
+    act(() => bridge.setStatuses(statusMap('checking', 'ready')))
+    await settle()
+    expect(bridge.api.aiStream).toHaveBeenCalledTimes(1)
+    expect(composerText(container)).toBe('')
+    expect(container.querySelector('.ai-msg-user')?.textContent).toContain('summarize this')
+    expect(container.querySelector('.ai-sub-prompt')).toBeNull()
+  })
+
+  it('a send held during the status check falls to the connect prompt when the answer is "not connected"', async () => {
+    const scrolled = watchScrollIntoView()
+    const bridge = installBridge({
+      settings: { subscriptionNoticeSeen: true },
+      statuses: statusMap('checking', 'checking'),
+    })
+    const container = await mountPanel()
+    await sendMessage(container, 'summarize this')
+
+    act(() => bridge.setStatuses(statusMap('signed-out', 'not-installed')))
+    await settle()
+    expect(bridge.api.aiStream).not.toHaveBeenCalled()
+    const prompt = container.querySelector('.ai-sub-prompt')
+    expect(prompt?.getAttribute('data-reason')).toBe('no-subscription')
+    expect(scrolled).toContain(prompt)
+    expect(composerText(container)).toBe('summarize this')
+
+    // and nothing starts by itself after the sign-in
+    act(() => bridge.setStatuses(statusMap('ready', 'not-installed')))
+    await settle()
     expect(bridge.api.aiStream).not.toHaveBeenCalled()
   })
 
-  it('holds the first subscription run until the first-connection notice is acknowledged', async () => {
+  it('holds the first subscription run until the first-connection notice is acknowledged, then starts it', async () => {
     const bridge = installBridge({ statuses: statusMap('ready', 'not-installed') })
     const container = await mountPanel()
 
@@ -183,14 +292,54 @@ describe('AiPanel under the subscription contract', () => {
     expect(container.querySelector('.ai-sub-first')).not.toBeNull()
     await sendMessage(container, 'first request')
     expect(bridge.api.aiStream).not.toHaveBeenCalled()
+    expect(composerText(container)).toBe('first request')
 
     await click(container, '.ai-sub-first .ai-sub-btn')
     expect(bridge.api.setAiSettings).toHaveBeenCalledTimes(1)
     expect(bridge.api.setAiSettings.mock.calls[0]![0].subscriptionNoticeSeen).toBe(true)
     expect(container.querySelector('.ai-sub-first')).toBeNull()
 
-    await sendMessage(container, 'first request')
+    // the held request went out by itself: no second press of send
     expect(bridge.api.aiStream).toHaveBeenCalledTimes(1)
+    expect(composerText(container)).toBe('')
+    expect(container.querySelector('.ai-msg-user')?.textContent).toContain('first request')
+  })
+
+  it('sends nothing and keeps the text when the notice goes away without an acknowledgement', async () => {
+    const base = normalizeAiSettings(undefined)
+    const bridge = installBridge({ statuses: statusMap('ready', 'not-installed') })
+    const container = await mountPanel()
+    await sendMessage(container, 'first request')
+
+    // the user picks a filled-in key provider instead of answering the notice
+    await act(async () =>
+      bridge.api.setAiSettings({
+        ...base,
+        provider: 'openai',
+        providers: { ...base.providers, openai: { apiKey: 'sk-test', model: 'gpt-5' } },
+      }),
+    )
+    await settle()
+    expect(container.querySelector('.ai-sub-first')).toBeNull()
+    expect(bridge.api.aiStream).not.toHaveBeenCalled()
+    expect(composerText(container)).toBe('first request')
+  })
+
+  it('writes the acknowledgement onto the settings stored now, not onto the panel copy', async () => {
+    const base = normalizeAiSettings(undefined)
+    const bridge = installBridge({ statuses: statusMap('ready', 'not-installed') })
+    const container = await mountPanel()
+    // the settings page stored a key after this panel read its copy
+    bridge.storeSilently({
+      ...base,
+      providers: { ...base.providers, openai: { apiKey: 'stored-later', model: 'gpt-later' } },
+    })
+
+    await click(container, '.ai-sub-first .ai-sub-btn')
+    expect(bridge.api.setAiSettings).toHaveBeenCalledTimes(1)
+    const saved = bridge.api.setAiSettings.mock.calls[0]![0]
+    expect(saved.subscriptionNoticeSeen).toBe(true)
+    expect(saved.providers.openai).toEqual({ apiKey: 'stored-later', model: 'gpt-later' })
   })
 
   it('renders a blocked run with a continue button that switches the provider and reruns', async () => {
@@ -225,8 +374,48 @@ describe('AiPanel under the subscription contract', () => {
     expect(bridge.api.setAiSettings.mock.calls[0]![0].provider).toBe('codex')
     expect(bridge.requests).toHaveLength(2)
     expect(bridge.requests[1]!.settings.provider).toBe('codex')
-    // the notice belongs to the run that stopped: it is gone once the rerun is under way
-    expect(container.querySelector('.ai-sub-blocked')).toBeNull()
+    // the offer belongs to the run that just stopped: the older reply keeps its reason only
+    expect(container.querySelector('.ai-sub-blocked')).not.toBeNull()
+    expect(container.querySelector('[data-action="continue-with"]')).toBeNull()
+  })
+
+  it('offers to continue on the most recent blocked reply only, and pauses the queue', async () => {
+    const bridge = installBridge({
+      settings: { subscriptionNoticeSeen: true },
+      statuses: statusMap('ready', 'ready'),
+    })
+    const container = await mountPanel()
+    const blockRun = async () => {
+      act(() =>
+        bridge.emit({
+          requestId: bridge.requests.at(-1)!.requestId,
+          type: 'error',
+          errorCode: 'rate-limit',
+          errorProvider: 'claude-code',
+        }),
+      )
+      await settle()
+    }
+    await sendMessage(container, 'rewrite the intro')
+    // typed while the reply runs: it waits in the queue
+    await typeAndEnter(container, 'then translate it')
+    expect(bridge.requests).toHaveLength(1)
+    expect(container.querySelector('.ai-queue-strip')).not.toBeNull()
+
+    await blockRun()
+    // the queued message did not run into the same wall
+    expect(bridge.requests).toHaveLength(1)
+    expect(container.querySelector('.ai-queue-strip')?.getAttribute('data-paused')).toBe('true')
+    expect(container.querySelectorAll('[data-action="continue-with"]')).toHaveLength(1)
+
+    // the user resumes the queue; that run stops the same way
+    await click(container, '.ai-queue-pause')
+    expect(bridge.requests).toHaveLength(2)
+    await blockRun()
+    const blocked = [...container.querySelectorAll('.ai-sub-blocked')]
+    expect(blocked).toHaveLength(2)
+    expect(blocked[0]!.querySelector('[data-action="continue-with"]')).toBeNull()
+    expect(blocked[1]!.querySelector('[data-action="continue-with"]')).not.toBeNull()
   })
 
   it('keeps a transient failure as a plain error line', async () => {

@@ -7,6 +7,7 @@ import {
   Dropdown,
   RibbonCollapseButton,
   RibbonExpandButton,
+  aiSubscriptionText,
   useDismissablePopover,
   useRibbonCollapse,
 } from '@genoffice/ui'
@@ -203,7 +204,7 @@ export function Ribbon({
   redactEnabled,
   onToggleRedact,
 }: Props) {
-  const { t } = useI18n()
+  const { t, lang } = useI18n()
   const collapse = useRibbonCollapse('mdapp.ribbonCollapsed', {
     collapse: t('ribbonCollapse'),
     expand: t('ribbonExpand'),
@@ -376,7 +377,7 @@ export function Ribbon({
               <span className="rb-big-icon">
                 <AiMark size={26} />
               </span>
-              <span>{t('aiEntryLabel')}</span>
+              <span>{aiSubscriptionText(lang, 'aiAssistant')}</span>
             </button>
             {aiPresets.map(({ kind, btn, prompt }) => (
               <button
