@@ -3,9 +3,14 @@
 ## Reporting a Vulnerability
 
 Please report suspected vulnerabilities privately via GitHub's
-[private vulnerability reporting](https://github.com/genspark-ai/genoffice/security/advisories/new)
-on this repository. Do not open public issues for security reports. We aim to
-acknowledge reports within 72 hours.
+[private vulnerability reporting](https://github.com/pblsketch/openoffice/security/advisories/new)
+on this repository. Do not open public issues for security reports. IeumOffice
+is maintained by volunteers, so reports are handled on a best-effort basis.
+
+IeumOffice is a modified version of GenOffice (see
+[License and acknowledgement](README.en.md#license-and-acknowledgement)). If a
+problem is in code the two projects share (the document engines, for example),
+please consider reporting it to the upstream project as well.
 
 ## Process Security Posture
 
@@ -19,8 +24,62 @@ All application windows run with the full Electron renderer lockdown:
   (`@genoffice/electron-utils` → `safeExternalUrl`) that parses the URL and
   enforces a protocol allowlist (http/https; pdf link annotations additionally
   allow mailto). `file:`, `javascript:`, and custom schemes are always rejected.
-- No API keys are hardcoded. AI requests are proxied through the signed-in
-  account by default; user-supplied keys stay in the OS-level settings store.
+- No API keys are hardcoded and the project runs no AI service of its own. By
+  default AI requests run through the Claude Code or Codex program installed on
+  the PC, under the login the user made there (see the next section).
+  User-supplied API keys are kept in the app's settings file
+  (`ai-settings.json` in the app's user-data folder) as plain JSON: they are
+  not encrypted and are protected only by the permissions of the user account.
+
+## Subscription Programs (Claude Code, Codex)
+
+The app starts the vendor's own, unmodified command-line program as a child
+process and uses it only as the model: every document edit is still carried out
+by the app's own tools. The rules the bridges are built to
+(`packages/ai-provider/src/subscription`, `claude-code-cli.ts`,
+`codex-app-server.ts`):
+
+- **Login material is never touched.** The app does not read, copy or store
+  `~/.codex/auth.json`, the Claude credential store, or any session token, and
+  it has no Claude or ChatGPT sign-in form of its own. Signing in happens in
+  the vendor's program and the vendor's own page. The connection state shown
+  in the app comes from the programs' own status commands, and the account
+  e-mail address they report is discarded.
+- **No shell.** AI runs and status checks start the program's real executable
+  directly, never through a shell, and nothing the user typed or a document
+  contains is placed on the command line: prompts travel over standard input.
+  The one exception is the Install button, which runs the vendor's fixed,
+  literal install command in a visible terminal window.
+- **No silent switch to a paid route.** Environment variables that would move
+  the program from the subscription to another billing route (API keys, base
+  URLs, cloud-platform switches; `SUBSCRIPTION_STRIPPED_ENV_VARS`) are removed
+  from the child's environment. A login that is billed by usage is never used
+  until the user accepts it explicitly.
+- **No tools of their own.** The programs run in an empty temporary folder
+  with hooks, plugins and MCP servers switched off and, as far as each program
+  allows, the user's personal configuration ignored. A Claude run goes ahead
+  only when the program reports zero available tools and zero MCP servers; a
+  Codex thread is refused when any MCP server or tool is attached. A refused
+  run ends with an `unsafe-tools` error.
+- **No orphan processes.** Cancelling a run and quitting the app end the whole
+  process tree of every program the app started. If the app itself is killed,
+  its next start ends whatever was left behind.
+
+Known limits, stated plainly:
+
+- Claude Code announces its tool list only after the first message has been
+  written to its input, so the zero-tools check necessarily runs at that
+  point. A failed check kills the process tree and none of the model's output
+  is used, but on Windows the kill is asynchronous.
+- Codex has no supported switch that ignores the whole user configuration when
+  it runs as an app server. The app overrides what it can; `~/.codex/AGENTS.md`
+  is still added to the conversation by Codex, and settings the app does not
+  override (for example other feature toggles) still apply.
+- The app turns off Codex's conversation-history files, but Codex keeps a
+  diagnostic log database of its own whose contents the project could not
+  inspect.
+
+A way around any of the rules above is a vulnerability — please report it.
 
 ## Threat Model: AI-Generated Layout Scripts (slides)
 
@@ -86,11 +145,11 @@ the main process.
 
 ## Out of Scope
 
-- The cloud AI services this client talks to are operated separately and are
-  not part of this repository; issues with them should be reported through the
-  service provider's channels.
+- The AI services this client talks to, and the Claude Code and Codex programs
+  it starts, are made and operated by other companies and are not part of this
+  repository; issues with them should be reported through their own channels.
 - Vulnerabilities that require an already-compromised machine or a modified
   binary. This includes the deliberate environment-variable override points
-  for local development (`GSK_CLI_PATH`, `XLSX_SIDECAR_PATH`): setting them
+  for local development (`GENOFFICE_APP_BIN`, `XLSX_SIDECAR_PATH`): setting them
   requires control of the process environment, which is equivalent to code
   execution on the machine.

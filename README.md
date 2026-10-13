@@ -1,679 +1,286 @@
-<p align="center">
-  <a href="https://genoffice.ai/">
-    <picture>
-      <source srcset="docs/assets/readme/hero-dark.webp" media="(prefers-color-scheme: dark)">
-      <img src="docs/assets/readme/hero.webp" alt="GenOffice — the open-source AI Office suite: Docs, Sheets, Slides, PDF, Markdown and HTML with a built-in AI panel" width="100%">
-    </picture>
-  </a>
-</p>
+# 이음오피스 (IeumOffice)
 
-<h1 align="center">GenOffice</h1>
+**한국어** · [English](README.en.md)
 
-<p align="center"><b>The world's first full-featured open-source AI Office suite.</b><br>
-Word, Excel, PowerPoint and PDF files, edited by you and your AI, saved back in the real formats.</p>
+이음오피스는 누구나 무료로 쓸 수 있는 오픈소스 데스크톱 오피스 프로그램입니다.
+워드, 엑셀, 파워포인트, PDF, 마크다운, HTML 문서를 한 창에서 열고 고칩니다.
+AI는 옆에서 답만 하는 것이 아니라 문서 자체를 고칩니다.
 
-<p align="center">
-  <a href="LICENSE"><img src="https://img.shields.io/github/license/genspark-ai/genoffice" alt="License: Apache-2.0"></a>
-  <a href="https://github.com/genspark-ai/genoffice/releases/latest"><img src="https://img.shields.io/github/v/release/genspark-ai/genoffice" alt="Latest release"></a>
-  <a href="https://github.com/genspark-ai/genoffice/releases"><img src="https://img.shields.io/github/downloads/genspark-ai/genoffice/total" alt="Downloads"></a>
-  <a href="https://github.com/genspark-ai/genoffice/stargazers"><img src="https://img.shields.io/github/stars/genspark-ai/genoffice?style=flat" alt="GitHub stars"></a>
-  <a href="https://x.com/merrickbuilds"><img src="https://img.shields.io/badge/follow-%40merrickbuilds-000000?logo=x&logoColor=white" alt="Follow @merrickbuilds on X"></a>
-</p>
+AI는 **이미 쓰고 있는 Claude 또는 Codex 구독**으로 돌아갑니다. API 키를 발급받을
+필요가 없고, 이음오피스에 내는 돈도 없습니다.
 
-<p align="center"><b>English</b> · <a href="docs/i18n/README.es.md">Español</a> · <a href="docs/i18n/README.pt-BR.md">Português (Brasil)</a> · <a href="docs/i18n/README.de.md">Deutsch</a> · <a href="docs/i18n/README.fr.md">Français</a> · <a href="docs/i18n/README.zh-CN.md">简体中文</a> · <a href="docs/i18n/README.zh-TW.md">繁體中文</a> · <a href="docs/i18n/README.ko.md">한국어</a> · <a href="docs/i18n/README.ja.md">日本語</a> · <a href="docs/i18n/README.ar.md">العربية</a> · <a href="docs/i18n/README.ru.md">Русский</a> · <a href="docs/i18n/README.it.md">Italiano</a> · <a href="docs/i18n/README.nl.md">Nederlands</a> · <a href="docs/i18n/README.pl.md">Polski</a> · <a href="docs/i18n/README.cs.md">Čeština</a> · <a href="docs/i18n/README.id.md">Bahasa Indonesia</a> · <a href="docs/i18n/README.ms.md">Bahasa Melayu</a> · <a href="docs/i18n/README.th.md">ไทย</a> · <a href="docs/i18n/README.hi.md">हिन्दी</a> · <a href="docs/i18n/README.he.md">עברית</a></p><!-- lang-switcher · public-hygiene: allow -->
+이음오피스는 오픈소스 프로젝트
+[GenOffice](https://github.com/genspark-ai/genoffice)를 바탕으로 고쳐 만든
+프로그램입니다([라이선스와 출처](#라이선스와-출처) 참고).
 
-<p align="center">
-  <a href="#download"><b>Download</b></a> ·
-  <a href="#command-line-and-agent-skill"><b>CLI</b></a> ·
-  <a href="#mcp-server"><b>MCP</b></a> ·
-  <a href="https://genoffice.ai/"><b>Website</b></a> ·
-  <a href="https://genoffice.ai/join"><b>Community</b></a> ·
-  <a href="https://x.com/merrickbuilds"><b>X</b></a> ·
-  <a href="PRIVACY.md"><b>Privacy</b></a>
-</p>
+## 차례
 
-GenOffice is a free, open-source alternative to Microsoft Office for macOS,
-Windows and Linux. It opens and saves native `.docx`, `.xlsx` and `.pptx`
-files, edits PDF, Markdown and HTML, and puts an AI agent next to every
-document — not a chat box bolted on the side, but an editor that reads the
-file, makes the change, and shows you exactly what it touched.
+- [지금 되는 것](#지금-되는-것)
+- [구독 연결하기](#구독-연결하기)
+- [앱이 로그인 정보로 절대 하지 않는 일](#앱이-로그인-정보로-절대-하지-않는-일)
+- [비용](#비용)
+- [이미지 생성, 사진 보기, 검색](#이미지-생성-사진-보기-검색)
+- [터미널 명령어, MCP, 에이전트 스킬](#터미널-명령어-mcp-에이전트-스킬)
+- [내려받기와 설치](#내려받기와-설치)
+- [업데이트](#업데이트)
+- [직접 빌드하기](#직접-빌드하기)
+- [알려진 한계](#알려진-한계)
+- [계획 중이고 아직 없는 것](#계획-중이고-아직-없는-것)
+- [개인정보](#개인정보)
+- [기여와 문제 신고](#기여와-문제-신고)
+- [라이선스와 출처](#라이선스와-출처)
 
-- **Real formats, byte-preserving.** Only what you edit is rewritten. Everything
-  else in the file survives byte-for-byte, so documents keep working in Word,
-  Excel and PowerPoint.
-- **AI you can review.** Edits land as tracked changes and diffs with one-click
-  rollback. Spreadsheets get live formulas, not pasted numbers. Decks and pages
-  are generated onto the canvas and stay fully editable.
-- **Local by design.** Files open, edit, save and convert on your machine.
-  PDF → Word / Excel / PowerPoint, Markdown → Word and HTML → Word all run
-  on-device. Only the AI calls leave the machine, to the provider you choose.
-- **Find files by what they say.** The home screen searches the names,
-  folders and full text of your `.docx`, `.xlsx`, `.pptx`, PDF, Markdown and
-  HTML files from a local SQLite index, CJK included. Optionally, the top hits
-  are reranked by **[TypeSafe Jev](https://typesafe.ai/)**, the System One
-  judgment model, so the file that answers your question comes first.
-- **Your keys or none.** Sign in with Genspark and skip keys, or bring your own
-  key for Claude, OpenAI, Gemini, DeepSeek, Kimi, GLM, Qwen, Doubao, MiniMax,
-  Grok, Mistral, OpenRouter, Requesty, Opper, Cheaper Inference, Atlas Cloud, or any OpenAI-compatible endpoint, local
-  servers included.
-- **Scriptable and agent-ready.** The app ships a `genoffice` command line and
-  a skill for Claude Code, Codex, Cursor, Gemini CLI, GitHub Copilot, OpenCode
-  and Windsurf, so a coding agent can create, convert, read and edit real
-  Office files on your machine without opening a window.
+## 지금 되는 것
 
-**Get it:** [macOS](https://github.com/genspark-ai/genoffice/releases/latest) (Apple Silicon and Intel) ·
-[Windows](https://github.com/genspark-ai/genoffice/releases/latest) (x64 and Arm) ·
-[Linux](https://github.com/genspark-ai/genoffice/releases/latest) (deb, rpm, AppImage) —
-details and requirements in [Download](#download).
+- **탭으로 묶인 편집기 여섯 개**: 워드(`.docx`), 엑셀(`.xlsx`),
+  파워포인트(`.pptx`), PDF, 마크다운, HTML. 파일은 내 PC에서 원래 형식 그대로
+  열고 저장합니다. 고친 부분만 원본 파일에 반영하므로, 손대지 않은 부분은
+  그대로 남습니다.
+- **편집기마다 있는 AI 창.** 말로 부탁하면 AI가 앱의 편집 도구로 문서를
+  고칩니다. 무엇이 바뀌었는지 보이고, 되돌릴 수 있습니다.
+- **PDF**: 쪽 위의 글자를 고치고, PDF를 워드·엑셀·파워포인트 파일로 내 PC에서
+  바꿉니다.
+- **말로 만드는 슬라이드**: 발표 자료를 내 PC에서 만듭니다.
+- **문서 검색**: 홈 화면에서 내 문서들을 찾습니다. 찾기용 색인은 내 PC에
+  만들어집니다.
+- **터미널 명령어(`ieumoffice`), MCP 서버, 에이전트 스킬**: 코딩 에이전트가 같은
+  파일을 읽고 만들고 고칠 수 있습니다.
+- **화면 언어 21개.** 한국어와 영어는 직접 썼고, 나머지 19개는 기계 번역입니다.
 
-## Demo
+배포하고 동작을 확인한 운영체제는 **Windows뿐**입니다.
 
-Six apps, one AI panel, a file search reranked by TypeSafe Jev, and a
-command line for your coding agent. Every
-screenshot is the real app on macOS, with the AI driven from the prompt you
-can read in the panel.
+## 구독 연결하기
 
-### 1 · Docs — open and edit `.docx` with an AI you can review
+이음오피스는 어디에도 대신 로그인하지 않습니다. 내 PC에 설치되어 있고 내가 이미
+로그인해 둔 Claude Code 또는 Codex 프로그램을 실행해서, 요청을 넘기고 답을
+받아 옵니다. 필요한 것은 두 가지입니다.
 
-<table>
-<tr>
-<td width="50%"><img src="docs/assets/readme/docs-report.webp" alt="GenOffice Docs rendering a two-column annual-report page with a full-width cover image, shaded KPI table, header and footer, at 80% zoom with the AI panel collapsed"></td>
-<td width="50%"><img src="docs/assets/readme/docs-ai.webp" alt="GenOffice Docs: a company overview with a banner image; the AI tightened the Overview and inserted a new bulleted section, and the panel offers a one-click roll back"></td>
-</tr>
-<tr>
-<td><b>Opens the file as Word lays it out</b> — two-column sections, full-bleed images, shaded tables, headers and footers, pagination on Word's line metrics. Styles, comments, tracked changes, equations and ink round-trip untouched.</td>
-<td><b>Ask for the edit</b> — the AI reads the blocks it needs, rewrites the Overview and inserts a new bulleted section. Every AI turn is a snapshot you can roll back; with <b>Track changes</b> on, edits arrive as Word-style revisions.</td>
-</tr>
-</table>
+1. 본인의 Claude 구독 또는 ChatGPT 구독
+2. PC에 설치되어 있고 로그인된 **Claude Code** 또는 **Codex**
 
-### 2 · Sheets — `.xlsx` with live formulas and charts, not pasted numbers
+첫 실행 안내 화면과 **설정 → AI → 구독 연결**에 프로그램별 상태가 보이고,
+빠진 단계에 맞는 버튼이 나옵니다.
 
-<table>
-<tr>
-<td width="50%"><img src="docs/assets/readme/sheets-ai.webp" alt="GenOffice Sheets: the AI added a Summary sheet with revenue by region and category using SUMIF formulas, plus a column chart, and reports 43 applied changes with an Undo button"></td>
-<td width="50%"><img src="docs/assets/readme/sheets-qa.webp" alt="GenOffice Sheets: asked which region led Q2 revenue, the AI answers Europe with the category breakdown and cites the cells it used as links, next to the Orders sheet"></td>
-</tr>
-<tr>
-<td><b>Build it</b> — from one sentence the agent adds a Summary sheet with real <code>SUMIF</code>s by region and category, inserts a column chart, and applies the 43 changes as a single undoable batch.</td>
-<td><b>Ask it</b> — questions about the workbook come back with the reasoning and the exact cells used as clickable citations. Under the hood: an in-house Rust <code>.xlsx</code> engine, pivot tables, slicers, conditional formatting and formula tracing.</td>
-</tr>
-</table>
+- **설치**를 누르면 그 회사의 공식 설치 명령이 눈에 보이는 터미널 창에서
+  실행됩니다. 앱이 설치 파일을 직접 내려받지 않습니다.
+  - Claude Code: `irm https://claude.ai/install.ps1 | iex`
+  - Codex: `winget install OpenAI.Codex`
+- **로그인**을 누르면 그 프로그램의 로그인 명령(`claude auth login`,
+  `codex login`)이 실행됩니다. 이때 열리는 로그인 화면은 Anthropic 또는 OpenAI의
+  것이고, 이 앱의 화면이 아닙니다.
 
-### 3 · Slides — from a prompt to a `.pptx` deck
+**사용할 AI**를 "자동"으로 두면 Claude가 연결되어 있을 때 Claude를, 아니면
+Codex를 씁니다. 같은 자리나 AI 창의 모델 선택에서 직접 고를 수도 있습니다.
+Claude Code는 2.1.248 이상이어야 하고, 그보다 낮으면 "업데이트 필요"로
+표시됩니다.
 
-<img src="docs/assets/readme/slides-generate.webp" alt="Time-lapse of GenOffice Slides generating the Aurora Home investor deck: the AI plans the storyline in the panel, slides appear on the canvas one after another, and the finished deck ends on the closing ask" width="100%">
+구독 프로그램은 "두뇌" 역할만 합니다. 문서를 고치고, 바뀐 내용을 보여 주고,
+되돌리는 일은 앱이 합니다. 프로그램은 빈 임시 폴더에서 자체 도구를 모두 끈
+채로 실행되고, Claude가 쓸 수 있는 도구가 하나라도 남아 있다고 알려 오면 그
+실행은 거부됩니다.
 
-<table>
-<tr>
-<td width="50%"><img src="docs/assets/readme/slides-cover.webp" alt="GenOffice Slides: the cover slide of an AI-generated Aurora Home investor deck on the canvas, with the original one-line prompt and the AI's summary of what it built in the panel"></td>
-<td width="50%"><img src="docs/assets/readme/slides-ai.webp" alt="GenOffice Slides: the designed closing slide of the same 11-slide deck, with the thumbnail strip on the left and the AI panel summarizing the storyline"></td>
-</tr>
-<tr>
-<td><b>One line in</b> — "Create a 10-slide investor pitch deck for Aurora Home…". GenOffice plans the storyline, researches the numbers, and drafts every slide onto the canvas as a real <code>.pptx</code>.</td>
-<td><b>A finished deck out</b> — eleven designed slides with consistent typography, imagery and a closing call to action; keep editing with masters, layouts, smart guides and non-destructive cropping, or ask the panel to restyle, rewrite and reorder.</td>
-</tr>
-</table>
+## 앱이 로그인 정보로 절대 하지 않는 일
 
-### 4 · PDF — edit PDF text in place, convert PDF to Word on-device
+- Claude나 Codex의 로그인 정보를 읽지도, 복사하지도, 저장하지도 않습니다.
+  `~/.codex/auth.json`, Claude의 로그인 저장소, 세션 토큰 모두 해당합니다.
+- 앱 안에 Claude나 ChatGPT 로그인 화면을 만들지 않습니다. 로그인은 언제나 그
+  회사의 프로그램과 그 회사의 화면에서 끝납니다.
+- 두 회사의 프로그램을 고치거나 감싸지 않습니다. 배포된 그대로 실행합니다.
+- 다른 사람의 AI 사용료를 대신 내거나, 되팔거나, 중간에서 전달하지 않습니다.
+  사용량은 Anthropic 또는 OpenAI가 사용자 본인 계정에 매깁니다.
+- 뒤에서 몰래 AI 요청을 시작하지 않습니다. 요청은 사용자가 시켰을 때만
+  시작됩니다.
+- 요청을 중단하거나 앱을 끈 뒤에 그 프로그램을 계속 돌려 두지 않습니다.
 
-<table>
-<tr>
-<td width="50%"><img src="docs/assets/readme/pdf-edit.webp" alt="GenOffice PDF: Edit text mode outlines every text block on the page for in-place editing while the AI panel answers a question about the report with page citations"></td>
-<td width="50%"><img src="docs/assets/readme/pdf-convert.webp" alt="GenOffice Docs showing a Word document converted locally from the Helios quarterly review PDF, opened in a second tab beside the original PDF"></td>
-</tr>
-<tr>
-<td><b>Edit inside the page</b> — Edit text mode outlines every text block for in-place retyping; the content stream is rewritten through PDFium with the original fonts, not a cover-up annotation. Ask the AI about a long report and get answers with page citations.</td>
-<td><b>Convert on-device</b> — <b>PDF Converter → PDF to Word</b> produces an editable <code>.docx</code> that opens in Docs next to the source, headings, stat rows and paragraphs intact. Excel and PowerPoint targets work the same way; scanned pages go through the system OCR.</td>
-</tr>
-</table>
+## 비용
 
-### 5 · HTML — an AI page and UI builder, design brief first
+이음오피스 자체는 무료입니다. AI에 드는 돈은 어떤 연결을 쓰느냐에 따라
+다릅니다.
 
-Say what the page is for and who it is for. The AI proposes a **design brief**
-first — hook, palette, typography and style directions — then builds a single
-self-contained `.html` file against those tokens.
+| 연결                                                                               | 비용                                                           | 언제 쓰이나                               |
+| ---------------------------------------------------------------------------------- | -------------------------------------------------------------- | ----------------------------------------- |
+| **구독**으로 로그인된 Claude 또는 Codex                                            | 구독료 말고는 없습니다. 요청은 구독의 사용 한도에서 차감됩니다 | 기본값("자동")                            |
+| **쓴 만큼 요금이 나가는 방식**(API 키, 종량제 계정)으로 로그인된 Claude 또는 Codex | 쓴 만큼 그 회사에 냅니다                                       | 경고를 읽고 **그래도 사용**을 고른 뒤에만 |
+| **설정 → AI → 고급**에서 넣은 **API 키 제공업체**                                  | 쓴 만큼 그 회사에 냅니다                                       | **사용할 AI**에서 직접 골라 둔 동안에만   |
 
-<img src="docs/assets/readme/html-restyle-motion.webp" alt="Time-lapse of GenOffice HTML restyling the Lumen landing page: one Restyle request in the panel turns the dark Midnight Studio page into the warm Solar Daybreak version while every section and all copy stay in place" width="100%">
+앱은 AI 대화를 요금이 나가는 연결로 스스로 바꾸지 않습니다. 구독 한도가 다
+찼거나 로그인이 만료되면 그 요청은 멈추고 이유를 알려 줍니다(프로그램이 알려
+줄 때는 한도가 풀리는 시각도 함께). 다른 구독이 연결되어 있으면 그쪽으로
+이어 가는 버튼이 나오고, 저절로 바뀌지는 않습니다. 사용 한도의 80%를 넘으면
+AI 창에 사용률과 초기화 시각이 표시됩니다.
 
-<table>
-<tr>
-<td width="50%"><img src="docs/assets/readme/html-ai.webp" alt="GenOffice HTML: a generated landing page for a solar desk lamp in the dark Midnight Studio direction, shown in the live preview with the AI panel summarizing the page it just built"></td>
-<td width="50%"><img src="docs/assets/readme/html-restyle.webp" alt="The same Lumen landing page restyled by the AI into the warm Solar Daybreak direction: paper background, serif headlines and an orange accent, with every section and all copy kept"></td>
-</tr>
-<tr>
-<td><b>Generated from one prompt</b> — a bold hero, feature cards, pricing and a waitlist form for Lumen, built in the Midnight Studio direction. Click any element to restyle it, double-click to edit text, or switch to the CodeMirror source view.</td>
-<td><b>Same design, new direction</b> — one <b>Restyle</b> request swaps the brief's tokens and the page follows: warm paper, editorial serif, sun-orange accent, nothing rewritten. Present fullscreen, or export as PDF or a native editable Word document.</td>
-</tr>
-</table>
-<table>
-<tr>
-<td width="50%"><img src="docs/assets/readme/html-dashboard.webp" alt="GenOffice HTML: a generated personal dashboard UI for a freelance designer in a warm linen style, with a left rail, serif greeting and four metric cards"></td>
-<td width="50%"><img src="docs/assets/readme/html-report.webp" alt="GenOffice HTML: a generated EV-market data report in a broadsheet style, with a serif masthead, a 17.3 million headline figure and a stat row"></td>
-</tr>
-<tr>
-<td><b>UI mockups</b> — the "personal dashboard" starter turns a persona into a working layout: left rail, greeting, billable-hours sparkline, invoice and utilization cards, all real HTML you can hand to a developer.</td>
-<td><b>Data stories</b> — the "data report" starter builds an editorial broadsheet: serif masthead, one headline number, a rule-separated stat row, inline SVG charts and a methodology note.</td>
-</tr>
-</table>
+Codex를 고르기 전에 알아 둘 것이 하나 있습니다. **앱에서 Codex 구독을 쓰는 것은
+OpenAI가 공식 권장하는 방식이 아닙니다.** 구독을 이런 식으로 써도 되는지,
+어디까지 되는지는 사용자와 Anthropic 또는 OpenAI 사이의 약관이 정하고, 그
+약관은 바뀔 수 있습니다.
 
-### 6 · Markdown — a block editor over plain `.md`, with Ask AI
+## 이미지 생성, 사진 보기, 검색
 
-<table>
-<tr>
-<td width="50%"><img src="docs/assets/readme/markdown-ai.webp" alt="GenOffice Markdown: a selected paragraph shows an Ask AI popover with a typed instruction and suggestion chips such as Polish, Make more concise, Expand and Fix grammar, plus Send now and Add to queue buttons"></td>
-<td width="50%"><img src="docs/assets/readme/markdown-render.webp" alt="GenOffice Markdown rendering a launch-notes document with a table, a Mermaid flowchart and a task list, with the AI panel's starter prompts on the left"></td>
-</tr>
-<tr>
-<td><b>Ask AI about a selection</b> — select any passage and an <b>Ask AI</b> chip appears: type an instruction or pick a suggestion, send it now, or queue several anchored edits and run them in one pass. The same entry exists in every app.</td>
-<td><b>Rendered, saved as plain Markdown</b> — headings, lists, tables, images, code blocks and Mermaid diagrams in a Tiptap block editor, written back as plain <code>.md</code>, with a fully local <b>Markdown → Word</b> export.</td>
-</tr>
-</table>
+- **이미지 생성은 이번 버전에서 키 방식만 됩니다.** **설정 → AI → 고급**에서
+  이미지 제공업체의 키를 넣어야 동작합니다. Codex 구독으로 이미지를 만드는
+  기능은 들어 있지 않습니다. 이미지 제공업체가 없으면 슬라이드는 검색으로 찾은
+  사진을 씁니다.
+- **사진 보기**: 첨부한 사진은 지금 쓰고 있는 AI(구독 포함)에게 그대로 보여
+  줍니다. 영상과 소리 분석은 영상 분석이 되는 키 방식 제공업체가 있어야 합니다.
+- **웹 검색과 이미지 검색은 기본이 무료**이고 키가 필요 없습니다. Parallel의
+  무료 검색을 먼저 쓰고, 안 되면 DuckDuckGo를 씁니다. 키 방식 검색
+  제공업체는 고급에서 고를 수 있습니다.
 
-### 7 · Search — find the file that answers the question, with TypeSafe Jev
+## 터미널 명령어, MCP, 에이전트 스킬
 
-Every file in your work folder is indexed on-device: names, folders and the
-extracted text of Word, Excel, PowerPoint, PDF, Markdown and HTML files, in a
-SQLite full-text index with CJK-aware tokenizing. Switch on **Jev search
-reranking** and the top 20 local hits are judged by
-[TypeSafe Jev](https://typesafe.ai/blog/introducing-system-one-models-and-jev),
-the System One model that returns one calibrated relevance score per document
-in a single call instead of generating text. The list is reordered by
-that score; if the call fails or times out, the local order stays.
-
-<img src="docs/assets/readme/search-jev-motion.webp" alt="Screen recording of the GenOffice home screen: typing laptop refresh policy lists a browser-cache policy, a brand-refresh plan and a dashboard-refresh schedule first while the equipment standards document is last; the Settings page shows Jev search reranking switched on under AI Media & Search with the TypeSafe endpoint; the same search then shows the equipment standards document first with a Jev badge next to the result count" width="100%">
-
-<table>
-<tr>
-<td width="50%"><img src="docs/assets/readme/search-jev-before-after.webp" alt="Two result lists for the query laptop refresh policy side by side: without Jev the dashboard refresh schedule, brand refresh plan and browser cache refresh policy lead and the company equipment standards document is fifth; with Jev the equipment standards document, which states the three-year laptop replacement cycle, is first"></td>
-<td width="50%"><img src="docs/assets/readme/search-jev-settings.webp" alt="GenOffice Settings, AI Media & Search page: the Local file search block with the Jev search reranking switch, the endpoint choice between OpenRouter and TypeSafe, and the API key field"></td>
-</tr>
-<tr>
-<td><b>Same words, different answers</b> — "laptop refresh policy" matches a browser-cache refresh policy, a brand-refresh plan and a dashboard-refresh schedule word for word, so full-text ranking puts them first. Jev reads the excerpts and moves the equipment standards document, the one that states the three-year replacement cycle, to the top. The <b>Jev</b> badge next to the result count shows when the order came from the model.</td>
-<td><b>Off by default, one switch to turn on</b> — Settings → AI Media & Search → Local file search. Pick OpenRouter or TypeSafe direct, paste a key, hit Test connection. Only when the switch is on do excerpts of the top hits leave the device; the index itself never does.</td>
-</tr>
-</table>
-
-### 8 · CLI — your coding agent drives GenOffice, on your machine
-
-GenOffice ships a `genoffice` command line and an agent skill. Install the
-skill and Claude Code, Codex, Cursor, Gemini CLI, GitHub Copilot, OpenCode or
-Windsurf can create, convert, read and edit real Office files through the
-same engines as the apps, without opening a window.
-
-<img src="docs/assets/readme/cli-deck-in-app.webp" alt="GenOffice Slides showing an eight-slide Solar System deck that a coding agent built through the genoffice command line: the cover slide on the canvas, eight thumbnails on the left and the AI panel open" width="100%">
-
-<table>
-<tr>
-<td width="50%"><img src="docs/assets/readme/cli-slides-grid.webp" alt="The eight rendered slides of the Solar System deck side by side: cover, exploration timeline, four key numbers, planet-diameter bar chart, rocky worlds versus giants, the Sun's 99.8% hero number, the four giants grid and takeaways"></td>
-<td width="50%"><img src="docs/assets/readme/cli-integrations.webp" alt="GenOffice Settings, Integrations page: the genoffice skill installed into Claude Code, with Install buttons next to Codex and Cursor"></td>
-</tr>
-<tr>
-<td><b>One prompt to your agent</b> — "Build an eight-slide deck about the Solar System." The agent reads the skill, writes a style sheet, an outline and one page spec per slide, generates the two photos with <code>genoffice image</code>, and lets <code>genoffice slides check</code> reject anything that overflows or overlaps before <code>genoffice create</code> assembles the <code>.pptx</code> and <code>slides render</code> hands back a PNG per slide to look at.</td>
-<td><b>Install once, from Settings → Integrations</b> — GenOffice lists the coding agents it finds on this computer and writes the skill into each one you pick. Or download the skill as a zip, or run <code>npx skills add genspark-ai/genoffice</code>. Commands and the full workflow are in <a href="#command-line-and-agent-skill">Command line and agent skill</a>.</td>
-</tr>
-</table>
-
-### 9 · MCP — the same tools over the Model Context Protocol
-
-Every `genoffice` command is also an MCP tool. Claude Code, Claude Desktop,
-Cursor and any other MCP client can start `genoffice mcp` themselves, with no
-skill to install and no window open, and get 29 tools plus the op references
-as resources. A second, HTTP server inside the app lets an agent build a Word
-document in a visible editor tab while you watch.
-
-<img src="docs/assets/readme/mcp-deck-motion.webp" alt="Time-lapse of Claude Code building an eight-slide renewable-energy investor briefing through the genoffice MCP server: it searches for figures and photos, checks each candidate picture with media, deck_start writes the style sheet and outline, deck_page adds one checked page at a time, deck_build assembles the .pptx and slides_render returns a picture of every slide; the finished deck then opens in GenOffice Slides" width="100%">
-
-<table>
-<tr>
-<td width="50%"><img src="docs/assets/readme/mcp-deck-in-app.webp" alt="GenOffice Slides showing the eight-slide Renewable Energy 2026 deck that Claude Code built through the genoffice MCP server: the cover slide with a wind-farm photograph on the canvas and eight thumbnails on the left"></td>
-<td width="50%"><img src="docs/assets/readme/mcp-integrations.webp" alt="GenOffice Settings, Integrations page, MCP part: the one-line claude mcp add command for Claude Code, the JSON block for Cursor, Claude Desktop and other MCP clients, and the local HTTP server option below"></td>
-</tr>
-<tr>
-<td><b>One prompt, 38 tool calls, no shell</b> — "Build an eight-slide investor briefing about renewable energy in 2026, with a real photo on the cover and wherever a photo helps." The agent pulls the figures and the photos with <code>search</code>, asks <code>media</code> whether each candidate picture is a real photograph, calls <code>deck_start</code> with a style sheet and an outline, then <code>deck_page</code> once per slide; every page is checked against the outline and the palette before it is kept, <code>deck_build</code> assembles the <code>.pptx</code>, <code>slides_audit</code> looks for overflow, <code>slides_render</code> hands back a PNG per slide as image content the model can look at, and <code>deck_replace</code> fixes the three pages it did not like.</td>
-<td><b>Connect once, from Settings → Integrations</b> — copy the <code>claude mcp add</code> line for Claude Code, or the JSON block into Cursor, Claude Desktop or any other MCP client. Option B switches on the local HTTP server for the visible Word editor. Both are described in <a href="#mcp-server">MCP server</a>.</td>
-</tr>
-</table>
-
-## Why GenOffice
-
-- **Open source**, Apache-2.0, built in the open on GitHub.
-- **Yours to run.** Native apps for macOS, Windows and Linux; files stay on your
-  disk and every edit, save and conversion happens on your machine.
-- **Real Office files.** Native `.docx`, `.xlsx` and `.pptx`, byte-preserving:
-  the parts of a file you did not touch are copied exactly as they were.
-- **An AI that edits the document itself.** Tracked changes in Docs, live
-  formulas and charts in Sheets, slides drawn onto the canvas, every AI turn a
-  snapshot you can roll back.
-- **Your model, your key.** Sign in with Genspark, or bring a key for Claude,
-  OpenAI, Gemini, DeepSeek and more, local servers and any OpenAI-compatible
-  endpoint included.
-- **PDF done properly.** Edit text inside the page, and convert PDF to Word,
-  Excel or PowerPoint on-device, with system OCR for scans.
-- **Markdown and HTML too**, with the same AI panel and local export to Word.
-- **Search that finds the answer, not the keyword.** Full-text search over
-  every document in your folders, indexed on-device, with optional reranking
-  by TypeSafe Jev, the System One judgment model.
-- **Scriptable.** A `genoffice` command line, an agent skill and an MCP server
-  put every engine at the service of Claude Code, Claude Desktop, Codex, Cursor
-  and other agents, still on-device.
-- **Free**, for individuals and teams alike.
-
-## AI backends
-
-**Sign in with Genspark** and there is nothing to configure: model calls route
-through the Genspark proxy (Claude, GPT and Gemini families) and the agents get
-web and image search, image generation, and image/audio/video analysis.
-
-**Or bring your own key.** Settings → AI lists Claude, OpenAI, Gemini,
-DeepSeek, Kimi, GLM, Qwen, Doubao, MiniMax, Grok, Mistral, OpenRouter, Requesty, Opper,
-Cheaper Inference, Atlas Cloud and OpenCode Zen/Go, plus a custom slot for any OpenAI-compatible endpoint (base
-URL + key), including local model servers. Search and media have their own
-per-capability providers under **AI Media & Search**: Serper, Serply, Tavily or Parallel for
-web search, and OpenAI, Gemini, Doubao/Seedream, GLM, Grok, Qwen, MiniMax or any
-OpenAI-compatible images endpoint for image generation and image/video
-analysis, plus DeepSeek V4.1 Flash for image analysis.
-
-**TypeSafe Jev** reranks the home screen's file search. Under **AI Media & Search →
-Local file search**, switch on Jev search reranking and pick an endpoint:
-[OpenRouter](https://openrouter.ai/typesafe) (model `typesafe/jev-1.13`) or
-TypeSafe's own API. The key is stored only on this device. It is off by
-default; when on, the excerpts of the top 20 local hits are sent for judgment
-and nothing else leaves the machine.
-
-**Parallel** works without an account: its free Search MCP (rate-limited) is the
-default web search whenever no Genspark login or search key is configured, and
-it runs ahead of the DuckDuckGo scrape. Select Parallel under Web search and
-enter a [Parallel](https://platform.parallel.ai/) key to use the Search API
-instead.
-
-The whole suite ships light, dark and system themes. Themes only change what
-is on screen: exports, prints and saved files always keep the document's own
-colors.
-
-## Command line and agent skill
-
-Everything the apps can do to a file, the `genoffice` command line can do from
-a terminal: inspect, convert, create, read and edit Word, Excel, PowerPoint,
-PDF, Markdown and HTML on the same engines, headless. It installs with
-GenOffice, needs no runtime of its own, and never sends a document anywhere.
-Paired with the bundled **agent skill**, it turns a coding agent into a
-document worker that produces real Office files instead of Markdown
-approximations.
-
-**Works with:** Claude Code, Codex, Cursor, Gemini CLI, GitHub Copilot,
-OpenCode and Windsurf out of the box, any other agent that reads skills, and,
-through the [MCP server](#mcp-server), Claude Desktop and every MCP client.
-
-### Install the skill
-
-| How                                    | What happens                                                                                                                                                             |
-| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Settings → Integrations** in the app | Lists the agents found on this computer; one click writes the skill into each one you choose. An **Update** button appears when a GenOffice release ships a newer skill. |
-| **Download as zip** on the same page   | The layout claude.ai, the Claude desktop apps and other assistants accept as an uploaded skill.                                                                          |
-| `npx skills add genspark-ai/genoffice` | Installs from this repository into any skills-compatible agent.                                                                                                          |
-
-Then start a new chat and ask for a document. The skill teaches the agent when
-to reach for `genoffice`, how to read a file before editing it, and how to
-check its own work.
-
-### Quickstart from the terminal
+설치하면 `ieumoffice` 명령어가 PATH에 등록됩니다(설치 뒤 터미널을 새로 여세요).
+창을 띄우지 않고 같은 종류의 파일을 읽고, 만들고, 바꾸고, 고칩니다.
 
 ```bash
-genoffice --version
-genoffice info report.docx --json                  # headings and blocks; or sheets, slides, pages
-genoffice convert report.md --to pdf               # md/html/docx/xlsx/pptx → pdf, pdf → docx/xlsx/pptx, …
-genoffice create --type docx --from notes.md --out notes.docx
-genoffice create --type xlsx --from table.json --out sales.xlsx   # "=SUM(B2:B9)" cells stay live formulas
-genoffice docs read report.docx --range 0-9 --json # then `docs apply --ops edits.json` edits in place
-genoffice render report.docx --out shots/          # one PNG per page, to look at what you made
-genoffice open sales.xlsx                          # hand the result to the editor
+ieumoffice --version
+ieumoffice info report.docx --json
+ieumoffice convert report.md --to pdf
+ieumoffice create --type docx --from notes.md --out notes.docx
+ieumoffice docs read report.docx --range 0-9 --json
+ieumoffice open report.docx
 ```
 
-Every command prints a one-line summary, or a single JSON object with
-`--json`. Edits are atomic: a rejected op leaves the file untouched and comes
-back with a guided error. `genoffice help` lists the current command surface;
-the full reference is [packages/cli/README.md](packages/cli/README.md).
+`ieumoffice help`가 모든 명령을 보여 줍니다. 전체 설명은
+[packages/cli/README.md](packages/cli/README.md)(영어)에 있습니다.
 
-### What the agent actually runs
+- **에이전트 스킬.** **설정 → 연동**에 PC에서 찾은 코딩 에이전트가 나오고, 고른
+  에이전트에 `ieumoffice` 스킬을 설치해 줍니다. 터미널에서는
+  `npx skills add pblsketch/openoffice`로 설치합니다.
+- **MCP 서버.** `ieumoffice mcp`는 같은 명령들을 MCP(Model Context Protocol)
+  도구로 제공합니다. 같은 설정 화면에 바로 쓸 수 있는 예시가 있습니다. 예:
+  `claude mcp add --transport stdio ieumoffice -- ieumoffice mcp`
 
-The Solar System deck in the [demo](#demo) took one prompt in Claude Code.
-Behind it, the agent followed the skill's staged workflow and the CLI checked
-every stage before the next one started:
+문서 명령은 전부 내 PC 안에서 돌아갑니다. 밖으로 무언가를 보내는 것은
+`search`, `image`, `media` 세 가지뿐이고, 앱과 같은 경로를 씁니다.
+
+**이렇게 들어온 요청은 허용하기 전에는 구독을 쓰지 않습니다.** 터미널 명령이나
+MCP 도구 호출은 화면을 보는 사람이 아니라 프로그램이 보내는 요청입니다.
+프로그램이 자동으로 구독을 쓰는 것은 Anthropic과 OpenAI 모두 권장하지 않고,
+계정에 제한이 걸릴 수 있습니다. 그래서 **설정 → AI → 고급 → 자동 호출에 구독
+사용**은 기본이 꺼짐입니다. 꺼져 있으면 이런 요청은 키 방식 제공업체가 있을
+때 그것을 쓰고, 없으면 "쓸 수 없음"으로 답합니다. 켜 두어도 한 번에 하나씩,
+한 시간에 20건까지만 처리합니다. 지금 무엇이 어떤 경로로 되는지는
+`ieumoffice capabilities --json`으로 볼 수 있습니다.
+
+이음오피스는 GenOffice와 한 PC에 함께 설치할 수 있습니다. 자기 이름
+(`ieumoffice`, `~/.ieumoffice`)만 등록하고, GenOffice가 등록한 것은 읽거나
+고치지 않습니다.
+
+## 내려받기와 설치
+
+설치 파일은 [릴리스 페이지](https://github.com/pblsketch/openoffice/releases)에
+`IeumOffice-Setup-<버전>.exe`라는 이름으로 올라옵니다. 64비트 Windows 10과
+11용입니다. 그 페이지가 아직 비어 있다면 공개된 버전이 없는 것이니, 아래
+방법으로 직접 빌드하세요.
+
+**설치 파일에는 코드 서명이 없습니다.** 그래서 Windows가 "알 수 없는
+게시자"라고 경고합니다. 보통 "Windows의 PC 보호" 창이 뜨고, **추가 정보 →
+실행**을 눌러야 설치가 시작됩니다(문구는 Windows 버전에 따라 조금 다릅니다).
+설치 파일은 반드시 이 저장소의 릴리스 페이지에서만 받으세요.
+
+## 업데이트
+
+설치된 앱은 켠 직후에 한 번, 그 뒤로는 4시간마다 이 저장소의 GitHub 릴리스를
+확인하고, 새 버전이 있으면 업데이트 창으로 알려 줍니다. 릴리스가 없거나,
+인터넷이 안 되거나, 확인에 실패하면 아무 일도 일어나지 않고 앱은 그대로 쓸 수
+있습니다. 직접 확인하려면 앱 메뉴의 **도움말 → 업데이트 확인…**을 누릅니다.
+시험판(프리릴리스)은 **설정 → 정보**에서 업데이트 채널을 "베타 버전"으로 바꾼
+경우에만 받습니다.
+
+## 직접 빌드하기
+
+Node 22.12 이상(npm 10 이상)과 Rust가 필요합니다. `cargo`가 PATH에 있어야
+합니다(엑셀 처리 프로그램을 만드는 데 씁니다).
 
 ```bash
-genoffice capabilities --json                        # which cloud tools GenOffice has configured
-genoffice guide slides design                        # the deck workflow and layout library
-genoffice image "the eight planets in a row …" --aspect 16:9 --out deck/assets/cover.jpg
-genoffice slides check deck/outline.json --json      # 8 pages, no findings
-genoffice slides check deck/pages/01.json --json     # builds one slide, audits overflow and overlap
-…                                                    # one page file per slide, fixed until each check is clean
-genoffice create --type pptx --spec deck/pages --outline deck/outline.json --out deck/solar-system.pptx --json
-genoffice slides render deck/solar-system.pptx --out deck/shots --json
-genoffice slides audit deck/solar-system.pptx --json    # 8 slides, no layout issues
-genoffice slides replace deck/solar-system.pptx --slide 4 --spec deck/pages/05.json --json
-genoffice open deck/solar-system.pptx
-```
-
-No model call happens inside `genoffice`: the agent does the thinking, the CLI
-does the building and the checking, and the result opens in GenOffice or
-PowerPoint as an ordinary `.pptx`.
-
-### MCP server
-
-The same commands are available as [Model Context Protocol](https://modelcontextprotocol.io)
-tools, for assistants that cannot run a terminal or that you would rather not
-give one. There are two ways in, both shown with copy-ready snippets in
-**Settings → Integrations → MCP**:
-
-| Way                                   | What it is                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
-| ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **A · `genoffice mcp`** (recommended) | A stdio server the assistant starts itself; GenOffice does not need to be open. One tool per command (`info`, `convert`, `create_docx`, `create_xlsx`, `create_pptx`, `create_pdf`, `docs_read` / `docs_apply` / `docs_check`, `sheet_*`, `slides_*`, `render`, `guide`, `search`, `image`, `media`, `open`) plus the staged deck flow `deck_start` → `deck_page` → `deck_build` → `deck_replace`. Ops, specs and Markdown are passed inline, so a client without a file system still works. |
-| **B · Local HTTP server**             | Runs inside the GenOffice app on `http://127.0.0.1:3093/mcp` (Streamable HTTP, with legacy SSE). Its tools drive a visible Word editor tab: `create_session`, `insert_content`, `replace_blocks`, `apply_ops`, `read_document`, `save_session`, and you watch the document take shape. Off by default; switch it on in the same settings pane.                                                                                                                                               |
-| **C · `genoffice mcp --http`**        | The stdio tool set as a Streamable HTTP server for clients on other machines: a container, a sandbox, a shared box on your network. Files travel with the calls: `PUT /files/<name>` uploads one and returns a URL, every `file` parameter takes an http(s) URL, and a tool that writes a file hands it back as a download URL plus, when small, the bytes as an MCP resource. `--host 0.0.0.0` opens it to the network, `--token` protects it.                                              |
-
-```bash
-# Claude Code
-claude mcp add --transport stdio genoffice -- genoffice mcp
-```
-
-```jsonc
-// Cursor, Claude Desktop or any other MCP client
-{ "mcpServers": { "genoffice": { "command": "genoffice", "args": ["mcp"] } } }
-```
-
-```bash
-# On the machine that has GenOffice (private network; add --token for a shared box)
-genoffice mcp --http 3093 --host 0.0.0.0 --token "$GENOFFICE_MCP_TOKEN"
-
-# From the client: upload, then use the URL wherever a tool takes a file
-curl -T report.docx -H "Authorization: Bearer $GENOFFICE_MCP_TOKEN" http://server:3093/files/
-#   → { "url": "http://server:3093/files/<id>/report.docx", ... }
-#   docs_read({ "file": "http://server:3093/files/<id>/report.docx" })
-#   docs_apply(...) → output_url, downloadable with curl -o
-```
-
-Over HTTP every session gets a private scratch folder, relative paths and deck
-folders resolve inside it, `open` is not offered, and with
-`GENOFFICE_ALLOWED_ROOTS` unset the tools cannot leave the server's own file
-store. `render`, `convert` to PDF and `create_pdf` still start a hidden
-GenOffice process, so a headless host needs the app installed and a virtual
-display (`xvfb-run`).
-
-`genoffice` here is the CLI shipped inside the app (on macOS
-`/Applications/GenOffice.app/Contents/Resources/cli/genoffice`; the settings
-pane prints the exact path for your install). The server carries its own
-workflow instructions and exposes the op references as `genoffice://guide/*`
-resources, so no skill is needed; the skill and the MCP server can coexist and
-the assistant picks one. Cloud features (`search`, `image`, `media`) still go
-through the provider configured in GenOffice; everything else runs locally, and
-`GENOFFICE_ALLOWED_ROOTS` confines every tool to the folders you list.
-
-The renewable-energy deck in the [demo](#demo) is what one prompt in Claude Code
-with only the `genoffice` MCP server attached looks like from the protocol
-side:
-
-```text
-capabilities · guide(slides, spec) · guide(slides, design)
-search(query) ×4                         → IEA, BNEF and IRENA figures for the slides
-search(query, images) ×7 · media(url, ask) ×7
-                                         → candidate photos, each one checked to be a real photograph
-deck_start(dir, style, outline)          → outline checked: 8 pages to write
-deck_page(dir, 0, page) … deck_page(dir, 7, page)
-                                         → each page checked against the outline and the palette; one page sent again
-deck_build(dir, out)                     → renewables-2026.pptx, no image failures
-slides_audit(file) · slides_render(file, out)
-                                         → no layout findings; 8 PNGs come back as image content
-deck_replace(dir, n, page) ×3 · slides_render(file, out)
-                                         → three pages fixed after looking at the renders
-```
-
-Thirty-eight calls, about thirteen minutes, and the assistant never touched a
-shell: the figures, the photos, the guides, the checks and the renders all
-travelled as MCP tool results. Only `search` and `media` left the machine, to
-the provider configured in GenOffice.
-
-## Download
-
-| Platform                             | Requirements                                          | Download                                                                                  |
-| ------------------------------------ | ----------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| **macOS** — Apple Silicon (arm64)    | macOS 11+                                             | [Latest `.dmg` (arm64)](https://github.com/genspark-ai/genoffice/releases/latest)         |
-| **macOS** — Intel (x64)              | macOS 11+                                             | [Latest `.dmg` (x64)](https://github.com/genspark-ai/genoffice/releases/latest)           |
-| **Windows** (x64, most PCs)          | Windows 10+, Intel/AMD                                | [Latest `-x64.exe` installer](https://github.com/genspark-ai/genoffice/releases/latest)   |
-| **Windows** on Arm (ARM64)           | Windows 11 on Arm (Snapdragon X and similar)          | [Latest `-arm64.exe` installer](https://github.com/genspark-ai/genoffice/releases/latest) |
-| **Linux** — Debian / Ubuntu          | x86_64, glibc 2.34+ (Ubuntu 22.04 or newer)           | [Latest `.deb`](https://github.com/genspark-ai/genoffice/releases/latest)                 |
-| **Linux** — Fedora / RHEL / openSUSE | x86_64, glibc 2.34+ (Fedora 35+, RHEL 9+, Leap 15.6+) | [Latest `.rpm`](https://github.com/genspark-ai/genoffice/releases/latest)                 |
-| **Linux** — other distributions      | x86_64, glibc 2.34+, FUSE 2                           | [Latest `.AppImage`](https://github.com/genspark-ai/genoffice/releases/latest)            |
-
-All builds come from `main`; the macOS and Windows installers are signed.
-Older versions are on the [Releases](https://github.com/genspark-ai/genoffice/releases) page.
-
-<details>
-<summary><b>Installing on Linux</b></summary>
-
-The deb installs with apt — it pulls in the dependencies and adds GenOffice
-to the applications menu:
-
-```bash
-sudo apt install ./genoffice_<version>_amd64.deb
-```
-
-On Fedora / RHEL-family / openSUSE, install the rpm instead:
-
-```bash
-sudo dnf install ./genoffice-<version>.x86_64.rpm     # Fedora / RHEL family
-sudo zypper install ./genoffice-<version>.x86_64.rpm  # openSUSE
-```
-
-The AppImage runs in place: install the FUSE 2 runtime
-(`sudo apt install libfuse2`; on Ubuntu 24.04 the package is `libfuse2t64`),
-make the file executable, then run it:
-
-```bash
-chmod +x GenOffice-<version>.AppImage
-./GenOffice-<version>.AppImage
-```
-
-</details>
-
-## How it works
-
-Seven Electron apps — Docs, Sheets, Slides, PDF, Markdown, HTML and the
-tabbed shell — share one engine layer of pure TypeScript packages plus a Rust
-sidecar for `.xlsx`. The original file is always the source of truth: edits
-are applied as narrow patches, and everything the editor did not touch
-survives the round trip untouched.
-
-```
-open docx ─► archive original by hash (never touched)
-          ─► parse word/document.xml into a block tree, each block anchored to its original XML
-          ─► Tiptap editor (manual + AI editing, dirty tracking)
-save      ─► dirty blocks → OOXML fragments (referencing existing styles only)
-          ─► splice into the original document.xml; untouched blocks keep their bytes
-          ─► repack the zip; every other entry is copied byte-for-byte
-```
-
-The package-by-package tour (docx/pptx engines, `pdf2docx`, `html2docx`, the
-agent core and providers) lives in [CONTRIBUTING.md](CONTRIBUTING.md#engine-packages).
-
-## Development
-
-```bash
+git clone https://github.com/pblsketch/openoffice.git
+cd openoffice
 npm install
-npm run fixtures     # generate test .docx fixtures
-npm test             # engine + app unit tests (docs/sheets/slides need no display)
-npm run typecheck    # tsc --noEmit across every workspace
-npm run dev          # all six editors + shell against Vite dev servers
-npm run dev:docs     # a single app (same pattern works per workspace)
-npm run dist:mac     # package macOS dmg (regenerates third-party notices)
-npm run dist:win     # package Windows nsis installer
-npm run dist:linux   # package Linux AppImage + deb + rpm
+npm run dev      # 모든 편집기와 앱 창을 개발 모드로 실행
+npm run shell    # 또는: 전체를 빌드한 뒤 앱 실행
 ```
 
-The sheets app additionally needs a Rust toolchain for its xlsx sidecar
-(`cargo` on PATH); `npm run build -w @genoffice/sheets` compiles it
-automatically. See [CONTRIBUTING.md](CONTRIBUTING.md) for the checks every
-change must pass and how pull requests land.
+Windows 설치 파일을 만들려면(Windows 10/11 SDK도 필요합니다):
 
-## Community
+```bash
+npm run native:build -w @genoffice/sheets
+# apps/sheets/native/xlsx-engine/target/release/xlsx-sidecar.exe 를
+#   apps/sheets/native/xlsx-engine/target/x86_64-pc-windows-gnu/release/ 로 복사
+npm run dist:win -- -- --publish never
+```
 
-GenOffice is in active development and your feedback shapes it.
+설치 파일은 `apps/shell/release`에 생깁니다. 변경할 때 통과해야 하는 검사를
+비롯한 자세한 내용은 [CONTRIBUTING.md](CONTRIBUTING.md)(영어)에, 새 버전을
+내는 절차는 [docs/releasing.ko.md](docs/releasing.ko.md)에 있습니다.
 
-- **Report a bug or request a feature** in
-  [GitHub Issues](https://github.com/genspark-ai/genoffice/issues).
-- **Join the GenOffice group chat** on
-  [GenTeam](https://genoffice.ai/join) to talk to the team and other users.
-- **Follow [@merrickbuilds](https://x.com/merrickbuilds) on X** for release
-  notes, demos and what is being built next.
-- **Star the repo** if GenOffice is useful to you — it is the best way to
-  support the project.
+코드 안의 패키지 이름과 환경 변수에는 아직 `genoffice` / `GENOFFICE_`가
+남아 있습니다. 원본 프로젝트의 엔진 개선을 계속 쉽게 받아오려고 일부러 둔
+것입니다.
 
-## FAQ
+## 알려진 한계
 
-<details>
-<summary><b>Is GenOffice free?</b></summary>
+- **Windows만 지원합니다.** GenOffice에서 물려받은 macOS·Linux용 코드는
+  저장소에 남아 있지만, 이 프로젝트는 그것을 빌드하지도, 배포하지도, 시험하지도
+  않습니다.
+- **설치 파일에 서명이 없습니다.** 위에서 설명한 대로입니다.
+- **구독은 API 키보다 답이 조금 늦게 시작됩니다.** 요청마다 그 회사의
+  프로그램을 먼저 띄우기 때문에 첫 글자가 나오기까지 몇 초가 걸립니다(개발에 쓴
+  PC에서 Claude는 4초쯤).
+- **Codex는 내 Codex 개인 설정을 통째로 무시하게 할 수 없습니다.** 앱이 끌 수
+  있는 것(내 MCP 서버, 훅, 플러그인)은 끄지만, Codex는 `~/.codex/AGENTS.md`를
+  여전히 대화에 넣고, 앱이 덮어쓰지 않는 설정은 그대로 적용됩니다. 앱이 Codex의
+  대화 기록 저장은 끄지만, Codex가 따로 남기는 진단 기록은 남습니다.
+- **ChatGPT로 로그인만 되어 있으면 "연결됨"으로 보입니다.** 무료 요금제도
+  마찬가지입니다. 실제로 무엇이 되는지는 그 요금제가 정합니다.
+- **Codex 사용량 표시**는 Codex가 5시간 또는 7일 한도를 알려 줄 때만 나옵니다.
+- **프록시.** 앱이 직접 보내는 요청(검색, 키 방식 제공업체, 업데이트 확인)은
+  프록시 환경 변수나 Windows의 프록시 설정을 따릅니다. Claude Code와 Codex는
+  별도의 프로그램이라 프록시 환경 변수(`HTTPS_PROXY` 등)만 봅니다. Windows에만
+  설정해 둔 프록시는 전달되지 않습니다.
+- **이미지 생성에는 키가 필요합니다.** 위에서 설명한 대로입니다.
+- **번역.** 화면 언어 21개 가운데 19개는 기계 번역이고, 그 언어를 쓰는 사람이
+  검토하지 않았습니다.
+- **실제 GitHub 릴리스로 업데이트되는 과정은** 이 글을 쓰는 시점에 끝까지
+  확인하지 못했습니다. 그때까지 공개된 릴리스가 없었기 때문입니다.
 
-Yes. GenOffice is free and open-source under the Apache-2.0 license — no
-trial, no paid tier for the apps themselves.
+## 계획 중이고 아직 없는 것
 
-</details>
+다음 단계에서 만들 예정이고, **지금 앱에는 없습니다.**
 
-<details>
-<summary><b>Can GenOffice open Microsoft Word, Excel and PowerPoint files?</b></summary>
+- 마인드맵 문서(`.xmind`)
+- 기존 문서 여러 개를 묶어 새 문서를 만드는 기능
 
-Yes. GenOffice opens and saves native `.docx`, `.xlsx` and `.pptx` files.
-Saving is byte-preserving: parts of the file you didn't touch are written
-back byte-for-byte, so documents keep working in Microsoft Office.
+## 개인정보
 
-</details>
+이음오피스에는 자체 서버가 없고, 사용 통계도 보내지 않습니다. 문서는 내 PC에
+남습니다. AI를 쓰면 문서 내용과 대화가 사용자 본인 계정으로 Anthropic 또는
+OpenAI에 전송됩니다(API 키를 넣었다면 그 회사로). 그 내용이 AI 학습에
+쓰이는지는 그 회사에 있는 내 계정 설정이 정합니다. 검색어는 기본적으로
+Parallel과 DuckDuckGo로, 업데이트 확인은 GitHub로 갑니다. 전체 목록은
+[PRIVACY.md](PRIVACY.md)(영어)에 있습니다.
 
-<details>
-<summary><b>Does GenOffice work offline?</b></summary>
+## 기여와 문제 신고
 
-Document editing is fully local — files never leave your machine to be
-opened, edited, saved or converted. The AI features (agents, search, image
-tools) need a network connection, with either a Genspark sign-in or your own
-model API key.
+- 버그와 제안: [GitHub Issues](https://github.com/pblsketch/openoffice/issues)
+- 보안 문제: 공개 이슈로 올리지 말고 [SECURITY.md](SECURITY.md)에 적힌 대로
+  비공개로 알려 주세요.
+- 코드 기여: [CONTRIBUTING.md](CONTRIBUTING.md)와
+  [행동 강령](CODE_OF_CONDUCT.md)을 읽어 주세요.
 
-</details>
+## 라이선스와 출처
 
-<details>
-<summary><b>Can GenOffice edit PDF files?</b></summary>
+이음오피스는 [Apache License 2.0](LICENSE)으로 배포합니다.
 
-Yes — real PDF text and image editing that rewrites the page content stream
-with the original fonts preserved, not cover-up annotations.
+**이음오피스는 [GenOffice](https://github.com/genspark-ai/genoffice)를 바탕으로
+만들었습니다.** GenOffice는 Genspark(Mainfunc, Inc.)가 만든 오픈소스 오피스
+프로그램이고, 역시 Apache-2.0 라이선스입니다. 문서 엔진과 편집기는 그
+프로젝트에서 왔습니다. 이음오피스는 AI를 연결하는 방식을 바꾸고, Genspark
+서비스에 묶인 부분을 걷어내고, 제품 이름을 바꿨습니다. 원래의 저작권 고지는
+그대로 두었고, 출처와 "고쳐 만든 버전"이라는 사실은 [NOTICE](NOTICE)에 적어
+두었습니다.
 
-</details>
-
-<details>
-<summary><b>Can GenOffice convert PDF to Word, Excel or PowerPoint?</b></summary>
-
-Yes — entirely on-device: PDFium character-level extraction plus
-geometry-based layout analysis, no cloud service, no upload. Scanned pages
-are covered too: on macOS and Windows the system OCR reads them, so they
-convert to editable text rather than a page image.
-
-</details>
-
-<details>
-<summary><b>Can I use my own AI model or API key?</b></summary>
-
-Yes. Besides the keyless Genspark sign-in, GenOffice supports bring your own
-key for Claude, OpenAI, Gemini, DeepSeek, Kimi, GLM, Qwen, Doubao, MiniMax,
-Grok, Mistral, OpenRouter, Requesty, Opper, Cheaper Inference, Atlas Cloud and OpenCode Zen/Go, plus any OpenAI-compatible
-endpoint — including local model servers. Search, image generation and
-image/video analysis take their own keys under Settings → AI Media & Search.
-
-</details>
-
-<details>
-<summary><b>Can GenOffice convert HTML to Word?</b></summary>
-
-Yes — Export as Word in the HTML app produces a native, editable `.docx`
-entirely on-device. The page is rendered in the built-in Chromium and reduced
-to real Word structures: headings, paragraphs, lists, tables, cards, KPI rows,
-form fields and page backgrounds; only visuals with no Word counterpart
-(charts, icons, decorated boxes) are embedded as pictures.
-
-</details>
-
-<details>
-<summary><b>Can I drive GenOffice from Claude Code, Codex, Cursor or a script?</b></summary>
-
-Yes. GenOffice installs a `genoffice` command line that runs the same engines
-headless: inspect, convert, create, read and edit documents from a terminal or
-a script, with `--json` output for programs. The bundled agent skill teaches
-Claude Code, Codex, Cursor, Gemini CLI, GitHub Copilot, OpenCode and Windsurf
-to use it; install it from **Settings → Integrations**. See
-[Command line and agent skill](#command-line-and-agent-skill).
-
-</details>
-
-<details>
-<summary><b>Does GenOffice collect any data?</b></summary>
-
-Official packaged builds send limited usage analytics by default, and you can
-disable reporting at any time under Settings → General. Analytics never sends
-document content, file names, file paths, account identity or email
-addresses. See [GenOffice Privacy](PRIVACY.md) for the complete event and
-data disclosures.
-
-</details>
-
-## Security
-
-See [SECURITY.md](SECURITY.md) for the process security posture (renderer
-sandboxing, IPC validation, external-link gating) and the threat models for
-AI-generated content.
-
-## Acknowledgements
-
-GenOffice would not be possible without these open-source projects:
-
-- [Electron](https://www.electronjs.org/) — the desktop runtime for every app.
-- [Univer](https://github.com/dream-num/univer) (Apache-2.0) — the spreadsheet
-  UI core that Sheets extends.
-- [PDFium](https://pdfium.googlesource.com/pdfium/) (BSD-3-Clause, bundled via
-  [@embedpdf/pdfium](https://github.com/embedpdf/embed-pdf-viewer)) — the
-  content-stream engine behind true PDF text and image editing.
-- [pdf.js](https://github.com/mozilla/pdf.js) (Apache-2.0) and
-  [pdf-lib](https://github.com/Hopding/pdf-lib) (MIT) — PDF rendering and
-  document assembly.
-- [Tiptap](https://tiptap.dev/) / [ProseMirror](https://prosemirror.net/) —
-  the block editors in Docs and Markdown.
-- [CodeMirror](https://codemirror.net/) (MIT) — the source editor in HTML.
-- [Konva](https://konvajs.org/) — canvas rendering for Slides and Sheets
-  charts.
-- [HarfBuzz](https://github.com/harfbuzz/harfbuzz) (wasm) — text-shaping
-  metrics for complex scripts.
-- [calamine](https://github.com/tafia/calamine) and
-  [IronCalc](https://github.com/ironcalc/IronCalc) — the read and calc layers
-  of the Rust xlsx sidecar.
-- [libeot](https://github.com/umanwizard/libeot) (MPL-2.0) — the MicroType
-  Express decoder for embedded PowerPoint fonts, ported to TypeScript.
-- [React](https://react.dev/) (MIT) — the UI layer of every app.
-- [Mermaid](https://mermaid.js.org/) (MIT) and [KaTeX](https://katex.org/)
-  (MIT) — diagrams and math in Markdown and Docs.
-- [opentype.js](https://opentype.js.org/) (MIT) — font parsing for metrics
-  and glyph lookup.
-- [JSZip](https://stuk.github.io/jszip/) (MIT) and
-  [fast-xml-parser](https://github.com/NaturalIntelligence/fast-xml-parser)
-  (MIT) — the OOXML container and XML layers.
-- [Fluent UI System Icons](https://github.com/microsoft/fluentui-system-icons)
-  (MIT) — the icon set across the ribbons.
-- [electron-updater](https://www.electron.build/) (MIT) — in-app updates.
-- Liberation, Carlito, Caladea, and Noto CJK fonts (OFL/Apache-2.0) — bundled
-  document fonts.
-
-`npm run notices` regenerates the bundled third-party license summary
-(`tools/gen-third-party-notices.mjs`); all runtime dependencies are
-MIT/Apache-2.0/BSD-3-Clause/OFL.
-
-## License
-
-GenOffice is licensed under the [Apache License 2.0](LICENSE), with one
-exception: the `ee/` directory is reserved for future enterprise modules and
-is covered by the [GenOffice Enterprise License](ee/LICENSE).
-
-The GenOffice and Genspark names and logos are trademarks of Mainfunc, Inc.
-The Apache-2.0 license does not grant permission to use them (see section 6);
-forks should use their own branding.
+이음오피스는 독립된 프로젝트입니다. Genspark / Mainfunc, Inc., Anthropic,
+OpenAI와 제휴하거나 후원·보증을 받은 관계가 아닙니다. "GenOffice"와
+"Genspark"라는 이름과 로고는 각 소유자의 상표이고, "Claude", "Codex",
+"ChatGPT"도 그렇습니다. 여기서는 이 프로그램이 무엇을 바탕으로 만들어졌고
+무엇과 함께 동작하는지 알리기 위해서만 그 이름을 적었습니다.

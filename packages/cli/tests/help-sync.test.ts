@@ -28,9 +28,8 @@ function readFirst(paths: string[], label: string): { path: string; text: string
 }
 
 const readme = readFileSync(README_PATH, 'utf-8')
-// The CLI README is rewritten with the other repository documents and still
-// spells the upstream command; switch this to `ieumoffice` together with it.
-const README_COMMAND = 'genoffice'
+// The command name the CLI README spells in its examples.
+const README_COMMAND = 'ieumoffice'
 const skillFile = readFirst(SKILL_CANDIDATES, 'ieumoffice SKILL.md')
 
 function fencesOf(markdown: string): string {

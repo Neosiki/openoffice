@@ -8,13 +8,15 @@ body:
       label: App
       description: Which part of the suite is affected?
       options:
-        - GenOffice Docs (docs)
-        - GenOffice Sheets (sheets)
-        - GenOffice Slides (slides)
-        - GenOffice PDF (pdf)
-        - GenOffice Markdown (markdown)
+        - Docs (docs)
+        - Sheets (sheets)
+        - Slides (slides)
+        - PDF (pdf)
+        - Markdown (markdown)
+        - HTML (html)
         - Shell / home screen
-        - AI panel / providers
+        - AI panel / subscription connection / providers
+        - Command line / MCP / agent skill
         - Build / packaging
         - Other
     validations:
@@ -23,8 +25,11 @@ body:
     id: version
     attributes:
       label: Version and OS
-      description: App version (or commit) and operating system
-      placeholder: '0.1.0 on macOS 15.3 / Windows 11'
+      description: >
+        App version (Settings → About, or the commit you built) and operating
+        system. For an AI problem, also say which connection was in use
+        (Claude subscription, Codex subscription, or an API-key provider).
+      placeholder: '0.11.0 on Windows 11'
     validations:
       required: true
   - type: textarea
@@ -42,4 +47,6 @@ body:
     id: logs
     attributes:
       label: Logs / screenshots
-      description: Console output, stack traces, or screenshots, if any.
+      description: >
+        Console output, stack traces, or screenshots, if any. Never paste API
+        keys or anything from a Claude or Codex login.

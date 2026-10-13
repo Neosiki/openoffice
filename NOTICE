@@ -71,3 +71,16 @@ full texts are at https://github.com/lucide-icons/lucide/blob/main/LICENSE.
 The wordmark in the logo lockup is set in Roboto Bold 2.137, Copyright 2011
 Google Inc., licensed under the Apache License, Version 2.0, and converted to
 outlines.
+
+IeumOffice modifications
+
+IeumOffice (https://github.com/pblsketch/openoffice) is a modified version of
+GenOffice (https://github.com/genspark-ai/genoffice), the work this file's
+opening notice refers to. Files of the original work have been changed, added
+and removed by the IeumOffice contributors; the repository history records
+each change. The modifications are licensed under the Apache License, Version
+2.0, like the original work.
+
+IeumOffice is not affiliated with, sponsored by or endorsed by Mainfunc, Inc.
+The names GenOffice and Genspark and their logos belong to their owners and
+are used here only to identify the original work.

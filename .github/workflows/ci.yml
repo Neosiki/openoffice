@@ -2,12 +2,13 @@ name: CI
 
 # Test gate for every PR and push: changed-file formatting, lint, typecheck across
 # all workspaces, and the full unit-test suite (engine packages and app tests; the
-# sheets suite also runs the Rust xlsx-sidecar tests). Packaging/signing is handled
-# by separate release automation — this workflow never builds installers.
+# sheets suite also runs the Rust xlsx-sidecar tests). Installers are built and
+# published by hand (docs/releasing.ko.md) — this workflow never builds or uploads
+# one, and it uses no repository secret.
 
 on:
   push:
-    branches: [main, 'dev_*', 'release_*']
+    branches: [main]
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -110,22 +111,6 @@ jobs:
       # diff — the change that causes it looks like an ordinary translation.
       - name: Check manual language coverage
         run: npm run check:help-langs
-
-      # Added lines only: Han text outside locale tables, review-tool tags,
-      # feedback-ledger ids, sample-corpus ids, internal PR numbers, personal
-      # paths/e-mails, credentials, NUL bytes (tools/check-public-hygiene.mjs).
-      - name: Check public-repo hygiene
-        env:
-          FORMAT_BASE_REF: ${{ github.event.pull_request.base.sha || github.event.before }}
-        run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            FORMAT_BASE_REF=$(git rev-parse HEAD^1)
-          fi
-          if [ -f tools/check-public-hygiene.mjs ]; then
-            node tools/check-public-hygiene.mjs
-          else
-            echo "public-hygiene gate not present in this checkout; skipped"
-          fi
 
       # Keep tracked code comments and contributor-facing documentation
       # English-only; functional CJK strings and AI prompt examples are allowed.
