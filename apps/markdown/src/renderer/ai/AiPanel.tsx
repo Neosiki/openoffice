@@ -14,7 +14,13 @@ import {
 } from '@genoffice/ui'
 import { useEffect, useRef, useState } from 'react'
 import type { PointerEvent as ReactPointerEvent, ReactElement, ReactNode } from 'react'
-import { AgentLoop, streamText, type IpcStreamError, composeWithDrive } from '@genoffice/agent-core'
+import {
+  AgentLoop,
+  streamText,
+  type IpcStreamError,
+  type MindMapTreeNode,
+  composeWithDrive,
+} from '@genoffice/agent-core'
 import type {
   AiSettings,
   AiSubscriptionProviderId,
@@ -42,6 +48,7 @@ import sendStop from '../assets/send-stop.png'
 import { clearAiHighlights } from '../editor/aiHighlight'
 import { setInactiveSelectionShown } from '../editor/inactiveSelection'
 import { createMarkdownSkill, MARKDOWN_RULES } from './markdown-skill'
+import { MindMapCard } from './MindMapCard'
 import {
   buildDocWriterRequest,
   countMarkdownBlocks,
@@ -116,6 +123,9 @@ interface ChatEntry {
   /** the run failed and this user message was rolled back out of the model context */
   undelivered?: boolean
   tools?: ToolActivity[]
+  /** interactive mind map from generate_mindmap's side-channel display (session-only;
+   * the persisted transcript keeps the tool call, so a reopened file can regenerate) */
+  mindmap?: MindMapTreeNode
   /** the selection this user message targeted, frozen at send */
   scope?: AiScopeQuoteData
   /** tokens the provider billed for this reply, summed across its turns (absent when unreported) */
@@ -521,6 +531,9 @@ export function AiPanel({
               [...prev, { label, time, doc: snapshotBefore }].slice(-MAX_SNAPSHOTS),
             )
           }
+          // mind maps ride the UI-only display side channel onto the message
+          const display = execution.display
+          const mindmap = display?.kind === 'mindmap' ? display.tree : undefined
           const activity: ToolActivity = {
             name: call.name,
             summary: execution.summary,
@@ -532,7 +545,7 @@ export function AiPanel({
             // Swap out the running placeholder pushed by onToolStart (parse-fail calls have none)
             const tools = [...(last.tools ?? [])]
             if (tools.at(-1)?.running) tools.pop()
-            return { tools: [...tools, activity] }
+            return { tools: [...tools, activity], ...(mindmap ? { mindmap } : {}) }
           })
         },
         onTurnEnd: () => {
@@ -1019,6 +1032,15 @@ export function AiPanel({
               >
                 {t('aiQuickPolish')}
               </button>
+              <button
+                className="ai-starter"
+                onClick={() => {
+                  setPrompt(t('aiQuickMindMapPrompt'))
+                  inputRef.current?.focus()
+                }}
+              >
+                {t('aiQuickMindMap')}
+              </button>
             </div>
           </div>
         )}
@@ -1082,6 +1104,19 @@ export function AiPanel({
                 )
               )}
               {hasTools && <ToolChipList tools={entry.tools!} />}
+              {entry.mindmap && (
+                <MindMapCard
+                  tree={entry.mindmap}
+                  onAsk={(label) => {
+                    setPrompt(t('aiMindMapAskPrompt', { label }))
+                    inputRef.current?.focus()
+                  }}
+                  onJumpBlock={(index) => {
+                    const current = depsRef.current.getEditor()
+                    if (current) navigateToBlock(current, index)
+                  }}
+                />
+              )}
               {entry.usage && (
                 <div className="ai-message-usage">
                   <AiUsageChip usage={entry.usage} lang={lang} />
