@@ -108,6 +108,24 @@ describe('coral', () => {
     expect(coral.styleSheet).toMatch(/bar along its top edge/)
     expect(coral.styleSheet).toMatch(/bar along its left edge/)
   })
+
+  it('asks for opacity on a rect fill only, never on text', () => {
+    // Text run colors are written without alpha, so a translucent numeral would land opaque.
+    const translucent = coral.styleSheet
+      .split(/\r?\n/)
+      .filter((line) => /opacity|alpha|translucent|transparent/i.test(line))
+    expect(translucent).toHaveLength(1)
+    expect(translucent[0]).toMatch(/^- Divider: .* rect at 15% opacity/)
+    expect(translucent[0]).toMatch(/text is always a solid color/)
+    expect(coral.styleSheet).toMatch(/- Wallpaper numeral: .* numeral in solid #D44A4A /)
+    for (const spec of Object.values(coral.sampleCover)) {
+      for (const el of spec.elements) {
+        if (el.type === 'image') continue
+        for (const p of el.paragraphs ?? [])
+          for (const r of p.runs) expect(r.color).toMatch(/^#[0-9A-F]{6}$/)
+      }
+    }
+  })
 })
 
 /** Specifiers a module loads at run time; `import type` and `export type` lines are erased by the compiler. */

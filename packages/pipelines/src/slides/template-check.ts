@@ -28,6 +28,7 @@ export type TemplateProblemCode =
   | 'cover_image'
   | 'cover_color'
   | 'cover_font'
+  | 'cover_text_alpha'
   | 'cover_text'
   | 'cover_audit'
   | 'cover_composition'
@@ -325,6 +326,22 @@ export async function validateSlideTemplate(template: unknown): Promise<Template
     if (paletteValid) {
       for (const color of pageColors(spec)) {
         if (!inPalette(color)) add('cover_color', where, `color ${color} is not in the palette`)
+      }
+    }
+    // The builder writes a run color as six digits, so alpha on text is lost:
+    // a numeral meant to be faint would land fully opaque. Fills and strokes keep alpha.
+    for (const [i, el] of spec.elements.entries()) {
+      if (el.type === 'image') continue
+      const translucent = new Set<string>()
+      for (const p of el.paragraphs ?? []) {
+        for (const r of p.runs) if (r.color && !HEX6.test(r.color)) translucent.add(r.color)
+      }
+      for (const color of translucent) {
+        add(
+          'cover_text_alpha',
+          where,
+          `element ${i}: text color ${color} carries alpha, which text cannot keep; use a six-digit palette color (only shape fills and strokes may be translucent)`,
+        )
       }
     }
     if (fontsValid) {

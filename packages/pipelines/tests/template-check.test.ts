@@ -262,6 +262,52 @@ describe('validateSlideTemplate: sample cover', () => {
     expect(problems).toEqual([])
   })
 
+  it('rejects a text run color that carries alpha, in a text box or inside a shape', async () => {
+    const inTextBox = await validateSlideTemplate(
+      withCovers((spec) => {
+        titleOf(spec).paragraphs[0]!.runs[0]!.color = '#1A1A1A1F'
+      }),
+    )
+    expect(inTextBox.map((p) => [p.code, p.where])).toEqual([
+      ['cover_text_alpha', 'sampleCover.ko'],
+      ['cover_text_alpha', 'sampleCover.en'],
+    ])
+    expect(inTextBox[0]!.message).toContain('#1A1A1A1F')
+    expect(inTextBox[0]!.message).toContain('element 1')
+    const inShape = await validateSlideTemplate(
+      withCovers((spec) => {
+        spec.elements[0] = {
+          type: 'shape',
+          shape: 'rect',
+          x: 0,
+          y: 0,
+          w: 1280,
+          h: 200,
+          fill: '#E85D5D',
+          paragraphs: [{ runs: [{ ...run('2026', 44, 'Bebas Neue'), color: '#1A1A1AFF' }] }],
+        }
+      }),
+    )
+    expect(codes(inShape)).toEqual(['cover_text_alpha'])
+    expect(inShape[0]!.message).toContain('#1A1A1AFF')
+    // the same label in a 6-digit color is fine
+    const opaque = await validateSlideTemplate(
+      withCovers((spec) => {
+        spec.elements[0] = {
+          type: 'shape',
+          shape: 'rect',
+          x: 0,
+          y: 0,
+          w: 1280,
+          h: 200,
+          fill: '#E85D5D',
+          paragraphs: [{ runs: [run('2026', 44, 'Bebas Neue')] }],
+        }
+      }),
+    )
+    expect(opaque).toEqual([])
+  })
+
   it('rejects a cover font outside the template fonts, and a run that names no font', async () => {
     const foreign = await validateSlideTemplate(
       withCovers((spec) => {

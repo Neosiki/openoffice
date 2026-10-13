@@ -2,7 +2,8 @@
  * Coral: flat coral, ink and cream planes with condensed poster capitals.
  * Re-authored for the page-spec builder from the upstream design notes; devices
  * the builder cannot draw as solid shapes (the diagonal hatch, the zigzag line)
- * are left out.
+ * are left out. Text is always a solid color: the builder writes run colors
+ * without alpha, so the upstream translucent numeral is set in the darker coral.
  */
 import type { PageSpec } from '../page-spec'
 import {
@@ -24,21 +25,21 @@ const TITLE_LATIN = 'Bebas Neue'
 const BODY = 'Pretendard'
 
 const STYLE_SHEET = `Backgrounds: main ${CREAM}. cover: a ${CORAL} band across the top third over ${CREAM}, with one ${INK} block. content: ${CREAM}. data: ${CREAM}. closing: ${INK}.
-Colors: main text ${INK}; body and small text ${GRAY}; text on ${INK} is ${CREAM}; primary accent ${CORAL}; secondary accent ${CORAL_DARK} (second data series only); card background ${WHITE}; border ${CREAM_DARK}. Text on ${CORAL} is always ${INK}, never white. Titles are ${INK}, ${CREAM} or ${CORAL}, never ${GRAY}.
+Colors: main text ${INK}; body and small text ${GRAY}; text on ${INK} is ${CREAM}; primary accent ${CORAL}; secondary accent ${CORAL_DARK} (second data series, wallpaper numeral); card background ${WHITE}; border ${CREAM_DARK}. Text on ${CORAL} is ${INK}, never white. Titles are ${INK}, ${CREAM} or ${CORAL}, never ${GRAY}.
 Fonts: Korean title ${TITLE_KO}; Latin title and every numeral ${TITLE_LATIN}, capitals only; body and labels ${BODY}. Big titles 40-48pt; subtitles 18-24pt; body 13-15pt; labels 12pt bold; hero numbers 64-80pt.
 Layout library:
-- cover: cover_split_color (color band above a cream field that holds the title), cover_typography_hero (one surface, a 48pt title and one 80pt figure as the anchor)
+- cover: cover_split_color (color band above a cream field that holds the title), cover_typography_hero (one surface, a 48pt title, one 80pt figure as anchor)
 - content: three_column_cards (white cards on cream), two_column_comparison (a ${CORAL} half against an ${INK} or cream half), hero_big_number (an 80pt figure inside a color region), timeline_horizontal (a 4px ${INK} line with ${CORAL} dots ringed in ${CREAM})
 - data: kpi_cards_row (white tiles in a row), chart_with_insight (bars built from rect shapes in ${CORAL}, comparison series ${CORAL_DARK})
 - closing: closing_cta (${INK} surface, ${CREAM} title, contact line in ${CORAL}), closing_thank_you (${INK} surface with one ${CORAL} block)
 Signature devices:
-- Color planes: two or three solid regions of ${CORAL}, ${INK} and ${CREAM} per page, meeting at hard straight edges. The edge between two regions is the layout; fill every region.
+- Color planes: two or three solid regions of ${CORAL}, ${INK} and ${CREAM} per page, meeting at hard straight edges; that edge is the layout. Fill every region.
 - Card: a ${WHITE} rect with a 5px ${CORAL} bar along its top edge as its only trim.
 - Tile: a ${WHITE} rect with a 4px ${CORAL} bar along its left edge, holding a ${TITLE_LATIN} value over a ${BODY} label.
 - Accent rule: an 80x4px ${CORAL} rect under a headline (60x4px on closing pages).
 - Icon square: a 48px ${CORAL} square holding one white ${TITLE_LATIN} character.
-- Divider: a full-width 3px ${INK} rect at 15% opacity.
-- Wallpaper numeral: a 64-80pt ${TITLE_LATIN} numeral in ${INK} at 12% opacity in an empty part of a ${CORAL} region, never under other text.
+- Divider: a full-width 3px ${INK} rect at 15% opacity. Only rect fills take opacity; text is always a solid color.
+- Wallpaper numeral: a 64-80pt ${TITLE_LATIN} numeral in solid ${CORAL_DARK} in an empty part of a ${CORAL} region, never under other text.
 - Square corners on every rect; circles only as timeline dots.
 Overall style: A bold magazine poster of flat coral, ink and cream planes, oversized condensed capitals and a single warm accent.`
 
