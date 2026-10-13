@@ -17,7 +17,7 @@ import {
 } from '../src/providers'
 import { AI_PROVIDER_ADAPTERS, getProviderAdapter } from '../src/registry'
 import { AiRunError, aiStreamErrorFields } from '../src/run-error'
-import { AiCreditsError, streamForProvider } from '../src/stream'
+import { AiCreditsError } from '../src/stream'
 import { AiTimeoutError } from '../src/watchdog'
 
 describe('claude-code provider', () => {
@@ -44,20 +44,6 @@ describe('claude-code provider', () => {
   it('gets a config slot that leaves the model to the CLI', () => {
     const config = defaultAiSettings().providers['claude-code']
     expect(config).toMatchObject({ apiKey: '', model: '' })
-  })
-
-  it('fails clearly until the bridge is wired in', async () => {
-    const config = { apiKey: '', model: '' }
-    await expect(
-      streamForProvider('claude-code', config, 'sys', [], [], 1024, {
-        onDelta: () => {},
-        onToolCall: () => {},
-        signal: new AbortController().signal,
-      }),
-    ).rejects.toThrow(/Claude Code.*not implemented yet/)
-    await expect(chatForProvider('claude-code', config, 'sys', 'hi')).rejects.toThrow(
-      /Claude Code.*not implemented yet/,
-    )
   })
 
   it('"auto" is a selection, not a provider to route to', async () => {
