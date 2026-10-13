@@ -86,6 +86,62 @@ describe('AI_SUBSCRIPTION_STRINGS', () => {
   })
 })
 
+describe('the AI entry label', () => {
+  it('is one key every editor shares for its ribbon button, panel title and panel label', () => {
+    expect(AI_SUBSCRIPTION_STRINGS.en.aiAssistant).toBe('AI Assistant')
+    expect(AI_SUBSCRIPTION_STRINGS.ko.aiAssistant).toBe('AI 도우미')
+    expect(aiSubscriptionText('ko', 'aiAssistant')).toBe('AI 도우미')
+  })
+
+  it('is a short label in all 21 languages: no placeholder, no sentence', () => {
+    for (const lang of LANGS) {
+      const label = AI_SUBSCRIPTION_STRINGS[lang].aiAssistant
+      expect(label.length, lang).toBeLessThanOrEqual(24)
+      expect(label, lang).not.toMatch(/[{}.。]/)
+      expect(label.trim(), lang).toBe(label)
+    }
+  })
+})
+
+describe('the connection-check error sentences', () => {
+  const ERROR_KEYS = ['cardErrNeedsUpdate', 'cardErrTimeout', 'cardErrFailed'] as const
+
+  it('name the provider in every language', () => {
+    for (const lang of LANGS) {
+      for (const key of ERROR_KEYS) {
+        expect(placeholders(AI_SUBSCRIPTION_STRINGS[lang][key]), `${lang}.${key}`).toEqual([
+          'provider',
+        ])
+        expect(aiSubscriptionText(lang, key, { provider: 'Codex' }), `${lang}.${key}`).toContain(
+          'Codex',
+        )
+      }
+    }
+  })
+
+  it('are three different sentences in every language', () => {
+    for (const lang of LANGS) {
+      const texts = ERROR_KEYS.map((key) => AI_SUBSCRIPTION_STRINGS[lang][key])
+      expect(new Set(texts).size, lang).toBe(3)
+    }
+  })
+
+  it('tell the user to update the program when it is too old', () => {
+    expect(AI_SUBSCRIPTION_STRINGS.en.cardErrNeedsUpdate).toMatch(/Update it/)
+    expect(AI_SUBSCRIPTION_STRINGS.ko.cardErrNeedsUpdate).toMatch(/업데이트/)
+  })
+
+  it('never carry the raw kind prefix of a status text', () => {
+    for (const lang of LANGS) {
+      for (const key of ERROR_KEYS) {
+        expect(AI_SUBSCRIPTION_STRINGS[lang][key], `${lang}.${key}`).not.toMatch(
+          /needs-update|timeout:|failed:/,
+        )
+      }
+    }
+  })
+})
+
 describe('aiSubscriptionText', () => {
   it('fills the placeholders', () => {
     expect(aiSubscriptionText('en', 'continueWith', { provider: 'Codex' })).toBe(

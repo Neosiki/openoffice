@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect, useRef } from 'react'
 import type { Lang } from '@genoffice/i18n'
 import type {
   AiProviderChoice,
@@ -65,7 +65,11 @@ export function AiSubscriptionCard({
 }): React.JSX.Element {
   const view = aiSubscriptionCardView(status)
   const provider = view.provider
-  const params = { vendor: aiSubscriptionVendorName(provider), plan: view.planName ?? '' }
+  const params = {
+    vendor: aiSubscriptionVendorName(provider),
+    plan: view.planName ?? '',
+    provider: aiSubscriptionProviderName(provider),
+  }
   const handlers: Record<AiSubscriptionCardAction, (id: AiSubscriptionProviderId) => void> = {
     install: onInstall,
     'install-help': onOpenInstallHelp,
@@ -94,7 +98,11 @@ export function AiSubscriptionCard({
           {aiSubscriptionText(lang, key, params)}
         </p>
       ))}
-      {view.detail && <p className="ai-sub-detail">{view.detail}</p>}
+      {view.detailKey && (
+        <p className="ai-sub-detail" data-detail={view.detailKey}>
+          {aiSubscriptionText(lang, view.detailKey, params)}
+        </p>
+      )}
       {view.actions.length > 0 && (
         <div className="ai-sub-actions">
           {view.actions.map((action, index) =>
@@ -137,6 +145,7 @@ export function AiConnectPrompt({
   statuses,
   lang,
   disabled,
+  attention,
   onOpenSettings,
   ...actions
 }: AiSubscriptionCardActions & {
@@ -144,14 +153,30 @@ export function AiConnectPrompt({
   readonly statuses: AiSubscriptionStatuses
   readonly lang: Lang
   readonly disabled?: boolean | undefined
+  /**
+   * count of the sends this prompt answered instead of a run: each new one
+   * scrolls the prompt into view, so the user sees why nothing was sent
+   */
+  readonly attention?: number | undefined
   /** open Settings › AI; offered when the selected key provider is not filled in */
   readonly onOpenSettings?: (() => void) | undefined
 }): React.JSX.Element | null {
   const view = aiConnectPromptView(choice)
+  const shown = view !== null
+  const promptRef = useRef<HTMLDivElement | null>(null)
+  useEffect(() => {
+    if (!attention || !shown) return
+    // not every host implements it (test DOMs do not)
+    promptRef.current?.scrollIntoView?.({ block: 'nearest' })
+  }, [attention, shown])
   if (!view) return null
   const params = { provider: view.providerName ?? '' }
   return (
-    <div className="ai-sub-prompt" data-reason={choice.connected ? undefined : choice.reason}>
+    <div
+      ref={promptRef}
+      className="ai-sub-prompt"
+      data-reason={choice.connected ? undefined : choice.reason}
+    >
       <div className="ai-sub-prompt-head">
         <span className="ai-sub-prompt-mark">
           <AiMark size={18} />

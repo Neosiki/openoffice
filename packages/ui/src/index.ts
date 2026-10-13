@@ -176,6 +176,21 @@ export {
   type AiSubscriptionCardView,
 } from './ai-subscription'
 export {
+  aiConnectPromptChoice,
+  aiHeldRequestStep,
+  aiHoldReason,
+  aiSendGate,
+  changeStoredAiSettings,
+  withAiContinueProvider,
+  withAiSubscriptionNoticeSeen,
+  type AiHeldReason,
+  type AiHeldRequestStep,
+  type AiSendGate,
+  type AiSendGateSettings,
+  type AiSettingsStore,
+} from './ai-send-gate'
+export { useAiSendGate, type AiSendGateArgs, type AiSendGateController } from './use-ai-send-gate'
+export {
   AI_SUBSCRIPTION_STRINGS,
   aiSubscriptionText,
   type AiSubscriptionStringKey,

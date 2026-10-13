@@ -185,7 +185,6 @@ export const de = {
   ribbonReplaceTip: 'Text suchen und ersetzen',
   ribbonSelectAll: 'Alles markieren',
   ribbonSelectAllTip: 'Das gesamte Dokument markieren',
-  ribbonAiAssistant: 'KI-Assistent',
   ribbonAiAssistantTip: 'KI-Assistenten öffnen',
   ribbonRemoveTableStyleTip: 'Tabellenformatvorlage entfernen',
   ribbonNoStyle: 'Keine Formatvorlage',

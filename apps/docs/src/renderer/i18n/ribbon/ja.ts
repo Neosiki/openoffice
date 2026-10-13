@@ -191,7 +191,6 @@ export const ja = {
   ribbonSelectAll: 'すべて選択',
   ribbonSelectAllTip: '文書全体を選択',
   // Home · AI
-  ribbonAiAssistant: 'AI アシスタント',
   ribbonAiAssistantTip: 'AI アシスタントを開く',
   // Table Design
   ribbonRemoveTableStyleTip: '表のスタイルを削除',

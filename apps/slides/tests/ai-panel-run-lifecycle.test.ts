@@ -9,6 +9,7 @@ const agentHarness = vi.hoisted(() => ({
       execution: { summary: string; output?: string; isError?: boolean; mutated?: boolean }
     }) => void
     onDone?: (result: { text: string; cancelled: boolean; turnLimit: boolean }) => void
+    onError?: (error: string) => void
   },
   run: vi.fn(),
   cancel: vi.fn(),
@@ -47,6 +48,26 @@ vi.mock('@genoffice/agent-core', async () => {
   }
 })
 
+// The loop is mocked, so nothing streams: the transport only hands over its hooks, which is
+// how a test reports the structured cause of a failed turn the way the real transport does.
+const transportHarness = vi.hoisted(() => ({
+  hooks: null as null | {
+    onStreamError?: (error: {
+      kind?: string
+      provider?: string
+      resetsAt?: number
+      message: string
+    }) => void
+  },
+}))
+
+vi.mock('../src/renderer/ai/transport', () => ({
+  createElectronTransport: (_getSettings: unknown, hooks: typeof transportHarness.hooks) => {
+    transportHarness.hooks = hooks
+    return {}
+  },
+}))
+
 // react-konva's node entry requires the native 'canvas' package; these tests do not draw.
 vi.mock('react-konva', () => {
   const stub = () => null
@@ -67,6 +88,7 @@ vi.mock('react-konva', () => {
   }
 })
 
+import { AI_SUBSCRIPTION_STRINGS } from '@genoffice/ui'
 import { AiPanel } from '../src/renderer/ai/AiPanel'
 import { AI_PROVIDERS, type AiSettings, type AttachmentMeta } from '../src/shared/ipc'
 
@@ -244,21 +266,64 @@ describe('AiPanel subscription gate (slides)', () => {
   const autoSettings: AiSettings = { ...settings, provider: 'auto' }
   const preset = { text: 'Polish this slide', nonce: 1, autoRun: true }
 
-  /** the bridge with a subscription API answering `statuses`, plus a settings writer to watch */
+  /**
+   * the bridge with a subscription API answering `statuses`, a settings writer to watch, and
+   * `emit` to report a status change the way the main process does
+   */
   function installSubscription(statuses: ReturnType<typeof statusMap>) {
-    const setAiSettings = vi.fn(async () => undefined)
+    const setAiSettings = vi.fn<(next: AiSettings) => Promise<undefined>>(async () => undefined)
     const api = window.slidesApi as unknown as Record<string, unknown>
     api.setAiSettings = setAiSettings
+    let current = statuses
+    let changed: ((next: ReturnType<typeof statusMap>) => void) | null = null
     api.aiSubscription = {
-      statuses: vi.fn(async () => statuses),
-      recheck: vi.fn(async () => statuses),
+      statuses: vi.fn(async () => current),
+      recheck: vi.fn(async () => current),
       login: vi.fn(async () => ({ ok: true })),
       install: vi.fn(async () => ({ ok: true })),
-      setMeteredAccepted: vi.fn(async () => ({ ok: true, statuses })),
-      onChanged: vi.fn(() => () => {}),
+      setMeteredAccepted: vi.fn(async () => ({ ok: true, statuses: current })),
+      onChanged: vi.fn((handler: (next: ReturnType<typeof statusMap>) => void) => {
+        changed = handler
+        return () => {}
+      }),
     }
-    return { setAiSettings }
+    const emit = async (next: ReturnType<typeof statusMap>) => {
+      current = next
+      await act(async () => changed?.(next))
+    }
+    return { setAiSettings, emit }
   }
+
+  const composer = (container: HTMLElement) =>
+    container.querySelector<HTMLTextAreaElement>('textarea[data-slides-ai-input]')!
+
+  /** type into the composer the way React sees a user typing */
+  function type(container: HTMLElement, text: string) {
+    const input = composer(container)
+    const setValue = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!
+    act(() => {
+      setValue.call(input, text)
+      input.dispatchEvent(new Event('input', { bubbles: true }))
+    })
+  }
+
+  const pressEnter = (container: HTMLElement) =>
+    act(() => {
+      composer(container).dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }),
+      )
+    })
+
+  /** the turn in flight fails the way the transport reports it: the cause, then the text */
+  async function failRun(cause: { kind: string; provider?: string; message: string }) {
+    await act(async () => {
+      transportHarness.hooks!.onStreamError!(cause)
+      agentHarness.events!.onError!(cause.message)
+    })
+    await flushEffects()
+  }
+
+  const seenSettings: AiSettings = { ...autoSettings, subscriptionNoticeSeen: true }
 
   it('nothing connected → the connect prompt replaces the run, and no error line is shown', async () => {
     installSubscription(statusMap('signed-out', 'not-installed'))
@@ -309,5 +374,242 @@ describe('AiPanel subscription gate (slides)', () => {
     expect(agentHarness.run).toHaveBeenCalledTimes(1)
     expect(agentHarness.run).toHaveBeenCalledWith('Polish this slide', [])
     expect(container.querySelector('.ai-sub-first')).toBeNull()
+  })
+
+  it('rule 1: a send during the status check is held, and falls to the connect prompt when the answer is "not connected"', async () => {
+    const scrolled: Element[] = []
+    Element.prototype.scrollIntoView = function (this: Element) {
+      scrolled.push(this)
+    }
+    try {
+      const { emit } = installSubscription(statusMap('checking', 'checking'))
+      const { container } = mount(createElement(AiPanel, panelProps({ settings: seenSettings })))
+      await flushEffects()
+      // no request yet: the check runs without a prompt flashing up
+      expect(container.querySelector('.ai-sub-prompt')).toBeNull()
+
+      type(container, 'Make it shorter')
+      pressEnter(container)
+      await flushEffects()
+      // held: not sent, not dropped, and the composer still shows the text
+      expect(agentHarness.run).not.toHaveBeenCalled()
+      expect(composer(container).value).toBe('Make it shorter')
+      expect(container.querySelector('.ai-msg-error')).toBeNull()
+
+      await emit(statusMap('signed-out', 'not-installed'))
+      await flushEffects()
+      expect(agentHarness.run).not.toHaveBeenCalled()
+      const prompt = container.querySelector('.ai-sub-prompt')
+      expect(prompt).not.toBeNull()
+      expect(scrolled).toContain(prompt)
+      expect(composer(container).value).toBe('Make it shorter')
+
+      // rule 2: signing in later does not send what was refused
+      await emit(statusMap('ready', 'not-installed'))
+      await flushEffects()
+      expect(agentHarness.run).not.toHaveBeenCalled()
+      expect(composer(container).value).toBe('Make it shorter')
+    } finally {
+      delete (Element.prototype as { scrollIntoView?: unknown }).scrollIntoView
+    }
+  })
+
+  it('rule 1: a send held during the status check starts by itself once a provider can run', async () => {
+    const { emit } = installSubscription(statusMap('checking', 'checking'))
+    const { container } = mount(createElement(AiPanel, panelProps({ settings: seenSettings })))
+    await flushEffects()
+    type(container, 'Make it shorter')
+    pressEnter(container)
+    await flushEffects()
+    expect(agentHarness.run).not.toHaveBeenCalled()
+
+    await emit(statusMap('checking', 'ready'))
+    await flushEffects()
+    expect(agentHarness.run).toHaveBeenCalledTimes(1)
+    expect(agentHarness.run).toHaveBeenCalledWith('Make it shorter', [])
+    expect(composer(container).value).toBe('')
+  })
+
+  it('rule 2: not connected → nothing is sent, the composer keeps its text, the prompt is scrolled to', async () => {
+    const scrolled: Element[] = []
+    Element.prototype.scrollIntoView = function (this: Element) {
+      scrolled.push(this)
+    }
+    try {
+      installSubscription(statusMap('signed-out', 'not-installed'))
+      const { container } = mount(createElement(AiPanel, panelProps({ settings: seenSettings })))
+      await flushEffects()
+      expect(scrolled).toEqual([])
+
+      type(container, 'Make it shorter')
+      pressEnter(container)
+      await flushEffects()
+      expect(agentHarness.run).not.toHaveBeenCalled()
+      expect(composer(container).value).toBe('Make it shorter')
+      expect(scrolled).toContain(container.querySelector('.ai-sub-prompt'))
+      expect(container.querySelector('.ai-msg-error')).toBeNull()
+    } finally {
+      delete (Element.prototype as { scrollIntoView?: unknown }).scrollIntoView
+    }
+  })
+
+  it('rule 3: the notice going away without an acknowledgement sends nothing and keeps the text', async () => {
+    const { setAiSettings } = installSubscription(statusMap('ready', 'signed-out'))
+    const { root, container } = mount(
+      createElement(AiPanel, panelProps({ settings: autoSettings })),
+    )
+    await flushEffects()
+    type(container, 'Make it shorter')
+    pressEnter(container)
+    await flushEffects()
+    expect(agentHarness.run).not.toHaveBeenCalled()
+    expect(container.querySelector('.ai-sub-first')).not.toBeNull()
+    expect(composer(container).value).toBe('Make it shorter')
+
+    // the user picks the filled-in key provider instead of answering the notice
+    act(() => root.render(createElement(AiPanel, panelProps({ settings }))))
+    await flushEffects()
+    expect(container.querySelector('.ai-sub-first')).toBeNull()
+    expect(agentHarness.run).not.toHaveBeenCalled()
+    expect(setAiSettings).not.toHaveBeenCalled()
+    expect(composer(container).value).toBe('Make it shorter')
+  })
+
+  it('rule 4: a blocked run shows the blocked notice, pauses the queue, and continues on the other provider', async () => {
+    const { setAiSettings } = installSubscription(statusMap('ready', 'ready'))
+    Object.defineProperty(window, 'desktop', {
+      configurable: true,
+      value: {
+        readAttachmentImage: vi.fn(async () => ({ ok: true, base64: 'AAAA', mime: 'image/png' })),
+      },
+    })
+    const attachments: AttachmentMeta[] = [
+      { path: '/tmp/brief.png', name: 'brief.png', ext: 'png', sizeBytes: 128 },
+    ]
+    const { container } = mount(
+      createElement(
+        AiPanel,
+        panelProps({
+          settings: seenSettings,
+          preset: { text: 'Polish this slide', nonce: 1, autoRun: true, attachments },
+        }),
+      ),
+    )
+    await flushEffects()
+    expect(agentHarness.run).toHaveBeenCalledTimes(1)
+    expect(agentHarness.run.mock.calls[0]).toEqual([
+      'Polish this slide',
+      [{ base64: 'AAAA', mime: 'image/png' }],
+    ])
+
+    // a second message typed while the reply runs waits in the queue
+    type(container, 'Then translate it')
+    pressEnter(container)
+    await flushEffects()
+    expect(agentHarness.run).toHaveBeenCalledTimes(1)
+    expect(container.querySelector('.ai-queue-strip')).not.toBeNull()
+    expect(container.querySelector('.ai-queue-strip')!.getAttribute('data-paused')).toBeNull()
+
+    await failRun({ kind: 'rate-limit', provider: 'claude-code', message: 'limit used up' })
+    const blocked = container.querySelector('.ai-sub-blocked')
+    expect(blocked).not.toBeNull()
+    expect(blocked!.getAttribute('data-kind')).toBe('rate-limit')
+    expect(container.querySelector('.ai-msg-error')).toBeNull()
+    // the queued message did not run into the same wall
+    expect(agentHarness.run).toHaveBeenCalledTimes(1)
+    expect(container.querySelector('.ai-queue-strip')!.getAttribute('data-paused')).toBe('true')
+
+    const continueButton = blocked!.querySelector<HTMLButtonElement>(
+      '[data-action="continue-with"]',
+    )!
+    expect(continueButton.getAttribute('data-provider')).toBe('codex')
+    await act(async () => continueButton.click())
+    await flushEffects()
+    // the selection is stored (the model picker reads it from there) before the rerun
+    expect(setAiSettings).toHaveBeenCalledTimes(1)
+    expect(setAiSettings.mock.calls[0]![0].provider).toBe('codex')
+    // the last user message runs again with its attachment, not the queued one
+    expect(agentHarness.run).toHaveBeenCalledTimes(2)
+    expect(agentHarness.run.mock.calls[1]).toEqual([
+      'Polish this slide',
+      [{ base64: 'AAAA', mime: 'image/png' }],
+    ])
+    expect(container.querySelector('.ai-queue-strip')!.getAttribute('data-paused')).toBe('true')
+  })
+
+  it('rule 4: "continue with" is offered on the most recent blocked reply only', async () => {
+    installSubscription(statusMap('ready', 'ready'))
+    const { root, container } = mount(
+      createElement(
+        AiPanel,
+        panelProps({
+          settings: seenSettings,
+          preset: { text: 'Polish this slide', nonce: 1, autoRun: true },
+        }),
+      ),
+    )
+    await flushEffects()
+    await failRun({ kind: 'rate-limit', provider: 'claude-code', message: 'limit used up' })
+    expect(container.querySelectorAll('[data-action="continue-with"]')).toHaveLength(1)
+
+    // a second request fails the same way: only its reply still offers to continue
+    act(() =>
+      root.render(
+        createElement(
+          AiPanel,
+          panelProps({
+            settings: seenSettings,
+            preset: { text: 'Try once more', nonce: 2, autoRun: true },
+          }),
+        ),
+      ),
+    )
+    await flushEffects()
+    expect(agentHarness.run).toHaveBeenCalledTimes(2)
+    await failRun({ kind: 'rate-limit', provider: 'claude-code', message: 'limit used up' })
+    expect(container.querySelectorAll('.ai-sub-blocked')).toHaveLength(2)
+    const offers = container.querySelectorAll('[data-action="continue-with"]')
+    expect(offers).toHaveLength(1)
+    const lastBlocked = [...container.querySelectorAll('.ai-sub-blocked')].at(-1)!
+    expect(lastBlocked.contains(offers[0]!)).toBe(true)
+  })
+
+  it('rule 5: the acknowledgement is written onto the settings stored now, not onto the panel copy', async () => {
+    const { setAiSettings } = installSubscription(statusMap('ready', 'signed-out'))
+    // the settings page filled in a key provider after this panel got its copy
+    const stored: AiSettings = {
+      ...autoSettings,
+      providers: {
+        ...autoSettings.providers,
+        openai: { apiKey: 'stored-later', model: 'stored-model' },
+      },
+    }
+    ;(window.slidesApi as unknown as Record<string, unknown>).getAiSettings = vi.fn(
+      async () => stored,
+    )
+    const { container } = mount(
+      createElement(AiPanel, panelProps({ settings: autoSettings, preset })),
+    )
+    await flushEffects()
+    await act(async () => {
+      container.querySelector('.ai-sub-first')!.querySelector('button')!.click()
+    })
+    await flushEffects()
+
+    expect(setAiSettings).toHaveBeenCalledTimes(1)
+    expect(setAiSettings.mock.calls[0]![0]).toEqual({ ...stored, subscriptionNoticeSeen: true })
+    expect(agentHarness.run).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('AI entry label (slides)', () => {
+  it('the panel title and its resizer label are the shared "AI Assistant" label', async () => {
+    const { container } = mount(createElement(AiPanel, panelProps()))
+    await flushEffects()
+    // the panel renders in the module language of the test run; the label comes from the
+    // shared dictionary, not from a slides key
+    const title = container.querySelector('.ai-panel-title')!.textContent
+    expect(Object.values(AI_SUBSCRIPTION_STRINGS).map((d) => d.aiAssistant)).toContain(title)
+    expect(container.querySelector('.ai-panel-resizer')!.getAttribute('aria-label')).toBe(title)
   })
 })

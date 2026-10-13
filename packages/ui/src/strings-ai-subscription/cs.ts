@@ -1,6 +1,7 @@
 import type { zh } from './zh'
 
 export const cs = {
+  aiAssistant: 'Asistent AI',
   cardChecking: 'Probíhá kontrola…',
   cardNotInstalled: 'Není nainstalováno',
   cardSignedOut: 'Nepřihlášeno',
@@ -9,6 +10,10 @@ export const cs = {
   cardMetered: 'Přihlášeno, ale ne přes předplatné',
   cardMeteredAccepted: 'Používá se · účtováno podle spotřeby',
   cardError: 'Připojení se nepodařilo ověřit',
+  cardErrNeedsUpdate:
+    'Program {provider} v tomto počítači je příliš starý. Aktualizujte ho a zkontrolujte znovu.',
+  cardErrTimeout: 'Program {provider} neodpověděl včas. Zkontrolujte to za chvíli znovu.',
+  cardErrFailed: 'Při kontrole {provider} došlo k potížím. Zkontrolujte to znovu.',
   actionInstall: 'Nainstalovat',
   actionLogin: 'Přihlásit se',
   actionRecheck: 'Zkontrolovat znovu',

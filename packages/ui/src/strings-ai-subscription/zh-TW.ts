@@ -1,6 +1,7 @@
 import type { zh } from './zh'
 
 export const zhTW = {
+  aiAssistant: 'AI 助理',
   cardChecking: '正在檢查…',
   cardNotInstalled: '尚未安裝',
   cardSignedOut: '尚未登入',
@@ -9,6 +10,9 @@ export const zhTW = {
   cardMetered: '已登入，但不是訂閱方式',
   cardMeteredAccepted: '使用中 · 依用量計費',
   cardError: '無法檢查連線狀態',
+  cardErrNeedsUpdate: '這台電腦上的 {provider} 程式版本過舊。請更新後重新檢查。',
+  cardErrTimeout: '{provider} 程式未及時回應。請稍後重新檢查。',
+  cardErrFailed: '檢查 {provider} 時發生問題。請重新檢查。',
   actionInstall: '安裝',
   actionLogin: '登入',
   actionRecheck: '重新檢查',

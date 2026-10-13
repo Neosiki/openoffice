@@ -9,6 +9,8 @@ import {
   AiInputTruncatedNotice,
   AiMark,
   AiSubscriptionUsageLine,
+  aiSubscriptionText,
+  useAiSendGate,
 } from '@genoffice/ui'
 import { useEffect, useRef, useState } from 'react'
 import type { PointerEvent as ReactPointerEvent, ReactElement, ReactNode } from 'react'
@@ -71,13 +73,9 @@ import { createSearchSkill } from './search-skill'
 import { pastedBase64Image } from './base64-paste'
 import { createElectronTransport } from './transport'
 import {
-  aiPanelGate,
   blockedRunFor,
   blockedRunOf,
-  gateAllowsSend,
   mergeSubscriptionUsage,
-  withContinueProvider,
-  withSubscriptionNoticeSeen,
   writerMayRetry,
   type BlockedRun,
 } from './connection'
@@ -350,7 +348,7 @@ export function AiPanel({
           if (alive) setAiSettings(next)
         })
         .catch(() => {
-          /* no settings bridge: the gate stays pending and the main process decides */
+          /* no settings bridge: the gate keeps waiting for the settings */
         })
     }
     refresh()
@@ -362,19 +360,28 @@ export function AiPanel({
       window.removeEventListener('focus', refresh)
     }
   }, [])
-  /** "Got it" pressed in this panel: holds even when the settings could not be saved, so the notice never locks the composer */
-  const [noticeAcknowledged, setNoticeAcknowledged] = useState(false)
-  const gateOf = (settings: AiSettings | null) =>
-    aiPanelGate(
-      settings && noticeAcknowledged ? withSubscriptionNoticeSeen(settings) : settings,
-      subscription.statuses,
-    )
-  /** what a request would meet right now: a provider, the connect prompt, or the first-connection notice */
-  const gate = gateOf(aiSettings)
-  const gateRef = useRef(gate)
-  gateRef.current = gate
-  /** holds the connect prompt / first-connection notice; a refused send moves focus into it */
-  const connectDockRef = useRef<HTMLDivElement>(null)
+  /** The send gate every editor shares: holds a request made during a status check or in front
+      of the first-connection notice, refuses in front of "not connected", and writes this
+      panel's settings changes ("continue with …", the acknowledged notice) onto the stored ones.
+      An acknowledgement holds for this panel even when it could not be saved, so the notice
+      never locks the composer. */
+  const sendGate = useAiSendGate<{
+    text: string
+    displayText: string | undefined
+    queueRun: boolean
+    attachments: AttachmentMeta[] | undefined
+    scope: AiScopeQuoteData | undefined
+  }>({
+    settings: aiSettings,
+    statuses: subscription.statuses,
+    store: MODEL_BRIDGE,
+    start: (held) => {
+      send(held.text, held.displayText, held.queueRun, held.attachments, held.scope)
+    },
+    onSettingsSaved: setAiSettings,
+  })
+  const sendGateRef = useRef(sendGate)
+  sendGateRef.current = sendGate
   /** rate-limit windows the subscription program reported (latest per window) */
   const [subscriptionUsage, setSubscriptionUsage] = useState<AiSubscriptionUsage[]>([])
   /** the last turn's input was cut to fit a limit; shown until dismissed */
@@ -388,8 +395,10 @@ export function AiPanel({
     busy,
     submit: (text, atts) => {
       const loop = loopRef.current
-      // a queued message waits for a connection instead of being refused and dropped
-      if (!loop || loop.busy || !gateAllowsSend(gateRef.current)) return false
+      if (!loop || loop.busy) return false
+      // a queued message waits instead of being refused and dropped; in front of "not
+      // connected" the queue is paused so it does not start by itself after a sign-in
+      if (!sendGateRef.current.admitQueued(() => msgQueueRef.current.setPaused(true))) return false
       return send(text, text, false, atts, undefined)
     },
   })
@@ -1057,9 +1066,18 @@ export function AiPanel({
     const instruction = text.trim()
     const loop = loopRef.current
     if (!instruction || !loop || loop.busy) return false
-    // nothing connected, or the first-connection notice not acknowledged: nothing is sent, and the dock above the composer says what to do
-    if (!gateAllowsSend(gateRef.current)) {
-      connectDockRef.current?.querySelector('button')?.focus()
+    // Nothing connected, or the first-connection notice not acknowledged: nothing is sent, and
+    // the dock above the composer says what to do. A request made during a status check or in
+    // front of the notice is held and starts by itself once the way is clear.
+    if (
+      !sendGate.admit({
+        text: instruction,
+        displayText,
+        queueRun,
+        attachments: attachmentsOverride,
+        scope,
+      })
+    ) {
       return false
     }
     lastStreamErrorRef.current = null
@@ -1135,6 +1153,8 @@ export function AiPanel({
       onQueueClear()
       return
     }
+    // a batch is not held: its items stay queued until a run can really start
+    if (!sendGate.admitQueued(() => {})) return
     const started = send(
       buildQueueInstruction(entries),
       buildQueueSummary(t('aiQueueSubmitted', { count: entries.length }), entries),
@@ -1207,42 +1227,19 @@ export function AiPanel({
 
   /** "Continue with …" on a blocked run: that provider becomes the selection (the picker shows it) and the request runs again */
   const continueWith = (provider: AiSubscriptionProviderId): void => {
-    void (async () => {
-      try {
-        const next = withContinueProvider(await window.htmlApi.getAiSettings(), provider)
-        await window.htmlApi.setAiSettings(next)
-        if (!mountedRef.current) return
-        setAiSettings(next)
-        gateRef.current = gateOf(next)
-        // the blocked request again, with the attachments and scope it was sent with
-        const last = [...chat].reverse().find((entry) => entry.role === 'user')
-        if (last)
-          send(
-            last.instruction ?? last.text,
-            last.text,
-            last.queueRun,
-            last.attachments ?? [],
-            last.scope,
-          )
-        else retry()
-      } catch {
-        /* the settings could not be saved: the notice stays and nothing is rerun on another provider */
-      }
-    })()
-  }
-
-  /** "Got it" on the first-connection notice: remembered in the shared settings, shown once */
-  const acknowledgeNotice = (): void => {
-    setNoticeAcknowledged(true)
-    void (async () => {
-      try {
-        const next = withSubscriptionNoticeSeen(await window.htmlApi.getAiSettings())
-        await window.htmlApi.setAiSettings(next)
-        if (mountedRef.current) setAiSettings(next)
-      } catch {
-        /* not saved: acknowledged for this panel only, asked again next time */
-      }
-    })()
+    // the blocked request again, with the attachments and scope it was sent with
+    const last = [...chat].reverse().find((entry) => entry.role === 'user')
+    sendGate.continueWith(provider, () => {
+      if (last)
+        send(
+          last.instruction ?? last.text,
+          last.text,
+          last.queueRun,
+          last.attachments ?? [],
+          last.scope,
+        )
+      else retry()
+    })
   }
 
   /** [label](htmlnav://sid/N) links in replies select that element */
@@ -1361,12 +1358,12 @@ export function AiPanel({
         onPointerDown={startResize}
         role="separator"
         aria-orientation="vertical"
-        aria-label={t('aiOpenAssistant')}
+        aria-label={aiSubscriptionText(lang, 'aiAssistant')}
       />
       <header className="ai-panel-header">
         <span className="ai-panel-title">
           <AiMark size={22} />
-          AI
+          {aiSubscriptionText(lang, 'aiAssistant')}
         </span>
         <div className="ai-panel-header-actions">
           <AiPanelSideButton
@@ -1378,6 +1375,7 @@ export function AiPanel({
               className="ai-header-btn"
               onClick={() => {
                 msgQueue.clear()
+                sendGate.reset()
                 stop()
                 loopRef.current?.reset()
                 setBusy(false)
@@ -1516,15 +1514,15 @@ export function AiPanel({
                 <span className="ai-typing-row">
                   <AiTypingIndicator label={hasTools ? t('aiWorking') : t('aiThinking')} />
                 </span>
-              ) : entry.blocked && isLast && !busy && aiSettings ? (
-                // only the run that just stopped offers "continue with …": it reruns the last request
+              ) : entry.blocked ? (
                 <AiBlockedNotice
                   kind={entry.blocked.kind}
                   provider={entry.blocked.provider}
                   resetsAt={entry.blocked.resetsAt}
                   message={entry.text}
-                  settings={aiSettings}
-                  statuses={subscription.statuses}
+                  settings={aiSettings ?? {}}
+                  // only the run that just stopped offers "continue with …": it reruns the last request
+                  statuses={isLast && !busy ? subscription.statuses : {}}
                   lang={lang}
                   onContinueWith={continueWith}
                 />
@@ -1680,14 +1678,15 @@ export function AiPanel({
           </div>
         </div>
       )}
-      {(gate.kind === 'connect' || gate.kind === 'notice') && (
-        <div className="ai-composer" ref={connectDockRef}>
-          {gate.kind === 'connect' ? (
+      {(sendGate.connectChoice || sendGate.noticeDue) && (
+        <div className="ai-composer">
+          {sendGate.connectChoice ? (
             <AiConnectPrompt
-              choice={gate.choice}
+              choice={sendGate.connectChoice}
               statuses={subscription.statuses}
               lang={lang}
               disabled={subscription.busy}
+              attention={sendGate.connectAttention}
               onOpenSettings={() => void window.htmlApi.openAiModelSettings().catch(() => {})}
               onInstall={subscription.install}
               onLogin={subscription.login}
@@ -1699,7 +1698,7 @@ export function AiPanel({
             <AiFirstConnectionNotice
               lang={lang}
               codexKeepsHistory={false}
-              onAcknowledge={acknowledgeNotice}
+              onAcknowledge={sendGate.acknowledgeNotice}
             />
           )}
         </div>

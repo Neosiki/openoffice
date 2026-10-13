@@ -6,13 +6,8 @@ import {
   type AiSubscriptionStatuses,
   type AiSubscriptionUsage,
 } from '@genoffice/ai-provider/browser'
-import {
-  aiBlockedRunOf,
-  aiSendGate,
-  mergeSubscriptionUsage,
-  withContinuedProvider,
-  withSubscriptionNoticeSeen,
-} from '../src/renderer/ai/ai-connection'
+import { aiSendGate, withAiContinueProvider, withAiSubscriptionNoticeSeen } from '@genoffice/ui'
+import { aiBlockedRunOf, mergeSubscriptionUsage } from '../src/renderer/ai/ai-connection'
 
 const settingsOf = (over: Partial<AiSettings> = {}): AiSettings => ({
   ...normalizeAiSettings({}),
@@ -45,45 +40,53 @@ const withOpenAiKey = (settings: AiSettings): AiSettings => ({
   },
 })
 
+// The gate itself is the one every editor shares (@genoffice/ui); these pin it on the
+// settings and statuses the pdf panel hands it.
 describe('aiSendGate', () => {
   it('starts from the automatic selection', () => {
     expect(settingsOf().provider).toBe('auto')
   })
 
   it('refuses to send while no subscription is connected', () => {
-    expect(aiSendGate(settingsOf(), {})).toBe('connect')
     expect(
       aiSendGate(settingsOf(), {
         'claude-code': status('claude-code', 'signed-out'),
         codex: status('codex', 'not-installed'),
-      }),
+      }).kind,
     ).toBe('connect')
   })
 
-  it('refuses to send while the statuses are still being checked', () => {
+  it('holds a send while the statuses are still being checked', () => {
+    expect(aiSendGate(settingsOf(), {}).kind).toBe('checking')
     expect(
       aiSendGate(settingsOf(), {
         'claude-code': status('claude-code', 'checking'),
         codex: status('codex', 'checking'),
-      }),
-    ).toBe('connect')
+      }).kind,
+    ).toBe('checking')
+    expect(aiSendGate(null, READY).kind).toBe('checking')
   })
 
   it('never falls back to a configured key provider under the automatic selection', () => {
-    expect(aiSendGate(withOpenAiKey(settingsOf()), {})).toBe('connect')
+    const signedOut: AiSubscriptionStatuses = {
+      'claude-code': status('claude-code', 'signed-out'),
+      codex: status('codex', 'signed-out'),
+    }
+    expect(aiSendGate(withOpenAiKey(settingsOf()), signedOut).kind).toBe('connect')
+    expect(aiSendGate(withOpenAiKey(settingsOf()), {}).kind).toBe('checking')
   })
 
   it('holds the first subscription request for the first-connection notice', () => {
-    expect(aiSendGate(settingsOf(), READY)).toBe('notice')
-    expect(aiSendGate(settingsOf({ provider: 'codex' }), READY)).toBe('notice')
+    expect(aiSendGate(settingsOf(), READY).kind).toBe('notice')
+    expect(aiSendGate(settingsOf({ provider: 'codex' }), READY).kind).toBe('notice')
   })
 
   it('sends once the notice was acknowledged', () => {
-    expect(aiSendGate(settingsOf({ subscriptionNoticeSeen: true }), READY)).toBe('run')
+    expect(aiSendGate(settingsOf({ subscriptionNoticeSeen: true }), READY).kind).toBe('run')
   })
 
   it('sends on a selected key provider without the subscription notice', () => {
-    expect(aiSendGate(withOpenAiKey(settingsOf({ provider: 'openai' })), {})).toBe('run')
+    expect(aiSendGate(withOpenAiKey(settingsOf({ provider: 'openai' })), {}).kind).toBe('run')
   })
 
   it('refuses a selected provider that cannot run instead of switching to another', () => {
@@ -91,14 +94,14 @@ describe('aiSendGate', () => {
       'claude-code': status('claude-code', 'signed-out'),
       codex: status('codex', 'ready'),
     }
-    expect(aiSendGate(settingsOf({ provider: 'claude-code' }), statuses)).toBe('connect')
+    expect(aiSendGate(settingsOf({ provider: 'claude-code' }), statuses).kind).toBe('connect')
   })
 
   it('refuses a metered login the user has not accepted', () => {
     const statuses: AiSubscriptionStatuses = {
       'claude-code': status('claude-code', 'metered', { loginMethod: 'metered' }),
     }
-    expect(aiSendGate(settingsOf({ provider: 'claude-code' }), statuses)).toBe('connect')
+    expect(aiSendGate(settingsOf({ provider: 'claude-code' }), statuses).kind).toBe('connect')
   })
 })
 
@@ -141,14 +144,14 @@ describe('aiBlockedRunOf', () => {
   })
 })
 
-describe('withContinuedProvider', () => {
+describe('"continue with" settings', () => {
   it('stores the continued provider as the selection and keeps its model', () => {
     const base = settingsOf({ provider: 'claude-code' })
     const settings: AiSettings = {
       ...base,
       providers: { ...base.providers, codex: { ...base.providers.codex, model: 'gpt-x' } },
     }
-    const next = withContinuedProvider(settings, 'codex')
+    const next = withAiContinueProvider(settings, 'codex')
     expect(next.provider).toBe('codex')
     expect(next.providers.codex.model).toBe('gpt-x')
     // the provider the run was blocked on keeps its own configuration
@@ -157,20 +160,20 @@ describe('withContinuedProvider', () => {
   })
 
   it('makes the continued provider the one a request runs on', () => {
-    const next = withContinuedProvider(settingsOf({ subscriptionNoticeSeen: true }), 'codex')
+    const next = withAiContinueProvider(settingsOf({ subscriptionNoticeSeen: true }), 'codex')
     expect(
       aiSendGate(next, {
         'claude-code': status('claude-code', 'signed-out'),
         codex: status('codex', 'ready'),
-      }),
+      }).kind,
     ).toBe('run')
   })
 })
 
-describe('withSubscriptionNoticeSeen', () => {
+describe('acknowledged-notice settings', () => {
   it('marks the notice as seen without touching anything else', () => {
     const settings = settingsOf({ provider: 'codex' })
-    const next = withSubscriptionNoticeSeen(settings)
+    const next = withAiSubscriptionNoticeSeen(settings)
     expect(next).toEqual({ ...settings, subscriptionNoticeSeen: true })
     expect(settings.subscriptionNoticeSeen).toBeFalsy()
   })

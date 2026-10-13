@@ -136,3 +136,89 @@ export function subscriptionStatusErrorKind(status: {
   if (text.startsWith('timeout:')) return 'timeout'
   return 'failed'
 }
+
+// ---------------------------------------------------------------------------
+// Reading IPC answers. A renderer cannot trust what comes back over IPC (no
+// handler registered yet, an older main, a half-filled object), so every answer
+// goes through these before it reaches the UI.
+// ---------------------------------------------------------------------------
+
+/** Listed here (not imported) so this file keeps importing types only */
+const SUBSCRIPTION_PROVIDER_IDS: readonly AiSubscriptionProviderId[] = ['claude-code', 'codex']
+
+const SUBSCRIPTION_STATES: readonly AiSubscriptionState[] = [
+  'checking',
+  'not-installed',
+  'signed-out',
+  'ready',
+  'metered',
+  'error',
+]
+
+const SUBSCRIPTION_LAUNCH_FAILURES: readonly SubscriptionLaunchFailure[] = [
+  'not-installed',
+  'unsupported',
+  'failed',
+  'invalid',
+]
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value)
+}
+
+/** Both providers `checking`: what is shown while nothing has answered */
+export function checkingSubscriptionStatuses(): SubscriptionStatusMap {
+  return {
+    'claude-code': checkingSubscriptionStatus('claude-code'),
+    codex: checkingSubscriptionStatus('codex'),
+  }
+}
+
+export function isSubscriptionProviderId(value: unknown): value is AiSubscriptionProviderId {
+  return (SUBSCRIPTION_PROVIDER_IDS as readonly unknown[]).includes(value)
+}
+
+/**
+ * An IPC answer as a status map with both providers present. A provider whose
+ * entry is missing or malformed reads as `checking`, so a renderer never has
+ * to guard against a half-filled answer.
+ */
+export function subscriptionStatusMapOf(result: unknown): SubscriptionStatusMap {
+  const raw = isRecord(result) ? result : {}
+  const statusOf = (provider: AiSubscriptionProviderId): AiSubscriptionStatus => {
+    const status = raw[provider]
+    if (!isRecord(status) || !SUBSCRIPTION_STATES.includes(status.state as AiSubscriptionState)) {
+      return checkingSubscriptionStatus(provider)
+    }
+    return {
+      ...(status as unknown as AiSubscriptionStatus),
+      provider,
+      meteredAccepted: status.meteredAccepted === true,
+    }
+  }
+  return { 'claude-code': statusOf('claude-code'), codex: statusOf('codex') }
+}
+
+/**
+ * An IPC answer as a launch result; anything unreadable is a plain failure.
+ * The spawn error text is left behind: it can carry an executable path, and the
+ * UI shows its own translated sentence instead.
+ */
+export function subscriptionLaunchResultOf(result: unknown): SubscriptionLaunchResult {
+  const raw = isRecord(result) ? result : {}
+  if (raw.ok === true) return { ok: true }
+  const reason = SUBSCRIPTION_LAUNCH_FAILURES.includes(raw.reason as SubscriptionLaunchFailure)
+    ? (raw.reason as SubscriptionLaunchFailure)
+    : 'failed'
+  return {
+    ok: false,
+    reason,
+    ...(typeof raw.installUrl === 'string' ? { installUrl: raw.installUrl } : {}),
+  }
+}
+
+/** An IPC answer to "use anyway": accepted only on a literal `true`, the statuses always a full map */
+export function subscriptionMeteredResultOf(result: unknown): SubscriptionMeteredResult {
+  const raw = isRecord(result) ? result : {}
+  return { ok: raw.ok === true, statuses: subscriptionStatusMapOf(raw.statuses) }
+}

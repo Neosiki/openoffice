@@ -9,6 +9,8 @@ import {
   AiInputTruncatedNotice,
   AiMark,
   AiSubscriptionUsageLine,
+  aiSubscriptionText,
+  useAiSendGate,
 } from '@genoffice/ui'
 import { useEffect, useRef, useState } from 'react'
 import type { PointerEvent as ReactPointerEvent, ReactElement, ReactNode } from 'react'
@@ -50,14 +52,7 @@ import {
 } from './doc-writer'
 import { createSearchSkill } from './search-skill'
 import { createElectronTransport } from './transport'
-import {
-  aiSendGate,
-  blockedRunOf,
-  readImageGenerationAvailable,
-  withContinueProvider,
-  withSubscriptionNoticeSeen,
-  type AiBlockedRun,
-} from './ai-connection'
+import { blockedRunOf, readImageGenerationAvailable, type AiBlockedRun } from './ai-connection'
 import { useSubscriptionConnection } from './subscription-client'
 import { EditQueueCard } from './EditQueueCard'
 import {
@@ -211,6 +206,9 @@ export function AiPanel({
     submit: (text) => {
       const loop = loopRef.current
       if (!loop || loop.busy) return false
+      // nothing can run right now: the message stays queued, and in front of "not connected"
+      // the queue is paused so it does not start by itself after a sign-in
+      if (!sendGateRef.current.admitQueued(() => msgQueueRef.current.setPaused(true))) return false
       return send(text, text, null)
     },
   })
@@ -242,18 +240,33 @@ export function AiPanel({
   const settingsRef = useRef<AiSettings | null>(null)
   /** the settings as last read, for what the panel shows and gates (settingsRef stays the run's own copy) */
   const [aiSettings, setAiSettings] = useState<AiSettings | null>(null)
-  const aiSettingsRef = useRef<AiSettings | null>(null)
   const applyAiSettings = (next: AiSettings): void => {
-    aiSettingsRef.current = next
     setAiSettings(next)
   }
   /** connection of the two subscription providers, and the actions of their connect cards */
   const subscription = useSubscriptionConnection()
   const statuses = subscription.statuses
-  const statusesRef = useRef(statuses)
-  statusesRef.current = statuses
   const refreshSubscriptionRef = useRef(subscription.refresh)
   refreshSubscriptionRef.current = subscription.refresh
+  /** The send gate every editor shares: holds a request made during a status check or in front
+      of the first-connection notice, refuses in front of "not connected", and writes this
+      panel's settings changes ("continue with …", the acknowledged notice) onto the stored ones */
+  const sendGate = useAiSendGate<{
+    text: string
+    displayText: string | undefined
+    retryScope: AiScopeQuoteData | null | undefined
+  }>({
+    settings: aiSettings,
+    statuses,
+    store: MODEL_BRIDGE,
+    start: (held) => {
+      send(held.text, held.displayText, held.retryScope)
+    },
+    onNotConnected: () => refreshSubscriptionRef.current(),
+    onSettingsSaved: applyAiSettings,
+  })
+  const sendGateRef = useRef(sendGate)
+  sendGateRef.current = sendGate
   /** whether generate_image can run, as the main process answers (refreshed with the settings and before each run) */
   const imageGenAvailableRef = useRef(false)
   const refreshImageGenAvailable = (): Promise<void> =>
@@ -279,9 +292,7 @@ export function AiPanel({
     const onFocus = () => {
       refresh()
       // a sign-in or install finished outside the app shows up once the window is back
-      if (aiSendGate(aiSettingsRef.current, statusesRef.current).action === 'connect') {
-        refreshSubscriptionRef.current()
-      }
+      if (sendGateRef.current.peek().kind === 'connect') refreshSubscriptionRef.current()
     }
     refresh()
     window.addEventListener('focus', onFocus)
@@ -673,14 +684,12 @@ export function AiPanel({
   }
 
   /**
-   * No provider can run, or the first-connection notice is still unread: the
-   * connect prompt / the notice in the chat is the answer, not a run.
+   * No run was started: the connect prompt / the first-connection notice at the
+   * end of the chat is the answer, so it is brought into view.
    */
-  const sendHeldByConnection = (): boolean => {
-    if (aiSendGate(aiSettingsRef.current, statusesRef.current).action === 'run') return false
+  const showWhatHoldsTheSend = (): void => {
     stickToBottomRef.current = true
     chatRef.current?.scrollTo({ top: chatRef.current.scrollHeight })
-    return true
   }
 
   /**
@@ -695,7 +704,13 @@ export function AiPanel({
     const instruction = text.trim()
     const loop = loopRef.current
     if (!instruction || !loop || loop.busy) return false
-    if (sendHeldByConnection()) return false
+    // A request made during a status check or in front of the first-connection notice is
+    // held and starts by itself once the way is clear; in front of "not connected" nothing
+    // is kept. Either way nothing is sent now and the text stays with the caller.
+    if (!sendGate.admit({ text: instruction, displayText, retryScope })) {
+      showWhatHoldsTheSend()
+      return false
+    }
     stickToBottomRef.current = true
     streamErrorRef.current = null
     setInputTruncated(false)
@@ -765,32 +780,8 @@ export function AiPanel({
   }
 
   /** "Continue with …" on a blocked run: that provider becomes the selection, then the request reruns */
-  const continueWith = (provider: AiSubscriptionProviderId): void => {
-    void (async () => {
-      try {
-        const next = withContinueProvider(await window.markdownApi.getAiSettings(), provider)
-        await window.markdownApi.setAiSettings(next)
-        if (!mountedRef.current) return
-        applyAiSettings(next)
-      } catch {
-        return
-      }
-      retry()
-    })()
-  }
-
-  /** the first-connection notice was read: remember it, so sending is open from here on */
-  const acknowledgeNotice = (): void => {
-    void (async () => {
-      try {
-        const next = withSubscriptionNoticeSeen(await window.markdownApi.getAiSettings())
-        await window.markdownApi.setAiSettings(next)
-        if (mountedRef.current) applyAiSettings(next)
-      } catch {
-        /* the notice stays until it can be saved */
-      }
-    })()
-  }
+  const continueWith = (provider: AiSubscriptionProviderId): void =>
+    sendGate.continueWith(provider, retry)
 
   // keep the scope chip & queue rows in sync with the editor selection/content
   useEffect(() => {
@@ -868,7 +859,10 @@ export function AiPanel({
     const current = depsRef.current.getEditor()
     if (!loop || loop.busy || editQueue.length === 0 || !current) return
     // nothing is consumed while no run can start
-    if (sendHeldByConnection()) return
+    if (!sendGate.admitQueued(() => {})) {
+      showWhatHoldsTheSend()
+      return
+    }
     const entries = liveItems(resolveQueue(current, editQueue))
     if (entries.length === 0) {
       onQueueClear?.()
@@ -948,9 +942,6 @@ export function AiPanel({
     resizer.setPointerCapture(e.pointerId)
   }
 
-  // what a send would lead to right now: a run, the connect prompt, or the first-connection notice
-  const gate = aiSendGate(aiSettings, statuses)
-
   return (
     <aside
       ref={asideRef}
@@ -963,12 +954,12 @@ export function AiPanel({
         onPointerDown={startResize}
         role="separator"
         aria-orientation="vertical"
-        aria-label={t('aiOpenAssistant')}
+        aria-label={aiSubscriptionText(lang, 'aiAssistant')}
       />
       <header className="ai-panel-header">
         <span className="ai-panel-title">
           <AiMark size={22} />
-          {t('aiEntryLabel')}
+          {aiSubscriptionText(lang, 'aiAssistant')}
         </span>
         <div className="ai-panel-header-actions">
           <AiPanelSideButton
@@ -982,6 +973,7 @@ export function AiPanel({
                 stop()
                 abandonWriter()
                 msgQueue.clear()
+                sendGate.reset()
                 loopRef.current?.reset()
                 setBusy(false)
                 setChat([])
@@ -1060,8 +1052,7 @@ export function AiPanel({
           const nextEntry = chat[i + 1]
           const turnEnded = nextEntry ? nextEntry.role === 'user' : !busy
           const showToolbar = !entry.streaming && turnEnded && !!entry.text && !entry.isError
-          // the continue button belongs to the run that just stopped, not to older replies
-          const blocked = isLast && !busy ? entry.blocked : undefined
+          const blocked = entry.blocked
           return (
             <div
               key={i}
@@ -1078,7 +1069,8 @@ export function AiPanel({
                   resetsAt={blocked.resetsAt}
                   message={entry.text}
                   settings={aiSettings ?? {}}
-                  statuses={statuses ?? {}}
+                  // the continue button belongs to the run that just stopped, not to older replies
+                  statuses={isLast && !busy ? (statuses ?? {}) : {}}
                   lang={lang}
                   onContinueWith={continueWith}
                 />
@@ -1153,12 +1145,13 @@ export function AiPanel({
             </div>
           )
         })}
-        {gate.action === 'connect' && (
+        {sendGate.connectChoice && (
           <AiConnectPrompt
-            choice={gate.choice}
+            choice={sendGate.connectChoice}
             statuses={statuses ?? {}}
             lang={lang}
             disabled={subscription.busy}
+            attention={sendGate.connectAttention}
             onOpenSettings={() => void window.markdownApi.openAiModelSettings().catch(() => {})}
             onInstall={subscription.install}
             onLogin={subscription.login}
@@ -1167,11 +1160,11 @@ export function AiPanel({
             onOpenInstallHelp={subscription.openInstallHelp}
           />
         )}
-        {gate.action === 'notice' && (
+        {sendGate.noticeDue && (
           <AiFirstConnectionNotice
             lang={lang}
             codexKeepsHistory={false}
-            onAcknowledge={acknowledgeNotice}
+            onAcknowledge={sendGate.acknowledgeNotice}
           />
         )}
         {inputTruncated && (

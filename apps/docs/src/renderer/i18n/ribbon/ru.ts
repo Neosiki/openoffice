@@ -184,7 +184,6 @@ export const ru = {
   ribbonReplaceTip: 'Найти и заменить текст',
   ribbonSelectAll: 'Выделить все',
   ribbonSelectAllTip: 'Выделить весь документ',
-  ribbonAiAssistant: 'ИИ-помощник',
   ribbonAiAssistantTip: 'Открыть помощника ИИ',
   ribbonRemoveTableStyleTip: 'Удалить стиль таблицы',
   ribbonNoStyle: 'Без стиля',

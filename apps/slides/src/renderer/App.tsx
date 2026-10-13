@@ -106,6 +106,7 @@ import {
   aiPanelInitiallyOpen,
   rememberAiPanelOpen,
   AiMark,
+  aiSubscriptionText,
 } from '@genoffice/ui'
 import type { ChartPresetDef, IconDef, SmartArtDef } from './insert-presets'
 import { IconAiBeautify, IconAiFactCheck, IconAiImage } from './components/icons'
@@ -3944,7 +3945,7 @@ export function App() {
                               onClick={toggleAi}
                             >
                               <AiMark size={14} className="ai-mark" />
-                              <span>{t('ribbonAiAssistant')}</span>
+                              <span>{aiSubscriptionText(lang, 'aiAssistant')}</span>
                             </button>
                             {/* Same one-click presets as the Home tab; hidden instead of
                         disabled while the deck has no real content */}

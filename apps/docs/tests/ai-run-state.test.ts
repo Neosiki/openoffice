@@ -1,6 +1,7 @@
-// What the AI panel decides from the subscription contract: when the first
-// connection notice is due, how a failed run is shown, what "continue with ..."
-// stores, and which usage reports are kept.
+// What the AI panel decides from the subscription contract: how a failed run
+// is shown and which usage reports are kept; plus the shared send gate pinned on
+// the settings and statuses the docs panel hands it (when the first connection
+// notice is due, what "continue with ..." stores).
 import { describe, expect, it } from 'vitest'
 import {
   selectAiProvider,
@@ -9,12 +10,11 @@ import {
   type AiSubscriptionStatuses,
 } from '@genoffice/ai-provider/browser'
 import { AI_PROVIDERS, type AiSettings } from '../src/shared/ipc'
+import { aiSendGate, withAiContinueProvider } from '@genoffice/ui'
 import {
-  firstConnectionNoticeDue,
+  isBlockedRunCause,
   mergeSubscriptionUsage,
   runErrorCauseOf,
-  runErrorView,
-  settingsContinuingWith,
   shouldRecheckAfter,
 } from '../src/renderer/ai/run-state'
 import { subscriptionLaunchResultOf, subscriptionStatusMapOf } from '../src/shared/subscription-api'
@@ -57,70 +57,27 @@ describe('runErrorCauseOf', () => {
   })
 })
 
-describe('runErrorView', () => {
-  const connected = selectAiProvider(settings(), CLAUDE_READY)
-  const notConnected = selectAiProvider(settings(), {})
-
+describe('isBlockedRunCause', () => {
   it('keeps the plain error line for a failure without a blocking cause', () => {
-    const plain = { blockedNotice: false, connectPrompt: false, errorLine: true }
-    expect(runErrorView(undefined, true, connected, settings(), CLAUDE_READY)).toEqual(plain)
-    expect(runErrorView({ kind: 'network' }, true, connected, settings(), CLAUDE_READY)).toEqual(
-      plain,
-    )
-    expect(runErrorView({ kind: 'timeout' }, true, notConnected, settings(), {})).toEqual(plain)
+    expect(isBlockedRunCause(undefined)).toBe(false)
+    expect(isBlockedRunCause({ kind: 'network' })).toBe(false)
+    expect(isBlockedRunCause({ kind: 'timeout' })).toBe(false)
+    expect(isBlockedRunCause({ kind: 'overloaded' })).toBe(false)
+    expect(isBlockedRunCause({ kind: 'credits' })).toBe(false)
   })
 
-  it('shows only the connect prompt when nothing at all can run', () => {
-    expect(runErrorView({ kind: 'not-connected' }, true, notConnected, settings(), {})).toEqual({
-      blockedNotice: false,
-      connectPrompt: true,
-      errorLine: false,
-    })
-  })
-
-  it('shows the reason of a used-up limit, without connect cards while connected', () => {
-    expect(
-      runErrorView(
-        { kind: 'rate-limit', provider: 'claude-code' },
-        true,
-        connected,
-        settings(),
-        CLAUDE_READY,
-      ),
-    ).toEqual({ blockedNotice: true, connectPrompt: false, errorLine: false })
-  })
-
-  it('shows both the reason and the connect card of a selected provider that stopped working', () => {
-    const picked = settings({ provider: 'claude-code' })
-    const statuses = { 'claude-code': status('claude-code', 'signed-out'), ...CODEX_READY }
-    expect(
-      runErrorView(
-        { kind: 'signed-out', provider: 'claude-code' },
-        true,
-        selectAiProvider(picked, statuses),
-        picked,
-        statuses,
-      ),
-    ).toEqual({ blockedNotice: true, connectPrompt: true, errorLine: false })
-  })
-
-  it('keeps the notice for not-connected when another subscription can continue', () => {
-    const picked = settings({ provider: 'openai' })
-    expect(
-      runErrorView(
-        { kind: 'not-connected' },
-        true,
-        selectAiProvider(picked, CODEX_READY),
-        picked,
-        CODEX_READY,
-      ),
-    ).toEqual({ blockedNotice: true, connectPrompt: true, errorLine: false })
-  })
-
-  it('leaves older replies as plain history', () => {
-    expect(
-      runErrorView({ kind: 'rate-limit', provider: 'codex' }, false, connected, settings(), {}),
-    ).toEqual({ blockedNotice: false, connectPrompt: false, errorLine: true })
+  it('gives the blocked notice to every cause that means the connection cannot go on', () => {
+    for (const kind of [
+      'rate-limit',
+      'signed-out',
+      'not-installed',
+      'needs-update',
+      'metered-not-accepted',
+      'unsafe-tools',
+      'not-connected',
+    ] as const) {
+      expect(isBlockedRunCause({ kind, provider: 'claude-code' }), kind).toBe(true)
+    }
   })
 })
 
@@ -134,33 +91,46 @@ describe('shouldRecheckAfter', () => {
   })
 })
 
-describe('firstConnectionNoticeDue', () => {
+// The gate itself is the one every editor shares (@genoffice/ui).
+describe('the first-connection notice', () => {
+  const noticeDue = (stored: AiSettings, statuses: AiSubscriptionStatuses) =>
+    aiSendGate(stored, statuses).kind === 'notice'
+  const BOTH_ANSWERED_CLAUDE: AiSubscriptionStatuses = {
+    ...CLAUDE_READY,
+    codex: status('codex', 'signed-out'),
+  }
+
   it('is due before the first run on a subscription', () => {
-    expect(firstConnectionNoticeDue(settings(), CLAUDE_READY)).toBe(true)
-    expect(firstConnectionNoticeDue(settings({ provider: 'codex' }), CODEX_READY)).toBe(true)
+    expect(noticeDue(settings(), CLAUDE_READY)).toBe(true)
+    expect(noticeDue(settings({ provider: 'codex' }), CODEX_READY)).toBe(true)
   })
 
   it('is not due once acknowledged', () => {
-    expect(firstConnectionNoticeDue(settings({ subscriptionNoticeSeen: true }), CLAUDE_READY)).toBe(
-      false,
-    )
+    expect(noticeDue(settings({ subscriptionNoticeSeen: true }), CLAUDE_READY)).toBe(false)
   })
 
   it('is not due while nothing is connected or a key provider is selected', () => {
-    expect(firstConnectionNoticeDue(settings(), {})).toBe(false)
+    // still being checked: a request waits, no notice yet
+    expect(aiSendGate(settings(), {}).kind).toBe('checking')
+    expect(
+      aiSendGate(settings(), {
+        'claude-code': status('claude-code', 'signed-out'),
+        codex: status('codex', 'not-installed'),
+      }).kind,
+    ).toBe('connect')
     const base = settings({ provider: 'openai' })
     const keyed = {
       ...base,
       providers: { ...base.providers, openai: { apiKey: 'sk-test', model: 'some-model' } },
     }
-    expect(firstConnectionNoticeDue(keyed, CLAUDE_READY)).toBe(false)
+    expect(aiSendGate(keyed, BOTH_ANSWERED_CLAUDE).kind).toBe('run')
   })
 })
 
-describe('settingsContinuingWith', () => {
+describe('"continue with" settings', () => {
   it('stores the provider as the selection and keeps its stored model', () => {
     const base = settings({ provider: 'claude-code' })
-    const next = settingsContinuingWith(
+    const next = withAiContinueProvider(
       { ...base, providers: { ...base.providers, codex: { apiKey: '', model: 'gpt-5.1-codex' } } },
       'codex',
     )

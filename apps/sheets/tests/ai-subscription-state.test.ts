@@ -8,13 +8,15 @@ import {
   type AiSubscriptionStatuses,
 } from '@genoffice/ai-provider/browser'
 import {
+  aiHoldReason,
+  aiSendGate,
+  withAiContinueProvider,
+  withAiSubscriptionNoticeSeen,
+} from '@genoffice/ui'
+import {
   aiBlockedRunOf,
-  aiGateAllowsSend,
-  aiPanelGate,
   blockedRunSourceIndex,
   imageGenerationOffered,
-  withContinueProvider,
-  withSubscriptionNoticeSeen,
 } from '../src/renderer/ai/subscription-state'
 
 function status(
@@ -34,72 +36,86 @@ const CLAUDE_READY: AiSubscriptionStatuses = {
   codex: status('codex', 'signed-out'),
 }
 
-describe('aiPanelGate', () => {
-  it('is loading until the settings are read, and sending keeps its earlier path', () => {
-    const gate = aiPanelGate(null, CLAUDE_READY)
-    expect(gate).toEqual({ kind: 'loading' })
-    expect(aiGateAllowsSend(gate)).toBe(true)
+// The gate itself is the one every editor shares (@genoffice/ui); these pin it on the
+// settings and statuses the sheets panel hands it.
+describe('the send gate', () => {
+  const NOT_CONNECTED: AiSubscriptionStatuses = {
+    'claude-code': status('claude-code', 'signed-out'),
+    codex: status('codex', 'not-installed'),
+  }
+
+  it('holds a send until the settings are read', () => {
+    const gate = aiSendGate(null, CLAUDE_READY)
+    expect(gate).toEqual({ kind: 'checking' })
+    expect(aiHoldReason(gate)).toBe('checking')
   })
 
   it('asks to connect while no subscription is ready, and nothing is sent', () => {
+    const gate = aiSendGate(settings(), NOT_CONNECTED)
+    expect(gate.kind).toBe('connect')
+    if (gate.kind !== 'connect') return
+    expect(gate.choice).toEqual(selectAiProvider(settings(), NOT_CONNECTED))
+    expect(aiHoldReason(gate)).toBeNull()
+  })
+
+  it('holds a send while a status check that could still connect is running', () => {
     const statuses = {
       'claude-code': status('claude-code', 'checking'),
       codex: status('codex', 'not-installed'),
     }
-    const gate = aiPanelGate(settings(), statuses)
-    expect(gate.kind).toBe('connect')
-    if (gate.kind !== 'connect') return
-    expect(gate.choice).toEqual(selectAiProvider(settings(), statuses))
-    expect(aiGateAllowsSend(gate)).toBe(false)
-  })
-
-  it('asks to connect before any status arrived (a missing handler reads as checking)', () => {
-    expect(aiPanelGate(settings(), {}).kind).toBe('connect')
+    expect(aiSendGate(settings(), statuses).kind).toBe('checking')
+    // a missing handler reads as checking
+    expect(aiSendGate(settings(), {}).kind).toBe('checking')
   })
 
   it('asks to connect for a selected subscription that cannot run, naming that provider', () => {
-    const gate = aiPanelGate(settings({ provider: 'codex' }), CLAUDE_READY)
+    const gate = aiSendGate(settings({ provider: 'codex' }), CLAUDE_READY)
     expect(gate.kind).toBe('connect')
-    if (gate.kind !== 'connect' || gate.choice.connected) return
+    if (gate.kind !== 'connect') return
     expect(gate.choice.provider).toBe('codex')
     expect(gate.choice.reason).toBe('signed-out')
   })
 
   it('asks to connect for automatic even when a key provider is filled in', () => {
-    const gate = aiPanelGate(
+    const gate = aiSendGate(
       settings({ providers: { anthropic: { apiKey: 'sk-test', model: 'claude-sonnet-4-5' } } }),
-      {},
+      NOT_CONNECTED,
     )
     expect(gate.kind).toBe('connect')
   })
 
   it('shows the first-connection notice before a subscription is used for the first time', () => {
-    const gate = aiPanelGate(settings(), CLAUDE_READY)
-    expect(gate).toEqual({ kind: 'notice', provider: 'claude-code' })
-    expect(aiGateAllowsSend(gate)).toBe(false)
+    const gate = aiSendGate(settings(), CLAUDE_READY)
+    expect(gate).toMatchObject({ kind: 'notice', provider: 'claude-code' })
+    expect(aiHoldReason(gate)).toBe('notice')
   })
 
-  it('is ready once the notice was acknowledged', () => {
-    const acknowledged = withSubscriptionNoticeSeen(settings())
+  it('runs once the notice was acknowledged', () => {
+    const acknowledged = withAiSubscriptionNoticeSeen(settings())
     expect(acknowledged.subscriptionNoticeSeen).toBe(true)
-    const gate = aiPanelGate(acknowledged, CLAUDE_READY)
-    expect(gate).toEqual({ kind: 'ready', provider: 'claude-code', metered: false })
-    expect(aiGateAllowsSend(gate)).toBe(true)
+    const gate = aiSendGate(acknowledged, CLAUDE_READY)
+    expect(gate).toEqual({
+      kind: 'run',
+      choice: { connected: true, provider: 'claude-code', metered: false },
+    })
   })
 
   it('shows no subscription notice for a key provider', () => {
-    const gate = aiPanelGate(
+    const gate = aiSendGate(
       settings({
         provider: 'anthropic',
         providers: { anthropic: { apiKey: 'sk-test', model: 'claude-sonnet-4-5' } },
       }),
       {},
     )
-    expect(gate).toEqual({ kind: 'ready', provider: 'anthropic', metered: false })
+    expect(gate).toEqual({
+      kind: 'run',
+      choice: { connected: true, provider: 'anthropic', metered: false },
+    })
   })
 
   it('marks an accepted metered login as costing money', () => {
-    const gate = aiPanelGate(
+    const gate = aiSendGate(
       settings({
         provider: 'codex',
         meteredAccepted: { codex: true },
@@ -107,7 +123,10 @@ describe('aiPanelGate', () => {
       }),
       { codex: status('codex', 'metered', true) },
     )
-    expect(gate).toEqual({ kind: 'ready', provider: 'codex', metered: true })
+    expect(gate).toEqual({
+      kind: 'run',
+      choice: { connected: true, provider: 'codex', metered: true },
+    })
   })
 })
 
@@ -151,13 +170,13 @@ describe('aiBlockedRunOf', () => {
   })
 })
 
-describe('withContinueProvider', () => {
+describe('"continue with" settings', () => {
   it('stores the provider as the selection, on the model it last used', () => {
     const before = settings({
       provider: 'claude-code',
       providers: { codex: { apiKey: '', model: 'gpt-5-codex' } },
     })
-    const after = withContinueProvider(before, 'codex')
+    const after = withAiContinueProvider(before, 'codex')
     expect(after.provider).toBe('codex')
     expect(after.providers.codex.model).toBe('gpt-5-codex')
     expect(before.provider).toBe('claude-code')
@@ -167,7 +186,7 @@ describe('withContinueProvider', () => {
   })
 
   it('replaces automatic too, so the picker shows what the user chose', () => {
-    expect(withContinueProvider(settings(), 'claude-code').provider).toBe('claude-code')
+    expect(withAiContinueProvider(settings(), 'claude-code').provider).toBe('claude-code')
   })
 })
 

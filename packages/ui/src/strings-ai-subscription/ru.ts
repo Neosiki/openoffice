@@ -1,6 +1,7 @@
 import type { zh } from './zh'
 
 export const ru = {
+  aiAssistant: 'ИИ-помощник',
   cardChecking: 'Проверка…',
   cardNotInstalled: 'Не установлено',
   cardSignedOut: 'Вход не выполнен',
@@ -9,6 +10,10 @@ export const ru = {
   cardMetered: 'Вход выполнен, но не по подписке',
   cardMeteredAccepted: 'Используется · оплата по расходу',
   cardError: 'Не удалось проверить подключение',
+  cardErrNeedsUpdate:
+    'Программа {provider} на этом компьютере слишком старая. Обновите её и проверьте снова.',
+  cardErrTimeout: 'Программа {provider} не ответила вовремя. Проверьте снова чуть позже.',
+  cardErrFailed: 'При проверке {provider} что-то пошло не так. Проверьте снова.',
   actionInstall: 'Установить',
   actionLogin: 'Войти',
   actionRecheck: 'Проверить снова',

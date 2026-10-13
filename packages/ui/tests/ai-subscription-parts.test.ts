@@ -127,13 +127,60 @@ describe('AiSubscriptionCard', () => {
     expect(actionsShown()).toEqual([])
   })
 
-  it('error: the detail and a re-check button', () => {
-    const actions = render(status('claude-code', 'error', { error: 'Program update needed' }))
+  it('error: says what went wrong in our own words, with a re-check button', () => {
+    const actions = render(
+      status('claude-code', 'error', {
+        error: 'needs-update: The Claude Code program is too old',
+      }),
+    )
     expect(statusText()).toBe(en.cardError)
-    expect(host.querySelector('.ai-sub-detail')!.textContent).toBe('Program update needed')
+    expect(host.querySelector('.ai-sub-detail')!.textContent).toBe(
+      'The Claude program on this PC is too old. Update it, then check again.',
+    )
     expect(actionsShown()).toEqual(['recheck'])
     click('[data-action="recheck"]')
     expect(actions.onRecheck).toHaveBeenCalledExactlyOnceWith('claude-code')
+  })
+
+  it('error: one sentence per kind, naming the provider, never the raw detail', () => {
+    const cases = [
+      {
+        error: 'needs-update: The Codex program is too old',
+        raw: 'The Codex program is too old',
+        en: 'The Codex program on this PC is too old. Update it, then check again.',
+        ko: '이 PC의 Codex 프로그램 버전이 낮습니다. 업데이트한 뒤 다시 확인하세요.',
+      },
+      {
+        error: 'timeout: The status check did not answer in 20000 ms',
+        raw: '20000',
+        en: 'The Codex program did not answer in time. Check again in a moment.',
+        ko: 'Codex 프로그램이 제때 응답하지 않았습니다. 잠시 뒤 다시 확인하세요.',
+      },
+      {
+        error: 'failed: spawn C:\\Users\\me\\AppData\\Roaming\\npm\\codex.cmd ENOENT',
+        raw: 'ENOENT',
+        en: 'Something went wrong while checking Codex. Check again.',
+        ko: 'Codex 연결을 확인하는 중에 문제가 생겼습니다. 다시 확인해 보세요.',
+      },
+    ]
+    for (const c of cases) {
+      for (const lang of ['en', 'ko'] as const) {
+        const props = { status: status('codex', 'error', { error: c.error }), lang }
+        act(() => root.render(createElement(AiSubscriptionCard, { ...props, ...cardActions() })))
+        expect(host.querySelector('.ai-sub-detail')!.textContent).toBe(c[lang])
+        expect(host.textContent).not.toContain(c.raw)
+        expect(host.textContent).not.toMatch(/needs-update|timeout:|failed:|spawn|AppData/)
+        expect(actionsShown()).toEqual(['recheck'])
+      }
+    }
+  })
+
+  it('error: a status text of an unknown shape is still not shown', () => {
+    render(status('claude-code', 'error', { error: 'Error: EACCES C:\\Program Files\\claude.exe' }))
+    expect(host.querySelector('.ai-sub-detail')!.textContent).toBe(
+      'Something went wrong while checking Claude. Check again.',
+    )
+    expect(host.textContent).not.toContain('EACCES')
   })
 
   it('marks the provider with the neutral AI glyph, never a vendor logo', () => {
@@ -253,6 +300,59 @@ describe('AiConnectPrompt', () => {
     expect(cards()).toEqual([])
     click('[data-action="open-settings"]')
     expect(onOpenSettings).toHaveBeenCalledOnce()
+  })
+})
+
+describe('AiConnectPrompt attention', () => {
+  const notConnected = { 'claude-code': status('claude-code', 'signed-out') }
+  const prompt = (statuses: AiSubscriptionStatuses, attention?: number) =>
+    createElement(AiConnectPrompt, {
+      choice: selectAiProvider(defaultAiSettings(), statuses),
+      statuses,
+      lang: 'en',
+      attention,
+      ...cardActions(),
+    })
+  let scrolled: Element[]
+  beforeEach(() => {
+    scrolled = []
+    Element.prototype.scrollIntoView = function (this: Element) {
+      scrolled.push(this)
+    }
+  })
+  afterEach(() => {
+    delete (Element.prototype as { scrollIntoView?: unknown }).scrollIntoView
+  })
+
+  it('stays where it is until a send was answered by it', () => {
+    act(() => root.render(prompt(notConnected)))
+    act(() => root.render(prompt(notConnected, 0)))
+    expect(scrolled).toEqual([])
+  })
+
+  it('scrolls itself into view each time a send was answered by it', () => {
+    act(() => root.render(prompt(notConnected, 0)))
+    act(() => root.render(prompt(notConnected, 1)))
+    expect(scrolled).toEqual([host.querySelector('.ai-sub-prompt')])
+    // an unrelated re-render does not scroll again
+    act(() => root.render(prompt(notConnected, 1)))
+    expect(scrolled).toHaveLength(1)
+    act(() => root.render(prompt(notConnected, 2)))
+    expect(scrolled).toHaveLength(2)
+  })
+
+  it('scrolls when it appears for a send made just before', () => {
+    const ready = { 'claude-code': status('claude-code', 'ready') }
+    act(() => root.render(prompt(ready, 1)))
+    expect(host.querySelector('.ai-sub-prompt')).toBeNull()
+    expect(scrolled).toEqual([])
+    act(() => root.render(prompt(notConnected, 1)))
+    expect(scrolled).toEqual([host.querySelector('.ai-sub-prompt')])
+  })
+
+  it('does not fail where the host cannot scroll', () => {
+    delete (Element.prototype as { scrollIntoView?: unknown }).scrollIntoView
+    expect(() => act(() => root.render(prompt(notConnected, 1)))).not.toThrow()
   })
 })
 
@@ -534,11 +634,59 @@ describe('AiModelPicker under the subscription contract', () => {
       'haiku',
       'Default model',
     ])
-    act(() => rows[3]!.click())
+    await act(async () => rows[3]!.click())
     expect(setSettings).toHaveBeenCalledOnce()
     const saved = setSettings.mock.calls[0]![0]
     expect(saved.provider).toBe('claude-code')
     expect(saved.providers['claude-code'].model).toBe('sonnet')
+    expect(chip()).toBe('sonnet')
+  })
+
+  it('writes a pick onto the settings stored now, not onto the copy it last read', async () => {
+    const read = defaultAiSettings()
+    // the settings page stored a key and the acknowledged notice after the picker read its copy
+    const stored = defaultAiSettings()
+    stored.providers.openai = { apiKey: 'stored-later', model: 'gpt-later' }
+    stored.subscriptionNoticeSeen = true
+    let current = read
+    const setSettings = vi.fn<(next: AiSettings) => Promise<void>>(async () => {})
+    const bridge: AiModelPickerBridge = { getSettings: async () => current, setSettings }
+    await act(async () => {
+      root.render(createElement(AiModelPicker, { bridge, lang: 'en', subscriptionStatuses: ready }))
+    })
+    current = stored
+    open()
+    const rows = [...host.querySelectorAll<HTMLButtonElement>('.ai-model-item')]
+    await act(async () => rows[3]!.click())
+
+    expect(setSettings).toHaveBeenCalledOnce()
+    const saved = setSettings.mock.calls[0]![0]
+    expect(saved.provider).toBe('claude-code')
+    expect(saved.providers['claude-code'].model).toBe('sonnet')
+    expect(saved.providers.openai).toEqual({ apiKey: 'stored-later', model: 'gpt-later' })
+    expect(saved.subscriptionNoticeSeen).toBe(true)
+    expect(chip()).toBe('sonnet')
+  })
+
+  it('still shows and writes a pick when the stored settings cannot be read', async () => {
+    let fail = false
+    const setSettings = vi.fn<(next: AiSettings) => Promise<void>>(async () => {})
+    const bridge: AiModelPickerBridge = {
+      getSettings: async () => {
+        if (fail) throw new Error('no handler')
+        return defaultAiSettings()
+      },
+      setSettings,
+    }
+    await act(async () => {
+      root.render(createElement(AiModelPicker, { bridge, lang: 'en', subscriptionStatuses: ready }))
+    })
+    fail = true
+    open()
+    const rows = [...host.querySelectorAll<HTMLButtonElement>('.ai-model-item')]
+    await act(async () => rows[3]!.click())
+    expect(setSettings).toHaveBeenCalledOnce()
+    expect(setSettings.mock.calls[0]![0].provider).toBe('claude-code')
     expect(chip()).toBe('sonnet')
   })
 
@@ -563,6 +711,81 @@ describe('AiModelPicker under the subscription contract', () => {
     expect(host.querySelectorAll('.ai-model-item:not(.ai-model-manage)')).toHaveLength(0)
   })
 
+  describe('the Codex line', () => {
+    const codexLine = () => [...host.querySelectorAll('.ai-sub-codex')].map((el) => el.textContent)
+
+    it('is shown with the Codex subscription group, in that group', async () => {
+      await mount(defaultAiSettings(), ready)
+      // nothing is said before the list is open
+      expect(codexLine()).toEqual([])
+      open()
+      expect(codexLine()).toEqual([en.codexNotice])
+      const note = host.querySelector('.ai-sub-codex')!
+      expect(note.classList.contains('compact')).toBe(true)
+      const group = note.closest('.ai-model-group')!
+      expect(group.querySelector('.ai-model-group-head')!.textContent).toContain('Codex')
+      // it is a line of text, not something to pick
+      expect(note.closest('.ai-model-item')).toBeNull()
+      expect(note.getAttribute('role')).toBe('note')
+    })
+
+    it('follows the UI language', async () => {
+      const bridge: AiModelPickerBridge = {
+        getSettings: async () => defaultAiSettings(),
+        setSettings: async () => {},
+      }
+      await act(async () => {
+        root.render(
+          createElement(AiModelPicker, { bridge, lang: 'ko', subscriptionStatuses: ready }),
+        )
+      })
+      open()
+      expect(codexLine()).toEqual([AI_SUBSCRIPTION_STRINGS.ko.codexNotice])
+    })
+
+    it('is shown for an accepted metered Codex login too', async () => {
+      const settings = defaultAiSettings()
+      settings.meteredAccepted = { codex: true }
+      await mount(settings, { codex: status('codex', 'metered', { meteredAccepted: true }) })
+      open()
+      expect(heads()).toEqual([['Codex', 'Paid']])
+      expect(codexLine()).toEqual([en.codexNotice])
+    })
+
+    it('is absent while Codex is not listed', async () => {
+      await mount(defaultAiSettings(), {
+        'claude-code': status('claude-code', 'ready'),
+        codex: status('codex', 'signed-out'),
+      })
+      open()
+      expect(heads()).toEqual([['Claude', 'Subscription']])
+      expect(codexLine()).toEqual([])
+    })
+
+    it('is not shown for a key provider that merely carries the name', async () => {
+      const settings = defaultAiSettings()
+      settings.provider = 'custom'
+      settings.customEndpoints = [
+        { id: 'ep1', name: 'Codex', baseUrl: 'http://localhost:1234/v1', apiKey: '', model: 'm1' },
+      ]
+      settings.customEndpoint = 'ep1'
+      await mount(settings, { 'claude-code': status('claude-code', 'ready') })
+      open()
+      expect(heads().flat()).toContain('Codex')
+      expect(codexLine()).toEqual([])
+    })
+
+    it('is not shown by the earlier picker, which lists no subscription group', async () => {
+      const settings = defaultAiSettings()
+      settings.provider = 'codex'
+      settings.providers.codex = { apiKey: '', model: 'gpt-next' }
+      await mount(settings)
+      open()
+      expect(heads().flat()).toContain('Codex CLI')
+      expect(codexLine()).toEqual([])
+    })
+  })
+
   it('keeps its earlier behavior without subscription statuses', async () => {
     const settings = defaultAiSettings()
     settings.provider = 'anthropic'
@@ -573,7 +796,7 @@ describe('AiModelPicker under the subscription contract', () => {
     expect(heads()).toEqual([['Claude']])
     expect(host.querySelector('.ai-model-auto')).toBeNull()
     const rows = [...host.querySelectorAll<HTMLButtonElement>('.ai-model-item')]
-    act(() => rows[1]!.click())
+    await act(async () => rows[1]!.click())
     expect(setSettings.mock.calls[0]![0].provider).toBe('anthropic')
   })
 })

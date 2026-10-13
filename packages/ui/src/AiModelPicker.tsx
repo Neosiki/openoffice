@@ -11,6 +11,8 @@ import {
   type AiProviderPickerSelection,
 } from './ai-model-picker-options'
 import { AiMark } from './AiMark'
+import { AiCodexNotice } from './AiSubscriptionNotices'
+import { changeStoredAiSettings } from './ai-send-gate'
 import { ProviderLogo } from './provider-logos'
 import { useDismissablePopover } from './popover-dismiss'
 import { AI_MODEL_PICKER_STRINGS } from './strings-ai-model-picker'
@@ -126,9 +128,16 @@ export function AiModelPicker({
   const pick = (sel: AiProviderPickerSelection) => {
     setOpen(false)
     if (!settings) return
-    const next = withAiProviderSelection(settings, sel)
-    setSettings(next)
-    void bridge.setSettings(next).catch(() => {})
+    // shown at once on the copy at hand; written onto what is stored now, so a change another
+    // window saved since this picker last read the settings is not written back
+    setSettings(withAiProviderSelection(settings, sel))
+    void changeStoredAiSettings(
+      bridge,
+      (latest) => withAiProviderSelection(latest, sel),
+      settings,
+    ).then((written) => {
+      if (written) setSettings(written)
+    })
   }
 
   const manage = () => {
@@ -214,6 +223,10 @@ export function AiModelPicker({
                       )
                     )}
                   </div>
+                )}
+                {/* said where Codex is chosen; a key provider of the same name is not this connection */}
+                {g.kind === 'subscription' && g.id === 'codex' && (
+                  <AiCodexNotice lang={lang} compact />
                 )}
                 {(g.models.length > 0 ? g.models : ['']).map((m) => {
                   const selected = sameGroup(g) && (g.kind === 'auto' || current?.model === m)

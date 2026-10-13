@@ -51,7 +51,12 @@ export {
   SUBSCRIPTION_INSTALL_URLS,
   SUBSCRIPTION_IPC_CHANNELS,
   checkingSubscriptionStatus,
+  checkingSubscriptionStatuses,
+  isSubscriptionProviderId,
+  subscriptionLaunchResultOf,
+  subscriptionMeteredResultOf,
   subscriptionStatusErrorKind,
+  subscriptionStatusMapOf,
 } from './subscription/contract'
 export type {
   SubscriptionIpcChannel,

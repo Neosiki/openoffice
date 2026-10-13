@@ -1,6 +1,7 @@
 import type { zh } from './zh'
 
 export const nl = {
+  aiAssistant: 'AI-assistent',
   cardChecking: 'Controleren…',
   cardNotInstalled: 'Niet geïnstalleerd',
   cardSignedOut: 'Niet aangemeld',
@@ -9,6 +10,11 @@ export const nl = {
   cardMetered: 'Aangemeld, maar niet met een abonnement',
   cardMeteredAccepted: 'In gebruik · betaald per verbruik',
   cardError: 'De verbinding kon niet worden gecontroleerd',
+  cardErrNeedsUpdate:
+    'Het programma {provider} op deze pc is te oud. Werk het bij en controleer daarna opnieuw.',
+  cardErrTimeout:
+    'Het programma {provider} heeft niet op tijd gereageerd. Controleer het zo dadelijk opnieuw.',
+  cardErrFailed: 'Er ging iets mis bij het controleren van {provider}. Controleer het opnieuw.',
   actionInstall: 'Installeren',
   actionLogin: 'Aanmelden',
   actionRecheck: 'Opnieuw controleren',

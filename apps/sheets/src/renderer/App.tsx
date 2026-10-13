@@ -67,6 +67,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore
 import {
   useAutoSavePref,
   addTokenUsage,
+  useAiSendGate,
   type AiTokenUsageView,
   type AiScopeQuoteData,
 } from '@genoffice/ui'
@@ -184,12 +185,8 @@ import { createElectronTransport } from './ai/transport'
 import { useSubscriptionConnection } from './ai/subscription-client'
 import {
   aiBlockedRunOf,
-  aiGateAllowsSend,
-  aiPanelGate,
   blockedRunSourceIndex,
   imageGenerationOffered,
-  withContinueProvider,
-  withSubscriptionNoticeSeen,
 } from './ai/subscription-state'
 import {
   MAX_READ_RANGE_CELLS,
@@ -558,6 +555,12 @@ function dateTextKind(value: string): 'date-like' | 'text' {
   if (dateTextKinds.size >= 50_000) dateTextKinds.clear()
   dateTextKinds.set(value, kind)
   return kind
+}
+
+/** where the AI settings are stored: the send gate writes its changes onto the stored copy */
+const AI_SETTINGS_STORE = {
+  getSettings: () => window.desktopApi.getAiSettings(),
+  setSettings: (settings: AiSettings) => window.desktopApi.setAiSettings(settings),
 }
 
 export function App({
@@ -1064,12 +1067,28 @@ export function App({
   // when no provider is configured — see isAgentConfigured/handleSend) ----
   const [aiSettings, setAiSettingsState] = useState<AiSettings | null>(null)
   const aiSettingsRef = useRef<AiSettings | null>(null)
-  aiSettingsRef.current = aiSettings
 
   /** connection of the subscription providers (Claude, Codex) and the connect actions */
   const subscription = useSubscriptionConnection()
-  const subscriptionStatusesRef = useRef(subscription.statuses)
-  subscriptionStatusesRef.current = subscription.statuses
+  /** The send gate every editor shares: holds a request made during a status check or in front
+   *  of the first-connection notice, refuses in front of "not connected", and writes the
+   *  panel's settings changes ("continue with …", the acknowledged notice) onto the stored ones */
+  const sendGate = useAiSendGate<{
+    instruction: string | undefined
+    attachments: readonly AttachmentMeta[] | undefined
+    retryIndex: number | undefined
+  }>({
+    settings: aiSettings,
+    statuses: subscription.statuses,
+    store: AI_SETTINGS_STORE,
+    start: (held) => handleSend(held.instruction, held.attachments, held.retryIndex),
+    onSettingsSaved: (next) => {
+      // the ref is updated at once for a run started right after
+      aiSettingsRef.current = next
+      setAiSettingsState(next)
+    },
+  })
+  aiSettingsRef.current = sendGate.settings
   /** whether the main process can route generate_image right now (refreshed
    *  with the settings, the connection, and on window focus) */
   const imageGenRef = useRef(false)
@@ -1563,30 +1582,18 @@ export function App({
   }
 
   function isAgentConfigured(): boolean {
-    return aiPanelGate(aiSettingsRef.current, subscriptionStatusesRef.current).kind === 'ready'
-  }
-
-  /** Save AI settings changed from the panel; the ref is updated at once for a run started right after. */
-  function saveAiSettings(next: AiSettings): void {
-    aiSettingsRef.current = next
-    setAiSettingsState(next)
-    void window.desktopApi.setAiSettings(next).catch(() => {})
-  }
-
-  function handleAcknowledgeSubscriptionNotice(): void {
-    const settings = aiSettingsRef.current
-    if (settings) saveAiSettings(withSubscriptionNoticeSeen(settings))
+    return sendGate.peek().kind === 'run'
   }
 
   /** "Continue with <provider>" on a blocked reply: that provider becomes the
    *  selection (the model picker shows it) and the failed request is sent again. */
   function handleContinueWith(provider: AiSubscriptionProviderId, replyIndex: number): void {
-    const settings = aiSettingsRef.current
-    if (!settings || aiBusy) return
-    saveAiSettings(withContinueProvider(settings, provider))
+    if (aiBusy) return
     const sourceIndex = blockedRunSourceIndex(chat, replyIndex)
     const source = chat[sourceIndex]
-    if (source) handleSend(source.text, source.attachments ?? [], sourceIndex)
+    sendGate.continueWith(provider, () => {
+      if (source) handleSend(source.text, source.attachments ?? [], sourceIndex)
+    })
   }
 
   /** Image attachments read as base64 and sent multimodal with this user message
@@ -1686,6 +1693,7 @@ export function App({
   }
 
   function handleNewChat(): void {
+    sendGate.reset()
     agentLoopRef.current?.reset()
     setAiRunScope(undefined)
     setAiBusy(false)
@@ -3418,7 +3426,15 @@ export function App({
     if (!instruction || aiBusy) return
     // No provider can run, or the first-use notice of a subscription is pending:
     // the panel shows what to do about it and nothing is sent (the draft is kept).
-    if (!aiGateAllowsSend(aiPanelGate(aiSettingsRef.current, subscriptionStatusesRef.current))) {
+    // A request made during a status check or in front of the notice is held and
+    // starts by itself once the way is clear.
+    if (
+      !sendGate.admit({
+        instruction: overrideInstruction,
+        attachments: overrideAttachments,
+        retryIndex,
+      })
+    ) {
       return
     }
     runToolsRef.current = []
@@ -5111,15 +5127,18 @@ export function App({
         aiBusy={aiBusy}
         {...(sessionUsage !== undefined ? { sessionUsage } : {})}
         aiSubscription={{
-          settings: aiSettings,
+          settings: sendGate.settings,
           statuses: subscription.statuses,
-          gate: aiPanelGate(aiSettings, subscription.statuses),
+          connectChoice: sendGate.connectChoice,
+          connectAttention: sendGate.connectAttention,
+          noticeDue: sendGate.noticeDue,
+          admitQueued: sendGate.admitQueued,
           busy: subscription.busy,
           actions: subscription.actions,
           usage: subscriptionUsage,
           inputTruncated,
           onDismissTruncated: () => setInputTruncated(false),
-          onAcknowledgeNotice: handleAcknowledgeSubscriptionNotice,
+          onAcknowledgeNotice: sendGate.acknowledgeNotice,
           onContinueWith: handleContinueWith,
         }}
         chat={chat}

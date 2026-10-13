@@ -1,6 +1,7 @@
 import type { zh } from './zh'
 
 export const ko = {
+  aiAssistant: 'AI 도우미',
   cardChecking: '확인 중…',
   cardNotInstalled: '설치되지 않음',
   cardSignedOut: '로그인 필요',
@@ -9,6 +10,9 @@ export const ko = {
   cardMetered: '구독이 아닌 방식으로 로그인됨',
   cardMeteredAccepted: '사용 중 · 쓴 만큼 요금 발생',
   cardError: '연결을 확인하지 못했습니다',
+  cardErrNeedsUpdate: '이 PC의 {provider} 프로그램 버전이 낮습니다. 업데이트한 뒤 다시 확인하세요.',
+  cardErrTimeout: '{provider} 프로그램이 제때 응답하지 않았습니다. 잠시 뒤 다시 확인하세요.',
+  cardErrFailed: '{provider} 연결을 확인하는 중에 문제가 생겼습니다. 다시 확인해 보세요.',
   actionInstall: '설치',
   actionLogin: '로그인',
   actionRecheck: '다시 확인',

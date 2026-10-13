@@ -181,7 +181,6 @@ export const nl = {
   ribbonFlipH: 'Horizontaal spiegelen',
   ribbonFlipV: 'Verticaal spiegelen',
   ribbonDistributeHint: '{title} (selecteer 3 of meer elementen)',
-  ribbonAiAssistant: 'AI-assistent',
   ribbonAiAssistantTip: 'Het AI-assistentpaneel weergeven of verbergen',
   ribbonGroupTable: 'Tabel',
   ribbonInsertTableTip: 'Een tabel invoegen (standaardstijl; kies rijen en kolommen)',

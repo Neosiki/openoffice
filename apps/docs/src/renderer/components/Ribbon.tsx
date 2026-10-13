@@ -42,6 +42,7 @@ import type {
 import {
   AiMark,
   Dropdown,
+  aiSubscriptionText,
   isSymbolFontFamily,
   useDismissablePopover,
   useRibbonCollapse,
@@ -3027,7 +3028,7 @@ function RibbonInner({
                   <span className="rb-big-icon">
                     <AiMark size={26} />
                   </span>
-                  <span>{t('ribbonAiAssistant')}</span>
+                  <span>{aiSubscriptionText(lang, 'aiAssistant')}</span>
                 </button>
                 <button
                   className="rb-big ai-entry"
@@ -3127,7 +3128,7 @@ function RibbonInner({
                   <span>{t('aiTidyBtn')}</span>
                 </button>
               </div>
-              <div className="ribbon-group-label">{t('ribbonAiAssistant')}</div>
+              <div className="ribbon-group-label">{aiSubscriptionText(lang, 'aiAssistant')}</div>
             </div>
 
             <div className="ribbon-sep" />

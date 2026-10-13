@@ -1,6 +1,7 @@
 import type { zh } from './zh'
 
 export const id = {
+  aiAssistant: 'Asisten AI',
   cardChecking: 'Memeriksa…',
   cardNotInstalled: 'Belum terpasang',
   cardSignedOut: 'Belum masuk',
@@ -9,6 +10,9 @@ export const id = {
   cardMetered: 'Sudah masuk, tetapi bukan dengan langganan',
   cardMeteredAccepted: 'Sedang dipakai · ditagih sesuai pemakaian',
   cardError: 'Koneksi tidak dapat diperiksa',
+  cardErrNeedsUpdate: 'Program {provider} di PC ini terlalu lama. Perbarui, lalu periksa lagi.',
+  cardErrTimeout: 'Program {provider} tidak menjawab tepat waktu. Periksa lagi sebentar lagi.',
+  cardErrFailed: 'Terjadi masalah saat memeriksa {provider}. Periksa lagi.',
   actionInstall: 'Pasang',
   actionLogin: 'Masuk',
   actionRecheck: 'Periksa lagi',

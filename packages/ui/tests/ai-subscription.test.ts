@@ -129,18 +129,38 @@ describe('aiSubscriptionCardView', () => {
     expect(view.actions).toEqual([])
   })
 
-  it('error: the detail and a re-check button', () => {
+  it('error: a sentence chosen by the kind of failure and a re-check button', () => {
     expect(
-      aiSubscriptionCardView(status('claude-code', 'error', { error: 'Program update needed' })),
+      aiSubscriptionCardView(
+        status('claude-code', 'error', {
+          error: 'needs-update: The Claude Code program is too old',
+        }),
+      ),
     ).toEqual({
       provider: 'claude-code',
       state: 'error',
       tone: 'error',
       statusKey: 'cardError',
       noteKeys: [],
-      detail: 'Program update needed',
+      detailKey: 'cardErrNeedsUpdate',
       actions: ['recheck'],
     })
+    const keyOf = (error?: string) =>
+      aiSubscriptionCardView(status('codex', 'error', error === undefined ? {} : { error }))
+        .detailKey
+    expect(keyOf('timeout: The status check did not answer')).toBe('cardErrTimeout')
+    expect(keyOf('failed: spawn C:\\Users\\me\\codex.exe ENOENT')).toBe('cardErrFailed')
+    // a text without a known kind, or no text at all, is a plain failure
+    expect(keyOf('Program update needed')).toBe('cardErrFailed')
+    expect(keyOf('')).toBe('cardErrFailed')
+    expect(keyOf()).toBe('cardErrFailed')
+  })
+
+  it('error: the status text itself is never part of the view', () => {
+    const raw = 'failed: spawn C:\\Users\\me\\AppData\\Roaming\\npm\\codex.cmd ENOENT'
+    const view = aiSubscriptionCardView(status('codex', 'error', { error: raw }))
+    expect(JSON.stringify(view)).not.toContain('ENOENT')
+    expect(JSON.stringify(view)).not.toContain('spawn')
   })
 
   it('reads a provider that has not reported yet as checking', () => {

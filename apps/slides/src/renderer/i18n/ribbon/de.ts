@@ -183,7 +183,6 @@ export const de = {
   ribbonFlipH: 'Horizontal spiegeln',
   ribbonFlipV: 'Vertikal spiegeln',
   ribbonDistributeHint: '{title} (mindestens 3 Elemente auswählen)',
-  ribbonAiAssistant: 'KI-Assistent',
   ribbonAiAssistantTip: 'KI-Assistent-Bereich ein-/ausblenden',
   ribbonGroupTable: 'Tabelle',
   ribbonInsertTableTip: 'Tabelle einfügen (Standardstil; Zeilen und Spalten wählbar)',

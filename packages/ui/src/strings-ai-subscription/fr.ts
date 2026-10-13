@@ -1,6 +1,7 @@
 import type { zh } from './zh'
 
 export const fr = {
+  aiAssistant: 'Assistant IA',
   cardChecking: 'Vérification…',
   cardNotInstalled: 'Non installé',
   cardSignedOut: 'Non connecté',
@@ -9,6 +10,12 @@ export const fr = {
   cardMetered: 'Connecté, mais pas avec un abonnement',
   cardMeteredAccepted: 'En service · facturé à l’usage',
   cardError: 'Impossible de vérifier la connexion',
+  cardErrNeedsUpdate:
+    'Le programme {provider} installé sur ce PC est trop ancien. Mettez-le à jour, puis vérifiez à nouveau.',
+  cardErrTimeout:
+    "Le programme {provider} n'a pas répondu à temps. Vérifiez à nouveau dans un instant.",
+  cardErrFailed:
+    'Un problème est survenu lors de la vérification de {provider}. Vérifiez à nouveau.',
   actionInstall: 'Installer',
   actionLogin: 'Se connecter',
   actionRecheck: 'Vérifier à nouveau',

@@ -38,9 +38,16 @@ export function AiFirstConnectionNotice({
 }
 
 /** The one line shown wherever Codex is chosen */
-export function AiCodexNotice({ lang }: { readonly lang: Lang }): React.JSX.Element {
+export function AiCodexNotice({
+  lang,
+  compact = false,
+}: {
+  readonly lang: Lang
+  /** plain small print for a tight place such as the model picker's Codex group */
+  readonly compact?: boolean | undefined
+}): React.JSX.Element {
   return (
-    <p className="ai-sub-notice ai-sub-codex" role="note">
+    <p className={`ai-sub-notice ai-sub-codex${compact ? ' compact' : ''}`} role="note">
       {aiSubscriptionText(lang, 'codexNotice')}
     </p>
   )

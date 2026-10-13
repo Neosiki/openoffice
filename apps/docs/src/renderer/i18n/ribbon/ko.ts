@@ -189,7 +189,6 @@ export const ko = {
   ribbonSelectAll: '모두 선택',
   ribbonSelectAllTip: '문서 전체 선택',
   // Home · AI
-  ribbonAiAssistant: 'AI 도우미',
   ribbonAiAssistantTip: 'AI 도우미 열기',
   // Table Design
   ribbonRemoveTableStyleTip: '표 스타일 제거',

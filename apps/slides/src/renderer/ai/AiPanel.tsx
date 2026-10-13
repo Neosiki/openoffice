@@ -10,6 +10,8 @@ import {
   AiMark,
   AiSubscriptionUsageLine,
   aiRunErrorText,
+  aiSubscriptionText,
+  useAiSendGate,
 } from '@genoffice/ui'
 import React, { useEffect, useRef, useState, useCallback } from 'react'
 import {
@@ -48,14 +50,9 @@ import {
 import { createFilesSkill } from './files-skill'
 import { createElectronTransport, type TransportHooks } from './transport'
 import {
-  aiPanelGate,
   blockedRunOf,
-  connectPromptVisible,
-  gateKeepsRequest,
   toolGatesOf,
   useSubscriptionConnection,
-  withContinuedProvider,
-  withSubscriptionNoticeSeen,
   type BlockedRun,
 } from './subscription'
 import { renderSlidesToPngBase64 } from '../export-render'
@@ -440,8 +437,9 @@ export function AiPanel({
       if (qcRunningRef.current || runStartingRef.current) return false
       const loop = loopRef.current
       if (!loop || loop.busy) return false
-      // nothing can run right now (not connected, notice unread): the message stays queued
-      if (aiPanelGate(settingsRef.current, statusesRef.current).kind !== 'ready') return false
+      // nothing can run right now: the message stays queued, and in front of "not connected"
+      // the queue is paused so it does not start by itself after a sign-in
+      if (!sendGate.admitQueued(() => msgQueue.setPaused(true))) return false
       runWith(text, text, { attachments: meta.attachments, scope: meta.scope })
       return true
     },
@@ -562,33 +560,14 @@ export function AiPanel({
   onPathChangeRef.current = onPathChange
   const onDeckProgressRef = useRef(onDeckProgress)
   onDeckProgressRef.current = onDeckProgress
-  // Settings this panel just saved ("continue with …", the acknowledged notice) apply at once:
-  // the prop only catches up after the main process re-broadcast the file
-  const savedSettingsRef = useRef<{ base: AiSettings; next: AiSettings } | null>(null)
-  if (savedSettingsRef.current && savedSettingsRef.current.base !== settings) {
-    savedSettingsRef.current = null
-  }
-  const liveSettings = savedSettingsRef.current?.next ?? settings
-  const settingsRef = useRef(liveSettings)
-  settingsRef.current = liveSettings
-  const [, rerenderForSettings] = useState(0)
-  const saveSettings = (next: AiSettings): Promise<void> => {
-    savedSettingsRef.current = { base: settings, next }
-    settingsRef.current = next
-    rerenderForSettings((n) => n + 1)
-    return window.slidesApi.setAiSettings(next).catch(() => {})
-  }
-
   /** Subscription connections (Claude, Codex) and what they allow right now */
   const connection = useSubscriptionConnection()
   const statusesRef = useRef(connection.statuses)
   statusesRef.current = connection.statuses
-  const gate = aiPanelGate(liveSettings, connection.statuses)
-  /** a run was asked for while nothing could run: the connect prompt shows even mid status check */
-  const [runBlockedByGate, setRunBlockedByGate] = useState(false)
-  /** the request made in front of the first-connection notice or a status check still running;
-      it starts as soon as a provider can run (see gateKeepsRequest) */
-  const pendingRunRef = useRef<{
+  /** The send gate every editor shares: holds a request made during a status check or in front
+      of the first-connection notice, refuses in front of "not connected", and writes this
+      panel's settings changes ("continue with …", the acknowledged notice) onto the stored ones */
+  const sendGate = useAiSendGate<{
     instruction: string
     displayText?: string
     opts?: {
@@ -597,7 +576,22 @@ export function AiPanel({
       scope?: AiScopeQuoteData
       retry?: boolean
     }
-  } | null>(null)
+  }>({
+    settings,
+    statuses: connection.statuses,
+    store: MODEL_BRIDGE,
+    start: (held) => runWith(held.instruction, held.displayText, held.opts),
+    onNotConnected: connection.refresh,
+    onSettingsSaved: (next) => {
+      // a run started right after ("continue with …") must already see the change
+      settingsRef.current = next
+    },
+  })
+  // a change this panel just saved applies at once: the prop only catches up after the main
+  // process re-broadcast the file
+  const liveSettings = sendGate.settings ?? settings
+  const settingsRef = useRef(liveSettings)
+  settingsRef.current = liveSettings
 
   /** Which image/media tools have a route, as the main process reports it (re-read whenever
       the settings or the connections change, and on window focus) */
@@ -1564,8 +1558,12 @@ export function AiPanel({
             }
             return next
           })
-          // the connection probably changed under the run: show what it is now
-          if (blocked) connection.refresh()
+          // the connection probably changed under the run: show what it is now. Queued
+          // messages would only fail the same way: they wait for an explicit resume
+          if (blocked) {
+            connection.refresh()
+            msgQueue.hold()
+          }
           void finishHistoryBatch().finally(() => {
             setBusy(false)
             const resolveQueueRun = queueRunResolverRef.current
@@ -1725,23 +1723,18 @@ export function AiPanel({
     // qcRunningRef: the post-generation QC pass edits the deck outside the main loop — no concurrent runs
     if (!instruction || !loop || loop.busy || runStartingRef.current || qcRunningRef.current) return
     // Nothing can run yet: the composer shows the connect prompt or the first-connection
-    // notice instead of an error. A request made in front of the notice (or while the status
-    // check is still running) starts once a provider can run; in front of a real "not
-    // connected" it is dropped and the composer keeps its text.
-    const runGate = aiPanelGate(settingsRef.current, statusesRef.current)
-    if (runGate.kind !== 'ready') {
-      pendingRunRef.current = gateKeepsRequest(runGate, statusesRef.current)
-        ? {
-            instruction,
-            ...(displayText !== undefined ? { displayText } : {}),
-            ...(opts ? { opts } : {}),
-          }
-        : null
-      if (runGate.kind === 'connect') connection.refresh()
-      setRunBlockedByGate(true)
+    // notice instead of an error, and keeps its text. A request made in front of the notice
+    // (or while the status check is still running) is held and starts once the way is clear;
+    // in front of a real "not connected" nothing is kept.
+    if (
+      !sendGate.admit({
+        instruction,
+        ...(displayText !== undefined ? { displayText } : {}),
+        ...(opts ? { opts } : {}),
+      })
+    ) {
       return
     }
-    pendingRunRef.current = null
     streamErrorRef.current = null
     setInputTruncated(false)
     runStartingRef.current = true
@@ -1888,10 +1881,7 @@ export function AiPanel({
     if (items.length === 0 || !loop || loop.busy || runStartingRef.current || qcRunningRef.current)
       return
     // same gate as runWith: the queue stays as it is until a provider can run
-    if (aiPanelGate(settingsRef.current, statusesRef.current).kind !== 'ready') {
-      setRunBlockedByGate(true)
-      return
-    }
+    if (!sendGate.admitQueued(() => {})) return
     const resolved = resolveQueue(slidesRef.current, items)
     const groups = groupByPage(resolved)
     const skipped = resolved.filter((r) => !r.ok)
@@ -2073,32 +2063,11 @@ export function AiPanel({
 
   /** "Continue with …" on a blocked run: that provider becomes the stored selection (the model
       picker shows it) and the last request runs again on it */
-  const continueWith = (provider: AiSubscriptionProviderId) => {
-    void saveSettings(withContinuedProvider(settingsRef.current, provider)).then(retry)
-  }
-
-  /** The first-connection notice was read: remember that (the request that waited starts below) */
-  const acknowledgeNotice = () => {
-    void saveSettings(withSubscriptionNoticeSeen(settingsRef.current))
-  }
-
-  // The gate opened (status check answered, notice acknowledged): start the request that
-  // waited in front of it. A check that answered "not connected" drops it instead.
-  const gateKeeps = gateKeepsRequest(gate, connection.statuses)
-  useEffect(() => {
-    if (gate.kind === 'ready') {
-      setRunBlockedByGate(false)
-      const pending = pendingRunRef.current
-      pendingRunRef.current = null
-      if (pending) runWith(pending.instruction, pending.displayText, pending.opts)
-    } else if (!gateKeeps) {
-      pendingRunRef.current = null
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gate.kind, gateKeeps])
+  const continueWith = (provider: AiSubscriptionProviderId) =>
+    sendGate.continueWith(provider, retry)
 
   const newChat = () => {
-    pendingRunRef.current = null
+    sendGate.reset()
     msgQueue.clear()
     dismissClarify()
     qcAbortRef.current?.abort()
@@ -2245,12 +2214,12 @@ export function AiPanel({
         onPointerDown={startResize}
         role="separator"
         aria-orientation="vertical"
-        aria-label={t('aiPanelTitle')}
+        aria-label={aiSubscriptionText(lang, 'aiAssistant')}
       />
       <div className="ai-panel-header">
         <span className="ai-panel-title">
           <AiMark size={22} />
-          {t('aiPanelTitle')}
+          {aiSubscriptionText(lang, 'aiAssistant')}
         </span>
         <div className="ai-panel-header-actions">
           <AiPanelSideButton
@@ -2522,22 +2491,22 @@ export function AiPanel({
             />
           )}
           {attachNotice && <div className="ai-attach-notice">{attachNotice}</div>}
-          {gate.kind === 'connect' &&
-            connectPromptVisible(gate, connection.statuses, runBlockedByGate) && (
-              <AiConnectPrompt
-                choice={gate.choice}
-                statuses={connection.statuses}
-                lang={lang}
-                disabled={connection.busy}
-                onOpenSettings={() => void window.slidesApi.openAiModelSettings().catch(() => {})}
-                {...connection.actions}
-              />
-            )}
-          {gate.kind === 'first-notice' && (
+          {sendGate.connectChoice && (
+            <AiConnectPrompt
+              choice={sendGate.connectChoice}
+              statuses={connection.statuses}
+              lang={lang}
+              disabled={connection.busy}
+              attention={sendGate.connectAttention}
+              onOpenSettings={() => void window.slidesApi.openAiModelSettings().catch(() => {})}
+              {...connection.actions}
+            />
+          )}
+          {sendGate.noticeDue && (
             <AiFirstConnectionNotice
               lang={lang}
               codexKeepsHistory={false}
-              onAcknowledge={acknowledgeNotice}
+              onAcknowledge={sendGate.acknowledgeNotice}
             />
           )}
           {inputTruncated && (

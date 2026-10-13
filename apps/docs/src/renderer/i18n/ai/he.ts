@@ -9,7 +9,6 @@ export const he = {
   aiStarterContinue: 'המשך לכתוב מהנקודה שבה המסמך נעצר',
   aiStarterFillTemplate: 'מצא ומלא את מצייני המיקום במסמך',
   aiGskLoginBtn: 'התחבר ל-Genspark',
-  aiPanelTitle: 'עוזר AI',
   aiOpenAssistant: 'פתיחת עוזר ה-AI',
   aiSummarizeBtn: 'סיכום AI',
   aiSummarizePrompt: 'סכם את התוכן העיקרי ואת הנקודות המרכזיות של מסמך זה',
