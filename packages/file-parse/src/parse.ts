@@ -6,6 +6,8 @@ import { pdfToText } from './pdf'
 import { pptToText } from './ppt'
 import { pptxToText } from './pptx'
 import { xlsxToText } from './xlsx'
+import { redactHtmlSource } from './html-redaction'
+import { redactMarkdownSource } from './markdown-redaction'
 
 export type ParsedFileKind = 'text' | 'image' | 'unsupported'
 
@@ -39,6 +41,18 @@ const TEXT_EXTS = new Set([
   'log',
   'py',
 ])
+
+/**
+ * Formats whose own editor can withhold a span from a model: the text is handed
+ * over with each withheld span as its `{{label}}` marker. These throw on a mark
+ * they cannot process, which the catch below turns into a failed read.
+ */
+const TEXT_REDACTORS: Record<string, (source: string) => string> = {
+  md: redactMarkdownSource,
+  markdown: redactMarkdownSource,
+  html: redactHtmlSource,
+  htm: redactHtmlSource,
+}
 
 const FATAL_UTF8_DECODER = new TextDecoder('utf-8', { fatal: true })
 // windows-1252 maps every byte, so this fallback can never fail
@@ -103,6 +117,8 @@ export async function parseFileToText(filePath: string): Promise<ParsedFile> {
             'Unsupported text encoding: BOM-declared UTF-32 cannot be decoded (UTF-8 and UTF-16 are supported)',
         }
       }
+      const redact = TEXT_REDACTORS[ext]
+      if (redact) return { ok: true, kind: 'text', text: redact(text) }
       return { ok: true, kind: 'text', text }
     }
     const bytes = await readFile(filePath)
