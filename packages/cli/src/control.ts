@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { connect } from 'node:net'
 import { join } from 'node:path'
+import { PRODUCT_NAME } from '@genoffice/i18n'
 import {
   CONTROL_FILE,
   CONTROL_MAX_REQUEST_BYTES,
@@ -9,14 +10,14 @@ import {
   type ControlReply,
   type ControlRequest,
 } from './control-protocol'
-import { genofficeUserDataDir } from './gui'
+import { genofficeDevUserDataDir, genofficeUserDataDir } from './gui'
 import { CliError, EXIT, type ErrorReason } from './result'
 
 /** The running shell's control endpoint, or null when no live shell published one. */
 export function controlEndpoint(env: NodeJS.ProcessEnv): ControlEndpoint | null {
   const dirs = env.GENOFFICE_USER_DATA
     ? [env.GENOFFICE_USER_DATA]
-    : [genofficeUserDataDir(env), `${genofficeUserDataDir(env)} Dev`]
+    : [genofficeUserDataDir(env), genofficeDevUserDataDir(env)]
   for (const dir of dirs) {
     const file = join(dir, CONTROL_FILE)
     if (!existsSync(file)) continue
@@ -77,9 +78,9 @@ export function controlRequest(
     const unavailable = (why: string) =>
       settle(() =>
         reject(
-          new CliError(EXIT.app, `GenOffice did not answer: ${why}`, undefined, {
+          new CliError(EXIT.app, `${PRODUCT_NAME} did not answer: ${why}`, undefined, {
             reason: 'app_unavailable',
-            suggestion: 'start GenOffice (or `genoffice open <file>`) and retry',
+            suggestion: `start ${PRODUCT_NAME} (or \`ieumoffice open <file>\`) and retry`,
           }),
         ),
       )
@@ -135,7 +136,7 @@ function defaultSuggestion(reason: ErrorReason, detail: Record<string, unknown>)
     case 'sheet_not_found':
       return 'use one of `detail.sheets` verbatim'
     case 'file_not_open_in_gui':
-      return 'run `genoffice open <file>` first'
+      return 'run `ieumoffice open <file>` first'
     default:
       return 'check the target and retry'
   }

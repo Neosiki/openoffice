@@ -3,6 +3,7 @@ import { createRequire } from 'node:module'
 import { homedir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { APP_BINARY_NAME, SKILL_NAME } from './names'
 
 /**
  * Two layouts: packaged (Resources/cli/genoffice.cjs next to Resources/wasm,
@@ -80,22 +81,28 @@ export function ocrHelperPath(): string | null {
   return candidates.find((p) => existsSync(p)) ?? null
 }
 
-/** skills/genoffice/SKILL.md as shipped beside this bundle (Resources/cli/skills) or in the checkout. */
+/** skills/ieumoffice/SKILL.md as shipped beside this bundle (Resources/cli/skills) or in the checkout. */
 export function bundledSkillPath(): string | null {
   const packaged = packagedResourcesDir()
   const candidates = [
-    ...(packaged ? [join(packaged, 'cli', 'skills', 'genoffice', 'SKILL.md')] : []),
-    ...(repoRoot() ? [join(repoRoot()!, 'skills', 'genoffice', 'SKILL.md')] : []),
+    ...(packaged ? [join(packaged, 'cli', 'skills', SKILL_NAME, 'SKILL.md')] : []),
+    ...(repoRoot() ? [join(repoRoot()!, 'skills', SKILL_NAME, 'SKILL.md')] : []),
   ]
   return candidates.find((p) => existsSync(p)) ?? null
 }
+
+/** Linux names the binary from electron-builder's `linux.executableName`; it sits in the product's own /opt folder. */
+const LINUX_APP_BINARY = 'genoffice'
 
 export interface AppLaunch {
   command: string
   args: string[]
 }
 
-/** How to start the GenOffice GUI: the app binary that hosts this CLI, an installed app, or the dev checkout. */
+/**
+ * How to start the IeumOffice GUI: the app binary that hosts this CLI, an installed app, or the dev checkout.
+ * Only this product's own install locations are probed: an upstream GenOffice on the machine is never started.
+ */
 export function appLaunch(env: NodeJS.ProcessEnv = process.env): AppLaunch | null {
   if (env.GENOFFICE_APP_BIN) return { command: env.GENOFFICE_APP_BIN, args: [] }
   if (packagedResourcesDir() && process.versions.electron) {
@@ -112,7 +119,8 @@ export function appLaunch(env: NodeJS.ProcessEnv = process.env): AppLaunch | nul
   return null
 }
 
-function installedAppBinaries(
+/** Where an installed copy of this product keeps its binary, the install hosting this CLI first. */
+export function installedAppBinaries(
   env: NodeJS.ProcessEnv,
   platform: NodeJS.Platform = process.platform,
   resources: string | null = packagedResourcesDir(),
@@ -122,25 +130,28 @@ function installedAppBinaries(
     case 'darwin':
       return [
         ...(shipped ? [shipped] : []),
-        '/Applications/GenOffice.app/Contents/MacOS/GenOffice',
-        join(homedir(), 'Applications/GenOffice.app/Contents/MacOS/GenOffice'),
+        `/Applications/${APP_BINARY_NAME}.app/Contents/MacOS/${APP_BINARY_NAME}`,
+        join(homedir(), `Applications/${APP_BINARY_NAME}.app/Contents/MacOS/${APP_BINARY_NAME}`),
       ]
     case 'win32':
       return [
         ...(shipped ? [shipped] : []),
-        env.LOCALAPPDATA ? join(env.LOCALAPPDATA, 'Programs', 'GenOffice', 'GenOffice.exe') : '',
-        env.ProgramFiles ? join(env.ProgramFiles, 'GenOffice', 'GenOffice.exe') : '',
+        env.LOCALAPPDATA
+          ? join(env.LOCALAPPDATA, 'Programs', APP_BINARY_NAME, `${APP_BINARY_NAME}.exe`)
+          : '',
+        env.ProgramFiles ? join(env.ProgramFiles, APP_BINARY_NAME, `${APP_BINARY_NAME}.exe`) : '',
       ].filter(Boolean)
     default:
-      return [...(shipped ? [shipped] : []), '/opt/GenOffice/genoffice', '/usr/bin/genoffice']
+      // /usr/bin/genoffice is the upstream app's name: never a place to look for ours
+      return [...(shipped ? [shipped] : []), `/opt/${APP_BINARY_NAME}/${LINUX_APP_BINARY}`]
   }
 }
 
 export function appBinaryForResources(resources: string, platform: NodeJS.Platform): string {
   const install = dirname(resources)
-  if (platform === 'darwin') return join(install, 'MacOS', 'GenOffice')
-  if (platform === 'win32') return join(install, 'GenOffice.exe')
-  return join(install, 'genoffice')
+  if (platform === 'darwin') return join(install, 'MacOS', APP_BINARY_NAME)
+  if (platform === 'win32') return join(install, `${APP_BINARY_NAME}.exe`)
+  return join(install, LINUX_APP_BINARY)
 }
 
 /**

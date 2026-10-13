@@ -77,7 +77,7 @@ export async function runJson(argv: string[], ctx: McpContext): Promise<Outcome>
         command: argv[0] ?? null,
         code: 3,
         error: 'conversion_failed',
-        message: `genoffice printed no JSON: ${text.slice(0, 200)}`,
+        message: `ieumoffice printed no JSON: ${text.slice(0, 200)}`,
       },
     }
   }

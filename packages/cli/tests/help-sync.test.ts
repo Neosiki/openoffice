@@ -12,8 +12,8 @@ import { commandHelp } from '../src/registry'
 const REPO = resolve(__dirname, '../../..')
 const README_PATH = resolve(__dirname, '..', 'README.md')
 const SKILL_CANDIDATES = [
-  resolve(REPO, 'skills/genoffice/SKILL.md'),
-  resolve(__dirname, '..', 'skills/genoffice/SKILL.md'),
+  resolve(REPO, 'skills/ieumoffice/SKILL.md'),
+  resolve(__dirname, '..', 'skills/ieumoffice/SKILL.md'),
 ]
 
 function readFirst(paths: string[], label: string): { path: string; text: string } {
@@ -28,7 +28,10 @@ function readFirst(paths: string[], label: string): { path: string; text: string
 }
 
 const readme = readFileSync(README_PATH, 'utf-8')
-const skillFile = readFirst(SKILL_CANDIDATES, 'genoffice SKILL.md')
+// The CLI README is rewritten with the other repository documents and still
+// spells the upstream command; switch this to `ieumoffice` together with it.
+const README_COMMAND = 'genoffice'
+const skillFile = readFirst(SKILL_CANDIDATES, 'ieumoffice SKILL.md')
 
 function fencesOf(markdown: string): string {
   return [...markdown.matchAll(/```[\s\S]*?```/g)].map((m) => m[0]).join('\n')
@@ -125,9 +128,9 @@ describe('cli help/registry/readme/skill sync', () => {
       .list()
       .map((d) => d.name)
     const missing = names.filter((n) => !global.includes(n))
-    expect(missing, `genoffice help is missing commands: ${missing.join(', ')}`).toEqual([])
+    expect(missing, `ieumoffice help is missing commands: ${missing.join(', ')}`).toEqual([])
     for (const flag of ['--json', '--help', '--version']) {
-      expect(global.includes(flag), `genoffice help is missing global flag ${flag}`).toBe(true)
+      expect(global.includes(flag), `ieumoffice help is missing global flag ${flag}`).toBe(true)
     }
   })
 
@@ -136,7 +139,7 @@ describe('cli help/registry/readme/skill sync', () => {
     for (const def of defaultRegistry().list()) {
       const built = norm(commandHelp(def))
       const shown = norm(await helpFor(['help', def.name]))
-      if (!shown.includes(norm(`usage: genoffice ${def.usage}`))) {
+      if (!shown.includes(norm(`usage: ieumoffice ${def.usage}`))) {
         gaps.push(`${def.name}: 'help ${def.name}' omits its usage line`)
       }
       for (const opt of def.options ?? []) {
@@ -154,8 +157,8 @@ describe('cli help/registry/readme/skill sync', () => {
     const names = defaultRegistry()
       .list()
       .map((d) => d.name)
-    const missingFile = names.filter((n) => !body.includes(norm(`genoffice ${n}`)))
-    const missingFence = names.filter((n) => !fence.includes(norm(`genoffice ${n}`)))
+    const missingFile = names.filter((n) => !body.includes(norm(`${README_COMMAND} ${n}`)))
+    const missingFence = names.filter((n) => !fence.includes(norm(`${README_COMMAND} ${n}`)))
     expect(missingFile, `packages/cli/README.md never mentions: ${missingFile.join(', ')}`).toEqual(
       [],
     )
@@ -170,7 +173,7 @@ describe('cli help/registry/readme/skill sync', () => {
     const names = defaultRegistry()
       .list()
       .map((d) => d.name)
-    const missing = names.filter((n) => !body.includes(norm(`genoffice ${n}`)))
+    const missing = names.filter((n) => !body.includes(norm(`ieumoffice ${n}`)))
     const unexpected = missing.filter((n) => !SKILL_COMMAND_OMISSIONS.has(n))
     const stale = [...SKILL_COMMAND_OMISSIONS.keys()].filter((n) => !missing.includes(n))
     expect(

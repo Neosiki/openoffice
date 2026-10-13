@@ -1,3 +1,4 @@
+import { PRODUCT_NAME } from '@genoffice/i18n'
 import { controlEndpoint, controlRequest } from '../control'
 import { resolveInput } from '../fs'
 import type { CommandDef } from '../registry'
@@ -12,9 +13,9 @@ export const selectionCommand: CommandDef = {
     const path = resolveInput(args.positionals[0], ctx)
     const endpoint = controlEndpoint(ctx.env)
     if (!endpoint) {
-      throw new CliError(EXIT.app, 'GenOffice is not running', undefined, {
+      throw new CliError(EXIT.app, `${PRODUCT_NAME} is not running`, undefined, {
         reason: 'app_unavailable',
-        suggestion: `run \`genoffice open ${path}\` and ask the user to select something`,
+        suggestion: `run \`ieumoffice open ${path}\` and ask the user to select something`,
       })
     }
     const result = await controlRequest(endpoint, { cmd: 'selection', path })

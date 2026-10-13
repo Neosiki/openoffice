@@ -1,5 +1,6 @@
 import { realpathSync } from 'node:fs'
 import { resolve } from 'node:path'
+import { PRODUCT_NAME } from '@genoffice/i18n'
 import { z } from 'zod'
 import type { OpenDocumentTab, TabKind } from '../../../shared/tabs-api'
 import type { McpToolDefinition } from '../mcp-server'
@@ -123,7 +124,7 @@ export function resolveOpenDocumentOfFamily(
 /** a guided "no such document" error listing what is actually open */
 function noMatch(target: string, documents: readonly OpenDocumentTab[]): Error {
   if (documents.length === 0) {
-    return new Error(`no document is open in GenOffice, so "${target}" cannot be resolved`)
+    return new Error(`no document is open in ${PRODUCT_NAME}, so "${target}" cannot be resolved`)
   }
   const listing = documents
     .map((doc) => `  ${doc.id}  ${doc.filePath ?? '(never saved)'}  — ${typeLabel(doc)}`)
@@ -192,7 +193,7 @@ export function createOpenDocumentTools(deps: OpenDocumentsDeps): McpToolDefinit
       },
       handler: async (args) => {
         if (!control) {
-          throw new Error('GenOffice is not running, so its open documents are unreachable')
+          throw new Error(`${PRODUCT_NAME} is not running, so its open documents are unreachable`)
         }
         const action = String(args.action ?? '')
         if (action === 'list') {

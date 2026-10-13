@@ -1,4 +1,5 @@
 import { isAbsolute } from 'node:path'
+import { PRODUCT_NAME } from '@genoffice/i18n'
 import { z } from 'zod'
 import type { McpToolDefinition } from '../mcp-server'
 import { familyLabel, withSaveExtension, type SessionFamily } from './formats'
@@ -157,7 +158,7 @@ export function createSessionTools(
           ok: true,
           family,
           sessionId: wcId,
-          message: `A new empty ${familyLabel(family)} is open in GenOffice. Add content, then call save_session.`,
+          message: `A new empty ${familyLabel(family)} is open in ${PRODUCT_NAME}. Add content, then call save_session.`,
         }
       },
     },

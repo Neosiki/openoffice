@@ -40,6 +40,7 @@ import {
   type WorkbookOperation,
 } from '@genoffice/xlsx-gateway/domain/workbook-dsl'
 import JSZip from 'jszip'
+import { PRODUCT_NAME } from '@genoffice/i18n'
 import type { PathContext } from '../fs'
 import { classifyOpError } from '../op-errors'
 import { CliError, EXIT, type ErrorHints, type ErrorReason } from '../result'
@@ -48,7 +49,7 @@ import { computedValues } from './xlsx'
 
 const OP_REJECTED: ErrorHints = {
   reason: 'op_rejected',
-  suggestion: 'fix the op against `genoffice guide sheets`, then resend the whole batch',
+  suggestion: 'fix the op against `ieumoffice guide sheets`, then resend the whole batch',
 }
 /** Pins a rejection to one op so a non-atomic `sheet apply` can drop that op and rerun the rest. */
 function pinned(
@@ -65,8 +66,8 @@ function pinned(
 function unknownOpSuggestion(op: string): string {
   const guess = didYouMean(op, SUPPORTED_DSL_OPS)
   return guess
-    ? `did you mean "${guess}"? (\`genoffice guide sheets\` lists every op), then resend the whole batch`
-    : 'run `genoffice guide sheets` for the op list, then resend the whole batch'
+    ? `did you mean "${guess}"? (\`ieumoffice guide sheets\` lists every op), then resend the whole batch`
+    : 'run `ieumoffice guide sheets` for the op list, then resend the whole batch'
 }
 const TWO_BATCHES: ErrorHints = {
   reason: 'op_rejected',
@@ -704,7 +705,7 @@ function normalizeOp(
   if (!(SUPPORTED_DSL_OPS as readonly string[]).includes(op.op)) {
     const reason = Object.hasOwn(REFUSED_DSL_OPS, op.op) ? REFUSED_DSL_OPS[op.op] : undefined
     const message = reason
-      ? `"${op.op}" is not available headless (${reason}); use the GenOffice app`
+      ? `"${op.op}" is not available headless (${reason}); use the ${PRODUCT_NAME} app`
       : `unknown op "${op.op}"`
     throw new CliError(
       EXIT.usage,
@@ -716,7 +717,7 @@ function normalizeOp(
       {
         reason: reason ? 'unsupported' : 'unknown_op',
         suggestion: reason
-          ? 'open the workbook in GenOffice for this edit'
+          ? `open the workbook in ${PRODUCT_NAME} for this edit`
           : unknownOpSuggestion(op.op),
       },
     )

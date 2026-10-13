@@ -1,3 +1,4 @@
+import { PRODUCT_NAME } from '@genoffice/i18n'
 import { McpServerService, DEFAULT_MCP_PORT, type McpToolDefinition } from './mcp-server'
 import { McpLogger } from './mcp-logger'
 import type { CliRunner } from './cli-runner'
@@ -145,7 +146,7 @@ function buildTools(): McpToolDefinition[] {
         openInTab: (filePath) => {
           if (!deps) return
           const opened = deps.openPath(filePath)
-          if (!opened) throw new Error(`could not open ${filePath} in GenOffice`)
+          if (!opened) throw new Error(`could not open ${filePath} in ${PRODUCT_NAME}`)
         },
         docs: deps.docsControl,
         extraFormats,

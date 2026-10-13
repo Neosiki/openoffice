@@ -2,7 +2,7 @@
  * GenOffice's own Genspark identity: device-code login (office_addin_auth,
  * app_type=genoffice) minting a gsk API key named "genoffice" — the key_name
  * lands in billing as billing_tag, attributing all traffic (incl. gsk CLI
- * subprocesses) to GenOffice. Stored in ~/.genoffice/auth.json, deliberately
+ * subprocesses) to GenOffice. Stored in ~/.ieumoffice/auth.json, deliberately
  * NOT the shared config.json that Claw Desktop overwrites on every launch.
  *
  * Flow: POST /device_code → browser approve → poll /token for a 30-day Bearer
@@ -128,7 +128,7 @@ async function loginFetchChannels(): Promise<(typeof fetch)[]> {
 
 /** Override dir via GENOFFICE_AUTH_DIR (test isolation). */
 export function genofficeAuthPath(): string {
-  return join(process.env.GENOFFICE_AUTH_DIR || join(homedir(), '.genoffice'), 'auth.json')
+  return join(process.env.GENOFFICE_AUTH_DIR || join(homedir(), '.ieumoffice'), 'auth.json')
 }
 
 export interface GenofficeAuth {

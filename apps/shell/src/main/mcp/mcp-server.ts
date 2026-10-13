@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http'
 import type { Socket } from 'node:net'
+import { brandText, PRODUCT_NAME } from '@genoffice/i18n'
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js'
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js'
@@ -96,7 +97,7 @@ export class McpServerService {
   // ── tool registration ─────────────────────────────────────────────────────
 
   private createSessionServer(): McpServer {
-    const server = new McpServer({ name: 'GenOffice', version: this.version })
+    const server = new McpServer({ name: PRODUCT_NAME, version: this.version })
     // a factory gives each connected client its own tool instances (session
     // state lives in their closures); otherwise the fixed set is shared
     const tools = this.toolsFactory ? this.toolsFactory() : this.tools
@@ -104,7 +105,7 @@ export class McpServerService {
       server.registerTool(
         tool.name,
         {
-          description: tool.description,
+          description: brandText(tool.description, 'en'),
           ...(tool.inputSchema ? { inputSchema: tool.inputSchema } : {}),
         },
         (async (args: Record<string, unknown>) => {
@@ -146,7 +147,7 @@ export class McpServerService {
     if (url.pathname === '/health' && req.method === 'GET') {
       return this.json(res, 200, {
         status: 'ok',
-        server: 'GenOffice',
+        server: PRODUCT_NAME,
         transport: 'StreamableHTTP + SSE',
         port: this.port,
       })

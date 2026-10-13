@@ -2,7 +2,7 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { app } from 'electron'
-import { installCliLink } from '@genoffice/cli/install'
+import { HOME_DIR_NAME, installCliLink, launcherFileName } from '@genoffice/cli/install'
 import { readAppSettings, writeAppSetting } from './app-settings'
 
 const SETTING_KEY = 'cliLink'
@@ -14,8 +14,8 @@ interface CliLinkRecord {
 }
 
 /**
- * Every launch: record where the genoffice launcher lives so agents can find it
- * without a PATH (the `genoffice` skill reads `~/.genoffice/launcher`), then
+ * Every launch: record where the ieumoffice launcher lives so agents can find it
+ * without a PATH (the `ieumoffice` skill reads `~/.ieumoffice/launcher`), then
  * try to expose it on the PATH. The dmg has no installer step to do that, so
  * macOS retries on each start until a writable directory turns up; Windows
  * gets its PATH entry from the installer and only re-checks once per version
@@ -35,7 +35,7 @@ export function installCliLinkBestEffort(settingsPath: string): void {
     const version = app.getVersion()
     const previous = readAppSettings(settingsPath)[SETTING_KEY] as CliLinkRecord | undefined
     if (process.platform === 'win32' && previous?.version === version) return
-    const launcher = join(dir, process.platform === 'win32' ? 'genoffice.cmd' : 'genoffice')
+    const launcher = join(dir, launcherFileName(process.platform))
     const outcome = installCliLink({ launcher })
     console.log(
       `[genoffice] cli link: ${outcome.status}${outcome.location ? ` (${outcome.location})` : ''}` +
@@ -54,12 +54,12 @@ export function isEphemeralInstall(resourcesPath: string, env: NodeJS.ProcessEnv
   return /^\/Volumes\//.test(resourcesPath) || /\/\.mount_[^/]+\//.test(resourcesPath)
 }
 
-/** Same directory the genoffice CLI uses for auth.json and its audit log. */
+/** Same directory the ieumoffice CLI uses for its audit log; never the upstream app's `~/.genoffice`. */
 export function launcherFilePath(env: NodeJS.ProcessEnv): string {
-  return join(env.GENOFFICE_AUTH_DIR || join(homedir(), '.genoffice'), 'launcher')
+  return join(env.GENOFFICE_AUTH_DIR || join(homedir(), HOME_DIR_NAME), 'launcher')
 }
 
-/** One line, the directory holding genoffice / genoffice.cmd; rewritten only when it changed. */
+/** One line, the directory holding ieumoffice / ieumoffice.cmd; rewritten only when it changed. */
 export function writeLauncherFile(file: string, launcherDir: string): boolean {
   const content = `${launcherDir}\n`
   try {
