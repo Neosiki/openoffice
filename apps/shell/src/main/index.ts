@@ -1,10 +1,8 @@
 import { execSync, spawn } from 'node:child_process'
 import {
-  cpSync,
   existsSync,
   mkdirSync,
   readFileSync,
-  readdirSync,
   renameSync,
   rmSync,
   statSync,
@@ -42,9 +40,11 @@ import menuHtmlIcon2x from './assets/menu-html@2x.png?asset'
 import menuHomeIcon1x from './assets/menu-home.png?asset'
 import menuHomeIcon2x from './assets/menu-home@2x.png?asset'
 import { createI18n, isLang, normalizeLang, setUiLang, type Lang } from '@genoffice/i18n'
+import { DEV_USER_DATA_DIR_NAME, productName } from '@genoffice/i18n'
 import {
   DEFAULT_SAVE_DIR_KEY,
   DROP_OPEN_CHANNEL,
+  GITHUB_REPO_SLUG,
   GITHUB_REPO_URL,
   appMenuLabels,
   contextMenuLabels,
@@ -375,26 +375,11 @@ if (!app.isPackaged) {
   if (process.env.GENOFFICE_USER_DATA) {
     app.setPath('userData', process.env.GENOFFICE_USER_DATA)
   } else {
-    // The dev profile used to live in "GenOffice Dev"; the space breaks
-    // unquoted shell expansions, rsync targets and .desktop Exec= lines, and
-    // XDG config entries are single tokens (genoffice#1817). "GenOffice-Dev" keeps the
-    // family naming of the packaged profile ("GenOffice"). The old directory
-    // moves once — it sits on the same volume as appData, so the rename is
-    // atomic, and a concurrent dev instance keeps its open file handles.
-    const appData = app.getPath('appData')
-    const devDir = join(appData, 'GenOffice-Dev')
-    const oldDevDir = join(appData, 'GenOffice Dev')
-    let userData = devDir
-    if (existsSync(oldDevDir) && !existsSync(devDir)) {
-      try {
-        renameSync(oldDevDir, devDir)
-      } catch {
-        // another dev instance holds the directory: keep using the old one so
-        // the profile is not lost and the move is retried on the next launch
-        userData = oldDevDir
-      }
-    }
-    app.setPath('userData', userData)
+    // One token, no space: a space breaks unquoted shell expansions, rsync
+    // targets and .desktop Exec= lines (genoffice#1817). The name follows the
+    // packaged profile's (Electron's default <appData>/<productName>), and both
+    // are this product's own: a profile of the upstream app is never adopted.
+    app.setPath('userData', join(app.getPath('appData'), DEV_USER_DATA_DIR_NAME))
   }
 }
 
@@ -408,14 +393,6 @@ const headlessArgv = parseHeadlessExportArgv(process.argv)
 if (headlessArgv.kind !== 'none') {
   setHeadlessMode(true)
   app.dock?.hide()
-}
-
-// The product rename from "AI Office" to GenOffice changed the userData path; migrate old user data once
-if (app.isPackaged) {
-  const oldDir = join(app.getPath('appData'), 'AI Office')
-  const newDir = app.getPath('userData')
-  const newEmpty = !existsSync(newDir) || readdirSync(newDir).length === 0
-  if (newEmpty && existsSync(oldDir)) cpSync(oldDir, newDir, { recursive: true })
 }
 
 // module build outputs: packaged builds carry them as extraResources
@@ -713,7 +690,7 @@ let cachedGithubStars: number | null = null
 async function fetchGithubStars(): Promise<number | null> {
   if (cachedGithubStars !== null) return cachedGithubStars
   try {
-    const response = await fetch('https://api.github.com/repos/genspark-ai/genoffice', {
+    const response = await fetch(`https://api.github.com/repos/${GITHUB_REPO_SLUG}`, {
       headers: { Accept: 'application/vnd.github+json' },
       signal: AbortSignal.timeout(5000),
     })
@@ -3163,7 +3140,7 @@ function createShellWindow(): void {
     height: 900,
     minWidth: 720,
     minHeight: 550,
-    title: 'GenOffice',
+    title: productName(currentLang()),
     // vibrancy: editor modules punch translucent regions (e.g. the slides
     // thumbnail pane) through to the desktop
     ...(process.platform === 'darwin'

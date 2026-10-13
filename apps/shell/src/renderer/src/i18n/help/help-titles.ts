@@ -8,6 +8,7 @@
  * no body yet still needs a title so the sidebar never shows an empty row.
  */
 
+import { brandText } from '@genoffice/i18n'
 import type { HelpGroupId } from './help-registry'
 
 /** The languages the manual has titles for; `@genoffice/i18n`'s list, minus none. */
@@ -563,5 +564,6 @@ export function groupTitle(id: HelpGroupId, lang: string): string {
  *  rather than as a blank row. */
 export function topicTitle(id: string, lang: string): string {
   const row = TOPIC_TITLES[id]
-  return (row?.[lang as HelpTitleLang] ?? row?.en ?? id) as string
+  // the table spells the product name as upstream does; show this product's
+  return brandText((row?.[lang as HelpTitleLang] ?? row?.en ?? id) as string, lang)
 }

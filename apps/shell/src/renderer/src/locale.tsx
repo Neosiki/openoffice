@@ -1,6 +1,6 @@
 import { createContext, useContext, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
-import { createI18n, htmlDir, htmlLang, type Lang, type Params } from '@genoffice/i18n'
+import { createI18n, htmlDir, htmlLang, productName, type Lang, type Params } from '@genoffice/i18n'
 import { strings } from './strings'
 
 const translate = createI18n(strings)
@@ -28,6 +28,7 @@ export function LocaleProvider({ initial, children }: { initial: Lang; children:
             setLangState(next)
             document.documentElement.lang = htmlLang(next)
             document.documentElement.dir = htmlDir(next)
+            document.title = productName(next)
           },
           (err: unknown) => console.warn('language not saved', err),
         )

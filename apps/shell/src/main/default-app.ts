@@ -11,7 +11,7 @@ interface OfficeType {
   ext: string
   uti: string
   mime: string
-  /** Windows ProgId written by the NSIS installer = fileAssociations[].name in electron-builder.cjs */
+  /** Windows ProgId written by the NSIS installer = win.fileAssociations[].name in electron-builder.cjs */
   progId: string
 }
 
@@ -20,31 +20,31 @@ export const OFFICE_TYPES: readonly OfficeType[] = [
     ext: 'docx',
     uti: 'org.openxmlformats.wordprocessingml.document',
     mime: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    progId: 'Word Document',
+    progId: 'IeumOffice.WordDocument',
   },
   {
     ext: 'xlsx',
     uti: 'org.openxmlformats.spreadsheetml.sheet',
     mime: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    progId: 'Excel Workbook',
+    progId: 'IeumOffice.ExcelWorkbook',
   },
   {
     ext: 'xlsm',
     uti: 'org.openxmlformats.spreadsheetml.sheet.macroenabled',
     mime: 'application/vnd.ms-excel.sheet.macroEnabled.12',
-    progId: 'Excel Macro-Enabled Workbook',
+    progId: 'IeumOffice.ExcelMacroEnabledWorkbook',
   },
   {
     ext: 'xls',
     uti: 'com.microsoft.excel.xls',
     mime: 'application/vnd.ms-excel',
-    progId: 'Excel 97-2003 Workbook',
+    progId: 'IeumOffice.Excel972003Workbook',
   },
   {
     ext: 'pptx',
     uti: 'org.openxmlformats.presentationml.presentation',
     mime: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-    progId: 'PowerPoint Presentation',
+    progId: 'IeumOffice.PowerPointPresentation',
   },
 ]
 

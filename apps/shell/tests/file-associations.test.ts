@@ -17,6 +17,9 @@ runInNewContext(readFileSync(resolve(import.meta.dirname, '../electron-builder.c
     id === 'node:fs' ? { ...require(id), existsSync: () => true } : require(id),
 })
 const config = configModule.exports
+// Declared per platform (a top-level list would be appended to the Windows
+// one); mac and Linux carry the full list.
+const fileAssociations: Array<{ ext: string; mimeType?: string }> = config.linux.fileAssociations
 
 describe('packaged file associations', () => {
   // The OS can only offer GenOffice in "Open With" (mac CFBundleDocumentTypes,
@@ -26,15 +29,15 @@ describe('packaged file associations', () => {
   // gap this closes.
   it('advertises every extension the app launches', () => {
     for (const ext of LAUNCHABLE_EXTS) {
-      const association = config.fileAssociations.find(
-        (entry: { ext: string }) => entry.ext === ext,
-      )
+      const association = fileAssociations.find((entry) => entry.ext === ext)
       expect(association, `no file association declared for .${ext}`).toBeTruthy()
     }
+    expect(config.mac.fileAssociations).toEqual(fileAssociations)
+    expect(config.fileAssociations).toBeUndefined()
   })
 
   it('gives every association the mimeType the Linux desktop entry needs', () => {
-    for (const association of config.fileAssociations) {
+    for (const association of fileAssociations) {
       expect(
         association.mimeType,
         `.${association.ext} declares no mimeType — the Linux target drops it`,

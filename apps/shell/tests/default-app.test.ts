@@ -160,9 +160,10 @@ describe('createDefaultAppService', () => {
         if (key.includes('.pptx')) throw new Error('no user choice')
         return key.includes('.docx')
           ? '    ProgId    REG_SZ    Word.Document.12\r\n'
-          : '    ProgId    REG_SZ    Excel Workbook\r\n'
+          : '    ProgId    REG_SZ    IeumOffice.ExcelWorkbook\r\n'
       }
-      if (key === 'HKCR\\.pptx') return '    (Default)    REG_SZ    PowerPoint Presentation\r\n'
+      if (key === 'HKCR\\.pptx')
+        return '    (Default)    REG_SZ    IeumOffice.PowerPointPresentation\r\n'
       if (key === 'HKCR\\Word.Document.12')
         return '    (Default)    REG_SZ    Microsoft Word Document\r\n'
       throw new Error('missing')
@@ -176,6 +177,24 @@ describe('createDefaultAppService', () => {
     })
     await svc.set()
     expect(openExternal).toHaveBeenCalledWith('ms-settings:defaultapps')
+  })
+
+  it('windows: a type the upstream app holds belongs to another app, not this one', async () => {
+    // the upstream app registers the bare document-type names as its ProgIds
+    const upstream = [
+      'Word Document',
+      'Excel Workbook',
+      'Excel Macro-Enabled Workbook',
+      'Excel 97-2003 Workbook',
+      'PowerPoint Presentation',
+    ]
+    const run = vi.fn<RunCommand>(async (_cmd, args) => {
+      const index = OFFICE_TYPES.findIndex((t) => args[1].endsWith(`.${t.ext}\\UserChoice`))
+      if (index >= 0) return `    ProgId    REG_SZ    ${upstream[index]}\r\n`
+      throw new Error('missing')
+    })
+    const svc = createDefaultAppService({ ...base, platform: 'win32', run })
+    expect(await svc.status()).toEqual({ state: 'other', others: upstream, manualOnly: true })
   })
 
   it('reports unknown instead of throwing when the probe fails', async () => {

@@ -8,7 +8,7 @@
  * this list rather than an invisible one.
  */
 
-import { LANGS } from '@genoffice/i18n'
+import { brandText, LANGS } from '@genoffice/i18n'
 import { topicTitle } from './help-titles'
 
 export type HelpGroupId = 'start' | 'apps' | 'ai' | 'manage'
@@ -363,12 +363,20 @@ export function helpLangSuffix(lang: string): string {
   return (LANGS as readonly string[]).includes(lang) ? lang : 'en'
 }
 
-/** A topic's body in the reader's language, falling back to English. */
+/**
+ * A topic's body in the reader's language, falling back to English.
+ *
+ * The one place a body leaves the registry (the reader and the search both
+ * come through here), so it is where the product name is put in: the files
+ * keep the upstream spelling and name the product of the language they are
+ * written in.
+ */
 export async function helpBody(id: string, lang: string): Promise<string | null> {
-  const direct = bodies[`./topics/${id}.${helpLangSuffix(lang)}.md`]
-  if (direct) return (await direct()) as string
+  const own = helpLangSuffix(lang)
+  const direct = bodies[`./topics/${id}.${own}.md`]
+  if (direct) return brandText((await direct()) as string, own)
   const english = bodies[`./topics/${id}.en.md`]
-  if (english) return (await english()) as string
+  if (english) return brandText((await english()) as string, 'en')
   return null
 }
 

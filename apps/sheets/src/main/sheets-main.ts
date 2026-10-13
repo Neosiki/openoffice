@@ -60,7 +60,14 @@ import {
   rendererUrl,
   writeJsonAtomic,
 } from '@genoffice/electron-utils'
-import { createI18n, getUiLang, type Lang, normalizeLang, setUiLang } from '@genoffice/i18n'
+import {
+  createI18n,
+  getUiLang,
+  type Lang,
+  normalizeLang,
+  PRODUCT_NAME,
+  setUiLang,
+} from '@genoffice/i18n'
 import { ProjectStore } from '@genoffice/project-store'
 
 import {
@@ -2182,7 +2189,7 @@ export async function createSheetsWindow(
     minWidth: 720,
     minHeight: 550,
     show: false,
-    title: 'GenOffice Sheets',
+    title: `${PRODUCT_NAME} Sheets`,
     // Traffic lights sit inside the toolbar row.
     ...(process.platform === 'darwin' ? { titleBarStyle: 'hiddenInset' as const } : {}),
     webPreferences: {

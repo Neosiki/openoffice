@@ -1,6 +1,6 @@
 import React from 'react'
 import { createRoot } from 'react-dom/client'
-import { htmlDir, htmlLang } from '@genoffice/i18n'
+import { htmlDir, htmlLang, productName } from '@genoffice/i18n'
 import { AppFrame } from './AppFrame'
 import { LocaleProvider } from './locale'
 import '@genoffice/ui/tokens.css'
@@ -30,6 +30,8 @@ void Promise.all([
 ]).then(([lang, onboardingSeen, theme]) => {
   document.documentElement.lang = htmlLang(lang)
   document.documentElement.dir = htmlDir(lang)
+  // the window (taskbar) title follows the page title
+  document.title = productName(lang)
   // apply theme attribute before first paint to avoid flash
   if (theme !== 'system') {
     document.documentElement.setAttribute('data-theme', theme)

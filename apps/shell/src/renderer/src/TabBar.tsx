@@ -3,6 +3,7 @@ import type { CSSProperties, PointerEvent as ReactPointerEvent, ReactElement } f
 import type { TabsApi, TabSummary } from '../../shared/tabs-api'
 import { TEAR_OFF_SLACK, insertionIndexForX, isBeyondBand } from '../../shared/tab-drag-geometry'
 import { notifyFilesChanged } from './file-events'
+import { productName } from '@genoffice/i18n'
 import { useI18n } from './locale'
 
 declare global {
@@ -166,7 +167,7 @@ export function renamedFileName(currentPath: string, typedName: string): string 
 }
 
 export function TabBar() {
-  const { t } = useI18n()
+  const { t, lang } = useI18n()
   const [tabs, setTabs] = useState<TabSummary[]>([])
   const stripRef = useRef<HTMLDivElement>(null)
 
@@ -480,7 +481,7 @@ export function TabBar() {
               className={`tab-item ${tab.kind === 'home' ? 'tab-home' : ''} ${tab.active ? 'active' : ''} ${dragVisual?.id === tab.id ? 'drag-source' : ''}`}
               // long file names ellipsize in the strip — hover reveals the
               // full title (the close button's own tooltip still wins there)
-              title={tab.title}
+              title={tab.kind === 'home' ? productName(lang) : tab.title}
               style={dragStyle}
               onContextMenu={(event) => {
                 event.preventDefault()
@@ -571,7 +572,9 @@ export function TabBar() {
                   onBlur={commitRename}
                 />
               ) : (
-                <span className="tab-title">{tab.title}</span>
+                <span className="tab-title">
+                  {tab.kind === 'home' ? productName(lang) : tab.title}
+                </span>
               )}
               {tab.closable && (
                 <button

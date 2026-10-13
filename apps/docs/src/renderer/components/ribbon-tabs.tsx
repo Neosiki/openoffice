@@ -26,6 +26,7 @@ import { tableModelToPmNode } from '../editor/convert'
 import { insertPageBreak } from '../editor/page-break'
 import { isStraightLineKind } from '../editor/shape-svg'
 import type { InkTool } from '../editor/ink'
+import { PRODUCT_NAME } from '@genoffice/i18n'
 import { t, useI18n, type StringKey } from '../i18n/locale'
 import iconEditor from '../assets/icon-editor.png'
 import iconTranslate from '../assets/icon-translate.png'
@@ -1591,7 +1592,7 @@ export function ViewTab({
                     }}
                   >
                     {w.focused ? '✓ ' : ''}
-                    {w.title || 'GenOffice Docs'}
+                    {w.title || `${PRODUCT_NAME} Docs`}
                   </button>
                 ))}
               </div>

@@ -1,55 +1,34 @@
 /**
- * electron-builder configuration (moved out of package.json "build" so the
- * auto-update feed URL can be injected at build time instead of living in
- * the repo).
+ * electron-builder configuration (kept out of package.json "build" because it
+ * computes values and carries the packaging hooks).
  *
- * GENOFFICE_UPDATE_URL — public base URL of the update channel (the generic
- * provider prefix that serves latest.yml / latest-mac.yml). Required for
- * release builds; CI provides it as a repository secret. For local release
- * builds put it in apps/shell/electron-builder.env (gitignored) — the
- * electron-builder CLI loads that file automatically.
- *
- * When the variable is unset (forks, PR smoke builds, plain local packaging)
- * the publish config is omitted: electron-builder then bakes no
- * app-update.yml into the app and in-app auto-update stays disabled.
- *
- * GENOFFICE_GA4_MEASUREMENT_ID / GENOFFICE_GA4_API_SECRET — GA4 Measurement
- * Protocol credentials for anonymous usage analytics, injected the same way
- * (CI secrets, or apps/shell/electron-builder.env locally). They are written
- * into the packaged app's package.json via extraMetadata and read back by
- * src/main/analytics.ts. When either is unset — every source/fork build —
- * nothing is injected and the app runs with analytics fully disabled.
- *
- * GENOFFICE_FONT_CDN_URL — base URL for the curated downloadable-font catalog.
- * Official release jobs inject it through extraMetadata so the endpoint stays
- * out of source. Without it, font download prompts/catalog entries are hidden;
- * users can still install local font files.
+ * Auto-update reads the releases of the product's public GitHub repository
+ * (see `publish` below): nothing is injected from the environment and no
+ * secret is needed to build an installer that updates itself.
  */
 
 const { execFileSync } = require('node:child_process')
 const { existsSync, readFileSync, rmSync } = require('node:fs')
 const { join } = require('node:path')
 
-function normalizeHttpsBaseUrl(name, value) {
-  if (!value || !value.trim()) return null
-  try {
-    const url = new URL(value.trim())
-    if (url.protocol !== 'https:' || url.username || url.password || url.search || url.hash) {
-      throw new Error('invalid')
-    }
-    return `${url.origin}${url.pathname.replace(/\/+$/, '')}`
-  } catch {
-    throw new Error(`${name} must be an HTTPS base URL without credentials, query, or fragment`)
-  }
-}
-
-const updateUrl = process.env.GENOFFICE_UPDATE_URL
-const ga4MeasurementId = process.env.GENOFFICE_GA4_MEASUREMENT_ID
-const ga4ApiSecret = process.env.GENOFFICE_GA4_API_SECRET
-const fontCdnUrl = normalizeHttpsBaseUrl(
-  'GENOFFICE_FONT_CDN_URL',
-  process.env.GENOFFICE_FONT_CDN_URL,
-)
+// Product identity of the installed app. PRODUCT_NAME must equal PRODUCT_NAME
+// in packages/i18n/src/product.ts and "productName" in ./package.json, and the
+// repository must equal the coordinates defined there
+// (tests/product-identity.test.ts keeps them in step). Everything registered
+// on the machine derives from these: the installer's product id and install
+// folder, the executable name, the userData folder and the Windows ProgIds.
+// None of them may coincide with the upstream GenOffice app, so both can be
+// installed on one machine without touching each other's registration.
+const APP_ID = 'io.github.pblsketch.ieumoffice'
+const PRODUCT_NAME = 'IeumOffice'
+// package.json "name" of the packaged app (the workspace keeps upstream's
+// "@genoffice/shell"): electron-builder and electron-updater name the per-user
+// folder that caches the installer and downloaded updates after it
+// (<local app data>/<name>-updater), so a shared name is a shared folder.
+const PACKAGED_APP_NAME = 'ieumoffice'
+const REPO_OWNER = 'pblsketch'
+const REPO_NAME = 'openoffice'
+const MAINTAINER = 'pblsketch <pblsketch@users.noreply.github.com>'
 
 // GENOFFICE_MAC_X64=1 — opt into packaging the Intel (x64) dmg/zip alongside
 // arm64. Off by default: Intel packages must only ever ship signed with the
@@ -69,7 +48,7 @@ const includeMacX64 = process.env.GENOFFICE_MAC_X64 === '1'
 const winArm64 = process.env.GENOFFICE_WIN_ARM64 === '1'
 // 7-Zip packs ARM64 executables with its ARM64 branch filter, which the NSIS
 // install-time extractor (Nsis7z) cannot decode: it silently skips
-// GenOffice.exe and every dll (electron-builder#9983). BCJ it can decode.
+// the app executable and every dll (electron-builder#9983). BCJ it can decode.
 if (winArm64 && !process.env.ELECTRON_BUILDER_7Z_FILTER) {
   process.env.ELECTRON_BUILDER_7Z_FILTER = 'BCJ'
 }
@@ -79,9 +58,6 @@ const WIN_SIDECAR = `../sheets/native/xlsx-engine/target/${winSidecarTarget}/rel
 
 function assertExtraResourceSources() {
   for (const rel of [
-    '../../node_modules/@genspark/cli',
-    '../../node_modules/@genspark/cli/node_modules/commander',
-    '../../node_modules/ws',
     '../../node_modules/electron/dist/LICENSES.chromium.html',
     '../../node_modules/@embedpdf/pdfium/dist/pdfium.wasm',
     '../pdf/node_modules/harfbuzzjs/hb-subset.wasm',
@@ -300,6 +276,13 @@ function ensureThirdPartyNotices() {
 // system editor, so Windows leaves those two out (mac/Linux only offer them
 // in Open With).
 const WIN_OPEN_WITH_ONLY_EXTS = new Set(['txt', 'json'])
+// NSIS registers each association under a ProgId taken from its `name`
+// (HKCU\Software\Classes\<name>). The upstream app registers the bare names
+// below ("Word Document"), so sharing them would let either install overwrite
+// the other's open command and either uninstall delete it: Windows gets
+// product-scoped ProgIds instead ("IeumOffice.WordDocument"). The same ids are
+// spelled out in src/main/default-app.ts and build/installer.nsh.
+const winProgId = (name) => `${PRODUCT_NAME}.${name.replace(/[^A-Za-z0-9]/g, '')}`
 const FILE_ASSOCIATIONS = [
   {
     ext: 'docx',
@@ -408,8 +391,8 @@ const FILE_ASSOCIATIONS = [
 ]
 
 const config = {
-  appId: 'com.genoffice.app',
-  productName: 'GenOffice',
+  appId: APP_ID,
+  productName: PRODUCT_NAME,
   // Resolved from the installed electron package so dependency bumps can
   // never leave a stale hard-coded pin behind (packaging would silently ship
   // the old runtime).
@@ -472,12 +455,8 @@ const config = {
       from: '../../packages/pdf2docx/ocr-helper/win-ocr.exe',
       to: 'ocr/win-ocr.exe',
     },
-    {
-      from: '../../node_modules/@genspark/cli',
-      to: 'gsk/node_modules/@genspark/cli',
-    },
-    // genoffice command line: runs on the app binary with ELECTRON_RUN_AS_NODE (as
-    // the gsk CLI above already does), so the RunAsNode fuse must stay enabled.
+    // genoffice command line: runs on the app binary with ELECTRON_RUN_AS_NODE,
+    // so the RunAsNode fuse must stay enabled.
     // Layout (Resources/cli next to wasm/, native/, ocr/) is what
     // packages/cli/src/resources.ts expects.
     {
@@ -508,14 +487,6 @@ const config = {
       from: '../../packages/cli/dist/node_modules',
       to: 'cli/node_modules',
     },
-    {
-      from: '../../node_modules/@genspark/cli/node_modules/commander',
-      to: 'gsk/node_modules/commander',
-    },
-    {
-      from: '../../node_modules/ws',
-      to: 'gsk/node_modules/ws',
-    },
   ],
   // `mimeType` is read only by the Linux target, where it becomes the
   // desktop entry's MimeType= list; associations without it are dropped
@@ -528,7 +499,10 @@ const config = {
   // bare GenOffice logo instead of a per-type document icon. The icns/ico
   // pairs are generated from the shell renderer's file-type tiles by
   // tools/gen-file-association-icons.mjs.
-  fileAssociations: FILE_ASSOCIATIONS,
+  //
+  // Declared per platform, never at the top level: electron-builder appends a
+  // platform's list to the top-level one, so a shared list would also reach
+  // Windows with the unscoped names (and with the two types it must not claim).
   npmRebuild: false,
   mac: {
     // Two separate arch packages (NOT universal): arm64 keeps the exact
@@ -543,6 +517,7 @@ const config = {
       { target: 'zip', arch: includeMacX64 ? ['arm64', 'x64'] : ['arm64'] },
     ],
     category: 'public.app-category.productivity',
+    fileAssociations: FILE_ASSOCIATIONS,
     hardenedRuntime: true,
     gatekeeperAssess: false,
     entitlements: 'build/entitlements.mac.plist',
@@ -562,7 +537,9 @@ const config = {
         arch: [winArch],
       },
     ],
-    fileAssociations: FILE_ASSOCIATIONS.filter((a) => !WIN_OPEN_WITH_ONLY_EXTS.has(a.ext)),
+    fileAssociations: FILE_ASSOCIATIONS.filter((a) => !WIN_OPEN_WITH_ONLY_EXTS.has(a.ext)).map(
+      (a) => ({ ...a, name: winProgId(a.name) }),
+    ),
     extraResources: [
       {
         from: WIN_SIDECAR,
@@ -597,14 +574,15 @@ const config = {
     // so apt sees the new packages as the same lineage. Homepage comes from
     // package.json "homepage"; the Package field is pinned in the deb block
     // below (packageName is a per-target option, rejected here by the schema).
-    maintainer: 'Mainfunc, Inc. <team@genspark.ai>',
-    vendor: 'Mainfunc, Inc. <team@genspark.ai>',
+    maintainer: MAINTAINER,
+    vendor: MAINTAINER,
     category: 'Office',
+    fileAssociations: FILE_ASSOCIATIONS,
     // Icon SET directory, not the single 1024px png: electron-builder does
     // not resize a lone png, so deb/rpm would install only
     // hicolor/1024x1024/apps/genoffice.png — a size absent from the hicolor
     // theme index, leaving GNOME/KDE launchers on the generic fallback icon
-    // (genspark-ai/genoffice#90). The set ships every standard raster size.
+    // (upstream issue #90). The set ships every standard raster size.
     icon: 'build/icons',
     // mac and win name the binary from productName; linux instead derives it
     // from package.json "name", and "@genoffice/shell" sanitizes to the
@@ -670,6 +648,11 @@ const config = {
   nsis: {
     oneClick: false,
     allowToChangeInstallationDirectory: true,
+    // no spaces: GitHub Releases rewrites them in asset names, and the update
+    // feed must name the file exactly as it is downloaded
+    artifactName: winArm64
+      ? '${productName}-Setup-${version}-arm64.${ext}'
+      : '${productName}-Setup-${version}.${ext}',
   },
   beforePack: async (context) => {
     ensurePlatformHelpers()
@@ -726,26 +709,22 @@ if (winSignMode) {
   }
 }
 
-if (updateUrl) {
-  config.publish = [
-    {
-      provider: 'generic',
-      url: updateUrl.replace(/\/+$/, ''),
-      channel: 'latest',
-    },
-  ]
-}
+// Auto-update feed: the releases of the public repository. Always configured,
+// so every installer carries an app-update.yml and can update itself — the
+// repository is public, which is why no token or feed URL has to be injected.
+// This only names the feed. Whether a build also uploads is the --publish
+// flag's business: pass `--publish never` to package without creating a
+// release (electron-builder would otherwise try to on a tagged CI build).
+config.publish = [
+  {
+    provider: 'github',
+    owner: REPO_OWNER,
+    repo: REPO_NAME,
+  },
+]
 
 // CI's "-c.extraMetadata.version=..." CLI override deep-merges with this block,
-// so the version and all injected feature settings survive together.
-const extraMetadata = {}
-if (ga4MeasurementId && ga4ApiSecret) {
-  extraMetadata.genofficeAnalytics = {
-    measurementId: ga4MeasurementId,
-    apiSecret: ga4ApiSecret,
-  }
-}
-if (fontCdnUrl) extraMetadata.genofficeFontCdn = { baseUrl: fontCdnUrl }
-if (Object.keys(extraMetadata).length) config.extraMetadata = extraMetadata
+// so the version and the packaged name survive together.
+config.extraMetadata = { name: PACKAGED_APP_NAME }
 
 module.exports = config

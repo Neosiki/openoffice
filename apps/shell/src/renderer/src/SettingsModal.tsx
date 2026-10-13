@@ -9,6 +9,7 @@ import {
   clampAiCustomFontSize,
 } from '@genoffice/ui'
 import type { AiFontSize, AiPanelPrefs, AiPanelSide } from '@genoffice/ui'
+import { PRODUCT_REPO_SLUG } from '@genoffice/i18n'
 import type { DecisionEndpoint, DefaultAppStatus, FileSearchSettings } from '../../shared/home-api'
 import type { UpdateUiState } from '../../shared/update-api'
 import {
@@ -1940,8 +1941,8 @@ export function SettingsModal({
                   label={t('setGithub')}
                   value={
                     githubStars === null
-                      ? 'github.com/genspark-ai/genoffice'
-                      : `github.com/genspark-ai/genoffice · ★ ${formatStars(githubStars)}`
+                      ? `github.com/${PRODUCT_REPO_SLUG}`
+                      : `github.com/${PRODUCT_REPO_SLUG} · ★ ${formatStars(githubStars)}`
                   }
                   action={
                     <button
@@ -1952,6 +1953,11 @@ export function SettingsModal({
                     </button>
                   }
                 />
+                <div className="set-field">
+                  <div className="set-field-text">
+                    <div className="set-field-desc">{t('setBasedOn')}</div>
+                  </div>
+                </div>
               </>
             )}
           </div>

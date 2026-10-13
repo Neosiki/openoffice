@@ -11,7 +11,7 @@
 
 !define GENOFFICE_PATH_MAX 7900
 
-; Scope templates to our ProgIDs (electron-builder uses fileAssociations.name).
+; Scope templates to our ProgIDs (electron-builder uses win.fileAssociations.name).
 ; A shared .ext\ShellNew would overwrite Office/WPS templates. OOXML files
 ; must be copied from valid packages, never created with NullFile.
 !macro GenOfficeRegisterShellNew EXT PROGID
@@ -30,9 +30,9 @@
 !macro customInstall
   Push "$INSTDIR\resources\cli"
   Call GenOfficeAddToUserPath
-  !insertmacro GenOfficeRegisterShellNew "docx" "Word Document"
-  !insertmacro GenOfficeRegisterShellNew "xlsx" "Excel Workbook"
-  !insertmacro GenOfficeRegisterShellNew "pptx" "PowerPoint Presentation"
+  !insertmacro GenOfficeRegisterShellNew "docx" "IeumOffice.WordDocument"
+  !insertmacro GenOfficeRegisterShellNew "xlsx" "IeumOffice.ExcelWorkbook"
+  !insertmacro GenOfficeRegisterShellNew "pptx" "IeumOffice.PowerPointPresentation"
   !insertmacro UPDATEFILEASSOC
 !macroend
 
@@ -40,9 +40,9 @@
   Push "$INSTDIR\resources\cli"
   Call un.GenOfficeRemoveFromUserPath
   Push $0
-  !insertmacro GenOfficeUnregisterShellNew "docx" "Word Document"
-  !insertmacro GenOfficeUnregisterShellNew "xlsx" "Excel Workbook"
-  !insertmacro GenOfficeUnregisterShellNew "pptx" "PowerPoint Presentation"
+  !insertmacro GenOfficeUnregisterShellNew "docx" "IeumOffice.WordDocument"
+  !insertmacro GenOfficeUnregisterShellNew "xlsx" "IeumOffice.ExcelWorkbook"
+  !insertmacro GenOfficeUnregisterShellNew "pptx" "IeumOffice.PowerPointPresentation"
   Pop $0
   !insertmacro UPDATEFILEASSOC
 !macroend
