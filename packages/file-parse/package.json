@@ -14,7 +14,9 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@genoffice/agent-core": "*",
     "@genoffice/docx-engine": "*",
+    "@genoffice/xmind-engine": "*",
     "cfb": "^1.2.2",
     "fast-xml-parser": "^5.3.4",
     "jszip": "^3.10.1",
