@@ -4,6 +4,7 @@ import type { IpcRendererEvent } from 'electron'
 import type { RenderSlide } from '@genoffice/pptx-render'
 import type { ProjectApi } from '@genoffice/project-store'
 import { installDropOpenBridge } from '@genoffice/electron-utils/drop-open'
+import type { TemplateSelectionInput } from '../shared/template-selection'
 import type {
   AddChartOp,
   AddElementOp,
@@ -484,6 +485,9 @@ const api: SlidesApi = {
   ) => ipcRenderer.invoke('ai:save-style-template', name, data),
   listStyleTemplates: () => ipcRenderer.invoke('ai:list-style-templates'),
   loadStyleTemplate: (name: string) => ipcRenderer.invoke('ai:load-style-template', name),
+  getTemplateSelection: () => ipcRenderer.invoke('slides:ai-template-selection-get'),
+  setTemplateSelection: (selection: TemplateSelectionInput | null) =>
+    ipcRenderer.invoke('slides:ai-template-selection-set', selection),
   presenterStart: () => ipcRenderer.invoke('slides:presenter-start'),
   presenterSync: (state: ShowSyncState) => ipcRenderer.send('slides:presenter-sync', state),
   presenterInk: (ev: ShowInkEvent) => ipcRenderer.send('slides:presenter-ink', ev),

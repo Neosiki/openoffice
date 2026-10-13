@@ -14,6 +14,7 @@ import type { FontSizeStep } from '@genoffice/pptx-ops/font-size'
 import type { LayoutSkeleton } from '../renderer/ai/layout-skeleton'
 import type { AiSettings, AiStreamChunk, AiStreamRequest } from '@genoffice/ai-provider'
 import type { AiToolCapabilities } from '@genoffice/ai-search'
+import type { TemplateSelection, TemplateSelectionInput } from './template-selection'
 import type { SubscriptionApi } from './subscription-api'
 
 import type {
@@ -49,6 +50,11 @@ export type {
   AiStreamRequest,
 } from '@genoffice/ai-provider'
 export type { AiToolCapabilities, AiToolCapability } from '@genoffice/ai-search'
+export type {
+  TemplateSelection,
+  TemplateSelectionInput,
+  TemplateSelectionKind,
+} from './template-selection'
 export { AI_PROVIDERS } from '@genoffice/ai-provider/browser'
 export type { AgentToolCall, AgentToolDef } from '@genoffice/agent-core'
 
@@ -1778,6 +1784,12 @@ export interface SlidesApi {
     layout?: LayoutSkeleton
     error?: string
   }>
+  /** The design template remembered for this window's document, on this PC only; null when there is none */
+  getTemplateSelection: () => Promise<TemplateSelection | null>
+  /** Remember a selection for this window's document (null forgets it; malformed input is ignored). Answers with what is stored afterwards */
+  setTemplateSelection: (
+    selection: TemplateSelectionInput | null,
+  ) => Promise<TemplateSelection | null>
   /** New blank page (with a specific layout): inserted after slide sourceIndex, rels pointing at the chosen layout */
   addSlideWithLayout: (
     op: AddSlideWithLayoutOp,

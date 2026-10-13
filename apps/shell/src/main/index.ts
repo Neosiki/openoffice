@@ -172,6 +172,7 @@ import {
   setSlidesShowBleed,
   slidesFileRenamed,
 } from '../../../slides/src/main/slides-main'
+import { moveSlidesTemplateSelection } from '../../../slides/src/main/template-selection-ipc'
 import {
   configurePdfRuntime,
   flushPdfSave,
@@ -2790,6 +2791,7 @@ function afterFileMoved(oldPath: string, newPath: string): void {
   replaceRecentFile(oldPath, newPath)
   projectFileRenamed(oldPath, newPath)
   if (/\.pptx$/i.test(newPath)) void replaceSlidesRecentFile(oldPath, newPath)
+  if (/\.pptx$/i.test(newPath)) moveSlidesTemplateSelection(oldPath, newPath)
   const affected = tabManager?.renameTabFile(oldPath, newPath) ?? []
   const detachedAffected = detachedRenameFile(oldPath, newPath)
   if (detachedAffected) affected.push(detachedAffected)
