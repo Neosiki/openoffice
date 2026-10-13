@@ -1,21 +1,42 @@
 # Modelos de IA e configurações
 
-## Provedores e modelos
+## Onde ficam as configurações
 
-Os modelos e as chaves configuram-se nas Configurações (a linha da conta no canto inferior esquerdo do ecrã Início):
+Abra as **Configurações** a partir da linha no canto inferior esquerdo do ecrã Início e escolha **IA**. O que vê primeiro é a conexão por assinatura. É tudo o que a maioria das pessoas precisa, e tem o seu próprio artigo: [Conexão por assinatura](help://subscription).
 
-![A janela de configurações](img/settings-general.png)
+Tudo o que requer uma chave fica em **Avançado**, ao fundo da mesma página. Fica fechado até o abrir.
 
-- **Genspark alojado**: entre (com o fluxo de código de dispositivo) e use — sem configuração nenhuma.
-- **Endpoints personalizados (BYOK)**: em Configurações ▸ Modelo de IA indicam-se a URL base e a chave de API de cada protocolo — o compatível com OpenAI, Anthropic, Gemini, DeepSeek, DashScope (qwen) e outros. As chaves ficam guardadas no ficheiro de definições da aplicação nesta máquina e são enviadas apenas nos cabeçalhos dos pedidos. Atlas Cloud está entre os protocolos embutidos.
-- Pode escolher um modelo diferente para cada capacidade: conversação/geração, geração de imagens, análise de imagens.
+## A predefinição: a sua assinatura
+
+- **IA em uso** começa em **Automático**: primeiro uma assinatura do Claude conectada, depois o Codex.
+- O Automático nunca escolhe nada que custe dinheiro extra. Uma chave de API só é usada enquanto escolher por si esse fornecedor em **IA em uso**.
+- A lista de modelos ao fundo de cada painel de IA mostra primeiro as assinaturas, depois os fornecedores com chave cuja configuração concluiu. Dentro de uma assinatura, **Modelo padrão** é o modelo normal dessa assinatura.
+
+## Chaves de API (Avançado ▸ Modelo de IA)
+
+Para quem prefere pagar diretamente a um fornecedor, ou executar um modelo próprio.
+
+- Escolha um **Provedor**, introduza a respetiva **Chave de API** (e uma **Base URL** quando o fornecedor a exigir), escolha um **Modelo** e clique em **Salvar**. A lista abrange servidores compatíveis com OpenAI, Anthropic, Gemini, DeepSeek, DashScope (qwen), Atlas Cloud e outros.
+- Aqui, a lista **Provedor** só decide de quem são os campos que aparecem no ecrã. Não altera a IA que está em uso; isso é sempre **IA em uso**.
+- As conversas com um fornecedor com chave usam a sua própria chave, e é esse fornecedor que lhas cobra.
+- As chaves ficam guardadas no ficheiro de definições da aplicação nesta máquina e são enviadas apenas nos cabeçalhos dos pedidos.
 - **Testar conexão**: confirma que o endpoint está acessível e que o modelo está visível, antes de guardar.
 - A URL base pode trazer um caminho e uma cadeia de consulta (ao estilo de gateway); e o caminho do endpoint é acrescentado corretamente.
+- Para os servidores que executa por conta própria, podem guardar-se vários **endpoints** e alternar entre eles a qualquer momento.
+- **Executável do Codex** serve apenas para um programa Codex instalado num sítio fora do comum. Deixe-o vazio e o programa é encontrado automaticamente.
 
-## Integração com a CLI (estilo Codex)
+## O que cada funcionalidade precisa
 
-- As Configurações aceitam o caminho de um programa CLI local (diretórios de casa não ASCII e o prefixo ~ funcionam; o ~ é expandido automaticamente); o Detectar automaticamente sonda os modelos que esse CLI disponibiliza.
-- A validação verifica apenas a existência — não há restrições de conjunto de caracteres.
+| Funcionalidade                       | Com o que funciona                                                                                                                                                                                                   |
+| ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Conversa e edição no painel de IA    | A sua assinatura, ou um fornecedor com chave que escolheu por si.                                                                                                                                                    |
+| Compreender uma imagem               | A IA com que está a conversar olha ela própria para a imagem. Não é precisa nenhuma chave extra. Em Avançado pode escolher-se um fornecedor de análise separado.                                                     |
+| Gerar uma imagem                     | **Só com chave, nesta versão.** Configure um fornecedor de imagens em Avançado ▸ Mídia e busca de IA. Sem ele, a geração de imagens fica indisponível, e o Slides usa em vez disso imagens encontradas por pesquisa. |
+| Análise de vídeo e áudio             | Um fornecedor com chave que suporte vídeo, escolhido em Avançado ▸ Mídia e busca de IA.                                                                                                                              |
+| Pesquisa na web e de imagens         | Gratuita por predefinição, sem chave. A chave de um fornecedor de pesquisa é opcional.                                                                                                                               |
+| Pesquisa nos seus próprios ficheiros | Corre nesta máquina. Reordenar os resultados através de um serviço é opcional e vem desligado por predefinição.                                                                                                      |
+
+Em **Avançado ▸ Mídia e busca de IA**, a chave e o URL base de um fornecedor são introduzidos uma vez e partilhados por todas as funcionalidades que usam esse fornecedor.
 
 ## Quando as alterações passam a vigorar
 

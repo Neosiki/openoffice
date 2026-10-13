@@ -15,29 +15,27 @@ C’est dans **Paramètres ▸ Intégrations** qu’on fait cela. Le panneau a d
 La même chose depuis un terminal — c’est la voie avancée, celle qu’il faut prendre quand l’agent se trouve là où le panneau ne peut pas le trouver :
 
 ```sh
-genoffice mcp install all
+ieumoffice mcp install all
 ```
 
-Il trouve les agents de programmation présents sur cette machine et écrit l’entrée du serveur stdio dans la configuration de chacun, en laissant le reste du fichier tel qu’il l’a trouvé.
+Il trouve les agents de programmation présents sur cette machine et écrit l’entrée du serveur stdio dans la configuration de chacun, en laissant le reste du fichier tel qu’il l’a trouvé. L’entrée s’appelle `ieumoffice`. Faite à la main pour Claude Code, la même inscription s’écrit `claude mcp add --transport stdio ieumoffice -- ieumoffice mcp`.
 
 ```sh
-genoffice mcp list             # where each agent stands
-genoffice mcp install cursor    # just one
-genoffice mcp uninstall cursor  # take it back out
+ieumoffice mcp list             # where each agent stands
+ieumoffice mcp install cursor    # just one
+ieumoffice mcp uninstall cursor  # take it back out
 ```
 
 Un agent installé ailleurs demande `--dir <path>` ; `--force` réécrit une entrée déjà présente.
 
-Tout ce que le serveur accepte tient sur un seul écran — les formes d’enregistrement, de retrait et de liste, le service en HTTP, et les deux options de schéma :
-
-![La vraie sortie de genoffice mcp --help : les formes install, uninstall et list, avec les options --http, --host, --token, --compact-schemas, --dir et --force](img/mcp.png)
+`ieumoffice mcp --help` réunit sur un seul écran tout ce que le serveur accepte : les formes d’enregistrement, de retrait et de liste, le service en HTTP, et les deux options de schéma.
 
 ## L’exécuter sans assistant
 
 Pour un client sur une autre machine, servez-le plutôt en HTTP :
 
 ```sh
-genoffice mcp --http 8765 --token <secret>
+ieumoffice mcp --http 8765 --token <secret>
 ```
 
 `--host <addr>` change le point d’écoute. Passez le même jeton au client.
@@ -52,21 +50,40 @@ Chaque commande est un outil. Les plus intéressantes :
 - **`render`** — un PNG par page, mis en page par le moteur de rendu de l’application, pour que l’agent regarde une diapositive au lieu de la deviner.
 - **`pdf`** — la couche de texte d’un PDF, page par page, sans lancer l’application.
 - **`info`** — métadonnées et résumé de la structure : c’est généralement l’appel le moins cher sur un fichier inconnu.
-- **`search`, `image`, `media`** — les fournisseurs configurés dans l’application, donc l’agent n’a pas besoin de ses propres clés.
+- **`search`, `image`, `media`** — recherche web et recherche d’images, génération d’images et analyse de médias à travers ce qui est configuré dans l’application, donc l’agent n’a pas besoin de ses propres clés. La section suivante dit ce qu’ils peuvent utiliser.
 - **`merge`** — remplir un modèle `{{key}}`.
+
+## Recherche, images et médias : ce qu’un agent peut utiliser
+
+Une requête venue de la commande `ieumoffice` ou d’un client MCP n’a pas été saisie par vous dans l’application : GenOffice la traite donc avec prudence.
+
+- **La recherche** fonctionne toujours et est gratuite par défaut. La clé d’un fournisseur de recherche n’est utilisée que si vous en avez sélectionné une.
+- **Générer une image** demande la clé d’un fournisseur d’images. Dans cette version, un abonnement ne génère pas d’images.
+- **Décrire une image** utilise un fournisseur à clé lorsqu’il y en a un de configuré. Votre abonnement Claude ou Codex **n’est pas utilisé, sauf si vous l’autorisez**.
+- **La vidéo et l’audio** ont besoin d’un fournisseur à clé qui prend en charge la vidéo.
+
+Pour autoriser l’utilisation de l’abonnement, ouvrez Paramètres ▸ IA ▸ **Avancé** et activez **Autoriser les requêtes automatiques à utiliser un abonnement**. Un avertissement s’affiche d’abord — « Aucune des deux entreprises ne recommande de laisser un programme utiliser automatiquement votre abonnement, et votre compte pourrait être restreint. » — et le réglage ne s’active qu’après **Activer quand même**.
+
+Même lorsque le réglage est activé :
+
+- Les requêtes sont traitées une par une. Les autres attendent leur tour.
+- Au plus 20 requêtes utilisant un abonnement sont traitées par heure. Le décompte est commun à toutes les commandes exécutées et à tous les appels MCP. Au-delà, la requête échoue avec une erreur qui indique quand les requêtes redeviennent possibles.
+- Une connexion facturée à l’usage que vous avez autorisée avec **Utiliser quand même** ne compte pas ici comme un abonnement. Elle est traitée comme une clé : si vous l’avez choisie comme IA à utiliser, les descriptions d’images passent par elle quel que soit le réglage, sans la limite horaire, et chacune est facturée.
+
+Lorsque le réglage est désactivé et qu’aucune clé n’est configurée, l’outil répond que la fonction est indisponible et nomme ce réglage. Un agent peut vérifier au préalable avec l’outil `capabilities` ; voir [Ligne de commande et agents](help://cli).
 
 ## Schémas et budget plus serré
 
-`apply` et `create` annoncent leurs paramètres `ops`, `cells` et `data` avec le schéma typé de chaque op, généré à partir de `genoffice guide <domain> --json`. C’est précis, et ce n’est pas petit. Un client dont la fenêtre de contexte est serrée peut demander de simples tableaux à la place :
+`apply` et `create` annoncent leurs paramètres `ops`, `cells` et `data` avec le schéma typé de chaque op, généré à partir de `ieumoffice guide <domain> --json`. C’est précis, et ce n’est pas petit. Un client dont la fenêtre de contexte est serrée peut demander de simples tableaux à la place :
 
 ```sh
-genoffice mcp --compact-schemas
-GENOFFICE_MCP_COMPACT_SCHEMAS=1 genoffice mcp
+ieumoffice mcp --compact-schemas
+GENOFFICE_MCP_COMPACT_SCHEMAS=1 ieumoffice mcp
 ```
 
 ## Pourquoi la compétence
 
-Un agent qui ne connaît pas le vocabulaire des ops devine. La compétence embarque la référence et les guides de conception — le même contenu que celui qu’imprime `genoffice guide` —, si bien que l’assistant écrit des ops dont il a réellement lu la spécification. Installez-la depuis le panneau ci-dessus, ou avec `genoffice skill` depuis un terminal.
+Un agent qui ne connaît pas le vocabulaire des ops devine. La compétence embarque la référence et les guides de conception — le même contenu que celui qu’imprime `ieumoffice guide` —, si bien que l’assistant écrit des ops dont il a réellement lu la spécification. Installez-la depuis le panneau ci-dessus, ou avec `ieumoffice skill` depuis un terminal.
 
 ## Ce qu’il atteint dans l’application
 

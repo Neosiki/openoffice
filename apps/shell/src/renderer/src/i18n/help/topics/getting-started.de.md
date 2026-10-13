@@ -4,8 +4,6 @@ GenOffice ist ein Office-Paket, das vollständig auf Ihrem Rechner läuft: ein F
 
 ## Überblick über die Oberfläche
 
-![Der Startbildschirm](img/home-screen.png)
-
 Das Fenster besteht aus drei Teilen:
 
 - **Tab-Leiste (oben)**: Jede geöffnete Datei ist ein Tab. Der Start-Tab ganz links ist immer vorhanden und lässt sich nicht schließen; die übrigen Tabs sind Ihre Dokumente. Ein Doppelklick auf einen Tab benennt die Datei direkt dort um.
@@ -26,7 +24,7 @@ Ein neues Dokument öffnet sich ohne Namen; die Datei auf dem Datenträger entst
 
 - Menü **Datei ▸ Öffnen** (⌘O/ctrl+O) öffnet die Systemauswahl: .docx / .doc / .xlsx / .xls / .csv / .tsv / .pptx / .ppt / .pdf / .md / .html.
 - Klicken Sie auf einen Eintrag in der Liste **Zuletzt verwendet** auf der Startseite.
-- `genoffice <file>` in einem Terminal öffnet Dateien ebenfalls.
+- `ieumoffice <file>` in einem Terminal öffnet Dateien ebenfalls.
 
 ## Das Speichermodell
 
@@ -88,4 +86,5 @@ Damit bleibt ⌥⌘D auf macOS frei, falls GenOffice ihn irgendwann für einen n
 - Wo Dateien liegen: [Der Startbildschirm](help://home-screen).
 - Viele geöffnete Dateien verwalten: [Tabs und Fensterverwaltung](help://tabs-and-windows).
 - Die KI die Arbeit machen lassen: [Der KI-Bereich](help://ai-panel).
+- Zuerst die KI verbinden: [Abonnement-Verbindung](help://subscription).
 - Sprache, Design, Standard-Apps: [Einstellungen, Sprache, Design und MCP-Integrationen](help://settings-integrations).

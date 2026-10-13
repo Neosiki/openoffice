@@ -1,10 +1,8 @@
-# Fon: muka huruf sistem dan keluarga yang boleh dimuat turun
+# Fon: fon sistem dan memasang fail fon
 
 ## Senarai fon
 
-Kawalan fon terletak pada tab Laman Utama setiap editor. Di bawah ini ialah kumpulan fon dalam Slides:
-
-![Kumpulan fon pada reben Slides](img/fonts.png)
+Kawalan fon terletak pada tab Laman Utama setiap editor.
 
 Pemilih fon setiap editor menggabungkan dua perkara, iaitu fon yang dipasang secara tempatan dan calon yang biasa ditemui pada platform tersebut.
 
@@ -12,18 +10,21 @@ Calon itu merangkumi keluarga yang lazim digunakan pada Windows dan macOS, terma
 
 Apabila sistem dapat menyenaraikan fon tempatan, senarai itu dikumpulkan mengikut apa yang benar-benar wujud. Jika tidak, senarai itu akan kembali kepada senarai calon yang penuh.
 
-## Fon yang boleh dimuat turun
+Setiap fon dalam senarai itu sama ada dipasang pada PC ini atau disertakan bersama aplikasi. Tiada apa-apa yang dimuat turun.
 
-- Pemilih fon dalam Slides membuka **katalog fon** yang mengandungi kumpulan OFL yang dipilih dengan teliti, merangkumi banyak sistem tulisan. Setiap keluarga menyertakan gaya biasa dan tebal.
-- Memilih salah satu akan memuat turun danepasangnya dari CDN, dengan checksum yang telah ditetapkan, ke dalam storan fon aplikasi. Selepas itu, fon itu tersedia untuk setiap dokumen tanpa pemasangan pada peringkat sistem.
-- Fon yang dipasang disimpan dalam direktori peribadi aplikasi dan akan hilang bersama aplikasi itu.
+## Memasang fail fon (Slides)
+
+- Di bahagian bawah senarai fon Slides, **Pasang fail fon…** menambah fail fon yang anda sudah ada: .ttf, .otf, .ttc atau .otc.
+- Fail itu disalin ke dalam folder fon aplikasi sendiri. Fon itu berfungsi dalam aplikasi ini sahaja; tiada apa-apa dipasang ke dalam sistem. Persembahan yang sedang dibuka disusun atur semula dengan fon baharu itu.
+- Apabila fail itu mengandungi satu keluarga fon sahaja, fon itu terus digunakan pada apa yang sedang anda pilih.
+- Fon yang dipasang dengan cara ini tidak muncul dalam senarai. Untuk menggunakannya kemudian, taip namanya ke dalam kotak fon.
+- Beberapa ketebalan bagi satu keluarga boleh dipasang bersama-sama.
+- Aplikasi ini tidak mempunyai perintah untuk membuang fon yang dipasang dengan cara ini.
+
+## Fon yang diperlukan dokumen tetapi tiada pada anda
+
+- Dokumen yang menggunakan fon yang tidak dipasang dipaparkan dengan fon gantian.
 
 ## Tipografi CJK
 
 - Fon CJK dalam Docs menerima mampatan tanda baca dan peraturan pemenggalan baris yang selaras dengan Word. Lihat bab Docs untuk maklumat lanjut.
-- Keluarga CJK dalam katalog merangkumi Cina ringkas dan tradisional, Jepun, dan Korea, dalam kedua-dua gaya serif dan sans serif.
-
-## Menguruskan fon tempatan
-
-- Kemasukan untuk memasang fail fon tempatan memuatkan fail .ttf dan .otf daripada cakera ke dalam storan fon aplikasi.
-- Storan tersebut diarkibkan mengikut keluarga, dan pelbagai gaya dalam satu keluarga boleh wujud serentak.

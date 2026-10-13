@@ -2,11 +2,9 @@
 
 ## Ouvrir les paramètres
 
-La ligne de compte en bas à gauche de l’accueil ouvre le panneau des paramètres (elle affiche Se connecter lorsque vous êtes déconnecté). Il comporte six sections : Compte, Modèle IA, Médias IA et recherche, Général, Intégrations et À propos.
+La ligne en bas à gauche de l’accueil ouvre le panneau des paramètres (elle affiche Connecter l’IA tant qu’aucune IA n’est connectée). Il comporte cinq sections : Compte, IA, Général, Intégrations et À propos.
 
-![Paramètres ▸ Général, où se trouvent la langue, le thème, l’enregistrement automatique et l’interrupteur des statistiques d’utilisation](img/settings-general.png)
-
-La configuration des modèles a son propre article ; dans **Médias IA et recherche**, vous activez, par fournisseur, la génération d’images, l’analyse d’images, l’analyse vidéo, la recherche web et la recherche de fichiers locaux.
+**Compte** indique où en sont vos abonnements Claude et Codex, et **Gérer les connexions** mène à la section IA. L’IA a ses propres articles : [Connexion par abonnement](help://subscription) et [Modèles IA et paramètres](help://ai-models).
 
 ## Langue
 
@@ -19,22 +17,24 @@ Clair / Sombre / Suivre le système. Suivre le système suit l’apparence de l�
 
 ## Général
 
-- **Envoyer des statistiques d'utilisation anonymes** — activé par défaut. Utilise Google Analytics 4 et envoie votre adresse IP publique et les métadonnées de transport ; le contenu des documents et les noms de fichiers ne sont jamais collectés, et chaque événement ne porte qu'un type comme « ouverture d'un .docx ». Vous pouvez le désactiver ici à tout moment.
 - **Position de la barre latérale IA** (à gauche ou à droite), **Taille du texte du panneau IA** et **Correction orthographique dans le chat IA**.
 - **Ouvrir le panneau IA dans les nouveaux documents** — désactivé, un nouveau document démarre avec le panneau replié, à un clic de là.
 - **Enregistrer automatiquement tous les documents** active l'enregistrement automatique par défaut dans tous les éditeurs ; vous pouvez toujours le désactiver pour une fenêtre.
 - **Emplacement d'enregistrement** avec un bouton **Modifier** et **Application par défaut pour les documents Office** pour attribuer .docx / .xlsx / .pptx à GenOffice.
 
-## Médias IA et recherche
+GenOffice ne collecte ni n’envoie de statistiques d’utilisation : il n’y a donc pas d’interrupteur pour cela.
 
-Ce ne sont pas des interrupteurs : chaque capacité choisit le fournisseur qui la sert, et la clé et l'URL de base d'un fournisseur sont saisies une seule fois et partagées :
+## IA ▸ Avancé
+
+Repliée tant que vous ne l’ouvrez pas ; la plupart des gens n’en ont jamais besoin. L’onglet **Modèle IA** contient les clés API et les serveurs que vous faites tourner vous-même, pour la conversation. Dans l’onglet **Médias IA et recherche**, chaque capacité choisit le fournisseur qui la sert, et la clé et l'URL de base d'un fournisseur sont saisies une seule fois et partagées :
 
 - **Recherche web**, **Génération d'images**, **Analyse d'images** et **Analyse vidéo**, chacune avec un fournisseur, un modèle, une clé et une URL de base.
 - La **recherche de fichiers locale** tourne sur cette machine. En dessous, le **reranking de recherche Jev** est **désactivé par défaut**. Activez-le et les extraits des 20 premiers résultats locaux — jusqu'à 1 200 caractères par document, plus noms de fichiers et de dossiers — partent vers le point de terminaison de décision choisi (Jev via OpenRouter ou TypeSafe, Perplexity, Liquid AI d1, Cloudflare, un moteur local ou une URL personnalisée) pour être réordonnés par pertinence. Désactivé, rien ne quitte l'appareil.
+- **Autoriser les requêtes automatiques à utiliser un abonnement** est **désactivé par défaut**. Ce réglage décide si une requête venue de la ligne de commande ou d’un agent de programmation connecté peut utiliser votre abonnement Claude ou Codex ; voir [Connecter un agent de codage](help://mcp).
 
 ## À propos
 
-- **Version**, le lien GitHub du projet et un bouton **Mettre une étoile sur GitHub**.
+- **Version**, l’adresse GitHub du projet et une ligne qui nomme le projet open source sur lequel cette application est basée.
 - **Canal de mise à jour** : Stable ou Bêta. Une modification prend effet immédiatement et déclenche une recherche de mise à jour ; elle ne rétrograde pas une installation Bêta vers Stable.
 
 ## Associations d’applications par défaut
@@ -46,24 +46,16 @@ Les paramètres peuvent enregistrer GenOffice comme gestionnaire de .docx / .xls
 - Aide ▸ Mentions relatives aux logiciels tiers : l’inventaire complet des licences open source livré avec l’application.
 - Aide ▸ Vérifier les mises à jour : déclenche une vérification manuelle ; une version plus récente propose l’installation.
 
-## Connexion à Genspark
-
-- Le point de connexion (paramètres ou liste des projets cloud) utilise un flux par **code d’appareil** : GenOffice affiche un code et ouvre la connexion dans le navigateur ; la suite est automatique une fois terminée.
-- La connexion sert uniquement à : la liste des projets cloud et aux modèles hébergés de Genspark. Sans elle, toutes les fonctions locales et les modèles personnalisés continuent de fonctionner.
-- La déconnexion se fait en un clic dans les paramètres.
-
 ## Intégration MCP (pour les utilisateurs avancés / clients IA)
 
 **Intégrations** est le panneau qui relie GenOffice à un agent de codage, et il a son propre article : Connecter un agent de codage. La version courte — choisissez une voie (la ligne de commande, ou MCP), suivez la section correspondante, puis ouvrez une nouvelle conversation et posez votre question.
-
-![Paramètres ▸ Intégrations : les trois étapes, puis les lignes de compétences et les options MCP](img/settings-integrations.png)
 
 Sous **Serveur HTTP local**, l’application peut aussi lancer le serveur elle-même — un interrupteur d’activation et un port —, et **Avancé** ajoute l’URL du test de santé et le fichier journal, au lieu de le laisser à l’assistant. Elle n’écoute que sur localhost.
 
 ## Aide-mémoire de la ligne de commande
 
-| Commande           | Ce qu’elle fait                 |
-| ------------------ | ------------------------------- |
-| `genoffice <file>` | ouvrir un fichier               |
-| `genoffice mcp`    | démarrer le serveur MCP local   |
-| `genoffice --help` | toutes les commandes et options |
+| Commande            | Ce qu’elle fait                 |
+| ------------------- | ------------------------------- |
+| `ieumoffice <file>` | ouvrir un fichier               |
+| `ieumoffice mcp`    | démarrer le serveur MCP local   |
+| `ieumoffice --help` | toutes les commandes et options |

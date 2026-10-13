@@ -1,93 +1,91 @@
-<!-- TRANSLATE: copy of en -->
+# Abonnementsverbinding
 
-# Subscription connection
+GenOffice laat zijn AI draaien op een abonnement dat je al hebt: een Claude-abonnement (Anthropic) of een Codex-abonnement (OpenAI). Codex is het programma van OpenAI, en je meldt je erbij aan met je ChatGPT-abonnement. Je hebt geen API-sleutel nodig, en GenOffice heeft geen eigen account waarvoor je je moet registreren.
 
-GenOffice runs its AI on a subscription you already have: a Claude subscription (Anthropic) or a Codex subscription (OpenAI). Codex is OpenAI's program, and you sign in to it with your ChatGPT plan. You do not need an API key, and GenOffice has no account of its own to sign up for.
+## Hoe het werkt
 
-## How it works
+- De AI zit niet in GenOffice ingebouwd. Op deze pc staat een programma van het bedrijf zelf — **Claude Code** bij een Claude-abonnement, **Codex** bij een ChatGPT-abonnement — en GenOffice vraagt dat programma om het antwoord.
+- Dat programma is aangemeld met je eigen account, dus elk verzoek telt mee voor je eigen abonnement.
+- GenOffice toont nooit een eigen aanmeldformulier en leest of bewaart je aanmeldgegevens nooit. Je meldt je aan in het programma en op de webpagina van het bedrijf zelf.
 
-- The AI is not built into GenOffice. A program from the company is installed on this PC — **Claude Code** for a Claude subscription, **Codex** for a ChatGPT subscription — and GenOffice asks that program for the answer.
-- That program is signed in with your own account, so every request counts against your own plan.
-- GenOffice never shows a sign-in form of its own, and it never reads or stores your login. You sign in inside the company's own program and web page.
+## Voordat je begint
 
-## Before you start
+Je hebt een van deze twee nodig. Allebei mag ook.
 
-You need one of these. Having both is fine.
+- Een Claude-abonnement, en het programma Claude Code dat op deze pc is geïnstalleerd en aangemeld.
+- Een ChatGPT-abonnement, en het programma Codex dat op deze pc is geïnstalleerd en aangemeld.
 
-- A Claude subscription, and the Claude Code program installed and signed in on this PC.
-- A ChatGPT subscription, and the Codex program installed and signed in on this PC.
+Is het programma nog niet geïnstalleerd of nog niet aangemeld, dan regel je dat met de knoppen uit het volgende onderdeel.
 
-If the program is not installed yet, or not signed in yet, the buttons in the next section take care of it.
+## Verbinden
 
-## Connecting
+1. Open **Instellingen** via de regel linksonder op Start en kies **AI**. Onder **Abonnementsverbinding** staat een kaart voor Claude en een voor Codex.
+2. Lees wat er op de kaart staat en druk op de knop. De tabel hieronder legt elke status uit.
+3. Ga terug naar het venster van GenOffice. De kaart controleert vanzelf opnieuw, en met **Opnieuw controleren** gebeurt dat meteen.
 
-1. Open **Settings** from the row at the bottom left of Home and choose **AI**. Under **Subscription connection** there is one card for Claude and one for Codex.
-2. Read what the card says and press its button. The table below explains each state.
-3. Come back to the GenOffice window. The card checks again by itself, and **Check again** checks at once.
+Dezelfde kaarten verschijnen in de tweede stap van de welkomstschermen bij de eerste start, en in het AI-paneel wanneer er geen AI is verbonden. Je kunt ze overslaan en later verbinden.
 
-The same cards appear in the second step of the welcome screens on first launch, and in the AI panel when no AI is connected. You can skip them and connect later.
+| Wat er op de kaart staat                        | Wat het betekent                                                                                                                             | Wat je doet                                                                                                                                                                                                                                                                                                       |
+| ----------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Controleren…**                                | GenOffice vraagt het programma hoe het ervoor staat.                                                                                         | Even wachten.                                                                                                                                                                                                                                                                                                     |
+| **Niet geïnstalleerd**                          | Het programma is niet gevonden op deze pc.                                                                                                   | Druk op **Installeren**. De officiële installatieopdracht van het bedrijf wordt uitgevoerd in een nieuw terminalvenster, zodat je kunt zien wat er gebeurt. GenOffice downloadt zelf niets. Wil je liever met de hand installeren, dan opent **Officiële installatiehandleiding** de instructies van het bedrijf. |
+| **Niet aangemeld**                              | Het programma is er, maar er is niemand aangemeld.                                                                                           | Druk op **Aanmelden**. De aanmelding van het programma zelf start in een nieuw venster en opent de aanmeldpagina van het bedrijf in je browser. Rond het daar af.                                                                                                                                                 |
+| **Verbonden**                                   | Er is een aanmelding met een abonnement bevestigd. De naam van het abonnement staat erbij als het programma die doorgeeft.                   | Niets. De AI is klaar voor gebruik.                                                                                                                                                                                                                                                                               |
+| **Aangemeld, maar niet met een abonnement**     | Het programma is aangemeld met een API-sleutel of een account met betaling per verbruik, of het type aanmelding kon niet worden vastgesteld. | Zie "Aanmeldingen met betaling per verbruik" hieronder.                                                                                                                                                                                                                                                           |
+| **De verbinding kon niet worden gecontroleerd** | De controle zelf is mislukt. De reden staat op de kaart.                                                                                     | Druk op **Opnieuw controleren**. Staat er dat het programma te oud is, werk het programma dan bij en controleer opnieuw.                                                                                                                                                                                          |
 
-| What the card says                         | What it means                                                                                                     | What to do                                                                                                                                                                                                                                              |
-| ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Checking…**                              | GenOffice is asking the program how it stands.                                                                    | Wait a moment.                                                                                                                                                                                                                                          |
-| **Not installed**                          | The program was not found on this PC.                                                                             | Press **Install**. The company's official install command runs in a new terminal window, so you can watch what it does. GenOffice downloads nothing by itself. To install by hand instead, **Official install guide** opens the company's instructions. |
-| **Not signed in**                          | The program is there but has no login.                                                                            | Press **Sign in**. The program's own sign-in starts in a new window and opens the company's sign-in page in your browser. Finish it there.                                                                                                              |
-| **Connected**                              | A subscription login was confirmed. The plan name is shown when the program reports it.                           | Nothing. AI is ready to use.                                                                                                                                                                                                                            |
-| **Signed in, but not with a subscription** | The program is signed in with an API key or a pay-as-you-go account, or the kind of login could not be confirmed. | See "Pay-as-you-go logins" below.                                                                                                                                                                                                                       |
-| **The connection could not be checked**    | The check itself failed. The reason is shown on the card.                                                         | Press **Check again**. If it says the program is too old, update the program and check again.                                                                                                                                                           |
+De verbinding wordt gecontroleerd wanneer de app start, wanneer je Instellingen opent en wanneer je naar het venster terugkeert nadat je een installatie of een aanmelding hebt gestart.
 
-The connection is checked when the app starts, when you open Settings, and when you return to the window after starting an install or a sign-in.
+## Aanmeldingen met betaling per verbruik
 
-## Pay-as-you-go logins
+Een kaart met **Aangemeld, maar niet met een abonnement** bevat een waarschuwing: "Dit is geen abonnement: je betaalt voor wat je gebruikt."
 
-A card that says **Signed in, but not with a subscription** carries a warning: "This is not a subscription: you are charged for what you use."
+- GenOffice gebruikt die aanmelding pas nadat je op **Toch gebruiken** hebt gedrukt. Vanaf dat moment wordt elk verzoek bij dat account in rekening gebracht.
+- Ook dan wordt die nooit automatisch gekozen. Kies die zelf onder **AI die wordt gebruikt**, waar er **Betaald** bij staat.
+- Je toestemming wordt alleen voor dat programma onthouden. Die vervalt zodra het programma wordt afgemeld of de aanmelding verandert.
+- Wil je toch je abonnement gebruiken, meld het programma dan aan met het account van je abonnement en druk op **Opnieuw controleren**.
 
-- GenOffice does not use that login until you press **Use anyway**. From then on, every request is billed to that account.
-- Even then it is never chosen automatically. Choose it yourself under **AI to use**, where it is marked **Paid**.
-- Your permission is remembered for that program only. It is cleared when the program is signed out or its login changes.
-- To use your subscription instead, sign the program in with your subscription account and press **Check again**.
+## Welke AI wordt gebruikt
 
-## Which AI is used
+**AI die wordt gebruikt**, onder Instellingen ▸ AI, staat eerst op **Automatisch**. Automatisch beslist in deze volgorde:
 
-**AI to use**, under Settings ▸ AI, starts on **Automatic**. Automatic decides in this order:
+1. Claude, als op de kaart Verbonden staat.
+2. Anders Codex, als op die kaart Verbonden staat.
+3. Anders is er geen AI verbonden, en toont het AI-paneel de verbindingskaarten in plaats van een foutmelding.
 
-1. Claude, when its card says Connected.
-2. Otherwise Codex, when its card says Connected.
-3. Otherwise no AI is connected, and the AI panel shows the connect cards instead of an error.
+Automatisch kiest nooit iets wat extra geld kost: geen API-sleutel en geen aanmelding met betaling per verbruik. Die worden alleen gebruikt zolang je ze zelf kiest.
 
-Automatic never picks anything that costs extra money: not an API key, and not a pay-as-you-go login. Those are used only while you choose them yourself.
+Je kunt ook zelf één AI kiezen, op dezelfde plek of in de modellenlijst onder in het AI-paneel. Werkt de AI die je hebt gekozen niet meer, dan stapt GenOffice niet stilletjes over op een andere. Het meldt wat er is gebeurd en laat zien hoe je opnieuw verbindt.
 
-You can also choose one AI yourself, in the same place or in the model list at the bottom of the AI panel. If the one you chose stops working, GenOffice does not quietly move to another. It tells you what happened and shows how to reconnect.
+Overal waar je Codex kunt kiezen, staat er één regel bij: "Een Codex-abonnement gebruiken in een app is geen methode die OpenAI officieel aanbeveelt." Houd daar rekening mee bij je keuze.
 
-Wherever Codex can be chosen, one line is shown with it: "Using a Codex subscription inside an app is not a method officially recommended by OpenAI." Decide with that in mind.
+## Als een verzoek wordt gestopt
 
-## When a request is stopped
+Een verzoek stopt wanneer de limiet van het abonnement is bereikt, wanneer de aanmelding is verlopen of wanneer het programma er niet meer is. GenOffice schakelt niet vanzelf over op een andere AI.
 
-A request stops when the plan's limit is used up, when the login has expired, or when the program is no longer there. GenOffice does not switch to another AI by itself.
+- De reden staat op de plek waar het antwoord is gestopt. Bij een bereikte limiet staat er ook het tijdstip waarop die wordt hersteld, als het programma dat doorgeeft.
+- Is je andere abonnement verbonden, dan verschijnt er een knop **Doorgaan met …**, bijvoorbeeld **Doorgaan met Codex**. Als je erop drukt, wordt dat de AI die wordt gebruikt — de modellenlijst laat de wijziging zien — en wordt het verzoek opnieuw uitgevoerd.
+- Is de enige andere verbinding een aanmelding met betaling per verbruik die je hebt toegestaan, dan staat er bij dezelfde knop een opmerking over de kosten.
+- Er is nooit een knop die je naar een API-sleutel overzet.
 
-- The reason is shown where the reply stopped. For a used-up limit, the time it resets is shown too, when the program reports it.
-- If your other subscription is connected, a **Continue with …** button appears, for example **Continue with Codex**. Pressing it makes that one the AI to use — the model list shows the change — and runs the request again.
-- If the only other connection is a pay-as-you-go login you allowed, the same button comes with a note about the cost.
-- There is never a button that moves you to an API key.
+## De verbruiksregel
 
-## The usage line
+Zodra je 80% of meer van een limiet hebt gebruikt, toont het AI-paneel een regel zoals "85% gebruikt · herstelt om 15:00". Claude meldt een limiet per 5 uur en een limiet per 7 dagen, en Codex wordt op dezelfde manier getoond wanneer het die meldt. Onder de 80%, of als het programma niets meldt, staat er geen regel.
 
-Once you have used 80% or more of a limit, the AI panel shows a line such as "85% used · resets at 3:00 PM". Claude reports a 5-hour limit and a 7-day limit, and Codex is shown the same way when it reports them. Below 80%, or when the program reports nothing, no line is shown.
+## Wat er wordt verzonden, en waarheen
 
-## What is sent, and where
+De eerste keer dat een abonnement kan worden gebruikt, toont GenOffice eenmalig een melding. Wil je die nog eens lezen, ga dan naar Instellingen ▸ AI ▸ **Melding bij de eerste verbinding** en druk op **Opnieuw bekijken**. Er staan drie dingen in:
 
-The first time a subscription can be used, GenOffice shows a notice once. To read it again, go to Settings ▸ AI ▸ **First-connection notice** and press **View again**. It says three things:
+- De inhoud van het document en je gesprek worden onder je eigen account naar Anthropic of OpenAI verzonden.
+- Of die inhoud wordt gebruikt om AI te trainen, wordt bepaald door de instellingen van je eigen account bij dat bedrijf, niet door GenOffice.
+- GenOffice zet het opslaan van de gespreksgeschiedenis in Codex uit, maar Codex kan nog steeds eigen diagnostische logboeken op deze pc bewaren.
 
-- Document content and your conversation are sent to Anthropic or OpenAI under your own account.
-- Whether that content is used to train AI is decided by your own account settings at that company, not by GenOffice.
-- GenOffice turns off conversation history saving in Codex, but Codex may still keep its own diagnostic logs on this PC.
+Wat je met **Selectie voor AI verbergen** hebt verborgen, wordt niet verzonden, welke AI je ook gebruikt.
 
-Anything you hid with **Hide the selection from AI** is not sent, whichever AI you use.
+## Goed om te weten
 
-## Good to know
-
-- **Speed.** A reply through a subscription starts a few seconds later than one through an API key, because the company's program has to start up first.
-- **Free ChatGPT plan.** It shows as Connected, but its limits are small, so requests stop sooner. The usage line does not appear for it.
-- **Image generation.** In this version a subscription does not generate images, on any plan. That needs an image provider key; see [AI models and settings](help://ai-models).
-- **Proxies.** Claude Code and Codex do not take proxy settings from GenOffice. They use the proxy set for this PC, for example the `HTTPS_PROXY` environment variable, just as when you run them in a terminal. If they cannot connect in a terminal, they cannot connect from here either.
-- **Commands and other programs.** A request that arrives from the `ieumoffice` command or from a connected coding agent does not use your subscription unless you allow it. See [Connecting a coding agent](help://mcp).
+- **Snelheid.** Een antwoord via een abonnement begint een paar seconden later dan een antwoord via een API-sleutel, omdat het programma van het bedrijf eerst moet opstarten.
+- **De gratis versie van ChatGPT.** Die wordt als Verbonden getoond, maar de limieten zijn klein, dus verzoeken stoppen eerder. De verbruiksregel verschijnt er niet bij.
+- **Afbeeldingen genereren.** In deze versie genereert een abonnement geen afbeeldingen, welk abonnement je ook hebt. Daarvoor is een sleutel van een afbeeldingsprovider nodig; zie [AI-modellen en instellingen](help://ai-models).
+- **Proxy's.** Claude Code en Codex nemen geen proxy-instellingen over van GenOffice. Ze gebruiken de proxy die voor deze pc is ingesteld, bijvoorbeeld de omgevingsvariabele `HTTPS_PROXY`, net als wanneer je ze in een terminal uitvoert. Krijgen ze in een terminal geen verbinding, dan lukt het vanuit hier ook niet.
+- **Opdrachten en andere programma's.** Een verzoek dat binnenkomt via de opdracht `ieumoffice` of via een verbonden coding agent gebruikt je abonnement niet, tenzij je dat toestaat. Zie [Verbinden met een coding agent](help://mcp).

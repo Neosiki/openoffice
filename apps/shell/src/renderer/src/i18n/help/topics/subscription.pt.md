@@ -1,93 +1,91 @@
-<!-- TRANSLATE: copy of en -->
+# Conexão por assinatura
 
-# Subscription connection
+O GenOffice faz funcionar a IA com uma assinatura que já tem: uma assinatura do Claude (Anthropic) ou uma assinatura do Codex (OpenAI). O Codex é o programa da OpenAI, e é com o seu plano ChatGPT que inicia sessão nele. Não precisa de uma chave de API, e o GenOffice não tem conta própria em que seja preciso registar-se.
 
-GenOffice runs its AI on a subscription you already have: a Claude subscription (Anthropic) or a Codex subscription (OpenAI). Codex is OpenAI's program, and you sign in to it with your ChatGPT plan. You do not need an API key, and GenOffice has no account of its own to sign up for.
+## Como funciona
 
-## How it works
+- A IA não está incorporada no GenOffice. Neste PC está instalado um programa da empresa — o **Claude Code** para uma assinatura do Claude, o **Codex** para uma assinatura do ChatGPT — e o GenOffice pede a resposta a esse programa.
+- Esse programa tem a sessão iniciada com a sua própria conta, por isso cada pedido conta para o seu próprio plano.
+- O GenOffice nunca mostra um formulário de início de sessão seu, e nunca lê nem guarda as suas credenciais. Inicia sessão no programa e na página web da própria empresa.
 
-- The AI is not built into GenOffice. A program from the company is installed on this PC — **Claude Code** for a Claude subscription, **Codex** for a ChatGPT subscription — and GenOffice asks that program for the answer.
-- That program is signed in with your own account, so every request counts against your own plan.
-- GenOffice never shows a sign-in form of its own, and it never reads or stores your login. You sign in inside the company's own program and web page.
+## Antes de começar
 
-## Before you start
+Precisa de uma destas duas coisas. Ter as duas também serve.
 
-You need one of these. Having both is fine.
+- Uma assinatura do Claude, e o programa Claude Code instalado e com sessão iniciada neste PC.
+- Uma assinatura do ChatGPT, e o programa Codex instalado e com sessão iniciada neste PC.
 
-- A Claude subscription, and the Claude Code program installed and signed in on this PC.
-- A ChatGPT subscription, and the Codex program installed and signed in on this PC.
+Se o programa ainda não estiver instalado, ou ainda não tiver sessão iniciada, os botões da secção seguinte tratam disso.
 
-If the program is not installed yet, or not signed in yet, the buttons in the next section take care of it.
+## Conectar
 
-## Connecting
+1. Abra as **Configurações** a partir da linha no canto inferior esquerdo do ecrã Início e escolha **IA**. Em **Conexão por assinatura** há um cartão para o Claude e outro para o Codex.
+2. Leia o que o cartão diz e clique no botão dele. A tabela abaixo explica cada estado.
+3. Volte à janela do GenOffice. O cartão volta a verificar sozinho, e **Verificar novamente** verifica de imediato.
 
-1. Open **Settings** from the row at the bottom left of Home and choose **AI**. Under **Subscription connection** there is one card for Claude and one for Codex.
-2. Read what the card says and press its button. The table below explains each state.
-3. Come back to the GenOffice window. The card checks again by itself, and **Check again** checks at once.
+Os mesmos cartões aparecem no segundo passo dos ecrãs de boas-vindas no primeiro arranque, e no painel de IA quando não há nenhuma IA conectada. Pode ignorá-los e conectar mais tarde.
 
-The same cards appear in the second step of the welcome screens on first launch, and in the AI panel when no AI is connected. You can skip them and connect later.
+| O que o cartão diz                          | O que significa                                                                                                                               | O que fazer                                                                                                                                                                                                                                                                            |
+| ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Verificando…**                            | O GenOffice está a perguntar ao programa em que estado se encontra.                                                                           | Aguarde um momento.                                                                                                                                                                                                                                                                    |
+| **Não instalado**                           | O programa não foi encontrado neste PC.                                                                                                       | Clique em **Instalar**. O comando oficial de instalação da empresa é executado numa nova janela de terminal, para poder ver o que ele faz. O GenOffice não transfere nada por conta própria. Se preferir instalar à mão, **Guia oficial de instalação** abre as instruções da empresa. |
+| **Sem login**                               | O programa existe, mas não tem sessão iniciada.                                                                                               | Clique em **Entrar**. O início de sessão do próprio programa arranca numa nova janela e abre a página de início de sessão da empresa no navegador. Conclua-o aí.                                                                                                                       |
+| **Conectado**                               | Foi confirmado um login com assinatura. O nome do plano é mostrado quando o programa o indica.                                                | Nada. A IA está pronta a usar.                                                                                                                                                                                                                                                         |
+| **Login feito, mas não com uma assinatura** | O programa tem sessão iniciada com uma chave de API ou com uma conta de pagamento por consumo, ou não foi possível confirmar o tipo de login. | Veja «Logins de pagamento por consumo» mais abaixo.                                                                                                                                                                                                                                    |
+| **Não foi possível verificar a conexão**    | A própria verificação falhou. O motivo é mostrado no cartão.                                                                                  | Clique em **Verificar novamente**. Se disser que o programa é demasiado antigo, atualize-o e verifique novamente.                                                                                                                                                                      |
 
-| What the card says                         | What it means                                                                                                     | What to do                                                                                                                                                                                                                                              |
-| ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Checking…**                              | GenOffice is asking the program how it stands.                                                                    | Wait a moment.                                                                                                                                                                                                                                          |
-| **Not installed**                          | The program was not found on this PC.                                                                             | Press **Install**. The company's official install command runs in a new terminal window, so you can watch what it does. GenOffice downloads nothing by itself. To install by hand instead, **Official install guide** opens the company's instructions. |
-| **Not signed in**                          | The program is there but has no login.                                                                            | Press **Sign in**. The program's own sign-in starts in a new window and opens the company's sign-in page in your browser. Finish it there.                                                                                                              |
-| **Connected**                              | A subscription login was confirmed. The plan name is shown when the program reports it.                           | Nothing. AI is ready to use.                                                                                                                                                                                                                            |
-| **Signed in, but not with a subscription** | The program is signed in with an API key or a pay-as-you-go account, or the kind of login could not be confirmed. | See "Pay-as-you-go logins" below.                                                                                                                                                                                                                       |
-| **The connection could not be checked**    | The check itself failed. The reason is shown on the card.                                                         | Press **Check again**. If it says the program is too old, update the program and check again.                                                                                                                                                           |
+A conexão é verificada quando a aplicação arranca, quando abre as Configurações e quando regressa à janela depois de iniciar uma instalação ou um início de sessão.
 
-The connection is checked when the app starts, when you open Settings, and when you return to the window after starting an install or a sign-in.
+## Logins de pagamento por consumo
 
-## Pay-as-you-go logins
+Um cartão que diz **Login feito, mas não com uma assinatura** traz um aviso: «Isto não é uma assinatura: você paga pelo que usar.»
 
-A card that says **Signed in, but not with a subscription** carries a warning: "This is not a subscription: you are charged for what you use."
+- O GenOffice não usa esse login enquanto não clicar em **Usar mesmo assim**. A partir daí, cada pedido é cobrado a essa conta.
+- Mesmo então, nunca é escolhido automaticamente. Escolha-o por si em **IA em uso**, onde aparece marcado como **Pago**.
+- A sua permissão é lembrada apenas para esse programa. É apagada quando a sessão do programa é terminada ou o login dele muda.
+- Para usar antes a sua assinatura, inicie sessão no programa com a conta da assinatura e clique em **Verificar novamente**.
 
-- GenOffice does not use that login until you press **Use anyway**. From then on, every request is billed to that account.
-- Even then it is never chosen automatically. Choose it yourself under **AI to use**, where it is marked **Paid**.
-- Your permission is remembered for that program only. It is cleared when the program is signed out or its login changes.
-- To use your subscription instead, sign the program in with your subscription account and press **Check again**.
+## Que IA é usada
 
-## Which AI is used
+**IA em uso**, em Configurações ▸ IA, começa em **Automático**. O Automático decide por esta ordem:
 
-**AI to use**, under Settings ▸ AI, starts on **Automatic**. Automatic decides in this order:
+1. O Claude, quando o cartão dele diz Conectado.
+2. Caso contrário o Codex, quando o cartão dele diz Conectado.
+3. Caso contrário não há nenhuma IA conectada, e o painel de IA mostra os cartões de conexão em vez de um erro.
 
-1. Claude, when its card says Connected.
-2. Otherwise Codex, when its card says Connected.
-3. Otherwise no AI is connected, and the AI panel shows the connect cards instead of an error.
+O Automático nunca escolhe nada que custe dinheiro extra: nem uma chave de API, nem um login de pagamento por consumo. Esses só são usados enquanto os escolher por si.
 
-Automatic never picks anything that costs extra money: not an API key, and not a pay-as-you-go login. Those are used only while you choose them yourself.
+Também pode escolher uma IA por si, no mesmo sítio ou na lista de modelos ao fundo do painel de IA. Se a que escolheu deixar de funcionar, o GenOffice não passa discretamente para outra. Diz-lhe o que aconteceu e mostra como voltar a conectar.
 
-You can also choose one AI yourself, in the same place or in the model list at the bottom of the AI panel. If the one you chose stops working, GenOffice does not quietly move to another. It tells you what happened and shows how to reconnect.
+Onde quer que o Codex possa ser escolhido, aparece junto dele uma linha: «Usar uma assinatura do Codex dentro de um aplicativo não é um método oficialmente recomendado pela OpenAI.» Decida tendo isso em conta.
 
-Wherever Codex can be chosen, one line is shown with it: "Using a Codex subscription inside an app is not a method officially recommended by OpenAI." Decide with that in mind.
+## Quando um pedido é interrompido
 
-## When a request is stopped
+Um pedido para quando o limite do plano se esgota, quando o login expirou ou quando o programa já não existe. O GenOffice não muda sozinho para outra IA.
 
-A request stops when the plan's limit is used up, when the login has expired, or when the program is no longer there. GenOffice does not switch to another AI by itself.
+- O motivo é mostrado no ponto em que a resposta parou. No caso de um limite esgotado, também é mostrada a hora a que é reposto, quando o programa a indica.
+- Se a sua outra assinatura estiver conectada, aparece um botão **Continuar com …**, por exemplo **Continuar com Codex**. Clicar nele faz dessa a IA em uso — a lista de modelos mostra a mudança — e volta a executar o pedido.
+- Se a única outra conexão for um login de pagamento por consumo que autorizou, o mesmo botão vem acompanhado de uma nota sobre o custo.
+- Nunca há um botão que o leve para uma chave de API.
 
-- The reason is shown where the reply stopped. For a used-up limit, the time it resets is shown too, when the program reports it.
-- If your other subscription is connected, a **Continue with …** button appears, for example **Continue with Codex**. Pressing it makes that one the AI to use — the model list shows the change — and runs the request again.
-- If the only other connection is a pay-as-you-go login you allowed, the same button comes with a note about the cost.
-- There is never a button that moves you to an API key.
+## A linha de utilização
 
-## The usage line
+Depois de ter usado 80% ou mais de um limite, o painel de IA mostra uma linha como «85% usado · redefine às 15:00». O Claude indica um limite de 5 horas e um limite de 7 dias, e o Codex é mostrado da mesma forma quando os indica. Abaixo de 80%, ou quando o programa não indica nada, não é mostrada nenhuma linha.
 
-Once you have used 80% or more of a limit, the AI panel shows a line such as "85% used · resets at 3:00 PM". Claude reports a 5-hour limit and a 7-day limit, and Codex is shown the same way when it reports them. Below 80%, or when the program reports nothing, no line is shown.
+## O que é enviado, e para onde
 
-## What is sent, and where
+Na primeira vez que uma assinatura pode ser usada, o GenOffice mostra um aviso, uma única vez. Para o voltar a ler, vá a Configurações ▸ IA ▸ **Aviso da primeira conexão** e clique em **Ver novamente**. Diz três coisas:
 
-The first time a subscription can be used, GenOffice shows a notice once. To read it again, go to Settings ▸ AI ▸ **First-connection notice** and press **View again**. It says three things:
+- O conteúdo do documento e a sua conversa são enviados à Anthropic ou à OpenAI pela sua própria conta.
+- Se esse conteúdo é usado para treinar IA depende das configurações da sua própria conta nessa empresa, não do GenOffice.
+- O GenOffice desativa o salvamento do histórico de conversas do Codex, mas o Codex ainda pode manter seus próprios registros de diagnóstico neste PC.
 
-- Document content and your conversation are sent to Anthropic or OpenAI under your own account.
-- Whether that content is used to train AI is decided by your own account settings at that company, not by GenOffice.
-- GenOffice turns off conversation history saving in Codex, but Codex may still keep its own diagnostic logs on this PC.
+Tudo o que ocultou com **Ocultar a seleção da IA** não é enviado, seja qual for a IA que use.
 
-Anything you hid with **Hide the selection from AI** is not sent, whichever AI you use.
+## Convém saber
 
-## Good to know
-
-- **Speed.** A reply through a subscription starts a few seconds later than one through an API key, because the company's program has to start up first.
-- **Free ChatGPT plan.** It shows as Connected, but its limits are small, so requests stop sooner. The usage line does not appear for it.
-- **Image generation.** In this version a subscription does not generate images, on any plan. That needs an image provider key; see [AI models and settings](help://ai-models).
-- **Proxies.** Claude Code and Codex do not take proxy settings from GenOffice. They use the proxy set for this PC, for example the `HTTPS_PROXY` environment variable, just as when you run them in a terminal. If they cannot connect in a terminal, they cannot connect from here either.
-- **Commands and other programs.** A request that arrives from the `ieumoffice` command or from a connected coding agent does not use your subscription unless you allow it. See [Connecting a coding agent](help://mcp).
+- **Velocidade.** Uma resposta através de uma assinatura começa alguns segundos mais tarde do que uma através de uma chave de API, porque o programa da empresa tem primeiro de arrancar.
+- **Plano gratuito do ChatGPT.** Aparece como Conectado, mas os limites são pequenos, por isso os pedidos param mais cedo. A linha de utilização não aparece para ele.
+- **Geração de imagens.** Nesta versão, uma assinatura não gera imagens, em nenhum plano. Para isso é precisa a chave de um fornecedor de imagens; consulte [Modelos de IA e configurações](help://ai-models).
+- **Proxies.** O Claude Code e o Codex não recebem as definições de proxy do GenOffice. Usam o proxy definido para este PC, por exemplo a variável de ambiente `HTTPS_PROXY`, tal como quando os executa num terminal. Se não conseguirem ligar-se num terminal, também não conseguem a partir daqui.
+- **Comandos e outros programas.** Um pedido que chega do comando `ieumoffice` ou de um agente de programação conectado não usa a sua assinatura, a menos que o autorize. Consulte [Conectar um agente de programação](help://mcp).

@@ -1,93 +1,91 @@
-<!-- TRANSLATE: copy of en -->
+# Подключение по подписке
 
-# Subscription connection
+GenOffice использует ИИ по подписке, которая у вас уже есть: подписке Claude (Anthropic) или подписке Codex (OpenAI). Codex — это программа OpenAI, и вход в неё выполняется с вашим тарифом ChatGPT. API-ключ не нужен, и у GenOffice нет собственного аккаунта, который пришлось бы заводить.
 
-GenOffice runs its AI on a subscription you already have: a Claude subscription (Anthropic) or a Codex subscription (OpenAI). Codex is OpenAI's program, and you sign in to it with your ChatGPT plan. You do not need an API key, and GenOffice has no account of its own to sign up for.
+## Как это устроено
 
-## How it works
+- ИИ не встроен в GenOffice. На этом компьютере установлена программа самой компании — **Claude Code** для подписки Claude, **Codex** для подписки ChatGPT, — и GenOffice обращается за ответом к этой программе.
+- В программу выполнен вход с вашим собственным аккаунтом, поэтому каждый запрос расходует лимит вашего тарифа.
+- GenOffice никогда не показывает собственную форму входа и никогда не читает и не сохраняет ваши данные для входа. Вы входите в программе и на веб-странице самой компании.
 
-- The AI is not built into GenOffice. A program from the company is installed on this PC — **Claude Code** for a Claude subscription, **Codex** for a ChatGPT subscription — and GenOffice asks that program for the answer.
-- That program is signed in with your own account, so every request counts against your own plan.
-- GenOffice never shows a sign-in form of its own, and it never reads or stores your login. You sign in inside the company's own program and web page.
+## Перед началом
 
-## Before you start
+Нужно одно из двух. Можно и то, и другое.
 
-You need one of these. Having both is fine.
+- Подписка Claude и программа Claude Code, которая установлена на этом компьютере и в которую выполнен вход.
+- Подписка ChatGPT и программа Codex, которая установлена на этом компьютере и в которую выполнен вход.
 
-- A Claude subscription, and the Claude Code program installed and signed in on this PC.
-- A ChatGPT subscription, and the Codex program installed and signed in on this PC.
+Если программа ещё не установлена или вход в неё ещё не выполнен, с этим помогут кнопки из следующего раздела.
 
-If the program is not installed yet, or not signed in yet, the buttons in the next section take care of it.
+## Подключение
 
-## Connecting
+1. Откройте **Настройки** из строки в левом нижнем углу «Главной» и выберите **ИИ**. В разделе **Подключение по подписке** есть одна карточка для Claude и одна для Codex.
+2. Прочитайте, что написано на карточке, и нажмите её кнопку. Каждое состояние описано в таблице ниже.
+3. Вернитесь в окно GenOffice. Карточка сама выполнит проверку заново, а кнопка **Проверить снова** запускает её сразу.
 
-1. Open **Settings** from the row at the bottom left of Home and choose **AI**. Under **Subscription connection** there is one card for Claude and one for Codex.
-2. Read what the card says and press its button. The table below explains each state.
-3. Come back to the GenOffice window. The card checks again by itself, and **Check again** checks at once.
+Те же карточки появляются на втором шаге приветственных экранов при первом запуске и в панели ИИ, когда ни один ИИ не подключён. Их можно пропустить и подключиться позже.
 
-The same cards appear in the second step of the welcome screens on first launch, and in the AI panel when no AI is connected. You can skip them and connect later.
+| Что написано на карточке             | Что это значит                                                                                                          | Что делать                                                                                                                                                                                                                                                                                         |
+| ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Проверка…**                        | GenOffice спрашивает у программы, в каком она состоянии.                                                                | Немного подождите.                                                                                                                                                                                                                                                                                 |
+| **Не установлено**                   | Программа не найдена на этом компьютере.                                                                                | Нажмите **Установить**. Официальная команда установки от этой компании выполняется в новом окне терминала, так что вы видите, что она делает. Сам GenOffice ничего не скачивает. Чтобы установить программу вручную, откройте инструкции компании кнопкой **Официальная инструкция по установке**. |
+| **Вход не выполнен**                 | Программа есть, но вход в неё не выполнен.                                                                              | Нажмите **Войти**. В новом окне запустится вход самой программы, а в браузере откроется страница входа компании. Завершите вход там.                                                                                                                                                               |
+| **Подключено**                       | Подтверждён вход по подписке. Название тарифа показывается, если программа его сообщает.                                | Ничего. ИИ готов к работе.                                                                                                                                                                                                                                                                         |
+| **Вход выполнен, но не по подписке** | В программу выполнен вход с API-ключом или через аккаунт с оплатой по расходу, либо способ входа не удалось определить. | См. «Вход с оплатой по расходу» ниже.                                                                                                                                                                                                                                                              |
+| **Не удалось проверить подключение** | Не удалась сама проверка. Причина указана на карточке.                                                                  | Нажмите **Проверить снова**. Если сказано, что программа слишком старая, обновите её и проверьте ещё раз.                                                                                                                                                                                          |
 
-| What the card says                         | What it means                                                                                                     | What to do                                                                                                                                                                                                                                              |
-| ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Checking…**                              | GenOffice is asking the program how it stands.                                                                    | Wait a moment.                                                                                                                                                                                                                                          |
-| **Not installed**                          | The program was not found on this PC.                                                                             | Press **Install**. The company's official install command runs in a new terminal window, so you can watch what it does. GenOffice downloads nothing by itself. To install by hand instead, **Official install guide** opens the company's instructions. |
-| **Not signed in**                          | The program is there but has no login.                                                                            | Press **Sign in**. The program's own sign-in starts in a new window and opens the company's sign-in page in your browser. Finish it there.                                                                                                              |
-| **Connected**                              | A subscription login was confirmed. The plan name is shown when the program reports it.                           | Nothing. AI is ready to use.                                                                                                                                                                                                                            |
-| **Signed in, but not with a subscription** | The program is signed in with an API key or a pay-as-you-go account, or the kind of login could not be confirmed. | See "Pay-as-you-go logins" below.                                                                                                                                                                                                                       |
-| **The connection could not be checked**    | The check itself failed. The reason is shown on the card.                                                         | Press **Check again**. If it says the program is too old, update the program and check again.                                                                                                                                                           |
+Подключение проверяется при запуске приложения, при открытии настроек и при возвращении в окно после того, как вы начали установку или вход.
 
-The connection is checked when the app starts, when you open Settings, and when you return to the window after starting an install or a sign-in.
+## Вход с оплатой по расходу
 
-## Pay-as-you-go logins
+На карточке с надписью **Вход выполнен, но не по подписке** есть предупреждение: «Это не подписка: плата взимается за фактическое использование.»
 
-A card that says **Signed in, but not with a subscription** carries a warning: "This is not a subscription: you are charged for what you use."
+- GenOffice не использует такой вход, пока вы не нажмёте **Всё равно использовать**. С этого момента каждый запрос оплачивается с этого аккаунта.
+- Даже тогда он никогда не выбирается автоматически. Выберите его сами в списке **Используемый ИИ**, где он помечен как **Платно**.
+- Разрешение запоминается только для этой программы. Оно сбрасывается, когда из программы выходят или вход в ней меняется.
+- Чтобы вместо этого пользоваться подпиской, войдите в программе с аккаунтом, на котором есть подписка, и нажмите **Проверить снова**.
 
-- GenOffice does not use that login until you press **Use anyway**. From then on, every request is billed to that account.
-- Even then it is never chosen automatically. Choose it yourself under **AI to use**, where it is marked **Paid**.
-- Your permission is remembered for that program only. It is cleared when the program is signed out or its login changes.
-- To use your subscription instead, sign the program in with your subscription account and press **Check again**.
+## Какой ИИ используется
 
-## Which AI is used
+Параметр **Используемый ИИ** в разделе Настройки ▸ ИИ сначала установлен на **Автоматически**. Автоматический режим выбирает в таком порядке:
 
-**AI to use**, under Settings ▸ AI, starts on **Automatic**. Automatic decides in this order:
+1. Claude, если на его карточке написано «Подключено».
+2. Иначе Codex, если на его карточке написано «Подключено».
+3. Иначе ни один ИИ не подключён, и панель ИИ показывает вместо ошибки карточки подключения.
 
-1. Claude, when its card says Connected.
-2. Otherwise Codex, when its card says Connected.
-3. Otherwise no AI is connected, and the AI panel shows the connect cards instead of an error.
+Автоматический режим никогда не выбирает то, что стоит дополнительных денег: ни API-ключ, ни вход с оплатой по расходу. Они используются, только пока вы выбираете их сами.
 
-Automatic never picks anything that costs extra money: not an API key, and not a pay-as-you-go login. Those are used only while you choose them yourself.
+Можно и самим выбрать один ИИ — там же или в списке моделей внизу панели ИИ. Если выбранный ИИ перестаёт работать, GenOffice не переходит молча на другой. Он сообщает, что произошло, и показывает, как подключиться заново.
 
-You can also choose one AI yourself, in the same place or in the model list at the bottom of the AI panel. If the one you chose stops working, GenOffice does not quietly move to another. It tells you what happened and shows how to reconnect.
+Везде, где можно выбрать Codex, рядом показывается одна строка: «Использование подписки Codex внутри приложения не является способом, который официально рекомендует OpenAI.» Учитывайте это при выборе.
 
-Wherever Codex can be chosen, one line is shown with it: "Using a Codex subscription inside an app is not a method officially recommended by OpenAI." Decide with that in mind.
+## Когда запрос останавливается
 
-## When a request is stopped
+Запрос останавливается, когда лимит тарифа исчерпан, когда вход истёк или когда программы больше нет на компьютере. GenOffice сам не переключается на другой ИИ.
 
-A request stops when the plan's limit is used up, when the login has expired, or when the program is no longer there. GenOffice does not switch to another AI by itself.
+- Причина показывается там, где оборвался ответ. Для исчерпанного лимита указывается и время его обновления, если программа его сообщает.
+- Если подключена ваша вторая подписка, появляется кнопка **Продолжить с …**, например **Продолжить с Codex**. Нажатие делает её используемым ИИ — изменение видно в списке моделей — и запускает запрос заново.
+- Если единственное другое подключение — разрешённый вами вход с оплатой по расходу, та же кнопка сопровождается пометкой о стоимости.
+- Кнопки, которая переводит на API-ключ, не бывает никогда.
 
-- The reason is shown where the reply stopped. For a used-up limit, the time it resets is shown too, when the program reports it.
-- If your other subscription is connected, a **Continue with …** button appears, for example **Continue with Codex**. Pressing it makes that one the AI to use — the model list shows the change — and runs the request again.
-- If the only other connection is a pay-as-you-go login you allowed, the same button comes with a note about the cost.
-- There is never a button that moves you to an API key.
+## Строка использования
 
-## The usage line
+Когда вы израсходовали 80% лимита или больше, в панели ИИ появляется строка вроде «Использовано 85% · обновление в 15:00». Claude сообщает лимит на 5 часов и лимит на 7 дней, и Codex показывается так же, когда сообщает их. Ниже 80% или когда программа ничего не сообщает, строки нет.
 
-Once you have used 80% or more of a limit, the AI panel shows a line such as "85% used · resets at 3:00 PM". Claude reports a 5-hour limit and a 7-day limit, and Codex is shown the same way when it reports them. Below 80%, or when the program reports nothing, no line is shown.
+## Что отправляется и куда
 
-## What is sent, and where
+Когда подпиской впервые можно воспользоваться, GenOffice один раз показывает уведомление. Чтобы прочитать его снова, откройте Настройки ▸ ИИ ▸ **Уведомление при первом подключении** и нажмите **Показать снова**. В нём сказано три вещи:
 
-The first time a subscription can be used, GenOffice shows a notice once. To read it again, go to Settings ▸ AI ▸ **First-connection notice** and press **View again**. It says three things:
+- Содержимое документа и ваша переписка отправляются в Anthropic или OpenAI от имени вашего собственного аккаунта.
+- Используется ли это содержимое для обучения ИИ, определяют настройки вашего аккаунта в этой компании, а не GenOffice.
+- GenOffice отключает сохранение истории переписки в Codex, но Codex всё же может хранить на этом компьютере собственные диагностические журналы.
 
-- Document content and your conversation are sent to Anthropic or OpenAI under your own account.
-- Whether that content is used to train AI is decided by your own account settings at that company, not by GenOffice.
-- GenOffice turns off conversation history saving in Codex, but Codex may still keep its own diagnostic logs on this PC.
+То, что вы скрыли командой **Скрыть выделение от ИИ**, не отправляется, каким бы ИИ вы ни пользовались.
 
-Anything you hid with **Hide the selection from AI** is not sent, whichever AI you use.
+## Полезно знать
 
-## Good to know
-
-- **Speed.** A reply through a subscription starts a few seconds later than one through an API key, because the company's program has to start up first.
-- **Free ChatGPT plan.** It shows as Connected, but its limits are small, so requests stop sooner. The usage line does not appear for it.
-- **Image generation.** In this version a subscription does not generate images, on any plan. That needs an image provider key; see [AI models and settings](help://ai-models).
-- **Proxies.** Claude Code and Codex do not take proxy settings from GenOffice. They use the proxy set for this PC, for example the `HTTPS_PROXY` environment variable, just as when you run them in a terminal. If they cannot connect in a terminal, they cannot connect from here either.
-- **Commands and other programs.** A request that arrives from the `ieumoffice` command or from a connected coding agent does not use your subscription unless you allow it. See [Connecting a coding agent](help://mcp).
+- **Скорость.** Ответ по подписке начинается на несколько секунд позже, чем через API-ключ, потому что сначала должна запуститься программа компании.
+- **Бесплатный тариф ChatGPT.** Он показывается как «Подключено», но лимиты у него небольшие, поэтому запросы останавливаются раньше. Строка использования для него не появляется.
+- **Генерация изображений.** В этой версии подписка не создаёт изображения ни на одном тарифе. Для этого нужен ключ провайдера изображений; см. [Модели ИИ и настройки](help://ai-models).
+- **Прокси.** Claude Code и Codex не берут настройки прокси из GenOffice. Они используют прокси, заданный для этого компьютера, например переменную окружения `HTTPS_PROXY`, — так же, как при запуске в терминале. Если они не могут подключиться в терминале, не смогут и отсюда.
+- **Команды и другие программы.** Запрос, который приходит от команды `ieumoffice` или от подключённого агента для программирования, не использует вашу подписку, пока вы этого не разрешите. См. [Подключение ИИ-агента](help://mcp).

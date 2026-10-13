@@ -4,8 +4,6 @@ GenOffice adalah rangkaian perkantoran yang berjalan sepenuhnya di komputer Anda
 
 ## Sekilas antarmuka
 
-![Layar Beranda](img/home-screen.png)
-
 Jendela ini terdiri dari tiga bagian:
 
 - **Bilah tab (atas)**: setiap file yang terbuka adalah sebuah tab. Tab Beranda paling kiri selalu ada dan tidak bisa ditutup; tab lainnya adalah dokumen Anda. Klik dua kali sebuah tab untuk mengganti nama file-nya secara langsung.
@@ -26,7 +24,7 @@ Dokumen baru terbuka tanpa nama; file di disk baru dibuat saat disimpan pertama 
 
 - Menu **File ▸ Buka…** (⌘O/ctrl+O) membuka pemilih file sistem: .docx / .doc / .xlsx / .xls / .csv / .tsv / .pptx / .ppt / .pdf / .md / .html.
 - Klik apa pun di daftar **Terbaru** pada Beranda.
-- `genoffice <file>` dari terminal juga dapat membuka file.
+- `ieumoffice <file>` dari terminal juga dapat membuka file.
 
 ## Cara kerja penyimpanan
 
@@ -88,4 +86,5 @@ Dengan begitu ⌥⌘D tetap bebas untuk dipakai GenOffice di macOS, bila suatu p
 - Letak file Anda: [Layar Beranda](help://home-screen).
 - Mengelola banyak file terbuka: [Tab dan pengelolaan jendela](help://tabs-and-windows).
 - Membiarkan AI mengerjakan pekerjaan: [Panel asisten AI](help://ai-panel).
+- Menghubungkan AI lebih dulu: [Koneksi langganan](help://subscription).
 - Bahasa, tema, aplikasi default: [Pengaturan, bahasa, tema, dan integrasi MCP](help://settings-integrations).

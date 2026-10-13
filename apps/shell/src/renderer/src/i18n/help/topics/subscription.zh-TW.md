@@ -1,93 +1,91 @@
-<!-- TRANSLATE: copy of en -->
+# 訂閱連線
 
-# Subscription connection
+GenOffice 的 AI 是靠你手上已有的訂閱來運作的：Claude 訂閱（Anthropic）或 Codex 訂閱（OpenAI）皆可。Codex 是 OpenAI 的程式，要用你的 ChatGPT 方案帳戶登入。你不需要 API 金鑰，GenOffice 本身也沒有需要另外註冊的帳戶。
 
-GenOffice runs its AI on a subscription you already have: a Claude subscription (Anthropic) or a Codex subscription (OpenAI). Codex is OpenAI's program, and you sign in to it with your ChatGPT plan. You do not need an API key, and GenOffice has no account of its own to sign up for.
+## 運作方式
 
-## How it works
+- AI 並不是內建在 GenOffice 裡。這台電腦上會安裝該公司的程式——Claude 訂閱用的是 **Claude Code**，ChatGPT 訂閱用的是 **Codex**——GenOffice 再向這個程式要答案。
+- 這個程式是用你自己的帳戶登入的，所以每一次要求都會算在你自己方案的用量裡。
+- GenOffice 不會顯示自己的登入畫面，也不會讀取或儲存你的登入資訊。登入一律在該公司自己的程式和網頁上完成。
 
-- The AI is not built into GenOffice. A program from the company is installed on this PC — **Claude Code** for a Claude subscription, **Codex** for a ChatGPT subscription — and GenOffice asks that program for the answer.
-- That program is signed in with your own account, so every request counts against your own plan.
-- GenOffice never shows a sign-in form of its own, and it never reads or stores your login. You sign in inside the company's own program and web page.
+## 開始之前
 
-## Before you start
+以下兩項只要有一項就行，兩項都有也沒問題。
 
-You need one of these. Having both is fine.
+- Claude 訂閱，以及在這台電腦上已安裝並登入的 Claude Code 程式。
+- ChatGPT 訂閱，以及在這台電腦上已安裝並登入的 Codex 程式。
 
-- A Claude subscription, and the Claude Code program installed and signed in on this PC.
-- A ChatGPT subscription, and the Codex program installed and signed in on this PC.
+如果程式還沒安裝，或是還沒登入，下一節的按鈕可以幫你處理。
 
-If the program is not installed yet, or not signed in yet, the buttons in the next section take care of it.
+## 連結
 
-## Connecting
+1. 按一下首頁左下角的那一列開啟**設定**，然後選擇 **AI**。**訂閱連線**底下有一張 Claude 卡片和一張 Codex 卡片。
+2. 看看卡片上寫的狀態，再按卡片上的按鈕。各種狀態的意思請見下表。
+3. 回到 GenOffice 視窗。卡片會自動重新檢查；按**重新檢查**則會立刻檢查。
 
-1. Open **Settings** from the row at the bottom left of Home and choose **AI**. Under **Subscription connection** there is one card for Claude and one for Codex.
-2. Read what the card says and press its button. The table below explains each state.
-3. Come back to the GenOffice window. The card checks again by itself, and **Check again** checks at once.
+第一次啟動時歡迎畫面的第二步，以及尚未連結任何 AI 時的 AI 面板，也會出現同樣的卡片。你可以先略過，之後再連結。
 
-The same cards appear in the second step of the welcome screens on first launch, and in the AI panel when no AI is connected. You can skip them and connect later.
+| 卡片上顯示                 | 意思                                                            | 該怎麼做                                                                                                                                                                   |
+| -------------------------- | --------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **正在檢查…**              | GenOffice 正在向程式詢問目前的狀態。                            | 稍候片刻。                                                                                                                                                                 |
+| **尚未安裝**               | 在這台電腦上找不到該程式。                                      | 按**安裝**。該公司的官方安裝指令會在新的終端機視窗中執行，你可以看到它做了哪些事。GenOffice 自己不會下載任何東西。如果想手動安裝，**官方安裝說明**會開啟該公司的說明頁面。 |
+| **尚未登入**               | 程式已經安裝，但還沒有登入。                                    | 按**登入**。程式自己的登入流程會在新視窗中啟動，並在瀏覽器裡開啟該公司的登入頁面。請在那裡完成登入。                                                                       |
+| **已連線**                 | 已確認是以訂閱方式登入。程式有回報方案名稱時會一併顯示。        | 不必做任何事，AI 已經可以使用。                                                                                                                                            |
+| **已登入，但不是訂閱方式** | 程式是以 API 金鑰或依用量付費的帳戶登入，或是無法確認登入方式。 | 請見下方的「依用量付費的登入」。                                                                                                                                           |
+| **無法檢查連線狀態**       | 檢查本身失敗了。原因會顯示在卡片上。                            | 按**重新檢查**。如果顯示程式版本過舊，請更新程式後再檢查一次。                                                                                                             |
 
-| What the card says                         | What it means                                                                                                     | What to do                                                                                                                                                                                                                                              |
-| ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Checking…**                              | GenOffice is asking the program how it stands.                                                                    | Wait a moment.                                                                                                                                                                                                                                          |
-| **Not installed**                          | The program was not found on this PC.                                                                             | Press **Install**. The company's official install command runs in a new terminal window, so you can watch what it does. GenOffice downloads nothing by itself. To install by hand instead, **Official install guide** opens the company's instructions. |
-| **Not signed in**                          | The program is there but has no login.                                                                            | Press **Sign in**. The program's own sign-in starts in a new window and opens the company's sign-in page in your browser. Finish it there.                                                                                                              |
-| **Connected**                              | A subscription login was confirmed. The plan name is shown when the program reports it.                           | Nothing. AI is ready to use.                                                                                                                                                                                                                            |
-| **Signed in, but not with a subscription** | The program is signed in with an API key or a pay-as-you-go account, or the kind of login could not be confirmed. | See "Pay-as-you-go logins" below.                                                                                                                                                                                                                       |
-| **The connection could not be checked**    | The check itself failed. The reason is shown on the card.                                                         | Press **Check again**. If it says the program is too old, update the program and check again.                                                                                                                                                           |
+應用程式啟動時、開啟設定時，以及開始安裝或登入後回到視窗時，都會檢查連線狀態。
 
-The connection is checked when the app starts, when you open Settings, and when you return to the window after starting an install or a sign-in.
+## 依用量付費的登入
 
-## Pay-as-you-go logins
+顯示**已登入，但不是訂閱方式**的卡片會附上一則警告：「這不是訂閱，而是依實際用量收費。」
 
-A card that says **Signed in, but not with a subscription** carries a warning: "This is not a subscription: you are charged for what you use."
+- 在你按下**仍要使用**之前，GenOffice 不會使用這個登入。按下之後，每一次要求都會向該帳戶計費。
+- 即使如此，它也不會被自動選用。你得自己在**使用的 AI**裡選它，它在那裡會標示為**付費**。
+- 你的許可只針對這個程式記住。程式登出或登入方式改變後，許可就會清除。
+- 想改用訂閱，請用訂閱帳戶重新登入該程式，再按**重新檢查**。
 
-- GenOffice does not use that login until you press **Use anyway**. From then on, every request is billed to that account.
-- Even then it is never chosen automatically. Choose it yourself under **AI to use**, where it is marked **Paid**.
-- Your permission is remembered for that program only. It is cleared when the program is signed out or its login changes.
-- To use your subscription instead, sign the program in with your subscription account and press **Check again**.
+## 用的是哪個 AI
 
-## Which AI is used
+設定 ▸ AI 底下的**使用的 AI**一開始是**自動**。自動會依下列順序決定：
 
-**AI to use**, under Settings ▸ AI, starts on **Automatic**. Automatic decides in this order:
+1. Claude 卡片顯示「已連線」時，使用 Claude。
+2. 否則，Codex 卡片顯示「已連線」時，使用 Codex。
+3. 兩者都不是，就表示尚未連結任何 AI，這時 AI 面板顯示的是連結卡片，而不是錯誤訊息。
 
-1. Claude, when its card says Connected.
-2. Otherwise Codex, when its card says Connected.
-3. Otherwise no AI is connected, and the AI panel shows the connect cards instead of an error.
+自動絕不會選用任何要額外花錢的方式：不選 API 金鑰，也不選依用量付費的登入。這些只有在你自己選用的期間才會使用。
 
-Automatic never picks anything that costs extra money: not an API key, and not a pay-as-you-go login. Those are used only while you choose them yourself.
+你也可以自己指定一個 AI：在同一個位置選，或是在 AI 面板底部的模型清單裡選。如果你選的那個無法使用了，GenOffice 不會悄悄換成另一個，而是告訴你發生了什麼事，並顯示重新連結的方法。
 
-You can also choose one AI yourself, in the same place or in the model list at the bottom of the AI panel. If the one you chose stops working, GenOffice does not quietly move to another. It tells you what happened and shows how to reconnect.
+凡是可以選擇 Codex 的地方，都會附上一行說明：「在應用程式中使用 Codex 訂閱並非 OpenAI 官方建議的方式。」請在了解這一點之後再決定。
 
-Wherever Codex can be chosen, one line is shown with it: "Using a Codex subscription inside an app is not a method officially recommended by OpenAI." Decide with that in mind.
+## 要求中途停止時
 
-## When a request is stopped
+方案額度用完、登入失效，或是程式已經不在了，要求就會停止。GenOffice 不會自行切換到另一個 AI。
 
-A request stops when the plan's limit is used up, when the login has expired, or when the program is no longer there. GenOffice does not switch to another AI by itself.
+- 回覆停下的地方會顯示原因。如果是額度用完，而程式有回報重設時間，也會一併顯示。
+- 如果你的另一個訂閱已經連線，就會出現**改用 … 繼續**按鈕，例如**改用 Codex 繼續**。按下後，那個訂閱會成為使用的 AI（模型清單也會顯示這項變更），並重新執行這次要求。
+- 如果另外只剩下一個你已允許的依用量付費登入，同一個按鈕會附上費用提醒。
+- 絕不會出現把你切換到 API 金鑰的按鈕。
 
-- The reason is shown where the reply stopped. For a used-up limit, the time it resets is shown too, when the program reports it.
-- If your other subscription is connected, a **Continue with …** button appears, for example **Continue with Codex**. Pressing it makes that one the AI to use — the model list shows the change — and runs the request again.
-- If the only other connection is a pay-as-you-go login you allowed, the same button comes with a note about the cost.
-- There is never a button that moves you to an API key.
+## 用量提示
 
-## The usage line
+某項額度用到 80% 以上之後，AI 面板會顯示一行類似「已用 85% · 下午3:00 重設」的提示。Claude 會回報 5 小時額度和 7 天額度；Codex 有回報這些資訊時，也會以同樣的方式顯示。低於 80%，或是程式沒有回報任何資訊時，就不會顯示這一行。
 
-Once you have used 80% or more of a limit, the AI panel shows a line such as "85% used · resets at 3:00 PM". Claude reports a 5-hour limit and a 7-day limit, and Codex is shown the same way when it reports them. Below 80%, or when the program reports nothing, no line is shown.
+## 傳送了什麼、傳到哪裡
 
-## What is sent, and where
+第一次可以使用訂閱時，GenOffice 會顯示一次說明。想再看一次，請到 設定 ▸ AI ▸ **首次連線說明**，按**再次檢視**。說明裡講了三件事：
 
-The first time a subscription can be used, GenOffice shows a notice once. To read it again, go to Settings ▸ AI ▸ **First-connection notice** and press **View again**. It says three things:
+- 文件內容和對話會以你本人的帳戶傳送給 Anthropic 或 OpenAI。
+- 這些內容是否用於 AI 訓練，取決於你在該公司帳戶中的設定，而不是由 GenOffice 決定。
+- GenOffice 會關閉 Codex 的對話記錄儲存，但 Codex 仍可能在這台電腦上保留自己的診斷記錄檔。
 
-- Document content and your conversation are sent to Anthropic or OpenAI under your own account.
-- Whether that content is used to train AI is decided by your own account settings at that company, not by GenOffice.
-- GenOffice turns off conversation history saving in Codex, but Codex may still keep its own diagnostic logs on this PC.
+用**把選取的內容對 AI 隱藏**藏起來的內容，不論使用哪個 AI 都不會傳送。
 
-Anything you hid with **Hide the selection from AI** is not sent, whichever AI you use.
+## 值得知道的事
 
-## Good to know
-
-- **Speed.** A reply through a subscription starts a few seconds later than one through an API key, because the company's program has to start up first.
-- **Free ChatGPT plan.** It shows as Connected, but its limits are small, so requests stop sooner. The usage line does not appear for it.
-- **Image generation.** In this version a subscription does not generate images, on any plan. That needs an image provider key; see [AI models and settings](help://ai-models).
-- **Proxies.** Claude Code and Codex do not take proxy settings from GenOffice. They use the proxy set for this PC, for example the `HTTPS_PROXY` environment variable, just as when you run them in a terminal. If they cannot connect in a terminal, they cannot connect from here either.
-- **Commands and other programs.** A request that arrives from the `ieumoffice` command or from a connected coding agent does not use your subscription unless you allow it. See [Connecting a coding agent](help://mcp).
+- **速度。** 透過訂閱得到的回覆，會比透過 API 金鑰的晚幾秒才開始，因為得先等該公司的程式啟動。
+- **ChatGPT 免費方案。** 會顯示為「已連線」，但額度很小，所以要求會更早停止。它也不會顯示用量提示。
+- **產生圖片。** 在這個版本裡，不論哪一種方案，訂閱都無法產生圖片。這需要生圖服務商的金鑰，請見 [AI 模型與設定](help://ai-models)。
+- **代理伺服器。** Claude Code 和 Codex 不會從 GenOffice 取得代理伺服器設定。它們使用這台電腦上設定的代理伺服器，例如 `HTTPS_PROXY` 環境變數，就和你在終端機裡執行它們時一樣。如果在終端機裡連不上，在這裡也一樣連不上。
+- **命令與其他程式。** 從 `ieumoffice` 命令或已連接的程式開發代理送來的要求，除非你允許，否則不會使用你的訂閱。請見[連接程式設計助手](help://mcp)。

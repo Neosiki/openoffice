@@ -1,93 +1,91 @@
-<!-- TRANSLATE: copy of en -->
+# חיבור מינוי
 
-# Subscription connection
+GenOffice מפעילה את ה-AI באמצעות מינוי שכבר יש לכם: מינוי Claude של Anthropic או מינוי Codex של OpenAI. Codex היא תוכנה של OpenAI, ונכנסים אליה עם תוכנית ה-ChatGPT שלכם. אין צורך במפתח API, ול-GenOffice אין חשבון משלה שצריך להירשם אליו.
 
-GenOffice runs its AI on a subscription you already have: a Claude subscription (Anthropic) or a Codex subscription (OpenAI). Codex is OpenAI's program, and you sign in to it with your ChatGPT plan. You do not need an API key, and GenOffice has no account of its own to sign up for.
+## איך זה עובד
 
-## How it works
+- ה-AI אינו מובנה ב-GenOffice. במחשב הזה מותקנת תוכנה של החברה — **Claude Code** למינוי Claude, ו-**Codex** למינוי ChatGPT — ו-GenOffice מבקשת ממנה את התשובה.
+- התוכנה הזו מחוברת לחשבון שלכם, ולכן כל בקשה נזקפת לתוכנית שלכם.
+- GenOffice לעולם אינה מציגה טופס כניסה משלה, ולעולם אינה קוראת או שומרת את פרטי הכניסה שלכם. הכניסה נעשית בתוך התוכנה ודף האינטרנט של החברה עצמה.
 
-- The AI is not built into GenOffice. A program from the company is installed on this PC — **Claude Code** for a Claude subscription, **Codex** for a ChatGPT subscription — and GenOffice asks that program for the answer.
-- That program is signed in with your own account, so every request counts against your own plan.
-- GenOffice never shows a sign-in form of its own, and it never reads or stores your login. You sign in inside the company's own program and web page.
+## לפני שמתחילים
 
-## Before you start
+דרוש אחד מאלה. אפשר גם את שניהם.
 
-You need one of these. Having both is fine.
+- מינוי Claude, והתוכנה Claude Code מותקנת במחשב הזה ומחוברת לחשבון.
+- מינוי ChatGPT, והתוכנה Codex מותקנת במחשב הזה ומחוברת לחשבון.
 
-- A Claude subscription, and the Claude Code program installed and signed in on this PC.
-- A ChatGPT subscription, and the Codex program installed and signed in on this PC.
+אם התוכנה עדיין לא מותקנת, או שעדיין לא נכנסתם בה לחשבון, הכפתורים שבסעיף הבא מטפלים בזה.
 
-If the program is not installed yet, or not signed in yet, the buttons in the next section take care of it.
+## חיבור
 
-## Connecting
+1. פתחו את **הגדרות** מהשורה שבפינה השמאלית-תחתונה של הבית ובחרו **AI**. תחת **חיבור מינוי** יש כרטיס אחד ל-Claude ואחד ל-Codex.
+2. קראו מה כתוב בכרטיס ולחצו על הכפתור שלו. הטבלה שלהלן מסבירה כל מצב.
+3. חזרו לחלון של GenOffice. הכרטיס בודק שוב מעצמו, ו**בדיקה חוזרת** בודקת מיד.
 
-1. Open **Settings** from the row at the bottom left of Home and choose **AI**. Under **Subscription connection** there is one card for Claude and one for Codex.
-2. Read what the card says and press its button. The table below explains each state.
-3. Come back to the GenOffice window. The card checks again by itself, and **Check again** checks at once.
+אותם כרטיסים מופיעים בשלב השני של מסכי הפתיחה בהפעלה הראשונה, וגם בחלונית ה-AI כשאין AI מחובר. אפשר לדלג עליהם ולהתחבר מאוחר יותר.
 
-The same cards appear in the second step of the welcome screens on first launch, and in the AI panel when no AI is connected. You can skip them and connect later.
+| מה כתוב בכרטיס                       | מה המשמעות                                                                                    | מה לעשות                                                                                                                                                                                                       |
+| ------------------------------------ | --------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **בודק…**                            | GenOffice שואלת את התוכנה מה מצבה.                                                            | המתינו רגע.                                                                                                                                                                                                    |
+| **לא מותקן**                         | התוכנה לא נמצאה במחשב הזה.                                                                    | לחצו **התקנה**. פקודת ההתקנה הרשמית של החברה מופעלת בחלון מסוף חדש, כך שאפשר לראות מה היא עושה. GenOffice אינה מורידה דבר בעצמה. אם אתם מעדיפים להתקין ידנית, **מדריך ההתקנה הרשמי** פותח את ההוראות של החברה. |
+| **לא מחובר לחשבון**                  | התוכנה קיימת, אבל לא בוצעה בה כניסה.                                                          | לחצו **כניסה**. תהליך הכניסה של התוכנה עצמה מתחיל בחלון חדש ופותח בדפדפן את דף הכניסה של החברה. השלימו אותו שם.                                                                                                |
+| **מחובר**                            | אושרה כניסה באמצעות מינוי. שם התוכנית מוצג כשהתוכנה מדווחת עליו.                              | כלום. ה-AI מוכן לשימוש.                                                                                                                                                                                        |
+| **בוצעה כניסה, אך לא באמצעות מינוי** | התוכנה מחוברת באמצעות מפתח API או חשבון בתשלום לפי שימוש, או שלא ניתן היה לאמת את סוג הכניסה. | ראו "כניסות בתשלום לפי שימוש" בהמשך.                                                                                                                                                                           |
+| **לא ניתן היה לבדוק את החיבור**      | הבדיקה עצמה נכשלה. הסיבה מוצגת בכרטיס.                                                        | לחצו **בדיקה חוזרת**. אם כתוב שהתוכנה ישנה מדי, עדכנו אותה ובדקו שוב.                                                                                                                                          |
 
-| What the card says                         | What it means                                                                                                     | What to do                                                                                                                                                                                                                                              |
-| ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Checking…**                              | GenOffice is asking the program how it stands.                                                                    | Wait a moment.                                                                                                                                                                                                                                          |
-| **Not installed**                          | The program was not found on this PC.                                                                             | Press **Install**. The company's official install command runs in a new terminal window, so you can watch what it does. GenOffice downloads nothing by itself. To install by hand instead, **Official install guide** opens the company's instructions. |
-| **Not signed in**                          | The program is there but has no login.                                                                            | Press **Sign in**. The program's own sign-in starts in a new window and opens the company's sign-in page in your browser. Finish it there.                                                                                                              |
-| **Connected**                              | A subscription login was confirmed. The plan name is shown when the program reports it.                           | Nothing. AI is ready to use.                                                                                                                                                                                                                            |
-| **Signed in, but not with a subscription** | The program is signed in with an API key or a pay-as-you-go account, or the kind of login could not be confirmed. | See "Pay-as-you-go logins" below.                                                                                                                                                                                                                       |
-| **The connection could not be checked**    | The check itself failed. The reason is shown on the card.                                                         | Press **Check again**. If it says the program is too old, update the program and check again.                                                                                                                                                           |
+החיבור נבדק כשהאפליקציה עולה, כשפותחים את ההגדרות, וכשחוזרים לחלון אחרי שהתחלתם התקנה או כניסה.
 
-The connection is checked when the app starts, when you open Settings, and when you return to the window after starting an install or a sign-in.
+## כניסות בתשלום לפי שימוש
 
-## Pay-as-you-go logins
+כרטיס שכתוב בו **בוצעה כניסה, אך לא באמצעות מינוי** נושא אזהרה: "זה אינו מינוי: החיוב הוא לפי השימוש בפועל."
 
-A card that says **Signed in, but not with a subscription** carries a warning: "This is not a subscription: you are charged for what you use."
+- GenOffice אינה משתמשת בכניסה הזו עד שתלחצו **להשתמש בכל זאת**. מאותו רגע כל בקשה מחויבת בחשבון הזה.
+- גם אז היא לעולם אינה נבחרת אוטומטית. בחרו בה בעצמכם תחת **ה-AI שבשימוש**, שם היא מסומנת **בתשלום**.
+- ההרשאה שלכם נשמרת לתוכנה הזו בלבד. היא נמחקת כשיוצאים מהחשבון בתוכנה או כשהכניסה בה משתנה.
+- אם אתם רוצים להשתמש דווקא במינוי שלכם, היכנסו בתוכנה עם חשבון המינוי ולחצו **בדיקה חוזרת**.
 
-- GenOffice does not use that login until you press **Use anyway**. From then on, every request is billed to that account.
-- Even then it is never chosen automatically. Choose it yourself under **AI to use**, where it is marked **Paid**.
-- Your permission is remembered for that program only. It is cleared when the program is signed out or its login changes.
-- To use your subscription instead, sign the program in with your subscription account and press **Check again**.
+## באיזה AI משתמשים
 
-## Which AI is used
+**ה-AI שבשימוש**, תחת הגדרות ▸ AI, מתחיל במצב **אוטומטי**. המצב האוטומטי מחליט לפי הסדר הזה:
 
-**AI to use**, under Settings ▸ AI, starts on **Automatic**. Automatic decides in this order:
+1. Claude, כשבכרטיס שלו כתוב "מחובר".
+2. אחרת Codex, כשבכרטיס שלו כתוב "מחובר".
+3. אחרת אין AI מחובר, וחלונית ה-AI מציגה את כרטיסי החיבור במקום הודעת שגיאה.
 
-1. Claude, when its card says Connected.
-2. Otherwise Codex, when its card says Connected.
-3. Otherwise no AI is connected, and the AI panel shows the connect cards instead of an error.
+המצב האוטומטי לעולם אינו בוחר במשהו שעולה כסף נוסף: לא מפתח API, ולא כניסה בתשלום לפי שימוש. באלה משתמשים רק כל עוד אתם בוחרים בהם בעצמכם.
 
-Automatic never picks anything that costs extra money: not an API key, and not a pay-as-you-go login. Those are used only while you choose them yourself.
+אפשר גם לבחור AI מסוים בעצמכם, באותו מקום או ברשימת המודלים שבתחתית חלונית ה-AI. אם ה-AI שבחרתם מפסיק לעבוד, GenOffice אינה עוברת בשקט ל-AI אחר. היא מודיעה לכם מה קרה ומראה איך להתחבר מחדש.
 
-You can also choose one AI yourself, in the same place or in the model list at the bottom of the AI panel. If the one you chose stops working, GenOffice does not quietly move to another. It tells you what happened and shows how to reconnect.
+בכל מקום שבו אפשר לבחור ב-Codex מוצגת לצידו שורה אחת: "שימוש במינוי Codex בתוך אפליקציה אינו שיטה ש-OpenAI ממליצה עליה באופן רשמי." קחו זאת בחשבון כשאתם מחליטים.
 
-Wherever Codex can be chosen, one line is shown with it: "Using a Codex subscription inside an app is not a method officially recommended by OpenAI." Decide with that in mind.
+## כשבקשה נעצרת
 
-## When a request is stopped
+בקשה נעצרת כשמכסת התוכנית נוצלה במלואה, כשתוקף הכניסה פג, או כשהתוכנה כבר אינה במחשב. GenOffice אינה עוברת ל-AI אחר מעצמה.
 
-A request stops when the plan's limit is used up, when the login has expired, or when the program is no longer there. GenOffice does not switch to another AI by itself.
+- הסיבה מוצגת במקום שבו התשובה נעצרה. כשהמכסה נוצלה, מוצג גם מועד האיפוס שלה, אם התוכנה מדווחת עליו.
+- אם המינוי האחר שלכם מחובר, מופיע כפתור **המשך עם …**, למשל **המשך עם Codex**. לחיצה עליו הופכת את המינוי הזה ל-AI שבשימוש — רשימת המודלים מראה את השינוי — ומריצה את הבקשה שוב.
+- אם החיבור האחר היחיד הוא כניסה בתשלום לפי שימוש שאישרתם, אותו כפתור מגיע עם הערה על העלות.
+- לעולם אין כפתור שמעביר אתכם למפתח API.
 
-- The reason is shown where the reply stopped. For a used-up limit, the time it resets is shown too, when the program reports it.
-- If your other subscription is connected, a **Continue with …** button appears, for example **Continue with Codex**. Pressing it makes that one the AI to use — the model list shows the change — and runs the request again.
-- If the only other connection is a pay-as-you-go login you allowed, the same button comes with a note about the cost.
-- There is never a button that moves you to an API key.
+## שורת השימוש
 
-## The usage line
+אחרי שניצלתם 80% או יותר ממכסה, חלונית ה-AI מציגה שורה כמו "נוצלו 85% · איפוס ב-15:00". Claude מדווח על מכסה ל-5 שעות ועל מכסה ל-7 ימים, ו-Codex מוצג באותו אופן כשהוא מדווח עליהן. מתחת ל-80%, או כשהתוכנה אינה מדווחת דבר, לא מוצגת שום שורה.
 
-Once you have used 80% or more of a limit, the AI panel shows a line such as "85% used · resets at 3:00 PM". Claude reports a 5-hour limit and a 7-day limit, and Codex is shown the same way when it reports them. Below 80%, or when the program reports nothing, no line is shown.
+## מה נשלח, ולאן
 
-## What is sent, and where
+בפעם הראשונה שאפשר להשתמש במינוי, GenOffice מציגה הודעה, פעם אחת בלבד. כדי לקרוא אותה שוב, עברו אל הגדרות ▸ AI ▸ **הודעת החיבור הראשון** ולחצו **הצגה חוזרת**. היא אומרת שלושה דברים:
 
-The first time a subscription can be used, GenOffice shows a notice once. To read it again, go to Settings ▸ AI ▸ **First-connection notice** and press **View again**. It says three things:
+- תוכן המסמך והשיחה נשלחים אל Anthropic או אל OpenAI באמצעות החשבון האישי שלכם.
+- השאלה אם התוכן הזה ישמש לאימון בינה מלאכותית נקבעת בהגדרות החשבון שלכם באותה חברה, לא על ידי GenOffice.
+- GenOffice מכבה את שמירת היסטוריית השיחות ב-Codex, אך ייתכן ש-Codex עדיין ישמור יומני אבחון משלו במחשב הזה.
 
-- Document content and your conversation are sent to Anthropic or OpenAI under your own account.
-- Whether that content is used to train AI is decided by your own account settings at that company, not by GenOffice.
-- GenOffice turns off conversation history saving in Codex, but Codex may still keep its own diagnostic logs on this PC.
+כל מה שהסתרתם באמצעות **הסתר את הבחירה מה-AI** אינו נשלח, ולא משנה באיזה AI אתם משתמשים.
 
-Anything you hid with **Hide the selection from AI** is not sent, whichever AI you use.
+## כדאי לדעת
 
-## Good to know
-
-- **Speed.** A reply through a subscription starts a few seconds later than one through an API key, because the company's program has to start up first.
-- **Free ChatGPT plan.** It shows as Connected, but its limits are small, so requests stop sooner. The usage line does not appear for it.
-- **Image generation.** In this version a subscription does not generate images, on any plan. That needs an image provider key; see [AI models and settings](help://ai-models).
-- **Proxies.** Claude Code and Codex do not take proxy settings from GenOffice. They use the proxy set for this PC, for example the `HTTPS_PROXY` environment variable, just as when you run them in a terminal. If they cannot connect in a terminal, they cannot connect from here either.
-- **Commands and other programs.** A request that arrives from the `ieumoffice` command or from a connected coding agent does not use your subscription unless you allow it. See [Connecting a coding agent](help://mcp).
+- **מהירות.** תשובה דרך מינוי מתחילה כמה שניות מאוחר יותר מתשובה דרך מפתח API, כי התוכנה של החברה צריכה לעלות קודם.
+- **תוכנית ChatGPT החינמית.** היא מוצגת כ"מחובר", אבל המכסות שלה קטנות, ולכן בקשות נעצרות מוקדם יותר. שורת השימוש אינה מופיעה עבורה.
+- **יצירת תמונות.** בגרסה הזו מינוי אינו יוצר תמונות, באף תוכנית. לשם כך דרוש מפתח של ספק תמונות; ראו [מודלים של AI והגדרות](help://ai-models).
+- **שרתי Proxy.** Claude Code ו-Codex אינם מקבלים הגדרות Proxy מ-GenOffice. הם משתמשים ב-Proxy שהוגדר למחשב הזה, למשל משתנה הסביבה `HTTPS_PROXY`, בדיוק כמו כשמריצים אותם במסוף. אם הם לא מצליחים להתחבר במסוף, הם לא יצליחו להתחבר גם מכאן.
+- **פקודות ותוכנות אחרות.** בקשה שמגיעה מהפקודה `ieumoffice` או מסוכן תכנון מחובר אינה משתמשת במינוי שלכם אלא אם אישרתם זאת. ראו [חיבור סוכן לקוד](help://mcp).

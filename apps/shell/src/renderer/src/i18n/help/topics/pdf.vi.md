@@ -38,9 +38,7 @@ Sáu công cụ: **Vẽ, Hình chữ nhật, Hình elip, Mũi tên, Ghi chú**, 
 - **Che nội dung, quy trình đầy đủ** (để giấu một dòng văn bản):
 
   1. Thẻ Chú thích ▸ nhấp **Che vùng nội dung** (công cụ được trang bị).
-  2. **Kéo một khung lên nội dung cần che** — phần bên trong được phủ bằng dấu gạch chéo, và thanh công cụ có thêm hai nút **Xóa các dấu đã đánh / Áp dụng che nội dung**:
-
-  ![Trang sau khi đánh dấu che nội dung](img/pdf-redact.png)
+  2. **Kéo một khung lên nội dung cần che** — phần bên trong được phủ bằng dấu gạch chéo, và thanh công cụ có thêm hai nút **Xóa các dấu đã đánh / Áp dụng che nội dung**.
 
   3. Nhấp **Áp dụng che nội dung** và xác nhận — kết quả là một bản làm việc trong đó văn bản và hình ảnh bị che đã bị gỡ bỏ hẳn (không phải phủ lên) và không thể hoàn tác; tài liệu gốc hoàn toàn không đổi.
 

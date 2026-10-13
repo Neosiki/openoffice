@@ -1,19 +1,19 @@
 # Kommandozeile und Agenten
 
-Jede Installation bringt den Befehl `genoffice` mit, der dieselben Engines antreibt wie das Fenster: dieselben Parser, denselben Writer, denselben Renderer. Eine Datei, die die App speichert, und eine Datei, die der Befehl schreibt, sind dieselbe Datei, und eine Prüfung, die der KI-Bereich der App besteht, besteht auch der Befehl.
+Jede Installation bringt den Befehl `ieumoffice` mit, der dieselben Engines antreibt wie das Fenster: dieselben Parser, denselben Writer, denselben Renderer. Eine Datei, die die App speichert, und eine Datei, die der Befehl schreibt, sind dieselbe Datei, und eine Prüfung, die der KI-Bereich der App besteht, besteht auch der Befehl.
 
 ```sh
-genoffice --help          # every command
-genoffice guide slides    # the op reference, for writing your own
+ieumoffice --help          # every command
+ieumoffice guide slides    # the op reference, for writing your own
 ```
 
-Das ist die gesamte Oberfläche auf einem Bildschirm — jeder Befehl mit einer Zeile dazu, was er bewirkt, dann die globalen Optionen und die Exit-Codes:
-
-![Die echte Ausgabe von genoffice --help: die Versionsbanner, jeder Befehl mit einzeiliger Beschreibung sowie die globalen Optionen und die Exit-Codes](img/cli.png)
+`ieumoffice --help` zeigt die gesamte Oberfläche auf einem Bildschirm: jeder Befehl mit einer Zeile dazu, was er bewirkt, dann die globalen Optionen und die Exit-Codes.
 
 ## Den Befehl bereitstellen
 
-macOS und Windows liefern es im App-Bundle mit. Um es beim Namen aufzurufen, einmal `genoffice install-cli` ausführen: es verlinkt die gebündelte Binärdatei in ein Verzeichnis Ihres PATH — auf macOS `/usr/local/bin`, sofern das kein Homebrew-Präfix ist (Homebrews eigene Verzeichnisse werden nie angetastet), sonst Ihr Benutzer-bin — oder unter Windows in Ihren Benutzer-`PATH`.
+Der Befehl wird mit der App geliefert. Um ihn beim Namen aufzurufen, einmal `ieumoffice install-cli` ausführen: Unter Windows wird der Ordner, in dem der Befehl liegt, in Ihren Benutzer-`PATH` aufgenommen, und danach geöffnete Terminals finden ihn. **Einstellungen ▸ Integrationen** zeigt, ob Ihr Terminal den Befehl bereits findet, und andernfalls die genaue Zeile, die Sie ausführen müssen.
+
+Coding-Agenten brauchen diesen Schritt nicht. Die App hält in `~/.ieumoffice/launcher` fest, wo der Befehl liegt, und dort finden sie ihn.
 
 ## Die Befehle, die man kennen sollte
 
@@ -26,31 +26,59 @@ macOS und Windows liefern es im App-Bundle mit. Um es beim Namen aufzurufen, ein
 | `render`          | Eine PNG-Datei pro Seite, so wie der Renderer sie setzt.                                                                                                                                                                                                              |
 | `pdf`             | Die Textebene einer PDF-Datei Seite für Seite lesen, ohne einen App-Prozess zu starten.                                                                                                                                                                               |
 | `info`            | Metadaten und eine Strukturübersicht eines Dokuments.                                                                                                                                                                                                                 |
-| `search`          | Web- oder Bildsuche über den in der App konfigurierten Anbieter.                                                                                                                                                                                                      |
+| `search`          | Web- oder Bildsuche: standardmäßig die kostenlose Suche oder der Suchanbieter, dessen Schlüssel Sie in der App ausgewählt haben.                                                                                                                                      |
 | `image` / `media` | Ein Bild erzeugen oder eine Bild-, Video- oder Audiodatei beschreiben und Fragen dazu stellen.                                                                                                                                                                        |
 | `merge`           | Die Platzhalter `{{key}}` in einer Vorlage `.docx`, `.pptx` oder `.xlsx` füllen.                                                                                                                                                                                      |
-| `capabilities`    | Melden, welche Cloud-Funktionen auf diesem Rechner konfiguriert sind.                                                                                                                                                                                                 |
+| `capabilities`    | Melden, welche KI-Funktionen (Suche, Bildgenerierung, Bild- und Videoanalyse) auf diesem Rechner verfügbar sind und über welchen Weg.                                                                                                                                 |
 | `guide`           | Die op-Referenz und die Design-Leitfäden, erzeugt aus genau den Definitionen, gegen die der Executor prüft — sie kann also nicht von dem abweichen, was `apply` akzeptiert. `--json` liefert sie mit dem Schema jedes ops.                                            |
-| `install-cli`     | `genoffice` in den `PATH` legen.                                                                                                                                                                                                                                      |
+| `install-cli`     | `ieumoffice` in den `PATH` legen.                                                                                                                                                                                                                                     |
 | `skill`           | Die auf diesem Rechner gefundenen Coding-Agenten auflisten und den GenOffice-Skill dort installieren oder aktualisieren.                                                                                                                                              |
 | `mcp`             | Jeden Befehl als Model-Context-Protocol-Werkzeug bereitstellen. Siehe **Einen Coding-Agenten anbinden**.                                                                                                                                                              |
 
 ## Bearbeiten: Dokumente, Tabellen, Folien
 
-`genoffice docs`, `genoffice sheet` und `genoffice slides` lesen und schreiben über denselben Pfad wie die App und teilen ein Vokabular: ein **op** ist eine einzelne Änderung, und eine **spec** ist eine Liste von ops, die der Reihe nach angewendet werden.
+`ieumoffice docs`, `ieumoffice sheet` und `ieumoffice slides` lesen und schreiben über denselben Pfad wie die App und teilen ein Vokabular: ein **op** ist eine einzelne Änderung, und eine **spec** ist eine Liste von ops, die der Reihe nach angewendet werden.
 
 ```sh
-genoffice sheet read report.xlsx
-genoffice slides apply deck.pptx --ops ops.json --dry-run
-genoffice docs apply brief.docx --ops ops.json
+ieumoffice sheet read report.xlsx
+ieumoffice slides apply deck.pptx --ops ops.json --dry-run
+ieumoffice docs apply brief.docx --ops ops.json
 ```
 
 `--dry-run` meldet, was ein Stapel tun würde, und schreibt nichts — so prüfen Sie eine spec günstig, bevor sie landet. Der KI-Bereich der App läuft auf genau diesen ops, Sie können also alles, was Sie ihm anvertrauen können, auch skripten.
 
+## Die Befehle für Suche, Bilder und Medien
+
+`search`, `image` und `media` verwenden, was in der App unter Einstellungen ▸ KI ▸ Erweitert eingerichtet ist:
+
+- `search` funktioniert immer. Der Befehl nutzt standardmäßig die kostenlose Suche oder den Suchanbieter, dessen Schlüssel Sie ausgewählt haben.
+- `image` braucht den Schlüssel eines Bildanbieters. In dieser Version erzeugt ein Abonnement keine Bilder.
+- `media` nutzt für ein Bild einen Anbieter mit Schlüssel, wenn einer eingerichtet ist. Ihr Claude- oder Codex-Abonnement nutzt der Befehl nur, wenn Sie das erlaubt haben, und das ist **standardmäßig aus**; [Einen Coding-Agenten anbinden](help://mcp) erklärt den Schalter und seine Grenzen.
+- `media` braucht für Video oder Audio einen Anbieter mit Schlüssel, der Video unterstützt.
+
+`ieumoffice capabilities --json` meldet all das, ohne eine KI aufzurufen. Sein `detail` enthält:
+
+| Feld                                                                             | Was es aussagt                                                                                                                                                                                                                                                                             |
+| -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `search`, `image_search`, `image_generation`, `image_analysis`, `video_analysis` | Für jede Funktion: `available`; `via`, wer antwortet; `route`, einer der Werte `free`, `key` oder `subscription`; `metered: true` bei einer Anmeldung mit Abrechnung nach Verbrauch; und, wenn die Funktion nicht verfügbar ist, `message`, der Text, mit dem der Befehl selbst antwortet. |
+| `media_analysis`                                                                 | Für ältere Skripte beibehalten: dasselbe wie `image_analysis` oder wie `video_analysis`, wenn nur Video funktioniert.                                                                                                                                                                      |
+| `automatic_calls`                                                                | `subscription_enabled` und, solange das eingeschaltet ist, `used`, `limit`, `remaining` und `resetsAt` für das Stundenkontingent.                                                                                                                                                          |
+| `app`                                                                            | `available`: ob die App dort installiert ist, wo der Befehl sie starten kann.                                                                                                                                                                                                              |
+| `settings_path`                                                                  | Die Einstellungsdatei, aus der diese Angaben gelesen wurden.                                                                                                                                                                                                                               |
+
+Wenn `image` oder `media` nicht laufen kann, endet der Befehl mit Code 4 und `error: "app_unavailable"`, und `detail.errorCode` nennt den Grund. `unavailable` bedeutet, dass für die Funktion nichts eingerichtet ist; ein erneuter Versuch hilft also nicht. `headless-limit` und `rate-limit` kommen mit `detail.resetsAt`, dem Zeitpunkt (in Millisekunden), ab dem Anfragen wieder möglich sind.
+
+## Was der Befehl auf diesem PC ablegt
+
+Beide Dateien liegen im Ordner `.ieumoffice` in Ihrem Benutzerordner:
+
+- `~/.ieumoffice/launcher` hält fest, wo der Befehl der App liegt, damit ein Coding-Agent ihn auch dann findet, wenn er nicht in Ihrem `PATH` liegt.
+- `~/.ieumoffice/cli-audit.jsonl` erhält für jeden ausgeführten Befehl eine Zeile — den Befehl, seine Argumente und das Ergebnis —, sodass Sie nachträglich sehen können, was ein Agent getan hat.
+
 ## Model Context Protocol
 
-`genoffice mcp` stellt jeden Befehl als MCP-Werkzeug bereit, und `genoffice mcp install <agent|all>` registriert es in der Konfiguration eines Coding-Agenten. Diese Seite steht in **Einen Coding-Agenten anbinden**.
+`ieumoffice mcp` stellt jeden Befehl als MCP-Werkzeug bereit, und `ieumoffice mcp install <agent|all>` registriert es in der Konfiguration eines Coding-Agenten. Diese Seite steht in **Einen Coding-Agenten anbinden**.
 
 ## Was der Befehl nicht tut
 
-Er liest und schreibt die Datei. Er ist nicht die App: es gibt kein Fenster, und der Aktualisierungsdialog in der App gilt hierfür nicht. Alles, was das Fenster braucht — der KI-Bereich, die QC-Prüfung einer gerenderten Folie —, wartet darauf, dass Sie die Datei öffnen. `genoffice render` liefert Ihnen die Pixel auch ohne Fenster, und `genoffice slides` prüft das Layout eines Decks eigenständig.
+Er liest und schreibt die Datei. Er ist nicht die App: es gibt kein Fenster, und der Aktualisierungsdialog in der App gilt hierfür nicht. Alles, was das Fenster braucht — der KI-Bereich, die QC-Prüfung einer gerenderten Folie —, wartet darauf, dass Sie die Datei öffnen. `ieumoffice render` liefert Ihnen die Pixel auch ohne Fenster, und `ieumoffice slides` prüft das Layout eines Decks eigenständig.

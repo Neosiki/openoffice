@@ -38,9 +38,7 @@ Sechs Werkzeuge: **Freihand, Rechteck, Ellipse, Pfeil, Notiz** sowie **Bereich s
 - **Schwärzen, der vollständige Ablauf** (um eine Textzeile zu verbergen):
 
   1. Tab „Anmerken“ ▸ klicken Sie auf **Bereich schwärzen** (das Werkzeug wird aktiviert).
-  2. **Ziehen Sie ein Rechteck über den Inhalt** — er wird mit einer Schraffur überdeckt, und die Werkzeugleiste erhält die Schaltflächen **Markierungen löschen / Schwärzungen anwenden**:
-
-  ![Die Seite nach dem Markieren einer Schwärzung](img/pdf-redact.png)
+  2. **Ziehen Sie ein Rechteck über den Inhalt** — er wird mit einer Schraffur überdeckt, und die Werkzeugleiste erhält die Schaltflächen **Markierungen löschen / Schwärzungen anwenden**.
 
   3. Klicken Sie auf **Schwärzungen anwenden** und bestätigen — das Ergebnis ist eine Arbeitskopie, in der der überdeckte Text und die Bilder physisch entfernt sind (nicht bloß verdeckt), und das lässt sich nicht rückgängig machen; das Originaldokument bleibt unberührt.
 

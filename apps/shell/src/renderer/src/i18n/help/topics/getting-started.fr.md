@@ -4,8 +4,6 @@ GenOffice est une suite bureautique qui fonctionne entièrement sur votre machin
 
 ## Aperçu de l’interface
 
-![L’écran d’accueil](img/home-screen.png)
-
 La fenêtre comporte trois parties :
 
 - **Barre d’onglets (en haut)** : chaque fichier ouvert correspond à un onglet. L’onglet Accueil le plus à gauche est toujours présent et ne peut pas être fermé ; les autres onglets sont vos documents. Un double-clic sur un onglet permet de renommer le fichier sur place.
@@ -26,7 +24,7 @@ Un nouveau document s’ouvre sans titre ; le fichier sur le disque n’est cré
 
 - Le menu **Fichier ▸ Ouvrir** (⌘O/ctrl+O) ouvre le sélecteur du système : .docx / .doc / .xlsx / .xls / .csv / .tsv / .pptx / .ppt / .pdf / .md / .html.
 - Cliquez sur n’importe quel élément de la liste **Récents** de l’accueil.
-- `genoffice <file>` depuis un terminal ouvre aussi les fichiers.
+- `ieumoffice <file>` depuis un terminal ouvre aussi les fichiers.
 
 ## Le modèle d’enregistrement
 
@@ -88,4 +86,5 @@ Cela laisse ⌥⌘D libre pour que GenOffice l'utilise sur macOS si une future c
 - Où se trouvent les fichiers : [L’écran d’accueil](help://home-screen).
 - Gérer beaucoup de fichiers ouverts : [Onglets et gestion des fenêtres](help://tabs-and-windows).
 - Confier le travail à l’IA : [Le panneau d’assistant IA](help://ai-panel).
+- Connecter d’abord l’IA : [Connexion par abonnement](help://subscription).
 - Langue, thème, applications par défaut : [Paramètres, langue, thème et intégrations MCP](help://settings-integrations).

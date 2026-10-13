@@ -1,93 +1,91 @@
-<!-- TRANSLATE: copy of en -->
+# الاتصال بالاشتراك
 
-# Subscription connection
+يشغّل GenOffice الذكاء الاصطناعي باشتراك لديك بالفعل: اشتراك Claude من Anthropic أو اشتراك Codex من OpenAI. وCodex هو برنامج OpenAI، وتسجّل الدخول إليه بخطة ChatGPT الخاصة بك. لا تحتاج إلى مفتاح API، وليس لـ GenOffice حساب خاص به تسجّل فيه.
 
-GenOffice runs its AI on a subscription you already have: a Claude subscription (Anthropic) or a Codex subscription (OpenAI). Codex is OpenAI's program, and you sign in to it with your ChatGPT plan. You do not need an API key, and GenOffice has no account of its own to sign up for.
+## كيف يعمل
 
-## How it works
+- الذكاء الاصطناعي ليس مدمجًا في GenOffice. بل يُثبَّت على هذا الحاسوب برنامج من الشركة — **Claude Code** لاشتراك Claude، و**Codex** لاشتراك ChatGPT — ويطلب GenOffice الإجابة من ذلك البرنامج.
+- يكون ذلك البرنامج مسجَّل الدخول بحسابك أنت، فيُحتسب كل طلب من خطتك أنت.
+- لا يعرض GenOffice أبدًا نموذج تسجيل دخول خاصًّا به، ولا يقرأ بيانات دخولك ولا يخزّنها. أنت تسجّل الدخول داخل برنامج الشركة نفسها وصفحتها على الويب.
 
-- The AI is not built into GenOffice. A program from the company is installed on this PC — **Claude Code** for a Claude subscription, **Codex** for a ChatGPT subscription — and GenOffice asks that program for the answer.
-- That program is signed in with your own account, so every request counts against your own plan.
-- GenOffice never shows a sign-in form of its own, and it never reads or stores your login. You sign in inside the company's own program and web page.
+## قبل أن تبدأ
 
-## Before you start
+تحتاج إلى واحد من هذين. ولا بأس إن كان لديك الاثنان.
 
-You need one of these. Having both is fine.
+- اشتراك Claude، وبرنامج Claude Code مثبَّتًا ومسجَّل الدخول على هذا الحاسوب.
+- اشتراك ChatGPT، وبرنامج Codex مثبَّتًا ومسجَّل الدخول على هذا الحاسوب.
 
-- A Claude subscription, and the Claude Code program installed and signed in on this PC.
-- A ChatGPT subscription, and the Codex program installed and signed in on this PC.
+إن لم يكن البرنامج مثبَّتًا بعد، أو لم يُسجَّل الدخول إليه بعد، فالأزرار في القسم التالي تتولى ذلك.
 
-If the program is not installed yet, or not signed in yet, the buttons in the next section take care of it.
+## الاتصال
 
-## Connecting
+1. افتح **الإعدادات** من الصف في أسفل يسار الصفحة الرئيسية واختر **الذكاء الاصطناعي**. تجد تحت **الاتصال بالاشتراك** بطاقة لـ Claude وأخرى لـ Codex.
+2. اقرأ ما تقوله البطاقة واضغط زرّها. يشرح الجدول أدناه كل حالة.
+3. عُد إلى نافذة GenOffice. تعيد البطاقة التحقق من تلقاء نفسها، وزر **التحقق مرة أخرى** يتحقق فورًا.
 
-1. Open **Settings** from the row at the bottom left of Home and choose **AI**. Under **Subscription connection** there is one card for Claude and one for Codex.
-2. Read what the card says and press its button. The table below explains each state.
-3. Come back to the GenOffice window. The card checks again by itself, and **Check again** checks at once.
+تظهر البطاقات نفسها في الخطوة الثانية من شاشات الترحيب عند أول تشغيل، وفي لوحة الذكاء الاصطناعي حين لا يكون أي ذكاء اصطناعي متصلًا. يمكنك تخطّيها والاتصال لاحقًا.
 
-The same cards appear in the second step of the welcome screens on first launch, and in the AI panel when no AI is connected. You can skip them and connect later.
+| ما تقوله البطاقة                        | ما معناه                                                                                             | ما عليك فعله                                                                                                                                                                                             |
+| --------------------------------------- | ---------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **جارٍ التحقق…**                        | يسأل GenOffice البرنامج عن حالته.                                                                    | انتظر لحظة.                                                                                                                                                                                              |
+| **غير مثبَّت**                          | لم يُعثر على البرنامج على هذا الحاسوب.                                                               | اضغط **تثبيت**. يُنفَّذ أمر التثبيت الرسمي من الشركة في نافذة طرفية جديدة، فترى ما يفعله. ولا ينزّل GenOffice شيئًا من تلقاء نفسه. وإن أردت التثبيت يدويًا، يفتح **دليل التثبيت الرسمي** تعليمات الشركة. |
+| **لم يتم تسجيل الدخول**                 | البرنامج موجود لكن لم يُسجَّل الدخول إليه.                                                           | اضغط **تسجيل الدخول**. يبدأ تسجيل الدخول الخاص بالبرنامج في نافذة جديدة ويفتح صفحة تسجيل الدخول لدى الشركة في متصفحك. أكمله هناك.                                                                        |
+| **متصل**                                | تم تأكيد تسجيل دخول باشتراك. ويظهر اسم الخطة حين يبلّغ عنه البرنامج.                                 | لا شيء. الذكاء الاصطناعي جاهز للاستخدام.                                                                                                                                                                 |
+| **تم تسجيل الدخول، لكن ليس عبر اشتراك** | البرنامج مسجَّل الدخول بمفتاح API أو بحساب يُدفع فيه حسب الاستخدام، أو تعذّر تأكيد نوع تسجيل الدخول. | انظر «تسجيل الدخول بالدفع حسب الاستخدام» أدناه.                                                                                                                                                          |
+| **تعذّر التحقق من الاتصال**             | فشل التحقق نفسه. ويظهر السبب على البطاقة.                                                            | اضغط **التحقق مرة أخرى**. وإن ذكرت البطاقة أن البرنامج قديم جدًا، فحدّث البرنامج ثم تحقق مرة أخرى.                                                                                                       |
 
-| What the card says                         | What it means                                                                                                     | What to do                                                                                                                                                                                                                                              |
-| ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Checking…**                              | GenOffice is asking the program how it stands.                                                                    | Wait a moment.                                                                                                                                                                                                                                          |
-| **Not installed**                          | The program was not found on this PC.                                                                             | Press **Install**. The company's official install command runs in a new terminal window, so you can watch what it does. GenOffice downloads nothing by itself. To install by hand instead, **Official install guide** opens the company's instructions. |
-| **Not signed in**                          | The program is there but has no login.                                                                            | Press **Sign in**. The program's own sign-in starts in a new window and opens the company's sign-in page in your browser. Finish it there.                                                                                                              |
-| **Connected**                              | A subscription login was confirmed. The plan name is shown when the program reports it.                           | Nothing. AI is ready to use.                                                                                                                                                                                                                            |
-| **Signed in, but not with a subscription** | The program is signed in with an API key or a pay-as-you-go account, or the kind of login could not be confirmed. | See "Pay-as-you-go logins" below.                                                                                                                                                                                                                       |
-| **The connection could not be checked**    | The check itself failed. The reason is shown on the card.                                                         | Press **Check again**. If it says the program is too old, update the program and check again.                                                                                                                                                           |
+يُتحقَّق من الاتصال عند بدء التطبيق، وعند فتح الإعدادات، وعند عودتك إلى النافذة بعد بدء تثبيت أو تسجيل دخول.
 
-The connection is checked when the app starts, when you open Settings, and when you return to the window after starting an install or a sign-in.
+## تسجيل الدخول بالدفع حسب الاستخدام
 
-## Pay-as-you-go logins
+البطاقة التي تقول **تم تسجيل الدخول، لكن ليس عبر اشتراك** تحمل تحذيرًا: «هذا ليس اشتراكًا: تُحتسب الرسوم بحسب ما تستخدمه.»
 
-A card that says **Signed in, but not with a subscription** carries a warning: "This is not a subscription: you are charged for what you use."
+- لا يستخدم GenOffice ذلك التسجيل إلى أن تضغط **استخدام على أي حال**. ومنذ تلك اللحظة تُحتسب تكلفة كل طلب على ذلك الحساب.
+- وحتى عندئذ لا يُختار تلقائيًا أبدًا. اختره بنفسك تحت **الذكاء الاصطناعي المستخدم**، حيث يحمل علامة **مدفوع**.
+- يُحفظ إذنك لذلك البرنامج وحده. ويُمحى عند تسجيل الخروج من البرنامج أو عند تغيّر تسجيل الدخول فيه.
+- إن أردت استخدام اشتراكك بدلًا من ذلك، سجّل الدخول إلى البرنامج بحساب اشتراكك واضغط **التحقق مرة أخرى**.
 
-- GenOffice does not use that login until you press **Use anyway**. From then on, every request is billed to that account.
-- Even then it is never chosen automatically. Choose it yourself under **AI to use**, where it is marked **Paid**.
-- Your permission is remembered for that program only. It is cleared when the program is signed out or its login changes.
-- To use your subscription instead, sign the program in with your subscription account and press **Check again**.
+## أي ذكاء اصطناعي يُستخدم
 
-## Which AI is used
+خيار **الذكاء الاصطناعي المستخدم**، في الإعدادات ▸ الذكاء الاصطناعي، يبدأ على **تلقائي**. ويقرّر الوضع التلقائي بهذا الترتيب:
 
-**AI to use**, under Settings ▸ AI, starts on **Automatic**. Automatic decides in this order:
+1. Claude، حين تقول بطاقته «متصل».
+2. وإلا فـ Codex، حين تقول بطاقته «متصل».
+3. وإلا فلا ذكاء اصطناعي متصل، وتعرض لوحة الذكاء الاصطناعي بطاقات الاتصال بدلًا من رسالة خطأ.
 
-1. Claude, when its card says Connected.
-2. Otherwise Codex, when its card says Connected.
-3. Otherwise no AI is connected, and the AI panel shows the connect cards instead of an error.
+لا يختار الوضع التلقائي أبدًا شيئًا يكلّف مالًا إضافيًا: لا مفتاح API، ولا تسجيل دخول بالدفع حسب الاستخدام. هذان لا يُستخدمان إلا ما دمت تختارهما بنفسك.
 
-Automatic never picks anything that costs extra money: not an API key, and not a pay-as-you-go login. Those are used only while you choose them yourself.
+يمكنك أيضًا أن تختار ذكاءً اصطناعيًا بعينه، في المكان نفسه أو في قائمة النماذج أسفل لوحة الذكاء الاصطناعي. وإذا توقف ما اخترته عن العمل، فلن ينتقل GenOffice بصمت إلى غيره. بل يخبرك بما حدث ويبيّن لك كيف تعيد الاتصال.
 
-You can also choose one AI yourself, in the same place or in the model list at the bottom of the AI panel. If the one you chose stops working, GenOffice does not quietly move to another. It tells you what happened and shows how to reconnect.
+وحيثما أمكن اختيار Codex يظهر معه سطر واحد: «استخدام اشتراك Codex داخل تطبيق ليس طريقة موصى بها رسميًا من OpenAI.» فخذ ذلك في الحسبان عند قرارك.
 
-Wherever Codex can be chosen, one line is shown with it: "Using a Codex subscription inside an app is not a method officially recommended by OpenAI." Decide with that in mind.
+## عند إيقاف طلب
 
-## When a request is stopped
+يتوقف الطلب حين يُستنفد حد الخطة، أو حين تنتهي صلاحية تسجيل الدخول، أو حين لا يعود البرنامج موجودًا. ولا ينتقل GenOffice إلى ذكاء اصطناعي آخر من تلقاء نفسه.
 
-A request stops when the plan's limit is used up, when the login has expired, or when the program is no longer there. GenOffice does not switch to another AI by itself.
+- يظهر السبب حيث توقف الرد. وفي حالة استنفاد الحد يظهر أيضًا وقت إعادة تعيينه، حين يبلّغ عنه البرنامج.
+- إن كان اشتراكك الآخر متصلًا، يظهر زر **المتابعة باستخدام …**، مثل **المتابعة باستخدام Codex**. الضغط عليه يجعل ذلك الاشتراك هو الذكاء الاصطناعي المستخدم — وتُظهر قائمة النماذج هذا التغيير — ويعيد تشغيل الطلب.
+- إن كان الاتصال الآخر الوحيد تسجيل دخول بالدفع حسب الاستخدام سبق أن سمحت به، يأتي الزر نفسه مع ملاحظة عن التكلفة.
+- لا يوجد أبدًا زر ينقلك إلى مفتاح API.
 
-- The reason is shown where the reply stopped. For a used-up limit, the time it resets is shown too, when the program reports it.
-- If your other subscription is connected, a **Continue with …** button appears, for example **Continue with Codex**. Pressing it makes that one the AI to use — the model list shows the change — and runs the request again.
-- If the only other connection is a pay-as-you-go login you allowed, the same button comes with a note about the cost.
-- There is never a button that moves you to an API key.
+## سطر الاستخدام
 
-## The usage line
+بعد أن تستخدم 80% أو أكثر من أحد الحدود، تعرض لوحة الذكاء الاصطناعي سطرًا مثل «تم استخدام 85% · إعادة التعيين في 3:00 م». يبلّغ Claude عن حد لخمس ساعات وحد لسبعة أيام، ويُعرض Codex بالطريقة نفسها حين يبلّغ عنهما. وتحت 80%، أو حين لا يبلّغ البرنامج عن شيء، لا يظهر أي سطر.
 
-Once you have used 80% or more of a limit, the AI panel shows a line such as "85% used · resets at 3:00 PM". Claude reports a 5-hour limit and a 7-day limit, and Codex is shown the same way when it reports them. Below 80%, or when the program reports nothing, no line is shown.
+## ما الذي يُرسَل، وإلى أين
 
-## What is sent, and where
+في أول مرة يمكن فيها استخدام اشتراك، يعرض GenOffice إشعارًا مرة واحدة. لقراءته مجددًا، انتقل إلى الإعدادات ▸ الذكاء الاصطناعي ▸ **إشعار الاتصال الأول** واضغط **عرض مجددًا**. وهو يذكر ثلاثة أمور:
 
-The first time a subscription can be used, GenOffice shows a notice once. To read it again, go to Settings ▸ AI ▸ **First-connection notice** and press **View again**. It says three things:
+- يُرسَل محتوى المستند ومحادثتك إلى Anthropic أو OpenAI عبر حسابك الشخصي.
+- استخدام هذا المحتوى في تدريب الذكاء الاصطناعي تحدده إعدادات حسابك لدى تلك الشركة، لا GenOffice.
+- يوقف GenOffice حفظ سجل المحادثات في Codex، لكن Codex قد يحتفظ بسجلاته التشخيصية الخاصة على هذا الحاسوب.
 
-- Document content and your conversation are sent to Anthropic or OpenAI under your own account.
-- Whether that content is used to train AI is decided by your own account settings at that company, not by GenOffice.
-- GenOffice turns off conversation history saving in Codex, but Codex may still keep its own diagnostic logs on this PC.
+كل ما أخفيته عبر **إخفاء التحديد عن الذكاء الاصطناعي** لا يُرسَل، أيًّا كان الذكاء الاصطناعي الذي تستخدمه.
 
-Anything you hid with **Hide the selection from AI** is not sent, whichever AI you use.
+## من المفيد أن تعرف
 
-## Good to know
-
-- **Speed.** A reply through a subscription starts a few seconds later than one through an API key, because the company's program has to start up first.
-- **Free ChatGPT plan.** It shows as Connected, but its limits are small, so requests stop sooner. The usage line does not appear for it.
-- **Image generation.** In this version a subscription does not generate images, on any plan. That needs an image provider key; see [AI models and settings](help://ai-models).
-- **Proxies.** Claude Code and Codex do not take proxy settings from GenOffice. They use the proxy set for this PC, for example the `HTTPS_PROXY` environment variable, just as when you run them in a terminal. If they cannot connect in a terminal, they cannot connect from here either.
-- **Commands and other programs.** A request that arrives from the `ieumoffice` command or from a connected coding agent does not use your subscription unless you allow it. See [Connecting a coding agent](help://mcp).
+- **السرعة.** الرد عبر اشتراك يتأخر بدؤه بضع ثوانٍ عن الرد عبر مفتاح API، لأن برنامج الشركة يحتاج إلى أن يبدأ التشغيل أولًا.
+- **خطة ChatGPT المجانية.** تظهر على أنها «متصل»، لكن حدودها صغيرة، فتتوقف الطلبات أبكر. ولا يظهر لها سطر الاستخدام.
+- **توليد الصور.** في هذا الإصدار لا يولّد الاشتراك صورًا، في أي خطة. يتطلب ذلك مفتاح مزوّد صور؛ انظر [نماذج الذكاء الاصطناعي والإعدادات](help://ai-models).
+- **الخوادم الوسيطة (البروكسي).** لا يأخذ Claude Code وCodex إعدادات البروكسي من GenOffice. بل يستخدمان البروكسي المضبوط لهذا الحاسوب، مثل متغير البيئة `HTTPS_PROXY`، تمامًا كما لو شغّلتهما في طرفية. فإن لم يتمكنا من الاتصال في الطرفية، فلن يتمكنا من الاتصال من هنا أيضًا.
+- **الأوامر والبرامج الأخرى.** الطلب الوارد من الأمر `ieumoffice` أو من وكيل برمجة متصل لا يستخدم اشتراكك ما لم تسمح بذلك. انظر [ربط وكيل برمجي](help://mcp).

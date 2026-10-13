@@ -2,16 +2,14 @@
 
 Domů je startovní stránka GenOffice: navigační panel vlevo, seznamy souborů a karty pro rychlé vytvoření vpravo.
 
-![Obrazovka domovské stránky](img/home-screen.png)
-
 ## Navigace v postranním panelu
 
 - **Nedávné**: soubory, které jste nedávno otevřeli. Každý řádek nese svůj čas — dnes, včera nebo datum.
 - **Oblíbené**: soubory, které jste si označili hvězdičkou. Přejděte na řádek souboru a klikněte na hvězdičku, abyste jej přidali nebo odebrali. **Přesunout do skupiny** v nabídce ⋯ třídí soubory s hvězdičkou do pojmenovaných skupin; zobrazení S hvězdičkou se podle nich filtruje.
 - **Uživatelská příručka**: otevře tuto příručku.
 - **Ask AI**: panel znalostní báze — ptejte se a dostávejte odpovědi s citacemi z vašich souborů s hvězdičkou (viz níže).
-- **Genspark Projects**: po přihlášení k účtu Genspark zobrazí projekty, které jste vytvořili na webu pomocí Genspark AI; kliknutím na projekt pokračujete v úpravách v prohlížeči. K dispozici je vyhledávání, řazení podle času, obnovení a načtení dalších.
 - **Složky**: adresáře, které do postranního panelu přidáte tlačítkem **Přidat složku…** nebo do něj přetáhnete ze správce souborů. Každý se stane kořenem, který můžete otevřít, vytvořit v něm podsložky, přejmenovat a odebrat; ten, který se stane nedostupným, se zobrazí jako nedostupný a lze ho ze seznamu sundat. **Nová složka** vytvoří další.
+- **Řádek dole**: ukazuje, zda je AI připojena — **Připojit AI**, nebo název připojeného předplatného — a otevírá Nastavení.
 
 Zde není žádná položka Koš. Odstraněné soubory putují do systémového koše a jejich obnova je věcí operačního systému.
 
@@ -61,12 +59,6 @@ Co která karta dělá:
 
 - Nejdřív dejte souborům hvězdičku (jakýkoli typ, který aplikace čte); hlavička panelu počítá korpus a prázdná báze vás vyzve, něco si označit.
 - Odpovědi citují zdrojové soubory; kliknutí na citaci otevře soubor v jeho editoru.
-- Vyžaduje přihlášení ke Genspark. Konverzace žije jen v paměti — zavření aplikace ji ukončí.
+- Vyžaduje připojenou AI; viz [Připojení předplatného](help://subscription). Konverzace žije jen v paměti — zavření aplikace ji ukončí.
 - Hledání běží na lokálním indexu souborů jako na Domově; zmizelé soubory z korpusu tiše vypadnou.
 - Skupiny organizují jen seznam S hvězdičkou — znalostní báze vždy zahrnuje všechny soubory s hvězdičkou.
-
-## Projekty v cloudu (Genspark Projects)
-
-- Při prvním použití je nutné přihlásit se k účtu Genspark (postup s kódem zařízení: GenOffice zobrazí kód a vy dokončíte přihlášení v prohlížeči).
-- Seznam projektů se synchronizuje s webem; Otevřít v prohlížeči vás přesune tam, kde lze pokračovat.
-- Nepřihlášení nijak neomezuje žádnou místní funkci.

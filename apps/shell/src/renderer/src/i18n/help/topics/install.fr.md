@@ -1,67 +1,37 @@
 # Installer GenOffice
 
-Chaque build est publié sur la [page Releases](https://github.com/genspark-ai/genoffice/releases/latest). Tous proviennent de `main` ; les installeurs macOS et Windows sont signés.
+Chaque version est publiée sur la [page Releases](https://github.com/pblsketch/openoffice/releases/latest) du projet sur GitHub. Cette version est publiée pour Windows.
 
 ## Choisir le fichier pour votre machine
 
-| Plateforme                           | Prérequis                                             | Fichier                   |
-| ------------------------------------ | ----------------------------------------------------- | ------------------------- |
-| **macOS** — Apple Silicon            | macOS 11+                                             | `.dmg` (arm64)            |
-| **macOS** — Intel                    | macOS 11+                                             | `.dmg` (x64)              |
-| **Windows** — la plupart des PC      | Windows 10+, Intel/AMD                                | installateur `-x64.exe`   |
-| **Windows** sur Arm                  | Windows 11 sur Arm (Snapdragon X et similaires)       | installateur `-arm64.exe` |
-| **Linux** — Debian / Ubuntu          | x86_64, glibc 2.34+ (Ubuntu 22.04 ou plus récent)     | `.deb`                    |
-| **Linux** — Fedora / RHEL / openSUSE | x86_64, glibc 2.34+ (Fedora 35+, RHEL 9+, Leap 15.6+) | `.rpm`                    |
-| **Linux** — tout le reste            | x86_64, glibc 2.34+, FUSE 2                           | `.AppImage`               |
+| Plateforme  | Prérequis                                           | Fichier                         |
+| ----------- | --------------------------------------------------- | ------------------------------- |
+| **Windows** | Windows 10 ou version ultérieure, Intel/AMD 64 bits | `GenOffice-Setup-<version>.exe` |
 
 Les versions antérieures restent sur la page Releases.
 
-## Sous macOS
-
-Ouvrez le `.dmg` et faites glisser **GenOffice** dans Applications. Sur une version Intel, le premier lancement demande de confirmer l’ouverture : clic droit sur l’application dans Applications ▸ Ouvrir. C’est Gatekeeper qui rencontre une image disque sans signature, pas un téléchargement endommagé.
-
 ## Sous Windows
 
-Lancez l’installeur `.exe`. Il place GenOffice dans le menu Démarrer et enregistre `.docx`, `.xlsx`, `.pptx`, `.pdf` et formats voisins, si bien qu’un double-clic sur un fichier l’ouvre.
+1. Téléchargez `GenOffice-Setup-<version>.exe` depuis la page Releases.
+2. Lancez-le. L’installeur n’est pas signé numériquement : Windows peut donc afficher d’abord une fenêtre bleue « Windows a protégé votre ordinateur ». Choisissez **Informations complémentaires**, puis **Exécuter quand même**. Le libellé exact dépend de votre version de Windows.
+3. Suivez l’installeur jusqu’au bout.
 
-## Sous Linux
+Il place GenOffice dans le menu Démarrer et enregistre `.docx`, `.xlsx`, `.pptx`, `.pdf` et formats voisins, si bien qu’un double-clic sur un fichier l’ouvre.
 
-**Debian / Ubuntu**
+Comme l’installeur n’est pas signé, n’exécutez que celui que vous avez téléchargé depuis la page Releases ci-dessus.
 
-```sh
-sudo apt install ./genoffice_<version>_amd64.deb
-```
+## Mises à jour
 
-**Fedora / RHEL / openSUSE**
-
-```sh
-sudo dnf install ./genoffice-<version>.x86_64.rpm     # Fedora / RHEL family
-sudo zypper install ./genoffice-<version>.x86_64.rpm  # openSUSE
-```
-
-**AppImage** — s’exécute sur place, sans étape d’installation :
-
-```sh
-chmod +x GenOffice-<version>.AppImage
-./GenOffice-<version>.AppImage
-```
-
-Il lui faut l’environnement d’exécution FUSE 2. Si vous préférez ne pas l’installer, lancez-le avec `--appimage-extract-and-run` : le bac à sable fonctionne alors depuis le répertoire extrait.
+- GenOffice cherche une version plus récente sur la même page GitHub Releases. Lorsqu’il y en a une, **Paramètres ▸ À propos** la propose : appuyez sur **Mettre à jour vers …**, attendez la fin du téléchargement, puis appuyez sur **Redémarrer et installer**.
+- **Aide ▸ Rechercher les mises à jour** lance la vérification quand vous le demandez.
+- Lorsque la vérification échoue — pas de réseau, ou rien de publié pour l’instant —, il ne se passe rien et l’application continue de fonctionner comme avant.
+- **Canal de mise à jour**, également sous Paramètres ▸ À propos, vaut Stable ou Bêta. Une modification prend effet immédiatement et déclenche une recherche de mise à jour ; elle ne rétrograde pas une installation Bêta vers Stable.
+- Les mises à jour ne sont pas signées non plus. Avant d’en installer une, l’application compare le fichier téléchargé à la somme de contrôle publiée avec cette version.
 
 ## Le build que vous exécutez
 
-**Paramètres ▸ À propos** est l'endroit où l'application indique le build que vous avez, le canal qu'elle suit et où se trouve le projet. Lorsqu'un build plus récent est publié sur ce canal, le même volet propose la mise à jour ; une installation Flatpak, Nix ou Docker ne le fait pas, car elle est remplacée par l'outil qui l'a mise là.
-
-![Paramètres ▸ À propos, avec la version installée, le canal de mise à jour suivi par l'application et le lien GitHub du projet](img/install.png)
-
-## Trois autres voies
-
-Les trois encapsulent les artefacts publiés au lieu de reconstruire l’application : elles suivent donc les binaires officiels.
-
-- **Flatpak** — installe le `.deb` via le mécanisme `extra-data` de Flatpak et l’exécute sous Zypak, qui adapte le bac à sable d’Electron. L’arborescence `/app` est en lecture seule : les mises à jour passent donc par Flatpak et non par la boîte de dialogue de mise à jour de l’application.
-- **Nix** — une expression de paquet que vous compilez depuis une copie de dépôt avec `nix-build packaging/nix` ; voir `packaging/nix`.
-- **Docker** — une image de conversion par lots sans interface (`packaging/docker`). Elle convertit un arbre entier de documents Office, Markdown et HTML en PDF via la chaîne d’export de l’application : le résultat est donc celui de Fichier ▸ Exporter. C’est un utilitaire CLI, pas un serveur.
+**Paramètres ▸ À propos** est l'endroit où l'application indique la version que vous avez, le canal qu'elle suit et où se trouve le projet. Elle y nomme aussi le projet open source sur lequel cette application est basée.
 
 ## La ligne de commande est incluse
 
-Chaque installation livre une commande `genoffice` qui parle aux mêmes moteurs que la fenêtre : les deux ne peuvent donc pas se contredire sur un fichier. Sous macOS et Windows, elle se trouve dans le bundle de l’application ; `genoffice install-cli` la met sur votre `PATH`. Pour ce qu’elle sait faire, voir **Ligne de commande et agents**.
+Chaque installation livre une commande `ieumoffice` qui parle aux mêmes moteurs que la fenêtre : les deux ne peuvent donc pas se contredire sur un fichier. `ieumoffice install-cli` la met sur votre `PATH`. Pour ce qu’elle sait faire, voir [Ligne de commande et agents](help://cli).

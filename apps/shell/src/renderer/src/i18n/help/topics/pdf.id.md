@@ -38,9 +38,7 @@ Enam alat: **Gambar, Persegi, Elips, Panah, Catatan**, ditambah **Redaksi area**
 - **Menutupi konten, alur lengkapnya** (menyembunyikan satu baris teks):
 
   1. Tab Anotasi ▸ klik **Redaksi area** (alat aktif).
-  2. **Seret sebuah kotak di atas konten** — isinya tertutup tanda arsir, dan bilah alat memperoleh tombol **Hapus tanda / Terapkan redaksi**:
-
-  ![Halaman setelah menandai area redaksi](img/pdf-redact.png)
+  2. **Seret sebuah kotak di atas konten** — isinya tertutup tanda arsir, dan bilah alat memperoleh tombol **Hapus tanda / Terapkan redaksi**.
 
   3. Klik **Terapkan redaksi** lalu konfirmasi — hasilnya adalah salinan kerja tempat teks dan gambar yang tertutup benar-benar dihapus (bukan sekadar ditutupi) dan tidak dapat dibatalkan; dokumen asli tidak tersentuh.
 

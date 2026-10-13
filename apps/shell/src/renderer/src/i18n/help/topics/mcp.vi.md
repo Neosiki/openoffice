@@ -15,29 +15,27 @@ Việc này làm ở **Cài đặt ▸ Tích hợp**. Bảng đó có hai nửa,
 Cũng làm được từ terminal — đây là đường nâng cao, dùng khi tác nhân nằm ở nơi bảng kia không tìm thấy:
 
 ```sh
-genoffice mcp install all
+ieumoffice mcp install all
 ```
 
-Lệnh này tìm các tác nhân lập trình có trên máy này — Claude Code, Codex, Cursor, Gemini CLI, Copilot CLI, OpenCode, Windsurf — rồi ghi mục máy chủ stdio vào cấu hình riêng của từng tác nhân, giữ nguyên phần còn lại của tệp đó như cũ.
+Lệnh này tìm các tác nhân lập trình có trên máy này — Claude Code, Codex, Cursor, Gemini CLI, Copilot CLI, OpenCode, Windsurf — rồi ghi mục máy chủ stdio vào cấu hình riêng của từng tác nhân, giữ nguyên phần còn lại của tệp đó như cũ. Mục đó có tên `ieumoffice`. Nếu làm bằng tay cho Claude Code, việc đăng ký tương tự là `claude mcp add --transport stdio ieumoffice -- ieumoffice mcp`.
 
 ```sh
-genoffice mcp list             # where each agent stands
-genoffice mcp install cursor    # just one
-genoffice mcp uninstall cursor  # take it back out
+ieumoffice mcp list             # where each agent stands
+ieumoffice mcp install cursor    # just one
+ieumoffice mcp uninstall cursor  # take it back out
 ```
 
 Một tác nhân bạn cài ở chỗ không mấy quen thuộc cần `--dir <path>`; còn `--force` ghi đè một mục đã có sẵn.
 
-Mọi thứ mà máy chủ nhận đều nằm trong một màn hình — các dạng đăng ký, gỡ bỏ và liệt kê, phục vụ qua HTTP, cùng hai cờ lược đồ:
-
-![Kết quả thật của genoffice mcp --help: các dạng install, uninstall và list, kèm các tùy chọn --http, --host, --token, --compact-schemas, --dir và --force](img/mcp.png)
+`ieumoffice mcp --help` đưa mọi thứ mà máy chủ nhận vào một màn hình: các dạng đăng ký, gỡ bỏ và liệt kê, phục vụ qua HTTP, cùng hai cờ lược đồ.
 
 ## Tự chạy nó
 
 Với một ứng dụng trên máy khác, hãy phục vụ qua HTTP thay thế:
 
 ```sh
-genoffice mcp --http 8765 --token <secret>
+ieumoffice mcp --http 8765 --token <secret>
 ```
 
 `--host <addr>` đổi nơi nó lắng nghe. Hãy truyền cùng mã thông báo đó cho ứng dụng.
@@ -52,21 +50,40 @@ Mỗi lệnh là một công cụ. Những cái đáng chú ý:
 - **`render`** — một PNG cho mỗi trang, được bộ kết xuất của ứng dụng bố cục, để tác nhân có thể nhìn một trang chiếu thay vì đoán mò.
 - **`pdf`** — lớp văn bản của PDF, từng trang một, không cần tiến trình ứng dụng.
 - **`info`** — siêu dữ liệu và phần tóm tắt cấu trúc, thường là lời gọi rẻ nhất khi gặp một tệp lạ.
-- **`search`, `image`, `media`** — các nhà cung cấp đã cấu hình trong ứng dụng, nên tác nhân không cần khóa riêng.
+- **`search`, `image`, `media`** — tìm kiếm web và hình ảnh, tạo hình ảnh và phân tích phương tiện thông qua những gì đã được thiết lập trong ứng dụng, nên tác nhân không cần khóa riêng. Phần tiếp theo nói rõ chúng được dùng những gì.
 - **`merge`** — điền một mẫu `{{key}}`.
+
+## Tìm kiếm, hình ảnh và phương tiện: tác nhân được dùng những gì
+
+Một yêu cầu đến từ lệnh `ieumoffice` hoặc từ một ứng dụng khách MCP không phải do bạn gõ trong ứng dụng, nên GenOffice thận trọng với nó.
+
+- **Tìm kiếm** lúc nào cũng dùng được và mặc định miễn phí. Khóa của nhà cung cấp tìm kiếm chỉ được dùng nếu bạn đã chọn.
+- **Tạo một hình ảnh** cần khóa của nhà cung cấp hình ảnh. Trong phiên bản này, gói đăng ký không tạo được hình ảnh.
+- **Mô tả một hình ảnh** sẽ dùng nhà cung cấp dùng khóa khi có một nhà cung cấp như vậy được thiết lập. Gói đăng ký Claude hoặc Codex của bạn **không được dùng trừ khi bạn cho phép**.
+- **Video và âm thanh** cần một nhà cung cấp dùng khóa có hỗ trợ video.
+
+Để cho phép dùng gói đăng ký, hãy mở Cài đặt ▸ AI ▸ **Nâng cao** rồi bật **Cho phép yêu cầu tự động dùng gói đăng ký**. Một cảnh báo sẽ hiện ra trước — "Cả hai công ty đều không khuyến nghị để chương trình tự động dùng gói đăng ký, và tài khoản của bạn có thể bị hạn chế." — và công tắc chỉ được bật sau khi bạn nhấn **Vẫn bật**.
+
+Ngay cả khi công tắc đã bật:
+
+- Các yêu cầu được xử lý lần lượt từng cái một. Những yêu cầu khác chờ đến lượt.
+- Mỗi giờ chỉ xử lý tối đa 20 yêu cầu dùng gói đăng ký. Con số này được tính chung cho mọi lần chạy lệnh và mọi lời gọi MCP. Vượt quá con số đó, yêu cầu sẽ thất bại kèm một lỗi cho biết khi nào có thể gửi yêu cầu trở lại.
+- Một lần đăng nhập tính phí theo mức sử dụng mà bạn đã cho phép bằng **Vẫn sử dụng** không được tính là gói đăng ký ở đây. Nó được xử lý như một khóa: nếu bạn đã chọn nó làm AI sử dụng, việc mô tả hình ảnh sẽ đi qua nó bất kể công tắc đang bật hay tắt, không chịu giới hạn mỗi giờ, và mỗi lần đều bị tính phí.
+
+Khi công tắc tắt và chưa có khóa nào được thiết lập, công cụ sẽ trả lời rằng tính năng không dùng được và nêu tên cài đặt này. Tác nhân có thể kiểm tra trước bằng công cụ `capabilities`; xem [Dòng lệnh và tác nhân](help://cli).
 
 ## Lược đồ, và một hạn mức nhỏ hơn
 
-`apply` và `create` công bố các tham số `ops`, `cells` và `data` kèm lược đồ có kiểu cho từng thao tác, sinh từ `genoffice guide <domain> --json`. Nó chính xác và không hề nhỏ. Một ứng dụng có cửa sổ ngữ cảnh chật hẹp có thể xin các mảng thuần thay vì thế:
+`apply` và `create` công bố các tham số `ops`, `cells` và `data` kèm lược đồ có kiểu cho từng thao tác, sinh từ `ieumoffice guide <domain> --json`. Nó chính xác và không hề nhỏ. Một ứng dụng có cửa sổ ngữ cảnh chật hẹp có thể xin các mảng thuần thay vì thế:
 
 ```sh
-genoffice mcp --compact-schemas
-GENOFFICE_MCP_COMPACT_SCHEMAS=1 genoffice mcp
+ieumoffice mcp --compact-schemas
+GENOFFICE_MCP_COMPACT_SCHEMAS=1 ieumoffice mcp
 ```
 
 ## Vì sao cần kỹ năng
 
-Một tác nhân không biết từ vựng thao tác sẽ đoán mò. Kỹ năng mang theo tài liệu tham chiếu và các hướng dẫn thiết kế — đúng những tài liệu mà `genoffice guide` in ra —, nên trợ lý viết ra thao tác mà nó đã thực sự đọc đặc tả. Cài nó từ bảng kia ở trên, hoặc bằng `genoffice skill` trong terminal.
+Một tác nhân không biết từ vựng thao tác sẽ đoán mò. Kỹ năng mang theo tài liệu tham chiếu và các hướng dẫn thiết kế — đúng những tài liệu mà `ieumoffice guide` in ra —, nên trợ lý viết ra thao tác mà nó đã thực sự đọc đặc tả. Cài nó từ bảng kia ở trên, hoặc bằng `ieumoffice skill` trong terminal.
 
 ## Nó chạm được gì trong ứng dụng
 

@@ -4,13 +4,18 @@ Setiap editor boleh memanggil panel AI. Pilih sesuatu, berikan arahan, dan lihat
 
 ## Membuka dan menggunakannya
 
-![Panel AI dalam Docs](img/ai-panel.png)
-
+- Panel ini memerlukan AI yang disambungkan. Jika tiada AI disambungkan, panel memaparkan kad sambungan dan bukannya ralat; lihat [Sambungan langganan](help://subscription).
 - Akses kepada panel ini ialah melalui **butang AI** pada reben setiap editor, **Tanya AI** dalam menu konteks, atau Tanya AI pada bar anotasi.
 - Terangkan tugas itu dalam bahasa biasa, kemudian tekan Enter.
 - Balasan dipaparkan secara berperingkat. Apabila AI memerlukan alatan, ia akan menggunakan alatan itu dan meneruskan sehingga selesai.
 - **Berhenti** boleh digunakan pada bila-bila masa untuk menghentikan pusingan semasa.
 - **Baris gilir**: ketika balasan sedang mengalir, Enter memasukkan mesej anda ke baris gilir dan bukannya membuangnya — jalur di atas kotak input mengiranya; buka untuk sunting, buang, susun semula, jeda atau kosongkan. Mesej seterusnya terhantar sendiri apabila giliran tamat; Esc masih menghentikan giliran.
+
+## AI mana yang menjawab
+
+- Senarai model di bahagian bawah panel menunjukkan AI yang sedang digunakan dan membolehkan anda memilih yang lain: langganan anda dahulu, kemudian penyedia berasaskan kunci yang telah anda sediakan.
+- Setelah anda menggunakan 80% atau lebih daripada had langganan, baris seperti "85% digunakan · ditetapkan semula pada 3:00 PTG" muncul dalam panel.
+- Jika permintaan dihentikan — had habis digunakan, atau log masuk telah tamat — panel menyatakan sebabnya dan tidak beralih kepada AI lain dengan sendirinya. Apabila langganan anda yang satu lagi disambungkan, butang **Teruskan dengan …** menawarkannya.
 
 ## Apa yang boleh dibuatnya
 
@@ -36,5 +41,6 @@ Setiap editor boleh memanggil panel AI. Pilih sesuatu, berikan arahan, dan lihat
 
 ## Privasi
 
-- Arahan dan kandungan dokumen yang berkaitan dihantar ke **perkhidmatan model yang anda konfigurasikan**, iaitu Genspark yang dihoskan atau titik akhir tersuai. Tanpa konfigurasi, tiada apa-apa yang dihantar.
-- Fail setempat tidak dimuat naik ke tempat lain. Kunci BYOK disimpan dalam fail tetapan aplikasi pada mesin ini dan dihantar hanya dalam pengepala permintaan.
+- Arahan dan kandungan dokumen yang berkaitan dihantar kepada **AI yang anda gunakan**: kepada Anthropic atau OpenAI di bawah akaun anda sendiri apabila anda menggunakan langganan, atau kepada penyedia yang kuncinya anda masukkan. Jika tiada AI disambungkan, tiada apa-apa yang dihantar.
+- Sama ada kandungan yang dihantar melalui langganan digunakan untuk melatih AI ditentukan oleh tetapan akaun anda sendiri di syarikat tersebut.
+- Fail setempat tidak dimuat naik ke tempat lain. Kunci API disimpan dalam fail tetapan aplikasi pada mesin ini dan dihantar hanya dalam pengepala permintaan.

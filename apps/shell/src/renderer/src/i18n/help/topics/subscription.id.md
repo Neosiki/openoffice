@@ -1,93 +1,91 @@
-<!-- TRANSLATE: copy of en -->
+# Koneksi langganan
 
-# Subscription connection
+GenOffice menjalankan AI dengan langganan yang sudah Anda miliki: langganan Claude (Anthropic) atau langganan Codex (OpenAI). Codex adalah program buatan OpenAI, dan Anda masuk ke dalamnya dengan paket ChatGPT Anda. Anda tidak memerlukan kunci API, dan GenOffice tidak punya akun sendiri yang harus Anda daftarkan.
 
-GenOffice runs its AI on a subscription you already have: a Claude subscription (Anthropic) or a Codex subscription (OpenAI). Codex is OpenAI's program, and you sign in to it with your ChatGPT plan. You do not need an API key, and GenOffice has no account of its own to sign up for.
+## Cara kerjanya
 
-## How it works
+- AI tidak tertanam di dalam GenOffice. Sebuah program dari perusahaan itu terpasang di PC ini — **Claude Code** untuk langganan Claude, **Codex** untuk langganan ChatGPT — dan GenOffice meminta jawaban kepada program tersebut.
+- Program itu masuk dengan akun Anda sendiri, sehingga setiap permintaan dihitung ke paket Anda sendiri.
+- GenOffice tidak pernah menampilkan formulir masuk miliknya sendiri, dan tidak pernah membaca atau menyimpan data login Anda. Anda masuk di program dan halaman web milik perusahaan itu sendiri.
 
-- The AI is not built into GenOffice. A program from the company is installed on this PC — **Claude Code** for a Claude subscription, **Codex** for a ChatGPT subscription — and GenOffice asks that program for the answer.
-- That program is signed in with your own account, so every request counts against your own plan.
-- GenOffice never shows a sign-in form of its own, and it never reads or stores your login. You sign in inside the company's own program and web page.
+## Sebelum mulai
 
-## Before you start
+Anda memerlukan salah satu dari ini. Memiliki keduanya juga boleh.
 
-You need one of these. Having both is fine.
+- Langganan Claude, serta program Claude Code yang terpasang dan sudah masuk di PC ini.
+- Langganan ChatGPT, serta program Codex yang terpasang dan sudah masuk di PC ini.
 
-- A Claude subscription, and the Claude Code program installed and signed in on this PC.
-- A ChatGPT subscription, and the Codex program installed and signed in on this PC.
+Jika programnya belum terpasang, atau belum masuk, tombol-tombol di bagian berikutnya akan mengurusnya.
 
-If the program is not installed yet, or not signed in yet, the buttons in the next section take care of it.
+## Menghubungkan
 
-## Connecting
+1. Buka **Pengaturan** dari baris di kiri bawah Beranda, lalu pilih **AI**. Di bawah **Koneksi langganan** ada satu kartu untuk Claude dan satu untuk Codex.
+2. Baca tulisan pada kartu, lalu tekan tombolnya. Tabel di bawah menjelaskan setiap keadaan.
+3. Kembalilah ke jendela GenOffice. Kartu memeriksa ulang dengan sendirinya, dan **Periksa lagi** memeriksa saat itu juga.
 
-1. Open **Settings** from the row at the bottom left of Home and choose **AI**. Under **Subscription connection** there is one card for Claude and one for Codex.
-2. Read what the card says and press its button. The table below explains each state.
-3. Come back to the GenOffice window. The card checks again by itself, and **Check again** checks at once.
+Kartu yang sama muncul di langkah kedua layar selamat datang saat aplikasi pertama kali dijalankan, dan di panel AI ketika belum ada AI yang terhubung. Anda bisa melewatinya dan menghubungkan nanti.
 
-The same cards appear in the second step of the welcome screens on first launch, and in the AI panel when no AI is connected. You can skip them and connect later.
+| Tulisan pada kartu                             | Artinya                                                                                                      | Yang perlu dilakukan                                                                                                                                                                                                                                                                               |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Memeriksa…**                                 | GenOffice sedang menanyakan keadaan program itu.                                                             | Tunggu sebentar.                                                                                                                                                                                                                                                                                   |
+| **Belum terpasang**                            | Program tidak ditemukan di PC ini.                                                                           | Tekan **Pasang**. Perintah pemasangan resmi dari perusahaan itu dijalankan di jendela terminal baru, sehingga Anda bisa melihat apa yang dilakukannya. GenOffice sendiri tidak mengunduh apa pun. Untuk memasang secara manual, **Panduan pemasangan resmi** membuka petunjuk dari perusahaan itu. |
+| **Belum masuk**                                | Programnya ada, tetapi belum ada yang masuk.                                                                 | Tekan **Masuk**. Proses masuk milik program itu dimulai di jendela baru dan membuka halaman masuk perusahaan di browser Anda. Selesaikan di sana.                                                                                                                                                  |
+| **Terhubung**                                  | Login dengan langganan sudah dipastikan. Nama paket ditampilkan bila program melaporkannya.                  | Tidak ada. AI siap dipakai.                                                                                                                                                                                                                                                                        |
+| **Sudah masuk, tetapi bukan dengan langganan** | Program masuk dengan kunci API atau akun bayar sesuai pemakaian, atau jenis loginnya tidak dapat dipastikan. | Lihat "Login bayar sesuai pemakaian" di bawah.                                                                                                                                                                                                                                                     |
+| **Koneksi tidak dapat diperiksa**              | Pemeriksaannya sendiri gagal. Alasannya ditampilkan pada kartu.                                              | Tekan **Periksa lagi**. Jika tertulis bahwa programnya terlalu lama, perbarui program itu lalu periksa lagi.                                                                                                                                                                                       |
 
-| What the card says                         | What it means                                                                                                     | What to do                                                                                                                                                                                                                                              |
-| ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Checking…**                              | GenOffice is asking the program how it stands.                                                                    | Wait a moment.                                                                                                                                                                                                                                          |
-| **Not installed**                          | The program was not found on this PC.                                                                             | Press **Install**. The company's official install command runs in a new terminal window, so you can watch what it does. GenOffice downloads nothing by itself. To install by hand instead, **Official install guide** opens the company's instructions. |
-| **Not signed in**                          | The program is there but has no login.                                                                            | Press **Sign in**. The program's own sign-in starts in a new window and opens the company's sign-in page in your browser. Finish it there.                                                                                                              |
-| **Connected**                              | A subscription login was confirmed. The plan name is shown when the program reports it.                           | Nothing. AI is ready to use.                                                                                                                                                                                                                            |
-| **Signed in, but not with a subscription** | The program is signed in with an API key or a pay-as-you-go account, or the kind of login could not be confirmed. | See "Pay-as-you-go logins" below.                                                                                                                                                                                                                       |
-| **The connection could not be checked**    | The check itself failed. The reason is shown on the card.                                                         | Press **Check again**. If it says the program is too old, update the program and check again.                                                                                                                                                           |
+Koneksi diperiksa saat aplikasi dimulai, saat Anda membuka Pengaturan, dan saat Anda kembali ke jendela setelah memulai pemasangan atau proses masuk.
 
-The connection is checked when the app starts, when you open Settings, and when you return to the window after starting an install or a sign-in.
+## Login bayar sesuai pemakaian
 
-## Pay-as-you-go logins
+Kartu yang bertuliskan **Sudah masuk, tetapi bukan dengan langganan** memuat peringatan: "Ini bukan langganan: Anda ditagih sesuai pemakaian."
 
-A card that says **Signed in, but not with a subscription** carries a warning: "This is not a subscription: you are charged for what you use."
+- GenOffice tidak memakai login itu sampai Anda menekan **Tetap gunakan**. Sejak saat itu, setiap permintaan ditagihkan ke akun tersebut.
+- Bahkan setelah itu, login tersebut tidak pernah dipilih secara otomatis. Pilih sendiri di **AI yang digunakan**, tempat login itu ditandai **Berbayar**.
+- Izin Anda diingat hanya untuk program itu. Izin dihapus ketika program tersebut keluar dari akun atau loginnya berubah.
+- Untuk memakai langganan Anda saja, masuklah di program itu dengan akun langganan Anda lalu tekan **Periksa lagi**.
 
-- GenOffice does not use that login until you press **Use anyway**. From then on, every request is billed to that account.
-- Even then it is never chosen automatically. Choose it yourself under **AI to use**, where it is marked **Paid**.
-- Your permission is remembered for that program only. It is cleared when the program is signed out or its login changes.
-- To use your subscription instead, sign the program in with your subscription account and press **Check again**.
+## AI mana yang dipakai
 
-## Which AI is used
+**AI yang digunakan**, di Pengaturan ▸ AI, awalnya diatur ke **Otomatis**. Mode Otomatis memutuskan dengan urutan ini:
 
-**AI to use**, under Settings ▸ AI, starts on **Automatic**. Automatic decides in this order:
+1. Claude, bila kartunya bertuliskan Terhubung.
+2. Kalau tidak, Codex, bila kartunya bertuliskan Terhubung.
+3. Kalau tidak, belum ada AI yang terhubung, dan panel AI menampilkan kartu koneksi, bukan pesan galat.
 
-1. Claude, when its card says Connected.
-2. Otherwise Codex, when its card says Connected.
-3. Otherwise no AI is connected, and the AI panel shows the connect cards instead of an error.
+Mode Otomatis tidak pernah memilih apa pun yang menimbulkan biaya tambahan: bukan kunci API, dan bukan login bayar sesuai pemakaian. Keduanya hanya dipakai selama Anda sendiri yang memilihnya.
 
-Automatic never picks anything that costs extra money: not an API key, and not a pay-as-you-go login. Those are used only while you choose them yourself.
+Anda juga bisa memilih sendiri satu AI, di tempat yang sama atau di daftar model di bagian bawah panel AI. Jika AI pilihan Anda berhenti berfungsi, GenOffice tidak diam-diam pindah ke AI lain. GenOffice memberi tahu apa yang terjadi dan menunjukkan cara menghubungkan kembali.
 
-You can also choose one AI yourself, in the same place or in the model list at the bottom of the AI panel. If the one you chose stops working, GenOffice does not quietly move to another. It tells you what happened and shows how to reconnect.
+Di mana pun Codex bisa dipilih, satu baris ditampilkan bersamanya: "Memakai langganan Codex di dalam aplikasi bukan cara yang direkomendasikan secara resmi oleh OpenAI." Putuskan dengan mempertimbangkan hal itu.
 
-Wherever Codex can be chosen, one line is shown with it: "Using a Codex subscription inside an app is not a method officially recommended by OpenAI." Decide with that in mind.
+## Ketika permintaan dihentikan
 
-## When a request is stopped
+Permintaan berhenti ketika batas paket habis, ketika sesi masuk berakhir, atau ketika programnya sudah tidak ada. GenOffice tidak beralih sendiri ke AI lain.
 
-A request stops when the plan's limit is used up, when the login has expired, or when the program is no longer there. GenOffice does not switch to another AI by itself.
+- Alasannya ditampilkan di tempat balasan terhenti. Untuk batas yang habis, waktu pengaturan ulangnya juga ditampilkan, bila program melaporkannya.
+- Jika langganan Anda yang lain terhubung, muncul tombol **Lanjutkan dengan …**, misalnya **Lanjutkan dengan Codex**. Menekannya menjadikan langganan itu AI yang digunakan — daftar model menunjukkan perubahannya — lalu menjalankan permintaan itu lagi.
+- Jika satu-satunya koneksi lain adalah login bayar sesuai pemakaian yang sudah Anda izinkan, tombol yang sama disertai catatan tentang biayanya.
+- Tidak pernah ada tombol yang memindahkan Anda ke kunci API.
 
-- The reason is shown where the reply stopped. For a used-up limit, the time it resets is shown too, when the program reports it.
-- If your other subscription is connected, a **Continue with …** button appears, for example **Continue with Codex**. Pressing it makes that one the AI to use — the model list shows the change — and runs the request again.
-- If the only other connection is a pay-as-you-go login you allowed, the same button comes with a note about the cost.
-- There is never a button that moves you to an API key.
+## Baris pemakaian
 
-## The usage line
+Setelah Anda memakai 80% atau lebih dari sebuah batas, panel AI menampilkan baris seperti "85% terpakai · diatur ulang pada 15.00". Claude melaporkan batas 5 jam dan batas 7 hari, dan Codex ditampilkan dengan cara yang sama bila melaporkannya. Di bawah 80%, atau bila program tidak melaporkan apa pun, tidak ada baris yang ditampilkan.
 
-Once you have used 80% or more of a limit, the AI panel shows a line such as "85% used · resets at 3:00 PM". Claude reports a 5-hour limit and a 7-day limit, and Codex is shown the same way when it reports them. Below 80%, or when the program reports nothing, no line is shown.
+## Apa yang dikirim, dan ke mana
 
-## What is sent, and where
+Saat langganan pertama kali bisa dipakai, GenOffice menampilkan pemberitahuan satu kali. Untuk membacanya lagi, buka Pengaturan ▸ AI ▸ **Pemberitahuan koneksi pertama** lalu tekan **Lihat lagi**. Isinya tiga hal:
 
-The first time a subscription can be used, GenOffice shows a notice once. To read it again, go to Settings ▸ AI ▸ **First-connection notice** and press **View again**. It says three things:
+- Isi dokumen dan percakapan Anda dikirim ke Anthropic atau OpenAI dengan akun Anda sendiri.
+- Apakah isi itu dipakai untuk melatih AI ditentukan oleh pengaturan akun Anda sendiri di perusahaan tersebut, bukan oleh GenOffice.
+- GenOffice mematikan penyimpanan riwayat percakapan Codex, tetapi Codex masih dapat menyimpan log diagnostiknya sendiri di PC ini.
 
-- Document content and your conversation are sent to Anthropic or OpenAI under your own account.
-- Whether that content is used to train AI is decided by your own account settings at that company, not by GenOffice.
-- GenOffice turns off conversation history saving in Codex, but Codex may still keep its own diagnostic logs on this PC.
+Apa pun yang Anda sembunyikan dengan **Sembunyikan seleksi dari AI** tidak dikirim, AI mana pun yang Anda pakai.
 
-Anything you hid with **Hide the selection from AI** is not sent, whichever AI you use.
+## Baik untuk diketahui
 
-## Good to know
-
-- **Speed.** A reply through a subscription starts a few seconds later than one through an API key, because the company's program has to start up first.
-- **Free ChatGPT plan.** It shows as Connected, but its limits are small, so requests stop sooner. The usage line does not appear for it.
-- **Image generation.** In this version a subscription does not generate images, on any plan. That needs an image provider key; see [AI models and settings](help://ai-models).
-- **Proxies.** Claude Code and Codex do not take proxy settings from GenOffice. They use the proxy set for this PC, for example the `HTTPS_PROXY` environment variable, just as when you run them in a terminal. If they cannot connect in a terminal, they cannot connect from here either.
-- **Commands and other programs.** A request that arrives from the `ieumoffice` command or from a connected coding agent does not use your subscription unless you allow it. See [Connecting a coding agent](help://mcp).
+- **Kecepatan.** Balasan lewat langganan dimulai beberapa detik lebih lambat daripada lewat kunci API, karena program perusahaan itu harus dijalankan lebih dulu.
+- **Paket ChatGPT gratis.** Paket ini tampil sebagai Terhubung, tetapi batasnya kecil, sehingga permintaan lebih cepat terhenti. Baris pemakaian tidak muncul untuk paket ini.
+- **Pembuatan gambar.** Pada versi ini langganan tidak membuat gambar, di paket mana pun. Untuk itu diperlukan kunci penyedia gambar; lihat [Model AI dan pengaturan](help://ai-models).
+- **Proxy.** Claude Code dan Codex tidak mengambil pengaturan proxy dari GenOffice. Keduanya memakai proxy yang diatur untuk PC ini, misalnya variabel lingkungan `HTTPS_PROXY`, sama seperti saat Anda menjalankannya di terminal. Jika keduanya tidak bisa terhubung di terminal, dari sini pun tidak bisa.
+- **Perintah dan program lain.** Permintaan yang datang dari perintah `ieumoffice` atau dari agen pemrograman yang terhubung tidak memakai langganan Anda kecuali Anda mengizinkannya. Lihat [Menghubungkan agen coding](help://mcp).

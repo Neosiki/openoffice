@@ -2,11 +2,9 @@
 
 ## Membuka pengaturan
 
-Baris akun di kiri bawah Beranda membuka panel pengaturan (bacaannya Masuk saat Anda belum masuk). Panel ini punya enam bagian: Akun, Model AI, Media & Pencarian AI, Umum, Integrasi, dan Tentang.
+Baris di kiri bawah Beranda membuka panel pengaturan (bacaannya Hubungkan AI sampai ada AI yang terhubung). Panel ini punya lima bagian: Akun, AI, Umum, Integrasi, dan Tentang.
 
-![Pengaturan ▸ Umum, tempat bahasa, tema, Autosave, dan sakelar statistik penggunaan berada](img/settings-general.png)
-
-Konfigurasi model punya bab tersendiri; di **Media & Pencarian AI** Anda menyalakan pembuatan gambar, analisis gambar, analisis video, pencarian web, dan pencarian file lokal untuk tiap penyedia.
+**Akun** menunjukkan keadaan langganan Claude dan Codex Anda, dan **Kelola koneksi** membawa Anda ke bagian AI. AI punya artikel tersendiri: [Koneksi langganan](help://subscription) dan [Model AI dan pengaturan](help://ai-models).
 
 ## Bahasa
 
@@ -19,22 +17,24 @@ Terang / Gelap / Ikuti Sistem. Mode Ikuti Sistem mengikuti tampilan sistem opera
 
 ## Umum
 
-- **Kirim statistik penggunaan anonim** — aktif secara default. Menggunakan Google Analytics 4 dan mengirim IP publik serta metadata transport Anda; isi dokumen dan nama file tidak pernah dikumpulkan, dan setiap peristiwa hanya membawa jenis seperti "membuka .docx". Anda bisa mematikannya di sini kapan saja.
 - **Posisi bilah samping AI** (kiri atau kanan), **Ukuran teks panel AI** dan **Pemeriksaan ejaan di obrolan AI**.
 - **Buka panel AI di dokumen baru** — nonaktif, dokumen baru dimulai dengan panel tertutup, sekali klik lagi.
 - **Simpan otomatis semua dokumen** menyalakan AutoSave secara default di setiap editor; Anda tetap bisa mematikannya untuk satu jendela.
 - **Lokasi penyimpanan** dengan tombol **Ubah**, dan **Aplikasi default untuk dokumen Office** untuk mengambil alih .docx / .xlsx / .pptx bagi GenOffice.
 
-## Media & Pencarian AI
+GenOffice tidak mengumpulkan atau mengirim statistik penggunaan, jadi tidak ada sakelar untuk itu.
 
-Bukan sakelar — setiap kemampuan memilih vendor yang melayaninya, dan kunci serta URL dasar sebuah vendor cukup diisi sekali lalu dipakai bersama:
+## AI ▸ Lanjutan
+
+Tertutup sampai Anda membukanya; kebanyakan orang tidak pernah memerlukannya. Tab **Model AI** berisi kunci API dan server yang Anda jalankan sendiri, untuk obrolan. Di tab **Media & Pencarian AI**, setiap kemampuan memilih vendor yang melayaninya, dan kunci serta URL dasar sebuah vendor cukup diisi sekali lalu dipakai bersama:
 
 - **Pencarian web**, **Pembuatan gambar**, **Analisis gambar** dan **Analisis video**, masing-masing dengan satu provider, satu model, satu kunci, dan satu URL dasar.
 - **Pencarian berkas lokal** berjalan di mesin ini. Di bawahnya, **reranking pencarian Jev** **nonaktif secara bawaan**. Diaktifkan, kutipan 20 hit lokal teratas — hingga 1.200 karakter per dokumen, plus nama berkas dan folder — pergi ke endpoint keputusan pilihan Anda (Jev via OpenRouter atau TypeSafe, Perplexity, Liquid AI d1, Cloudflare, mesin lokal, atau URL kustom) untuk diurutkan ulang menurut relevansi. Nonaktif, tak ada yang meninggalkan perangkat.
+- **Izinkan permintaan otomatis memakai langganan** **nonaktif secara bawaan**. Sakelar ini menentukan apakah permintaan dari baris perintah atau dari agen pemrograman yang terhubung boleh memakai langganan Claude atau Codex Anda; lihat [Menghubungkan agen coding](help://mcp).
 
 ## Tentang
 
-- **Versi**, tautan GitHub proyek, dan tombol **Beri Bintang di GitHub**.
+- **Versi**, alamat GitHub proyek, dan satu baris yang menyebutkan proyek sumber terbuka yang menjadi dasar aplikasi ini.
 - **Saluran Pembaruan**: Stabil atau Beta. Mengubahnya langsung berlaku dan memeriksa pembaruan; ini tidak akan menurunkan instalasi Beta kembali ke Stabil.
 
 ## Pengikatan aplikasi predefinida
@@ -46,24 +46,16 @@ Pengaturan dapat mendaftarkan GenOffice sebagai aplikasi penangan .docx / .xlsx 
 - Bantuan ▸ Pemberitahuan Perangkat Lunak Pihak Ketiga: inventaris lengkap lisensi OSS yang disertakan dengan aplikasi.
 - Bantuan ▸ Periksa Pembaruan…: memicu pemeriksaan manual; versi yang lebih baru menawarkan dipasang.
 
-## Masuk dengan Genspark
-
-- Jalur masuk (di pengaturan atau di daftar proyek cloud) memakai alur **device-code**: GenOffice menampilkan kode dan membuka login di browser; prosesnya dilanjutkan otomatis setelah selesai.
-- Login hanya dipakai untuk: daftar proyek cloud dan model terkelola Genspark. Tanpa login, semua fitur lokal dan model kustom tetap berfungsi.
-- Keluar cukup satu klik di pengaturan.
-
 ## Integrasi MCP (untuk pengguna lanjutan / klien AI)
 
 **Integrasi** adalah panel yang menghubungkan GenOffice dengan agen pemrograman, dan ia punya artikel tersendiri: Menghubungkan agen pemrograman. Versi singkat — pilih jalurnya (baris perintah, atau MCP), ikuti bagian itu, lalu mulai obrolan baru dan bertanya.
-
-![Pengaturan ▸ Integrasi: tiga langkah, lalu baris skill dan opsi MCP](img/settings-integrations.png)
 
 Di bawah **Server HTTP lokal**, aplikasi juga bisa menjalankan server itu sendiri — sakelar aktif dan port — dan **Lanjutan** menambahkan URL pemeriksaan kesehatan serta file log, alih-alih menghandalkannya kepada asisten. Ia hanya mendengarkan di localhost.
 
 ## Lembar pintasan baris perintah
 
-| Perintah           | Fungsinya                |
-| ------------------ | ------------------------ |
-| `genoffice <file>` | membuka sebuah file      |
-| `genoffice mcp`    | memulai server MCP lokal |
-| `genoffice --help` | semua perintah dan opsi  |
+| Perintah            | Fungsinya                |
+| ------------------- | ------------------------ |
+| `ieumoffice <file>` | membuka sebuah file      |
+| `ieumoffice mcp`    | memulai server MCP lokal |
+| `ieumoffice --help` | semua perintah dan opsi  |

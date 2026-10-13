@@ -4,13 +4,18 @@ Todos los editores pueden invocar el panel de IA: seleccione algo, dé una instr
 
 ## Abrirlo y usarlo
 
-![El panel de IA en Docs](img/ai-panel.png)
-
+- El panel necesita una IA conectada. Si no hay ninguna, muestra las tarjetas de conexión en lugar de un error; vea [Conexión por suscripción](help://subscription).
 - Entradas: el **botón de IA** en la cinta de opciones de cada editor, **Pedir a la IA** en los menús contextuales, o Preguntar a la IA en la barra de marcado.
 - Describa la tarea en lenguaje natural (reescribir esto / convertir esta columna en porcentajes / rehacer el diseño de esta página…) y pulse Intro.
 - Las respuestas se renderizan **en streaming**; cuando la IA necesita herramientas (leer el documento, editarlo), las ejecuta y sigue hasta terminar.
 - **Detener**: interrumpa la vuelta en curso en cualquier momento.
 - **Cola**: mientras se genera una respuesta, Enter pone tu mensaje en cola en lugar de descartarlo — una franja sobre el campo de entrada los cuenta; ábrela para editar, quitar, reordenar, pausar o vaciar. El siguiente mensaje se envía solo al terminar el turno; Esc sigue deteniendo el turno.
+
+## Qué IA responde
+
+- La lista de modelos de la parte inferior del panel muestra la IA en uso y permite elegir otra: primero sus suscripciones y después los proveedores con clave que haya configurado.
+- Cuando ha usado el 80 % o más del límite de una suscripción, aparece en el panel una línea como «85 % usado · se restablece a las 15:00».
+- Si una solicitud se detiene —se agotó el límite, o la sesión ha caducado—, el panel dice por qué y no cambia a otra IA por su cuenta. Cuando su otra suscripción está conectada, un botón **Continuar con …** la ofrece.
 
 ## Qué sabe hacer
 
@@ -36,5 +41,6 @@ Todos los editores pueden invocar el panel de IA: seleccione algo, dé una instr
 
 ## Privacidad
 
-- Las instrucciones y el contenido pertinente del documento van al **servicio de modelo que haya configurado** (Genspark alojado o un endpoint personalizado, capítulo siguiente); sin configuración, no se envía nada.
-- Los archivos locales no se suben a ningún otro sitio; las claves BYOK se guardan en el archivo de ajustes de la aplicación en este equipo y se envían solo en las cabeceras de la petición.
+- Las instrucciones y el contenido pertinente del documento van a la **IA que esté usando**: a Anthropic u OpenAI con su propia cuenta cuando usa una suscripción, o al proveedor cuya clave introdujo. Si no hay ninguna IA conectada, no se envía nada.
+- Que el contenido de una suscripción se use para entrenar IA depende de los ajustes de su propia cuenta en esa empresa.
+- Los archivos locales no se suben a ningún otro sitio; las claves de API se guardan en el archivo de ajustes de la aplicación en este equipo y se envían solo en las cabeceras de la petición.

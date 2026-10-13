@@ -15,29 +15,27 @@ Tempatnya ialah **Tetapan ▸ Integrasi**. Panel itu mempunyai dua bahagian, dan
 Perkara yang sama daripada satu terminal — inilah laluan lanjutan, dan laluan yang perlu digunakan apabila ejen berada di tempat yang tidak dapat dicari oleh panel:
 
 ```sh
-genoffice mcp install all
+ieumoffice mcp install all
 ```
 
-Ia menemui ejen penulisan kod pada mesin ini — Claude Code, Codex, Cursor, Gemini CLI, Copilot CLI, OpenCode, Windsurf — lalu menulis entri pelayan stdio ke dalam konfigurasi sendiri setiap satu, dan meninggalkan bahagian lain fail itu seperti yang dijumpainya.
+Ia menemui ejen penulisan kod pada mesin ini — Claude Code, Codex, Cursor, Gemini CLI, Copilot CLI, OpenCode, Windsurf — lalu menulis entri pelayan stdio ke dalam konfigurasi sendiri setiap satu, dan meninggalkan bahagian lain fail itu seperti yang dijumpainya. Entri itu dinamakan `ieumoffice`. Jika dilakukan secara manual untuk Claude Code, pendaftaran yang sama ialah `claude mcp add --transport stdio ieumoffice -- ieumoffice mcp`.
 
 ```sh
-genoffice mcp list             # where each agent stands
-genoffice mcp install cursor    # just one
-genoffice mcp uninstall cursor  # take it back out
+ieumoffice mcp list             # where each agent stands
+ieumoffice mcp install cursor    # just one
+ieumoffice mcp uninstall cursor  # take it back out
 ```
 
 Ejen yang anda pasang di tempat yang luar biasa menggunakan `--dir <path>`; `--force` menulis semula entri yang sudah ada di situ.
 
-Segala yang diterima oleh pelayan itu muat pada satu skrin — borang untuk memasang, mengeluarkan dan menyenaraikan, menyajikan melalui HTTP, dan dua pilihan skema:
-
-![Keluaran sebenar genoffice mcp --help: borang install, uninstall dan list, bersama pilihan --http, --host, --token, --compact-schemas, --dir dan --force](img/mcp.png)
+`ieumoffice mcp --help` memaparkan segala yang diterima oleh pelayan itu pada satu skrin: borang untuk mendaftar, mengeluarkan dan menyenaraikan, penyajian melalui HTTP, dan dua pilihan skema.
 
 ## Menjalankannya tanpa pembantu
 
 Bagi klien pada mesin lain, layankannya melalui HTTP:
 
 ```sh
-genoffice mcp --http 8765 --token <secret>
+ieumoffice mcp --http 8765 --token <secret>
 ```
 
 `--host <addr>` menukar tempat ia mendengarkan. Berikan token yang sama kepada klien.
@@ -52,21 +50,40 @@ Setiap perintah ialah sebuah alat. Yang menarik:
 - **`render`** — satu PNG bagi setiap halaman, disusun oleh penjana aplikasi, jadi ejen boleh melihat slaid itu dan bukan meneka.
 - **`pdf`** — lapisan teks PDF, halaman demi halaman, tanpa proses aplikasi.
 - **`info`** — metadatan dan ringkasan struktur, yang biasanya merupakan panggilan pertama yang termurah bagi fail yang tidak dikenali.
-- **`search`, `image`, `media`** — pembekal yang dikonfigurasi dalam aplikasi, jadi ejen tidak perlukan kunci sendiri.
+- **`search`, `image`, `media`** — carian web dan imej, penjanaan imej dan analisis media melalui apa yang disediakan dalam aplikasi, jadi ejen tidak perlukan kunci sendiri. Bahagian seterusnya menerangkan apa yang boleh digunakannya.
 - **`merge`** — mengisi templat `{{key}}`.
+
+## Carian, imej dan media: apa yang boleh digunakan oleh ejen
+
+Permintaan daripada perintah `ieumoffice` atau daripada klien MCP tidak ditaip oleh anda dalam aplikasi, jadi GenOffice berhati-hati dengannya.
+
+- **Carian** sentiasa berfungsi dan percuma secara lalai. Kunci penyedia carian digunakan hanya jika anda memilihnya.
+- **Menjana gambar** memerlukan kunci penyedia imej. Dalam versi ini, langganan tidak menjana imej.
+- **Menghuraikan gambar** menggunakan penyedia berasaskan kunci apabila ada yang disediakan. Langganan Claude atau Codex anda **tidak digunakan melainkan anda membenarkannya**.
+- **Video dan audio** memerlukan penyedia berasaskan kunci yang menyokong video.
+
+Untuk membenarkan penggunaan langganan, buka Tetapan ▸ AI ▸ **Lanjutan** dan hidupkan **Benarkan permintaan automatik menggunakan langganan**. Satu amaran dipaparkan dahulu — "Kedua-dua syarikat tidak mengesyorkan program menggunakan langganan anda secara automatik, dan akaun anda mungkin dihadkan." — dan suis itu dihidupkan hanya selepas **Hidupkan juga**.
+
+Walaupun suis itu dihidupkan:
+
+- Permintaan dikendalikan satu demi satu. Yang lain menunggu giliran.
+- Paling banyak 20 permintaan langganan dikendalikan dalam sejam. Kiraan itu dikongsi oleh setiap perintah yang dijalankan dan setiap panggilan MCP. Selepas itu, permintaan gagal dengan ralat yang menyatakan bila permintaan boleh dibuat semula.
+- Log masuk bayar ikut guna yang anda benarkan dengan **Guna juga** tidak dikira sebagai langganan di sini. Ia dilayan seperti kunci: jika anda memilihnya sebagai AI yang digunakan, huraian gambar dibuat melaluinya walau apa pun kedudukan suis itu, tanpa had sejam, dan setiap satu dicaj.
+
+Apabila suis dimatikan dan tiada kunci disediakan, alat itu menjawab bahawa ciri tersebut tidak tersedia dan menamakan tetapan ini. Ejen boleh menyemak dahulu dengan alat `capabilities`; lihat [Baris arahan dan ejen](help://cli).
 
 ## Skema, dan bajet yang lebih kecil
 
-`apply` dan `create` membentangkan parameter `ops`, `cells` dan `data` mereka bersama skema bertip bagi setiap op, yang dijana daripada `genoffice guide <domain> --json`. Itu tepat, tetapi tidak kecil. Klien dengan tetingkap konteks yang sempit boleh meminta tatasusunan biasa sebagai gantinya:
+`apply` dan `create` membentangkan parameter `ops`, `cells` dan `data` mereka bersama skema bertip bagi setiap op, yang dijana daripada `ieumoffice guide <domain> --json`. Itu tepat, tetapi tidak kecil. Klien dengan tetingkap konteks yang sempit boleh meminta tatasusunan biasa sebagai gantinya:
 
 ```sh
-genoffice mcp --compact-schemas
-GENOFFICE_MCP_COMPACT_SCHEMAS=1 genoffice mcp
+ieumoffice mcp --compact-schemas
+GENOFFICE_MCP_COMPACT_SCHEMAS=1 ieumoffice mcp
 ```
 
 ## Mengapa perlu skill
 
-Ejen yang tidak tahu kosa kata op akan meneka. Skill itu membawa rujukan dan panduan reka bentuk — bahan yang sama seperti yang dicetak oleh `genoffice guide` —, jadi pembantu menulis op yang spesifikasinya memang telah dibaca. Pasang ia daripada panel di atas, atau dengan `genoffice skill` daripada terminal.
+Ejen yang tidak tahu kosa kata op akan meneka. Skill itu membawa rujukan dan panduan reka bentuk — bahan yang sama seperti yang dicetak oleh `ieumoffice guide` —, jadi pembantu menulis op yang spesifikasinya memang telah dibaca. Pasang ia daripada panel di atas, atau dengan `ieumoffice skill` daripada terminal.
 
 ## Apa yang boleh dicapainya dalam aplikasi
 

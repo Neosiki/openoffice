@@ -1,93 +1,91 @@
-<!-- TRANSLATE: copy of en -->
+# सदस्यता कनेक्शन
 
-# Subscription connection
+GenOffice अपना AI उस सदस्यता पर चलाता है जो आपके पास पहले से है: Claude सदस्यता (Anthropic) या Codex सदस्यता (OpenAI)। Codex, OpenAI का प्रोग्राम है, और उसमें आप अपने ChatGPT प्लान से साइन इन करते हैं। आपको API कुंजी की ज़रूरत नहीं है, और GenOffice का अपना कोई खाता नहीं है जिसके लिए साइन अप करना पड़े।
 
-GenOffice runs its AI on a subscription you already have: a Claude subscription (Anthropic) or a Codex subscription (OpenAI). Codex is OpenAI's program, and you sign in to it with your ChatGPT plan. You do not need an API key, and GenOffice has no account of its own to sign up for.
+## यह कैसे काम करता है
 
-## How it works
+- AI, GenOffice के अंदर बना हुआ नहीं है। कंपनी का एक प्रोग्राम इस PC पर इंस्टॉल होता है — Claude सदस्यता के लिए **Claude Code**, ChatGPT सदस्यता के लिए **Codex** — और GenOffice उसी प्रोग्राम से जवाब माँगता है।
+- वह प्रोग्राम आपके अपने खाते से साइन इन रहता है, इसलिए हर अनुरोध आपके अपने प्लान में गिना जाता है।
+- GenOffice कभी अपना साइन-इन फ़ॉर्म नहीं दिखाता, और आपकी लॉगिन जानकारी कभी नहीं पढ़ता या सहेजता। आप कंपनी के अपने प्रोग्राम और वेब पेज के अंदर साइन इन करते हैं।
 
-- The AI is not built into GenOffice. A program from the company is installed on this PC — **Claude Code** for a Claude subscription, **Codex** for a ChatGPT subscription — and GenOffice asks that program for the answer.
-- That program is signed in with your own account, so every request counts against your own plan.
-- GenOffice never shows a sign-in form of its own, and it never reads or stores your login. You sign in inside the company's own program and web page.
+## शुरू करने से पहले
 
-## Before you start
+आपको इनमें से एक चाहिए। दोनों हों तो भी ठीक है।
 
-You need one of these. Having both is fine.
+- Claude सदस्यता, और इस PC पर इंस्टॉल तथा साइन इन किया हुआ Claude Code प्रोग्राम।
+- ChatGPT सदस्यता, और इस PC पर इंस्टॉल तथा साइन इन किया हुआ Codex प्रोग्राम।
 
-- A Claude subscription, and the Claude Code program installed and signed in on this PC.
-- A ChatGPT subscription, and the Codex program installed and signed in on this PC.
+अगर प्रोग्राम अभी इंस्टॉल नहीं है, या उसमें अभी साइन इन नहीं हुआ है, तो अगले भाग के बटन यह काम कर देते हैं।
 
-If the program is not installed yet, or not signed in yet, the buttons in the next section take care of it.
+## कनेक्ट करना
 
-## Connecting
+1. होम के नीचे-बाएँ कोने की पंक्ति से **सेटिंग्स** खोलें और **AI** चुनें। **सदस्यता कनेक्शन** के नीचे एक कार्ड Claude के लिए और एक Codex के लिए है।
+2. कार्ड पर जो लिखा है उसे पढ़ें और उसका बटन दबाएँ। नीचे की तालिका हर स्थिति समझाती है।
+3. GenOffice की विंडो पर लौट आएँ। कार्ड अपने-आप दोबारा जाँच करता है, और **फिर से जाँचें** तुरंत जाँच करता है।
 
-1. Open **Settings** from the row at the bottom left of Home and choose **AI**. Under **Subscription connection** there is one card for Claude and one for Codex.
-2. Read what the card says and press its button. The table below explains each state.
-3. Come back to the GenOffice window. The card checks again by itself, and **Check again** checks at once.
+यही कार्ड पहली बार चलाने पर स्वागत स्क्रीन के दूसरे चरण में, और कोई AI कनेक्ट न होने पर AI पैनल में भी दिखते हैं। आप इन्हें छोड़कर बाद में कनेक्ट कर सकते हैं।
 
-The same cards appear in the second step of the welcome screens on first launch, and in the AI panel when no AI is connected. You can skip them and connect later.
+| कार्ड पर क्या लिखा है              | इसका मतलब                                                                                                      | क्या करें                                                                                                                                                                                                                                                   |
+| ---------------------------------- | -------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **जाँच हो रही है…**                | GenOffice प्रोग्राम से उसकी स्थिति पूछ रहा है।                                                                 | थोड़ा इंतज़ार करें।                                                                                                                                                                                                                                         |
+| **इंस्टॉल नहीं है**                | यह प्रोग्राम इस PC पर नहीं मिला।                                                                               | **इंस्टॉल करें** दबाएँ। कंपनी का आधिकारिक इंस्टॉल कमांड एक नई टर्मिनल विंडो में चलता है, ताकि आप देख सकें कि वह क्या कर रहा है। GenOffice खुद कुछ डाउनलोड नहीं करता। अगर आप खुद इंस्टॉल करना चाहें, तो **आधिकारिक इंस्टॉल गाइड** कंपनी के निर्देश खोलता है। |
+| **साइन इन नहीं है**                | प्रोग्राम मौजूद है, पर उसमें साइन इन नहीं है।                                                                  | **साइन इन करें** दबाएँ। प्रोग्राम का अपना साइन-इन एक नई विंडो में शुरू होता है और आपके ब्राउज़र में कंपनी का साइन-इन पेज खोलता है। उसे वहीं पूरा करें।                                                                                                      |
+| **कनेक्ट है**                      | सदस्यता वाला साइन-इन पक्का हो गया है। प्रोग्राम प्लान का नाम बताए तो वह भी दिखता है।                           | कुछ नहीं। AI उपयोग के लिए तैयार है।                                                                                                                                                                                                                         |
+| **साइन इन है, पर सदस्यता से नहीं** | प्रोग्राम API कुंजी या उपयोग के अनुसार भुगतान वाले खाते से साइन इन है, या साइन-इन का प्रकार पक्का नहीं हो सका। | नीचे "उपयोग के अनुसार भुगतान वाले साइन-इन" देखें।                                                                                                                                                                                                           |
+| **कनेक्शन की जाँच नहीं हो सकी**    | जाँच ही विफल रही। कारण कार्ड पर दिखता है।                                                                      | **फिर से जाँचें** दबाएँ। अगर लिखा हो कि प्रोग्राम बहुत पुराना है, तो प्रोग्राम अपडेट करके फिर से जाँचें।                                                                                                                                                    |
 
-| What the card says                         | What it means                                                                                                     | What to do                                                                                                                                                                                                                                              |
-| ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Checking…**                              | GenOffice is asking the program how it stands.                                                                    | Wait a moment.                                                                                                                                                                                                                                          |
-| **Not installed**                          | The program was not found on this PC.                                                                             | Press **Install**. The company's official install command runs in a new terminal window, so you can watch what it does. GenOffice downloads nothing by itself. To install by hand instead, **Official install guide** opens the company's instructions. |
-| **Not signed in**                          | The program is there but has no login.                                                                            | Press **Sign in**. The program's own sign-in starts in a new window and opens the company's sign-in page in your browser. Finish it there.                                                                                                              |
-| **Connected**                              | A subscription login was confirmed. The plan name is shown when the program reports it.                           | Nothing. AI is ready to use.                                                                                                                                                                                                                            |
-| **Signed in, but not with a subscription** | The program is signed in with an API key or a pay-as-you-go account, or the kind of login could not be confirmed. | See "Pay-as-you-go logins" below.                                                                                                                                                                                                                       |
-| **The connection could not be checked**    | The check itself failed. The reason is shown on the card.                                                         | Press **Check again**. If it says the program is too old, update the program and check again.                                                                                                                                                           |
+कनेक्शन की जाँच ऐप शुरू होने पर, सेटिंग्स खोलने पर, और इंस्टॉल या साइन-इन शुरू करने के बाद विंडो पर लौटने पर होती है।
 
-The connection is checked when the app starts, when you open Settings, and when you return to the window after starting an install or a sign-in.
+## उपयोग के अनुसार भुगतान वाले साइन-इन
 
-## Pay-as-you-go logins
+जिस कार्ड पर **साइन इन है, पर सदस्यता से नहीं** लिखा हो, उस पर एक चेतावनी रहती है: "यह सदस्यता नहीं है: जितना उपयोग करेंगे उतना शुल्क लगेगा।"
 
-A card that says **Signed in, but not with a subscription** carries a warning: "This is not a subscription: you are charged for what you use."
+- जब तक आप **फिर भी उपयोग करें** नहीं दबाते, GenOffice उस साइन-इन का उपयोग नहीं करता। उसके बाद हर अनुरोध का शुल्क उसी खाते से लिया जाता है।
+- तब भी वह कभी अपने-आप नहीं चुना जाता। उसे आप खुद **उपयोग किया जाने वाला AI** में चुनें, जहाँ उस पर **सशुल्क** लिखा रहता है।
+- आपकी अनुमति केवल उसी प्रोग्राम के लिए याद रखी जाती है। प्रोग्राम से साइन आउट होने या उसका साइन-इन बदलने पर वह हट जाती है।
+- अगर आप इसकी जगह अपनी सदस्यता इस्तेमाल करना चाहते हैं, तो प्रोग्राम में अपने सदस्यता वाले खाते से साइन इन करें और **फिर से जाँचें** दबाएँ।
 
-- GenOffice does not use that login until you press **Use anyway**. From then on, every request is billed to that account.
-- Even then it is never chosen automatically. Choose it yourself under **AI to use**, where it is marked **Paid**.
-- Your permission is remembered for that program only. It is cleared when the program is signed out or its login changes.
-- To use your subscription instead, sign the program in with your subscription account and press **Check again**.
+## कौन-सा AI इस्तेमाल होता है
 
-## Which AI is used
+सेटिंग्स ▸ AI में **उपयोग किया जाने वाला AI** शुरू में **स्वचालित** पर रहता है। स्वचालित इस क्रम में तय करता है:
 
-**AI to use**, under Settings ▸ AI, starts on **Automatic**. Automatic decides in this order:
+1. Claude, जब उसके कार्ड पर "कनेक्ट है" लिखा हो।
+2. नहीं तो Codex, जब उसके कार्ड पर "कनेक्ट है" लिखा हो।
+3. नहीं तो कोई AI कनेक्ट नहीं है, और AI पैनल त्रुटि की जगह कनेक्ट करने वाले कार्ड दिखाता है।
 
-1. Claude, when its card says Connected.
-2. Otherwise Codex, when its card says Connected.
-3. Otherwise no AI is connected, and the AI panel shows the connect cards instead of an error.
+स्वचालित कभी ऐसी चीज़ नहीं चुनता जिस पर अतिरिक्त पैसा लगे: न API कुंजी, न उपयोग के अनुसार भुगतान वाला साइन-इन। ये तभी इस्तेमाल होते हैं जब आप इन्हें खुद चुनते हैं।
 
-Automatic never picks anything that costs extra money: not an API key, and not a pay-as-you-go login. Those are used only while you choose them yourself.
+आप कोई एक AI खुद भी चुन सकते हैं, उसी जगह पर या AI पैनल के नीचे की मॉडल सूची में। अगर आपका चुना हुआ AI काम करना बंद कर दे, तो GenOffice चुपचाप किसी दूसरे पर नहीं चला जाता। वह बताता है कि क्या हुआ और दोबारा कनेक्ट करने का तरीका दिखाता है।
 
-You can also choose one AI yourself, in the same place or in the model list at the bottom of the AI panel. If the one you chose stops working, GenOffice does not quietly move to another. It tells you what happened and shows how to reconnect.
+जहाँ भी Codex चुना जा सकता है, वहाँ उसके साथ एक पंक्ति दिखती है: "किसी ऐप के अंदर Codex सदस्यता का उपयोग करना OpenAI द्वारा आधिकारिक रूप से सुझाया गया तरीका नहीं है।" इसे ध्यान में रखकर तय करें।
 
-Wherever Codex can be chosen, one line is shown with it: "Using a Codex subscription inside an app is not a method officially recommended by OpenAI." Decide with that in mind.
+## जब कोई अनुरोध रुक जाता है
 
-## When a request is stopped
+अनुरोध तब रुकता है जब प्लान की सीमा पूरी हो जाए, साइन-इन समाप्त हो जाए, या प्रोग्राम अब मौजूद न हो। GenOffice अपने-आप किसी दूसरे AI पर नहीं जाता।
 
-A request stops when the plan's limit is used up, when the login has expired, or when the program is no longer there. GenOffice does not switch to another AI by itself.
+- कारण वहीं दिखता है जहाँ जवाब रुका। सीमा पूरी होने पर, प्रोग्राम बताए तो उसके रीसेट होने का समय भी दिखता है।
+- अगर आपकी दूसरी सदस्यता कनेक्ट है, तो **… के साथ जारी रखें** बटन दिखता है, जैसे **Codex के साथ जारी रखें**। उसे दबाने पर वही सदस्यता उपयोग किया जाने वाला AI बन जाती है — मॉडल सूची में यह बदलाव दिखता है — और अनुरोध दोबारा चलता है।
+- अगर दूसरा कनेक्शन केवल उपयोग के अनुसार भुगतान वाला साइन-इन है जिसकी आपने अनुमति दी है, तो उसी बटन के साथ लागत के बारे में एक टिप्पणी आती है।
+- ऐसा कोई बटन कभी नहीं होता जो आपको API कुंजी पर ले जाए।
 
-- The reason is shown where the reply stopped. For a used-up limit, the time it resets is shown too, when the program reports it.
-- If your other subscription is connected, a **Continue with …** button appears, for example **Continue with Codex**. Pressing it makes that one the AI to use — the model list shows the change — and runs the request again.
-- If the only other connection is a pay-as-you-go login you allowed, the same button comes with a note about the cost.
-- There is never a button that moves you to an API key.
+## उपयोग पंक्ति
 
-## The usage line
+जब आप किसी सीमा का 80% या उससे ज़्यादा इस्तेमाल कर लेते हैं, तो AI पैनल "85% उपयोग हुआ · दोपहर 3:00 पर रीसेट" जैसी पंक्ति दिखाता है। Claude 5 घंटे की सीमा और 7 दिन की सीमा बताता है, और Codex जब इन्हें बताता है तो वह भी इसी तरह दिखता है। 80% से कम होने पर, या जब प्रोग्राम कुछ नहीं बताता, कोई पंक्ति नहीं दिखती।
 
-Once you have used 80% or more of a limit, the AI panel shows a line such as "85% used · resets at 3:00 PM". Claude reports a 5-hour limit and a 7-day limit, and Codex is shown the same way when it reports them. Below 80%, or when the program reports nothing, no line is shown.
+## क्या भेजा जाता है, और कहाँ
 
-## What is sent, and where
+जब पहली बार कोई सदस्यता इस्तेमाल की जा सकती है, GenOffice एक सूचना दिखाता है, केवल एक बार। उसे दोबारा पढ़ने के लिए सेटिंग्स ▸ AI ▸ **पहले कनेक्शन की सूचना** पर जाएँ और **फिर से देखें** दबाएँ। उसमें तीन बातें हैं:
 
-The first time a subscription can be used, GenOffice shows a notice once. To read it again, go to Settings ▸ AI ▸ **First-connection notice** and press **View again**. It says three things:
+- दस्तावेज़ की सामग्री और आपकी बातचीत आपके अपने खाते से Anthropic या OpenAI को भेजी जाती है।
+- उस सामग्री का उपयोग AI के प्रशिक्षण में होगा या नहीं, यह उस कंपनी में आपके अपने खाते की सेटिंग से तय होता है, GenOffice से नहीं।
+- GenOffice, Codex में बातचीत का इतिहास सहेजना बंद कर देता है, लेकिन Codex फिर भी अपने डायग्नोस्टिक लॉग इस PC पर रख सकता है।
 
-- Document content and your conversation are sent to Anthropic or OpenAI under your own account.
-- Whether that content is used to train AI is decided by your own account settings at that company, not by GenOffice.
-- GenOffice turns off conversation history saving in Codex, but Codex may still keep its own diagnostic logs on this PC.
+जो कुछ आपने **चयन को AI से छिपाएँ** से छिपाया है, वह नहीं भेजा जाता, चाहे आप कोई भी AI इस्तेमाल करें।
 
-Anything you hid with **Hide the selection from AI** is not sent, whichever AI you use.
+## जानने योग्य बातें
 
-## Good to know
-
-- **Speed.** A reply through a subscription starts a few seconds later than one through an API key, because the company's program has to start up first.
-- **Free ChatGPT plan.** It shows as Connected, but its limits are small, so requests stop sooner. The usage line does not appear for it.
-- **Image generation.** In this version a subscription does not generate images, on any plan. That needs an image provider key; see [AI models and settings](help://ai-models).
-- **Proxies.** Claude Code and Codex do not take proxy settings from GenOffice. They use the proxy set for this PC, for example the `HTTPS_PROXY` environment variable, just as when you run them in a terminal. If they cannot connect in a terminal, they cannot connect from here either.
-- **Commands and other programs.** A request that arrives from the `ieumoffice` command or from a connected coding agent does not use your subscription unless you allow it. See [Connecting a coding agent](help://mcp).
+- **गति।** सदस्यता से आने वाला जवाब API कुंजी वाले जवाब से कुछ सेकंड देर से शुरू होता है, क्योंकि पहले कंपनी के प्रोग्राम को चालू होना पड़ता है।
+- **मुफ़्त ChatGPT प्लान।** यह "कनेक्ट है" दिखता है, पर इसकी सीमाएँ छोटी हैं, इसलिए अनुरोध जल्दी रुक जाते हैं। इसके लिए उपयोग पंक्ति नहीं दिखती।
+- **इमेज जनरेशन।** इस संस्करण में सदस्यता से इमेज नहीं बनतीं, किसी भी प्लान पर। इसके लिए इमेज प्रदाता की कुंजी चाहिए; देखें [AI मॉडल और सेटिंग्स](help://ai-models)।
+- **प्रॉक्सी।** Claude Code और Codex, GenOffice से प्रॉक्सी सेटिंग नहीं लेते। वे इस PC के लिए सेट की गई प्रॉक्सी इस्तेमाल करते हैं, जैसे `HTTPS_PROXY` एनवायरनमेंट वेरिएबल, ठीक वैसे ही जैसे आप उन्हें टर्मिनल में चलाते हैं। अगर वे टर्मिनल में कनेक्ट नहीं हो पाते, तो यहाँ से भी नहीं हो पाएँगे।
+- **कमांड और दूसरे प्रोग्राम।** `ieumoffice` कमांड से या किसी कनेक्ट किए गए कोडिंग एजेंट से आने वाला अनुरोध आपकी सदस्यता का उपयोग नहीं करता, जब तक आप इसकी अनुमति न दें। देखें [कोडिंग एजेंट से कनेक्ट करना](help://mcp)।

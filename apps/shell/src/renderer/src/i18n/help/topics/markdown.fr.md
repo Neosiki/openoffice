@@ -13,8 +13,6 @@ L'éditeur Markdown ouvre .md / .markdown — et .txt / .json, directement en vu
 
 Une rangée de boutons au-dessus de l’éditeur (survolez pour les infobulles) :
 
-![La barre d’outils Markdown](img/md-toolbar.png)
-
 - **Fichier et historique** : Enregistrer, Enregistrer sous, Annuler, Rétablir, Rechercher ; l’interrupteur **Enregistrement automatique** à droite écrit les modifications sur le disque à intervalles réguliers.
 - **Bouton IA** : ouvre le panneau IA ; à côté se trouvent les prédéfinis réécriture / développement / traduction.
 - **Style de paragraphe** (menu déroulant) : passer du corps de texte aux niveaux de titre.

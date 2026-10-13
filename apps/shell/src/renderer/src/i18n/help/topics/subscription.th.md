@@ -1,93 +1,91 @@
-<!-- TRANSLATE: copy of en -->
+# การเชื่อมต่อการสมัครสมาชิก
 
-# Subscription connection
+AI ของ GenOffice ทำงานด้วยการสมัครสมาชิกที่คุณมีอยู่แล้ว จะเป็นการสมัครสมาชิก Claude (Anthropic) หรือการสมัครสมาชิก Codex (OpenAI) ก็ได้ Codex เป็นโปรแกรมของ OpenAI ซึ่งคุณเข้าสู่ระบบด้วยบัญชีแพ็กเกจ ChatGPT ของคุณ ไม่ต้องใช้คีย์ API และ GenOffice ก็ไม่มีบัญชีของตัวเองให้สมัคร
 
-GenOffice runs its AI on a subscription you already have: a Claude subscription (Anthropic) or a Codex subscription (OpenAI). Codex is OpenAI's program, and you sign in to it with your ChatGPT plan. You do not need an API key, and GenOffice has no account of its own to sign up for.
+## หลักการทำงาน
 
-## How it works
+- AI ไม่ได้ฝังอยู่ใน GenOffice แต่มีโปรแกรมของบริษัทนั้นติดตั้งอยู่ในคอมพิวเตอร์เครื่องนี้ — **Claude Code** สำหรับการสมัครสมาชิก Claude และ **Codex** สำหรับการสมัครสมาชิก ChatGPT — แล้ว GenOffice จะขอคำตอบจากโปรแกรมนั้น
+- โปรแกรมนั้นเข้าสู่ระบบด้วยบัญชีของคุณเอง ทุกคำขอจึงนับรวมในการใช้งานแพ็กเกจของคุณเอง
+- GenOffice ไม่แสดงหน้าเข้าสู่ระบบของตัวเอง และไม่อ่านหรือเก็บข้อมูลการเข้าสู่ระบบของคุณ คุณเข้าสู่ระบบในโปรแกรมและหน้าเว็บของบริษัทนั้นเอง
 
-- The AI is not built into GenOffice. A program from the company is installed on this PC — **Claude Code** for a Claude subscription, **Codex** for a ChatGPT subscription — and GenOffice asks that program for the answer.
-- That program is signed in with your own account, so every request counts against your own plan.
-- GenOffice never shows a sign-in form of its own, and it never reads or stores your login. You sign in inside the company's own program and web page.
+## ก่อนเริ่มต้น
 
-## Before you start
+คุณต้องมีอย่างใดอย่างหนึ่งต่อไปนี้ จะมีทั้งสองอย่างก็ได้
 
-You need one of these. Having both is fine.
+- การสมัครสมาชิก Claude และโปรแกรม Claude Code ที่ติดตั้งและเข้าสู่ระบบแล้วในคอมพิวเตอร์เครื่องนี้
+- การสมัครสมาชิก ChatGPT และโปรแกรม Codex ที่ติดตั้งและเข้าสู่ระบบแล้วในคอมพิวเตอร์เครื่องนี้
 
-- A Claude subscription, and the Claude Code program installed and signed in on this PC.
-- A ChatGPT subscription, and the Codex program installed and signed in on this PC.
+ถ้ายังไม่ได้ติดตั้งโปรแกรม หรือยังไม่ได้เข้าสู่ระบบ ปุ่มในหัวข้อถัดไปจะช่วยจัดการให้
 
-If the program is not installed yet, or not signed in yet, the buttons in the next section take care of it.
+## การเชื่อมต่อ
 
-## Connecting
+1. เปิด **การตั้งค่า** จากแถวที่มุมล่างซ้ายของหน้าแรก แล้วเลือก **AI** ใต้ **การเชื่อมต่อการสมัครสมาชิก** จะมีการ์ดของ Claude หนึ่งใบและของ Codex หนึ่งใบ
+2. อ่านสถานะที่การ์ดแสดง แล้วกดปุ่มบนการ์ด ตารางด้านล่างอธิบายความหมายของแต่ละสถานะ
+3. กลับมาที่หน้าต่าง GenOffice การ์ดจะตรวจสอบใหม่เอง ส่วน **ตรวจสอบอีกครั้ง** จะตรวจสอบทันที
 
-1. Open **Settings** from the row at the bottom left of Home and choose **AI**. Under **Subscription connection** there is one card for Claude and one for Codex.
-2. Read what the card says and press its button. The table below explains each state.
-3. Come back to the GenOffice window. The card checks again by itself, and **Check again** checks at once.
+การ์ดชุดเดียวกันนี้ปรากฏในขั้นตอนที่สองของหน้าจอต้อนรับเมื่อเปิดแอปครั้งแรก และในแผง AI เมื่อยังไม่มี AI ที่เชื่อมต่ออยู่ คุณข้ามไปก่อนแล้วค่อยเชื่อมต่อภายหลังได้
 
-The same cards appear in the second step of the welcome screens on first launch, and in the AI panel when no AI is connected. You can skip them and connect later.
+| สิ่งที่การ์ดแสดง                                | ความหมาย                                                                                                  | สิ่งที่ต้องทำ                                                                                                                                                                                                                                 |
+| ----------------------------------------------- | --------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **กำลังตรวจสอบ…**                               | GenOffice กำลังถามสถานะจากโปรแกรม                                                                         | รอสักครู่                                                                                                                                                                                                                                     |
+| **ยังไม่ได้ติดตั้ง**                            | ไม่พบโปรแกรมในคอมพิวเตอร์เครื่องนี้                                                                       | กด **ติดตั้ง** คำสั่งติดตั้งอย่างเป็นทางการของบริษัทนั้นจะทำงานในหน้าต่างเทอร์มินัลใหม่ คุณจึงเห็นได้ว่ามันทำอะไรบ้าง GenOffice ไม่ดาวน์โหลดอะไรเอง หากต้องการติดตั้งด้วยตนเอง **คู่มือการติดตั้งอย่างเป็นทางการ** จะเปิดคำแนะนำของบริษัทนั้น |
+| **ยังไม่ได้เข้าสู่ระบบ**                        | มีโปรแกรมอยู่แล้ว แต่ยังไม่ได้เข้าสู่ระบบ                                                                 | กด **เข้าสู่ระบบ** ขั้นตอนเข้าสู่ระบบของโปรแกรมเองจะเริ่มในหน้าต่างใหม่ และเปิดหน้าเข้าสู่ระบบของบริษัทนั้นในเบราว์เซอร์ ให้ทำจนเสร็จที่นั่น                                                                                                  |
+| **เชื่อมต่อแล้ว**                               | ยืนยันแล้วว่าเข้าสู่ระบบด้วยการสมัครสมาชิก และจะแสดงชื่อแพ็กเกจด้วยเมื่อโปรแกรมรายงานมา                   | ไม่ต้องทำอะไร AI พร้อมใช้งานแล้ว                                                                                                                                                                                                              |
+| **เข้าสู่ระบบแล้ว แต่ไม่ใช่ด้วยการสมัครสมาชิก** | โปรแกรมเข้าสู่ระบบด้วยคีย์ API หรือบัญชีที่จ่ายตามการใช้งาน หรือไม่สามารถยืนยันประเภทของการเข้าสู่ระบบได้ | ดู "การเข้าสู่ระบบแบบจ่ายตามการใช้งาน" ด้านล่าง                                                                                                                                                                                               |
+| **ตรวจสอบการเชื่อมต่อไม่ได้**                   | การตรวจสอบเองล้มเหลว โดยจะแสดงสาเหตุไว้บนการ์ด                                                            | กด **ตรวจสอบอีกครั้ง** ถ้าการ์ดบอกว่าโปรแกรมเก่าเกินไป ให้อัปเดตโปรแกรมแล้วตรวจสอบอีกครั้ง                                                                                                                                                    |
 
-| What the card says                         | What it means                                                                                                     | What to do                                                                                                                                                                                                                                              |
-| ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Checking…**                              | GenOffice is asking the program how it stands.                                                                    | Wait a moment.                                                                                                                                                                                                                                          |
-| **Not installed**                          | The program was not found on this PC.                                                                             | Press **Install**. The company's official install command runs in a new terminal window, so you can watch what it does. GenOffice downloads nothing by itself. To install by hand instead, **Official install guide** opens the company's instructions. |
-| **Not signed in**                          | The program is there but has no login.                                                                            | Press **Sign in**. The program's own sign-in starts in a new window and opens the company's sign-in page in your browser. Finish it there.                                                                                                              |
-| **Connected**                              | A subscription login was confirmed. The plan name is shown when the program reports it.                           | Nothing. AI is ready to use.                                                                                                                                                                                                                            |
-| **Signed in, but not with a subscription** | The program is signed in with an API key or a pay-as-you-go account, or the kind of login could not be confirmed. | See "Pay-as-you-go logins" below.                                                                                                                                                                                                                       |
-| **The connection could not be checked**    | The check itself failed. The reason is shown on the card.                                                         | Press **Check again**. If it says the program is too old, update the program and check again.                                                                                                                                                           |
+แอปจะตรวจสอบการเชื่อมต่อเมื่อเริ่มทำงาน เมื่อคุณเปิดการตั้งค่า และเมื่อคุณกลับมาที่หน้าต่างหลังจากเริ่มการติดตั้งหรือการเข้าสู่ระบบ
 
-The connection is checked when the app starts, when you open Settings, and when you return to the window after starting an install or a sign-in.
+## การเข้าสู่ระบบแบบจ่ายตามการใช้งาน
 
-## Pay-as-you-go logins
+การ์ดที่แสดง **เข้าสู่ระบบแล้ว แต่ไม่ใช่ด้วยการสมัครสมาชิก** จะมีคำเตือนกำกับไว้ว่า "นี่ไม่ใช่การสมัครสมาชิก: คุณจะถูกคิดค่าบริการตามที่ใช้จริง"
 
-A card that says **Signed in, but not with a subscription** carries a warning: "This is not a subscription: you are charged for what you use."
+- GenOffice จะไม่ใช้การเข้าสู่ระบบนั้นจนกว่าคุณจะกด **ใช้ต่อไป** หลังจากนั้นทุกคำขอจะถูกเรียกเก็บจากบัญชีนั้น
+- ถึงอย่างนั้นก็จะไม่ถูกเลือกโดยอัตโนมัติ คุณต้องเลือกเองใน **AI ที่ใช้** ซึ่งจะมีป้าย **มีค่าใช้จ่าย** กำกับอยู่
+- การอนุญาตของคุณจะถูกจำไว้เฉพาะสำหรับโปรแกรมนั้น และจะถูกล้างเมื่อโปรแกรมออกจากระบบหรือการเข้าสู่ระบบเปลี่ยนไป
+- หากต้องการใช้การสมัครสมาชิกแทน ให้เข้าสู่ระบบโปรแกรมด้วยบัญชีที่สมัครสมาชิกไว้ แล้วกด **ตรวจสอบอีกครั้ง**
 
-- GenOffice does not use that login until you press **Use anyway**. From then on, every request is billed to that account.
-- Even then it is never chosen automatically. Choose it yourself under **AI to use**, where it is marked **Paid**.
-- Your permission is remembered for that program only. It is cleared when the program is signed out or its login changes.
-- To use your subscription instead, sign the program in with your subscription account and press **Check again**.
+## AI ตัวไหนถูกใช้
 
-## Which AI is used
+**AI ที่ใช้** ใน การตั้งค่า ▸ AI เริ่มต้นที่ **อัตโนมัติ** โดยอัตโนมัติจะตัดสินใจตามลำดับนี้
 
-**AI to use**, under Settings ▸ AI, starts on **Automatic**. Automatic decides in this order:
+1. Claude เมื่อการ์ดของ Claude แสดงว่า "เชื่อมต่อแล้ว"
+2. ถ้าไม่ใช่ ก็เป็น Codex เมื่อการ์ดของ Codex แสดงว่า "เชื่อมต่อแล้ว"
+3. ถ้าไม่ใช่ทั้งสองอย่าง แสดงว่ายังไม่มี AI ที่เชื่อมต่ออยู่ และแผง AI จะแสดงการ์ดสำหรับเชื่อมต่อแทนข้อความแสดงข้อผิดพลาด
 
-1. Claude, when its card says Connected.
-2. Otherwise Codex, when its card says Connected.
-3. Otherwise no AI is connected, and the AI panel shows the connect cards instead of an error.
+อัตโนมัติจะไม่เลือกสิ่งที่มีค่าใช้จ่ายเพิ่ม ไม่ว่าจะเป็นคีย์ API หรือการเข้าสู่ระบบแบบจ่ายตามการใช้งาน สิ่งเหล่านี้จะถูกใช้เฉพาะช่วงที่คุณเลือกไว้เองเท่านั้น
 
-Automatic never picks anything that costs extra money: not an API key, and not a pay-as-you-go login. Those are used only while you choose them yourself.
+คุณเลือก AI ตัวใดตัวหนึ่งเองก็ได้ ทั้งที่ตำแหน่งเดียวกันนี้ หรือในรายการโมเดลที่ด้านล่างของแผง AI ถ้า AI ที่คุณเลือกเกิดใช้งานไม่ได้ GenOffice จะไม่สลับไปใช้ตัวอื่นเงียบ ๆ แต่จะบอกว่าเกิดอะไรขึ้น และแสดงวิธีเชื่อมต่อใหม่
 
-You can also choose one AI yourself, in the same place or in the model list at the bottom of the AI panel. If the one you chose stops working, GenOffice does not quietly move to another. It tells you what happened and shows how to reconnect.
+ทุกที่ที่เลือก Codex ได้ จะมีข้อความหนึ่งบรรทัดแสดงคู่กันว่า "การใช้การสมัครสมาชิก Codex ภายในแอปไม่ใช่วิธีที่ OpenAI แนะนำอย่างเป็นทางการ" โปรดคำนึงถึงข้อนี้ก่อนตัดสินใจ
 
-Wherever Codex can be chosen, one line is shown with it: "Using a Codex subscription inside an app is not a method officially recommended by OpenAI." Decide with that in mind.
+## เมื่อคำขอถูกหยุด
 
-## When a request is stopped
+คำขอจะหยุดเมื่อใช้โควตาของแพ็กเกจครบแล้ว เมื่อการเข้าสู่ระบบหมดอายุ หรือเมื่อไม่มีโปรแกรมอยู่แล้ว GenOffice จะไม่สลับไปใช้ AI ตัวอื่นเอง
 
-A request stops when the plan's limit is used up, when the login has expired, or when the program is no longer there. GenOffice does not switch to another AI by itself.
+- สาเหตุจะแสดงตรงจุดที่คำตอบหยุด ในกรณีที่ใช้โควตาครบ จะแสดงเวลาที่โควตารีเซ็ตด้วยเมื่อโปรแกรมรายงานมา
+- ถ้าการสมัครสมาชิกอีกรายการของคุณเชื่อมต่ออยู่ จะมีปุ่ม **ดำเนินการต่อด้วย …** ปรากฏขึ้น เช่น **ดำเนินการต่อด้วย Codex** เมื่อกดแล้ว รายการนั้นจะกลายเป็น AI ที่ใช้ — รายการโมเดลจะแสดงการเปลี่ยนแปลงนี้ — และคำขอจะถูกเรียกใช้อีกครั้ง
+- ถ้าการเชื่อมต่ออื่นที่เหลืออยู่มีเพียงการเข้าสู่ระบบแบบจ่ายตามการใช้งานที่คุณอนุญาตไว้ ปุ่มเดียวกันนี้จะมีหมายเหตุเรื่องค่าใช้จ่ายกำกับมาด้วย
+- จะไม่มีปุ่มที่พาคุณไปใช้คีย์ API เลย
 
-- The reason is shown where the reply stopped. For a used-up limit, the time it resets is shown too, when the program reports it.
-- If your other subscription is connected, a **Continue with …** button appears, for example **Continue with Codex**. Pressing it makes that one the AI to use — the model list shows the change — and runs the request again.
-- If the only other connection is a pay-as-you-go login you allowed, the same button comes with a note about the cost.
-- There is never a button that moves you to an API key.
+## บรรทัดแสดงการใช้งาน
 
-## The usage line
+เมื่อคุณใช้โควตาไปแล้ว 80% ขึ้นไป แผง AI จะแสดงบรรทัดอย่างเช่น "ใช้ไปแล้ว 85% · รีเซ็ตเวลา 15:00" Claude รายงานโควตา 5 ชั่วโมงและโควตา 7 วัน ส่วน Codex ก็จะแสดงในแบบเดียวกันเมื่อรายงานข้อมูลนี้มา ถ้าต่ำกว่า 80% หรือโปรแกรมไม่ได้รายงานอะไรมา จะไม่มีบรรทัดนี้แสดง
 
-Once you have used 80% or more of a limit, the AI panel shows a line such as "85% used · resets at 3:00 PM". Claude reports a 5-hour limit and a 7-day limit, and Codex is shown the same way when it reports them. Below 80%, or when the program reports nothing, no line is shown.
+## อะไรถูกส่งไป และส่งไปที่ไหน
 
-## What is sent, and where
+ครั้งแรกที่ใช้การสมัครสมาชิกได้ GenOffice จะแสดงประกาศหนึ่งครั้ง หากต้องการอ่านอีกครั้ง ให้ไปที่ การตั้งค่า ▸ AI ▸ **ประกาศเมื่อเชื่อมต่อครั้งแรก** แล้วกด **ดูอีกครั้ง** ประกาศนี้บอกสามเรื่อง
 
-The first time a subscription can be used, GenOffice shows a notice once. To read it again, go to Settings ▸ AI ▸ **First-connection notice** and press **View again**. It says three things:
+- เนื้อหาเอกสารและบทสนทนาจะถูกส่งไปยัง Anthropic หรือ OpenAI ภายใต้บัญชีของคุณเอง
+- เนื้อหานั้นจะถูกนำไปใช้ฝึก AI หรือไม่ ขึ้นอยู่กับการตั้งค่าบัญชีของคุณเองกับบริษัทนั้น ไม่ได้ขึ้นอยู่กับ GenOffice
+- GenOffice ปิดการบันทึกประวัติการสนทนาของ Codex แต่ Codex อาจยังเก็บบันทึกการวินิจฉัยของตัวเองไว้ในคอมพิวเตอร์เครื่องนี้
 
-- Document content and your conversation are sent to Anthropic or OpenAI under your own account.
-- Whether that content is used to train AI is decided by your own account settings at that company, not by GenOffice.
-- GenOffice turns off conversation history saving in Codex, but Codex may still keep its own diagnostic logs on this PC.
+สิ่งที่คุณซ่อนไว้ด้วย **ซ่อนส่วนที่เลือกจาก AI** จะไม่ถูกส่งไป ไม่ว่าคุณจะใช้ AI ตัวไหน
 
-Anything you hid with **Hide the selection from AI** is not sent, whichever AI you use.
+## ข้อควรรู้
 
-## Good to know
-
-- **Speed.** A reply through a subscription starts a few seconds later than one through an API key, because the company's program has to start up first.
-- **Free ChatGPT plan.** It shows as Connected, but its limits are small, so requests stop sooner. The usage line does not appear for it.
-- **Image generation.** In this version a subscription does not generate images, on any plan. That needs an image provider key; see [AI models and settings](help://ai-models).
-- **Proxies.** Claude Code and Codex do not take proxy settings from GenOffice. They use the proxy set for this PC, for example the `HTTPS_PROXY` environment variable, just as when you run them in a terminal. If they cannot connect in a terminal, they cannot connect from here either.
-- **Commands and other programs.** A request that arrives from the `ieumoffice` command or from a connected coding agent does not use your subscription unless you allow it. See [Connecting a coding agent](help://mcp).
+- **ความเร็ว** คำตอบที่ผ่านการสมัครสมาชิกจะเริ่มช้ากว่าคำตอบที่ผ่านคีย์ API อยู่ไม่กี่วินาที เพราะโปรแกรมของบริษัทนั้นต้องเริ่มทำงานก่อน
+- **แพ็กเกจฟรีของ ChatGPT** จะแสดงเป็น "เชื่อมต่อแล้ว" แต่โควตามีน้อย คำขอจึงหยุดเร็วกว่า และจะไม่มีบรรทัดแสดงการใช้งานให้เห็น
+- **การสร้างภาพ** ในเวอร์ชันนี้ การสมัครสมาชิกสร้างภาพไม่ได้ ไม่ว่าจะเป็นแพ็กเกจใด การสร้างภาพต้องใช้คีย์ของผู้ให้บริการสร้างภาพ ดู [โมเดล AI และการตั้งค่า](help://ai-models)
+- **พร็อกซี** Claude Code และ Codex ไม่รับการตั้งค่าพร็อกซีจาก GenOffice แต่ใช้พร็อกซีที่ตั้งไว้สำหรับคอมพิวเตอร์เครื่องนี้ เช่น ตัวแปรสภาพแวดล้อม `HTTPS_PROXY` เหมือนกับตอนที่คุณเรียกใช้ในเทอร์มินัล ถ้าเชื่อมต่อในเทอร์มินัลไม่ได้ ก็เชื่อมต่อจากที่นี่ไม่ได้เช่นกัน
+- **คำสั่งและโปรแกรมอื่น** คำขอที่มาจากคำสั่ง `ieumoffice` หรือจากเอเจนต์เขียนโค้ดที่เชื่อมต่อไว้ จะไม่ใช้การสมัครสมาชิกของคุณ เว้นแต่คุณจะอนุญาต ดู [เชื่อมต่อเอเจนต์เขียนโค้ด](help://mcp)

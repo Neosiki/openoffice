@@ -1,93 +1,91 @@
-<!-- TRANSLATE: copy of en -->
+# Kết nối gói đăng ký
 
-# Subscription connection
+GenOffice chạy AI bằng gói đăng ký mà bạn đã có: gói đăng ký Claude (Anthropic) hoặc gói đăng ký Codex (OpenAI). Codex là chương trình của OpenAI, và bạn đăng nhập vào đó bằng tài khoản gói ChatGPT của mình. Bạn không cần khóa API, và GenOffice cũng không có tài khoản riêng nào để đăng ký.
 
-GenOffice runs its AI on a subscription you already have: a Claude subscription (Anthropic) or a Codex subscription (OpenAI). Codex is OpenAI's program, and you sign in to it with your ChatGPT plan. You do not need an API key, and GenOffice has no account of its own to sign up for.
+## Cách hoạt động
 
-## How it works
+- AI không được tích hợp sẵn trong GenOffice. Trên máy tính này có cài một chương trình của công ty đó — **Claude Code** cho gói đăng ký Claude, **Codex** cho gói đăng ký ChatGPT — và GenOffice nhờ chương trình đó trả lời.
+- Chương trình đó được đăng nhập bằng chính tài khoản của bạn, nên mọi yêu cầu đều được tính vào gói của bạn.
+- GenOffice không bao giờ hiển thị biểu mẫu đăng nhập riêng, cũng không bao giờ đọc hay lưu thông tin đăng nhập của bạn. Bạn đăng nhập ngay trong chương trình và trang web của chính công ty đó.
 
-- The AI is not built into GenOffice. A program from the company is installed on this PC — **Claude Code** for a Claude subscription, **Codex** for a ChatGPT subscription — and GenOffice asks that program for the answer.
-- That program is signed in with your own account, so every request counts against your own plan.
-- GenOffice never shows a sign-in form of its own, and it never reads or stores your login. You sign in inside the company's own program and web page.
+## Trước khi bắt đầu
 
-## Before you start
+Bạn cần một trong hai thứ sau. Có cả hai cũng được.
 
-You need one of these. Having both is fine.
+- Gói đăng ký Claude, cùng chương trình Claude Code đã được cài đặt và đăng nhập trên máy tính này.
+- Gói đăng ký ChatGPT, cùng chương trình Codex đã được cài đặt và đăng nhập trên máy tính này.
 
-- A Claude subscription, and the Claude Code program installed and signed in on this PC.
-- A ChatGPT subscription, and the Codex program installed and signed in on this PC.
+Nếu chương trình chưa được cài đặt hoặc chưa đăng nhập, các nút ở phần tiếp theo sẽ lo việc đó.
 
-If the program is not installed yet, or not signed in yet, the buttons in the next section take care of it.
+## Kết nối
 
-## Connecting
+1. Mở **Cài đặt** từ hàng ở góc dưới bên trái của Trang chủ rồi chọn **AI**. Dưới **Kết nối gói đăng ký** có một thẻ cho Claude và một thẻ cho Codex.
+2. Đọc trạng thái ghi trên thẻ rồi nhấn nút của thẻ. Bảng bên dưới giải thích từng trạng thái.
+3. Quay lại cửa sổ GenOffice. Thẻ sẽ tự kiểm tra lại, còn **Kiểm tra lại** thì kiểm tra ngay lập tức.
 
-1. Open **Settings** from the row at the bottom left of Home and choose **AI**. Under **Subscription connection** there is one card for Claude and one for Codex.
-2. Read what the card says and press its button. The table below explains each state.
-3. Come back to the GenOffice window. The card checks again by itself, and **Check again** checks at once.
+Những thẻ này cũng xuất hiện ở bước thứ hai của màn hình chào mừng khi khởi chạy lần đầu, và trong bảng AI khi chưa có AI nào được kết nối. Bạn có thể bỏ qua và kết nối sau.
 
-The same cards appear in the second step of the welcome screens on first launch, and in the AI panel when no AI is connected. You can skip them and connect later.
+| Thẻ hiển thị                                       | Ý nghĩa                                                                                                                     | Việc cần làm                                                                                                                                                                                                                                                                 |
+| -------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Đang kiểm tra…**                                 | GenOffice đang hỏi chương trình về trạng thái của nó.                                                                       | Chờ một chút.                                                                                                                                                                                                                                                                |
+| **Chưa cài đặt**                                   | Không tìm thấy chương trình trên máy tính này.                                                                              | Nhấn **Cài đặt**. Lệnh cài đặt chính thức của công ty đó sẽ chạy trong một cửa sổ terminal mới, nên bạn có thể theo dõi nó làm gì. GenOffice không tự tải về bất cứ thứ gì. Nếu muốn tự cài bằng tay, **Hướng dẫn cài đặt chính thức** sẽ mở trang hướng dẫn của công ty đó. |
+| **Chưa đăng nhập**                                 | Chương trình đã có nhưng chưa đăng nhập.                                                                                    | Nhấn **Đăng nhập**. Quy trình đăng nhập của chính chương trình sẽ bắt đầu trong một cửa sổ mới và mở trang đăng nhập của công ty đó trong trình duyệt. Hãy hoàn tất đăng nhập ở đó.                                                                                          |
+| **Đã kết nối**                                     | Đã xác nhận đăng nhập bằng gói đăng ký. Tên gói được hiển thị khi chương trình cho biết.                                    | Không cần làm gì. AI đã sẵn sàng.                                                                                                                                                                                                                                            |
+| **Đã đăng nhập nhưng không phải bằng gói đăng ký** | Chương trình được đăng nhập bằng khóa API hoặc tài khoản trả phí theo mức sử dụng, hoặc không xác định được loại đăng nhập. | Xem "Đăng nhập tính phí theo mức sử dụng" bên dưới.                                                                                                                                                                                                                          |
+| **Không kiểm tra được kết nối**                    | Chính việc kiểm tra đã thất bại. Lý do được hiển thị trên thẻ.                                                              | Nhấn **Kiểm tra lại**. Nếu thẻ báo chương trình quá cũ, hãy cập nhật chương trình rồi kiểm tra lại.                                                                                                                                                                          |
 
-| What the card says                         | What it means                                                                                                     | What to do                                                                                                                                                                                                                                              |
-| ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Checking…**                              | GenOffice is asking the program how it stands.                                                                    | Wait a moment.                                                                                                                                                                                                                                          |
-| **Not installed**                          | The program was not found on this PC.                                                                             | Press **Install**. The company's official install command runs in a new terminal window, so you can watch what it does. GenOffice downloads nothing by itself. To install by hand instead, **Official install guide** opens the company's instructions. |
-| **Not signed in**                          | The program is there but has no login.                                                                            | Press **Sign in**. The program's own sign-in starts in a new window and opens the company's sign-in page in your browser. Finish it there.                                                                                                              |
-| **Connected**                              | A subscription login was confirmed. The plan name is shown when the program reports it.                           | Nothing. AI is ready to use.                                                                                                                                                                                                                            |
-| **Signed in, but not with a subscription** | The program is signed in with an API key or a pay-as-you-go account, or the kind of login could not be confirmed. | See "Pay-as-you-go logins" below.                                                                                                                                                                                                                       |
-| **The connection could not be checked**    | The check itself failed. The reason is shown on the card.                                                         | Press **Check again**. If it says the program is too old, update the program and check again.                                                                                                                                                           |
+Kết nối được kiểm tra khi ứng dụng khởi động, khi bạn mở Cài đặt, và khi bạn quay lại cửa sổ sau khi bắt đầu cài đặt hoặc đăng nhập.
 
-The connection is checked when the app starts, when you open Settings, and when you return to the window after starting an install or a sign-in.
+## Đăng nhập tính phí theo mức sử dụng
 
-## Pay-as-you-go logins
+Thẻ ghi **Đã đăng nhập nhưng không phải bằng gói đăng ký** có kèm một cảnh báo: "Đây không phải gói đăng ký: bạn bị tính phí theo mức sử dụng."
 
-A card that says **Signed in, but not with a subscription** carries a warning: "This is not a subscription: you are charged for what you use."
+- GenOffice không dùng lần đăng nhập đó cho đến khi bạn nhấn **Vẫn sử dụng**. Từ đó trở đi, mọi yêu cầu đều được tính tiền vào tài khoản đó.
+- Ngay cả khi ấy, nó cũng không bao giờ được chọn tự động. Bạn phải tự chọn trong **AI sử dụng**, nơi nó được đánh dấu **Trả phí**.
+- Sự cho phép của bạn chỉ được ghi nhớ cho riêng chương trình đó. Nó sẽ bị xóa khi chương trình đăng xuất hoặc khi thông tin đăng nhập thay đổi.
+- Nếu muốn dùng gói đăng ký, hãy đăng nhập chương trình bằng tài khoản có gói đăng ký rồi nhấn **Kiểm tra lại**.
 
-- GenOffice does not use that login until you press **Use anyway**. From then on, every request is billed to that account.
-- Even then it is never chosen automatically. Choose it yourself under **AI to use**, where it is marked **Paid**.
-- Your permission is remembered for that program only. It is cleared when the program is signed out or its login changes.
-- To use your subscription instead, sign the program in with your subscription account and press **Check again**.
+## AI nào được dùng
 
-## Which AI is used
+**AI sử dụng**, trong Cài đặt ▸ AI, ban đầu được đặt là **Tự động**. Tự động quyết định theo thứ tự sau:
 
-**AI to use**, under Settings ▸ AI, starts on **Automatic**. Automatic decides in this order:
+1. Claude, khi thẻ của nó ghi "Đã kết nối".
+2. Nếu không thì Codex, khi thẻ của nó ghi "Đã kết nối".
+3. Nếu không nữa thì chưa có AI nào được kết nối, và bảng AI hiển thị các thẻ kết nối thay vì báo lỗi.
 
-1. Claude, when its card says Connected.
-2. Otherwise Codex, when its card says Connected.
-3. Otherwise no AI is connected, and the AI panel shows the connect cards instead of an error.
+Tự động không bao giờ chọn thứ gì tốn thêm tiền: không chọn khóa API, cũng không chọn đăng nhập tính phí theo mức sử dụng. Những thứ đó chỉ được dùng trong lúc bạn tự chọn chúng.
 
-Automatic never picks anything that costs extra money: not an API key, and not a pay-as-you-go login. Those are used only while you choose them yourself.
+Bạn cũng có thể tự chọn một AI, ngay tại chỗ đó hoặc trong danh sách mô hình ở cuối bảng AI. Nếu AI bạn chọn ngừng hoạt động, GenOffice không lặng lẽ chuyển sang AI khác. Nó cho bạn biết chuyện gì đã xảy ra và chỉ cách kết nối lại.
 
-You can also choose one AI yourself, in the same place or in the model list at the bottom of the AI panel. If the one you chose stops working, GenOffice does not quietly move to another. It tells you what happened and shows how to reconnect.
+Ở bất cứ chỗ nào chọn được Codex đều có một dòng đi kèm: "Dùng gói đăng ký Codex bên trong một ứng dụng không phải là cách được OpenAI chính thức khuyến nghị." Hãy cân nhắc điều đó khi quyết định.
 
-Wherever Codex can be chosen, one line is shown with it: "Using a Codex subscription inside an app is not a method officially recommended by OpenAI." Decide with that in mind.
+## Khi một yêu cầu bị dừng
 
-## When a request is stopped
+Một yêu cầu sẽ dừng khi giới hạn của gói đã dùng hết, khi phiên đăng nhập đã hết hạn, hoặc khi chương trình không còn trên máy. GenOffice không tự chuyển sang AI khác.
 
-A request stops when the plan's limit is used up, when the login has expired, or when the program is no longer there. GenOffice does not switch to another AI by itself.
+- Lý do được hiển thị ngay tại chỗ câu trả lời dừng lại. Nếu là do dùng hết giới hạn, thời điểm giới hạn được đặt lại cũng được hiển thị khi chương trình cho biết.
+- Nếu gói đăng ký còn lại của bạn đang được kết nối, một nút **Tiếp tục với …** sẽ xuất hiện, ví dụ **Tiếp tục với Codex**. Nhấn nút đó sẽ đặt gói ấy làm AI sử dụng — danh sách mô hình cũng hiển thị thay đổi này — rồi chạy lại yêu cầu.
+- Nếu kết nối duy nhất còn lại là một lần đăng nhập tính phí theo mức sử dụng mà bạn đã cho phép, nút đó sẽ kèm một ghi chú về chi phí.
+- Không bao giờ có nút nào chuyển bạn sang khóa API.
 
-- The reason is shown where the reply stopped. For a used-up limit, the time it resets is shown too, when the program reports it.
-- If your other subscription is connected, a **Continue with …** button appears, for example **Continue with Codex**. Pressing it makes that one the AI to use — the model list shows the change — and runs the request again.
-- If the only other connection is a pay-as-you-go login you allowed, the same button comes with a note about the cost.
-- There is never a button that moves you to an API key.
+## Dòng mức sử dụng
 
-## The usage line
+Khi bạn đã dùng từ 80% một giới hạn trở lên, bảng AI hiển thị một dòng như "Đã dùng 85% · đặt lại lúc 15:00". Claude báo giới hạn 5 giờ và giới hạn 7 ngày, còn Codex cũng được hiển thị theo cách tương tự khi nó báo các giới hạn này. Dưới 80%, hoặc khi chương trình không báo gì, sẽ không có dòng nào hiện ra.
 
-Once you have used 80% or more of a limit, the AI panel shows a line such as "85% used · resets at 3:00 PM". Claude reports a 5-hour limit and a 7-day limit, and Codex is shown the same way when it reports them. Below 80%, or when the program reports nothing, no line is shown.
+## Những gì được gửi đi, và gửi đến đâu
 
-## What is sent, and where
+Lần đầu tiên có thể dùng một gói đăng ký, GenOffice hiển thị một thông báo đúng một lần. Để đọc lại, hãy vào Cài đặt ▸ AI ▸ **Thông báo khi kết nối lần đầu** rồi nhấn **Xem lại**. Thông báo nói ba điều:
 
-The first time a subscription can be used, GenOffice shows a notice once. To read it again, go to Settings ▸ AI ▸ **First-connection notice** and press **View again**. It says three things:
+- Nội dung tài liệu và cuộc trò chuyện được gửi đến Anthropic hoặc OpenAI bằng chính tài khoản của bạn.
+- Nội dung đó có được dùng để huấn luyện AI hay không tùy thuộc vào cài đặt tài khoản của bạn tại công ty đó, chứ không phải do GenOffice quyết định.
+- GenOffice tắt việc lưu lịch sử trò chuyện của Codex, nhưng Codex vẫn có thể lưu nhật ký chẩn đoán riêng trên máy tính này.
 
-- Document content and your conversation are sent to Anthropic or OpenAI under your own account.
-- Whether that content is used to train AI is decided by your own account settings at that company, not by GenOffice.
-- GenOffice turns off conversation history saving in Codex, but Codex may still keep its own diagnostic logs on this PC.
+Bất cứ thứ gì bạn đã ẩn bằng **Ẩn vùng chọn khỏi AI** đều không được gửi đi, dù bạn dùng AI nào.
 
-Anything you hid with **Hide the selection from AI** is not sent, whichever AI you use.
+## Nên biết
 
-## Good to know
-
-- **Speed.** A reply through a subscription starts a few seconds later than one through an API key, because the company's program has to start up first.
-- **Free ChatGPT plan.** It shows as Connected, but its limits are small, so requests stop sooner. The usage line does not appear for it.
-- **Image generation.** In this version a subscription does not generate images, on any plan. That needs an image provider key; see [AI models and settings](help://ai-models).
-- **Proxies.** Claude Code and Codex do not take proxy settings from GenOffice. They use the proxy set for this PC, for example the `HTTPS_PROXY` environment variable, just as when you run them in a terminal. If they cannot connect in a terminal, they cannot connect from here either.
-- **Commands and other programs.** A request that arrives from the `ieumoffice` command or from a connected coding agent does not use your subscription unless you allow it. See [Connecting a coding agent](help://mcp).
+- **Tốc độ.** Câu trả lời qua gói đăng ký bắt đầu chậm hơn vài giây so với qua khóa API, vì chương trình của công ty đó phải khởi động trước.
+- **Gói ChatGPT miễn phí.** Gói này hiển thị là "Đã kết nối", nhưng giới hạn của nó nhỏ nên yêu cầu sẽ dừng sớm hơn. Dòng mức sử dụng không xuất hiện với gói này.
+- **Tạo hình ảnh.** Trong phiên bản này, gói đăng ký không tạo được hình ảnh, dù là gói nào. Việc đó cần khóa của nhà cung cấp hình ảnh; xem [Mô hình AI và cài đặt](help://ai-models).
+- **Proxy.** Claude Code và Codex không nhận cài đặt proxy từ GenOffice. Chúng dùng proxy được thiết lập cho máy tính này, chẳng hạn biến môi trường `HTTPS_PROXY`, giống hệt như khi bạn chạy chúng trong terminal. Nếu chúng không kết nối được trong terminal thì ở đây cũng không kết nối được.
+- **Lệnh và các chương trình khác.** Một yêu cầu đến từ lệnh `ieumoffice` hoặc từ một tác nhân lập trình đã kết nối sẽ không dùng gói đăng ký của bạn trừ khi bạn cho phép. Xem [Kết nối tác nhân lập trình](help://mcp).

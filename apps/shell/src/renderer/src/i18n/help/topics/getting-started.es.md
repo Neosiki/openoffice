@@ -4,8 +4,6 @@ GenOffice es una suite ofimática que funciona por completo en su equipo: una ve
 
 ## Descripción de la interfaz
 
-![La pantalla de inicio](img/home-screen.png)
-
 La ventana tiene tres partes:
 
 - **Barra de pestañas (arriba)**: cada archivo abierto es una pestaña. La pestaña Inicio de la izquierda siempre está presente y no se puede cerrar; las demás pestañas son sus documentos. Haga doble clic en una pestaña para cambiar el nombre del archivo en el sitio.
@@ -26,7 +24,7 @@ Un documento nuevo se abre sin título; el archivo en el disco solo se crea al g
 
 - El menú **Archivo ▸ Abrir** (⌘O/ctrl+O) abre el selector del sistema: .docx / .doc / .xlsx / .xls / .csv / .tsv / .pptx / .ppt / .pdf / .md / .html.
 - Haga clic en cualquier elemento de la lista **Recientes** de la pantalla de inicio.
-- `genoffice <file>` en un terminal también abre archivos.
+- `ieumoffice <file>` en un terminal también abre archivos.
 
 ## El modelo de guardado
 
@@ -88,4 +86,5 @@ Eso deja ⌥⌘D libre para que GenOffice lo use en macOS si algún comando futu
 - Dónde viven los archivos: [La pantalla de inicio](help://home-screen).
 - Gestionar muchos archivos abiertos: [Pestañas y gestión de ventanas](help://tabs-and-windows).
 - Dejar que la IA haga el trabajo: [El panel de IA](help://ai-panel).
+- Conectar primero la IA: [Conexión por suscripción](help://subscription).
 - Idioma, tema, aplicaciones predeterminadas: [Configuración, idioma, tema e integraciones MCP](help://settings-integrations).

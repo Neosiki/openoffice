@@ -4,8 +4,6 @@ GenOffice 是一个完全运行在本机的办公套件：一个窗口、一排�
 
 ## 界面总览
 
-![主屏一览](img/home-screen.png)
-
 窗口分为三块：
 
 - **顶部标签条**：每个打开的文件是一个标签页。最左边的「主页」标签永远存在、不可关闭；其余标签对应你打开的文档，双击标签可以直接重命名文件。
@@ -26,7 +24,7 @@ GenOffice 是一个完全运行在本机的办公套件：一个窗口、一排�
 
 - 菜单 **文件 ▸ 打开**（⌘O/ctrl+O）弹出系统选择框，支持 .docx / .doc / .xlsx / .xls / .csv / .tsv / .pptx / .ppt / .pdf / .md / .html。
 - 主页的「最近使用」列表直接点开。
-- 命令行 `genoffice <文件>` 也可以打开（适配脚本）。
+- 命令行 `ieumoffice <文件>` 也可以打开（适配脚本）。
 
 ## 保存模型
 
@@ -88,4 +86,5 @@ Windows 并不是把 Mac 上那两个组合改写一遍。Excel for Mac 给 Shee
 - 想知道文件都放哪了：看[主屏（Home）](help://home-screen)一章。
 - 想管理一堆打开的文件：看[标签页与窗口管理](help://tabs-and-windows)。
 - 想让 AI 帮你干活：看[AI 助手面板](help://ai-panel)。
+- 想先把 AI 连上：看[订阅连接](help://subscription)。
 - 想改语言、主题、默认应用：看[设置、语言、主题与 MCP 集成](help://settings-integrations)。

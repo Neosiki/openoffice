@@ -1,93 +1,91 @@
-<!-- TRANSLATE: copy of en -->
+# サブスクリプションの接続
 
-# Subscription connection
+GenOffice の AI は、すでにお持ちのサブスクリプションで動きます。Claude のサブスクリプション（Anthropic）か、Codex のサブスクリプション（OpenAI）のどちらかがあれば使えます。Codex は OpenAI のプログラムで、ChatGPT のプランのアカウントでログインして使います。API キーは必要なく、GenOffice に新しく登録するアカウントもありません。
 
-GenOffice runs its AI on a subscription you already have: a Claude subscription (Anthropic) or a Codex subscription (OpenAI). Codex is OpenAI's program, and you sign in to it with your ChatGPT plan. You do not need an API key, and GenOffice has no account of its own to sign up for.
+## しくみ
 
-## How it works
+- AI は GenOffice に組み込まれているわけではありません。この PC にその会社のプログラム（Claude のサブスクリプションなら **Claude Code**、ChatGPT のサブスクリプションなら **Codex**）がインストールされていて、GenOffice はそのプログラムに回答を依頼します。
+- そのプログラムはご自身のアカウントでログインしているので、リクエストはすべてご自身のプランの使用量として数えられます。
+- GenOffice が独自のログイン画面を表示することはなく、ログイン情報を読み取ったり保存したりすることもありません。ログインは、その会社のプログラムと Web ページで行います。
 
-- The AI is not built into GenOffice. A program from the company is installed on this PC — **Claude Code** for a Claude subscription, **Codex** for a ChatGPT subscription — and GenOffice asks that program for the answer.
-- That program is signed in with your own account, so every request counts against your own plan.
-- GenOffice never shows a sign-in form of its own, and it never reads or stores your login. You sign in inside the company's own program and web page.
+## 始める前に
 
-## Before you start
+次のどちらかが必要です。両方あってもかまいません。
 
-You need one of these. Having both is fine.
+- Claude のサブスクリプションと、この PC にインストールしてログインを済ませた Claude Code プログラム。
+- ChatGPT のサブスクリプションと、この PC にインストールしてログインを済ませた Codex プログラム。
 
-- A Claude subscription, and the Claude Code program installed and signed in on this PC.
-- A ChatGPT subscription, and the Codex program installed and signed in on this PC.
+プログラムをまだインストールしていない場合や、まだログインしていない場合は、次の節のボタンで済ませられます。
 
-If the program is not installed yet, or not signed in yet, the buttons in the next section take care of it.
+## 接続する
 
-## Connecting
+1. ホームの左下の行から **設定** を開き、**AI** を選びます。**サブスクリプションの接続** の下に、Claude のカードと Codex のカードが 1 枚ずつあります。
+2. カードに書かれている状態を確認して、カードのボタンを押します。それぞれの状態の意味は下の表のとおりです。
+3. GenOffice のウィンドウに戻ります。カードは自動で確認し直します。**再確認** を押すと、すぐに確認します。
 
-1. Open **Settings** from the row at the bottom left of Home and choose **AI**. Under **Subscription connection** there is one card for Claude and one for Codex.
-2. Read what the card says and press its button. The table below explains each state.
-3. Come back to the GenOffice window. The card checks again by itself, and **Check again** checks at once.
+同じカードは、初回起動時のようこそ画面の 2 番目のステップと、AI が接続されていないときの AI パネルにも表示されます。スキップして、あとで接続してもかまいません。
 
-The same cards appear in the second step of the welcome screens on first launch, and in the AI panel when no AI is connected. You can skip them and connect later.
+| カードの表示                                             | 意味                                                                                                      | すること                                                                                                                                                                                                                                                                                                 |
+| -------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **確認中…**                                              | GenOffice がプログラムに状態を問い合わせています。                                                        | 少し待ちます。                                                                                                                                                                                                                                                                                           |
+| **未インストール**                                       | この PC でプログラムが見つかりませんでした。                                                              | **インストール** を押します。その会社の公式インストールコマンドが新しいターミナルウィンドウで実行されるので、何が行われるかを自分の目で確認できます。GenOffice が独自に何かをダウンロードすることはありません。手動でインストールしたい場合は、**公式のインストール手順** からその会社の説明を開けます。 |
+| **未ログイン**                                           | プログラムはありますが、ログインしていません。                                                            | **ログイン** を押します。プログラム自身のログイン手続きが新しいウィンドウで始まり、ブラウザーでその会社のログインページが開きます。そこでログインを完了します。                                                                                                                                          |
+| **接続済み**                                             | サブスクリプションでのログインを確認できました。プログラムが報告する場合は、プラン名も表示されます。      | 何もする必要はありません。AI をすぐに使えます。                                                                                                                                                                                                                                                          |
+| **ログイン済みですが、サブスクリプションではありません** | プログラムが API キーまたは従量課金のアカウントでログインしているか、ログイン方法を確認できませんでした。 | 下の「従量課金のログイン」を参照してください。                                                                                                                                                                                                                                                           |
+| **接続を確認できませんでした**                           | 確認そのものに失敗しました。理由はカードに表示されます。                                                  | **再確認** を押します。プログラムが古いと表示された場合は、プログラムを更新してからもう一度確認します。                                                                                                                                                                                                  |
 
-| What the card says                         | What it means                                                                                                     | What to do                                                                                                                                                                                                                                              |
-| ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Checking…**                              | GenOffice is asking the program how it stands.                                                                    | Wait a moment.                                                                                                                                                                                                                                          |
-| **Not installed**                          | The program was not found on this PC.                                                                             | Press **Install**. The company's official install command runs in a new terminal window, so you can watch what it does. GenOffice downloads nothing by itself. To install by hand instead, **Official install guide** opens the company's instructions. |
-| **Not signed in**                          | The program is there but has no login.                                                                            | Press **Sign in**. The program's own sign-in starts in a new window and opens the company's sign-in page in your browser. Finish it there.                                                                                                              |
-| **Connected**                              | A subscription login was confirmed. The plan name is shown when the program reports it.                           | Nothing. AI is ready to use.                                                                                                                                                                                                                            |
-| **Signed in, but not with a subscription** | The program is signed in with an API key or a pay-as-you-go account, or the kind of login could not be confirmed. | See "Pay-as-you-go logins" below.                                                                                                                                                                                                                       |
-| **The connection could not be checked**    | The check itself failed. The reason is shown on the card.                                                         | Press **Check again**. If it says the program is too old, update the program and check again.                                                                                                                                                           |
+接続は、アプリの起動時、設定を開いたとき、インストールやログインを始めたあとでウィンドウに戻ったときに確認されます。
 
-The connection is checked when the app starts, when you open Settings, and when you return to the window after starting an install or a sign-in.
+## 従量課金のログイン
 
-## Pay-as-you-go logins
+**ログイン済みですが、サブスクリプションではありません** と表示されたカードには、警告が添えられます。「サブスクリプションではなく、使った分だけ料金が発生します。」
 
-A card that says **Signed in, but not with a subscription** carries a warning: "This is not a subscription: you are charged for what you use."
+- **それでも使用** を押すまで、GenOffice がそのログインを使うことはありません。押したあとは、リクエストのたびにそのアカウントへ課金されます。
+- 押したあとも、自動で選ばれることはありません。**使用する AI** でご自身で選ぶ必要があり、そこには **有料** と表示されます。
+- 許可は、そのプログラムについてだけ記憶されます。プログラムからログアウトするか、ログインが変わると、許可は消去されます。
+- サブスクリプションで使いたい場合は、サブスクリプションのアカウントでプログラムにログインし直してから **再確認** を押します。
 
-- GenOffice does not use that login until you press **Use anyway**. From then on, every request is billed to that account.
-- Even then it is never chosen automatically. Choose it yourself under **AI to use**, where it is marked **Paid**.
-- Your permission is remembered for that program only. It is cleared when the program is signed out or its login changes.
-- To use your subscription instead, sign the program in with your subscription account and press **Check again**.
+## どの AI が使われるか
 
-## Which AI is used
+設定 ▸ AI の **使用する AI** は、最初は **自動** になっています。自動は次の順で決めます。
 
-**AI to use**, under Settings ▸ AI, starts on **Automatic**. Automatic decides in this order:
+1. Claude のカードが「接続済み」なら、Claude。
+2. そうでなく、Codex のカードが「接続済み」なら、Codex。
+3. どちらでもなければ、AI は接続されていません。このとき AI パネルには、エラーではなく接続用のカードが表示されます。
 
-1. Claude, when its card says Connected.
-2. Otherwise Codex, when its card says Connected.
-3. Otherwise no AI is connected, and the AI panel shows the connect cards instead of an error.
+自動が、追加の料金がかかるものを選ぶことはありません。API キーも、従量課金のログインも選びません。これらは、ご自身で選んでいる間だけ使われます。
 
-Automatic never picks anything that costs extra money: not an API key, and not a pay-as-you-go login. Those are used only while you choose them yourself.
+AI をご自身で 1 つ選ぶこともできます。同じ場所で選ぶか、AI パネルの下部にあるモデル一覧で選びます。選んだ AI が使えなくなっても、GenOffice が黙って別の AI に切り替えることはありません。何が起きたかを知らせ、接続し直す方法を表示します。
 
-You can also choose one AI yourself, in the same place or in the model list at the bottom of the AI panel. If the one you chose stops working, GenOffice does not quietly move to another. It tells you what happened and shows how to reconnect.
+Codex を選べる場所には、必ず次の 1 行が添えられます。「アプリ内で Codex のサブスクリプションを使うことは、OpenAI が公式に推奨している方法ではありません。」このことを踏まえて決めてください。
 
-Wherever Codex can be chosen, one line is shown with it: "Using a Codex subscription inside an app is not a method officially recommended by OpenAI." Decide with that in mind.
+## リクエストが止まったとき
 
-## When a request is stopped
+プランの上限を使い切ったとき、ログインの期限が切れたとき、プログラムがなくなったときに、リクエストは止まります。GenOffice が自分で別の AI に切り替えることはありません。
 
-A request stops when the plan's limit is used up, when the login has expired, or when the program is no longer there. GenOffice does not switch to another AI by itself.
+- 返信が止まった場所に理由が表示されます。上限を使い切った場合は、プログラムが報告していれば、リセットされる時刻も表示されます。
+- もう一方のサブスクリプションが接続されていれば、**… で続行** ボタンが表示されます（たとえば **Codex で続行**）。押すと、そちらが使用する AI になり（モデル一覧にも変更が反映されます）、リクエストをもう一度実行します。
+- ほかに残っている接続が、許可済みの従量課金のログインだけの場合は、同じボタンに料金についての注意書きが付きます。
+- API キーに切り替えるボタンが表示されることはありません。
 
-- The reason is shown where the reply stopped. For a used-up limit, the time it resets is shown too, when the program reports it.
-- If your other subscription is connected, a **Continue with …** button appears, for example **Continue with Codex**. Pressing it makes that one the AI to use — the model list shows the change — and runs the request again.
-- If the only other connection is a pay-as-you-go login you allowed, the same button comes with a note about the cost.
-- There is never a button that moves you to an API key.
+## 使用量の表示
 
-## The usage line
+上限の 80% 以上を使うと、AI パネルに「85% 使用 · 15:00 にリセット」のような行が表示されます。Claude は 5 時間の上限と 7 日間の上限を報告し、Codex も報告があれば同じように表示されます。80% 未満のとき、またはプログラムから何も報告がないときは、行は表示されません。
 
-Once you have used 80% or more of a limit, the AI panel shows a line such as "85% used · resets at 3:00 PM". Claude reports a 5-hour limit and a 7-day limit, and Codex is shown the same way when it reports them. Below 80%, or when the program reports nothing, no line is shown.
+## 何がどこに送られるか
 
-## What is sent, and where
+サブスクリプションを初めて使えるようになったとき、GenOffice は案内を 1 回表示します。もう一度読むには、設定 ▸ AI ▸ **初回接続時の案内** で **もう一度見る** を押します。案内には次の 3 つが書かれています。
 
-The first time a subscription can be used, GenOffice shows a notice once. To read it again, go to Settings ▸ AI ▸ **First-connection notice** and press **View again**. It says three things:
+- 文書の内容と会話は、ご自身のアカウントで Anthropic または OpenAI に送信されます。
+- その内容が AI の学習に使われるかどうかは、GenOffice ではなく、その会社でのご自身のアカウント設定によって決まります。
+- GenOffice は Codex の会話履歴の保存をオフにしますが、Codex が独自の診断ログをこの PC に残す場合があります。
 
-- Document content and your conversation are sent to Anthropic or OpenAI under your own account.
-- Whether that content is used to train AI is decided by your own account settings at that company, not by GenOffice.
-- GenOffice turns off conversation history saving in Codex, but Codex may still keep its own diagnostic logs on this PC.
+**選択範囲をAIに隠す** で隠した内容は、どの AI を使っていても送信されません。
 
-Anything you hid with **Hide the selection from AI** is not sent, whichever AI you use.
+## 知っておくとよいこと
 
-## Good to know
-
-- **Speed.** A reply through a subscription starts a few seconds later than one through an API key, because the company's program has to start up first.
-- **Free ChatGPT plan.** It shows as Connected, but its limits are small, so requests stop sooner. The usage line does not appear for it.
-- **Image generation.** In this version a subscription does not generate images, on any plan. That needs an image provider key; see [AI models and settings](help://ai-models).
-- **Proxies.** Claude Code and Codex do not take proxy settings from GenOffice. They use the proxy set for this PC, for example the `HTTPS_PROXY` environment variable, just as when you run them in a terminal. If they cannot connect in a terminal, they cannot connect from here either.
-- **Commands and other programs.** A request that arrives from the `ieumoffice` command or from a connected coding agent does not use your subscription unless you allow it. See [Connecting a coding agent](help://mcp).
+- **速度。** サブスクリプション経由の返信は、API キー経由の返信より数秒遅れて始まります。先にその会社のプログラムが起動する必要があるためです。
+- **ChatGPT の無料プラン。** 「接続済み」と表示されますが、上限が小さいため、リクエストが早く止まります。使用量の表示も出ません。
+- **画像生成。** このバージョンでは、どのプランでもサブスクリプションで画像は生成できません。画像プロバイダーのキーが必要です。[AI モデルと設定](help://ai-models) を参照してください。
+- **プロキシ。** Claude Code と Codex は、GenOffice からプロキシ設定を受け取りません。ターミナルで実行するときと同じように、`HTTPS_PROXY` 環境変数など、この PC に設定されたプロキシを使います。ターミナルで接続できない場合は、ここからも接続できません。
+- **コマンドとほかのプログラム。** `ieumoffice` コマンドや、接続したコーディングエージェントから届いたリクエストは、許可しないかぎりサブスクリプションを使いません。[コーディングエージェントの接続](help://mcp) を参照してください。

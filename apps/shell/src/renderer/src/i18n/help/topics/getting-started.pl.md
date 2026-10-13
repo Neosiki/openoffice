@@ -4,8 +4,6 @@ GenOffice to pakiet biurowy działający w całości na Twoim komputerze: jedno 
 
 ## Przegląd interfejsu
 
-![Ekran strony głównej](img/home-screen.png)
-
 Okno składa się z trzech części:
 
 - **Pasek kart (u góry)**: każdy otwarty plik to jedna karta. Karta Strona główna, najbardziej z lewej, jest zawsze obecna i nie można jej zamknąć; pozostałe karty to Twoje dokumenty. Kliknij dwukrotnie kartę, aby zmienić nazwę pliku w miejscu.
@@ -26,7 +24,7 @@ Nowy dokument otwiera się bez tytułu; plik na dysku powstaje dopiero przy pier
 
 - Menu **Plik ▸ Otwórz…** (⌘O/ctrl+O) otwiera systemowy selektor: .docx / .doc / .xlsx / .xls / .csv / .tsv / .pptx / .ppt / .pdf / .md / .html.
 - Kliknij dowolny element na liście **Ostatnie** na stronie głównej.
-- Także `genoffice <plik>` wpisane w terminalu otwiera pliki.
+- Także `ieumoffice <plik>` wpisane w terminalu otwiera pliki.
 
 ## Model zapisywania
 
@@ -88,4 +86,5 @@ To zostawia ⌥⌘D wolny dla GenOffice na macOS, gdyby jakieś przyszłe polece
 - Gdzie są pliki: [Ekran strony głównej](help://home-screen).
 - Zarządzanie wieloma otwartymi plikami: [Karty i zarządzanie oknami](help://tabs-and-windows).
 - Zlecenie pracy sztucznej inteligencji: [Panel asystenta AI](help://ai-panel).
+- Najpierw trzeba połączyć AI: [Połączenie z subskrypcją](help://subscription).
 - Język, motyw, aplikacje domyślne: [Ustawienia, język, motyw i integracje MCP](help://settings-integrations).

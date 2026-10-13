@@ -13,8 +13,6 @@ Trình soạn Markdown mở .md / .markdown — và .txt / .json, thẳng vào c
 
 Một hàng nút phía trên trình soạn thảo ( rê chuột để xem chú thích):
 
-![Thanh công cụ Markdown](img/md-toolbar.png)
-
 - **Tệp và lịch sử**: Lưu, Lưu dưới dạng, Hoàn tác, Làm lại, Tìm kiếm; công tắc **Tự động lưu** ở bên phải ghi thay đổi xuống đĩa theo định kỳ.
 - **Nút AI**: mở bảng AI; bên cạnh là các nút mẫu viết lại / mở rộng / dịch.
 - **Kiểu đoạn văn** (thả xuống): chuyển giữa văn bản thường và các cấp tiêu đề.

@@ -4,8 +4,6 @@ GenOffice ialah satu pek pejabat yang berjalan sepenuhnya pada mesin anda: satu 
 
 ## Gambaran keseluruhan antara muka
 
-![Skrin Laman Utama](img/home-screen.png)
-
 Tingkap ini mempunyai tiga bahagian:
 
 - **Baris tab (atas)**: setiap fail yang dibuka ialah satu tab. Tab Laman Utama, paling kiri, sentiasa ada dan tidak boleh ditutup; tab lain ialah dokumen anda. Klik dua kali pada tab untuk menamakan semula failnya terus di tempat.
@@ -26,7 +24,7 @@ Dokumen baharu dibuka tanpa tajuk; fail pada cakera hanya dicipta semasa simpana
 
 - Menu **Fail ▸ Buka…** (⌘O/ctrl+O) membuka pemilih sistem: .docx / .doc / .xlsx / .xls / .csv / .tsv / .pptx / .ppt / .pdf / .md / .html.
 - Klik mana-mana item dalam senarai **Terkini** pada Laman Utama.
-- `genoffice <fail>` daripada terminal turut membuka fail.
+- `ieumoffice <fail>` daripada terminal turut membuka fail.
 
 ## Model simpanan
 
@@ -88,4 +86,5 @@ Maka ⌥⌘D kekal bebas untuk GenOffice gunakan pada macOS, jika ada perintah p
 - Di mana fail berada: [Skrin Laman Utama](help://home-screen).
 - Menguruskan ramai fail yang dibuka: [Tab dan pengurusan tingkap](help://tabs-and-windows).
 - Membiarkan AI mengendalikan kerja: [Panel pembantu AI](help://ai-panel).
+- Menyambungkan AI dahulu: [Sambungan langganan](help://subscription).
 - Bahasa, tema, aplikasi lalai: [Tetapan, bahasa, tema dan integrasi MCP](help://settings-integrations).

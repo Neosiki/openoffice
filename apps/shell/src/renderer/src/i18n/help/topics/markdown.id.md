@@ -13,8 +13,6 @@ Editor Markdown membuka .md / .markdown — dan .txt / .json, langsung ke tampil
 
 Satu baris tombol di atas editor (arahkan kursor untuk melihat keterangan):
 
-![Bilah alat Markdown](img/md-toolbar.png)
-
 - **File & riwayat**: Simpan, Simpan Sebagai…, Urungkan, Ulangi, Temukan; sakelar **Simpan Otomatis** di sebelah kanan menulis perubahan ke disk secara berkala.
 - **Tombol AI**: membuka panel AI; di sebelahnya adalah siap-siap untuk menulis ulang / memperpanjang / menerjemahkan.
 - **Gaya paragraf** (drop-down): berpindah antara teks isi dan berbagai tingkat judul.

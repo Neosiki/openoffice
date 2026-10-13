@@ -4,13 +4,18 @@ Každý editor může vyvolat panel AI: vyberte něco, zadejte pokyn a sledujte 
 
 ## Otevření a používání
 
-![Panel AI v Docs](img/ai-panel.png)
-
+- Panel potřebuje připojenou AI. Není-li žádná připojena, zobrazí místo chyby karty pro připojení; viz [Připojení předplatného](help://subscription).
 - Vstupy: **tlačítko AI** na pásku každého editoru, **Zeptat se AI** v kontextových nabídkách nebo Zeptat se AI na liště značení.
 - Popište úkol běžnými slovy (přepsat to / udělat z této sloupce procenta / přelayoutovat tuto stránku...) a stiskněte Enter.
 - Odpovědi se vykreslují **průběžně**; když AI potřebuje nástroje (přečíst dokument, upravit ho), použije je a pokračuje až do dokončení.
 - **Zastavit**: kdykoli přeruší právě probíhající krok.
 - **Fronta**: zatímco odpověď běží, Enter zařadí zprávu do fronty, místo aby ji zahodil — pruh nad polem je počítá; rozbalte ho pro úpravu, odebrání, přeřazení, pauzu nebo vymazání. Další zpráva se pošle sama koncem tahu; Esc tahu i nadále ukončuje.
+
+## Která AI odpovídá
+
+- Seznam modelů ve spodní části panelu ukazuje používanou AI a umožňuje zvolit jinou: nejprve vaše předplatná, potom poskytovatele s klíčem, které jste nastavili.
+- Jakmile využijete 80 % limitu předplatného nebo více, objeví se v panelu řádek jako „Využito 85 % · obnoví se v 15:00“.
+- Pokud se požadavek zastaví — limit je vyčerpán nebo vypršelo přihlášení — panel uvede důvod a sám na jinou AI nepřepne. Je-li připojeno vaše druhé předplatné, nabídne ho tlačítko **Pokračovat s …**.
 
 ## Co umí
 
@@ -36,5 +41,6 @@ Každý editor může vyvolat panel AI: vyberte něco, zadejte pokyn a sledujte 
 
 ## Soukromí
 
-- Pokyny a příslušný obsah dokumentu putují do **služby modelu, kterou jste nastavili** (Genspark v cloudu nebo vlastní koncový bod, viz další kapitola); bez nastavení se nic neodesílá.
-- Místní soubory se nikam jinam neodesílají; klíče BYOK se ukládají do souboru nastavení aplikace na tomto počítači a odesílají pouze v hlavičkách požadavků.
+- Pokyny a příslušný obsah dokumentu putují k **AI, kterou používáte**: společnosti Anthropic nebo OpenAI pod vaším vlastním účtem, pokud používáte předplatné, nebo poskytovateli, jehož klíč jste zadali. Není-li připojena žádná AI, nic se neodesílá.
+- Zda se obsah odeslaný přes předplatné použije k trénování AI, určuje nastavení vašeho účtu u dané společnosti.
+- Místní soubory se nikam jinam neodesílají; klíče API se ukládají do souboru nastavení aplikace na tomto počítači a odesílají pouze v hlavičkách požadavků.
