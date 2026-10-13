@@ -18,6 +18,8 @@ export const SUBSCRIPTION_IPC_CHANNELS = {
   install: 'ai:subscription-install',
   /** (SubscriptionMeteredRequest) → SubscriptionMeteredResult: "use anyway" for a metered login */
   metered: 'ai:subscription-metered',
+  /** () → boolean: whether this build can generate images through the Codex subscription */
+  codexImage: 'ai:subscription-codex-image',
   /** event, payload SubscriptionStatusMap: the statuses changed */
   changed: 'ai:subscription-changed',
 } as const
@@ -83,6 +85,7 @@ export interface SubscriptionIpcContract {
     request: SubscriptionMeteredRequest
     response: SubscriptionMeteredResult
   }
+  [SUBSCRIPTION_IPC_CHANNELS.codexImage]: { request: void; response: boolean }
   [SUBSCRIPTION_IPC_CHANNELS.changed]: { request: never; response: SubscriptionStatusMap }
 }
 

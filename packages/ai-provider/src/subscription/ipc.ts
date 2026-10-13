@@ -3,6 +3,7 @@
  * channel, wired to whatever the caller injects. Nothing here imports Electron,
  * so an app passes its `ipcMain` and the tests pass a stand-in.
  */
+import { codexImageGenerationAvailable } from '../image-backend'
 import { isSubscriptionProvider } from '../provider-selection'
 import type { AiSettings, AiSubscriptionProviderId } from '../types'
 import {
@@ -103,6 +104,8 @@ export function registerSubscriptionIpc(
       }
       return service.setMeteredAccepted(provider, accepted)
     },
+    // true only in a process that loaded the Codex image backend (it registers itself on import)
+    [SUBSCRIPTION_IPC_CHANNELS.codexImage]: () => codexImageGenerationAvailable(),
   }
   for (const [channel, handler] of Object.entries(handlers)) ipcMain.handle(channel, handler)
   const stopListening = deps.broadcast

@@ -18,6 +18,7 @@ import {
   type SubscriptionMeteredResult,
   type SubscriptionStatusMap,
 } from '../src/subscription'
+import { setCodexImageGenerationAvailable } from '../src/image-backend'
 import type { AiSubscriptionProviderId } from '../src/types'
 
 type Handler = (event: unknown, ...args: unknown[]) => unknown
@@ -108,6 +109,7 @@ describe('the channel names', () => {
       login: 'ai:subscription-login',
       install: 'ai:subscription-install',
       metered: 'ai:subscription-metered',
+      codexImage: 'ai:subscription-codex-image',
       changed: 'ai:subscription-changed',
     })
     const names = Object.values(SUBSCRIPTION_IPC_CHANNELS)
@@ -187,8 +189,19 @@ describe('registerSubscriptionIpc', () => {
         SUBSCRIPTION_IPC_CHANNELS.login,
         SUBSCRIPTION_IPC_CHANNELS.install,
         SUBSCRIPTION_IPC_CHANNELS.metered,
+        SUBSCRIPTION_IPC_CHANNELS.codexImage,
       ].sort(),
     )
+  })
+
+  it('answers whether this process can generate images through the Codex subscription', async () => {
+    const { ipc, deps } = setup()
+    registerSubscriptionIpc(ipc, deps)
+    setCodexImageGenerationAvailable(false)
+    expect(await ipc.invoke(SUBSCRIPTION_IPC_CHANNELS.codexImage)).toBe(false)
+    setCodexImageGenerationAvailable(true)
+    expect(await ipc.invoke(SUBSCRIPTION_IPC_CHANNELS.codexImage)).toBe(true)
+    setCodexImageGenerationAvailable(false)
   })
 
   it('routes get-statuses to the cached statuses', async () => {
