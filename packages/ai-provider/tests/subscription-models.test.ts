@@ -12,6 +12,7 @@ import {
   setSubscriptionModelSource,
   subscriptionModelsOf,
   subscriptionStatusMapOf,
+  type MeteredAcceptanceRecord,
   type SubscriptionDetection,
   type SubscriptionModelLister,
   type SubscriptionStatusMap,
@@ -126,10 +127,18 @@ function serviceWith(options: {
   const changes: SubscriptionStatusMap[] = []
   const settings = defaultAiSettings()
   settings.providers.codex = { ...settings.providers.codex, cliPath: 'D:\\codex.exe' }
+  let record: MeteredAcceptanceRecord = {}
   const service = createSubscriptionStatusService({
     getSettings: () => settings,
-    setMeteredAccepted: () => undefined,
-    acceptanceStore: { read: async () => ({}), write: async () => undefined },
+    setMeteredAccepted: (provider, accepted) => {
+      settings.meteredAccepted = { ...settings.meteredAccepted, [provider]: accepted }
+    },
+    acceptanceStore: {
+      read: async () => ({ ...record }),
+      write: async (next) => {
+        record = { ...next }
+      },
+    },
     detect: async (provider) =>
       options.detections[provider] ?? { provider, state: 'not-installed' },
     listModels: options.listModels,
@@ -143,6 +152,13 @@ const READY_CLAUDE: SubscriptionDetection = {
   state: 'ready',
   loginMethod: 'subscription',
   loginKind: 'claude.ai/firstParty',
+}
+
+const METERED_CODEX: SubscriptionDetection = {
+  provider: 'codex',
+  state: 'metered',
+  loginMethod: 'metered',
+  loginKind: 'api-key',
 }
 
 describe('the model list on the connection status', () => {
@@ -170,7 +186,7 @@ describe('the model list on the connection status', () => {
     expect(service.getStatuses()['claude-code'].models).toEqual(CLAUDE_MODELS)
   })
 
-  it('is asked for a usable login only: ready, or metered', async () => {
+  it('is asked for a login that is signed in only', async () => {
     const asked: string[] = []
     const listModels: SubscriptionModelLister = async (provider) => {
       asked.push(provider)
@@ -187,25 +203,77 @@ describe('the model list on the connection status', () => {
     }
     expect(asked).toEqual([])
 
-    const metered = serviceWith({
-      detections: {
-        codex: {
-          provider: 'codex',
-          state: 'metered',
-          loginMethod: 'metered',
-          loginKind: 'api-key',
-        },
-      },
-      listModels,
-    })
-    await metered.service.check(['codex'])
+    const ready = serviceWith({ detections: { 'claude-code': READY_CLAUDE }, listModels })
+    await ready.service.check(['claude-code'])
     await settle()
-    expect(asked).toEqual(['codex'])
-    expect(metered.service.getStatuses().codex).toMatchObject({
+    expect(asked).toEqual(['claude-code'])
+    expect(ready.service.getStatuses()['claude-code'].models).toEqual(CLAUDE_MODELS)
+  })
+
+  it('is not asked of a metered login the user has not accepted: its program is not started for a list', async () => {
+    const asked: Array<[string, string | undefined]> = []
+    const { service, changes } = serviceWith({
+      detections: { codex: METERED_CODEX },
+      listModels: async (provider, options) => {
+        asked.push([provider, options?.configuredPath])
+        return CLAUDE_MODELS
+      },
+    })
+    for (let round = 0; round < 2; round++) {
+      const checked = await service.check(['codex'])
+      await settle()
+      expect(checked.codex).toMatchObject({ state: 'metered', meteredAccepted: false })
+      // no list: the UI shows its built-in one
+      expect('models' in service.getStatuses().codex).toBe(false)
+    }
+    expect(asked).toEqual([])
+    expect(changes.every((statuses) => statuses.codex.models === undefined)).toBe(true)
+
+    // "use anyway": now the app may use this login, and the list is read, once
+    const accepted = await service.setMeteredAccepted('codex', true)
+    expect(accepted.ok).toBe(true)
+    expect(accepted.statuses.codex.models).toBeUndefined()
+    const before = changes.length
+    await settle()
+    expect(asked).toEqual([['codex', 'D:\\codex.exe']])
+    // it follows on the change event, like the list of a subscription
+    expect(changes).toHaveLength(before + 1)
+    expect(changes.at(-1)!.codex).toMatchObject({
       state: 'metered',
-      meteredAccepted: false,
+      meteredAccepted: true,
       models: CLAUDE_MODELS,
     })
+
+    // while accepted it behaves like a subscription: kept, and read again on a re-check
+    const rechecked = await service.check(['codex'])
+    expect(rechecked.codex).toMatchObject({ meteredAccepted: true, models: CLAUDE_MODELS })
+    await settle()
+    expect(asked).toHaveLength(2)
+
+    // the acceptance taken back: no list on the status, and none asked for again
+    const withdrawn = await service.setMeteredAccepted('codex', false)
+    expect(withdrawn.statuses.codex.meteredAccepted).toBe(false)
+    expect('models' in withdrawn.statuses.codex).toBe(false)
+    await service.check(['codex'])
+    await settle()
+    expect('models' in service.getStatuses().codex).toBe(false)
+    expect(asked).toHaveLength(2)
+  })
+
+  it('a list that arrives after the acceptance was taken back is not shown', async () => {
+    const pending = deferred<AiSubscriptionModel[] | undefined>()
+    const { service, changes } = serviceWith({
+      detections: { codex: METERED_CODEX },
+      listModels: () => pending.promise,
+    })
+    await service.check(['codex'])
+    await service.setMeteredAccepted('codex', true)
+    await service.setMeteredAccepted('codex', false)
+    const before = changes.length
+    pending.resolve(CLAUDE_MODELS)
+    await settle()
+    expect('models' in service.getStatuses().codex).toBe(false)
+    expect(changes).toHaveLength(before)
   })
 
   it('hands the configured path of the CLI to the lister', async () => {
