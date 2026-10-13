@@ -118,6 +118,9 @@ const SUBSCRIPTION_BLOCKERS: Record<
  *
  * - `auto`: Claude Code when it is `ready`, else Codex when it is `ready`,
  *   else not connected. Key providers and metered logins are not candidates.
+ *   A provider is passed over only once its status check has answered: while
+ *   an earlier one is still `checking` (or has no status yet) nothing is
+ *   decided, so a later provider is not picked just because it answered first.
  * - a selected provider is used when it can run (a ready subscription, an
  *   accepted metered login, a configured key provider) and is reported as not
  *   connected otherwise. There is no fallback from an explicit selection.
@@ -128,7 +131,12 @@ export function selectAiProvider(
 ): AiProviderChoice {
   const selection = providerSelectionOf(settings)
   if (selection === 'auto') {
-    const ready = AI_SUBSCRIPTION_PROVIDERS.find((id) => statuses[id]?.state === 'ready')
+    let ready: AiSubscriptionProviderId | undefined
+    for (const id of AI_SUBSCRIPTION_PROVIDERS) {
+      const state = statuses[id]?.state ?? 'checking'
+      if (state === 'ready') ready = id
+      if (state === 'ready' || state === 'checking') break
+    }
     return ready
       ? { connected: true, provider: ready, metered: false }
       : {

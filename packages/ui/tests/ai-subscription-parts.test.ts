@@ -250,7 +250,10 @@ describe('AiConnectPrompt', () => {
     ])
 
   it('renders nothing once a provider can run', () => {
-    render(defaultAiSettings(), { codex: status('codex', 'ready') })
+    render(defaultAiSettings(), {
+      'claude-code': status('claude-code', 'signed-out'),
+      codex: status('codex', 'ready'),
+    })
     expect(host.innerHTML).toBe('')
   })
 

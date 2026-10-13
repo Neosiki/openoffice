@@ -78,13 +78,43 @@ describe('selectAiProvider with auto', () => {
   })
 
   it('picks Codex when only Codex is ready', () => {
-    for (const claude of ['checking', 'not-installed', 'signed-out', 'metered', 'error'] as const) {
+    for (const claude of ['not-installed', 'signed-out', 'metered', 'error'] as const) {
       expect(selectAiProvider(settingsWith('auto'), statuses(claude, 'ready'))).toEqual({
         connected: true,
         provider: 'codex',
         metered: false,
       })
     }
+  })
+
+  // the two status checks answer at different times: "not known yet" is not "not ready"
+  it('does not decide for Codex while the Claude check has not answered', () => {
+    const pending = {
+      connected: false,
+      selection: 'auto',
+      reason: 'no-subscription',
+      errorKind: 'not-connected',
+    }
+    expect(selectAiProvider(settingsWith('auto'), statuses('checking', 'ready'))).toEqual(pending)
+    expect(selectAiProvider(settingsWith('auto'), { codex: status('codex', 'ready') })).toEqual(
+      pending,
+    )
+  })
+
+  it('picks Codex once the Claude check answered signed out', () => {
+    expect(selectAiProvider(settingsWith('auto'), statuses('signed-out', 'ready'))).toEqual({
+      connected: true,
+      provider: 'codex',
+      metered: false,
+    })
+  })
+
+  it('picks the ready Claude without waiting for the Codex check', () => {
+    const claude = { connected: true, provider: 'claude-code', metered: false }
+    expect(selectAiProvider(settingsWith('auto'), statuses('ready', 'checking'))).toEqual(claude)
+    expect(
+      selectAiProvider(settingsWith('auto'), { 'claude-code': status('claude-code', 'ready') }),
+    ).toEqual(claude)
   })
 
   it('skips an accepted metered Claude login and picks the ready Codex', () => {
