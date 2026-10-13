@@ -4571,62 +4571,10 @@ body.vib .slide-list {
   cursor: default;
 }
 
-.rb-font-download {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-.rb-font-download-tag {
-  font-size: 11px;
-  color: var(--text-secondary);
-}
 .rb-font-install-local {
   border-top: 1px solid var(--border);
   margin-top: 4px;
   color: var(--accent);
-}
-
-.font-missing-banner {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 6px 14px;
-  font-size: 12.5px;
-  background: var(--accent-soft);
-  color: var(--text);
-  border-bottom: 1px solid var(--border);
-}
-.font-missing-banner .fmb-text {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.font-missing-banner .fmb-fonts {
-  margin-left: 6px;
-  color: var(--text-secondary);
-}
-.font-missing-banner button {
-  border: 1px solid var(--border);
-  border-radius: 5px;
-  background: var(--surface);
-  color: var(--text);
-  padding: 3px 10px;
-  font-size: 12px;
-  cursor: pointer;
-}
-.font-missing-banner button:hover {
-  background: var(--hover);
-}
-.font-missing-banner .fmb-download {
-  color: var(--accent);
-  font-weight: 600;
-}
-.font-missing-banner .fmb-download:disabled {
-  opacity: 0.6;
-  cursor: default;
 }
 
 .rb-color-underbar {

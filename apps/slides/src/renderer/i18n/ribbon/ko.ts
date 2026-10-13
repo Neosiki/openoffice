@@ -75,12 +75,8 @@ export const ko = {
   // Home: font
   ribbonGroupFont: '글꼴',
   ribbonFontsSystem: '시스템 글꼴',
-  ribbonFontsDownloadable: '다운로드 가능한 글꼴',
   ribbonFontInstallLocal: '글꼴 파일 설치…',
-  ribbonFontDownloading: '다운로드 중…',
-  ribbonFontDownloadFailed: '다운로드 실패 — 클릭하여 재시도',
   fontMissingBanner: '이 프레젠테이션에 설치되지 않은 글꼴이 사용되었습니다:',
-  fontMissingDownloadAll: '모두 다운로드',
   fontMissingDismiss: '닫기',
   ribbonGroupParagraph: '단락',
   ribbonCharSpacing: '문자 간격',

@@ -14,9 +14,7 @@ import {
   systemFamiliesBesidesCandidates,
 } from '../src/font-list'
 
-// Nanum Myeongjo (the other Korean serif) is not a built-in candidate: it ships in the
-// downloadable catalog, so the pickers surface it as a catalog row with a download marker
-// (@genoffice/electron-utils/font-catalog, covered by packages/electron-utils/tests/font-store.test.ts).
+// Nanum Myeongjo (the other Korean serif) is not a built-in candidate.
 
 /** every spelling the alias table knows for a family, its own name first */
 function spellingsOf(family: string): readonly string[] {

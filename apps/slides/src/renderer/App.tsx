@@ -359,40 +359,14 @@ export function App() {
     if (slides.length) void syncPrivateFonts()
   }, [slides])
   const [path, setPath] = useState<string | null>(null)
-  // Deck references catalog fonts that are missing locally → one-click download banner
-  const [missingFonts, setMissingFonts] = useState<string[]>([])
-  const [fontBannerBusy, setFontBannerBusy] = useState(false)
-  const missingFontsDismissed = useRef(false)
-  const refreshMissingFonts = useCallback(() => {
-    if (missingFontsDismissed.current) return
-    window.slidesApi
-      .fontMissing?.()
-      .then((m) => setMissingFonts(m ?? []))
-      .catch(() => {})
-  }, [])
-  const hasSlides = slides.length > 0
-  useEffect(() => {
-    missingFontsDismissed.current = false
-    if (hasSlides) refreshMissingFonts()
-  }, [path, hasSlides, refreshMissingFonts])
-  // Font store changed (download / local install): re-register FontFaces, refresh the banner
+  // Font store changed (local install): re-register FontFaces
   useEffect(
     () =>
       window.slidesApi.onFontsChanged?.(() => {
         void syncPrivateFonts()
-        refreshMissingFonts()
       }),
-    [refreshMissingFonts],
+    [],
   )
-  const downloadMissingFonts = useCallback(async () => {
-    setFontBannerBusy(true)
-    try {
-      for (const f of missingFonts) await window.slidesApi.fontDownload?.(f)
-    } finally {
-      setFontBannerBusy(false)
-      refreshMissingFonts()
-    }
-  }, [missingFonts, refreshMissingFonts])
   /** AiPanel reset key: incremented only on applyOpen (open/new file), not on draft path updates */
   const [aiPanelKey, setAiPanelKey] = useState(0)
   /** Theme body default font (fallback for the font box when the selection has no text element) */
@@ -3606,30 +3580,6 @@ export function App() {
           </div>
         )}
         <div className="app-content">
-          {missingFonts.length > 0 && (
-            <div className="font-missing-banner">
-              <span className="fmb-text">
-                {t('fontMissingBanner')}
-                <span className="fmb-fonts">{missingFonts.join(', ')}</span>
-              </span>
-              <button
-                className="fmb-download"
-                disabled={fontBannerBusy}
-                onClick={() => void downloadMissingFonts()}
-              >
-                {fontBannerBusy ? t('ribbonFontDownloading') : t('fontMissingDownloadAll')}
-              </button>
-              <button
-                className="fmb-dismiss"
-                onClick={() => {
-                  missingFontsDismissed.current = true
-                  setMissingFonts([])
-                }}
-              >
-                {t('fontMissingDismiss')}
-              </button>
-            </div>
-          )}
           <div className="workspace">
             {!slide ? (
               <div className="start-screen start-booting">{t('appStartOpening')}</div>
