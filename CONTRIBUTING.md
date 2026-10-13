@@ -122,6 +122,7 @@ npm run check:theme-colors      # no raw colors in changed renderer CSS (see CLA
 npm run check:english-comments  # no Chinese text in code comments or docs
 npm run check:help-langs        # every language of the in-app manual matches the English structure
 npm run check:skill-version     # a changed skills/*/SKILL.md body bumps its metadata.version
+npm run check:no-genspark       # nothing tied to the removed vendor's services is back (allowlist in the tool)
 ```
 
 CI runs on Linux. On Windows a number of tests inherited from upstream fail
