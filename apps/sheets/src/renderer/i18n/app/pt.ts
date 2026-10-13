@@ -807,7 +807,6 @@ export const pt = {
   appFormatPaneDetail: 'Eixos, espaçamento, separação',
   appGroupChartActions: 'Ações do gráfico',
   appRemoveFromSheet: 'Remover da planilha',
-  appGroupAiAssistant: 'Assistente de IA',
   appAiOpenPanelDetail: 'Barra lateral de chat',
   appGroupAiStarters: 'Início rápido',
   appAiStarterDetail: 'Enviar ao painel de IA',

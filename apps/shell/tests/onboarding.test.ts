@@ -138,8 +138,7 @@ describe('Onboarding', () => {
     const step = host.querySelector<HTMLElement>('.onb-slide[data-step="welcome"]')!
     expect(step.querySelector('.onb-subtitle')!.textContent).toBe(strings.en.onbWelcomeSubtitle)
     expect(step.querySelector('.onb-body')!.textContent).toBe(strings.en.onbWelcomeBody)
-    // not the upstream vendor's claim, and no superlative of its own
-    expect(step.textContent).not.toContain(strings.en.onbSubtitle1)
+    // no superlative of its own
     expect(step.textContent).not.toMatch(/\b(first|best|leading|most|only)\b|AI-native/i)
     expect(strings.en.onbWelcomeSubtitle).toBe('An open-source office suite')
   })
@@ -255,7 +254,7 @@ describe('Onboarding', () => {
     renderOnboarding({ connection: connectionOf(statuses('ready', 'ready')) })
     const text = () => host.textContent ?? ''
     for (let step = 0; step < ONBOARDING_STEPS.length; step++) {
-      expect(text()).not.toMatch(/genspark|genteam|credit|github|\bstars?\b|statistic|analytics/i)
+      expect(text()).not.toMatch(/credit|github|\bstars?\b|statistic|analytics/i)
       if (step < ONBOARDING_STEPS.length - 1) await click('.onb-next')
     }
     expect(host.querySelector('[role="switch"]')).toBeNull()
@@ -270,7 +269,6 @@ describe('welcome copy', () => {
       const { onbWelcomeSubtitle, onbWelcomeBody } = strings[lang]
       expect(onbWelcomeSubtitle.trim(), lang).not.toBe('')
       expect(onbWelcomeBody.trim(), lang).not.toBe('')
-      expect(onbWelcomeSubtitle, lang).not.toBe(strings[lang].onbSubtitle1)
       if (lang === 'en') continue
       expect(onbWelcomeSubtitle, lang).not.toBe(strings.en.onbWelcomeSubtitle)
       expect(onbWelcomeBody, lang).not.toBe(strings.en.onbWelcomeBody)
@@ -286,6 +284,6 @@ describe('welcome copy', () => {
     expect(body).toContain('Claude')
     expect(body).toContain('Codex')
     // the product is named by the title above, and no vendor of the suite is named at all
-    expect(`${strings[lang].onbWelcomeSubtitle} ${body}`).not.toMatch(/genoffice|genspark/i)
+    expect(`${strings[lang].onbWelcomeSubtitle} ${body}`).not.toMatch(/genoffice/i)
   })
 })

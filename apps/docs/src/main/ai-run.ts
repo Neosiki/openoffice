@@ -10,7 +10,6 @@
  */
 import {
   AI_PROVIDERS,
-  REMOVED_AI_PROVIDER_IDS,
   aiStreamErrorFields,
   isAiOverloadedError,
   isSubscriptionProvider,
@@ -172,9 +171,4 @@ export function withMeteredAccepted(
 ): AiSettings {
   const settings = normalizeAiSettings(stored)
   return { ...settings, meteredAccepted: { ...settings.meteredAccepted, [provider]: accepted } }
-}
-
-/** An id that a stored selection may still name but that no longer selects anything */
-export function isRemovedAiProviderId(id: unknown): id is (typeof REMOVED_AI_PROVIDER_IDS)[number] {
-  return (REMOVED_AI_PROVIDER_IDS as readonly unknown[]).includes(id)
 }

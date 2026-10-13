@@ -1,9 +1,10 @@
 /**
  * Loading a settings file written before the subscription providers existed.
- * Such a file names Genspark in its selection slots and carries the Genspark
- * cloud-tools switch. Every slot holding a removed or unknown id falls to its
- * default, the removed switch is left out so the next save no longer writes
- * it, and nothing here throws: an old file must never greet the user with an
+ * Such a file names a provider that no longer exists in its selection slots
+ * and carries a switch that was removed. Every slot holding an unknown id
+ * (a removed one is simply unknown now) falls to its default, fields this
+ * build does not know are left out so the next save no longer writes them,
+ * and nothing here throws: an old file must never greet the user with an
  * error.
  *
  * Unknown ids are treated the way the IPC guard (ai-settings-guard.ts) treats
@@ -31,9 +32,6 @@ import type {
   AiVideoAnalysisProviderSelection,
 } from './types'
 
-/** Ids a stored selection may still name but that no longer select anything */
-export const REMOVED_AI_PROVIDER_IDS = ['genspark'] as const
-
 export const DEFAULT_AI_PROVIDER_SELECTION: AiProviderSelection = 'auto'
 /**
  * Stored even in a build without Codex image generation: there it behaves
@@ -44,11 +42,7 @@ export const DEFAULT_AI_IMAGE_PROVIDER: AiImageProviderSelection = 'codex'
 export const DEFAULT_AI_ANALYSIS_PROVIDER: AiAnalysisProviderSelection = 'chat'
 export const DEFAULT_AI_VIDEO_ANALYSIS_PROVIDER: AiVideoAnalysisProviderSelection = 'none'
 /** Parallel with an empty key is the keyless free route (free Parallel search, then DuckDuckGo) */
-export const DEFAULT_AI_SEARCH_PROVIDER: Exclude<AiSearchProviderId, 'genspark'> = 'parallel'
-
-function isRemoved(id: unknown): boolean {
-  return (REMOVED_AI_PROVIDER_IDS as readonly unknown[]).includes(id)
-}
+export const DEFAULT_AI_SEARCH_PROVIDER: AiSearchProviderId = 'parallel'
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value)
@@ -56,7 +50,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 /** a key media provider that has the capability, by id */
 function mediaKeyProvider(id: unknown, capability: MediaCapability): boolean {
-  if (isRemoved(id)) return false
   const meta = AI_MEDIA_PROVIDERS.find((m) => m.id === id)
   return !!meta && providerHasCapability(meta, capability)
 }
@@ -98,7 +91,7 @@ function normalizeMedia(media: AiMediaSettings): AiMediaSettings {
 
 function normalizeSearch(search: AiSearchSettings): AiSearchSettings {
   const stored: unknown = search.provider
-  const known = !isRemoved(stored) && AI_SEARCH_PROVIDERS.some((m) => m.id === stored)
+  const known = AI_SEARCH_PROVIDERS.some((m) => m.id === stored)
   return {
     provider: known ? (stored as AiSearchProviderId) : DEFAULT_AI_SEARCH_PROVIDER,
     providers: search.providers,
@@ -108,8 +101,8 @@ function normalizeSearch(search: AiSearchSettings): AiSearchSettings {
 /**
  * The settings to work with, from whatever the settings file held (already
  * JSON-parsed; this function does no file I/O). Runs resolveAiSettings, then
- * replaces removed and unknown selections with their defaults and leaves the
- * removed Genspark cloud-tools switch out. Never throws.
+ * replaces unknown selections with their defaults and leaves out every field
+ * this build does not know. Never throws.
  */
 export function normalizeAiSettings(
   stored: unknown,
@@ -124,11 +117,11 @@ export function normalizeAiSettings(
   }
   const provider: unknown = resolved.provider
   const selection =
-    provider === 'auto' || (!isRemoved(provider) && AI_PROVIDERS.some((m) => m.id === provider))
+    provider === 'auto' || AI_PROVIDERS.some((m) => m.id === provider)
       ? (provider as AiProviderSelection)
       : DEFAULT_AI_PROVIDER_SELECTION
   const fallback = defaultAiSettings()
-  const settings: AiSettings = {
+  return {
     ...resolved,
     provider: selection,
     providers: {
@@ -144,7 +137,4 @@ export function normalizeAiSettings(
     headlessSubscriptionEnabled: resolved.headlessSubscriptionEnabled === true,
     subscriptionNoticeSeen: resolved.subscriptionNoticeSeen === true,
   }
-  // the Genspark cloud-tools switch is gone: left out, the next save no longer writes it
-  delete settings.gskToolsEnabled
-  return settings
 }

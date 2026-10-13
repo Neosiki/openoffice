@@ -6,12 +6,6 @@ import type {
 } from './types'
 
 export const AI_SEARCH_PROVIDERS: AiSearchProviderMeta[] = [
-  {
-    id: 'genspark',
-    label: 'Genspark',
-    keyPlaceholder: 'Not required - sign in to Genspark',
-    imageSearch: true,
-  },
   { id: 'serper', label: 'Serper', keyPlaceholder: 'Serper API key', imageSearch: true },
   { id: 'serply', label: 'Serply', keyPlaceholder: 'Serply API key', imageSearch: true },
   { id: 'tavily', label: 'Tavily', keyPlaceholder: 'tvly-...', imageSearch: false },
@@ -23,7 +17,7 @@ export const AI_SEARCH_PROVIDERS: AiSearchProviderMeta[] = [
 
 export function defaultAiSearchSettings(): AiSearchSettings {
   return {
-    provider: 'genspark',
+    provider: 'parallel',
     providers: {
       serper: { apiKey: '' },
       serply: { apiKey: '' },
@@ -48,13 +42,19 @@ export function resolveAiSearchSettings(
   return { provider: stored.provider ?? defaults.provider, providers }
 }
 
-/** Parallel can run keylessly; other custom providers require a key or fall back to Genspark. */
-export function activeSearchProvider(settings: Pick<AiSettings, 'search'>): AiSearchProviderId {
+/**
+ * The selected search provider when it can run: Parallel always (it answers
+ * keylessly), any other provider once its key is stored. Null when nothing
+ * usable is selected, which leaves the search to the keyless free chain.
+ */
+export function activeSearchProvider(
+  settings: Pick<AiSettings, 'search'>,
+): AiSearchProviderId | null {
   const search = settings.search
-  if (!search || search.provider === 'genspark') return 'genspark'
-  if (!AI_SEARCH_PROVIDERS.some((m) => m.id === search.provider)) return 'genspark'
+  if (!search) return null
+  if (!AI_SEARCH_PROVIDERS.some((m) => m.id === search.provider)) return null
   if (search.provider === 'parallel') return 'parallel'
-  // Trim-aware: a whitespace-only key from in-memory settings falls back
+  // Trim-aware: a whitespace-only key from in-memory settings selects nothing
   // instead of sending `Bearer    ` to the search backend.
-  return search.providers?.[search.provider]?.apiKey?.trim() ? search.provider : 'genspark'
+  return search.providers?.[search.provider]?.apiKey?.trim() ? search.provider : null
 }

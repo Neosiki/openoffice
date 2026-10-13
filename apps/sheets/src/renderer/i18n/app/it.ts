@@ -806,7 +806,6 @@ export const it = {
   appFormatPaneDetail: 'Assi, distanza tra le barre, esplosione',
   appGroupChartActions: 'Azioni grafico',
   appRemoveFromSheet: 'Rimuovi dal foglio',
-  appGroupAiAssistant: 'Assistente IA',
   appAiOpenPanelDetail: 'Barra laterale chat',
   appGroupAiStarters: 'Avvio rapido',
   appAiStarterDetail: 'Invia al pannello IA',

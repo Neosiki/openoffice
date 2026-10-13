@@ -6,7 +6,6 @@
  */
 import {
   AI_PROVIDERS,
-  REMOVED_AI_PROVIDER_IDS,
   activeCustomEndpoint,
   customEndpointLabel,
   imageProviderSelection,
@@ -102,11 +101,6 @@ export function withLiveSelectionFields(draft: AiSettings, latest: AiSettings | 
     headlessSubscriptionEnabled: latest.headlessSubscriptionEnabled,
     subscriptionNoticeSeen: latest.subscriptionNoticeSeen,
   }
-}
-
-/** An id that older settings files and the catalogs still carry but that selects nothing any more */
-export function isRemovedProviderId(id: string): boolean {
-  return (REMOVED_AI_PROVIDER_IDS as readonly string[]).includes(id)
 }
 
 // ── which AI to use ───────────────────────────────────────
@@ -216,9 +210,7 @@ export function advancedProviderIds(catalog: readonly { id: string }[]): AiProvi
   const known = new Set<string>(AI_PROVIDERS.map((meta) => meta.id))
   return catalog
     .map((entry) => entry.id)
-    .filter(
-      (id) => known.has(id) && !isRemovedProviderId(id) && id !== 'claude-code',
-    ) as AiProviderId[]
+    .filter((id) => known.has(id) && id !== 'claude-code') as AiProviderId[]
 }
 
 /**
@@ -262,14 +254,12 @@ export function mediaKeyProviders(
   block: MediaBlock,
   catalog: readonly AiMediaProviderMeta[],
 ): AiMediaProviderMeta[] {
-  return catalog.filter(
-    (meta) =>
-      !isRemovedProviderId(meta.id) &&
-      (block === 'image'
-        ? !!meta.imageProtocol
-        : block === 'video'
-          ? !!meta.analysisProtocol && meta.videoAnalysis
-          : !!meta.analysisProtocol),
+  return catalog.filter((meta) =>
+    block === 'image'
+      ? !!meta.imageProtocol
+      : block === 'video'
+        ? !!meta.analysisProtocol && meta.videoAnalysis
+        : !!meta.analysisProtocol,
   )
 }
 

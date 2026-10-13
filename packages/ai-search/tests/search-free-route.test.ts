@@ -84,7 +84,6 @@ const notDuckDuckGo = (urls: string[]) =>
 /** every settings shape in which the user selected no key search provider */
 const NOTHING_SELECTED = [
   ['fresh settings', () => writeSettings()],
-  ['the removed provider', () => writeSettings({ search: { provider: 'genspark' } })],
   ['an unknown provider', () => writeSettings({ search: { provider: 'bing' } })],
   [
     'free Parallel search, the stored default',
@@ -199,7 +198,6 @@ describe('a selected key provider and the environment', () => {
   it('prefers the stored key over the environment', () => {
     vi.stubEnv('SERPER_API_KEY', 'env-serper-key')
     expect(searchOptionsFromSettings(readAiSettingsFile(serperSelected('stored-key')))).toEqual({
-      useGsk: false,
       ...NO_KEYS,
       serperKey: 'stored-key',
       prefer: 'serper',
@@ -209,7 +207,6 @@ describe('a selected key provider and the environment', () => {
   it('is the keyless route when neither holds a key', async () => {
     const settings = serperSelected('')
     expect(searchOptionsFromSettings(readAiSettingsFile(settings))).toEqual({
-      useGsk: false,
       ...NO_KEYS,
       prefer: 'parallel',
     })
@@ -261,15 +258,11 @@ describe('a selected key provider and the environment', () => {
 })
 
 describe('the default search route', () => {
-  it('is the keyless chain for fresh settings and for a file that names the removed provider', () => {
-    const free = { useGsk: false, ...NO_KEYS, prefer: 'parallel' }
+  it('is the keyless chain for fresh settings', () => {
+    const free = { ...NO_KEYS, prefer: 'parallel' }
     expect(searchOptionsFromSettings(normalizeAiSettings(undefined))).toEqual(free)
-    // the stored default before the subscription providers existed
-    expect(defaultAiSettings().search?.provider).toBe('genspark')
+    expect(defaultAiSettings().search?.provider).toBe('parallel')
     expect(searchOptionsFromSettings(defaultAiSettings())).toEqual(free)
-    expect(searchOptionsFromSettings({ ...defaultAiSettings(), gskToolsEnabled: false })).toEqual(
-      free,
-    )
   })
 
   it('asks free Parallel search first', async () => {
@@ -310,20 +303,20 @@ describe('the default search route', () => {
     ])
   })
 
-  it('is what a settings file that selected the removed provider gets', async () => {
+  it('is what a settings file that selected a provider this build does not know gets', async () => {
     stubDuckDuckGo()
     parallelFree.mockResolvedValue(null)
-    const settings = writeSettings({ gskToolsEnabled: true, search: { provider: 'genspark' } })
+    const settings = writeSettings({ search: { provider: 'retired-provider' } })
     expect((await webSearchTool(settings, 'q')).method).toBe('duckduckgo')
     expect((await imageSearchTool(settings, 'q')).method).toBe('duckduckgo')
   })
 })
 
 describe('webSearch / imageSearch called directly', () => {
-  it('ignores the old useGsk option, in every spelling', async () => {
+  it('takes the keyless chain when no options are given, in every spelling', async () => {
     stubDuckDuckGo()
     parallelFree.mockResolvedValue(null)
-    for (const options of [undefined, true, { useGsk: true }, {}] as const) {
+    for (const options of [undefined, true, {}] as const) {
       expect((await webSearch('q', 3, options)).method).toBe('duckduckgo')
       expect((await imageSearch('q', 3, options)).method).toBe('duckduckgo')
     }

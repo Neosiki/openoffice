@@ -89,7 +89,7 @@ describe('Settings → About', () => {
     await openAbout()
     const pane = host.querySelector<HTMLElement>('.set-pane-title')!.parentElement!
     const text = pane.textContent ?? ''
-    expect(text).not.toMatch(/\bstars?\b|starred|genspark|genteam/i)
+    expect(text).not.toMatch(/\bstars?\b|starred/i)
     expect(text).toContain('Based on the open-source project GenOffice (Apache License 2.0).')
     // the acknowledgement is the one place the upstream name appears
     expect(text.match(/GenOffice/g)).toHaveLength(1)
@@ -100,7 +100,6 @@ describe('Settings → About', () => {
     for (const lang of LANGS) {
       const label = strings[lang].viewOnGitHub
       expect(label, lang).toContain('GitHub')
-      expect(label, lang).not.toBe(strings[lang].starOnGitHub)
       if (lang !== 'en') expect(label, lang).not.toBe(strings.en.viewOnGitHub)
     }
     // the two Chinese scripts and the two Malay-family languages may share a wording

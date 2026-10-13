@@ -6,7 +6,7 @@
  * midway (a used-up limit, say) ends in its error; it is not retried on
  * another backend.
  */
-import { DEFAULT_AI_IMAGE_PROVIDER, REMOVED_AI_PROVIDER_IDS } from './legacy-settings'
+import { DEFAULT_AI_IMAGE_PROVIDER } from './legacy-settings'
 import { AI_MEDIA_PROVIDERS, mediaConfigUsable, providerHasCapability } from './media'
 import type {
   AiImageProviderSelection,
@@ -51,7 +51,6 @@ function usableKeyConfig(
   settings: MediaSettings,
   id: unknown,
 ): { provider: AiMediaKeyProviderId; config: AiMediaProviderConfig } | null {
-  if ((REMOVED_AI_PROVIDER_IDS as readonly unknown[]).includes(id)) return null
   const meta = AI_MEDIA_PROVIDERS.find((m) => m.id === id)
   if (!meta || !providerHasCapability(meta, 'image')) return null
   const provider = meta.id as AiMediaKeyProviderId
@@ -82,13 +81,7 @@ export function imageProviderSelection(
   const stored: unknown = settings?.media?.imageProvider
   if (stored === 'none') return 'none'
   const key = AI_MEDIA_PROVIDERS.find((m) => m.id === stored)
-  if (
-    key &&
-    providerHasCapability(key, 'image') &&
-    !(REMOVED_AI_PROVIDER_IDS as readonly unknown[]).includes(key.id)
-  ) {
-    return key.id
-  }
+  if (key && providerHasCapability(key, 'image')) return key.id
   const selection = stored === 'codex' ? 'codex' : DEFAULT_AI_IMAGE_PROVIDER
   return selection === 'codex' && !available ? 'none' : selection
 }

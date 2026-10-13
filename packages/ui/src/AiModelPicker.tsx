@@ -2,8 +2,6 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { Lang } from '@genoffice/i18n'
 import type { AiSettings, AiSubscriptionStatuses } from '@genoffice/ai-provider/browser'
 import {
-  aiModelPickerGroups,
-  aiModelPickerSelection,
   aiProviderPickerGroups,
   aiProviderPickerSelection,
   withAiProviderSelection,
@@ -24,7 +22,6 @@ export interface AiModelPickerBridge {
   readonly setSettings: (settings: AiSettings) => Promise<void>
   /** fires after any renderer (this one, another tab, the shell settings page) saved ai-settings.json */
   readonly onSettingsChanged?: ((handler: () => void) => () => void) | undefined
-  readonly gskLoggedIn?: (() => Promise<boolean>) | undefined
   /** shell: switch to Home and open Settings › AI Model */
   readonly openModelSettings?: (() => Promise<void> | void) | undefined
 }
@@ -45,9 +42,9 @@ function PickerMark({ group }: { readonly group: Pick<AiProviderPickerGroup, 'ki
  * same ai-settings.json the settings page edits) and ends with a row that
  * opens that page for keys and new vendors.
  *
- * With `subscriptionStatuses` the list follows the subscription contract: an
- * automatic entry, the connected subscriptions, then the key providers that
- * are filled in. Without it the chip keeps its earlier behavior.
+ * The list follows the subscription contract: an automatic entry, the
+ * connected subscriptions, then the key providers that are filled in. Without
+ * `subscriptionStatuses` no subscription counts as connected.
  */
 export function AiModelPicker({
   bridge,
@@ -56,12 +53,11 @@ export function AiModelPicker({
 }: {
   readonly bridge: AiModelPickerBridge
   readonly lang: Lang
-  /** status of the subscription CLIs; passing it switches the list to the subscription contract */
+  /** status of the subscription CLIs */
   readonly subscriptionStatuses?: AiSubscriptionStatuses | undefined
 }): React.JSX.Element | null {
   const strings = AI_MODEL_PICKER_STRINGS[lang] ?? AI_MODEL_PICKER_STRINGS.en
   const [settings, setSettings] = useState<AiSettings | null>(null)
-  const [loggedIn, setLoggedIn] = useState(false)
   const [open, setOpen] = useState(false)
   const [popStyle, setPopStyle] = useState<React.CSSProperties>({})
   const chipRef = useRef<HTMLButtonElement | null>(null)
@@ -72,9 +68,6 @@ export function AiModelPicker({
     Promise.resolve()
       .then(() => bridge.getSettings())
       .then(setSettings, () => {})
-    Promise.resolve()
-      .then(() => bridge.gskLoggedIn?.() ?? false)
-      .then(setLoggedIn, () => {})
   }, [bridge])
 
   useEffect(() => {
@@ -99,19 +92,10 @@ export function AiModelPicker({
 
   const groups = useMemo<AiProviderPickerGroup[]>(() => {
     if (!settings) return []
-    if (subscriptionStatuses) return aiProviderPickerGroups(settings, subscriptionStatuses)
-    return aiModelPickerGroups(settings, loggedIn).map((g) => ({
-      ...g,
-      kind: 'key' as const,
-      metered: false,
-    }))
-  }, [settings, loggedIn, subscriptionStatuses])
-  const picked =
-    settings && subscriptionStatuses
-      ? aiProviderPickerSelection(settings, subscriptionStatuses)
-      : null
-  const current: AiProviderPickerSelection | null =
-    picked ?? (settings ? aiModelPickerSelection(settings) : null)
+    return aiProviderPickerGroups(settings, subscriptionStatuses ?? {})
+  }, [settings, subscriptionStatuses])
+  const picked = settings ? aiProviderPickerSelection(settings, subscriptionStatuses ?? {}) : null
+  const current: AiProviderPickerSelection | null = picked
   const sameGroup = (g: { id: string; endpoint?: string | undefined }) =>
     g.id === current?.provider && (g.id !== 'custom' || g.endpoint === current?.endpoint)
   const currentUsable = groups.some(sameGroup)

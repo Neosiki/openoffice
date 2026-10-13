@@ -104,10 +104,12 @@ describe('aiProviderPickerGroups', () => {
     expect(key[0]!.metered).toBe(false)
   })
 
-  it('never lists the removed Genspark provider, signed in or not', () => {
+  it('never lists a provider config stored under an id this build does not know', () => {
     const settings = defaultAiSettings()
-    settings.providers.genspark = { apiKey: 'k', model: 'claude-opus-5-5' }
-    expect(aiProviderPickerGroups(settings, ready).some((g) => g.id === 'genspark')).toBe(false)
+    const stored = settings.providers as Record<string, { apiKey: string; model: string }>
+    stored['retired-provider'] = { apiKey: 'k', model: 'claude-opus-5-5' }
+    const ids: string[] = aiProviderPickerGroups(settings, ready).map((g) => g.id)
+    expect(ids).not.toContain('retired-provider')
   })
 
   it('lists an accepted metered login with a cost marker', () => {
@@ -240,8 +242,8 @@ describe('selection under the subscription contract', () => {
     })
   })
 
-  it('reads a removed provider id as the automatic selection', () => {
-    const settings = { ...defaultAiSettings(), provider: 'genspark' as const }
+  it('reads an unknown provider id as the automatic selection', () => {
+    const settings = { ...defaultAiSettings(), provider: 'retired-provider' as never }
     expect(aiProviderPickerSelection(settings, ready).provider).toBe('auto')
   })
 

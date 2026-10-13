@@ -106,8 +106,8 @@ describe('"AI to use" choices', () => {
     expect(withAiSelection(settingsWith({ provider: 'auto' }), stored!).provider).toBe('auto')
   })
 
-  it('reads a removed provider id as auto', () => {
-    const settings = settingsWith({ provider: 'genspark' })
+  it('reads a provider id this build does not know as auto', () => {
+    const settings = settingsWith({ provider: 'retired-provider' as never })
     expect(aiSelectionValue(settings)).toBe('auto')
     const choices = aiSelectionChoices(settings, checkingSubscriptionStatuses())
     expect(choices.map((choice) => choice.value)).toEqual(['auto'])
@@ -210,14 +210,14 @@ describe('a change saved at once', () => {
     expect(file.writes).toBe(2)
   })
 
-  it('writes neither a removed selection nor the removed switch', async () => {
-    const legacy = settingsWith({ provider: 'genspark', gskToolsEnabled: false })
-    legacy.search = { ...legacy.search!, provider: 'genspark' }
-    const file = stubSettingsFile(legacy)
+  it('writes neither an unknown selection nor a field this build does not know', async () => {
+    const legacy = settingsWith({ provider: 'retired-provider' as never })
+    legacy.search = { ...legacy.search!, provider: 'retired-provider' as never }
+    const file = stubSettingsFile({ ...legacy, retiredSwitch: false } as AiSettings)
     await changeAiSettings((current) => ({ ...current, subscriptionNoticeSeen: true }))
     expect(file.stored).toMatchObject({ provider: 'auto', subscriptionNoticeSeen: true })
     expect(file.stored!.search?.provider).toBe('parallel')
-    expect('gskToolsEnabled' in file.stored!).toBe(false)
+    expect('retiredSwitch' in file.stored!).toBe(false)
   })
 
   it('writes nothing, and does not throw, when the file cannot be read', async () => {
@@ -228,9 +228,9 @@ describe('a change saved at once', () => {
 })
 
 describe('the Advanced key pane', () => {
-  it('lists neither the removed provider nor Claude, and keeps Codex for its path', () => {
-    const listed = advancedProviderIds(AI_PROVIDERS)
-    expect(listed).not.toContain('genspark')
+  it('lists no id outside the catalog and not Claude, and keeps Codex for its path', () => {
+    const listed = advancedProviderIds([...AI_PROVIDERS, { id: 'retired-provider' }])
+    expect(listed).not.toContain('retired-provider')
     expect(listed).not.toContain('claude-code')
     expect(listed).toContain('codex')
     expect(listed).toContain('custom')
@@ -241,12 +241,12 @@ describe('the Advanced key pane', () => {
     expect(initialAdvancedProvider({ provider: 'openai' }, AI_PROVIDERS)).toBe('openai')
     expect(initialAdvancedProvider({ provider: 'codex' }, AI_PROVIDERS)).toBe('codex')
     const first = initialAdvancedProvider({ provider: 'auto' }, AI_PROVIDERS)
-    expect(first).toBe(
-      AI_PROVIDERS.find((m) => !['genspark', 'claude-code', 'codex'].includes(m.id))!.id,
-    )
-    // a subscription or a removed id selected: the pane still opens on a key provider
+    expect(first).toBe(AI_PROVIDERS.find((m) => !['claude-code', 'codex'].includes(m.id))!.id)
+    // a subscription or an unknown id selected: the pane still opens on a key provider
     expect(initialAdvancedProvider({ provider: 'claude-code' }, AI_PROVIDERS)).toBe(first)
-    expect(initialAdvancedProvider({ provider: 'genspark' }, AI_PROVIDERS)).toBe(first)
+    expect(initialAdvancedProvider({ provider: 'retired-provider' as never }, AI_PROVIDERS)).toBe(
+      first,
+    )
   })
 })
 
@@ -261,11 +261,14 @@ describe('media choices', () => {
     expect(mediaSpecialChoices('video', true)).toEqual(['none'])
   })
 
-  it('leaves the removed provider out of every key list', () => {
+  it('lists only the providers able to serve each block', () => {
     for (const block of ['image', 'analysis', 'video'] as const) {
-      const ids = mediaKeyProviders(block, AI_MEDIA_PROVIDERS).map((meta) => meta.id)
-      expect(ids).not.toContain('genspark')
-      expect(ids.length).toBeGreaterThan(0)
+      const listed = mediaKeyProviders(block, AI_MEDIA_PROVIDERS)
+      expect(listed.length).toBeGreaterThan(0)
+      for (const meta of listed) {
+        expect(block === 'image' ? meta.imageProtocol : meta.analysisProtocol).toBeTruthy()
+        if (block === 'video') expect(meta.videoAnalysis).toBe(true)
+      }
     }
   })
 
@@ -283,13 +286,13 @@ describe('media choices', () => {
     settings.media = {
       ...settings.media!,
       imageProvider: image,
-      analysisProvider: 'genspark',
+      analysisProvider: 'retired-provider' as never,
       videoAnalysisProvider: video,
     }
     expect(mediaSelection('image', settings, AI_MEDIA_PROVIDERS, false)).toBe(image)
     expect(mediaSelection('analysis', settings, AI_MEDIA_PROVIDERS, false)).toBe('chat')
     expect(mediaSelection('video', settings, AI_MEDIA_PROVIDERS, false)).toBe(video)
-    settings.media = { ...settings.media, videoAnalysisProvider: 'genspark' }
+    settings.media = { ...settings.media, videoAnalysisProvider: 'retired-provider' as never }
     expect(mediaSelection('video', settings, AI_MEDIA_PROVIDERS, false)).toBe('none')
   })
 })

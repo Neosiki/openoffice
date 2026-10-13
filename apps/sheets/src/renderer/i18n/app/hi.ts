@@ -768,7 +768,6 @@ export const hi = {
   appFormatPaneDetail: 'अक्ष, अंतराल चौड़ाई, अलगाव',
   appGroupChartActions: 'चार्ट क्रियाएँ',
   appRemoveFromSheet: 'शीट से निकालें',
-  appGroupAiAssistant: 'AI सहायक',
   appAiOpenPanelDetail: 'चैट साइडबार',
   appGroupAiStarters: 'त्वरित प्रारंभ',
   appAiStarterDetail: 'AI पैनल पर भेजें',

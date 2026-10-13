@@ -13,7 +13,6 @@ import {
   DEFAULT_AI_PROVIDER_SELECTION,
   DEFAULT_AI_SEARCH_PROVIDER,
   DEFAULT_AI_VIDEO_ANALYSIS_PROVIDER,
-  REMOVED_AI_PROVIDER_IDS,
   normalizeAiSettings,
 } from '../src/legacy-settings'
 import { activeSearchProvider } from '../src/search-settings'
@@ -51,7 +50,6 @@ describe('normalizeAiSettings', () => {
     expect(DEFAULT_AI_ANALYSIS_PROVIDER).toBe('chat')
     expect(DEFAULT_AI_VIDEO_ANALYSIS_PROVIDER).toBe('none')
     expect(DEFAULT_AI_SEARCH_PROVIDER).toBe('parallel')
-    expect(REMOVED_AI_PROVIDER_IDS).toEqual(['genspark'])
   })
 
   it('replaces every Genspark selection with its default', () => {

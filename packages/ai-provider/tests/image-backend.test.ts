@@ -171,7 +171,7 @@ describe('resolveImageBackend', () => {
   })
 
   it('reads a removed or unknown stored selection as the default', () => {
-    for (const stored of ['genspark', 'no-such-backend', 7, null]) {
+    for (const stored of ['retired-backend', 'no-such-backend', 7, null]) {
       const settings = settingsWith('codex', { openai: 'sk-live' })
       ;(settings.media as { imageProvider: unknown }).imageProvider = stored
       expect(resolveImageBackend(settings, { ...available, codex: codex('ready') })).toEqual({
@@ -196,7 +196,7 @@ describe('imageProviderSelection', () => {
   })
 
   it('reads a removed, unknown or image-less stored id as the default', () => {
-    for (const stored of ['genspark', 'deepseek', 'nope', undefined]) {
+    for (const stored of ['retired-backend', 'deepseek', 'nope', undefined]) {
       const settings = settingsWith('codex')
       ;(settings.media as { imageProvider: unknown }).imageProvider = stored
       expect(imageProviderSelection(settings, true)).toBe('codex')

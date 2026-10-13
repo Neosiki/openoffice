@@ -768,7 +768,6 @@ export const ms = {
   appFormatPaneDetail: 'Paksi, lebar sela, pemisahan',
   appGroupChartActions: 'Tindakan carta',
   appRemoveFromSheet: 'Alih keluar daripada helaian',
-  appGroupAiAssistant: 'Pembantu AI',
   appAiOpenPanelDetail: 'Bar sisi sembang',
   appGroupAiStarters: 'Mula pantas',
   appAiStarterDetail: 'Hantar ke panel AI',

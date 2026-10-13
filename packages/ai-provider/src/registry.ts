@@ -1,6 +1,6 @@
 import { ANTHROPIC_BASE_URL } from './protocols/anthropic'
 import { GEMINI_BASE_URL } from './protocols/gemini'
-import { AI_PROVIDERS, DEEPSEEK_V41_FLASH, GENSPARK_LLM_BASE_URLS } from './providers'
+import { AI_PROVIDERS, DEEPSEEK_V41_FLASH } from './providers'
 import type { AiProviderConfig, AiProviderId, AiProviderMeta, AiProviderSelection } from './types'
 
 /** Wire protocols every provider maps onto, including the Codex app-server and Claude Code CLI bridges. */
@@ -8,8 +8,8 @@ export type AiProtocol =
   'anthropic' | 'gemini' | 'openai-compatible' | 'codex-app-server' | 'claude-code-cli'
 
 export interface ProviderCapabilities {
-  /** How the provider authenticates: app login, user key, or the Codex / Claude Code CLI's existing login. */
-  auth: 'gsk-login' | 'api-key' | 'codex-chatgpt' | 'claude-subscription'
+  /** How the provider authenticates: user key, or the Codex / Claude Code CLI's existing login. */
+  auth: 'api-key' | 'codex-chatgpt' | 'claude-subscription'
   /** chat models accept image input (declarative; for custom endpoints it is assumed, not known) */
   vision: boolean
 }
@@ -40,7 +40,7 @@ function metaOf(id: AiProviderId): AiProviderMeta {
 
 /**
  * Model families that fix sampling and reject a temperature field, on any
- * route — vendor API, the Genspark proxy, OpenRouter's vendor-prefixed ids,
+ * route — vendor API, OpenRouter's vendor-prefixed ids,
  * or a mirror behind a custom base URL. Kimi K3 answers "only 1 is allowed";
  * OpenAI's GPT-5 and GPT-6 reasoning families reject any temperature other
  * than the default outright, and the o-series reasoning models (o1/o3/o4) likewise
@@ -200,23 +200,6 @@ function fixedEndpoint(
 }
 
 export const AI_PROVIDER_ADAPTERS: Record<AiProviderId, ProviderAdapter> = {
-  genspark: {
-    meta: metaOf('genspark'),
-    capabilities: { auth: 'gsk-login', vision: true },
-    // Route by model id prefix: claude uses the Anthropic protocol (preserves image
-    // input fidelity), the rest OpenAI-compatible. The proxy's gemini endpoint was
-    // removed server-side (405 as of 2026-08-31) along with its gemini models.
-    resolveEndpoint(config) {
-      if (config.model.startsWith('claude')) {
-        return { protocol: 'anthropic', baseUrl: GENSPARK_LLM_BASE_URLS.anthropic }
-      }
-      return {
-        protocol: 'openai-compatible',
-        baseUrl: GENSPARK_LLM_BASE_URLS.openai,
-        ...(modelHasFixedSampling(config.model) ? { omitTemperature: true } : {}),
-      }
-    },
-  },
   'claude-code': {
     meta: metaOf('claude-code'),
     capabilities: { auth: 'claude-subscription', vision: true },
@@ -257,7 +240,7 @@ export const AI_PROVIDER_ADAPTERS: Record<AiProviderId, ProviderAdapter> = {
     meta: metaOf('openai'),
     capabilities: { auth: 'api-key', vision: true },
     // every current OpenAI model accepts the renamed field, so it is safe endpoint-wide;
-    // other openai-compatible vendors (and the LiteLLM-backed Genspark proxy) still expect `max_tokens`
+    // other openai-compatible vendors still expect `max_tokens`
     resolveEndpoint: fixedEndpoint('openai-compatible', 'https://api.openai.com/v1', {
       useMaxCompletionTokens: true,
     }),

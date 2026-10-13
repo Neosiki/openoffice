@@ -101,7 +101,6 @@ describe('analyze_media, image analysis through the AI provider (`chat`)', () =>
     expect(r.text).toBeUndefined()
     expect(r.errorCode).toBe('unavailable')
     expect(r.error).toMatch(/Settings/)
-    expect(r.error).not.toMatch(/genspark/i)
     expect(stream).not.toHaveBeenCalled()
   })
 
@@ -200,7 +199,6 @@ describe('analyze_media, video and audio', () => {
     expect(r.errorCode).toBe('unavailable')
     expect(r.error).toMatch(/video/i)
     expect(r.error).toMatch(/Settings/)
-    expect(r.error).not.toMatch(/genspark/i)
     expect(stream).not.toHaveBeenCalled()
     expect(keyAnalyze).not.toHaveBeenCalled()
   })

@@ -18,9 +18,6 @@ import {
 import { parallelMcpSearch } from './parallel-mcp'
 
 export type { ImageSearchResult, WebSearchResult } from './shared'
-// the Genspark modules are no longer called from here; they stay exported for the callers not migrated yet
-export * from './gsk'
-export * from './genoffice-auth'
 export * from './media-tools'
 export * from './search-tools'
 export * from './codex-image-generator'
@@ -42,8 +39,6 @@ const FIRECRAWL_KEY = () => process.env.FIRECRAWL_API_KEY ?? ''
  * search behind the user's selection, and name the chosen backend so it runs first.
  */
 export interface SearchOptions {
-  /** ignored: the Genspark backend it switched is no longer asked */
-  useGsk?: boolean
   serperKey?: string
   serplyKey?: string
   tavilyKey?: string
@@ -79,7 +74,6 @@ export function searchEnvKey(backend: NonNullable<SearchOptions['prefer']>): str
 function normalizeOptions(opts: boolean | SearchOptions | undefined): Required<SearchOptions> {
   const o = typeof opts === 'boolean' ? {} : (opts ?? {})
   return {
-    useGsk: false,
     serperKey: o.serperKey ?? SERPER_KEY(),
     serplyKey: o.serplyKey ?? SERPLY_KEY(),
     tavilyKey: o.tavilyKey ?? TAVILY_KEY(),

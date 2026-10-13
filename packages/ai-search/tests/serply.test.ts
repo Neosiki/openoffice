@@ -10,11 +10,11 @@ const webResponse = () =>
     results: [
       {
         title: 'GenOffice',
-        link: 'https://genoffice.ai/',
+        link: 'https://office.example.com/',
         description: 'A free, open-source office suite.',
       },
       { title: 'Not a page', link: 'javascript:void(0)', description: 'dropped' },
-      { title: 'Docs', link: 'https://genoffice.ai/docs', description: 'Documentation.' },
+      { title: 'Docs', link: 'https://office.example.com/docs', description: 'Documentation.' },
     ],
     answers: [],
   })
@@ -27,7 +27,6 @@ const fallback = () =>
   new Response('<a class="result__a" href="https://fallback.example.com">Fallback</a>')
 
 beforeEach(() => {
-  vi.stubEnv('AI_SEARCH_DISABLE_GSK', '1')
   for (const key of ['SERPER_API_KEY', 'SERPLY_API_KEY', 'TAVILY_API_KEY', 'PARALLEL_API_KEY'])
     vi.stubEnv(key, '')
 })
@@ -42,7 +41,6 @@ describe('Serply web search', () => {
     const fetch = vi.fn<typeof globalThis.fetch>(async () => webResponse())
     vi.stubGlobal('fetch', fetch)
     const r = await webSearch('genoffice', 5, {
-      useGsk: false,
       serplyKey: 'user-key',
       serperKey: 'serper-key',
       prefer: 'serply',
@@ -51,10 +49,10 @@ describe('Serply web search', () => {
       results: [
         {
           title: 'GenOffice',
-          url: 'https://genoffice.ai/',
+          url: 'https://office.example.com/',
           snippet: 'A free, open-source office suite.',
         },
-        { title: 'Docs', url: 'https://genoffice.ai/docs', snippet: 'Documentation.' },
+        { title: 'Docs', url: 'https://office.example.com/docs', snippet: 'Documentation.' },
       ],
       method: 'serply',
     })
@@ -76,7 +74,7 @@ describe('Serply web search', () => {
     )
     const r = await webSearch('genoffice', 1)
     expect(r.method).toBe('serply')
-    expect(r.results.map((x) => x.url)).toEqual(['https://genoffice.ai/'])
+    expect(r.results.map((x) => x.url)).toEqual(['https://office.example.com/'])
   })
 
   it('falls through to the next backend when Serply rejects the key', async () => {
@@ -93,7 +91,6 @@ describe('Serply web search', () => {
       }),
     )
     const r = await webSearch('genoffice', 3, {
-      useGsk: false,
       serplyKey: 'bad-key',
       prefer: 'serply',
     })
@@ -126,7 +123,6 @@ describe('Serply image search', () => {
     )
     vi.stubGlobal('fetch', fetch)
     const r = await imageSearch('eiffel tower', 2, {
-      useGsk: false,
       serplyKey: 'user-key',
       serperKey: 'serper-key',
       prefer: 'serply',
@@ -170,7 +166,7 @@ describe('Serply image search', () => {
         })
       }),
     )
-    const r = await imageSearch('cats', 3, { useGsk: false, serplyKey: 'a', serperKey: 'b' })
+    const r = await imageSearch('cats', 3, { serplyKey: 'a', serperKey: 'b' })
     expect(r.method).toBe('serper')
     expect(urls).toEqual(['https://google.serper.dev/images'])
   })
@@ -187,7 +183,6 @@ describe('Serply settings wiring', () => {
       },
     }
     expect(searchOptionsFromSettings(settings)).toMatchObject({
-      useGsk: false,
       serplyKey: 'k',
       prefer: 'serply',
     })

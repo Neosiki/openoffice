@@ -584,7 +584,6 @@ describe('AiModelPicker under the subscription contract', () => {
     const bridge: AiModelPickerBridge = {
       getSettings: async () => settings,
       setSettings,
-      gskLoggedIn: async () => false,
     }
     await act(async () => {
       root.render(createElement(AiModelPicker, { bridge, lang: 'en', subscriptionStatuses }))
@@ -775,18 +774,18 @@ describe('AiModelPicker under the subscription contract', () => {
       expect(codexLine()).toEqual([])
     })
 
-    it('is not shown by the earlier picker, which lists no subscription group', async () => {
+    it('is absent without subscription statuses, which list no subscription group', async () => {
       const settings = defaultAiSettings()
       settings.provider = 'codex'
       settings.providers.codex = { apiKey: '', model: 'gpt-next' }
       await mount(settings)
       open()
-      expect(heads().flat()).toContain('Codex CLI')
+      expect(heads()).toEqual([])
       expect(codexLine()).toEqual([])
     })
   })
 
-  it('keeps its earlier behavior without subscription statuses', async () => {
+  it('lists only the key providers without subscription statuses', async () => {
     const settings = defaultAiSettings()
     settings.provider = 'anthropic'
     settings.providers.anthropic = { apiKey: 'k', model: 'claude-next' }

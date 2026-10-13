@@ -736,7 +736,6 @@ export const th = {
   appFormatPaneDetail: 'แกน ความกว้างช่องว่าง การแยกชิ้น',
   appGroupChartActions: 'การดำเนินการกับแผนภูมิ',
   appRemoveFromSheet: 'เอาออกจากแผ่นงาน',
-  appGroupAiAssistant: 'ผู้ช่วย AI',
   appAiOpenPanelDetail: 'แถบด้านข้างสนทนา',
   appGroupAiStarters: 'เริ่มด่วน',
   appAiStarterDetail: 'ส่งไปยังแผง AI',

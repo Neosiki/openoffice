@@ -615,7 +615,7 @@ html.genoffice-popover-open .ribbon-tabs {
 }
 
 /* Slim visible scrollbar so mouse users can reach overflowed groups
-   (genspark-ai/genoffice#55 precedent from the sheets ribbon). */
+   (genoffice#55 precedent from the sheets ribbon). */
 .ribbon-body::-webkit-scrollbar {
   height: 5px;
 }

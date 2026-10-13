@@ -769,7 +769,6 @@ export const cs = {
   appFormatPaneDetail: 'Osa, šířka mezery, odsazení',
   appGroupChartActions: 'Akce grafu',
   appRemoveFromSheet: 'Odebrat z listu',
-  appGroupAiAssistant: 'Asistent AI',
   appAiOpenPanelDetail: 'Postranní panel chatu',
   appGroupAiStarters: 'Rychlý start',
   appAiStarterDetail: 'Odeslat do panelu AI',

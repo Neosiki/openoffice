@@ -787,7 +787,6 @@ export const ko = {
   appGroupChartActions: '차트 작업',
   appRemoveFromSheet: '시트에서 제거',
   // AI Tab
-  appGroupAiAssistant: 'AI 도우미',
   appAiOpenPanelDetail: '사이드바 대화',
   appGroupAiStarters: '빠른 시작',
   appAiStarterDetail: 'AI 패널로 보내기',

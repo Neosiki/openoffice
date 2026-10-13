@@ -104,7 +104,6 @@ describe('generate_image backend at request start', () => {
     expect(r.url).toBeUndefined()
     expect(r.errorCode).toBe('unavailable')
     expect(r.error).toMatch(/Settings/)
-    expect(r.error).not.toMatch(/genspark/i)
     expect(codexGen).not.toHaveBeenCalled()
     expect(keyGen).not.toHaveBeenCalled()
   })
@@ -194,16 +193,15 @@ describe('generate_image backend at request start', () => {
     const key = await generateImageTool(
       writeSettings({ media: keyMedia({ imageProvider: 'codex' }, 'openai') }),
       { prompt: 'a logo' },
-      // the old option names still compile and are ignored
-      { notLoggedInError: 'sign in first', mediaRoots: [] },
+      { mediaRoots: [] },
     )
     expect(key.url).toMatch(/^file:/)
     expect(codexGen).not.toHaveBeenCalled()
   })
 
-  it('reads a removed provider id in the settings file as the default selection', async () => {
+  it('reads an unknown provider id in the settings file as the default selection', async () => {
     const settings = writeSettings({
-      media: keyMedia({ imageProvider: 'genspark' }, 'openai'),
+      media: keyMedia({ imageProvider: 'retired-provider' }, 'openai'),
     })
     await generateImageTool(
       settings,

@@ -342,13 +342,13 @@ export interface HomeApi {
   onDocumentThemeChanged(handler: (theme: DocTheme) => void): () => void
   /** open the public GitHub repository in the default browser */
   openGitHubRepo(): Promise<void>
-  /** AI settings (userData/ai-settings.json, shared by every editor); the genspark key never appears here */
+  /** AI settings (userData/ai-settings.json, shared by every editor) */
   getAiSettings(): Promise<AiSettings>
   /** persist AI settings; every renderer gets ai:settings-changed and re-reads */
   setAiSettings(settings: AiSettings): Promise<void>
   /** ai-settings.json was rewritten by any renderer (composer model chip, another window) */
   onAiSettingsChanged(handler: () => void): () => void
-  /** provider catalog with each fixed endpoint's default base URL (empty for genspark/custom) */
+  /** provider catalog with each fixed endpoint's default base URL (empty for custom) */
   getAiProviders(): AiCatalogEntry[]
   /** live Codex model catalog discovered through the current or overridden app-server */
   getCodexModels(cliPath?: string): Promise<CodexModelCatalog>
@@ -358,14 +358,14 @@ export interface HomeApi {
   testAiSettings(settings: AiSettings): Promise<AiChatResponse>
   /** image generation / media analysis provider catalog */
   getAiMediaProviders(): AiMediaProviderMeta[]
-  /** credential check for a (possibly unsaved) media provider; genspark reports the gsk login state */
+  /** credential check for a (possibly unsaved) media provider */
   testAiMediaSettings(input: {
     provider: AiMediaProviderId
     config: AiMediaProviderConfig
   }): Promise<{ ok: boolean; error?: string }>
   /** web search provider catalog */
   getAiSearchProviders(): AiSearchProviderMeta[]
-  /** one minimal query against the given key (genspark reports the gsk login state) */
+  /** one minimal query against the given key */
   testAiSearchSettings(input: {
     provider: AiSearchProviderId
     apiKey: string

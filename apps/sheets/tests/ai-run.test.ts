@@ -53,10 +53,12 @@ function withKeyProvider(): AiSettings {
 }
 
 describe('aiSettingsFromStored (ai:get-settings)', () => {
-  it('reads a file from before the subscription providers as automatic, without the cloud-tools switch', () => {
-    const settings = aiSettingsFromStored(file({ provider: 'genspark', gskToolsEnabled: false }))
+  it('reads a file from before the subscription providers as automatic, without the switch that was removed', () => {
+    const settings = aiSettingsFromStored(
+      file({ provider: 'retired-provider', retiredSwitch: false }),
+    )
     expect(settings.provider).toBe('auto')
-    expect('gskToolsEnabled' in settings).toBe(false)
+    expect('retiredSwitch' in settings).toBe(false)
     expect(settings.media?.imageProvider).toBe('codex')
     expect(settings.search?.provider).toBe('parallel')
   })
@@ -120,8 +122,8 @@ describe('resolveAiRunTarget', () => {
     if (!target.ok) expect(target.block.errorCode).toBe('not-connected')
   })
 
-  it('reads the removed provider id as automatic', () => {
-    const target = resolveAiRunTarget(file({ provider: 'genspark' }), {
+  it('reads a provider id this build does not know as automatic', () => {
+    const target = resolveAiRunTarget(file({ provider: 'retired-provider' }), {
       codex: status('codex', 'ready'),
     })
     expect(target.ok && target.provider).toBe('codex')

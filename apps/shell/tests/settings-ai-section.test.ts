@@ -229,21 +229,21 @@ function lastSaved(): AiSettings {
   return setAiSettings.mock.calls.at(-1)![0]
 }
 
-/** a settings file from before the subscription providers: everything on the removed provider */
+/** a settings file from before the subscription providers: everything on a provider this build does not know */
 function legacySettings(): AiSettings {
   const settings = defaultAiSettings()
   return {
     ...settings,
-    provider: 'genspark',
-    gskToolsEnabled: false,
+    provider: 'retired-provider',
+    retiredSwitch: false,
     media: {
       ...settings.media!,
-      imageProvider: 'genspark',
-      analysisProvider: 'genspark',
-      videoAnalysisProvider: 'genspark',
+      imageProvider: 'retired-provider',
+      analysisProvider: 'retired-provider',
+      videoAnalysisProvider: 'retired-provider',
     },
-    search: { ...settings.search!, provider: 'genspark' },
-  }
+    search: { ...settings.search!, provider: 'retired-provider' },
+  } as unknown as AiSettings
 }
 
 function withOpenAiKey(settings: AiSettings): AiSettings {
@@ -281,7 +281,6 @@ describe('the default view', () => {
     expect(host.querySelector('.set-input')).toBeNull()
     expect(host.textContent).not.toContain('API Key')
     expect(host.querySelector('.set-adv-toggle')?.getAttribute('aria-expanded')).toBe('false')
-    expect(host.textContent).not.toMatch(/genspark/i)
   })
 
   it('keeps the key panes under Advanced, one area at a time', async () => {
@@ -308,14 +307,13 @@ describe('the default view', () => {
     expect(host.querySelector('input[type="password"]')).toBeNull()
   })
 
-  it('offers neither the removed provider nor Claude in the key pane', async () => {
+  it('does not offer Claude in the key pane', async () => {
     installHome(defaultAiSettings())
     installSubscription(statusMap('ready', 'ready'))
     await openModal()
     await openAiSection()
     await openAdvanced()
     const labels = (await optionsOf('Provider')).map((option) => option.label)
-    expect(labels).not.toContain('Genspark')
     expect(labels).not.toContain('Claude Code')
     // "Claude" here is the Anthropic key provider; Codex stays for the path of a custom install
     expect(labels).toContain('Codex CLI')
@@ -344,7 +342,7 @@ describe('the default view', () => {
       'ClaudeConnected · max',
       'CodexNot installed',
     ])
-    expect(host.textContent).not.toMatch(/genspark|credits/i)
+    expect(host.textContent).not.toMatch(/credits/i)
 
     await click(button('Manage connections'))
     expect(nav('AI')?.classList.contains('active')).toBe(true)
@@ -641,7 +639,6 @@ describe('media providers', () => {
     await openMedia()
     const labels = (await optionsOf('Image generation')).map((option) => option.label)
     expect(labels.slice(0, 2)).toEqual(['Codex subscription', 'None selected'])
-    expect(labels).not.toContain('Genspark')
     expect(dropdown('Image generation')?.textContent).toBe('Codex subscription')
     // no key rows for a selection that needs none, and the Codex line is shown
     expect(host.querySelector('#set-ai-image-key')).toBeNull()
@@ -656,7 +653,6 @@ describe('media providers', () => {
     expect(dropdown('Video analysis')?.textContent).toBe('None selected')
     expect((await optionsOf('Image analysis'))[0]!.label).toBe('Ask the current AI directly')
     expect((await optionsOf('Video analysis'))[0]!.label).toBe('None selected')
-    expect((await optionsOf('Web search')).map((option) => option.label)).not.toContain('Genspark')
     expect(host.querySelector('#set-ai-analysis-key')).toBeNull()
     expect(host.querySelector('#set-ai-video-key')).toBeNull()
   })
@@ -679,7 +675,7 @@ describe('media providers', () => {
 
 describe('saving', () => {
   function expectClean(saved: AiSettings): void {
-    expect('gskToolsEnabled' in saved).toBe(false)
+    expect('retiredSwitch' in saved).toBe(false)
     expect(saved.provider).toBe('auto')
     expect(saved.media).toMatchObject({
       imageProvider: 'codex',

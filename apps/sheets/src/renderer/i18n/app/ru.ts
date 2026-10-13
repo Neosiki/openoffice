@@ -787,7 +787,6 @@ export const ru = {
   appFormatPaneDetail: 'Оси, боковой зазор, вырезание',
   appGroupChartActions: 'Действия с диаграммой',
   appRemoveFromSheet: 'Удалить с листа',
-  appGroupAiAssistant: 'Помощник ИИ',
   appAiOpenPanelDetail: 'Чат в боковой панели',
   appGroupAiStarters: 'Быстрый старт',
   appAiStarterDetail: 'Отправить в панель ИИ',

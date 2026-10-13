@@ -257,7 +257,7 @@ describe('selectAiProvider with an explicit selection', () => {
   })
 
   it('treats a removed or unknown stored id as auto', () => {
-    for (const stored of ['genspark', 'no-such-provider', '', 42, null, undefined]) {
+    for (const stored of ['retired-provider', 'no-such-provider', '', 42, null, undefined]) {
       const settings = settingsWith('auto')
       ;(settings as { provider: unknown }).provider = stored
       expect(selectAiProvider(settings, statuses('signed-out', 'ready'))).toEqual({
@@ -303,6 +303,6 @@ describe('subscription helpers', () => {
     settings.providers.codex = { apiKey: 'sk-x', model: 'gpt-x', cliPath: '' }
     expect(isKeyProviderConfigured(settings, 'codex')).toBe(false)
     expect(isKeyProviderConfigured(settings, 'claude-code')).toBe(false)
-    expect(isKeyProviderConfigured(settings, 'genspark')).toBe(false)
+    expect(isKeyProviderConfigured(settings, 'no-such-provider' as never)).toBe(false)
   })
 })

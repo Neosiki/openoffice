@@ -820,7 +820,6 @@ export const de = {
   appFormatPaneDetail: 'Achsen, Abstandsbreite, Explosion',
   appGroupChartActions: 'Diagrammaktionen',
   appRemoveFromSheet: 'Vom Blatt entfernen',
-  appGroupAiAssistant: 'KI-Assistent',
   appAiOpenPanelDetail: 'Chat-Seitenleiste',
   appGroupAiStarters: 'Schnellstart',
   appAiStarterDetail: 'An KI-Bereich senden',

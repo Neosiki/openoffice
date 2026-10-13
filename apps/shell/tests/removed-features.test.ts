@@ -78,30 +78,26 @@ describe('removed shell modules', () => {
     expect(matching(/\banalytics\b|\btrack\(\s*['"]/i, main)).toEqual([])
     expect(matching(/StarPrompt|starPrompt|fetchGithubStars|stargazers/, main)).toEqual([])
     expect(matching(/cloudProject|CloudProject/, main)).toEqual([])
-    expect(matching(/CREDIT_USAGE_URL|GENTEAM_URL|credit-usage/, main)).toEqual([])
-    expect(matching(/genspark\.ai|genoffice\.ai/i, main)).toEqual([])
-    expect(
-      matching(/gskLoginInfo|startGenofficeLogin|genofficeLogout|watchGskApiKey|setGskProxyUrl/),
-    ).toEqual([])
+    expect(matching(/CREDIT_USAGE_URL|credit-usage/, main)).toEqual([])
+    expect(matching(/startGenofficeLogin|genofficeLogout/)).toEqual([])
   })
 
   it('leave no caller behind in the renderer and the preload', () => {
     const removed =
-      /\b(accountStatus|accountLogin|onAccountLogin|openLoginUrl|accountLogout|aiGskStatus|getAnalyticsEnabled|setAnalyticsEnabled|openGenTeam|openCreditUsage|githubStars|starPromptShouldShow|starPromptAction|cloudProjectsCached|cloudProjectsSync|openCloudProject)\b/
+      /\b(accountStatus|accountLogin|onAccountLogin|openLoginUrl|accountLogout|getAnalyticsEnabled|setAnalyticsEnabled|openCreditUsage|githubStars|starPromptShouldShow|starPromptAction|cloudProjectsCached|cloudProjectsSync|openCloudProject)\b/
     expect(matching(removed, isDictionary)).toEqual([])
     expect(
       matching(/AccountStatus|AccountLoginEvent|CloudProjectsSnapshot|StarPromptShow/),
     ).toEqual([])
-    expect(matching(/ai:gsk-status/)).toEqual([])
   })
 })
 
 describe('home IPC contract', () => {
   it('has no channel of a removed feature', () => {
     const names = Object.keys(HOME_CHANNELS).join(' ')
-    expect(names).not.toMatch(/account|analytics|starPrompt|githubStars|cloud|credit|genteam/i)
+    expect(names).not.toMatch(/account|analytics|starPrompt|githubStars|cloud|credit/i)
     expect(Object.values(HOME_CHANNELS).join(' ')).not.toMatch(
-      /account|analytics|star-prompt|github-stars|cloud|credit|genteam/i,
+      /account|analytics|star-prompt|github-stars|cloud|credit/i,
     )
     // the onboarding flag and the link to the project stay
     expect(HOME_CHANNELS.setOnboardingSeen).toBe('home:set-onboarding-seen')
@@ -119,9 +115,13 @@ describe('home preload API', () => {
 
   it('exposes no member of a removed feature', () => {
     const members = Object.keys(homeApi)
-    expect(
-      members.filter((name) => /account|analytics|gsk|star|cloud|credit|genteam/i.test(name)),
-    ).toEqual(['starred', 'starredGroups', 'setStarredGroup', 'toggleStar', 'unstarPaths'])
+    expect(members.filter((name) => /account|analytics|star|cloud|credit/i.test(name))).toEqual([
+      'starred',
+      'starredGroups',
+      'setStarredGroup',
+      'toggleStar',
+      'unstarPaths',
+    ])
   })
 
   it('still records that the onboarding was finished', async () => {
