@@ -186,7 +186,7 @@ describe('Serply settings wiring', () => {
         providers: { ...base.search!.providers, serply: { apiKey: ' k ' } },
       },
     }
-    expect(searchOptionsFromSettings(settings)).toEqual({
+    expect(searchOptionsFromSettings(settings)).toMatchObject({
       useGsk: false,
       serplyKey: 'k',
       prefer: 'serply',

@@ -1,21 +1,24 @@
 /**
- * generate_image / analyze_media for the five editors' main processes: one
- * place that reads ai-settings.json live, routes to the BYOK media provider
- * when one is configured, and otherwise to the Genspark CLI behind the usual
- * login + cloud-tools gate. BYOK providers answer with bytes; those land in
- * the local generated-image store and come back as a file:// URL that the
- * insert pipelines' fetchRemoteImage accepts.
+ * generate_image / analyze_media for the editors' main processes and the CLI:
+ * one place that reads ai-settings.json live and starts the request on the
+ * route tool-routing.ts picks: the Codex subscription or a key provider for
+ * images, the AI provider the chat runs on or a key provider for analysis.
+ * Providers answer with bytes; those land in the local generated-image store
+ * and come back as a file:// URL that the insert pipelines' fetchRemoteImage
+ * accepts.
  */
 
 import { existsSync, readFileSync, realpathSync, statSync } from 'node:fs'
 import { basename, dirname, extname, sep } from 'node:path'
 import {
-  activeMediaConfig,
+  aiStreamErrorFields,
   analyzeMediaWithProvider,
-  cloudToolsEnabled,
   defaultAiSettings,
   generateImageWithProvider,
+  maxOutputTokensOf,
+  normalizeAiSettings,
   resolveAiSettings,
+  type AiRunErrorKind,
   type AiSettings,
   type LegacyAiSettings,
   type MediaBlob,
@@ -28,12 +31,17 @@ import {
   readBodyCapped,
 } from '@genoffice/electron-utils/remote-image'
 import { fetchWithSsrfGuard } from '@genoffice/electron-utils/safe-remote-url'
-import { gskAnalyzeMedia, gskGenerateImage, hasGskAuth, type GskGenerateImageOptions } from './gsk'
-
-export const GSK_NOT_LOGGED_IN_ERROR =
-  'Genspark account is not logged in on this machine; ask the user to log in first'
-export const GSK_TOOLS_OFF_ERROR =
-  'Genspark cloud tools are turned off in Settings (AI Model); enable them or configure an image provider under Settings (AI Media) to use this tool'
+import { analyzeImagesWithChatProvider } from './chat-analysis'
+import { codexImageGenerator, type CodexImageRequest } from './codex-image-generator'
+import { runHeadlessSubscriptionCall } from './headless-ledger'
+import {
+  SCREEN_TOOL_CONTEXT,
+  imageGenerationUnavailableMessage,
+  resolveImageAnalysisRoute,
+  resolveImageRoute,
+  resolveVideoAnalysisRoute,
+  type AiToolCallContext,
+} from './tool-routing'
 
 /** 200 MB: enough for a long clip through the Gemini Files API, small enough to hold in memory */
 const MAX_MEDIA_BYTES = 200 * 1024 * 1024
@@ -57,13 +65,13 @@ export const MEDIA_BUDGET = {
   concurrency: MEDIA_LOAD_CONCURRENCY,
 } as const
 
-/** the only load failure that may hand the request back to Genspark; validation failures never do */
+/** a reference over the size cap, as opposed to one that failed validation */
 export class MediaTooLargeError extends Error {}
 
-/** Subclasses MediaTooLargeError so the existing "too big, try Genspark" fallback applies. */
+/** The request as a whole is over its item or byte budget. */
 export class MediaBudgetExceededError extends MediaTooLargeError {}
 
-/** The item ceiling in one place, so the Genspark route rejects like the BYOK one. */
+/** The item ceiling in one place. */
 function assertMediaItemCount(count: number, maxItems: number): void {
   if (count > maxItems) {
     throw new MediaBudgetExceededError(
@@ -115,7 +123,10 @@ export function readAiSettingsFile(path: string): AiSettings {
   return resolveAiSettings(stored, defaultAiSettings())
 }
 
-type Gate = { error: string } | null
+/** The settings the tools route on: a removed or unknown selection reads as its default. */
+function readRoutingSettings(path: string): AiSettings {
+  return normalizeAiSettings(readAiSettingsFile(path))
+}
 
 /** no allowlist configured: the extension check alone decides */
 const NO_MEDIA_ROOTS: readonly string[] = []
@@ -169,13 +180,6 @@ export function isLocalMediaPathAllowed(
   roots: readonly string[] = NO_MEDIA_ROOTS,
 ): boolean {
   return verifiedLocalPath(ref, roots) !== null
-}
-
-/** the Genspark route's preconditions; null when it may proceed */
-function gskGate(settings: AiSettings, notLoggedInError: string): Gate {
-  if (!hasGskAuth()) return { error: notLoggedInError }
-  if (!cloudToolsEnabled(settings)) return { error: GSK_TOOLS_OFF_ERROR }
-  return null
 }
 
 function errorText(err: unknown): string {
@@ -249,10 +253,58 @@ export async function loadMediaReference(
 }
 
 export interface MediaToolOptions {
-  /** localized replacement for the default signed-out message */
+  /** ignored: it replaced the signed-out message of a route that no longer exists */
   notLoggedInError?: string
   /** directories a bare local path may be read from; omitted = extension check only */
   mediaRoots?: readonly string[]
+  /** who is asking; omitted = the screen path with no subscription connected (key routes only) */
+  context?: AiToolCallContext | undefined
+  /** cancels the request */
+  signal?: AbortSignal | undefined
+}
+
+/** `unavailable`: nothing is connected or configured for the request; otherwise the cause of a failed run */
+export type MediaToolErrorCode = 'unavailable' | AiRunErrorKind
+
+export interface MediaToolFailure {
+  error?: string
+  errorCode?: MediaToolErrorCode
+  /** epoch ms at which a used-up limit frees again (`rate-limit`, `headless-limit`) */
+  resetsAt?: number
+}
+
+export interface GenerateImageToolResult extends MediaToolFailure {
+  url?: string
+  /** something the caller asked for was not done; worth passing on to the model with the URL */
+  note?: string
+}
+
+export interface AnalyzeMediaToolResult extends MediaToolFailure {
+  text?: string
+}
+
+function failure(err: unknown): MediaToolFailure {
+  const cause = aiStreamErrorFields(err)
+  return {
+    error: errorText(err),
+    ...(cause.errorCode ? { errorCode: cause.errorCode } : {}),
+    ...(cause.errorResetsAt !== undefined ? { resetsAt: cause.errorResetsAt } : {}),
+  }
+}
+
+/**
+ * A request that runs on a subscription login. On the automatic-call path it
+ * waits its turn and takes one slot of the hourly allowance; on the screen
+ * path it just runs.
+ */
+function onSubscription<T>(
+  context: AiToolCallContext,
+  run: () => Promise<T>,
+  signal: AbortSignal | undefined,
+): Promise<T> {
+  return context.path === 'headless' && context.dataDir
+    ? runHeadlessSubscriptionCall(context.dataDir, run, { signal })
+    : run()
 }
 
 export interface MediaBudget {
@@ -310,61 +362,85 @@ export async function loadMediaReferences(
   return blobs
 }
 
-/** Genspark background-removal model — chained after generation for transparentBackground */
-export const GSK_RMBG_MODEL = 'fal-bria-rmbg'
+const MODEL_IGNORED_NOTE =
+  'The `model` option is no longer supported and was ignored: special-purpose image models (background removal, upscaling, outpainting, text removal) are gone, and the image was generated with the configured image backend.'
 
-export type GenerateImageToolOp = GskGenerateImageOptions & {
-  /** The result must have real PNG alpha (icons/logos/cutouts). Generation models cannot
-   * produce transparency from the prompt alone — they paint a fake gray checkerboard into
-   * the pixels — so the tool strips the background in a second pass instead. */
-  transparentBackground?: boolean
+const CODEX_NO_REFERENCES_ERROR =
+  'Reference images are not supported when images are generated through the Codex subscription. Call again without referenceImageUrls, or select an image provider key under Settings > AI > Advanced to edit images.'
+
+export interface GenerateImageToolOp {
+  /** Image description (English works better; text that must appear in the image stays verbatim) */
+  prompt: string
+  /** ignored, with a note in the result: it named special-purpose models that no longer exist */
+  model?: string | undefined
+  /** Reference/edit-target images (URLs or local paths); key providers only */
+  referenceImageUrls?: string[] | undefined
+  /** 1:1 | 4:3 | 16:9 | 9:16 | 3:4 | 2:3 | 3:2 | auto */
+  aspectRatio?: string | undefined
+  /** auto | 0.5k | 1k | 2k | 3k | 4k; only the Codex backend takes a size */
+  imageSize?: string | undefined
+  /** The result must have real PNG alpha (icons/logos/cutouts). Passed to the backend's own
+   * alpha control where it has one; there is no separate background-removal pass. */
+  transparentBackground?: boolean | undefined
 }
 
 export async function generateImageTool(
   settingsPath: string,
   op: GenerateImageToolOp,
   options: MediaToolOptions = {},
-): Promise<{ url?: string; error?: string }> {
+): Promise<GenerateImageToolResult> {
   const prompt = String(op.prompt ?? '').trim()
   if (!prompt) return { error: 'prompt must not be empty' }
   const mediaRoots = options.mediaRoots ?? NO_MEDIA_ROOTS
-  const settings = readAiSettingsFile(settingsPath)
-  const byok = activeMediaConfig(settings, 'image')
+  const context = options.context ?? SCREEN_TOOL_CONTEXT
+  const settings = readRoutingSettings(settingsPath)
+  // chosen once, here: a request that fails below ends in its error and is not retried elsewhere
+  const backend = resolveImageRoute(settings, context)
+  const unavailable = (): GenerateImageToolResult => ({
+    error: imageGenerationUnavailableMessage(settings, context),
+    errorCode: 'unavailable',
+  })
+  if (backend.kind === 'none') return unavailable()
+  const note = op.model ? { note: MODEL_IGNORED_NOTE } : {}
   try {
-    if (!byok) {
-      const gate = gskGate(settings, options.notLoggedInError ?? GSK_NOT_LOGGED_IN_ERROR)
-      if (gate) return gate
-      // gskGenerateImage hands the references straight to the CLI argv, so this route
-      // enforces the same item ceiling as the BYOK one instead of passing them on
-      assertMediaItemCount(op.referenceImageUrls?.length ?? 0, MEDIA_BUDGET.maxItems)
-      const gen = await gskGenerateImage({ ...op, prompt })
-      if (!op.transparentBackground || op.model === GSK_RMBG_MODEL) return { url: gen.url }
-      try {
-        const cut = await gskGenerateImage({
-          prompt: 'remove the background completely, keep only the subject',
-          model: GSK_RMBG_MODEL,
-          referenceImageUrls: [gen.url],
-        })
-        return { url: cut.url }
-      } catch {
-        return { url: gen.url } // strip failed: the opaque image is still usable
+    if (backend.kind === 'codex') {
+      // the route is `codex` only while a generator is registered
+      const generate = codexImageGenerator()
+      if (!generate) return unavailable()
+      // the generator takes a prompt only: an edit request must not come back as an unrelated picture
+      if (op.referenceImageUrls?.length) return { error: CODEX_NO_REFERENCES_ERROR }
+      const request: CodexImageRequest = {
+        prompt,
+        aspectRatio: op.aspectRatio,
+        imageSize: op.imageSize,
+        transparent: op.transparentBackground === true,
+        signal: options.signal,
+      }
+      const image = await onSubscription(context, () => generate(request), options.signal)
+      return {
+        url: 'url' in image ? image.url : storeGeneratedImage(image.bytes, image.mime),
+        ...note,
       }
     }
-    // `model` names Genspark-only special models (fal-*); BYOK uses the configured image model
     const references = await loadMediaReferences(
       op.referenceImageUrls ?? [],
       MEDIA_BUDGET,
       mediaRoots,
     )
-    const image = await generateImageWithProvider(byok.provider, byok.config, {
-      prompt,
-      aspectRatio: op.aspectRatio,
-      references,
-      transparent: op.transparentBackground === true,
-    })
-    return { url: storeGeneratedImage(image.bytes, image.mime) }
+    const image = await generateImageWithProvider(
+      backend.provider,
+      backend.config,
+      {
+        prompt,
+        aspectRatio: op.aspectRatio,
+        references,
+        transparent: op.transparentBackground === true,
+      },
+      options.signal,
+    )
+    return { url: storeGeneratedImage(image.bytes, image.mime), ...note }
   } catch (err) {
-    return { error: errorText(err) }
+    return failure(err)
   }
 }
 
@@ -372,43 +448,49 @@ export async function analyzeMediaTool(
   settingsPath: string,
   op: { mediaUrls: string[]; requirements: string },
   options: MediaToolOptions = {},
-): Promise<{ text?: string; error?: string }> {
+): Promise<AnalyzeMediaToolResult> {
   const mediaUrls = (op.mediaUrls ?? []).map(String).filter(Boolean)
   const requirements = String(op.requirements ?? '').trim()
   if (!mediaUrls.length) return { error: 'mediaUrls must not be empty' }
   if (!requirements) return { error: 'requirements must not be empty' }
   const mediaRoots = options.mediaRoots ?? NO_MEDIA_ROOTS
-  const settings = readAiSettingsFile(settingsPath)
-  const imageByok = activeMediaConfig(settings, 'analysis')
-  const videoByok = activeMediaConfig(settings, 'video')
+  const context = options.context ?? SCREEN_TOOL_CONTEXT
+  const settings = readRoutingSettings(settingsPath)
   try {
-    const viaGsk = async () => {
-      const gate = gskGate(settings, options.notLoggedInError ?? GSK_NOT_LOGGED_IN_ERROR)
-      if (gate) return gate
-      // gskAnalyzeMedia spreads the URLs straight into the CLI argv, so this route
-      // enforces the same item ceiling as the BYOK one instead of passing them on
-      assertMediaItemCount(mediaUrls.length, MEDIA_BUDGET.maxItems)
-      return { text: await gskAnalyzeMedia({ mediaUrls, requirements }) }
-    }
-    if (!imageByok && !videoByok) return await viaGsk()
+    const media = await loadMediaReferences(mediaUrls, MEDIA_BUDGET, mediaRoots)
     // route on the loaded bytes' real MIME, not the URL spelling: images go to the
-    // image-analysis provider, anything with video/audio to the video one
-    let media: MediaBlob[]
-    try {
-      media = await loadMediaReferences(mediaUrls, MEDIA_BUDGET, mediaRoots)
-    } catch (err) {
-      // only the size cap hands the request back to Genspark (the CLI streams large
-      // files itself); scheme / path / SSRF rejections stay rejections
-      if (err instanceof MediaTooLargeError && (!imageByok || !videoByok)) return await viaGsk()
-      return { error: errorText(err) }
-    }
+    // image-analysis route, anything with video/audio to the video provider
     const hasVideo = media.some((m) => !m.mime.startsWith('image/'))
-    const byok = hasVideo ? videoByok : imageByok
-    if (!byok) return await viaGsk()
+    const route = hasVideo
+      ? resolveVideoAnalysisRoute(settings)
+      : resolveImageAnalysisRoute(settings, context)
+    if (route.kind === 'none') return { error: route.message, errorCode: 'unavailable' }
+    if (route.kind === 'key') {
+      return {
+        text: await analyzeMediaWithProvider(
+          route.provider,
+          route.config,
+          { media, requirements },
+          options.signal,
+        ),
+      }
+    }
+    const ask = () =>
+      analyzeImagesWithChatProvider(
+        route.provider,
+        settings.providers[route.provider],
+        { media, requirements },
+        maxOutputTokensOf(settings),
+        options.signal,
+      )
+    // a metered login or a key the user selected is paid per request: no turn to wait for, no slot to take
     return {
-      text: await analyzeMediaWithProvider(byok.provider, byok.config, { media, requirements }),
+      text:
+        route.billing === 'subscription'
+          ? await onSubscription(context, ask, options.signal)
+          : await ask(),
     }
   } catch (err) {
-    return { error: errorText(err) }
+    return failure(err)
   }
 }
