@@ -476,8 +476,17 @@ describe('webSearch (Firecrawl)', () => {
 describe('search-tools', () => {
   it('maps the settings block onto SearchOptions', () => {
     const base = defaultAiSettings()
+    // every key is spelled out, so the environment never fills one in behind the selection
+    const none = {
+      serperKey: '',
+      serplyKey: '',
+      tavilyKey: '',
+      parallelKey: '',
+      exaKey: '',
+      firecrawlKey: '',
+    }
     // nothing selected: the keyless chain, whatever the removed cloud-tools switch says
-    const free = { useGsk: false, parallelKey: '', prefer: 'parallel' }
+    const free = { useGsk: false, ...none, prefer: 'parallel' }
     expect(searchOptionsFromSettings(base)).toEqual(free)
     expect(searchOptionsFromSettings({ ...base, gskToolsEnabled: false })).toEqual(free)
     const serper = {
@@ -494,7 +503,12 @@ describe('search-tools', () => {
         },
       },
     }
-    expect(searchOptionsFromSettings(serper)).toEqual({ useGsk: false, serperKey: 'k' })
+    expect(searchOptionsFromSettings(serper)).toEqual({
+      useGsk: false,
+      ...none,
+      serperKey: 'k',
+      prefer: 'serper',
+    })
     const tavily = {
       ...base,
       search: {
@@ -511,6 +525,7 @@ describe('search-tools', () => {
     }
     expect(searchOptionsFromSettings(tavily)).toEqual({
       useGsk: false,
+      ...none,
       tavilyKey: 't',
       prefer: 'tavily',
     })
@@ -528,7 +543,12 @@ describe('search-tools', () => {
         },
       },
     }
-    expect(searchOptionsFromSettings(exa)).toEqual({ useGsk: false, exaKey: 'e', prefer: 'exa' })
+    expect(searchOptionsFromSettings(exa)).toEqual({
+      useGsk: false,
+      ...none,
+      exaKey: 'e',
+      prefer: 'exa',
+    })
     const firecrawl = {
       ...base,
       search: {
@@ -545,6 +565,7 @@ describe('search-tools', () => {
     }
     expect(searchOptionsFromSettings(firecrawl)).toEqual({
       useGsk: false,
+      ...none,
       firecrawlKey: 'fc-1',
       prefer: 'firecrawl',
     })

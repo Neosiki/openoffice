@@ -7,28 +7,56 @@
  */
 
 import {
-  activeSearchProvider,
+  AI_SEARCH_PROVIDERS,
   type AiSearchProviderId,
   type AiSettings,
 } from '@genoffice/ai-provider'
-import { imageSearch, webSearch, type SearchOptions } from './index'
+import { imageSearch, searchEnvKey, webSearch, type SearchOptions } from './index'
 import { readAiSettingsFile } from './media-tools'
 
-/** The keyless chain: free Parallel search first, and no stored or environment key for it. */
-const FREE_SEARCH_OPTIONS: SearchOptions = { useGsk: false, parallelKey: '', prefer: 'parallel' }
+type KeySearchProviderId = NonNullable<SearchOptions['prefer']>
+
+/** Every key spelled out as absent, so the environment fills none in behind the user's selection. */
+const NO_SEARCH_KEYS = {
+  serperKey: '',
+  serplyKey: '',
+  tavilyKey: '',
+  parallelKey: '',
+  exaKey: '',
+  firecrawlKey: '',
+} satisfies SearchOptions
+
+/** The keyless chain and nothing else: free Parallel search, then DuckDuckGo. */
+const FREE_SEARCH_OPTIONS: SearchOptions = { useGsk: false, ...NO_SEARCH_KEYS, prefer: 'parallel' }
+
+/**
+ * The key search provider the user selected, with the key it runs on, or null
+ * when the search is the keyless one. The stored key wins; without one, the
+ * environment key of that same provider stands in (a developer's override).
+ * Parallel with no stored key is the free route itself, so no environment
+ * key may turn it into a paid one.
+ */
+export function selectedSearchKey(
+  settings: Pick<AiSettings, 'search'>,
+): { provider: KeySearchProviderId; key: string } | null {
+  const stored: unknown = settings.search?.provider
+  const provider = AI_SEARCH_PROVIDERS.find((meta) => meta.id === stored)?.id
+  // nothing usable is selected: an unknown id, or one that was removed
+  if (!provider || provider === 'genspark') return null
+  const storedKey = settings.search?.providers?.[provider]?.apiKey?.trim() ?? ''
+  const key = storedKey || (provider === 'parallel' ? '' : searchEnvKey(provider))
+  return key ? { provider, key } : null
+}
 
 export function searchOptionsFromSettings(settings: AiSettings): SearchOptions {
-  const provider = activeSearchProvider(settings)
-  // no usable selection: a key provider without its key, or a provider id that was removed
-  if (provider === 'genspark') return { ...FREE_SEARCH_OPTIONS }
-  const key = settings.search!.providers?.[provider]?.apiKey?.trim() ?? ''
-  if (provider === 'parallel') return { useGsk: false, parallelKey: key, prefer: 'parallel' }
-  if (provider === 'serply') return { useGsk: false, serplyKey: key, prefer: 'serply' }
-  if (provider === 'exa') return { useGsk: false, exaKey: key, prefer: 'exa' }
-  if (provider === 'firecrawl') return { useGsk: false, firecrawlKey: key, prefer: 'firecrawl' }
-  return provider === 'tavily'
-    ? { useGsk: false, tavilyKey: key, prefer: 'tavily' }
-    : { useGsk: false, serperKey: key }
+  const selected = selectedSearchKey(settings)
+  if (!selected) return { ...FREE_SEARCH_OPTIONS }
+  return {
+    useGsk: false,
+    ...NO_SEARCH_KEYS,
+    [`${selected.provider}Key`]: selected.key,
+    prefer: selected.provider,
+  }
 }
 
 export function webSearchTool(settingsPath: string, query: string, maxResults = 6) {

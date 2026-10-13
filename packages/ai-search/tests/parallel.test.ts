@@ -224,28 +224,33 @@ describe('Parallel search', () => {
     expect(await testSearchProvider('parallel', 'valid-key')).toEqual({ ok: true })
   })
 
-  it('preserves image fallback when Parallel is selected', async () => {
+  it('searches images for free when Parallel is selected, even with a Serper key in the environment', async () => {
     vi.stubEnv('SERPER_API_KEY', 'image-key')
     const settings = defaultAiSettings()
     settings.search = {
       provider: 'parallel',
       providers: { ...settings.search!.providers, parallel: { apiKey: 'parallel-key' } },
     }
-    const fetch = vi.fn<typeof globalThis.fetch>(async () =>
-      Response.json({
-        images: [
-          {
-            title: 'Photo',
-            imageUrl: 'https://example.com/photo.jpg',
-            link: 'https://example.com',
-          },
-        ],
-      }),
-    )
+    const fetch = vi.fn<typeof globalThis.fetch>(async (input) => {
+      const url = String(input)
+      if (url.startsWith('https://duckduckgo.com/i.js')) {
+        return Response.json({
+          results: [
+            {
+              title: 'Photo',
+              image: 'https://example.com/photo.jpg',
+              url: 'https://example.com',
+            },
+          ],
+        })
+      }
+      return new Response('vqd="123-456"')
+    })
     vi.stubGlobal('fetch', fetch)
+    // Parallel has no image endpoint, and the Serper key is not the user's selection
     expect((await imageSearch('office', 1, searchOptionsFromSettings(settings))).method).toBe(
-      'serper',
+      'duckduckgo',
     )
-    expect(fetch.mock.calls[0]?.[0]).toBe('https://google.serper.dev/images')
+    expect(fetch.mock.calls.every(([url]) => String(url).includes('duckduckgo.com'))).toBe(true)
   })
 })

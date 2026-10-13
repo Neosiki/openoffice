@@ -36,9 +36,10 @@ const EXA_KEY = () => process.env.EXA_API_KEY ?? ''
 const FIRECRAWL_KEY = () => process.env.FIRECRAWL_API_KEY ?? ''
 
 /**
- * Backend selection for one search. Keys default to the SERPER_API_KEY /
- * SERPLY_API_KEY / TAVILY_API_KEY / PARALLEL_API_KEY env vars; settings-driven callers (search-tools.ts) pass the
- * user's key and name the chosen backend so it runs first.
+ * Backend selection for one search. A key left out defaults to its SERPER_API_KEY /
+ * SERPLY_API_KEY / TAVILY_API_KEY / PARALLEL_API_KEY env var; settings-driven callers (search-tools.ts) spell
+ * out every key ('' for the backends the user did not select), so no environment key reaches a
+ * search behind the user's selection, and name the chosen backend so it runs first.
  */
 export interface SearchOptions {
   /** ignored: the Genspark backend it switched is no longer asked */
@@ -61,6 +62,19 @@ const SEARCH_BACKENDS = new Set([
   'exa',
   'firecrawl',
 ] as const)
+
+/** The environment key of one backend: a developer's stand-in for the key of the provider selected in settings. */
+export function searchEnvKey(backend: NonNullable<SearchOptions['prefer']>): string {
+  const keys = {
+    serper: SERPER_KEY,
+    serply: SERPLY_KEY,
+    tavily: TAVILY_KEY,
+    parallel: PARALLEL_KEY,
+    exa: EXA_KEY,
+    firecrawl: FIRECRAWL_KEY,
+  }
+  return keys[backend]().trim()
+}
 
 function normalizeOptions(opts: boolean | SearchOptions | undefined): Required<SearchOptions> {
   const o = typeof opts === 'boolean' ? {} : (opts ?? {})

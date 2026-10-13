@@ -9,7 +9,8 @@
  * (headlessSubscriptionUsage reports it).
  */
 
-import { activeSearchProvider, normalizeAiSettings, type AiSettings } from '@genoffice/ai-provider'
+import { normalizeAiSettings, type AiSettings } from '@genoffice/ai-provider'
+import { selectedSearchKey } from './search-tools'
 import {
   SCREEN_TOOL_CONTEXT,
   imageGenerationUnavailableMessage,
@@ -69,18 +70,17 @@ export function aiToolCapabilities(
 ): AiToolCapabilities {
   const resolved = normalizeAiSettings(settings ?? undefined)
 
-  const search = activeSearchProvider(resolved)
-  const searchKey =
-    search === 'genspark' ? '' : (resolved.search?.providers?.[search]?.apiKey?.trim() ?? '')
+  // the same answer the search tools route on: the selected key provider, or the keyless chain
+  const search = selectedSearchKey(resolved)?.provider
   // only Serper and Serply have an image endpoint; every other selection searches images for free
-  const imageSearchKeyed = searchKey !== '' && (search === 'serper' || search === 'serply')
+  const imageSearchKeyed = search === 'serper' || search === 'serply'
 
   const image = resolveImageRoute(resolved, context)
   const analysis = resolveImageAnalysisRoute(resolved, context)
   const video = resolveVideoAnalysisRoute(resolved)
 
   return {
-    webSearch: searchKey ? via('key', search) : via('free', 'parallel'),
+    webSearch: search ? via('key', search) : via('free', 'parallel'),
     imageSearch: imageSearchKeyed ? via('key', search) : via('free', 'duckduckgo'),
     imageGeneration:
       image.kind === 'none'

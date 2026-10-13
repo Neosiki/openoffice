@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -199,6 +199,28 @@ describe('automatic-call path with the subscription setting on', () => {
     expect(analyzed.resetsAt).toBe(oldest + HEADLESS_SUBSCRIPTION_WINDOW_MS)
     expect(codexGen).not.toHaveBeenCalled()
     expect(stream).not.toHaveBeenCalled()
+  })
+
+  it('treats a damaged ledger as a used-up hour instead of starting the count over', async () => {
+    writeFileSync(ledgerPath(), '{"version":1,"runs":[18')
+    const written = Math.round(statSync(ledgerPath()).mtimeMs)
+    const settings = writeSettings(ON)
+    const generated = await generateImageTool(
+      settings,
+      { prompt: 'a logo' },
+      { context: headless() },
+    )
+    expect(generated.url).toBeUndefined()
+    expect(generated.errorCode).toBe('headless-limit')
+    // one window after the file was written (file times and the clock agree to the millisecond)
+    expect(
+      Math.abs(generated.resetsAt! - (written + HEADLESS_SUBSCRIPTION_WINDOW_MS)),
+    ).toBeLessThanOrEqual(2)
+    const analyzed = await analyzeMediaTool(settings, image, { context: headless() })
+    expect(analyzed.errorCode).toBe('headless-limit')
+    expect(codexGen).not.toHaveBeenCalled()
+    expect(stream).not.toHaveBeenCalled()
+    expect(readFileSync(ledgerPath(), 'utf-8')).toBe('{"version":1,"runs":[18')
   })
 
   it('does not fall to a key provider when the limit is hit', async () => {
