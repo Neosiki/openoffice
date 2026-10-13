@@ -6,17 +6,30 @@ import {
 } from '@genoffice/ui'
 import React, { useEffect, useRef, useState } from 'react'
 import {
+  AiBlockedNotice,
   AiComposer,
+  AiConnectPrompt,
+  AiFirstConnectionNotice,
+  AiInputTruncatedNotice,
+  AiMark,
   AiQueueStrip,
   AI_QUEUE_LABELS,
   AiScopeQuote,
+  AiSubscriptionUsageLine,
   AiTypingIndicator,
   AiUsageChip,
   type AiScopeQuoteData,
+  type AiSubscriptionCardActions,
   type AiTokenUsageView,
   useChatRunQueue,
 } from '@genoffice/ui'
-import { GensparkMark } from '../ribbon-icons'
+import type {
+  AiSettings,
+  AiSubscriptionProviderId,
+  AiSubscriptionStatuses,
+  AiSubscriptionUsage,
+} from '@genoffice/ai-provider/browser'
+import { aiGateAllowsSend, type AiBlockedRun, type AiPanelGate } from './subscription-state'
 import type { ChangePlan } from '@genoffice/xlsx-gateway/domain/workbook.types'
 import { ATTACHMENT_IMAGE_EXTS, type AttachmentMeta } from '../../shared/desktop-api'
 import { useI18n, type TFunc } from '../i18n/locale'
@@ -45,7 +58,7 @@ const PASTE_MIME_EXT: Record<string, string> = {
   'image/webp': 'webp',
 }
 
-/** File-type icons for attachment cards (Genspark attachment icon set); exts the
+/** File-type icons for attachment cards; exts the
  *  attachment allowlist doesn't accept yet are mapped ahead so they light up when added */
 const ATTACHMENT_CARD_ICON_GROUPS: [icon: string, exts: string[]][] = [
   [fileWordIcon, ['doc', 'docx']],
@@ -214,8 +227,8 @@ export interface AiChatMessage {
   readonly undelivered?: boolean | undefined
   /** this user message was written to the project-store chat log (Retry re-persists when it wasn't) */
   readonly persisted?: boolean | undefined
-  /** the run failed because Genspark is signed out — render an inline sign-in button */
-  readonly loginRequired?: boolean | undefined
+  /** the run stopped because its connection cannot go on — render the blocked notice */
+  readonly blocked?: AiBlockedRun | undefined
   /** Set when this message reflects an auto-applied plan; renders an inline [Undo] button. */
   readonly autoApplied?: { readonly opCount: number; readonly undoSteps: number } | undefined
   /** attachments consumed from the composer by this user message (read-only echo chips) */
@@ -230,9 +243,33 @@ const MODEL_BRIDGE: AiModelPickerBridge = {
   getSettings: () => window.desktopApi.getAiSettings(),
   setSettings: (settings) => window.desktopApi.setAiSettings(settings),
   onSettingsChanged: (handler) => window.desktopApi.onAiSettingsChanged(handler),
-  gskLoggedIn: () => window.desktopApi.aiGskStatus().then((s) => !!s?.loggedIn),
   openModelSettings: () => window.desktopApi.openAiModelSettings().catch(() => {}),
 }
+
+/** The subscription connection as the panel shows it (built in App.tsx) */
+export interface AiPanelSubscription {
+  /** null until the settings are read */
+  readonly settings: AiSettings | null
+  readonly statuses: AiSubscriptionStatuses
+  /** where the panel stands: connect prompt, first-use notice, or ready to send */
+  readonly gate: AiPanelGate
+  /** a connect action is in flight */
+  readonly busy: boolean
+  /** the connect cards' buttons */
+  readonly actions: AiSubscriptionCardActions
+  /** rate-limit windows the subscription provider reported on its latest turn */
+  readonly usage: readonly AiSubscriptionUsage[]
+  /** the input of the current run was cut to fit a limit */
+  readonly inputTruncated: boolean
+  readonly onDismissTruncated: () => void
+  /** the first-connection notice was acknowledged */
+  readonly onAcknowledgeNotice: () => void
+  /** "continue with <provider>" on the blocked reply at this chat index */
+  readonly onContinueWith: (provider: AiSubscriptionProviderId, replyIndex: number) => void
+}
+
+/** a blocked notice drawn before the settings are read offers no metered connection */
+const NO_METERED_ACCEPTED: Pick<AiSettings, 'meteredAccepted'> = {}
 
 export function AiChatPanel({
   isOpen,
@@ -250,6 +287,7 @@ export function AiChatPanel({
   preview,
   aiBusy,
   sessionUsage,
+  subscription,
   onPromptChange,
   onSend,
   onStop,
@@ -283,6 +321,7 @@ export function AiChatPanel({
   readonly aiBusy: boolean
   /** tokens billed across the session, shown beside the composer */
   readonly sessionUsage?: AiTokenUsageView | undefined
+  readonly subscription: AiPanelSubscription
   readonly onPromptChange: (prompt: string) => void
   /** Send the composer text, or the given instruction when provided (used by the
    *  failed-run Retry, which also resends the message's original attachments;
@@ -327,7 +366,7 @@ export function AiChatPanel({
   const [dragOver, setDragOver] = useState(false)
   const asideRef = useRef<HTMLElement | null>(null)
   const [resizing, setResizing] = useState(false)
-  /** data-URL previews for image attachments, keyed by path (Genspark composer thumbnails) */
+  /** data-URL previews for image attachments, keyed by path (composer thumbnails) */
   const [attachmentPreviews, setAttachmentPreviews] = useState<Record<string, string>>({})
   /** image paths with a read already issued — one readAttachmentImage per attach, even while pending */
   const previewRequestedRef = useRef(new Set<string>())
@@ -481,7 +520,7 @@ export function AiChatPanel({
           data-tip={t('aiOpenAssistant')}
           aria-label={t('aiOpenAssistant')}
         >
-          <GensparkMark size={22} />
+          <AiMark size={22} />
         </button>
       </aside>
     )
@@ -496,9 +535,16 @@ export function AiChatPanel({
     void window.desktopApi.openSourcePath(path)
   })
 
+  const { gate } = subscription
+
   const send = (): void => {
     if (!canSend) return
     stickToBottomRef.current = true
+    // nothing is sent while the panel asks to connect: bring that prompt into view instead
+    if (!aiGateAllowsSend(gate)) {
+      chatRef.current?.scrollTo({ top: chatRef.current.scrollHeight })
+      return
+    }
     onSend()
   }
 
@@ -561,12 +607,12 @@ export function AiChatPanel({
         onPointerDown={startResize}
         role="separator"
         aria-orientation="vertical"
-        aria-label={t('aiGensparkAccount')}
+        aria-label={t('appGroupAiAssistant')}
       />
       <header className="ai-panel-header">
         <span className="ai-panel-title">
-          <GensparkMark size={22} />
-          Genspark
+          <AiMark size={22} />
+          {t('appGroupAiAssistant')}
         </span>
         <div className="ai-panel-header-actions">
           <AiPanelSideButton
@@ -618,7 +664,7 @@ export function AiChatPanel({
             <div className="ai-history-sep">{t('aiHistorySep')}</div>
           </>
         )}
-        {chat.length === 0 && historicChat.length === 0 && (
+        {chat.length === 0 && historicChat.length === 0 && gate.kind !== 'connect' && (
           <div className="ai-chat-empty">
             <div className="ai-chat-empty-title">
               {t(hasContent ? 'aiEmptyTitle' : 'aiEmptyBuildTitle')}
@@ -631,7 +677,7 @@ export function AiChatPanel({
         {chat.map((entry, index) => (
           <div
             key={index}
-            className={`ai-msg ai-msg-${entry.role}${entry.isError ? ' ai-msg-error' : ''}${entry.role === 'assistant' && entry.streaming ? ' ai-msg-streaming' : ''}`}
+            className={`ai-msg ai-msg-${entry.role}${entry.isError && !entry.blocked ? ' ai-msg-error' : ''}${entry.role === 'assistant' && entry.streaming ? ' ai-msg-streaming' : ''}`}
           >
             {entry.role === 'user' ? (
               <>
@@ -662,7 +708,18 @@ export function AiChatPanel({
                     <AiUsageChip usage={entry.usage} lang={lang} />
                   </div>
                 )}
-                {entry.text ? (
+                {entry.blocked ? (
+                  <AiBlockedNotice
+                    kind={entry.blocked.kind}
+                    provider={entry.blocked.provider}
+                    resetsAt={entry.blocked.resetsAt}
+                    message={entry.text}
+                    settings={subscription.settings ?? NO_METERED_ACCEPTED}
+                    statuses={subscription.statuses}
+                    lang={lang}
+                    onContinueWith={(provider) => subscription.onContinueWith(provider, index)}
+                  />
+                ) : entry.text ? (
                   <div dir="auto">
                     <Markdown text={entry.text} navs={[citationNav, fileNav]} />
                   </div>
@@ -693,14 +750,6 @@ export function AiChatPanel({
                       </button>
                     )}
                   </div>
-                )}
-                {entry.loginRequired && (
-                  <button
-                    className="ai-login-btn"
-                    onClick={() => void window.desktopApi.aiGskLogin()}
-                  >
-                    {t('aiGskLoginBtn')}
-                  </button>
                 )}
               </>
             )}
@@ -754,9 +803,31 @@ export function AiChatPanel({
             ))}
           </section>
         )}
+
+        {/* no provider can run: how to connect, in place of an error */}
+        {gate.kind === 'connect' && (
+          <AiConnectPrompt
+            choice={gate.choice}
+            statuses={subscription.statuses}
+            lang={lang}
+            disabled={subscription.busy}
+            onOpenSettings={() => void window.desktopApi.openAiModelSettings().catch(() => {})}
+            {...subscription.actions}
+          />
+        )}
       </div>
 
       <div className="ai-composer">
+        {gate.kind === 'notice' && (
+          <AiFirstConnectionNotice
+            lang={lang}
+            codexKeepsHistory={false}
+            onAcknowledge={subscription.onAcknowledgeNotice}
+          />
+        )}
+        {subscription.inputTruncated && (
+          <AiInputTruncatedNotice lang={lang} onDismiss={subscription.onDismissTruncated} />
+        )}
         {attachNotice && <div className="ai-attach-notice">{attachNotice}</div>}
         <AiComposer
           queueStrip={
@@ -891,8 +962,13 @@ export function AiChatPanel({
           stopIcon={<img src={sendStop} alt="" aria-hidden />}
           footerStart={
             <>
-              <AiModelPicker bridge={MODEL_BRIDGE} lang={lang} />
+              <AiModelPicker
+                bridge={MODEL_BRIDGE}
+                lang={lang}
+                subscriptionStatuses={subscription.statuses}
+              />
               {sessionUsage && <AiUsageChip usage={sessionUsage} session lang={lang} />}
+              <AiSubscriptionUsageLine usage={subscription.usage} lang={lang} />
               <button
                 className="ai-attach-btn"
                 onClick={onPickAttachments}

@@ -71,42 +71,34 @@ import {
 import { ProjectStore } from '@genoffice/project-store'
 
 import {
-  AiCreditsError,
-  AiTimeoutError,
-  isAiNetworkError,
   isAiOverloadedError,
   chatForProvider,
-  defaultAiSettings,
-  activeProvider,
   maxOutputTokensOf,
-  resolveAiSettings,
   setAiUserAgent,
   setRescueFetch,
   streamForProvider,
-  type AiProviderId,
   type AiSettings,
   type AiStreamChunk,
-  type GenSparkAccountStatus,
-  type LegacyAiSettings,
 } from '@genoffice/ai-provider'
 import { shutdownCodexAppServers } from '@genoffice/ai-provider/codex-app-server'
+import {
+  ensureSubscriptionIpc,
+  sharedSubscriptionStatuses,
+  shutdownSubscriptionChildren,
+} from '@genoffice/ai-provider/subscription'
 import {
   csvToXlsxBufferForOpen,
   decodeCsvBuffer,
   sheetCsvToXlsxBuffer,
 } from '@genoffice/xlsx-gateway/gateway/csv-import'
 import {
-  ensureGenofficeLogin,
-  noteGskCallFailure,
-  setGenofficeLoginOpener,
-  gskApiKey,
-  gskLoginInfo,
-  hasGskAuth,
-  setGskProxyUrl,
+  aiToolCapabilities,
+  readAiSettingsFile,
   webSearchTool,
   imageSearchTool,
   generateImageTool,
   localMediaRoots,
+  type AiToolCapabilities,
 } from '@genoffice/ai-search'
 import { parseFileToText } from '@genoffice/file-parse'
 import type { CellEdit, SheetStructuralOps } from '@genoffice/xlsx-gateway/gateway/xlsx-gateway'
@@ -160,6 +152,14 @@ import {
   type WorkbookSaveRequest,
 } from '../shared/desktop-api'
 import { IPC_CHANNELS } from '../shared/ipc-channels'
+import {
+  aiRunBlockChunk,
+  aiSettingsFromStored,
+  aiStreamErrorChunk,
+  resolveAiRunTarget,
+  subscriptionStreamCallbacks,
+  withMeteredAccepted,
+} from './ai-run'
 import { atomicWriteFile } from './atomic-write'
 import { closeGuardDecision, ShutdownLatch } from './close-guard'
 import { SaveEditsTransferStore } from './save-edits-transfer'
@@ -2602,8 +2602,20 @@ export function registerSheetsIpc(): void {
           prompt: String(op?.prompt ?? ''),
           ...(op?.aspectRatio ? { aspectRatio: String(op.aspectRatio) } : {}),
         },
-        { mediaRoots: sheetsMediaRoots(event.sender.id) },
+        {
+          mediaRoots: sheetsMediaRoots(event.sender.id),
+          context: { path: 'screen', statuses: sharedSubscriptionStatuses() },
+        },
       ),
+  )
+
+  // What the image and search tools can do right now. Registered here for the
+  // same reason: the renderer offers generate_image from this answer.
+  ipcMain.handle(IPC_CHANNELS.aiToolCapabilities, (): AiToolCapabilities =>
+    aiToolCapabilities(readAiSettingsFile(SETTINGS_PATH()), {
+      path: 'screen',
+      statuses: sharedSubscriptionStatuses(),
+    }),
   )
 
   ipcMain.on(IPC_CHANNELS.recoveryPromptReply, (event, restore: unknown) => {
@@ -3639,62 +3651,50 @@ export function registerSheetsAiIpc(): void {
 
   // Node fetch (undici) direct connections get reset under VPN/tun setups; retry over Chromium's stack
   setRescueFetch((url, init) => net.fetch(url, init))
-  setAiUserAgent(`GenOffice/${app.getVersion()}`)
+  setAiUserAgent(`${PRODUCT_NAME}/${app.getVersion()}`)
+
+  const broadcastAiSettingsChanged = (): void => {
+    for (const wc of webContents.getAllWebContents())
+      if (!wc.isDestroyed()) wc.send(IPC_CHANNELS.aiSettingsChanged)
+  }
+
+  // Subscription connection (Claude, Codex): one registration per process,
+  // whichever editor's main asks first
+  ensureSubscriptionIpc(ipcMain, {
+    getSettings: () => aiSettingsFromStored(readJson<unknown>(SETTINGS_PATH(), {})),
+    setMeteredAccepted: (provider, accepted) => {
+      writeJsonAtomic(
+        SETTINGS_PATH(),
+        withMeteredAccepted(readJson<unknown>(SETTINGS_PATH(), {}), provider, accepted),
+      )
+      broadcastAiSettingsChanged()
+    },
+    dataDir: app.getPath('userData'),
+    broadcast: (channel, payload) => {
+      for (const wc of webContents.getAllWebContents())
+        if (!wc.isDestroyed()) wc.send(channel, payload)
+    },
+  })
 
   ipcMain.handle(IPC_CHANNELS.aiGetSettings, (event): AiSettings => {
     sessionFor(event)
-    const stored = readJson<Partial<AiSettings> & LegacyAiSettings>(SETTINGS_PATH(), {})
-    const settings = resolveAiSettings(stored, defaultAiSettings())
-    // a stored BYOK provider is honored when usable; half-filled configs fall back to genspark
-    settings.provider = activeProvider(settings)
-    return settings
-  })
-
-  // Genspark account (gsk login state): the auth source for AI features; the
-  // frontend uses it to guide sign-in when logged out
-  ipcMain.handle(
-    IPC_CHANNELS.aiGskStatus,
-    async (_event, withEmail?: unknown): Promise<GenSparkAccountStatus> => {
-      if (!hasGskAuth()) return { loggedIn: false }
-      if (!withEmail) return { loggedIn: true }
-      const info = await gskLoginInfo()
-      return info?.email ? { loggedIn: true, email: info.email } : { loggedIn: true }
-    },
-  )
-
-  // a 401 on the gsk key opens the device-code login once (genoffice-auth recovery)
-  setGenofficeLoginOpener((url) => void shell.openExternal(url))
-
-  ipcMain.handle(IPC_CHANNELS.aiGskLogin, () => {
-    ensureGenofficeLogin((url) => void shell.openExternal(url))
+    return aiSettingsFromStored(readJson<unknown>(SETTINGS_PATH(), {}))
   })
 
   ipcMain.handle(IPC_CHANNELS.aiSetSettings, async (event, input: unknown) => {
     sessionFor(event)
     const settings = aiSettingsInputSchema.parse(input)
     writeJsonAtomic(SETTINGS_PATH(), settings)
-    for (const wc of webContents.getAllWebContents())
-      if (!wc.isDestroyed()) wc.send(IPC_CHANNELS.aiSettingsChanged)
+    broadcastAiSettingsChanged()
   })
 
   ipcMain.handle(IPC_CHANNELS.aiChat, async (event, input: unknown) => {
     sessionFor(event)
     const request = aiChatRequestSchema.parse(input)
-    const provider = request.settings.provider as AiProviderId
-    let config = request.settings.providers[provider]
-    // set only when the gsk key was injected: a 401 then means that key expired
-    let gskKey = ''
-    if (provider === 'genspark' && config && !config.apiKey) {
-      gskKey = gskApiKey()
-      config = { ...config, apiKey: gskKey }
-    }
-    if (!config || (provider !== 'codex' && !config.apiKey)) {
-      return {
-        ok: false,
-        error: provider === 'genspark' ? tm('errGskNotLoggedIn') : tm('errNoApiKey', { provider }),
-      }
-    }
-    if (provider !== 'codex' && !config.model) return { ok: false, error: tm('errNoModel') }
+    // never another provider than the one selected: a request none can run is refused
+    const target = resolveAiRunTarget(request.settings, sharedSubscriptionStatuses())
+    if (!target.ok) return { ok: false, error: target.block.error }
+    const { provider, config } = target
     try {
       const result = await chatForProvider(provider, config, request.system, request.user)
       // the one-shot path reports HTTP failures as ok:false with the raw body —
@@ -3702,10 +3702,8 @@ export function registerSheetsAiIpc(): void {
       if (!result.ok && isAiOverloadedError(result.error)) {
         return { ok: false, error: tm('errAiBusy') }
       }
-      if (!result.ok) noteGskCallFailure(gskKey, result.error)
       return result
     } catch (err) {
-      noteGskCallFailure(gskKey, err)
       return { ok: false, error: isAiOverloadedError(err) ? tm('errAiBusy') : String(err) }
     }
   })
@@ -3715,32 +3713,18 @@ export function registerSheetsAiIpc(): void {
     const request = aiStreamRequestSchema.parse(input)
     const { requestId, system, messages } = request
     const tools = request.tools ?? []
-    const maxTokens = request.maxTokens ?? maxOutputTokensOf(request.settings)
-    const provider = request.settings.provider as AiProviderId
-    let config = request.settings.providers[provider]
-    // Genspark's key never enters the settings file; it is read from the gsk
-    // login state per request
-    // set only when the gsk key was injected: a 401 then means that key expired
-    let gskKey = ''
-    if (provider === 'genspark' && config && !config.apiKey) {
-      gskKey = gskApiKey()
-      config = { ...config, apiKey: gskKey }
-    }
+    // never another provider than the one selected: a request none can run is
+    // answered with its cause, so the panel shows how to connect
+    const target = resolveAiRunTarget(request.settings, sharedSubscriptionStatuses())
+    const maxTokens = request.maxTokens ?? maxOutputTokensOf(target.settings)
     const send = (chunk: AiStreamChunk) => {
       if (!event.sender.isDestroyed()) event.sender.send(IPC_CHANNELS.aiStreamChunk, chunk)
     }
-    if (!config || (provider !== 'codex' && !config.apiKey)) {
-      send({
-        requestId,
-        type: 'error',
-        error: provider === 'genspark' ? tm('errGskNotLoggedIn') : tm('errNoApiKey', { provider }),
-      })
+    if (!target.ok) {
+      send(aiRunBlockChunk(requestId, target.block))
       return
     }
-    if (provider !== 'codex' && !config.model) {
-      send({ requestId, type: 'error', error: tm('errNoModel') })
-      return
-    }
+    const { provider, config } = target
     const controller = new AbortController()
     entry.aiStreams.set(requestId, controller)
     const unwatchSender = abortOnDestroyed(event.sender, controller)
@@ -3765,6 +3749,7 @@ export function registerSheetsAiIpc(): void {
           stopReason = reason
         },
         onUsage: (usage) => send({ requestId, type: 'usage', usage }),
+        ...subscriptionStreamCallbacks(requestId, send),
       })
       // sheets tsconfig sets exactOptionalPropertyTypes: an explicit
       // `stopReason: undefined` is not assignable to AiStreamChunk, so only
@@ -3778,22 +3763,7 @@ export function registerSheetsAiIpc(): void {
       if (controller.signal.aborted) {
         send({ requestId, type: 'done' })
       } else {
-        // an expired/revoked key drops to signed-out so the inline sign-in button shows
-        noteGskCallFailure(gskKey, err)
-        send({
-          requestId,
-          type: 'error',
-          error: err instanceof Error ? err.message : String(err),
-          ...(err instanceof AiTimeoutError
-            ? { errorCode: 'timeout' as const }
-            : err instanceof AiCreditsError
-              ? { errorCode: 'credits' as const }
-              : isAiNetworkError(err)
-                ? { errorCode: 'network' as const }
-                : isAiOverloadedError(err)
-                  ? { errorCode: 'overloaded' as const }
-                  : {}),
-        })
+        send(aiStreamErrorChunk(requestId, err))
       }
     } finally {
       unwatchSender()
@@ -4677,9 +4647,6 @@ export {
  */
 async function applyMainProcessProxy(): Promise<void> {
   const setDispatcher = async (proxyUrl: string) => {
-    // spawned gsk CLI children do their own fetch and never see the
-    // dispatcher below — forward the proxy to them via env
-    setGskProxyUrl(proxyUrl)
     try {
       const { ProxyAgent, setGlobalDispatcher } = await import('undici')
       setGlobalDispatcher(new ProxyAgent(proxyUrl))
@@ -4702,9 +4669,8 @@ async function applyMainProcessProxy(): Promise<void> {
   }
   try {
     await app.whenReady()
-    // PAC/rule proxies answer per-host: probe the host the login flow, the
-    // Genspark LLM proxy and the gsk CLI actually target
-    const resolved = await electronSession.defaultSession.resolveProxy('https://www.genspark.ai/')
+    // PAC/rule proxies answer per-host: probe an LLM endpoint the main-process fetch targets
+    const resolved = await electronSession.defaultSession.resolveProxy('https://api.anthropic.com/')
     const m = /PROXY\s+([^;]+)/i.exec(resolved || '')
     if (m?.[1]) {
       await setDispatcher(`http://${m[1].trim()}`)
@@ -4742,6 +4708,9 @@ export function startSheetsStandalone(): void {
   app.on('before-quit', () => {
     stopSheetsSidecar()
   })
+  // a subscription program started for an AI run must not outlive the app
+  app.on('will-quit', shutdownSubscriptionChildren)
+  process.on('exit', shutdownSubscriptionChildren)
   app.on('activate', () => {
     if (!mainWindow) void createSheetsWindow()
   })

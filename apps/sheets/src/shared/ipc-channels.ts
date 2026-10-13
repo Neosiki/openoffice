@@ -102,12 +102,12 @@ export const IPC_CHANNELS = {
   aiStream: 'ai:stream',
   aiStreamCancel: 'ai:stream-cancel',
   aiStreamChunk: 'ai:stream-chunk',
-  aiGskStatus: 'ai:gsk-status',
-  aiGskLogin: 'ai:gsk-login',
   aiImageSearch: 'ai:image-search',
   aiFetchImage: 'ai:fetch-image',
   // sheets: prefix — slides' ai:generate-image only registers once a slides view exists
   aiGenerateImage: 'sheets:ai-generate-image',
+  // sheets: prefix — answered by the sheets main in the shell too (see registerSheetsIpc)
+  aiToolCapabilities: 'sheets:ai-tool-capabilities',
   // MCP visible-grid bridge: shell pushes one command, the renderer that owns
   // the Univer workbook executes it with the built-in AI's executors
   mcpCommand: 'sheets:mcp-command',
