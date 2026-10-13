@@ -223,4 +223,44 @@ export const fr = {
   aiSumSaveTemplate: 'Modèle de style « {name} » enregistré',
   aiSumTemplatesEmpty: 'Modèles de style (vide)',
   aiSumListTemplates: '{count} modèles de style listés',
+  aiTplGalleryTitle: 'Choisir un modèle',
+  aiTplSectionBuiltin: 'Modèles intégrés',
+  aiTplSectionSaved: 'Mes styles enregistrés',
+  aiTplChipPick: 'Modèle',
+  aiTplChipChange: 'Changer de modèle',
+  aiTplChipRemove: 'Retirer le modèle',
+  aiTplAdjustMark: 'Avec demandes ajoutées',
+  aiTplAdjustClear: 'Effacer les demandes ajoutées',
+  aiTplSchemeLight: 'Clair',
+  aiTplSchemeDark: 'Sombre',
+  aiTplSchemeMixed: 'Mixte',
+  aiTplSavedOn: 'Enregistré le {date}',
+  aiTplPreviewAlt: 'Aperçu de la couverture : {name}',
+  aiTplAppliesToNew:
+    "Vos diapositives existantes restent telles quelles. Ce modèle s'applique aux diapositives que l'IA créera désormais.",
+  aiTplFontsNotice:
+    "Les polices du modèle sont incluses dans cette application. D'autres logiciels, comme PowerPoint, peuvent afficher une police différente.",
+  aiTplOpenFonts: 'Ouvrir le dossier des polices',
+  aiTplDesc_coral:
+    'Crème et rose orangé sur fond presque noir, avec de très grands titres étroits.',
+  aiTplDesc_blue_professional:
+    'Fond crème avec des touches de bleu cobalt vif. Net, moderne et sobre.',
+  aiTplDesc_monochrome:
+    'Fond ivoire, texte entièrement noir, titres à empattements. Aucune couleur.',
+  aiTplDesc_neo_grid_bold:
+    'Fond blanc cassé avec un seul accent jaune fluo. Traits épais, allure de magazine.',
+  aiTplDesc_block_frame: 'Aplats pastel fluo et épaisses bordures noires. Ludique et accrocheur.',
+  aiTplDesc_raw_grid:
+    'Rose, vert sauge et noir encre, bordures épaisses et aplats décalés. Brut et percutant.',
+  aiTplDesc_studio: 'Fond noir et texte jaune électrique. Énergique et saisissant.',
+  aiTplDesc_signal:
+    "Bleu marine profond et blanc cassé, avec une seule touche d'or mat. Institutionnel et posé.",
+  aiTplDesc_grove:
+    'Fond vert forêt, texte crème, titres classiques à empattements et une touche rouille.',
+  aiTplDesc_editorial_tri_tone:
+    'Trois couleurs façon magazine : rose poudré, crème moutarde et bordeaux profond.',
+  aiTplDesc_emerald_editorial:
+    'Vert vif, bleu marine et blanc papier. Doubles filets et gros titres à empattements, façon magazine.',
+  aiTplDesc_vellum:
+    'Fond bleu marine profond, texte jaune chaud à empattements et une touche bleu canard. Calme et érudit.',
 } satisfies Record<keyof typeof zh, string>

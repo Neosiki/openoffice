@@ -223,4 +223,43 @@ export const nl = {
   aiSumSaveTemplate: 'Stijlsjabloon "{name}" opgeslagen',
   aiSumTemplatesEmpty: 'Stijlsjablonen (leeg)',
   aiSumListTemplates: '{count} stijlsjablonen weergegeven',
+  aiTplGalleryTitle: 'Sjabloon kiezen',
+  aiTplSectionBuiltin: 'Meegeleverde sjablonen',
+  aiTplSectionSaved: 'Mijn opgeslagen stijlen',
+  aiTplChipPick: 'Sjabloon',
+  aiTplChipChange: 'Ander sjabloon kiezen',
+  aiTplChipRemove: 'Sjabloon verwijderen',
+  aiTplAdjustMark: 'Met extra wensen',
+  aiTplAdjustClear: 'Extra wensen wissen',
+  aiTplSchemeLight: 'Licht',
+  aiTplSchemeDark: 'Donker',
+  aiTplSchemeMixed: 'Gemengd',
+  aiTplSavedOn: 'Opgeslagen op {date}',
+  aiTplPreviewAlt: 'Voorbeeld van voorblad: {name}',
+  aiTplAppliesToNew:
+    "Je bestaande dia's blijven zoals ze zijn. Dit sjabloon geldt voor dia's die de AI vanaf nu maakt.",
+  aiTplFontsNotice:
+    "De lettertypen van het sjabloon zitten in deze app. Andere programma's, zoals PowerPoint, tonen mogelijk een ander lettertype.",
+  aiTplOpenFonts: 'Lettertypemap openen',
+  aiTplDesc_coral: 'Crème en oranjeroze op bijna zwart, met extra grote, smalle koppen.',
+  aiTplDesc_blue_professional:
+    'Crèmekleurige achtergrond met felle kobaltblauwe accenten. Strak, modern en zakelijk.',
+  aiTplDesc_monochrome:
+    'Ivoorkleurige achtergrond met alleen zwarte tekst en schreefkoppen. Helemaal geen kleur.',
+  aiTplDesc_neo_grid_bold:
+    'Gebroken wit met één neongeel accent. Dikke lijnen, als in een tijdschrift.',
+  aiTplDesc_block_frame: 'Pastel-neon kleurvlakken met dikke zwarte randen. Speels en opvallend.',
+  aiTplDesc_raw_grid:
+    'Roze, saliegroen en inktzwart met dikke randen en verschoven vlakken. Ruw en krachtig.',
+  aiTplDesc_studio: 'Zwarte achtergrond met felgele tekst. Energiek en uitgesproken.',
+  aiTplDesc_signal:
+    'Diep marineblauw en gebroken wit met één gedempt goudaccent. Formeel en rustig.',
+  aiTplDesc_grove:
+    'Bosgroene achtergrond met crèmekleurige tekst, klassieke schreefkoppen en één roestaccent.',
+  aiTplDesc_editorial_tri_tone:
+    'Drie kleuren in tijdschriftstijl: oudroze, mosterdcrème en diep bordeauxrood.',
+  aiTplDesc_emerald_editorial:
+    'Fris groen, marineblauw en papierwit. Dubbele lijnen en stevige schreefkoppen, als een tijdschriftcover.',
+  aiTplDesc_vellum:
+    'Diep marineblauw met warmgele schreefletters en één gedempt petrolaccent. Rustig en geleerd.',
 } satisfies Record<keyof typeof zh, string>

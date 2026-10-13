@@ -221,4 +221,42 @@ export const vi = {
   aiSumSaveTemplate: 'Đã lưu mẫu phong cách "{name}"',
   aiSumTemplatesEmpty: 'Mẫu phong cách (trống)',
   aiSumListTemplates: 'Đã liệt kê {count} mẫu phong cách',
+  aiTplGalleryTitle: 'Chọn mẫu',
+  aiTplSectionBuiltin: 'Mẫu có sẵn',
+  aiTplSectionSaved: 'Phong cách tôi đã lưu',
+  aiTplChipPick: 'Mẫu',
+  aiTplChipChange: 'Đổi mẫu',
+  aiTplChipRemove: 'Bỏ mẫu',
+  aiTplAdjustMark: 'Có yêu cầu thêm',
+  aiTplAdjustClear: 'Xóa yêu cầu thêm',
+  aiTplSchemeLight: 'Sáng',
+  aiTplSchemeDark: 'Tối',
+  aiTplSchemeMixed: 'Pha trộn',
+  aiTplSavedOn: 'Đã lưu {date}',
+  aiTplPreviewAlt: 'Xem trước trang bìa {name}',
+  aiTplAppliesToNew:
+    'Các trang chiếu hiện có vẫn giữ nguyên. Mẫu này được áp dụng cho các trang chiếu AI tạo từ bây giờ.',
+  aiTplFontsNotice:
+    'Phông chữ của mẫu có sẵn trong ứng dụng này. Các chương trình khác như PowerPoint có thể hiển thị phông chữ khác.',
+  aiTplOpenFonts: 'Mở thư mục phông chữ',
+  aiTplDesc_coral: 'Màu kem và hồng cam trên nền gần như đen, tiêu đề cỡ lớn, nét đậm và hẹp.',
+  aiTplDesc_blue_professional:
+    'Nền kem với điểm nhấn xanh cô-ban rực rỡ. Gọn gàng, hiện đại, nghiêm túc.',
+  aiTplDesc_monochrome: 'Nền màu ngà, chữ toàn màu đen, tiêu đề có chân. Hoàn toàn không dùng màu.',
+  aiTplDesc_neo_grid_bold:
+    'Nền trắng đục với một điểm nhấn vàng neon duy nhất. Nét dày, phong cách tạp chí.',
+  aiTplDesc_block_frame: 'Các mảng màu pastel neon với viền đen dày. Vui tươi và bắt mắt.',
+  aiTplDesc_raw_grid:
+    'Hồng, xanh xám nhạt và đen mực với viền dày và các mảng màu đặt lệch. Thô mộc và mạnh mẽ.',
+  aiTplDesc_studio: 'Nền đen với chữ vàng chói. Tràn đầy năng lượng và ấn tượng.',
+  aiTplDesc_signal:
+    'Xanh hải quân đậm và trắng ngà với một điểm nhấn vàng kim trầm. Trang trọng và điềm tĩnh.',
+  aiTplDesc_grove:
+    'Nền xanh rừng với chữ màu kem, tiêu đề có chân cổ điển và một điểm nhấn màu gỉ sắt.',
+  aiTplDesc_editorial_tri_tone:
+    'Ba màu theo phong cách tạp chí: hồng tro, kem mù tạt và đỏ rượu vang đậm.',
+  aiTplDesc_emerald_editorial:
+    'Xanh lục tươi, xanh hải quân và trắng giấy. Đường kẻ đôi và tiêu đề có chân nét đậm, như bìa tạp chí.',
+  aiTplDesc_vellum:
+    'Nền xanh hải quân đậm với chữ có chân màu vàng ấm và một điểm nhấn xanh cổ vịt trầm. Tĩnh lặng và uyên bác.',
 } satisfies Record<keyof typeof zh, string>

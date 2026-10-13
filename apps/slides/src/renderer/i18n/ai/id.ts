@@ -222,4 +222,45 @@ export const id = {
   aiSumSaveTemplate: 'Menyimpan templat gaya "{name}"',
   aiSumTemplatesEmpty: 'Daftar templat gaya (kosong)',
   aiSumListTemplates: 'Menampilkan {count} templat gaya',
+  aiTplGalleryTitle: 'Pilih templat',
+  aiTplSectionBuiltin: 'Templat bawaan',
+  aiTplSectionSaved: 'Gaya simpanan saya',
+  aiTplChipPick: 'Templat',
+  aiTplChipChange: 'Ganti templat',
+  aiTplChipRemove: 'Lepas templat',
+  aiTplAdjustMark: 'Ada permintaan tambahan',
+  aiTplAdjustClear: 'Hapus permintaan tambahan',
+  aiTplSchemeLight: 'Terang',
+  aiTplSchemeDark: 'Gelap',
+  aiTplSchemeMixed: 'Campuran',
+  aiTplSavedOn: 'Disimpan {date}',
+  aiTplPreviewAlt: 'Pratinjau sampul {name}',
+  aiTplAppliesToNew:
+    'Slide yang sudah ada tidak berubah. Templat ini berlaku untuk slide yang dibuat AI mulai sekarang.',
+  aiTplFontsNotice:
+    'Font templat sudah disertakan dalam aplikasi ini. Program lain seperti PowerPoint mungkin menampilkan font yang berbeda.',
+  aiTplOpenFonts: 'Buka folder font',
+  aiTplDesc_coral:
+    'Krem dan merah muda jingga di atas latar hampir hitam, dengan judul besar dan ramping.',
+  aiTplDesc_blue_professional:
+    'Latar krem dengan aksen biru kobalt yang cerah. Bersih, modern, dan resmi.',
+  aiTplDesc_monochrome:
+    'Latar gading dengan teks serba hitam dan judul berhuruf serif. Tanpa warna sama sekali.',
+  aiTplDesc_neo_grid_bold:
+    'Latar putih tulang dengan satu aksen kuning neon. Garis tebal, bergaya majalah.',
+  aiTplDesc_block_frame:
+    'Bidang warna pastel neon dengan garis tepi hitam tebal. Ceria dan mencolok.',
+  aiTplDesc_raw_grid:
+    'Merah muda, hijau sage, dan hitam tinta dengan garis tepi tebal dan bidang yang digeser. Kasar dan bertenaga.',
+  aiTplDesc_studio: 'Latar hitam dengan teks kuning menyala. Penuh energi dan tegas.',
+  aiTplDesc_signal:
+    'Biru dongker pekat dan krem pucat dengan satu aksen emas redup. Resmi dan tenang.',
+  aiTplDesc_grove:
+    'Latar hijau hutan dengan teks krem, judul serif klasik, dan satu aksen warna karat.',
+  aiTplDesc_editorial_tri_tone:
+    'Tiga warna bergaya majalah: merah muda kusam, krem mustard, dan merah anggur pekat.',
+  aiTplDesc_emerald_editorial:
+    'Hijau cerah, biru dongker, dan putih kertas. Garis ganda dan judul serif tebal, seperti sampul majalah.',
+  aiTplDesc_vellum:
+    'Biru dongker pekat dengan teks serif kuning hangat dan satu aksen hijau kebiruan kusam. Tenang dan ilmiah.',
 } satisfies Record<keyof typeof zh, string>

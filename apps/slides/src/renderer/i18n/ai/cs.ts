@@ -222,4 +222,44 @@ export const cs = {
   aiSumSaveTemplate: 'Uložena šablona stylu „{name}“',
   aiSumTemplatesEmpty: 'Šablony stylu (prázdné)',
   aiSumListTemplates: 'Vypsáno šablon stylu: {count}',
+  aiTplGalleryTitle: 'Vyberte šablonu',
+  aiTplSectionBuiltin: 'Vestavěné šablony',
+  aiTplSectionSaved: 'Moje uložené styly',
+  aiTplChipPick: 'Šablona',
+  aiTplChipChange: 'Změnit šablonu',
+  aiTplChipRemove: 'Odebrat šablonu',
+  aiTplAdjustMark: 'S doplňujícími požadavky',
+  aiTplAdjustClear: 'Vymazat doplňující požadavky',
+  aiTplSchemeLight: 'Světlá',
+  aiTplSchemeDark: 'Tmavá',
+  aiTplSchemeMixed: 'Smíšená',
+  aiTplSavedOn: 'Uloženo {date}',
+  aiTplPreviewAlt: 'Náhled titulního snímku: {name}',
+  aiTplAppliesToNew:
+    'Stávající snímky zůstanou beze změny. Tato šablona se použije na snímky, které AI vytvoří od této chvíle.',
+  aiTplFontsNotice:
+    'Písma šablony jsou součástí této aplikace. Jiné programy, například PowerPoint, mohou zobrazit jiné písmo.',
+  aiTplOpenFonts: 'Otevřít složku s písmy',
+  aiTplDesc_coral: 'Krémová a lososově oranžová na téměř černém pozadí, s obřími úzkými nadpisy.',
+  aiTplDesc_blue_professional:
+    'Krémové pozadí s výraznými kobaltově modrými akcenty. Čistý, moderní a věcný vzhled.',
+  aiTplDesc_monochrome:
+    'Slonovinové pozadí, výhradně černý text a patkové nadpisy. Zcela bez barev.',
+  aiTplDesc_neo_grid_bold:
+    'Lomená bílá s jediným neonově žlutým akcentem. Silné linky, časopisecký ráz.',
+  aiTplDesc_block_frame:
+    'Pastelově neonové barevné plochy se silnými černými okraji. Hravý a nápadný vzhled.',
+  aiTplDesc_raw_grid:
+    'Růžová, šalvějová a inkoustová se silnými okraji a posunutými plochami. Syrový a důrazný vzhled.',
+  aiTplDesc_studio: 'Černé pozadí se zářivě žlutým textem. Energický a výrazný vzhled.',
+  aiTplDesc_signal:
+    'Tmavě námořnická modř a kostní bílá s jediným tlumeně zlatým akcentem. Seriózní a klidný vzhled.',
+  aiTplDesc_grove:
+    'Lesně zelené pozadí s krémovým textem, klasickými patkovými nadpisy a rezavým akcentem.',
+  aiTplDesc_editorial_tri_tone:
+    'Tři barvy v časopiseckém stylu: pudrově růžová, hořčicově krémová a tmavě vínová.',
+  aiTplDesc_emerald_editorial:
+    'Sytá zelená, námořnická modř a papírově bílá. Dvojité linky a výrazné patkové titulky jako na obálce časopisu.',
+  aiTplDesc_vellum:
+    'Tmavě námořnická modř s teple žlutým patkovým písmem a tlumeným modrozeleným akcentem. Klidný a učený vzhled.',
 } satisfies Record<keyof typeof zh, string>
