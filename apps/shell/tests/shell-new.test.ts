@@ -54,10 +54,11 @@ describe('Windows Explorer New templates', () => {
 
   it('provides nonempty Windows file type labels for the New menu', () => {
     for (const ext of ['docx', 'xlsx', 'pptx']) {
-      const association = config.fileAssociations.find(
-        (entry: { ext: string }) => entry.ext === ext,
-      )
-      expect(association.description).toBe(association.name)
+      const byExt = (entry: { ext: string }) => entry.ext === ext
+      // Windows registers `name` as the ProgId, so the label Explorer shows is
+      // the description: the document type name mac and Linux use as `name`
+      const association = config.win.fileAssociations.find(byExt)
+      expect(association.description).toBe(config.mac.fileAssociations.find(byExt).name)
     }
   })
 })

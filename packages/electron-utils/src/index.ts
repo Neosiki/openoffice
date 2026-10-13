@@ -28,7 +28,18 @@ export {
   type AppMenuLabels,
   type ViewMenuOptions,
 } from './app-menu'
-export { GITHUB_REPO_URL } from './github-menu'
+export {
+  GITHUB_ISSUES_URL,
+  GITHUB_LATEST_RELEASE_URL,
+  GITHUB_NEW_ISSUE_URL,
+  GITHUB_RELEASES_URL,
+  GITHUB_REPO_DISPLAY,
+  GITHUB_REPO_NAME,
+  GITHUB_REPO_OWNER,
+  GITHUB_REPO_SLUG,
+  GITHUB_REPO_URL,
+  githubReleaseTagUrl,
+} from './github-menu'
 export {
   saveAsSuggestion,
   showOpenDialogWithMemory,

@@ -6,6 +6,7 @@
 /// setting.
 import { accessSync, constants, mkdirSync, readFileSync } from 'node:fs'
 import { isAbsolute, join } from 'node:path'
+import { PRODUCT_NAME } from '@genoffice/i18n'
 
 /** the subset of Electron's `app` needed here (kept structural: this package has no Electron dependency) */
 export interface PathProvider {
@@ -52,6 +53,6 @@ export function resolveDefaultSaveDir(configured: string | null, fallbackDir: st
 /** convenience for the Electron mains: settings lookup + fallback in one call */
 export function configuredDefaultSaveDir(app: PathProvider): string {
   const settingsPath = join(app.getPath('userData'), 'app-settings.json')
-  const fallback = join(app.getPath('documents'), 'GenOffice')
+  const fallback = join(app.getPath('documents'), PRODUCT_NAME)
   return resolveDefaultSaveDir(readDefaultSaveDirSetting(settingsPath), fallback)
 }

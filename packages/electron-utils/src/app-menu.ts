@@ -2,6 +2,7 @@
 /// English-only and (for role:'windowMenu' on Windows/Linux) follow macOS
 /// conventions (Zoom, Ctrl+M minimize, Bring All to Front).
 import type { MenuItemConstructorOptions, WebContents } from 'electron'
+import { brandText, getUiLang, PRODUCT_NAME, productName } from '@genoffice/i18n'
 import { baseLang, contextMenuLabels, type ContextMenuLabels } from './context-menu'
 
 export interface AppMenuLabels extends ContextMenuLabels {
@@ -477,7 +478,9 @@ const LABELS: Record<string, Labels> = {
 }
 
 export function appMenuLabels(lang: string): AppMenuLabels {
-  return { ...contextMenuLabels(lang), ...(LABELS[lang] ?? LABELS[baseLang(lang)] ?? EN) }
+  const labels = { ...contextMenuLabels(lang), ...(LABELS[lang] ?? LABELS[baseLang(lang)] ?? EN) }
+  // the table spells the product name as upstream does; show this product's
+  return { ...labels, about: brandText(labels.about, lang) }
 }
 
 /** macOS keeps the native role (Minimize/Zoom/Front, window list); Windows/Linux
@@ -620,16 +623,17 @@ export function aboutMenuItem(labels: AppMenuLabels): MenuItemConstructorOptions
       const { app, dialog, clipboard } = await import('electron')
       const version = app.getVersion()
       const canCheck = updateCheckInvoker !== null
+      const name = productName(getUiLang())
       const { response } = await dialog.showMessageBox({
         type: 'info',
-        title: 'GenOffice',
-        message: 'GenOffice',
+        title: name,
+        message: name,
         detail: `${labels.version} ${version}`,
         buttons: ['OK', labels.copy, ...(canCheck ? [labels.checkUpdates] : [])],
         defaultId: 0,
         cancelId: 0,
       })
-      if (response === 1) clipboard.writeText(`GenOffice ${version}`)
+      if (response === 1) clipboard.writeText(`${PRODUCT_NAME} ${version}`)
       if (response === 2) updateCheckInvoker?.()
     },
   }

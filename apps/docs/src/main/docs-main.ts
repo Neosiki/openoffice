@@ -6,7 +6,6 @@ import {
   mkdirSync,
   readdirSync,
   readFileSync,
-  renameSync,
   statSync,
   unlinkSync,
   writeFileSync,
@@ -70,7 +69,7 @@ import {
   writeJsonAtomic,
 } from '@genoffice/electron-utils'
 import { configureMetricsCache, familyVerticalMetrics } from '@genoffice/font-metrics'
-import { createI18n, getUiLang, normalizeLang, setUiLang } from '@genoffice/i18n'
+import { createI18n, getUiLang, normalizeLang, PRODUCT_NAME, setUiLang } from '@genoffice/i18n'
 import { ProjectStore } from '@genoffice/project-store'
 import type {
   IpcMainInvokeEvent,
@@ -5836,7 +5835,7 @@ export function createDocsWindow(openPath?: string): BrowserWindow {
     height: 900,
     minWidth: 720,
     minHeight: 550,
-    title: 'GenOffice Docs',
+    title: `${PRODUCT_NAME} Docs`,
     // Word-like custom title bar (document name centered, quick-access buttons)
     ...(process.platform === 'darwin'
       ? { titleBarStyle: 'hiddenInset' as const }
@@ -6122,22 +6121,9 @@ export function startDocsStandalone(): void {
   // single-instance lock) so parallel automation sessions don't evict each other
   if (process.env.AI_OFFICE_USER_DATA) app.setPath('userData', process.env.AI_OFFICE_USER_DATA)
   else if (isDev) {
-    // "GenOffice Docs Dev" carried a space, against the XDG one-token
-    // convention (genoffice#1817); move the old profile once, as the shell does.
-    const appData = app.getPath('appData')
-    const devDir = join(appData, 'GenOffice-Docs-Dev')
-    const oldDevDir = join(appData, 'GenOffice Docs Dev')
-    let userData = devDir
-    if (existsSync(oldDevDir) && !existsSync(devDir)) {
-      try {
-        renameSync(oldDevDir, devDir)
-      } catch {
-        // another dev instance holds the directory: keep using the old one so
-        // the profile is not lost and the move is retried on the next launch
-        userData = oldDevDir
-      }
-    }
-    app.setPath('userData', userData)
+    // one token, against a space in the name (genoffice#1817); this product's
+    // own profile, as in the shell: the upstream app's is never adopted
+    app.setPath('userData', join(app.getPath('appData'), `${PRODUCT_NAME}-Docs-Dev`))
   }
 
   const hasSingleInstanceLock = app.requestSingleInstanceLock()

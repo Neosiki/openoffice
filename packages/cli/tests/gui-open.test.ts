@@ -1,7 +1,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { basename, dirname, join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { genofficeUserDataDir, guiOpenDocuments } from '../src/gui'
+import { genofficeDevUserDataDir, genofficeUserDataDir, guiOpenDocuments } from '../src/gui'
 import { run, tempDir } from './helpers'
 
 function writeRegistry(dir: string, pid: number, paths: string[]): void {
@@ -31,7 +31,30 @@ async function workbook(dir: string): Promise<string> {
 describe('GUI-open documents', () => {
   it('locates the shell userData directory and honours the override', () => {
     expect(genofficeUserDataDir({ GENOFFICE_USER_DATA: '/u' })).toBe('/u')
-    expect(genofficeUserDataDir({}).endsWith('GenOffice')).toBe(true)
+    expect(basename(genofficeUserDataDir({}))).toBe('IeumOffice')
+  })
+
+  it("resolves this product's own folders, never the upstream app's", () => {
+    const root = tempDir()
+    const env = { APPDATA: root, HOME: root, XDG_CONFIG_HOME: root }
+    const packaged = genofficeUserDataDir(env)
+    const dev = genofficeDevUserDataDir(env)
+    expect(packaged.startsWith(root)).toBe(true)
+    expect(basename(packaged)).toBe('IeumOffice')
+    // the unpacked shell keeps its profile beside the installed one (apps/shell/src/main/index.ts)
+    expect(dev).toBe(join(dirname(packaged), 'IeumOffice-Dev'))
+    for (const dir of [packaged, dev]) expect(basename(dir)).not.toMatch(/^GenOffice/)
+
+    // a registry the upstream app left in its own folder is not this app's to read
+    writeRegistry(join(dirname(packaged), 'GenOffice'), process.pid, ['/upstream.docx'])
+    writeRegistry(join(dirname(packaged), 'GenOffice-Dev'), process.pid, ['/upstream-dev.docx'])
+    expect(guiOpenDocuments(env)).toEqual([])
+    writeRegistry(packaged, process.pid, ['/mine.docx'])
+    writeRegistry(dev, process.pid, ['/mine-dev.docx'])
+    expect(guiOpenDocuments(env)).toEqual([
+      { pid: process.pid, paths: ['/mine.docx'] },
+      { pid: process.pid, paths: ['/mine-dev.docx'] },
+    ])
   })
 
   it('ignores a missing, malformed or crash-leftover registry', () => {
@@ -65,7 +88,7 @@ describe('GUI-open documents', () => {
     // The in-process CLI must resolve userData from this env, never the real home directory.
     expect(packagedDir.startsWith(appRoot)).toBe(true)
     writeRegistry(packagedDir, process.pid, [join(dir, 'packaged.xlsx')])
-    writeRegistry(`${packagedDir} Dev`, process.pid, [xlsx])
+    writeRegistry(genofficeDevUserDataDir(env), process.pid, [xlsx])
 
     const refused = await run(['sheet', 'apply', xlsx, '--ops', ops, '--json'], { env })
 

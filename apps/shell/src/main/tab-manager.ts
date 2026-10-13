@@ -2,6 +2,7 @@ import { basename, join } from 'node:path'
 import { realpathSync } from 'node:fs'
 import { BrowserWindow, shell, WebContentsView } from 'electron'
 import type { Rectangle, WebContents } from 'electron'
+import { PRODUCT_NAME } from '@genoffice/i18n'
 
 import {
   createDocsView,
@@ -79,7 +80,8 @@ const HOME_ID = 'home'
  */
 export class TabManager {
   private readonly tabs: TabRecord[] = [
-    { id: HOME_ID, kind: 'home', view: null, title: 'GenOffice' },
+    // the tab strip shows the name in the UI language (TabBar.tsx)
+    { id: HOME_ID, kind: 'home', view: null, title: PRODUCT_NAME },
   ]
   private activeId: string = HOME_ID
   private nextId = 1
@@ -292,7 +294,7 @@ export class TabManager {
     const id = `t${this.nextId++}`
     this.shellWindow.contentView.addChildView(view)
     view.setVisible(false)
-    this.tabs.push({ id, kind: 'help', view, title: this.untitled('help', 'GenOffice Help') })
+    this.tabs.push({ id, kind: 'help', view, title: this.untitled('help', `${PRODUCT_NAME} Help`) })
     this.activateTab(id)
     return id
   }
@@ -312,7 +314,7 @@ export class TabManager {
       id,
       kind: 'docs',
       view,
-      title: openPath ? basename(openPath) : this.untitled('docs', 'GenOffice Docs'),
+      title: openPath ? basename(openPath) : this.untitled('docs', `${PRODUCT_NAME} Docs`),
       filePath: openPath,
     })
     this.activateTab(id)

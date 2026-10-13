@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { homedir } from 'node:os'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
+import { DEV_USER_DATA_DIR_NAME, USER_DATA_DIR_NAME } from '@genoffice/i18n'
 import { realizedPath } from './fs'
 import { CliError, EXIT } from './result'
 
@@ -16,7 +17,13 @@ export function genofficeUserDataDir(env: NodeJS.ProcessEnv): string {
       : process.platform === 'win32'
         ? env.APPDATA || join(home, 'AppData', 'Roaming')
         : env.XDG_CONFIG_HOME || join(home, '.config')
-  return join(base, 'GenOffice')
+  return join(base, USER_DATA_DIR_NAME)
+}
+
+/** userData of an unpacked (development) shell, which keeps its profile beside the installed app's. */
+export function genofficeDevUserDataDir(env: NodeJS.ProcessEnv): string {
+  const installed = genofficeUserDataDir({ ...env, GENOFFICE_USER_DATA: undefined })
+  return join(dirname(installed), DEV_USER_DATA_DIR_NAME)
 }
 
 export interface GuiOpenDocuments {
@@ -33,7 +40,7 @@ export function guiOpenDocuments(
   env: NodeJS.ProcessEnv,
   dirs = env.GENOFFICE_USER_DATA
     ? [env.GENOFFICE_USER_DATA]
-    : [genofficeUserDataDir(env), `${genofficeUserDataDir(env)} Dev`],
+    : [genofficeUserDataDir(env), genofficeDevUserDataDir(env)],
 ): GuiOpenDocuments[] {
   const live: GuiOpenDocuments[] = []
   for (const dir of dirs) {

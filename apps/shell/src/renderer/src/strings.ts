@@ -387,6 +387,7 @@ export const strings = {
     setAiGskToolsDesc:
       '服务商选择 Genspark 时，网页搜索、生图与媒体解析经 Genspark 云端并消耗积分；关闭后搜索改用免费来源，Genspark 生图工具不可用。',
     setGithub: '开源项目',
+    setBasedOn: '基于开源项目 {{GenOffice}} 构建（Apache License 2.0）。',
     starOnGitHub: '去 GitHub 点 Star',
     starPromptTitle: '喜欢 GenOffice 吗？',
     starPromptTitleN: '你已经用 GenOffice 打开了 {n} 个文档',
@@ -829,6 +830,7 @@ export const strings = {
     setAiGskToolsDesc:
       'Web search, image generation and media analysis run through Genspark and use credits while their provider is set to Genspark; when off, search uses free sources and the Genspark image tools are unavailable.',
     setGithub: 'Open Source',
+    setBasedOn: 'Based on the open-source project {{GenOffice}} (Apache License 2.0).',
     starOnGitHub: 'Star on GitHub',
     starPromptTitle: 'Enjoying GenOffice?',
     starPromptTitleN: "You've opened {n} documents with GenOffice",
@@ -1275,6 +1277,7 @@ export const strings = {
     setAiGskToolsDesc:
       'Tìm kiếm web, tạo hình ảnh và phân tích phương tiện được xử lý qua Genspark và tiêu tốn credit khi nhà cung cấp được đặt là Genspark; khi tắt, tìm kiếm sẽ dùng các nguồn miễn phí và công cụ hình ảnh Genspark sẽ không khả dụng.',
     setGithub: 'Mã nguồn mở',
+    setBasedOn: 'Dựa trên dự án mã nguồn mở {{GenOffice}} (Apache License 2.0).',
     starOnGitHub: 'Gắn sao trên GitHub',
     starPromptTitle: 'Bạn thích GenOffice chứ?',
     starPromptTitleN: 'Bạn đã mở {n} tài liệu với GenOffice',
@@ -1732,6 +1735,8 @@ export const strings = {
     setAiGskToolsDesc:
       'プロバイダーが Genspark のとき、Web 検索・画像生成・メディア解析は Genspark 経由でクレジットを消費します。オフにすると検索は無料ソースを使い、Genspark の画像ツールは利用できません。',
     setGithub: 'オープンソース',
+    setBasedOn:
+      'オープンソースプロジェクト {{GenOffice}}（Apache License 2.0）をもとに開発されています。',
     starOnGitHub: 'GitHub でスターを付ける',
     starPromptTitle: 'GenOffice はいかがですか？',
     starPromptTitleN: 'GenOffice で {n} 件のドキュメントを開きました',
@@ -2181,6 +2186,7 @@ export const strings = {
     setAiGskToolsDesc:
       '제공자가 Genspark일 때 웹 검색, 이미지 생성, 미디어 분석은 Genspark를 거쳐 크레딧을 사용합니다. 끄면 검색은 무료 소스를 사용하고 Genspark 이미지 도구는 사용할 수 없습니다.',
     setGithub: '오픈 소스',
+    setBasedOn: '오픈 소스 프로젝트 {{GenOffice}}(Apache License 2.0)를 바탕으로 만들었습니다.',
     starOnGitHub: 'GitHub에서 스타 누르기',
     starPromptTitle: 'GenOffice가 마음에 드시나요?',
     starPromptTitleN: 'GenOffice로 문서를 {n}개 열어보셨네요',
@@ -2647,6 +2653,7 @@ export const strings = {
     setAiGskToolsDesc:
       "Lorsque leur fournisseur est Genspark, la recherche web, la génération d'images et l'analyse de médias passent par Genspark et consomment des crédits ; désactivé, la recherche utilise des sources gratuites et les outils d'image Genspark sont indisponibles.",
     setGithub: 'Open source',
+    setBasedOn: 'Basé sur le projet open source {{GenOffice}} (Apache License 2.0).',
     starOnGitHub: 'Mettre une étoile sur GitHub',
     starPromptTitle: 'GenOffice vous plaît ?',
     starPromptTitleN: 'Vous avez ouvert {n} documents avec GenOffice',
@@ -3115,6 +3122,7 @@ export const strings = {
     setAiGskToolsDesc:
       'Steht ihr Anbieter auf Genspark, laufen Websuche, Bildgenerierung und Medienanalyse über Genspark und verbrauchen Credits; ausgeschaltet nutzt die Suche kostenlose Quellen und die Genspark-Bildwerkzeuge sind nicht verfügbar.',
     setGithub: 'Open Source',
+    setBasedOn: 'Basiert auf dem Open-Source-Projekt {{GenOffice}} (Apache License 2.0).',
     starOnGitHub: 'Auf GitHub Stern geben',
     starPromptTitle: 'Gefällt Ihnen GenOffice?',
     starPromptTitleN: 'Sie haben {n} Dokumente mit GenOffice geöffnet',
@@ -3579,6 +3587,7 @@ export const strings = {
     setAiGskToolsDesc:
       'Cuando su proveedor es Genspark, la búsqueda web, la generación de imágenes y el análisis de medios pasan por Genspark y consumen créditos; desactivado, la búsqueda usa fuentes gratuitas y las herramientas de imagen de Genspark no están disponibles.',
     setGithub: 'Código abierto',
+    setBasedOn: 'Basado en el proyecto de código abierto {{GenOffice}} (Apache License 2.0).',
     starOnGitHub: 'Dar una estrella en GitHub',
     starPromptTitle: '¿Te gusta GenOffice?',
     starPromptTitleN: 'Has abierto {n} documentos con GenOffice',
@@ -4025,6 +4034,7 @@ export const strings = {
     setAiGskToolsDesc:
       'เมื่อผู้ให้บริการตั้งเป็น Genspark การค้นหาเว็บ การสร้างภาพ และการวิเคราะห์สื่อจะผ่าน Genspark และใช้เครดิต เมื่อปิด การค้นหาจะใช้แหล่งข้อมูลฟรีและเครื่องมือภาพของ Genspark จะใช้ไม่ได้',
     setGithub: 'โอเพนซอร์ส',
+    setBasedOn: 'พัฒนาต่อยอดจากโครงการโอเพนซอร์ส {{GenOffice}} (Apache License 2.0)',
     starOnGitHub: 'กดดาวบน GitHub',
     starPromptTitle: 'ชอบ GenOffice ไหม?',
     starPromptTitleN: 'คุณเปิดเอกสารด้วย GenOffice ไปแล้ว {n} ไฟล์',
@@ -4482,6 +4492,7 @@ export const strings = {
     setAiGskToolsDesc:
       'Saat penyedianya disetel ke Genspark, pencarian web, pembuatan gambar, dan analisis media berjalan lewat Genspark dan memakai kredit; jika dimatikan, pencarian memakai sumber gratis dan alat gambar Genspark tidak tersedia.',
     setGithub: 'Sumber Terbuka',
+    setBasedOn: 'Dibuat berdasarkan proyek sumber terbuka {{GenOffice}} (Apache License 2.0).',
     starOnGitHub: 'Beri Bintang di GitHub',
     starPromptTitle: 'Suka GenOffice?',
     starPromptTitleN: 'Anda telah membuka {n} dokumen dengan GenOffice',
@@ -4938,6 +4949,8 @@ export const strings = {
     setAiGskToolsDesc:
       'Когда провайдером выбран Genspark, веб-поиск, генерация изображений и анализ медиа идут через Genspark и расходуют кредиты; при выключении поиск использует бесплатные источники, а инструменты изображений Genspark недоступны.',
     setGithub: 'Открытый код',
+    setBasedOn:
+      'Создано на основе проекта с открытым исходным кодом {{GenOffice}} (Apache License 2.0).',
     starOnGitHub: 'Поставить звезду на GitHub',
     starPromptTitle: 'Нравится GenOffice?',
     starPromptTitleN: 'Вы уже открыли {n} документов в GenOffice',
@@ -5386,6 +5399,7 @@ export const strings = {
     setAiGskToolsDesc:
       'عندما يكون المزوّد Genspark، يمر البحث في الويب وتوليد الصور وتحليل الوسائط عبر Genspark ويستهلك الرصيد؛ عند الإيقاف يستخدم البحث مصادر مجانية وتصبح أدوات صور Genspark غير متاحة.',
     setGithub: 'مفتوح المصدر',
+    setBasedOn: 'مبني على المشروع مفتوح المصدر {{GenOffice}} (Apache License 2.0).',
     starOnGitHub: 'ضع نجمة على GitHub',
     starPromptTitle: 'هل أعجبك GenOffice؟',
     starPromptTitleN: 'لقد فتحت {n} من المستندات في GenOffice',
@@ -5841,6 +5855,7 @@ export const strings = {
     setAiGskToolsDesc:
       'Quando o provedor é o Genspark, a busca na web, a geração de imagens e a análise de mídia passam pelo Genspark e consomem créditos; desativado, a busca usa fontes gratuitas e as ferramentas de imagem do Genspark ficam indisponíveis.',
     setGithub: 'Código aberto',
+    setBasedOn: 'Baseado no projeto de código aberto {{GenOffice}} (Apache License 2.0).',
     starOnGitHub: 'Dar uma estrela no GitHub',
     starPromptTitle: 'Gostando do GenOffice?',
     starPromptTitleN: 'Você já abriu {n} documentos com o GenOffice',
@@ -6293,6 +6308,7 @@ export const strings = {
     setAiGskToolsDesc:
       "Quando il provider è Genspark, la ricerca web, la generazione di immagini e l'analisi dei media passano da Genspark e consumano crediti; se disattivato, la ricerca usa fonti gratuite e gli strumenti immagine di Genspark non sono disponibili.",
     setGithub: 'Open source',
+    setBasedOn: 'Basato sul progetto open source {{GenOffice}} (Apache License 2.0).',
     starOnGitHub: 'Metti una stella su GitHub',
     starPromptTitle: 'Ti piace GenOffice?',
     starPromptTitleN: 'Hai aperto {n} documenti con GenOffice',
@@ -6740,6 +6756,7 @@ export const strings = {
     setAiGskToolsDesc:
       'Gdy dostawcą jest Genspark, wyszukiwanie w sieci, generowanie obrazów i analiza mediów przechodzą przez Genspark i zużywają kredyty; po wyłączeniu wyszukiwanie używa darmowych źródeł, a narzędzia obrazów Genspark są niedostępne.',
     setGithub: 'Open source',
+    setBasedOn: 'Oparte na projekcie open source {{GenOffice}} (Apache License 2.0).',
     starOnGitHub: 'Gwiazdka na GitHubie',
     starPromptTitle: 'Podoba Ci się GenOffice?',
     starPromptTitleN: 'Otwarto już {n} dokumentów w GenOffice',
@@ -7154,6 +7171,7 @@ export const strings = {
     setAiGskToolsDesc:
       'Webové vyhledávání, generování obrázků a analýza médií běží přes Genspark a čerpají kredity, pokud je jejich poskytovatel nastaven na Genspark; při vypnutí vyhledávání používá bezplatné zdroje a obrázkové nástroje Genspark nejsou dostupné.',
     setGithub: 'Open source',
+    setBasedOn: 'Založeno na open source projektu {{GenOffice}} (Apache License 2.0).',
     starOnGitHub: 'Dát hvězdičku na GitHubu',
     starPromptTitle: 'Líbí se vám GenOffice?',
     starPromptTitleN: 'V GenOffice jste otevřeli už {n} dokumentů',
@@ -7634,6 +7652,7 @@ export const strings = {
     setAiGskToolsDesc:
       'Staat de provider op Genspark, dan lopen zoeken op het web, afbeeldingen genereren en media-analyse via Genspark en kosten ze credits; uitgeschakeld gebruikt zoeken gratis bronnen en zijn de Genspark-afbeeldingstools niet beschikbaar.',
     setGithub: 'Open source',
+    setBasedOn: 'Gebaseerd op het opensourceproject {{GenOffice}} (Apache License 2.0).',
     starOnGitHub: 'Geef een ster op GitHub',
     starPromptTitle: 'Bevalt GenOffice?',
     starPromptTitleN: 'Je hebt al {n} documenten geopend met GenOffice',
@@ -8086,6 +8105,7 @@ export const strings = {
     setAiGskToolsDesc:
       'Apabila pembekalnya ditetapkan kepada Genspark, carian web, penjanaan imej dan analisis media melalui Genspark dan menggunakan kredit; apabila dimatikan, carian menggunakan sumber percuma dan alat imej Genspark tidak tersedia.',
     setGithub: 'Sumber Terbuka',
+    setBasedOn: 'Berasaskan projek sumber terbuka {{GenOffice}} (Apache License 2.0).',
     starOnGitHub: 'Beri Bintang di GitHub',
     starPromptTitle: 'Suka GenOffice?',
     starPromptTitleN: 'Anda telah membuka {n} dokumen dengan GenOffice',
@@ -8522,6 +8542,7 @@ export const strings = {
     setAiGskToolsDesc:
       'כשהספק מוגדר ל-Genspark, חיפוש באינטרנט, יצירת תמונות וניתוח מדיה עוברים דרך Genspark וצורכים קרדיטים; כשהוא כבוי החיפוש משתמש במקורות חינמיים וכלי התמונות של Genspark אינם זמינים.',
     setGithub: 'קוד פתוח',
+    setBasedOn: 'מבוסס על פרויקט הקוד הפתוח {{GenOffice}} (Apache License 2.0).',
     starOnGitHub: 'תנו כוכב ב-GitHub',
     starPromptTitle: 'נהנים מ-GenOffice?',
     starPromptTitleN: 'פתחת {n} מסמכים עם GenOffice',
@@ -8967,6 +8988,7 @@ export const strings = {
     setAiGskToolsDesc:
       'जब प्रदाता Genspark हो, वेब खोज, इमेज जनरेशन और मीडिया विश्लेषण Genspark से होकर चलते हैं और क्रेडिट खर्च करते हैं; बंद होने पर खोज मुफ़्त स्रोत उपयोग करती है और Genspark इमेज टूल उपलब्ध नहीं रहते।',
     setGithub: 'ओपन सोर्स',
+    setBasedOn: 'ओपन सोर्स प्रोजेक्ट {{GenOffice}} (Apache License 2.0) पर आधारित।',
     starOnGitHub: 'GitHub पर स्टार दें',
     starPromptTitle: 'GenOffice पसंद आ रहा है?',
     starPromptTitleN: 'आपने GenOffice में {n} दस्तावेज़ खोले हैं',
@@ -9395,6 +9417,7 @@ export const strings = {
     setAiGskToolsDesc:
       '服務商選擇 Genspark 時，網頁搜尋、生圖與媒體解析經 Genspark 雲端並消耗點數；關閉後搜尋改用免費來源，Genspark 生圖工具不可用。',
     setGithub: '開源專案',
+    setBasedOn: '以開源專案 {{GenOffice}} 為基礎打造（Apache License 2.0）。',
     starOnGitHub: '到 GitHub 給我們一顆星',
     starPromptTitle: '喜歡 GenOffice 嗎？',
     starPromptTitleN: '你已經用 GenOffice 開啟了 {n} 個文件',
