@@ -26,9 +26,10 @@ import type { AiMediaProviderMeta } from '@genoffice/ai-provider'
 import { aiProviderDisplayName, aiProviderPickerGroups } from '@genoffice/ui'
 
 /**
- * Whether the first-connection notice carries the sentence that Codex may keep
- * conversation content on this PC. It stays in until the Codex bridge is known
- * to prevent that: saying it needlessly is the safe side of the two.
+ * Whether the first-connection notice carries its Codex sentence. The Codex
+ * bridge turns conversation history off (ephemeral threads, no history file),
+ * but Codex still writes its own diagnostic log on this PC, which the app can
+ * neither read nor prevent. So the sentence stays in, and says exactly that.
  */
 export const CODEX_MAY_KEEP_HISTORY = true
 

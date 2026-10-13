@@ -10,8 +10,10 @@ import {
   AiTypingIndicator,
   AiUsageChip,
   addTokenUsage,
+  aiSubscriptionText,
   createFileNav,
   Markdown,
+  type AiConnectPromptView,
   type AiTokenUsageView,
 } from '@genoffice/ui'
 import type { AiSettings } from '@genoffice/ai-provider'
@@ -55,16 +57,21 @@ interface AskMessage {
 export function KbAskPanel({
   onOpenPath,
   onGoToRecents,
+  connectHint,
+  onOpenAiSettings,
 }: {
   onOpenPath: (path: string) => void
   onGoToRecents: () => void
+  /** why the selected AI cannot run right now; null when it can */
+  connectHint: AiConnectPromptView | null
+  /** open Settings on its AI section, where a connection is made */
+  onOpenAiSettings: () => void
 }): React.JSX.Element {
   const { t, lang } = useI18n()
   const [messages, setMessages] = useState<AskMessage[]>([])
   const [draft, setDraft] = useState('')
   const [busy, setBusy] = useState(false)
   const [corpusCount, setCorpusCount] = useState<number | null>(null)
-  const [gskEmail, setGskEmail] = useState<string | null>(null)
   const corpusRef = useRef<KbFileInfo[]>([])
   const settingsRef = useRef<AiSettings | null>(null)
   const loopRef = useRef<AgentLoop<unknown> | null>(null)
@@ -101,10 +108,6 @@ export function KbAskPanel({
       })
       .catch(() => setCorpusCount(0))
     refreshSettings()
-    void window.aiOffice
-      .aiGskStatus()
-      .then((status) => setGskEmail(status.loggedIn ? (status.email ?? '') : null))
-      .catch(() => undefined)
     loopRef.current = new AgentLoop({
       transport: createIpcTransport<AiSettings>({
         onStream: (listener) => window.aiOffice.onAiStream(listener),
@@ -295,7 +298,16 @@ export function KbAskPanel({
           {t('askNoSave')}
         </p>
       )}
-      {gskEmail === null && <p className="kb-ask-login">{t('askNeedsLogin')}</p>}
+      {connectHint && (
+        <p className="kb-ask-login">
+          {aiSubscriptionText(lang, connectHint.titleKey, {
+            provider: connectHint.providerName ?? '',
+          })}{' '}
+          <button type="button" className="kb-ask-login-link" onClick={onOpenAiSettings}>
+            {aiSubscriptionText(lang, 'actionOpenSettings')}
+          </button>
+        </p>
+      )}
       <AiComposer
         value={draft}
         busy={busy}

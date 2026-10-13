@@ -47,7 +47,8 @@ export const ko = {
   noticeTitle: '구독으로 AI를 쓰기 전에',
   noticeSend: '문서 내용과 대화는 사용자 본인 계정으로 Anthropic 또는 OpenAI에 전송됩니다.',
   noticeTraining: '그 내용이 AI 학습에 쓰이는지는 해당 회사의 사용자 계정 설정에 따라 정해집니다.',
-  noticeCodexHistory: 'Codex는 대화 내용을 이 PC에 남길 수 있습니다.',
+  noticeCodexHistory:
+    '이 앱은 Codex의 대화 기록 저장을 꺼 둡니다. 다만 Codex가 자체 진단 로그를 이 PC에 남길 수 있습니다.',
   noticeAck: '확인',
   codexNotice: '앱에서 Codex 구독을 쓰는 것은 OpenAI가 공식 권장하는 방식이 아닙니다.',
   truncatedNotice: '입력이 너무 길어 일부를 잘라내고 보냈습니다.',

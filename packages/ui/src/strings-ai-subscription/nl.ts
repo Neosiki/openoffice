@@ -54,7 +54,8 @@ export const nl = {
     'De inhoud van het document en je gesprek worden onder je eigen account naar Anthropic of OpenAI verzonden.',
   noticeTraining:
     'Of die inhoud wordt gebruikt om AI te trainen, wordt bepaald door de instellingen van je eigen account bij dat bedrijf.',
-  noticeCodexHistory: 'Codex kan de inhoud van gesprekken op deze pc bewaren.',
+  noticeCodexHistory:
+    'Deze app zet het opslaan van de gespreksgeschiedenis in Codex uit, maar Codex kan nog steeds eigen diagnostische logboeken op deze pc bewaren.',
   noticeAck: 'Begrepen',
   codexNotice:
     'Een Codex-abonnement gebruiken in een app is geen methode die OpenAI officieel aanbeveelt.',

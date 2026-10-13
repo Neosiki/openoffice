@@ -76,13 +76,10 @@ function installApi(settings: AiSettings): void {
   window.aiOffice = {
     getTheme: async () => 'system',
     getDefaultSaveDir: async () => '',
-    getAnalyticsEnabled: async () => true,
-    setAnalyticsEnabled: async () => true,
     getAiPanelPrefs: async () => ({ fontSize: 'medium', customFontSize: 14, spellcheck: true }),
     setAiPanelPrefs: async (patch: unknown) => patch,
     getUpdateChannel: async () => 'stable',
     getAppVersion: async () => '1.0.0',
-    githubStars: async () => null,
     getAiProviders: () => [
       {
         id: 'openai',
@@ -116,16 +113,7 @@ async function openAiPane(): Promise<void> {
         LocaleProvider,
         { initial: 'en' },
         createElement(SettingsModal, {
-          status: null,
-          loggingOut: false,
-          loginWaiting: false,
-          loginUrl: null,
-          urlCopied: false,
-          onOpenLoginUrl: vi.fn(),
-          onCopyLoginUrl: vi.fn(),
           onClose: vi.fn(),
-          onLogin: vi.fn(),
-          onLogout: vi.fn(),
         }),
       ),
     )

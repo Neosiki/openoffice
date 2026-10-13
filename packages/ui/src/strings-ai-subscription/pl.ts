@@ -53,7 +53,8 @@ export const pl = {
     'Treść dokumentu i rozmowa są wysyłane do Anthropic lub OpenAI z Twojego własnego konta.',
   noticeTraining:
     'To, czy te treści służą do trenowania AI, zależy od ustawień Twojego konta w danej firmie.',
-  noticeCodexHistory: 'Codex może przechowywać treść rozmów na tym komputerze.',
+  noticeCodexHistory:
+    'Ta aplikacja wyłącza zapisywanie historii rozmów w Codex, ale Codex może nadal przechowywać własne dzienniki diagnostyczne na tym komputerze.',
   noticeAck: 'Rozumiem',
   codexNotice:
     'Korzystanie z subskrypcji Codex wewnątrz aplikacji nie jest metodą oficjalnie zalecaną przez OpenAI.',

@@ -52,7 +52,8 @@ export const vi = {
     'Nội dung tài liệu và cuộc trò chuyện được gửi đến Anthropic hoặc OpenAI bằng chính tài khoản của bạn.',
   noticeTraining:
     'Nội dung đó có được dùng để huấn luyện AI hay không tùy thuộc vào cài đặt tài khoản của bạn tại công ty đó.',
-  noticeCodexHistory: 'Codex có thể lưu nội dung trò chuyện trên máy tính này.',
+  noticeCodexHistory:
+    'Ứng dụng này tắt việc lưu lịch sử trò chuyện của Codex, nhưng Codex vẫn có thể lưu nhật ký chẩn đoán riêng trên máy tính này.',
   noticeAck: 'Đã hiểu',
   codexNotice:
     'Dùng gói đăng ký Codex bên trong một ứng dụng không phải là cách được OpenAI chính thức khuyến nghị.',

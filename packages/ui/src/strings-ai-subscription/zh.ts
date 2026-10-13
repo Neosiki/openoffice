@@ -42,7 +42,8 @@ export const zh = {
   noticeTitle: '使用订阅运行 AI 之前',
   noticeSend: '文档内容和对话会以你本人的账户发送给 Anthropic 或 OpenAI。',
   noticeTraining: '这些内容是否用于 AI 训练，取决于你在该公司账户中的设置。',
-  noticeCodexHistory: 'Codex 可能会在这台电脑上保留对话内容。',
+  noticeCodexHistory:
+    '本应用会关闭 Codex 的对话历史保存，但 Codex 仍可能在这台电脑上保留自己的诊断日志。',
   noticeAck: '知道了',
   codexNotice: '在应用中使用 Codex 订阅并非 OpenAI 官方推荐的方式。',
   truncatedNotice: '输入内容过长，已截去一部分后发送。',
