@@ -12,7 +12,7 @@ PDF 보기·주석·편집 에디터다. 화면은 PDF.js로 그리고, 저장�
 ## 맡지 않는 것 (경계)
 
 - AI 요청의 실행은 이 모듈의 범위가 아니다. `ai:stream`·`ai:get-settings` 등 공용 채널과 구독 IPC 채널은 `apps/docs/src/main/docs-main.ts`의 `registerAiIpc`가 등록한다. 이 모듈은 그중 어느 것도 등록하지 않는다. 그래서 단독 실행(`startPdfStandalone`)에는 AI 핸들러가 없고, 그때 패널의 연결 상태는 계속 `checking`이다. 배포되는 앱에는 항상 핸들러가 있다.
-- 프로바이더 선택은 `packages/ai-provider`, 보내기 규칙과 연결 카드·알림은 `packages/ui`, 에이전트 루프는 `packages/agent-core`의 범위다.
+- 제공자 선택은 `packages/ai-provider`, 보내기 규칙과 연결 카드·알림은 `packages/ui`, 에이전트 루프는 `packages/agent-core`의 범위다.
 - PDF를 Word·PowerPoint·Excel로 바꾸는 변환은 `packages/pdf2docx`와 shell(`apps/shell/src/main/pdf2docx-local.ts` 등)의 범위다. AI가 새 docx·md를 만드는 흐름은 문서 에디터의 `createAiDocument`가 하고 shell이 `configurePdfRuntime`으로 주입한다.
 - 탭, 창, 암호 입력 창, 구독 프로그램의 수명은 `apps/shell`의 범위다.
 
@@ -25,7 +25,7 @@ PDF 보기·주석·편집 에디터다. 화면은 PDF.js로 그리고, 저장�
 - 이 모듈이 갖는 AI 채널은 `PDF_CHANNELS.generateImage` 하나다. 슬라이드의 `ai:generate-image`는 슬라이드 뷰가 있어야 등록되므로 PDF는 자기 채널을 갖는다. 호출할 때 `{ path: 'screen', statuses: sharedSubscriptionStatuses() }`를 넘기고, 읽을 수 있는 로컬 경로는 열린 파일의 폴더와 붙여 넣기 임시 폴더로 제한한다(`documentMediaRoots`).
 - 이미지 생성 도구는 추측으로 내놓지 않는다. 메인의 가용성 보고(`AI_TOOL_CAPABILITIES_CHANNEL`)를 `imageGenerationAvailableOf`로 읽고, 핸들러가 없거나 답이 이상하면 "불가"로 본다.
 - 구독 API는 preload가 `window.pdfApi.subscription`으로 내보내며 채널 이름과 판독 함수는 `@genoffice/ai-provider/browser`의 것을 쓴다. 이 모듈에 판독 함수의 사본을 만들지 않는다. 모든 호출은 실패를 견딘다(핸들러 없음 = `checking`, 동작 없음).
-- 보내기 판단을 따로 만들지 않는다. 패널은 `useAiSendGate`를 쓰고, 막힌 실행은 `aiBlockedRunOf`가 `isAiBlockedRunKind`로 판정한다. 다른 프로바이더로 저절로 넘어가는 코드를 넣지 않는다.
+- 보내기 판단을 따로 만들지 않는다. 패널은 `useAiSendGate`를 쓰고, 막힌 실행은 `aiBlockedRunOf`가 `isAiBlockedRunKind`로 판정한다. 다른 제공자로 저절로 넘어가는 코드를 넣지 않는다.
 
 ## 이 모듈의 방식
 
@@ -39,7 +39,7 @@ PDF 보기·주석·편집 에디터다. 화면은 PDF.js로 그리고, 저장�
 ## 테스트
 
 - 실행: `npm run test -w @genoffice/pdf`(또는 이 폴더에서 `npx vitest run`), `npm run typecheck -w @genoffice/pdf`. 환경은 `jsdom`이다.
-- AI 배선(`tests/ai-connection.test.ts`, `tests/ai-panel-subscription.test.ts`, `tests/subscription-api.test.ts`, `tests/ai-transport.test.ts`): 막힌 실행 판정, 핸들러가 없을 때의 상태, 가용성 답이 깨졌을 때 이미지 도구가 빠지는지. 이 모듈의 테스트는 프로바이더를 부르지 않는다.
+- AI 배선(`tests/ai-connection.test.ts`, `tests/ai-panel-subscription.test.ts`, `tests/subscription-api.test.ts`, `tests/ai-transport.test.ts`): 막힌 실행 판정, 핸들러가 없을 때의 상태, 가용성 답이 깨졌을 때 이미지 도구가 빠지는지. 이 모듈의 테스트는 제공자를 부르지 않는다.
 - 저장·가림·글자 편집을 바꾸면 결과 PDF를 다시 읽어 확인하는 테스트를 붙인다. 가림은 지운 글자가 추출 결과에 남지 않는지를 본다.
 - Windows에서 `tests/generated-output.test.ts`의 "sanitizes characters that are invalid in file names" 한 건은 변경과 무관하게 실패한다(`a:b?.pdf`에서 `basename`이 Windows의 드라이브 표기로 `a:`를 떼어 낸다).
 - 실제 렌더링, 서명 검증, OCR은 단위 테스트로 다 확인되지 않는다. 빌드한 앱에서 확인한다.

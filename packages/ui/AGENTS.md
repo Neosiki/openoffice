@@ -23,12 +23,12 @@
 
 - 크롬 색은 토큰으로만 쓴다. 이 폴더의 CSS에 `#hex`·`rgb()`를 직접 쓰지 않고 `var(--surface)` 등을 참조한다. `npm run check:theme-colors`는 `apps/*/src/renderer`의 CSS만 검사하므로 이 패키지의 CSS는 검사에 걸리지 않는다. 그래서 직접 지켜야 한다.
 - 토큰을 추가하면 `tokens.css`의 세 블록(`:root`, `[data-theme='dark']`, `prefers-color-scheme: dark` 미디어 쿼리 안의 시스템 모드)에 모두 넣는다. 한 곳이라도 빠지면 그 테마에서 값이 비어 버린다. 경고 전용 토큰은 없다. 비용 표시와 경고는 `--danger` 계열을 쓴다.
-- 보내기 규칙은 `aiSendGate` 하나다. 상태 확인이 아직 답하지 않았으면 요청을 붙잡았다가 실행 가능해지는 즉시 시작한다. 실행할 수 있는 것이 없으면 아무것도 보내지 않고, 작성기의 글은 남기고, 연결 안내를 보여 준다. 이때는 나중에 저절로 시작하지 않는다(로그인은 몇 분 걸릴 수 있고 실행은 다시 요청받아야 한다). 구독을 처음 쓰려는 순간이면 첫 연결 알림이 먼저이고 확인을 눌러야 시작한다.
+- 보내기 규칙은 `aiSendGate` 하나다. 상태 확인이 아직 답하지 않았으면 요청을 붙잡았다가 실행 가능해지는 즉시 시작한다. 실행할 수 있는 것이 없으면 아무것도 보내지 않고, 작성기의 글은 남기고, 연결 안내를 보여 준다. 이때는 나중에 저절로 시작하지 않는다(로그인은 몇 분 걸릴 수 있고 실행은 다시 요청받아야 한다). 구독을 처음 쓰려는 순간이면 첫 연결 안내이 먼저이고 확인을 눌러야 시작한다.
 - 에디터는 자기만의 보내기 판단을 만들지 않는다. `tests/editors-consistency.test.ts`가 여섯 에디터의 소스를 읽어 `useAiSendGate`를 쓰는지, 자체 gate 함수를 내보내지 않는지 확인한다.
-- 저절로 다른 프로바이더로 바꾸지 않는다. 막힌 실행 뒤의 "다른 연결로 계속"은 사용자가 버튼을 눌렀을 때만이고, 후보(`aiContinueOption`)는 `ready`인 다른 구독, 없으면 이미 동의한 종량제 로그인이다. 막힌 프로바이더 자신과 키 프로바이더는 후보가 아니다. 누르면 그 프로바이더가 저장된 선택이 되어 모델 선택기에 보인다(`withAiContinueProvider`).
+- 저절로 다른 제공자로 바꾸지 않는다. 막힌 실행 뒤의 "다른 연결로 계속"은 사용자가 버튼을 눌렀을 때만이고, 후보(`aiContinueOption`)는 `ready`인 다른 구독, 없으면 이미 동의한 종량제 로그인이다. 막힌 제공자 자신과 키 제공자는 후보가 아니다. 누르면 그 제공자가 저장된 선택이 되어 모델 선택기에 보인다(`withAiContinueProvider`).
 - 모델 선택기에 올리는 항목은 고르는 즉시 실행 가능한 것만이다. `auto`는 구독으로 풀릴 때만 나오고, 종량제 로그인은 동의한 것만 비용 표시와 함께 나온다. 목록에 없는 상태로 되돌리는 일은 설정 화면에서 한다.
 - 패널이 설정을 쓸 때는 `changeStoredAiSettings`를 거친다. 패널이 쥐고 있는 사본이 아니라 지금 저장된 값에 변경을 적용한다. 다른 창이나 설정 화면이 그사이 쓴 값을 덮어쓰지 않기 위해서다.
-- 구독 프로바이더는 글자 이름으로만 표시한다(`Claude`, `Codex`). 벤더 로고를 넣지 않으며 `src/provider-logos.tsx`의 `'claude-code': null`은 의도된 값이다. AI 표시는 `AiMark`를 쓴다.
+- 구독 제공자는 글자 이름으로만 표시한다(`Claude`, `Codex`). 벤더 로고를 넣지 않으며 `src/provider-logos.tsx`의 `'claude-code': null`은 의도된 값이다. AI 표시는 `AiMark`를 쓴다.
 - 구독 연결에 관한 문장은 이 패키지의 문자열만 쓴다. 에디터 사전에 같은 문장을 복제하지 않는다. AI 진입 버튼과 패널 제목의 이름도 공용 키 `aiAssistant` 하나다.
 - 문자열 키는 21개 언어 조각 모두에 있어야 한다. `zh.ts`가 키 집합을 정의하고 나머지는 타입으로 같은 키를 강제받는다. 다른 언어에 영어 문장을 복사해 넣지 않는다(비라틴 문자 언어에서 영어와 같은 값은 테스트가 잡는다).
 - 상태 확인의 오류 문장(`status.error`)을 그대로 화면에 찍지 않는다. `subscriptionStatusErrorKind`로 종류를 읽어 번역된 문장을 쓴다. 로그인·설치 실패의 원문도 마찬가지다(실행 파일 경로가 들어 있을 수 있다).
@@ -36,10 +36,10 @@
 ## 이 모듈의 방식
 
 - 규칙은 순수 함수, 컴포넌트는 배치다. 연결 상태 여섯 가지에 카드가 무엇을 보이는지는 `aiSubscriptionCardView`, 연결 안내의 구성은 `aiConnectPromptView`, 어떤 오류가 "막힌 실행" 알림을 받는지는 `AI_BLOCKED_RUN_KINDS`·`isAiBlockedRunKind`가 정한다. 동작을 바꿀 때는 이 함수와 그 테스트를 먼저 바꾼다.
-- 패널 배선은 `useAiSendGate` 하나로 한다. 보내기 경로는 `admit(request)`를 묻고(거짓이면 보내지 않고 작성기 글을 남긴다), 대기열은 `admitQueued`를, 첫 연결 알림의 확인 버튼은 `acknowledgeNotice`를, 막힌 실행의 버튼은 `continueWith(provider, rerun)`을 부른다. 붙잡힌 요청은 `start`로 되돌아오고 패널의 보내기 경로를 다시 지나며 `admit`을 한 번 더 묻는다.
-- 붙잡힌 요청의 운명은 `aiHeldRequestStep`이 정한다. 상태 확인 때문에 붙잡힌 요청은 답이 "연결 안 됨"이면 버려진다. 알림 때문에 붙잡힌 요청은 확인 버튼만이 시작시키고, 다른 이유로 알림이 사라지면(프로바이더 변경, 연결 끊김) 버려진다.
+- 패널 배선은 `useAiSendGate` 하나로 한다. 보내기 경로는 `admit(request)`를 묻고(거짓이면 보내지 않고 작성기 글을 남긴다), 대기열은 `admitQueued`를, 첫 연결 안내의 확인 버튼은 `acknowledgeNotice`를, 막힌 실행의 버튼은 `continueWith(provider, rerun)`을 부른다. 붙잡힌 요청은 `start`로 되돌아오고 패널의 보내기 경로를 다시 지나며 `admit`을 한 번 더 묻는다.
+- 붙잡힌 요청의 운명은 `aiHeldRequestStep`이 정한다. 상태 확인 때문에 붙잡힌 요청은 답이 "연결 안 됨"이면 버려진다. 알림 때문에 붙잡힌 요청은 확인 버튼만이 시작시키고, 다른 이유로 알림이 사라지면(제공자 변경, 연결 끊김) 버려진다.
 - `AiModelPicker`는 `subscriptionStatuses`를 받는다. 넘기지 않으면 어떤 구독도 연결된 것으로 치지 않는다. 선택 변경은 `withAiProviderSelection`으로 쓴다.
-- 오류 문장: `aiRunErrorText(lang, cause)`는 구독 계약의 종류에만 문장을 주고 `timeout`·`credits`·`network`·`overloaded`에는 `undefined`를 돌려준다. 그래서 전송의 `errorText` 옵션에 그대로 꽂으면 에디터의 기존 문장이 살아 있다. `unsafe-tools`에 프로바이더가 없으면 Claude로 읽는다.
+- 오류 문장: `aiRunErrorText(lang, cause)`는 구독 계약의 종류에만 문장을 주고 `timeout`·`credits`·`network`·`overloaded`에는 `undefined`를 돌려준다. 그래서 전송의 `errorText` 옵션에 그대로 꽂으면 에디터의 기존 문장이 살아 있다. `unsafe-tools`에 제공자가 없으면 Claude로 읽는다.
 - 문자열은 `createI18n`을 거치므로 사전 안의 `GenOffice`는 출력에서 제품명으로 바뀐다. 사전은 원본의 표기를 유지한다.
 - CSS는 컴포넌트가 스스로 import한다(`ai-subscription.css`, `ai-usage.css`). 새 클래스는 `ai-sub-` 접두사를 쓴다. 에디터가 따로 import해야 하는 CSS는 `package.json`의 `exports`에 올린 것뿐이다.
 - 브랜드 로고는 두 테마에서 공식 색을 유지한다(크롬이 아니라 브랜드 자산). 단색 로고는 `currentColor`를 써서 어두운 테마에서 읽히게 한다.

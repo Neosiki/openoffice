@@ -17,7 +17,7 @@
 - 어느 경로(무료·키·구독)로 갈지, 시간당 한도를 어떻게 세는지는 `packages/ai-search`의 범위다. 이 모듈은 "자동 호출 경로다"라는 사실과 `dataDir`, 연결 상태를 넘길 뿐이다. 구독 프로그램의 시작·종료는 `packages/ai-provider`의 범위다.
 - 앱 안의 MCP 서버(`apps/shell/src/main/mcp`)와 설정 화면의 통합 탭은 shell의 범위다. shell은 이 패키지를 프로세스로 실행하거나 하위 진입점(`/install`, `/agent-skills`, `/mcp-launch`, `/control-protocol`)을 import한다.
 - 렌더러가 필요한 변환(PDF 내보내기 등)은 앱 실행 파일의 `--headless-export`가 한다. 이 모듈은 그것을 찾아 실행하고 결과 봉투를 읽는다.
-- AI 설정 파일과 종량제 동의 기록은 앱의 것이다. 명령줄은 둘 다 읽기만 한다.
+- AI 설정 파일과 종량 허용 기록은 앱의 것이다. 명령줄은 둘 다 읽기만 한다.
 
 ## 항상 지켜야 하는 것
 
@@ -28,9 +28,9 @@
 - 도움말·도구 설명 같은 고정 문구는 소스에 `GenOffice`로 적고 출력할 때 `branded()`로 바꾼다. 경로를 담은 메시지에는 `branded()`를 쓰지 않고 `PRODUCT_NAME`을 직접 넣는다(실제로 `GenOffice`라는 이름의 폴더는 있는 그대로 찍혀야 한다).
 - 이 모듈의 모든 명령과 그것을 실행하는 모든 MCP 도구는 자동 호출 경로다. 검색·이미지·미디어 명령은 반드시 `headlessCall`로 얻은 컨텍스트(`path: 'headless'`, `dataDir`)를 도구에 넘긴다. 컨텍스트 없이 도구를 부르면 화면 경로로 취급되어 한도가 적용되지 않는다.
 - 자동 호출 경로는 사용자가 앱 설정에서 켰을 때만 구독을 쓰고, 한 번에 하나, 한 시간에 20개이며, 명령·MCP 프로세스를 통틀어 센다. 꺼져 있으면 구독이 없는 것처럼 동작한다. 검색은 구독을 쓰지 않는다.
-- 필요 없는 상태 확인으로 벤더 프로그램을 띄우지 않는다. `subscriptionProvidersInPlay`가 결과를 바꿀 수 있는 프로바이더만 고르고, 없으면 상태 확인을 건너뛴다. 확인이 실패하거나 시간이 넘으면 연결되지 않은 것으로 본다.
+- 필요 없는 상태 확인으로 벤더 프로그램을 띄우지 않는다. `subscriptionProvidersInPlay`가 결과를 바꿀 수 있는 제공자만 고르고, 없으면 상태 확인을 건너뛴다. 확인이 실패하거나 시간이 넘으면 연결되지 않은 것으로 본다.
 - 구독 프로그램을 띄울 수 있는 프로세스는 끝날 때 그것을 끝낸다(`endSubscriptionChildrenWith`: `exit`와 `SIGHUP`·`SIGINT`·`SIGTERM`). 실제 요청을 실행하는 경우에는 강제 종료에 대비해 `dataDir`에 자식 기록도 남긴다. 앱의 다음 시작이 그 기록으로 정리한다.
-- 로그인 정보를 다루지 않는다. 명령줄에는 자체 로그인이 없고 자격 증명을 저장하지 않는다. 종량제 동의는 앱의 기록을 읽기만 하고(`write`는 아무것도 하지 않는다) 맞지 않는 동의는 "동의 안 됨"으로 보고 앱이 지우게 둔다.
+- 로그인 정보를 다루지 않는다. 명령줄에는 자체 로그인이 없고 자격 증명을 저장하지 않는다. 종량 허용는 앱의 기록을 읽기만 하고(`write`는 아무것도 하지 않는다) 맞지 않는 동의는 "동의 안 됨"으로 보고 앱이 지우게 둔다.
 - 결과 계약을 지킨다. 표준 출력의 JSON 봉투(`status`, `command`, `summary`, `output_path`, `detail`)와 종료 코드 0~4, 오류의 `error` 값(`ErrorReason`)은 프로그램이 분기하는 값이다. 이름을 바꾸지 않고 함부로 늘리지 않는다. 검색·이미지·미디어 실패는 종료 코드 4, `error: "app_unavailable"`, 원인은 `detail.errorCode`, 한도가 풀리는 시각은 `detail.resetsAt`이다.
 - 쓰기는 한 곳을 거친다. 출력 경로는 `src/fs.ts`에서 풀고, `GENOFFICE_ALLOWED_ROOTS`를 symlink를 푼 뒤 검사하고, 앱이 탭으로 열어 둔 파일은 `--force` 없이는 덮어쓰지 않는다. 파일은 같은 폴더의 임시 파일에 쓴 뒤 rename한다.
 - 비밀 값은 감사 기록에 남기지 않는다. 기록은 실패해도 명령을 실패시키지 않는다.
@@ -40,7 +40,7 @@
 - 명령은 `CommandDef` 하나다. `defaultRegistry()`에 등록하면 도움말, README 예시, 스킬 문서, MCP 도구가 같은 표에서 나온다. `tests/help-sync.test.ts`가 등록된 명령과 옵션이 `README.md`와 `skills/ieumoffice/SKILL.md`에 모두 나오는지 확인하므로, 옵션을 추가하면 세 곳을 함께 고친다.
 - 스킬 본문을 고치면 `metadata.version`을 올린다. 스킬은 사용자의 에이전트 폴더로 복사되고 버전이 커질 때만 교체되기 때문이다(`npm run check:skill-version`).
 - MCP 도구는 명령의 두 번째 구현이 아니다. 도구 호출을 명령줄 인자로 바꿔(`buildArgv`) 같은 명령을 실행한다. 인라인 값(ops, 명세, Markdown)은 임시 파일에 써서 경로로 넘긴다.
-- 명령줄은 Electron 없이 앱의 userData를 찾는다(`genofficeUserDataDir`). AI 설정은 그 안의 `ai-settings.json`이고, 한도 장부와 종량제 동의 기록은 같은 폴더에 둔다(`aiDataDir`). 앱과 모든 명령줄 프로세스가 같은 폴더를 써야 한도가 합쳐진다.
+- 명령줄은 Electron 없이 앱의 userData를 찾는다(`genofficeUserDataDir`). AI 설정은 그 안의 `ai-settings.json`이고, 한도 장부와 종량 허용 기록은 같은 폴더에 둔다(`aiDataDir`). 앱과 모든 명령줄 프로세스가 같은 폴더를 써야 한도가 합쳐진다.
 - 패키징: `build.mjs`가 전체를 CommonJS 파일 하나로 묶고, 설치된 앱은 그것을 `ELECTRON_RUN_AS_NODE=1`로 자기 실행 파일에서 돌린다(`bin/ieumoffice.cmd`). `node_modules`는 함께 배포되지 않는다. 번들의 버전은 `GENOFFICE_APP_VERSION`으로 주입되어 앱 버전과 어긋나지 않는다.
 - MCP 클라이언트는 셸 없이 프로세스를 띄운다. Windows에서 `.cmd`나 `cmd /c`를 등록하면 공백이 든 경로가 쪼개지므로, 등록하는 명령은 "앱 실행 파일을 Node로, 번들 CLI를 인자로"다(`src/mcp-launch.ts`). 이 파일은 순수 문자열 코드라 렌더러도 import한다.
 - 에이전트 설정 파일은 키 하나만 쓰거나 지운다. `ieumoffice` 이름의 항목이 우리 실행기가 아닌 것을 가리키면 강제 옵션 없이는 바꾸지 않는다. JSON 설정은 다시 직렬화되고 TOML은 해당 표만 줄 단위로 바꾼다. symlink인 설정은 대상에 써서 링크를 보존한다.
@@ -49,7 +49,7 @@
 ## 테스트
 
 - 실행: `npm run test -w @genoffice/cli`(또는 이 폴더에서 `npx vitest run`), `npm run typecheck -w @genoffice/cli`. 테스트는 `tests/helpers.ts`의 `run()`으로 `runCli`를 프로세스 안에서 부른다.
-- 어떤 테스트도 벤더 프로그램이나 네트워크에 닿으면 안 된다. `tests/headless-tools.test.ts`처럼 `@genoffice/ai-provider/subscription`의 `detectSubscriptionLogin`과 키 프로바이더 호출을 `vi.mock`으로 바꾼다. 구독 경로에 닿을 수 있는 테스트는 도구나 이미지 생성기도 함께 바꾼다.
+- 어떤 테스트도 벤더 프로그램이나 네트워크에 닿으면 안 된다. `tests/headless-tools.test.ts`처럼 `@genoffice/ai-provider/subscription`의 `detectSubscriptionLogin`과 키 제공자 호출을 `vi.mock`으로 바꾼다. 구독 경로에 닿을 수 있는 테스트는 도구나 이미지 생성기도 함께 바꾼다.
 - `tests/upstream-coexistence.test.ts`는 원본 앱과의 공존을 고정한다. 등록·삭제·판정 코드를 바꾸면 "원본의 항목이 그대로 남는다"는 경우를 여기에 추가한다.
 - 바꾸면 반드시 테스트하는 것: 설정 스위치 켬·끔에 따른 `capabilities`와 실제 명령의 답이 같은지, 한도 초과 시 봉투의 `errorCode`·`resetsAt`, 허용 폴더 밖 경로와 symlink 우회, 앱이 열어 둔 파일 쓰기, 부분 적용 배치(`status: "partial"`).
 - 저장소 검사 도구(`tools/check-no-genspark.mjs`, `tools/check-english-comments.mjs`)의 테스트도 이 폴더의 `tests/`에 있다.

@@ -16,7 +16,7 @@
 
 - 문서 편집과 형식별 저장·내보내기는 이 모듈의 범위가 아니다. 각 에디터(`apps/docs`, `apps/sheets`, `apps/slides`, `apps/pdf`, `apps/markdown`, `apps/html`)가 한다. shell은 그 메인 모듈의 내보낸 함수(`createDocsView`, `configureSheetsRuntime` 등)를 부른다.
 - AI 요청의 실행은 범위가 아니다. `ai:*` 채널과 구독 IPC 채널은 `apps/docs/src/main/docs-main.ts`의 `registerAiIpc`가 등록한다. shell은 그것을 한 번 호출할 뿐이고, AI와 관련해 직접 응답하는 채널은 `home:open-subscription-install-help`(벤더의 설치 안내 페이지 열기)와 `ai:open-model-settings`(홈 탭의 설정 화면 열기)뿐이다.
-- 프로바이더 선택 규칙, 구독 프로그램 실행은 `packages/ai-provider`, 연결 카드와 알림 컴포넌트는 `packages/ui`의 범위다.
+- 제공자 선택 규칙, 구독 프로그램 실행은 `packages/ai-provider`, 연결 카드와 알림 컴포넌트는 `packages/ui`의 범위다.
 - 명령줄과 그 MCP 서버의 구현은 `packages/cli`의 범위다. 앱 안 MCP 서버의 창 없는 도구들은 그 명령줄을 프로세스로 실행해 결과 봉투를 옮길 뿐, 문서 엔진을 다시 구현하지 않는다(`src/main/mcp/cli-runner.ts`).
 - 제품 이름과 저장소 좌표의 정의는 `packages/i18n/src/product.ts`의 범위다.
 
@@ -41,9 +41,9 @@
 - 에디터의 메인 코드는 패키지가 아니라 상대 경로로 가져온다(`../../../docs/src/main/docs-main`). `electron.vite.config.ts`는 메인에 대해 아무것도 외부화하지 않고 전부 한 번들로 묶는다. 그래서 `apps/*/src/main`을 고친 뒤에는 shell을 다시 빌드해야 한다. 안 하면 변경이 조용히 실행되지 않는다. 렌더러와 preload는 각 에디터의 빌드 결과(`apps/<앱>/out`, 패키징 시 `resources/modules/`)에서 불러오므로 그쪽도 먼저 빌드되어 있어야 한다(`npm run shell`은 `build:all` 뒤에 실행한다).
 - 개발 모드에서 preload를 고쳤으면 다시 빌드한다. 낡은 preload는 렌더러를 빈 화면으로 만든다(`npm run dev`의 `predev`가 `tools/build-stale-preloads.mjs`를 돌린다).
 - 에디터는 `configure<앱>Runtime({ preloadPath, rendererUrl, rendererFile, … })`으로 자기 빌드 결과의 위치를 주입받는다. 공용 `ai:*` 핸들러는 `registerAiIpc()` 한 번으로 모든 창(문서, 시트, 홈)을 담당한다. 시트 뷰를 `createSheetsView({ includeAiHandlers: false })`로 만드는 이유다.
-- 설정 화면에서 쓰는 AI는 "사용할 AI" 선택 하나로 정해진다. 고급 영역의 프로바이더 드롭다운은 어느 프로바이더의 입력란을 보여 줄지만 고른다. 설정은 읽을 때(`readAiSettings`)와 쓸 때(`writeAiSettings`) 모두 `normalizeAiSettings`를 거쳐, 사라진 선택이 다시 저장되지 않는다.
-- 홈의 질문 패널은 에디터와 같은 보내기 규칙을 작은 사본(`askSendGate`, `src/renderer/src/kb-ask-connection.ts`)으로 갖는다. 첫 연결 알림은 홈 화면이 띄우고 패널은 그동안 보내지 않는다. `packages/ui`의 규칙을 바꾸면 이 사본도 맞춘다.
-- 첫 연결 알림의 Codex 문장은 `CODEX_MAY_KEEP_HISTORY`로 켜져 있다. 브리지가 대화 이력 파일은 끄지만 Codex가 자체 진단 로그를 남기고, 앱은 그것을 읽을 수도 막을 수도 없기 때문이다.
+- 설정 화면에서 쓰는 AI는 "사용할 AI" 선택 하나로 정해진다. 고급 영역의 제공자 드롭다운은 어느 제공자의 입력란을 보여 줄지만 고른다. 설정은 읽을 때(`readAiSettings`)와 쓸 때(`writeAiSettings`) 모두 `normalizeAiSettings`를 거쳐, 사라진 선택이 다시 저장되지 않는다.
+- 홈의 질문 패널은 에디터와 같은 보내기 규칙을 작은 사본(`askSendGate`, `src/renderer/src/kb-ask-connection.ts`)으로 갖는다. 첫 연결 안내은 홈 화면이 띄우고 패널은 그동안 보내지 않는다. `packages/ui`의 규칙을 바꾸면 이 사본도 맞춘다.
+- 첫 연결 안내의 Codex 문장은 `CODEX_MAY_KEEP_HISTORY`로 켜져 있다. 브리지가 대화 이력 파일은 끄지만 Codex가 자체 진단 로그를 남기고, 앱은 그것을 읽을 수도 막을 수도 없기 때문이다.
 - 문자열은 세 군데에 있다. 렌더러 사전 `src/renderer/src/strings.ts`(언어 21개가 한 파일에 있고 `zh`가 키 집합을 정한다), 메인 프로세스의 인라인 사전(`src/main/index.ts`의 `tMain`), 도움말 `i18n/help/topics/<id>.<lang>.md`. 도움말 항목은 `help-registry.ts`의 `HELP_TOPICS`에 등록해야 보이고, 모든 언어 파일의 구조는 영어 원본과 같아야 한다(`npm run check:help-langs`).
 - 렌더러 CSS의 크롬 색은 토큰만 쓴다(`npm run check:theme-colors`). shell의 강조색(`--accent` 계열)은 `src/renderer/src/home.css`에서 정의한다.
 - 패키징은 저장소 루트에서 한다: `npm run dist:win -- -- --publish never`. `--`가 두 번 필요하고, `--publish never`가 없으면 electron-builder가 업로드를 시도한다. xlsx 사이드카는 `target/x86_64-pc-windows-gnu/release/`에 있어야 하므로 Windows에서 MSVC로 빌드했다면 `target/release/xlsx-sidecar.exe`를 그리로 복사한다. OCR 도우미 컴파일에는 Windows SDK가 필요하다. Windows만 빌드·검증하며 Linux 패키징에는 원본의 이름이 남아 있다.
@@ -54,5 +54,5 @@
 - `src/main/index.ts`는 실행 중인 Electron이 있어야 불러올 수 있다. 그래서 배선은 소스 글자를 읽어 고정한다(`tests/subscription-lifetime.test.ts`, `tests/main-locale-tables.test.ts`). 종료 처리나 인라인 사전의 모양을 바꾸면 이 테스트들이 깨진다. 로직은 Electron을 import하지 않는 모듈로 빼서 테스트한다(`settings-ai.ts`, `kb-ask-connection.ts`, `app-routing.ts`).
 - 바꾸면 반드시 테스트하는 것: preload가 내보내는 구독 API(핸들러 없음, 깨진 답), 설정 저장 뒤 다시 읽은 값, 제품 정체성(`tests/product-identity.test.ts`: 빌더 설정·`package.json`·HTML 제목·ProgId·저장소 좌표의 일치), 업데이트 피드 설정, 탭 IPC의 인자 검증.
 - Windows에서 변경과 무관하게 실패하는 테스트: `tests/headless-export.test.ts`(16건, `/docs/a.docx` 같은 POSIX 경로를 전제로 한다)와 `tests/default-app.test.ts`의 Linux 사례 한 건. `tests/update-resume.test.ts`와 `tests/third-party-notices.test.ts`는 부하가 큰 PC에서 가끔 실패하므로 단독으로 다시 돌려 확인한다.
-- E2E(`npm run test:e2e`, 저장소 루트의 `e2e/`)는 전체 빌드가 필요하다. 실행기(`e2e/helpers.ts`)는 `ai-settings.json`에 `{ providers: {}, subscriptionNoticeSeen: true }`를 미리 써서, Claude·Codex에 로그인된 PC에서 첫 연결 알림이 화면을 가리지 않게 한다(`providers`가 없으면 파일 전체가 기본값으로 읽힌다).
+- E2E(`npm run test:e2e`, 저장소 루트의 `e2e/`)는 전체 빌드가 필요하다. 실행기(`e2e/helpers.ts`)는 `ai-settings.json`에 `{ providers: {}, subscriptionNoticeSeen: true }`를 미리 써서, Claude·Codex에 로그인된 PC에서 첫 연결 안내이 화면을 가리지 않게 한다(`providers`가 없으면 파일 전체가 기본값으로 읽힌다).
 - 실제 릴리스에서의 업데이트 내려받기·설치, 설치 프로그램 자체는 자동 테스트로 확인하지 못한다. 실제 빌드로 확인한다.

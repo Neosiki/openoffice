@@ -12,15 +12,15 @@
 
 ## 맡지 않는 것 (경계)
 
-- 모델 호출은 이 모듈의 범위가 아니다. 프로바이더 선택, 구독 프로그램 브리지, HTTP 프로토콜은 `packages/ai-provider`가 하고, 메인 프로세스의 `ai:stream` 핸들러는 `apps/*/src/main`에 있다. 루프는 `AgentTransport`만 안다.
+- 모델 호출은 이 모듈의 범위가 아니다. 제공자 선택, 구독 프로그램 브리지, HTTP 프로토콜은 `packages/ai-provider`가 하고, 메인 프로세스의 `ai:stream` 핸들러는 `apps/*/src/main`에 있다. 루프는 `AgentTransport`만 안다.
 - 도구의 구현과 system prompt 본문은 각 에디터(`apps/*/src/renderer/ai`)의 범위다. 여기에는 문서 형식을 아는 코드를 두지 않는다.
-- 보내기 전의 판단(연결됐는지, 첫 연결 알림을 봤는지)과 사용자에게 보이는 오류 문장은 `packages/ui`의 범위다. 전송은 문장을 만들지 않고 호출자가 준 `errorText` 등을 부를 뿐이다.
+- 보내기 전의 판단(연결됐는지, 첫 연결 안내을 봤는지)과 사용자에게 보이는 오류 문장은 `packages/ui`의 범위다. 전송은 문장을 만들지 않고 호출자가 준 `errorText` 등을 부를 뿐이다.
 - 가려진 내용이 파일에 어떻게 저장되는지(docx의 run 속성, pptx의 확장 요소)는 `packages/docx-engine`·`packages/pptx-engine`의 범위다. 여기는 두 엔진이 함께 쓰는 이름만 정의한다.
 
 ## 항상 지켜야 하는 것
 
 - 의존성을 추가하지 않는다. `package.json`에 `dependencies`가 없고, `packages/ai-provider`가 이 패키지를 import한다(반대 방향은 순환이다). 그래서 `IpcStreamChunk`는 `AiStreamChunk`와 구조만 같게 여기서 따로 선언하고, 오류 종류는 `IpcStreamErrorKind`가 유일한 정의이며 `AiRunErrorKind`가 그 별칭이다. 오류 종류나 조각 종류를 추가할 때는 여기서 먼저 추가한다.
-- 루프는 프로바이더를 고르거나 바꾸지 않는다. 턴이 실패하면 실행을 끝내고 오류를 알린다. 스스로 다시 보내는 경우는 둘뿐이다. 오류 문장에 `(empty stream)`이 있고 그 턴에서 글도 도구 호출도 전달되지 않았을 때(1초, 3초 뒤 두 번), `while sending tool arguments`가 있고 도구 호출이 전달되지 않았을 때(한 번). 두 경우 모두 이력이 그대로라 같은 요청을 다시 보내도 안전하다. 무언가 전달된 턴은 다시 보내지 않는다(같은 편집이 두 번 실행된다).
+- 루프는 제공자를 고르거나 바꾸지 않는다. 턴이 실패하면 실행을 끝내고 오류를 알린다. 스스로 다시 보내는 경우는 둘뿐이다. 오류 문장에 `(empty stream)`이 있고 그 턴에서 글도 도구 호출도 전달되지 않았을 때(1초, 3초 뒤 두 번), `while sending tool arguments`가 있고 도구 호출이 전달되지 않았을 때(한 번). 두 경우 모두 이력이 그대로라 같은 요청을 다시 보내도 안전하다. 무언가 전달된 턴은 다시 보내지 않는다(같은 편집이 두 번 실행된다).
 - 위 두 문구는 `packages/ai-provider`의 프로토콜·브리지와 맺은 문자열 계약이다. 한쪽만 고치면 재시도가 조용히 사라진다. 이 표식은 `errorCode`가 없는 오류에만 유효하다. `errorCode`가 붙은 조각은 `createIpcTransport`가 번역된 문장으로 바꿔 루프에 넘기므로 표식이 남지 않는다.
 - 모델이 요청한 호출은 검증을 통과해야 실행한다. `inputError`가 달린 호출(JSON이 깨졌거나 앱 도구 목록에 없는 이름), `truncated` 호출, 필수 인자가 빠지거나 `null`인 호출은 실행하지 않고 오류 결과로 모델에게 돌려준다. `null`을 값으로 받는 도구는 스키마에 그렇게 적어야 한다(`schemaAcceptsNull`).
 - 폭주는 일찍 끊는다. 같은 턴이 3번 반복되거나(`MAX_IDENTICAL_TURNS`), 모든 도구 호출이 8턴 연속 실패하거나(`MAX_ALL_ERROR_TURNS`), 쓸 수 없는 인자가 3번 이어지면(`MAX_INPUT_PARSE_RETRIES`) 실행을 끝낸다. 턴 상한(`DEFAULT_MAX_TURNS`)에 닿으면 도구 없이 마무리 턴을 한 번 준다.
@@ -46,6 +46,6 @@
 ## 테스트
 
 - 실행: `npm run test -w @genoffice/agent-core`(또는 이 폴더에서 `npx vitest run`), `npm run typecheck -w @genoffice/agent-core`. Windows에서 전부 통과한다.
-- 루프 테스트는 가짜 `AgentTransport`로 턴을 대본처럼 재생한다. 실제 프로바이더나 Electron이 필요 없다.
+- 루프 테스트는 가짜 `AgentTransport`로 턴을 대본처럼 재생한다. 실제 제공자나 Electron이 필요 없다.
 - 바꾸면 반드시 테스트하는 것: 재시도 조건의 경계(글이 한 글자라도 나간 뒤의 `(empty stream)`은 다시 보내지 않는다), 취소 직후 도착한 콜백, 실패 뒤 이력 되돌림과 그 다음 요청, 필수 인자 누락·`null`·잘림, 전송의 오류 문장 우선순위와 모르는 조각 종류.
 - 가림 코드는 빠져나가는 경우를 테스트한다. 선택 범위가 가려진 구간을 가로지를 때, 표식이 답에서 쪼개졌을 때, 모르는 노드 형태가 들어왔을 때 원문이 결과에 남지 않아야 한다.

@@ -13,7 +13,7 @@
 ## 테스트
 
 - **`npm test`가 첫 실패에서 멈춘다.** 작업 공간을 `&&`로 이어 돌리기 때문이다. Windows에서는 원본 코드 그대로도 실패하는 테스트가 있어(경로 구분자, 크롬 없음, 시간 초과), 한 번에 끝까지 가지 않는다. → 작업 공간별로 따로 돌리고(`npm run test -w @genoffice/<이름>`) 실패 목록을 이전 결과와 비교한다.
-- **부하가 걸리면 시간 초과로 떨어지는 테스트가 있다.** 껍데기 앱의 `third-party-notices`, `update-resume`, `pdf2docx-local-argv`, 워드 엔진의 암호 해시·압축 폭탄 테스트가 그렇다. → 여러 작업을 동시에 돌리던 중의 실패는 그 파일만 따로 돌려 본 뒤 판단한다.
+- **부하가 걸리면 시간 초과로 떨어지는 테스트가 있다.** 껍데기 앱의 `third-party-notices`, `update-resume`, `pdf2docx-local-argv`, 워드 엔진의 암호 해시·압축 폭탄 테스트, AI 연결부의 실제 프로세스 끝내기 테스트(`subscription-process`의 "really ends a child and the grandchild"), 엑셀 편집기의 `table-design-create`가 그렇다. → 여러 작업을 동시에 돌리던 중의 실패는 그 파일만 따로 돌려 본 뒤 판단한다.
 - **엑셀 편집기 테스트가 Rust 빌드를 시작한다.** `npm run test -w @genoffice/sheets`는 먼저 엑셀 처리 프로그램을 빌드한다. → 필요 없으면 `apps/sheets`에서 `npx vitest run`을 쓰고, 그 프로그램이 필요한 테스트에는 `XLSX_SIDECAR_PATH`로 만들어 둔 실행 파일을 가리킨다. 일부 테스트는 실행 파일 경로를 테스트 파일 기준으로 고정해 두어서, 저장소의 다른 사본에서는 돌지 않는다.
 - **구독 제공자로 가는 테스트는 진짜 프로그램을 띄운다.** 제공자가 `claude-code`나 `codex`로 정해지는데 연결부를 가짜로 바꾸지 않으면, 테스트가 사용자 PC의 실제 프로그램을 실행해 구독 한도를 쓴다. 테스트는 통과한 것처럼 보인다. → 연결부를 가짜로 바꾼 것을 확인한다.
 - **실제 화면 확인은 스크립트로 한다.** `e2e/helpers.ts`의 `launchShell`이 빌드된 껍데기 앱을 임시 데이터 폴더로 띄운다. 구독에 로그인된 PC에서는 첫 연결 안내가 설정과 질문 창을 덮으므로, 기본으로 "안내를 봤다"는 설정을 심는다(`subscriptionNoticeSeen: false`로 끌 수 있다). 편집기 화면은 `waitForPageWithUrl(app, '://docs/')`로 잡는다.

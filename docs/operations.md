@@ -57,17 +57,19 @@ cd apps/shell && npx vitest run tests/<파일>.test.ts   # 파일 하나만
 
 ## 환경변수
 
-| 이름                                       | 역할                                                       | 쓰이는 곳                                                     |
-| ------------------------------------------ | ---------------------------------------------------------- | ------------------------------------------------------------- |
-| `GENOFFICE_USER_DATA`                      | 데이터 폴더를 다른 곳으로 돌린다                           | 앱, 명령어. 화면 확인 스크립트가 임시 폴더를 줄 때 쓴다       |
-| `GENOFFICE_LANG`                           | 화면 언어를 강제한다                                       | 앱. 화면 확인 스크립트는 기본으로 영어를 준다                 |
-| `GENOFFICE_AI_SETTINGS`                    | 명령어가 읽을 AI 설정 파일 위치                            | 명령어, MCP                                                   |
-| `GENOFFICE_APP_BIN`                        | 명령어가 띄울 앱 실행 파일 위치                            | 명령어(화면이 필요한 변환)                                    |
-| `GENOFFICE_ALLOWED_ROOTS`                  | 명령어가 읽고 쓸 수 있는 폴더를 제한한다(PATH처럼 여러 개) | 명령어, MCP                                                   |
-| `GENOFFICE_AUDIT_LOG`                      | 명령어 실행 기록의 위치. `off`면 끈다                      | 명령어                                                        |
-| `GENOFFICE_MCP_COMPACT_SCHEMAS`            | MCP 도구 설명을 짧게 낸다                                  | MCP                                                           |
-| `XLSX_SIDECAR_PATH`                        | 엑셀 처리 프로그램의 위치                                  | 테스트                                                        |
-| `HTTPS_PROXY` / `HTTP_PROXY` / `ALL_PROXY` | 프록시                                                     | 앱이 직접 보내는 요청, 명령어. 구독 프로그램도 이 변수만 본다 |
+| 이름                                       | 역할                                                                     | 쓰이는 곳                                                                                                         |
+| ------------------------------------------ | ------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------- |
+| `GENOFFICE_USER_DATA`                      | 데이터 폴더를 다른 곳으로 돌린다                                         | 앱, 명령어. 화면 확인 스크립트가 임시 폴더를 줄 때 쓴다                                                           |
+| `GENOFFICE_LANG`                           | 화면 언어를 강제한다                                                     | 앱. 화면 확인 스크립트는 기본으로 영어를 준다                                                                     |
+| `GENOFFICE_AI_SETTINGS`                    | 명령어가 읽을 AI 설정 파일 위치                                          | 명령어, MCP                                                                                                       |
+| `GENOFFICE_APP_BIN`                        | 명령어가 띄울 앱 실행 파일 위치                                          | 명령어(화면이 필요한 변환)                                                                                        |
+| `GENOFFICE_ALLOWED_ROOTS`                  | 명령어가 읽고 쓸 수 있는 폴더를 제한한다(PATH처럼 여러 개)               | 명령어, MCP                                                                                                       |
+| `GENOFFICE_AUDIT_LOG`                      | 명령어 실행 기록의 위치. `off`면 끈다                                    | 명령어                                                                                                            |
+| `GENOFFICE_MCP_TOKEN`                      | `ieumoffice mcp --http`가 요청마다 요구할 값. `--token`이 없을 때 읽는다 | MCP                                                                                                               |
+| `GENOFFICE_HOME`                           | 에이전트 설정 폴더를 찾을 때의 홈 폴더                                   | 명령어(`mcp install`, 스킬 설치)                                                                                  |
+| `GENOFFICE_MCP_COMPACT_SCHEMAS`            | MCP 도구 설명을 짧게 낸다                                                | MCP                                                                                                               |
+| `XLSX_SIDECAR_PATH`                        | 엑셀 처리 프로그램의 위치를 바꾼다                                       | 엑셀 편집기 뒷단, 명령어, 테스트                                                                                  |
+| `HTTPS_PROXY` / `HTTP_PROXY` / `ALL_PROXY` | 프록시                                                                   | 앱이 직접 보내는 요청, 명령어. 구독 프로그램에는 이 변수가 그대로 전달된다(프로그램이 따르는지는 확인하지 않았다) |
 
 이름에 `GENOFFICE_`가 남아 있는 것은 일부러다. 내부 이름은 원본과 같게 둔다.
 
@@ -97,7 +99,7 @@ npm run dist:win -- -- --publish never
 
 ## 새 버전 내기
 
-순서는 `docs/releasing.ko.md`에 있다. 요점:
+순서:
 
 1. **공개 배포 전에 Anthropic 상업 약관에 동의했는지 확인한다.** 저장소 주인이 직접 해야 하는 일이고, 동의하지 않았으면 여기서 멈춘다.
 2. 버전 번호를 올리고 설치 파일을 만든다.
@@ -106,7 +108,21 @@ npm run dist:win -- -- --publish never
 
 ## 원본의 개선 받아오기
 
-1. 원본 저장소(주소는 소개 문서의 출처 단락에 있다. `git remote`에 `upstream`으로 등록해 둔다)의 변경을 가져와, 문서 엔진 쪽 커밋을 골라 합친다.
-2. 충돌이 나는 곳은 주로 화면 문구 파일, 껍데기 앱의 뒷단, AI 연결부다. 이쪽은 이 프로젝트의 것을 남긴다.
-3. 합친 뒤 `npm run check:no-genspark`를 돌린다. 원본에서 다시 딸려 온 제작사 표기·연결을 여기서 잡는다. 이어서 위의 검사 전체를 돌린다.
-4. 원본이 화면 문구 키를 늘렸으면 21개 언어 모두에 들어왔는지 형 검사로 확인한다.
+원본의 문서 엔진 쪽 커밋을 하나씩 골라 옮긴다. 원본 가지를 통째로 합치지 않는다. 통째로 합치면 걷어낸 제작사 연결과 화면이 한꺼번에 되돌아온다.
+
+```bash
+git remote add upstream <원본 저장소 주소>     # 처음 한 번. 주소는 소개 문서의 출처 단락에 있다
+git fetch upstream
+# 엔진 폴더에 닿은 원본 커밋만 본다
+git log --oneline HEAD..upstream/main -- packages/docx-engine packages/pptx-engine packages/pptx-ops \
+  packages/pptx-render packages/xlsx-gateway packages/pdf2docx packages/html2docx packages/file-parse \
+  packages/zip-gate packages/font-metrics apps/sheets/native
+git checkout -b sync/<날짜>
+git cherry-pick -x <커밋>                      # 하나씩. -x가 원본 커밋 번호를 커밋 글에 남긴다
+npm run check:no-genspark                      # 원본에서 다시 딸려 온 제작사 표기·연결을 여기서 잡는다
+npm run typecheck
+```
+
+- 엔진 밖의 파일까지 고치는 커밋은 엔진 쪽 변경만 받는다. 화면 문구 파일, 껍데기 앱의 뒷단, AI 연결부에서 충돌이 나면 이 프로젝트의 것을 남긴다.
+- 원본이 화면 문구 키를 늘렸으면 21개 언어 모두에 들어왔는지 형 검사로 확인한다.
+- 옮긴 뒤 위의 검사 전체와, 건드린 엔진 패키지의 테스트를 돌린다.

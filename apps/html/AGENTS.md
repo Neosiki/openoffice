@@ -1,6 +1,6 @@
 # apps/html (`@genoffice/html`)
 
-HTML 에디터다. HTML 원문이 진실의 원천이고, 옆에서 실시간 미리 보기가 돈다. AI는 쪽 전체를 새로 쓰거나 원문을 좁게 고치며, 공용 AI 배선 위에 HTML용 skill을 얹은 구성이다.
+HTML 에디터다. HTML 원문이 기준이고, 옆에서 실시간 미리 보기가 돈다. AI는 쪽 전체를 새로 쓰거나 원문을 좁게 고치며, 공용 AI 배선 위에 HTML용 skill을 얹은 구성이다.
 
 ## 맡은 범위
 
@@ -13,7 +13,7 @@ HTML 에디터다. HTML 원문이 진실의 원천이고, 옆에서 실시간 �
 
 - AI 요청의 실행은 이 모듈의 범위가 아니다. 공용 `ai:*` 채널과 구독 IPC 채널은 `apps/docs/src/main/docs-main.ts`의 `registerAiIpc`가 등록하고 이 모듈은 등록하지 않는다. 단독 실행(`startHtmlStandalone`)에는 AI 핸들러가 없다.
 - HTML을 Word로 바꾸는 변환기는 `packages/html2docx`의 범위다. 이 모듈은 숨은 창과 드라이버를 제공하고 결과를 저장한다.
-- 프로바이더 선택은 `packages/ai-provider`, 보내기 규칙과 연결 카드·알림은 `packages/ui`, 가림 규칙의 공통 부분과 `streamText`는 `packages/agent-core`의 범위다.
+- 제공자 선택은 `packages/ai-provider`, 보내기 규칙과 연결 카드·알림은 `packages/ui`, 가림 규칙의 공통 부분과 `streamText`는 `packages/agent-core`의 범위다.
 - 탭, 창, 구독 프로그램의 잔여 프로세스 정리는 `apps/shell`의 범위다.
 
 ## 항상 지켜야 하는 것
@@ -25,7 +25,7 @@ HTML 에디터다. HTML 원문이 진실의 원천이고, 옆에서 실시간 �
 - AI가 만들었거나 신뢰할 수 없는 HTML을 그리는 창은 적대적인 내용으로 취급한다. 숨은 창은 `sandbox: true`, preload 없음, IPC 없음이다. 인쇄용 창은 스크립트를 끈다(`javascript: false`). Word 내보내기용 창은 스크립트를 켠 채 `executeJavaScript`로만 몰고, 시간 제한(`HTML_EXPORT_TIMEOUT_MS`)이 지나면 창을 없앤다. 스크립트가 끝나지 않는 쪽이 숨은 창을 붙잡아 두지 못하게 한다.
 - 미리 보기의 두 스킴(`html-preview`, `html-asset`)은 앱 준비 전에 프로세스당 한 번 등록한다. 렌더러 스킴과 한 목록으로 등록해야 하고(`registerPrivilegedSchemes`), shell도 앱 전체의 스킴을 이 함수 하나로 등록한다. 그러니 다른 곳에서 `registerSchemesAsPrivileged`를 또 부르지 않는다. 둘 다 secure로 등록한다. 아니면 미리 보기 문서의 스타일시트와 스크립트가 혼합 콘텐츠로 막힌다.
 - 이 모듈이 갖는 AI 채널은 `html:ai-generate-image` 하나다. 호출할 때 `{ path: 'screen', statuses: sharedSubscriptionStatuses() }`를 넘기고 로컬 경로는 문서 폴더와 붙여 넣기 임시 폴더로 제한한다. 이 에디터는 가용성 보고를 미리 묻지 않는다. 경로가 없으면 도구가 `unavailable` 오류로 답한다.
-- 구독 API의 채널 이름과 판독 함수는 `@genoffice/ai-provider/browser`의 것을 쓰고 사본을 만들지 않는다. 보내기 판단은 `useAiSendGate`만 쓴다. 다른 프로바이더로 저절로 넘어가는 코드를 넣지 않는다.
+- 구독 API의 채널 이름과 판독 함수는 `@genoffice/ai-provider/browser`의 것을 쓰고 사본을 만들지 않는다. 보내기 판단은 `useAiSendGate`만 쓴다. 다른 제공자로 저절로 넘어가는 코드를 넣지 않는다.
 - 모델에게 주는 프롬프트에서 제품을 가리키는 이름은 `brandText`를 거친다(`tests/ai-prompts-brand.test.ts`가 확인한다). 크롬 색은 토큰만 쓴다. 미리 보기 안의 쪽은 문서 내용이라 토큰의 영향을 받지 않는다.
 
 ## 이 모듈의 방식
@@ -42,5 +42,5 @@ HTML 에디터다. HTML 원문이 진실의 원천이고, 옆에서 실시간 �
 - 실행: `npm run test -w @genoffice/html`(또는 이 폴더에서 `npx vitest run`), `npm run typecheck -w @genoffice/html`. Windows에서 전부 통과한다.
 - 편집 경로를 바꾸면 패치 집합의 검증(낡은 버전, 범위 밖, 겹침)과 "고치지 않은 원문이 글자 그대로인지"를 테스트한다.
 - 가림을 바꾸면 세 가지 표시 각각에 대해, 줄 번호로 읽은 결과가 실제 줄과 맞는지, 가려진 구간을 가로지르는 치환, 쪼개진 표식이 거절되는지를 테스트한다(`tests/redact*.test.ts`).
-- AI 배선(`tests/ai-connection.test.ts`, `tests/ai-panel-connection.test.ts`, `tests/subscription-bridge.test.ts`, `tests/subscription-client.test.ts`): 막힌 실행 판정, 핸들러가 없을 때의 상태, preload가 내보내는 구독 API. 이 모듈의 테스트는 프로바이더를 부르지 않는다.
+- AI 배선(`tests/ai-connection.test.ts`, `tests/ai-panel-connection.test.ts`, `tests/subscription-bridge.test.ts`, `tests/subscription-client.test.ts`): 막힌 실행 판정, 핸들러가 없을 때의 상태, preload가 내보내는 구독 API. 이 모듈의 테스트는 제공자를 부르지 않는다.
 - 미리 보기 스킴, 숨은 창의 내보내기, 실제 Word 결과는 단위 테스트로 확인되지 않는다. 빌드한 앱에서 확인한다.

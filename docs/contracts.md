@@ -1,6 +1,6 @@
 # 바깥에 내놓는 약속
 
-이 프로그램을 밖에서 쓰는 쪽은 넷이다. 터미널 명령어를 부르는 스크립트와 에이전트, MCP 클라이언트, 사용자의 설정 파일, 그리고 원본 프로그램과 주고받는 문서.
+이 프로그램을 밖에서 쓰는 쪽은 다섯이다. 터미널 명령어를 부르는 스크립트와 에이전트, 명령어 쪽 MCP 클라이언트, 앱 안 MCP 서버에 붙는 클라이언트, 사용자의 설정 파일, 그리고 원본 프로그램과 주고받는 문서.
 
 ## 공통
 
@@ -15,8 +15,8 @@
 **출력.**
 
 - 기본은 사람이 읽는 한 줄 요약이다. `--json`을 주면 JSON 객체 하나를 낸다.
-- 성공: `{ status, command, summary, output_path?, warnings?, detail? }`. `warnings[]`는 `{ code, message, suggestion? }`이고, 성공했지만 알려 둘 것이 있을 때 온다.
-- 실패: `{ status: "error", code, error, message, suggestion?, detail? }`. `code`는 종료 코드, `error`는 바뀌지 않는 소문자_밑줄 이유(`unknown_op`, `target_not_found`, `out_of_range`, `sheet_not_found`, `file_open_in_gui`, `app_unavailable` 등)다. 다시 시도하는 데 필요한 사실(유효한 범위, 쓸 수 있는 식별자, 시트 이름, 사용법)은 `message` 안이 아니라 `detail`의 항목으로 온다.
+- 성공: `{ status, command, summary, output_path?, warnings?, detail? }`. `status`는 `ok` 또는 `partial`이다. `partial`은 파일은 썼지만 묶음 안의 일부 편집이 빠졌다는 뜻이고, 빠진 것은 `detail.batch`·`detail.failures`에 있다. `warnings[]`는 `{ code, message, suggestion? }`이고, 성공했지만 알려 둘 것이 있을 때 온다.
+- 실패: `{ status: "error", command, code, error, message, suggestion?, detail? }`. `command`는 명령을 알아내지 못했으면 `null`이다. `code`는 종료 코드, `error`는 바뀌지 않는 영어 소문자 이유(`unknown_op`, `target_not_found`, `out_of_range`, `sheet_not_found`, `file_open_in_gui`, `app_unavailable` 등)다. 다시 시도하는 데 필요한 사실(유효한 범위, 쓸 수 있는 식별자, 시트 이름, 사용법)은 `message` 안이 아니라 `detail`의 항목으로 온다.
 
 **종료 코드.** `0` 성공, `1` 사용법 오류, `2` 파일 문제, `3` 변환 실패, `4` 앱이나 필요한 경로를 쓸 수 없음.
 
@@ -25,7 +25,7 @@
 - `GENOFFICE_ALLOWED_ROOTS`가 있으면 그 폴더들 밖의 파일은 읽지도 쓰지도 않는다. 심볼릭 링크는 풀어서 본다. 벗어나면 종료 코드 2와 `detail.allowed_roots`.
 - 이미 있는 다른 파일 위에 쓰려면 `--force`가 필요하다. 제자리 편집에는 필요 없다. 모르는 옵션은 무시하지 않고 거절한다.
 - 앱의 탭에 열려 있는 파일은 제자리에서 고치지 않는다(종료 코드 2, `detail.gui_pid`). `--force`면 쓴다.
-- 실행한 명령마다 `~/.ieumoffice/cli-audit.jsonl`에 한 줄을 남긴다(`ts`, `command`, `argv`, `status`, `code`, `output_path`, `ms`, `cwd`). 2MB에서 돌린다.
+- 실행한 명령마다 `~/.ieumoffice/cli-audit.jsonl`에 한 줄을 남긴다(`ts`, `pid`, `command`, `argv`, `status`, `code`, `output_path`, `ms`, `cwd`). 2MB에서 돌린다.
 
 ## `search` · `image` · `media`와 `capabilities`
 
@@ -58,12 +58,12 @@
 
 **실패.** 세 명령이 실행될 수 없으면 종료 코드 4, `error: "app_unavailable"`.
 
-| `detail.errorCode`                                                                                                                   | 뜻                           | 다시 시도                           |
-| ------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------- | ----------------------------------- |
-| `unavailable`                                                                                                                        | 그 기능에 설정된 것이 없다   | 하지 않는다. 설정을 바꿔야 한다     |
-| `headless-limit`                                                                                                                     | 자동 호출의 시간당 한도 초과 | `detail.resetsAt`(밀리초 시각) 이후 |
-| `rate-limit`                                                                                                                         | 구독 한도 소진               | `detail.resetsAt`이 있으면 그 이후  |
-| `signed-out`, `not-installed`, `metered-not-accepted`, `needs-update`, `unsafe-tools`, `timeout`, `network`, `overloaded`, `credits` | 실행이 그 이유로 실패        | 이유에 따라                         |
+| `detail.errorCode`                                                                                                                                    | 뜻                           | 다시 시도                           |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- | ----------------------------------- |
+| `unavailable`                                                                                                                                         | 그 기능에 설정된 것이 없다   | 하지 않는다. 설정을 바꿔야 한다     |
+| `headless-limit`                                                                                                                                      | 자동 호출의 시간당 한도 초과 | `detail.resetsAt`(밀리초 시각) 이후 |
+| `rate-limit`                                                                                                                                          | 구독 한도 소진               | `detail.resetsAt`이 있으면 그 이후  |
+| `not-connected`, `signed-out`, `not-installed`, `metered-not-accepted`, `needs-update`, `unsafe-tools`, `timeout`, `network`, `overloaded`, `credits` | 실행이 그 이유로 실패        | 이유에 따라                         |
 
 ## MCP 서버 (`ieumoffice mcp`)
 
@@ -71,9 +71,17 @@
 - 등록 예: `claude mcp add --transport stdio ieumoffice -- ieumoffice mcp`. `ieumoffice mcp install <에이전트|all>`이 각 에이전트의 설정 파일에 `ieumoffice` 항목만 쓴다. 같은 이름의 항목이 다른 프로그램을 가리키면 `occupied`로 알리고 `--force` 없이는 건드리지 않는다.
 - 도구는 명령 동사마다 하나다(`docs_read`, `docs_apply`, `sheet_apply`, `slides_render`, `convert` 등). 매개변수는 명령의 옵션 목록에서 그대로 나온다. 두 표면이 어긋나지 않는다.
 - 결과는 `--json`이 내는 것과 같은 객체다. 실패는 `isError`와 같은 `error` 이유로 온다.
-- 두 이름은 예전 철자를 유지한다. 도구 `open_in_genoffice`, 환경변수 `GENOFFICE_MCP_COMPACT_SCHEMAS`.
+- 환경변수 `GENOFFICE_MCP_COMPACT_SCHEMAS`는 예전 철자를 유지한다. `--http`의 토큰은 `--token`, 없으면 `GENOFFICE_MCP_TOKEN`에서 읽고, 둘 다 없으면 인증 없이 받는다. 에이전트 설정 폴더를 찾을 때의 홈 폴더는 `GENOFFICE_HOME`으로 바꿀 수 있다.
 - 안내 자료는 리소스로도 내놓는다(`ieumoffice://guide/docs`, `…/sheets`, `…/slides`, `…/slides/design`, `…/slides/spec`).
 - 앱의 설정 → 연동 화면이 지금 설치본에 맞는 등록 예시를 보여 준다.
+
+## 앱 안 MCP 서버
+
+명령어 쪽 서버와 다른 것이다. 실행 중인 앱이 직접 여는 서버이고, 열려 있는 문서를 다룬다.
+
+- 설정 → 연동에서 켠다. 기본은 꺼짐이다. 기본 포트는 3093이고 이 PC(`127.0.0.1`)에서만 닿는다. 인증은 없고, 요청의 Host·Origin이 이 PC의 것이 아니면 거절한다.
+- 도구: `get_app_info`, `open_documents`, `open_in_genoffice`(이 이름은 예전 철자를 유지한다), `create_session`, `save_session`, `read_document`, `read_docx`, `read_sheet`, `read_deck`, `read_pdf`, `create_docx`, `create_xlsx`, `create_pptx`, `apply_ops`, `apply_sheet_ops`, `apply_slide_ops`, `insert_content`, `replace_blocks`.
+- 에이전트 설정에 넣는 항목 이름은 `ieumoffice-editor`다. 명령어 쪽 서버의 `ieumoffice`와 겹치지 않는다.
 
 ## 에이전트 스킬
 
@@ -85,15 +93,18 @@
 
 데이터 폴더(`%APPDATA%\IeumOffice`, 개발 실행은 `IeumOffice-Dev`)에 있다. 사람이 직접 고칠 수 있고, 명령어와 MCP는 읽기만 한다.
 
-| 값                            | 종류                                             | 기본                                                       |
-| ----------------------------- | ------------------------------------------------ | ---------------------------------------------------------- |
-| `provider`                    | `auto` 또는 제공자 식별자                        | `auto`                                                     |
-| `providers`                   | 제공자별 `{ apiKey, model, baseUrl?, cliPath? }` | 빈 표                                                      |
-| `meteredAccepted`             | 구독 제공자별 참/거짓                            | 거짓                                                       |
-| `headlessSubscriptionEnabled` | 참/거짓. 자동 호출 경로의 구독 사용              | 거짓                                                       |
-| `subscriptionNoticeSeen`      | 참/거짓. 첫 연결 안내를 봤는지                   | 거짓                                                       |
-| `media`, `search`             | 이미지·분석·검색 제공자 선택과 그 키             | 이미지 분석은 `chat`, 영상 분석은 `none`, 검색은 무료 경로 |
+| 값                                  | 종류                                             | 기본                                                       |
+| ----------------------------------- | ------------------------------------------------ | ---------------------------------------------------------- |
+| `provider`                          | `auto` 또는 제공자 식별자                        | `auto`                                                     |
+| `providers`                         | 제공자별 `{ apiKey, model, baseUrl?, cliPath? }` | 빈 표                                                      |
+| `meteredAccepted`                   | 구독 제공자별 참/거짓                            | 거짓                                                       |
+| `headlessSubscriptionEnabled`       | 참/거짓. 자동 호출 경로의 구독 사용              | 거짓                                                       |
+| `subscriptionNoticeSeen`            | 참/거짓. 첫 연결 안내를 봤는지                   | 거짓                                                       |
+| `customEndpoints`, `customEndpoint` | 직접 운영하는 서버 목록과 지금 쓰는 것의 식별자  | 없음                                                       |
+| `maxOutputTokens`                   | 모델 한 차례의 출력 상한                         | 코드의 기본값                                              |
+| `media`, `search`                   | 이미지·분석·검색 제공자 선택과 그 키             | 이미지 분석은 `chat`, 영상 분석은 `none`, 검색은 무료 경로 |
 
+- 이미지 생성 제공자의 저장값 기본은 `codex`다. Codex 구독 이미지 생성이 들어 있지 않은 지금은 `none`(선택 없음)과 똑같이 동작한다.
 - 구독 제공자의 식별자는 `claude-code`, `codex`다. 인증 방식은 `claude-subscription`, `codex-chatgpt`, `api-key` 셋이다.
 - 모르는 제공자 식별자나 없어진 값이 있어도 오류 없이 읽는다. 그 자리는 기본값이 되고, 다음에 앱이 저장할 때 지워진다.
 - `providers` 표가 아예 없는 파일은 제공자 설정 이전의 파일로 읽혀, 다른 값까지 기본값이 된다.

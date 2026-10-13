@@ -14,7 +14,7 @@ Excel 통합 문서(.xlsx, .csv 등) 에디터다. 화면은 Univer 격자 위�
 ## 맡지 않는 것 (경계)
 
 - 배포되는 앱에서 공용 `ai:*` 채널(`ai:stream`, `ai:chat`, `ai:get-settings` 등)은 이 모듈이 응답하지 않는다. shell은 시트 뷰를 `createSheetsView({ includeAiHandlers: false })`로 만들고, 그 채널들은 `apps/docs/src/main/docs-main.ts`의 `registerAiIpc`가 담당한다. `registerSheetsAiIpc`는 단독 실행에서만 돈다.
-- 프로바이더 선택과 구독 프로그램 실행은 `packages/ai-provider`, 검색·이미지 도구의 경로 결정은 `packages/ai-search`, 보내기 규칙과 연결 카드·알림은 `packages/ui`의 범위다.
+- 제공자 선택과 구독 프로그램 실행은 `packages/ai-provider`, 검색·이미지 도구의 경로 결정은 `packages/ai-search`, 보내기 규칙과 연결 카드·알림은 `packages/ui`의 범위다.
 - 셀 주소·서식 색·차트 표현 같은 통합 문서 도메인 타입은 `packages/xlsx-gateway`의 범위다.
 - 새 docx·pdf·md 파일을 만드는 AI 도구(`create_document`)의 실제 생성은 문서 에디터의 `createAiDocument`가 한다. shell이 `configureSheetsRuntime`으로 주입한다.
 - 탭, 창, 구독 프로그램의 잔여 프로세스 정리는 `apps/shell`의 범위다.
@@ -22,10 +22,10 @@ Excel 통합 문서(.xlsx, .csv 등) 에디터다. 화면은 Univer 격자 위�
 ## 항상 지켜야 하는 것
 
 - 모든 IPC 핸들러는 보낸 쪽을 확인한다. `sessionFor(event)`가 등록된 시트 탭이 아니면 예외를 던지고, 입력은 zod 스키마(`aiStreamRequestSchema` 등)로 파싱한 뒤에 쓴다. 새 핸들러도 이 두 가지를 먼저 한다.
-- 원본 파일이 진실의 원천이다. 저장은 편집 기록을 사이드카에 넘겨 좁게 패치하는 방식이고, 에디터가 건드리지 않은 것은 그대로 남아야 한다. 열기·저장 경로를 바꾸면 왕복 테스트로 증명한다. 문서 엔진의 동작(해석, 저장, 내보내기)을 AI나 UI 작업의 일부로 바꾸지 않는다.
+- 원본 파일이 기준이다. 저장은 편집 기록을 사이드카에 넘겨 좁게 패치하는 방식이고, 에디터가 건드리지 않은 것은 그대로 남아야 한다. 열기·저장 경로를 바꾸면 왕복 테스트로 증명한다. 문서 엔진의 동작(해석, 저장, 내보내기)을 AI나 UI 작업의 일부로 바꾸지 않는다.
 - 문서 내용은 테마가 다시 칠하지 않는다. 어두운 시트는 Univer의 `darkMode`를 쓰는 화면 전용 변환이고, 셀 채우기·글자색·차트 색상표는 문서 데이터다. 저장·내보내기·인쇄 결과는 두 테마에서 같아야 한다. 리본 등 크롬 색은 토큰만 쓴다.
-- 요청은 다른 프로바이더로 넘어가지 않는다. 단독 실행의 `ai:stream`·`ai:chat`은 `resolveAiRunTarget`으로 대상을 정하고, 실행할 수 없으면 프로바이더를 부르지 않고 원인을 담아 거절한다. 이 규칙은 문서 에디터의 `ai-run.ts`와 같은 답을 내야 한다. 한쪽만 바꾸면 단독 실행과 배포 앱의 동작이 갈린다.
-- 종량제 동의를 쓸 때는 정규화된 설정 전체를 쓴다(`withMeteredAccepted`). `providers` 표가 없는 설정 파일은 프로바이더 도입 이전 파일로 읽혀 기본값이 되고, 그러면 방금 쓴 동의가 사라진다.
+- 요청은 다른 제공자로 넘어가지 않는다. 단독 실행의 `ai:stream`·`ai:chat`은 `resolveAiRunTarget`으로 대상을 정하고, 실행할 수 없으면 제공자를 부르지 않고 원인을 담아 거절한다. 이 규칙은 문서 에디터의 `ai-run.ts`와 같은 답을 내야 한다. 한쪽만 바꾸면 단독 실행과 배포 앱의 동작이 갈린다.
+- 종량 허용를 쓸 때는 정규화된 설정 전체를 쓴다(`withMeteredAccepted`). `providers` 표가 없는 설정 파일은 제공자 도입 이전 파일로 읽혀 기본값이 되고, 그러면 방금 쓴 동의가 사라진다.
 - 구독 IPC는 `ensureSubscriptionIpc`로만 등록하고 `initSubscriptionChildTracking`은 부르지 않는다. 단독 실행 진입은 `will-quit`와 `process.on('exit')`에서 `shutdownSubscriptionChildren`을 부른다.
 - shell 안에서도 필요한 시트 전용 AI 채널은 `registerSheetsAiIpc`가 아니라 `registerSheetsIpc`에 등록하고 `sheets:` 접두사를 붙인다(`sheets:ai-generate-image`, `sheets:ai-tool-capabilities`, 첨부 관련 `sheets:files-*`). `registerSheetsAiIpc`에 두면 배포 앱에서 "핸들러 없음"이 된다.
 - 이미지 도구에는 `{ path: 'screen', statuses: sharedSubscriptionStatuses() }`를 넘기고, 읽을 수 있는 로컬 경로는 그 탭이 연 통합 문서들의 폴더와 붙여 넣기 임시 폴더로 제한한다(`sheetsMediaRoots`).
@@ -46,5 +46,5 @@ Excel 통합 문서(.xlsx, .csv 등) 에디터다. 화면은 Univer 격자 위�
 - 사이드카를 쓰는 테스트(`tests/xlsx-*.test.ts`, `tests/ole-roundtrip.test.ts` 등)는 테스트 파일 기준 `../native/xlsx-engine/target/release/`의 실행 파일을 직접 찾는다. 한 번은 `npm run native:build`가 돌아 있어야 한다.
 - 환경은 `node`이고 기본 시간 제한(5초)을 쓴다. 부하가 큰 PC에서는 `tests/table-design.test.ts`, `tests/table-design-create.test.ts`가 시간 초과로 실패할 수 있다. 단독으로 다시 돌려 확인한다.
 - Windows에서 `tests/promote-file-atomically.test.ts`의 두 건은 변경과 무관하게 실패한다(단독으로 돌려도 같다).
-- AI 배선에서 바꾸면 반드시 테스트하는 것(`tests/ai-run.test.ts`, `tests/ai-subscription-state.test.ts`, `tests/ai-chat-panel-subscription.test.ts`): 연결 없는 요청의 거절과 원인 필드, 종량제 동의 뒤 다시 읽은 설정, 재시도된 턴 뒤의 막힌 실행 판정. `claude-code`·`codex`로 가는 테스트는 브리지를 mock한다.
+- AI 배선에서 바꾸면 반드시 테스트하는 것(`tests/ai-run.test.ts`, `tests/ai-subscription-state.test.ts`, `tests/ai-chat-panel-subscription.test.ts`): 연결 없는 요청의 거절과 원인 필드, 종량 허용 뒤 다시 읽은 설정, 재시도된 턴 뒤의 막힌 실행 판정. `claude-code`·`codex`로 가는 테스트는 브리지를 mock한다.
 - 형식 충실도 검증(`npm run compat`, `npm run fixtures`, 벤치마크)은 필요할 때 따로 돌린다.

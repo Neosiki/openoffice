@@ -1,12 +1,12 @@
 # packages/ai-provider (`@genoffice/ai-provider`)
 
-모델에게 한 턴을 맡기는 계층이다. 사용자가 PC에 설치해 로그인해 둔 Claude Code·Codex 프로그램을 "한 턴짜리 두뇌"로 띄우는 브리지와, 사용자가 직접 고른 API 키 프로바이더의 HTTP 프로토콜을 한 계약으로 묶는다.
+모델에게 한 턴을 맡기는 계층이다. 사용자가 PC에 설치해 로그인해 둔 Claude Code·Codex 프로그램을 "한 턴짜리 두뇌"로 띄우는 브리지와, 사용자가 직접 고른 API 키 제공자의 HTTP 프로토콜을 한 계약으로 묶는다.
 
 ## 맡은 범위
 
-- 프로바이더 카탈로그와 설정: `AI_PROVIDERS`(`src/providers.ts`), 어댑터 표 `AI_PROVIDER_ADAPTERS`(`src/registry.ts`), 저장 파일 정규화 `normalizeAiSettings`(`src/legacy-settings.ts`), 렌더러가 보낸 설정 검사 `sanitizeAiSettings`(`src/ai-settings-guard.ts`).
-- 어느 프로바이더로 실행할지: `selectAiProvider`·`subscriptionConnection`(`src/provider-selection.ts`). 순수 함수이며 렌더러(무엇을 보여 줄지)와 메인(무엇을 실행할지)이 같은 함수를 쓴다.
-- 한 턴 라우팅: `streamForProvider`(`src/stream.ts`), `chatForProvider`(`src/chat.ts`), 실패의 기계 판독 원인 `AiRunError`·`aiStreamErrorFields`(`src/run-error.ts`).
+- 제공자 카탈로그와 설정: `AI_PROVIDERS`(`src/providers.ts`), 어댑터 표 `AI_PROVIDER_ADAPTERS`(`src/registry.ts`), 저장 파일 정규화 `normalizeAiSettings`(`src/legacy-settings.ts`), 렌더러가 보낸 설정 검사 `sanitizeAiSettings`(`src/ai-settings-guard.ts`).
+- 어느 제공자로 실행할지: `selectAiProvider`·`subscriptionConnection`(`src/provider-selection.ts`). 순수 함수이며 렌더러(무엇을 보여 줄지)와 메인(무엇을 실행할지)이 같은 함수를 쓴다.
+- 한 턴 라우팅: `streamForProvider`(`src/stream.ts`), `chatForProvider`(`src/chat.ts`), 프로그램이 읽는 실패 이유 `AiRunError`·`aiStreamErrorFields`(`src/run-error.ts`).
 - 구독 프로그램 공통 계층 `src/subscription/`: 실행 파일 찾기(`locate.ts`), 환경(`env.ts`), 시작·종료와 자식 등록부(`process.ts`), 강제 종료 뒤 정리(`leftovers.ts`), 연결 상태(`status.ts`, `service.ts`), 종량제 로그인 동의(`metered.ts`), 로그인·설치 창(`launch.ts`), IPC 계약과 메인 측 핸들러(`contract.ts`, `ipc.ts`).
 - 두 브리지 `src/claude-code-cli.ts`, `src/codex-app-server.ts`와 키 기반 이미지·미디어 프로토콜(`src/media.ts`, `src/media-protocols.ts`, `src/image-backend.ts`).
 
@@ -28,9 +28,10 @@
 - 사용자 설정·hook·plugin·MCP를 실행에 들이지 않는다. Claude는 `claudeCodeCliLaunchArgs`의 고정 플래그(`--tools ""`, `--restricted`, `--strict-mcp-config`, `--setting-sources ""`, `--disable-slash-commands`, `--no-session-persistence`)와 실행마다 새로 만든 빈 임시 폴더를 쓴다. `--bare`는 쓰지 않는다(구독 로그인을 읽지 못한다). `--json-schema`도 쓰지 않는다(`StructuredOutput` 도구가 세션에 추가되어 아래 0-도구 규칙이 깨진다). 스키마는 지시문으로 주고 답은 `parseClaudeCodeTurn`이 검증한다.
 - Claude 턴은 프로그램이 도구 0개를 보고했을 때만 진행한다. `init` 이벤트의 `tools`가 빈 배열이고 `mcp_servers`가 없어야 `verified`가 되고, 그 전에 도착한 답, 도구 블록, `can_use_tool` 권한 요청은 모두 `unsafe-tools`로 프로세스 트리를 끝낸다. 플래그를 믿지 않고 보고를 확인하는 구조이므로 플래그를 추가했다고 이 확인을 빼지 않는다. 한계도 있다. Claude Code는 첫 메시지를 stdin으로 받은 뒤에야 도구 목록을 알리므로 확인은 그 시점에 이뤄지고, 실패하면 모델의 출력은 하나도 쓰지 않지만 Windows의 트리 종료는 비동기다.
 - Codex에는 사용자 `config.toml`을 통째로 무시하는 스위치가 없다. 그래서 `CODEX_CONFIG_OVERRIDES`로 하나씩 덮고(`-c features.<name>=false`를 쓴다. `--disable` 뒤에 모르는 이름이 오면 Codex가 시작하지 못한다), MCP 서버는 스레드마다 `codexMcpServerOverrides`로 끈 뒤 `mcpServerStatus/list`로 실제로 꺼졌는지 확인한다. 확인할 수 없는 스레드는 안전하지 않은 것으로 보고 `unsafe-tools`로 끝낸다. 모델도 항상 명시한다(`defaultModelFor`). 비워 두면 Codex가 사용자 설정 파일의 모델을 쓴다. 덮지 못하는 것도 있다. Codex 홈 폴더(`~/.codex/`)의 사용자 지침 파일은 Codex가 여전히 대화에 넣고, Codex 자체의 진단 로그는 앱이 끄지 못한다.
+- Codex 자신의 셸 도구는 끌 수 없다. `codexThreadStartParams`가 권한 프로필(`CODEX_PERMISSION_PROFILE`)로 읽기를 플랫폼 경로와 임시 폴더로 좁히고, 프로필이 적용되지 않으면(예전 Codex, 사용자 설정의 `sandbox_mode`) `sandbox: 'read-only'`로 내려간다. 내려간 경우 그 도구는 디스크 전체를 읽을 수 있다. 이 대체 경로를 넓히지 않는다. 쓰기 권한이나 승인을 여는 값은 어느 경로에도 넣지 않는다.
 - Codex 실행 직전에 로그인을 한 번 더 본다(`assertRunnableAccount`). 로그아웃됐으면 `signed-out`, 상태 확인이 마지막으로 본 것과 다른 종류의 종량제 로그인으로 바뀌어 있으면 `metered-not-accepted`로 멈춘다. 사용자가 동의한 것은 "그때 그 로그인"이기 때문이다.
-- `auto`는 `ready`인 구독만 고른다. 순서는 `AI_SUBSCRIPTION_PROVIDERS`(Claude 다음 Codex)이고, 키 프로바이더와 종량제 로그인은 후보가 아니다. `ready`는 로그인 방식이 `subscription`일 때만이고 알 수 없는 로그인은 `metered`다. 종량제 로그인은 설정의 `meteredAccepted[provider]`와 상태의 `meteredAccepted`가 둘 다 참일 때만 쓴다(로그인이 바뀐 뒤 남은 플래그로 유료 실행이 시작되지 않게).
-- 막힌 실행은 멈춘다. 명시적으로 고른 프로바이더가 실행될 수 없으면 `connected: false`와 원인을 돌려주고, 브리지는 `AiRunError`를 던진다. 어느 쪽도 다른 프로바이더로 스스로 넘어가지 않는다. `streamForProvider`에 `auto`를 넘기면 `Unknown provider: auto`로 실패한다. 호출자가 먼저 `selectAiProvider`로 풀어야 한다.
+- `auto`는 `ready`인 구독만 고른다. 순서는 `AI_SUBSCRIPTION_PROVIDERS`(Claude 다음 Codex)이고, 키 제공자와 종량제 로그인은 후보가 아니다. `ready`는 로그인 방식이 `subscription`일 때만이고 알 수 없는 로그인은 `metered`다. 종량제 로그인은 설정의 `meteredAccepted[provider]`와 상태의 `meteredAccepted`가 둘 다 참일 때만 쓴다(로그인이 바뀐 뒤 남은 플래그로 유료 실행이 시작되지 않게).
+- 막힌 실행은 멈춘다. 명시적으로 고른 제공자가 실행될 수 없으면 `connected: false`와 원인을 돌려주고, 브리지는 `AiRunError`를 던진다. 어느 쪽도 다른 제공자로 스스로 넘어가지 않는다. `streamForProvider`에 `auto`를 넘기면 `Unknown provider: auto`로 실패한다. 호출자가 먼저 `selectAiProvider`로 풀어야 한다.
 - 앱이 띄운 자식은 앱보다 오래 살지 않는다. 취소는 `killProcessTree`(Windows에서는 System32의 `taskkill.exe`를 전체 경로로 불러 `/T /F`), 종료는 동기 함수 `shutdownSubscriptionChildren`, 강제 종료된 뒤의 다음 시작은 `initSubscriptionChildTracking`이 `subscription-children-<앱 pid>.json` 기록을 읽어 pid·프로그램 파일·시작 시각이 모두 맞는 프로세스만 끝낸다. 사용자가 직접 띄운 claude·codex는 기록에 없으므로 건드리지 않는다.
 - 입력을 말없이 자르지 않는다. Claude 브리지가 줄이는 것은 이미지 100장(`MAX_CLAUDE_CODE_IMAGES`) 초과분뿐이고, 오래된 것부터 빼며 반드시 `onInputTruncated`를 부른다. 글자는 자르지 않는다.
 - 구독 IPC 채널은 프로세스당 한 번, `ensureSubscriptionIpc`로만 등록한다. 패키징된 앱은 여러 에디터의 메인 코드가 한 프로세스에서 돌고 같은 채널을 두 번 등록하면 예외가 나므로 `registerSubscriptionIpc`를 앱에서 직접 부르지 않는다. 등록은 상태 확인을 시작하지 않는다. 첫 `statuses` 요청이 첫 확인을 시작하므로, AI를 보여 주지 않는 프로세스(headless export 등)는 벤더 프로그램을 띄우지 않는다.
@@ -41,12 +42,12 @@
 - Claude 턴은 매번 대화 전체를 사용자 메시지 하나로 다시 읽는 새 세션이다. 그래서 마지막 이벤트가 도구 결과이면 `AFTER_TOOL_RESULTS` 문단을 이벤트 블록들 뒤에 붙인다. 작은 모델이 첫 사용자 요청에 다시 답하며 이미 실행된 호출을 또 요청해, 문단 하나가 네 번 삽입된 일이 있었다. 이 문단은 반드시 이벤트 뒤에 둔다(앞선 턴의 블록이 이번 턴의 접두사로 남아야 프롬프트 캐시가 맞는다).
 - 도구 호출 id는 브리지가 붙인다(`claude-<uuid>`). 세션이 매번 새것이라 모델이 고유성을 지킬 수 없다. 목록에 없는 도구 이름은 실행하지 않고 `inputError`를 달아 루프로 넘긴다.
 - 루프와 문자열로 맺은 계약이 둘 있다. 오류 문장 끝의 `(empty stream)`은 "아무것도 전달되지 않았으니 같은 턴을 다시 보내도 된다", `while sending tool arguments`는 "도구 호출이 전달되지 않았으니 한 번 재시도한다"는 뜻이며 `packages/agent-core/src/loop.ts`가 이 글자를 찾는다. 문구를 고치면 재시도가 조용히 사라진다.
-- 상태는 한 방향으로 흐른다. `detectSubscriptionLogin` → `createSubscriptionStatusService`(저장된 종량제 동의와 대조) → `ensureSubscriptionIpc`가 `SUBSCRIPTION_IPC_CHANNELS` 응답과 `changed` 방송 → preload는 `@genoffice/ai-provider/browser`의 채널 이름과 판독 함수(`subscriptionStatusMapOf`, `subscriptionLaunchResultOf`, `subscriptionMeteredResultOf`)로 읽는다. 핸들러가 없거나 답이 깨졌으면 연결이 아니라 `checking`으로 읽힌다. 실행 실패의 spawn 오류 문장은 실행 파일 경로를 담을 수 있어 판독 함수에서 버린다.
+- 상태는 한 방향으로 흐른다. `detectSubscriptionLogin` → `createSubscriptionStatusService`(저장된 종량 허용와 대조) → `ensureSubscriptionIpc`가 `SUBSCRIPTION_IPC_CHANNELS` 응답과 `changed` 방송 → preload는 `@genoffice/ai-provider/browser`의 채널 이름과 판독 함수(`subscriptionStatusMapOf`, `subscriptionLaunchResultOf`, `subscriptionMeteredResultOf`)로 읽는다. 핸들러가 없거나 답이 깨졌으면 연결이 아니라 `checking`으로 읽힌다. 실행 실패의 spawn 오류 문장은 실행 파일 경로를 담을 수 있어 판독 함수에서 버린다.
 - `error` 상태의 문장은 `"<kind>: <코드에 적힌 영어 문장>"` 형식이다. 화면은 `subscriptionStatusErrorKind`로 종류만 읽어 번역한다.
-- 종량제 동의는 불리언만으로는 "그때 그 로그인"인지 알 수 없고, 누가 로그인했는지는 저장하면 안 된다. 그래서 동의한 로그인의 종류만 `subscription-metered.json`에 남긴다. 값은 `METERED_LOGIN_FINGERPRINTS` 상수 중 하나이고 프로그램 출력으로 조립하지 않는다. 종류가 바뀌거나 로그아웃하면 동의가 지워진다.
-- 설정을 읽는 문은 둘이다. 디스크의 파일은 `normalizeAiSettings`(절대 throw하지 않고, 모르는 id는 기본값으로 떨어진다), 렌더러가 보낸 값은 `sanitizeAiSettings`(모르는 프로바이더 id면 `null`). 설정 파일의 `cliPath`는 spawn으로, `baseUrl`은 API 키와 함께 나가므로 렌더러 값을 검사 없이 쓰지 않는다.
-- 키 프로바이더를 추가하려면 `AiProviderId`(`src/types.ts`)에 id, `AI_PROVIDERS`에 메타, `AI_PROVIDER_ADAPTERS`에 어댑터를 넣는다. 표가 `Record<AiProviderId, …>`라 하나라도 빠지면 타입 오류다. 이미지 입력을 못 받는 모델 id는 `modelLacksVision`에 함께 넣는다.
-- 진입점을 가려 쓴다. 렌더러와 preload는 `/browser`만 import한다(`contract.ts`가 타입만 import하는 이유다). `/subscription`, `/claude-code-cli`, `/codex-app-server`는 Node 전용이다. `/codex-image`는 비어 있고 `codexImageGenerationAvailable()`은 어느 프로세스에서도 `false`다. 이미지 생성은 지금 키 기반뿐이다.
+- 종량 허용는 불리언만으로는 "그때 그 로그인"인지 알 수 없고, 누가 로그인했는지는 저장하면 안 된다. 그래서 동의한 로그인의 종류만 `subscription-metered.json`에 남긴다. 값은 `METERED_LOGIN_FINGERPRINTS` 상수 중 하나이고 프로그램 출력으로 조립하지 않는다. 종류가 바뀌거나 로그아웃하면 동의가 지워진다.
+- 설정을 읽는 문은 둘이다. 디스크의 파일은 `normalizeAiSettings`(절대 throw하지 않고, 모르는 id는 기본값으로 떨어진다), 렌더러가 보낸 값은 `sanitizeAiSettings`(모르는 제공자 id면 `null`). 설정 파일의 `cliPath`는 spawn으로, `baseUrl`은 API 키와 함께 나가므로 렌더러 값을 검사 없이 쓰지 않는다.
+- 키 제공자를 추가하려면 `AiProviderId`(`src/types.ts`)에 id, `AI_PROVIDERS`에 메타, `AI_PROVIDER_ADAPTERS`에 어댑터를 넣는다. 표가 `Record<AiProviderId, …>`라 하나라도 빠지면 타입 오류다. 이미지 입력을 못 받는 모델 id는 `modelLacksVision`에 함께 넣는다.
+- 진입점을 가려 쓴다. 렌더러와 preload가 값으로 import하는 것은 `/browser`뿐이고, 대표 진입점에서는 타입만 import한다(`contract.ts`가 타입만 import하는 이유다). `/subscription`, `/claude-code-cli`, `/codex-app-server`는 Node 전용이다. `/codex-image`는 비어 있고 `codexImageGenerationAvailable()`은 어느 프로세스에서도 `false`다. 이미지 생성은 지금 키 기반뿐이다.
 
 ## 테스트
 

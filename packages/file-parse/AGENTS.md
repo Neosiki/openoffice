@@ -35,4 +35,4 @@
 - `npm run test -w @genoffice/file-parse`, 또는 패키지 폴더에서 `npx vitest run`. 타임아웃은 20초다.
 - OOXML 픽스처는 `tests/helpers/fixtures.ts`가 JSZip으로 그때그때 만들어 임시 폴더에 쓴다. 파일로 들어 있는 것은 옛 형식 두 개(`tests/fixtures/legacy-sample.doc`, `legacy-sample.ppt`)뿐이다. `npm run fixtures`는 필요 없다.
 - 형식 처리를 바꾸면 정상 추출, 깨진 파일이 던지지 않고 `ok: false`가 되는 경우, 글자 원형 보존(앞자리 0, 런 사이 공백)을 덮는다. zip을 여는 경로를 건드리면 `tests/zip-bomb-gate.test.ts`도 함께 본다.
-- Windows에서 변경 이전부터 실패하는 것으로 알려진 테스트는 없다.
+- Windows에서 원본 코드 그대로도 실패하는 테스트는 없다.

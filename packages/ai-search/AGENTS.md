@@ -5,27 +5,27 @@ AI가 쓰는 부가 도구(웹 검색, 이미지 검색, 이미지 생성, 미�
 ## 맡은 범위
 
 - 검색: `webSearch`·`imageSearch`와 백엔드별 구현(`src/index.ts`), 설정 파일을 읽어 옵션으로 바꾸는 `webSearchTool`·`imageSearchTool`·`searchOptionsFromSettings`(`src/search-tools.ts`), 키 없는 Parallel 검색(`src/parallel-mcp.ts`).
-- 이미지 생성과 미디어 분석: `generateImageTool`·`analyzeMediaTool`(`src/media-tools.ts`), 채팅 프로바이더에게 이미지를 보여 주는 분석(`src/chat-analysis.ts`).
+- 이미지 생성과 미디어 분석: `generateImageTool`·`analyzeMediaTool`(`src/media-tools.ts`), 채팅 제공자에게 이미지를 보여 주는 분석(`src/chat-analysis.ts`).
 - 경로 결정: `resolveImageRoute`·`resolveImageAnalysisRoute`·`resolveVideoAnalysisRoute`·`headlessSubscriptionBlocked`(`src/tool-routing.ts`)와 같은 함수로 만든 가용성 보고 `aiToolCapabilities`(`src/tool-capabilities.ts`).
 - 자동 호출 경로의 구독 사용 한도: `runHeadlessSubscriptionCall`·`headlessSubscriptionUsage`(`src/headless-ledger.ts`).
 - Codex 이미지 생성기가 스스로 등록하는 자리 `registerCodexImageGenerator`(`src/codex-image-generator.ts`).
 
 ## 맡지 않는 것 (경계)
 
-- 프로바이더 선택 규칙, 구독 프로그램의 시작·종료, 연결 상태 확인은 `packages/ai-provider`의 범위다. 이 모듈은 호출자가 넘긴 `statuses`를 읽기만 하고, 상태를 직접 확인하거나 벤더 프로그램을 띄우지 않는다.
-- Codex로 이미지를 "만드는 방법"은 이 모듈의 범위가 아니다. 여기는 요청을 Codex로 보낼지 정하고 등록된 생성기를 부를 뿐이다. 지금은 등록되는 생성기가 없어 이미지 생성은 키 프로바이더로만 된다.
+- 제공자 선택 규칙, 구독 프로그램의 시작·종료, 연결 상태 확인은 `packages/ai-provider`의 범위다. 이 모듈은 호출자가 넘긴 `statuses`를 읽기만 하고, 상태를 직접 확인하거나 벤더 프로그램을 띄우지 않는다.
+- Codex로 이미지를 "만드는 방법"은 이 모듈의 범위가 아니다. 여기는 요청을 Codex로 보낼지 정하고 등록된 생성기를 부를 뿐이다. 지금은 등록되는 생성기가 없어 이미지 생성은 키 제공자로만 된다.
 - 받은 이미지를 문서에 넣는 일, 도구를 모델에게 노출할지 정하는 일은 각 에디터(`apps/*/src/renderer/ai`)의 범위다.
 - 명령의 인자·출력 형식·종료 코드는 `packages/cli`의 범위다. 이 모듈의 도구는 `{ url | text | error, errorCode, resetsAt }` 객체를 돌려줄 뿐이다.
 - Electron을 import하지 않는다. 이 코드는 Electron 없이 도는 명령줄 번들에도 들어가므로 `@genoffice/electron-utils`는 패키지 루트가 아니라 `generated-images`·`remote-image`·`safe-remote-url` 하위 경로로만 import한다(루트는 Electron에 묶인 모듈을 다시 내보낸다).
 
 ## 항상 지켜야 하는 것
 
-- 검색은 구독을 쓰지 않고, 기본 경로는 키가 없는 경로다(무료 Parallel 검색 다음 DuckDuckGo). 키 프로바이더는 사용자가 설정에서 고른 것만 쓴다. 환경 변수의 키(`SERPER_API_KEY` 등)는 사용자가 "고른" 프로바이더의 저장된 키를 대신할 뿐 어느 프로바이더를 쓸지는 바꾸지 못한다. Parallel에 저장된 키가 없으면 그것이 곧 무료 경로이므로 `PARALLEL_API_KEY`가 있어도 유료로 바뀌지 않는다(`selectedSearchKey`).
+- 검색은 구독을 쓰지 않고, 기본 경로는 키가 없는 경로다(무료 Parallel 검색 다음 DuckDuckGo). 키 제공자는 사용자가 설정에서 고른 것만 쓴다. 환경 변수의 키(`SERPER_API_KEY` 등)는 사용자가 "고른" 제공자의 저장된 키를 대신할 뿐 어느 제공자를 쓸지는 바꾸지 못한다. Parallel에 저장된 키가 없으면 그것이 곧 무료 경로이므로 `PARALLEL_API_KEY`가 있어도 유료로 바뀌지 않는다(`selectedSearchKey`).
 - 요청은 화면 경로(`path: 'screen'`, 사람이 에디터에서 요청)와 자동 호출 경로(`path: 'headless'`, 명령줄과 MCP) 중 하나로 들어온다. 자동 호출 경로는 사용자가 설정에서 켰을 때(`headlessSubscriptionEnabled`)만 구독 로그인을 쓰고, 꺼져 있으면 `ready`인 구독이 없는 것처럼 라우팅한다(`routingStatuses`). `dataDir`가 없는 자동 호출도 구독을 쓰지 않는다. 장부를 둘 곳이 없으면 한도를 지킬 수 없기 때문이다.
 - 자동 호출 경로의 구독 요청은 한 번에 하나, 한 시간에 20개(`HEADLESS_SUBSCRIPTION_MAX_PER_HOUR`)다. 명령 하나가 프로세스 하나이므로 메모리에 셀 수 없고, `dataDir`의 잠금 파일(`headless-subscription.lock`)과 장부(`headless-subscription-ledger.json`)로 프로세스를 넘어 센다. 한도를 넘으면 기다리지 않고 `AiRunError('headless-limit', …, { resetsAt })`를 던진다.
-- 장부는 닫힌 쪽으로 실패한다. 내용이 손상된 장부는 마지막으로 쓰인 시각에서 한도 기간(한 시간)이 지날 때까지 한도를 다 쓴 것으로 치고, 자리를 기록하지 못한 요청은 실행하지 않는다. 자리는 요청이 시작할 때 잡으므로 실패한 요청도 센다.
+- 장부는 막힌 것으로 처리한다. 내용이 손상된 장부는 마지막으로 쓰인 시각에서 한도 기간(한 시간)이 지날 때까지 한도를 다 쓴 것으로 치고, 자리를 기록하지 못한 요청은 실행하지 않는다. 자리는 요청이 시작할 때 잡으므로 실패한 요청도 센다.
 - 사용자가 동의한 종량제 로그인은 구독이 아니다. 요청마다 돈이 드는 키와 같은 취급이라 자동 호출 스위치로 꺼지지도, 장부에 세지도 않고, 이미지 생성에는 쓰지 않는다. 가용성 보고에서는 `route: 'key'`에 `metered: true`로 나간다.
-- 이미지 분석이 채팅 프로바이더로 갈 때는 채팅과 똑같이 `selectAiProvider`로 고른다. 돈이 드는 것을 사용자 대신 고르지 않기 위해서다. 연결된 것이 없으면 다른 것으로 넘어가지 않고 `unavailable`로 답한다.
+- 이미지 분석이 채팅 제공자로 갈 때는 채팅과 똑같이 `selectAiProvider`로 고른다. 돈이 드는 것을 사용자 대신 고르지 않기 위해서다. 연결된 것이 없으면 다른 것으로 넘어가지 않고 `unavailable`로 답한다.
 - 보고와 실행은 같은 함수를 묻는다. `aiToolCapabilities`가 "된다"고 한 경로가 실제 도구가 시작하는 경로여야 하므로, 경로 규칙은 `tool-routing.ts`에만 두고 도구나 보고 쪽에 따로 분기를 만들지 않는다. 시간당 한도는 가용성이 아니라 요청의 오류다(보고는 장부를 보지 않는다).
 - 도구는 throw하지 않는다. 실패는 `error`와 `errorCode`(`'unavailable'` 또는 `AiRunErrorKind`)로 돌려준다. 문장은 영어이며 도구(모델)가 읽는 용도다. 화면은 `errorCode`로 번역한다.
 - 모델이 준 주소와 경로는 믿지 않는다. 원격 미디어는 `fetchWithSsrfGuard`와 크기 상한을 거치고, 로컬 경로는 `mediaRoots`(열린 문서의 폴더와 첨부 임시 폴더) 안에 있는지 양쪽을 realpath로 풀어 확인한다. `file://` 주소는 `readGeneratedImage`가 이 앱이 만든 이미지일 때만 읽는다.
@@ -34,17 +34,17 @@ AI가 쓰는 부가 도구(웹 검색, 이미지 검색, 이미지 생성, 미�
 
 - 호출자가 자기 신원을 넘긴다. 에디터 메인은 `{ path: 'screen', statuses: sharedSubscriptionStatuses() }`, 명령줄과 MCP는 `{ path: 'headless', statuses, dataDir }`다. `dataDir`는 `ai-settings.json`이 있는 폴더로, 앱과 모든 명령줄 프로세스가 같은 곳을 써야 한도가 합쳐진다. 컨텍스트를 안 넘기면 "구독이 연결되지 않은 화면 경로"로 취급되어 키와 무료 경로만 쓴다.
 - `statuses`는 상태 서비스의 값이어야 한다. 날것의 감지 결과에는 `meteredAccepted`가 반영되지 않아 동의한 종량제 로그인이 연결로 읽히지 않는다.
-- 도구는 호출 때마다 설정 파일을 새로 읽고(`readAiSettingsFile`) 안에서 `normalizeAiSettings`를 거친다. 사라진 프로바이더 id가 저장돼 있어도 기본값으로 읽힌다.
+- 도구는 호출 때마다 설정 파일을 새로 읽고(`readAiSettingsFile`) 안에서 `normalizeAiSettings`를 거친다. 사라진 제공자 id가 저장돼 있어도 기본값으로 읽힌다.
 - 이미지 경로는 요청이 시작할 때 한 번 정하고 도중에 바꾸지 않는다(`resolveImageRoute`). Codex 경로는 `codexImageGenerationAvailable()`이 참이고 생성기가 등록됐을 때만 후보다(`codexImageRouteOffered`). `@genoffice/ai-provider`가 이 패키지를 import하면 순환이 되므로 생성기는 "등록"하는 구조다.
-- 키 프로바이더가 준 이미지 바이트는 로컬 생성 이미지 저장소(`storeGeneratedImage`)에 두고 `file://` 주소로 돌려준다. 에디터의 삽입 경로가 그 주소를 받는다.
-- 이미지 분석은 사용자가 고른 키 분석 프로바이더가 채워져 있으면 그쪽으로, 아니면 채팅이 도는 프로바이더(`chat`)로 간다. `chat` 분석은 비전이 없는 모델, 요청당 20MB를 넘는 이미지(`CHAT_ANALYSIS_MAX_BYTES`)를 거절하고 300초(`CHAT_ANALYSIS_TIMEOUT_MS`)에 끊는다. 영상·음성 분석은 영상을 읽는 키 프로바이더가 있을 때만 된다.
+- 키 제공자가 준 이미지 바이트는 로컬 생성 이미지 저장소(`storeGeneratedImage`)에 두고 `file://` 주소로 돌려준다. 에디터의 삽입 경로가 그 주소를 받는다.
+- 이미지 분석은 사용자가 고른 키 분석 제공자가 채워져 있으면 그쪽으로, 아니면 채팅이 도는 제공자(`chat`)로 간다. `chat` 분석은 비전이 없는 모델, 요청당 20MB를 넘는 이미지(`CHAT_ANALYSIS_MAX_BYTES`)를 거절하고 300초(`CHAT_ANALYSIS_TIMEOUT_MS`)에 끊는다. 영상·음성 분석은 영상을 읽는 키 제공자가 있을 때만 된다.
 - 잠금은 죽은 프로세스를 견딘다. 보유자가 잠금 파일의 수정 시각을 주기적으로 갱신하고, 프로세스가 사라졌거나 갱신이 멈춘 잠금은 넘겨받는다. 장부 쓰기는 임시 파일을 rename하는 방식만 쓴다.
 
 ## 테스트
 
 - 실행: `npm run test -w @genoffice/ai-search`(또는 이 폴더에서 `npx vitest run`), `npm run typecheck -w @genoffice/ai-search`.
 - 테스트는 네트워크와 벤더 프로그램에 닿지 않는다. `@genoffice/ai-provider`의 `generateImageWithProvider`·`analyzeMediaWithProvider`·`streamForProvider`를 `vi.mock`으로 바꾸고, 상태는 `tests/routing-helpers.ts`의 `status()`로 만든다. 구독 경로를 타는 테스트에서 `streamForProvider`를 바꾸지 않으면 실제 프로그램이 뜬다.
-- 설정 파일 픽스처에는 `providers` 블록을 항상 넣는다(`writeSettings`). 그 블록이 없는 파일은 프로바이더 도입 이전 파일로 읽혀 모든 구역이 기본값으로 초기화된다.
-- 바꾸면 반드시 테스트하는 것: 화면·자동 호출 × 스위치 켬·끔 × 구독 `ready`·종량제 동의·미연결 조합에서 경로와 보고가 같은 답인지, 환경 변수 키가 선택을 바꾸지 못하는지(`tests/search-free-route.test.ts`), 한도 21번째 요청, 손상된 장부, 죽은 프로세스의 잠금, 동시에 들어온 두 요청.
+- 설정 파일 픽스처에는 `providers` 블록을 항상 넣는다(`writeSettings`). 그 블록이 없는 파일은 제공자 도입 이전 파일로 읽혀 모든 구역이 기본값으로 초기화된다.
+- 바꾸면 반드시 테스트하는 것: 화면·자동 호출 × 스위치 켬·끔 × 구독 `ready`·종량 허용·미연결 조합에서 경로와 보고가 같은 답인지, 환경 변수 키가 선택을 바꾸지 못하는지(`tests/search-free-route.test.ts`), 한도 21번째 요청, 손상된 장부, 죽은 프로세스의 잠금, 동시에 들어온 두 요청.
 - `tests/codex-image-absent.test.ts`는 "이 빌드에는 Codex 이미지 생성이 없다"를 고정한다. 생성기를 추가하면 이 테스트와 가용성 판단을 함께 바꾼다.
 - Windows에서 `tests/media-local-path.test.ts`의 `documentMediaRoots` 한 건은 변경과 무관하게 실패한다(기대값이 `/work`인데 Windows의 `dirname`은 `\work`를 돌려준다).

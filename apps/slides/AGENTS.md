@@ -13,7 +13,7 @@ PowerPoint 프레젠테이션(.pptx) 에디터다. 파일을 바이트 그대로
 
 - pptx의 해석·모델·연산·렌더 모델은 이 모듈의 범위가 아니다. `packages/pptx-engine`, `packages/pptx-ops`, `packages/pptx-render`가 한다. 가림 표식을 파일에 쓰고 읽는 것도 엔진이 한다(`<a:extLst>`). 이 모듈의 `redact.ts`는 파일을 건드리지 않는다.
 - 배포되는 앱에서 공용 `ai:*` 채널(`ai:stream`, `ai:get-settings`, `ai:web-search` 등)은 `apps/docs/src/main/docs-main.ts`의 `registerAiIpc`가 응답한다. 이 모듈의 `registerAiIpc`는 shell 안에서는 호출되지 않고 단독 실행에서만 돈다.
-- 프로바이더 선택과 구독 프로그램 실행은 `packages/ai-provider`, 이미지 생성·미디어 분석의 경로 결정은 `packages/ai-search`, 보내기 규칙과 연결 카드·알림은 `packages/ui`의 범위다.
+- 제공자 선택과 구독 프로그램 실행은 `packages/ai-provider`, 이미지 생성·미디어 분석의 경로 결정은 `packages/ai-search`, 보내기 규칙과 연결 카드·알림은 `packages/ui`의 범위다.
 - 탭, 창, 구독 프로그램의 잔여 프로세스 정리는 `apps/shell`의 범위다.
 
 ## 항상 지켜야 하는 것
@@ -24,10 +24,10 @@ PowerPoint 프레젠테이션(.pptx) 에디터다. 파일을 바이트 그대로
 - 가려진 내용은 지워지지 않는다. 가려진 run은 실제 글자를 담은 채 남고 모델에게 직렬화될 때만 `{{label}}`로 나간다. 모델이 표식을 쪼개거나 지어낼 수 있으므로 모델의 편집은 덱에 들어가기 전에 검사한다. 가려진 그림·영상·음성은 모델에게 참조 자체를 주지 않는다(연결된 미디어의 주소는 재사용 가능한 서명 URL일 수 있다).
 - 문서 옆에 쓰는 파일의 이름을 바꾸지 않는다. 생성된 초안 옆의 스타일 기록은 같은 이름의 `.styleskill.json`이다. 생성된 쪽의 표식 `cloudpptx:`와 임시 폴더 이름(`genoffice-cloud-pages`, `genoffice-local-pages`)은 "생성된 쪽"을 뜻하는 내부 이름이라 그대로 둔다.
 - shell 안에서도 필요한 슬라이드 전용 AI 채널은 `registerSlidesOnlyAiIpc`에 둔다(`slides:ai-tool-capabilities`, `ai:generate-image`, `ai:analyze-media`, `ai:insert-image-url`, `ai:save-sidecar` 등). `registerAiIpc`에 두면 배포 앱에서 "핸들러 없음" 오류가 난다. 반대로 문서 에디터가 이미 등록하는 공용 채널을 여기서 또 등록하면 예외가 난다.
-- 요청은 다른 프로바이더로 넘어가지 않는다. 단독 실행의 `ai:stream`은 `resolveStreamTarget`으로 대상을 정하고, 실행할 수 없는 선택은 원인을 담아 거절한다. 이 규칙은 문서 에디터의 것과 같은 답을 내야 한다.
+- 요청은 다른 제공자로 넘어가지 않는다. 단독 실행의 `ai:stream`은 `resolveStreamTarget`으로 대상을 정하고, 실행할 수 없는 선택은 원인을 담아 거절한다. 이 규칙은 문서 에디터의 것과 같은 답을 내야 한다.
 - 모델에게 주는 도구는 실제 경로가 있는 것만이다. 렌더러는 메인의 가용성 보고(`slides:ai-tool-capabilities`)가 답하기 전에는 이미지 생성·미디어 분석 도구를 내놓지 않는다(`toolGatesOf`).
 - 구독 IPC는 `ensureSubscriptionIpc`로만 등록하고 `initSubscriptionChildTracking`은 부르지 않는다. 단독 실행 진입은 `will-quit`와 `process.on('exit')`에서 `shutdownSubscriptionChildren`을 부른다.
-- 글꼴은 내려받지 않는다. 글꼴 목록은 PC에 설치된 것과 앱에 든 것이고, "글꼴 파일 설치"는 사용자가 가진 파일을 앱의 글꼴 폴더(`<userData>/fonts`)로 복사한다. 시스템에는 설치하지 않는다.
+- 지금은 글꼴을 내려받는 기능이 없다. 글꼴 목록은 PC에 설치된 것과 앱에 든 것이고, "글꼴 파일 설치"는 사용자가 가진 파일을 앱의 글꼴 폴더(`<userData>/fonts`)로 복사한다. 시스템에는 설치하지 않는다.
 
 ## 이 모듈의 방식
 

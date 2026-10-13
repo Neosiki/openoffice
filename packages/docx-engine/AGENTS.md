@@ -58,4 +58,4 @@ docx 한 파일의 읽기와 쓰기 전부를 맡는다.
 - `npm run fixtures`는 `fixtures/generated/*.docx`를 다시 만든다. 이 파일들은 저장소에 들어 있고 CI가 생성 결과와 커밋된 파일의 차이를 검사한다. 생성기(`scripts/generate-fixtures.ts`, `tests/helpers/build-docx.ts`)를 바꿨다면 다시 만들어 함께 커밋한다.
 - 열기·저장 경로를 건드리면 왕복 테스트로 증명한다. 편집 없음 → 결과가 원본 파일과 바이트 동일, 한 블록 편집 → 다른 zip 항목과 다른 `w:p`가 바이트 동일(`tests/roundtrip.test.ts`의 형태).
 - 한도와 방어 코드를 바꾸면 거부 사례와 정상 문서가 통과하는 사례를 둘 다 넣는다.
-- Windows에서 변경 이전부터 실패하는 것으로 알려진 테스트는 없다.
+- Windows에서 원본 코드 그대로도 실패하는 테스트는 없다.

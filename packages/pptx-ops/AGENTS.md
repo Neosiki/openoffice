@@ -42,4 +42,4 @@
 - `tests/op-docs-sync.test.ts`가 등록부와 문서의 일치, 서명 줄, 영어 전용을 검사한다. 문서 예시를 dry run에 태우는 테스트는 이 패키지가 아니라 `apps/slides/tests/op-docs-examples.test.ts`에 있다. op나 예시를 바꾸면 그쪽도 돌린다.
 - vitest 별칭이 `pptx-engine`과 `docx-engine/math`를 소스 경로로 묶는다. 엔진의 새 하위 경로를 import하면 `vitest.config.ts`와 `tsconfig.json`의 경로에도 추가한다.
 - op를 추가하면 정상 적용, 인자 거부(안내 문구 포함), 원자적 트랜잭션에서 실패했을 때 덱이 그대로인지를 덮는다.
-- Windows에서 변경 이전부터 실패하는 것으로 알려진 테스트는 없다.
+- Windows에서 원본 코드 그대로도 실패하는 테스트는 없다.
