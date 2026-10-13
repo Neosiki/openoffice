@@ -221,6 +221,129 @@ describe('AiSubscriptionCard', () => {
     expect(host.querySelector('[data-action="accept-metered"]')!.textContent).toBe('그래도 사용')
     expect(notes()[0]).toBe('구독이 아니라 쓴 만큼 요금이 나갑니다.')
   })
+
+  describe('the account and its actions (Settings only)', () => {
+    const signedIn = status('claude-code', 'ready', {
+      planName: 'max',
+      account: 'user@example.com',
+    })
+    const accountActions = () => ({ onSwitchAccount: vi.fn(), onLogout: vi.fn() })
+    const accountLine = () => host.querySelector('.ai-sub-account')?.textContent
+
+    it('shows neither on a card that was not asked to: an AI panel never names the account', () => {
+      render(signedIn)
+      expect(accountLine()).toBeUndefined()
+      expect(statusText()).toBe('Connected · max')
+      expect(actionsShown()).toEqual([])
+      expect(host.textContent).not.toContain('user@example.com')
+    })
+
+    it('shows the account next to the plan name when asked', () => {
+      act(() =>
+        root.render(
+          createElement(AiSubscriptionCard, {
+            status: signedIn,
+            lang: 'en',
+            showAccount: true,
+            ...cardActions(),
+          }),
+        ),
+      )
+      expect(accountLine()).toBe('user@example.com · max')
+      expect(statusText()).toBe('Connected')
+      // showing the account alone offers no action
+      expect(actionsShown()).toEqual([])
+
+      act(() =>
+        root.render(
+          createElement(AiSubscriptionCard, {
+            status: status('codex', 'metered', { account: 'user@example.com' }),
+            lang: 'en',
+            showAccount: true,
+            ...cardActions(),
+          }),
+        ),
+      )
+      expect(accountLine()).toBe('user@example.com')
+    })
+
+    it('offers the two account actions when their handlers are given, neither as the primary button', () => {
+      const actions = { ...cardActions(), ...accountActions() }
+      act(() =>
+        root.render(
+          createElement(AiSubscriptionCard, {
+            status: signedIn,
+            lang: 'en',
+            showAccount: true,
+            ...actions,
+          }),
+        ),
+      )
+      expect(actionsShown()).toEqual(['switch-account', 'logout'])
+      const switchButton = host.querySelector<HTMLButtonElement>('[data-action="switch-account"]')!
+      const logoutButton = host.querySelector<HTMLButtonElement>('[data-action="logout"]')!
+      expect(switchButton.textContent).toBe('Sign in with another account')
+      expect(logoutButton.textContent).toBe('Sign out')
+      expect(switchButton.classList.contains('primary')).toBe(false)
+      expect(logoutButton.classList.contains('primary')).toBe(false)
+      click('[data-action="switch-account"]')
+      expect(actions.onSwitchAccount).toHaveBeenCalledExactlyOnceWith('claude-code')
+      click('[data-action="logout"]')
+      expect(actions.onLogout).toHaveBeenCalledExactlyOnceWith('claude-code')
+      // the card itself runs nothing else: asking first is the caller's part
+      expect(actions.onLogin).not.toHaveBeenCalled()
+    })
+
+    it('words them in Korean', () => {
+      act(() =>
+        root.render(
+          createElement(AiSubscriptionCard, {
+            status: signedIn,
+            lang: 'ko',
+            ...cardActions(),
+            ...accountActions(),
+          }),
+        ),
+      )
+      expect(host.querySelector('[data-action="switch-account"]')!.textContent).toBe(
+        '다른 계정으로 로그인',
+      )
+      expect(host.querySelector('[data-action="logout"]')!.textContent).toBe('로그아웃')
+    })
+
+    it('keeps the account actions inert while an action is in flight', () => {
+      act(() =>
+        root.render(
+          createElement(AiSubscriptionCard, {
+            status: signedIn,
+            lang: 'en',
+            disabled: true,
+            ...cardActions(),
+            ...accountActions(),
+          }),
+        ),
+      )
+      expect(host.querySelector<HTMLButtonElement>('[data-action="logout"]')!.disabled).toBe(true)
+    })
+
+    it('a compact card shows neither, whatever it is given', () => {
+      act(() =>
+        root.render(
+          createElement(AiSubscriptionCard, {
+            status: signedIn,
+            lang: 'en',
+            compact: true,
+            showAccount: true,
+            ...cardActions(),
+            ...accountActions(),
+          }),
+        ),
+      )
+      expect(accountLine()).toBeUndefined()
+      expect(actionsShown()).toEqual([])
+      expect(host.textContent).not.toContain('user@example.com')
+    })
+  })
 })
 
 describe('AiConnectPrompt', () => {
@@ -292,6 +415,27 @@ describe('AiConnectPrompt', () => {
     )
     expect(cards()).toEqual([['codex', 'metered']])
     expect(actionsShown()).toEqual(['accept-metered'])
+  })
+
+  it('never names the account and never offers the account actions', () => {
+    const statuses = {
+      codex: status('codex', 'metered', { account: 'user@example.com' }),
+    }
+    act(() =>
+      root.render(
+        createElement(AiConnectPrompt, {
+          choice: selectAiProvider({ ...defaultAiSettings(), provider: 'codex' }, statuses),
+          statuses,
+          lang: 'en',
+          ...cardActions(),
+          // even a caller that passes them along does not get them in a panel
+          ...({ showAccount: true, onLogout: vi.fn(), onSwitchAccount: vi.fn() } as object),
+        }),
+      ),
+    )
+    expect(cards()).toEqual([['codex', 'metered']])
+    expect(actionsShown()).toEqual(['accept-metered'])
+    expect(host.textContent).not.toContain('user@example.com')
   })
 
   it('sends an unfinished key provider to the settings page', () => {
@@ -711,6 +855,139 @@ describe('AiModelPicker under the subscription contract', () => {
     expect(chip()).toBe('Connect AI')
     open()
     expect(host.querySelectorAll('.ai-model-item:not(.ai-model-manage)')).toHaveLength(0)
+  })
+
+  describe('with the model list the CLI gave', () => {
+    const listed: AiSubscriptionStatuses = {
+      'claude-code': status('claude-code', 'ready', {
+        models: [
+          { id: '', label: 'Default (recommended)', resolved: 'claude-opus-5-5', isDefault: true },
+          { id: 'opus', label: 'Opus 5.5', resolved: 'claude-opus-5-5' },
+          { id: 'fable', label: 'Fable 5.1', resolved: 'claude-fable-5-1' },
+        ],
+      }),
+      codex: status('codex', 'ready', {
+        models: [
+          { id: 'gpt-next-codex', label: 'GPT-Next-Codex', isDefault: true },
+          { id: 'gpt-next', label: 'GPT-Next', resolved: 'gpt-next-2026-09-01' },
+        ],
+      }),
+    }
+    async function mountIn(lang: 'en' | 'ko', settings: AiSettings) {
+      const setSettings = vi.fn<(next: AiSettings) => Promise<void>>(async () => {})
+      const bridge: AiModelPickerBridge = { getSettings: async () => settings, setSettings }
+      await act(async () => {
+        root.render(createElement(AiModelPicker, { bridge, lang, subscriptionStatuses: listed }))
+      })
+      return setSettings
+    }
+    const picked = (provider: 'claude-code' | 'codex', model: string): AiSettings => {
+      const settings = defaultAiSettings()
+      settings.provider = provider
+      settings.providers[provider] = { ...settings.providers[provider], model }
+      return settings
+    }
+    /** each row as [name, concrete id]; the id is absent on a row that shows none */
+    const rows = () =>
+      [...host.querySelectorAll<HTMLElement>('.ai-model-item:not(.ai-model-manage)')].map((row) => {
+        const id = row.querySelector('.ai-model-item-id')?.textContent
+        const text = row.querySelector('.ai-model-item-text')!
+        const name = [...text.childNodes]
+          .filter((node) => node.nodeType === Node.TEXT_NODE)
+          .map((node) => node.textContent)
+          .join('')
+          .trim()
+        return id === undefined ? [name] : [name, id]
+      })
+    const tip = () => host.querySelector('.ai-model-chip')!.getAttribute('data-tip')
+
+    it('lists each model by its display name with the concrete id beside it', async () => {
+      await mountIn('en', defaultAiSettings())
+      open()
+      expect(rows()).toEqual([
+        ['Automatic · Claude · Opus 5.5'],
+        ['Default model · Opus 5.5', 'claude-opus-5-5'],
+        ['Opus 5.5', 'claude-opus-5-5'],
+        ['Fable 5.1', 'claude-fable-5-1'],
+        ['Default model · GPT-Next-Codex', 'gpt-next-codex'],
+        ['GPT-Next-Codex', 'gpt-next-codex'],
+        ['GPT-Next', 'gpt-next-2026-09-01'],
+      ])
+      // the options keep their role, and the quieter id is part of the same option
+      const options = [...host.querySelectorAll('.ai-model-pop [role="option"]')]
+      expect(options).toHaveLength(7)
+      expect(options[2]!.textContent).toBe('Opus 5.5 claude-opus-5-5')
+    })
+
+    it('shows the concrete model on the chip under the automatic selection', async () => {
+      await mountIn('en', defaultAiSettings())
+      expect(chip()).toBe('Automatic · Claude · Opus 5.5')
+      expect(tip()).toContain('claude-opus-5-5')
+      await mountIn('ko', defaultAiSettings())
+      expect(chip()).toBe('자동 · Claude · Opus 5.5')
+      // the model the provider under "automatic" has stored is the one named
+      await mountIn('en', { ...picked('claude-code', 'fable'), provider: 'auto' })
+      expect(chip()).toBe('Automatic · Claude · Fable 5.1')
+    })
+
+    it('shows the provider and the concrete model on the chip for an explicit selection', async () => {
+      await mountIn('en', picked('claude-code', 'opus'))
+      expect(chip()).toBe('Claude · Opus 5.5')
+      expect(tip()).toContain('claude-opus-5-5')
+      await mountIn('ko', picked('claude-code', ''))
+      expect(chip()).toBe('Claude · Opus 5.5')
+      await mountIn('ko', picked('codex', 'gpt-next'))
+      expect(chip()).toBe('Codex · GPT-Next')
+      expect(tip()).toContain('gpt-next-2026-09-01')
+      // the whole text is in the tooltip, for a chip too narrow to show it
+      expect(tip()).toContain('Codex · GPT-Next')
+    })
+
+    it('words the default entry in the ui language', async () => {
+      await mountIn('ko', picked('claude-code', ''))
+      open()
+      expect(rows().slice(0, 2)).toEqual([
+        ['자동 · Claude · Opus 5.5'],
+        ['기본 모델 · Opus 5.5', 'claude-opus-5-5'],
+      ])
+    })
+
+    it('still shows a stored selection the CLI does not list, by its id', async () => {
+      await mountIn('en', picked('claude-code', 'claude-old-3'))
+      expect(chip()).toBe('Claude · claude-old-3')
+      open()
+      expect(rows().slice(1, 4)).toEqual([
+        ['Default model · Opus 5.5', 'claude-opus-5-5'],
+        ['claude-old-3'],
+        ['Opus 5.5', 'claude-opus-5-5'],
+      ])
+      const selected = [...host.querySelectorAll('.ai-model-item[aria-selected="true"]')]
+      expect(selected.map((row) => row.textContent)).toEqual(['claude-old-3'])
+    })
+
+    it('stores the value the CLI takes, never the display name', async () => {
+      const setSettings = await mountIn('en', defaultAiSettings())
+      open()
+      const fable = [...host.querySelectorAll<HTMLButtonElement>('.ai-model-item')].find((row) =>
+        row.textContent!.startsWith('Fable 5.1'),
+      )!
+      await act(async () => fable.click())
+      const saved = setSettings.mock.calls[0]![0]
+      expect(saved.provider).toBe('claude-code')
+      expect(saved.providers['claude-code'].model).toBe('fable')
+      expect(JSON.stringify(saved)).not.toContain('Fable 5.1')
+      expect(chip()).toBe('Claude · Fable 5.1')
+    })
+
+    it('stores the empty selection for the default entry', async () => {
+      const setSettings = await mountIn('en', picked('claude-code', 'fable'))
+      open()
+      const entry = [...host.querySelectorAll<HTMLButtonElement>('.ai-model-item')].find((row) =>
+        row.textContent!.startsWith('Default model · Opus 5.5'),
+      )!
+      await act(async () => entry.click())
+      expect(setSettings.mock.calls[0]![0].providers['claude-code'].model).toBe('')
+    })
   })
 
   describe('the Codex line', () => {

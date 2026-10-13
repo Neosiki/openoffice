@@ -138,7 +138,9 @@ export { withAiModelSelection, type AiModelPickerSelection } from './ai-model-pi
 export {
   aiProviderPickerGroups,
   aiProviderPickerSelection,
+  aiSubscriptionModelName,
   withAiProviderSelection,
+  type AiPickerModelDetail,
   type AiProviderPickerCurrent,
   type AiProviderPickerGroup,
   type AiProviderPickerSelection,
@@ -166,6 +168,7 @@ export {
   type AiContinueOption,
   type AiRunErrorCause,
   type AiSubscriptionCardAction,
+  type AiSubscriptionCardOptions,
   type AiSubscriptionCardTone,
   type AiSubscriptionCardView,
 } from './ai-subscription'

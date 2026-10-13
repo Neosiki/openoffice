@@ -9,11 +9,27 @@ import {
   type AiSubscriptionStatus,
   type AiSubscriptionStatuses,
 } from '@genoffice/ai-provider'
+import type { AiSubscriptionModel } from '@genoffice/ai-provider'
 import {
   aiProviderPickerGroups,
   aiProviderPickerSelection,
+  aiSubscriptionModelName,
   withAiProviderSelection,
 } from '../src/ai-model-picker-options'
+
+/** as Claude Code lists them: the default first, by the name of what it resolves to */
+const CLAUDE_LIST: AiSubscriptionModel[] = [
+  { id: '', label: 'Default (recommended)', resolved: 'claude-opus-5-5', isDefault: true },
+  { id: 'opus', label: 'Opus 5.5', resolved: 'claude-opus-5-5' },
+  { id: 'fable', label: 'Fable 5.1', resolved: 'claude-fable-5-1' },
+  { id: 'claude-sonnet-5', label: 'Sonnet 5' },
+]
+
+/** as Codex lists them: one of the entries is flagged as the default */
+const CODEX_LIST: AiSubscriptionModel[] = [
+  { id: 'gpt-next-codex', label: 'GPT-Next-Codex', isDefault: true },
+  { id: 'gpt-next', label: 'GPT-Next', resolved: 'gpt-next-2026-09-01' },
+]
 
 const status = (
   provider: AiSubscriptionProviderId,
@@ -88,6 +104,147 @@ describe('aiProviderPickerGroups', () => {
     settings.providers.codex = { apiKey: '', model: 'gpt-next', cliPath: '' }
     const codex = aiProviderPickerGroups(settings, ready).find((g) => g.id === 'codex')!
     expect(codex.models).toEqual(['', 'gpt-next'])
+  })
+
+  describe('a subscription whose CLI listed its models', () => {
+    const withLists: AiSubscriptionStatuses = {
+      'claude-code': status('claude-code', 'ready', { models: CLAUDE_LIST }),
+      codex: status('codex', 'ready', { models: CODEX_LIST }),
+    }
+    const group = (settings: AiSettings, id: AiSubscriptionProviderId) =>
+      aiProviderPickerGroups(settings, withLists).find((g) => g.id === id)!
+
+    it('offers the CLI default first, then what the CLI lists, by the value it takes', () => {
+      expect(group(defaultAiSettings(), 'claude-code').models).toEqual([
+        '',
+        'opus',
+        'fable',
+        'claude-sonnet-5',
+      ])
+      expect(group(defaultAiSettings(), 'codex').models).toEqual(['', 'gpt-next-codex', 'gpt-next'])
+    })
+
+    it('gives each entry its display name and its concrete id', () => {
+      const claude = group(defaultAiSettings(), 'claude-code').details!
+      expect(claude.get('opus')).toEqual({ name: 'Opus 5.5', concrete: 'claude-opus-5-5' })
+      expect(claude.get('fable')).toEqual({ name: 'Fable 5.1', concrete: 'claude-fable-5-1' })
+      // an entry that is its own concrete id
+      expect(claude.get('claude-sonnet-5')).toEqual({
+        name: 'Sonnet 5',
+        concrete: 'claude-sonnet-5',
+      })
+      const codex = group(defaultAiSettings(), 'codex').details!
+      expect(codex.get('gpt-next')).toEqual({ name: 'GPT-Next', concrete: 'gpt-next-2026-09-01' })
+      expect(codex.get('gpt-next-codex')).toEqual({
+        name: 'GPT-Next-Codex',
+        concrete: 'gpt-next-codex',
+      })
+    })
+
+    it('says what the default resolves to', () => {
+      // Claude names the model its default runs on: shown by that model's own name
+      expect(group(defaultAiSettings(), 'claude-code').details!.get('')).toEqual({
+        name: 'Opus 5.5',
+        concrete: 'claude-opus-5-5',
+      })
+      // Codex flags one of its entries as the default
+      expect(group(defaultAiSettings(), 'codex').details!.get('')).toEqual({
+        name: 'GPT-Next-Codex',
+        concrete: 'gpt-next-codex',
+      })
+      // a default that resolves to a model the list does not name is shown by its id
+      const lone = aiProviderPickerGroups(defaultAiSettings(), {
+        'claude-code': status('claude-code', 'ready', {
+          models: [
+            { id: '', label: 'Default', resolved: 'claude-next-9', isDefault: true },
+            { id: 'haiku', label: 'Haiku 4.5', resolved: 'claude-haiku-4-5' },
+          ],
+        }),
+      }).find((g) => g.id === 'claude-code')!
+      expect(lone.details!.get('')).toEqual({ name: 'claude-next-9' })
+      // a CLI that does not say leaves the default entry as it was
+      const silent = aiProviderPickerGroups(defaultAiSettings(), {
+        'claude-code': status('claude-code', 'ready', {
+          models: [{ id: 'haiku', label: 'Haiku 4.5' }],
+        }),
+      }).find((g) => g.id === 'claude-code')!
+      expect(silent.models).toEqual(['', 'haiku'])
+      expect(silent.details!.has('')).toBe(false)
+    })
+
+    it('still shows a stored selection the CLI does not list, right after the default', () => {
+      const settings = defaultAiSettings()
+      settings.providers['claude-code'] = { apiKey: '', model: 'claude-old-3' }
+      const claude = group(settings, 'claude-code')
+      expect(claude.models).toEqual(['', 'claude-old-3', 'opus', 'fable', 'claude-sonnet-5'])
+      expect(claude.details!.has('claude-old-3')).toBe(false)
+      // a listed selection is not repeated
+      settings.providers['claude-code'] = { apiKey: '', model: 'fable' }
+      expect(group(settings, 'claude-code').models).toEqual([
+        '',
+        'opus',
+        'fable',
+        'claude-sonnet-5',
+      ])
+    })
+
+    it('a stored selection named like an object property is just another id', () => {
+      const settings = defaultAiSettings()
+      settings.providers['claude-code'] = { apiKey: '', model: 'constructor' }
+      const claude = group(settings, 'claude-code')
+      expect(claude.details!.get('constructor')).toBeUndefined()
+      expect(aiSubscriptionModelName(settings, withLists, 'claude-code')).toBe('constructor')
+    })
+
+    it('every listed entry still passes selectAiProvider once picked, stored by its id', () => {
+      for (const id of ['claude-code', 'codex'] as const) {
+        for (const model of group(defaultAiSettings(), id).models) {
+          const next = withAiProviderSelection(defaultAiSettings(), { provider: id, model })
+          expect(next.providers[id].model).toBe(model)
+          expect(selectAiProvider(next, withLists).connected).toBe(true)
+        }
+      }
+    })
+
+    it('without a list the static catalog is shown, with no details', () => {
+      const claude = aiProviderPickerGroups(defaultAiSettings(), ready).find(
+        (g) => g.id === 'claude-code',
+      )!
+      expect(claude.models).toEqual(['', ...claudeModels])
+      expect(claude.details).toBeUndefined()
+    })
+  })
+
+  describe('aiSubscriptionModelName', () => {
+    const withLists: AiSubscriptionStatuses = {
+      'claude-code': status('claude-code', 'ready', { models: CLAUDE_LIST }),
+      codex: status('codex', 'ready', { models: CODEX_LIST }),
+    }
+
+    it('names the model the stored selection runs on', () => {
+      const settings = defaultAiSettings()
+      expect(aiSubscriptionModelName(settings, withLists, 'claude-code')).toBe('Opus 5.5')
+      expect(aiSubscriptionModelName(settings, withLists, 'codex')).toBe('GPT-Next-Codex')
+      settings.providers['claude-code'] = { apiKey: '', model: 'fable' }
+      settings.providers.codex = { apiKey: '', model: 'gpt-next', cliPath: '' }
+      expect(aiSubscriptionModelName(settings, withLists, 'claude-code')).toBe('Fable 5.1')
+      expect(aiSubscriptionModelName(settings, withLists, 'codex')).toBe('GPT-Next')
+    })
+
+    it('falls back to the stored id for a model the CLI does not list', () => {
+      const settings = defaultAiSettings()
+      settings.providers['claude-code'] = { apiKey: '', model: 'claude-old-3' }
+      expect(aiSubscriptionModelName(settings, withLists, 'claude-code')).toBe('claude-old-3')
+    })
+
+    it('is absent without a list, for a key provider, and for no provider', () => {
+      const settings = defaultAiSettings()
+      settings.providers['claude-code'] = { apiKey: '', model: 'sonnet' }
+      expect(aiSubscriptionModelName(settings, ready, 'claude-code')).toBeUndefined()
+      expect(aiSubscriptionModelName(settings, {}, 'claude-code')).toBeUndefined()
+      expect(aiSubscriptionModelName(settings, withLists, 'anthropic')).toBeUndefined()
+      expect(aiSubscriptionModelName(settings, withLists, undefined)).toBeUndefined()
+    })
   })
 
   it('lists a key provider only once its settings are filled in', () => {

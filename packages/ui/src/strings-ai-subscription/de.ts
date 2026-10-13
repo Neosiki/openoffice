@@ -23,6 +23,8 @@ export const de = {
   actionInstallHelp: 'Offizielle Installationsanleitung',
   actionOpenSettings: 'Einstellungen öffnen',
   actionDismiss: 'Schließen',
+  actionSwitchAccount: 'Mit anderem Konto anmelden',
+  actionLogout: 'Abmelden',
   installNote:
     'Der offizielle Installationsbefehl von {vendor} wird in einem neuen Terminalfenster ausgeführt.',
   loginNote: 'Die Anmeldeseite, die sich öffnet, stammt von {vendor}.',
@@ -71,7 +73,9 @@ export const de = {
   truncatedNotice: 'Die Eingabe war zu lang; ein Teil wurde vor dem Senden abgeschnitten.',
   pickerAuto: 'Automatisch',
   pickerAutoUsing: 'Automatisch · {provider}',
+  pickerAutoUsingModel: 'Automatisch · {provider} · {model}',
   pickerDefaultModel: 'Standardmodell',
+  pickerDefaultModelNamed: 'Standardmodell · {model}',
   pickerSubscription: 'Abonnement',
   pickerPaid: 'Kostenpflichtig',
   pickerPaidTitle: 'Abrechnung nach Verbrauch, nicht durch ein Abonnement gedeckt',

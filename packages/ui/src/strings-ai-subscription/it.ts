@@ -23,6 +23,8 @@ export const it = {
   actionInstallHelp: 'Guida ufficiale all’installazione',
   actionOpenSettings: 'Apri impostazioni',
   actionDismiss: 'Chiudi',
+  actionSwitchAccount: 'Accedi con un altro account',
+  actionLogout: 'Esci',
   installNote:
     'Il comando di installazione ufficiale di {vendor} viene eseguito in una nuova finestra del terminale.',
   loginNote: 'La pagina di accesso che si apre è quella di {vendor}.',
@@ -69,7 +71,9 @@ export const it = {
   truncatedNotice: 'L’input era troppo lungo, quindi una parte è stata tagliata prima dell’invio.',
   pickerAuto: 'Automatico',
   pickerAutoUsing: 'Automatico · {provider}',
+  pickerAutoUsingModel: 'Automatico · {provider} · {model}',
   pickerDefaultModel: 'Modello predefinito',
+  pickerDefaultModelNamed: 'Modello predefinito · {model}',
   pickerSubscription: 'Abbonamento',
   pickerPaid: 'A pagamento',
   pickerPaidTitle: 'Addebito a consumo, non coperto da un abbonamento',

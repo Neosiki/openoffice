@@ -12,6 +12,7 @@ import {
   type AiProviderId,
   type AiProviderSelection,
   type AiSettings,
+  type AiSubscriptionModel,
   type AiSubscriptionStatuses,
 } from '@genoffice/ai-provider/browser'
 import { aiProviderDisplayName, aiSubscriptionProviderName } from './ai-subscription'
@@ -41,6 +42,64 @@ export function withAiModelSelection(input: AiSettings, pick: AiModelPickerSelec
   }
 }
 
+/** What the list shows for one model of a subscription whose CLI listed its models */
+export interface AiPickerModelDetail {
+  /**
+   * the CLI's display name of the model; on the default entry (the empty id),
+   * the name of the model it runs on
+   */
+  readonly name: string
+  /** the concrete model id, shown beside the name in a quieter style when it says more */
+  readonly concrete?: string | undefined
+}
+
+/**
+ * The display details of a CLI's model list, by the id a selection stores. The
+ * entry for the empty id is the CLI's own default and is present only when the
+ * CLI tells what that is: Claude lists the default with what it resolves to,
+ * Codex flags one of its entries.
+ */
+function subscriptionModelDetails(
+  listed: readonly AiSubscriptionModel[],
+): Map<string, AiPickerModelDetail> {
+  const detailOf = (name: string, concrete: string | undefined): AiPickerModelDetail => ({
+    name,
+    ...(concrete && concrete !== name ? { concrete } : {}),
+  })
+  const details = new Map<string, AiPickerModelDetail>()
+  const named = listed.filter((model) => model.id !== '')
+  const own = listed.find((model) => model.id === '')
+  const flagged = named.find((model) => model.isDefault)
+  if (own?.resolved) {
+    const same = named.find((model) => model.resolved === own.resolved)
+    details.set('', detailOf(same?.label ?? own.resolved, own.resolved))
+  } else if (flagged) {
+    details.set('', detailOf(flagged.label, flagged.resolved ?? flagged.id))
+  }
+  for (const model of named)
+    details.set(model.id, detailOf(model.label, model.resolved ?? model.id))
+  return details
+}
+
+/**
+ * The name of the model a subscription provider runs on right now, for the
+ * places that show the current choice (the composer chip, "AI to use" in
+ * Settings): the CLI's name for the stored selection, or for what its default
+ * resolves to. A stored model the CLI does not list reads as its id. Undefined
+ * when the CLI listed no models, or does not tell what its default is.
+ */
+export function aiSubscriptionModelName(
+  settings: Pick<AiSettings, 'providers'>,
+  statuses: AiSubscriptionStatuses,
+  provider: AiProviderSelection | undefined,
+): string | undefined {
+  if (!isSubscriptionProvider(provider)) return undefined
+  const listed = statuses[provider]?.models
+  if (!listed?.length) return undefined
+  const stored = settings.providers?.[provider]?.model?.trim() ?? ''
+  return subscriptionModelDetails(listed).get(stored)?.name ?? (stored || undefined)
+}
+
 /** One block of the composer chip's list under the subscription contract */
 export interface AiProviderPickerGroup {
   /** `auto`: the "automatic" entry; `subscription`: a vendor CLI login; `key`: an API-key provider */
@@ -52,6 +111,12 @@ export interface AiProviderPickerGroup {
   readonly label: string
   /** selectable models; '' is the CLI's own default. Empty on `auto`, which is a single entry */
   readonly models: readonly string[]
+  /**
+   * a subscription whose CLI listed its models: what to show for each id (its
+   * name and concrete model). Absent otherwise, and a stored selection the CLI
+   * does not list has no entry: both are shown by their id, as before.
+   */
+  readonly details?: ReadonlyMap<string, AiPickerModelDetail> | undefined
   /** an accepted metered login: listed, but marked as costing money */
   readonly metered: boolean
   /** `auto` only: the provider requests run on right now */
@@ -99,7 +164,12 @@ export function aiProviderPickerGroups(
   for (const id of AI_SUBSCRIPTION_PROVIDERS) {
     const connection = subscriptionConnection(settings, statuses[id])
     if (!connection) continue
-    const catalog = AI_PROVIDERS.find((m) => m.id === id)?.models ?? []
+    // what the CLI itself lists, when it did; the fixed catalog of this build otherwise
+    const listed = statuses[id]?.models
+    const details = listed?.length ? subscriptionModelDetails(listed) : undefined
+    const catalog = listed?.length
+      ? listed.map((model) => model.id).filter((model) => model !== '')
+      : (AI_PROVIDERS.find((m) => m.id === id)?.models ?? [])
     const stored = settings.providers?.[id]?.model?.trim() ?? ''
     groups.push({
       kind: 'subscription',
@@ -107,6 +177,7 @@ export function aiProviderPickerGroups(
       label: aiSubscriptionProviderName(id),
       models: ['', ...(stored && !catalog.includes(stored) ? [stored] : []), ...catalog],
       metered: connection === 'metered',
+      ...(details ? { details } : {}),
     })
   }
   for (const meta of AI_PROVIDERS) {

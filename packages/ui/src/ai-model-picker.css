@@ -132,6 +132,12 @@
   white-space: nowrap;
 }
 
+/* the concrete model id beside a model's display name, when the CLI listed its models */
+.ai-model-item-id {
+  color: var(--text-dim);
+  font-size: 11px;
+}
+
 .ai-model-manage {
   flex-shrink: 0;
   margin-top: 4px;
