@@ -35,7 +35,8 @@ openoffice/
 ├── apps/
 │   ├── shell/AGENTS.md            ← 껍데기 앱: 창·탭·홈·설정·첫 실행 안내·업데이트
 │   ├── docs/AGENTS.md             ← 워드 편집기, 공용 AI 창구를 등록하는 뒷단
-│   ├── sheets/AGENTS.md           ← 엑셀 편집기와 엑셀 처리 프로그램(Rust)
+│   ├── sheets/AGENTS.md           ← 엑셀 편집기
+│   ├── sheets/native/xlsx-engine/AGENTS.md ← 엑셀 처리 프로그램(Rust)
 │   ├── slides/AGENTS.md           ← 파워포인트 편집기, 슬라이드 생성
 │   ├── pdf/AGENTS.md              ← PDF 편집기
 │   ├── markdown/AGENTS.md         ← 마크다운·텍스트 편집기

@@ -48,7 +48,6 @@ npm run check:no-genspark
 ```bash
 npm run test -w @genoffice/ai-provider      # 작업 공간 하나
 cd apps/sheets && npx vitest run            # 엑셀 편집기: Rust 빌드를 건너뛰고 테스트만
-XLSX_SIDECAR_PATH=<저장소>/apps/sheets/native/xlsx-engine/target/release/xlsx-sidecar.exe npx vitest run
 cd apps/shell && npx vitest run tests/<파일>.test.ts   # 파일 하나만
 ```
 
@@ -57,19 +56,19 @@ cd apps/shell && npx vitest run tests/<파일>.test.ts   # 파일 하나만
 
 ## 환경변수
 
-| 이름                                       | 역할                                                                     | 쓰이는 곳                                                                                                         |
-| ------------------------------------------ | ------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------- |
-| `GENOFFICE_USER_DATA`                      | 데이터 폴더를 다른 곳으로 돌린다                                         | 앱, 명령어. 화면 확인 스크립트가 임시 폴더를 줄 때 쓴다                                                           |
-| `GENOFFICE_LANG`                           | 화면 언어를 강제한다                                                     | 앱. 화면 확인 스크립트는 기본으로 영어를 준다                                                                     |
-| `GENOFFICE_AI_SETTINGS`                    | 명령어가 읽을 AI 설정 파일 위치                                          | 명령어, MCP                                                                                                       |
-| `GENOFFICE_APP_BIN`                        | 명령어가 띄울 앱 실행 파일 위치                                          | 명령어(화면이 필요한 변환)                                                                                        |
-| `GENOFFICE_ALLOWED_ROOTS`                  | 명령어가 읽고 쓸 수 있는 폴더를 제한한다(PATH처럼 여러 개)               | 명령어, MCP                                                                                                       |
-| `GENOFFICE_AUDIT_LOG`                      | 명령어 실행 기록의 위치. `off`면 끈다                                    | 명령어                                                                                                            |
-| `GENOFFICE_MCP_TOKEN`                      | `ieumoffice mcp --http`가 요청마다 요구할 값. `--token`이 없을 때 읽는다 | MCP                                                                                                               |
-| `GENOFFICE_HOME`                           | 에이전트 설정 폴더를 찾을 때의 홈 폴더                                   | 명령어(`mcp install`, 스킬 설치)                                                                                  |
-| `GENOFFICE_MCP_COMPACT_SCHEMAS`            | MCP 도구 설명을 짧게 낸다                                                | MCP                                                                                                               |
-| `XLSX_SIDECAR_PATH`                        | 엑셀 처리 프로그램의 위치를 바꾼다                                       | 엑셀 편집기 뒷단, 명령어, 테스트                                                                                  |
-| `HTTPS_PROXY` / `HTTP_PROXY` / `ALL_PROXY` | 프록시                                                                   | 앱이 직접 보내는 요청, 명령어. 구독 프로그램에는 이 변수가 그대로 전달된다(프로그램이 따르는지는 확인하지 않았다) |
+| 이름                                       | 역할                                                                            | 쓰이는 곳                                                                                                         |
+| ------------------------------------------ | ------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `GENOFFICE_USER_DATA`                      | 데이터 폴더를 다른 곳으로 돌린다                                                | 앱, 명령어. 화면 확인 스크립트가 임시 폴더를 줄 때 쓴다                                                           |
+| `GENOFFICE_LANG`                           | 화면 언어를 강제한다                                                            | 앱. 화면 확인 스크립트는 기본으로 영어를 준다                                                                     |
+| `GENOFFICE_AI_SETTINGS`                    | 명령어가 읽을 AI 설정 파일 위치                                                 | 명령어, MCP                                                                                                       |
+| `GENOFFICE_APP_BIN`                        | 명령어가 띄울 앱 실행 파일 위치                                                 | 명령어(화면이 필요한 변환)                                                                                        |
+| `GENOFFICE_ALLOWED_ROOTS`                  | 명령어가 읽고 쓸 수 있는 폴더를 제한한다(PATH처럼 여러 개)                      | 명령어, MCP                                                                                                       |
+| `GENOFFICE_AUDIT_LOG`                      | 명령어 실행 기록의 위치. `off`면 끈다                                           | 명령어                                                                                                            |
+| `GENOFFICE_MCP_TOKEN`                      | `ieumoffice mcp --http`가 요청마다 요구할 값. `--token`이 없을 때 읽는다        | MCP                                                                                                               |
+| `GENOFFICE_HOME`                           | 에이전트 설정 폴더를 찾을 때의 홈 폴더                                          | 명령어(`mcp install`, 스킬 설치)                                                                                  |
+| `GENOFFICE_MCP_COMPACT_SCHEMAS`            | MCP 도구 설명을 짧게 낸다                                                       | MCP                                                                                                               |
+| `XLSX_SIDECAR_PATH`                        | 엑셀 처리 프로그램의 위치를 바꾼다. 설치본과 엑셀 편집기 테스트에는 듣지 않는다 | 혼자 띄운 엑셀 편집기, 명령어                                                                                     |
+| `HTTPS_PROXY` / `HTTP_PROXY` / `ALL_PROXY` | 프록시                                                                          | 앱이 직접 보내는 요청, 명령어. 구독 프로그램에는 이 변수가 그대로 전달된다(프로그램이 따르는지는 확인하지 않았다) |
 
 이름에 `GENOFFICE_`가 남아 있는 것은 일부러다. 내부 이름은 원본과 같게 둔다.
 
