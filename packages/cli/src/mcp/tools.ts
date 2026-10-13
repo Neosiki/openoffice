@@ -49,7 +49,7 @@ export interface ToolSpec {
   /** the text content is the result's summary, not the JSON envelope (guides) */
   plainText?: boolean
   readOnly?: boolean
-  /** the call reaches the configured cloud provider (search, image, media) */
+  /** the call reaches a provider outside the machine (search, image, media); always the automatic-call path */
   openWorld?: boolean
   /** needs the GenOffice window in front of the client, so not registered in http mode */
   localOnly?: boolean
@@ -470,7 +470,7 @@ export const TOOLS: ToolSpec[] = [
     command: 'capabilities',
     readOnly: true,
     description:
-      'Which cloud features are configured in GenOffice: web search, image search, image generation, media understanding. Check once before planning photos or live facts; everything else runs locally.',
+      'Which cloud features this server can use, and by which route (free, key or subscription): web search, image search, image generation, image and video analysis. A subscription login is used only after the user turned that on for automatic calls (detail.automatic_calls); an unavailable feature carries the message its tool would answer with. Check once before planning photos or live facts; everything else runs locally.',
   },
   {
     name: 'search',
@@ -478,7 +478,7 @@ export const TOOLS: ToolSpec[] = [
     openWorld: true,
     readOnly: true,
     description:
-      'Web search, or image search with images=true, through the provider configured in GenOffice (the query leaves the machine). Image results carry imageUrl, width and height for addPicture / insert_image.',
+      'Web search, or image search with images=true, through the free search or the search provider key selected in GenOffice (the query leaves the machine). Image results carry imageUrl, width and height for addPicture / insert_image.',
     positionals: [{ key: 'query', description: 'the search query' }],
     options: ['images', 'max'],
   },
@@ -487,7 +487,7 @@ export const TOOLS: ToolSpec[] = [
     command: 'image',
     openWorld: true,
     description:
-      'Generate an image from a prompt with the provider configured in GenOffice and save it; the result names the real format. ref images steer edits (background removal, upscale).',
+      'Generate an image from a prompt with the image provider configured in GenOffice and save it; the result names the real format. ref images steer an edit (key providers only). A failure names its cause in detail.errorCode (unavailable: not configured, do not retry; headless-limit: wait until detail.resetsAt).',
     positionals: [{ key: 'prompt', description: 'what to draw' }],
     options: ['out', 'aspect', 'size', 'ref', 'model', 'force'],
   },
@@ -497,7 +497,7 @@ export const TOOLS: ToolSpec[] = [
     openWorld: true,
     readOnly: true,
     description:
-      'Describe or extract from an image, audio or video file (or URL) with the configured provider; the file leaves the machine.',
+      'Describe or extract from an image, audio or video file (or URL) with the provider configured in GenOffice; the file leaves the machine. A failure names its cause in detail.errorCode (unavailable: not configured, do not retry; headless-limit: wait until detail.resetsAt).',
     positionals: [{ key: 'source', description: 'path or URL of the media' }],
     options: ['ask'],
   },
