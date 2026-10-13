@@ -56,6 +56,7 @@ import { EMU_PER_PX_96 } from '@genoffice/pptx-render'
 import { runAiStream, storedAiSettings, withMeteredAccepted } from './ai-stream'
 import { tm } from './i18n-main'
 import { pushHistory, rebuildSlide, scheduleHistoryNotify, sessions } from './session-state'
+import { registerTemplateSelectionIpc } from './template-selection-ipc'
 
 // ---- AI settings + streaming proxy (the main process does the networking to avoid renderer CORS; implementation shared via @genoffice/ai-provider) ----
 
@@ -237,6 +238,9 @@ export function registerAiIpc(): void {
 // never called; docs does not have these channels, so putting them in the wrong place raises
 // "No handler registered".
 export function registerSlidesOnlyAiIpc(): void {
+  // The design template remembered per document (slides:ai-template-selection-get / -set)
+  registerTemplateSelectionIpc()
+
   // What the search/image/media tools can do right now (settings + subscription connections):
   // the renderer offers the model only the tools that have a route.
   ipcMain.handle('slides:ai-tool-capabilities', (): AiToolCapabilities =>
