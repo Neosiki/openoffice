@@ -4,6 +4,7 @@ import { streamAnthropic } from './protocols/anthropic'
 import { streamGemini } from './protocols/gemini'
 import { streamOpenAiCompatible } from './protocols/openai-compatible'
 import { streamCodexAppServer } from './codex-app-server'
+import { streamClaudeCodeCli } from './claude-code-cli'
 import type { StreamCallbacks } from './protocols/shared'
 import { getProviderAdapter, type AiProtocol } from './registry'
 import type { AiProviderConfig, AiProviderSelection } from './types'
@@ -31,7 +32,7 @@ export async function streamForProvider(
     return streamCodexAppServer(config, system, messages, tools, maxTokens, cb)
   }
   if (endpoint.protocol === 'claude-code-cli') {
-    throw new Error('The Claude Code bridge is not implemented yet')
+    return streamClaudeCodeCli(config, system, messages, tools, maxTokens, cb)
   }
   const protocol: Exclude<AiProtocol, 'codex-app-server' | 'claude-code-cli'> = endpoint.protocol
   return withOutputCapFallback(baseUrl, config.model, maxTokens, (cap) => {

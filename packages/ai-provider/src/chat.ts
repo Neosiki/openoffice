@@ -3,6 +3,7 @@ import { chatGemini } from './protocols/gemini'
 import { chatOpenAiCompatible } from './protocols/openai-compatible'
 import { ResponseBodyTooLargeError } from './protocols/shared'
 import { chatCodexAppServer } from './codex-app-server'
+import { chatClaudeCodeCli } from './claude-code-cli'
 import { getProviderAdapter, type ResolvedEndpoint } from './registry'
 import type { AiChatResponse, AiProviderConfig, AiProviderSelection } from './types'
 import { AI_CHAT_RESPONSE_TIMEOUT_MS, createStreamWatchdog } from './watchdog'
@@ -34,7 +35,7 @@ export async function chatForProvider(
       case 'codex-app-server':
         return chatCodexAppServer(config, system, user, wd.signal)
       case 'claude-code-cli':
-        return Promise.reject(new Error('The Claude Code bridge is not implemented yet'))
+        return chatClaudeCodeCli(wd, config, system, user)
       case 'anthropic':
         return chatAnthropic(wd, config, system, user, endpoint.baseUrl)
       case 'gemini':
