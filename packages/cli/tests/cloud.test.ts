@@ -1,6 +1,11 @@
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { aiSettingsPath, proxyUrlFromEnv } from '../src/cloud'
+import {
+  aiDataDir,
+  aiSettingsPath,
+  endSubscriptionChildrenWith,
+  proxyUrlFromEnv,
+} from '../src/cloud'
 import { analysisText } from '../src/commands/media'
 import { resultCount } from '../src/commands/search'
 import { run } from './helpers'
@@ -12,6 +17,62 @@ describe('cloud command plumbing', () => {
     expect(p.endsWith(join('IeumOffice', 'ai-settings.json'))).toBe(true)
     if (process.platform === 'darwin') expect(p).toContain('Library/Application Support')
     expect(aiSettingsPath({ GENOFFICE_USER_DATA: '/ud' })).toBe(join('/ud', 'ai-settings.json'))
+  })
+
+  it('takes the folder of the settings file in use as the data folder', () => {
+    expect(aiDataDir({ GENOFFICE_USER_DATA: '/ud' })).toBe(join('/ud'))
+    // the ledger and the acceptance record sit beside the settings actually read
+    expect(aiDataDir({ GENOFFICE_USER_DATA: '/ud', GENOFFICE_AI_SETTINGS: '/x/y/ai.json' })).toBe(
+      dirname('/x/y/ai.json'),
+    )
+    expect(aiDataDir({}).endsWith('IeumOffice')).toBe(true)
+  })
+
+  it('ends the subscription CLIs it started when the process ends, by exit or by signal', () => {
+    const listeners = new Map<string, (() => void)[]>()
+    const exits: number[] = []
+    const proc = {
+      once(event: string, listener: () => void) {
+        listeners.set(event, [...(listeners.get(event) ?? []), listener])
+        return proc
+      },
+      prependOnceListener(event: string, listener: () => void) {
+        listeners.set(event, [listener, ...(listeners.get(event) ?? [])])
+        return proc
+      },
+      listenerCount: (event: string) => listeners.get(event)?.length ?? 0,
+      exit: (code: number) => void exits.push(code),
+    }
+    const emit = (event: string) => {
+      // as Node does for `once`: each listener is taken off right before it runs
+      for (const listener of [...(listeners.get(event) ?? [])]) {
+        listeners.set(
+          event,
+          (listeners.get(event) ?? []).filter((l) => l !== listener),
+        )
+        listener()
+      }
+    }
+    let ended = 0
+    endSubscriptionChildrenWith(proc, () => void ended++)
+    expect([...listeners.keys()].sort()).toEqual(['SIGHUP', 'SIGINT', 'SIGTERM', 'exit'])
+
+    emit('exit')
+    expect(ended).toBe(1)
+    expect(exits).toEqual([])
+
+    // nobody else handles the signal: end the way the default handler would have
+    emit('SIGINT')
+    expect(ended).toBe(2)
+    expect(exits).toEqual([130])
+
+    // a server that shuts down on the signal itself keeps the last word, whenever it registered
+    let closed = 0
+    proc.once('SIGTERM', () => void closed++)
+    emit('SIGTERM')
+    expect(ended).toBe(3)
+    expect(closed).toBe(1)
+    expect(exits).toEqual([130])
   })
 
   it('picks the first http(s) proxy variable and ignores socks', () => {

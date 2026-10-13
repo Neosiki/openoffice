@@ -1,68 +1,96 @@
 import {
-  activeMediaProvider,
-  activeSearchProvider,
-  cloudToolsEnabled,
-  imageGenerationAvailable,
-  mediaAnalysisAvailable,
-} from '@genoffice/ai-provider'
-import { hasGskAuth, readAiSettingsFile } from '@genoffice/ai-search'
-import { aiSettingsPath, prepareCloud } from '../cloud'
+  aiToolCapabilities,
+  headlessSubscriptionUsage,
+  type AiToolCapability,
+} from '@genoffice/ai-search'
+import { headlessCall } from '../cloud'
 import type { CommandDef } from '../registry'
 import { appLaunch } from '../resources'
 
+/** `media_analysis` repeats one of the two analysis entries, so the summary leaves it out */
+const SUMMARIZED = [
+  'search',
+  'image_search',
+  'image_generation',
+  'image_analysis',
+  'video_analysis',
+  'app',
+] as const
+
 /**
  * What the cloud commands can do on this machine, decided from GenOffice's
- * own settings without a network call: a Genspark login with cloud tools on,
- * a BYOK key, or explicitly selected free Parallel search. Unkeyed fallbacks in the
- * default chain (free Parallel MCP, DuckDuckGo) do not count as configured. Agents
- * check this once before planning work that needs photos or web facts.
+ * own settings without a network call and without asking a model: the routes
+ * the search / image / media commands would start on as the automatic-call
+ * path they are (the free search, a key the user entered, or a subscription
+ * login once the user allowed that for the command line). Agents check this
+ * once before planning work that needs photos or web facts.
  */
 export const capabilitiesCommand: CommandDef = {
   name: 'capabilities',
   summary:
-    'Report which cloud features (search, image search, image generation, media analysis) are configured in GenOffice, and whether the app is installed.',
+    'Report which cloud features (search, image search, image generation, image and video analysis) are available in GenOffice and by which route, and whether the app is installed.',
   usage: 'capabilities',
   async run(_args, ctx) {
-    await prepareCloud(ctx.env)
-    const settings = readAiSettingsFile(aiSettingsPath(ctx.env))
-    const gsk = hasGskAuth() && cloudToolsEnabled(settings)
-    const searchProvider = activeSearchProvider(settings)
-    const gskSearch = gsk && searchProvider === 'genspark'
-    const customSearch = searchProvider !== 'genspark'
-    const search = gskSearch || customSearch
-    const keyedImageSearch = searchProvider === 'serper' || searchProvider === 'serply'
-    const imageSearch = gskSearch || keyedImageSearch
-    const imageGeneration = imageGenerationAvailable(settings, hasGskAuth())
-    const mediaAnalysis = mediaAnalysisAvailable(settings, hasGskAuth())
-    const via = (byok: string | null | undefined) => (byok ? byok : gsk ? 'genspark' : null)
+    const { settingsPath, settings, context } = await headlessCall(ctx.env, 'capabilities')
+    const caps = aiToolCapabilities(settings, context)
+    const subscription = settings.headlessSubscriptionEnabled === true
+    // the allowance only exists while the setting is on; off, no subscription request is counted
+    const usage = subscription ? headlessSubscriptionUsage(context.dataDir) : null
+    const imageAnalysis = feature(caps.imageAnalysis)
+    const videoAnalysis = feature(caps.videoAnalysis)
     const detail = {
-      search: {
-        available: search,
-        via: customSearch ? searchProvider : gskSearch ? 'genspark' : null,
-      },
-      image_search: {
-        available: imageSearch,
-        via: keyedImageSearch ? searchProvider : gskSearch ? 'genspark' : null,
-      },
-      image_generation: {
-        available: imageGeneration,
-        via: imageGeneration ? via(activeMediaProvider(settings, 'image')) : null,
-      },
-      media_analysis: {
-        available: mediaAnalysis,
-        via: mediaAnalysis ? via(activeMediaProvider(settings, 'analysis')) : null,
+      search: feature(caps.webSearch),
+      image_search: feature(caps.imageSearch),
+      image_generation: feature(caps.imageGeneration),
+      // the `media` command as a whole: images when they can be read, otherwise video and audio
+      media_analysis:
+        imageAnalysis.available || !videoAnalysis.available ? imageAnalysis : videoAnalysis,
+      image_analysis: imageAnalysis,
+      video_analysis: videoAnalysis,
+      automatic_calls: {
+        subscription_enabled: subscription,
+        ...(usage
+          ? {
+              used: usage.used,
+              limit: usage.limit,
+              remaining: Math.max(0, usage.limit - usage.used),
+              ...(usage.resetsAt !== undefined ? { resetsAt: usage.resetsAt } : {}),
+            }
+          : {}),
       },
       app: { available: appLaunch(ctx.env) !== null },
-      settings_path: aiSettingsPath(ctx.env),
+      settings_path: settingsPath,
     }
-    const on = Object.entries(detail)
-      .filter(([k, v]) => k !== 'settings_path' && (v as { available: boolean }).available)
-      .map(([k]) => k)
+    const on = SUMMARIZED.filter((name) => detail[name].available)
+    const off = SUMMARIZED.filter((name) => !detail[name].available)
     return {
-      summary: on.length
-        ? `configured: ${on.join(', ')}`
-        : 'no cloud feature configured; the app is not installed',
+      summary: [
+        ...(on.length ? [`available: ${on.join(', ')}`] : []),
+        ...(off.length ? [`unavailable: ${off.join(', ')}`] : []),
+      ].join('; '),
       detail,
     }
   },
+}
+
+interface Feature {
+  available: boolean
+  /** who answers: a search backend, a key provider, `codex`, or the AI provider the chat runs on */
+  via: string | null
+  /** how it is paid for: `free`, `key` or `subscription` */
+  route: AiToolCapability['route']
+  /** a metered CLI login the user accepted: billed like a key, and reported as one */
+  metered?: true
+  /** unavailable only: the text the command itself answers with */
+  message?: string
+}
+
+function feature(capability: AiToolCapability): Feature {
+  return {
+    available: capability.available,
+    via: capability.provider,
+    route: capability.route,
+    ...(capability.metered ? { metered: true as const } : {}),
+    ...(capability.message ? { message: capability.message } : {}),
+  }
 }
