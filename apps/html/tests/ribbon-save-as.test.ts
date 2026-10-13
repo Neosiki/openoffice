@@ -3,9 +3,6 @@ import { act, createElement } from 'react'
 import { createRoot } from 'react-dom/client'
 import { Ribbon } from '../src/renderer/components/Ribbon'
 
-// The assistant is unrelated to quick-access file actions.
-vi.mock('../src/renderer/ai/AiPanel', () => ({ GensparkMark: () => null }))
-
 beforeEach(() => vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true))
 const cleanups: Array<() => void> = []
 afterEach(() => {

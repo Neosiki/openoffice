@@ -1,12 +1,13 @@
 import { streamText, type AgentTransport } from '@genoffice/agent-core'
+import { brandText } from '@genoffice/i18n'
 import type { Brief } from '../document/brief'
 
 /**
  * Whole-page generation runs as its own tool-less request whose reply body IS
  * the HTML. Text deltas stream immediately, so the preview fills in as the model
  * writes and no gateway sees a silent connection. (Tool arguments are buffered
- * server-side until the JSON is complete; a page-sized argument exceeded the
- * Genspark gateway's idle cutoff and arrived as an empty stream.)
+ * server-side until the JSON is complete; a page-sized argument exceeded a
+ * gateway's idle cutoff and arrived as an empty stream.)
  */
 export const PAGE_MAX_CHARS = 200_000
 const CONTEXT_CAP = 8000
@@ -72,12 +73,12 @@ export function buildPageWriterRequest(
   if (spec.kind === 'design') {
     const { alternatives: _alternatives, ...brief } = spec.brief
     return {
-      system: DESIGN_SYSTEM + langDirective,
+      system: brandText(DESIGN_SYSTEM, 'en') + langDirective,
       user: `## Confirmed brief\n${JSON.stringify(brief, null, 1)}${context}${instruction}\n\nWrite the page now.`,
     }
   }
   return {
-    system: CONTENT_SYSTEM + langDirective,
+    system: brandText(CONTENT_SYSTEM, 'en') + langDirective,
     user: `## Plan\n${spec.title ? `Title: ${spec.title}\n` : ''}${spec.plan.slice(0, 4000)}${context}${instruction}\n\nWrite the document now.`,
   }
 }

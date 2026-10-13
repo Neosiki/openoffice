@@ -1,4 +1,5 @@
 import type { AgentSkill } from '@genoffice/agent-core'
+import { brandText } from '@genoffice/i18n'
 import { createHtmlSkill, type HtmlDocAccess } from './tools'
 import { buildProjection, placeholderInstruction } from './redact'
 
@@ -61,8 +62,10 @@ export function createDocumentSkill(access: HtmlDocAccess): AgentSkill {
   return createHtmlSkill(access, {
     get systemPrompt(): string {
       const proj = buildProjection(access.getText(), access.getMap())
-      if (proj.empty) return SYSTEM_PROMPT
-      return `${SYSTEM_PROMPT}\n\n${placeholderInstruction(proj.labels())}`
+      // the prompt names the product: the upstream name is swapped for this product's
+      const system = brandText(SYSTEM_PROMPT, 'en')
+      if (proj.empty) return system
+      return `${system}\n\n${placeholderInstruction(proj.labels())}`
     },
   })
 }
