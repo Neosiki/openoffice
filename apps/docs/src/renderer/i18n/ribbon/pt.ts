@@ -3,7 +3,7 @@ import type { zh } from './zh'
 export const pt = {
   ribbonAiCreditNote: 'Usa IA e consome créditos',
   ribbonAiRewriteConfirm:
-    'Esta ação chama a IA: consome créditos e pode reescrever todo o conteúdo. Continuar? (Não será perguntado novamente.)',
+    'Esta ação chama a IA e pode reescrever todo o conteúdo. Continuar? (Não será perguntado novamente.)',
   ribbonTabFile: 'Arquivo',
   ribbonTabHome: 'Página Inicial',
   ribbonTabInsert: 'Inserir',
@@ -185,7 +185,7 @@ export const pt = {
   ribbonReplaceTip: 'Localizar e substituir texto',
   ribbonSelectAll: 'Selecionar tudo',
   ribbonSelectAllTip: 'Selecionar o documento inteiro',
-  ribbonAiAssistant: 'Genspark',
+  ribbonAiAssistant: 'Assistente de IA',
   ribbonAiAssistantTip: 'Abrir o assistente de IA',
   ribbonRemoveTableStyleTip: 'Remover estilo da tabela',
   ribbonNoStyle: 'Sem Estilo',

@@ -3,7 +3,7 @@ import type { zh } from './zh'
 export const de = {
   ribbonAiCreditNote: 'Ruft KI auf und verbraucht Guthaben',
   ribbonAiRewriteConfirm:
-    'Diese Aktion ruft die KI auf: Sie verbraucht Guthaben und kann den gesamten Inhalt umschreiben. Fortfahren? (Sie werden nicht erneut gefragt.)',
+    'Diese Aktion ruft die KI auf und kann den gesamten Inhalt umschreiben. Fortfahren? (Sie werden nicht erneut gefragt.)',
   ribbonTabFile: 'Datei',
   ribbonTabHome: 'Start',
   ribbonTabInsert: 'Einfügen',
@@ -185,7 +185,7 @@ export const de = {
   ribbonReplaceTip: 'Text suchen und ersetzen',
   ribbonSelectAll: 'Alles markieren',
   ribbonSelectAllTip: 'Das gesamte Dokument markieren',
-  ribbonAiAssistant: 'Genspark',
+  ribbonAiAssistant: 'KI-Assistent',
   ribbonAiAssistantTip: 'KI-Assistenten öffnen',
   ribbonRemoveTableStyleTip: 'Tabellenformatvorlage entfernen',
   ribbonNoStyle: 'Keine Formatvorlage',

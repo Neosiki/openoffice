@@ -3,7 +3,7 @@ import type { zh } from './zh'
 export const ru = {
   ribbonAiCreditNote: 'Использует ИИ и расходует кредиты',
   ribbonAiRewriteConfirm:
-    'Это действие вызывает ИИ: расходуются кредиты, и всё содержимое может быть переписано. Продолжить? (Вопрос больше не появится.)',
+    'Это действие вызывает ИИ, и всё содержимое может быть переписано. Продолжить? (Вопрос больше не появится.)',
   ribbonTabFile: 'Файл',
   ribbonTabHome: 'Главная',
   ribbonTabInsert: 'Вставка',
@@ -184,7 +184,7 @@ export const ru = {
   ribbonReplaceTip: 'Найти и заменить текст',
   ribbonSelectAll: 'Выделить все',
   ribbonSelectAllTip: 'Выделить весь документ',
-  ribbonAiAssistant: 'Genspark',
+  ribbonAiAssistant: 'ИИ-помощник',
   ribbonAiAssistantTip: 'Открыть помощника ИИ',
   ribbonRemoveTableStyleTip: 'Удалить стиль таблицы',
   ribbonNoStyle: 'Без стиля',

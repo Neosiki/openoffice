@@ -41,8 +41,8 @@ import type {
   AiSettings,
   AiStreamChunk,
   AiStreamRequest,
-  GenSparkAccountStatus,
 } from '@genoffice/ai-provider'
+import type { AiToolCapabilities, MediaToolErrorCode } from '@genoffice/ai-search'
 import type { HeadlessExportTarget } from '@genoffice/electron-utils/headless-export'
 import type { FaceVerticalMetrics } from '@genoffice/font-metrics'
 import type { AiPanelPrefs } from '@genoffice/ui'
@@ -58,8 +58,8 @@ export type {
   AiSettings,
   AiStreamChunk,
   AiStreamRequest,
-  GenSparkAccountStatus,
 } from '@genoffice/ai-provider'
+export type { AiToolCapabilities, AiToolCapability } from '@genoffice/ai-search'
 export { AI_PROVIDERS } from '@genoffice/ai-provider/browser'
 
 // ---- agent protocol: canonical types live in @genoffice/agent-core ----
@@ -495,10 +495,8 @@ export interface DesktopApi {
   /** start a streaming AI call; deltas arrive via onAiStream with the same requestId */
   aiStream(request: AiStreamRequest): Promise<void>
   aiStreamCancel(requestId: string): Promise<void>
-  /** Genspark account status (gsk login state); withEmail also returns the email (needs a network request, slower) */
-  aiGskStatus(withEmail?: boolean): Promise<GenSparkAccountStatus>
-  /** Open the browser to log in to Genspark (fire-and-forget; aiGskStatus flips to logged-in when done) */
-  aiGskLogin(): Promise<void>
+  /** what the search and media tools can do right now (settings + subscription statuses) */
+  aiToolCapabilities(): Promise<AiToolCapabilities>
   webSearch(
     query: string,
     maxResults?: number,
@@ -529,13 +527,16 @@ export interface DesktopApi {
   analyzeMedia(op: {
     mediaUrls: string[]
     requirements: string
-  }): Promise<{ text?: string; error?: string }>
+  }): Promise<{ text?: string; error?: string; errorCode?: MediaToolErrorCode; resetsAt?: number }>
   fetchImage(url: string): Promise<{ base64: string; mime: string } | null>
-  /** AI image generation via the Genspark cloud channel (requires login + cloud tools) */
-  aiGenerateImage(op: {
-    prompt: string
-    aspectRatio?: string
-  }): Promise<{ url?: string; error?: string }>
+  /** AI image generation via the Codex subscription or a key image provider (see aiToolCapabilities) */
+  aiGenerateImage(op: { prompt: string; aspectRatio?: string }): Promise<{
+    url?: string
+    error?: string
+    errorCode?: MediaToolErrorCode
+    resetsAt?: number
+    note?: string
+  }>
   /** file picker for chat attachments (multi-select) */
   pickAttachments(): Promise<AttachmentAddResult | null>
   /** validate dropped paths and return attachment metadata */

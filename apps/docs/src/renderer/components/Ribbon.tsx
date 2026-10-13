@@ -40,6 +40,7 @@ import type {
   ThemeFonts,
 } from '@genoffice/docx-engine'
 import {
+  AiMark,
   Dropdown,
   isSymbolFontFamily,
   useDismissablePopover,
@@ -158,7 +159,6 @@ import {
 import { WRAP_OPTIONS } from './ContextMenu'
 import { CropDialog, CutoutDialog } from './PictureDialogs'
 import {
-  GensparkMark,
   IconAlignCenter,
   IconAlignJustify,
   IconAlignLeft,
@@ -3016,7 +3016,7 @@ function RibbonInner({
           </div>
         ) : tab === 'home' ? (
           <>
-            {/* ---- Genspark AI (first slot: entry + one-click AI actions) ---- */}
+            {/* ---- AI (first slot: entry + one-click AI actions) ---- */}
             <div className="ribbon-group">
               <div className="ribbon-group-items">
                 <button
@@ -3025,9 +3025,9 @@ function RibbonInner({
                   onClick={onToggleAi}
                 >
                   <span className="rb-big-icon">
-                    <GensparkMark size={26} />
+                    <AiMark size={26} />
                   </span>
-                  <span>Genspark AI</span>
+                  <span>{t('ribbonAiAssistant')}</span>
                 </button>
                 <button
                   className="rb-big ai-entry"
@@ -3127,7 +3127,7 @@ function RibbonInner({
                   <span>{t('aiTidyBtn')}</span>
                 </button>
               </div>
-              <div className="ribbon-group-label">Genspark AI</div>
+              <div className="ribbon-group-label">{t('ribbonAiAssistant')}</div>
             </div>
 
             <div className="ribbon-sep" />

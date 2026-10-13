@@ -3,7 +3,7 @@ import type { zh } from './zh'
 export const ar = {
   ribbonAiCreditNote: 'يستدعي الذكاء الاصطناعي ويستهلك الرصيد',
   ribbonAiRewriteConfirm:
-    'هذا الإجراء يستدعي الذكاء الاصطناعي: يستهلك الرصيد وقد يعيد كتابة المحتوى بالكامل. هل تريد المتابعة؟ (لن يتم السؤال مرة أخرى.)',
+    'هذا الإجراء يستدعي الذكاء الاصطناعي وقد يعيد كتابة المحتوى بالكامل. هل تريد المتابعة؟ (لن يتم السؤال مرة أخرى.)',
   ribbonTabFile: 'ملف',
   ribbonTabHome: 'الشريط الرئيسي',
   ribbonTabInsert: 'إدراج',
@@ -183,7 +183,7 @@ export const ar = {
   ribbonReplaceTip: 'البحث عن نص واستبداله',
   ribbonSelectAll: 'تحديد الكل',
   ribbonSelectAllTip: 'تحديد المستند بالكامل',
-  ribbonAiAssistant: 'Genspark',
+  ribbonAiAssistant: 'مساعد الذكاء الاصطناعي',
   ribbonAiAssistantTip: 'فتح مساعد الذكاء الاصطناعي',
   ribbonRemoveTableStyleTip: 'إزالة نمط الجدول',
   ribbonNoStyle: 'بلا نمط',

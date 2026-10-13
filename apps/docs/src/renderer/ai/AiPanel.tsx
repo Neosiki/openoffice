@@ -1,10 +1,16 @@
 import {
   aiPanelWidthAtPointer,
+  AiBlockedNotice,
+  AiConnectPrompt,
+  AiFirstConnectionNotice,
+  AiInputTruncatedNotice,
+  AiMark,
   AiPanelSideButton,
   AiModelPicker,
   type AiModelPickerBridge,
   AiQueueStrip,
   AI_QUEUE_LABELS,
+  AiSubscriptionUsageLine,
   AiUsageChip,
   addTokenUsage,
   type AiTokenUsageView,
@@ -19,10 +25,20 @@ import {
   createKnowledgeBaseSkill,
   streamText,
   type AgentImage,
+  type IpcStreamError,
   type KbFileInfo,
 } from '@genoffice/agent-core'
-import { imageGenerationAvailable, mediaAnalysisAvailable } from '@genoffice/ai-provider/browser'
-import type { AiSettings, AttachmentAddResult, AttachmentMeta } from '../../shared/ipc'
+import {
+  selectAiProvider,
+  type AiSubscriptionProviderId,
+  type AiSubscriptionUsage,
+} from '@genoffice/ai-provider/browser'
+import type {
+  AiSettings,
+  AiToolCapabilities,
+  AttachmentAddResult,
+  AttachmentMeta,
+} from '../../shared/ipc'
 import { ATTACHMENT_IMAGE_EXTS } from '../../shared/ipc'
 import type { PmNode } from '../editor/convert'
 import { TABLE_TRAILING_SKIP } from '../editor/extensions'
@@ -61,10 +77,19 @@ import { currentDocGeneration } from '../file-actions'
 import { createFilesSkill } from './files-skill'
 import { boundChatHistory } from './chat-retention'
 import { createElectronTransport } from './transport'
+import {
+  firstConnectionNoticeDue,
+  mergeSubscriptionUsage,
+  runErrorCauseOf,
+  runErrorView,
+  settingsContinuingWith,
+  shouldRecheckAfter,
+  type RunErrorCause,
+} from './run-state'
+import { useSubscriptionConnection } from './subscription-client'
 import { useI18n, t as tModule, aiLangDirective, type StringKey } from '../i18n/locale'
 import { createFileNav, Markdown } from '@genoffice/ui'
 import { AiComposer, AiScopeQuote, AiTypingIndicator, type AiScopeQuoteData } from '@genoffice/ui'
-import { GensparkMark } from '../components/icons'
 import sendEnterOn from '../assets/send-enter-on.png'
 import sendEnterOff from '../assets/send-enter-off.png'
 import sendStop from '../assets/send-stop.png'
@@ -115,8 +140,8 @@ interface ChatEntry {
   error?: string
   streaming?: boolean
   turnLimit?: boolean
-  /** the run failed because Genspark is signed out — render an inline sign-in button */
-  loginRequired?: boolean
+  /** machine-readable cause of `error`: a blocked connection gets the notice and connect cards instead of an error line */
+  errorCause?: RunErrorCause
   /** tool executions performed during this assistant turn */
   tools?: ToolActivity[]
   /** document state before this turn's first edit — rendered as an inline roll-back action */
@@ -181,7 +206,7 @@ const PASTE_MIME_EXT: Record<string, string> = {
   'image/webp': 'webp',
 }
 
-/** File-type icons for attachment cards (Genspark attachment icon set); exts the
+/** File-type icons for attachment cards (attachment icon set); exts the
  *  attachment allowlist doesn't accept yet are mapped ahead so they light up when added */
 const ATTACHMENT_CARD_ICON_GROUPS: [icon: string, exts: string[]][] = [
   [fileWordIcon, ['doc', 'docx']],
@@ -345,7 +370,6 @@ const MODEL_BRIDGE: AiModelPickerBridge = {
   getSettings: () => window.desktop.getAiSettings(),
   setSettings: (settings) => window.desktop.setAiSettings(settings),
   onSettingsChanged: (handler) => window.desktop.onAiSettingsChanged(handler),
-  gskLoggedIn: () => window.desktop.aiGskStatus().then((s) => !!s?.loggedIn),
   openModelSettings: () => window.desktop.openAiModelSettings().catch(() => {}),
 }
 
@@ -420,7 +444,7 @@ export function AiPanel({
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null)
   const [attachments, setAttachments] = useState<AttachmentMeta[]>([])
   const [attachNotice, setAttachNotice] = useState<string | null>(null)
-  /** data-URL previews for image attachments, keyed by path (Genspark composer thumbnails) */
+  /** data-URL previews for image attachments, keyed by path (composer thumbnails) */
   const [attachmentPreviews, setAttachmentPreviews] = useState<Record<string, string>>({})
   /** image paths with a read already issued — one readAttachmentImage per attach, even while pending */
   const previewRequestedRef = useRef(new Set<string>())
@@ -529,18 +553,28 @@ export function AiPanel({
   // latest props for the loop's closures (the loop instance outlives renders)
   const editorRef = useRef(editor)
   editorRef.current = editor
-  const settingsRef = useRef(settings)
-  settingsRef.current = settings
-  /** gsk login state for the generate_image gate (refreshed on mount and window focus) */
-  const gskLoggedInRef = useRef(false)
+  /** a change this panel just stored ("continue with ...", the acknowledged notice), until the settings prop catches up */
+  const [storedSettings, setStoredSettings] = useState<AiSettings | null>(null)
+  useEffect(() => setStoredSettings(null), [settings])
+  const liveSettings = storedSettings ?? settings
+  const settingsRef = useRef(liveSettings)
+  settingsRef.current = liveSettings
+  /** connection of the subscription providers: decides the provider, the connect prompt and the notices */
+  const subscription = useSubscriptionConnection()
+  const subscriptionRef = useRef(subscription)
+  subscriptionRef.current = subscription
+  const providerChoice = selectAiProvider(liveSettings, subscription.statuses)
+  /** what the image / media tools can do right now, asked from the main process
+      (settings plus subscription statuses; refreshed when either changes and on window focus) */
+  const toolCapabilitiesRef = useRef<AiToolCapabilities | null>(null)
   useEffect(() => {
     let alive = true
     const refresh = () => {
       // tests render the panel without a preload bridge
-      void window.desktop
-        ?.aiGskStatus?.()
-        .then((s) => {
-          if (alive) gskLoggedInRef.current = !!s?.loggedIn
+      void Promise.resolve()
+        .then(() => window.desktop?.aiToolCapabilities?.())
+        .then((capabilities) => {
+          if (alive && capabilities) toolCapabilitiesRef.current = capabilities
         })
         .catch(() => {})
     }
@@ -550,7 +584,16 @@ export function AiPanel({
       alive = false
       window.removeEventListener('focus', refresh)
     }
-  }, [])
+  }, [settings, subscription.statuses])
+  /** rate-limit windows the subscription CLI reported (newest per provider and window) */
+  const [subscriptionUsage, setSubscriptionUsage] = useState<AiSubscriptionUsage[]>([])
+  /** the last turn's input was cut to fit a limit: the user is told, never silently */
+  const [inputTruncated, setInputTruncated] = useState(false)
+  /** the first run on a subscription waits here until the notice is acknowledged */
+  const [firstNoticeOpen, setFirstNoticeOpen] = useState(false)
+  const heldRunRef = useRef<(() => void) | null>(null)
+  /** structured copy of the transport's latest failure, matched to the loop's error by its text */
+  const streamErrorRef = useRef<IpcStreamError | null>(null)
   const blocksRef = useRef(blocks)
   blocksRef.current = blocks
   const numIdFallbackRef = useRef(numIdFallback)
@@ -730,7 +773,14 @@ export function AiPanel({
 
   const transportRef = useRef<ReturnType<typeof createElectronTransport> | null>(null)
   if (!transportRef.current)
-    transportRef.current = createElectronTransport(() => settingsRef.current)
+    transportRef.current = createElectronTransport(() => settingsRef.current, {
+      onStreamError: (failure) => {
+        streamErrorRef.current = failure
+      },
+      onSubscriptionUsage: (usage) =>
+        setSubscriptionUsage((known) => mergeSubscriptionUsage(known, usage)),
+      onInputTruncated: () => setInputTruncated(true),
+    })
 
   /**
    * Long-form writing: one tool-less request whose reply is the fragment, streamed
@@ -834,14 +884,16 @@ export function AiPanel({
           () => (trackChangesRef.current ? { author: AI_REVISION_AUTHOR } : undefined),
           () => commentsAccessRef.current,
           () => hfAccessRef.current,
-          () => imageGenerationAvailable(settingsRef.current, gskLoggedInRef.current),
+          () => toolCapabilitiesRef.current?.imageGeneration.available === true,
           () => ({
             write: (spec, onProgress, signal) => runDocWriterRef.current(spec, onProgress, signal),
           }),
           () => pageSetupAccessRef.current,
           () => docExtrasRef.current,
           () => notesAccessRef.current,
-          () => mediaAnalysisAvailable(settingsRef.current, gskLoggedInRef.current),
+          () =>
+            toolCapabilitiesRef.current?.imageAnalysis.available === true ||
+            toolCapabilitiesRef.current?.videoAnalysis.available === true,
         ),
         createFilesSkill(availableAttachments),
       ]),
@@ -931,6 +983,8 @@ export function AiPanel({
           }
         },
         onError: (error) => {
+          const errorCause = runErrorCauseOf(streamErrorRef.current, error)
+          streamErrorRef.current = null
           setChat((prev) => {
             const next = [...prev]
             const last = next.at(-1)
@@ -939,31 +993,20 @@ export function AiPanel({
                 ...last,
                 streaming: false,
                 error,
+                ...(errorCause ? { errorCause } : {}),
                 tools: last.tools?.filter((tl) => !tl.running),
                 snapshot: runSnapshotRef.current ?? undefined,
               }
             }
             return boundChatHistory(next)
           })
-          // Signed-out failures get an inline sign-in button; detected via
-          // gsk status rather than matching the localized error text — but only
-          // when Genspark is the provider: a BYOK user's error (e.g. their own
-          // provider's rate limit) must not advertise a Genspark sign-in (#1948)
-          void window.desktop
-            .aiGskStatus()
-            .then((status) => {
-              if (status.loggedIn) return
-              if ((settingsRef.current?.provider ?? 'genspark') !== 'genspark') return
-              setChat((prev) => {
-                const next = [...prev]
-                const last = next.at(-1)
-                if (last?.role === 'assistant' && last.error) {
-                  next[next.length - 1] = { ...last, loginRequired: true }
-                }
-                return next
-              })
-            })
-            .catch(() => {})
+          // a refusal for a connection reason may rest on an out-of-date status: look
+          // again, so the connect cards show what the program says now
+          if (shouldRecheckAfter(errorCause)) {
+            subscriptionRef.current.refresh(
+              errorCause?.provider ? [errorCause.provider] : undefined,
+            )
+          }
           setBusy(false)
         },
       },
@@ -1091,6 +1134,14 @@ export function AiPanel({
   ) => {
     const loop = loopRef.current
     if (!instruction || !loop || loop.busy || pendingSendRef.current) return
+    // the first run on a subscription waits until the notice about what leaves the PC was acknowledged
+    if (firstConnectionNoticeDue(settingsRef.current, subscriptionRef.current.statuses)) {
+      heldRunRef.current = () =>
+        runWith(instruction, displayInstruction, attachmentsOverride, retryScope)
+      setFirstNoticeOpen(true)
+      return
+    }
+    setInputTruncated(false)
     setInput('')
     // The message consumes the composer attachments: they ride along (echoed on the
     // bubble, images multimodal, files via the files skill) and the composer clears.
@@ -1200,6 +1251,40 @@ export function AiPanel({
 
   const continueRun = () => runWith(DOCS_CONTINUE_INSTRUCTION, t('aiContinue'))
 
+  /**
+   * Apply a change to the shared settings file. This panel runs on the result at
+   * once; the file gets the change on top of its latest content rather than this
+   * panel's copy, so a key another window saved meanwhile is not written back.
+   * The picker and the other windows follow the file's change event.
+   */
+  const storeSettings = (change: (current: AiSettings) => AiSettings) => {
+    const next = change(settingsRef.current)
+    settingsRef.current = next
+    setStoredSettings(next)
+    void Promise.resolve()
+      .then(() => window.desktop.getAiSettings())
+      .then(
+        (latest) => window.desktop.setAiSettings(change(latest)),
+        // no readable file copy: this panel's copy is the best there is
+        () => window.desktop.setAiSettings(next),
+      )
+      .catch(() => {})
+  }
+
+  /** "continue with ..." on a blocked run: that provider becomes the selection, then the request runs again */
+  const continueWith = (provider: AiSubscriptionProviderId) => {
+    storeSettings((current) => settingsContinuingWith(current, provider))
+    retry()
+  }
+
+  const acknowledgeFirstNotice = () => {
+    storeSettings((current) => ({ ...current, subscriptionNoticeSeen: true }))
+    setFirstNoticeOpen(false)
+    const held = heldRunRef.current
+    heldRunRef.current = null
+    held?.()
+  }
+
   /** Enter while a reply runs: the draft joins the queue above the composer */
   const enqueueDraft = () => {
     const text = input.trim()
@@ -1227,6 +1312,9 @@ export function AiPanel({
     }
     abandonWriter()
     loopRef.current?.reset()
+    heldRunRef.current = null
+    setFirstNoticeOpen(false)
+    setInputTruncated(false)
     setBusy(false)
     setChat([])
     // Restored history is painted above the live turn: without this the
@@ -1364,7 +1452,7 @@ export function AiPanel({
         aria-label={t('appExpandAiPanel')}
         onClick={onExpand}
       >
-        <GensparkMark size={22} />
+        <AiMark size={22} />
       </button>
     )
   }
@@ -1396,7 +1484,7 @@ export function AiPanel({
       />
       <div className="ai-panel-header">
         <span className="ai-panel-title">
-          <GensparkMark size={22} />
+          <AiMark size={22} />
           {t('aiPanelTitle')}
         </span>
         <div className="ai-panel-header-actions">
@@ -1485,6 +1573,13 @@ export function AiPanel({
             return null
           }
           const isLast = i === chat.length - 1
+          const errorView = runErrorView(
+            entry.errorCause,
+            isLast && !busy,
+            providerChoice,
+            liveSettings,
+            subscription.statuses,
+          )
           // Action row appears once per completed reply: on the turn's final segment only
           // (mid-turn segments have a following assistant entry; the live turn ends when !busy)
           const nextEntry = chat[i + 1]
@@ -1523,13 +1618,34 @@ export function AiPanel({
                 </div>
               )}
               {entry.tools && entry.tools.length > 0 && <ToolChipList tools={entry.tools} />}
-              {entry.error && (
+              {entry.error && errorView.errorLine && (
                 <div className="ai-msg-error">{t('aiErrorPrefix', { error: entry.error })}</div>
               )}
-              {entry.loginRequired && (
-                <button className="ai-login-btn" onClick={() => void window.desktop.aiGskLogin()}>
-                  {t('aiGskLoginBtn')}
-                </button>
+              {entry.errorCause && errorView.blockedNotice && (
+                <AiBlockedNotice
+                  kind={entry.errorCause.kind}
+                  provider={entry.errorCause.provider}
+                  resetsAt={entry.errorCause.resetsAt}
+                  message={entry.error}
+                  settings={liveSettings}
+                  statuses={subscription.statuses}
+                  lang={lang}
+                  onContinueWith={continueWith}
+                />
+              )}
+              {entry.error && errorView.connectPrompt && (
+                <AiConnectPrompt
+                  choice={providerChoice}
+                  statuses={subscription.statuses}
+                  lang={lang}
+                  disabled={subscription.busy}
+                  onOpenSettings={() => void window.desktop.openAiModelSettings().catch(() => {})}
+                  onInstall={subscription.install}
+                  onLogin={subscription.login}
+                  onRecheck={subscription.recheck}
+                  onAcceptMetered={subscription.acceptMetered}
+                  onOpenInstallHelp={subscription.openInstallHelp}
+                />
               )}
               {showToolbar && (
                 <div className="ai-msg-toolbar">
@@ -1613,6 +1729,16 @@ export function AiPanel({
       </div>
 
       <div className="ai-composer">
+        {firstNoticeOpen && (
+          <AiFirstConnectionNotice
+            lang={lang}
+            codexKeepsHistory={false}
+            onAcknowledge={acknowledgeFirstNotice}
+          />
+        )}
+        {inputTruncated && (
+          <AiInputTruncatedNotice lang={lang} onDismiss={() => setInputTruncated(false)} />
+        )}
         {attachNotice && <div className="ai-attach-notice">{attachNotice}</div>}
         {activePartial && (
           <div className="ai-queue ai-partial-card" role="group" aria-label={t('aiPartialTitle')}>
@@ -1783,8 +1909,13 @@ export function AiPanel({
           onPasteFiles={(files) => void onPasteFiles(files)}
           footerStart={
             <>
-              <AiModelPicker bridge={MODEL_BRIDGE} lang={lang} />
+              <AiModelPicker
+                bridge={MODEL_BRIDGE}
+                lang={lang}
+                subscriptionStatuses={subscription.statuses}
+              />
               {sessionUsage && <AiUsageChip usage={sessionUsage} session lang={lang} />}
+              <AiSubscriptionUsageLine usage={subscriptionUsage} lang={lang} />
               <button
                 className="ai-attach-btn"
                 onClick={pickAttachments}

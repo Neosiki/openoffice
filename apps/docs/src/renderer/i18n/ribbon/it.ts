@@ -3,7 +3,7 @@ import type { zh } from './zh'
 export const it = {
   ribbonAiCreditNote: "Usa l'IA e consuma crediti",
   ribbonAiRewriteConfirm:
-    "Questa azione richiama l'IA: consuma crediti e può riscrivere l'intero contenuto. Continuare? (Non verrà più chiesto.)",
+    "Questa azione richiama l'IA e può riscrivere l'intero contenuto. Continuare? (Non verrà più chiesto.)",
   ribbonTabFile: 'File',
   ribbonTabHome: 'Home',
   ribbonTabInsert: 'Inserisci',
@@ -186,7 +186,7 @@ export const it = {
   ribbonReplaceTip: 'Trova e sostituisci testo',
   ribbonSelectAll: 'Seleziona tutto',
   ribbonSelectAllTip: 'Seleziona l’intero documento',
-  ribbonAiAssistant: 'Genspark',
+  ribbonAiAssistant: 'Assistente IA',
   ribbonAiAssistantTip: "Apri l'assistente IA",
   ribbonRemoveTableStyleTip: 'Rimuovi stile tabella',
   ribbonNoStyle: 'Nessuno stile',

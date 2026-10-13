@@ -3,7 +3,7 @@ import type { zh } from './zh'
 export const th = {
   ribbonAiCreditNote: 'เรียกใช้ AI และใช้เครดิต',
   ribbonAiRewriteConfirm:
-    'การดำเนินการนี้จะเรียกใช้ AI: ใช้เครดิตและอาจเขียนเนื้อหาทั้งหมดใหม่ ดำเนินการต่อหรือไม่ (จะไม่ถามอีก)',
+    'การดำเนินการนี้จะเรียกใช้ AI และอาจเขียนเนื้อหาทั้งหมดใหม่ ดำเนินการต่อหรือไม่ (จะไม่ถามอีก)',
   ribbonTabFile: 'ไฟล์',
   ribbonTabHome: 'หน้าแรก',
   ribbonTabInsert: 'แทรก',
@@ -182,7 +182,7 @@ export const th = {
   ribbonReplaceTip: 'ค้นหาและแทนที่ข้อความ',
   ribbonSelectAll: 'เลือกทั้งหมด',
   ribbonSelectAllTip: 'เลือกทั้งเอกสาร',
-  ribbonAiAssistant: 'Genspark',
+  ribbonAiAssistant: 'ผู้ช่วย AI',
   ribbonAiAssistantTip: 'เปิดผู้ช่วย AI',
   ribbonRemoveTableStyleTip: 'เอาสไตล์ตารางออก',
   ribbonNoStyle: 'ไม่มีสไตล์',

@@ -3,7 +3,7 @@ import type { zh } from './zh'
 export const ja = {
   ribbonAiCreditNote: 'AI を呼び出し、クレジットを消費します',
   ribbonAiRewriteConfirm:
-    'この操作は AI を呼び出します。クレジットを消費し、内容全体が書き換えられる可能性があります。続行しますか？（確認後は再表示されません）',
+    'この操作は AI を呼び出します。内容全体が書き換えられる可能性があります。続行しますか？（確認後は再表示されません）',
   // Tabs
   ribbonTabFile: 'ファイル',
   ribbonTabHome: 'ホーム',
@@ -191,7 +191,7 @@ export const ja = {
   ribbonSelectAll: 'すべて選択',
   ribbonSelectAllTip: '文書全体を選択',
   // Home · AI
-  ribbonAiAssistant: 'Genspark',
+  ribbonAiAssistant: 'AI アシスタント',
   ribbonAiAssistantTip: 'AI アシスタントを開く',
   // Table Design
   ribbonRemoveTableStyleTip: '表のスタイルを削除',
