@@ -1,5 +1,5 @@
 // Rejects new raw colors in renderer CSS: UI chrome must go through the design
-// tokens in packages/ui/src/tokens.css (see CLAUDE.md). Raw values are allowed
+// tokens in packages/ui/src/tokens.css (see docs/standards.md). Raw values are allowed
 // only on custom-property definition lines (token/accent definitions), so the
 // check is diff-based and never flags pre-existing lines.
 import { existsSync, readFileSync } from 'node:fs'
@@ -91,7 +91,7 @@ if (violations.size === 0) {
 console.error(
   'New raw colors in renderer CSS. UI chrome must use the design tokens from\n' +
     'packages/ui/src/tokens.css (raw values are only allowed when defining a\n' +
-    'custom property). See the theming rules in CLAUDE.md.\n',
+    'custom property). See the theming rules in docs/standards.md.\n',
 )
 for (const [where, text] of violations) console.error(`  ${where}  ${text}`)
 process.exit(1)
