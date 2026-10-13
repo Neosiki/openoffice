@@ -31,6 +31,7 @@ import {
   rendererUrl,
 } from '@genoffice/electron-utils'
 import { createI18n, getUiLang } from '@genoffice/i18n'
+import { sharedSubscriptionStatuses } from '@genoffice/ai-provider/subscription'
 import { generateImageTool, documentMediaRoots } from '@genoffice/ai-search'
 import { ImageExportSessions } from './image-export'
 import { printMarkdownPdf } from './print-pdf'
@@ -896,7 +897,10 @@ function registerMarkdownIpc(): void {
         },
         // markdown keeps pasted/picked images as doc-relative assets, so the
         // open document's own directory is the media root
-        { mediaRoots: documentMediaRoots(markdownFilePath(e.sender.id), undefined) },
+        {
+          mediaRoots: documentMediaRoots(markdownFilePath(e.sender.id), undefined),
+          context: { path: 'screen', statuses: sharedSubscriptionStatuses() },
+        },
       ),
   )
 
