@@ -1,14 +1,15 @@
 import { ANTHROPIC_BASE_URL } from './protocols/anthropic'
 import { GEMINI_BASE_URL } from './protocols/gemini'
 import { AI_PROVIDERS, DEEPSEEK_V41_FLASH, GENSPARK_LLM_BASE_URLS } from './providers'
-import type { AiProviderConfig, AiProviderId, AiProviderMeta } from './types'
+import type { AiProviderConfig, AiProviderId, AiProviderMeta, AiProviderSelection } from './types'
 
-/** Wire protocols every provider maps onto, including the official Codex app-server bridge. */
-export type AiProtocol = 'anthropic' | 'gemini' | 'openai-compatible' | 'codex-app-server'
+/** Wire protocols every provider maps onto, including the Codex app-server and Claude Code CLI bridges. */
+export type AiProtocol =
+  'anthropic' | 'gemini' | 'openai-compatible' | 'codex-app-server' | 'claude-code-cli'
 
 export interface ProviderCapabilities {
-  /** How the provider authenticates: app login, user key, or the Codex CLI's existing login. */
-  auth: 'gsk-login' | 'api-key' | 'codex-chatgpt'
+  /** How the provider authenticates: app login, user key, or the Codex / Claude Code CLI's existing login. */
+  auth: 'gsk-login' | 'api-key' | 'codex-chatgpt' | 'claude-subscription'
   /** chat models accept image input (declarative; for custom endpoints it is assumed, not known) */
   vision: boolean
 }
@@ -216,6 +217,13 @@ export const AI_PROVIDER_ADAPTERS: Record<AiProviderId, ProviderAdapter> = {
       }
     },
   },
+  'claude-code': {
+    meta: metaOf('claude-code'),
+    capabilities: { auth: 'claude-subscription', vision: true },
+    resolveEndpoint() {
+      return { protocol: 'claude-code-cli', baseUrl: '' }
+    },
+  },
   codex: {
     meta: metaOf('codex'),
     capabilities: { auth: 'codex-chatgpt', vision: true },
@@ -390,9 +398,12 @@ export const AI_PROVIDER_ADAPTERS: Record<AiProviderId, ProviderAdapter> = {
   },
 }
 
-/** Throws on ids not in the registry — settings files are user data and can carry anything. */
-export function getProviderAdapter(provider: AiProviderId): ProviderAdapter {
-  const adapter = AI_PROVIDER_ADAPTERS[provider]
+/**
+ * Throws on ids not in the registry — settings files are user data and can carry anything.
+ * That includes `auto`: it is a selection, resolved by selectAiProvider before routing.
+ */
+export function getProviderAdapter(provider: AiProviderSelection): ProviderAdapter {
+  const adapter = AI_PROVIDER_ADAPTERS[provider as AiProviderId]
   if (!adapter) throw new Error(`Unknown provider: ${provider}`)
   return adapter
 }

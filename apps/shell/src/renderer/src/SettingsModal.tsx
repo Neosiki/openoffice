@@ -947,9 +947,9 @@ function AiMediaPane({
                 : (search.providers[search.provider]?.apiKey ?? ''),
           }) ?? Promise.resolve(fallback),
       ],
-      ['image', () => vendorCheck(media.imageProvider)],
-      ['analysis', () => vendorCheck(media.analysisProvider)],
-      ['video', () => vendorCheck(media.videoAnalysisProvider)],
+      ['image', () => vendorCheck(media.imageProvider as AiMediaProviderId)],
+      ['analysis', () => vendorCheck(media.analysisProvider as AiMediaProviderId)],
+      ['video', () => vendorCheck(media.videoAnalysisProvider as AiMediaProviderId)],
     ]
     if (fileSearch?.rerank) {
       blocks.push([

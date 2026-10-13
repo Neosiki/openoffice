@@ -20,7 +20,47 @@ export type {
   AiTokenUsage,
   GenSparkAccountStatus,
   LegacyAiSettings,
+  AiAnalysisProviderSelection,
+  AiImageProviderSelection,
+  AiMediaKeyProviderId,
+  AiProviderSelection,
+  AiRunErrorKind,
+  AiSubscriptionLoginMethod,
+  AiSubscriptionProviderId,
+  AiSubscriptionState,
+  AiSubscriptionStatus,
+  AiSubscriptionStatuses,
+  AiSubscriptionUsage,
+  AiUsageWindow,
+  AiVideoAnalysisProviderSelection,
 } from './types'
+export {
+  AI_SUBSCRIPTION_PROVIDERS,
+  isKeyProviderConfigured,
+  isSubscriptionProvider,
+  providerSelectionOf,
+  selectAiProvider,
+  subscriptionConnection,
+} from './provider-selection'
+export type { AiNotConnectedReason, AiProviderChoice } from './provider-selection'
+export {
+  DEFAULT_AI_ANALYSIS_PROVIDER,
+  DEFAULT_AI_IMAGE_PROVIDER,
+  DEFAULT_AI_PROVIDER_SELECTION,
+  DEFAULT_AI_SEARCH_PROVIDER,
+  DEFAULT_AI_VIDEO_ANALYSIS_PROVIDER,
+  REMOVED_AI_PROVIDER_IDS,
+  normalizeAiSettings,
+} from './legacy-settings'
+export {
+  codexImageGenerationAvailable,
+  configuredImageKeyProviders,
+  imageProviderSelection,
+  resolveImageBackend,
+  setCodexImageGenerationAvailable,
+} from './image-backend'
+export type { AiImageBackend, AiImageBackendContext } from './image-backend'
+export { AiRunError, aiStreamErrorFields } from './run-error'
 export {
   AI_PROVIDERS,
   DEFAULT_MAX_OUTPUT_TOKENS,

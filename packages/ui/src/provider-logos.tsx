@@ -133,6 +133,8 @@ const LOGOS: Record<AiProviderId, ReactNode> = {
       <path d="m7 9 3 3-3 3M12.5 15H17" />
     </svg>
   ),
+  // named in text only, no vendor mark: ProviderLogo falls back to the generic glyph
+  'claude-code': null,
   anthropic: (
     <svg viewBox="0 0 24 24" aria-hidden="true">
       <path

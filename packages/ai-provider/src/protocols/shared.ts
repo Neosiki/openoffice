@@ -1,5 +1,5 @@
 import type { AgentToolCall } from '@genoffice/agent-core'
-import type { AiTokenUsage } from '../types'
+import type { AiSubscriptionUsage, AiTokenUsage } from '../types'
 
 // ---- endpoint URL composition ----
 
@@ -260,6 +260,10 @@ export interface StreamCallbacks {
   onStopReason?: (reason: string) => void
   /** tokens the provider billed for this turn; fires once at stream end when the provider reports usage at all */
   onUsage?: (usage: AiTokenUsage) => void
+  /** rate-limit windows a subscription CLI reported; sent on as a 'subscription-usage' chunk */
+  onSubscriptionUsage?: (usage: AiSubscriptionUsage[]) => void
+  /** the input was cut to fit a limit; sent on as an 'input-truncated' chunk so the user is told */
+  onInputTruncated?: () => void
   /** bytes arrived on the wire (fires per network chunk, including SSE pings; used for keepalive) */
   onActivity?: () => void
   /** Stable renderer transport id for providers with native sessions. */
