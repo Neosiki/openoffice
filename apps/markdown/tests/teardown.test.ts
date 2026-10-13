@@ -93,7 +93,11 @@ describe('AiPanel teardown', () => {
     Object.defineProperty(window, 'markdownApi', {
       configurable: true,
       value: {
-        getAiSettings: vi.fn(async () => ({})),
+        // a selected, filled-in key provider: the run needs no subscription connection
+        getAiSettings: vi.fn(async () => ({
+          provider: 'openai',
+          providers: { openai: { apiKey: 'sk-test', model: 'gpt-5' } },
+        })),
         aiStream,
         aiStreamCancel,
         onAiStream,
