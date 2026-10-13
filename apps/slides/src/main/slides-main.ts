@@ -75,6 +75,7 @@ import {
   isElementClipboardToken,
   writeElementClipboardImage,
 } from './element-clipboard'
+import { familyInfoFor } from '@genoffice/font-metrics'
 import { getUiLang, normalizeLang, PRODUCT_NAME, setUiLang } from '@genoffice/i18n'
 import { ProjectStore } from '@genoffice/project-store'
 import {
@@ -1277,6 +1278,10 @@ export function registerSlidesIpc(): void {
   // shared with the other editor modules — last (identical) registration wins
   ipcMain.removeHandler('app:get-language')
   ipcMain.handle('app:get-language', () => getUiLang())
+
+  // shared with the other editor modules — last (identical) registration wins
+  ipcMain.removeHandler('app:font-family-info')
+  ipcMain.handle('app:font-family-info', (_event, families: unknown) => familyInfoFor(families))
 
   // Screen recording: source dispatch for the renderer's navigator.mediaDevices.getDisplayMedia.
   // macOS prefers the system picker (with its permission flow), falling back to the first screen.

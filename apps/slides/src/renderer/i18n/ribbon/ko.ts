@@ -75,6 +75,7 @@ export const ko = {
   // Home: font
   ribbonGroupFont: '글꼴',
   ribbonFontsSystem: '시스템 글꼴',
+  ribbonFontsHangul: '한글 글꼴',
   ribbonFontInstallLocal: '글꼴 파일 설치…',
   fontMissingBanner: '이 프레젠테이션에 설치되지 않은 글꼴이 사용되었습니다:',
   fontMissingDismiss: '닫기',

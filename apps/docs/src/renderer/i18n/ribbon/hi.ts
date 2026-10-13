@@ -88,6 +88,7 @@ export const hi = {
   ribbonFontFamilyTip: 'फ़ॉन्ट',
   ribbonFontsCommon: 'सामान्य फ़ॉन्ट',
   ribbonFontsSystem: 'सिस्टम फ़ॉन्ट',
+  ribbonFontsHangul: 'कोरियाई फ़ॉन्ट',
   ribbonFontSizeTip: 'फ़ॉन्ट आकार',
   ribbonGrowFont: 'फ़ॉन्ट आकार बढ़ाएँ',
   ribbonShrinkFont: 'फ़ॉन्ट आकार घटाएँ',

@@ -71,6 +71,7 @@ export const ar = {
   ribbonAddSectionTip: 'إضافة مقطع قبل الشريحة الحالية لتنظيم العروض التقديمية الطويلة',
   ribbonGroupFont: 'خط',
   ribbonFontsSystem: 'خطوط النظام',
+  ribbonFontsHangul: 'خطوط كورية',
   ribbonFontInstallLocal: 'تثبيت ملف خط…',
   fontMissingBanner: 'يستخدم هذا العرض خطوطًا غير مثبتة:',
   fontMissingDismiss: 'تجاهل',

@@ -86,6 +86,7 @@ export const vi = {
   ribbonFontFamilyTip: 'Phông chữ',
   ribbonFontsCommon: 'Phông chữ phổ biến',
   ribbonFontsSystem: 'Phông chữ hệ thống',
+  ribbonFontsHangul: 'Phông chữ tiếng Hàn',
   ribbonFontSizeTip: 'Cỡ chữ',
   ribbonGrowFont: 'Tăng cỡ chữ',
   ribbonShrinkFont: 'Giảm cỡ chữ',

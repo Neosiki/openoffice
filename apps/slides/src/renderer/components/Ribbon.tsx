@@ -1535,8 +1535,8 @@ export function Ribbon({
   }
 
   // Apply a free-typed font name, same selection dance as commitSizeDraft
-  const commitFontDraft = () => {
-    const v = (fontDraft ?? '').trim()
+  const commitFontDraft = (name?: string) => {
+    const v = (name ?? fontDraft ?? '').trim()
     if (!v) return
     if (editing) restoreEditSelection()
     onFontFamily(v)

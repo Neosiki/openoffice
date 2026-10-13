@@ -72,6 +72,7 @@ export const th = {
   ribbonAddSectionTip: 'เพิ่มส่วนก่อนสไลด์ปัจจุบัน (ช่วยจัดระเบียบงานนำเสนอที่ยาว)',
   ribbonGroupFont: 'ฟอนต์',
   ribbonFontsSystem: 'แบบอักษรของระบบ',
+  ribbonFontsHangul: 'ฟอนต์ภาษาเกาหลี',
   ribbonFontInstallLocal: 'ติดตั้งไฟล์แบบอักษร…',
   fontMissingBanner: 'งานนำเสนอนี้ใช้แบบอักษรที่ยังไม่ได้ติดตั้ง:',
   fontMissingDismiss: 'ปิด',

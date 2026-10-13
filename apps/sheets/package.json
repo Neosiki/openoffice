@@ -30,6 +30,7 @@
     "@genoffice/docx-engine": "*",
     "@genoffice/electron-utils": "*",
     "@genoffice/file-parse": "*",
+    "@genoffice/font-metrics": "*",
     "@genoffice/i18n": "*",
     "@genoffice/ui": "*",
     "@genoffice/pptx-render": "*",

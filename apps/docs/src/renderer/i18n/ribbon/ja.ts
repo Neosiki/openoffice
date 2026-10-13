@@ -91,6 +91,7 @@ export const ja = {
   ribbonFontFamilyTip: 'フォント',
   ribbonFontsCommon: 'よく使うフォント',
   ribbonFontsSystem: 'システムフォント',
+  ribbonFontsHangul: '韓国語フォント',
   ribbonFontSizeTip: 'フォント サイズ',
   ribbonGrowFont: 'フォント サイズの拡大',
   ribbonShrinkFont: 'フォント サイズの縮小',

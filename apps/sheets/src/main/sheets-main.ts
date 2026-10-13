@@ -104,6 +104,7 @@ import {
   type AiToolCapabilities,
 } from '@genoffice/ai-search'
 import { parseFileToText } from '@genoffice/file-parse'
+import { familyInfoFor } from '@genoffice/font-metrics'
 import type { CellEdit, SheetStructuralOps } from '@genoffice/xlsx-gateway/gateway/xlsx-gateway'
 import {
   readArchiveEntryText,
@@ -2620,6 +2621,10 @@ export function registerSheetsIpc(): void {
   // shared with the other editor modules — last (identical) registration wins
   ipcMain.removeHandler('app:get-language')
   ipcMain.handle('app:get-language', () => getUiLang())
+
+  // shared with the other editor modules — last (identical) registration wins
+  ipcMain.removeHandler('app:font-family-info')
+  ipcMain.handle('app:font-family-info', (_event, families: unknown) => familyInfoFor(families))
 
   /** returns true once when shell opened this tab for a new blank workbook */
   ipcMain.handle('sheets:consume-new-blank', () => {

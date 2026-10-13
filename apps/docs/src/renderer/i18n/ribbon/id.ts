@@ -88,6 +88,7 @@ export const id = {
   ribbonFontFamilyTip: 'Font',
   ribbonFontsCommon: 'Font umum',
   ribbonFontsSystem: 'Font sistem',
+  ribbonFontsHangul: 'Font Korea',
   ribbonFontSizeTip: 'Ukuran Font',
   ribbonGrowFont: 'Perbesar Ukuran Font',
   ribbonShrinkFont: 'Perkecil Ukuran Font',

@@ -132,7 +132,14 @@ import {
 import { RibbonColorPalette } from './ribbon-color-palette'
 import { HeaderFooterTab, type HfAction, type HfEditingInfo } from './ribbon-hf-tab'
 import { PasteSpecialDialog } from './PasteSpecialDialog'
-import { fontFamiliesFor, isEastAsianFontName, systemFamiliesBesidesCandidates } from '../font-list'
+import {
+  familyForTypedName,
+  findFontMatch,
+  fontFamiliesFor,
+  isEastAsianFontName,
+  splitHangulFamilies,
+  systemFamiliesBesidesCandidates,
+} from '../font-list'
 import {
   fontSizeLabel,
   fontSizeOptions,
@@ -1324,10 +1331,22 @@ function RibbonInner({
   // computed unconditionally (not inside the dropdown render): cheap, and the
   // render-isolation test uses fontFamiliesFor calls as its render probe
   const fontFamilies = fontFamiliesFor(lang)
-  const { families: allSystemFontFamilies, load: loadSystemFonts } = useSystemFontFamilies()
+  const {
+    families: allSystemFontFamilies,
+    info: fontInfo,
+    load: loadSystemFonts,
+  } = useSystemFontFamilies()
   // every candidate stays listed (the machine may genuinely lack some), so the
   // system section is the candidates-deduped remainder: no builtin is listed twice
   const systemFontFamilies = systemFamiliesBesidesCandidates(fontFamilies, allSystemFontFamilies)
+  // Korean UI: installed Korean fonts get their own section right below the
+  // common ones (alphabetical order buries them among hundreds of system fonts)
+  // and show their Korean name beside the English one the system reports
+  const koFontInfo = lang === 'ko' ? fontInfo : undefined
+  const { hangul: hangulFontFamilies, other: otherFontFamilies } = splitHangulFamilies(
+    systemFontFamilies,
+    koFontInfo,
+  )
   // unset align follows the paragraph direction: start is left in LTR, right in RTL
   const activeAlign = fs.align ?? (fs.bidi ? 'right' : 'left')
   // like Word, direction buttons appear only with an RTL UI language or RTL paragraphs at hand
@@ -1348,15 +1367,18 @@ function RibbonInner({
   // w:ascii/w:hAnsi so the CJK font survives
   const setFont = (name: string) => {
     setTextStyle(
-      isEastAsianFontName(name)
+      // a Hangul font the name pattern cannot know (Pretendard) is East Asian too
+      isEastAsianFontName(name) || fontInfo.get(name)?.hangul
         ? { font: name, fontAscii: name, eastAsiaFont: name, eaSlotEmpty: false }
         : { fontAscii: name },
     )
   }
-  const fontMenuItems: Array<{ key: string; name: string; section: 'b' | 's' }> = [
+  const fontMenuItems: Array<{ key: string; name: string; section: 'b' | 'k' | 's' }> = [
     ...fontFamilies.map((name) => ({ key: `b:${name}`, name, section: 'b' as const })),
-    ...systemFontFamilies.map((name) => ({ key: `s:${name}`, name, section: 's' as const })),
+    ...hangulFontFamilies.map((name) => ({ key: `s:${name}`, name, section: 'k' as const })),
+    ...otherFontFamilies.map((name) => ({ key: `s:${name}`, name, section: 's' as const })),
   ]
+  const fontMenuNames = fontMenuItems.map((it) => it.name)
   const openFontMenu = () => {
     if (dropdown === 'fontFamily') return
     loadSystemFonts()
@@ -1370,11 +1392,13 @@ function RibbonInner({
     const input = e.currentTarget
     const typed = input.value
     const native = e.nativeEvent as InputEvent
-    const q = typed.trim().toLowerCase()
-    const match = q ? fontMenuItems.find((it) => it.name.toLowerCase().startsWith(q)) : undefined
+    // the name's start first (completes inline), else anywhere in it or its Korean name
+    const hit = findFontMatch(typed, fontMenuNames, fontInfo)
+    const match = hit && fontMenuItems.find((it) => it.name === hit.family)
     // inline completion only on plain insertions, so Backspace shortens instead of re-completing
     if (
       match &&
+      hit.prefix &&
       native.inputType === 'insertText' &&
       !native.isComposing &&
       match.name.length > typed.length &&
@@ -1396,7 +1420,13 @@ function RibbonInner({
         dropdown === 'fontFamily' && fontHighlight
           ? fontMenuItems.find((it) => it.key === fontHighlight)?.name
           : undefined
-      const name = (picked ?? e.currentTarget.value).trim()
+      const typedName = e.currentTarget.value.trim()
+      // the name the box already shows stays as it is, even when it is another
+      // spelling of a listed family (a document may hold the Korean name)
+      const name =
+        typedName === currentFont
+          ? typedName
+          : (picked ?? familyForTypedName(typedName, fontMenuNames, fontInfo))
       resetFontBox()
       // an unchanged name is a no-op: re-applying the East Asian face the box
       // shows on CJK text would overwrite the run's Latin font
@@ -3281,13 +3311,19 @@ function RibbonInner({
                     </button>
                     {dropdown === 'fontFamily' && (
                       <div data-rb-panel="" className="spacing-menu rb-font-family-menu">
-                        {(['b', 's'] as const).map((section) => {
+                        {(['b', 'k', 's'] as const).map((section) => {
                           const items = fontMenuItems.filter((it) => it.section === section)
                           if (items.length === 0) return null
                           return (
                             <div key={section}>
                               <div className="rb-menu-group-label">
-                                {t(section === 'b' ? 'ribbonFontsCommon' : 'ribbonFontsSystem')}
+                                {t(
+                                  section === 'b'
+                                    ? 'ribbonFontsCommon'
+                                    : section === 'k'
+                                      ? 'ribbonFontsHangul'
+                                      : 'ribbonFontsSystem',
+                                )}
                               </div>
                               {items.map((it) => (
                                 <button
@@ -3305,6 +3341,11 @@ function RibbonInner({
                                   onClick={() => setFont(it.name)}
                                 >
                                   {it.name}
+                                  {koFontInfo?.get(it.name)?.ko && (
+                                    <span className="rb-font-ko">
+                                      {koFontInfo.get(it.name)?.ko}
+                                    </span>
+                                  )}
                                 </button>
                               ))}
                             </div>

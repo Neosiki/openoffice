@@ -45,7 +45,7 @@ import type {
 import type { AiToolCapabilities, MediaToolErrorCode } from '@genoffice/ai-search'
 import type { HeadlessExportTarget } from '@genoffice/electron-utils/headless-export'
 import type { FaceVerticalMetrics } from '@genoffice/font-metrics'
-import type { AiPanelPrefs } from '@genoffice/ui'
+import type { AiPanelPrefs, FontFamilyInfo } from '@genoffice/ui'
 
 export type { FaceVerticalMetrics }
 
@@ -440,6 +440,9 @@ export interface DesktopApi {
   pickImage(): Promise<PickImageResult | null>
   /** vertical metrics of an installed family (exact name match), null when missing */
   fontMetrics(family: string): Promise<FaceVerticalMetrics | null>
+  /** Korean name and Hangul coverage of the enumerated families (read from the font
+   *  files); families that are not Korean are left out */
+  fontFamilyInfo(families: readonly string[]): Promise<Array<[string, FontFamilyInfo]>>
   getAiSettings(): Promise<AiSettings>
   setAiSettings(settings: AiSettings): Promise<void>
   /** ai-settings.json was rewritten by any renderer; re-read it */

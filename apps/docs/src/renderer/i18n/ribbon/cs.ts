@@ -87,6 +87,7 @@ export const cs = {
   ribbonFontFamilyTip: 'Písmo',
   ribbonFontsCommon: 'Běžná písma',
   ribbonFontsSystem: 'Systémová písma',
+  ribbonFontsHangul: 'Korejská písma',
   ribbonFontSizeTip: 'Velikost písma',
   ribbonGrowFont: 'Zvětšit písmo',
   ribbonShrinkFont: 'Zmenšit písmo',

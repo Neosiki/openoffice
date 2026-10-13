@@ -71,6 +71,7 @@ export const en = {
   ribbonAddSectionTip: 'Add a section before the current slide to organize long decks',
   ribbonGroupFont: 'Font',
   ribbonFontsSystem: 'System fonts',
+  ribbonFontsHangul: 'Korean fonts',
   ribbonFontInstallLocal: 'Install font file…',
   fontMissingBanner: 'This presentation uses fonts that are not installed:',
   fontMissingDismiss: 'Dismiss',

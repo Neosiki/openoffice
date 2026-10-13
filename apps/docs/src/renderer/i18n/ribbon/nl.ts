@@ -89,6 +89,7 @@ export const nl = {
   ribbonFontFamilyTip: 'Lettertype',
   ribbonFontsCommon: 'Veelgebruikte lettertypen',
   ribbonFontsSystem: 'Systeemlettertypen',
+  ribbonFontsHangul: 'Koreaanse lettertypen',
   ribbonFontSizeTip: 'Tekengrootte',
   ribbonGrowFont: 'Tekengrootte vergroten',
   ribbonShrinkFont: 'Tekengrootte verkleinen',

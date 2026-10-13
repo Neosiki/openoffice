@@ -10,6 +10,9 @@ import {
   useRibbonCollapse,
   aiPanelInitiallyOpen,
   aiSubscriptionText,
+  familyForTypedName,
+  fontFamilyLabel,
+  matchesFontQuery,
   rememberAiPanelOpen,
   type AiTokenUsageView,
 } from '@genoffice/ui'
@@ -1911,7 +1914,11 @@ function Ribbon({
   const [fontColor, setFontColor] = useState('#C00000')
   const [fillColor, setFillColor] = useState('#FFF2CC')
   const [borderColor, setBorderColor] = useState('#000000')
-  const { families: systemFontFamilies, load: loadSystemFonts } = useSystemFontFamilies()
+  const {
+    families: systemFontFamilies,
+    info: fontInfo,
+    load: loadSystemFonts,
+  } = useSystemFontFamilies()
   // Large menu button: a native select stretched invisibly over the tool,
   // each option carrying its full command string.
   const largeMenu = (
@@ -3318,14 +3325,19 @@ function Ribbon({
   const fontSizes = [9, 10, 11, 12, 14, 16, 18, 22, 26]
   const echoFamily = selectionFormat?.fontFamily ?? 'Aptos'
   const echoSize = selectionFormat?.fontSize ?? 11
-  const fontGroups = fontFamilyGroups(systemFontFamilies, echoFamily)
+  // Korean UI: installed Korean fonts are listed right below the common ones,
+  // each with its Korean name beside the English one the system reports
+  const koFontInfo = lang === 'ko' ? fontInfo : undefined
+  const fontGroups = fontFamilyGroups(systemFontFamilies, echoFamily, koFontInfo)
+  const familyOption = (family: string, index: number) => ({
+    value: family,
+    label: fontFamilyLabel(family, koFontInfo),
+    sep: index === 0,
+  })
   const familyOptions = [
-    ...fontGroups.common.map((family) => ({ value: family, label: family })),
-    ...fontGroups.system.map((family, index) => ({
-      value: family,
-      label: family,
-      sep: index === 0,
-    })),
+    ...fontGroups.common.map((family) => familyOption(family, -1)),
+    ...fontGroups.hangul.map(familyOption),
+    ...fontGroups.system.map(familyOption),
   ]
   const sizeOptions = fontSizes.includes(echoSize)
     ? fontSizes
@@ -3462,6 +3474,14 @@ function Ribbon({
               value={echoFamily}
               options={familyOptions}
               onOpen={loadSystemFonts}
+              matches={(family, query) => matchesFontQuery(query, family, fontInfo)}
+              resolve={(text) =>
+                familyForTypedName(
+                  text,
+                  familyOptions.map((option) => option.value),
+                  fontInfo,
+                )
+              }
               onPick={(value) => onCommand(`font-family:${value}`)}
               commit={(text) => onCommand(`font-family:${text}`)}
             />
@@ -4219,7 +4239,8 @@ function ShapeGallerySelect({
 
 /// MenuSelect variant whose trigger is a free-text input (Excel's font
 /// name/size boxes): Enter or clicking away commits the typed value, Esc
-/// reverts, the caret opens the preset list.
+/// reverts, the caret opens the preset list. With `matches`, typing opens the
+/// list narrowed to the options the text matches.
 function EditableMenuSelect({
   label,
   'data-tip': tip,
@@ -4227,6 +4248,8 @@ function EditableMenuSelect({
   value,
   options,
   onOpen,
+  matches,
+  resolve,
   onPick,
   commit,
 }: {
@@ -4237,6 +4260,10 @@ function EditableMenuSelect({
   readonly options: readonly { value: string; label: string; sep?: boolean }[]
   /// fired on the click that opens the list (lazy option loading)
   readonly onOpen?: () => void
+  /// search-as-you-type: does the option answer to the typed text?
+  readonly matches?: (value: string, query: string) => boolean
+  /// maps typed text to the value it stands for (another name of an option)
+  readonly resolve?: (text: string) => string
   readonly onPick: (value: string) => void
   /// apply typed text (caller validates; invalid input is dropped silently)
   readonly commit: (text: string) => void
@@ -4255,10 +4282,16 @@ function EditableMenuSelect({
   useDismissablePopover(open, () => setOpen(false), { inside: () => [wrapRef.current] })
   useEscapeClose(open, () => setOpen(false))
   const commitDraft = (): void => {
-    const text = draftRef.current?.trim()
-    if (text && text !== value) commit(text)
+    const typed = draftRef.current?.trim()
+    // the shown value retyped is no change, even when it resolves to another name
+    if (typed && typed !== value) {
+      const text = resolve ? resolve(typed) : typed
+      if (text !== value) commit(text)
+    }
     setDraft(null)
   }
+  const shown =
+    matches && draft !== null ? options.filter((option) => matches(option.value, draft)) : options
   return (
     <div ref={wrapRef} className="menu-select">
       <span className={`${className ?? ''} menu-select-edit`} data-tip={tip}>
@@ -4266,9 +4299,27 @@ function EditableMenuSelect({
           value={draft ?? value}
           aria-label={label}
           onFocus={(event) => event.currentTarget.select()}
-          onChange={(event) => setDraft(event.currentTarget.value)}
+          onChange={(event) => {
+            setDraft(event.currentTarget.value)
+            if (matches && !open) {
+              onOpen?.()
+              setOpen(true)
+            }
+          }}
           onKeyDown={(event) => {
+            // Enter while an IME composition is open only confirms the composition
+            if (event.nativeEvent.isComposing) return
             if (event.key === 'Enter') {
+              if (matches) setOpen(false)
+              // a search that names no option outright applies its first result
+              const typed = draftRef.current?.trim()
+              const first = matches && typed ? shown[0] : undefined
+              if (first && !options.some((option) => option.value === typed)) {
+                setDraft(null)
+                event.currentTarget.blur()
+                if (first.value !== value) onPick(first.value)
+                return
+              }
               event.currentTarget.blur() // blur handler commits
             } else if (event.key === 'Escape') {
               setDraft(null)
@@ -4295,15 +4346,16 @@ function EditableMenuSelect({
           <CaretIcon />
         </button>
       </span>
-      {open && (
+      {open && shown.length > 0 && (
         <div className="menu-select-drop" role="listbox" aria-label={label}>
-          {options.map((option) => (
+          {shown.map((option, index) => (
             <button
               type="button"
               key={option.value}
               role="option"
               aria-selected={option.value === value}
-              className={`${option.value === value ? 'on' : ''}${option.sep ? ' sep-above' : ''}`}
+              // no rule above the first row: a narrowed list can start at a group's first option
+              className={`${option.value === value ? 'on' : ''}${option.sep && index > 0 ? ' sep-above' : ''}`}
               onClick={() => {
                 setOpen(false)
                 setDraft(null)

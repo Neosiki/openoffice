@@ -76,6 +76,7 @@ export const fr = {
     'Ajouter une section avant la diapositive actuelle pour organiser les longues présentations',
   ribbonGroupFont: 'Police',
   ribbonFontsSystem: 'Polices système',
+  ribbonFontsHangul: 'Polices coréennes',
   ribbonFontInstallLocal: 'Installer un fichier de police…',
   fontMissingBanner: 'Cette présentation utilise des polices non installées :',
   fontMissingDismiss: 'Ignorer',

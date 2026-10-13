@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 
-import { Dropdown } from '@genoffice/ui'
+import { Dropdown, fontFamilyLabel } from '@genoffice/ui'
 
 import { ColorDropdown } from './ColorDropdown'
 import { draftFromSelection, formatCellsCommands, type FormatCellsDraft } from './format-cells'
@@ -136,7 +136,7 @@ export function FormatCellsDialog({
   readonly onCommand: (command: string) => void
   readonly onClose: () => void
 }): React.JSX.Element {
-  const { t } = useI18n()
+  const { t, lang } = useI18n()
   const [tab, setTab] = useState<Tab>('Number')
   // The selection format at open time is the change baseline; the live echo
   // must not move it while the dialog is up.
@@ -163,10 +163,16 @@ export function FormatCellsDialog({
   )
   const negativeSample = -Math.abs(typeof sample === 'number' ? sample : 1234.56)
 
-  const { families: systemFontFamilies, load: loadSystemFonts } = useSystemFontFamilies()
+  const {
+    families: systemFontFamilies,
+    info: fontInfo,
+    load: loadSystemFonts,
+  } = useSystemFontFamilies()
   // the dialog opens from a click, so activation is still live here
   useEffect(() => loadSystemFonts(), [loadSystemFonts])
-  const fontGroups = fontFamilyGroups(systemFontFamilies, draft.family)
+  // Korean UI: installed Korean fonts first, each with its Korean name (as in the ribbon)
+  const koFontInfo = lang === 'ko' ? fontInfo : undefined
+  const fontGroups = fontFamilyGroups(systemFontFamilies, draft.family, koFontInfo)
   const sizeOptions =
     !draft.size || FONT_SIZES.includes(draft.size)
       ? FONT_SIZES
@@ -431,8 +437,10 @@ export function FormatCellsDialog({
                     { value: '', label: t('dlgFcUnchanged') },
                     ...[
                       ...fontGroups.common,
-                      ...fontGroups.system.filter((f) => !fontGroups.common.includes(f)),
-                    ].map((f) => ({ value: f, label: f })),
+                      ...[...fontGroups.hangul, ...fontGroups.system].filter(
+                        (f) => !fontGroups.common.includes(f),
+                      ),
+                    ].map((f) => ({ value: f, label: fontFamilyLabel(f, koFontInfo) })),
                   ]}
                   onPick={(v) => set('family', v)}
                 />

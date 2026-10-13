@@ -83,6 +83,7 @@ export const zhTW = {
   ribbonFontFamilyTip: '字型',
   ribbonFontsCommon: '常用字型',
   ribbonFontsSystem: '系統字型',
+  ribbonFontsHangul: '韓文字型',
   ribbonFontSizeTip: '字型大小',
   ribbonGrowFont: '放大字型',
   ribbonShrinkFont: '縮小字型',

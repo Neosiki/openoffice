@@ -88,6 +88,7 @@ export const zh = {
   ribbonFontFamilyTip: '字体',
   ribbonFontsCommon: '常用字体',
   ribbonFontsSystem: '系统字体',
+  ribbonFontsHangul: '韩文字体',
   ribbonFontSizeTip: '字号',
   ribbonGrowFont: '增大字号',
   ribbonShrinkFont: '减小字号',

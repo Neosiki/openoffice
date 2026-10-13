@@ -88,6 +88,7 @@ export const fr = {
   ribbonFontFamilyTip: 'Police',
   ribbonFontsCommon: 'Polices courantes',
   ribbonFontsSystem: 'Polices système',
+  ribbonFontsHangul: 'Polices coréennes',
   ribbonFontSizeTip: 'Taille de police',
   ribbonGrowFont: 'Agrandir la police',
   ribbonShrinkFont: 'Réduire la police',

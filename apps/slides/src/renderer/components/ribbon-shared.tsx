@@ -647,7 +647,7 @@ export interface RibbonTabCtx extends Pick<
   collapseOpen: string | null
   collapsedGroups: string[]
   colorOpen: boolean
-  commitFontDraft: () => void
+  commitFontDraft: (name?: string) => void
   commitSizeDraft: () => void
   fontDraft: string | null
   setFontDraft: Dispatch<SetStateAction<string | null>>

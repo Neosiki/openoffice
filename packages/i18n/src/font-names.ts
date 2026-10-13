@@ -98,3 +98,20 @@ export const CJK_FAMILY_ALIASES: Readonly<Record<string, readonly string[]>> = {
   돋움: ['Dotum'],
   굴림: ['Gulim'],
 }
+
+/**
+ * Korean readings of families whose font files carry no Korean name, so typing
+ * the name in Hangul still finds them. Search-only: never shown as the label
+ * (a font's own Korean name comes from its name table at runtime). A key also
+ * covers the families it prefixes (`Pretendard Variable`, `Gmarket Sans TTF`).
+ */
+export const KOREAN_FAMILY_READINGS: Readonly<Record<string, readonly string[]>> = {
+  Pretendard: ['프리텐다드'],
+  'Noto Sans KR': ['노토 산스', '본고딕'],
+  'Noto Serif KR': ['노토 세리프', '본명조'],
+  'Gmarket Sans': ['G마켓 산스', '지마켓 산스'],
+  'Spoqa Han Sans': ['스포카 한 산스'],
+  'Wanted Sans': ['원티드 산스'],
+  SUIT: ['수트'],
+  'Apple SD Gothic Neo': ['애플 SD 산돌고딕 Neo'],
+}

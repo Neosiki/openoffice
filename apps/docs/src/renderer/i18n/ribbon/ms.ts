@@ -88,6 +88,7 @@ export const ms = {
   ribbonFontFamilyTip: 'Fon',
   ribbonFontsCommon: 'Fon biasa',
   ribbonFontsSystem: 'Fon sistem',
+  ribbonFontsHangul: 'Fon Korea',
   ribbonFontSizeTip: 'Saiz Fon',
   ribbonGrowFont: 'Besarkan Saiz Fon',
   ribbonShrinkFont: 'Kecilkan Saiz Fon',

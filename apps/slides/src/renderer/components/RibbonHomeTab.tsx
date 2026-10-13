@@ -5,8 +5,11 @@ import {
   AiMark,
   ColorPicker,
   aiSubscriptionText,
+  familyForTypedName,
   isSymbolFontFamily,
+  matchesFontQuery,
   partitionFontFamilies,
+  splitHangulFamilies,
 } from '@genoffice/ui'
 import { useI18n } from '../i18n/locale'
 import { saveEditSelection } from '../TextEditOverlay'
@@ -173,15 +176,41 @@ export function RibbonHomeTab({ rb }: { rb: RibbonTabCtx }) {
   // Typed-ahead font query: only what the user actually typed filters the menu
   // (opening via the caret or focusing shows the full list)
   const [fontFilter, setFontFilter] = useState('')
-  const { families: allSystemFontFamilies, load: loadSystemFonts } = useSystemFontFamilies()
+  const {
+    families: allSystemFontFamilies,
+    info: fontInfo,
+    load: loadSystemFonts,
+  } = useSystemFontFamilies()
   // Candidates the machine proves absent drop out; when enumeration is
   // unavailable the full candidate list stays visible.
   const { builtin: fontFamilies, system: systemFontFamilies } = partitionFontFamilies(
     FONT_FAMILIES,
     allSystemFontFamilies,
   )
-  const matchesFontFilter = (f: string) =>
-    !fontFilter.trim() || f.toLowerCase().includes(fontFilter.trim().toLowerCase())
+  // Korean UI: installed Korean fonts get their own section above the rest of
+  // the system fonts and show their Korean name beside the English one
+  const koFontInfo = lang === 'ko' ? fontInfo : undefined
+  const { hangul: hangulFontFamilies, other: otherFontFamilies } = splitHangulFamilies(
+    systemFontFamilies,
+    koFontInfo,
+  )
+  // anywhere in the name, or in its Korean name
+  const matchesFontFilter = (f: string) => matchesFontQuery(fontFilter, f, fontInfo)
+  const fontOption = (f: string) => (
+    <button
+      key={f}
+      className={f === curFontFamily ? 'on' : ''}
+      style={{ fontFamily: fontPreviewFamily(f) }}
+      onMouseDown={(e) => {
+        e.preventDefault()
+        onFontFamily(f)
+        setFontOpen(false)
+      }}
+    >
+      {f}
+      {koFontInfo?.get(f)?.ko && <span className="rb-font-ko">{koFontInfo.get(f)?.ko}</span>}
+    </button>
+  )
   const EMU_PER_PX = 9525
   const commitHangDraft = () => {
     const px = parseFloat(hangDraft.replace(',', '.'))
@@ -553,7 +582,17 @@ export function RibbonHomeTab({ rb }: { rb: RibbonTabCtx }) {
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
                       e.preventDefault()
-                      commitFontDraft()
+                      // a Korean name typed in full applies the family it names;
+                      // the name the box already shows is kept as it is
+                      commitFontDraft(
+                        e.currentTarget.value.trim() === curFontFamily
+                          ? e.currentTarget.value
+                          : familyForTypedName(
+                              e.currentTarget.value,
+                              [...fontFamilies, ...systemFontFamilies],
+                              fontInfo,
+                            ),
+                      )
                       e.currentTarget.blur()
                     } else if (e.key === 'Escape') {
                       e.preventDefault()
@@ -598,37 +637,17 @@ export function RibbonHomeTab({ rb }: { rb: RibbonTabCtx }) {
                     : fontFamilies
                   )
                     .filter(matchesFontFilter)
-                    .map((f) => (
-                      <button
-                        key={f}
-                        className={f === curFontFamily ? 'on' : ''}
-                        style={{ fontFamily: fontPreviewFamily(f) }}
-                        onMouseDown={(e) => {
-                          e.preventDefault()
-                          onFontFamily(f)
-                          setFontOpen(false)
-                        }}
-                      >
-                        {f}
-                      </button>
-                    ))}
-                  {systemFontFamilies.some(matchesFontFilter) && (
+                    .map(fontOption)}
+                  {hangulFontFamilies.some(matchesFontFilter) && (
+                    <>
+                      <div className="rb-menu-group-label">{t('ribbonFontsHangul')}</div>
+                      {hangulFontFamilies.filter(matchesFontFilter).map(fontOption)}
+                    </>
+                  )}
+                  {otherFontFamilies.some(matchesFontFilter) && (
                     <>
                       <div className="rb-menu-group-label">{t('ribbonFontsSystem')}</div>
-                      {systemFontFamilies.filter(matchesFontFilter).map((f) => (
-                        <button
-                          key={f}
-                          className={f === curFontFamily ? 'on' : ''}
-                          style={{ fontFamily: fontPreviewFamily(f) }}
-                          onMouseDown={(e) => {
-                            e.preventDefault()
-                            onFontFamily(f)
-                            setFontOpen(false)
-                          }}
-                        >
-                          {f}
-                        </button>
-                      ))}
+                      {otherFontFamilies.filter(matchesFontFilter).map(fontOption)}
                     </>
                   )}
                   <button
