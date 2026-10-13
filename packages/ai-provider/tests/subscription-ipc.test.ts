@@ -11,7 +11,10 @@ import * as root from '../src/index'
 import {
   SUBSCRIPTION_IPC_CHANNELS,
   checkingSubscriptionStatus,
+  ensureSubscriptionIpc,
   registerSubscriptionIpc,
+  resetSharedSubscriptionIpc,
+  sharedSubscriptionStatuses,
   subscriptionStatusErrorKind,
   type SubscriptionIpcDeps,
   type SubscriptionLaunchResult,
@@ -319,5 +322,37 @@ describe('registerSubscriptionIpc', () => {
   it('the provider ids in the payload types are the subscription ids', () => {
     const providers: AiSubscriptionProviderId[] = ['claude-code', 'codex']
     expect(Object.keys(READY).sort()).toEqual(providers.sort())
+  })
+})
+
+describe('ensureSubscriptionIpc', () => {
+  const SETUP = {
+    getSettings: () => ({ providers: {} as never }),
+    setMeteredAccepted: () => undefined,
+    dataDir: 'unused',
+  }
+
+  it('registers once per process: a second caller gets the first registration back', async () => {
+    resetSharedSubscriptionIpc()
+    const { ipc, deps, log } = setup()
+    let created = 0
+    const create = (): SubscriptionIpcDeps => {
+      created++
+      return deps
+    }
+    expect(sharedSubscriptionStatuses()).toEqual({})
+    const first = ensureSubscriptionIpc(ipc, SETUP, create)
+    // a second module in the same process: must not register the channels again (that throws)
+    const second = ensureSubscriptionIpc(ipc, SETUP, create)
+    expect(second).toBe(first)
+    expect(created).toBe(1)
+    expect(ipc.handlers.has(SUBSCRIPTION_IPC_CHANNELS.statuses)).toBe(true)
+    // the first registration starts the first status check
+    await Promise.resolve()
+    expect(log.filter((entry) => entry.startsWith('check'))).toHaveLength(1)
+    expect(sharedSubscriptionStatuses()).toEqual(READY)
+    resetSharedSubscriptionIpc()
+    expect(ipc.handlers.size).toBe(0)
+    expect(sharedSubscriptionStatuses()).toEqual({})
   })
 })

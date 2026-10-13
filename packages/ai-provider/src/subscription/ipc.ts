@@ -149,3 +149,36 @@ export function createSubscriptionIpcDeps(setup: SubscriptionIpcSetup): Subscrip
     broadcast: setup.broadcast,
   }
 }
+
+let sharedRegistration: { deps: SubscriptionIpcDeps; unregister: () => void } | null = null
+
+/**
+ * Register the subscription channels once per process, whoever asks first.
+ * Several editors' main-process modules run in one process in the packaged
+ * app, and registering a channel twice throws, so every caller goes through
+ * this instead of `registerSubscriptionIpc`: the first call registers and
+ * starts the first status check, later calls get the same dependencies back.
+ */
+export function ensureSubscriptionIpc(
+  ipcMain: SubscriptionIpcMain,
+  setup: SubscriptionIpcSetup,
+  createDeps: (setup: SubscriptionIpcSetup) => SubscriptionIpcDeps = createSubscriptionIpcDeps,
+): SubscriptionIpcDeps {
+  if (sharedRegistration) return sharedRegistration.deps
+  const deps = createDeps(setup)
+  const unregister = registerSubscriptionIpc(ipcMain, deps)
+  sharedRegistration = { deps, unregister }
+  void deps.service.check().catch(() => undefined)
+  return deps
+}
+
+/** The statuses of the process-wide registration; empty until `ensureSubscriptionIpc` ran. */
+export function sharedSubscriptionStatuses(): Partial<SubscriptionStatusMap> {
+  return sharedRegistration?.deps.service.getStatuses() ?? {}
+}
+
+/** Drop the process-wide registration (tests, and an app that tears its IPC down). */
+export function resetSharedSubscriptionIpc(): void {
+  sharedRegistration?.unregister()
+  sharedRegistration = null
+}
