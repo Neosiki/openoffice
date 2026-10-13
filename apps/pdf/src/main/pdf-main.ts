@@ -30,6 +30,7 @@ import {
 } from '@genoffice/electron-utils'
 import { createI18n, getUiLang } from '@genoffice/i18n'
 import { generateImageTool, documentMediaRoots } from '@genoffice/ai-search'
+import { sharedSubscriptionStatuses } from '@genoffice/ai-provider/subscription'
 import { PDF_CHANNELS } from '../shared/ipc'
 import { buildExportImagePaths, hasValidExportPageNumbers } from './export-images'
 import type {
@@ -1771,6 +1772,8 @@ function registerPdfIpc(): void {
           openPathByWc.get(e.sender.id),
           join(app.getPath('temp'), 'genoffice-pasted'),
         ),
+        // a user request from the AI panel: the connected subscription may be used
+        context: { path: 'screen', statuses: sharedSubscriptionStatuses() },
       },
     ),
   )
