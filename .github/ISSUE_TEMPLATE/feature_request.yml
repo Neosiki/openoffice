@@ -7,13 +7,15 @@ body:
     attributes:
       label: App
       options:
-        - GenOffice Docs (docs)
-        - GenOffice Sheets (sheets)
-        - GenOffice Slides (slides)
-        - GenOffice PDF (pdf)
-        - GenOffice Markdown (markdown)
+        - Docs (docs)
+        - Sheets (sheets)
+        - Slides (slides)
+        - PDF (pdf)
+        - Markdown (markdown)
+        - HTML (html)
         - Shell / home screen
-        - AI panel / providers
+        - AI panel / subscription connection / providers
+        - Command line / MCP / agent skill
         - Whole suite
     validations:
       required: true
