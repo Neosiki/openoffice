@@ -1,7 +1,13 @@
 import { resolveCustomEndpoints } from './custom-endpoints'
 import { defaultAiMediaSettings, resolveAiMediaSettings } from './media'
 import { defaultAiSearchSettings, resolveAiSearchSettings } from './search-settings'
-import type { AiProviderId, AiProviderMeta, AiSettings, LegacyAiSettings } from './types'
+import type {
+  AiProviderId,
+  AiProviderMeta,
+  AiSettings,
+  AiSubscriptionProviderId,
+  LegacyAiSettings,
+} from './types'
 
 /**
  * Genspark server-side LLM proxy endpoints. All three protocols share the
@@ -66,6 +72,15 @@ export const AI_PROVIDERS: AiProviderMeta[] = [
     ],
     defaultModel: 'claude-opus-5-5',
     keyPlaceholder: 'Not required - sign in to Genspark',
+  },
+  {
+    id: 'claude-code',
+    label: 'Claude Code',
+    // Aliases the CLI resolves to the subscription's current models, so no
+    // dated id goes stale here. Empty leaves the choice to the CLI.
+    models: ['opus', 'sonnet', 'haiku'],
+    defaultModel: '',
+    keyPlaceholder: '',
   },
   {
     id: 'codex',
@@ -444,12 +459,29 @@ export function defaultAiSettings(
     }
   }
   return {
-    provider: 'genspark',
+    provider: 'auto',
     providers,
     gskToolsEnabled: true,
     media: defaultAiMediaSettings(),
     search: defaultAiSearchSettings(),
+    meteredAccepted: sanitizeMeteredAccepted(undefined),
+    headlessSubscriptionEnabled: false,
+    subscriptionNoticeSeen: false,
   }
+}
+
+/** Providers reached through the vendor CLI's own login, in the order `auto` tries them */
+export const AI_SUBSCRIPTION_PROVIDERS: readonly AiSubscriptionProviderId[] = [
+  'claude-code',
+  'codex',
+]
+
+/** One boolean per subscription provider; anything that is not `true` reads as not accepted */
+export function sanitizeMeteredAccepted(
+  stored: unknown,
+): Record<AiSubscriptionProviderId, boolean> {
+  const raw = isRecord(stored) ? stored : {}
+  return { 'claude-code': raw['claude-code'] === true, codex: raw.codex === true }
 }
 
 /** false only on an explicit opt-out; absent (pre-toggle settings files) means on */
@@ -464,10 +496,15 @@ export function cloudToolsEnabled(settings: Pick<AiSettings, 'gskToolsEnabled'>)
  * ids from a hand-edited
  * settings file — falls back to genspark, so a half-filled setup degrades
  * to the signed-in default instead of silently disabling AI.
+ *
+ * Pre-subscription contract, kept for callers that have not moved to
+ * selectAiProvider: it knows nothing about connection status, so `auto` reads
+ * as the old default (genspark) and `claude-code`, which has no key, falls
+ * back the same way.
  */
 export function activeProvider(settings: AiSettings): AiProviderId {
   const provider = settings.provider
-  if (provider === 'genspark') return 'genspark'
+  if (provider === 'genspark' || provider === 'auto') return 'genspark'
   const meta = AI_PROVIDERS.find((m) => m.id === provider)
   const config = settings.providers?.[provider]
   if (!meta || !config) return 'genspark'
@@ -619,6 +656,11 @@ export function resolveAiSettings(stored: unknown, defaults: AiSettings): AiSett
     gskToolsEnabled: settings.gskToolsEnabled ?? defaults.gskToolsEnabled ?? true,
     media: resolveAiMediaSettings(settings.media ?? defaults.media),
     search: resolveAiSearchSettings(settings.search ?? defaults.search),
+    meteredAccepted: sanitizeMeteredAccepted(settings.meteredAccepted ?? defaults.meteredAccepted),
+    headlessSubscriptionEnabled:
+      (settings.headlessSubscriptionEnabled ?? defaults.headlessSubscriptionEnabled) === true,
+    subscriptionNoticeSeen:
+      (settings.subscriptionNoticeSeen ?? defaults.subscriptionNoticeSeen) === true,
     // clamped on read: a hand-edited settings file with an absurd cap must not be
     // forwarded to the endpoint verbatim
     ...(settings.maxOutputTokens !== undefined || defaults.maxOutputTokens !== undefined

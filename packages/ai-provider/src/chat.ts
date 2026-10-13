@@ -4,12 +4,12 @@ import { chatOpenAiCompatible } from './protocols/openai-compatible'
 import { ResponseBodyTooLargeError } from './protocols/shared'
 import { chatCodexAppServer } from './codex-app-server'
 import { getProviderAdapter, type ResolvedEndpoint } from './registry'
-import type { AiChatResponse, AiProviderConfig, AiProviderId } from './types'
+import type { AiChatResponse, AiProviderConfig, AiProviderSelection } from './types'
 import { AI_CHAT_RESPONSE_TIMEOUT_MS, createStreamWatchdog } from './watchdog'
 
 /** route a one-shot (non-streaming, non-tool-calling) chat call by provider id */
 export async function chatForProvider(
-  provider: AiProviderId,
+  provider: AiProviderSelection,
   config: AiProviderConfig,
   system: string,
   user: string,
@@ -33,6 +33,8 @@ export async function chatForProvider(
     switch (endpoint.protocol) {
       case 'codex-app-server':
         return chatCodexAppServer(config, system, user, wd.signal)
+      case 'claude-code-cli':
+        return Promise.reject(new Error('The Claude Code bridge is not implemented yet'))
       case 'anthropic':
         return chatAnthropic(wd, config, system, user, endpoint.baseUrl)
       case 'gemini':

@@ -8,6 +8,60 @@ import type {
 } from './types'
 
 /**
+ * Machine-readable cause of a failed turn. The one definition of the union:
+ * ai-provider's AiRunErrorKind is an alias of it.
+ */
+export type IpcStreamErrorKind =
+  | 'timeout'
+  | 'credits'
+  | 'network'
+  | 'overloaded'
+  /** no usable provider */
+  | 'not-connected'
+  /** the subscription CLI was not found */
+  | 'not-installed'
+  /** the subscription CLI is no longer signed in */
+  | 'signed-out'
+  /** the subscription limit is used up */
+  | 'rate-limit'
+  /** Claude Code started with tools available */
+  | 'unsafe-tools'
+  /** the selected connection is metered and the user has not accepted that */
+  | 'metered-not-accepted'
+  /** the subscription CLI is too old for a required feature */
+  | 'needs-update'
+  /** the hourly limit of headless (terminal command, MCP) calls is used up */
+  | 'headless-limit'
+
+/** Providers reached through a locally installed vendor CLI (ai-provider's AiSubscriptionProviderId) */
+export type IpcSubscriptionProviderId = 'claude-code' | 'codex'
+
+/** What an error chunk says about its cause, without the message */
+export interface IpcStreamErrorCause {
+  kind: IpcStreamErrorKind
+  /** subscription provider the error is about */
+  provider?: IpcSubscriptionProviderId
+  /** epoch milliseconds: when the limit resets ('rate-limit') or calls are allowed again ('headless-limit') */
+  resetsAt?: number
+}
+
+/** One failed turn as the app sees it; `kind` is absent when the failure has no machine-readable cause */
+export interface IpcStreamError extends Partial<IpcStreamErrorCause> {
+  /** the text handed to onError */
+  message: string
+}
+
+/** How much of one rate-limit window a subscription has used (ai-provider's AiSubscriptionUsage) */
+export interface IpcSubscriptionUsage {
+  provider: IpcSubscriptionProviderId
+  window: 'five_hour' | 'seven_day'
+  /** 0 (unused) to 1 (exhausted) */
+  utilization: number
+  /** epoch milliseconds; absent when the CLI reported no reset time */
+  resetsAt?: number | undefined
+}
+
+/**
  * One streamed chunk pushed back over an Electron IPC bridge. Structurally
  * identical to ai-provider's AiStreamChunk; declared here so this package
  * stays dependency-free.
@@ -15,17 +69,34 @@ import type {
 export interface IpcStreamChunk {
   requestId: string
   /** 'ping' = wire-level keepalive; re-arms the silence watchdog and carries no payload;
-   * 'reasoning' = model thinking delta (text carries it) */
-  type: 'delta' | 'reasoning' | 'tool-call' | 'usage' | 'done' | 'error' | 'ping'
+   * 'reasoning' = model thinking delta (text carries it);
+   * 'subscription-usage' = rate-limit windows a subscription CLI reported;
+   * 'input-truncated' = the input was cut to fit a limit and the user must be told */
+  type:
+    | 'delta'
+    | 'reasoning'
+    | 'tool-call'
+    | 'usage'
+    | 'subscription-usage'
+    | 'input-truncated'
+    | 'done'
+    | 'error'
+    | 'ping'
   text?: string
   toolCall?: AgentToolCall
   error?: string
-  /** machine-readable error cause; maps to the localized timeout/credits/network/overloaded message */
-  errorCode?: 'timeout' | 'credits' | 'network' | 'overloaded'
+  /** machine-readable error cause; maps to a localized message (see errorText) */
+  errorCode?: IpcStreamErrorKind
+  /** subscription provider the error is about */
+  errorProvider?: IpcSubscriptionProviderId
+  /** epoch milliseconds: when the limit resets ('rate-limit') or calls are allowed again ('headless-limit') */
+  errorResetsAt?: number
   /** normalized stop reason on 'done' ('max_tokens' = cut off by the token limit) */
   stopReason?: string
   /** tokens the provider billed for this turn, carried on 'usage' (always sent before 'done') */
   usage?: AgentTokenUsage
+  /** rate-limit windows carried on 'subscription-usage' */
+  subscriptionUsage?: IpcSubscriptionUsage[]
 }
 
 /** The request forwarded to the main process to start one streaming turn. */
@@ -66,6 +137,17 @@ export interface IpcTransportOptions<S> {
   networkErrorText?(): string
   /** localized message for capacity/rate-limit failures (errorCode 'overloaded') */
   overloadedErrorText?(): string
+  /**
+   * Localized message for any error kind, built from its accompanying values.
+   * Wins over the per-code texts above; returning undefined falls back to them.
+   */
+  errorText?(cause: IpcStreamErrorCause): string | undefined
+  /** structured copy of every failure, delivered right before onError gets its message */
+  onStreamError?(error: IpcStreamError): void
+  /** rate-limit windows a subscription CLI reported during the turn */
+  onSubscriptionUsage?(usage: IpcSubscriptionUsage[]): void
+  /** the input was cut to fit a limit; the app must tell the user */
+  onInputTruncated?(): void
 }
 
 /**
@@ -74,7 +156,22 @@ export interface IpcTransportOptions<S> {
  * Each app wires in its own preload bridge and i18n via the options.
  */
 export function createIpcTransport<S>(options: IpcTransportOptions<S>): AgentTransport {
-  const timeoutText = () => options.timeoutErrorText?.() ?? options.unknownErrorText()
+  const timeoutText = () =>
+    options.errorText?.({ kind: 'timeout' }) ??
+    options.timeoutErrorText?.() ??
+    options.unknownErrorText()
+  const causeText = (cause: IpcStreamErrorCause, carried: string | undefined): string => {
+    if (cause.kind === 'timeout') return timeoutText()
+    const legacy =
+      cause.kind === 'credits'
+        ? options.creditsErrorText
+        : cause.kind === 'network'
+          ? options.networkErrorText
+          : cause.kind === 'overloaded'
+            ? options.overloadedErrorText
+            : undefined
+    return options.errorText?.(cause) ?? legacy?.() ?? carried ?? options.unknownErrorText()
+  }
   const sessionId = crypto.randomUUID()
   return {
     stream(request: AgentStreamRequest, cb) {
@@ -86,16 +183,21 @@ export function createIpcTransport<S>(options: IpcTransportOptions<S>): AgentTra
         clearTimeout(silenceTimer)
         unsubscribe()
       }
-      const fail = (error: string) => {
+      const fail = (error: string, cause?: IpcStreamErrorCause) => {
         if (settled) return
         settle()
+        try {
+          options.onStreamError?.({ ...cause, message: error })
+        } catch {
+          // a broken listener must not leave the run without its error
+        }
         cb.onError(error)
       }
       const armSilence = () => {
         clearTimeout(silenceTimer)
         silenceTimer = setTimeout(() => {
           options.cancel(requestId)
-          fail(timeoutText())
+          fail(timeoutText(), { kind: 'timeout' })
         }, IPC_STREAM_SILENCE_TIMEOUT_MS)
       }
       const unsubscribe = options.onStream((chunk) => {
@@ -114,23 +216,27 @@ export function createIpcTransport<S>(options: IpcTransportOptions<S>): AgentTra
         } else if (chunk.type === 'usage') {
           armSilence()
           if (chunk.usage) cb.onUsage?.(chunk.usage)
+        } else if (chunk.type === 'subscription-usage') {
+          armSilence()
+          if (chunk.subscriptionUsage) options.onSubscriptionUsage?.(chunk.subscriptionUsage)
+        } else if (chunk.type === 'input-truncated') {
+          armSilence()
+          options.onInputTruncated?.()
         } else if (chunk.type === 'done') {
           settle()
           if (chunk.stopReason) cb.onStopReason?.(chunk.stopReason)
           cb.onDone()
         } else if (chunk.type === 'error') {
-          settle()
-          cb.onError(
-            chunk.errorCode === 'timeout'
-              ? timeoutText()
-              : chunk.errorCode === 'credits'
-                ? (options.creditsErrorText?.() ?? chunk.error ?? options.unknownErrorText())
-                : chunk.errorCode === 'network'
-                  ? (options.networkErrorText?.() ?? chunk.error ?? options.unknownErrorText())
-                  : chunk.errorCode === 'overloaded'
-                    ? (options.overloadedErrorText?.() ?? chunk.error ?? options.unknownErrorText())
-                    : (chunk.error ?? options.unknownErrorText()),
-          )
+          if (!chunk.errorCode) {
+            fail(chunk.error ?? options.unknownErrorText())
+            return
+          }
+          const cause: IpcStreamErrorCause = {
+            kind: chunk.errorCode,
+            ...(chunk.errorProvider ? { provider: chunk.errorProvider } : {}),
+            ...(chunk.errorResetsAt !== undefined ? { resetsAt: chunk.errorResetsAt } : {}),
+          }
+          fail(causeText(cause, chunk.error), cause)
         } else {
           // A chunk kind this build predates must not kill the run; traffic proves it is alive.
           armSilence()

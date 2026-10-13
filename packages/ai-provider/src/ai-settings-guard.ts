@@ -15,8 +15,15 @@ import { statSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 
+import { AI_SUBSCRIPTION_PROVIDERS } from './providers'
 import { AI_PROVIDER_ADAPTERS, normalizeBaseUrl } from './registry'
-import type { AiCustomEndpoint, AiProviderConfig, AiProviderId, AiSettings } from './types'
+import type {
+  AiCustomEndpoint,
+  AiProviderConfig,
+  AiProviderId,
+  AiProviderSelection,
+  AiSettings,
+} from './types'
 
 const PROVIDER_IDS = Object.keys(AI_PROVIDER_ADAPTERS) as AiProviderId[]
 
@@ -158,7 +165,13 @@ export function sanitizeAiSettings(input: unknown): AiSettings | null {
   if (typeof input !== 'object' || input === null || Array.isArray(input)) return null
   const raw = input as Record<string, unknown>
   const provider = raw.provider
-  if (typeof provider !== 'string' || !PROVIDER_IDS.includes(provider as AiProviderId)) return null
+  // `auto` is the one selection that is not a provider id
+  if (
+    typeof provider !== 'string' ||
+    (provider !== 'auto' && !PROVIDER_IDS.includes(provider as AiProviderId))
+  ) {
+    return null
+  }
   if (typeof raw.providers !== 'object' || raw.providers === null || Array.isArray(raw.providers)) {
     return null
   }
@@ -168,10 +181,30 @@ export function sanitizeAiSettings(input: unknown): AiSettings | null {
     ;(providers as Record<string, AiProviderConfig>)[id] = sanitizeProviderConfig(config)
   }
   const settings: AiSettings = {
-    provider: provider as AiProviderId,
+    provider: provider as AiProviderSelection,
     providers,
   }
   if (typeof raw.gskToolsEnabled === 'boolean') settings.gskToolsEnabled = raw.gskToolsEnabled
+  // accepting a metered login lets the app spend the user's money: only the two
+  // subscription ids and only real booleans get through
+  if (
+    typeof raw.meteredAccepted === 'object' &&
+    raw.meteredAccepted !== null &&
+    !Array.isArray(raw.meteredAccepted)
+  ) {
+    const accepted: NonNullable<AiSettings['meteredAccepted']> = {}
+    for (const id of AI_SUBSCRIPTION_PROVIDERS) {
+      const value = (raw.meteredAccepted as Record<string, unknown>)[id]
+      if (typeof value === 'boolean') accepted[id] = value
+    }
+    settings.meteredAccepted = accepted
+  }
+  if (typeof raw.headlessSubscriptionEnabled === 'boolean') {
+    settings.headlessSubscriptionEnabled = raw.headlessSubscriptionEnabled
+  }
+  if (typeof raw.subscriptionNoticeSeen === 'boolean') {
+    settings.subscriptionNoticeSeen = raw.subscriptionNoticeSeen
+  }
   const customEndpoints = sanitizeCustomEndpoints(raw.customEndpoints)
   if (customEndpoints.length > 0) {
     settings.customEndpoints = customEndpoints

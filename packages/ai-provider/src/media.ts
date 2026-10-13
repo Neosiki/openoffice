@@ -1,4 +1,6 @@
 import type {
+  AiAnalysisProviderSelection,
+  AiImageProviderSelection,
   AiMediaProviderConfig,
   AiMediaProviderId,
   AiMediaProviderMeta,
@@ -206,7 +208,10 @@ export const AI_MEDIA_PROVIDERS: AiMediaProviderMeta[] = [
 
 export type MediaCapability = 'image' | 'analysis' | 'video'
 
-export function getMediaProviderMeta(id: AiMediaProviderId): AiMediaProviderMeta | undefined {
+/** undefined for the selection values that name no catalog entry (`codex`, `chat`, `none`) */
+export function getMediaProviderMeta(
+  id: AiMediaProviderId | AiImageProviderSelection | AiAnalysisProviderSelection,
+): AiMediaProviderMeta | undefined {
   return AI_MEDIA_PROVIDERS.find((m) => m.id === id)
 }
 
@@ -271,8 +276,9 @@ export function resolveAiMediaSettings(
   return {
     imageProvider: stored.imageProvider ?? legacy ?? defaults.imageProvider,
     analysisProvider,
-    // a pre-split file used one vendor for all media analysis
-    videoAnalysisProvider: stored.videoAnalysisProvider ?? analysisProvider,
+    // a pre-split file used one vendor for all media analysis (`chat` cannot read video)
+    videoAnalysisProvider:
+      stored.videoAnalysisProvider ?? (analysisProvider === 'chat' ? 'none' : analysisProvider),
     providers,
   }
 }
@@ -293,6 +299,10 @@ export function mediaConfigUsable(
  * The stored provider for one capability, honored only when it exists, has
  * that capability and is usable; anything else falls back to genspark so a
  * half-filled setup degrades to the signed-in default.
+ *
+ * Pre-subscription contract: the selections that name no key provider
+ * (`codex`, `chat`, `none`) read as genspark here. Image requests choose their
+ * backend with resolveImageBackend.
  */
 export function activeMediaProvider(
   settings: Pick<AiSettings, 'media'>,
@@ -309,8 +319,8 @@ export function activeMediaProvider(
   if (!id || id === 'genspark') return 'genspark'
   const meta = getMediaProviderMeta(id)
   if (!meta || !providerHasCapability(meta, capability)) return 'genspark'
-  if (!mediaConfigUsable(meta, media.providers?.[id])) return 'genspark'
-  return id
+  if (!mediaConfigUsable(meta, media.providers?.[meta.id])) return 'genspark'
+  return meta.id
 }
 
 /** the active BYOK config for one capability, or null when it runs through Genspark */

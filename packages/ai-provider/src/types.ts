@@ -1,8 +1,14 @@
-import type { AgentMessage, AgentToolCall, AgentToolDef } from '@genoffice/agent-core'
+import type {
+  AgentMessage,
+  AgentToolCall,
+  AgentToolDef,
+  IpcStreamErrorKind,
+} from '@genoffice/agent-core'
 
 export type AiProviderId =
   | 'genspark'
   | 'codex'
+  | 'claude-code'
   | 'anthropic'
   | 'gemini'
   | 'deepseek'
@@ -27,6 +33,52 @@ export type AiProviderId =
   | 'opencode-zen'
   | 'opencode-go'
   | 'custom'
+
+/** Providers reached through the locally installed, already signed-in vendor CLI (a subscription, not a key) */
+export type AiSubscriptionProviderId = 'claude-code' | 'codex'
+
+/** What the provider setting holds: `auto` (first ready subscription) or one provider id */
+export type AiProviderSelection = 'auto' | AiProviderId
+
+export type AiSubscriptionState =
+  'checking' | 'not-installed' | 'signed-out' | 'ready' | 'metered' | 'error'
+
+/** how the CLI is signed in; `unknown` is handled as `metered` */
+export type AiSubscriptionLoginMethod = 'subscription' | 'metered' | 'unknown'
+
+/** Connection status of one subscription provider. Carries no account identity (email, organisation). */
+export interface AiSubscriptionStatus {
+  provider: AiSubscriptionProviderId
+  /** `ready` only when loginMethod is `subscription`; `metered` covers the metered and unknown logins */
+  state: AiSubscriptionState
+  /** CLI version, when the program reported one */
+  version?: string | undefined
+  /** absent until the CLI is known to be signed in */
+  loginMethod?: AiSubscriptionLoginMethod | undefined
+  /** plan name the CLI reported, display only */
+  planName?: string | undefined
+  /** the user chose "use anyway" for this metered login */
+  meteredAccepted: boolean
+  /** what went wrong, on state `error` */
+  error?: string | undefined
+}
+
+export type AiSubscriptionStatuses = Partial<Record<AiSubscriptionProviderId, AiSubscriptionStatus>>
+
+export type AiUsageWindow = 'five_hour' | 'seven_day'
+
+/** How much of one rate-limit window a subscription has used */
+export interface AiSubscriptionUsage {
+  provider: AiSubscriptionProviderId
+  window: AiUsageWindow
+  /** 0 (unused) to 1 (exhausted) */
+  utilization: number
+  /** epoch milliseconds; absent when the CLI reported no reset time */
+  resetsAt?: number | undefined
+}
+
+/** Machine-readable cause of a failed run; one union shared with the renderer transport */
+export type AiRunErrorKind = IpcStreamErrorKind
 
 /** Genspark account status (gsk login state; the sole auth source for AI features) */
 export interface GenSparkAccountStatus {
@@ -83,6 +135,16 @@ export type AiMediaProviderId =
   | 'deepseek'
   | 'custom'
 
+/** Media backends configured with a key (or a base URL): the AI_MEDIA_PROVIDERS catalog minus Genspark */
+export type AiMediaKeyProviderId = Exclude<AiMediaProviderId, 'genspark'>
+
+/** generate_image choice: the Codex subscription, a key provider, or `none` (first configured key provider) */
+export type AiImageProviderSelection = 'codex' | 'none' | AiMediaProviderId
+/** analyze_media choice for images: `chat` shows the image to the current AI provider */
+export type AiAnalysisProviderSelection = 'chat' | AiMediaProviderId
+/** analyze_media choice for video/audio: `none` or a video-capable key provider */
+export type AiVideoAnalysisProviderSelection = 'none' | AiMediaProviderId
+
 /** wire shape of the image endpoint */
 export type AiImageProtocol = 'openai-images' | 'gemini' | 'dashscope' | 'minimax'
 /** wire shape of the understanding endpoint */
@@ -121,11 +183,11 @@ export interface AiMediaProviderMeta {
 
 export interface AiMediaSettings {
   /** provider behind generate_image */
-  imageProvider: AiMediaProviderId
+  imageProvider: AiImageProviderSelection
   /** provider behind analyze_media for images */
-  analysisProvider: AiMediaProviderId
+  analysisProvider: AiAnalysisProviderSelection
   /** provider behind analyze_media when the input has video/audio (only video-capable vendors qualify) */
-  videoAnalysisProvider: AiMediaProviderId
+  videoAnalysisProvider: AiVideoAnalysisProviderSelection
   providers: Record<AiMediaProviderId, AiMediaProviderConfig>
   /** pre-catalog shape (one provider for both); migrated by resolveAiMediaSettings */
   provider?: AiMediaProviderId | undefined
@@ -149,8 +211,13 @@ export interface AiSearchSettings {
 }
 
 export interface AiSettings {
-  provider: AiProviderId
-  providers: Record<AiProviderId, AiProviderConfig>
+  /** `auto` or one provider id; resolve it with selectAiProvider before indexing `providers` */
+  provider: AiProviderSelection
+  /**
+   * One config per provider. The `auto` slot is never populated: it exists so
+   * code that indexes with the raw selection keeps compiling and reads undefined.
+   */
+  providers: Record<AiProviderId, AiProviderConfig> & { auto?: AiProviderConfig | undefined }
   /** every saved custom endpoint; absent on files written before the list existed */
   customEndpoints?: AiCustomEndpoint[] | undefined
   /** id of the endpoint `providers.custom` mirrors */
@@ -178,6 +245,12 @@ export interface AiSettings {
    * (absent = the default, so pre-existing settings files keep working).
    */
   maxOutputTokens?: number | undefined
+  /** per subscription provider: the user accepted a metered (pay-as-you-go) CLI login; absent = false */
+  meteredAccepted?: Partial<Record<AiSubscriptionProviderId, boolean>> | undefined
+  /** headless callers (terminal commands, MCP) may use subscription providers; absent = false */
+  headlessSubscriptionEnabled?: boolean | undefined
+  /** the first-connection notice has been shown; absent = false */
+  subscriptionNoticeSeen?: boolean | undefined
 }
 
 /** pre-provider settings shape (single OpenAI-compatible endpoint); migrated into "custom" */
@@ -221,16 +294,33 @@ export interface AiTokenUsage {
 export interface AiStreamChunk {
   requestId: string
   /** 'ping' = wire-level keepalive so the renderer can tell a live stream from a dead one;
-   * 'reasoning' = model thinking delta (text carries it), stored for interleaved-thinking echo */
-  type: 'delta' | 'reasoning' | 'tool-call' | 'usage' | 'done' | 'error' | 'ping'
+   * 'reasoning' = model thinking delta (text carries it), stored for interleaved-thinking echo;
+   * 'subscription-usage' = rate-limit windows a subscription CLI reported;
+   * 'input-truncated' = the input was cut to fit a limit and the user must be told */
+  type:
+    | 'delta'
+    | 'reasoning'
+    | 'tool-call'
+    | 'usage'
+    | 'subscription-usage'
+    | 'input-truncated'
+    | 'done'
+    | 'error'
+    | 'ping'
   text?: string
   /** complete parsed tool call (emitted once its arguments finish streaming) */
   toolCall?: AgentToolCall
   error?: string
-  /** machine-readable error cause ('timeout', exhausted 'credits', 'network' connectivity failure, 'overloaded' capacity/rate limit); lets the renderer localize the message */
-  errorCode?: 'timeout' | 'credits' | 'network' | 'overloaded'
+  /** machine-readable error cause ('timeout', exhausted 'credits', 'network' connectivity failure, 'overloaded' capacity/rate limit, or a subscription cause); lets the renderer localize the message */
+  errorCode?: AiRunErrorKind
+  /** subscription provider the error is about ('not-installed', 'signed-out', 'rate-limit', 'metered-not-accepted', 'needs-update') */
+  errorProvider?: AiSubscriptionProviderId
+  /** epoch milliseconds: when the limit resets ('rate-limit', when reported) or calls are allowed again ('headless-limit') */
+  errorResetsAt?: number
   /** normalized stop reason carried on 'done' ('max_tokens' = output cut off by the token limit) */
   stopReason?: string
   /** tokens the provider billed for this turn, carried on 'usage' (always sent before 'done') */
   usage?: AiTokenUsage
+  /** rate-limit windows carried on 'subscription-usage' */
+  subscriptionUsage?: AiSubscriptionUsage[]
 }

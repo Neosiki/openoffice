@@ -9,7 +9,10 @@
     ".": "./src/index.ts",
     "./browser": "./src/browser.ts",
     "./codex-app-server": "./src/codex-app-server.ts",
-    "./custom-models": "./src/custom-models.ts"
+    "./custom-models": "./src/custom-models.ts",
+    "./subscription": "./src/subscription.ts",
+    "./claude-code-cli": "./src/claude-code-cli.ts",
+    "./codex-image": "./src/codex-image.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
