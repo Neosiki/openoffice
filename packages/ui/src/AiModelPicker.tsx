@@ -1,15 +1,20 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { Lang } from '@genoffice/i18n'
-import type { AiSettings } from '@genoffice/ai-provider/browser'
+import type { AiSettings, AiSubscriptionStatuses } from '@genoffice/ai-provider/browser'
 import {
   aiModelPickerGroups,
   aiModelPickerSelection,
-  withAiModelSelection,
-  type AiModelPickerSelection,
+  aiProviderPickerGroups,
+  aiProviderPickerSelection,
+  withAiProviderSelection,
+  type AiProviderPickerGroup,
+  type AiProviderPickerSelection,
 } from './ai-model-picker-options'
+import { AiMark } from './AiMark'
 import { ProviderLogo } from './provider-logos'
 import { useDismissablePopover } from './popover-dismiss'
 import { AI_MODEL_PICKER_STRINGS } from './strings-ai-model-picker'
+import { aiSubscriptionText } from './strings-ai-subscription'
 
 /** Each app's preload exposes these under its own namespace; the panel adapts them. */
 export interface AiModelPickerBridge {
@@ -22,18 +27,35 @@ export interface AiModelPickerBridge {
   readonly openModelSettings?: (() => Promise<void> | void) | undefined
 }
 
+/** Subscription connections are named in text and carry the neutral AI mark, never a vendor logo */
+function PickerMark({ group }: { readonly group: Pick<AiProviderPickerGroup, 'kind' | 'id'> }) {
+  if (group.kind === 'key') return <ProviderLogo id={group.id} />
+  return (
+    <span className="gs-provider-logo" aria-hidden="true">
+      <AiMark size={14} />
+    </span>
+  )
+}
+
 /**
  * Composer footer chip showing the active provider + model; the popover lists
  * every usable provider's models for a one-click switch (saved globally, the
  * same ai-settings.json the settings page edits) and ends with a row that
  * opens that page for keys and new vendors.
+ *
+ * With `subscriptionStatuses` the list follows the subscription contract: an
+ * automatic entry, the connected subscriptions, then the key providers that
+ * are filled in. Without it the chip keeps its earlier behavior.
  */
 export function AiModelPicker({
   bridge,
   lang,
+  subscriptionStatuses,
 }: {
   readonly bridge: AiModelPickerBridge
   readonly lang: Lang
+  /** status of the subscription CLIs; passing it switches the list to the subscription contract */
+  readonly subscriptionStatuses?: AiSubscriptionStatuses | undefined
 }): React.JSX.Element | null {
   const strings = AI_MODEL_PICKER_STRINGS[lang] ?? AI_MODEL_PICKER_STRINGS.en
   const [settings, setSettings] = useState<AiSettings | null>(null)
@@ -73,11 +95,21 @@ export function AiModelPicker({
     inside: () => [chipRef.current, popRef.current],
   })
 
-  const groups = useMemo(
-    () => (settings ? aiModelPickerGroups(settings, loggedIn) : []),
-    [settings, loggedIn],
-  )
-  const current = settings ? aiModelPickerSelection(settings) : null
+  const groups = useMemo<AiProviderPickerGroup[]>(() => {
+    if (!settings) return []
+    if (subscriptionStatuses) return aiProviderPickerGroups(settings, subscriptionStatuses)
+    return aiModelPickerGroups(settings, loggedIn).map((g) => ({
+      ...g,
+      kind: 'key' as const,
+      metered: false,
+    }))
+  }, [settings, loggedIn, subscriptionStatuses])
+  const picked =
+    settings && subscriptionStatuses
+      ? aiProviderPickerSelection(settings, subscriptionStatuses)
+      : null
+  const current: AiProviderPickerSelection | null =
+    picked ?? (settings ? aiModelPickerSelection(settings) : null)
   const sameGroup = (g: { id: string; endpoint?: string | undefined }) =>
     g.id === current?.provider && (g.id !== 'custom' || g.endpoint === current?.endpoint)
   const currentUsable = groups.some(sameGroup)
@@ -91,10 +123,10 @@ export function AiModelPicker({
     setOpen((v) => !v)
   }
 
-  const pick = (sel: AiModelPickerSelection) => {
+  const pick = (sel: AiProviderPickerSelection) => {
     setOpen(false)
     if (!settings) return
-    const next = withAiModelSelection(settings, sel)
+    const next = withAiProviderSelection(settings, sel)
     setSettings(next)
     void bridge.setSettings(next).catch(() => {})
   }
@@ -105,10 +137,16 @@ export function AiModelPicker({
   }
 
   if (!settings) return null
-  const chipText =
-    currentUsable && current
-      ? current.model || (groups.find(sameGroup)?.label ?? '')
+  const currentGroup = groups.find(sameGroup)
+  const paid = aiSubscriptionText(lang, 'pickerPaid')
+  const paidTitle = aiSubscriptionText(lang, 'pickerPaidTitle')
+  const chipText = !(currentUsable && current)
+    ? subscriptionStatuses
+      ? aiSubscriptionText(lang, 'pickerNotConnected')
       : strings.choose
+    : currentGroup?.kind === 'auto'
+      ? aiSubscriptionText(lang, 'pickerAutoUsing', { provider: currentGroup.label })
+      : current.model || (currentGroup?.label ?? '')
 
   return (
     <div
@@ -131,8 +169,13 @@ export function AiModelPicker({
         data-tip={strings.title}
         aria-label={`${strings.title}: ${chipText}`}
       >
-        {currentUsable && current && <ProviderLogo id={current.provider} />}
+        {currentUsable && currentGroup && <PickerMark group={currentGroup} />}
         <span className="ai-model-chip-text">{chipText}</span>
+        {currentUsable && picked?.metered && (
+          <span className="ai-model-cost" title={paidTitle}>
+            {paid}
+          </span>
+        )}
         <svg className="ai-model-chip-caret" width="10" height="10" viewBox="0 0 10 10" aria-hidden>
           <path
             d="M2 6.5 5 3.5l3 3"
@@ -155,22 +198,42 @@ export function AiModelPicker({
           <div className="ai-model-pop-list">
             {groups.map((g) => (
               <div key={g.endpoint ? `${g.id}:${g.endpoint}` : g.id} className="ai-model-group">
-                <div className="ai-model-group-head">
-                  <ProviderLogo id={g.id} />
-                  <span>{g.label}</span>
-                </div>
+                {g.kind !== 'auto' && (
+                  <div className="ai-model-group-head">
+                    <PickerMark group={g} />
+                    <span>{g.label}</span>
+                    {g.metered ? (
+                      <span className="ai-model-cost" title={paidTitle}>
+                        {paid}
+                      </span>
+                    ) : (
+                      g.kind === 'subscription' && (
+                        <span className="ai-model-tag">
+                          {aiSubscriptionText(lang, 'pickerSubscription')}
+                        </span>
+                      )
+                    )}
+                  </div>
+                )}
                 {(g.models.length > 0 ? g.models : ['']).map((m) => {
-                  const selected = sameGroup(g) && current?.model === m
+                  const selected = sameGroup(g) && (g.kind === 'auto' || current?.model === m)
                   return (
                     <button
                       key={`${g.id}:${g.endpoint ?? ''}:${m}`}
                       type="button"
                       role="option"
                       aria-selected={selected}
-                      className={`ai-model-item${selected ? ' selected' : ''}`}
+                      className={`ai-model-item${g.kind === 'auto' ? ' ai-model-auto' : ''}${selected ? ' selected' : ''}`}
                       onClick={() => pick({ provider: g.id, endpoint: g.endpoint, model: m })}
                     >
-                      <span className="ai-model-item-text">{m || g.label}</span>
+                      {g.kind === 'auto' && <PickerMark group={g} />}
+                      <span className="ai-model-item-text">
+                        {g.kind === 'auto'
+                          ? aiSubscriptionText(lang, 'pickerAutoUsing', { provider: g.label })
+                          : g.kind === 'subscription'
+                            ? m || aiSubscriptionText(lang, 'pickerDefaultModel')
+                            : m || g.label}
+                      </span>
                       {selected && (
                         <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden>
                           <path

@@ -1,0 +1,64 @@
+import type { zh } from './zh'
+
+export const th = {
+  cardChecking: 'กำลังตรวจสอบ…',
+  cardNotInstalled: 'ยังไม่ได้ติดตั้ง',
+  cardSignedOut: 'ยังไม่ได้เข้าสู่ระบบ',
+  cardReady: 'เชื่อมต่อแล้ว',
+  cardReadyPlan: 'เชื่อมต่อแล้ว · {plan}',
+  cardMetered: 'เข้าสู่ระบบแล้ว แต่ไม่ใช่ด้วยการสมัครสมาชิก',
+  cardMeteredAccepted: 'กำลังใช้งาน · คิดค่าบริการตามการใช้งาน',
+  cardError: 'ตรวจสอบการเชื่อมต่อไม่ได้',
+  actionInstall: 'ติดตั้ง',
+  actionLogin: 'เข้าสู่ระบบ',
+  actionRecheck: 'ตรวจสอบอีกครั้ง',
+  actionAcceptMetered: 'ใช้ต่อไป',
+  actionInstallHelp: 'คู่มือการติดตั้งอย่างเป็นทางการ',
+  actionOpenSettings: 'เปิดการตั้งค่า',
+  actionDismiss: 'ปิด',
+  installNote: 'คำสั่งติดตั้งอย่างเป็นทางการของ {vendor} จะทำงานในหน้าต่างเทอร์มินัลใหม่',
+  loginNote: 'หน้าเข้าสู่ระบบที่เปิดขึ้นเป็นของ {vendor}',
+  meteredWarning: 'นี่ไม่ใช่การสมัครสมาชิก: คุณจะถูกคิดค่าบริการตามที่ใช้จริง',
+  meteredMeaning:
+    'การเข้าสู่ระบบนี้ใช้คีย์ API หรือบัญชีที่จ่ายตามการใช้งาน หรือไม่สามารถยืนยันประเภทได้ เมื่อเลือก "ใช้ต่อไป" AI จะทำงานผ่านการเชื่อมต่อนี้ และทุกคำขอจะถูกเรียกเก็บจากบัญชีนั้น',
+  connectTitle: 'เชื่อมต่อการสมัครสมาชิกเพื่อใช้ AI',
+  connectBody: 'AI ทำงานด้วยการสมัครสมาชิก Claude หรือ Codex ที่คุณมีอยู่แล้ว ไม่ต้องใช้คีย์ API',
+  connectProviderTitle: 'การเชื่อมต่อ {provider} ยังใช้งานไม่ได้ในขณะนี้',
+  connectKeyBody:
+    'การตั้งค่า {provider} ยังไม่เสร็จสมบูรณ์ โปรดตั้งค่าให้เสร็จในการตั้งค่า หรือเลือก AI อื่น',
+  errNotConnected:
+    'ยังไม่มี AI ที่เชื่อมต่ออยู่ โปรดเชื่อมต่อการสมัครสมาชิก Claude หรือ Codex ก่อน',
+  errNotInstalled: 'ไม่พบโปรแกรม {provider} ในคอมพิวเตอร์เครื่องนี้',
+  errSignedOut: 'การเข้าสู่ระบบ {provider} หมดอายุแล้ว โปรดเข้าสู่ระบบอีกครั้งเพื่อดำเนินการต่อ',
+  errRateLimit: 'ใช้โควตาการสมัครสมาชิก {provider} ครบแล้ว',
+  errRateLimitReset: 'ใช้โควตาการสมัครสมาชิก {provider} ครบแล้ว โควตาจะรีเซ็ตเวลา {time}',
+  errUnsafeTools:
+    'โปรแกรม {provider} เริ่มทำงานโดยที่เครื่องมือของตัวเองยังเปิดอยู่ จึงหยุดการทำงานเพื่อความปลอดภัย',
+  errMeteredNotAccepted:
+    'การเชื่อมต่อ {provider} คิดค่าบริการตามการใช้งาน และคุณยังไม่ได้อนุญาต เลือก "ใช้ต่อไป" ในการตั้งค่าการเชื่อมต่อเพื่อใช้งาน',
+  errNeedsUpdate: 'โปรแกรม {provider} เก่าเกินไปสำหรับฟีเจอร์นี้ โปรดอัปเดตแล้วลองอีกครั้ง',
+  errHeadlessLimit: 'ถึงขีดจำกัดต่อชั่วโมงของคำขออัตโนมัติแล้ว',
+  errHeadlessLimitReset:
+    'ถึงขีดจำกัดต่อชั่วโมงของคำขออัตโนมัติแล้ว จะส่งคำขอได้อีกครั้งเวลา {time}',
+  continueWith: 'ดำเนินการต่อด้วย {provider}',
+  continueMeteredNote:
+    'การเชื่อมต่อ {provider} ไม่ใช่การสมัครสมาชิก: หากดำเนินการต่อจะคิดค่าบริการตามการใช้งาน',
+  usageLine: 'ใช้ไปแล้ว {percent}% · รีเซ็ตเวลา {time}',
+  usageWindowFiveHour: 'โควตา 5 ชั่วโมง',
+  usageWindowSevenDay: 'โควตา 7 วัน',
+  noticeTitle: 'ก่อนใช้ AI ด้วยการสมัครสมาชิกของคุณ',
+  noticeSend: 'เนื้อหาเอกสารและบทสนทนาจะถูกส่งไปยัง Anthropic หรือ OpenAI ภายใต้บัญชีของคุณเอง',
+  noticeTraining:
+    'เนื้อหานั้นจะถูกนำไปใช้ฝึก AI หรือไม่ ขึ้นอยู่กับการตั้งค่าบัญชีของคุณเองกับบริษัทนั้น',
+  noticeCodexHistory: 'Codex อาจเก็บเนื้อหาบทสนทนาไว้ในคอมพิวเตอร์เครื่องนี้',
+  noticeAck: 'รับทราบ',
+  codexNotice: 'การใช้การสมัครสมาชิก Codex ภายในแอปไม่ใช่วิธีที่ OpenAI แนะนำอย่างเป็นทางการ',
+  truncatedNotice: 'ข้อความที่ป้อนยาวเกินไป จึงตัดบางส่วนออกก่อนส่ง',
+  pickerAuto: 'อัตโนมัติ',
+  pickerAutoUsing: 'อัตโนมัติ · {provider}',
+  pickerDefaultModel: 'โมเดลเริ่มต้น',
+  pickerSubscription: 'การสมัครสมาชิก',
+  pickerPaid: 'มีค่าใช้จ่าย',
+  pickerPaidTitle: 'คิดค่าบริการตามการใช้งาน ไม่รวมอยู่ในการสมัครสมาชิก',
+  pickerNotConnected: 'เชื่อมต่อ AI',
+} satisfies Record<keyof typeof zh, string>

@@ -1,0 +1,69 @@
+import type { zh } from './zh'
+
+export const it = {
+  cardChecking: 'Verifica in corso…',
+  cardNotInstalled: 'Non installato',
+  cardSignedOut: 'Accesso non effettuato',
+  cardReady: 'Connesso',
+  cardReadyPlan: 'Connesso · {plan}',
+  cardMetered: 'Accesso effettuato, ma non con un abbonamento',
+  cardMeteredAccepted: 'In uso · addebito a consumo',
+  cardError: 'Impossibile verificare la connessione',
+  actionInstall: 'Installa',
+  actionLogin: 'Accedi',
+  actionRecheck: 'Verifica di nuovo',
+  actionAcceptMetered: 'Usa comunque',
+  actionInstallHelp: 'Guida ufficiale all’installazione',
+  actionOpenSettings: 'Apri impostazioni',
+  actionDismiss: 'Chiudi',
+  installNote:
+    'Il comando di installazione ufficiale di {vendor} viene eseguito in una nuova finestra del terminale.',
+  loginNote: 'La pagina di accesso che si apre è quella di {vendor}.',
+  meteredWarning: 'Non è un abbonamento: paghi in base a quanto usi.',
+  meteredMeaning:
+    'Questo accesso usa una chiave API o un account a consumo, oppure non è stato possibile confermarne il tipo. Con “Usa comunque” l’IA funziona su questa connessione e ogni richiesta viene addebitata a quell’account.',
+  connectTitle: 'Collega un abbonamento per usare l’IA',
+  connectBody:
+    'L’IA funziona con l’abbonamento Claude o Codex che hai già. Non serve alcuna chiave API.',
+  connectProviderTitle: 'La connessione {provider} non è utilizzabile al momento',
+  connectKeyBody:
+    'La configurazione di {provider} non è completa. Completala nelle Impostazioni oppure scegli un’altra IA.',
+  errNotConnected: 'Nessuna IA è collegata. Collega prima un abbonamento Claude o Codex.',
+  errNotInstalled: 'Il programma {provider} non è stato trovato su questo PC.',
+  errSignedOut: 'L’accesso a {provider} è scaduto. Accedi di nuovo per continuare.',
+  errRateLimit: 'Il limite dell’abbonamento {provider} è stato raggiunto.',
+  errRateLimitReset:
+    'Il limite dell’abbonamento {provider} è stato raggiunto. Si azzera alle {time}.',
+  errUnsafeTools:
+    'Il programma {provider} è stato avviato con i propri strumenti attivi, quindi l’esecuzione è stata interrotta per sicurezza.',
+  errMeteredNotAccepted:
+    'La connessione {provider} è a consumo e non l’hai ancora consentita. Scegli “Usa comunque” nelle impostazioni di connessione per usarla.',
+  errNeedsUpdate:
+    'Il programma {provider} è troppo vecchio per questa funzione. Aggiornalo e riprova.',
+  errHeadlessLimit: 'È stato raggiunto il limite orario delle richieste automatiche.',
+  errHeadlessLimitReset:
+    'È stato raggiunto il limite orario delle richieste automatiche. Saranno di nuovo possibili alle {time}.',
+  continueWith: 'Continua con {provider}',
+  continueMeteredNote:
+    'La connessione {provider} non è un abbonamento: continuando paghi a consumo.',
+  usageLine: '{percent}% usato · si azzera alle {time}',
+  usageWindowFiveHour: 'Limite di 5 ore',
+  usageWindowSevenDay: 'Limite di 7 giorni',
+  noticeTitle: 'Prima di usare l’IA con il tuo abbonamento',
+  noticeSend:
+    'Il contenuto del documento e la conversazione vengono inviati ad Anthropic o a OpenAI con il tuo account personale.',
+  noticeTraining:
+    'L’uso di questi contenuti per addestrare l’IA dipende dalle impostazioni del tuo account presso quell’azienda.',
+  noticeCodexHistory: 'Codex può conservare il contenuto delle conversazioni su questo PC.',
+  noticeAck: 'Ho capito',
+  codexNotice:
+    'Usare un abbonamento Codex all’interno di un’app non è un metodo ufficialmente consigliato da OpenAI.',
+  truncatedNotice: 'L’input era troppo lungo, quindi una parte è stata tagliata prima dell’invio.',
+  pickerAuto: 'Automatico',
+  pickerAutoUsing: 'Automatico · {provider}',
+  pickerDefaultModel: 'Modello predefinito',
+  pickerSubscription: 'Abbonamento',
+  pickerPaid: 'A pagamento',
+  pickerPaidTitle: 'Addebito a consumo, non coperto da un abbonamento',
+  pickerNotConnected: 'Collega l’IA',
+} satisfies Record<keyof typeof zh, string>

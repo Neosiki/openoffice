@@ -1,0 +1,67 @@
+import type { zh } from './zh'
+
+export const vi = {
+  cardChecking: 'Đang kiểm tra…',
+  cardNotInstalled: 'Chưa cài đặt',
+  cardSignedOut: 'Chưa đăng nhập',
+  cardReady: 'Đã kết nối',
+  cardReadyPlan: 'Đã kết nối · {plan}',
+  cardMetered: 'Đã đăng nhập nhưng không phải bằng gói đăng ký',
+  cardMeteredAccepted: 'Đang dùng · tính phí theo mức sử dụng',
+  cardError: 'Không kiểm tra được kết nối',
+  actionInstall: 'Cài đặt',
+  actionLogin: 'Đăng nhập',
+  actionRecheck: 'Kiểm tra lại',
+  actionAcceptMetered: 'Vẫn sử dụng',
+  actionInstallHelp: 'Hướng dẫn cài đặt chính thức',
+  actionOpenSettings: 'Mở cài đặt',
+  actionDismiss: 'Đóng',
+  installNote: 'Lệnh cài đặt chính thức của {vendor} sẽ chạy trong một cửa sổ terminal mới.',
+  loginNote: 'Trang đăng nhập được mở ra là của {vendor}.',
+  meteredWarning: 'Đây không phải gói đăng ký: bạn bị tính phí theo mức sử dụng.',
+  meteredMeaning:
+    'Lần đăng nhập này dùng khóa API hoặc tài khoản trả phí theo mức sử dụng, hoặc không xác định được loại đăng nhập. Chọn "Vẫn sử dụng" để AI chạy qua kết nối này, và mỗi yêu cầu sẽ được tính vào tài khoản đó.',
+  connectTitle: 'Kết nối gói đăng ký để dùng AI',
+  connectBody: 'AI chạy bằng gói đăng ký Claude hoặc Codex mà bạn đã có. Không cần khóa API.',
+  connectProviderTitle: 'Kết nối {provider} hiện chưa dùng được',
+  connectKeyBody:
+    'Thiết lập {provider} chưa hoàn tất. Hãy hoàn tất trong Cài đặt hoặc chọn AI khác.',
+  errNotConnected: 'Chưa có AI nào được kết nối. Hãy kết nối gói đăng ký Claude hoặc Codex trước.',
+  errNotInstalled: 'Không tìm thấy chương trình {provider} trên máy tính này.',
+  errSignedOut: 'Phiên đăng nhập {provider} đã hết hạn. Hãy đăng nhập lại để tiếp tục.',
+  errRateLimit: 'Đã dùng hết giới hạn của gói đăng ký {provider}.',
+  errRateLimitReset:
+    'Đã dùng hết giới hạn của gói đăng ký {provider}. Giới hạn sẽ được đặt lại lúc {time}.',
+  errUnsafeTools:
+    'Chương trình {provider} khởi động khi các công cụ riêng của nó vẫn bật, nên lượt chạy đã bị dừng để đảm bảo an toàn.',
+  errMeteredNotAccepted:
+    'Kết nối {provider} bị tính phí theo mức sử dụng và bạn chưa cho phép. Chọn "Vẫn sử dụng" trong phần cài đặt kết nối để dùng.',
+  errNeedsUpdate:
+    'Chương trình {provider} quá cũ nên không dùng được tính năng này. Hãy cập nhật rồi thử lại.',
+  errHeadlessLimit: 'Đã đạt giới hạn mỗi giờ cho các yêu cầu tự động.',
+  errHeadlessLimitReset:
+    'Đã đạt giới hạn mỗi giờ cho các yêu cầu tự động. Có thể gửi lại yêu cầu lúc {time}.',
+  continueWith: 'Tiếp tục với {provider}',
+  continueMeteredNote:
+    'Kết nối {provider} không phải gói đăng ký: tiếp tục sẽ bị tính phí theo mức sử dụng.',
+  usageLine: 'Đã dùng {percent}% · đặt lại lúc {time}',
+  usageWindowFiveHour: 'Giới hạn 5 giờ',
+  usageWindowSevenDay: 'Giới hạn 7 ngày',
+  noticeTitle: 'Trước khi dùng AI bằng gói đăng ký của bạn',
+  noticeSend:
+    'Nội dung tài liệu và cuộc trò chuyện được gửi đến Anthropic hoặc OpenAI bằng chính tài khoản của bạn.',
+  noticeTraining:
+    'Nội dung đó có được dùng để huấn luyện AI hay không tùy thuộc vào cài đặt tài khoản của bạn tại công ty đó.',
+  noticeCodexHistory: 'Codex có thể lưu nội dung trò chuyện trên máy tính này.',
+  noticeAck: 'Đã hiểu',
+  codexNotice:
+    'Dùng gói đăng ký Codex bên trong một ứng dụng không phải là cách được OpenAI chính thức khuyến nghị.',
+  truncatedNotice: 'Nội dung nhập quá dài nên một phần đã bị cắt bớt trước khi gửi.',
+  pickerAuto: 'Tự động',
+  pickerAutoUsing: 'Tự động · {provider}',
+  pickerDefaultModel: 'Mô hình mặc định',
+  pickerSubscription: 'Gói đăng ký',
+  pickerPaid: 'Trả phí',
+  pickerPaidTitle: 'Tính phí theo mức sử dụng, không nằm trong gói đăng ký',
+  pickerNotConnected: 'Kết nối AI',
+} satisfies Record<keyof typeof zh, string>
