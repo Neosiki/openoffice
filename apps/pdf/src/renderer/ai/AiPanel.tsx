@@ -4,21 +4,34 @@ import {
   AiModelPicker,
   type AiModelPickerBridge,
 } from '@genoffice/ui'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { PointerEvent as ReactPointerEvent, ReactElement } from 'react'
 import { AgentLoop } from '@genoffice/agent-core'
-import { imageGenerationAvailable, type AiSettings } from '@genoffice/ai-provider/browser'
 import {
+  isSubscriptionProvider,
+  selectAiProvider,
+  type AiSettings,
+  type AiSubscriptionProviderId,
+  type AiSubscriptionUsage,
+} from '@genoffice/ai-provider/browser'
+import {
+  AiBlockedNotice,
   AiComposer,
+  AiConnectPrompt,
+  AiFirstConnectionNotice,
+  AiInputTruncatedNotice,
+  AiMark,
   AiQueueStrip,
   AI_QUEUE_LABELS,
   AiScopeQuote,
+  AiSubscriptionUsageLine,
   AiTypingIndicator,
   AiUsageChip,
   addTokenUsage,
   useChatRunQueue,
   type AiScopeQuoteData,
   type AiTokenUsageView,
+  type ChatRunQueue,
 } from '@genoffice/ui'
 import { aiLangDirective, t as tGlobal, useI18n } from '../i18n/locale'
 import { createFileNav, Markdown } from '@genoffice/ui'
@@ -27,6 +40,15 @@ import sendEnterOff from '../assets/send-enter-off.png'
 import sendStop from '../assets/send-stop.png'
 import { createPdfSkill } from './pdf-skill'
 import { createElectronTransport } from './transport'
+import {
+  aiBlockedRunOf,
+  aiSendGate,
+  mergeSubscriptionUsage,
+  withContinuedProvider,
+  withSubscriptionNoticeSeen,
+  type AiBlockedRun,
+} from './ai-connection'
+import { useSubscriptionConnection } from './useSubscriptionConnection'
 import { PDF_NAV_SCHEME, parsePdfNavHref } from './pdf-nav'
 import type { FileOpConfirm, PdfAiDeps, PdfAppDeps } from './tools'
 
@@ -71,6 +93,8 @@ interface ChatEntry {
   text: string
   streaming?: boolean
   isError?: boolean
+  /** the run stopped because its connection cannot go on: shown as the blocked notice */
+  blocked?: AiBlockedRun
   /** the run failed and this user message was rolled back out of the model context */
   undelivered?: boolean
   tools?: ToolActivity[]
@@ -94,7 +118,6 @@ const MODEL_BRIDGE: AiModelPickerBridge = {
   getSettings: () => window.pdfApi.getAiSettings(),
   setSettings: (settings) => window.pdfApi.setAiSettings(settings),
   onSettingsChanged: (handler) => window.pdfApi.onAiSettingsChanged(handler),
-  gskLoggedIn: () => window.pdfApi.gskStatus().then((s) => !!s?.loggedIn),
   openModelSettings: () => window.pdfApi.openAiModelSettings().catch(() => {}),
 }
 
@@ -122,15 +145,22 @@ export function AiPanel({
   const [prompt, setPrompt] = useState('')
   const [busy, setBusy] = useState(false)
   /** messages queued while a reply runs; the pump re-runs them through send on settle */
+  const msgQueueRef = useRef<ChatRunQueue<void> | null>(null)
   const msgQueue = useChatRunQueue<void>({
     busy,
     submit: (text) => {
       const loop = loopRef.current
       if (!loop || loop.busy) return false
+      // nothing can run (or the first-connection notice is due): the queue waits, paused
+      if (sendGate() !== 'run') {
+        msgQueueRef.current?.setPaused(true)
+        return false
+      }
       send(text, null)
       return true
     },
   })
+  msgQueueRef.current = msgQueue
   const [phase, setPhase] = useState<Phase>('thinking')
   /** the scope chip's expandable preview of the selected text */
   const [scopePreviewOpen, setScopePreviewOpen] = useState(false)
@@ -290,25 +320,71 @@ export function AiPanel({
   }, [panelWidth])
   const settingsRef = useRef<AiSettings | null>(null)
 
-  /** gsk login state for the cloud-tools gate (refreshed on mount and window focus) */
-  const gskLoggedInRef = useRef(false)
+  /** the subscription providers' connection (statuses + the connect cards' actions) */
+  const connection = useSubscriptionConnection()
+  const connectionRef = useRef(connection)
+  connectionRef.current = connection
+  /** the stored AI settings as last read (refreshed on mount, window focus and every save) */
+  const [aiSettings, setAiSettings] = useState<AiSettings | null>(null)
+  const aiSettingsRef = useRef<AiSettings | null>(null)
+  /** whether generate_image can run right now, as the app-wide AI host reports it */
+  const imageGenAvailableRef = useRef(false)
+  const refreshImageGen = useCallback((): void => {
+    void window.pdfApi
+      ?.imageGenerationAvailable()
+      .then((available) => {
+        imageGenAvailableRef.current = available === true
+      })
+      .catch(() => {
+        imageGenAvailableRef.current = false
+      })
+  }, [])
   useEffect(() => {
     let alive = true
     const refresh = () => {
       void window.pdfApi
-        ?.gskStatus()
+        ?.getAiSettings()
         .then((s) => {
-          if (alive) gskLoggedInRef.current = !!s?.loggedIn
+          if (!alive) return
+          aiSettingsRef.current = s
+          setAiSettings(s)
         })
         .catch(() => {})
+      refreshImageGen()
     }
     refresh()
+    const off = window.pdfApi?.onAiSettingsChanged(refresh)
     window.addEventListener('focus', refresh)
     return () => {
       alive = false
+      off?.()
       window.removeEventListener('focus', refresh)
     }
-  }, [])
+  }, [refreshImageGen])
+  // a connection change moves the image route too (the Codex subscription generates images)
+  useEffect(refreshImageGen, [refreshImageGen, connection.statuses])
+  /** what a send does right now; settings not read yet = let the main process answer */
+  const sendGate = () =>
+    aiSettingsRef.current
+      ? aiSendGate(aiSettingsRef.current, connectionRef.current.statuses)
+      : 'run'
+  /** a send was refused for want of a connection: the connect prompt stays until one can run */
+  const [connectAsked, setConnectAsked] = useState(false)
+  /** the first-connection notice is up, holding the scope of the request that raised it */
+  const [noticeFor, setNoticeFor] = useState<{ scope?: AiScopeQuoteData | null } | null>(null)
+  /** rate-limit windows the subscription CLI reported (latest per provider and window) */
+  const [subscriptionUsage, setSubscriptionUsage] = useState<AiSubscriptionUsage[]>([])
+  /** the last turn's input was cut to fit a limit */
+  const [inputTruncated, setInputTruncated] = useState(false)
+  /** structured cause of the failure the loop is about to report through onError */
+  const streamErrorRef = useRef<AiBlockedRun | null>(null)
+  /** the provider a request would run on right now (null until the settings are read) */
+  const providerChoice = aiSettings ? selectAiProvider(aiSettings, connection.statuses) : null
+  const aiConnected = providerChoice?.connected === true
+  // once a provider can run again the connect prompt has done its job
+  useEffect(() => {
+    if (aiConnected) setConnectAsked(false)
+  }, [aiConnected])
   const langRef = useRef(lang)
   langRef.current = lang
   const apiRef = useRef(api)
@@ -416,12 +492,19 @@ export function AiPanel({
       deleteImage: (ref) => apiRef.current.deleteImage(ref),
       searchImages: (query, max) => apiRef.current.searchImages(query, max),
       generateImage: (op) => apiRef.current.generateImage(op),
-      imageGenAvailable: () =>
-        imageGenerationAvailable(settingsRef.current, gskLoggedInRef.current),
+      imageGenAvailable: () => imageGenAvailableRef.current,
       fetchImage: (url) => apiRef.current.fetchImage(url),
     }
     loopRef.current = new AgentLoop({
-      transport: createElectronTransport(() => settingsRef.current!),
+      transport: createElectronTransport(() => settingsRef.current!, {
+        lang: () => langRef.current,
+        onStreamError: (error) => {
+          streamErrorRef.current = aiBlockedRunOf(error)
+        },
+        onSubscriptionUsage: (usage) =>
+          setSubscriptionUsage((prev) => mergeSubscriptionUsage(prev, usage)),
+        onInputTruncated: () => setInputTruncated(true),
+      }),
       skill: createPdfSkill(deps),
       systemSuffix: () => aiLangDirective(langRef.current),
       events: {
@@ -492,6 +575,18 @@ export function AiPanel({
           }
         },
         onError: (error) => {
+          const blocked = streamErrorRef.current
+          streamErrorRef.current = null
+          if (blocked) {
+            // queued messages must not be fired into the same blocked connection
+            msgQueueRef.current?.hold()
+            // the shown status may be stale (a login that expired mid-run): look again,
+            // and offer the connect cards if the provider turns out to be unusable
+            if (blocked.provider && isSubscriptionProvider(blocked.provider)) {
+              connectionRef.current.recheck(blocked.provider)
+            }
+            setConnectAsked(true)
+          }
           setChat((prev) => {
             const next = [...prev]
             // the loop rolled this run's user message out of the model context — surface that
@@ -504,7 +599,13 @@ export function AiPanel({
             }
             const last = next.at(-1)
             if (last?.role === 'assistant') {
-              next[next.length - 1] = { ...last, streaming: false, text: error, isError: true }
+              next[next.length - 1] = {
+                ...last,
+                streaming: false,
+                text: error,
+                isError: true,
+                ...(blocked ? { blocked } : {}),
+              }
             }
             return next
           })
@@ -518,7 +619,7 @@ export function AiPanel({
     if (stickToBottomRef.current) {
       chatRef.current?.scrollTo({ top: chatRef.current.scrollHeight })
     }
-  }, [chat, busy, fileOpConfirm])
+  }, [chat, busy, fileOpConfirm, connectAsked, noticeFor, inputTruncated])
 
   const onChatScroll = (): void => {
     const el = chatRef.current
@@ -532,6 +633,18 @@ export function AiPanel({
     const loop = loopRef.current
     if (!instruction || !loop || loop.busy) return
     stickToBottomRef.current = true
+    const gate = sendGate()
+    if (gate !== 'run') {
+      // nothing is sent: the request stays in the composer while the panel shows what
+      // is missing (a connection) or what must be read first (the first-connection notice)
+      setPrompt(instruction)
+      if (gate === 'connect') setConnectAsked(true)
+      else setNoticeFor({ scope: retryScope })
+      return
+    }
+    setNoticeFor(null)
+    setInputTruncated(false)
+    streamErrorRef.current = null
     const scope = retryScope !== undefined ? (retryScope ?? undefined) : selectionScopeQuote()
     persistMessage('user', instruction, undefined, scope)
     segTextRef.current = ''
@@ -565,6 +678,41 @@ export function AiPanel({
   const stop = (): void => {
     msgQueue.hold()
     loopRef.current?.cancel()
+  }
+
+  /** "Got it" on the first-connection notice: remember it, then send what was held back */
+  const acknowledgeNotice = (): void => {
+    const held = noticeFor
+    const text = prompt
+    setNoticeFor(null)
+    void (async () => {
+      try {
+        const next = withSubscriptionNoticeSeen(await window.pdfApi.getAiSettings())
+        await window.pdfApi.setAiSettings(next)
+        aiSettingsRef.current = next
+        setAiSettings(next)
+      } catch {
+        return
+      }
+      if (held) send(text, held.scope)
+    })()
+  }
+
+  /** "Continue with <provider>" on a blocked run: select that provider and rerun the request */
+  const continueWith = (provider: AiSubscriptionProviderId): void => {
+    if (loopRef.current?.busy) return
+    const request = [...chat].reverse().find((entry) => entry.role === 'user')
+    void (async () => {
+      try {
+        const next = withContinuedProvider(await window.pdfApi.getAiSettings(), provider)
+        await window.pdfApi.setAiSettings(next)
+        aiSettingsRef.current = next
+        setAiSettings(next)
+      } catch {
+        return
+      }
+      if (request) send(request.text, request.scope ?? null)
+    })()
   }
 
   /** Enter while a reply runs: the draft joins the queue above the composer */
@@ -684,8 +832,8 @@ export function AiPanel({
       />
       <header className="ai-panel-header">
         <span className="ai-panel-title">
-          <GensparkMark size={22} />
-          Genspark
+          <AiMark size={22} />
+          {t('ribbonAiAssistant')}
         </span>
         <div className="ai-panel-header-actions">
           <AiPanelSideButton
@@ -773,7 +921,7 @@ export function AiPanel({
           return (
             <div
               key={i}
-              className={`ai-msg ai-msg-assistant${entry.isError ? ' ai-msg-error' : ''}`}
+              className={`ai-msg ai-msg-assistant${entry.isError && !entry.blocked ? ' ai-msg-error' : ''}`}
             >
               {hasTools && <ToolChipList tools={entry.tools!} />}
               {entry.usage && (
@@ -781,10 +929,24 @@ export function AiPanel({
                   <AiUsageChip usage={entry.usage} lang={lang} />
                 </div>
               )}
-              {entry.text && (
-                <div dir="auto">
-                  <Markdown text={entry.text} navs={[pdfNav, fileNav]} />
-                </div>
+              {entry.blocked ? (
+                <AiBlockedNotice
+                  kind={entry.blocked.kind}
+                  provider={entry.blocked.provider}
+                  resetsAt={entry.blocked.resetsAt}
+                  message={entry.text}
+                  settings={aiSettings ?? {}}
+                  // only the run that just stopped can be continued on another connection
+                  statuses={i === chat.length - 1 && !busy ? connection.statuses : {}}
+                  lang={lang}
+                  onContinueWith={continueWith}
+                />
+              ) : (
+                entry.text && (
+                  <div dir="auto">
+                    <Markdown text={entry.text} navs={[pdfNav, fileNav]} />
+                  </div>
+                )
               )}
             </div>
           )
@@ -814,6 +976,30 @@ export function AiPanel({
               </button>
             </div>
           </div>
+        )}
+        {connectAsked && providerChoice && !providerChoice.connected && (
+          <AiConnectPrompt
+            choice={providerChoice}
+            statuses={connection.statuses}
+            lang={lang}
+            disabled={connection.busy}
+            onOpenSettings={() => void window.pdfApi.openAiModelSettings().catch(() => {})}
+            onInstall={connection.install}
+            onLogin={connection.login}
+            onRecheck={connection.recheck}
+            onAcceptMetered={connection.acceptMetered}
+            onOpenInstallHelp={connection.openInstallHelp}
+          />
+        )}
+        {noticeFor && aiConnected && (
+          <AiFirstConnectionNotice
+            lang={lang}
+            codexKeepsHistory={false}
+            onAcknowledge={acknowledgeNotice}
+          />
+        )}
+        {inputTruncated && (
+          <AiInputTruncatedNotice lang={lang} onDismiss={() => setInputTruncated(false)} />
         )}
         {/* In-progress state: a standalone three-dot row at the end of the stream, kept until done */}
         {busy && <AiTypingIndicator label={typingLabel} />}
@@ -893,8 +1079,19 @@ export function AiPanel({
           iconOnly
           footerStart={
             <>
-              <AiModelPicker bridge={MODEL_BRIDGE} lang={lang} />
+              <AiModelPicker
+                bridge={MODEL_BRIDGE}
+                lang={lang}
+                subscriptionStatuses={connection.statuses}
+              />
               {sessionUsage && <AiUsageChip usage={sessionUsage} session lang={lang} />}
+              <AiSubscriptionUsageLine
+                usage={subscriptionUsage.filter(
+                  (entry) =>
+                    providerChoice?.connected && entry.provider === providerChoice.provider,
+                )}
+                lang={lang}
+              />
             </>
           }
           sendIconEnabled={<img src={sendEnterOn} alt="" aria-hidden />}
@@ -1088,26 +1285,6 @@ function IconCollapse(): ReactElement {
       <rect x="1.5" y="2.5" width="13" height="11" rx="1" />
       <path d="M5.5 2.5v11" />
       <path d="M12.5 8H8.1M9.8 5.9 7.7 8l2.1 2.1" strokeWidth="1.3" strokeLinejoin="round" />
-    </svg>
-  )
-}
-
-/** Genspark brand mark (rounded-square sparkle badge), inline so it renders
- * crisply at device resolution instead of going through <img> rasterization */
-export function GensparkMark({ size = 18 }: { size?: number }): React.JSX.Element {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 130 130.025"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      aria-hidden
-    >
-      <path
-        d="M105.115 0H24.6428C11.0443 0 0 11.0686 0 24.6915V105.334C0 118.981 11.0199 130.025 24.6428 130.025H105.115C118.714 130.025 129.758 118.957 129.758 105.334V24.6915C129.758 11.0443 118.714 0 105.115 0ZM71.5201 35.2735C85.5078 33.1571 86.7729 31.9164 88.865 17.88C88.938 17.4421 89.3028 17.1259 89.7407 17.1259C90.1786 17.1259 90.5435 17.4421 90.6164 17.88C92.7328 31.8921 93.9735 33.1571 107.961 35.2735C108.399 35.3465 108.715 35.7114 108.715 36.1493C108.715 36.5871 108.399 36.952 107.961 37.025C93.9249 39.1414 92.7085 40.4064 90.5677 54.6131C90.5191 54.9537 90.2516 55.197 89.911 55.197C89.5704 55.197 89.3028 54.9537 89.2542 54.6131C87.1134 40.4064 85.5565 39.1658 71.4958 37.025C71.0579 36.952 70.7417 36.5871 70.7417 36.1493C70.7417 35.7114 71.0579 35.3465 71.4958 35.2735H71.5201ZM101.758 78.5261C101.758 78.8181 101.563 79.037 101.271 79.0856C92.3193 80.4236 91.5652 81.2264 90.2029 90.2759C90.1786 90.4948 89.9839 90.6408 89.7893 90.6408C89.5703 90.6408 89.4001 90.4948 89.3758 90.2759C88.0135 81.2507 87.0161 80.4479 78.0883 79.0856C77.7964 79.037 77.6017 78.7937 77.6017 78.5261C77.6017 78.2342 77.7964 78.0153 78.0883 77.9666C86.9918 76.6287 87.7703 75.8259 89.1326 66.898C89.1812 66.6061 89.4244 66.4115 89.692 66.4115C89.9839 66.4115 90.2028 66.6061 90.2515 66.898C91.5894 75.8259 92.3923 76.6043 101.296 77.9666C101.588 78.0153 101.782 78.2585 101.782 78.5261H101.758ZM16.5178 54.8077C16.5178 54.1023 17.0286 53.4941 17.7341 53.3968C40.1388 50.0154 42.1093 47.9963 45.4907 25.5672C45.588 24.8861 46.1961 24.3509 46.9016 24.3509C47.6071 24.3509 48.191 24.8617 48.3126 25.5672C51.694 47.9963 53.6887 50.0154 76.0691 53.3968C76.7503 53.4941 77.2855 54.1023 77.2855 54.8077C77.2855 55.5132 76.7746 56.1214 76.0691 56.2187C53.5914 59.6244 51.6696 61.6192 48.2639 84.3645C48.1909 84.8754 47.7287 85.2889 47.2179 85.2889C46.707 85.2889 46.2448 84.8997 46.1718 84.3645C42.7418 61.6435 40.2604 59.6244 17.7584 56.2187C17.0772 56.1214 16.542 55.5132 16.542 54.8077H16.5178ZM112.097 109.591C112.097 111.416 110.613 112.9 108.813 112.9H21.2614C19.4369 112.9 17.9774 111.416 17.9774 109.591V102.658C17.9774 100.834 19.4612 99.3497 21.2614 99.3497H108.813C110.637 99.3497 112.097 100.834 112.097 102.658V109.591Z"
-        fill="currentColor"
-      />
     </svg>
   )
 }
