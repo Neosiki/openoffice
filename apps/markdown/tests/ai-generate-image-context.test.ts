@@ -1,3 +1,4 @@
+import { EventEmitter } from 'node:events'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
@@ -5,7 +6,26 @@ import { describe, expect, it, vi } from 'vitest'
 type IpcHandler = (event: { sender: { id: number } }, ...args: unknown[]) => unknown
 
 const handlers = new Map<string, IpcHandler>()
-const generateImageTool = vi.fn(async (..._args: unknown[]) => ({ url: 'file:///generated.png' }))
+const generateImageTool = vi.fn(
+  async (..._args: unknown[]): Promise<{ url?: string; error?: string }> => ({
+    url: 'file:///generated.png',
+  }),
+)
+let nextId = 0
+/** a tab's webContents: an id, and the `destroyed` event of a closed tab */
+class FakeContents extends EventEmitter {
+  id = ++nextId
+  destroyed = false
+  isDestroyed = () => this.destroyed
+  loadFile = vi.fn()
+  loadURL = vi.fn()
+  send = vi.fn()
+  setWindowOpenHandler = vi.fn()
+  destroy(): void {
+    this.destroyed = true
+    this.emit('destroyed')
+  }
+}
 const statuses = {
   'claude-code': { provider: 'claude-code', state: 'ready', meteredAccepted: false },
   codex: { provider: 'codex', state: 'ready', meteredAccepted: false },
@@ -36,15 +56,7 @@ vi.mock('electron', () => ({
   protocol: { handle: vi.fn() },
   shell: { openExternal: vi.fn() },
   WebContentsView: class {
-    webContents = {
-      id: 1,
-      isDestroyed: vi.fn(() => false),
-      loadFile: vi.fn(),
-      loadURL: vi.fn(),
-      once: vi.fn(),
-      send: vi.fn(),
-      setWindowOpenHandler: vi.fn(),
-    }
+    webContents = new FakeContents()
   },
 }))
 
@@ -59,7 +71,8 @@ vi.mock('@genoffice/electron-utils', () => ({
   showSaveDialogWithMemory: vi.fn(),
 }))
 
-vi.mock('@genoffice/ai-search', () => ({
+vi.mock('@genoffice/ai-search', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@genoffice/ai-search')>()),
   generateImageTool: (...args: unknown[]) => generateImageTool(...args),
   documentMediaRoots: vi.fn(() => ['/doc-dir']),
 }))
@@ -69,6 +82,7 @@ vi.mock('@genoffice/ai-provider/subscription', () => ({
   sharedSubscriptionStatuses: vi.fn(() => statuses),
 }))
 
+import { abortMediaCalls } from '@genoffice/ai-search'
 import { createMarkdownView } from '../src/main/markdown-main'
 import { MARKDOWN_CHANNELS } from '../src/shared/ipc'
 
@@ -91,8 +105,52 @@ describe('markdown:ai-generate-image', () => {
     expect(options).toEqual({
       mediaRoots: ['/doc-dir'],
       context: { path: 'screen', statuses },
+      signal: expect.any(AbortSignal),
     })
+    expect((options as { signal: AbortSignal }).signal.aborted).toBe(false)
     // no login gate of a removed provider is passed along any more
     expect(options).not.toHaveProperty('notLoggedInError')
+  })
+
+  describe('cancelling', () => {
+    /** a request that stays in flight until the test answers it */
+    function startRequest() {
+      let answer!: (result: { url?: string; error?: string }) => void
+      generateImageTool.mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            answer = resolve
+          }),
+      )
+      const sender = createMarkdownView(null).webContents as unknown as FakeContents
+      const result = handlers.get(MARKDOWN_CHANNELS.aiGenerateImage)!(
+        { sender },
+        { prompt: 'a lighthouse at dusk' },
+      )
+      const options = generateImageTool.mock.calls.at(-1)![2] as { signal: AbortSignal }
+      return { sender, signal: options.signal, result, answer }
+    }
+
+    it('aborts when the tab that asked is closed', async () => {
+      const request = startRequest()
+      expect(request.signal.aborted).toBe(false)
+      request.sender.destroy()
+      expect(request.signal.aborted).toBe(true)
+      request.answer({ error: 'cancelled' })
+      await request.result
+    })
+
+    it('aborts when the AI run of its tab is stopped, and leaves another tab alone', async () => {
+      const stopped = startRequest()
+      const other = startRequest()
+      // what the AI handlers do on the stop message (ai:stream-cancel) of a tab
+      abortMediaCalls(stopped.sender.id)
+      expect(stopped.signal.aborted).toBe(true)
+      expect(other.signal.aborted).toBe(false)
+      stopped.answer({ error: 'cancelled' })
+      other.answer({ url: 'file:///generated.png' })
+      expect(await other.result).toEqual({ url: 'file:///generated.png' })
+      await stopped.result
+    })
   })
 })

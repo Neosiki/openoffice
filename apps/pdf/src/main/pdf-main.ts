@@ -29,7 +29,7 @@ import {
   rendererUrl,
 } from '@genoffice/electron-utils'
 import { brandText, createI18n, getUiLang } from '@genoffice/i18n'
-import { generateImageTool, documentMediaRoots } from '@genoffice/ai-search'
+import { generateImageTool, documentMediaRoots, withMediaCallSignal } from '@genoffice/ai-search'
 import { sharedSubscriptionStatuses } from '@genoffice/ai-provider/subscription'
 import { PDF_CHANNELS } from '../shared/ipc'
 import { buildExportImagePaths, hasValidExportPageNumbers } from './export-images'
@@ -1760,21 +1760,25 @@ function registerPdfIpc(): void {
   // pdf-owned (unlike ai:image-search / ai:fetch-image, which the shell registers app-wide):
   // slides' ai:generate-image is only registered once a slides view exists, so pdf needs its own
   ipcMain.handle(PDF_CHANNELS.generateImage, (e, op: { prompt?: unknown; aspectRatio?: unknown }) =>
-    generateImageTool(
-      join(app.getPath('userData'), 'ai-settings.json'),
-      {
-        prompt: String(op?.prompt ?? ''),
-        aspectRatio: op?.aspectRatio ? String(op.aspectRatio) : undefined,
-      },
-      {
-        // pdf keeps its media (exported/edited images) beside the open file
-        mediaRoots: documentMediaRoots(
-          openPathByWc.get(e.sender.id),
-          join(app.getPath('temp'), 'genoffice-pasted'),
-        ),
-        // a user request from the AI panel: the connected subscription may be used
-        context: { path: 'screen', statuses: sharedSubscriptionStatuses() },
-      },
+    // ends with its tab, or when the tab's AI run is stopped
+    withMediaCallSignal(e.sender, (signal) =>
+      generateImageTool(
+        join(app.getPath('userData'), 'ai-settings.json'),
+        {
+          prompt: String(op?.prompt ?? ''),
+          aspectRatio: op?.aspectRatio ? String(op.aspectRatio) : undefined,
+        },
+        {
+          // pdf keeps its media (exported/edited images) beside the open file
+          mediaRoots: documentMediaRoots(
+            openPathByWc.get(e.sender.id),
+            join(app.getPath('temp'), 'genoffice-pasted'),
+          ),
+          // a user request from the AI panel: the connected subscription may be used
+          context: { path: 'screen', statuses: sharedSubscriptionStatuses() },
+          signal,
+        },
+      ),
     ),
   )
 

@@ -123,6 +123,16 @@ describe('createIpcTransport', () => {
     expect(cancelled).toEqual([started[0]!.requestId])
   })
 
+  it('cancel still reaches the bridge after the turn ended', () => {
+    // the loop stops a run whose tools are executing through the handle of the turn that
+    // already ended; the main process ends the window's media tool calls on that message
+    const { started, cancelled, cb, handle, emit } = setup()
+    emit({ type: 'done' })
+    expect(cb.onDone).toHaveBeenCalledTimes(1)
+    handle.cancel()
+    expect(cancelled).toEqual([started[0]!.requestId])
+  })
+
   it('maps a timeout error code to the localized timeout message', () => {
     const { cb, emit } = setup()
     emit({ type: 'error', error: 'AI request timed out: no data received', errorCode: 'timeout' })

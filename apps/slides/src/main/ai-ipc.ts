@@ -41,7 +41,9 @@ import {
   generateImageTool,
   analyzeMediaTool,
   aiToolCapabilities,
+  abortMediaCalls,
   documentMediaRoots,
+  withMediaCallSignal,
   type AiToolCallContext,
   type AiToolCapabilities,
 } from '@genoffice/ai-search'
@@ -197,8 +199,10 @@ export function registerAiIpc(): void {
     }
   })
 
-  ipcMain.handle('ai:stream-cancel', (_event, requestId: string) => {
+  ipcMain.handle('ai:stream-cancel', (event, requestId: string) => {
     activeAiStreams.get(requestId)?.abort()
+    // Stop while a tool runs names a turn that already ended: end the window's media calls too
+    abortMediaCalls(event.sender.id)
   })
 
   // Search tools (content + images), Serper with DuckDuckGo fallback
@@ -240,6 +244,7 @@ export function registerSlidesOnlyAiIpc(): void {
   )
 
   // AI image generation / media analysis. Answers with an error text when no route is available.
+  // Either call ends with its window, or when the window's AI run is stopped.
   ipcMain.handle(
     'ai:generate-image',
     async (
@@ -253,19 +258,21 @@ export function registerSlidesOnlyAiIpc(): void {
         transparentBackground?: boolean
       },
     ) => {
-      return generateImageTool(
-        AI_SETTINGS_PATH(),
-        {
-          prompt: String(op.prompt),
-          model: op.model ? String(op.model) : undefined,
-          referenceImageUrls: Array.isArray(op.referenceImageUrls)
-            ? op.referenceImageUrls.map(String)
-            : undefined,
-          aspectRatio: op.aspectRatio ? String(op.aspectRatio) : undefined,
-          imageSize: op.imageSize ? String(op.imageSize) : undefined,
-          transparentBackground: op.transparentBackground === true,
-        },
-        { mediaRoots: slidesMediaRoots(event.sender.id), context: screenToolContext() },
+      return withMediaCallSignal(event.sender, (signal) =>
+        generateImageTool(
+          AI_SETTINGS_PATH(),
+          {
+            prompt: String(op.prompt),
+            model: op.model ? String(op.model) : undefined,
+            referenceImageUrls: Array.isArray(op.referenceImageUrls)
+              ? op.referenceImageUrls.map(String)
+              : undefined,
+            aspectRatio: op.aspectRatio ? String(op.aspectRatio) : undefined,
+            imageSize: op.imageSize ? String(op.imageSize) : undefined,
+            transparentBackground: op.transparentBackground === true,
+          },
+          { mediaRoots: slidesMediaRoots(event.sender.id), context: screenToolContext(), signal },
+        ),
       )
     },
   )
@@ -273,13 +280,15 @@ export function registerSlidesOnlyAiIpc(): void {
   ipcMain.handle(
     'ai:analyze-media',
     async (event, op: { mediaUrls: string[]; requirements: string }) => {
-      return analyzeMediaTool(
-        AI_SETTINGS_PATH(),
-        {
-          mediaUrls: (op.mediaUrls ?? []).map(String),
-          requirements: String(op.requirements ?? ''),
-        },
-        { mediaRoots: slidesMediaRoots(event.sender.id), context: screenToolContext() },
+      return withMediaCallSignal(event.sender, (signal) =>
+        analyzeMediaTool(
+          AI_SETTINGS_PATH(),
+          {
+            mediaUrls: (op.mediaUrls ?? []).map(String),
+            requirements: String(op.requirements ?? ''),
+          },
+          { mediaRoots: slidesMediaRoots(event.sender.id), context: screenToolContext(), signal },
+        ),
       )
     },
   )
