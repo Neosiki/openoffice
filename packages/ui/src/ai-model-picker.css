@@ -140,3 +140,35 @@
   border-radius: 0 0 var(--radius-6) var(--radius-6);
   color: var(--text-secondary);
 }
+
+/* the automatic entry is a single row with its own mark, not a list under a head */
+.ai-model-auto {
+  padding-left: 8px;
+}
+
+/* tells a subscription login apart from the same vendor's API-key provider */
+.ai-model-tag {
+  flex-shrink: 0;
+  padding: 0 5px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-30);
+  color: var(--text-dim);
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 14px;
+  white-space: nowrap;
+}
+
+/* cost marker on a connection charged by usage (an accepted metered login) */
+.ai-model-cost {
+  flex-shrink: 0;
+  padding: 0 5px;
+  border: 1px solid var(--danger-border);
+  border-radius: var(--radius-30);
+  background: var(--danger-bg);
+  color: var(--danger);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 14px;
+  white-space: nowrap;
+}

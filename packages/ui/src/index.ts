@@ -141,6 +141,58 @@ export {
   type AiModelPickerGroup,
   type AiModelPickerSelection,
 } from './ai-model-picker-options'
+export {
+  aiProviderPickerGroups,
+  aiProviderPickerSelection,
+  withAiProviderSelection,
+  type AiProviderPickerCurrent,
+  type AiProviderPickerGroup,
+  type AiProviderPickerSelection,
+} from './ai-model-picker-options'
+export {
+  AI_BLOCKED_RUN_KINDS,
+  AI_SUBSCRIPTION_INSTALL_HELP_URLS,
+  AI_SUBSCRIPTION_USAGE_THRESHOLD,
+  aiConnectPromptView,
+  aiContinueOption,
+  aiProviderDisplayName,
+  aiRunErrorText,
+  aiSubscriptionCardView,
+  aiSubscriptionProviderName,
+  aiSubscriptionStatusOf,
+  aiSubscriptionUsageAlerts,
+  aiSubscriptionUsageLabel,
+  aiSubscriptionUsageText,
+  aiSubscriptionVendorName,
+  aiUsagePercent,
+  formatAiResetTime,
+  isAiBlockedRunKind,
+  type AiBlockedRunKind,
+  type AiConnectPromptView,
+  type AiContinueOption,
+  type AiRunErrorCause,
+  type AiSubscriptionCardAction,
+  type AiSubscriptionCardTone,
+  type AiSubscriptionCardView,
+} from './ai-subscription'
+export {
+  AI_SUBSCRIPTION_STRINGS,
+  aiSubscriptionText,
+  type AiSubscriptionStringKey,
+} from './strings-ai-subscription'
+export {
+  AiConnectPrompt,
+  AiSubscriptionCard,
+  type AiSubscriptionCardActions,
+} from './AiSubscriptionCard'
+export { AiBlockedNotice } from './AiBlockedNotice'
+export { AiSubscriptionUsageLine } from './AiSubscriptionUsageLine'
+export {
+  AiCodexNotice,
+  AiFirstConnectionNotice,
+  AiInputTruncatedNotice,
+  AiMeteredWarning,
+} from './AiSubscriptionNotices'
 export { ProviderLogo } from './provider-logos'
 export { useRedactLabelField } from './use-redact-label'
 export type { RedactLabelField } from './use-redact-label'
