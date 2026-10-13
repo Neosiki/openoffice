@@ -28,7 +28,7 @@ import { basename, dirname, join, resolve } from 'node:path'
 import { cleanupExpiredGeneratedPages } from './generated-page-temp'
 import { exportSlidesPdf } from './pdf-export'
 import { printSlidesHtml } from './print-window'
-import { gskApiKey, gskSlideGenerate, setGskProxyUrl } from '@genoffice/ai-search'
+import { shutdownSubscriptionChildren } from '@genoffice/ai-provider/subscription'
 import {
   appMenuLabels,
   configuredDefaultSaveDir,
@@ -290,8 +290,8 @@ let slideClipboard: { bundles: SlideBundle[]; pngs?: string[] } | null = null
 /** The immediately preceding slide paste per webContents, so the paste-options floater can redo it with another mode. */
 const lastSlidePaste = new Map<number, { afterIndex: number; undoLen: number }>()
 
-// Cloud-generated single-page pptx: marker strings travel in pageMarkers slots; only paths issued
-// by slides:cloud-page-generate are readable (the renderer can't point the reader at arbitrary files)
+// Generated single-page pptx: marker strings travel in pageMarkers slots; only paths issued
+// by slides:local-page-generate are readable (the renderer can't point the reader at arbitrary files)
 const CLOUD_PAGE_PREFIX = 'cloudpptx:'
 const issuedCloudPages = new Set<string>()
 import { registerPresenterIpc } from './presenter-show'
@@ -1770,89 +1770,9 @@ export function registerSlidesIpc(): void {
     }
     return rendered ? { slide: rendered } : null
   })
-  // ── Cloud single-page generation (gsk slide_generate): brief → cloud HTML+conversion → one-slide
-  // pptx saved to a temp file. Returns a marker string that slides:land-generated-pages redeems for
-  // the bytes. Enabled when gsk is logged in; GENOFFICE_CLOUD_SLIDE=0 is the kill switch.
-  const cloudSlideEnabled = () => process.env.GENOFFICE_CLOUD_SLIDE !== '0' && !!gskApiKey()
-
-  ipcMain.handle('slides:cloud-gen-status', () => ({ enabled: cloudSlideEnabled() }))
-
-  // In-flight cloud generations keyed by the requesting window: stop in one
-  // panel aborts all of that window's pages (a deck batch shares one stop
-  // signal) and none of another window's
-  const cloudPageAborts = new Map<number, Set<AbortController>>()
-
-  ipcMain.handle('slides:cloud-page-cancel', (e) => {
-    const aborts = cloudPageAborts.get(e.sender.id)
-    if (!aborts) return
-    for (const c of aborts) c.abort()
-    cloudPageAborts.delete(e.sender.id)
-  })
-
-  ipcMain.handle(
-    'slides:cloud-page-generate',
-    async (
-      e,
-      op: {
-        brief: string
-        title?: string
-        styleSkill?: string
-        deckContext?: Record<string, unknown>
-        images?: { url: string; caption?: string }[]
-        width?: number
-        height?: number
-      },
-    ): Promise<{ ok: boolean; marker?: string; error?: string }> => {
-      if (!cloudSlideEnabled()) return { ok: false, error: 'cloud slide generation is disabled' }
-      try {
-        // Ultra resolves to the opus-class slide model server-side; standard is the
-        // lighter MiniMax M3 model. Keep an explicit escape hatch for quality
-        // comparisons and emergency rollback.
-        const tier = process.env.GENOFFICE_CLOUD_SLIDE_TIER === 'standard' ? 'standard' : 'ultra'
-        const started = Date.now()
-        // Stop must reach the cloud request: without this the generation keeps
-        // running (and billing) after the user pressed stop
-        const abort = new AbortController()
-        const windowAborts = cloudPageAborts.get(e.sender.id) ?? new Set<AbortController>()
-        windowAborts.add(abort)
-        cloudPageAborts.set(e.sender.id, windowAborts)
-        let bytes: Uint8Array
-        let model: string
-        try {
-          ;({ bytes, model } = await gskSlideGenerate({
-            tier,
-            brief: String(op.brief ?? ''),
-            title: op.title ? String(op.title) : undefined,
-            styleSkill: op.styleSkill ? String(op.styleSkill) : undefined,
-            deckContext: op.deckContext,
-            images: Array.isArray(op.images) ? op.images : undefined,
-            width: op.width,
-            height: op.height,
-            signal: abort.signal,
-          }))
-        } finally {
-          windowAborts.delete(abort)
-          if (windowAborts.size === 0) cloudPageAborts.delete(e.sender.id)
-        }
-        console.log(
-          `[cloud-slide] page generated: tier=${tier} model=${model} bytes=${bytes.length} ms=${Date.now() - started}`,
-        )
-        const dir = join(app.getPath('temp'), 'genoffice-cloud-pages')
-        mkdirSync(dir, { recursive: true })
-        const path = join(dir, `${randomUUID()}.pptx`)
-        await writeFile(path, bytes)
-        issuedCloudPages.add(path)
-        return { ok: true, marker: CLOUD_PAGE_PREFIX + path }
-      } catch (err) {
-        return { ok: false, error: err instanceof Error ? err.message : String(err) }
-      }
-    },
-  )
-
-  // ── Local single-page generation (no gsk needed, e.g. BYOK): a JSON slide spec written by
-  // the renderer's LLM call is built directly into a one-slide pptx with pptx-engine
-  // primitives — no HTML intermediate. Returns the same marker kind as the cloud path, so
-  // landing (slides:land-generated-pages) is shared.
+  // ── Single-page generation: a JSON slide spec written by the renderer's LLM call is built
+  // directly into a one-slide pptx with pptx-engine primitives — no HTML intermediate.
+  // Returns a marker string that slides:land-generated-pages redeems for the bytes.
   ipcMain.handle(
     'slides:local-page-generate',
     async (
@@ -1928,8 +1848,8 @@ export function registerSlidesIpc(): void {
         })
       | { error: string }
     > => {
-      // Every page arrives as a cloud marker (cloudpptx:<path> written by
-      // slides:cloud-page-generate, pointing at a one-slide pptx temp file); this handler only
+      // Every page arrives as a marker (cloudpptx:<path> written by
+      // slides:local-page-generate, pointing at a one-slide pptx temp file); this handler only
       // reads and lands the bytes.
       // replace: assemble the whole batch into one multi-page pptx as the new deck base.
       // append/replace_at/insert_at: land the extracted pages as insertSlidePptx ops
@@ -5048,9 +4968,6 @@ export function installSlidesMenu(): void {
  */
 async function applyMainProcessProxy(): Promise<void> {
   const setDispatcher = async (proxyUrl: string) => {
-    // spawned gsk CLI children do their own fetch and never see the
-    // dispatcher below — forward the proxy to them via env
-    setGskProxyUrl(proxyUrl)
     try {
       const { ProxyAgent, setGlobalDispatcher } = await import('undici')
       setGlobalDispatcher(new ProxyAgent(proxyUrl))
@@ -5074,9 +4991,8 @@ async function applyMainProcessProxy(): Promise<void> {
   // No environment variables: read the system proxy (requires app ready)
   try {
     await app.whenReady()
-    // PAC/rule proxies answer per-host: probe the host the login flow, the
-    // Genspark LLM proxy and the gsk CLI actually target
-    const resolved = await electronSession.defaultSession.resolveProxy('https://www.genspark.ai/')
+    // PAC/rule proxies answer per-host: probe a host the AI providers actually target
+    const resolved = await electronSession.defaultSession.resolveProxy('https://api.anthropic.com/')
     // resolveProxy returns strings like "PROXY 127.0.0.1:1087" or "DIRECT"
     const m = /PROXY\s+([^;]+)/i.exec(resolved || '')
     if (m) {
@@ -5117,6 +5033,10 @@ export function startSlidesStandalone(): void {
     app.quit()
     return
   }
+  // Standalone owns the process (in the shell, the shell does this): the subscription
+  // programs started for AI runs must not outlive the app
+  app.on('will-quit', () => shutdownSubscriptionChildren())
+  process.on('exit', () => shutdownSubscriptionChildren())
 
   app.on('open-file', (event, path) => {
     event.preventDefault()

@@ -3,6 +3,13 @@ import {
   AiPanelSideButton,
   AiModelPicker,
   type AiModelPickerBridge,
+  AiBlockedNotice,
+  AiConnectPrompt,
+  AiFirstConnectionNotice,
+  AiInputTruncatedNotice,
+  AiMark,
+  AiSubscriptionUsageLine,
+  aiRunErrorText,
 } from '@genoffice/ui'
 import React, { useEffect, useRef, useState, useCallback } from 'react'
 import {
@@ -10,15 +17,17 @@ import {
   composeSkills,
   IPC_STREAM_SILENCE_TIMEOUT_MS,
   type AgentImage,
+  type IpcStreamError,
   type ToolDisplay,
 } from '@genoffice/agent-core'
 import type { RenderSlide } from '@genoffice/pptx-render'
-import {
-  cloudToolsEnabled,
-  imageGenerationAvailable,
-  mediaAnalysisAvailable,
-} from '@genoffice/ai-provider/browser'
-import type { AiSettings, AttachmentAddResult, AttachmentMeta } from '../../shared/ipc'
+import type { AiSubscriptionProviderId, AiSubscriptionUsage } from '@genoffice/ai-provider/browser'
+import type {
+  AiSettings,
+  AiToolCapabilities,
+  AttachmentAddResult,
+  AttachmentMeta,
+} from '../../shared/ipc'
 import { ATTACHMENT_IMAGE_EXTS } from '../../shared/ipc'
 import {
   createSlidesSkill,
@@ -37,7 +46,18 @@ import {
   type ResolveFailure,
 } from './edit-queue'
 import { createFilesSkill } from './files-skill'
-import { createElectronTransport } from './transport'
+import { createElectronTransport, type TransportHooks } from './transport'
+import {
+  aiPanelGate,
+  blockedRunOf,
+  connectPromptVisible,
+  gateKeepsRequest,
+  toolGatesOf,
+  useSubscriptionConnection,
+  withContinuedProvider,
+  withSubscriptionNoticeSeen,
+  type BlockedRun,
+} from './subscription'
 import { renderSlidesToPngBase64 } from '../export-render'
 import {
   isQcEnabled,
@@ -49,7 +69,7 @@ import {
   screenshotAllowed,
   settingsSupportVision,
 } from './slide-qc'
-import { useI18n, t as tGlobal, aiLangDirective, type TFunc } from '../i18n/locale'
+import { useI18n, t as tGlobal, aiLangDirective, getLang, type TFunc } from '../i18n/locale'
 import {
   AiQueueStrip,
   AI_QUEUE_LABELS,
@@ -62,7 +82,6 @@ import {
   type AiScopeQuoteData,
   type AiTokenUsageView,
 } from '@genoffice/ui'
-import { GensparkMark } from '../components/icons'
 import sendEnterOn from '../assets/send-enter-on.png'
 import sendEnterOff from '../assets/send-enter-off.png'
 import sendStop from '../assets/send-stop.png'
@@ -104,7 +123,7 @@ const PASTE_MIME_EXT: Record<string, string> = {
   'image/webp': 'webp',
 }
 
-/** File-type icons for attachment cards (Genspark attachment icon set); exts the
+/** File-type icons for attachment cards; exts the
  *  attachment allowlist doesn't accept yet are mapped ahead so they light up when added */
 const ATTACHMENT_CARD_ICON_GROUPS: [icon: string, exts: string[]][] = [
   [fileWordIcon, ['doc', 'docx']],
@@ -240,8 +259,8 @@ interface ChatEntry {
   text: string
   error?: string
   streaming?: boolean
-  /** the run failed because Genspark is signed out — render an inline sign-in button */
-  loginRequired?: boolean
+  /** the run stopped because its connection cannot go on — rendered as the blocked notice */
+  blocked?: BlockedRun
   tools?: ToolActivity[]
   /** Generation progress card (only one per turn, replaced in real time) */
   deckProgress?: DeckProgressSnapshot
@@ -374,7 +393,6 @@ const MODEL_BRIDGE: AiModelPickerBridge = {
   getSettings: () => window.slidesApi.getAiSettings(),
   setSettings: (settings) => window.slidesApi.setAiSettings(settings),
   onSettingsChanged: (handler) => window.slidesApi.onAiSettingsChanged(handler),
-  gskLoggedIn: () => window.slidesApi.aiGskStatus().then((s) => !!s?.loggedIn),
   openModelSettings: () => window.slidesApi.openAiModelSettings().catch(() => {}),
 }
 
@@ -422,6 +440,8 @@ export function AiPanel({
       if (qcRunningRef.current || runStartingRef.current) return false
       const loop = loopRef.current
       if (!loop || loop.busy) return false
+      // nothing can run right now (not connected, notice unread): the message stays queued
+      if (aiPanelGate(settingsRef.current, statusesRef.current).kind !== 'ready') return false
       runWith(text, text, { attachments: meta.attachments, scope: meta.scope })
       return true
     },
@@ -432,7 +452,7 @@ export function AiPanel({
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null)
   const [attachments, setAttachments] = useState<AttachmentMeta[]>([])
   const [attachNotice, setAttachNotice] = useState<string | null>(null)
-  /** data-URL previews for image attachments, keyed by path (Genspark composer thumbnails) */
+  /** data-URL previews for image attachments, keyed by path (composer thumbnails) */
   const [attachmentPreviews, setAttachmentPreviews] = useState<Record<string, string>>({})
   /** image paths with a read already issued — one readAttachmentImage per attach, even while pending */
   const previewRequestedRef = useRef(new Set<string>())
@@ -542,18 +562,53 @@ export function AiPanel({
   onPathChangeRef.current = onPathChange
   const onDeckProgressRef = useRef(onDeckProgress)
   onDeckProgressRef.current = onDeckProgress
-  const settingsRef = useRef(settings)
-  settingsRef.current = settings
+  // Settings this panel just saved ("continue with …", the acknowledged notice) apply at once:
+  // the prop only catches up after the main process re-broadcast the file
+  const savedSettingsRef = useRef<{ base: AiSettings; next: AiSettings } | null>(null)
+  if (savedSettingsRef.current && savedSettingsRef.current.base !== settings) {
+    savedSettingsRef.current = null
+  }
+  const liveSettings = savedSettingsRef.current?.next ?? settings
+  const settingsRef = useRef(liveSettings)
+  settingsRef.current = liveSettings
+  const [, rerenderForSettings] = useState(0)
+  const saveSettings = (next: AiSettings): Promise<void> => {
+    savedSettingsRef.current = { base: settings, next }
+    settingsRef.current = next
+    rerenderForSettings((n) => n + 1)
+    return window.slidesApi.setAiSettings(next).catch(() => {})
+  }
 
-  /** gsk login state for the cloud-tools gate (refreshed on mount and window focus) */
-  const gskLoggedInRef = useRef(false)
+  /** Subscription connections (Claude, Codex) and what they allow right now */
+  const connection = useSubscriptionConnection()
+  const statusesRef = useRef(connection.statuses)
+  statusesRef.current = connection.statuses
+  const gate = aiPanelGate(liveSettings, connection.statuses)
+  /** a run was asked for while nothing could run: the connect prompt shows even mid status check */
+  const [runBlockedByGate, setRunBlockedByGate] = useState(false)
+  /** the request made in front of the first-connection notice or a status check still running;
+      it starts as soon as a provider can run (see gateKeepsRequest) */
+  const pendingRunRef = useRef<{
+    instruction: string
+    displayText?: string
+    opts?: {
+      slideShot?: boolean
+      attachments?: AttachmentMeta[]
+      scope?: AiScopeQuoteData
+      retry?: boolean
+    }
+  } | null>(null)
+
+  /** Which image/media tools have a route, as the main process reports it (re-read whenever
+      the settings or the connections change, and on window focus) */
+  const toolCapabilitiesRef = useRef<AiToolCapabilities | null>(null)
   useEffect(() => {
     let alive = true
     const refresh = () => {
-      void window.slidesApi
-        ?.aiGskStatus()
-        .then((s) => {
-          if (alive) gskLoggedInRef.current = !!s?.loggedIn
+      void Promise.resolve()
+        .then(() => window.slidesApi?.aiToolCapabilities?.())
+        .then((capabilities) => {
+          if (alive && capabilities) toolCapabilitiesRef.current = capabilities
         })
         .catch(() => {})
     }
@@ -563,7 +618,21 @@ export function AiPanel({
       alive = false
       window.removeEventListener('focus', refresh)
     }
-  }, [])
+  }, [liveSettings, connection.statuses])
+
+  /** structured cause of the turn that just failed (the transport sets it right before onError) */
+  const streamErrorRef = useRef<IpcStreamError | null>(null)
+  /** the latest rate-limit windows a subscription program reported */
+  const [subscriptionUsage, setSubscriptionUsage] = useState<AiSubscriptionUsage[]>([])
+  /** the input of the current run was cut to fit a limit: the user is told, never silently */
+  const [inputTruncated, setInputTruncated] = useState(false)
+  const transportHooksRef = useRef<TransportHooks>({
+    onStreamError: (error) => {
+      streamErrorRef.current = error
+    },
+    onSubscriptionUsage: (usage) => setSubscriptionUsage(usage),
+    onInputTruncated: () => setInputTruncated(true),
+  })
   const imagesRef = useRef(images)
   imagesRef.current = images
   const attachmentsRef = useRef(attachments)
@@ -889,7 +958,10 @@ export function AiPanel({
         const unsub = window.slidesApi.onAiStream((chunk) => {
           if (chunk.requestId !== requestId) return
           armTimeout() // any chunk (including pings) proves the turn is alive
-          if (chunk.type === 'delta') buf += chunk.text ?? ''
+          if (chunk.type === 'subscription-usage') {
+            if (chunk.subscriptionUsage) setSubscriptionUsage(chunk.subscriptionUsage)
+          } else if (chunk.type === 'input-truncated') setInputTruncated(true)
+          else if (chunk.type === 'delta') buf += chunk.text ?? ''
           else if (chunk.type === 'done')
             finish(
               buf.trim()
@@ -899,7 +971,16 @@ export function AiPanel({
           else if (chunk.type === 'error')
             finish({
               ok: false,
-              error: chunk.error ?? tGlobal('aiErrUnknown'),
+              error:
+                (chunk.errorCode
+                  ? aiRunErrorText(getLang(), {
+                      kind: chunk.errorCode,
+                      provider: chunk.errorProvider,
+                      resetsAt: chunk.errorResetsAt,
+                    })
+                  : undefined) ??
+                chunk.error ??
+                tGlobal('aiErrUnknown'),
               // Empty gateway streams surface as errors now (ai-provider stream.ts
               // tags them with this suffix); keep classifying them as empty output
               // so retry ladders fail fast instead of burning billed attempts
@@ -1055,24 +1136,9 @@ export function AiPanel({
           setActiveClarify(questions)
         })
       },
-      isCloudPageGenEnabled: async () => {
-        // Cloud page generation runs on Genspark's own slide model and spends
-        // Genspark credits, so it is gated by the "Genspark cloud tools" toggle
-        // plus the main-process account status only — the chat provider does not
-        // gate it (search/media gate per capability, not per chat provider). A
-        // free-plan or credits-exhausted account is covered by the mid-run
-        // fallback to the local pipeline instead of disabling cloud up front.
-        const cur = settingsRef.current
-        if (!cloudToolsEnabled(cur)) return false
-        try {
-          return !!(await window.slidesApi.cloudGenStatus())?.enabled
-        } catch {
-          return false
-        }
-      },
-      // Local single-page generation (no gsk needed, e.g. BYOK): one LLM request through the
-      // app's own AI transport writes a structured JSON slide spec, and the main process builds
-      // it directly into a one-slide pptx with pptx-engine primitives — no HTML intermediate.
+      // Single-page generation: one LLM request through the app's own AI transport writes a
+      // structured JSON slide spec, and the main process builds it directly into a one-slide
+      // pptx with pptx-engine primitives — no HTML intermediate.
       generatePageLocal: async (args) => {
         const W = args.canvasW
         const H = args.canvasH
@@ -1147,46 +1213,6 @@ export function AiPanel({
           }
         }
         return { ok: false, error: lastErr || tGlobal('aiErrUnknown') }
-      },
-      // Cloud single-page generation (gsk slide_generate): the cloud service owns HTML writing +
-      // pptx conversion; the deck-level style/outline stay local.
-      generatePageCloud: async (args) => {
-        // a stop that already fired must not start (and bill) another page
-        if (args.signal?.aborted) return { ok: false, error: tGlobal('aiErrStopped') }
-        // Forward the panel's stop signal: the main process aborts the in-flight
-        // cloud request instead of letting it run (and bill) to completion
-        const cancelCloud = () => void window.slidesApi.cloudPageCancel().catch(() => {})
-        args.signal?.addEventListener('abort', cancelCloud, { once: true })
-        try {
-          const briefParts = [args.brief]
-          if (args.layout) briefParts.push(`Layout intent: ${args.layout}`)
-          if (args.context)
-            briefParts.push(
-              `Reference material (all real names/figures/facts come from here; do not invent):\n${args.context.slice(0, 4000)}`,
-            )
-          // The cloud service owns its own page prompt; the template chrome rides
-          // in as part of the style so its pages pin the same geometry
-          const styleSkill = args.skeleton ? `${args.style}\n\n${args.skeleton}` : args.style
-          const res = await window.slidesApi.cloudGeneratePage({
-            brief: briefParts.join('\n\n'),
-            title: args.title,
-            styleSkill,
-            deckContext: {
-              ...(args.topic ? { topic: args.topic } : {}),
-              core_hook: args.coreHook,
-              page_index: args.pageIndex,
-              total_pages: args.totalPages,
-            },
-            images: args.images.map((u) => ({ url: u })),
-            width: args.canvasW,
-            height: args.canvasH,
-          })
-          return res ?? { ok: false, error: tGlobal('aiErrUnknown') }
-        } catch (e) {
-          return { ok: false, error: e instanceof Error ? e.message : String(e) }
-        } finally {
-          args.signal?.removeEventListener('abort', cancelCloud)
-        }
       },
       // ── In-tool planning: given topic+page count, the LLM produces a structured outline (batched recursion scheduled by the skill).
       // Fixes "missing pages at the input side" at the root: the main agent doesn't hand-write dozens of pages of pages JSON.
@@ -1375,10 +1401,8 @@ export function AiPanel({
           return { ok: false, error: String('') }
         }
       },
-      imageGenAvailable: () =>
-        imageGenerationAvailable(settingsRef.current, gskLoggedInRef.current),
-      mediaAnalysisAvailable: () =>
-        mediaAnalysisAvailable(settingsRef.current, gskLoggedInRef.current),
+      imageGenAvailable: () => toolGatesOf(toolCapabilitiesRef.current).imageGeneration,
+      mediaAnalysisAvailable: () => toolGatesOf(toolCapabilitiesRef.current).mediaAnalysis,
       unreadTextAttachments: () =>
         availableAttachments()
           .filter(
@@ -1414,7 +1438,7 @@ export function AiPanel({
     }
     accessRef.current = access
     loopRef.current = new AgentLoop({
-      transport: createElectronTransport(() => settingsRef.current),
+      transport: createElectronTransport(() => settingsRef.current, transportHooksRef.current),
       systemSuffix: aiLangDirective,
       skill: composeSkills('slides+files', '', [
         createSlidesSkill(access),
@@ -1522,6 +1546,10 @@ export function AiPanel({
         onError: (error) => {
           logRunFailure('error', error)
           qcPagesRef.current = []
+          // A run that stopped because its connection cannot go on (limit used up, signed
+          // out, program gone) gets the blocked notice; nothing switches provider by itself
+          const blocked = blockedRunOf(streamErrorRef.current)
+          streamErrorRef.current = null
           setChat((prev) => {
             const next = [...prev]
             const last = next.at(-1)
@@ -1530,30 +1558,14 @@ export function AiPanel({
                 ...last,
                 streaming: false,
                 error,
+                ...(blocked ? { blocked } : {}),
                 tools: last.tools?.filter((tl) => !tl.running),
               }
             }
             return next
           })
-          // Signed-out failures get an inline sign-in button; detected via
-          // gsk status rather than matching the localized error text — but only
-          // when Genspark is the provider: a BYOK user's error (e.g. their own
-          // provider's rate limit) must not advertise a Genspark sign-in (#1948)
-          void window.slidesApi
-            .aiGskStatus()
-            .then((status) => {
-              if (status.loggedIn) return
-              if ((settingsRef.current?.provider ?? 'genspark') !== 'genspark') return
-              setChat((prev) => {
-                const next = [...prev]
-                const last = next.at(-1)
-                if (last?.role === 'assistant' && last.error) {
-                  next[next.length - 1] = { ...last, loginRequired: true }
-                }
-                return next
-              })
-            })
-            .catch(() => {})
+          // the connection probably changed under the run: show what it is now
+          if (blocked) connection.refresh()
           void finishHistoryBatch().finally(() => {
             setBusy(false)
             const resolveQueueRun = queueRunResolverRef.current
@@ -1712,6 +1724,26 @@ export function AiPanel({
     // otherwise two sets of bubbles get pushed and the earlier assistant placeholder stays at "thinking" forever.
     // qcRunningRef: the post-generation QC pass edits the deck outside the main loop — no concurrent runs
     if (!instruction || !loop || loop.busy || runStartingRef.current || qcRunningRef.current) return
+    // Nothing can run yet: the composer shows the connect prompt or the first-connection
+    // notice instead of an error. A request made in front of the notice (or while the status
+    // check is still running) starts once a provider can run; in front of a real "not
+    // connected" it is dropped and the composer keeps its text.
+    const runGate = aiPanelGate(settingsRef.current, statusesRef.current)
+    if (runGate.kind !== 'ready') {
+      pendingRunRef.current = gateKeepsRequest(runGate, statusesRef.current)
+        ? {
+            instruction,
+            ...(displayText !== undefined ? { displayText } : {}),
+            ...(opts ? { opts } : {}),
+          }
+        : null
+      if (runGate.kind === 'connect') connection.refresh()
+      setRunBlockedByGate(true)
+      return
+    }
+    pendingRunRef.current = null
+    streamErrorRef.current = null
+    setInputTruncated(false)
     runStartingRef.current = true
     setInput('')
     // The message consumes the composer attachments: they ride along (echoed on the
@@ -1769,7 +1801,7 @@ export function AiPanel({
         // AI Beautify sends the current slide's rendering along, so the model sees what it edits;
         // the note rides on the model instruction only — the chat bubble stays the localized preset text
         let modelInstruction = instruction
-        if (opts?.slideShot && settingsSupportVision(settingsRef.current)) {
+        if (opts?.slideShot && settingsSupportVision(settingsRef.current, statusesRef.current)) {
           const shot = await captureSlideShot(currentRef.current)
           if (shot) {
             images.push(shot)
@@ -1801,6 +1833,7 @@ export function AiPanel({
         return
       }
       runStartingRef.current = true
+      streamErrorRef.current = null
       instructionRef.current = instruction
       lastInstructionRef.current = instruction
       lastDisplayTextRef.current = undefined
@@ -1854,6 +1887,11 @@ export function AiPanel({
     const loop = loopRef.current
     if (items.length === 0 || !loop || loop.busy || runStartingRef.current || qcRunningRef.current)
       return
+    // same gate as runWith: the queue stays as it is until a provider can run
+    if (aiPanelGate(settingsRef.current, statusesRef.current).kind !== 'ready') {
+      setRunBlockedByGate(true)
+      return
+    }
     const resolved = resolveQueue(slidesRef.current, items)
     const groups = groupByPage(resolved)
     const skipped = resolved.filter((r) => !r.ok)
@@ -1908,7 +1946,12 @@ export function AiPanel({
     const controller = new AbortController()
     qcAbortRef.current = controller
     const capped = pages.slice(0, QC_MAX_PAGES)
-    const transport = createElectronTransport(() => settingsRef.current)
+    // usage and truncation are shown for a QC turn too; its failures stay its own (a skipped page)
+    const { onSubscriptionUsage, onInputTruncated } = transportHooksRef.current
+    const transport = createElectronTransport(() => settingsRef.current, {
+      onSubscriptionUsage,
+      onInputTruncated,
+    })
     const header = tGlobal('aiQcStart', { count: capped.length })
     const lines: string[] = []
     const renderEntry = () => [header, ...lines].join('\n')
@@ -1932,7 +1975,8 @@ export function AiPanel({
     try {
       for (const page of capped) {
         if (controller.signal.aborted) break
-        const useScreenshot = !forceGeometryOnly && settingsSupportVision(settingsRef.current)
+        const useScreenshot =
+          !forceGeometryOnly && settingsSupportVision(settingsRef.current, statusesRef.current)
         const shot = useScreenshot ? await captureSlideShot(page) : null
         if (useScreenshot && !shot) {
           if (slidesRef.current[page]) lines.push(tGlobal('aiQcPageSkipped', { n: page + 1 }))
@@ -2027,7 +2071,34 @@ export function AiPanel({
       retry: true,
     })
 
+  /** "Continue with …" on a blocked run: that provider becomes the stored selection (the model
+      picker shows it) and the last request runs again on it */
+  const continueWith = (provider: AiSubscriptionProviderId) => {
+    void saveSettings(withContinuedProvider(settingsRef.current, provider)).then(retry)
+  }
+
+  /** The first-connection notice was read: remember that (the request that waited starts below) */
+  const acknowledgeNotice = () => {
+    void saveSettings(withSubscriptionNoticeSeen(settingsRef.current))
+  }
+
+  // The gate opened (status check answered, notice acknowledged): start the request that
+  // waited in front of it. A check that answered "not connected" drops it instead.
+  const gateKeeps = gateKeepsRequest(gate, connection.statuses)
+  useEffect(() => {
+    if (gate.kind === 'ready') {
+      setRunBlockedByGate(false)
+      const pending = pendingRunRef.current
+      pendingRunRef.current = null
+      if (pending) runWith(pending.instruction, pending.displayText, pending.opts)
+    } else if (!gateKeeps) {
+      pendingRunRef.current = null
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gate.kind, gateKeeps])
+
   const newChat = () => {
+    pendingRunRef.current = null
     msgQueue.clear()
     dismissClarify()
     qcAbortRef.current?.abort()
@@ -2146,7 +2217,7 @@ export function AiPanel({
         aria-label={t('appAiRailExpand')}
         onClick={onExpand}
       >
-        <GensparkMark size={22} />
+        <AiMark size={22} />
       </button>
     )
   }
@@ -2178,7 +2249,7 @@ export function AiPanel({
       />
       <div className="ai-panel-header">
         <span className="ai-panel-title">
-          <GensparkMark size={22} />
+          <AiMark size={22} />
           {t('aiPanelTitle')}
         </span>
         <div className="ai-panel-header-actions">
@@ -2305,14 +2376,22 @@ export function AiPanel({
                   <AiUsageChip usage={entry.usage} lang={lang} />
                 </div>
               )}
-              {entry.error && (
-                <div className="ai-msg-error">{t('aiMsgError', { error: entry.error })}</div>
-              )}
-              {entry.loginRequired && (
-                <button className="ai-login-btn" onClick={() => void window.slidesApi.aiGskLogin()}>
-                  {t('aiGskLoginBtn')}
-                </button>
-              )}
+              {entry.error &&
+                (entry.blocked ? (
+                  <AiBlockedNotice
+                    kind={entry.blocked.kind}
+                    provider={entry.blocked.provider}
+                    resetsAt={entry.blocked.resetsAt}
+                    message={entry.error}
+                    settings={liveSettings}
+                    // only the run that just stopped can be continued
+                    statuses={isLast && !busy ? connection.statuses : {}}
+                    lang={lang}
+                    onContinueWith={continueWith}
+                  />
+                ) : (
+                  <div className="ai-msg-error">{t('aiMsgError', { error: entry.error })}</div>
+                ))}
               {entry.deckProgress && <DeckProgressCard progress={entry.deckProgress} />}
               {showToolbar && (
                 <div className="ai-msg-toolbar">
@@ -2443,6 +2522,28 @@ export function AiPanel({
             />
           )}
           {attachNotice && <div className="ai-attach-notice">{attachNotice}</div>}
+          {gate.kind === 'connect' &&
+            connectPromptVisible(gate, connection.statuses, runBlockedByGate) && (
+              <AiConnectPrompt
+                choice={gate.choice}
+                statuses={connection.statuses}
+                lang={lang}
+                disabled={connection.busy}
+                onOpenSettings={() => void window.slidesApi.openAiModelSettings().catch(() => {})}
+                {...connection.actions}
+              />
+            )}
+          {gate.kind === 'first-notice' && (
+            <AiFirstConnectionNotice
+              lang={lang}
+              codexKeepsHistory={false}
+              onAcknowledge={acknowledgeNotice}
+            />
+          )}
+          {inputTruncated && (
+            <AiInputTruncatedNotice lang={lang} onDismiss={() => setInputTruncated(false)} />
+          )}
+          <AiSubscriptionUsageLine usage={subscriptionUsage} lang={lang} />
           <div className="ai-input-box">
             <AiQueueStrip
               items={msgQueue.queued}
@@ -2548,7 +2649,11 @@ export function AiPanel({
               rows={1}
             />
             <div className="ai-input-footer">
-              <AiModelPicker bridge={MODEL_BRIDGE} lang={lang} />
+              <AiModelPicker
+                bridge={MODEL_BRIDGE}
+                lang={lang}
+                subscriptionStatuses={connection.statuses}
+              />
               {sessionUsage && <AiUsageChip usage={sessionUsage} session lang={lang} />}
               <button
                 className="ai-attach-btn"
