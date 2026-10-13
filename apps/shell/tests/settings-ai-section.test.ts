@@ -84,12 +84,10 @@ function installHome(settings: AiSettings): void {
   window.aiOffice = {
     getTheme: async () => 'system',
     getDefaultSaveDir: async () => '',
-    getAnalyticsEnabled: async () => true,
     getAutoSaveDefault: async () => ({ on: false, updatedAt: 0 }),
     getAiPanelPrefs: async () => ({ fontSize: 'default', customFontSize: 14, spellcheck: true }),
     getUpdateChannel: async () => 'stable',
     getAppVersion: async () => '1.0.0',
-    githubStars: async () => null,
     getAiProviders: () => AI_PROVIDERS.map((meta) => ({ ...meta, defaultBaseUrl: '' })),
     getAiMediaProviders: () => AI_MEDIA_PROVIDERS,
     getAiSearchProviders: () => AI_SEARCH_PROVIDERS,

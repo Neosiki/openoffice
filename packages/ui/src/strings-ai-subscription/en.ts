@@ -51,7 +51,8 @@ export const en = {
     'Document content and your conversation are sent to Anthropic or OpenAI under your own account.',
   noticeTraining:
     'Whether that content is used to train AI is decided by your own account settings at that company.',
-  noticeCodexHistory: 'Codex may keep conversation content on this PC.',
+  noticeCodexHistory:
+    'This app turns off conversation history saving in Codex, but Codex may still keep its own diagnostic logs on this PC.',
   noticeAck: 'Got it',
   codexNotice:
     'Using a Codex subscription inside an app is not a method officially recommended by OpenAI.',

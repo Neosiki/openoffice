@@ -53,7 +53,8 @@ export const ja = {
   noticeSend: '文書の内容と会話は、ご自身のアカウントで Anthropic または OpenAI に送信されます。',
   noticeTraining:
     'その内容が AI の学習に使われるかどうかは、その会社でのご自身のアカウント設定によって決まります。',
-  noticeCodexHistory: 'Codex は会話の内容をこの PC に残す場合があります。',
+  noticeCodexHistory:
+    'このアプリは Codex の会話履歴の保存をオフにしますが、Codex が独自の診断ログをこの PC に残す場合があります。',
   noticeAck: 'わかりました',
   codexNotice:
     'アプリ内で Codex のサブスクリプションを使うことは、OpenAI が公式に推奨している方法ではありません。',

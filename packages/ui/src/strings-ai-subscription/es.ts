@@ -55,7 +55,8 @@ export const es = {
     'El contenido del documento y tu conversación se envían a Anthropic u OpenAI con tu propia cuenta.',
   noticeTraining:
     'Que ese contenido se use para entrenar IA depende de los ajustes de tu propia cuenta en esa empresa.',
-  noticeCodexHistory: 'Codex puede guardar el contenido de las conversaciones en este PC.',
+  noticeCodexHistory:
+    'Esta aplicación desactiva el guardado del historial de conversaciones de Codex, pero Codex puede seguir guardando sus propios registros de diagnóstico en este PC.',
   noticeAck: 'Entendido',
   codexNotice:
     'Usar una suscripción de Codex dentro de una aplicación no es un método recomendado oficialmente por OpenAI.',

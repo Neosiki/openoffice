@@ -56,7 +56,8 @@ export const de = {
     'Dokumentinhalte und Ihre Unterhaltung werden über Ihr eigenes Konto an Anthropic oder OpenAI gesendet.',
   noticeTraining:
     'Ob diese Inhalte zum Training von KI verwendet werden, bestimmen die Einstellungen Ihres eigenen Kontos bei dem jeweiligen Unternehmen.',
-  noticeCodexHistory: 'Codex kann Unterhaltungsinhalte auf diesem PC speichern.',
+  noticeCodexHistory:
+    'Diese App schaltet das Speichern des Unterhaltungsverlaufs in Codex ab, Codex kann jedoch weiterhin eigene Diagnoseprotokolle auf diesem PC speichern.',
   noticeAck: 'Verstanden',
   codexNotice:
     'Ein Codex-Abonnement in einer App zu nutzen, ist keine von OpenAI offiziell empfohlene Methode.',

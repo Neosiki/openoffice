@@ -37,6 +37,8 @@ export interface SubscriptionConnection {
   readonly install: (provider: AiSubscriptionProviderId) => void
   readonly login: (provider: AiSubscriptionProviderId) => void
   readonly recheck: (provider: AiSubscriptionProviderId) => void
+  /** read the last known statuses again without starting a check (another view may have changed them) */
+  readonly refresh: () => void
   /** "use anyway" on a metered login; resolves once the answer is in */
   readonly acceptMetered: (provider: AiSubscriptionProviderId) => Promise<void>
   readonly openInstallHelp: (provider: AiSubscriptionProviderId) => void
@@ -55,7 +57,7 @@ async function attempt<T>(call: (api: SubscriptionApi) => Promise<T>): Promise<T
 
 /**
  * Live connection state for as long as the calling component is mounted (the
- * settings dialog): the statuses are read and re-checked when it opens, follow
+ * settings dialog, the app frame): the statuses are read and re-checked when it opens, follow
  * the main process's change events, and are checked again each time the window
  * regains focus after a login or an install was started, since both happen in
  * another window.
@@ -148,6 +150,9 @@ export function useSubscriptionConnection(): SubscriptionConnection {
     },
     [check],
   )
+  const refresh = useCallback(() => {
+    void attempt((api) => api.statuses()).then(apply)
+  }, [apply])
   const acceptMetered = useCallback(
     async (provider: AiSubscriptionProviderId) => {
       setBusy(true)
@@ -169,6 +174,7 @@ export function useSubscriptionConnection(): SubscriptionConnection {
     install,
     login,
     recheck,
+    refresh,
     acceptMetered,
     openInstallHelp,
   }

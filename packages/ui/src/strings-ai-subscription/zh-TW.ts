@@ -44,7 +44,8 @@ export const zhTW = {
   noticeTitle: '以訂閱使用 AI 之前',
   noticeSend: '文件內容和對話會以你本人的帳戶傳送給 Anthropic 或 OpenAI。',
   noticeTraining: '這些內容是否用於 AI 訓練，取決於你在該公司帳戶中的設定。',
-  noticeCodexHistory: 'Codex 可能會在這台電腦上保留對話內容。',
+  noticeCodexHistory:
+    '本應用程式會關閉 Codex 的對話記錄儲存，但 Codex 仍可能在這台電腦上保留自己的診斷記錄檔。',
   noticeAck: '知道了',
   codexNotice: '在應用程式中使用 Codex 訂閱並非 OpenAI 官方建議的方式。',
   truncatedNotice: '輸入內容過長，已截去一部分後傳送。',

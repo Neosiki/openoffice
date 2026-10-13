@@ -51,7 +51,8 @@ export const cs = {
     'Obsah dokumentu a konverzace se odesílají společnosti Anthropic nebo OpenAI pod vaším vlastním účtem.',
   noticeTraining:
     'Zda se tento obsah použije k trénování AI, určuje nastavení vašeho účtu u dané společnosti.',
-  noticeCodexHistory: 'Codex může obsah konverzací uchovávat v tomto počítači.',
+  noticeCodexHistory:
+    'Tato aplikace vypíná ukládání historie konverzací v Codexu, Codex však může v tomto počítači dál uchovávat vlastní diagnostické protokoly.',
   noticeAck: 'Rozumím',
   codexNotice:
     'Používání předplatného Codex uvnitř aplikace není způsob, který OpenAI oficiálně doporučuje.',

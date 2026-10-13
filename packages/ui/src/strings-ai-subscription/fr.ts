@@ -54,7 +54,8 @@ export const fr = {
     'Le contenu du document et votre conversation sont envoyés à Anthropic ou à OpenAI sous votre propre compte.',
   noticeTraining:
     'L’utilisation de ce contenu pour entraîner l’IA dépend des paramètres de votre propre compte auprès de cette société.',
-  noticeCodexHistory: 'Codex peut conserver le contenu des conversations sur ce PC.',
+  noticeCodexHistory:
+    'Cette application désactive l’enregistrement de l’historique des conversations de Codex, mais Codex peut tout de même conserver ses propres journaux de diagnostic sur ce PC.',
   noticeAck: 'Compris',
   codexNotice:
     'Utiliser un abonnement Codex dans une application n’est pas une méthode officiellement recommandée par OpenAI.',

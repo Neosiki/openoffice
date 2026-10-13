@@ -51,13 +51,10 @@ describe('Settings AI panel preferences', () => {
     window.aiOffice = {
       getTheme: async () => 'system',
       getDefaultSaveDir: async () => '',
-      getAnalyticsEnabled: async () => true,
-      setAnalyticsEnabled: async () => true,
       getAiPanelPrefs: async () => saved,
       setAiPanelPrefs,
       getUpdateChannel: async () => 'stable',
       getAppVersion: async () => '1.0.0',
-      githubStars: async () => null,
     } as unknown as HomeApi
 
     await act(async () => {
@@ -66,16 +63,7 @@ describe('Settings AI panel preferences', () => {
           LocaleProvider,
           { initial: 'en' },
           createElement(SettingsModal, {
-            status: null,
-            loggingOut: false,
-            loginWaiting: false,
-            loginUrl: null,
-            urlCopied: false,
-            onOpenLoginUrl: vi.fn(),
-            onCopyLoginUrl: vi.fn(),
             onClose: vi.fn(),
-            onLogin: vi.fn(),
-            onLogout: vi.fn(),
           }),
         ),
       )
@@ -113,13 +101,10 @@ describe('Settings AI panel preferences', () => {
     window.aiOffice = {
       getTheme: async () => 'system',
       getDefaultSaveDir: async () => '',
-      getAnalyticsEnabled: async () => true,
-      setAnalyticsEnabled: async () => true,
       getAiPanelPrefs: async () => saved,
       setAiPanelPrefs,
       getUpdateChannel: async () => 'stable',
       getAppVersion: async () => '1.0.0',
-      githubStars: async () => null,
     } as unknown as HomeApi
 
     await act(async () => {
@@ -128,16 +113,7 @@ describe('Settings AI panel preferences', () => {
           LocaleProvider,
           { initial: 'en' },
           createElement(SettingsModal, {
-            status: null,
-            loggingOut: false,
-            loginWaiting: false,
-            loginUrl: null,
-            urlCopied: false,
-            onOpenLoginUrl: vi.fn(),
-            onCopyLoginUrl: vi.fn(),
             onClose: vi.fn(),
-            onLogin: vi.fn(),
-            onLogout: vi.fn(),
           }),
         ),
       )
@@ -178,13 +154,10 @@ describe('Settings AI panel preferences', () => {
     window.aiOffice = {
       getTheme: async () => 'system',
       getDefaultSaveDir: async () => '',
-      getAnalyticsEnabled: async () => true,
-      setAnalyticsEnabled: async () => true,
       getAiPanelPrefs: async () => saved,
       setAiPanelPrefs,
       getUpdateChannel: async () => 'stable',
       getAppVersion: async () => '1.0.0',
-      githubStars: async () => null,
     } as unknown as HomeApi
 
     await act(async () => {
@@ -193,16 +166,7 @@ describe('Settings AI panel preferences', () => {
           LocaleProvider,
           { initial: 'en' },
           createElement(SettingsModal, {
-            status: null,
-            loggingOut: false,
-            loginWaiting: false,
-            loginUrl: null,
-            urlCopied: false,
-            onOpenLoginUrl: vi.fn(),
-            onCopyLoginUrl: vi.fn(),
             onClose: vi.fn(),
-            onLogin: vi.fn(),
-            onLogout: vi.fn(),
           }),
         ),
       )

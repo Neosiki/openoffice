@@ -5,8 +5,19 @@ import { act, createElement } from 'react'
 import { createRoot } from 'react-dom/client'
 import type { Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import type { AiSubscriptionState, SubscriptionStatusMap } from '@genoffice/ai-provider/browser'
+import { aiSubscriptionText } from '@genoffice/ui'
 import { Onboarding } from '../src/renderer/src/Onboarding'
 import { LocaleProvider } from '../src/renderer/src/locale'
+import {
+  ONBOARDING_CONNECT_STEP,
+  ONBOARDING_STEPS,
+  isLastOnboardingStep,
+  nextOnboardingStep,
+  previousOnboardingStep,
+} from '../src/renderer/src/onboarding-steps'
+import { strings } from '../src/renderer/src/strings'
+import type { SubscriptionConnection } from '../src/renderer/src/subscription-client'
 
 const actEnvironment = globalThis as typeof globalThis & {
   IS_REACT_ACT_ENVIRONMENT?: boolean
@@ -27,53 +38,215 @@ afterEach(() => {
   host.remove()
 })
 
-function renderOnboarding(onDone: () => Promise<boolean>): void {
+function statuses(claude: AiSubscriptionState, codex: AiSubscriptionState): SubscriptionStatusMap {
+  return {
+    'claude-code': { provider: 'claude-code', state: claude, meteredAccepted: false },
+    codex: { provider: 'codex', state: codex, meteredAccepted: false },
+  }
+}
+
+function connectionOf(
+  map: SubscriptionStatusMap,
+  extra: Partial<SubscriptionConnection> = {},
+): SubscriptionConnection {
+  return {
+    statuses: map,
+    busy: false,
+    failed: {},
+    codexImageAvailable: false,
+    install: vi.fn(),
+    login: vi.fn(),
+    recheck: vi.fn(),
+    refresh: vi.fn(),
+    acceptMetered: vi.fn(async () => undefined),
+    openInstallHelp: vi.fn(),
+    ...extra,
+  }
+}
+
+interface RenderOptions {
+  onDone?: () => Promise<boolean>
+  connection?: SubscriptionConnection
+  noticeDue?: boolean
+  onNoticeAcknowledge?: () => void
+}
+
+function renderOnboarding(options: RenderOptions = {}): void {
   act(() => {
     root.render(
-      createElement(LocaleProvider, { initial: 'en' }, createElement(Onboarding, { onDone })),
+      createElement(
+        LocaleProvider,
+        { initial: 'en' },
+        createElement(Onboarding, {
+          onDone: options.onDone ?? vi.fn(async () => true),
+          connection: options.connection ?? connectionOf(statuses('not-installed', 'signed-out')),
+          noticeDue: options.noticeDue ?? false,
+          onNoticeAcknowledge: options.onNoticeAcknowledge ?? vi.fn(),
+        }),
+      ),
     )
   })
 }
 
 async function click(selector: string): Promise<void> {
   const button = host.querySelector<HTMLButtonElement>(selector)
-  expect(button).not.toBeNull()
+  expect(button, selector).not.toBeNull()
   await act(async () => {
     button!.click()
-    await Promise.resolve()
+    // let a finish (persist, then re-enable the buttons) settle
+    await new Promise((resolve) => setTimeout(resolve, 0))
   })
 }
 
-describe('analytics consent in onboarding', () => {
-  it('explains default-on analytics without an onboarding control', () => {
-    renderOnboarding(vi.fn(async () => true))
-    expect(host.querySelector('[role="switch"]')).toBeNull()
-    expect(host.textContent).toContain('Enabled by default')
-    expect(host.textContent).toContain('Settings → General')
+const activeStep = (): string | null =>
+  host.querySelector<HTMLElement>('.onb-slide.active')?.dataset.step ?? null
+
+describe('onboarding steps', () => {
+  it('are exactly welcome, connect, done', () => {
+    expect(ONBOARDING_STEPS).toEqual(['welcome', 'connect', 'done'])
+    expect(ONBOARDING_CONNECT_STEP).toBe(1)
   })
 
-  it('lets Skip and Escape finish without changing analytics', async () => {
+  it('advance one by one and finish after the last, whatever the connection', () => {
+    expect(nextOnboardingStep(0)).toBe(1)
+    expect(nextOnboardingStep(1)).toBe(2)
+    expect(nextOnboardingStep(2)).toBeNull()
+    expect(isLastOnboardingStep(1)).toBe(false)
+    expect(isLastOnboardingStep(2)).toBe(true)
+  })
+
+  it('go back one by one and stop at the first', () => {
+    expect(previousOnboardingStep(2)).toBe(1)
+    expect(previousOnboardingStep(1)).toBe(0)
+    expect(previousOnboardingStep(0)).toBe(0)
+  })
+})
+
+describe('Onboarding', () => {
+  it('shows three steps: welcome first, one dot each', () => {
+    renderOnboarding()
+    expect(
+      Array.from(host.querySelectorAll<HTMLElement>('.onb-slide')).map((el) => el.dataset.step),
+    ).toEqual(['welcome', 'connect', 'done'])
+    expect(host.querySelectorAll('.onb-dot')).toHaveLength(3)
+    expect(activeStep()).toBe('welcome')
+  })
+
+  it('can be completed without connecting a subscription', async () => {
     const onDone = vi.fn(async () => true)
-    renderOnboarding(onDone)
+    const connection = connectionOf(statuses('not-installed', 'not-installed'))
+    renderOnboarding({ onDone, connection })
+
+    await click('.onb-next')
+    expect(activeStep()).toBe('connect')
+    expect(host.querySelector<HTMLButtonElement>('.onb-next')!.disabled).toBe(false)
+    expect(host.textContent).toContain(strings.en.onbConnectSkipNote)
+
+    await click('.onb-next')
+    expect(activeStep()).toBe('done')
+    expect(host.textContent).toContain(strings.en.onbDoneNotConnected)
+    expect(onDone).not.toHaveBeenCalled()
+
+    await click('.onb-next')
+    expect(onDone).toHaveBeenCalledTimes(1)
+    expect(connection.install).not.toHaveBeenCalled()
+    expect(connection.login).not.toHaveBeenCalled()
+  })
+
+  it('lets Skip and Escape finish from any step', async () => {
+    const onDone = vi.fn(async () => true)
+    renderOnboarding({ onDone })
 
     await click('.onb-skip')
-    expect(onDone).toHaveBeenLastCalledWith()
+    expect(onDone).toHaveBeenCalledTimes(1)
 
-    onDone.mockClear()
+    await click('.onb-next')
     await act(async () => {
       window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
       await Promise.resolve()
     })
-    expect(onDone).toHaveBeenLastCalledWith()
+    expect(onDone).toHaveBeenCalledTimes(2)
   })
 
-  it('finishes the final slide without an analytics choice', async () => {
+  it('offers both subscriptions on the connect step, with live status and the Codex line', async () => {
+    const connection = connectionOf(statuses('not-installed', 'signed-out'))
+    renderOnboarding({ connection })
+    await click('.onb-next')
+
+    const step = host.querySelector<HTMLElement>('.onb-slide[data-step="connect"]')!
+    const cards = Array.from(step.querySelectorAll<HTMLElement>('.ai-sub-card'))
+    expect(cards.map((card) => card.dataset.provider)).toEqual(['claude-code', 'codex'])
+    expect(cards.map((card) => card.dataset.state)).toEqual(['not-installed', 'signed-out'])
+    expect(step.querySelector('.ai-sub-codex')!.textContent).toBe(
+      aiSubscriptionText('en', 'codexNotice'),
+    )
+
+    await click(
+      '.onb-slide[data-step="connect"] [data-provider="claude-code"] [data-action="install"]',
+    )
+    expect(connection.install).toHaveBeenCalledWith('claude-code')
+    await click('.onb-slide[data-step="connect"] [data-provider="codex"] [data-action="login"]')
+    expect(connection.login).toHaveBeenCalledWith('codex')
+  })
+
+  it('says a launch could not start', async () => {
+    renderOnboarding({
+      connection: connectionOf(statuses('not-installed', 'signed-out'), {
+        failed: { codex: 'login' },
+      }),
+    })
+    await click('.onb-next')
+    const failed = host.querySelector<HTMLElement>('.onb-connect-failed')!
+    expect(failed.dataset.provider).toBe('codex')
+    expect(failed.textContent).toBe(strings.en.setSubLoginFailed)
+  })
+
+  it('names the connected subscription on the last step', async () => {
+    renderOnboarding({ connection: connectionOf(statuses('ready', 'signed-out')) })
+    await click('.onb-next')
+    await click('.onb-next')
+    expect(host.querySelector('.onb-slide.active .onb-subtitle')!.textContent).toBe(
+      'AI is connected: Claude.',
+    )
+  })
+
+  it('keeps the first-connection notice for the connect step and reports its acknowledgement', async () => {
+    const onNoticeAcknowledge = vi.fn()
     const onDone = vi.fn(async () => true)
-    renderOnboarding(onDone)
+    renderOnboarding({
+      onDone,
+      noticeDue: true,
+      onNoticeAcknowledge,
+      connection: connectionOf(statuses('ready', 'signed-out')),
+    })
+    expect(host.querySelector('.first-notice')).toBeNull()
 
     await click('.onb-next')
-    await click('.onb-next')
-    await click('.onb-next')
-    expect(onDone).toHaveBeenCalledWith()
+    const notice = host.querySelector<HTMLElement>('.first-notice')!
+    expect(notice.textContent).toContain(aiSubscriptionText('en', 'noticeSend'))
+    expect(notice.textContent).toContain(aiSubscriptionText('en', 'noticeTraining'))
+    expect(notice.textContent).toContain(aiSubscriptionText('en', 'noticeCodexHistory'))
+
+    // the notice owns the keyboard: the onboarding behind it neither skips nor advances
+    await act(async () => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' }))
+      await Promise.resolve()
+    })
+    expect(activeStep()).toBe('connect')
+    expect(onDone).not.toHaveBeenCalled()
+
+    await click('.first-notice .ai-sub-btn')
+    expect(onNoticeAcknowledge).toHaveBeenCalledTimes(1)
+  })
+
+  it('carries no credits offer, community call, star hint or statistics notice', async () => {
+    renderOnboarding({ connection: connectionOf(statuses('ready', 'ready')) })
+    const text = () => host.textContent ?? ''
+    for (let step = 0; step < ONBOARDING_STEPS.length; step++) {
+      expect(text()).not.toMatch(/genspark|genteam|credit|github|\bstars?\b|statistic|analytics/i)
+      if (step < ONBOARDING_STEPS.length - 1) await click('.onb-next')
+    }
+    expect(host.querySelector('[role="switch"]')).toBeNull()
+    expect(host.querySelector('.onb-offer, .onb-star, .onb-consent, .onb-join')).toBeNull()
   })
 })

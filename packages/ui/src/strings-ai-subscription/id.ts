@@ -51,7 +51,8 @@ export const id = {
     'Isi dokumen dan percakapan Anda dikirim ke Anthropic atau OpenAI dengan akun Anda sendiri.',
   noticeTraining:
     'Apakah isi itu dipakai untuk melatih AI ditentukan oleh pengaturan akun Anda sendiri di perusahaan tersebut.',
-  noticeCodexHistory: 'Codex dapat menyimpan isi percakapan di PC ini.',
+  noticeCodexHistory:
+    'Aplikasi ini mematikan penyimpanan riwayat percakapan Codex, tetapi Codex masih dapat menyimpan log diagnostiknya sendiri di PC ini.',
   noticeAck: 'Mengerti',
   codexNotice:
     'Memakai langganan Codex di dalam aplikasi bukan cara yang direkomendasikan secara resmi oleh OpenAI.',

@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
+import { useFirstConnectionNotice } from './FirstConnectionNotice'
 import { Home } from './Home'
 import { Onboarding } from './Onboarding'
-import { StarPromptCard } from './StarPromptCard'
 import { TabBar } from './TabBar'
+import { useSubscriptionConnection } from './subscription-client'
 
 interface AppFrameProps {
   /** resolved before first paint (main.tsx) so home never flashes under the overlay */
@@ -12,7 +13,10 @@ interface AppFrameProps {
 export function AppFrame({ initialOnboardingSeen }: AppFrameProps) {
   const [homeActive, setHomeActive] = useState(true)
   const [showOnboarding, setShowOnboarding] = useState(!initialOnboardingSeen)
-  const [starPromptDocOpens, setStarPromptDocOpens] = useState<number | null>(null)
+  // one live view of the subscription connection for the home screen, the
+  // onboarding and the first-connection notice
+  const connection = useSubscriptionConnection()
+  const notice = useFirstConnectionNotice(connection.statuses)
 
   useEffect(() => {
     const applyTabs = (tabs: Awaited<ReturnType<typeof window.aiOfficeTabs.list>>) => {
@@ -22,20 +26,6 @@ export function AppFrame({ initialOnboardingSeen }: AppFrameProps) {
     void window.aiOfficeTabs.list().then(applyTabs)
     return window.aiOfficeTabs.onChanged(applyTabs)
   }, [])
-
-  // The "star us" invitation is decided (and counted as shown) by the main
-  // process; ask once per session, and never while onboarding is up — a
-  // first-run user can't have met the value threshold anyway.
-  useEffect(() => {
-    if (showOnboarding) return
-    let alive = true
-    void window.aiOffice.starPromptShouldShow?.().then((result) => {
-      if (alive && result.show) setStarPromptDocOpens(result.docOpens)
-    })
-    return () => {
-      alive = false
-    }
-  }, [showOnboarding])
 
   const finishOnboarding = async (): Promise<boolean> => {
     try {
@@ -54,13 +44,23 @@ export function AppFrame({ initialOnboardingSeen }: AppFrameProps) {
       {/* docs/sheets tabs render as WebContentsView children of this window, positioned
        * by the main process to cover this area — only Home paints its own content here. */}
       <div className="app-frame-content" style={{ visibility: homeActive ? 'visible' : 'hidden' }}>
-        <Home />
+        <Home
+          connection={connection}
+          aiSettings={notice.settings}
+          // during the onboarding its connect step shows the notice instead
+          noticeDue={notice.due && !showOnboarding}
+          onNoticeAcknowledge={notice.acknowledge}
+        />
       </div>
       {/* editor WebContentsViews paint above ALL shell DOM, so the overlay only
        * renders while the home tab is active — it comes back when home does */}
-      {showOnboarding && homeActive && <Onboarding onDone={finishOnboarding} />}
-      {starPromptDocOpens !== null && !showOnboarding && homeActive && (
-        <StarPromptCard docOpens={starPromptDocOpens} onClose={() => setStarPromptDocOpens(null)} />
+      {showOnboarding && homeActive && (
+        <Onboarding
+          onDone={finishOnboarding}
+          connection={connection}
+          noticeDue={notice.due}
+          onNoticeAcknowledge={notice.acknowledge}
+        />
       )}
     </div>
   )
