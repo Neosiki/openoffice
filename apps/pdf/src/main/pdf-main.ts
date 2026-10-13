@@ -28,7 +28,7 @@ import {
   registerRendererScheme,
   rendererUrl,
 } from '@genoffice/electron-utils'
-import { createI18n, getUiLang } from '@genoffice/i18n'
+import { brandText, createI18n, getUiLang } from '@genoffice/i18n'
 import { generateImageTool, documentMediaRoots } from '@genoffice/ai-search'
 import { sharedSubscriptionStatuses } from '@genoffice/ai-provider/subscription'
 import { PDF_CHANNELS } from '../shared/ipc'
@@ -655,7 +655,7 @@ async function createStandaloneDocument(
   if (request.type === 'docx') {
     return {
       ok: false,
-      error: 'Creating DOCX files requires the GenOffice shell or Docs app.',
+      error: brandText('Creating DOCX files requires the GenOffice shell or Docs app.', 'en'),
     }
   }
   const title = sanitizeGeneratedDocumentTitle(request.title)
