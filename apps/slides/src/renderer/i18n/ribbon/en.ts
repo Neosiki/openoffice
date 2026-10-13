@@ -1,9 +1,9 @@
 import type { zh } from './zh'
 
 export const en = {
-  ribbonAiCreditNote: 'Uses AI and consumes credits',
+  ribbonAiCreditNote: 'Uses AI and counts toward your AI usage',
   ribbonAiRewriteConfirm:
-    'This action calls the AI assistant: it consumes credits and may rewrite the entire content. Continue? (You will not be asked again.)',
+    'This action calls the AI assistant: it counts toward your AI usage and may rewrite the entire content. Continue? (You will not be asked again.)',
   ribbonTabFile: 'File',
   ribbonTabHome: 'Home',
   ribbonTabInsert: 'Insert',

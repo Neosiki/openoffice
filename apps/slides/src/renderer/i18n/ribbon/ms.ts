@@ -1,9 +1,9 @@
 import type { zh } from './zh'
 
 export const ms = {
-  ribbonAiCreditNote: 'Menggunakan AI dan menggunakan kredit',
+  ribbonAiCreditNote: 'Menggunakan AI dan mengurangkan kuota penggunaan AI anda',
   ribbonAiRewriteConfirm:
-    'Tindakan ini memanggil AI: menggunakan kredit dan mungkin menulis semula keseluruhan kandungan. Teruskan? (Tidak akan ditanya lagi.)',
+    'Tindakan ini memanggil AI: mengurangkan kuota penggunaan AI anda dan mungkin menulis semula keseluruhan kandungan. Teruskan? (Tidak akan ditanya lagi.)',
   ribbonTabFile: 'Fail',
   ribbonTabHome: 'Laman Utama',
   ribbonTabInsert: 'Sisip',

@@ -1,9 +1,9 @@
 import type { zh } from './zh'
 
 export const de = {
-  ribbonAiCreditNote: 'Ruft KI auf und verbraucht Guthaben',
+  ribbonAiCreditNote: 'Ruft KI auf und zählt zu Ihrem KI-Kontingent',
   ribbonAiRewriteConfirm:
-    'Diese Aktion ruft die KI auf: Sie verbraucht Guthaben und kann den gesamten Inhalt umschreiben. Fortfahren? (Sie werden nicht erneut gefragt.)',
+    'Diese Aktion ruft die KI auf: Sie zählt zu Ihrem KI-Kontingent und kann den gesamten Inhalt umschreiben. Fortfahren? (Sie werden nicht erneut gefragt.)',
   // tabs
   ribbonTabFile: 'Datei',
   ribbonTabHome: 'Start',

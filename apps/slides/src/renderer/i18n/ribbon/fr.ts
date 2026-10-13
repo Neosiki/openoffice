@@ -1,9 +1,9 @@
 import type { zh } from './zh'
 
 export const fr = {
-  ribbonAiCreditNote: "Fait appel à l'IA et consomme des crédits",
+  ribbonAiCreditNote: "Fait appel à l'IA et compte dans votre quota d'IA",
   ribbonAiRewriteConfirm:
-    "Cette action fait appel à l'IA : elle consomme des crédits et peut réécrire tout le contenu. Continuer ? (Vous ne serez plus averti.)",
+    "Cette action fait appel à l'IA : elle compte dans votre quota d'IA et peut réécrire tout le contenu. Continuer ? (Vous ne serez plus averti.)",
   // tabs
   ribbonTabFile: 'Fichier',
   ribbonTabHome: 'Accueil',

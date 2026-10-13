@@ -1,9 +1,9 @@
 import type { zh } from './zh'
 
 export const it = {
-  ribbonAiCreditNote: "Usa l'IA e consuma crediti",
+  ribbonAiCreditNote: "Usa l'IA e conta nel tuo limite di utilizzo",
   ribbonAiRewriteConfirm:
-    "Questa azione richiama l'IA: consuma crediti e può riscrivere l'intero contenuto. Continuare? (Non verrà più chiesto.)",
+    "Questa azione richiama l'IA: conta nel tuo limite di utilizzo e può riscrivere l'intero contenuto. Continuare? (Non verrà più chiesto.)",
   ribbonTabFile: 'File',
   ribbonTabHome: 'Home',
   ribbonTabInsert: 'Inserisci',

@@ -1,9 +1,9 @@
 import type { zh } from './zh'
 
 export const id = {
-  ribbonAiCreditNote: 'Menggunakan AI dan menghabiskan kredit',
+  ribbonAiCreditNote: 'Menggunakan AI dan mengurangi kuota penggunaan AI Anda',
   ribbonAiRewriteConfirm:
-    'Tindakan ini memanggil AI: menghabiskan kredit dan dapat menulis ulang seluruh konten. Lanjutkan? (Tidak akan ditanya lagi.)',
+    'Tindakan ini memanggil AI: mengurangi kuota penggunaan AI Anda dan dapat menulis ulang seluruh konten. Lanjutkan? (Tidak akan ditanya lagi.)',
   // tabs
   ribbonTabFile: 'File',
   ribbonTabHome: 'Beranda',

@@ -1,9 +1,9 @@
 import type { zh } from './zh'
 
 export const vi = {
-  ribbonAiCreditNote: 'Sử dụng AI và tiêu tốn tín dụng',
+  ribbonAiCreditNote: 'Sử dụng AI và tính vào hạn mức sử dụng AI của bạn',
   ribbonAiRewriteConfirm:
-    'Thao tác này sẽ gọi trợ lý AI: tiêu tốn tín dụng và có thể viết lại toàn bộ nội dung. Bạn có muốn tiếp tục? (Sau khi xác nhận sẽ không hỏi lại nữa.)',
+    'Thao tác này sẽ gọi trợ lý AI: tính vào hạn mức sử dụng AI của bạn và có thể viết lại toàn bộ nội dung. Bạn có muốn tiếp tục? (Sau khi xác nhận sẽ không hỏi lại nữa.)',
   ribbonTabFile: 'Tệp',
   ribbonTabHome: 'Trang chủ',
   ribbonTabInsert: 'Chèn',

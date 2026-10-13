@@ -1,9 +1,9 @@
 import type { zh } from './zh'
 
 export const he = {
-  ribbonAiCreditNote: 'משתמש ב-AI וצורך קרדיטים',
+  ribbonAiCreditNote: 'משתמש ב-AI ונספר במכסת השימוש שלך ב-AI',
   ribbonAiRewriteConfirm:
-    'פעולה זו מפעילה AI: היא צורכת קרדיטים ועשויה לשכתב את כל התוכן. להמשיך? (לא תישאל שוב.)',
+    'פעולה זו מפעילה AI: היא נספרת במכסת השימוש שלך ב-AI ועשויה לשכתב את כל התוכן. להמשיך? (לא תישאל שוב.)',
   ribbonTabFile: 'קובץ',
   ribbonTabHome: 'בית',
   ribbonTabInsert: 'הוספה',
