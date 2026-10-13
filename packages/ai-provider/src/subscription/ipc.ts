@@ -156,8 +156,11 @@ let sharedRegistration: { deps: SubscriptionIpcDeps; unregister: () => void } | 
  * Register the subscription channels once per process, whoever asks first.
  * Several editors' main-process modules run in one process in the packaged
  * app, and registering a channel twice throws, so every caller goes through
- * this instead of `registerSubscriptionIpc`: the first call registers and
- * starts the first status check, later calls get the same dependencies back.
+ * this instead of `registerSubscriptionIpc`: the first call registers, later
+ * calls get the same dependencies back. Nothing is checked here: the first
+ * window that asks for the statuses starts the first check, so a process that
+ * never shows AI (a headless export, a second instance about to quit) does not
+ * start the vendor programs at all.
  */
 export function ensureSubscriptionIpc(
   ipcMain: SubscriptionIpcMain,
@@ -168,7 +171,6 @@ export function ensureSubscriptionIpc(
   const deps = createDeps(setup)
   const unregister = registerSubscriptionIpc(ipcMain, deps)
   sharedRegistration = { deps, unregister }
-  void deps.service.check().catch(() => undefined)
   return deps
 }
 

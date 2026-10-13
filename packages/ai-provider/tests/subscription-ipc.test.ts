@@ -347,9 +347,9 @@ describe('ensureSubscriptionIpc', () => {
     expect(second).toBe(first)
     expect(created).toBe(1)
     expect(ipc.handlers.has(SUBSCRIPTION_IPC_CHANNELS.statuses)).toBe(true)
-    // the first registration starts the first status check
+    // registering checks nothing: a process that never shows AI must not start the vendor programs
     await Promise.resolve()
-    expect(log.filter((entry) => entry.startsWith('check'))).toHaveLength(1)
+    expect(log.filter((entry) => entry.startsWith('check'))).toHaveLength(0)
     expect(sharedSubscriptionStatuses()).toEqual(READY)
     resetSharedSubscriptionIpc()
     expect(ipc.handlers.size).toBe(0)
