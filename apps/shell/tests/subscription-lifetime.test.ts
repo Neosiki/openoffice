@@ -52,6 +52,22 @@ describe('subscription CLI lifetime in the shell main process', () => {
     for (const handler of handlers) expect(handler[0]).toContain('shutdownSubscriptionChildren')
   })
 
+  it('leaves an uncaught exception to Electron, which does not end the process', () => {
+    // Checked on the Electron this app ships (43.7.6): its own listener,
+    //   process.listenerCount('uncaughtException') > 1 || dialog.showErrorBox(…)
+    // only shows the error; nothing exits, so there is no way out of the process
+    // on this path that skips will-quit / 'exit'. (A rejected promise nobody
+    // handles is only warned about there; it never becomes an uncaught exception.)
+    // That holds only while the app takes the path over by no other spelling either.
+    const takeovers = [
+      ...source.matchAll(/process\.(?:once|addListener)\(\s*'uncaughtException'[\s\S]{0,800}/g),
+    ]
+    for (const takeover of takeovers) {
+      expect(takeover[0]).toContain('shutdownSubscriptionChildren')
+    }
+    expect(source).not.toContain('setUncaughtExceptionCaptureCallback')
+  })
+
   it('registers none of the shared subscription channels (one module of the app owns them)', () => {
     for (const channel of Object.values(SUBSCRIPTION_IPC_CHANNELS)) {
       expect(source).not.toContain(`'${channel}'`)

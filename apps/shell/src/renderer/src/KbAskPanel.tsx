@@ -6,18 +6,35 @@ import {
   type KbFileInfo,
 } from '@genoffice/agent-core'
 import {
+  AiBlockedNotice,
   AiComposer,
+  AiConnectPrompt,
   AiTypingIndicator,
   AiUsageChip,
   addTokenUsage,
+  aiRunErrorText,
   aiSubscriptionText,
   createFileNav,
   Markdown,
-  type AiConnectPromptView,
   type AiTokenUsageView,
 } from '@genoffice/ui'
 import type { AiSettings } from '@genoffice/ai-provider'
+import {
+  AI_SUBSCRIPTION_PROVIDERS,
+  isSubscriptionProvider,
+  selectAiProvider,
+  type AiSubscriptionProviderId,
+} from '@genoffice/ai-provider/browser'
+import {
+  askBlockedRunOf,
+  askSendGate,
+  withContinuedProvider,
+  type AskBlockedRun,
+} from './kb-ask-connection'
 import { useI18n } from './locale'
+import { changeAiSettings } from './settings-ai'
+import type { SubscriptionConnection } from './subscription-client'
+import { aiConnectHint } from './subscription-status'
 import sendEnterOn from './assets/send-enter-on.png'
 import sendEnterOff from './assets/send-enter-off.png'
 import sendStop from './assets/send-stop.png'
@@ -52,18 +69,28 @@ interface AskMessage {
   isError?: boolean
   /** tokens the provider billed for this answer, summed across its turns (absent when unreported) */
   usage?: AiTokenUsageView
+  /** the run stopped because its connection cannot go on: shown as the blocked notice */
+  blocked?: AskBlockedRun
+  /** the reason as the transport worded it, for a kind the notice has no text of its own for */
+  blockedReason?: string
 }
 
 export function KbAskPanel({
   onOpenPath,
   onGoToRecents,
-  connectHint,
+  connection,
+  aiSettings,
+  noticeDue,
   onOpenAiSettings,
 }: {
   onOpenPath: (path: string) => void
   onGoToRecents: () => void
-  /** why the selected AI cannot run right now; null when it can */
-  connectHint: AiConnectPromptView | null
+  /** the live subscription connection: the connect prompt shows it and acts on it */
+  connection: SubscriptionConnection
+  /** the AI settings as last read; null until they are */
+  aiSettings: AiSettings | null
+  /** the first-connection notice is up over this panel and not acknowledged yet */
+  noticeDue: boolean
   /** open Settings on its AI section, where a connection is made */
   onOpenAiSettings: () => void
 }): React.JSX.Element {
@@ -82,6 +109,24 @@ export function KbAskPanel({
   const runUsageRef = useRef<AiTokenUsageView | undefined>(undefined)
   /** tokens billed across the panel's session (the composer chip) */
   const [sessionUsage, setSessionUsage] = useState<AiTokenUsageView | undefined>(undefined)
+  /** a send was refused for want of a connection: the connect prompt stays until one can run */
+  const [connectAsked, setConnectAsked] = useState(false)
+  /** structured cause of the failure the loop is about to report through onError */
+  const streamErrorRef = useRef<AskBlockedRun | null>(null)
+  const langRef = useRef(lang)
+  langRef.current = lang
+  const connectionRef = useRef(connection)
+  connectionRef.current = connection
+  /** the provider a question would run on right now (null until the settings are read) */
+  const providerChoice = aiSettings ? selectAiProvider(aiSettings, connection.statuses) : null
+  const aiConnected = providerChoice?.connected === true
+  const connectPromptOpen = connectAsked && providerChoice !== null && !providerChoice.connected
+  // why the selected AI cannot run right now; null when it can
+  const connectHint = aiConnectHint(aiSettings, connection.statuses)
+  // once a provider can run again the connect prompt has done its job
+  useEffect(() => {
+    if (aiConnected) setConnectAsked(false)
+  }, [aiConnected])
 
   const refreshSettings = (): void => {
     void window.aiOffice
@@ -115,6 +160,11 @@ export function KbAskPanel({
         cancel: (requestId) => void window.aiOffice.aiStreamCancel(requestId),
         getSettings: () => settingsRef.current as AiSettings,
         unknownErrorText: () => t('askUnknownError'),
+        // the subscription causes are worded once for every AI surface of the suite
+        errorText: (cause) => aiRunErrorText(langRef.current, cause),
+        onStreamError: (error) => {
+          streamErrorRef.current = askBlockedRunOf(error)
+        },
       }),
       skill: createKnowledgeBaseSkill({
         listFiles: () => corpusRef.current,
@@ -138,12 +188,27 @@ export function KbAskPanel({
           setSessionUsage((prev) => addTokenUsage(prev, usage))
           patchLast({ usage: runUsageRef.current })
         },
-        onError: (error) =>
+        onError: (error) => {
+          const blocked = streamErrorRef.current
+          streamErrorRef.current = null
+          if (blocked) {
+            // the shown status may be stale (a login that expired mid-run): look again,
+            // and offer the connect cards if the provider turns out to be unusable
+            if (blocked.provider && isSubscriptionProvider(blocked.provider)) {
+              connectionRef.current.recheck(blocked.provider)
+            }
+            setConnectAsked(true)
+          }
           patchLast((last) => ({
-            text: last.text || error,
+            // a blocked run keeps what was answered so far; the notice under it says why it stopped
+            text: blocked ? last.text : last.text || error,
             streaming: false,
-            isError: !last.text,
-          })),
+            isError: !blocked && !last.text,
+            ...(blocked ? { blocked, blockedReason: error } : {}),
+          }))
+          // onError is the loop's last word on a run: the composer takes questions again
+          setBusy(false)
+        },
       },
     })
     return () => loopRef.current?.cancel()
@@ -152,7 +217,7 @@ export function KbAskPanel({
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight })
-  }, [messages])
+  }, [messages, connectPromptOpen])
 
   const patchLast = (
     patch: Partial<AskMessage> | ((last: AskMessage) => Partial<AskMessage>),
@@ -174,10 +239,21 @@ export function KbAskPanel({
     setBusy(false)
   }
 
-  const ask = async (): Promise<void> => {
-    const instruction = draft.trim()
+  /** `again`: a question asked before, sent once more; `known`: settings just written, ahead of the props */
+  const ask = async (again?: string, known?: AiSettings): Promise<void> => {
+    const instruction = (again ?? draft).trim()
     if (!instruction || busy) return
-    setDraft('')
+    const gate = askSendGate(known ?? aiSettings, connection.statuses, noticeDue)
+    if (gate !== 'run') {
+      // nothing is sent: the question stays in the composer while the panel shows what
+      // is missing (a connection) or the home screen shows what must be read first
+      // (the first-connection notice)
+      if (again !== undefined) setDraft(instruction)
+      if (gate === 'connect') setConnectAsked(true)
+      return
+    }
+    streamErrorRef.current = null
+    if (again === undefined) setDraft('')
     setBusy(true)
     refreshSettings()
     const seq = ++askSeqRef.current
@@ -210,6 +286,17 @@ export function KbAskPanel({
     } catch {
       finishLast()
     }
+  }
+
+  /** "Continue with <provider>" on a blocked run: select that provider and ask the question again */
+  const continueWith = (provider: AiSubscriptionProviderId): void => {
+    if (busy || loopRef.current?.busy) return
+    const question = [...messages].reverse().find((m) => m.role === 'user')
+    void changeAiSettings((current) => withContinuedProvider(current, provider)).then((next) => {
+      if (!next) return
+      settingsRef.current = next
+      if (question) void ask(question.text, next)
+    })
   }
 
   const fileNav = createFileNav((path) => onOpenPath(path))
@@ -289,8 +376,54 @@ export function KbAskPanel({
                 <AiUsageChip usage={m.usage} lang={lang} />
               </div>
             )}
+            {m.blocked && (
+              <AiBlockedNotice
+                kind={m.blocked.kind}
+                provider={m.blocked.provider}
+                resetsAt={m.blocked.resetsAt}
+                message={m.blockedReason}
+                settings={aiSettings ?? {}}
+                // only the run that just stopped can be continued on another connection
+                statuses={i === messages.length - 1 && !busy ? connection.statuses : {}}
+                lang={lang}
+                onContinueWith={continueWith}
+              />
+            )}
           </div>
         ))}
+        {connectPromptOpen && (
+          <>
+            <AiConnectPrompt
+              choice={providerChoice}
+              statuses={connection.statuses}
+              lang={lang}
+              disabled={connection.busy}
+              onOpenSettings={onOpenAiSettings}
+              onInstall={connection.install}
+              onLogin={connection.login}
+              onRecheck={connection.recheck}
+              onAcceptMetered={(provider) => void connection.acceptMetered(provider)}
+              onOpenInstallHelp={connection.openInstallHelp}
+            />
+            {AI_SUBSCRIPTION_PROVIDERS.map(
+              (provider) =>
+                connection.failed[provider] && (
+                  <p
+                    key={provider}
+                    className="kb-ask-login kb-ask-error"
+                    role="alert"
+                    data-provider={provider}
+                  >
+                    {t(
+                      connection.failed[provider] === 'install'
+                        ? 'setSubInstallFailed'
+                        : 'setSubLoginFailed',
+                    )}
+                  </p>
+                ),
+            )}
+          </>
+        )}
       </div>
       {messages.length > 0 && (
         <p className="kb-ask-nosave">
@@ -298,7 +431,7 @@ export function KbAskPanel({
           {t('askNoSave')}
         </p>
       )}
-      {connectHint && (
+      {connectHint && !connectPromptOpen && (
         <p className="kb-ask-login">
           {aiSubscriptionText(lang, connectHint.titleKey, {
             provider: connectHint.providerName ?? '',

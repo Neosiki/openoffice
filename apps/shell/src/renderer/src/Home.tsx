@@ -39,7 +39,7 @@ import { skillUpdateDue } from './IntegrationsPane'
 import { onFilesChanged } from './file-events'
 import { FirstConnectionDialog } from './FirstConnectionNotice'
 import type { SubscriptionConnection } from './subscription-client'
-import { aiConnectHint, subscriptionSummary } from './subscription-status'
+import { subscriptionSummary } from './subscription-status'
 
 declare global {
   interface Window {
@@ -3017,7 +3017,9 @@ export function Home({
         renderFolderContent()
       ) : askMode ? (
         <KbAskPanel
-          connectHint={aiConnectHint(aiSettings, connection.statuses)}
+          connection={connection}
+          aiSettings={aiSettings}
+          noticeDue={noticeDue}
           onOpenAiSettings={() => setSettingsRequest({ section: 'aiModel' })}
           onOpenPath={(path) => void window.aiOffice.openPath(path)}
           onGoToRecents={() => changeView('recent')}

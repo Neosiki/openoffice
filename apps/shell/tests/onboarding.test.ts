@@ -6,6 +6,7 @@ import { createRoot } from 'react-dom/client'
 import type { Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { AiSubscriptionState, SubscriptionStatusMap } from '@genoffice/ai-provider/browser'
+import { LANGS } from '@genoffice/i18n'
 import { aiSubscriptionText } from '@genoffice/ui'
 import { Onboarding } from '../src/renderer/src/Onboarding'
 import { LocaleProvider } from '../src/renderer/src/locale'
@@ -132,6 +133,17 @@ describe('Onboarding', () => {
     expect(activeStep()).toBe('welcome')
   })
 
+  it('describes the product plainly on the welcome step', () => {
+    renderOnboarding()
+    const step = host.querySelector<HTMLElement>('.onb-slide[data-step="welcome"]')!
+    expect(step.querySelector('.onb-subtitle')!.textContent).toBe(strings.en.onbWelcomeSubtitle)
+    expect(step.querySelector('.onb-body')!.textContent).toBe(strings.en.onbWelcomeBody)
+    // not the upstream vendor's claim, and no superlative of its own
+    expect(step.textContent).not.toContain(strings.en.onbSubtitle1)
+    expect(step.textContent).not.toMatch(/\b(first|best|leading|most|only)\b|AI-native/i)
+    expect(strings.en.onbWelcomeSubtitle).toBe('An open-source office suite')
+  })
+
   it('can be completed without connecting a subscription', async () => {
     const onDone = vi.fn(async () => true)
     const connection = connectionOf(statuses('not-installed', 'not-installed'))
@@ -248,5 +260,32 @@ describe('Onboarding', () => {
     }
     expect(host.querySelector('[role="switch"]')).toBeNull()
     expect(host.querySelector('.onb-offer, .onb-star, .onb-consent, .onb-join')).toBeNull()
+  })
+})
+
+describe('welcome copy', () => {
+  it('exists in every UI language, as a translation', () => {
+    expect(LANGS).toHaveLength(21)
+    for (const lang of LANGS) {
+      const { onbWelcomeSubtitle, onbWelcomeBody } = strings[lang]
+      expect(onbWelcomeSubtitle.trim(), lang).not.toBe('')
+      expect(onbWelcomeBody.trim(), lang).not.toBe('')
+      expect(onbWelcomeSubtitle, lang).not.toBe(strings[lang].onbSubtitle1)
+      if (lang === 'en') continue
+      expect(onbWelcomeSubtitle, lang).not.toBe(strings.en.onbWelcomeSubtitle)
+      expect(onbWelcomeBody, lang).not.toBe(strings.en.onbWelcomeBody)
+    }
+    expect(new Set(LANGS.map((lang) => strings[lang].onbWelcomeBody)).size).toBe(LANGS.length)
+  })
+
+  it.each(LANGS)('names every document kind and both subscriptions in %s', (lang) => {
+    const body = strings[lang].onbWelcomeBody
+    for (const name of ['Word', 'Excel', 'PowerPoint', 'PDF', 'Markdown', 'HTML']) {
+      expect(body, name).toContain(name)
+    }
+    expect(body).toContain('Claude')
+    expect(body).toContain('Codex')
+    // the product is named by the title above, and no vendor of the suite is named at all
+    expect(`${strings[lang].onbWelcomeSubtitle} ${body}`).not.toMatch(/genoffice|genspark/i)
   })
 })
