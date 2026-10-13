@@ -420,6 +420,7 @@ export const strings = {
     setGithub: '开源项目',
     setBasedOn: '基于开源项目 {{GenOffice}} 构建（Apache License 2.0）。',
     starOnGitHub: '去 GitHub 点 Star',
+    viewOnGitHub: '在 GitHub 上查看',
     starPromptTitle: '喜欢 GenOffice 吗？',
     starPromptTitleN: '你已经用 GenOffice 打开了 {n} 个文档',
     starPromptBody: 'GenOffice 是免费开源软件。到 GitHub 给我们一个 Star，是对团队最好的支持。',
@@ -443,6 +444,9 @@ export const strings = {
     newTab: '新建标签页',
     // First-run onboarding
     onbTitle1: '欢迎使用 GenOffice',
+    onbWelcomeSubtitle: '开源办公套件',
+    onbWelcomeBody:
+      '打开并编辑 Word、Excel、PowerPoint、PDF、Markdown 和 HTML 文档。AI 通过你已有的 Claude 或 Codex 订阅运行。',
     onbSubtitle1: '第一个开源的 AI 原生 Office 套件',
     onbBody1: '创建文档、制作表格、生成演示、审阅 PDF。AI 深度融入每个环节。',
     onbTitle2: '这只是一个开始',
@@ -903,6 +907,7 @@ export const strings = {
     setGithub: 'Open Source',
     setBasedOn: 'Based on the open-source project {{GenOffice}} (Apache License 2.0).',
     starOnGitHub: 'Star on GitHub',
+    viewOnGitHub: 'View on GitHub',
     starPromptTitle: 'Enjoying GenOffice?',
     starPromptTitleN: "You've opened {n} documents with GenOffice",
     starPromptBody:
@@ -925,6 +930,9 @@ export const strings = {
     newTab: 'New tab',
     // First-run onboarding
     onbTitle1: 'Welcome to GenOffice',
+    onbWelcomeSubtitle: 'An open-source office suite',
+    onbWelcomeBody:
+      'Open and edit Word, Excel, PowerPoint, PDF, Markdown and HTML documents. AI works through the Claude or Codex subscription you already have.',
     onbSubtitle1: 'The first open-source, AI-native office suite',
     onbBody1:
       'Create docs, build sheets, make slides, and review PDFs. AI is built into every step.',
@@ -1390,6 +1398,7 @@ export const strings = {
     setGithub: 'Mã nguồn mở',
     setBasedOn: 'Dựa trên dự án mã nguồn mở {{GenOffice}} (Apache License 2.0).',
     starOnGitHub: 'Gắn sao trên GitHub',
+    viewOnGitHub: 'Xem trên GitHub',
     starPromptTitle: 'Bạn thích GenOffice chứ?',
     starPromptTitleN: 'Bạn đã mở {n} tài liệu với GenOffice',
     starPromptBody:
@@ -1412,6 +1421,9 @@ export const strings = {
     newTab: 'Tab mới',
     // First-run onboarding
     onbTitle1: 'Chào mừng đến với GenOffice',
+    onbWelcomeSubtitle: 'Bộ ứng dụng văn phòng mã nguồn mở',
+    onbWelcomeBody:
+      'Mở và chỉnh sửa tài liệu Word, Excel, PowerPoint, PDF, Markdown và HTML. AI hoạt động qua gói đăng ký Claude hoặc Codex mà bạn đã có.',
     onbSubtitle1: 'Bộ ứng dụng văn phòng AI nguồn mở đầu tiên',
     onbBody1:
       'Tạo tài liệu, xây dựng bảng tính, tạo bản trình bày và xem lại PDF. AI được tích hợp trong từng bước.',
@@ -1889,6 +1901,7 @@ export const strings = {
     setBasedOn:
       'オープンソースプロジェクト {{GenOffice}}（Apache License 2.0）をもとに開発されています。',
     starOnGitHub: 'GitHub でスターを付ける',
+    viewOnGitHub: 'GitHub で見る',
     starPromptTitle: 'GenOffice はいかがですか？',
     starPromptTitleN: 'GenOffice で {n} 件のドキュメントを開きました',
     starPromptBody:
@@ -1913,6 +1926,9 @@ export const strings = {
     newTab: '新しいタブ',
     // First-run onboarding
     onbTitle1: 'GenOffice へようこそ',
+    onbWelcomeSubtitle: 'オープンソースのオフィススイート',
+    onbWelcomeBody:
+      'Word、Excel、PowerPoint、PDF、Markdown、HTML の文書を開いて編集できます。AI は、すでにお持ちの Claude または Codex のサブスクリプションで動作します。',
     onbSubtitle1: '初のオープンソース AI ネイティブ Office スイート',
     onbBody1:
       '文書の作成、表計算、プレゼン作成、PDF のレビュー。あらゆるステップに AI が組み込まれています。',
@@ -2378,6 +2394,7 @@ export const strings = {
     setGithub: '오픈 소스',
     setBasedOn: '오픈 소스 프로젝트 {{GenOffice}}(Apache License 2.0)를 바탕으로 만들었습니다.',
     starOnGitHub: 'GitHub에서 스타 누르기',
+    viewOnGitHub: 'GitHub에서 보기',
     starPromptTitle: 'GenOffice가 마음에 드시나요?',
     starPromptTitleN: 'GenOffice로 문서를 {n}개 열어보셨네요',
     starPromptBody:
@@ -2402,6 +2419,9 @@ export const strings = {
     newTab: '새 탭',
     // First-run onboarding
     onbTitle1: 'GenOffice에 오신 것을 환영합니다',
+    onbWelcomeSubtitle: '오픈소스 오피스 제품군',
+    onbWelcomeBody:
+      'Word, Excel, PowerPoint, PDF, Markdown, HTML 문서를 열고 편집합니다. AI는 이미 쓰고 있는 Claude 또는 Codex 구독으로 동작합니다.',
     onbSubtitle1: '최초의 오픈소스 AI 네이티브 오피스 제품군',
     onbBody1:
       '문서 작성, 스프레드시트 제작, 프레젠테이션 생성, PDF 검토. 모든 단계에 AI가 녹아 있습니다.',
@@ -2886,6 +2906,7 @@ export const strings = {
     setGithub: 'Open source',
     setBasedOn: 'Basé sur le projet open source {{GenOffice}} (Apache License 2.0).',
     starOnGitHub: 'Mettre une étoile sur GitHub',
+    viewOnGitHub: 'Voir sur GitHub',
     starPromptTitle: 'GenOffice vous plaît ?',
     starPromptTitleN: 'Vous avez ouvert {n} documents avec GenOffice',
     starPromptBody:
@@ -2910,6 +2931,9 @@ export const strings = {
     newTab: 'Nouvel onglet',
     // First-run onboarding
     onbTitle1: 'Bienvenue dans GenOffice',
+    onbWelcomeSubtitle: 'Une suite bureautique open source',
+    onbWelcomeBody:
+      'Ouvrez et modifiez des documents Word, Excel, PowerPoint, PDF, Markdown et HTML. L’IA fonctionne avec l’abonnement Claude ou Codex que vous avez déjà.',
     onbSubtitle1: 'La première suite bureautique open source et native IA',
     onbBody1:
       'Créez des documents, des feuilles de calcul et des présentations, et relisez des PDF. L’IA est intégrée à chaque étape.',
@@ -3397,6 +3421,7 @@ export const strings = {
     setGithub: 'Open Source',
     setBasedOn: 'Basiert auf dem Open-Source-Projekt {{GenOffice}} (Apache License 2.0).',
     starOnGitHub: 'Auf GitHub Stern geben',
+    viewOnGitHub: 'Auf GitHub ansehen',
     starPromptTitle: 'Gefällt Ihnen GenOffice?',
     starPromptTitleN: 'Sie haben {n} Dokumente mit GenOffice geöffnet',
     starPromptBody:
@@ -3421,6 +3446,9 @@ export const strings = {
     newTab: 'Neuer Tab',
     // First-run onboarding
     onbTitle1: 'Willkommen bei GenOffice',
+    onbWelcomeSubtitle: 'Eine quelloffene Office-Suite',
+    onbWelcomeBody:
+      'Öffnen und bearbeiten Sie Word-, Excel-, PowerPoint-, PDF-, Markdown- und HTML-Dokumente. Die KI läuft über das Claude- oder Codex-Abonnement, das Sie bereits haben.',
     onbSubtitle1: 'Die erste quelloffene, KI-native Office-Suite',
     onbBody1:
       'Dokumente erstellen, Tabellen bauen, Präsentationen gestalten und PDFs prüfen. KI ist in jedem Schritt integriert.',
@@ -3904,6 +3932,7 @@ export const strings = {
     setGithub: 'Código abierto',
     setBasedOn: 'Basado en el proyecto de código abierto {{GenOffice}} (Apache License 2.0).',
     starOnGitHub: 'Dar una estrella en GitHub',
+    viewOnGitHub: 'Ver en GitHub',
     starPromptTitle: '¿Te gusta GenOffice?',
     starPromptTitleN: 'Has abierto {n} documentos con GenOffice',
     starPromptBody:
@@ -3928,6 +3957,9 @@ export const strings = {
     newTab: 'Nueva pestaña',
     // First-run onboarding
     onbTitle1: 'Bienvenido a GenOffice',
+    onbWelcomeSubtitle: 'Una suite ofimática de código abierto',
+    onbWelcomeBody:
+      'Abre y edita documentos de Word, Excel, PowerPoint, PDF, Markdown y HTML. La IA funciona con la suscripción de Claude o Codex que ya tienes.',
     onbSubtitle1: 'La primera suite ofimática de código abierto y nativa de IA',
     onbBody1:
       'Crea documentos, hojas de cálculo y presentaciones, y revisa PDF. La IA está integrada en cada paso.',
@@ -4391,6 +4423,7 @@ export const strings = {
     setGithub: 'โอเพนซอร์ส',
     setBasedOn: 'พัฒนาต่อยอดจากโครงการโอเพนซอร์ส {{GenOffice}} (Apache License 2.0)',
     starOnGitHub: 'กดดาวบน GitHub',
+    viewOnGitHub: 'ดูบน GitHub',
     starPromptTitle: 'ชอบ GenOffice ไหม?',
     starPromptTitleN: 'คุณเปิดเอกสารด้วย GenOffice ไปแล้ว {n} ไฟล์',
     starPromptBody:
@@ -4415,6 +4448,9 @@ export const strings = {
     newTab: 'แท็บใหม่',
     // First-run onboarding
     onbTitle1: 'ยินดีต้อนรับสู่ GenOffice',
+    onbWelcomeSubtitle: 'ชุดโปรแกรมออฟฟิศโอเพนซอร์ส',
+    onbWelcomeBody:
+      'เปิดและแก้ไขเอกสาร Word, Excel, PowerPoint, PDF, Markdown และ HTML โดย AI ทำงานผ่านการสมัครสมาชิก Claude หรือ Codex ที่คุณมีอยู่แล้ว',
     onbSubtitle1: 'ชุดโปรแกรมออฟฟิศ AI-native โอเพนซอร์สตัวแรก',
     onbBody1: 'สร้างเอกสาร ทำสเปรดชีต สร้างงานนำเสนอ และตรวจทาน PDF ทุกขั้นตอนมี AI ในตัว',
     onbTitle2: 'นี่เป็นเพียงจุดเริ่มต้น',
@@ -4890,6 +4926,7 @@ export const strings = {
     setGithub: 'Sumber Terbuka',
     setBasedOn: 'Dibuat berdasarkan proyek sumber terbuka {{GenOffice}} (Apache License 2.0).',
     starOnGitHub: 'Beri Bintang di GitHub',
+    viewOnGitHub: 'Lihat di GitHub',
     starPromptTitle: 'Suka GenOffice?',
     starPromptTitleN: 'Anda telah membuka {n} dokumen dengan GenOffice',
     starPromptBody:
@@ -4914,6 +4951,9 @@ export const strings = {
     newTab: 'Tab baru',
     // First-run onboarding
     onbTitle1: 'Selamat datang di GenOffice',
+    onbWelcomeSubtitle: 'Suite office open source',
+    onbWelcomeBody:
+      'Buka dan edit dokumen Word, Excel, PowerPoint, PDF, Markdown, dan HTML. AI berjalan melalui langganan Claude atau Codex yang sudah Anda miliki.',
     onbSubtitle1: 'Suite office open source AI-native pertama',
     onbBody1:
       'Buat dokumen, susun spreadsheet, rancang presentasi, dan tinjau PDF. AI hadir di setiap langkah.',
@@ -5390,6 +5430,7 @@ export const strings = {
     setBasedOn:
       'Создано на основе проекта с открытым исходным кодом {{GenOffice}} (Apache License 2.0).',
     starOnGitHub: 'Поставить звезду на GitHub',
+    viewOnGitHub: 'Открыть на GitHub',
     starPromptTitle: 'Нравится GenOffice?',
     starPromptTitleN: 'Вы уже открыли {n} документов в GenOffice',
     starPromptBody:
@@ -5414,6 +5455,9 @@ export const strings = {
     newTab: 'Новая вкладка',
     // First-run onboarding
     onbTitle1: 'Добро пожаловать в GenOffice',
+    onbWelcomeSubtitle: 'Офисный пакет с открытым исходным кодом',
+    onbWelcomeBody:
+      'Открывайте и редактируйте документы Word, Excel, PowerPoint, PDF, Markdown и HTML. ИИ работает через уже имеющуюся у вас подписку Claude или Codex.',
     onbSubtitle1: 'Первый открытый ИИ-нативный офисный пакет',
     onbBody1:
       'Создавайте документы, таблицы и презентации, работайте с PDF. ИИ встроен в каждый шаг.',
@@ -5879,6 +5923,7 @@ export const strings = {
     setGithub: 'مفتوح المصدر',
     setBasedOn: 'مبني على المشروع مفتوح المصدر {{GenOffice}} (Apache License 2.0).',
     starOnGitHub: 'ضع نجمة على GitHub',
+    viewOnGitHub: 'عرض على GitHub',
     starPromptTitle: 'هل أعجبك GenOffice؟',
     starPromptTitleN: 'لقد فتحت {n} من المستندات في GenOffice',
     starPromptBody: 'GenOffice مجاني ومفتوح المصدر. نجمة على GitHub هي أفضل دعم للفريق.',
@@ -5902,6 +5947,9 @@ export const strings = {
     newTab: 'علامة تبويب جديدة',
     // First-run onboarding
     onbTitle1: 'مرحبًا بك في GenOffice',
+    onbWelcomeSubtitle: 'حزمة مكتبية مفتوحة المصدر',
+    onbWelcomeBody:
+      'افتح مستندات Word وExcel وPowerPoint وPDF وMarkdown وHTML وحرّرها. يعمل الذكاء الاصطناعي عبر اشتراك Claude أو Codex الذي لديك بالفعل.',
     onbSubtitle1: 'أول حزمة مكتبية مفتوحة المصدر وأصيلة في الذكاء الاصطناعي',
     onbBody1:
       'أنشئ المستندات وجداول البيانات والعروض التقديمية وراجع ملفات PDF. الذكاء الاصطناعي مدمج في كل خطوة.',
@@ -6376,6 +6424,7 @@ export const strings = {
     setGithub: 'Código aberto',
     setBasedOn: 'Baseado no projeto de código aberto {{GenOffice}} (Apache License 2.0).',
     starOnGitHub: 'Dar uma estrela no GitHub',
+    viewOnGitHub: 'Ver no GitHub',
     starPromptTitle: 'Gostando do GenOffice?',
     starPromptTitleN: 'Você já abriu {n} documentos com o GenOffice',
     starPromptBody:
@@ -6398,6 +6447,9 @@ export const strings = {
     newTab: 'Nova guia',
     // First-run onboarding
     onbTitle1: 'Bem-vindo ao GenOffice',
+    onbWelcomeSubtitle: 'Uma suíte de escritório de código aberto',
+    onbWelcomeBody:
+      'Abra e edite documentos do Word, Excel, PowerPoint, PDF, Markdown e HTML. A IA funciona com a assinatura do Claude ou do Codex que você já tem.',
     onbSubtitle1: 'A primeira suíte de escritório open source e nativa de IA',
     onbBody1:
       'Crie documentos, planilhas e apresentações e revise PDFs. A IA está integrada em cada etapa.',
@@ -6870,6 +6922,7 @@ export const strings = {
     setGithub: 'Open source',
     setBasedOn: 'Basato sul progetto open source {{GenOffice}} (Apache License 2.0).',
     starOnGitHub: 'Metti una stella su GitHub',
+    viewOnGitHub: 'Vedi su GitHub',
     starPromptTitle: 'Ti piace GenOffice?',
     starPromptTitleN: 'Hai aperto {n} documenti con GenOffice',
     starPromptBody:
@@ -6892,6 +6945,9 @@ export const strings = {
     newTab: 'Nuova scheda',
     // First-run onboarding
     onbTitle1: 'Benvenuto in GenOffice',
+    onbWelcomeSubtitle: 'Una suite per ufficio open source',
+    onbWelcomeBody:
+      'Apri e modifica documenti Word, Excel, PowerPoint, PDF, Markdown e HTML. L’IA funziona con l’abbonamento Claude o Codex che hai già.',
     onbSubtitle1: 'La prima suite per ufficio open source e nativa per l’IA',
     onbBody1:
       'Crea documenti, fogli di calcolo e presentazioni e rivedi i PDF. L’IA è integrata in ogni passaggio.',
@@ -7361,6 +7417,7 @@ export const strings = {
     setGithub: 'Open source',
     setBasedOn: 'Oparte na projekcie open source {{GenOffice}} (Apache License 2.0).',
     starOnGitHub: 'Gwiazdka na GitHubie',
+    viewOnGitHub: 'Zobacz na GitHubie',
     starPromptTitle: 'Podoba Ci się GenOffice?',
     starPromptTitleN: 'Otwarto już {n} dokumentów w GenOffice',
     starPromptBody:
@@ -7383,6 +7440,9 @@ export const strings = {
     newTab: 'Nowa karta',
     // First-run onboarding
     onbTitle1: 'Witamy w GenOffice',
+    onbWelcomeSubtitle: 'Otwartoźródłowy pakiet biurowy',
+    onbWelcomeBody:
+      'Otwieraj i edytuj dokumenty Word, Excel, PowerPoint, PDF, Markdown i HTML. AI działa w ramach subskrypcji Claude lub Codex, którą już masz.',
     onbSubtitle1: 'Pierwszy otwartoźródłowy, natywnie oparty na AI pakiet biurowy',
     onbBody1:
       'Twórz dokumenty, arkusze i prezentacje oraz przeglądaj pliki PDF. AI jest wbudowana w każdy etap.',
@@ -7818,6 +7878,7 @@ export const strings = {
     setGithub: 'Open source',
     setBasedOn: 'Založeno na open source projektu {{GenOffice}} (Apache License 2.0).',
     starOnGitHub: 'Dát hvězdičku na GitHubu',
+    viewOnGitHub: 'Zobrazit na GitHubu',
     starPromptTitle: 'Líbí se vám GenOffice?',
     starPromptTitleN: 'V GenOffice jste otevřeli už {n} dokumentů',
     starPromptBody:
@@ -7840,6 +7901,9 @@ export const strings = {
     newTab: 'Nová karta',
     // First-run onboarding
     onbTitle1: 'Vítejte v GenOffice',
+    onbWelcomeSubtitle: 'Kancelářský balík s otevřeným zdrojovým kódem',
+    onbWelcomeBody:
+      'Otevírejte a upravujte dokumenty Word, Excel, PowerPoint, PDF, Markdown a HTML. AI funguje přes předplatné Claude nebo Codex, které už máte.',
     onbSubtitle1: 'První open-source kancelářský balík s nativní AI',
     onbBody1:
       'Vytvářejte dokumenty, tabulky a prezentace a kontrolujte PDF. AI je součástí každého kroku.',
@@ -8340,6 +8404,7 @@ export const strings = {
     setGithub: 'Open source',
     setBasedOn: 'Gebaseerd op het opensourceproject {{GenOffice}} (Apache License 2.0).',
     starOnGitHub: 'Geef een ster op GitHub',
+    viewOnGitHub: 'Bekijken op GitHub',
     starPromptTitle: 'Bevalt GenOffice?',
     starPromptTitleN: 'Je hebt al {n} documenten geopend met GenOffice',
     starPromptBody:
@@ -8362,6 +8427,9 @@ export const strings = {
     newTab: 'Nieuw tabblad',
     // First-run onboarding
     onbTitle1: 'Welkom bij GenOffice',
+    onbWelcomeSubtitle: 'Een opensource-officesuite',
+    onbWelcomeBody:
+      'Open en bewerk Word-, Excel-, PowerPoint-, PDF-, Markdown- en HTML-documenten. AI werkt via het Claude- of Codex-abonnement dat je al hebt.',
     onbSubtitle1: 'De eerste open source, AI-native officesuite',
     onbBody1:
       'Maak documenten, bouw spreadsheets, maak presentaties en beoordeel PDF-bestanden. AI zit in elke stap ingebouwd.',
@@ -8834,6 +8902,7 @@ export const strings = {
     setGithub: 'Sumber Terbuka',
     setBasedOn: 'Berasaskan projek sumber terbuka {{GenOffice}} (Apache License 2.0).',
     starOnGitHub: 'Beri Bintang di GitHub',
+    viewOnGitHub: 'Lihat di GitHub',
     starPromptTitle: 'Suka GenOffice?',
     starPromptTitleN: 'Anda telah membuka {n} dokumen dengan GenOffice',
     starPromptBody:
@@ -8856,6 +8925,9 @@ export const strings = {
     newTab: 'Tab baharu',
     // First-run onboarding
     onbTitle1: 'Selamat datang ke GenOffice',
+    onbWelcomeSubtitle: 'Suite pejabat sumber terbuka',
+    onbWelcomeBody:
+      'Buka dan sunting dokumen Word, Excel, PowerPoint, PDF, Markdown dan HTML. AI berfungsi melalui langganan Claude atau Codex yang sudah anda miliki.',
     onbSubtitle1: 'Suite pejabat sumber terbuka natif AI yang pertama',
     onbBody1:
       'Cipta dokumen, bina hamparan, hasilkan persembahan dan semak PDF. AI tersedia pada setiap langkah.',
@@ -9310,6 +9382,7 @@ export const strings = {
     setGithub: 'קוד פתוח',
     setBasedOn: 'מבוסס על פרויקט הקוד הפתוח {{GenOffice}} (Apache License 2.0).',
     starOnGitHub: 'תנו כוכב ב-GitHub',
+    viewOnGitHub: 'הצגה ב-GitHub',
     starPromptTitle: 'נהנים מ-GenOffice?',
     starPromptTitleN: 'פתחת {n} מסמכים עם GenOffice',
     starPromptBody: 'GenOffice חינמי ובקוד פתוח. כוכב ב-GitHub הוא התמיכה הטובה ביותר בצוות.',
@@ -9331,6 +9404,9 @@ export const strings = {
     newTab: 'כרטיסייה חדשה',
     // First-run onboarding
     onbTitle1: 'ברוכים הבאים ל-GenOffice',
+    onbWelcomeSubtitle: 'חבילת משרד בקוד פתוח',
+    onbWelcomeBody:
+      'פתחו וערכו מסמכי Word, Excel, PowerPoint, PDF, Markdown ו-HTML. ה-AI פועל דרך מינוי Claude או Codex שכבר יש לכם.',
     onbSubtitle1: 'חבילת המשרד הראשונה בקוד פתוח שהיא AI-נייטיב',
     onbBody1: 'צרו מסמכים, בנו גיליונות, הכינו מצגות ובדקו קובצי PDF. ה-AI מובנה בכל שלב.',
     onbTitle2: 'זו רק ההתחלה',
@@ -9796,6 +9872,7 @@ export const strings = {
     setGithub: 'ओपन सोर्स',
     setBasedOn: 'ओपन सोर्स प्रोजेक्ट {{GenOffice}} (Apache License 2.0) पर आधारित।',
     starOnGitHub: 'GitHub पर स्टार दें',
+    viewOnGitHub: 'GitHub पर देखें',
     starPromptTitle: 'GenOffice पसंद आ रहा है?',
     starPromptTitleN: 'आपने GenOffice में {n} दस्तावेज़ खोले हैं',
     starPromptBody:
@@ -9818,6 +9895,9 @@ export const strings = {
     newTab: 'नया टैब',
     // First-run onboarding
     onbTitle1: 'GenOffice में आपका स्वागत है',
+    onbWelcomeSubtitle: 'ओपन-सोर्स ऑफ़िस सुइट',
+    onbWelcomeBody:
+      'Word, Excel, PowerPoint, PDF, Markdown और HTML दस्तावेज़ खोलें और संपादित करें। AI आपकी मौजूदा Claude या Codex सदस्यता के ज़रिए काम करता है।',
     onbSubtitle1: 'पहला ओपन-सोर्स, AI-नेटिव ऑफ़िस सुइट',
     onbBody1:
       'दस्तावेज़ बनाएँ, स्प्रेडशीट तैयार करें, प्रस्तुतियाँ बनाएँ और PDF की समीक्षा करें। AI हर चरण में शामिल है।',
@@ -10262,6 +10342,7 @@ export const strings = {
     setGithub: '開源專案',
     setBasedOn: '以開源專案 {{GenOffice}} 為基礎打造（Apache License 2.0）。',
     starOnGitHub: '到 GitHub 給我們一顆星',
+    viewOnGitHub: '在 GitHub 上查看',
     starPromptTitle: '喜歡 GenOffice 嗎？',
     starPromptTitleN: '你已經用 GenOffice 開啟了 {n} 個文件',
     starPromptBody: 'GenOffice 是免費的開源軟體。到 GitHub 給我們一顆星，是對團隊最好的支持。',
@@ -10283,6 +10364,9 @@ export const strings = {
     newTab: '新分頁',
     // First-run onboarding
     onbTitle1: '歡迎使用 GenOffice',
+    onbWelcomeSubtitle: '開源辦公套件',
+    onbWelcomeBody:
+      '開啟並編輯 Word、Excel、PowerPoint、PDF、Markdown 和 HTML 文件。AI 透過你已有的 Claude 或 Codex 訂閱運作。',
     onbSubtitle1: '第一個開源的 AI 原生 Office 套件',
     onbBody1: '建立文件、製作試算表、產生簡報、審閱 PDF。AI 深度融入每個環節。',
     onbTitle2: '這只是一個開始',

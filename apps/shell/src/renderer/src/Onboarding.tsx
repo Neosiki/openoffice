@@ -166,8 +166,8 @@ export function Onboarding({
     if (step === 'welcome') {
       return (
         <>
-          <p className="onb-subtitle">{t('onbSubtitle1')}</p>
-          <p className="onb-body">{t('onbBody1')}</p>
+          <p className="onb-subtitle">{t('onbWelcomeSubtitle')}</p>
+          <p className="onb-body">{t('onbWelcomeBody')}</p>
         </>
       )
     }

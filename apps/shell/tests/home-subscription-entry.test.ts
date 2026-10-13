@@ -251,6 +251,25 @@ describe('ask panel without a connection', () => {
     expect(host.querySelector('.set-nav-item.active')?.textContent).toContain('AI')
   })
 
+  it('offers the connect cards, on the live connection, when a question is sent anyway', async () => {
+    await renderHome(statuses({ state: 'not-installed' }, { state: 'signed-out' }))
+    await openAsk()
+    const box = host.querySelector<HTMLTextAreaElement>('.kb-ask textarea')!
+    const setValue = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!
+    await act(async () => {
+      setValue.call(box, 'What changed?')
+      box.dispatchEvent(new Event('input', { bubbles: true }))
+    })
+    await click(host.querySelector('.kb-ask .ai-send-btn'))
+
+    const cards = Array.from(
+      host.querySelectorAll<HTMLElement>('.kb-ask .ai-sub-prompt .ai-sub-card'),
+    )
+    expect(cards.map((card) => card.dataset.state)).toEqual(['not-installed', 'signed-out'])
+    expect(box.value).toBe('What changed?')
+    expect(host.querySelectorAll('.kb-ask-msg')).toHaveLength(0)
+  })
+
   it('says nothing once a subscription can run', async () => {
     await renderHome(statuses({ state: 'ready' }, { state: 'signed-out' }))
     await openAsk()

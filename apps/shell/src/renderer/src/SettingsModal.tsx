@@ -1873,7 +1873,7 @@ export function SettingsModal({
                       className="set-btn"
                       onClick={() => void window.aiOffice.openGitHubRepo?.()}
                     >
-                      {t('starOnGitHub')}
+                      {t('viewOnGitHub')}
                     </button>
                   }
                 />

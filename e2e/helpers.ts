@@ -18,6 +18,14 @@ export const ARTIFACTS_DIR = resolve(__dirname, 'artifacts')
 
 const SHELL_MAIN = join(SHELL_DIR, 'out/main/index.js')
 
+/**
+ * ai-settings.json with the first-connection notice acknowledged and everything
+ * else at its default. The empty `providers` table is required: a file without
+ * one is read as predating the provider settings and falls back to the
+ * defaults, which would drop the flag.
+ */
+const AI_SETTINGS_NOTICE_SEEN = { providers: {}, subscriptionNoticeSeen: true }
+
 interface LaunchOptions {
   /** reuse a previous scratch dir to simulate a second launch */
   userDataDir?: string
@@ -27,6 +35,12 @@ interface LaunchOptions {
   onboardingSeen?: boolean
   /** extra app-settings.json keys (e.g. defaultSaveDir) written before launch */
   settings?: Record<string, unknown>
+  /**
+   * pre-seed ai-settings.json with the first-connection notice acknowledged
+   * (default true): on a PC with a signed-in Claude or Codex CLI the notice
+   * would otherwise cover Settings and the ask panel. Pass false to see it.
+   */
+  subscriptionNoticeSeen?: boolean
   /** subdir of e2e/artifacts to store this launch's video in */
   videoDir: string
   /** absolute document path passed as argv, opened in an editor tab on launch */
@@ -54,6 +68,11 @@ export async function launchShell(options: LaunchOptions): Promise<LaunchedApp> 
         ...options.settings,
       }),
     )
+  }
+  // never over a file an earlier launch of the same scratch dir already wrote
+  const aiSettingsPath = join(userDataDir, 'ai-settings.json')
+  if (options.subscriptionNoticeSeen !== false && !existsSync(aiSettingsPath)) {
+    await writeFile(aiSettingsPath, JSON.stringify(AI_SETTINGS_NOTICE_SEEN))
   }
   const require = createRequire(join(SHELL_DIR, 'package.json'))
   const executablePath = require('electron') as unknown as string
