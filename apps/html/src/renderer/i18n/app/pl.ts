@@ -44,6 +44,9 @@ export const pl = {
   redo: 'Ponów',
   cursorPos: 'Wiersz {line}, kol. {col}',
   charCount: '{n} zn.',
+  pageCount: 'Strony: {n}',
+  pageThumbs: 'Miniatury stron',
+  pageThumbGo: 'Przejdź do strony {n}',
   previewNeedsSave: 'Względne obrazy i style pojawią się w podglądzie po zapisaniu pliku',
   inspectHint: 'Kliknij element w podglądzie, aby go zaznaczyć; dwukrotne kliknięcie edytuje tekst',
   nodeDynamic:
@@ -87,6 +90,7 @@ export const pl = {
   devDesktop: 'Pulpit',
   devTablet: 'Tablet',
   devPhone: 'Telefon',
+  devPaper: 'Strona wydruku',
   stylePanel: 'Panel stylów',
   stylePanelClose: 'Zamknij panel stylów',
   alignLeft: 'Wyrównaj do lewej',

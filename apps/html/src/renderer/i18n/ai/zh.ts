@@ -50,6 +50,7 @@ export const zh = {
   aiWorking: '处理中',
   aiOpenAssistant: '打开 AI 助手',
   aiToolOutline: '读取文档结构',
+  aiToolCheckPages: '检查打印分页',
   aiToolReadSource: '读取源码',
   aiToolApplyOps: '应用了 {n} 处修改',
   aiToolApplyOpsFailed: '修改未应用',

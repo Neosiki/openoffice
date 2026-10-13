@@ -45,6 +45,9 @@ export const it = {
   redo: 'Ripeti',
   cursorPos: 'Riga {line}, col. {col}',
   charCount: '{n} caratteri',
+  pageCount: 'Pagine: {n}',
+  pageThumbs: 'Miniature delle pagine',
+  pageThumbGo: 'Vai a pagina {n}',
   previewNeedsSave:
     "Immagini e stili relativi compaiono nell'anteprima dopo il salvataggio del file",
   inspectHint:
@@ -91,6 +94,7 @@ export const it = {
   devDesktop: 'Desktop',
   devTablet: 'Tablet',
   devPhone: 'Telefono',
+  devPaper: 'Pagina stampata',
   stylePanel: 'Pannello stile',
   stylePanelClose: 'Chiudi pannello stile',
   alignLeft: 'Allinea a sinistra',

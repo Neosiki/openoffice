@@ -45,6 +45,9 @@ export const ja = {
   redo: 'やり直す',
   cursorPos: '行 {line}、列 {col}',
   charCount: '{n} 文字',
+  pageCount: '{n} ページ',
+  pageThumbs: 'ページのサムネイル',
+  pageThumbGo: '{n} ページへ移動',
   previewNeedsSave: 'ファイルを保存すると、相対パスの画像とスタイルがプレビューに表示されます',
   inspectHint: 'プレビューの要素をクリックして選択、ダブルクリックでテキスト編集',
   nodeDynamic:
@@ -89,6 +92,7 @@ export const ja = {
   devDesktop: 'デスクトップ',
   devTablet: 'タブレット',
   devPhone: 'スマホ',
+  devPaper: '印刷用紙',
   stylePanel: 'スタイルパネル',
   stylePanelClose: 'スタイルパネルを閉じる',
   alignLeft: '左揃え',

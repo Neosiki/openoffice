@@ -33,6 +33,7 @@ export const HTML_CHANNELS = {
   headlessExportDone: 'html:headless-export-done',
   printRequest: 'html:print-request',
   printHtml: 'html:print-html',
+  printPreview: 'html:print-preview',
   aiGenerateImage: 'html:ai-generate-image',
   filesPick: 'html:files-pick',
   filesAdd: 'html:files-add',
@@ -278,6 +279,8 @@ export interface HtmlApi {
   exportHtml(request: ExportHtmlRequest): Promise<ExportResult>
   /** Shell menu Print → main renders the document and opens the system print dialog */
   printHtml(request: PrintHtmlRequest): Promise<PrintResult>
+  /** the PDF the export would write, in memory: the page thumbnails of the paper view are drawn from it; null when it cannot be rendered */
+  renderPrintPreview(request: PrintHtmlRequest): Promise<Uint8Array | null>
   getLanguage(): Promise<Lang>
   onLanguageChanged(handler: (lang: Lang) => void): () => void
   getTheme(): Promise<UiTheme>

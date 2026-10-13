@@ -3,7 +3,9 @@
  * file is loaded as a raw string and appended as a <script>. It never mutates
  * the document except for its own overlay nodes (marked data-gx-inspector) and
  * a temporary contenteditable during text edits (a single click on rendered text
- * starts one with the caret at the click, like PowerPoint). */
+ * starts one with the caret at the click, like PowerPoint). The paper view adds
+ * a stylesheet of its own and flips media conditions in the CSSOM; neither is
+ * markup, so neither can travel back to the source with an edit. */
 ;(() => {
   const SID = 'data-gx-sid'
   const MARK = 'data-gx-inspector'
@@ -1089,6 +1091,242 @@
     if (editing && e.target === editing.el) finishEdit(true)
   })
 
+  // ---- paper view: the same DOM, fragmented into the pages it prints on ----
+  // The root becomes a one-column multicol whose rows are page content boxes, so the
+  // breaks are decided by Chromium's own fragmentation, the engine print runs on.
+  // The frame is exactly as wide as the content box (the host draws the side margins):
+  // vw and width queries then resolve as they do on a printed page.
+  let paper = null
+  const PAGE_BREAKS = new Set(['page', 'left', 'right', 'recto', 'verso'])
+  /** `print` holds and `screen` fails while the page is shown on paper. Only the media type is
+   * swapped (`tty` never matches): a leading `not` negates the whole query, so it has to keep
+   * negating the same conditions. */
+  const printMediaText = (text) => text.replace(/\bprint\b/gi, 'all').replace(/\bscreen\b/gi, 'tty')
+  const eachMediaList = (visit) => {
+    const walk = (rules) => {
+      for (const rule of rules) {
+        if (rule.media) visit(rule.media)
+        if (rule.cssRules) walk(rule.cssRules)
+        // @import: its sheet is same-origin or the read throws like any foreign sheet
+        if (rule.styleSheet) walk(rule.styleSheet.cssRules)
+      }
+    }
+    for (const sheet of document.styleSheets) {
+      if (sheet.ownerNode && isOwn(sheet.ownerNode)) continue
+      try {
+        visit(sheet.media)
+        walk(sheet.cssRules)
+      } catch {
+        // a cross-origin stylesheet keeps its rules to itself: it stays as on screen
+      }
+    }
+  }
+  /** a forced page break is no break at all inside a multicol: restate each one as a column break */
+  const breakRules = () => {
+    const out = []
+    const forced = []
+    for (const el of document.querySelectorAll(`[${SID}]`)) {
+      const c = window.getComputedStyle(el)
+      const d = []
+      if (PAGE_BREAKS.has(c.breakBefore)) {
+        d.push('break-before: column !important')
+        forced.push(el)
+      } else if (c.breakBefore === 'avoid-page') d.push('break-before: avoid !important')
+      if (PAGE_BREAKS.has(c.breakAfter)) d.push('break-after: column !important')
+      else if (c.breakAfter === 'avoid-page') d.push('break-after: avoid !important')
+      if (c.breakInside === 'avoid-page') d.push('break-inside: avoid !important')
+      if (d.length) out.push(`[${SID}="${el.getAttribute(SID)}"] { ${d.join('; ')}; }`)
+    }
+    return { css: out.join('\n'), forced }
+  }
+  /** the colour print fills the whole sheet with: the canvas background, margins included */
+  const sheetColor = () => {
+    for (const el of [document.documentElement, document.body]) {
+      const c = el ? window.getComputedStyle(el).backgroundColor : ''
+      if (/^rgba?\(/.test(c) && !/^rgba\([^)]*,\s*0\)$/.test(c)) return c
+    }
+    return 'rgb(255, 255, 255)'
+  }
+  const paintPaper = () => {
+    const { width, height, marginTop, marginBottom, gap, desk, ink } = paper.layout
+    const sheet = marginTop + height + marginBottom
+    const period = sheet + gap
+    paper.style.textContent = `
+      html:root {
+        display: block !important; box-sizing: content-box !important;
+        width: ${width}px !important; min-width: 0 !important; max-width: none !important;
+        height: auto !important; min-height: 0 !important; max-height: none !important;
+        margin: 0 !important; border: 0 !important;
+        padding: ${gap + marginTop}px 0 ${marginBottom + gap}px !important;
+        columns: auto 1 !important; column-gap: 0 !important; column-rule: none !important;
+        column-height: ${height}px !important; column-wrap: wrap !important;
+        row-gap: ${marginBottom + gap + marginTop}px !important; column-fill: auto !important;
+        scrollbar-width: none !important;
+        background: repeating-linear-gradient(to bottom, ${paper.sheet} 0, ${paper.sheet} ${sheet}px, ${desk} ${sheet}px, ${desk} ${period}px)
+          0 ${gap}px / 100% ${Math.max(1, paper.pages) * period - gap}px no-repeat ${desk} !important;
+      }
+      [${MARK}-pageno] { position: absolute; left: 0; width: ${width}px; height: ${gap}px; font: 11px/${gap}px -apple-system, system-ui, sans-serif; text-align: center; color: ${ink}; pointer-events: none; user-select: none; }
+      ${paper.rules}`
+    paper.labels.forEach((el, i) => {
+      el.style.top = `${gap + i * period + sheet}px`
+      el.textContent = `${i + 1} / ${paper.pages}`
+    })
+  }
+  /** rows of the root multicol: every one is a full page tall, the last included */
+  const countPages = () => {
+    if (!paper) return
+    const { height, marginTop, marginBottom, gap } = paper.layout
+    const rowGap = marginBottom + gap + marginTop
+    const flow =
+      document.documentElement.getBoundingClientRect().height -
+      (gap + marginTop) -
+      (marginBottom + gap)
+    const pages = Math.max(1, Math.round((flow + rowGap) / (height + rowGap)))
+    if (pages === paper.pages) return
+    paper.pages = pages
+    while (paper.labels.length > pages) paper.labels.pop().remove()
+    while (paper.labels.length < pages) {
+      const el = document.createElement('div')
+      el.setAttribute(MARK, '')
+      el.setAttribute(`${MARK}-pageno`, '')
+      document.documentElement.appendChild(el)
+      paper.labels.push(el)
+    }
+    paintPaper()
+    post({ type: 'gx:paged', pages, sheet: paper.sheet })
+    refresh()
+  }
+  const clearPaper = () => {
+    if (!paper) return
+    paper.observer.disconnect()
+    paper.style.remove()
+    for (const el of paper.labels) el.remove()
+    for (const [list, text] of paper.media) list.mediaText = text
+    paper = null
+  }
+  /** How the pages came out, for the host to put in words: how full each one is, the element
+   * that begins it, where the document forces a break and what a page boundary cuts in two. */
+  const measurePaper = () => {
+    countPages()
+    const { height, marginTop, marginBottom, gap } = paper.layout
+    const period = marginTop + height + marginBottom + gap
+    const pages = paper.pages
+    const pageOf = (y) =>
+      Math.max(0, Math.min(pages - 1, Math.floor((y + window.scrollY - gap) / period)))
+    const fill = new Array(pages).fill(0)
+    // a container's fragment runs to the foot of its page whether or not anything is in it:
+    // only what has no element inside (and loose text) says how far the content reaches
+    const reach = (rect) => {
+      if (!rect.width && !rect.height) return
+      const page = pageOf(rect.top + 0.5)
+      const used = (rect.bottom + window.scrollY - (gap + marginTop + page * period)) / height
+      if (used > fill[page]) fill[page] = Math.min(1, used)
+    }
+    const range = document.createRange()
+    const starts = new Array(pages).fill(null)
+    const span = new Map()
+    for (const el of document.body ? document.body.querySelectorAll('*') : []) {
+      if (isOwn(el)) continue
+      const rects = el.getClientRects()
+      if (!rects.length) continue
+      if (!el.childElementCount) for (const r of rects) reach(r)
+      else
+        for (const node of el.childNodes) {
+          if (node.nodeType !== 3 || !node.textContent.trim()) continue
+          range.selectNodeContents(node)
+          for (const r of range.getClientRects()) reach(r)
+        }
+      const sid = sidOf(el)
+      // a box of no size (symbol sheets, anchors) is on no page in particular
+      if (sid === null || !Array.from(rects).some((r) => r.width && r.height)) continue
+      const from = pageOf(rects[0].top + 0.5)
+      const to = pageOf(rects[rects.length - 1].bottom - 0.5)
+      span.set(el, [sid, from, Math.max(from, to)])
+      if (starts[from] === null) starts[from] = sid
+    }
+    const splits = []
+    for (const [el, [sid, from, to]] of span) {
+      if (from === to) continue
+      // the innermost one is the thing actually cut; its ancestors merely contain it
+      const inner = Array.from(el.children).some((c) => {
+        const s = span.get(c)
+        return s && s[1] !== s[2]
+      })
+      if (!inner) splits.push([sid, from, to])
+    }
+    const breaks = paper.forced
+      .filter((el) => span.has(el))
+      .map((el) => [span.get(el)[0], span.get(el)[1]])
+    return {
+      pages,
+      fill: fill.map((v) => Math.round(v * 100) / 100),
+      starts,
+      splits: splits.slice(0, 40),
+      breaks: breaks.slice(0, 200),
+    }
+  }
+  /** fonts and pictures still on their way would move every break after them */
+  const whenSettled = () => {
+    const loaded =
+      document.readyState === 'complete'
+        ? Promise.resolve()
+        : new Promise((resolve) => window.addEventListener('load', resolve, { once: true }))
+    const fonts = document.fonts ? document.fonts.ready : Promise.resolve()
+    const cap = new Promise((resolve) => window.setTimeout(resolve, 4000))
+    return Promise.race([Promise.all([loaded, fonts]), cap])
+  }
+  const PAPER_LENGTHS = ['width', 'height', 'marginTop', 'marginBottom', 'gap']
+  /** the host's layout, or null when a field is not what the host sends */
+  const paperLayout = (p) => {
+    if (!p || typeof p !== 'object') return null
+    if (!PAPER_LENGTHS.every((k) => Number.isFinite(p[k]) && p[k] >= 0)) return null
+    if (!p.width || !p.height) return null
+    const colour = (v) => typeof v === 'string' && /^[#\w\s(),.%/-]+$/.test(v)
+    return colour(p.desk) && colour(p.ink) ? p : null
+  }
+  const applyPaper = (layout) => {
+    if (paper && layout && PAPER_LENGTHS.every((k) => paper.layout[k] === layout[k])) {
+      // only the chrome colours moved (theme switch): the layout, and the reader's place in it, stay
+      paper.layout = layout
+      paintPaper()
+      return
+    }
+    clearPaper()
+    if (!layout) {
+      refresh()
+      return
+    }
+    const media = []
+    eachMediaList((list) => {
+      const text = list.mediaText
+      const next = printMediaText(text)
+      if (next === text) return
+      media.push([list, text])
+      list.mediaText = next
+    })
+    // both read the document as print styles it, before the root is turned into pages
+    const sheet = sheetColor()
+    const { css: rules, forced } = breakRules()
+    const style = document.createElement('style')
+    style.setAttribute(MARK, '')
+    document.documentElement.appendChild(style)
+    paper = {
+      layout,
+      media,
+      sheet,
+      rules,
+      forced,
+      style,
+      labels: [],
+      pages: 0,
+      // fonts and images arriving later move the breaks: every added or dropped row resizes the root
+      observer: new window.ResizeObserver(countPages),
+    }
+    paintPaper()
+    countPages()
+    paper.observer.observe(document.documentElement)
+  }
+
   window.addEventListener('message', (e) => {
     const msg = e.data
     if (!msg || typeof msg.type !== 'string') return
@@ -1162,6 +1400,15 @@
         break
       case 'gx:scrollTo':
         window.scrollTo(0, msg.y)
+        break
+      case 'gx:setPaged':
+        if (editing) finishEdit(true)
+        applyPaper(paperLayout(msg.paper))
+        break
+      case 'gx:measurePages':
+        whenSettled().then(() => {
+          if (paper) post({ type: 'gx:pageReport', ...measurePaper() })
+        })
         break
       case 'gx:theme':
         dark = !!msg.dark

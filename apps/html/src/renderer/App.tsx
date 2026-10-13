@@ -1,4 +1,12 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import {
+  type CSSProperties,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
 import {
   Dropdown,
   FindPanel,
@@ -24,7 +32,15 @@ import {
 } from './source/SourceEditor'
 import { PreviewFrame, type PreviewFrameHandle } from './preview/PreviewFrame'
 import { instrumentForPreview } from './preview/instrument'
-import type { ComputedSnapshot, ElementRect, FromInspector } from './preview/inspector-protocol'
+import { probePages } from './preview/page-probe'
+import { PageRail, usePageThumbs } from './preview/PageRail'
+import {
+  readPaperReport,
+  type ComputedSnapshot,
+  type ElementRect,
+  type FromInspector,
+  type PaperReport,
+} from './preview/inspector-protocol'
 import inspectorSource from './preview/inspector.js?raw'
 import { AiPanel, type AiPreset, type HtmlAiDeps } from './ai/AiPanel'
 import { AiAskPopover, type AnchorRect, type AskMode } from './components/AiAskPopover'
@@ -56,6 +72,7 @@ import {
 } from './document/insert-presets'
 import { isDocEmpty } from './document/blank'
 import { documentSkeleton } from './document/skeleton'
+import { pageAtScroll, readPageSetup, sheetPeriod } from './document/page-setup'
 import { moveTarget } from './document/move-target'
 import { StylePanel } from './components/StylePanel'
 import { floatPosition, parseDeclarations } from './document/float-position'
@@ -95,8 +112,17 @@ const PREVIEW_DEBOUNCE_MS = 150
 const DEFAULT_ENVELOPE: Envelope = { bom: false, eol: '\n', trailingNewline: true }
 /** live style pokes are written to the source as one set_style op this long after the last change */
 const STYLE_COMMIT_MS = 600
-type Device = 'desktop' | 'tablet' | 'mobile'
-const DEVICES: Device[] = ['desktop', 'tablet', 'mobile']
+/** paper: the page laid out on the sheets it prints on */
+type Device = 'desktop' | 'tablet' | 'mobile' | 'paper'
+const DEVICES: Device[] = ['desktop', 'tablet', 'mobile', 'paper']
+const DEVICE_LABELS = {
+  desktop: 'devDesktop',
+  tablet: 'devTablet',
+  mobile: 'devPhone',
+  paper: 'devPaper',
+} as const
+/** desk showing between two sheets of the paper view, frame px */
+const PAPER_GAP = 24
 /** document scaffolding: selectable in the source, never a target for element ops */
 const STRUCTURAL = new Set(['html', 'head', 'body'])
 const IS_MAC = /Mac/i.test(navigator.platform)
@@ -174,6 +200,19 @@ export default function App() {
     const stored = localStorage.getItem('htmlapp.device')
     return DEVICES.includes(stored as Device) ? (stored as Device) : 'desktop'
   })
+  /** the paper the document declares, while the preview shows it on paper */
+  const pageSetup = useMemo(() => (device === 'paper' ? readPageSetup(text) : null), [device, text])
+  const pageSetupKey = pageSetup ? JSON.stringify(pageSetup) : ''
+  const pageSetupRef = useRef(pageSetup)
+  pageSetupRef.current = pageSetup
+  /** sheets the frame laid the page out on; null until it reports (and outside the paper view) */
+  const [paperReport, setPaperReport] = useState<PaperReport | null>(null)
+  const paperPagesRef = useRef(1)
+  paperPagesRef.current = paperReport?.pages ?? 1
+  /** page at the reader's eye in the paper view, 0-based: the thumbnail rail marks it */
+  const [paperPage, setPaperPage] = useState(0)
+  const zoomRef = useRef(zoom)
+  zoomRef.current = zoom
   const [panelOpen, setPanelOpen] = useState(
     () => localStorage.getItem('htmlapp.stylePanel') !== '0',
   )
@@ -209,6 +248,11 @@ export default function App() {
   const editorRef = useRef<SourceEditorHandle>(null)
   const previewRef = useRef<PreviewFrameHandle>(null)
   const envelopeRef = useRef<Envelope>(DEFAULT_ENVELOPE)
+  const printHtml = useMemo(
+    () => (pageSetup ? serializeDocText({ text, envelope: envelopeRef.current }) : null),
+    [pageSetup, text],
+  )
+  const { thumbs } = usePageThumbs(printHtml)
   const textRef = useRef('')
   const savedTextRef = useRef('')
   const savingRef = useRef(false)
@@ -362,6 +406,33 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('htmlapp.device', device)
   }, [device])
+
+  /** hand the frame the page box and the chrome colours it draws the desk with (it cannot read tokens) */
+  const postPaper = useCallback(() => {
+    const setup = pageSetupRef.current
+    const stage = stageRef.current
+    if (!setup || !stage) {
+      previewRef.current?.post({ type: 'gx:setPaged', paper: null })
+      return
+    }
+    const css = getComputedStyle(stage)
+    previewRef.current?.post({
+      type: 'gx:setPaged',
+      paper: {
+        width: setup.width,
+        height: setup.height,
+        marginTop: setup.marginTop,
+        marginBottom: setup.marginBottom,
+        gap: PAPER_GAP,
+        desk: css.backgroundColor,
+        ink: css.getPropertyValue('--text-muted').trim() || css.color,
+      },
+    })
+  }, [])
+  useEffect(() => {
+    if (!pageSetupKey) setPaperReport(null)
+    postPaper()
+  }, [pageSetupKey, postPaper])
 
   useEffect(() => {
     localStorage.setItem('htmlapp.stylePanel', panelOpen ? '1' : '0')
@@ -659,6 +730,10 @@ export default function App() {
         case 'gx:ready': {
           previewRef.current?.post({ type: 'gx:theme', dark: isDarkTheme() })
           previewRef.current?.post({ type: 'gx:setMode', mode: frameMode(canvasModeRef.current) })
+          // the fresh copy starts at the top; the side margins follow until the scroll below lands
+          stageRef.current?.style.setProperty('--paper-scroll', '0px')
+          setPaperPage(0)
+          if (pageSetupRef.current) postPaper()
           // an edit reloaded the page under the reader: put it back where it was before selecting
           if (frameScrollRef.current !== null)
             previewRef.current?.post({ type: 'gx:scrollTo', y: frameScrollRef.current })
@@ -750,6 +825,16 @@ export default function App() {
           return
         case 'gx:scroll':
           frameScrollRef.current = msg.y
+          if (Number.isFinite(msg.y))
+            stageRef.current?.style.setProperty('--paper-scroll', `${msg.y}px`)
+          if (pageSetupRef.current && Number.isFinite(msg.y)) {
+            const viewHeight = (stageRef.current?.clientHeight ?? 0) / (zoomRef.current / 100)
+            const period = sheetPeriod(pageSetupRef.current, PAPER_GAP)
+            setPaperPage(pageAtScroll(msg.y, viewHeight, period, paperPagesRef.current))
+          }
+          return
+        case 'gx:paged':
+          setPaperReport(readPaperReport(msg))
           return
         case 'gx:htmlEditCommit':
           runManual([{ op: 'set_inner_html', sid: msg.sid, html: msg.html }])
@@ -822,7 +907,7 @@ export default function App() {
           return
       }
     },
-    [getMap, postMarks, runManual, selectSid, t, flushPending],
+    [getMap, postMarks, postPaper, runManual, selectSid, t, flushPending],
   )
 
   // the source cursor picks the covering element (no reveal: the user is already there)
@@ -1370,10 +1455,11 @@ export default function App() {
     const offPrint = window.htmlApi.onPrintRequest(() => void runPrint())
     const offTheme = window.htmlApi.onThemeChanged(() => {
       // let main.tsx flip data-theme first
-      window.setTimeout(
-        () => previewRef.current?.post({ type: 'gx:theme', dark: isDarkTheme() }),
-        0,
-      )
+      window.setTimeout(() => {
+        previewRef.current?.post({ type: 'gx:theme', dark: isDarkTheme() })
+        // the desk between the sheets is a chrome colour
+        if (pageSetupRef.current) postPaper()
+      }, 0)
     })
     const onKeyDown = (event: KeyboardEvent) => {
       if (!(event.metaKey || event.ctrlKey) || event.altKey) return
@@ -1424,7 +1510,7 @@ export default function App() {
       offTheme()
       window.removeEventListener('keydown', onKeyDown, true)
     }
-  }, [doSave, runExport, runPrint, cycleView, zoomIn, zoomOut, flushPending, openFind])
+  }, [doSave, runExport, runPrint, cycleView, zoomIn, zoomOut, flushPending, openFind, postPaper])
 
   // pinch / ctrl+wheel over the stage chrome around the frame; wheel inside the frame arrives as gx:zoom
   useEffect(() => {
@@ -1471,6 +1557,28 @@ export default function App() {
         return applyOps(ops, false)
       },
       replaceAll: (html) => replaceAll(html, true),
+      measurePages: async () => {
+        if (!previewUrl) return null
+        // the probe reads the copy the main process serves: make that the text as it is now
+        flushPending()
+        pushPreview(textRef.current)
+        const setup = readPageSetup(textRef.current)
+        const measure = await probePages({
+          url: previewUrl,
+          version: pushedVersionRef.current,
+          paper: {
+            width: setup.width,
+            height: setup.height,
+            marginTop: setup.marginTop,
+            marginBottom: setup.marginBottom,
+            gap: PAPER_GAP,
+            // nobody sees this frame
+            desk: 'transparent',
+            ink: 'transparent',
+          },
+        })
+        return measure && { setup, measure }
+      },
     },
     getSnapshot: () => ({ text: textRef.current }),
     restoreSnapshot: (snapshot) => replaceAll(snapshot.text, false),
@@ -1514,6 +1622,20 @@ export default function App() {
   if (status === 'loading') return <div className="center-note">{t('loading')}</div>
 
   const hasElement = !!selectedEntry && !STRUCTURAL.has(selectedEntry.tag)
+  /** sheet geometry for the stage CSS: the frame is the page content box, the side margins are drawn around it */
+  const paperVars = pageSetup
+    ? ({
+        '--paper-w': `${pageSetup.width}px`,
+        '--paper-ml': `${pageSetup.marginLeft}px`,
+        '--paper-mr': `${pageSetup.marginRight}px`,
+        '--paper-sheet-h': `${pageSetup.marginTop + pageSetup.height + pageSetup.marginBottom}px`,
+        '--paper-gap': `${PAPER_GAP}px`,
+        ...(paperReport
+          ? { '--paper-pages': paperReport.pages, '--paper-sheet': paperReport.sheet }
+          : {}),
+      } as CSSProperties)
+    : undefined
+  const showRail = !!pageSetup && canvasMode !== 'present'
   const panelShown = panelOpen && selectedEntry?.sid !== panelDismissedSid
 
   /** stage geometry for the floating toolbar: frame coordinates scale with the CSS zoom and shift by the centred device host */
@@ -1629,11 +1751,29 @@ export default function App() {
             />
           )}
           <div className={`workspace view-${canvasMode === 'present' ? 'preview' : view}`}>
-            <div className="pane pane-preview">
+            <div className={`pane pane-preview${showRail ? ' with-rail' : ''}`}>
+              {showRail && pageSetup && (
+                <PageRail
+                  thumbs={thumbs}
+                  pages={paperReport?.pages ?? 0}
+                  current={paperPage}
+                  ratio={
+                    (pageSetup.marginTop + pageSetup.height + pageSetup.marginBottom) /
+                    (pageSetup.marginLeft + pageSetup.width + pageSetup.marginRight)
+                  }
+                  onPick={(page) =>
+                    previewRef.current?.post({
+                      type: 'gx:scrollTo',
+                      y: page * sheetPeriod(pageSetup, PAPER_GAP),
+                    })
+                  }
+                />
+              )}
               <div
                 className="preview-stage"
                 ref={stageRef}
                 data-device={device}
+                style={paperVars}
                 onPointerDown={(e) => {
                   if (e.target === e.currentTarget) selectSid(null)
                 }}
@@ -1752,17 +1892,15 @@ export default function App() {
                 </span>
               )}
               <span className="status-item">{t('charCount', { n: text.length })}</span>
+              {pageSetup && paperReport && (
+                <span className="status-item">{t('pageCount', { n: paperReport.pages })}</span>
+              )}
               <Dropdown
                 className="device-dd"
                 value={device}
                 ariaLabel={t('device')}
                 tip={t('device')}
-                options={DEVICES.map((d) => ({
-                  value: d,
-                  label: t(
-                    d === 'desktop' ? 'devDesktop' : d === 'tablet' ? 'devTablet' : 'devPhone',
-                  ),
-                }))}
+                options={DEVICES.map((d) => ({ value: d, label: t(DEVICE_LABELS[d]) }))}
                 onPick={setDevice}
               />
               <button

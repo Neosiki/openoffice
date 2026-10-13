@@ -57,6 +57,7 @@ export const vi = {
   aiWorking: 'Đang xử lý',
   aiOpenAssistant: 'Mở trợ lý AI',
   aiToolOutline: 'Đọc dàn ý tài liệu',
+  aiToolCheckPages: 'Kiểm tra các trang in',
   aiToolReadSource: 'Đọc mã nguồn',
   aiToolApplyOps: 'Đã áp dụng {n} chỉnh sửa',
   aiToolApplyOpsFailed: 'Chưa áp dụng các chỉnh sửa',

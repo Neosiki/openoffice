@@ -11,6 +11,7 @@ import {
   type HtmlDocAccess,
 } from '../src/renderer/ai/tools'
 import type { Brief } from '../src/renderer/document/brief'
+import { readPageSetup } from '../src/renderer/document/page-setup'
 import type { PageWriteSpec } from '../src/renderer/ai/page-writer'
 import type { BriefPlanSpec } from '../src/renderer/ai/brief-writer'
 
@@ -751,5 +752,100 @@ describe('truncated data: URL guard in apply_ops', () => {
     expect(r.mutated).toBe(true)
     expect(doc.text).toContain('R0lGODlhAQABAAAAACw=')
     expect(doc.text).toContain('To be continued\u2026')
+  })
+})
+
+describe('print layout check', () => {
+  const PAPER_DOC = `<!doctype html>
+<html>
+<head><style>@page{size:A4;margin:15mm}</style></head>
+<body>
+<section id="one" data-section="hero"><h1>Worksheet</h1></section>
+<section id="two" class="pb" data-section="content"><p>Answer here.</p></section>
+</body>
+</html>`
+  const A4 = readPageSetup(PAPER_DOC)
+
+  /** the preview's answer for the two sections: the second forced onto its own, almost empty page */
+  function measures(access: HtmlDocAccess) {
+    let asked = 0
+    access.measurePages = async () => {
+      asked++
+      const sid = (id: string) =>
+        access.getMap().elements.find((e) => {
+          const tag = access.getText().slice(e.startTag[0], e.startTag[1])
+          return tag.includes(`id="${id}"`)
+        })!.sid
+      return {
+        setup: A4,
+        measure: {
+          pages: 3,
+          fill: [0.95, 0.1, 0.4],
+          starts: [sid('one'), null, sid('two')],
+          splits: [[sid('one'), 0, 1]],
+          breaks: [[sid('two'), 2]],
+        },
+      }
+    }
+    return () => asked
+  }
+
+  it('check_pages reports the measured pages with the sids and previews of the outline', async () => {
+    const doc = fakeAccess(PAPER_DOC)
+    measures(doc.access)
+    const r = await createHtmlSkillCore(doc.access).executeTool(call('check_pages', {}))
+    expect(r.isError).toBeFalsy()
+    expect(r.mutated).toBeFalsy()
+    expect(r.output).toContain('3 pages; each page holds 180 \u00d7 267 mm of content')
+    expect(r.output).toMatch(/p1: 95% full; starts with sid=\d+ section#one "Worksheet"/)
+    expect(r.output).toMatch(/p2: 10% full; continues sid=\d+/)
+    expect(r.output).toMatch(
+      /p3: 40% full; starts with sid=\d+ section#two\.pb "Answer here\." \(forced page break before it\)/,
+    )
+    expect(r.output).toContain('Mostly empty before the last page: p2 (10%)')
+  })
+
+  it('check_pages says so instead of guessing when the preview cannot measure', async () => {
+    const doc = fakeAccess(PAPER_DOC)
+    const none = await createHtmlSkillCore(doc.access).executeTool(call('check_pages', {}))
+    expect(none.isError).toBe(true)
+    expect(none.output).toContain('could not be measured')
+    doc.access.measurePages = async () => null
+    const silent = await createHtmlSkillCore(doc.access).executeTool(call('check_pages', {}))
+    expect(silent.isError).toBe(true)
+  })
+
+  it('a page written for paper comes back with its print layout, any other page without', async () => {
+    const proposal = {
+      core_hook: 'Find the rule',
+      style: { tone: 'plain' },
+      sections: [{ title: 'Hero', brief: 'x' }],
+    }
+    const paper = fakeAccess('')
+    paper.access.confirmBrief = async (brief) => ({ kind: 'confirmed', brief })
+    paper.access.writePage = async () => ({ ok: true, html: PAPER_DOC })
+    drafts(paper.access, proposal)
+    const asked = measures(paper.access)
+    const written = await createHtmlSkillCore(paper.access).executeTool(
+      call('plan_page', { mode: 'new' }),
+    )
+    expect(asked()).toBe(1)
+    expect(written.output).toContain('Page written by the system')
+    expect(written.output).toContain('Mostly empty before the last page: p2 (10%)')
+    expect(written.output).toContain('meant for paper')
+
+    const web = fakeAccess('')
+    web.access.confirmBrief = async (brief) => ({ kind: 'confirmed', brief })
+    web.access.writePage = async () => ({
+      ok: true,
+      html: '<!doctype html><html><body><section data-section="hero">Hi</section></body></html>',
+    })
+    drafts(web.access, proposal)
+    const askedWeb = measures(web.access)
+    const landed = await createHtmlSkillCore(web.access).executeTool(
+      call('plan_page', { mode: 'new' }),
+    )
+    expect(askedWeb()).toBe(0)
+    expect(landed.output).not.toContain('Print layout')
   })
 })

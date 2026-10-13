@@ -57,6 +57,7 @@ export const ms = {
   aiWorking: 'Bekerja',
   aiOpenAssistant: 'Buka pembantu AI',
   aiToolOutline: 'Membaca struktur dokumen',
+  aiToolCheckPages: 'Semak halaman cetak',
   aiToolReadSource: 'Membaca sumber',
   aiToolApplyOps: '{n} suntingan digunakan',
   aiToolApplyOpsFailed: 'Suntingan tidak digunakan',

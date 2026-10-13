@@ -33,6 +33,9 @@ export const cs = {
   redo: 'Znovu',
   cursorPos: 'Ř. {line}, Sl. {col}',
   charCount: '{n} znaků',
+  pageCount: 'Stránky: {n}',
+  pageThumbs: 'Miniatury stránek',
+  pageThumbGo: 'Přejít na stránku {n}',
   previewNeedsSave: 'Relativní obrázky a styly se v náhledu zobrazí po uložení souboru',
   inspectHint: 'Klepnutím na prvek v náhledu ho vyberete, poklepáním upravíte text',
   nodeDynamic:
@@ -76,6 +79,7 @@ export const cs = {
   devDesktop: 'Počítač',
   devTablet: 'Tablet',
   devPhone: 'Telefon',
+  devPaper: 'Tištěná stránka',
   stylePanel: 'Panel stylů',
   stylePanelClose: 'Zavřít panel stylů',
   alignLeft: 'Zarovnat vlevo',

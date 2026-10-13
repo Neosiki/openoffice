@@ -45,6 +45,9 @@ export const nl = {
   redo: 'Opnieuw',
   cursorPos: 'Rg {line}, kol {col}',
   charCount: '{n} tekens',
+  pageCount: "Pagina's: {n}",
+  pageThumbs: 'Paginaminiaturen',
+  pageThumbGo: 'Naar pagina {n}',
   previewNeedsSave:
     'Relatieve afbeeldingen en stijlen verschijnen in het voorbeeld zodra het bestand is opgeslagen',
   inspectHint:
@@ -91,6 +94,7 @@ export const nl = {
   devDesktop: 'Desktop',
   devTablet: 'Tablet',
   devPhone: 'Telefoon',
+  devPaper: 'Afgedrukte pagina',
   stylePanel: 'Stijlpaneel',
   stylePanelClose: 'Stijlpaneel sluiten',
   alignLeft: 'Links uitlijnen',

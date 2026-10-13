@@ -44,6 +44,9 @@ export const id = {
   redo: 'Ulangi',
   cursorPos: 'Brs {line}, Kol {col}',
   charCount: '{n} karakter',
+  pageCount: '{n} halaman',
+  pageThumbs: 'Gambar mini halaman',
+  pageThumbGo: 'Ke halaman {n}',
   previewNeedsSave: 'Gambar dan gaya relatif akan tampil di pratinjau setelah file disimpan',
   inspectHint: 'Klik elemen di pratinjau untuk memilih, klik dua kali untuk mengedit teks',
   nodeDynamic:
@@ -88,6 +91,7 @@ export const id = {
   devDesktop: 'Desktop',
   devTablet: 'Tablet',
   devPhone: 'Ponsel',
+  devPaper: 'Halaman cetak',
   stylePanel: 'Panel gaya',
   stylePanelClose: 'Tutup panel gaya',
   alignLeft: 'Rata kiri',

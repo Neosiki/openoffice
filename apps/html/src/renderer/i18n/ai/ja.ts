@@ -57,6 +57,7 @@ export const ja = {
   aiWorking: '処理中',
   aiOpenAssistant: 'AI アシスタントを開く',
   aiToolOutline: 'ドキュメント構造を読み取り',
+  aiToolCheckPages: '印刷ページを確認',
   aiToolReadSource: 'ソースを読み取り',
   aiToolApplyOps: '{n} 件の編集を適用',
   aiToolApplyOpsFailed: '編集は適用されませんでした',

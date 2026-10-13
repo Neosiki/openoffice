@@ -13,6 +13,8 @@ import {
   type Brief,
   type BriefStyle,
 } from '../document/brief'
+import { declaresPaper, type PageSetup } from '../document/page-setup'
+import { formatPageReport, type PageMeasure } from '../document/page-report'
 import type { PageWriteResult, PageWriteSpec } from './page-writer'
 import type { BriefPlanResult, BriefPlanSpec } from './brief-writer'
 
@@ -56,6 +58,8 @@ export interface HtmlDocAccess {
   ): Promise<{ ok: true; src: string } | { ok: false; error: string }>
   /** names of the attachments the model can reference; lets refs to names with spaces or parentheses match whole */
   listAttachmentNames?(): string[]
+  /** lay the current text out on the paper it prints on and measure the pages; null when the preview cannot answer */
+  measurePages?(): Promise<{ setup: PageSetup; measure: PageMeasure } | null>
 }
 
 export type PlanMode = 'new' | 'redesign' | 'restyle' | 'extract'
@@ -383,6 +387,12 @@ export const AGENT_TOOLS: AgentToolDef[] = [
     },
   },
   {
+    name: 'check_pages',
+    description:
+      'How the document prints, measured with the print engine on the paper its @page rule declares (A4 when it declares none): the page count, how full each page is, the element that starts each page, forced page breaks and the elements a page boundary cuts in two. Read-only. Use it for documents meant for paper, after the page is written and after every edit that changes what fits on a page.',
+    inputSchema: { type: 'object', properties: {} },
+  },
+  {
     name: 'write_document',
     description:
       '[Content-first documents only: the user wants text written (article, guide, memo, announcement), not a designed page] Hands a plan to the system document writer, which writes the whole document as a clean single-column page. Give the title, a plan (outline, key points, length, voice) and the reference material in context. Everything else — new designed pages and full redesigns — goes through plan_page; single edits use apply_ops.',
@@ -568,6 +578,21 @@ export function createHtmlSkillCore(access: HtmlDocAccess): {
   const stale = () => access.getLastManualVersion() > seenVersion
   let currentSignal: AbortSignal | undefined
 
+  /** the print layout in the model's terms; null when the preview cannot measure it */
+  const pageReport = async (): Promise<string | null> => {
+    const measured = await access.measurePages?.()
+    if (!measured) return null
+    const map = access.getMap()
+    const proj = buildProjection(access.getText(), map)
+    return formatPageReport(measured.setup, measured.measure, (sid) => {
+      const e = map.bySid.get(sid)
+      if (!e) return null
+      // enough to recognise the element: the report names one per page and per cut
+      const preview = textPreview(proj, e).slice(0, 32)
+      return `${e.tag}${attrsPreview(proj, e)}${preview ? ` "${preview}"` : ''}`
+    })
+  }
+
   const landPage = async (spec: PageWriteSpec, preface: string): Promise<ToolExecution> => {
     const summary = t('aiToolWritePage')
     if (!access.writePage)
@@ -586,8 +611,13 @@ export function createHtmlSkillCore(access: HtmlDocAccess): {
     const note = result.truncated
       ? ' The stream ended early, so the page is INCOMPLETE (the user chose to keep it): the tail is missing. Say so and offer to finish the missing sections with apply_ops.'
       : ''
+    // a page written for paper was written blind: nobody has seen where its pages break yet
+    const report = declaresPaper(result.html) ? await pageReport() : null
+    const paper = report
+      ? `\n\n${report}\nThis page is meant for paper: fix what the layout above shows as the Paper documents rules say, then describe the page.`
+      : ''
     return {
-      output: `${preface}\nPage written by the system (${result.html.length} chars, ${lines} lines${sections.length ? `; sections: ${sections.join(', ')}` : ''}). Version ${access.getVersion()}.${note}\nReply with one or two sentences describing the page; do not paste HTML.`,
+      output: `${preface}\nPage written by the system (${result.html.length} chars, ${lines} lines${sections.length ? `; sections: ${sections.join(', ')}` : ''}). Version ${access.getVersion()}.${note}${paper}\nReply with one or two sentences describing the page; do not paste HTML.`,
       mutated: true,
       summary: result.truncated ? t('aiToolWritePagePartial') : summary,
     }
@@ -935,6 +965,20 @@ export function createHtmlSkillCore(access: HtmlDocAccess): {
               summary: t('aiToolPlan', { n: decision.brief.sections.length }),
             }
           })
+        }
+        case 'check_pages': {
+          markSeen()
+          const summary = t('aiToolCheckPages')
+          return pageReport().then((report) =>
+            report
+              ? { output: report, summary }
+              : {
+                  output:
+                    'The print layout could not be measured right now (the preview did not answer). Do not guess page numbers; say so if the user asked about them.',
+                  isError: true,
+                  summary,
+                },
+          )
         }
         case 'write_document': {
           const plan = String(call.input.plan ?? '').trim()

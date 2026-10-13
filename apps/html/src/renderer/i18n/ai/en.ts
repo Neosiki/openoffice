@@ -57,6 +57,7 @@ export const en = {
   aiWorking: 'Working',
   aiOpenAssistant: 'Open AI assistant',
   aiToolOutline: 'Read document outline',
+  aiToolCheckPages: 'Check print pages',
   aiToolReadSource: 'Read source',
   aiToolApplyOps: 'Applied {n} edit(s)',
   aiToolApplyOpsFailed: 'Edits not applied',

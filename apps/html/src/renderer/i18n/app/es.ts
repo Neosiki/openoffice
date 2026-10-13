@@ -44,6 +44,9 @@ export const es = {
   redo: 'Rehacer',
   cursorPos: 'Lín. {line}, col. {col}',
   charCount: '{n} caracteres',
+  pageCount: 'Páginas: {n}',
+  pageThumbs: 'Miniaturas de página',
+  pageThumbGo: 'Ir a la página {n}',
   previewNeedsSave:
     'Las imágenes y estilos relativos se mostrarán en la vista previa al guardar el archivo',
   inspectHint:
@@ -90,6 +93,7 @@ export const es = {
   devDesktop: 'Escritorio',
   devTablet: 'Tableta',
   devPhone: 'Móvil',
+  devPaper: 'Página impresa',
   stylePanel: 'Panel de estilo',
   stylePanelClose: 'Cerrar panel de estilo',
   alignLeft: 'Alinear a la izquierda',

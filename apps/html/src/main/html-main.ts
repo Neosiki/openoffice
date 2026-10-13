@@ -1740,6 +1740,24 @@ function registerHtmlIpc(): void {
     },
   )
 
+  // Page thumbnails of the paper view: the very PDF the export writes, handed back in
+  // memory. A page that cannot be rendered has no thumbnails; that is not worth a dialog.
+  ipcMain.handle(
+    HTML_CHANNELS.printPreview,
+    async (e, request: PrintHtmlRequest): Promise<Uint8Array | null> => {
+      if (typeof request?.html !== 'string') return null
+      const workDir = await mkdtemp(join(tmpdir(), 'genoffice-html-preview-'))
+      try {
+        return await renderPrintPdf(request.html, savePathByWc.get(e.sender.id), workDir)
+      } catch (err) {
+        console.error('[html] print preview failed:', err)
+        return null
+      } finally {
+        await rm(workDir, { recursive: true, force: true }).catch(() => {})
+      }
+    },
+  )
+
   ipcMain.handle(
     HTML_CHANNELS.printHtml,
     async (e, request: PrintHtmlRequest): Promise<PrintResult> => {

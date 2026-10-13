@@ -44,6 +44,9 @@ export const en = {
   redo: 'Redo',
   cursorPos: 'Ln {line}, Col {col}',
   charCount: '{n} chars',
+  pageCount: 'Pages: {n}',
+  pageThumbs: 'Page thumbnails',
+  pageThumbGo: 'Go to page {n}',
   previewNeedsSave: 'Relative images and styles show in the preview once the file is saved',
   inspectHint: 'Click an element in the preview to select it, double-click to edit text',
   nodeDynamic:
@@ -88,6 +91,7 @@ export const en = {
   devDesktop: 'Desktop',
   devTablet: 'Tablet',
   devPhone: 'Phone',
+  devPaper: 'Printed page',
   stylePanel: 'Style panel',
   stylePanelClose: 'Close style panel',
   alignLeft: 'Align left',

@@ -44,6 +44,9 @@ export const ms = {
   redo: 'Buat semula',
   cursorPos: 'Baris {line}, Lajur {col}',
   charCount: '{n} aksara',
+  pageCount: '{n} halaman',
+  pageThumbs: 'Lakaran kecil halaman',
+  pageThumbGo: 'Pergi ke halaman {n}',
   previewNeedsSave: 'Imej dan gaya relatif akan dipaparkan dalam pratonton selepas fail disimpan',
   inspectHint: 'Klik elemen dalam pratonton untuk memilih, klik dua kali untuk menyunting teks',
   nodeDynamic:
@@ -87,6 +90,7 @@ export const ms = {
   devDesktop: 'Desktop',
   devTablet: 'Tablet',
   devPhone: 'Telefon',
+  devPaper: 'Halaman cetak',
   stylePanel: 'Panel gaya',
   stylePanelClose: 'Tutup panel gaya',
   alignLeft: 'Jajar kiri',

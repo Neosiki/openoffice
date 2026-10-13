@@ -57,6 +57,7 @@ export const ar = {
   aiWorking: 'يعمل',
   aiOpenAssistant: 'فتح مساعد الذكاء الاصطناعي',
   aiToolOutline: 'قراءة بنية المستند',
+  aiToolCheckPages: 'التحقق من صفحات الطباعة',
   aiToolReadSource: 'قراءة المصدر',
   aiToolApplyOps: 'تم تطبيق {n} تعديل',
   aiToolApplyOpsFailed: 'لم يتم تطبيق التعديلات',

@@ -57,6 +57,7 @@ export const th = {
   aiWorking: 'กำลังทำงาน',
   aiOpenAssistant: 'เปิดผู้ช่วย AI',
   aiToolOutline: 'อ่านโครงสร้างเอกสาร',
+  aiToolCheckPages: 'ตรวจสอบหน้าพิมพ์',
   aiToolReadSource: 'อ่านซอร์ส',
   aiToolApplyOps: 'ใช้การแก้ไข {n} รายการ',
   aiToolApplyOpsFailed: 'ไม่ได้ใช้การแก้ไข',

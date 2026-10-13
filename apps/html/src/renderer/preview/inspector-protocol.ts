@@ -18,6 +18,24 @@ export type ToInspector =
   | { type: 'gx:mark'; marks: Array<{ sid: number; label: string }> }
   /** restore the window scroll of the copy an edit just replaced */
   | { type: 'gx:scrollTo'; y: number }
+  /** lay the page out on the paper it prints on, or (null) back as one continuous page */
+  | { type: 'gx:setPaged'; paper: PaperLayout | null }
+  /** measure the paper view once fonts and pictures have settled; answered with gx:pageReport */
+  | { type: 'gx:measurePages' }
+
+/** the printed page as the frame draws it: the frame itself is the content box, sheets stack downwards */
+export interface PaperLayout {
+  /** page content box, frame px */
+  width: number
+  height: number
+  marginTop: number
+  marginBottom: number
+  /** desk showing between two sheets */
+  gap: number
+  /** chrome colours resolved from the host's tokens (the frame cannot read them) */
+  desk: string
+  ink: string
+}
 
 /** effective styles of the selected element (px numbers without unit, colours as #rrggbb, '' when transparent) */
 export interface ComputedSnapshot {
@@ -128,6 +146,10 @@ export type FromInspectorBody =
   | { type: 'gx:moveTo'; sid: number; position: 'before' | 'after'; ref_sid: number }
   /** a resize or reorder drag started / ended (the host hides its chrome meanwhile) */
   | { type: 'gx:drag'; active: boolean }
+  /** the paper view was laid out or re-flowed: sheet count and the page colour its margins continue in */
+  | { type: 'gx:paged'; pages: number; sheet: string }
+  /** answer to gx:measurePages; its fields are read with readPageMeasure, never taken as typed */
+  | { type: 'gx:pageReport' }
 
 /** Message tags the instrumented inspector can emit; anything else is forged. */
 const KNOWN_FROM_INSPECTOR = new Set([
@@ -147,6 +169,8 @@ const KNOWN_FROM_INSPECTOR = new Set([
   'gx:resize',
   'gx:moveTo',
   'gx:drag',
+  'gx:paged',
+  'gx:pageReport',
 ])
 
 export function isFromInspector(data: unknown): data is FromInspector {
@@ -162,4 +186,20 @@ export function isFromInspector(data: unknown): data is FromInspector {
     typeof version === 'number' &&
     Number.isFinite(version)
   )
+}
+
+/** what the host draws around the frame in the paper view */
+export interface PaperReport {
+  pages: number
+  sheet: string
+}
+
+/** The frame is untrusted and `sheet` ends up in a style value: only a plain colour passes. */
+export function readPaperReport(msg: { pages: unknown; sheet: unknown }): PaperReport | null {
+  const { pages, sheet } = msg
+  if (typeof pages !== 'number' || !Number.isInteger(pages) || pages < 1 || pages > 100_000)
+    return null
+  if (typeof sheet !== 'string' || !/^(#[0-9a-f]{3,8}|rgba?\([\d\s.,/%]+\))$/i.test(sheet))
+    return null
+  return { pages, sheet }
 }

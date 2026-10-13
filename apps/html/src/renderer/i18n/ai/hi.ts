@@ -57,6 +57,7 @@ export const hi = {
   aiWorking: 'कार्य कर रहा है',
   aiOpenAssistant: 'AI सहायक खोलें',
   aiToolOutline: 'दस्तावेज़ संरचना पढ़ी',
+  aiToolCheckPages: 'मुद्रित पृष्ठ जाँचें',
   aiToolReadSource: 'स्रोत पढ़ा',
   aiToolApplyOps: '{n} संपादन लागू',
   aiToolApplyOpsFailed: 'संपादन लागू नहीं हुए',

@@ -57,6 +57,7 @@ export const id = {
   aiWorking: 'Bekerja',
   aiOpenAssistant: 'Buka asisten AI',
   aiToolOutline: 'Membaca struktur dokumen',
+  aiToolCheckPages: 'Periksa halaman cetak',
   aiToolReadSource: 'Membaca sumber',
   aiToolApplyOps: '{n} perubahan diterapkan',
   aiToolApplyOpsFailed: 'Perubahan tidak diterapkan',

@@ -57,6 +57,7 @@ export const nl = {
   aiWorking: 'Bezig',
   aiOpenAssistant: 'AI-assistent openen',
   aiToolOutline: 'Documentstructuur lezen',
+  aiToolCheckPages: "Afgedrukte pagina's controleren",
   aiToolReadSource: 'Broncode lezen',
   aiToolApplyOps: '{n} bewerking(en) toegepast',
   aiToolApplyOpsFailed: 'Bewerkingen niet toegepast',

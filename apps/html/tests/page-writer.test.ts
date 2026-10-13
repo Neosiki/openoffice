@@ -184,3 +184,25 @@ describe('streamPage', () => {
     expect(outcome).toMatchObject({ status: 'partial', reason: 'max_tokens' })
   })
 })
+
+describe('paper documents', () => {
+  it('the page writer is told how to lay a printed page out, the document writer is not', () => {
+    const design = buildPageWriterRequest(
+      {
+        kind: 'design',
+        brief: {
+          core_hook: 'Hook',
+          style: { tone: 'plain', palette: {}, typography: {} },
+          sections: [{ title: 'Hero', brief: 'b' }],
+          version: 1,
+        },
+        instruction: 'an A4 worksheet',
+      },
+      '',
+    ).system
+    expect(design).toContain('## Paper documents')
+    expect(design).toContain('@page { size: A4 portrait; margin: 15mm }')
+    const content = buildPageWriterRequest({ kind: 'content', plan: 'p', instruction: 'x' }, '')
+    expect(content.system).not.toContain('## Paper documents')
+  })
+})

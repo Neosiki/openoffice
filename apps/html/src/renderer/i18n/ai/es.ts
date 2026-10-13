@@ -59,6 +59,7 @@ export const es = {
   aiWorking: 'Trabajando',
   aiOpenAssistant: 'Abrir asistente de IA',
   aiToolOutline: 'Leer estructura del documento',
+  aiToolCheckPages: 'Comprobar las páginas impresas',
   aiToolReadSource: 'Leer código fuente',
   aiToolApplyOps: '{n} cambio(s) aplicado(s)',
   aiToolApplyOpsFailed: 'Cambios no aplicados',

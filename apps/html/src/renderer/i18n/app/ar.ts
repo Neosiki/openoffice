@@ -44,6 +44,9 @@ export const ar = {
   redo: 'إعادة',
   cursorPos: 'سطر {line}، عمود {col}',
   charCount: '{n} حرف',
+  pageCount: 'الصفحات: {n}',
+  pageThumbs: 'مصغّرات الصفحات',
+  pageThumbGo: 'الانتقال إلى الصفحة {n}',
   previewNeedsSave: 'ستظهر الصور والأنماط النسبية في المعاينة بعد حفظ الملف',
   inspectHint: 'انقر على عنصر في المعاينة لتحديده، وانقر نقرًا مزدوجًا لتحرير النص',
   nodeDynamic:
@@ -87,6 +90,7 @@ export const ar = {
   devDesktop: 'سطح المكتب',
   devTablet: 'جهاز لوحي',
   devPhone: 'هاتف',
+  devPaper: 'صفحة مطبوعة',
   stylePanel: 'لوحة الأنماط',
   stylePanelClose: 'إغلاق لوحة الأنماط',
   alignLeft: 'محاذاة لليسار',

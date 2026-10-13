@@ -57,6 +57,7 @@ export const ko = {
   aiWorking: '작업 중',
   aiOpenAssistant: 'AI 어시스턴트 열기',
   aiToolOutline: '문서 구조 읽기',
+  aiToolCheckPages: '인쇄 쪽 나눔 확인',
   aiToolReadSource: '소스 읽기',
   aiToolApplyOps: '{n}개 수정 적용',
   aiToolApplyOpsFailed: '수정이 적용되지 않음',

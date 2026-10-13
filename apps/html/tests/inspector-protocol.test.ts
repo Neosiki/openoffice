@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { isFromInspector } from '../src/renderer/preview/inspector-protocol'
+import { isFromInspector, readPaperReport } from '../src/renderer/preview/inspector-protocol'
 
 describe('isFromInspector', () => {
   it('accepts well-formed inspector messages', () => {
@@ -16,5 +16,25 @@ describe('isFromInspector', () => {
     expect(isFromInspector({ type: 'gx:ready', title: 't' })).toBe(false)
     expect(isFromInspector({ type: 'gx:ready', version: '3' })).toBe(false)
     expect(isFromInspector({ type: 'gx:ready', version: Number.NaN })).toBe(false)
+  })
+})
+
+describe('readPaperReport', () => {
+  it('passes a sheet count with a plain colour', () => {
+    expect(readPaperReport({ pages: 12, sheet: 'rgb(255, 255, 255)' })).toEqual({
+      pages: 12,
+      sheet: 'rgb(255, 255, 255)',
+    })
+    expect(readPaperReport({ pages: 1, sheet: '#1f2a44' })).not.toBeNull()
+    expect(readPaperReport({ pages: 3, sheet: 'rgba(0, 0, 0, 0.5)' })).not.toBeNull()
+  })
+
+  it('rejects counts and colours a forged message could carry', () => {
+    expect(readPaperReport({ pages: 0, sheet: '#fff' })).toBeNull()
+    expect(readPaperReport({ pages: 1.5, sheet: '#fff' })).toBeNull()
+    expect(readPaperReport({ pages: '3', sheet: '#fff' })).toBeNull()
+    expect(readPaperReport({ pages: 2, sheet: 'url(https://example.com/x)' })).toBeNull()
+    expect(readPaperReport({ pages: 2, sheet: 'red; background: url(x)' })).toBeNull()
+    expect(readPaperReport({ pages: 2, sheet: 42 })).toBeNull()
   })
 })

@@ -45,6 +45,9 @@ export const pt = {
   redo: 'Refazer',
   cursorPos: 'Lin. {line}, col. {col}',
   charCount: '{n} caracteres',
+  pageCount: 'Páginas: {n}',
+  pageThumbs: 'Miniaturas das páginas',
+  pageThumbGo: 'Ir para a página {n}',
   previewNeedsSave: 'Imagens e estilos relativos aparecem na visualização após salvar o arquivo',
   inspectHint:
     'Clique em um elemento na visualização para selecioná-lo; clique duas vezes para editar o texto',
@@ -90,6 +93,7 @@ export const pt = {
   devDesktop: 'Desktop',
   devTablet: 'Tablet',
   devPhone: 'Celular',
+  devPaper: 'Página impressa',
   stylePanel: 'Painel de estilo',
   stylePanelClose: 'Fechar painel de estilo',
   alignLeft: 'Alinhar à esquerda',

@@ -44,6 +44,9 @@ export const ko = {
   redo: '다시 실행',
   cursorPos: '줄 {line}, 열 {col}',
   charCount: '{n}자',
+  pageCount: '{n}쪽',
+  pageThumbs: '쪽 축소판',
+  pageThumbGo: '{n}쪽으로 이동',
   previewNeedsSave: '파일을 저장하면 상대 경로의 이미지와 스타일이 미리보기에 표시됩니다',
   inspectHint: '미리보기에서 요소를 클릭해 선택, 더블클릭으로 텍스트 편집',
   nodeDynamic:
@@ -88,6 +91,7 @@ export const ko = {
   devDesktop: '데스크톱',
   devTablet: '태블릿',
   devPhone: '휴대폰',
+  devPaper: '인쇄 용지',
   stylePanel: '스타일 패널',
   stylePanelClose: '스타일 패널 닫기',
   alignLeft: '왼쪽 맞춤',

@@ -58,6 +58,7 @@ export const it = {
   aiWorking: 'Sta lavorando',
   aiOpenAssistant: 'Apri assistente IA',
   aiToolOutline: 'Lettura struttura documento',
+  aiToolCheckPages: 'Controlla le pagine stampate',
   aiToolReadSource: 'Lettura sorgente',
   aiToolApplyOps: '{n} modifica(che) applicata(e)',
   aiToolApplyOpsFailed: 'Modifiche non applicate',

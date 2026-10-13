@@ -45,6 +45,9 @@ export const de = {
   redo: 'Wiederholen',
   cursorPos: 'Z. {line}, Sp. {col}',
   charCount: '{n} Zeichen',
+  pageCount: 'Seiten: {n}',
+  pageThumbs: 'Seitenminiaturen',
+  pageThumbGo: 'Zu Seite {n}',
   previewNeedsSave:
     'Relative Bilder und Stile erscheinen in der Vorschau, sobald die Datei gespeichert ist',
   inspectHint: 'Element in der Vorschau anklicken zum Auswählen, Doppelklick zum Textbearbeiten',
@@ -90,6 +93,7 @@ export const de = {
   devDesktop: 'Desktop',
   devTablet: 'Tablet',
   devPhone: 'Handy',
+  devPaper: 'Druckseite',
   stylePanel: 'Stilbereich',
   stylePanelClose: 'Stilbereich schließen',
   alignLeft: 'Linksbündig',

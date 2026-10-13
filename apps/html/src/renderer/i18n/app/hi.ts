@@ -44,6 +44,9 @@ export const hi = {
   redo: 'फिर से करें',
   cursorPos: 'पंक्ति {line}, स्तंभ {col}',
   charCount: '{n} वर्ण',
+  pageCount: 'पृष्ठ: {n}',
+  pageThumbs: 'पृष्ठ थंबनेल',
+  pageThumbGo: 'पृष्ठ {n} पर जाएँ',
   previewNeedsSave: 'फ़ाइल सहेजने के बाद सापेक्ष चित्र और शैलियाँ पूर्वावलोकन में दिखेंगी',
   inspectHint:
     'चयन के लिए पूर्वावलोकन में किसी तत्व पर क्लिक करें, टेक्स्ट संपादित करने के लिए डबल-क्लिक करें',
@@ -89,6 +92,7 @@ export const hi = {
   devDesktop: 'डेस्कटॉप',
   devTablet: 'टैबलेट',
   devPhone: 'फ़ोन',
+  devPaper: 'मुद्रित पृष्ठ',
   stylePanel: 'स्टाइल पैनल',
   stylePanelClose: 'स्टाइल पैनल बंद करें',
   alignLeft: 'बाएँ संरेखित करें',

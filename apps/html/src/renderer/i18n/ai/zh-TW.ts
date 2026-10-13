@@ -51,6 +51,7 @@ export const zhTW = {
   aiWorking: '處理中',
   aiOpenAssistant: '開啟 AI 助手',
   aiToolOutline: '讀取文件結構',
+  aiToolCheckPages: '檢查列印分頁',
   aiToolReadSource: '讀取原始碼',
   aiToolApplyOps: '套用了 {n} 處修改',
   aiToolApplyOpsFailed: '修改未套用',

@@ -58,6 +58,7 @@ export const de = {
   aiWorking: 'Arbeitet',
   aiOpenAssistant: 'KI-Assistent öffnen',
   aiToolOutline: 'Dokumentstruktur lesen',
+  aiToolCheckPages: 'Druckseiten prüfen',
   aiToolReadSource: 'Quelltext lesen',
   aiToolApplyOps: '{n} Änderung(en) angewendet',
   aiToolApplyOpsFailed: 'Änderungen nicht angewendet',

@@ -48,6 +48,12 @@ const DESIGN_SYSTEM = [
   '## Word-export friendly HTML (only when the brief has docx_friendly=true)',
   '- Linear block flow with semantic tags; side-by-side content as a table with <colgroup> percentages. Avoid position: absolute/fixed, transforms and vw/vh for structure. Page breaks via break-before: page; break-inside: avoid on cards, figures and table rows.',
   '',
+  '## Paper documents (when the brief says the page is printed: a paper size, a page count, a handout, worksheet or form)',
+  '- Declare the paper once: @page { size: A4 portrait; margin: 15mm } unless the brief names another. Type in pt, boxes in mm; no vh, no fixed or sticky positioning, no full-viewport heroes. The paper rules win over "responsive by construction" where they disagree.',
+  '- Plan the pages before writing: decide which sections share a page and budget their heights against the page content box (A4 with 15mm margins holds 180 × 267 mm). Writing lines, table rows and cards are what overflow: count them.',
+  '- Force a break (break-before: page) only where a new page must start, and only after sections budgeted to fill their page with room to spare; everything else flows. A forced break after a section that runs a few lines over leaves an almost empty page.',
+  '- break-after: avoid on headings; break-inside: avoid on cards, figures, table rows and a question with its answer lines. Side-by-side columns taller than half a page stack vertically instead: a grid cut by a page boundary leaves a hole.',
+  '',
   OUTPUT_CONTRACT,
 ].join('\n')
 

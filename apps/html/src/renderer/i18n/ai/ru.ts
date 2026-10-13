@@ -57,6 +57,7 @@ export const ru = {
   aiWorking: 'Работает',
   aiOpenAssistant: 'Открыть ИИ-ассистента',
   aiToolOutline: 'Чтение структуры документа',
+  aiToolCheckPages: 'Проверить печатные страницы',
   aiToolReadSource: 'Чтение исходного кода',
   aiToolApplyOps: 'Применено правок: {n}',
   aiToolApplyOpsFailed: 'Правки не применены',

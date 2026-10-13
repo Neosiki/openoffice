@@ -57,6 +57,7 @@ export const cs = {
   aiWorking: 'Pracuji',
   aiOpenAssistant: 'Otevřít asistenta AI',
   aiToolOutline: 'Čtení osnovy dokumentu',
+  aiToolCheckPages: 'Zkontrolovat tištěné stránky',
   aiToolReadSource: 'Čtení zdroje',
   aiToolApplyOps: 'Použito úprav: {n}',
   aiToolApplyOpsFailed: 'Úpravy nebyly použity',

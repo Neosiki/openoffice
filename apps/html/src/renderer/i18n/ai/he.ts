@@ -55,6 +55,7 @@ export const he = {
   aiWorking: 'עובד',
   aiOpenAssistant: 'פתחו את עוזר ה-AI',
   aiToolOutline: 'קריאת מבנה המסמך',
+  aiToolCheckPages: 'בדיקת עמודי ההדפסה',
   aiToolReadSource: 'קריאת מקור',
   aiToolApplyOps: 'הוחלו {n} עריכות',
   aiToolApplyOpsFailed: 'העריכות לא הוחלו',

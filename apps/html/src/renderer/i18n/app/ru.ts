@@ -45,6 +45,9 @@ export const ru = {
   redo: 'Повторить',
   cursorPos: 'Стр. {line}, стлб. {col}',
   charCount: '{n} симв.',
+  pageCount: 'Страниц: {n}',
+  pageThumbs: 'Миниатюры страниц',
+  pageThumbGo: 'Перейти к странице {n}',
   previewNeedsSave: 'Относительные изображения и стили появятся в просмотре после сохранения файла',
   inspectHint: 'Щёлкните элемент в просмотре, чтобы выбрать; двойной щелчок редактирует текст',
   nodeDynamic:
@@ -88,6 +91,7 @@ export const ru = {
   devDesktop: 'Десктоп',
   devTablet: 'Планшет',
   devPhone: 'Телефон',
+  devPaper: 'Печатная страница',
   stylePanel: 'Панель стилей',
   stylePanelClose: 'Закрыть панель стилей',
   alignLeft: 'По левому краю',

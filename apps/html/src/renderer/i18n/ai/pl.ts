@@ -57,6 +57,7 @@ export const pl = {
   aiWorking: 'Pracuje',
   aiOpenAssistant: 'Otwórz asystenta AI',
   aiToolOutline: 'Odczyt struktury dokumentu',
+  aiToolCheckPages: 'Sprawdź strony wydruku',
   aiToolReadSource: 'Odczyt źródła',
   aiToolApplyOps: 'Zastosowano zmian: {n}',
   aiToolApplyOpsFailed: 'Zmiany niezastosowane',

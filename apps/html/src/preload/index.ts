@@ -112,6 +112,7 @@ const api: HtmlApi = {
   exportPdf: (request) => ipcRenderer.invoke(HTML_CHANNELS.exportPdf, request),
   exportHtml: (request) => ipcRenderer.invoke(HTML_CHANNELS.exportHtml, request),
   printHtml: (request) => ipcRenderer.invoke(HTML_CHANNELS.printHtml, request),
+  renderPrintPreview: (request) => ipcRenderer.invoke(HTML_CHANNELS.printPreview, request),
   getLanguage: () => ipcRenderer.invoke(HTML_CHANNELS.getLanguage),
   onLanguageChanged: (handler) => {
     const listener = (_e: Electron.IpcRendererEvent, lang: Lang) => handler(lang)
