@@ -310,6 +310,9 @@ export function parseClaudeCodeTurn(
     // the object may sit inside a sentence the model added around it
     const start = trimmed.indexOf('{')
     const end = trimmed.lastIndexOf('}')
+    // No object at all: the model answered in plain prose (seen live: a bare "done" after
+    // its tool calls had run). That is an answer without tool calls, not a broken one.
+    if (start < 0 && trimmed) return { text: trimmed, toolCalls: [] }
     try {
       if (start < 0 || end <= start) throw error
       parsed = JSON.parse(trimmed.slice(start, end + 1))

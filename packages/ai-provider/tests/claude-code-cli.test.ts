@@ -682,8 +682,20 @@ describe('Claude Code bridge: the structured turn', () => {
     expect(record.toolCalls[0]!.input).toEqual({})
   })
 
-  it('hands an answer that is not the structure to the replay path, with nothing delivered', async () => {
-    const record = harness(answer('I would rather answer in plain prose.'))
+  it('takes an answer in plain prose as text without tool calls', async () => {
+    // seen live: after its tool calls had run, the model answered a bare "done"
+    const record = harness(answer('done'))
+    await stream(record)
+    expect(record.deltas.join('')).toBe('done')
+    expect(record.toolCalls).toEqual([])
+    expect(parseClaudeCodeTurn('  I would rather answer in plain prose.  ', tools)).toEqual({
+      text: 'I would rather answer in plain prose.',
+      toolCalls: [],
+    })
+  })
+
+  it('hands an answer that is a broken structure to the replay path, with nothing delivered', async () => {
+    const record = harness(answer('{"toolCalls": [ {"name": "replace_text" '))
     const failure = await stream(record).then(
       () => undefined,
       (error: unknown) => error,
