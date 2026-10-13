@@ -465,7 +465,7 @@ describe('Claude Code bridge: what goes over stdin', () => {
     const input = buildClaudeCodeInput('system', messages, tools, 2048)
     expect(input.truncated).toBe(false)
     const blocks = input.user.message.content as Array<Record<string, any>>
-    expect(blocks).toHaveLength(4)
+    expect(blocks).toHaveLength(5)
     expect(blocks[0].text).toContain('2048')
     expect(JSON.parse(blocks[2].text)).toEqual({
       role: 'assistant',
@@ -476,9 +476,27 @@ describe('Claude Code bridge: what goes over stdin', () => {
       role: 'tool',
       results: [{ id: 'c1', name: 'replace_text', output: 'ok' }],
     })
+    // a turn that ends on tool results says they already ran, so they are not requested again
+    expect(blocks[4].type).toBe('text')
+    expect(blocks[4].text).toMatch(/already run those calls exactly once/)
+    expect(blocks[4].text).toMatch(/do not request them again/)
     // an earlier turn's blocks are a prefix of the next turn's, so the prompt cache can hit
     const earlier = buildClaudeCodeInput('system', messages.slice(0, 1), tools, 2048)
     expect(blocks.slice(0, 2)).toEqual(earlier.user.message.content)
+    // the closing note is not part of that prefix: it only follows a trailing tool result
+    expect(earlier.user.message.content).toHaveLength(2)
+    const answered = buildClaudeCodeInput(
+      'system',
+      [...messages, { role: 'assistant', text: 'Fixed.' }],
+      tools,
+      2048,
+    )
+    expect(answered.user.message.content).toHaveLength(5)
+    expect(answered.user.message.content.slice(0, 4)).toEqual(blocks.slice(0, 4))
+    expect(JSON.parse((answered.user.message.content[4] as { text: string }).text)).toEqual({
+      role: 'assistant',
+      text: 'Fixed.',
+    })
   })
 
   it('passes user images as image blocks right after the event that lists them', () => {

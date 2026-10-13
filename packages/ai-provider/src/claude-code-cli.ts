@@ -83,6 +83,16 @@ const STRUCTURED_INSTRUCTIONS =
 
 const PLAIN_INSTRUCTIONS = `${NO_TOOLS_INSTRUCTIONS} Answer the request directly.`
 
+/**
+ * Closes a turn whose last event is a tool result. Every turn is a fresh CLI
+ * session that reads the whole conversation as one user message, and a smaller
+ * model then tends to answer the first user event again and re-request calls
+ * that already ran (seen live: one requested paragraph inserted four times).
+ */
+const AFTER_TOOL_RESULTS =
+  'The last event above is the result of the tool calls requested in the event before it. The application has already run those calls exactly once: do not request them again. ' +
+  'Continue from the results: request only the further calls that are still needed, or finish with an empty "toolCalls" array.'
+
 // ── What the CLI is started with ──
 
 /** A model alias or id as the CLI takes it; never something that could read as an option */
@@ -183,9 +193,10 @@ function initializeRequest(system: string, instructions: string): ClaudeCodeInpu
 /**
  * The two stdin lines of a structured turn. The user message is a list of
  * blocks: the tool list and the schema first, then one JSON object per
- * conversation event with a user event's images right after it. A later turn
- * of the same conversation repeats the earlier blocks unchanged and appends
- * to them, so the provider's prompt cache can serve the common prefix.
+ * conversation event with a user event's images right after it, and a closing
+ * note when the last event is a tool result. A later turn of the same
+ * conversation repeats the earlier event blocks unchanged and appends to them,
+ * so the provider's prompt cache can serve the common prefix.
  */
 export function buildClaudeCodeInput(
   system: string,
@@ -262,6 +273,8 @@ export function buildClaudeCodeInput(
       })
     }
   }
+  // after the events, so an earlier turn's blocks stay a prefix of this turn's
+  if (messages.at(-1)?.role === 'tool') content.push({ type: 'text', text: AFTER_TOOL_RESULTS })
   return {
     initialize: initializeRequest(system, STRUCTURED_INSTRUCTIONS),
     user: { type: 'user', message: { role: 'user', content } },
