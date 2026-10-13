@@ -183,3 +183,14 @@ describe('reading subscription IPC answers', () => {
     expect(reexport?.[1]).toContain('checkingSubscriptionStatuses')
   })
 })
+
+describe('the first-connection notice', () => {
+  // Codex writes a diagnostic log on the PC that the app can neither read nor
+  // prevent; the notice says so wherever it is first shown, not only in the shell.
+  it.each(Object.entries(EDITORS))('%s shows the Codex sentence', (_name, editor) => {
+    const panel = source(editor.panel)
+    expect(panel).toContain('<AiFirstConnectionNotice')
+    expect(panel).not.toContain('codexKeepsHistory={false}')
+    expect(panel).toMatch(/<AiFirstConnectionNotice[^>]*\bcodexKeepsHistory\b/)
+  })
+})

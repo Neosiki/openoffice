@@ -850,7 +850,7 @@ export function AiChatPanel({
         {subscription.noticeDue && (
           <AiFirstConnectionNotice
             lang={lang}
-            codexKeepsHistory={false}
+            codexKeepsHistory
             onAcknowledge={subscription.onAcknowledgeNotice}
           />
         )}

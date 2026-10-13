@@ -1,0 +1,50 @@
+# apps/sheets (`@genoffice/sheets`)
+
+Excel 통합 문서(.xlsx, .csv 등) 에디터다. 화면은 Univer 격자 위에 Excel식 리본을 얹은 것이고, 파일의 읽기·쓰기는 별도 프로세스로 도는 Rust 사이드카가 한다.
+
+## 맡은 범위
+
+- 렌더러(`src/renderer/`): Univer 구성(`create-univer.ts`), Excel식 동작을 맞추는 수많은 보정 모듈, 리본과 대화 상자, 편집 기록(`edit-journal.ts`).
+- 메인 프로세스(`src/main/sheets-main.ts`): 탭 세션, 열기·저장·복구, PDF·CSV 내보내기, 인쇄, 사이드카 클라이언트(`xlsx-sidecar-client.ts`), 큰 저장의 조각 전송(`save-edits-transfer.ts`).
+- xlsx 엔진 `native/xlsx-engine`(Rust). 사이드카 실행 파일로 빌드되어 요청·응답 프로토콜로 통합 문서를 스트리밍한다.
+- IPC 계약 `src/shared/ipc-channels.ts`(`IPC_CHANNELS`)와 `src/shared/desktop-api.ts`.
+- 시트의 AI: 패널 `src/renderer/ai/AiChatPanel.tsx`, skill과 도구(`workbook-skill.ts`, `tools.ts`, `image-skill.ts`, `search-skill.ts`), 막힌 실행 판정(`subscription-state.ts`), 모델에게 보낼 열을 거르는 정책(`src/ai/privacy-policy.ts`).
+- 단독 실행용 AI 핸들러 `registerSheetsAiIpc`와 그 규칙(`src/main/ai-run.ts`).
+
+## 맡지 않는 것 (경계)
+
+- 배포되는 앱에서 공용 `ai:*` 채널(`ai:stream`, `ai:chat`, `ai:get-settings` 등)은 이 모듈이 응답하지 않는다. shell은 시트 뷰를 `createSheetsView({ includeAiHandlers: false })`로 만들고, 그 채널들은 `apps/docs/src/main/docs-main.ts`의 `registerAiIpc`가 담당한다. `registerSheetsAiIpc`는 단독 실행에서만 돈다.
+- 프로바이더 선택과 구독 프로그램 실행은 `packages/ai-provider`, 검색·이미지 도구의 경로 결정은 `packages/ai-search`, 보내기 규칙과 연결 카드·알림은 `packages/ui`의 범위다.
+- 셀 주소·서식 색·차트 표현 같은 통합 문서 도메인 타입은 `packages/xlsx-gateway`의 범위다.
+- 새 docx·pdf·md 파일을 만드는 AI 도구(`create_document`)의 실제 생성은 문서 에디터의 `createAiDocument`가 한다. shell이 `configureSheetsRuntime`으로 주입한다.
+- 탭, 창, 구독 프로그램의 잔여 프로세스 정리는 `apps/shell`의 범위다.
+
+## 항상 지켜야 하는 것
+
+- 모든 IPC 핸들러는 보낸 쪽을 확인한다. `sessionFor(event)`가 등록된 시트 탭이 아니면 예외를 던지고, 입력은 zod 스키마(`aiStreamRequestSchema` 등)로 파싱한 뒤에 쓴다. 새 핸들러도 이 두 가지를 먼저 한다.
+- 원본 파일이 진실의 원천이다. 저장은 편집 기록을 사이드카에 넘겨 좁게 패치하는 방식이고, 에디터가 건드리지 않은 것은 그대로 남아야 한다. 열기·저장 경로를 바꾸면 왕복 테스트로 증명한다. 문서 엔진의 동작(해석, 저장, 내보내기)을 AI나 UI 작업의 일부로 바꾸지 않는다.
+- 문서 내용은 테마가 다시 칠하지 않는다. 어두운 시트는 Univer의 `darkMode`를 쓰는 화면 전용 변환이고, 셀 채우기·글자색·차트 색상표는 문서 데이터다. 저장·내보내기·인쇄 결과는 두 테마에서 같아야 한다. 리본 등 크롬 색은 토큰만 쓴다.
+- 요청은 다른 프로바이더로 넘어가지 않는다. 단독 실행의 `ai:stream`·`ai:chat`은 `resolveAiRunTarget`으로 대상을 정하고, 실행할 수 없으면 프로바이더를 부르지 않고 원인을 담아 거절한다. 이 규칙은 문서 에디터의 `ai-run.ts`와 같은 답을 내야 한다. 한쪽만 바꾸면 단독 실행과 배포 앱의 동작이 갈린다.
+- 종량제 동의를 쓸 때는 정규화된 설정 전체를 쓴다(`withMeteredAccepted`). `providers` 표가 없는 설정 파일은 프로바이더 도입 이전 파일로 읽혀 기본값이 되고, 그러면 방금 쓴 동의가 사라진다.
+- 구독 IPC는 `ensureSubscriptionIpc`로만 등록하고 `initSubscriptionChildTracking`은 부르지 않는다. 단독 실행 진입은 `will-quit`와 `process.on('exit')`에서 `shutdownSubscriptionChildren`을 부른다.
+- shell 안에서도 필요한 시트 전용 AI 채널은 `registerSheetsAiIpc`가 아니라 `registerSheetsIpc`에 등록하고 `sheets:` 접두사를 붙인다(`sheets:ai-generate-image`, `sheets:ai-tool-capabilities`, 첨부 관련 `sheets:files-*`). `registerSheetsAiIpc`에 두면 배포 앱에서 "핸들러 없음"이 된다.
+- 이미지 도구에는 `{ path: 'screen', statuses: sharedSubscriptionStatuses() }`를 넘기고, 읽을 수 있는 로컬 경로는 그 탭이 연 통합 문서들의 폴더와 붙여 넣기 임시 폴더로 제한한다(`sheetsMediaRoots`).
+- 모델에게 보내는 열은 `applyPrivacyPolicy`를 거친다. `deny`는 보내지 않고 `statistics-only`는 값 없이 개수만 보낸다. 값을 직접 읽어 프롬프트에 넣는 우회 경로를 만들지 않는다.
+
+## 이 모듈의 방식
+
+- 메인 코드는 shell 번들에 들어간다(`../../../sheets/src/main/sheets-main`을 상대 경로로 import한다). `src/main`을 고친 뒤에는 shell을 다시 빌드한다.
+- 사이드카 위치는 주입받는다. 배포 앱은 `resources/native/`, 개발 실행은 `native/xlsx-engine/target/release/`의 실행 파일을 쓰고 `XLSX_SIDECAR_PATH`로 바꿀 수 있다. 사이드카가 죽으면 `workbook:sidecar-crashed`로 알리고 같은 경로를 정상 열기 경로로 다시 연다.
+- 큰 저장은 조각으로 나눠 보낸다. 편집이 `SAVE_EDITS_INLINE_MAX`(1만 건)를 넘으면 JSON 문자열 조각으로 올린 뒤 저장 요청에 전송 id만 싣는다. 살아 있는 객체 그래프를 context bridge로 넘기면 속성 하나씩 건너가 매우 느리기 때문이다. 상한 상수는 zod 스키마와 preload의 수동 검증이 함께 쓴다(preload는 zod를 쓰지 않는다).
+- 패널 배선: 보내기 규칙은 `App.tsx`의 `useAiSendGate`가 쥐고, `AiChatPanel.tsx`는 `admitQueued`·`onAcknowledgeNotice` 등을 props로 받는다. 전송은 `aiRunErrorText`로 다른 에디터와 같은 문장을 쓰고, 막힌 실행 여부는 `aiBlockedRunOf`가 정한다(전송이 기록한 마지막 실패와 실행이 끝난 문장이 같을 때만 같은 실패로 본다. 루프가 스스로 재시도한 턴이 섞이기 때문이다).
+- `dependencies`에 올린 `@genoffice/*` 패키지는 `electron.vite.config.ts`의 `externalizeDepsPlugin` `exclude`에도 있어야 한다. preload는 샌드박스에서 임의의 npm 패키지를 require할 수 없으므로 `@genoffice/ai-provider`(구독 채널 이름)와 `@genoffice/electron-utils`를 번들에 넣는다.
+- 문자열은 `src/renderer/i18n/`의 언어별 조각(`ai/`, `app/`, `dialogs/`)이고 `zh.ts`가 키 집합을 정한다. 21개 언어 모두에 넣는다. 구독 연결 문장은 `@genoffice/ui`의 것을 쓴다.
+
+## 테스트
+
+- `npm run test -w @genoffice/sheets`는 Rust 테스트와 사이드카 빌드를 먼저 돌린다(`cargo` 필요). TypeScript 쪽만 볼 때는 이 폴더에서 `npx vitest run`을 쓴다. Windows에서 `cargo`가 PATH에 없으면 `%USERPROFILE%\.cargo\bin`을 앞에 붙인다.
+- 사이드카를 쓰는 테스트(`tests/xlsx-*.test.ts`, `tests/ole-roundtrip.test.ts` 등)는 테스트 파일 기준 `../native/xlsx-engine/target/release/`의 실행 파일을 직접 찾는다. 한 번은 `npm run native:build`가 돌아 있어야 한다.
+- 환경은 `node`이고 기본 시간 제한(5초)을 쓴다. 부하가 큰 PC에서는 `tests/table-design.test.ts`, `tests/table-design-create.test.ts`가 시간 초과로 실패할 수 있다. 단독으로 다시 돌려 확인한다.
+- Windows에서 `tests/promote-file-atomically.test.ts`의 두 건은 변경과 무관하게 실패한다(단독으로 돌려도 같다).
+- AI 배선에서 바꾸면 반드시 테스트하는 것(`tests/ai-run.test.ts`, `tests/ai-subscription-state.test.ts`, `tests/ai-chat-panel-subscription.test.ts`): 연결 없는 요청의 거절과 원인 필드, 종량제 동의 뒤 다시 읽은 설정, 재시도된 턴 뒤의 막힌 실행 판정. `claude-code`·`codex`로 가는 테스트는 브리지를 mock한다.
+- 형식 충실도 검증(`npm run compat`, `npm run fixtures`, 벤치마크)은 필요할 때 따로 돌린다.

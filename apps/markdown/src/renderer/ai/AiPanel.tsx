@@ -1163,7 +1163,7 @@ export function AiPanel({
         {sendGate.noticeDue && (
           <AiFirstConnectionNotice
             lang={lang}
-            codexKeepsHistory={false}
+            codexKeepsHistory
             onAcknowledge={sendGate.acknowledgeNotice}
           />
         )}
