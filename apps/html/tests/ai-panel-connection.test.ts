@@ -331,8 +331,8 @@ describe('AI panel on a first subscription use', () => {
     await mountPanel(main)
     expect(host.querySelector('.ai-sub-first')).not.toBeNull()
     expect(host.querySelector('.ai-sub-prompt')).toBeNull()
-    // Codex keeps no conversation history on this PC, so the notice does not claim it does
-    expect(host.querySelector('.ai-sub-first')!.textContent).not.toContain(
+    // Codex keeps a diagnostic log the app cannot read or prevent: the notice says so here too
+    expect(host.querySelector('.ai-sub-first')!.textContent).toContain(
       aiSubscriptionText(LANG, 'noticeCodexHistory'),
     )
 

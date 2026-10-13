@@ -520,8 +520,8 @@ describe('AI panel: first connection notice', () => {
     expect(harness.requests).toHaveLength(0)
     const notice = container.querySelector('.ai-sub-first')
     expect(notice).not.toBeNull()
-    // Codex history is not kept (ephemeral threads): that sentence is not shown
-    expect(notice?.querySelectorAll('li')).toHaveLength(2)
+    // Codex keeps a diagnostic log the app cannot read or prevent: the notice says so here too
+    expect(notice?.querySelectorAll('li')).toHaveLength(3)
 
     act(() => notice!.querySelector<HTMLButtonElement>('button')!.click())
     await settle()

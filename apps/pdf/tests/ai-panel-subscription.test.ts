@@ -380,8 +380,8 @@ describe('AI panel: first-connection notice', () => {
     expect(bridge.api.aiStream).not.toHaveBeenCalled()
     const notice = panel.querySelector('.ai-sub-first')
     expect(notice).not.toBeNull()
-    // threads are ephemeral: the "Codex may keep history" sentence is not shown
-    expect(notice!.textContent).not.toContain(aiSubscriptionText('en', 'noticeCodexHistory'))
+    // Codex keeps a diagnostic log the app cannot read or prevent: the notice says so here too
+    expect(notice!.textContent).toContain(aiSubscriptionText('en', 'noticeCodexHistory'))
 
     await click(notice!.querySelector('button'))
 
