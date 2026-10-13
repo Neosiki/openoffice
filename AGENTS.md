@@ -1,6 +1,6 @@
 # 이음오피스 (IeumOffice)
 
-워드·엑셀·파워포인트·PDF·마크다운·HTML 문서를 한 창에서 열고 고치는 데스크톱 오피스 프로그램이다. AI가 문서를 직접 고친다. 누구나 무료로 쓰도록 배포하며, 특정 직업군용이 아니다.
+워드·엑셀·파워포인트·PDF·마크다운·HTML·한글(HWP) 문서를 한 창에서 열고 고치는 데스크톱 오피스 프로그램이다. AI가 문서를 직접 고친다. 누구나 무료로 쓰도록 배포하며, 특정 직업군용이 아니다.
 
 AI는 쓰는 사람이 이미 내고 있는 **Claude 또는 Codex 구독**으로 돌아간다. 앱은 PC에 설치된 그 회사의 프로그램을 실행해 답 한 차례를 받아 오고, 문서를 고치는 일은 앱이 한다. 요금이 나가는 쪽으로는 사용자가 직접 고르지 않는 한 가지 않는다.
 
@@ -39,7 +39,8 @@ openoffice/
 │   ├── slides/AGENTS.md           ← 파워포인트 편집기, 슬라이드 생성
 │   ├── pdf/AGENTS.md              ← PDF 편집기
 │   ├── markdown/AGENTS.md         ← 마크다운·텍스트 편집기
-│   └── html/AGENTS.md             ← HTML 편집기
+│   ├── html/AGENTS.md             ← HTML 편집기
+│   └── hwp/AGENTS.md              ← 한글(HWP·HWPX) 편집기, 편집 화면은 rhwp
 ├── packages/
 │   ├── ai-provider/AGENTS.md      ← 제공자 목록·선택 규칙, 구독 프로그램 실행부
 │   ├── ai-search/AGENTS.md        ← 검색·이미지 생성·미디어 분석 도구, 자동 호출 제한

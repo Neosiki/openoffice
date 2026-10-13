@@ -187,6 +187,7 @@ function assertModuleTreesPresent() {
     '../pdf/out',
     '../markdown/out',
     '../html/out',
+    '../hwp/out',
     '../../packages/cli/dist/genoffice.cjs',
     '../../packages/cli/dist/node_modules/jsdom',
   ]) {
@@ -274,8 +275,9 @@ function ensureThirdPartyNotices() {
 // NSIS makes every declared ProgId the extension's default opener; for the
 // office types that is the point, for plain text and JSON it would hijack the
 // system editor, so Windows leaves those two out (mac/Linux only offer them
-// in Open With).
-const WIN_OPEN_WITH_ONLY_EXTS = new Set(['txt', 'json'])
+// in Open With). HWP and HWPX stay out for the same reason: installing this
+// app must not take the documents away from Hancom Office on a PC that has it.
+const WIN_OPEN_WITH_ONLY_EXTS = new Set(['txt', 'json', 'hwp', 'hwpx'])
 // NSIS registers each association under a ProgId taken from its `name`
 // (HKCU\Software\Classes\<name>). The upstream app registers the bare names
 // below ("Word Document"), so sharing them would let either install overwrite
@@ -388,6 +390,20 @@ const FILE_ASSOCIATIONS = [
     icon: 'html',
     mimeType: 'text/html',
   },
+  {
+    ext: 'hwp',
+    name: 'HWP Document',
+    role: 'Editor',
+    icon: 'hwp',
+    mimeType: 'application/x-hwp',
+  },
+  {
+    ext: 'hwpx',
+    name: 'HWPX Document',
+    role: 'Editor',
+    icon: 'hwp',
+    mimeType: 'application/hwp+zip',
+  },
 ]
 
 const config = {
@@ -433,6 +449,10 @@ const config = {
     {
       from: '../html/out',
       to: 'modules/html',
+    },
+    {
+      from: '../hwp/out',
+      to: 'modules/hwp',
     },
     // PDF text editing engines: the bundled main resolves these under
     // Resources/wasm when node_modules is absent (apps/pdf/src/main/wasm-path.ts)

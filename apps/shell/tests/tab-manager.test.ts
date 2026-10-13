@@ -168,6 +168,16 @@ vi.mock('../../html/src/main/html-main', () => ({
   requestHtmlClose: (...args: unknown[]) => requestHtmlClose(...(args as [])),
 }))
 
+const createHwpView = vi.fn(() => makeFakeView())
+const hwpIsDirty = vi.fn(() => false)
+const requestHwpClose = vi.fn(() => Promise.resolve(true))
+
+vi.mock('../../hwp/src/main/hwp-main', () => ({
+  createHwpView: (...args: unknown[]) => createHwpView(...(args as [])),
+  hwpIsDirty: (...args: unknown[]) => hwpIsDirty(...(args as [])),
+  requestHwpClose: (...args: unknown[]) => requestHwpClose(...(args as [])),
+}))
+
 import { TabManager } from '../src/main/tab-manager'
 import type { TabKind } from '../src/shared/tabs-api'
 
@@ -771,6 +781,15 @@ describe('file path bookkeeping', () => {
       open: () => {
         manager.openHtmlTab('/tmp/one.html')
         return lastCreatedView(createHtmlView)
+      },
+    },
+    {
+      kind: 'hwp',
+      file: '/tmp/one.hwpx',
+      renamed: '/tmp/two.hwpx',
+      open: () => {
+        manager.openHwpTab('/tmp/one.hwpx')
+        return lastCreatedView(createHwpView)
       },
     },
   ]

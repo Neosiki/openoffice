@@ -1,0 +1,62 @@
+import type { zh } from './zh'
+
+export const fr = {
+  loading: 'Ouverture du document…',
+  noDocument: 'Aucun document n’est ouvert dans cet onglet.',
+  editorFailed: 'L’éditeur n’a pas pu démarrer.',
+  openFailed: 'Le document n’a pas pu être ouvert.',
+  saveFailed: 'Le document n’a pas pu être enregistré.',
+  saveVerifyFailed:
+    'Rien n’a été enregistré : la copie à écrire ne correspondait pas, à la relecture, au document affiché. Essayez « Enregistrer sous » pour écrire un nouveau fichier.',
+  saveProtected:
+    'Non enregistré : ce document est protégé par mot de passe, et l’enregistrer ici l’écrirait sans mot de passe.',
+  backupKept: 'Enregistré. La version précédente a été conservée sous le nom {name}.',
+  dismiss: 'Fermer',
+  aiOpenAssistant: "Ouvrir l'assistant IA",
+  aiNewChat: 'Nouvelle conversation',
+  aiCollapsePanel: 'Réduire le panneau',
+  aiEmptyTitle: 'Interrogez ce document',
+  aiThinking: 'Réflexion',
+  aiWorking: 'Traitement',
+  aiStopped: 'Arrêté',
+  aiNoReply: '(aucune réponse)',
+  aiTurnLimit:
+    "Limite d'étapes atteinte pour cette exécution — envoyez une autre instruction pour continuer.",
+  aiTruncatedNote: '(La réponse a été tronquée par la limite de longueur et peut être incomplète.)',
+  aiUnknownError: 'La requête IA a échoué, réessayez',
+  aiTimeoutError: 'Délai de réponse IA dépassé',
+  aiCreditsExhausted: "Crédits épuisés — rechargez auprès de votre fournisseur d'IA",
+  aiNetworkError:
+    'Problème réseau : impossible de joindre le service IA. Vérifiez votre connexion et réessayez',
+  aiOverloadedError: "Le service d'IA est actuellement surchargé — réessayez dans un instant",
+  aiUndelivered: 'Non envoyé',
+  aiRetry: 'Réessayer',
+  aiHintIdle: 'Entrée pour envoyer, Maj+Entrée pour une nouvelle ligne',
+  aiHintBusy: 'Réponse en cours…',
+  aiSend: 'Envoyer',
+  aiStop: 'Arrêter',
+  aiWorkedSteps: 'Terminé · {n} étapes',
+  aiGroupWorking: 'En cours…',
+  aiCopyReplyTitle: 'Copier la réponse',
+  aiEmptyBody:
+    'Posez une question sur le texte, faites reformuler un passage ou remplir les champs de formulaire. Chaque modification est listée ici et peut être annulée d’un coup.',
+  aiComposerPlaceholder: 'Posez une question sur ce document ou indiquez ce qu’il faut modifier…',
+  aiStarterSummarize: 'Résumer',
+  aiStarterSummarizePrompt: 'Résume brièvement ce document, en ne gardant que l’essentiel.',
+  aiStarterProofread: 'Corriger l’orthographe et les espaces',
+  aiStarterProofreadPrompt:
+    'Trouve les fautes d’orthographe et d’espacement de ce document et corrige-les.',
+  aiToolRead: 'Document lu',
+  aiToolFind: 'Recherche de « {text} » · {count} trouvé(s)',
+  aiToolFields: 'Champs de formulaire vérifiés · {count}',
+  aiToolFill: 'Champ « {name} » rempli',
+  aiToolInsert: 'Paragraphes ajoutés : {count}',
+  aiToolDelete: 'Paragraphe supprimé · {text}',
+  aiToolTable: 'Tableau ajouté · {rows} × {cols}',
+  aiToolNotDone: 'Non effectué · {what}',
+  aiChangesTitle: 'Modifications apportées au document : {count}',
+  aiRevert: 'Annuler ces modifications',
+  aiReverted: 'Modifications annulées',
+  aiRevertRefused:
+    'Ces modifications n’ont pas pu être annulées d’un coup. Si le document a été modifié depuis, utilisez l’annulation de l’éditeur (Ctrl+Z).',
+} satisfies Record<keyof typeof zh, string>

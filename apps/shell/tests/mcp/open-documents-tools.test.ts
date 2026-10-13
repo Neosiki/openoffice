@@ -260,6 +260,22 @@ describe('open_documents tool', () => {
     expect(textOf(result.content)).toContain('viewer')
   })
 
+  it('lists an open HWP document but refuses to read it, without calling it a PDF', async () => {
+    const hwp = doc({ id: 't8', kind: 'hwp', title: 'eight.hwpx', filePath: 'C:/docs/eight.hwpx' })
+    const read = vi.fn(async () => ({ content: 'never' }))
+    await startService(controlOf({ list: vi.fn(async () => [hwp]), read }))
+    const listed = await client!.callTool({ name: 'open_documents', arguments: { action: 'list' } })
+    expect(textOf(listed.content)).toContain('HWP document')
+    const result = await client!.callTool({
+      name: 'open_documents',
+      arguments: { action: 'read', target: 'C:/docs/eight.hwpx' },
+    })
+    expect(result.isError).toBe(true)
+    expect(textOf(result.content)).toContain('HWP document')
+    expect(textOf(result.content)).not.toContain('PDF')
+    expect(read).not.toHaveBeenCalled()
+  })
+
   it('lists an unknown target as an error that names what is open', async () => {
     await startService(controlOf())
     const result = await client!.callTool({

@@ -1,0 +1,117 @@
+import { contextBridge, ipcRenderer } from 'electron'
+import type { AiStreamChunk } from '@genoffice/ai-provider'
+import { SUBSCRIPTION_IPC_CHANNELS } from '@genoffice/ai-provider/browser'
+import type { Lang } from '@genoffice/i18n'
+import type { AiPanelPrefs } from '@genoffice/ui'
+import { installDropOpenBridge } from '@genoffice/electron-utils/drop-open'
+import { AI_CHANNELS, HWP_CHANNELS } from '../shared/ipc'
+import type { HwpApi, SaveMode, UiTheme } from '../shared/ipc'
+import type { SubscriptionApi } from '../shared/subscription-api'
+import {
+  SUBSCRIPTION_INSTALL_HELP_CHANNEL,
+  subscriptionLaunchResultOf,
+  subscriptionStatusMapOf,
+} from '../shared/subscription-api'
+
+// Subscription channels are registered once for the whole app by the docs main.
+// Until they are, an invoke rejects; the renderer treats that as "still checking".
+const aiSubscription: SubscriptionApi = {
+  async statuses() {
+    return subscriptionStatusMapOf(await ipcRenderer.invoke(SUBSCRIPTION_IPC_CHANNELS.statuses))
+  },
+  async recheck(providers) {
+    return subscriptionStatusMapOf(
+      await ipcRenderer.invoke(
+        SUBSCRIPTION_IPC_CHANNELS.recheck,
+        providers ? { providers } : undefined,
+      ),
+    )
+  },
+  async login(provider) {
+    return subscriptionLaunchResultOf(
+      await ipcRenderer.invoke(SUBSCRIPTION_IPC_CHANNELS.login, { provider }),
+    )
+  },
+  async install(provider) {
+    return subscriptionLaunchResultOf(
+      await ipcRenderer.invoke(SUBSCRIPTION_IPC_CHANNELS.install, { provider }),
+    )
+  },
+  async setMeteredAccepted(provider, accepted) {
+    const result: unknown = await ipcRenderer.invoke(SUBSCRIPTION_IPC_CHANNELS.metered, {
+      provider,
+      accepted,
+    })
+    const raw = (result ?? {}) as { ok?: unknown; statuses?: unknown }
+    return { ok: raw.ok === true, statuses: subscriptionStatusMapOf(raw.statuses) }
+  },
+  onChanged(handler) {
+    const listener = (_e: Electron.IpcRendererEvent, statuses: unknown) =>
+      handler(subscriptionStatusMapOf(statuses))
+    ipcRenderer.on(SUBSCRIPTION_IPC_CHANNELS.changed, listener)
+    return () => ipcRenderer.removeListener(SUBSCRIPTION_IPC_CHANNELS.changed, listener)
+  },
+  async openInstallHelp(provider) {
+    await ipcRenderer.invoke(SUBSCRIPTION_INSTALL_HELP_CHANNEL, provider)
+  },
+}
+
+const api: HwpApi = {
+  consumePending: () => ipcRenderer.invoke(HWP_CHANNELS.consumePending),
+  readFile: (path) => ipcRenderer.invoke(HWP_CHANNELS.readFile, path),
+  beginSave: (mode) => ipcRenderer.invoke(HWP_CHANNELS.beginSave, mode),
+  commitSave: (bytes) => ipcRenderer.invoke(HWP_CHANNELS.commitSave, bytes),
+  abortSave: () => ipcRenderer.send(HWP_CHANNELS.abortSave),
+  setDirty: (dirty) => ipcRenderer.send(HWP_CHANNELS.dirtyChanged, dirty),
+  onSaveRequest: (handler) => {
+    const listener = (_e: Electron.IpcRendererEvent, mode: SaveMode) => handler(mode)
+    ipcRenderer.on(HWP_CHANNELS.saveRequest, listener)
+    return () => ipcRenderer.removeListener(HWP_CHANNELS.saveRequest, listener)
+  },
+  onCloseSaveRequest: (handler) => {
+    const listener = () => handler()
+    ipcRenderer.on(HWP_CHANNELS.closeSaveRequest, listener)
+    return () => ipcRenderer.removeListener(HWP_CHANNELS.closeSaveRequest, listener)
+  },
+  sendCloseSaveResult: (ok) => ipcRenderer.send(HWP_CHANNELS.closeSaveResult, ok),
+  getLanguage: () => ipcRenderer.invoke(HWP_CHANNELS.getLanguage),
+  onLanguageChanged: (handler) => {
+    const listener = (_e: Electron.IpcRendererEvent, lang: Lang) => handler(lang)
+    ipcRenderer.on(HWP_CHANNELS.languageChanged, listener)
+    return () => ipcRenderer.removeListener(HWP_CHANNELS.languageChanged, listener)
+  },
+  getTheme: () => ipcRenderer.invoke(HWP_CHANNELS.getTheme),
+  onThemeChanged: (handler) => {
+    const listener = (_e: Electron.IpcRendererEvent, theme: UiTheme) => handler(theme)
+    ipcRenderer.on(HWP_CHANNELS.themeChanged, listener)
+    return () => ipcRenderer.removeListener(HWP_CHANNELS.themeChanged, listener)
+  },
+  getAiPanelPrefs: () => ipcRenderer.invoke(HWP_CHANNELS.getAiPanelPrefs),
+  setAiPanelPrefs: (patch) => ipcRenderer.invoke(HWP_CHANNELS.setAiPanelPrefs, patch),
+  onAiPanelPrefsChanged: (handler) => {
+    const listener = (_e: Electron.IpcRendererEvent, prefs: AiPanelPrefs) => handler(prefs)
+    ipcRenderer.on(HWP_CHANNELS.aiPanelPrefsChanged, listener)
+    return () => ipcRenderer.removeListener(HWP_CHANNELS.aiPanelPrefsChanged, listener)
+  },
+  getAiSettings: () => ipcRenderer.invoke(AI_CHANNELS.getSettings),
+  setAiSettings: (settings) => ipcRenderer.invoke(AI_CHANNELS.setSettings, settings),
+  onAiSettingsChanged: (handler) => {
+    const listener = () => handler()
+    ipcRenderer.on(AI_CHANNELS.settingsChanged, listener)
+    return () => ipcRenderer.removeListener(AI_CHANNELS.settingsChanged, listener)
+  },
+  openAiModelSettings: () => ipcRenderer.invoke(AI_CHANNELS.openModelSettings),
+  aiSubscription,
+  aiStream: (request) => ipcRenderer.invoke(AI_CHANNELS.stream, request),
+  aiStreamCancel: (requestId) => ipcRenderer.invoke(AI_CHANNELS.streamCancel, requestId),
+  onAiStream: (handler) => {
+    const listener = (_e: Electron.IpcRendererEvent, chunk: AiStreamChunk) => handler(chunk)
+    ipcRenderer.on(AI_CHANNELS.streamChunk, listener)
+    return () => ipcRenderer.removeListener(AI_CHANNELS.streamChunk, listener)
+  },
+}
+
+contextBridge.exposeInMainWorld('hwpApi', api)
+
+// open documents dragged from the OS onto this tab as a new shell tab
+installDropOpenBridge()

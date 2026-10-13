@@ -1,6 +1,6 @@
 # apps/shell (`@genoffice/shell`)
 
-실제로 배포되는 앱이다. Electron 프로세스 하나, 창 하나에 홈 화면과 여섯 에디터를 탭(`WebContentsView`)으로 띄운다. 설치 프로그램에 들어가는 것은 이 앱뿐이고, 에디터들의 메인 프로세스 코드는 이 앱의 메인 번들 안에서 돈다.
+실제로 배포되는 앱이다. Electron 프로세스 하나, 창 하나에 홈 화면과 일곱 에디터를 탭(`WebContentsView`)으로 띄운다. 설치 프로그램에 들어가는 것은 이 앱뿐이고, 에디터들의 메인 프로세스 코드는 이 앱의 메인 번들 안에서 돈다.
 
 ## 맡은 범위
 
@@ -14,7 +14,7 @@
 
 ## 맡지 않는 것 (경계)
 
-- 문서 편집과 형식별 저장·내보내기는 이 모듈의 범위가 아니다. 각 에디터(`apps/docs`, `apps/sheets`, `apps/slides`, `apps/pdf`, `apps/markdown`, `apps/html`)가 한다. shell은 그 메인 모듈의 내보낸 함수(`createDocsView`, `configureSheetsRuntime` 등)를 부른다.
+- 문서 편집과 형식별 저장·내보내기는 이 모듈의 범위가 아니다. 각 에디터(`apps/docs`, `apps/sheets`, `apps/slides`, `apps/pdf`, `apps/markdown`, `apps/html`, `apps/hwp`)가 한다. shell은 그 메인 모듈의 내보낸 함수(`createDocsView`, `configureSheetsRuntime` 등)를 부른다.
 - AI 요청의 실행은 범위가 아니다. `ai:*` 채널과 구독 IPC 채널은 `apps/docs/src/main/docs-main.ts`의 `registerAiIpc`가 등록한다. shell은 그것을 한 번 호출할 뿐이고, AI와 관련해 직접 응답하는 채널은 `home:open-subscription-install-help`(벤더의 설치 안내 페이지 열기)와 `ai:open-model-settings`(홈 탭의 설정 화면 열기)뿐이다.
 - 제공자 선택 규칙, 구독 프로그램 실행은 `packages/ai-provider`, 연결 카드와 알림 컴포넌트는 `packages/ui`의 범위다.
 - 명령줄과 그 MCP 서버의 구현은 `packages/cli`의 범위다. 앱 안 MCP 서버의 창 없는 도구들은 그 명령줄을 프로세스로 실행해 결과 봉투를 옮길 뿐, 문서 엔진을 다시 구현하지 않는다(`src/main/mcp/cli-runner.ts`).

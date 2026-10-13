@@ -49,6 +49,9 @@ describe('packaged file associations', () => {
     const winExts = config.win.fileAssociations.map((entry: { ext: string }) => entry.ext)
     expect(winExts).not.toContain('txt')
     expect(winExts).not.toContain('json')
+    // a PC with Hancom Office keeps it as the opener for its own formats
+    expect(winExts).not.toContain('hwp')
+    expect(winExts).not.toContain('hwpx')
     for (const ext of ['docx', 'xlsx', 'pptx', 'pdf', 'md', 'html']) {
       expect(winExts, `.${ext} missing from the Windows associations`).toContain(ext)
     }

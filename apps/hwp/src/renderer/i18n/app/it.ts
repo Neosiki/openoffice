@@ -1,0 +1,62 @@
+import type { zh } from './zh'
+
+export const it = {
+  loading: 'Apertura del documento…',
+  noDocument: 'Nessun documento aperto in questa scheda.',
+  editorFailed: 'Impossibile avviare l’editor.',
+  openFailed: 'Impossibile aprire il documento.',
+  saveFailed: 'Impossibile salvare il documento.',
+  saveVerifyFailed:
+    'Non è stato salvato nulla: la copia da scrivere, riletta, non corrispondeva al documento sullo schermo. Prova «Salva con nome» per scrivere un nuovo file.',
+  saveProtected:
+    'Non salvato: questo documento è protetto da password e salvarlo qui lo scriverebbe senza password.',
+  backupKept: 'Salvato. La versione precedente è stata conservata come {name}.',
+  dismiss: 'Chiudi',
+  aiOpenAssistant: 'Apri assistente IA',
+  aiNewChat: 'Nuova chat',
+  aiCollapsePanel: 'Comprimi pannello',
+  aiEmptyTitle: 'Chiedi di questo documento',
+  aiThinking: 'Sta pensando',
+  aiWorking: 'Sta lavorando',
+  aiStopped: 'Interrotto',
+  aiNoReply: '(nessuna risposta)',
+  aiTurnLimit: "Raggiunto il limite di passaggi per esecuzione — invia un'altra istruzione.",
+  aiTruncatedNote:
+    '(La risposta è stata troncata dal limite di lunghezza e potrebbe essere incompleta.)',
+  aiUnknownError: 'Richiesta IA non riuscita, riprova',
+  aiTimeoutError: 'Timeout della risposta IA',
+  aiCreditsExhausted: 'Crediti esauriti — ricarica presso il tuo fornitore di IA',
+  aiNetworkError:
+    'Problema di rete: impossibile raggiungere il servizio IA. Controlla la connessione e riprova',
+  aiOverloadedError: 'Il servizio IA è momentaneamente sovraccarico — riprova tra poco',
+  aiUndelivered: 'Non inviato',
+  aiRetry: 'Riprova',
+  aiHintIdle: 'Invio per inviare, Maiusc+Invio per andare a capo',
+  aiHintBusy: 'Sta rispondendo…',
+  aiSend: 'Invia',
+  aiStop: 'Interrompi',
+  aiWorkedSteps: 'Completato · {n} passaggi',
+  aiGroupWorking: 'In corso…',
+  aiCopyReplyTitle: 'Copia risposta',
+  aiEmptyBody:
+    'Fai domande sul testo, fai migliorare la formulazione o compilare i campi modulo. Ogni modifica è elencata qui e si può annullare in un colpo solo.',
+  aiComposerPlaceholder: 'Fai una domanda su questo documento o indica cosa modificare…',
+  aiStarterSummarize: 'Riassumi',
+  aiStarterSummarizePrompt: 'Riassumi brevemente questo documento, solo i punti chiave.',
+  aiStarterProofread: 'Correggi ortografia e spazi',
+  aiStarterProofreadPrompt:
+    'Trova gli errori di ortografia e di spaziatura in questo documento e correggili.',
+  aiToolRead: 'Documento letto',
+  aiToolFind: 'Ricerca di «{text}» · {count} trovati',
+  aiToolFields: 'Campi modulo controllati · {count}',
+  aiToolFill: 'Campo «{name}» compilato',
+  aiToolInsert: 'Paragrafi aggiunti: {count}',
+  aiToolDelete: 'Paragrafo rimosso · {text}',
+  aiToolTable: 'Tabella aggiunta · {rows} × {cols}',
+  aiToolNotDone: 'Non eseguito · {what}',
+  aiChangesTitle: 'Modifiche apportate al documento: {count}',
+  aiRevert: 'Annulla queste modifiche',
+  aiReverted: 'Modifiche annullate',
+  aiRevertRefused:
+    'Non è stato possibile annullare queste modifiche in un colpo solo. Se il documento è stato modificato in seguito, usa Annulla dell’editor (Ctrl+Z).',
+} satisfies Record<keyof typeof zh, string>

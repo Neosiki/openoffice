@@ -18,6 +18,8 @@ export const LAUNCHABLE_EXTS = [
   'json',
   'html',
   'htm',
+  'hwp',
+  'hwpx',
 ] as const
 
 const SUPPORTED_LAUNCH_RE = new RegExp(`\\.(${LAUNCHABLE_EXTS.join('|')})$`, 'i')

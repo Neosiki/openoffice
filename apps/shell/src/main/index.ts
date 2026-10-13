@@ -37,6 +37,8 @@ import menuMdIcon1x from './assets/menu-md.png?asset'
 import menuMdIcon2x from './assets/menu-md@2x.png?asset'
 import menuHtmlIcon1x from './assets/menu-html.png?asset'
 import menuHtmlIcon2x from './assets/menu-html@2x.png?asset'
+import menuHwpIcon1x from './assets/menu-hwp.png?asset'
+import menuHwpIcon2x from './assets/menu-hwp@2x.png?asset'
 import menuHomeIcon1x from './assets/menu-home.png?asset'
 import menuHomeIcon2x from './assets/menu-home@2x.png?asset'
 import { createI18n, isLang, normalizeLang, setUiLang, type Lang } from '@genoffice/i18n'
@@ -203,6 +205,12 @@ import {
   setMarkdownFileSavedHook,
 } from '../../../markdown/src/main/markdown-main'
 import {
+  configureHwpRuntime,
+  hwpFileRenamed,
+  requestHwpSave,
+  setHwpFileSavedHook,
+} from '../../../hwp/src/main/hwp-main'
+import {
   configureHtmlRuntime,
   exportHtmlHeadless,
   htmlDiscardPendingAssets,
@@ -263,6 +271,7 @@ import { isMoveSource, isUserVisibleFile, type FileTargetSources } from './file-
 import {
   DOCX_RE,
   HTML_RE,
+  HWP_RE,
   PDF_RE,
   PPTX_RE,
   TEXT_RE,
@@ -387,6 +396,9 @@ const MARKDOWN_OUT = app.isPackaged
 const HTML_OUT = app.isPackaged
   ? join(process.resourcesPath, 'modules', 'html')
   : join(APPS_ROOT, 'html', 'out')
+const HWP_OUT = app.isPackaged
+  ? join(process.resourcesPath, 'modules', 'hwp')
+  : join(APPS_ROOT, 'hwp', 'out')
 const SIDECAR_BIN = app.isPackaged
   ? join(process.resourcesPath, 'native', SIDECAR_EXE)
   : join(APPS_ROOT, 'sheets', 'native', 'xlsx-engine', 'target', 'release', SIDECAR_EXE)
@@ -430,6 +442,11 @@ configureHtmlRuntime({
   rendererUrl: process.env.HTML_RENDERER_URL,
   rendererFile: join(HTML_OUT, 'renderer', 'index.html'),
   openGeneratedPath: (path) => openGeneratedDocument(path),
+})
+configureHwpRuntime({
+  preloadPath: join(HWP_OUT, 'preload', 'index.js'),
+  rendererUrl: process.env.HWP_RENDERER_URL,
+  rendererFile: join(HWP_OUT, 'renderer', 'index.html'),
 })
 // privileged-scheme registration is only legal before app ready
 registerPrivilegedSchemes()
@@ -590,6 +607,7 @@ const tMain = createI18n({
     filterPpt: 'PowerPoint 演示文稿',
     filterMarkdown: '文本文件 (Markdown, TXT, JSON)',
     filterHtml: 'HTML 文档',
+    filterHwp: 'HWP 文档 (HWP, HWPX)',
     filterPdf: 'PDF 文档',
     errBadArgs: '参数无效',
     errBadName: '文件名不合法',
@@ -684,6 +702,7 @@ const tMain = createI18n({
     filterPpt: 'PowerPoint Presentations',
     filterMarkdown: 'Text Files (Markdown, TXT, JSON)',
     filterHtml: 'HTML Documents',
+    filterHwp: 'HWP Documents (HWP, HWPX)',
     filterPdf: 'PDF Documents',
     errBadArgs: 'Invalid arguments',
     errBadName: 'Invalid file name',
@@ -786,6 +805,7 @@ const tMain = createI18n({
     filterPpt: 'Bản trình bày PowerPoint',
     filterMarkdown: 'Tệp văn bản (Markdown, TXT, JSON)',
     filterHtml: 'Tài liệu HTML',
+    filterHwp: 'Tài liệu HWP (HWP, HWPX)',
     filterPdf: 'Tài liệu PDF',
     errBadArgs: 'Đối số không hợp lệ',
     errBadName: 'Tên tệp không hợp lệ',
@@ -888,6 +908,7 @@ const tMain = createI18n({
     filterPpt: 'PowerPoint プレゼンテーション',
     filterMarkdown: 'テキストファイル (Markdown, TXT, JSON)',
     filterHtml: 'HTML ドキュメント',
+    filterHwp: 'HWP ドキュメント (HWP, HWPX)',
     filterPdf: 'PDF ドキュメント',
     errBadArgs: '引数が無効です',
     errBadName: 'ファイル名が無効です',
@@ -990,6 +1011,7 @@ const tMain = createI18n({
     filterPpt: 'PowerPoint 프레젠테이션',
     filterMarkdown: '텍스트 파일 (Markdown, TXT, JSON)',
     filterHtml: 'HTML 문서',
+    filterHwp: '한글 문서 (HWP, HWPX)',
     filterPdf: 'PDF 문서',
     errBadArgs: '잘못된 인수입니다',
     errBadName: '파일 이름이 잘못되었습니다',
@@ -1091,6 +1113,7 @@ const tMain = createI18n({
     filterPpt: 'Présentations PowerPoint',
     filterMarkdown: 'Fichiers texte (Markdown, TXT, JSON)',
     filterHtml: 'Documents HTML',
+    filterHwp: 'Documents HWP (HWP, HWPX)',
     filterPdf: 'Documents PDF',
     errBadArgs: 'Arguments non valides',
     errBadName: 'Nom de fichier non valide',
@@ -1194,6 +1217,7 @@ const tMain = createI18n({
     filterPpt: 'PowerPoint-Präsentationen',
     filterMarkdown: 'Textdateien (Markdown, TXT, JSON)',
     filterHtml: 'HTML-Dokumente',
+    filterHwp: 'HWP-Dokumente (HWP, HWPX)',
     filterPdf: 'PDF-Dokumente',
     errBadArgs: 'Ungültige Argumente',
     errBadName: 'Ungültiger Dateiname',
@@ -1298,6 +1322,7 @@ const tMain = createI18n({
     filterPpt: 'Presentaciones de PowerPoint',
     filterMarkdown: 'Archivos de texto (Markdown, TXT, JSON)',
     filterHtml: 'Documentos HTML',
+    filterHwp: 'Documentos HWP (HWP, HWPX)',
     filterPdf: 'Documentos PDF',
     errBadArgs: 'Argumentos no válidos',
     errBadName: 'Nombre de archivo no válido',
@@ -1401,6 +1426,7 @@ const tMain = createI18n({
     filterPpt: 'งานนำเสนอ PowerPoint',
     filterMarkdown: 'ไฟล์ข้อความ (Markdown, TXT, JSON)',
     filterHtml: 'เอกสาร HTML',
+    filterHwp: 'เอกสาร HWP (HWP, HWPX)',
     filterPdf: 'เอกสาร PDF',
     errBadArgs: 'อาร์กิวเมนต์ไม่ถูกต้อง',
     errBadName: 'ชื่อไฟล์ไม่ถูกต้อง',
@@ -1500,6 +1526,7 @@ const tMain = createI18n({
     filterPpt: 'Presentasi PowerPoint',
     filterMarkdown: 'File teks (Markdown, TXT, JSON)',
     filterHtml: 'Dokumen HTML',
+    filterHwp: 'Dokumen HWP (HWP, HWPX)',
     filterPdf: 'Dokumen PDF',
     errBadArgs: 'Argumen tidak valid',
     errBadName: 'Nama file tidak valid',
@@ -1603,6 +1630,7 @@ const tMain = createI18n({
     filterPpt: 'Презентации PowerPoint',
     filterMarkdown: 'Текстовые файлы (Markdown, TXT, JSON)',
     filterHtml: 'Документы HTML',
+    filterHwp: 'Документы HWP (HWP, HWPX)',
     filterPdf: 'Документы PDF',
     errBadArgs: 'Недопустимые аргументы',
     errBadName: 'Недопустимое имя файла',
@@ -1706,6 +1734,7 @@ const tMain = createI18n({
     filterPpt: 'عروض PowerPoint التقديمية',
     filterMarkdown: 'ملفات نصية (Markdown, TXT, JSON)',
     filterHtml: 'مستندات HTML',
+    filterHwp: 'مستندات HWP (HWP, HWPX)',
     filterPdf: 'مستندات PDF',
     errBadArgs: 'وسيطات غير صالحة',
     errBadName: 'اسم ملف غير صالح',
@@ -1805,6 +1834,7 @@ const tMain = createI18n({
     filterPpt: 'Apresentações do PowerPoint',
     filterMarkdown: 'Arquivos de texto (Markdown, TXT, JSON)',
     filterHtml: 'Documentos HTML',
+    filterHwp: 'Documentos HWP (HWP, HWPX)',
     filterPdf: 'Documentos PDF',
     errBadArgs: 'Argumentos inválidos',
     errBadName: 'Nome de arquivo inválido',
@@ -1908,6 +1938,7 @@ const tMain = createI18n({
     filterPpt: 'Presentazioni PowerPoint',
     filterMarkdown: 'File di testo (Markdown, TXT, JSON)',
     filterHtml: 'Documenti HTML',
+    filterHwp: 'Documenti HWP (HWP, HWPX)',
     filterPdf: 'Documenti PDF',
     errBadArgs: 'Argomenti non validi',
     errBadName: 'Nome file non valido',
@@ -2011,6 +2042,7 @@ const tMain = createI18n({
     filterPpt: 'Prezentacje programu PowerPoint',
     filterMarkdown: 'Pliki tekstowe (Markdown, TXT, JSON)',
     filterHtml: 'Dokumenty HTML',
+    filterHwp: 'Dokumenty HWP (HWP, HWPX)',
     filterPdf: 'Dokumenty PDF',
     errBadArgs: 'Nieprawidłowe argumenty',
     errBadName: 'Nieprawidłowa nazwa pliku',
@@ -2114,6 +2146,7 @@ const tMain = createI18n({
     filterPpt: 'Prezentace PowerPoint',
     filterMarkdown: 'Textové soubory (Markdown, TXT, JSON)',
     filterHtml: 'Dokumenty HTML',
+    filterHwp: 'Dokumenty HWP (HWP, HWPX)',
     filterPdf: 'Dokumenty PDF',
     errBadArgs: 'Neplatné argumenty',
     errBadName: 'Neplatný název souboru',
@@ -2215,6 +2248,7 @@ const tMain = createI18n({
     filterPpt: 'PowerPoint-presentaties',
     filterMarkdown: 'Tekstbestanden (Markdown, TXT, JSON)',
     filterHtml: 'HTML-documenten',
+    filterHwp: 'HWP-documenten (HWP, HWPX)',
     filterPdf: 'PDF-documenten',
     errBadArgs: 'Ongeldige argumenten',
     errBadName: 'Ongeldige bestandsnaam',
@@ -2318,6 +2352,7 @@ const tMain = createI18n({
     filterPpt: 'Persembahan PowerPoint',
     filterMarkdown: 'Fail teks (Markdown, TXT, JSON)',
     filterHtml: 'Dokumen HTML',
+    filterHwp: 'Dokumen HWP (HWP, HWPX)',
     filterPdf: 'Dokumen PDF',
     errBadArgs: 'Argumen tidak sah',
     errBadName: 'Nama fail tidak sah',
@@ -2420,6 +2455,7 @@ const tMain = createI18n({
     filterPpt: 'מצגות PowerPoint',
     filterMarkdown: 'קובצי טקסט (Markdown, TXT, JSON)',
     filterHtml: 'מסמכי HTML',
+    filterHwp: 'מסמכי HWP (HWP, HWPX)',
     filterPdf: 'מסמכי PDF',
     errBadArgs: 'ארגומנטים לא חוקיים',
     errBadName: 'שם קובץ לא חוקי',
@@ -2520,6 +2556,7 @@ const tMain = createI18n({
     filterPpt: 'PowerPoint प्रस्तुतियाँ',
     filterMarkdown: 'पाठ फ़ाइलें (Markdown, TXT, JSON)',
     filterHtml: 'HTML दस्तावेज़',
+    filterHwp: 'HWP दस्तावेज़ (HWP, HWPX)',
     filterPdf: 'PDF दस्तावेज़',
     errBadArgs: 'अमान्य आर्ग्युमेंट',
     errBadName: 'अमान्य फ़ाइल नाम',
@@ -2623,6 +2660,7 @@ const tMain = createI18n({
     filterPpt: 'PowerPoint 簡報',
     filterMarkdown: '文字檔 (Markdown, TXT, JSON)',
     filterHtml: 'HTML 文件',
+    filterHwp: 'HWP 文件 (HWP, HWPX)',
     filterPdf: 'PDF 文件',
     errBadArgs: '參數無效',
     errBadName: '檔案名稱不合法',
@@ -2799,6 +2837,7 @@ function afterFileMoved(oldPath: string, newPath: string): void {
     else if (t.kind === 'sheets') sheetsFileRenamed(t.webContents, oldPath, newPath)
     else if (t.kind === 'markdown') markdownFileRenamed(t.webContents, oldPath, newPath)
     else if (t.kind === 'html') htmlFileRenamed(t.webContents, oldPath, newPath)
+    else if (t.kind === 'hwp') hwpFileRenamed(t.webContents, oldPath, newPath)
     else if (t.kind === 'pdf') pdfFileRenamed(t.webContents, oldPath, newPath)
   }
 }
@@ -2873,6 +2912,7 @@ const SEARCH_EXT_FAMILY: Record<string, readonly string[]> = {
   pptx: ['pptx', 'ppt'],
   md: ['md', 'markdown', 'txt', 'json'],
   html: ['html', 'htm'],
+  hwp: ['hwp', 'hwpx'],
 }
 
 /** one recursive watcher per tree root; follows the save-folder setting and the added folders */
@@ -2963,6 +3003,9 @@ function applyMenuFor(kind: TabKind): void {
       break
     case 'html':
       buildHtmlMenu()
+      break
+    case 'hwp':
+      buildHwpMenu()
       break
     default:
       buildHomeMenu()
@@ -3160,6 +3203,12 @@ function createShellWindow(): void {
     recordRecentFile(path)
     applyPendingDir(wc.id, path)
   })
+  // hwp Save As lands on a new path
+  setHwpFileSavedHook((wc, path) => {
+    manager.setTabFileFor(wc.id, path)
+    detachedSetFileFor(wc.id, path)
+    recordRecentFile(path)
+  })
   setHtmlProvisionalTitleHook((wc, title) => {
     manager.setTabTitleFor(wc.id, title)
     detachedSetTitleFor(wc.id, title)
@@ -3242,6 +3291,8 @@ const OPEN_DIALOG_EXTENSIONS = [
   'json',
   'html',
   'htm',
+  'hwp',
+  'hwpx',
 ]
 
 function notifyUnsupportedFile(filePath: string): void {
@@ -3357,6 +3408,13 @@ function routeDocumentPath(filePath: string): boolean {
     const existing = tabManager.findHtmlTabByPath(filePath)
     if (existing) tabManager.activateTab(existing)
     else tabManager.openHtmlTab(filePath)
+    return true
+  }
+  if (HWP_RE.test(filePath)) {
+    recordRecentFile(filePath)
+    const existing = tabManager.findHwpTabByPath(filePath)
+    if (existing) tabManager.activateTab(existing)
+    else tabManager.openHwpTab(filePath)
     return true
   }
   notifyUnsupportedFile(filePath)
@@ -3775,6 +3833,7 @@ function registerHomeIpc(): void {
         { name: tm('filterPdf'), extensions: ['pdf'] },
         { name: tm('filterMarkdown'), extensions: ['md', 'markdown', 'txt', 'json'] },
         { name: tm('filterHtml'), extensions: ['html', 'htm'] },
+        { name: tm('filterHwp'), extensions: ['hwp', 'hwpx'] },
       ],
       properties: ['openFile', 'multiSelections'],
     })
@@ -4302,6 +4361,7 @@ interface MenuIconSet {
   pdf: NativeImage
   md: NativeImage
   html: NativeImage
+  hwp: NativeImage
   home: NativeImage
 }
 let menuIconCache: MenuIconSet | null = null
@@ -4313,6 +4373,7 @@ function menuIcons(): MenuIconSet {
     pdf: loadMenuIcon(menuPdfIcon1x, menuPdfIcon2x),
     md: loadMenuIcon(menuMdIcon1x, menuMdIcon2x),
     html: loadMenuIcon(menuHtmlIcon1x, menuHtmlIcon2x),
+    hwp: loadMenuIcon(menuHwpIcon1x, menuHwpIcon2x),
     home: loadMenuIcon(menuHomeIcon1x, menuHomeIcon2x),
   }
   return menuIconCache
@@ -4326,6 +4387,7 @@ const TAB_MENU_ICON: Record<TabKind, keyof MenuIconSet> = {
   pdf: 'pdf',
   markdown: 'md',
   html: 'html',
+  hwp: 'hwp',
   help: 'home',
 }
 
@@ -4407,6 +4469,9 @@ function activeMarkdownTarget() {
 }
 function activeHtmlTarget() {
   return activeEditorTarget('html', () => tabManager?.activeHtmlTab())
+}
+function activeHwpTarget() {
+  return activeEditorTarget('hwp', () => tabManager?.activeHwpTab())
 }
 
 function registerTabsIpc(): void {
@@ -4768,6 +4833,69 @@ function buildMarkdownMenu(): void {
           click: () => {
             const tab = activeMarkdownTarget()
             if (tab) sendMarkdownPrintRequest(tab.webContents)
+          },
+        },
+        { type: 'separator' },
+        {
+          label: tm('menuClose'),
+          accelerator: 'CmdOrCtrl+W',
+          click: () => closeFocusedEditor(),
+        },
+      ],
+    },
+    editMenuTemplate(process.platform, appMenuLabels(currentLang())),
+    windowMenuTemplate(process.platform, appMenuLabels(currentLang())),
+    {
+      role: 'help',
+      label: tm('menuHelp'),
+      submenu: [
+        { label: tm('thirdPartyNotices'), click: () => void openThirdPartyNotices() },
+        { type: 'separator' },
+        checkUpdatesMenuItem(appMenuLabels(currentLang())),
+        aboutMenuItem(appMenuLabels(currentLang())),
+      ],
+    },
+  ]
+  Menu.setApplicationMenu(Menu.buildFromTemplate(template))
+}
+
+// ---- hwp menu (hwp-main has no menu of its own; the shell owns hwp tabs) ----
+
+function buildHwpMenu(): void {
+  const isMac = process.platform === 'darwin'
+  const template: MenuItemConstructorOptions[] = [
+    ...(isMac ? [{ role: 'appMenu' as const }] : []),
+    {
+      label: tm('menuFile'),
+      submenu: [
+        {
+          label: tm('menuOpen'),
+          accelerator: 'CmdOrCtrl+O',
+          click: () => void openFileViaDialog(),
+        },
+        { type: 'separator' },
+        {
+          label: tm('backToHome'),
+          accelerator: 'Shift+CmdOrCtrl+H',
+          click: () => tabManager?.openHomeTab(),
+        },
+        { type: 'separator' },
+        // no accelerators here: the embedded editor swallows Ctrl+S before the
+        // menu sees it, so hwp-main takes the two save shortcuts off the key
+        // event itself; registering them twice would save twice whenever focus
+        // sits outside the editor
+        {
+          label: tm('menuSave'),
+          click: () => {
+            const tab = activeHwpTarget()
+            if (tab) void requestHwpSave(tab.webContents, 'save')
+          },
+        },
+        {
+          label: tm('menuSaveAs'),
+          click: () => {
+            const tab = activeHwpTarget()
+            if (tab) void requestHwpSave(tab.webContents, 'saveAs')
           },
         },
         { type: 'separator' },
@@ -5508,6 +5636,7 @@ app.whenReady().then(async () => {
     pdf: join(PDF_OUT, 'renderer'),
     markdown: join(MARKDOWN_OUT, 'renderer'),
     html: join(HTML_OUT, 'renderer'),
+    hwp: join(HWP_OUT, 'renderer'),
     // the manual shares the shell's own renderer bundle (help mode)
     help: join(__dirname, '../renderer'),
   })

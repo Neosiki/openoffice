@@ -22,7 +22,7 @@
 export type SessionFamily = 'docx' | 'pptx' | 'xlsx'
 
 /** every family the app can edit, including ones MCP does not drive yet */
-export type EditorFamily = SessionFamily | 'md' | 'html' | 'pdf'
+export type EditorFamily = SessionFamily | 'md' | 'html' | 'pdf' | 'hwp'
 
 export interface McpFormats {
   /** format the headless `create_*` tool writes, when exposed */
@@ -107,6 +107,14 @@ export const FORMAT_FAMILIES: readonly FormatFamily[] = [
     // read-only by design: the pdf app is a viewer, MCP exposes text
     // extraction only and does not drive the editor
     mcp: { read: 'pdf' },
+  },
+  {
+    family: 'hwp',
+    label: 'HWP document',
+    editorOpen: ['hwp', 'hwpx'],
+    // a document is saved back in the format it was opened in
+    editorSave: ['hwp', 'hwpx'],
+    editorExport: [],
   },
 ]
 

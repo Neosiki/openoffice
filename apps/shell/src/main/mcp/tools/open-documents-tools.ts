@@ -26,6 +26,7 @@ const FAMILY_BY_KIND: Record<Exclude<TabKind, 'home' | 'help'>, EditorFamily> = 
   markdown: 'md',
   html: 'html',
   pdf: 'pdf',
+  hwp: 'hwp',
 }
 
 /** families whose live content can be read back over MCP */
@@ -209,6 +210,12 @@ export function createOpenDocumentTools(deps: OpenDocumentsDeps): McpToolDefinit
         if (!doc) throw noMatch(target, documents)
 
         if (action === 'read') {
+          if (doc.kind === 'hwp') {
+            throw new Error(
+              `"${doc.title}" is an HWP document: the HWP editor does not expose its content ` +
+                'through this tool yet',
+            )
+          }
           if (!READABLE_KINDS.has(doc.kind)) {
             throw new Error(
               `"${doc.title}" is a PDF: the pdf app is a viewer, so an open PDF has no readable ` +

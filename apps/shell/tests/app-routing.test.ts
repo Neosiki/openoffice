@@ -18,6 +18,14 @@ describe('appForPath', () => {
     expect(appForPath('/x/a.html')).toBe('html')
   })
 
+  it('routes both Hangul formats to the hwp app', () => {
+    expect(appForPath('/x/a.hwp')).toBe('hwp')
+    expect(appForPath('/x/a.hwpx')).toBe('hwp')
+    expect(appForPath('/x/A.HWPX')).toBe('hwp')
+    // the backup the hwp editor leaves beside a document is not a document
+    expect(appForPath('/x/a.hwp.bak')).toBeUndefined()
+  })
+
   it('has no app for an extension nothing opens', () => {
     expect(appForPath('/x/a.xyz')).toBeUndefined()
     expect(appForPath('/x/noextension')).toBeUndefined()

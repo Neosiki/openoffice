@@ -8,6 +8,7 @@ import iconPptx from './assets/file-pptx.svg'
 import iconPdf from './assets/file-pdf.svg'
 import iconMd from './assets/file-md.svg'
 import iconHtml from './assets/file-html.svg'
+import iconHwp from './assets/file-hwp.svg'
 import type {
   FolderEntry,
   FolderListing,
@@ -71,13 +72,15 @@ const FILE_ICONS: Record<string, string> = {
   markdown: iconMd,
   html: iconHtml,
   htm: iconHtml,
+  hwp: iconHwp,
+  hwpx: iconHwp,
 }
 
 /* Formats the open-local card advertises. Too long for the card at any window
    width, so it ellipsizes and a hover ScreenTip carries the full list. Keep in
    sync with the main-process open-dialog filter (OPEN_DIALOG_EXTENSIONS). */
 const OPEN_LOCAL_EXTENSIONS =
-  '.docx / .xlsx / .xlsm / .xls / .csv / .tsv / .pptx / .pdf / .md / .html'
+  '.docx / .xlsx / .xlsm / .xls / .csv / .tsv / .pptx / .pdf / .md / .html / .hwp / .hwpx'
 
 /** drag payload of home file/folder rows (JSON array of absolute paths) */
 const DRAG_PATHS_MIME = 'application/x-genoffice-paths'
@@ -256,6 +259,7 @@ const FILTERS: { key: string; label: StringKey }[] = [
   { key: 'pdf', label: 'filterPdf' },
   { key: 'md', label: 'filterMd' },
   { key: 'html', label: 'filterHtml' },
+  { key: 'hwp', label: 'filterHwp' },
 ]
 
 /** sidebar filter keys that stand for a family of extensions (mirrors recent-files.ts) */
@@ -265,6 +269,7 @@ const FILTER_FAMILY: Record<string, readonly string[]> = {
   pptx: ['pptx', 'ppt'],
   md: ['md', 'markdown', 'txt', 'json'],
   html: ['html', 'htm'],
+  hwp: ['hwp', 'hwpx'],
 }
 
 function matchesFilter(entry: RecentEntry, filter: string): boolean {

@@ -1,0 +1,63 @@
+import type { zh } from './zh'
+
+export const es = {
+  loading: 'Abriendo el documento…',
+  noDocument: 'No hay ningún documento abierto en esta pestaña.',
+  editorFailed: 'No se pudo iniciar el editor.',
+  openFailed: 'No se pudo abrir el documento.',
+  saveFailed: 'No se pudo guardar el documento.',
+  saveVerifyFailed:
+    'No se guardó nada: la copia que se iba a escribir no coincidía, al releerla, con el documento en pantalla. Prueba «Guardar como» para escribir un archivo nuevo.',
+  saveProtected:
+    'No se guardó: este documento está protegido con contraseña y, al guardarlo aquí, se escribiría sin ella.',
+  backupKept: 'Guardado. La versión anterior se conservó como {name}.',
+  dismiss: 'Cerrar',
+  aiOpenAssistant: 'Abrir asistente de IA',
+  aiNewChat: 'Nueva conversación',
+  aiCollapsePanel: 'Contraer panel',
+  aiEmptyTitle: 'Pregunta sobre este documento',
+  aiThinking: 'Pensando',
+  aiWorking: 'Trabajando',
+  aiStopped: 'Detenido',
+  aiNoReply: '(sin respuesta)',
+  aiTurnLimit:
+    'Se alcanzó el límite de pasos por ejecución; envía otra instrucción para continuar.',
+  aiTruncatedNote: '(La respuesta fue cortada por el límite de longitud y puede estar incompleta.)',
+  aiUnknownError: 'La solicitud de IA falló, reinténtalo',
+  aiTimeoutError: 'La respuesta de IA agotó el tiempo',
+  aiCreditsExhausted: 'Sin créditos — recarga con tu proveedor de IA',
+  aiNetworkError:
+    'Problema de red: no se pudo conectar con el servicio de IA. Comprueba tu conexión e inténtalo de nuevo',
+  aiOverloadedError:
+    'El servicio de IA está saturado en este momento; inténtalo de nuevo en unos instantes',
+  aiUndelivered: 'No enviado',
+  aiRetry: 'Reintentar',
+  aiHintIdle: 'Enter para enviar, Mayús+Enter para nueva línea',
+  aiHintBusy: 'Respondiendo…',
+  aiSend: 'Enviar',
+  aiStop: 'Detener',
+  aiWorkedSteps: 'Completado · {n} pasos',
+  aiGroupWorking: 'En curso…',
+  aiCopyReplyTitle: 'Copiar respuesta',
+  aiEmptyBody:
+    'Pregunta sobre el texto, pide que se mejore la redacción o que se rellenen los campos de formulario. Cada cambio aparece aquí y se puede deshacer de una vez.',
+  aiComposerPlaceholder: 'Pregunta sobre este documento o indica qué hay que cambiar…',
+  aiStarterSummarize: 'Resumir',
+  aiStarterSummarizePrompt: 'Resume brevemente este documento, solo los puntos clave.',
+  aiStarterProofread: 'Corregir ortografía y espacios',
+  aiStarterProofreadPrompt:
+    'Busca los errores de ortografía y de espaciado de este documento y corrígelos.',
+  aiToolRead: 'Documento leído',
+  aiToolFind: 'Búsqueda de «{text}» · {count} encontrado(s)',
+  aiToolFields: 'Campos de formulario revisados · {count}',
+  aiToolFill: 'Campo «{name}» rellenado',
+  aiToolInsert: 'Párrafos añadidos: {count}',
+  aiToolDelete: 'Párrafo eliminado · {text}',
+  aiToolTable: 'Tabla añadida · {rows} × {cols}',
+  aiToolNotDone: 'No realizado · {what}',
+  aiChangesTitle: 'Cambios hechos en el documento: {count}',
+  aiRevert: 'Deshacer estos cambios',
+  aiReverted: 'Cambios deshechos',
+  aiRevertRefused:
+    'No se pudieron deshacer estos cambios de una vez. Si el documento se editó después, usa Deshacer del editor (Ctrl+Z).',
+} satisfies Record<keyof typeof zh, string>

@@ -6,10 +6,11 @@ const XLSX_RE = /\.(xlsx|xlsm|xls|csv|tsv)$/i
 const PPTX_RE = /\.pptx$/i
 const PDF_RE = /\.pdf$/i
 const HTML_RE = /\.html?$/i
+const HWP_RE = /\.hwpx?$/i
 
 const TEXT_RE = /\.(md|markdown|txt|json)$/i
 
-export { DOCX_RE, XLSX_RE, PPTX_RE, PDF_RE, HTML_RE, TEXT_RE }
+export { DOCX_RE, XLSX_RE, PPTX_RE, PDF_RE, HTML_RE, HWP_RE, TEXT_RE }
 
 export function appForPath(path: string): DocumentTabKind | undefined {
   if (DOCX_RE.test(path)) return 'docs'
@@ -18,6 +19,7 @@ export function appForPath(path: string): DocumentTabKind | undefined {
   if (PDF_RE.test(path)) return 'pdf'
   if (TEXT_RE.test(path)) return 'markdown'
   if (HTML_RE.test(path)) return 'html'
+  if (HWP_RE.test(path)) return 'hwp'
   return undefined
 }
 

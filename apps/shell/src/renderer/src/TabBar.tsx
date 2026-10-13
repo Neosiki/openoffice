@@ -131,6 +131,17 @@ function HtmlIcon() {
   )
 }
 
+/** the Hangul letter hieut, the first letter of the format's own name */
+function HwpIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 240 240" fill="none" aria-hidden="true">
+      <rect width="240" height="240" rx="48" fill="#0EA5E9" />
+      <path d="M96 66H144M66 104H174" stroke="#fff" strokeWidth="20" strokeLinecap="round" />
+      <circle cx="120" cy="160" r="32" stroke="#fff" strokeWidth="20" />
+    </svg>
+  )
+}
+
 const KIND_ICON: Record<TabSummary['kind'], ReactElement> = {
   home: <HomeIcon />,
   docs: <DocIcon />,
@@ -139,6 +150,7 @@ const KIND_ICON: Record<TabSummary['kind'], ReactElement> = {
   pdf: <PdfIcon />,
   markdown: <MarkdownIcon />,
   html: <HtmlIcon />,
+  hwp: <HwpIcon />,
   help: <HelpIcon />,
 }
 

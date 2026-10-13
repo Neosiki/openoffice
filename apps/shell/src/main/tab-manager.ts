@@ -25,6 +25,7 @@ import {
   htmlIsDirty,
   requestHtmlClose,
 } from '../../../html/src/main/html-main'
+import { createHwpView, hwpIsDirty, requestHwpClose } from '../../../hwp/src/main/hwp-main'
 import {
   createPdfView,
   clearPdfDirty,
@@ -265,6 +266,8 @@ export class TabManager {
         return markdownIsDirty(wc.id)
       case 'html':
         return htmlIsDirty(wc.id)
+      case 'hwp':
+        return hwpIsDirty(wc.id)
       case 'slides':
         return slidesIsDirty(wc.id)
       case 'docs':
@@ -421,6 +424,24 @@ export class TabManager {
     return id
   }
 
+  /** HWP/HWPX tabs always carry a file: the editor opens documents, it does not create them */
+  openHwpTab(openPath: string): string {
+    const view = createHwpView(openPath)
+    const id = `t${this.nextId++}`
+    this.shellWindow.contentView.addChildView(view)
+    view.setVisible(false)
+    this.trackHtmlFullScreen(view)
+    this.tabs.push({
+      id,
+      kind: 'hwp',
+      view,
+      title: basename(openPath),
+      filePath: openPath,
+    })
+    this.activateTab(id)
+    return id
+  }
+
   /** Present → New tab: a chrome-free html tab showing the owner tab's live preview */
   openHtmlPresentTab(owner: WebContents, title: string): string {
     const view = createHtmlPresentView(owner, title)
@@ -570,6 +591,13 @@ export class TabManager {
       .map((t) => ({ id: t.id, webContents: t.view!.webContents }))
   }
 
+  /** hwp tabs whose renderer reports unsaved edits (shell-close guard) */
+  dirtyHwpTabs(): Array<{ id: string; webContents: WebContents }> {
+    return this.tabs
+      .filter((t) => t.kind === 'hwp' && t.view && hwpIsDirty(t.view.webContents.id))
+      .map((t) => ({ id: t.id, webContents: t.view!.webContents }))
+  }
+
   /** slides tabs whose main-process session has unsaved edits (shell-close guard) */
   dirtySlidesTabs(): Array<{ id: string; webContents: WebContents }> {
     return this.tabs
@@ -617,9 +645,11 @@ export class TabManager {
             ? requestMarkdownClose
             : tab.kind === 'html' && htmlIsDirty(tab.view.webContents.id)
               ? requestHtmlClose
-              : tab.kind === 'slides' && slidesIsDirty(tab.view.webContents.id)
-                ? requestSlidesClose
-                : null)
+              : tab.kind === 'hwp' && hwpIsDirty(tab.view.webContents.id)
+                ? requestHwpClose
+                : tab.kind === 'slides' && slidesIsDirty(tab.view.webContents.id)
+                  ? requestSlidesClose
+                  : null)
     // docs dirty state lives in the renderer and needs an async query; skip the guard when clean (avoids a flash activation)
     if (!closeGuard && tab.kind === 'docs' && tab.view) {
       this.closingIds.add(id)
@@ -797,6 +827,18 @@ export class TabManager {
 
   findHtmlTabByPath(path?: string): string | undefined {
     return this.findTabOfKindByPath('html', path)
+  }
+
+  findHwpTabByPath(path?: string): string | undefined {
+    return this.findTabOfKindByPath('hwp', path)
+  }
+
+  /** the active tab's hwp view, if the active tab is hwp (hwp menu target) */
+  activeHwpTab(): { id: string; webContents: WebContents; filePath?: string } | undefined {
+    const tab = this.tabs.find((t) => t.id === this.activeId)
+    return tab?.kind === 'hwp' && tab.view
+      ? { id: tab.id, webContents: tab.view.webContents, filePath: tab.filePath }
+      : undefined
   }
 
   /** the active tab's html view, if the active tab is html (html menu target) */
