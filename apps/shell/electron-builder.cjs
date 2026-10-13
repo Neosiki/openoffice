@@ -464,12 +464,12 @@ const config = {
       to: 'cli/genoffice.cjs',
     },
     {
-      from: '../../packages/cli/bin/genoffice',
-      to: 'cli/genoffice',
+      from: '../../packages/cli/bin/ieumoffice',
+      to: 'cli/ieumoffice',
     },
     {
-      from: '../../packages/cli/bin/genoffice.cmd',
-      to: 'cli/genoffice.cmd',
+      from: '../../packages/cli/bin/ieumoffice.cmd',
+      to: 'cli/ieumoffice.cmd',
     },
     // the CLI's version (Settings → Integrations shows it) and the agent skill
     // the same pane installs into Claude Code / Codex / …; bytes identical to the repo file
@@ -478,8 +478,8 @@ const config = {
       to: 'cli/package.json',
     },
     {
-      from: '../../skills/genoffice/SKILL.md',
-      to: 'cli/skills/genoffice/SKILL.md',
+      from: '../../skills/ieumoffice/SKILL.md',
+      to: 'cli/skills/ieumoffice/SKILL.md',
     },
     // runtime deps the genoffice bundle leaves external (jsdom for the Word/Markdown
     // paths); collected by packages/cli/collect-deps.mjs during its build

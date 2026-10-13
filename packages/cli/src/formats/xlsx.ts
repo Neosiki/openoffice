@@ -21,6 +21,7 @@ import {
   nextFreeRelationshipId,
   type SheetEditPlan,
 } from '@genoffice/xlsx-gateway/gateway/xlsx-sheets'
+import { PRODUCT_NAME } from '@genoffice/i18n'
 import { EMPTY_PAYLOADS, type GatewayPayloads } from './xlsx-gateway-ops'
 import type { WorkbookStyleEdit } from '@genoffice/xlsx-gateway/shared/edit-schemas'
 import {
@@ -187,7 +188,7 @@ async function withSidecar<T>(fn: (client: XlsxSidecarClient) => Promise<T>): Pr
   const binary = xlsxSidecarPath()
   if (!binary) {
     throw new CliError(EXIT.conversion, 'xlsx engine (xlsx-sidecar) not found', {
-      hint: 'set XLSX_SIDECAR_PATH or run a packaged GenOffice',
+      hint: `set XLSX_SIDECAR_PATH or run a packaged ${PRODUCT_NAME}`,
     })
   }
   const client = new XlsxSidecarClient(binary)

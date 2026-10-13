@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
-import { DEV_USER_DATA_DIR_NAME, USER_DATA_DIR_NAME } from '@genoffice/i18n'
+import { DEV_USER_DATA_DIR_NAME, PRODUCT_NAME, USER_DATA_DIR_NAME } from '@genoffice/i18n'
 import { realizedPath } from './fs'
 import { CliError, EXIT } from './result'
 
@@ -77,12 +77,11 @@ export function assertNotOpenInGui(abs: string, env: NodeJS.ProcessEnv): void {
     if (!open.paths.some((p) => realizedPath(p) === target)) continue
     throw new CliError(
       EXIT.file,
-      `GenOffice has this file open: ${abs}`,
+      `${PRODUCT_NAME} has this file open: ${abs}`,
       { gui_pid: open.pid },
       {
         reason: 'file_open_in_gui',
-        suggestion:
-          'close the tab in GenOffice first, or pass --force to write anyway (the editor may overwrite your change on its next save)',
+        suggestion: `close the tab in ${PRODUCT_NAME} first, or pass --force to write anyway (the editor may overwrite your change on its next save)`,
       },
     )
   }

@@ -1,4 +1,5 @@
 import { existsSync } from 'node:fs'
+import { PRODUCT_NAME } from '@genoffice/i18n'
 import type { WebContents } from 'electron'
 import type {
   ControlReply,
@@ -42,7 +43,7 @@ export function controlHandler(host: ControlHost): (req: ControlRequest) => Prom
       const existing = host.findTab(req.path)
       if (existing) host.activateTab(existing.id)
       else if (!host.openDocument(req.path)) {
-        return fail('unsupported', `GenOffice cannot open ${req.path}`)
+        return fail('unsupported', `${PRODUCT_NAME} cannot open ${req.path}`)
       }
       if (!req.target) return { ok: true, result: { opened: req.path } }
       const tab = existing ?? host.findTab(req.path)
@@ -57,8 +58,8 @@ export function controlHandler(host: ControlHost): (req: ControlRequest) => Prom
     }
     const tab = host.findTab(req.path)
     if (!tab) {
-      return fail('file_not_open_in_gui', `GenOffice does not have ${req.path} open`, {
-        suggestion: `genoffice open ${req.path}`,
+      return fail('file_not_open_in_gui', `${PRODUCT_NAME} does not have ${req.path} open`, {
+        suggestion: `ieumoffice open ${req.path}`,
       })
     }
     return ask(tab.webContents, { cmd: 'selection' }, host.readyTimeoutMs)

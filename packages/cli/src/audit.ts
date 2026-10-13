@@ -1,11 +1,12 @@
 import { appendFileSync, mkdirSync, renameSync, statSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
+import { HOME_DIR_NAME } from './names'
 
 /**
  * One JSON line per executed command, so the person who let an agent loose
- * with genoffice can see afterwards what it touched. Default location
- * ~/.genoffice/cli-audit.jsonl; GENOFFICE_AUDIT_LOG=<path> redirects, `off`
+ * with ieumoffice can see afterwards what it touched. Default location
+ * ~/.ieumoffice/cli-audit.jsonl; GENOFFICE_AUDIT_LOG=<path> redirects, `off`
  * disables. Never throws: a failed audit write must not fail the command.
  */
 export interface AuditRecord {
@@ -24,7 +25,7 @@ export function auditLogPath(env: NodeJS.ProcessEnv): string | null {
   const raw = env.GENOFFICE_AUDIT_LOG?.trim()
   if (raw?.toLowerCase() === 'off') return null
   if (raw) return raw
-  return join(env.GENOFFICE_AUTH_DIR || join(homedir(), '.genoffice'), 'cli-audit.jsonl')
+  return join(env.GENOFFICE_AUTH_DIR || join(homedir(), HOME_DIR_NAME), 'cli-audit.jsonl')
 }
 
 export function appendAudit(env: NodeJS.ProcessEnv, record: AuditRecord): void {

@@ -143,7 +143,7 @@ async function run(
   const viaApp = appTarget(from, to)
   if (viaApp) {
     const r = await exportViaApp(input, viaApp, output, { env: ctx.env, log: ctx.log })
-    return { detail: { via: 'genoffice --headless-export', summary: r.summary } }
+    return { detail: { via: 'ieumoffice --headless-export', summary: r.summary } }
   }
   if (from === 'pdf') {
     try {
@@ -186,7 +186,7 @@ async function run(
         ctx.warn({
           code: 'images_dropped',
           message: `${exported.skipped.images} image(s) have no Markdown form and were dropped`,
-          suggestion: 'use `genoffice docs read --html` when the images matter',
+          suggestion: 'use `ieumoffice docs read --html` when the images matter',
         })
       }
       return {

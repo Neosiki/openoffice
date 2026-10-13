@@ -52,6 +52,7 @@ import type {
 import type { SheetNote } from '@genoffice/xlsx-gateway/gateway/xlsx-notes'
 import type { SheetPageSetupState } from '@genoffice/xlsx-gateway/gateway/xlsx-page-setup'
 import type { WorkbookChartEdit } from '@genoffice/xlsx-gateway/shared/edit-schemas'
+import { PRODUCT_NAME } from '@genoffice/i18n'
 import { assertAllowed, type PathContext } from '../fs'
 import { classifyOpError } from '../op-errors'
 import { CliError, EXIT } from '../result'
@@ -246,7 +247,7 @@ export async function buildGatewayPayloads(input: GatewayBuildInput): Promise<Ga
       { failures: [classifyOpError(index, op, message)] },
       {
         reason: 'op_rejected',
-        suggestion: 'fix the op against `genoffice guide sheets`, then resend the whole batch',
+        suggestion: 'fix the op against `ieumoffice guide sheets`, then resend the whole batch',
       },
     )
   }
@@ -412,7 +413,7 @@ export async function buildGatewayPayloads(input: GatewayBuildInput): Promise<Ga
             reject(
               i,
               op.op,
-              `${sheet}'s filter already has criteria the CLI cannot re-save; run set_filter on the range first (it clears them) or use the GenOffice app`,
+              `${sheet}'s filter already has criteria the CLI cannot re-save; run set_filter on the range first (it clears them) or use the ${PRODUCT_NAME} app`,
             )
           }
           draft = { range: existing!.range, columns: new Map(), cleared: false }
@@ -479,11 +480,15 @@ export async function buildGatewayPayloads(input: GatewayBuildInput): Promise<Ga
           reject(
             i,
             op.op,
-            'chartPath must be a chart part of the file (xl/charts/chartN.xml); `genoffice info` lists them',
+            'chartPath must be a chart part of the file (xl/charts/chartN.xml); `ieumoffice info` lists them',
           )
         }
         if (op.seriesData !== undefined) {
-          reject(i, op.op, 'seriesData (repointing a series at new cells) needs the GenOffice app')
+          reject(
+            i,
+            op.op,
+            `seriesData (repointing a series at new cells) needs the ${PRODUCT_NAME} app`,
+          )
         }
         const edit: Record<string, unknown> = { chartPath: op.chartPath }
         for (const k of [

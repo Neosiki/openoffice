@@ -1,5 +1,6 @@
 import { existsSync } from 'node:fs'
 import { basename, extname, isAbsolute, join } from 'node:path'
+import { PRODUCT_NAME } from '@genoffice/i18n'
 import { z } from 'zod'
 import { createFileViaCli, readDocxTextViaCli } from '../headless-cli'
 import type { McpToolDefinition } from '../mcp-server'
@@ -227,7 +228,7 @@ export function createDocumentTools(deps: DocToolDeps, host: SessionHost): McpTo
         "generate, and the editor's full open/save/export format matrix per family.",
       inputSchema: {},
       handler: () => ({
-        name: 'GenOffice',
+        name: PRODUCT_NAME,
         version: deps.version,
         defaultSaveDir: deps.defaultSaveDir(),
         // Every format listed here is written by a headless create/read tool, and
