@@ -423,7 +423,7 @@ describe('AiPanel subscription gate (slides)', () => {
     await flushEffects()
     expect(agentHarness.run).not.toHaveBeenCalled()
 
-    await emit(statusMap('checking', 'ready'))
+    await emit(statusMap('signed-out', 'ready'))
     await flushEffects()
     expect(agentHarness.run).toHaveBeenCalledTimes(1)
     expect(agentHarness.run).toHaveBeenCalledWith('Make it shorter', [])

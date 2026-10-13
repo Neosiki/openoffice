@@ -278,7 +278,7 @@ describe('AI panel without a connection', () => {
     expect(host.querySelector('.ai-sub-prompt')).not.toBeNull()
     expect(host.querySelector('.ai-msg-error')).toBeNull()
 
-    act(() => main.setStatuses(statusMap('checking', 'ready')))
+    act(() => main.setStatuses(statusMap('signed-out', 'ready')))
     await settle()
     expect(main.requests).toHaveLength(1)
     expect(composer().value).toBe('')

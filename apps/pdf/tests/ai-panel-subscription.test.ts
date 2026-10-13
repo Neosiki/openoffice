@@ -328,7 +328,7 @@ describe('AI panel: a send while the connection is still being checked', () => {
     expect(composerText(panel)).toBe(strings.en.aiQuickSummaryPrompt)
     expect(panel.querySelector('.ai-msg-error')).toBeNull()
 
-    await act(async () => bridge.setStatuses(statusesOf('checking', 'ready')))
+    await act(async () => bridge.setStatuses(statusesOf('signed-out', 'ready')))
     await settle()
     expect(bridge.state.starts).toHaveLength(1)
     expect(composerText(panel)).toBe('')
