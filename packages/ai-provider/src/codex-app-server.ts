@@ -542,9 +542,9 @@ export function shutdownCodexAppServers(): void {
 }
 
 /**
- * The app ran Codex's own login or logout. A running app-server keeps the login it started
- * with, so none of them serves another request: each is ended at once when idle, and after
- * the runs it is serving otherwise. The next request starts a process on the new login.
+ * The app ran Codex's own login or logout. A running app-server may go on with the login it
+ * started with, so none of them serves another request: each is ended at once when idle, and
+ * after the runs it is serving otherwise. The next request starts a process on the new login.
  */
 function retireCodexAppServers(): void {
   for (const [key, client] of [...clients]) {

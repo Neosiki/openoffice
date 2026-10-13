@@ -58,8 +58,8 @@ const loginChangeListeners = new Set<(provider: AiSubscriptionProviderId) => voi
 
 /**
  * Be told when the app ran a CLI's login or logout to its end. A process
- * started before that still holds the login it started with, so a bridge that
- * keeps one running listens here. Returns a function that stops the listening.
+ * started before that may still hold the login it started with, so a bridge
+ * that keeps one running listens here. Returns a function that stops the listening.
  */
 export function onSubscriptionLoginChange(
   listener: (provider: AiSubscriptionProviderId) => void,
