@@ -24,8 +24,14 @@ export interface SubscriptionApi {
   statuses(): Promise<SubscriptionStatusMap>
   /** look again (both providers when none is named) and answer when done */
   recheck(providers?: AiSubscriptionProviderId[]): Promise<SubscriptionStatusMap>
-  /** open the program's own sign-in */
+  /** open the program's own sign-in (also the way to sign in with another account) */
   login(provider: AiSubscriptionProviderId): Promise<SubscriptionLaunchResult>
+  /**
+   * run the program's own sign-out; the answer comes after the status was
+   * checked again. It signs the program out for the whole PC, so the screen
+   * asks the user before it calls this. Only the shell preload exposes it.
+   */
+  logout(provider: AiSubscriptionProviderId): Promise<SubscriptionLaunchResult>
   /** run the vendor's official install command in a visible terminal window */
   install(provider: AiSubscriptionProviderId): Promise<SubscriptionLaunchResult>
   /** "use anyway" for a metered login (or take that back) */

@@ -224,6 +224,11 @@ export const strings = {
     setSubManage: '管理连接',
     setSubInstallFailed: '无法运行安装命令。请按照官方安装说明进行安装。',
     setSubLoginFailed: '无法开始登录。请确认程序已安装后重试。',
+    setSubLogoutFailed: '无法退出登录。请稍后再试。',
+    setSubLogoutConfirm:
+      '将在这台电脑上退出 {program} 的登录。在终端中使用的 {program} 也会一并退出登录。',
+    setSubSwitchConfirm:
+      '将在这台电脑上用其他账户重新登录 {program}。在终端中使用的 {program} 的账户也会一并更改。',
     setAiUse: '使用的 AI',
     setAiUseDesc:
       '“自动”会使用已连接的订阅：优先 Claude，其次 Codex。它不会自动选择需要付费的连接。',
@@ -633,6 +638,11 @@ export const strings = {
       'The install command could not be started. Follow the official install guide instead.',
     setSubLoginFailed:
       'The sign-in could not be started. Check that the program is installed, then try again.',
+    setSubLogoutFailed: 'The sign-out could not be completed. Try again in a moment.',
+    setSubLogoutConfirm:
+      'This signs {program} out on this PC. {program} in a terminal is signed out as well.',
+    setSubSwitchConfirm:
+      'This signs {program} in again on this PC with another account. The account {program} uses in a terminal changes as well.',
     setAiUse: 'AI to use',
     setAiUseDesc:
       'Automatic uses a connected subscription: Claude first, then Codex. It never picks a connection that costs money.',
@@ -1051,6 +1061,11 @@ export const strings = {
     setSubInstallFailed: 'Không thể chạy lệnh cài đặt. Hãy làm theo hướng dẫn cài đặt chính thức.',
     setSubLoginFailed:
       'Không thể bắt đầu đăng nhập. Hãy kiểm tra xem chương trình đã được cài đặt chưa rồi thử lại.',
+    setSubLogoutFailed: 'Không thể đăng xuất. Hãy thử lại sau giây lát.',
+    setSubLogoutConfirm:
+      'Thao tác này đăng xuất {program} trên máy tính này. {program} dùng trong terminal cũng bị đăng xuất theo.',
+    setSubSwitchConfirm:
+      'Thao tác này đăng nhập lại {program} trên máy tính này bằng tài khoản khác. Tài khoản mà {program} dùng trong terminal cũng thay đổi theo.',
     setAiUse: 'AI sử dụng',
     setAiUseDesc:
       '"Tự động" dùng gói đăng ký đã kết nối: Claude trước, sau đó đến Codex. Chế độ này không bao giờ tự chọn kết nối phải trả phí.',
@@ -1481,6 +1496,11 @@ export const strings = {
       'インストールコマンドを実行できませんでした。公式のインストール手順に沿ってインストールしてください。',
     setSubLoginFailed:
       'ログインを開始できませんでした。プログラムがインストールされているか確認してから、もう一度お試しください。',
+    setSubLogoutFailed: 'ログアウトできませんでした。しばらくしてからもう一度お試しください。',
+    setSubLogoutConfirm:
+      'この PC の {program} からログアウトします。ターミナルで使っている {program} も一緒にログアウトされます。',
+    setSubSwitchConfirm:
+      'この PC の {program} に別のアカウントでログインし直します。ターミナルで使っている {program} のアカウントも一緒に変わります。',
     setAiUse: '使用する AI',
     setAiUseDesc:
       '「自動」は接続済みのサブスクリプションを使います。Claude が優先で、なければ Codex です。料金が発生する接続を自動で選ぶことはありません。',
@@ -1909,6 +1929,11 @@ export const strings = {
     setSubInstallFailed: '설치 명령을 실행하지 못했습니다. 공식 설치 안내를 보고 설치해 주세요.',
     setSubLoginFailed:
       '로그인을 시작하지 못했습니다. 프로그램이 설치되어 있는지 확인한 뒤 다시 시도하세요.',
+    setSubLogoutFailed: '로그아웃하지 못했습니다. 잠시 뒤 다시 시도하세요.',
+    setSubLogoutConfirm:
+      '이 PC의 {program}에서 로그아웃합니다. 터미널에서 쓰는 {program}도 함께 로그아웃됩니다.',
+    setSubSwitchConfirm:
+      '이 PC의 {program}에 다른 계정으로 다시 로그인합니다. 터미널에서 쓰는 {program}의 계정도 함께 바뀝니다.',
     setAiUse: '사용할 AI',
     setAiUseDesc:
       '자동은 연결된 구독을 씁니다. Claude가 먼저이고, 없으면 Codex입니다. 요금이 나가는 연결은 자동으로 고르지 않습니다.',
@@ -2339,6 +2364,11 @@ export const strings = {
       'La commande d’installation n’a pas pu être lancée. Suivez plutôt le guide d’installation officiel.',
     setSubLoginFailed:
       'La connexion n’a pas pu être lancée. Vérifiez que le programme est installé, puis réessayez.',
+    setSubLogoutFailed: 'La déconnexion n’a pas pu aboutir. Réessayez dans un instant.',
+    setSubLogoutConfirm:
+      'Cette action déconnecte {program} sur ce PC. {program} utilisé dans un terminal est déconnecté lui aussi.',
+    setSubSwitchConfirm:
+      'Cette action reconnecte {program} sur ce PC avec un autre compte. Le compte que {program} utilise dans un terminal change lui aussi.',
     setAiUse: 'IA à utiliser',
     setAiUseDesc:
       '« Automatique » utilise un abonnement connecté : Claude d’abord, puis Codex. Ce mode ne choisit jamais une connexion payante.',
@@ -2781,6 +2811,12 @@ export const strings = {
       'Der Installationsbefehl konnte nicht gestartet werden. Folgen Sie stattdessen der offiziellen Installationsanleitung.',
     setSubLoginFailed:
       'Die Anmeldung konnte nicht gestartet werden. Prüfen Sie, ob das Programm installiert ist, und versuchen Sie es erneut.',
+    setSubLogoutFailed:
+      'Die Abmeldung konnte nicht abgeschlossen werden. Versuchen Sie es gleich noch einmal.',
+    setSubLogoutConfirm:
+      'Damit wird {program} auf diesem PC abgemeldet. Auch {program} im Terminal wird abgemeldet.',
+    setSubSwitchConfirm:
+      'Damit wird {program} auf diesem PC mit einem anderen Konto neu angemeldet. Auch das Konto, das {program} im Terminal verwendet, ändert sich.',
     setAiUse: 'Verwendete KI',
     setAiUseDesc:
       '„Automatisch“ verwendet ein verbundenes Abonnement: zuerst Claude, dann Codex. Eine kostenpflichtige Verbindung wird nie automatisch gewählt.',
@@ -3221,6 +3257,11 @@ export const strings = {
       'No se pudo iniciar el comando de instalación. Sigue la guía oficial de instalación.',
     setSubLoginFailed:
       'No se pudo iniciar el inicio de sesión. Comprueba que el programa esté instalado y vuelve a intentarlo.',
+    setSubLogoutFailed: 'No se pudo cerrar la sesión. Inténtalo de nuevo en un momento.',
+    setSubLogoutConfirm:
+      'Esto cierra la sesión de {program} en este PC. {program} en una terminal también queda sin sesión.',
+    setSubSwitchConfirm:
+      'Esto vuelve a iniciar sesión en {program} en este PC con otra cuenta. La cuenta que {program} usa en una terminal también cambia.',
     setAiUse: 'IA que se usa',
     setAiUseDesc:
       '«Automático» usa una suscripción conectada: primero Claude y después Codex. Nunca elige una conexión de pago.',
@@ -3647,6 +3688,11 @@ export const strings = {
       'ไม่สามารถเรียกใช้คำสั่งติดตั้งได้ โปรดทำตามคู่มือการติดตั้งอย่างเป็นทางการแทน',
     setSubLoginFailed:
       'ไม่สามารถเริ่มการเข้าสู่ระบบได้ โปรดตรวจสอบว่าติดตั้งโปรแกรมแล้ว จากนั้นลองอีกครั้ง',
+    setSubLogoutFailed: 'ออกจากระบบไม่สำเร็จ โปรดลองอีกครั้งในอีกสักครู่',
+    setSubLogoutConfirm:
+      'การดำเนินการนี้จะออกจากระบบ {program} บนพีซีเครื่องนี้ {program} ที่ใช้ในเทอร์มินัลจะถูกออกจากระบบไปด้วย',
+    setSubSwitchConfirm:
+      'การดำเนินการนี้จะเข้าสู่ระบบ {program} บนพีซีเครื่องนี้ใหม่ด้วยบัญชีอื่น บัญชีที่ {program} ใช้ในเทอร์มินัลจะเปลี่ยนไปด้วย',
     setAiUse: 'AI ที่ใช้',
     setAiUseDesc:
       '"อัตโนมัติ" จะใช้การสมัครสมาชิกที่เชื่อมต่อไว้ โดยใช้ Claude ก่อน แล้วจึงเป็น Codex และจะไม่เลือกการเชื่อมต่อที่มีค่าใช้จ่ายให้เอง',
@@ -4074,6 +4120,11 @@ export const strings = {
       'Perintah pemasangan tidak dapat dijalankan. Ikuti panduan pemasangan resmi sebagai gantinya.',
     setSubLoginFailed:
       'Proses masuk tidak dapat dimulai. Pastikan programnya sudah terpasang, lalu coba lagi.',
+    setSubLogoutFailed: 'Tidak dapat keluar. Coba lagi sebentar lagi.',
+    setSubLogoutConfirm:
+      'Tindakan ini mengeluarkan {program} dari akunnya di PC ini. {program} yang dipakai di terminal ikut keluar.',
+    setSubSwitchConfirm:
+      'Tindakan ini memasukkan kembali {program} di PC ini dengan akun lain. Akun yang dipakai {program} di terminal ikut berubah.',
     setAiUse: 'AI yang digunakan',
     setAiUseDesc:
       '"Otomatis" memakai langganan yang terhubung: Claude lebih dulu, lalu Codex. Mode ini tidak pernah memilih koneksi yang berbayar.',
@@ -4505,6 +4556,11 @@ export const strings = {
       'Не удалось запустить команду установки. Воспользуйтесь официальной инструкцией по установке.',
     setSubLoginFailed:
       'Не удалось начать вход. Убедитесь, что программа установлена, и повторите попытку.',
+    setSubLogoutFailed: 'Не удалось выйти. Повторите попытку чуть позже.',
+    setSubLogoutConfirm:
+      'Будет выполнен выход из {program} на этом компьютере. {program} в терминале тоже выйдет из учётной записи.',
+    setSubSwitchConfirm:
+      'Будет выполнен повторный вход в {program} на этом компьютере с другой учётной записью. Учётная запись, которую {program} использует в терминале, тоже изменится.',
     setAiUse: 'Используемый ИИ',
     setAiUseDesc:
       '«Автоматически» использует подключённую подписку: сначала Claude, затем Codex. Платное подключение автоматически никогда не выбирается.',
@@ -4935,6 +4991,11 @@ export const strings = {
     setSubManage: 'إدارة الاتصالات',
     setSubInstallFailed: 'تعذّر تشغيل أمر التثبيت. اتبع دليل التثبيت الرسمي بدلًا من ذلك.',
     setSubLoginFailed: 'تعذّر بدء تسجيل الدخول. تأكد من أن البرنامج مثبّت ثم حاول مجددًا.',
+    setSubLogoutFailed: 'تعذّر تسجيل الخروج. حاول مجددًا بعد قليل.',
+    setSubLogoutConfirm:
+      'سيؤدي هذا إلى تسجيل خروج {program} على هذا الحاسوب. وسيُسجَّل خروج {program} المستخدم في الطرفية أيضًا.',
+    setSubSwitchConfirm:
+      'سيؤدي هذا إلى تسجيل الدخول إلى {program} من جديد على هذا الحاسوب بحساب آخر. وسيتغيّر أيضًا الحساب الذي يستخدمه {program} في الطرفية.',
     setAiUse: 'الذكاء الاصطناعي المستخدم',
     setAiUseDesc:
       'يستخدم الخيار «تلقائي» اشتراكًا متصلًا: Claude أولًا ثم Codex. ولا يختار أبدًا اتصالًا تترتب عليه رسوم.',
@@ -5358,6 +5419,11 @@ export const strings = {
       'Não foi possível iniciar o comando de instalação. Siga o guia oficial de instalação.',
     setSubLoginFailed:
       'Não foi possível iniciar o login. Verifique se o programa está instalado e tente novamente.',
+    setSubLogoutFailed: 'Não foi possível sair. Tente novamente em instantes.',
+    setSubLogoutConfirm:
+      'Isso desconecta o {program} neste PC. O {program} usado em um terminal também é desconectado.',
+    setSubSwitchConfirm:
+      'Isso faz o {program} entrar novamente neste PC com outra conta. A conta que o {program} usa em um terminal também muda.',
     setAiUse: 'IA em uso',
     setAiUseDesc:
       '"Automático" usa uma assinatura conectada: primeiro o Claude, depois o Codex. Ele nunca escolhe uma conexão paga.',
@@ -5784,6 +5850,11 @@ export const strings = {
       'Impossibile avviare il comando di installazione. Segui invece la guida ufficiale all’installazione.',
     setSubLoginFailed:
       'Impossibile avviare l’accesso. Verifica che il programma sia installato, quindi riprova.',
+    setSubLogoutFailed: 'Non è stato possibile uscire. Riprova tra qualche istante.',
+    setSubLogoutConfirm:
+      'Questa operazione disconnette {program} su questo PC. Anche {program} usato in un terminale viene disconnesso.',
+    setSubSwitchConfirm:
+      'Questa operazione fa accedere di nuovo {program} su questo PC con un altro account. Cambia anche l’account che {program} usa in un terminale.',
     setAiUse: 'IA da usare',
     setAiUseDesc:
       '"Automatico" usa un abbonamento connesso: prima Claude, poi Codex. Non sceglie mai una connessione a pagamento.',
@@ -6208,6 +6279,11 @@ export const strings = {
       'Nie udało się uruchomić polecenia instalacji. Skorzystaj z oficjalnej instrukcji instalacji.',
     setSubLoginFailed:
       'Nie udało się rozpocząć logowania. Sprawdź, czy program jest zainstalowany, i spróbuj ponownie.',
+    setSubLogoutFailed: 'Nie udało się wylogować. Spróbuj ponownie za chwilę.',
+    setSubLogoutConfirm:
+      'Spowoduje to wylogowanie programu {program} na tym komputerze. Program {program} używany w terminalu również zostanie wylogowany.',
+    setSubSwitchConfirm:
+      'Spowoduje to ponowne zalogowanie programu {program} na tym komputerze na inne konto. Konto, którego {program} używa w terminalu, również się zmieni.',
     setAiUse: 'Używane AI',
     setAiUseDesc:
       '„Automatycznie” korzysta z połączonej subskrypcji: najpierw Claude, potem Codex. Nigdy nie wybiera połączenia płatnego.',
@@ -6597,6 +6673,11 @@ export const strings = {
       'Instalační příkaz se nepodařilo spustit. Postupujte prosím podle oficiálního návodu k instalaci.',
     setSubLoginFailed:
       'Přihlášení se nepodařilo spustit. Zkontrolujte, zda je program nainstalovaný, a zkuste to znovu.',
+    setSubLogoutFailed: 'Odhlášení se nepodařilo dokončit. Zkuste to za chvíli znovu.',
+    setSubLogoutConfirm:
+      'Tím se program {program} na tomto počítači odhlásí. Odhlásí se i {program} používaný v terminálu.',
+    setSubSwitchConfirm:
+      'Tím se program {program} na tomto počítači znovu přihlásí jiným účtem. Změní se i účet, který {program} používá v terminálu.',
     setAiUse: 'Používaná AI',
     setAiUseDesc:
       '„Automaticky“ používá připojené předplatné: nejprve Claude, potom Codex. Placené připojení nikdy samo nevybere.',
@@ -7050,6 +7131,11 @@ export const strings = {
       'De installatieopdracht kon niet worden gestart. Volg in plaats daarvan de officiële installatiehandleiding.',
     setSubLoginFailed:
       'Het aanmelden kon niet worden gestart. Controleer of het programma is geïnstalleerd en probeer het opnieuw.',
+    setSubLogoutFailed: 'Het afmelden is niet gelukt. Probeer het zo meteen opnieuw.',
+    setSubLogoutConfirm:
+      'Hiermee wordt {program} op deze pc afgemeld. Ook {program} in een terminal wordt afgemeld.',
+    setSubSwitchConfirm:
+      'Hiermee wordt {program} op deze pc opnieuw aangemeld met een ander account. Ook het account dat {program} in een terminal gebruikt, verandert.',
     setAiUse: 'AI die wordt gebruikt',
     setAiUseDesc:
       '"Automatisch" gebruikt een verbonden abonnement: eerst Claude, daarna Codex. Er wordt nooit vanzelf een betaalde verbinding gekozen.',
@@ -7473,6 +7559,11 @@ export const strings = {
       'Arahan pemasangan tidak dapat dijalankan. Sila ikut panduan pemasangan rasmi.',
     setSubLoginFailed:
       'Log masuk tidak dapat dimulakan. Pastikan program telah dipasang, kemudian cuba lagi.',
+    setSubLogoutFailed: 'Tidak dapat log keluar. Cuba lagi sebentar lagi.',
+    setSubLogoutConfirm:
+      'Tindakan ini melog keluar {program} pada PC ini. {program} yang digunakan dalam terminal turut dilog keluar.',
+    setSubSwitchConfirm:
+      'Tindakan ini melog masuk semula {program} pada PC ini dengan akaun lain. Akaun yang digunakan oleh {program} dalam terminal turut berubah.',
     setAiUse: 'AI yang digunakan',
     setAiUseDesc:
       '"Automatik" menggunakan langganan yang disambungkan: Claude dahulu, kemudian Codex. Mod ini tidak sekali-kali memilih sambungan yang berbayar.',
@@ -7894,6 +7985,11 @@ export const strings = {
     setSubInstallFailed:
       'לא ניתן היה להפעיל את פקודת ההתקנה. פעלו במקום זאת לפי מדריך ההתקנה הרשמי.',
     setSubLoginFailed: 'לא ניתן היה להתחיל את הכניסה. ודאו שהתוכנה מותקנת ונסו שוב.',
+    setSubLogoutFailed: 'לא ניתן היה להשלים את היציאה מהחשבון. נסו שוב בעוד רגע.',
+    setSubLogoutConfirm:
+      'פעולה זו מנתקת את {program} מהחשבון במחשב הזה. גם {program} שבשימוש במסוף ינותק.',
+    setSubSwitchConfirm:
+      'פעולה זו מחברת מחדש את {program} במחשב הזה עם חשבון אחר. גם החשבון ש-{program} משתמש בו במסוף ישתנה.',
     setAiUse: 'ה-AI שבשימוש',
     setAiUseDesc:
       'האפשרות "אוטומטי" משתמשת במינוי מחובר: קודם Claude ואחריו Codex. היא לעולם לא בוחרת חיבור שכרוך בתשלום.',
@@ -8308,6 +8404,11 @@ export const strings = {
       'इंस्टॉल कमांड शुरू नहीं हो सका। इसके बजाय आधिकारिक इंस्टॉल गाइड का पालन करें।',
     setSubLoginFailed:
       'साइन-इन शुरू नहीं हो सका। जाँचें कि प्रोग्राम इंस्टॉल है, फिर दोबारा कोशिश करें।',
+    setSubLogoutFailed: 'साइन आउट पूरा नहीं हो सका। थोड़ी देर बाद फिर कोशिश करें।',
+    setSubLogoutConfirm:
+      'इससे इस PC पर {program} साइन आउट हो जाएगा। टर्मिनल में इस्तेमाल होने वाला {program} भी साइन आउट हो जाएगा।',
+    setSubSwitchConfirm:
+      'इससे इस PC पर {program} में किसी दूसरे खाते से दोबारा साइन इन होगा। टर्मिनल में {program} जिस खाते का इस्तेमाल करता है, वह भी बदल जाएगा।',
     setAiUse: 'उपयोग किया जाने वाला AI',
     setAiUseDesc:
       '"स्वचालित" कनेक्ट की गई सदस्यता का उपयोग करता है: पहले Claude, फिर Codex। यह कभी भी ऐसा कनेक्शन नहीं चुनता जिस पर शुल्क लगता हो।',
@@ -8719,6 +8820,10 @@ export const strings = {
     setSubManage: '管理連線',
     setSubInstallFailed: '無法執行安裝指令。請依照官方安裝說明進行安裝。',
     setSubLoginFailed: '無法開始登入。請確認程式已安裝後再試一次。',
+    setSubLogoutFailed: '無法登出。請稍後再試。',
+    setSubLogoutConfirm: '將在這台電腦上登出 {program}。在終端機中使用的 {program} 也會一併登出。',
+    setSubSwitchConfirm:
+      '將在這台電腦上以其他帳戶重新登入 {program}。在終端機中使用的 {program} 的帳戶也會一併變更。',
     setAiUse: '使用的 AI',
     setAiUseDesc:
       '「自動」會使用已連線的訂閱：優先 Claude，其次 Codex。它不會自動選擇需要付費的連線。',

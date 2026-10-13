@@ -27,6 +27,7 @@ import {
 } from '@genoffice/ai-provider/browser'
 import {
   askBlockedRunOf,
+  askHeldStep,
   askSendGate,
   withContinuedProvider,
   type AskBlockedRun,
@@ -111,6 +112,8 @@ export function KbAskPanel({
   const [sessionUsage, setSessionUsage] = useState<AiTokenUsageView | undefined>(undefined)
   /** a send was refused for want of a connection: the connect prompt stays until one can run */
   const [connectAsked, setConnectAsked] = useState(false)
+  /** a question sent while the connection was still being checked: it waits for the answer */
+  const heldRef = useRef<string | null>(null)
   /** structured cause of the failure the loop is about to report through onError */
   const streamErrorRef = useRef<AskBlockedRun | null>(null)
   const langRef = useRef(lang)
@@ -244,16 +247,19 @@ export function KbAskPanel({
     const instruction = (again ?? draft).trim()
     if (!instruction || busy) return
     const gate = askSendGate(known ?? aiSettings, connection.statuses, noticeDue)
+    heldRef.current = gate === 'checking' ? instruction : null
     if (gate !== 'run') {
       // nothing is sent: the question stays in the composer while the panel shows what
       // is missing (a connection) or the home screen shows what must be read first
-      // (the first-connection notice)
+      // (the first-connection notice). Asked while the connection was still being
+      // checked, it is held and starts by itself when the check says it can run.
       if (again !== undefined) setDraft(instruction)
       if (gate === 'connect') setConnectAsked(true)
       return
     }
     streamErrorRef.current = null
-    if (again === undefined) setDraft('')
+    // a held question was left in the composer while it waited: it is sent now
+    if (again === undefined || draft.trim() === instruction) setDraft('')
     setBusy(true)
     refreshSettings()
     const seq = ++askSeqRef.current
@@ -287,6 +293,20 @@ export function KbAskPanel({
       finishLast()
     }
   }
+
+  // The gate moved: start the question that waited in front of the status check, or drop it.
+  const gateNow = askSendGate(aiSettings, connection.statuses, noticeDue)
+  useEffect(() => {
+    const held = heldRef.current
+    if (held === null) return
+    const step = askHeldStep(gateNow)
+    if (step === 'keep') return
+    heldRef.current = null
+    if (step === 'start') void ask(held)
+    // the check answered "not connected": the prompt takes over
+    else if (gateNow === 'connect') setConnectAsked(true)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only a move of the gate matters
+  }, [gateNow])
 
   /** "Continue with <provider>" on a blocked run: select that provider and ask the question again */
   const continueWith = (provider: AiSubscriptionProviderId): void => {
