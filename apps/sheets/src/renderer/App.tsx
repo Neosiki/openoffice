@@ -60,6 +60,11 @@ import {
   structuralDeleteFormulaErrorSync,
   type PlanContext,
 } from './plan-operations'
+import {
+  registerCellFontAliases,
+  untilCellFontsLoaded,
+  workbookFontFamilies,
+} from './cell-font-fallback'
 import { isNumericIdentifierText } from './cell-warning'
 import { consumePendingUndoCarry, undoStackDepth } from './undo-carry'
 import { createSaveGate, shouldRunSaveTick } from './save-scheduler'
@@ -4306,9 +4311,12 @@ export function App({
     if (!(await commitActiveEditor())) return false
     // the bundled faces this workbook names, before its first skeleton measures
     // (the Normal font's digit width sizes every column); bounded like boot fonts
-    await Promise.race([
-      loadTemplateFontsFor(workbookTemplateFontUses(opened)),
-      new Promise((resolve) => setTimeout(resolve, 3000)),
+    await Promise.all([
+      Promise.race([
+        loadTemplateFontsFor(workbookTemplateFontUses(opened)),
+        new Promise((resolve) => setTimeout(resolve, 3000)),
+      ]),
+      untilCellFontsLoaded(registerCellFontAliases(workbookFontFamilies(opened))),
     ])
     if (opts?.continueChat) chatContinuesRef.current = true
     const selected: WorkbookFile = {
