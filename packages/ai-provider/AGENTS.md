@@ -45,7 +45,7 @@
 ## 이 모듈의 방식
 
 - 브리지는 "한 턴짜리 두뇌"다. 앱의 system prompt, 지금까지의 대화, 앱 도구 목록, 응답 JSON Schema를 주고 `{ text, toolCalls }` 객체 하나를 받는다. Claude는 턴마다 새 프로세스를 띄우고 끝나면 스스로 나가게 둔다(stdin을 닫고 5초 뒤에도 남아 있으면 트리 종료). Codex는 app-server 프로세스를 실행들이 공유하고 쓰는 실행이 없으면 끝낸다.
-- Claude 턴은 매번 대화 전체를 사용자 메시지 하나로 다시 읽는 새 세션이다. 그래서 마지막 이벤트가 도구 결과이면 `AFTER_TOOL_RESULTS` 문단을 이벤트 블록들 뒤에 붙인다. 작은 모델이 첫 사용자 요청에 다시 답하며 이미 실행된 호출을 또 요청해, 문단 하나가 네 번 삽입된 일이 있었다. 이 문단은 반드시 이벤트 뒤에 둔다(앞선 턴의 블록이 이번 턴의 접두사로 남아야 프롬프트 캐시가 맞는다).
+- Claude 턴은 매번 대화 전체를 사용자 메시지 하나로 다시 읽는 새 세션이다. 그래서 도구 결과 이벤트마다 "이 호출들은 이미 한 번 실행됐다"는 문장(`AFTER_TOOL_RESULTS`)을 그 이벤트 JSON의 `note` 필드로 넣는다. 작은 모델이 첫 사용자 요청에 다시 답하며 이미 실행된 호출을 또 요청해, 문단 하나가 네 번 삽입된 일이 있었다. 이 문장을 이벤트 뒤의 별도 블록으로 두지 않는다. 마지막 블록이 다음 턴에 사라지면 앞선 턴의 블록 목록이 다음 턴의 접두사가 아니게 되어, 도구 루프의 매 턴이 프롬프트 캐시 없이 전체를 다시 읽는다. 모든 도구 이벤트에 같은 글자로 넣는다.
 - 도구 호출 id는 브리지가 붙인다(`claude-<uuid>`). 세션이 매번 새것이라 모델이 고유성을 지킬 수 없다. 목록에 없는 도구 이름은 실행하지 않고 `inputError`를 달아 루프로 넘긴다.
 - 루프와 문자열로 맺은 계약이 둘 있다. 오류 문장 끝의 `(empty stream)`은 "아무것도 전달되지 않았으니 같은 턴을 다시 보내도 된다", `while sending tool arguments`는 "도구 호출이 전달되지 않았으니 한 번 재시도한다"는 뜻이며 `packages/agent-core/src/loop.ts`가 이 글자를 찾는다. 문구를 고치면 재시도가 조용히 사라진다.
 - 상태는 한 방향으로 흐른다. `detectSubscriptionLogin` → `createSubscriptionStatusService`(저장된 종량 허용와 대조) → `ensureSubscriptionIpc`가 `SUBSCRIPTION_IPC_CHANNELS` 응답과 `changed` 방송 → preload는 `@genoffice/ai-provider/browser`의 채널 이름과 판독 함수(`subscriptionStatusMapOf`, `subscriptionLaunchResultOf`, `subscriptionMeteredResultOf`)로 읽는다. 모델 목록은 `listSubscriptionModels`(브리지가 `setSubscriptionModelSource`로 등록한 읽기 함수)가 상태 서비스에 주고, 상태에 실려 같은 길로 간다. 에디터마다 따로 채널을 만들지 않는다. 핸들러가 없거나 답이 깨졌으면 연결이 아니라 `checking`으로 읽힌다. 실행 실패의 spawn 오류 문장은 실행 파일 경로를 담을 수 있어 판독 함수에서 버린다.
