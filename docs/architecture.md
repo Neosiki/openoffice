@@ -10,7 +10,8 @@ apps/shell      껍데기 앱. 창, 탭, 홈 화면, 설정, 첫 실행 안내, 
 apps/docs       워드(.docx) 편집기. 뒷단이 공용 AI 창구(`ai:*`)를 등록한다. 설치본에서는 여섯 편집기의
                 모델 호출·설정·검색 요청을 모두 이 뒷단이 받는다
 apps/sheets     엑셀(.xlsx) 편집기        ┐ 모델 호출용 뒷단 코드는 편집기를 혼자 띄울 때만 돈다. 설치본에서는
-apps/slides     파워포인트(.pptx) 편집기  ┘ 자기 이름을 붙인 전용 AI 창구(이미지 생성, 미디어 분석 등)만 등록한다
+apps/slides     파워포인트(.pptx) 편집기  ┘ 전용 AI 창구만 등록한다. 엑셀은 이름 앞에 `sheets:`를 붙인다. PPT는 예외로
+                이름을 붙이지 않은 `ai:generate-image`·`ai:analyze-media` 등을 직접 등록한다(워드는 같은 일에 `docs:`를 붙인다)
 apps/pdf        PDF 편집기
 apps/markdown   마크다운·텍스트 편집기
 apps/html       HTML 편집기
@@ -27,7 +28,7 @@ packages/docx-engine, pptx-engine, pptx-ops, pptx-render, xlsx-gateway,
 apps/sheets/native/xlsx-engine   엑셀 계산·입출력을 맡는 별도 프로그램(Rust). 표준 입출력으로 대화한다
 ```
 
-- 의존 방향은 한쪽이다. `apps/*` → `packages/*`. 패키지끼리는 `ai-provider` → `agent-core`(그래서 `agent-core`는 `ai-provider`를 가져올 수 없다), `ai-search` → `ai-provider`·`electron-utils`, `ui` → `ai-provider`·`agent-core`·`i18n`·`pptx-render`, `cli` → 엔진 패키지·`ai-search`·`ai-provider`·`i18n`, `electron-utils` → `i18n`. `i18n`과 `agent-core`는 다른 작업 공간 패키지에 기대지 않는다.
+- 의존 방향은 한쪽이다. `apps/*` → `packages/*`. 패키지끼리는 `ai-provider` → `agent-core`·`i18n`(그래서 `agent-core`는 `ai-provider`를 가져올 수 없다), `ai-search` → `ai-provider`·`electron-utils`, `ui` → `ai-provider`·`agent-core`·`i18n`·`pptx-render`, `cli` → 엔진 패키지·`ai-search`·`ai-provider`·`i18n`, `electron-utils` → `i18n`. `i18n`과 `agent-core`는 다른 작업 공간 패키지에 기대지 않는다.
 - `ai-provider`는 진입점이 나뉘어 있다. 화면(renderer)과 preload가 **값**으로 가져오는 것은 `@genoffice/ai-provider/browser`뿐이다. 대표 진입점에서는 형(`import type`)만 가져온다. 프로그램을 실행하는 코드(`/subscription`, `/claude-code-cli`, `/codex-app-server`)는 뒷단에서만 가져온다.
 - 편집기 여섯 개의 뒷단 코드는 따로 실행되지 않는다. 껍데기 앱을 빌드할 때 함께 묶여, 껍데기 앱의 한 프로세스 안에서 돈다. 그래서 창구 이름(IPC 채널)은 프로세스 전체에서 하나뿐이어야 한다.
 - 편집기 화면은 껍데기 창 위에 얹히는 별도 화면(WebContentsView)이다. 홈 탭만 껍데기 앱 자신의 화면이다.
