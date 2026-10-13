@@ -73,7 +73,11 @@ import { AI_PROVIDERS, type AiSettings, type AttachmentMeta } from '../src/share
 const settings: AiSettings = {
   provider: 'anthropic',
   providers: Object.fromEntries(
-    AI_PROVIDERS.map((provider) => [provider.id, { apiKey: '', model: provider.defaultModel }]),
+    // a key provider that can run: the panel starts nothing while no provider is connected
+    AI_PROVIDERS.map((provider) => [
+      provider.id,
+      { apiKey: provider.id === 'anthropic' ? 'test-key' : '', model: provider.defaultModel },
+    ]),
   ) as AiSettings['providers'],
 }
 
@@ -117,7 +121,6 @@ function installSlidesApi(): void {
   Object.defineProperty(window, 'slidesApi', {
     configurable: true,
     value: {
-      aiGskStatus: vi.fn(async () => ({ loggedIn: true })),
       beginHistoryBatch: vi.fn(async () => false),
       endHistoryBatch: vi.fn(async () => null),
       aiLogRunFailure: vi.fn(async () => undefined),
@@ -229,5 +232,82 @@ describe('AiPanel agent run lifecycle (slides)', () => {
     expect(agentHarness.run).toHaveBeenCalledWith('Polish this slide', [
       { base64: 'AAAA', mime: 'image/png' },
     ])
+  })
+})
+
+describe('AiPanel subscription gate (slides)', () => {
+  type State = 'checking' | 'not-installed' | 'signed-out' | 'ready' | 'metered' | 'error'
+  const statusMap = (claude: State, codex: State) => ({
+    'claude-code': { provider: 'claude-code', state: claude, meteredAccepted: false },
+    codex: { provider: 'codex', state: codex, meteredAccepted: false },
+  })
+  const autoSettings: AiSettings = { ...settings, provider: 'auto' }
+  const preset = { text: 'Polish this slide', nonce: 1, autoRun: true }
+
+  /** the bridge with a subscription API answering `statuses`, plus a settings writer to watch */
+  function installSubscription(statuses: ReturnType<typeof statusMap>) {
+    const setAiSettings = vi.fn(async () => undefined)
+    const api = window.slidesApi as unknown as Record<string, unknown>
+    api.setAiSettings = setAiSettings
+    api.aiSubscription = {
+      statuses: vi.fn(async () => statuses),
+      recheck: vi.fn(async () => statuses),
+      login: vi.fn(async () => ({ ok: true })),
+      install: vi.fn(async () => ({ ok: true })),
+      setMeteredAccepted: vi.fn(async () => ({ ok: true, statuses })),
+      onChanged: vi.fn(() => () => {}),
+    }
+    return { setAiSettings }
+  }
+
+  it('nothing connected → the connect prompt replaces the run, and no error line is shown', async () => {
+    installSubscription(statusMap('signed-out', 'not-installed'))
+    const { container } = mount(
+      createElement(AiPanel, panelProps({ settings: autoSettings, preset })),
+    )
+    await flushEffects()
+
+    expect(agentHarness.run).not.toHaveBeenCalled()
+    expect(container.querySelector('.ai-sub-prompt')).not.toBeNull()
+    expect(container.querySelectorAll('.ai-sub-card')).toHaveLength(2)
+    expect(container.querySelector('.ai-msg-error')).toBeNull()
+    expect(container.querySelector('.ai-sub-first')).toBeNull()
+  })
+
+  it('a request made while the status check is running starts once a provider is ready', async () => {
+    // the notice was read earlier, so nothing but the status check stands in front of the run
+    installSubscription(statusMap('ready', 'signed-out'))
+    const seen: AiSettings = { ...autoSettings, subscriptionNoticeSeen: true }
+    const { container } = mount(createElement(AiPanel, panelProps({ settings: seen, preset })))
+    await flushEffects()
+
+    expect(agentHarness.run).toHaveBeenCalledTimes(1)
+    expect(agentHarness.run).toHaveBeenCalledWith('Polish this slide', [])
+    expect(container.querySelector('.ai-sub-prompt')).toBeNull()
+  })
+
+  it('first use of a subscription → the notice comes first; acknowledging saves it and starts the request', async () => {
+    const { setAiSettings } = installSubscription(statusMap('ready', 'signed-out'))
+    const { container } = mount(
+      createElement(AiPanel, panelProps({ settings: autoSettings, preset })),
+    )
+    await flushEffects()
+
+    expect(agentHarness.run).not.toHaveBeenCalled()
+    const notice = container.querySelector('.ai-sub-first')
+    expect(notice).not.toBeNull()
+    expect(container.querySelector('.ai-sub-prompt')).toBeNull()
+
+    await act(async () => {
+      notice!.querySelector('button')!.click()
+    })
+    await flushEffects()
+
+    expect(setAiSettings).toHaveBeenCalledWith(
+      expect.objectContaining({ provider: 'auto', subscriptionNoticeSeen: true }),
+    )
+    expect(agentHarness.run).toHaveBeenCalledTimes(1)
+    expect(agentHarness.run).toHaveBeenCalledWith('Polish this slide', [])
+    expect(container.querySelector('.ai-sub-first')).toBeNull()
   })
 })

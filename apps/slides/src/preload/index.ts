@@ -97,6 +97,53 @@ import type {
   UiTheme,
   SetEffectsPatch,
 } from '../shared/ipc'
+import { SUBSCRIPTION_IPC_CHANNELS } from '@genoffice/ai-provider/browser'
+import {
+  subscriptionLaunchResultOf,
+  subscriptionStatusMapOf,
+  type SubscriptionApi,
+} from '../shared/subscription-api'
+
+// The subscription channels are registered once per process (see main/ai-ipc.ts).
+// Until that handler exists an invoke rejects; the renderer reads that as
+// "still checking" (see renderer/ai/subscription.ts).
+const subscriptionApi: SubscriptionApi = {
+  async statuses() {
+    return subscriptionStatusMapOf(await ipcRenderer.invoke(SUBSCRIPTION_IPC_CHANNELS.statuses))
+  },
+  async recheck(providers) {
+    return subscriptionStatusMapOf(
+      await ipcRenderer.invoke(
+        SUBSCRIPTION_IPC_CHANNELS.recheck,
+        providers ? { providers } : undefined,
+      ),
+    )
+  },
+  async login(provider) {
+    return subscriptionLaunchResultOf(
+      await ipcRenderer.invoke(SUBSCRIPTION_IPC_CHANNELS.login, { provider }),
+    )
+  },
+  async install(provider) {
+    return subscriptionLaunchResultOf(
+      await ipcRenderer.invoke(SUBSCRIPTION_IPC_CHANNELS.install, { provider }),
+    )
+  },
+  async setMeteredAccepted(provider, accepted) {
+    const result: unknown = await ipcRenderer.invoke(SUBSCRIPTION_IPC_CHANNELS.metered, {
+      provider,
+      accepted,
+    })
+    const raw = (result ?? {}) as { ok?: unknown; statuses?: unknown }
+    return { ok: raw.ok === true, statuses: subscriptionStatusMapOf(raw.statuses) }
+  },
+  onChanged(handler) {
+    const listener = (_event: IpcRendererEvent, statuses: unknown) =>
+      handler(subscriptionStatusMapOf(statuses))
+    ipcRenderer.on(SUBSCRIPTION_IPC_CHANNELS.changed, listener)
+    return () => ipcRenderer.removeListener(SUBSCRIPTION_IPC_CHANNELS.changed, listener)
+  },
+}
 
 const api: SlidesApi = {
   getLanguage: () => ipcRenderer.invoke('app:get-language'),
@@ -166,17 +213,6 @@ const api: SlidesApi = {
       atIndex,
       deckName,
     ),
-  cloudGenStatus: () => ipcRenderer.invoke('slides:cloud-gen-status'),
-  cloudPageCancel: () => ipcRenderer.invoke('slides:cloud-page-cancel'),
-  cloudGeneratePage: (op: {
-    brief: string
-    title?: string
-    styleSkill?: string
-    deckContext?: Record<string, unknown>
-    images?: { url: string; caption?: string }[]
-    width?: number
-    height?: number
-  }) => ipcRenderer.invoke('slides:cloud-page-generate', op),
   localGeneratePage: (op: { specJson: string }) =>
     ipcRenderer.invoke('slides:local-page-generate', op),
   editText: (op: EditTextOp) => ipcRenderer.invoke('slides:edit-text', op),
@@ -400,8 +436,8 @@ const api: SlidesApi = {
   openAiModelSettings: () => ipcRenderer.invoke('ai:open-model-settings'),
   aiStream: (request: AiStreamRequest) => ipcRenderer.invoke('ai:stream', request),
   aiStreamCancel: (requestId: string) => ipcRenderer.invoke('ai:stream-cancel', requestId),
-  aiGskStatus: (withEmail?: boolean) => ipcRenderer.invoke('ai:gsk-status', withEmail),
-  aiGskLogin: () => ipcRenderer.invoke('ai:gsk-login'),
+  aiSubscription: subscriptionApi,
+  aiToolCapabilities: () => ipcRenderer.invoke('slides:ai-tool-capabilities'),
   aiLogRunFailure: (entry: AiRunFailure) => ipcRenderer.invoke('ai:log-run-failure', entry),
   webSearch: (query: string, maxResults?: number) =>
     ipcRenderer.invoke('ai:web-search', query, maxResults),
@@ -438,7 +474,6 @@ const api: SlidesApi = {
   }) => ipcRenderer.invoke('ai:generate-image', op),
   analyzeMedia: (op: { mediaUrls: string[]; requirements: string }) =>
     ipcRenderer.invoke('ai:analyze-media', op),
-  gskStatus: () => ipcRenderer.invoke('ai:gsk-status'),
   onAiStream: (handler: (chunk: AiStreamChunk) => void) => {
     const listener = (_e: IpcRendererEvent, chunk: AiStreamChunk) => handler(chunk)
     ipcRenderer.on('ai:stream-chunk', listener)

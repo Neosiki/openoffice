@@ -17,8 +17,7 @@ export const he = {
   aiQcPageSkipped: 'עמוד {n}: בדיקת הפריסה האוטומטית דולגה',
   aiQcStopped: 'בדיקת הפריסה הופסקה',
   aiQcCapped: 'עוד {count} עמודים לא נבדקו (מגבלה לכל הרצה)',
-  aiGskLoginBtn: 'התחבר ל-Genspark',
-  aiPanelTitle: 'Genspark',
+  aiPanelTitle: 'עוזר AI',
   aiOpenAssistant: 'פתיחת עוזר ה-AI',
   aiFactCheckBtn: 'בדיקת עובדות AI',
   aiFactCheckPrompt:
@@ -109,7 +108,7 @@ export const he = {
   aiErrStreamTimeout: 'תם הזמן לבקשת ה-AI: אין תגובה מהרשת וההרצה הופסקה. בדוק את החיבור ונסה שוב',
   aiErrOverloaded: 'שירות ה-AI עמוס כרגע — נסו שוב בעוד רגע',
   aiErrNetwork: 'בעיית רשת: לא ניתן להתחבר לשירות ה-AI. בדוק את החיבור ונסה שוב',
-  aiCreditsExhausted: 'קרדיטי Genspark שלך אזלו. טען מחדש ב-genspark.ai/pricing ונסה שוב',
+  aiCreditsExhausted: 'הקרדיט בחשבונך אצל ספק ה-AI אזל. טען אותו מחדש אצל אותו ספק ונסה שוב',
   aiErrRequestFailed: 'שליחת הבקשה נכשלה: {msg}',
   aiErrGenerateFailed: 'היצירה נכשלה',
   aiErrRegenFailed: 'יצירת השקופית מחדש נכשלה',
@@ -218,5 +217,4 @@ export const he = {
   aiSumSaveTemplate: 'תבנית הסגנון "{name}" נשמרה',
   aiSumTemplatesEmpty: 'תבניות סגנון (ריק)',
   aiSumListTemplates: 'הוצגו {count} תבניות סגנון',
-  aiPageCloudToLocal: 'הענן לא זמין — נוצר מקומית',
 } satisfies Record<keyof typeof zh, string>

@@ -4,7 +4,7 @@
  * to avoid renderer CORS), search tools, and the slides-only ai:* channels
  * (image generation, media analysis, style templates).
  */
-import { app, ipcMain, nativeImage, net, shell, webContents } from 'electron'
+import { app, ipcMain, nativeImage, net, webContents } from 'electron'
 import {
   appendFileSync,
   existsSync,
@@ -16,25 +16,18 @@ import {
 } from 'node:fs'
 import { join } from 'node:path'
 import {
-  AiCreditsError,
-  AiTimeoutError,
-  isAiNetworkError,
-  isAiOverloadedError,
-  defaultAiSettings,
-  activeProvider,
-  maxOutputTokensOf,
-  resolveAiSettings,
   sanitizeAiSettings,
   setAiUserAgent,
   setRescueFetch,
-  streamForProvider,
   type AiSettings,
   type AiStreamChunk,
   type AiStreamRequest,
-  type GenSparkAccountStatus,
-  type LegacyAiSettings,
 } from '@genoffice/ai-provider'
 import { shutdownCodexAppServers } from '@genoffice/ai-provider/codex-app-server'
+import {
+  ensureSubscriptionIpc,
+  sharedSubscriptionStatuses,
+} from '@genoffice/ai-provider/subscription'
 import {
   abortOnDestroyed,
   MAX_REMOTE_IMAGE_BYTES,
@@ -45,21 +38,20 @@ import {
 import {
   webSearchTool,
   imageSearchTool,
-  ensureGenofficeLogin,
-  noteGskCallFailure,
-  setGenofficeLoginOpener,
-  gskApiKey,
   generateImageTool,
   analyzeMediaTool,
+  aiToolCapabilities,
   documentMediaRoots,
-  gskLoginInfo,
-  hasGskAuth,
+  type AiToolCallContext,
+  type AiToolCapabilities,
 } from '@genoffice/ai-search'
+import { PRODUCT_NAME } from '@genoffice/i18n'
 import { addPicture, editPictureSrcRect, replacePictureBytes } from '@genoffice/pptx-engine'
 import { matchesElementRef } from '@genoffice/pptx-engine/identity'
 import { coverCropFractions } from '@genoffice/pipelines/slides'
 import type { AiRunFailure } from '../shared/ipc'
 import { EMU_PER_PX_96 } from '@genoffice/pptx-render'
+import { runAiStream, storedAiSettings, withMeteredAccepted } from './ai-stream'
 import { tm } from './i18n-main'
 import { pushHistory, rebuildSlide, scheduleHistoryNotify, sessions } from './session-state'
 
@@ -85,6 +77,24 @@ function readJson<T>(path: string, fallback: T): T {
     /* Corrupted state file: fall back to defaults */
   }
   return fallback
+}
+
+/** ai-settings.json as the app reads it (an old or damaged file falls to the defaults) */
+function readAiSettings(): AiSettings {
+  return storedAiSettings(readJson<unknown>(AI_SETTINGS_PATH(), {}))
+}
+
+/** Who is asking the image/media tools: a window of this process, with its subscription connections */
+function screenToolContext(): AiToolCallContext {
+  return { path: 'screen', statuses: sharedSubscriptionStatuses() }
+}
+
+function broadcastToWindows(channel: string, payload?: unknown): void {
+  for (const wc of webContents.getAllWebContents()) {
+    if (wc.isDestroyed()) continue
+    if (payload === undefined) wc.send(channel)
+    else wc.send(channel, payload)
+  }
 }
 
 const activeAiStreams = new Map<string, AbortController>()
@@ -120,37 +130,25 @@ export function registerAiIpc(): void {
   app.once('before-quit', shutdownCodexAppServers)
   // Node fetch (undici) direct connections get reset under VPN/tun setups; retry over Chromium's stack
   setRescueFetch((url, init) => net.fetch(url, init))
-  setAiUserAgent(`GenOffice/${app.getVersion()}`)
+  setAiUserAgent(`${PRODUCT_NAME}/${app.getVersion()}`)
 
-  ipcMain.handle('ai:get-settings', (): AiSettings => {
-    const stored = readJson<Partial<AiSettings> & LegacyAiSettings>(AI_SETTINGS_PATH(), {})
-    const settings = resolveAiSettings(stored, defaultAiSettings())
-    // a stored BYOK provider is honored when usable; half-filled configs fall back to genspark
-    settings.provider = activeProvider(settings)
-    return settings
-  })
+  ipcMain.handle('ai:get-settings', (): AiSettings => readAiSettings())
 
-  // Genspark account (gsk login state): the auth source for AI features; when logged out the frontend uses this to guide login
-  ipcMain.handle(
-    'ai:gsk-status',
-    async (_event, withEmail?: boolean): Promise<GenSparkAccountStatus> => {
-      if (!hasGskAuth()) return { loggedIn: false }
-      if (!withEmail) return { loggedIn: true }
-      const info = await gskLoginInfo()
-      return info?.email ? { loggedIn: true, email: info.email } : { loggedIn: true }
+  // Subscription connections (Claude, Codex): status, sign-in, install. Registered once per
+  // process, whichever editor's main asks first.
+  ensureSubscriptionIpc(ipcMain, {
+    getSettings: readAiSettings,
+    setMeteredAccepted: (provider, accepted) => {
+      writeJsonAtomic(AI_SETTINGS_PATH(), withMeteredAccepted(readAiSettings(), provider, accepted))
+      broadcastToWindows('ai:settings-changed')
     },
-  )
-
-  // a 401 on the gsk key opens the device-code login once (genoffice-auth recovery)
-  setGenofficeLoginOpener((url) => void shell.openExternal(url))
-
-  ipcMain.handle('ai:gsk-login', () => {
-    ensureGenofficeLogin((url) => void shell.openExternal(url))
+    dataDir: app.getPath('userData'),
+    broadcast: broadcastToWindows,
   })
 
   ipcMain.handle('ai:set-settings', (_event, settings: AiSettings) => {
     // SECURITY.md: payloads are schema-checked in the main process. The settings
-    // file feeds cliPath into spawn() and baseUrl receives the gsk bearer token,
+    // file feeds cliPath into spawn() and baseUrl receives the provider's API key,
     // so the renderer's copy is sanitized before it touches disk.
     const sanitized = sanitizeAiSettings(settings)
     if (!sanitized) {
@@ -158,8 +156,7 @@ export function registerAiIpc(): void {
       return
     }
     writeJsonAtomic(AI_SETTINGS_PATH(), sanitized)
-    for (const wc of webContents.getAllWebContents())
-      if (!wc.isDestroyed()) wc.send('ai:settings-changed')
+    broadcastToWindows('ai:settings-changed')
   })
 
   ipcMain.handle('ai:log-run-failure', (_event, entry: AiRunFailure) => {
@@ -179,86 +176,21 @@ export function registerAiIpc(): void {
       } satisfies AiStreamChunk)
       return
     }
-    const { requestId, system, messages } = request
-    const tools = request.tools ?? []
-    const maxTokens = request.maxTokens ?? maxOutputTokensOf(settings)
-    const provider = settings.provider
-    let config = settings.providers?.[provider]
-    // The genspark key never enters the settings file; it is fetched from the gsk login state per request
-    // set only when the gsk key was injected: a 401 then means that key expired
-    let gskKey = ''
-    if (provider === 'genspark' && config && !config.apiKey) {
-      gskKey = gskApiKey()
-      config = { ...config, apiKey: gskKey }
-    }
+    const { requestId } = request
     const send = (chunk: AiStreamChunk) => {
       if (!event.sender.isDestroyed()) event.sender.send('ai:stream-chunk', chunk)
-    }
-    if (!config || (provider !== 'codex' && !config.apiKey)) {
-      send({
-        requestId,
-        type: 'error',
-        error: provider === 'genspark' ? tm('errGskNotLoggedIn') : tm('errNoApiKey', { provider }),
-      })
-      return
-    }
-    if (provider !== 'codex' && !config.model) {
-      send({ requestId, type: 'error', error: tm('errNoModel') })
-      return
     }
     const controller = new AbortController()
     activeAiStreams.set(requestId, controller)
     const unwatchSender = abortOnDestroyed(event.sender, controller)
-    // wire-activity keepalive: lets the renderer's silence watchdog tell a slow turn from a dead one
-    let lastPing = 0
-    const ping = () => {
-      const now = Date.now()
-      if (now - lastPing < 5_000) return
-      lastPing = now
-      send({ requestId, type: 'ping' })
-    }
     try {
-      let stopReason: string | undefined
-      await streamForProvider(provider, config, system, messages, tools, maxTokens, {
-        ...(request.sessionId ? { sessionId: request.sessionId } : {}),
+      await runAiStream({
+        request,
+        settings,
+        statuses: sharedSubscriptionStatuses(),
         signal: controller.signal,
-        onDelta: (text) => send({ requestId, type: 'delta', text }),
-        onReasoningDelta: (text) => send({ requestId, type: 'reasoning', text }),
-        onToolCall: (toolCall) => send({ requestId, type: 'tool-call', toolCall }),
-        onActivity: ping,
-        onStopReason: (reason) => {
-          stopReason = reason
-        },
-        onUsage: (usage) => send({ requestId, type: 'usage', usage }),
+        send,
       })
-      send(
-        stopReason === undefined
-          ? { requestId, type: 'done' }
-          : { requestId, type: 'done', stopReason },
-      )
-    } catch (err) {
-      if (controller.signal.aborted) {
-        send({ requestId, type: 'done' })
-      } else {
-        // an expired/revoked key drops to signed-out so the inline sign-in button shows
-        noteGskCallFailure(gskKey, err)
-        const msg = err instanceof Error ? err.message : String(err)
-        console.error(`[ai-stream] ${requestId} (${provider}/${config.model}) failed:`, msg)
-        send({
-          requestId,
-          type: 'error',
-          error: msg,
-          ...(err instanceof AiTimeoutError
-            ? { errorCode: 'timeout' as const }
-            : err instanceof AiCreditsError
-              ? { errorCode: 'credits' as const }
-              : isAiNetworkError(err)
-                ? { errorCode: 'network' as const }
-                : isAiOverloadedError(err)
-                  ? { errorCode: 'overloaded' as const }
-                  : {}),
-        })
-      }
     } finally {
       unwatchSender()
       activeAiStreams.delete(requestId)
@@ -301,7 +233,13 @@ export function registerAiIpc(): void {
 // never called; docs does not have these channels, so putting them in the wrong place raises
 // "No handler registered".
 export function registerSlidesOnlyAiIpc(): void {
-  // gsk (Genspark CLI) capabilities: AI image generation / media analysis. Returns an error prompt when not logged in.
+  // What the search/image/media tools can do right now (settings + subscription connections):
+  // the renderer offers the model only the tools that have a route.
+  ipcMain.handle('slides:ai-tool-capabilities', (): AiToolCapabilities =>
+    aiToolCapabilities(readAiSettings(), screenToolContext()),
+  )
+
+  // AI image generation / media analysis. Answers with an error text when no route is available.
   ipcMain.handle(
     'ai:generate-image',
     async (
@@ -327,10 +265,7 @@ export function registerSlidesOnlyAiIpc(): void {
           imageSize: op.imageSize ? String(op.imageSize) : undefined,
           transparentBackground: op.transparentBackground === true,
         },
-        {
-          notLoggedInError: tm('errGskCli'),
-          mediaRoots: slidesMediaRoots(event.sender.id),
-        },
+        { mediaRoots: slidesMediaRoots(event.sender.id), context: screenToolContext() },
       )
     },
   )
@@ -344,10 +279,7 @@ export function registerSlidesOnlyAiIpc(): void {
           mediaUrls: (op.mediaUrls ?? []).map(String),
           requirements: String(op.requirements ?? ''),
         },
-        {
-          notLoggedInError: tm('errGskCli'),
-          mediaRoots: slidesMediaRoots(event.sender.id),
-        },
+        { mediaRoots: slidesMediaRoots(event.sender.id), context: screenToolContext() },
       )
     },
   )

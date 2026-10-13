@@ -13,7 +13,9 @@ import {
 import {
   getProviderAdapter,
   modelLacksVision,
+  selectAiProvider,
   type AiSettings,
+  type AiSubscriptionStatuses,
 } from '@genoffice/ai-provider/browser'
 import { auditSlideLayout } from '@genoffice/pipelines/slides/layout-audit'
 import { createSlidesSkill, formatSlideDump, type DeckAccess } from './slides-skill'
@@ -50,13 +52,20 @@ export function isQcEnabled(): boolean {
 /** Cost ceiling per generation run — beyond this the tail pages are skipped (reported to the user) */
 export const QC_MAX_PAGES = 20
 
-/** Unknown providers are treated as text-only: omitting an image is safer than a user-visible 400. */
+/**
+ * Unknown providers are treated as text-only: omitting an image is safer than a user-visible 400.
+ * `auto` is judged by the subscription provider it resolves to, so `statuses` must be the live
+ * ones; with nothing connected there is no provider to send a picture to.
+ */
 export function settingsSupportVision(
-  settings: Pick<AiSettings, 'provider' | 'providers'>,
+  settings: Pick<AiSettings, 'provider' | 'providers' | 'meteredAccepted'>,
+  statuses: AiSubscriptionStatuses = {},
 ): boolean {
   try {
-    if (!getProviderAdapter(settings.provider).capabilities.vision) return false
-    return !modelLacksVision(settings.providers?.[settings.provider]?.model ?? '')
+    const provider = selectAiProvider(settings, statuses).provider
+    if (!provider) return false
+    if (!getProviderAdapter(provider).capabilities.vision) return false
+    return !modelLacksVision(settings.providers?.[provider]?.model ?? '')
   } catch {
     return false
   }
