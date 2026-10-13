@@ -6,8 +6,11 @@
  * one in use, and the app must not store who is signed in. So next to the
  * setting the app remembers one short value per provider: the kind of login
  * the acceptance was given for (`metered:api_key/firstParty`,
- * `unknown:oauth_token/firstParty`, `metered:api-key`, …), as the CLI itself
- * names it. It contains no email, organisation, key or token.
+ * `unknown:oauth_token/firstParty`, `metered:api-key`, `unknown:unknown`, …).
+ * The value is always one of `METERED_LOGIN_FINGERPRINTS`, a list of constants
+ * in code: it is never built from what a CLI printed, so it cannot contain an
+ * email, organisation, key or token. A kind of login the code does not know is
+ * remembered as `unknown`.
  *
  * An acceptance counts only while the detected login has that same kind. It is
  * cleared when the kind changes (API key to Bedrock, metered to subscription),
@@ -19,7 +22,11 @@ import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { AI_SUBSCRIPTION_PROVIDERS } from '../providers'
 import type { AiSubscriptionProviderId } from '../types'
-import type { SubscriptionDetection } from './status'
+import {
+  SUBSCRIPTION_LOGIN_KINDS,
+  subscriptionLoginKind,
+  type SubscriptionDetection,
+} from './status'
 
 /** Per provider: the kind of login the metered acceptance was given for */
 export type MeteredAcceptanceRecord = Partial<Record<AiSubscriptionProviderId, string>>
@@ -32,18 +39,20 @@ export interface MeteredAcceptanceStore {
 /** File the acceptance record is kept in, inside the directory the app passes */
 export const SUBSCRIPTION_METERED_FILE = 'subscription-metered.json'
 
-const MAX_FINGERPRINT_LENGTH = 120
+/** Every value a remembered acceptance can have: a non-subscription login method and a listed kind */
+export const METERED_LOGIN_FINGERPRINTS: readonly string[] = (
+  ['metered', 'unknown'] as const
+).flatMap((loginMethod) => SUBSCRIPTION_LOGIN_KINDS.map((kind) => `${loginMethod}:${kind}`))
 
 /**
  * The kind of a metered (or unknown) login, as remembered with an acceptance.
  * Null for anything that is not a metered login.
  */
 export function meteredLoginFingerprint(detection: SubscriptionDetection): string | null {
-  if (detection.state !== 'metered' || !detection.loginMethod) return null
-  return `${detection.loginMethod}:${detection.loginKind ?? 'unknown'}`.slice(
-    0,
-    MAX_FINGERPRINT_LENGTH,
-  )
+  if (detection.state !== 'metered') return null
+  // a detection can come from an injected detector: its kind is checked against the list again
+  const loginMethod = detection.loginMethod === 'metered' ? 'metered' : 'unknown'
+  return `${loginMethod}:${subscriptionLoginKind(detection.loginKind)}`
 }
 
 /**
@@ -82,7 +91,8 @@ export function createMeteredAcceptanceFileStore(dir: string): MeteredAcceptance
       if (!parsed || typeof parsed !== 'object') return record
       for (const provider of AI_SUBSCRIPTION_PROVIDERS) {
         const value = (parsed as Record<string, unknown>)[provider]
-        if (typeof value === 'string' && value && value.length <= MAX_FINGERPRINT_LENGTH) {
+        // anything else, a value an earlier build wrote included, is no acceptance
+        if (typeof value === 'string' && METERED_LOGIN_FINGERPRINTS.includes(value)) {
           record[provider] = value
         }
       }
@@ -92,7 +102,7 @@ export function createMeteredAcceptanceFileStore(dir: string): MeteredAcceptance
       const clean: MeteredAcceptanceRecord = {}
       for (const provider of AI_SUBSCRIPTION_PROVIDERS) {
         const value = record[provider]
-        if (value) clean[provider] = value
+        if (value && METERED_LOGIN_FINGERPRINTS.includes(value)) clean[provider] = value
       }
       await mkdir(dir, { recursive: true })
       const temp = `${file}.tmp`

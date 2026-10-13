@@ -8,6 +8,7 @@ import { AI_SUBSCRIPTION_PROVIDERS } from '../providers'
 import type { AiSettings, AiSubscriptionProviderId, AiSubscriptionStatus } from '../types'
 import {
   checkingSubscriptionStatus,
+  subscriptionStatusErrorText,
   type SubscriptionMeteredResult,
   type SubscriptionStatusMap,
 } from './contract'
@@ -144,9 +145,13 @@ export function createSubscriptionStatusService(
           configuredPath: settings.providers?.[provider]?.cliPath,
           timeoutMs: deps.timeoutMs,
         })
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error)
-        detection = { provider, state: 'error', error: `failed: ${message}` }
+      } catch {
+        // a fixed text: the message of the failure may carry what a CLI printed
+        detection = {
+          provider,
+          state: 'error',
+          error: subscriptionStatusErrorText('failed', 'The status check failed'),
+        }
       }
       await applyDetection(detection)
     })().finally(() => inFlight.delete(provider))

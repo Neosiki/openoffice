@@ -3,9 +3,14 @@
  * reports. Everything here is asynchronous, so a slow CLI never freezes the UI,
  * and both providers are asked at the same time.
  *
- * The CLIs also report who is signed in (email, organisation). Those fields are
- * never copied out of the parsed output: the result names the kind of login and
- * the plan, nothing that identifies the account.
+ * The CLIs also report who is signed in (email, organisation), and their output
+ * is not always in the expected shape. So no text of a CLI is ever copied into
+ * a result. The output is only matched against values this file lists: a kind
+ * of login is one of `SUBSCRIPTION_LOGIN_KINDS`, an error text is a sentence
+ * written here plus facts the code derived itself (exit code, version number),
+ * and anything unrecognised becomes the fixed token `unknown`. The one value
+ * that is passed on is the plan name, and only when it looks like a plan
+ * identifier.
  */
 import { AI_SUBSCRIPTION_PROVIDERS } from '../providers'
 import type {
@@ -52,9 +57,9 @@ export type SubscriptionLogin =
       /** plan the CLI names, for display */
       planName?: string
       /**
-       * The CLI's own name for the kind of login (`api_key/firstParty`,
-       * `chatgpt`, …). Tells one kind of login from another without naming an
-       * account; a metered acceptance is remembered against it.
+       * The kind of login, one of `SUBSCRIPTION_LOGIN_KINDS` (`api_key/firstParty`,
+       * `chatgpt`, `unknown`, …). Tells one kind of login from another without
+       * naming an account; a metered acceptance is remembered against it.
        */
       loginKind: string
     }
@@ -98,14 +103,73 @@ export type SubscriptionDetector = (
   options?: SubscriptionDetectOptions,
 ) => Promise<SubscriptionDetection>
 
-const MAX_LABEL_LENGTH = 40
-const MAX_ERROR_DETAIL_LENGTH = 300
+/** The token for a kind of login this file does not list */
+const UNKNOWN_KIND = 'unknown'
 
-/** A short display/label value: plain characters only, bounded */
-function label(value: unknown): string | undefined {
-  if (typeof value !== 'string') return undefined
-  const cleaned = value.replace(/[^\w.+ -]/g, '').trim()
-  return cleaned ? cleaned.slice(0, MAX_LABEL_LENGTH) : undefined
+/** Values of `authMethod` in `claude auth status` */
+const CLAUDE_AUTH_KINDS = [
+  'claude.ai',
+  'api_key',
+  'api_key_helper',
+  'third_party',
+  'oauth_token',
+] as const
+
+/** Values of `apiProvider` in `claude auth status` */
+const CLAUDE_API_PROVIDER_KINDS = [
+  'firstParty',
+  'bedrock',
+  'vertex',
+  'foundry',
+  'anthropicAws',
+  'anthropicGoogleCloud',
+  'mantle',
+  'gateway',
+] as const
+
+const CODEX_LOGIN_KINDS = [
+  'chatgpt',
+  'api-key',
+  'bedrock',
+  'workload-identity',
+  'access-token',
+  'personal-access-token',
+  'no-account',
+] as const
+
+type CodexLoginKind = (typeof CODEX_LOGIN_KINDS)[number]
+
+/**
+ * Every value a `loginKind` can take. Claude: `<authMethod>/<apiProvider>`, each
+ * half from its list above or `unknown`. Codex: one of its list. All of them
+ * are constants of this file; none is built from what a CLI printed.
+ */
+export const SUBSCRIPTION_LOGIN_KINDS: readonly string[] = [
+  UNKNOWN_KIND,
+  ...[...CLAUDE_AUTH_KINDS, UNKNOWN_KIND].flatMap((auth) =>
+    [...CLAUDE_API_PROVIDER_KINDS, UNKNOWN_KIND].map((api) => `${auth}/${api}`),
+  ),
+  ...CODEX_LOGIN_KINDS,
+]
+
+/** `value` when it is one of the listed kinds, the fixed token `unknown` otherwise */
+export function subscriptionLoginKind(value: unknown): string {
+  return typeof value === 'string' && SUBSCRIPTION_LOGIN_KINDS.includes(value)
+    ? value
+    : UNKNOWN_KIND
+}
+
+/** The entry of `list` equal to `value`; the result is the list's own constant, never the input */
+function listed<T extends string>(value: unknown, list: readonly T[]): T | typeof UNKNOWN_KIND {
+  return list.find((entry) => entry === value) ?? UNKNOWN_KIND
+}
+
+/**
+ * A plan name as the CLIs give it: one short identifier (`max`, `plus`,
+ * `team`). A value of any other shape, such as free text, is not shown.
+ */
+function planLabel(value: unknown): string | undefined {
+  return typeof value === 'string' && /^[a-z][a-z0-9_-]{0,31}$/i.test(value) ? value : undefined
 }
 
 function asRecord(value: unknown): Record<string, unknown> | undefined {
@@ -114,36 +178,21 @@ function asRecord(value: unknown): Record<string, unknown> | undefined {
     : undefined
 }
 
-/**
- * Remove what could identify an account or act as a credential from CLI output
- * before it becomes an error detail: email addresses, ids, keys and tokens.
- */
-export function scrubSubscriptionOutput(text: string): string {
-  return text
-    .replace(/[\w.+-]+@[\w-]+(\.[\w-]+)+/g, '[redacted]')
-    .replace(/\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi, '[redacted]')
-    .replace(/\b(sk|pk|rk|key|tok|sess)-[\w*.-]{6,}/gi, '[redacted]')
-    .replace(/\b[\w+/=-]{32,}\b/g, '[redacted]')
-}
-
-function detail(text: string): string {
-  const line =
-    text
-      .split(/\r?\n/)
-      .map((part) => part.trim())
-      .find(Boolean) ?? ''
-  return scrubSubscriptionOutput(line).slice(0, MAX_ERROR_DETAIL_LENGTH)
-}
-
 // ── Claude Code: `claude auth status --json` ──
 
-const CLAUDE_METERED_METHODS = new Set(['api_key', 'api_key_helper', 'third_party'])
+const CLAUDE_METERED_METHODS: ReadonlySet<string> = new Set([
+  'api_key',
+  'api_key_helper',
+  'third_party',
+])
 
 /**
  * Read `loggedIn`, `authMethod`, `apiProvider` and `subscriptionType` from the
  * CLI's JSON; every other field (email, organisation, directories) is ignored.
  * A subscription is reported only for a claude.ai login on Anthropic's own API
- * that names a plan. Null when the output is not the expected JSON.
+ * that names a plan. The fields are compared with known values, not copied: an
+ * unexpected value reads as `unknown`. Null when the output is not the expected
+ * JSON.
  */
 export function parseClaudeAuthStatus(stdout: string): SubscriptionLogin | null {
   const start = stdout.indexOf('{')
@@ -157,11 +206,16 @@ export function parseClaudeAuthStatus(stdout: string): SubscriptionLogin | null 
   }
   if (!parsed || typeof parsed.loggedIn !== 'boolean') return null
   if (!parsed.loggedIn) return { signedIn: false }
-  const authMethod = label(parsed.authMethod) ?? 'unknown'
-  const apiProvider = label(parsed.apiProvider)
-  const planName = label(parsed.subscriptionType)
-  const loginKind = `${authMethod}/${apiProvider ?? 'unknown'}`
-  if (CLAUDE_METERED_METHODS.has(authMethod) || (apiProvider && apiProvider !== 'firstParty')) {
+  const authMethod = listed(parsed.authMethod, CLAUDE_AUTH_KINDS)
+  const apiProvider = listed(parsed.apiProvider, CLAUDE_API_PROVIDER_KINDS)
+  const planName = planLabel(parsed.subscriptionType)
+  const loginKind = `${authMethod}/${apiProvider}`
+  // any named backend other than Anthropic's own API is a paid route, known to this file or not
+  const otherBackend =
+    typeof parsed.apiProvider === 'string' &&
+    parsed.apiProvider !== '' &&
+    parsed.apiProvider !== 'firstParty'
+  if (CLAUDE_METERED_METHODS.has(authMethod) || otherBackend) {
     return { signedIn: true, loginMethod: 'metered', loginKind }
   }
   if (authMethod === 'claude.ai' && apiProvider === 'firstParty' && planName) {
@@ -173,29 +227,27 @@ export function parseClaudeAuthStatus(stdout: string): SubscriptionLogin | null 
 // ── Codex: `codex login status` ──
 
 /**
- * Read the one line `codex login status` prints (on stderr). Only the kind of
- * login is taken from it; the masked API key that follows on the API-key line
- * is not kept. Null when no known line is present.
+ * Read the one line `codex login status` prints (on stderr). The line is only
+ * matched against the lines Codex is known to print; nothing of it is kept, so
+ * neither the masked API key on the API-key line nor anything on a line this
+ * file does not know can travel on. Null when there is no login line at all.
  */
 export function parseCodexLoginStatus(output: string): SubscriptionLogin | null {
   if (/\bNot logged in\b/i.test(output)) return { signedIn: false }
   const match = /\bLogged in using ([^\r\n]*)/i.exec(output)
   if (!match) return null
-  const how = match[1]!.toLowerCase()
-  if (how.startsWith('chatgpt')) {
-    return { signedIn: true, loginMethod: 'subscription', loginKind: 'chatgpt' }
-  }
-  if (/^(an )?api key/.test(how)) {
-    return { signedIn: true, loginMethod: 'metered', loginKind: 'api-key' }
-  }
-  if (how.includes('bedrock')) {
-    return { signedIn: true, loginMethod: 'metered', loginKind: 'bedrock' }
-  }
-  if (how.includes('workload identity')) {
-    return { signedIn: true, loginMethod: 'metered', loginKind: 'workload-identity' }
-  }
-  const kind = (label(how) ?? 'unknown').replace(/\s+/g, '-')
-  return { signedIn: true, loginMethod: 'unknown', loginKind: kind }
+  const how = match[1]!.trim().toLowerCase()
+  const login = (
+    loginMethod: AiSubscriptionLoginMethod,
+    loginKind: CodexLoginKind | typeof UNKNOWN_KIND,
+  ): SubscriptionLogin => ({ signedIn: true, loginMethod, loginKind })
+  if (/^chatgpt\b/.test(how)) return login('subscription', 'chatgpt')
+  if (/^(an )?api key\b/.test(how)) return login('metered', 'api-key')
+  if (/^amazon bedrock\b/.test(how)) return login('metered', 'bedrock')
+  if (/^workload identity\b/.test(how)) return login('metered', 'workload-identity')
+  if (how === 'access token') return login('unknown', 'access-token')
+  if (how === 'personal access token') return login('unknown', 'personal-access-token')
+  return login('unknown', UNKNOWN_KIND)
 }
 
 // ── Codex: the app-server's account/read ──
@@ -203,7 +255,8 @@ export function parseCodexLoginStatus(output: string): SubscriptionLogin | null 
 /**
  * The login `account/read` describes: `{ account: { type: 'chatgpt', planType }
  * | { type: 'apiKey' } | null, requiresOpenaiAuth }`. The account's email is
- * not read. Null when the value is not an `account/read` result.
+ * not read, and an account type this file does not know reads as `unknown`.
+ * Null when the value is not an `account/read` result.
  */
 export function codexAccountInfo(accountRead: unknown): SubscriptionLogin | null {
   const result = asRecord(accountRead)
@@ -215,7 +268,7 @@ export function codexAccountInfo(accountRead: unknown): SubscriptionLogin | null
     return { signedIn: true, loginMethod: 'unknown', loginKind: 'no-account' }
   }
   if (account.type === 'chatgpt') {
-    const planName = label(account.planType)
+    const planName = planLabel(account.planType)
     return {
       signedIn: true,
       loginMethod: 'subscription',
@@ -226,8 +279,7 @@ export function codexAccountInfo(accountRead: unknown): SubscriptionLogin | null
   if (account.type === 'apiKey') {
     return { signedIn: true, loginMethod: 'metered', loginKind: 'api-key' }
   }
-  const kind = (label(account.type) ?? 'unknown').replace(/\s+/g, '-')
-  return { signedIn: true, loginMethod: 'unknown', loginKind: kind }
+  return { signedIn: true, loginMethod: 'unknown', loginKind: UNKNOWN_KIND }
 }
 
 let codexAccountSource: CodexAccountSource | null = null
@@ -257,6 +309,11 @@ function mergeLogins(cli: SubscriptionLogin, account: SubscriptionLogin | null):
 
 // ── From CLI answers to a state ──
 
+/**
+ * An `error` detection. `text` is always a sentence written in this file, with
+ * at most facts the code derived itself added to it: a version number, an exit
+ * code, an error code. It never contains what a CLI or an error message said.
+ */
 function errorDetection(
   provider: AiSubscriptionProviderId,
   kind: SubscriptionStatusErrorKind,
@@ -288,7 +345,7 @@ function loginDetection(
     state: subscription ? 'ready' : 'metered',
     loginMethod: login.loginMethod,
     ...(subscription && login.planName ? { planName: login.planName } : {}),
-    loginKind: login.loginKind,
+    loginKind: subscriptionLoginKind(login.loginKind),
   }
 }
 
@@ -309,8 +366,14 @@ function versionAtLeast(version: string, minimum: string): boolean {
 const UNKNOWN_COMMAND =
   /unknown (command|option)|unrecognized (subcommand|option)|unexpected argument/i
 
-function failureDetail(error: unknown): string {
-  return detail(error instanceof Error ? error.message : String(error))
+/**
+ * The system error code of a failure (`ENOENT`, `EACCES`) as a suffix, or
+ * nothing. The message of an error is never used: it can contain a path, or
+ * whatever a program printed.
+ */
+function errorCodeSuffix(error: unknown): string {
+  const code = (error as { code?: unknown } | null | undefined)?.code
+  return typeof code === 'string' && /^E[A-Z0-9_]{1,30}$/.test(code) ? ` (${code})` : ''
 }
 
 const STATUS_ARGS: Record<AiSubscriptionProviderId, string[]> = {
@@ -340,7 +403,7 @@ async function inspect(
       configuredPath: options.configuredPath,
     })
   } catch (error) {
-    return errorDetection(provider, 'failed', failureDetail(error))
+    return errorDetection(provider, 'failed', `Could not look for ${name}${errorCodeSuffix(error)}`)
   }
   if (!program) return { provider, state: 'not-installed' }
 
@@ -382,7 +445,12 @@ async function inspect(
       account = codexAccountInfo(accountResult)
     }
   } catch (error) {
-    return errorDetection(provider, 'failed', failureDetail(error), version)
+    return errorDetection(
+      provider,
+      'failed',
+      `${name} could not be run${errorCodeSuffix(error)}`,
+      version,
+    )
   }
 
   const login = parseStatus(provider, status)
@@ -396,11 +464,12 @@ async function inspect(
         version,
       )
     }
-    const said = detail(status.stderr) || detail(status.stdout)
+    // what the CLI printed instead stays here: it may name the account
+    const exit = typeof status.code === 'number' ? `exit code ${status.code}` : 'no exit code'
     return errorDetection(
       provider,
       'failed',
-      `${name} did not report its login status${said ? `: ${said}` : ''}`,
+      `${name} did not report its login status (${exit})`,
       version,
     )
   }
@@ -430,7 +499,12 @@ export const detectSubscriptionLogin: SubscriptionDetector = async (provider, op
   try {
     return await Promise.race([
       inspect(provider, options, controller.signal, timeoutMs).catch(
-        (error): SubscriptionDetection => errorDetection(provider, 'failed', failureDetail(error)),
+        (error): SubscriptionDetection =>
+          errorDetection(
+            provider,
+            'failed',
+            `The ${subscriptionProviderLabel(provider)} check failed${errorCodeSuffix(error)}`,
+          ),
       ),
       deadline,
     ])
