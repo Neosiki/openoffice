@@ -219,4 +219,37 @@ export const th = {
   aiSumSaveTemplate: 'บันทึกเทมเพลตสไตล์ "{name}"',
   aiSumTemplatesEmpty: 'รายการเทมเพลตสไตล์ (ว่าง)',
   aiSumListTemplates: 'แสดงเทมเพลตสไตล์ {count} รายการ',
+  aiTplGalleryTitle: 'เลือกเทมเพลต',
+  aiTplSectionBuiltin: 'เทมเพลตพื้นฐาน',
+  aiTplSectionSaved: 'สไตล์ที่ฉันบันทึกไว้',
+  aiTplChipPick: 'เทมเพลต',
+  aiTplChipChange: 'เปลี่ยนเทมเพลต',
+  aiTplChipRemove: 'เอาเทมเพลตออก',
+  aiTplAdjustMark: 'มีคำขอเพิ่มเติม',
+  aiTplAdjustClear: 'ล้างคำขอเพิ่มเติม',
+  aiTplSchemeLight: 'สว่าง',
+  aiTplSchemeDark: 'มืด',
+  aiTplSchemeMixed: 'ผสม',
+  aiTplSavedOn: 'บันทึกเมื่อ {date}',
+  aiTplPreviewAlt: 'ตัวอย่างหน้าปกของ {name}',
+  aiTplAppliesToNew: 'สไลด์ที่มีอยู่จะไม่เปลี่ยนแปลง เทมเพลตนี้จะใช้กับสไลด์ที่ AI สร้างนับจากนี้',
+  aiTplFontsNotice:
+    'ฟอนต์ของเทมเพลตมีอยู่ในแอปนี้แล้ว หากเปิดในโปรแกรมอื่น เช่น PowerPoint อาจแสดงเป็นฟอนต์อื่น',
+  aiTplOpenFonts: 'เปิดโฟลเดอร์ฟอนต์',
+  aiTplDesc_coral: 'สีครีมและชมพูอมส้มบนพื้นเกือบดำ หัวเรื่องตัวใหญ่ หนา และแคบ',
+  aiTplDesc_blue_professional: 'พื้นสีครีมกับจุดเน้นสีน้ำเงินโคบอลต์สด เรียบ ทันสมัย และเป็นทางการ',
+  aiTplDesc_monochrome: 'พื้นสีงาช้างกับตัวอักษรสีดำล้วน หัวเรื่องแบบมีเชิง ไม่ใช้สีเลย',
+  aiTplDesc_neo_grid_bold:
+    'พื้นขาวนวลกับจุดเน้นสีเหลืองนีออนเพียงสีเดียว เส้นหนา ให้อารมณ์แบบนิตยสาร',
+  aiTplDesc_block_frame: 'พื้นสีพาสเทลนีออนกับขอบดำหนา สดใสและสะดุดตา',
+  aiTplDesc_raw_grid: 'ชมพู เขียวหม่น และดำหมึก กับขอบหนาและพื้นสีที่วางเหลื่อมกัน ดิบและมีพลัง',
+  aiTplDesc_studio: 'พื้นดำกับตัวอักษรสีเหลืองจัดจ้าน เปี่ยมพลังและโดดเด่น',
+  aiTplDesc_signal:
+    'น้ำเงินกรมท่าเข้มและขาวงาช้าง กับจุดเน้นสีทองหม่นเพียงสีเดียว เป็นทางการและสุขุม',
+  aiTplDesc_grove: 'พื้นเขียวป่ากับตัวอักษรสีครีม หัวเรื่องมีเชิงแบบคลาสสิก และจุดเน้นสีสนิม',
+  aiTplDesc_editorial_tri_tone: 'สามสีในสไตล์นิตยสาร ชมพูหม่น ครีมมัสตาร์ด และแดงเบอร์กันดีเข้ม',
+  aiTplDesc_emerald_editorial:
+    'เขียวสด น้ำเงินกรมท่า และขาวกระดาษ เส้นคู่และหัวเรื่องมีเชิงตัวหนา เหมือนปกนิตยสาร',
+  aiTplDesc_vellum:
+    'พื้นน้ำเงินกรมท่าเข้มกับตัวอักษรมีเชิงสีเหลืองอุ่นและจุดเน้นสีเขียวอมฟ้าหม่น เงียบสงบและดูเป็นวิชาการ',
 } satisfies Record<keyof typeof zh, string>

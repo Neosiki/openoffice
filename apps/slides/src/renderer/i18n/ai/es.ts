@@ -224,4 +224,45 @@ export const es = {
   aiSumSaveTemplate: 'Plantilla de estilo "{name}" guardada',
   aiSumTemplatesEmpty: 'Plantillas de estilo (vacío)',
   aiSumListTemplates: 'Se enumeraron {count} plantillas de estilo',
+  aiTplGalleryTitle: 'Elegir una plantilla',
+  aiTplSectionBuiltin: 'Plantillas incluidas',
+  aiTplSectionSaved: 'Mis estilos guardados',
+  aiTplChipPick: 'Plantilla',
+  aiTplChipChange: 'Cambiar plantilla',
+  aiTplChipRemove: 'Quitar plantilla',
+  aiTplAdjustMark: 'Con peticiones añadidas',
+  aiTplAdjustClear: 'Borrar peticiones añadidas',
+  aiTplSchemeLight: 'Claro',
+  aiTplSchemeDark: 'Oscuro',
+  aiTplSchemeMixed: 'Mixto',
+  aiTplSavedOn: 'Guardado el {date}',
+  aiTplPreviewAlt: 'Vista previa de la portada: {name}',
+  aiTplAppliesToNew:
+    'Tus diapositivas actuales se quedan como están. Esta plantilla se aplica a las diapositivas que la IA cree a partir de ahora.',
+  aiTplFontsNotice:
+    'Las fuentes de la plantilla vienen incluidas en esta aplicación. Otros programas, como PowerPoint, pueden mostrar una fuente distinta.',
+  aiTplOpenFonts: 'Abrir carpeta de fuentes',
+  aiTplDesc_coral:
+    'Crema y rosa anaranjado sobre un fondo casi negro, con titulares enormes y estrechos.',
+  aiTplDesc_blue_professional:
+    'Fondo crema con toques de azul cobalto intenso. Limpio, moderno y formal.',
+  aiTplDesc_monochrome:
+    'Fondo marfil con texto totalmente negro y titulares con serifa. Sin ningún color.',
+  aiTplDesc_neo_grid_bold:
+    'Fondo blanco roto con un único toque amarillo neón. Líneas gruesas, aire de revista.',
+  aiTplDesc_block_frame:
+    'Planos de color pastel neón con gruesos bordes negros. Divertido y llamativo.',
+  aiTplDesc_raw_grid:
+    'Rosa, verde salvia y negro tinta con bordes gruesos y planos desplazados. Tosco y contundente.',
+  aiTplDesc_studio: 'Fondo negro con texto amarillo eléctrico. Enérgico e impactante.',
+  aiTplDesc_signal:
+    'Azul marino profundo y blanco hueso con un único toque dorado apagado. Institucional y sereno.',
+  aiTplDesc_grove:
+    'Fondo verde bosque con texto crema, titulares clásicos con serifa y un toque óxido.',
+  aiTplDesc_editorial_tri_tone:
+    'Tres colores al estilo revista: rosa empolvado, crema mostaza y burdeos profundo.',
+  aiTplDesc_emerald_editorial:
+    'Verde intenso, azul marino y blanco papel. Filetes dobles y titulares con serifa, como una portada de revista.',
+  aiTplDesc_vellum:
+    'Azul marino profundo con texto con serifa en amarillo cálido y un toque verde azulado apagado. Sereno y erudito.',
 } satisfies Record<keyof typeof zh, string>

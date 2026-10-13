@@ -221,4 +221,43 @@ export const en = {
   aiSumSaveTemplate: 'Saved style template "{name}"',
   aiSumTemplatesEmpty: 'Style templates (empty)',
   aiSumListTemplates: 'Listed {count} style templates',
+  aiTplGalleryTitle: 'Choose a template',
+  aiTplSectionBuiltin: 'Templates',
+  aiTplSectionSaved: 'My saved styles',
+  aiTplChipPick: 'Template',
+  aiTplChipChange: 'Change template',
+  aiTplChipRemove: 'Remove template',
+  aiTplAdjustMark: 'Has added requests',
+  aiTplAdjustClear: 'Clear added requests',
+  aiTplSchemeLight: 'Light',
+  aiTplSchemeDark: 'Dark',
+  aiTplSchemeMixed: 'Mixed',
+  aiTplSavedOn: 'Saved {date}',
+  aiTplPreviewAlt: '{name} cover preview',
+  aiTplAppliesToNew:
+    'Your existing slides stay as they are. This template applies to slides the AI makes from now on.',
+  aiTplFontsNotice:
+    'Template fonts are included in this app. Other programs such as PowerPoint may show a different font.',
+  aiTplOpenFonts: 'Open fonts folder',
+  aiTplDesc_coral: 'Cream and orange-pink on near-black, with oversized condensed headlines.',
+  aiTplDesc_blue_professional:
+    'Cream background with vivid cobalt accents. Clean, modern, and businesslike.',
+  aiTplDesc_monochrome:
+    'Ivory background with all-black text and serif headlines. No color at all.',
+  aiTplDesc_neo_grid_bold:
+    'Off-white with a single neon yellow accent. Stark, heavy-lined, and magazine-like.',
+  aiTplDesc_block_frame:
+    'Pastel-neon color panels with chunky black borders. Playful and eye-catching.',
+  aiTplDesc_raw_grid: 'Pink, sage, and ink with thick borders and offset blocks. Rough and punchy.',
+  aiTplDesc_studio: 'Black background with electric yellow text. High-energy and striking.',
+  aiTplDesc_signal:
+    'Deep navy and bone white with one muted gold accent. Formal, with quiet weight.',
+  aiTplDesc_grove:
+    'Forest green background with cream text, classic serif headlines, and one rust accent.',
+  aiTplDesc_editorial_tri_tone:
+    'Three colors in a magazine style: dusty pink, mustard cream, and deep burgundy.',
+  aiTplDesc_emerald_editorial:
+    'Rich green, navy, and off-white. Double rules and big serif titles, like a magazine cover.',
+  aiTplDesc_vellum:
+    'Deep navy with warm yellow serif text and one dusty teal accent. Quiet and scholarly.',
 } satisfies Record<keyof typeof zh, string>
