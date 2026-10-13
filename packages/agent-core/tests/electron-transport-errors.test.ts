@@ -165,7 +165,12 @@ describe('createIpcTransport subscription side channels', () => {
         utilization: 0.86,
         resetsAt: 1_791_879_000_000,
       },
-      { provider: 'claude-code', window: 'seven_day', utilization: 0.08 },
+      {
+        provider: 'claude-code',
+        window: 'seven_day',
+        utilization: 0.08,
+        resetsAt: 1_792_300_000_000,
+      },
     ]
     emit({ type: 'subscription-usage', subscriptionUsage: usage })
     emit({ type: 'subscription-usage' }) // payload-less chunk carries nothing

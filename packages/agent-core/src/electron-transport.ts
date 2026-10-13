@@ -57,8 +57,8 @@ export interface IpcSubscriptionUsage {
   window: 'five_hour' | 'seven_day'
   /** 0 (unused) to 1 (exhausted) */
   utilization: number
-  /** epoch milliseconds; absent when the CLI reported no reset time */
-  resetsAt?: number | undefined
+  /** epoch milliseconds; a window the CLI reports without a reset time is not a usage value */
+  resetsAt: number
 }
 
 /**

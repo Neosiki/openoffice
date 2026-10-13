@@ -73,8 +73,8 @@ export interface AiSubscriptionUsage {
   window: AiUsageWindow
   /** 0 (unused) to 1 (exhausted) */
   utilization: number
-  /** epoch milliseconds; absent when the CLI reported no reset time */
-  resetsAt?: number | undefined
+  /** epoch milliseconds; a window the CLI reports without a reset time is not a usage value */
+  resetsAt: number
 }
 
 /** Machine-readable cause of a failed run; one union shared with the renderer transport */
