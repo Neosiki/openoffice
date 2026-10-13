@@ -596,6 +596,7 @@ describe('the account shown on the Settings card', () => {
           getStatuses: () => statuses,
           check: async () => statuses,
           setMeteredAccepted: async () => ({ ok: true, statuses }),
+          clearMeteredAcceptance: async () => undefined,
           onChange: () => () => undefined,
         },
         launchLogin: async () => ({ ok: true }),

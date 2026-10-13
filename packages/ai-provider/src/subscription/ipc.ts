@@ -17,6 +17,7 @@ import {
   launchSubscriptionInstall,
   launchSubscriptionLogin,
   launchSubscriptionLogout,
+  onSubscriptionLoginChange,
 } from './launch'
 import { createMeteredAcceptanceFileStore } from './metered'
 import { listSubscriptionModels, type SubscriptionModelLister } from './models'
@@ -58,7 +59,8 @@ function failure(error: unknown, provider: AiSubscriptionProviderId): Subscripti
  * Register the request channels of `SUBSCRIPTION_IPC_CHANNELS` on `ipcMain`
  * and forward status changes to the `changed` channel. Payloads come from a
  * renderer and are checked here: an unknown provider is answered with
- * `invalid`, never passed on. Returns a function that undoes the registration.
+ * `invalid`, never passed on. A login or logout the app ran withdraws that
+ * provider's metered acceptance. Returns a function that undoes the registration.
  */
 export function registerSubscriptionIpc(
   ipcMain: SubscriptionIpcMain,
@@ -99,13 +101,14 @@ export function registerSubscriptionIpc(
     [SUBSCRIPTION_IPC_CHANNELS.login]: (event, payload) =>
       launch((provider) => deps.launchLogin(provider))(event, payload),
     // the provider is looked at again before the answer goes back, so the window that asked
-    // already shows the outcome; a logout that failed may have signed the CLI out all the same
+    // already shows the outcome; a logout that failed may have signed the CLI out all the same.
+    // A check of its own time: one already under way may have asked before the logout ended.
     [SUBSCRIPTION_IPC_CHANNELS.logout]: (event, payload) =>
       launch(async (provider) => {
         try {
           return await deps.launchLogout(provider)
         } finally {
-          await service.check([provider]).catch(() => undefined)
+          await service.check([provider], { fresh: true }).catch(() => undefined)
         }
       })(event, payload),
     [SUBSCRIPTION_IPC_CHANNELS.install]: (event, payload) =>
@@ -129,8 +132,15 @@ export function registerSubscriptionIpc(
   const stopListening = deps.broadcast
     ? service.onChange((statuses) => deps.broadcast?.(SUBSCRIPTION_IPC_CHANNELS.changed, statuses))
     : () => undefined
+  // The app ran this provider's login or logout to its end. "Use anyway" was given for the
+  // login before it, and the kind of login cannot tell that one from another account of the
+  // same kind: the acceptance goes, the stored setting and the remembered kind with it.
+  const stopClearing = onSubscriptionLoginChange((provider) => {
+    void service.clearMeteredAcceptance(provider).catch(() => undefined)
+  })
   return () => {
     stopListening()
+    stopClearing()
     for (const channel of Object.keys(handlers)) ipcMain.removeHandler?.(channel)
   }
 }
@@ -152,8 +162,8 @@ export interface SubscriptionIpcSetup {
 /**
  * The real dependencies for `registerSubscriptionIpc`: a status service over
  * the app's settings that also reads each CLI's model list, and the launchers.
- * After a login window closes the provider is checked again, so the UI follows
- * without being asked.
+ * After a login window closes the provider is checked again, by a check that
+ * starts then, so the UI follows without being asked.
  */
 export function createSubscriptionIpcDeps(setup: SubscriptionIpcSetup): SubscriptionIpcDeps {
   const service = createSubscriptionStatusService({
@@ -168,7 +178,8 @@ export function createSubscriptionIpcDeps(setup: SubscriptionIpcSetup): Subscrip
     launchLogin: (provider) =>
       launchSubscriptionLogin(provider, {
         configuredPath: setup.getSettings().providers?.[provider]?.cliPath,
-        onExit: () => void service.check([provider]).catch(() => undefined),
+        // a check of its own time: one already under way may have asked before the login ended
+        onExit: () => void service.check([provider], { fresh: true }).catch(() => undefined),
       }),
     launchLogout: (provider) =>
       launchSubscriptionLogout(provider, {
