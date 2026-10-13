@@ -1,17 +1,31 @@
-import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process'
+import type { ChildProcessWithoutNullStreams } from 'node:child_process'
 import { createHash, randomUUID } from 'node:crypto'
-import { access, mkdtemp, readdir, rm, stat, writeFile } from 'node:fs/promises'
-import { delimiter, dirname, isAbsolute, join, resolve, sep } from 'node:path'
+import { mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { StringDecoder } from 'node:string_decoder'
 import type { AgentImage, AgentMessage, AgentToolCall, AgentToolDef } from '@genoffice/agent-core'
-import type { AiChatResponse, AiProviderConfig, CodexModelCatalog } from './types'
+import type {
+  AiChatResponse,
+  AiProviderConfig,
+  AiSubscriptionUsage,
+  AiUsageWindow,
+  CodexModelCatalog,
+} from './types'
 import {
   parseToolInput,
   throwIfToolCountOverBudget,
   throwIfToolJsonOverBudget,
   type StreamCallbacks,
 } from './protocols/shared'
+import { AiRunError } from './run-error'
+import { resolveSubscriptionProgram, type SubscriptionProgram } from './subscription/locate'
+import {
+  killProcessTree,
+  spawnSubscriptionProgram,
+  type SubscriptionSpawn,
+} from './subscription/process'
+import { codexAccountInfo, setCodexAccountSource } from './subscription/status'
 import { createStreamWatchdog } from './watchdog'
 
 interface CodexAppServerTurn {
@@ -65,6 +79,7 @@ const REQUEST_TIMEOUT_MS = 30_000
 const IDLE_SHUTDOWN_MS = 120_000
 const MAX_NATIVE_SESSIONS = 64
 const MAX_MODEL_PAGES = 10
+const MAX_MCP_STATUS_PAGES = 10
 const CODEX_TEMP_PREFIX = 'genoffice-codex-app-server-'
 const CODEX_BASE_INSTRUCTIONS =
   'You are the language-model backend embedded in GenOffice. Never inspect or modify local files, run shell commands, browse, call MCP, use apps, or invoke any built-in Codex tool. The caller supplies the complete relevant conversation and a JSON Schema. Return exactly one assistant response matching that schema; GenOffice itself executes document tools.'
@@ -160,171 +175,6 @@ export function attachBoundedRpcStdout(
   })
 }
 
-function cleanCliPath(value: string | undefined): string {
-  const trimmed = (value ?? '').trim()
-  if (
-    trimmed.length >= 2 &&
-    ((trimmed.startsWith('"') && trimmed.endsWith('"')) ||
-      (trimmed.startsWith("'") && trimmed.endsWith("'")))
-  ) {
-    return trimmed.slice(1, -1)
-  }
-  return trimmed
-}
-
-interface CodexCliResolutionOptions {
-  /** Override used by tests and portable distributions with the desktop bin tree elsewhere. */
-  managedInstallRoot?: string | undefined
-  env?: NodeJS.ProcessEnv | undefined
-  platform?: NodeJS.Platform | undefined
-}
-
-async function fileExists(path: string): Promise<boolean> {
-  try {
-    return (await stat(path)).isFile()
-  } catch {
-    return false
-  }
-}
-
-function managedCodexRoot(platform: NodeJS.Platform, env: NodeJS.ProcessEnv): string | undefined {
-  if (platform !== 'win32') return undefined
-  const localAppData = env.LOCALAPPDATA ?? env.LocalAppData
-  return localAppData ? join(localAppData, 'OpenAI', 'Codex', 'bin') : undefined
-}
-
-function isInside(path: string, root: string, platform: NodeJS.Platform): boolean {
-  const normalizedPath = resolve(path)
-  const normalizedRoot = resolve(root)
-  const pathValue = platform === 'win32' ? normalizedPath.toLowerCase() : normalizedPath
-  const rootValue = platform === 'win32' ? normalizedRoot.toLowerCase() : normalizedRoot
-  return pathValue === rootValue || pathValue.startsWith(`${rootValue}${sep}`)
-}
-
-async function newestManagedCodex(root: string, platform: NodeJS.Platform): Promise<string | null> {
-  let entries
-  try {
-    entries = await readdir(root, { withFileTypes: true })
-  } catch {
-    return null
-  }
-  const executable = platform === 'win32' ? 'codex.exe' : 'codex'
-  const candidates = await Promise.all(
-    entries
-      .filter((entry) => entry.isDirectory())
-      .map(async (entry) => {
-        const path = join(root, entry.name, executable)
-        try {
-          const [info, directoryInfo] = await Promise.all([
-            stat(path),
-            stat(join(root, entry.name)),
-          ])
-          if (!info.isFile()) return null
-          const companion =
-            platform !== 'win32' ||
-            (await fileExists(join(root, entry.name, 'codex-code-mode-host.exe')))
-          return { path, modified: Math.max(info.mtimeMs, directoryInfo.mtimeMs), companion }
-        } catch {
-          return null
-        }
-      }),
-  )
-  const found = candidates.filter((candidate) => candidate !== null)
-  const complete = found.filter((candidate) => candidate.companion)
-  const pool = complete.length > 0 ? complete : found
-  pool.sort((a, b) => b.modified - a.modified || b.path.localeCompare(a.path))
-  return pool[0]?.path ?? null
-}
-
-/**
- * Finder/Dock-launched Electron inherits a minimal PATH, so the directories
- * npm, Homebrew and version managers install into are probed explicitly.
- */
-async function commonUnixBinDirs(env: NodeJS.ProcessEnv): Promise<string[]> {
-  const home = env.HOME ?? ''
-  const dirs = ['/opt/homebrew/bin', '/usr/local/bin']
-  if (home) {
-    dirs.push(
-      join(home, '.local', 'bin'),
-      join(home, '.npm-global', 'bin'),
-      join(home, '.volta', 'bin'),
-      join(home, '.bun', 'bin'),
-      join(home, '.yarn', 'bin'),
-    )
-    const nvmRoot = join(home, '.nvm', 'versions', 'node')
-    const versions = await readdir(nvmRoot).catch(() => [] as string[])
-    for (const version of versions.sort().reverse()) dirs.push(join(nvmRoot, version, 'bin'))
-  }
-  return dirs
-}
-
-async function codexOnPath(
-  platform: NodeJS.Platform,
-  env: NodeJS.ProcessEnv,
-): Promise<string | null> {
-  const pathValue = env.PATH ?? env.Path ?? env.path ?? ''
-  const names = platform === 'win32' ? ['codex.exe'] : ['codex']
-  const directories = pathValue ? pathValue.split(platform === 'win32' ? ';' : delimiter) : []
-  if (platform !== 'win32') directories.push(...(await commonUnixBinDirs(env)))
-  for (const directory of directories) {
-    const cleanDirectory = cleanCliPath(directory)
-    if (!cleanDirectory) continue
-    for (const name of names) {
-      const candidate = join(cleanDirectory, name)
-      if (!(await fileExists(candidate))) continue
-      if (platform !== 'win32') {
-        try {
-          await access(candidate)
-        } catch {
-          continue
-        }
-      }
-      return candidate
-    }
-  }
-  return null
-}
-
-/**
- * Resolve the current Codex CLI on demand. Desktop-managed paths contain a
- * release hash, so a saved path inside that tree is intentionally treated as
- * automatic and upgraded to the newest complete installation.
- */
-export async function resolveCodexCliPath(
-  configuredPath?: string,
-  options: CodexCliResolutionOptions = {},
-): Promise<string> {
-  const platform = options.platform ?? process.platform
-  const env = options.env ?? process.env
-  const managedRoot = options.managedInstallRoot ?? managedCodexRoot(platform, env)
-  const configured = cleanCliPath(configuredPath)
-
-  if (configured) {
-    const configuredExecutable =
-      isAbsolute(configured) && (await stat(configured).catch(() => null))?.isDirectory()
-        ? join(configured, platform === 'win32' ? 'codex.exe' : 'codex')
-        : configured
-    const managed =
-      managedRoot && isAbsolute(configuredExecutable)
-        ? isInside(configuredExecutable, managedRoot, platform)
-        : false
-    if (!managed) {
-      if (!isAbsolute(configuredExecutable)) return configuredExecutable
-      if (await fileExists(configuredExecutable)) return configuredExecutable
-    }
-  }
-
-  if (managedRoot) {
-    const managed = await newestManagedCodex(managedRoot, platform)
-    if (managed) return managed
-  }
-  const fromPath = await codexOnPath(platform, env)
-  if (fromPath) return fromPath
-  throw new Error(
-    'Codex CLI was not found automatically. Install or open the Codex app, or set a custom codex executable path.',
-  )
-}
-
 function appendDiagnostic(current: string, chunk: Buffer | string): string {
   const next = current + chunk.toString()
   return next.length <= DIAGNOSTIC_LIMIT ? next : next.slice(-DIAGNOSTIC_LIMIT)
@@ -344,20 +194,76 @@ function cancelledError(): Error {
   return error
 }
 
-function codexChildEnv(cliPath: string): NodeJS.ProcessEnv {
-  const env = { ...process.env }
-  // Electron on Windows can omit HOME even though USERPROFILE is present. The
-  // native Codex launcher uses HOME to find its normal login/config directory.
-  if (process.platform === 'win32' && !env.HOME && env.USERPROFILE) env.HOME = env.USERPROFILE
-  if (isAbsolute(cliPath)) {
-    const key = Object.keys(env).find((name) => name.toLowerCase() === 'path') ?? 'PATH'
-    env[key] = `${dirname(cliPath)}${delimiter}${env[key] ?? ''}`
-  }
-  return env
+function unsafeToolsError(message: string): AiRunError {
+  return new AiRunError('unsafe-tools', message, { provider: 'codex' })
 }
 
+function signedOutError(): AiRunError {
+  return new AiRunError(
+    'signed-out',
+    'Codex CLI is not signed in. Run codex login, then try again.',
+    { provider: 'codex' },
+  )
+}
+
+/**
+ * `codex app-server` has no switch that skips the user's `config.toml` (only
+ * `codex exec` has one), so each thing that file can bring into a run is
+ * overridden here. Feature switches go through `-c features.<name>=false`: an
+ * unknown name there is a warning, while after `--disable` it stops Codex from
+ * starting. The login is untouched; it is read from the same Codex home.
+ * MCP servers are named tables that cannot be emptied from here; they are
+ * switched off per thread (see `codexMcpServerOverrides`).
+ */
+const CODEX_CONFIG_OVERRIDES = [
+  // user hooks, plugins (with their MCP servers, skills and hooks), ChatGPT
+  // connectors, and personal memories
+  'features.hooks=false',
+  'features.plugins=false',
+  'features.apps=false',
+  'features.memories=false',
+  // the program the user has Codex run after each turn
+  'notify=[]',
+  // no prompt history file
+  'history.persistence="none"',
+  // the built-in OpenAI provider on its default address, whatever provider or
+  // address (a proxy, another vendor) the user configured: empty is "not set"
+  'model_provider="openai"',
+  'openai_base_url=""',
+  // the list of the user's skills is not added to the prompt
+  'skills.include_instructions=false',
+]
+
 export function codexAppServerLaunchArgs(): string[] {
-  return ['app-server', '--listen', 'stdio://']
+  return [
+    'app-server',
+    ...CODEX_CONFIG_OVERRIDES.flatMap((override) => ['-c', override]),
+    '--listen',
+    'stdio://',
+  ]
+}
+
+/** How the bridge finds, starts and ends the Codex program */
+export interface CodexAppServerRuntime {
+  resolve: typeof resolveSubscriptionProgram
+  /** the process spawner handed to `spawnSubscriptionProgram`; Node's own when absent */
+  spawn: SubscriptionSpawn | undefined
+  killTree: typeof killProcessTree
+}
+
+const defaultRuntime: CodexAppServerRuntime = {
+  resolve: resolveSubscriptionProgram,
+  spawn: undefined,
+  killTree: killProcessTree,
+}
+let runtime = defaultRuntime
+
+/** For tests: replace parts of the runtime. Returns a function that puts the real one back. */
+export function setCodexAppServerRuntime(overrides: Partial<CodexAppServerRuntime>): () => void {
+  runtime = { ...defaultRuntime, ...overrides }
+  return () => {
+    runtime = defaultRuntime
+  }
 }
 
 class CodexAppServerClient {
@@ -371,25 +277,36 @@ class CodexAppServerClient {
   private closed = false
   private users = 0
   private idleTimer: ReturnType<typeof setTimeout> | undefined
+  private readonly closeListeners = new Set<(error: Error) => void>()
+  private stopWhenReleased = false
 
   constructor(
-    readonly cliPath: string,
-    private readonly onClose: () => void,
+    program: SubscriptionProgram,
+    private readonly onClosed: () => void,
   ) {
-    this.child = spawn(cliPath, codexAppServerLaunchArgs(), {
-      env: codexChildEnv(cliPath),
+    // Sanitised environment, no shell, registered so that quitting or crashing ends it. The
+    // temp dir as working directory keeps the project configuration of wherever the app was
+    // started out of the process.
+    this.child = spawnSubscriptionProgram(program, codexAppServerLaunchArgs(), {
+      cwd: tmpdir(),
       stdio: ['pipe', 'pipe', 'pipe'],
-      windowsHide: true,
-    })
+      spawn: runtime.spawn,
+    }) as ChildProcessWithoutNullStreams
     attachBoundedRpcStdout(
-      this.child,
+      { stdout: this.child.stdout, kill: () => runtime.killTree(this.child) },
       (line) => this.onLine(line),
       (error) => this.fail(error),
     )
     this.child.stderr.on('data', (chunk: Buffer) => {
       this.stderr = appendDiagnostic(this.stderr, chunk)
     })
-    this.child.once('error', (error) => this.fail(error))
+    this.child.once('error', (error) =>
+      this.fail(
+        (error as NodeJS.ErrnoException).code === 'ENOENT'
+          ? new AiRunError('not-installed', 'Codex CLI was not found', { provider: 'codex' })
+          : error,
+      ),
+    )
     this.child.once('close', (code) => {
       const detail = this.stderr.trim()
       this.fail(
@@ -412,8 +329,20 @@ class CodexAppServerClient {
   release(): void {
     this.users = Math.max(0, this.users - 1)
     if (this.users > 0 || this.closed) return
+    if (this.stopWhenReleased) {
+      this.close()
+      return
+    }
     this.idleTimer = setTimeout(() => this.close(), IDLE_SHUTDOWN_MS)
     this.idleTimer.unref?.()
+  }
+
+  /**
+   * A cancelled run must not leave the process, or anything it started, behind. The process is
+   * shared, so it ends as soon as no other run is using it.
+   */
+  stopWhenUnused(): void {
+    this.stopWhenReleased = true
   }
 
   async ready(): Promise<void> {
@@ -432,6 +361,12 @@ class CodexAppServerClient {
   onNotification(listener: (message: RpcMessage) => void): () => void {
     this.notificationListeners.add(listener)
     return () => this.notificationListeners.delete(listener)
+  }
+
+  /** Called once with the reason when the process is gone, however it ended */
+  onClose(listener: (error: Error) => void): () => void {
+    this.closeListeners.add(listener)
+    return () => this.closeListeners.delete(listener)
   }
 
   getSession(id: string): NativeSession | undefined {
@@ -466,8 +401,8 @@ class CodexAppServerClient {
     }
   }
 
-  stop(): void {
-    this.close()
+  stop(reason?: Error): void {
+    this.close(reason)
   }
 
   private async initialize(): Promise<void> {
@@ -536,6 +471,15 @@ class CodexAppServerClient {
       return
     }
     if (typeof message.method === 'string') {
+      if (message.method === 'mcpServer/startupStatus/updated') {
+        // Every thread of this process has its MCP servers switched off, so one starting means
+        // the switch-off did not hold. Nothing may run with it attached.
+        const status = objectValue(message.params)?.status
+        if (status === 'starting' || status === 'ready') {
+          this.close(unsafeToolsError('Codex started an MCP server that was switched off'))
+          return
+        }
+      }
       for (const listener of this.notificationListeners) listener(message)
     }
   }
@@ -552,15 +496,20 @@ class CodexAppServerClient {
     for (const session of this.sessions.values()) this.disposeSession(session, false)
     this.sessions.clear()
     this.notificationListeners.clear()
-    this.onClose()
+    // a turn waits on notifications, not on a request: tell it the process is gone
+    const closeListeners = [...this.closeListeners]
+    this.closeListeners.clear()
+    for (const listener of closeListeners) listener(error)
+    this.onClosed()
   }
 
-  private close(): void {
+  private close(reason?: Error): void {
     if (this.closed) return
     try {
-      this.child.kill()
+      // the whole tree: Codex starts helper processes of its own
+      runtime.killTree(this.child)
     } finally {
-      this.fail(new Error('Codex app-server stopped after being idle'))
+      this.fail(reason ?? new Error('Codex app-server stopped after being idle'))
     }
   }
 }
@@ -574,11 +523,11 @@ export function shutdownCodexAppServers(): void {
 }
 
 async function clientFor(cliPathValue: string | undefined): Promise<CodexAppServerClient> {
-  const cliPath = await resolveCodexCliPath(cliPathValue)
-  const key = process.platform === 'win32' ? cliPath.toLowerCase() : cliPath
+  const program = await runtime.resolve('codex', { configuredPath: cliPathValue })
+  const key = process.platform === 'win32' ? program.entry.toLowerCase() : program.entry
   const existing = clients.get(key)
   if (existing && !existing.isClosed) return existing
-  const client = new CodexAppServerClient(cliPath, () => {
+  const client = new CodexAppServerClient(program, () => {
     if (clients.get(key) === client) clients.delete(key)
   })
   clients.set(key, client)
@@ -588,6 +537,7 @@ async function clientFor(cliPathValue: string | undefined): Promise<CodexAppServ
 async function withClient<T>(
   cliPath: string | undefined,
   action: (client: CodexAppServerClient) => Promise<T>,
+  signal?: AbortSignal,
 ): Promise<T> {
   const client = await clientFor(cliPath)
   client.retain()
@@ -595,6 +545,8 @@ async function withClient<T>(
     await client.ready()
     return await action(client)
   } finally {
+    // cancelled by the user or by the watchdog, at whatever step
+    if (signal?.aborted) client.stopWhenUnused()
     client.release()
   }
 }
@@ -808,6 +760,7 @@ export function codexThreadStartParams(
   config: AiProviderConfig,
   tempDir: string,
   mode: 'profile' | 'read-only',
+  mcpServers: CodexMcpServerOverrides = {},
 ): Record<string, unknown> {
   const base = {
     ...(config.model.trim() ? { model: config.model.trim() } : {}),
@@ -815,9 +768,13 @@ export function codexThreadStartParams(
     approvalPolicy: 'never',
     serviceName: 'genoffice',
     baseInstructions: CODEX_BASE_INSTRUCTIONS,
+    // nothing of the thread is written to the user's Codex home
     ephemeral: true,
   }
-  if (mode === 'read-only') return { ...base, sandbox: 'read-only' }
+  const mcp = Object.keys(mcpServers).length > 0 ? { mcp_servers: mcpServers } : undefined
+  if (mode === 'read-only') {
+    return { ...base, sandbox: 'read-only', ...(mcp ? { config: mcp } : {}) }
+  }
   return {
     ...base,
     config: {
@@ -825,6 +782,7 @@ export function codexThreadStartParams(
       permissions: {
         [CODEX_PERMISSION_PROFILE]: { filesystem: { ':minimal': 'read', [tempDir]: 'read' } },
       },
+      ...mcp,
     },
   }
 }
@@ -834,16 +792,110 @@ export function activePermissionProfileId(result: unknown): string | undefined {
   return typeof active?.id === 'string' ? active.id : undefined
 }
 
+export type CodexMcpServerOverrides = Record<string, { enabled: false }>
+
+/**
+ * The per-thread override that switches off every MCP server in the
+ * configuration Codex reports (`config/read`). A launch argument cannot do
+ * this: an override table is merged into the user's, so the servers have to
+ * be named. Only the names are read; a server's command and environment are
+ * not looked at.
+ */
+export function codexMcpServerOverrides(configRead: unknown): CodexMcpServerOverrides {
+  const config = objectValue(objectValue(configRead)?.config)
+  if (!config) throw new Error('Codex app-server did not return its configuration')
+  const overrides: CodexMcpServerOverrides = {}
+  for (const name of Object.keys(objectValue(config.mcp_servers) ?? {})) {
+    overrides[name] = { enabled: false }
+  }
+  return overrides
+}
+
+/**
+ * Names of the MCP servers a thread can use, from `mcpServerStatus/list` for
+ * that thread: a server in any state but `disabled`, or one that lists a tool.
+ * Throws when the value is not such a list, because then nothing is known.
+ */
+export function codexAttachedMcpServers(statusList: unknown): string[] {
+  const data = objectValue(statusList)?.data
+  if (!Array.isArray(data)) throw new Error('Codex app-server did not list its MCP servers')
+  const attached: string[] = []
+  for (const value of data) {
+    const entry = objectValue(value)
+    if (!entry) throw new Error('Codex app-server did not list its MCP servers')
+    const enabled = typeof entry.runtimeStatus === 'string' && entry.runtimeStatus !== 'disabled'
+    const tools = Object.keys(objectValue(entry.tools) ?? {}).length
+    if (enabled || tools > 0) attached.push(typeof entry.name === 'string' ? entry.name : '')
+  }
+  return attached
+}
+
+/**
+ * The run is refused unless Codex itself confirms that the thread has no MCP
+ * server: the switch-off is checked by its result, not trusted. A thread that
+ * cannot be checked counts as unsafe, and the process is ended with it.
+ */
+async function assertNoMcpServers(client: CodexAppServerClient, threadId: string): Promise<void> {
+  let attached = 0
+  let checked: boolean
+  try {
+    let cursor: string | null = null
+    for (let page = 0; page < MAX_MCP_STATUS_PAGES; page++) {
+      const result = await client.request('mcpServerStatus/list', {
+        threadId,
+        detail: 'toolsAndAuthOnly',
+        cursor,
+        limit: 100,
+      })
+      attached += codexAttachedMcpServers(result).length
+      const next = objectValue(result)?.nextCursor
+      cursor = typeof next === 'string' && next ? next : null
+      if (!cursor) break
+    }
+    checked = cursor === null
+  } catch {
+    checked = false
+  }
+  if (checked && attached === 0) return
+  const error = unsafeToolsError(
+    checked
+      ? 'Codex attached an MCP server to the run although all of them were switched off'
+      : 'Codex could not confirm that no MCP server is attached to the run',
+  )
+  client.stop(error)
+  throw error
+}
+
 async function startNativeThread(
   client: CodexAppServerClient,
   config: AiProviderConfig,
   tempDir: string,
 ): Promise<string> {
+  let mcpServers: CodexMcpServerOverrides
+  try {
+    mcpServers = codexMcpServerOverrides(
+      await client.request('config/read', { includeLayers: false, cwd: tempDir }),
+    )
+  } catch {
+    // without the names nothing can be switched off, so nothing is started
+    throw unsafeToolsError('Codex could not report its configured MCP servers')
+  }
+  const threadId = await startThreadWithPermissions(client, config, tempDir, mcpServers)
+  await assertNoMcpServers(client, threadId)
+  return threadId
+}
+
+async function startThreadWithPermissions(
+  client: CodexAppServerClient,
+  config: AiProviderConfig,
+  tempDir: string,
+  mcpServers: CodexMcpServerOverrides,
+): Promise<string> {
   let profileResult: unknown
   try {
     profileResult = await client.request(
       'thread/start',
-      codexThreadStartParams(config, tempDir, 'profile'),
+      codexThreadStartParams(config, tempDir, 'profile', mcpServers),
     )
     if (activePermissionProfileId(profileResult) === CODEX_PERMISSION_PROFILE) {
       return threadIdFrom(profileResult)
@@ -859,13 +911,120 @@ async function startNativeThread(
     await client.request('thread/delete', { threadId: abandoned }).catch(() => undefined)
   }
   return threadIdFrom(
-    await client.request('thread/start', codexThreadStartParams(config, tempDir, 'read-only')),
+    await client.request(
+      'thread/start',
+      codexThreadStartParams(config, tempDir, 'read-only', mcpServers),
+    ),
   )
 }
+
+const USAGE_WINDOWS: Record<number, AiUsageWindow> = { 300: 'five_hour', 10080: 'seven_day' }
+
+interface CodexRateLimitWindow {
+  usedPercent: number
+  minutes: number | undefined
+  /** epoch milliseconds */
+  resetsAt: number | undefined
+}
+
+function finiteNumber(value: unknown): number | undefined {
+  return typeof value === 'number' && Number.isFinite(value) ? value : undefined
+}
+
+/** The windows of a `RateLimitSnapshot` (`account/rateLimits/updated`, `account/rateLimits/read`) */
+function rateLimitWindows(snapshot: unknown): CodexRateLimitWindow[] {
+  const value = objectValue(snapshot)
+  const windows: CodexRateLimitWindow[] = []
+  for (const key of ['primary', 'secondary']) {
+    const window = objectValue(value?.[key])
+    const usedPercent = finiteNumber(window?.usedPercent)
+    if (!window || usedPercent === undefined) continue
+    // Codex reports the reset time in epoch seconds
+    const resetsAt = finiteNumber(window.resetsAt)
+    windows.push({
+      usedPercent,
+      minutes: finiteNumber(window.windowDurationMins),
+      resetsAt: resetsAt !== undefined && resetsAt > 0 ? resetsAt * 1000 : undefined,
+    })
+  }
+  return windows
+}
+
+/**
+ * The usage Codex reports, as the windows the app shows. Codex names a window
+ * by its length: five hours and seven days are passed on, any other length
+ * (the free plan has one 30-day window) is not. A window without a reset time
+ * is not a usage value, and neither is a snapshot of another limit than the
+ * account's main one.
+ */
+export function codexSubscriptionUsage(snapshot: unknown): AiSubscriptionUsage[] {
+  const limitId = objectValue(snapshot)?.limitId
+  if (limitId != null && limitId !== 'codex') return []
+  const usage: AiSubscriptionUsage[] = []
+  for (const window of rateLimitWindows(snapshot)) {
+    const name = window.minutes === undefined ? undefined : USAGE_WINDOWS[window.minutes]
+    if (!name || window.resetsAt === undefined) continue
+    usage.push({
+      provider: 'codex',
+      window: name,
+      utilization: Math.min(1, Math.max(0, window.usedPercent / 100)),
+      resetsAt: window.resetsAt,
+    })
+  }
+  return usage
+}
+
+/** When an exhausted limit is usable again: the latest reset among the windows that are used up */
+function limitResetTime(snapshot: unknown): number | undefined {
+  const resets = rateLimitWindows(snapshot)
+    .filter((window) => window.usedPercent >= 100 && window.resetsAt !== undefined)
+    .map((window) => window.resetsAt!)
+  return resets.length > 0 ? Math.max(...resets) : undefined
+}
+
+function httpStatusOf(codexErrorInfo: unknown): number | undefined {
+  for (const detail of Object.values(objectValue(codexErrorInfo) ?? {})) {
+    const status = finiteNumber(objectValue(detail)?.httpStatusCode)
+    if (status !== undefined) return status
+  }
+  return undefined
+}
+
+function isUsageLimitError(turnError: unknown): boolean {
+  return objectValue(turnError)?.codexErrorInfo === 'usageLimitExceeded'
+}
+
+/**
+ * The error of a failed turn (`TurnError`: `message` plus `codexErrorInfo`) as
+ * the error the app reports. A used-up subscription limit and a rejected login
+ * get their own kinds; `rateLimits` is the last snapshot Codex gave, for the
+ * reset time. Everything else keeps Codex's message.
+ */
+export function codexRunError(turnError: unknown, rateLimits?: unknown): Error {
+  const value = objectValue(turnError)
+  const message =
+    typeof value?.message === 'string' && value.message ? value.message : 'Codex turn failed'
+  const info = value?.codexErrorInfo
+  if (info === 'usageLimitExceeded') {
+    const resetsAt = limitResetTime(rateLimits)
+    return new AiRunError('rate-limit', message, {
+      provider: 'codex',
+      ...(resetsAt !== undefined ? { resetsAt } : {}),
+    })
+  }
+  if (info === 'unauthorized' || httpStatusOf(info) === 401) {
+    return new AiRunError('signed-out', message, { provider: 'codex' })
+  }
+  return new Error(message)
+}
+
+const RATE_LIMIT_READ_TIMEOUT_MS = 5_000
 
 export interface CodexTurnTransport {
   request(method: string, params: unknown): Promise<unknown>
   onNotification(listener: (message: RpcMessage) => void): () => void
+  /** the process ended; without it a turn only ends by its own notifications */
+  onClose?(listener: (error: Error) => void): () => void
 }
 
 export async function waitForTurn(
@@ -879,14 +1038,32 @@ export async function waitForTurn(
   let turnId = ''
   let finalText = ''
   let settled = false
+  /** the last error Codex reported for the turn; it decides nothing until the turn itself ends */
+  let reportedError: unknown
+  let rateLimits: unknown
   return new Promise<string>((resolve, reject) => {
     const finish = (error?: Error) => {
       if (settled) return
       settled = true
       unsubscribe()
+      unsubscribeClose?.()
       signal.removeEventListener('abort', onAbort)
       if (error) reject(error)
       else resolve(finalText)
+    }
+    const fail = (turnError: unknown) => {
+      if (!isUsageLimitError(turnError) || limitResetTime(rateLimits) !== undefined) {
+        finish(codexRunError(turnError, rateLimits))
+        return
+      }
+      // The turn did not come with the limits; ask for them, briefly, for the reset time.
+      const timeout = new Promise<undefined>((done) => {
+        const timer = setTimeout(() => done(undefined), RATE_LIMIT_READ_TIMEOUT_MS)
+        timer.unref?.()
+      })
+      void Promise.race([client.request('account/rateLimits/read', undefined), timeout])
+        .catch(() => undefined)
+        .then((result) => finish(codexRunError(turnError, objectValue(result)?.rateLimits)))
     }
     let interrupted = false
     const interrupt = () => {
@@ -900,8 +1077,16 @@ export async function waitForTurn(
     }
     const unsubscribe = client.onNotification((message) => {
       const params = objectValue(message.params)
+      if (message.method === 'account/rateLimits/updated') {
+        // account-wide, so it carries no thread id
+        rateLimits = params?.rateLimits
+        const usage = codexSubscriptionUsage(rateLimits)
+        if (usage.length > 0) cb.onSubscriptionUsage?.(usage)
+        return
+      }
       if (params?.threadId !== threadId) return
-      cb.onActivity?.()
+      // A reconnect notice is not data: while only those arrive, the idle timeout keeps running.
+      if (message.method !== 'error' || params.willRetry !== true) cb.onActivity?.()
       const eventTurnId = typeof params.turnId === 'string' ? params.turnId : ''
       if (turnId && eventTurnId && eventTurnId !== turnId) return
       if (message.method === 'turn/started') {
@@ -917,10 +1102,7 @@ export async function waitForTurn(
         if (typeof turn?.id === 'string') turnId = turn.id
         if (!finalText) finalText = finalMessageFromTurn(params)
         if (turn?.status === 'failed') {
-          const error = objectValue(turn.error)
-          finish(
-            new Error(typeof error?.message === 'string' ? error.message : 'Codex turn failed'),
-          )
+          fail(turn.error ?? reportedError)
         } else {
           finish()
         }
@@ -928,10 +1110,14 @@ export async function waitForTurn(
         // willRetry: a dropped model stream Codex reconnects on its own ("Reconnecting... 2/5");
         // the turn is still live and ends with turn/completed.
         if (params.willRetry === true) return
-        const error = objectValue(params.error) ?? params
-        finish(new Error(typeof error?.message === 'string' ? error.message : 'Codex turn failed'))
+        // Codex reports warnings this way too, so an error alone does not fail the turn: the
+        // turn's own outcome (turn/completed, or the process ending) does.
+        reportedError = objectValue(params.error) ?? params
       }
     })
+    const unsubscribeClose = client.onClose?.((error) =>
+      finish(error instanceof AiRunError || !reportedError ? error : codexRunError(reportedError)),
+    )
     signal.addEventListener('abort', onAbort, { once: true })
     void start()
       .then((result) => {
@@ -956,7 +1142,8 @@ async function runCodexAppServer(
   // One-shot chats and the connection test have no reusable transport id, so
   // their thread and temp dir are dropped as soon as the turn ends.
   const ephemeral = cb.sessionId === undefined
-  await withClient(config.cliPath, async (client) => {
+  const run = async (client: CodexAppServerClient): Promise<void> => {
+    await assertRunnableAccount(client)
     const signature = sessionSignature(system, tools, config.model.trim())
     let session = client.getSession(nativeSessionId)
     let nextMessages = incrementalMessages(session, signature, messages)
@@ -1002,7 +1189,8 @@ async function runCodexAppServer(
     } finally {
       if (ephemeral) client.deleteSession(nativeSessionId)
     }
-  })
+  }
+  await withClient(config.cliPath, run, cb.signal)
 }
 
 export async function streamCodexAppServer(
@@ -1047,11 +1235,73 @@ export async function chatCodexAppServer(
     : { ok: false, error: 'Codex app-server returned no content' }
 }
 
+/**
+ * The kind of login the status check last read through this bridge
+ * (`signed-out` when it found none). Undefined until a status check ran.
+ */
+let statusLoginKind: string | undefined
+
+function abortError(): Error {
+  const error = new Error('The Codex account check was cancelled')
+  error.name = 'AbortError'
+  return error
+}
+
+/**
+ * The app-server's `account/read` result, as is: what kind of login Codex is
+ * on (`chatgpt` with a plan, `apiKey`, …). It is what the subscription status
+ * check asks for; `codexAccountInfo` there maps it and drops the email. The
+ * login itself is never read: Codex only says what kind it is.
+ */
+export async function readCodexAccount(cliPath?: string, signal?: AbortSignal): Promise<unknown> {
+  if (signal?.aborted) throw abortError()
+  const read = withClient(cliPath, async (client) => {
+    const account = await client.request('account/read', { refreshToken: false })
+    const login = codexAccountInfo(account)
+    if (login) statusLoginKind = login.signedIn ? login.loginKind : 'signed-out'
+    return account
+  }).catch((error: unknown) => {
+    // the status check went on without this reading, so it is no longer what the check saw
+    statusLoginKind = undefined
+    throw error
+  })
+  if (!signal) return read
+  return new Promise((resolve, reject) => {
+    const onAbort = (): void => reject(abortError())
+    signal.addEventListener('abort', onAbort, { once: true })
+    read.then(resolve, reject).finally(() => signal.removeEventListener('abort', onAbort))
+  })
+}
+
+setCodexAccountSource(({ configuredPath, signal }) => readCodexAccount(configuredPath, signal))
+
+/**
+ * Whether Codex may be used on a metered login (an API key, say) is decided
+ * where the provider is selected, from the status check and the user's "use
+ * anyway". That decision is about the login the status check saw. So a run is
+ * stopped here in the one case the selection cannot see: Codex is now on a
+ * metered login of another kind than the status check last read (the user
+ * switched logins since). The next status check picks the new login up.
+ */
+async function assertRunnableAccount(client: CodexAppServerClient): Promise<void> {
+  const login = codexAccountInfo(await client.request('account/read', { refreshToken: false }))
+  if (!login) return
+  if (!login.signedIn) throw signedOutError()
+  if (login.loginMethod === 'subscription') return
+  if (statusLoginKind !== undefined && statusLoginKind !== login.loginKind) {
+    throw new AiRunError(
+      'metered-not-accepted',
+      'Codex is signed in with a login that is billed by usage, which has not been accepted',
+      { provider: 'codex' },
+    )
+  }
+}
+
 export async function listCodexModels(cliPath?: string): Promise<CodexModelCatalog> {
   return withClient(cliPath, async (client) => {
     const account = objectValue(await client.request('account/read', { refreshToken: false }))
     if (account?.requiresOpenaiAuth === true && account.account == null) {
-      throw new Error('Codex CLI is not signed in. Run codex login, then try again.')
+      throw signedOutError()
     }
     const models: string[] = []
     let defaultModel = ''
