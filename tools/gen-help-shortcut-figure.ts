@@ -49,6 +49,7 @@ import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 
+import { HOME_DIR_NAME } from '../packages/cli/src/names'
 import { buildBlankDocx } from '../packages/docx-engine/src/blank'
 
 const REPO = resolve(__dirname, '..')
@@ -103,7 +104,7 @@ async function main(): Promise<void> {
         ...hostEnv,
         HOME: home,
         GENOFFICE_USER_DATA: userData,
-        GENOFFICE_AUTH_DIR: join(home, '.genoffice'),
+        GENOFFICE_AUTH_DIR: join(home, HOME_DIR_NAME),
         GENOFFICE_NO_SPARE_VIEW: '1',
         GENOFFICE_LANG: lang,
       },

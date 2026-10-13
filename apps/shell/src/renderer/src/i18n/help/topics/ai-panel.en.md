@@ -4,13 +4,18 @@ Every editor can summon the AI panel: select something, give an instruction, wat
 
 ## Opening and using it
 
-![The AI panel in Docs](img/ai-panel.png)
-
+- The panel needs a connected AI. With none connected it shows the connect cards instead of an error; see [Subscription connection](help://subscription).
 - Entries: the **AI button** in each editor's ribbon, **Ask AI** in context menus, or Ask AI on the markup bar.
 - Describe the task in plain language (rewrite this / make this column percentages / re-layout this page...) and press Enter.
 - Replies render **streamed**; when the AI needs tools (read the document, edit it) it executes and continues until done.
 - **Stop**: interrupt the current turn at any time.
 - **Queueing**: while a reply is streaming, Enter queues your message instead — a strip above the input counts them; open it to edit, remove, reorder, pause or clear. The next message sends itself when the turn ends; Esc still stops the turn.
+
+## Which AI answers
+
+- The model list at the bottom of the panel shows the AI in use and lets you choose another: your subscriptions first, then the key providers you have set up.
+- Once you have used 80% or more of a subscription limit, a line such as "85% used · resets at 3:00 PM" appears in the panel.
+- If a request is stopped — the limit is used up, or the login has expired — the panel says why and does not switch to another AI by itself. When your other subscription is connected, a **Continue with …** button offers it.
 
 ## What it can do
 
@@ -36,5 +41,6 @@ Every editor can summon the AI panel: select something, give an instruction, wat
 
 ## Privacy
 
-- Instructions and the relevant document content go to the **model service you configured** (Genspark hosted or a custom endpoint, next chapter); no configuration, no sending.
-- Local files are uploaded nowhere else; BYOK keys are stored in the app's settings file on this machine and sent only in request headers.
+- Instructions and the relevant document content go to the **AI you are using**: to Anthropic or OpenAI under your own account when you use a subscription, or to the provider whose key you entered. With no AI connected, nothing is sent.
+- Whether a subscription's content is used to train AI is decided by your own account settings at that company.
+- Local files are uploaded nowhere else; API keys are stored in the app's settings file on this machine and sent only in request headers.

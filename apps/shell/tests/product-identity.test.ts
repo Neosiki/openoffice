@@ -122,7 +122,7 @@ describe('the name in the shell UI', () => {
       }
     }
     // file names keep the Latin name whatever the language
-    expect(await helpBody('install', 'ko')).toContain('IeumOffice-<version>.AppImage')
+    expect(await helpBody('install', 'ko')).toContain('IeumOffice-Setup-<version>.exe')
     expect(await helpBody('getting-started', 'ko')).toContain('이음오피스')
   })
 })

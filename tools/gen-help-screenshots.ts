@@ -11,18 +11,21 @@
  *
  * ## Why HOME and not just GENOFFICE_USER_DATA
  *
- * The account name is not in userData at all. `gskApiKey()` reads
- * `~/.genspark-tool-cli/config.json` through `homedir()`, and GENOFFICE_USER_DATA
- * says nothing about that — so a run that only overrides userData still finds
- * the developer's key and greets them by name (verified: that is what a local
- * e2e run does today). HOME is the one lever that covers both it and the
- * `~/.genoffice/bin` shim. `GENOFFICE_AUTH_DIR` is not enough on its own: it
- * redirects GenOffice's own key and leaves the shared gsk CLI config in place.
+ * userData holds the app's own settings, but the command-line launcher record
+ * lives under the home directory (`~/.ieumoffice`), and GENOFFICE_USER_DATA says
+ * nothing about that. HOME and `GENOFFICE_AUTH_DIR` keep it inside the scratch
+ * profile too, so nothing of the developer's own session is read or written.
  *
- * With no key, `gskLoginInfo()` returns null, the app reads as signed out, and
- * the greeting, the account row and the Genspark Projects entry all disappear —
- * which is also the state every CI run and every user without a Genspark account
- * is in. Nothing of the developer's own session is read or written.
+ * ## What the scratch profile cannot pin
+ *
+ * The account row and Settings → Account show where the Claude and Codex
+ * subscriptions stand. That is read from the programs installed on the
+ * capturing machine, not from a file this script controls. No account name or
+ * e-mail appears — only "Connect AI", or the provider's name and plan — but the
+ * figures differ between a machine with a connected subscription and one
+ * without. Capture where neither program is signed in for the not-connected
+ * state. The first-connection notice is marked as seen below, so its dialog
+ * never covers the window.
  */
 import {
   _electron as electron,
@@ -36,6 +39,8 @@ import { mkdtempSync, mkdirSync, rmSync, utimesSync, writeFileSync } from 'node:
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 
+import { HOME_DIR_NAME } from '../packages/cli/src/names'
+import { PRODUCT_NAME } from '../packages/i18n/src/product'
 import { buildBlankDocx } from '../packages/docx-engine/src/blank'
 import { createBlankPptx } from '../packages/pptx-engine/src/blank'
 import { buildSheetsFixture } from '../apps/sheets/tests/fixture-builder'
@@ -60,7 +65,7 @@ function minimalPdf(): Buffer {
     null, // stream, filled below
     '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
   ]
-  const stream = `BT /F1 18 Tf 72 700 Td (GenOffice Manual Sample) Tj ET\nBT /F1 11 Tf 72 660 Td (This paragraph is here so you can try text selection.) Tj ET\nBT /F1 11 Tf 72 620 Td (SECRET ONE needs redaction.) Tj ET\nBT /F1 11 Tf 72 580 Td (More filler text on the sample page.) Tj ET`
+  const stream = `BT /F1 18 Tf 72 700 Td (${PRODUCT_NAME} Manual Sample) Tj ET\nBT /F1 11 Tf 72 660 Td (This paragraph is here so you can try text selection.) Tj ET\nBT /F1 11 Tf 72 620 Td (SECRET ONE needs redaction.) Tj ET\nBT /F1 11 Tf 72 580 Td (More filler text on the sample page.) Tj ET`
   objects[3] = `<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`
   let pdf = '%PDF-1.4\n'
   const offsets: number[] = []
@@ -95,7 +100,7 @@ async function makeScratch(): Promise<Scratch> {
   // /var/folders/<xx>/<per-user-hash>/T, so it differs per machine. This has to
   // be absolute and creatable, which is all resolveDefaultSaveDir asks of a
   // configured dir.
-  const saveDir = process.platform === 'win32' ? 'C:\\GenOffice' : '/tmp/GenOffice'
+  const saveDir = process.platform === 'win32' ? `C:\\${PRODUCT_NAME}` : `/tmp/${PRODUCT_NAME}`
   for (const dir of [home, userData, samples, saveDir]) mkdirSync(dir, { recursive: true })
 
   // the file list the Home figure shows; types only — the figures are about
@@ -135,6 +140,13 @@ async function makeScratch(): Promise<Scratch> {
       2,
     ),
   )
+  // The first-connection notice is a dialog that closes only by being
+  // acknowledged, and it comes up on a machine with a connected subscription.
+  // An empty providers table is what makes the file read as a current one.
+  writeFileSync(
+    join(userData, 'ai-settings.json'),
+    JSON.stringify({ providers: {}, subscriptionNoticeSeen: true }, null, 2),
+  )
 
   return { home, userData, samples, dispose: () => rmSync(root, { recursive: true, force: true }) }
 }
@@ -153,7 +165,7 @@ async function launch(scratch: Scratch, lang: string): Promise<ElectronApplicati
       ...hostEnv,
       HOME: scratch.home,
       GENOFFICE_USER_DATA: scratch.userData,
-      GENOFFICE_AUTH_DIR: join(scratch.home, '.genoffice'),
+      GENOFFICE_AUTH_DIR: join(scratch.home, HOME_DIR_NAME),
       GENOFFICE_NO_SPARE_VIEW: '1',
       GENOFFICE_LANG: lang,
     },
@@ -204,15 +216,6 @@ async function shoot(page: Page, cdp: CDPSession, name: string, lang: string): P
   process.stdout.write(`wrote ${name}.${lang}.png\n`)
 }
 
-/** Dismiss the star prompt: it is a promo overlay, not part of the screen the
- *  figure is documenting, and it sits over the file list. */
-async function dismissStarPrompt(page: Page): Promise<void> {
-  const close = page.locator('.star-prompt button, .star-prompt [aria-label]').last()
-  if (await close.count()) await close.click().catch(() => {})
-  await page.keyboard.press('Escape').catch(() => {})
-  await page.waitForTimeout(300)
-}
-
 async function main(): Promise<void> {
   mkdirSync(OUT_DIR, { recursive: true })
   for (const lang of TARGET_LANGS) {
@@ -222,8 +225,6 @@ async function main(): Promise<void> {
       app = await launch(scratch, lang)
       const page = app.windows()[0] ?? (await app.firstWindow())
       const cdp = await frame(page)
-
-      await dismissStarPrompt(page)
 
       // The folder view is the figure: it carries everything the landing view
       // has (the quick-start cards) plus the folders, the file table and the
@@ -254,7 +255,7 @@ async function main(): Promise<void> {
         throw new Error(`folder view did not list files; rows on screen: ${seen}`)
       }
 
-      // 1. the Home screen, signed out, listing the sample files
+      // 1. the Home screen, listing the sample files
       await shoot(page, cdp, 'home-screen', lang)
 
       // 2. the same list with a file's own menu open — the surface the
@@ -288,8 +289,8 @@ async function main(): Promise<void> {
       //    its aria-label is localized, so match the class rather than the text.
       //    Two panes, each saved under the name of the pane it actually shows:
       //    General is where the manual's own subjects live — language and theme,
-      //    plus the analytics and AutoSave switches — and Account is where the
-      //    e-mail used to leak from. Integrations is the pane the MCP topic is
+      //    plus the AutoSave switch — and Account is where the subscription
+      //    state shows. Integrations is the pane the MCP topic is
       //    about, so it gets its own figure rather than a stand-in.
       await page.locator('.account-btn').click()
       const nav = page.locator('.set-nav-item')

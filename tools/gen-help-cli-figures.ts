@@ -5,7 +5,7 @@
  *
  * The other fourteen figures are the running app. `install`, `cli` and `mcp` are
  * not screens, so they cannot be captured the way the app is: there is no window
- * that lists the installer files, prints `genoffice --help`, or registers an MCP
+ * that lists the installer files, prints `ieumoffice --help`, or registers an MCP
  * server. Composing those by hand would put invented text in a committed PNG, so
  * every line in these three figures is stdout captured from the real binary.
  *
@@ -22,7 +22,7 @@
  * ## Why mcp is captured with `--help` and not `mcp install all`
  *
  * Both were run. `mcp install all` and `mcp list` print the absolute path of the
- * resolved `genoffice` binary and the absolute path of every agent's config file
+ * resolved `ieumoffice` binary and the absolute path of every agent's config file
  * under `$HOME`, so a capture of either puts this machine's build path and
  * account name into a committed PNG and churns on every run. `mcp --help` is the
  * same real command printing its real usage, carries no path at all, and covers
@@ -57,6 +57,9 @@ import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 
+import { CLI_COMMAND, HOME_DIR_NAME } from '../packages/cli/src/names'
+import { PRODUCT_NAME } from '../packages/i18n/src/product'
+
 const REPO = resolve(__dirname, '..')
 const SHELL_DIR = join(REPO, 'apps/shell')
 const OUT_DIR = join(REPO, 'apps/shell/src/renderer/src/i18n/help/topics/img')
@@ -81,7 +84,9 @@ function capture(args: string[], env: NodeJS.ProcessEnv = {}): string {
   })
   if (run.error) throw run.error
   const out = `${run.stdout ?? ''}${run.stderr ?? ''}`.replace(/\s+$/, '')
-  if (!out) throw new Error(`genoffice ${args.join(' ')} printed nothing (exit ${run.status})`)
+  if (!out) {
+    throw new Error(`${CLI_COMMAND} ${args.join(' ')} printed nothing (exit ${run.status})`)
+  }
   return out
 }
 
@@ -167,7 +172,7 @@ function figureHtml(title: string, blocks: { command: string; output: string }[]
 </style></head>
 <body>
   <div class="card">
-    <div class="head"><span class="app">GenOffice</span><span class="sep">—</span><span>${escapeHtml(title)}</span></div>
+    <div class="head"><span class="app">${PRODUCT_NAME}</span><span class="sep">—</span><span>${escapeHtml(title)}</span></div>
     <div class="term">
 ${body}
     </div>
@@ -214,35 +219,14 @@ async function shootHtml(html: string, name: string): Promise<void> {
 }
 
 /**
- * Dismiss the star prompt: it is a promo overlay, not part of the screen the
- * figure documents, and it lands on top of the pane on some runs. Same
- * dismissal the app generator does, so the two scripts agree on what a capture
- * is allowed to include.
- */
-async function dismissStarPrompt(page: Page): Promise<void> {
-  const close = page.locator('.star-prompt button, .star-prompt [aria-label]').last()
-  if (await close.count()) await close.click().catch(() => {})
-  await page.keyboard.press('Escape').catch(() => {})
-  await page.waitForTimeout(300)
-}
-
-/**
  * The install figure: Settings > About, the one place in the app that reports
  * the build you are on and replaces it. Same scratch profile as the app
  * generator, so the figure cannot pick up a developer's account or home path.
  *
- * One row of this pane is not reproducible: "Open Source" appends the live
- * stargazer count, which the main process fetches from api.github.com. It is
- * real and correct in the figure, but it moves whenever the repo is starred, so
- * a regeneration that shows a different number is the count changing and not a
- * capture going wrong. Three ways of pinning it were tried and all failed
- * without touching product code, which is why it is documented instead of
- * hidden: contextBridge freezes window.aiOffice so the renderer cannot be made
- * to ignore it, a Chromium --host-resolver-rules switch does not reach the main
- * process's own fetch, and Electron strips NODE_OPTIONS=--require, so a preload
- * shim never runs. The app has no offline flag for it either. If this ever
- * needs to be stable, the fix belongs in the product (a capture flag next to
- * the fetch), not in this script.
+ * The only row that can differ between runs is the update offer, shown when a
+ * newer release exists. What differs between machines is the subscription
+ * state the dimmed Home screen behind the pane was drawn with;
+ * gen-help-screenshots.ts says why that cannot be pinned here.
  */
 async function shootInstall(): Promise<void> {
   const require = createRequire(join(SHELL_DIR, 'package.json'))
@@ -263,6 +247,13 @@ async function shootInstall(): Promise<void> {
     join(userData, 'app-settings.json'),
     JSON.stringify({ onboardingSeen: true }, null, 2),
   )
+  // The first-connection notice is a dialog that closes only by being
+  // acknowledged, and it comes up on a machine with a connected subscription.
+  // An empty providers table is what makes the file read as a current one.
+  writeFileSync(
+    join(userData, 'ai-settings.json'),
+    JSON.stringify({ providers: {}, subscriptionNoticeSeen: true }, null, 2),
+  )
   let app: ElectronApplication | null = null
   try {
     app = await electron.launch({
@@ -272,7 +263,7 @@ async function shootInstall(): Promise<void> {
         ...hostEnv,
         HOME: home,
         GENOFFICE_USER_DATA: userData,
-        GENOFFICE_AUTH_DIR: join(home, '.genoffice'),
+        GENOFFICE_AUTH_DIR: join(home, HOME_DIR_NAME),
         GENOFFICE_NO_SPARE_VIEW: '1',
         GENOFFICE_LANG: 'en',
       },
@@ -287,7 +278,6 @@ async function shootInstall(): Promise<void> {
       mobile: false,
     })
     await page.waitForTimeout(2500)
-    await dismissStarPrompt(page)
     await page.locator('.account-btn').click()
     // the nav label is localized, so match the class and the English word
     const about = page.locator('.set-nav-item').filter({ hasText: /About/ }).first()
@@ -317,8 +307,8 @@ async function main(): Promise<void> {
   if (take('cli')) {
     ensureCliBundle()
     await shootHtml(
-      figureHtml('genoffice --help', [
-        { command: 'genoffice --help', output: capture(['--help']) },
+      figureHtml(`${CLI_COMMAND} --help`, [
+        { command: `${CLI_COMMAND} --help`, output: capture(['--help']) },
       ]),
       'cli',
     )
@@ -327,8 +317,8 @@ async function main(): Promise<void> {
   if (take('mcp')) {
     ensureCliBundle()
     await shootHtml(
-      figureHtml('genoffice mcp --help', [
-        { command: 'genoffice mcp --help', output: capture(['mcp', '--help']) },
+      figureHtml(`${CLI_COMMAND} mcp --help`, [
+        { command: `${CLI_COMMAND} mcp --help`, output: capture(['mcp', '--help']) },
       ]),
       'mcp',
     )
