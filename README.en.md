@@ -8,7 +8,8 @@ window, and its AI works on the document itself instead of answering in a
 chat box beside it.
 
 The AI runs on **the Claude or Codex subscription you already pay for**. You
-do not create an API key and you do not pay IeumOffice anything.
+do not create an API key and you do not pay IeumOffice anything. Without a
+subscription you can connect a **free AI** (OpenRouter or Google Gemini).
 
 IeumOffice is a modified version of the open-source project
 [GenOffice](https://github.com/genspark-ai/genoffice) (see
@@ -18,6 +19,7 @@ IeumOffice is a modified version of the open-source project
 
 - [What works today](#what-works-today)
 - [Connecting your subscription](#connecting-your-subscription)
+- [Using it for free, without a subscription](#using-it-for-free-without-a-subscription)
 - [What the app never does with your login](#what-the-app-never-does-with-your-login)
 - [What it costs](#what-it-costs)
 - [Images, pictures and search](#images-pictures-and-search)
@@ -76,6 +78,24 @@ connected and Codex otherwise. You can pick one yourself in the same place or
 in the model picker of the AI panel. Claude Code 2.1.248 or newer is required;
 an older one is reported as needing an update.
 
+## Using it for free, without a subscription
+
+The first-run guide and **Settings → AI → Use for free** connect a free AI.
+
+- **OpenRouter**: press **Connect in browser**, sign up or sign in to
+  OpenRouter in the browser that opens, and allow access. There is no key to
+  copy. Only free models are used, and the card shows how many free requests
+  are left today.
+- **Google Gemini**: **Get a key** opens Google AI Studio, where you make a
+  key; paste it and press **Connect**. Only for people aged 18 or older. A key
+  from a Google project with billing turned on can be charged.
+
+Once connected, that AI becomes the **AI to use**. Free models are weaker than
+the subscription ones and have a daily limit (one edit of a document takes
+several requests). When it runs out, the app says so and when it frees again.
+While you use it for free, what you send may be used to improve that
+company's AI, so take care with documents that hold personal information.
+
 The subscription program is only the "brain". Editing the document, showing
 the changes and undoing them are done by the app. The program is started in an
 empty temporary folder with its own tools switched off, and a Claude run is
@@ -99,11 +119,12 @@ refused if the program reports that any tool is still available.
 
 IeumOffice itself is free. What the AI costs depends on the connection:
 
-| Connection                                                                                     | Cost                                                                     | When it is used                                            |
-| ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ | ---------------------------------------------------------- |
-| Claude or Codex signed in with a **subscription**                                              | Nothing beyond the subscription; requests count against its usage limits | By default (_Automatic_)                                   |
-| Claude or Codex signed in in a way that is **billed by usage** (an API key, a metered account) | You pay the vendor for what you use                                      | Only after you read the warning and choose **Use anyway**  |
-| An **API-key provider** set up under **Settings → AI → Advanced**                              | You pay that provider for what you use                                   | Only while you have chosen it yourself under **AI to use** |
+| Connection                                                                                     | Cost                                                                     | When it is used                                                 |
+| ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ | --------------------------------------------------------------- |
+| Claude or Codex signed in with a **subscription**                                              | Nothing beyond the subscription; requests count against its usage limits | By default (_Automatic_)                                        |
+| Claude or Codex signed in in a way that is **billed by usage** (an API key, a metered account) | You pay the vendor for what you use                                      | Only after you read the warning and choose **Use anyway**       |
+| An **API-key provider** set up under **Settings → AI → Advanced**                              | You pay that provider for what you use                                   | Only while you have chosen it yourself under **AI to use**      |
+| OpenRouter or Gemini connected under **Settings → AI → Use for free**                          | Nothing within the free limit                                            | Once connected, or while you have chosen it under **AI to use** |
 
 The app never moves your AI chat to a connection that costs money on its own.
 When a subscription runs out of its limit, or a login expires, the request
