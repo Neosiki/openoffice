@@ -132,20 +132,72 @@ const MODEL_BRIDGE: AiModelPickerBridge = {
 
 export function AiPanel({
   bridge,
+  filePath,
   onCollapse,
 }: {
   /** the document operations of the open editor */
   bridge: AgentBridge
+  /** the file of the open document: the conversation is kept with it */
+  filePath: string | null
   onCollapse: () => void
 }): ReactElement {
   const { lang, t } = useI18n()
   const [chat, setChat] = useState<ChatEntry[]>([])
+  /** the conversation shown now, for code that must decide before the next render */
+  const chatNowRef = useRef(chat)
+  chatNowRef.current = chat
   const [prompt, setPrompt] = useState('')
   const [busy, setBusy] = useState(false)
   /** an undo of a run is on its way to the editor */
   const [reverting, setReverting] = useState(false)
   /** the editor shows marks over what the last run changed */
   const [marksShown, setMarksShown] = useState(false)
+  const filePathRef = useRef(filePath)
+  /** where this document's conversation is kept, once the shell said */
+  const chatIdsRef = useRef<{ projectId: string; chatId: string } | null>(null)
+  /** messages sent before that was known, written once it is */
+  const pendingPersistRef = useRef<
+    { role: 'user' | 'assistant'; text: string; tools?: ToolActivity[]; scope?: AiScopeQuoteData }[]
+  >([])
+  /** what the tools of the run in flight did, kept with its reply */
+  const runToolsRef = useRef<ToolActivity[]>([])
+
+  /** Keep a message of the conversation with the document; a failure loses only the record. */
+  const persistMessage = (
+    role: 'user' | 'assistant',
+    text: string,
+    tools?: ToolActivity[],
+    scope?: AiScopeQuoteData,
+  ): void => {
+    const api = window.projectApi
+    if (!api) return
+    const ids = chatIdsRef.current
+    if (!ids) {
+      pendingPersistRef.current.push({ role, text, tools, scope })
+      return
+    }
+    void api
+      .appendChat({
+        projectId: ids.projectId,
+        chatId: ids.chatId,
+        role,
+        text,
+        ...(tools && tools.length > 0
+          ? {
+              tools: tools.map((tool) => ({
+                name: tool.name,
+                summary: tool.summary,
+                ...(tool.isError ? { isError: true } : {}),
+                ...(tool.output ? { output: tool.output } : {}),
+              })),
+            }
+          : {}),
+        ...(scope ? { scope } : {}),
+      })
+      .catch(() => {
+        // the conversation goes on without its record
+      })
+  }
   /** Take the marks of the changes off the pages. */
   const clearMarks = (): void => {
     setMarksShown(false)
@@ -475,6 +527,7 @@ export function AiPanel({
             isError: execution.isError,
             output: execution.output?.slice(0, TOOL_OUTPUT_MAX_CHARS),
           }
+          runToolsRef.current.push(activity)
           patchLast((last) => {
             // Swap out the running placeholder pushed by onToolStart (parse-fail calls have none)
             const tools = [...(last.tools ?? [])]
@@ -494,6 +547,8 @@ export function AiPanel({
             ? [base, tGlobal('aiTruncatedNote')].filter(Boolean).join('\n\n')
             : base
           const changed = takeRunChanges()
+          persistMessage('assistant', final, runToolsRef.current)
+          runToolsRef.current = []
           patchLast((last) => ({
             streaming: false,
             text: final || (last.tools?.length ? last.text : tGlobal('aiNoReply')),
@@ -616,20 +671,21 @@ export function AiPanel({
     runAttachmentsRef.current = sentAtts
     runScopeRef.current = sentScope
     skillRef.current!.setSelection(sentScope)
+    const scopeQuote: AiScopeQuoteData | undefined = sentScope
+      ? {
+          label: t('aiScopeSelection', { words: countWords(scopeText(sentScope)) }),
+          text: scopeExcerpt(sentScope),
+        }
+      : undefined
+    runToolsRef.current = []
+    persistMessage('user', instruction, undefined, scopeQuote)
     setChat((prev) => [
       ...prev,
       {
         role: 'user',
         text: instruction,
         ...(sentAtts.length > 0 ? { attachments: sentAtts } : {}),
-        ...(sentScope
-          ? {
-              scope: {
-                label: t('aiScopeSelection', { words: countWords(scopeText(sentScope)) }),
-                text: scopeExcerpt(sentScope),
-              },
-            }
-          : {}),
+        ...(scopeQuote ? { scope: scopeQuote } : {}),
       },
       { role: 'assistant', text: '', streaming: true },
     ])
@@ -731,6 +787,65 @@ export function AiPanel({
       () => settle('refused'),
     )
   }
+
+  // the conversation kept with this document: bound to its file, restored when the panel opens
+  useEffect(() => {
+    const api = window.projectApi
+    if (!api) return
+    void api
+      .resolveChat({ filePath: filePathRef.current ?? null, tempChatId: `unsaved-${Date.now()}` })
+      .then((ids) => {
+        chatIdsRef.current = ids
+        for (const msg of pendingPersistRef.current.splice(0)) {
+          persistMessage(msg.role, msg.text, msg.tools, msg.scope)
+        }
+        return api.loadChat({ projectId: ids.projectId, chatId: ids.chatId, limit: 200 })
+      })
+      .then((messages) => {
+        if (!mountedRef.current || messages.length === 0) return
+        // a message the user sent while the record loaded is not replaced. Decided here and
+        // not in the state update, which React runs later: the model is to get the same
+        if (chatNowRef.current.length > 0 || loopRef.current?.busy) return
+        setChat(
+          messages.map((message) => ({
+            role: message.role,
+            text: message.text,
+            ...(message.tools
+              ? {
+                  tools: message.tools.map((tool) => ({
+                    name: tool.name,
+                    summary: tool.summary,
+                    isError: tool.isError,
+                    output: tool.output?.slice(0, TOOL_OUTPUT_MAX_CHARS),
+                  })),
+                }
+              : {}),
+            ...(message.scope ? { scope: message.scope } : {}),
+          })),
+        )
+        loopRef.current?.restore(
+          messages.map((message) => ({ role: message.role, text: message.text })),
+        )
+      })
+      .catch(() => {
+        // the panel opens without the earlier conversation
+      })
+  }, [])
+
+  // a document saved under a name for the first time takes its conversation along
+  useEffect(() => {
+    filePathRef.current = filePath
+    const ids = chatIdsRef.current
+    if (!window.projectApi || !ids || !filePath || !ids.chatId.startsWith('unsaved-')) return
+    void window.projectApi
+      .rebindChat({ projectId: ids.projectId, tempChatId: ids.chatId, newFilePath: filePath })
+      .then((rebound) => {
+        if (rebound?.chatId) chatIdsRef.current = rebound
+      })
+      .catch(() => {
+        // the conversation stays where it was kept
+      })
+  }, [filePath])
 
   // Re-derive the display width on window resize (max is 60% of the window);
   // growing the window back restores the preferred width

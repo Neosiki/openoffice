@@ -81,6 +81,8 @@ export default function App() {
   const [phase, setPhase] = useState<Phase>('booting')
   const [notice, setNotice] = useState<Notice | null>(null)
   const [aiOpen, setAiOpen] = useState(() => aiPanelInitiallyOpen(AI_OPEN_KEY))
+  /** the file the document is in: the AI conversation is kept with it */
+  const [filePath, setFilePath] = useState<string | null>(null)
   /** the AI panel's way into the document: the app's plugin inside the editor */
   const agentBridge = useMemo(() => createAgentBridge(() => editorRef.current), [])
 
@@ -115,6 +117,7 @@ export default function App() {
           return
         }
         formatRef.current = hwpFormatOfPath(path) ?? 'hwp'
+        setFilePath(path)
         setPhase('loading')
         const bytes = await window.hwpApi.readFile(path)
         await editor.loadFile(bytes, fileNameOf(path), { skipUnsavedGuard: true })
@@ -209,6 +212,7 @@ export default function App() {
       try {
         const outcome = await runSave(savePortOf(editor), window.hwpApi, mode)
         if (outcome.kind === 'saved') {
+          setFilePath(outcome.path)
           const backup = outcome.backupPath ? { name: fileNameOf(outcome.backupPath) } : null
           if (outcome.tailsLost) {
             // stays until dismissed: the file is written, but may not open in Hangul
@@ -327,7 +331,7 @@ export default function App() {
                 <AiMark size={22} />
               </button>
             )}
-            <AiPanel bridge={agentBridge} onCollapse={() => setAiOpen(false)} />
+            <AiPanel bridge={agentBridge} filePath={filePath} onCollapse={() => setAiOpen(false)} />
           </div>
         )}
         <div className="hwp-stage">
