@@ -6,7 +6,7 @@
 
 - 모든 바깥 이름은 `ieumoffice`다. 명령어, MCP 등록 이름, 에이전트 스킬 이름과 폴더, 홈 폴더 아래 `.ieumoffice`.
 - 원본이 쓰는 이름(`genoffice` 명령어, `~/.genoffice`, `genoffice` 연동 항목과 스킬 폴더)은 읽지도 쓰지도 않는다. 두 프로그램은 한 PC에 함께 있을 수 있다.
-- 문서 명령은 PC 안에서 끝난다. 밖으로 무언가를 보내는 명령은 `search`, `image`, `media` 셋뿐이다.
+- 문서 명령은 PC 안에서 끝난다. 밖으로 무언가를 보내는 명령은 `search`, `image`, `media`, `pdf ai-read`, `pdf translate` 다섯뿐이다. 뒤의 둘은 `--yes`가 있을 때만 보낸다.
 
 ## 터미널 명령어 `ieumoffice`
 
@@ -27,6 +27,68 @@
 - 앱의 탭에 열려 있는 파일은 제자리에서 고치지 않는다(종료 코드 2, `detail.gui_pid`). `--force`면 쓴다.
 - 실행한 명령마다 `~/.ieumoffice/cli-audit.jsonl`에 한 줄을 남긴다(`ts`, `pid`, `command`, `argv`, `status`, `code`, `output_path`, `ms`, `cwd`). 2MB에서 돌린다.
 
+## PDF 명령
+
+`pdf read`, `pdf images`, `pdf status`와 `convert`는 PC 안에서 끝난다. `pdf ai-read`와 `pdf translate`는 아래 "AI를 부르는 PDF 명령"의 규칙을 따른다.
+
+| 명령                                                                                                                                                                                        | 동작                                                                                                                                                                                             |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `convert <file.pdf> --to md\|epub [--pages <목록>] [--password <pw>] [--out <경로>] [--force]`                                                                                              | 다시 흐르는 글로 바꾼다. Markdown은 그림을 옆의 `assets/`에 쓴다. 이 프로그램이 쓰지 않은 같은 이름의 파일이 거기 있으면 종료 코드 2, `output_exists`                                            |
+| `convert … --to epub [--title <글>] [--author <글>] [--no-cover]`                                                                                                                           | 제목·저자는 PDF 정보에서, 없으면 파일 이름에서 가져온다. 표지는 첫 페이지이고 기본으로 켜져 있다. 이 옵션들을 다른 경로에 주면 종료 코드 1, `invalid_argument`                                   |
+| `pdf read … --structured`                                                                                                                                                                   | 페이지별 `text`가 문서 나무의 구조화 글(제목 `#`, 목록, 표, `[figure]` 캡션, 각주)이다. `detail.structured: true`. 범위는 `--page`/`--range`를 그대로 쓰고, 나머지 출력 모양도 `pdf read`와 같다 |
+| `pdf images <file.pdf> --out <폴더> [--pages <목록>] [--password <pw>]`                                                                                                                     | 페이지에 그려진 그림을 원래 해상도의 PNG로 `<이름>-p<페이지>-<n>.png`에 쓴다. 이미 있는 파일은 바꾸지 않고 이름 뒤에 ` (2)`를 붙인다                                                             |
+| `pdf ai-read <file.pdf> --pages <목록> [--yes] [--allow-paid] [--password <pw>]`                                                                                                            | 페이지 그림을 AI 제공자에게 한 페이지씩 보내 읽힌다. 이미 읽은 페이지는 보내지 않는다                                                                                                            |
+| `pdf translate <file.pdf> --to <언어 코드> [--pages <목록>] [--format pdf,md,epub] [--bilingual] [--out <경로>] [--partial] [--restart] [--yes] [--allow-paid] [--password <pw>] [--force]` | 고른 페이지의 글을 묶음으로 보내 번역하고 결과 파일을 쓴다. `--format`의 기본은 `pdf`다. `--bilingual`은 md·epub에만 쓰인다(대역 PDF는 만들지 않는다). 언어 코드는 화면 언어 21개다              |
+| `pdf status <file.pdf>`                                                                                                                                                                     | 보관소에 있는 그 문서의 AI 읽기와 번역별 진행. 아무것도 보내지 않는다                                                                                                                            |
+
+- `<목록>`은 `1-5,8,10-12` 꼴이고 1부터 센다. 문서 밖의 페이지는 종료 코드 1, `out_of_range`, `detail.valid_range`.
+- 동사마다 받는 옵션이 정해져 있다. 다른 동사의 옵션을 주면 종료 코드 1, `unknown_option`.
+- 변환·구조화 글·번역은 보관소에 있는 AI 읽기 결과를 그 페이지 대신 쓴다. 변환 결과의 `detail.ai_read_pages`가 그 페이지들이다.
+- 고른 페이지가 모두 글자를 읽을 수 없는 그림이면 변환은 페이지 그림으로 끝나고 경고 `pages_as_images`가 붙는다.
+- **보관소**: 앱과 같은 데이터 폴더의 `pdf-store`다(`GENOFFICE_USER_DATA`로 바꿀 수 있다). 앱과 명령어가 같은 문서를 동시에 다뤄도 항목 단위로 원자적으로 쓴다.
+
+**성공 `detail`**
+
+| 명령            | 성공 `detail`                                                                                                                                                                 |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `convert`(md)   | `{ pages, warnings, assets_written, assets_reused, ai_read_pages? }`                                                                                                          |
+| `convert`(epub) | `{ pages, title, author?, cover, ai_read_pages? }`                                                                                                                            |
+| `pdf images`    | `{ images: { page, file, width, height }[] }`                                                                                                                                 |
+| `pdf ai-read`   | `{ pages_read: number[], pages_skipped: number[], pages_failed: { page, reason }[], provider, model }`                                                                        |
+| `pdf translate` | `{ lang, provider, model, translated_blocks, untranslated_blocks: { page, reason }[], overflowed_blocks: { page }[], original_pages: { page, reason }[], outputs: string[] }` |
+| `pdf status`    | `{ ai_read: { pages: number[], job }, translations: { lang, provider, model, done_blocks, total_blocks, complete, job }[] }`                                                  |
+
+- `model`이 빈 글이면 구독 프로그램의 기본 모델이다.
+- `pdf status`의 `done_blocks`·`total_blocks`는 그 번역 작업이 마지막으로 기록한 진행이다(작업의 페이지 범위 기준). 작업 기록이 없으면 보관소에 있는 블록 수다. `complete`는 `job.state`가 `complete`일 때 참이다.
+- **`job` 모양**: `{ state, last_error?, resetsAt?, outputs, progress? }`.
+  - `state`는 `idle | running | stopped | complete` 넷 중 하나다. `idle`은 기록이 없다는 뜻이다.
+  - `running`은 작업 기록이 최근 30초 안에 갱신된 경우다. 그보다 오래 갱신되지 않은 `running` 기록은 `stopped`, `last_error: "interrupted"`로 읽는다.
+  - `last_error`는 `rate-limit | cancelled | failures | interrupted | store-write-failed | output-write-failed | <기존 errorCode>`(`signed-out`, `credits` 등) 중 하나다.
+  - `resetsAt`은 한도가 풀리는 시각(밀리초)이다.
+  - `outputs`는 그 작업이 쓴 결과 파일 경로다.
+  - `progress`는 `{ done, total }`이다(페이지 또는 블록 수).
+
+**AI를 부르는 PDF 명령(`pdf ai-read`, `pdf translate`)**
+
+- 가는 길은 대화에 쓰는 AI 제공자다. 고르는 규칙은 대화와 같고, 자동 호출이므로 구독은 스위치가 켜져 있을 때만 쓴다(아래 `search` · `image` · `media`와 같은 규칙). 다른 제공자로 저절로 넘어가지 않는다. 그림을 읽지 못하는 모델이면 `ai-read`는 시작하지 않는다.
+- **예상만 답하기**: `--yes`가 없으면 아무것도 보내지 않는다. 종료 코드 0, `detail.started: false`, `detail.estimate: { calls, pages, provider, route, metered }`.
+  - `calls`는 보낼 요청 수, `pages`는 보낼 페이지 수(`ai-read`) 또는 범위의 페이지 수(`translate`)다.
+  - `route`는 `subscription` 또는 `key`다. 허용된 종량 로그인은 `key`로 친다.
+  - `metered`는 쓴 만큼 요금이 나가는 경로(키 제공자, 허용된 종량 로그인)인지다. 참이면 실행에 `--allow-paid`가 필요하다.
+  - `ai-read`는 `detail.pages_skipped`(이미 읽은 페이지)를 함께 준다. `translate`는 `detail.done_blocks`·`detail.total_blocks`를 주고, 보관된 번역과 제공자·모델이 다르면 `detail.provider_change: { stored: { provider, model }, next: { provider, model } }`도 준다.
+- **요금 경로**: `metered`인 길에서 `--yes`를 주면서 `--allow-paid`가 없으면 아무것도 보내지 않고 종료 코드 4, `error: "paid_route_not_allowed"`, `detail.route`, `detail.via`.
+- **쓸 수 있는 길이 없으면**: 종료 코드 4, `app_unavailable`, `detail.errorCode`(`unavailable`, `not-connected`, `signed-out` 등).
+- **한 문서에 작업 하나**: 같은 문서에 작업이 돌고 있으면(같은 프로세스든 다른 프로세스든) 종료 코드 4, `app_unavailable`, `detail.errorCode: "document-job-running"`, `detail.job: { kind, lang?, progress? }`.
+- **`pdf translate`는 끝날 때까지 앞에서 돈다.** 진행은 오류 출력(stderr)에 쓴다. `pdf ai-read`도 같다. Ctrl+C는 작업을 `interrupted`로 멈추고 답하게 한다.
+- **한도 소진·연속 실패로 멈췄을 때**
+  - `--partial`이 없으면 파일을 쓰지 않고 기존 약속대로 실패로 답한다: 종료 코드 4, `error: "app_unavailable"`, `detail.errorCode`(`rate-limit`, `failures` 등), `detail.resetsAt`. 끝난 분량은 `detail.done_blocks`·`detail.total_blocks`로 함께 준다. `ai-read`는 `detail.done_pages`·`detail.total_pages`와 `pages_read`, `pages_failed`를 준다.
+  - `--partial`이 있으면(`translate`만) 끝난 부분만 반영하고 나머지는 원문으로 둔 파일을 쓰고 `status: "partial"`로 답한다. 성공 `detail`에 `detail.stopped: { errorCode, resetsAt? }`와 `done_blocks`·`total_blocks`가 더해진다.
+  - 다시 실행하면 보관소에서 이어 간다. 끝난 블록과 페이지는 다시 보내지 않는다. `--restart`면 그 언어의 보관된 번역을 지우고 처음부터 한다.
+- **결과 파일 위치**: `--out`이 없으면 원본 옆에 `〈원본 이름〉.〈언어 코드〉.〈확장자〉`로 쓴다. 형식이 하나면 `--out`이 그 파일이고, 여럿이면 `--out`은 형식마다 확장자를 붙일 기준 경로다. 이미 있으면 `--force`가 필요하다(기존 파일 규칙). 실행할 때는 보내기 전에 확인하고, 예상만 답할 때는 경고(`output_exists`)로만 알린다.
+- **PDF로 쓸 수 없는 경우**: 목표 언어가 `ar`, `he`, `hi`이거나 PDF가 암호화돼 있으면 `--format pdf`를 보내기 전에 거절한다. 종료 코드 1, `unsupported`, `detail.supported_formats: ["md", "epub"]`.
+- 번역할 글이 없는 범위(스캔 문서 등)는 종료 코드 1, `unsupported`이고 `pdf ai-read`를 먼저 권한다.
+- 결과 파일을 쓰지 못하면 작업 기록은 `stopped`, `last_error: "output-write-failed"`가 된다. 보관된 번역은 남는다.
+
 ## `search` · `image` · `media`와 `capabilities`
 
 이 셋은 자동 호출이다. 화면을 보는 사람이 없는 요청이므로 갈 수 있는 길이 제한된다.
@@ -37,40 +99,46 @@
 | `image`  | 키 방식 이미지 제공자만. 없으면 "쓸 수 없음". `--model`은 무시된다(성공 결과의 `detail.note`에 적힌다)                                                        |
 | `media`  | 사진은 대화에 쓰는 AI 제공자 또는 고른 키 방식 분석 제공자. 영상·소리는 영상 분석이 되는 키 방식 제공자만                                                     |
 
-- 구독은 사용자가 설정에서 허용했을 때만 쓰인다(기본 꺼짐). 꺼져 있으면 구독이 없는 것처럼 답한다. 켜져 있으면 한 번에 하나, 한 시간에 20건이고, 횟수는 모든 명령 실행과 MCP 호출에 걸쳐 합산된다.
+- 구독은 사용자가 설정에서 허용했을 때만 쓰인다(기본 꺼짐). 꺼져 있으면 구독이 없는 것처럼 답한다. 켜져 있으면 모든 명령 실행과 MCP 호출을 통틀어 AI 요청을 하나씩 차례로 처리한다. 차례의 단위는 작업이 아니라 요청 하나라서, 긴 PDF 작업도 다른 호출자와 요청마다 번갈아 처리된다. 시간당 한도는 없다.
+- 시간당 한도가 있던 예전 경고에 동의해 켜 둔 스위치는 꺼진 것으로 읽는다. 새 경고에 다시 동의해야 켜진다(설정 파일의 `headlessSubscriptionConsentVersion`).
 - 사용자가 허용하고 직접 고른 종량 로그인은 구독이 아니라 키 경로로 친다.
 - 구독에 로그인된 계정(이메일)과 프로그램의 모델 목록은 이 명령들의 출력 어디에도 나오지 않는다. `capabilities`의 답, 도구 결과, 실행 기록(`cli-audit.jsonl`) 모두 같다. 계정은 앱의 설정 화면에만 보인다.
 
 **`ieumoffice capabilities --json`** 은 모델을 부르지 않고, 위 세 명령이 지금 무엇을 할지 알려 준다. `detail`:
 
-| 항목                                                                                               | 값                                                                                         |
-| -------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| `search`, `image_search`, `image_generation`, `image_analysis`, `video_analysis`, `media_analysis` | 각각 `{ available, via, route, metered?, message? }`                                       |
-| `via`                                                                                              | 누가 답하는지(검색 경로, 키 제공자, 대화용 AI 제공자). 없으면 `null`                       |
-| `route`                                                                                            | 비용이 어디로 가는지. `free` \| `key` \| `subscription`. 쓸 수 없으면 `null`               |
-| `metered`                                                                                          | `true`면 쓴 만큼 요금이 나가는 로그인                                                      |
-| `message`                                                                                          | 쓸 수 없을 때만 온다. 명령이 실제로 답할 글 그대로다                                       |
-| `automatic_calls`                                                                                  | `{ subscription_enabled }`. 켜져 있으면 `{ used, limit, remaining, resetsAt? }`가 더해진다 |
-| `app`                                                                                              | `{ available }`. 화면이 필요한 변환에 쓸 앱 실행 파일을 찾았는지                           |
-| `settings_path`                                                                                    | 이 답을 읽어 온 설정 파일                                                                  |
+| 항목                                                                                               | 값                                                                                             |
+| -------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| `search`, `image_search`, `image_generation`, `image_analysis`, `video_analysis`, `media_analysis` | 각각 `{ available, via, route, metered?, message? }`                                           |
+| `pdf_ai_read`, `pdf_translation`                                                                   | 같은 모양. PDF의 AI 페이지 읽기와 문서 번역이 갈 길(대화에 쓰는 AI 제공자)                     |
+| `via`                                                                                              | 누가 답하는지(검색 경로, 키 제공자, 대화용 AI 제공자). 없으면 `null`                           |
+| `route`                                                                                            | 비용이 어디로 가는지. `free` \| `key` \| `subscription`. 쓸 수 없으면 `null`                   |
+| `metered`                                                                                          | `true`면 쓴 만큼 요금이 나가는 로그인                                                          |
+| `message`                                                                                          | 쓸 수 없을 때만 온다. 명령이 실제로 답할 글 그대로다                                           |
+| `automatic_calls`                                                                                  | `{ subscription_enabled }`. 켜져 있을 때만 `{ used, limit: null, remaining: null }`이 더해진다 |
+| `app`                                                                                              | `{ available }`. 화면이 필요한 변환에 쓸 앱 실행 파일을 찾았는지                               |
+| `settings_path`                                                                                    | 이 답을 읽어 온 설정 파일                                                                      |
 
 - `media_analysis`는 예전 호출자를 위해 남긴 항목이다. `image_analysis`와 같고, 영상만 될 때는 `video_analysis`와 같다.
 - 웹·이미지 검색은 키 제공자를 고르지 않는 한 항상 `available`이고 `route`는 `free`다.
+- `automatic_calls.used`는 최근 한 시간 동안 처리한 자동 호출 수이고 정보용이다. 한도가 없으므로 `limit`, `remaining`은 `null`이고 `resetsAt`은 오지 않는다.
 
 **실패.** 세 명령이 실행될 수 없으면 종료 코드 4, `error: "app_unavailable"`.
 
-| `detail.errorCode`                                                                                                                                    | 뜻                           | 다시 시도                           |
-| ----------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- | ----------------------------------- |
-| `unavailable`                                                                                                                                         | 그 기능에 설정된 것이 없다   | 하지 않는다. 설정을 바꿔야 한다     |
-| `headless-limit`                                                                                                                                      | 자동 호출의 시간당 한도 초과 | `detail.resetsAt`(밀리초 시각) 이후 |
-| `rate-limit`                                                                                                                                          | 구독 한도 소진               | `detail.resetsAt`이 있으면 그 이후  |
-| `not-connected`, `signed-out`, `not-installed`, `metered-not-accepted`, `needs-update`, `unsafe-tools`, `timeout`, `network`, `overloaded`, `credits` | 실행이 그 이유로 실패        | 이유에 따라                         |
+| `detail.errorCode`                                                                                                                                    | 뜻                                                                | 다시 시도                          |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- | ---------------------------------- |
+| `unavailable`                                                                                                                                         | 그 기능에 설정된 것이 없다                                        | 하지 않는다. 설정을 바꿔야 한다    |
+| `headless-limit`                                                                                                                                      | 더 이상 쓰이지 않음. 자동 호출의 시간당 한도가 없어져 내지 않는다 | 해당 없음                          |
+| `rate-limit`                                                                                                                                          | 구독 한도 소진                                                    | `detail.resetsAt`이 있으면 그 이후 |
+| `not-connected`, `signed-out`, `not-installed`, `metered-not-accepted`, `needs-update`, `unsafe-tools`, `timeout`, `network`, `overloaded`, `credits` | 실행이 그 이유로 실패                                             | 이유에 따라                        |
 
 ## MCP 서버 (`ieumoffice mcp`)
 
 - 표준 입출력으로 같은 명령들을 도구로 내놓는다. `--http <포트>`를 주면 Streamable HTTP로 내놓는다(`--host`, `--token`).
 - 등록 예: `claude mcp add --transport stdio ieumoffice -- ieumoffice mcp`. `ieumoffice mcp install <에이전트|all>`이 각 에이전트의 설정 파일에 `ieumoffice` 항목만 쓴다. 같은 이름의 항목이 다른 프로그램을 가리키면 `occupied`로 알리고 `--force` 없이는 건드리지 않는다.
-- 도구는 명령 동사마다 하나다(`docs_read`, `docs_apply`, `sheet_apply`, `slides_render`, `convert` 등). 매개변수는 명령의 옵션 목록에서 그대로 나온다. 두 표면이 어긋나지 않는다.
+- 도구는 명령 동사마다 하나다(`docs_read`, `docs_apply`, `sheet_apply`, `slides_render`, `convert`, `pdf_read`, `pdf_images`, `pdf_ai_read`, `pdf_translate`, `pdf_status` 등). 매개변수는 명령의 옵션 목록에서 그대로 나온다(`allow-paid`는 `allow_paid`, `no-cover`는 `no_cover`). 두 표면이 어긋나지 않는다.
+- `pdf_ai_read`·`pdf_translate`는 `yes`가 없으면 명령처럼 예상만 답한다. `yes`가 있으면 작업을 MCP 서버 프로세스 안에서 띄우고 바로 답한다(`detail.started: true`, `detail.estimate`). 진행, 멈춘 이유, `resetsAt`, 결과 파일 경로는 `pdf_status`의 `job`으로 본다. 이어하기는 같은 도구를 다시 부르면 된다.
+- 그 결과 파일은 작업이 끝날 때 쓴다. `partial: true`로 부른 작업은 멈출 때 끝난 부분만 반영해 쓴다. 위치 규칙은 명령어와 같고, 경로는 `job.outputs`로 알려 준다.
+- 서버가 끝나면 그 작업도 멈춘다(`last_error: "interrupted"`). 보관된 결과는 남는다.
 - 결과는 `--json`이 내는 것과 같은 객체다. 실패는 `isError`와 같은 `error` 이유로 온다.
 - 환경변수 `GENOFFICE_MCP_COMPACT_SCHEMAS`는 예전 철자를 유지한다. `--http`의 토큰은 `--token`, 없으면 `GENOFFICE_MCP_TOKEN`에서 읽고, 둘 다 없으면 인증 없이 받는다. 에이전트 설정 폴더를 찾을 때의 홈 폴더는 `GENOFFICE_HOME`으로 바꿀 수 있다.
 - 안내 자료는 리소스로도 내놓는다(`ieumoffice://guide/docs`, `…/sheets`, `…/slides`, `…/slides/design`, `…/slides/spec`).
@@ -94,17 +162,19 @@
 
 데이터 폴더(`%APPDATA%\IeumOffice`, 개발 실행은 `IeumOffice-Dev`)에 있다. 사람이 직접 고칠 수 있고, 명령어와 MCP는 읽기만 한다.
 
-| 값                                  | 종류                                             | 기본                                                       |
-| ----------------------------------- | ------------------------------------------------ | ---------------------------------------------------------- |
-| `provider`                          | `auto` 또는 제공자 식별자                        | `auto`                                                     |
-| `providers`                         | 제공자별 `{ apiKey, model, baseUrl?, cliPath? }` | 빈 표                                                      |
-| `meteredAccepted`                   | 구독 제공자별 참/거짓                            | 거짓                                                       |
-| `headlessSubscriptionEnabled`       | 참/거짓. 자동 호출 경로의 구독 사용              | 거짓                                                       |
-| `subscriptionNoticeSeen`            | 참/거짓. 첫 연결 안내를 봤는지                   | 거짓                                                       |
-| `customEndpoints`, `customEndpoint` | 직접 운영하는 서버 목록과 지금 쓰는 것의 식별자  | 없음                                                       |
-| `maxOutputTokens`                   | 모델 한 차례의 출력 상한                         | 코드의 기본값                                              |
-| `media`, `search`                   | 이미지·분석·검색 제공자 선택과 그 키             | 이미지 분석은 `chat`, 영상 분석은 `none`, 검색은 무료 경로 |
+| 값                                   | 종류                                             | 기본                                                       |
+| ------------------------------------ | ------------------------------------------------ | ---------------------------------------------------------- |
+| `provider`                           | `auto` 또는 제공자 식별자                        | `auto`                                                     |
+| `providers`                          | 제공자별 `{ apiKey, model, baseUrl?, cliPath? }` | 빈 표                                                      |
+| `meteredAccepted`                    | 구독 제공자별 참/거짓                            | 거짓                                                       |
+| `headlessSubscriptionEnabled`        | 참/거짓. 자동 호출 경로의 구독 사용              | 거짓                                                       |
+| `headlessSubscriptionConsentVersion` | 자동 호출 스위치를 켤 때 동의한 경고의 판(정수)  | 없음                                                       |
+| `subscriptionNoticeSeen`             | 참/거짓. 첫 연결 안내를 봤는지                   | 거짓                                                       |
+| `customEndpoints`, `customEndpoint`  | 직접 운영하는 서버 목록과 지금 쓰는 것의 식별자  | 없음                                                       |
+| `maxOutputTokens`                    | 모델 한 차례의 출력 상한                         | 코드의 기본값                                              |
+| `media`, `search`                    | 이미지·분석·검색 제공자 선택과 그 키             | 이미지 분석은 `chat`, 영상 분석은 `none`, 검색은 무료 경로 |
 
+- `headlessSubscriptionEnabled`가 참이어도 `headlessSubscriptionConsentVersion`이 지금 경고의 판(2)보다 작거나 없으면 꺼진 것으로 읽는다. 판 1은 시간당 한도가 있던 예전 경고이고, 그때는 판을 저장하지 않았다.
 - 이미지 생성 제공자의 저장값 기본은 `codex`다. Codex 구독 이미지 생성이 들어 있지 않은 지금은 `none`(선택 없음)과 똑같이 동작한다.
 - 구독 제공자의 식별자는 `claude-code`, `codex`다. 인증 방식은 `claude-subscription`, `codex-chatgpt`, `api-key` 셋이다.
 - 모르는 제공자 식별자나 없어진 값이 있어도 오류 없이 읽는다. 그 자리는 기본값이 되고, 다음에 앱이 저장할 때 지워진다.

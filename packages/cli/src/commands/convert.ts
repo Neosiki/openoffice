@@ -8,13 +8,23 @@ import { convertLegacyWorkbook, sheetToCsv } from '../formats/xlsx'
 import { exportViaApp, type AppExportTarget } from '../formats/app-export'
 import { htmlToMarkdown, markdownToDocx, markdownToHtml } from '../formats/markdown'
 import { closeDocument, documentHtml, openDocument } from '../formats/docx'
+import { writeEpubFile, writeMarkdownFile } from '../formats/pdf-outputs'
+import {
+  documentHash,
+  documentTree,
+  onlyPageImages,
+  parsePageList,
+  pdfFacts,
+  resultStore,
+  withStoredReadings,
+} from '../formats/pdf-structure'
 import { extension, readInput, resolveInput, resolveOutput, writeOutput } from '../fs'
 import type { CommandContext, CommandDef } from '../registry'
 import { CliError, EXIT } from '../result'
 
 /** Conversions that run in this process. */
 const NODE_ROUTES: Record<string, readonly string[]> = {
-  pdf: ['docx', 'pptx', 'xlsx'],
+  pdf: ['docx', 'pptx', 'xlsx', 'md', 'epub'],
   csv: ['xlsx'],
   xls: ['xlsx'],
   xlsb: ['xlsx'],
@@ -59,7 +69,8 @@ function appTarget(from: string, to: string): AppExportTarget | null {
 export const convertCommand: CommandDef = {
   name: 'convert',
   summary: 'Convert a document to another format using the GenOffice engines.',
-  usage: 'convert <file> --to <format> [--out <path>] [--force] [--password <pw>] [--sheet <name>]',
+  usage:
+    'convert <file> --to <format> [--out <path>] [--force] [--password <pw>] [--sheet <name>] [--pages <list>] [--title <text>] [--author <text>] [--no-cover]',
   options: [
     { name: 'to', value: 'format', description: 'target format: ' + describeRoutes() },
     { name: 'out', value: 'path', description: 'output file (default: same name, new extension)' },
@@ -70,6 +81,22 @@ export const convertCommand: CommandDef = {
       value: 'name',
       description: 'xlsx→csv: worksheet to export (default: the active one)',
     },
+    {
+      name: 'pages',
+      value: 'list',
+      description: 'pdf→md/epub: pages like 1-5,8 (default: every page)',
+    },
+    {
+      name: 'title',
+      value: 'text',
+      description: 'pdf→epub: title (default: from the PDF)',
+    },
+    {
+      name: 'author',
+      value: 'text',
+      description: 'pdf→epub: author (default: from the PDF)',
+    },
+    { name: 'no-cover', description: 'pdf→epub: no cover page' },
   ],
   async run(args, ctx) {
     const input = resolveInput(args.positionals[0], ctx)
@@ -88,6 +115,7 @@ export const convertCommand: CommandDef = {
         { reason: 'unsupported', suggestion: 'pick a route from detail.supported' },
       )
     }
+    assertRouteOptions(args, from, to)
     // before run(): the sidecar and app routes write the output themselves
     const output = resolveOutput(flagString(args, 'out'), ctx, {
       fallback: join(dirname(input), `${basename(input, extname(input))}.${to}`),
@@ -144,6 +172,9 @@ async function run(
   if (viaApp) {
     const r = await exportViaApp(input, viaApp, output, { env: ctx.env, log: ctx.log })
     return { detail: { via: 'ieumoffice --headless-export', summary: r.summary } }
+  }
+  if (from === 'pdf' && (to === 'md' || to === 'epub')) {
+    return pdfReflow(input, to, output, args, ctx)
   }
   if (from === 'pdf') {
     try {
@@ -203,6 +234,75 @@ async function run(
   }
   const r = await convertLegacyWorkbook(input, output)
   return { detail: { sheets: r.sheets, cells: r.cells } }
+}
+
+/** Options that belong to one route only are refused on the others rather than ignored. */
+const ROUTE_OPTIONS: [string, (from: string, to: string) => boolean, string][] = [
+  ['pages', (from, to) => from === 'pdf' && (to === 'md' || to === 'epub'), 'pdf→md/epub'],
+  ['title', (from, to) => from === 'pdf' && to === 'epub', 'pdf→epub'],
+  ['author', (from, to) => from === 'pdf' && to === 'epub', 'pdf→epub'],
+  ['no-cover', (from, to) => from === 'pdf' && to === 'epub', 'pdf→epub'],
+]
+
+function assertRouteOptions(args: ParsedArgs, from: string, to: string): void {
+  for (const [option, applies, route] of ROUTE_OPTIONS) {
+    if (args.flags[option] === undefined || applies(from, to)) continue
+    throw new CliError(EXIT.usage, `--${option} applies to ${route} only`, undefined, {
+      reason: 'invalid_argument',
+    })
+  }
+}
+
+/**
+ * pdf→md / pdf→epub (spec §3, §5): the reflowed document tree of the chosen
+ * pages, with the pages read by AI as read, written the way the PDF editor
+ * writes it (Markdown with `assets/` beside it).
+ */
+async function pdfReflow(
+  input: string,
+  to: 'md' | 'epub',
+  output: string,
+  args: ParsedArgs,
+  ctx: CommandContext,
+): Promise<Produced> {
+  const password = flagString(args, 'password')
+  const bytes = readInput(input)
+  const spec = flagString(args, 'pages')
+  const pages =
+    spec === undefined ? undefined : parsePageList(spec, (await pdfFacts(bytes, password)).pages)
+  const extracted = await documentTree(bytes, {
+    ...(password !== undefined ? { password } : {}),
+    ...(pages !== undefined ? { pages } : {}),
+    onProgress: (done, total) => ctx.log(`page ${done}/${total}`),
+  })
+  const { tree, aiPages } = await withStoredReadings(
+    extracted,
+    resultStore(ctx.env),
+    documentHash(bytes),
+  )
+  if (onlyPageImages(tree)) {
+    ctx.warn({
+      code: 'pages_as_images',
+      message:
+        'every page is a picture without readable text, so the result holds page images only',
+      suggestion: `read the pages with \`ieumoffice pdf ai-read ${basename(input)} --pages <list>\` first, then convert again`,
+    })
+  }
+  const source = {
+    pdfPath: input,
+    ...(password !== undefined ? { password } : {}),
+    ...(pages !== undefined ? { pages } : {}),
+  }
+  const common = { pages: tree.pages.length, ...(aiPages.length ? { ai_read_pages: aiPages } : {}) }
+  if (to === 'md') {
+    const md = await writeMarkdownFile(source, tree, output)
+    return { detail: { ...common, ...md } }
+  }
+  const title = flagString(args, 'title') || tree.info.title || basename(input, extname(input))
+  const author = flagString(args, 'author') ?? tree.info.author
+  const cover = !flagBool(args, 'no-cover')
+  await writeEpubFile(source, tree, output, { title, ...(author ? { author } : {}), cover })
+  return { detail: { ...common, title, ...(author ? { author } : {}), cover } }
 }
 
 function describeRoutes(): string {

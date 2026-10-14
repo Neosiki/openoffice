@@ -5,6 +5,7 @@ import {
   type AiToolCapability,
 } from '@genoffice/ai-search'
 import { headlessCall } from '../cloud'
+import { pdfAiFeature, resolvePdfAiRoute } from '../pdf-ai'
 import type { CommandDef } from '../registry'
 import { appLaunch } from '../resources'
 
@@ -15,6 +16,8 @@ const SUMMARIZED = [
   'image_generation',
   'image_analysis',
   'video_analysis',
+  'pdf_ai_read',
+  'pdf_translation',
   'app',
 ] as const
 
@@ -29,7 +32,7 @@ const SUMMARIZED = [
 export const capabilitiesCommand: CommandDef = {
   name: 'capabilities',
   summary:
-    'Report which cloud features (search, image search, image generation, image and video analysis) are available in GenOffice and by which route, and whether the app is installed.',
+    'Report which cloud features (search, image search, image generation, image and video analysis, PDF AI page reading and translation) are available in GenOffice and by which route, and whether the app is installed.',
   usage: 'capabilities',
   async run(_args, ctx) {
     const { settingsPath, settings, context } = await headlessCall(ctx.env, 'capabilities')
@@ -48,6 +51,9 @@ export const capabilitiesCommand: CommandDef = {
         imageAnalysis.available || !videoAnalysis.available ? imageAnalysis : videoAnalysis,
       image_analysis: imageAnalysis,
       video_analysis: videoAnalysis,
+      // the PDF document jobs: the AI provider the chat runs on (page reading needs one that reads images)
+      pdf_ai_read: pdfAiFeature(resolvePdfAiRoute(settings, context, 'ai-read')),
+      pdf_translation: pdfAiFeature(resolvePdfAiRoute(settings, context, 'translate')),
       automatic_calls: {
         subscription_enabled: subscription,
         // there is no hourly cap: the count of the last hour is information only
