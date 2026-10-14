@@ -5,7 +5,8 @@
  */
 import { useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
-import { useI18n } from '../i18n/locale'
+import type { LinkInputKind } from '../document/link-input'
+import { type StringKey, useI18n } from '../i18n/locale'
 
 function Modal(p: { title: string; onCancel(): void; children: ReactNode; kind: string }) {
   return (
@@ -82,13 +83,19 @@ export interface TopicFieldRequest {
 }
 
 /**
- * Edits one field of a topic. `onSubmit` answers whether the value was taken;
- * a link that is not a web or mail address is turned down and the dialog says
- * so. An empty value removes the field.
+ * Edits one field of a topic. `onSubmit` answers whether the value was taken.
+ * An empty value removes the field.
+ *
+ * A link is shown as it is in the file, whatever it is. While the address in
+ * the field is one that will be kept but never opened, the dialog says so
+ * before it is stored; an address in the form of a reference into the file is
+ * turned down, and the dialog says why.
  */
 export function TopicFieldDialog(p: {
   request: TopicFieldRequest
   onSubmit(value: string): boolean
+  /** for a link: whether the address in the field would be opened, only kept, or not taken */
+  linkKind?(value: string): LinkInputKind
   onClose(): void
 }) {
   const { t } = useI18n()
@@ -102,6 +109,16 @@ export function TopicFieldDialog(p: {
 
   const { field: kind } = p.request
   const title = kind === 'label' ? t('tbLabel') : kind === 'note' ? t('tbNote') : t('tbLink')
+  const linkKind = kind === 'link' ? (p.linkKind?.(value) ?? 'opens') : 'opens'
+  const hintKey: StringKey =
+    kind === 'label'
+      ? 'labelHint'
+      : refused || linkKind === 'internal'
+        ? 'linkInternal'
+        : linkKind === 'kept'
+          ? 'linkWontOpen'
+          : 'linkHint'
+  const hintTone = refused ? ' error' : hintKey === 'linkWontOpen' ? ' warn' : ''
   const submit = (next: string): void => {
     if (p.onSubmit(next)) p.onClose()
     else setRefused(true)
@@ -134,10 +151,11 @@ export function TopicFieldDialog(p: {
       )}
       {kind !== 'note' && (
         <p
-          className={`mm-modal-hint${refused ? ' error' : ''}`}
-          role={refused ? 'alert' : undefined}
+          className={`mm-modal-hint${hintTone}`}
+          data-link-kind={kind === 'link' ? linkKind : undefined}
+          role={hintTone === '' ? undefined : 'alert'}
         >
-          {kind === 'label' ? t('labelHint') : refused ? t('linkInvalid') : t('linkHint')}
+          {t(hintKey)}
         </p>
       )}
       <div className="mm-modal-actions">

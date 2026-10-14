@@ -63,7 +63,9 @@ export const en = {
   openRejected: 'This file cannot be opened because of its size or structure',
   labelHint: 'Separate several labels with commas',
   linkHint: 'Enter a web address (http, https) or an email address (mailto)',
-  linkInvalid: 'Only web addresses (http, https) and email addresses can be used',
+  linkWontOpen:
+    'This address is kept and shown as text, but clicking it will not open it. Only web addresses (http, https) and email addresses are opened.',
+  linkInternal: 'An address of this form points inside the map file and cannot be entered here.',
   linkNotOpened: 'This link cannot be opened',
   pickRelationship: 'Click the topic to connect to. Press Esc to cancel.',
   selectTopicFirst: 'Select a topic first',

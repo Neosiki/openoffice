@@ -389,13 +389,38 @@ async function editingRun(): Promise<void> {
     await shot(page, '05-note-dialog')
     await page.locator('[data-action="field-ok"]').click()
     await page.locator('[data-action="link"]').click()
+    // an address nothing will open: kept and shown as text, said so beforehand, never opened
     await page.locator('[data-dialog="topic-link"] .mm-field').fill('javascript:alert(1)')
+    check(
+      (await page.locator('.mm-modal-hint').getAttribute('data-link-kind')) === 'kept',
+      'the dialog says beforehand that a javascript: address will not be opened',
+    )
+    await shot(page, '06-link-will-not-open')
+    await page.locator('[data-action="field-ok"]').click()
+    await page.waitForSelector('[data-dialog="topic-link"]', { state: 'detached' })
+    const kept = page.locator(`${topicSelector(ID.gamma)} .mm-chip-link`)
+    check((await kept.textContent()) === 'javascript:alert(1)', 'the address is shown as text')
+    check(
+      (await kept.evaluate((node) => node.tagName)) === 'SPAN' &&
+        (await page.locator('.mm-card a').count()) === 0,
+      'as a plain span, not an anchor',
+    )
+    await kept.click()
+    await page.waitForTimeout(300)
+    check((await openedLinks(app)).length === 0, 'pressing it opens nothing')
+    // a reference into the file is turned down
+    await page.locator('[data-action="link"]').click()
+    check(
+      (await page.locator('[data-dialog="topic-link"] .mm-field').inputValue()) ===
+        'javascript:alert(1)',
+      'the link dialog opens with the address the topic has',
+    )
+    await page.locator('[data-dialog="topic-link"] .mm-field').fill('xmind:#some-topic')
     await page.locator('[data-action="field-ok"]').click()
     check(
       (await page.locator('.mm-modal-hint.error').count()) === 1,
-      'an address that is not a web link is turned down in the dialog',
+      'an address in the form of a reference into the file is turned down',
     )
-    await shot(page, '06-link-refused')
     await page.locator('[data-dialog="topic-link"] .mm-field').fill('example.com/page')
     await page.locator('[data-action="field-ok"]').click()
     await page.waitForSelector('[data-dialog="topic-link"]', { state: 'detached' })
@@ -498,6 +523,44 @@ async function editingRun(): Promise<void> {
       'a topic with nothing hidden is deleted without a question',
     )
 
+    // cut and paste is a move: the topic arrives with everything it carried
+    await selectTopic(page, ID.alpha)
+    await page.keyboard.press('Control+x')
+    await page.waitForSelector('[data-dialog="delete-hidden"]')
+    await page.locator('[data-action="confirm-ok"]').click()
+    await page.waitForSelector(topicSelector(ID.alpha), { state: 'detached' })
+    await selectTopic(page, ID.delta)
+    await page.keyboard.press('Control+v')
+    await page.waitForSelector(topicSelector(ID.alpha))
+    check(
+      await page.evaluate(
+        ([moved, target]) =>
+          document.querySelector<HTMLElement & { nodeObj: { parent?: { id: string } } }>(
+            `me-tpc[data-nodeid="me${moved}"]`,
+          )?.nodeObj.parent?.id === target,
+        [ID.alpha, ID.delta] as const,
+      ),
+      'a cut topic pasted elsewhere arrives under its own id',
+    )
+    await shot(page, '11-cut-and-pasted')
+
+    // a title still being typed when the save comes is saved with it
+    await selectTopic(page, ID.gamma)
+    await page.keyboard.press('F2')
+    await page.waitForSelector('#input-box')
+    await page.keyboard.type('감마, 치는 중에 저장')
+    await page.keyboard.press('Control+S')
+    await waitForSaved(page)
+    check((await page.locator('#input-box').count()) === 0, 'saving takes the title being typed')
+
+    // and so is a syllable an input method is still composing
+    await selectTopic(page, ID.alphaOne)
+    await page.keyboard.press('F2')
+    await page.waitForSelector('#input-box')
+    await cdp.send('Input.insertText', { text: '조합 중 ' })
+    for (const text of ['ㄲ', '끄', '끝']) {
+      await cdp.send('Input.imeSetComposition', { text, selectionStart: 1, selectionEnd: 1 })
+    }
     await page.keyboard.press('Control+S')
     await waitForSaved(page)
     await shot(page, '11-saved')
@@ -536,6 +599,20 @@ async function editingRun(): Promise<void> {
   check(
     findTopic(view.root, (candidate) => candidate.id === ID.alpha) !== null,
     'Alpha is in the file',
+  )
+  check(
+    gamma.title === '감마, 치는 중에 저장',
+    'the title typed right before the save is in the file',
+  )
+  const composed = findTopic(view.root, (candidate) => candidate.id === ID.alphaOne)?.title
+  results.titleSavedWhileComposing = composed
+  check(composed === '조합 중 끝', 'the syllable still being composed at the save is in the file')
+  const movedAlpha = delta.children.find((child) => child.id === ID.alpha)
+  check(movedAlpha !== undefined, 'Alpha, cut and pasted, is under Delta in the file')
+  check(
+    JSON.stringify(movedAlpha?.children.map((child) => child.id)) ===
+      JSON.stringify([ID.alphaOne, ID.alphaTwo]) && movedAlpha?.summaries.length === 1,
+    'with its branches and its summary',
   )
   for (const [name, id] of [
     ['the callout', ID.callout],

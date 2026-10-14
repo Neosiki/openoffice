@@ -63,7 +63,10 @@ export const id = {
   openRejected: 'File ini tidak dapat dibuka karena ukuran atau strukturnya',
   labelHint: 'Pisahkan beberapa label dengan koma',
   linkHint: 'Masukkan alamat web (http, https) atau alamat email (mailto)',
-  linkInvalid: 'Hanya alamat web (http, https) dan alamat email yang dapat digunakan',
+  linkWontOpen:
+    'Alamat ini disimpan dan ditampilkan sebagai teks, tetapi tidak akan dibuka saat diklik. Hanya alamat web (http, https) dan alamat email yang dibuka.',
+  linkInternal:
+    'Alamat dengan bentuk ini menunjuk ke bagian dalam file peta dan tidak dapat dimasukkan di sini.',
   linkNotOpened: 'Tautan ini tidak dapat dibuka',
   pickRelationship: 'Klik topik yang ingin dihubungkan. Tekan Esc untuk membatalkan.',
   selectTopicFirst: 'Pilih topik terlebih dahulu',

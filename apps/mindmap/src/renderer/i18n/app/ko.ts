@@ -62,7 +62,9 @@ export const ko = {
   openRejected: '파일의 크기나 구조 때문에 열 수 없습니다',
   labelHint: '쉼표로 나누어 여러 개를 적을 수 있습니다',
   linkHint: '웹 주소(http, https)나 메일 주소(mailto)를 적습니다',
-  linkInvalid: '웹 주소(http, https)나 메일 주소만 넣을 수 있습니다',
+  linkWontOpen:
+    '이 주소는 글자로만 보이고 눌러도 열리지 않습니다. 웹 주소(http, https)와 메일 주소만 열립니다.',
+  linkInternal: '이 꼴의 주소는 지도 파일 안을 가리키는 데 쓰여서 여기에 적을 수 없습니다.',
   linkNotOpened: '이 링크는 열 수 없습니다',
   pickRelationship: '연결할 토픽을 누르세요. Esc를 누르면 그만둡니다.',
   selectTopicFirst: '토픽을 먼저 고르세요',

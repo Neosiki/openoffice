@@ -62,7 +62,10 @@ export const ja = {
   openRejected: 'ファイルのサイズまたは構造のため開けません',
   labelHint: '複数のラベルはカンマで区切ります',
   linkHint: 'Web アドレス（http、https）またはメールアドレス（mailto）を入力します',
-  linkInvalid: 'Web アドレス（http、https）とメールアドレスのみ指定できます',
+  linkWontOpen:
+    'このアドレスは文字として保存・表示されるだけで、クリックしても開きません。開くのは Web アドレス（http、https）とメールアドレスだけです。',
+  linkInternal:
+    'この形式のアドレスはマップファイルの内部を指すためのもので、ここには入力できません。',
   linkNotOpened: 'このリンクは開けません',
   pickRelationship: '接続先のトピックをクリックしてください。Esc でキャンセルします。',
   selectTopicFirst: '先にトピックを選択してください',

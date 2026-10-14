@@ -242,6 +242,114 @@ describe('a file that opens', () => {
   })
 })
 
+describe('the link of a topic', () => {
+  async function openLinkDialog(href: string) {
+    const sheet = plainSheet()
+    const first = sheet.rootTopic.children!.attached![0]!
+    first.href = href
+    const opened = await openWith(sheet)
+    await selectOnMap(first.id)
+    await click('[data-action="link"]')
+    const field = document.querySelector<HTMLInputElement>('[data-dialog="topic-link"] input')!
+    return { ...opened, first, field }
+  }
+  const hint = (): string => document.querySelector('.mm-modal-hint')!.textContent ?? ''
+  const type = async (field: HTMLInputElement, value: string): Promise<void> => {
+    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!
+    await act(async () => {
+      setter.call(field, value)
+      field.dispatchEvent(new Event('input', { bubbles: true }))
+    })
+  }
+
+  it.each(['javascript:alert(1)', 'file:///C:/secret.txt', 'ftp://example.com/x'])(
+    'the dialog opens with %s as it is in the file and says it will not be opened',
+    async (href) => {
+      const { field } = await openLinkDialog(href)
+      expect(field.value).toBe(href)
+      expect(hint()).toContain('will not open it')
+    },
+  )
+
+  it('a web address gets the plain hint', async () => {
+    const { field } = await openLinkDialog('https://example.com/a')
+    expect(field.value).toBe('https://example.com/a')
+    expect(hint()).toBe('Enter a web address (http, https) or an email address (mailto)')
+  })
+
+  it('a typed address that will not be opened is stored and shown as text', async () => {
+    const { fake, first, field } = await openLinkDialog('https://example.com/a')
+    await type(field, 'javascript:alert(1)')
+    expect(hint()).toContain('will not open it')
+    await click('[data-action="field-ok"]')
+    expect(document.querySelector('.mm-modal')).toBeNull()
+    expect(topicEl(first.id).querySelector('.mm-chip-link')!.textContent).toBe(
+      'javascript:alert(1)',
+    )
+    expect(container.querySelector('.mm-card a')).toBeNull()
+
+    await click('[data-action="save"]')
+    const saved = await openXmind(fake.saves[0]!.bytes)
+    if (saved.status !== 'ok') throw new Error('did not open')
+    expect(saved.document.sheets[0]!.rootTopic.children!.attached![0]!.href).toBe(
+      'javascript:alert(1)',
+    )
+  })
+
+  it('an address in the form of a reference into the file is refused, and the dialog says why', async () => {
+    const { first, field } = await openLinkDialog('https://example.com/a')
+    await type(field, 'xmind:#another-topic')
+    await click('[data-action="field-ok"]')
+    expect(document.querySelector('.mm-modal-hint.error')!.textContent).toBe(
+      'An address of this form points inside the map file and cannot be entered here.',
+    )
+    expect(topicEl(first.id).querySelector('.mm-chip-link')!.textContent).toBe(
+      'https://example.com/a',
+    )
+  })
+
+  it('a click on a link the main process will not open tells the user so', async () => {
+    const { fake, first } = await openLinkDialog('https://example.com/a')
+    await click('[data-action="field-cancel"]')
+    const asked: string[] = []
+    fake.api.openLink = async (url: string) => {
+      asked.push(url)
+      return false
+    }
+    await act(async () => {
+      topicEl(first.id).querySelector<HTMLElement>('.mm-chip-link')!.click()
+    })
+    await settle()
+    expect(asked).toEqual(['https://example.com/a'])
+    expect(container.querySelector('.mm-save-status')!.textContent).toBe(
+      'This link cannot be opened',
+    )
+  })
+})
+
+describe('a title still being typed', () => {
+  it('is in what a save hands over, and in the outline given on request', async () => {
+    const sheet = plainSheet()
+    const first = sheet.rootTopic.children!.attached![0]!
+    const { fake } = await openWith(sheet)
+    await selectOnMap(first.id)
+    await pressOnMap('F2')
+    container.querySelector<HTMLElement>('#input-box')!.textContent = '저장 직전에 친 글'
+
+    fake.emit.outlineRequest()
+    expect((fake.outlines[0] as { text: string }).text).toContain('저장 직전에 친 글')
+
+    await pressOnMap('F2')
+    container.querySelector<HTMLElement>('#input-box')!.textContent = '두 번째로 친 글'
+    await click('[data-action="save"]')
+    const saved = await openXmind(fake.saves[0]!.bytes)
+    if (saved.status !== 'ok') throw new Error('did not open')
+    expect(saved.document.sheets[0]!.rootTopic.children!.attached![0]!.title).toBe(
+      '두 번째로 친 글',
+    )
+  })
+})
+
 describe('a new map', () => {
   it("has one sheet and one central topic named in the user's language, and is not dirty", async () => {
     const fake = fakeApi(null, null)

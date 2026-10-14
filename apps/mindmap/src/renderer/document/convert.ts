@@ -8,8 +8,9 @@
  *
  * - `topic` is the title; the instance draws it as text (see `text-guard.ts`).
  * - `tags` are derived, for display only: the labels as plain strings, and one
- *   chip each for a note and for a web link. The library sets them with
- *   `textContent`.
+ *   chip each for a note and for a link. The library sets them with
+ *   `textContent`. The link chip is a span holding the address as text,
+ *   whatever the address is; it is never an anchor.
  * - `metadata` carries the values themselves (labels, note, link) plus what
  *   the editor shows without editing (picture, markers, style).
  * - `dangerouslySetInnerHTML`, `hyperLink`, `image`, `icons` and `style` are
@@ -27,7 +28,7 @@
  */
 import type { MindElixirData, NodeObj, TagObj } from 'mind-elixir'
 import {
-  isWebLink,
+  isShownLink,
   newXmindId,
   type ViewImage,
   type ViewLayout,
@@ -177,7 +178,7 @@ function readMeta(value: unknown): MapNodeMeta {
       ? meta.labels.filter((label) => typeof label === 'string')
       : [],
     note: typeof meta.note === 'string' && meta.note !== '' ? meta.note : null,
-    link: isWebLink(meta.link) ? meta.link : null,
+    link: isShownLink(meta.link) ? meta.link : null,
     image: isObject(meta.image) ? (meta.image as unknown as ViewImage) : null,
     markers: Array.isArray(meta.markers)
       ? meta.markers.filter((marker) => typeof marker === 'string')

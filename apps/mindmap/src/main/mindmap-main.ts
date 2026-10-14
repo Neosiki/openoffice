@@ -7,11 +7,14 @@
  *
  * Two things are decided here and not left to the renderer:
  *
- * - A file that did not open as `ok` is never written. This side opens the
- *   bytes itself before handing them over; when they do not open, the view
- *   gets a status and no bytes, loses its save target, and every later save
- *   from it is refused. Bytes a save brings are opened the same way before
- *   they replace a file.
+ * - A file that did not open as `ok` is never written. A path is a save target
+ *   only after this side has opened the file's bytes with the engine itself
+ *   and seen `ok`. A view made for a path starts without a save target
+ *   (`unopenedByWc`); until its file has opened here, and for good once it
+ *   failed to, every way to save from it is refused: the save call, the menu,
+ *   the close prompt and a save to a given path. What the renderer says or
+ *   leaves out changes nothing. Bytes a save brings are opened the same way
+ *   before they replace a file.
  * - A link is opened only after `safeExternalUrl`, and only from here. The
  *   view cannot open a window or navigate away.
  *
@@ -31,7 +34,6 @@ import {
   installNavigationGuard,
   installRendererProtocol,
   registerRendererScheme,
-  safeExternalUrl,
   showSaveDialogWithMemory,
 } from '@genoffice/electron-utils'
 import { getUiLang, normalizeLang, setUiLang } from '@genoffice/i18n'
@@ -39,6 +41,7 @@ import { openXmind } from '@genoffice/xmind-engine'
 import { atomicWriteFile } from './atomic-write'
 import { tm } from './i18n-main'
 import { APP_CHANNELS, MINDMAP_CHANNELS } from '../shared/ipc'
+import { openableLink } from '../shared/links'
 import type {
   ExportFormat,
   MindmapMenuCommand,
@@ -49,9 +52,6 @@ import type {
 
 /** The one extension a map is saved with. */
 const MAP_EXTENSION = '.xmind'
-
-/** What a topic's web link may be opened as. `file:`, `javascript:` and app schemes are refused by `safeExternalUrl` whatever is listed. */
-const LINK_PROTOCOLS = ['http:', 'https:', 'mailto:'] as const
 
 interface RuntimePaths {
   preloadPath: string
@@ -71,10 +71,19 @@ export function configureMindmapRuntime(paths: RuntimePaths): void {
 const openPathByWc = new Map<number, string>()
 /** File paths granted to each view: opening and saving only allow these */
 const allowedByWc = new Map<number, Set<string>>()
-/** Current save target per view; absent = untitled map */
+/** Current save target per view; absent = untitled map, or a file this side has not seen open */
 const savePathByWc = new Map<number, string>()
-/** Views whose file did not open as `ok`. Nothing is ever written for these. */
-const failedOpenByWc = new Set<number>()
+/**
+ * Views made for a file that this side has not seen open as `ok`: not asked
+ * for yet (`pending`) or asked for and not opened (`failed`). Nothing is ever
+ * written for a view in here, to any path. A view for a new map is never in.
+ */
+const unopenedByWc = new Map<number, 'pending' | 'failed'>()
+
+/** Whether anything may be written for this view. */
+function mayWrite(wcId: number): boolean {
+  return !unopenedByWc.has(wcId)
+}
 /** Unsaved-changes flags mirrored from the renderer; drives the save prompt before closing a tab/window */
 const dirtyByWc = new Set<number>()
 const closeSaveWaiters = new Map<number, (ok: boolean) => void>()
@@ -116,6 +125,8 @@ export async function requestMindmapClose(
   contents: WebContents,
   parent?: BrowserWindow | null,
 ): Promise<boolean> {
+  // no map, nothing to save: a view whose file did not open closes without a question
+  if (!mayWrite(contents.id)) return true
   if (!dirtyByWc.has(contents.id) || contents.isDestroyed()) return true
   const options = {
     type: 'warning' as const,
@@ -147,7 +158,7 @@ export async function requestMindmapClose(
 
 /** Menu Save / Save As: ask the renderer to produce the bytes and save; clean views resolve true immediately on plain save */
 export function requestMindmapSave(contents: WebContents, mode: SaveMode): Promise<boolean> {
-  if (contents.isDestroyed() || failedOpenByWc.has(contents.id)) return Promise.resolve(false)
+  if (contents.isDestroyed() || !mayWrite(contents.id)) return Promise.resolve(false)
   if (mode === 'save' && !dirtyByWc.has(contents.id) && savePathByWc.has(contents.id)) {
     return Promise.resolve(true)
   }
@@ -173,7 +184,7 @@ export function requestMindmapSave(contents: WebContents, mode: SaveMode): Promi
 export function mindmapSaveToPath(contents: WebContents, filePath: string): Promise<void> {
   if (contents.isDestroyed()) return Promise.reject(new Error('the map is no longer open'))
   const wcId = contents.id
-  if (failedOpenByWc.has(wcId)) {
+  if (!mayWrite(wcId)) {
     return Promise.reject(new Error('the file did not open, so there is no map to save'))
   }
   const previousPath = savePathByWc.get(wcId)
@@ -292,8 +303,9 @@ function registerMindmapIpc(): void {
       refuseWrites(wcId)
       return { status: opened.status }
     }
-    // a reload of a view whose file now opens (it was replaced on disk) may save again
-    failedOpenByWc.delete(wcId)
+    // Seen open, here: only now is the path a save target. This also covers a
+    // reload of a view whose file opens again after it was replaced on disk.
+    unopenedByWc.delete(wcId)
     savePathByWc.set(wcId, path)
     return { status: 'ok', bytes }
   })
@@ -306,7 +318,7 @@ function registerMindmapIpc(): void {
       waiter?.(result.ok && !('canceled' in result))
       return result
     }
-    if (failedOpenByWc.has(wcId)) {
+    if (!mayWrite(wcId)) {
       return done({ ok: false, error: 'mindmap: the file did not open, nothing is written' })
     }
     const {
@@ -354,7 +366,7 @@ function registerMindmapIpc(): void {
   })
 
   ipcMain.handle(MINDMAP_CHANNELS.openLink, async (_e, url: unknown): Promise<boolean> => {
-    const target = safeExternalUrl(url, { allowedProtocols: LINK_PROTOCOLS })
+    const target = openableLink(url)
     if (!target) return false
     try {
       await shell.openExternal(target)
@@ -366,7 +378,7 @@ function registerMindmapIpc(): void {
   })
 
   ipcMain.on(MINDMAP_CHANNELS.dirtyChanged, (e, dirty: unknown) => {
-    if (dirty === true) dirtyByWc.add(e.sender.id)
+    if (dirty === true && mayWrite(e.sender.id)) dirtyByWc.add(e.sender.id)
     else dirtyByWc.delete(e.sender.id)
   })
 
@@ -392,7 +404,7 @@ function registerMindmapIpc(): void {
 
 /** The view's file did not open: it has no save target and gets none. */
 function refuseWrites(wcId: number): void {
-  failedOpenByWc.add(wcId)
+  unopenedByWc.set(wcId, 'failed')
   savePathByWc.delete(wcId)
   dirtyByWc.delete(wcId)
 }
@@ -401,8 +413,9 @@ function grantAndTrack(wc: WebContents, openPath?: string | null): void {
   const wcId = wc.id
   if (openPath && existsSync(openPath)) {
     openPathByWc.set(wcId, openPath)
-    savePathByWc.set(wcId, openPath)
     allowedByWc.set(wcId, new Set([openPath]))
+    // Not a save target yet: it becomes one when the open handler has seen the file open.
+    unopenedByWc.set(wcId, 'pending')
   }
   // The map never opens a window or leaves its page. A link is opened by the
   // openLink handler, after safeExternalUrl; nothing else may reach the system.
@@ -414,7 +427,7 @@ function grantAndTrack(wc: WebContents, openPath?: string | null): void {
     openPathByWc.delete(wcId)
     allowedByWc.delete(wcId)
     savePathByWc.delete(wcId)
-    failedOpenByWc.delete(wcId)
+    unopenedByWc.delete(wcId)
     dirtyByWc.delete(wcId)
     closeSaveWaiters.get(wcId)?.(false)
     closeSaveWaiters.delete(wcId)

@@ -64,7 +64,10 @@ export const nl = {
   openRejected: 'Dit bestand kan vanwege de grootte of structuur niet worden geopend',
   labelHint: "Scheid meerdere labels met komma's",
   linkHint: 'Voer een webadres (http, https) of een e-mailadres (mailto) in',
-  linkInvalid: 'Alleen webadressen (http, https) en e-mailadressen zijn toegestaan',
+  linkWontOpen:
+    'Dit adres wordt als tekst bewaard en getoond, maar wordt niet geopend als u erop klikt. Alleen webadressen (http, https) en e-mailadressen worden geopend.',
+  linkInternal:
+    'Een adres in deze vorm verwijst naar iets binnen het mindmapbestand en kan hier niet worden ingevoerd.',
   linkNotOpened: 'Deze koppeling kan niet worden geopend',
   pickRelationship: 'Klik op het onderwerp waarmee u wilt verbinden. Druk op Esc om te annuleren.',
   selectTopicFirst: 'Selecteer eerst een onderwerp',

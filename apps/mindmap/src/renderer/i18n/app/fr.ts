@@ -64,7 +64,10 @@ export const fr = {
   openRejected: 'Ce fichier ne peut pas être ouvert en raison de sa taille ou de sa structure',
   labelHint: 'Séparez plusieurs étiquettes par des virgules',
   linkHint: 'Saisissez une adresse web (http, https) ou une adresse e-mail (mailto)',
-  linkInvalid: 'Seules les adresses web (http, https) et les adresses e-mail sont acceptées',
+  linkWontOpen:
+    "Cette adresse est conservée et affichée comme du texte, mais un clic ne l'ouvrira pas. Seules les adresses web (http, https) et les adresses e-mail sont ouvertes.",
+  linkInternal:
+    "Une adresse de cette forme désigne un élément à l'intérieur du fichier de la carte et ne peut pas être saisie ici.",
   linkNotOpened: 'Ce lien ne peut pas être ouvert',
   pickRelationship: 'Cliquez sur le sujet à relier. Appuyez sur Échap pour annuler.',
   selectTopicFirst: "Sélectionnez d'abord un sujet",

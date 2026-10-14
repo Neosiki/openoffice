@@ -64,7 +64,9 @@ export const vi = {
   openRejected: 'Không thể mở tệp này do kích thước hoặc cấu trúc của tệp',
   labelHint: 'Phân tách nhiều nhãn bằng dấu phẩy',
   linkHint: 'Nhập địa chỉ web (http, https) hoặc địa chỉ email (mailto)',
-  linkInvalid: 'Chỉ dùng được địa chỉ web (http, https) và địa chỉ email',
+  linkWontOpen:
+    'Địa chỉ này được lưu và hiển thị dưới dạng văn bản, nhưng nhấp vào sẽ không mở. Chỉ địa chỉ web (http, https) và địa chỉ email mới được mở.',
+  linkInternal: 'Địa chỉ có dạng này dùng để trỏ vào bên trong tệp sơ đồ nên không thể nhập ở đây.',
   linkNotOpened: 'Không thể mở liên kết này',
   pickRelationship: 'Nhấp vào chủ đề cần kết nối. Nhấn Esc để hủy.',
   selectTopicFirst: 'Hãy chọn một chủ đề trước',

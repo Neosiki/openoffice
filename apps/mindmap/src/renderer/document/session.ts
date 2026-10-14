@@ -36,6 +36,7 @@ import {
   type ViewSheet,
   type XmindDocument,
   type XmindSheet,
+  type XmindTopic,
 } from '@genoffice/xmind-engine'
 
 /** A sheet as the tabs show it. `key` stays the same while the sheet lives; `index` moves when a sheet before it is deleted. */
@@ -142,15 +143,7 @@ export class DocumentSession {
     const changed = result.ok && result.changed
     if (before) {
       // A refused state is a step too: the library recorded one, and the two histories must stay in line.
-      entry.snapshots.length = entry.cursor + 1
-      entry.snapshots[entry.cursor] = before
-      entry.snapshots.push(changed ? structuredClone(this.#document.sheets[index]!) : before)
-      entry.cursor++
-      entry.stale = false
-      if (entry.snapshots.length > MAX_HISTORY_STEPS + 1) {
-        entry.snapshots.shift()
-        entry.cursor--
-      }
+      this.#record(entry, before, changed ? structuredClone(this.#document.sheets[index]!) : before)
     } else if (changed) {
       entry.stale = true
     }
@@ -195,6 +188,88 @@ export class DocumentSession {
       entry.stale = false
       this.#notify()
     }
+    return this.view(key)
+  }
+
+  // ---- topics taken out and put back whole (cut, then paste) ----
+
+  /** A copy of a shown topic's source, with everything on and below it. Null when the sheet shows no such topic. */
+  copyOfTopic(key: string, topicId: string): XmindTopic | null {
+    const topic = findShown(this.sheet(key).rootTopic, topicId)
+    return topic ? structuredClone(topic) : null
+  }
+
+  /** Copies of the sheet's relationship records, shown or not. */
+  relationshipRecords(key: string): Record<string, unknown>[] {
+    const { relationships } = this.sheet(key)
+    return Array.isArray(relationships) ? structuredClone(relationships.filter(isRecord)) : []
+  }
+
+  /** Every topic id of the file, on every sheet, shown or not. */
+  topicIds(): Set<string> {
+    const ids = new Set<string>()
+    for (const sheet of this.#document.sheets) collectIds(sheet.rootTopic, ids)
+    return ids
+  }
+
+  /**
+   * Puts source topics that were taken out of this sheet back under one of
+   * its shown topics, after the branches already there: the topics as they
+   * were, ids, unknown keys and hidden parts included. `relationships` are
+   * records that went with them; each comes back when both its ends exist
+   * again. One step of the history, like a reconciled change, so the caller
+   * has the drawing library record a step for it as well.
+   *
+   * Null, with nothing changed, when it cannot be done: the target is not a
+   * shown topic, an id is in the file again, or the result would not be a
+   * tree a file may hold.
+   */
+  reinsertTopics(
+    key: string,
+    parentId: string,
+    topics: readonly XmindTopic[],
+    relationships: readonly Record<string, unknown>[] = [],
+  ): ViewSheet | null {
+    const { entry, index } = this.#at(key)
+    const live = this.#document.sheets[index]!
+    const taken = this.topicIds()
+    const arriving = new Set<string>()
+    for (const topic of topics) collectIds(topic, arriving)
+    if (topics.length === 0 || [...arriving].some((id) => taken.has(id))) return null
+
+    const next = structuredClone(live)
+    const parent = findShown(next.rootTopic, parentId)
+    if (!parent) return null
+    const children = (parent.children ??= {})
+    children.attached = [
+      ...(children.attached ?? []),
+      ...topics.map((topic) => structuredClone(topic)),
+    ]
+    // what was pasted into a folded topic is shown, as the library does it
+    if (parent.branch === 'folded') delete parent.branch
+
+    const ends = new Set<string>()
+    collectIds(next.rootTopic, ends)
+    const lines = Array.isArray(next.relationships) ? [...next.relationships] : []
+    const present = new Set(lines.filter(isRecord).map((line) => line.id))
+    for (const line of relationships) {
+      const { id, end1Id, end2Id } = line
+      if (typeof id !== 'string' || present.has(id)) continue
+      if (typeof end1Id !== 'string' || typeof end2Id !== 'string') continue
+      if (!ends.has(end1Id) || !ends.has(end2Id)) continue
+      lines.push(structuredClone(line))
+      present.add(id)
+    }
+    if (lines.length > 0) next.relationships = lines
+    if (!checkContentStructure([next]).ok) return null
+
+    const before =
+      entry.snapshots.length === 0 || entry.stale
+        ? structuredClone(live)
+        : entry.snapshots[entry.cursor]!
+    putInPlace(live, next)
+    this.#record(entry, before, structuredClone(live))
+    this.#notify()
     return this.view(key)
   }
 
@@ -283,6 +358,19 @@ export class DocumentSession {
     return () => this.#listeners.delete(listener)
   }
 
+  /** One more step: the sheet as it was before it and as it is after it. Steps that were undone are dropped. */
+  #record(entry: SheetEntry, before: XmindSheet, after: XmindSheet): void {
+    entry.snapshots.length = entry.cursor + 1
+    entry.snapshots[entry.cursor] = before
+    entry.snapshots.push(after)
+    entry.cursor++
+    entry.stale = false
+    if (entry.snapshots.length > MAX_HISTORY_STEPS + 1) {
+      entry.snapshots.shift()
+      entry.cursor--
+    }
+  }
+
   #at(key: string): { entry: SheetEntry; index: number } {
     const index = this.indexOf(key)
     if (index < 0) throw new Error(`mindmap: there is no sheet ${key}`)
@@ -313,6 +401,11 @@ function restoreSheet(document: XmindDocument, index: number, snapshot: XmindShe
   carryOver(live.rootTopic, next.rootTopic, 'structureClass')
   const check = checkContentStructure([next])
   if (!check.ok) throw new Error(`mindmap: cannot restore the sheet, ${check.problem}`)
+  putInPlace(live, next)
+}
+
+/** Moves the keys of `next` into the sheet object the document holds, in `next`'s order. Nothing is marked changed. */
+function putInPlace(live: XmindSheet, next: XmindSheet): void {
   for (const key of Object.keys(live)) delete live[key]
   for (const [key, value] of Object.entries(next)) {
     // defined, not assigned: a key named `__proto__` must stay a key of the file
@@ -324,6 +417,34 @@ function restoreSheet(document: XmindDocument, index: number, snapshot: XmindShe
     })
   }
 }
+
+/** The topic with this id among the topics the editor shows: the central topic and the branches below it. */
+function findShown(topic: XmindTopic, id: string, depth = 0): XmindTopic | null {
+  if (topic.id === id) return topic
+  if (depth > MAX_WALK_DEPTH) return null
+  const attached = topic.children?.attached
+  if (!Array.isArray(attached)) return null
+  for (const child of attached) {
+    const hit = findShown(child, id, depth + 1)
+    if (hit) return hit
+  }
+  return null
+}
+
+/** The ids of a topic and of every topic below it, of whatever kind (branches, floating topics, callouts, …). */
+function collectIds(topic: XmindTopic, into: Set<string>, depth = 0): void {
+  if (typeof topic.id === 'string') into.add(topic.id)
+  if (depth > MAX_WALK_DEPTH || !isRecord(topic.children)) return
+  for (const kind of Object.values(topic.children)) {
+    if (!Array.isArray(kind)) continue
+    for (const child of kind) {
+      if (isRecord(child)) collectIds(child as XmindTopic, into, depth + 1)
+    }
+  }
+}
+
+/** Deeper than any file the engine opens; a walk stops here rather than trust the tree. */
+const MAX_WALK_DEPTH = 1024
 
 function carryOver(from: Record<string, unknown>, to: Record<string, unknown>, key: string): void {
   if (Object.hasOwn(from, key)) to[key] = from[key]

@@ -63,7 +63,10 @@ export const pl = {
   openRejected: 'Tego pliku nie można otworzyć ze względu na jego rozmiar lub strukturę',
   labelHint: 'Oddziel kilka etykiet przecinkami',
   linkHint: 'Wpisz adres internetowy (http, https) lub adres e-mail (mailto)',
-  linkInvalid: 'Dozwolone są tylko adresy internetowe (http, https) i adresy e-mail',
+  linkWontOpen:
+    'Ten adres jest zachowywany i wyświetlany jako tekst, ale kliknięcie go nie otworzy. Otwierane są tylko adresy internetowe (http, https) i adresy e-mail.',
+  linkInternal:
+    'Adres w tej postaci wskazuje na coś wewnątrz pliku mapy i nie można go tutaj wpisać.',
   linkNotOpened: 'Tego linku nie można otworzyć',
   pickRelationship: 'Kliknij temat, z którym chcesz połączyć. Naciśnij Esc, aby anulować.',
   selectTopicFirst: 'Najpierw wybierz temat',

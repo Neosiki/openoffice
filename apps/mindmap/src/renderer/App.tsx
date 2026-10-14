@@ -14,6 +14,7 @@ import type { ViewLayout } from '@genoffice/xmind-engine'
 import { t as translate, useI18n } from './i18n/locale'
 import { mapStrings } from './i18n/map-strings'
 import type { StringKey } from './i18n/locale'
+import { linkFromInput, linkInputKind } from './document/link-input'
 import { newMap, type OpenFailure, type OpenNotices, openMapBytes } from './document/open'
 import type { DocumentSession, SheetTab } from './document/session'
 import { deleteSheetAfterConfirm } from './document/sheet-actions'
@@ -42,6 +43,8 @@ const OPEN_FAILURE_TEXT: Readonly<Record<OpenFailure, StringKey>> = {
 }
 
 const AUTO_SAVE_INTERVAL_MS = 30_000
+/** Labels are typed in one field, separated by a comma: the plain one, the full-width one or the ideographic one. */
+const LABEL_SEPARATORS = /[,\uFF0C\u3001]/
 const TOAST_MS = 4000
 
 /** true while the keyboard is in a text field or in a title being typed on the map */
@@ -254,7 +257,11 @@ export default function App() {
 
   /** Brings the tree in line with every sheet on screen, so nothing shown is missing from what is saved or read. */
   const flushAll = useCallback(() => {
-    controllers.current.forEach((each) => each.flush())
+    controllers.current.forEach((each) => {
+      // a title still being typed is part of the map: it goes in before anything is saved or read
+      each.commitEdit()
+      each.flush()
+    })
   }, [])
 
   // ---- saving ----
@@ -300,17 +307,25 @@ export default function App() {
   // autosave: every 30s and on window blur; untitled maps wait for an explicit first save
   useEffect(() => {
     if (!autoSave || !path) return
-    const tick = (): void => {
+    const tick = (onTimer: boolean): void => {
       if (savingRef.current) return
+      const maps = [...controllers.current.values()]
+      // An input method is composing: this save waits for the next occasion rather than cut into it.
+      if (maps.some((each) => each.composing)) return
+      // The timer does not close a title the user is in the middle of typing; the
+      // next tick, leaving the window or a save by hand takes it.
+      if (onTimer && maps.some((each) => each.editingText)) return
       flushAll()
       if (!sessionRef.current?.dirty) return
       void doSave('save')
     }
-    const id = window.setInterval(tick, AUTO_SAVE_INTERVAL_MS)
-    window.addEventListener('blur', tick)
+    const onTimer = (): void => tick(true)
+    const onBlur = (): void => tick(false)
+    const id = window.setInterval(onTimer, AUTO_SAVE_INTERVAL_MS)
+    window.addEventListener('blur', onBlur)
     return () => {
       window.clearInterval(id)
-      window.removeEventListener('blur', tick)
+      window.removeEventListener('blur', onBlur)
     }
   }, [autoSave, path, doSave, flushAll])
 
@@ -447,8 +462,9 @@ export default function App() {
       event.preventDefault()
       runCommand(key === 'y' || event.shiftKey ? 'redo' : 'undo')
     }
-    window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
+    // Captured: the edit box of a title keeps its keys to itself, and Ctrl+S has to work while typing.
+    window.addEventListener('keydown', onKeyDown, true)
+    return () => window.removeEventListener('keydown', onKeyDown, true)
   }, [doSave, runCommand])
 
   // ---- sheets ----
@@ -500,15 +516,10 @@ export default function App() {
     const map = controller
     if (!map || !fieldRequest) return true
     const { field, topicId } = fieldRequest
-    if (field === 'label') return map.setLabels(topicId, value.split(/[,，、]/))
+    if (field === 'label') return map.setLabels(topicId, value.split(LABEL_SEPARATORS))
     if (field === 'note') return map.setNote(topicId, value)
-    const address = value.trim()
-    if (address === '') return map.setLink(topicId, null)
-    // an address typed without a scheme is taken as a web address
-    return map.setLink(
-      topicId,
-      /^[a-z][a-z0-9+.-]*:/i.test(address) ? address : `https://${address}`,
-    )
+    // Any address is kept; the controller turns down only a reference into the file.
+    return map.setLink(topicId, linkFromInput(value))
   }
 
   // computed on every render: `t` is a new function each time and must not be a hook dependency
@@ -648,6 +659,7 @@ export default function App() {
           key={`${fieldRequest.field}:${fieldRequest.topicId}`}
           request={fieldRequest}
           onSubmit={submitField}
+          linkKind={linkInputKind}
           onClose={() => setFieldRequest(null)}
         />
       )}

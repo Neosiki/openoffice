@@ -64,7 +64,10 @@ export const it = {
   openRejected: 'Questo file non può essere aperto a causa delle dimensioni o della struttura',
   labelHint: 'Separa più etichette con le virgole',
   linkHint: 'Inserisci un indirizzo web (http, https) o un indirizzo e-mail (mailto)',
-  linkInvalid: 'Sono ammessi solo indirizzi web (http, https) e indirizzi e-mail',
+  linkWontOpen:
+    'Questo indirizzo viene conservato e mostrato come testo, ma facendo clic non verrà aperto. Vengono aperti solo indirizzi web (http, https) e indirizzi e-mail.',
+  linkInternal:
+    "Un indirizzo in questa forma punta all'interno del file della mappa e non può essere inserito qui.",
   linkNotOpened: 'Questo collegamento non può essere aperto',
   pickRelationship: "Fai clic sull'argomento da collegare. Premi Esc per annullare.",
   selectTopicFirst: 'Seleziona prima un argomento',

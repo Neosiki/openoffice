@@ -63,7 +63,9 @@ export const cs = {
   openRejected: 'Tento soubor nelze otevřít kvůli jeho velikosti nebo struktuře',
   labelHint: 'Více štítků oddělte čárkami',
   linkHint: 'Zadejte webovou adresu (http, https) nebo e-mailovou adresu (mailto)',
-  linkInvalid: 'Lze použít pouze webové adresy (http, https) a e-mailové adresy',
+  linkWontOpen:
+    'Tato adresa se uchová a zobrazí jako text, ale kliknutím se neotevře. Otevírají se pouze webové adresy (http, https) a e-mailové adresy.',
+  linkInternal: 'Adresa v tomto tvaru odkazuje dovnitř souboru mapy a nelze ji zde zadat.',
   linkNotOpened: 'Tento odkaz nelze otevřít',
   pickRelationship: 'Klikněte na téma, které chcete propojit. Stisknutím klávesy Esc akci zrušíte.',
   selectTopicFirst: 'Nejprve vyberte téma',

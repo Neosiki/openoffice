@@ -236,6 +236,79 @@ describe('a file that did not open is never written', () => {
   })
 })
 
+describe('a path becomes a save target only once the main process has seen the file open', () => {
+  /** A view on a file that is not a map, whose renderer never asked to open it. */
+  function unopened(): { contents: FakeContents; path: string; original: Buffer } {
+    const path = join(dir, 'not-a-map.xmind')
+    const original = Buffer.from('this is not a zip archive')
+    writeFileSync(path, original)
+    return { contents: view(path), path, original }
+  }
+  const untouched = (path: string, original: Buffer): void => {
+    expect(readFileSync(path).equals(original)).toBe(true)
+    expect(readdirSync(dir)).toEqual(['not-a-map.xmind'])
+  }
+
+  it('save and save as are refused before any open', async () => {
+    const { contents, path, original } = unopened()
+    expect(mindmapFilePath(contents.id)).toBeUndefined()
+    const good = await mapBytes()
+    showSaveDialog.mockResolvedValue({ canceled: false, filePath: join(dir, 'elsewhere.xmind') })
+    for (const mode of ['save', 'saveAs'] as const) {
+      expect(await save(contents, { bytes: good, mode })).toMatchObject({ ok: false })
+    }
+    expect(showSaveDialog).not.toHaveBeenCalled()
+    untouched(path, original)
+  })
+
+  it('the menu save, the close prompt and a save to a given path never reach the renderer', async () => {
+    const { contents, path, original } = unopened()
+    expect(await requestMindmapSave(contents as never, 'save')).toBe(false)
+    expect(await requestMindmapSave(contents as never, 'saveAs')).toBe(false)
+    await expect(mindmapSaveToPath(contents as never, path)).rejects.toThrow()
+    await expect(mindmapSaveToPath(contents as never, join(dir, 'other.xmind'))).rejects.toThrow()
+    // a renderer claiming unsaved changes for a file that never opened gets no "save?" question
+    call(MINDMAP_CHANNELS.dirtyChanged, contents, true)
+    expect(mindmapIsDirty(contents.id)).toBe(false)
+    expect(await requestMindmapClose(contents as never)).toBe(true)
+    expect(showMessageBox).not.toHaveBeenCalled()
+    expect(contents.sent).toEqual([])
+    // an automatic save is the same save call
+    expect(await save(contents, { bytes: await mapBytes(), mode: 'save' })).toMatchObject({
+      ok: false,
+    })
+    untouched(path, original)
+  })
+
+  it('a good file is no save target either until it was opened here, and is one afterwards', async () => {
+    const path = join(dir, 'good.xmind')
+    const bytes = await mapBytes()
+    writeFileSync(path, bytes)
+    const contents = view(path)
+    const edited = await mapBytes('Edited')
+    expect(await save(contents, { bytes: edited, mode: 'save' })).toMatchObject({ ok: false })
+    expect(readFileSync(path).equals(Buffer.from(bytes))).toBe(true)
+
+    expect((await open(contents, path)).status).toBe('ok')
+    expect(await save(contents, { bytes: edited, mode: 'save' })).toEqual({ ok: true, path })
+    expect(readFileSync(path).equals(Buffer.from(edited))).toBe(true)
+  })
+
+  it('a file that stops opening after a reload stops being a save target', async () => {
+    const path = join(dir, 'changing.xmind')
+    writeFileSync(path, await mapBytes())
+    const contents = view(path)
+    await open(contents, path)
+    const broken = Buffer.from('replaced by something else')
+    writeFileSync(path, broken)
+    expect((await open(contents, path)).status).toBe('unreadable')
+    expect(await save(contents, { bytes: await mapBytes(), mode: 'save' })).toMatchObject({
+      ok: false,
+    })
+    expect(readFileSync(path).equals(broken)).toBe(true)
+  })
+})
+
 describe('saving', () => {
   it('writes the bytes it was given, byte for byte', async () => {
     const path = join(dir, 'map.xmind')

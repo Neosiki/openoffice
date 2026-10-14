@@ -62,7 +62,9 @@ export const zhTW = {
   openRejected: '由於檔案大小或結構問題，無法開啟',
   labelHint: '多個標籤請以逗號分隔',
   linkHint: '請輸入網址（http、https）或電子郵件地址（mailto）',
-  linkInvalid: '只能填寫網址（http、https）或電子郵件地址',
+  linkWontOpen:
+    '此位址只會以文字保留並顯示，點選也不會開啟。只有網址（http、https）和電子郵件地址才會開啟。',
+  linkInternal: '這種形式的位址用來指向心智圖檔案內部，無法在此輸入。',
   linkNotOpened: '無法開啟此連結',
   pickRelationship: '請點選要連接的主題。按 Esc 取消。',
   selectTopicFirst: '請先選取一個主題',

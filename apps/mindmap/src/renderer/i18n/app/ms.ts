@@ -63,7 +63,10 @@ export const ms = {
   openRejected: 'Fail ini tidak dapat dibuka kerana saiz atau strukturnya',
   labelHint: 'Asingkan beberapa label dengan koma',
   linkHint: 'Masukkan alamat web (http, https) atau alamat e-mel (mailto)',
-  linkInvalid: 'Hanya alamat web (http, https) dan alamat e-mel boleh digunakan',
+  linkWontOpen:
+    'Alamat ini disimpan dan dipaparkan sebagai teks, tetapi tidak akan dibuka apabila diklik. Hanya alamat web (http, https) dan alamat e-mel yang dibuka.',
+  linkInternal:
+    'Alamat dalam bentuk ini menunjuk ke bahagian dalam fail peta dan tidak boleh dimasukkan di sini.',
   linkNotOpened: 'Pautan ini tidak dapat dibuka',
   pickRelationship: 'Klik topik yang hendak disambungkan. Tekan Esc untuk membatalkan.',
   selectTopicFirst: 'Pilih topik dahulu',

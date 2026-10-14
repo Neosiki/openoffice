@@ -64,7 +64,10 @@ export const de = {
   openRejected: 'Diese Datei kann wegen ihrer Größe oder Struktur nicht geöffnet werden',
   labelHint: 'Mehrere Etiketten durch Kommas trennen',
   linkHint: 'Webadresse (http, https) oder E-Mail-Adresse (mailto) eingeben',
-  linkInvalid: 'Nur Webadressen (http, https) und E-Mail-Adressen sind möglich',
+  linkWontOpen:
+    'Diese Adresse wird als Text gespeichert und angezeigt, aber ein Klick öffnet sie nicht. Geöffnet werden nur Webadressen (http, https) und E-Mail-Adressen.',
+  linkInternal:
+    'Eine Adresse dieser Form verweist in die Mindmap-Datei selbst und kann hier nicht eingegeben werden.',
   linkNotOpened: 'Dieser Link kann nicht geöffnet werden',
   pickRelationship: 'Klicken Sie auf das Thema, das verbunden werden soll. Mit Esc brechen Sie ab.',
   selectTopicFirst: 'Wählen Sie zuerst ein Thema aus',

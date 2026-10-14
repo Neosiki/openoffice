@@ -25,7 +25,13 @@ import MindElixir, {
   type Options,
   type Topic,
 } from 'mind-elixir'
-import { isWebLink, newXmindId, type ViewLayout, type ViewSheet } from '@genoffice/xmind-engine'
+import {
+  isShownLink,
+  newXmindId,
+  type ViewLayout,
+  type ViewSheet,
+  type XmindTopic,
+} from '@genoffice/xmind-engine'
 import {
   type Arrow,
   cleanPastedNode,
@@ -128,6 +134,14 @@ export class MapController {
   #quietTimer: ReturnType<typeof setTimeout> | null = null
   /** the topic a relationship is being drawn from, while the user picks its other end */
   #pickingFrom: string | null = null
+  /** topics a cut is about to take out, kept until the library reports that it removed them */
+  #cutPending: CutStash | null = null
+  /** topics a cut took out of this sheet: pasted back here, they return as they were */
+  #cutStash: CutStash | null = null
+  /** set while a step the session already recorded is announced to the library's history */
+  #recordedBySession = false
+  /** an input method is composing in the edit box */
+  #composing = false
   #destroyed = false
   readonly #dispose: Array<() => void> = []
 
@@ -160,7 +174,9 @@ export class MapController {
       before: {
         removeNodes: (topics) => this.#beforeRemove(topics),
         // Pasted nodes come from the clipboard: cleaned before the library draws them.
-        copyNodes: (topics) => {
+        // Unless they are the topics just cut from this sheet: those come back whole.
+        copyNodes: (topics, to) => {
+          if (this.#moveBack(topics, to)) return false
           topics.forEach(cleanIfPasted)
           return true
         },
@@ -227,11 +243,24 @@ export class MapController {
     const container = mind.container
     const onKeyDownFirst = (event: KeyboardEvent): void => this.#guardKeys(event)
     const onClick = (event: MouseEvent): void => this.#onClick(event)
+    const onCut = (event: Event): void => this.#onCut(event)
+    const onCopy = (): void => this.#forgetCut()
+    const onComposition = (event: Event): void => {
+      this.#composing = event.type === 'compositionstart'
+    }
     container.addEventListener('keydown', onKeyDownFirst, true)
     container.addEventListener('click', onClick, true)
+    container.addEventListener('cut', onCut, true)
+    container.addEventListener('copy', onCopy, true)
+    container.addEventListener('compositionstart', onComposition)
+    container.addEventListener('compositionend', onComposition)
     this.#dispose.push(() => {
       container.removeEventListener('keydown', onKeyDownFirst, true)
       container.removeEventListener('click', onClick, true)
+      container.removeEventListener('cut', onCut, true)
+      container.removeEventListener('copy', onCopy, true)
+      container.removeEventListener('compositionstart', onComposition)
+      container.removeEventListener('compositionend', onComposition)
     })
   }
 
@@ -318,11 +347,18 @@ export class MapController {
     return this.#patchMeta(topicId, { note: note && note.trim() !== '' ? note : null })
   }
 
-  /** Sets or removes a topic's web link. False when the address is not one a map holds as a web link. */
+  /**
+   * Sets or removes a topic's link. Any address is taken and shown as text,
+   * also one nothing will ever open: taking it is not opening it. False only
+   * for an address in the form of a reference into the file (a link to
+   * another topic or to an attachment), which would become a link the editor
+   * no longer shows.
+   */
   setLink(topicId: string, link: string | null): boolean {
-    const address = link === null ? null : link.trim()
-    if (address !== null && !isWebLink(address)) return false
-    return this.#patchMeta(topicId, { link: address || null })
+    const address = link?.trim() ?? ''
+    if (address === '') return this.#patchMeta(topicId, { link: null })
+    if (!isShownLink(address)) return false
+    return this.#patchMeta(topicId, { link: address })
   }
 
   /**
@@ -527,6 +563,29 @@ export class MapController {
     this.#sync({ step: false })
   }
 
+  /** true while an input method is composing in the edit box */
+  get composing(): boolean {
+    return this.#composing && this.editingText
+  }
+
+  /**
+   * Takes a title that is still being typed (of a topic, a summary or a
+   * relationship) into the map, as leaving the edit box would. Called before
+   * the map is saved or read, so the text in the box is not left out. A
+   * composition that is open ends with the box losing the focus; the browser
+   * keeps its text. False when nothing was being typed.
+   */
+  commitEdit(): boolean {
+    const box = this.mind.nodes.querySelector<HTMLElement>('#input-box')
+    if (!box) return false
+    // The library takes the text when the box loses the focus, and only then.
+    if (document.activeElement === box) box.blur()
+    // not focused (or no real focus to lose): tell the library the same way
+    if (box.isConnected) box.dispatchEvent(new FocusEvent('blur'))
+    this.#composing = false
+    return true
+  }
+
   /** Draws the sheet again from the source tree. */
   redraw(): void {
     this.#draw(this.#session.view(this.#key))
@@ -687,12 +746,114 @@ export class MapController {
   #onOperation = (operation: Operation): void => {
     // Opening the edit box changes nothing yet, and the library records no step for it.
     if (operation.name === 'beginEdit') return
+    // The session recorded this step and the screen was drawn from it: nothing to reconcile.
+    if (this.#recordedBySession) return
+    const cut = this.#cutPending
+    this.#cutPending = null
     if (operation.name === 'removeSummary') this.#removedSummaries.add(operation.obj.id)
     if (operation.name === 'removeArrow') this.#removedRelationships.add(operation.obj.id)
     this.#sync({
       step: true,
       reshaped: operation.name === 'reshapeArrow' ? [operation.obj.id] : [],
     })
+    if (cut && operation.name === 'removeNodes') {
+      const removed = operation.objs.map((node) => node.id)
+      if (sameIds(removed, cut.ids)) {
+        // the lines that went with the topics are the ones the sheet no longer has
+        const left = new Set(this.#session.relationshipRecords(this.#key).map((line) => line.id))
+        this.#cutStash = {
+          ...cut,
+          relationships: cut.relationships.filter((line) => !left.has(line.id)),
+        }
+      }
+    }
+  }
+
+  /**
+   * A cut is starting (the library copies the selection to the clipboard and
+   * then removes it). The source of the selected topics is copied now, while
+   * it is still there: reconciling the removal deletes it with everything the
+   * editor never showed.
+   */
+  #onCut(event: Event): void {
+    this.#forgetCut()
+    const target = event.target instanceof Element ? event.target : null
+    if (target?.closest('#input-box')) return
+    const selected = (this.mind.currentNodes ?? []).map((topic) => topic.nodeObj)
+    const chosen = new Set(selected)
+    const ids: string[] = []
+    const topics: XmindTopic[] = []
+    for (const node of selected) {
+      if (!node.parent) return
+      let inside = false
+      for (let up: NodeObj | undefined = node.parent; up; up = up.parent) inside ||= chosen.has(up)
+      if (inside) continue
+      const source = this.#session.copyOfTopic(this.#key, node.id)
+      if (!source) return
+      ids.push(node.id)
+      topics.push(source)
+    }
+    if (ids.length === 0) return
+    this.#cutPending = {
+      ids,
+      topics,
+      relationships: this.#session.relationshipRecords(this.#key),
+    }
+  }
+
+  /** Something else was copied or cut: what an earlier cut took out can no longer be pasted back as itself. */
+  #forgetCut(): void {
+    this.#cutPending = null
+    this.#cutStash = null
+  }
+
+  /**
+   * The library is about to paste. When the clipboard holds exactly the topics
+   * last cut from this sheet, they are put back as the source topics they
+   * were (ids, every key, hidden parts), under the target: a move, as the user
+   * meant it. True when that was done and the library has nothing left to do.
+   * Any other paste, and a second paste of the same clipboard, makes new
+   * topics from what the clipboard shows.
+   */
+  #moveBack(topics: Topic[], to: Topic): boolean {
+    const stash = this.#cutStash
+    if (!stash || !to?.nodeObj) return false
+    const pasted = topics.map((topic) => topic.nodeObj as NodeObj | undefined)
+    if (pasted.some((node) => !node || typeof node.parent === 'object')) return false
+    if (
+      !sameIds(
+        pasted.map((node) => String(node!.id)),
+        stash.ids,
+      )
+    ) {
+      return false
+    }
+    this.#cutStash = null
+    this.#sync({ step: false })
+    const view = this.#session.reinsertTopics(
+      this.#key,
+      to.nodeObj.id,
+      stash.topics,
+      stash.relationships,
+    )
+    if (!view) return false
+    this.#draw(view)
+    // The session has its step; the library records one for the same change.
+    this.#recordedBySession = true
+    try {
+      this.mind.bus.fire('operation', {
+        name: 'reshapeNode',
+        obj: this.mind.nodeData,
+        origin: this.mind.nodeData,
+      })
+    } finally {
+      this.#recordedBySession = false
+    }
+    const moved = stash.ids.map((id) => this.#element(id)).filter((topic) => topic !== null)
+    this.mind.clearSelection()
+    if (moved.length > 0) this.mind.selectNodes(moved)
+    this.#host.onStateChange()
+    return true
   }
 
   #onQuietChange = (): void => {
@@ -793,6 +954,8 @@ export class MapController {
       this.cancelRelationshipPick()
       return
     }
+    // While a title is typed, every key belongs to the text (Ctrl+arrow moves by words).
+    if (event.target instanceof Element && event.target.closest('#input-box')) return
     // The library switches the layout on Ctrl+arrow. A layout is written to the
     // file when it is picked, so it is picked on purpose (the toolbar), not by a key.
     const layoutKey = ['ArrowLeft', 'ArrowRight', 'ArrowUp'].includes(event.key)
@@ -818,7 +981,8 @@ export class MapController {
     }
     if (!topic) return
     if (target.closest('.mm-chip-link')) {
-      // The map never opens anything itself: the address goes to the main process.
+      // The map never opens anything itself. Whatever the address is, it goes to
+      // the main process, which opens it only when it is a web or mail address.
       event.preventDefault()
       event.stopPropagation()
       const link = this.#meta(topic.nodeObj).link
@@ -855,6 +1019,20 @@ export class MapController {
     if (positions.some((position) => position < 0)) return null
     return { parent: parent.id, start: Math.min(...positions), end: Math.max(...positions) }
   }
+}
+
+/** What a cut took out of the sheet: the source topics, and the relationship records that went with them. */
+interface CutStash {
+  /** ids of the topics that were cut (not of the topics below them) */
+  ids: string[]
+  topics: XmindTopic[]
+  relationships: Record<string, unknown>[]
+}
+
+function sameIds(a: readonly string[], b: readonly string[]): boolean {
+  if (a.length !== b.length) return false
+  const wanted = new Set(b)
+  return new Set(a).size === a.length && a.every((id) => wanted.has(id))
 }
 
 /**

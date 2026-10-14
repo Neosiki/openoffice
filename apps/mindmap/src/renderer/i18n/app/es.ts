@@ -64,7 +64,10 @@ export const es = {
   openRejected: 'Este archivo no se puede abrir debido a su tamaño o estructura',
   labelHint: 'Separe varias etiquetas con comas',
   linkHint: 'Escriba una dirección web (http, https) o una dirección de correo (mailto)',
-  linkInvalid: 'Solo se admiten direcciones web (http, https) y direcciones de correo',
+  linkWontOpen:
+    'Esta dirección se conserva y se muestra como texto, pero no se abrirá al hacer clic. Solo se abren direcciones web (http, https) y direcciones de correo.',
+  linkInternal:
+    'Una dirección con esta forma apunta al interior del archivo del mapa y no se puede escribir aquí.',
   linkNotOpened: 'Este enlace no se puede abrir',
   pickRelationship: 'Haga clic en el tema con el que desea conectar. Pulse Esc para cancelar.',
   selectTopicFirst: 'Seleccione primero un tema',

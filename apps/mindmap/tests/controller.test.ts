@@ -5,6 +5,7 @@
  */
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
+  openXmind,
   sheetToView,
   type ViewTopic,
   type XmindSheet,
@@ -182,6 +183,55 @@ describe('shortcuts', () => {
     expect(attached()).toHaveLength(3)
   })
 
+  it('while a title is typed, Ctrl+arrow belongs to the text: the caret moves by words', async () => {
+    const { mind, el, root } = await mount()
+    mind.selectNode(mind.findEle(IDS.c))
+    press(mind.container, 'F2')
+    await settle()
+    const box = el.querySelector<HTMLElement>('#input-box')!
+    for (const key of ['ArrowLeft', 'ArrowRight', 'ArrowUp']) {
+      const event = new KeyboardEvent('keydown', {
+        key,
+        ctrlKey: true,
+        bubbles: true,
+        cancelable: true,
+      })
+      box.dispatchEvent(event)
+      expect(event.defaultPrevented, key).toBe(false)
+    }
+    expect(root().structureClass).toBe(FISHBONE)
+  })
+
+  it('a title still being typed is committed on request, so a save does not miss it', async () => {
+    const { controller, mind, el, attached } = await mount()
+    mind.selectNode(mind.findEle(IDS.c))
+    press(mind.container, 'F2')
+    await settle()
+    el.querySelector<HTMLElement>('#input-box')!.textContent = '아직 치는 중'
+    expect(controller.editingText).toBe(true)
+    expect(attached()[2]!.title).toBe('Gamma')
+
+    expect(controller.commitEdit()).toBe(true)
+    expect(controller.editingText).toBe(false)
+    expect(attached()[2]!.title).toBe('아직 치는 중')
+    expect(controller.commitEdit()).toBe(false)
+    controller.undo()
+    expect(attached()[2]!.title).toBe('Gamma')
+  })
+
+  it('knows when an input method is composing in the edit box', async () => {
+    const { controller, mind, el } = await mount()
+    mind.selectNode(mind.findEle(IDS.c))
+    press(mind.container, 'F2')
+    await settle()
+    const box = el.querySelector<HTMLElement>('#input-box')!
+    expect(controller.composing).toBe(false)
+    box.dispatchEvent(new CompositionEvent('compositionstart', { bubbles: true }))
+    expect(controller.composing).toBe(true)
+    box.dispatchEvent(new CompositionEvent('compositionend', { bubbles: true, data: '한' }))
+    expect(controller.composing).toBe(false)
+  })
+
   it('the arrow keys with Ctrl do not change the layout behind the user', async () => {
     const { mind, root, doc } = await mount()
     mind.selectNode(mind.findEle(IDS.c))
@@ -338,10 +388,22 @@ describe('labels, notes and links', () => {
     expect(doc.changed).toBe(false)
   })
 
-  it('an address that is not a web link is not taken', async () => {
+  it('a typed address nothing will open is kept and shown as text, like one from a file', async () => {
+    const { controller, el, attached } = await mount()
+    expect(controller.setLink(IDS.c, 'javascript:alert(1)')).toBe(true)
+    expect(attached()[2]!.href).toBe('javascript:alert(1)')
+    const chip = topicEl(el, IDS.c).querySelector('.mm-chip-link')!
+    expect(chip.tagName).toBe('SPAN')
+    expect(chip.textContent).toBe('javascript:alert(1)')
+    expect(el.querySelector('a')).toBeNull()
+    expect(controller.topic(IDS.c)!.link).toBe('javascript:alert(1)')
+  })
+
+  it('an address in the form of a reference into the file is not taken', async () => {
     const { controller, attached, doc } = await mount()
-    expect(controller.setLink(IDS.c, 'javascript:alert(1)')).toBe(false)
-    expect(controller.setLink(IDS.c, 'file:///C:/secret.txt')).toBe(false)
+    for (const internal of ['xmind:#some-topic', 'XMIND:#x', 'xap:attachments/a.pdf', '  xap:x']) {
+      expect(controller.setLink(IDS.c, internal), internal).toBe(false)
+    }
     expect(attached()[2]!).not.toHaveProperty('href')
     expect(doc.changed).toBe(false)
   })
@@ -529,7 +591,212 @@ describe('text from the file is never markup', () => {
     expect(pasted.title).toBe(HOSTILE)
     expect(pasted.id).toMatch(UUID)
     expect(pasted.labels).toEqual(['ok'])
-    expect(pasted).not.toHaveProperty('href')
+    // a pasted address is text like any other: kept, shown, and never an anchor
+    expect(pasted.href).toBe('javascript:alert(1)')
+  })
+})
+
+describe('links nothing will open', () => {
+  const PROBES = ['javascript:alert(1)', 'file:///C:/secret.txt', 'ftp://example.com/x'] as const
+
+  function probeSheet(): XmindSheet {
+    const sheet = plainSheet()
+    sheet.rootTopic.children!.attached = PROBES.map((href, at) =>
+      topic(`eeeeeeee-eeee-4eee-8eee-eeeeeeeeeee${at}`, `Probe ${at}`, { href }),
+    )
+    return sheet
+  }
+
+  it('are shown on the topic as plain text and are not anchors', async () => {
+    const { controller, el, attached } = await mount([probeSheet()])
+    expect(el.querySelectorAll('a')).toHaveLength(0)
+    attached().forEach((source, at) => {
+      const chip = topicEl(el, source.id).querySelector('.mm-chip-link')!
+      expect(chip.tagName).toBe('SPAN')
+      expect(chip.children).toHaveLength(0)
+      expect(chip.textContent).toBe(PROBES[at])
+      expect(controller.topic(source.id)!.link).toBe(PROBES[at])
+    })
+  })
+
+  it('pressing one asks only the host, which hands it to the main process; the map opens nothing', async () => {
+    const open = vi.spyOn(window, 'open').mockReturnValue(null)
+    const { el, host, attached } = await mount([probeSheet()])
+    for (const source of attached()) {
+      topicEl(el, source.id)
+        .querySelector<HTMLElement>('.mm-chip-link')!
+        .dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
+    }
+    expect(host.openLink.mock.calls.map((call) => call[0])).toEqual([...PROBES])
+    expect(open).not.toHaveBeenCalled()
+    open.mockRestore()
+  })
+
+  it('stay in the file byte for byte through an unrelated edit and a save', async () => {
+    const { controller, session, attached } = await mount([probeSheet()])
+    controller.setTitle(attached()[0]!.id, 'Probe 0, renamed')
+    controller.setLabels(attached()[1]!.id, ['unrelated'])
+    const saved = await openXmind(await session.produceBytes())
+    if (saved.status !== 'ok') throw new Error('did not open')
+    const topics = saved.document.sheets[0]!.rootTopic.children!.attached!
+    expect(topics.map((source) => source.href)).toEqual([...PROBES])
+    expect(topics[0]!.title).toBe('Probe 0, renamed')
+  })
+})
+
+describe('cut and paste', () => {
+  /** What the library put on the clipboard at a copy or cut. */
+  function clipboardEvent(
+    type: 'cut' | 'copy' | 'paste',
+    text = '',
+  ): { event: Event; text: () => string } {
+    let held = text
+    const event = new Event(type, { bubbles: true, cancelable: true })
+    Object.defineProperty(event, 'clipboardData', {
+      value: {
+        getData: () => held,
+        setData: (_format: string, value: string) => {
+          held = value
+        },
+      },
+    })
+    return { event, text: () => held }
+  }
+
+  async function cut(mind: MapController['mind'], id: string): Promise<string> {
+    mind.selectNode(mind.findEle(id))
+    const clipboard = clipboardEvent('cut')
+    mind.container.dispatchEvent(clipboard.event)
+    await settle()
+    return clipboard.text()
+  }
+
+  async function paste(mind: MapController['mind'], targetId: string, text: string): Promise<void> {
+    mind.selectNode(mind.findEle(targetId))
+    mind.container.dispatchEvent(clipboardEvent('paste', text).event)
+    await settle()
+  }
+
+  it('a cut topic pasted in the same sheet arrives as the original source topic, whole', async () => {
+    const { controller, mind, el, doc, host, attached } = await mount()
+    const original = JSON.stringify(doc.sheets[0])
+    const alpha = copyOf(attached()[0]!)
+    expect(alpha).toMatchObject({
+      id: IDS.a,
+      unknownTopicKey: { nested: ['kept', 1, true] },
+      markers: [{ markerId: 'priority-1' }],
+      notes: { realHTML: { content: '<div>note of alpha</div>' } },
+    })
+
+    const clipboard = await cut(mind, IDS.a)
+    expect(host.confirmDelete).toHaveBeenCalledExactlyOnceWith(3)
+    expect(attached().map((source) => source.id)).toEqual([IDS.b, IDS.c])
+    const afterCut = JSON.stringify(doc.sheets[0])
+
+    await paste(mind, IDS.c, clipboard)
+    const gamma = attached()[1]!
+    expect(gamma.id).toBe(IDS.c)
+    // same ids, every source key, the picture, markers, style, both note forms, summary, boundary, callout
+    expect(gamma.children!.attached).toEqual([alpha])
+    expect(JSON.stringify(doc.sheets[0])).toContain(IDS.underSummary)
+    // the line from one of its branches is back with its curve
+    const line = (doc.sheets[0]!.relationships as { id: string; controlPoints?: unknown }[]).find(
+      (candidate) => candidate.id === IDS.relShown,
+    )
+    expect(line?.controlPoints).toBeDefined()
+    // and the screen shows the same topic, under its own id
+    expect(topicEl(el, IDS.a).querySelector('.text')!.textContent).toBe('Alpha')
+    expect(mind.nodeData.children![1]!.children![0]!.id).toBe(IDS.a)
+
+    // undo and redo across the cut and the paste restore exactly
+    controller.undo()
+    expect(JSON.stringify(doc.sheets[0])).toBe(afterCut)
+    controller.undo()
+    expect(JSON.stringify(doc.sheets[0])).toBe(original)
+    expect(doc.changed).toBe(false)
+    controller.redo()
+    controller.redo()
+    expect(attached()[1]!.children!.attached).toEqual([alpha])
+    expect(topicEl(el, IDS.a).querySelector('.text')!.textContent).toBe('Alpha')
+  })
+
+  it('a second paste of the same clipboard makes new topics from what is shown', async () => {
+    const { mind, attached } = await mount()
+    const clipboard = await cut(mind, IDS.a)
+    await paste(mind, IDS.c, clipboard)
+    await paste(mind, IDS.b, clipboard)
+    const beta = attached()[0]!
+    const second = beta.children!.attached!.at(-1)!
+    expect(second.title).toBe('Alpha')
+    expect(second.id).not.toBe(IDS.a)
+    expect(second.id).toMatch(UUID)
+    expect(second.labels).toEqual(['urgent', 'draft'])
+    expect(second).not.toHaveProperty('unknownTopicKey')
+    expect(second).not.toHaveProperty('markers')
+    // the one that was moved is untouched
+    expect(attached()[1]!.children!.attached![0]!.id).toBe(IDS.a)
+  })
+
+  it('copy and paste makes new topics, and a copy forgets an earlier cut', async () => {
+    const { mind, attached } = await mount()
+    const cutText = await cut(mind, IDS.b)
+    mind.selectNode(mind.findEle(IDS.c))
+    const copy = clipboardEvent('copy')
+    mind.container.dispatchEvent(copy.event)
+    await paste(mind, IDS.a, copy.text())
+    const copied = attached()[0]!.children!.attached!.at(-1)!
+    expect(copied.title).toBe('Gamma')
+    expect(copied.id).not.toBe(IDS.c)
+
+    // the clipboard of the earlier cut, pasted after something else was copied: a new topic
+    await paste(mind, IDS.c, cutText)
+    const again = attached()[1]!.children!.attached!.at(-1)!
+    expect(again.title).toBe('Beta')
+    expect(again.id).not.toBe(IDS.b)
+    expect(again).not.toHaveProperty('href')
+  })
+
+  it('a cut the user called off leaves the topic, and pasting then makes a copy', async () => {
+    const { mind, attached } = await mount([richSheet()], {
+      confirmDelete: vi.fn(async () => false),
+    })
+    const clipboard = await cut(mind, IDS.a)
+    expect(attached().map((source) => source.id)).toEqual([IDS.a, IDS.b, IDS.c])
+    await paste(mind, IDS.c, clipboard)
+    const pasted = attached()[2]!.children!.attached![0]!
+    expect(pasted.id).not.toBe(IDS.a)
+    expect(pasted).not.toHaveProperty('unknownTopicKey')
+  })
+
+  it('pasting into another sheet makes new topics there', async () => {
+    const doc = await documentOf(richSheet(), plainSheet())
+    const session = new DocumentSession(doc)
+    const host = {
+      confirmDelete: vi.fn(async () => true),
+      openLink: vi.fn(),
+      onRequest: vi.fn(),
+      onStateChange: vi.fn(),
+    }
+    const [first, second] = session.tabs().map((tab) => {
+      const el = document.createElement('div')
+      document.body.appendChild(el)
+      const controller = new MapController({
+        el,
+        session,
+        sheetKey: tab.key,
+        strings: STRINGS,
+        host,
+      })
+      mounted.push(controller)
+      return controller
+    })
+    const clipboard = await cut(first!.mind, IDS.a)
+    const target = doc.sheets[1]!.rootTopic.children!.attached![0]!
+    await paste(second!.mind, target.id, clipboard)
+    const pasted = doc.sheets[1]!.rootTopic.children!.attached![0]!.children!.attached![0]!
+    expect(pasted.title).toBe('Alpha')
+    expect(pasted.id).not.toBe(IDS.a)
+    expect(pasted).not.toHaveProperty('unknownTopicKey')
   })
 })
 

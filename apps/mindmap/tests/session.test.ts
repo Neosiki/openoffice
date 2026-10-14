@@ -135,6 +135,56 @@ describe('undo restores the source tree, not a rebuilt one', () => {
   })
 })
 
+describe('putting topics back that were taken out', () => {
+  it('reinserts the very source topics under another topic, as one step that undo takes back', async () => {
+    const { document, session, first } = await richSession()
+    const original = JSON.stringify(document.sheets[0])
+    const alpha = session.copyOfTopic(first.key, IDS.a)!
+    const lines = session.relationshipRecords(first.key)
+    expect(alpha.unknownTopicKey).toEqual({ nested: ['kept', 1, true] })
+
+    session.apply(first.key, without(session.view(first.key), IDS.a), { step: true })
+    const afterCut = JSON.stringify(document.sheets[0])
+    expect(session.topicIds().has(IDS.callout)).toBe(false)
+
+    const view = session.reinsertTopics(first.key, IDS.c, [alpha], lines)!
+    const gamma = document.sheets[0]!.rootTopic.children!.attached![1]!
+    expect(gamma.id).toBe(IDS.c)
+    // the whole topic: unknown keys, markers, picture, style, both note forms, hidden children
+    expect(gamma.children!.attached![0]).toEqual(alpha)
+    expect(view.root.children[1]!.children[0]!.id).toBe(IDS.a)
+    // the line that ended on a topic of the subtree is back, with its curve
+    const shown = (
+      document.sheets[0]!.relationships as { id: string; controlPoints?: unknown }[]
+    ).find((line) => line.id === IDS.relShown)
+    expect(shown?.controlPoints).toBeDefined()
+
+    session.undo(first.key)
+    expect(JSON.stringify(document.sheets[0])).toBe(afterCut)
+    session.undo(first.key)
+    expect(JSON.stringify(document.sheets[0])).toBe(original)
+    session.redo(first.key)
+    session.redo(first.key)
+    expect(document.sheets[0]!.rootTopic.children!.attached![1]!.children!.attached![0]).toEqual(
+      alpha,
+    )
+  })
+
+  it('refuses when an id is in the file already or the target is not a shown topic', async () => {
+    const { document, session, first } = await richSession()
+    const before = JSON.stringify(document.sheets[0])
+    const alpha = session.copyOfTopic(first.key, IDS.a)!
+    // Alpha is still in the map: putting a second one in would double every id
+    expect(session.reinsertTopics(first.key, IDS.c, [alpha])).toBeNull()
+    session.apply(first.key, without(session.view(first.key), IDS.a), { step: true })
+    expect(session.reinsertTopics(first.key, IDS.floating, [alpha])).toBeNull()
+    expect(session.reinsertTopics(first.key, 'nowhere', [alpha])).toBeNull()
+    expect(session.canUndo(first.key)).toBe(true)
+    session.undo(first.key)
+    expect(JSON.stringify(document.sheets[0])).toBe(before)
+  })
+})
+
 describe('sheets', () => {
   it('adds a sheet with one central topic and the default theme, renames and deletes', async () => {
     const { document, session, second } = await richSession()

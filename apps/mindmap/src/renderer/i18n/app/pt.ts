@@ -63,7 +63,10 @@ export const pt = {
   openRejected: 'Este arquivo não pode ser aberto por causa do tamanho ou da estrutura',
   labelHint: 'Separe vários rótulos com vírgulas',
   linkHint: 'Digite um endereço web (http, https) ou um endereço de e-mail (mailto)',
-  linkInvalid: 'Somente endereços web (http, https) e endereços de e-mail são aceitos',
+  linkWontOpen:
+    'Este endereço é mantido e exibido como texto, mas clicar nele não o abrirá. Somente endereços web (http, https) e endereços de e-mail são abertos.',
+  linkInternal:
+    'Um endereço com este formato aponta para dentro do arquivo do mapa e não pode ser digitado aqui.',
   linkNotOpened: 'Este link não pode ser aberto',
   pickRelationship: 'Clique no tópico a ser conectado. Pressione Esc para cancelar.',
   selectTopicFirst: 'Selecione um tópico primeiro',

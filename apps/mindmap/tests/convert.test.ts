@@ -173,13 +173,26 @@ describe('library data to the state for reconciling', () => {
     expect(gamma.href).toBe('https://example.org/')
   })
 
-  it('a link that is not a web link never reaches the state', async () => {
+  it('a link nothing would open is still a link: it reaches the file as text', async () => {
     const { root, result } = await edit((data) => {
       const gamma = find(data.nodeData, IDS.c)
       gamma.metadata = { ...gamma.metadata!, link: 'javascript:alert(1)' }
     })
+    expect(result).toMatchObject({ ok: true, inSync: true })
+    expect(root.children!.attached![2]!.href).toBe('javascript:alert(1)')
+  })
+
+  it('a reference into the file is not a link a node can carry', async () => {
+    const { root, result } = await edit((data) => {
+      const gamma = find(data.nodeData, IDS.c)
+      gamma.metadata = { ...gamma.metadata!, link: 'xap:attachments/a.pdf' }
+      // Beta holds a link to another topic; a forged one on screen must not replace it
+      const beta = find(data.nodeData, IDS.b)
+      beta.metadata = { ...beta.metadata!, link: 'xmind:#somewhere-else' }
+    })
     expect(result.ok).toBe(true)
     expect(root.children!.attached![2]!).not.toHaveProperty('href')
+    expect(root.children!.attached![1]!.href).toBe(`xmind:#${IDS.a}`)
   })
 
   it('a summary the user added is created, one the user removed is deleted', async () => {
@@ -290,7 +303,7 @@ describe('nodes from the clipboard', () => {
       icons: ['<b>x</b>'],
       style: { background: 'url(https://example.com/x)' },
       tags: [{ text: 'forged', className: 'mm-chip mm-chip-link' }],
-      metadata: { labels: ['ok', 5], note: 7, link: 'file:///etc/passwd', image: { src: 'x' } },
+      metadata: { labels: ['ok', 5], note: 7, link: 'xmind:#topic', image: { src: 'x' } },
       children: [{ id: 'y', topic: 42, dangerouslySetInnerHTML: '<b>x</b>' }],
     }
     cleanPastedNode(pasted)

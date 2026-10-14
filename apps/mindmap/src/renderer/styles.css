@@ -565,6 +565,11 @@ html.genoffice-popover-open .ribbon-tabs {
   color: var(--danger);
 }
 
+/* an address that is kept but will not be opened: said plainly, not as a mistake */
+.mm-modal-hint.warn {
+  color: var(--text-primary);
+}
+
 .mm-field {
   width: 100%;
   box-sizing: border-box;

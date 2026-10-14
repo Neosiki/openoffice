@@ -59,7 +59,9 @@ export const zh = {
   openRejected: '由于文件大小或结构问题，无法打开',
   labelHint: '多个标签请用逗号分隔',
   linkHint: '请输入网址（http、https）或邮箱地址（mailto）',
-  linkInvalid: '只能填写网址（http、https）或邮箱地址',
+  linkWontOpen:
+    '此地址仅以文字形式保留和显示，点击不会打开。只有网址（http、https）和邮箱地址才会被打开。',
+  linkInternal: '这种形式的地址用于指向导图文件内部，无法在此填写。',
   linkNotOpened: '无法打开此链接',
   pickRelationship: '请点击要连接的主题。按 Esc 取消。',
   selectTopicFirst: '请先选择一个主题',
