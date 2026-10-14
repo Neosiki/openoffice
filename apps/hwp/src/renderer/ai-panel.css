@@ -1026,3 +1026,183 @@
   line-height: 1.5;
   color: var(--hwp-error);
 }
+
+/* chat attachments: the same rules as the other editors' panels */
+/* attachments (same contract as the docs panel): paperclip in the composer footer,
+   chips above the textarea, read-only echo on the sent bubble */
+.ai-attach-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.ai-attach-btn img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.ai-attach-btn:hover {
+  filter: brightness(0.7);
+}
+
+.ai-attachments {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 4px 2px 8px;
+}
+
+.ai-attachments > * {
+  flex-shrink: 0;
+}
+
+.ai-attachment-thumb {
+  position: relative;
+}
+
+.ai-attachment-thumb img {
+  display: block;
+  width: 56px;
+  height: 56px;
+  object-fit: cover;
+  border-radius: 12px;
+}
+
+.ai-attachment-thumb-remove {
+  position: absolute;
+  top: -8px;
+  right: -6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: var(--text-primary);
+  color: var(--surface);
+  cursor: pointer;
+}
+
+.ai-attachment-thumb-remove:hover {
+  background: var(--text-dim);
+}
+
+.ai-attachment-thumb-pending {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  background: var(--bg-content);
+}
+
+.ai-attachment-thumb .ai-attachment-thumb-pending img {
+  width: 26px;
+  height: 26px;
+}
+
+.ai-attachment-card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 190px;
+  height: 56px;
+  padding: 0 14px 0 8px;
+  border: 1px solid var(--color-border-default);
+  border-radius: 12px;
+  background: var(--bg-content);
+}
+
+.ai-attachment-card-icon {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: var(--surface);
+}
+
+.ai-attachment-card-icon img {
+  display: block;
+  width: 26px;
+  height: 26px;
+}
+
+.ai-attachment-card-meta {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.ai-attachment-card-name {
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ai-attachment-card-size {
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.ai-msg-attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.ai-msg-attachments .ai-attachment-thumb img {
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+}
+
+.ai-msg-attachments .ai-attachment-card {
+  width: auto;
+  max-width: 190px;
+  height: 44px;
+  background: var(--surface);
+}
+
+.ai-msg-attachments .ai-attachment-card-icon {
+  width: 32px;
+  height: 32px;
+  background: var(--surface-subtle);
+}
+
+.ai-msg-attachments .ai-attachment-card-icon img {
+  width: 22px;
+  height: 22px;
+}
+
+.ai-attach-notice {
+  margin-bottom: 7px;
+  font-size: 11.5px;
+  color: var(--hx-error);
+}
+
+.ai-panel-dragover {
+  outline: 2px dashed var(--accent);
+  outline-offset: -4px;
+}

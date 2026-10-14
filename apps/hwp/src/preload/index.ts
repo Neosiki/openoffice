@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from 'electron'
+import { contextBridge, ipcRenderer, webUtils } from 'electron'
 import type { AiStreamChunk } from '@genoffice/ai-provider'
 import { SUBSCRIPTION_IPC_CHANNELS } from '@genoffice/ai-provider/browser'
 import type { Lang } from '@genoffice/i18n'
@@ -80,6 +80,13 @@ const api: HwpApi = {
     return () => ipcRenderer.removeListener(HWP_CHANNELS.readBytesRequest, listener)
   },
   sendReadBytesResult: (result) => ipcRenderer.send(HWP_CHANNELS.readBytesResult, result),
+  pickAttachments: () => ipcRenderer.invoke(HWP_CHANNELS.filesPick),
+  addAttachmentPaths: (paths) => ipcRenderer.invoke(HWP_CHANNELS.filesAdd, paths),
+  addPastedImage: (data, ext) => ipcRenderer.invoke(HWP_CHANNELS.filesAddPastedImage, data, ext),
+  readAttachment: (path, offset, maxChars) =>
+    ipcRenderer.invoke(HWP_CHANNELS.filesRead, path, offset, maxChars),
+  readAttachmentImage: (path) => ipcRenderer.invoke(HWP_CHANNELS.filesReadImage, path),
+  getPathForFile: (file) => webUtils.getPathForFile(file),
   getLanguage: () => ipcRenderer.invoke(HWP_CHANNELS.getLanguage),
   onLanguageChanged: (handler) => {
     const listener = (_e: Electron.IpcRendererEvent, lang: Lang) => handler(lang)

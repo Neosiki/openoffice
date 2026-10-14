@@ -15,6 +15,7 @@ import {
 } from '@genoffice/electron-utils'
 import { hwpToText } from '@genoffice/file-parse'
 import { getUiLang } from '@genoffice/i18n'
+import { registerHwpAttachmentIpc } from './attachments-ipc'
 import { atomicWriteFile } from './atomic-write'
 import { tm } from './dialog-strings'
 import { backupPathFor, bytesMatchFormat, needsBackup, withFormatExtension } from './save-plan'
@@ -208,6 +209,7 @@ function settleSave(wcId: number, ok: boolean): void {
 let ipcRegistered = false
 
 function registerHwpIpc(): void {
+  registerHwpAttachmentIpc()
   if (ipcRegistered) return
   ipcRegistered = true
 

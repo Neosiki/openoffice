@@ -15,6 +15,11 @@ export const HWP_CHANNELS = {
   closeSaveResult: 'hwp:close-save-result',
   readBytesRequest: 'hwp:read-bytes-request',
   readBytesResult: 'hwp:read-bytes-result',
+  filesPick: 'hwp:files-pick',
+  filesAdd: 'hwp:files-add',
+  filesAddPastedImage: 'hwp:files-add-pasted-image',
+  filesRead: 'hwp:files-read',
+  filesReadImage: 'hwp:files-read-image',
   // channels below are served once by the shell for every editor
   getLanguage: 'app:get-language',
   languageChanged: 'app:language-changed',
@@ -66,6 +71,40 @@ export type CommitSaveResult =
 /** The live document as bytes in its own format, or why there are none. */
 export type ReadBytesResult = { ok: true; bytes: Uint8Array } | { ok: false; error: string }
 
+// ---- chat attachments (local files fed to the agent via tools) ----
+
+/** image attachments skip text extraction: read as base64 on send and passed to the model with the user message */
+export const ATTACHMENT_IMAGE_EXTS = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp'])
+
+export interface AttachmentMeta {
+  path: string
+  name: string
+  ext: string
+  sizeBytes: number
+}
+
+export interface AttachmentAddResult {
+  accepted: AttachmentMeta[]
+  /** per-file reasons, already localized */
+  rejected: string[]
+}
+
+export interface AttachmentReadResult {
+  ok: boolean
+  name?: string
+  totalChars?: number
+  offset?: number
+  text?: string
+  error?: string
+}
+
+export interface AttachmentImageResult {
+  ok: boolean
+  base64?: string
+  mime?: string
+  error?: string
+}
+
 export interface HwpApi {
   /** path queued for this view when its tab was created; null for a view opened without a file */
   consumePending(): Promise<string | null>
@@ -83,6 +122,18 @@ export interface HwpApi {
   /** the main process wants the document as it is now, unsaved edits included */
   onReadBytesRequest(handler: () => void): () => void
   sendReadBytesResult(result: ReadBytesResult): void
+  /** file picker for chat attachments (multi-select) */
+  pickAttachments(): Promise<AttachmentAddResult | null>
+  /** validate dropped paths and return attachment metadata */
+  addAttachmentPaths(paths: string[]): Promise<AttachmentAddResult>
+  /** persist a pasted clipboard image (no local path) to a temp file and add it as an attachment */
+  addPastedImage(data: ArrayBuffer, ext: string): Promise<AttachmentAddResult>
+  /** read a slice of the extracted text of an attachment */
+  readAttachment(path: string, offset: number, maxChars: number): Promise<AttachmentReadResult>
+  /** read an image attachment as base64 for multimodal input */
+  readAttachmentImage(path: string): Promise<AttachmentImageResult>
+  /** the local path of a dropped or pasted file; empty for one that has none (a screenshot) */
+  getPathForFile(file: File): string
   getLanguage(): Promise<Lang>
   onLanguageChanged(handler: (lang: Lang) => void): () => void
   getTheme(): Promise<UiTheme>

@@ -19,8 +19,17 @@ import {
   useChatRunQueue,
 } from '@genoffice/ui'
 import { useEffect, useRef, useState } from 'react'
-import type { PointerEvent as ReactPointerEvent, ReactElement } from 'react'
-import { AgentLoop, type IpcStreamError } from '@genoffice/agent-core'
+import type {
+  DragEvent as ReactDragEvent,
+  PointerEvent as ReactPointerEvent,
+  ReactElement,
+} from 'react'
+import {
+  AgentLoop,
+  composeSkills,
+  type AgentImage,
+  type IpcStreamError,
+} from '@genoffice/agent-core'
 import type {
   AiSettings,
   AiSubscriptionProviderId,
@@ -30,9 +39,14 @@ import { aiLangDirective, t as tGlobal, useI18n } from '../i18n/locale'
 import sendEnterOn from '../assets/send-enter-on.png'
 import sendEnterOff from '../assets/send-enter-off.png'
 import sendStop from '../assets/send-stop.png'
+import attachIcon from '../assets/attach-icon.png'
+import { ATTACHMENT_IMAGE_EXTS } from '../../shared/ipc'
+import type { AttachmentAddResult, AttachmentMeta } from '../../shared/ipc'
 import type { AgentPlace } from '../../../studio-plugin/agent-plugin.mjs'
 import type { AgentBridge } from './agent-bridge'
 import { blockedRunOf, type AiBlockedRun } from './ai-connection'
+import { AttachmentList, MAX_IMAGES_PER_MESSAGE, PASTE_MIME_EXT } from './attachments'
+import { createFilesSkill } from './files-skill'
 import { createHwpSkill, type HwpChange } from './hwp-skill'
 import { useSubscriptionConnection } from './subscription-client'
 import { createElectronTransport } from './transport'
@@ -93,6 +107,8 @@ interface ChatEntry {
   undelivered?: boolean
   tools?: ToolActivity[]
   changes?: RunChanges
+  /** attachments this message took from the composer (echoed read-only; a retry sends them again) */
+  attachments?: AttachmentMeta[]
 }
 
 const MODEL_BRIDGE: AiModelPickerBridge = {
@@ -117,19 +133,120 @@ export function AiPanel({
   /** an undo of a run is on its way to the editor */
   const [reverting, setReverting] = useState(false)
   /** messages queued while a reply runs; the pump re-runs them through send on settle */
-  const msgQueue = useChatRunQueue<void>({
+  const msgQueue = useChatRunQueue<AttachmentMeta[]>({
     busy,
-    submit: (text) => {
+    submit: (text, queuedAttachments) => {
       const loop = loopRef.current
       if (!loop || loop.busy) return false
       // nothing can run right now: the message stays queued, and in front of "not connected"
       // the queue is paused so it does not start by itself after a sign-in
       if (!sendGateRef.current.admitQueued(() => msgQueueRef.current.setPaused(true))) return false
-      return send(text)
+      return send(text, queuedAttachments)
     },
   })
   const msgQueueRef = useRef(msgQueue)
   msgQueueRef.current = msgQueue
+
+  // ---- attachments: files the user hands over as reference material ----
+  const [attachments, setAttachments] = useState<AttachmentMeta[]>([])
+  const attachmentsRef = useRef(attachments)
+  attachmentsRef.current = attachments
+  const [dragOver, setDragOver] = useState(false)
+  const [attachNotice, setAttachNotice] = useState<string | null>(null)
+  /** data-URL previews for image attachments, keyed by path */
+  const [attachmentPreviews, setAttachmentPreviews] = useState<Record<string, string>>({})
+  const previewRequestedRef = useRef(new Set<string>())
+  /** attachments consumed by earlier sends: the files skill keeps reading them in follow-up turns */
+  const sentAttachmentsRef = useRef<AttachmentMeta[]>([])
+  useEffect(() => {
+    const wanted = [...attachments, ...chat.flatMap((entry) => entry.attachments ?? [])]
+    for (const a of wanted) {
+      if (!ATTACHMENT_IMAGE_EXTS.has(a.ext) || previewRequestedRef.current.has(a.path)) continue
+      previewRequestedRef.current.add(a.path)
+      void window.hwpApi
+        .readAttachmentImage(a.path)
+        .then((result) => {
+          if (result.ok && result.base64 && result.mime) {
+            const url = `data:${result.mime};base64,${result.base64}`
+            setAttachmentPreviews((prev) => ({ ...prev, [a.path]: url }))
+          }
+        })
+        .catch(() => {})
+    }
+  }, [attachments, chat])
+  /** every file of this conversation, each once: what read_attachment indexes */
+  const availableAttachments = (): AttachmentMeta[] => {
+    const seen = new Set<string>()
+    return [...sentAttachmentsRef.current, ...attachmentsRef.current].filter((a) => {
+      if (seen.has(a.path)) return false
+      seen.add(a.path)
+      return true
+    })
+  }
+  const showAttachNotice = (lines: string[]): void => {
+    if (lines.length === 0) return
+    setAttachNotice(lines.join('; '))
+    window.setTimeout(() => setAttachNotice(null), 5000)
+  }
+  const mergeAttachments = (result: AttachmentAddResult | null): void => {
+    if (!result) return
+    if (result.accepted.length > 0) {
+      setAttachments((prev) => {
+        const have = new Set(prev.map((a) => a.path))
+        return [...prev, ...result.accepted.filter((a) => !have.has(a.path))]
+      })
+    }
+    showAttachNotice(result.rejected)
+  }
+  const pickAttachments = async (): Promise<void> =>
+    mergeAttachments(await window.hwpApi.pickAttachments())
+  const onDrop = async (e: ReactDragEvent): Promise<void> => {
+    // handled here: without this the tab would open the dropped document instead
+    e.preventDefault()
+    e.stopPropagation()
+    setDragOver(false)
+    const paths = Array.from(e.dataTransfer.files)
+      .map((file) => window.hwpApi.getPathForFile(file))
+      .filter(Boolean)
+    if (paths.length > 0) mergeAttachments(await window.hwpApi.addAttachmentPaths(paths))
+  }
+  /** pasted files with a local path go the regular way; a bare bitmap (a screenshot) is saved to a temp file first */
+  const onPasteFiles = async (files: File[]): Promise<void> => {
+    const paths: string[] = []
+    for (const file of files) {
+      const path = window.hwpApi.getPathForFile(file)
+      if (path) {
+        paths.push(path)
+        continue
+      }
+      const ext = PASTE_MIME_EXT[file.type] ?? file.name.split('.').pop()?.toLowerCase() ?? 'bin'
+      mergeAttachments(await window.hwpApi.addPastedImage(await file.arrayBuffer(), ext))
+    }
+    if (paths.length > 0) mergeAttachments(await window.hwpApi.addAttachmentPaths(paths))
+  }
+  const removeAttachment = (path: string): void =>
+    setAttachments((prev) => prev.filter((a) => a.path !== path))
+  /** image attachments ride along as multimodal input (≤5MB each, capped per message) */
+  const collectImages = async (atts: AttachmentMeta[]): Promise<AgentImage[]> => {
+    const imageAtts = atts.filter((a) => ATTACHMENT_IMAGE_EXTS.has(a.ext))
+    const images: AgentImage[] = []
+    const failures: string[] = []
+    for (const att of imageAtts.slice(0, MAX_IMAGES_PER_MESSAGE)) {
+      const result = await window.hwpApi.readAttachmentImage(att.path)
+      if (result.ok && result.base64 && result.mime) {
+        images.push({ base64: result.base64, mime: result.mime })
+      } else {
+        failures.push(result.error ?? t('aiImageReadFail', { name: att.name }))
+      }
+    }
+    if (imageAtts.length > MAX_IMAGES_PER_MESSAGE) {
+      failures.push(t('aiTooManyImages', { max: MAX_IMAGES_PER_MESSAGE }))
+    }
+    showAttachNotice(failures)
+    return images
+  }
+  const availableAttachmentsRef = useRef(availableAttachments)
+  availableAttachmentsRef.current = availableAttachments
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null)
   const chatRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
@@ -159,12 +276,12 @@ export function AiPanel({
   /** The send gate every editor shares: holds a request made during a status check or in front
       of the first-connection notice, refuses in front of "not connected", and writes this
       panel's settings changes ("continue with …", the acknowledged notice) onto the stored ones */
-  const sendGate = useAiSendGate<{ text: string }>({
+  const sendGate = useAiSendGate<{ text: string; attachments?: AttachmentMeta[] }>({
     settings: aiSettings,
     statuses,
     store: MODEL_BRIDGE,
     start: (held) => {
-      send(held.text)
+      send(held.text, held.attachments)
     },
     onNotConnected: () => refreshSubscriptionRef.current(),
     onSettingsSaved: setAiSettings,
@@ -267,7 +384,10 @@ export function AiPanel({
   if (!loopRef.current) {
     loopRef.current = new AgentLoop({
       transport: transportRef.current,
-      skill: skillRef.current.skill,
+      skill: composeSkills('hwp+files', '', [
+        skillRef.current.skill,
+        createFilesSkill(() => availableAttachmentsRef.current()),
+      ]),
       systemSuffix: () => aiLangDirective(langRef.current),
       events: {
         onText: (text) => patchLast({ text }),
@@ -383,15 +503,18 @@ export function AiPanel({
     chatRef.current?.scrollTo({ top: chatRef.current.scrollHeight })
   }
 
+  /** the attachments of the run in progress, for a retry of it */
+  const runAttachmentsRef = useRef<AttachmentMeta[]>([])
+
   /** Returns false when no run was started (the text stays with the caller). */
-  const send = (text: string): boolean => {
+  const send = (text: string, attachmentsOverride?: AttachmentMeta[]): boolean => {
     const instruction = text.trim()
     const loop = loopRef.current
     if (!instruction || !loop || loop.busy || reverting) return false
     // A request made during a status check or in front of the first-connection notice is
     // held and starts by itself once the way is clear; in front of "not connected" nothing
     // is kept. Either way nothing is sent now and the text stays with the caller.
-    if (!sendGate.admit({ text: instruction })) {
+    if (!sendGate.admit({ text: instruction, attachments: attachmentsOverride })) {
       showWhatHoldsTheSend()
       return false
     }
@@ -401,18 +524,35 @@ export function AiPanel({
     runInstructionRef.current = instruction
     runChangesRef.current = []
     runForeignRef.current = null
+    // the message takes the composer's attachments: echoed on the bubble, images sent with
+    // it, the other files read through the files skill, now and in later turns
+    const sentAtts = attachmentsOverride ?? attachmentsRef.current
+    if (sentAtts.length > 0) {
+      const seen = new Set(sentAttachmentsRef.current.map((a) => a.path))
+      sentAttachmentsRef.current = [
+        ...sentAttachmentsRef.current,
+        ...sentAtts.filter((a) => !seen.has(a.path)),
+      ]
+      if (!attachmentsOverride) setAttachments([])
+    }
+    runAttachmentsRef.current = sentAtts
     setChat((prev) => [
       ...prev,
-      { role: 'user', text: instruction },
+      {
+        role: 'user',
+        text: instruction,
+        ...(sentAtts.length > 0 ? { attachments: sentAtts } : {}),
+      },
       { role: 'assistant', text: '', streaming: true },
     ])
     setPrompt('')
     setBusy(true)
     void (async () => {
       try {
-        const [settings, foreign] = await Promise.all([
+        const [settings, foreign, images] = await Promise.all([
           window.hwpApi.getAiSettings(),
           bridgeRef.current.foreignChanges().catch(() => null),
+          sentAtts.length > 0 ? collectImages(sentAtts) : Promise.resolve([]),
           skillRef.current!.refreshContext(),
         ])
         settingsRef.current = settings
@@ -421,7 +561,10 @@ export function AiPanel({
         setAiSettings(settings)
         const noted = revertedNoteDueRef.current
         revertedNoteDueRef.current = false
-        loop.run(noted ? `${REVERTED_NOTE}\n\n${instruction}` : instruction)
+        loop.run(
+          noted ? `${REVERTED_NOTE}\n\n${instruction}` : instruction,
+          images.length > 0 ? images : undefined,
+        )
       } catch (err) {
         if (!mountedRef.current) return
         patchLast({
@@ -444,12 +587,14 @@ export function AiPanel({
   const enqueueDraft = () => {
     const text = prompt.trim()
     if (!text) return
-    msgQueue.enqueue(text, undefined)
+    // the queued message owns the composer's attachments; the pump hands them back to send
+    msgQueue.enqueue(text, attachmentsRef.current)
+    setAttachments([])
     setPrompt('')
   }
 
   const retry = (): void => {
-    send(runInstructionRef.current)
+    send(runInstructionRef.current, runAttachmentsRef.current)
   }
 
   /** "Continue with …" on a blocked run: that provider becomes the selection, then the request reruns */
@@ -547,9 +692,20 @@ export function AiPanel({
   return (
     <aside
       ref={asideRef}
-      className={`copilot${resizing ? ' ai-panel-resizing' : ''}`}
+      className={`copilot${resizing ? ' ai-panel-resizing' : ''}${dragOver ? ' ai-panel-dragover' : ''}`}
       style={{ width: '100%' }}
       dir={lang === 'ar' || lang === 'he' ? 'rtl' : undefined}
+      onDragOver={(e) => {
+        if (e.dataTransfer.types.includes('Files')) {
+          e.preventDefault()
+          e.stopPropagation()
+          setDragOver(true)
+        }
+      }}
+      onDragLeave={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setDragOver(false)
+      }}
+      onDrop={(e) => void onDrop(e)}
     >
       <div
         className="ai-panel-resizer"
@@ -577,6 +733,8 @@ export function AiPanel({
                 sendGate.reset()
                 loopRef.current?.reset()
                 revertedNoteDueRef.current = false
+                sentAttachmentsRef.current = []
+                setAttachments([])
                 setBusy(false)
                 setChat([])
               }}
@@ -616,12 +774,20 @@ export function AiPanel({
           if (entry.role === 'user') {
             return (
               <div key={i} className="ai-msg ai-msg-user">
+                {entry.attachments && entry.attachments.length > 0 && (
+                  <div className="ai-msg-attachments">
+                    <AttachmentList atts={entry.attachments} previews={attachmentPreviews} />
+                  </div>
+                )}
                 <span dir="auto">{entry.text}</span>
                 {entry.undelivered && (
                   <div className="ai-msg-undelivered">
                     {t('aiUndelivered')}
                     {!busy && (
-                      <button className="ai-retry-btn" onClick={() => send(entry.text)}>
+                      <button
+                        className="ai-retry-btn"
+                        onClick={() => send(entry.text, entry.attachments ?? [])}
+                      >
                         {t('aiRetry')}
                       </button>
                     )}
@@ -719,6 +885,17 @@ export function AiPanel({
       </div>
 
       <div className="ai-composer">
+        {attachments.length > 0 && (
+          <div className="ai-attachments">
+            <AttachmentList
+              atts={attachments}
+              previews={attachmentPreviews}
+              onRemove={removeAttachment}
+              removeLabel={t('aiRemoveAttachmentTitle')}
+            />
+          </div>
+        )}
+        {attachNotice && <div className="ai-attach-notice">{attachNotice}</div>}
         <AiComposer
           queueStrip={
             <AiQueueStrip
@@ -750,8 +927,18 @@ export function AiPanel({
                 subscriptionStatuses={statuses ?? {}}
               />
               <AiSubscriptionUsageLine usage={subscriptionUsage} lang={lang} />
+              <button
+                type="button"
+                className="ai-attach-btn"
+                onClick={() => void pickAttachments()}
+                data-tip={t('aiAttachTitle')}
+                aria-label={t('aiAttachTitle')}
+              >
+                <img src={attachIcon} alt="" aria-hidden />
+              </button>
             </>
           }
+          onPasteFiles={(files) => void onPasteFiles(files)}
           sendIconEnabled={<img src={sendEnterOn} alt="" aria-hidden />}
           sendIconDisabled={<img src={sendEnterOff} alt="" aria-hidden />}
           stopIcon={<img src={sendStop} alt="" aria-hidden />}
