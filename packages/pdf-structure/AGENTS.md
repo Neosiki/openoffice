@@ -69,7 +69,7 @@ PDF를 다시 흐르는 글의 **문서 나무**로 바꾸고, 그 나무를 쓰
 - PDFium wasm 초기화는 호출자가 한다. 초기화된 모듈을 받는다. OCR 엔진, 폰트 부분 집합 wasm, 페이지 그림 그리기도 호출자가 준다.
 - 모델 호출, 제공자 선택, 구독 프로그램 실행은 이 패키지의 일이 아니다. 앱은 `ai:stream`, 명령줄은 `ai-provider`의 `streamForProvider`로 부르고, 이 패키지는 그 함수를 받아 쓴다.
 - 파일 저장 창, 출력 파일 쓰기, 진행 표시, 시작 전 확인은 호출자(`apps/pdf`, 셸, `packages/cli`)의 일이다.
-- 별도 프로세스(`utilityProcess`)를 띄우는 일은 셸이 한다(`apps/shell/AGENTS.md`).
+- 별도 프로세스(`utilityProcess`)를 띄우고 끝내는 일은 셸 메인이 한다. 이 패키지는 그 프로세스 안에서 불리는 함수만 가진다.
 - `pdf2docx`의 분석 코드는 타입이 없는 `bidi-js`를 끌어온다. 이 패키지를 소스로 컴파일하는 곳은 `pdf2docx/src/bidi-js.d.ts`를 tsconfig `include`에 넣는다(`apps/pdf`, `apps/shell`과 같은 방식).
 
 ## 항상 지켜야 하는 것
@@ -94,7 +94,7 @@ PDF를 다시 흐르는 글의 **문서 나무**로 바꾸고, 그 나무를 쓰
 - 페이지 범위는 pdf-lib로 고른 페이지만 복사해 분석한다. 암호가 걸린 문서는 pdf-lib가 복호화하지 못하므로 PDFium의 페이지 가져오기로 복사한다.
 - 진행은 페이지마다 알리고, 취소 신호를 받으면 다음 페이지 경계에서 바로 멈춘다. 분석은 동기라서 같은 스레드의 취소는 진행 콜백 안에서만 들어온다. 앱은 별도 프로세스를 끝내는 것으로 취소한다.
 - 보관소의 쓰기는 같은 폴더의 임시 파일에 쓰고 rename한다. Windows는 다른 프로세스가 열어 둔 파일 위로 rename하지 못하므로, 거절되면 예전 항목을 옆으로 옮기고 새 항목을 그 이름으로 옮긴다. 같은 항목을 쓰는 쪽끼리는 옆의 잠금 파일로 차례를 지킨다. 10초 넘은 잠금은 죽은 쓰기의 것으로 보고 넘겨받는다.
-- 조정 가능한 값은 이름 붙은 상수로 둔다(`JOB_CONCURRENCY`, `TRANSLATION_BATCH_TOKENS`, `MIN_FONT_SCALE`, `MIN_IMAGE_PX`, `AI_READ_REPETITION` 등). 값을 바꾸면 spec과 문서의 숫자도 고친다.
+- 조정 가능한 값은 이름 붙은 상수로 둔다(`JOB_CONCURRENCY`, `TRANSLATION_BATCH_TOKENS`, `MIN_FONT_SCALE`, `MIN_IMAGE_PX`, `AI_READ_REPETITION` 등). 값을 바꾸면 문서에 적힌 숫자도 고친다.
 
 ## 테스트
 
