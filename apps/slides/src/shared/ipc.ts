@@ -1271,6 +1271,9 @@ export type MenuCommand =
   | 'copy'
   | 'paste'
 
+/** Which of a design template's two sample covers to draw: Korean for a Korean UI, English otherwise */
+export type TemplateCoverLang = 'ko' | 'en'
+
 export interface SlidesApi {
   /** current UI language (persisted by the shell in app-settings.json) */
   getLanguage: () => Promise<
@@ -1315,6 +1318,8 @@ export interface SlidesApi {
   fontInstallLocal: () => Promise<{ families: string[] }>
   /** Open the bundled template font folder in Explorer; false when it could not be opened */
   openTemplateFontsFolder: () => Promise<boolean>
+  /** A built-in template's sample cover laid out as one slide (no document involved); null for an unknown id */
+  renderTemplateCover: (id: string, lang: TemplateCoverLang) => Promise<RenderSlide | null>
   /** The user font store changed (local install): re-sync private FontFaces */
   onFontsChanged: (handler: () => void) => () => void
   consumePendingOpen: (fitWidthPx: number) => Promise<OpenResult | null>
