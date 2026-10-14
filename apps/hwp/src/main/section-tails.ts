@@ -33,7 +33,13 @@ import type { HwpRecord, OpenedHwp } from './hwp5-file'
  * (shapes, fonts, pictures in DocInfo) must still be at the same position in the saved
  * file; when that cannot be shown, nothing is put back.
  *
- * This is the one place the module touches bytes the engine serialized (decision 0012).
+ * The same goes for the caption of an equation: a list right under the equation's control
+ * record, which the engine leaves out when it writes the section anew (and Hangul then
+ * refuses the file). It is kept by the content of that control record, which the engine
+ * writes back unchanged and which holds the object's own instance number, and put back
+ * under the same control (decision 0016).
+ *
+ * See decision 0012; the module's other changes to saved bytes are in decisions 0014-0016.
  */
 
 const ID_MAPPINGS = 17
@@ -49,6 +55,11 @@ const MEMO_COMMAND = Buffer.from('MEMO/', 'utf16le')
 const MAX_COMMAND_DIGITS = 12
 /** A master page's list header: paragraph count, properties, width and height come first. */
 const MASTER_PAGE_KIND_AT = 16
+/** An equation's control, its id read as a little-endian number ('eqed') */
+const EQUATION = 0x65716564
+/** A record's header word: tag, level and size in 10, 10 and 12 bits; a full size may follow */
+const LEVEL_SHIFT = 10
+const LEVEL_MASK = 0x3ff
 
 /** One list after the body: a master page or a memo, with everything below it. */
 interface TailList {
@@ -73,6 +84,16 @@ export interface SectionTails {
   ids: Map<string, string[]>
   /** names of the binary data streams (pictures) of the opened file */
   binData: string[]
+  /**
+   * the captions of equations, by digest of the equation's control record: the caption's
+   * records and the level of the control they were under
+   */
+  captions: Map<string, Caption>
+}
+
+interface Caption {
+  bytes: Buffer
+  level: number
 }
 
 export type RestoreSkip = 'unreadable' | 'sections' | 'ids' | 'bin-data'
@@ -177,6 +198,92 @@ function tailOf(data: Buffer, records: HwpRecord[]): SectionTail | null {
   return { bodyEnd: records[first]!.start, lists }
 }
 
+const digestOf = (data: Buffer, record: HwpRecord): string =>
+  createHash('sha1').update(data.subarray(record.body, record.end)).digest('hex')
+
+/** Where the caption under the control at `index` ends, or null when it has none. */
+function captionEnd(records: HwpRecord[], index: number): number | null {
+  const control = records[index]!
+  const head = records[index + 1]
+  if (!head || head.tag !== LIST_HEADER || head.level !== control.level + 1) return null
+  // the list header, then its paragraphs with everything below them
+  let end = index + 2
+  while (end < records.length) {
+    const record = records[end]!
+    const inside =
+      record.level > control.level + 1 ||
+      (record.level === control.level + 1 && record.tag === PARA_HEADER)
+    if (!inside) break
+    end++
+  }
+  return end
+}
+
+const isEquation = (data: Buffer, record: HwpRecord): boolean =>
+  record.tag === CTRL_HEADER &&
+  record.end - record.body >= 4 &&
+  data.readUInt32LE(record.body) === EQUATION
+
+/** Adds the captions of the equations of one section. */
+function captionsIn(data: Buffer, records: HwpRecord[], found: Map<string, Caption>): void {
+  records.forEach((record, index) => {
+    if (!isEquation(data, record)) return
+    const end = captionEnd(records, index)
+    if (end === null) return
+    const stop = end < records.length ? records[end]!.start : data.length
+    found.set(digestOf(data, record), {
+      bytes: Buffer.from(data.subarray(records[index + 1]!.start, stop)),
+      level: record.level,
+    })
+  })
+}
+
+/** The records in `bytes`, each moved `by` levels; null when that leaves the allowed levels. */
+function shiftLevels(bytes: Buffer, by: number): Buffer | null {
+  if (by === 0) return bytes
+  const records = recordsOf(bytes)
+  if (!records) return null
+  const out = Buffer.from(bytes)
+  for (const record of records) {
+    const word = out.readUInt32LE(record.start)
+    const level = ((word >>> LEVEL_SHIFT) & LEVEL_MASK) + by
+    if (level < 0 || level > LEVEL_MASK) return null
+    out.writeUInt32LE(
+      ((word & ~(LEVEL_MASK << LEVEL_SHIFT)) | (level << LEVEL_SHIFT)) >>> 0,
+      record.start,
+    )
+  }
+  return out
+}
+
+/**
+ * The section with the kept captions put back under the equations that lost theirs, and how
+ * many were put back; null when one cannot be.
+ */
+function withCaptions(
+  data: Buffer,
+  records: HwpRecord[],
+  kept: Map<string, Caption>,
+): { data: Buffer; added: number } | null {
+  if (kept.size === 0) return { data, added: 0 }
+  const pieces: Buffer[] = []
+  let from = 0
+  let added = 0
+  for (const [index, record] of records.entries()) {
+    if (!isEquation(data, record) || captionEnd(records, index) !== null) continue
+    const caption = kept.get(digestOf(data, record))
+    if (!caption) continue
+    const bytes = shiftLevels(caption.bytes, record.level - caption.level)
+    if (!bytes) return null
+    pieces.push(data.subarray(from, record.end), bytes)
+    from = record.end
+    added++
+  }
+  if (added === 0) return { data, added: 0 }
+  pieces.push(data.subarray(from))
+  return { data: Buffer.concat(pieces), added }
+}
+
 /**
  * Digests of the DocInfo records the body refers to by number, in order, by kind. Fonts
  * are numbered within their language, so each language is a kind of its own.
@@ -231,17 +338,19 @@ export function sectionTailsOf(file: Uint8Array): SectionTails | null {
     if (!opened) return null
     const sections = sectionCount(opened)
     const tails = new Map<number, TailList[]>()
+    const captions = new Map<string, Caption>()
     for (let index = 0; index < sections; index++) {
       const data = streamOf(opened, SECTION(index))
       const records = data ? recordsOf(data) : null
       if (!data || !records) return null
       const tail = tailOf(data, records)
       if (tail && tail.lists.length > 0) tails.set(index, tail.lists)
+      captionsIn(data, records, captions)
     }
-    if (tails.size === 0) return null
+    if (tails.size === 0 && captions.size === 0) return null
     const ids = idsOf(opened)
     if (!ids) return null
-    return { sections, tails, ids, binData: binDataOf(opened) }
+    return { sections, tails, ids, binData: binDataOf(opened), captions }
   } catch {
     return null
   }
@@ -310,21 +419,33 @@ export function restoreSectionTails(saved: Uint8Array, kept: SectionTails): Rest
       }
       return anchored
     }
-    for (const [index, lists] of kept.tails) {
-      const data = streamOf(opened, SECTION(index))
-      const records = data ? recordsOf(data) : null
-      const tail = data && records ? tailOf(data, records) : null
-      if (!data || !tail) return untouched('unreadable')
-      const merged = mergeLists(lists, tail.lists, memosAnchored)
-      if (merged.missing === 0) continue
-      restored += merged.missing
-      due.push({
-        index,
-        data: Buffer.concat([
-          data.subarray(0, tail.bodyEnd),
-          ...merged.lists.map((list) => list.bytes),
-        ]),
-      })
+    const count = sectionCount(opened)
+    for (let index = 0; index < count; index++) {
+      const lists = kept.tails.get(index)
+      if (!lists && kept.captions.size === 0) continue
+      const saved = streamOf(opened, SECTION(index))
+      const savedRecords = saved ? recordsOf(saved) : null
+      if (!saved || !savedRecords) return untouched('unreadable')
+      // the captions first: they go inside the body, the tail after it
+      const captioned = withCaptions(saved, savedRecords, kept.captions)
+      if (!captioned) return untouched('unreadable')
+      restored += captioned.added
+      const data = captioned.data
+      let next = captioned.added > 0 ? data : null
+      if (lists) {
+        const records = recordsOf(data)
+        const tail = records ? tailOf(data, records) : null
+        if (!tail) return untouched('unreadable')
+        const merged = mergeLists(lists, tail.lists, memosAnchored)
+        if (merged.missing > 0) {
+          restored += merged.missing
+          next = Buffer.concat([
+            data.subarray(0, tail.bodyEnd),
+            ...merged.lists.map((list) => list.bytes),
+          ])
+        }
+      }
+      if (next) due.push({ index, data: next })
     }
     if (due.length === 0) return untouched()
     if (sectionCount(opened) !== kept.sections) return untouched('sections')

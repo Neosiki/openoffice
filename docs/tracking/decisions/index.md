@@ -17,3 +17,4 @@
 | [0013](0013-hwp-no-save-with-tracked-changes.md)          | 변경 내용 추적이 든 한글 문서는 저장하지 않는다 (0015로 대체)                                   | 2026-10-14 |
 | [0014](0014-hwp-fix-tab-widths-and-field-kinds.md)        | 한글 문서를 저장할 때 새 탭의 폭과 필드의 종류를 바로잡는다                                     | 2026-10-14 |
 | [0015](0015-hwp-open-tracked-changes-as-current.md)       | 변경 내용 추적이 든 한글 문서는 지금의 내용으로 열고, 저장하면 추적 기록 없이 저장한다          | 2026-10-14 |
+| [0016](0016-hwp-restore-equation-captions.md)             | 한글 문서를 저장할 때 엔진이 빠뜨린 수식의 캡션을 원본에서 다시 붙인다                          | 2026-10-14 |

@@ -344,3 +344,92 @@ describe('what the lists refer to by number', () => {
     expect(result.bytes).toBe(garbage)
   })
 })
+
+const EQ_EDIT = 88
+
+/**
+ * A body paragraph holding an equation whose control record says `instance`, with or
+ * without a caption (a list of one empty paragraph right under the control).
+ */
+function equationParagraph(instance: number, caption: boolean, level = 0): Buffer {
+  const text = Buffer.alloc(18)
+  text.writeUInt16LE(11, 0) // an object's character, eight units
+  text.write('deqe', 2, 'latin1')
+  text.writeUInt16LE(11, 14)
+  text.writeUInt16LE(13, 16)
+  const header = Buffer.alloc(24)
+  header.writeUInt32LE(9, 0)
+  const control = Buffer.alloc(46)
+  control.write('deqe', 0, 'latin1')
+  control.writeUInt32LE(instance, 36)
+  const list = Buffer.alloc(30)
+  list.writeUInt32LE(1, 0)
+  const script = Buffer.concat([Buffer.alloc(4), Buffer.from('x^2', 'utf16le')])
+  return Buffer.concat([
+    record(PARA_HEADER, level, header),
+    record(67, level + 1, text),
+    record(71, level + 1, control),
+    ...(caption ? [record(LIST_HEADER, level + 2, list), paragraph(level + 2)] : []),
+    record(EQ_EDIT, level + 2, script),
+  ])
+}
+
+describe('the caption of an equation', () => {
+  it('is kept by the equation it belongs to', () => {
+    const kept = sectionTailsOf(
+      withTail(exported('본문'), equationParagraph(7, true), equationParagraph(8, false)),
+    )
+    expect(kept?.tails.size).toBe(0)
+    expect(kept?.captions.size).toBe(1)
+  })
+
+  it('goes back under that equation when the engine left it out', () => {
+    const opened = withTail(
+      exported('본문'),
+      equationParagraph(7, false),
+      equationParagraph(8, true),
+    )
+    const saved = withTail(
+      exported('본문'),
+      equationParagraph(7, false),
+      equationParagraph(8, false),
+    )
+    const result = restoreSectionTails(saved, sectionTailsOf(opened)!)
+    expect(result).toMatchObject({ restored: 1 })
+    expect(streamOf(result.bytes, SECTION0).equals(streamOf(opened, SECTION0))).toBe(true)
+  })
+
+  it('takes the level of the place the equation is at now', () => {
+    const opened = withTail(exported('본문'), equationParagraph(8, true))
+    // the same equation, written one level down (as in a table cell)
+    const deeper = equationParagraph(8, false, 1)
+    const saved = withTail(exported('본문'), deeper)
+    const result = restoreSectionTails(saved, sectionTailsOf(opened)!)
+    expect(result.restored).toBe(1)
+    expect(
+      streamOf(result.bytes, SECTION0).includes(
+        Buffer.concat([
+          record(
+            LIST_HEADER,
+            3,
+            (() => {
+              const list = Buffer.alloc(30)
+              list.writeUInt32LE(1, 0)
+              return list
+            })(),
+          ),
+          paragraph(3),
+        ]),
+      ),
+    ).toBe(true)
+  })
+
+  it('is left alone when the engine wrote it, or the equation is gone', () => {
+    const opened = withTail(exported('본문'), equationParagraph(8, true))
+    const kept = sectionTailsOf(opened)!
+    const same = withTail(exported('본문'), equationParagraph(8, true))
+    expect(restoreSectionTails(same, kept).bytes).toBe(same)
+    const other = withTail(exported('본문'), equationParagraph(9, false))
+    expect(restoreSectionTails(other, kept).bytes).toBe(other)
+  })
+})
