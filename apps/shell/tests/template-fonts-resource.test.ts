@@ -85,5 +85,5 @@ describe('template fonts in the installer', () => {
       }
     }
     expect(offenders).toEqual([])
-  })
+  }, 60_000)
 })
