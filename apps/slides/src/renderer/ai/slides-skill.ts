@@ -9,6 +9,7 @@ import type {
 import type { AgentToolCall, AgentToolDef } from '../../shared/ipc'
 import { OP_GROUPS, opGuide, opGuideCatalog, opSignatureIndex } from '@genoffice/pptx-ops/op-docs'
 import { auditSlideLayout, formatAudit } from '@genoffice/pipelines/slides/layout-audit'
+import { findSlideTemplate, listSlideTemplates } from '@genoffice/pipelines/slides/templates'
 import { runLayoutScript, type LayoutScriptElement } from './layout-script'
 import {
   extractLayoutSkeleton,
@@ -16,6 +17,17 @@ import {
   skeletonRole,
   type LayoutSkeleton,
 } from './layout-skeleton'
+import {
+  appliedBuiltinTemplate,
+  appliedSavedStyle,
+  builtinTemplateById,
+  normalizeRequestText,
+  resolveAppliedTemplate,
+  styleWithRequests,
+  withAddedRequest,
+  type AppliedTemplate,
+  type TemplateSelectionState,
+} from './template-selection-state'
 import { brandText } from '@genoffice/i18n'
 import { t } from '../i18n/locale'
 import systemPrompt from './prompts/system.md?raw'
@@ -154,6 +166,8 @@ export interface DeckAccess {
     canvasH: number
     /** Formatted template-chrome block (layout-skeleton.ts) for this page's role; absent without a template */
     skeleton?: string
+    /** The style is a built-in design template, or a style saved from one: its devices override the ban rules they collide with */
+    templateDevices?: boolean
     signal?: AbortSignal
   }): Promise<{ ok: boolean; marker?: string; error?: string; imageFailures?: string[] }>
   /**
@@ -198,11 +212,18 @@ export interface DeckAccess {
    * Save styleSkill into userData/style-templates/<name>.json for later reuse.
    * `layout` is the deck's extracted chrome skeleton (title/brand-image slots,
    * accents, backgrounds) — generation uses it to keep those elements consistent
-   * across pages (see layout-skeleton.ts).
+   * across pages (see layout-skeleton.ts). `basedOn` is the id of the built-in
+   * design template the style was saved from, when it was.
    */
   saveStyleTemplate?(
     name: string,
-    data: { topic: string; styleSkill: string; createdAt: string; layout?: LayoutSkeleton },
+    data: {
+      topic: string
+      styleSkill: string
+      createdAt: string
+      layout?: LayoutSkeleton
+      basedOn?: string
+    },
   ): Promise<{ ok: boolean; error?: string }>
   /**
    * List saved Style templates (name + topic + createdAt).
@@ -217,8 +238,14 @@ export interface DeckAccess {
     styleSkill?: string
     topic?: string
     layout?: LayoutSkeleton
+    basedOn?: string
     error?: string
   }>
+  /**
+   * The document's chosen design template and the requests added on top of it
+   * (template-selection-state.ts). Absent: no template is ever selected.
+   */
+  templateSelection?: TemplateSelectionState
   fitWidthPx: number
   /** Base retry backoff in ms for single-page generation failures (default 2000; tests pass 0 to disable backoff) */
   retryBackoffMs?: number
@@ -615,7 +642,7 @@ const TOOLS: AgentToolDef[] = [
         style_template: {
           type: 'string',
           description:
-            "Optional: name of a saved style template (from list_style_templates); when passed, Step 0 is skipped and the template's styleSkill is used directly, no style regeneration. A template saved from a finished deck also carries its layout skeleton, which pins the title/brand-image geometry on every page for a consistent look",
+            "Optional: a built-in design template's id or name, or the name of a saved style (both from list_style_templates); when passed, Step 0 is skipped and that template's style is used directly, no style regeneration, and it becomes the document's selected template. A style saved from a finished deck also carries its layout skeleton, which pins the title/brand-image geometry on every page for a consistent look",
         },
         dataSource: {
           type: 'string',
@@ -629,7 +656,7 @@ const TOOLS: AgentToolDef[] = [
   {
     name: 'save_style_template',
     description:
-      '[Save the current deck\'s style as a reusable template] Saves the current presentation\'s Style Skill (visual style guide) under the given name, plus the deck\'s layout skeleton (recurring title box, brand-image slot, accent shapes and backgrounds). Next time you generate a deck, pass the style_template argument to reuse both directly and skip style generation. Call when the user says "save this style" / "save as template".',
+      "[Save the current deck's style as a reusable template] Saves the current presentation's Style Skill (visual style guide) under the given name, plus the deck's layout skeleton (recurring title box, brand-image slot, accent shapes and backgrounds). With a built-in design template selected, what is saved is that template's style together with the requests the user added to it. Next time you generate a deck, pass the style_template argument to reuse both directly and skip style generation. Call when the user says \"save this style\" / \"save as template\". A name equal to a built-in design template's id or name (in any letter case) is refused.",
     inputSchema: {
       type: 'object',
       properties: {
@@ -644,7 +671,7 @@ const TOOLS: AgentToolDef[] = [
   {
     name: 'list_style_templates',
     description:
-      'List all saved style templates (name + topic + createdAt). When the user says "use last time\'s style" or "use some template", call this first to see what exists, then pass the target template name to generate_deck\'s style_template argument.',
+      'List the design templates a deck can be made with, in two groups: the built-in templates (id + name + description + scheme) and the styles the user saved (name + topic + createdAt). When the user says "use last time\'s style" or "use some template", call this first to see what exists, then pass the target template\'s id or name to generate_deck\'s style_template argument.',
     inputSchema: { type: 'object', properties: {}, required: [] },
   },
   {
@@ -1083,7 +1110,9 @@ export function createSlidesSkill(access: DeckAccess): AgentSkill {
     buildContext: () => {
       const outline = `<deck outline>\n${buildDeckOutline(access.getSlides(), access.getCurrent(), access.getSelectedIds())}\n</deck outline>`
       const progress = buildProgressNote(state)
-      return progress ? `${outline}\n${progress}` : outline
+      // only a document with a selected design template gets this block
+      const template = buildTemplateNote(access)
+      return [outline, progress, template].filter(Boolean).join('\n')
     },
     executeTool: (call, signal) => executeTool(access, call, state, signal),
   }
@@ -1103,6 +1132,100 @@ interface SkillState {
   lastStyleSkill?: string
   /** Topic of the most recent generate_deck (used by save_style_template) */
   lastTopic?: string
+  /** Id of the built-in design template lastStyleSkill came from, when it did: its devices stay exempt from the ban rules */
+  lastStyleBasedOn?: string
+}
+
+// ── The chosen design template ────────────────────────────────
+
+/** The design template in force for this document: its selection, read again and resolved. Null when there is none, or it no longer exists. */
+async function selectedTemplateOf(access: DeckAccess): Promise<AppliedTemplate | null> {
+  const selection = access.templateSelection
+  if (!selection) return null
+  return resolveAppliedTemplate(await selection.refresh(), access.loadStyleTemplate)
+}
+
+/** The added requests the document holds for exactly this template; null when it is not the document's selection */
+function selectedRequestsOf(access: DeckAccess, template: AppliedTemplate): string[] | null {
+  const current = access.templateSelection?.current()
+  return current && current.kind === template.kind && current.key === template.key
+    ? [...current.adjustments]
+    : null
+}
+
+/**
+ * A template named in the conversation: a built-in template's id or name
+ * first (any letter case), then a saved style's name (its exact name first,
+ * then any letter case). Null when nothing has that name.
+ */
+async function findNamedTemplate(
+  access: DeckAccess,
+  name: string,
+): Promise<AppliedTemplate | null> {
+  const builtin = findSlideTemplate(name)
+  if (builtin) return appliedBuiltinTemplate(builtin)
+  if (!access.loadStyleTemplate) return null
+  try {
+    let savedName = name
+    if (access.listStyleTemplates) {
+      const names = (await access.listStyleTemplates()).map((s) => s.name)
+      const lower = name.toLowerCase()
+      savedName =
+        names.find((n) => n === name) ?? names.find((n) => n.toLowerCase() === lower) ?? name
+    }
+    return appliedSavedStyle(savedName, await access.loadStyleTemplate(savedName))
+  } catch {
+    return null // fail-open: generation goes on without the named template
+  }
+}
+
+/** Told to the model when the name it passed is no template: the name is unknown, what was used instead, and the names that exist. */
+async function unknownTemplateNote(
+  access: DeckAccess,
+  name: string,
+  used: AppliedTemplate | null,
+): Promise<string> {
+  const builtins = listSlideTemplates().map((tpl) => `${tpl.id} ("${tpl.name}")`)
+  let saved: string[] = []
+  try {
+    saved = ((await access.listStyleTemplates?.()) ?? []).map((s) => s.name)
+  } catch {
+    /* fail-open: the note lists the built-in templates only */
+  }
+  const usedInstead = used
+    ? `the document's selected template "${used.name}" was used`
+    : 'the style was generated for the topic as usual'
+  return (
+    ` Note: no design template or saved style is named "${name}", so the document's selection was not changed and ${usedInstead}.` +
+    ` Usable names — built-in templates: ${builtins.join(', ') || 'none'}; saved styles: ${saved.join(', ') || 'none'}. Tell the user the name was not found.`
+  )
+}
+
+/**
+ * The context block for a document with a selected design template. It holds
+ * the rules that only apply then, so the system prompt stays as it is for
+ * everyone else. Empty without a selection.
+ */
+function buildTemplateNote(access: DeckAccess): string {
+  const selection = access.templateSelection?.current()
+  if (!selection) return ''
+  const builtin = selection.kind === 'builtin' ? builtinTemplateById(selection.key) : undefined
+  if (selection.kind === 'builtin' && !builtin) return ''
+  const what = builtin
+    ? `the built-in design template "${builtin.name}" (id "${builtin.id}")`
+    : `the saved style "${selection.key}"`
+  const requests = selection.adjustments.length
+    ? `\nRequests the user already added (applied automatically; do not pass them again):\n${selection.adjustments.map((r, i) => `${i + 1}. ${r}`).join('\n')}`
+    : ''
+  return (
+    `<design-template>\n` +
+    `The user chose a design template for this document: ${what}. generate_deck and regenerate_slide apply it automatically; this overrides any instruction to define or pass a style.\n` +
+    `- The deck's visual style is settled. Do not ask the user about style (colors, fonts, tone, look), neither in ask_clarification nor in text. Questions about content (audience, scenario, focus) are still fine.\n` +
+    `- Leave generate_deck's style_template empty unless the user names another template or saved style in this conversation and asks to use it; naming one switches the document to it.\n` +
+    `- Leave generate_deck's style empty, also when you pass pages, add pages with insert_mode:"append", or follow a plan_deck plan. Never describe or invent a style yourself. Pass style only when the user explicitly asks for a look that differs from the template (e.g. "make it mostly blue"), and then pass just that request in the user's own terms. It is kept with the document as a request added on top of the template.` +
+    requests +
+    `\n</design-template>`
+  )
 }
 
 /**
@@ -1711,8 +1834,13 @@ async function executeTool(
         state.pageDone = new Array(pages.length).fill(false) // New planning round, reset per-page progress
       }
       const summary = t('aiSumPlan', { count: pages.length, hook: coreHook })
+      // With a design template selected the deck style is the template's: a style
+      // passed on to generate_deck would be kept as a request of the user's.
+      const passOn = (await selectedTemplateOf(access))
+        ? `core_hook + all ${pages.length} pages; leave style empty unless the user asked for a look that differs from the document's design template, and then pass just that request`
+        : `core_hook + style + all ${pages.length} pages`
       return {
-        output: `Plan confirmed:\nCore Hook: ${coreHook}\nStyle: ${style}\n${lines.join('\n')}\nNow follow this plan and call generate_deck once, passing core_hook + style + all ${pages.length} pages (each page's brief strictly following the plan above). Each turn a <generation-progress> note tells you how many pages remain; do not stop before they are complete.`,
+        output: `Plan confirmed:\nCore Hook: ${coreHook}\nStyle: ${style}\n${lines.join('\n')}\nNow follow this plan and call generate_deck once, passing ${passOn} (each page's brief strictly following the plan above). Each turn a <generation-progress> note tells you how many pages remain; do not stop before they are complete.`,
         mutated: false,
         summary,
       }
@@ -1743,17 +1871,24 @@ async function executeTool(
       let marker: string | null = null
       let genImageFails: string[] = []
       let lastErr = ''
+      // The document's design template and its added requests when one is selected;
+      // otherwise the last style this window generated with.
+      const selected = await selectedTemplateOf(access)
+      const regenBasedOn = selected ? selected.basedOn : state?.lastStyleBasedOn
       const regenArgs = {
         pageIndex: idx + 1,
         totalPages: slides.length,
         coreHook: '',
-        style: state?.lastStyleSkill ?? '',
+        style: selected
+          ? styleWithRequests(selected.styleText, selected.requests)
+          : (state?.lastStyleSkill ?? ''),
         title: String(call.input.title ?? ''),
         brief,
         layout: String(call.input.layout ?? ''),
         images: regenImages,
         canvasW: 1280,
         canvasH: 720,
+        ...(regenBasedOn ? { templateDevices: true } : {}),
       }
       const runRegen = async (gen: NonNullable<DeckAccess['generatePageLocal']>) => {
         for (let attempt = 0; attempt < 2 && !marker; attempt++) {
@@ -1859,23 +1994,51 @@ async function executeTool(
       // ── Step 0: generate the Style Skill independently — one focused LLM call thinking only about the design system, less AI-looking.
       // Prefer the user-passed style as the style preference; without pages, generate a full Style Skill from topic.
       // When full pages+style are passed, respect the user's style (don't regenerate).
-      // When style_template is passed, load the template directly and skip Step 0 (no LLM style generation).
+      // When a design template applies (the document's selection, or one named in style_template), its style is used directly and Step 0 is skipped (no LLM style generation).
       let styleSkill = ''
       let templateSkeleton: LayoutSkeleton | undefined
-      if (styleTemplateName && access.loadStyleTemplate) {
-        // Preferred: load from a saved template (fail-open: on load failure continue normal generation)
-        try {
-          const tr = await access.loadStyleTemplate(styleTemplateName)
-          if (tr.ok && tr.styleSkill) styleSkill = tr.styleSkill
-          if (tr.ok && tr.layout) templateSkeleton = tr.layout
-        } catch {
-          /* fail-open */
+      // The document's selection applies unless the model names a template: a named one
+      // is used and becomes the selection, which drops the requests added to the old one.
+      let template = await selectedTemplateOf(access)
+      // The model was shown the <design-template> block only for a selection that
+      // existed before this call; only then can `style` be a request of the user's.
+      let styleIsRequest = template !== null
+      let templateNote = ''
+      if (styleTemplateName) {
+        const named = await findNamedTemplate(access, styleTemplateName)
+        if (named) {
+          const before = template
+          await access.templateSelection?.select(named.kind, named.key)
+          // naming what is already selected keeps its requests
+          template = { ...named, requests: selectedRequestsOf(access, named) ?? [] }
+          // a template named just now: the model knew nothing of it, so its `style`
+          // is a design system of its own and is ignored (as with saved styles before)
+          styleIsRequest = before !== null && before.kind === named.kind && before.key === named.key
+        } else {
+          // fail-open: an unknown name changes nothing and generation continues
+          templateNote = await unknownTemplateNote(access, styleTemplateName, template)
         }
+      }
+      // With a selection the model was told about, `style` carries a look the user
+      // asked for on top of it (the context block says so): it is kept with the
+      // document and wins where it conflicts. Without a template, `style` is the
+      // style hint it always was.
+      const styleRequest = template && styleIsRequest ? normalizeRequestText(style) : ''
+      if (template && styleRequest && access.templateSelection) {
+        // kept only with the template it was made for
+        if (selectedRequestsOf(access, template))
+          await access.templateSelection.addRequest(styleRequest)
+        // the list as the document keeps it, so this deck gets the request also when it could not be remembered
+        template = { ...template, requests: withAddedRequest(template.requests, styleRequest) }
+      }
+      if (template) {
+        styleSkill = styleWithRequests(template.styleText, template.requests)
+        templateSkeleton = template.layout
       }
       // User clicked stop → checked inside each stage loop, abort as soon as possible (pages already landed are kept)
       const cancelled = () => signal?.aborted === true
       const cancelResult = (landed: number, totalPages: number) => ({
-        output: `The user stopped generation. ${landed} page(s) already landed${totalPages ? ` (${totalPages} planned)` : ''} and remain on the canvas.`,
+        output: `The user stopped generation. ${landed} page(s) already landed${totalPages ? ` (${totalPages} planned)` : ''} and remain on the canvas.${templateNote}`,
         mutated: landed > 0,
         summary: landed > 0 ? t('aiSumStoppedKept', { n: landed }) : t('aiErrStopped'),
       })
@@ -2104,6 +2267,7 @@ async function executeTool(
         state.pageDone = new Array(total).fill(false)
         state.lastStyleSkill = styleSkill
         state.lastTopic = topic || coreHook || ''
+        state.lastStyleBasedOn = template?.basedOn
       }
 
       // Presentation name: prefer the cover (page 1) title, then the user-entered topic / coreHook.
@@ -2206,6 +2370,7 @@ async function executeTool(
           canvasW,
           canvasH,
           ...(skeleton ? { skeleton } : {}),
+          ...(template?.basedOn ? { templateDevices: true } : {}),
           ...(signal ? { signal } : {}),
         }
         const local = await tryGenerate(access.generatePageLocal!, pageArgs, pageIndex)
@@ -2383,7 +2548,7 @@ async function executeTool(
         })
         return fail(
           t('aiFailGenDeck'),
-          `All ${total} pages failed to generate; retry or check the AI model configuration.`,
+          `All ${total} pages failed to generate; retry or check the AI model configuration.${templateNote}`,
         )
       }
 
@@ -2420,7 +2585,13 @@ async function executeTool(
             )} degraded to a plain-text fallback page after conversion failure (all layout and styling lost): immediately redo these pages in place with regenerate_slide following the original brief, then reply to the user.`
         : ''
       return {
-        output: okMsg + failMsg + degradedMsg + imageFailNote(deckImageFails) + progressTail,
+        output:
+          okMsg +
+          failMsg +
+          degradedMsg +
+          imageFailNote(deckImageFails) +
+          templateNote +
+          progressTail,
         mutated: true,
         summary: t('aiSumDeckGenerated', { done: landedPages, total }),
       }
@@ -2544,7 +2715,22 @@ async function executeTool(
           t('aiFailSaveTemplate'),
           'The current environment does not support template saving',
         )
-      const styleSkillToSave = state?.lastStyleSkill ?? ''
+      // A saved style may not take a built-in template's id or name: called by
+      // that name in conversation, the built-in template is the one found.
+      const namesake = findSlideTemplate(name)
+      if (namesake)
+        return fail(
+          t('aiFailSaveTemplate'),
+          `"${name}" is taken by the built-in design template "${namesake.name}" (id "${namesake.id}"): a saved style cannot use a built-in template's id or name, in any letter case. Nothing was saved. Save it under another name (ask the user for one if they insisted on this name).`,
+        )
+      // With a built-in template selected, the style to save is that template's
+      // text merged with the added requests, and the file records the template.
+      const selected = await selectedTemplateOf(access)
+      const fromBuiltin = selected?.kind === 'builtin' ? selected : null
+      const styleSkillToSave = fromBuiltin
+        ? styleWithRequests(fromBuiltin.styleText, fromBuiltin.requests)
+        : (state?.lastStyleSkill ?? '')
+      const basedOn = fromBuiltin ? fromBuiltin.basedOn : state?.lastStyleBasedOn
       const topicToSave = state?.lastTopic ?? ''
       if (!styleSkillToSave)
         return fail(
@@ -2559,6 +2745,7 @@ async function executeTool(
         styleSkill: styleSkillToSave,
         createdAt: new Date().toISOString(),
         ...(layout ? { layout } : {}),
+        ...(basedOn ? { basedOn } : {}),
       })
       if (!r.ok) return fail(t('aiFailSaveTemplate'), r.error ?? 'Save failed')
       return {
@@ -2575,7 +2762,8 @@ async function executeTool(
           'The current environment does not support template listing',
         )
       const templates = await access.listStyleTemplates()
-      if (templates.length === 0) {
+      const builtins = listSlideTemplates()
+      if (templates.length === 0 && builtins.length === 0) {
         return {
           output:
             'No saved style templates yet. After generating a deck, call save_style_template(name) to save the current style.',
@@ -2583,13 +2771,22 @@ async function executeTool(
           summary: t('aiSumTemplatesEmpty'),
         }
       }
-      const lines = templates.map(
-        (t) => `- ${t.name} (topic: ${t.topic || 'unknown'}, saved ${t.createdAt.slice(0, 10)})`,
+      // Two groups the model can tell apart: built-in templates, then the user's saved styles
+      const builtinLines = builtins.map(
+        (tpl) =>
+          `- id: ${tpl.id} | name: ${tpl.name} | scheme: ${tpl.scheme} | description: ${tpl.description}`,
+      )
+      const savedLines = templates.map(
+        (s) =>
+          `- name: ${s.name} | topic: ${s.topic || 'unknown'} | saved: ${s.createdAt || 'unknown'}`,
       )
       return {
-        output: `Saved style templates (${templates.length}):\n${lines.join('\n')}\n\nPass style_template:"<template name>" to generate_deck to reuse that style directly.`,
+        output:
+          `Built-in design templates (${builtins.length}) — pass the id or the name as style_template:\n${builtinLines.join('\n') || '(none)'}\n\n` +
+          `Saved styles (${templates.length}) — the user saved these; pass the name as style_template:\n${savedLines.join('\n') || '(none yet; save_style_template(name) saves the current style)'}\n\n` +
+          `Pass style_template:"<id or name>" to generate_deck to make the deck with that template. A built-in template is found first when a saved style has the same name.`,
         mutated: false,
-        summary: t('aiSumListTemplates', { count: templates.length }),
+        summary: t('aiSumListTemplates', { count: builtins.length + templates.length }),
       }
     }
 
