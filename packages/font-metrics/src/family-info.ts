@@ -6,7 +6,14 @@
  */
 import { closeSync, openSync } from 'node:fs'
 
-import { faceOffsets, norm, readTable, readTableDir, systemFontFiles } from './sfnt'
+import {
+  faceOffsets,
+  fontDirsGeneration,
+  norm,
+  readTable,
+  readTableDir,
+  scannedFontFiles,
+} from './sfnt'
 
 export interface FamilyInfo {
   /** Korean family name (name table, Windows langID 0x0412) when the font carries one */
@@ -173,15 +180,21 @@ function scanFile(path: string, faces: FaceFamily[], seen: Set<string>): void {
 }
 
 let scan: Promise<FaceFamily[]> | null = null
+let scanGeneration = -1
 
 /** Scanned once per process (fonts installed later show up after a restart), yielding
- * between batches: the whole scan is ~0.5s of small reads, too long for one main-process turn. */
+ * between batches: the whole scan is ~0.5s of small reads, too long for one main-process turn.
+ * Naming the app's own font folders (configureExtraFontDirs) starts it over. */
 function installedFaces(): Promise<FaceFamily[]> {
+  if (scanGeneration !== fontDirsGeneration()) {
+    scan = null
+    scanGeneration = fontDirsGeneration()
+  }
   scan ??= (async () => {
     const faces: FaceFamily[] = []
     const seen = new Set<string>()
     let n = 0
-    for (const path of systemFontFiles()) {
+    for (const path of scannedFontFiles()) {
       scanFile(path, faces, seen)
       if (++n % 16 === 0) await new Promise<void>((r) => setImmediate(r))
     }

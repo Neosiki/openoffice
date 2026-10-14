@@ -222,4 +222,44 @@ export const pt = {
   aiSumSaveTemplate: 'Modelo de estilo "{name}" salvo',
   aiSumTemplatesEmpty: 'Modelos de estilo (vazio)',
   aiSumListTemplates: '{count} modelos de estilo listados',
+  aiTplGalleryTitle: 'Escolher um modelo',
+  aiTplSectionBuiltin: 'Modelos incluídos',
+  aiTplSectionSaved: 'Meus estilos salvos',
+  aiTplChipPick: 'Modelo',
+  aiTplChipChange: 'Trocar modelo',
+  aiTplChipRemove: 'Remover modelo',
+  aiTplAdjustMark: 'Com pedidos adicionais',
+  aiTplAdjustClear: 'Limpar pedidos adicionais',
+  aiTplSchemeLight: 'Claro',
+  aiTplSchemeDark: 'Escuro',
+  aiTplSchemeMixed: 'Misto',
+  aiTplSavedOn: 'Salvo em {date}',
+  aiTplPreviewAlt: 'Prévia da capa: {name}',
+  aiTplAppliesToNew:
+    'Seus slides atuais continuam como estão. Este modelo vale para os slides que a IA criar daqui em diante.',
+  aiTplFontsNotice:
+    'As fontes do modelo já vêm neste aplicativo. Outros programas, como o PowerPoint, podem mostrar uma fonte diferente.',
+  aiTplOpenFonts: 'Abrir pasta de fontes',
+  aiTplDesc_coral:
+    'Creme e rosa alaranjado sobre fundo quase preto, com títulos enormes e estreitos.',
+  aiTplDesc_blue_professional:
+    'Fundo creme com detalhes em azul-cobalto vivo. Limpo, moderno e formal.',
+  aiTplDesc_monochrome: 'Fundo marfim com texto todo preto e títulos serifados. Nenhuma cor.',
+  aiTplDesc_neo_grid_bold:
+    'Fundo branco-gelo com um único destaque amarelo-neon. Linhas grossas, com jeito de revista.',
+  aiTplDesc_block_frame:
+    'Áreas de cor pastel neon com bordas pretas grossas. Divertido e chamativo.',
+  aiTplDesc_raw_grid:
+    'Rosa, verde-sálvia e preto-tinta com bordas grossas e áreas deslocadas. Cru e marcante.',
+  aiTplDesc_studio: 'Fundo preto com texto amarelo vibrante. Enérgico e impactante.',
+  aiTplDesc_signal:
+    'Azul-marinho profundo e branco-osso com um único detalhe em dourado suave. Institucional e sóbrio.',
+  aiTplDesc_grove:
+    'Fundo verde-floresta com texto creme, títulos serifados clássicos e um detalhe ferrugem.',
+  aiTplDesc_editorial_tri_tone:
+    'Três cores em estilo de revista: rosa-queimado, creme-mostarda e bordô profundo.',
+  aiTplDesc_emerald_editorial:
+    'Verde vivo, azul-marinho e branco-papel. Fios duplos e títulos serifados fortes, como capa de revista.',
+  aiTplDesc_vellum:
+    'Azul-marinho profundo com texto serifado amarelo quente e um detalhe verde-azulado suave. Sereno e erudito.',
 } satisfies Record<keyof typeof zh, string>

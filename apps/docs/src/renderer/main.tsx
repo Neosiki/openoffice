@@ -19,8 +19,11 @@ import './styles.css'
 import './fonts/fonts.css'
 import { applyAiPanelPrefs, installScreenTips } from '@genoffice/ui'
 import { setAltChunkHtmlConverter } from '@genoffice/docx-engine'
+import { registerTemplateFonts } from './template-fonts'
 
 installScreenTips()
+// before any layout: the editor, print and PDF export (also headless) all draw in this page
+registerTemplateFonts()
 if (window.desktop?.convertAltChunkHtml) {
   setAltChunkHtmlConverter((html) => window.desktop.convertAltChunkHtml(html))
 }

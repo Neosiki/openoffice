@@ -22,6 +22,8 @@ ieumoffice guide slides                         # op groups; `ieumoffice guide s
 ieumoffice slides read deck.pptx [--full] --json # durable ids + geometry an agent targets ops at; --full: whole text, tables, notes; text elements add `effective` (displayed style of the first run + `src` = the inheritance layer each value comes from)
 ieumoffice slides read deck.pptx --units in --json # box and size in inches (or cm, pt, px at 96 dpi) with `unit` named; default emu
 ieumoffice create --type pptx --ops deck.json --out deck.pptx
+ieumoffice guide slides templates               # built-in design templates, one line each (id, name, scheme, description, fonts); --json: detail.templates
+ieumoffice guide slides templates coral > deck/style.md   # one template's style sheet, saved as the deck's style.md as is
 ieumoffice create --type pptx --spec deck/pages --outline deck/outline.json --out deck.pptx   # one page spec file per slide (`ieumoffice guide slides design|spec`)
 ieumoffice create --type pptx --spec deck.json --out deck.pptx --render deck/previews --audit   # plus one PNG per slide (detail.previews) and the geometry audit (detail.audit) in the same call
 ieumoffice slides check deck/outline.json | deck/pages/03.json   # outline rules (exit 1 on errors) / build + audit one page file
@@ -80,6 +82,8 @@ Workbook writes go through `@genoffice/xlsx-gateway` (the app's save path). The 
 `create`/`slides apply` take the same ops the in-app AI uses (`@genoffice/pptx-ops`), as a JSON array or `{ "ops": [...] }`; `--ops -` reads stdin. Image ops accept a local file path in their `bytes` field. A rejected op comes back with the guided error and its usage line so the caller can fix and retry; atomic transactions leave the file untouched.
 
 `create --type pptx --spec` is the CLI end of the app's deck generation pipeline (`@genoffice/pipelines`): the caller's agent does the design work following `ieumoffice guide slides design`, writing the style sheet, the outline and one page spec file per slide (`ieumoffice guide slides spec`), and the same page builder the app uses turns them into a pptx, measuring every text box and growing it to its content. Where the app separates the stages into model calls, the CLI separates them into files: `slides check` validates the outline against the planning rules and builds and audits a single page file, then checks it against its outline entry and the style sheet's palette (both found beside the page files), `create --spec <dir>` runs the same checks on every file and refuses to assemble a deck with pages missing or disagreeing with the outline, and `slides replace` rebuilds one slide from its file. `slides audit` runs the app's deterministic layout audit; `slides render` gives the agent PNGs to look at. No model call happens inside ieumoffice.
+
+In Windows PowerShell 5.1, `>` writes UTF-16, and `slides check` then finds no palette in the saved style sheet. Save it with `ieumoffice guide slides templates coral | Out-File -Encoding utf8 deck/style.md` there, or run the command in a shell that writes UTF-8.
 
 Every command prints a one-line human summary by default or a single JSON
 object with `--json` (`{ status, command, summary, output_path?, warnings?, detail? }`);
@@ -166,7 +170,9 @@ client sees the fields without reading the guide; `ieumoffice mcp
 --compact-schemas` (or `GENOFFICE_MCP_COMPACT_SCHEMAS=1`) advertises them as
 plain arrays for clients with a small context budget. The op references are
 also resources (`ieumoffice://guide/docs`, `…/sheets`, `…/slides`,
-`…/slides/design`, `…/slides/spec`).
+`…/slides/design`, `…/slides/spec`, `…/slides/templates` and one
+`…/slides/templates/<id>` per built-in template); the `guide` tool takes the
+template id as a third positional, `guide("slides", "templates", "<id>")`.
 
 A new deck goes through `deck_start` (style sheet + outline, returns the
 design and spec guides), `deck_page` (one page per call, checked against its

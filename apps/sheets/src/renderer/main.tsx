@@ -18,6 +18,7 @@ import '@univerjs/preset-sheets-core/lib/index.css'
 import { App } from './App'
 import { installCanvasFontFallback, registerCellFontAliases } from './cell-font-fallback'
 import { LocaleProvider, setModuleLang } from './i18n/locale'
+import { registerTemplateFonts } from './template-fonts'
 import type { DocTheme, UiTheme } from '../shared/desktop-api'
 import './styles.css'
 
@@ -35,6 +36,8 @@ if (!root) throw new Error('Missing application root.')
 
 installScreenTips()
 installCanvasFontFallback()
+// URL-backed faces: no file is read until text first uses its family
+registerTemplateFonts()
 
 function applyTheme(theme: UiTheme): void {
   if (theme === 'system') document.documentElement.removeAttribute('data-theme')

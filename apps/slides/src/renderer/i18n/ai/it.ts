@@ -223,4 +223,42 @@ export const it = {
   aiSumSaveTemplate: 'Modello di stile "{name}" salvato',
   aiSumTemplatesEmpty: 'Modelli di stile (vuoto)',
   aiSumListTemplates: '{count} modelli di stile elencati',
+  aiTplGalleryTitle: 'Scegli un modello',
+  aiTplSectionBuiltin: 'Modelli inclusi',
+  aiTplSectionSaved: 'I miei stili salvati',
+  aiTplChipPick: 'Modello',
+  aiTplChipChange: 'Cambia modello',
+  aiTplChipRemove: 'Rimuovi modello',
+  aiTplAdjustMark: 'Con richieste aggiunte',
+  aiTplAdjustClear: 'Cancella richieste aggiunte',
+  aiTplSchemeLight: 'Chiaro',
+  aiTplSchemeDark: 'Scuro',
+  aiTplSchemeMixed: 'Misto',
+  aiTplSavedOn: 'Salvato il {date}',
+  aiTplPreviewAlt: 'Anteprima della copertina: {name}',
+  aiTplAppliesToNew:
+    "Le diapositive esistenti restano come sono. Questo modello si applica alle diapositive che l'IA creerà d'ora in poi.",
+  aiTplFontsNotice:
+    'I caratteri del modello sono inclusi in questa app. Altri programmi, come PowerPoint, potrebbero mostrare un carattere diverso.',
+  aiTplOpenFonts: 'Apri la cartella dei caratteri',
+  aiTplDesc_coral: 'Crema e rosa aranciato su fondo quasi nero, con titoli enormi e stretti.',
+  aiTplDesc_blue_professional:
+    'Sfondo crema con accenti blu cobalto acceso. Pulito, moderno e formale.',
+  aiTplDesc_monochrome: 'Sfondo avorio con testo tutto nero e titoli con grazie. Nessun colore.',
+  aiTplDesc_neo_grid_bold:
+    'Sfondo bianco sporco con un solo accento giallo fluo. Linee spesse, aria da rivista.',
+  aiTplDesc_block_frame: 'Campiture pastello fluo con spessi bordi neri. Giocoso e vistoso.',
+  aiTplDesc_raw_grid:
+    'Rosa, verde salvia e nero inchiostro con bordi spessi e campiture sfalsate. Ruvido e deciso.',
+  aiTplDesc_studio: "Sfondo nero con testo giallo elettrico. Energico e d'impatto.",
+  aiTplDesc_signal:
+    'Blu navy profondo e bianco avorio con un solo accento oro spento. Istituzionale e pacato.',
+  aiTplDesc_grove:
+    'Sfondo verde bosco con testo crema, titoli classici con grazie e un accento ruggine.',
+  aiTplDesc_editorial_tri_tone:
+    'Tre colori in stile rivista: rosa antico, crema senape e bordeaux profondo.',
+  aiTplDesc_emerald_editorial:
+    'Verde brillante, blu navy e bianco carta. Doppi filetti e titoli con grazie marcati, come una copertina di rivista.',
+  aiTplDesc_vellum:
+    'Blu navy profondo con testo giallo caldo con grazie e un accento ottanio spento. Quieto e colto.',
 } satisfies Record<keyof typeof zh, string>

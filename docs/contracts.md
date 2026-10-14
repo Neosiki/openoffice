@@ -142,7 +142,8 @@
 - 서버가 끝나면 그 작업도 멈춘다(`last_error: "interrupted"`). 보관된 결과는 남는다.
 - 결과는 `--json`이 내는 것과 같은 객체다. 실패는 `isError`와 같은 `error` 이유로 온다.
 - 환경변수 `GENOFFICE_MCP_COMPACT_SCHEMAS`는 예전 철자를 유지한다. `--http`의 토큰은 `--token`, 없으면 `GENOFFICE_MCP_TOKEN`에서 읽고, 둘 다 없으면 인증 없이 받는다. 에이전트 설정 폴더를 찾을 때의 홈 폴더는 `GENOFFICE_HOME`으로 바꿀 수 있다.
-- 안내 자료는 리소스로도 내놓는다(`ieumoffice://guide/docs`, `…/sheets`, `…/slides`, `…/slides/design`, `…/slides/spec`).
+- 안내 자료는 리소스로도 내놓는다(`ieumoffice://guide/docs`, `…/sheets`, `…/slides`, `…/slides/design`, `…/slides/spec`, `…/slides/templates`, 내장 템플릿마다 `…/slides/templates/<id>`).
+- 내장 디자인 템플릿은 `ieumoffice guide slides templates [<id>]`로 고른다. 목록의 `--json`은 `detail.templates`(`[{ id, name, scheme, description, fonts }]`, 정해진 순서), 템플릿 하나는 `detail`(`{ id, name, scheme, description, fonts, styleSheet }`)이다. 모르는 id는 종료 코드 1, `error: "invalid_argument"`, `detail.templates`에 쓸 수 있는 id 목록이다. MCP `guide` 도구는 세 번째 위치 인자 `name`으로 id를 받는다.
 - 앱의 설정 → 연동 화면이 지금 설치본에 맞는 등록 예시를 보여 준다.
 
 ## 앱 안 MCP 서버
@@ -210,6 +211,8 @@
 - 가리기 표시는 문서 안에 저장되고, 그 이름공간 주소는 원본과 같다. 원본으로 가린 문서를 열면 가리기가 그대로 인식된다.
 - 문서 곁에 저장되는 보조 파일의 이름(`.genoffice-assets.json` 등)도 원본과 같다.
 - 문서 안에 적히는 작성자 이름(PDF 주석 작성자, 엑셀 메모 작성자, 명령어가 넣는 메모 작성자)은 지금 "GenOffice"다.
+- 파워포인트 편집기에서 고른 디자인 템플릿은 문서 안이나 곁에 쓰지 않는다. 문서에 남는 것은 평범한 도형·글·글꼴 이름뿐이다.
+- 저장한 스타일 파일(`<데이터 폴더>/style-templates/<이름>.json`)에는 선택 항목 `basedOn`(기본 템플릿의 id)이 붙을 수 있다. 이 값을 모르는 예전 버전은 무시하고 그대로 읽는다.
 
 ## 설치본과 업데이트
 

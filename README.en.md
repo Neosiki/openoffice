@@ -310,6 +310,12 @@ Genspark's services and renames the product. The original copyright notices
 are kept, and [NOTICE](NOTICE) records the attribution and the fact that this
 is a modified version.
 
+The slide design templates are re-authored from the designs in
+[frontend-slides](https://github.com/zarazhangrui/frontend-slides) (MIT
+License), and their fonts are all licensed under the SIL Open Font License
+1.1; [NOTICE](NOTICE) carries the notice and the font list. The templates'
+Korean font pairings referred to [k-slide](https://k-slide.web.app).
+
 IeumOffice is an independent project. It is not affiliated with, sponsored by
 or endorsed by Genspark / Mainfunc, Inc., Anthropic or OpenAI. "GenOffice" and
 "Genspark", and their logos, are trademarks of their owners; so are "Claude",

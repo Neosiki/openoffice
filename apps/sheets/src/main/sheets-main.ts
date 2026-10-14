@@ -168,6 +168,7 @@ import { atomicWriteFile } from './atomic-write'
 import { closeGuardDecision, ShutdownLatch } from './close-guard'
 import { SaveEditsTransferStore } from './save-edits-transfer'
 import { exportPdf, printWorkbook } from './pdf-export'
+import { installStandaloneTemplateFontProtocol } from './template-fonts'
 import { allowsAutomaticWorkbookRecovery } from './recovery-policy'
 import {
   setSystemShortDate,
@@ -4676,6 +4677,8 @@ export function startSheetsStandalone(): void {
   void applyMainProcessProxy()
   app.whenReady().then(() => {
     installRendererProtocol({ sheets: join(__dirname, '../renderer') })
+    // the shell's Word editor serves these URLs there; alone, sheets does
+    installStandaloneTemplateFontProtocol()
     setUiLang(normalizeLang(process.env.GENOFFICE_LANG ?? app.getLocale()))
     app.setAccessibilitySupportEnabled(true)
     installApplicationMenu()

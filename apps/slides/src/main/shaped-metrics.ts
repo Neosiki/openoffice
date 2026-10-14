@@ -309,7 +309,7 @@ export async function refineComplexWidths(wc: {
           if (!need.has(f.family)) continue
           // Each face registers independently: one bad face must not skip the rest
           try {
-            const weight = f.bold ? '700' : '400'
+            const weight = f.weight ?? (f.bold ? '700' : '400')
             const style = f.italic ? 'italic' : 'normal'
             let have = false
             document.fonts.forEach((x) => {

@@ -216,4 +216,37 @@ export const he = {
   aiSumSaveTemplate: 'תבנית הסגנון "{name}" נשמרה',
   aiSumTemplatesEmpty: 'תבניות סגנון (ריק)',
   aiSumListTemplates: 'הוצגו {count} תבניות סגנון',
+  aiTplGalleryTitle: 'בחירת תבנית',
+  aiTplSectionBuiltin: 'תבניות מובנות',
+  aiTplSectionSaved: 'הסגנונות ששמרתי',
+  aiTplChipPick: 'תבנית',
+  aiTplChipChange: 'החלפת תבנית',
+  aiTplChipRemove: 'הסרת התבנית',
+  aiTplAdjustMark: 'יש בקשות נוספות',
+  aiTplAdjustClear: 'ניקוי הבקשות הנוספות',
+  aiTplSchemeLight: 'בהיר',
+  aiTplSchemeDark: 'כהה',
+  aiTplSchemeMixed: 'מעורב',
+  aiTplSavedOn: 'נשמר ב-{date}',
+  aiTplPreviewAlt: 'תצוגה מקדימה של השער: {name}',
+  aiTplAppliesToNew:
+    'השקופיות הקיימות נשארות כמו שהן. התבנית הזו תחול על שקופיות שה-AI ייצור מעכשיו.',
+  aiTplFontsNotice:
+    'גופני התבנית כלולים באפליקציה הזו. תוכנות אחרות, כמו PowerPoint, עשויות להציג גופן אחר.',
+  aiTplOpenFonts: 'פתיחת תיקיית הגופנים',
+  aiTplDesc_coral: 'קרם וורוד-כתום על רקע כמעט שחור, עם כותרות ענקיות וצרות.',
+  aiTplDesc_blue_professional: 'רקע בצבע קרם עם נגיעות של כחול קובלט עז. נקי, מודרני וענייני.',
+  aiTplDesc_monochrome: 'רקע בצבע שנהב, טקסט שחור בלבד וכותרות בגופן סריפי. בלי צבע בכלל.',
+  aiTplDesc_neo_grid_bold: 'רקע לבן שבור עם נגיעה אחת של צהוב ניאון. קווים עבים, בסגנון מגזין.',
+  aiTplDesc_block_frame: 'משטחי צבע בפסטל-ניאון עם מסגרות שחורות עבות. שובב ובולט.',
+  aiTplDesc_raw_grid:
+    'ורוד, ירוק מרווה ושחור דיו עם מסגרות עבות ומשטחי צבע מוסטים. מחוספס ועוצמתי.',
+  aiTplDesc_studio: 'רקע שחור עם טקסט צהוב זוהר. אנרגטי ומרשים.',
+  aiTplDesc_signal: 'כחול נייבי עמוק ולבן שמנת עם נגיעה אחת של זהב עמום. רשמי ושקט.',
+  aiTplDesc_grove: 'רקע ירוק יער עם טקסט בצבע קרם, כותרות סריפיות קלאסיות ונגיעה אחת בצבע חלודה.',
+  aiTplDesc_editorial_tri_tone: 'שלושה צבעים בסגנון מגזין: ורוד מאובק, קרם חרדל ובורדו עמוק.',
+  aiTplDesc_emerald_editorial:
+    'ירוק עז, כחול נייבי ולבן נייר. קווים כפולים וכותרות סריפיות עבות, כמו שער של מגזין.',
+  aiTplDesc_vellum:
+    'רקע כחול נייבי עמוק עם טקסט סריפי בצהוב חם ונגיעה של טורקיז מאובק. שקט ומלומד.',
 } satisfies Record<keyof typeof zh, string>

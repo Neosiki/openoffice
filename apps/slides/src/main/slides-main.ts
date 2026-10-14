@@ -275,9 +275,12 @@ import {
   type Session,
 } from './session-state'
 import { registerAiIpc, registerSlidesOnlyAiIpc } from './ai-ipc'
+import { followTemplateSelection, inheritTemplateSelection } from './template-selection-ipc'
 import { listPrivateFontFaces, getPrivateFontData, registerEmbeddedFonts } from './fonts'
 import { listMetafileFonts } from './metafile-fonts'
 import { initFontStore, installLocalFontFiles } from './font-store'
+import { initTemplateFonts, registerTemplateFontsIpc } from './template-fonts'
+import { registerTemplateCoverIpc } from './template-cover'
 
 /** One slide, copied from any deck open in this process, waiting to be pasted into another. */
 let slideClipboard: { bundles: SlideBundle[]; pngs?: string[] } | null = null
@@ -472,6 +475,7 @@ export async function saveSessionDeckTo(session: Session, filePath: string): Pro
   await mkdir(dirname(filePath), { recursive: true })
   const metaRevAtSave = session.metaRev ?? 0
   await savePptxToFile(session.opened, filePath)
+  followTemplateSelection(session, session.path, filePath)
   session.path = filePath
   autosaveBackoff.delete(filePath)
   // mirror slides:save-as: a saved deck is no longer an unsaved untitled draft
@@ -939,6 +943,7 @@ async function saveDraftAfterGenerate(
     }
 
     await writeFile(draftPath, Buffer.from(bytes))
+    followTemplateSelection(session, session.path, draftPath)
     session.path = draftPath
     await pushRecent(draftPath)
     slidesOpenedHook?.(wc, draftPath)
@@ -1308,6 +1313,9 @@ export function registerSlidesIpc(): void {
   ipcMain.handle('slides:private-font-data', (_e, id: string) => getPrivateFontData(id))
 
   initFontStore()
+  initTemplateFonts()
+  registerTemplateFontsIpc()
+  registerTemplateCoverIpc()
   // Fonts changed (local install): rebuild every open session with a fresh
   // registry and push the relaid-out slides + a re-sync ping to all attached windows.
   const afterFontsChanged = (): void => {
@@ -2025,6 +2033,7 @@ export function registerSlidesIpc(): void {
         }
         const old = sessions.get(e.sender.id)
         carryHistoryForReplacement(old, replaceSession)
+        inheritTemplateSelection(old, replaceSession)
         sessions.set(e.sender.id, replaceSession)
         // Re-point windows that shared the old session, or they diverge onto a dead deck
         if (old) for (const id of attachedIds(old)) sessions.set(id, replaceSession)
@@ -4360,6 +4369,7 @@ export function registerSlidesIpc(): void {
       const draftsDir = getDraftsDir()
       if (!existsSync(draftsDir)) mkdirSync(draftsDir, { recursive: true })
       session.path = pickDraftPath(draftsDir, tm('untitledDeck'))
+      followTemplateSelection(session, '', session.path)
       await pushRecent(session.path)
       slidesOpenedHook?.(e.sender, session.path)
     }
@@ -4398,6 +4408,7 @@ export function registerSlidesIpc(): void {
     try {
       const metaRevAtSave = session.metaRev ?? 0
       await savePptxToFile(session.opened, r.filePath)
+      followTemplateSelection(session, session.path, r.filePath)
       session.path = r.filePath
       autosaveBackoff.delete(r.filePath)
       dropUntitledRecovery(e.sender.id)

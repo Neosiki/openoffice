@@ -64,11 +64,13 @@ import {
   installRendererProtocol,
   registerRendererScheme,
   rendererUrl,
+  templateFontsDir,
   MAX_REMOTE_IMAGE_BYTES,
   readBodyCapped,
   writeJsonAtomic,
 } from '@genoffice/electron-utils'
 import {
+  configureExtraFontDirs,
   configureMetricsCache,
   familyInfoFor,
   familyVerticalMetrics,
@@ -4248,7 +4250,15 @@ const reissuedDoc = (
 /** document/attachment/window IPC (everything except the AI proxy above) */
 export function registerDocsIpc(): void {
   registerZoteroIpc()
-  void app.whenReady().then(registerLazyMediaProtocol)
+  // the design templates' fonts: shipped once (resources/template-fonts), served to the
+  // renderer on the media scheme and indexed for vertical metrics and family info
+  const fontsDir = templateFontsDir({
+    isPackaged: app.isPackaged,
+    getAppPath: () => app.getAppPath(),
+    resourcesPath: process.resourcesPath,
+  })
+  configureExtraFontDirs([fontsDir])
+  void app.whenReady().then(() => registerLazyMediaProtocol(fontsDir))
   // Node fetch (undici) direct connections get reset under VPN/tun setups; retry over Chromium's stack
   setRescueFetch((url, init) => net.fetch(url, init))
   setAiUserAgent(`${PRODUCT_NAME}/${app.getVersion()}`)

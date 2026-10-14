@@ -78,7 +78,25 @@ const GUIDES: { uri: string; name: string; argv: string[]; description: string }
     argv: ['guide', 'slides', 'spec'],
     description: 'the outline and one-page spec JSON the deck_* tools take',
   },
+  {
+    uri: 'ieumoffice://guide/slides/templates',
+    name: 'Deck templates',
+    argv: ['guide', 'slides', 'templates'],
+    description:
+      'the built-in design templates: id, name, scheme, description and fonts, one per line',
+  },
 ]
+
+/** One resource per built-in template: its style sheet, ready to save as the deck's style.md. */
+async function templateGuides(): Promise<typeof GUIDES> {
+  const { listSlideTemplates } = await import('@genoffice/pipelines/slides/templates')
+  return listSlideTemplates().map((t) => ({
+    uri: `ieumoffice://guide/slides/templates/${t.id}`,
+    name: `Deck template: ${t.name}`,
+    argv: ['guide', 'slides', 'templates', t.id],
+    description: `the ${t.name} template as a style sheet (${t.scheme}): ${t.description}`,
+  }))
+}
 
 export interface ServerOptions {
   registry?: CommandRegistry
@@ -133,7 +151,7 @@ export async function createMcpServer(
     )
   }
 
-  for (const g of GUIDES) {
+  for (const g of [...GUIDES, ...(await templateGuides())]) {
     server.registerResource(
       g.name,
       g.uri,

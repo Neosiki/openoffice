@@ -14,3 +14,4 @@
 | [0010](0010-subscription-for-page-reading-and-translation.md) | 구독으로 PDF 페이지 그림 읽기와 문서 전체 번역을 한다. 터미널·MCP도 같다                        | 2026-10-14 |
 | [0011](0011-no-hourly-cap-on-automatic-calls.md)              | 자동 호출의 시간당 한도를 모든 자동 호출에서 없앤다(0004를 대체)                                | 2026-10-14 |
 | [0012](0012-document-job-rules.md)                            | 문서 작업은 명시적 행동으로만 시작하고, 대화와 따로 돌며, 스스로 이어 가지 않는다               | 2026-10-14 |
+| [0013](0013-bundle-template-fonts.md)                         | 디자인 템플릿 글꼴을 설치 파일에 한 번만 넣는다                                                 | 2026-10-14 |

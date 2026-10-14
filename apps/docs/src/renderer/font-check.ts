@@ -1,5 +1,5 @@
 import type { ParsedDoc } from '@genoffice/docx-engine'
-import { BUNDLED_FONTS, cssFontFamily, isBundledFont } from './line-metrics'
+import { BUNDLED_FONTS, cssFontFamily, isBundledFont, isTemplateFontFamily } from './line-metrics'
 
 const GENERIC = new Set(['serif', 'sans-serif', 'monospace'])
 
@@ -98,7 +98,8 @@ export function checkMissingFonts(names: string[]): FontSubstitution[] {
   const out: FontSubstitution[] = []
   for (const name of names) {
     // a declared bundled face resolves in canvas yet still renders the subset fallback — report it
-    if (!isBundledFont(name) && fontAvailableIn(cx, name)) continue
+    // a bundled template face may not have loaded yet, but it renders real once it has
+    if (!isBundledFont(name) && (isTemplateFontFamily(name) || fontAvailableIn(cx, name))) continue
     const chain = cssFontFamily(name)
       .split(',')
       .map((s) => s.trim().replace(/^'|'$/g, ''))

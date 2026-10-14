@@ -299,6 +299,12 @@ Parallel과 DuckDuckGo로, 업데이트 확인은 GitHub로 갑니다. 전체 �
 그대로 두었고, 출처와 "고쳐 만든 버전"이라는 사실은 [NOTICE](NOTICE)에 적어
 두었습니다.
 
+슬라이드 디자인 템플릿은
+[frontend-slides](https://github.com/zarazhangrui/frontend-slides)(MIT
+라이선스)의 디자인을 바탕으로 다시 만들었고, 템플릿 글꼴은 모두 SIL Open Font
+License 1.1입니다. 고지와 글꼴 목록은 [NOTICE](NOTICE)에 있습니다. 템플릿의
+한글 글꼴 조합은 [k-slide](https://k-slide.web.app)를 참고했습니다.
+
 이음오피스는 독립된 프로젝트입니다. Genspark / Mainfunc, Inc., Anthropic,
 OpenAI와 제휴하거나 후원·보증을 받은 관계가 아닙니다. "GenOffice"와
 "Genspark"라는 이름과 로고는 각 소유자의 상표이고, "Claude", "Codex",

@@ -225,6 +225,24 @@ export function setEmbeddedLineMetrics(
   }
 }
 
+/** the design templates' bundled families the editor registered (template-fonts.ts), keyed like embeddedLineBoxes */
+let templateLineFactors = new Map<string, number | undefined>()
+
+const templateKey = (family: string) => family.normalize('NFKC').toLowerCase().trim()
+
+/** The bundled families now draw for real: they count as available and keep their own line box. */
+export function noteTemplateFontFamilies(
+  families: ReadonlyArray<{ family: string; lineFactor?: number }>,
+): void {
+  templateLineFactors = new Map(families.map((f) => [templateKey(f.family), f.lineFactor]))
+  noteEmbeddedFontsChanged(families.map((f) => f.family))
+}
+
+/** a bundled template family the editor registered from the shipped file */
+export function isTemplateFontFamily(name: string): boolean {
+  return templateLineFactors.has(templateKey(name))
+}
+
 /** Names Word for Mac renders with SimSun itself (lower-cased input) */
 const SIMSUN_NAME_RE = /simsun|\u5b8b\u4f53|xiaobiaosong|\u5c0f\u6807\u5b8b/
 
@@ -236,6 +254,9 @@ export function lineHeightFactor(fontFamily: string): number {
   // Word meters an embedded East Asian face by its EA rule, not its own box
   // (embedded Malgun Gothic: 19.0 pt at 11 pt = 1.7371, hhea total is 1.3301)
   if (embedded && !isCjkFontName(fontFamily)) return embedded.factor
+  // a bundled template face renders real too, with the box its own file gives
+  const template = templateLineFactors.get(templateKey(fontFamily))
+  if (template !== undefined) return template
   const symbolFace = SYMBOL_FACE_FACTORS[f.trim()]
   if (symbolFace !== undefined) return symbolFace
   // Aptos (M365 cloud face): Word probe 2026-08-22 measured 1.22, same as Calibri
@@ -688,6 +709,9 @@ export function isBundledFont(name: string): boolean {
 
 const fontAvailableCache = new Map<string, boolean>()
 export function isFontAvailable(font: string): boolean {
+  // registered from the shipped file: available even before its lazy load lands,
+  // when a canvas probe would still measure the fallback
+  if (isTemplateFontFamily(font)) return true
   if (typeof document === 'undefined') return false
   const cached = fontAvailableCache.get(font)
   if (cached !== undefined) return cached

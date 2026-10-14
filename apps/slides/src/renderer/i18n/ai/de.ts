@@ -225,4 +225,45 @@ export const de = {
   aiSumSaveTemplate: 'Stilvorlage „{name}“ gespeichert',
   aiSumTemplatesEmpty: 'Stilvorlagen (leer)',
   aiSumListTemplates: '{count} Stilvorlagen aufgelistet',
+  aiTplGalleryTitle: 'Vorlage auswählen',
+  aiTplSectionBuiltin: 'Mitgelieferte Vorlagen',
+  aiTplSectionSaved: 'Meine gespeicherten Stile',
+  aiTplChipPick: 'Vorlage',
+  aiTplChipChange: 'Vorlage wechseln',
+  aiTplChipRemove: 'Vorlage entfernen',
+  aiTplAdjustMark: 'Mit Zusatzwünschen',
+  aiTplAdjustClear: 'Zusatzwünsche löschen',
+  aiTplSchemeLight: 'Hell',
+  aiTplSchemeDark: 'Dunkel',
+  aiTplSchemeMixed: 'Gemischt',
+  aiTplSavedOn: 'Gespeichert am {date}',
+  aiTplPreviewAlt: 'Titelfolien-Vorschau: {name}',
+  aiTplAppliesToNew:
+    'Deine vorhandenen Folien bleiben unverändert. Diese Vorlage gilt für Folien, die die KI ab jetzt erstellt.',
+  aiTplFontsNotice:
+    'Die Schriftarten der Vorlage sind in dieser App enthalten. Andere Programme wie PowerPoint zeigen möglicherweise eine andere Schriftart an.',
+  aiTplOpenFonts: 'Schriftartenordner öffnen',
+  aiTplDesc_coral:
+    'Creme und Lachsorange auf fast schwarzem Grund, mit übergroßen, schmalen Überschriften.',
+  aiTplDesc_blue_professional:
+    'Cremefarbener Hintergrund mit kräftigen kobaltblauen Akzenten. Klar, modern und sachlich.',
+  aiTplDesc_monochrome:
+    'Elfenbeinfarbener Hintergrund, rein schwarze Schrift, Überschriften mit Serifen. Ganz ohne Farbe.',
+  aiTplDesc_neo_grid_bold:
+    'Gebrochenes Weiß mit einem einzigen neongelben Akzent. Kräftige Linien, wie ein Magazin.',
+  aiTplDesc_block_frame:
+    'Pastellige Neonflächen mit dicken schwarzen Rändern. Verspielt und auffällig.',
+  aiTplDesc_raw_grid:
+    'Rosa, Salbeigrün und Tintenschwarz mit dicken Rändern und versetzten Flächen. Rau und kraftvoll.',
+  aiTplDesc_studio: 'Schwarzer Hintergrund mit knallgelber Schrift. Energiegeladen und markant.',
+  aiTplDesc_signal:
+    'Tiefes Marineblau und Altweiß mit einem gedeckten Goldakzent. Seriös und ruhig.',
+  aiTplDesc_grove:
+    'Waldgrüner Hintergrund mit cremefarbener Schrift, klassischen Serifenüberschriften und einem Rostakzent.',
+  aiTplDesc_editorial_tri_tone:
+    'Drei Farben im Magazinstil: Altrosa, Senfcreme und tiefes Bordeauxrot.',
+  aiTplDesc_emerald_editorial:
+    'Sattes Grün, Marineblau und Papierweiß. Doppellinien und kräftige Serifentitel wie auf einem Magazincover.',
+  aiTplDesc_vellum:
+    'Tiefes Marineblau mit warmgelber Serifenschrift und einem gedeckten Petrolakzent. Ruhig und gelehrt.',
 } satisfies Record<keyof typeof zh, string>

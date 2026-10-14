@@ -173,6 +173,12 @@ import {
   type CrossHighlightHandle,
 } from './cross-highlight'
 import { installOutlineGutter, type OutlineGutterHandle } from './outline-gutter'
+import { refreshTemplateFontLayout } from './template-font-layout'
+import {
+  installTemplateFontRefresh,
+  loadTemplateFontsFor,
+  workbookTemplateFontUses,
+} from './template-fonts'
 import {
   loadRowOutlines,
   outlineSummarySettings,
@@ -1857,6 +1863,11 @@ export function App({
     // Load-time wrap-row measures queue until Univer's auto-height
     // interceptor exists (lifecycle Rendered).
     const wrapMeasureDisposable = installWrapMeasureLifecycle(runtime)
+    // a bundled template face loads on first use; cells laid out before it
+    // arrived are measured again with it
+    const templateFontRefreshDispose = installTemplateFontRefresh(() =>
+      refreshTemplateFontLayout(runtime),
+    )
     // live theme switching: main.tsx updates data-theme first (its listener
     // registered at bootstrap), so reading the attribute here is safe; the
     // matchMedia listener covers OS appearance flips while in system mode
@@ -3329,6 +3340,7 @@ export function App({
       findRevealDispose()
       gridGrowthDispose()
       wrapMeasureDisposable.dispose()
+      templateFontRefreshDispose()
       prefersDark.removeEventListener('change', applyUniverDark)
       dateTextDisposable.dispose()
       filteredCopyDisposable.dispose()
@@ -4279,6 +4291,12 @@ export function App({
     opts?: { continueChat?: boolean; onInitialRangeLoaded?: () => void },
   ): Promise<boolean> {
     if (!(await commitActiveEditor())) return false
+    // the bundled faces this workbook names, before its first skeleton measures
+    // (the Normal font's digit width sizes every column); bounded like boot fonts
+    await Promise.race([
+      loadTemplateFontsFor(workbookTemplateFontUses(opened)),
+      new Promise((resolve) => setTimeout(resolve, 3000)),
+    ])
     if (opts?.continueChat) chatContinuesRef.current = true
     const selected: WorkbookFile = {
       ...opened,

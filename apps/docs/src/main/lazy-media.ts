@@ -4,6 +4,7 @@ import { open, stat } from 'node:fs/promises'
 import { inflateRawSync } from 'node:zlib'
 import { protocol } from 'electron'
 import { DOCX_MEDIA_SCHEME_PRIVILEGE } from '@genoffice/electron-utils'
+import { templateFontResponse } from '@genoffice/electron-utils/template-font-response'
 import { takeHandoff } from './byte-handoff'
 import {
   LAZY_MEDIA_SCHEME,
@@ -240,7 +241,9 @@ export async function readLazyMedia(url: string): Promise<{ body: Buffer; mime: 
   }
 }
 
-export function registerLazyMediaProtocol(): void {
+/** `templateFontsDir`: the design templates' font folder, served under its own host
+ *  (templateFontUrl in @genoffice/ui/template-fonts) for every editor in the shell */
+export function registerLazyMediaProtocol(templateFontsDir: string): void {
   if (DOCX_MEDIA_SCHEME_PRIVILEGE.scheme !== LAZY_MEDIA_SCHEME) {
     throw new Error('lazy media scheme privilege registered under another name')
   }
@@ -256,6 +259,8 @@ export function registerLazyMediaProtocol(): void {
         },
       })
     }
+    const font = await templateFontResponse(request.url, templateFontsDir)
+    if (font) return font
     const media = await readLazyMedia(request.url)
     if (!media) return new Response(null, { status: 404 })
     return new Response(new Uint8Array(media.body), { headers: { 'Content-Type': media.mime } })
