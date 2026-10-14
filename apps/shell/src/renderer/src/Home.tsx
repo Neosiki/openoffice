@@ -32,6 +32,7 @@ import {
 } from '@genoffice/ui'
 import type { AiSettings } from '@genoffice/ai-provider/browser'
 import { productName } from '@genoffice/i18n'
+import { RELEASE_IS_BETA } from '../../shared/release-stage'
 import { fileCountLabel, visiblePageCount } from './counts'
 import { useI18n } from './locale'
 import type { I18n, StringKey } from './locale'
@@ -3006,6 +3007,11 @@ export function Home({
       <aside className="sidebar">
         <div className="sidebar-logo">
           <img className="logo-lockup" src={logoLockup} alt={productName(lang)} />
+          {RELEASE_IS_BETA && (
+            <span className="beta-badge" title={t('betaTooltip')}>
+              {t('betaBadge')}
+            </span>
+          )}
         </div>
         <nav className="sidebar-nav">
           <button

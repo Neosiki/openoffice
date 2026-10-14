@@ -130,6 +130,19 @@ body.vib .home {
   filter: invert(var(--logo-invert));
 }
 
+/* shown while RELEASE_IS_BETA */
+.beta-badge {
+  flex: none;
+  padding: 1px 7px;
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 16px;
+  cursor: default;
+}
+
 .sidebar-nav {
   display: flex;
   flex-direction: column;

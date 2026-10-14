@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { RELEASE_IS_BETA } from '../../shared/release-stage'
 import type { ReactNode } from 'react'
 import {
   AI_CUSTOM_FONT_MAX_PX,
@@ -1821,7 +1822,17 @@ export function SettingsModal({
             {section === 'about' && (
               <>
                 <h3 className="set-pane-title">{t('setSecAbout')}</h3>
-                <Field label={t('versionLabel')} value={appVersion || '—'} />
+                <Field
+                  label={t('versionLabel')}
+                  value={
+                    appVersion
+                      ? RELEASE_IS_BETA
+                        ? `${appVersion} · ${t('betaBadge')}`
+                        : appVersion
+                      : '—'
+                  }
+                />
+                {RELEASE_IS_BETA && <div className="set-field-desc">{t('betaTooltip')}</div>}
                 {updateState && (
                   <div className="set-field">
                     <div className="set-field-text">
