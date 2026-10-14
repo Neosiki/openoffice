@@ -31,13 +31,14 @@ export const it = {
   meteredWarning: 'Non è un abbonamento: paghi in base a quanto usi.',
   meteredMeaning:
     'Questo accesso usa una chiave API o un account a consumo, oppure non è stato possibile confermarne il tipo. Con “Usa comunque” l’IA funziona su questa connessione e ogni richiesta viene addebitata a quell’account.',
-  connectTitle: 'Collega un abbonamento per usare l’IA',
+  connectTitle: 'Collega un’IA per iniziare',
   connectBody:
     'L’IA funziona con l’abbonamento Claude o Codex che hai già. Non serve alcuna chiave API.',
   connectProviderTitle: 'La connessione {provider} non è utilizzabile al momento',
   connectKeyBody:
     'La configurazione di {provider} non è completa. Completala nelle Impostazioni oppure scegli un’altra IA.',
-  errNotConnected: 'Nessuna IA è collegata. Collega prima un abbonamento Claude o Codex.',
+  errNotConnected:
+    'Nessuna IA è collegata. Collega prima un abbonamento Claude o Codex, oppure un’IA gratuita.',
   errNotInstalled: 'Il programma {provider} non è stato trovato su questo PC.',
   errSignedOut: 'L’accesso a {provider} è scaduto. Accedi di nuovo per continuare.',
   errRateLimit: 'Il limite dell’abbonamento {provider} è stato raggiunto.',
@@ -52,6 +53,12 @@ export const it = {
   errHeadlessLimit: 'È stato raggiunto il limite orario delle richieste automatiche.',
   errHeadlessLimitReset:
     'È stato raggiunto il limite orario delle richieste automatiche. Saranno di nuovo possibili alle {time}.',
+  connectFreeHint:
+    'Non hai un abbonamento? Puoi collegare un’IA gratuita nelle Impostazioni in circa un minuto.',
+  actionConnectFree: 'Collega un’IA gratuita',
+  errFreeLimit:
+    'La quota gratuita di oggi è esaurita. Riprova domani oppure scegli un’altra IA nelle Impostazioni.',
+  errFreeLimitReset: 'La quota gratuita di oggi è esaurita. Potrai usarla di nuovo alle {time}.',
   continueWith: 'Continua con {provider}',
   continueMeteredNote:
     'La connessione {provider} non è un abbonamento: continuando paghi a consumo.',

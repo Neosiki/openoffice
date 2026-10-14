@@ -10,3 +10,4 @@
 | [0006](0006-no-codex-image-via-login-file.md)             | Codex 구독 이미지 생성은 로그인 파일을 건드리지 않는 방법으로만 넣는다                          | 2026-10-13 |
 | [0007](0007-key-providers-under-advanced.md)              | 키 제공자는 지우지 않고 고급 구역으로 옮긴다                                                    | 2026-10-13 |
 | [0008](0008-remove-font-downloads.md)                     | 글꼴 내려받기를 없애고 파일 설치만 남긴다                                                       | 2026-10-13 |
+| [0009](0009-free-ai-connections.md)                       | 구독이 없는 사람을 위해 무료 연결(OpenRouter·Gemini)을 고급 밖에 둔다                           | 2026-10-14 |

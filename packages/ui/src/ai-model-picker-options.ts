@@ -4,6 +4,7 @@ import {
   customEndpointLabel,
   isKeyProviderConfigured,
   isSubscriptionProvider,
+  keyProviderModels,
   providerSelectionOf,
   resolveCustomEndpoints,
   selectAiProvider,
@@ -198,8 +199,7 @@ export function aiProviderPickerGroups(
       continue
     }
     if (!isKeyProviderConfigured(settings, meta.id)) continue
-    const stored = settings.providers[meta.id].model.trim()
-    const models = meta.models.includes(stored) ? meta.models : [stored, ...meta.models]
+    const models = keyProviderModels(meta.id, settings.providers[meta.id].model)
     groups.push({ kind: 'key', id: meta.id, label: meta.label, models, metered: false })
   }
   return groups

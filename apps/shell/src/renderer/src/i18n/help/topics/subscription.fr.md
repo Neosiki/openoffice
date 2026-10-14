@@ -36,6 +36,16 @@ Les mêmes cartes apparaissent à la deuxième étape des écrans de bienvenue a
 
 La connexion est vérifiée au démarrage de l’application, à l’ouverture des Paramètres et lorsque vous revenez à la fenêtre après avoir lancé une installation ou une connexion.
 
+## Sans abonnement : une IA gratuite
+
+Pas d’abonnement Claude ni ChatGPT ? Sous Paramètres ▸ IA, **Utiliser gratuitement** permet de connecter une IA gratuite à la place. Les mêmes cartes apparaissent à la deuxième étape des écrans de bienvenue, et le panneau IA propose **Connecter une IA gratuite** lorsque rien n’est connecté.
+
+- **OpenRouter** : appuyez sur **Connecter dans le navigateur**. Votre navigateur ouvre OpenRouter ; inscrivez-vous ou connectez-vous, puis autorisez l’accès. Quand le navigateur indique que la connexion est établie, fermez l’onglet et revenez. Il n’y a aucune clé à copier, et la carte indique combien de requêtes gratuites il reste aujourd’hui.
+- **Google Gemini** : appuyez sur **Obtenir une clé**, créez une clé dans Google AI Studio, collez-la dans la carte et appuyez sur **Connecter**. Réservé aux personnes de 18 ans ou plus. Une clé créée dans un projet Google dont la facturation est activée peut entraîner des frais.
+- Une fois connectée, cette IA devient l’**IA à utiliser**. Si les deux sont connectées, **Utiliser cette IA** sur une carte permet de passer de l’une à l’autre. **Déconnecter** retire la clé de GenOffice.
+- Les modèles gratuits sont moins performants que ceux des abonnements, et le nombre de requêtes par jour est limité. Une seule modification d’un document peut en demander plusieurs. Quand le quota du jour est épuisé, le panneau IA l’indique, ainsi que le moment où elle sera de nouveau utilisable.
+- Tant que vous l’utilisez gratuitement, ce que vous envoyez peut servir à améliorer l’IA de cette société. Soyez prudent avec les documents qui contiennent des données personnelles.
+
 ## Connexions facturées à l’usage
 
 Une carte qui indique **Connecté, mais pas avec un abonnement** porte un avertissement : « Ce n’est pas un abonnement : vous payez ce que vous consommez. »

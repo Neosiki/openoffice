@@ -223,6 +223,46 @@ describe('Onboarding', () => {
     )
   })
 
+  it('offers the free connections on the connect step and names a made one on the last step', async () => {
+    const connectFreeAi = vi.fn(async () => ({
+      ok: true as const,
+      provider: 'gemini' as const,
+      model: 'm',
+    }))
+    vi.stubGlobal('aiOffice', {
+      getAiSettings: async () => ({
+        providers: {
+          openrouter: { apiKey: 'sk-or-v1-x', model: 'nvidia/nemotron-3-super-120b-a12b:free' },
+        },
+      }),
+      onAiSettingsChanged: () => () => {},
+      getFreeAiQuota: async () => ({ used: 9, limit: 50, remaining: 41 }),
+      connectFreeAi,
+    })
+    try {
+      renderOnboarding()
+      await click('.onb-next')
+      const step = host.querySelector('.onb-slide.active')!
+      expect(step.querySelector('.onb-free-title')!.textContent).toBe(strings.en.onbFreeTitle)
+      expect(
+        [...step.querySelectorAll<HTMLElement>('.free-ai-card')].map((el) => [
+          el.dataset.provider,
+          el.dataset.state,
+        ]),
+      ).toEqual([
+        ['openrouter', 'connected'],
+        ['gemini', 'idle'],
+      ])
+      expect(step.textContent).toContain('41 of 50 free requests left today')
+      await click('.onb-next')
+      expect(host.querySelector('.onb-slide.active .onb-subtitle')!.textContent).toBe(
+        'AI is connected: OpenRouter.',
+      )
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
   it('keeps the first-connection notice for the connect step and reports its acknowledgement', async () => {
     const onNoticeAcknowledge = vi.fn()
     const onDone = vi.fn(async () => true)

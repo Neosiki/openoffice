@@ -36,6 +36,16 @@ Những thẻ này cũng xuất hiện ở bước thứ hai của màn hình ch
 
 Kết nối được kiểm tra khi ứng dụng khởi động, khi bạn mở Cài đặt, và khi bạn quay lại cửa sổ sau khi bắt đầu cài đặt hoặc đăng nhập.
 
+## Không có gói đăng ký: AI miễn phí
+
+Không có gói đăng ký Claude hay ChatGPT? Trong Cài đặt ▸ AI, mục **Dùng miễn phí** cho phép kết nối một AI miễn phí để thay thế. Những thẻ này cũng có ở bước thứ hai của màn hình chào mừng, và bảng AI sẽ đưa ra **Kết nối AI miễn phí** khi chưa có gì được kết nối.
+
+- **OpenRouter**: nhấn **Kết nối trong trình duyệt**. Trình duyệt sẽ mở OpenRouter; hãy đăng ký hoặc đăng nhập, rồi cho phép truy cập. Khi trình duyệt báo đã kết nối, hãy đóng tab đó và quay lại. Không cần sao chép khóa nào, và thẻ hiển thị số yêu cầu miễn phí còn lại trong hôm nay.
+- **Google Gemini**: nhấn **Lấy khóa**, tạo một khóa trong Google AI Studio, dán vào thẻ rồi nhấn **Kết nối**. Chỉ dành cho người từ 18 tuổi trở lên. Khóa tạo trong một dự án Google đã bật thanh toán có thể bị tính phí.
+- Sau khi kết nối, AI đó trở thành **AI sử dụng**. Nếu đã kết nối cả hai, **Dùng AI này** trên thẻ sẽ chuyển qua lại giữa chúng. **Ngắt kết nối** xóa khóa khỏi GenOffice.
+- Mô hình miễn phí yếu hơn mô hình của gói đăng ký, và mỗi ngày chỉ cho phép một số yêu cầu nhất định. Một lần sửa tài liệu có thể tốn vài yêu cầu. Khi hết lượt của hôm nay, bảng AI sẽ báo cho bạn biết, kèm thời điểm có thể dùng lại.
+- Trong lúc dùng miễn phí, nội dung bạn gửi có thể được dùng để cải thiện AI của công ty đó. Hãy cẩn thận với tài liệu chứa thông tin cá nhân.
+
 ## Đăng nhập tính phí theo mức sử dụng
 
 Thẻ ghi **Đã đăng nhập nhưng không phải bằng gói đăng ký** có kèm một cảnh báo: "Đây không phải gói đăng ký: bạn bị tính phí theo mức sử dụng."

@@ -29,13 +29,14 @@ export const ms = {
   meteredWarning: 'Ini bukan langganan: anda dicaj mengikut penggunaan.',
   meteredMeaning:
     'Log masuk ini menggunakan kunci API atau akaun bayar ikut guna, atau jenisnya tidak dapat disahkan. Dengan "Guna juga", AI berjalan melalui sambungan ini dan setiap permintaan dicaj kepada akaun tersebut.',
-  connectTitle: 'Sambungkan langganan untuk menggunakan AI',
+  connectTitle: 'Sambungkan AI untuk bermula',
   connectBody:
     'AI berjalan dengan langganan Claude atau Codex yang anda sudah ada. Kunci API tidak diperlukan.',
   connectProviderTitle: 'Sambungan {provider} tidak boleh digunakan sekarang',
   connectKeyBody:
     'Persediaan {provider} belum selesai. Lengkapkannya dalam Tetapan, atau pilih AI lain.',
-  errNotConnected: 'Tiada AI yang disambungkan. Sambungkan langganan Claude atau Codex dahulu.',
+  errNotConnected:
+    'Tiada AI yang disambungkan. Sambungkan langganan Claude atau Codex, atau AI percuma, dahulu.',
   errNotInstalled: 'Program {provider} tidak ditemui pada PC ini.',
   errSignedOut: 'Log masuk {provider} telah tamat. Log masuk semula untuk meneruskan.',
   errRateLimit: 'Had langganan {provider} telah habis digunakan.',
@@ -49,6 +50,13 @@ export const ms = {
   errHeadlessLimit: 'Had sejam bagi permintaan automatik telah dicapai.',
   errHeadlessLimitReset:
     'Had sejam bagi permintaan automatik telah dicapai. Permintaan boleh dibuat semula pada {time}.',
+  connectFreeHint:
+    'Tiada langganan? Anda boleh menyambungkan AI percuma dalam Tetapan dalam masa kira-kira seminit.',
+  actionConnectFree: 'Sambungkan AI percuma',
+  errFreeLimit:
+    'Peruntukan percuma hari ini telah habis. Cuba lagi esok, atau pilih AI lain dalam Tetapan.',
+  errFreeLimitReset:
+    'Peruntukan percuma hari ini telah habis. Anda boleh menggunakannya semula pada {time}.',
   continueWith: 'Teruskan dengan {provider}',
   continueMeteredNote:
     'Sambungan {provider} bukan langganan: meneruskan akan dicaj mengikut penggunaan.',

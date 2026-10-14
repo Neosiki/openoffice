@@ -36,6 +36,16 @@ Stejné karty se zobrazují ve druhém kroku uvítacích obrazovek při prvním 
 
 Připojení se kontroluje při spuštění aplikace, při otevření Nastavení a při návratu do okna poté, co jste spustili instalaci nebo přihlášení.
 
+## Bez předplatného: AI zdarma
+
+Nemáte předplatné Claude ani ChatGPT? V Nastavení ▸ AI můžete v části **Používat zdarma** připojit místo toho bezplatnou AI. Stejné karty jsou i ve druhém kroku uvítacích obrazovek a panel AI nabízí **Připojit bezplatnou AI**, když není nic připojeno.
+
+- **OpenRouter**: stiskněte **Připojit v prohlížeči**. V prohlížeči se otevře OpenRouter; zaregistrujte se nebo se přihlaste a povolte přístup. Až prohlížeč ohlásí, že je připojeno, zavřete kartu prohlížeče a vraťte se. Žádný klíč není třeba kopírovat a karta v GenOffice ukazuje, kolik bezplatných požadavků dnes zbývá.
+- **Google Gemini**: stiskněte **Získat klíč**, vytvořte klíč v Google AI Studio, vložte ho do karty a stiskněte **Připojit**. Jen pro osoby od 18 let. Klíč vytvořený v projektu Google se zapnutou fakturací může být zpoplatněn.
+- Po připojení se tato AI nastaví jako **Používaná AI**. Když jsou připojené obě, přepínáte mezi nimi tlačítkem **Použít tuto AI** na kartě. **Odpojit** odstraní klíč z GenOffice.
+- Bezplatné modely jsou slabší než modely v předplatném a počet požadavků za den je omezený. Jedna úprava dokumentu jich může spotřebovat několik. Když je dnešní limit vyčerpán, panel AI to oznámí a uvede, kdy ji půjde znovu použít.
+- Dokud ji používáte zdarma, může být to, co odešlete, použito ke zlepšování AI dané společnosti. Buďte opatrní u dokumentů s osobními údaji.
+
 ## Přihlášení s platbou podle spotřeby
 
 Karta se stavem **Přihlášeno, ale ne přes předplatné** obsahuje varování: „Toto není předplatné: platíte podle skutečné spotřeby.“

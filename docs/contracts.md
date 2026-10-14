@@ -64,6 +64,7 @@
 | `unavailable`                                                                                                                                         | 그 기능에 설정된 것이 없다   | 하지 않는다. 설정을 바꿔야 한다     |
 | `headless-limit`                                                                                                                                      | 자동 호출의 시간당 한도 초과 | `detail.resetsAt`(밀리초 시각) 이후 |
 | `rate-limit`                                                                                                                                          | 구독 한도 소진               | `detail.resetsAt`이 있으면 그 이후  |
+| `free-limit`                                                                                                                                          | 무료 연결의 오늘 사용량 소진 | `detail.resetsAt`이 있으면 그 이후  |
 | `not-connected`, `signed-out`, `not-installed`, `metered-not-accepted`, `needs-update`, `unsafe-tools`, `timeout`, `network`, `overloaded`, `credits` | 실행이 그 이유로 실패        | 이유에 따라                         |
 
 ## MCP 서버 (`ieumoffice mcp`)

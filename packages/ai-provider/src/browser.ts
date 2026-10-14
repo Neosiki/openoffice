@@ -87,5 +87,26 @@ export {
   upsertCustomEndpoint,
 } from './custom-endpoints'
 export { getProviderAdapter, modelLacksVision } from './registry'
+export {
+  FREE_AI_IPC_CHANNELS,
+  FREE_AI_KEY_PAGES,
+  FREE_AI_PROVIDERS,
+  GEMINI_FREE_MODEL,
+  OPENROUTER_FREE_MODELS,
+  freeAiConnectResultOf,
+  freeAiConnected,
+  freeAiQuotaOf,
+  isFreeAiProvider,
+  isOpenRouterFreeModel,
+  keyProviderModels,
+  withFreeAiConnection,
+  withoutFreeAiConnection,
+} from './free-ai'
+export type {
+  FreeAiConnectFailure,
+  FreeAiConnectResult,
+  FreeAiProviderId,
+  FreeAiQuota,
+} from './free-ai'
 export { AI_MEDIA_PROVIDERS } from './media'
 export { AI_SEARCH_PROVIDERS } from './search-settings'

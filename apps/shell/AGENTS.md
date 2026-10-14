@@ -43,6 +43,7 @@
 - 에디터의 메인 코드는 패키지가 아니라 상대 경로로 가져온다(`../../../docs/src/main/docs-main`). `electron.vite.config.ts`는 메인에 대해 아무것도 외부화하지 않고 전부 한 번들로 묶는다. 그래서 `apps/*/src/main`을 고친 뒤에는 shell을 다시 빌드해야 한다. 안 하면 변경이 조용히 실행되지 않는다. 렌더러와 preload는 각 에디터의 빌드 결과(`apps/<앱>/out`, 패키징 시 `resources/modules/`)에서 불러오므로 그쪽도 먼저 빌드되어 있어야 한다(`npm run shell`은 `build:all` 뒤에 실행한다).
 - 개발 모드에서 preload를 고쳤으면 다시 빌드한다. 낡은 preload는 렌더러를 빈 화면으로 만든다(`npm run dev`의 `predev`가 `tools/build-stale-preloads.mjs`를 돌린다).
 - 에디터는 `configure<앱>Runtime({ preloadPath, rendererUrl, rendererFile, … })`으로 자기 빌드 결과의 위치를 주입받는다. 공용 `ai:*` 핸들러는 `registerAiIpc()` 한 번으로 모든 창(문서, 시트, 홈)을 담당한다. 시트 뷰를 `createSheetsView({ includeAiHandlers: false })`로 만드는 이유다.
+- 무료 연결 카드(`FreeAiCards.tsx`, 규칙은 `free-ai-cards.ts`)는 설정 → AI의 "무료로 쓰기"와 첫 실행 안내의 연결 단계에 같은 부품으로 들어간다. 연결·해제·남은 요청 수는 preload의 `connectFreeAi`·`disconnectFreeAi`·`getFreeAiQuota`가 워드 뒷단의 `ai:free-*` 채널을 부르고, 카드는 설정 파일이 바뀐 알림을 받아 다시 읽는다. OpenRouter 키는 이 화면에 오지 않는다.
 - 설정 화면에서 쓰는 AI는 "사용할 AI" 선택 하나로 정해진다. 고급 영역의 제공자 드롭다운은 어느 제공자의 입력란을 보여 줄지만 고른다. 설정은 읽을 때(`readAiSettings`)와 쓸 때(`writeAiSettings`) 모두 `normalizeAiSettings`를 거쳐, 사라진 선택이 다시 저장되지 않는다.
 - 홈의 질문 패널은 에디터와 같은 보내기 규칙을 쓴다. `askSendGate`(`src/renderer/src/kb-ask-connection.ts`)는 `packages/ui`의 `aiSendGate`가 내린 판단을 그대로 읽는다. 연결 상태나 설정을 아직 모르면 질문을 붙잡았다가(`askHeldStep`) 실행할 수 있게 되면 시작하고, "연결 필요"로 정해지면 버리고 연결 안내를 보인다. 이 패널만의 차이는 하나다. 첫 연결 안내는 홈 화면이 띄우므로, 안내가 떠 있는 동안에는 패널이 보내지 않고 붙잡아 둔 질문도 시작하지 않는다.
 - 첫 연결 안내의 Codex 문장은 `CODEX_MAY_KEEP_HISTORY`로 켜져 있다. 브리지가 대화 이력 파일은 끄지만 Codex가 자체 진단 로그를 남기고, 앱은 그것을 읽을 수도 막을 수도 없기 때문이다.

@@ -31,13 +31,14 @@ export const fr = {
   meteredWarning: 'Ce n’est pas un abonnement : vous payez ce que vous consommez.',
   meteredMeaning:
     'Cette connexion utilise une clé API ou un compte facturé à l’usage, ou son type n’a pas pu être confirmé. « Utiliser quand même » permet à l’IA de fonctionner avec cette connexion, et chaque requête est facturée à ce compte.',
-  connectTitle: 'Connectez un abonnement pour utiliser l’IA',
+  connectTitle: 'Connectez une IA pour commencer',
   connectBody:
     'L’IA fonctionne avec l’abonnement Claude ou Codex que vous avez déjà. Aucune clé API n’est nécessaire.',
   connectProviderTitle: 'La connexion {provider} n’est pas utilisable pour le moment',
   connectKeyBody:
     'La configuration de {provider} n’est pas terminée. Terminez-la dans les paramètres ou choisissez une autre IA.',
-  errNotConnected: 'Aucune IA n’est connectée. Connectez d’abord un abonnement Claude ou Codex.',
+  errNotConnected:
+    'Aucune IA n’est connectée. Connectez d’abord un abonnement Claude ou Codex, ou une IA gratuite.',
   errNotInstalled: 'Le programme {provider} est introuvable sur ce PC.',
   errSignedOut: 'La connexion à {provider} a expiré. Reconnectez-vous pour continuer.',
   errRateLimit: 'La limite de l’abonnement {provider} est atteinte.',
@@ -52,6 +53,13 @@ export const fr = {
   errHeadlessLimit: 'La limite horaire des requêtes automatiques est atteinte.',
   errHeadlessLimitReset:
     'La limite horaire des requêtes automatiques est atteinte. Les requêtes seront de nouveau possibles à {time}.',
+  connectFreeHint:
+    'Pas d’abonnement ? Vous pouvez connecter une IA gratuite dans les paramètres en une minute environ.',
+  actionConnectFree: 'Connecter une IA gratuite',
+  errFreeLimit:
+    'Le quota gratuit du jour est épuisé. Réessayez demain ou choisissez une autre IA dans les paramètres.',
+  errFreeLimitReset:
+    'Le quota gratuit du jour est épuisé. Vous pourrez de nouveau l’utiliser à {time}.',
   continueWith: 'Continuer avec {provider}',
   continueMeteredNote:
     'La connexion {provider} n’est pas un abonnement : continuer est facturé à l’usage.',

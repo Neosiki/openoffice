@@ -28,12 +28,13 @@ export const cs = {
   meteredWarning: 'Toto není předplatné: platíte podle skutečné spotřeby.',
   meteredMeaning:
     'Toto přihlášení používá klíč API nebo účet s platbou podle spotřeby, případně se jeho typ nepodařilo zjistit. Volbou „Přesto použít“ poběží AI přes toto připojení a každý požadavek se naúčtuje tomuto účtu.',
-  connectTitle: 'Chcete-li používat AI, připojte předplatné',
+  connectTitle: 'Začněte připojením AI',
   connectBody: 'AI běží na předplatném Claude nebo Codex, které už máte. Klíč API není potřeba.',
   connectProviderTitle: 'Připojení {provider} teď nelze použít',
   connectKeyBody:
     'Nastavení poskytovatele {provider} není dokončeno. Dokončete ho v Nastavení, nebo zvolte jinou AI.',
-  errNotConnected: 'Není připojena žádná AI. Nejprve připojte předplatné Claude nebo Codex.',
+  errNotConnected:
+    'Není připojena žádná AI. Nejprve připojte předplatné Claude nebo Codex, nebo bezplatnou AI.',
   errNotInstalled: 'Program {provider} nebyl na tomto počítači nalezen.',
   errSignedOut: 'Přihlášení k {provider} vypršelo. Přihlaste se znovu a pokračujte.',
   errRateLimit: 'Limit předplatného {provider} je vyčerpán.',
@@ -47,6 +48,11 @@ export const cs = {
   errHeadlessLimit: 'Byl dosažen hodinový limit automatických požadavků.',
   errHeadlessLimitReset:
     'Byl dosažen hodinový limit automatických požadavků. Znovu budou možné v {time}.',
+  connectFreeHint: 'Nemáte předplatné? V Nastavení můžete bezplatnou AI připojit zhruba za minutu.',
+  actionConnectFree: 'Připojit bezplatnou AI',
+  errFreeLimit:
+    'Dnešní bezplatný limit je vyčerpán. Zkuste to zítra, nebo v Nastavení zvolte jinou AI.',
+  errFreeLimitReset: 'Dnešní bezplatný limit je vyčerpán. Znovu ho můžete použít v {time}.',
   continueWith: 'Pokračovat s {provider}',
   continueMeteredNote:
     'Připojení {provider} není předplatné: pokračování se účtuje podle spotřeby.',

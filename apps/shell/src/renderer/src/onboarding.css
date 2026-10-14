@@ -180,6 +180,24 @@
   color: var(--danger);
 }
 
+/* the free connections, for people without a subscription */
+.onb-free {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.onb-free-title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
 /* the step can be left without connecting; say so quietly */
 .onb-note {
   margin: 12px 0 0;

@@ -36,6 +36,16 @@ Las mismas tarjetas aparecen en el segundo paso de las pantallas de bienvenida d
 
 La conexión se comprueba al arrancar la aplicación, al abrir Configuración y al volver a la ventana después de iniciar una instalación o un inicio de sesión.
 
+## Sin suscripción: IA gratuita
+
+¿No tiene suscripción a Claude ni a ChatGPT? En Configuración ▸ IA, **Usar gratis** conecta en su lugar una IA gratuita. Las mismas tarjetas aparecen en el segundo paso de las pantallas de bienvenida, y el panel de IA ofrece **Conectar una IA gratuita** cuando no hay nada conectado.
+
+- **OpenRouter**: pulse **Conectar en el navegador**. El navegador abre OpenRouter; regístrese o inicie sesión, y permita el acceso. Cuando el navegador indique que ya está conectado, cierre la pestaña y vuelva. No hay que copiar ninguna clave, y la tarjeta muestra cuántas solicitudes gratuitas quedan hoy.
+- **Google Gemini**: pulse **Obtener una clave**, cree una clave en Google AI Studio, péguela en la tarjeta y pulse **Conectar**. Solo para mayores de 18 años. Una clave creada en un proyecto de Google con la facturación activada puede generar cargos.
+- Una vez conectada, esa IA pasa a ser la **IA que se usa**. Si están conectadas las dos, **Usar esta IA** en una tarjeta cambia de una a otra. **Desconectar** quita la clave de GenOffice.
+- Los modelos gratuitos son más débiles que los de suscripción, y cada día admite un número limitado de solicitudes. Una sola edición de un documento puede consumir varias. Cuando se agota el cupo de hoy, el panel de IA lo indica, junto con el momento en que se podrá volver a usar.
+- Mientras la use gratis, lo que envíe puede utilizarse para mejorar la IA de esa empresa. Tenga cuidado con los documentos que contengan datos personales.
+
 ## Inicios de sesión de pago por consumo
 
 Una tarjeta que dice **Sesión iniciada, pero no con una suscripción** lleva una advertencia: «Esto no es una suscripción: se cobra según lo que uses.»

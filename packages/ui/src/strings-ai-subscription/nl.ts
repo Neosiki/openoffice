@@ -30,13 +30,14 @@ export const nl = {
   meteredWarning: 'Dit is geen abonnement: je betaalt voor wat je gebruikt.',
   meteredMeaning:
     'Deze aanmelding gebruikt een API-sleutel of een account met betaling per verbruik, of het type kon niet worden vastgesteld. Met ‘Toch gebruiken’ draait AI via deze verbinding en wordt elk verzoek bij dat account in rekening gebracht.',
-  connectTitle: 'Koppel een abonnement om AI te gebruiken',
+  connectTitle: 'Koppel een AI om te beginnen',
   connectBody:
     'AI draait op het Claude- of Codex-abonnement dat je al hebt. Een API-sleutel is niet nodig.',
   connectProviderTitle: 'De verbinding {provider} is nu niet bruikbaar',
   connectKeyBody:
     'De configuratie van {provider} is nog niet af. Rond die af in Instellingen of kies een andere AI.',
-  errNotConnected: 'Er is geen AI verbonden. Koppel eerst een Claude- of Codex-abonnement.',
+  errNotConnected:
+    'Er is geen AI verbonden. Koppel eerst een Claude- of Codex-abonnement, of een gratis AI.',
   errNotInstalled: 'Het programma {provider} is niet gevonden op deze pc.',
   errSignedOut: 'De aanmelding bij {provider} is verlopen. Meld je opnieuw aan om door te gaan.',
   errRateLimit: 'De limiet van het abonnement {provider} is bereikt.',
@@ -51,6 +52,12 @@ export const nl = {
   errHeadlessLimit: 'De uurlimiet voor automatische verzoeken is bereikt.',
   errHeadlessLimitReset:
     'De uurlimiet voor automatische verzoeken is bereikt. Verzoeken zijn weer mogelijk om {time}.',
+  connectFreeHint:
+    'Geen abonnement? In Instellingen koppel je in ongeveer een minuut een gratis AI.',
+  actionConnectFree: 'Gratis AI koppelen',
+  errFreeLimit:
+    'Het gratis tegoed van vandaag is op. Probeer het morgen opnieuw of kies een andere AI in Instellingen.',
+  errFreeLimitReset: 'Het gratis tegoed van vandaag is op. Je kunt het weer gebruiken om {time}.',
   continueWith: 'Doorgaan met {provider}',
   continueMeteredNote:
     'De verbinding {provider} is geen abonnement: doorgaan wordt per verbruik in rekening gebracht.',

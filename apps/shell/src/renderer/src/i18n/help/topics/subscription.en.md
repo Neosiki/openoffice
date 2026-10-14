@@ -36,6 +36,16 @@ The same cards appear in the second step of the welcome screens on first launch,
 
 The connection is checked when the app starts, when you open Settings, and when you return to the window after starting an install or a sign-in.
 
+## Without a subscription: free AI
+
+No Claude or ChatGPT subscription? Under Settings ▸ AI, **Use for free** connects a free AI instead. The same cards appear in the second step of the welcome screens, and the AI panel offers **Connect a free AI** when nothing is connected.
+
+- **OpenRouter**: press **Connect in browser**. Your browser opens OpenRouter; sign up or sign in, and allow access. When the browser says it is connected, close the tab and come back. There is no key to copy, and the card shows how many free requests are left today.
+- **Google Gemini**: press **Get a key**, make a key in Google AI Studio, paste it into the card and press **Connect**. Only for people aged 18 or older. A key made in a Google project with billing turned on can be charged.
+- Once connected, that AI becomes the **AI to use**. With both connected, **Use this AI** on a card switches between them. **Disconnect** removes the key from GenOffice.
+- Free models are weaker than subscription models, and each day allows a limited number of requests. One edit of a document can take several. When today's allowance is used up, the AI panel says so, and when it can be used again.
+- While you use it for free, what you send may be used to improve that company's AI. Take care with documents that hold personal information.
+
 ## Pay-as-you-go logins
 
 A card that says **Signed in, but not with a subscription** carries a warning: "This is not a subscription: you are charged for what you use."

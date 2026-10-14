@@ -29,14 +29,14 @@ export const ja = {
   meteredWarning: 'サブスクリプションではなく、使った分だけ料金が発生します。',
   meteredMeaning:
     'API キーまたは従量課金のアカウントでログインしているか、ログイン方法を確認できませんでした。「それでも使用」を選ぶと AI がこの接続で動作し、リクエストのたびにそのアカウントへ課金されます。',
-  connectTitle: 'AI を使うにはサブスクリプションを接続してください',
+  connectTitle: 'AI を接続して始めましょう',
   connectBody:
     'お持ちの Claude または Codex のサブスクリプションで AI を利用します。API キーは不要です。',
   connectProviderTitle: '{provider} の接続は現在使用できません',
   connectKeyBody:
     '{provider} の設定がまだ完了していません。設定で完了するか、別の AI を選んでください。',
   errNotConnected:
-    '接続されている AI がありません。先に Claude または Codex のサブスクリプションを接続してください。',
+    '接続されている AI がありません。先に Claude または Codex のサブスクリプションか、無料の AI を接続してください。',
   errNotInstalled: 'この PC で {provider} のプログラムが見つかりませんでした。',
   errSignedOut: '{provider} のログインが切れました。もう一度ログインしてから続けてください。',
   errRateLimit: '{provider} のサブスクリプションの上限に達しました。',
@@ -51,6 +51,11 @@ export const ja = {
   errHeadlessLimit: '自動呼び出しの 1 時間あたりの上限に達しました。',
   errHeadlessLimitReset:
     '自動呼び出しの 1 時間あたりの上限に達しました。{time} から再び利用できます。',
+  connectFreeHint: 'サブスクリプションがなくても、設定から 1 分ほどで無料の AI を接続できます。',
+  actionConnectFree: '無料の AI を接続',
+  errFreeLimit:
+    '今日の無料利用分を使い切りました。明日もう一度お試しいただくか、設定で別の AI を選んでください。',
+  errFreeLimitReset: '今日の無料利用分を使い切りました。{time} から再び利用できます。',
   continueWith: '{provider} で続行',
   continueMeteredNote:
     '{provider} の接続はサブスクリプションではありません。続行すると使った分だけ料金が発生します。',

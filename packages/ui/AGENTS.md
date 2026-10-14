@@ -43,6 +43,8 @@
 - 패널 배선은 `useAiSendGate` 하나로 한다. 보내기 경로는 `admit(request)`를 묻고(거짓이면 보내지 않고 작성기 글을 남긴다), 대기열은 `admitQueued`를, 첫 연결 안내의 확인 버튼은 `acknowledgeNotice`를, 막힌 실행의 버튼은 `continueWith(provider, rerun)`을 부른다. 붙잡힌 요청은 `start`로 되돌아오고 패널의 보내기 경로를 다시 지나며 `admit`을 한 번 더 묻는다.
 - 붙잡힌 요청의 운명은 `aiHeldRequestStep`이 정한다. 상태 확인 때문에 붙잡힌 요청은 답이 "연결 안 됨"이면 버려진다. 알림 때문에 붙잡힌 요청은 확인 버튼만이 시작시키고, 다른 이유로 알림이 사라지면(제공자 변경, 연결 끊김) 버려진다.
 - `AiModelPicker`는 `subscriptionStatuses`를 받는다. 넘기지 않으면 어떤 구독도 연결된 것으로 치지 않는다. 선택 변경은 `withAiProviderSelection`으로 쓴다.
+- 아무것도 연결되지 않은 "AI 연결" 안내(`aiConnectPromptView`의 `free`)에는 무료 연결로 가는 버튼이 붙는다. 버튼은 호스트가 준 `onOpenSettings`를 부른다(설정 → AI가 열린다). 이 패키지는 무료 연결을 직접 실행하지 않는다.
+- `free-limit`(무료 연결의 오늘 사용량 소진)은 막힌 실행 종류(`AI_BLOCKED_RUN_KINDS`)다. 문장은 `errFreeLimit`·`errFreeLimitReset`이다.
 - 오류 문장: `aiRunErrorText(lang, cause)`는 구독 계약의 종류에만 문장을 주고 `timeout`·`credits`·`network`·`overloaded`에는 `undefined`를 돌려준다. 그래서 전송의 `errorText` 옵션에 그대로 꽂으면 에디터의 기존 문장이 살아 있다. `unsafe-tools`에 제공자가 없으면 Claude로 읽는다.
 - 문자열은 `createI18n`을 거치므로 사전 안의 `GenOffice`는 출력에서 제품명으로 바뀐다. 사전은 원본의 표기를 유지한다.
 - CSS는 컴포넌트가 스스로 import한다(`ai-subscription.css`, `ai-usage.css`). 새 클래스는 `ai-sub-` 접두사를 쓴다. 에디터가 따로 import해야 하는 CSS는 `package.json`의 `exports`에 올린 것뿐이다.

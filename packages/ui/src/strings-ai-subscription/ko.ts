@@ -27,12 +27,12 @@ export const ko = {
   meteredWarning: '구독이 아니라 쓴 만큼 요금이 나갑니다.',
   meteredMeaning:
     'API 키나 종량제 계정으로 로그인되어 있거나, 로그인 방식을 확인하지 못한 상태입니다. "그래도 사용"을 누르면 이 연결로 AI를 쓰게 되고, 요청할 때마다 그 계정에 요금이 청구됩니다.',
-  connectTitle: 'AI를 쓰려면 구독을 연결하세요',
+  connectTitle: 'AI를 쓰려면 먼저 연결하세요',
   connectBody: '이미 쓰고 있는 Claude 또는 Codex 구독으로 AI를 씁니다. API 키는 필요 없습니다.',
   connectProviderTitle: '{provider} 연결을 지금 쓸 수 없습니다',
   connectKeyBody:
     '{provider} 설정이 아직 끝나지 않았습니다. 설정에서 마무리하거나 다른 AI를 선택하세요.',
-  errNotConnected: '연결된 AI가 없습니다. 먼저 Claude 또는 Codex 구독을 연결하세요.',
+  errNotConnected: '연결된 AI가 없습니다. Claude·Codex 구독이나 무료 AI를 먼저 연결하세요.',
   errNotInstalled: '이 PC에서 {provider} 프로그램을 찾지 못했습니다.',
   errSignedOut: '{provider} 로그인이 풀렸습니다. 다시 로그인한 뒤 계속하세요.',
   errRateLimit: '{provider} 구독 한도를 모두 썼습니다.',
@@ -45,6 +45,11 @@ export const ko = {
     '{provider} 프로그램 버전이 낮아 이 기능을 쓸 수 없습니다. 업데이트한 뒤 다시 시도하세요.',
   errHeadlessLimit: '자동 호출의 시간당 한도에 도달했습니다.',
   errHeadlessLimitReset: '자동 호출의 시간당 한도에 도달했습니다. {time}부터 다시 가능합니다.',
+  connectFreeHint: '구독이 없나요? 설정에서 무료 AI를 1분 안에 연결할 수 있습니다.',
+  actionConnectFree: '무료 AI 연결하기',
+  errFreeLimit:
+    '오늘 쓸 수 있는 무료 사용량을 다 썼습니다. 내일 다시 쓰거나 설정에서 다른 AI를 고르세요.',
+  errFreeLimitReset: '오늘 쓸 수 있는 무료 사용량을 다 썼습니다. {time}부터 다시 쓸 수 있습니다.',
   continueWith: '{provider}로 계속',
   continueMeteredNote: '{provider} 연결은 구독이 아닙니다. 계속하면 쓴 만큼 요금이 나갑니다.',
   usageLine: '{percent}% 사용 · {time}에 초기화',

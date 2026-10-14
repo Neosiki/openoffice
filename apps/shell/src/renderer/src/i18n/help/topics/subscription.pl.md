@@ -36,6 +36,16 @@ Te same karty pojawiają się w drugim kroku ekranów powitalnych przy pierwszym
 
 Połączenie jest sprawdzane przy uruchomieniu aplikacji, po otwarciu Ustawień oraz po powrocie do okna, gdy wcześniej rozpoczęto instalację lub logowanie.
 
+## Bez subskrypcji: darmowe AI
+
+Nie masz subskrypcji Claude ani ChatGPT? W Ustawienia ▸ AI opcja **Korzystaj za darmo** pozwala zamiast tego połączyć darmowe AI. Te same karty są w drugim kroku ekranów powitalnych, a gdy nic nie jest połączone, panel AI proponuje **Połącz darmowe AI**.
+
+- **OpenRouter**: naciśnij **Połącz w przeglądarce**. Przeglądarka otworzy OpenRouter; zarejestruj się lub zaloguj i zezwól na dostęp. Gdy przeglądarka pokaże, że połączono, zamknij tę kartę przeglądarki i wróć. Nie trzeba kopiować żadnego klucza, a karta w GenOffice pokazuje, ile darmowych żądań zostało na dziś.
+- **Google Gemini**: naciśnij **Uzyskaj klucz**, utwórz klucz w Google AI Studio, wklej go na karcie i naciśnij **Połącz**. Tylko dla osób, które mają co najmniej 18 lat. Klucz utworzony w projekcie Google z włączonymi płatnościami może generować opłaty.
+- Po połączeniu to AI zostaje wybrane w polu **Używane AI**. Gdy połączone są oba, przycisk **Użyj tego AI** na karcie przełącza między nimi. **Rozłącz** usuwa klucz z GenOffice.
+- Darmowe modele są słabsze niż modele z subskrypcji, a liczba żądań na dzień jest ograniczona. Jedna edycja dokumentu może zużyć kilka z nich. Gdy dzisiejszy limit się wyczerpie, panel AI o tym poinformuje i poda, kiedy znów będzie można z niego korzystać.
+- Podczas darmowego korzystania to, co wysyłasz, może posłużyć do ulepszania AI tej firmy. Uważaj na dokumenty zawierające dane osobowe.
+
 ## Logowania rozliczane za zużycie
 
 Karta z napisem **Zalogowano, ale nie w ramach subskrypcji** zawiera ostrzeżenie: „To nie jest subskrypcja: płacisz za faktyczne zużycie.”

@@ -225,6 +225,8 @@ export interface AiConnectPromptView {
   readonly providers: readonly AiSubscriptionProviderId[]
   /** a key provider is selected but not filled in: the way out is the settings page */
   readonly settings: boolean
+  /** nothing is connected: the free connections in the settings page are the other way in */
+  readonly free: boolean
 }
 
 /**
@@ -241,6 +243,7 @@ export function aiConnectPromptView(choice: AiProviderChoice): AiConnectPromptVi
       bodyKey: 'connectBody',
       providers: AI_SUBSCRIPTION_PROVIDERS,
       settings: false,
+      free: true,
     }
   }
   const providerName = aiProviderDisplayName(choice.provider)
@@ -250,6 +253,7 @@ export function aiConnectPromptView(choice: AiProviderChoice): AiConnectPromptVi
       providerName,
       providers: [choice.provider],
       settings: false,
+      free: false,
     }
   }
   return {
@@ -258,6 +262,7 @@ export function aiConnectPromptView(choice: AiProviderChoice): AiConnectPromptVi
     providerName,
     providers: [],
     settings: true,
+    free: false,
   }
 }
 
@@ -272,6 +277,7 @@ export const AI_BLOCKED_RUN_KINDS = [
   'metered-not-accepted',
   'unsafe-tools',
   'not-connected',
+  'free-limit',
 ] as const satisfies readonly AiRunErrorKind[]
 
 export type AiBlockedRunKind = (typeof AI_BLOCKED_RUN_KINDS)[number]
@@ -374,6 +380,10 @@ export function aiRunErrorText(
       return hasTime
         ? aiSubscriptionText(lang, 'errHeadlessLimitReset', { time })
         : aiSubscriptionText(lang, 'errHeadlessLimit')
+    case 'free-limit':
+      return hasTime
+        ? aiSubscriptionText(lang, 'errFreeLimitReset', { time })
+        : aiSubscriptionText(lang, 'errFreeLimit')
     default:
       return undefined
   }
