@@ -16,7 +16,9 @@
  * to the source tree past this class except the sheet tabs.
  *
  * What the library must never be given is described in `text-guard.ts` and
- * `convert.ts`.
+ * `convert.ts`. What the editor draws on the library's topics itself (the
+ * branch colours, markers, pictures and a topic's own style) is in
+ * `decorate.ts`, and runs every time the library is about to draw the lines.
  */
 import MindElixir, {
   type MindElixirInstance,
@@ -28,6 +30,9 @@ import MindElixir, {
 import {
   isShownLink,
   newXmindId,
+  type ThemeId,
+  themeLook,
+  type ThemeLook,
   type ViewLayout,
   type ViewSheet,
   type XmindTopic,
@@ -49,6 +54,8 @@ import {
   XMIND_ID,
 } from '../document/convert'
 import type { DocumentSession } from '../document/session'
+import { type DecorationStrings, TopicDecorator } from './decorate'
+import { PictureStore } from './images'
 import { libraryTheme, lookOfSheet } from './look'
 import { escapeMapText } from './text-guard'
 
@@ -68,6 +75,8 @@ export interface MapStrings {
   menuLabel: string
   menuNote: string
   menuLink: string
+  /** names of the markers and of a picture that is not shown, for assistive technology */
+  decoration: DecorationStrings
 }
 
 export type TopicRequest = 'label' | 'note' | 'link'
@@ -142,6 +151,13 @@ export class MapController {
   #recordedBySession = false
   /** an input method is composing in the edit box */
   #composing = false
+  /** the look the sheet is drawn with */
+  #look: ThemeLook
+  readonly #pictures: PictureStore
+  readonly #decorator: TopicDecorator
+  #relinkTimer: ReturnType<typeof setTimeout> | null = null
+  /** the lines have to be drawn again, but the sheet was not on screen to be measured */
+  #relinkWhenShown = false
   #destroyed = false
   readonly #dispose: Array<() => void> = []
 
@@ -151,6 +167,9 @@ export class MapController {
     this.#host = options.host
     this.#strings = options.strings
     this.#lastView = this.#session.view(this.#key)
+    this.#look = lookOfSheet(this.#session.sheet(this.#key))
+    // Pictures come out of the archive through the engine, and from nowhere else.
+    this.#pictures = new PictureStore((name) => this.#session.document.readEntry(name))
 
     const mind = new MindElixir({
       el: options.el,
@@ -159,7 +178,7 @@ export class MapController {
       toolBar: false,
       allowUndo: true,
       newTopicName: this.#strings.newTopic,
-      theme: libraryTheme(lookOfSheet(this.#session.sheet(this.#key))),
+      theme: libraryTheme(this.#look),
       scaleMin: ZOOM_MIN,
       scaleMax: ZOOM_MAX,
       // The one switch on the paths that put text into markup: see text-guard.ts.
@@ -189,6 +208,22 @@ export class MapController {
       pasteHandler: () => {},
     })
     this.mind = mind
+    this.#decorator = new TopicDecorator({
+      mind,
+      pictures: this.#pictures,
+      look: this.#look,
+      strings: this.#strings.decoration,
+      onResize: this.#relink,
+    })
+    // The library draws the lines from what it measures. The editor's own
+    // drawing goes in right before that, so it is measured too; the branch
+    // colours of the lines follow right after.
+    const libraryLinkDiv = mind.linkDiv.bind(mind)
+    mind.linkDiv = (mainNode) => {
+      this.#decorator.before()
+      libraryLinkDiv(mainNode)
+      this.#decorator.after(mainNode)
+    }
     mind.keypress = {
       // Space edits, like F2: a summary or a relationship when one is selected, else the topic
       ' ': () => {
@@ -290,6 +325,16 @@ export class MapController {
   /** true while the user is picking the other end of a new relationship */
   get pickingRelationship(): boolean {
     return this.#pickingFrom !== null
+  }
+
+  /** The theme the sheet is drawn with: its own when this app wrote it, the default one otherwise. */
+  get themeId(): ThemeId {
+    return this.#look.id
+  }
+
+  /** false while the sheet is drawn with the default look because its theme is not one of this app's */
+  get themeWritten(): boolean {
+    return this.#session.themeOf(this.#key) !== null
   }
 
   selectedTopicIds(): string[] {
@@ -458,6 +503,20 @@ export class MapController {
     else mind.initSide()
   }
 
+  /**
+   * The user picks a theme for this sheet. This is what writes a theme to the
+   * file, and the only thing that does; it is not a step of the history.
+   * False, with nothing written, when the sheet already carries that theme.
+   */
+  setTheme(id: ThemeId): boolean {
+    if (this.#session.themeOf(this.#key) === id) return false
+    this.commitEdit()
+    this.#session.applyTheme(this.#key, id)
+    this.#showLook(themeLook(id))
+    this.#host.onStateChange()
+    return true
+  }
+
   /** Folds or unfolds every branch. Not a step of the history, like folding one branch. */
   setAllFolded(folded: boolean): void {
     const visit = (node: NodeObj, isRoot: boolean): void => {
@@ -550,6 +609,8 @@ export class MapController {
       const text = builtIn[item.id] ?? own[at - (items.length - own.length)]
       if (text !== undefined && item.firstElementChild) item.firstElementChild.textContent = text
     })
+    this.#decorator.setStrings(strings.decoration)
+    this.#decorator.before()
   }
 
   // ---- keeping the tree and the screen in line ----
@@ -591,15 +652,66 @@ export class MapController {
     this.#draw(this.#session.view(this.#key))
   }
 
+  /**
+   * The sheet came on screen. Lines can only be drawn around topics that can
+   * be measured, so what was put off while the sheet was hidden is done now.
+   */
+  onShown(): void {
+    if (!this.#relinkWhenShown || this.#destroyed) return
+    this.#relinkWhenShown = false
+    this.mind.linkDiv()
+  }
+
   destroy(): void {
     if (this.#destroyed) return
     this.#destroyed = true
     if (this.#quietTimer) clearTimeout(this.#quietTimer)
+    if (this.#relinkTimer) clearTimeout(this.#relinkTimer)
     this.#dispose.forEach((dispose) => dispose())
     this.mind.destroy()
+    this.#pictures.destroy()
   }
 
   // ---- internals ----
+
+  /** Draws the sheet with another look. The map itself is the same; only how it is drawn changes. */
+  #showLook(look: ThemeLook): void {
+    this.#look = look
+    this.#decorator.setLook(look)
+    const selected = this.selectedTopicIds()
+    // the library draws every topic again with the new theme
+    this.mind.changeTheme(libraryTheme(look))
+    const again = selected.map((id) => this.#element(id)).filter((topic) => topic !== null)
+    if (again.length > 0) this.mind.selectNodes(again)
+  }
+
+  /** A picture arrived or took its size: the lines are drawn again around it, once per turn. */
+  #relink = (): void => {
+    if (this.#destroyed || this.#relinkTimer) return
+    this.#relinkTimer = setTimeout(() => {
+      this.#relinkTimer = null
+      if (this.#destroyed) return
+      // A hidden sheet measures as nothing, and lines drawn from that would all
+      // collapse into one point: wait until it is shown.
+      if (this.mind.nodes.offsetWidth === 0) this.#relinkWhenShown = true
+      else this.mind.linkDiv()
+    }, 0)
+  }
+
+  /**
+   * The library's edit box takes the size, colour, padding and box of the
+   * topic it stands in for, but not how heavy and how tall its text is. With
+   * those too, a title does not change its look while it is typed.
+   */
+  #dressEditBox(topicId: string): void {
+    const topic = this.#element(topicId)
+    const box = this.mind.nodes.querySelector<HTMLElement>('#input-box')
+    if (!topic || !box) return
+    const drawn = getComputedStyle(topic)
+    box.style.fontWeight = drawn.fontWeight
+    box.style.lineHeight = drawn.lineHeight
+    box.style.letterSpacing = drawn.letterSpacing
+  }
 
   #menuEntries(): NonNullable<MenuOption['extend']> {
     const ask = (kind: TopicRequest) => () => {
@@ -745,7 +857,10 @@ export class MapController {
 
   #onOperation = (operation: Operation): void => {
     // Opening the edit box changes nothing yet, and the library records no step for it.
-    if (operation.name === 'beginEdit') return
+    if (operation.name === 'beginEdit') {
+      this.#dressEditBox(operation.obj.id)
+      return
+    }
     // The session recorded this step and the screen was drawn from it: nothing to reconcile.
     if (this.#recordedBySession) return
     const cut = this.#cutPending

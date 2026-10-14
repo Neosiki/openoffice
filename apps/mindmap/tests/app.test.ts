@@ -7,7 +7,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, createElement } from 'react'
 import { createRoot } from 'react-dom/client'
 import type { Lang } from '@genoffice/i18n'
-import { openXmind, type XmindSheet } from '@genoffice/xmind-engine'
+import {
+  DEFAULT_THEME_ID,
+  openXmind,
+  recogniseSheetTheme,
+  type XmindSheet,
+} from '@genoffice/xmind-engine'
 import App from '../src/renderer/App'
 import { LocaleProvider } from '../src/renderer/i18n/locale'
 import type {
@@ -407,6 +412,122 @@ describe('sheets', () => {
     expect(
       container.querySelector('.mm-sheet-host:not([hidden]) me-root me-tpc .text')!.textContent,
     ).toBe('Central Topic')
+  })
+})
+
+describe('the theme panel', () => {
+  const drawnTheme = (): string | undefined =>
+    container.querySelector<HTMLElement>('.mm-sheet-host:not([hidden]) .map-container')!.dataset
+      .mmTheme
+  const chosen = (): string[] =>
+    [...container.querySelectorAll<HTMLElement>('.mm-theme-option.on')].map(
+      (option) => option.dataset.themePick!,
+    )
+
+  it('opens from the toolbar with the look of the open sheet chosen, changes nothing, and closes again', async () => {
+    const { fake, bytes } = await openWith(plainSheet())
+    expect(container.querySelector('.mm-theme-panel')).toBeNull()
+    await click('[data-action="theme"]')
+    expect(container.querySelector('.mm-theme-panel')!.getAttribute('data-theme-id')).toBe(
+      DEFAULT_THEME_ID,
+    )
+    expect(container.querySelector('[data-action="theme"]')!.getAttribute('aria-pressed')).toBe(
+      'true',
+    )
+    expect(chosen()).toEqual(['skeleton:pill', 'band:paper', 'variant:light'])
+    expect(container.querySelectorAll('[data-theme-pick^="skeleton:"]')).toHaveLength(4)
+    expect(container.querySelectorAll('[data-theme-pick^="band:"]')).toHaveLength(8)
+    expect(container.querySelectorAll('[data-theme-pick^="variant:"]')).toHaveLength(3)
+    // every choice has a name in the user's language
+    const names = [...container.querySelectorAll('.mm-theme-name')].map((name) => name.textContent)
+    expect(names).toEqual([
+      'Pill',
+      'Capsule',
+      'Line',
+      'Block',
+      'Paper',
+      'Slate',
+      'Moss',
+      'Harbor',
+      'Clay',
+      'Plum',
+      'Signal',
+      'Poppy',
+      'Light',
+      'Dark',
+      'Tinted',
+    ])
+    expect(fake.dirty.at(-1)).toBe(false)
+    await click('[data-action="save"]')
+    expect(fake.saves[0]!.bytes).toEqual(bytes)
+    await click('[data-action="theme-close"]')
+    expect(container.querySelector('.mm-theme-panel')).toBeNull()
+  })
+
+  it('picking writes the theme to the sheet: the map is drawn with it, is unsaved, and the save carries it', async () => {
+    const { fake } = await openWith(plainSheet())
+    await click('[data-action="theme"]')
+    expect(container.querySelector('[data-theme-note="not-written"]')).not.toBeNull()
+    await click('[data-theme-pick="skeleton:block"]')
+    expect(drawnTheme()).toBe('block/paper/light')
+    expect(chosen()).toEqual(['skeleton:block', 'band:paper', 'variant:light'])
+    expect(container.querySelector('[data-theme-note="not-written"]')).toBeNull()
+    expect(fake.dirty.at(-1)).toBe(true)
+    await click('[data-theme-pick="band:moss"]')
+    await click('[data-theme-pick="variant:dark"]')
+    expect(drawnTheme()).toBe('block/moss/dark')
+
+    await click('[data-action="save"]')
+    const saved = await openXmind(fake.saves[0]!.bytes)
+    if (saved.status !== 'ok') throw new Error('the saved map does not open')
+    expect(recogniseSheetTheme(saved.document.sheets[0]!)).toBe('block/moss/dark')
+  })
+
+  it('picking is not undone by Undo', async () => {
+    const { fake } = await openWith(plainSheet())
+    await click('[data-action="theme"]')
+    await click('[data-theme-pick="skeleton:line"]')
+    expect(container.querySelector<HTMLButtonElement>('[data-action="undo"]')!.disabled).toBe(true)
+    await act(async () => fake.emit.menu('undo'))
+    await settle()
+    expect(drawnTheme()).toBe('line/paper/light')
+  })
+
+  it('a sheet with a theme of another program says so, and picking one for it ends the notice', async () => {
+    await openWith(richSheet())
+    expect(container.querySelector('[data-notice="theme"]')).not.toBeNull()
+    await click('[data-action="theme"]')
+    expect(container.querySelector('[data-theme-note="not-written"]')!.textContent).toBe(
+      'This sheet is shown with the default look. Picking a theme here writes it to the file.',
+    )
+    expect(chosen()).toEqual(['skeleton:pill', 'band:paper', 'variant:light'])
+    await click('[data-theme-pick="variant:tint"]')
+    expect(drawnTheme()).toBe('pill/paper/tint')
+    expect(container.querySelector('[data-notice="theme"]')).toBeNull()
+    expect(container.querySelector('[data-notice="preserved"]')).not.toBeNull()
+  })
+
+  it('each sheet has its own theme, and the panel follows the sheet that is open', async () => {
+    const { fake } = await openWith(richSheet(), plainSheet('Second'))
+    await click('[data-action="theme"]')
+    await click('[data-theme-pick="skeleton:capsule"]')
+    await act(async () => {
+      container.querySelectorAll<HTMLElement>('.mm-sheet-name')[1]!.click()
+    })
+    await settle()
+    expect(drawnTheme()).toBe(DEFAULT_THEME_ID)
+    expect(chosen()).toEqual(['skeleton:pill', 'band:paper', 'variant:light'])
+    expect(container.querySelector('[data-theme-note="not-written"]')).not.toBeNull()
+    await click('[data-theme-pick="band:signal"]')
+    expect(drawnTheme()).toBe('pill/signal/light')
+
+    await click('[data-action="save"]')
+    const saved = await openXmind(fake.saves[0]!.bytes)
+    if (saved.status !== 'ok') throw new Error('the saved map does not open')
+    expect(saved.document.sheets.map(recogniseSheetTheme)).toEqual([
+      'capsule/paper/light',
+      'pill/signal/light',
+    ])
   })
 })
 

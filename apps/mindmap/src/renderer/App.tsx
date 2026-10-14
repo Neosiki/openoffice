@@ -1,6 +1,6 @@
 /**
- * The mind map editor: toolbar on top, the map in a card, sheet tabs and the
- * zoom ratio below.
+ * The mind map editor: toolbar on top, the map in a card with the theme panel
+ * beside it, sheet tabs and the zoom ratio below.
  *
  * The map lives in a `DocumentSession` (the engine's document and the history
  * of every sheet). Each sheet that has been shown has its own `MapController`
@@ -10,7 +10,7 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useAutoSavePref } from '@genoffice/ui'
-import type { ViewLayout } from '@genoffice/xmind-engine'
+import type { ThemeId, ViewLayout } from '@genoffice/xmind-engine'
 import { t as translate, useI18n } from './i18n/locale'
 import { mapStrings } from './i18n/map-strings'
 import type { StringKey } from './i18n/locale'
@@ -22,6 +22,7 @@ import { thumbnailForSave } from './document/thumbnail'
 import { MapController, type MapHost, type TopicRequest } from './map/controller'
 import { Toolbar } from './components/Toolbar'
 import { SheetTabs } from './components/SheetTabs'
+import { ThemePanel } from './components/ThemePanel'
 import {
   ConfirmDialog,
   type ConfirmRequest,
@@ -68,6 +69,7 @@ export default function App() {
   const [confirm, setConfirm] = useState<ConfirmRequest | null>(null)
   const [fieldRequest, setFieldRequest] = useState<TopicFieldRequest | null>(null)
   const [toast, setToast] = useState<StringKey | null>(null)
+  const [themeOpen, setThemeOpen] = useState(false)
   /** bumped when a controller reports a change of selection, history, zoom or layout */
   const [, setMapTick] = useState(0)
   const [autoSave, setAutoSave] = useAutoSavePref('mindmapapp.autoSave', window.mindmapApi)
@@ -230,6 +232,11 @@ export default function App() {
     controllers.current.set(activeKey, created)
     setMapTick((tick) => tick + 1)
   }, [session, activeKey, host, tabs])
+
+  // a sheet that comes on screen catches up on what could not be measured while it was hidden
+  useEffect(() => {
+    if (activeKey) controllers.current.get(activeKey)?.onShown()
+  }, [activeKey])
 
   // a deleted sheet takes its instance with it
   useEffect(() => {
@@ -504,6 +511,18 @@ export default function App() {
     })
   }
 
+  // ---- the theme of the sheet that is open ----
+
+  const pickTheme = (id: ThemeId): void => {
+    if (!controller?.setTheme(id) || !session) return
+    // the sheet now carries a theme of this app: the notice about the default look may no longer apply
+    if (!session.hasUnknownTheme()) {
+      setNotices((current) =>
+        current.unknownTheme ? { ...current, unknownTheme: false } : current,
+      )
+    }
+  }
+
   // ---- labels, notes, links ----
 
   const requestField = (field: TopicRequest): void => {
@@ -562,6 +581,7 @@ export default function App() {
         layout={controller?.layout ?? 'both'}
         layoutExact={controller?.layoutExact ?? true}
         pickingRelationship={picking}
+        themeOpen={themeOpen}
         onSave={() => void doSave('save')}
         onSaveAs={() => void doSave('saveAs')}
         onUndo={() => runCommand('undo')}
@@ -580,6 +600,7 @@ export default function App() {
         onLabel={() => requestField('label')}
         onLink={() => requestField('link')}
         onLayout={(layout: ViewLayout) => controller?.setLayout(layout)}
+        onToggleTheme={() => setThemeOpen((open) => !open)}
         onFoldAll={() => runCommand('fold-all')}
         onUnfoldAll={() => runCommand('unfold-all')}
         onZoomIn={() => runCommand('zoom-in')}
@@ -614,7 +635,7 @@ export default function App() {
       )}
 
       <main className="mm-stage">
-        {/* the theme panel and the AI panel dock at this element's end side */}
+        {/* the theme panel docks at this element's end side; the AI panel will dock there too */}
         <div className="mm-card" aria-label={t('appName')}>
           {tabs.map((tab) => (
             <div
@@ -629,6 +650,15 @@ export default function App() {
             />
           ))}
         </div>
+        {themeOpen && controller && (
+          <ThemePanel
+            themeId={controller.themeId}
+            written={controller.themeWritten}
+            disabled={!controller}
+            onPick={pickTheme}
+            onClose={() => setThemeOpen(false)}
+          />
+        )}
       </main>
 
       <footer className="mm-foot">

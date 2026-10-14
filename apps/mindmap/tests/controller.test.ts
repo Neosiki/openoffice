@@ -38,6 +38,14 @@ const STRINGS: MapStrings = {
   menuLabel: '라벨',
   menuNote: '메모',
   menuLink: '링크',
+  decoration: {
+    priority: [1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => `우선순위 ${n}`),
+    progress: [0, 13, 25, 38, 50, 63, 75, 88, 100].map((percent) => `진행 ${percent}%`),
+    flag: '깃발',
+    star: '별',
+    otherMarker: '표식',
+    pictureNotShown: '불러오지 않은 그림',
+  },
 }
 
 const mounted: MapController[] = []

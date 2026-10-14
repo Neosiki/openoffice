@@ -2,8 +2,10 @@
  * Test maps, built here with the engine. No file from another program is read
  * or copied: every id, key and value below is made up for these tests.
  */
+import JSZip from 'jszip'
 import {
   createXmindDocumentFromSheets,
+  openXmind,
   type XmindDocument,
   type XmindSheet,
   type XmindTopic,
@@ -142,4 +144,26 @@ export function documentOf(...sheets: XmindSheet[]): Promise<XmindDocument> {
 /** A deep copy that can be compared with the tree later. */
 export function copyOf<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T
+}
+
+/** The bytes of a 2x1 PNG. Enough to be told as a picture; nothing has to decode it. */
+export const TINY_PNG = new Uint8Array([
+  0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52,
+  0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x01, 0x08, 0x02, 0x00, 0x00, 0x00,
+])
+
+/**
+ * A map file with entries added to its archive (pictures under `resources/`),
+ * opened. The engine itself only ever makes the three entries a map needs.
+ */
+export async function documentWithEntries(
+  sheets: XmindSheet[],
+  entries: Record<string, Uint8Array>,
+): Promise<XmindDocument> {
+  const plain = await (await documentOf(...sheets)).save()
+  const zip = await JSZip.loadAsync(plain)
+  for (const [name, bytes] of Object.entries(entries)) zip.file(name, bytes)
+  const opened = await openXmind(await zip.generateAsync({ type: 'uint8array' }))
+  if (opened.status !== 'ok') throw new Error(`the test map does not open: ${opened.status}`)
+  return opened.document
 }
