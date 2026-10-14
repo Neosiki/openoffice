@@ -3,5 +3,5 @@
   "compilerOptions": {
     "types": ["node"]
   },
-  "include": ["src", "tests"]
+  "include": ["src", "tests", "../pdf2docx/src/bidi-js.d.ts"]
 }
