@@ -10,3 +10,10 @@
 | [0006](0006-no-codex-image-via-login-file.md)             | Codex 구독 이미지 생성은 로그인 파일을 건드리지 않는 방법으로만 넣는다                          | 2026-10-13 |
 | [0007](0007-key-providers-under-advanced.md)              | 키 제공자는 지우지 않고 고급 구역으로 옮긴다                                                    | 2026-10-13 |
 | [0008](0008-remove-font-downloads.md)                     | 글꼴 내려받기를 없애고 파일 설치만 남긴다                                                       | 2026-10-13 |
+| [0011](0011-own-xmind-engine.md)                          | 마인드맵 파일은 직접 만든 엔진으로 열고 저장하고, 편집 화면의 결과를 원본 나무에 맞춘다         | 2026-10-14 |
+| [0012](0012-map-themes-as-format-tables.md)               | 지도 테마는 파일 형식의 속성표로 적고 그 표로 다시 알아본다. 지도의 색은 문서 내용이다          | 2026-10-14 |
+| [0013](0013-redaction-on-cross-file-reads.md)             | 가리기는 앱 안의 모든 다른 파일로 읽기에 적용하고, 처리하지 못하면 읽지 않는다                  | 2026-10-14 |
+| [0014](0014-generation-as-hand-off.md)                    | 새 문서 만들기는 만들 문서 쪽 편집기의 AI에 넘기고, "만들기"를 누를 때 한 번만 시작한다         | 2026-10-14 |
+| [0015](0015-provenance-outside-documents.md)              | 출처 기록은 문서 밖, 앱 데이터 폴더의 `document-links.json`에 둔다                              | 2026-10-14 |
+| [0016](0016-no-xmind-association-at-install.md)           | 설치할 때 `.xmind`의 기본 프로그램을 가져오지 않는다                                            | 2026-10-14 |
+| [0017](0017-ask-scope-held-in-main.md)                    | 홈의 묻기를 별표 그룹 하나로 좁히는 일은 뒷단이 지킨다                                          | 2026-10-14 |

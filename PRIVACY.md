@@ -1,6 +1,6 @@
 # IeumOffice Privacy
 
-Last updated: October 13, 2026
+Last updated: October 14, 2026
 
 IeumOffice opens, edits and saves documents on your own PC. The project runs
 no server of its own: nothing is sent to IeumOffice or to its maintainers, and
@@ -17,6 +17,7 @@ by that service's own terms and by your account settings there.
 | -------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | You use AI with a connected Claude or Codex subscription (the default)                 | What you typed, the document content the request works on, the files and images you attached, the conversation | **Anthropic** (Claude) or **OpenAI** (Codex), under your own account. The app hands the request to the Claude Code or Codex program installed on your PC, and that program sends it with the login you made there |
 | You use AI with an API-key provider you set up under Settings → AI → Advanced          | The same content                                                                                               | The company, or your own server, whose key or address you entered                                                                                                                                                 |
+| You press "Make" in the "Make a new document" window                                   | What you typed (or the default request) and the files listed as material                                       | The AI provider in use, through the new document's AI panel like any request there. "Convert without AI" sends nothing                                                                                            |
 | The AI, or the `ieumoffice search` command, searches the web or looks for images       | The search query                                                                                               | By default **Parallel**'s free search and **DuckDuckGo**, no key needed. If you chose a key-based search provider under Advanced (Serper, Serply, Tavily, Parallel, Exa or Firecrawl), that provider instead      |
 | A picture found by a search, or one the AI inserts by address, is put in your document | A download request for that picture                                                                            | The website that hosts the picture                                                                                                                                                                                |
 | An image is generated (needs a key-based image provider in this version)               | The description of the image and any reference pictures                                                        | The image provider whose key you entered                                                                                                                                                                          |
@@ -30,6 +31,34 @@ public IP address, as any website you visit does.
 
 Parts of a document that you marked as hidden from AI, in the editors that
 offer that marking, are withheld from the request whichever provider is used.
+
+## How far hiding reaches
+
+The PowerPoint, Markdown and HTML editors let you hide parts of a document
+from AI. The mark is saved in the file, and it is honoured:
+
+- in that editor's own AI panel;
+- when the file is read inside the app as material for something else: as an
+  attachment in another editor's AI panel, by the home screen's Ask (its
+  reads and its search excerpts), in the home screen's search index and the
+  excerpts sent for reranking, as material for "Make a new document", and
+  by "Convert without AI". A hidden part is read as its label (`{{label}}`),
+  hidden text cannot be found by the home screen's search, and a file whose
+  marks cannot be processed is not read at all;
+- a file open in a tab with unsaved changes is not read for any of these
+  until you save it, because a new mark only reaches the file on save.
+
+It does **not** reach:
+
+- **Word documents.** The Word editor does not recognise hiding marks, and a
+  `.docx` file read as material (attachment, Ask, search index, "Make") is
+  read as written. A Word document whose parts were hidden in the program
+  this app is based on sends those parts to the AI provider when you use AI
+  on it here.
+- **The terminal command, its MCP server and the app's own MCP server.**
+  `ieumoffice` commands and MCP tools read PowerPoint, Markdown and HTML files
+  as written, hidden parts included. What an agent does with that text is
+  up to the agent you run.
 
 Three more things can cause network traffic that is not a request made by the
 app's own features:
@@ -114,6 +143,12 @@ Nothing in this list is uploaded by the app.
 - **The search index** of the folders you added to the home screen, autosave
   copies, recent-file lists and local diagnostic logs, also in the data
   folder.
+- **Records of which documents were made from which files**
+  (`document-links.json` in the data folder), written when a document made
+  with "Make a new document" is first saved. They hold the file paths, the
+  time and whether AI was used, not your request. Nothing is written into
+  the documents themselves, and the records do not travel with a file to
+  another PC.
 - **The command-line audit log** (`~/.ieumoffice/cli-audit.jsonl`): one line
   per `ieumoffice` command with the time, the arguments, the result and the
   output path. Set `GENOFFICE_AUDIT_LOG=off` to disable it.
