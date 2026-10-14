@@ -190,14 +190,20 @@ describe('ranges: the covered branches come apart', () => {
     expect(p!.summaries).toMatchObject([{ id: 'sm', range: '(0,0)' }])
   })
 
-  it('counts a branch that moved to another topic as gone from the range', async () => {
-    const { p, sheet } = await edit(ranged('(1,2)', '(2,3)'), (view) => {
+  it('shortens the range a later branch moved out of, and follows a first branch that moved', async () => {
+    const { p, sheet, before } = await edit(ranged('(1,2)', '(2,3)'), (view) => {
       inView(view, 'q').children.push(detach(view, 'k2'))
     })
-    expect(p).toMatchObject({ boundaries: [{ range: '(1,1)' }], summaries: [{ range: '(2,2)' }] })
+    // the boundary began at k1, which stayed; the summary began at k2, which moved
+    expect(p!.boundaries).toMatchObject([{ id: 'bd', range: '(1,1)' }])
+    expect(p).not.toHaveProperty('summaries')
     expect(inSource(sheet, 'q')).toEqual({
       id: 'q',
-      children: { attached: [{ id: 'k2', title: 'K2' }] },
+      children: {
+        attached: [{ id: 'k2', title: 'K2' }],
+        summary: inSource(before, 'p')!.children!.summary,
+      },
+      summaries: [{ id: 'sm', range: '(0,0)', topicId: 'st', futureKey: 2 }],
     })
   })
 

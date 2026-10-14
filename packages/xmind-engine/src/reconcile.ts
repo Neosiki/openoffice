@@ -19,7 +19,8 @@ export interface ReconcileOptions {
  * How reconciling ended.
  *
  * `ok: true`: the source tree now matches the state. `changed` says whether
- * anything in it differed. `view` is the view of the tree as it now is, and
+ * this call changed the tree; whether the file needs saving is the document's
+ * `changed`. `view` is the view of the tree as it now is, and
  * `inSync` whether that is what the state showed, once the ids in `ids` are
  * put in place of the ones the state gave. When it is false the editor shows
  * something the file does not hold, and has to draw `view` again.
@@ -45,8 +46,10 @@ export type ReconcileResult =
  * Sheets are reconciled one at a time: topics are paired by id inside the
  * sheet at `index`, and the same id on another sheet is another topic.
  *
- * The document is marked changed only when something differed. A state that
- * equals the view leaves it unchanged, and it still saves byte for byte.
+ * The document is not marked changed. It decides for itself whether there is
+ * anything to save, by comparing the tree with the file it holds: a state that
+ * equals the view leaves it unchanged, and so does an edit that a later state
+ * takes back. Either way it still saves byte for byte.
  * Throws when the document has no sheet at `index`; never for anything in the
  * state, which comes from a renderer and is checked as a whole before any of
  * it is applied.
@@ -68,9 +71,17 @@ export function reconcileSheet(
     // The reconciled copy moves into the sheet object the document already
     // holds, keys in the copy's order, so a caller that kept the sheet still
     // reads the live tree. The topics below it are new objects.
+    // Each key is defined rather than assigned: a key named `__proto__` would
+    // otherwise set the object's prototype instead of staying a key of the file.
     for (const key of Object.keys(sheet)) delete sheet[key]
-    Object.assign(sheet, outcome.sheet)
-    document.markChanged()
+    for (const [key, value] of Object.entries(outcome.sheet)) {
+      Object.defineProperty(sheet, key, {
+        value,
+        writable: true,
+        enumerable: true,
+        configurable: true,
+      })
+    }
   }
   const view = sheetToView(sheet, index)
   const inSync = shownBy(state, outcome.ids) === shownBy(view)

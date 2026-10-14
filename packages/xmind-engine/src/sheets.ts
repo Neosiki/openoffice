@@ -2,8 +2,12 @@
  * The sheets of a document: adding one, renaming one, deleting one.
  *
  * These are edits of the source tree made straight from the sheet tabs, not
- * through a reconciled state, and the editor's undo does not cover them. Each
- * marks the document changed only when it changed something.
+ * through a reconciled state, and the editor's undo does not cover them.
+ *
+ * None of them marks the document changed. The document compares its tree with
+ * the file it holds whenever it is asked or saved, so an edit here is written,
+ * and a sheet added and deleted again, or renamed and renamed back, leaves a
+ * document that saves as the file's own bytes.
  */
 
 import { newSheet, type NewSheetOptions } from './create'
@@ -27,7 +31,6 @@ export type SheetEditResult = { ok: true } | { ok: false; problem: SheetEditProb
  */
 export function addSheet(document: XmindDocument, options: NewSheetOptions): number {
   document.sheets.push(newSheet(options))
-  document.markChanged()
   return document.sheets.length - 1
 }
 
@@ -40,10 +43,7 @@ export function renameSheet(
   const sheet = sheetAt(document, index)
   if (!sheet) return { ok: false, problem: 'no-such-sheet' }
   if (typeof title !== 'string') return { ok: false, problem: 'bad-title' }
-  if (sheet.title !== title) {
-    sheet.title = title
-    document.markChanged()
-  }
+  if (sheet.title !== title) sheet.title = title
   return { ok: true }
 }
 
@@ -55,7 +55,6 @@ export function deleteSheet(document: XmindDocument, index: number): SheetEditRe
   if (!sheetAt(document, index)) return { ok: false, problem: 'no-such-sheet' }
   if (document.sheets.length === 1) return { ok: false, problem: 'last-sheet' }
   document.sheets.splice(index, 1)
-  document.markChanged()
   return { ok: true }
 }
 

@@ -11,6 +11,10 @@
  * - a branch only in the tree: deleted, with everything below it. Only what the
  *   view could have shown can be missing from a state; floating topics,
  *   callouts and the branches under a summary topic are never in one and stay.
+ *   Nothing else is removed. A summary or boundary goes only when every branch
+ *   it covered was deleted, or when it is a summary the state took off a topic
+ *   that is still there; while one covered branch exists it follows that
+ *   branch (see `reconcile-ranges.ts`).
  * - a topic of the tree under another parent, or at another place: the object
  *   in the tree is moved whole, with every key the view does not know.
  *
@@ -26,8 +30,8 @@ import { noteText } from './notes'
 import {
   addSummary,
   dropEmptyChildren,
+  followRanges,
   removeSummary,
-  rewriteRanges,
   snapshotRanges,
 } from './reconcile-ranges'
 import { readState, Refusal, refuse, type StateSheet, type StateTopic } from './reconcile-state'
@@ -120,9 +124,14 @@ function apply(sheet: XmindSheet, want: StateSheet, context: TreeContext): Recon
 
   settleTopics(run)
   const settled = settleSummaries(run)
-  const kept = new Set(run.pairs.map((pair) => pair.topic))
+  // Every range the sheet had is placed again, also one on a topic that is now
+  // deleted: a covered branch may live on under another topic.
+  const parentOf = new Map<string, XmindTopic>()
+  for (const { topic } of run.pairs) {
+    for (const branch of topic.children?.attached ?? []) parentOf.set(branch.id, topic)
+  }
   for (const snapshot of ranges) {
-    if (snapshot && kept.has(snapshot.owner)) rewriteRanges(snapshot, settled)
+    if (snapshot) followRanges(snapshot, settled, parentOf)
   }
   settleRelationships(run, new Set(context.reshaped))
   settleLayout(run)
@@ -207,12 +216,16 @@ function writeBranches(topic: XmindTopic, branches: XmindTopic[]): void {
 /**
  * Summaries are paired by the id of their summary topic. One the tree has is
  * retitled, moved to the topic the state shows it on, or removed when the
- * state has it no more; one only the state has is created.
+ * state no longer has it on a topic that is still there; one only the state
+ * has is created. A summary that is missing from the state only because the
+ * topic that carried it was deleted is not removed here: it is left to follow
+ * the branches it covers, and goes when none of them is left.
  *
- * Returns the records whose positions the state decided. A summary the state
- * lists with the positions it already had was not placed by the user: where it
- * ends up follows from the branches it covers (see `reconcile-ranges.ts`), and
- * its old positions may by now lie past the last branch.
+ * Returns the records whose place and positions the state decided. A summary
+ * the state lists where it was, with the positions it already had, was not
+ * placed by the user: where it ends up follows from the branches it covers
+ * (see `reconcile-ranges.ts`), and its old positions may by now lie past the
+ * last branch.
  */
 function settleSummaries(run: Run): Set<JsonRecord> {
   const settled = new Set<JsonRecord>()
@@ -266,8 +279,11 @@ function settleSummaries(run: Run): Set<JsonRecord> {
       run.ends.add(topicId)
     }
   }
+  const kept = new Set(run.pairs.map((pair) => pair.topic))
   for (const unclaimed of waiting.values()) {
-    for (const summary of unclaimed) removeSummary(summary.owner, summary.record)
+    for (const summary of unclaimed) {
+      if (kept.has(summary.owner)) removeSummary(summary.owner, summary.record)
+    }
   }
   return settled
 }
