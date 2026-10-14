@@ -121,3 +121,9 @@ export {
   type PrintDocumentOptions,
 } from './print-window'
 export { abortOnDestroyed, type DestroyableSender } from './abort-on-destroyed'
+export {
+  TEMPLATE_FONTS_DIR_NAME,
+  TEMPLATE_FONTS_REPO_DIR,
+  templateFontsDir,
+  type TemplateFontsHost,
+} from './template-fonts-dir'

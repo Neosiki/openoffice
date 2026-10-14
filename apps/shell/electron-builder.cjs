@@ -61,6 +61,7 @@ function assertExtraResourceSources() {
     '../../node_modules/electron/dist/LICENSES.chromium.html',
     '../../node_modules/@embedpdf/pdfium/dist/pdfium.wasm',
     '../pdf/node_modules/harfbuzzjs/hb-subset.wasm',
+    '../../packages/ui/template-fonts/README.md',
   ]) {
     if (!existsSync(join(__dirname, rel))) {
       throw new Error(
@@ -486,6 +487,13 @@ const config = {
     {
       from: '../../packages/cli/dist/node_modules',
       to: 'cli/node_modules',
+    },
+    // the design templates' shared fonts, shipped once for every editor (an
+    // asset import would copy them into each editor's out/); main code finds
+    // the folder with templateFontsDir (@genoffice/electron-utils)
+    {
+      from: '../../packages/ui/template-fonts',
+      to: 'template-fonts',
     },
   ],
   // `mimeType` is read only by the Linux target, where it becomes the
