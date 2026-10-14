@@ -30,6 +30,20 @@ pagination model (`tests/helpers/lo-fonts.ts` measures the same set of files).
 
 Registration lives in `fonts.css`; family-name mapping in `cssFontFamily()` of `line-metrics.ts`.
 
+## Template fonts (not in this folder)
+
+The design templates' fonts (Pretendard, Noto Serif KR, Gowun Batang, Playfair Display…,
+listed in `@genoffice/ui/template-fonts`) are real, unmodified faces that ship once in
+the installer (`resources/template-fonts`). They are never imported here as build
+assets: `../template-fonts.ts` registers each face at startup as a URL-backed
+`FontFace` under its real family name (plus `Pretendard SemiBold`, the SemiBold face's
+Office family), the main process serves the listed files on the docs media scheme
+(`genoffice-docx-media://template-fonts/<file>`, `src/main/template-font-protocol.ts`),
+and `@genoffice/font-metrics` indexes the same folder (`configureExtraFontDirs`). Their
+line factors (`TEMPLATE_LINE_FACTORS`) come from each file's own hhea box, with Word's
+East Asian rule (x 1.3) for the Korean faces; `tests/template-fonts.test.ts` recomputes
+them from the files.
+
 "Aptos GO" / "Aptos Display GO" are not separate files: they are `size-adjust`ed
 views of the Carlito faces (Word probe 2026-09-03 against Word's bundled Aptos).
 Aptos letters run ~6.8% wider than Carlito's, digits +5.4%, the space 10%

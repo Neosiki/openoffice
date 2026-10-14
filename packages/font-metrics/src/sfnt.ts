@@ -171,6 +171,31 @@ export function* systemFontFiles(): Generator<string> {
   for (const dir of fontDirs()) yield* fontFiles(dir, 2)
 }
 
+let extraDirs: readonly string[] = []
+let dirsGeneration = 0
+
+/**
+ * Folders of fonts the app itself ships (e.g. the design templates' set), which no
+ * system folder holds. Scanned flat and after the system folders, so every lookup an
+ * installed font already answered keeps its answer and these only fill the gaps.
+ * Replaces any earlier list and drops the scans built without it; an empty list
+ * restores the system-only behavior.
+ */
+export function configureExtraFontDirs(dirs: readonly string[]): void {
+  extraDirs = [...dirs]
+  index = null
+  dirsGeneration++
+}
+
+/** Bumped by configureExtraFontDirs: per-process scans made under an older value are stale. */
+export const fontDirsGeneration = (): number => dirsGeneration
+
+/** Every system font file, then the app's own font folders */
+export function* scannedFontFiles(): Generator<string> {
+  yield* systemFontFiles()
+  for (const dir of extraDirs) yield* fontFiles(dir, 0)
+}
+
 /** Offsets of every face's offset table within the file (many for .ttc, [0] otherwise) */
 export function faceOffsets(fd: number): number[] {
   if (readAt(fd, 0, 4).readUInt32BE(0) !== TTC_TAG) return [0]
@@ -219,7 +244,7 @@ let index: FontIndex | null = null
 export function getFontIndex(): FontIndex {
   if (!index) {
     index = { byPs: new Map(), byFamily: new Map() }
-    for (const path of systemFontFiles()) indexFile(path, index)
+    for (const path of scannedFontFiles()) indexFile(path, index)
   }
   return index
 }

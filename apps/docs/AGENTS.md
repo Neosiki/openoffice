@@ -40,6 +40,7 @@ Word 문서(.docx) 에디터다. 그리고 배포되는 앱 전체에서 공용 
 - 문자열은 언어별 조각이다. `i18n/strings-ai.ts`·`strings-app.ts`·`strings-ribbon.ts`는 `i18n/<영역>/<lang>.ts`를 모으는 집계 파일이고 `zh.ts`가 키 집합을 정한다. 키를 추가하면 21개 조각 모두에 넣는다. 구독 연결 문장은 `@genoffice/ui`의 공용 문자열을 쓰고 여기에 복제하지 않는다. `useI18n()`의 `t`는 훅 의존성 배열에 넣지 않는다.
 - `electron.vite.config.ts`의 `externalizeDepsPlugin`은 `dependencies`의 패키지를 번들 밖에 둔다. `@genoffice/*` 패키지는 TS 소스라 밖에 두면 실행 시 해석에 실패하므로, `dependencies`에 workspace 패키지를 추가하면 `exclude` 목록에도 넣는다.
 - 문서 바이트는 IPC 응답이 아니라 미디어 프로토콜의 일회용 주소로 렌더러에 건넨다(`byte-handoff.ts`). IPC 직렬화가 버퍼를 통째로 복사해 1GB 파일에서 메인 프로세스가 죽었기 때문이다.
+- 디자인 템플릿 글꼴은 설치 파일에 한 번만 들어 있고(`resources/template-fonts`) 렌더러 빌드 자산으로 import하지 않는다. 같은 미디어 프로토콜의 `template-fonts` 호스트가 목록에 있는 파일만 내주고(`template-font-protocol.ts`), 렌더러가 시작할 때 실제 패밀리 이름으로 등록한다(`renderer/template-fonts.ts`). 인쇄와 PDF 내보내기(창 없는 내보내기 포함)는 같은 렌더러에서 돌므로 따로 등록하지 않는다.
 
 ## 테스트
 
