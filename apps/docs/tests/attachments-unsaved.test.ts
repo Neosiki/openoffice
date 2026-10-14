@@ -15,6 +15,7 @@ const handlers = new Map<string, Handler>()
 vi.mock('electron', () => ({
   app: {
     getPath: () => tmpdir(),
+    getAppPath: () => tmpdir(),
     getName: () => 'docs-test',
     getVersion: () => '0',
     on: () => {},

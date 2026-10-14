@@ -274,7 +274,7 @@ describe('the default view', () => {
     expect(labels).toEqual(['Account', 'AI', 'General', 'Integrations', 'About'])
   })
 
-  it('shows both subscription cards and no key input', async () => {
+  it('shows both subscription cards, the free cards, and no paid key input', async () => {
     installHome(defaultAiSettings())
     installSubscription(statusMap('ready', 'signed-out'))
     await openModal()
@@ -282,11 +282,13 @@ describe('the default view', () => {
 
     expect(card('claude-code').dataset.state).toBe('ready')
     expect(card('codex').dataset.state).toBe('signed-out')
-    expect(host.querySelectorAll('.ai-sub-card')).toHaveLength(2)
+    expect(host.querySelectorAll('.ai-sub-card:not(.free-ai-card)')).toHaveLength(2)
+    // the free connections sit outside Advanced (decision 0009); Gemini's key field is theirs
+    expect(host.querySelectorAll('.free-ai-card')).toHaveLength(2)
 
-    expect(host.querySelector('input[type="password"]')).toBeNull()
+    expect(host.querySelector('input[type="password"]:not(.free-ai-key)')).toBeNull()
     expect(host.querySelector('#set-ai-key')).toBeNull()
-    expect(host.querySelector('.set-input')).toBeNull()
+    expect(host.querySelector('.set-input:not(.free-ai-key)')).toBeNull()
     expect(host.textContent).not.toContain('API Key')
     expect(host.querySelector('.set-adv-toggle')?.getAttribute('aria-expanded')).toBe('false')
   })
@@ -310,9 +312,9 @@ describe('the default view', () => {
     expect(host.textContent).toContain('Image generation')
     expect(host.textContent).toContain('Video analysis')
 
-    // closing Advanced takes every key field out again
+    // closing Advanced takes every key field out again (the free Gemini card's own field stays)
     await openAdvanced()
-    expect(host.querySelector('input[type="password"]')).toBeNull()
+    expect(host.querySelector('input[type="password"]:not(.free-ai-key)')).toBeNull()
   })
 
   it('does not offer Claude in the key pane', async () => {
@@ -354,7 +356,7 @@ describe('the default view', () => {
 
     await click(button('Manage connections'))
     expect(nav('AI')?.classList.contains('active')).toBe(true)
-    expect(host.querySelectorAll('.ai-sub-card')).toHaveLength(2)
+    expect(host.querySelectorAll('.ai-sub-card:not(.free-ai-card)')).toHaveLength(2)
   })
 })
 
@@ -433,7 +435,7 @@ describe('"AI to use"', () => {
     // a configured key provider is offered, but auto never lands on it
     expect(dropdown('AI to use')?.textContent).toBe('Automatic')
     expect(host.querySelector('[data-ai-blocked]')?.textContent).toBe(
-      'Connect a subscription to use AI',
+      'Connect an AI to get started',
     )
   })
 
