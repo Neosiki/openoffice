@@ -49,6 +49,12 @@ export const KOREAN_FAMILIES: readonly string[] = [
   'Dotum',
   'Noto Sans KR',
   'Noto Serif KR',
+  // bundled with the design templates (@genoffice/ui/template-fonts)
+  'Pretendard',
+  'Black Han Sans',
+  'Do Hyeon',
+  'Gowun Dodum',
+  'Gowun Batang',
 ]
 
 export const TRADITIONAL_CJK_FAMILIES: readonly string[] = [
@@ -114,4 +120,9 @@ export const KOREAN_FAMILY_READINGS: Readonly<Record<string, readonly string[]>>
   'Wanted Sans': ['원티드 산스'],
   SUIT: ['수트'],
   'Apple SD Gothic Neo': ['애플 SD 산돌고딕 Neo'],
+  // its file has a Korean name, but the bundled copy is not among the scanned installed fonts
+  'Black Han Sans': ['검은고딕'],
+  'Do Hyeon': ['도현', '배달의민족 도현'],
+  'Gowun Dodum': ['고운돋움'],
+  'Gowun Batang': ['고운바탕'],
 }
