@@ -291,6 +291,7 @@ const CLOUD_PAGE_PREFIX = 'cloudpptx:'
 const issuedCloudPages = new Set<string>()
 import { registerPresenterIpc } from './presenter-show'
 import { registerAttachmentIpc } from './attachments-ipc'
+import { registerGenerateHandoffIpc } from './generate-handoff-ipc'
 
 export {
   configureSlidesRuntime,
@@ -4593,6 +4594,9 @@ export function registerSlidesIpc(): void {
 
   // ── Chat attachments (slides:files-*) ──
   registerAttachmentIpc()
+
+  // ── Generate hand-off from the shell's "make" window (slides:handoff-*) ──
+  registerGenerateHandoffIpc()
 
   // ── Presenter-view multi-screen show (registered inside registerSlidesIpc: shell
   // aggregate mode only calls this function) ──
