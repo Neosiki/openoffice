@@ -354,9 +354,16 @@ export async function watchRequests(app: ElectronApplication): Promise<() => Pro
   return () => app.evaluate(() => (globalThis as unknown as { __requests: string[] }).__requests)
 }
 
+/**
+ * The app's own scheme serves its built page files by fetching them from
+ * `out/renderer`, so those file reads show up in the request log too; they
+ * stay inside the app. Anything else under `file:` does not.
+ */
+const OWN_RENDERER_FILES = /^file:\/\/\/.*\/apps\/mindmap\/out\/renderer\//i
+
 /** Addresses that leave the app: anything but its own pages, and pictures it made itself. */
 export const leavesTheApp = (url: string): boolean =>
-  !/^(?:genoffice-app|blob|data|devtools):/i.test(url)
+  !/^(?:genoffice-app|blob|data|devtools):/i.test(url) && !OWN_RENDERER_FILES.test(url)
 
 // ---- driving the theme panel ----
 
