@@ -34,6 +34,11 @@ import { productName } from '@genoffice/i18n'
 import { fileCountLabel, visiblePageCount } from './counts'
 import { useI18n } from './locale'
 import type { I18n, StringKey } from './locale'
+import {
+  generateEntryLabel,
+  openGenerateWithGroup,
+  openGenerateWithPaths,
+} from './generate/home-entry'
 import { SettingsModal } from './SettingsModal'
 import type { SettingsTarget } from './SettingsModal'
 import { skillUpdateDue } from './IntegrationsPane'
@@ -2277,6 +2282,18 @@ export function Home({
                 >
                   {t('copyPath')}
                 </button>
+                {!entry.missing && (
+                  <button
+                    role="menuitem"
+                    data-testid="home-generate-from-file"
+                    onClick={() => {
+                      setRowMenu(null)
+                      openGenerateWithPaths([entry.path])
+                    }}
+                  >
+                    {generateEntryLabel(lang, 'homeMakeFromFile')}
+                  </button>
+                )}
                 {canMove && editable && !entry.missing && (
                   <>
                     <div className="row-menu-divider" />
@@ -2693,6 +2710,13 @@ export function Home({
                 <span className="selection-count">
                   {t('selectedCount', { n: folderSelectedPaths.length })}
                 </span>
+                <button
+                  className="selection-action"
+                  data-testid="home-generate-from-selection"
+                  onClick={() => openGenerateWithPaths(folderSelectedPaths)}
+                >
+                  {generateEntryLabel(lang, 'homeMakeFromSelection')}
+                </button>
                 {selectedFolder && editableAt(selectedFolder) && (
                   <>
                     <button
@@ -2814,6 +2838,13 @@ export function Home({
                 <span className="selection-count">
                   {t('selectedCount', { n: selectedPaths.length })}
                 </span>
+                <button
+                  className="selection-action"
+                  data-testid="home-generate-from-selection"
+                  onClick={() => openGenerateWithPaths(selectedPaths)}
+                >
+                  {generateEntryLabel(lang, 'homeMakeFromSelection')}
+                </button>
                 {canMove && (
                   <button className="selection-action" onClick={() => startMove(selectedPaths)}>
                     {t('moveToFolder')}
@@ -2877,6 +2908,16 @@ export function Home({
                       </button>
                     ))}
                   </div>
+                )}
+                {view === 'starred' && groupFilter !== null && (
+                  // the group as material: every file in it, whatever the type pill shows
+                  <button
+                    className="selection-action"
+                    data-testid="home-generate-from-group"
+                    onClick={() => openGenerateWithGroup(groupFilter)}
+                  >
+                    {generateEntryLabel(lang, 'homeMakeFromGroup')}
+                  </button>
                 )}
               </div>
             )}

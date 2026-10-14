@@ -54,6 +54,8 @@ import {
 import { rendererUrl, safeExternalUrl } from '@genoffice/electron-utils'
 import type { OpenDocumentTab, TabKind, TabSummary } from '../shared/tabs-api'
 import { TAB_STRIP_HEIGHT } from '../shared/tab-drag-geometry'
+import type { GenerateHandoff } from '../shared/generate-api'
+import { dropGenerateHandoff, queueGenerateHandoffFor } from './generate/handoff'
 
 /** a tab lifted out of the strip with its live view: what "Open in New Window",
  *  tear-off and dock hand back and forth between the shell and a detached window */
@@ -445,6 +447,25 @@ export class TabManager {
     return id
   }
 
+  /**
+   * The generate window's "make": a new untitled tab of the target kind, with
+   * the request queued for that tab's webContents to take once. The view is
+   * created and the request queued in the same tick, before its renderer can
+   * ask; a tab that closes first drops the request.
+   */
+  openGenerateTargetTab(handoff: GenerateHandoff): string {
+    const id =
+      handoff.target === 'slides'
+        ? this.openSlidesTab()
+        : handoff.target === 'html'
+          ? this.openHtmlTab()
+          : this.openMindmapTab()
+    const contents = this.webContentsForTab(id)
+    if (!contents) throw new Error('the new tab could not be opened')
+    queueGenerateHandoffFor(contents, handoff)
+    return id
+  }
+
   /** Present → New tab: a chrome-free html tab showing the owner tab's live preview */
   openHtmlPresentTab(owner: WebContents, title: string): string {
     const view = createHtmlPresentView(owner, title)
@@ -704,6 +725,8 @@ export class TabManager {
       this.onChanged()
     }
     if (removed.view) {
+      // a generate request the tab never took goes with the tab
+      dropGenerateHandoff(removed.view.webContents.id)
       removed.view.setVisible(false)
       this.shellWindow.contentView.removeChildView(removed.view)
       if (removed.kind === 'docs') {
