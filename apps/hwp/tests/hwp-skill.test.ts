@@ -84,6 +84,18 @@ function setup(overrides: Partial<AgentBridge> = {}) {
     formatSelection: vi.fn(async () => ({ ok: true as const, count: 2, place: PLACE })),
     listFields: vi.fn(async () => []),
     fillField: vi.fn(async () => ({ ok: true as const, name: '성명' })),
+    insertToc: vi.fn(async () => ({
+      ok: true as const,
+      count: 2,
+      pages: [1, 3],
+      place: PLACE,
+    })),
+    refreshToc: vi.fn(async () => ({
+      ok: true as const,
+      lines: 2,
+      changed: 1,
+      place: PLACE,
+    })),
     listNotes: vi.fn(async () => ({ count: 0, elsewhere: 0, notes: [] })),
     insertNote: vi.fn(async () => ({
       ok: true as const,
@@ -951,6 +963,69 @@ describe('form fields', () => {
   })
 })
 
+describe('a table of contents', () => {
+  it('passes the headings and their levels, and lists the contents as one change', async () => {
+    const { bridge, call, changes } = setup()
+    const result = await call('insert_toc', {
+      anchor: '보고서',
+      where: 'after',
+      title: '차 례',
+      entries: [
+        { find: 'Ⅰ. 추진 배경', level: 1 },
+        { find: '1. 현황', level: 2, occurrence: 2 },
+      ],
+    })
+    expect(result.isError).toBeFalsy()
+    expect(result.output).toContain('on pages 1, 3')
+    expect(bridge.insertToc).toHaveBeenCalledWith('보고서', null, 'after', '차 례', [
+      { find: 'Ⅰ. 추진 배경', level: 1 },
+      { find: '1. 현황', level: 2, occurrence: 2 },
+    ])
+    expect(changes).toEqual([{ kind: 'table', from: '', to: '차 례 (2)', count: 1, place: PLACE }])
+  })
+
+  it('says which heading could not be used, and why', async () => {
+    const { call } = setup({
+      insertToc: async () => ({
+        ok: false as const,
+        reason: 'no_heading' as const,
+        heading: '현황',
+        why: 'ambiguous',
+        count: 2,
+        matches: [],
+      }),
+    })
+    const result = await call('insert_toc', { where: 'end', entries: [{ find: '현황', level: 1 }] })
+    expect(result.isError).toBe(true)
+    expect(result.output).toContain('the heading "현황"')
+    expect(result.output).toContain('occurs 2 times')
+  })
+
+  it('refuses entries without levels', async () => {
+    const { bridge, call } = setup()
+    const result = await call('insert_toc', { where: 'end', entries: [{ find: '제목' }] })
+    expect(result.isError).toBe(true)
+    expect(bridge.insertToc).not.toHaveBeenCalled()
+  })
+
+  it('writes the page numbers again and lists the rows that changed', async () => {
+    const { bridge, call, changes } = setup()
+    const result = await call('refresh_toc', { title: '차 례' })
+    expect(bridge.refreshToc).toHaveBeenCalledWith('차 례', null)
+    expect(result.output).toBe('1 of 2 page number(s) changed.')
+    expect(changes[0]).toMatchObject({ kind: 'cells', from: '차 례', count: 1 })
+  })
+
+  it('says when no table of contents follows the line', async () => {
+    const { call } = setup({
+      refreshToc: async () => ({ ok: false as const, reason: 'no_toc' as const, count: 0 }),
+    })
+    const result = await call('refresh_toc', { title: '차 례' })
+    expect(result.isError).toBe(true)
+    expect(result.output).toContain('no table of contents follows')
+  })
+})
+
 describe('footnotes and endnotes', () => {
   it('puts a note after the words it is about and lists it as a change', async () => {
     const { bridge, call, changes } = setup()
@@ -1091,6 +1166,8 @@ describe('the skill as the model sees it', () => {
       'remove_from_table',
       'list_fields',
       'fill_field',
+      'insert_toc',
+      'refresh_toc',
       'list_notes',
       'insert_note',
       'edit_note',

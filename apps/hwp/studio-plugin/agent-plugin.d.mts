@@ -327,6 +327,42 @@ export type AgentDeleteNoteResult =
   | { ok: false; reason: 'no_such_note'; count: number }
   | { ok: false; reason: 'has_objects'; count: number }
 
+/** One heading of a table of contents: text it contains, and its level (1 to 3). */
+export interface AgentTocEntry {
+  find: string
+  /** which occurrence of find, when it occurs more than once */
+  occurrence?: number | null
+  level: number
+}
+
+export type AgentInsertTocResult =
+  | { ok: true; count: number; pages: number[]; place: AgentPlace }
+  | AgentPlaceRefusal
+  | { ok: false; reason: 'in_table'; count: number }
+  /** a heading could not be decided: `why` is not_found, ambiguous, no_such_occurrence or unsupported_place */
+  | {
+      ok: false
+      reason: 'no_heading'
+      heading: string
+      why: string
+      count: number
+      matches?: AgentMatch[]
+    }
+
+export type AgentRefreshTocResult =
+  | {
+      ok: true
+      /** rows that hold a page number */
+      lines: number
+      changed: number
+      /** headings no longer found in the body */
+      missing?: string[]
+      place: AgentPlace
+    }
+  | AgentPlaceRefusal
+  | { ok: false; reason: 'in_table'; count: number }
+  | { ok: false; reason: 'no_toc'; count: number }
+
 export type AgentUndoResult =
   { ok: boolean; undone: number } | { ok: false; reason: 'changed'; undone: 0 }
 
@@ -387,6 +423,14 @@ export interface AgentPluginSurface {
   ): AgentFormatSelectionResult
   listFields(): AgentField[]
   fillField(field: number, value: string): AgentFillResult
+  insertToc(
+    anchor: string,
+    occurrence: number | null,
+    where: AgentWhere,
+    title: string | null,
+    entries: AgentTocEntry[],
+  ): AgentInsertTocResult
+  refreshToc(title: string, occurrence: number | null): AgentRefreshTocResult
   listNotes(): AgentNoteList
   insertNote(
     kind: AgentNoteKind,

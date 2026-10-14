@@ -10,6 +10,7 @@ import type {
   AgentTableCell,
   AgentTableLinesRefusal,
   AgentTableSummary,
+  AgentTocEntry,
   AgentWhere,
 } from '../../../studio-plugin/agent-plugin.mjs'
 import type { AgentBridge } from './agent-bridge'
@@ -96,6 +97,7 @@ const SYSTEM_PROMPT = [
   '- Work on the tables that are already there: list them (list_tables), read one cell by cell (read_table), write text into its cells, many at once (fill_cells), and add or remove rows and columns (add_to_table, remove_from_table).',
   '- Change formatting: bold, italic, underline, strikethrough, font size, text colour and highlight of a piece of text (format_text); alignment and line spacing of a paragraph, and the character formatting of a whole paragraph (format_paragraph).',
   '- Fill the form fields of the document (list_fields, fill_field). In Hangul these are called 누름틀. A field is picked by its number in list_fields, because several fields often share one name.',
+  '- Make a table of contents (차례, 목차) from the headings you pick, with their page numbers, and write its page numbers again after the document changed (insert_toc, refresh_toc).',
   '- Add footnotes and endnotes (각주, 미주) with their mark right after a piece of body text (insert_note), list the notes with their text (list_notes), and rewrite or remove one (edit_note, delete_note). The text of the document does not show the notes; list_notes does.',
   '',
   '## What they cannot do',
@@ -118,6 +120,12 @@ const SYSTEM_PROMPT = [
   '- Leave a cell empty when you do not know its answer, and tell the user which ones are left.',
   '- When a list in a form has too few rows for what the user gave you, add rows after the last row of that list with add_to_table (they come out shaped like that row), read the table again for the new row numbers, then fill them. Do not add rows or columns the user has no content for.',
   '- Remove rows or columns only when the user asks for it: what is in them goes too.',
+  '',
+  '## Table of contents',
+  '- Make one only when the user asks. Pick the headings from the text: the lines that open the parts of the document, in order (for example Ⅰ./1./가. or □ at the start, or short title lines). Level 1 for the top parts, 2 and 3 for the parts inside them; leave out body lines.',
+  '- Name each heading by text it contains, as short as is unambiguous (pass occurrence when it occurs more than once). The table shows the whole heading line and finds its page itself: never type page numbers.',
+  '- Put it where the user says; otherwise after the title or cover of the document. Give it the title the user uses, or 차 례 for a Korean document.',
+  '- After changes that move text between pages, or when the user asks, call refresh_toc with the title of the table of contents.',
   '',
   '## Footnotes and endnotes',
   '- A footnote explains or gives the source of the words it follows and shows at the foot of the page; an endnote does the same at the end of the document. Use the kind the user asks for; when they do not say, use a footnote, and use endnotes where the document already has them.',
@@ -171,6 +179,20 @@ const TEXT_FORMAT_SCHEMA = {
 
 /** Cells one read_table answer holds at most (the editor's own limit), as the model is told. */
 const READ_TABLE_HINT = 600
+
+const TOC_ENTRY_SCHEMA = {
+  type: 'object',
+  properties: {
+    find: { type: 'string', description: 'text of the heading, enough to tell it apart' },
+    occurrence: {
+      type: 'integer',
+      minimum: 1,
+      description: 'which occurrence of find, when it occurs more than once',
+    },
+    level: { type: 'integer', minimum: 1, maximum: 3 },
+  },
+  required: ['find', 'level'],
+}
 
 const NOTE_TEXT_SCHEMA = {
   type: 'string',
@@ -460,6 +482,35 @@ const TOOLS: AgentToolDef[] = [
         value: { type: 'string' },
       },
       required: ['field', 'value'],
+    },
+  },
+  {
+    name: 'insert_toc',
+    description:
+      'Add a table of contents: an optional title line, then a row per heading with its page number, next to the paragraph anchor occurs in (where after or before), or at the end of the document.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        anchor: { type: 'string', description: 'text of the paragraph it goes next to' },
+        occurrence: { type: 'integer', minimum: 1 },
+        where: { type: 'string', enum: ['after', 'before', 'end'] },
+        title: { type: 'string', description: 'the title line, for example 차 례; empty for none' },
+        entries: { type: 'array', items: TOC_ENTRY_SCHEMA, minItems: 1, maxItems: 100 },
+      },
+      required: ['where', 'entries'],
+    },
+  },
+  {
+    name: 'refresh_toc',
+    description:
+      'Write the page numbers of a table of contents again, after the document changed. Pass the text of its title line.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        title: { type: 'string', description: 'the title line of the table of contents' },
+        occurrence: { type: 'integer', minimum: 1 },
+      },
+      required: ['title'],
     },
   },
   {
@@ -1325,6 +1376,109 @@ export function createHwpSkill(deps: HwpSkillDeps): HwpSkill {
           output: 'Filled.',
           mutated: true,
           summary: label('aiToolFill', { name: quote(name) }),
+        }
+      }
+      case 'insert_toc': {
+        const place = placeArgs(call)
+        const entries = call.input.entries
+        const title = textArg(call, 'title')
+        if (!place) return bad(call, WHERE_HELP)
+        if (
+          !Array.isArray(entries) ||
+          entries.length === 0 ||
+          !entries.every(
+            (entry) =>
+              entry !== null &&
+              typeof entry === 'object' &&
+              typeof (entry as { find?: unknown }).find === 'string' &&
+              typeof (entry as { level?: unknown }).level === 'number',
+          )
+        ) {
+          return bad(call, 'entries must be a list of { find, level } for the headings')
+        }
+        if (title !== null && hasLineBreak(title)) return bad(call, ONE_LINE_HELP)
+        const list = entries as AgentTocEntry[]
+        if (list.some((entry) => hasLineBreak(entry.find))) return bad(call, ONE_LINE_HELP)
+        const result = await bridge.insertToc(
+          place.anchor,
+          place.occurrence,
+          place.where,
+          title,
+          list.map((entry) => ({
+            find: entry.find,
+            level: entry.level,
+            ...(typeof entry.occurrence === 'number' ? { occurrence: entry.occurrence } : {}),
+          })),
+        )
+        if (!result.ok) {
+          if (result.reason === 'in_table') return bad(call, IN_TABLE_HELP)
+          if (result.reason === 'no_heading') {
+            const why =
+              result.why === 'ambiguous'
+                ? `it occurs ${result.count} times; pass occurrence for that entry.\n${matchLines(result.matches ?? [], result.count)}`
+                : result.why === 'unsupported_place'
+                  ? 'it is inside a table cell or an equation, which is not a heading of the body.'
+                  : result.why === 'no_such_occurrence'
+                    ? `occurrence must be between 1 and ${result.count}.`
+                    : 'it is not in the document. Copy the heading text exactly from what you read.'
+            return bad(
+              call,
+              `Nothing was changed: the heading "${result.heading}" could not be used: ${why}`,
+            )
+          }
+          return bad(call, placeRefusal(result))
+        }
+        const name = title?.trim() || label('aiTocName')
+        deps.onChange({
+          kind: 'table',
+          from: '',
+          to: changeText(`${name} (${result.count})`),
+          count: 1,
+          place: result.place,
+        })
+        return {
+          output: `Added a table of contents of ${result.count} heading(s), on pages ${result.pages.join(', ')}.`,
+          mutated: true,
+          summary: label('aiToolToc', { count: result.count }),
+        }
+      }
+      case 'refresh_toc': {
+        const title = textArg(call, 'title')
+        if (!title)
+          return bad(call, 'title must be the text of the title line of the table of contents')
+        if (hasLineBreak(title)) return bad(call, ONE_LINE_HELP)
+        const occurrence = call.input.occurrence
+        const result = await bridge.refreshToc(
+          title,
+          typeof occurrence === 'number' ? occurrence : null,
+        )
+        if (!result.ok) {
+          if (result.reason === 'no_toc') {
+            return bad(
+              call,
+              'Nothing was changed: no table of contents follows that line. Pass the title line of a table of contents made with insert_toc.',
+            )
+          }
+          if (result.reason === 'in_table') return bad(call, IN_TABLE_HELP)
+          return bad(call, placeRefusal(result))
+        }
+        if (result.changed > 0) {
+          deps.onChange({
+            kind: 'cells',
+            from: title,
+            to: label('aiTocPagesChanged', { count: result.changed }),
+            count: result.changed,
+            place: result.place,
+          })
+        }
+        const missing =
+          result.missing && result.missing.length > 0
+            ? ` These headings are no longer in the document, so their rows were left alone: ${result.missing.join(' / ')}.`
+            : ''
+        return {
+          output: `${result.changed} of ${result.lines} page number(s) changed.${missing}`,
+          mutated: result.changed > 0,
+          summary: label('aiToolTocRefresh', { count: result.changed }),
         }
       }
       case 'list_notes': {

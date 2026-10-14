@@ -1316,6 +1316,117 @@ function writeNote(doc, at, prefix, lines) {
 
 const noteSummary = (note) => ({ kind: note.kind, number: note.number })
 
+/** Most entries one table of contents takes. */
+const MAX_TOC_ENTRIES = 100
+const MAX_TOC_LEVEL = 3
+/** Longest heading a table of contents shows. */
+const MAX_TOC_TEXT = 120
+/** How far a heading is indented, per level below the first. */
+const TOC_INDENT_PT = 14
+/** Width of the page-number column; the heading column takes the rest of the text width. */
+const TOC_PAGE_COLUMN_PT = 45
+/** The cells of a contents table: no lines, Hangul's usual cell margins. */
+const TOC_CELL_STYLE = 'border:none;padding:1.41pt 5.1pt'
+/** Room a heading cell keeps free: its margins, and a little for a font wider than guessed. */
+const TOC_CELL_SLACK_PT = 24
+/** How much of a heading is looked up when the page numbers are written again. */
+const TOC_KEY_CHARS = 40
+const PAGE_NUMBER = /^\s*(\d+)\s*$/
+
+/** The text of a body paragraph. */
+const bodyText = (doc, sec, k) => {
+  const length = doc.getParagraphLength(sec, k)
+  return length > 0 ? doc.getTextRange(sec, k, 0, length) : ''
+}
+
+/** The page number a reader sees for a body paragraph (the section may number its pages its own way). */
+function pageNumberOf(doc, sec, para) {
+  const at = parse(doc.getPageOfPosition(sec, para))
+  if (!at.ok || !Number.isInteger(at.page))
+    throw fail('ENGINE', 'could not find the page of a heading')
+  const info = parse(doc.getPageInfo(at.page))
+  return Number.isInteger(info.pageNumber) ? info.pageNumber : at.page + 1
+}
+
+/** The width of the text of a section's page, in points. */
+function textWidthPt(doc, sec) {
+  const page = parse(doc.getPageDef(sec))
+  const width = (page.landscape ? page.height : page.width) - page.marginLeft - page.marginRight
+  return Math.max(100, Math.round((width - (page.marginGutter ?? 0)) / 100))
+}
+
+function checkTocEntries(entries) {
+  if (!Array.isArray(entries) || entries.length === 0 || entries.length > MAX_TOC_ENTRIES) {
+    throw fail('BAD_ARGUMENT', `entries must list 1 to ${MAX_TOC_ENTRIES} headings`)
+  }
+  for (const entry of entries) {
+    if (!entry || typeof entry.find !== 'string' || entry.find.length === 0) {
+      throw fail('BAD_ARGUMENT', 'each entry needs the text of its heading')
+    }
+    if (!Number.isInteger(entry.level) || entry.level < 1 || entry.level > MAX_TOC_LEVEL) {
+      throw fail('BAD_ARGUMENT', `each entry needs a level from 1 to ${MAX_TOC_LEVEL}`)
+    }
+  }
+}
+
+/**
+ * A table of contents as a table the engine pastes: a row per heading, the heading in the
+ * first column (indented by level), its page number right-aligned in the second. No lines:
+ * it reads as a list. Not lines with a right tab, as Hangul makes them: rhwp writes a new
+ * tab without the width Hangul keeps in it, and Hangul then shows the tab as nothing.
+ */
+function tocHtml(rows, font, widthPt) {
+  const text = [
+    font.family ? `font-family:${font.family};mso-fareast-font-family:${font.family}` : '',
+    `font-size:${font.points}pt`,
+  ]
+    .filter(Boolean)
+    .join(';')
+  const headingWidth = Math.max(50, widthPt - TOC_PAGE_COLUMN_PT)
+  const cellStyle = TOC_CELL_STYLE
+  const row = ({ text: heading, level, page }) =>
+    '<tr>' +
+    `<td style="${cellStyle};width:${headingWidth}pt">` +
+    `<p style="margin-left:${(level - 1) * TOC_INDENT_PT}pt"><span style="${text}">${escapeHtml(heading)}</span></p></td>` +
+    `<td style="${cellStyle};width:${TOC_PAGE_COLUMN_PT}pt">` +
+    `<p style="text-align:right"><span style="${text}">${page}</span></p></td>` +
+    '</tr>'
+  return `<table>${rows.map(row).join('')}</table>`
+}
+
+/** Width of a character in ems, roughly: full width for Hangul and CJK, about half for the rest. */
+const emsOf = (ch) => (ch.codePointAt(0) > 0x2e7f ? 1 : 0.55)
+
+/**
+ * A heading cut to what fits on one line of the contents table. A row whose text wraps is
+ * laid out taller by rhwp but drawn at its stored height by Hangul, the lines on top of one
+ * another, and the two then also count different pages. Headings are short; a whole
+ * paragraph taken for one is not, and is cut.
+ */
+function oneLine(text, level, font, widthPt) {
+  const room =
+    (widthPt - TOC_PAGE_COLUMN_PT - (level - 1) * TOC_INDENT_PT - TOC_CELL_SLACK_PT) / font.points
+  let used = 0
+  let out = ''
+  for (const ch of text) {
+    used += emsOf(ch)
+    if (used > room - 1) return `${out.trimEnd()}…`
+    out += ch
+  }
+  return out
+}
+
+/** The cell at a row and column of a table (zero-based), as gridOf lists it. */
+const cellOf = (grid, row, col) => grid.find((cell) => cell.row === row && cell.col === col)
+
+/** Replace the text of the first paragraph of a cell. */
+function setCellText(doc, table, cell, value) {
+  const box = cellBox(doc, table, cell)
+  const length = box.length(0)
+  if (length > 0) box.deleteText(0, length)
+  box.insert(0, value)
+}
+
 /** Takes the plugin's double-click listener off the page again. */
 let stopListening = null
 
@@ -2449,6 +2560,191 @@ export const agentPlugin = {
           const place = fieldPlace(field)
           return { ok: true, name: field.name ?? '', ...(place ? { place } : {}) }
         })
+      }),
+
+      /**
+       * Add a table of contents next to the paragraph `anchor` occurs in (or at the end): a
+       * title line when `title` is given, then a table with a row per heading and its page
+       * number. A heading is named by text it contains (`find`, with `occurrence` when
+       * that text occurs more than once) and shown as its whole paragraph; headings are body
+       * paragraphs. The page numbers are those with the table of contents in place.
+       */
+      insertToc: guarded((anchor, occurrence, where, title, entries) => {
+        checkWhere(where)
+        checkTocEntries(entries)
+        if (title !== null && title !== undefined) checkReplacement(title)
+        const titled = typeof title === 'string' && title.trim() !== ''
+        const headingsOf = (doc) =>
+          entries.map((entry) => {
+            const hits = searchAll(doc, entry.find)
+            const picked = pickHit(hits, entry.occurrence ?? null)
+            const reason = !picked.hit
+              ? picked.reason
+              : !isReplaceable(picked.hit) || cellPathOf(picked.hit)
+                ? 'unsupported_place'
+                : null
+            return { entry, hits, hit: reason ? null : picked.hit, reason }
+          })
+        const refusal = host.read((doc) => {
+          const located = locate(doc, anchor, occurrence, where)
+          if (located.refusal) return located.refusal
+          if (located.box.inTable) return { ok: false, reason: 'in_table', count: 1 }
+          const missing = headingsOf(doc).find((heading) => heading.reason)
+          if (!missing) return null
+          return {
+            ok: false,
+            reason: 'no_heading',
+            heading: missing.entry.find,
+            why: missing.reason,
+            count: missing.hits.length,
+            ...(missing.reason === 'ambiguous' ? { matches: listMatches(doc, missing.hits) } : {}),
+          }
+        })
+        if (refusal) return refusal
+        return keepingObjects((mustKeep) =>
+          change('insert-toc', (doc) => {
+            const { box, plain } = locate(doc, anchor, occurrence, where)
+            if (!box || box.inTable) throw fail('CHANGED', 'the document changed mid-call')
+            const before = objectsOf(doc)
+            const { sec } = box.place(box.index, 0)
+            const headings = headingsOf(doc)
+            if (headings.some((heading) => !heading.hit)) {
+              throw fail('CHANGED', 'the document changed mid-call')
+            }
+            // read before a paragraph is split: the contents are to look like the text there
+            const font = box.font(box.index)
+            const width = textWidthPt(doc, sec)
+            const rows = headings.map(({ entry, hit }) => ({
+              text: oneLine(
+                clip(bodyText(doc, hit.sec, hit.para).replace(/\s+/g, ' ').trim(), MAX_TOC_TEXT),
+                entry.level,
+                font,
+                width,
+              ),
+              level: entry.level,
+              page: 0,
+            }))
+            let first = box.index
+            if (where === 'before') box.split(first, 0)
+            else {
+              openAfter(box, first, plain)
+              first += 1
+            }
+            let holder = first
+            if (titled) {
+              box.insert(first, title.trim())
+              openAfter(box, first, false)
+              holder = first + 1
+            }
+            box.pasteHtml(holder, tocHtml(rows, font, width))
+            const table = tablesOf(doc).tables.find(
+              (candidate) =>
+                candidate.sec === sec && candidate.para === holder && candidate.path.length === 1,
+            )
+            if (!table) throw fail('ENGINE', 'the table of contents could not be made')
+            // the pages as they are now: every paragraph from the first new one moved down
+            const added = holder - first + 1
+            const grid = gridOf(doc, table)
+            const pages = headings.map(({ hit }, index) => {
+              const para = hit.sec === sec && hit.para >= first ? hit.para + added : hit.para
+              const page = pageNumberOf(doc, hit.sec, para)
+              const cell = cellOf(grid, index, 1)
+              if (!cell) throw fail('ENGINE', 'the table of contents came out in another shape')
+              setCellText(doc, table, cell.cell, String(page))
+              return page
+            })
+            if (titled) {
+              expectOk(
+                doc.applyParaFormat(sec, first, JSON.stringify({ alignment: 'center' })),
+                'center the title',
+              )
+            }
+            const after = objectsOf(doc)
+            // the table is an object of its own; nothing that was there may be gone
+            mustKeep(before, { ...after, controls: Math.min(after.controls, before.controls) })
+            return {
+              ok: true,
+              count: entries.length,
+              pages,
+              place: { sec, para: first, offset: 0, length: titled ? title.trim().length : 0 },
+            }
+          }),
+        )
+      }),
+
+      /**
+       * Write the page numbers of a table of contents again: the two-column table in the
+       * paragraph after the one `title` occurs in. Each row's heading is looked up by its
+       * text in the body; a row whose heading is gone, or whose second cell is not a page
+       * number, is left alone.
+       */
+      refreshToc: guarded((title, occurrence) => {
+        const find = (doc) => {
+          const located = locate(doc, title, occurrence, 'after')
+          if (located.refusal) return { refusal: located.refusal }
+          if (located.box.inTable) return { refusal: { ok: false, reason: 'in_table', count: 1 } }
+          const { sec } = located.box.place(located.box.index, 0)
+          const table = tablesOf(doc).tables.find(
+            (candidate) =>
+              candidate.sec === sec &&
+              candidate.para === located.box.index + 1 &&
+              candidate.path.length === 1 &&
+              candidate.cols === 2,
+          )
+          return table ? { table } : { refusal: { ok: false, reason: 'no_toc', count: 0 } }
+        }
+        const refusal = host.read((doc) => find(doc).refusal ?? null)
+        if (refusal) return refusal
+        return keepingObjects((mustKeep) =>
+          change('refresh-toc', (doc) => {
+            const { table } = find(doc)
+            if (!table) throw fail('CHANGED', 'the document changed mid-call')
+            const before = objectsOf(doc)
+            const grid = gridOf(doc, table)
+            let rows = 0
+            let changed = 0
+            const missing = []
+            for (let row = 0; row < table.rows; row++) {
+              const headingCell = cellOf(grid, row, 0)
+              const pageCell = cellOf(grid, row, 1)
+              if (!headingCell || !pageCell) continue
+              const shown = PAGE_NUMBER.exec(
+                paragraphsOf(cellBox(doc, table, pageCell.cell)).join(''),
+              )
+              if (!shown) continue
+              rows += 1
+              const heading = paragraphsOf(cellBox(doc, table, headingCell.cell))
+                .join(' ')
+                .trim()
+              // looked up by the start of its text (a long one was cut short in the table); a
+              // body paragraph that starts with it is preferred to a mention elsewhere
+              const key = heading.replace(/…$/, '').slice(0, TOC_KEY_CHARS)
+              const body = key
+                ? searchAll(doc, key).filter((hit) => !cellPathOf(hit) && isReplaceable(hit))
+                : []
+              const hit =
+                body.find((candidate) =>
+                  bodyText(doc, candidate.sec, candidate.para).trim().startsWith(key),
+                ) ?? body[0]
+              if (!hit) {
+                missing.push(heading)
+                continue
+              }
+              const page = pageNumberOf(doc, hit.sec, hit.para)
+              if (page === Number(shown[1])) continue
+              setCellText(doc, table, pageCell.cell, String(page))
+              changed += 1
+            }
+            mustKeep(before, objectsOf(doc))
+            return {
+              ok: true,
+              lines: rows,
+              changed,
+              ...(missing.length > 0 ? { missing } : {}),
+              place: { sec: table.sec, para: table.para, offset: 0, length: 0 },
+            }
+          }),
+        )
       }),
 
       /**

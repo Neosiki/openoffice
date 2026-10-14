@@ -37,6 +37,8 @@ const METHODS = [
   'formatSelection',
   'listFields',
   'fillField',
+  'insertToc',
+  'refreshToc',
   'listNotes',
   'insertNote',
   'editNote',
