@@ -66,6 +66,8 @@ export interface ProcessSetup {
   wasmPath: string
   /** OCR helper candidates, first usable wins; none usable = no OCR */
   ocrHelperPaths: string[]
+  /** the app's user-data folder: its result store's AI readings go into conversions */
+  userDataDir?: string
 }
 
 export interface RunMessage {
@@ -196,6 +198,7 @@ export function parseRunMessage(raw: unknown): RunMessage | null {
   if (!isRecord(setup) || typeof setup.wasmPath !== 'string') return null
   if (!Array.isArray(setup.ocrHelperPaths)) return null
   if (!setup.ocrHelperPaths.every((p) => typeof p === 'string')) return null
+  if (setup.userDataDir !== undefined && typeof setup.userDataDir !== 'string') return null
   if (!isRecord(job) || typeof job.op !== 'string' || !OPS.has(job.op)) return null
   if (!isRecord(job.source) || typeof job.source.pdfPath !== 'string') return null
   return raw as unknown as RunMessage

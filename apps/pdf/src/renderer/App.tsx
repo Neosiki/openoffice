@@ -128,6 +128,10 @@ import { PropertiesDialog } from './PropertiesDialog'
 import { ConvertDialog } from './convert/ConvertDialog'
 import { ExportImagesMenu } from './convert/ExportImagesMenu'
 import { exportEmbeddedImages } from './convert/embedded-images'
+import { AiPageReading, type AiPageReadingHandle } from './ai-read/AiPageReading'
+import { createPageRenderer } from './ai-read/render-page'
+import { loadAiReadTexts } from './ai-read/search-texts'
+import { DocumentJobSession } from './doc-jobs/job-session'
 import { CertSignDialog } from './CertSignDialog'
 import { SignaturesDialog, overallSignatureStatus } from './SignaturesDialog'
 import { SignatureDialog, fileToCanvas } from './SignatureDialog'
@@ -141,7 +145,7 @@ import {
 import { StampDialog } from './StampDialog'
 import { buildStamps } from './stamps'
 import type { HeaderFooterConfig, WatermarkConfig } from './stamps'
-import { createSearchIndexCache, searchInIndex } from './search'
+import { aiReadOnlyPages, createSearchIndexCache, searchInIndex } from './search'
 import type { SearchIndex, SearchMatch } from './search'
 import { mapDocFont, type DocFontStyle } from './doc-font'
 import { groupPageBlocks, reflowOverflows, type TextBlock } from './text-block'
@@ -346,6 +350,7 @@ import {
   IconOpacity,
   IconAiSummarize,
   IconAiKeyPoints,
+  IconAiReadPages,
 } from './icons'
 
 GlobalWorkerOptions.workerSrc = workerUrl
@@ -496,6 +501,24 @@ export default function App() {
   const [convertBusy, setConvertBusy] = useState(false)
   /** the Markdown / EPUB conversion dialog that is open */
   const [convertDialog, setConvertDialog] = useState<PdfReflowFormat | null>(null)
+  /** AI page reading: this tab's document jobs, the window's handle, the ribbon menu */
+  const jobSession = useMemo(() => new DocumentJobSession(), [])
+  const aiReadApi = useMemo(() => {
+    const api = window.pdfApi
+    if (!api?.structure || !api.store) return null
+    return {
+      tree: api.structure.tree,
+      cancel: api.structure.cancel,
+      onProgress: api.structure.onProgress,
+      store: api.store,
+    }
+  }, [])
+  const aiReadRef = useRef<AiPageReadingHandle | null>(null)
+  const [aiReadMenuOpen, setAiReadMenuOpen] = useState(false)
+  /** bumped when stored AI readings change, so the search reads them again */
+  const [aiReadVersion, setAiReadVersion] = useState(0)
+  /** pages (0-based) whose AI-read text alone has the search query */
+  const [searchAiPages, setSearchAiPages] = useState<number[]>([])
   /** "only the pictures in the pages" export: progress of the running job */
   const [imagesProgress, setImagesProgress] = useState<{ done: number; total: number } | null>(null)
   const [drawings, setDrawings] = useState<LocalDrawing[]>([])
@@ -2390,9 +2413,29 @@ export default function App() {
     }
   }, [doc, visibleRows, rows, savedMarkups])
 
+  /** AI-read text per page (spec §7), read from the store once per document and store change */
+  const aiReadTextsRef = useRef<{
+    doc: PDFDocumentProxy
+    version: number
+    texts: Promise<Map<number, string>>
+  } | null>(null)
+  const getAiReadTexts = useCallback((): Promise<Map<number, string>> => {
+    const api = window.pdfApi
+    if (!doc || !filePath || !api?.structure || !api.store) return Promise.resolve(new Map())
+    const cached = aiReadTextsRef.current
+    if (cached && cached.doc === doc && cached.version === aiReadVersion) return cached.texts
+    const texts = loadAiReadTexts(
+      { tree: (request) => api.structure.tree(request), store: api.store },
+      { path: filePath, password: passwordRef.current },
+    )
+    aiReadTextsRef.current = { doc, version: aiReadVersion, texts }
+    return texts
+  }, [doc, filePath, aiReadVersion])
+
   useEffect(() => {
     if (!searchOpen || !searchQuery.trim()) {
       setSearchMatches([])
+      setSearchAiPages([])
       setSearchCur(0)
       return
     }
@@ -2400,15 +2443,20 @@ export default function App() {
     const timer = setTimeout(() => {
       void getSearchIndex()?.then((idx) => {
         if (cancelled) return
-        setSearchMatches(searchInIndex(idx, searchQuery.trim()))
+        const query = searchQuery.trim()
+        setSearchMatches(searchInIndex(idx, query))
         setSearchCur(0)
+        // pages whose positioned text has no hit may still have it in their AI reading
+        void getAiReadTexts().then((texts) => {
+          if (!cancelled) setSearchAiPages(aiReadOnlyPages(idx, texts, query))
+        })
       })
     }, 200)
     return () => {
       cancelled = true
       clearTimeout(timer)
     }
-  }, [searchOpen, searchQuery, getSearchIndex])
+  }, [searchOpen, searchQuery, getSearchIndex, getAiReadTexts])
 
   /** Pages with unsaved deletion are excluded from match navigation */
   const activeMatches = useMemo(
@@ -2416,6 +2464,10 @@ export default function App() {
     [searchMatches, deleted],
   )
   const searchCurClamped = Math.min(searchCur, Math.max(0, activeMatches.length - 1))
+  const activeAiPages = useMemo(
+    () => searchAiPages.filter((pageIndex) => !deleted.has(pageIndex)),
+    [searchAiPages, deleted],
+  )
 
   const gotoMatch = useCallback(
     (idx: number) => {
@@ -4362,6 +4414,9 @@ export default function App() {
       } catch {
         /* Save already succeeded; a reload failure doesn't block (takes effect on next open) */
       }
+      // the saved bytes are a new document for the result store: carry the AI
+      // readings, translations and unfinished job records over (spec §6)
+      await aiReadRef.current?.afterSave().catch(() => {})
       // Content-derived naming (docs/sheets analog): a shell-created blank still
       // carrying its untitled name takes its file name from the topmost text this
       // save inserted; the main process no-ops for every other file, so
@@ -6305,6 +6360,8 @@ export default function App() {
     currentPage: () => (visList[currentPage - 1] ?? 0) + 1,
     readOnly: () => readOnly,
     ocrText: (origIdx) => ocrPages.get(origIdx)?.entry.text ?? null,
+    startAiPageReading: (pages) =>
+      aiReadRef.current?.requestOpen(pages) ?? { unavailable: true as const },
     structuredRead: () => {
       const api = window.pdfApi
       if (!filePath || !api?.structure || !api.store) return null
@@ -6618,6 +6675,7 @@ export default function App() {
   const opacityMenuRef = useRef<HTMLDivElement | null>(null)
   const staticColorFieldRef = useRef<HTMLDivElement | null>(null)
   const convertWrapRef = useRef<HTMLDivElement | null>(null)
+  const aiReadWrapRef = useRef<HTMLDivElement | null>(null)
 
   // Thumbnail context menu
   useDismissablePopover(thumbMenu != null, () => setThumbMenu(null), {
@@ -6672,6 +6730,10 @@ export default function App() {
   // Converter dropdown (Home tab)
   useDismissablePopover(convertOpen, () => setConvertOpen(false), {
     inside: () => [convertWrapRef.current],
+  })
+  // AI page reading menu (Home tab)
+  useDismissablePopover(aiReadMenuOpen, () => setAiReadMenuOpen(false), {
+    inside: () => [aiReadWrapRef.current],
   })
 
   // Main process asked for a save (close prompt, menu Save, export) → save and report the result
@@ -7472,6 +7534,48 @@ export default function App() {
                     </span>
                     <span>{t('aiKeyPointsBtn')}</span>
                   </button>
+                  <div className="rb-drop-wrap" ref={aiReadWrapRef}>
+                    <button
+                      className={`rb-big ai-entry${aiReadMenuOpen ? ' active' : ''}`}
+                      data-tip={t('arButtonTip')}
+                      data-action="ai-read-menu"
+                      onClick={() => setAiReadMenuOpen((v) => !v)}
+                    >
+                      <span className="rb-big-icon">
+                        <span className="ai-feature-icon" aria-hidden="true">
+                          <IconAiReadPages />
+                        </span>
+                        <RbCaret />
+                      </span>
+                      <span>{t('arButton')}</span>
+                    </button>
+                    {aiReadMenuOpen && (
+                      <div className="rb-drop rb-menu">
+                        <button
+                          data-action="ai-read-open"
+                          onClick={() => {
+                            setAiReadMenuOpen(false)
+                            const answer = aiReadRef.current?.requestOpen(null)
+                            if (answer && 'running' in answer)
+                              showNotice(t('arBusy', answer.running))
+                            else if (!answer || 'unavailable' in answer)
+                              showNotice(t('arUnavailable'))
+                          }}
+                        >
+                          {t('arMenuRead')}
+                        </button>
+                        <button
+                          data-action="ai-read-delete"
+                          onClick={() => {
+                            setAiReadMenuOpen(false)
+                            void aiReadRef.current?.deleteStored()
+                          }}
+                        >
+                          {t('arMenuDelete')}
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
               <div className="ribbon-sep" />
@@ -8284,6 +8388,32 @@ export default function App() {
               </button>
             </div>
           )}
+          <AiPageReading
+            ref={aiReadRef}
+            filePath={filePath || null}
+            password={passwordRef.current}
+            pageCount={sizes.length}
+            lang={lang}
+            t={t}
+            api={aiReadApi}
+            session={jobSession}
+            openPageRenderer={async () => {
+              const data = await window.pdfApi.readFile(filePath)
+              const task = getDocument({
+                data: new Uint8Array(data),
+                password: passwordRef.current,
+                ...DOC_OPTS,
+              })
+              try {
+                return createPageRenderer(await task.promise)
+              } catch (err) {
+                void task.destroy()
+                throw err
+              }
+            }}
+            onStoredChange={() => setAiReadVersion((v) => v + 1)}
+            onNotice={showNotice}
+          />
           <div className="pdf-body">
             {sidebar === 'outline' && outline && (
               <div className="pdf-thumbs pdf-outline-pane" style={{ width: sidebarW }}>
@@ -9786,7 +9916,9 @@ export default function App() {
                           current: searchCurClamped + 1,
                           total: activeMatches.length,
                         })
-                      : t('searchNoResults')
+                      : activeAiPages.length > 0
+                        ? ''
+                        : t('searchNoResults')
                     : ''}
                 </span>
                 <button
@@ -9810,6 +9942,22 @@ export default function App() {
                 <button className="rb-icon" onClick={closeSearch}>
                   ×
                 </button>
+                {activeAiPages.length > 0 && (
+                  <div className="pdf-search-ai" data-tip={t('searchAiReadTip')}>
+                    <span className="pdf-search-ai-label">{t('searchAiRead')}</span>
+                    {activeAiPages.map((pageIndex) => (
+                      <button
+                        key={pageIndex}
+                        type="button"
+                        className="pdf-search-ai-page"
+                        data-ai-page={pageIndex + 1}
+                        onClick={() => aiApi.gotoPage(pageIndex + 1)}
+                      >
+                        {t('arPageLabel', { page: pageIndex + 1 })}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
             {selPopup && (

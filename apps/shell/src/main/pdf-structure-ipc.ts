@@ -40,7 +40,11 @@ function ocrHelperPaths(): string[] {
 }
 
 function processSetup(): ProcessSetup {
-  return { wasmPath: pdfiumWasmPath(), ocrHelperPaths: ocrHelperPaths() }
+  return {
+    wasmPath: pdfiumWasmPath(),
+    ocrHelperPaths: ocrHelperPaths(),
+    userDataDir: app.getPath('userData'),
+  }
 }
 
 function spawnJobProcess(): JobProcess {

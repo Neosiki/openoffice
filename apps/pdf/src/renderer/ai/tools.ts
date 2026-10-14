@@ -40,6 +40,7 @@ import { DEFAULT_CUTOUT_TOLERANCE, cropRect } from '../image-bake'
 import type { CropFractions, ImageBakeOp } from '../image-bake'
 import type { Op, PlanResult } from '../edit-ops'
 import { OP_DOCS, callableOpNames, opSignatureIndex, opVocabulary } from '../../shared/op-docs'
+import type { AiReadOpenAnswer } from '../ai-read/AiPageReading'
 import {
   aiReadPayloadText,
   pageImageNote,
@@ -214,6 +215,9 @@ export interface PdfAiDeps {
   setStamps(cfg: StampConfig | null): void
   /** AI create_document: write a new standalone file (pdf/docx/md) into the default folder and open it in a new tab */
   createDocument(request: CreateDocumentRequest): Promise<CreateDocumentResult>
+  /** Open the AI page-reading window (page picker, then the confirmation); it never sends
+      anything itself and answers at once. Absent where the window has no structure channels */
+  startAiPageReading?(pages: number[] | null): AiReadOpenAnswer
   /** Inline confirmation card for a file-level operation; false when the user declines, the run is stopped, or the panel goes away */
   confirmFileOp(req: FileOpConfirm, signal?: AbortSignal): Promise<boolean>
   /** Pending edit (undoable, saved with the document): a blank page after the given original page; null = first */
@@ -1197,6 +1201,24 @@ export const AGENT_TOOLS: AgentToolDef[] = [
       required: ['title', 'content'],
     },
   },
+  {
+    name: 'start_ai_page_reading',
+    description:
+      'Open the AI page-reading window for this PDF: the AI reads pages from their page images (scanned pages, pages whose text cannot be extracted properly, pages with tables or formulas) and the reading is kept for Markdown/EPUB conversion, read_pages and search. ' +
+      'The window preselects scanned and unreadable pages; the user adjusts the pages and confirms the number of calls and the provider before anything is sent. ' +
+      'The tool only opens the window and returns at once; the reading runs as a separate job while the conversation goes on. It has not read anything when it returns: never claim pages were read.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        pages: {
+          type: 'array',
+          items: { type: 'integer' },
+          description:
+            'original 1-based page numbers the user asked for; omit to preselect scanned and unreadable pages',
+        },
+      },
+    },
+  },
 ]
 
 const READONLY_OUTPUT =
@@ -1340,7 +1362,7 @@ async function aiReadTexts(
   }
   for (const entry of stored.pages) {
     for (const page of byFp.get(entry.pageFingerprint) ?? []) {
-      const text = aiReadPayloadText(entry.payload, page)
+      const text = aiReadPayloadText(entry.payload, page, entry.pageFingerprint)
       if (text !== null) out.set(page, text)
     }
   }
@@ -1500,7 +1522,7 @@ async function markupText(deps: PdfAiDeps, input: Record<string, unknown>): Prom
   const onPage = searchInIndex(index, text).filter((m) => m.pageIndex === r.origIdx)
   if (onPage.length === 0) {
     return err(
-      `"${text}" not found on page ${r.origIdx + 1}; use read_pages to verify the exact text`,
+      `"${text}" not found on page ${r.origIdx + 1}; use search_text to find the exact text`,
       summary,
     )
   }
@@ -1622,7 +1644,7 @@ async function addNoteTool(
     const located = entry ? locateOccurrence(entry, anchor, 1) : null
     if (!located) {
       return err(
-        `"${anchor}" not found on page ${r.origIdx + 1}; use read_pages to verify the exact text`,
+        `"${anchor}" not found on page ${r.origIdx + 1}; use search_text to find the exact text`,
         summary,
       )
     }
@@ -2293,7 +2315,7 @@ async function editText(deps: PdfAiDeps, input: Record<string, unknown>): Promis
   const located = entry ? locateOccurrence(entry, oldText, occurrence) : null
   if (!entry || !located) {
     return err(
-      `Occurrence ${occurrence} of "${oldText}" not found on page ${r.origIdx + 1}; use read_pages to verify the exact text`,
+      `Occurrence ${occurrence} of "${oldText}" not found on page ${r.origIdx + 1}; use search_text to find the exact text`,
       summary,
     )
   }
@@ -2341,7 +2363,7 @@ async function locateBlock(
   )
   if (hits.length === 0) {
     return {
-      bad: `No paragraph on page ${origIdx + 1} contains "${anchor}"; use read_pages to verify the exact text`,
+      bad: `No paragraph on page ${origIdx + 1} contains "${anchor}"; use search_text to find the exact text`,
     }
   }
   if (hits.length > 1) {
@@ -2466,7 +2488,7 @@ async function addFormMarkTool(
     const located = entry ? locateOccurrence(entry, anchor, 1) : null
     if (!located) {
       return err(
-        `"${anchor}" not found on page ${r.origIdx + 1}; use read_pages to verify the exact text`,
+        `"${anchor}" not found on page ${r.origIdx + 1}; use search_text to find the exact text`,
         summary,
       )
     }
@@ -2631,7 +2653,7 @@ async function insertTextTool(
     const located = entry ? locateOccurrence(entry, anchor, 1) : null
     if (!located) {
       return err(
-        `"${anchor}" not found on page ${r.origIdx + 1}; use read_pages to verify the exact text`,
+        `"${anchor}" not found on page ${r.origIdx + 1}; use search_text to find the exact text`,
         summary,
       )
     }
@@ -3067,7 +3089,7 @@ async function insertImageTool(
     const located = entry ? locateOccurrence(entry, anchor, 1) : null
     if (!located) {
       return err(
-        `"${anchor}" not found on page ${r.origIdx + 1}; use read_pages to verify the exact text`,
+        `"${anchor}" not found on page ${r.origIdx + 1}; use search_text to find the exact text`,
         summary,
       )
     }
@@ -3877,7 +3899,44 @@ export async function executePdfTool(
         summary: t('aiToolCreatedDocument', { name }),
       }
     }
+    case 'start_ai_page_reading':
+      return startAiPageReading(deps, input)
     default:
       return err(`Unknown tool: ${call.name}`, call.name)
+  }
+}
+
+/** open the AI page-reading window; the user confirms before anything is sent (spec §7, §9) */
+function startAiPageReading(deps: PdfAiDeps, input: Record<string, unknown>): ToolExecution {
+  const summary = t('arTitle')
+  let pages: number[] | null = null
+  if (input.pages !== undefined && input.pages !== null) {
+    if (!Array.isArray(input.pages)) return err('pages must be an array of page numbers', summary)
+    const count = deps.pageCount()
+    const bad = input.pages.filter((p) => !Number.isInteger(p) || p < 1 || p > count)
+    if (bad.length > 0) {
+      return err(
+        `Page number(s) ${bad.map(String).join(', ')} out of range (document has ${count} pages)`,
+        summary,
+      )
+    }
+    pages = [...new Set(input.pages as number[])].sort((a, b) => a - b)
+  }
+  const answer = deps.startAiPageReading?.(pages) ?? { unavailable: true as const }
+  if ('unavailable' in answer) {
+    return err('AI page reading is not available in this window; tell the user.', summary)
+  }
+  if ('running' in answer) {
+    const { done, total } = answer.running
+    return {
+      output: `An AI job is already running on this document (${done}/${total}); its progress is shown in the editor. Only one job runs per document, so nothing new was started.`,
+      summary,
+    }
+  }
+  return {
+    output:
+      'Opened the AI page-reading window. The user now picks the pages and confirms the calls and the provider; nothing has been sent yet and nothing is read until they press Start. ' +
+      'The reading then runs as a separate job with its own progress bar. Tell the user briefly what to do in the window; do not wait for it and do not claim the pages were read.',
+    summary,
   }
 }
