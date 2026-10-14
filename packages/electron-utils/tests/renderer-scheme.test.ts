@@ -8,6 +8,7 @@ describe('rendererUrl', () => {
       'genoffice-app://sheets/index.html?mode=tab',
     )
     expect(rendererUrl(undefined, 'docs')).toBe('genoffice-app://docs/index.html')
+    expect(rendererUrl(undefined, 'mindmap')).toBe('genoffice-app://mindmap/index.html')
   })
 
   it('appends the query to a dev URL that already carries params', () => {

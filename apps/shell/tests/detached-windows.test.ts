@@ -116,6 +116,11 @@ vi.mock('../../html/src/main/html-main', () => ({
   requestHtmlClose: vi.fn(() => Promise.resolve(true)),
 }))
 
+vi.mock('../../mindmap/src/main/mindmap-main', () => ({
+  mindmapIsDirty: vi.fn(() => false),
+  requestMindmapClose: vi.fn(() => Promise.resolve(true)),
+}))
+
 vi.mock('../src/main/tab-manager', () => ({
   canonicalPath: (p: string) => p.toLowerCase(),
 }))
@@ -203,6 +208,84 @@ describe('detachedOpenDocuments', () => {
       ['pdf', true],
       ['slides', false],
     ])
+  })
+})
+
+describe('a detached mind map', () => {
+  it('is left out of the list reported to MCP agents', async () => {
+    detached.createDetachedEditorWindow({
+      view: fakeView(41) as never,
+      kind: 'mindmap',
+      title: 'plan.xmind',
+      filePath: 'C:/maps/plan.xmind',
+      applyMenuFor: () => {},
+    })
+    detached.createDetachedEditorWindow({
+      view: fakeView(42) as never,
+      kind: 'sheets',
+      title: 'b',
+      applyMenuFor: () => {},
+    })
+    const docs = await detached.detachedOpenDocuments()
+    expect(docs.map((d) => d.id)).toEqual(['detached:42'])
+  })
+
+  it('is found by its path, so a second open focuses the window', () => {
+    detached.createDetachedEditorWindow({
+      view: fakeView(43) as never,
+      kind: 'mindmap',
+      title: 'plan.xmind',
+      filePath: 'C:/maps/plan.xmind',
+      applyMenuFor: () => {},
+    })
+    expect(detached.focusDetachedByPath('c:/maps/PLAN.xmind')).toBe(true)
+    expect(detached.findDetachedTabByPath('C:/maps/plan.xmind')).toMatchObject({
+      id: 'detached:43',
+      kind: 'mindmap',
+    })
+  })
+
+  it('closes without a prompt when clean', async () => {
+    const view = fakeView(44)
+    detached.createDetachedEditorWindow({
+      view: view as never,
+      kind: 'mindmap',
+      title: 'plan.xmind',
+      applyMenuFor: () => {},
+    })
+    const win = instances[0]!
+    win.emit('close', { preventDefault: vi.fn() })
+    await flush()
+    const { requestMindmapClose } = await import('../../mindmap/src/main/mindmap-main')
+    expect(requestMindmapClose).not.toHaveBeenCalled()
+    expect(win.destroyed).toBe(true)
+    expect(view.webContents.close).toHaveBeenCalled()
+  })
+
+  it('asks before closing when dirty and keeps the window on cancel', async () => {
+    const { mindmapIsDirty, requestMindmapClose } =
+      await import('../../mindmap/src/main/mindmap-main')
+    vi.mocked(mindmapIsDirty).mockReturnValue(true)
+    vi.mocked(requestMindmapClose).mockResolvedValueOnce(false)
+    const view = fakeView(45)
+    detached.createDetachedEditorWindow({
+      view: view as never,
+      kind: 'mindmap',
+      title: 'plan.xmind',
+      applyMenuFor: () => {},
+    })
+    const win = instances[0]!
+    win.emit('close', { preventDefault: vi.fn() })
+    await flush()
+    expect(requestMindmapClose).toHaveBeenCalledWith(view.webContents, win)
+    expect(win.destroyed).toBe(false)
+    expect(view.webContents.close).not.toHaveBeenCalled()
+
+    vi.mocked(requestMindmapClose).mockResolvedValueOnce(true)
+    win.emit('close', { preventDefault: vi.fn() })
+    await flush()
+    expect(win.destroyed).toBe(true)
+    vi.mocked(mindmapIsDirty).mockReturnValue(false)
   })
 })
 

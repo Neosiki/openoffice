@@ -187,6 +187,7 @@ function assertModuleTreesPresent() {
     '../pdf/out',
     '../markdown/out',
     '../html/out',
+    '../mindmap/out',
     '../../packages/cli/dist/genoffice.cjs',
     '../../packages/cli/dist/node_modules/jsdom',
   ]) {
@@ -275,7 +276,9 @@ function ensureThirdPartyNotices() {
 // office types that is the point, for plain text and JSON it would hijack the
 // system editor, so Windows leaves those two out (mac/Linux only offer them
 // in Open With).
-const WIN_OPEN_WITH_ONLY_EXTS = new Set(['txt', 'json'])
+// A mind map file keeps the program the user already opens it with: installing
+// must not take .xmind over, so Windows registers nothing for it either.
+const WIN_OPEN_WITH_ONLY_EXTS = new Set(['txt', 'json', 'xmind'])
 // NSIS registers each association under a ProgId taken from its `name`
 // (HKCU\Software\Classes\<name>). The upstream app registers the bare names
 // below ("Word Document"), so sharing them would let either install overwrite
@@ -388,6 +391,18 @@ const FILE_ASSOCIATIONS = [
     icon: 'html',
     mimeType: 'text/html',
   },
+  {
+    // Open With only: Windows leaves it out (WIN_OPEN_WITH_ONLY_EXTS) and
+    // macOS ranks the app as an alternate, so the file's own program stays
+    // the default.
+    ext: 'xmind',
+    name: 'Mind Map',
+    description: 'Mind Map',
+    role: 'Editor',
+    rank: 'Alternate',
+    icon: 'mindmap',
+    mimeType: 'application/vnd.xmind.workbook',
+  },
 ]
 
 const config = {
@@ -433,6 +448,10 @@ const config = {
     {
       from: '../html/out',
       to: 'modules/html',
+    },
+    {
+      from: '../mindmap/out',
+      to: 'modules/mindmap',
     },
     // PDF text editing engines: the bundled main resolves these under
     // Resources/wasm when node_modules is absent (apps/pdf/src/main/wasm-path.ts)

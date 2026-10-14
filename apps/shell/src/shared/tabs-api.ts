@@ -1,4 +1,5 @@
-export type TabKind = 'home' | 'docs' | 'sheets' | 'slides' | 'pdf' | 'markdown' | 'html' | 'help'
+export type TabKind =
+  'home' | 'docs' | 'sheets' | 'slides' | 'pdf' | 'markdown' | 'html' | 'mindmap' | 'help'
 
 /** a tab that holds a document — every kind except the Home screen and the in-app manual */
 export type DocumentTabKind = Exclude<TabKind, 'home' | 'help'>
@@ -22,7 +23,8 @@ export interface TabSummary {
  */
 export interface OpenDocumentTab {
   id: string
-  kind: DocumentTabKind
+  /** a mind map is not reported yet: the MCP tools do not know that kind */
+  kind: Exclude<DocumentTabKind, 'mindmap'>
   title: string
   filePath?: string
   active: boolean

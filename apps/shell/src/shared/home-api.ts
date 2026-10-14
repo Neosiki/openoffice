@@ -238,6 +238,8 @@ export interface HomeApi {
   newMarkdown(opts?: NewFileOpts): Promise<void>
   /** open a blank html editor tab */
   newHtml(opts?: NewFileOpts): Promise<void>
+  /** open a new, untitled mind map tab */
+  newMindmap(opts?: NewFileOpts): Promise<void>
   /** create a blank single-page PDF in the default save folder and open it */
   newPdf(opts?: NewFileOpts): Promise<void>
   /** drop entries from the recent list (does not touch the files) */
@@ -466,6 +468,7 @@ export const HOME_CHANNELS = {
   newSlide: 'home:new-slide',
   newMarkdown: 'home:new-markdown',
   newHtml: 'home:new-html',
+  newMindmap: 'home:new-mindmap',
   newPdf: 'home:new-pdf',
   removeRecent: 'home:remove-recent',
   revealPath: 'home:reveal-path',

@@ -53,4 +53,30 @@ describe('packaged file associations', () => {
       expect(winExts, `.${ext} missing from the Windows associations`).toContain(ext)
     }
   })
+
+  // Installing must not take the default program for a mind map file away from
+  // whatever the user already opens it with.
+  it('keeps .xmind off the Windows list, and Open With only everywhere else', () => {
+    const winExts = config.win.fileAssociations.map((entry: { ext: string }) => entry.ext)
+    expect(winExts).not.toContain('xmind')
+    expect(LAUNCHABLE_EXTS).toContain('xmind')
+
+    const offered = fileAssociations.find((entry) => entry.ext === 'xmind') as
+      | { ext: string; name: string; description?: string; rank?: string; mimeType?: string }
+      | undefined
+    expect(offered, 'mac / Linux do not offer the app for .xmind').toBeTruthy()
+    // macOS: an alternate handler never becomes the default by being installed
+    expect(offered!.rank).toBe('Alternate')
+    expect(offered!.mimeType).toBe('application/vnd.xmind.workbook')
+    // the type is named for what it is, not after another product
+    expect(`${offered!.name} ${offered!.description ?? ''}`).not.toMatch(/xmind/i)
+  })
+
+  it('ships the module tree of every editor the bundle routes to', () => {
+    const modules = (config.extraResources as Array<{ from: string; to: string }>)
+      .map((entry) => entry.to)
+      .filter((to) => to.startsWith('modules/'))
+    expect(modules).toContain('modules/html')
+    expect(modules).toContain('modules/mindmap')
+  })
 })

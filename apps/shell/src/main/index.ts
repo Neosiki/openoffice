@@ -37,6 +37,8 @@ import menuMdIcon1x from './assets/menu-md.png?asset'
 import menuMdIcon2x from './assets/menu-md@2x.png?asset'
 import menuHtmlIcon1x from './assets/menu-html.png?asset'
 import menuHtmlIcon2x from './assets/menu-html@2x.png?asset'
+import menuMindmapIcon1x from './assets/menu-mindmap.png?asset'
+import menuMindmapIcon2x from './assets/menu-mindmap@2x.png?asset'
 import menuHomeIcon1x from './assets/menu-home.png?asset'
 import menuHomeIcon2x from './assets/menu-home@2x.png?asset'
 import { createI18n, isLang, normalizeLang, setUiLang, type Lang } from '@genoffice/i18n'
@@ -220,6 +222,15 @@ import {
   setHtmlPresentHooks,
   setHtmlProvisionalTitleHook,
 } from '../../../html/src/main/html-main'
+import {
+  configureMindmapRuntime,
+  mindmapFileRenamed,
+  requestMindmapSave,
+  sendMindmapExportRequest,
+  sendMindmapMenuCommand,
+  sendMindmapPrintRequest,
+  setMindmapFileSavedHook,
+} from '../../../mindmap/src/main/mindmap-main'
 import type {
   AutoSaveDefault,
   FolderListing,
@@ -264,6 +275,7 @@ import { isMoveSource, isUserVisibleFile, type FileTargetSources } from './file-
 import {
   DOCX_RE,
   HTML_RE,
+  MINDMAP_RE,
   PDF_RE,
   PPTX_RE,
   TEXT_RE,
@@ -392,6 +404,9 @@ const MARKDOWN_OUT = app.isPackaged
 const HTML_OUT = app.isPackaged
   ? join(process.resourcesPath, 'modules', 'html')
   : join(APPS_ROOT, 'html', 'out')
+const MINDMAP_OUT = app.isPackaged
+  ? join(process.resourcesPath, 'modules', 'mindmap')
+  : join(APPS_ROOT, 'mindmap', 'out')
 const SIDECAR_BIN = app.isPackaged
   ? join(process.resourcesPath, 'native', SIDECAR_EXE)
   : join(APPS_ROOT, 'sheets', 'native', 'xlsx-engine', 'target', 'release', SIDECAR_EXE)
@@ -435,6 +450,11 @@ configureHtmlRuntime({
   rendererUrl: process.env.HTML_RENDERER_URL,
   rendererFile: join(HTML_OUT, 'renderer', 'index.html'),
   openGeneratedPath: (path) => openGeneratedDocument(path),
+})
+configureMindmapRuntime({
+  preloadPath: join(MINDMAP_OUT, 'preload', 'index.js'),
+  rendererUrl: process.env.MINDMAP_RENDERER_URL,
+  rendererFile: join(MINDMAP_OUT, 'renderer', 'index.html'),
 })
 // privileged-scheme registration is only legal before app ready
 registerPrivilegedSchemes()
@@ -570,14 +590,18 @@ const tMain = createI18n({
     untitledDeck: '未命名演示文稿',
     untitledMarkdown: '未命名 Markdown',
     untitledHtml: '未命名 HTML',
+    untitledMindmap: '未命名思维导图',
     untitledPdf: '未命名 PDF',
     menuNewSlide: 'AI Slides',
     menuNewMarkdown: 'AI Markdown',
     menuNewHtml: 'AI HTML',
+    menuNewMindmap: '思维导图',
     menuNewPdf: 'AI PDF',
     menuExportPdf: '导出为 PDF…',
     menuExportImages: '导出为图片…',
     menuExportHtml: '导出为单文件 HTML…',
+    menuExportMapImage: '导出为图片 (PNG)…',
+    menuExportMapOutline: '导出为 Markdown 大纲…',
     menuOpenInDocs: '转换为 Docs 文档并打开',
     menuPrint: '打印…',
     menuOpen: '打开…',
@@ -595,6 +619,7 @@ const tMain = createI18n({
     filterPpt: 'PowerPoint 演示文稿',
     filterMarkdown: '文本文件 (Markdown, TXT, JSON)',
     filterHtml: 'HTML 文档',
+    filterMindmap: '思维导图 (XMind 文件)',
     filterPdf: 'PDF 文档',
     errBadArgs: '参数无效',
     errBadName: '文件名不合法',
@@ -664,14 +689,18 @@ const tMain = createI18n({
     untitledDeck: 'Untitled Presentation',
     untitledMarkdown: 'Untitled Markdown',
     untitledHtml: 'Untitled HTML',
+    untitledMindmap: 'Untitled Mind Map',
     untitledPdf: 'Untitled PDF',
     menuNewSlide: 'AI Slides',
     menuNewMarkdown: 'AI Markdown',
     menuNewHtml: 'AI HTML',
+    menuNewMindmap: 'Mind Map',
     menuNewPdf: 'AI PDF',
     menuExportPdf: 'Export as PDF…',
     menuExportImages: 'Export as Images…',
     menuExportHtml: 'Export as Single-File HTML…',
+    menuExportMapImage: 'Export as Image (PNG)…',
+    menuExportMapOutline: 'Export as Markdown Outline…',
     menuOpenInDocs: 'Convert and Open in Docs',
     menuPrint: 'Print…',
     menuOpen: 'Open…',
@@ -689,6 +718,7 @@ const tMain = createI18n({
     filterPpt: 'PowerPoint Presentations',
     filterMarkdown: 'Text Files (Markdown, TXT, JSON)',
     filterHtml: 'HTML Documents',
+    filterMindmap: 'Mind Maps (XMind files)',
     filterPdf: 'PDF Documents',
     errBadArgs: 'Invalid arguments',
     errBadName: 'Invalid file name',
@@ -766,14 +796,18 @@ const tMain = createI18n({
     untitledDeck: 'Bản trình bày chưa có tiêu đề',
     untitledMarkdown: 'Markdown chưa có tiêu đề',
     untitledHtml: 'HTML chưa có tiêu đề',
+    untitledMindmap: 'Sơ đồ tư duy chưa có tiêu đề',
     untitledPdf: 'PDF chưa có tiêu đề',
     menuNewSlide: 'AI Slides',
     menuNewMarkdown: 'AI Markdown',
     menuNewHtml: 'AI HTML',
+    menuNewMindmap: 'Sơ đồ tư duy',
     menuNewPdf: 'AI PDF',
     menuExportPdf: 'Xuất dưới dạng PDF…',
     menuExportImages: 'Xuất dưới dạng hình ảnh…',
     menuExportHtml: 'Xuất dưới dạng HTML một tệp…',
+    menuExportMapImage: 'Xuất dưới dạng hình ảnh (PNG)…',
+    menuExportMapOutline: 'Xuất dưới dạng dàn ý Markdown…',
     menuOpenInDocs: 'Chuyển đổi và mở trong Docs',
     menuPrint: 'In…',
     menuOpen: 'Mở…',
@@ -791,6 +825,7 @@ const tMain = createI18n({
     filterPpt: 'Bản trình bày PowerPoint',
     filterMarkdown: 'Tệp văn bản (Markdown, TXT, JSON)',
     filterHtml: 'Tài liệu HTML',
+    filterMindmap: 'Sơ đồ tư duy (tệp XMind)',
     filterPdf: 'Tài liệu PDF',
     errBadArgs: 'Đối số không hợp lệ',
     errBadName: 'Tên tệp không hợp lệ',
@@ -868,14 +903,18 @@ const tMain = createI18n({
     untitledDeck: '無題のプレゼンテーション',
     untitledMarkdown: '無題の Markdown',
     untitledHtml: '無題の HTML',
+    untitledMindmap: '無題のマインドマップ',
     untitledPdf: '無題の PDF',
     menuNewSlide: 'AI Slides',
     menuNewMarkdown: 'AI Markdown',
     menuNewHtml: 'AI HTML',
+    menuNewMindmap: 'マインドマップ',
     menuNewPdf: 'AI PDF',
     menuExportPdf: 'PDF として書き出す…',
     menuExportImages: '画像としてエクスポート…',
     menuExportHtml: '単一ファイル HTML として書き出す…',
+    menuExportMapImage: '画像 (PNG) としてエクスポート…',
+    menuExportMapOutline: 'Markdown アウトラインとしてエクスポート…',
     menuOpenInDocs: 'Docs 文書に変換して開く',
     menuPrint: '印刷…',
     menuOpen: '開く…',
@@ -893,6 +932,7 @@ const tMain = createI18n({
     filterPpt: 'PowerPoint プレゼンテーション',
     filterMarkdown: 'テキストファイル (Markdown, TXT, JSON)',
     filterHtml: 'HTML ドキュメント',
+    filterMindmap: 'マインドマップ (XMind ファイル)',
     filterPdf: 'PDF ドキュメント',
     errBadArgs: '引数が無効です',
     errBadName: 'ファイル名が無効です',
@@ -970,14 +1010,18 @@ const tMain = createI18n({
     untitledDeck: '제목 없는 프레젠테이션',
     untitledMarkdown: '제목 없는 Markdown',
     untitledHtml: '제목 없는 HTML',
+    untitledMindmap: '제목 없는 마인드맵',
     untitledPdf: '제목 없는 PDF',
     menuNewSlide: 'AI Slides',
     menuNewMarkdown: 'AI Markdown',
     menuNewHtml: 'AI HTML',
+    menuNewMindmap: '마인드맵',
     menuNewPdf: 'AI PDF',
     menuExportPdf: 'PDF로 내보내기…',
     menuExportImages: '이미지로 내보내기…',
     menuExportHtml: '단일 파일 HTML로 내보내기…',
+    menuExportMapImage: '이미지(PNG)로 내보내기…',
+    menuExportMapOutline: '마크다운 개요로 내보내기…',
     menuOpenInDocs: 'Docs 문서로 변환하여 열기',
     menuPrint: '인쇄…',
     menuOpen: '열기…',
@@ -995,6 +1039,7 @@ const tMain = createI18n({
     filterPpt: 'PowerPoint 프레젠테이션',
     filterMarkdown: '텍스트 파일 (Markdown, TXT, JSON)',
     filterHtml: 'HTML 문서',
+    filterMindmap: '마인드맵 (XMind 파일)',
     filterPdf: 'PDF 문서',
     errBadArgs: '잘못된 인수입니다',
     errBadName: '파일 이름이 잘못되었습니다',
@@ -1071,14 +1116,18 @@ const tMain = createI18n({
     untitledDeck: 'Présentation sans titre',
     untitledMarkdown: 'Markdown sans titre',
     untitledHtml: 'HTML sans titre',
+    untitledMindmap: 'Carte mentale sans titre',
     untitledPdf: 'PDF sans titre',
     menuNewSlide: 'AI Slides',
     menuNewMarkdown: 'AI Markdown',
     menuNewHtml: 'AI HTML',
+    menuNewMindmap: 'Carte mentale',
     menuNewPdf: 'AI PDF',
     menuExportPdf: 'Exporter en PDF…',
     menuExportImages: 'Exporter en images…',
     menuExportHtml: 'Exporter en HTML (fichier unique)…',
+    menuExportMapImage: 'Exporter en image (PNG)…',
+    menuExportMapOutline: 'Exporter en plan Markdown…',
     menuOpenInDocs: 'Convertir et ouvrir dans Docs',
     menuPrint: 'Imprimer…',
     menuOpen: 'Ouvrir…',
@@ -1096,6 +1145,7 @@ const tMain = createI18n({
     filterPpt: 'Présentations PowerPoint',
     filterMarkdown: 'Fichiers texte (Markdown, TXT, JSON)',
     filterHtml: 'Documents HTML',
+    filterMindmap: 'Cartes mentales (fichiers XMind)',
     filterPdf: 'Documents PDF',
     errBadArgs: 'Arguments non valides',
     errBadName: 'Nom de fichier non valide',
@@ -1174,14 +1224,18 @@ const tMain = createI18n({
     untitledDeck: 'Unbenannte Präsentation',
     untitledMarkdown: 'Unbenanntes Markdown',
     untitledHtml: 'Unbenanntes HTML',
+    untitledMindmap: 'Unbenannte Mindmap',
     untitledPdf: 'Unbenanntes PDF',
     menuNewSlide: 'AI Slides',
     menuNewMarkdown: 'AI Markdown',
     menuNewHtml: 'AI HTML',
+    menuNewMindmap: 'Mindmap',
     menuNewPdf: 'AI PDF',
     menuExportPdf: 'Als PDF exportieren…',
     menuExportImages: 'Als Bilder exportieren…',
     menuExportHtml: 'Als Einzeldatei-HTML exportieren…',
+    menuExportMapImage: 'Als Bild (PNG) exportieren…',
+    menuExportMapOutline: 'Als Markdown-Gliederung exportieren…',
     menuOpenInDocs: 'In Docs umwandeln und öffnen',
     menuPrint: 'Drucken…',
     menuOpen: 'Öffnen…',
@@ -1199,6 +1253,7 @@ const tMain = createI18n({
     filterPpt: 'PowerPoint-Präsentationen',
     filterMarkdown: 'Textdateien (Markdown, TXT, JSON)',
     filterHtml: 'HTML-Dokumente',
+    filterMindmap: 'Mindmaps (XMind-Dateien)',
     filterPdf: 'PDF-Dokumente',
     errBadArgs: 'Ungültige Argumente',
     errBadName: 'Ungültiger Dateiname',
@@ -1278,14 +1333,18 @@ const tMain = createI18n({
     untitledDeck: 'Presentación sin título',
     untitledMarkdown: 'Markdown sin título',
     untitledHtml: 'HTML sin título',
+    untitledMindmap: 'Mapa mental sin título',
     untitledPdf: 'PDF sin título',
     menuNewSlide: 'AI Slides',
     menuNewMarkdown: 'AI Markdown',
     menuNewHtml: 'AI HTML',
+    menuNewMindmap: 'Mapa mental',
     menuNewPdf: 'AI PDF',
     menuExportPdf: 'Exportar como PDF…',
     menuExportImages: 'Exportar como imágenes…',
     menuExportHtml: 'Exportar como HTML de archivo único…',
+    menuExportMapImage: 'Exportar como imagen (PNG)…',
+    menuExportMapOutline: 'Exportar como esquema Markdown…',
     menuOpenInDocs: 'Convertir y abrir en Docs',
     menuPrint: 'Imprimir…',
     menuOpen: 'Abrir…',
@@ -1303,6 +1362,7 @@ const tMain = createI18n({
     filterPpt: 'Presentaciones de PowerPoint',
     filterMarkdown: 'Archivos de texto (Markdown, TXT, JSON)',
     filterHtml: 'Documentos HTML',
+    filterMindmap: 'Mapas mentales (archivos XMind)',
     filterPdf: 'Documentos PDF',
     errBadArgs: 'Argumentos no válidos',
     errBadName: 'Nombre de archivo no válido',
@@ -1381,14 +1441,18 @@ const tMain = createI18n({
     untitledDeck: 'งานนำเสนอไม่มีชื่อ',
     untitledMarkdown: 'Markdown ไม่มีชื่อ',
     untitledHtml: 'HTML ไม่มีชื่อ',
+    untitledMindmap: 'แผนที่ความคิดไม่มีชื่อ',
     untitledPdf: 'PDF ไม่มีชื่อ',
     menuNewSlide: 'AI Slides',
     menuNewMarkdown: 'AI Markdown',
     menuNewHtml: 'AI HTML',
+    menuNewMindmap: 'แผนที่ความคิด',
     menuNewPdf: 'AI PDF',
     menuExportPdf: 'ส่งออกเป็น PDF…',
     menuExportImages: 'ส่งออกเป็นรูปภาพ…',
     menuExportHtml: 'ส่งออกเป็น HTML ไฟล์เดียว…',
+    menuExportMapImage: 'ส่งออกเป็นรูปภาพ (PNG)…',
+    menuExportMapOutline: 'ส่งออกเป็นโครงร่าง Markdown…',
     menuOpenInDocs: 'แปลงและเปิดใน Docs',
     menuPrint: 'พิมพ์…',
     menuOpen: 'เปิด…',
@@ -1406,6 +1470,7 @@ const tMain = createI18n({
     filterPpt: 'งานนำเสนอ PowerPoint',
     filterMarkdown: 'ไฟล์ข้อความ (Markdown, TXT, JSON)',
     filterHtml: 'เอกสาร HTML',
+    filterMindmap: 'แผนที่ความคิด (ไฟล์ XMind)',
     filterPdf: 'เอกสาร PDF',
     errBadArgs: 'อาร์กิวเมนต์ไม่ถูกต้อง',
     errBadName: 'ชื่อไฟล์ไม่ถูกต้อง',
@@ -1480,14 +1545,18 @@ const tMain = createI18n({
     untitledDeck: 'Presentasi tanpa judul',
     untitledMarkdown: 'Markdown tanpa judul',
     untitledHtml: 'HTML tanpa judul',
+    untitledMindmap: 'Peta pikiran tanpa judul',
     untitledPdf: 'PDF tanpa judul',
     menuNewSlide: 'AI Slides',
     menuNewMarkdown: 'AI Markdown',
     menuNewHtml: 'AI HTML',
+    menuNewMindmap: 'Peta pikiran',
     menuNewPdf: 'AI PDF',
     menuExportPdf: 'Ekspor sebagai PDF…',
     menuExportImages: 'Ekspor sebagai gambar…',
     menuExportHtml: 'Ekspor sebagai HTML satu file…',
+    menuExportMapImage: 'Ekspor sebagai gambar (PNG)…',
+    menuExportMapOutline: 'Ekspor sebagai kerangka Markdown…',
     menuOpenInDocs: 'Konversi dan buka di Docs',
     menuPrint: 'Cetak…',
     menuOpen: 'Buka…',
@@ -1505,6 +1574,7 @@ const tMain = createI18n({
     filterPpt: 'Presentasi PowerPoint',
     filterMarkdown: 'File teks (Markdown, TXT, JSON)',
     filterHtml: 'Dokumen HTML',
+    filterMindmap: 'Peta pikiran (file XMind)',
     filterPdf: 'Dokumen PDF',
     errBadArgs: 'Argumen tidak valid',
     errBadName: 'Nama file tidak valid',
@@ -1583,14 +1653,18 @@ const tMain = createI18n({
     untitledDeck: 'Презентация без названия',
     untitledMarkdown: 'Markdown без названия',
     untitledHtml: 'HTML без названия',
+    untitledMindmap: 'Интеллект-карта без названия',
     untitledPdf: 'PDF без названия',
     menuNewSlide: 'AI Slides',
     menuNewMarkdown: 'AI Markdown',
     menuNewHtml: 'AI HTML',
+    menuNewMindmap: 'Интеллект-карта',
     menuNewPdf: 'AI PDF',
     menuExportPdf: 'Экспортировать в PDF…',
     menuExportImages: 'Экспорт в изображения…',
     menuExportHtml: 'Экспортировать в один файл HTML…',
+    menuExportMapImage: 'Экспорт в изображение (PNG)…',
+    menuExportMapOutline: 'Экспорт в структуру Markdown…',
     menuOpenInDocs: 'Преобразовать и открыть в Docs',
     menuPrint: 'Печать…',
     menuOpen: 'Открыть…',
@@ -1608,6 +1682,7 @@ const tMain = createI18n({
     filterPpt: 'Презентации PowerPoint',
     filterMarkdown: 'Текстовые файлы (Markdown, TXT, JSON)',
     filterHtml: 'Документы HTML',
+    filterMindmap: 'Интеллект-карты (файлы XMind)',
     filterPdf: 'Документы PDF',
     errBadArgs: 'Недопустимые аргументы',
     errBadName: 'Недопустимое имя файла',
@@ -1686,14 +1761,18 @@ const tMain = createI18n({
     untitledDeck: 'عرض تقديمي بدون عنوان',
     untitledMarkdown: 'Markdown بدون عنوان',
     untitledHtml: 'HTML بدون عنوان',
+    untitledMindmap: 'خريطة ذهنية بدون عنوان',
     untitledPdf: 'PDF بدون عنوان',
     menuNewSlide: 'AI Slides',
     menuNewMarkdown: 'AI Markdown',
     menuNewHtml: 'AI HTML',
+    menuNewMindmap: 'خريطة ذهنية',
     menuNewPdf: 'AI PDF',
     menuExportPdf: 'تصدير بتنسيق PDF…',
     menuExportImages: 'تصدير كصور…',
     menuExportHtml: 'تصدير كملف HTML واحد…',
+    menuExportMapImage: 'تصدير كصورة (PNG)…',
+    menuExportMapOutline: 'تصدير كمخطط Markdown…',
     menuOpenInDocs: 'التحويل والفتح في Docs',
     menuPrint: 'طباعة…',
     menuOpen: 'فتح…',
@@ -1711,6 +1790,7 @@ const tMain = createI18n({
     filterPpt: 'عروض PowerPoint التقديمية',
     filterMarkdown: 'ملفات نصية (Markdown, TXT, JSON)',
     filterHtml: 'مستندات HTML',
+    filterMindmap: 'خرائط ذهنية (ملفات XMind)',
     filterPdf: 'مستندات PDF',
     errBadArgs: 'وسيطات غير صالحة',
     errBadName: 'اسم ملف غير صالح',
@@ -1785,14 +1865,18 @@ const tMain = createI18n({
     untitledDeck: 'Apresentação sem título',
     untitledMarkdown: 'Markdown sem título',
     untitledHtml: 'HTML sem título',
+    untitledMindmap: 'Mapa mental sem título',
     untitledPdf: 'PDF sem título',
     menuNewSlide: 'AI Slides',
     menuNewMarkdown: 'AI Markdown',
     menuNewHtml: 'AI HTML',
+    menuNewMindmap: 'Mapa mental',
     menuNewPdf: 'AI PDF',
     menuExportPdf: 'Exportar como PDF…',
     menuExportImages: 'Exportar como imagens…',
     menuExportHtml: 'Exportar como HTML de arquivo único…',
+    menuExportMapImage: 'Exportar como imagem (PNG)…',
+    menuExportMapOutline: 'Exportar como estrutura de tópicos Markdown…',
     menuOpenInDocs: 'Converter e abrir no Docs',
     menuPrint: 'Imprimir…',
     menuOpen: 'Abrir…',
@@ -1810,6 +1894,7 @@ const tMain = createI18n({
     filterPpt: 'Apresentações do PowerPoint',
     filterMarkdown: 'Arquivos de texto (Markdown, TXT, JSON)',
     filterHtml: 'Documentos HTML',
+    filterMindmap: 'Mapas mentais (arquivos XMind)',
     filterPdf: 'Documentos PDF',
     errBadArgs: 'Argumentos inválidos',
     errBadName: 'Nome de arquivo inválido',
@@ -1888,14 +1973,18 @@ const tMain = createI18n({
     untitledDeck: 'Presentazione senza titolo',
     untitledMarkdown: 'Markdown senza titolo',
     untitledHtml: 'HTML senza titolo',
+    untitledMindmap: 'Mappa mentale senza titolo',
     untitledPdf: 'PDF senza titolo',
     menuNewSlide: 'AI Slides',
     menuNewMarkdown: 'AI Markdown',
     menuNewHtml: 'AI HTML',
+    menuNewMindmap: 'Mappa mentale',
     menuNewPdf: 'AI PDF',
     menuExportPdf: 'Esporta come PDF…',
     menuExportImages: 'Esporta come immagini…',
     menuExportHtml: 'Esporta come HTML a file singolo…',
+    menuExportMapImage: 'Esporta come immagine (PNG)…',
+    menuExportMapOutline: 'Esporta come struttura Markdown…',
     menuOpenInDocs: 'Converti e apri in Docs',
     menuPrint: 'Stampa…',
     menuOpen: 'Apri…',
@@ -1913,6 +2002,7 @@ const tMain = createI18n({
     filterPpt: 'Presentazioni PowerPoint',
     filterMarkdown: 'File di testo (Markdown, TXT, JSON)',
     filterHtml: 'Documenti HTML',
+    filterMindmap: 'Mappe mentali (file XMind)',
     filterPdf: 'Documenti PDF',
     errBadArgs: 'Argomenti non validi',
     errBadName: 'Nome file non valido',
@@ -1991,14 +2081,18 @@ const tMain = createI18n({
     untitledDeck: 'Prezentacja bez tytułu',
     untitledMarkdown: 'Markdown bez tytułu',
     untitledHtml: 'HTML bez tytułu',
+    untitledMindmap: 'Mapa myśli bez tytułu',
     untitledPdf: 'PDF bez tytułu',
     menuNewSlide: 'AI Slides',
     menuNewMarkdown: 'AI Markdown',
     menuNewHtml: 'AI HTML',
+    menuNewMindmap: 'Mapa myśli',
     menuNewPdf: 'AI PDF',
     menuExportPdf: 'Eksportuj jako PDF…',
     menuExportImages: 'Eksportuj jako obrazy…',
     menuExportHtml: 'Eksportuj jako pojedynczy plik HTML…',
+    menuExportMapImage: 'Eksportuj jako obraz (PNG)…',
+    menuExportMapOutline: 'Eksportuj jako konspekt Markdown…',
     menuOpenInDocs: 'Konwertuj i otwórz w Docs',
     menuPrint: 'Drukuj…',
     menuOpen: 'Otwórz…',
@@ -2016,6 +2110,7 @@ const tMain = createI18n({
     filterPpt: 'Prezentacje programu PowerPoint',
     filterMarkdown: 'Pliki tekstowe (Markdown, TXT, JSON)',
     filterHtml: 'Dokumenty HTML',
+    filterMindmap: 'Mapy myśli (pliki XMind)',
     filterPdf: 'Dokumenty PDF',
     errBadArgs: 'Nieprawidłowe argumenty',
     errBadName: 'Nieprawidłowa nazwa pliku',
@@ -2094,14 +2189,18 @@ const tMain = createI18n({
     untitledDeck: 'Prezentace bez názvu',
     untitledMarkdown: 'Markdown bez názvu',
     untitledHtml: 'HTML bez názvu',
+    untitledMindmap: 'Myšlenková mapa bez názvu',
     untitledPdf: 'PDF bez názvu',
     menuNewSlide: 'AI Slides',
     menuNewMarkdown: 'AI Markdown',
     menuNewHtml: 'AI HTML',
+    menuNewMindmap: 'Myšlenková mapa',
     menuNewPdf: 'AI PDF',
     menuExportPdf: 'Exportovat jako PDF…',
     menuExportImages: 'Exportovat jako obrázky…',
     menuExportHtml: 'Exportovat jako samostatné HTML…',
+    menuExportMapImage: 'Exportovat jako obrázek (PNG)…',
+    menuExportMapOutline: 'Exportovat jako osnovu Markdown…',
     menuOpenInDocs: 'Převést a otevřít v Docs',
     menuPrint: 'Tisk…',
     menuOpen: 'Otevřít…',
@@ -2119,6 +2218,7 @@ const tMain = createI18n({
     filterPpt: 'Prezentace PowerPoint',
     filterMarkdown: 'Textové soubory (Markdown, TXT, JSON)',
     filterHtml: 'Dokumenty HTML',
+    filterMindmap: 'Myšlenkové mapy (soubory XMind)',
     filterPdf: 'Dokumenty PDF',
     errBadArgs: 'Neplatné argumenty',
     errBadName: 'Neplatný název souboru',
@@ -2195,14 +2295,18 @@ const tMain = createI18n({
     untitledDeck: 'Naamloze presentatie',
     untitledMarkdown: 'Naamloos Markdown',
     untitledHtml: 'Naamloos HTML',
+    untitledMindmap: 'Naamloze mindmap',
     untitledPdf: 'Naamloze PDF',
     menuNewSlide: 'AI Slides',
     menuNewMarkdown: 'AI Markdown',
     menuNewHtml: 'AI HTML',
+    menuNewMindmap: 'Mindmap',
     menuNewPdf: 'AI PDF',
     menuExportPdf: 'Exporteren als PDF…',
     menuExportImages: 'Exporteren als afbeeldingen…',
     menuExportHtml: 'Exporteren als één HTML-bestand…',
+    menuExportMapImage: 'Exporteren als afbeelding (PNG)…',
+    menuExportMapOutline: 'Exporteren als Markdown-overzicht…',
     menuOpenInDocs: 'Converteren en openen in Docs',
     menuPrint: 'Afdrukken…',
     menuOpen: 'Openen…',
@@ -2220,6 +2324,7 @@ const tMain = createI18n({
     filterPpt: 'PowerPoint-presentaties',
     filterMarkdown: 'Tekstbestanden (Markdown, TXT, JSON)',
     filterHtml: 'HTML-documenten',
+    filterMindmap: 'Mindmaps (XMind-bestanden)',
     filterPdf: 'PDF-documenten',
     errBadArgs: 'Ongeldige argumenten',
     errBadName: 'Ongeldige bestandsnaam',
@@ -2298,14 +2403,18 @@ const tMain = createI18n({
     untitledDeck: 'Persembahan tanpa tajuk',
     untitledMarkdown: 'Markdown tanpa tajuk',
     untitledHtml: 'HTML tanpa tajuk',
+    untitledMindmap: 'Peta minda tanpa tajuk',
     untitledPdf: 'PDF tanpa tajuk',
     menuNewSlide: 'AI Slides',
     menuNewMarkdown: 'AI Markdown',
     menuNewHtml: 'AI HTML',
+    menuNewMindmap: 'Peta minda',
     menuNewPdf: 'AI PDF',
     menuExportPdf: 'Eksport sebagai PDF…',
     menuExportImages: 'Eksport sebagai imej…',
     menuExportHtml: 'Eksport sebagai HTML fail tunggal…',
+    menuExportMapImage: 'Eksport sebagai imej (PNG)…',
+    menuExportMapOutline: 'Eksport sebagai rangka Markdown…',
     menuOpenInDocs: 'Tukar dan buka dalam Docs',
     menuPrint: 'Cetak…',
     menuOpen: 'Buka…',
@@ -2323,6 +2432,7 @@ const tMain = createI18n({
     filterPpt: 'Persembahan PowerPoint',
     filterMarkdown: 'Fail teks (Markdown, TXT, JSON)',
     filterHtml: 'Dokumen HTML',
+    filterMindmap: 'Peta minda (fail XMind)',
     filterPdf: 'Dokumen PDF',
     errBadArgs: 'Argumen tidak sah',
     errBadName: 'Nama fail tidak sah',
@@ -2400,14 +2510,18 @@ const tMain = createI18n({
     untitledDeck: 'מצגת ללא שם',
     untitledMarkdown: 'Markdown ללא שם',
     untitledHtml: 'HTML ללא שם',
+    untitledMindmap: 'מפת חשיבה ללא שם',
     untitledPdf: 'PDF ללא שם',
     menuNewSlide: 'AI Slides',
     menuNewMarkdown: 'AI Markdown',
     menuNewHtml: 'AI HTML',
+    menuNewMindmap: 'מפת חשיבה',
     menuNewPdf: 'AI PDF',
     menuExportPdf: 'ייצוא כ-PDF…',
     menuExportImages: 'ייצוא כתמונות…',
     menuExportHtml: 'ייצוא כ-HTML בקובץ יחיד…',
+    menuExportMapImage: 'ייצוא כתמונה (PNG)…',
+    menuExportMapOutline: 'ייצוא כמתאר Markdown…',
     menuOpenInDocs: 'המרה ופתיחה ב-Docs',
     menuPrint: 'הדפסה…',
     menuOpen: 'פתיחה…',
@@ -2425,6 +2539,7 @@ const tMain = createI18n({
     filterPpt: 'מצגות PowerPoint',
     filterMarkdown: 'קובצי טקסט (Markdown, TXT, JSON)',
     filterHtml: 'מסמכי HTML',
+    filterMindmap: 'מפות חשיבה (קובצי XMind)',
     filterPdf: 'מסמכי PDF',
     errBadArgs: 'ארגומנטים לא חוקיים',
     errBadName: 'שם קובץ לא חוקי',
@@ -2500,14 +2615,18 @@ const tMain = createI18n({
     untitledDeck: 'बिना शीर्षक प्रस्तुति',
     untitledMarkdown: 'अनाम Markdown',
     untitledHtml: 'अनाम HTML',
+    untitledMindmap: 'अनाम माइंड मैप',
     untitledPdf: 'अनाम PDF',
     menuNewSlide: 'AI Slides',
     menuNewMarkdown: 'AI Markdown',
     menuNewHtml: 'AI HTML',
+    menuNewMindmap: 'माइंड मैप',
     menuNewPdf: 'AI PDF',
     menuExportPdf: 'PDF के रूप में निर्यात…',
     menuExportImages: 'छवियों के रूप में निर्यात…',
     menuExportHtml: 'एकल-फ़ाइल HTML के रूप में निर्यात…',
+    menuExportMapImage: 'छवि (PNG) के रूप में निर्यात…',
+    menuExportMapOutline: 'Markdown रूपरेखा के रूप में निर्यात…',
     menuOpenInDocs: 'Docs में बदलें और खोलें',
     menuPrint: 'प्रिंट करें…',
     menuOpen: 'खोलें…',
@@ -2525,6 +2644,7 @@ const tMain = createI18n({
     filterPpt: 'PowerPoint प्रस्तुतियाँ',
     filterMarkdown: 'पाठ फ़ाइलें (Markdown, TXT, JSON)',
     filterHtml: 'HTML दस्तावेज़',
+    filterMindmap: 'माइंड मैप (XMind फ़ाइलें)',
     filterPdf: 'PDF दस्तावेज़',
     errBadArgs: 'अमान्य आर्ग्युमेंट',
     errBadName: 'अमान्य फ़ाइल नाम',
@@ -2603,14 +2723,18 @@ const tMain = createI18n({
     untitledDeck: '未命名簡報',
     untitledMarkdown: '未命名 Markdown',
     untitledHtml: '未命名 HTML',
+    untitledMindmap: '未命名心智圖',
     untitledPdf: '未命名 PDF',
     menuNewSlide: 'AI Slides',
     menuNewMarkdown: 'AI Markdown',
     menuNewHtml: 'AI HTML',
+    menuNewMindmap: '心智圖',
     menuNewPdf: 'AI PDF',
     menuExportPdf: '匯出為 PDF…',
     menuExportImages: '匯出為圖片…',
     menuExportHtml: '匯出為單檔 HTML…',
+    menuExportMapImage: '匯出為圖片 (PNG)…',
+    menuExportMapOutline: '匯出為 Markdown 大綱…',
     menuOpenInDocs: '轉換為 Docs 文件並開啟',
     menuPrint: '列印…',
     menuOpen: '開啟…',
@@ -2628,6 +2752,7 @@ const tMain = createI18n({
     filterPpt: 'PowerPoint 簡報',
     filterMarkdown: '文字檔 (Markdown, TXT, JSON)',
     filterHtml: 'HTML 文件',
+    filterMindmap: '心智圖 (XMind 檔案)',
     filterPdf: 'PDF 文件',
     errBadArgs: '參數無效',
     errBadName: '檔案名稱不合法',
@@ -2804,6 +2929,7 @@ function afterFileMoved(oldPath: string, newPath: string): void {
     else if (t.kind === 'sheets') sheetsFileRenamed(t.webContents, oldPath, newPath)
     else if (t.kind === 'markdown') markdownFileRenamed(t.webContents, oldPath, newPath)
     else if (t.kind === 'html') htmlFileRenamed(t.webContents, oldPath, newPath)
+    else if (t.kind === 'mindmap') mindmapFileRenamed(t.webContents, oldPath, newPath)
     else if (t.kind === 'pdf') pdfFileRenamed(t.webContents, oldPath, newPath)
   }
 }
@@ -2969,6 +3095,9 @@ function applyMenuFor(kind: TabKind): void {
     case 'html':
       buildHtmlMenu()
       break
+    case 'mindmap':
+      buildMindmapMenu()
+      break
     default:
       buildHomeMenu()
   }
@@ -3041,7 +3170,9 @@ function createShellWindow(): void {
               ? tm('untitledMarkdown')
               : kind === 'html'
                 ? tm('untitledHtml')
-                : tm('untitledSheet'),
+                : kind === 'mindmap'
+                  ? tm('untitledMindmap')
+                  : tm('untitledSheet'),
   )
   tabManager = manager
 
@@ -3165,6 +3296,13 @@ function createShellWindow(): void {
     recordRecentFile(path)
     applyPendingDir(wc.id, path)
   })
+  // mind map untitled first save / Save As lands on a new path
+  setMindmapFileSavedHook((wc, path) => {
+    manager.setTabFileFor(wc.id, path)
+    detachedSetFileFor(wc.id, path)
+    recordRecentFile(path)
+    applyPendingDir(wc.id, path)
+  })
   setHtmlProvisionalTitleHook((wc, title) => {
     manager.setTabTitleFor(wc.id, title)
     detachedSetTitleFor(wc.id, title)
@@ -3247,6 +3385,7 @@ const OPEN_DIALOG_EXTENSIONS = [
   'json',
   'html',
   'htm',
+  'xmind',
 ]
 
 function notifyUnsupportedFile(filePath: string): void {
@@ -3362,6 +3501,13 @@ function routeDocumentPath(filePath: string): boolean {
     const existing = tabManager.findHtmlTabByPath(filePath)
     if (existing) tabManager.activateTab(existing)
     else tabManager.openHtmlTab(filePath)
+    return true
+  }
+  if (MINDMAP_RE.test(filePath)) {
+    recordRecentFile(filePath)
+    const existing = tabManager.findMindmapTabByPath(filePath)
+    if (existing) tabManager.activateTab(existing)
+    else tabManager.openMindmapTab(filePath)
     return true
   }
   notifyUnsupportedFile(filePath)
@@ -3555,6 +3701,14 @@ function newMarkdownTab(): void {
 function newHtmlTab(): void {
   try {
     bindPendingDir('html', tabManager?.openHtmlTab())
+  } catch (err) {
+    surfaceNewTabError(err)
+  }
+}
+
+function newMindmapTab(): void {
+  try {
+    bindPendingDir('mindmap', tabManager?.openMindmapTab())
   } catch (err) {
     surfaceNewTabError(err)
   }
@@ -3785,6 +3939,7 @@ function registerHomeIpc(): void {
         { name: tm('filterPdf'), extensions: ['pdf'] },
         { name: tm('filterMarkdown'), extensions: ['md', 'markdown', 'txt', 'json'] },
         { name: tm('filterHtml'), extensions: ['html', 'htm'] },
+        { name: tm('filterMindmap'), extensions: ['xmind'] },
       ],
       properties: ['openFile', 'multiSelections'],
     })
@@ -3814,6 +3969,11 @@ function registerHomeIpc(): void {
   ipcMain.handle(HOME_CHANNELS.newHtml, (_event, opts?: NewFileOpts) => {
     rememberPendingDir('html', opts)
     newHtmlTab()
+  })
+
+  ipcMain.handle(HOME_CHANNELS.newMindmap, (_event, opts?: NewFileOpts) => {
+    rememberPendingDir('mindmap', opts)
+    newMindmapTab()
   })
 
   ipcMain.handle(HOME_CHANNELS.newPdf, (_event, opts?: NewFileOpts) => {
@@ -4312,6 +4472,7 @@ interface MenuIconSet {
   pdf: NativeImage
   md: NativeImage
   html: NativeImage
+  mindmap: NativeImage
   home: NativeImage
 }
 let menuIconCache: MenuIconSet | null = null
@@ -4323,6 +4484,7 @@ function menuIcons(): MenuIconSet {
     pdf: loadMenuIcon(menuPdfIcon1x, menuPdfIcon2x),
     md: loadMenuIcon(menuMdIcon1x, menuMdIcon2x),
     html: loadMenuIcon(menuHtmlIcon1x, menuHtmlIcon2x),
+    mindmap: loadMenuIcon(menuMindmapIcon1x, menuMindmapIcon2x),
     home: loadMenuIcon(menuHomeIcon1x, menuHomeIcon2x),
   }
   return menuIconCache
@@ -4336,6 +4498,7 @@ const TAB_MENU_ICON: Record<TabKind, keyof MenuIconSet> = {
   pdf: 'pdf',
   markdown: 'md',
   html: 'html',
+  mindmap: 'mindmap',
   help: 'home',
 }
 
@@ -4417,6 +4580,9 @@ function activeMarkdownTarget() {
 }
 function activeHtmlTarget() {
   return activeEditorTarget('html', () => tabManager?.activeHtmlTab())
+}
+function activeMindmapTarget() {
+  return activeEditorTarget('mindmap', () => tabManager?.activeMindmapTab())
 }
 
 function registerTabsIpc(): void {
@@ -4545,6 +4711,11 @@ function registerTabsIpc(): void {
         click: () => newHtmlTab(),
       },
       {
+        label: tm('menuNewMindmap'),
+        icon: menuIcons().mindmap,
+        click: () => newMindmapTab(),
+      },
+      {
         label: tm('menuNewPdf'),
         icon: menuIcons().pdf,
         click: () => void newPdfTab(),
@@ -4593,6 +4764,7 @@ function buildHomeMenu(): void {
         { label: tm('menuNewSlide'), click: () => newSlideTab() },
         { label: tm('menuNewMarkdown'), click: () => newMarkdownTab() },
         { label: tm('menuNewHtml'), click: () => newHtmlTab() },
+        { label: tm('menuNewMindmap'), click: () => newMindmapTab() },
         { label: tm('menuNewPdf'), click: () => void newPdfTab() },
         { type: 'separator' },
         {
@@ -4881,6 +5053,137 @@ function buildHtmlMenu(): void {
       ],
     },
     editMenuTemplate(process.platform, appMenuLabels(currentLang())),
+    windowMenuTemplate(process.platform, appMenuLabels(currentLang())),
+    {
+      role: 'help',
+      label: tm('menuHelp'),
+      submenu: [
+        { label: tm('thirdPartyNotices'), click: () => void openThirdPartyNotices() },
+        { type: 'separator' },
+        checkUpdatesMenuItem(appMenuLabels(currentLang())),
+        aboutMenuItem(appMenuLabels(currentLang())),
+      ],
+    },
+  ]
+  Menu.setApplicationMenu(Menu.buildFromTemplate(template))
+}
+
+// ---- mind map menu (mindmap-main has no menu of its own; the shell owns mind map tabs) ----
+
+function buildMindmapMenu(): void {
+  const isMac = process.platform === 'darwin'
+  const labels = appMenuLabels(currentLang())
+  const template: MenuItemConstructorOptions[] = [
+    ...(isMac ? [{ role: 'appMenu' as const }] : []),
+    {
+      label: tm('menuFile'),
+      submenu: [
+        {
+          label: tm('menuSectionNew'),
+          accelerator: 'CmdOrCtrl+N',
+          click: () => newMindmapTab(),
+        },
+        {
+          label: tm('menuOpen'),
+          accelerator: 'CmdOrCtrl+O',
+          click: () => void openFileViaDialog(),
+        },
+        { type: 'separator' },
+        {
+          label: tm('backToHome'),
+          accelerator: 'Shift+CmdOrCtrl+H',
+          click: () => tabManager?.openHomeTab(),
+        },
+        { type: 'separator' },
+        {
+          label: tm('menuSave'),
+          accelerator: 'CmdOrCtrl+S',
+          click: () => {
+            const tab = activeMindmapTarget()
+            if (tab) void requestMindmapSave(tab.webContents, 'save')
+          },
+        },
+        {
+          label: tm('menuSaveAs'),
+          accelerator: 'CmdOrCtrl+Shift+S',
+          click: () => {
+            const tab = activeMindmapTarget()
+            if (tab) void requestMindmapSave(tab.webContents, 'saveAs')
+          },
+        },
+        { type: 'separator' },
+        {
+          label: tm('menuExportMapImage'),
+          click: () => {
+            const tab = activeMindmapTarget()
+            if (tab) sendMindmapExportRequest(tab.webContents, 'png')
+          },
+        },
+        {
+          label: tm('menuExportPdf'),
+          click: () => {
+            const tab = activeMindmapTarget()
+            if (tab) sendMindmapExportRequest(tab.webContents, 'pdf')
+          },
+        },
+        {
+          label: tm('menuExportMapOutline'),
+          click: () => {
+            const tab = activeMindmapTarget()
+            if (tab) sendMindmapExportRequest(tab.webContents, 'markdown')
+          },
+        },
+        { type: 'separator' },
+        {
+          label: tm('menuPrint'),
+          accelerator: 'CmdOrCtrl+P',
+          click: () => {
+            const tab = activeMindmapTarget()
+            if (tab) sendMindmapPrintRequest(tab.webContents)
+          },
+        },
+        { type: 'separator' },
+        {
+          label: tm('menuClose'),
+          accelerator: 'CmdOrCtrl+W',
+          click: () => closeFocusedEditor(),
+        },
+      ],
+    },
+    {
+      label: labels.edit,
+      submenu: [
+        // Undo and redo go to the map: its history is not the page's own, so the
+        // undo / redo roles would not reach it. The map already takes the keys
+        // itself; on Windows and Linux the shortcut is shown but not registered,
+        // or one press would undo twice.
+        {
+          label: labels.undo,
+          accelerator: 'CmdOrCtrl+Z',
+          registerAccelerator: false,
+          click: () => {
+            const tab = activeMindmapTarget()
+            if (tab) sendMindmapMenuCommand(tab.webContents, 'undo')
+          },
+        },
+        {
+          label: labels.redo,
+          accelerator: isMac ? 'Shift+Cmd+Z' : 'Ctrl+Y',
+          registerAccelerator: false,
+          click: () => {
+            const tab = activeMindmapTarget()
+            if (tab) sendMindmapMenuCommand(tab.webContents, 'redo')
+          },
+        },
+        { type: 'separator' },
+        { role: 'cut', label: labels.cut },
+        { role: 'copy', label: labels.copy },
+        { role: 'paste', label: labels.paste },
+        { role: 'delete', label: labels.delete },
+        { type: 'separator' },
+        { role: 'selectAll', label: labels.selectAll },
+      ],
+    },
     windowMenuTemplate(process.platform, appMenuLabels(currentLang())),
     {
       role: 'help',
@@ -5518,6 +5821,7 @@ app.whenReady().then(async () => {
     pdf: join(PDF_OUT, 'renderer'),
     markdown: join(MARKDOWN_OUT, 'renderer'),
     html: join(HTML_OUT, 'renderer'),
+    mindmap: join(MINDMAP_OUT, 'renderer'),
     // the manual shares the shell's own renderer bundle (help mode)
     help: join(__dirname, '../renderer'),
   })
