@@ -11,6 +11,10 @@ export const strings = {
     askTitle: '问知识库',
     askEmptyCorpusHint: '还没有收藏文件——先在最近或文件夹里点星收藏,AI 就能读它们。',
     askCorpusCount: '知识库:{n} 个收藏文件',
+    askScopeLabel: '提问范围',
+    askScopeAll: '全部',
+    askCorpusCountGroup: '{group}：{n} 个收藏文件',
+    askScopeGone: '这个分组里已经没有收藏文件，所以没有提问。请选择其他分组或“全部”。',
     askIntro: '基于你收藏的文件提问,回答会标注来源文件,点击即可打开。',
     askToolSearch: '搜索知识库',
     askToolRead: '读取文件',
@@ -425,6 +429,11 @@ export const strings = {
     askTitle: 'Ask your knowledge base',
     askEmptyCorpusHint: 'No starred files yet — star some files first and the AI can read them.',
     askCorpusCount: 'Knowledge base: {n} starred files',
+    askScopeLabel: 'Ask within',
+    askScopeAll: 'All',
+    askCorpusCountGroup: '{group}: {n} starred files',
+    askScopeGone:
+      'This group has no starred files any more, so nothing was asked. Choose another group or All.',
     askIntro: 'Ask about your starred files. Answers cite their sources — click one to open it.',
     askToolSearch: 'Searching the knowledge base',
     askToolRead: 'Reading a file',
@@ -852,6 +861,11 @@ export const strings = {
     askEmptyCorpusHint:
       'Chưa có tệp nào được đánh dấu — hãy đánh dấu tệp trước để AI có thể đọc chúng.',
     askCorpusCount: 'Cơ sở tri thức: {n} tệp đã đánh dấu',
+    askScopeLabel: 'Phạm vi hỏi',
+    askScopeAll: 'Tất cả',
+    askCorpusCountGroup: '{group}: {n} tệp đã đánh dấu',
+    askScopeGone:
+      'Nhóm này không còn tệp đã đánh dấu nào nên chưa có câu hỏi nào được gửi. Hãy chọn nhóm khác hoặc Tất cả.',
     askIntro: 'Hỏi về các tệp bạn đã đánh dấu. Câu trả lời dẫn nguồn — nhấp để mở.',
     askToolSearch: 'Đang tìm cơ sở tri thức',
     askToolRead: 'Đang đọc tệp',
@@ -1280,6 +1294,11 @@ export const strings = {
     askEmptyCorpusHint:
       'スター付きファイルがまだありません。先にファイルをスターすると、AI が読めます。',
     askCorpusCount: 'ナレッジベース:スター付き {n} 件',
+    askScopeLabel: '質問の範囲',
+    askScopeAll: 'すべて',
+    askCorpusCountGroup: '{group}：スター付き {n} 件',
+    askScopeGone:
+      'このグループにはスター付きファイルがもうないため、質問しませんでした。別のグループか「すべて」を選んでください。',
     askIntro: 'スター付きファイルについて質問できます。回答には出典が付き、クリックで開けます。',
     askToolSearch: 'ナレッジベースを検索中',
     askToolRead: 'ファイルを読み込み中',
@@ -1719,6 +1738,11 @@ export const strings = {
     askEmptyCorpusHint:
       '즐겨찾기한 파일이 아직 없습니다. 먼저 파일을 즐겨찾기하면 AI가 읽을 수 있습니다.',
     askCorpusCount: '지식 베이스: 즐겨찾기 {n}개',
+    askScopeLabel: '묻는 범위',
+    askScopeAll: '전체',
+    askCorpusCountGroup: '{group}: 즐겨찾기 {n}개',
+    askScopeGone:
+      '이 그룹에 즐겨찾기한 파일이 더 이상 없어 질문하지 않았습니다. 다른 그룹이나 전체를 고르세요.',
     askIntro: '즐겨찾기한 파일에 대해 질문하세요. 답변에는 출처가 표시되며 클릭하면 열립니다.',
     askToolSearch: '지식 베이스 검색 중',
     askToolRead: '파일 읽는 중',
@@ -2149,6 +2173,11 @@ export const strings = {
     askEmptyCorpusHint:
       'Aucun fichier favori pour l’instant — ajoutez-en d’abord pour que l’IA puisse les lire.',
     askCorpusCount: 'Base de connaissances : {n} fichiers favoris',
+    askScopeLabel: 'Interroger',
+    askScopeAll: 'Tous',
+    askCorpusCountGroup: '{group} : {n} fichiers favoris',
+    askScopeGone:
+      'Ce groupe n’a plus de fichiers favoris : la question n’a donc pas été posée. Choisissez un autre groupe ou Tous.',
     askIntro:
       'Posez des questions sur vos fichiers favoris. Les réponses citent leurs sources — cliquez pour ouvrir.',
     askToolSearch: 'Recherche dans la base',
@@ -2595,6 +2624,11 @@ export const strings = {
     askEmptyCorpusHint:
       'Noch keine Favoriten — markieren Sie zuerst Dateien, damit die KI sie lesen kann.',
     askCorpusCount: 'Wissensbasis: {n} favorisierte Dateien',
+    askScopeLabel: 'Fragen in',
+    askScopeAll: 'Alle',
+    askCorpusCountGroup: '{group}: {n} favorisierte Dateien',
+    askScopeGone:
+      'Diese Gruppe enthält keine favorisierten Dateien mehr, daher wurde nichts gefragt. Wählen Sie eine andere Gruppe oder „Alle“.',
     askIntro:
       'Fragen Sie zu Ihren Favoriten. Antworten nennen ihre Quellen — Klick öffnet die Datei.',
     askToolSearch: 'Wissensbasis durchsuchen',
@@ -3044,6 +3078,11 @@ export const strings = {
     askEmptyCorpusHint:
       'Aún no hay archivos favoritos: marca algunos primero para que la IA pueda leerlos.',
     askCorpusCount: 'Base de conocimientos: {n} archivos favoritos',
+    askScopeLabel: 'Preguntar en',
+    askScopeAll: 'Todos',
+    askCorpusCountGroup: '{group}: {n} archivos favoritos',
+    askScopeGone:
+      'Este grupo ya no tiene archivos favoritos, así que no se ha preguntado nada. Elige otro grupo o Todos.',
     askIntro:
       'Pregunta sobre tus archivos favoritos. Las respuestas citan la fuente; haz clic para abrirla.',
     askToolSearch: 'Buscando en la base',
@@ -3486,6 +3525,11 @@ export const strings = {
     askTitle: 'ถามคลังความรู้ของคุณ',
     askEmptyCorpusHint: 'ยังไม่มีไฟล์ที่ติดดาว — ติดดาวไฟล์ก่อนเพื่อให้ AI อ่านได้',
     askCorpusCount: 'คลังความรู้: {n} ไฟล์ที่ติดดาว',
+    askScopeLabel: 'ขอบเขตการถาม',
+    askScopeAll: 'ทั้งหมด',
+    askCorpusCountGroup: '{group}: {n} ไฟล์ที่ติดดาว',
+    askScopeGone:
+      'กลุ่มนี้ไม่มีไฟล์ที่ติดดาวแล้ว จึงยังไม่ได้ส่งคำถาม เลือกกลุ่มอื่นหรือ “ทั้งหมด”',
     askIntro: 'ถามเกี่ยวกับไฟล์ที่ติดดาวของคุณ คำตอบจะอ้างอิงแหล่งที่มา — คลิกเพื่อเปิด',
     askToolSearch: 'กำลังค้นคลังความรู้',
     askToolRead: 'กำลังอ่านไฟล์',
@@ -3914,6 +3958,11 @@ export const strings = {
     askEmptyCorpusHint:
       'Belum ada file berbintang — tandai beberapa file dahulu agar AI bisa membacanya.',
     askCorpusCount: 'Basis pengetahuan: {n} file berbintang',
+    askScopeLabel: 'Tanya di',
+    askScopeAll: 'Semua',
+    askCorpusCountGroup: '{group}: {n} file berbintang',
+    askScopeGone:
+      'Grup ini tidak lagi berisi file berbintang, jadi pertanyaan tidak dikirim. Pilih grup lain atau Semua.',
     askIntro:
       'Bertanyalah tentang file berbintang anda. Jawaban menyebut sumbernya — klik untuk membuka.',
     askToolSearch: 'Mencari basis pengetahuan',
@@ -4354,6 +4403,11 @@ export const strings = {
     askEmptyCorpusHint:
       'Пока нет избранных файлов — отметьте файлы звёздочкой, чтобы ИИ мог их читать.',
     askCorpusCount: 'База знаний: избранных файлов — {n}',
+    askScopeLabel: 'Где спрашивать',
+    askScopeAll: 'Все',
+    askCorpusCountGroup: '{group}: избранных файлов — {n}',
+    askScopeGone:
+      'В этой группе больше нет избранных файлов, поэтому вопрос не задан. Выберите другую группу или «Все».',
     askIntro:
       'Задавайте вопросы по избранным файлам. Ответы ссылаются на источники — нажмите, чтобы открыть.',
     askToolSearch: 'Поиск по базе',
@@ -4794,6 +4848,11 @@ export const strings = {
     askEmptyCorpusHint:
       'لا توجد ملفات مفضلة بعد — ضع نجمة على بعض الملفات أولاً ليتمكن الذكاء الاصطناعي من قراءتها.',
     askCorpusCount: 'قاعدة المعارف: {n} ملف مفضل',
+    askScopeLabel: 'نطاق السؤال',
+    askScopeAll: 'الكل',
+    askCorpusCountGroup: '{group}: {n} ملف مفضل',
+    askScopeGone:
+      'لم تعد هذه المجموعة تحتوي على ملفات مفضلة، لذلك لم يُرسل السؤال. اختر مجموعة أخرى أو «الكل».',
     askIntro: 'اسأل عن ملفاتك المفضلة. تذكر الإجابات مصادرها — انقر لفتحها.',
     askToolSearch: 'جارٍ البحث في القاعدة',
     askToolRead: 'جارٍ قراءة ملف',
@@ -5222,6 +5281,11 @@ export const strings = {
     askEmptyCorpusHint:
       'Ainda não há arquivos favoritos — marque alguns primeiro para a IA poder lê-los.',
     askCorpusCount: 'Base de conhecimento: {n} arquivos favoritos',
+    askScopeLabel: 'Perguntar em',
+    askScopeAll: 'Todos',
+    askCorpusCountGroup: '{group}: {n} arquivos favoritos',
+    askScopeGone:
+      'Este grupo não tem mais arquivos favoritos, então nada foi perguntado. Escolha outro grupo ou Todos.',
     askIntro:
       'Pergunte sobre seus arquivos favoritos. As respostas citam as fontes — clique para abrir.',
     askToolSearch: 'Pesquisando na base',
@@ -5657,6 +5721,11 @@ export const strings = {
     askEmptyCorpusHint:
       'Ancora nessun file preferito — contrassegnane prima alcuni perché l’IA possa leggerli.',
     askCorpusCount: 'Base di conoscenza: {n} file preferiti',
+    askScopeLabel: 'Chiedi in',
+    askScopeAll: 'Tutti',
+    askCorpusCountGroup: '{group}: {n} file preferiti',
+    askScopeGone:
+      'Questo gruppo non contiene più file preferiti, quindi la domanda non è stata inviata. Scegli un altro gruppo o Tutti.',
     askIntro:
       'Chiedi informazioni sui tuoi file preferiti. Le risposte citano la fonte — clicca per aprire.',
     askToolSearch: 'Ricerca nella base',
@@ -6091,6 +6160,11 @@ export const strings = {
     askEmptyCorpusHint:
       'Nie ma jeszcze ulubionych plików — najpierw oznacz je gwiazdką, aby AI mogło je czytać.',
     askCorpusCount: 'Baza wiedzy: {n} ulubionych plików',
+    askScopeLabel: 'Zakres pytania',
+    askScopeAll: 'Wszystkie',
+    askCorpusCountGroup: '{group}: {n} ulubionych plików',
+    askScopeGone:
+      'Ta grupa nie ma już ulubionych plików, więc pytanie nie zostało wysłane. Wybierz inną grupę lub Wszystkie.',
     askIntro: 'Zadawaj pytania o swoje pliki. Odpowiedzi podają źródła — kliknij, aby otworzyć.',
     askToolSearch: 'Wyszukiwanie w bazie',
     askToolRead: 'Czytanie pliku',
@@ -6521,6 +6595,11 @@ export const strings = {
     askEmptyCorpusHint:
       'Zatím nejsou žádné oblíbené soubory — nejprve je označte hvězdičkou, aby je AI mohla číst.',
     askCorpusCount: 'Znalostní databáze: {n} oblíbených souborů',
+    askScopeLabel: 'Rozsah dotazu',
+    askScopeAll: 'Vše',
+    askCorpusCountGroup: '{group}: {n} oblíbených souborů',
+    askScopeGone:
+      'Tato skupina už neobsahuje žádné oblíbené soubory, proto dotaz nebyl odeslán. Vyberte jinou skupinu nebo Vše.',
     askIntro: 'Ptejte se na své oblíbené soubory. Odpovědi uvádějí zdroje — kliknutím otevřete.',
     askToolSearch: 'Prohledávání databáze',
     askToolRead: 'Čtení souboru',
@@ -6946,6 +7025,11 @@ export const strings = {
     askTitle: 'Vraag je kennisbank',
     askEmptyCorpusHint: 'Nog geen favorieten — markeer eerst bestanden zodat de AI ze kan lezen.',
     askCorpusCount: 'Kennisbank: {n} favoriete bestanden',
+    askScopeLabel: 'Vragen in',
+    askScopeAll: 'Alle',
+    askCorpusCountGroup: '{group}: {n} favoriete bestanden',
+    askScopeGone:
+      'Deze groep heeft geen favoriete bestanden meer, dus er is niets gevraagd. Kies een andere groep of Alle.',
     askIntro: 'Vraag naar je favoriete bestanden. Antwoorden noemen hun bron — klik om te openen.',
     askToolSearch: 'Kennisbank doorzoeken',
     askToolRead: 'Bestand lezen',
@@ -7376,6 +7460,11 @@ export const strings = {
     askEmptyCorpusHint:
       'Tiada fail kegemaran lagi — tanda beberapa fail dahulu supaya AI boleh membacanya.',
     askCorpusCount: 'Pangkalan pengetahuan: {n} fail kegemaran',
+    askScopeLabel: 'Tanya dalam',
+    askScopeAll: 'Semua',
+    askCorpusCountGroup: '{group}: {n} fail kegemaran',
+    askScopeGone:
+      'Kumpulan ini tidak lagi mempunyai fail kegemaran, jadi soalan tidak dihantar. Pilih kumpulan lain atau Semua.',
     askIntro: 'Tanya tentang fail kegemaran anda. Jawapan memetik sumbernya — klik untuk membuka.',
     askToolSearch: 'Mencari pangkalan pengetahuan',
     askToolRead: 'Membaca fail',
@@ -7809,6 +7898,11 @@ export const strings = {
     askEmptyCorpusHint:
       'אין עדיין קבצים מסומנים — סמן קבצים בכוכבית תחילה כדי שה-AI יוכל לקרוא אותם.',
     askCorpusCount: 'בסיס ידע: {n} קבצים מסומנים',
+    askScopeLabel: 'היקף השאלה',
+    askScopeAll: 'הכול',
+    askCorpusCountGroup: '{group}: {n} קבצים מסומנים',
+    askScopeGone:
+      'בקבוצה הזו כבר אין קבצים מסומנים, ולכן השאלה לא נשלחה. בחרו קבוצה אחרת או ״הכול״.',
     askIntro: 'שאל על הקבצים המסומנים שלך. תשובות מציינות את המקור — לחיצה פותחת אותו.',
     askToolSearch: 'מחפש בבסיס הידע',
     askToolRead: 'קורא קובץ',
@@ -8225,6 +8319,11 @@ export const strings = {
     askEmptyCorpusHint:
       'अभी कोई स्टार की गई फ़ाइल नहीं है — पहले फ़ाइलों को स्टार करें ताकि AI उन्हें पढ़ सके।',
     askCorpusCount: 'नॉलेज बेस: {n} स्टार की गई फ़ाइलें',
+    askScopeLabel: 'कहाँ पूछें',
+    askScopeAll: 'सभी',
+    askCorpusCountGroup: '{group}: {n} स्टार की गई फ़ाइलें',
+    askScopeGone:
+      'इस समूह में अब कोई स्टार की गई फ़ाइल नहीं है, इसलिए प्रश्न नहीं भेजा गया। कोई दूसरा समूह या सभी चुनें।',
     askIntro:
       'अपनी स्टार की गई फ़ाइलों के बारे में पूछें। उत्तर स्रोत बताते हैं — खोलने के लिए क्लिक करें।',
     askToolSearch: 'नॉलेज बेस खोज रहा है',
@@ -8652,6 +8751,10 @@ export const strings = {
     askTitle: '問知識庫',
     askEmptyCorpusHint: '還沒有收藏檔案——先在最近或資料夾裡點星收藏,AI 就能讀取它們。',
     askCorpusCount: '知識庫:{n} 個收藏檔案',
+    askScopeLabel: '提問範圍',
+    askScopeAll: '全部',
+    askCorpusCountGroup: '{group}：{n} 個收藏檔案',
+    askScopeGone: '這個群組已經沒有收藏檔案，所以沒有提問。請選擇其他群組或「全部」。',
     askIntro: '根據你收藏的檔案提問,回答會標註來源檔案,點擊即可開啟。',
     askToolSearch: '搜尋知識庫',
     askToolRead: '讀取檔案',

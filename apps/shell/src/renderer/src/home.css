@@ -1992,6 +1992,22 @@ html[dir='rtl'] .quick-title-row {
   font-size: 12px;
   color: var(--text-tertiary);
 }
+/* the ask's "All / <group>" choice: the Starred view's group pills, compact, at the bar's end */
+.kb-ask-headbar .kb-ask-scope {
+  height: 32px;
+  margin-left: auto;
+  align-self: center;
+  max-width: 60%;
+  overflow-x: auto;
+}
+.kb-ask-scope .filter-pill {
+  padding: 5px 12px;
+  font-size: 13px;
+}
+.kb-ask-scope .filter-pill:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
 
 .kb-ask-thread {
   flex: 1;
