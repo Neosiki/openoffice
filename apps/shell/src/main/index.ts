@@ -78,6 +78,7 @@ import { controlHandler } from './control-handlers'
 import { installCliLinkBestEffort } from './cli-link'
 import { createDefaultAppService, execFileRunner } from './default-app'
 import { registerIntegrationsIpc } from './integrations-ipc'
+import { registerResultStoreIpc } from './result-store-ipc'
 import { handleDroppedFiles } from './dropped-files'
 import { collectLaunchPaths } from './launch-paths'
 
@@ -5450,6 +5451,7 @@ registerIntegrationsIpc({
     ? join(process.resourcesPath, 'cli', 'package.json')
     : join(APPS_ROOT, '..', 'packages', 'cli', 'package.json'),
 })
+registerResultStoreIpc(ipcMain, () => app.getPath('userData'))
 registerTabsIpc()
 registerDroppedFilesIpc()
 

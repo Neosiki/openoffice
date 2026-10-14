@@ -162,6 +162,11 @@ export const strings = {
     saveLocation: '默认保存位置',
     setAutoSave: '所有文档自动保存',
     setAutoSaveDesc: '在每个编辑器中默认开启自动保存，仍可在单个窗口中关闭。',
+    setResultStore: '已保存的 PDF AI 结果',
+    setResultStoreDesc: 'AI 读取的页面和译文会保存在本机，直到你删除。已占用：{size}',
+    setResultStoreDeleteAll: '全部删除',
+    setResultStoreConfirm: '要删除所有已保存的 AI 读取结果和译文吗？重新生成需要再次使用 AI。',
+    setResultStoreDeleteFailed: '无法删除，请重试。',
     setSearchRerank: 'Jev 搜索重排',
     setSearchRerankDesc:
       '把本机搜索的前 20 条命中片段发给 TypeSafe 的 Jev 模型，按相关性重新排序。默认关闭；开启后命中片段会离开本机。',
@@ -573,6 +578,13 @@ export const strings = {
     setAutoSave: 'Auto-save all documents',
     setAutoSaveDesc:
       'Turn on AutoSave by default in every editor. You can still switch it off for a single window.',
+    setResultStore: 'Saved PDF AI results',
+    setResultStoreDesc:
+      'Pages read by AI and translations stay on this PC until you delete them. In use: {size}',
+    setResultStoreDeleteAll: 'Delete all',
+    setResultStoreConfirm:
+      'Delete all saved AI readings and translations? Getting them back means using AI again.',
+    setResultStoreDeleteFailed: 'Could not delete them. Try again.',
     setSearchRerank: 'Jev search reranking',
     setSearchRerankDesc:
       "Sends the top 20 local hits' excerpts to TypeSafe's Jev model and reorders them by relevance. Off by default; when on, excerpts leave this device.",
@@ -997,6 +1009,13 @@ export const strings = {
     setAutoSave: 'Tự động lưu tất cả tài liệu',
     setAutoSaveDesc:
       'Bật Tự động lưu theo mặc định trong mọi trình soạn thảo. Bạn vẫn có thể tắt tính năng này cho từng cửa sổ riêng lẻ.',
+    setResultStore: 'Kết quả AI của PDF đã lưu',
+    setResultStoreDesc:
+      'Các trang do AI đọc và bản dịch được lưu trên máy tính này cho đến khi bạn xóa. Đang dùng: {size}',
+    setResultStoreDeleteAll: 'Xóa tất cả',
+    setResultStoreConfirm:
+      'Xóa tất cả kết quả đọc bằng AI và bản dịch đã lưu? Muốn có lại sẽ phải dùng AI lần nữa.',
+    setResultStoreDeleteFailed: 'Không xóa được. Hãy thử lại.',
     setSearchRerank: 'Sắp xếp lại kết quả tìm kiếm Jev',
     setSearchRerankDesc:
       'Gửi đoạn trích của 20 kết quả hàng đầu cục bộ tới mô hình Jev của TypeSafe và sắp xếp lại theo mức độ liên quan. Tắt theo mặc định; khi bật, các đoạn trích sẽ được gửi ra ngoài thiết bị này.',
@@ -1430,6 +1449,13 @@ export const strings = {
     setAutoSave: 'すべてのドキュメントを自動保存',
     setAutoSaveDesc:
       'すべてのエディターで自動保存をデフォルトでオンにします。個々のウィンドウでオフにすることもできます。',
+    setResultStore: '保存済みの PDF AI 結果',
+    setResultStoreDesc:
+      'AI で読み取ったページと翻訳は、削除するまでこの PC に保存されます。使用量：{size}',
+    setResultStoreDeleteAll: 'すべて削除',
+    setResultStoreConfirm:
+      '保存済みの AI 読み取り結果と翻訳をすべて削除しますか？作り直すには AI をもう一度使います。',
+    setResultStoreDeleteFailed: '削除できませんでした。もう一度お試しください。',
     setSearchRerank: 'Jev 検索リランク',
     setSearchRerankDesc:
       'ローカル検索の上位 20 件の抜粋を TypeSafe の Jev モデルに送り、関連度で並べ替えます。既定ではオフ。オンにすると抜粋が端末外に送信されます。',
@@ -1865,6 +1891,13 @@ export const strings = {
     saveLocation: '저장 위치',
     setAutoSave: '모든 문서 자동 저장',
     setAutoSaveDesc: '모든 편집기에서 자동 저장을 기본으로 켭니다. 개별 창에서는 끌 수 있습니다.',
+    setResultStore: 'PDF AI 결과 보관소',
+    setResultStoreDesc:
+      'AI로 읽은 페이지와 번역본은 지울 때까지 이 PC에 보관됩니다. 사용 중: {size}',
+    setResultStoreDeleteAll: '모두 지우기',
+    setResultStoreConfirm:
+      '보관된 AI 읽기 결과와 번역본을 모두 지울까요? 다시 만들려면 AI를 다시 써야 합니다.',
+    setResultStoreDeleteFailed: '지우지 못했습니다. 다시 시도해 주세요.',
     setSearchRerank: 'Jev 검색 재정렬',
     setSearchRerankDesc:
       '로컬 검색 상위 20개 결과의 발췌문을 TypeSafe의 Jev 모델로 보내 관련도 순으로 재정렬합니다. 기본은 꺼짐이며, 켜면 발췌문이 기기 밖으로 전송됩니다.',
@@ -2298,6 +2331,13 @@ export const strings = {
     setAutoSave: 'Enregistrer automatiquement tous les documents',
     setAutoSaveDesc:
       "Active l'enregistrement automatique par défaut dans chaque éditeur. Vous pouvez toujours le désactiver pour une fenêtre.",
+    setResultStore: 'Résultats IA des PDF enregistrés',
+    setResultStoreDesc:
+      "Les pages lues par l'IA et les traductions restent sur ce PC jusqu'à ce que vous les supprimiez. Espace utilisé : {size}",
+    setResultStoreDeleteAll: 'Tout supprimer',
+    setResultStoreConfirm:
+      "Supprimer toutes les lectures IA et traductions enregistrées ? Pour les retrouver, il faudra refaire appel à l'IA.",
+    setResultStoreDeleteFailed: 'Impossible de les supprimer. Réessayez.',
     setSearchRerank: 'Reclassement Jev',
     setSearchRerankDesc:
       'Envoie les extraits des 20 premiers résultats locaux au modèle Jev de TypeSafe et les réordonne par pertinence. Désactivé par défaut ; une fois activé, les extraits quittent cet appareil.',
@@ -2745,6 +2785,13 @@ export const strings = {
     setAutoSave: 'Alle Dokumente automatisch speichern',
     setAutoSaveDesc:
       'Aktiviert AutoSave standardmäßig in jedem Editor. Für ein einzelnes Fenster kann es weiterhin ausgeschaltet werden.',
+    setResultStore: 'Gespeicherte KI-Ergebnisse für PDFs',
+    setResultStoreDesc:
+      'Von der KI gelesene Seiten und Übersetzungen bleiben auf diesem PC, bis Sie sie löschen. Belegt: {size}',
+    setResultStoreDeleteAll: 'Alle löschen',
+    setResultStoreConfirm:
+      'Alle gespeicherten KI-Lesungen und Übersetzungen löschen? Um sie zurückzubekommen, muss die KI erneut genutzt werden.',
+    setResultStoreDeleteFailed: 'Löschen fehlgeschlagen. Bitte erneut versuchen.',
     setSearchRerank: 'Jev-Neusortierung',
     setSearchRerankDesc:
       'Sendet die Auszüge der 20 besten lokalen Treffer an das Jev-Modell von TypeSafe und sortiert sie nach Relevanz. Standardmäßig aus; wenn aktiv, verlassen Auszüge dieses Gerät.',
@@ -3190,6 +3237,13 @@ export const strings = {
     setAutoSave: 'Guardar automáticamente todos los documentos',
     setAutoSaveDesc:
       'Activa el autoguardado de forma predeterminada en todos los editores. Aún puedes desactivarlo en una ventana concreta.',
+    setResultStore: 'Resultados de IA de PDF guardados',
+    setResultStoreDesc:
+      'Las páginas leídas por la IA y las traducciones se guardan en este PC hasta que las elimines. En uso: {size}',
+    setResultStoreDeleteAll: 'Eliminar todo',
+    setResultStoreConfirm:
+      '¿Eliminar todas las lecturas de IA y traducciones guardadas? Para recuperarlas habrá que volver a usar la IA.',
+    setResultStoreDeleteFailed: 'No se pudieron eliminar. Inténtalo de nuevo.',
     setSearchRerank: 'Reordenación con Jev',
     setSearchRerankDesc:
       'Envía los extractos de los 20 mejores resultados locales al modelo Jev de TypeSafe y los reordena por relevancia. Desactivado por defecto; al activarlo, los extractos salen de este dispositivo.',
@@ -3624,6 +3678,13 @@ export const strings = {
     saveLocation: 'ตำแหน่งบันทึก',
     setAutoSave: 'บันทึกอัตโนมัติทุกเอกสาร',
     setAutoSaveDesc: 'เปิดบันทึกอัตโนมัติเป็นค่าเริ่มต้นในทุกตัวแก้ไข คุณยังปิดได้ในแต่ละหน้าต่าง',
+    setResultStore: 'ผลลัพธ์ AI ของ PDF ที่บันทึกไว้',
+    setResultStoreDesc:
+      'หน้าที่ AI อ่านและคำแปลจะเก็บไว้ในพีซีเครื่องนี้จนกว่าคุณจะลบ ใช้พื้นที่: {size}',
+    setResultStoreDeleteAll: 'ลบทั้งหมด',
+    setResultStoreConfirm:
+      'ลบผลการอ่านด้วย AI และคำแปลที่บันทึกไว้ทั้งหมดหรือไม่ หากต้องการอีกครั้งจะต้องใช้ AI ใหม่',
+    setResultStoreDeleteFailed: 'ลบไม่สำเร็จ โปรดลองอีกครั้ง',
     setSearchRerank: 'จัดอันดับใหม่ด้วย Jev',
     setSearchRerankDesc:
       'ส่งข้อความตัดตอนของผลลัพธ์ 20 อันดับแรกไปยังโมเดล Jev ของ TypeSafe เพื่อจัดอันดับใหม่ตามความเกี่ยวข้อง ปิดเป็นค่าเริ่มต้น เมื่อเปิด ข้อความตัดตอนจะถูกส่งออกจากอุปกรณ์นี้',
@@ -4055,6 +4116,13 @@ export const strings = {
     setAutoSave: 'Simpan otomatis semua dokumen',
     setAutoSaveDesc:
       'Aktifkan Simpan Otomatis secara default di setiap editor. Anda masih dapat menonaktifkannya untuk satu jendela.',
+    setResultStore: 'Hasil AI PDF tersimpan',
+    setResultStoreDesc:
+      'Halaman yang dibaca AI dan terjemahan disimpan di PC ini sampai Anda menghapusnya. Terpakai: {size}',
+    setResultStoreDeleteAll: 'Hapus semua',
+    setResultStoreConfirm:
+      'Hapus semua hasil baca AI dan terjemahan yang tersimpan? Untuk mendapatkannya lagi, AI harus digunakan lagi.',
+    setResultStoreDeleteFailed: 'Tidak dapat menghapus. Coba lagi.',
     setSearchRerank: 'Peringkat ulang Jev',
     setSearchRerankDesc:
       'Mengirim kutipan 20 hasil lokal teratas ke model Jev dari TypeSafe dan mengurutkannya ulang berdasarkan relevansi. Nonaktif secara bawaan; saat aktif, kutipan keluar dari perangkat ini.',
@@ -4491,6 +4559,13 @@ export const strings = {
     setAutoSave: 'Автосохранение всех документов',
     setAutoSaveDesc:
       'Включает автосохранение по умолчанию во всех редакторах. Его по-прежнему можно выключить для отдельного окна.',
+    setResultStore: 'Сохранённые результаты ИИ для PDF',
+    setResultStoreDesc:
+      'Страницы, прочитанные ИИ, и переводы хранятся на этом компьютере, пока вы их не удалите. Занято: {size}',
+    setResultStoreDeleteAll: 'Удалить всё',
+    setResultStoreConfirm:
+      'Удалить все сохранённые результаты чтения ИИ и переводы? Чтобы получить их снова, придётся снова обратиться к ИИ.',
+    setResultStoreDeleteFailed: 'Не удалось удалить. Повторите попытку.',
     setSearchRerank: 'Переранжирование Jev',
     setSearchRerankDesc:
       'Отправляет фрагменты 20 лучших локальных результатов модели Jev от TypeSafe и переупорядочивает их по релевантности. По умолчанию выключено; при включении фрагменты покидают это устройство.',
@@ -4927,6 +5002,13 @@ export const strings = {
     setAutoSave: 'حفظ جميع المستندات تلقائيًا',
     setAutoSaveDesc:
       'تشغيل الحفظ التلقائي افتراضيًا في كل محرر. لا يزال بإمكانك إيقافه لنافذة واحدة.',
+    setResultStore: 'نتائج الذكاء الاصطناعي المحفوظة لملفات PDF',
+    setResultStoreDesc:
+      'تبقى الصفحات التي قرأها الذكاء الاصطناعي والترجمات على هذا الكمبيوتر حتى تحذفها. المساحة المستخدمة: {size}',
+    setResultStoreDeleteAll: 'حذف الكل',
+    setResultStoreConfirm:
+      'هل تريد حذف كل نتائج قراءة الذكاء الاصطناعي والترجمات المحفوظة؟ للحصول عليها مجددًا يجب استخدام الذكاء الاصطناعي مرة أخرى.',
+    setResultStoreDeleteFailed: 'تعذّر الحذف. حاول مرة أخرى.',
     setSearchRerank: 'إعادة ترتيب Jev',
     setSearchRerankDesc:
       'يرسل مقتطفات أفضل 20 نتيجة محلية إلى نموذج Jev من TypeSafe ويعيد ترتيبها حسب الصلة. معطّل افتراضيًا؛ عند التفعيل تخرج المقتطفات من هذا الجهاز.',
@@ -5352,6 +5434,13 @@ export const strings = {
     setAutoSave: 'Salvar automaticamente todos os documentos',
     setAutoSaveDesc:
       'Ativa o salvamento automático por padrão em todos os editores. Você ainda pode desativá-lo em uma janela específica.',
+    setResultStore: 'Resultados de IA de PDF salvos',
+    setResultStoreDesc:
+      'Páginas lidas pela IA e traduções ficam neste PC até você excluí-las. Em uso: {size}',
+    setResultStoreDeleteAll: 'Excluir tudo',
+    setResultStoreConfirm:
+      'Excluir todas as leituras de IA e traduções salvas? Para obtê-las de novo, será preciso usar a IA outra vez.',
+    setResultStoreDeleteFailed: 'Não foi possível excluir. Tente novamente.',
     setSearchRerank: 'Reordenação com Jev',
     setSearchRerankDesc:
       'Envia os trechos dos 20 melhores resultados locais ao modelo Jev da TypeSafe e os reordena por relevância. Desativado por padrão; quando ativo, os trechos saem deste dispositivo.',
@@ -5784,6 +5873,13 @@ export const strings = {
     setAutoSave: 'Salva automaticamente tutti i documenti',
     setAutoSaveDesc:
       'Attiva il salvataggio automatico per impostazione predefinita in ogni editor. Puoi comunque disattivarlo per una singola finestra.',
+    setResultStore: 'Risultati IA dei PDF salvati',
+    setResultStoreDesc:
+      "Le pagine lette dall'IA e le traduzioni restano su questo PC finché non le elimini. Spazio usato: {size}",
+    setResultStoreDeleteAll: 'Elimina tutto',
+    setResultStoreConfirm:
+      "Eliminare tutte le letture IA e le traduzioni salvate? Per riaverle bisognerà usare di nuovo l'IA.",
+    setResultStoreDeleteFailed: 'Impossibile eliminarli. Riprova.',
     setSearchRerank: 'Riordino con Jev',
     setSearchRerankDesc:
       'Invia gli estratti dei 20 migliori risultati locali al modello Jev di TypeSafe e li riordina per pertinenza. Disattivato per impostazione predefinita; se attivo, gli estratti lasciano questo dispositivo.',
@@ -6214,6 +6310,13 @@ export const strings = {
     setAutoSave: 'Automatycznie zapisuj wszystkie dokumenty',
     setAutoSaveDesc:
       'Włącza autozapis domyślnie w każdym edytorze. Nadal możesz go wyłączyć dla pojedynczego okna.',
+    setResultStore: 'Zapisane wyniki AI dla PDF',
+    setResultStoreDesc:
+      'Strony odczytane przez AI i tłumaczenia pozostają na tym komputerze, dopóki ich nie usuniesz. Zajęte: {size}',
+    setResultStoreDeleteAll: 'Usuń wszystko',
+    setResultStoreConfirm:
+      'Usunąć wszystkie zapisane odczyty AI i tłumaczenia? Aby uzyskać je ponownie, trzeba będzie znów użyć AI.',
+    setResultStoreDeleteFailed: 'Nie udało się usunąć. Spróbuj ponownie.',
     setSearchRerank: 'Ponowne sortowanie Jev',
     setSearchRerankDesc:
       'Wysyła fragmenty 20 najlepszych lokalnych wyników do modelu Jev firmy TypeSafe i sortuje je według trafności. Domyślnie wyłączone; po włączeniu fragmenty opuszczają to urządzenie.',
@@ -6868,6 +6971,13 @@ export const strings = {
     setAutoSave: 'Automaticky ukládat všechny dokumenty',
     setAutoSaveDesc:
       'Zapne automatické ukládání ve všech editorech jako výchozí. Pro jednotlivé okno ho lze stále vypnout.',
+    setResultStore: 'Uložené výsledky AI pro PDF',
+    setResultStoreDesc:
+      'Stránky přečtené AI a překlady zůstávají v tomto počítači, dokud je nesmažete. Využito: {size}',
+    setResultStoreDeleteAll: 'Smazat vše',
+    setResultStoreConfirm:
+      'Smazat všechna uložená čtení AI a překlady? Pro jejich opětovné získání bude nutné znovu použít AI.',
+    setResultStoreDeleteFailed: 'Smazání se nezdařilo. Zkuste to znovu.',
     setSearchRerank: 'Přeřazení Jev',
     setSearchRerankDesc:
       'Odešle výňatky 20 nejlepších místních výsledků modelu Jev od TypeSafe a seřadí je podle relevance. Ve výchozím stavu vypnuto; po zapnutí výňatky opouštějí toto zařízení.',
@@ -7065,6 +7175,13 @@ export const strings = {
     setAutoSave: 'Alle documenten automatisch opslaan',
     setAutoSaveDesc:
       'Zet automatisch opslaan standaard aan in elke editor. Je kunt het nog steeds uitschakelen voor één venster.',
+    setResultStore: "Opgeslagen AI-resultaten van pdf's",
+    setResultStoreDesc:
+      "Door AI gelezen pagina's en vertalingen blijven op deze pc staan tot je ze verwijdert. In gebruik: {size}",
+    setResultStoreDeleteAll: 'Alles verwijderen',
+    setResultStoreConfirm:
+      'Alle opgeslagen AI-leesresultaten en vertalingen verwijderen? Om ze terug te krijgen, moet je AI opnieuw gebruiken.',
+    setResultStoreDeleteFailed: 'Verwijderen is mislukt. Probeer het opnieuw.',
     setSearchRerank: 'Jev-herordening',
     setSearchRerankDesc:
       'Stuurt de fragmenten van de 20 beste lokale resultaten naar het Jev-model van TypeSafe en sorteert ze op relevantie. Standaard uit; indien aan verlaten fragmenten dit apparaat.',
@@ -7493,6 +7610,13 @@ export const strings = {
     setAutoSave: 'Simpan automatik semua dokumen',
     setAutoSaveDesc:
       'Hidupkan Simpan Automatik secara lalai dalam setiap editor. Anda masih boleh mematikannya untuk satu tetingkap.',
+    setResultStore: 'Hasil AI PDF yang disimpan',
+    setResultStoreDesc:
+      'Halaman yang dibaca AI dan terjemahan disimpan dalam PC ini sehingga anda memadamkannya. Digunakan: {size}',
+    setResultStoreDeleteAll: 'Padam semua',
+    setResultStoreConfirm:
+      'Padam semua hasil bacaan AI dan terjemahan yang disimpan? Untuk mendapatkannya semula, AI perlu digunakan sekali lagi.',
+    setResultStoreDeleteFailed: 'Tidak dapat memadam. Cuba lagi.',
     setSearchRerank: 'Susunan semula Jev',
     setSearchRerankDesc:
       'Menghantar petikan 20 hasil tempatan teratas ke model Jev TypeSafe dan menyusunnya semula mengikut kaitan. Dimatikan secara lalai; apabila dihidupkan, petikan keluar dari peranti ini.',
@@ -7921,6 +8045,12 @@ export const strings = {
     saveLocation: 'מיקום שמירה',
     setAutoSave: 'שמירה אוטומטית של כל המסמכים',
     setAutoSaveDesc: 'מפעיל שמירה אוטומטית כברירת מחדל בכל עורך. עדיין אפשר לכבות אותה בחלון בודד.',
+    setResultStore: 'תוצאות AI שמורות של PDF',
+    setResultStoreDesc: 'דפים שה-AI קרא ותרגומים נשמרים במחשב הזה עד שתמחק אותם. בשימוש: {size}',
+    setResultStoreDeleteAll: 'מחק הכול',
+    setResultStoreConfirm:
+      'למחוק את כל תוצאות הקריאה של ה-AI והתרגומים השמורים? כדי לקבל אותם שוב יהיה צורך להשתמש שוב ב-AI.',
+    setResultStoreDeleteFailed: 'המחיקה נכשלה. נסה שוב.',
     setSearchRerank: 'סידור מחדש עם Jev',
     setSearchRerankDesc:
       'שולח את הקטעים של 20 התוצאות המקומיות המובילות למודל Jev של TypeSafe ומסדר אותן מחדש לפי רלוונטיות. כבוי כברירת מחדל; כשמופעל, הקטעים יוצאים מהמכשיר הזה.',
@@ -8339,6 +8469,13 @@ export const strings = {
     setAutoSave: 'सभी दस्तावेज़ स्वतः सहेजें',
     setAutoSaveDesc:
       'हर संपादक में स्वतः सहेजना डिफ़ॉल्ट रूप से चालू करता है। आप इसे किसी एक विंडो के लिए अब भी बंद कर सकते हैं।',
+    setResultStore: 'सहेजे गए PDF AI परिणाम',
+    setResultStoreDesc:
+      'AI द्वारा पढ़े गए पेज और अनुवाद इस PC पर तब तक रहते हैं जब तक आप उन्हें हटा नहीं देते। उपयोग में: {size}',
+    setResultStoreDeleteAll: 'सभी हटाएँ',
+    setResultStoreConfirm:
+      'सहेजे गए सभी AI पठन परिणाम और अनुवाद हटाएँ? उन्हें फिर से पाने के लिए AI का दोबारा उपयोग करना होगा।',
+    setResultStoreDeleteFailed: 'हटाया नहीं जा सका। फिर से कोशिश करें।',
     setSearchRerank: 'Jev खोज पुनर्क्रमण',
     setSearchRerankDesc:
       'स्थानीय खोज के शीर्ष 20 परिणामों के अंश TypeSafe के Jev मॉडल को भेजता है और उन्हें प्रासंगिकता के अनुसार पुनः क्रमित करता है। डिफ़ॉल्ट रूप से बंद; चालू होने पर अंश इस डिवाइस से बाहर जाते हैं।',
@@ -8759,6 +8896,11 @@ export const strings = {
     saveLocation: '預設儲存位置',
     setAutoSave: '所有文件自動儲存',
     setAutoSaveDesc: '在每個編輯器中預設開啟自動儲存，仍可在單一視窗中關閉。',
+    setResultStore: '已儲存的 PDF AI 結果',
+    setResultStoreDesc: 'AI 讀取的頁面和譯文會保存在這台電腦上，直到你刪除。已使用：{size}',
+    setResultStoreDeleteAll: '全部刪除',
+    setResultStoreConfirm: '要刪除所有已儲存的 AI 讀取結果和譯文嗎？重新產生需要再次使用 AI。',
+    setResultStoreDeleteFailed: '無法刪除，請再試一次。',
     setSearchRerank: 'Jev 搜尋重排',
     setSearchRerankDesc:
       '將本機搜尋前 20 筆命中片段傳給 TypeSafe 的 Jev 模型，依相關性重新排序。預設關閉；開啟後命中片段會離開本機。',
