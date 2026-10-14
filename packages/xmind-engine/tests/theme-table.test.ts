@@ -27,13 +27,29 @@ import {
   type ThemeProperties,
   type XmindSheet,
 } from '../src/index'
+import { contrastRatio } from '../src/theme-color'
 import { buildMapFile, CONTENT, openOk, sampleSheets, text, unzip } from './helpers'
+
+/** WCAG AA for running text. */
+const READABLE = 4.5
+/**
+ * A block's main topics are filled with their own branch colour, and the file
+ * can give that level one text colour only. On the light grounds no single
+ * colour reaches 4.5:1 on all four accents (they differ in lightness by design),
+ * so the floor there is WCAG's level for large bold text, which these are.
+ */
+const MIN_CONTRAST_ON_BRANCH_FILL = 3
+
+function filledFromBranch(id: ThemeId, level: string): boolean {
+  return id.startsWith('block/') && !id.endsWith('/dark') && level === 'mainTopic'
+}
 
 const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/
 const LEVELS = ['map', 'centralTopic', 'mainTopic', 'subTopic']
 const TOPIC_PROPERTIES = [
   'fo:font-size',
   'fo:font-weight',
+  'fo:color',
   'svg:fill',
   'fill-pattern',
   'line-width',
@@ -51,7 +67,7 @@ const TOPIC_PROPERTIES = [
  *  - if they did, first copy the old table of every affected theme into
  *    `SHIPPED_THEME_TABLES` (src/theme-table.ts), then put the new digest here.
  */
-const WRITTEN_TABLES_DIGEST = '9f32d33df60486e8065709ad3801e93f5fbf2c6be4efc55f04d863a7f6f515b4'
+const WRITTEN_TABLES_DIGEST = '2418608d216f51cdf5cf45cd9f42eb184fc39832036a064b75d08d12b3ebf307'
 
 /** A theme from some other program: hand-written, every value invented here. */
 function foreignTheme(): Record<string, unknown> {
@@ -179,10 +195,48 @@ describe('writing a theme', () => {
       for (const color of ['svg:fill', 'line-color', 'border-line-color']) {
         expect(level[color]).toMatch(/^(?:#[0-9a-f]{6}|inherited)$/)
       }
+      // The text colour is always spelled out: left out, a program falls back
+      // to fixed colours of its own that need not read on these fills.
+      expect(level['fo:color']).toMatch(/^#[0-9a-f]{6}$/)
     }
-    // No font name, no text colour, no pointer at the app's own colours, and
-    // no theme name of any program: only the four levels above.
-    expect(JSON.stringify(table)).not.toMatch(/font-family|fontFamily|fo:color|var\(|ThemeId/)
+    // No font name, no pointer at the app's own colours, and no theme name of
+    // any program: only the four levels above.
+    expect(JSON.stringify(table)).not.toMatch(/font-family|fontFamily|var\(|ThemeId/)
+  })
+
+  it.each(THEME_IDS)('%s writes text that reads on what the file puts under it', (id) => {
+    const table = writtenThemeProperties(id)
+    const ground = table.map!['svg:fill']!
+    const branches = table.map!['multi-line-colors']!.split(' ')
+    for (const name of LEVELS.slice(1)) {
+      const level = table[name]!
+      const text = level['fo:color']!
+      // No fill: the text is on the map. A fill taken from the branch: on any
+      // of the branch colours. Otherwise on the fill as written.
+      const surfaces =
+        level['fill-pattern'] === 'none'
+          ? [ground]
+          : level['svg:fill'] === 'inherited'
+            ? branches
+            : [level['svg:fill']!]
+      for (const surface of surfaces) {
+        const wanted = filledFromBranch(id, name) ? MIN_CONTRAST_ON_BRANCH_FILL : READABLE
+        expect(
+          contrastRatio(text, surface),
+          `${name}: ${text} on ${surface}`,
+        ).toBeGreaterThanOrEqual(wanted)
+      }
+    }
+  })
+
+  it('writes the text colours of the dark harbor blocks that read in the other program', () => {
+    const table = writtenThemeProperties('block/harbor/dark')
+    expect(table.centralTopic!['svg:fill']).toBe('#f2f7fa')
+    expect(contrastRatio(table.centralTopic!['fo:color']!, '#f2f7fa')).toBeGreaterThanOrEqual(
+      READABLE,
+    )
+    expect(table.subTopic!['svg:fill']).toBe('#243749')
+    expect(contrastRatio(table.subTopic!['fo:color']!, '#243749')).toBeGreaterThanOrEqual(READABLE)
   })
 
   it('carries the three levels over as whole numbers that still shrink', () => {
