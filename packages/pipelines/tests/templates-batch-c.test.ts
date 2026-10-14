@@ -19,10 +19,10 @@ import { emeraldEditorial } from '../src/slides/templates/emerald-editorial'
 import { vellum } from '../src/slides/templates/vellum'
 
 /** Each template with its fixed id, name and scheme from the template list. */
-const BATCH: [SlideTemplate, string, string, SlideTemplateScheme][] = [
-  [editorialTriTone, 'editorial-tri-tone', 'Editorial Tri-Tone', 'mixed'],
-  [emeraldEditorial, 'emerald-editorial', 'Emerald Editorial', 'mixed'],
-  [vellum, 'vellum', 'Vellum', 'dark'],
+const BATCH: [string, SlideTemplate, string, SlideTemplateScheme][] = [
+  ['editorial-tri-tone', editorialTriTone, 'Editorial Tri-Tone', 'mixed'],
+  ['emerald-editorial', emeraldEditorial, 'Emerald Editorial', 'mixed'],
+  ['vellum', vellum, 'Vellum', 'dark'],
 ]
 
 const PAGE_TYPES = ['cover', 'content', 'data', 'closing'] as const
@@ -50,7 +50,7 @@ function runs(spec: PageSpec) {
   )
 }
 
-describe.each(BATCH)('%#: %s', (template, id, name, scheme) => {
+describe.each(BATCH)('%s', (id, template, name, scheme) => {
   // Building and auditing both covers takes a second or two; give it room on a busy machine.
   it('passes the template validator with no problems', { timeout: 30_000 }, async () => {
     expect(await validateSlideTemplate(template)).toEqual([])
@@ -60,7 +60,6 @@ describe.each(BATCH)('%#: %s', (template, id, name, scheme) => {
     expect([template.id, template.name, template.scheme]).toEqual([id, name, scheme])
     expect(template.id).toMatch(SLIDE_TEMPLATE_ID_PATTERN)
     for (const font of Object.values(template.fonts)) expect(SLIDE_TEMPLATE_FONTS).toContain(font)
-    expect(template.fonts.latinTitle).toBe('Playfair Display')
     expect(template.styleSheet.length).toBeLessThanOrEqual(SLIDE_TEMPLATE_STYLE_MAX_CHARS)
     expect(template.source.commit).toBe(SLIDE_TEMPLATE_SOURCE_COMMIT)
     expect(template.source.path).toBe(`bold-template-pack/templates/${id}`)
@@ -88,6 +87,31 @@ describe.each(BATCH)('%#: %s', (template, id, name, scheme) => {
 })
 
 describe('editorial-tri-tone', () => {
+  it('leads with grotesque titles, as upstream does, and no serif', () => {
+    expect(editorialTriTone.fonts).toEqual({
+      title: 'Pretendard',
+      body: 'Pretendard',
+      latinTitle: 'Space Grotesk',
+    })
+    expect(editorialTriTone.styleSheet).not.toMatch(/italic/i)
+  })
+
+  it('marks title emphasis by weight: a heavy line, then a regular-weight phrase', () => {
+    expect(editorialTriTone.styleSheet).toMatch(/- Emphasis: .*heavy to regular weight/)
+    for (const spec of Object.values(editorialTriTone.sampleCover)) {
+      const title = spec.elements.find(
+        (el) =>
+          el.type === 'text' && el.paragraphs.some((p) => p.runs.some((r) => r.sizePt === 44)),
+      )
+      if (title?.type !== 'text') throw new Error('no title box on the cover')
+      const [heavy, emphasis] = title.paragraphs.map((p) => p.runs[0]!)
+      expect(heavy!.bold).toBe(true)
+      expect(emphasis!.bold).toBeUndefined()
+      expect(emphasis!.color).toBe(heavy!.color)
+      for (const r of runs(spec)) expect(r.italic).toBeUndefined()
+    }
+  })
+
   it('stays inside its three inks', () => {
     expect(editorialTriTone.palette).toEqual(['#F2B6C6', '#F2D86A', '#7A1F35'])
     expect(editorialTriTone.styleSheet).toMatch(/never white, gray or black/)
