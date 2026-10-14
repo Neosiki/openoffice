@@ -19,6 +19,7 @@ import {
   effectiveAiPanelOpen,
   onAiRailClick,
   rememberAiPanelOpen,
+  useAiSidebarEnabled,
   useSplitPaneFocusPing,
   useSplitPaneRole,
 } from '@genoffice/ui'
@@ -185,6 +186,8 @@ export default function App() {
   // In a split, a secondary pane's panel is forced to the rail; the focus pane keeps its own state
   const { role: paneRole, requestFocus } = useSplitPaneRole()
   const aiPanelOpen = effectiveAiPanelOpen(aiOpen, paneRole)
+  // the sidebar switch is a soft hide; it closes the panel when it turns off
+  const aiSidebarEnabled = useAiSidebarEnabled(setAiOpen)
   const [aiPreset, setAiPreset] = useState<AiPreset | null>(null)
   const [editQueue, setEditQueue] = useState<EditQueueItem[]>([])
   const [askMode, setAskMode] = useState<AskMode | null>(null)
@@ -1834,8 +1837,12 @@ export default function App() {
       />
 
       <div className="app-main">
-        <div className={`ai-dock${aiPanelOpen ? '' : ' collapsed'}`}>
-          {!aiPanelOpen && (
+        <div
+          className={`ai-dock${aiPanelOpen ? '' : ' collapsed'}${
+            !aiSidebarEnabled && !aiPanelOpen ? ' ai-dock-off' : ''
+          }`}
+        >
+          {!aiPanelOpen && aiSidebarEnabled && (
             <button
               className="ai-rail"
               data-tip={t('aiOpenAssistant')}

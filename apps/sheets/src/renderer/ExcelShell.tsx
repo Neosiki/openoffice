@@ -14,6 +14,7 @@ import {
   fontFamilyLabel,
   matchesFontQuery,
   rememberAiPanelOpen,
+  useAiSidebarEnabled,
   type AiTokenUsageView,
   type DriveAttachPicked,
 } from '@genoffice/ui'
@@ -564,12 +565,17 @@ export function ExcelShell({
   const [isCopilotOpen, setIsCopilotOpen] = useState(() =>
     aiPanelInitiallyOpen('ai-sheets-show-ai'),
   )
+  // the sidebar switch is a soft hide; it closes the panel when it turns off
+  const aiSidebarEnabled = useAiSidebarEnabled(setIsCopilotOpen)
   useEffect(() => {
     rememberAiPanelOpen('ai-sheets-show-ai', isCopilotOpen)
   }, [isCopilotOpen])
   // Split panes (decision 0036): as the secondary pane the dock is forced to
   // the rail, and the rail's click asks the shell to focus this pane first.
   const aiDock = useAiDock(isCopilotOpen, setIsCopilotOpen)
+  // the "show the AI sidebar" setting off hides the copilot rail (soft hide):
+  // an explicit AI action (ribbon run, toggle) still opens the panel, and
+  // closing it returns to hidden — no dead affordances, no invisible runs
   const [showFormatCells, setShowFormatCells] = useState(false)
   const [axisSizeTarget, setAxisSizeTarget] = useState<'row' | 'col' | null>(null)
   const [showLinkDialog, setShowLinkDialog] = useState(false)
@@ -962,6 +968,7 @@ export function ExcelShell({
       <div className="sheet-body">
         <AiChatPanel
           isOpen={aiDock.open}
+          hideRail={!aiSidebarEnabled}
           hasContent={sheetHasContent}
           chat={chat}
           {...(historicChat !== undefined ? { historicChat } : {})}

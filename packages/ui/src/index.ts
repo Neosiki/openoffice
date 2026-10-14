@@ -29,6 +29,7 @@ export {
   aiPanelInitiallyOpen,
   rememberAiPanelOpen,
   useAiPanelPrefs,
+  useAiSidebarEnabled,
   aiPanelWidthAtPointer,
 } from './ai-panel-prefs-store'
 export {

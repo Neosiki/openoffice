@@ -185,6 +185,7 @@ import {
   rememberAiPanelOpen,
   useDismissablePopover,
   useRibbonCollapse,
+  useAiSidebarEnabled,
   useSplitPaneFocusPing,
   useSplitPaneRole,
 } from '@genoffice/ui'
@@ -490,6 +491,10 @@ export default function App() {
   // In a split, a secondary pane's panel is forced to the rail; the focus pane keeps its own state
   const { role: paneRole, requestFocus } = useSplitPaneRole()
   const aiPanelOpen = effectiveAiPanelOpen(!aiCollapsed, paneRole)
+  /** the panel setter in the "true = visible" sense the sidebar hook expects */
+  const setAiOpen = useCallback((open: boolean) => setAiCollapsed(!open), [])
+  // the sidebar switch is a soft hide; it closes the panel when it turns off
+  const aiSidebarEnabled = useAiSidebarEnabled(setAiOpen)
   useEffect(() => {
     rememberAiPanelOpen('genoffice-pdf-show-ai', !aiCollapsed)
   }, [aiCollapsed])
@@ -8458,8 +8463,12 @@ export default function App() {
       <div className="app-main">
         {/* dock wrapper animates the width between panel and rail (docs-style 180ms ease);
             the panel stays mounted while collapsed so the chat history survives */}
-        <div className={`ai-dock${aiPanelOpen ? '' : ' collapsed'}`}>
-          {!aiPanelOpen && (
+        <div
+          className={`ai-dock${aiPanelOpen ? '' : ' collapsed'}${
+            !aiSidebarEnabled && !aiPanelOpen ? ' ai-dock-off' : ''
+          }`}
+        >
+          {!aiPanelOpen && aiSidebarEnabled && (
             <button
               className="ai-rail"
               data-tip={t('aiOpenAssistant')}

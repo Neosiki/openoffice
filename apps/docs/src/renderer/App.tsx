@@ -23,6 +23,7 @@ import {
   rememberAiPanelOpen,
   createZoomWheelClassifier,
   useAutoSavePref,
+  useAiSidebarEnabled,
   useSplitPaneFocusPing,
 } from '@genoffice/ui'
 import { wordRangeAtCaret } from './editor/comments'
@@ -795,6 +796,12 @@ export function App() {
   // forced to the rail, and the rail's click asks the shell to focus it first.
   const aiDock = useAiDock(showAi, setShowAi)
   useSplitPaneFocusPing()
+  // Settings › "show the AI sidebar" off hides the panel and its rail the way Word
+  // treats the Copilot pane: an explicit Ask-AI action (ribbon, context menu,
+  // shortcut, preset) still opens the panel for this document, and closing it
+  // returns to hidden. The dock stays mounted either way, so panel state and
+  // in-flight runs survive; the hook closes it when the switch itself goes off.
+  const aiSidebarEnabled = useAiSidebarEnabled(setShowAi)
   const [spellcheck, setSpellcheck] = useState(spellcheckEnabled)
   const [largeDocSpellOff, setLargeDocSpellOff] = useState(false)
   const spellcheckActive = spellcheck && !largeDocSpellOff
@@ -7309,7 +7316,11 @@ export function App() {
 
       <div className="app-main">
         {doc && (
-          <div className={`ai-dock${aiDock.open ? '' : ' collapsed'}`}>
+          <div
+            className={`ai-dock${aiDock.open ? '' : ' collapsed'}${
+              !aiSidebarEnabled && !aiDock.open ? ' ai-dock-off' : ''
+            }`}
+          >
             {/* always mounted: collapse must not drop state or in-flight runs */}
             <AiPanel
               key={aiPanelKey}
@@ -7322,6 +7333,7 @@ export function App() {
               }
               preset={aiPreset}
               open={aiDock.open}
+              hideRail={!aiSidebarEnabled}
               onExpand={aiDock.onExpand}
               onCollapse={() => setShowAi(false)}
               filePath={doc?.filePath ?? null}
