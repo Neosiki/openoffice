@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process'
 import { mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { test, expect, type Page } from '@playwright/test'
+import { test, expect, type ElectronApplication, type Page } from '@playwright/test'
 import { closeAndSaveVideo, launchShell, screenshotPath, waitForPageWithUrl } from './helpers'
 
 /**
@@ -10,9 +10,13 @@ import { closeAndSaveVideo, launchShell, screenshotPath, waitForPageWithUrl } fr
  * app: Home's three entry points, sizes / total / notices, an unsaved material
  * blocking "make" until its save button saved it, the window above an active
  * editor tab, and "make" opening a new tab with the request queued for that
- * tab only (the receiving editors take it in later tasks, so it stays queued).
+ * tab only, which the mind map editor in it then takes.
  *
- * Nothing here reaches Claude or Codex: no AI run starts anywhere in this flow.
+ * Nothing here reaches Claude or Codex. The receiving editor takes the request
+ * and tries to run it, so before anything opens the main process's
+ * subscription status handlers answer "not installed" (the send gate blocks the
+ * run), the real status pushes are kept from the tabs, and `ai:stream` is a
+ * recording stub that the test asserts was never called.
  */
 
 /** where the screenshots for review go (defaults to e2e/artifacts/screenshots) */
@@ -24,6 +28,35 @@ async function generatePage(app: Parameters<typeof waitForPageWithUrl>[0]): Prom
   const page = await waitForPageWithUrl(app, 'generate.html')
   await expect(page.getByTestId('generate-window')).toBeVisible()
   return page
+}
+
+/** the AI channels in the main process become stubs: nothing is signed in, and a stream is recorded, never run */
+async function stubAi(app: ElectronApplication): Promise<void> {
+  await app.evaluate(({ ipcMain, webContents }) => {
+    const g = globalThis as Record<string, unknown>
+    g.__generateE2eStreams = 0
+    const proto = Object.getPrototypeOf(webContents.getAllWebContents()[0]) as {
+      send: (channel: string, ...args: unknown[]) => void
+    }
+    const realSend = proto.send
+    proto.send = function (this: unknown, channel: string, ...args: unknown[]) {
+      if (channel === 'ai:subscription-changed') return
+      return realSend.call(this, channel, ...args)
+    }
+    const statuses = {
+      'claude-code': { provider: 'claude-code', state: 'not-installed', meteredAccepted: false },
+      codex: { provider: 'codex', state: 'not-installed', meteredAccepted: false },
+    }
+    for (const channel of ['ai:subscription-statuses', 'ai:subscription-recheck']) {
+      ipcMain.removeHandler(channel)
+      ipcMain.handle(channel, () => statuses)
+    }
+    ipcMain.removeHandler('ai:stream')
+    ipcMain.handle('ai:stream', () => {
+      g.__generateE2eStreams = (g.__generateE2eStreams as number) + 1
+      throw new Error('ai:stream is stubbed in this test')
+    })
+  })
 }
 
 async function cancel(page: Page): Promise<void> {
@@ -58,6 +91,7 @@ test.describe('generate window', () => {
 
     const launched = await launchShell({ onboardingSeen: true, videoDir: 'generate-window' })
     const { app, page } = launched
+    await stubAi(app)
     const handoffs = () =>
       app.evaluate((): HandoffSnapshot => {
         const store = (globalThis as Record<symbol, unknown>)[
@@ -241,24 +275,28 @@ test.describe('generate window', () => {
       // the new view commits its URL a moment after the tab shows
       await expect.poll(async () => (await mindmapWebContents()).length).toBe(1)
       const mindmapIds = await mindmapWebContents()
+      // queued for that tab only, unless its editor has already taken it
       const queued = await handoffs()
-      expect(queued).toEqual({
-        queued: [
+      if (queued.taken === 0) {
+        expect(queued.queued).toEqual([
           {
             webContentsId: mindmapIds[0],
             target: 'mindmap',
             materials: [draft, lesson],
             text: 'Focus on the plan',
           },
-        ],
-        taken: 0,
-      })
-      // the editor does not take it yet, and nothing else does
+        ])
+      }
+      // the mind map editor in that tab takes it; with nothing signed in the send
+      // gate blocks the run, so no stream is ever asked for
+      await expect.poll(handoffs, { timeout: 30_000 }).toEqual({ queued: [], taken: 1 })
       await new Promise((r) => setTimeout(r, 3000))
-      expect(await handoffs()).toEqual(queued)
+      expect(
+        await app.evaluate(() => (globalThis as Record<string, unknown>).__generateE2eStreams),
+      ).toBe(0)
       await page.screenshot({ path: shot('generate-new-mindmap-tab') })
 
-      // closing the tab before the take drops the request
+      // closing the tab drops what it took
       const tabs = await page.evaluate(() => window.aiOfficeTabs.list())
       const mapTab = tabs.find((t) => t.kind === 'mindmap')!
       await page.evaluate((id) => window.aiOfficeTabs.close(id), mapTab.id)

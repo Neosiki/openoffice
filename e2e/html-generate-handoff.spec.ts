@@ -2,7 +2,7 @@ import { mkdir, mkdtemp, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test, expect, type ElectronApplication, type Page } from '@playwright/test'
-import { closeAndSaveVideo, launchShell, screenshotPath } from '../../../../e2e/helpers'
+import { closeAndSaveVideo, launchShell, screenshotPath } from './helpers'
 
 /**
  * "Make" → a new HTML tab that takes the request (8.5), on the built app.
