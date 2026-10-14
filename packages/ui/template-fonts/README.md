@@ -22,19 +22,16 @@ Version 1.1" and carries the full license text.
 
 ### Pretendard (프리텐다드)
 
-| File                      | Weight | Size      |
-| ------------------------- | ------ | --------- |
-| `Pretendard-Regular.otf`  | 400    | 1,574,352 |
-| `Pretendard-SemiBold.otf` | 600    | 1,583,704 |
-| `Pretendard-Bold.otf`     | 700    | 1,576,660 |
+| File                     | Weight | Size      |
+| ------------------------ | ------ | --------- |
+| `Pretendard-Regular.otf` | 400    | 1,574,352 |
+| `Pretendard-Bold.otf`    | 700    | 1,576,660 |
 
 - License: SIL OFL 1.1, with Reserved Font Name "Pretendard" — `Pretendard-OFL.txt`
 - License evidence: https://github.com/orioncactus/pretendard/blob/v1.3.9/packages/pretendard/dist/LICENSE.txt
 - Distributor: https://github.com/orioncactus/pretendard
 - Source: https://github.com/orioncactus/pretendard/tree/v1.3.9/packages/pretendard/dist/public/static
 - Version: 1.309 (release v1.3.9)
-- Office lists the SemiBold face as its own family, "Pretendard SemiBold"; Regular and Bold are
-  "Pretendard".
 
 ### Noto Serif KR (본명조)
 
@@ -156,4 +153,4 @@ Version 1.1" and carries the full license text.
 
 ## Total
 
-14 font files, 46,602,424 bytes (44.4 MiB).
+13 font files, 45,018,720 bytes (42.9 MiB).

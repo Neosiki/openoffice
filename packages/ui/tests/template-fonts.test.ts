@@ -9,7 +9,11 @@ import {
   TEMPLATE_FONTS,
   TEMPLATE_FONTS_MAX_BYTES,
   TEMPLATE_FONTS_README,
+  TEMPLATE_FONT_FACE_REGISTRATIONS,
   TEMPLATE_FONT_FAMILY_NAMES,
+  TEMPLATE_FONT_FILES,
+  templateFontFileOf,
+  templateFontUrl,
 } from '../src/template-fonts'
 
 const FOLDER = resolve(import.meta.dirname, '../template-fonts')
@@ -77,6 +81,45 @@ describe('template font list', () => {
       expect(family.licenseUrl).toMatch(/^https:\/\/github\.com\//)
       expect(family.downloaded).toMatch(/^\d{4}-\d{2}-\d{2}$/)
     }
+  })
+})
+
+describe('template font faces and URLs', () => {
+  it('registers every face under its family, a variable file over its weight range', () => {
+    expect(TEMPLATE_FONT_FACE_REGISTRATIONS).toHaveLength(fontFiles.length)
+    expect(new Set(TEMPLATE_FONT_FACE_REGISTRATIONS.map((x) => x.family))).toEqual(
+      new Set(TEMPLATE_FONT_FAMILY_NAMES),
+    )
+    expect(TEMPLATE_FONT_FACE_REGISTRATIONS.filter((x) => x.family === 'Pretendard')).toEqual([
+      { family: 'Pretendard', file: 'Pretendard-Regular.otf', weight: '400' },
+      { family: 'Pretendard', file: 'Pretendard-Bold.otf', weight: '700' },
+    ])
+    expect(TEMPLATE_FONT_FACE_REGISTRATIONS.filter((x) => x.family === 'Playfair Display')).toEqual(
+      [{ family: 'Playfair Display', file: 'PlayfairDisplay[wght].ttf', weight: '400 900' }],
+    )
+    expect([...TEMPLATE_FONT_FILES].sort()).toEqual([...fontFiles].sort())
+  })
+
+  it('names every listed file by URL and maps the URL back, the bracketed file included', () => {
+    for (const file of fontFiles) expect(templateFontFileOf(templateFontUrl(file))).toBe(file)
+    expect(templateFontUrl('PlayfairDisplay[wght].ttf')).toBe(
+      'genoffice-docx-media://template-fonts/PlayfairDisplay%5Bwght%5D.ttf',
+    )
+  })
+
+  it('refuses unlisted names, other hosts and schemes, and non-URLs', () => {
+    for (const url of [
+      templateFontUrl('README.md'),
+      templateFontUrl('Pretendard-OFL.txt'),
+      templateFontUrl('../../package.json'),
+      'genoffice-docx-media://template-fonts/..%2F..%2Fpackage.json',
+      'genoffice-docx-media://template-fonts/%2E%2E/README.md',
+      'genoffice-docx-media://template-fonts/%E0%A4%A',
+      `genoffice-docx-media://${'a'.repeat(64)}/Pretendard-Bold.otf`,
+      'genoffice-app://template-fonts/Pretendard-Bold.otf',
+      'not a url',
+    ])
+      expect(templateFontFileOf(url), url).toBeNull()
   })
 })
 

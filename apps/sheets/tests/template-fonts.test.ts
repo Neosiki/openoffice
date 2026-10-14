@@ -7,21 +7,34 @@ import { join, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { describe, expect, it, vi } from 'vitest'
 
-import { TEMPLATE_FONT_FAMILY_NAMES, TEMPLATE_FONTS } from '@genoffice/ui/template-fonts'
+import {
+  TEMPLATE_FONT_FACE_REGISTRATIONS,
+  TEMPLATE_FONT_FAMILY_NAMES,
+  TEMPLATE_FONT_FILES,
+  TEMPLATE_FONT_SCHEME,
+  TEMPLATE_FONTS,
+  templateFontUrl,
+} from '@genoffice/ui/template-fonts'
+
+type SchemeHandler = (request: Request) => Promise<Response>
+const handlers = vi.hoisted(() => new Map<string, SchemeHandler>())
 
 vi.mock('electron', () => ({
   app: {
     isPackaged: false,
     getAppPath: () => resolve(import.meta.dirname, '..'),
   },
-  protocol: { handle: () => {} },
+  protocol: {
+    handle: (scheme: string, handler: SchemeHandler) => void handlers.set(scheme, handler),
+    isProtocolHandled: () => false,
+  },
 }))
 
 import { DOCX_MEDIA_SCHEME_PRIVILEGE } from '@genoffice/electron-utils/renderer-scheme'
 import {
+  installStandaloneTemplateFontProtocol,
   sheetsTemplateFontsDir,
   templateFontFaceCss,
-  templateFontResponse,
   withTemplateFontFaces,
 } from '../src/main/template-fonts'
 import { fontFamilyGroups } from '../src/renderer/system-fonts'
@@ -31,12 +44,6 @@ import {
   registerTemplateFonts,
   workbookTemplateFontUses,
 } from '../src/renderer/template-fonts'
-import {
-  TEMPLATE_FONT_FACE_REGISTRATIONS,
-  TEMPLATE_FONT_FILES,
-  TEMPLATE_FONT_SCHEME,
-  templateFontUrl,
-} from '../src/shared/template-font-faces'
 import { registeredCellFontAliases } from '../src/renderer/cell-font-fallback'
 
 const FOLDER = resolve(import.meta.dirname, '../../../packages/ui/template-fonts')
@@ -75,16 +82,6 @@ describe('template font faces', () => {
       }
     }
     for (const file of TEMPLATE_FONT_FILES) expect(existsSync(join(FOLDER, file))).toBe(true)
-  })
-
-  it('registers Pretendard SemiBold as Pretendard 600 and as its own Office family', () => {
-    const semiBold = TEMPLATE_FONT_FACE_REGISTRATIONS.filter(
-      (face) => face.file === 'Pretendard-SemiBold.otf',
-    )
-    expect(semiBold).toEqual([
-      { family: 'Pretendard', file: 'Pretendard-SemiBold.otf', weight: '600' },
-      { family: 'Pretendard SemiBold', file: 'Pretendard-SemiBold.otf', weight: '400' },
-    ])
   })
 
   it('registers the variable Playfair Display across its weight range', () => {
@@ -127,11 +124,6 @@ describe('registerTemplateFonts (grid canvas, at boot)', () => {
       })),
     )
     expect(created).toContainEqual({
-      family: 'Pretendard SemiBold',
-      source: 'url("genoffice-docx-media://template-fonts/Pretendard-SemiBold.otf")',
-      weight: '400',
-    })
-    expect(created).toContainEqual({
       family: 'Playfair Display',
       source: 'url("genoffice-docx-media://template-fonts/PlayfairDisplay%5Bwght%5D.ttf")',
       weight: '400 900',
@@ -159,14 +151,14 @@ describe('loading a face only when it is used', () => {
         { fontFamily: 'Pretendard', bold: true, ...plain },
         { fontFamily: 'Gowun Batang', bold: false, ...plain },
       ],
-      normalFontName: 'Pretendard SemiBold',
+      normalFontName: 'Noto Serif KR',
       themeFonts: { major: 'Bebas Neue', minor: 'Calibri' },
     })
     await loadTemplateFontsFor(uses, fonts as unknown as FontFaceSet)
     expect(requested.sort()).toEqual([
       '400 16px "Bebas Neue"',
       '400 16px "Gowun Batang"',
-      '400 16px "Pretendard SemiBold"',
+      '400 16px "Noto Serif KR"',
       '700 16px "Pretendard"',
     ])
   })
@@ -182,7 +174,7 @@ describe('loading a face only when it is used', () => {
 
   it('counts the bundled families as available before they load', () => {
     expect(isTemplateFontFamily('"Gowun Dodum"')).toBe(true)
-    expect(isTemplateFontFamily('pretendard semibold')).toBe(true)
+    expect(isTemplateFontFamily('noto serif kr')).toBe(true)
     expect(isTemplateFontFamily('Calibri')).toBe(false)
   })
 })
@@ -192,55 +184,37 @@ describe('serving the bundled files (main)', () => {
     expect(sheetsTemplateFontsDir()).toBe(FOLDER)
   })
 
-  it('reads a file only when its URL is requested, brackets in the name included', async () => {
-    const read = vi.fn((path: string) => Promise.resolve(new Uint8Array(readFileSync(path))))
-    const url = templateFontUrl('PlayfairDisplay[wght].ttf')
-    expect(read).not.toHaveBeenCalled()
-    const response = await templateFontResponse(url, FOLDER, read)
-    expect(read).toHaveBeenCalledTimes(1)
-    expect(read).toHaveBeenCalledWith(join(FOLDER, 'PlayfairDisplay[wght].ttf'))
-    expect(response!.status).toBe(200)
-    expect(response!.headers.get('Content-Type')).toBe('font/ttf')
-    expect(response!.headers.get('Access-Control-Allow-Origin')).toBe('*')
-    const bytes = Buffer.from(await response!.arrayBuffer())
-    expect(bytes.equals(readFileSync(join(FOLDER, 'PlayfairDisplay[wght].ttf')))).toBe(true)
-  })
-
-  it('serves only the listed files', async () => {
-    const read = vi.fn(() => Promise.resolve(new Uint8Array(4)))
-    const urls = [
-      'genoffice-docx-media://template-fonts/README.md',
-      'genoffice-docx-media://template-fonts/Pretendard-OFL.txt',
-      'genoffice-docx-media://template-fonts/..%2F..%2Fpackage.json',
-      'genoffice-docx-media://template-fonts/%2E%2E/README.md',
-      `genoffice-docx-media://${'a'.repeat(64)}/Pretendard-Bold.otf`,
-      'genoffice-app://template-fonts/Pretendard-Bold.otf',
-      'not a url',
-    ]
-    for (const url of urls) expect(await templateFontResponse(url, FOLDER, read)).toBeNull()
-    expect(read).not.toHaveBeenCalled()
-  })
-
-  it('answers 404 when the folder lacks a listed file', async () => {
-    const url = templateFontUrl('Pretendard-Bold.otf')
-    const response = await templateFontResponse(url, FOLDER, () =>
-      Promise.reject(new Error('missing')),
-    )
-    expect(response!.status).toBe(404)
+  it('a standalone app serves every listed file on its URL, and nothing else', async () => {
+    handlers.clear()
+    installStandaloneTemplateFontProtocol()
+    const handle = handlers.get(TEMPLATE_FONT_SCHEME)!
+    for (const file of TEMPLATE_FONT_FILES) {
+      const response = await handle({ url: templateFontUrl(file) } as Request)
+      expect(response.status, file).toBe(200)
+      const bytes = Buffer.from(await response.arrayBuffer())
+      expect(bytes.equals(readFileSync(join(FOLDER, file))), file).toBe(true)
+    }
+    const other = await handle({
+      url: 'genoffice-docx-media://template-fonts/README.md',
+    } as Request)
+    expect(other.status).toBe(404)
   })
 
   it('names files on the URLs the Word editor serves them on inside the shell', async () => {
-    // the shell's docs main owns the media scheme; sheets asks it for the same URLs
-    // (imported by a computed path: the docs module is outside this app's typecheck)
-    const docsProtocol = pathToFileURL(
-      resolve(import.meta.dirname, '../../docs/src/main/template-font-protocol.ts'),
+    // the shell's docs main owns the media scheme; sheets asks its handler for the same
+    // URLs (imported by a computed path: the docs module is outside this app's typecheck)
+    const docsLazyMedia = pathToFileURL(
+      resolve(import.meta.dirname, '../../docs/src/main/lazy-media.ts'),
     ).href
-    const docs = (await import(/* @vite-ignore */ docsProtocol)) as {
-      templateFontResponse(url: string, dir: string): Promise<Response | null>
+    const docs = (await import(/* @vite-ignore */ docsLazyMedia)) as {
+      registerLazyMediaProtocol(templateFontsDir: string): void
     }
+    handlers.clear()
+    docs.registerLazyMediaProtocol(FOLDER)
+    const handle = handlers.get(TEMPLATE_FONT_SCHEME)!
     for (const file of TEMPLATE_FONT_FILES) {
-      const response = await docs.templateFontResponse(templateFontUrl(file), FOLDER)
-      expect(response?.status, file).toBe(200)
+      const response = await handle({ url: templateFontUrl(file) } as Request)
+      expect(response.status, file).toBe(200)
     }
     expect(TEMPLATE_FONT_SCHEME).toBe(DOCX_MEDIA_SCHEME_PRIVILEGE.scheme)
   })
@@ -272,7 +246,7 @@ describe('template font faces for PDF export and print', () => {
       '<!doctype html><html lang="ko"><head><meta charset="utf-8"><style>body{}</style></head><body>x</body></html>'
     const out = withTemplateFontFaces(html, FOLDER)
     expect(out.startsWith('<!doctype html><html lang="ko"><head><style>')).toBe(true)
-    expect(out.indexOf("font-family: 'Pretendard SemiBold'")).toBeLessThan(out.indexOf('body{}'))
+    expect(out.indexOf("font-family: 'Pretendard'")).toBeLessThan(out.indexOf('body{}'))
     expect(out.endsWith('<body>x</body></html>')).toBe(true)
   })
 

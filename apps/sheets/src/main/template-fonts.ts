@@ -1,25 +1,22 @@
-/// The bundled template fonts on the main side: the answer to a renderer's
-/// template-font URL (one listed file, read when a face is first used), and the
-/// @font-face rules the hidden PDF export / print window needs (it loads the print
-/// HTML from a temp file with scripting off, so it only sees fonts the page itself
-/// declares). Both read the one installed folder (templateFontsDir); nothing is
-/// copied, downloaded or installed into the OS.
+/// The bundled template fonts on the main side: a standalone app's answer to a
+/// renderer's template-font URL (templateFontResponse, the same answer the Word
+/// editor's media scheme gives inside the shell: one listed file, read when a face is
+/// first used), and the @font-face rules the hidden PDF export / print window needs
+/// (it loads the print HTML from a temp file with scripting off, so it only sees
+/// fonts the page itself declares). Both read the one installed folder
+/// (templateFontsDir); nothing is copied, downloaded or installed into the OS.
 
-import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 
 import { app, protocol } from 'electron'
 
+import { templateFontResponse } from '@genoffice/electron-utils/template-font-response'
 import { templateFontsDir } from '@genoffice/electron-utils/template-fonts-dir'
-
 import {
   TEMPLATE_FONT_FACE_REGISTRATIONS,
   TEMPLATE_FONT_SCHEME,
-  templateFontFileOf,
-} from '../shared/template-font-faces'
-
-const FONT_MIME: Readonly<Record<string, string>> = { ttf: 'font/ttf', otf: 'font/otf' }
+} from '@genoffice/ui/template-fonts'
 
 /// The installed folder (resources/template-fonts), or the checkout's in a dev run.
 /// The app path is the shell's when this code runs inside the shell and the sheets
@@ -29,32 +26,6 @@ export function sheetsTemplateFontsDir(): string {
     isPackaged: app.isPackaged,
     getAppPath: () => app.getAppPath(),
     resourcesPath: process.resourcesPath,
-  })
-}
-
-/// The answer to a template-font URL: the listed file read from `dir`, or 404 when
-/// the folder lacks it (the cell's chain then falls back like for any missing font).
-/// Null for every other URL. Only listed names reach the disk, so no path escapes.
-export async function templateFontResponse(
-  url: string,
-  dir: string,
-  read: (path: string) => Promise<Uint8Array> = readFile,
-): Promise<Response | null> {
-  const file = templateFontFileOf(url)
-  if (!file) return null
-  let bytes: Uint8Array
-  try {
-    bytes = await read(join(dir, file))
-  } catch {
-    return new Response(null, { status: 404 })
-  }
-  return new Response(new Uint8Array(bytes), {
-    headers: {
-      'Content-Type': FONT_MIME[file.split('.').pop()?.toLowerCase() ?? ''] ?? 'font/sfnt',
-      'Content-Length': String(bytes.byteLength),
-      // fonts load in CORS mode; the renderer's origin is another scheme (or a dev server)
-      'Access-Control-Allow-Origin': '*',
-    },
   })
 }
 

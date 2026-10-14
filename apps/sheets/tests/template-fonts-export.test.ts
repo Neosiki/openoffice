@@ -38,7 +38,7 @@ vi.mock('electron', () => ({
 }))
 
 import { exportPdf, printWorkbook } from '../src/main/pdf-export'
-import { TEMPLATE_FONT_FACE_REGISTRATIONS } from '../src/shared/template-font-faces'
+import { TEMPLATE_FONT_FACE_REGISTRATIONS } from '@genoffice/ui/template-fonts'
 
 import type { IpcMainInvokeEvent } from 'electron'
 import type { WorkbookExportPdfRequest } from '../src/shared/desktop-api'
@@ -46,7 +46,7 @@ import type { WorkbookExportPdfRequest } from '../src/shared/desktop-api'
 const FOLDER = resolve(import.meta.dirname, '../../../packages/ui/template-fonts')
 const REQUEST: WorkbookExportPdfRequest = {
   fileName: 'Book1.pdf',
-  html: `<!doctype html><html><head><meta charset="utf-8"></head><body><td style="font-family:'Pretendard SemiBold',Calibri">가</td></body></html>`,
+  html: `<!doctype html><html><head><meta charset="utf-8"></head><body><td style="font-family:'Noto Serif KR',Calibri">가</td></body></html>`,
   landscape: false,
   pageSize: 'A4',
   margins: { top: 0, bottom: 0, left: 0, right: 0 },
@@ -60,7 +60,7 @@ function expectBundledFaces(html: string): void {
     expect(html).toContain(`font-family: '${family}'; src: url("${href}"); font-weight: ${weight};`)
   }
   expect(html).toContain('PlayfairDisplay%5Bwght%5D.ttf')
-  expect(html).toContain(`<body><td style="font-family:'Pretendard SemiBold',Calibri">가</td>`)
+  expect(html).toContain(`<body><td style="font-family:'Noto Serif KR',Calibri">가</td>`)
 }
 
 describe('bundled fonts on the export and print page', () => {

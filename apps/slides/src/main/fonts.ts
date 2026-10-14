@@ -69,7 +69,7 @@ export function getUserFontDir(): string | null {
  * The design templates' shared font set (@genoffice/ui/template-fonts): a second read-only
  * source beside the user store, never written to and invisible to Chromium the same way.
  * Indexed by the family list rather than file names: Space Grotesk ships a Bold file only,
- * Playfair Display one variable file, and Pretendard's SemiBold face is its own Office family.
+ * and Playfair Display one variable file.
  * slides-main injects a resolver because the folder's location needs Electron's app facts.
  */
 let templateFontDir: (() => string) | null = null
@@ -666,11 +666,6 @@ class FontRegistry {
           norm(fam.family),
           fam.faces.map((f) => join(templateDir, f.file)),
         )
-        for (const f of fam.faces) {
-          if (f.officeFamily === fam.family) continue
-          const key = norm(f.officeFamily)
-          this.templates.set(key, [...(this.templates.get(key) ?? []), join(templateDir, f.file)])
-        }
       }
     }
     // One prefix each covers every scanned asset dir for the isPrivate check

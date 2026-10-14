@@ -124,25 +124,24 @@ describe('each bundled face resolves to its own file', () => {
 
   for (const fam of TEMPLATE_FONTS) {
     for (const face of fam.faces) {
-      const bold = face.officeFamily === fam.family && face.weight >= 700
-      it(`${face.officeFamily}${bold ? ' bold' : ''} → ${face.file}`, () => {
-        expect(familyAvailable(face.officeFamily)).toBe(true)
-        expect(m.substituted!(style(face.officeFamily, { bold }))).toBe(false)
-        expect(m.displayFamily!(style(face.officeFamily, { bold }))).toBe(face.officeFamily)
-        const hit = served(face.officeFamily, bold)
+      const bold = face.weight >= 700
+      it(`${fam.family}${bold ? ' bold' : ''} → ${face.file}`, () => {
+        expect(familyAvailable(fam.family)).toBe(true)
+        expect(m.substituted!(style(fam.family, { bold }))).toBe(false)
+        expect(m.displayFamily!(style(fam.family, { bold }))).toBe(fam.family)
+        const hit = served(fam.family, bold)
         expect(hit).toBeDefined()
         expect(sameBytes(hit!.bytes, face.file)).toBe(true)
       })
     }
   }
 
-  it('Pretendard SemiBold is its own family and the 600 face, not Regular or Bold', () => {
-    const hit = served('Pretendard SemiBold', false)
-    expect(sameBytes(hit!.bytes, 'Pretendard-SemiBold.otf')).toBe(true)
-    const os2 = (
-      opentype.parse(hit!.bytes!) as unknown as { tables: { os2: { usWeightClass: number } } }
-    ).tables.os2
-    expect(os2.usWeightClass).toBe(600)
+  it('Pretendard draws its Regular and Bold files, nothing in between', () => {
+    const weightOf = (bytes: ArrayBuffer | null | undefined) =>
+      (opentype.parse(bytes!) as unknown as { tables: { os2: { usWeightClass: number } } }).tables
+        .os2.usWeightClass
+    expect(weightOf(served('Pretendard', false)!.bytes)).toBe(400)
+    expect(weightOf(served('Pretendard', true)!.bytes)).toBe(700)
   })
 
   it('a family that ships only a Bold file draws plain runs with it (Space Grotesk)', () => {

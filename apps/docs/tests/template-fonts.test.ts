@@ -6,11 +6,18 @@ import { readFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import { LANGS } from '@genoffice/i18n'
-import { TEMPLATE_FONTS, TEMPLATE_FONT_FAMILY_NAMES } from '@genoffice/ui/template-fonts'
+import {
+  TEMPLATE_FONTS,
+  TEMPLATE_FONT_FACE_REGISTRATIONS,
+  TEMPLATE_FONT_FAMILY_NAMES,
+  TEMPLATE_FONT_SCHEME,
+  templateFontFileOf,
+  templateFontUrl,
+} from '@genoffice/ui/template-fonts'
+import { LAZY_MEDIA_SCHEME } from '@genoffice/docx-engine/lazy-media'
+import { DOCX_MEDIA_SCHEME_PRIVILEGE } from '@genoffice/electron-utils/renderer-scheme'
+import { templateFontResponse } from '@genoffice/electron-utils/template-font-response'
 import { configureExtraFontDirs, familyVerticalMetrics } from '@genoffice/font-metrics'
-
-import { templateFontResponse } from '../src/main/template-font-protocol'
-import { templateFontFileOf, templateFontUrl } from '../src/shared/template-fonts'
 import { fontFamiliesFor } from '../src/renderer/font-list'
 import { checkMissingFonts } from '../src/renderer/font-check'
 import {
@@ -21,18 +28,11 @@ import {
   noteTemplateFontFamilies,
 } from '../src/renderer/line-metrics'
 import { familiesForInfo } from '../src/renderer/system-fonts'
-import {
-  TEMPLATE_LINE_FACTORS,
-  registerTemplateFonts,
-  templateFontFaceSpecs,
-} from '../src/renderer/template-fonts'
+import { TEMPLATE_LINE_FACTORS, registerTemplateFonts } from '../src/renderer/template-fonts'
 
 const DOCS = resolve(import.meta.dirname, '..')
 const FOLDER = resolve(DOCS, '../../packages/ui/template-fonts')
 const FILES = TEMPLATE_FONTS.flatMap((f) => f.faces.map((face) => face.file))
-const OFFICE_FAMILIES = [
-  ...new Set(TEMPLATE_FONTS.flatMap((f) => [f.family, ...f.faces.map((x) => x.officeFamily)])),
-]
 
 class FakeFace {
   constructor(
@@ -89,25 +89,13 @@ describe('template fonts in the font list', () => {
 })
 
 describe('template font URLs', () => {
-  it('names every listed file and maps the URL back to it, the bracketed file included', () => {
-    for (const file of FILES) expect(templateFontFileOf(templateFontUrl(file))).toBe(file)
-    expect(templateFontUrl('PlayfairDisplay[wght].ttf')).toContain('PlayfairDisplay%5Bwght%5D.ttf')
-    expect(templateFontFileOf(templateFontUrl('PlayfairDisplay[wght].ttf'))).toBe(
-      'PlayfairDisplay[wght].ttf',
-    )
-  })
-
-  it('refuses unlisted names, other hosts and lazy-media URLs', () => {
-    expect(templateFontFileOf(templateFontUrl('README.md'))).toBeNull()
-    expect(templateFontFileOf(templateFontUrl('../../package.json'))).toBeNull()
-    expect(templateFontFileOf('genoffice-docx-media://template-fonts/..%2F..%2Fpackage.json')).toBe(
+  it('are on the docs media scheme, the one the lazy media and the privilege use', () => {
+    expect(TEMPLATE_FONT_SCHEME).toBe(LAZY_MEDIA_SCHEME)
+    expect(TEMPLATE_FONT_SCHEME).toBe(DOCX_MEDIA_SCHEME_PRIVILEGE.scheme)
+    // a lazy-media URL (64-hex host) is never a template font
+    expect(templateFontFileOf(`${LAZY_MEDIA_SCHEME}://${'a'.repeat(64)}/word/media/a.png`)).toBe(
       null,
     )
-    expect(templateFontFileOf(`genoffice-docx-media://${'a'.repeat(64)}/word/media/a.png`)).toBe(
-      null,
-    )
-    expect(templateFontFileOf('genoffice-app://template-fonts/BebasNeue-Regular.ttf')).toBeNull()
-    expect(templateFontFileOf('not a url')).toBeNull()
   })
 
   it('serves the shipped bytes from the template folder, with CORS for the dev origin', async () => {
@@ -118,7 +106,7 @@ describe('template font URLs', () => {
     expect(res?.headers.get('Access-Control-Allow-Origin')).toBe('*')
     const body = new Uint8Array(await res!.arrayBuffer())
     expect(Buffer.from(body).equals(readFileSync(join(FOLDER, file)))).toBe(true)
-    const otf = await templateFontResponse(templateFontUrl('Pretendard-SemiBold.otf'), FOLDER)
+    const otf = await templateFontResponse(templateFontUrl('Pretendard-Bold.otf'), FOLDER)
     expect(otf?.headers.get('Content-Type')).toBe('font/otf')
   })
 
@@ -141,7 +129,7 @@ describe('template font URLs', () => {
 describe('template font registration', () => {
   it('registers every face from its shipped file under its real family', () => {
     const { added, families } = register()
-    expect(added).toHaveLength(templateFontFaceSpecs().length)
+    expect(added).toHaveLength(TEMPLATE_FONT_FACE_REGISTRATIONS.length)
     for (const face of added) expect(FILES).toContain(fileOfSource(face.source))
     for (const family of TEMPLATE_FONTS) {
       for (const f of family.faces) {
@@ -151,15 +139,15 @@ describe('template font registration', () => {
         expect(own, f.file).toBeDefined()
       }
     }
-    expect(families.sort()).toEqual([...OFFICE_FAMILIES].sort())
+    expect(families.sort()).toEqual([...TEMPLATE_FONT_FAMILY_NAMES].sort())
   })
 
-  it('registers Pretendard SemiBold at 600 in Pretendard and as its own Office family', () => {
+  it('registers Pretendard as its Regular and Bold faces only', () => {
     const { added } = register()
-    const semi = added.filter((x) => fileOfSource(x.source) === 'Pretendard-SemiBold.otf')
-    expect(semi.map((x) => [x.family, x.descriptors.weight])).toEqual([
-      ['Pretendard', '600'],
-      ['Pretendard SemiBold', '400'],
+    const pretendard = added.filter((x) => x.family === 'Pretendard')
+    expect(pretendard.map((x) => [fileOfSource(x.source), x.descriptors.weight])).toEqual([
+      ['Pretendard-Regular.otf', '400'],
+      ['Pretendard-Bold.otf', '700'],
     ])
   })
 
@@ -173,7 +161,7 @@ describe('template font registration', () => {
 
   it('heads each family chain with the registered face, not a substitute', () => {
     const { added } = register()
-    for (const family of OFFICE_FAMILIES) {
+    for (const family of TEMPLATE_FONT_FAMILY_NAMES) {
       const head = cssFontFamily(family).split(',')[0]!.replace(/^'|'$/g, '')
       expect(head, family).toBe(family)
       expect(added.some((x) => x.family === head)).toBe(true)
@@ -186,7 +174,7 @@ describe('template font registration', () => {
 
   it('does not report a registered family as missing', () => {
     register()
-    expect(checkMissingFonts([...OFFICE_FAMILIES])).toEqual([])
+    expect(checkMissingFonts([...TEMPLATE_FONT_FAMILY_NAMES])).toEqual([])
   })
 
   it('does nothing without a font loading API', () => {
@@ -199,18 +187,15 @@ describe('template font metrics', () => {
 
   it('font-metrics reads every bundled family from the folder it is given', () => {
     configureExtraFontDirs([FOLDER])
-    for (const family of OFFICE_FAMILIES)
+    for (const family of TEMPLATE_FONT_FAMILY_NAMES)
       expect(familyVerticalMetrics(family), family).not.toBe(null)
   })
 
   it('lays each family out with the line box of its own shipped file', () => {
     register()
-    for (const family of OFFICE_FAMILIES) {
-      const owner = TEMPLATE_FONTS.find(
-        (f) => f.family === family || f.faces.some((x) => x.officeFamily === family),
-      )!
-      const faces = owner.faces.filter((x) => x.officeFamily === family || owner.family === family)
-      const file = (faces.find((x) => x.weight === 400) ?? faces[0]!).file
+    for (const owner of TEMPLATE_FONTS) {
+      const family = owner.family
+      const file = (owner.faces.find((x) => x.weight === 400) ?? owner.faces[0]!).file
       const hhea = hheaBox(join(FOLDER, file))
       const korean = owner.script === 'korean'
       const expected = Math.round(hhea * (korean ? 1.3 : 1) * 1e4) / 1e4
