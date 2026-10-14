@@ -1,4 +1,5 @@
 import { certSignStringsFor } from './cert-sign-strings'
+import { convertStrings } from './strings-convert'
 
 const fillFormStrings = {
   ribbonTabFillForm: 'Fill Form',
@@ -391,6 +392,7 @@ export const strings = {
   zh: {
     ...fillFormStringsFor('zh'),
     ...certSignStringsFor('zh'),
+    ...convertStrings.zh,
     ribbonTabHome: '开始',
     ribbonTabAnnotate: '注释',
     ribbonTabEdit: '编辑',
@@ -722,6 +724,7 @@ export const strings = {
   en: {
     ...fillFormStringsFor('en'),
     ...certSignStringsFor('en'),
+    ...convertStrings.en,
     ribbonTabHome: 'Home',
     ribbonTabAnnotate: 'Annotate',
     ribbonTabEdit: 'Edit',
@@ -1062,6 +1065,7 @@ export const strings = {
   vi: {
     ...fillFormStringsFor('vi'),
     ...certSignStringsFor('vi'),
+    ...convertStrings.vi,
     ribbonTabHome: 'Trang chủ',
     ribbonTabAnnotate: 'Chú thích',
     ribbonTabEdit: 'Chỉnh sửa',
@@ -1405,6 +1409,7 @@ export const strings = {
   ja: {
     ...fillFormStringsFor('ja'),
     ...certSignStringsFor('ja'),
+    ...convertStrings.ja,
     ribbonTabHome: 'ホーム',
     ribbonTabAnnotate: '注釈',
     ribbonTabEdit: '編集',
@@ -1744,6 +1749,7 @@ export const strings = {
   ko: {
     ...fillFormStringsFor('ko'),
     ...certSignStringsFor('ko'),
+    ...convertStrings.ko,
     ribbonTabHome: '홈',
     ribbonTabAnnotate: '주석',
     ribbonTabEdit: '편집',
@@ -2082,6 +2088,7 @@ export const strings = {
   fr: {
     ...fillFormStringsFor('fr'),
     ...certSignStringsFor('fr'),
+    ...convertStrings.fr,
     ribbonTabHome: 'Accueil',
     ribbonTabAnnotate: 'Annoter',
     ribbonTabEdit: 'Édition',
@@ -2430,6 +2437,7 @@ export const strings = {
   de: {
     ...fillFormStringsFor('de'),
     ...certSignStringsFor('de'),
+    ...convertStrings.de,
     ribbonTabHome: 'Start',
     ribbonTabAnnotate: 'Anmerken',
     ribbonTabEdit: 'Bearbeiten',
@@ -2776,6 +2784,7 @@ export const strings = {
   es: {
     ...fillFormStringsFor('es'),
     ...certSignStringsFor('es'),
+    ...convertStrings.es,
     ribbonTabHome: 'Inicio',
     ribbonTabAnnotate: 'Anotar',
     ribbonTabEdit: 'Editar',
@@ -3122,6 +3131,7 @@ export const strings = {
   th: {
     ...fillFormStringsFor('th'),
     ...certSignStringsFor('th'),
+    ...convertStrings.th,
     ribbonTabHome: 'หน้าแรก',
     ribbonTabAnnotate: 'คำอธิบายประกอบ',
     ribbonTabEdit: 'แก้ไข',
@@ -3460,6 +3470,7 @@ export const strings = {
   id: {
     ...fillFormStringsFor('id'),
     ...certSignStringsFor('id'),
+    ...convertStrings.id,
     ribbonTabHome: 'Beranda',
     ribbonTabAnnotate: 'Anotasi',
     ribbonTabEdit: 'Edit',
@@ -3803,6 +3814,7 @@ export const strings = {
   ru: {
     ...fillFormStringsFor('ru'),
     ...certSignStringsFor('ru'),
+    ...convertStrings.ru,
     ribbonTabHome: 'Главная',
     ribbonTabAnnotate: 'Аннотирование',
     ribbonTabEdit: 'Правка',
@@ -4147,6 +4159,7 @@ export const strings = {
   ar: {
     ...fillFormStringsFor('ar'),
     ...certSignStringsFor('ar'),
+    ...convertStrings.ar,
     ribbonTabHome: 'الشريط الرئيسي',
     ribbonTabAnnotate: 'تعليق توضيحي',
     ribbonTabEdit: 'تحرير',
@@ -4484,6 +4497,7 @@ export const strings = {
   pt: {
     ...fillFormStringsFor('pt'),
     ...certSignStringsFor('pt'),
+    ...convertStrings.pt,
     ribbonTabHome: 'Página Inicial',
     ribbonTabAnnotate: 'Anotar',
     ribbonTabEdit: 'Editar',
@@ -4829,6 +4843,7 @@ export const strings = {
   it: {
     ...fillFormStringsFor('it'),
     ...certSignStringsFor('it'),
+    ...convertStrings.it,
     ribbonTabHome: 'Home',
     ribbonTabAnnotate: 'Annota',
     ribbonTabEdit: 'Modifica',
@@ -5177,6 +5192,7 @@ export const strings = {
   pl: {
     ...fillFormStringsFor('pl'),
     ...certSignStringsFor('pl'),
+    ...convertStrings.pl,
     ribbonTabHome: 'Narzędzia główne',
     ribbonTabAnnotate: 'Adnotacje',
     ribbonTabEdit: 'Edycja',
@@ -5520,6 +5536,7 @@ export const strings = {
   cs: {
     ...fillFormStringsFor('cs'),
     ...certSignStringsFor('cs'),
+    ...convertStrings.cs,
     ribbonTabHome: 'Domů',
     ribbonTabAnnotate: 'Anotace',
     ribbonTabEdit: 'Úpravy',
@@ -5861,6 +5878,7 @@ export const strings = {
   nl: {
     ...fillFormStringsFor('nl'),
     ...certSignStringsFor('nl'),
+    ...convertStrings.nl,
     ribbonTabHome: 'Start',
     ribbonTabAnnotate: 'Annoteren',
     ribbonTabEdit: 'Bewerken',
@@ -6204,6 +6222,7 @@ export const strings = {
   ms: {
     ...fillFormStringsFor('ms'),
     ...certSignStringsFor('ms'),
+    ...convertStrings.ms,
     ribbonTabHome: 'Laman Utama',
     ribbonTabAnnotate: 'Anotasi',
     ribbonTabEdit: 'Edit',
@@ -6546,6 +6565,7 @@ export const strings = {
   he: {
     ...fillFormStringsFor('he'),
     ...certSignStringsFor('he'),
+    ...convertStrings.he,
     ribbonTabHome: 'בית',
     ribbonTabAnnotate: 'הערות',
     ribbonTabEdit: 'עריכה',
@@ -6879,6 +6899,7 @@ export const strings = {
   hi: {
     ...fillFormStringsFor('hi'),
     ...certSignStringsFor('hi'),
+    ...convertStrings.hi,
     ribbonTabHome: 'होम',
     ribbonTabAnnotate: 'एनोटेट',
     ribbonTabEdit: 'संपादन',
@@ -7218,6 +7239,7 @@ export const strings = {
   'zh-TW': {
     ...fillFormStringsFor('zh-TW'),
     ...certSignStringsFor('zh-TW'),
+    ...convertStrings['zh-TW'],
     ribbonTabHome: '常用',
     ribbonTabAnnotate: '註解',
     ribbonTabEdit: '編輯',

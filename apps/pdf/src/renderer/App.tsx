@@ -125,6 +125,9 @@ import { buildHeadingOutline, remapOutlinePages } from './heading-outline'
 import { printPdf } from './print'
 import { PasswordDialog } from './PasswordDialog'
 import { PropertiesDialog } from './PropertiesDialog'
+import { ConvertDialog } from './convert/ConvertDialog'
+import { ExportImagesMenu } from './convert/ExportImagesMenu'
+import { exportEmbeddedImages } from './convert/embedded-images'
 import { CertSignDialog } from './CertSignDialog'
 import { SignaturesDialog, overallSignatureStatus } from './SignaturesDialog'
 import { SignatureDialog, fileToCanvas } from './SignatureDialog'
@@ -189,6 +192,7 @@ import type {
   NoteEditInput,
   PageImageRef,
   PdfConvertFormat,
+  PdfReflowFormat,
   PdfSignatureInfo,
   StaticFormFillRecord,
   StampInput,
@@ -490,6 +494,10 @@ export default function App() {
   const [highlightColorOpen, setHighlightColorOpen] = useState(false)
   const [convertOpen, setConvertOpen] = useState(false)
   const [convertBusy, setConvertBusy] = useState(false)
+  /** the Markdown / EPUB conversion dialog that is open */
+  const [convertDialog, setConvertDialog] = useState<PdfReflowFormat | null>(null)
+  /** "only the pictures in the pages" export: progress of the running job */
+  const [imagesProgress, setImagesProgress] = useState<{ done: number; total: number } | null>(null)
   const [drawings, setDrawings] = useState<LocalDrawing[]>([])
   const drawingsRef = useRef(drawings)
   drawingsRef.current = drawings
@@ -6695,6 +6703,9 @@ export default function App() {
     return window.pdfApi.onPrintRequest(openPrintDlg)
   })
 
+  // Shell File menu › Markdown / EPUB → the same dialog as the converter dropdown
+  useEffect(() => window.pdfApi.onConvertDialogRequest((format) => setConvertDialog(format)), [])
+
   // Shortcuts: ⌘S/⌘F/⌘P/⌘±/⌘0 + page navigation (only ⌘ combos kept while an input control is focused)
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -6967,6 +6978,58 @@ export default function App() {
     } finally {
       setConvertBusy(false)
     }
+  }
+
+  /** Converter dropdown › Markdown / EPUB → the conversion dialog */
+  const openConvertDialog = (format: PdfReflowFormat): void => {
+    setConvertOpen(false)
+    setConvertDialog(format)
+  }
+
+  /** Conversion jobs read the file on disk: save pending edits first */
+  const flushForStructureJob = async (): Promise<boolean> =>
+    (await flushThen(async () => true)) === true
+
+  /** Text of a 1-based visible page as pdf.js extracts it (the AI fill of the EPUB dialog) */
+  const visiblePageText = async (page: number): Promise<string> => {
+    const origIdx = visList[page - 1]
+    if (origIdx === undefined || isBlankPage(origIdx)) return ''
+    const pdfPage = await doc.getPage(origIdx + 1)
+    const content = await pdfPage.getTextContent()
+    let text = ''
+    for (const item of content.items) {
+      if ('str' in item) {
+        text += item.str
+        if (item.hasEOL) text += '\n'
+      }
+    }
+    pdfPage.cleanup()
+    return text
+  }
+
+  /** Export images › only the pictures in the pages: a structure job on the saved file */
+  const exportPagePictures = (): void => {
+    if (exporting) return
+    setExporting(true)
+    setImagesProgress(null)
+    void exportEmbeddedImages({
+      api: {
+        pickTarget: (request) => window.pdfApi.structure.pickTarget(request),
+        extractImages: (request) => window.pdfApi.structure.extractImages(request),
+        onProgress: (handler) => window.pdfApi.structure.onProgress(handler),
+        revealResult: (request) => window.pdfApi.revealConvertResult(request),
+      },
+      filePath,
+      password: passwordRef.current,
+      baseName: fileName.replace(/\.pdf$/i, ''),
+      t,
+      prepare: flushForStructureJob,
+      onProgress: (done, total) => setImagesProgress({ done, total }),
+      notice: showNotice,
+    }).finally(() => {
+      setExporting(false)
+      setImagesProgress(null)
+    })
   }
 
   // ── shared ribbon groups (rendered on more than one tab) ──
@@ -7444,6 +7507,8 @@ export default function App() {
                           {t('convertToExcel')}
                         </button>
                         <button onClick={() => void convertTo('pptx')}>{t('convertToPpt')}</button>
+                        <button onClick={() => openConvertDialog('md')}>{t('cvToMarkdown')}</button>
+                        <button onClick={() => openConvertDialog('epub')}>{t('cvToEpub')}</button>
                       </div>
                     )}
                   </div>
@@ -7466,17 +7531,20 @@ export default function App() {
                     </span>
                     {printing ? t('printPreparing') : t('print')}
                   </button>
-                  <button
-                    className="rb-big"
-                    data-tip={t('exportImagesAll')}
-                    disabled={exporting}
-                    onClick={() => void exportImages(true)}
-                  >
-                    <span className="rb-big-icon">
-                      <IconExportImg />
-                    </span>
-                    {exporting ? t('exporting') : t('exportImages')}
-                  </button>
+                  <ExportImagesMenu
+                    t={t}
+                    icon={<IconExportImg />}
+                    busy={exporting}
+                    label={
+                      exporting
+                        ? imagesProgress && imagesProgress.total > 0
+                          ? t('imgExportProgress', imagesProgress)
+                          : t('exporting')
+                        : t('exportImages')
+                    }
+                    onWholePages={() => void exportImages(true)}
+                    onEmbedded={exportPagePictures}
+                  />
                   <button
                     className="rb-big"
                     data-tip={t('propsTitle')}
@@ -10182,6 +10250,31 @@ export default function App() {
                   setPropsDlg(false)
                   applyEditOps([{ op: 'setMetadata', metadata: meta }])
                 }}
+              />
+            )}
+            {convertDialog && (
+              <ConvertDialog
+                key={convertDialog}
+                format={convertDialog}
+                filePath={filePath}
+                fileName={fileName}
+                pageCount={pageCount}
+                docInfo={metadata ?? docInfo}
+                password={passwordRef.current}
+                lang={lang}
+                t={t}
+                api={{
+                  pickTarget: (request) => window.pdfApi.structure.pickTarget(request),
+                  convert: (request) => window.pdfApi.structure.convert(request),
+                  cancel: (jobId) => window.pdfApi.structure.cancel(jobId),
+                  onProgress: (handler) => window.pdfApi.structure.onProgress(handler),
+                  releaseTarget: (request) => window.pdfApi.releaseConvertTarget(request),
+                  openResult: (request) => window.pdfApi.openConvertResult(request),
+                  revealResult: (request) => window.pdfApi.revealConvertResult(request),
+                }}
+                prepare={flushForStructureJob}
+                pageText={visiblePageText}
+                onClose={() => setConvertDialog(null)}
               />
             )}
             {certSignDlg && (
