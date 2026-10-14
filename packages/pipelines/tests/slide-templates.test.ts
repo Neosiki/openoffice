@@ -45,18 +45,10 @@ const ROSTER = [
 ] as const
 
 describe('listSlideTemplates', () => {
-  it('lists templates in the fixed display order, each matching its fixed name and scheme', () => {
+  it('lists exactly the fixed templates in display order, each with its fixed name and scheme', () => {
     const list = listSlideTemplates()
-    expect(list.length).toBeGreaterThan(0)
-    expect(list[0]!.id).toBe('coral')
-    const rows = list.map((t) => ROSTER.findIndex(([id]) => id === t.id))
-    expect(rows).not.toContain(-1)
-    expect(rows).toEqual([...rows].sort((a, b) => a - b))
-    expect(new Set(rows).size).toBe(rows.length)
-    for (const [i, t] of list.entries()) {
-      const [, name, scheme] = ROSTER[rows[i]!]!
-      expect([t.id, t.name, t.scheme]).toEqual([t.id, name, scheme])
-    }
+    expect(list.map((t) => [t.id, t.name, t.scheme])).toEqual(ROSTER.map((row) => [...row]))
+    expect(new Set(list.map((t) => t.id)).size).toBe(list.length)
   })
 
   it('returns the same list every time', () => {

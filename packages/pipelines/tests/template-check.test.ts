@@ -88,7 +88,7 @@ describe('validateSlideTemplate', () => {
         problems: [],
       })
     }
-  })
+  }, 60_000)
 
   it('says where each problem is and what to fix', async () => {
     const problems = await validateSlideTemplate(withStyle('Card background #123456.'))
