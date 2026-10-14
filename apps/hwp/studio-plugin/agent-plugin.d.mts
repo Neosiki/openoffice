@@ -113,6 +113,25 @@ export interface AgentNoSuchStyle {
   styles: string[]
 }
 
+/** A place in a table, rows and columns from 1. */
+export interface AgentCellPlace {
+  row: number
+  col: number
+}
+
+export type AgentMergeCellsResult =
+  | { ok: true; merged: number; place: AgentPlace }
+  | { ok: false; reason: 'no_such_table'; count: number }
+  | { ok: false; reason: 'unsupported_place' }
+  | { ok: false; reason: 'no_such_cell'; rows: number; cols: number }
+  | { ok: false; reason: 'crosses_merged' | 'named_cells'; cells: AgentCellPlace[] }
+
+export type AgentSplitCellResult =
+  | { ok: true; unmerged: boolean; place: AgentPlace }
+  | { ok: false; reason: 'no_such_table'; count: number }
+  | { ok: false; reason: 'unsupported_place' | 'not_merged' | 'holds_object' }
+  | { ok: false; reason: 'no_such_cell'; rows: number; cols: number }
+
 export type AgentFormatCellsResult =
   | { ok: true; count: number; place: AgentPlace }
   | { ok: false; reason: 'no_such_table'; count: number }
@@ -490,6 +509,14 @@ export interface AgentPluginSurface {
   deleteNote(note: number): AgentDeleteNoteResult
   measureTabs(spots: AgentTabSpot[]): { tabs: (AgentTabMeasure | null)[] }
   listStyles(): string[]
+  mergeCells(table: number, from: AgentCellPlace, to: AgentCellPlace): AgentMergeCellsResult
+  splitCell(
+    table: number,
+    row: number,
+    col: number,
+    rows?: number | null,
+    cols?: number | null,
+  ): AgentSplitCellResult
   formatCells(
     table: number,
     cells: { row: number; col: number }[],

@@ -37,6 +37,8 @@ const MAX_CELL_CHARS = 300
 const MAX_FILLED_CELLS = 400
 /** Lines of text one cell is given. */
 const MAX_CELL_LINES = 50
+/** Most rows or columns one cell is split into. */
+const MAX_SPLIT = 10
 /** Cells one call gives a background colour. */
 const MAX_FORMATTED_CELLS = 500
 /** Rows or columns one call adds to or removes from a table. */
@@ -1124,6 +1126,19 @@ function tablesOf(doc) {
     }
   }
   return { tables, partial: lookups <= 0 }
+}
+
+/**
+ * Table `number` (as listTables numbers them) when it sits in a body paragraph, with its
+ * cells; otherwise a refusal. The engine merges and splits cells by table and cell number,
+ * which cannot name a table inside another table's cell.
+ */
+function bodyTable(doc, number) {
+  const { tables } = tablesOf(doc)
+  const table = Number.isInteger(number) ? tables[number - 1] : undefined
+  if (!table) return { refusal: { ok: false, reason: 'no_such_table', count: tables.length } }
+  if (table.path.length > 1) return { refusal: { ok: false, reason: 'unsupported_place' } }
+  return { table, grid: gridOf(doc, table) }
 }
 
 /** The cells of a table with the place each takes: zero-based row and column, and its spans. */
@@ -2558,6 +2573,160 @@ export const agentPlugin = {
             return {
               ok: true,
               count: targets.length,
+              place: { sec: table.sec, para: table.para, offset: 0, length: 0 },
+            }
+          }),
+        )
+      }),
+
+      /**
+       * Merge the cells of table `number` from one corner to the other (rows and columns
+       * from 1, both corners included) into one cell; their text goes into it one cell after
+       * another, as Hangul merges. A merged cell must lie wholly inside the range or wholly
+       * outside it. Cells of a table inside another table's cell cannot be merged here.
+       */
+      mergeCells: guarded((number, from, to) => {
+        const corner = (at) =>
+          at && Number.isInteger(at.row) && Number.isInteger(at.col) && at.row >= 1 && at.col >= 1
+        if (!corner(from) || !corner(to)) {
+          throw fail('BAD_ARGUMENT', 'from and to need a row and a col, counted from 1')
+        }
+        const top = Math.min(from.row, to.row) - 1
+        const bottom = Math.max(from.row, to.row) - 1
+        const left = Math.min(from.col, to.col) - 1
+        const right = Math.max(from.col, to.col) - 1
+        if (top === bottom && left === right) {
+          throw fail('BAD_ARGUMENT', 'from and to name one cell: there is nothing to merge')
+        }
+        const plan = (doc) => {
+          const found = bodyTable(doc, number)
+          if (found.refusal) return found
+          const { table, grid } = found
+          if (bottom >= table.rows || right >= table.cols) {
+            return {
+              refusal: { ok: false, reason: 'no_such_cell', rows: table.rows, cols: table.cols },
+            }
+          }
+          const inside = []
+          const crossing = []
+          for (const cell of grid) {
+            const lastRow = cell.row + cell.rowSpan - 1
+            const lastCol = cell.col + cell.colSpan - 1
+            const overlaps =
+              cell.row <= bottom && lastRow >= top && cell.col <= right && lastCol >= left
+            if (!overlaps) continue
+            const within =
+              cell.row >= top && lastRow <= bottom && cell.col >= left && lastCol <= right
+            if (within) inside.push(cell)
+            else crossing.push({ row: cell.row + 1, col: cell.col + 1 })
+          }
+          if (crossing.length > 0) {
+            return { refusal: { ok: false, reason: 'crosses_merged', cells: crossing } }
+          }
+          // a named cell other than the first would lose its name, which a form fills it by
+          const control = table.path[0].controlIndex
+          const named = inside
+            .filter((cell) => !(cell.row === top && cell.col === left))
+            .filter((cell) => {
+              const props = parse(doc.getCellProperties(table.sec, table.para, control, cell.cell))
+              return typeof props.fieldName === 'string' && props.fieldName !== ''
+            })
+            .map((cell) => ({ row: cell.row + 1, col: cell.col + 1 }))
+          if (named.length > 0)
+            return { refusal: { ok: false, reason: 'named_cells', cells: named } }
+          return { table, control, merged: inside.length }
+        }
+        const refusal = host.read((doc) => plan(doc).refusal ?? null)
+        if (refusal) return refusal
+        return keepingObjects((mustKeep) =>
+          change('merge-cells', (doc) => {
+            const { table, control, merged } = plan(doc)
+            if (!table) throw fail('CHANGED', 'the document changed mid-call')
+            const before = objectsOf(doc)
+            expectOk(
+              doc.mergeTableCells(table.sec, table.para, control, top, left, bottom, right),
+              'merge the cells',
+            )
+            mustKeep(before, objectsOf(doc))
+            return {
+              ok: true,
+              merged,
+              place: { sec: table.sec, para: table.para, offset: 0, length: 0 },
+            }
+          }),
+        )
+      }),
+
+      /**
+       * Split the cell of table `number` at `row` and `col` (from 1): into `rows` by
+       * `cols` cells, or, with neither, a merged cell back into the cells it covers. The
+       * text stays in the first of them.
+       */
+      splitCell: guarded((number, row, col, rows, cols) => {
+        if (!Number.isInteger(row) || !Number.isInteger(col) || row < 1 || col < 1) {
+          throw fail('BAD_ARGUMENT', 'row and col count from 1')
+        }
+        const count = (value) => (value === undefined || value === null ? 1 : value)
+        const down = count(rows)
+        const across = count(cols)
+        for (const value of [down, across]) {
+          if (!Number.isInteger(value) || value < 1 || value > MAX_SPLIT) {
+            throw fail('BAD_ARGUMENT', `rows and cols must be 1 to ${MAX_SPLIT}`)
+          }
+        }
+        const plan = (doc) => {
+          const found = bodyTable(doc, number)
+          if (found.refusal) return found
+          const { table, grid } = found
+          const cell = grid.find(
+            (candidate) =>
+              row - 1 >= candidate.row &&
+              row - 1 < candidate.row + candidate.rowSpan &&
+              col - 1 >= candidate.col &&
+              col - 1 < candidate.col + candidate.colSpan,
+          )
+          if (!cell) {
+            return {
+              refusal: { ok: false, reason: 'no_such_cell', rows: table.rows, cols: table.cols },
+            }
+          }
+          // a picture or a table in the cell (or lying on it) would stay in the first, smaller
+          // part, cut off
+          if (cellHoldsObject(doc, table, cell.cell) || coveredCells(doc, table).has(cell.cell)) {
+            return { refusal: { ok: false, reason: 'holds_object' } }
+          }
+          const merged = cell.rowSpan > 1 || cell.colSpan > 1
+          if (down === 1 && across === 1 && !merged) {
+            return { refusal: { ok: false, reason: 'not_merged' } }
+          }
+          return { table, cell, unmerge: down === 1 && across === 1 }
+        }
+        const refusal = host.read((doc) => plan(doc).refusal ?? null)
+        if (refusal) return refusal
+        return keepingObjects((mustKeep) =>
+          change('split-cell', (doc) => {
+            const { table, cell, unmerge } = plan(doc)
+            if (!table) throw fail('CHANGED', 'the document changed mid-call')
+            const before = objectsOf(doc)
+            const control = table.path[0].controlIndex
+            const result = unmerge
+              ? doc.splitTableCell(table.sec, table.para, control, cell.row, cell.col)
+              : doc.splitTableCellInto(
+                  table.sec,
+                  table.para,
+                  control,
+                  cell.row,
+                  cell.col,
+                  down,
+                  across,
+                  true,
+                  false,
+                )
+            expectOk(result, 'split the cell')
+            mustKeep(before, objectsOf(doc))
+            return {
+              ok: true,
+              unmerged: unmerge,
               place: { sec: table.sec, para: table.para, offset: 0, length: 0 },
             }
           }),

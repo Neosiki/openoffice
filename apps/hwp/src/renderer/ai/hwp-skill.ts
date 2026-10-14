@@ -96,6 +96,7 @@ const SYSTEM_PROMPT = [
   '- Add a table of plain-text cells, with a header row when the first row names the columns (insert_table).',
   '- Work on the tables that are already there: list them (list_tables), read one cell by cell (read_table), write text into its cells, many at once (fill_cells), and add or remove rows and columns (add_to_table, remove_from_table).',
   '- Change formatting: bold, italic, underline, strikethrough, font, font size, text colour and highlight of a piece of text (format_text); alignment, line spacing, first-line indent, margins, space above and below and the paragraph style of a paragraph, and the character formatting of a whole paragraph (format_paragraph); the background colour of table cells (format_cells).',
+  '- Merge table cells into one (merge_cells; their text goes into it, one cell after another) or split a cell into several, or a merged cell back (split_cell). Read the table first: rows and columns count as read_table shows them.',
   '- Fill the form fields of the document (list_fields, fill_field). In Hangul these are called 누름틀. A field is picked by its number in list_fields, because several fields often share one name.',
   '- Make a table of contents (차례, 목차) from the headings you pick, with their page numbers, and write its page numbers again after the document changed (insert_toc, refresh_toc).',
   '- Add footnotes and endnotes (각주, 미주) with their mark right after a piece of body text (insert_note), list the notes with their text (list_notes), and rewrite or remove one (edit_note, delete_note). The text of the document does not show the notes; list_notes does.',
@@ -404,6 +405,38 @@ const TOOLS: AgentToolDef[] = [
         ...PARAGRAPH_FORMAT_SCHEMA,
         ...TEXT_FORMAT_SCHEMA,
       },
+    },
+  },
+  {
+    name: 'merge_cells',
+    description:
+      'Merge the cells of a table between two corners (both included) into one cell. Their text is kept, one cell after another. A merged cell must lie wholly inside the range. Not for a table inside another table.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        table: { type: 'integer', minimum: 1, description: 'table number from list_tables' },
+        from_row: { type: 'integer', minimum: 1 },
+        from_col: { type: 'integer', minimum: 1 },
+        to_row: { type: 'integer', minimum: 1 },
+        to_col: { type: 'integer', minimum: 1 },
+      },
+      required: ['table', 'from_row', 'from_col', 'to_row', 'to_col'],
+    },
+  },
+  {
+    name: 'split_cell',
+    description:
+      'Split one cell of a table into rows × cols cells, or, without rows and cols, split a merged cell back into the cells it covers. The text stays in the first cell. Not for a table inside another table.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        table: { type: 'integer', minimum: 1, description: 'table number from list_tables' },
+        row: { type: 'integer', minimum: 1 },
+        col: { type: 'integer', minimum: 1 },
+        rows: { type: 'integer', minimum: 1, maximum: 10 },
+        cols: { type: 'integer', minimum: 1, maximum: 10 },
+      },
+      required: ['table', 'row', 'col'],
     },
   },
   {
@@ -844,6 +877,10 @@ const arrow = (from: string, to: string) => `“${quote(from)}” → “${quote
 
 const NO_FORMAT_HELP =
   'Name at least one property to change: bold, italic, underline, strikethrough, font, size, color, highlight, and for a paragraph align, line_spacing, indent, margin_left, margin_right, space_before, space_after or style.'
+
+/** Table places as the model names them: row.col. */
+const cellList = (cells: { row: number; col: number }[]): string =>
+  cells.map((cell) => `${cell.row}.${cell.col}`).join(', ')
 
 /** Why a style was not applied, with the styles the document has. */
 const noSuchStyle = (styles: string[]): string =>
@@ -1310,6 +1347,137 @@ export function createHwpSkill(deps: HwpSkillDeps): HwpSkill {
             read.cells.map(cellLine).join('\n') +
             more,
           summary: label('aiToolReadTable', { table }),
+        }
+      }
+      case 'merge_cells': {
+        const numbers = ['table', 'from_row', 'from_col', 'to_row', 'to_col'].map(
+          (key) => call.input[key],
+        )
+        if (
+          !numbers.every(
+            (value) => typeof value === 'number' && Number.isInteger(value) && value >= 1,
+          )
+        ) {
+          return bad(
+            call,
+            'table, from_row, from_col, to_row and to_col must be whole numbers from 1',
+          )
+        }
+        const [table, fromRow, fromCol, toRow, toCol] = numbers as number[]
+        if (fromRow === toRow && fromCol === toCol) {
+          return bad(call, 'from and to name the same cell: there is nothing to merge')
+        }
+        const result = await bridge.mergeCells(
+          table!,
+          { row: fromRow!, col: fromCol! },
+          { row: toRow!, col: toCol! },
+        )
+        if (!result.ok) {
+          switch (result.reason) {
+            case 'no_such_table':
+              return bad(call, noSuchTable(table!, result.count))
+            case 'unsupported_place':
+              return bad(
+                call,
+                'Nothing was changed: that table sits inside a cell of another table, whose cells cannot be merged here.',
+              )
+            case 'no_such_cell':
+              return bad(
+                call,
+                `Nothing was changed: the table has ${result.rows} row(s) and ${result.cols} column(s). Read the table again.`,
+              )
+            case 'crosses_merged':
+              return bad(
+                call,
+                `Nothing was changed: these merged cells lie partly inside the range: ${cellList(result.cells)}. Widen the range to take them whole, or leave them out.`,
+              )
+            default:
+              return bad(
+                call,
+                `Nothing was changed: these cells have names a form fills them by, which merging would lose: ${cellList(result.cells)}.`,
+              )
+          }
+        }
+        const range = `${fromRow}.${fromCol}–${toRow}.${toCol}`
+        deps.onChange({
+          kind: 'lines',
+          from: label('aiTableName', { table: table! }),
+          to: label('aiCellsMerged', { range }),
+          count: 1,
+          place: result.place,
+        })
+        return {
+          output: `Merged ${result.merged} cell(s) into one.`,
+          mutated: true,
+          summary: label('aiToolMergeCells', { table: table! }),
+        }
+      }
+      case 'split_cell': {
+        const table = call.input.table
+        const row = call.input.row
+        const col = call.input.col
+        const whole = (value: unknown) =>
+          typeof value === 'number' && Number.isInteger(value) && value >= 1
+        if (!whole(table) || !whole(row) || !whole(col)) {
+          return bad(call, 'table, row and col must be whole numbers from 1')
+        }
+        const rows = call.input.rows
+        const cols = call.input.cols
+        const optional = (value: unknown) => value === undefined || value === null || whole(value)
+        if (!optional(rows) || !optional(cols)) return bad(call, 'rows and cols must be 1 to 10')
+        const result = await bridge.splitCell(
+          table as number,
+          row as number,
+          col as number,
+          (rows as number | undefined) ?? null,
+          (cols as number | undefined) ?? null,
+        )
+        if (!result.ok) {
+          switch (result.reason) {
+            case 'no_such_table':
+              return bad(call, noSuchTable(table as number, result.count))
+            case 'unsupported_place':
+              return bad(
+                call,
+                'Nothing was changed: that table sits inside a cell of another table, whose cells cannot be split here.',
+              )
+            case 'no_such_cell':
+              return bad(
+                call,
+                `Nothing was changed: the table has ${result.rows} row(s) and ${result.cols} column(s). Read the table again.`,
+              )
+            case 'holds_object':
+              return bad(
+                call,
+                'Nothing was changed: that cell holds a picture or a table, which would stay in the first, smaller part and be cut off. Leave it whole.',
+              )
+            default:
+              return bad(
+                call,
+                'Nothing was changed: that cell is not merged. Pass rows and cols to split it into more cells.',
+              )
+          }
+        }
+        const cell = `${row}.${col}`
+        deps.onChange({
+          kind: 'lines',
+          from: label('aiTableName', { table: table as number }),
+          to: result.unmerged
+            ? label('aiCellUnmerged', { cell })
+            : label('aiCellSplit', {
+                cell,
+                rows: (rows as number | undefined) ?? 1,
+                cols: (cols as number | undefined) ?? 1,
+              }),
+          count: 1,
+          place: result.place,
+        })
+        return {
+          output: result.unmerged
+            ? 'Split the merged cell back into the cells it covered; the text stays in the first.'
+            : 'Split the cell; the text stays in the first of the new cells.',
+          mutated: true,
+          summary: label('aiToolSplitCell', { table: table as number }),
         }
       }
       case 'format_cells': {

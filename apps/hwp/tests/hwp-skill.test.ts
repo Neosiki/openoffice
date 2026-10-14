@@ -103,6 +103,16 @@ function setup(overrides: Partial<AgentBridge> = {}) {
       count: 1,
       place: { sec: 0, para: 0, offset: 0, length: 0 },
     })),
+    mergeCells: vi.fn(async () => ({
+      ok: true as const,
+      merged: 4,
+      place: { sec: 0, para: 0, offset: 0, length: 0 },
+    })),
+    splitCell: vi.fn(async () => ({
+      ok: true as const,
+      unmerged: false,
+      place: { sec: 0, para: 0, offset: 0, length: 0 },
+    })),
     insertNote: vi.fn(async () => ({
       ok: true as const,
       kind: 'footnote' as const,
@@ -585,6 +595,71 @@ describe('format_paragraph', () => {
     expect(result.isError).toBe(true)
     expect(result.output).toContain('format_text')
     expect(changes).toEqual([])
+  })
+})
+
+describe('merge_cells and split_cell', () => {
+  it('merges a range and lists the change on the table', async () => {
+    const { call, changes, bridge } = setup()
+    const result = await call('merge_cells', {
+      table: 1,
+      from_row: 1,
+      from_col: 1,
+      to_row: 2,
+      to_col: 2,
+    })
+    expect(bridge.mergeCells).toHaveBeenCalledWith(1, { row: 1, col: 1 }, { row: 2, col: 2 })
+    expect(result).toMatchObject({ mutated: true, output: 'Merged 4 cell(s) into one.' })
+    expect(changes[0]).toMatchObject({ kind: 'lines', to: 'aiCellsMerged:{"range":"1.1–2.2"}' })
+  })
+
+  it('says which merged cells cut through the range', async () => {
+    const { call, changes } = setup({
+      mergeCells: async () => ({
+        ok: false,
+        reason: 'crosses_merged',
+        cells: [{ row: 1, col: 1 }],
+      }),
+    })
+    const result = await call('merge_cells', {
+      table: 1,
+      from_row: 1,
+      from_col: 2,
+      to_row: 2,
+      to_col: 3,
+    })
+    expect(result.isError).toBe(true)
+    expect(result.output).toContain('1.1')
+    expect(changes).toEqual([])
+  })
+
+  it('refuses a range of one cell before asking the editor', async () => {
+    const { call, bridge } = setup()
+    const result = await call('merge_cells', {
+      table: 1,
+      from_row: 2,
+      from_col: 2,
+      to_row: 2,
+      to_col: 2,
+    })
+    expect(result.isError).toBe(true)
+    expect(bridge.mergeCells).not.toHaveBeenCalled()
+  })
+
+  it('splits a cell into rows and columns, or a merged cell back', async () => {
+    const { call, changes, bridge } = setup()
+    await call('split_cell', { table: 1, row: 2, col: 2, rows: 2, cols: 3 })
+    expect(bridge.splitCell).toHaveBeenCalledWith(1, 2, 2, 2, 3)
+    expect(changes[0]!.to).toBe('aiCellSplit:{"cell":"2.2","rows":2,"cols":3}')
+    await call('split_cell', { table: 1, row: 1, col: 1 })
+    expect(bridge.splitCell).toHaveBeenLastCalledWith(1, 1, 1, null, null)
+  })
+
+  it('tells the model a cell that is not merged needs rows and cols', async () => {
+    const { call } = setup({ splitCell: async () => ({ ok: false, reason: 'not_merged' }) })
+    const result = await call('split_cell', { table: 1, row: 1, col: 1 })
+    expect(result.isError).toBe(true)
+    expect(result.output).toContain('rows and cols')
   })
 })
 
@@ -1254,6 +1329,8 @@ describe('the skill as the model sees it', () => {
       'replace_selection',
       'read_selection',
       'format_selection',
+      'merge_cells',
+      'split_cell',
       'format_cells',
       'list_tables',
       'read_table',

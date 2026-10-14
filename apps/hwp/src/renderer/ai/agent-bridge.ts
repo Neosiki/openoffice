@@ -47,6 +47,8 @@ const METHODS = [
   'clearMarks',
   'listStyles',
   'formatCells',
+  'mergeCells',
+  'splitCell',
   'undo',
 ] as const satisfies readonly (keyof AgentPluginSurface)[]
 
