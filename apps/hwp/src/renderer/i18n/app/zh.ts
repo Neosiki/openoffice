@@ -9,6 +9,8 @@ export const zh = {
     '未保存：即将写入的内容读回后与屏幕上的文档不一致。请尝试“另存为”保存到新文件。',
   saveProtected: '未保存：此文档有密码保护，在这里保存会写出不带密码的文件。',
   backupKept: '已保存。之前的版本保留为 {name}。',
+  openedTracked:
+    '此文档包含修订记录。屏幕上只显示应用修订后的当前内容；保存时将保存此内容，不保留修订记录。',
   saveTracked:
     '未保存：此文档包含修订记录，在这里保存会丢失修订记录，并且保存的文件可能无法在 Hancom Hangul 中打开。',
   savedTailsLost:

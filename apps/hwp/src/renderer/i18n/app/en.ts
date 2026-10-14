@@ -11,6 +11,8 @@ export const en = {
   saveProtected:
     'Not saved: this document is password-protected, and saving it here would write it without the password.',
   backupKept: 'Saved. The previous version was kept as {name}.',
+  openedTracked:
+    'This document has tracked changes. You see its current text, with the changes applied; saving keeps this text and drops the record of changes.',
   saveTracked:
     'Not saved: this document has tracked changes, and saving it here would lose them and may write a file Hancom Hangul cannot open.',
   savedTailsLost:

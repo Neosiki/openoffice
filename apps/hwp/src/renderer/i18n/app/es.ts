@@ -11,6 +11,8 @@ export const es = {
   saveProtected:
     'No se guardó: este documento está protegido con contraseña y, al guardarlo aquí, se escribiría sin ella.',
   backupKept: 'Guardado. La versión anterior se conservó como {name}.',
+  openedTracked:
+    'Este documento tiene control de cambios. Ve su texto actual, con los cambios aplicados; al guardar se conserva este texto y se descarta el registro de cambios.',
   saveTracked:
     'No se guardó: este documento tiene control de cambios; guardarlo aquí los perdería y podría crear un archivo que Hancom Hangul no puede abrir.',
   savedTailsLost:

@@ -30,6 +30,8 @@ interface Notice {
   params?: Params
   /** untranslated cause from the engine or the file system, shown under the message */
   detail?: string
+  /** an information that stays until dismissed, as errors do */
+  sticky?: true
 }
 
 /** How often the editor is asked whether the document has unsaved changes. */
@@ -52,6 +54,7 @@ const isBridgeTimeout = (error: unknown) =>
   error instanceof Error && error.message.startsWith('Request timeout')
 
 function savePortOf(editor: RhwpEditor): SaveEditorPort {
+  const agent = createAgentBridge(() => editor)
   return {
     isPasswordProtected: async () => {
       const flag = (await editor.commands.context())[PASSWORD_FLAG]
@@ -63,6 +66,7 @@ function savePortOf(editor: RhwpEditor): SaveEditorPort {
     exportHwp: () => editor.exportHwp(),
     exportHwpx: () => editor.exportHwpx(),
     exportHwpVerify: () => editor.exportHwpVerify(),
+    measureTabs: async (spots) => (await agent.measureTabs(spots)).tabs,
     notifySaved: (fileName) => editor.notifySaved(fileName),
   }
 }
@@ -114,7 +118,11 @@ export default function App() {
         setPhase('loading')
         const bytes = await window.hwpApi.readFile(path)
         await editor.loadFile(bytes, fileNameOf(path), { skipUnsavedGuard: true })
-        if (!disposed) setPhase('ready')
+        if (disposed) return
+        setPhase('ready')
+        if (await window.hwpApi.trackingDropped().catch(() => false)) {
+          if (!disposed) setNotice({ tone: 'info', key: 'openedTracked', sticky: true })
+        }
       } catch (error) {
         if (disposed) return
         if (editor && isBridgeTimeout(error)) return
@@ -297,7 +305,7 @@ export default function App() {
   )
 
   useEffect(() => {
-    if (notice?.tone !== 'info') return
+    if (notice?.tone !== 'info' || notice.sticky) return
     const timer = setTimeout(() => setNotice(null), INFO_NOTICE_MS)
     return () => clearTimeout(timer)
   }, [notice])

@@ -11,6 +11,8 @@ export const nl = {
   saveProtected:
     'Niet opgeslagen: dit document is met een wachtwoord beveiligd, en hier opslaan zou het zonder wachtwoord wegschrijven.',
   backupKept: 'Opgeslagen. De vorige versie is bewaard als {name}.',
+  openedTracked:
+    'Dit document bevat bijgehouden wijzigingen. U ziet de huidige tekst, met de wijzigingen verwerkt; bij opslaan blijft deze tekst behouden en vervalt het overzicht van wijzigingen.',
   saveTracked:
     'Niet opgeslagen: dit document bevat bijgehouden wijzigingen; door het hier op te slaan gaan ze verloren en kan Hancom Hangul het bestand mogelijk niet openen.',
   savedTailsLost:

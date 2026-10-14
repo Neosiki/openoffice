@@ -43,6 +43,7 @@ const METHODS = [
   'insertNote',
   'editNote',
   'deleteNote',
+  'measureTabs',
   'undo',
 ] as const satisfies readonly (keyof AgentPluginSurface)[]
 

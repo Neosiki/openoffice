@@ -18,12 +18,22 @@ import { getUiLang } from '@genoffice/i18n'
 import { registerHwpAttachmentIpc } from './attachments-ipc'
 import { atomicWriteFile } from './atomic-write'
 import { tm } from './dialog-strings'
+import { fieldKindsOf, restoreFieldKinds } from './field-kinds'
+import type { FieldKinds } from './field-kinds'
 import { backupPathFor, bytesMatchFormat, needsBackup, withFormatExtension } from './save-plan'
 import { restoreSectionTails, sectionTailsOf } from './section-tails'
 import type { SectionTails } from './section-tails'
-import { hasTrackedChanges } from './tracked-changes'
+import { newTabsOf, writeTabWidths } from './tab-widths'
+import { hasTrackedChanges, withoutTrackedChanges } from './tracked-changes'
 import { HWP_CHANNELS, MAX_HWP_SAVE_BYTES, hwpFormatOfPath } from '../shared/ipc'
-import type { BeginSaveResult, CommitSaveResult, HwpFormat, SaveMode } from '../shared/ipc'
+import type {
+  BeginSaveResult,
+  CommitSaveResult,
+  HwpFormat,
+  MeasuredTab,
+  SaveMode,
+  TabSpot,
+} from '../shared/ipc'
 
 interface RuntimePaths {
   preloadPath: string
@@ -60,8 +70,12 @@ const writtenByWc = new Map<number, Set<string>>()
  * first, memos), kept to put back when the view saves; see section-tails.ts
  */
 const tailsByWc = new Map<number, SectionTails>()
-/** Views whose file has tracked changes: not saved, see tracked-changes.ts */
+/** The kinds of the HWP file's fields that the engine writes as "unknown"; see field-kinds.ts */
+const fieldKindsByWc = new Map<number, FieldKinds>()
+/** Views whose file has tracked changes that could not be left out: not saved, see tracked-changes.ts */
 const trackedByWc = new Set<number>()
+/** Views whose file had tracked changes, opened without them; see tracked-changes.ts */
+const trackingDroppedByWc = new Set<number>()
 
 /** Fired after a save lands on a NEW path (Save As); the shell syncs tab title, recents, projects */
 let fileSavedHook: ((wc: WebContents, path: string) => void) | null = null
@@ -231,15 +245,31 @@ function registerHwpIpc(): void {
     }
     const info = await stat(path)
     if (info.size > MAX_HWP_SAVE_BYTES) throw new Error('hwp: file is too large to open')
-    const bytes = await readFile(path)
+    let bytes: Uint8Array = await readFile(path)
     // the document the view holds from now on is this file: what is kept follows it
+    const wcId = e.sender.id
+    trackedByWc.delete(wcId)
+    trackingDroppedByWc.delete(wcId)
+    if (bytesMatchFormat(bytes, 'hwp') && hasTrackedChanges(bytes)) {
+      // the editor gets the document as it reads now; one that cannot be had is not saved
+      const current = withoutTrackedChanges(bytes)
+      if (current) {
+        bytes = current
+        trackingDroppedByWc.add(wcId)
+      } else {
+        trackedByWc.add(wcId)
+      }
+    }
     const tails = bytesMatchFormat(bytes, 'hwp') ? sectionTailsOf(bytes) : null
     if (tails) tailsByWc.set(e.sender.id, tails)
     else tailsByWc.delete(e.sender.id)
-    if (bytesMatchFormat(bytes, 'hwp') && hasTrackedChanges(bytes)) trackedByWc.add(e.sender.id)
-    else trackedByWc.delete(e.sender.id)
+    const kinds = bytesMatchFormat(bytes, 'hwp') ? fieldKindsOf(bytes) : null
+    if (kinds) fieldKindsByWc.set(e.sender.id, kinds)
+    else fieldKindsByWc.delete(e.sender.id)
     return bytes
   })
+
+  ipcMain.handle(HWP_CHANNELS.trackingDropped, (e) => trackingDroppedByWc.has(e.sender.id))
 
   ipcMain.handle(HWP_CHANNELS.beginSave, async (e, mode: unknown): Promise<BeginSaveResult> => {
     const wcId = e.sender.id
@@ -286,63 +316,82 @@ function registerHwpIpc(): void {
     }
   })
 
-  ipcMain.handle(HWP_CHANNELS.commitSave, async (e, data: unknown): Promise<CommitSaveResult> => {
-    const wcId = e.sender.id
-    const pending = pendingSaveByWc.get(wcId)
-    pendingSaveByWc.delete(wcId)
-    const done = (result: CommitSaveResult): CommitSaveResult => {
-      settleSave(wcId, result.ok)
-      return result
-    }
-    if (!pending) return done({ ok: false, error: 'hwp: no save in progress' })
+  ipcMain.handle(HWP_CHANNELS.newTabs, (e, data: unknown, format: unknown): TabSpot[] => {
+    if (!pendingSaveByWc.has(e.sender.id)) return []
     if (!(data instanceof Uint8Array) || data.length === 0 || data.length > MAX_HWP_SAVE_BYTES) {
-      return done({ ok: false, error: 'hwp: bad save request' })
+      return []
     }
-    if (!bytesMatchFormat(data, pending.format)) {
-      return done({ ok: false, error: `hwp: exported bytes are not a ${pending.format} file` })
-    }
-    try {
-      const target = pending.path
-      let bytes = data
-      let tailsLost = false
-      const tails = pending.format === 'hwp' ? tailsByWc.get(wcId) : undefined
-      if (tails) {
-        const result = restoreSectionTails(data, tails)
-        bytes = result.bytes
-        if (result.skipped) {
-          tailsLost = true
-          console.warn(`hwp: master pages or memos were not put back on save (${result.skipped})`)
-        }
-      }
-      const written = writtenByWc.get(wcId) ?? new Set<string>()
-      let backupPath: string | undefined
-      if (needsBackup(target, existsSync(target), written)) {
-        backupPath = backupPathFor(target)
-        await copyFile(target, backupPath)
-      }
-      await atomicWriteFile(target, Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength))
-      written.add(target)
-      writtenByWc.set(wcId, written)
-      const isNewPath = savePathByWc.get(wcId) !== target
-      savePathByWc.set(wcId, target)
-      // keep the reload path in sync: a stale openPathByWc would make a
-      // reloaded renderer load the OLD file and then save it over the new one
-      openPathByWc.set(wcId, target)
-      const allowed = allowedByWc.get(wcId) ?? new Set<string>()
-      allowed.add(target)
-      allowedByWc.set(wcId, allowed)
-      dirtyByWc.delete(wcId)
-      if (isNewPath) fileSavedHook?.(e.sender, target)
-      return done({
-        ok: true,
-        path: target,
-        ...(backupPath ? { backupPath } : {}),
-        ...(tailsLost ? { tailsLost: true as const } : {}),
-      })
-    } catch (err) {
-      return done({ ok: false, error: err instanceof Error ? err.message : String(err) })
-    }
+    if ((format !== 'hwp' && format !== 'hwpx') || !bytesMatchFormat(data, format)) return []
+    return newTabsOf(data, format)
   })
+
+  ipcMain.handle(
+    HWP_CHANNELS.commitSave,
+    async (e, data: unknown, tabs: unknown): Promise<CommitSaveResult> => {
+      const wcId = e.sender.id
+      const pending = pendingSaveByWc.get(wcId)
+      pendingSaveByWc.delete(wcId)
+      const done = (result: CommitSaveResult): CommitSaveResult => {
+        settleSave(wcId, result.ok)
+        return result
+      }
+      if (!pending) return done({ ok: false, error: 'hwp: no save in progress' })
+      if (!(data instanceof Uint8Array) || data.length === 0 || data.length > MAX_HWP_SAVE_BYTES) {
+        return done({ ok: false, error: 'hwp: bad save request' })
+      }
+      if (!bytesMatchFormat(data, pending.format)) {
+        return done({ ok: false, error: `hwp: exported bytes are not a ${pending.format} file` })
+      }
+      try {
+        const target = pending.path
+        let bytes = data
+        // the tabs first: their places were found in the engine's bytes, and putting the
+        // tails back leaves the body of each section as it is
+        if (Array.isArray(tabs) && tabs.length > 0) {
+          bytes = writeTabWidths(bytes, pending.format, tabs as MeasuredTab[]).bytes
+        }
+        const kinds = pending.format === 'hwp' ? fieldKindsByWc.get(wcId) : undefined
+        if (kinds) bytes = restoreFieldKinds(bytes, kinds).bytes
+        let tailsLost = false
+        const tails = pending.format === 'hwp' ? tailsByWc.get(wcId) : undefined
+        if (tails) {
+          const result = restoreSectionTails(bytes, tails)
+          bytes = result.bytes
+          if (result.skipped) {
+            tailsLost = true
+            console.warn(`hwp: master pages or memos were not put back on save (${result.skipped})`)
+          }
+        }
+        const written = writtenByWc.get(wcId) ?? new Set<string>()
+        let backupPath: string | undefined
+        if (needsBackup(target, existsSync(target), written)) {
+          backupPath = backupPathFor(target)
+          await copyFile(target, backupPath)
+        }
+        await atomicWriteFile(target, Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength))
+        written.add(target)
+        writtenByWc.set(wcId, written)
+        const isNewPath = savePathByWc.get(wcId) !== target
+        savePathByWc.set(wcId, target)
+        // keep the reload path in sync: a stale openPathByWc would make a
+        // reloaded renderer load the OLD file and then save it over the new one
+        openPathByWc.set(wcId, target)
+        const allowed = allowedByWc.get(wcId) ?? new Set<string>()
+        allowed.add(target)
+        allowedByWc.set(wcId, allowed)
+        dirtyByWc.delete(wcId)
+        if (isNewPath) fileSavedHook?.(e.sender, target)
+        return done({
+          ok: true,
+          path: target,
+          ...(backupPath ? { backupPath } : {}),
+          ...(tailsLost ? { tailsLost: true as const } : {}),
+        })
+      } catch (err) {
+        return done({ ok: false, error: err instanceof Error ? err.message : String(err) })
+      }
+    },
+  )
 
   ipcMain.on(HWP_CHANNELS.abortSave, (e) => {
     pendingSaveByWc.delete(e.sender.id)
@@ -407,7 +456,9 @@ function grantAndTrack(wc: WebContents, openPath?: string | null): void {
     pendingSaveByWc.delete(wcId)
     writtenByWc.delete(wcId)
     tailsByWc.delete(wcId)
+    fieldKindsByWc.delete(wcId)
     trackedByWc.delete(wcId)
+    trackingDroppedByWc.delete(wcId)
     closeSaveWaiters.get(wcId)?.(false)
     closeSaveWaiters.delete(wcId)
     settleSave(wcId, false)

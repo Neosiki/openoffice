@@ -14,4 +14,6 @@
 | [0010](0010-hwp-ai-through-studio-plugin.md)              | 한글 문서의 AI 편집은 편집기 안에 넣은 자체 플러그인으로 하고, 개체를 잃는 변경은 하지 않는다   | 2026-10-14 |
 | [0011](0011-hwp-read-outside-editor.md)                   | 편집기 밖에서 한글 문서는 같은 엔진으로 읽기만 한다                                             | 2026-10-14 |
 | [0012](0012-hwp-restore-section-tails.md)                 | 한글 문서를 저장할 때 엔진이 빠뜨린 바탕쪽과 메모를 원본에서 다시 붙인다                        | 2026-10-14 |
-| [0013](0013-hwp-no-save-with-tracked-changes.md)          | 변경 내용 추적이 든 한글 문서는 저장하지 않는다                                                 | 2026-10-14 |
+| [0013](0013-hwp-no-save-with-tracked-changes.md)          | 변경 내용 추적이 든 한글 문서는 저장하지 않는다 (0015로 대체)                                   | 2026-10-14 |
+| [0014](0014-hwp-fix-tab-widths-and-field-kinds.md)        | 한글 문서를 저장할 때 새 탭의 폭과 필드의 종류를 바로잡는다                                     | 2026-10-14 |
+| [0015](0015-hwp-open-tracked-changes-as-current.md)       | 변경 내용 추적이 든 한글 문서는 지금의 내용으로 열고, 저장하면 추적 기록 없이 저장한다          | 2026-10-14 |

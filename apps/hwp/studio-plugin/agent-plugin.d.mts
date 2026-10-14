@@ -335,6 +335,22 @@ export interface AgentTocEntry {
   level: number
 }
 
+/** A tab a save found without a width: see TabSpot in src/main/tab-widths.ts. */
+export interface AgentTabSpot {
+  sec: number
+  para: number
+  cells: { table: number; cell: number; para: number }[]
+  tab: number
+  tabs: number
+}
+
+/** Width in HWPUNIT; kind (0 left, 1 right, 2 centre, 3 decimal) and leader of its tab stop. */
+export interface AgentTabMeasure {
+  width: number
+  type: number
+  fill: number
+}
+
 export type AgentInsertTocResult =
   | { ok: true; count: number; pages: number[]; place: AgentPlace }
   | AgentPlaceRefusal
@@ -440,6 +456,7 @@ export interface AgentPluginSurface {
   ): AgentInsertNoteResult
   editNote(note: number, text: string): AgentEditNoteResult
   deleteNote(note: number): AgentDeleteNoteResult
+  measureTabs(spots: AgentTabSpot[]): { tabs: (AgentTabMeasure | null)[] }
   undo(steps: number, expectedForeign: number): AgentUndoResult
 }
 

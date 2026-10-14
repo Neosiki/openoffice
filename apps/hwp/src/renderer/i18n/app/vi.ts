@@ -11,6 +11,8 @@ export const vi = {
   saveProtected:
     'Chưa lưu: tài liệu này được bảo vệ bằng mật khẩu, và lưu ở đây sẽ ghi tệp không có mật khẩu.',
   backupKept: 'Đã lưu. Phiên bản trước được giữ lại dưới tên {name}.',
+  openedTracked:
+    'Tài liệu này có theo dõi thay đổi. Bạn đang thấy nội dung hiện tại đã áp dụng các thay đổi; khi lưu, nội dung này được giữ lại và bản ghi thay đổi bị bỏ đi.',
   saveTracked:
     'Chưa lưu: tài liệu này có theo dõi thay đổi; lưu ở đây sẽ làm mất chúng và có thể tạo ra tệp mà Hancom Hangul không mở được.',
   savedTailsLost:

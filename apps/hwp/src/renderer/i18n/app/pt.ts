@@ -11,6 +11,8 @@ export const pt = {
   saveProtected:
     'Não salvo: este documento é protegido por senha, e salvá-lo aqui o gravaria sem a senha.',
   backupKept: 'Salvo. A versão anterior foi mantida como {name}.',
+  openedTracked:
+    'Este documento tem alterações controladas. Você vê o texto atual, com as alterações aplicadas; ao salvar, este texto é mantido e o registro de alterações é descartado.',
   saveTracked:
     'Não foi salvo: este documento tem alterações controladas; salvá-lo aqui faria com que se perdessem e poderia gerar um arquivo que o Hancom Hangul não consegue abrir.',
   savedTailsLost:

@@ -1,4 +1,4 @@
-import type { HwpApi, SaveMode } from '../shared/ipc'
+import type { HwpApi, HwpFormat, MeasuredTab, SaveMode, TabMeasure, TabSpot } from '../shared/ipc'
 
 /** The part of the embedded editor a save needs. */
 export interface SaveEditorPort {
@@ -12,6 +12,8 @@ export interface SaveEditorPort {
     pageCountAfter: number
     recovered: boolean
   }>
+  /** how the editor lays out the given tabs; null for one it cannot measure */
+  measureTabs(spots: TabSpot[]): Promise<(TabMeasure | null)[]>
   /** clear the editor's unsaved state after the host stored the bytes */
   notifySaved(fileName?: string): Promise<unknown>
 }
@@ -37,6 +39,30 @@ const fileNameOf = (path: string) => path.split(/[\\/]/).pop() ?? path
 const detailOf = (error: unknown) => (error instanceof Error ? error.message : String(error))
 
 /**
+ * The widths for the tabs the engine wrote without one (Hangul would draw them with none,
+ * decision 0014), as the editor lays them out. A save never fails on this: whatever cannot
+ * be measured is written as the engine wrote it.
+ */
+async function measuredTabs(
+  editor: SaveEditorPort,
+  api: Pick<HwpApi, 'newTabs'>,
+  bytes: Uint8Array,
+  format: HwpFormat,
+): Promise<MeasuredTab[]> {
+  try {
+    const spots = await api.newTabs(bytes, format)
+    if (spots.length === 0) return []
+    const measures = await editor.measureTabs(spots)
+    return spots.flatMap((spot, index) => {
+      const measure = measures[index]
+      return measure ? [{ ...spot, ...measure }] : []
+    })
+  } catch {
+    return []
+  }
+}
+
+/**
  * One save, start to finish: the main process decides where and in which
  * format, the editor exports, the main process writes. The file on disk is
  * only replaced by bytes the engine could produce; a failed export leaves it
@@ -44,7 +70,7 @@ const detailOf = (error: unknown) => (error instanceof Error ? error.message : S
  */
 export async function runSave(
   editor: SaveEditorPort,
-  api: Pick<HwpApi, 'beginSave' | 'commitSave' | 'abortSave'>,
+  api: Pick<HwpApi, 'beginSave' | 'newTabs' | 'commitSave' | 'abortSave'>,
   mode: SaveMode,
 ): Promise<SaveOutcome> {
   // before any dialog: a protected document is not saved under any name
@@ -83,7 +109,7 @@ export async function runSave(
     return { kind: 'failed', reason: 'export', detail: detailOf(error) }
   }
 
-  const commit = await api.commitSave(bytes)
+  const commit = await api.commitSave(bytes, await measuredTabs(editor, api, bytes, begin.format))
   if (!commit.ok) return { kind: 'failed', reason: 'write', detail: commit.error }
   // the file is already written; a failed notification only leaves the editor's own dirty flag set
   await editor.notifySaved(fileNameOf(commit.path)).catch(() => {})

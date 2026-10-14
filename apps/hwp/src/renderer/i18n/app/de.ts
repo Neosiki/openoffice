@@ -11,6 +11,8 @@ export const de = {
   saveProtected:
     'Nicht gespeichert: Dieses Dokument ist kennwortgeschützt, und beim Speichern hier würde es ohne Kennwort geschrieben.',
   backupKept: 'Gespeichert. Die vorherige Version wurde als {name} aufbewahrt.',
+  openedTracked:
+    'Dieses Dokument enthält nachverfolgte Änderungen. Angezeigt wird der aktuelle Text mit übernommenen Änderungen; beim Speichern bleibt dieser Text erhalten, die Änderungsverfolgung entfällt.',
   saveTracked:
     'Nicht gespeichert: Dieses Dokument enthält nachverfolgte Änderungen. Beim Speichern hier gingen sie verloren, und Hancom Hangul könnte die Datei nicht öffnen.',
   savedTailsLost:

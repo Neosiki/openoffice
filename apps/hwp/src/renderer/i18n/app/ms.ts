@@ -11,6 +11,8 @@ export const ms = {
   saveProtected:
     'Tidak disimpan: dokumen ini dilindungi kata laluan, dan menyimpannya di sini akan menulisnya tanpa kata laluan.',
   backupKept: 'Disimpan. Versi sebelumnya disimpan sebagai {name}.',
+  openedTracked:
+    'Dokumen ini mengandungi perubahan yang dijejak. Anda melihat teks semasanya, dengan perubahan digunakan; menyimpan akan mengekalkan teks ini dan membuang rekod perubahan.',
   saveTracked:
     'Tidak disimpan: dokumen ini mempunyai penjejakan perubahan; menyimpannya di sini akan menghilangkannya dan mungkin menghasilkan fail yang tidak dapat dibuka oleh Hancom Hangul.',
   savedTailsLost:

@@ -11,6 +11,8 @@ export const id = {
   saveProtected:
     'Tidak disimpan: dokumen ini dilindungi kata sandi, dan menyimpannya di sini akan menulisnya tanpa kata sandi.',
   backupKept: 'Tersimpan. Versi sebelumnya disimpan sebagai {name}.',
+  openedTracked:
+    'Dokumen ini berisi pelacakan perubahan. Anda melihat teks terkininya, dengan perubahan diterapkan; menyimpan akan mempertahankan teks ini dan menghapus catatan perubahan.',
   saveTracked:
     'Tidak disimpan: dokumen ini memiliki pelacakan perubahan; menyimpannya di sini akan menghilangkannya dan dapat menghasilkan file yang tidak bisa dibuka Hancom Hangul.',
   savedTailsLost:

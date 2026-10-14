@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { runSave, type SaveEditorPort } from '../src/renderer/save-flow'
-import type { BeginSaveResult, CommitSaveResult } from '../src/shared/ipc'
+import type { BeginSaveResult, CommitSaveResult, TabSpot } from '../src/shared/ipc'
 
 const HWP = Uint8Array.from([1, 2, 3])
 const HWPX = Uint8Array.from([4, 5, 6])
@@ -15,20 +15,64 @@ function editor(overrides: Partial<SaveEditorPort> = {}): SaveEditorPort {
       pageCountAfter: 3,
       recovered: true,
     })),
+    measureTabs: vi.fn(async (spots: TabSpot[]) =>
+      spots.map((spot) => (spot.tab === 0 ? { width: 4000, type: 0, fill: 0 } : null)),
+    ),
     notifySaved: vi.fn(async () => ({ ok: true })),
     ...overrides,
   }
 }
 
-function api(begin: BeginSaveResult, commit: CommitSaveResult = { ok: true, path: 'C:/d/a.hwp' }) {
+function api(
+  begin: BeginSaveResult,
+  commit: CommitSaveResult = { ok: true, path: 'C:/d/a.hwp' },
+  tabs: TabSpot[] = [],
+) {
   return {
     beginSave: vi.fn(async () => begin),
+    newTabs: vi.fn(async () => tabs),
     commitSave: vi.fn(async () => commit),
     abortSave: vi.fn(),
   }
 }
 
+const SPOTS: TabSpot[] = [
+  { sec: 0, para: 1, cells: [], tab: 0, tabs: 2 },
+  { sec: 0, para: 1, cells: [], tab: 1, tabs: 2 },
+]
+
 describe('runSave', () => {
+  it('hands the main process the widths the editor measured for the tabs it found', async () => {
+    const ed = editor()
+    const host = api({ ok: true, path: 'C:/d/a.hwpx', format: 'hwpx' }, undefined, SPOTS)
+    await runSave(ed, host, 'save')
+    expect(host.newTabs).toHaveBeenCalledWith(HWPX, 'hwpx')
+    expect(ed.measureTabs).toHaveBeenCalledWith(SPOTS)
+    // a tab the editor could not measure is left out
+    expect(host.commitSave).toHaveBeenCalledWith(HWPX, [
+      { ...SPOTS[0], width: 4000, type: 0, fill: 0 },
+    ])
+  })
+
+  it('saves without widths when measuring fails', async () => {
+    const ed = editor({
+      measureTabs: vi.fn(async () => {
+        throw new Error('the editor is not ready')
+      }),
+    })
+    const host = api({ ok: true, path: 'C:/d/a.hwp', format: 'hwp' }, undefined, SPOTS)
+    const outcome = await runSave(ed, host, 'save')
+    expect(outcome).toEqual({ kind: 'saved', path: 'C:/d/a.hwp' })
+    expect(host.commitSave).toHaveBeenCalledWith(HWP, [])
+  })
+
+  it('does not ask the editor when no tab lacks a width', async () => {
+    const ed = editor()
+    const host = api({ ok: true, path: 'C:/d/a.hwp', format: 'hwp' })
+    await runSave(ed, host, 'save')
+    expect(ed.measureTabs).not.toHaveBeenCalled()
+  })
+
   it('writes nothing for a document with tracked changes, and says why', async () => {
     const ed = editor()
     const host = api({
@@ -66,7 +110,7 @@ describe('runSave', () => {
     const outcome = await runSave(ed, host, 'save')
     expect(outcome).toEqual({ kind: 'saved', path: 'C:/d/a.hwp' })
     expect(ed.exportHwpVerify).toHaveBeenCalledOnce()
-    expect(host.commitSave).toHaveBeenCalledWith(HWP)
+    expect(host.commitSave).toHaveBeenCalledWith(HWP, [])
     expect(ed.notifySaved).toHaveBeenCalledWith('a.hwp')
     expect(host.abortSave).not.toHaveBeenCalled()
   })

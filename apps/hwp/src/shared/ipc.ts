@@ -8,6 +8,8 @@ export const HWP_CHANNELS = {
   readFile: 'hwp:read-file',
   beginSave: 'hwp:begin-save',
   commitSave: 'hwp:commit-save',
+  newTabs: 'hwp:new-tabs',
+  trackingDropped: 'hwp:tracking-dropped',
   abortSave: 'hwp:abort-save',
   saveRequest: 'hwp:save-request',
   dirtyChanged: 'hwp:dirty-changed',
@@ -73,6 +75,30 @@ export type CommitSaveResult =
    */
   { ok: true; path: string; backupPath?: string; tailsLost?: true } | { ok: false; error: string }
 
+/**
+ * A tab the engine saved without a width, as the editor can find it again: the body
+ * paragraph (or the one holding the table), the cells on the way (each table by its place
+ * among the tables of its paragraph), which tab of its paragraph, and how many it has.
+ */
+export interface TabSpot {
+  sec: number
+  para: number
+  cells: { table: number; cell: number; para: number }[]
+  tab: number
+  tabs: number
+}
+
+/** How the editor lays a tab out: width in HWPUNIT; kind and leader of its tab stop. */
+export interface TabMeasure {
+  width: number
+  /** 0 left, 1 right, 2 centre, 3 decimal, as tab stops number them */
+  type: number
+  /** the leader, numbered as tab stops number it (0: none) */
+  fill: number
+}
+
+export type MeasuredTab = TabSpot & TabMeasure
+
 /** The live document as bytes in its own format, or why there are none. */
 export type ReadBytesResult = { ok: true; bytes: Uint8Array } | { ok: false; error: string }
 
@@ -114,10 +140,20 @@ export interface HwpApi {
   /** path queued for this view when its tab was created; null for a view opened without a file */
   consumePending(): Promise<string | null>
   readFile(path: string): Promise<Uint8Array>
+  /**
+   * the file `readFile` gave this view had tracked changes and was given without them: the
+   * text as it reads now, which is what a save writes (decision 0013)
+   */
+  trackingDropped(): Promise<boolean>
   /** resolve where and in which format this save goes (shows the dialog for Save As) */
   beginSave(mode: SaveMode): Promise<BeginSaveResult>
-  /** write the exported bytes to the target `beginSave` resolved */
-  commitSave(bytes: Uint8Array): Promise<CommitSaveResult>
+  /** the tabs of exported bytes that have no width yet (see tab-widths in main) */
+  newTabs(bytes: Uint8Array, format: HwpFormat): Promise<TabSpot[]>
+  /**
+   * write the exported bytes to the target `beginSave` resolved, with the widths the editor
+   * measured for the tabs `newTabs` found
+   */
+  commitSave(bytes: Uint8Array, tabs?: MeasuredTab[]): Promise<CommitSaveResult>
   /** the renderer could not produce bytes for a save it began */
   abortSave(): void
   setDirty(dirty: boolean): void

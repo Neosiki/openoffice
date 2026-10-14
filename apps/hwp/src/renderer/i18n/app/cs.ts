@@ -11,6 +11,8 @@ export const cs = {
   saveProtected:
     'Neuloženo: tento dokument je chráněn heslem a uložením zde by se zapsal bez hesla.',
   backupKept: 'Uloženo. Předchozí verze byla zachována jako {name}.',
+  openedTracked:
+    'Tento dokument obsahuje sledované změny. Vidíte jeho aktuální text s použitými změnami; uložením se tento text zachová a záznam změn se odstraní.',
   saveTracked:
     'Neuloženo: tento dokument obsahuje sledované změny; uložením zde by se ztratily a soubor by Hancom Hangul nemusel otevřít.',
   savedTailsLost:
