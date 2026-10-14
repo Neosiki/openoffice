@@ -72,6 +72,7 @@ const INTEGER_OPTIONS = new Set([
   'max',
   'max-chars',
   'max-rows',
+  'offset',
   'cols',
   'pad',
   'tile',
@@ -92,7 +93,7 @@ export const TOOLS: ToolSpec[] = [
     command: 'info',
     readOnly: true,
     description:
-      'Metadata and a structure summary of a document (docx, xlsx, pptx, pdf, md, html, csv): page or slide count, sheets, block count, size. Runs locally.',
+      'Metadata and a structure summary of a document (docx, xlsx, pptx, pdf, hwp, md, html, csv): page or slide count, sheets, block count, size. Runs locally.',
     positionals: [{ key: 'file', description: 'path of the document' }],
     options: ['password'],
   },
@@ -345,6 +346,16 @@ export const TOOLS: ToolSpec[] = [
     description:
       'Pages read by AI and translations GenOffice keeps for a PDF, each with its job { state, last_error?, resetsAt?, outputs, progress? }. Follows pdf_ai_read and pdf_translate. Runs locally.',
     positionals: [{ key: 'file', description: 'path of the .pdf' }],
+  },
+  {
+    name: 'hwp_read',
+    command: 'hwp',
+    verb: 'read',
+    readOnly: true,
+    description:
+      'Text of a Hangul (HWP / HWPX) document, read locally: paragraphs as lines, table rows as "a | b". Clipped to 20000 characters; next_offset is the offset to go on from. Read-only.',
+    positionals: [{ key: 'file', description: '.hwp or .hwpx path' }],
+    options: ['offset', 'full', 'max-chars'],
   },
   {
     name: 'sheet_read',

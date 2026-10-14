@@ -248,6 +248,8 @@ export interface HomeApi {
   newHtml(opts?: NewFileOpts): Promise<void>
   /** open a new, untitled mind map tab */
   newMindmap(opts?: NewFileOpts): Promise<void>
+  /** open a blank HWP editor tab; the file is named at its first save */
+  newHwp(opts?: NewFileOpts): Promise<void>
   /** create a blank single-page PDF in the default save folder and open it */
   newPdf(opts?: NewFileOpts): Promise<void>
   /** drop entries from the recent list (does not touch the files) */
@@ -493,6 +495,7 @@ export const HOME_CHANNELS = {
   newMarkdown: 'home:new-markdown',
   newHtml: 'home:new-html',
   newMindmap: 'home:new-mindmap',
+  newHwp: 'home:new-hwp',
   newPdf: 'home:new-pdf',
   removeRecent: 'home:remove-recent',
   revealPath: 'home:reveal-path',

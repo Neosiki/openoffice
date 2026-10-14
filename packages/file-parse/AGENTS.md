@@ -2,7 +2,7 @@
 
 ## 맡은 범위
 
-첨부 파일을 모델에 보낼 평문으로 바꾼다. `parseFileToText(경로)`가 확장자와 매직 바이트를 보고 PDF, docx, doc, pptx, ppt, xlsx/xlsm, 마인드맵(`.xmind`), 텍스트 계열 파일을 글자로 풀고, 이미지는 내용을 읽지 않고 `kind: 'image'`와 MIME만 돌려준다. Docs·Sheets·Slides·HTML·Mindmap 메인 프로세스의 첨부 처리, 셸의 파일 색인·지식 베이스, 만들기 창의 자료 확인과 AI 없이 바꾸기가 쓴다. 앱 안에서 파일이 "다른 파일로" 읽히는 길은 모두 여기를 지난다.
+첨부 파일을 모델에 보낼 평문으로 바꾼다. `parseFileToText(경로)`가 확장자와 매직 바이트를 보고 PDF, docx, doc, pptx, ppt, xlsx/xlsm, 마인드맵(`.xmind`), 한글(hwp, hwpx), 텍스트 계열 파일을 글자로 풀고, 이미지는 내용을 읽지 않고 `kind: 'image'`와 MIME만 돌려준다. Docs·Sheets·Slides·HTML·Mindmap 메인 프로세스의 첨부 처리, 셸의 파일 색인·지식 베이스, 만들기 창의 자료 확인과 AI 없이 바꾸기가 쓴다. 앱 안에서 파일이 "다른 파일로" 읽히는 길은 모두 여기를 지난다.
 
 다른 파일로 읽힐 때의 가리기도 맡는다. 자기 편집기가 AI에게 가리는 자리를 여기서도 똑같이 `{{이름}}`으로 바꿔 내준다.
 
@@ -22,12 +22,14 @@
 - 워드(`.docx`)의 가리기 표시는 처리하지 않는다. 이 저장소에도 원본의 공개 저장소에도 그 표시를 쓰거나 읽는 코드가 없어 모양을 확인하지 못했고, 확인되기 전에 짐작으로 만들지 않는다.
 - 파일을 읽기 전에 "저장하지 않은 변경이 있는 파일인가"를 묻는 일은 호출자가 한다(`packages/electron-utils`의 `assertFileSaved`·`withoutUnsavedFiles`).
 - 터미널 명령어(`packages/cli`)의 읽기는 이 패키지를 지나지 않고, 가리기를 적용하지 않는다.
+- 한글 문서를 고치거나 저장하지 않는다. 그것은 `apps/hwp`의 편집기가 한다. 여기서는 같은 엔진(`@rhwp/core`)으로 열어 글자만 꺼낸다.
+- 읽기에 시간 제한을 두지 않는다. 칸이 수만 개인 표가 든 한글 문서는 엔진이 여는 데만 10초 넘게 걸린다. 파일 색인은 작업자 스레드와 120초 제한 안에서 부르지만, 첨부·MCP·열린 탭 읽기는 메인 프로세스에서 바로 부른다.
 
 ## 항상 지켜야 하는 것
 
 - `parseFileToText`는 실패를 던지지 않고 `{ ok: false, error }`로 돌려준다. 깨진 파일 하나가 채팅 요청 전체를 막으면 안 된다. 따로 내보낸 `docxToText` 같은 개별 함수는 던진다.
-- 확장자를 믿지 않는다. 매직 바이트와 어긋나면 `Content mismatch`로 거부한다. 예외는 `.doc` 이름의 zip 하나이고 OOXML로 읽는다. `.ppt` 이름의 zip은 거부한다.
-- zip 기반 형식은 풀기 전에 관문을 거친다. pptx와 xlsx는 `assertZipInflatesWithinLimits`를 먼저 부르고 그다음에 선언 크기 검사를 한다. docx는 `parseDocx` 안에서 같은 검사가 돈다. 순서를 바꾸거나 선언 크기 검사만 남기지 않는다.
+- 확장자를 믿지 않는다. 매직 바이트와 어긋나면 `Content mismatch`로 거부한다. 예외는 `.doc` 이름의 zip 하나이고 OOXML로 읽는다. `.ppt` 이름의 zip은 거부한다. `.hwpx`는 zip이어야 하고, `.hwp`는 OLE(HWP 5), `HWP Document File`로 시작하는 옛 HWP 3, zip(이름만 `.hwp`인 HWPX) 셋을 받는다.
+- zip 기반 형식은 풀기 전에 관문을 거친다. pptx와 xlsx는 `assertZipInflatesWithinLimits`를 먼저 부르고 그다음에 선언 크기 검사를 한다. hwpx도 zip이므로 엔진에 넘기기 전에 같은 관문을 거친다. docx는 `parseDocx` 안에서 같은 검사가 돈다. 순서를 바꾸거나 선언 크기 검사만 남기지 않는다.
 - 관계(rels) 대상은 `resolveTarget`으로만 푼다. `..`은 zip 루트에서 멈추고, 스킴이 붙은 대상과 디코딩할 수 없는 대상은 빈 문자열이 된다. Windows 계열 생성기가 쓰는 역슬래시 구분자도 여기서 처리한다.
 - 글자를 바꾸지 않는다. XML 파서 설정은 `trimValues: false`, `parseTagValue: false`로 둔다. `02139` 같은 값이 숫자로 바뀌거나 런 사이의 공백이 사라지면 안 된다.
 - 적대적인 xlsx에 메모리를 내주지 않는다. 열 번호가 16,384(`MAX_XLSX_COLS`) 이상이거나 참조가 잘못된 셀은 그 자리를 채우지 않고 뒤에 붙이고, 빈 칸이 8개 넘게 이어지면 `(N empty)`로 줄인다.
@@ -48,11 +50,15 @@
 - 텍스트 파일은 BOM을 보고 UTF-8과 UTF-16을 풀고, UTF-8로 읽히지 않으면 windows-1252로 읽는다. BOM이 UTF-32라고 알리는 파일만 거부한다.
 - 설치본에서만 깨지는 문제를 막는 우회가 두 군데 있고, 개발 실행에서는 드러나지 않으므로 지우지 않는다. pdfjs는 `DOMMatrix`가 없으면 import 단계에서 죽어서 순수 JS 대체 구현을 먼저 설치하고, 워커 모듈을 글자 그대로의 경로로 import해 번들에 넣는다. `ppt-to-text`는 의존성을 번들러가 따라가지 못하는 require 뒤에 숨기므로 `globalThis.CFB`와 `cptable`을 먼저 채운 뒤 지연 import한다.
 - 옛 PPT의 글자 디코딩은 코드페이지 1200(UTF-16LE)만 지원한다.
+- 한글 문서는 문단을 한 줄로, 표를 행마다 칸을 `|`로 이어 적는다. 병합된 칸은 첫 자리에 적고 걸친 자리는 비우되, 줄 끝에 이어지는 빈 자리는 적지 않는다. 한 칸에 문단이 셋을 넘는 표(글을 배치하려고 쓴 표)는 행으로 적지 않고 칸의 문단을 줄로 푼다.
+- 문단과 표를 따라가는 읽기가 닿지 못한 글자(글상자, 머리말, 표 안의 표 등)는 엔진의 평문 내보내기에서 찾아 제자리에 끼워 넣는다(`withMissingText`). 엔진 평문만 쓰지 않는 이유는 그쪽이 빈 누름틀에 안내 문구를 적고 표를 줄 구분 없이 풀기 때문이다.
+- 엔진 WASM(`rhwp_bg.wasm`, 약 12MB)은 한글 문서를 처음 읽을 때 한 번 올린다. 위치는 `GENOFFICE_RHWP_WASM`, `node_modules`의 `@rhwp/core`, 설치본의 `Resources/wasm` 순으로 찾는다. 연 문서는 반드시 `free()`한다(WASM 메모리는 저절로 풀리지 않는다).
+- 암호가 걸린 한글 문서는 읽지 않고 그렇다고 알린다. 암호를 받는 길은 없다.
 
 ## 테스트
 
 - `npm run test -w @genoffice/file-parse`, 또는 패키지 폴더에서 `npx vitest run`. 타임아웃은 20초다.
-- OOXML 픽스처는 `tests/helpers/fixtures.ts`가 JSZip으로 그때그때 만들어 임시 폴더에 쓴다. 파일로 들어 있는 것은 옛 형식 두 개(`tests/fixtures/legacy-sample.doc`, `legacy-sample.ppt`)뿐이다. `npm run fixtures`는 필요 없다.
+- OOXML 픽스처는 `tests/helpers/fixtures.ts`가 JSZip으로 그때그때 만들어 임시 폴더에 쓴다. 파일로 들어 있는 것은 옛 형식 두 개(`tests/fixtures/legacy-sample.doc`, `legacy-sample.ppt`)뿐이다. `npm run fixtures`는 필요 없다. 한글 문서는 `tests/hwp.test.ts`가 엔진으로 직접 만든다(문단을 모두 만든 뒤 표를 붙인다. 표가 놓인 문단을 나누면 엔진이 표를 옮긴다).
 - 형식 처리를 바꾸면 정상 추출, 깨진 파일이 던지지 않고 `ok: false`가 되는 경우, 글자 원형 보존(앞자리 0, 런 사이 공백)을 덮는다. zip을 여는 경로를 건드리면 `tests/zip-bomb-gate.test.ts`도 함께 본다.
 - 가리기를 바꾸면 형식마다, 표시 종류마다 "가린 글이 결과에 남지 않는다"와 "표시를 처리하지 못하면 원문이 아니라 실패가 나온다"를 덮는다(`tests/redaction.test.ts`). 마크다운은 "끝을 짐작하지 않는다"와 "표시가 될 수 있는 것만 실패한다"를 함께 본다. 지도 읽기는 `tests/xmind.test.ts`.
 - Windows에서 원본 코드 그대로도 실패하는 테스트는 없다.

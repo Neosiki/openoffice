@@ -21,6 +21,7 @@ import {
 } from '../../../slides/src/main/slides-main'
 import { pdfIsDirty, requestPdfClose } from '../../../pdf/src/main/pdf-main'
 import { markdownIsDirty, requestMarkdownClose } from '../../../markdown/src/main/markdown-main'
+import { hwpIsDirty, requestHwpClose } from '../../../hwp/src/main/hwp-main'
 import { htmlIsDirty, requestHtmlClose } from '../../../html/src/main/html-main'
 import { mindmapIsDirty, requestMindmapClose } from '../../../mindmap/src/main/mindmap-main'
 import { canonicalPath } from './tab-manager'
@@ -114,6 +115,7 @@ const DEFAULT_SIZE: Record<string, { width: number; height: number }> = {
   markdown: { width: 1200, height: 850 },
   html: { width: 1200, height: 850 },
   mindmap: { width: 1200, height: 850 },
+  hwp: { width: 1280, height: 900 },
 }
 
 /** where the pointer sits inside a freshly torn-off window's title bar */
@@ -228,6 +230,8 @@ async function detachedIsDirty(rec: DetachedRecord): Promise<boolean> {
       return htmlIsDirty(wc.id)
     case 'mindmap':
       return mindmapIsDirty(wc.id)
+    case 'hwp':
+      return hwpIsDirty(wc.id)
     default:
       return false
   }
@@ -254,6 +258,8 @@ async function confirmDetachedClose(rec: DetachedRecord): Promise<boolean> {
       return requestHtmlClose(wc, win)
     case 'mindmap':
       return requestMindmapClose(wc, win)
+    case 'hwp':
+      return requestHwpClose(wc, win)
     default:
       return true
   }

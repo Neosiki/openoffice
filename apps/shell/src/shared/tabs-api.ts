@@ -1,5 +1,5 @@
 export type TabKind =
-  'home' | 'docs' | 'sheets' | 'slides' | 'pdf' | 'markdown' | 'html' | 'mindmap' | 'help'
+  'home' | 'docs' | 'sheets' | 'slides' | 'pdf' | 'markdown' | 'html' | 'mindmap' | 'hwp' | 'help'
 
 /** a tab that holds a document — every kind except the Home screen and the in-app manual */
 export type DocumentTabKind = Exclude<TabKind, 'home' | 'help'>

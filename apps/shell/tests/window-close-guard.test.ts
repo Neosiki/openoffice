@@ -17,6 +17,7 @@ const requestPdfClose = vi.fn(() => Promise.resolve(true))
 const requestMarkdownClose = vi.fn(() => Promise.resolve(true))
 const requestHtmlClose = vi.fn(() => Promise.resolve(true))
 const requestMindmapClose = vi.fn(() => Promise.resolve(true))
+const requestHwpClose = vi.fn(() => Promise.resolve(true))
 
 vi.mock('../../docs/src/main/docs-main', () => ({
   docsQueryDirty: (...args: unknown[]) => docsQueryDirty(...(args as [])),
@@ -46,6 +47,10 @@ vi.mock('../../html/src/main/html-main', () => ({
 
 vi.mock('../../mindmap/src/main/mindmap-main', () => ({
   requestMindmapClose: (...args: unknown[]) => requestMindmapClose(...(args as [])),
+}))
+
+vi.mock('../../hwp/src/main/hwp-main', () => ({
+  requestHwpClose: (...args: unknown[]) => requestHwpClose(...(args as [])),
 }))
 
 interface TabStub {
@@ -92,7 +97,7 @@ class FakeWindow {
   }
 }
 
-type DirtyKinds = 'sheets' | 'pdf' | 'markdown' | 'html' | 'mindmap' | 'slides' | 'docs'
+type DirtyKinds = 'sheets' | 'pdf' | 'markdown' | 'html' | 'mindmap' | 'hwp' | 'slides' | 'docs'
 
 function fakeManager(dirty: Partial<Record<DirtyKinds, TabStub[]>> = {}) {
   return {
@@ -102,6 +107,7 @@ function fakeManager(dirty: Partial<Record<DirtyKinds, TabStub[]>> = {}) {
     dirtyMarkdownTabs: () => dirty.markdown ?? [],
     dirtyHtmlTabs: () => dirty.html ?? [],
     dirtyMindmapTabs: () => dirty.mindmap ?? [],
+    dirtyHwpTabs: () => dirty.hwp ?? [],
     dirtySlidesTabs: () => dirty.slides ?? [],
     docsTabs: () => dirty.docs ?? [],
   }
@@ -125,6 +131,7 @@ beforeEach(async () => {
     requestMarkdownClose,
     requestHtmlClose,
     requestMindmapClose,
+    requestHwpClose,
   ]) {
     ask.mockImplementation(() => Promise.resolve(true))
   }
@@ -184,6 +191,7 @@ describe('dirty close', () => {
       markdown: [{ id: 'm', webContents: { id: 2 } }],
       html: [{ id: 'h', webContents: { id: 3 } }],
       mindmap: [{ id: 'x', webContents: { id: 5 } }],
+      hwp: [{ id: 'w', webContents: { id: 5 } }],
       slides: [{ id: 's', webContents: { id: 4 } }],
     })
     install(win as never, manager as never)
@@ -194,6 +202,7 @@ describe('dirty close', () => {
       requestMarkdownClose,
       requestHtmlClose,
       requestMindmapClose,
+      requestHwpClose,
       requestSlidesClose,
     ]) {
       expect(ask).toHaveBeenCalledWith(expect.anything(), win)

@@ -22,3 +22,11 @@
 | [0018](0018-provenance-outside-documents.md)                  | 출처 기록은 문서 밖, 앱 데이터 폴더의 `document-links.json`에 둔다                              | 2026-10-14 |
 | [0019](0019-no-xmind-association-at-install.md)               | 설치할 때 `.xmind`의 기본 프로그램을 가져오지 않는다                                            | 2026-10-14 |
 | [0020](0020-ask-scope-held-in-main.md)                        | 홈의 묻기를 별표 그룹 하나로 좁히는 일은 뒷단이 지킨다                                          | 2026-10-14 |
+| [0021](0021-hwp-editor-on-rhwp.md)                            | 한글 편집 화면은 rhwp를 앱 안에 넣어 쓰고, 이 프로그램은 열기와 저장만 맡는다                   | 2026-10-14 |
+| [0022](0022-hwp-ai-through-studio-plugin.md)                  | 한글 문서의 AI 편집은 편집기 안에 넣은 자체 플러그인으로 하고, 개체를 잃는 변경은 하지 않는다   | 2026-10-14 |
+| [0023](0023-hwp-read-outside-editor.md)                       | 편집기 밖에서 한글 문서는 같은 엔진으로 읽기만 한다                                             | 2026-10-14 |
+| [0024](0024-hwp-restore-section-tails.md)                     | 한글 문서를 저장할 때 엔진이 빠뜨린 바탕쪽과 메모를 원본에서 다시 붙인다                        | 2026-10-14 |
+| [0025](0025-hwp-no-save-with-tracked-changes.md)              | 변경 내용 추적이 든 한글 문서는 저장하지 않는다 (0027로 대체)                                   | 2026-10-14 |
+| [0026](0026-hwp-fix-tab-widths-and-field-kinds.md)            | 한글 문서를 저장할 때 새 탭의 폭과 필드의 종류를 바로잡는다                                     | 2026-10-14 |
+| [0027](0027-hwp-open-tracked-changes-as-current.md)           | 변경 내용 추적이 든 한글 문서는 지금의 내용으로 열고, 저장하면 추적 기록 없이 저장한다          | 2026-10-14 |
+| [0028](0028-hwp-restore-equation-captions.md)                 | 한글 문서를 저장할 때 엔진이 빠뜨린 수식의 캡션을 원본에서 다시 붙인다                          | 2026-10-14 |

@@ -2362,6 +2362,8 @@ const ATTACHMENT_EXTS = new Set([
   'xlsm',
   'xls',
   'xmind',
+  'hwp',
+  'hwpx',
   ...ATTACHMENT_IMAGE_EXTS,
 ])
 

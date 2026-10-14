@@ -64,6 +64,7 @@ ieumoffice pdf ai-read scan.pdf --pages 1-3 --yes [--allow-paid] --json   # send
 ieumoffice pdf translate book.pdf --to ko --format pdf,md --yes --json   # book.ko.pdf + book.ko.md beside the source; progress on stderr
 ieumoffice pdf translate book.pdf --to de --format md,epub --bilingual --out out/book --partial --restart --yes --force   # each paragraph followed by its translation; --partial writes what is done when the job stops, --restart starts over
 ieumoffice pdf status book.pdf --json                          # what the result store holds: pages read by AI, translations, each with its job
+ieumoffice hwp read notice.hwp [--offset 20000] [--full] --json           # text of a Hangul (HWP / HWPX) document, tables as "a | b" rows (first 20000 characters by default); read-only, no app process
 ieumoffice guide docs                                                   # op signatures + restricted-HTML rules (`guide <domain> --json` = the catalog with each op's schema and a fingerprint)
 ieumoffice selection report.docx --json   # what the user has selected in the editor showing the file
 ieumoffice skill list   # coding agents found on this machine and the skill version each has

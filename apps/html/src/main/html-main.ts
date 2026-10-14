@@ -694,6 +694,8 @@ const ATTACHMENT_EXTS = new Set([
   'xlsm',
   'xls',
   'xmind',
+  'hwp',
+  'hwpx',
   ...ATTACHMENT_IMAGE_EXTS,
 ])
 const ATTACHMENT_IMAGE_MIME: Record<string, string> = {

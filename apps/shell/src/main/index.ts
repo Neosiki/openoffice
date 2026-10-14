@@ -39,6 +39,8 @@ import menuHtmlIcon1x from './assets/menu-html.png?asset'
 import menuHtmlIcon2x from './assets/menu-html@2x.png?asset'
 import menuMindmapIcon1x from './assets/menu-mindmap.png?asset'
 import menuMindmapIcon2x from './assets/menu-mindmap@2x.png?asset'
+import menuHwpIcon1x from './assets/menu-hwp.png?asset'
+import menuHwpIcon2x from './assets/menu-hwp@2x.png?asset'
 import menuHomeIcon1x from './assets/menu-home.png?asset'
 import menuHomeIcon2x from './assets/menu-home@2x.png?asset'
 import { createI18n, isLang, normalizeLang, setUiLang, type Lang } from '@genoffice/i18n'
@@ -213,6 +215,14 @@ import {
   setMarkdownFileSavedHook,
 } from '../../../markdown/src/main/markdown-main'
 import {
+  configureHwpRuntime,
+  hwpFileRenamed,
+  hwpReadText,
+  requestHwpPrint,
+  requestHwpSave,
+  setHwpFileSavedHook,
+} from '../../../hwp/src/main/hwp-main'
+import {
   configureHtmlRuntime,
   exportHtmlHeadless,
   htmlDiscardPendingAssets,
@@ -287,6 +297,7 @@ import {
   DOCX_RE,
   HTML_RE,
   MINDMAP_RE,
+  HWP_RE,
   PDF_RE,
   PPTX_RE,
   TEXT_RE,
@@ -431,6 +442,9 @@ const HTML_OUT = app.isPackaged
 const MINDMAP_OUT = app.isPackaged
   ? join(process.resourcesPath, 'modules', 'mindmap')
   : join(APPS_ROOT, 'mindmap', 'out')
+const HWP_OUT = app.isPackaged
+  ? join(process.resourcesPath, 'modules', 'hwp')
+  : join(APPS_ROOT, 'hwp', 'out')
 const SIDECAR_BIN = app.isPackaged
   ? join(process.resourcesPath, 'native', SIDECAR_EXE)
   : join(APPS_ROOT, 'sheets', 'native', 'xlsx-engine', 'target', 'release', SIDECAR_EXE)
@@ -479,6 +493,12 @@ configureMindmapRuntime({
   preloadPath: join(MINDMAP_OUT, 'preload', 'index.js'),
   rendererUrl: process.env.MINDMAP_RENDERER_URL,
   rendererFile: join(MINDMAP_OUT, 'renderer', 'index.html'),
+})
+configureHwpRuntime({
+  preloadPath: join(HWP_OUT, 'preload', 'index.js'),
+  rendererUrl: process.env.HWP_RENDERER_URL,
+  rendererFile: join(HWP_OUT, 'renderer', 'index.html'),
+  openGeneratedPath: (path) => openGeneratedDocument(path),
 })
 // privileged-scheme registration is only legal before app ready
 registerPrivilegedSchemes()
@@ -615,11 +635,13 @@ const tMain = createI18n({
     untitledMarkdown: '未命名 Markdown',
     untitledHtml: '未命名 HTML',
     untitledMindmap: '未命名思维导图',
+    untitledHwp: '未命名 HWP',
     untitledPdf: '未命名 PDF',
     menuNewSlide: 'AI Slides',
     menuNewMarkdown: 'AI Markdown',
     menuNewHtml: 'AI HTML',
     menuNewMindmap: '思维导图',
+    menuNewHwp: 'AI HWP',
     menuNewPdf: 'AI PDF',
     menuExportPdf: '导出为 PDF…',
     menuExportImages: '导出为图片…',
@@ -647,6 +669,7 @@ const tMain = createI18n({
     filterMarkdown: '文本文件 (Markdown, TXT, JSON)',
     filterHtml: 'HTML 文档',
     filterMindmap: '思维导图 (XMind 文件)',
+    filterHwp: 'HWP 文档 (HWP, HWPX)',
     filterPdf: 'PDF 文档',
     errBadArgs: '参数无效',
     errBadName: '文件名不合法',
@@ -719,11 +742,13 @@ const tMain = createI18n({
     untitledMarkdown: 'Untitled Markdown',
     untitledHtml: 'Untitled HTML',
     untitledMindmap: 'Untitled Mind Map',
+    untitledHwp: 'Untitled HWP',
     untitledPdf: 'Untitled PDF',
     menuNewSlide: 'AI Slides',
     menuNewMarkdown: 'AI Markdown',
     menuNewHtml: 'AI HTML',
     menuNewMindmap: 'Mind Map',
+    menuNewHwp: 'AI HWP',
     menuNewPdf: 'AI PDF',
     menuExportPdf: 'Export as PDF…',
     menuExportImages: 'Export as Images…',
@@ -751,6 +776,7 @@ const tMain = createI18n({
     filterMarkdown: 'Text Files (Markdown, TXT, JSON)',
     filterHtml: 'HTML Documents',
     filterMindmap: 'Mind Maps (XMind files)',
+    filterHwp: 'HWP Documents (HWP, HWPX)',
     filterPdf: 'PDF Documents',
     errBadArgs: 'Invalid arguments',
     errBadName: 'Invalid file name',
@@ -831,11 +857,13 @@ const tMain = createI18n({
     untitledMarkdown: 'Markdown chưa có tiêu đề',
     untitledHtml: 'HTML chưa có tiêu đề',
     untitledMindmap: 'Sơ đồ tư duy chưa có tiêu đề',
+    untitledHwp: 'HWP chưa có tiêu đề',
     untitledPdf: 'PDF chưa có tiêu đề',
     menuNewSlide: 'AI Slides',
     menuNewMarkdown: 'AI Markdown',
     menuNewHtml: 'AI HTML',
     menuNewMindmap: 'Sơ đồ tư duy',
+    menuNewHwp: 'AI HWP',
     menuNewPdf: 'AI PDF',
     menuExportPdf: 'Xuất dưới dạng PDF…',
     menuExportImages: 'Xuất dưới dạng hình ảnh…',
@@ -863,6 +891,7 @@ const tMain = createI18n({
     filterMarkdown: 'Tệp văn bản (Markdown, TXT, JSON)',
     filterHtml: 'Tài liệu HTML',
     filterMindmap: 'Sơ đồ tư duy (tệp XMind)',
+    filterHwp: 'Tài liệu HWP (HWP, HWPX)',
     filterPdf: 'Tài liệu PDF',
     errBadArgs: 'Đối số không hợp lệ',
     errBadName: 'Tên tệp không hợp lệ',
@@ -943,11 +972,13 @@ const tMain = createI18n({
     untitledMarkdown: '無題の Markdown',
     untitledHtml: '無題の HTML',
     untitledMindmap: '無題のマインドマップ',
+    untitledHwp: '無題の HWP',
     untitledPdf: '無題の PDF',
     menuNewSlide: 'AI Slides',
     menuNewMarkdown: 'AI Markdown',
     menuNewHtml: 'AI HTML',
     menuNewMindmap: 'マインドマップ',
+    menuNewHwp: 'AI HWP',
     menuNewPdf: 'AI PDF',
     menuExportPdf: 'PDF として書き出す…',
     menuExportImages: '画像としてエクスポート…',
@@ -975,6 +1006,7 @@ const tMain = createI18n({
     filterMarkdown: 'テキストファイル (Markdown, TXT, JSON)',
     filterHtml: 'HTML ドキュメント',
     filterMindmap: 'マインドマップ (XMind ファイル)',
+    filterHwp: 'HWP ドキュメント (HWP, HWPX)',
     filterPdf: 'PDF ドキュメント',
     errBadArgs: '引数が無効です',
     errBadName: 'ファイル名が無効です',
@@ -1055,11 +1087,13 @@ const tMain = createI18n({
     untitledMarkdown: '제목 없는 Markdown',
     untitledHtml: '제목 없는 HTML',
     untitledMindmap: '제목 없는 마인드맵',
+    untitledHwp: '제목 없는 한글 문서',
     untitledPdf: '제목 없는 PDF',
     menuNewSlide: 'AI Slides',
     menuNewMarkdown: 'AI Markdown',
     menuNewHtml: 'AI HTML',
     menuNewMindmap: '마인드맵',
+    menuNewHwp: 'AI 한글',
     menuNewPdf: 'AI PDF',
     menuExportPdf: 'PDF로 내보내기…',
     menuExportImages: '이미지로 내보내기…',
@@ -1087,6 +1121,7 @@ const tMain = createI18n({
     filterMarkdown: '텍스트 파일 (Markdown, TXT, JSON)',
     filterHtml: 'HTML 문서',
     filterMindmap: '마인드맵 (XMind 파일)',
+    filterHwp: '한글 문서 (HWP, HWPX)',
     filterPdf: 'PDF 문서',
     errBadArgs: '잘못된 인수입니다',
     errBadName: '파일 이름이 잘못되었습니다',
@@ -1166,11 +1201,13 @@ const tMain = createI18n({
     untitledMarkdown: 'Markdown sans titre',
     untitledHtml: 'HTML sans titre',
     untitledMindmap: 'Carte mentale sans titre',
+    untitledHwp: 'HWP sans titre',
     untitledPdf: 'PDF sans titre',
     menuNewSlide: 'AI Slides',
     menuNewMarkdown: 'AI Markdown',
     menuNewHtml: 'AI HTML',
     menuNewMindmap: 'Carte mentale',
+    menuNewHwp: 'AI HWP',
     menuNewPdf: 'AI PDF',
     menuExportPdf: 'Exporter en PDF…',
     menuExportImages: 'Exporter en images…',
@@ -1198,6 +1235,7 @@ const tMain = createI18n({
     filterMarkdown: 'Fichiers texte (Markdown, TXT, JSON)',
     filterHtml: 'Documents HTML',
     filterMindmap: 'Cartes mentales (fichiers XMind)',
+    filterHwp: 'Documents HWP (HWP, HWPX)',
     filterPdf: 'Documents PDF',
     errBadArgs: 'Arguments non valides',
     errBadName: 'Nom de fichier non valide',
@@ -1279,11 +1317,13 @@ const tMain = createI18n({
     untitledMarkdown: 'Unbenanntes Markdown',
     untitledHtml: 'Unbenanntes HTML',
     untitledMindmap: 'Unbenannte Mindmap',
+    untitledHwp: 'Unbenanntes HWP',
     untitledPdf: 'Unbenanntes PDF',
     menuNewSlide: 'AI Slides',
     menuNewMarkdown: 'AI Markdown',
     menuNewHtml: 'AI HTML',
     menuNewMindmap: 'Mindmap',
+    menuNewHwp: 'AI HWP',
     menuNewPdf: 'AI PDF',
     menuExportPdf: 'Als PDF exportieren…',
     menuExportImages: 'Als Bilder exportieren…',
@@ -1311,6 +1351,7 @@ const tMain = createI18n({
     filterMarkdown: 'Textdateien (Markdown, TXT, JSON)',
     filterHtml: 'HTML-Dokumente',
     filterMindmap: 'Mindmaps (XMind-Dateien)',
+    filterHwp: 'HWP-Dokumente (HWP, HWPX)',
     filterPdf: 'PDF-Dokumente',
     errBadArgs: 'Ungültige Argumente',
     errBadName: 'Ungültiger Dateiname',
@@ -1393,11 +1434,13 @@ const tMain = createI18n({
     untitledMarkdown: 'Markdown sin título',
     untitledHtml: 'HTML sin título',
     untitledMindmap: 'Mapa mental sin título',
+    untitledHwp: 'HWP sin título',
     untitledPdf: 'PDF sin título',
     menuNewSlide: 'AI Slides',
     menuNewMarkdown: 'AI Markdown',
     menuNewHtml: 'AI HTML',
     menuNewMindmap: 'Mapa mental',
+    menuNewHwp: 'AI HWP',
     menuNewPdf: 'AI PDF',
     menuExportPdf: 'Exportar como PDF…',
     menuExportImages: 'Exportar como imágenes…',
@@ -1425,6 +1468,7 @@ const tMain = createI18n({
     filterMarkdown: 'Archivos de texto (Markdown, TXT, JSON)',
     filterHtml: 'Documentos HTML',
     filterMindmap: 'Mapas mentales (archivos XMind)',
+    filterHwp: 'Documentos HWP (HWP, HWPX)',
     filterPdf: 'Documentos PDF',
     errBadArgs: 'Argumentos no válidos',
     errBadName: 'Nombre de archivo no válido',
@@ -1506,11 +1550,13 @@ const tMain = createI18n({
     untitledMarkdown: 'Markdown ไม่มีชื่อ',
     untitledHtml: 'HTML ไม่มีชื่อ',
     untitledMindmap: 'แผนที่ความคิดไม่มีชื่อ',
+    untitledHwp: 'HWP ไม่มีชื่อ',
     untitledPdf: 'PDF ไม่มีชื่อ',
     menuNewSlide: 'AI Slides',
     menuNewMarkdown: 'AI Markdown',
     menuNewHtml: 'AI HTML',
     menuNewMindmap: 'แผนที่ความคิด',
+    menuNewHwp: 'AI HWP',
     menuNewPdf: 'AI PDF',
     menuExportPdf: 'ส่งออกเป็น PDF…',
     menuExportImages: 'ส่งออกเป็นรูปภาพ…',
@@ -1538,6 +1584,7 @@ const tMain = createI18n({
     filterMarkdown: 'ไฟล์ข้อความ (Markdown, TXT, JSON)',
     filterHtml: 'เอกสาร HTML',
     filterMindmap: 'แผนที่ความคิด (ไฟล์ XMind)',
+    filterHwp: 'เอกสาร HWP (HWP, HWPX)',
     filterPdf: 'เอกสาร PDF',
     errBadArgs: 'อาร์กิวเมนต์ไม่ถูกต้อง',
     errBadName: 'ชื่อไฟล์ไม่ถูกต้อง',
@@ -1615,11 +1662,13 @@ const tMain = createI18n({
     untitledMarkdown: 'Markdown tanpa judul',
     untitledHtml: 'HTML tanpa judul',
     untitledMindmap: 'Peta pikiran tanpa judul',
+    untitledHwp: 'HWP tanpa judul',
     untitledPdf: 'PDF tanpa judul',
     menuNewSlide: 'AI Slides',
     menuNewMarkdown: 'AI Markdown',
     menuNewHtml: 'AI HTML',
     menuNewMindmap: 'Peta pikiran',
+    menuNewHwp: 'AI HWP',
     menuNewPdf: 'AI PDF',
     menuExportPdf: 'Ekspor sebagai PDF…',
     menuExportImages: 'Ekspor sebagai gambar…',
@@ -1647,6 +1696,7 @@ const tMain = createI18n({
     filterMarkdown: 'File teks (Markdown, TXT, JSON)',
     filterHtml: 'Dokumen HTML',
     filterMindmap: 'Peta pikiran (file XMind)',
+    filterHwp: 'Dokumen HWP (HWP, HWPX)',
     filterPdf: 'Dokumen PDF',
     errBadArgs: 'Argumen tidak valid',
     errBadName: 'Nama file tidak valid',
@@ -1728,11 +1778,13 @@ const tMain = createI18n({
     untitledMarkdown: 'Markdown без названия',
     untitledHtml: 'HTML без названия',
     untitledMindmap: 'Интеллект-карта без названия',
+    untitledHwp: 'HWP без названия',
     untitledPdf: 'PDF без названия',
     menuNewSlide: 'AI Slides',
     menuNewMarkdown: 'AI Markdown',
     menuNewHtml: 'AI HTML',
     menuNewMindmap: 'Интеллект-карта',
+    menuNewHwp: 'AI HWP',
     menuNewPdf: 'AI PDF',
     menuExportPdf: 'Экспортировать в PDF…',
     menuExportImages: 'Экспорт в изображения…',
@@ -1760,6 +1812,7 @@ const tMain = createI18n({
     filterMarkdown: 'Текстовые файлы (Markdown, TXT, JSON)',
     filterHtml: 'Документы HTML',
     filterMindmap: 'Интеллект-карты (файлы XMind)',
+    filterHwp: 'Документы HWP (HWP, HWPX)',
     filterPdf: 'Документы PDF',
     errBadArgs: 'Недопустимые аргументы',
     errBadName: 'Недопустимое имя файла',
@@ -1841,11 +1894,13 @@ const tMain = createI18n({
     untitledMarkdown: 'Markdown بدون عنوان',
     untitledHtml: 'HTML بدون عنوان',
     untitledMindmap: 'خريطة ذهنية بدون عنوان',
+    untitledHwp: 'HWP بدون عنوان',
     untitledPdf: 'PDF بدون عنوان',
     menuNewSlide: 'AI Slides',
     menuNewMarkdown: 'AI Markdown',
     menuNewHtml: 'AI HTML',
     menuNewMindmap: 'خريطة ذهنية',
+    menuNewHwp: 'AI HWP',
     menuNewPdf: 'AI PDF',
     menuExportPdf: 'تصدير بتنسيق PDF…',
     menuExportImages: 'تصدير كصور…',
@@ -1873,6 +1928,7 @@ const tMain = createI18n({
     filterMarkdown: 'ملفات نصية (Markdown, TXT, JSON)',
     filterHtml: 'مستندات HTML',
     filterMindmap: 'خرائط ذهنية (ملفات XMind)',
+    filterHwp: 'مستندات HWP (HWP, HWPX)',
     filterPdf: 'مستندات PDF',
     errBadArgs: 'وسيطات غير صالحة',
     errBadName: 'اسم ملف غير صالح',
@@ -1950,11 +2006,13 @@ const tMain = createI18n({
     untitledMarkdown: 'Markdown sem título',
     untitledHtml: 'HTML sem título',
     untitledMindmap: 'Mapa mental sem título',
+    untitledHwp: 'HWP sem título',
     untitledPdf: 'PDF sem título',
     menuNewSlide: 'AI Slides',
     menuNewMarkdown: 'AI Markdown',
     menuNewHtml: 'AI HTML',
     menuNewMindmap: 'Mapa mental',
+    menuNewHwp: 'AI HWP',
     menuNewPdf: 'AI PDF',
     menuExportPdf: 'Exportar como PDF…',
     menuExportImages: 'Exportar como imagens…',
@@ -1982,6 +2040,7 @@ const tMain = createI18n({
     filterMarkdown: 'Arquivos de texto (Markdown, TXT, JSON)',
     filterHtml: 'Documentos HTML',
     filterMindmap: 'Mapas mentais (arquivos XMind)',
+    filterHwp: 'Documentos HWP (HWP, HWPX)',
     filterPdf: 'Documentos PDF',
     errBadArgs: 'Argumentos inválidos',
     errBadName: 'Nome de arquivo inválido',
@@ -2063,11 +2122,13 @@ const tMain = createI18n({
     untitledMarkdown: 'Markdown senza titolo',
     untitledHtml: 'HTML senza titolo',
     untitledMindmap: 'Mappa mentale senza titolo',
+    untitledHwp: 'HWP senza titolo',
     untitledPdf: 'PDF senza titolo',
     menuNewSlide: 'AI Slides',
     menuNewMarkdown: 'AI Markdown',
     menuNewHtml: 'AI HTML',
     menuNewMindmap: 'Mappa mentale',
+    menuNewHwp: 'AI HWP',
     menuNewPdf: 'AI PDF',
     menuExportPdf: 'Esporta come PDF…',
     menuExportImages: 'Esporta come immagini…',
@@ -2095,6 +2156,7 @@ const tMain = createI18n({
     filterMarkdown: 'File di testo (Markdown, TXT, JSON)',
     filterHtml: 'Documenti HTML',
     filterMindmap: 'Mappe mentali (file XMind)',
+    filterHwp: 'Documenti HWP (HWP, HWPX)',
     filterPdf: 'Documenti PDF',
     errBadArgs: 'Argomenti non validi',
     errBadName: 'Nome file non valido',
@@ -2176,11 +2238,13 @@ const tMain = createI18n({
     untitledMarkdown: 'Markdown bez tytułu',
     untitledHtml: 'HTML bez tytułu',
     untitledMindmap: 'Mapa myśli bez tytułu',
+    untitledHwp: 'HWP bez tytułu',
     untitledPdf: 'PDF bez tytułu',
     menuNewSlide: 'AI Slides',
     menuNewMarkdown: 'AI Markdown',
     menuNewHtml: 'AI HTML',
     menuNewMindmap: 'Mapa myśli',
+    menuNewHwp: 'AI HWP',
     menuNewPdf: 'AI PDF',
     menuExportPdf: 'Eksportuj jako PDF…',
     menuExportImages: 'Eksportuj jako obrazy…',
@@ -2208,6 +2272,7 @@ const tMain = createI18n({
     filterMarkdown: 'Pliki tekstowe (Markdown, TXT, JSON)',
     filterHtml: 'Dokumenty HTML',
     filterMindmap: 'Mapy myśli (pliki XMind)',
+    filterHwp: 'Dokumenty HWP (HWP, HWPX)',
     filterPdf: 'Dokumenty PDF',
     errBadArgs: 'Nieprawidłowe argumenty',
     errBadName: 'Nieprawidłowa nazwa pliku',
@@ -2289,11 +2354,13 @@ const tMain = createI18n({
     untitledMarkdown: 'Markdown bez názvu',
     untitledHtml: 'HTML bez názvu',
     untitledMindmap: 'Myšlenková mapa bez názvu',
+    untitledHwp: 'HWP bez názvu',
     untitledPdf: 'PDF bez názvu',
     menuNewSlide: 'AI Slides',
     menuNewMarkdown: 'AI Markdown',
     menuNewHtml: 'AI HTML',
     menuNewMindmap: 'Myšlenková mapa',
+    menuNewHwp: 'AI HWP',
     menuNewPdf: 'AI PDF',
     menuExportPdf: 'Exportovat jako PDF…',
     menuExportImages: 'Exportovat jako obrázky…',
@@ -2321,6 +2388,7 @@ const tMain = createI18n({
     filterMarkdown: 'Textové soubory (Markdown, TXT, JSON)',
     filterHtml: 'Dokumenty HTML',
     filterMindmap: 'Myšlenkové mapy (soubory XMind)',
+    filterHwp: 'Dokumenty HWP (HWP, HWPX)',
     filterPdf: 'Dokumenty PDF',
     errBadArgs: 'Neplatné argumenty',
     errBadName: 'Neplatný název souboru',
@@ -2400,11 +2468,13 @@ const tMain = createI18n({
     untitledMarkdown: 'Naamloos Markdown',
     untitledHtml: 'Naamloos HTML',
     untitledMindmap: 'Naamloze mindmap',
+    untitledHwp: 'Naamloos HWP',
     untitledPdf: 'Naamloze PDF',
     menuNewSlide: 'AI Slides',
     menuNewMarkdown: 'AI Markdown',
     menuNewHtml: 'AI HTML',
     menuNewMindmap: 'Mindmap',
+    menuNewHwp: 'AI HWP',
     menuNewPdf: 'AI PDF',
     menuExportPdf: 'Exporteren als PDF…',
     menuExportImages: 'Exporteren als afbeeldingen…',
@@ -2432,6 +2502,7 @@ const tMain = createI18n({
     filterMarkdown: 'Tekstbestanden (Markdown, TXT, JSON)',
     filterHtml: 'HTML-documenten',
     filterMindmap: 'Mindmaps (XMind-bestanden)',
+    filterHwp: 'HWP-documenten (HWP, HWPX)',
     filterPdf: 'PDF-documenten',
     errBadArgs: 'Ongeldige argumenten',
     errBadName: 'Ongeldige bestandsnaam',
@@ -2513,11 +2584,13 @@ const tMain = createI18n({
     untitledMarkdown: 'Markdown tanpa tajuk',
     untitledHtml: 'HTML tanpa tajuk',
     untitledMindmap: 'Peta minda tanpa tajuk',
+    untitledHwp: 'HWP tanpa tajuk',
     untitledPdf: 'PDF tanpa tajuk',
     menuNewSlide: 'AI Slides',
     menuNewMarkdown: 'AI Markdown',
     menuNewHtml: 'AI HTML',
     menuNewMindmap: 'Peta minda',
+    menuNewHwp: 'AI HWP',
     menuNewPdf: 'AI PDF',
     menuExportPdf: 'Eksport sebagai PDF…',
     menuExportImages: 'Eksport sebagai imej…',
@@ -2545,6 +2618,7 @@ const tMain = createI18n({
     filterMarkdown: 'Fail teks (Markdown, TXT, JSON)',
     filterHtml: 'Dokumen HTML',
     filterMindmap: 'Peta minda (fail XMind)',
+    filterHwp: 'Dokumen HWP (HWP, HWPX)',
     filterPdf: 'Dokumen PDF',
     errBadArgs: 'Argumen tidak sah',
     errBadName: 'Nama fail tidak sah',
@@ -2625,11 +2699,13 @@ const tMain = createI18n({
     untitledMarkdown: 'Markdown ללא שם',
     untitledHtml: 'HTML ללא שם',
     untitledMindmap: 'מפת חשיבה ללא שם',
+    untitledHwp: 'HWP ללא שם',
     untitledPdf: 'PDF ללא שם',
     menuNewSlide: 'AI Slides',
     menuNewMarkdown: 'AI Markdown',
     menuNewHtml: 'AI HTML',
     menuNewMindmap: 'מפת חשיבה',
+    menuNewHwp: 'AI HWP',
     menuNewPdf: 'AI PDF',
     menuExportPdf: 'ייצוא כ-PDF…',
     menuExportImages: 'ייצוא כתמונות…',
@@ -2657,6 +2733,7 @@ const tMain = createI18n({
     filterMarkdown: 'קובצי טקסט (Markdown, TXT, JSON)',
     filterHtml: 'מסמכי HTML',
     filterMindmap: 'מפות חשיבה (קובצי XMind)',
+    filterHwp: 'מסמכי HWP (HWP, HWPX)',
     filterPdf: 'מסמכי PDF',
     errBadArgs: 'ארגומנטים לא חוקיים',
     errBadName: 'שם קובץ לא חוקי',
@@ -2735,11 +2812,13 @@ const tMain = createI18n({
     untitledMarkdown: 'अनाम Markdown',
     untitledHtml: 'अनाम HTML',
     untitledMindmap: 'अनाम माइंड मैप',
+    untitledHwp: 'अनाम HWP',
     untitledPdf: 'अनाम PDF',
     menuNewSlide: 'AI Slides',
     menuNewMarkdown: 'AI Markdown',
     menuNewHtml: 'AI HTML',
     menuNewMindmap: 'माइंड मैप',
+    menuNewHwp: 'AI HWP',
     menuNewPdf: 'AI PDF',
     menuExportPdf: 'PDF के रूप में निर्यात…',
     menuExportImages: 'छवियों के रूप में निर्यात…',
@@ -2767,6 +2846,7 @@ const tMain = createI18n({
     filterMarkdown: 'पाठ फ़ाइलें (Markdown, TXT, JSON)',
     filterHtml: 'HTML दस्तावेज़',
     filterMindmap: 'माइंड मैप (XMind फ़ाइलें)',
+    filterHwp: 'HWP दस्तावेज़ (HWP, HWPX)',
     filterPdf: 'PDF दस्तावेज़',
     errBadArgs: 'अमान्य आर्ग्युमेंट',
     errBadName: 'अमान्य फ़ाइल नाम',
@@ -2848,11 +2928,13 @@ const tMain = createI18n({
     untitledMarkdown: '未命名 Markdown',
     untitledHtml: '未命名 HTML',
     untitledMindmap: '未命名心智圖',
+    untitledHwp: '未命名 HWP',
     untitledPdf: '未命名 PDF',
     menuNewSlide: 'AI Slides',
     menuNewMarkdown: 'AI Markdown',
     menuNewHtml: 'AI HTML',
     menuNewMindmap: '心智圖',
+    menuNewHwp: 'AI HWP',
     menuNewPdf: 'AI PDF',
     menuExportPdf: '匯出為 PDF…',
     menuExportImages: '匯出為圖片…',
@@ -2880,6 +2962,7 @@ const tMain = createI18n({
     filterMarkdown: '文字檔 (Markdown, TXT, JSON)',
     filterHtml: 'HTML 文件',
     filterMindmap: '心智圖 (XMind 檔案)',
+    filterHwp: 'HWP 文件 (HWP, HWPX)',
     filterPdf: 'PDF 文件',
     errBadArgs: '參數無效',
     errBadName: '檔案名稱不合法',
@@ -3061,6 +3144,7 @@ function afterFileMoved(oldPath: string, newPath: string): void {
     else if (t.kind === 'markdown') markdownFileRenamed(t.webContents, oldPath, newPath)
     else if (t.kind === 'html') htmlFileRenamed(t.webContents, oldPath, newPath)
     else if (t.kind === 'mindmap') mindmapFileRenamed(t.webContents, oldPath, newPath)
+    else if (t.kind === 'hwp') hwpFileRenamed(t.webContents, oldPath, newPath)
     else if (t.kind === 'pdf') pdfFileRenamed(t.webContents, oldPath, newPath)
   }
 }
@@ -3136,6 +3220,7 @@ const SEARCH_EXT_FAMILY: Record<string, readonly string[]> = {
   pptx: ['pptx', 'ppt'],
   md: ['md', 'markdown', 'txt', 'json'],
   html: ['html', 'htm'],
+  hwp: ['hwp', 'hwpx'],
 }
 
 /** one recursive watcher per tree root; follows the save-folder setting and the added folders */
@@ -3230,6 +3315,9 @@ function applyMenuFor(kind: TabKind): void {
     case 'mindmap':
       buildMindmapMenu()
       break
+    case 'hwp':
+      buildHwpMenu()
+      break
     default:
       buildHomeMenu()
   }
@@ -3305,7 +3393,9 @@ function createShellWindow(): void {
                 ? tm('untitledHtml')
                 : kind === 'mindmap'
                   ? tm('untitledMindmap')
-                  : tm('untitledSheet'),
+                  : kind === 'hwp'
+                    ? tm('untitledHwp')
+                    : tm('untitledSheet'),
   )
   tabManager = manager
 
@@ -3442,6 +3532,13 @@ function createShellWindow(): void {
   })
   // the mind map's toolbar button "make another document from this one"
   setMindmapMakeFromDocumentHook((wc) => makeFromDocument(wc))
+  // hwp Save As lands on a new path
+  setHwpFileSavedHook((wc, path) => {
+    manager.setTabFileFor(wc.id, path)
+    detachedSetFileFor(wc.id, path)
+    recordRecentFile(path)
+    applyPendingDir(wc.id, path)
+  })
   setHtmlProvisionalTitleHook((wc, title) => {
     manager.setTabTitleFor(wc.id, title)
     detachedSetTitleFor(wc.id, title)
@@ -3530,6 +3627,8 @@ const OPEN_DIALOG_EXTENSIONS = [
   'html',
   'htm',
   'xmind',
+  'hwp',
+  'hwpx',
 ]
 
 function notifyUnsupportedFile(filePath: string): void {
@@ -3652,6 +3751,13 @@ function routeDocumentPath(filePath: string): boolean {
     const existing = tabManager.findMindmapTabByPath(filePath)
     if (existing) tabManager.activateTab(existing)
     else tabManager.openMindmapTab(filePath)
+    return true
+  }
+  if (HWP_RE.test(filePath)) {
+    recordRecentFile(filePath)
+    const existing = tabManager.findHwpTabByPath(filePath)
+    if (existing) tabManager.activateTab(existing)
+    else tabManager.openHwpTab(filePath)
     return true
   }
   notifyUnsupportedFile(filePath)
@@ -3853,6 +3959,14 @@ function newHtmlTab(): void {
 function newMindmapTab(): void {
   try {
     bindPendingDir('mindmap', tabManager?.openMindmapTab())
+  } catch (err) {
+    surfaceNewTabError(err)
+  }
+}
+
+function newHwpTab(): void {
+  try {
+    bindPendingDir('hwp', tabManager?.openHwpTab())
   } catch (err) {
     surfaceNewTabError(err)
   }
@@ -4109,6 +4223,7 @@ function registerHomeIpc(): void {
         { name: tm('filterMarkdown'), extensions: ['md', 'markdown', 'txt', 'json'] },
         { name: tm('filterHtml'), extensions: ['html', 'htm'] },
         { name: tm('filterMindmap'), extensions: ['xmind'] },
+        { name: tm('filterHwp'), extensions: ['hwp', 'hwpx'] },
       ],
       properties: ['openFile', 'multiSelections'],
     })
@@ -4143,6 +4258,11 @@ function registerHomeIpc(): void {
   ipcMain.handle(HOME_CHANNELS.newMindmap, (_event, opts?: NewFileOpts) => {
     rememberPendingDir('mindmap', opts)
     newMindmapTab()
+  })
+
+  ipcMain.handle(HOME_CHANNELS.newHwp, (_event, opts?: NewFileOpts) => {
+    rememberPendingDir('hwp', opts)
+    newHwpTab()
   })
 
   ipcMain.handle(HOME_CHANNELS.newPdf, (_event, opts?: NewFileOpts) => {
@@ -4642,6 +4762,7 @@ interface MenuIconSet {
   md: NativeImage
   html: NativeImage
   mindmap: NativeImage
+  hwp: NativeImage
   home: NativeImage
 }
 let menuIconCache: MenuIconSet | null = null
@@ -4654,6 +4775,7 @@ function menuIcons(): MenuIconSet {
     md: loadMenuIcon(menuMdIcon1x, menuMdIcon2x),
     html: loadMenuIcon(menuHtmlIcon1x, menuHtmlIcon2x),
     mindmap: loadMenuIcon(menuMindmapIcon1x, menuMindmapIcon2x),
+    hwp: loadMenuIcon(menuHwpIcon1x, menuHwpIcon2x),
     home: loadMenuIcon(menuHomeIcon1x, menuHomeIcon2x),
   }
   return menuIconCache
@@ -4668,6 +4790,7 @@ const TAB_MENU_ICON: Record<TabKind, keyof MenuIconSet> = {
   markdown: 'md',
   html: 'html',
   mindmap: 'mindmap',
+  hwp: 'hwp',
   help: 'home',
 }
 
@@ -4795,6 +4918,9 @@ function linkMenuKind(): TabKind | undefined {
   // a Present tab shows the Home menu
   if (active?.kind === 'html' && !tabManager?.activeHtmlTab()) return 'home'
   return active?.kind
+}
+function activeHwpTarget() {
+  return activeEditorTarget('hwp', () => tabManager?.activeHwpTab())
 }
 
 function registerTabsIpc(): void {
@@ -4928,6 +5054,11 @@ function registerTabsIpc(): void {
         click: () => newMindmapTab(),
       },
       {
+        label: tm('menuNewHwp'),
+        icon: menuIcons().hwp,
+        click: () => newHwpTab(),
+      },
+      {
         label: tm('menuNewPdf'),
         icon: menuIcons().pdf,
         click: () => void newPdfTab(),
@@ -4977,6 +5108,7 @@ function buildHomeMenu(): void {
         { label: tm('menuNewMarkdown'), click: () => newMarkdownTab() },
         { label: tm('menuNewHtml'), click: () => newHtmlTab() },
         { label: tm('menuNewMindmap'), click: () => newMindmapTab() },
+        { label: tm('menuNewHwp'), click: () => newHwpTab() },
         { label: tm('menuNewPdf'), click: () => void newPdfTab() },
         { type: 'separator' },
         {
@@ -5173,6 +5305,84 @@ function buildMarkdownMenu(): void {
           click: () => {
             const tab = activeMarkdownTarget()
             if (tab) sendMarkdownPrintRequest(tab.webContents)
+          },
+        },
+        { type: 'separator' },
+        {
+          label: tm('menuClose'),
+          accelerator: 'CmdOrCtrl+W',
+          click: () => closeFocusedEditor(),
+        },
+      ],
+    },
+    editMenuTemplate(process.platform, appMenuLabels(currentLang())),
+    windowMenuTemplate(process.platform, appMenuLabels(currentLang())),
+    {
+      role: 'help',
+      label: tm('menuHelp'),
+      submenu: [
+        { label: tm('thirdPartyNotices'), click: () => void openThirdPartyNotices() },
+        { type: 'separator' },
+        checkUpdatesMenuItem(appMenuLabels(currentLang())),
+        aboutMenuItem(appMenuLabels(currentLang())),
+      ],
+    },
+  ]
+  Menu.setApplicationMenu(Menu.buildFromTemplate(template))
+}
+
+// ---- hwp menu (hwp-main has no menu of its own; the shell owns hwp tabs) ----
+
+function buildHwpMenu(): void {
+  const isMac = process.platform === 'darwin'
+  const template: MenuItemConstructorOptions[] = [
+    ...(isMac ? [{ role: 'appMenu' as const }] : []),
+    {
+      label: tm('menuFile'),
+      submenu: [
+        {
+          label: tm('menuOpen'),
+          accelerator: 'CmdOrCtrl+O',
+          click: () => void openFileViaDialog(),
+        },
+        { type: 'separator' },
+        {
+          label: tm('backToHome'),
+          accelerator: 'Shift+CmdOrCtrl+H',
+          click: () => tabManager?.openHomeTab(),
+        },
+        { type: 'separator' },
+        // no accelerators here: the embedded editor swallows Ctrl+S and Ctrl+P
+        // before the menu sees them, so hwp-main takes those shortcuts off the key
+        // event itself; registering them twice would run them twice whenever focus
+        // sits outside the editor
+        {
+          label: tm('menuSave'),
+          click: () => {
+            const tab = activeHwpTarget()
+            if (tab) void requestHwpSave(tab.webContents, 'save')
+          },
+        },
+        {
+          label: tm('menuSaveAs'),
+          click: () => {
+            const tab = activeHwpTarget()
+            if (tab) void requestHwpSave(tab.webContents, 'saveAs')
+          },
+        },
+        { type: 'separator' },
+        {
+          label: tm('menuExportPdf'),
+          click: () => {
+            const tab = activeHwpTarget()
+            if (tab) requestHwpPrint(tab.webContents, 'pdf')
+          },
+        },
+        {
+          label: tm('menuPrint'),
+          click: () => {
+            const tab = activeHwpTarget()
+            if (tab) requestHwpPrint(tab.webContents, 'print')
           },
         },
         { type: 'separator' },
@@ -6067,6 +6277,7 @@ app.whenReady().then(async () => {
     markdown: join(MARKDOWN_OUT, 'renderer'),
     html: join(HTML_OUT, 'renderer'),
     mindmap: join(MINDMAP_OUT, 'renderer'),
+    hwp: join(HWP_OUT, 'renderer'),
     // the manual shares the shell's own renderer bundle (help mode)
     help: join(__dirname, '../renderer'),
   })
@@ -6266,6 +6477,7 @@ app.whenReady().then(async () => {
         read: mindmapReadOutline,
         save: mindmapSaveToPath,
       },
+      hwp: { read: hwpReadText },
     }),
     // the headless create_*/read_* tools delegate to the bundled genoffice CLI
     // (the same engines, no second implementation); it runs on the app's own

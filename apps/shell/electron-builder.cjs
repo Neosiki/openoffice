@@ -62,6 +62,7 @@ function assertExtraResourceSources() {
     '../../node_modules/@embedpdf/pdfium/dist/pdfium.wasm',
     '../pdf/node_modules/harfbuzzjs/hb-subset.wasm',
     '../../packages/ui/template-fonts/README.md',
+    '../../node_modules/@rhwp/core/rhwp_bg.wasm',
   ]) {
     if (!existsSync(join(__dirname, rel))) {
       throw new Error(
@@ -189,6 +190,7 @@ function assertModuleTreesPresent() {
     '../markdown/out',
     '../html/out',
     '../mindmap/out',
+    '../hwp/out',
     '../../packages/cli/dist/genoffice.cjs',
     '../../packages/cli/dist/node_modules/jsdom',
   ]) {
@@ -294,8 +296,10 @@ function ensureThirdPartyNotices() {
 // system editor, so Windows leaves those two out (mac/Linux only offer them
 // in Open With).
 // A mind map file keeps the program the user already opens it with: installing
-// must not take .xmind over, so Windows registers nothing for it either.
-const WIN_OPEN_WITH_ONLY_EXTS = new Set(['txt', 'json', 'xmind'])
+// must not take .xmind over, so Windows registers nothing for it either. HWP
+// and HWPX stay out for the same reason: installing this app must not take the
+// documents away from Hancom Office on a PC that has it.
+const WIN_OPEN_WITH_ONLY_EXTS = new Set(['txt', 'json', 'xmind', 'hwp', 'hwpx'])
 // NSIS registers each association under a ProgId taken from its `name`
 // (HKCU\Software\Classes\<name>). The upstream app registers the bare names
 // below ("Word Document"), so sharing them would let either install overwrite
@@ -420,6 +424,20 @@ const FILE_ASSOCIATIONS = [
     icon: 'mindmap',
     mimeType: 'application/vnd.xmind.workbook',
   },
+  {
+    ext: 'hwp',
+    name: 'HWP Document',
+    role: 'Editor',
+    icon: 'hwp',
+    mimeType: 'application/x-hwp',
+  },
+  {
+    ext: 'hwpx',
+    name: 'HWPX Document',
+    role: 'Editor',
+    icon: 'hwp',
+    mimeType: 'application/hwp+zip',
+  },
 ]
 
 const config = {
@@ -470,6 +488,10 @@ const config = {
       from: '../mindmap/out',
       to: 'modules/mindmap',
     },
+    {
+      from: '../hwp/out',
+      to: 'modules/hwp',
+    },
     // PDF text editing engines: the bundled main resolves these under
     // Resources/wasm when node_modules is absent (apps/pdf/src/main/wasm-path.ts)
     {
@@ -479,6 +501,12 @@ const config = {
     {
       from: '../pdf/node_modules/harfbuzzjs/hb-subset.wasm',
       to: 'wasm/hb-subset.wasm',
+    },
+    // HWP / HWPX reading outside the editor (file search, knowledge base,
+    // attachments, MCP, command line): packages/file-parse/src/hwp.ts
+    {
+      from: '../../node_modules/@rhwp/core/rhwp_bg.wasm',
+      to: 'wasm/rhwp_bg.wasm',
     },
     // platform system-OCR helpers for scanned-page recovery (each exists only
     // on its own build platform; electron-builder skips absent sources and the

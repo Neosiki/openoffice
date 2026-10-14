@@ -7,6 +7,7 @@ import { requestPdfClose } from '../../../pdf/src/main/pdf-main'
 import { requestMarkdownClose } from '../../../markdown/src/main/markdown-main'
 import { requestHtmlClose } from '../../../html/src/main/html-main'
 import { requestMindmapClose } from '../../../mindmap/src/main/mindmap-main'
+import { requestHwpClose } from '../../../hwp/src/main/hwp-main'
 import type { TabManager } from './tab-manager'
 
 /**
@@ -34,6 +35,7 @@ export function installShellCloseGuard(win: BrowserWindow, manager: TabManager):
     const dirtyMarkdown = manager.dirtyMarkdownTabs()
     const dirtyHtml = manager.dirtyHtmlTabs()
     const dirtyMindmap = manager.dirtyMindmapTabs()
+    const dirtyHwp = manager.dirtyHwpTabs()
     const dirtySlides = manager.dirtySlidesTabs()
     const docsTabs = manager.docsTabs()
     // Nothing to protect, so let this close event through untouched. Cancelling
@@ -47,6 +49,7 @@ export function installShellCloseGuard(win: BrowserWindow, manager: TabManager):
       dirtyMarkdown.length === 0 &&
       dirtyHtml.length === 0 &&
       dirtyMindmap.length === 0 &&
+      dirtyHwp.length === 0 &&
       dirtySlides.length === 0 &&
       docsTabs.length === 0
     ) {
@@ -80,6 +83,10 @@ export function installShellCloseGuard(win: BrowserWindow, manager: TabManager):
           for (const tab of dirtyMindmap) {
             manager.activateTab(tab.id)
             if (!(await requestMindmapClose(tab.webContents, win))) return true
+          }
+          for (const tab of dirtyHwp) {
+            manager.activateTab(tab.id)
+            if (!(await requestHwpClose(tab.webContents, win))) return true
           }
           for (const tab of dirtySlides) {
             manager.activateTab(tab.id)

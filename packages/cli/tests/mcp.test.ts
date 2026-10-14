@@ -163,6 +163,7 @@ describe('mcp server', () => {
         'docs_read',
         'docs_apply',
         'pdf_read',
+        'hwp_read',
         'sheet_apply',
         'slides_render',
         'guide',
@@ -195,6 +196,11 @@ describe('mcp server', () => {
     expect(tools.find((t) => t.name === 'search')!.annotations?.openWorldHint).toBe(true)
     expect(tools.find((t) => t.name === 'docs_read')!.annotations?.readOnlyHint).toBe(true)
     expect(tools.find((t) => t.name === 'pdf_read')!.annotations?.readOnlyHint).toBe(true)
+    const hwp = tools.find((t) => t.name === 'hwp_read')!
+    expect(hwp.annotations?.readOnlyHint).toBe(true)
+    const hwpProps = hwp.inputSchema.properties as Record<string, { type?: unknown }>
+    expect(hwpProps.offset?.type).toBe('integer')
+    expect(hwpProps.max_chars?.type).toBe('integer')
   })
 
   type Schema = {
@@ -274,7 +280,8 @@ describe('mcp server', () => {
     }
     const bytes = JSON.stringify(list).length
     // 90 KiB before the four PDF document tools (pdf_images, pdf_ai_read, pdf_translate, pdf_status)
-    expect(bytes).toBeLessThanOrEqual(96 * 1024)
+    // and hwp_read (about 1 KiB) joined the catalog
+    expect(bytes).toBeLessThanOrEqual(97 * 1024)
     expect(bytes).toBeGreaterThan(60 * 1024)
   })
 

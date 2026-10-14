@@ -19,7 +19,7 @@
 
 ## 맡지 않는 것 (경계)
 
-- 문서 편집과 형식별 저장·내보내기는 이 모듈의 범위가 아니다. 각 에디터(`apps/docs`, `apps/sheets`, `apps/slides`, `apps/pdf`, `apps/markdown`, `apps/html`, `apps/mindmap`)가 한다. shell은 그 메인 모듈의 내보낸 함수(`createDocsView`, `configureSheetsRuntime` 등)를 부른다.
+- 문서 편집과 형식별 저장·내보내기는 이 모듈의 범위가 아니다. 각 에디터(`apps/docs`, `apps/sheets`, `apps/slides`, `apps/pdf`, `apps/markdown`, `apps/html`, `apps/mindmap`, `apps/hwp`)가 한다. shell은 그 메인 모듈의 내보낸 함수(`createDocsView`, `configureSheetsRuntime` 등)를 부른다.
 - AI 요청의 실행은 범위가 아니다. `ai:*` 채널과 구독 IPC 채널은 `apps/docs/src/main/docs-main.ts`의 `registerAiIpc`가 등록한다. shell은 그것을 한 번 호출할 뿐이고, AI와 관련해 직접 응답하는 채널은 `home:open-subscription-install-help`(벤더의 설치 안내 페이지 열기)와 `ai:open-model-settings`(홈 탭의 설정 화면 열기)뿐이다.
 - 제공자 선택 규칙, 구독 프로그램 실행은 `packages/ai-provider`, 연결 카드와 알림 컴포넌트는 `packages/ui`의 범위다.
 - 새 문서의 글을 쓰는 것은 만들 문서 쪽 에디터(PPT, HTML, 마인드맵)의 AI다. 이 모듈은 생성 코드를 갖지 않고, 요청을 새 탭 앞으로 맡겨 둘 뿐이다. 맡겨 두는 곳은 `packages/electron-utils`의 `generate-handoff.ts`이고(`src/main/generate/handoff.ts`는 그것을 다시 내보낸다), 가져가는 창구(`<에디터>:handoff-take`)는 각 에디터가 등록한다.
@@ -65,6 +65,8 @@
 - 홈의 질문 패널은 에디터와 같은 보내기 규칙을 쓴다. `askSendGate`(`src/renderer/src/kb-ask-connection.ts`)는 `packages/ui`의 `aiSendGate`가 내린 판단을 그대로 읽는다. 연결 상태나 설정을 아직 모르면 질문을 붙잡았다가(`askHeldStep`) 실행할 수 있게 되면 시작하고, "연결 필요"로 정해지면 버리고 연결 안내를 보인다. 이 패널만의 차이는 하나다. 첫 연결 안내는 홈 화면이 띄우므로, 안내가 떠 있는 동안에는 패널이 보내지 않고 붙잡아 둔 질문도 시작하지 않는다.
 - 첫 연결 안내의 Codex 문장은 `CODEX_MAY_KEEP_HISTORY`로 켜져 있다. 브리지가 대화 이력 파일은 끄지만 Codex가 자체 진단 로그를 남기고, 앱은 그것을 읽을 수도 막을 수도 없기 때문이다.
 - 문자열은 세 군데에 있다. 렌더러 사전 `src/renderer/src/strings.ts`(언어 21개가 한 파일에 있고 `zh`가 키 집합을 정한다), 메인 프로세스의 인라인 사전(`src/main/index.ts`의 `tMain`), 도움말 `i18n/help/topics/<id>.<lang>.md`. 도움말 항목은 `help-registry.ts`의 `HELP_TOPICS`에 등록해야 보이고, 모든 언어 파일의 구조는 영어 원본과 같아야 한다(`npm run check:help-langs`).
+- 새 한글 문서는 홈의 카드, "+" 메뉴, 파일 메뉴에서 만든다(`newHwpTab`, `home:new-hwp`). 다른 새 문서처럼 만든 폴더를 기억해 두고(`rememberPendingDir`), 첫 저장 뒤 한글 저장 훅이 파일을 그 폴더로 옮긴다(`applyPendingDir`). 탭 이름은 저장 전까지 "제목 없는 한글 문서"(`untitledHwp`)다.
+- 한글 문서는 편집기 밖에서 읽기만 한다. 파일 색인·지식 자료는 `parseFileToText`로, 앱 안 MCP의 `read_hwp`(`src/main/mcp/tools/hwp-tools.ts`)는 `hwpToText`로 디스크의 파일을 읽고, 열린 문서 읽기(`open_documents`)는 한글 탭이면 `apps/hwp`의 `hwpReadText`로 저장하지 않은 내용까지 읽는다. 열린 문서를 MCP로 저장하는 길은 한글 탭에 없다. 엔진 WASM은 `electron-builder.cjs`의 `extraResources`가 `Resources/wasm/rhwp_bg.wasm`으로 넣는다.
 - 렌더러 CSS의 크롬 색은 토큰만 쓴다(`npm run check:theme-colors`). shell의 강조색(`--accent` 계열)은 `src/renderer/src/home.css`에서 정의한다.
 - 구조 작업 프로세스는 메인 번들과 따로 묶인다. `pdf-structure-ipc.ts`가 진입점을 `?modulePath`로 가져오고, 빌드 결과는 `out/main/pdf-structure-process-*.js`다. `electron-builder.cjs`의 `beforePack`이 `assertPdfStructureProcessBuilt`로 이 파일이 있는지 확인하고, 없으면 패키징을 멈춘다. 이 파일이 빠진 설치본은 다른 기능은 되는데 Markdown·EPUB 변환, 그림 꺼내기, 번역 PDF만 실행 중에 실패한다. 번역 PDF에 필요한 `hb-subset.wasm`은 `extraResources`로 `wasm/`에 들어간다(명령줄도 같은 파일을 쓴다).
 - 디자인 템플릿 글꼴(`packages/ui/template-fonts`)은 `electron-builder.cjs`의 extraResources 항목 하나로 `resources/template-fonts`에 한 번만 들어간다. 편집기마다 넣지 않고, 편집기는 `templateFontsDir`로 이 폴더를 읽는다. `tests/template-fonts-resource.test.ts`가 항목이 정확히 하나인지, 어느 편집기의 `src`도 그 글꼴 파일을 빌드 자산으로 가져오지 않는지(import, `new URL`, CSS `url()`) 확인한다. 폴더의 `README.md`가 없으면 빌드 설정이 바로 멈춘다(`assertExtraResourceSources`).

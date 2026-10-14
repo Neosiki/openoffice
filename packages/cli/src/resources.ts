@@ -87,6 +87,20 @@ export function hbSubsetWasmPath(): string {
   throw new Error('hb-subset.wasm not found (set GENOFFICE_HB_SUBSET_WASM)')
 }
 
+/** The rhwp engine that reads HWP / HWPX documents (see @genoffice/file-parse/hwp). */
+export function rhwpWasmPath(): string {
+  if (process.env.GENOFFICE_RHWP_WASM) return process.env.GENOFFICE_RHWP_WASM
+  const packaged = packagedResourcesDir()
+  if (packaged) return join(packaged, 'wasm', 'rhwp_bg.wasm')
+  const root = repoRoot()
+  if (root) {
+    try {
+      return createRequire(join(root, 'package.json')).resolve('@rhwp/core/rhwp_bg.wasm')
+    } catch {}
+  }
+  throw new Error('rhwp_bg.wasm not found (set GENOFFICE_RHWP_WASM)')
+}
+
 export function xlsxSidecarPath(): string | null {
   if (process.env.XLSX_SIDECAR_PATH) return process.env.XLSX_SIDECAR_PATH
   const executable = process.platform === 'win32' ? 'xlsx-sidecar.exe' : 'xlsx-sidecar'

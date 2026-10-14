@@ -2,6 +2,7 @@ import { readFile } from 'node:fs/promises'
 import { extname } from 'node:path'
 import { docToText } from './doc'
 import { docxToText } from './docx'
+import { hwpToText } from './hwp'
 import { pdfToText } from './pdf'
 import { pptToText } from './ppt'
 import { pptxToText } from './pptx'
@@ -85,7 +86,10 @@ function decodeTextBytes(bytes: Buffer): string | null {
   }
 }
 
-type BinaryKind = 'zip' | 'pdf' | 'ole2' | 'unknown'
+type BinaryKind = 'zip' | 'pdf' | 'ole2' | 'hwp3' | 'unknown'
+
+/** How a Hangul 3.x document begins; Hangul 5 is an OLE2 file and HWPX a zip. */
+const HWP3_SIGNATURE = Buffer.from('HWP Document File')
 
 /** pdf.js scans the first 1024 bytes for the header, and leading junk before it
  *  (HTTP header remnants, whitespace) is common in the wild, so match the header
@@ -103,6 +107,7 @@ function sniffBinary(bytes: Buffer): BinaryKind {
     bytes[3] === 0xe0
   )
     return 'ole2'
+  if (bytes.subarray(0, HWP3_SIGNATURE.length).equals(HWP3_SIGNATURE)) return 'hwp3'
   return 'unknown'
 }
 
@@ -163,7 +168,22 @@ export async function parseFileToText(filePath: string): Promise<ParsedFile> {
         error: `Content mismatch: .${ext} file has ${sniffed} magic bytes`,
       }
     }
+    // .hwpx is a zip; a .hwp is Hangul 5 (OLE2) or Hangul 3, and now and then an
+    // HWPX saved under the old name, which the engine reads by its content
+    if (
+      (ext === 'hwpx' && sniffed !== 'zip') ||
+      (ext === 'hwp' && sniffed !== 'ole2' && sniffed !== 'hwp3' && sniffed !== 'zip')
+    ) {
+      return {
+        ok: false,
+        kind: 'text',
+        error: `Content mismatch: .${ext} file has ${sniffed} magic bytes`,
+      }
+    }
     switch (ext) {
+      case 'hwp':
+      case 'hwpx':
+        return { ok: true, kind: 'text', text: await hwpToText(bytes) }
       case 'doc':
         return {
           ok: true,

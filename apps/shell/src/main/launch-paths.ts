@@ -19,6 +19,8 @@ export const LAUNCHABLE_EXTS = [
   'html',
   'htm',
   'xmind',
+  'hwp',
+  'hwpx',
 ] as const
 
 const SUPPORTED_LAUNCH_RE = new RegExp(`\\.(${LAUNCHABLE_EXTS.join('|')})$`, 'i')
