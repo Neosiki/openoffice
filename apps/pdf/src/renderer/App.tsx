@@ -6297,6 +6297,17 @@ export default function App() {
     currentPage: () => (visList[currentPage - 1] ?? 0) + 1,
     readOnly: () => readOnly,
     ocrText: (origIdx) => ocrPages.get(origIdx)?.entry.text ?? null,
+    structuredRead: () => {
+      const api = window.pdfApi
+      if (!filePath || !api?.structure || !api.store) return null
+      const password = passwordRef.current
+      return {
+        source: { path: filePath, ...(password !== undefined ? { password } : {}) },
+        text: (request) => api.structure.text(request),
+        tree: (request) => api.structure.tree(request),
+        aiReadPages: (docHash) => api.store.aiReadPages(docHash),
+      }
+    },
     selection: () => aiSelection,
     pendingSummary: aiPendingSummary,
     annotationSummary: aiAnnotationSummary,

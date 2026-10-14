@@ -7,6 +7,7 @@
 import type { PdfiumModule } from '../../../../../packages/pdf2docx/src'
 import type { DocumentTree } from '../../../../../packages/pdf-structure/src/tree/types'
 import type { PdfStructuredTextPage } from '../../../../pdf/src/shared/ipc'
+import { treeToStructuredText } from '../../../../../packages/pdf-structure/src/structured-text'
 
 /**
  * Structured text for the AI read path (spec §2): one entry per analyzed
@@ -15,7 +16,7 @@ import type { PdfStructuredTextPage } from '../../../../pdf/src/shared/ipc'
  */
 export type StructuredTextFormatter = (tree: DocumentTree) => PdfStructuredTextPage[]
 
-export const structuredTextFormatter: StructuredTextFormatter | null = null
+export const structuredTextFormatter: StructuredTextFormatter | null = treeToStructuredText
 
 export interface TranslatedPdfWriteInput {
   /** initialized PDFium */
