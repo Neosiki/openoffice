@@ -17,12 +17,14 @@
   - `ai/`: AI 창(`AiPanel.tsx`), 창을 지도 오른쪽에 붙이는 자리와 AI가 지도를 보는 창구(`AiDock.tsx`의 `useMindmapAi`·`MindmapAiDock`), 도구가 지도에 하는 일(`map-tools.ts`), 지도 skill과 지시문(`mindmap-skill.ts`), 첨부·검색 skill, 전송과 연결 상태. 문구는 `i18n/ai/<언어>.ts`.
 - 메인 프로세스(`src/main/mindmap-main.ts`): 파일 읽기·쓰기, 뷰마다 허용된 경로, 닫기 전 저장 확인, 이름 바뀜 따라가기, 링크 열기, 단독 실행. 내보내기·인쇄 창구는 `src/main/export-main.ts`.
 - AI 첨부와 제목 없는 지도의 임시 이름(`src/main/ai-attachments.ts`): `mindmap:files-*`, `mindmap:provisional-title`.
-- IPC 계약 `src/shared/ipc.ts`(`MINDMAP_CHANNELS`). 이 편집기가 갖는 창구 이름과 주고받는 자료의 모양이 전부 여기 있다. 아직 받는 쪽이 없는 창구에는 맡을 작업이 주석으로 적혀 있다.
+- 껍데기 앱과 주고받는 것: 넘겨받은 생성 요청(`src/main/handoff-main.ts`), AI 없이 바꾸기로 여는 새 지도의 내용(`src/main/seed-main.ts`), 앱 안 MCP 서버가 묻는 개요 글과 저장할 바이트(`src/main/mcp-queries.ts`), 도구 줄의 "이 문서로 다른 문서 만들기" 단추가 보내는 알림(`mindmap:make-from-document` → `setMindmapMakeFromDocumentHook`으로 건 껍데기의 함수).
+- IPC 계약 `src/shared/ipc.ts`(`MINDMAP_CHANNELS`). 이 편집기가 갖는 창구 이름과 주고받는 자료의 모양이 전부 여기 있다.
 
 ## 맡지 않는 것 (경계)
 
 - `.xmind` 파일의 해석, 보존, 맞추기, 개요 글, 테마 표는 `packages/xmind-engine`의 범위다. 엔진에 문제가 보이면 여기서 돌려 막지 않는다.
 - 탭, 창, 메뉴, 홈 화면, 열기·저장 대화 상자의 확장자 목록은 `apps/shell`의 범위다. 이 모듈은 shell이 부르는 함수(`createMindmapView`, `requestMindmapSave`, `requestMindmapClose`, `sendMindmapMenuCommand` 등)를 내보낼 뿐이다.
+- 만들기 창, 파일 메뉴의 "이 문서로 다른 문서 만들기"·"자료 보기"·"이 문서로 만든 문서", 출처 기록(`document-links.json`), AI 없이 바꾸기의 변환은 `apps/shell`이 한다. 이 모듈은 맡겨 둔 요청과 내용을 한 번 가져가고, 실행이 시작됐음을 알릴 뿐이다.
 - 공용 `ai:*` 창구와 구독 창구는 `apps/docs/src/main/docs-main.ts`가 등록한다. 이 모듈은 등록하지 않는다. preload는 그 창구를 부르기만 한다.
 - 화면 틀의 색(토큰)은 `packages/ui`의 범위다.
 
@@ -76,7 +78,8 @@
 - **첨부**는 다른 편집기와 같다. 받는 확장자에 `xmind`가 있고, 글은 `parseFileToText`로만 읽으며(가리기 적용, 읽지 못하면 읽지 않음), 다른 탭에서 저장하지 않은 파일은 `assertFileSaved`로 거절한다. 창은 한 번에 24,000자씩 읽고 메인은 한 번에 48,000자를 넘겨주지 않는다. 그림(5MB까지)은 사용자 글과 함께 그림으로 간다.
 - **창은 지도 오른쪽 끝에 붙는다.** 테마 패널과 같은 쪽이라 둘은 번갈아 열린다(하나를 열면 다른 하나는 접힌다). AI 창은 접혀도 남아 있어 실행과 대화가 이어진다. 열림 여부는 `mindmapapp.showAi`에 기억한다.
 - **밖에서 시작하는 실행**은 `MindmapAiDock`(`AiPanel`)의 `request`(`{ nonce, text, attachmentPaths }`)로 건넨다. 파일은 `mindmap:files-add`로 받아 첨부 칸에, 글은 입력 칸에 넣은 뒤 보내기 버튼과 같은 `send`를 지난다. 문지기가 붙잡거나 거절하면 글과 첨부는 창에 그대로 남는다. 실행이 실제로 시작될 때마다 `onRunStart({ text, attachments })`가 불린다(입력, 다시 시도, 대기열, 밖에서 시작 모두).
-- **넘겨받은 요청**(8.5): 껍데기의 "만들기"가 새 지도 탭에 맡겨 둔 요청을 그 탭이 한 번 가져간다. 메인은 `src/main/handoff-main.ts`가 `mindmap:handoff-take`(공용 `takeGenerateHandoff`, 파일로 연 뷰는 가져가지 않음)와 `mindmap:handoff-run-started`(공용 `reportGenerateRunStarted`, 받은 값을 검사)를 받는다. 화면은 `ai/use-handoff.ts`가 맡는다. 지도가 처음 준비될 때 제목 없는 새 지도일 때만 가져가고, AI 창을 연 뒤 요청을 `request`로 한 번의 렌더에만 건네고 버린다(창이 다시 붙어도, 탭을 다시 불러와도 다시 돌지 않는다). 실행이 시작될 때 넘겨받은 파일이 하나라도 붙어 있으면 그 경로를 알리고, 메인은 첫 번째만 기록한다. 넘겨받은 파일을 모두 뺀 실행은 알리지 않는다. 테스트는 `tests/handoff.test.ts`와 `tests/main.test.ts`.
+- **넘겨받은 요청**: 껍데기의 "만들기"가 새 지도 탭에 맡겨 둔 요청을 그 탭이 한 번 가져간다. 메인은 `src/main/handoff-main.ts`가 `mindmap:handoff-take`(공용 `takeGenerateHandoff`, 파일로 연 뷰는 가져가지 않음)와 `mindmap:handoff-run-started`(공용 `reportGenerateRunStarted`, 받은 값을 검사)를 받는다. 화면은 `ai/use-handoff.ts`가 맡는다. 지도가 처음 준비될 때 제목 없는 새 지도일 때만 가져가고, AI 창을 연 뒤 요청을 `request`로 한 번의 렌더에만 건네고 버린다(창이 다시 붙어도, 탭을 다시 불러와도 다시 돌지 않는다). 실행이 시작될 때 넘겨받은 파일이 하나라도 붙어 있으면 그 경로를 알리고, 메인은 첫 번째만 기록한다. 넘겨받은 파일을 모두 뺀 실행은 알리지 않는다. 테스트는 `tests/handoff.test.ts`와 `tests/main.test.ts`.
+- **AI 없이 바꾸기로 여는 새 지도**: 껍데기가 마크다운 자료를 지도로 바꿀 때 새 지도 탭에 개요 글을 맡겨 둔다. 그 탭이 처음 준비될 때 `mindmap:seed-take`로 한 번 가져가, 엔진의 `createXmindDocumentFromOutline`으로 만든 지도를 저장하지 않은 새 지도로 연다. 파일로 연 뷰, 두 번째 가져가기, 다시 불러오기는 아무것도 받지 않는다. AI는 돌지 않는다. 테스트는 `tests/seed.test.ts`.
 - 이 편집기는 `ai:*`와 구독 창구를 등록하지 않는다. 제공자는 `selectAiProvider`(뒷단)가 정하고, 화면은 문지기와 막힘 안내만 그린다.
 
 ## 내보내기와 인쇄
@@ -98,4 +101,5 @@
 - 바꾸면 반드시 테스트하는 것(모양): 스타일 값 거름망의 표(`tests/style-values.test.ts`), 바깥 그림이 출처 있는 요소를 만들지 않는 것과 표식·그림 규칙(`tests/markers-images.test.ts`, `tests/decorate.test.ts`), 96개 테마를 고르면 파일에 적히고 다시 열면 같은 모양인 것, 앱이 밝든 어둡든 지도 색이 같은 것, 지도 CSS·그리는 코드가 화면 틀 토큰을 쓰지 않는 것(`tests/look.test.ts`), 테마 패널(`tests/app.test.ts`).
 - 바꾸면 반드시 테스트하는 것(AI): 도구마다(`tests/ai-tools.test.ts`: 편집 하나씩의 검사, 50개 상한, 보이지 않는 요소가 딸린 토픽의 지우기 거절, 새 시트·빈 새 지도 채우기·덮어쓰지 않기, 묶음 하나가 되돌리기 한 단계, 차례 되돌리기가 더한 시트를 지우는 것, 꺾쇠가 든 글), 창(`tests/ai-panel.test.ts`: 대본으로 쓴 모델의 답으로 지도가 바뀌고 Ctrl+Z로 물러나는 것, 밖에서 시작한 실행이 막히면 글과 첨부가 남는 것), 첨부(`tests/ai-attachments.test.ts`). 제공자가 구독으로 정해지는 테스트는 전송 창구(`aiStream`)를 가짜로 바꾼다. 실제 `claude`·`codex`에 닿는 테스트를 두지 않는다.
 - 바꾸면 반드시 테스트하는 것(내보내기): 적대적인 글·스타일·바깥 그림을 가진 지도의 페이지와 SVG에 글에서 온 요소, 바깥 주소, 거르지 않은 스타일이 없는 것, 앱이 밝든 어둡든 결과가 같은 것(`tests/export.test.ts`), 마크다운 개요가 `sheetsToOutline`과 글자 그대로 같은 것과 미리보기 그림을 못 만들 때 예전 그림이 남는 것(`tests/app-export.test.ts`), 파일 이름과 확장자(`tests/export-main.test.ts`).
+- 바꾸면 반드시 테스트하는 것(껍데기와 잇는 곳): 넘겨받은 요청을 한 번만 가져가고 파일로 연 뷰는 가져가지 않는 것(`tests/handoff.test.ts`), 바꾸기로 맡겨 둔 내용이 저장하지 않은 새 지도로 열리는 것(`tests/seed.test.ts`), 도구 줄의 만들기 단추(`tests/toolbar-make-from.test.ts`), 21개 언어 문구의 키(`tests/i18n.test.ts`).
 - 빌드한 앱을 실제로 몰아 보는 확인은 `tests/real-run/driver.ts`다. `npm test`에는 들어 있지 않다. 한글 조합 입력, 끌어 옮기기, 저장 후 다시 열기, 큰 지도의 속도를 본다. 모양은 `tests/real-run/look-run.ts`가 본다. 네 뼈대, 여덟 색 띠, 세 바탕, 테마 패널, 도구 줄 확대, 앱과 지도의 밝기 조합, 표식·그림의 화면을 찍고, "선" 뼈대의 이음매를 재고, 바깥 주소로 나가는 요청이 없는지 세션의 요청 기록과 작은 웹 서버로 확인한다. `MINDMAP_REAL_RUN_ONLY=look`이면 이것만 돈다. 내보내기는 `tests/real-run/export-run.ts`가 본다(`MINDMAP_REAL_RUN_ONLY=export`). 밝은 앱과 어두운 앱의 PNG·미리보기 그림을 픽셀로 견주고, PDF와 인쇄가 가로 A4 한 쪽인지 읽어 보고, 바깥으로 나간 요청을 센다. 인쇄는 그 창의 `print`를 같은 창의 `printToPDF`로 바꿔 확인한다.

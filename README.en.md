@@ -3,9 +3,9 @@
 [한국어](README.md) · **English**
 
 IeumOffice (이음오피스) is a free, open-source desktop office suite. It opens
-and edits Word, Excel, PowerPoint, PDF, Markdown and HTML documents in one
-window, and its AI works on the document itself instead of answering in a
-chat box beside it.
+and edits Word, Excel, PowerPoint, PDF, Markdown and HTML documents and mind
+maps in one window, and its AI works on the document itself instead of
+answering in a chat box beside it.
 
 The AI runs on **the Claude or Codex subscription you already pay for**. You
 do not create an API key and you do not pay IeumOffice anything.
@@ -33,9 +33,9 @@ IeumOffice is a modified version of the open-source project
 
 ## What works today
 
-- **Six editors in one tabbed window**: Word (`.docx`), Excel (`.xlsx`),
-  PowerPoint (`.pptx`), PDF, Markdown and HTML. Files are opened and saved in
-  their real formats on your own PC; edits are written back as narrow changes
+- **Editors in one tabbed window**: Word (`.docx`), Excel (`.xlsx`),
+  PowerPoint (`.pptx`), PDF, Markdown, HTML and mind maps. Files are opened
+  and saved in their real formats on your own PC; edits are written back as narrow changes
   to the original file, so the parts you did not touch are kept as they were.
 - **An AI panel in every editor.** You ask in plain words, and the AI changes
   the document through the app's own editing tools. You see what was changed
@@ -43,6 +43,17 @@ IeumOffice is a modified version of the open-source project
 - **PDF**: edit text on the page and convert a PDF to Word, Excel or
   PowerPoint on your PC.
 - **Slides from a request**: the deck is generated on your PC.
+- **Mind maps**: opens and saves XMind files (`.xmind`) in place. Elements the
+  editor does not show are kept when you save, and a map you did not change is
+  saved byte for byte as it was. Several sheets, themes, export to a picture,
+  PDF or Markdown outline, and printing.
+- **New documents from your documents**: start "Make a new document" from a
+  starred group on the home screen, from files you picked, or from an
+  editor's File menu, and the material is turned into a PowerPoint deck, an
+  HTML page or a mind map. The AI of the editor for the new document writes
+  it. Maps and Markdown convert into each other, and a map into a slide
+  outline, without AI. File → View Sources shows which files a document was
+  made from; that record stays on your PC.
 - **Search across your documents** from the home screen, indexed on your PC.
 - **A terminal command (`ieumoffice`), an MCP server and an agent skill**, so a
   coding agent can read, create and edit the same files.
@@ -248,6 +259,13 @@ project easy to take.
 - **Image generation needs a key**, as described above.
 - **Translations.** 19 of the 21 interface languages are machine-translated
   and have not been reviewed by native speakers.
+- **Hiding does not reach everywhere.** Parts you hid from AI in the
+  PowerPoint, Markdown and HTML editors stay hidden when the file is attached
+  in another editor or asked about on the home screen, but hiding marks in
+  Word documents are not recognised, and the terminal command and MCP read
+  files as written. [PRIVACY.md](PRIVACY.md) has the details.
+- **Old XMind 8 files** (with only `content.xml` inside) and password-protected
+  mind maps do not open.
 - **Updating from a real GitHub release had not been exercised end to end**
   when this was written, because no release existed yet.
 
@@ -255,8 +273,12 @@ project easy to take.
 
 These belong to a later stage and are **not in the app today**:
 
-- Mind-map documents (`.xmind`).
-- Creating a new document from a bundle of existing documents.
+- Making Word and Markdown documents with AI (today: PowerPoint, HTML and mind
+  maps).
+- Importing old XMind 8 files.
+- Showing a theme chosen in XMind with a similar look (today such a map is
+  drawn with the default look, and the file's theme is left as it is).
+- Mind maps in the terminal command (`ieumoffice`).
 
 ## Privacy
 

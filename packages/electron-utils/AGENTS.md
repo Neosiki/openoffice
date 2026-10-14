@@ -1,6 +1,6 @@
 # packages/electron-utils (`@genoffice/electron-utils`)
 
-shell과 여섯 에디터의 메인 프로세스(일부는 preload)가 함께 쓰는 도우미 모음이다. 보안 관문(외부 URL, 원격 주소, 탐색 잠금), 파일 쓰기, 메뉴, 인쇄, headless 내보내기 계약처럼 "앱마다 따로 구현하면 어긋나는 것"을 한 곳에 둔다.
+shell과 에디터들의 메인 프로세스(일부는 preload)가 함께 쓰는 도우미 모음이다. 보안 관문(외부 URL, 원격 주소, 탐색 잠금), 파일 쓰기, 메뉴, 인쇄, headless 내보내기 계약처럼 "앱마다 따로 구현하면 어긋나는 것"을 한 곳에 둔다.
 
 ## 맡은 범위
 
@@ -9,6 +9,8 @@ shell과 여섯 에디터의 메인 프로세스(일부는 preload)가 함께 �
 - 창과 메뉴: 공용 메뉴 템플릿(`src/app-menu.ts`), 우클릭 메뉴(`src/context-menu.ts`), 저장소 주소 상수(`src/github-menu.ts`), 파일 끌어다 놓기 다리(`src/drop-open.ts`), 렌더러 스킴과 프로토콜(`src/renderer-scheme.ts`, `src/renderer-protocol.ts`).
 - 인쇄와 내보내기: `printHtmlToPdf`·`sanitizePrintableBody`(`src/print-html-pdf.ts`), 인쇄 대화 상자용 임시 창(`src/print-window.ts`), headless 내보내기의 인자 문법·종료 코드·출력 봉투(`src/headless-export.ts`), 프로세스 전역 headless 플래그(`src/headless-mode.ts`).
 - 스트림 정리: 렌더러가 사라지면 요청을 끊는 `abortOnDestroyed`(`src/abort-on-destroyed.ts`).
+- 저장하지 않은 파일 확인(`src/unsaved-files.ts`): 파일을 다른 파일로 읽기 전에 "어떤 탭에 열려 있고 저장하지 않은 변경이 있는가"를 묻는 `assertFileSaved`·`withoutUnsavedFiles`·`fileHasUnsavedChanges`. 열린 문서의 목록은 shell이 `setOpenFilesSource`로 건다.
+- 생성 넘겨주기(`src/generate-handoff.ts`): 만들기 창의 요청을 새 탭의 webContents 앞으로 맡겨 두고(`queueGenerateHandoff`), 그 탭의 에디터가 한 번 가져가며(`takeGenerateHandoff`), 실행 시작(`reportGenerateRunStarted`)과 AI 없이 바꾼 사실(`recordGenerateConverted`)을 메모리에 남긴다. shell의 출처 기록이 이 사건들을 읽는다.
 
 ## 맡지 않는 것 (경계)
 
@@ -29,6 +31,8 @@ shell과 여섯 에디터의 메인 프로세스(일부는 preload)가 함께 �
 - headless 내보내기의 계약(`--headless-export <입력> --to <형식> --out <경로> [--json]`, 종료 코드 1 인자 오류 / 2 입력 파일 오류 / 3 변환 실패, 한 줄 봉투)은 `packages/cli`와 shell이 함께 읽는다. 바꾸려면 양쪽을 같이 바꾼다.
 - 패키지 루트 진입점은 Electron에 묶여 있다(`renderer-protocol.ts`가 `net`·`protocol`을, `drop-open.ts`가 `ipcRenderer`·`webUtils`를 실행 시점에 import한다). Electron 없이 도는 코드(`packages/cli`의 번들, `packages/ai-search`)는 `package.json`의 `exports`에 있는 하위 경로(`/remote-image`, `/generated-images`, `/safe-remote-url`, `/atomic-write`, `/headless-export` 등)로만 import한다. 그런 코드가 써야 할 모듈을 새로 만들면 하위 경로로도 내보낸다.
 - 내부 식별자는 원본 표기를 유지한다. 렌더러 스킴 `genoffice-app`(`RENDERER_SCHEME`), 임시 폴더 이름 `genoffice-ai-images`, 심볼 키 등은 사용자에게 보이지 않는 이름이라 바꾸지 않는다. 사용자에게 보이는 이름(메뉴의 제품 이름, 기본 저장 폴더 `<문서>/IeumOffice`)은 `@genoffice/i18n`의 `PRODUCT_NAME`·`productName`·`brandText`에서 가져온다.
+- 저장하지 않은 파일 확인과 생성 넘겨주기의 상태는 `Symbol.for(...)` 키에 둔다. shell이 건 목록과 맡겨 둔 요청을, 번들에 따로 들어간 에디터의 사본이 같은 것으로 읽어야 한다. 열린 문서 목록이 없는 실행(에디터 단독 실행)에서는 아무것도 막지 않는다.
+- 넘겨주기는 실행을 시작하지 않는다. 요청은 맡겨진 webContents와 종류에서만, 한 번만 가져갈 수 있고, 가져가기 전에 탭이 닫히면 버린다. 디스크에 아무것도 쓰지 않는다.
 - 저장소 URL을 문자열로 다시 적지 않는다. `GITHUB_REPO_URL`·`GITHUB_ISSUES_URL`·`GITHUB_LATEST_RELEASE_URL`·`githubReleaseTagUrl`을 쓴다.
 
 ## 이 모듈의 방식

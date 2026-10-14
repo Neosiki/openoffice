@@ -1,6 +1,6 @@
 # 이음오피스 (IeumOffice)
 
-워드·엑셀·파워포인트·PDF·마크다운·HTML 문서를 한 창에서 열고 고치는 데스크톱 오피스 프로그램이다. AI가 문서를 직접 고친다. 누구나 무료로 쓰도록 배포하며, 특정 직업군용이 아니다.
+워드·엑셀·파워포인트·PDF·마크다운·HTML 문서와 마인드맵(XMind 파일 `.xmind`)을 한 창에서 열고 고치는 데스크톱 오피스 프로그램이다. AI가 문서를 직접 고친다. 누구나 무료로 쓰도록 배포하며, 특정 직업군용이 아니다.
 
 AI는 쓰는 사람이 이미 내고 있는 **Claude 또는 Codex 구독**으로 돌아간다. 앱은 PC에 설치된 그 회사의 프로그램을 실행해 답 한 차례를 받아 오고, 문서를 고치는 일은 앱이 한다. 요금이 나가는 쪽으로는 사용자가 직접 고르지 않는 한 가지 않는다.
 
@@ -11,7 +11,7 @@ AI는 쓰는 사람이 이미 내고 있는 **Claude 또는 Codex 구독**으로
 ```
 openoffice/
 ├── AGENTS.md                      ← Codex 등이 읽는 진입점
-├── CLAUDE.md                      ← Claude Code가 읽는 진입점. 내용은 AGENTS.md와 같다
+├── CLAUDE.md                      ← Claude Code가 읽는 진입점. 원본에서 온 영어 요약(화면 색, 빌드, 문구 규칙)이고, 전체 규칙은 이 문서와 docs/에 있다
 ├── README.md / README.en.md       ← 사용자용 소개(한국어 / 영어)
 ├── PRIVACY.md                     ← 무엇이 어디로 전송되는지 전체 목록
 ├── CONTRIBUTING.md / SECURITY.md  ← 기여 방법, 보안 문제 신고
@@ -33,14 +33,15 @@ openoffice/
 │           ├── index.md           ← 결정 기록 목록
 │           └── NNNN-*.md          ← 결정 하나씩(맥락, 결정, 버린 대안, 결과)
 ├── apps/
-│   ├── shell/AGENTS.md            ← 껍데기 앱: 창·탭·홈·설정·첫 실행 안내·업데이트
+│   ├── shell/AGENTS.md            ← 껍데기 앱: 창·탭·홈·설정·첫 실행 안내·업데이트, 만들기 창과 출처 기록
 │   ├── docs/AGENTS.md             ← 워드 편집기, 공용 AI 창구를 등록하는 뒷단
 │   ├── sheets/AGENTS.md           ← 엑셀 편집기
 │   ├── sheets/native/xlsx-engine/AGENTS.md ← 엑셀 처리 프로그램(Rust)
 │   ├── slides/AGENTS.md           ← 파워포인트 편집기, 슬라이드 생성
 │   ├── pdf/AGENTS.md              ← PDF 편집기
 │   ├── markdown/AGENTS.md         ← 마크다운·텍스트 편집기
-│   └── html/AGENTS.md             ← HTML 편집기
+│   ├── html/AGENTS.md             ← HTML 편집기
+│   └── mindmap/AGENTS.md          ← 마인드맵 편집기(`.xmind`)
 ├── packages/
 │   ├── ai-provider/AGENTS.md      ← 제공자 목록·선택 규칙, 구독 프로그램 실행부
 │   ├── ai-search/AGENTS.md        ← 검색·이미지 생성·미디어 분석 도구, 자동 호출 제한
@@ -56,7 +57,8 @@ openoffice/
 │   ├── xlsx-gateway/AGENTS.md     ← 엑셀 저장 경로
 │   ├── pdf2docx/AGENTS.md         ← PDF → 워드 변환
 │   ├── html2docx/AGENTS.md        ← HTML → 워드 변환
-│   ├── file-parse/AGENTS.md       ← 첨부·검색용 파일 읽기
+│   ├── xmind-engine/AGENTS.md     ← 마인드맵 파일 엔진(열기, 원본 보존, 맞추기, 개요 글, 테마 표)
+│   ├── file-parse/AGENTS.md       ← 첨부·검색용 파일 읽기, 다른 파일로 읽을 때의 가리기
 │   ├── zip-gate/AGENTS.md         ← 압축 파일 안전 검사
 │   ├── font-metrics/AGENTS.md     ← 글꼴 치수
 │   ├── pipelines/AGENTS.md        ← 슬라이드 생성 단계
@@ -89,6 +91,8 @@ openoffice/
 | 화면 문구나 도움말을 더하거나 고친다                   | `docs/standards.md`의 "글과 언어", "제품 이름". 21개 언어 모두 채운다                                    |
 | 화면 스타일을 고친다                                   | `docs/standards.md`의 "화면 색"                                                                          |
 | 터미널 명령어·MCP·스킬을 고친다                        | `docs/contracts.md`. 출력 구조와 이름은 밖에서 기대고 있다                                               |
+| 가리기나 다른 파일로 읽기를 고친다                     | `docs/security.md`의 "문서 내용", `packages/file-parse/AGENTS.md`                                        |
+| 마인드맵 파일의 열기·저장을 고친다                     | `packages/xmind-engine/AGENTS.md`. 바뀐 것이 없는 저장은 원본 바이트 그대로다                            |
 | 설정 파일의 값을 더하거나 읽는 방식을 바꾼다           | `docs/engineering-notes.md`의 "설정 파일", `docs/contracts.md`의 "설정 파일"                             |
 | 원본의 변경을 받아온다                                 | `docs/operations.md`의 "원본의 개선 받아오기". 끝나면 `npm run check:no-genspark`                        |
 | 문서 엔진 패키지를 고쳐야 할 것 같다                   | 멈추고 사람에게 묻는다. 그 패키지의 `AGENTS.md`를 읽는다                                                 |
