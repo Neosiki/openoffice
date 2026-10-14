@@ -102,6 +102,7 @@ export const ms = {
   aiScopeClearTitle: 'Buang skop pilihan',
   aiToolNotDone: 'Tidak dilakukan · {what}',
   aiChangesTitle: 'Perubahan pada dokumen: {count}',
+  aiClearMarks: 'Sembunyikan tanda',
   aiRevert: 'Buat asal perubahan ini',
   aiReverted: 'Perubahan dibuat asal',
   aiRevertRefused:

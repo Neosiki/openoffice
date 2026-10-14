@@ -99,6 +99,7 @@ export const he = {
   aiScopeClearTitle: 'ביטול טווח הבחירה',
   aiToolNotDone: 'לא בוצע · {what}',
   aiChangesTitle: 'שינויים במסמך: {count}',
+  aiClearMarks: 'הסתר סימונים',
   aiRevert: 'ביטול השינויים האלה',
   aiReverted: 'השינויים בוטלו',
   aiRevertRefused:

@@ -67,11 +67,12 @@ const PATCHES = {
  */
 /**
  * What the app's plugin uses of the studio beyond the plugin host: the editor's caret, to
- * show a change, to read the selection and to select a word. The host hands out none of
- * it; the plugin reaches it through a command it registers, which the studio calls with
- * its own services. These are names inside the studio, not a contract, so the build looks
- * for them in the source it fetched: a release that renames one fails the build instead of
- * turning those three things off without a word.
+ * show a change, to read the selection and to select a word, and the pages' places and the
+ * zoom, to mark its changes on the pages. The host hands out none of it; the plugin reaches
+ * it through a command it registers, which the studio calls with its own services. These
+ * are names inside the studio, not a contract, so the build looks for them in the source
+ * it fetched: a release that renames one fails the build instead of turning those things
+ * off without a word.
  */
 export const pluginHooks = [
   {
@@ -91,15 +92,30 @@ export const pluginHooks = [
   },
   {
     file: 'src/engine/input-handler.ts',
-    needles: ['private cursor: CursorState', 'updateCaret('],
+    needles: [
+      'private cursor: CursorState',
+      'updateCaret(',
+      'private virtualScroll: VirtualScroll',
+    ],
   },
   {
     file: 'src/command/types.ts',
     needles: [
       'getInputHandler: () => InputHandler | null',
+      'getViewportManager: () => ViewportManager | null',
       'execute: (services: CommandServices, params?: Record<string, unknown>) => void',
     ],
   },
+  // where the marks of the plugin's changes go: the pages' places and the zoom
+  {
+    file: 'src/view/virtual-scroll.ts',
+    needles: [
+      'getPageOffset(pageIdx: number): number',
+      'getPageLeftResolved(pageIdx: number, containerWidth: number): number',
+    ],
+  },
+  { file: 'src/view/viewport-manager.ts', needles: ['getZoom(): number'] },
+  { file: 'index.html', needles: ['<div id="scroll-content"></div>'] },
   { file: 'src/automation/types.ts', needles: ['registerCommand(def: ExtCommandDef): void'] },
 ]
 

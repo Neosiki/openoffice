@@ -112,7 +112,7 @@ function checkPluginHooks() {
   if (missing.length > 0) {
     throw new Error(
       `rhwp-studio ${TAG}: the editor no longer has what the app's plugin uses to show a change, ` +
-        `read the selection and select a word (see pluginHooks in rhwp-patches.mjs):\n  ` +
+        `read the selection, select a word and mark its changes (see pluginHooks in rhwp-patches.mjs):\n  ` +
         missing.join('\n  '),
     )
   }

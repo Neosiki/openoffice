@@ -101,6 +101,7 @@ export const th = {
   aiScopeClearTitle: 'ยกเลิกขอบเขตที่เลือก',
   aiToolNotDone: 'ทำไม่สำเร็จ · {what}',
   aiChangesTitle: 'แก้ไขเอกสาร {count} แห่ง',
+  aiClearMarks: 'ซ่อนเครื่องหมาย',
   aiRevert: 'ยกเลิกการแก้ไขเหล่านี้',
   aiReverted: 'ยกเลิกการแก้ไขแล้ว',
   aiRevertRefused:

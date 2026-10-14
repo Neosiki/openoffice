@@ -103,6 +103,7 @@ export const cs = {
   aiScopeClearTitle: 'Zrušit rozsah výběru',
   aiToolNotDone: 'Neprovedeno · {what}',
   aiChangesTitle: 'Změny v dokumentu: {count}',
+  aiClearMarks: 'Skrýt označení',
   aiRevert: 'Vrátit tyto změny',
   aiReverted: 'Změny vráceny',
   aiRevertRefused:

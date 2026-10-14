@@ -102,6 +102,7 @@ export const id = {
   aiScopeClearTitle: 'Hapus cakupan pilihan',
   aiToolNotDone: 'Tidak dilakukan · {what}',
   aiChangesTitle: 'Perubahan pada dokumen: {count}',
+  aiClearMarks: 'Sembunyikan tanda',
   aiRevert: 'Batalkan perubahan ini',
   aiReverted: 'Perubahan dibatalkan',
   aiRevertRefused:

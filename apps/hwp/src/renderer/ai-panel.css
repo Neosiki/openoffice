@@ -944,6 +944,29 @@
   cursor: default;
 }
 
+/* takes the marks of the changes off the pages: quieter than undo, right before it */
+.ai-changes-unmark {
+  flex: none;
+  margin-left: auto;
+  border: none;
+  border-radius: 4px;
+  background: none;
+  padding: 2px 6px;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+
+.ai-changes-unmark:hover {
+  background: var(--hover);
+  color: var(--color-text-primary);
+}
+
+.ai-changes-unmark:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
 .ai-changes-list {
   display: flex;
   flex-direction: column;

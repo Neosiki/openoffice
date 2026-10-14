@@ -457,6 +457,8 @@ export interface AgentPluginSurface {
   editNote(note: number, text: string): AgentEditNoteResult
   deleteNote(note: number): AgentDeleteNoteResult
   measureTabs(spots: AgentTabSpot[]): { tabs: (AgentTabMeasure | null)[] }
+  /** take the marks of the changes made so far off the pages */
+  clearMarks(): { ok: true }
   undo(steps: number, expectedForeign: number): AgentUndoResult
 }
 

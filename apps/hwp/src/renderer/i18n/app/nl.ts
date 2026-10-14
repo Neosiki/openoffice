@@ -102,6 +102,7 @@ export const nl = {
   aiScopeClearTitle: 'Selectiebereik wissen',
   aiToolNotDone: 'Niet uitgevoerd · {what}',
   aiChangesTitle: 'Wijzigingen in het document: {count}',
+  aiClearMarks: 'Markeringen verbergen',
   aiRevert: 'Deze wijzigingen ongedaan maken',
   aiReverted: 'Wijzigingen ongedaan gemaakt',
   aiRevertRefused:

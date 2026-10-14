@@ -101,6 +101,7 @@ export const en = {
   aiScopeClearTitle: 'Clear the selection scope',
   aiToolNotDone: 'Not done · {what}',
   aiChangesTitle: 'Changes made to the document: {count}',
+  aiClearMarks: 'Hide marks',
   aiRevert: 'Undo these changes',
   aiReverted: 'Changes undone',
   aiRevertRefused:

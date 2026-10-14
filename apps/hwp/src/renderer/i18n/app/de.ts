@@ -105,6 +105,7 @@ export const de = {
   aiScopeClearTitle: 'Auswahlbereich aufheben',
   aiToolNotDone: 'Nicht ausgeführt · {what}',
   aiChangesTitle: 'Änderungen am Dokument: {count}',
+  aiClearMarks: 'Markierungen ausblenden',
   aiRevert: 'Diese Änderungen zurücknehmen',
   aiReverted: 'Änderungen zurückgenommen',
   aiRevertRefused:

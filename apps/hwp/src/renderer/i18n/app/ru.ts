@@ -103,6 +103,7 @@ export const ru = {
   aiScopeClearTitle: 'Снять область выделения',
   aiToolNotDone: 'Не выполнено · {what}',
   aiChangesTitle: 'Изменений в документе: {count}',
+  aiClearMarks: 'Скрыть отметки',
   aiRevert: 'Отменить эти изменения',
   aiReverted: 'Изменения отменены',
   aiRevertRefused:

@@ -101,6 +101,7 @@ export const ja = {
   aiScopeClearTitle: '選択範囲を解除',
   aiToolNotDone: '実行できませんでした · {what}',
   aiChangesTitle: '文書を {count} か所変更しました',
+  aiClearMarks: '表示を消す',
   aiRevert: '変更を元に戻す',
   aiReverted: '元に戻しました',
   aiRevertRefused:

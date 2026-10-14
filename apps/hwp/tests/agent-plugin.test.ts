@@ -107,7 +107,9 @@ function fakeEditor(
     },
     events: { on: (_name: string, handler: () => void) => listeners.push(handler) },
     automation: {
-      execute: () => {
+      // the editor's undo; other commands (the plugin's own) do nothing here
+      execute: (command: string) => {
+        if (command !== 'edit:undo') return null
         const before = history.pop()
         if (!before) return { ok: false }
         state = before

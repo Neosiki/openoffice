@@ -47,6 +47,22 @@ const REVEAL_COMMAND = 'ext:ieum-reveal'
 const SELECTION_COMMAND = 'ext:ieum-selection'
 /** The command that selects the word under the caret (a double click in the page). */
 const WORD_COMMAND = 'ext:ieum-select-word'
+/** The command that draws the marks of this plugin's changes on the pages. */
+const MARK_COMMAND = 'ext:ieum-mark-changes'
+/** Most places marked at once: a replace-all over a long document stops here. */
+const MAX_MARKS = 500
+/**
+ * How a mark looks: a light fill over the changed text and a line under it, warm so it is
+ * not taken for the editor's blue selection. The page is paper white in every theme.
+ */
+const MARK_FILL = 'rgba(255, 193, 7, 0.24)'
+const MARK_LINE = 'rgba(214, 140, 0, 0.85)'
+/** Under the editor's selection (5) and caret. */
+const MARK_LAYER_Z = 4
+/** The editor lays pages out again after a change, in its own time: the marks follow then. */
+const MARK_SETTLE_MS = 350
+/** Changes that leave nothing to mark: what they removed is gone. */
+const UNMARKED_CHANGES = new Set(['delete-paragraph', 'remove-table-lines', 'delete-note'])
 /** The most runs and characters of one selection: a sanity limit, far above real use. */
 const MAX_SELECTED_RUNS = 5000
 const MAX_SELECTED_CHARS = 400000
@@ -1550,8 +1566,76 @@ function measureTab(doc, spot) {
   return { width, type, fill }
 }
 
+// ---- marks of changes ----
+
+/** The run of a mark within a paragraph of `length` characters: its own, or the whole paragraph. */
+function spanOf(mark, length) {
+  const offset = Math.min(Math.max(0, Number.isInteger(mark.offset) ? mark.offset : 0), length)
+  const want = Number.isInteger(mark.length) ? mark.length : 0
+  return want > 0 ? [offset, Math.min(length, offset + want)] : [0, length]
+}
+
+/**
+ * Where a marked place is on the pages: rectangles in page pixels with their page. A place
+ * without text of its own (a table on a line of its own) is the tables of its paragraph.
+ * Nothing for a place that is no longer there.
+ */
+function markRects(doc, mark) {
+  const { sec, para } = mark
+  if (sec >= doc.getSectionCount()) return []
+  const path = Array.isArray(mark.path) && mark.path.length > 0 ? mark.path : null
+  if (!path) {
+    if (para >= doc.getParagraphCount(sec)) return []
+    const [start, end] = spanOf(mark, doc.getParagraphLength(sec, para))
+    const rects = end > start ? parse(doc.getSelectionRects(sec, para, start, para, end)) : []
+    if (rects.length > 0) return rects
+    const tables = []
+    const controls = parse(doc.getControlTextPositions(sec, para)).length
+    for (let control = 0; control < controls; control++) {
+      try {
+        tables.push(parse(doc.getTableBBox(sec, para, control)))
+      } catch {
+        // not a table
+      }
+    }
+    return tables
+  }
+  const json = JSON.stringify(path)
+  const cellPara = path[path.length - 1].cellParaIndex
+  const [start, end] = spanOf(mark, doc.getCellParagraphLengthByPath(sec, para, json))
+  return end > start
+    ? parse(doc.getSelectionRectsInCellByPath(sec, para, json, cellPara, start, cellPara, end))
+    : []
+}
+
+/** Body paragraphs per section. */
+function paragraphCounts(doc) {
+  const counts = []
+  const sections = doc.getSectionCount()
+  for (let sec = 0; sec < sections; sec++) counts.push(doc.getParagraphCount(sec))
+  return counts
+}
+
+/**
+ * The marks of earlier changes, moved for a change that added or removed body paragraphs:
+ * `at` is where it did (the first paragraph it made, or the one it removed). Marks inside
+ * table cells keep their place: a change in a cell does not move the body.
+ */
+function shiftMarks(marks, before, after, at) {
+  return marks.flatMap((mark) => {
+    const delta = (after[mark.sec] ?? 0) - (before[mark.sec] ?? 0)
+    if (delta === 0 || !at || at.sec !== mark.sec) return [mark]
+    if (delta > 0) return [mark.para >= at.para ? { ...mark, para: mark.para + delta } : mark]
+    if (mark.para < at.para) return [mark]
+    if (mark.para < at.para - delta) return []
+    return [{ ...mark, para: mark.para + delta }]
+  })
+}
+
 /** Takes the plugin's double-click listener off the page again. */
 let stopListening = null
+/** Takes the marks off the page again, with what keeps them in place. */
+let stopMarking = null
 
 export const agentPlugin = {
   id: AGENT_PLUGIN_ID,
@@ -1560,6 +1644,8 @@ export const agentPlugin = {
   deactivate() {
     if (stopListening) stopListening()
     stopListening = null
+    if (stopMarking) stopMarking()
+    stopMarking = null
   },
 
   activate(host) {
@@ -1570,10 +1656,123 @@ export const agentPlugin = {
     let own = false
     // the text is read for every request; it only changes when the document does
     let text = null
+    // the places this plugin changed since the panel last cleared them, as they are now
+    let marks = []
     host.events.on('document-changed', () => {
       text = null
-      if (!own) foreign += 1
+      if (!own) {
+        foreign += 1
+        // an edit of the user's own moves text under the marks: they would point astray
+        if (marks.length > 0) {
+          marks = []
+          refreshMarks()
+        }
+      }
     })
+
+    let layer = null
+    let settle = null
+    /** Draw the marks again (a command, for the editor's own services); later once more. */
+    const refreshMarks = () => {
+      try {
+        host.automation.execute(MARK_COMMAND)
+      } catch {
+        // an editor without commands: no marks
+      }
+      if (settle) clearTimeout(settle)
+      settle = setTimeout(() => {
+        settle = null
+        try {
+          host.automation.execute(MARK_COMMAND)
+        } catch {
+          // as above
+        }
+      }, MARK_SETTLE_MS)
+    }
+
+    /** Draws the marks where the editor lays their places out, as it draws its selection. */
+    const drawMarks = (services) => {
+      const page = globalThis.document
+      const content = page ? page.querySelector('#scroll-content') : null
+      if (!content) return
+      if (!layer || layer.parentElement !== content) {
+        if (stopMarking) stopMarking()
+        layer = page.createElement('div')
+        layer.className = 'ieum-change-marks'
+        layer.style.cssText = `position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:${MARK_LAYER_Z};`
+        content.appendChild(layer)
+        // the content is resized when the zoom changes: the marks are placed again
+        const Observer = globalThis.ResizeObserver
+        const observer = Observer ? new Observer(() => refreshMarks()) : null
+        if (observer) observer.observe(content)
+        const own = layer
+        stopMarking = () => {
+          if (observer) observer.disconnect()
+          own.remove()
+          if (layer === own) layer = null
+        }
+      }
+      layer.replaceChildren()
+      if (marks.length === 0) return
+      const input = services && services.getInputHandler ? services.getInputHandler() : null
+      const scroll = input ? input.virtualScroll : null
+      const viewport =
+        services && services.getViewportManager ? services.getViewportManager() : null
+      if (!scroll || !viewport) return
+      const zoom = viewport.getZoom()
+      const width = content.clientWidth
+      const rects = host.read((doc) =>
+        marks.flatMap((mark) => {
+          try {
+            return markRects(doc, mark)
+          } catch {
+            return []
+          }
+        }),
+      )
+      for (const rect of rects) {
+        const box = page.createElement('div')
+        const left = scroll.getPageLeftResolved(rect.pageIndex, width) + rect.x * zoom
+        const top = scroll.getPageOffset(rect.pageIndex) + rect.y * zoom
+        // one property at a time: a style string is dropped whole where one part is not understood
+        Object.assign(box.style, {
+          position: 'absolute',
+          left: `${left.toFixed(2)}px`,
+          top: `${top.toFixed(2)}px`,
+          width: `${(rect.width * zoom).toFixed(2)}px`,
+          height: `${(rect.height * zoom).toFixed(2)}px`,
+          background: MARK_FILL,
+          boxShadow: `inset 0 -2px 0 ${MARK_LINE}`,
+          borderRadius: '2px',
+        })
+        layer.appendChild(box)
+      }
+    }
+
+    try {
+      host.automation.registerCommand({
+        id: MARK_COMMAND,
+        label: 'Mark the changes',
+        execute: (services) => {
+          try {
+            drawMarks(services)
+          } catch {
+            // marks are a help; a page that cannot take them stays as it is
+          }
+        },
+      })
+    } catch {
+      // registered by an earlier activation of this plugin, or a host without commands
+    }
+
+    /** What a change leaves to mark, and the earlier marks moved for it. */
+    const noteChange = (label, result, before, after) => {
+      if (!result || result.ok === false) return
+      const places = Array.isArray(result.marks) ? result.marks : result.place ? [result.place] : []
+      marks = shiftMarks(marks, before, after, result.shiftAt ?? places[0] ?? result.place ?? null)
+      if (!UNMARKED_CHANGES.has(label)) marks = [...marks, ...places].slice(0, MAX_MARKS)
+      refreshMarks()
+    }
 
     // the answer of the reveal command: a command of the editor returns nothing itself
     let shown = false
@@ -1669,10 +1868,23 @@ export const agentPlugin = {
       // words that are no longer there
       text = null
       try {
-        return host.transaction(label, (tx) => {
+        const done = host.transaction(label, (tx) => {
           tx.deferPagination()
-          return fn(tx.doc())
+          const doc = tx.doc()
+          const before = paragraphCounts(doc)
+          const result = fn(doc)
+          return { result, before, after: paragraphCounts(doc) }
         })
+        noteChange(label, done.result, done.before, done.after)
+        if (
+          done.result &&
+          typeof done.result === 'object' &&
+          ('marks' in done.result || 'shiftAt' in done.result)
+        ) {
+          const { marks: _places, shiftAt: _at, ...rest } = done.result
+          return rest
+        }
+        return done.result
       } finally {
         own = false
       }
@@ -1820,11 +2032,20 @@ export const agentPlugin = {
           // back to front, so replacing one match never moves the offset of one still to do
           const hits = searchAll(doc, find).filter(isReplaceable).reverse()
           for (const hit of hits) replaceHit(doc, hit, replacement)
-          // the first in reading order is the last one done; nothing in front of it moved
+          // the first in reading order is the last one done; nothing in front of it moved.
+          // A later match in the same paragraph moved by what the earlier ones changed.
+          const shifted = new Map()
+          const marks = [...hits].reverse().map((hit) => {
+            const key = JSON.stringify([hit.sec, hit.para, cellPathOf(hit)])
+            const moved = shifted.get(key) ?? 0
+            shifted.set(key, moved + replacement.length - hit.length)
+            return placeOf({ ...hit, charOffset: hit.charOffset + moved }, replacement.length)
+          })
           return {
             ok: true,
             count: hits.length,
             place: placeOf(hits[hits.length - 1], replacement.length),
+            marks,
           }
         })
       }),
@@ -1859,14 +2080,13 @@ export const agentPlugin = {
               if (text) box.insert(at, text)
             }
             mustKeep(before, objectsOf(doc))
+            const first = where === 'before' ? box.index : box.index + 1
             return {
               ok: true,
               count: paragraphs.length,
               inTable: box.inTable,
-              place: box.place(
-                where === 'before' ? box.index : box.index + 1,
-                paragraphs[0].length,
-              ),
+              place: box.place(first, paragraphs[0].length),
+              marks: paragraphs.map((text, k) => box.place(first + k, text.length)),
             }
           }),
         )
@@ -1910,6 +2130,8 @@ export const agentPlugin = {
               emptied,
               inTable: box.inTable,
               place: box.place(emptied ? k : k - 1, 0),
+              // the marks below move up from the paragraph that went
+              shiftAt: box.place(k, 0),
             }
           }),
         )
@@ -3026,6 +3248,13 @@ export const agentPlugin = {
             }
           }),
         )
+      }),
+
+      /** Take the marks of the changes made so far off the pages. */
+      clearMarks: guarded(() => {
+        marks = []
+        refreshMarks()
+        return { ok: true }
       }),
 
       /**

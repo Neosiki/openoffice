@@ -144,6 +144,13 @@ export function AiPanel({
   const [busy, setBusy] = useState(false)
   /** an undo of a run is on its way to the editor */
   const [reverting, setReverting] = useState(false)
+  /** the editor shows marks over what the last run changed */
+  const [marksShown, setMarksShown] = useState(false)
+  /** Take the marks of the changes off the pages. */
+  const clearMarks = (): void => {
+    setMarksShown(false)
+    void bridgeRef.current.clearMarks().catch(() => {})
+  }
   /** messages queued while a reply runs; the pump re-runs them through send on settle */
   const msgQueue = useChatRunQueue<{
     attachments: AttachmentMeta[]
@@ -405,6 +412,8 @@ export function AiPanel({
     const items = runChangesRef.current
     runChangesRef.current = []
     if (items.length === 0) return {}
+    // the plugin marked each change on the pages as it made it
+    setMarksShown(true)
     const foreign = runForeignRef.current
     // a run whose starting point is unknown cannot be checked, so it is not offered for undo
     return {
@@ -591,6 +600,8 @@ export function AiPanel({
     runInstructionRef.current = instruction
     runChangesRef.current = []
     runForeignRef.current = null
+    // the marks show what the last run did; a new run starts without them
+    clearMarks()
     // the message takes the composer's attachments: echoed on the bubble, images sent with
     // it, the other files read through the files skill, now and in later turns
     const sentAtts = attachmentsOverride ?? attachmentsRef.current
@@ -707,7 +718,11 @@ export function AiPanel({
           i === idx && entry.changes ? { ...entry, changes: { ...entry.changes, state } } : entry,
         ),
       )
-      if (state === 'reverted') revertedNoteDueRef.current = true
+      if (state === 'reverted') {
+        revertedNoteDueRef.current = true
+        // what they marked was taken back
+        clearMarks()
+      }
       setReverting(false)
     }
     setReverting(true)
@@ -816,6 +831,7 @@ export function AiPanel({
                 setScopeCleared(null)
                 setBusy(false)
                 setChat([])
+                clearMarks()
               }}
               data-tip={t('aiNewChat')}
               aria-label={t('aiNewChat')}
@@ -919,6 +935,7 @@ export function AiPanel({
                   changes={entry.changes}
                   canRevert={i === revertableIdx && !busy && !reverting}
                   onRevert={() => revert(i)}
+                  onClearMarks={i === revertableIdx && marksShown ? clearMarks : null}
                   onShow={(place) => void bridgeRef.current.reveal(place).catch(() => {})}
                 />
               )}
@@ -1076,11 +1093,14 @@ function RunChangesCard({
   changes,
   canRevert,
   onRevert,
+  onClearMarks,
   onShow,
 }: {
   changes: RunChanges
   canRevert: boolean
   onRevert: () => void
+  /** set while the editor marks these changes on the pages */
+  onClearMarks: (() => void) | null
   onShow: (place: AgentPlace) => void
 }): ReactElement {
   const { t } = useI18n()
@@ -1091,6 +1111,11 @@ function RunChangesCard({
         <span className="ai-changes-title">
           {changes.state === 'reverted' ? t('aiReverted') : t('aiChangesTitle', { count })}
         </span>
+        {onClearMarks && changes.state === 'applied' && (
+          <button className="ai-changes-unmark" onClick={onClearMarks}>
+            {t('aiClearMarks')}
+          </button>
+        )}
         {changes.state === 'applied' && (
           <button className="ai-changes-revert" disabled={!canRevert} onClick={onRevert}>
             {t('aiRevert')}

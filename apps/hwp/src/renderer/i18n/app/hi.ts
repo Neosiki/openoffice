@@ -102,6 +102,7 @@ export const hi = {
   aiScopeClearTitle: 'चयन दायरा हटाएँ',
   aiToolNotDone: 'नहीं हो सका · {what}',
   aiChangesTitle: 'दस्तावेज़ में बदलाव: {count}',
+  aiClearMarks: 'चिह्न छिपाएँ',
   aiRevert: 'ये बदलाव वापस लें',
   aiReverted: 'बदलाव वापस लिए गए',
   aiRevertRefused:

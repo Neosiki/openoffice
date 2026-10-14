@@ -102,6 +102,7 @@ export const pl = {
   aiScopeClearTitle: 'Usuń zakres zaznaczenia',
   aiToolNotDone: 'Nie wykonano · {what}',
   aiChangesTitle: 'Zmiany w dokumencie: {count}',
+  aiClearMarks: 'Ukryj oznaczenia',
   aiRevert: 'Cofnij te zmiany',
   aiReverted: 'Zmiany cofnięte',
   aiRevertRefused:

@@ -102,6 +102,7 @@ export const vi = {
   aiScopeClearTitle: 'Xóa phạm vi vùng chọn',
   aiToolNotDone: 'Chưa thực hiện · {what}',
   aiChangesTitle: 'Thay đổi trong tài liệu: {count}',
+  aiClearMarks: 'Ẩn đánh dấu',
   aiRevert: 'Hoàn tác các thay đổi này',
   aiReverted: 'Đã hoàn tác thay đổi',
   aiRevertRefused:

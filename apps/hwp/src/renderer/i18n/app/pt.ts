@@ -104,6 +104,7 @@ export const pt = {
   aiScopeClearTitle: 'Remover o escopo da seleção',
   aiToolNotDone: 'Não realizado · {what}',
   aiChangesTitle: 'Alterações feitas no documento: {count}',
+  aiClearMarks: 'Ocultar marcas',
   aiRevert: 'Desfazer estas alterações',
   aiReverted: 'Alterações desfeitas',
   aiRevertRefused:

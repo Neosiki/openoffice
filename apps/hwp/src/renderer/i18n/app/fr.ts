@@ -104,6 +104,7 @@ export const fr = {
   aiScopeClearTitle: 'Effacer la portée de la sélection',
   aiToolNotDone: 'Non effectué · {what}',
   aiChangesTitle: 'Modifications apportées au document : {count}',
+  aiClearMarks: 'Masquer les marques',
   aiRevert: 'Annuler ces modifications',
   aiReverted: 'Modifications annulées',
   aiRevertRefused:

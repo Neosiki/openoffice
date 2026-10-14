@@ -100,6 +100,7 @@ export const ar = {
   aiScopeClearTitle: 'إلغاء نطاق التحديد',
   aiToolNotDone: 'لم يُنفَّذ · {what}',
   aiChangesTitle: 'عدد التغييرات في المستند: {count}',
+  aiClearMarks: 'إخفاء العلامات',
   aiRevert: 'التراجع عن هذه التغييرات',
   aiReverted: 'تم التراجع عن التغييرات',
   aiRevertRefused:

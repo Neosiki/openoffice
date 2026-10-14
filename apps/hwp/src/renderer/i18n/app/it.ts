@@ -104,6 +104,7 @@ export const it = {
   aiScopeClearTitle: "Rimuovi l'ambito della selezione",
   aiToolNotDone: 'Non eseguito · {what}',
   aiChangesTitle: 'Modifiche apportate al documento: {count}',
+  aiClearMarks: 'Nascondi segni',
   aiRevert: 'Annulla queste modifiche',
   aiReverted: 'Modifiche annullate',
   aiRevertRefused:

@@ -100,6 +100,7 @@ export const ko = {
   aiScopeClearTitle: '선택 범위 해제',
   aiToolNotDone: '하지 못함 · {what}',
   aiChangesTitle: '문서 {count}곳을 고쳤습니다',
+  aiClearMarks: '표시 지우기',
   aiRevert: '되돌리기',
   aiReverted: '되돌렸습니다',
   aiRevertRefused:

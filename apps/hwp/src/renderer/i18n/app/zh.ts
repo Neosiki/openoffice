@@ -97,6 +97,7 @@ export const zh = {
   aiScopeClearTitle: '取消选中范围',
   aiToolNotDone: '未完成 · {what}',
   aiChangesTitle: '已修改文档 {count} 处',
+  aiClearMarks: '清除标记',
   aiRevert: '撤销这些修改',
   aiReverted: '已撤销',
   aiRevertRefused: '无法一次撤销这些修改。如果之后又编辑过文档，请使用编辑器自带的撤销（Ctrl+Z）。',

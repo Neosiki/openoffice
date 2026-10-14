@@ -98,6 +98,7 @@ export const zhTW = {
   aiScopeClearTitle: '取消選中範圍',
   aiToolNotDone: '未完成 · {what}',
   aiChangesTitle: '已修改文件 {count} 處',
+  aiClearMarks: '清除標記',
   aiRevert: '復原這些修改',
   aiReverted: '已復原',
   aiRevertRefused: '無法一次復原這些修改。如果之後又編輯過文件，請使用編輯器本身的復原（Ctrl+Z）。',
