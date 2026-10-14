@@ -115,6 +115,9 @@ export const FORMAT_FAMILIES: readonly FormatFamily[] = [
     // a document is saved back in the format it was opened in
     editorSave: ['hwp', 'hwpx'],
     editorExport: [],
+    // read-only: read_hwp extracts the text of a .hwp or .hwpx file; editing is
+    // done in the editor, by its own AI panel
+    mcp: { read: 'hwp' },
   },
 ]
 

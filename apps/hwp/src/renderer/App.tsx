@@ -14,7 +14,8 @@ import { useI18n, type StringKey } from './i18n/locale'
 import { runSave, type SaveEditorPort } from './save-flow'
 import { PASSWORD_FLAG } from '../../scripts/rhwp-patches.mjs'
 import { STUDIO_SETTINGS_KEY, seededStudioSettings, studioUrl } from './studio-settings'
-import type { SaveMode, UiTheme } from '../shared/ipc'
+import { hwpFormatOfPath } from '../shared/ipc'
+import type { HwpFormat, SaveMode, UiTheme } from '../shared/ipc'
 
 /**
  * booting: the editor itself is starting. loading: the editor is up and working
@@ -71,6 +72,8 @@ export default function App() {
   const hostRef = useRef<HTMLDivElement>(null)
   const editorRef = useRef<RhwpEditor | null>(null)
   const savingRef = useRef(false)
+  /** the format the document was opened in: what it is exported as when it is read */
+  const formatRef = useRef<HwpFormat>('hwp')
   const [phase, setPhase] = useState<Phase>('booting')
   const [notice, setNotice] = useState<Notice | null>(null)
   const [aiOpen, setAiOpen] = useState(() => aiPanelInitiallyOpen(AI_OPEN_KEY))
@@ -107,6 +110,7 @@ export default function App() {
           setPhase('empty')
           return
         }
+        formatRef.current = hwpFormatOfPath(path) ?? 'hwp'
         setPhase('loading')
         const bytes = await window.hwpApi.readFile(path)
         await editor.loadFile(bytes, fileNameOf(path), { skipUnsavedGuard: true })
@@ -252,6 +256,25 @@ export default function App() {
       offClose()
     }
   }, [phase, save])
+
+  // the document as it is now, for a reader outside the editor (the MCP tool that reads
+  // open documents): exported in its own format, never written anywhere
+  useEffect(
+    () =>
+      window.hwpApi.onReadBytesRequest(() => {
+        const editor = editorRef.current
+        if (!editor || phase !== 'ready') {
+          window.hwpApi.sendReadBytesResult({ ok: false, error: 'no document is open in this tab' })
+          return
+        }
+        const exporting = formatRef.current === 'hwpx' ? editor.exportHwpx() : editor.exportHwp()
+        exporting.then(
+          (bytes) => window.hwpApi.sendReadBytesResult({ ok: true, bytes }),
+          (error) => window.hwpApi.sendReadBytesResult({ ok: false, error: detailOf(error) }),
+        )
+      }),
+    [phase],
+  )
 
   // keep the editor's own chrome on the app theme
   useEffect(

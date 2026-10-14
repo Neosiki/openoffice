@@ -72,6 +72,7 @@ const INTEGER_OPTIONS = new Set([
   'max',
   'max-chars',
   'max-rows',
+  'offset',
   'cols',
   'pad',
   'tile',
@@ -92,7 +93,7 @@ export const TOOLS: ToolSpec[] = [
     command: 'info',
     readOnly: true,
     description:
-      'Metadata and a structure summary of a document (docx, xlsx, pptx, pdf, md, html, csv): page or slide count, sheets, block count, size. Runs locally.',
+      'Metadata and a structure summary of a document (docx, xlsx, pptx, pdf, hwp, md, html, csv): page or slide count, sheets, block count, size. Runs locally.',
     positionals: [{ key: 'file', description: 'path of the document' }],
     options: ['password'],
   },
@@ -291,6 +292,16 @@ export const TOOLS: ToolSpec[] = [
       'Text layer of a PDF page by page (1-based page, width_pt/height_pt, text clipped to 4000 characters with truncated: true) plus page count, encrypted flag and title/author/producer metadata; extracted locally with pdfium, no app process. Reads pages 1-20 by default and says how to get the rest: page or range narrows, full reads every page uncapped. Scanned pages come back with empty text (convert to docx runs OCR).',
     positionals: [{ key: 'file', description: 'path of the .pdf' }],
     options: ['page', 'range', 'password', 'full', 'max-chars'],
+  },
+  {
+    name: 'hwp_read',
+    command: 'hwp',
+    verb: 'read',
+    readOnly: true,
+    description:
+      'Text of a Hangul (HWP / HWPX) document, read locally: paragraphs as lines, table rows as "a | b". Clipped to 20000 characters; next_offset is the offset to go on from. Read-only.',
+    positionals: [{ key: 'file', description: '.hwp or .hwpx path' }],
+    options: ['offset', 'full', 'max-chars'],
   },
   {
     name: 'sheet_read',

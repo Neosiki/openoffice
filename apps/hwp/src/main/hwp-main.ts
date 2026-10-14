@@ -13,6 +13,7 @@ import {
   safeExternalUrl,
   showSaveDialogWithMemory,
 } from '@genoffice/electron-utils'
+import { hwpToText } from '@genoffice/file-parse'
 import { getUiLang } from '@genoffice/i18n'
 import { atomicWriteFile } from './atomic-write'
 import { tm } from './dialog-strings'
@@ -44,6 +45,8 @@ const dirtyByWc = new Set<number>()
 const closeSaveWaiters = new Map<number, (ok: boolean) => void>()
 /** Resolvers for menu- and shortcut-triggered saves, settled when the renderer's save ends */
 const saveWaiters = new Map<number, (ok: boolean) => void>()
+const readBytesWaiters = new Map<number, (result: unknown) => void>()
+const readTextInFlight = new Map<number, Promise<string>>()
 /** Target a view resolved with beginSave and has not committed yet */
 const pendingSaveByWc = new Map<number, { path: string; format: HwpFormat }>()
 /** Paths each view has already written this session; their first overwrite kept a backup */
@@ -129,6 +132,71 @@ export function requestHwpSave(contents: WebContents, mode: SaveMode): Promise<b
     })
     contents.send(HWP_CHANNELS.saveRequest, mode)
   })
+}
+
+/** How long a live read may take; a large document exports in well under this. */
+const READ_TEXT_TIMEOUT_MS = 30_000
+/** How often the request is sent again while the renderer has not answered. */
+const READ_TEXT_RETRY_MS = 250
+
+/**
+ * The text of the document as it is in the editor now, unsaved edits included
+ * (for the MCP tool that reads open documents). The renderer exports the
+ * document's bytes and the shared reader turns them into text, so an open
+ * document reads the same as one read from disk.
+ *
+ * One read per view at a time: a second caller shares the first one's answer.
+ * The request is re-sent until the renderer answers, because its listener is
+ * registered while it mounts and a request sent before that is dropped.
+ */
+export function hwpReadText(contents: WebContents): Promise<string> {
+  if (contents.isDestroyed()) return Promise.reject(new Error('the document is no longer open'))
+  const wcId = contents.id
+  const inFlight = readTextInFlight.get(wcId)
+  if (inFlight) return inFlight
+  const request = new Promise<string>((resolve, reject) => {
+    let settled = false
+    const settle = (finish: () => void): void => {
+      if (settled) return
+      settled = true
+      clearInterval(retry)
+      clearTimeout(timer)
+      readBytesWaiters.delete(wcId)
+      readTextInFlight.delete(wcId)
+      finish()
+    }
+    const retry = setInterval(() => {
+      if (contents.isDestroyed()) {
+        settle(() => reject(new Error('the document is no longer open')))
+        return
+      }
+      if (!answered) contents.send(HWP_CHANNELS.readBytesRequest)
+    }, READ_TEXT_RETRY_MS)
+    const timer = setTimeout(
+      () => settle(() => reject(new Error('timed out reading the document'))),
+      READ_TEXT_TIMEOUT_MS,
+    )
+    // the first answer is the one that counts: re-sent requests may produce more
+    let answered = false
+    readBytesWaiters.set(wcId, (result) => {
+      if (answered) return
+      answered = true
+      const raw = (result ?? {}) as { ok?: unknown; bytes?: unknown; error?: unknown }
+      if (raw.ok !== true || !(raw.bytes instanceof Uint8Array)) {
+        const error = typeof raw.error === 'string' ? raw.error : 'the editor returned no document'
+        settle(() => reject(new Error(error)))
+        return
+      }
+      hwpToText(raw.bytes).then(
+        (text) => settle(() => resolve(text)),
+        (error: unknown) =>
+          settle(() => reject(error instanceof Error ? error : new Error(String(error)))),
+      )
+    })
+    contents.send(HWP_CHANNELS.readBytesRequest)
+  })
+  readTextInFlight.set(wcId, request)
+  return request
 }
 
 function settleSave(wcId: number, ok: boolean): void {
@@ -250,6 +318,10 @@ function registerHwpIpc(): void {
     const waiter = closeSaveWaiters.get(e.sender.id)
     closeSaveWaiters.delete(e.sender.id)
     waiter?.(ok === true)
+  })
+
+  ipcMain.on(HWP_CHANNELS.readBytesResult, (e, result: unknown) => {
+    readBytesWaiters.get(e.sender.id)?.(result)
   })
 
   // Language channel shared with other modules; removeHandler tolerates duplicate registration

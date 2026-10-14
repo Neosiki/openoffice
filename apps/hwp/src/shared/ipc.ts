@@ -13,6 +13,8 @@ export const HWP_CHANNELS = {
   dirtyChanged: 'hwp:dirty-changed',
   closeSaveRequest: 'hwp:close-save-request',
   closeSaveResult: 'hwp:close-save-result',
+  readBytesRequest: 'hwp:read-bytes-request',
+  readBytesResult: 'hwp:read-bytes-result',
   // channels below are served once by the shell for every editor
   getLanguage: 'app:get-language',
   languageChanged: 'app:language-changed',
@@ -61,6 +63,9 @@ export type CommitSaveResult =
   /** `backupPath` is set when this save was the first to overwrite the file and the previous bytes were kept */
   { ok: true; path: string; backupPath?: string } | { ok: false; error: string }
 
+/** The live document as bytes in its own format, or why there are none. */
+export type ReadBytesResult = { ok: true; bytes: Uint8Array } | { ok: false; error: string }
+
 export interface HwpApi {
   /** path queued for this view when its tab was created; null for a view opened without a file */
   consumePending(): Promise<string | null>
@@ -75,6 +80,9 @@ export interface HwpApi {
   onSaveRequest(handler: (mode: SaveMode) => void): () => void
   onCloseSaveRequest(handler: () => void): () => void
   sendCloseSaveResult(ok: boolean): void
+  /** the main process wants the document as it is now, unsaved edits included */
+  onReadBytesRequest(handler: () => void): () => void
+  sendReadBytesResult(result: ReadBytesResult): void
   getLanguage(): Promise<Lang>
   onLanguageChanged(handler: (lang: Lang) => void): () => void
   getTheme(): Promise<UiTheme>

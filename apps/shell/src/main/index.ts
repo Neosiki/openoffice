@@ -207,6 +207,7 @@ import {
 import {
   configureHwpRuntime,
   hwpFileRenamed,
+  hwpReadText,
   requestHwpSave,
   setHwpFileSavedHook,
 } from '../../../hwp/src/main/hwp-main'
@@ -5761,6 +5762,7 @@ app.whenReady().then(async () => {
         save: htmlSaveToPath,
         discard: htmlDiscardPendingAssets,
       },
+      hwp: { read: hwpReadText },
     }),
     // the headless create_*/read_* tools delegate to the bundled genoffice CLI
     // (the same engines, no second implementation); it runs on the app's own

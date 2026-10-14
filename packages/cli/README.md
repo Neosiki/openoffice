@@ -53,6 +53,7 @@ ieumoffice docs apply report.docx --ops ops.json [--dry-run]           # apply_o
 ieumoffice docs check report.docx --json                               # fields without results, broken bookmark references, stale TOC, missing images, empty charts/headings, heading level skips, placeholder text, pending revisions, open comments; exit 0
 ieumoffice merge invoice-template.docx --data values.json --out invoice.docx [--force] [--strict]   # fill {{key}} placeholders in a docx/pptx/xlsx template; reports used, unused and unresolved keys (or --data '{"name":"Ada"}')
 ieumoffice pdf read scan.pdf [--page 3 | --range 1-5] [--full] --json     # text layer page by page (pages 1-20 by default, 4000 characters each) with page sizes and metadata; headless pdfium, no app process
+ieumoffice hwp read notice.hwp [--offset 20000] [--full] --json           # text of a Hangul (HWP / HWPX) document, tables as "a | b" rows (first 20000 characters by default); read-only, no app process
 ieumoffice guide docs                                                   # op signatures + restricted-HTML rules (`guide <domain> --json` = the catalog with each op's schema and a fingerprint)
 ieumoffice selection report.docx --json   # what the user has selected in the editor showing the file
 ieumoffice skill list   # coding agents found on this machine and the skill version each has

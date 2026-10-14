@@ -74,6 +74,12 @@ const api: HwpApi = {
     return () => ipcRenderer.removeListener(HWP_CHANNELS.closeSaveRequest, listener)
   },
   sendCloseSaveResult: (ok) => ipcRenderer.send(HWP_CHANNELS.closeSaveResult, ok),
+  onReadBytesRequest: (handler) => {
+    const listener = () => handler()
+    ipcRenderer.on(HWP_CHANNELS.readBytesRequest, listener)
+    return () => ipcRenderer.removeListener(HWP_CHANNELS.readBytesRequest, listener)
+  },
+  sendReadBytesResult: (result) => ipcRenderer.send(HWP_CHANNELS.readBytesResult, result),
   getLanguage: () => ipcRenderer.invoke(HWP_CHANNELS.getLanguage),
   onLanguageChanged: (handler) => {
     const listener = (_e: Electron.IpcRendererEvent, lang: Lang) => handler(lang)

@@ -36,6 +36,7 @@ const READABLE_KINDS: ReadonlySet<TabKind> = new Set<TabKind>([
   'slides',
   'markdown',
   'html',
+  'hwp',
 ])
 
 export interface OpenDocumentsControl {
@@ -180,7 +181,9 @@ export function createOpenDocumentTools(deps: OpenDocumentsDeps): McpToolDefinit
         'family content tools (insert_content / apply_ops / apply_sheet_ops / apply_slide_ops): no ' +
         'session is needed, and the UI switches to that tab so the user sees the change land. ' +
         'PDF tabs are listed but cannot be read or closed here: the pdf app is a viewer, so an ' +
-        'open PDF has no readable or savable state through this tool.',
+        'open PDF has no readable or savable state through this tool. HWP tabs can be read ' +
+        '(paragraphs as lines, tables as " | " rows) but not edited or saved here: "close" on ' +
+        'an HWP tab with unsaved changes fails unless unsaved:"discard" is passed.',
       inputSchema: {
         action: z.enum(['list', 'read', 'close']).describe('what to do'),
         target: z
@@ -210,12 +213,6 @@ export function createOpenDocumentTools(deps: OpenDocumentsDeps): McpToolDefinit
         if (!doc) throw noMatch(target, documents)
 
         if (action === 'read') {
-          if (doc.kind === 'hwp') {
-            throw new Error(
-              `"${doc.title}" is an HWP document: the HWP editor does not expose its content ` +
-                'through this tool yet',
-            )
-          }
           if (!READABLE_KINDS.has(doc.kind)) {
             throw new Error(
               `"${doc.title}" is a PDF: the pdf app is a viewer, so an open PDF has no readable ` +

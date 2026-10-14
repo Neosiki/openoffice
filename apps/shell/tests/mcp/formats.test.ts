@@ -32,13 +32,18 @@ describe('format registry', () => {
     for (const family of ['md', 'html'] as const) {
       expect(formatFamily(family).mcp).toBeUndefined()
     }
-    // the three edit-in-place families carry full mcp blocks; pdf is read-only
+    // the three edit-in-place families carry full mcp blocks; pdf and hwp are read-only
     expect(FORMAT_FAMILIES.filter((f) => f.mcp).map((f) => f.family)).toEqual([
       'docx',
       'xlsx',
       'pptx',
       'pdf',
+      'hwp',
     ])
+  })
+
+  it('exposes hwp as read-only: the document is edited and saved in its editor', () => {
+    expect(formatFamily('hwp').mcp).toEqual({ read: 'hwp' })
   })
 
   it('exposes pdf as read-only until MCP drives the editor', () => {

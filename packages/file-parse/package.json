@@ -4,9 +4,10 @@
   "license": "Apache-2.0",
   "private": true,
   "type": "module",
-  "description": "shared attachment parsing: PDF, Office and plain-text formats to text; images flagged for multimodal input",
+  "description": "shared attachment parsing: PDF, Office, HWP and plain-text formats to text; images flagged for multimodal input",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./hwp": "./src/hwp.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
@@ -15,6 +16,7 @@
   },
   "dependencies": {
     "@genoffice/docx-engine": "*",
+    "@rhwp/core": "0.8.7",
     "cfb": "^1.2.2",
     "fast-xml-parser": "^5.3.4",
     "jszip": "^3.10.1",

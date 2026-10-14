@@ -260,9 +260,9 @@ describe('open_documents tool', () => {
     expect(textOf(result.content)).toContain('viewer')
   })
 
-  it('lists an open HWP document but refuses to read it, without calling it a PDF', async () => {
+  it('lists an open HWP document and reads its live content', async () => {
     const hwp = doc({ id: 't8', kind: 'hwp', title: 'eight.hwpx', filePath: 'C:/docs/eight.hwpx' })
-    const read = vi.fn(async () => ({ content: 'never' }))
+    const read = vi.fn(async () => '제목\n구분 | 연락처')
     await startService(controlOf({ list: vi.fn(async () => [hwp]), read }))
     const listed = await client!.callTool({ name: 'open_documents', arguments: { action: 'list' } })
     expect(textOf(listed.content)).toContain('HWP document')
@@ -270,10 +270,9 @@ describe('open_documents tool', () => {
       name: 'open_documents',
       arguments: { action: 'read', target: 'C:/docs/eight.hwpx' },
     })
-    expect(result.isError).toBe(true)
-    expect(textOf(result.content)).toContain('HWP document')
-    expect(textOf(result.content)).not.toContain('PDF')
-    expect(read).not.toHaveBeenCalled()
+    expect(result.isError).toBeFalsy()
+    expect(textOf(result.content)).toContain('구분 | 연락처')
+    expect(read).toHaveBeenCalledWith(hwp)
   })
 
   it('lists an unknown target as an error that names what is open', async () => {

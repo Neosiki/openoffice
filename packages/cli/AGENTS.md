@@ -13,7 +13,7 @@
 
 ## 맡지 않는 것 (경계)
 
-- 문서 형식의 해석과 저장은 이 모듈의 범위가 아니다. `packages/docx-engine`, `packages/pptx-engine`·`pptx-ops`·`pptx-render`, `packages/xlsx-gateway`와 xlsx 사이드카, `packages/pdf2docx`가 한다. 여기 `src/formats/`는 얇은 어댑터다.
+- 문서 형식의 해석과 저장은 이 모듈의 범위가 아니다. `packages/docx-engine`, `packages/pptx-engine`·`pptx-ops`·`pptx-render`, `packages/xlsx-gateway`와 xlsx 사이드카, `packages/pdf2docx`가 한다. 한글 문서는 `packages/file-parse`의 `hwpToText`로 읽기만 한다(`hwp read`, `info`). 만들거나 고치지 않는다. 여기 `src/formats/`는 얇은 어댑터다.
 - 어느 경로(무료·키·구독)로 갈지, 시간당 한도를 어떻게 세는지는 `packages/ai-search`의 범위다. 이 모듈은 "자동 호출 경로다"라는 사실과 `dataDir`, 연결 상태를 넘길 뿐이다. 구독 프로그램의 시작·종료는 `packages/ai-provider`의 범위다.
 - 앱 안의 MCP 서버(`apps/shell/src/main/mcp`)와 설정 화면의 통합 탭은 shell의 범위다. shell은 이 패키지를 프로세스로 실행하거나 하위 진입점(`/install`, `/agent-skills`, `/mcp-launch`, `/control-protocol`)을 import한다.
 - 렌더러가 필요한 변환(PDF 내보내기 등)은 앱 실행 파일의 `--headless-export`가 한다. 이 모듈은 그것을 찾아 실행하고 결과 봉투를 읽는다.
@@ -42,6 +42,8 @@
 - MCP 도구는 명령의 두 번째 구현이 아니다. 도구 호출을 명령줄 인자로 바꿔(`buildArgv`) 같은 명령을 실행한다. 인라인 값(ops, 명세, Markdown)은 임시 파일에 써서 경로로 넘긴다.
 - 명령줄은 Electron 없이 앱의 userData를 찾는다(`genofficeUserDataDir`). AI 설정은 그 안의 `ai-settings.json`이고, 한도 장부와 종량 허용 기록은 같은 폴더에 둔다(`aiDataDir`). 앱과 모든 명령줄 프로세스가 같은 폴더를 써야 한도가 합쳐진다.
 - 패키징: `build.mjs`가 전체를 CommonJS 파일 하나로 묶고, 설치된 앱은 그것을 `ELECTRON_RUN_AS_NODE=1`로 자기 실행 파일에서 돌린다(`bin/ieumoffice.cmd`). `node_modules`는 함께 배포되지 않는다. 번들의 버전은 `GENOFFICE_APP_VERSION`으로 주입되어 앱 버전과 어긋나지 않는다.
+- 한글 엔진의 WASM은 번들에 들어가지 않는다. `rhwpWasmPath`(`src/resources.ts`)가 설치본의 `Resources/wasm`이나 체크아웃의 `node_modules`에서 찾아 `GENOFFICE_RHWP_WASM`으로 넘긴다. 번들 안에서는 `import.meta.url`이 비어서 읽는 쪽이 스스로 찾지 못한다.
+- MCP 도구 목록 전체의 크기에는 상한이 있다(`tests/mcp.test.ts`, 91KiB). 도구를 더할 때는 설명과 옵션 설명을 짧게 쓴다.
 - MCP 클라이언트는 셸 없이 프로세스를 띄운다. Windows에서 `.cmd`나 `cmd /c`를 등록하면 공백이 든 경로가 쪼개지므로, 등록하는 명령은 "앱 실행 파일을 Node로, 번들 CLI를 인자로"다(`src/mcp-launch.ts`). 이 파일은 순수 문자열 코드라 렌더러도 import한다.
 - 에이전트 설정 파일은 키 하나만 쓰거나 지운다. `ieumoffice` 이름의 항목이 우리 실행기가 아닌 것을 가리키면 강제 옵션 없이는 바꾸지 않는다. JSON 설정은 다시 직렬화되고 TOML은 해당 표만 줄 단위로 바꾼다. symlink인 설정은 대상에 써서 링크를 보존한다.
 - 이 패키지는 `@genoffice/i18n`과 `@genoffice/electron-utils`를 import하지만 `package.json`의 `dependencies`에는 적혀 있지 않다(workspace 호이스팅에 기대는 기존 구조다).
