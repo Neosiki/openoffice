@@ -4669,3 +4669,105 @@ button {
   border: 1px solid var(--danger-border);
   border-radius: 6px;
 }
+
+/* ── Markdown / EPUB conversion dialog ── */
+
+.pdf-convert-dialog {
+  width: 460px;
+}
+
+.pdf-convert-pages {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 14px;
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.pdf-convert-pages legend {
+  width: 100%;
+  margin-bottom: 4px;
+  padding: 0;
+  font-size: 12.5px;
+  color: var(--text-dim);
+}
+
+.pdf-convert-pages .pdf-modal-input {
+  flex: 1 1 100%;
+}
+
+.pdf-convert-path {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12.5px;
+  color: var(--text-secondary);
+}
+
+.pdf-convert-book {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pdf-convert-error {
+  margin: 0;
+  font-size: 12px;
+  color: var(--pdf-error);
+}
+
+.pdf-convert-ai {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pdf-convert-ai-state {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.pdf-convert-ai-state.is-error {
+  color: var(--pdf-error);
+}
+
+.pdf-convert-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12.5px;
+  color: var(--text-secondary);
+}
+
+.pdf-convert-bar {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--color-bg-subtle);
+  overflow: hidden;
+}
+
+.pdf-convert-bar-fill {
+  height: 100%;
+  background: var(--accent);
+  transition: width var(--transition-fast);
+}
+
+.pdf-convert-done {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.pdf-convert-warnings {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12.5px;
+  color: var(--text-secondary);
+}

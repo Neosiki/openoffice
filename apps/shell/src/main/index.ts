@@ -190,6 +190,7 @@ import { convertPdfFileToPptxLocalWithPrompt } from './pdf2pptx-local'
 import { convertPdfFileToXlsxLocalWithPrompt } from './pdf2xlsx-local'
 import { closePdfPasswordDialog, promptPdfPassword } from './pdf-password-dialog'
 import { registerPdfStructureIpc } from './pdf-structure-ipc'
+import { registerPdfConvertUiIpc, requestPdfConvertDialog } from './pdf-convert-ui'
 import {
   configureMarkdownRuntime,
   exportMarkdownPdfHeadless,
@@ -615,6 +616,8 @@ const tMain = createI18n({
     pdfPptxBusyMsg: '正在转换中，请等待当前导出完成。',
     pdfPptxLocalScannedDetail: '本地转换已按图片保真导出各页，幻灯片中的文字不可编辑。',
     menuExportXlsx: '导出为 Excel…',
+    menuExportMd: '导出为 Markdown…',
+    menuExportEpub: '导出为 EPUB…',
     pdfXlsxFailedMsg: '导出为 Excel 失败',
     pdfXlsxBusyMsg: '正在转换中，请等待当前导出完成。',
     pdfXlsxLocalScannedDetail: '扫描页无法转换为单元格，对应工作表中已写入提示行。',
@@ -710,6 +713,8 @@ const tMain = createI18n({
     pdfPptxLocalScannedDetail:
       'Each page was exported as a full-page image; the text on the slides is not editable.',
     menuExportXlsx: 'Export as Excel…',
+    menuExportMd: 'Export as Markdown…',
+    menuExportEpub: 'Export as EPUB…',
     pdfXlsxFailedMsg: 'Export as Excel failed',
     pdfXlsxBusyMsg: 'An export is already in progress. Please wait for it to finish.',
     pdfXlsxLocalScannedDetail:
@@ -812,6 +817,8 @@ const tMain = createI18n({
     pdfPptxLocalScannedDetail:
       'Mỗi trang đã được xuất dưới dạng hình ảnh toàn trang; văn bản trên các trang trình bày không thể chỉnh sửa.',
     menuExportXlsx: 'Xuất dưới dạng Excel…',
+    menuExportMd: 'Xuất dưới dạng Markdown…',
+    menuExportEpub: 'Xuất dưới dạng EPUB…',
     pdfXlsxFailedMsg: 'Xuất dưới dạng Excel thất bại',
     pdfXlsxBusyMsg: 'Một tác vụ xuất đang được tiến hành. Vui lòng đợi tác vụ hoàn tất.',
     pdfXlsxLocalScannedDetail:
@@ -914,6 +921,8 @@ const tMain = createI18n({
     pdfPptxLocalScannedDetail:
       '各ページは画像として書き出されたため、スライド内のテキストは編集できません。',
     menuExportXlsx: 'Excel として書き出す…',
+    menuExportMd: 'Markdown として書き出す…',
+    menuExportEpub: 'EPUB として書き出す…',
     pdfXlsxFailedMsg: 'Excel への書き出しに失敗しました',
     pdfXlsxBusyMsg: '変換が進行中です。現在の書き出しが完了するまでお待ちください。',
     pdfXlsxLocalScannedDetail:
@@ -1016,6 +1025,8 @@ const tMain = createI18n({
     pdfPptxLocalScannedDetail:
       '각 페이지가 이미지로 내보내져 슬라이드의 텍스트를 편집할 수 없습니다.',
     menuExportXlsx: 'Excel로 내보내기…',
+    menuExportMd: 'Markdown으로 내보내기…',
+    menuExportEpub: 'EPUB으로 내보내기…',
     pdfXlsxFailedMsg: 'Excel 내보내기 실패',
     pdfXlsxBusyMsg: '변환이 진행 중입니다. 현재 내보내기가 완료될 때까지 기다려 주세요.',
     pdfXlsxLocalScannedDetail:
@@ -1117,6 +1128,8 @@ const tMain = createI18n({
     pdfPptxLocalScannedDetail:
       "Chaque page a été exportée sous forme d'image ; le texte des diapositives n'est pas modifiable.",
     menuExportXlsx: 'Exporter en Excel…',
+    menuExportMd: 'Exporter en Markdown…',
+    menuExportEpub: 'Exporter en EPUB…',
     pdfXlsxFailedMsg: "Échec de l'exportation en Excel",
     pdfXlsxBusyMsg: "Une exportation est déjà en cours. Veuillez attendre qu'elle se termine.",
     pdfXlsxLocalScannedDetail:
@@ -1221,6 +1234,8 @@ const tMain = createI18n({
     pdfPptxLocalScannedDetail:
       'Jede Seite wurde als Bild exportiert; der Text auf den Folien ist nicht bearbeitbar.',
     menuExportXlsx: 'Als Excel exportieren…',
+    menuExportMd: 'Als Markdown exportieren…',
+    menuExportEpub: 'Als EPUB exportieren…',
     pdfXlsxFailedMsg: 'Export als Excel fehlgeschlagen',
     pdfXlsxBusyMsg: 'Ein Export läuft bereits. Bitte warten Sie, bis er abgeschlossen ist.',
     pdfXlsxLocalScannedDetail:
@@ -1324,6 +1339,8 @@ const tMain = createI18n({
     pdfPptxLocalScannedDetail:
       'Cada página se exportó como imagen; el texto de las diapositivas no es editable.',
     menuExportXlsx: 'Exportar como Excel…',
+    menuExportMd: 'Exportar como Markdown…',
+    menuExportEpub: 'Exportar como EPUB…',
     pdfXlsxFailedMsg: 'Error al exportar como Excel',
     pdfXlsxBusyMsg: 'Ya hay una exportación en curso. Espere a que termine.',
     pdfXlsxLocalScannedDetail:
@@ -1426,6 +1443,8 @@ const tMain = createI18n({
     pdfPptxBusyMsg: 'กำลังแปลงอยู่ โปรดรอให้การส่งออกปัจจุบันเสร็จสิ้น',
     pdfPptxLocalScannedDetail: 'แต่ละหน้าถูกส่งออกเป็นรูปภาพ ข้อความในสไลด์จึงแก้ไขไม่ได้',
     menuExportXlsx: 'ส่งออกเป็น Excel…',
+    menuExportMd: 'ส่งออกเป็น Markdown…',
+    menuExportEpub: 'ส่งออกเป็น EPUB…',
     pdfXlsxFailedMsg: 'การส่งออกเป็น Excel ล้มเหลว',
     pdfXlsxBusyMsg: 'กำลังแปลงอยู่ โปรดรอให้การส่งออกปัจจุบันเสร็จสิ้น',
     pdfXlsxLocalScannedDetail:
@@ -1526,6 +1545,8 @@ const tMain = createI18n({
     pdfPptxLocalScannedDetail:
       'Setiap halaman diekspor sebagai gambar; teks pada slide tidak dapat diedit.',
     menuExportXlsx: 'Ekspor sebagai Excel…',
+    menuExportMd: 'Ekspor sebagai Markdown…',
+    menuExportEpub: 'Ekspor sebagai EPUB…',
     pdfXlsxFailedMsg: 'Gagal mengekspor sebagai Excel',
     pdfXlsxBusyMsg: 'Ekspor sedang berlangsung. Harap tunggu hingga selesai.',
     pdfXlsxLocalScannedDetail:
@@ -1629,6 +1650,8 @@ const tMain = createI18n({
     pdfPptxLocalScannedDetail:
       'Каждая страница экспортирована как изображение; текст на слайдах нельзя редактировать.',
     menuExportXlsx: 'Экспортировать в Excel…',
+    menuExportMd: 'Экспортировать в Markdown…',
+    menuExportEpub: 'Экспортировать в EPUB…',
     pdfXlsxFailedMsg: 'Не удалось экспортировать в Excel',
     pdfXlsxBusyMsg: 'Экспорт уже выполняется. Дождитесь его завершения.',
     pdfXlsxLocalScannedDetail:
@@ -1731,6 +1754,8 @@ const tMain = createI18n({
     pdfPptxBusyMsg: 'هناك عملية تصدير قيد التنفيذ. يرجى الانتظار حتى تكتمل.',
     pdfPptxLocalScannedDetail: 'تم تصدير كل صفحة كصورة؛ النص في الشرائح غير قابل للتحرير.',
     menuExportXlsx: 'تصدير كملف Excel…',
+    menuExportMd: 'تصدير كملف Markdown…',
+    menuExportEpub: 'تصدير كملف EPUB…',
     pdfXlsxFailedMsg: 'فشل التصدير كملف Excel',
     pdfXlsxBusyMsg: 'هناك عملية تصدير قيد التنفيذ. يرجى الانتظار حتى تكتمل.',
     pdfXlsxLocalScannedDetail:
@@ -1831,6 +1856,8 @@ const tMain = createI18n({
     pdfPptxLocalScannedDetail:
       'Cada página foi exportada como imagem; o texto dos slides não é editável.',
     menuExportXlsx: 'Exportar como Excel…',
+    menuExportMd: 'Exportar como Markdown…',
+    menuExportEpub: 'Exportar como EPUB…',
     pdfXlsxFailedMsg: 'Falha ao exportar como Excel',
     pdfXlsxBusyMsg: 'Já há uma exportação em andamento. Aguarde a conclusão.',
     pdfXlsxLocalScannedDetail:
@@ -1934,6 +1961,8 @@ const tMain = createI18n({
     pdfPptxLocalScannedDetail:
       'Ogni pagina è stata esportata come immagine; il testo delle diapositive non è modificabile.',
     menuExportXlsx: 'Esporta come Excel…',
+    menuExportMd: 'Esporta come Markdown…',
+    menuExportEpub: 'Esporta come EPUB…',
     pdfXlsxFailedMsg: 'Esportazione come Excel non riuscita',
     pdfXlsxBusyMsg: "Un'esportazione è già in corso. Attendere che finisca.",
     pdfXlsxLocalScannedDetail:
@@ -2037,6 +2066,8 @@ const tMain = createI18n({
     pdfPptxLocalScannedDetail:
       'Każda strona została wyeksportowana jako obraz; tekst na slajdach nie jest edytowalny.',
     menuExportXlsx: 'Eksportuj jako Excel…',
+    menuExportMd: 'Eksportuj jako Markdown…',
+    menuExportEpub: 'Eksportuj jako EPUB…',
     pdfXlsxFailedMsg: 'Eksport jako Excel nie powiódł się',
     pdfXlsxBusyMsg: 'Eksport już trwa. Poczekaj na jego zakończenie.',
     pdfXlsxLocalScannedDetail:
@@ -2140,6 +2171,8 @@ const tMain = createI18n({
     pdfPptxLocalScannedDetail:
       'Každá stránka byla exportována jako celostránkový obrázek; text na snímcích nelze upravovat.',
     menuExportXlsx: 'Exportovat jako Excel…',
+    menuExportMd: 'Exportovat jako Markdown…',
+    menuExportEpub: 'Exportovat jako EPUB…',
     pdfXlsxFailedMsg: 'Export do Excelu se nezdařil',
     pdfXlsxBusyMsg: 'Export už probíhá. Počkejte, až se dokončí.',
     pdfXlsxLocalScannedDetail:
@@ -2241,6 +2274,8 @@ const tMain = createI18n({
     pdfPptxLocalScannedDetail:
       'Elke pagina is als afbeelding geëxporteerd; de tekst op de dia’s is niet bewerkbaar.',
     menuExportXlsx: 'Exporteren als Excel…',
+    menuExportMd: 'Exporteren als Markdown…',
+    menuExportEpub: 'Exporteren als EPUB…',
     pdfXlsxFailedMsg: 'Exporteren als Excel mislukt',
     pdfXlsxBusyMsg: 'Er is al een export bezig. Wacht tot deze is voltooid.',
     pdfXlsxLocalScannedDetail:
@@ -2344,6 +2379,8 @@ const tMain = createI18n({
     pdfPptxLocalScannedDetail:
       'Setiap halaman dieksport sebagai imej; teks pada slaid tidak boleh diedit.',
     menuExportXlsx: 'Eksport sebagai Excel…',
+    menuExportMd: 'Eksport sebagai Markdown…',
+    menuExportEpub: 'Eksport sebagai EPUB…',
     pdfXlsxFailedMsg: 'Eksport sebagai Excel gagal',
     pdfXlsxBusyMsg: 'Eksport sedang berjalan. Sila tunggu sehingga selesai.',
     pdfXlsxLocalScannedDetail:
@@ -2445,6 +2482,8 @@ const tMain = createI18n({
     pdfPptxBusyMsg: 'ייצוא כבר מתבצע. יש להמתין לסיומו.',
     pdfPptxLocalScannedDetail: 'כל עמוד יוצא כתמונה; הטקסט בשקופיות אינו ניתן לעריכה.',
     menuExportXlsx: 'ייצוא כ-Excel…',
+    menuExportMd: 'ייצוא כ-Markdown…',
+    menuExportEpub: 'ייצוא כ-EPUB…',
     pdfXlsxFailedMsg: 'הייצוא כ-Excel נכשל',
     pdfXlsxBusyMsg: 'ייצוא כבר מתבצע. יש להמתין לסיומו.',
     pdfXlsxLocalScannedDetail:
@@ -2546,6 +2585,8 @@ const tMain = createI18n({
     pdfPptxLocalScannedDetail:
       'प्रत्येक पृष्ठ छवि के रूप में निर्यात किया गया; स्लाइड का टेक्स्ट संपादन योग्य नहीं है।',
     menuExportXlsx: 'Excel के रूप में निर्यात करें…',
+    menuExportMd: 'Markdown के रूप में निर्यात करें…',
+    menuExportEpub: 'EPUB के रूप में निर्यात करें…',
     pdfXlsxFailedMsg: 'Excel के रूप में निर्यात विफल रहा',
     pdfXlsxBusyMsg: 'एक निर्यात पहले से चल रहा है। कृपया उसके पूरा होने की प्रतीक्षा करें।',
     pdfXlsxLocalScannedDetail:
@@ -2648,6 +2689,8 @@ const tMain = createI18n({
     pdfPptxBusyMsg: '正在轉換中，請等待目前匯出完成。',
     pdfPptxLocalScannedDetail: '本機轉換已將各頁以圖片保真匯出，簡報中的文字無法編輯。',
     menuExportXlsx: '匯出為 Excel…',
+    menuExportMd: '匯出為 Markdown…',
+    menuExportEpub: '匯出為 EPUB…',
     pdfXlsxFailedMsg: '匯出為 Excel 失敗',
     pdfXlsxBusyMsg: '正在轉換中，請等待目前匯出完成。',
     pdfXlsxLocalScannedDetail: '掃描頁無法轉換為儲存格，對應工作表中已寫入提示列。',
@@ -4663,6 +4706,15 @@ function buildPdfMenu(): void {
           label: tm('menuExportXlsx'),
           click: () => void exportPdfAsXlsxLocal(),
         },
+        // Markdown / EPUB: the pdf tab's conversion dialog (page range, save location, progress)
+        {
+          label: tm('menuExportMd'),
+          click: () => requestPdfConvertDialog(activePdfTarget()?.webContents, 'md'),
+        },
+        {
+          label: tm('menuExportEpub'),
+          click: () => requestPdfConvertDialog(activePdfTarget()?.webContents, 'epub'),
+        },
         { type: 'separator' },
         {
           label: tm('menuPrint'),
@@ -5454,6 +5506,17 @@ registerIntegrationsIpc({
 registerTabsIpc()
 registerDroppedFilesIpc()
 registerPdfStructureIpc()
+registerPdfConvertUiIpc({
+  findMarkdownTab: (path) => tabManager?.findMarkdownTabByPath(path),
+  closeTab: async (tabId) => {
+    await tabManager?.closeTab(tabId)
+  },
+  activateView: (viewId) => {
+    const tabId = tabManager?.tabIdForWebContents(viewId)
+    if (tabId) tabManager?.activateTab(tabId)
+  },
+  openDocument: (path) => openDocumentPath(path),
+})
 
 // sheets' project:resolveChat goes through the handler registered by docs-main; the sessionId reverse lookup hooks in here
 setSessionPathResolver(resolveSheetsSessionPath)

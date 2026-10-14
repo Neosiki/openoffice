@@ -142,6 +142,26 @@ const api: PdfApi = {
   cropPages: (request) => ipcRenderer.invoke(PDF_CHANNELS.cropPages, request),
   exportImages: (request) => ipcRenderer.invoke(PDF_CHANNELS.exportImages, request),
   convertOffice: (format) => ipcRenderer.invoke(PDF_CHANNELS.convertOffice, format),
+  onConvertDialogRequest: (handler) => {
+    const listener = (_e: Electron.IpcRendererEvent, format: unknown) => {
+      if (format === 'md' || format === 'epub') handler(format)
+    }
+    ipcRenderer.on(PDF_CHANNELS.convertDialogRequest, listener)
+    return () => ipcRenderer.removeListener(PDF_CHANNELS.convertDialogRequest, listener)
+  },
+  // shell-only handlers; the standalone pdf app has no tabs: a target is free, nothing opens or shows
+  releaseConvertTarget: (request) =>
+    (ipcRenderer.invoke(PDF_CHANNELS.convertReleaseTarget, request) as Promise<boolean>).catch(
+      () => true,
+    ),
+  openConvertResult: (request) =>
+    (ipcRenderer.invoke(PDF_CHANNELS.convertOpenResult, request) as Promise<boolean>).catch(
+      () => false,
+    ),
+  revealConvertResult: (request) =>
+    (ipcRenderer.invoke(PDF_CHANNELS.convertRevealResult, request) as Promise<boolean>).catch(
+      () => false,
+    ),
   createDocument: (request) => ipcRenderer.invoke(PDF_CHANNELS.createDocument, request),
   imageSearch: (query, maxResults) =>
     ipcRenderer.invoke(AI_CHANNELS.imageSearch, query, maxResults),

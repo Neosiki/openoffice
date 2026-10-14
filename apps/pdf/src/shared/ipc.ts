@@ -86,6 +86,11 @@ export const PDF_CHANNELS = {
   storeWrite: 'pdf:store-write',
   storeMigrate: 'pdf:store-migrate',
   storeDeleteDocument: 'pdf:store-delete-document',
+  // Markdown / EPUB conversion screen (the jobs themselves go through structure*)
+  convertDialogRequest: 'pdf:convert-dialog-request',
+  convertReleaseTarget: 'pdf:convert-release-target',
+  convertOpenResult: 'pdf:convert-open-result',
+  convertRevealResult: 'pdf:convert-reveal-result',
 } as const
 
 export const VISUAL_SIGNATURE_CONTENT_PREFIX = 'GenOffice visual signature field: '
@@ -251,6 +256,17 @@ export interface SavedSignature {
 }
 
 export type PdfConvertFormat = 'docx' | 'xlsx' | 'pptx'
+
+/** the reflowable formats the conversion dialog writes (document-structure jobs) */
+export type PdfReflowFormat = 'md' | 'epub'
+
+/** a converted file and the open PDF it came from (the shell checks the view owns that PDF) */
+export interface PdfConvertOutputRequest {
+  /** the open file of this view */
+  source: string
+  /** the written file (or the picked folder) */
+  path: string
+}
 
 /** target file type of the AI create_document tool (mirrors the docs app's contract) */
 export type CreateDocumentType = 'docx' | 'pdf' | 'md' | 'html'
@@ -1242,6 +1258,14 @@ export interface PdfApi {
   exportImages(request: ExportImagesRequest): Promise<ExportImagesResult>
   /** Convert the current PDF to Word / Excel / PowerPoint via the shell's local conversion flows */
   convertOffice(format: PdfConvertFormat): Promise<void>
+  /** Shell File menu → open the Markdown / EPUB conversion dialog */
+  onConvertDialogRequest(handler: (format: PdfReflowFormat) => void): () => void
+  /** Before a Markdown job writes: close a Markdown tab showing that file (its unsaved-changes guard applies). False = still open */
+  releaseConvertTarget(request: PdfConvertOutputRequest): Promise<boolean>
+  /** Open a converted Markdown file in a Markdown tab (same routing as File > Open) */
+  openConvertResult(request: PdfConvertOutputRequest): Promise<boolean>
+  /** Show a converted file (or an export folder's first file) in the system file manager */
+  revealConvertResult(request: PdfConvertOutputRequest): Promise<boolean>
   /** AI create_document: build a new standalone file in the default folder and open it in a new tab */
   createDocument(request: CreateDocumentRequest): Promise<CreateDocumentResult>
   /** Web image search for AI tools (app-wide ai:image-search handler) */
