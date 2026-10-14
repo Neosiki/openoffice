@@ -9,7 +9,7 @@ import {
   type CallContext,
   type PickPathRequest,
 } from '../src/main/pdf-structure/handlers'
-import { migrateUnfinishedJobs } from '../src/main/pdf-structure/job-migration'
+import { migrateJobRecords } from '../src/main/pdf-structure/job-migration'
 import type { StructureJob } from '../src/main/pdf-structure/protocol'
 import type { JobRunOutcome } from '../src/main/pdf-structure/runner'
 
@@ -396,7 +396,7 @@ describe('store channels', () => {
     expect(await handlers.storeUnfinishedJobs(OWNER, docHash)).toEqual({ ok: true, jobs: [] })
   })
 
-  it('migrates results and unfinished job records after an in-app save', async () => {
+  it('migrates results and job records after an in-app save', async () => {
     const { handlers } = makeHandlers()
     const { docHash: oldHash } = (await handlers.storeDocHash(OWNER, pdfPath)) as {
       docHash: string
@@ -445,7 +445,7 @@ describe('store channels', () => {
       aiReadPages: 1,
       translationBlocks: 0,
       languages: [],
-      jobs: 1,
+      jobs: 2,
     })
     expect(jobs.at(-1)!.job).toEqual({ op: 'fingerprints', source: { pdfPath } })
     // the new hash is now usable by this view
@@ -462,6 +462,8 @@ describe('store channels', () => {
         },
       ],
     })
+    // a finished job carries over too, and is not offered as unfinished
+    expect((await store.readJob(newHash, 'translate', 'ko')).state).toBe('complete')
     // the old document keeps its entries until the user deletes them
     expect(await handlers.storeUnfinishedJobs(OWNER, oldHash)).toMatchObject({
       jobs: [{ kind: 'ai-read' }],
@@ -492,31 +494,94 @@ describe('store channels', () => {
   })
 })
 
-describe('migrateUnfinishedJobs', () => {
-  it('keeps a newer record in the new document and skips complete jobs', async () => {
-    const oldHash = '1'.repeat(64)
-    const newHash = '2'.repeat(64)
+describe('migrateJobRecords', () => {
+  const oldHash = '1'.repeat(64)
+  const newHash = '2'.repeat(64)
+
+  it('keeps a newer record in the new document and carries complete jobs too', async () => {
     await store.writeJob(oldHash, { kind: 'translate', lang: 'en', state: 'stopped' })
     await store.writeJob(oldHash, { kind: 'translate', lang: 'fr', state: 'stopped' })
-    await store.writeJob(oldHash, { kind: 'ai-read', state: 'complete' })
+    await store.writeJob(oldHash, {
+      kind: 'ai-read',
+      state: 'complete',
+      progress: { done: 3, total: 3 },
+    })
     now += 10
     await store.writeJob(newHash, { kind: 'translate', lang: 'en', state: 'running' })
-    expect(await migrateUnfinishedJobs(store, oldHash, newHash)).toBe(1)
+    expect(await migrateJobRecords(store, oldHash, newHash)).toBe(2)
     expect((await store.readJob(newHash, 'translate', 'en')).state).toBe('running')
     expect((await store.readJob(newHash, 'translate', 'fr')).state).toBe('stopped')
-    expect((await store.readJob(newHash, 'ai-read')).state).toBe('idle')
-    expect(await migrateUnfinishedJobs(store, oldHash, oldHash)).toBe(0)
+    expect(await store.readJob(newHash, 'ai-read')).toMatchObject({
+      state: 'complete',
+      progress: { done: 3, total: 3 },
+    })
+    expect(await migrateJobRecords(store, oldHash, oldHash)).toBe(0)
   })
 
   it('carries a stale running job as interrupted', async () => {
-    const oldHash = '1'.repeat(64)
-    const newHash = '2'.repeat(64)
     await store.writeJob(oldHash, { kind: 'ai-read', state: 'running' })
     now += 60_000
-    expect(await migrateUnfinishedJobs(store, oldHash, newHash)).toBe(1)
+    expect(await migrateJobRecords(store, oldHash, newHash)).toBe(1)
     expect(await store.readJob(newHash, 'ai-read')).toMatchObject({
       state: 'stopped',
       last_error: 'interrupted',
+    })
+  })
+
+  it("a job that finishes after the save replaces its 'running' copy when migrated again", async () => {
+    await store.writeJob(oldHash, {
+      kind: 'ai-read',
+      state: 'running',
+      progress: { done: 1, total: 2 },
+    })
+    now += 1000
+    expect(await migrateJobRecords(store, oldHash, newHash)).toBe(1)
+    expect((await store.readJob(newHash, 'ai-read')).state).toBe('running')
+    now += 1000
+    await store.writeJob(oldHash, {
+      kind: 'ai-read',
+      state: 'complete',
+      progress: { done: 2, total: 2 },
+    })
+    expect(await migrateJobRecords(store, oldHash, newHash)).toBe(1)
+    now += 60_000
+    expect(await store.unfinishedJobs(newHash)).toEqual([])
+    expect(await store.readJob(newHash, 'ai-read')).toMatchObject({
+      state: 'complete',
+      progress: { done: 2, total: 2 },
+    })
+  })
+
+  it('copies again a final write the job made while its record was being copied', async () => {
+    await store.writeJob(oldHash, {
+      kind: 'ai-read',
+      state: 'running',
+      progress: { done: 1, total: 2 },
+    })
+    now += 1000
+    // the job's final write lands between reading the old record and writing its copy;
+    // the copy is stamped the same moment, so a later migration could not tell them apart
+    let raced = false
+    const racing = {
+      listJobs: (h: string) => store.listJobs(h),
+      readJob: (h: string, kind: 'ai-read' | 'translate', lang?: string) =>
+        store.readJob(h, kind, lang),
+      writeJob: async (h: string, job: Parameters<ResultStore['writeJob']>[1]) => {
+        if (h === newHash && !raced) {
+          raced = true
+          await store.writeJob(oldHash, {
+            kind: 'ai-read',
+            state: 'complete',
+            progress: { done: 2, total: 2 },
+          })
+        }
+        await store.writeJob(h, job)
+      },
+    }
+    expect(await migrateJobRecords(racing, oldHash, newHash)).toBe(1)
+    expect(await store.readJob(newHash, 'ai-read')).toMatchObject({
+      state: 'complete',
+      progress: { done: 2, total: 2 },
     })
   })
 })

@@ -476,6 +476,10 @@ describe('AI page reading: the job', () => {
     await click(m.el, '[data-action="stop-job"]')
     await until(() => q(m.el, '[data-job-state="stopped"]') !== null, 'the job to stop')
     expect(bridge.api.aiStreamCancel).toHaveBeenCalledTimes(2)
+    // the job's own requests only: the AI window's media calls in this tab keep running
+    for (const call of bridge.api.aiStreamCancel.mock.calls) {
+      expect((call as unknown[])[1]).toBe('request')
+    }
     expect(m.channels.jobs.at(-1)).toMatchObject({ state: 'stopped', last_error: 'cancelled' })
   })
 
@@ -536,6 +540,48 @@ describe('AI page reading: resume, save, delete', () => {
     expect(m.channels.store.migrate).toHaveBeenCalledWith({ path: PATH, oldDocHash: DOC })
     // the remembered pages follow, so the resume offer of the saved file has them
     expect(window.localStorage.getItem(`genoffice-pdf-job-pages:${SAVED_DOC}:ai-read`)).toBe('[2]')
+  })
+
+  it('a second start right after a save is not refused by its own job carried to the saved file', async () => {
+    const m = await mount()
+    await openToConfirm(m)
+    await click(m.el, '[data-action="start"]')
+    await until(() => bridge.starts.length === 2, 'the job to send')
+    // saved while the job runs: the save carried its 'running' record to the saved file
+    await act(async () => m.handle.current!.afterSave())
+    const carried: JobStatus = {
+      kind: 'ai-read',
+      state: 'running',
+      outputs: [],
+      progress: { done: 0, total: 4 },
+      updatedAt: Date.now() - 1,
+    }
+    m.channels.store.unfinishedJobs.mockImplementation(async () => ({
+      ok: true as const,
+      jobs: [carried],
+    }))
+    // the job finishes; the start comes before its own carry rewrote that record
+    for (let i = 0; i < 10 && !q(m.el, '[data-job-state="complete"]'); i++) {
+      await act(async () => bridge.answerAll())
+      await settle()
+    }
+    expect(q(m.el, '[data-job-state="complete"]')).not.toBeNull()
+    // the saved file, with pages not read yet
+    const savedTree = fakeTree()
+    const savedFps = FPS.map((fp) => `${fp}-saved`)
+    savedTree.pages.forEach((page, i) => (page.fingerprint = savedFps[i]!))
+    vi.mocked(m.channels.api.tree).mockImplementation(async () => ({
+      ok: true as const,
+      docHash: SAVED_DOC,
+      tree: savedTree,
+      fingerprints: savedFps.map((fingerprint, i) => ({ page: i + 1, fingerprint })),
+      cached: false,
+    }))
+    const sent = bridge.starts.length
+    await openToConfirm(m)
+    await click(m.el, '[data-action="start"]')
+    await until(() => bridge.starts.length > sent, 'the second job to send')
+    expect(q(m.el, '[data-error="start"]')).toBeNull()
   })
 
   it('deletes this document’s stored results only after confirming', async () => {

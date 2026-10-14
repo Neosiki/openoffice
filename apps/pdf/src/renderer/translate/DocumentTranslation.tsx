@@ -8,7 +8,8 @@
  *   AI window's tool only opens the window (`requestOpen` returns at once);
  * - one document job per document: in this tab (the session, shared with AI
  *   page reading), in this renderer (the engine's lock) and against a job
- *   another process is running (a fresh 'running' record in the store);
+ *   another process is running (a fresh 'running' record in the store that
+ *   is not this tab's own job carried over by a save);
  * - the job sends to the provider the user confirmed and never switches;
  * - the job belongs to the tab: unmounting (closing the tab, quitting) stops
  *   it as 'interrupted', and the file writing with it;
@@ -228,6 +229,7 @@ export const DocumentTranslation = forwardRef<DocumentTranslationHandle, Documen
         .catch(() => null)
       if (!out?.ok) return
       carryJobPages(from, out.docHash)
+      p.session.adopt(from, out.docHash)
       if (aliveRef.current) setDocHash(out.docHash)
     }
 
@@ -352,7 +354,7 @@ export const DocumentTranslation = forwardRef<DocumentTranslationHandle, Documen
       if (here) return { ok: false, busy: here.progress }
       // a job another process runs on the same file (the terminal, another window)
       const records = await p.api.store.unfinishedJobs(hash).catch(() => null)
-      const elsewhere = records?.ok ? records.jobs.find((j) => j.state === 'running') : undefined
+      const elsewhere = records?.ok ? session.runningElsewhere(hash, records.jobs) : undefined
       if (elsewhere) return { ok: false, busy: elsewhere.progress ?? { done: 0, total: 0 } }
 
       const targets = await pickTargets(request)
