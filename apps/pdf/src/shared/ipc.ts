@@ -1171,7 +1171,7 @@ export interface PdfStoreMigrateResult {
   aiReadPages: number
   translationBlocks: number
   languages: string[]
-  /** unfinished job records carried to the new hash */
+  /** job records carried to the new hash (finished ones included) */
   jobs: number
 }
 
@@ -1187,7 +1187,7 @@ export interface PdfStoreApi {
   /** not complete (stopped, or running elsewhere): the source of the resume offer */
   unfinishedJobs(docHash: string): Promise<PdfStructureOutcome<{ jobs: JobStatus[] }>>
   write(request: PdfStoreWriteRequest): Promise<PdfStructureOutcome<object>>
-  /** after an in-app save: carry results and unfinished job records to the new hash */
+  /** after an in-app save: carry results and job records to the new hash */
   migrate(request: PdfStoreMigrateRequest): Promise<PdfStructureOutcome<PdfStoreMigrateResult>>
   /** forget everything stored for the document */
   deleteDocument(docHash: string): Promise<PdfStructureOutcome<object>>
@@ -1362,6 +1362,11 @@ export interface PdfApi {
   /** whether generate_image can run right now (false when the app-wide AI host does not answer) */
   imageGenerationAvailable(): Promise<boolean>
   aiStream(request: AiStreamRequest): Promise<void>
-  aiStreamCancel(requestId: string): Promise<void>
+  /**
+   * End the stream `requestId`. Without a scope this is the AI window's Stop
+   * and also ends the tab's image and media calls; scope 'request' (a
+   * document job's call) ends that stream only.
+   */
+  aiStreamCancel(requestId: string, scope?: 'request'): Promise<void>
   onAiStream(handler: (chunk: AiStreamChunk) => void): () => void
 }

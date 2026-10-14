@@ -19,6 +19,11 @@ export interface ElectronTransportHooks {
   onSubscriptionUsage?(usage: IpcSubscriptionUsage[]): void
   /** the input was cut to fit a limit; the user must be told */
   onInputTruncated?(): void
+  /**
+   * 'request': cancelling ends this stream only, not the tab's image and
+   * media calls (a document job's call; the AI window's Stop ends both)
+   */
+  cancelScope?: 'request'
 }
 
 /** The shared IPC transport wired to the pdf preload bridge (window.pdfApi). */
@@ -29,7 +34,10 @@ export function createElectronTransport(
   return createIpcTransport<AiSettings>({
     onStream: (listener) => window.pdfApi.onAiStream(listener),
     start: (request) => window.pdfApi.aiStream(request),
-    cancel: (requestId) => void window.pdfApi.aiStreamCancel(requestId),
+    cancel: (requestId) =>
+      void (hooks?.cancelScope
+        ? window.pdfApi.aiStreamCancel(requestId, hooks.cancelScope)
+        : window.pdfApi.aiStreamCancel(requestId)),
     getSettings,
     unknownErrorText: () => t('aiUnknownError'),
     timeoutErrorText: () => t('aiTimeoutError'),

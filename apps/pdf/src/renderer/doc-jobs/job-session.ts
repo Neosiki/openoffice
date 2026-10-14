@@ -18,7 +18,7 @@ import {
   type JobSummary,
   type RunningDocumentJob,
 } from '../../../../../packages/pdf-structure/src/jobs'
-import type { JobKind } from '../../../../../packages/pdf-structure/src/store/store'
+import type { JobKind, JobStatus } from '../../../../../packages/pdf-structure/src/store/store'
 
 export interface DocumentJobView {
   /** session-unique */
@@ -59,6 +59,9 @@ export interface StartDocumentJob<U> {
   onEnd?(view: DocumentJobView): void
 }
 
+const recordKey = (docHash: string, kind: JobKind, lang?: string): string =>
+  JSON.stringify([docHash, kind, lang ?? null])
+
 export type StartJobOutcome =
   { ok: true; view: DocumentJobView } | { ok: false; running: RunningDocumentJob }
 
@@ -68,6 +71,10 @@ export class DocumentJobSession {
   private readonly listeners = new Set<() => void>()
   private nextId = 1
   private snapshot: readonly DocumentJobView[] = []
+  /** job records this session's jobs wrote (document hash, kind, language) */
+  private readonly ran = new Set<string>()
+  /** copies of those records an in-app save carried to another hash, and when */
+  private readonly carried = new Map<string, number>()
 
   constructor(private readonly registry: DocumentJobRegistry = documentJobs) {}
 
@@ -113,6 +120,7 @@ export class DocumentJobSession {
     }
     this.views.set(spec.docHash, view)
     this.controllers.set(spec.docHash, controller)
+    this.ran.add(recordKey(spec.docHash, spec.kind, spec.lang))
     this.emit()
     const end = (patch: Partial<DocumentJobView>) => {
       if (this.controllers.get(spec.docHash) === controller) this.controllers.delete(spec.docHash)
@@ -133,6 +141,34 @@ export class DocumentJobSession {
         end({ state: 'failed', error: err instanceof Error ? err.message : String(err) }),
     )
     return { ok: true, view: { ...view } }
+  }
+
+  /**
+   * An in-app save carried the job records of `from` to `to`: the copies of
+   * this session's records there are its own, not a job running elsewhere.
+   */
+  adopt(from: string, to: string): void {
+    if (from === to) return
+    const at = Date.now()
+    const own = [...this.ran, ...this.carried.keys()]
+    for (const key of own) {
+      const [docHash, kind, lang] = JSON.parse(key) as [string, JobKind, string | null]
+      if (docHash === from) this.carried.set(recordKey(to, kind, lang ?? undefined), at)
+    }
+  }
+
+  /**
+   * A job another process (the terminal, another window) runs on the
+   * document, from the store's records: a fresh 'running' record that is not
+   * a copy of this session's own job carried over by a save. A record
+   * written after the carry is someone else's.
+   */
+  runningElsewhere(docHash: string, records: readonly JobStatus[]): JobStatus | undefined {
+    return records.find((job) => {
+      if (job.state !== 'running') return false
+      const carriedAt = this.carried.get(recordKey(docHash, job.kind, job.lang))
+      return carriedAt === undefined || job.updatedAt === undefined || job.updatedAt > carriedAt
+    })
   }
 
   /** "Stop": the job ends after the calls in flight are cancelled */

@@ -9,6 +9,8 @@
  * and `resetsAt`, which the job engine reads to retry ('timeout', 'network',
  * …) or to stop at once ('rate-limit', 'signed-out', …). Aborting the signal
  * cancels the stream; the shell then ends the subscription program it started.
+ * The cancel names this request only, so it leaves the image and media calls
+ * of the AI window in the same tab alone.
  */
 import type {
   AgentStreamHandle,
@@ -89,6 +91,8 @@ export function createModelCall(o: ModelCallOptions): ModelCall {
       }
       const transport = createElectronTransport(o.settings, {
         lang: o.lang,
+        // Stop on a job ends its own calls, not what the AI window runs in this tab
+        cancelScope: 'request',
         onStreamError: (error) => {
           cause = error
         },

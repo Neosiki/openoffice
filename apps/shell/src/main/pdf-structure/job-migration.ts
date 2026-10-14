@@ -1,8 +1,13 @@
 /**
- * Carry unfinished job records to the new document hash after an in-app save
- * (spec §6, §9): the store's migrateDocument copies results but not job
- * records, and without them the "continue the unfinished job?" offer would
- * not appear for the saved file. Built on the store's public API only.
+ * Carry job records to the new document hash after an in-app save (spec §6,
+ * §9): the store's migrateDocument copies results but not job records, and
+ * without them the "continue the unfinished job?" offer would not appear for
+ * the saved file. Built on the store's public API only.
+ *
+ * Every record moves, complete ones included: a job that was running at the
+ * save and finished later must carry its final state over when its tab runs
+ * the migration again, or the earlier 'running' copy would go stale and read
+ * as an interrupted job.
  *
  * A record already in the new document wins when it is at least as recent
  * (same rule as the result migration), so running this again is harmless.
@@ -10,25 +15,47 @@
  * its heartbeat to the new hash, turns 'stopped' / 'interrupted' once the
  * running window passes.
  */
-import type { JobRecordInput, ResultStore } from '../../../../../packages/pdf-structure/src/store'
+import type {
+  JobRecordInput,
+  JobStatus,
+  ResultStore,
+} from '../../../../../packages/pdf-structure/src/store'
 
-export async function migrateUnfinishedJobs(
-  store: Pick<ResultStore, 'unfinishedJobs' | 'readJob' | 'writeJob'>,
+/** times one record is copied again because its job wrote it while it was being copied */
+const COPY_ATTEMPTS = 3
+
+function recordOf(job: JobStatus): JobRecordInput {
+  const record: JobRecordInput = {
+    kind: job.kind,
+    state: job.state === 'idle' ? 'stopped' : job.state,
+    outputs: job.outputs,
+  }
+  if (job.lang !== undefined) record.lang = job.lang
+  if (job.last_error !== undefined) record.last_error = job.last_error
+  if (job.resetsAt !== undefined) record.resetsAt = job.resetsAt
+  if (job.progress !== undefined) record.progress = job.progress
+  return record
+}
+
+export async function migrateJobRecords(
+  store: Pick<ResultStore, 'listJobs' | 'readJob' | 'writeJob'>,
   oldDocHash: string,
   newDocHash: string,
 ): Promise<number> {
   if (oldDocHash === newDocHash) return 0
   let moved = 0
-  for (const job of await store.unfinishedJobs(oldDocHash)) {
-    if (job.state !== 'running' && job.state !== 'stopped') continue
+  for (const job of await store.listJobs(oldDocHash)) {
     const current = await store.readJob(newDocHash, job.kind, job.lang)
     if (current.state !== 'idle' && (current.updatedAt ?? 0) >= (job.updatedAt ?? 0)) continue
-    const record: JobRecordInput = { kind: job.kind, state: job.state, outputs: job.outputs }
-    if (job.lang !== undefined) record.lang = job.lang
-    if (job.last_error !== undefined) record.last_error = job.last_error
-    if (job.resetsAt !== undefined) record.resetsAt = job.resetsAt
-    if (job.progress !== undefined) record.progress = job.progress
-    await store.writeJob(newDocHash, record)
+    // the copy is stamped with the time of the copy, so a write the job made
+    // while it was being copied would lose to it later: copy that write too
+    let source = job
+    for (let attempt = 0; attempt < COPY_ATTEMPTS; attempt++) {
+      await store.writeJob(newDocHash, recordOf(source))
+      const again = await store.readJob(oldDocHash, job.kind, job.lang)
+      if (again.state === 'idle' || again.updatedAt === source.updatedAt) break
+      source = again
+    }
     moved++
   }
   return moved

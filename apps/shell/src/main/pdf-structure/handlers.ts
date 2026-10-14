@@ -37,7 +37,7 @@ import type {
   PdfStructureWriteBackRequest,
   PdfStructureWriteBackResult,
 } from '../../../../pdf/src/shared/ipc'
-import { migrateUnfinishedJobs } from './job-migration'
+import { migrateJobRecords } from './job-migration'
 import type {
   EpubJobValue,
   FingerprintsJobValue,
@@ -631,7 +631,7 @@ export function createPdfStructureHandlers(deps: StructureHandlerDeps) {
           newDocHash: value.docHash,
           pageFingerprints: value.fingerprints,
         })
-        const jobs = await migrateUnfinishedJobs(store, req.oldDocHash, value.docHash)
+        const jobs = await migrateJobRecords(store, req.oldDocHash, value.docHash)
         return { ok: true, docHash: value.docHash, ...moved, jobs }
       } catch (err) {
         return storeFailure(err)

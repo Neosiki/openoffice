@@ -245,7 +245,8 @@ const api: PdfApi = {
   store,
   imageGenerationAvailable,
   aiStream: (request) => ipcRenderer.invoke(AI_CHANNELS.stream, request),
-  aiStreamCancel: (requestId) => ipcRenderer.invoke(AI_CHANNELS.streamCancel, requestId),
+  aiStreamCancel: (requestId, scope) =>
+    ipcRenderer.invoke(AI_CHANNELS.streamCancel, requestId, ...(scope ? [scope] : [])),
   onAiStream: (handler) => {
     const listener = (_e: Electron.IpcRendererEvent, chunk: AiStreamChunk) => handler(chunk)
     ipcRenderer.on(AI_CHANNELS.streamChunk, listener)
