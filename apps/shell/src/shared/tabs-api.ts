@@ -23,8 +23,7 @@ export interface TabSummary {
  */
 export interface OpenDocumentTab {
   id: string
-  /** a mind map is not reported yet: the MCP tools do not know that kind */
-  kind: Exclude<DocumentTabKind, 'mindmap'>
+  kind: DocumentTabKind
   title: string
   filePath?: string
   active: boolean

@@ -28,8 +28,8 @@ describe('format registry', () => {
     expect(sheet.mcp?.save).not.toContain('tsv')
   })
 
-  it('keeps the editor-only families (md/html) without an mcp block', () => {
-    for (const family of ['md', 'html'] as const) {
+  it('keeps the editor-only families (md/html/xmind) without an mcp block', () => {
+    for (const family of ['md', 'html', 'xmind'] as const) {
       expect(formatFamily(family).mcp).toBeUndefined()
     }
     // the three edit-in-place families carry full mcp blocks; pdf is read-only
@@ -61,6 +61,16 @@ describe('format registry', () => {
         expect(f.editorSave).toContain(ext)
       }
     }
+  })
+
+  it('registers the mind map family: xmind opens and saves as xmind', () => {
+    const map = formatFamily('xmind')
+    expect(map.label).toBe('mind map')
+    expect(map.editorOpen).toEqual(['xmind'])
+    expect(map.editorSave).toEqual(['xmind'])
+    expect(map.editorExport).toEqual(['png', 'pdf', 'md'])
+    // no session, generator or file reader: maps are reached through open_documents
+    expect(map.mcp).toBeUndefined()
   })
 
   it('reports labels for guided errors', () => {
@@ -95,7 +105,15 @@ describe('withSaveExtension', () => {
 describe('capabilityReport', () => {
   it('exposes editor truth alongside the mcp subset for every family', () => {
     const report = capabilityReport()
-    expect(report.map((r) => r.family)).toEqual(['docx', 'xlsx', 'pptx', 'md', 'html', 'pdf'])
+    expect(report.map((r) => r.family)).toEqual([
+      'docx',
+      'xlsx',
+      'pptx',
+      'md',
+      'html',
+      'pdf',
+      'xmind',
+    ])
     const docx = report.find((r) => r.family === 'docx')!
     expect(docx.editor.open).toEqual(['docx'])
     expect(docx.editor.export).toEqual(['pdf'])
@@ -104,5 +122,11 @@ describe('capabilityReport', () => {
     expect(report.find((r) => r.family === 'md')!.mcp).toBeUndefined()
     // pdf is the read-only family
     expect(report.find((r) => r.family === 'pdf')!.mcp).toEqual({ read: 'pdf' })
+    // the mind map entry carries its editor formats and no mcp key
+    expect(report.find((r) => r.family === 'xmind')).toEqual({
+      family: 'xmind',
+      label: 'mind map',
+      editor: { open: ['xmind'], save: ['xmind'], export: ['png', 'pdf', 'md'] },
+    })
   })
 })
