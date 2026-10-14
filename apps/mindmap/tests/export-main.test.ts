@@ -6,6 +6,7 @@
 import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { pathToFileURL } from 'node:url'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 type Handler = (event: unknown, ...args: unknown[]) => unknown
@@ -21,8 +22,10 @@ vi.mock('electron', () => ({
 }))
 
 import {
+  allowPageFile,
   EXPORT_KINDS,
   exportFileBase,
+  exportRequestAllowed,
   registerMindmapExportIpc,
   withExportExtension,
 } from '../src/main/export-main'
@@ -131,6 +134,26 @@ describe('the PDF and print', () => {
       expect((await call(channel, {})).ok).toBe(false)
     }
     expect(showSaveDialog).not.toHaveBeenCalled()
+  })
+
+  it('the export session loads only the page file being exported and data: addresses', () => {
+    const page = join(dir, 'map.html')
+    const other = join(dir, 'other.html')
+    expect(exportRequestAllowed(pathToFileURL(page).href)).toBe(false)
+    const release = allowPageFile(page)
+    expect(exportRequestAllowed(pathToFileURL(page).href)).toBe(true)
+    expect(exportRequestAllowed('data:image/png;base64,AAAA')).toBe(true)
+    for (const url of [
+      pathToFileURL(other).href,
+      'file://server/share/map.html',
+      'file:///C:/Windows/win.ini',
+      'https://example.com/x.png',
+      'blob:https://example.com/1',
+    ]) {
+      expect(exportRequestAllowed(url), url).toBe(false)
+    }
+    release()
+    expect(exportRequestAllowed(pathToFileURL(page).href)).toBe(false)
   })
 
   it('a cancelled PDF dialog makes no page and writes nothing', async () => {

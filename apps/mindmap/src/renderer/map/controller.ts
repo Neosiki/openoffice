@@ -196,11 +196,11 @@ export class MapController {
         // Unless they are the topics just cut from this sheet: those come back whole.
         copyNodes: (topics, to) => {
           if (this.#moveBack(topics, to)) return false
-          topics.forEach(cleanIfPasted)
+          topics.forEach((topic) => this.#cleanIfPasted(topic))
           return true
         },
         copyNode: (topic) => {
-          cleanIfPasted(topic)
+          this.#cleanIfPasted(topic)
           return true
         },
       },
@@ -742,6 +742,19 @@ export class MapController {
     return this.mind.getObjById(id, this.mind.nodeData)
   }
 
+  /**
+   * A node of this map's live tree, by identity. Anything else came out of the
+   * clipboard as text any program can write, whatever its fields claim.
+   */
+  #isLive(node: NodeObj): boolean {
+    return typeof node.id === 'string' && this.#node(node.id) === node
+  }
+
+  #cleanIfPasted(topic: Topic): void {
+    const node = topic.nodeObj as NodeObj | undefined
+    if (node && !this.#isLive(node)) cleanPastedNode(node)
+  }
+
   #meta(node: NodeObj): MapNodeMeta {
     return { ...emptyMeta(), ...((node.metadata as Partial<MapNodeMeta> | undefined) ?? {}) }
   }
@@ -934,7 +947,7 @@ export class MapController {
     const stash = this.#cutStash
     if (!stash || !to?.nodeObj) return false
     const pasted = topics.map((topic) => topic.nodeObj as NodeObj | undefined)
-    if (pasted.some((node) => !node || typeof node.parent === 'object')) return false
+    if (pasted.some((node) => !node || this.#isLive(node))) return false
     if (
       !sameIds(
         pasted.map((node) => String(node!.id)),
@@ -1148,15 +1161,6 @@ function sameIds(a: readonly string[], b: readonly string[]): boolean {
   if (a.length !== b.length) return false
   const wanted = new Set(b)
   return new Set(a).size === a.length && a.every((id) => wanted.has(id))
-}
-
-/**
- * A node of the live tree knows its parent and was made by this editor. One
- * that does not came out of the clipboard as text any program can write.
- */
-function cleanIfPasted(topic: Topic): void {
-  const node = topic.nodeObj as NodeObj | undefined
-  if (node && typeof node.parent !== 'object') cleanPastedNode(node)
 }
 
 /**

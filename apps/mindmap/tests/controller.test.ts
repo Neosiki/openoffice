@@ -602,6 +602,54 @@ describe('text from the file is never markup', () => {
     // a pasted address is text like any other: kept, shown, and never an anchor
     expect(pasted.href).toBe('javascript:alert(1)')
   })
+
+  // Clipboard text claiming to be one of the map's own nodes is still clipboard text.
+  it.each([
+    ['null', () => null],
+    ['an empty object', () => ({})],
+    ['the id of a live topic', (rootId: string) => ({ id: rootId })],
+    [
+      'a copy of the live central topic',
+      (rootId: string) => ({ id: rootId, topic: 'Root', root: true, children: [] }),
+    ],
+  ])('a pasted node whose parent is %s is cleaned too', async (_name, parentOf) => {
+    const { mind, el, attached, root } = await mount([plainSheet()])
+    const target = attached()[0]!
+    mind.selectNode(mind.findEle(target.id))
+    const payload = JSON.stringify({
+      magic: 'MIND-ELIXIR-WAIT-COPY',
+      data: [
+        {
+          // the id of a topic on the map does not make this one of its nodes
+          id: target.id,
+          topic: 'Pasted',
+          parent: parentOf(root().id),
+          dangerouslySetInnerHTML: '<b>bold</b>',
+          style: { background: 'url(https://evil.example/bg.png)', color: 'red' },
+          hyperLink: 'https://evil.example/',
+          image: { url: 'https://evil.example/i.png', width: 5, height: 5 },
+          nodeObj: { id: target.id, parent: { id: root().id } },
+          children: [
+            { id: 'below', topic: 'Below', parent: null, dangerouslySetInnerHTML: '<i>i</i>' },
+          ],
+        },
+      ],
+    })
+    const paste = new Event('paste', { bubbles: true, cancelable: true })
+    Object.defineProperty(paste, 'clipboardData', { value: { getData: () => payload } })
+    mind.container.dispatchEvent(paste)
+    await settle()
+
+    expect(el.querySelectorAll('img, script, b, i, a')).toHaveLength(0)
+    expect(el.querySelectorAll('[style*="url("]')).toHaveLength(0)
+    expect(el.innerHTML).not.toContain('evil.example')
+    const pasted = attached(attached()[0]!).at(-1)!
+    expect(pasted.title).toBe('Pasted')
+    expect(pasted.id).toMatch(UUID)
+    expect(pasted.id).not.toBe(target.id)
+    expect(pasted).not.toHaveProperty('href')
+    expect(pasted.children!.attached![0]!.title).toBe('Below')
+  })
 })
 
 describe('links nothing will open', () => {

@@ -97,6 +97,8 @@ interface Section {
   title: string | null
   /** lines that stand under no topic */
   body: string[]
+  /** how many of those lines came before the first outermost topic; null while there is none */
+  itemsAt: number | null
   outer: Draft[]
   /** the drafts at the deepest level a topic may have */
   deepest: Draft[]
@@ -240,13 +242,17 @@ function readSections(text: string): Section[] {
   if (sections.length > 1 && first.outer.length === 0) {
     sections.shift()
     const body = withoutBlankEdges(first.body)
-    if (body.length > 0) sections[0]!.body = [...body, '', ...sections[0]!.body]
+    if (body.length > 0) {
+      const next = sections[0]!
+      next.body = [...body, '', ...next.body]
+      if (next.itemsAt !== null) next.itemsAt += body.length + 1
+    }
   }
   return sections
 }
 
 function newSection(title: string | null): Section {
-  return { title, body: [], outer: [], deepest: [] }
+  return { title, body: [], itemsAt: null, outer: [], deepest: [] }
 }
 
 function addDraft(
@@ -264,6 +270,7 @@ function addDraft(
     parent: above,
     depth: above === null ? 0 : above.depth + 1,
   }
+  if (above === null && section.itemsAt === null) section.itemsAt = section.body.length
   ;(above === null ? section.outer : above.children).push(draft)
   if (draft.depth === MAX_TOPIC_DEPTH) section.deepest.push(draft)
   return draft
@@ -402,12 +409,20 @@ function withoutBlankEdges(lines: readonly string[]): string[] {
   return lines.slice(start, end)
 }
 
-/** The note of a topic: what stood above it in the sheet, its `> ` lines, then its other text. */
-function noteOf(draft: Draft, above: readonly string[] = []): string | null {
+/**
+ * The note of a topic: what stood above it in the sheet, its `> ` lines, its
+ * other text, then what stood after it in the sheet.
+ */
+function noteOf(
+  draft: Draft,
+  above: readonly string[] = [],
+  after: readonly string[] = [],
+): string | null {
   const parts = [
     withoutBlankEdges(above).join('\n'),
     draft.quoted.join('\n'),
     withoutBlankEdges(draft.body).join('\n'),
+    withoutBlankEdges(after).join('\n'),
   ].filter((part) => part !== '')
   return parts.length > 0 ? parts.join('\n\n') : null
 }
@@ -427,7 +442,13 @@ function sectionToSheet(section: Section, untitled: string): XmindSheet {
     depth: 0,
   }
   const sheet = newSheet({ title, rootTitle: root.title })
-  dress(sheet.rootTopic, root, only === null ? [] : section.body)
+  if (only === null) {
+    dress(sheet.rootTopic, root)
+  } else {
+    // the sheet's own text keeps its place: before the topic's lines or after them
+    const at = section.itemsAt ?? section.body.length
+    dress(sheet.rootTopic, root, section.body.slice(0, at), section.body.slice(at))
+  }
 
   const pending: [Draft, XmindTopic][] = [[root, sheet.rootTopic]]
   for (let next = pending.pop(); next; next = pending.pop()) {
@@ -465,9 +486,14 @@ function raiseDeepest(section: Section): void {
 }
 
 /** Puts what a draft holds besides its title on the topic made for it. */
-function dress(topic: XmindTopic, draft: Draft, above: readonly string[] = []): void {
+function dress(
+  topic: XmindTopic,
+  draft: Draft,
+  above: readonly string[] = [],
+  after: readonly string[] = [],
+): void {
   if (draft.labels.length > 0) topic.labels = draft.labels
   if (draft.link !== null) topic.href = draft.link
-  const note = noteOf(draft, above)
+  const note = noteOf(draft, above, after)
   if (note !== null) topic.notes = { plain: { content: note } }
 }

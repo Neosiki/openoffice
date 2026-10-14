@@ -275,7 +275,7 @@ export function Toolbar(p: ToolbarProps) {
             <ExportMenu disabled={p.disabled} onExport={p.onExport} />
           </div>
         </div>
-        {/* "make another document from this one" goes here, after its own separator */}
+        {/* "make another document from this one", after its own separator */}
         <span className="rb-sep" />
         <div className="ribbon-group">
           <div className="ribbon-group-items">

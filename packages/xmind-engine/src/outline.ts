@@ -294,13 +294,20 @@ const ORDERED_START = /^(\d{1,9})(?=[.)](?:[ \t]|$))/
 const BLOCK_START = /^(?:#{1,6}(?=[ \t]|$)|>|`{3}|~{3})/
 const RULE = /^(?:(?:\*[ \t]*){3,}|(?:-[ \t]*){3,}|(?:_[ \t]*){3,})$/
 
-/** A topic title as the text of a list item. */
+/**
+ * A topic title as the text of a list item. The reader tests for a rule on the
+ * whole line, item marker included, so `--` is escaped as well as `---`.
+ */
 function escapeTitle(title: string): string {
   const text = escapeInline(title)
   const ordered = ORDERED_START.exec(text)
   if (ordered) return `${ordered[1]}\\${text.slice(ordered[1]!.length)}`
   const startsSomething =
-    BULLET_START.test(text) || BLOCK_START.test(text) || RULE.test(text) || kindMarkLength(text) > 0
+    BULLET_START.test(text) ||
+    BLOCK_START.test(text) ||
+    RULE.test(`- ${text}`) ||
+    RULE.test(text) ||
+    kindMarkLength(text) > 0
   return startsSomething ? `\\${text}` : text
 }
 

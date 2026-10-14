@@ -147,6 +147,26 @@ function cleanAttributes(element: Element): void {
   for (const { name, value } of [...element.attributes]) {
     if (DROPPED_ATTRIBUTES.test(name) || UNSAFE_VALUE.test(value)) element.removeAttribute(name)
   }
+  if (element.localName === 'me-tpc' && element instanceof HTMLElement) keepTopicStyle(element)
+}
+
+/** The properties `decorate.ts` sets on a topic: the only ones a copied topic keeps. */
+const TOPIC_STYLE = [
+  'background-color',
+  'box-shadow',
+  'color',
+  'font-weight',
+  'font-size',
+  'line-height',
+] as const
+
+function keepTopicStyle(topic: HTMLElement): void {
+  if (!topic.hasAttribute('style')) return
+  const kept = TOPIC_STYLE.map((name) => [name, topic.style.getPropertyValue(name)] as const)
+  topic.removeAttribute('style')
+  for (const [name, value] of kept) {
+    if (value !== '' && !UNSAFE_VALUE.test(value)) topic.style.setProperty(name, value)
+  }
 }
 
 /** The custom properties of an inline style, as name and value. */
