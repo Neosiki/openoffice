@@ -48,6 +48,7 @@
 - 첫 연결 안내의 Codex 문장은 `CODEX_MAY_KEEP_HISTORY`로 켜져 있다. 브리지가 대화 이력 파일은 끄지만 Codex가 자체 진단 로그를 남기고, 앱은 그것을 읽을 수도 막을 수도 없기 때문이다.
 - 문자열은 세 군데에 있다. 렌더러 사전 `src/renderer/src/strings.ts`(언어 21개가 한 파일에 있고 `zh`가 키 집합을 정한다), 메인 프로세스의 인라인 사전(`src/main/index.ts`의 `tMain`), 도움말 `i18n/help/topics/<id>.<lang>.md`. 도움말 항목은 `help-registry.ts`의 `HELP_TOPICS`에 등록해야 보이고, 모든 언어 파일의 구조는 영어 원본과 같아야 한다(`npm run check:help-langs`).
 - 렌더러 CSS의 크롬 색은 토큰만 쓴다(`npm run check:theme-colors`). shell의 강조색(`--accent` 계열)은 `src/renderer/src/home.css`에서 정의한다.
+- 디자인 템플릿 글꼴(`packages/ui/template-fonts`)은 `electron-builder.cjs`의 extraResources 항목 하나로 `resources/template-fonts`에 한 번만 들어간다. 편집기마다 넣지 않고, 편집기는 `templateFontsDir`로 이 폴더를 읽는다. `tests/template-fonts-resource.test.ts`가 항목이 정확히 하나인지, 어느 편집기의 `src`도 그 글꼴 파일을 빌드 자산으로 가져오지 않는지(import, `new URL`, CSS `url()`) 확인한다. 폴더의 `README.md`가 없으면 빌드 설정이 바로 멈춘다(`assertExtraResourceSources`).
 - 패키징은 저장소 루트에서 한다: `npm run dist:win -- -- --publish never`. `--`가 두 번 필요하고, `--publish never`가 없으면 electron-builder가 업로드를 시도한다. xlsx 사이드카는 `target/x86_64-pc-windows-gnu/release/`에 있어야 하므로 Windows에서 MSVC로 빌드했다면 `target/release/xlsx-sidecar.exe`를 그리로 복사한다. OCR 도우미 컴파일에는 Windows SDK가 필요하다. Windows만 빌드·검증하며 Linux 패키징에는 원본의 이름이 남아 있다.
 
 ## 테스트

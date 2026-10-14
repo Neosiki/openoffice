@@ -74,6 +74,8 @@ Workbook writes go through `@genoffice/xlsx-gateway` (the app's save path). The 
 
 `create --type pptx --spec` is the CLI end of the app's deck generation pipeline (`@genoffice/pipelines`): the caller's agent does the design work following `ieumoffice guide slides design`, writing the style sheet, the outline and one page spec file per slide (`ieumoffice guide slides spec`), and the same page builder the app uses turns them into a pptx, measuring every text box and growing it to its content. Where the app separates the stages into model calls, the CLI separates them into files: `slides check` validates the outline against the planning rules and builds and audits a single page file, then checks it against its outline entry and the style sheet's palette (both found beside the page files), `create --spec <dir>` runs the same checks on every file and refuses to assemble a deck with pages missing or disagreeing with the outline, and `slides replace` rebuilds one slide from its file. `slides audit` runs the app's deterministic layout audit; `slides render` gives the agent PNGs to look at. No model call happens inside ieumoffice.
 
+In Windows PowerShell 5.1, `>` writes UTF-16, and `slides check` then finds no palette in the saved style sheet. Save it with `ieumoffice guide slides templates coral | Out-File -Encoding utf8 deck/style.md` there, or run the command in a shell that writes UTF-8.
+
 Every command prints a one-line human summary by default or a single JSON
 object with `--json` (`{ status, command, summary, output_path?, warnings?, detail? }`);
 `warnings[]` (`{ code, message, suggestion? }`) carries advisories about a

@@ -27,7 +27,11 @@ PowerPoint 프레젠테이션(.pptx) 에디터다. 파일을 바이트 그대로
 - 요청은 다른 제공자로 넘어가지 않는다. 단독 실행의 `ai:stream`은 `resolveStreamTarget`으로 대상을 정하고, 실행할 수 없는 선택은 원인을 담아 거절한다. 이 규칙은 문서 에디터의 것과 같은 답을 내야 한다.
 - 모델에게 주는 도구는 실제 경로가 있는 것만이다. 렌더러는 메인의 가용성 보고(`slides:ai-tool-capabilities`)가 답하기 전에는 이미지 생성·미디어 분석 도구를 내놓지 않는다(`toolGatesOf`).
 - 구독 IPC는 `ensureSubscriptionIpc`로만 등록하고 `initSubscriptionChildTracking`은 부르지 않는다. 단독 실행 진입은 `will-quit`와 `process.on('exit')`에서 `shutdownSubscriptionChildren`을 부른다.
-- 지금은 글꼴을 내려받는 기능이 없다. 글꼴 목록은 PC에 설치된 것과 앱에 든 것이고, "글꼴 파일 설치"는 사용자가 가진 파일을 앱의 글꼴 폴더(`<userData>/fonts`)로 복사한다. 시스템에는 설치하지 않는다.
+- 지금은 글꼴을 내려받는 기능이 없다. 글꼴 목록은 PC에 설치된 것과 앱에 든 것이고, "글꼴 파일 설치"는 사용자가 가진 파일을 앱의 글꼴 폴더(`<userData>/fonts`)로 복사한다. 시스템에는 설치하지 않는다. 디자인 템플릿 글꼴 폴더는 읽기만 한다.
+- 디자인 템플릿의 동작 지시는 `prompts/system.md`에 넣지 않는다. 템플릿을 고른 문서에만 붙는 문맥 블록(`slides-skill.ts`, "The user chose a design template …")에 둔다. 템플릿을 고르지 않은 요청은 템플릿이 생기기 전과 같은 글을 보내야 한다.
+- 쪽 작성기의 시스템 프롬프트는 `buildPageSystemPrompt`(`src/renderer/ai/page-system-prompt.ts`)가 만든다. 템플릿이 없는 요청의 글은 `tests/fixtures/page-system-prompt.baseline.json`과 바이트까지 같아야 한다(`tests/page-system-prompt.test.ts`). 템플릿 장치 예외(`TEMPLATE_DEVICES_EXEMPTION`)는 내장 템플릿이나 거기서 저장한 스타일일 때만 끝에 붙인다. 테스트를 통과시키려고 이 고정 자료를 고치지 않는다.
+- 문서마다 고른 템플릿은 `.pptx` 안이나 곁에 쓰지 않는다. `<userData>/slides-template-selections.json` 한 파일에 정규 경로를 키로 두고(`src/main/template-selection-store.ts`, 최대 2,000개, 오래 안 쓴 것부터 버림), 채널 `slides:ai-template-selection-get`·`-set`은 `registerSlidesOnlyAiIpc`에 있다. 문서는 인자가 아니라 호출한 창의 세션으로 정한다. 첫 저장, 다른 이름으로 저장, 생성한 초안의 이동, 외부 도구의 저장은 기록을 새 경로로 따라가게 하고, 앱 안의 이름 바꾸기·옮기기는 기록을 옮긴다(shell의 `tests/slides-template-selection-move.test.ts`).
+- 견본 표지 그리기 채널 `slides:template-cover-render`는 카탈로그 id와 `'ko'`·`'en'`만 받는다. 결과를 캐시하고, 열린 문서를 건드리지 않는다.
 
 ## 이 모듈의 방식
 
@@ -37,6 +41,8 @@ PowerPoint 프레젠테이션(.pptx) 에디터다. 파일을 바이트 그대로
 - 프롬프트 파일(`src/renderer/ai/prompts/*.md`)은 Prettier 대상이 아니다. Prettier가 강조 표식과 목록 들여쓰기를 바꾸면 모델이 읽는 글이 달라진다. 이 파일들을 포매터에 넣지 않는다.
 - 메인 프로세스의 Node `fetch`는 시스템 프록시를 쓰지 않아 `applyMainProcessProxy`가 환경 변수나 시스템 설정의 프록시를 전역 디스패처에 건다. 이 프록시는 구독 프로그램에는 전달되지 않는다(그쪽은 물려받은 환경 변수만 본다).
 - 문자열은 `src/renderer/i18n/`의 언어별 조각(`ai/`, `app/`, `panes/`, `ribbon/`)이고 `zh.ts`가 키 집합을 정한다. 21개 언어 모두에 넣는다. 구독 연결 문장은 `@genoffice/ui`의 것을 쓴다.
+- 렌더러에서 문서의 템플릿 선택과 덧붙인 요청은 `src/renderer/ai/template-selection-state.ts` 하나가 쥔다. 기억된 키가 더 이상 풀리지 않으면(지운 저장 스타일 등) 선택 없음으로 읽는다. 템플릿 자료는 `@genoffice/pipelines/slides/templates`에서 가져온다(렌더러에서 써도 되는 하위 경로).
+- 템플릿 글꼴: `src/main/template-fonts.ts`가 `templateFontsDir`로 공용 폴더를 찾고, `fonts.ts`가 그 폴더를 사용자 글꼴 저장소 다음의 두 번째 읽기 전용 개인 글꼴로 색인한다. 같은 패밀리가 PC에 설치되어 있으면 그것이 먼저다. 캔버스, PDF 내보내기, 인쇄가 이 글꼴로 그린다. 발표 화면의 청중 창은 따로 된 문서라서 그리기 전에 개인 글꼴을 따로 등록한다. 폴더 열기 채널 `slides:open-template-fonts-folder`는 shell이 부르는 `registerSlidesIpc`에 있고, 정확히 그 폴더만 연다.
 - `vitest.config.ts`는 `@genoffice/pptx-*` 패키지를 이 저장소의 소스 경로로 고정한다. 하위 경로 별칭은 패키지 이름 별칭보다 앞에 둔다(문자열 별칭은 접두사 치환이다).
 
 ## 테스트

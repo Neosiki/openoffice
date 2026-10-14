@@ -10,3 +10,4 @@
 | [0006](0006-no-codex-image-via-login-file.md)             | Codex 구독 이미지 생성은 로그인 파일을 건드리지 않는 방법으로만 넣는다                          | 2026-10-13 |
 | [0007](0007-key-providers-under-advanced.md)              | 키 제공자는 지우지 않고 고급 구역으로 옮긴다                                                    | 2026-10-13 |
 | [0008](0008-remove-font-downloads.md)                     | 글꼴 내려받기를 없애고 파일 설치만 남긴다                                                       | 2026-10-13 |
+| [0009](0009-bundle-template-fonts.md)                     | 디자인 템플릿 글꼴을 설치 파일에 한 번만 넣는다                                                 | 2026-10-14 |

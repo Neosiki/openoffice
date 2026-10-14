@@ -11,7 +11,8 @@ Run `node tools/gen-third-party-notices.mjs` to produce it from a source
 checkout.
 
 Bundled fonts and their licenses are documented in
-apps/docs/src/renderer/fonts/README.md.
+apps/docs/src/renderer/fonts/README.md. The slide design templates' fonts
+are listed under "Slide design template fonts" below.
 
 Unicode Character Database
 
@@ -50,6 +51,73 @@ full texts are at https://github.com/lucide-icons/lucide/blob/main/LICENSE.
 The wordmark in the logo lockup is set in Roboto Bold 2.137, Copyright 2011
 Google Inc., licensed under the Apache License, Version 2.0, and converted to
 outlines.
+
+Slide design templates
+
+The twelve built-in slide design templates in
+packages/pipelines/src/slides/templates (coral, blue-professional,
+monochrome, neo-grid-bold, block-frame, raw-grid, studio, signal, grove,
+editorial-tri-tone, emerald-editorial, vellum) are re-authored from the
+designs in frontend-slides (https://github.com/zarazhangrui/frontend-slides),
+folder bold-template-pack/, read at commit
+9906a34d640d2111f724544cbc50f7f130569ae1. The templates' style texts and
+sample covers are based on those designs. frontend-slides is distributed
+under the MIT License:
+
+  MIT License
+
+  Copyright (c) 2025 Zara Zhang
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
+
+  The above copyright notice and this permission notice shall be included in all
+  copies or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
+
+The Korean font pairings of the templates referred to k-slide
+(https://k-slide.web.app).
+
+Slide design template fonts
+
+packages/ui/template-fonts holds the fonts the design templates use. It
+ships once in the installer as resources/template-fonts. Every file is the
+original distributor's, unmodified, and is licensed under the SIL Open Font
+License, Version 1.1. Each family's license text sits beside its files, and
+packages/ui/template-fonts/README.md records the license evidence and the
+exact source of every file. All files were downloaded on 2026-10-14.
+
+- Pretendard 1.309 (release v1.3.9), SIL OFL 1.1 with Reserved Font Name
+  "Pretendard", https://github.com/orioncactus/pretendard
+- Noto Serif KR 2.003, SIL OFL 1.1,
+  https://github.com/notofonts/noto-cjk
+- Black Han Sans 1.001, SIL OFL 1.1,
+  https://github.com/google/fonts/tree/main/ofl/blackhansans
+- Do Hyeon 1.001, SIL OFL 1.1,
+  https://github.com/google/fonts/tree/main/ofl/dohyeon
+- Gowun Dodum 2.000, SIL OFL 1.1,
+  https://github.com/yangheeryu/Gowun-Dodum
+- Gowun Batang 2.000, SIL OFL 1.1,
+  https://github.com/yangheeryu/Gowun-Batang
+- Bebas Neue 2.000, SIL OFL 1.1,
+  https://github.com/google/fonts/tree/main/ofl/bebasneue
+- Space Grotesk 2.000, SIL OFL 1.1,
+  https://github.com/floriankarsten/space-grotesk
+- Playfair Display 1.203, SIL OFL 1.1 with Reserved Font Name
+  "Playfair Display", https://github.com/google/fonts/tree/main/ofl/playfairdisplay
+- Archivo Black 1.006, SIL OFL 1.1,
+  https://github.com/google/fonts/tree/main/ofl/archivoblack
 
 IeumOffice modifications
 
