@@ -11,6 +11,10 @@ export const pl = {
   saveProtected:
     'Nie zapisano: ten dokument jest chroniony hasłem, a zapisanie go tutaj zapisałoby go bez hasła.',
   backupKept: 'Zapisano. Poprzednia wersja została zachowana jako {name}.',
+  saveTracked:
+    'Nie zapisano: ten dokument zawiera śledzone zmiany; zapisanie go tutaj spowodowałoby ich utratę, a pliku Hancom Hangul mógłby nie otworzyć.',
+  savedTailsLost:
+    'Zapisano, ale części stron wzorcowych lub notatek z oryginalnego pliku nie udało się zachować; Hancom Hangul może nie otworzyć zapisanego pliku. Otwórz go, aby sprawdzić.',
   dismiss: 'Zamknij',
   aiOpenAssistant: 'Otwórz asystenta AI',
   aiNewChat: 'Nowy czat',

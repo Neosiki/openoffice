@@ -62,11 +62,16 @@ export const MAX_HWP_SAVE_BYTES = 512 * 1024 * 1024
 export type BeginSaveResult =
   | { ok: true; path: string; format: HwpFormat }
   | { ok: true; canceled: true }
-  | { ok: false; error: string }
+  /** `reason` 'tracked': the document has tracked changes, which a save here would lose */
+  | { ok: false; error: string; reason?: 'tracked' }
 
 export type CommitSaveResult =
-  /** `backupPath` is set when this save was the first to overwrite the file and the previous bytes were kept */
-  { ok: true; path: string; backupPath?: string } | { ok: false; error: string }
+  /**
+   * `backupPath` is set when this save was the first to overwrite the file and the previous
+   * bytes were kept. `tailsLost` is set when master pages or memos of the opened file could
+   * not be carried into the written one.
+   */
+  { ok: true; path: string; backupPath?: string; tailsLost?: true } | { ok: false; error: string }
 
 /** The live document as bytes in its own format, or why there are none. */
 export type ReadBytesResult = { ok: true; bytes: Uint8Array } | { ok: false; error: string }

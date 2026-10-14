@@ -10,6 +10,10 @@ export const zhTW = {
     '未儲存：即將寫入的內容讀回後與畫面上的文件不一致。請嘗試「另存新檔」儲存為新檔案。',
   saveProtected: '未儲存：此文件有密碼保護，在這裡儲存會寫出不含密碼的檔案。',
   backupKept: '已儲存。先前的版本保留為 {name}。',
+  saveTracked:
+    '未儲存：此文件包含追蹤修訂，在這裡儲存會遺失修訂記錄，而且儲存的檔案可能無法在 Hancom Hangul 中開啟。',
+  savedTailsLost:
+    '已儲存，但原檔案中的部分主版頁面或註解未能保留，儲存的檔案可能無法在 Hancom Hangul 中開啟。請開啟確認。',
   dismiss: '關閉',
   aiOpenAssistant: '開啟 AI 助手',
   aiNewChat: '新對話',

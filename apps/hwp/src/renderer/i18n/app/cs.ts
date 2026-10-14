@@ -11,6 +11,10 @@ export const cs = {
   saveProtected:
     'Neuloženo: tento dokument je chráněn heslem a uložením zde by se zapsal bez hesla.',
   backupKept: 'Uloženo. Předchozí verze byla zachována jako {name}.',
+  saveTracked:
+    'Neuloženo: tento dokument obsahuje sledované změny; uložením zde by se ztratily a soubor by Hancom Hangul nemusel otevřít.',
+  savedTailsLost:
+    'Uloženo, ale některé předlohy stránek nebo poznámky z původního souboru se nepodařilo zachovat; Hancom Hangul nemusí uložený soubor otevřít. Otevřete jej pro kontrolu.',
   dismiss: 'Zavřít',
   aiOpenAssistant: 'Otevřít asistenta AI',
   aiNewChat: 'Nový chat',

@@ -29,6 +29,37 @@ function api(begin: BeginSaveResult, commit: CommitSaveResult = { ok: true, path
 }
 
 describe('runSave', () => {
+  it('writes nothing for a document with tracked changes, and says why', async () => {
+    const ed = editor()
+    const host = api({
+      ok: false,
+      error: 'hwp: the document has tracked changes',
+      reason: 'tracked',
+    })
+    const outcome = await runSave(ed, host, 'saveAs')
+    expect(outcome).toEqual({ kind: 'failed', reason: 'tracked' })
+    expect(ed.exportHwp).not.toHaveBeenCalled()
+    expect(ed.exportHwpx).not.toHaveBeenCalled()
+    expect(host.commitSave).not.toHaveBeenCalled()
+  })
+
+  it('reports a save that could not carry master pages or memos over', async () => {
+    const ed = editor()
+    const host = api(
+      { ok: true, path: 'C:/d/a.hwp', format: 'hwp' },
+      { ok: true, path: 'C:/d/a.hwp', backupPath: 'C:/d/a.hwp.bak', tailsLost: true },
+    )
+    const outcome = await runSave(ed, host, 'save')
+    expect(outcome).toEqual({
+      kind: 'saved',
+      path: 'C:/d/a.hwp',
+      backupPath: 'C:/d/a.hwp.bak',
+      tailsLost: true,
+    })
+    // the file is written: the editor is told so
+    expect(ed.notifySaved).toHaveBeenCalledWith('a.hwp')
+  })
+
   it('writes HWP bytes only after the engine read its own output back whole', async () => {
     const ed = editor()
     const host = api({ ok: true, path: 'C:/d/a.hwp', format: 'hwp' })

@@ -11,6 +11,10 @@ export const ja = {
   saveProtected:
     '保存しませんでした。この文書はパスワードで保護されており、ここで保存するとパスワードなしで書き出されます。',
   backupKept: '保存しました。以前の内容は {name} として残しました。',
+  saveTracked:
+    '保存しませんでした。この文書には変更履歴があり、ここで保存すると変更履歴が失われ、Hancom Hangul で開けないファイルになることがあります。',
+  savedTailsLost:
+    '保存しましたが、元のファイルにあったマスターページやメモの一部を引き継げませんでした。保存したファイルは Hancom Hangul で開けないことがあります。開いて確認してください。',
   dismiss: '閉じる',
   aiOpenAssistant: 'AI アシスタントを開く',
   aiNewChat: '新しいチャット',

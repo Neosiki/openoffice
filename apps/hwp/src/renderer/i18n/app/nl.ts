@@ -11,6 +11,10 @@ export const nl = {
   saveProtected:
     'Niet opgeslagen: dit document is met een wachtwoord beveiligd, en hier opslaan zou het zonder wachtwoord wegschrijven.',
   backupKept: 'Opgeslagen. De vorige versie is bewaard als {name}.',
+  saveTracked:
+    'Niet opgeslagen: dit document bevat bijgehouden wijzigingen; door het hier op te slaan gaan ze verloren en kan Hancom Hangul het bestand mogelijk niet openen.',
+  savedTailsLost:
+    "Opgeslagen, maar sommige basispagina's of memo's van het oorspronkelijke bestand konden niet worden behouden; Hancom Hangul kan het opgeslagen bestand mogelijk niet openen. Open het ter controle.",
   dismiss: 'Sluiten',
   aiOpenAssistant: 'AI-assistent openen',
   aiNewChat: 'Nieuwe chat',

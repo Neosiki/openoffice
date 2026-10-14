@@ -17,14 +17,20 @@ export interface SaveEditorPort {
 }
 
 export type SaveOutcome =
-  | { kind: 'saved'; path: string; backupPath?: string }
+  /** `tailsLost`: written, but without some master pages or memos the opened file had */
+  | { kind: 'saved'; path: string; backupPath?: string; tailsLost?: true }
   | { kind: 'canceled' }
   /**
    * Nothing was written.
    * `protected`: the document has a password this save path cannot keep.
+   * `tracked`: the document has tracked changes this save path cannot keep.
    * `verify`: the engine could not read back what it was about to write.
    */
-  | { kind: 'failed'; reason: 'protected' | 'verify' | 'export' | 'write'; detail?: string }
+  | {
+      kind: 'failed'
+      reason: 'protected' | 'tracked' | 'verify' | 'export' | 'write'
+      detail?: string
+    }
 
 const fileNameOf = (path: string) => path.split(/[\\/]/).pop() ?? path
 
@@ -53,7 +59,11 @@ export async function runSave(
   }
 
   const begin = await api.beginSave(mode)
-  if (!begin.ok) return { kind: 'failed', reason: 'write', detail: begin.error }
+  if (!begin.ok) {
+    return begin.reason === 'tracked'
+      ? { kind: 'failed', reason: 'tracked' }
+      : { kind: 'failed', reason: 'write', detail: begin.error }
+  }
   if ('canceled' in begin) return { kind: 'canceled' }
 
   let bytes: Uint8Array
@@ -81,5 +91,6 @@ export async function runSave(
     kind: 'saved',
     path: commit.path,
     ...(commit.backupPath ? { backupPath: commit.backupPath } : {}),
+    ...(commit.tailsLost ? { tailsLost: true as const } : {}),
   }
 }

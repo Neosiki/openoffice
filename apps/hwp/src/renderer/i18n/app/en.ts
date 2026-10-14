@@ -11,6 +11,10 @@ export const en = {
   saveProtected:
     'Not saved: this document is password-protected, and saving it here would write it without the password.',
   backupKept: 'Saved. The previous version was kept as {name}.',
+  saveTracked:
+    'Not saved: this document has tracked changes, and saving it here would lose them and may write a file Hancom Hangul cannot open.',
+  savedTailsLost:
+    'Saved, but some master pages or memos of the original file could not be carried over, and Hancom Hangul may not open the saved file. Please open it there to check.',
   dismiss: 'Dismiss',
   aiOpenAssistant: 'Open AI assistant',
   aiNewChat: 'New chat',

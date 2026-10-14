@@ -19,6 +19,9 @@ import { registerHwpAttachmentIpc } from './attachments-ipc'
 import { atomicWriteFile } from './atomic-write'
 import { tm } from './dialog-strings'
 import { backupPathFor, bytesMatchFormat, needsBackup, withFormatExtension } from './save-plan'
+import { restoreSectionTails, sectionTailsOf } from './section-tails'
+import type { SectionTails } from './section-tails'
+import { hasTrackedChanges } from './tracked-changes'
 import { HWP_CHANNELS, MAX_HWP_SAVE_BYTES, hwpFormatOfPath } from '../shared/ipc'
 import type { BeginSaveResult, CommitSaveResult, HwpFormat, SaveMode } from '../shared/ipc'
 
@@ -52,6 +55,13 @@ const readTextInFlight = new Map<number, Promise<string>>()
 const pendingSaveByWc = new Map<number, { path: string; format: HwpFormat }>()
 /** Paths each view has already written this session; their first overwrite kept a backup */
 const writtenByWc = new Map<number, Set<string>>()
+/**
+ * What the engine does not hold of the HWP file a view opened (master pages beyond the
+ * first, memos), kept to put back when the view saves; see section-tails.ts
+ */
+const tailsByWc = new Map<number, SectionTails>()
+/** Views whose file has tracked changes: not saved, see tracked-changes.ts */
+const trackedByWc = new Set<number>()
 
 /** Fired after a save lands on a NEW path (Save As); the shell syncs tab title, recents, projects */
 let fileSavedHook: ((wc: WebContents, path: string) => void) | null = null
@@ -221,12 +231,24 @@ function registerHwpIpc(): void {
     }
     const info = await stat(path)
     if (info.size > MAX_HWP_SAVE_BYTES) throw new Error('hwp: file is too large to open')
-    return await readFile(path)
+    const bytes = await readFile(path)
+    // the document the view holds from now on is this file: what is kept follows it
+    const tails = bytesMatchFormat(bytes, 'hwp') ? sectionTailsOf(bytes) : null
+    if (tails) tailsByWc.set(e.sender.id, tails)
+    else tailsByWc.delete(e.sender.id)
+    if (bytesMatchFormat(bytes, 'hwp') && hasTrackedChanges(bytes)) trackedByWc.add(e.sender.id)
+    else trackedByWc.delete(e.sender.id)
+    return bytes
   })
 
   ipcMain.handle(HWP_CHANNELS.beginSave, async (e, mode: unknown): Promise<BeginSaveResult> => {
     const wcId = e.sender.id
     pendingSaveByWc.delete(wcId)
+    // before any dialog: under no name and in no format
+    if (trackedByWc.has(wcId)) {
+      settleSave(wcId, false)
+      return { ok: false, error: 'hwp: the document has tracked changes', reason: 'tracked' }
+    }
     try {
       const current = savePathByWc.get(wcId)
       const currentFormat = current ? hwpFormatOfPath(current) : null
@@ -281,13 +303,24 @@ function registerHwpIpc(): void {
     }
     try {
       const target = pending.path
+      let bytes = data
+      let tailsLost = false
+      const tails = pending.format === 'hwp' ? tailsByWc.get(wcId) : undefined
+      if (tails) {
+        const result = restoreSectionTails(data, tails)
+        bytes = result.bytes
+        if (result.skipped) {
+          tailsLost = true
+          console.warn(`hwp: master pages or memos were not put back on save (${result.skipped})`)
+        }
+      }
       const written = writtenByWc.get(wcId) ?? new Set<string>()
       let backupPath: string | undefined
       if (needsBackup(target, existsSync(target), written)) {
         backupPath = backupPathFor(target)
         await copyFile(target, backupPath)
       }
-      await atomicWriteFile(target, Buffer.from(data.buffer, data.byteOffset, data.byteLength))
+      await atomicWriteFile(target, Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength))
       written.add(target)
       writtenByWc.set(wcId, written)
       const isNewPath = savePathByWc.get(wcId) !== target
@@ -300,7 +333,12 @@ function registerHwpIpc(): void {
       allowedByWc.set(wcId, allowed)
       dirtyByWc.delete(wcId)
       if (isNewPath) fileSavedHook?.(e.sender, target)
-      return done({ ok: true, path: target, ...(backupPath ? { backupPath } : {}) })
+      return done({
+        ok: true,
+        path: target,
+        ...(backupPath ? { backupPath } : {}),
+        ...(tailsLost ? { tailsLost: true as const } : {}),
+      })
     } catch (err) {
       return done({ ok: false, error: err instanceof Error ? err.message : String(err) })
     }
@@ -368,6 +406,8 @@ function grantAndTrack(wc: WebContents, openPath?: string | null): void {
     dirtyByWc.delete(wcId)
     pendingSaveByWc.delete(wcId)
     writtenByWc.delete(wcId)
+    tailsByWc.delete(wcId)
+    trackedByWc.delete(wcId)
     closeSaveWaiters.get(wcId)?.(false)
     closeSaveWaiters.delete(wcId)
     settleSave(wcId, false)

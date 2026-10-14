@@ -11,6 +11,10 @@ export const it = {
   saveProtected:
     'Non salvato: questo documento è protetto da password e salvarlo qui lo scriverebbe senza password.',
   backupKept: 'Salvato. La versione precedente è stata conservata come {name}.',
+  saveTracked:
+    'Non salvato: questo documento contiene revisioni; salvandolo qui andrebbero perse e il file potrebbe non aprirsi in Hancom Hangul.',
+  savedTailsLost:
+    'Salvato, ma non è stato possibile conservare alcune pagine master o note del file originale; Hancom Hangul potrebbe non aprire il file salvato. Aprilo per verificare.',
   dismiss: 'Chiudi',
   aiOpenAssistant: 'Apri assistente IA',
   aiNewChat: 'Nuova chat',

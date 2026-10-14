@@ -11,6 +11,10 @@ export const fr = {
   saveProtected:
     'Non enregistré : ce document est protégé par mot de passe, et l’enregistrer ici l’écrirait sans mot de passe.',
   backupKept: 'Enregistré. La version précédente a été conservée sous le nom {name}.',
+  saveTracked:
+    "Non enregistré : ce document contient des modifications suivies ; l'enregistrer ici les ferait perdre et pourrait produire un fichier que Hancom Hangul ne peut pas ouvrir.",
+  savedTailsLost:
+    "Enregistré, mais certaines pages maîtres ou certains mémos du fichier d'origine n'ont pas pu être conservés ; Hancom Hangul pourrait ne pas ouvrir le fichier enregistré. Ouvrez-le pour vérifier.",
   dismiss: 'Fermer',
   aiOpenAssistant: "Ouvrir l'assistant IA",
   aiNewChat: 'Nouvelle conversation',

@@ -11,6 +11,10 @@ export const de = {
   saveProtected:
     'Nicht gespeichert: Dieses Dokument ist kennwortgeschützt, und beim Speichern hier würde es ohne Kennwort geschrieben.',
   backupKept: 'Gespeichert. Die vorherige Version wurde als {name} aufbewahrt.',
+  saveTracked:
+    'Nicht gespeichert: Dieses Dokument enthält nachverfolgte Änderungen. Beim Speichern hier gingen sie verloren, und Hancom Hangul könnte die Datei nicht öffnen.',
+  savedTailsLost:
+    'Gespeichert, aber einige Masterseiten oder Memos der Originaldatei konnten nicht übernommen werden. Hancom Hangul kann die gespeicherte Datei möglicherweise nicht öffnen. Bitte dort zur Kontrolle öffnen.',
   dismiss: 'Schließen',
   aiOpenAssistant: 'KI-Assistent öffnen',
   aiNewChat: 'Neuer Chat',

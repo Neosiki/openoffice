@@ -193,37 +193,48 @@ export default function App() {
     }
   }, [phase])
 
-  const save = useCallback(async (mode: SaveMode): Promise<boolean> => {
-    const editor = editorRef.current
-    if (!editor || savingRef.current) return false
-    savingRef.current = true
-    try {
-      const outcome = await runSave(savePortOf(editor), window.hwpApi, mode)
-      if (outcome.kind === 'saved') {
-        setNotice(
-          outcome.backupPath
-            ? { tone: 'info', key: 'backupKept', params: { name: fileNameOf(outcome.backupPath) } }
-            : null,
-        )
-        return true
+  const save = useCallback(
+    async (mode: SaveMode): Promise<boolean> => {
+      const editor = editorRef.current
+      if (!editor || savingRef.current) return false
+      savingRef.current = true
+      try {
+        const outcome = await runSave(savePortOf(editor), window.hwpApi, mode)
+        if (outcome.kind === 'saved') {
+          const backup = outcome.backupPath ? { name: fileNameOf(outcome.backupPath) } : null
+          if (outcome.tailsLost) {
+            // stays until dismissed: the file is written, but may not open in Hangul
+            setNotice({
+              tone: 'error',
+              key: 'savedTailsLost',
+              ...(backup ? { detail: t('backupKept', backup) } : {}),
+            })
+          } else {
+            setNotice(backup ? { tone: 'info', key: 'backupKept', params: backup } : null)
+          }
+          return true
+        }
+        if (outcome.kind === 'failed') {
+          setNotice({
+            tone: 'error',
+            key:
+              outcome.reason === 'protected'
+                ? 'saveProtected'
+                : outcome.reason === 'tracked'
+                  ? 'saveTracked'
+                  : outcome.reason === 'verify'
+                    ? 'saveVerifyFailed'
+                    : 'saveFailed',
+            ...(outcome.detail ? { detail: outcome.detail } : {}),
+          })
+        }
+        return false
+      } finally {
+        savingRef.current = false
       }
-      if (outcome.kind === 'failed') {
-        setNotice({
-          tone: 'error',
-          key:
-            outcome.reason === 'protected'
-              ? 'saveProtected'
-              : outcome.reason === 'verify'
-                ? 'saveVerifyFailed'
-                : 'saveFailed',
-          ...(outcome.detail ? { detail: outcome.detail } : {}),
-        })
-      }
-      return false
-    } finally {
-      savingRef.current = false
-    }
-  }, [])
+    },
+    [t],
+  )
 
   // saves asked for by the menu, the shortcut and the close prompt
   useEffect(() => {
