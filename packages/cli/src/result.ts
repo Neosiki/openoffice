@@ -36,6 +36,7 @@ export type ErrorReason =
   | 'conversion_failed'
   | 'app_unavailable'
   | 'app_crashed'
+  | 'paid_route_not_allowed'
   | 'invalid_usage'
 
 export interface ErrorHints {

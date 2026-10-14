@@ -9,6 +9,11 @@ export interface CommandContext {
   log: (message: string) => void
   /** advisories that belong in the result: merged into `warnings` when the command returns */
   warn: (warning: Warning) => void
+  /**
+   * the command runs inside a long-lived host (the MCP server): a document job
+   * it starts runs on in the background and the command answers at once
+   */
+  background?: boolean
 }
 
 export interface OptionDef {

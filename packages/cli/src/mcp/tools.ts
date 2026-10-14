@@ -100,9 +100,9 @@ export const TOOLS: ToolSpec[] = [
     name: 'convert',
     command: 'convert',
     description:
-      'Convert a document to another format with the GenOffice engines (pdf, docx, xlsx, pptx, md, html, csv; the `to` description lists the routes). Targets that need layout (to pdf, docx to html, html to docx) start a hidden GenOffice process for 1-6 s. Output defaults to the input name with the new extension.',
+      'Convert a document to another format with the GenOffice engines (pdf, docx, xlsx, pptx, md, html, csv, epub; the `to` description lists the routes). Targets that need layout (to pdf, docx to html, html to docx) start a hidden GenOffice process for 1-6 s. pdf to md/epub reflows the text (pictures in assets/ beside the .md) and uses pages read by pdf_ai_read. Output defaults to the input name with the new extension.',
     positionals: [{ key: 'file', description: 'path of the source document' }],
-    options: ['to', 'out', 'force', 'password', 'sheet'],
+    options: ['to', 'out', 'force', 'password', 'sheet', 'pages', 'title', 'author', 'no-cover'],
   },
   {
     name: 'create_docx',
@@ -290,7 +290,61 @@ export const TOOLS: ToolSpec[] = [
     description:
       'Text layer of a PDF page by page (1-based page, width_pt/height_pt, text clipped to 4000 characters with truncated: true) plus page count, encrypted flag and title/author/producer metadata; extracted locally with pdfium, no app process. Reads pages 1-20 by default and says how to get the rest: page or range narrows, full reads every page uncapped. Scanned pages come back with empty text (convert to docx runs OCR).',
     positionals: [{ key: 'file', description: 'path of the .pdf' }],
-    options: ['page', 'range', 'password', 'full', 'max-chars'],
+    options: ['page', 'range', 'password', 'full', 'max-chars', 'structured'],
+  },
+  {
+    name: 'pdf_images',
+    command: 'pdf',
+    verb: 'images',
+    description:
+      'Save the pictures drawn on PDF pages as PNG at their own resolution (<name>-p<page>-<n>.png in out; nothing is replaced). Runs locally.',
+    positionals: [{ key: 'file', description: 'path of the .pdf' }],
+    options: [
+      { key: 'out', description: 'folder for the pictures (required)', required: true },
+      'pages',
+      'password',
+    ],
+  },
+  {
+    name: 'pdf_ai_read',
+    command: 'pdf',
+    verb: 'ai-read',
+    openWorld: true,
+    description:
+      'Read PDF pages (scans, formulas, tables) with the AI provider configured in GenOffice; each page image leaves the machine. Without yes: only detail.estimate, nothing sent; ask the user, then call with yes=true (and allow_paid when estimate.metered). With yes the job runs in this server and the call returns detail.started: true; follow it with pdf_status. Read pages are kept and skipped next time.',
+    positionals: [{ key: 'file', description: 'path of the .pdf' }],
+    options: [{ key: 'pages', required: true }, 'yes', 'allow-paid', 'password'],
+  },
+  {
+    name: 'pdf_translate',
+    command: 'pdf',
+    verb: 'translate',
+    openWorld: true,
+    description:
+      'Translate a PDF with the AI provider configured in GenOffice (the text leaves the machine) into a translated PDF, md or epub. Without yes: only detail.estimate, nothing sent; ask the user, then call with yes=true (and allow_paid when estimate.metered). With yes the job runs in this server and the call returns detail.started: true; pdf_status shows progress, stop reason and job.outputs. Calling again continues a stopped job. ar/he/hi: format md,epub only.',
+    positionals: [{ key: 'file', description: 'path of the .pdf' }],
+    options: [
+      { key: 'to', required: true },
+      'pages',
+      'format',
+      'bilingual',
+      { key: 'out', description: 'result file (default <name>.<lang>.<ext> beside the PDF)' },
+      'partial',
+      'restart',
+      'yes',
+      'allow-paid',
+      'password',
+      'force',
+    ],
+  },
+  {
+    name: 'pdf_status',
+    command: 'pdf',
+    verb: 'status',
+    readOnly: true,
+    description:
+      'Pages read by AI and translations GenOffice keeps for a PDF, each with its job { state, last_error?, resetsAt?, outputs, progress? }. Follows pdf_ai_read and pdf_translate. Runs locally.',
+    positionals: [{ key: 'file', description: 'path of the .pdf' }],
   },
   {
     name: 'sheet_read',
@@ -470,7 +524,7 @@ export const TOOLS: ToolSpec[] = [
     command: 'capabilities',
     readOnly: true,
     description:
-      'Which cloud features this server can use, and by which route (free, key or subscription): web search, image search, image generation, image and video analysis. A subscription login is used only after the user turned that on for automatic calls (detail.automatic_calls); an unavailable feature carries the message its tool would answer with. Check once before planning photos or live facts; everything else runs locally.',
+      'Which cloud features this server can use, and by which route (free, key or subscription): web search, image search, image generation, image and video analysis, PDF AI page reading and translation. A subscription login is used only after the user turned that on for automatic calls (detail.automatic_calls); an unavailable feature carries the message its tool would answer with. Check once before planning photos or live facts; everything else runs locally.',
   },
   {
     name: 'search',
@@ -487,7 +541,7 @@ export const TOOLS: ToolSpec[] = [
     command: 'image',
     openWorld: true,
     description:
-      'Generate an image from a prompt with the image provider configured in GenOffice and save it; the result names the real format. ref images steer an edit (key providers only). A failure names its cause in detail.errorCode (unavailable: not configured, do not retry; headless-limit: wait until detail.resetsAt).',
+      'Generate an image from a prompt with the image provider configured in GenOffice and save it; the result names the real format. ref images steer an edit (key providers only). A failure names its cause in detail.errorCode (unavailable: not configured, do not retry; rate-limit: the subscription limit is used up, wait until detail.resetsAt when it is given).',
     positionals: [{ key: 'prompt', description: 'what to draw' }],
     options: ['out', 'aspect', 'size', 'ref', 'model', 'force'],
   },
@@ -497,7 +551,7 @@ export const TOOLS: ToolSpec[] = [
     openWorld: true,
     readOnly: true,
     description:
-      'Describe or extract from an image, audio or video file (or URL) with the provider configured in GenOffice; the file leaves the machine. A failure names its cause in detail.errorCode (unavailable: not configured, do not retry; headless-limit: wait until detail.resetsAt).',
+      'Describe or extract from an image, audio or video file (or URL) with the provider configured in GenOffice; the file leaves the machine. A failure names its cause in detail.errorCode (unavailable: not configured, do not retry; rate-limit: the subscription limit is used up, wait until detail.resetsAt when it is given).',
     positionals: [{ key: 'source', description: 'path or URL of the media' }],
     options: ['ask'],
   },

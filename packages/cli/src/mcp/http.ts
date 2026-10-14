@@ -9,6 +9,7 @@ import { pipeline } from 'node:stream/promises'
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js'
 import { FileStore, MAX_TRANSFER_BYTES, mimeOf, safeName } from './files'
+import { stopBackgroundJobs } from '../pdf-jobs'
 import { createContext, disposeContext, type McpContext } from './run'
 import { createMcpServer, type ServeOptions } from './server'
 
@@ -300,6 +301,8 @@ export async function startHttp(opts: HttpServeOptions): Promise<HttpHandle> {
     url: '',
     port: opts.port,
     async close() {
+      // a PDF job started by a tool call ends with the server ('interrupted'); what it stored stays
+      await stopBackgroundJobs()
       for (const [id, s] of [...sessions]) {
         sessions.delete(id)
         await s.transport.close().catch(() => undefined)

@@ -31,7 +31,7 @@ export function loadPdfium(): Promise<PdfiumModule> {
 }
 
 let ocrEngine: OcrEngine | null | undefined
-function ocr(): OcrEngine | null {
+export function ocr(): OcrEngine | null {
   if (ocrEngine !== undefined) return ocrEngine
   const helper = ocrHelperPath()
   const create = process.platform === 'darwin' ? createVisionOcrEngine : createWindowsOcrEngine
