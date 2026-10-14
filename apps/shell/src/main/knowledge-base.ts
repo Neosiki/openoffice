@@ -12,6 +12,7 @@
 /// so fetching a bounded page and filtering by real path is the cheap,
 /// correct filter.
 
+import { randomBytes } from 'node:crypto'
 import { statSync } from 'node:fs'
 import { basename, dirname } from 'node:path'
 import { assertFileSaved, withoutUnsavedFiles } from '@genoffice/electron-utils/unsaved-files'
@@ -175,5 +176,81 @@ export async function readKnowledgeFilePage(filePath: string, offset: number): P
     text: text.slice(start, start + KB_READ_CHUNK_CHARS),
     totalChars: text.length,
     offset: start,
+  }
+}
+
+// ---- asking one starred group (spec 8.8) ----
+//
+// A home ask can be narrowed to one starred group. The narrowing is kept here
+// in main, not by the screen: the panel names a group once per run, main mints
+// an opaque scope for it, and every kb:* call of that run carries the scope.
+// Main resolves the group's members from the starred store on each call, so a
+// file list sent from the renderer is never trusted, and there is no call that
+// changes what an open scope covers. A call without a scope is an unscoped ask
+// (every starred file, as before); a scope main does not hold is refused, never
+// read as unscoped. Narrowing only ever filters what the existing checks
+// (starred only, unsaved files refused, excerpts from files indexed as on disk)
+// already allow.
+
+/** the refusal of a read outside the run's knowledge base: the starred set, or the run's group */
+export const KB_NOT_IN_BASE = 'path is not in the knowledge base'
+
+/** a call carried a scope main does not hold (never opened, closed, evicted, or another window's) */
+export const KB_SCOPE_UNKNOWN = 'knowledge-base scope is not open'
+
+/** a scope was asked for a group with no starred files (never existed, emptied, renamed away) */
+export const KB_GROUP_EMPTY = 'knowledge-base group has no starred files'
+
+/** how many group scopes main holds at once; the oldest is dropped (and then refused) past this */
+const KB_SCOPES_MAX = 16
+
+export class KbRunScopes {
+  private readonly scopes = new Map<string, { owner: number; group: string }>()
+
+  constructor(
+    private readonly newScope: () => string = () => randomBytes(24).toString('hex'),
+    private readonly max = KB_SCOPES_MAX,
+  ) {}
+
+  /** a scope for one run of `owner` (a webContents id) over `group`; refuses a group with no starred files */
+  open(owner: number, group: unknown, groupOf: ReadonlyMap<string, string>): string {
+    if (typeof group !== 'string' || !group || ![...groupOf.values()].includes(group)) {
+      throw new Error(KB_GROUP_EMPTY)
+    }
+    const scope = this.newScope()
+    this.scopes.set(scope, { owner, group })
+    while (this.scopes.size > this.max) {
+      const oldest = this.scopes.keys().next().value
+      if (oldest === undefined) break
+      this.scopes.delete(oldest)
+    }
+    return scope
+  }
+
+  /** the run is over; only the window that opened a scope can close it */
+  close(owner: number, scope: unknown): void {
+    if (typeof scope === 'string' && this.scopes.get(scope)?.owner === owner) {
+      this.scopes.delete(scope)
+    }
+  }
+
+  /**
+   * `paths` narrowed to what this call may touch. `raw` is the call's argument
+   * object; only its `scope` field is read. No scope: every path (an unscoped
+   * ask). A held scope: the paths whose group is the scope's group right now.
+   * Anything else: refused.
+   */
+  narrow(
+    owner: number,
+    raw: unknown,
+    paths: readonly string[],
+    groupOf: () => ReadonlyMap<string, string>,
+  ): string[] {
+    const scope = raw && typeof raw === 'object' ? (raw as { scope?: unknown }).scope : undefined
+    if (scope === undefined) return [...paths]
+    const held = typeof scope === 'string' ? this.scopes.get(scope) : undefined
+    if (!held || held.owner !== owner) throw new Error(KB_SCOPE_UNKNOWN)
+    const groups = groupOf()
+    return paths.filter((path) => groups.get(path) === held.group)
   }
 }

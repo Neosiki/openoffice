@@ -315,6 +315,8 @@ import { FileIndexer } from './file-index/indexer'
 import { FileIndexStore } from './file-index/store'
 import { normalizeFileSearchSettings, probeDecision, SearchReranker } from './file-index/rerank'
 import {
+  KB_NOT_IN_BASE,
+  KbRunScopes,
   listKnowledgeFiles,
   readKnowledgeFilePage,
   searchSavedKnowledgeBase,
@@ -3894,9 +3896,28 @@ function registerHomeIpc(): void {
   // files (docs wires these into its panel; see knowledge-base.ts). Path
   // arguments are validated against the starred set — a corpus file is the
   // only thing a knowledge tool may read.
-  ipcMain.handle('kb:list', (): unknown => listKnowledgeFiles(readStarredFiles()))
+  // A home ask narrowed to one starred group (spec 8.8) carries a scope main
+  // minted for that run; main resolves the group's members itself on every
+  // call (see KbRunScopes). A call without a scope is an unscoped ask.
+  const kbRunScopes = new KbRunScopes()
+  ipcMain.handle('kb:open-scope', (event, group: unknown): string =>
+    kbRunScopes.open(event.sender.id, group, readStarredGroupMap()),
+  )
+  ipcMain.handle('kb:close-scope', (event, scope: unknown): void =>
+    kbRunScopes.close(event.sender.id, scope),
+  )
 
-  ipcMain.handle('kb:search', async (_event, raw: unknown): Promise<unknown> => {
+  ipcMain.handle('kb:list', (event, raw: unknown): unknown => {
+    const starred = kbRunScopes.narrow(
+      event.sender.id,
+      raw,
+      readStarredFiles(),
+      readStarredGroupMap,
+    )
+    return listKnowledgeFiles(starred)
+  })
+
+  ipcMain.handle('kb:search', async (event, raw: unknown): Promise<unknown> => {
     const query = (raw && typeof raw === 'object' ? raw : {}) as { q?: unknown; limit?: unknown }
     const q = typeof query.q === 'string' ? query.q : ''
     const limitRaw = Number(query.limit)
@@ -3907,6 +3928,8 @@ function registerHomeIpc(): void {
     // a file saved since its last scan is still indexed as it was before the
     // save, so only the files the index holds as they are on disk are quoted
     const starred = store.pathsIndexedAsOnDisk(readStarredFiles())
+    // a group-scoped ask searches its group only: a further filter on the set above, never a wider one
+    const inScope = kbRunScopes.narrow(event.sender.id, raw, starred, readStarredGroupMap)
     // a starred file open with unsaved changes is left out: its excerpt would
     // be the text as last saved, before any withholding mark still in the editor
     const hits = await searchSavedKnowledgeBase(
@@ -3918,13 +3941,13 @@ function registerHomeIpc(): void {
           snippetText: (h.snippet ?? []).map((part) => part.text).join(''),
         })),
       q,
-      starred,
+      inScope,
       Math.min(limit, 20),
     )
     return hits
   })
 
-  ipcMain.handle('kb:read', async (_event, raw: unknown): Promise<unknown> => {
+  ipcMain.handle('kb:read', async (event, raw: unknown): Promise<unknown> => {
     const req = (raw && typeof raw === 'object' ? raw : {}) as {
       path?: unknown
       offset?: unknown
@@ -3934,6 +3957,10 @@ function registerHomeIpc(): void {
     const offset = Number.isFinite(offsetRaw) ? Math.floor(offsetRaw) : 0
     if (!path || !readStarredFiles().includes(path)) {
       throw new Error('path is not in the knowledge base')
+    }
+    // a group-scoped ask reads its group only: the same refusal, on top of the check above
+    if (!kbRunScopes.narrow(event.sender.id, raw, [path], readStarredGroupMap).includes(path)) {
+      throw new Error(KB_NOT_IN_BASE)
     }
     return readKnowledgeFilePage(path, offset)
   })

@@ -157,14 +157,27 @@ const homeApi: HomeApi = {
   },
   // knowledge-base ask panel (handlers live in the shell main, same process
   // that owns the index and the shared ai:stream registration)
-  async kbList() {
-    return ipcRenderer.invoke('kb:list')
+  async kbList(scope) {
+    return scope === undefined
+      ? ipcRenderer.invoke('kb:list')
+      : ipcRenderer.invoke('kb:list', { scope })
   },
-  async kbSearch(query) {
-    return ipcRenderer.invoke('kb:search', query)
+  async kbSearch(query, scope) {
+    return ipcRenderer.invoke('kb:search', scope === undefined ? query : { ...query, scope })
   },
-  async kbRead(path, offset) {
-    return ipcRenderer.invoke('kb:read', { path, offset })
+  async kbRead(path, offset, scope) {
+    return ipcRenderer.invoke(
+      'kb:read',
+      scope === undefined ? { path, offset } : { path, offset, scope },
+    )
+  },
+  async kbOpenScope(group) {
+    const scope: unknown = await ipcRenderer.invoke('kb:open-scope', group)
+    if (typeof scope !== 'string' || !scope) throw new Error('knowledge-base scope is not open')
+    return scope
+  },
+  async kbCloseScope(scope) {
+    await ipcRenderer.invoke('kb:close-scope', scope)
   },
   async aiGetSettings() {
     return ipcRenderer.invoke('ai:get-settings')

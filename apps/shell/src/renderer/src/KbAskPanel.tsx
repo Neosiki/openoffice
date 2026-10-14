@@ -120,6 +120,19 @@ export function KbAskPanel({
   langRef.current = lang
   const connectionRef = useRef(connection)
   connectionRef.current = connection
+  /** starred groups that have files, as last read: the "All / <group>" choice */
+  const [groups, setGroups] = useState<string[]>([])
+  /** the group asks are narrowed to (null = All). Starts at All whenever the
+   *  panel opens and is stored nowhere: the choice is not remembered (spec 8.8) */
+  const [scopeGroup, setScopeGroup] = useState<string | null>(null)
+  /** starred files in the chosen group, for the headbar (null until known) */
+  const [scopeCount, setScopeCount] = useState<number | null>(null)
+  /** the scope main minted for the latest narrowed run: the knowledge tools carry it on
+   *  every call, and main keeps it to its group. It stays set (closed in main, so
+   *  refused) after the run, so a late call of that run is never read as unscoped */
+  const runScopeRef = useRef<string | undefined>(undefined)
+  /** that scope while main still holds it open */
+  const openScopeRef = useRef<string | undefined>(undefined)
   /** the provider a question would run on right now (null until the settings are read) */
   const providerChoice = aiSettings ? selectAiProvider(aiSettings, connection.statuses) : null
   const aiConnected = providerChoice?.connected === true
@@ -140,7 +153,34 @@ export function KbAskPanel({
       .catch(() => undefined)
   }
 
+  const refreshGroups = (): void => {
+    if (typeof window.aiOffice?.starredGroups !== 'function') return
+    void window.aiOffice
+      .starredGroups()
+      .then(setGroups)
+      .catch(() => undefined)
+  }
+
+  /** the narrowed run is over: main drops its scope */
+  const endRunScope = (): void => {
+    const scope = openScopeRef.current
+    openScopeRef.current = undefined
+    if (scope !== undefined) void window.aiOffice.kbCloseScope(scope).catch(() => undefined)
+  }
+
+  const chooseScope = (group: string | null): void => {
+    if (busy) return
+    setScopeGroup(group)
+    setScopeCount(null)
+    if (group === null || typeof window.aiOffice?.starred !== 'function') return
+    void window.aiOffice
+      .starred({ group, limit: 0 })
+      .then((page) => setScopeCount(page.totalAll))
+      .catch(() => undefined)
+  }
+
   useEffect(() => {
+    refreshGroups()
     // one corpus snapshot per mount; sends refresh it again (see ask()).
     // A bridge without the kb channel (defensive: the shell always exposes
     // it) leaves the corpus empty, which keeps the panel on its guidance.
@@ -171,8 +211,10 @@ export function KbAskPanel({
       }),
       skill: createKnowledgeBaseSkill({
         listFiles: () => corpusRef.current,
-        search: (query, limit) => window.aiOffice.kbSearch({ q: query, limit }),
-        read: (path, offset) => window.aiOffice.kbRead(path, offset),
+        // a narrowed run's calls carry its scope; main keeps them to the group
+        search: (query, limit) =>
+          window.aiOffice.kbSearch({ q: query, limit }, runScopeRef.current),
+        read: (path, offset) => window.aiOffice.kbRead(path, offset, runScopeRef.current),
       }),
       events: {
         onText: (text) => patchLast({ text }),
@@ -185,13 +227,17 @@ export function KbAskPanel({
                 : { label: t('askToolRead'), kind: 'read' as const },
             ],
           })),
-        onDone: () => finishLast(),
+        onDone: () => {
+          endRunScope()
+          finishLast()
+        },
         onUsage: (usage) => {
           runUsageRef.current = addTokenUsage(runUsageRef.current, usage)
           setSessionUsage((prev) => addTokenUsage(prev, usage))
           patchLast({ usage: runUsageRef.current })
         },
         onError: (error) => {
+          endRunScope()
           const blocked = streamErrorRef.current
           streamErrorRef.current = null
           if (blocked) {
@@ -214,7 +260,10 @@ export function KbAskPanel({
         },
       },
     })
-    return () => loopRef.current?.cancel()
+    return () => {
+      loopRef.current?.cancel()
+      endRunScope()
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only; the loop reads live refs
   }, [])
 
@@ -264,20 +313,55 @@ export function KbAskPanel({
     refreshSettings()
     const seq = ++askSeqRef.current
     runUsageRef.current = undefined
+    // a narrowed ask: main mints this run's scope for the chosen group and keeps
+    // every call of the run inside it. A group that has no files any more runs
+    // nothing; it never widens to every starred file.
+    const group = scopeGroup
+    refreshGroups()
+    let scope: string | undefined
+    if (group !== null) {
+      try {
+        scope = await window.aiOffice.kbOpenScope(group)
+      } catch {
+        if (askSeqRef.current !== seq) return
+        setMessages((prev) => [
+          ...prev,
+          { role: 'user', text: instruction, toolNotes: [] },
+          { role: 'assistant', text: t('askScopeGone'), toolNotes: [], isError: true },
+        ])
+        setBusy(false)
+        return
+      }
+    }
+    runScopeRef.current = scope
+    openScopeRef.current = scope
+    if (askSeqRef.current !== seq) {
+      endRunScope()
+      return
+    }
     // freshly starred files are answerable this very turn
     try {
-      const files = await window.aiOffice.kbList()
+      const files =
+        scope === undefined ? await window.aiOffice.kbList() : await window.aiOffice.kbList(scope)
       corpusRef.current = files
-      setCorpusCount(files.length)
+      if (scope === undefined) setCorpusCount(files.length)
+      else setScopeCount(files.length)
     } catch {
-      // keep the mount snapshot
+      // keep the mount snapshot; a narrowed run never falls back to the full list
+      if (scope !== undefined) corpusRef.current = []
     }
-    if (askSeqRef.current !== seq) return
+    if (askSeqRef.current !== seq) {
+      endRunScope()
+      return
+    }
     if (corpusRef.current.length === 0) {
+      endRunScope()
       setMessages((prev) => [
         ...prev,
         { role: 'user', text: instruction, toolNotes: [] },
-        { role: 'assistant', text: t('askEmptyCorpus'), toolNotes: [] },
+        scope === undefined
+          ? { role: 'assistant', text: t('askEmptyCorpus'), toolNotes: [] }
+          : { role: 'assistant', text: t('askScopeGone'), toolNotes: [], isError: true },
       ])
       setBusy(false)
       return
@@ -326,7 +410,27 @@ export function KbAskPanel({
       {corpusCount !== null && corpusCount > 0 && (
         <div className="kb-ask-headbar">
           <b>{t('askTitle')}</b>
-          <span>{t('askCorpusCount', { n: String(corpusCount) })}</span>
+          <span>
+            {scopeGroup === null
+              ? t('askCorpusCount', { n: String(corpusCount) })
+              : scopeCount === null
+                ? scopeGroup
+                : t('askCorpusCountGroup', { group: scopeGroup, n: String(scopeCount) })}
+          </span>
+          {(groups.length > 0 || scopeGroup !== null) && (
+            <KbAskScopeChoice
+              groups={
+                scopeGroup === null || groups.includes(scopeGroup)
+                  ? groups
+                  : [...groups, scopeGroup]
+              }
+              chosen={scopeGroup}
+              disabled={busy}
+              allLabel={t('askScopeAll')}
+              ariaLabel={t('askScopeLabel')}
+              onChoose={chooseScope}
+            />
+          )}
         </div>
       )}
       <div className="kb-ask-thread" ref={scrollRef}>
@@ -482,9 +586,53 @@ export function KbAskPanel({
         onStop={() => {
           askSeqRef.current++
           loopRef.current?.cancel()
+          endRunScope()
           finishLast()
         }}
       />
+    </div>
+  )
+}
+
+/**
+ * "All / <group>": what the next ask reads. Same segmented look as the Starred
+ * view's group pills. Choosing only names the group; the narrowing itself is
+ * kept by the main process for the run (see KbRunScopes in knowledge-base.ts).
+ */
+function KbAskScopeChoice({
+  groups,
+  chosen,
+  disabled,
+  allLabel,
+  ariaLabel,
+  onChoose,
+}: {
+  groups: string[]
+  chosen: string | null
+  disabled: boolean
+  allLabel: string
+  ariaLabel: string
+  onChoose: (group: string | null) => void
+}): React.JSX.Element {
+  const options: Array<{ group: string | null; label: string }> = [
+    { group: null, label: allLabel },
+    ...groups.map((group) => ({ group, label: group })),
+  ]
+  return (
+    <div className="filter-pills kb-ask-scope" role="radiogroup" aria-label={ariaLabel}>
+      {options.map((option) => (
+        <button
+          key={option.group ?? ''}
+          type="button"
+          role="radio"
+          aria-checked={chosen === option.group}
+          className={`filter-pill${chosen === option.group ? ' active' : ''}`}
+          disabled={disabled}
+          onClick={() => onChoose(option.group)}
+        >
+          {option.label}
+        </button>
+      ))}
     </div>
   )
 }
