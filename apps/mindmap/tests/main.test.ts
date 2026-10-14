@@ -164,12 +164,7 @@ describe('channel names', () => {
     ] as const) {
       expect(handlers.has(MINDMAP_CHANNELS[name])).toBe(true)
     }
-    for (const name of [
-      'outlineResult',
-      'bytesResult',
-      'handoffTake',
-      'seedTake',
-    ] as const) {
+    for (const name of ['outlineResult', 'bytesResult', 'handoffTake', 'seedTake'] as const) {
       expect(handlers.has(MINDMAP_CHANNELS[name])).toBe(false)
     }
   })

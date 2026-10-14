@@ -81,6 +81,8 @@ function fakeApi(options: FakeOptions) {
     onFileRenamed: on('renamed'),
     openLink: async () => true,
     onMenuCommand: on('menu'),
+    onExportRequest: on('export'),
+    onPrintRequest: on('print'),
     getLanguage: async () => 'en' as Lang,
     onLanguageChanged: on('language'),
     getTheme: async () => 'system' as const,
