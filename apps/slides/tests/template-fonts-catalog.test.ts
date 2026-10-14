@@ -13,9 +13,7 @@ const bundled = new Map(TEMPLATE_FONTS.map((f) => [f.family, f]))
 function hasWeight(family: string, weight: number): boolean {
   const f = bundled.get(family)
   if (!f) return false
-  return f.faces.some(
-    (face) => face.weight >= weight || (face.variableWeight?.max ?? 0) >= weight,
-  )
+  return f.faces.some((face) => face.weight >= weight || (face.variableWeight?.max ?? 0) >= weight)
 }
 
 /** Single-weight display families: their one face is the heavy one, bold adds nothing. */
@@ -44,7 +42,8 @@ describe('template fonts against the bundled font set', () => {
     for (const t of listSlideTemplates()) {
       for (const [lang, page] of Object.entries(t.sampleCover)) {
         for (const el of page.elements) {
-          for (const p of el.paragraphs ?? []) {
+          const paragraphs = 'paragraphs' in el ? (el.paragraphs ?? []) : []
+          for (const p of paragraphs) {
             for (const r of p.runs) {
               if (!r.bold || !r.font || DISPLAY_ONLY.has(r.font)) continue
               if (!hasWeight(r.font, 600)) misses.push(`${t.id}/${lang}: ${r.font}`)
