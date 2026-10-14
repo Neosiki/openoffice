@@ -6,4 +6,6 @@
  * passes the initialized module in. Node-only parts (the result store) live
  * behind their own entry and are not exported here.
  */
-export {}
+export * from './tree'
+export { extractEmbeddedImages, MIN_IMAGE_PX, MAX_IMAGE_TOTAL_PX } from './images'
+export type { EmbeddedImage, ExtractEmbeddedImagesOptions } from './images'
