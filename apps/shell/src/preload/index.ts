@@ -39,6 +39,8 @@ import { RESULT_STORE_CHANNELS } from '../shared/result-store-api'
 import type { ResultStoreApi } from '../shared/result-store-api'
 import type { TabsApi, TabSummary } from '../shared/tabs-api'
 import { TABS_CHANNELS } from '../shared/tabs-api'
+import type { GenerateHomeApi } from '../shared/generate-api'
+import { GENERATE_HOME_CHANNELS } from '../shared/generate-home-channels'
 import type { SubscriptionApi } from '../shared/subscription-api'
 import {
   SHELL_SUBSCRIPTION_CHANNELS,
@@ -160,14 +162,27 @@ const homeApi: HomeApi = {
   },
   // knowledge-base ask panel (handlers live in the shell main, same process
   // that owns the index and the shared ai:stream registration)
-  async kbList() {
-    return ipcRenderer.invoke('kb:list')
+  async kbList(scope) {
+    return scope === undefined
+      ? ipcRenderer.invoke('kb:list')
+      : ipcRenderer.invoke('kb:list', { scope })
   },
-  async kbSearch(query) {
-    return ipcRenderer.invoke('kb:search', query)
+  async kbSearch(query, scope) {
+    return ipcRenderer.invoke('kb:search', scope === undefined ? query : { ...query, scope })
   },
-  async kbRead(path, offset) {
-    return ipcRenderer.invoke('kb:read', { path, offset })
+  async kbRead(path, offset, scope) {
+    return ipcRenderer.invoke(
+      'kb:read',
+      scope === undefined ? { path, offset } : { path, offset, scope },
+    )
+  },
+  async kbOpenScope(group) {
+    const scope: unknown = await ipcRenderer.invoke('kb:open-scope', group)
+    if (typeof scope !== 'string' || !scope) throw new Error('knowledge-base scope is not open')
+    return scope
+  },
+  async kbCloseScope(scope) {
+    await ipcRenderer.invoke('kb:close-scope', scope)
   },
   async aiGetSettings() {
     return ipcRenderer.invoke('ai:get-settings')
@@ -204,6 +219,9 @@ const homeApi: HomeApi = {
   },
   async newHtml(opts) {
     await ipcRenderer.invoke(HOME_CHANNELS.newHtml, opts)
+  },
+  async newMindmap(opts) {
+    await ipcRenderer.invoke(HOME_CHANNELS.newMindmap, opts)
   },
   async newPdf(opts) {
     await ipcRenderer.invoke(HOME_CHANNELS.newPdf, opts)
@@ -703,6 +721,17 @@ const tabsApi: TabsApi = {
 }
 
 contextBridge.exposeInMainWorld('aiOfficeTabs', tabsApi)
+
+// Home's entry points into the generate window ("make a new document from these files")
+const generateHomeApi: GenerateHomeApi = {
+  async openWithPaths(paths) {
+    await ipcRenderer.invoke(GENERATE_HOME_CHANNELS.openWithPaths, paths)
+  },
+  async openWithGroup(group) {
+    await ipcRenderer.invoke(GENERATE_HOME_CHANNELS.openWithGroup, group)
+  },
+}
+contextBridge.exposeInMainWorld('aiOfficeGenerate', generateHomeApi)
 
 // open documents dragged from the OS anywhere over Home or the tab strip
 installDropOpenBridge()

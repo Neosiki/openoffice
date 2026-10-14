@@ -6,6 +6,7 @@ import { SUBSCRIPTION_IPC_CHANNELS } from '@genoffice/ai-provider/browser'
 import type { ProjectApi } from '@genoffice/project-store'
 import { installDropOpenBridge } from '@genoffice/electron-utils/drop-open'
 import { AI_CHANNELS, HTML_CHANNELS } from '../shared/ipc'
+import { HTML_HANDOFF_CHANNELS } from '../shared/ipc'
 import type { AutoSaveDefault, ExportFormat, HtmlApi, SaveMode, UiTheme } from '../shared/ipc'
 import {
   SUBSCRIPTION_INSTALL_HELP_CHANNEL,
@@ -164,6 +165,10 @@ const api: HtmlApi = {
     ipcRenderer.invoke(AI_CHANNELS.imageSearch, query, maxResults),
   fetchImage: (url) => ipcRenderer.invoke(HTML_CHANNELS.fetchImage, url),
   aiGenerateImage: (op) => ipcRenderer.invoke(HTML_CHANNELS.aiGenerateImage, op),
+  // the generate hand-off (8.5): no handler (standalone, older shell) rejects; the panel reads that as "nothing"
+  takeGenerateHandoff: () => ipcRenderer.invoke(HTML_HANDOFF_CHANNELS.take),
+  reportGenerateRunStarted: (attachedPaths) =>
+    ipcRenderer.invoke(HTML_HANDOFF_CHANNELS.runStarted, attachedPaths),
 }
 
 /** Chat persistence: the shared project:* handlers are registered once by the shell (docs-main registerProjectIpc) */

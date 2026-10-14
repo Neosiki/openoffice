@@ -22,6 +22,7 @@ import {
 import { pdfIsDirty, requestPdfClose } from '../../../pdf/src/main/pdf-main'
 import { markdownIsDirty, requestMarkdownClose } from '../../../markdown/src/main/markdown-main'
 import { htmlIsDirty, requestHtmlClose } from '../../../html/src/main/html-main'
+import { mindmapIsDirty, requestMindmapClose } from '../../../mindmap/src/main/mindmap-main'
 import { canonicalPath } from './tab-manager'
 import type { DetachedTab } from './tab-manager'
 import type { OpenDocumentTab, TabKind } from '../shared/tabs-api'
@@ -112,6 +113,7 @@ const DEFAULT_SIZE: Record<string, { width: number; height: number }> = {
   pdf: { width: 1200, height: 900 },
   markdown: { width: 1200, height: 850 },
   html: { width: 1200, height: 850 },
+  mindmap: { width: 1200, height: 850 },
 }
 
 /** where the pointer sits inside a freshly torn-off window's title bar */
@@ -224,6 +226,8 @@ async function detachedIsDirty(rec: DetachedRecord): Promise<boolean> {
       return markdownIsDirty(wc.id)
     case 'html':
       return htmlIsDirty(wc.id)
+    case 'mindmap':
+      return mindmapIsDirty(wc.id)
     default:
       return false
   }
@@ -248,6 +252,8 @@ async function confirmDetachedClose(rec: DetachedRecord): Promise<boolean> {
       return requestMarkdownClose(wc, win)
     case 'html':
       return requestHtmlClose(wc, win)
+    case 'mindmap':
+      return requestMindmapClose(wc, win)
     default:
       return true
   }

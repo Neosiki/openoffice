@@ -99,6 +99,8 @@ describe('headlessModuleFor', () => {
   it('returns null for an unsupported extension', () => {
     expect(headlessModuleFor('/x/a.pdf')).toBeNull()
     expect(headlessModuleFor('/x/a.doc')).toBeNull()
+    // a mind map has no headless exporter: the entry reports it as an input it cannot export
+    expect(headlessModuleFor('/x/plan.xmind')).toBeNull()
     expect(headlessModuleFor('/x/noext')).toBeNull()
   })
 })

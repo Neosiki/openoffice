@@ -213,12 +213,17 @@ export interface HomeApi {
   /** star / unstar a file */
   toggleStar(path: string): Promise<void>
   // ---- knowledge-base ask panel: the reader's starred corpus, askable ----
-  /** the starred corpus as the AI's knowledge base */
-  kbList(): Promise<KbFileInfo[]>
-  /** full-text search over the corpus */
-  kbSearch(query: { q: string; limit?: number }): Promise<KbSearchHit[]>
-  /** one page of a corpus file's parsed text (path must be in kbList) */
-  kbRead(path: string, offset: number): Promise<KbReadPage>
+  /** the starred corpus as the AI's knowledge base (`scope`: only the run's group, see kbOpenScope) */
+  kbList(scope?: string): Promise<KbFileInfo[]>
+  /** full-text search over the corpus (`scope`: only the run's group) */
+  kbSearch(query: { q: string; limit?: number }, scope?: string): Promise<KbSearchHit[]>
+  /** one page of a corpus file's parsed text (path must be in kbList; with `scope`, in the run's group) */
+  kbRead(path: string, offset: number, scope?: string): Promise<KbReadPage>
+  /** open a run narrowed to one starred group; main mints the scope and keeps the narrowing.
+   *  Rejects when the group has no starred files (the run must not widen to all) */
+  kbOpenScope(group: string): Promise<string>
+  /** the narrowed run is over */
+  kbCloseScope(scope: string): Promise<void>
   /** the user's AI provider settings (shared with every app's panel) */
   aiGetSettings(): Promise<AiSettings>
   /** one streamed model turn over the shared ai:stream handler */
@@ -241,6 +246,8 @@ export interface HomeApi {
   newMarkdown(opts?: NewFileOpts): Promise<void>
   /** open a blank html editor tab */
   newHtml(opts?: NewFileOpts): Promise<void>
+  /** open a new, untitled mind map tab */
+  newMindmap(opts?: NewFileOpts): Promise<void>
   /** create a blank single-page PDF in the default save folder and open it */
   newPdf(opts?: NewFileOpts): Promise<void>
   /** drop entries from the recent list (does not touch the files) */
@@ -485,6 +492,7 @@ export const HOME_CHANNELS = {
   newSlide: 'home:new-slide',
   newMarkdown: 'home:new-markdown',
   newHtml: 'home:new-html',
+  newMindmap: 'home:new-mindmap',
   newPdf: 'home:new-pdf',
   removeRecent: 'home:remove-recent',
   revealPath: 'home:reveal-path',

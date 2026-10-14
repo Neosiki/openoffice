@@ -90,6 +90,7 @@ import {
   type EditQueueItem,
 } from './edit-queue'
 import { buildProjection } from './redact'
+import { useGenerateHandoff } from './generate-handoff'
 
 /** [chip label, composer prefill]: blank page → design something new; page with content → rework it */
 const GENERATE_STARTERS = [
@@ -318,6 +319,7 @@ export function AiPanel({
   onQueueFocus,
   onQueueConsume,
   onCollapse,
+  onGenerateHandoff,
 }: {
   deps: HtmlAiDeps
   filePath: string | null
@@ -330,6 +332,8 @@ export function AiPanel({
   onQueueFocus: (qid: string) => void
   onQueueConsume: (qids: string[]) => void
   onCollapse: () => void
+  /** this new tab took a request handed over by "make" (8.5) */
+  onGenerateHandoff?: () => void
 }): ReactElement {
   const { lang, t } = useI18n()
   const [chat, setChat] = useState<ChatEntry[]>([])
@@ -1055,6 +1059,17 @@ export function AiPanel({
     stickToBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 48
   }
 
+  /** a new tab opened by "make" takes its request once and sends it through `send` (8.5) */
+  const generateHandoff = useGenerateHandoff({
+    filePath,
+    composer: prompt,
+    attach: mergeAttachments,
+    setComposer: setPrompt,
+    designIntent: () => setIntent('design'),
+    send: (text) => send(text),
+    onTaken: onGenerateHandoff,
+  })
+
   /** false when nothing was started (empty text or a run already active) */
   const send = (
     text: string,
@@ -1085,6 +1100,7 @@ export function AiPanel({
     setInputTruncated(false)
     // the message consumes the composer attachments: echoed on the bubble, images multimodal, files via the skill
     const sentAtts = attachmentsOverride ?? attachmentsRef.current
+    generateHandoff.runAdmitted(sentAtts)
     if (sentAtts.length > 0) {
       const seen = new Set(sentAttachmentsRef.current.map((a) => a.path))
       sentAttachmentsRef.current = [

@@ -1,13 +1,16 @@
 # apps/shell (`@genoffice/shell`)
 
-실제로 배포되는 앱이다. Electron 프로세스 하나, 창 하나에 홈 화면과 여섯 에디터를 탭(`WebContentsView`)으로 띄운다. 설치 프로그램에 들어가는 것은 이 앱뿐이고, 에디터들의 메인 프로세스 코드는 이 앱의 메인 번들 안에서 돈다.
+실제로 배포되는 앱이다. Electron 프로세스 하나, 창 하나에 홈 화면과 에디터들을 탭(`WebContentsView`)으로 띄운다. 설치 프로그램에 들어가는 것은 이 앱뿐이고, 에디터들의 메인 프로세스 코드는 이 앱의 메인 번들 안에서 돈다.
 
 ## 맡은 범위
 
 - 앱의 수명 주기(`src/main/index.ts`): 단일 인스턴스 잠금, userData 위치, 확장자에 따른 파일 라우팅, 탭별 메뉴 전환, 종료 처리, `--headless-export` 진입.
 - 탭과 창: `src/main/tab-manager.ts`, 떼어 낸 창(`detached-windows.ts`), 닫기 확인(`window-close-guard.ts`), 렌더러 자원 감시(`renderer-watchdog.ts`).
 - 홈 화면과 설정(`src/renderer/src/`): `Home.tsx`, `Onboarding.tsx`, `SettingsModal.tsx`, AI 설정 `SettingsAiSection.tsx`·`settings-ai.ts`, 통합 탭 `IntegrationsPane.tsx`, 별표 파일에 묻는 `KbAskPanel.tsx`, 앱 안 도움말(`i18n/help/`).
-- 파일 색인과 지식 기반(`src/main/file-index/`, `knowledge-base.ts`), 최근 파일, 폴더 트리.
+- 파일 색인과 지식 기반(`src/main/file-index/`, `knowledge-base.ts`), 최근 파일, 폴더 트리. 홈의 질문을 별표 그룹 하나로 좁히는 일(`knowledge-base.ts`의 `KbRunScopes`, `kb:open-scope`·`kb:close-scope`).
+- 문서로 새 문서 만들기(`src/main/generate/`): 만들기 창(`generate-window.ts`, 화면은 `src/renderer/generate.html`과 `src/renderer/src/generate/`), 창 하나의 상태와 동작(`session.ts`), 요청 검사(`request.ts`), 자료의 상태와 글 길이(`materials.ts`), 자료가 열린 탭과 그 저장(`open-materials.ts`), AI 없이 바꾸기(`convert.ts`, `converted-tab.ts`), 조정 가능한 값(`limits.ts`). 홈의 입구는 `generate:open-with-paths`·`generate:open-with-group`이다.
+- 출처 기록(`document-links.ts`, 껍데기 쪽 배선 `document-links-shell.ts`)과 모든 에디터의 파일 메뉴에 붙는 "이 문서로 다른 문서 만들기"·"자료 보기"·"이 문서로 만든 문서"(`document-links-menu.ts`).
+- 열린 탭 가운데 저장하지 않은 문서의 목록을 에디터 뒷단에 알려 주는 일(`index.ts`에서 `setOpenFilesSource`).
 - 자동 업데이트(`updater.ts`, `update-window.ts`, `update-resume.ts`)와 패키징 설정 `electron-builder.cjs`.
 - 외부에서 들어오는 입구: 앱 안 MCP 서버(`src/main/mcp/`), 명령줄용 제어 채널(`control-server.ts`), 열린 문서 목록 게시(`open-documents.ts`), 명령줄 PATH 연결과 실행기 위치 기록(`cli-link.ts`), 스킬·MCP 등록 IPC(`integrations-ipc.ts`).
 - 기본 앱 등록과 파일 연결(`default-app.ts`).
@@ -16,9 +19,11 @@
 
 ## 맡지 않는 것 (경계)
 
-- 문서 편집과 형식별 저장·내보내기는 이 모듈의 범위가 아니다. 각 에디터(`apps/docs`, `apps/sheets`, `apps/slides`, `apps/pdf`, `apps/markdown`, `apps/html`)가 한다. shell은 그 메인 모듈의 내보낸 함수(`createDocsView`, `configureSheetsRuntime` 등)를 부른다.
+- 문서 편집과 형식별 저장·내보내기는 이 모듈의 범위가 아니다. 각 에디터(`apps/docs`, `apps/sheets`, `apps/slides`, `apps/pdf`, `apps/markdown`, `apps/html`, `apps/mindmap`)가 한다. shell은 그 메인 모듈의 내보낸 함수(`createDocsView`, `configureSheetsRuntime` 등)를 부른다.
 - AI 요청의 실행은 범위가 아니다. `ai:*` 채널과 구독 IPC 채널은 `apps/docs/src/main/docs-main.ts`의 `registerAiIpc`가 등록한다. shell은 그것을 한 번 호출할 뿐이고, AI와 관련해 직접 응답하는 채널은 `home:open-subscription-install-help`(벤더의 설치 안내 페이지 열기)와 `ai:open-model-settings`(홈 탭의 설정 화면 열기)뿐이다.
 - 제공자 선택 규칙, 구독 프로그램 실행은 `packages/ai-provider`, 연결 카드와 알림 컴포넌트는 `packages/ui`의 범위다.
+- 새 문서의 글을 쓰는 것은 만들 문서 쪽 에디터(PPT, HTML, 마인드맵)의 AI다. 이 모듈은 생성 코드를 갖지 않고, 요청을 새 탭 앞으로 맡겨 둘 뿐이다. 맡겨 두는 곳은 `packages/electron-utils`의 `generate-handoff.ts`이고(`src/main/generate/handoff.ts`는 그것을 다시 내보낸다), 가져가는 창구(`<에디터>:handoff-take`)는 각 에디터가 등록한다.
+- 파일을 글로 읽는 일과 가리기 적용은 `packages/file-parse`, 지도 파일의 해석과 개요 글은 `packages/xmind-engine`의 범위다.
 - 명령줄과 그 MCP 서버의 구현은 `packages/cli`의 범위다. 앱 안 MCP 서버의 창 없는 도구들은 그 명령줄을 프로세스로 실행해 결과 봉투를 옮길 뿐, 문서 엔진을 다시 구현하지 않는다(`src/main/mcp/cli-runner.ts`).
 - 제품 이름과 저장소 좌표의 정의는 `packages/i18n/src/product.ts`의 범위다.
 
@@ -36,6 +41,13 @@
 - 업데이트는 이 제품의 공개 저장소의 GitHub Releases에서만 받는다. 저장소는 `electron-builder.cjs`의 `publish`에서 `app-update.yml`로 구워지고, 빌드 시 주입되는 값이나 토큰이 없다. 확인 실패(릴리스 없음, 네트워크 없음)는 조용히 넘긴다. 설치 프로그램은 서명하지 않는다.
 - 앱 안 MCP 서버와 제어 채널은 로컬 전용이다. MCP 서버는 루프백에만 바인드하고 Host 헤더를 검사한다(인증이 없으므로). 제어 채널은 userData의 소켓·명명된 파이프와 실행마다 새로 만든 토큰을 쓰고, 명령은 "이 위치를 보여 줘"와 "선택을 읽어 줘"뿐이다. 요청으로 파일을 쓰거나 코드를 실행하는 명령을 추가하지 않는다.
 - 스킬과 MCP 등록은 통합 탭에서 사용자가 누를 때만 쓴다. 시작 시 자동으로 에이전트 설정 파일을 고치지 않는다.
+- **만들기 창은 AI 실행을 시작하지 않는다.** "만들기"는 만들 종류의 제목 없는 새 탭을 열고 그 탭의 webContents 앞으로 요청을 한 번 맡겨 둘 뿐이다. 실행은 그 탭의 에디터가 자기 보내기 판단을 지나 시작한다. 탭이 열렸다는 이유만으로 실행하는 길을 만들지 않는다. "만들기"를 누르면 뒷단이 요청과 자료를 창의 마지막 상태와 무관하게 다시 검사한다.
+- **자료의 글은 `parseFileToText`로만 읽고, 길이만 남긴다.** 만들기 창은 알림용 길이를 재는 데만 글을 쓰고 그 자리에서 버린다. AI 없이 바꾸기도 자료를 `parseFileToText`로만 읽는다(가린 자리는 이름표). 마크다운 자료에 가린 부분이 있는지 알리는 판단(`markdownRedactionNotice`)만 파일의 원문과 견주고, 그 결과는 예/아니오뿐이다.
+- **저장하지 않은 자료로는 만들지 않는다.** 어떤 탭에 열려 있고 저장하지 않은 변경이 있는 자료가 하나라도 있으면 만들기와 바꾸기를 막는다. 한 번도 저장하지 않은 문서는 자료가 될 수 없다. 마지막 저장본으로 진행하는 길을 만들지 않는다.
+- **출처 기록은 문서 밖에만 쓴다.** `document-links.json`(userData)에만 적고 문서 파일에는 아무것도 넣지 않는다. 요청 글을 적지 않는다(읽는 이벤트에 글이 없고, 기록에도 그 칸이 없다). 기록은 넘겨받은 자료가 하나라도 붙은 실행이 그 탭에서 시작됐거나 바꾸기가 이루어졌고, 그 탭의 문서가 처음 저장됐을 때만 쓴다. 디스크에 없는 파일이라는 이유로 기록을 지우지 않는다.
+- **그룹으로 좁힌 질문은 main이 지킨다.** 패널은 실행마다 그룹 이름 하나만 넘기고, main이 그 실행의 불투명한 범위 값을 만든다. `kb:*` 호출마다 main이 별표 저장소에서 그룹의 파일을 다시 구한다. 화면이 보낸 파일 목록을 믿지 않고, main이 갖고 있지 않은 범위 값은 거절한다(범위 없는 질문으로 읽지 않는다). 좁히기는 기존 검사(별표 파일만, 저장하지 않은 파일 거절, 디스크와 같은 색인의 발췌만)가 허락한 것을 더 거르기만 한다.
+- **PC 밖으로 나가는 색인 발췌는 두 번 거른다.** 묻기의 검색과 재정렬은 색인이 디스크의 지금 파일과 같은 파일(`pathsIndexedAsOnDisk`)이면서 저장하지 않은 변경이 없는 파일(`withoutUnsavedFiles`)의 발췌만 쓴다. 색인 본문에 들어가는 것을 바꾸면 `file-index/store.ts`의 `EXTRACT_VERSION`을 올린다. 올리면 다음 실행 때 색인을 통째로 다시 만든다.
+- **Windows 설치본은 `.xmind`를 파일 연결로 등록하지 않는다**(`electron-builder.cjs`의 `WIN_OPEN_WITH_ONLY_EXTS`, `.txt`·`.json`과 같다). 설치가 사용자의 기본 프로그램을 가져가지 않게 하기 위해서다.
 - "GenOffice를 기반으로 합니다" 고지(문자열 키 `setBasedOn`, 값에 `{{GenOffice}}`)는 21개 언어 모두에 남긴다. 원본 이름이 화면에 나오는 곳은 이 한 줄뿐이어야 한다. 다른 문자열과 도움말 제목·본문에 `{{GenOffice}}`를 쓰면 `tests/product-identity.test.ts`가 실패한다.
 - 없앤 기능(사용 통계 전송, 자체 계정 로그인, 클라우드 프로젝트 목록 등)의 모듈·IPC·호출부를 되살리지 않는다. `tests/removed-features.test.ts`가 지킨다. 원본의 변경을 병합할 때 특히 본다.
 - 모든 창은 `contextIsolation: true`, `nodeIntegration: false`, `sandbox: true`다. `shell.openExternal`은 `safeExternalUrl`을 거친 값만 받는다.
@@ -64,6 +76,7 @@
 - `src/main/index.ts`는 실행 중인 Electron이 있어야 불러올 수 있다. 그래서 배선은 소스 글자를 읽어 고정한다(`tests/subscription-lifetime.test.ts`, `tests/main-locale-tables.test.ts`). 종료 처리나 인라인 사전의 모양을 바꾸면 이 테스트들이 깨진다. 로직은 Electron을 import하지 않는 모듈로 빼서 테스트한다(`settings-ai.ts`, `kb-ask-connection.ts`, `app-routing.ts`).
 - PDF 구조 작업(`tests/pdf-structure-*.test.ts`)은 가짜 프로세스로 실행기의 수명(답·취소·탭 닫기 때 끝나는지)과 채널의 경로 검사를 본다. 진입점 배선은 `pdf-structure-wiring.test.ts`, 설정의 보관소 줄은 `settings-result-store.test.ts`·`result-store-ipc.test.ts`가 본다. `beforePack`을 거치는 패키징 테스트(`packaged-cli-version.test.ts`)는 구조 프로세스 파일이 있는 것처럼 가짜 목록을 준다. 확인 조건을 바꾸면 그 가짜도 고친다.
 - 바꾸면 반드시 테스트하는 것: preload가 내보내는 구독 API(핸들러 없음, 깨진 답), 계정 버튼의 확인 흐름(취소하면 아무것도 실행되지 않는지), 설정 저장 뒤 다시 읽은 값, 제품 정체성(`tests/product-identity.test.ts`: 빌더 설정·`package.json`·HTML 제목·ProgId·저장소 좌표의 일치), 업데이트 피드 설정, 탭 IPC의 인자 검증.
+- 바꾸면 반드시 테스트하는 것(만들기와 기록): 요청 검사(`tests/generate-request.test.ts`), 저장하지 않은 자료의 차단과 한 번만 맡겨 두기(`tests/generate-session*.test.ts`, `tests/generate-handoff.test.ts`), 자료의 크기·글 길이와 읽을 수 없는 자료의 이유(`tests/generate-materials.test.ts`), 바꾸기와 가린 자리의 이름표(`tests/generate-convert.test.ts`), 시작되지 않은 실행은 기록하지 않는 것·이름 바뀜 따라가기·망가진 파일(`tests/document-links.test.ts`), 다른 파일로 읽기의 가리기와 저장 안 한 파일(`tests/cross-file-redaction.test.ts`), 그룹 밖 파일 읽기의 거절(`tests/kb-ask-scope.test.ts`, `tests/kb-ask-group.test.ts`), `.xmind`가 Windows에서 등록되지 않는 것(`tests/file-associations.test.ts`), 앱 안 MCP의 지도(`tests/mcp/open-documents-mindmap.test.ts`).
 - Windows에서 변경과 무관하게 실패하는 테스트: `tests/headless-export.test.ts`(16건, `/docs/a.docx` 같은 POSIX 경로를 전제로 한다)와 `tests/default-app.test.ts`의 Linux 사례 한 건. `tests/update-resume.test.ts`와 `tests/third-party-notices.test.ts`는 부하가 큰 PC에서 가끔 실패하므로 단독으로 다시 돌려 확인한다.
 - E2E(`npm run test:e2e`, 저장소 루트의 `e2e/`)는 전체 빌드가 필요하다. 실행기(`e2e/helpers.ts`)는 `ai-settings.json`에 `{ providers: {}, subscriptionNoticeSeen: true }`를 미리 써서, Claude·Codex에 로그인된 PC에서 첫 연결 안내이 화면을 가리지 않게 한다(`providers`가 없으면 파일 전체가 기본값으로 읽힌다).
 - 실제 릴리스에서의 업데이트 내려받기·설치, 설치 프로그램 자체는 자동 테스트로 확인하지 못한다. 실제 빌드로 확인한다.

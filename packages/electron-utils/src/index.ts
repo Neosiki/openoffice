@@ -86,6 +86,15 @@ export {
 } from './print-html-pdf'
 export { isHeadlessMode, setHeadlessMode } from './headless-mode'
 export {
+  UNSAVED_CHANGES_MESSAGE,
+  assertFileSaved,
+  fileHasUnsavedChanges,
+  setOpenFilesSource,
+  withoutUnsavedFiles,
+  type OpenFileState,
+  type OpenFilesSource,
+} from './unsaved-files'
+export {
   HEADLESS_EXIT,
   HEADLESS_EXPORT_FLAG,
   HEADLESS_SUPPORTED_EXTENSIONS,

@@ -68,6 +68,7 @@ import {
   MAX_REMOTE_IMAGE_BYTES,
   readBodyCapped,
   writeJsonAtomic,
+  assertFileSaved,
 } from '@genoffice/electron-utils'
 import {
   configureExtraFontDirs,
@@ -3638,6 +3639,7 @@ const ATTACHMENT_EXTS = new Set([
   'xlsx',
   'xlsm',
   'xls',
+  'xmind',
   ...ATTACHMENT_IMAGE_EXTS,
 ])
 
@@ -3729,6 +3731,9 @@ function savePastedImage(data: unknown, ext: unknown): string | null {
 
 /** parse an attachment to text via @genoffice/file-parse (docx/pdf/pptx/xlsx/plain text) */
 async function extractAttachmentText(filePath: string): Promise<string> {
+  // a file open with unsaved changes is not read (before the cache): a
+  // withholding mark only reaches the file on save
+  await assertFileSaved(filePath)
   const stat = statSync(filePath)
   const stamp = `${stat.mtimeMs}:${stat.size}`
   const cached = attachmentTextCache.get(filePath)
@@ -5383,6 +5388,16 @@ export function setDocsExtraFileMenuItems(items: MenuItemConstructorOptions[]): 
   extraFileMenuItems = items
 }
 
+/** shell-built File-menu entries for the open document (make another document
+ * from it, its sources, the documents made from it); asked at every build */
+let documentLinkMenuItems: (() => MenuItemConstructorOptions[]) | null = null
+
+export function setDocsDocumentLinkMenuItems(
+  items: (() => MenuItemConstructorOptions[]) | null,
+): void {
+  documentLinkMenuItems = items
+}
+
 /** Shell-installed gate: inside the shell the docs menu may only take over the
  * application menu while a docs tab is active — internal rebuilds (pushRecent
  * after opening/saving any file) must not clobber another tab's menu.
@@ -5448,6 +5463,7 @@ export function buildDocsMenu(): void {
         ...(extraFileMenuItems.length > 0
           ? [{ type: 'separator' as const }, ...extraFileMenuItems]
           : []),
+        ...(documentLinkMenuItems?.() ?? []),
         { type: 'separator' },
         shellHooks
           ? {

@@ -1839,6 +1839,17 @@ export interface SlidesApi {
   onShowInk: (handler: (ev: ShowInkEvent) => void) => () => void
   /** Presenter: subscribe to navigation actions sent back by the audience window */
   onAudienceNav: (handler: (action: AudienceNavAction) => void) => () => void
+  // ── Generate hand-off (spec 8.5): the request the shell's "make" window left for this new tab ──
+  /** Take the request left for this tab, once: null when there is none or it was already taken (a reload) */
+  takeGenerateHandoff?: () => Promise<{
+    id: string
+    /** the request text (the default request when the user wrote none) */
+    text: string
+    /** the materials to attach, in the order the user listed them */
+    materials: Array<{ path: string; name: string }>
+  } | null>
+  /** A run started in this tab with these attachments; true when it was recorded as the hand-off's start */
+  reportGenerateRunStarted?: (attachedPaths: string[]) => Promise<boolean>
 }
 
 declare global {

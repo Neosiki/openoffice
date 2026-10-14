@@ -52,6 +52,7 @@ import {
   type ResolveFailure,
 } from './edit-queue'
 import { createFilesSkill } from './files-skill'
+import { useGenerateHandoff } from './generate-handoff'
 import { createElectronTransport, type TransportHooks } from './transport'
 import {
   blockedRunOf,
@@ -1580,6 +1581,30 @@ export function AiPanel({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [preset?.nonce])
+
+  // Generate hand-off (spec 8.5): a request the shell's "make" window left for this new tab.
+  // Taken once; it goes in like a user's own send — attachments, composer text, then the send
+  // gate — so a refused or held run leaves both in the composer. Unlike the ribbon preset above.
+  useGenerateHandoff({
+    chat,
+    open,
+    expand: () => onExpand?.(),
+    attach: (result) => {
+      const seen = new Set(attachmentsRef.current.map((a) => a.path))
+      const merged = [
+        ...attachmentsRef.current,
+        ...result.accepted.filter((a) => !seen.has(a.path)),
+      ]
+      attachmentsRef.current = merged
+      setAttachments(merged)
+      if (result.rejected.length > 0) {
+        setAttachNotice(result.rejected.join(';'))
+        window.setTimeout(() => setAttachNotice(null), 5000)
+      }
+    },
+    fill: (text) => setInput(text),
+    send: (text) => runWith(text),
+  })
 
   // `open` dep: re-expanding lands on messages streamed while collapsed
   useEffect(() => {

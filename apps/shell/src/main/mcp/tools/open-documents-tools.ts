@@ -26,6 +26,7 @@ const FAMILY_BY_KIND: Record<Exclude<TabKind, 'home' | 'help'>, EditorFamily> = 
   markdown: 'md',
   html: 'html',
   pdf: 'pdf',
+  mindmap: 'xmind',
 }
 
 /** families whose live content can be read back over MCP */
@@ -35,6 +36,7 @@ const READABLE_KINDS: ReadonlySet<TabKind> = new Set<TabKind>([
   'slides',
   'markdown',
   'html',
+  'mindmap',
 ])
 
 export interface OpenDocumentsControl {
@@ -178,6 +180,7 @@ export function createOpenDocumentTools(deps: OpenDocumentsDeps): McpToolDefinit
         'To *edit* one of these documents, pass its id (or path) as the `document` argument of the ' +
         'family content tools (insert_content / apply_ops / apply_sheet_ops / apply_slide_ops): no ' +
         'session is needed, and the UI switches to that tab so the user sees the change land. ' +
+        'A mind map (kind "mindmap") reads as its outline text; there is no tool that edits one. ' +
         'PDF tabs are listed but cannot be read or closed here: the pdf app is a viewer, so an ' +
         'open PDF has no readable or savable state through this tool.',
       inputSchema: {

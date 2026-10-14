@@ -18,6 +18,7 @@ import {
   isHiddenEntry,
   isInsideRoot,
   isSelfOrDescendant,
+  isSupportedTreeFile,
   listFolder,
   movePathsInto,
   pathsUnder,
@@ -115,6 +116,20 @@ describe('listFolder', () => {
         .files.map((f) => f.name)
         .sort(),
     ).toEqual(['data.json', 'notes.md', 'notes.txt'])
+  })
+
+  // the same list decides what the file-search index scans
+  it('lists mind map files', () => {
+    touch('plan.xmind')
+    touch('PLAN2.XMIND')
+    touch('photo.png')
+
+    expect(
+      listFolder(root, new Set())
+        .files.map((f) => f.name)
+        .sort(),
+    ).toEqual(['PLAN2.XMIND', 'plan.xmind'])
+    expect(isSupportedTreeFile('plan.xmind')).toBe(true)
   })
 })
 

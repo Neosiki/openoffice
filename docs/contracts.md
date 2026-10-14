@@ -153,6 +153,8 @@
 - 설정 → 연동에서 켠다. 기본은 꺼짐이다. 기본 포트는 3093이고 이 PC(`127.0.0.1`)에서만 닿는다. 인증은 없고, 요청의 Host·Origin이 이 PC의 것이 아니면 거절한다.
 - 도구: `get_app_info`, `open_documents`, `open_in_genoffice`(이 이름은 예전 철자를 유지한다), `create_session`, `save_session`, `read_document`, `read_docx`, `read_sheet`, `read_deck`, `read_pdf`, `create_docx`, `create_xlsx`, `create_pptx`, `apply_ops`, `apply_sheet_ops`, `apply_slide_ops`, `insert_content`, `replace_blocks`.
 - 에이전트 설정에 넣는 항목 이름은 `ieumoffice-editor`다. 명령어 쪽 서버의 `ieumoffice`와 겹치지 않는다.
+- `open_documents`의 목록에 마인드맵 탭이 `kind: "mindmap"`, `type: "mind map"`으로 나온다(떼어 낸 창도 같다). `read`의 `content`는 지금 지도의 개요 글 문자열이고 저장하지 않은 편집이 들어 있다. 마크다운·HTML 탭의 읽기와 같은 모양이다. `close`의 저장은 편집기의 저장과 같은 길을 지나고, 한 번도 저장하지 않은 지도는 기본 저장 폴더에 겹치지 않는 이름의 `.xmind`로 저장된다. `ok`로 열리지 않은 지도는 어떤 경우에도 쓰지 않는다. 지도를 만들거나 고치는 도구는 없다.
+- `get_app_info`의 `families`에 `{ family: "xmind", label: "mind map", editor: { open: ["xmind"], save: ["xmind"], export: ["png", "pdf", "md"] } }`가 있다. `mcp` 항목은 없다.
 
 ## 에이전트 스킬
 
@@ -185,6 +187,36 @@
 - 구독 제공자의 `model`에는 프로그램이 받는 값이 그대로 들어간다(Claude의 `opus`·`claude-opus-5-5` 같은 별칭이나 식별자, Codex의 모델 식별자). 빈 값은 프로그램의 기본 모델이다. 화면에 보이는 표시 이름은 저장하지 않는다.
 - 구독에 로그인된 계정은 이 파일에도, `subscription-metered.json`에도 적히지 않는다. 그 기록에 남는 것은 로그인 방식의 종류뿐이다.
 
+## 출처 기록 (`document-links.json`)
+
+같은 데이터 폴더에 있다. 만들기로 만든 문서가 어떤 자료에서 왔는지를 적는다. 문서 파일 안에는 아무것도 넣지 않는다.
+
+```json
+{
+  "version": 1,
+  "links": [
+    {
+      "derived": "C:\\Users\\me\\Documents\\slides.pptx",
+      "sources": ["C:\\Users\\me\\Documents\\notes.docx"],
+      "createdAt": "2026-10-14T09:00:00.000Z",
+      "via": "ai"
+    }
+  ]
+}
+```
+
+| 값          | 뜻                                                                 |
+| ----------- | ------------------------------------------------------------------ |
+| `derived`   | 만든 문서의 절대 경로. 기록 사이에 겹치지 않는다                   |
+| `sources`   | 넘겨받은 자료의 절대 경로 목록. 한 자료가 여러 기록에 나올 수 있다 |
+| `createdAt` | 기록을 적은 시각(ISO 8601)                                         |
+| `via`       | `ai`(만들 문서 쪽 편집기의 AI로 만듦) 또는 `convert`(AI 없이 바꿈) |
+
+- 요청 글은 적지 않는다.
+- 앱이 임시 파일에 쓴 뒤 바꿔치기한다. 읽을 수 없거나 망가진 파일은 빈 기록으로 읽고, 다음 기록을 적을 때 새 파일로 바뀐다.
+- 앱 안에서 이름을 바꾸거나 옮기면 `derived`와 `sources`의 경로가 따라간다. 디스크에 없는 파일이라는 이유로 기록을 지우지 않는다.
+- 터미널 명령어와 MCP는 이 파일을 읽지도 쓰지도 않는다.
+
 ## 구독 연결 상태 (앱 안의 창구)
 
 앱 안에서 뒷단이 화면에 주는 값이다. 바깥 프로그램에는 나가지 않는다.
@@ -208,6 +240,7 @@
 ## 문서 호환
 
 - `.docx`·`.xlsx`·`.pptx`·PDF·마크다운·HTML 파일은 원본 프로그램과 같은 방식으로 읽고 쓴다. 한쪽에서 만든 문서를 다른 쪽에서 열 수 있다.
+- **마인드맵.** XMind 파일(`.xmind`, `content.json`이 든 형식)을 열고 같은 형식으로 저장한다. 이 앱이 보여 주지 않는 요소와 모르는 값도 저장할 때 그대로 나가고, 바뀐 것이 없으면 원본과 바이트까지 같은 파일을 쓴다. 바뀌었으면 `content.json`만 다시 쓰고, 미리보기 그림(`Thumbnails/thumbnail.png`)은 새로 만들었을 때만 바꾸며, `manifest.json`은 고치지 않는다. 예전 형식(`content.xml`만 있는 파일)과 암호가 걸린 파일은 열지 않는다. 테마는 사용자가 고를 때와 새 시트를 만들 때(새 파일 포함, 기본 테마) 파일 형식의 속성표로 적고, 이 앱만의 표식은 넣지 않는다. 그 밖에는 이미 있는 시트의 테마를 그대로 둔다. 터미널 명령어와 그 MCP 서버는 `.xmind`를 다루지 않는다.
 - 가리기 표시는 문서 안에 저장되고, 그 이름공간 주소는 원본과 같다. 원본으로 가린 문서를 열면 가리기가 그대로 인식된다.
 - 문서 곁에 저장되는 보조 파일의 이름(`.genoffice-assets.json` 등)도 원본과 같다.
 - 문서 안에 적히는 작성자 이름(PDF 주석 작성자, 엑셀 메모 작성자, 명령어가 넣는 메모 작성자)은 지금 "GenOffice"다.
@@ -218,4 +251,5 @@
 
 - 설치 파일 이름은 `IeumOffice-Setup-<버전>.exe`, 설치 식별자는 `io.github.pblsketch.ieumoffice`, 실행 파일은 `IeumOffice.exe`다.
 - 파일 연결의 등록 이름은 `IeumOffice.<종류>` 꼴이다(`IeumOffice.WordDocument` 등).
+- Windows 설치본은 `.txt`·`.json`·`.xmind`를 이 앱에 연결해 등록하지 않는다. 설치해도 그 파일들의 기본 프로그램이 바뀌지 않는다. 앱 안에서는 열기 창, 끌어다 놓기, 최근 파일, 폴더 나무로 열고, 실행 인자로 경로를 받으면 연다.
 - 자동 업데이트는 `pblsketch/openoffice`의 GitHub 릴리스에서 `latest.yml`과 설치 파일을 읽는다. 릴리스는 `v<버전>` 태그여야 한다.

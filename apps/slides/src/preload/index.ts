@@ -513,6 +513,10 @@ const api: SlidesApi = {
     ipcRenderer.on('slides:audience-nav', listener)
     return () => ipcRenderer.removeListener('slides:audience-nav', listener)
   },
+  // ── Generate hand-off (spec 8.5): take the request left for this tab; report a run that started with it ──
+  takeGenerateHandoff: () => ipcRenderer.invoke('slides:handoff-take'),
+  reportGenerateRunStarted: (attachedPaths: string[]) =>
+    ipcRenderer.invoke('slides:handoff-run-started', attachedPaths),
 }
 
 contextBridge.exposeInMainWorld('slidesApi', api)

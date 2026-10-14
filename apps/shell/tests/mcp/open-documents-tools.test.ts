@@ -97,6 +97,13 @@ const DOCUMENTS: OpenDocumentTab[] = [
   doc({ id: 't5', kind: 'html', title: 'five.html', filePath: 'C:/docs/five.html' }),
   doc({ id: 't6', kind: 'pdf', title: 'six.pdf', filePath: 'C:/docs/six.pdf' }),
   doc({ id: 't7', kind: 'docs', title: 'Untitled', dirty: true, active: true }),
+  doc({
+    id: 't8',
+    kind: 'mindmap',
+    title: 'plan.xmind',
+    filePath: 'C:/maps/plan.xmind',
+    dirty: true,
+  }),
 ]
 
 function controlOf(overrides: Partial<OpenDocumentsControl> = {}): OpenDocumentsControl {
@@ -153,6 +160,7 @@ describe('closeSavePath', () => {
     ['markdown', '.md'],
     ['html', '.html'],
     ['pdf', '.pdf'],
+    ['mindmap', '.xmind'],
   ] as const)('resolves an untitled %s document to a %s target', (kind, ext) => {
     const untitled = doc({ id: `untitled-${kind}`, kind, title: `untitled ${kind}`, dirty: true })
     const target = closeSavePath(untitled, () => dir)
@@ -191,6 +199,14 @@ describe('open_documents tool', () => {
       t4: 'Markdown document',
       t5: 'HTML page',
       t6: 'PDF document',
+      t8: 'mind map',
+    })
+    // a mind map tab keeps its own kind
+    expect(documents.find((d) => d.id === 't8')).toMatchObject({
+      kind: 'mindmap',
+      path: 'C:/maps/plan.xmind',
+      saved: true,
+      dirty: true,
     })
   })
 
@@ -207,6 +223,28 @@ describe('open_documents tool', () => {
     expect(result.dirty).toBe(false)
     expect(result.content).toEqual({ content: 'live:t4' })
     expect(read).toHaveBeenCalledTimes(1)
+  })
+
+  it('reads a mind map as the outline text its control returns', async () => {
+    const outline = '# Sheet 1\n\n- Plan\n  - unsaved topic\n'
+    const read = vi.fn(async () => outline)
+    await startService(controlOf({ read }))
+    const result = jsonOf(
+      await client!.callTool({
+        name: 'open_documents',
+        arguments: { action: 'read', target: 'C:/maps/plan.xmind' },
+      }),
+    )
+    expect(result).toEqual({
+      id: 't8',
+      type: 'mind map',
+      kind: 'mindmap',
+      title: 'plan.xmind',
+      path: 'C:/maps/plan.xmind',
+      dirty: true,
+      content: outline,
+    })
+    expect(read).toHaveBeenCalledWith(expect.objectContaining({ id: 't8', kind: 'mindmap' }))
   })
 
   it('reads an untitled document by its tab id', async () => {

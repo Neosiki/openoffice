@@ -35,6 +35,7 @@ const TYPES = {
   pdf: 'file-pdf.svg',
   md: 'file-md.svg',
   html: 'file-html.svg',
+  mindmap: 'file-mindmap.svg',
   txt: 'file-txt.svg',
   json: 'file-json.svg',
 }

@@ -2,37 +2,42 @@
 
 ## 한 프로그램으로 배포되는 여러 조각
 
-설치되는 것은 Electron 프로그램 하나다. 그 안에 껍데기 앱 하나와 편집기 여섯 개가 들어 있고, 편집기들은 화면과 무관한 공용 패키지(문서 엔진, AI 연결부)를 가져다 쓴다.
+설치되는 것은 Electron 프로그램 하나다. 그 안에 껍데기 앱 하나와 편집기들(워드, 엑셀, 파워포인트, PDF, 마크다운, HTML, 마인드맵)이 들어 있고, 편집기들은 화면과 무관한 공용 패키지(문서 엔진, AI 연결부)를 가져다 쓴다.
 
 ```
 apps/shell      껍데기 앱. 창, 탭, 홈 화면, 설정, 첫 실행 안내, 자동 업데이트, 파일 색인과 지식 자료 검색,
-                앱 안 MCP 서버, 명령어가 실행 중인 앱에 말을 거는 제어 창구
-apps/docs       워드(.docx) 편집기. 뒷단이 공용 AI 창구(`ai:*`)를 등록한다. 설치본에서는 여섯 편집기의
-                모델 호출·설정·검색 요청을 모두 이 뒷단이 받는다
+                앱 안 MCP 서버, 명령어가 실행 중인 앱에 말을 거는 제어 창구, 만들기 창, AI 없이 바꾸기, 출처 기록
+apps/docs       워드(.docx) 편집기. 뒷단이 공용 AI 창구(`ai:*`)를 등록한다. 설치본에서는 모든 편집기의
+                모델 호출·설정·검색 요청을 이 뒷단이 받는다
 apps/sheets     엑셀(.xlsx) 편집기        ┐ 모델 호출용 뒷단 코드는 편집기를 혼자 띄울 때만 돈다. 설치본에서는
 apps/slides     파워포인트(.pptx) 편집기  ┘ 전용 AI 창구만 등록한다. 엑셀은 이름 앞에 `sheets:`를 붙인다. PPT는 예외로
                 이름을 붙이지 않은 `ai:generate-image`·`ai:analyze-media` 등을 직접 등록한다(워드는 같은 일에 `docs:`를 붙인다)
 apps/pdf        PDF 편집기
 apps/markdown   마크다운·텍스트 편집기
 apps/html       HTML 편집기
+apps/mindmap    마인드맵(.xmind) 편집기. 지도를 그리는 일은 mind-elixir, 파일은 packages/xmind-engine이 맡는다
 packages/ai-provider   제공자 목록, 제공자 선택 규칙, 구독 프로그램 실행부, 키 방식 제공자 연결
 packages/ai-search     검색·이미지 생성·미디어 분석 도구, 자동 호출 경로의 구독 요청 차례
 packages/agent-core    AI 실행 반복(모델 → 도구 → 모델), 화면↔뒷단 전송 통로, 가리기
 packages/ui            편집기들이 함께 쓰는 AI 화면 부품과 그 문구(21개 언어)
 packages/i18n          화면 언어 목록, 제품 이름 한 곳 정의
 packages/cli           터미널 명령어 `ieumoffice`, MCP 도구, 에이전트 스킬 설치
-packages/electron-utils 편집기 뒷단 공용 도구(메뉴, 저장소 주소, 원격 이미지 받기 등)
+packages/electron-utils 편집기 뒷단 공용 도구(메뉴, 저장소 주소, 원격 이미지 받기 등), 저장하지 않은 파일 확인,
+                       생성 요청을 새 탭에 맡겨 두는 곳(`generate-handoff.ts`)
 packages/pdf-structure PDF의 문서 나무(다시 흐르는 글), Markdown·EPUB 쓰기, 그림 원본 꺼내기, AI 페이지 읽기,
                        번역, 번역 PDF 써 넣기, 문서 작업 엔진, 결과 보관소. pdf2docx의 IR을 읽기만 한다
+packages/xmind-engine  마인드맵 파일 엔진(열기, 원본 보존, 맞추기, 저장, 개요 글, 테마 표). 이 프로젝트가 만든 것이고,
+                       화면과 Node 양쪽에서 돈다
 packages/docx-engine, pptx-engine, pptx-ops, pptx-render, xlsx-gateway,
          pdf2docx, html2docx, file-parse, zip-gate, font-metrics, pipelines, project-store
-                       문서 엔진과 그 주변. 원본(GenOffice)에서 온 그대로 두는 영역
+                       문서 엔진과 그 주변. 원본(GenOffice)에서 온 그대로 두는 영역. `file-parse`에는 이 프로젝트가
+                       `.xmind` 읽기와 다른 파일로 읽을 때의 가리기를 새 파일로 더했다
 apps/sheets/native/xlsx-engine   엑셀 계산·입출력을 맡는 별도 프로그램(Rust). 표준 입출력으로 대화한다
 ```
 
-- 의존 방향은 한쪽이다. `apps/*` → `packages/*`. 패키지끼리는 `ai-provider` → `agent-core`·`i18n`(그래서 `agent-core`는 `ai-provider`를 가져올 수 없다), `ai-search` → `ai-provider`·`electron-utils`, `ui` → `ai-provider`·`agent-core`·`i18n`·`pptx-render`, `cli` → 엔진 패키지·`pdf-structure`·`ai-search`·`ai-provider`·`i18n`, `electron-utils` → `i18n`. `pdf-structure`는 `pdf2docx`·`i18n`·`ai-provider`(그림 입력 판정)·`agent-core`(형)·`font-metrics`의 소스를 상대 경로로 가져오고, `apps/pdf`·`apps/shell`·`cli`도 `pdf-structure`를 상대 경로로 가져온다. `pdf-structure`는 다른 작업 공간 패키지를 이름으로 가져오지 않고 Electron에 기대지 않는다. `i18n`과 `agent-core`는 다른 작업 공간 패키지에 기대지 않는다.
+- 의존 방향은 한쪽이다. `apps/*` → `packages/*`. 패키지끼리는 `ai-provider` → `agent-core`·`i18n`(그래서 `agent-core`는 `ai-provider`를 가져올 수 없다), `ai-search` → `ai-provider`·`electron-utils`, `ui` → `ai-provider`·`agent-core`·`i18n`·`pptx-render`, `cli` → 엔진 패키지·`pdf-structure`·`ai-search`·`ai-provider`·`i18n`, `electron-utils` → `i18n`, `file-parse` → `agent-core`(가리기 이름표)·`xmind-engine`·`docx-engine`, `xmind-engine` → `zip-gate`·`i18n`. `pdf-structure`는 `pdf2docx`·`i18n`·`ai-provider`(그림 입력 판정)·`agent-core`(형)·`font-metrics`의 소스를 상대 경로로 가져오고, `apps/pdf`·`apps/shell`·`cli`도 `pdf-structure`를 상대 경로로 가져온다. `pdf-structure`는 다른 작업 공간 패키지를 이름으로 가져오지 않고 Electron에 기대지 않는다. `i18n`과 `agent-core`는 다른 작업 공간 패키지에 기대지 않는다.
 - `ai-provider`는 진입점이 나뉘어 있다. 화면(renderer)과 preload가 **값**으로 가져오는 것은 `@genoffice/ai-provider/browser`뿐이다. 대표 진입점에서는 형(`import type`)만 가져온다. 프로그램을 실행하는 코드(`/subscription`, `/claude-code-cli`, `/codex-app-server`)는 뒷단에서만 가져온다.
-- 편집기 여섯 개의 뒷단 코드는 따로 실행되지 않는다. 껍데기 앱을 빌드할 때 함께 묶여, 껍데기 앱의 한 프로세스 안에서 돈다. 그래서 창구 이름(IPC 채널)은 프로세스 전체에서 하나뿐이어야 한다.
+- 편집기들의 뒷단 코드는 따로 실행되지 않는다. 껍데기 앱을 빌드할 때 함께 묶여, 껍데기 앱의 한 프로세스 안에서 돈다. 그래서 창구 이름(IPC 채널)은 프로세스 전체에서 하나뿐이어야 한다.
 - 편집기 화면은 껍데기 창 위에 얹히는 별도 화면(WebContentsView)이다. 홈 탭만 껍데기 앱 자신의 화면이다.
 
 ## AI 요청 한 번의 흐름 (화면 경로)
@@ -50,6 +55,20 @@ apps/sheets/native/xlsx-engine   엑셀 계산·입출력을 맡는 별도 프�
 8. 사용자가 중단하면 화면이 통로에 중단을 알리고, 뒷단이 띄워 둔 프로그램을 하위 프로세스까지 끝낸다.
 
 구독 프로그램은 "한 차례의 답"만 내는 두뇌다. 앱의 도구를 직접 실행하지 못하고 요청만 한다. 문서 변경, 변경 내용 표시, 되돌리기는 모두 7번의 앱 쪽에서 일어난다.
+
+## 문서로 새 문서를 만드는 흐름 (넘겨주기)
+
+새 생성 엔진은 없다. 껍데기 앱은 자료와 요청을 만들 문서 쪽 편집기의 새 탭에 넘겨줄 뿐이고, 글은 그 편집기의 AI가 평소 방식대로 쓴다.
+
+1. 입구는 홈의 별표 그룹("이 그룹으로 새 문서 만들기"), 홈의 선택 막대와 파일 줄 메뉴, 모든 편집기의 파일 메뉴("이 문서로 다른 문서 만들기"), 마인드맵 편집기의 도구 줄 단추다. 어디서 시작하든 껍데기 앱이 만들기 창을 띄운다. 만들기 창은 따로 뜨는 작은 창이다. 편집기 탭은 껍데기 화면 위에 얹힌 별도 화면이라, 껍데기 화면이 그 위에 무언가를 그릴 수 없기 때문이다.
+2. 창은 자료마다 `parseFileToText`로 읽어 글 길이만 재고 글은 그 자리에서 버린다(사용량·긴 자료 알림용). 어떤 탭에 열려 있고 저장하지 않은 변경이 있는 자료는 읽지 않고, "만들기"를 막는다.
+3. "만들기"를 누르면 뒷단이 요청을 다시 검사하고 자료를 다시 확인한 뒤, 만들 종류(PPT, HTML, 마인드맵)의 제목 없는 새 탭을 열면서 그 탭 앞으로 요청을 맡겨 둔다(`packages/electron-utils`의 `generate-handoff.ts`). 창은 닫힌다. 여기까지 AI는 돌지 않는다.
+4. 새 탭의 편집기 화면이 준비되면 `<편집기>:handoff-take`로 요청을 한 번 가져간다. 요청은 그 탭 앞으로만 맡겨지므로 다른 탭은 받지 않고, 두 번째 가져가기와 다시 불러오기도 아무것도 받지 않는다. 가져가기 전에 탭이 닫히면 요청은 버려진다.
+5. 편집기는 자료를 AI 창의 첨부로, 요청 글을 입력 칸에 넣고 보내기 버튼과 같은 길로 보낸다. 그래서 실행은 보내기 전의 문지기를 그대로 지나고, 막히면 글과 첨부가 그 창에 남는다. 첨부는 그 편집기의 평소 첨부 읽기로 읽힌다.
+6. 넘겨받은 자료가 하나라도 붙은 실행이 실제로 시작되면 편집기가 `<편집기>:handoff-run-started`로 알린다. 껍데기 앱은 이것을 메모리에만 둔다.
+7. 그 탭의 문서가 처음 저장되면(6과의 순서는 상관없다) 껍데기 앱이 데이터 폴더의 `document-links.json`에 출처 기록을 적는다. 문서 파일에는 아무것도 넣지 않는다.
+
+**AI 없이 바꾸기.** 자료가 하나이고 종류가 맞으면(지도 → 마크다운, 지도 → PPT 뼈대, 마크다운 → 지도) 3에서 껍데기 앱이 직접 바꾼다(`apps/shell/src/main/generate/convert.ts`). 자료는 `parseFileToText`로만 읽으므로 가린 자리는 이름표로 옮겨진다. 결과는 그 종류의 새 탭 앞으로 맡겨 두고, 새 탭이 한 번 가져가 저장하지 않은 새 문서로 연다. 바꾼 사실은 7의 기록에 같이 쓰인다.
 
 ## 구독 연결 상태가 화면에 닿는 길
 

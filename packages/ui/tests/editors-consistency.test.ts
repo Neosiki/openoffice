@@ -1,5 +1,5 @@
 /**
- * The six editors were moved to the subscription contract one by one and
+ * The editors were moved to the subscription contract one by one and
  * drifted apart in small ways. These guards read their sources and keep three
  * things shared: the AI entry label, the send gate, and the reading of
  * subscription IPC answers.
@@ -70,6 +70,13 @@ const EDITORS: Record<string, Editor> = {
     ribbon: 'apps/html/src/renderer/components/Ribbon.tsx',
     gate: 'apps/html/src/renderer/ai/AiPanel.tsx',
     locales: 'apps/html/src/renderer/i18n',
+    retiredKeys: [],
+  },
+  mindmap: {
+    panel: 'apps/mindmap/src/renderer/ai/AiPanel.tsx',
+    ribbon: 'apps/mindmap/src/renderer/components/Toolbar.tsx',
+    gate: 'apps/mindmap/src/renderer/ai/AiPanel.tsx',
+    locales: 'apps/mindmap/src/renderer/i18n',
     retiredKeys: [],
   },
 }
@@ -171,7 +178,7 @@ describe('the send gate', () => {
 })
 
 describe('reading subscription IPC answers', () => {
-  const APPS = ['docs', 'sheets', 'slides', 'pdf', 'markdown', 'html', 'shell']
+  const APPS = ['docs', 'sheets', 'slides', 'pdf', 'markdown', 'html', 'mindmap', 'shell']
 
   it.each(APPS)('%s: the local contract file re-exports the shared readers', (app) => {
     const text = source(`apps/${app}/src/shared/subscription-api.ts`)

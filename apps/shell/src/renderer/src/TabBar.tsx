@@ -131,6 +131,26 @@ function HtmlIcon() {
   )
 }
 
+/* same artwork as the home screen's file-mindmap.svg asset */
+function MindmapIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 240 240" fill="none" aria-hidden="true">
+      <rect width="240" height="240" rx="48" fill="#D6409F" />
+      <path
+        d="M104 120C134 120 124 66 154 66M104 120H154M104 120C134 120 124 174 154 174"
+        stroke="#fff"
+        strokeWidth="14"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <rect x="38" y="94" width="76" height="52" rx="26" fill="#fff" />
+      <rect x="150" y="52" width="54" height="28" rx="14" fill="#fff" />
+      <rect x="150" y="106" width="54" height="28" rx="14" fill="#fff" />
+      <rect x="150" y="160" width="54" height="28" rx="14" fill="#fff" />
+    </svg>
+  )
+}
+
 const KIND_ICON: Record<TabSummary['kind'], ReactElement> = {
   home: <HomeIcon />,
   docs: <DocIcon />,
@@ -139,6 +159,7 @@ const KIND_ICON: Record<TabSummary['kind'], ReactElement> = {
   pdf: <PdfIcon />,
   markdown: <MarkdownIcon />,
   html: <HtmlIcon />,
+  mindmap: <MindmapIcon />,
   help: <HelpIcon />,
 }
 

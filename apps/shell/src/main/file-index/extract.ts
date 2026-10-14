@@ -1,6 +1,6 @@
 import { readFile, stat } from 'node:fs/promises'
 import { extname } from 'node:path'
-import { parseFileToText } from '@genoffice/file-parse'
+import { parseFileToText, redactHtmlSource } from '@genoffice/file-parse'
 
 /** larger files are indexed by name and folder only */
 export const MAX_EXTRACT_BYTES = 64 * 1024 * 1024
@@ -30,9 +30,12 @@ export async function extractText(path: string): Promise<Extracted> {
     if (st.size > MAX_EXTRACT_BYTES) return { kind: 'name-only' }
     const ext = extname(path).slice(1).toLowerCase()
     if (MARKUP_EXTS.has(ext)) {
+      // what the page withholds from a model goes before the tags do: the index
+      // feeds excerpts to the knowledge base and the reranker. A mark that cannot
+      // be processed throws, and the catch below keeps the body out of the index
       return {
         kind: 'text',
-        text: stripMarkup(await readFile(path, 'utf-8')).slice(0, MAX_BODY_CHARS),
+        text: stripMarkup(redactHtmlSource(await readFile(path, 'utf-8'))).slice(0, MAX_BODY_CHARS),
       }
     }
     const parsed = await parseFileToText(path)

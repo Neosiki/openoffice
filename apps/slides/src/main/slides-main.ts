@@ -294,6 +294,8 @@ const CLOUD_PAGE_PREFIX = 'cloudpptx:'
 const issuedCloudPages = new Set<string>()
 import { registerPresenterIpc } from './presenter-show'
 import { registerAttachmentIpc } from './attachments-ipc'
+import { registerGenerateHandoffIpc } from './generate-handoff-ipc'
+import { openSlidesSeed } from './seed-deck'
 
 export {
   configureSlidesRuntime,
@@ -1409,6 +1411,9 @@ export function registerSlidesIpc(): void {
       dropQueued()
       return result
     }
+    // A new tab that starts with a given deck (a conversion's result, T17): taken once, unsaved
+    const seeded = await openSlidesSeed(e.sender, fitWidthPx, deckDefaultFont)
+    if (seeded) return seeded
     // No queued path but the main process already has a session (remount after an HMR full
     // reload/crash recovery) -> restore from the session; otherwise the document is lost leaving
     // only the start screen, and reopening the same file just activates this empty tab with no
@@ -4605,6 +4610,9 @@ export function registerSlidesIpc(): void {
   // ── Chat attachments (slides:files-*) ──
   registerAttachmentIpc()
 
+  // ── Generate hand-off from the shell's "make" window (slides:handoff-*) ──
+  registerGenerateHandoffIpc()
+
   // ── Presenter-view multi-screen show (registered inside registerSlidesIpc: shell
   // aggregate mode only calls this function) ──
   registerPresenterIpc()
@@ -4866,6 +4874,15 @@ export function setSlidesExtraFileMenuItems(items: Electron.MenuItemConstructorO
   extraFileMenuItems = items
 }
 
+/** Shell-built File-menu entries for the open document (make another document
+ *  from it, its sources, the documents made from it); asked at every build */
+let documentLinkMenuItems: (() => Electron.MenuItemConstructorOptions[]) | null = null
+export function setSlidesDocumentLinkMenuItems(
+  items: (() => Electron.MenuItemConstructorOptions[]) | null,
+): void {
+  documentLinkMenuItems = items
+}
+
 /** Tab mode: Cmd+W closes the current tab rather than the whole shell window */
 let closeActiveTabHook: (() => void) | null = null
 export function setSlidesCloseTabHook(fn: (() => void) | null): void {
@@ -4899,6 +4916,7 @@ export function buildSlidesMenu(): Menu {
         ...(extraFileMenuItems.length > 0
           ? [{ type: 'separator' as const }, ...extraFileMenuItems]
           : []),
+        ...(documentLinkMenuItems?.() ?? []),
         { type: 'separator' },
         { label: tm('menuSave'), accelerator: 'CmdOrCtrl+S', click: () => send('save') },
         { label: tm('menuSaveAs'), accelerator: 'CmdOrCtrl+Shift+S', click: () => send('save-as') },

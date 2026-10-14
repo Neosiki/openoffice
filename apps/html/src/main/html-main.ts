@@ -41,6 +41,7 @@ import {
   readBodyCapped,
   printHtmlDocument,
   type PrintDialogOutcome,
+  assertFileSaved,
 } from '@genoffice/electron-utils'
 import { createI18n, getUiLang } from '@genoffice/i18n'
 import {
@@ -74,6 +75,7 @@ import {
 } from './asset-mime'
 import { buildPreviewDocument } from './preview-document'
 import { inlineImagesForSingleFile, singleFileExportBaseName } from './single-file-html'
+import { registerHtmlHandoffIpc } from './generate-handoff-ipc'
 import {
   assetBaseHref,
   previewUrlFor,
@@ -691,6 +693,7 @@ const ATTACHMENT_EXTS = new Set([
   'xlsx',
   'xlsm',
   'xls',
+  'xmind',
   ...ATTACHMENT_IMAGE_EXTS,
 ])
 const ATTACHMENT_IMAGE_MIME: Record<string, string> = {
@@ -780,6 +783,9 @@ function savePastedImage(data: unknown, ext: unknown): string | null {
 }
 
 async function extractAttachmentText(filePath: string): Promise<string> {
+  // a file open with unsaved changes is not read (before the cache): a
+  // withholding mark only reaches the file on save
+  await assertFileSaved(filePath)
   const stat = statSync(filePath)
   const stamp = `${stat.mtimeMs}:${stat.size}`
   const cached = attachmentTextCache.get(filePath)
@@ -1285,6 +1291,7 @@ function registerHtmlIpc(): void {
   })
 
   ipcMain.handle(HTML_CHANNELS.consumePending, (e) => openPathByWc.get(e.sender.id) ?? null)
+  registerHtmlHandoffIpc(ipcMain, (wcId) => openPathByWc.has(wcId))
 
   // ---- headless export mode (--headless-export) ----
 

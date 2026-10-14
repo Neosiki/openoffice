@@ -24,6 +24,7 @@ by that service's own terms and by your account settings there.
 | You start **Translate Document** in the PDF editor and confirm it                                                                     | The whole text of the pages you chose (the whole document by default), in batches; link addresses stay on your PC                              | The AI provider in use, as for chat                                                                                                                                                                               |
 | You press **Fill with AI** in the EPUB conversion window                                                                              | The text of the first pages (3 to at most 12 pages, up to 12,000 characters), once                                                             | The AI provider in use, as for chat                                                                                                                                                                               |
 | A terminal command or an MCP client runs `pdf ai-read` or `pdf translate` (the MCP tools `pdf_ai_read`, `pdf_translate`) with `--yes` | The same as AI page reading or document translation above                                                                                      | The AI provider chosen for chat; a subscription only if you allowed automatic requests to use one, and a route billed by usage only with `--allow-paid`                                                           |
+| You press "Make" in the "Make a new document" window                                                                                  | What you typed (or the default request) and the files listed as material                                                                       | The AI provider in use, through the new document's AI panel like any request there. "Convert without AI" sends nothing                                                                                            |
 | The AI, or the `ieumoffice search` command, searches the web or looks for images                                                      | The search query                                                                                                                               | By default **Parallel**'s free search and **DuckDuckGo**, no key needed. If you chose a key-based search provider under Advanced (Serper, Serply, Tavily, Parallel, Exa or Firecrawl), that provider instead      |
 | A picture found by a search, or one the AI inserts by address, is put in your document                                                | A download request for that picture                                                                                                            | The website that hosts the picture                                                                                                                                                                                |
 | An image is generated (needs a key-based image provider in this version)                                                              | The description of the image and any reference pictures                                                                                        | The image provider whose key you entered                                                                                                                                                                          |
@@ -37,6 +38,49 @@ public IP address, as any website you visit does.
 
 Parts of a document that you marked as hidden from AI, in the editors that
 offer that marking, are withheld from the request whichever provider is used.
+
+## How far hiding reaches
+
+The PowerPoint, Markdown and HTML editors let you hide parts of a document
+from AI. The mark is saved in the file, and it is honoured:
+
+- in that editor's own AI panel;
+- when the file is read inside the app as material for something else: as an
+  attachment in another editor's AI panel, by the home screen's Ask (its
+  reads and its search excerpts), in the home screen's search index and the
+  excerpts sent for reranking, as material for "Make a new document", and
+  by "Convert without AI". A hidden part is read as its label (`{{label}}`),
+  hidden text cannot be found by the home screen's search, and a file whose
+  marks cannot be processed is not read at all;
+- a file open in a tab with unsaved changes is not read for any of these
+  until you save it, because a new mark only reaches the file on save.
+
+It does **not** reach:
+
+- **Word documents.** The Word editor does not recognise hiding marks, and a
+  `.docx` file read as material (attachment, Ask, search index, "Make") is
+  read as written. A Word document whose parts were hidden in the program
+  this app is based on sends those parts to the AI provider when you use AI
+  on it here.
+- **The terminal command, its MCP server and the app's own MCP server.**
+  `ieumoffice` commands and MCP tools read PowerPoint, Markdown and HTML files
+  as written, hidden parts included. What an agent does with that text is
+  up to the agent you run.
+- **Three known faults where a mark is lost or not read.** These apply until
+  they are fixed:
+  - In the PowerPoint editor, if you hide a piece of text that has no
+    character formatting of its own, it can be saved without the mark. It
+    looks hidden in the open tab, but once you reopen the file, or the file
+    is read elsewhere in the app (attachment, Ask, search index, "Make"),
+    the text is visible and can be sent to an AI provider.
+  - In the Markdown editor, if a part you hide contains inline code, the code
+    is saved outside the hidden part. After reopening, or when the file is
+    read elsewhere in the app, that code is visible and can be sent to an AI
+    provider.
+  - A Markdown document saved as `.txt` or `.json` keeps its marks in the
+    file, but when you open it again in the Markdown editor, the editor does
+    not recognise them and its AI panel sees the hidden text. Read elsewhere
+    in the app, the same file stays hidden.
 
 Three more things can cause network traffic that is not a request made by the
 app's own features:
@@ -136,6 +180,15 @@ Nothing in this list is uploaded by the app.
 - **The search index** of the folders you added to the home screen, autosave
   copies, recent-file lists and local diagnostic logs, also in the data
   folder.
+- **Records of which documents were made from which files**
+  (`document-links.json` in the data folder), written when a document made
+  with "Make a new document" is first saved, and only if its tab actually
+  made something: an AI run started there with at least one of the handed-over
+  files attached, or a conversion without AI was done there. They hold the
+  file paths, the
+  time and whether AI was used, not your request. Nothing is written into
+  the documents themselves, and the records do not travel with a file to
+  another PC.
 - **The command-line audit log** (`~/.ieumoffice/cli-audit.jsonl`): one line
   per `ieumoffice` command with the time, the arguments, the result and the
   output path. Set `GENOFFICE_AUDIT_LOG=off` to disable it.

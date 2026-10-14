@@ -6,6 +6,9 @@ import { pdfToText } from './pdf'
 import { pptToText } from './ppt'
 import { pptxToText } from './pptx'
 import { xlsxToText } from './xlsx'
+import { xmindToText } from './xmind'
+import { redactHtmlSource } from './html-redaction'
+import { redactMarkdownSource } from './markdown-redaction'
 
 export type ParsedFileKind = 'text' | 'image' | 'unsupported'
 
@@ -39,6 +42,22 @@ const TEXT_EXTS = new Set([
   'log',
   'py',
 ])
+
+/**
+ * Formats whose own editor can withhold a span from a model: the text is handed
+ * over with each withheld span as its `{{label}}` marker. These throw on a mark
+ * they cannot process, which the catch below turns into a failed read.
+ */
+const TEXT_REDACTORS: Record<string, (source: string) => string> = {
+  md: redactMarkdownSource,
+  markdown: redactMarkdownSource,
+  // the markdown editor opens these two as well, and its Save As writes a
+  // document under them with the withheld spans it holds
+  txt: redactMarkdownSource,
+  json: redactMarkdownSource,
+  html: redactHtmlSource,
+  htm: redactHtmlSource,
+}
 
 const FATAL_UTF8_DECODER = new TextDecoder('utf-8', { fatal: true })
 // windows-1252 maps every byte, so this fallback can never fail
@@ -103,6 +122,8 @@ export async function parseFileToText(filePath: string): Promise<ParsedFile> {
             'Unsupported text encoding: BOM-declared UTF-32 cannot be decoded (UTF-8 and UTF-16 are supported)',
         }
       }
+      const redact = TEXT_REDACTORS[ext]
+      if (redact) return { ok: true, kind: 'text', text: redact(text) }
       return { ok: true, kind: 'text', text }
     }
     const bytes = await readFile(filePath)
@@ -122,6 +143,13 @@ export async function parseFileToText(filePath: string): Promise<ParsedFile> {
         ok: false,
         kind: 'text',
         error: `Content mismatch: .${ext} file has ${sniffed} magic bytes`,
+      }
+    }
+    if (ext === 'xmind' && sniffed !== 'zip') {
+      return {
+        ok: false,
+        kind: 'text',
+        error: `Content mismatch: .xmind file has ${sniffed} magic bytes`,
       }
     }
     // a DOCX saved under a .doc name is common enough that it parses as OOXML
@@ -153,6 +181,8 @@ export async function parseFileToText(filePath: string): Promise<ParsedFile> {
         return { ok: true, kind: 'text', text: await xlsxToText(bytes) }
       case 'pdf':
         return { ok: true, kind: 'text', text: await pdfToText(bytes) }
+      case 'xmind':
+        return { ok: true, kind: 'text', text: await xmindToText(bytes) }
     }
   } catch (e) {
     return { ok: false, kind: 'text', error: e instanceof Error ? e.message : String(e) }
