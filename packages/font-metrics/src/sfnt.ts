@@ -176,14 +176,19 @@ let dirsGeneration = 0
 
 /**
  * Folders of fonts the app itself ships (e.g. the design templates' set), which no
- * system folder holds. Scanned flat and after the system folders, so every lookup an
- * installed font already answered keeps its answer and these only fill the gaps.
- * Replaces any earlier list and drops the scans built without it; an empty list
- * restores the system-only behavior.
+ * system folder holds. Only the Word editor's lookups see them: its vertical metrics
+ * (familyVerticalMetrics) and the pickers' family info (familyInfoFor) read
+ * getAppFontIndex / scannedFontFiles. The installed-font lookups (findSystemFont,
+ * findFontCovering, isFamilyInstalled, advanceWidths) keep reading getFontIndex, the
+ * system folders alone: the process is shared by every editor in the shell, and the
+ * PDF editor must not embed, or pdf2docx pick, a font the PC does not have.
+ * Scanned flat and after the system folders, so a lookup an installed font already
+ * answered keeps its answer. Replaces any earlier list and drops the scans built with
+ * it; an empty list restores the system-only behavior.
  */
 export function configureExtraFontDirs(dirs: readonly string[]): void {
   extraDirs = [...dirs]
-  index = null
+  appIndex = null
   dirsGeneration++
 }
 
@@ -240,13 +245,30 @@ function indexFile(path: string, index: FontIndex): void {
 }
 
 let index: FontIndex | null = null
+let appIndex: FontIndex | null = null
 
+/** The installed fonts: the platform's font directories only */
 export function getFontIndex(): FontIndex {
   if (!index) {
     index = { byPs: new Map(), byFamily: new Map() }
-    for (const path of scannedFontFiles()) indexFile(path, index)
+    for (const path of systemFontFiles()) indexFile(path, index)
   }
   return index
+}
+
+/**
+ * The installed fonts, then the app's own font folders (configureExtraFontDirs); the
+ * same index as getFontIndex while none is named. Built on a copy of the system index:
+ * indexFile replaces the per-family lists it extends, so the system index is untouched.
+ */
+export function getAppFontIndex(): FontIndex {
+  if (extraDirs.length === 0) return getFontIndex()
+  if (!appIndex) {
+    const system = getFontIndex()
+    appIndex = { byPs: new Map(system.byPs), byFamily: new Map(system.byFamily) }
+    for (const dir of extraDirs) for (const path of fontFiles(dir, 0)) indexFile(path, appIndex)
+  }
+  return appIndex
 }
 
 // "bolditalic" deliberately has no atomic alternative: a BoldItalic face must yield
