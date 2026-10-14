@@ -9,3 +9,14 @@
 export * from './tree'
 export { extractEmbeddedImages, MIN_IMAGE_PX, MAX_IMAGE_TOTAL_PX } from './images'
 export type { EmbeddedImage, ExtractEmbeddedImagesOptions } from './images'
+export * from './markdown'
+export {
+  writeEpub,
+  epubLanguages,
+  guessLanguageFromText,
+  MIN_LANGUAGE_SCORE,
+  CJK_WEIGHT,
+  KANA_SHARE_FOR_JA,
+  LANGUAGE_SAMPLE_CHARS,
+} from './epub'
+export type { EpubWriteOptions, EpubLanguageOptions } from './epub'
