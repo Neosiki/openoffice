@@ -10,11 +10,18 @@
  * only these files, each family's license text and README.md, which records the
  * license evidence and the downloaded versions.
  *
- * Plain data with no Node or DOM imports: renderer and main-process code both read it.
+ * Plain data and string helpers with no imports at all: renderer and main-process code
+ * both read it (the main-process answer to a font URL is templateFontResponse in
+ * @genoffice/electron-utils/template-font-response).
  */
 
 export type TemplateFontScript = 'korean' | 'latin'
 
+/**
+ * One shipped file. Every face's family (name ID 1) is its family's name, so Office
+ * lists it under that family: only regular and bold faces ship (spec 4.1, the weights
+ * the templates use), and font-metrics' template-font-names test holds the files to it.
+ */
 export interface TemplateFontFace {
   /** file name in the folder, exactly as the distributor names it */
   readonly file: string
@@ -22,12 +29,6 @@ export interface TemplateFontFace {
   readonly weight: number
   /** the wght range of a variable file; absent for a static face */
   readonly variableWeight?: { readonly min: number; readonly max: number }
-  /**
-   * The face's family (name ID 1): the name Office lists the face under and stores in
-   * a document. It equals the family for regular and bold faces; a face outside the
-   * regular/bold pair is its own family there (`Pretendard SemiBold`).
-   */
-  readonly officeFamily: string
 }
 
 export interface TemplateFontFamily {
@@ -74,9 +75,8 @@ export const TEMPLATE_FONTS: readonly TemplateFontFamily[] = [
     family: 'Pretendard',
     script: 'korean',
     faces: [
-      { file: 'Pretendard-Regular.otf', weight: 400, officeFamily: 'Pretendard' },
-      { file: 'Pretendard-SemiBold.otf', weight: 600, officeFamily: 'Pretendard SemiBold' },
-      { file: 'Pretendard-Bold.otf', weight: 700, officeFamily: 'Pretendard' },
+      { file: 'Pretendard-Regular.otf', weight: 400 },
+      { file: 'Pretendard-Bold.otf', weight: 700 },
     ],
     license: 'OFL-1.1',
     licenseFile: 'Pretendard-OFL.txt',
@@ -92,8 +92,8 @@ export const TEMPLATE_FONTS: readonly TemplateFontFamily[] = [
     family: 'Noto Serif KR',
     script: 'korean',
     faces: [
-      { file: 'NotoSerifKR-Regular.otf', weight: 400, officeFamily: 'Noto Serif KR' },
-      { file: 'NotoSerifKR-Bold.otf', weight: 700, officeFamily: 'Noto Serif KR' },
+      { file: 'NotoSerifKR-Regular.otf', weight: 400 },
+      { file: 'NotoSerifKR-Bold.otf', weight: 700 },
     ],
     license: 'OFL-1.1',
     licenseFile: 'NotoSerifKR-OFL.txt',
@@ -108,7 +108,7 @@ export const TEMPLATE_FONTS: readonly TemplateFontFamily[] = [
   {
     family: 'Black Han Sans',
     script: 'korean',
-    faces: [{ file: 'BlackHanSans-Regular.ttf', weight: 400, officeFamily: 'Black Han Sans' }],
+    faces: [{ file: 'BlackHanSans-Regular.ttf', weight: 400 }],
     license: 'OFL-1.1',
     licenseFile: 'BlackHanSans-OFL.txt',
     ...googleFonts('blackhansans'),
@@ -118,7 +118,7 @@ export const TEMPLATE_FONTS: readonly TemplateFontFamily[] = [
   {
     family: 'Do Hyeon',
     script: 'korean',
-    faces: [{ file: 'DoHyeon-Regular.ttf', weight: 400, officeFamily: 'Do Hyeon' }],
+    faces: [{ file: 'DoHyeon-Regular.ttf', weight: 400 }],
     license: 'OFL-1.1',
     licenseFile: 'DoHyeon-OFL.txt',
     ...googleFonts('dohyeon'),
@@ -129,7 +129,7 @@ export const TEMPLATE_FONTS: readonly TemplateFontFamily[] = [
     // the distributor publishes a Regular only
     family: 'Gowun Dodum',
     script: 'korean',
-    faces: [{ file: 'GowunDodum-Regular.ttf', weight: 400, officeFamily: 'Gowun Dodum' }],
+    faces: [{ file: 'GowunDodum-Regular.ttf', weight: 400 }],
     license: 'OFL-1.1',
     licenseFile: 'GowunDodum-OFL.txt',
     licenseUrl:
@@ -144,8 +144,8 @@ export const TEMPLATE_FONTS: readonly TemplateFontFamily[] = [
     family: 'Gowun Batang',
     script: 'korean',
     faces: [
-      { file: 'GowunBatang-Regular.ttf', weight: 400, officeFamily: 'Gowun Batang' },
-      { file: 'GowunBatang-Bold.ttf', weight: 700, officeFamily: 'Gowun Batang' },
+      { file: 'GowunBatang-Regular.ttf', weight: 400 },
+      { file: 'GowunBatang-Bold.ttf', weight: 700 },
     ],
     license: 'OFL-1.1',
     licenseFile: 'GowunBatang-OFL.txt',
@@ -160,7 +160,7 @@ export const TEMPLATE_FONTS: readonly TemplateFontFamily[] = [
   {
     family: 'Bebas Neue',
     script: 'latin',
-    faces: [{ file: 'BebasNeue-Regular.ttf', weight: 400, officeFamily: 'Bebas Neue' }],
+    faces: [{ file: 'BebasNeue-Regular.ttf', weight: 400 }],
     license: 'OFL-1.1',
     licenseFile: 'BebasNeue-OFL.txt',
     ...googleFonts('bebasneue'),
@@ -170,7 +170,7 @@ export const TEMPLATE_FONTS: readonly TemplateFontFamily[] = [
   {
     family: 'Space Grotesk',
     script: 'latin',
-    faces: [{ file: 'SpaceGrotesk-Bold.ttf', weight: 700, officeFamily: 'Space Grotesk' }],
+    faces: [{ file: 'SpaceGrotesk-Bold.ttf', weight: 700 }],
     license: 'OFL-1.1',
     licenseFile: 'SpaceGrotesk-OFL.txt',
     licenseUrl:
@@ -190,7 +190,6 @@ export const TEMPLATE_FONTS: readonly TemplateFontFamily[] = [
         file: 'PlayfairDisplay[wght].ttf',
         weight: 400,
         variableWeight: { min: 400, max: 900 },
-        officeFamily: 'Playfair Display',
       },
     ],
     license: 'OFL-1.1',
@@ -202,7 +201,7 @@ export const TEMPLATE_FONTS: readonly TemplateFontFamily[] = [
   {
     family: 'Archivo Black',
     script: 'latin',
-    faces: [{ file: 'ArchivoBlack-Regular.ttf', weight: 400, officeFamily: 'Archivo Black' }],
+    faces: [{ file: 'ArchivoBlack-Regular.ttf', weight: 400 }],
     license: 'OFL-1.1',
     licenseFile: 'ArchivoBlack-OFL.txt',
     ...googleFonts('archivoblack'),
@@ -213,3 +212,68 @@ export const TEMPLATE_FONTS: readonly TemplateFontFamily[] = [
 
 /** The bundled families, e.g. for a picker's `knownAvailable` (the OS enumeration cannot see them). */
 export const TEMPLATE_FONT_FAMILY_NAMES: readonly string[] = TEMPLATE_FONTS.map((f) => f.family)
+
+// ── What the editors register, and the URLs they load it from ─────────────────
+
+/** One face as an editor registers it (a FontFace, or an @font-face rule). */
+export interface TemplateFontFaceRegistration {
+  /** the family a document names */
+  readonly family: string
+  /** file name in the template font folder */
+  readonly file: string
+  /** CSS font-weight descriptor: one weight, or a variable file's "min max" range */
+  readonly weight: string
+}
+
+/** Every face under its family at its own weight; a variable file over its wght range. */
+export const TEMPLATE_FONT_FACE_REGISTRATIONS: readonly TemplateFontFaceRegistration[] =
+  TEMPLATE_FONTS.flatMap(({ family, faces }) =>
+    faces.map((face) => ({
+      family,
+      file: face.file,
+      weight: face.variableWeight
+        ? `${face.variableWeight.min} ${face.variableWeight.max}`
+        : String(face.weight),
+    })),
+  )
+
+/** Each bundled font file once. */
+export const TEMPLATE_FONT_FILES: readonly string[] = [
+  ...new Set(TEMPLATE_FONTS.flatMap((f) => f.faces.map((face) => face.file))),
+]
+
+/**
+ * Where a renderer loads a bundled file from: the template-fonts host of the Word
+ * editor's privileged media scheme (LAZY_MEDIA_SCHEME in @genoffice/docx-engine,
+ * DOCX_MEDIA_SCHEME_PRIVILEGE in @genoffice/electron-utils; the docs and sheets tests
+ * hold the three equal). Inside the shell the Word editor's main serves these URLs for
+ * every editor; a standalone sheets app serves them itself.
+ */
+export const TEMPLATE_FONT_SCHEME = 'genoffice-docx-media'
+/** the URL host the template fonts are served under (never a 64-hex lazy-media hash) */
+export const TEMPLATE_FONT_HOST = 'template-fonts'
+
+/** The URL of a bundled font file; the name is encoded (`PlayfairDisplay[wght].ttf`). */
+export function templateFontUrl(file: string): string {
+  return `${TEMPLATE_FONT_SCHEME}://${TEMPLATE_FONT_HOST}/${encodeURIComponent(file)}`
+}
+
+/** The listed font file a URL names, or null for any other URL (other hosts, unlisted names). */
+export function templateFontFileOf(url: string): string | null {
+  let parsed: URL
+  try {
+    parsed = new URL(url)
+  } catch {
+    return null
+  }
+  if (parsed.protocol !== `${TEMPLATE_FONT_SCHEME}:` || parsed.hostname !== TEMPLATE_FONT_HOST) {
+    return null
+  }
+  let name: string
+  try {
+    name = decodeURIComponent(parsed.pathname.replace(/^\/+/, ''))
+  } catch {
+    return null
+  }
+  return TEMPLATE_FONT_FILES.includes(name) ? name : null
+}

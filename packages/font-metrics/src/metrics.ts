@@ -10,7 +10,14 @@
 import { closeSync, mkdirSync, openSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 
-import { fontDirsGeneration, getFontIndex, norm, readTable, readTableDir, styleScore } from './sfnt'
+import {
+  fontDirsGeneration,
+  getAppFontIndex,
+  norm,
+  readTable,
+  readTableDir,
+  styleScore,
+} from './sfnt'
 
 export interface FaceVerticalMetrics {
   unitsPerEm: number
@@ -125,7 +132,8 @@ export function familyVerticalMetrics(family: string): FaceVerticalMetrics | nul
   const hit = cache[key]
   if (hit && cacheValid(hit)) return hit.m
 
-  const candidates = getFontIndex().byFamily.get(key)
+  // the Word editor's lookup: the app's own font folders count (configureExtraFontDirs)
+  const candidates = getAppFontIndex().byFamily.get(key)
   const face = candidates?.length
     ? [...candidates].sort((a, b) => styleScore(b, []) - styleScore(a, []))[0]
     : undefined

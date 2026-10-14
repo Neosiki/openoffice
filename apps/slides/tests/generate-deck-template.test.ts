@@ -476,6 +476,21 @@ describe('naming a template in the conversation (6.5)', () => {
     expect(deck.pageCalls[0]!.style).toBe(styleWithRequests(builtin.styleSheet, ['mostly blue']))
   })
 
+  it('an unknown name on a call that fails early: the failure still names the usable templates', async () => {
+    const deck = makeDeck({ saved: { Mine: plainSaved } })
+    // no topic and no pages: refused before any planning
+    const res = await run(
+      deck,
+      call('generate_deck', { core_hook: 'Hook', style_template: 'no-such-template' }),
+    )
+    expect(res.isError).toBe(true)
+    expect(res.output).toContain('generate_deck requires')
+    expect(res.output).toContain('"no-such-template"')
+    expect(res.output).toContain(builtin.id)
+    expect(res.output).toContain('Mine')
+    expect(deck.pageCalls).toHaveLength(0)
+  })
+
   it('an unknown name with no selection: generation goes on as with no template', async () => {
     const deck = makeDeck()
     const res = await run(deck, topicCall({ style_template: 'no-such-template' }))
@@ -630,6 +645,33 @@ describe('the three tools (6.6)', () => {
     await run(later, topicCall({ style_template: 'My Coral' }))
     expect(later.pageCalls[0]!.templateDevices).toBe(true)
     expect(later.pageCalls[0]!.style).toBe(styleWithRequests(builtin.styleSheet, ['mostly blue']))
+  })
+
+  it('saving with a saved style selected after reopening stores its text merged with the requests', async () => {
+    const deck = makeDeck({
+      selected: { kind: 'saved', key: 'Mine', adjustments: ['bigger titles'] },
+      saved: { Mine: plainSaved },
+    })
+    // a reopened document: this window has generated nothing yet
+    const res = await run(deck, call('save_style_template', { name: 'Mine v2' }))
+    expect(res.isError).toBeFalsy()
+    expect(deck.saved['Mine v2']).toMatchObject({
+      styleSkill: styleWithRequests('PLAIN SAVED STYLE', ['bigger titles']),
+    })
+    expect(deck.saved['Mine v2']).not.toHaveProperty('basedOn')
+  })
+
+  it('saving a selected saved style that came from a built-in template keeps the origin', async () => {
+    const deck = makeDeck({
+      selected: { kind: 'saved', key: 'Mine' },
+      saved: { Mine: { ...plainSaved, basedOn: builtin.id } },
+    })
+    const res = await run(deck, call('save_style_template', { name: 'Copy' }))
+    expect(res.isError).toBeFalsy()
+    expect(deck.saved['Copy']).toMatchObject({
+      styleSkill: 'PLAIN SAVED STYLE',
+      basedOn: builtin.id,
+    })
   })
 
   it('saving without a selection stores this window’s last style and no origin', async () => {

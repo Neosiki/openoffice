@@ -1,23 +1,15 @@
-import { TEMPLATE_FONTS } from '@genoffice/ui/template-fonts'
-import { templateFontUrl } from '../shared/template-fonts'
+import { TEMPLATE_FONT_FACE_REGISTRATIONS, templateFontUrl } from '@genoffice/ui/template-fonts'
 import { noteTemplateFontFamilies } from './line-metrics'
 
 /**
  * The design templates' bundled fonts in the Word editor. Each face is registered
- * under its real family name from the one shipped copy (served by the main process,
- * see shared/template-fonts.ts), so a document naming the family draws, measures,
+ * under its real family name from the one shipped copy (served by the main process on
+ * templateFontUrl's URLs), so a document naming the family draws, measures,
  * prints and exports in the real face: cssFontFamily keeps the declared name at the
  * head of every chain, and the rest of the chain still catches characters the face
  * lacks. URL-backed faces load only when text first uses them; the 'loadingdone'
  * listeners then re-measure, as for the fonts.css faces.
  */
-
-export interface TemplateFontFaceSpec {
-  readonly family: string
-  readonly file: string
-  /** CSS font-weight descriptor: one weight, or a variable file's range */
-  readonly weight: string
-}
 
 /**
  * Single-spacing line factor of each family the editor draws real: the face's hhea
@@ -29,7 +21,6 @@ export interface TemplateFontFaceSpec {
  */
 export const TEMPLATE_LINE_FACTORS: Readonly<Record<string, number>> = {
   Pretendard: 1.5514,
-  'Pretendard SemiBold': 1.5514,
   'Noto Serif KR': 1.8681,
   'Black Han Sans': 1.625,
   'Do Hyeon': 1.625,
@@ -39,28 +30,6 @@ export const TEMPLATE_LINE_FACTORS: Readonly<Record<string, number>> = {
   'Space Grotesk': 1.276,
   'Playfair Display': 1.333,
   'Archivo Black': 1.088,
-}
-
-/**
- * Every face to register. A face outside the regular/bold pair is its own family in
- * Office (`Pretendard SemiBold`), so it is registered twice: at its weight under the
- * family, and as the regular face of that Office family, where bold synthesizes like
- * Word's faux bold of a family without a bold face.
- */
-export function templateFontFaceSpecs(): TemplateFontFaceSpec[] {
-  const specs: TemplateFontFaceSpec[] = []
-  for (const family of TEMPLATE_FONTS) {
-    for (const face of family.faces) {
-      const weight = face.variableWeight
-        ? `${face.variableWeight.min} ${face.variableWeight.max}`
-        : String(face.weight)
-      specs.push({ family: family.family, file: face.file, weight })
-      if (face.officeFamily !== family.family) {
-        specs.push({ family: face.officeFamily, file: face.file, weight: '400' })
-      }
-    }
-  }
-  return specs
 }
 
 type FontFaceCtor = new (
@@ -81,7 +50,7 @@ export function registerTemplateFonts(
 ): string[] {
   if (!fonts || !Face) return []
   const families = new Set<string>()
-  for (const spec of templateFontFaceSpecs()) {
+  for (const spec of TEMPLATE_FONT_FACE_REGISTRATIONS) {
     const face = new Face(spec.family, `url("${templateFontUrl(spec.file)}")`, {
       weight: spec.weight,
       style: 'normal',

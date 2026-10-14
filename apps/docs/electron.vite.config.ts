@@ -26,7 +26,13 @@ export default defineConfig({
   main: {
     plugins: [
       externalizeDepsPlugin({
-        exclude: ['@genoffice/docx-engine', '@genoffice/electron-utils', '@genoffice/font-metrics'],
+        exclude: [
+          '@genoffice/docx-engine',
+          '@genoffice/electron-utils',
+          '@genoffice/font-metrics',
+          // the template font list the media scheme serves from
+          '@genoffice/ui',
+        ],
       }),
     ],
     resolve: { alias: localAlias },

@@ -25,7 +25,7 @@ describe('installTemplateFontRefresh', () => {
     installTemplateFontRefresh(refresh, fonts as FontFaceSet, (run) => run())
     fonts.dispatchEvent(loadingDone(['Calibri']))
     expect(refresh).not.toHaveBeenCalled()
-    fonts.dispatchEvent(loadingDone(['"Pretendard SemiBold"']))
+    fonts.dispatchEvent(loadingDone(['"Noto Serif KR"']))
     expect(refresh).toHaveBeenCalledTimes(1)
   })
 
