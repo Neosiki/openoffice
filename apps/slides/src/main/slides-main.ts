@@ -280,6 +280,7 @@ import { listPrivateFontFaces, getPrivateFontData, registerEmbeddedFonts } from 
 import { listMetafileFonts } from './metafile-fonts'
 import { initFontStore, installLocalFontFiles } from './font-store'
 import { initTemplateFonts, registerTemplateFontsIpc } from './template-fonts'
+import { registerTemplateCoverIpc } from './template-cover'
 
 /** One slide, copied from any deck open in this process, waiting to be pasted into another. */
 let slideClipboard: { bundles: SlideBundle[]; pngs?: string[] } | null = null
@@ -1314,6 +1315,7 @@ export function registerSlidesIpc(): void {
   initFontStore()
   initTemplateFonts()
   registerTemplateFontsIpc()
+  registerTemplateCoverIpc()
   // Fonts changed (local install): rebuild every open session with a fresh
   // registry and push the relaid-out slides + a re-sync ping to all attached windows.
   const afterFontsChanged = (): void => {

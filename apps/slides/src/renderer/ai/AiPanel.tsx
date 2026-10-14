@@ -40,6 +40,8 @@ import {
 import { extractJsonObject, parseOutlineJson } from './outline-json'
 import { buildPageSystemPrompt } from './page-system-prompt'
 import { templateSelectionState } from './template-selection-state'
+import { TemplateStartGallery } from './TemplateGallery'
+import { TemplatePicker } from './TemplatePicker'
 import { EditQueueCard } from './EditQueueCard'
 import { deriveDeckProgressView, type DeckProgressSnapshot } from './deck-progress-view'
 import {
@@ -2273,6 +2275,7 @@ export function AiPanel({
                 </button>
               ))}
             </div>
+            {deckEmpty && <TemplateStartGallery />}
           </div>
         )}
         {chat.map((entry, i) => {
@@ -2492,6 +2495,10 @@ export function AiPanel({
             <AiInputTruncatedNotice lang={lang} onDismiss={() => setInputTruncated(false)} />
           )}
           <AiSubscriptionUsageLine usage={subscriptionUsage} lang={lang} />
+          <TemplatePicker
+            deckEmpty={deckEmpty ?? false}
+            galleryShown={!!deckEmpty && chat.length === 0 && historicChat.length === 0}
+          />
           <div className="ai-input-box">
             <AiQueueStrip
               items={msgQueue.queued}
