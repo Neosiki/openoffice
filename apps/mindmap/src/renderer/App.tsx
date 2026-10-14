@@ -23,6 +23,7 @@ import { MapController, type MapHost, type TopicRequest } from './map/controller
 import { Toolbar } from './components/Toolbar'
 import { SheetTabs } from './components/SheetTabs'
 import { ThemePanel } from './components/ThemePanel'
+import { MindmapAiDock, useMindmapAi } from './ai/AiDock'
 import {
   ConfirmDialog,
   type ConfirmRequest,
@@ -270,6 +271,9 @@ export default function App() {
       each.flush()
     })
   }, [])
+
+  // the AI panel works on the map through the same session and controllers (T12)
+  const ai = useMindmapAi({ session, controllers, activeKey, setActiveKey, path, flush: flushAll })
 
   // ---- saving ----
 
@@ -582,6 +586,7 @@ export default function App() {
         layoutExact={controller?.layoutExact ?? true}
         pickingRelationship={picking}
         themeOpen={themeOpen}
+        aiOpen={ai.open}
         onSave={() => void doSave('save')}
         onSaveAs={() => void doSave('saveAs')}
         onUndo={() => runCommand('undo')}
@@ -600,12 +605,19 @@ export default function App() {
         onLabel={() => requestField('label')}
         onLink={() => requestField('link')}
         onLayout={(layout: ViewLayout) => controller?.setLayout(layout)}
-        onToggleTheme={() => setThemeOpen((open) => !open)}
+        onToggleTheme={() => {
+          ai.setOpen(false)
+          setThemeOpen((open) => !open)
+        }}
         onFoldAll={() => runCommand('fold-all')}
         onUnfoldAll={() => runCommand('unfold-all')}
         onZoomIn={() => runCommand('zoom-in')}
         onZoomOut={() => runCommand('zoom-out')}
         onZoomFit={() => runCommand('zoom-fit')}
+        onToggleAi={() => {
+          setThemeOpen(false)
+          ai.setOpen(!ai.open)
+        }}
       />
 
       {(notices.preserved > 0 || notices.unknownTheme || picking) && (
@@ -659,6 +671,7 @@ export default function App() {
             onClose={() => setThemeOpen(false)}
           />
         )}
+        <MindmapAiDock ai={ai} filePath={path} />
       </main>
 
       <footer className="mm-foot">

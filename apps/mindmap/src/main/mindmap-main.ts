@@ -38,6 +38,7 @@ import {
 } from '@genoffice/electron-utils'
 import { getUiLang, normalizeLang, setUiLang } from '@genoffice/i18n'
 import { openXmind } from '@genoffice/xmind-engine'
+import { registerMindmapAiIpc } from './ai-attachments'
 import { atomicWriteFile } from './atomic-write'
 import { tm } from './i18n-main'
 import { APP_CHANNELS, MINDMAP_CHANNELS } from '../shared/ipc'
@@ -49,6 +50,8 @@ import type {
   SaveMindmapResult,
   SaveMode,
 } from '../shared/ipc'
+
+export { setMindmapProvisionalTitleHook } from './ai-attachments'
 
 /** The one extension a map is saved with. */
 const MAP_EXTENSION = '.xmind'
@@ -396,6 +399,9 @@ function registerMindmapIpc(): void {
     saveWaiters.delete(e.sender.id)
     waiter?.(ok === true)
   })
+
+  // the AI panel's attachments and the provisional name of an untitled map (T12)
+  registerMindmapAiIpc({ hasFile: (wcId) => savePathByWc.has(wcId) })
 
   // Language channel shared with other modules; removeHandler tolerates duplicate registration
   ipcMain.removeHandler(APP_CHANNELS.getLanguage)
