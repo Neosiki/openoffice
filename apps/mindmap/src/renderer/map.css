@@ -1,0 +1,36 @@
+/*
+ * The map itself: document content. Nothing here follows the app's light or
+ * dark setting and nothing references a chrome token; the colours of a map
+ * come from its theme (map/look.ts). What is drawn on the map only while
+ * editing (selection, the edit box, the context menu) is chrome and lives in
+ * styles.css.
+ */
+
+.mm-card .map-container {
+  font-family: var(--font-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif);
+}
+
+/* the labels, and the chips for a note and a link, sit under the title */
+.mm-card .map-container .tags span {
+  max-width: 18em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
+}
+
+/* the library lets clicks fall through everything inside a topic; the two chips take theirs */
+.mm-card .map-container .mm-chip {
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.mm-card .map-container .mm-chip-link {
+  text-decoration: underline;
+}
+
+/* a relationship or summary without a title still needs something to click on */
+.mm-card .map-container .svg-label:empty {
+  min-width: 1.5em;
+  min-height: 1em;
+}

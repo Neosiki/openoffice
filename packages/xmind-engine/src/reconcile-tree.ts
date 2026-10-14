@@ -45,7 +45,7 @@ import {
   shownParts,
 } from './tree-walk'
 import { isRecord, type XmindSheet, type XmindTopic } from './types'
-import { formatRange, isWebLink } from './view'
+import { formatRange, isShownLink } from './view'
 
 /**
  * The ids reconciling wrote in place of ids the state gave, by the id given.
@@ -188,8 +188,8 @@ function writeValues(topic: XmindTopic, want: StateTopic): void {
     else delete topic.notes
   }
   // A link to another topic or to an attachment shows as no link, so it stays
-  // until the user puts a web link in its place.
-  const link = isWebLink(topic.href) ? topic.href : null
+  // until the user puts a link in its place.
+  const link = isShownLink(topic.href) ? topic.href : null
   if (link !== want.link) {
     if (want.link === null) delete topic.href
     else topic.href = want.link

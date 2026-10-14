@@ -3,7 +3,7 @@
  *
  * This is the engine's own shape, not the data shape of the drawing library;
  * the editor converts. It carries only what is shown or edited: titles, the
- * order of branches, folding, labels, the note as plain text, the web link,
+ * order of branches, folding, labels, the note as plain text, the link,
  * summaries, relationships, the layout, the picture reference, marker ids and
  * the style values set on a topic itself.
  *
@@ -43,7 +43,12 @@ export interface ViewTopic {
   labels: string[]
   /** the note as plain text; null when the topic has none */
   note: string | null
-  /** a web link; a link to another topic or to an attachment is not shown */
+  /**
+   * the topic's link as the file holds it, whatever it points at: a web
+   * address, or one nothing will ever open (`javascript:`, `file:`). It is
+   * text to show, not something to trust. A link to another topic or to an
+   * attachment is not shown and is null here.
+   */
   link: string | null
   image: ViewImage | null
   /** marker ids only, e.g. `priority-1` */
@@ -123,7 +128,7 @@ function topicToView(topic: XmindTopic, shown: Set<string>): ViewTopic {
     folded: topic.branch === 'folded',
     labels: strings(topic.labels),
     note: noteText(topic.notes),
-    link: isWebLink(topic.href) ? topic.href : null,
+    link: isShownLink(topic.href) ? topic.href : null,
     image: imageToView(topic.image),
     markers: records(topic.markers)
       .map((marker) => marker.markerId)
@@ -135,12 +140,29 @@ function topicToView(topic: XmindTopic, shown: Set<string>): ViewTopic {
 }
 
 /**
- * Whether a topic's `href` is a link the editor shows and edits. Links to
- * another topic (`xmind:#…`) and to an attachment (`xap:…`) are kept in the
- * file but are not view data.
+ * Whether an `href` is a web link: `http`, `https` or `mailto`. These are the
+ * links the outline text writes, and the only ones worth offering to open.
  */
 export function isWebLink(href: unknown): href is string {
   return typeof href === 'string' && /^(?:https?:\/\/|mailto:)/i.test(href)
+}
+
+/**
+ * Whether an `href` is one of the two references into the file itself: a link
+ * to another topic (`xmind:#…`) or to an attachment (`xap:…`). The editor does
+ * not show these; they stay in the file as they are.
+ */
+export function isInternalLink(href: unknown): href is string {
+  return typeof href === 'string' && /^\s*(?:xmind|xap):/i.test(href)
+}
+
+/**
+ * Whether a topic's `href` is a link the editor shows and edits: any text
+ * that is not empty and not an internal reference. That includes addresses
+ * nothing should open; showing one is not opening it.
+ */
+export function isShownLink(href: unknown): href is string {
+  return typeof href === 'string' && href.trim() !== '' && !isInternalLink(href)
 }
 
 const ATTACHMENT_SCHEME = 'xap:'
