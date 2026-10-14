@@ -1,0 +1,656 @@
+/**
+ * The mind map editor: toolbar on top, the map in a card, sheet tabs and the
+ * zoom ratio below.
+ *
+ * The map lives in a `DocumentSession` (the engine's document and the history
+ * of every sheet). Each sheet that has been shown has its own `MapController`
+ * with its own instance of the drawing library, so the undo history of one
+ * sheet never reaches another. Everything that changes the map goes through a
+ * controller's edit functions; this component only wires the screen to them.
+ */
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useAutoSavePref } from '@genoffice/ui'
+import type { ViewLayout } from '@genoffice/xmind-engine'
+import { t as translate, useI18n } from './i18n/locale'
+import { mapStrings } from './i18n/map-strings'
+import type { StringKey } from './i18n/locale'
+import { newMap, type OpenFailure, type OpenNotices, openMapBytes } from './document/open'
+import type { DocumentSession, SheetTab } from './document/session'
+import { deleteSheetAfterConfirm } from './document/sheet-actions'
+import { thumbnailForSave } from './document/thumbnail'
+import { MapController, type MapHost, type TopicRequest } from './map/controller'
+import { Toolbar } from './components/Toolbar'
+import { SheetTabs } from './components/SheetTabs'
+import {
+  ConfirmDialog,
+  type ConfirmRequest,
+  Notice,
+  TopicFieldDialog,
+  type TopicFieldRequest,
+} from './components/dialogs'
+import type { MindmapMenuCommand, SaveMode } from '../shared/ipc'
+
+type LoadStatus = 'loading' | 'ready' | 'failed' | 'error'
+type SaveState = 'idle' | 'saving' | 'saved' | 'failed'
+
+/** What the screen says for a file that did not open. Such a file has no map and is never written. */
+const OPEN_FAILURE_TEXT: Readonly<Record<OpenFailure, StringKey>> = {
+  'legacy-format': 'openLegacy',
+  encrypted: 'openEncrypted',
+  unreadable: 'openUnreadable',
+  rejected: 'openRejected',
+}
+
+const AUTO_SAVE_INTERVAL_MS = 30_000
+const TOAST_MS = 4000
+
+/** true while the keyboard is in a text field or in a title being typed on the map */
+function typingInText(): boolean {
+  const active = document.activeElement
+  if (!(active instanceof HTMLElement)) return false
+  return active.isContentEditable || active.tagName === 'INPUT' || active.tagName === 'TEXTAREA'
+}
+
+export default function App() {
+  const { lang, t } = useI18n()
+  const [status, setStatus] = useState<LoadStatus>('loading')
+  const [failure, setFailure] = useState<OpenFailure | null>(null)
+  const [session, setSession] = useState<DocumentSession | null>(null)
+  const [path, setPath] = useState<string | null>(null)
+  const [tabs, setTabs] = useState<SheetTab[]>([])
+  const [activeKey, setActiveKey] = useState<string | null>(null)
+  const [dirty, setDirty] = useState(false)
+  const [saveState, setSaveState] = useState<SaveState>('idle')
+  const [notices, setNotices] = useState<OpenNotices>({ preserved: 0, unknownTheme: false })
+  const [confirm, setConfirm] = useState<ConfirmRequest | null>(null)
+  const [fieldRequest, setFieldRequest] = useState<TopicFieldRequest | null>(null)
+  const [toast, setToast] = useState<StringKey | null>(null)
+  /** bumped when a controller reports a change of selection, history, zoom or layout */
+  const [, setMapTick] = useState(0)
+  const [autoSave, setAutoSave] = useAutoSavePref('mindmapapp.autoSave', window.mindmapApi)
+
+  const sessionRef = useRef<DocumentSession | null>(null)
+  const statusRef = useRef<LoadStatus>('loading')
+  const controllers = useRef(new Map<string, MapController>())
+  const hosts = useRef(new Map<string, HTMLDivElement>())
+  const confirmAnswer = useRef<((ok: boolean) => void) | null>(null)
+  const savingRef = useRef(false)
+  const langRef = useRef(lang)
+  langRef.current = lang
+  statusRef.current = status
+
+  const controller = activeKey ? (controllers.current.get(activeKey) ?? null) : null
+
+  // ---- asking ----
+
+  const ask = useCallback((request: ConfirmRequest): Promise<boolean> => {
+    // a second question while one is open answers the first with "no"
+    confirmAnswer.current?.(false)
+    return new Promise<boolean>((resolve) => {
+      confirmAnswer.current = resolve
+      setConfirm(request)
+    })
+  }, [])
+
+  const answer = useCallback((ok: boolean) => {
+    const resolve = confirmAnswer.current
+    confirmAnswer.current = null
+    setConfirm(null)
+    resolve?.(ok)
+  }, [])
+
+  const say = useCallback((key: StringKey) => setToast(key), [])
+  useEffect(() => {
+    if (toast === null) return
+    const timer = window.setTimeout(() => setToast(null), TOAST_MS)
+    return () => window.clearTimeout(timer)
+  }, [toast])
+
+  // ---- what a map on screen needs from the screen around it ----
+
+  const openField = useCallback((field: TopicRequest, topicId: string) => {
+    const active = [...controllers.current.values()].find((candidate) => candidate.topic(topicId))
+    const topic = active?.topic(topicId)
+    if (!topic) return
+    const value =
+      field === 'label'
+        ? topic.labels.join(', ')
+        : field === 'note'
+          ? (topic.note ?? '')
+          : (topic.link ?? '')
+    setFieldRequest({ field, topicId, value })
+  }, [])
+
+  const host = useMemo<MapHost>(
+    () => ({
+      confirmDelete: (count) =>
+        ask({
+          kind: 'delete-hidden',
+          title: translate('deleteHiddenTitle'),
+          body: translate('deleteHiddenBody', { count }),
+          confirmLabel: translate('btnDelete'),
+        }),
+      openLink: (url) => {
+        void window.mindmapApi
+          .openLink(url)
+          .then((opened) => {
+            if (!opened) say('linkNotOpened')
+          })
+          .catch(() => say('linkNotOpened'))
+      },
+      onRequest: openField,
+      onStateChange: () => setMapTick((tick) => tick + 1),
+    }),
+    [ask, openField, say],
+  )
+
+  // ---- opening ----
+
+  useEffect(() => {
+    let cancelled = false
+    void (async () => {
+      try {
+        const pending = await window.mindmapApi.consumePending()
+        let opened: DocumentSession
+        let found: OpenNotices = { preserved: 0, unknownTheme: false }
+        if (pending) {
+          const file = await window.mindmapApi.openFile(pending)
+          const started = performance.now()
+          const result = file.status === 'ok' ? await openMapBytes(file.bytes) : file
+          // how long the engine took over the file, for measuring large maps
+          performance.measure('mindmap:open', { start: started, end: performance.now() })
+          if (cancelled) return
+          if (result.status !== 'ok') {
+            setFailure(result.status)
+            setStatus('failed')
+            return
+          }
+          opened = result.session
+          found = result.notices
+        } else {
+          opened = await newMap({
+            sheetTitle: translate('sheetDefaultName', { n: 1 }),
+            rootTitle: translate('centralTopic'),
+          })
+          if (cancelled) return
+        }
+        sessionRef.current = opened
+        setSession(opened)
+        setPath(pending)
+        setTabs(opened.tabs())
+        setActiveKey(opened.tabs()[0]?.key ?? null)
+        setNotices(found)
+        setStatus('ready')
+      } catch (err) {
+        console.error('[mindmap] open failed:', err)
+        if (!cancelled) setStatus('error')
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  // the session reports every change of the tree: the tabs and the unsaved mark follow
+  useEffect(() => {
+    if (!session) return
+    const sync = (): void => {
+      setTabs(session.tabs())
+      setDirty(session.dirty)
+    }
+    sync()
+    return session.subscribe(sync)
+  }, [session])
+
+  // mirror dirtiness to the main process (close prompt); a new map nobody touched never counts
+  useEffect(() => {
+    if (status === 'ready') window.mindmapApi.setDirty(dirty)
+  }, [dirty, status])
+
+  useEffect(() => {
+    if (dirty && saveState === 'saved') setSaveState('idle')
+  }, [dirty, saveState])
+
+  // ---- one drawing-library instance per sheet, made when the sheet is first shown ----
+
+  useEffect(() => {
+    if (!session || !activeKey || controllers.current.has(activeKey)) return
+    const el = hosts.current.get(activeKey)
+    if (!el) return
+    const created = new MapController({
+      el,
+      session,
+      sheetKey: activeKey,
+      strings: mapStrings(langRef.current),
+      host,
+    })
+    controllers.current.set(activeKey, created)
+    setMapTick((tick) => tick + 1)
+  }, [session, activeKey, host, tabs])
+
+  // a deleted sheet takes its instance with it
+  useEffect(() => {
+    const alive = new Set(tabs.map((tab) => tab.key))
+    for (const [key, gone] of controllers.current) {
+      if (alive.has(key)) continue
+      gone.destroy()
+      controllers.current.delete(key)
+    }
+  }, [tabs])
+
+  useEffect(() => {
+    const all = controllers.current
+    return () => {
+      all.forEach((each) => each.destroy())
+      all.clear()
+    }
+  }, [])
+
+  // the language changed: new topics, new summaries and the map's menu follow
+  useEffect(() => {
+    const strings = mapStrings(lang)
+    controllers.current.forEach((each) => each.setStrings(strings))
+  }, [lang])
+
+  /** Brings the tree in line with every sheet on screen, so nothing shown is missing from what is saved or read. */
+  const flushAll = useCallback(() => {
+    controllers.current.forEach((each) => each.flush())
+  }, [])
+
+  // ---- saving ----
+
+  const doSave = useCallback(
+    async (mode: SaveMode): Promise<boolean> => {
+      const current = sessionRef.current
+      if (statusRef.current !== 'ready' || !current) return false
+      // a menu save during an autosave queues behind it instead of being dropped
+      while (savingRef.current) await new Promise((resolve) => setTimeout(resolve, 50))
+      savingRef.current = true
+      setSaveState('saving')
+      try {
+        flushAll()
+        const bytes = await current.produceBytes({ thumbnail: await thumbnailForSave() })
+        const rootTitle = current.view(current.tabs()[0]!.key).root.title.trim()
+        const result = await window.mindmapApi.save({
+          bytes,
+          mode,
+          // an untitled map is offered its central topic as a name, unless that is still the default one
+          defaultName: rootTitle !== translate('centralTopic') ? rootTitle : undefined,
+        })
+        if (result.ok && 'path' in result) {
+          current.markWritten()
+          setPath(result.path)
+          setSaveState(current.dirty ? 'idle' : 'saved')
+          return true
+        }
+        setSaveState(result.ok ? 'idle' : 'failed')
+        if (!result.ok) console.error('[mindmap] save failed:', result.error)
+        return false
+      } catch (err) {
+        console.error('[mindmap] save failed:', err)
+        setSaveState('failed')
+        return false
+      } finally {
+        savingRef.current = false
+      }
+    },
+    [flushAll],
+  )
+
+  // autosave: every 30s and on window blur; untitled maps wait for an explicit first save
+  useEffect(() => {
+    if (!autoSave || !path) return
+    const tick = (): void => {
+      if (savingRef.current) return
+      flushAll()
+      if (!sessionRef.current?.dirty) return
+      void doSave('save')
+    }
+    const id = window.setInterval(tick, AUTO_SAVE_INTERVAL_MS)
+    window.addEventListener('blur', tick)
+    return () => {
+      window.clearInterval(id)
+      window.removeEventListener('blur', tick)
+    }
+  }, [autoSave, path, doSave, flushAll])
+
+  // ---- undo, redo and the other commands (toolbar, keyboard, menu: one way in) ----
+
+  const activeController = useCallback(
+    () => (activeKey ? (controllers.current.get(activeKey) ?? null) : null),
+    [activeKey],
+  )
+
+  const runCommand = useCallback(
+    (command: MindmapMenuCommand) => {
+      const map = activeController()
+      if (!map) return
+      switch (command) {
+        case 'undo':
+        case 'redo':
+          // While a title is being typed the keystroke belongs to the text, not to the map's history.
+          if (typingInText()) document.execCommand(command)
+          else if (command === 'undo') map.undo()
+          else map.redo()
+          break
+        case 'add-child':
+          map.addChild()
+          break
+        case 'add-sibling':
+          map.addSibling()
+          break
+        case 'fold-all':
+          map.setAllFolded(true)
+          break
+        case 'unfold-all':
+          map.setAllFolded(false)
+          break
+        case 'zoom-in':
+          map.zoomIn()
+          break
+        case 'zoom-out':
+          map.zoomOut()
+          break
+        case 'zoom-reset':
+          map.zoomReset()
+          break
+        case 'zoom-fit':
+          map.zoomFit()
+          break
+      }
+    },
+    [activeController],
+  )
+
+  useEffect(() => {
+    const api = window.mindmapApi
+    const offSave = api.onSaveRequest((mode) => {
+      if (statusRef.current !== 'ready') {
+        api.sendSaveRequestAck(false)
+        return
+      }
+      void doSave(mode).then((saved) => {
+        // a save that failed before it reached the main process still has someone waiting
+        if (!saved) api.sendSaveRequestAck(false)
+      })
+    })
+    const offClose = api.onCloseSaveRequest(() => {
+      void (async () => {
+        while (savingRef.current) await new Promise((resolve) => setTimeout(resolve, 50))
+        flushAll()
+        if (!sessionRef.current?.dirty) {
+          api.sendCloseSaveResult(true)
+          return
+        }
+        api.sendCloseSaveResult(await doSave('save'))
+      })()
+    })
+    const offRenamed = api.onFileRenamed((next) => setPath(next))
+    const offMenu = api.onMenuCommand(runCommand)
+    // Questions from the in-app MCP server. Staying silent while the map is
+    // still loading keeps the asker retrying instead of failing.
+    const offOutline = api.onOutlineRequest(() => {
+      if (statusRef.current === 'loading') return
+      const current = sessionRef.current
+      if (!current) {
+        api.sendOutlineResult({ error: 'the file did not open, so there is no map to read' })
+        return
+      }
+      try {
+        flushAll()
+        api.sendOutlineResult({ text: current.outline() })
+      } catch (err) {
+        api.sendOutlineResult({ error: err instanceof Error ? err.message : String(err) })
+      }
+    })
+    const offBytes = api.onBytesRequest(() => {
+      if (statusRef.current === 'loading') return
+      const current = sessionRef.current
+      if (!current) {
+        api.sendBytesResult({ error: 'the file did not open, so there is no map to read' })
+        return
+      }
+      flushAll()
+      current
+        .produceBytes()
+        .then((bytes) => api.sendBytesResult({ bytes }))
+        .catch((err: unknown) =>
+          api.sendBytesResult({ error: err instanceof Error ? err.message : String(err) }),
+        )
+    })
+    const offChrome = api.onChromePressed(() => activeController()?.cancelRelationshipPick())
+    return () => {
+      offSave()
+      offClose()
+      offRenamed()
+      offMenu()
+      offOutline()
+      offBytes()
+      offChrome()
+    }
+  }, [doSave, flushAll, runCommand, activeController])
+
+  // Ctrl+S / Ctrl+Shift+S, and undo or redo pressed while the map itself does not have the keyboard
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent): void => {
+      if (!(event.ctrlKey || event.metaKey) || event.altKey) return
+      const key = event.key.toLowerCase()
+      if (key === 's') {
+        event.preventDefault()
+        void doSave(event.shiftKey ? 'saveAs' : 'save')
+        return
+      }
+      if (key !== 'z' && key !== 'y') return
+      const target = event.target instanceof Element ? event.target : null
+      // the map handles its own keys, and a text field its own undo
+      if (target?.closest('.map-container') || typingInText()) return
+      event.preventDefault()
+      runCommand(key === 'y' || event.shiftKey ? 'redo' : 'undo')
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [doSave, runCommand])
+
+  // ---- sheets ----
+
+  const selectSheet = (key: string): void => {
+    activeController()?.flush()
+    setActiveKey(key)
+  }
+
+  const addSheet = (): void => {
+    if (!session) return
+    activeController()?.flush()
+    const added = session.addSheet({
+      title: t('sheetDefaultName', { n: session.tabs().length + 1 }),
+      rootTitle: t('centralTopic'),
+    })
+    setActiveKey(added.key)
+  }
+
+  const deleteSheet = (key: string): void => {
+    if (!session) return
+    const index = session.indexOf(key)
+    void deleteSheetAfterConfirm(session, key, (title) =>
+      ask({
+        kind: 'delete-sheet',
+        title: translate('deleteSheetTitle'),
+        body: translate('deleteSheetBody', { name: title }),
+        confirmLabel: translate('btnDelete'),
+      }),
+    ).then((outcome) => {
+      if (outcome === 'last-sheet') say('lastSheetNote')
+      if (outcome !== 'deleted') return
+      const left = session.tabs()
+      setActiveKey((current) =>
+        current === key ? (left[Math.min(index, left.length - 1)]?.key ?? null) : current,
+      )
+    })
+  }
+
+  // ---- labels, notes, links ----
+
+  const requestField = (field: TopicRequest): void => {
+    const id = controller?.selectedTopicIds().at(-1)
+    if (id) openField(field, id)
+    else say('selectTopicFirst')
+  }
+
+  const submitField = (value: string): boolean => {
+    const map = controller
+    if (!map || !fieldRequest) return true
+    const { field, topicId } = fieldRequest
+    if (field === 'label') return map.setLabels(topicId, value.split(/[,，、]/))
+    if (field === 'note') return map.setNote(topicId, value)
+    const address = value.trim()
+    if (address === '') return map.setLink(topicId, null)
+    // an address typed without a scheme is taken as a web address
+    return map.setLink(
+      topicId,
+      /^[a-z][a-z0-9+.-]*:/i.test(address) ? address : `https://${address}`,
+    )
+  }
+
+  // computed on every render: `t` is a new function each time and must not be a hook dependency
+  const statusText =
+    toast !== null
+      ? t(toast)
+      : saveState === 'saving'
+        ? t('saving')
+        : saveState === 'failed'
+          ? t('saveFailedStatus')
+          : dirty
+            ? t('unsaved')
+            : saveState === 'saved'
+              ? t('savedOk')
+              : ''
+
+  if (status === 'error') return <div className="center-note">{t('loadFailed')}</div>
+  if (status === 'loading') return <div className="center-note">{t('loading')}</div>
+  if (status === 'failed') {
+    return (
+      <div className="center-note" role="alert" data-open-failure={failure ?? 'unreadable'}>
+        {t(OPEN_FAILURE_TEXT[failure ?? 'unreadable'])}
+      </div>
+    )
+  }
+
+  const hasTopic = (controller?.selectedTopicIds().length ?? 0) > 0
+  const picking = controller?.pickingRelationship ?? false
+
+  return (
+    <div className="app">
+      <Toolbar
+        disabled={!controller}
+        dirty={dirty}
+        statusText={statusText}
+        canUndo={controller?.canUndo ?? false}
+        canRedo={controller?.canRedo ?? false}
+        autoSave={autoSave}
+        hasTopic={hasTopic}
+        layout={controller?.layout ?? 'both'}
+        layoutExact={controller?.layoutExact ?? true}
+        pickingRelationship={picking}
+        onSave={() => void doSave('save')}
+        onSaveAs={() => void doSave('saveAs')}
+        onUndo={() => runCommand('undo')}
+        onRedo={() => runCommand('redo')}
+        onToggleAutoSave={setAutoSave}
+        onAddChild={() => runCommand('add-child')}
+        onAddSibling={() => runCommand('add-sibling')}
+        onRelationship={() => {
+          if (picking) controller?.cancelRelationshipPick()
+          else if (!controller?.pickRelationshipTarget()) say('selectTopicFirst')
+        }}
+        onSummary={() => {
+          if (!controller?.addSummary()) say('selectTopicFirst')
+        }}
+        onNote={() => requestField('note')}
+        onLabel={() => requestField('label')}
+        onLink={() => requestField('link')}
+        onLayout={(layout: ViewLayout) => controller?.setLayout(layout)}
+        onFoldAll={() => runCommand('fold-all')}
+        onUnfoldAll={() => runCommand('unfold-all')}
+        onZoomIn={() => runCommand('zoom-in')}
+        onZoomOut={() => runCommand('zoom-out')}
+        onZoomFit={() => runCommand('zoom-fit')}
+      />
+
+      {(notices.preserved > 0 || notices.unknownTheme || picking) && (
+        <div className="mm-notices">
+          {notices.preserved > 0 && (
+            <Notice
+              kind="preserved"
+              text={t('noticePreserved', { count: notices.preserved })}
+              onClose={() => setNotices((current) => ({ ...current, preserved: 0 }))}
+            />
+          )}
+          {notices.unknownTheme && (
+            <Notice
+              kind="theme"
+              text={t('noticeTheme')}
+              onClose={() => setNotices((current) => ({ ...current, unknownTheme: false }))}
+            />
+          )}
+          {picking && (
+            <Notice
+              kind="pick-relationship"
+              text={t('pickRelationship')}
+              onClose={() => controller?.cancelRelationshipPick()}
+            />
+          )}
+        </div>
+      )}
+
+      <main className="mm-stage">
+        {/* the theme panel and the AI panel dock at this element's end side */}
+        <div className="mm-card" aria-label={t('appName')}>
+          {tabs.map((tab) => (
+            <div
+              key={tab.key}
+              className="mm-sheet-host"
+              data-sheet-host={tab.key}
+              hidden={tab.key !== activeKey}
+              ref={(el) => {
+                if (el) hosts.current.set(tab.key, el)
+                else hosts.current.delete(tab.key)
+              }}
+            />
+          ))}
+        </div>
+      </main>
+
+      <footer className="mm-foot">
+        <SheetTabs
+          tabs={tabs}
+          activeKey={activeKey}
+          disabled={!session}
+          onSelect={selectSheet}
+          onAdd={addSheet}
+          onRename={(key, title) => session?.renameSheet(key, title)}
+          onDelete={deleteSheet}
+        />
+        <button
+          type="button"
+          className="mm-zoom"
+          data-action="zoom-reset"
+          data-tip={t('zoomReset')}
+          disabled={!controller}
+          onClick={() => runCommand('zoom-reset')}
+        >
+          {Math.round((controller?.zoom ?? 1) * 100)}%
+        </button>
+      </footer>
+
+      {confirm && <ConfirmDialog request={confirm} onAnswer={answer} />}
+      {fieldRequest && (
+        <TopicFieldDialog
+          key={`${fieldRequest.field}:${fieldRequest.topicId}`}
+          request={fieldRequest}
+          onSubmit={submitField}
+          onClose={() => setFieldRequest(null)}
+        />
+      )}
+    </div>
+  )
+}
