@@ -12,10 +12,13 @@ import { closeAndSaveVideo, launchShell, screenshotPath, waitForPageWithUrl } fr
  * attachments stay; once a provider is connected the user's own send is the
  * run that counts as started. A reload takes nothing and starts nothing.
  *
- * Nothing here reaches Claude or Codex: the app runs with a PATH and a home
- * that hold no CLI (so the status check finds nothing to start), "connected"
- * is a status the test answers itself, and `ai:stream` is replaced by a stub
- * that records the request and replies with a fixed text.
+ * Nothing here reaches Claude or Codex: before "make" is pressed the
+ * subscription status handlers and `ai:stream` / `ai:stream-cancel` are
+ * replaced in the main process, the real status broadcast is filtered out so
+ * only the scripted statuses reach a view ("connected" is a status the test
+ * answers itself), and the stream stub records the request and replies with a
+ * fixed text. As a second layer the app runs with a PATH and a home that hold
+ * no CLI, so the real status check finds nothing to start.
  */
 
 const EVIDENCE_DIR = process.env.GENERATE_EVIDENCE_DIR
@@ -81,11 +84,42 @@ test.describe('generate hand-off: PPT editor', () => {
         }
       })
     try {
-      // the AI run is a stub from the start: no request ever reaches a provider
-      await app.evaluate(({ ipcMain }) => {
+      // the script runner wraps named functions in a helper the main process does not have
+      await app.evaluate('globalThis.__name = (fn) => fn' as never)
+      // Before anything can take the request: the AI run and the subscription statuses are
+      // scripted, and the real status broadcast never reaches a view, so no tab can pass
+      // the send gate on a subscription signed in on this machine
+      await app.evaluate(({ ipcMain, webContents }) => {
         const g = globalThis as unknown as Record<string, unknown>
         g.__t15Streams = []
-        ipcMain.removeHandler('ai:stream')
+        g.__t15Statuses = {
+          'claude-code': {
+            provider: 'claude-code',
+            state: 'not-installed',
+            meteredAccepted: false,
+          },
+          codex: { provider: 'codex', state: 'not-installed', meteredAccepted: false },
+        }
+        const proto = Object.getPrototypeOf(webContents.getAllWebContents()[0]!) as {
+          send: (this: unknown, channel: string, ...args: unknown[]) => void
+        }
+        const send = proto.send
+        g.__t15Send = send
+        proto.send = function (this: unknown, channel: string, ...args: unknown[]) {
+          if (channel === 'ai:subscription-changed') return
+          send.call(this, channel, ...args)
+        }
+        for (const channel of [
+          'ai:subscription-statuses',
+          'ai:subscription-recheck',
+          'ai:stream',
+          'ai:stream-cancel',
+        ]) {
+          ipcMain.removeHandler(channel)
+        }
+        ipcMain.handle('ai:subscription-statuses', () => g.__t15Statuses)
+        ipcMain.handle('ai:subscription-recheck', () => g.__t15Statuses)
+        ipcMain.handle('ai:stream-cancel', () => undefined)
         ipcMain.handle('ai:stream', (event, request: { requestId: string }) => {
           ;(g.__t15Streams as unknown[]).push(request)
           const send = (chunk: Record<string, unknown>) =>
@@ -117,17 +151,16 @@ test.describe('generate hand-off: PPT editor', () => {
       await editor.screenshot({ path: shot('slides-handoff-not-connected') })
 
       // ── the user connects (the test answers "ready") and sends what was left ──
-      await app.evaluate(({ ipcMain, webContents }) => {
-        const ready = {
+      await app.evaluate(({ webContents }) => {
+        const g = globalThis as unknown as Record<string, unknown>
+        g.__t15Statuses = {
           'claude-code': { provider: 'claude-code', state: 'ready', meteredAccepted: false },
           codex: { provider: 'codex', state: 'not-installed', meteredAccepted: false },
         }
-        for (const channel of ['ai:subscription-statuses', 'ai:subscription-recheck']) {
-          ipcMain.removeHandler(channel)
-          ipcMain.handle(channel, () => ready)
-        }
+        // through the saved send: the patched one drops status pushes
+        const send = g.__t15Send as (this: unknown, channel: string, ...args: unknown[]) => void
         for (const wc of webContents.getAllWebContents()) {
-          if (!wc.isDestroyed()) wc.send('ai:subscription-changed', ready)
+          if (!wc.isDestroyed()) send.call(wc, 'ai:subscription-changed', g.__t15Statuses)
         }
       })
       await expect(editor.locator('.ai-sub-prompt')).toHaveCount(0)
