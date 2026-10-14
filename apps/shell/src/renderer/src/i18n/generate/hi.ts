@@ -41,4 +41,18 @@ export const hi = {
   homeMakeFromGroup: 'इस समूह से नया दस्तावेज़ बनाएँ',
   homeMakeFromSelection: 'नया दस्तावेज़ बनाएँ',
   homeMakeFromFile: 'इस फ़ाइल से नया दस्तावेज़ बनाएँ',
+  untitled: 'बिना शीर्षक',
+  convertLabel: 'AI के बिना बदलें',
+  convertToMarkdown: 'Markdown दस्तावेज़',
+  convertToSlides: 'प्रस्तुति का ढाँचा (PPT)',
+  convertToMindmap: 'माइंड मैप',
+  convertHint:
+    'AI के बिना — आपके प्लान की सीमा से कुछ खर्च नहीं होता। परिणाम एक नए, अभी तक सहेजे न गए टैब में खुलता है।',
+  noticeRedacted: 'छिपाए गए हिस्से मूल पाठ की जगह अपने लेबल के रूप में ले जाए जाते हैं।',
+  convertUnreadable: 'सामग्री पढ़ी नहीं जा सकी, इसलिए कुछ भी नहीं बदला गया।',
+  convertRedactionFailed:
+    'सामग्री के छिपाए गए हिस्से संसाधित नहीं किए जा सके, इसलिए कुछ भी नहीं बदला गया।',
+  convertTooManySlides:
+    'मैप में एक प्रस्तुति के लिए बहुत ज़्यादा मुख्य शाखाएँ हैं (अधिकतम {max} स्लाइड)।',
+  convertFailed: 'बदला नहीं जा सका। फिर से कोशिश करें।',
 } satisfies Record<keyof typeof zh, string>

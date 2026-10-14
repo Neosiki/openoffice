@@ -42,6 +42,7 @@ import { registerMindmapAiIpc } from './ai-attachments'
 import { atomicWriteFile } from './atomic-write'
 import { registerMindmapExportIpc } from './export-main'
 import { registerMindmapHandoffIpc } from './handoff-main'
+import { registerMindmapSeedIpc } from './seed-main'
 import { tm } from './i18n-main'
 import { APP_CHANNELS, MINDMAP_CHANNELS } from '../shared/ipc'
 import { openableLink } from '../shared/links'
@@ -406,6 +407,7 @@ function registerMindmapIpc(): void {
   registerMindmapAiIpc({ hasFile: (wcId) => savePathByWc.has(wcId) })
   registerMindmapExportIpc({ filePathOf: (wcId) => savePathByWc.get(wcId) })
   registerMindmapHandoffIpc({ opensFile: (wcId) => openPathByWc.has(wcId) })
+  registerMindmapSeedIpc({ opensFile: (wcId) => openPathByWc.has(wcId) })
 
   // Language channel shared with other modules; removeHandler tolerates duplicate registration
   ipcMain.removeHandler(APP_CHANNELS.getLanguage)

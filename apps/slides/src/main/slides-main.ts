@@ -292,6 +292,7 @@ const issuedCloudPages = new Set<string>()
 import { registerPresenterIpc } from './presenter-show'
 import { registerAttachmentIpc } from './attachments-ipc'
 import { registerGenerateHandoffIpc } from './generate-handoff-ipc'
+import { openSlidesSeed } from './seed-deck'
 
 export {
   configureSlidesRuntime,
@@ -1402,6 +1403,9 @@ export function registerSlidesIpc(): void {
       dropQueued()
       return result
     }
+    // A new tab that starts with a given deck (a conversion's result, T17): taken once, unsaved
+    const seeded = await openSlidesSeed(e.sender, fitWidthPx, deckDefaultFont)
+    if (seeded) return seeded
     // No queued path but the main process already has a session (remount after an HMR full
     // reload/crash recovery) -> restore from the session; otherwise the document is lost leaving
     // only the start screen, and reopening the same file just activates this empty tab with no

@@ -41,4 +41,19 @@ export const nl = {
   homeMakeFromGroup: 'Nieuw document maken van deze groep',
   homeMakeFromSelection: 'Nieuw document maken',
   homeMakeFromFile: 'Nieuw document maken van dit bestand',
+  untitled: 'Naamloos',
+  convertLabel: 'Omzetten zonder AI',
+  convertToMarkdown: 'Markdown-document',
+  convertToSlides: 'Presentatieopzet (PPT)',
+  convertToMindmap: 'Mindmap',
+  convertHint:
+    'Zonder AI: er gaat niets van de limiet van je abonnement af. Het resultaat opent in een nieuw tabblad dat nog niet is opgeslagen.',
+  noticeRedacted:
+    'Verborgen delen worden overgenomen als hun labels, niet als de oorspronkelijke tekst.',
+  convertUnreadable: 'Het materiaal kon niet worden gelezen, dus er is niets omgezet.',
+  convertRedactionFailed:
+    'De verborgen delen van het materiaal konden niet worden verwerkt, dus er is niets omgezet.',
+  convertTooManySlides:
+    'De mindmap heeft te veel hoofdtakken voor één presentatie (tot {max} dia’s).',
+  convertFailed: 'Omzetten is mislukt. Probeer het opnieuw.',
 } satisfies Record<keyof typeof zh, string>

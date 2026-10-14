@@ -56,6 +56,8 @@ import type { OpenDocumentTab, TabKind, TabSummary } from '../shared/tabs-api'
 import { TAB_STRIP_HEIGHT } from '../shared/tab-drag-geometry'
 import type { GenerateHandoff } from '../shared/generate-api'
 import { dropGenerateHandoff, queueGenerateHandoffFor } from './generate/handoff'
+import type { ConvertedDocument } from './generate/convert'
+import { queueConvertedContent } from './generate/converted-tab'
 
 /** a tab lifted out of the strip with its live view: what "Open in New Window",
  *  tear-off and dock hand back and forth between the shell and a detached window */
@@ -463,6 +465,26 @@ export class TabManager {
     const contents = this.webContentsForTab(id)
     if (!contents) throw new Error('the new tab could not be opened')
     queueGenerateHandoffFor(contents, handoff)
+    return id
+  }
+
+  /**
+   * The generate window's "make" for a conversion without AI (8.6): a new
+   * untitled tab of the result's editor, with the content queued for that
+   * tab's webContents (taken once, as a new unsaved document) in the same
+   * tick, and the conversion recorded. A tab that closes first drops it.
+   */
+  openConversionResult(doc: ConvertedDocument): string {
+    const target = doc.content.target
+    const id =
+      target === 'markdown'
+        ? this.openMarkdownTab()
+        : target === 'slides'
+          ? this.openSlidesTab()
+          : this.openMindmapTab()
+    const contents = this.webContentsForTab(id)
+    if (!contents) throw new Error('the new tab could not be opened')
+    queueConvertedContent(contents, doc)
     return id
   }
 

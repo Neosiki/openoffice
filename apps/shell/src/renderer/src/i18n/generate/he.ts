@@ -40,4 +40,16 @@ export const he = {
   homeMakeFromGroup: 'יצירת מסמך חדש מהקבוצה הזו',
   homeMakeFromSelection: 'יצירת מסמך חדש',
   homeMakeFromFile: 'יצירת מסמך חדש מהקובץ הזה',
+  untitled: 'ללא כותרת',
+  convertLabel: 'המרה בלי בינה מלאכותית',
+  convertToMarkdown: 'מסמך Markdown',
+  convertToSlides: 'שלד מצגת (PPT)',
+  convertToMindmap: 'מפת חשיבה',
+  convertHint:
+    'בלי בינה מלאכותית – לא נצרך דבר מהמכסה של התוכנית שלך. התוצאה נפתחת בכרטיסייה חדשה שעדיין לא נשמרה.',
+  noticeRedacted: 'החלקים המוסתרים מועברים כתוויות שלהם, לא כטקסט המקורי.',
+  convertUnreadable: 'לא ניתן היה לקרוא את החומר, ולכן לא הומר דבר.',
+  convertRedactionFailed: 'לא ניתן היה לעבד את החלקים המוסתרים בחומר, ולכן לא הומר דבר.',
+  convertTooManySlides: 'במפה יש יותר מדי ענפים ראשיים למצגת אחת (עד {max} שקופיות).',
+  convertFailed: 'ההמרה נכשלה. נסו שוב.',
 } satisfies Record<keyof typeof zh, string>

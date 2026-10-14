@@ -40,4 +40,18 @@ export const es = {
   homeMakeFromGroup: 'Crear un documento nuevo a partir de este grupo',
   homeMakeFromSelection: 'Crear un documento nuevo',
   homeMakeFromFile: 'Crear un documento nuevo a partir de este archivo',
+  untitled: 'Sin título',
+  convertLabel: 'Convertir sin IA',
+  convertToMarkdown: 'Documento Markdown',
+  convertToSlides: 'Esquema de presentación (PPT)',
+  convertToMindmap: 'Mapa mental',
+  convertHint:
+    'Sin IA: no se usa nada del límite de tu plan. El resultado se abre en una pestaña nueva, aún sin guardar.',
+  noticeRedacted: 'Las partes ocultas se trasladan como sus etiquetas, no como el texto original.',
+  convertUnreadable: 'No se pudo leer el material, así que no se convirtió nada.',
+  convertRedactionFailed:
+    'No se pudieron procesar las partes ocultas del material, así que no se convirtió nada.',
+  convertTooManySlides:
+    'El mapa tiene demasiadas ramas principales para una sola presentación (hasta {max} diapositivas).',
+  convertFailed: 'No se pudo convertir. Inténtalo de nuevo.',
 } satisfies Record<keyof typeof zh, string>

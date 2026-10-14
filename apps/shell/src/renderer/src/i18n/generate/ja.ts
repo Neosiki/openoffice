@@ -40,4 +40,16 @@ export const ja = {
   homeMakeFromGroup: 'このグループから新しい文書を作成',
   homeMakeFromSelection: '新しい文書を作成',
   homeMakeFromFile: 'このファイルから新しい文書を作成',
+  untitled: '無題',
+  convertLabel: 'AI を使わずに変換',
+  convertToMarkdown: 'Markdown 文書',
+  convertToSlides: 'PPT の骨組み',
+  convertToMindmap: 'マインドマップ',
+  convertHint: 'AI を使わないため、プランの上限は使いません。結果は未保存の新しいタブで開きます。',
+  noticeRedacted: '隠した部分は元の文字ではなくラベルとして移されます。',
+  convertUnreadable: '資料を読み込めなかったため、変換しませんでした。',
+  convertRedactionFailed: '資料の隠した部分を処理できなかったため、変換しませんでした。',
+  convertTooManySlides:
+    '大きな枝が多すぎて 1 つのプレゼンテーションにできません（スライド {max} 枚まで）。',
+  convertFailed: '変換できませんでした。もう一度お試しください。',
 } satisfies Record<keyof typeof zh, string>

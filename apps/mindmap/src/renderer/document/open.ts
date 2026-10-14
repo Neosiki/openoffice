@@ -5,7 +5,13 @@
  * status the screen shows as a message; there is no document, so nothing can
  * be saved over the file (the main process refuses as well).
  */
-import { createXmindDocument, openXmind, type XmindOpenStatus } from '@genoffice/xmind-engine'
+import {
+  createXmindDocument,
+  createXmindDocumentFromOutline,
+  openXmind,
+  type XmindOpenStatus,
+} from '@genoffice/xmind-engine'
+import type { MindmapSeed } from '../../shared/ipc'
 import { DocumentSession } from './session'
 
 export type OpenFailure = Exclude<XmindOpenStatus, 'ok'>
@@ -38,4 +44,19 @@ export async function newMap(titles: {
   rootTitle: string
 }): Promise<DocumentSession> {
   return new DocumentSession(await createXmindDocument(titles))
+}
+
+/**
+ * A new map with given content (spec 8.6: a markdown document read as an
+ * outline, 4.9), from the engine's own reader. It is a NEW, UNSAVED map: it
+ * has no path, and it is marked changed so it counts as unsaved until written.
+ * `untitled` names a sheet without a `# ` heading (and its central topic when
+ * the text has no single outermost item), in the user's language.
+ */
+export async function seededMap(seed: MindmapSeed, untitled: string): Promise<DocumentSession> {
+  const document = await createXmindDocumentFromOutline(seed.outline, { untitled })
+  const title = seed.title?.trim()
+  if (title && document.sheets[0]) document.sheets[0].title = title
+  document.markChanged()
+  return new DocumentSession(document)
 }

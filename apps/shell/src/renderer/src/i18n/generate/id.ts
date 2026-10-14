@@ -41,4 +41,18 @@ export const id = {
   homeMakeFromGroup: 'Buat dokumen baru dari grup ini',
   homeMakeFromSelection: 'Buat dokumen baru',
   homeMakeFromFile: 'Buat dokumen baru dari file ini',
+  untitled: 'Tanpa judul',
+  convertLabel: 'Ubah tanpa AI',
+  convertToMarkdown: 'Dokumen Markdown',
+  convertToSlides: 'Kerangka presentasi (PPT)',
+  convertToMindmap: 'Peta pikiran',
+  convertHint:
+    'Tanpa AI, jadi batas paket Anda tidak terpakai. Hasilnya terbuka di tab baru yang belum disimpan.',
+  noticeRedacted: 'Bagian yang disembunyikan dipindahkan sebagai labelnya, bukan teks aslinya.',
+  convertUnreadable: 'Materi tidak dapat dibaca, jadi tidak ada yang diubah.',
+  convertRedactionFailed:
+    'Bagian materi yang disembunyikan tidak dapat diproses, jadi tidak ada yang diubah.',
+  convertTooManySlides:
+    'Peta memiliki terlalu banyak cabang utama untuk satu presentasi (hingga {max} slide).',
+  convertFailed: 'Gagal mengubah. Coba lagi.',
 } satisfies Record<keyof typeof zh, string>

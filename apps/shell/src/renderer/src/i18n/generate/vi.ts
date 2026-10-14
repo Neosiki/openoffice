@@ -40,4 +40,19 @@ export const vi = {
   homeMakeFromGroup: 'Tạo tài liệu mới từ nhóm này',
   homeMakeFromSelection: 'Tạo tài liệu mới',
   homeMakeFromFile: 'Tạo tài liệu mới từ tệp này',
+  untitled: 'Không có tiêu đề',
+  convertLabel: 'Chuyển đổi không dùng AI',
+  convertToMarkdown: 'Tài liệu Markdown',
+  convertToSlides: 'Khung bản trình bày (PPT)',
+  convertToMindmap: 'Sơ đồ tư duy',
+  convertHint:
+    'Không dùng AI nên không tốn hạn mức gói của bạn. Kết quả mở trong một thẻ mới, chưa được lưu.',
+  noticeRedacted:
+    'Các phần bị ẩn được chuyển sang dưới dạng nhãn của chúng, không phải văn bản gốc.',
+  convertUnreadable: 'Không đọc được tài liệu nguồn nên không có gì được chuyển đổi.',
+  convertRedactionFailed:
+    'Không xử lý được các phần bị ẩn trong tài liệu nguồn nên không có gì được chuyển đổi.',
+  convertTooManySlides:
+    'Sơ đồ có quá nhiều nhánh chính cho một bản trình bày (tối đa {max} trang chiếu).',
+  convertFailed: 'Không chuyển đổi được. Hãy thử lại.',
 } satisfies Record<keyof typeof zh, string>

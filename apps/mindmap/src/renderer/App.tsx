@@ -16,6 +16,7 @@ import { mapStrings } from './i18n/map-strings'
 import type { StringKey } from './i18n/locale'
 import { linkFromInput, linkInputKind } from './document/link-input'
 import { newMap, type OpenFailure, type OpenNotices, openMapBytes } from './document/open'
+import { seededMap } from './document/open'
 import type { DocumentSession, SheetTab } from './document/session'
 import { deleteSheetAfterConfirm } from './document/sheet-actions'
 import { thumbnailForSave } from './document/thumbnail'
@@ -176,10 +177,14 @@ export default function App() {
           opened = result.session
           found = result.notices
         } else {
-          opened = await newMap({
-            sheetTitle: translate('sheetDefaultName', { n: 1 }),
-            rootTitle: translate('centralTopic'),
-          })
+          // a new map that starts with given content (a conversion's result, T17), taken once
+          const seed = (await window.mindmapApi.takeSeed?.()) ?? null
+          opened = seed
+            ? await seededMap(seed, translate('untitled'))
+            : await newMap({
+                sheetTitle: translate('sheetDefaultName', { n: 1 }),
+                rootTitle: translate('centralTopic'),
+              })
           if (cancelled) return
         }
         sessionRef.current = opened

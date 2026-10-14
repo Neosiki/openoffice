@@ -41,4 +41,18 @@ export const ms = {
   homeMakeFromGroup: 'Buat dokumen baharu daripada kumpulan ini',
   homeMakeFromSelection: 'Buat dokumen baharu',
   homeMakeFromFile: 'Buat dokumen baharu daripada fail ini',
+  untitled: 'Tanpa tajuk',
+  convertLabel: 'Tukar tanpa AI',
+  convertToMarkdown: 'Dokumen Markdown',
+  convertToSlides: 'Rangka persembahan (PPT)',
+  convertToMindmap: 'Peta minda',
+  convertHint:
+    'Tanpa AI, jadi had pelan anda tidak digunakan. Hasilnya dibuka dalam tab baharu yang belum disimpan.',
+  noticeRedacted: 'Bahagian yang disembunyikan dibawa sebagai labelnya, bukan teks asal.',
+  convertUnreadable: 'Bahan tidak dapat dibaca, jadi tiada apa-apa yang ditukar.',
+  convertRedactionFailed:
+    'Bahagian bahan yang disembunyikan tidak dapat diproses, jadi tiada apa-apa yang ditukar.',
+  convertTooManySlides:
+    'Peta mempunyai terlalu banyak cabang utama untuk satu persembahan (sehingga {max} slaid).',
+  convertFailed: 'Gagal menukar. Cuba lagi.',
 } satisfies Record<keyof typeof zh, string>

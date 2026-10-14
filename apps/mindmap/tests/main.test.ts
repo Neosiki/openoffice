@@ -169,10 +169,11 @@ describe('channel names', () => {
       'provisionalTitle',
       'handoffTake',
       'handoffRunStarted',
+      'seedTake',
     ] as const) {
       expect(handlers.has(MINDMAP_CHANNELS[name])).toBe(true)
     }
-    for (const name of ['outlineResult', 'bytesResult', 'seedTake'] as const) {
+    for (const name of ['outlineResult', 'bytesResult'] as const) {
       expect(handlers.has(MINDMAP_CHANNELS[name])).toBe(false)
     }
   })

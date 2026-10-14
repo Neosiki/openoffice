@@ -25,12 +25,14 @@ import { safeExternalUrl } from '@genoffice/electron-utils'
 import {
   GENERATE_CHANNELS,
   type AiTargetKind,
+  type ConvertKind,
   type GenerateHandoff,
   type GenerateWindowState,
 } from '../../shared/generate-api'
 import { GENERATE_HOME_CHANNELS } from '../../shared/generate-home-channels'
 import { generateText } from '../../renderer/src/i18n/strings-generate'
 import { setGenerateTabIdResolver } from './handoff'
+import { convertSource, markdownRedactionNotice, type ConvertedDocument } from './convert'
 import { inspectMaterial, SUPPORTED_MATERIAL_EXTS } from './materials'
 import { createOpenMaterials, type OpenMaterialsDeps } from './open-materials'
 import { GenerateSession, type MaterialRef } from './session'
@@ -45,6 +47,13 @@ export interface GenerateWindowDeps {
    * it (TabManager.openGenerateTargetTab). Throws when no tab could open.
    */
   openTargetTab(handoff: GenerateHandoff): void
+  /**
+   * 8.6: open a conversion's result as a new unsaved tab of its editor, with
+   * the content queued for it and the conversion recorded
+   * (TabManager.openConversionResult). Throws when no tab could open. Without
+   * it, the window offers no conversion.
+   */
+  openConvertedTab?(doc: ConvertedDocument): void
   /** every starred file in a Starred-view group */
   starredGroupPaths(group: string): string[]
   /** the shell tab id behind a webContents, for the run-started records */
@@ -90,6 +99,9 @@ function registerIpc(): void {
   )
   ipcMain.handle(GENERATE_CHANNELS.setKind, (event, kind: unknown) => {
     if (fromWindow(event)) session?.setKind(kind)
+  })
+  ipcMain.handle(GENERATE_CHANNELS.setConvert, (event, kind: unknown) => {
+    if (fromWindow(event)) session?.setConvert(kind)
   })
   ipcMain.handle(GENERATE_CHANNELS.addMaterials, async (event) => {
     if (!fromWindow(event) || !session || !win || !deps) return
@@ -146,6 +158,15 @@ function sessionFor(d: GenerateWindowDeps, refs: MaterialRef[], kind?: AiTargetK
       saveMaterial: (path) => open.saveMaterial(path),
       showUntitled: (id) => open.showUntitled(id),
       openTargetTab: (handoff) => d.openTargetTab(handoff),
+      // 8.6: conversions without AI, offered only when the shell can open their result
+      ...(d.openConvertedTab
+        ? {
+            convert: (kind: ConvertKind, path: string) =>
+              convertSource(kind, path, { untitled: generateText(d.lang(), 'untitled') }),
+            openConvertedTab: (doc: ConvertedDocument) => d.openConvertedTab!(doc),
+            redactionNotice: (path: string) => markdownRedactionNotice(path),
+          }
+        : {}),
       push: pushState,
       close: () => closeGenerateWindow(),
       newId: () => randomUUID(),

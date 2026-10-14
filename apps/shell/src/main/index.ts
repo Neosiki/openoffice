@@ -5941,6 +5941,10 @@ app.whenReady().then(async () => {
       revealShellWindow()
       ensureTabManager().openGenerateTargetTab(handoff)
     },
+    openConvertedTab: (doc) => {
+      revealShellWindow()
+      ensureTabManager().openConversionResult(doc)
+    },
     starredGroupPaths: (group) => {
       const groupOf = readStarredGroupMap()
       return readStarredFiles().filter((p) => groupOf.get(p) === group)

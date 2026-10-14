@@ -4,6 +4,8 @@ import './globals'
 import {
   AI_TARGET_KINDS,
   type AiTargetKind,
+  type ConvertKind,
+  type ConvertProblem,
   type GenerateWindowState,
   type MaterialProblem,
   type MaterialView,
@@ -16,6 +18,21 @@ const KIND_LABEL: Record<AiTargetKind, GenerateStringKey> = {
   slides: 'kindSlides',
   html: 'kindHtml',
   mindmap: 'kindMindmap',
+}
+
+/** 8.6: what each conversion without AI makes */
+const CONVERT_LABEL: Record<ConvertKind, GenerateStringKey> = {
+  'mindmap-to-markdown': 'convertToMarkdown',
+  'mindmap-to-slides': 'convertToSlides',
+  'markdown-to-mindmap': 'convertToMindmap',
+}
+
+/** why a conversion did not happen */
+const CONVERT_PROBLEM_LABEL: Record<ConvertProblem, GenerateStringKey> = {
+  unreadable: 'convertUnreadable',
+  redaction: 'convertRedactionFailed',
+  'too-many-slides': 'convertTooManySlides',
+  failed: 'convertFailed',
 }
 
 const PROBLEM_LABEL: Record<MaterialProblem, GenerateStringKey> = {
@@ -82,8 +99,10 @@ export function GenerateWindow() {
   const unsaved = state.materials.filter((m) => m.state === 'unsaved')
   const excluded = state.materials.filter((m) => m.state === 'excluded')
   const busy = state.making
+  const converting = state.mode === 'convert'
   const make = () => {
-    if (state.canMake) void api.make(text)
+    // 8.1: a conversion carries no request text
+    if (state.canMake) void api.make(converting ? '' : text)
   }
 
   const saveButton = (m: MaterialView) => {
@@ -134,9 +153,9 @@ export function GenerateWindow() {
               <button
                 key={kind}
                 role="radio"
-                aria-checked={state.kind === kind}
+                aria-checked={!converting && state.kind === kind}
                 data-kind={kind}
-                className={`gen-kind${state.kind === kind ? ' active' : ''}`}
+                className={`gen-kind${!converting && state.kind === kind ? ' active' : ''}`}
                 disabled={busy}
                 onClick={() => void api.setKind(kind)}
               >
@@ -144,7 +163,28 @@ export function GenerateWindow() {
               </button>
             ))}
           </div>
-          {/* "convert without AI" (8.6) joins here once conversions exist */}
+          {state.conversions.length > 0 && (
+            <div className="gen-convert" data-testid="gen-convert">
+              <div className="gen-sublabel" id="gen-convert-label">
+                {t('convertLabel')}
+              </div>
+              <div className="gen-kinds" role="radiogroup" aria-labelledby="gen-convert-label">
+                {state.conversions.map((kind) => (
+                  <button
+                    key={kind}
+                    role="radio"
+                    aria-checked={state.convertKind === kind}
+                    data-convert={kind}
+                    className={`gen-kind${state.convertKind === kind ? ' active' : ''}`}
+                    disabled={busy}
+                    onClick={() => void api.setConvert(kind)}
+                  >
+                    {t(CONVERT_LABEL[kind])}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </section>
 
         <section className="gen-section">
@@ -243,7 +283,16 @@ export function GenerateWindow() {
           )}
         </section>
 
-        <section className="gen-section">
+        {converting && state.redactionNotice && (
+          <div className="gen-notices" data-testid="gen-redaction-notice" role="status">
+            <div className="gen-callout" data-notice="redacted">
+              <NoticeIcon />
+              <span>{t('noticeRedacted')}</span>
+            </div>
+          </div>
+        )}
+
+        <section className="gen-section" hidden={converting}>
           <label className="gen-label" htmlFor="gen-request">
             {t('requestLabel')}
           </label>
@@ -288,14 +337,22 @@ export function GenerateWindow() {
           <div className="gen-blocker">{t('noReadable')}</div>
         )}
         {state.failure && (
-          <div className="gen-blocker" role="alert">
-            {state.failure === 'make' ? t('makeFailed') : t('saveFailed')}
+          <div className="gen-blocker" role="alert" data-testid="gen-failure">
+            {state.failure === 'convert'
+              ? t(CONVERT_PROBLEM_LABEL[state.convertProblem ?? 'failed'], {
+                  max: state.limits.maxConvertSlides,
+                })
+              : state.failure === 'make'
+                ? t('makeFailed')
+                : t('saveFailed')}
           </div>
         )}
       </div>
 
       <footer className="gen-foot">
-        <span className="gen-hint gen-foot-hint">{t('makeHint')}</span>
+        <span className="gen-hint gen-foot-hint">
+          {converting ? t('convertHint') : t('makeHint')}
+        </span>
         <div className="gen-actions">
           <button className="gen-btn" onClick={() => void api.cancel()}>
             {t('cancel')}
