@@ -17,6 +17,8 @@ import type {
   MarkupType,
   MetadataInput,
   PageImageRef,
+  PdfStoreApi,
+  PdfStructureApi,
   TextEditInput,
   TextInsertInput,
 } from '../../shared/ipc'
@@ -38,9 +40,33 @@ import { DEFAULT_CUTOUT_TOLERANCE, cropRect } from '../image-bake'
 import type { CropFractions, ImageBakeOp } from '../image-bake'
 import type { Op, PlanResult } from '../edit-ops'
 import { OP_DOCS, callableOpNames, opSignatureIndex, opVocabulary } from '../../shared/op-docs'
+import {
+  aiReadPayloadText,
+  pageImageNote,
+} from '../../../../../packages/pdf-structure/src/structured-text'
 
 /** Text cap per read_pages fed back to the model (the payload is resent in full each turn, so volume must be limited) */
 const READ_CHUNK_CHARS = 24_000
+
+/** How long read_pages waits for the document analysis before it reads the plain page text */
+export const STRUCTURED_READ_TIMEOUT_MS = 20_000
+
+/** First line of read_pages output when the structured reading could not be used */
+export const STRUCTURED_READ_UNAVAILABLE_NOTE =
+  '(Structured reading is unavailable right now; showing the plain page text instead.)'
+
+/**
+ * The open file's structure and store channels, as read_pages uses them
+ * (spec §2). `source` is the file as saved, granted to this view.
+ */
+export interface StructuredReadAccess {
+  source: { path: string; password?: string }
+  text: PdfStructureApi['text']
+  tree: PdfStructureApi['tree']
+  aiReadPages: PdfStoreApi['aiReadPages']
+  /** default STRUCTURED_READ_TIMEOUT_MS */
+  timeoutMs?: number
+}
 
 /** Capability surface App provides to AI tools; all getters, since the loop outlives render closures */
 export type RotateDelta = 90 | -90 | 180
@@ -60,6 +86,8 @@ export interface PdfAiDeps {
   readOnly(): boolean
   /** OCR-recovered text of a scanned page; null when the page was not OCR'd */
   ocrText(origIdx: number): string | null
+  /** Structured reading for read_pages (document tree, AI-read pages); absent or null → PDF.js text only */
+  structuredRead?(): StructuredReadAccess | null
   /** Text selection cached at mouseup (native DOM selections collapse when focus moves
       into the panel); page..lastPage is the original-page span it covers */
   selection(): { page: number; lastPage: number; text: string } | null
@@ -237,7 +265,9 @@ export const AGENT_TOOLS: AgentToolDef[] = [
   {
     name: 'read_pages',
     description:
-      'Read the text content of a page range (with [Page N] markers). Read the relevant pages before answering questions; at most 10 pages per call, over-long output is truncated.',
+      'Read the content of a page range (with [Page N] markers). Read the relevant pages before answering questions; at most 10 pages per call, over-long output is truncated. ' +
+      'The text is the reflowed document structure: headings as #, tables as Markdown tables, footnotes in a "Footnotes:" block at the end of their page, headers/footers/page numbers left out, and a page kept as an image marked as such; a page the user had read by AI shows the AI reading. ' +
+      'If the structured reading is unavailable, the first line says so and the plain page text follows. Lines may be joined, so confirm an exact fragment with search_text before an edit that needs it.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -1199,7 +1229,172 @@ function resolvePage(deps: PdfAiDeps, raw: unknown): { origIdx: number } | { bad
   return { origIdx: page - 1 }
 }
 
-async function readPages(deps: PdfAiDeps, input: Record<string, unknown>): Promise<ToolExecution> {
+/** structured text of one saved file, as the structure channel answered it */
+interface StructuredLoad {
+  docHash: string
+  pages: Map<number, string>
+  /** page fingerprint → page numbers, asked for once AI-read pages exist */
+  fingerprints?: Promise<Map<string, number[]> | null>
+}
+
+interface StructuredEntry {
+  path: string
+  password: string | undefined
+  load: Promise<StructuredLoad | null>
+  /** a wait already ran out: later calls only take a finished analysis */
+  timedOut: boolean
+}
+
+/**
+ * Structured text per open file, keyed by the PDF.js document: a save
+ * reloads the file into a new document, so the entry goes with the old one
+ * (the main process re-keys its tree by the file hash on its side).
+ */
+const structuredCache = new WeakMap<object, StructuredEntry>()
+
+/** failures tried again on the next call; the others stand until the file changes */
+const RETRY_STRUCTURE_ERRORS: ReadonlySet<string> = new Set(['busy', 'cancelled', 'process-exited'])
+
+const AI_READ_PAGE_NOTE = '(read by AI from the page image; may contain recognition errors)'
+const OCR_PAGE_NOTE = '(recovered by OCR; may contain recognition errors)'
+
+let structuredJobSeq = 0
+const structuredJobId = (): string =>
+  `ai-read-pages-${Date.now().toString(36)}-${(++structuredJobSeq).toString(36)}`
+
+const sourceRequest = (access: StructuredReadAccess) => ({
+  path: access.source.path,
+  ...(access.source.password !== undefined ? { password: access.source.password } : {}),
+})
+
+/** the value, or null when the time ran out or the run was stopped first */
+function waitAtMost<T>(
+  promise: Promise<T>,
+  ms: number,
+  signal?: AbortSignal,
+): Promise<{ value: T } | null> {
+  if (signal?.aborted) return Promise.resolve(null)
+  return new Promise((resolve) => {
+    const finish = (result: { value: T } | null) => {
+      clearTimeout(timer)
+      signal?.removeEventListener('abort', onAbort)
+      resolve(result)
+    }
+    const onAbort = () => finish(null)
+    const timer = setTimeout(() => finish(null), ms)
+    signal?.addEventListener('abort', onAbort, { once: true })
+    promise.then(
+      (value) => finish({ value }),
+      () => finish(null),
+    )
+  })
+}
+
+function structuredEntry(doc: object, access: StructuredReadAccess): StructuredEntry {
+  const { path, password } = access.source
+  const cached = structuredCache.get(doc)
+  if (cached && cached.path === path && cached.password === password) return cached
+  const entry: StructuredEntry = { path, password, timedOut: false, load: Promise.resolve(null) }
+  // the whole document is analyzed once; a page range would change what counts as a header
+  entry.load = (async (): Promise<StructuredLoad | null> => {
+    try {
+      const out = await access.text({ jobId: structuredJobId(), ...sourceRequest(access) })
+      if (out.ok) {
+        return { docHash: out.docHash, pages: new Map(out.pages.map((p) => [p.page, p.text])) }
+      }
+      if (RETRY_STRUCTURE_ERRORS.has(out.error) && structuredCache.get(doc) === entry) {
+        structuredCache.delete(doc)
+      }
+    } catch {
+      /* the preload answers failures; a throw stands like any other failure */
+    }
+    return null
+  })()
+  structuredCache.set(doc, entry)
+  return entry
+}
+
+/** structured text of the AI-read pages by page number (asked on every call: the store can grow) */
+async function aiReadTexts(
+  access: StructuredReadAccess,
+  load: StructuredLoad,
+): Promise<Map<number, string>> {
+  const out = new Map<number, string>()
+  const stored = await access.aiReadPages(load.docHash)
+  if (!stored.ok || stored.pages.length === 0) return out
+  load.fingerprints ??= access.tree({ jobId: structuredJobId(), ...sourceRequest(access) }).then(
+    (tree) => {
+      if (!tree.ok) return null
+      const byFp = new Map<string, number[]>()
+      for (const { page, fingerprint } of tree.fingerprints) {
+        byFp.set(fingerprint, [...(byFp.get(fingerprint) ?? []), page])
+      }
+      return byFp
+    },
+    () => null,
+  )
+  const byFp = await load.fingerprints
+  if (!byFp) {
+    load.fingerprints = undefined
+    return out
+  }
+  for (const entry of stored.pages) {
+    for (const page of byFp.get(entry.pageFingerprint) ?? []) {
+      const text = aiReadPayloadText(entry.payload, page)
+      if (text !== null) out.set(page, text)
+    }
+  }
+  return out
+}
+
+interface StructuredPages {
+  texts: Map<number, string>
+  aiRead: Set<number>
+}
+
+/**
+ * The structured reading of the open file (spec §2): null when none is
+ * wired, 'unavailable' when the analysis failed or took too long.
+ */
+async function structuredPages(
+  deps: PdfAiDeps,
+  doc: object,
+  signal?: AbortSignal,
+): Promise<StructuredPages | 'unavailable' | null> {
+  const access = deps.structuredRead?.() ?? null
+  if (!access) return null
+  const ms = access.timeoutMs ?? STRUCTURED_READ_TIMEOUT_MS
+  const entry = structuredEntry(doc, access)
+  // a timed-out analysis keeps running; later calls take it once done but do not wait for it
+  const waited = await waitAtMost(entry.load, entry.timedOut ? 0 : ms, signal)
+  if (!waited) {
+    if (!signal?.aborted) entry.timedOut = true
+    return 'unavailable'
+  }
+  const load = waited.value
+  if (!load) return 'unavailable'
+  const texts = new Map(load.pages)
+  const aiRead = new Set<number>()
+  const ai = await waitAtMost(
+    aiReadTexts(access, load).catch(() => new Map<number, string>()),
+    ms,
+    signal,
+  )
+  for (const [page, text] of ai?.value ?? []) {
+    texts.set(page, text)
+    aiRead.add(page)
+  }
+  return { texts, aiRead }
+}
+
+const isPageImageText = (text: string, page: number): boolean =>
+  text.includes(pageImageNote(page, 'scanned')) || text.includes(pageImageNote(page, 'degraded'))
+
+async function readPages(
+  deps: PdfAiDeps,
+  input: Record<string, unknown>,
+  signal?: AbortSignal,
+): Promise<ToolExecution> {
   const doc = deps.doc()
   if (!doc) return err('Document not ready', t('aiToolReadPages', { start: '?', end: '?' }))
   const start = Number(input.start)
@@ -1217,22 +1412,35 @@ async function readPages(deps: PdfAiDeps, input: Record<string, unknown>): Promi
   ) {
     return err(`Invalid page range (document has ${doc.numPages} pages)`, summary)
   }
+  const structured = await structuredPages(deps, doc, signal)
+  const tree = structured === 'unavailable' ? null : structured
   let out = ''
   for (let n = start; n <= Math.min(end, doc.numPages); n++) {
-    const page = await doc.getPage(n)
-    const content = await page.getTextContent()
     let text = ''
-    for (const item of content.items) {
-      if ('str' in item) {
-        text += item.str
-        if (item.hasEOL) text += '\n'
+    const structuredText = tree?.texts.get(n)
+    if (tree && structuredText !== undefined) {
+      text = structuredText
+      if (tree.aiRead.has(n)) {
+        text = `${AI_READ_PAGE_NOTE}\n${text}`
+      } else if (isPageImageText(text, n)) {
+        const ocr = deps.ocrText(n - 1)
+        if (ocr && ocr.trim()) text = `${text}\n${OCR_PAGE_NOTE}\n${ocr}`
       }
-    }
-    page.cleanup()
-    if (isScannedText(text)) {
-      const ocr = deps.ocrText(n - 1)
-      if (ocr && ocr.trim()) {
-        text = `(recovered by OCR; may contain recognition errors)\n${ocr}`
+    } else {
+      const page = await doc.getPage(n)
+      const content = await page.getTextContent()
+      for (const item of content.items) {
+        if ('str' in item) {
+          text += item.str
+          if (item.hasEOL) text += '\n'
+        }
+      }
+      page.cleanup()
+      if (isScannedText(text)) {
+        const ocr = deps.ocrText(n - 1)
+        if (ocr && ocr.trim()) {
+          text = `${OCR_PAGE_NOTE}\n${ocr}`
+        }
       }
     }
     out += `[Page ${n}]\n${text.trim()}\n\n`
@@ -1241,8 +1449,9 @@ async function readPages(deps: PdfAiDeps, input: Record<string, unknown>): Promi
       break
     }
   }
+  const body = out.trim() || '(No extractable text in this range; the pages may be scanned images)'
   return {
-    output: out.trim() || '(No extractable text in this range; the pages may be scanned images)',
+    output: structured === 'unavailable' ? `${STRUCTURED_READ_UNAVAILABLE_NOTE}\n${body}` : body,
     summary,
   }
 }
@@ -3542,7 +3751,7 @@ export async function executePdfTool(
   const input = call.input
   switch (call.name) {
     case 'read_pages':
-      return readPages(deps, input)
+      return readPages(deps, input, signal)
     case 'search_text':
       return searchText(deps, input)
     case 'goto_page': {

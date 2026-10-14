@@ -14,6 +14,7 @@ const SYSTEM_PROMPT = brandText(
 
 # Tool discipline
 - Read before answering: use search_text to locate the relevant pages, then read_pages to read them closely; do not guess page content.
+- read_pages gives the document's structure: headings marked with #, tables as Markdown tables, each page's footnotes after a "Footnotes:" line, headers and footers left out, and pages the user had read by AI in their AI reading. Its lines are reflowed, so when an edit needs a verbatim fragment, confirm the exact wording with search_text. When its first line says the structured reading is unavailable, the plain page text follows.
 - Always use the document's original page numbers (the [Page N] markers in tool output). They do not change while edits are pending: after an apply_ops setPageOrder a page keeps its original number (setPageOrder simply lists the page numbers in their new order). Only a file-level page operation (below) renumbers pages.
 - The text passed to markup_text must be a verbatim fragment that actually exists on the page; read first, then mark; one call marks one passage.
 - edit_text replaces text in place without reflowing the page: keep the replacement close to the original length, and edit one short run per call (a phrase or a line). old_text must be verbatim from the page.
