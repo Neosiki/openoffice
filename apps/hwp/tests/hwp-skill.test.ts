@@ -23,6 +23,8 @@ function setup(overrides: Partial<AgentBridge> = {}) {
       inTable: false,
     })),
     insertTable: vi.fn(async () => ({ ok: true as const, rows: 2, cols: 3, inTable: false })),
+    formatText: vi.fn(async () => ({ ok: true as const, count: 1 })),
+    formatParagraph: vi.fn(async () => ({ ok: true as const, inTable: false })),
     listFields: vi.fn(async () => []),
     fillField: vi.fn(async () => ({ ok: true as const, name: '성명' })),
     undo: vi.fn(async () => ({ ok: true, undone: 1 })),
@@ -301,9 +303,15 @@ describe('insert_table', () => {
       ['신청서', '3월 2일'],
     ]
     const result = await call('insert_table', { where: 'after', anchor: '본문입니다', rows })
-    expect(bridge.insertTable).toHaveBeenCalledWith('본문입니다', null, 'after', rows)
+    expect(bridge.insertTable).toHaveBeenCalledWith('본문입니다', null, 'after', rows, false)
     expect(result).toMatchObject({ mutated: true, summary: 'aiToolTable:{"rows":2,"cols":3}' })
     expect(changes).toEqual([{ kind: 'table', from: '', to: '항목 | 기한 | 비고', count: 1 }])
+  })
+
+  it('passes the header option on', async () => {
+    const { call, bridge } = setup()
+    await call('insert_table', { where: 'end', rows: [['이름', '소속']], header: true })
+    expect(bridge.insertTable).toHaveBeenCalledWith('', null, 'end', [['이름', '소속']], true)
   })
 
   it('tells the model that a table cannot go inside a table', async () => {
@@ -322,6 +330,114 @@ describe('insert_table', () => {
     expect((await call('insert_table', { where: 'end', rows: [['가\n나']] })).isError).toBe(true)
     expect((await call('insert_table', { where: 'end', rows: ['가', '나'] })).isError).toBe(true)
     expect(bridge.insertTable).not.toHaveBeenCalled()
+  })
+})
+
+describe('format_text', () => {
+  it('sends only the properties the model named, and lists what was set', async () => {
+    const { call, changes, bridge } = setup()
+    const result = await call('format_text', {
+      find: '본문',
+      occurrence: 2,
+      bold: true,
+      underline: false,
+      size: 14,
+      color: '#C00000',
+    })
+    expect(bridge.formatText).toHaveBeenCalledWith('본문', 2, false, {
+      bold: true,
+      underline: false,
+      size: 14,
+      color: '#C00000',
+    })
+    expect(result).toMatchObject({ mutated: true, summary: 'aiToolFormat:{"text":"본문"}' })
+    expect(changes).toEqual([
+      {
+        kind: 'format',
+        from: '본문',
+        to: 'aiFmtBold · aiFmtOff:{"name":"aiFmtUnderline"} · 14pt · aiFmtColor #C00000',
+        count: 1,
+      },
+    ])
+  })
+
+  it('formats every occurrence with all, and counts them', async () => {
+    const { call, changes } = setup({ formatText: async () => ({ ok: true, count: 5 }) })
+    const result = await call('format_text', { find: '갑', all: true, highlight: 'none' })
+    expect(result.output).toBe('Formatted 5 occurrence(s).')
+    expect(changes[0]).toMatchObject({ count: 5, to: 'aiFmtOff:{"name":"aiFmtHighlight"}' })
+  })
+
+  it('asks for a property when none was named', async () => {
+    const { call, bridge } = setup()
+    const result = await call('format_text', { find: '본문' })
+    expect(result.isError).toBe(true)
+    expect(result.output).toContain('at least one property')
+    expect(bridge.formatText).not.toHaveBeenCalled()
+  })
+
+  it('offers both ways out when the text is ambiguous', async () => {
+    const { call, changes } = setup({
+      formatText: async () => ({
+        ok: false,
+        reason: 'ambiguous',
+        count: 2,
+        matches: [
+          { occurrence: 1, inTable: false, context: '첫 문단' },
+          { occurrence: 2, inTable: false, context: '둘째 문단' },
+        ],
+      }),
+    })
+    const result = await call('format_text', { find: '문단', bold: true })
+    expect(result.output).toContain('Pass occurrence to pick one, or all')
+    expect(result.output).toContain('#2: …둘째 문단…')
+    expect(changes).toEqual([])
+  })
+
+  it('hands a value the editor refuses back to the model', async () => {
+    const { call } = setup({
+      formatText: async () => {
+        throw new Error('color must look like #RRGGBB')
+      },
+    })
+    const result = await call('format_text', { find: '본문', color: 'red' })
+    expect(result).toMatchObject({ isError: true, output: 'color must look like #RRGGBB' })
+  })
+})
+
+describe('format_paragraph', () => {
+  it('sends alignment and line spacing with the character formatting', async () => {
+    const { call, changes, bridge } = setup()
+    const result = await call('format_paragraph', {
+      find: '제목',
+      align: 'center',
+      line_spacing: 180,
+      bold: true,
+    })
+    expect(bridge.formatParagraph).toHaveBeenCalledWith('제목', null, {
+      bold: true,
+      align: 'center',
+      lineSpacing: 180,
+    })
+    expect(result.mutated).toBe(true)
+    expect(changes).toEqual([
+      {
+        kind: 'format',
+        from: '제목',
+        to: 'aiFmtAlignCenter · aiFmtBold · aiFmtLineSpacing 180%',
+        count: 1,
+      },
+    ])
+  })
+
+  it('says what can still be done where a paragraph cannot be aligned', async () => {
+    const { call, changes } = setup({
+      formatParagraph: async () => ({ ok: false, reason: 'unsupported_place', count: 1 }),
+    })
+    const result = await call('format_paragraph', { find: '안쪽 표', align: 'center' })
+    expect(result.isError).toBe(true)
+    expect(result.output).toContain('format_text')
+    expect(changes).toEqual([])
   })
 })
 
@@ -384,6 +500,8 @@ describe('the skill as the model sees it', () => {
       'insert_paragraphs',
       'delete_paragraph',
       'insert_table',
+      'format_text',
+      'format_paragraph',
       'list_fields',
       'fill_field',
     ])

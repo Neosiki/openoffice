@@ -98,6 +98,17 @@ function openEditor(options: { fields?: boolean; endsWithTable?: boolean } = {})
     steps: () => history.length,
     /** the engine's document, for what the plugin does not report */
     doc: () => doc,
+    /** character formatting at a place in a body paragraph */
+    chars: (para: number, offset: number) =>
+      JSON.parse(doc.getCharPropertiesAt(0, para, offset)) as Record<string, unknown>,
+    /** character formatting at the start of a cell of the table (paragraph 3) */
+    cellChars: (cell: number, offset = 0) =>
+      JSON.parse(doc.getCellCharPropertiesAt(0, 3, 0, cell, 0, offset)) as Record<string, unknown>,
+    alignment: (para: number) =>
+      (JSON.parse(doc.getParaPropertiesAt(0, para)) as { alignment: string }).alignment,
+    cellAlignment: (cell: number) =>
+      (JSON.parse(doc.getCellParaPropertiesAt(0, 3, 0, cell, 0)) as { alignment: string })
+        .alignment,
     /** what a save and a reopen leave of the text */
     reopened: () => {
       const again = new HwpDocument(doc.exportHwp())
@@ -363,6 +374,185 @@ describe('adding a table', () => {
     const editor = openEditor()
     expect(() => editor.plugin.insertTable('제목', null, 'after', [['가\n나']])).toThrow(/rows/)
     expect(() => editor.plugin.insertTable('제목', null, 'after', [])).toThrow(/rows/)
+  })
+})
+
+describe('formatting text', () => {
+  it('changes only the text asked for, and only what was asked', () => {
+    const editor = openEditor()
+    const size = editor.chars(1, 0).fontSize
+    // "첫째 문단입니다." — the word 문단 is characters 3 and 4
+    expect(
+      editor.plugin.formatText('문단', 1, false, { bold: true, color: '#C00000', size: 14 }),
+    ).toEqual({ ok: true, count: 1 })
+    expect(editor.chars(1, 3)).toMatchObject({
+      bold: true,
+      textColor: '#c00000',
+      fontSize: 1400,
+      italic: false,
+    })
+    // in front of it, behind it, and the next occurrence of the word
+    expect(editor.chars(1, 1)).toMatchObject({ bold: false, textColor: '#000000', fontSize: size })
+    expect(editor.chars(1, 6)).toMatchObject({ bold: false, fontSize: size })
+    expect(editor.chars(2, 3)).toMatchObject({ bold: false })
+    expect(editor.lines()).toEqual(ORIGINAL)
+    expect(editor.steps()).toBe(1)
+  })
+
+  it('formats every occurrence at once, table cells included', () => {
+    const editor = openEditor()
+    editor.plugin.replaceText('업체', '문단 업체')
+    expect(editor.plugin.formatText('문단', null, true, { underline: true })).toEqual({
+      ok: true,
+      count: 4,
+    })
+    expect(editor.chars(1, 3).underline).toBe(true)
+    expect(editor.chars(2, 3).underline).toBe(true)
+    expect(editor.chars(4, 2).underline).toBe(true)
+    expect(editor.cellChars(3, 0).underline).toBe(true)
+    // the rest of that cell is as it was
+    expect(editor.cellChars(3, 3).underline).toBe(false)
+    expect(editor.steps()).toBe(2)
+  })
+
+  it('takes formatting away again, and sets and clears a highlight', () => {
+    const editor = openEditor()
+    editor.plugin.formatText('제목', null, false, { bold: true, highlight: '#FFFF00' })
+    expect(editor.chars(0, 0)).toMatchObject({ bold: true, shadeColor: '#ffff00' })
+    editor.plugin.formatText('제목', null, false, { bold: false, highlight: 'none' })
+    expect(editor.chars(0, 0)).toMatchObject({ bold: false, shadeColor: '#ffffff' })
+  })
+
+  it('survives a save and a reopen', () => {
+    const editor = openEditor()
+    editor.plugin.formatText('제목', null, false, { bold: true, size: 20 })
+    const again = new HwpDocument(editor.doc().exportHwp())
+    expect(JSON.parse(again.getCharPropertiesAt(0, 0, 0))).toMatchObject({
+      bold: true,
+      fontSize: 2000,
+    })
+    const hwpx = new HwpDocument(editor.doc().exportHwpx())
+    expect(JSON.parse(hwpx.getCharPropertiesAt(0, 0, 0))).toMatchObject({ bold: true })
+  })
+
+  it('changes nothing when the text is ambiguous or missing', () => {
+    const editor = openEditor()
+    expect(editor.plugin.formatText('문단', null, false, { bold: true })).toMatchObject({
+      ok: false,
+      reason: 'ambiguous',
+      count: 3,
+    })
+    expect(editor.plugin.formatText('없는 말', null, true, { bold: true })).toMatchObject({
+      ok: false,
+      reason: 'not_found',
+    })
+    expect(editor.chars(1, 3).bold).toBe(false)
+    expect(editor.steps()).toBe(0)
+  })
+
+  it('refuses a request it cannot read as a format', () => {
+    const editor = openEditor()
+    const format = (value: object) => () =>
+      editor.plugin.formatText('제목', null, false, value as never)
+    expect(format({})).toThrow(/nothing to change/)
+    expect(format({ color: 'red' })).toThrow(/#RRGGBB/)
+    expect(format({ size: 900 })).toThrow(/size/)
+    expect(format({ bold: 'yes' })).toThrow(/true or false/)
+    // alignment is a property of a paragraph, not of a piece of text
+    expect(format({ align: 'center' })).toThrow(/whole paragraph/)
+    expect(editor.steps()).toBe(0)
+  })
+
+  it('is taken back as one step', () => {
+    const editor = openEditor()
+    const before = editor.plugin.foreignChanges()
+    editor.plugin.formatText('문단', null, true, { bold: true })
+    expect(editor.plugin.undo(1, before)).toEqual({ ok: true, undone: 1 })
+    expect(editor.chars(1, 3).bold).toBe(false)
+  })
+})
+
+describe('formatting a paragraph', () => {
+  it('aligns the paragraph the text is in and leaves the others', () => {
+    const editor = openEditor()
+    const other = editor.alignment(1)
+    expect(editor.plugin.formatParagraph('제목', null, { align: 'center' })).toEqual({
+      ok: true,
+      inTable: false,
+    })
+    expect(editor.alignment(0)).toBe('center')
+    expect(editor.alignment(1)).toBe(other)
+    expect(editor.lines()).toEqual(ORIGINAL)
+  })
+
+  it('formats all the text of the paragraph together with the paragraph', () => {
+    const editor = openEditor()
+    editor.plugin.formatParagraph('첫째', null, { align: 'right', bold: true, lineSpacing: 200 })
+    expect(editor.alignment(1)).toBe('right')
+    expect(editor.chars(1, 0).bold).toBe(true)
+    expect(editor.chars(1, 8).bold).toBe(true)
+    expect(editor.chars(2, 0).bold).toBe(false)
+    expect(JSON.parse(editor.doc().getParaPropertiesAt(0, 1))).toMatchObject({
+      lineSpacing: 200,
+      lineSpacingType: 'Percent',
+    })
+    // one request, one step to take back
+    expect(editor.steps()).toBe(1)
+  })
+
+  it('works on a paragraph inside a table cell', () => {
+    const editor = openEditor()
+    expect(editor.plugin.formatParagraph('대상', null, { align: 'center', bold: true })).toEqual({
+      ok: true,
+      inTable: true,
+    })
+    expect(editor.cellAlignment(2)).toBe('center')
+    expect(editor.cellChars(2).bold).toBe(true)
+    expect(editor.cellAlignment(3)).not.toBe('center')
+    expect(editor.cellChars(3).bold).toBe(false)
+  })
+
+  it('refuses values outside what a document can hold', () => {
+    const editor = openEditor()
+    const format = (value: object) => () =>
+      editor.plugin.formatParagraph('제목', null, value as never)
+    expect(format({ align: 'middle' })).toThrow(/align/)
+    expect(format({ lineSpacing: 5 })).toThrow(/lineSpacing/)
+    expect(editor.steps()).toBe(0)
+  })
+})
+
+describe('a table with a header row', () => {
+  it('makes the first row bold, centred and a title row, and leaves the others plain', () => {
+    const editor = openEditor()
+    editor.plugin.insertTable(
+      '첫째 문단',
+      null,
+      'after',
+      [
+        ['항목', '기한'],
+        ['신청서', '3월 2일'],
+      ],
+      true,
+    )
+    const doc = editor.doc()
+    const chars = (cell: number) => JSON.parse(doc.getCellCharPropertiesAt(0, 2, 0, cell, 0, 0))
+    const align = (cell: number) => JSON.parse(doc.getCellParaPropertiesAt(0, 2, 0, cell, 0))
+    const props = (cell: number) => JSON.parse(doc.getCellProperties(0, 2, 0, cell))
+    expect(chars(0).bold).toBe(true)
+    expect(chars(1).bold).toBe(true)
+    expect(align(0).alignment).toBe('center')
+    expect(props(0).isHeader).toBe(true)
+    expect(chars(2).bold).toBe(false)
+    expect(align(2).alignment).not.toBe('center')
+    expect(props(2).isHeader).toBe(false)
+    expect(editor.lines().slice(2, 6)).toEqual(['항목', '기한', '신청서', '3월 2일'])
+  })
+
+  it('is plain without the option', () => {
+    const editor = openEditor()
+    editor.plugin.insertTable('첫째 문단', null, 'after', [['항목', '기한']])
+    expect(JSON.parse(editor.doc().getCellCharPropertiesAt(0, 2, 0, 0, 0, 0)).bold).toBe(false)
   })
 })
 

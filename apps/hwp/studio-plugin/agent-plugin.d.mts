@@ -59,6 +59,38 @@ export type AgentTableResult =
   /** the anchor is inside a table cell, where a table cannot be made */
   | { ok: false; reason: 'in_table'; count: number }
 
+/** Character formatting to change; what is left out stays as it is. */
+export interface AgentTextFormat {
+  bold?: boolean
+  italic?: boolean
+  underline?: boolean
+  strikethrough?: boolean
+  /** font size in points */
+  size?: number
+  /** text colour, #RRGGBB */
+  color?: string
+  /** highlight colour, #RRGGBB, or "none" to take it away */
+  highlight?: string
+}
+
+/** Formatting of a whole paragraph: its own properties, and character formatting for all its text. */
+export interface AgentParagraphFormat extends AgentTextFormat {
+  align?: 'left' | 'center' | 'right' | 'justify'
+  /** line spacing in percent of the font height */
+  lineSpacing?: number
+}
+
+export type AgentFormatTextResult =
+  | { ok: true; count: number }
+  | {
+      ok: false
+      reason: 'not_found' | 'ambiguous' | 'no_such_occurrence' | 'unsupported_place' | 'has_objects'
+      count: number
+      matches?: AgentMatch[]
+    }
+
+export type AgentFormatParagraphResult = { ok: true; inTable: boolean } | AgentPlaceRefusal
+
 export interface AgentField {
   /** 1-based position in the document; what fillField takes */
   field: number
@@ -95,7 +127,19 @@ export interface AgentPluginSurface {
     occurrence: number | null,
     where: AgentWhere,
     rows: string[][],
+    header?: boolean,
   ): AgentTableResult
+  formatText(
+    find: string,
+    occurrence: number | null,
+    all: boolean,
+    format: AgentTextFormat,
+  ): AgentFormatTextResult
+  formatParagraph(
+    find: string,
+    occurrence: number | null,
+    format: AgentParagraphFormat,
+  ): AgentFormatParagraphResult
   listFields(): AgentField[]
   fillField(field: number, value: string): AgentFillResult
   undo(steps: number, expectedForeign: number): AgentUndoResult

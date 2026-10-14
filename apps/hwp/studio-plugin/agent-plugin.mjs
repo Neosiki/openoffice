@@ -27,6 +27,12 @@ const MAX_INSERTED_PARAGRAPHS = 100
 const MAX_TABLE_CELLS = 400
 /** Characters of a removed paragraph handed back, for the panel's list of changes. */
 const MAX_REPORTED_CHARS = 200
+/** Font sizes a format request may ask for, in points. */
+const MIN_FONT_PT = 4
+const MAX_FONT_PT = 200
+/** Line spacings a format request may ask for, in percent of the font height. */
+const MIN_LINE_SPACING = 50
+const MAX_LINE_SPACING = 500
 
 const parse = (json) => JSON.parse(json)
 
@@ -156,6 +162,10 @@ function containerOf(doc, hit) {
       deleteText: (k, count) => expectOk(doc.deleteText(sec, k, 0, count), 'delete'),
       deleteRange: (k1, o1, k2, o2) => expectOk(doc.deleteRange(sec, k1, o1, k2, o2), 'delete'),
       pasteHtml: (k, html) => expectOk(doc.pasteHtml(sec, k, 0, html), 'insert the table'),
+      formatChars: (k, start, end, json) =>
+        expectOk(doc.applyCharFormat(sec, k, start, end, json), 'format the text'),
+      formatParagraph: (k, json) =>
+        expectOk(doc.applyParaFormat(sec, k, json), 'format the paragraph'),
     }
   }
   const last = path[path.length - 1]
@@ -179,6 +189,21 @@ function containerOf(doc, hit) {
       expectOk(doc.deleteRangeInCellByPath(sec, para, at(k1), k1, o1, k2, o2), 'delete'),
     pasteHtml: (k, html) =>
       expectOk(doc.pasteHtmlInCellByPath(sec, para, at(k), 0, html), 'insert the table'),
+    formatChars: (k, start, end, json) =>
+      expectOk(
+        doc.applyCharFormatInCellByPath(sec, para, at(k), start, end, json),
+        'format the text',
+      ),
+    // the engine formats a cell paragraph by table and cell number only, which cannot name
+    // a cell of a table inside another table's cell
+    formatParagraph:
+      path.length === 1
+        ? (k, json) =>
+            expectOk(
+              doc.applyParaFormatInCell(sec, para, last.controlIndex, last.cellIndex, k, json),
+              'format the paragraph',
+            )
+        : null,
   }
 }
 
@@ -187,6 +212,82 @@ function objectsOf(doc) {
   return {
     controls: parse(doc.getControls()).length,
     fields: JSON.stringify(parse(doc.getFieldList()).map((field) => field.value ?? '')),
+  }
+}
+
+const HEX_COLOR = /^#[0-9a-fA-F]{6}$/
+const ALIGNMENTS = ['left', 'center', 'right', 'justify']
+const TOGGLES = ['bold', 'italic', 'underline', 'strikethrough']
+
+/**
+ * A format request as the engine's property lists. Only what was asked for is set, so
+ * everything else about the text stays as it is. `chars` and `paragraph` are null when
+ * the request holds nothing of that kind.
+ */
+function formatOf(format, allowParagraph) {
+  if (!format || typeof format !== 'object' || Array.isArray(format)) {
+    throw fail('BAD_ARGUMENT', 'format must be an object')
+  }
+  const chars = {}
+  for (const key of TOGGLES) {
+    if (format[key] === undefined || format[key] === null) continue
+    if (typeof format[key] !== 'boolean') throw fail('BAD_ARGUMENT', `${key} must be true or false`)
+    chars[key] = format[key]
+  }
+  if (format.size !== undefined && format.size !== null) {
+    if (
+      typeof format.size !== 'number' ||
+      !(format.size >= MIN_FONT_PT && format.size <= MAX_FONT_PT)
+    ) {
+      throw fail('BAD_ARGUMENT', `size must be ${MIN_FONT_PT} to ${MAX_FONT_PT} points`)
+    }
+    // the engine counts in hundredths of a point
+    chars.fontSize = Math.round(format.size * 100)
+  }
+  if (format.color !== undefined && format.color !== null) {
+    if (typeof format.color !== 'string' || !HEX_COLOR.test(format.color)) {
+      throw fail('BAD_ARGUMENT', 'color must look like #RRGGBB')
+    }
+    chars.textColor = format.color.toLowerCase()
+  }
+  if (format.highlight !== undefined && format.highlight !== null) {
+    const none = format.highlight === 'none'
+    if (!none && (typeof format.highlight !== 'string' || !HEX_COLOR.test(format.highlight))) {
+      throw fail('BAD_ARGUMENT', 'highlight must look like #RRGGBB, or be "none"')
+    }
+    // no highlight is a white one: the engine has no other way to say it here
+    chars.shadeColor = none ? '#ffffff' : format.highlight.toLowerCase()
+  }
+  const paragraph = {}
+  if (format.align !== undefined && format.align !== null) {
+    if (!ALIGNMENTS.includes(format.align)) {
+      throw fail('BAD_ARGUMENT', `align must be one of ${ALIGNMENTS.join(', ')}`)
+    }
+    paragraph.alignment = format.align
+  }
+  if (format.lineSpacing !== undefined && format.lineSpacing !== null) {
+    const percent = format.lineSpacing
+    if (
+      typeof percent !== 'number' ||
+      !(percent >= MIN_LINE_SPACING && percent <= MAX_LINE_SPACING)
+    ) {
+      throw fail(
+        'BAD_ARGUMENT',
+        `lineSpacing must be ${MIN_LINE_SPACING} to ${MAX_LINE_SPACING} percent`,
+      )
+    }
+    paragraph.lineSpacing = Math.round(percent)
+    paragraph.lineSpacingType = 'Percent'
+  }
+  const hasChars = Object.keys(chars).length > 0
+  const hasParagraph = Object.keys(paragraph).length > 0
+  if (hasParagraph && !allowParagraph) {
+    throw fail('BAD_ARGUMENT', 'align and lineSpacing belong to a whole paragraph')
+  }
+  if (!hasChars && !hasParagraph) throw fail('BAD_ARGUMENT', 'format names nothing to change')
+  return {
+    chars: hasChars ? JSON.stringify(chars) : null,
+    paragraph: hasParagraph ? JSON.stringify(paragraph) : null,
   }
 }
 
@@ -239,6 +340,8 @@ const escapeHtml = (text) => text.replace(/&/g, '&amp;').replace(/</g, '&lt;').r
  * These are document content, not app chrome: the same in the light and the dark theme.
  */
 const TABLE_CELL_STYLE = 'border:0.4pt solid #000000;padding:1.41pt 5.1pt'
+/** Fill of a header row. Document content as well. */
+const TABLE_HEADER_FILL = '#e5e5e5'
 /** Top plus bottom cell margin of TABLE_CELL_STYLE, in points. */
 const TABLE_CELL_MARGIN_PT = 2.82
 /** Line height of a table cell relative to its font size (the engine's default line spacing). */
@@ -267,7 +370,7 @@ function fontOf(read) {
  * one line, so each cell carries the font of the paragraph the table is put next to and a
  * height that fits a line of it (a cell whose text wraps still grows).
  */
-function tableHtml(table, font) {
+function tableHtml(table, font, header) {
   const height = Math.round((font.points * TABLE_LINE_SPACING + TABLE_CELL_MARGIN_PT) * 10) / 10
   const text = [
     font.family ? `font-family:${font.family};mso-fareast-font-family:${font.family}` : '',
@@ -275,9 +378,18 @@ function tableHtml(table, font) {
   ]
     .filter(Boolean)
     .join(';')
+  const box = `${TABLE_CELL_STYLE};height:${height}pt`
   const cell = (value) =>
-    `<td style="${TABLE_CELL_STYLE};height:${height}pt"><span style="${text}">${escapeHtml(value)}</span></td>`
-  return `<table>${table.map((row) => `<tr>${row.map(cell).join('')}</tr>`).join('')}</table>`
+    `<td style="${box}"><span style="${text}">${escapeHtml(value)}</span></td>`
+  // a header cell the way Hangul documents usually have it: bold, centred, on light grey;
+  // as <th> the engine also marks it as a title cell, which repeats on the next page
+  const head = (value) =>
+    `<th style="${box};background-color:${TABLE_HEADER_FILL}"><p style="text-align:center">` +
+    `<span style="${text};font-weight:bold">${escapeHtml(value)}</span></p></th>`
+  const rows = table.map(
+    (row, index) => `<tr>${row.map(header && index === 0 ? head : cell).join('')}</tr>`,
+  )
+  return `<table>${rows.join('')}</table>`
 }
 
 /** Which match a replace call means, or the reason it cannot be decided. */
@@ -544,7 +656,7 @@ export const agentPlugin = {
        * in the body text only: the engine does not lay out a table made inside the cell of
        * another one (its cells come out in one row, without lines).
        */
-      insertTable: guarded((anchor, occurrence, where, rows) => {
+      insertTable: guarded((anchor, occurrence, where, rows, header) => {
         checkWhere(where)
         const table = tableOf(rows)
         const refusal = host.read((doc) => {
@@ -566,11 +678,92 @@ export const agentPlugin = {
               openAfter(box, at, plain)
               at += 1
             }
-            box.pasteHtml(at, tableHtml(table, font))
+            box.pasteHtml(at, tableHtml(table, font, header === true))
             const after = objectsOf(doc)
             // the new table is an object of its own; nothing that was there may be gone
             mustKeep(before, { ...after, controls: Math.min(after.controls, before.controls) })
             return { ok: true, rows: table.length, cols: table[0].length, inTable: box.inTable }
+          }),
+        )
+      }),
+
+      /**
+       * Change the character formatting of one occurrence of `find`, or with `all` of every
+       * occurrence. Only the named properties change; the text itself is not touched.
+       */
+      formatText: guarded((find, occurrence, all, format) => {
+        const { chars } = formatOf(format, false)
+        const targets = (doc) => {
+          const hits = searchAll(doc, find)
+          if (all === true) {
+            const usable = hits.filter(isReplaceable)
+            return usable.length > 0
+              ? { hits: usable }
+              : { refusal: { ok: false, reason: 'not_found', count: 0 } }
+          }
+          const picked = pickHit(hits, occurrence)
+          if (picked.hit && isReplaceable(picked.hit)) return { hits: [picked.hit] }
+          const reason = picked.hit ? 'unsupported_place' : picked.reason
+          return {
+            refusal: {
+              ok: false,
+              reason,
+              count: hits.length,
+              ...(reason === 'ambiguous' ? { matches: listMatches(doc, hits) } : {}),
+            },
+          }
+        }
+        const refusal = host.read((doc) => targets(doc).refusal ?? null)
+        if (refusal) return refusal
+        return keepingObjects((mustKeep) =>
+          change('format-text', (doc) => {
+            const { hits } = targets(doc)
+            if (!hits) throw fail('CHANGED', 'the document changed mid-call')
+            const before = objectsOf(doc)
+            for (const hit of hits) {
+              const box = containerOf(doc, hit)
+              box.formatChars(box.index, hit.charOffset, hit.charOffset + hit.length, chars)
+            }
+            mustKeep(before, objectsOf(doc))
+            return { ok: true, count: hits.length }
+          }),
+        )
+      }),
+
+      /**
+       * Change the formatting of the whole paragraph `find` occurs in: its alignment and
+       * line spacing, and the character formatting of all its text.
+       */
+      formatParagraph: guarded((find, occurrence, format) => {
+        const { chars, paragraph } = formatOf(format, true)
+        const plan = (doc) => {
+          const hits = searchAll(doc, find)
+          const picked = pickHit(hits, occurrence)
+          const refuse = (reason) => ({
+            refusal: {
+              ok: false,
+              reason,
+              count: hits.length,
+              ...(reason === 'ambiguous' ? { matches: listMatches(doc, hits) } : {}),
+            },
+          })
+          if (!picked.hit) return refuse(picked.reason)
+          if (!isReplaceable(picked.hit)) return refuse('unsupported_place')
+          const box = containerOf(doc, picked.hit)
+          return paragraph && !box.formatParagraph ? refuse('unsupported_place') : { box }
+        }
+        const refusal = host.read((doc) => plan(doc).refusal ?? null)
+        if (refusal) return refusal
+        return keepingObjects((mustKeep) =>
+          change('format-paragraph', (doc) => {
+            const { box } = plan(doc)
+            if (!box) throw fail('CHANGED', 'the document changed mid-call')
+            const before = objectsOf(doc)
+            const length = box.length(box.index)
+            if (chars && length > 0) box.formatChars(box.index, 0, length, chars)
+            if (paragraph) box.formatParagraph(box.index, paragraph)
+            mustKeep(before, objectsOf(doc))
+            return { ok: true, inTable: box.inTable }
           }),
         )
       }),

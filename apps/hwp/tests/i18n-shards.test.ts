@@ -31,6 +31,8 @@ describe('hwp renderer strings', () => {
       aiToolInsert: ['{count}'],
       aiToolDelete: ['{text}'],
       aiToolTable: ['{rows}', '{cols}'],
+      aiToolFormat: ['{text}'],
+      aiFmtOff: ['{name}'],
       aiChangesTitle: ['{count}'],
       aiWorkedSteps: ['{n}'],
     } as const
