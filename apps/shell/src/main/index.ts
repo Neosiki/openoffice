@@ -231,6 +231,7 @@ import {
   sendMindmapMenuCommand,
   sendMindmapPrintRequest,
   setMindmapFileSavedHook,
+  setMindmapProvisionalTitleHook,
 } from '../../../mindmap/src/main/mindmap-main'
 import { mindmapReadOutline } from '../../../mindmap/src/main/mcp-queries'
 import type {
@@ -3306,6 +3307,10 @@ function createShellWindow(): void {
     applyPendingDir(wc.id, path)
   })
   setHtmlProvisionalTitleHook((wc, title) => {
+    manager.setTabTitleFor(wc.id, title)
+    detachedSetTitleFor(wc.id, title)
+  })
+  setMindmapProvisionalTitleHook((wc, title) => {
     manager.setTabTitleFor(wc.id, title)
     detachedSetTitleFor(wc.id, title)
   })
