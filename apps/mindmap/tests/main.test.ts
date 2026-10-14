@@ -97,8 +97,14 @@ import {
   sendMindmapMenuCommand,
   sendMindmapPrintRequest,
 } from '../src/main/mindmap-main'
+import {
+  generateRunStartedEvents,
+  queueGenerateHandoff,
+  resetGenerateHandoffsForTest,
+  type GenerateHandoff,
+} from '@genoffice/electron-utils/generate-handoff'
 import { AI_CHANNELS, APP_CHANNELS, MINDMAP_CHANNELS } from '../src/shared/ipc'
-import type { OpenFileResult, SaveMindmapResult } from '../src/shared/ipc'
+import type { MindmapHandoff, OpenFileResult, SaveMindmapResult } from '../src/shared/ipc'
 
 let dir: string
 beforeEach(() => {
@@ -161,10 +167,12 @@ describe('channel names', () => {
       'filesRead',
       'filesReadImage',
       'provisionalTitle',
+      'handoffTake',
+      'handoffRunStarted',
     ] as const) {
       expect(handlers.has(MINDMAP_CHANNELS[name])).toBe(true)
     }
-    for (const name of ['outlineResult', 'bytesResult', 'handoffTake', 'seedTake'] as const) {
+    for (const name of ['outlineResult', 'bytesResult', 'seedTake'] as const) {
       expect(handlers.has(MINDMAP_CHANNELS[name])).toBe(false)
     }
   })
@@ -500,5 +508,121 @@ describe('links', () => {
     const event = { preventDefault: vi.fn() }
     navigate(event, 'https://example.com/elsewhere')
     expect(event.preventDefault).toHaveBeenCalled()
+  })
+})
+
+describe('a request handed over by the shell (8.5)', () => {
+  beforeEach(() => resetGenerateHandoffsForTest())
+
+  const handoff = (patch: Partial<GenerateHandoff> = {}): GenerateHandoff => ({
+    id: 'h-1',
+    mode: 'ai',
+    target: 'mindmap',
+    materials: [
+      { path: join('C:', 'notes', 'plan.docx'), name: 'plan.docx' },
+      { path: join('C:', 'notes', 'old.xmind'), name: 'old.xmind' },
+    ],
+    text: 'Make a mind map from these notes',
+    defaultText: false,
+    createdAt: 1,
+    ...patch,
+  })
+  const take = (contents: FakeContents) =>
+    call<MindmapHandoff | null>(MINDMAP_CHANNELS.handoffTake, contents)
+  const report = (contents: FakeContents, payload: unknown) =>
+    call<void>(MINDMAP_CHANNELS.handoffRunStarted, contents, payload)
+  const plan = join('C:', 'notes', 'plan.docx')
+  const old = join('C:', 'notes', 'old.xmind')
+
+  it('the new tab takes it once, in the shape of the contract', () => {
+    const contents = view(null)
+    queueGenerateHandoff(contents.id, handoff())
+    expect(take(contents)).toEqual({
+      id: 'h-1',
+      sourcePaths: [plan, old],
+      prompt: 'Make a mind map from these notes',
+    })
+    // a second take (a reload) gets nothing
+    expect(take(contents)).toBeNull()
+  })
+
+  it('another tab, or a request made for another kind, gets nothing', () => {
+    const mine = view(null)
+    const other = view(null)
+    queueGenerateHandoff(mine.id, handoff())
+    expect(take(other)).toBeNull()
+    queueGenerateHandoff(other.id, handoff({ id: 'h-2', target: 'slides' }))
+    expect(take(other)).toBeNull()
+    expect(take(mine)?.id).toBe('h-1')
+  })
+
+  it('a view made for a file never takes, and leaves the request where it is', async () => {
+    const path = join(dir, 'map.xmind')
+    writeFileSync(path, await mapBytes())
+    const contents = view(path)
+    queueGenerateHandoff(contents.id, handoff())
+    expect(take(contents)).toBeNull()
+    expect(take(contents)).toBeNull()
+  })
+
+  it('records the first run with handed-over files attached, with just those files', () => {
+    const contents = view(null)
+    queueGenerateHandoff(contents.id, handoff())
+    take(contents)
+    report(contents, {
+      id: 'h-1',
+      attachedSources: 1,
+      attachedPaths: [old, join('C:', 'elsewhere', 'mine.txt')],
+    })
+    expect(generateRunStartedEvents()).toEqual([
+      expect.objectContaining({
+        webContentsId: contents.id,
+        target: 'mindmap',
+        mode: 'ai',
+        sources: [old],
+        handoffId: 'h-1',
+      }),
+    ])
+    // later runs of the same tab are not new starts
+    report(contents, { id: 'h-1', attachedSources: 2, attachedPaths: [plan, old] })
+    expect(generateRunStartedEvents()).toHaveLength(1)
+  })
+
+  it('a run with every handed-over file removed is not recorded; a later one with them is', () => {
+    const contents = view(null)
+    queueGenerateHandoff(contents.id, handoff())
+    take(contents)
+    report(contents, { id: 'h-1', attachedSources: 0, attachedPaths: [] })
+    report(contents, {
+      id: 'h-1',
+      attachedSources: 1,
+      attachedPaths: [join('C:', 'elsewhere', 'mine.txt')],
+    })
+    expect(generateRunStartedEvents()).toEqual([])
+    report(contents, { id: 'h-1', attachedSources: 1, attachedPaths: [plan] })
+    expect(generateRunStartedEvents().map((e) => e.sources)).toEqual([[plan]])
+  })
+
+  it('ignores reports that are malformed, name another request, or come from a tab that took nothing', () => {
+    const contents = view(null)
+    const stranger = view(null)
+    queueGenerateHandoff(contents.id, handoff())
+    for (const payload of [
+      null,
+      'h-1',
+      42,
+      { id: 'h-1' },
+      { id: 'h-1', attachedPaths: plan },
+      { id: 'h-1', attachedPaths: [42, null, ''] },
+      { id: 7, attachedPaths: [plan] },
+    ]) {
+      report(contents, payload)
+    }
+    // not taken yet: nothing to report against
+    report(contents, { id: 'h-1', attachedSources: 1, attachedPaths: [plan] })
+    take(contents)
+    report(contents, { id: 'someone-else', attachedSources: 1, attachedPaths: [plan] })
+    report(stranger, { id: 'h-1', attachedSources: 1, attachedPaths: [plan] })
+    expect(generateRunStartedEvents()).toEqual([])
   })
 })

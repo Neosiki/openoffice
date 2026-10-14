@@ -272,7 +272,7 @@ export interface MindmapHandoff {
   id: string
   /** files to attach to the AI panel, in the order the user arranged them */
   sourcePaths: string[]
-  /** what the user wrote; may be empty */
+  /** what the user wrote, or the default request when they wrote nothing */
   prompt: string
 }
 
@@ -280,6 +280,8 @@ export interface HandoffRunStarted {
   id: string
   /** how many of the handed-over files were still attached when the run started */
   attachedSources: number
+  /** those files' paths: the main process records which of the handed-over files the run used */
+  attachedPaths: string[]
 }
 
 // ---- a new tab that starts with given content (T17) ----

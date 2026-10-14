@@ -25,6 +25,7 @@ import { Toolbar } from './components/Toolbar'
 import { SheetTabs } from './components/SheetTabs'
 import { ThemePanel } from './components/ThemePanel'
 import { MindmapAiDock, useMindmapAi } from './ai/AiDock'
+import { useMapHandoff } from './ai/use-handoff'
 import {
   ConfirmDialog,
   type ConfirmRequest,
@@ -275,6 +276,15 @@ export default function App() {
 
   // the AI panel works on the map through the same session and controllers (T12)
   const ai = useMindmapAi({ session, controllers, activeKey, setActiveKey, path, flush: flushAll })
+  // a request the shell handed over to this new map: taken once, run through the panel (T16)
+  const handoff = useMapHandoff({
+    ready: status === 'ready',
+    untitled: path === null,
+    openPanel: () => {
+      setThemeOpen(false)
+      ai.setOpen(true)
+    },
+  })
 
   // ---- saving ----
 
@@ -676,7 +686,12 @@ export default function App() {
             onClose={() => setThemeOpen(false)}
           />
         )}
-        <MindmapAiDock ai={ai} filePath={path} />
+        <MindmapAiDock
+          ai={ai}
+          filePath={path}
+          request={handoff.request}
+          onRunStart={handoff.onRunStart}
+        />
       </main>
 
       <footer className="mm-foot">

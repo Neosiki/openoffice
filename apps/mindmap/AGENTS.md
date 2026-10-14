@@ -76,6 +76,7 @@
 - **첨부**는 다른 편집기와 같다. 받는 확장자에 `xmind`가 있고, 글은 `parseFileToText`로만 읽으며(가리기 적용, 읽지 못하면 읽지 않음), 다른 탭에서 저장하지 않은 파일은 `assertFileSaved`로 거절한다. 창은 한 번에 24,000자씩 읽고 메인은 한 번에 48,000자를 넘겨주지 않는다. 그림(5MB까지)은 사용자 글과 함께 그림으로 간다.
 - **창은 지도 오른쪽 끝에 붙는다.** 테마 패널과 같은 쪽이라 둘은 번갈아 열린다(하나를 열면 다른 하나는 접힌다). AI 창은 접혀도 남아 있어 실행과 대화가 이어진다. 열림 여부는 `mindmapapp.showAi`에 기억한다.
 - **밖에서 시작하는 실행**은 `MindmapAiDock`(`AiPanel`)의 `request`(`{ nonce, text, attachmentPaths }`)로 건넨다. 파일은 `mindmap:files-add`로 받아 첨부 칸에, 글은 입력 칸에 넣은 뒤 보내기 버튼과 같은 `send`를 지난다. 문지기가 붙잡거나 거절하면 글과 첨부는 창에 그대로 남는다. 실행이 실제로 시작될 때마다 `onRunStart({ text, attachments })`가 불린다(입력, 다시 시도, 대기열, 밖에서 시작 모두).
+- **넘겨받은 요청**(8.5): 껍데기의 "만들기"가 새 지도 탭에 맡겨 둔 요청을 그 탭이 한 번 가져간다. 메인은 `src/main/handoff-main.ts`가 `mindmap:handoff-take`(공용 `takeGenerateHandoff`, 파일로 연 뷰는 가져가지 않음)와 `mindmap:handoff-run-started`(공용 `reportGenerateRunStarted`, 받은 값을 검사)를 받는다. 화면은 `ai/use-handoff.ts`가 맡는다. 지도가 처음 준비될 때 제목 없는 새 지도일 때만 가져가고, AI 창을 연 뒤 요청을 `request`로 한 번의 렌더에만 건네고 버린다(창이 다시 붙어도, 탭을 다시 불러와도 다시 돌지 않는다). 실행이 시작될 때 넘겨받은 파일이 하나라도 붙어 있으면 그 경로를 알리고, 메인은 첫 번째만 기록한다. 넘겨받은 파일을 모두 뺀 실행은 알리지 않는다. 테스트는 `tests/handoff.test.ts`와 `tests/main.test.ts`.
 - 이 편집기는 `ai:*`와 구독 창구를 등록하지 않는다. 제공자는 `selectAiProvider`(뒷단)가 정하고, 화면은 문지기와 막힘 안내만 그린다.
 
 ## 내보내기와 인쇄
