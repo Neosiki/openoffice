@@ -106,7 +106,11 @@ export function BookInfoAiFill({
       // the stored settings as they are now: the provider the gate just let through
       const current = await window.pdfApi.getAiSettings()
       const outcome = await streamText({
-        transport: createElectronTransport(() => current, { lang: () => langRef.current }),
+        transport: createElectronTransport(() => current, {
+          lang: () => langRef.current,
+          // a one-off request: cancelling it must not end the chat's media calls
+          cancelScope: 'request',
+        }),
         system: BOOK_INFO_SYSTEM,
         user: bookInfoUserMessage(text),
         signal: abort.signal,
