@@ -165,7 +165,7 @@ letting a program use a subscription automatically; an account may be
 restricted for it. So **Settings → AI → Advanced → Let automatic requests use
 a subscription** is off by default. While it is off, these requests use a key
 provider if you set one up and are otherwise answered with "unavailable".
-While it is on, they run one at a time and at most 20 an hour.
+While it is on, they run one at a time, with no hourly limit.
 `ieumoffice capabilities --json` reports what is available and by which route.
 
 IeumOffice can be installed next to GenOffice. It registers only its own names
