@@ -5,6 +5,7 @@ export const ko = {
   cardChecking: '확인 중…',
   cardNotInstalled: '설치되지 않음',
   cardSignedOut: '로그인 필요',
+  cardSigningIn: '로그인하는 중…',
   cardReady: '연결됨',
   cardReadyPlan: '연결됨 · {plan}',
   cardMetered: '구독이 아닌 방식으로 로그인됨',
@@ -15,6 +16,7 @@ export const ko = {
   cardErrFailed: '{provider} 연결을 확인하는 중에 문제가 생겼습니다. 다시 확인해 보세요.',
   actionInstall: '설치',
   actionLogin: '로그인',
+  actionLoginWindow: '브라우저가 안 열리거나 코드가 나오나요?',
   actionRecheck: '다시 확인',
   actionAcceptMetered: '그래도 사용',
   actionInstallHelp: '공식 설치 안내',
@@ -24,6 +26,10 @@ export const ko = {
   actionLogout: '로그아웃',
   installNote: '{vendor}의 공식 설치 명령이 새 터미널 창에서 실행됩니다.',
   loginNote: '열리는 로그인 화면은 {vendor}의 것입니다.',
+  signingInBrowserNote:
+    '열린 브라우저에서 {vendor} 계정으로 로그인하고 허용을 누르세요. 끝나면 저절로 연결됩니다.',
+  signingInWindowNote:
+    '브라우저에 코드가 나오면 복사해서 방금 열린 창에 붙여 넣고 Enter를 누르세요.',
   meteredWarning: '구독이 아니라 쓴 만큼 요금이 나갑니다.',
   meteredMeaning:
     'API 키나 종량제 계정으로 로그인되어 있거나, 로그인 방식을 확인하지 못한 상태입니다. "그래도 사용"을 누르면 이 연결로 AI를 쓰게 되고, 요청할 때마다 그 계정에 요금이 청구됩니다.',

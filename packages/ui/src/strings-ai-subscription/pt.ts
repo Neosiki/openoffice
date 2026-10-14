@@ -5,6 +5,7 @@ export const pt = {
   cardChecking: 'Verificando…',
   cardNotInstalled: 'Não instalado',
   cardSignedOut: 'Sem login',
+  cardSigningIn: 'Entrando…',
   cardReady: 'Conectado',
   cardReadyPlan: 'Conectado · {plan}',
   cardMetered: 'Login feito, mas não com uma assinatura',
@@ -16,6 +17,7 @@ export const pt = {
   cardErrFailed: 'Algo deu errado ao verificar {provider}. Verifique novamente.',
   actionInstall: 'Instalar',
   actionLogin: 'Entrar',
+  actionLoginWindow: 'O navegador não abriu ou mostra um código?',
   actionRecheck: 'Verificar novamente',
   actionAcceptMetered: 'Usar mesmo assim',
   actionInstallHelp: 'Guia oficial de instalação',
@@ -26,6 +28,10 @@ export const pt = {
   installNote:
     'O comando oficial de instalação da {vendor} é executado em uma nova janela de terminal.',
   loginNote: 'A página de login que se abre é da própria {vendor}.',
+  signingInBrowserNote:
+    'Entre na sua conta da {vendor} no navegador que abriu e permita o acesso. A conexão é feita sozinha quando você terminar.',
+  signingInWindowNote:
+    'Se o navegador mostrar um código, copie-o, cole-o na janela que acabou de abrir e pressione Enter.',
   meteredWarning: 'Isto não é uma assinatura: você paga pelo que usar.',
   meteredMeaning:
     'Este login usa uma chave de API ou uma conta de pagamento por consumo, ou não foi possível confirmar o tipo. “Usar mesmo assim” permite que a IA funcione com esta conexão, e cada solicitação é cobrada dessa conta.',

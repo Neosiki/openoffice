@@ -23,7 +23,7 @@ import './ai-subscription.css'
 export interface AiSubscriptionCardActions {
   /** run the vendor's official install command in a visible terminal window */
   readonly onInstall: (provider: AiSubscriptionProviderId) => void
-  /** start the CLI's own login */
+  /** start the CLI's own login; while a browser sign-in runs, open the CLI's window instead */
   readonly onLogin: (provider: AiSubscriptionProviderId) => void
   /** check the connection again */
   readonly onRecheck: (provider: AiSubscriptionProviderId) => void
@@ -37,6 +37,7 @@ const ACTION_LABELS: Record<AiSubscriptionCardAction, AiSubscriptionStringKey> =
   install: 'actionInstall',
   'install-help': 'actionInstallHelp',
   login: 'actionLogin',
+  'login-window': 'actionLoginWindow',
   'accept-metered': 'actionAcceptMetered',
   recheck: 'actionRecheck',
   'switch-account': 'actionSwitchAccount',
@@ -95,6 +96,8 @@ export function AiSubscriptionCard({
     install: onInstall,
     'install-help': onOpenInstallHelp,
     login: onLogin,
+    // pressing login again while the browser sign-in runs opens the CLI's window
+    'login-window': onLogin,
     'accept-metered': onAcceptMetered,
     recheck: onRecheck,
     'switch-account': (id) => onSwitchAccount?.(id),
@@ -135,7 +138,8 @@ export function AiSubscriptionCard({
       {view.actions.length > 0 && (
         <div className="ai-sub-actions">
           {view.actions.map((action, index) =>
-            action === 'install-help' ? (
+            // the way out of a step, not the step itself: a link, never the highlighted button
+            action === 'install-help' || action === 'login-window' ? (
               <button
                 key={action}
                 type="button"

@@ -5,6 +5,7 @@ export const id = {
   cardChecking: 'Memeriksa…',
   cardNotInstalled: 'Belum terpasang',
   cardSignedOut: 'Belum masuk',
+  cardSigningIn: 'Sedang masuk…',
   cardReady: 'Terhubung',
   cardReadyPlan: 'Terhubung · {plan}',
   cardMetered: 'Sudah masuk, tetapi bukan dengan langganan',
@@ -15,6 +16,7 @@ export const id = {
   cardErrFailed: 'Terjadi masalah saat memeriksa {provider}. Periksa lagi.',
   actionInstall: 'Pasang',
   actionLogin: 'Masuk',
+  actionLoginWindow: 'Browser tidak terbuka, atau menampilkan kode?',
   actionRecheck: 'Periksa lagi',
   actionAcceptMetered: 'Tetap gunakan',
   actionInstallHelp: 'Panduan pemasangan resmi',
@@ -24,6 +26,10 @@ export const id = {
   actionLogout: 'Keluar',
   installNote: 'Perintah pemasangan resmi dari {vendor} dijalankan di jendela terminal baru.',
   loginNote: 'Halaman masuk yang terbuka adalah milik {vendor}.',
+  signingInBrowserNote:
+    'Masuk ke akun {vendor} Anda di browser yang terbuka, lalu izinkan akses. Koneksi akan tersambung sendiri setelah selesai.',
+  signingInWindowNote:
+    'Jika browser menampilkan kode, salin, tempelkan ke jendela yang baru terbuka, lalu tekan Enter.',
   meteredWarning: 'Ini bukan langganan: Anda ditagih sesuai pemakaian.',
   meteredMeaning:
     'Login ini memakai kunci API atau akun bayar sesuai pemakaian, atau jenisnya tidak dapat dipastikan. Dengan "Tetap gunakan", AI berjalan melalui koneksi ini dan setiap permintaan ditagihkan ke akun tersebut.',

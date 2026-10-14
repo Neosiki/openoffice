@@ -5,6 +5,7 @@ export const he = {
   cardChecking: 'בודק…',
   cardNotInstalled: 'לא מותקן',
   cardSignedOut: 'לא מחובר לחשבון',
+  cardSigningIn: 'מתבצעת כניסה…',
   cardReady: 'מחובר',
   cardReadyPlan: 'מחובר · {plan}',
   cardMetered: 'בוצעה כניסה, אך לא באמצעות מינוי',
@@ -15,6 +16,7 @@ export const he = {
   cardErrFailed: 'משהו השתבש במהלך הבדיקה של {provider}. בדקו שוב.',
   actionInstall: 'התקנה',
   actionLogin: 'כניסה',
+  actionLoginWindow: 'הדפדפן לא נפתח, או שהוא מציג קוד?',
   actionRecheck: 'בדיקה חוזרת',
   actionAcceptMetered: 'להשתמש בכל זאת',
   actionInstallHelp: 'מדריך ההתקנה הרשמי',
@@ -24,6 +26,10 @@ export const he = {
   actionLogout: 'יציאה מהחשבון',
   installNote: 'פקודת ההתקנה הרשמית של {vendor} תופעל בחלון מסוף חדש.',
   loginNote: 'דף הכניסה שייפתח הוא של {vendor}.',
+  signingInBrowserNote:
+    'היכנסו לחשבון {vendor} שלכם בדפדפן שנפתח ואשרו את הגישה. החיבור יתבצע מעצמו כשתסיימו.',
+  signingInWindowNote:
+    'אם הדפדפן מציג קוד, העתיקו אותו, הדביקו אותו בחלון שנפתח זה עתה והקישו Enter.',
   meteredWarning: 'זה אינו מינוי: החיוב הוא לפי השימוש בפועל.',
   meteredMeaning:
     'הכניסה הזו משתמשת במפתח API או בחשבון בתשלום לפי שימוש, או שלא ניתן היה לאמת את סוגה. בחירה ב"להשתמש בכל זאת" מאפשרת לבינה המלאכותית לפעול דרך החיבור הזה, וכל בקשה תחויב בחשבון הזה.',

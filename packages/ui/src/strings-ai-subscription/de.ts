@@ -5,6 +5,7 @@ export const de = {
   cardChecking: 'Wird geprüft…',
   cardNotInstalled: 'Nicht installiert',
   cardSignedOut: 'Nicht angemeldet',
+  cardSigningIn: 'Anmeldung läuft…',
   cardReady: 'Verbunden',
   cardReadyPlan: 'Verbunden · {plan}',
   cardMetered: 'Angemeldet, aber nicht mit einem Abonnement',
@@ -18,6 +19,7 @@ export const de = {
     'Bei der Prüfung von {provider} ist ein Problem aufgetreten. Prüfen Sie es erneut.',
   actionInstall: 'Installieren',
   actionLogin: 'Anmelden',
+  actionLoginWindow: 'Browser nicht geöffnet oder zeigt er einen Code?',
   actionRecheck: 'Erneut prüfen',
   actionAcceptMetered: 'Trotzdem verwenden',
   actionInstallHelp: 'Offizielle Installationsanleitung',
@@ -28,6 +30,10 @@ export const de = {
   installNote:
     'Der offizielle Installationsbefehl von {vendor} wird in einem neuen Terminalfenster ausgeführt.',
   loginNote: 'Die Anmeldeseite, die sich öffnet, stammt von {vendor}.',
+  signingInBrowserNote:
+    'Melden Sie sich im geöffneten Browser bei Ihrem {vendor}-Konto an und erlauben Sie den Zugriff. Danach wird die Verbindung von selbst hergestellt.',
+  signingInWindowNote:
+    'Wenn der Browser einen Code anzeigt, kopieren Sie ihn, fügen Sie ihn in das soeben geöffnete Fenster ein und drücken Sie die Eingabetaste.',
   meteredWarning: 'Das ist kein Abonnement: Abgerechnet wird nach Verbrauch.',
   meteredMeaning:
     'Diese Anmeldung nutzt einen API-Schlüssel oder ein Konto mit nutzungsbasierter Abrechnung, oder ihre Art ließ sich nicht feststellen. Mit „Trotzdem verwenden“ läuft die KI über diese Verbindung, und jede Anfrage wird diesem Konto berechnet.',

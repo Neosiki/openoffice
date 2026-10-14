@@ -5,6 +5,7 @@ export const it = {
   cardChecking: 'Verifica in corso…',
   cardNotInstalled: 'Non installato',
   cardSignedOut: 'Accesso non effettuato',
+  cardSigningIn: 'Accesso in corso…',
   cardReady: 'Connesso',
   cardReadyPlan: 'Connesso · {plan}',
   cardMetered: 'Accesso effettuato, ma non con un abbonamento',
@@ -18,6 +19,7 @@ export const it = {
     'Si è verificato un problema durante la verifica di {provider}. Verifica di nuovo.',
   actionInstall: 'Installa',
   actionLogin: 'Accedi',
+  actionLoginWindow: 'Il browser non si è aperto o mostra un codice?',
   actionRecheck: 'Verifica di nuovo',
   actionAcceptMetered: 'Usa comunque',
   actionInstallHelp: 'Guida ufficiale all’installazione',
@@ -28,6 +30,10 @@ export const it = {
   installNote:
     'Il comando di installazione ufficiale di {vendor} viene eseguito in una nuova finestra del terminale.',
   loginNote: 'La pagina di accesso che si apre è quella di {vendor}.',
+  signingInBrowserNote:
+    'Accedi al tuo account {vendor} nel browser che si è aperto e consenti l’accesso. La connessione avviene da sola quando hai finito.',
+  signingInWindowNote:
+    'Se il browser mostra un codice, copialo, incollalo nella finestra appena aperta e premi Invio.',
   meteredWarning: 'Non è un abbonamento: paghi in base a quanto usi.',
   meteredMeaning:
     'Questo accesso usa una chiave API o un account a consumo, oppure non è stato possibile confermarne il tipo. Con “Usa comunque” l’IA funziona su questa connessione e ogni richiesta viene addebitata a quell’account.',

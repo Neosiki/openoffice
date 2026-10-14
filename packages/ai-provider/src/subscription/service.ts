@@ -15,6 +15,7 @@ import type {
   AiSettings,
   AiSubscriptionModel,
   AiSubscriptionProviderId,
+  AiSubscriptionSigningIn,
   AiSubscriptionStatus,
 } from '../types'
 import {
@@ -96,6 +97,15 @@ export interface SubscriptionStatusService {
    */
   clearMeteredAcceptance(provider: AiSubscriptionProviderId): Promise<void>
   onChange(listener: (statuses: SubscriptionStatusMap) => void): () => void
+  /**
+   * Mark a login the app started as under way (`browser`, `window`), or as over
+   * (undefined). The mark rides on the statuses handed out and is announced; it
+   * changes nothing that was detected.
+   */
+  setSigningIn(
+    provider: AiSubscriptionProviderId,
+    signingIn: AiSubscriptionSigningIn | undefined,
+  ): void
 }
 
 /** A login is known for these states: the account belongs to them alone */
@@ -159,7 +169,15 @@ export function createSubscriptionStatusService(
   // both providers share the settings and the acceptance file: one change at a time
   let acceptanceQueue: Promise<unknown> = Promise.resolve()
 
-  const snapshot = (): SubscriptionStatusMap => ({ ...statuses })
+  /** logins the app started that are under way, laid over the detected statuses */
+  const signingIn = new Map<AiSubscriptionProviderId, AiSubscriptionSigningIn>()
+  const snapshot = (): SubscriptionStatusMap => {
+    const current = { ...statuses }
+    for (const [provider, mode] of signingIn) {
+      current[provider] = { ...current[provider], signingIn: mode }
+    }
+    return current
+  }
   const announce = (): void => {
     const current = snapshot()
     for (const listener of listeners) {
@@ -330,6 +348,12 @@ export function createSubscriptionStatusService(
     onChange(listener) {
       listeners.add(listener)
       return () => listeners.delete(listener)
+    },
+    setSigningIn(provider, mode) {
+      if (signingIn.get(provider) === mode) return
+      if (mode) signingIn.set(provider, mode)
+      else signingIn.delete(provider)
+      announce()
     },
   }
 }

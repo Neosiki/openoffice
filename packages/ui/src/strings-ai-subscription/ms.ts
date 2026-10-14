@@ -5,6 +5,7 @@ export const ms = {
   cardChecking: 'Sedang menyemak…',
   cardNotInstalled: 'Belum dipasang',
   cardSignedOut: 'Belum log masuk',
+  cardSigningIn: 'Sedang log masuk…',
   cardReady: 'Disambungkan',
   cardReadyPlan: 'Disambungkan · {plan}',
   cardMetered: 'Sudah log masuk, tetapi bukan dengan langganan',
@@ -17,6 +18,7 @@ export const ms = {
   cardErrFailed: 'Masalah berlaku semasa menyemak {provider}. Semak semula.',
   actionInstall: 'Pasang',
   actionLogin: 'Log masuk',
+  actionLoginWindow: 'Pelayar tidak dibuka, atau menunjukkan kod?',
   actionRecheck: 'Semak semula',
   actionAcceptMetered: 'Guna juga',
   actionInstallHelp: 'Panduan pemasangan rasmi',
@@ -26,6 +28,10 @@ export const ms = {
   actionLogout: 'Log keluar',
   installNote: 'Arahan pemasangan rasmi {vendor} dijalankan dalam tetingkap terminal baharu.',
   loginNote: 'Halaman log masuk yang dibuka ialah milik {vendor}.',
+  signingInBrowserNote:
+    'Log masuk ke akaun {vendor} anda dalam pelayar yang dibuka, kemudian benarkan akses. Sambungan akan dibuat sendiri apabila selesai.',
+  signingInWindowNote:
+    'Jika pelayar menunjukkan kod, salin dan tampalkannya ke tetingkap yang baru dibuka, kemudian tekan Enter.',
   meteredWarning: 'Ini bukan langganan: anda dicaj mengikut penggunaan.',
   meteredMeaning:
     'Log masuk ini menggunakan kunci API atau akaun bayar ikut guna, atau jenisnya tidak dapat disahkan. Dengan "Guna juga", AI berjalan melalui sambungan ini dan setiap permintaan dicaj kepada akaun tersebut.',

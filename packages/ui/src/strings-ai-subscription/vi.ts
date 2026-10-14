@@ -5,6 +5,7 @@ export const vi = {
   cardChecking: 'Đang kiểm tra…',
   cardNotInstalled: 'Chưa cài đặt',
   cardSignedOut: 'Chưa đăng nhập',
+  cardSigningIn: 'Đang đăng nhập…',
   cardReady: 'Đã kết nối',
   cardReadyPlan: 'Đã kết nối · {plan}',
   cardMetered: 'Đã đăng nhập nhưng không phải bằng gói đăng ký',
@@ -16,6 +17,7 @@ export const vi = {
   cardErrFailed: 'Đã xảy ra sự cố khi kiểm tra {provider}. Hãy kiểm tra lại.',
   actionInstall: 'Cài đặt',
   actionLogin: 'Đăng nhập',
+  actionLoginWindow: 'Trình duyệt không mở, hoặc hiện một mã?',
   actionRecheck: 'Kiểm tra lại',
   actionAcceptMetered: 'Vẫn sử dụng',
   actionInstallHelp: 'Hướng dẫn cài đặt chính thức',
@@ -25,6 +27,10 @@ export const vi = {
   actionLogout: 'Đăng xuất',
   installNote: 'Lệnh cài đặt chính thức của {vendor} sẽ chạy trong một cửa sổ terminal mới.',
   loginNote: 'Trang đăng nhập được mở ra là của {vendor}.',
+  signingInBrowserNote:
+    'Đăng nhập vào tài khoản {vendor} của bạn trong trình duyệt vừa mở và cho phép truy cập. Khi xong, kết nối sẽ tự hoàn tất.',
+  signingInWindowNote:
+    'Nếu trình duyệt hiện một mã, hãy sao chép, dán vào cửa sổ vừa mở rồi nhấn Enter.',
   meteredWarning: 'Đây không phải gói đăng ký: bạn bị tính phí theo mức sử dụng.',
   meteredMeaning:
     'Lần đăng nhập này dùng khóa API hoặc tài khoản trả phí theo mức sử dụng, hoặc không xác định được loại đăng nhập. Chọn "Vẫn sử dụng" để AI chạy qua kết nối này, và mỗi yêu cầu sẽ được tính vào tài khoản đó.',

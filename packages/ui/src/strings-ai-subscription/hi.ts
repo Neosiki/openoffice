@@ -5,6 +5,7 @@ export const hi = {
   cardChecking: 'जाँच हो रही है…',
   cardNotInstalled: 'इंस्टॉल नहीं है',
   cardSignedOut: 'साइन इन नहीं है',
+  cardSigningIn: 'साइन इन हो रहा है…',
   cardReady: 'कनेक्ट है',
   cardReadyPlan: 'कनेक्ट है · {plan}',
   cardMetered: 'साइन इन है, पर सदस्यता से नहीं',
@@ -16,6 +17,7 @@ export const hi = {
   cardErrFailed: '{provider} की जाँच करते समय कोई समस्या हुई। फिर से जाँचें।',
   actionInstall: 'इंस्टॉल करें',
   actionLogin: 'साइन इन करें',
+  actionLoginWindow: 'ब्राउज़र नहीं खुला, या कोई कोड दिखा रहा है?',
   actionRecheck: 'फिर से जाँचें',
   actionAcceptMetered: 'फिर भी उपयोग करें',
   actionInstallHelp: 'आधिकारिक इंस्टॉल गाइड',
@@ -25,6 +27,10 @@ export const hi = {
   actionLogout: 'साइन आउट करें',
   installNote: '{vendor} का आधिकारिक इंस्टॉल कमांड एक नई टर्मिनल विंडो में चलेगा।',
   loginNote: 'जो साइन-इन पेज खुलेगा वह {vendor} का अपना है।',
+  signingInBrowserNote:
+    'खुले हुए ब्राउज़र में अपने {vendor} खाते में साइन इन करें और अनुमति दें। पूरा होते ही कनेक्शन अपने आप हो जाएगा।',
+  signingInWindowNote:
+    'अगर ब्राउज़र कोई कोड दिखाए, तो उसे कॉपी करके अभी खुली विंडो में पेस्ट करें और Enter दबाएँ।',
   meteredWarning: 'यह सदस्यता नहीं है: जितना उपयोग करेंगे उतना शुल्क लगेगा।',
   meteredMeaning:
     'यह साइन-इन API कुंजी या उपयोग के अनुसार भुगतान वाले खाते से है, या इसका प्रकार पक्का नहीं हो सका। "फिर भी उपयोग करें" चुनने पर AI इसी कनेक्शन से चलेगा और हर अनुरोध का शुल्क उसी खाते से लिया जाएगा।',

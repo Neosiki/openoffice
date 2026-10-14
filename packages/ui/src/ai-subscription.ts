@@ -65,7 +65,14 @@ export function aiProviderDisplayName(provider: AiProviderId | undefined): strin
 // ---- connect card ----
 
 export type AiSubscriptionCardAction =
-  'install' | 'install-help' | 'login' | 'accept-metered' | 'recheck' | 'switch-account' | 'logout'
+  | 'install'
+  | 'install-help'
+  | 'login'
+  | 'login-window'
+  | 'accept-metered'
+  | 'recheck'
+  | 'switch-account'
+  | 'logout'
 
 /**
  * The two actions on the account of a signed-in CLI: sign in with another
@@ -131,6 +138,7 @@ export function aiSubscriptionCardView(
   status: AiSubscriptionStatus,
   options: AiSubscriptionCardOptions = {},
 ): AiSubscriptionCardView {
+  if (status.signingIn) return signingInCardView(status)
   const view = connectionCardView(status)
   if (status.state !== 'ready' && status.state !== 'metered') return view
   const account = options.account ? status.account?.trim() || undefined : undefined
@@ -142,6 +150,23 @@ export function aiSubscriptionCardView(
     actions: options.accountActions
       ? [...view.actions, ...AI_SUBSCRIPTION_ACCOUNT_ACTIONS]
       : view.actions,
+  }
+}
+
+/**
+ * A login the app started is under way, whatever was detected before it: the
+ * card says where to sign in. In the browser first, with a way to open the
+ * CLI's window for when the browser hands back a code; then, in that window.
+ */
+function signingInCardView(status: AiSubscriptionStatus): AiSubscriptionCardView {
+  const browser = status.signingIn === 'browser'
+  return {
+    provider: status.provider,
+    state: status.state,
+    tone: 'neutral',
+    statusKey: 'cardSigningIn',
+    noteKeys: [browser ? 'signingInBrowserNote' : 'signingInWindowNote'],
+    actions: browser ? ['login-window'] : [],
   }
 }
 

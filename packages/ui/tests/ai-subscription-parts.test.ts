@@ -189,6 +189,26 @@ describe('AiSubscriptionCard', () => {
     expect(host.querySelector('.gs-provider-logo')).toBeNull()
   })
 
+  it('a browser sign-in under way: says where, and the link to the window signs in again', () => {
+    const actions = render(status('claude-code', 'signed-out', { signingIn: 'browser' }))
+    expect(statusText()).toBe(en.cardSigningIn)
+    expect(notes()).toEqual([
+      'Sign in to your Anthropic account in the browser that opened and allow access. It connects by itself when you are done.',
+    ])
+    expect(actionsShown()).toEqual(['login-window'])
+    const link = host.querySelector<HTMLButtonElement>('[data-action="login-window"]')!
+    expect(link.className).toBe('ai-sub-link')
+    click('[data-action="login-window"]')
+    expect(actions.onLogin).toHaveBeenCalledExactlyOnceWith('claude-code')
+  })
+
+  it('the window open for a code: says what to do there, nothing to press', () => {
+    render(status('codex', 'signed-out', { signingIn: 'window' }))
+    expect(statusText()).toBe(en.cardSigningIn)
+    expect(notes()).toEqual([en.signingInWindowNote])
+    expect(actionsShown()).toEqual([])
+  })
+
   it('keeps the buttons inert while an action is in flight', () => {
     const actions = cardActions()
     act(() =>

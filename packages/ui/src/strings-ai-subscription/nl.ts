@@ -5,6 +5,7 @@ export const nl = {
   cardChecking: 'Controleren…',
   cardNotInstalled: 'Niet geïnstalleerd',
   cardSignedOut: 'Niet aangemeld',
+  cardSigningIn: 'Bezig met aanmelden…',
   cardReady: 'Verbonden',
   cardReadyPlan: 'Verbonden · {plan}',
   cardMetered: 'Aangemeld, maar niet met een abonnement',
@@ -17,6 +18,7 @@ export const nl = {
   cardErrFailed: 'Er ging iets mis bij het controleren van {provider}. Controleer het opnieuw.',
   actionInstall: 'Installeren',
   actionLogin: 'Aanmelden',
+  actionLoginWindow: 'Browser niet geopend, of toont hij een code?',
   actionRecheck: 'Opnieuw controleren',
   actionAcceptMetered: 'Toch gebruiken',
   actionInstallHelp: 'Officiële installatiehandleiding',
@@ -27,6 +29,10 @@ export const nl = {
   installNote:
     'De officiële installatieopdracht van {vendor} wordt uitgevoerd in een nieuw terminalvenster.',
   loginNote: 'De aanmeldpagina die wordt geopend is van {vendor} zelf.',
+  signingInBrowserNote:
+    'Meld je in de geopende browser aan bij je {vendor}-account en sta toegang toe. De verbinding komt vanzelf tot stand als je klaar bent.',
+  signingInWindowNote:
+    'Als de browser een code toont, kopieer die, plak hem in het venster dat net is geopend en druk op Enter.',
   meteredWarning: 'Dit is geen abonnement: je betaalt voor wat je gebruikt.',
   meteredMeaning:
     'Deze aanmelding gebruikt een API-sleutel of een account met betaling per verbruik, of het type kon niet worden vastgesteld. Met ‘Toch gebruiken’ draait AI via deze verbinding en wordt elk verzoek bij dat account in rekening gebracht.',

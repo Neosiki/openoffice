@@ -93,6 +93,7 @@ function setup(): {
         listeners.add(listener)
         return () => listeners.delete(listener)
       },
+      setSigningIn: (provider, mode) => void log.push(`signingIn:${provider}:${mode ?? 'none'}`),
     },
     launchLogin: async (provider): Promise<SubscriptionLaunchResult> => {
       log.push(`login:${provider}`)

@@ -227,6 +227,40 @@ describe('aiSubscriptionCardView', () => {
     expect(JSON.stringify(view)).not.toContain('spawn')
   })
 
+  it('a browser sign-in under way: where to sign in, and the way to the window for a code', () => {
+    expect(
+      aiSubscriptionCardView(status('claude-code', 'signed-out', { signingIn: 'browser' })),
+    ).toEqual({
+      provider: 'claude-code',
+      state: 'signed-out',
+      tone: 'neutral',
+      statusKey: 'cardSigningIn',
+      noteKeys: ['signingInBrowserNote'],
+      actions: ['login-window'],
+    })
+  })
+
+  it('the window open for a code: what to do in it, and nothing to press', () => {
+    expect(aiSubscriptionCardView(status('codex', 'signed-out', { signingIn: 'window' }))).toEqual({
+      provider: 'codex',
+      state: 'signed-out',
+      tone: 'neutral',
+      statusKey: 'cardSigningIn',
+      noteKeys: ['signingInWindowNote'],
+      actions: [],
+    })
+  })
+
+  it('a sign-in with another account under way hides the account and its actions', () => {
+    const view = aiSubscriptionCardView(
+      status('claude-code', 'ready', { account: 'a@example.com', signingIn: 'browser' }),
+      { account: true, accountActions: true },
+    )
+    expect(view.account).toBeUndefined()
+    expect(view.statusKey).toBe('cardSigningIn')
+    expect(view.actions).toEqual(['login-window'])
+  })
+
   it('reads a provider that has not reported yet as checking', () => {
     expect(aiSubscriptionStatusOf({}, 'codex')).toEqual({
       provider: 'codex',

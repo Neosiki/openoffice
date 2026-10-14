@@ -5,6 +5,7 @@ export const pl = {
   cardChecking: 'Sprawdzanie…',
   cardNotInstalled: 'Nie zainstalowano',
   cardSignedOut: 'Nie zalogowano',
+  cardSigningIn: 'Logowanie…',
   cardReady: 'Połączono',
   cardReadyPlan: 'Połączono · {plan}',
   cardMetered: 'Zalogowano, ale nie w ramach subskrypcji',
@@ -16,6 +17,7 @@ export const pl = {
   cardErrFailed: 'Podczas sprawdzania {provider} wystąpił problem. Sprawdź ponownie.',
   actionInstall: 'Zainstaluj',
   actionLogin: 'Zaloguj się',
+  actionLoginWindow: 'Przeglądarka się nie otworzyła albo pokazuje kod?',
   actionRecheck: 'Sprawdź ponownie',
   actionAcceptMetered: 'Użyj mimo to',
   actionInstallHelp: 'Oficjalna instrukcja instalacji',
@@ -26,6 +28,10 @@ export const pl = {
   installNote:
     'Oficjalne polecenie instalacji firmy {vendor} zostanie uruchomione w nowym oknie terminala.',
   loginNote: 'Strona logowania, która się otworzy, należy do firmy {vendor}.',
+  signingInBrowserNote:
+    'Zaloguj się na swoje konto {vendor} w otwartej przeglądarce i zezwól na dostęp. Połączenie nastąpi samo, gdy skończysz.',
+  signingInWindowNote:
+    'Jeśli przeglądarka pokaże kod, skopiuj go, wklej w oknie, które właśnie się otworzyło, i naciśnij Enter.',
   meteredWarning: 'To nie jest subskrypcja: płacisz za faktyczne zużycie.',
   meteredMeaning:
     'To logowanie korzysta z klucza API lub konta rozliczanego za zużycie albo nie udało się ustalić jego rodzaju. Po wybraniu „Użyj mimo to” AI będzie działać przez to połączenie, a każde żądanie obciąży to konto.',

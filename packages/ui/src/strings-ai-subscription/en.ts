@@ -5,6 +5,7 @@ export const en = {
   cardChecking: 'Checking…',
   cardNotInstalled: 'Not installed',
   cardSignedOut: 'Not signed in',
+  cardSigningIn: 'Signing in…',
   cardReady: 'Connected',
   cardReadyPlan: 'Connected · {plan}',
   cardMetered: 'Signed in, but not with a subscription',
@@ -15,6 +16,7 @@ export const en = {
   cardErrFailed: 'Something went wrong while checking {provider}. Check again.',
   actionInstall: 'Install',
   actionLogin: 'Sign in',
+  actionLoginWindow: 'Browser did not open, or shows a code?',
   actionRecheck: 'Check again',
   actionAcceptMetered: 'Use anyway',
   actionInstallHelp: 'Official install guide',
@@ -24,6 +26,10 @@ export const en = {
   actionLogout: 'Sign out',
   installNote: "{vendor}'s official install command runs in a new terminal window.",
   loginNote: "The sign-in page that opens is {vendor}'s own.",
+  signingInBrowserNote:
+    'Sign in to your {vendor} account in the browser that opened and allow access. It connects by itself when you are done.',
+  signingInWindowNote:
+    'If the browser shows a code, copy it, paste it into the window that just opened, and press Enter.',
   meteredWarning: 'This is not a subscription: you are charged for what you use.',
   meteredMeaning:
     'This login is an API key or a pay-as-you-go account, or its type could not be confirmed. "Use anyway" lets AI run on this connection, and every request is billed to that account.',

@@ -5,6 +5,7 @@ export const ar = {
   cardChecking: 'جارٍ التحقق…',
   cardNotInstalled: 'غير مثبَّت',
   cardSignedOut: 'لم يتم تسجيل الدخول',
+  cardSigningIn: 'جارٍ تسجيل الدخول…',
   cardReady: 'متصل',
   cardReadyPlan: 'متصل · {plan}',
   cardMetered: 'تم تسجيل الدخول، لكن ليس عبر اشتراك',
@@ -15,6 +16,7 @@ export const ar = {
   cardErrFailed: 'حدث خطأ أثناء التحقق من {provider}. تحقق مرة أخرى.',
   actionInstall: 'تثبيت',
   actionLogin: 'تسجيل الدخول',
+  actionLoginWindow: 'لم يُفتح المتصفح، أو يعرض رمزًا؟',
   actionRecheck: 'التحقق مرة أخرى',
   actionAcceptMetered: 'استخدام على أي حال',
   actionInstallHelp: 'دليل التثبيت الرسمي',
@@ -24,6 +26,10 @@ export const ar = {
   actionLogout: 'تسجيل الخروج',
   installNote: 'سيُنفَّذ أمر التثبيت الرسمي من {vendor} في نافذة طرفية جديدة.',
   loginNote: 'صفحة تسجيل الدخول التي ستُفتح تابعة لشركة {vendor}.',
+  signingInBrowserNote:
+    'سجّل الدخول إلى حسابك في {vendor} في المتصفح الذي فُتح، ثم اسمح بالوصول. سيتم الاتصال تلقائيًا عند الانتهاء.',
+  signingInWindowNote:
+    'إذا عرض المتصفح رمزًا، فانسخه والصقه في النافذة التي فُتحت للتو، ثم اضغط Enter.',
   meteredWarning: 'هذا ليس اشتراكًا: تُحتسب الرسوم بحسب ما تستخدمه.',
   meteredMeaning:
     'يستخدم هذا التسجيل مفتاح API أو حسابًا يُدفع فيه حسب الاستخدام، أو تعذّر تأكيد نوعه. عند اختيار «استخدام على أي حال» يعمل الذكاء الاصطناعي عبر هذا الاتصال، وتُحتسب تكلفة كل طلب على ذلك الحساب.',

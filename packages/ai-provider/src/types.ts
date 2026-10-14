@@ -46,6 +46,13 @@ export type AiSubscriptionState =
 export type AiSubscriptionLoginMethod = 'subscription' | 'metered' | 'unknown'
 
 /**
+ * A login the app started is under way. `browser`: the CLI runs without a window
+ * and the user signs in on the vendor's page in the browser. `window`: the CLI's
+ * own window is open, for when the browser hands back a code to paste there.
+ */
+export type AiSubscriptionSigningIn = 'browser' | 'window'
+
+/**
  * One model a subscription CLI offers, as the CLI itself lists it. Display
  * data for the model picker: only `id` ever becomes a setting.
  */
@@ -86,6 +93,8 @@ export interface AiSubscriptionStatus {
   meteredAccepted: boolean
   /** what went wrong, on state `error` */
   error?: string | undefined
+  /** a login the app started is under way; absent otherwise */
+  signingIn?: AiSubscriptionSigningIn | undefined
 }
 
 export type AiSubscriptionStatuses = Partial<Record<AiSubscriptionProviderId, AiSubscriptionStatus>>

@@ -5,6 +5,7 @@ export const cs = {
   cardChecking: 'Probíhá kontrola…',
   cardNotInstalled: 'Není nainstalováno',
   cardSignedOut: 'Nepřihlášeno',
+  cardSigningIn: 'Probíhá přihlášení…',
   cardReady: 'Připojeno',
   cardReadyPlan: 'Připojeno · {plan}',
   cardMetered: 'Přihlášeno, ale ne přes předplatné',
@@ -16,6 +17,7 @@ export const cs = {
   cardErrFailed: 'Při kontrole {provider} došlo k potížím. Zkontrolujte to znovu.',
   actionInstall: 'Nainstalovat',
   actionLogin: 'Přihlásit se',
+  actionLoginWindow: 'Prohlížeč se neotevřel, nebo zobrazuje kód?',
   actionRecheck: 'Zkontrolovat znovu',
   actionAcceptMetered: 'Přesto použít',
   actionInstallHelp: 'Oficiální návod k instalaci',
@@ -25,6 +27,10 @@ export const cs = {
   actionLogout: 'Odhlásit se',
   installNote: 'Oficiální instalační příkaz společnosti {vendor} se spustí v novém okně terminálu.',
   loginNote: 'Přihlašovací stránka, která se otevře, patří společnosti {vendor}.',
+  signingInBrowserNote:
+    'V otevřeném prohlížeči se přihlaste ke svému účtu {vendor} a povolte přístup. Po dokončení se připojení vytvoří samo.',
+  signingInWindowNote:
+    'Pokud prohlížeč zobrazí kód, zkopírujte ho, vložte do právě otevřeného okna a stiskněte Enter.',
   meteredWarning: 'Toto není předplatné: platíte podle skutečné spotřeby.',
   meteredMeaning:
     'Toto přihlášení používá klíč API nebo účet s platbou podle spotřeby, případně se jeho typ nepodařilo zjistit. Volbou „Přesto použít“ poběží AI přes toto připojení a každý požadavek se naúčtuje tomuto účtu.',

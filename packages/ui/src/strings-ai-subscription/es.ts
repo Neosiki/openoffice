@@ -5,6 +5,7 @@ export const es = {
   cardChecking: 'Comprobando…',
   cardNotInstalled: 'No instalado',
   cardSignedOut: 'Sesión no iniciada',
+  cardSigningIn: 'Iniciando sesión…',
   cardReady: 'Conectado',
   cardReadyPlan: 'Conectado · {plan}',
   cardMetered: 'Sesión iniciada, pero no con una suscripción',
@@ -16,6 +17,7 @@ export const es = {
   cardErrFailed: 'Algo salió mal al comprobar {provider}. Comprueba de nuevo.',
   actionInstall: 'Instalar',
   actionLogin: 'Iniciar sesión',
+  actionLoginWindow: '¿No se abrió el navegador o muestra un código?',
   actionRecheck: 'Comprobar de nuevo',
   actionAcceptMetered: 'Usar de todos modos',
   actionInstallHelp: 'Guía oficial de instalación',
@@ -26,6 +28,10 @@ export const es = {
   installNote:
     'El comando de instalación oficial de {vendor} se ejecuta en una nueva ventana de terminal.',
   loginNote: 'La página de inicio de sesión que se abre es la de {vendor}.',
+  signingInBrowserNote:
+    'Inicia sesión con tu cuenta de {vendor} en el navegador que se abrió y permite el acceso. Se conecta solo cuando termines.',
+  signingInWindowNote:
+    'Si el navegador muestra un código, cópialo, pégalo en la ventana que se acaba de abrir y pulsa Intro.',
   meteredWarning: 'Esto no es una suscripción: se cobra según lo que uses.',
   meteredMeaning:
     'Este inicio de sesión usa una clave de API o una cuenta de pago por consumo, o no se pudo confirmar su tipo. «Usar de todos modos» permite que la IA funcione con esta conexión, y cada solicitud se factura a esa cuenta.',

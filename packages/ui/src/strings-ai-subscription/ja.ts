@@ -5,6 +5,7 @@ export const ja = {
   cardChecking: '確認中…',
   cardNotInstalled: '未インストール',
   cardSignedOut: '未ログイン',
+  cardSigningIn: 'ログイン中…',
   cardReady: '接続済み',
   cardReadyPlan: '接続済み · {plan}',
   cardMetered: 'ログイン済みですが、サブスクリプションではありません',
@@ -17,6 +18,7 @@ export const ja = {
   cardErrFailed: '{provider} の確認中に問題が発生しました。もう一度確認してください。',
   actionInstall: 'インストール',
   actionLogin: 'ログイン',
+  actionLoginWindow: 'ブラウザーが開かない、またはコードが表示されましたか？',
   actionRecheck: '再確認',
   actionAcceptMetered: 'それでも使用',
   actionInstallHelp: '公式のインストール手順',
@@ -26,6 +28,10 @@ export const ja = {
   actionLogout: 'ログアウト',
   installNote: '{vendor} の公式インストールコマンドが新しいターミナルウィンドウで実行されます。',
   loginNote: '開くログイン画面は {vendor} のものです。',
+  signingInBrowserNote:
+    '開いたブラウザーで {vendor} のアカウントにログインし、アクセスを許可してください。終わると自動で接続されます。',
+  signingInWindowNote:
+    'ブラウザーにコードが表示されたら、コピーしていま開いたウィンドウに貼り付け、Enter キーを押してください。',
   meteredWarning: 'サブスクリプションではなく、使った分だけ料金が発生します。',
   meteredMeaning:
     'API キーまたは従量課金のアカウントでログインしているか、ログイン方法を確認できませんでした。「それでも使用」を選ぶと AI がこの接続で動作し、リクエストのたびにそのアカウントへ課金されます。',
