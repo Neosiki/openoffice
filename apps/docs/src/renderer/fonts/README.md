@@ -40,7 +40,8 @@ assets: `../template-fonts.ts` registers each face at startup as a URL-backed
 `@genoffice/ui/template-fonts`), the main process serves the listed files on the docs
 media scheme (`genoffice-docx-media://template-fonts/<file>`, through
 `@genoffice/electron-utils/template-font-response` in `src/main/lazy-media.ts`), and
-`@genoffice/font-metrics` reads the same folder for vertical metrics only
+`@genoffice/font-metrics` reads the same folder for vertical metrics and the pickers'
+family info only
 (`configureExtraFontDirs`). Their
 line factors (`TEMPLATE_LINE_FACTORS`) come from each file's own hhea box, with Word's
 East Asian rule (x 1.3) for the Korean faces; `tests/template-fonts.test.ts` recomputes

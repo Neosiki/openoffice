@@ -176,8 +176,9 @@ let dirsGeneration = 0
 
 /**
  * Folders of fonts the app itself ships (e.g. the design templates' set), which no
- * system folder holds. Only the Word editor's lookups see them: its vertical metrics
- * (familyVerticalMetrics) and the pickers' family info (familyInfoFor) read
+ * system folder holds. Only two lookups see them: vertical metrics
+ * (familyVerticalMetrics, used by the Word editor) and the pickers' family info
+ * (familyInfoFor, used by the Word, Excel and PowerPoint editors) read
  * getAppFontIndex / scannedFontFiles. The installed-font lookups (findSystemFont,
  * findFontCovering, isFamilyInstalled, advanceWidths) keep reading getFontIndex, the
  * system folders alone: the process is shared by every editor in the shell, and the
