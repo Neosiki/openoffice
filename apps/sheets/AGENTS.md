@@ -38,6 +38,7 @@ Excel 통합 문서(.xlsx, .csv 등) 에디터다. 화면은 Univer 격자 위�
 - 큰 저장은 조각으로 나눠 보낸다. 편집이 `SAVE_EDITS_INLINE_MAX`(1만 건)를 넘으면 JSON 문자열 조각으로 올린 뒤 저장 요청에 전송 id만 싣는다. 살아 있는 객체 그래프를 context bridge로 넘기면 속성 하나씩 건너가 매우 느리기 때문이다. 상한 상수는 zod 스키마와 preload의 수동 검증이 함께 쓴다(preload는 zod를 쓰지 않는다).
 - 패널 배선: 보내기 규칙은 `App.tsx`의 `useAiSendGate`가 쥐고, `AiChatPanel.tsx`는 `admitQueued`·`onAcknowledgeNotice` 등을 props로 받는다. 전송은 `aiRunErrorText`로 다른 에디터와 같은 문장을 쓰고, 막힌 실행 여부는 `aiBlockedRunOf`가 정한다(전송이 기록한 마지막 실패와 실행이 끝난 문장이 같을 때만 같은 실패로 본다. 루프가 스스로 재시도한 턴이 섞이기 때문이다).
 - `dependencies`에 올린 `@genoffice/*` 패키지는 `electron.vite.config.ts`의 `externalizeDepsPlugin` `exclude`에도 있어야 한다. preload는 샌드박스에서 임의의 npm 패키지를 require할 수 없으므로 `@genoffice/ai-provider`(구독 채널 이름)와 `@genoffice/electron-utils`를 번들에 넣는다.
+- 디자인 템플릿 글꼴은 쓸 때만 불러온다. 시작할 때는 면마다 `genoffice-docx-media://template-fonts/<file>` 주소의 `FontFace`를 바이트를 읽지 않고 등록만 한다. shell 안에서는 워드 편집기의 메인이 이 주소에 답하고(`apps/docs/src/main/template-font-protocol.ts`), 시트를 단독으로 띄우면 시트 메인이 직접 답한다(`src/main/template-fonts.ts`, 목록에 있는 파일 이름만). 통합 문서를 열면 그 문서가 쓰는 템플릿 패밀리를 먼저 불러(최대 3초) 첫 레이아웃이 실제 글꼴로 재게 하고, 면 하나가 다 불러지면 글자 측정 캐시를 버리고 시트를 다시 그린다. PDF 내보내기와 인쇄의 숨은 창은 페이지가 선언한 글꼴만 보므로 같은 파일을 `file://` `@font-face`로 적는다. 저장되는 .xlsx는 바뀌지 않는다.
 - 문자열은 `src/renderer/i18n/`의 언어별 조각(`ai/`, `app/`, `dialogs/`)이고 `zh.ts`가 키 집합을 정한다. 21개 언어 모두에 넣는다. 구독 연결 문장은 `@genoffice/ui`의 것을 쓴다.
 
 ## 테스트
