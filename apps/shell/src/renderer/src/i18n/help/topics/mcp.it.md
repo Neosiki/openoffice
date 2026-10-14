@@ -62,13 +62,13 @@ Una richiesta che arriva dal comando `ieumoffice` o da un client MCP non l'hai d
 - **Descrivere un'immagine** usa un provider con chiave quando ce n'è uno configurato. Il tuo abbonamento Claude o Codex **non viene usato a meno che tu non lo consenta**.
 - **Video e audio** richiedono un provider con chiave che supporta i video.
 
-Per consentire l'uso dell'abbonamento, apri Impostazioni ▸ IA ▸ **Avanzate** e attiva **Consenti alle richieste automatiche di usare un abbonamento**. Prima compare un avviso — «Nessuna delle due aziende consiglia di lasciare che un programma usi automaticamente il tuo abbonamento, e il tuo account potrebbe subire limitazioni.» — e l'interruttore si attiva solo dopo **Attiva comunque**.
+Per consentire l'uso dell'abbonamento, apri Impostazioni ▸ IA ▸ **Avanzate** e attiva **Consenti alle richieste automatiche di usare un abbonamento**. Prima compare un avviso — «Non c’è un limite orario: un programma può inviare tutte le richieste che vuole, e queste possono contenere l’intero testo di un documento e le immagini delle sue pagine. Nessuna delle due aziende consiglia di lasciare che un programma usi automaticamente il tuo abbonamento, e il tuo account potrebbe subire limitazioni.» — e l'interruttore si attiva solo dopo **Attiva comunque**.
 
 Anche con l'interruttore attivo:
 
 - Le richieste vengono gestite una alla volta. Le altre aspettano il proprio turno.
-- Vengono gestite al massimo 20 richieste con abbonamento all'ora. Il conteggio è comune a tutte le esecuzioni del comando e a tutte le chiamate MCP. Oltre questa soglia, la richiesta fallisce con un errore che dice quando le richieste tornano possibili.
-- Un accesso a consumo che hai consentito con **Usa comunque** qui non conta come abbonamento. Viene trattato come una chiave: se lo hai scelto come IA da usare, le descrizioni di immagini passano da lì qualunque cosa dica l'interruttore, senza il limite orario, e ognuna viene addebitata.
+- Non c'è un limite orario. Il turno passa da una richiesta all'altra, non da un'attività all'altra, quindi una lunga traduzione di un PDF si alterna con gli altri chiamanti invece di bloccarli. Un interruttore attivato con l'avviso precedente è stato spento: leggi il nuovo avviso e riattivalo.
+- Un accesso a consumo che hai consentito con **Usa comunque** qui non conta come abbonamento. Viene trattato come una chiave: se lo hai scelto come IA da usare, le descrizioni di immagini passano da lì qualunque cosa dica l'interruttore, e ognuna viene addebitata.
 
 Con l'interruttore disattivato e nessuna chiave configurata, lo strumento risponde che la funzione non è disponibile e indica questa impostazione. Un agente può controllare prima con lo strumento `capabilities`; vedi [Riga di comando e agenti](help://cli).
 

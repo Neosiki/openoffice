@@ -62,13 +62,13 @@ Permintaan daripada perintah `ieumoffice` atau daripada klien MCP tidak ditaip o
 - **Menghuraikan gambar** menggunakan penyedia berasaskan kunci apabila ada yang disediakan. Langganan Claude atau Codex anda **tidak digunakan melainkan anda membenarkannya**.
 - **Video dan audio** memerlukan penyedia berasaskan kunci yang menyokong video.
 
-Untuk membenarkan penggunaan langganan, buka Tetapan ▸ AI ▸ **Lanjutan** dan hidupkan **Benarkan permintaan automatik menggunakan langganan**. Satu amaran dipaparkan dahulu — "Kedua-dua syarikat tidak mengesyorkan program menggunakan langganan anda secara automatik, dan akaun anda mungkin dihadkan." — dan suis itu dihidupkan hanya selepas **Hidupkan juga**.
+Untuk membenarkan penggunaan langganan, buka Tetapan ▸ AI ▸ **Lanjutan** dan hidupkan **Benarkan permintaan automatik menggunakan langganan**. Satu amaran dipaparkan dahulu — "Tiada had sejam, jadi program boleh menghantar seberapa banyak permintaan yang dikehendaki, dan permintaan itu mungkin mengandungi seluruh teks dokumen serta imej halamannya. Kedua-dua syarikat tidak mengesyorkan program menggunakan langganan anda secara automatik, dan akaun anda mungkin dihadkan." — dan suis itu dihidupkan hanya selepas **Hidupkan juga**.
 
 Walaupun suis itu dihidupkan:
 
 - Permintaan dikendalikan satu demi satu. Yang lain menunggu giliran.
-- Paling banyak 20 permintaan langganan dikendalikan dalam sejam. Kiraan itu dikongsi oleh setiap perintah yang dijalankan dan setiap panggilan MCP. Selepas itu, permintaan gagal dengan ralat yang menyatakan bila permintaan boleh dibuat semula.
-- Log masuk bayar ikut guna yang anda benarkan dengan **Guna juga** tidak dikira sebagai langganan di sini. Ia dilayan seperti kunci: jika anda memilihnya sebagai AI yang digunakan, huraian gambar dibuat melaluinya walau apa pun kedudukan suis itu, tanpa had sejam, dan setiap satu dicaj.
+- Tiada had sejam. Giliran dikira mengikut permintaan, bukan mengikut tugas, jadi terjemahan PDF yang panjang bergilir-gilir dengan pemanggil lain dan tidak menahannya. Suis yang dihidupkan di bawah amaran lama telah dimatikan; baca amaran baharu dan hidupkannya semula.
+- Log masuk bayar ikut guna yang anda benarkan dengan **Guna juga** tidak dikira sebagai langganan di sini. Ia dilayan seperti kunci: jika anda memilihnya sebagai AI yang digunakan, huraian gambar dibuat melaluinya walau apa pun kedudukan suis itu, dan setiap satu dicaj.
 
 Apabila suis dimatikan dan tiada kunci disediakan, alat itu menjawab bahawa ciri tersebut tidak tersedia dan menamakan tetapan ini. Ejen boleh menyemak dahulu dengan alat `capabilities`; lihat [Baris arahan dan ejen](help://cli).
 

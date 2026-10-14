@@ -62,13 +62,13 @@ Une requête venue de la commande `ieumoffice` ou d’un client MCP n’a pas é
 - **Décrire une image** utilise un fournisseur à clé lorsqu’il y en a un de configuré. Votre abonnement Claude ou Codex **n’est pas utilisé, sauf si vous l’autorisez**.
 - **La vidéo et l’audio** ont besoin d’un fournisseur à clé qui prend en charge la vidéo.
 
-Pour autoriser l’utilisation de l’abonnement, ouvrez Paramètres ▸ IA ▸ **Avancé** et activez **Autoriser les requêtes automatiques à utiliser un abonnement**. Un avertissement s’affiche d’abord — « Aucune des deux entreprises ne recommande de laisser un programme utiliser automatiquement votre abonnement, et votre compte pourrait être restreint. » — et le réglage ne s’active qu’après **Activer quand même**.
+Pour autoriser l’utilisation de l’abonnement, ouvrez Paramètres ▸ IA ▸ **Avancé** et activez **Autoriser les requêtes automatiques à utiliser un abonnement**. Un avertissement s’affiche d’abord — « Il n’y a pas de limite horaire : un programme peut envoyer autant de requêtes qu’il le souhaite, et elles peuvent contenir tout le texte d’un document et des images de ses pages. Aucune des deux entreprises ne recommande de laisser un programme utiliser automatiquement votre abonnement, et votre compte pourrait être restreint. » — et le réglage ne s’active qu’après **Activer quand même**.
 
 Même lorsque le réglage est activé :
 
 - Les requêtes sont traitées une par une. Les autres attendent leur tour.
-- Au plus 20 requêtes utilisant un abonnement sont traitées par heure. Le décompte est commun à toutes les commandes exécutées et à tous les appels MCP. Au-delà, la requête échoue avec une erreur qui indique quand les requêtes redeviennent possibles.
-- Une connexion facturée à l’usage que vous avez autorisée avec **Utiliser quand même** ne compte pas ici comme un abonnement. Elle est traitée comme une clé : si vous l’avez choisie comme IA à utiliser, les descriptions d’images passent par elle quel que soit le réglage, sans la limite horaire, et chacune est facturée.
+- Il n’y a pas de limite horaire. Le tour passe d’une requête à l’autre, pas d’une tâche à l’autre : une longue traduction de PDF alterne donc avec les autres appelants au lieu de les bloquer. Un réglage activé avec l’ancien avertissement a été désactivé : lisez le nouvel avertissement et réactivez-le.
+- Une connexion facturée à l’usage que vous avez autorisée avec **Utiliser quand même** ne compte pas ici comme un abonnement. Elle est traitée comme une clé : si vous l’avez choisie comme IA à utiliser, les descriptions d’images passent par elle quel que soit le réglage, et chacune est facturée.
 
 Lorsque le réglage est désactivé et qu’aucune clé n’est configurée, l’outil répond que la fonction est indisponible et nomme ce réglage. Un agent peut vérifier au préalable avec l’outil `capabilities` ; voir [Ligne de commande et agents](help://cli).
 

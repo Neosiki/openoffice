@@ -62,13 +62,13 @@ Požadavek z příkazu `ieumoffice` nebo od klienta MCP jste v aplikaci nenapsal
 - **Popis obrázku** používá poskytovatele s klíčem, pokud je nastaven. Vaše předplatné Claude nebo Codex se **nepoužije, dokud to nepovolíte**.
 - **Video a zvuk** potřebují poskytovatele s klíčem, který podporuje video.
 
-Chcete-li používání předplatného povolit, otevřete Nastavení ▸ AI ▸ **Pokročilé** a zapněte **Povolit automatickým požadavkům používat předplatné**. Nejprve se zobrazí varování — „Ani jedna z obou společností nedoporučuje, aby program používal předplatné automaticky, a váš účet může být omezen.“ — a přepínač se zapne až po volbě **Přesto zapnout**.
+Chcete-li používání předplatného povolit, otevřete Nastavení ▸ AI ▸ **Pokročilé** a zapněte **Povolit automatickým požadavkům používat předplatné**. Nejprve se zobrazí varování — „Neexistuje žádný hodinový limit: program může poslat libovolně mnoho požadavků a ty mohou obsahovat celý text dokumentu i obrázky jeho stránek. Ani jedna z obou společností nedoporučuje, aby program používal předplatné automaticky, a váš účet může být omezen.“ — a přepínač se zapne až po volbě **Přesto zapnout**.
 
 I se zapnutým přepínačem platí:
 
 - Požadavky se vyřizují po jednom. Ostatní čekají, až na ně přijde řada.
-- Za hodinu se vyřídí nejvýše 20 požadavků přes předplatné. Počet je společný pro všechna spuštění příkazů a všechna volání MCP. Po jeho překročení požadavek skončí chybou, která říká, kdy budou požadavky znovu možné.
-- Přihlášení s platbou podle spotřeby, které jste povolili volbou **Přesto použít**, se zde za předplatné nepočítá. Zachází se s ním jako s klíčem: pokud jste ho zvolili jako používanou AI, popisy obrázků jdou přes něj bez ohledu na přepínač, bez hodinového limitu, a každý se účtuje.
+- Hodinový limit neexistuje. Pořadí se střídá po jednotlivých požadavcích, ne po celých úlohách, takže dlouhý překlad PDF se střídá s ostatními volajícími a nezdržuje je. Přepínač zapnutý podle dřívějšího varování byl vypnut: přečtěte si nové varování a zapněte ho znovu.
+- Přihlášení s platbou podle spotřeby, které jste povolili volbou **Přesto použít**, se zde za předplatné nepočítá. Zachází se s ním jako s klíčem: pokud jste ho zvolili jako používanou AI, popisy obrázků jdou přes něj bez ohledu na přepínač, a každý se účtuje.
 
 Je-li přepínač vypnutý a není nastaven žádný klíč, nástroj odpoví, že funkce není dostupná, a uvede toto nastavení. Agent si to může předem ověřit nástrojem `capabilities`; viz [Příkazová řádka a agenti](help://cli).
 
