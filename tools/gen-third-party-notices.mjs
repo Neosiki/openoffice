@@ -31,6 +31,7 @@ const BUILTIN = new Set(builtinModules)
 const SRC_GLOBS = [
   'apps/docs/src',
   'apps/html/src',
+  'apps/mindmap/src',
   'apps/markdown/src',
   'apps/pdf/src',
   'apps/sheets/src',
