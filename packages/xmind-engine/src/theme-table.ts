@@ -14,8 +14,14 @@
  * properties, is not recognised, and nothing here ever changes it.
  */
 
-import { mixColors } from './theme-color'
-import { THEME_IDS, type ThemeBranchShape, type ThemeId, type ThemeTopicShape } from './theme-data'
+import { contrastRatio, mixColors } from './theme-color'
+import {
+  THEME_IDS,
+  THEME_RULES,
+  type ThemeBranchShape,
+  type ThemeId,
+  type ThemeTopicShape,
+} from './theme-data'
 import { themeLook, type ThemeLook } from './theme-look'
 import { isRecord, type XmindSheet } from './types'
 
@@ -60,8 +66,34 @@ function points(value: number): string {
 
 interface LevelColors {
   fill: string
+  text: string
   line: string
   border: string
+}
+
+/** How far a text colour is moved in one step while looking for one that reads. */
+const TEXT_STEPS = 20
+
+/**
+ * The one text colour a level gets in the file. `wanted` when it reads on
+ * every colour the file may put under the text; otherwise the first step from
+ * it towards one of `ends` that does; otherwise the step that reads best on
+ * the worst of them. That last case only arises for a fill taken from the
+ * branch, whose four colours can be too far apart for any single text colour.
+ */
+function textOn(surfaces: readonly string[], wanted: string, ends: readonly string[]): string {
+  const worst = (color: string): number =>
+    Math.min(...surfaces.map((surface) => contrastRatio(color, surface)))
+  let best = wanted
+  for (const end of ends) {
+    for (let step = 0; step <= TEXT_STEPS; step++) {
+      const candidate = mixColors(wanted, end, step / TEXT_STEPS)
+      const reach = worst(candidate)
+      if (reach >= THEME_RULES.readableContrast) return candidate
+      if (reach > worst(best)) best = candidate
+    }
+  }
+  return best
 }
 
 function topicProperties(
@@ -73,6 +105,7 @@ function topicProperties(
   return {
     'fo:font-size': points(shape.fontSize),
     'fo:font-weight': String(whole(shape.fontWeight / 100) * 100),
+    'fo:color': colors.text,
     'svg:fill': colors.fill,
     'fill-pattern': shape.fill === 'none' ? 'none' : 'solid',
     'line-width': points(lineWidth),
@@ -91,20 +124,36 @@ function topicProperties(
  * (the pill with a quiet fill, the capsule with an outline), a block is a
  * rounded rectangle filled with its branch colour, and the line skeleton is
  * the underline shape. Sizes, weights and line widths go in as whole numbers.
- * No font name is written, and no text colour: each program then uses its own
- * font and picks the text colour that reads on the fill.
+ * No font name is written: each program uses its own font.
  *
- * Every colour here comes from `mixColors` and `raiseColor` alone (see
- * `theme-color.ts`), so a table does not shift between releases by accident.
+ * The text colour is written on every level. Left out, a program falls back to
+ * fixed colours of its own, which on a dark ground or a dark fill need not read
+ * at all. Each level gets the look's own text colour, moved only as far as it
+ * must to read on what the file puts under it: the map for a level without a
+ * fill, the written fill, or every branch colour for a fill taken from the
+ * branch.
+ *
+ * The fills come from `mixColors` and `raiseColor` alone (see
+ * `theme-color.ts`); the text colours are then chosen by contrast. The tables
+ * are pinned by a test, so none of this shifts between releases unnoticed.
  */
 export function themePropertiesOf(look: ThemeLook): ThemeProperties {
   const { shapes, ground, strongText } = look
   const softFill = mixColors(ground, strongText, SOFT_FILL_IN_FILE)
-  const branchColors = (shape: ThemeTopicShape): LevelColors => ({
-    fill: shape.fill === 'soft' ? softFill : INHERITED,
-    line: INHERITED,
-    border: INHERITED,
-  })
+  const branchFills = look.branches.map((branch) => branch.color)
+  const ends = [strongText, '#ffffff', '#000000']
+  const branchColors = (
+    shape: ThemeTopicShape,
+    wanted: (branch: ThemeLook['branches'][number]) => string,
+    plain: string,
+  ): LevelColors => {
+    const fill = shape.fill === 'soft' ? softFill : INHERITED
+    const surfaces =
+      shape.fill === 'none' ? [ground] : shape.fill === 'soft' ? [softFill] : branchFills
+    const text = shape.fill === 'solid' ? wanted(look.branches[0]!) : plain
+    return { fill, text: textOn(surfaces, text, ends), line: INHERITED, border: INHERITED }
+  }
+  const centralFill = shapes.central.fill === 'none' ? ground : strongText
   return {
     map: {
       'svg:fill': ground,
@@ -115,7 +164,8 @@ export function themePropertiesOf(look: ThemeLook): ThemeProperties {
     centralTopic: topicProperties(
       shapes.central,
       {
-        fill: shapes.central.fill === 'none' ? ground : strongText,
+        fill: centralFill,
+        text: textOn([centralFill], look.central.text, ends),
         line: strongText,
         border: strongText,
       },
@@ -124,13 +174,13 @@ export function themePropertiesOf(look: ThemeLook): ThemeProperties {
     ),
     mainTopic: topicProperties(
       shapes.main,
-      branchColors(shapes.main),
+      branchColors(shapes.main, (branch) => branch.main.text, strongText),
       look.lines.sub.width,
       look.lines.sub.shape,
     ),
     subTopic: topicProperties(
       shapes.sub,
-      branchColors(shapes.sub),
+      branchColors(shapes.sub, (branch) => branch.sub.text, look.text),
       look.lines.sub.width,
       look.lines.sub.shape,
     ),
