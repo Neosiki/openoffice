@@ -15,7 +15,8 @@
  * Every map it opens is built here with the engine. The pictures of the look
  * of the map (`look-run.ts`) go to `look/` in that folder.
  *
- * MINDMAP_REAL_RUN_ONLY=look runs the look part alone. MINDMAP_REAL_RUN_SAMPLE
+ * MINDMAP_REAL_RUN_ONLY=look runs the look part alone, MINDMAP_REAL_RUN_ONLY=export
+ * the export part (`export-run.ts`: export, print, the preview picture). MINDMAP_REAL_RUN_SAMPLE
  * names a map file from another program to draw in the default look; it is
  * opened from a copy in the system temp directory and only a screenshot of it
  * is kept.
@@ -36,6 +37,7 @@ import {
   type XmindSheet,
   type XmindTopic,
 } from '@genoffice/xmind-engine'
+import { exportRun } from './export-run'
 import { lookRun } from './look-run'
 
 const APP_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
@@ -809,13 +811,15 @@ async function main(): Promise<void> {
   console.log(`real run of ${APP_DIR}\nevidence in ${OUT}`)
   let failure: unknown = null
   try {
-    if (process.env.MINDMAP_REAL_RUN_ONLY !== 'look') {
+    const only = process.env.MINDMAP_REAL_RUN_ONLY
+    if (only !== 'look' && only !== 'export') {
       await editingRun()
       await brokenFileRun()
       await newMapRun()
       await largeMapRun()
     }
-    await lookRun({ out: OUT, launch, check, results })
+    if (only !== 'export') await lookRun({ out: OUT, launch, check, results })
+    if (only !== 'look') await exportRun({ out: OUT, launch, check, results })
   } catch (error) {
     failure = error
     console.error(error)

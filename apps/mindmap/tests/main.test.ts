@@ -146,14 +146,19 @@ describe('channel names', () => {
 
   it('registers a handler for what is implemented, and none for what later work adds', () => {
     view(null)
-    for (const name of ['consumePending', 'openFile', 'save', 'openLink'] as const) {
-      expect(handlers.has(MINDMAP_CHANNELS[name])).toBe(true)
-    }
     for (const name of [
+      'consumePending',
+      'openFile',
+      'save',
+      'openLink',
       'exportPng',
       'exportPdf',
       'exportMarkdown',
       'print',
+    ] as const) {
+      expect(handlers.has(MINDMAP_CHANNELS[name])).toBe(true)
+    }
+    for (const name of [
       'filesPick',
       'filesRead',
       'outlineResult',

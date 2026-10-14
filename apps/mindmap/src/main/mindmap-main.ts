@@ -39,6 +39,7 @@ import {
 import { getUiLang, normalizeLang, setUiLang } from '@genoffice/i18n'
 import { openXmind } from '@genoffice/xmind-engine'
 import { atomicWriteFile } from './atomic-write'
+import { registerMindmapExportIpc } from './export-main'
 import { tm } from './i18n-main'
 import { APP_CHANNELS, MINDMAP_CHANNELS } from '../shared/ipc'
 import { openableLink } from '../shared/links'
@@ -396,6 +397,8 @@ function registerMindmapIpc(): void {
     saveWaiters.delete(e.sender.id)
     waiter?.(ok === true)
   })
+
+  registerMindmapExportIpc({ filePathOf: (wcId) => savePathByWc.get(wcId) })
 
   // Language channel shared with other modules; removeHandler tolerates duplicate registration
   ipcMain.removeHandler(APP_CHANNELS.getLanguage)

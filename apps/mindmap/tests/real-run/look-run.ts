@@ -237,7 +237,7 @@ function glyphSheet(): XmindSheet {
 // ---- pictures drawn here ----
 
 /** A PNG of the given size, pixel by pixel. */
-function png(
+export function png(
   width: number,
   height: number,
   pixel: (x: number, y: number) => [number, number, number],
@@ -271,7 +271,7 @@ function png(
 }
 
 /** A small landscape: sky, a sun, two hills. */
-function landscape(): Uint8Array {
+export function landscape(): Uint8Array {
   const mix = (from: number[], to: number[], share: number): [number, number, number] => [
     Math.round(from[0]! + (to[0]! - from[0]!) * share),
     Math.round(from[1]! + (to[1]! - from[1]!) * share),
@@ -292,7 +292,7 @@ function landscape(): Uint8Array {
  * A small chart as SVG, with two things in it a picture should never get to do:
  * a script, and a picture it would load from outside.
  */
-function chartSvg(outside: string): Uint8Array {
+export function chartSvg(outside: string): Uint8Array {
   return new TextEncoder().encode(
     `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="160" height="100" viewBox="0 0 160 100">
@@ -306,7 +306,7 @@ function chartSvg(outside: string): Uint8Array {
 }
 
 /** The bytes of a map file with pictures added under `resources/`. */
-async function withResources(
+export async function withResources(
   sheets: XmindSheet[],
   resources: Record<string, Uint8Array>,
 ): Promise<Uint8Array> {
@@ -329,7 +329,7 @@ async function withResources(
 
 // ---- a web server that must stay unvisited ----
 
-async function startOutside(): Promise<{ server: Server; url: string; hits: string[] }> {
+export async function startOutside(): Promise<{ server: Server; url: string; hits: string[] }> {
   const hits: string[] = []
   const picture = png(8, 8, () => [200, 40, 40])
   const server = createServer((request, response) => {
@@ -342,7 +342,7 @@ async function startOutside(): Promise<{ server: Server; url: string; hits: stri
 }
 
 /** Records every address the app's session is asked for, from now on. */
-async function watchRequests(app: ElectronApplication): Promise<() => Promise<string[]>> {
+export async function watchRequests(app: ElectronApplication): Promise<() => Promise<string[]>> {
   await app.evaluate(({ session }) => {
     const seen: string[] = []
     ;(globalThis as unknown as { __requests: string[] }).__requests = seen
@@ -355,7 +355,8 @@ async function watchRequests(app: ElectronApplication): Promise<() => Promise<st
 }
 
 /** Addresses that leave the app: anything but its own pages, and pictures it made itself. */
-const leavesTheApp = (url: string): boolean => !/^(?:genoffice-app|blob|data|devtools):/i.test(url)
+export const leavesTheApp = (url: string): boolean =>
+  !/^(?:genoffice-app|blob|data|devtools):/i.test(url)
 
 // ---- driving the theme panel ----
 

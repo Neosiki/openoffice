@@ -84,6 +84,8 @@ function fakeApi(pending: string | null, file: OpenFileResult | null): Fake {
       sendOutlineResult: (reply: unknown) => void fake.outlines.push(reply),
       onBytesRequest: on('bytes'),
       sendBytesResult: () => {},
+      onExportRequest: on('export'),
+      onPrintRequest: on('print'),
     } as unknown as MindmapApi,
   }
   return fake
