@@ -2879,6 +2879,8 @@ export interface DesktopApi {
   /** Korean name and Hangul coverage of the enumerated families (read from the font
    *  files); families that are not Korean are left out */
   fontFamilyInfo(families: readonly string[]): Promise<Array<[string, FontFamilyInfo]>>
+  /** the bytes of one bundled template font file, read from the installed folder */
+  templateFontData(file: string): Promise<Uint8Array<ArrayBuffer>>
   /** current UI language (persisted by the shell in app-settings.json) */
   getLanguage(): Promise<'zh' | 'en' | 'ja' | 'ko' | 'fr' | 'de' | 'es' | 'th' | 'id' | 'ru' | 'ar'>
   /** language switched from the shell home page */
