@@ -137,7 +137,8 @@ export function handoffStoreEvents(): MakeEvent[] {
     ...generateRunStartedEvents().map((e) => ({
       webContentsId: e.webContentsId,
       mode: 'ai' as const,
-      sources: e.sources,
+      // the record lists the materials handed over, not only those still attached (9)
+      sources: e.handedOver,
       at: e.at,
     })),
     ...generateConvertedEvents().map((e) => ({

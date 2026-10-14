@@ -134,7 +134,8 @@ describe('when a record is written', () => {
     // blocked first, then sent by hand from that tab after connecting: the same report
     reportGenerateRunStarted('slides', 1, [NOTES()])
     await flush()
-    expect(links.sourcesOf(doc('deck.pptx'))).toEqual([NOTES()])
+    // the record lists every handed-over material, not only the one still attached (9)
+    expect(links.sourcesOf(doc('deck.pptx'))).toEqual([MAP(), NOTES()])
     expect(stored().links).toHaveLength(1)
     // the resolver still answers the tab id for the store
     expect(generateRunStartedEvents()[0]?.tabId).toBe('tab-1')

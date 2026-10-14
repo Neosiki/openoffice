@@ -56,6 +56,8 @@ export interface GenerateRunStarted {
   mode: 'ai'
   /** the handed-over material paths that were attached to the run */
   sources: string[]
+  /** every material the hand-off carried, attached or not: what a provenance record lists (9) */
+  handedOver: string[]
   /** the hand-off this run came from */
   handoffId: string
   /** ms since epoch */
@@ -210,6 +212,7 @@ export function reportGenerateRunStarted(
     target,
     mode: handoff.mode,
     sources,
+    handedOver: handoff.materials.map((m) => m.path),
     handoffId: handoff.id,
     at: Date.now(),
   }
@@ -220,7 +223,7 @@ export function reportGenerateRunStarted(
 
 /** the recorded run-started events, oldest first (a copy) */
 export function generateRunStartedEvents(): GenerateRunStarted[] {
-  return store().runs.map((e) => ({ ...e, sources: [...e.sources] }))
+  return store().runs.map((e) => ({ ...e, sources: [...e.sources], handedOver: [...e.handedOver] }))
 }
 
 /**
