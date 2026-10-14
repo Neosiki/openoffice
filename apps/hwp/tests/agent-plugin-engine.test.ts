@@ -162,9 +162,9 @@ describe('replacing text in the real engine', () => {
   it('replaces every occurrence and takes the run back', () => {
     const editor = openEditor()
     const before = editor.plugin.foreignChanges()
-    expect(editor.plugin.replaceAllText('문단', '단락')).toEqual({ ok: true, count: 3 })
+    expect(editor.plugin.replaceAllText('문단', '단락')).toMatchObject({ ok: true, count: 3 })
     expect(editor.lines().filter((line) => line.includes('단락'))).toHaveLength(3)
-    expect(editor.plugin.undo(1, before)).toEqual({ ok: true, undone: 1 })
+    expect(editor.plugin.undo(1, before)).toMatchObject({ ok: true, undone: 1 })
     expect(editor.lines()).toEqual(ORIGINAL)
   })
 })
@@ -174,7 +174,7 @@ describe('adding paragraphs', () => {
     const editor = openEditor()
     expect(
       editor.plugin.insertParagraphs('첫째 문단', null, 'after', ['새 하나', '새 둘']),
-    ).toEqual({ ok: true, count: 2, inTable: false })
+    ).toMatchObject({ ok: true, count: 2, inTable: false })
     expect(editor.lines().slice(0, 5)).toEqual([
       '제목',
       '첫째 문단입니다.',
@@ -194,7 +194,7 @@ describe('adding paragraphs', () => {
 
   it('adds them inside a table cell', () => {
     const editor = openEditor()
-    expect(editor.plugin.insertParagraphs('대상', null, 'after', ['담당 부서'])).toEqual({
+    expect(editor.plugin.insertParagraphs('대상', null, 'after', ['담당 부서'])).toMatchObject({
       ok: true,
       count: 1,
       inTable: true,
@@ -257,7 +257,7 @@ describe('adding paragraphs', () => {
     const editor = openEditor()
     const before = editor.plugin.foreignChanges()
     editor.plugin.insertParagraphs('둘째 문단', null, 'after', ['하나', '둘', '셋'])
-    expect(editor.plugin.undo(1, before)).toEqual({ ok: true, undone: 1 })
+    expect(editor.plugin.undo(1, before)).toMatchObject({ ok: true, undone: 1 })
     expect(editor.lines()).toEqual(ORIGINAL)
   })
 })
@@ -265,7 +265,7 @@ describe('adding paragraphs', () => {
 describe('removing a paragraph', () => {
   it('removes it and leaves the ones around it', () => {
     const editor = openEditor()
-    expect(editor.plugin.deleteParagraph('둘째 문단', null)).toEqual({
+    expect(editor.plugin.deleteParagraph('둘째 문단', null)).toMatchObject({
       ok: true,
       text: '둘째 문단입니다.',
       emptied: false,
@@ -319,7 +319,7 @@ describe('adding a table', () => {
         ['항목', '기한', '비고'],
         ['신청서 <제출>', '3월 2일'],
       ]),
-    ).toEqual({ ok: true, rows: 2, cols: 3, inTable: false })
+    ).toMatchObject({ ok: true, rows: 2, cols: 3, inTable: false })
     expect(editor.tables()).toBe(2)
     expect(editor.lines().slice(1, 8)).toEqual([
       '첫째 문단입니다.',
@@ -384,7 +384,7 @@ describe('formatting text', () => {
     // "첫째 문단입니다." — the word 문단 is characters 3 and 4
     expect(
       editor.plugin.formatText('문단', 1, false, { bold: true, color: '#C00000', size: 14 }),
-    ).toEqual({ ok: true, count: 1 })
+    ).toMatchObject({ ok: true, count: 1 })
     expect(editor.chars(1, 3)).toMatchObject({
       bold: true,
       textColor: '#c00000',
@@ -402,7 +402,7 @@ describe('formatting text', () => {
   it('formats every occurrence at once, table cells included', () => {
     const editor = openEditor()
     editor.plugin.replaceText('업체', '문단 업체')
-    expect(editor.plugin.formatText('문단', null, true, { underline: true })).toEqual({
+    expect(editor.plugin.formatText('문단', null, true, { underline: true })).toMatchObject({
       ok: true,
       count: 4,
     })
@@ -467,7 +467,7 @@ describe('formatting text', () => {
     const editor = openEditor()
     const before = editor.plugin.foreignChanges()
     editor.plugin.formatText('문단', null, true, { bold: true })
-    expect(editor.plugin.undo(1, before)).toEqual({ ok: true, undone: 1 })
+    expect(editor.plugin.undo(1, before)).toMatchObject({ ok: true, undone: 1 })
     expect(editor.chars(1, 3).bold).toBe(false)
   })
 })
@@ -476,7 +476,7 @@ describe('formatting a paragraph', () => {
   it('aligns the paragraph the text is in and leaves the others', () => {
     const editor = openEditor()
     const other = editor.alignment(1)
-    expect(editor.plugin.formatParagraph('제목', null, { align: 'center' })).toEqual({
+    expect(editor.plugin.formatParagraph('제목', null, { align: 'center' })).toMatchObject({
       ok: true,
       inTable: false,
     })
@@ -502,7 +502,9 @@ describe('formatting a paragraph', () => {
 
   it('works on a paragraph inside a table cell', () => {
     const editor = openEditor()
-    expect(editor.plugin.formatParagraph('대상', null, { align: 'center', bold: true })).toEqual({
+    expect(
+      editor.plugin.formatParagraph('대상', null, { align: 'center', bold: true }),
+    ).toMatchObject({
       ok: true,
       inTable: true,
     })

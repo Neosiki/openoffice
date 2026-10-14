@@ -169,7 +169,7 @@ describe('filling cells', () => {
       ],
       false,
     )
-    expect(result).toEqual({ ok: true, table: 1, count: 3 })
+    expect(result).toMatchObject({ ok: true, table: 1, count: 3 })
     expect(steps()).toBe(1)
     expect(cells()).toMatchObject({
       '1.1': '성명',
@@ -288,7 +288,7 @@ describe('filling cells', () => {
       ],
       false,
     )
-    expect(plugin.undo(1, foreign)).toEqual({ ok: true, undone: 1 })
+    expect(plugin.undo(1, foreign)).toMatchObject({ ok: true, undone: 1 })
     expect(cells()).toMatchObject({ '1.2': '', '3.2': '' })
   })
 })
@@ -316,7 +316,7 @@ describe('cells that hold a form field', () => {
       ],
       false,
     )
-    expect(result).toEqual({ ok: true, table: 1, count: 2 })
+    expect(result).toMatchObject({ ok: true, table: 1, count: 2 })
     expect(steps()).toBe(1)
     expect(plugin.listFields()[0]).toMatchObject({ field: 1, value: '홍길동' })
     expect(plugin.readText()).not.toContain(GUIDE)
@@ -397,5 +397,245 @@ describe('reading a document whose plain-text export leaves things out', () => {
     expect(plugin.readText()).not.toContain('홍길동')
     plugin.fillCells(1, [{ row: 1, col: 2, text: '홍길동' }], false)
     expect(plugin.readText()).toContain('홍길동')
+  })
+})
+
+describe('a picture that floats over a cell', () => {
+  // the engine puts a picture "in a cell" beside the table in the body paragraph and
+  // floats it over the cell: the cell itself holds nothing
+  const withSeal = () =>
+    openForm((doc) => {
+      const png = Uint8Array.from(
+        Buffer.from(
+          'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+          'base64',
+        ),
+      )
+      doc.insertPictureEx(
+        JSON.stringify({
+          sectionIdx: 0,
+          paraIdx: 1,
+          charOffset: 0,
+          cellPath: cellPath(3),
+          width: 2000,
+          height: 600,
+          naturalWidthPx: 20,
+          naturalHeightPx: 6,
+          extension: 'png',
+        }),
+        png,
+      )
+    })
+
+  it('marks the cell as not empty', () => {
+    const { plugin } = withSeal()
+    const read = plugin.readTable(1)
+    if (!read.ok) throw new Error('expected a table')
+    expect(read.cells[3]).toEqual({ row: 1, col: 4, text: '', object: true })
+    expect(read.cells[1]).toEqual({ row: 1, col: 2, text: '' })
+  })
+
+  it('does not write under it', () => {
+    const { plugin, steps } = withSeal()
+    expect(plugin.fillCells(1, [{ row: 1, col: 4, text: '교무기획부' }], true)).toEqual({
+      ok: false,
+      reason: 'holds_object',
+      cells: [{ row: 1, col: 4 }],
+      rows: 3,
+      cols: 4,
+    })
+    expect(steps()).toBe(0)
+    expect(plugin.fillCells(1, [{ row: 1, col: 2, text: '홍길동' }], false)).toMatchObject({
+      ok: true,
+    })
+  })
+})
+
+describe('adding and removing rows and columns', () => {
+  const rowTexts = (cells: Record<string, string>, row: number) =>
+    Object.entries(cells)
+      .filter(([place]) => place.startsWith(`${row}.`))
+      .map(([, text]) => text)
+
+  it('adds empty rows after a row, in one undo step', () => {
+    const { plugin, steps, cells } = openForm()
+    const result = plugin.addTableLines(1, 'rows', 2, 'after', 2)
+    expect(result).toMatchObject({ ok: true, table: 1, rows: 5, cols: 4, first: 3, count: 2 })
+    expect(steps()).toBe(1)
+    const now = cells()
+    expect(rowTexts(now, 2)).toEqual(['연락처', '', '비고', '기존 내용'])
+    expect(rowTexts(now, 3)).toEqual(['', '', '', ''])
+    expect(rowTexts(now, 4)).toEqual(['', '', '', ''])
+    expect(now['5.1']).toBe('활동')
+  })
+
+  it('adds a row before the first one, and the new cells can be filled', () => {
+    const { plugin, cells } = openForm()
+    expect(plugin.addTableLines(1, 'rows', 1, 'before', 1)).toMatchObject({
+      ok: true,
+      rows: 4,
+      first: 1,
+    })
+    expect(cells()['2.1']).toBe('성명')
+    expect(plugin.fillCells(1, [{ row: 1, col: 1, text: '구분' }], false)).toMatchObject({
+      ok: true,
+    })
+    expect(cells()['1.1']).toBe('구분')
+  })
+
+  it('gives a new row the alignment of the row it is added next to', () => {
+    const { plugin, doc } = openForm((d) => {
+      for (const cell of [4, 5, 6, 7]) {
+        d.applyParaFormatInCell(0, 1, 0, cell, 0, JSON.stringify({ alignment: 'center' }))
+      }
+    })
+    plugin.addTableLines(1, 'rows', 2, 'after', 1)
+    for (const cell of [8, 9, 10, 11]) {
+      const props = JSON.parse(doc().getCellParaPropertiesAt(0, 1, 0, cell, 0)) as {
+        alignment: string
+      }
+      expect(props.alignment).toBe('center')
+    }
+  })
+
+  it('adds a column', () => {
+    const { plugin, cells } = openForm()
+    expect(plugin.addTableLines(1, 'columns', 1, 'after', 1)).toMatchObject({
+      ok: true,
+      rows: 3,
+      cols: 5,
+      first: 2,
+    })
+    expect(cells()).toMatchObject({ '1.1': '성명', '1.2': '', '1.4': '소속' })
+  })
+
+  it('removes rows with what is in them and says what went', () => {
+    const { plugin, steps, cells } = openForm()
+    const result = plugin.removeTableLines(1, 'rows', 2, 1)
+    expect(result).toMatchObject({ ok: true, table: 1, rows: 2, cols: 4, count: 1 })
+    if (!result.ok) throw new Error('expected a removal')
+    expect(result.text).toBe('연락처 | 비고 | 기존 내용')
+    expect(steps()).toBe(1)
+    expect(cells()).toMatchObject({ '1.1': '성명', '2.1': '활동' })
+  })
+
+  it('removes a column', () => {
+    const { plugin, cells } = openForm()
+    expect(plugin.removeTableLines(1, 'columns', 1, 1)).toMatchObject({
+      ok: true,
+      rows: 3,
+      cols: 3,
+    })
+    expect(cells()['1.2']).toBe('소속')
+  })
+
+  it('is taken back by one undo', () => {
+    const { plugin, cells } = openForm()
+    const foreign = plugin.foreignChanges()
+    plugin.addTableLines(1, 'rows', 3, 'after', 3)
+    expect(plugin.undo(1, foreign)).toEqual({ ok: true, undone: 1 })
+    const read = plugin.readTable(1)
+    expect(read).toMatchObject({ ok: true, rows: 3, cols: 4 })
+    expect(cells()['2.4']).toBe('기존 내용')
+  })
+
+  it('refuses lines that are not there, a table left without rows, and bad arguments', () => {
+    const { plugin, steps } = openForm()
+    expect(plugin.addTableLines(1, 'rows', 4, 'after', 1)).toEqual({
+      ok: false,
+      reason: 'no_such_line',
+      rows: 3,
+      cols: 4,
+    })
+    expect(plugin.removeTableLines(1, 'rows', 3, 2)).toMatchObject({
+      ok: false,
+      reason: 'no_such_line',
+    })
+    expect(plugin.removeTableLines(1, 'rows', 1, 3)).toMatchObject({
+      ok: false,
+      reason: 'would_empty',
+    })
+    expect(plugin.addTableLines(2, 'rows', 1, 'after', 1)).toEqual({
+      ok: false,
+      reason: 'no_such_table',
+      count: 1,
+    })
+    expect(() => plugin.addTableLines(1, 'rows', 1, 'after', 0)).toThrow(/between 1 and/)
+    expect(() => plugin.addTableLines(1, 'cells' as 'rows', 1, 'after', 1)).toThrow(/rows/)
+    expect(() => plugin.addTableLines(1, 'rows', 1, 'below' as 'after', 1)).toThrow(/after/)
+    expect(steps()).toBe(0)
+  })
+
+  it('does not remove a row with a picture floating over one of its cells', () => {
+    const { plugin } = openForm((doc) => {
+      const png = Uint8Array.from(
+        Buffer.from(
+          'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+          'base64',
+        ),
+      )
+      doc.insertPictureEx(
+        JSON.stringify({
+          sectionIdx: 0,
+          paraIdx: 1,
+          charOffset: 0,
+          cellPath: cellPath(3),
+          width: 2000,
+          height: 600,
+          naturalWidthPx: 20,
+          naturalHeightPx: 6,
+          extension: 'png',
+        }),
+        png,
+      )
+    })
+    expect(plugin.removeTableLines(1, 'rows', 1, 1)).toMatchObject({
+      ok: false,
+      reason: 'holds_object',
+      cells: [{ row: 1, col: 4 }],
+    })
+  })
+})
+
+describe('where a change is', () => {
+  it('names the cell a fill started in and the run written there', () => {
+    const { plugin } = openForm()
+    const result = plugin.fillCells(1, [{ row: 2, col: 2, text: '041-000-0000' }], false)
+    expect(result).toMatchObject({
+      ok: true,
+      place: {
+        sec: 0,
+        para: 1,
+        path: [{ controlIndex: 0, cellIndex: 5, cellParaIndex: 0 }],
+        offset: 0,
+        length: 12,
+      },
+    })
+  })
+
+  it('names the replaced run in the body and in a cell', () => {
+    const { plugin } = openForm()
+    expect(plugin.replaceText('신청서', '참가 신청서')).toMatchObject({
+      place: { sec: 0, para: 0, offset: 0, length: 6 },
+    })
+    const inCell = plugin.replaceText('기존 내용', '새 내용')
+    expect(inCell).toMatchObject({
+      place: { sec: 0, para: 1, path: [{ cellIndex: 7, cellParaIndex: 0 }], offset: 0, length: 4 },
+    })
+  })
+
+  it('names the first new paragraph and the first new row', () => {
+    const { plugin } = openForm()
+    expect(plugin.insertParagraphs('끝.', null, 'after', ['붙임 1부.'])).toMatchObject({
+      place: { sec: 0, para: 3, offset: 0, length: 6 },
+    })
+    expect(plugin.addTableLines(1, 'rows', 3, 'after', 1)).toMatchObject({
+      place: { sec: 0, para: 1, path: [{ controlIndex: 0, cellIndex: 10, cellParaIndex: 0 }] },
+    })
+  })
+
+  it('answers false to reveal when the editor has no caret to move', () => {
+    const { plugin } = openForm()
+    expect(plugin.reveal({ sec: 0, para: 0, offset: 0, length: 3 })).toEqual({ ok: false })
   })
 })

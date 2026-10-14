@@ -4,8 +4,10 @@ import type {
   AgentCellText,
   AgentMatch,
   AgentParagraphFormat,
+  AgentPlace,
   AgentPlaceRefusal,
   AgentTableCell,
+  AgentTableLinesRefusal,
   AgentTableSummary,
   AgentWhere,
 } from '../../../studio-plugin/agent-plugin.mjs'
@@ -24,13 +26,24 @@ const CHANGE_TEXT_CHARS = 200
 
 /** One change a run made to the document, as the panel lists it. */
 export interface HwpChange {
-  kind: 'replace' | 'replaceAll' | 'field' | 'insert' | 'delete' | 'table' | 'format' | 'cells'
+  kind:
+    | 'replace'
+    | 'replaceAll'
+    | 'field'
+    | 'insert'
+    | 'delete'
+    | 'table'
+    | 'format'
+    | 'cells'
+    | 'lines'
   /** the replaced, removed or formatted text, the field name, or the table whose cells were filled; empty for something added */
   from: string
   /** the new text (for a table its first row, for a format what was set, for cells what went into them); empty for something removed */
   to: string
-  /** places changed (more than one for replaceAll and for filled cells) */
+  /** places changed (more than one for replaceAll, filled cells, and rows or columns) */
   count: number
+  /** where the change is (the first place of several), for the editor to show */
+  place?: AgentPlace
 }
 
 export interface HwpSkillDeps {
@@ -62,12 +75,12 @@ const SYSTEM_PROMPT = [
   '- Replace a piece of text with another (replace_text, replace_all). The new text takes the formatting of the text it replaces.',
   '- Add new paragraphs next to an existing one, in the body or inside a table cell, or at the end of the document (insert_paragraphs). Remove a paragraph (delete_paragraph).',
   '- Add a table of plain-text cells, with a header row when the first row names the columns (insert_table).',
-  '- Work on the tables that are already there: list them (list_tables), read one cell by cell (read_table), and write text into its cells, many at once (fill_cells).',
+  '- Work on the tables that are already there: list them (list_tables), read one cell by cell (read_table), write text into its cells, many at once (fill_cells), and add or remove rows and columns (add_to_table, remove_from_table).',
   '- Change formatting: bold, italic, underline, strikethrough, font size, text colour and highlight of a piece of text (format_text); alignment and line spacing of a paragraph, and the character formatting of a whole paragraph (format_paragraph).',
   '- Fill the form fields of the document (list_fields, fill_field). In Hangul these are called 누름틀. A field is picked by its number in list_fields, because several fields often share one name.',
   '',
   '## What they cannot do',
-  '- You cannot change the font family, styles, numbering, indents, borders or cell shading, or the page layout. You cannot add or change pictures, or add, remove or merge rows and columns of an existing table: when a form has too few rows for what the user gave you, fill what fits and say what is left.',
+  '- You cannot change the font family, styles, numbering, indents, borders or cell shading, or the page layout. You cannot add or change pictures, or merge or split the cells of a table.',
   '- One piece of text is always one line: a line break inside a text argument is refused. Several paragraphs are several strings in one insert_paragraphs call.',
   '- When the user asks for something the tools cannot do, say so plainly instead of approximating it.',
   '',
@@ -84,6 +97,8 @@ const SYSTEM_PROMPT = [
   '- An empty cell cannot be reached with replace_text or insert_paragraphs, which need text to find: use fill_cells.',
   '- A cell marked as holding a picture or another object is not empty even without text (a logo, a seal, a photo): never fill it.',
   '- Leave a cell empty when you do not know its answer, and tell the user which ones are left.',
+  '- When a list in a form has too few rows for what the user gave you, add rows after the last row of that list with add_to_table (they come out shaped like that row), read the table again for the new row numbers, then fill them. Do not add rows or columns the user has no content for.',
+  '- Remove rows or columns only when the user asks for it: what is in them goes too.',
   '',
   '## Formatting rules',
   '- Format only what the user asked for. Do not restyle text on your own: a new paragraph already looks like its neighbour, and official documents keep one look throughout.',
@@ -314,6 +329,37 @@ const TOOLS: AgentToolDef[] = [
     },
   },
   {
+    name: 'add_to_table',
+    description:
+      'Add empty rows or columns to a table, after or before one of its rows or columns. The new ones are shaped and formatted like that one. Row and column numbers after them shift: read the table again before filling. Not for a table that sits inside a cell of another table.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        table: { type: 'integer', minimum: 1, description: 'the table number from list_tables' },
+        what: { type: 'string', enum: ['rows', 'columns'] },
+        at: { type: 'integer', minimum: 1, description: 'the row or column to add next to' },
+        where: { type: 'string', enum: ['after', 'before'], description: 'default "after"' },
+        count: { type: 'integer', minimum: 1, description: 'how many to add (default 1)' },
+      },
+      required: ['table', 'what', 'at'],
+    },
+  },
+  {
+    name: 'remove_from_table',
+    description:
+      'Remove rows or columns of a table, with what is in them. Use it only when the user asked for it. A table keeps at least one row and one column; a row or column with a picture in it is not removed.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        table: { type: 'integer', minimum: 1, description: 'the table number from list_tables' },
+        what: { type: 'string', enum: ['rows', 'columns'] },
+        at: { type: 'integer', minimum: 1, description: 'the first row or column to remove' },
+        count: { type: 'integer', minimum: 1, description: 'how many to remove (default 1)' },
+      },
+      required: ['table', 'what', 'at'],
+    },
+  },
+  {
     name: 'list_fields',
     description:
       'List the form fields (누름틀) of the document in document order: number, name, the guide text shown while empty, and the current value.',
@@ -493,6 +539,38 @@ function matchLines(matches: AgentMatch[], count: number): string {
   return lines.join('\n')
 }
 
+/** Why rows or columns were not added or removed, as the model reads it. */
+function linesRefusal(table: number, what: string, result: AgentTableLinesRefusal): string {
+  switch (result.reason) {
+    case 'no_such_table':
+      return noSuchTable(table, result.count)
+    case 'nested':
+      return 'Nothing was changed: that table sits inside a cell of another table, and rows and columns can only be added to or removed from a table of the body text.'
+    case 'no_such_line':
+      return `Nothing was changed: the table has ${result.rows} row(s) and ${result.cols} column(s), so those ${what} are not all in it.`
+    case 'would_empty':
+      return `Nothing was changed: that would remove every one of the ${what}. A table keeps at least one row and one column.`
+    case 'holds_object':
+      return `Nothing was changed: these cells hold a picture or another object, which would be removed with them: ${result.cells.map((cell) => `${cell.row}.${cell.col}`).join(', ')}.`
+    default:
+      return HAS_OBJECTS_HELP
+  }
+}
+
+/** The table, the kind of line, the place and the count of a row or column call. */
+function linesArgs(
+  call: AgentToolCall,
+): { table: number; what: 'rows' | 'columns'; at: number; count: number } | null {
+  const { table, what, at, count } = call.input
+  if (typeof table !== 'number' || typeof at !== 'number') return null
+  if (what !== 'rows' && what !== 'columns') return null
+  if (count !== undefined && count !== null && typeof count !== 'number') return null
+  return { table, what, at, count: typeof count === 'number' ? count : 1 }
+}
+
+const LINES_HELP =
+  'table and at must be numbers (from list_tables and read_table), and what "rows" or "columns".'
+
 function noSuchTable(table: number, count: number): string {
   return count === 0
     ? 'This document has no tables.'
@@ -587,7 +665,13 @@ export function createHwpSkill(deps: HwpSkillDeps): HwpSkill {
           typeof occurrence === 'number' ? occurrence : null,
         )
         if (result.ok) {
-          deps.onChange({ kind: 'replace', from: find, to: replace, count: 1 })
+          deps.onChange({
+            kind: 'replace',
+            from: find,
+            to: replace,
+            count: 1,
+            place: result.place,
+          })
           return {
             output: result.inTable ? 'Replaced (in a table cell).' : 'Replaced.',
             mutated: true,
@@ -616,7 +700,13 @@ export function createHwpSkill(deps: HwpSkillDeps): HwpSkill {
         if (hasLineBreak(find) || hasLineBreak(replace)) return bad(call, ONE_LINE_HELP)
         const result = await bridge.replaceAllText(find, replace)
         if (!result.ok) return bad(call, NOT_FOUND_HELP)
-        deps.onChange({ kind: 'replaceAll', from: find, to: replace, count: result.count })
+        deps.onChange({
+          kind: 'replaceAll',
+          from: find,
+          to: replace,
+          count: result.count,
+          place: result.place,
+        })
         return {
           output: `Replaced ${result.count} occurrence(s).`,
           mutated: true,
@@ -642,6 +732,7 @@ export function createHwpSkill(deps: HwpSkillDeps): HwpSkill {
           from: '',
           to: changeText(paragraphs.filter(Boolean).join(' ⏎ ')),
           count: 1,
+          place: result.place,
         })
         return {
           output: `Added ${result.count} paragraph(s)${result.inTable ? ' in the table cell' : ''}.`,
@@ -659,7 +750,13 @@ export function createHwpSkill(deps: HwpSkillDeps): HwpSkill {
           typeof occurrence === 'number' ? occurrence : null,
         )
         if (!result.ok) return bad(call, placeRefusal(result))
-        deps.onChange({ kind: 'delete', from: changeText(result.text), to: '', count: 1 })
+        deps.onChange({
+          kind: 'delete',
+          from: changeText(result.text),
+          to: '',
+          count: 1,
+          place: result.place,
+        })
         return {
           output: result.emptied
             ? 'The paragraph was emptied. It is the first paragraph of its cell or section, so its empty line stays.'
@@ -694,6 +791,7 @@ export function createHwpSkill(deps: HwpSkillDeps): HwpSkill {
           from: '',
           to: changeText(rows[0]!.join(' | ')),
           count: 1,
+          place: result.place,
         })
         return {
           output: `Added a table of ${result.rows} row(s) and ${result.cols} column(s).`,
@@ -728,6 +826,7 @@ export function createHwpSkill(deps: HwpSkillDeps): HwpSkill {
           from: changeText(find),
           to: describeFormat(format, label),
           count: result.count,
+          place: result.place,
         })
         return {
           output: `Formatted ${result.count} occurrence(s).`,
@@ -760,6 +859,7 @@ export function createHwpSkill(deps: HwpSkillDeps): HwpSkill {
           from: changeText(find),
           to: describeFormat(format, label),
           count: 1,
+          place: result.place,
         })
         return {
           output: `Formatted the paragraph${result.inTable ? ' in the table cell' : ''}.`,
@@ -815,6 +915,7 @@ export function createHwpSkill(deps: HwpSkillDeps): HwpSkill {
             from: label('aiTableName', { table }),
             to: changeText(cells.map((cell) => cell.text).join(' | ')),
             count: result.count,
+            place: result.place,
           })
           return {
             output: `Filled ${result.count} cell(s) of table ${table}.`,
@@ -854,6 +955,52 @@ export function createHwpSkill(deps: HwpSkillDeps): HwpSkill {
             result.cells.map((cell) => `${cell.row}.${cell.col}: ${cell.text ?? ''}`).join('\n'),
         )
       }
+      case 'add_to_table': {
+        const args = linesArgs(call)
+        const where = call.input.where ?? 'after'
+        if (!args || (where !== 'after' && where !== 'before')) return bad(call, LINES_HELP)
+        const result = await bridge.addTableLines(args.table, args.what, args.at, where, args.count)
+        if (!result.ok) return bad(call, linesRefusal(args.table, args.what, result))
+        const what = label(args.what === 'rows' ? 'aiTableRowsAdded' : 'aiTableColsAdded', {
+          count: result.count,
+        })
+        const name = label('aiTableName', { table: args.table })
+        deps.onChange({
+          kind: 'lines',
+          from: name,
+          to: what,
+          count: result.count,
+          place: result.place,
+        })
+        const last = result.first + result.count - 1
+        return {
+          output: `Added ${result.count} of the ${args.what}: number ${result.first}${last > result.first ? ` to ${last}` : ''}, empty. Table ${args.table} now has ${result.rows} row(s) and ${result.cols} column(s).`,
+          mutated: true,
+          summary: `${name} · ${what}`,
+        }
+      }
+      case 'remove_from_table': {
+        const args = linesArgs(call)
+        if (!args) return bad(call, LINES_HELP)
+        const result = await bridge.removeTableLines(args.table, args.what, args.at, args.count)
+        if (!result.ok) return bad(call, linesRefusal(args.table, args.what, result))
+        const what = label(args.what === 'rows' ? 'aiTableRowsRemoved' : 'aiTableColsRemoved', {
+          count: result.count,
+        })
+        const name = label('aiTableName', { table: args.table })
+        deps.onChange({
+          kind: 'lines',
+          from: name,
+          to: result.text ? `${what} · ${changeText(result.text)}` : what,
+          count: result.count,
+          place: result.place,
+        })
+        return {
+          output: `Removed ${result.count} of the ${args.what}. Table ${args.table} now has ${result.rows} row(s) and ${result.cols} column(s).`,
+          mutated: true,
+          summary: `${name} · ${what}`,
+        }
+      }
       case 'list_fields': {
         const fields = await bridge.listFields()
         return {
@@ -882,7 +1029,7 @@ export function createHwpSkill(deps: HwpSkillDeps): HwpSkill {
         }
         // by number first: names repeat, and a field nobody named has none
         const name = [`#${field}`, result.name.trim()].filter(Boolean).join(' ')
-        deps.onChange({ kind: 'field', from: name, to: value, count: 1 })
+        deps.onChange({ kind: 'field', from: name, to: value, count: 1, place: result.place })
         return {
           output: 'Filled.',
           mutated: true,

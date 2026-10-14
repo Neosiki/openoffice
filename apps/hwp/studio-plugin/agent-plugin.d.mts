@@ -17,8 +17,20 @@ export interface AgentFindResult {
   matches: AgentMatch[]
 }
 
+/**
+ * Where a change is, for the editor to show: the paragraph (for a cell, the body paragraph
+ * its table sits in and the path to the cell paragraph), and a run of characters in it.
+ */
+export interface AgentPlace {
+  sec: number
+  para: number
+  path?: { controlIndex: number; cellIndex: number; cellParaIndex: number }[]
+  offset: number
+  length: number
+}
+
 export type AgentReplaceResult =
-  | { ok: true; count: number; inTable: boolean }
+  | { ok: true; count: number; inTable: boolean; place: AgentPlace }
   | {
       ok: false
       reason: 'not_found' | 'ambiguous' | 'no_such_occurrence' | 'unsupported_place'
@@ -27,7 +39,7 @@ export type AgentReplaceResult =
     }
 
 export type AgentReplaceAllResult =
-  { ok: true; count: number } | { ok: false; reason: 'not_found'; count: 0 }
+  { ok: true; count: number; place: AgentPlace } | { ok: false; reason: 'not_found'; count: 0 }
 
 /** Why a paragraph edit did nothing: the anchor could not be decided, or an object is in the way. */
 export interface AgentPlaceRefusal {
@@ -40,7 +52,8 @@ export interface AgentPlaceRefusal {
 /** Where a paragraph edit goes relative to the anchor paragraph; "end" is the end of the document. */
 export type AgentWhere = 'after' | 'before' | 'end'
 
-export type AgentInsertResult = { ok: true; count: number; inTable: boolean } | AgentPlaceRefusal
+export type AgentInsertResult =
+  { ok: true; count: number; inTable: boolean; place: AgentPlace } | AgentPlaceRefusal
 
 export type AgentDeleteResult =
   | {
@@ -50,11 +63,12 @@ export type AgentDeleteResult =
       /** the paragraph kept its place as an empty line (the first of its cell or section) */
       emptied: boolean
       inTable: boolean
+      place: AgentPlace
     }
   | AgentPlaceRefusal
 
 export type AgentTableResult =
-  | { ok: true; rows: number; cols: number; inTable: boolean }
+  | { ok: true; rows: number; cols: number; inTable: boolean; place: AgentPlace }
   | AgentPlaceRefusal
   /** the anchor is inside a table cell, where a table cannot be made */
   | { ok: false; reason: 'in_table'; count: number }
@@ -81,7 +95,7 @@ export interface AgentParagraphFormat extends AgentTextFormat {
 }
 
 export type AgentFormatTextResult =
-  | { ok: true; count: number }
+  | { ok: true; count: number; place: AgentPlace }
   | {
       ok: false
       reason: 'not_found' | 'ambiguous' | 'no_such_occurrence' | 'unsupported_place' | 'has_objects'
@@ -89,7 +103,8 @@ export type AgentFormatTextResult =
       matches?: AgentMatch[]
     }
 
-export type AgentFormatParagraphResult = { ok: true; inTable: boolean } | AgentPlaceRefusal
+export type AgentFormatParagraphResult =
+  { ok: true; inTable: boolean; place: AgentPlace } | AgentPlaceRefusal
 
 /** One table of the document, as listTables lists it. */
 export interface AgentTableSummary {
@@ -124,7 +139,7 @@ export interface AgentTableCell {
   text: string
   /** numbers (as in listFields) of the click-here fields that sit in the cell */
   fields?: number[]
-  /** the cell holds a picture, a shape or a table of its own: not empty, whatever its text */
+  /** a picture, a shape or a table sits in the cell or floats over it: not empty, whatever its text */
   object?: true
 }
 
@@ -148,7 +163,7 @@ export interface AgentCellText {
 }
 
 export type AgentFillCellsResult =
-  | { ok: true; table: number; count: number }
+  | { ok: true; table: number; count: number; place: AgentPlace }
   | { ok: false; reason: 'no_such_table'; count: number }
   | {
       ok: false
@@ -177,7 +192,62 @@ export interface AgentField {
 }
 
 export type AgentFillResult =
-  { ok: true; name: string } | { ok: false; reason: 'no_such_field'; count: number }
+  | { ok: true; name: string; place?: AgentPlace }
+  | { ok: false; reason: 'no_such_field'; count: number }
+
+/** Rows or columns of a table. */
+export type AgentTableLines = 'rows' | 'columns'
+
+/** Why a row or column call did nothing. */
+export type AgentTableLinesRefusal =
+  | { ok: false; reason: 'no_such_table'; count: number }
+  | {
+      ok: false
+      /**
+       * nested: the table sits inside a cell of another table, where the engine cannot add
+       * or remove lines. no_such_line: the row or column is outside the table.
+       * would_empty: nothing would be left of the table.
+       */
+      reason: 'nested' | 'no_such_line' | 'would_empty'
+      rows: number
+      cols: number
+    }
+  | {
+      ok: false
+      /** cells of those lines hold a picture or another object */
+      reason: 'holds_object'
+      cells: { row: number; col: number }[]
+      rows: number
+      cols: number
+    }
+  | { ok: false; reason: 'has_objects'; count: number }
+
+export type AgentAddLinesResult =
+  | {
+      ok: true
+      table: number
+      /** the size of the table now */
+      rows: number
+      cols: number
+      /** 1-based number of the first new row or column */
+      first: number
+      count: number
+      place?: AgentPlace
+    }
+  | AgentTableLinesRefusal
+
+export type AgentRemoveLinesResult =
+  | {
+      ok: true
+      table: number
+      rows: number
+      cols: number
+      count: number
+      /** the text that went with them, cut to a few hundred characters */
+      text: string
+      place: AgentPlace
+    }
+  | AgentTableLinesRefusal
 
 export type AgentUndoResult =
   { ok: boolean; undone: number } | { ok: false; reason: 'changed'; undone: 0 }
@@ -217,6 +287,20 @@ export interface AgentPluginSurface {
   listTables(): AgentTableList
   readTable(table: number, fromRow?: number | null): AgentReadTableResult
   fillCells(table: number, cells: AgentCellText[], overwrite: boolean): AgentFillCellsResult
+  addTableLines(
+    table: number,
+    what: AgentTableLines,
+    at: number,
+    where: 'after' | 'before',
+    count: number,
+  ): AgentAddLinesResult
+  removeTableLines(
+    table: number,
+    what: AgentTableLines,
+    at: number,
+    count: number,
+  ): AgentRemoveLinesResult
+  reveal(place: AgentPlace): { ok: boolean }
   listFields(): AgentField[]
   fillField(field: number, value: string): AgentFillResult
   undo(steps: number, expectedForeign: number): AgentUndoResult
@@ -227,7 +311,14 @@ export interface AgentPluginHost {
   read<T>(fn: (doc: never) => T): T
   transaction<T>(label: string, fn: (tx: { doc(): never; deferPagination(): void }) => T): T
   events: { on(name: 'document-changed', handler: () => void): unknown }
-  automation: { execute(command: string): { ok?: boolean } | null | undefined }
+  automation: {
+    execute(command: string, params?: unknown): { ok?: boolean } | null | undefined
+    registerCommand?(command: {
+      id: string
+      label: string
+      execute(services: never, params?: never): void
+    }): void
+  }
 }
 
 export declare const agentPlugin: {

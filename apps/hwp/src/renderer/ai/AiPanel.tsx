@@ -30,6 +30,7 @@ import { aiLangDirective, t as tGlobal, useI18n } from '../i18n/locale'
 import sendEnterOn from '../assets/send-enter-on.png'
 import sendEnterOff from '../assets/send-enter-off.png'
 import sendStop from '../assets/send-stop.png'
+import type { AgentPlace } from '../../../studio-plugin/agent-plugin.mjs'
 import type { AgentBridge } from './agent-bridge'
 import { blockedRunOf, type AiBlockedRun } from './ai-connection'
 import { createHwpSkill, type HwpChange } from './hwp-skill'
@@ -254,7 +255,11 @@ export function AiPanel({
         get: (_target, method: keyof AgentBridge) => bridgeRef.current[method],
       }),
       label: tGlobal,
-      onChange: (change) => runChangesRef.current.push(change),
+      onChange: (change) => {
+        runChangesRef.current.push(change)
+        // the view follows the work: a change far down the document would go unseen
+        if (change.place) void bridgeRef.current.reveal(change.place).catch(() => {})
+      },
     })
 
   // The loop is built once; every mutable value goes through a ref getter
@@ -668,6 +673,7 @@ export function AiPanel({
                   changes={entry.changes}
                   canRevert={i === revertableIdx && !busy && !reverting}
                   onRevert={() => revert(i)}
+                  onShow={(place) => void bridgeRef.current.reveal(place).catch(() => {})}
                 />
               )}
               {showToolbar && (
@@ -764,10 +770,12 @@ function RunChangesCard({
   changes,
   canRevert,
   onRevert,
+  onShow,
 }: {
   changes: RunChanges
   canRevert: boolean
   onRevert: () => void
+  onShow: (place: AgentPlace) => void
 }): ReactElement {
   const { t } = useI18n()
   const count = changes.items.reduce((sum, item) => sum + item.count, 0)
@@ -786,7 +794,19 @@ function RunChangesCard({
       <ul className="ai-changes-list">
         {changes.items.map((item, j) => (
           <li key={j} className="ai-change" dir="auto">
-            <ChangeLine item={item} />
+            {item.place && changes.state !== 'reverted' ? (
+              // a place that was taken back is no longer there to show
+              <button
+                type="button"
+                className="ai-change-go"
+                data-tip={t('aiShowChange')}
+                onClick={() => onShow(item.place!)}
+              >
+                <ChangeLine item={item} />
+              </button>
+            ) : (
+              <ChangeLine item={item} />
+            )}
           </li>
         ))}
       </ul>
@@ -823,7 +843,10 @@ function ChangeLine({ item }: { item: HwpChange }): ReactElement {
   }
   return (
     <>
-      {item.kind === 'field' || item.kind === 'format' || item.kind === 'cells' ? (
+      {item.kind === 'field' ||
+      item.kind === 'format' ||
+      item.kind === 'cells' ||
+      item.kind === 'lines' ? (
         // named, not struck through: this text stays, it is what the change was done to
         <span className="ai-change-field">{item.from}</span>
       ) : (

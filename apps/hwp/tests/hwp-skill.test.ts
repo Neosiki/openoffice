@@ -8,6 +8,9 @@ import {
   type HwpChange,
 } from '../src/renderer/ai/hwp-skill'
 
+/** where a change is, as the editor hands it back */
+const PLACE = { sec: 0, para: 1, offset: 0, length: 3 }
+
 function setup(overrides: Partial<AgentBridge> = {}) {
   const bridge: AgentBridge = {
     foreignChanges: vi.fn(async () => 0),
@@ -38,7 +41,26 @@ function setup(overrides: Partial<AgentBridge> = {}) {
         { row: 3, col: 1, text: '', object: true as const },
       ],
     })),
-    fillCells: vi.fn(async () => ({ ok: true as const, table: 1, count: 2 })),
+    fillCells: vi.fn(async () => ({ ok: true as const, table: 1, count: 2, place: PLACE })),
+    addTableLines: vi.fn(async () => ({
+      ok: true as const,
+      table: 1,
+      rows: 5,
+      cols: 4,
+      first: 3,
+      count: 2,
+      place: PLACE,
+    })),
+    removeTableLines: vi.fn(async () => ({
+      ok: true as const,
+      table: 1,
+      rows: 2,
+      cols: 4,
+      count: 1,
+      text: '연락처 | 비고',
+      place: PLACE,
+    })),
+    reveal: vi.fn(async () => ({ ok: true })),
     listFields: vi.fn(async () => []),
     fillField: vi.fn(async () => ({ ok: true as const, name: '성명' })),
     undo: vi.fn(async () => ({ ok: true, undone: 1 })),
@@ -540,7 +562,14 @@ describe('tables that are already in the document', () => {
     expect(result.mutated).toBe(true)
     expect(result.summary).toBe('aiToolFillCells:{"table":1,"count":2}')
     expect(changes).toEqual([
-      { kind: 'cells', from: 'aiTableName:{"table":1}', to: '홍길동 | 교무기획부', count: 2 },
+      {
+        kind: 'cells',
+        from: 'aiTableName:{"table":1}',
+        to: '홍길동 | 교무기획부',
+        count: 2,
+        // the place travels with the change, for the panel to show it in the document
+        place: PLACE,
+      },
     ])
   })
 
@@ -619,6 +648,75 @@ describe('tables that are already in the document', () => {
   })
 })
 
+describe('rows and columns of a table', () => {
+  it('adds rows after a row by default and tells the model the new numbers', async () => {
+    const { call, changes, bridge } = setup()
+    const result = await call('add_to_table', { table: 1, what: 'rows', at: 2, count: 2 })
+    expect(bridge.addTableLines).toHaveBeenCalledWith(1, 'rows', 2, 'after', 2)
+    expect(result.mutated).toBe(true)
+    expect(result.output).toBe(
+      'Added 2 of the rows: number 3 to 4, empty. Table 1 now has 5 row(s) and 4 column(s).',
+    )
+    expect(result.summary).toBe('aiTableName:{"table":1} · aiTableRowsAdded:{"count":2}')
+    expect(changes).toEqual([
+      {
+        kind: 'lines',
+        from: 'aiTableName:{"table":1}',
+        to: 'aiTableRowsAdded:{"count":2}',
+        count: 2,
+        place: PLACE,
+      },
+    ])
+  })
+
+  it('adds one column before a column when asked', async () => {
+    const { call, bridge } = setup()
+    await call('add_to_table', { table: 1, what: 'columns', at: 1, where: 'before' })
+    expect(bridge.addTableLines).toHaveBeenCalledWith(1, 'columns', 1, 'before', 1)
+  })
+
+  it('removes rows and lists what went with them', async () => {
+    const { call, changes, bridge } = setup()
+    const result = await call('remove_from_table', { table: 1, what: 'rows', at: 2 })
+    expect(bridge.removeTableLines).toHaveBeenCalledWith(1, 'rows', 2, 1)
+    expect(result.summary).toBe('aiTableName:{"table":1} · aiTableRowsRemoved:{"count":1}')
+    expect(changes[0]).toMatchObject({
+      kind: 'lines',
+      to: 'aiTableRowsRemoved:{"count":1} · 연락처 | 비고',
+    })
+  })
+
+  it('tells the model why nothing was changed', async () => {
+    const cases = [
+      [{ ok: false, reason: 'nested', rows: 2, cols: 2 }, 'inside a cell of another table'],
+      [{ ok: false, reason: 'no_such_line', rows: 3, cols: 4 }, '3 row(s) and 4 column(s)'],
+      [{ ok: false, reason: 'would_empty', rows: 3, cols: 4 }, 'at least one row'],
+      [
+        { ok: false, reason: 'holds_object', cells: [{ row: 1, col: 4 }], rows: 3, cols: 4 },
+        'picture or another object, which would be removed with them: 1.4',
+      ],
+      [{ ok: false, reason: 'no_such_table', count: 2 }, 'the document has 2'],
+    ] as const
+    for (const [refusal, said] of cases) {
+      const { call, changes } = setup({ removeTableLines: async () => refusal })
+      const result = await call('remove_from_table', { table: 1, what: 'rows', at: 1 })
+      expect(result.isError).toBe(true)
+      expect(result.output).toContain(said)
+      expect(changes).toEqual([])
+    }
+  })
+
+  it('never sends a call it cannot read to the editor', async () => {
+    const { call, bridge } = setup()
+    expect((await call('add_to_table', { table: 1, what: 'cells', at: 1 })).isError).toBe(true)
+    expect((await call('add_to_table', { table: 1, what: 'rows' })).isError).toBe(true)
+    expect(
+      (await call('add_to_table', { table: 1, what: 'rows', at: 1, where: 'below' })).isError,
+    ).toBe(true)
+    expect(bridge.addTableLines).not.toHaveBeenCalled()
+  })
+})
+
 describe('form fields', () => {
   it('lists them', async () => {
     const { call } = setup({
@@ -683,6 +781,8 @@ describe('the skill as the model sees it', () => {
       'list_tables',
       'read_table',
       'fill_cells',
+      'add_to_table',
+      'remove_from_table',
       'list_fields',
       'fill_field',
     ])

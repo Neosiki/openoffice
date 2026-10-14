@@ -960,6 +960,32 @@
   overflow-wrap: anywhere;
 }
 
+/* a change that can be shown in the document: the whole line is the button */
+.ai-change-go {
+  display: block;
+  width: calc(100% + 8px);
+  margin: 0 -4px;
+  padding: 1px 4px;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  line-height: inherit;
+  text-align: start;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+
+.ai-change-go:hover {
+  background: var(--hover);
+}
+
+.ai-change-go:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
 .ai-change-from {
   color: var(--color-text-tertiary);
   text-decoration: line-through;

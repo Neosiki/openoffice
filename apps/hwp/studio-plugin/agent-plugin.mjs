@@ -37,6 +37,12 @@ const MAX_CELL_CHARS = 300
 const MAX_FILLED_CELLS = 400
 /** Lines of text one cell is given. */
 const MAX_CELL_LINES = 50
+/** Rows or columns one call adds to or removes from a table. */
+const MAX_TABLE_LINES = 50
+/** What sits on the page as an object and can lie over a table cell without being in it. */
+const FLOATING_KINDS = new Set(['image', 'picture', 'shape', 'group', 'ole', 'textbox'])
+/** The command this plugin registers with the editor to move its caret to a place. */
+const REVEAL_COMMAND = 'ext:ieum-reveal'
 /** Lookups one walk over the document spends on finding tables inside table cells. */
 const MAX_NESTED_LOOKUPS = 20000
 /** Objects tried in one cell paragraph when looking for a table inside it. */
@@ -91,6 +97,81 @@ function cellPathOf(hit) {
   const cell = hit.cellContext
   if (!cell) return null
   return [{ controlIndex: cell.ctrlIdx, cellIndex: cell.cellIdx, cellParaIndex: cell.cellPara }]
+}
+
+/**
+ * Where a change is, so the editor can show it: the paragraph (for a cell, the body
+ * paragraph its table sits in and the path to the cell paragraph), and a run of characters.
+ */
+function placeOf(hit, length) {
+  const path = cellPathOf(hit)
+  return {
+    sec: hit.sec,
+    para: hit.para,
+    ...(path ? { path } : {}),
+    offset: hit.charOffset ?? 0,
+    length,
+  }
+}
+
+/** Where a form field is; null for a field in a text box or a note, which has no such address. */
+function fieldPlace(field) {
+  const where = field.location
+  if (!where) return null
+  const path = Array.isArray(where.path) ? where.path : []
+  if (path.some((entry) => entry.type !== 'cell')) return null
+  return {
+    sec: where.sectionIndex,
+    para: where.paraIndex,
+    ...(path.length > 0
+      ? {
+          path: path.map((entry) => ({
+            controlIndex: entry.controlIndex,
+            cellIndex: entry.cellIndex,
+            cellParaIndex: entry.paraIndex,
+          })),
+        }
+      : {}),
+    offset: field.startCharIdx ?? 0,
+    length: 0,
+  }
+}
+
+/**
+ * Move the editor's caret to a place and select the run there; the editor scrolls to its
+ * caret. The caret is not part of the plugin host: this runs as a command of the editor,
+ * which is handed the editor's own services. The focus stays where it is.
+ */
+function showPlace(services, place) {
+  const input = services && services.getInputHandler ? services.getInputHandler() : null
+  const cursor = input ? input.cursor : null
+  if (!cursor || !place || !Number.isInteger(place.sec) || !Number.isInteger(place.para)) {
+    return false
+  }
+  const path = Array.isArray(place.path) ? place.path : []
+  const offset = Number.isInteger(place.offset) ? place.offset : 0
+  const start =
+    path.length > 0
+      ? {
+          sectionIndex: place.sec,
+          paragraphIndex: place.para,
+          charOffset: offset,
+          parentParaIndex: place.para,
+          controlIndex: path[0].controlIndex,
+          cellIndex: path[0].cellIndex,
+          cellParaIndex: path[0].cellParaIndex,
+          // a cell of a table inside a cell is named by the whole path
+          ...(path.length > 1 ? { cellPath: path } : {}),
+        }
+      : { sectionIndex: place.sec, paragraphIndex: place.para, charOffset: offset }
+  cursor.clearSelection()
+  cursor.moveTo(start)
+  if (Number.isInteger(place.length) && place.length > 0) {
+    cursor.setAnchor()
+    cursor.moveTo({ ...start, charOffset: offset + place.length })
+  }
+  if (input.updateCaret) input.updateCaret()
+  return true
 }
 
 /** Text inside an equation is a script, not prose: it has no replace path here. */
@@ -171,6 +252,7 @@ function containerOf(doc, hit) {
     return {
       index: para,
       inTable: false,
+      place: (k, length) => ({ sec, para: k, offset: 0, length }),
       count: () => doc.getParagraphCount(sec),
       length: (k) => doc.getParagraphLength(sec, k),
       text: (k, count) => (count > 0 ? doc.getTextRange(sec, k, 0, count) : ''),
@@ -197,6 +279,7 @@ function containerOf(doc, hit) {
   return {
     index: last.cellParaIndex,
     inTable: true,
+    place: (k, length) => ({ sec, para, path: parse(at(k)), offset: 0, length }),
     count: () => doc.getCellParagraphCountByPath(sec, para, at(0)),
     length: (k) => doc.getCellParagraphLengthByPath(sec, para, at(k)),
     text: (k, count) => (count > 0 ? doc.getTextInCellByPath(sec, para, at(k), 0, count) : ''),
@@ -690,6 +773,47 @@ function cellHoldsObject(doc, table, cell) {
   return false
 }
 
+/**
+ * The cells of a table that an object of the page lies on: a seal or a logo that belongs to
+ * the body text and floats over the cell. It is not in the cell, so cellHoldsObject does not
+ * see it, but text written there lands under it all the same. An object counts for the cell
+ * its middle is in; one placed behind the text (a watermark) does not count.
+ */
+function coveredCells(doc, table) {
+  const covered = new Set()
+  let boxes
+  try {
+    boxes = parse(doc.getTableCellBboxesByPath(table.sec, table.para, JSON.stringify(table.path)))
+  } catch {
+    return covered
+  }
+  const pages = new Map()
+  for (const box of boxes) {
+    if (!Number.isInteger(box.pageIndex)) continue
+    const list = pages.get(box.pageIndex)
+    if (list) list.push(box)
+    else pages.set(box.pageIndex, [box])
+  }
+  for (const [page, cells] of pages) {
+    let controls
+    try {
+      controls = parse(doc.getPageControlLayout(page)).controls ?? []
+    } catch {
+      continue
+    }
+    for (const control of controls) {
+      if (!FLOATING_KINDS.has(control.type) || control.wrap === 'behindText') continue
+      const x = control.x + control.w / 2
+      const y = control.y + control.h / 2
+      const under = cells.find(
+        (cell) => x >= cell.x && x <= cell.x + cell.w && y >= cell.y && y <= cell.y + cell.h,
+      )
+      if (under) covered.add(under.cellIdx)
+    }
+  }
+  return covered
+}
+
 const clip = (text, max) => (text.length > max ? `${text.slice(0, max)}…` : text)
 
 /**
@@ -745,6 +869,20 @@ function checkCells(cells) {
   })
 }
 
+/** What a row or column call names: true for rows, false for columns. */
+function checkLines(what, at, count) {
+  if (what !== 'rows' && what !== 'columns') {
+    throw fail('BAD_ARGUMENT', 'what must be "rows" or "columns"')
+  }
+  if (!Number.isInteger(at) || at < 1) {
+    throw fail('BAD_ARGUMENT', 'at counts from 1 and is a whole number')
+  }
+  if (!Number.isInteger(count) || count < 1 || count > MAX_TABLE_LINES) {
+    throw fail('BAD_ARGUMENT', `count must be between 1 and ${MAX_TABLE_LINES}`)
+  }
+  return what === 'rows'
+}
+
 function pickHit(hits, occurrence) {
   if (hits.length === 0) return { reason: 'not_found' }
   if (occurrence === undefined || occurrence === null) {
@@ -772,6 +910,25 @@ export const agentPlugin = {
       text = null
       if (!own) foreign += 1
     })
+
+    // the answer of the reveal command: a command of the editor returns nothing itself
+    let shown = false
+    try {
+      host.automation.registerCommand({
+        id: REVEAL_COMMAND,
+        label: 'Show a change',
+        execute: (services, place) => {
+          try {
+            shown = showPlace(services, place)
+          } catch {
+            // a place that is no longer there (the change was undone) is not an error
+            shown = false
+          }
+        },
+      })
+    } catch {
+      // registered by an earlier activation of this plugin, or a host without commands
+    }
 
     const guarded =
       (fn) =>
@@ -923,7 +1080,12 @@ export const agentPlugin = {
           const { hit } = pickHit(hits, occurrence)
           if (!hit || !isReplaceable(hit)) throw fail('CHANGED', 'the document changed mid-call')
           replaceHit(doc, hit, replacement)
-          return { ok: true, count: hits.length, inTable: Boolean(hit.cellContext) }
+          return {
+            ok: true,
+            count: hits.length,
+            inTable: Boolean(hit.cellContext),
+            place: placeOf(hit, replacement.length),
+          }
         })
       }),
 
@@ -936,7 +1098,12 @@ export const agentPlugin = {
           // back to front, so replacing one match never moves the offset of one still to do
           const hits = searchAll(doc, find).filter(isReplaceable).reverse()
           for (const hit of hits) replaceHit(doc, hit, replacement)
-          return { ok: true, count: hits.length }
+          // the first in reading order is the last one done; nothing in front of it moved
+          return {
+            ok: true,
+            count: hits.length,
+            place: placeOf(hits[hits.length - 1], replacement.length),
+          }
         })
       }),
 
@@ -970,7 +1137,15 @@ export const agentPlugin = {
               if (text) box.insert(at, text)
             }
             mustKeep(before, objectsOf(doc))
-            return { ok: true, count: paragraphs.length, inTable: box.inTable }
+            return {
+              ok: true,
+              count: paragraphs.length,
+              inTable: box.inTable,
+              place: box.place(
+                where === 'before' ? box.index : box.index + 1,
+                paragraphs[0].length,
+              ),
+            }
           }),
         )
       }),
@@ -1007,7 +1182,13 @@ export const agentPlugin = {
             // goes, and the ones around it keep their own formatting
             else box.deleteRange(k - 1, box.length(k - 1), k, length)
             mustKeep(before, objectsOf(doc))
-            return { ok: true, text, emptied, inTable: box.inTable }
+            return {
+              ok: true,
+              text,
+              emptied,
+              inTable: box.inTable,
+              place: box.place(emptied ? k : k - 1, 0),
+            }
           }),
         )
       }),
@@ -1043,7 +1224,13 @@ export const agentPlugin = {
             const after = objectsOf(doc)
             // the new table is an object of its own; nothing that was there may be gone
             mustKeep(before, { ...after, controls: Math.min(after.controls, before.controls) })
-            return { ok: true, rows: table.length, cols: table[0].length, inTable: box.inTable }
+            return {
+              ok: true,
+              rows: table.length,
+              cols: table[0].length,
+              inTable: box.inTable,
+              place: box.place(at, 0),
+            }
           }),
         )
       }),
@@ -1086,7 +1273,7 @@ export const agentPlugin = {
               box.formatChars(box.index, hit.charOffset, hit.charOffset + hit.length, chars)
             }
             mustKeep(before, objectsOf(doc))
-            return { ok: true, count: hits.length }
+            return { ok: true, count: hits.length, place: placeOf(hits[0], hits[0].length) }
           }),
         )
       }),
@@ -1124,7 +1311,7 @@ export const agentPlugin = {
             if (chars && length > 0) box.formatChars(box.index, 0, length, chars)
             if (paragraph) box.formatParagraph(box.index, paragraph)
             mustKeep(before, objectsOf(doc))
-            return { ok: true, inTable: box.inTable }
+            return { ok: true, inTable: box.inTable, place: box.place(box.index, length) }
           }),
         )
       }),
@@ -1197,6 +1384,7 @@ export const agentPlugin = {
             if (end < 0) end = grid.length
           }
           const fields = fieldsByCell(doc)
+          const covered = coveredCells(doc, table)
           const key = tableKey(table.sec, table.para, table.path)
           const cells = grid.slice(0, end).map((place) => {
             const held = fields.get(`${key}:${place.cell}`)
@@ -1207,7 +1395,9 @@ export const agentPlugin = {
               ...(place.colSpan > 1 ? { colSpan: place.colSpan } : {}),
               text: clip(paragraphsOf(cellBox(doc, table, place.cell)).join('\n'), MAX_CELL_CHARS),
               ...(held ? { fields: held.map((field) => field.number) } : {}),
-              ...(!held && cellHoldsObject(doc, table, place.cell) ? { object: true } : {}),
+              ...(!held && (covered.has(place.cell) || cellHoldsObject(doc, table, place.cell))
+                ? { object: true }
+                : {}),
             }
           })
           return {
@@ -1238,6 +1428,7 @@ export const agentPlugin = {
             return { refusal: { ok: false, reason: 'no_such_table', count: tables.length } }
           const grid = gridOf(doc, table)
           const fields = fieldsByCell(doc)
+          const covered = coveredCells(doc, table)
           const key = tableKey(table.sec, table.para, table.path)
           const targets = []
           const missing = []
@@ -1274,7 +1465,7 @@ export const agentPlugin = {
               } else targets.push({ ...want, cell: place.cell, field })
               continue
             }
-            if (cellHoldsObject(doc, table, place.cell)) {
+            if (covered.has(place.cell) || cellHoldsObject(doc, table, place.cell)) {
               holding.push(at)
               continue
             }
@@ -1325,9 +1516,200 @@ export const agentPlugin = {
               })
             }
             mustKeep(before, objectsOf(doc, own))
-            return { ok: true, table: number, count: targets.length }
+            const first = targets[0]
+            return {
+              ok: true,
+              table: number,
+              count: targets.length,
+              place: cellBox(doc, table, first.cell).place(
+                0,
+                first.field ? 0 : first.lines[0].length,
+              ),
+            }
           }),
         )
+      }),
+
+      /**
+       * Add `count` empty rows or columns to table `number`, after or before row or column
+       * `at` (1-based). The new ones are shaped like the one they are added next to: the
+       * engine copies its cells, and the alignment of each new cell is set to match. Only
+       * for a table of the body: the engine has no such call for a table inside a cell.
+       */
+      addTableLines: guarded((number, what, at, where, count) => {
+        const rows = checkLines(what, at, count)
+        if (where !== 'after' && where !== 'before') {
+          throw fail('BAD_ARGUMENT', 'where must be "after" or "before"')
+        }
+        const plan = (doc) => {
+          const { tables } = tablesOf(doc)
+          const table = Number.isInteger(number) ? tables[number - 1] : undefined
+          if (!table)
+            return { refusal: { ok: false, reason: 'no_such_table', count: tables.length } }
+          const size = { rows: table.rows, cols: table.cols }
+          if (table.parent !== null) return { refusal: { ok: false, reason: 'nested', ...size } }
+          if (at > (rows ? table.rows : table.cols)) {
+            return { refusal: { ok: false, reason: 'no_such_line', ...size } }
+          }
+          return { table }
+        }
+        const refusal = host.read((doc) => plan(doc).refusal ?? null)
+        if (refusal) return refusal
+        return keepingObjects((mustKeep) =>
+          change('add-table-lines', (doc) => {
+            const { table } = plan(doc)
+            if (!table) throw fail('CHANGED', 'the document changed mid-call')
+            const before = objectsOf(doc)
+            const { sec, para } = table
+            const ctrl = table.path[0].controlIndex
+            const after = where === 'after'
+            for (let n = 0; n < count; n++) {
+              // "before" pushes the line it copies down by one each time
+              const beside = after ? at - 1 : at - 1 + n
+              expectOk(
+                rows
+                  ? doc.insertTableRow(sec, para, ctrl, beside, after)
+                  : doc.insertTableColumn(sec, para, ctrl, beside, after),
+                rows ? 'add a row' : 'add a column',
+              )
+            }
+            const first = after ? at : at - 1
+            const model = after ? at - 1 : at - 1 + count
+            const grown = {
+              ...table,
+              cells: parse(doc.getTableDimensions(sec, para, ctrl)).cellCount,
+            }
+            const grid = gridOf(doc, grown)
+            const line = (cell) => (rows ? cell.row : cell.col)
+            const across = (cell) => (rows ? cell.col : cell.row)
+            const alignment = (cell) =>
+              parse(doc.getCellParaPropertiesAt(sec, para, ctrl, cell.cell, 0)).alignment
+            for (const cell of grid) {
+              if (line(cell) < first || line(cell) >= first + count) continue
+              const like = grid.find((c) => line(c) === model && across(c) === across(cell))
+              if (!like) continue
+              const wanted = alignment(like)
+              if (wanted && wanted !== alignment(cell)) {
+                expectOk(
+                  doc.applyParaFormatInCell(
+                    sec,
+                    para,
+                    ctrl,
+                    cell.cell,
+                    0,
+                    JSON.stringify({ alignment: wanted }),
+                  ),
+                  'format the new cell',
+                )
+              }
+            }
+            mustKeep(before, objectsOf(doc))
+            const dims = parse(doc.getTableDimensions(sec, para, ctrl))
+            const shown = grid.find((cell) => line(cell) === first)
+            return {
+              ok: true,
+              table: number,
+              rows: dims.rowCount,
+              cols: dims.colCount,
+              first: first + 1,
+              count,
+              ...(shown ? { place: cellBox(doc, grown, shown.cell).place(0, 0) } : {}),
+            }
+          }),
+        )
+      }),
+
+      /**
+       * Remove `count` rows or columns of table `number`, from row or column `at`
+       * (1-based), with what is in them. Not all of them: a table keeps one row and one
+       * column. A row or column with a cell that holds a picture or another object is left
+       * alone, and so is the whole call.
+       */
+      removeTableLines: guarded((number, what, at, count) => {
+        const rows = checkLines(what, at, count)
+        const plan = (doc) => {
+          const { tables } = tablesOf(doc)
+          const table = Number.isInteger(number) ? tables[number - 1] : undefined
+          if (!table)
+            return { refusal: { ok: false, reason: 'no_such_table', count: tables.length } }
+          const size = { rows: table.rows, cols: table.cols }
+          if (table.parent !== null) return { refusal: { ok: false, reason: 'nested', ...size } }
+          const total = rows ? table.rows : table.cols
+          if (at + count - 1 > total)
+            return { refusal: { ok: false, reason: 'no_such_line', ...size } }
+          if (count >= total) return { refusal: { ok: false, reason: 'would_empty', ...size } }
+          const covered = coveredCells(doc, table)
+          const going = gridOf(doc, table).filter((cell) => {
+            const line = rows ? cell.row : cell.col
+            return line >= at - 1 && line < at - 1 + count
+          })
+          const holding = going
+            .filter((cell) => covered.has(cell.cell) || cellHoldsObject(doc, table, cell.cell))
+            .map((cell) => ({ row: cell.row + 1, col: cell.col + 1 }))
+          if (holding.length > 0) {
+            return { refusal: { ok: false, reason: 'holds_object', cells: holding, ...size } }
+          }
+          return { table, going }
+        }
+        const refusal = host.read((doc) => plan(doc).refusal ?? null)
+        if (refusal) return refusal
+        return keepingObjects((mustKeep) =>
+          change('remove-table-lines', (doc) => {
+            const { table, going } = plan(doc)
+            if (!table) throw fail('CHANGED', 'the document changed mid-call')
+            const before = objectsOf(doc, new Set())
+            const { sec, para } = table
+            const ctrl = table.path[0].controlIndex
+            const text = clip(
+              going
+                .map((cell) =>
+                  paragraphsOf(cellBox(doc, table, cell.cell))
+                    .join(' ')
+                    .trim(),
+                )
+                .filter(Boolean)
+                .join(' | '),
+              MAX_REPORTED_CHARS,
+            )
+            for (let n = 0; n < count; n++) {
+              // the next one moves up into the place of the one just removed
+              expectOk(
+                rows
+                  ? doc.deleteTableRow(sec, para, ctrl, at - 1)
+                  : doc.deleteTableColumn(sec, para, ctrl, at - 1),
+                rows ? 'remove the row' : 'remove the column',
+              )
+            }
+            // the value of a named cell goes with its cell; nothing else may be lost
+            mustKeep(before, objectsOf(doc, new Set()))
+            const dims = parse(doc.getTableDimensions(sec, para, ctrl))
+            const shrunk = { ...table, cells: dims.cellCount }
+            return {
+              ok: true,
+              table: number,
+              rows: dims.rowCount,
+              cols: dims.colCount,
+              count,
+              text,
+              place: cellBox(doc, shrunk, 0).place(0, 0),
+            }
+          }),
+        )
+      }),
+
+      /**
+       * Show a place in the editor: its caret goes there, the run is selected, and the view
+       * scrolls to it. `place` is what a change handed back. Answers false when the editor
+       * cannot (no caret yet, or the place is gone).
+       */
+      reveal: guarded((place) => {
+        shown = false
+        try {
+          host.automation.execute(REVEAL_COMMAND, place)
+        } catch {
+          return { ok: false }
+        }
+        return { ok: shown }
       }),
 
       /**
@@ -1358,7 +1740,8 @@ export const agentPlugin = {
           const field = parse(doc.getFieldList())[number - 1]
           if (!field) throw fail('CHANGED', 'the document changed mid-call')
           expectOk(doc.setFieldValue(field.fieldId, value), 'fill the field')
-          return { ok: true, name: field.name ?? '' }
+          const place = fieldPlace(field)
+          return { ok: true, name: field.name ?? '', ...(place ? { place } : {}) }
         })
       }),
 

@@ -157,7 +157,7 @@ describe('reading', () => {
 describe('replacing one occurrence', () => {
   it('replaces a text that occurs once, in the body or in a table cell', () => {
     const editor = fakeEditor(['제출 기한은 3월 2일'], [{ para: 0, text: '담당자: 홍길동' }])
-    expect(editor.plugin.replaceText('3월 2일', '3월 9일')).toEqual({
+    expect(editor.plugin.replaceText('3월 2일', '3월 9일')).toMatchObject({
       ok: true,
       count: 1,
       inTable: false,
@@ -212,7 +212,7 @@ describe('replacing one occurrence', () => {
 describe('replacing every occurrence', () => {
   it('is one undo step, however many places change', () => {
     const editor = fakeEditor(['갑 갑 갑', '갑'], [{ para: 1, text: '갑과 을' }])
-    expect(editor.plugin.replaceAllText('갑', '발주처')).toEqual({ ok: true, count: 5 })
+    expect(editor.plugin.replaceAllText('갑', '발주처')).toMatchObject({ ok: true, count: 5 })
     expect(editor.text()).toBe('발주처 발주처 발주처\n발주처\n발주처과 을')
     expect(editor.steps()).toBe(1)
   })
@@ -242,7 +242,7 @@ describe('form fields', () => {
       { field: 1, name: '성명', guide: '', value: '', inCell: false },
       { field: 2, name: '소속', guide: '', value: '총무과', inCell: false },
     ])
-    expect(editor.plugin.fillField(1, '홍길동')).toEqual({ ok: true, name: '성명' })
+    expect(editor.plugin.fillField(1, '홍길동')).toMatchObject({ ok: true, name: '성명' })
     expect(editor.fieldValues()).toEqual(['홍길동', '총무과'])
     expect(editor.steps()).toBe(1)
   })
@@ -289,7 +289,7 @@ describe('taking a run back', () => {
     editor.plugin.replaceText('둘', '2')
     // the plugin's own changes are not foreign
     expect(editor.plugin.foreignChanges()).toBe(before)
-    expect(editor.plugin.undo(2, before)).toEqual({ ok: true, undone: 2 })
+    expect(editor.plugin.undo(2, before)).toMatchObject({ ok: true, undone: 2 })
     expect(editor.text()).toBe('하나 둘 셋')
     // nor is its own undo: a run under this one can still be taken back
     expect(editor.plugin.foreignChanges()).toBe(before)
