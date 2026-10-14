@@ -1152,7 +1152,8 @@ function ChangeLine({ item }: { item: HwpChange }): ReactElement {
       {item.kind === 'field' ||
       item.kind === 'format' ||
       item.kind === 'cells' ||
-      item.kind === 'lines' ? (
+      item.kind === 'lines' ||
+      item.kind === 'note' ? (
         // named, not struck through: this text stays, it is what the change was done to
         <span className="ai-change-field">{item.from}</span>
       ) : (

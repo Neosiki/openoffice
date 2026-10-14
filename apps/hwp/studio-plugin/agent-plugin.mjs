@@ -1183,6 +1183,139 @@ function pickHit(hits, occurrence) {
   return { hit: hits[occurrence - 1] }
 }
 
+/** Most notes listNotes lists. */
+const MAX_LISTED_NOTES = 200
+/** Longest note text listNotes shows. */
+const MAX_LISTED_NOTE_CHARS = 500
+/** Most paragraphs one note is written with. */
+const MAX_NOTE_LINES = 20
+/** Text shown before a note's mark, so the model can tell where it sits. */
+const NOTE_CONTEXT_CHARS = 30
+const NOTE_KINDS = ['footnote', 'endnote']
+const NOTE_CONTROL_IDS = new Set(['fn', 'en'])
+/** What comes before the text in the first paragraph of a note: its number and a space. */
+const NOTE_NUMBER_CHARS = 2
+
+/**
+ * The engine answers a note with its text as JSON, but leaves a tab in that text unescaped,
+ * which JSON does not allow. Its answers carry no whitespace between tokens, so every control
+ * character in one is inside a string and can be escaped.
+ */
+const parseNoteInfo = (json) =>
+  JSON.parse(
+    // eslint-disable-next-line no-control-regex
+    json.replace(/[\u0000-\u001f]/g, (c) => `\\u${c.charCodeAt(0).toString(16).padStart(4, '0')}`),
+  )
+
+/**
+ * The footnotes and endnotes of the body, in reading order. A note is addressed by the
+ * body paragraph its mark sits in and its index among that paragraph's controls. The
+ * engine has no such address for a note inside a table cell or a text box: `elsewhere`
+ * counts those.
+ *
+ * The first paragraph of a note starts with its number and a space (`prefix` characters);
+ * `lines` is the text after them. A note that holds anything but text (an equation, a
+ * picture) is not `plain`: its text is shown but not rewritten.
+ */
+function notesOf(doc) {
+  const controls = parse(doc.getControls()).filter((control) =>
+    NOTE_CONTROL_IDS.has(control.ctrlId),
+  )
+  const notes = []
+  if (controls.length === 0) return { notes, elsewhere: 0 }
+  // the notes of the body, in document order: their kind, when the engine cannot say it
+  // here (a new endnote has no place on a page until the editor lays the pages out again)
+  const bodyNotes = controls.filter((control) => control.list === 0)
+  const sections = doc.getSectionCount()
+  for (let sec = 0; sec < sections; sec++) {
+    const paragraphs = doc.getParagraphCount(sec)
+    for (let para = 0; para < paragraphs && notes.length < controls.length; para++) {
+      const positions = parse(doc.getControlTextPositions(sec, para))
+      positions.forEach((offset, control) => {
+        let info
+        try {
+          info = parseNoteInfo(doc.getFootnoteInfo(sec, para, control))
+        } catch {
+          return // not a note: a table, a picture, a section definition
+        }
+        if (!info.ok) return
+        let kind = null
+        let prefix = NOTE_NUMBER_CHARS
+        try {
+          const edit = parse(doc.getNoteEditInfo(sec, para, control))
+          kind = edit.kind
+          if (Number.isInteger(edit.charOffset)) prefix = edit.charOffset
+        } catch {
+          const listed = bodyNotes[notes.length]
+          if (listed && listed.para === para && listed.controlIndex === control) {
+            kind = listed.ctrlId === 'en' ? 'endnote' : 'footnote'
+          }
+        }
+        const texts = Array.isArray(info.texts) ? info.texts : []
+        notes.push({
+          sec,
+          para,
+          control,
+          offset,
+          kind: kind === 'endnote' ? 'endnote' : 'footnote',
+          number: info.number,
+          prefix,
+          lines: texts.map((line, index) => (index === 0 ? line.slice(prefix) : line)),
+          plain: texts.reduce((sum, line) => sum + line.length, 0) === info.totalTextLen,
+        })
+      })
+    }
+  }
+  return { notes, elsewhere: Math.max(0, controls.length - notes.length) }
+}
+
+/** The text in front of a note's mark, cut to a few words. */
+function noteContext(doc, note) {
+  const start = Math.max(0, note.offset - NOTE_CONTEXT_CHARS)
+  return note.offset > start
+    ? doc.getTextRange(note.sec, note.para, start, note.offset - start)
+    : ''
+}
+
+function checkNoteText(text) {
+  if (typeof text !== 'string' || text.trim() === '') {
+    throw fail('BAD_ARGUMENT', 'the note text must be a non-empty string')
+  }
+  const lines = text.split('\n')
+  if (lines.length > MAX_NOTE_LINES) {
+    throw fail('BAD_ARGUMENT', `a note takes at most ${MAX_NOTE_LINES} paragraphs`)
+  }
+  for (const line of lines) {
+    if (CONTROL_CHARS.test(line))
+      throw fail('BAD_ARGUMENT', 'the note text holds a control character')
+  }
+  return lines
+}
+
+/**
+ * Write `lines` into a note whose first paragraph holds only its number (`prefix`
+ * characters): the first line after the number, each further line as a paragraph of its own.
+ */
+function writeNote(doc, at, prefix, lines) {
+  const { sec, para, control } = at
+  let end = prefix
+  lines.forEach((line, index) => {
+    if (index > 0) {
+      // the engine counts a split in the first paragraph one place further than an insert (the
+      // number in front); past the end it splits at the end, so the extra place is safe
+      const at = index - 1 === 0 ? end + 1 : end
+      expectOk(doc.splitParagraphInFootnote(sec, para, control, index - 1, at), 'split the note')
+      end = 0
+    }
+    if (line) {
+      expectOk(doc.insertTextInFootnote(sec, para, control, index, end, line), 'write the note')
+    }
+    end += line.length
+  })
+}
+
+const noteSummary = (note) => ({ kind: note.kind, number: note.number })
+
 /** Takes the plugin's double-click listener off the page again. */
 let stopListening = null
 
@@ -2316,6 +2449,164 @@ export const agentPlugin = {
           const place = fieldPlace(field)
           return { ok: true, name: field.name ?? '', ...(place ? { place } : {}) }
         })
+      }),
+
+      /**
+       * The footnotes and endnotes of the body in reading order: number in this list (what
+       * editNote and deleteNote take), kind, the document's own number, the text in front of
+       * the mark, and the note's text.
+       */
+      listNotes: guarded(() =>
+        host.read((doc) => {
+          const { notes, elsewhere } = notesOf(doc)
+          return {
+            count: notes.length,
+            elsewhere,
+            notes: notes.slice(0, MAX_LISTED_NOTES).map((note, index) => ({
+              note: index + 1,
+              ...noteSummary(note),
+              after: noteContext(doc, note),
+              text: clip(note.lines.join('\n'), MAX_LISTED_NOTE_CHARS),
+              ...(note.plain ? {} : { objects: true }),
+            })),
+          }
+        }),
+      ),
+
+      /**
+       * Add a footnote or an endnote whose mark goes right after `anchor` (the text must
+       * occur once, or `occurrence` picks one), with `text` as its content; a line break
+       * starts a new paragraph of the note. Notes go in the body text only.
+       */
+      insertNote: guarded((kind, anchor, occurrence, text) => {
+        if (!NOTE_KINDS.includes(kind))
+          throw fail('BAD_ARGUMENT', 'kind must be footnote or endnote')
+        const lines = checkNoteText(text)
+        const pick = (doc) => {
+          const hits = searchAll(doc, anchor)
+          const picked = pickHit(hits, occurrence)
+          const reason = !picked.hit
+            ? picked.reason
+            : !isReplaceable(picked.hit) || cellPathOf(picked.hit)
+              ? 'unsupported_place'
+              : null
+          return { hits, hit: reason ? null : picked.hit, reason }
+        }
+        const refusal = host.read((doc) => {
+          const { hits, reason } = pick(doc)
+          if (!reason) return null
+          return {
+            ok: false,
+            reason,
+            count: hits.length,
+            ...(reason === 'ambiguous' ? { matches: listMatches(doc, hits) } : {}),
+          }
+        })
+        if (refusal) return refusal
+        return keepingObjects((mustKeep) =>
+          change('insert-note', (doc) => {
+            const { hit } = pick(doc)
+            if (!hit) throw fail('CHANGED', 'the document changed mid-call')
+            const before = objectsOf(doc)
+            const offset = hit.charOffset + hit.length
+            const made = parse(
+              kind === 'endnote'
+                ? doc.insertEndnote(hit.sec, hit.para, offset)
+                : doc.insertFootnote(hit.sec, hit.para, offset),
+            )
+            if (!made.ok || !Number.isInteger(made.controlIdx)) {
+              throw fail('ENGINE', `could not add the ${kind}`)
+            }
+            const at = { sec: hit.sec, para: made.paraIdx ?? hit.para, control: made.controlIdx }
+            // a new note holds its number only: everything in it is the number
+            const prefix = parse(doc.getFootnoteInfo(at.sec, at.para, at.control)).totalTextLen
+            writeNote(doc, at, prefix, lines)
+            // the one control more is the note itself
+            mustKeep({ ...before, controls: before.controls + 1 }, objectsOf(doc))
+            return {
+              ok: true,
+              kind,
+              number: made.footnoteNumber ?? made.endnoteNumber ?? null,
+              place: placeOf(hit, hit.length),
+            }
+          }),
+        )
+      }),
+
+      /** Replace the whole text of a note (its number from listNotes); a line break starts a paragraph. */
+      editNote: guarded((number, text) => {
+        const lines = checkNoteText(text)
+        const refusal = host.read((doc) => {
+          const { notes } = notesOf(doc)
+          const note = notes[number - 1]
+          if (!Number.isInteger(number) || !note) {
+            return { ok: false, reason: 'no_such_note', count: notes.length }
+          }
+          return note.plain ? null : { ok: false, reason: 'has_objects', count: 1 }
+        })
+        if (refusal) return refusal
+        return keepingObjects((mustKeep) =>
+          change('edit-note', (doc) => {
+            const note = notesOf(doc).notes[number - 1]
+            if (!note || !note.plain) throw fail('CHANGED', 'the document changed mid-call')
+            const before = objectsOf(doc)
+            // one paragraph holding the number only, then the new text
+            for (let k = note.lines.length - 1; k > 0; k--) {
+              expectOk(
+                doc.mergeParagraphInFootnote(note.sec, note.para, note.control, k),
+                'merge the note',
+              )
+            }
+            const first = parse(doc.getFootnoteInfo(note.sec, note.para, note.control)).totalTextLen
+            if (first > note.prefix) {
+              expectOk(
+                doc.deleteTextInFootnote(
+                  note.sec,
+                  note.para,
+                  note.control,
+                  0,
+                  note.prefix,
+                  first - note.prefix,
+                ),
+                'clear the note',
+              )
+            }
+            writeNote(doc, note, note.prefix, lines)
+            mustKeep(before, objectsOf(doc))
+            return {
+              ok: true,
+              ...noteSummary(note),
+              was: clip(note.lines.join('\n'), MAX_REPORTED_CHARS),
+              place: { sec: note.sec, para: note.para, offset: note.offset, length: 0 },
+            }
+          }),
+        )
+      }),
+
+      /** Remove a note (its number from listNotes), mark and text. */
+      deleteNote: guarded((number) => {
+        const refusal = host.read((doc) => {
+          const { notes } = notesOf(doc)
+          return Number.isInteger(number) && notes[number - 1]
+            ? null
+            : { ok: false, reason: 'no_such_note', count: notes.length }
+        })
+        if (refusal) return refusal
+        return keepingObjects((mustKeep) =>
+          change('delete-note', (doc) => {
+            const note = notesOf(doc).notes[number - 1]
+            if (!note) throw fail('CHANGED', 'the document changed mid-call')
+            const before = objectsOf(doc)
+            expectOk(doc.deleteFootnote(note.sec, note.para, note.control), 'remove the note')
+            mustKeep({ ...before, controls: before.controls - 1 }, objectsOf(doc))
+            return {
+              ok: true,
+              ...noteSummary(note),
+              text: clip(note.lines.join('\n'), MAX_REPORTED_CHARS),
+              place: { sec: note.sec, para: note.para, offset: note.offset, length: 0 },
+            }
+          }),
+        )
       }),
 
       /**

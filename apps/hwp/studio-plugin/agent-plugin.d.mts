@@ -290,6 +290,43 @@ export type AgentRemoveLinesResult =
     }
   | AgentTableLinesRefusal
 
+export type AgentNoteKind = 'footnote' | 'endnote'
+
+/** One footnote or endnote of the body, as listNotes lists it. */
+export interface AgentNote {
+  /** 1-based position among the notes of the body in reading order; what editNote and deleteNote take */
+  note: number
+  kind: AgentNoteKind
+  /** the number the document shows (footnotes and endnotes are counted apart) */
+  number: number
+  /** the text in front of the note's mark */
+  after: string
+  /** the note's text, a line per paragraph, cut when long */
+  text: string
+  /** it holds something besides text (an equation, a picture): it is not rewritten */
+  objects?: true
+}
+
+export interface AgentNoteList {
+  count: number
+  /** notes inside table cells or text boxes, which have no address here */
+  elsewhere: number
+  notes: AgentNote[]
+}
+
+export type AgentInsertNoteResult =
+  { ok: true; kind: AgentNoteKind; number: number | null; place: AgentPlace } | AgentPlaceRefusal
+
+export type AgentEditNoteResult =
+  | { ok: true; kind: AgentNoteKind; number: number; was: string; place: AgentPlace }
+  | { ok: false; reason: 'no_such_note'; count: number }
+  | { ok: false; reason: 'has_objects'; count: number }
+
+export type AgentDeleteNoteResult =
+  | { ok: true; kind: AgentNoteKind; number: number; text: string; place: AgentPlace }
+  | { ok: false; reason: 'no_such_note'; count: number }
+  | { ok: false; reason: 'has_objects'; count: number }
+
 export type AgentUndoResult =
   { ok: boolean; undone: number } | { ok: false; reason: 'changed'; undone: 0 }
 
@@ -350,6 +387,15 @@ export interface AgentPluginSurface {
   ): AgentFormatSelectionResult
   listFields(): AgentField[]
   fillField(field: number, value: string): AgentFillResult
+  listNotes(): AgentNoteList
+  insertNote(
+    kind: AgentNoteKind,
+    anchor: string,
+    occurrence: number | null,
+    text: string,
+  ): AgentInsertNoteResult
+  editNote(note: number, text: string): AgentEditNoteResult
+  deleteNote(note: number): AgentDeleteNoteResult
   undo(steps: number, expectedForeign: number): AgentUndoResult
 }
 

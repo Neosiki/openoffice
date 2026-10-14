@@ -39,6 +39,7 @@ export interface HwpChange {
     | 'format'
     | 'cells'
     | 'lines'
+    | 'note'
   /** the replaced, removed or formatted text, the field name, or the table whose cells were filled; empty for something added */
   from: string
   /** the new text (for a table its first row, for a format what was set, for cells what went into them); empty for something removed */
@@ -95,9 +96,10 @@ const SYSTEM_PROMPT = [
   '- Work on the tables that are already there: list them (list_tables), read one cell by cell (read_table), write text into its cells, many at once (fill_cells), and add or remove rows and columns (add_to_table, remove_from_table).',
   '- Change formatting: bold, italic, underline, strikethrough, font size, text colour and highlight of a piece of text (format_text); alignment and line spacing of a paragraph, and the character formatting of a whole paragraph (format_paragraph).',
   '- Fill the form fields of the document (list_fields, fill_field). In Hangul these are called 누름틀. A field is picked by its number in list_fields, because several fields often share one name.',
+  '- Add footnotes and endnotes (각주, 미주) with their mark right after a piece of body text (insert_note), list the notes with their text (list_notes), and rewrite or remove one (edit_note, delete_note). The text of the document does not show the notes; list_notes does.',
   '',
   '## What they cannot do',
-  '- You cannot change the font family, styles, numbering, indents, borders or cell shading, or the page layout. You cannot add or change pictures, or merge or split the cells of a table.',
+  '- You cannot change the font family, styles, numbering, indents, borders or cell shading, or the page layout. You cannot add or change pictures, or merge or split the cells of a table. A note cannot be put inside a table cell.',
   '- One piece of text is always one line: a line break inside a text argument is refused. Several paragraphs are several strings in one insert_paragraphs call.',
   '- When the user asks for something the tools cannot do, say so plainly instead of approximating it.',
   '',
@@ -116,6 +118,12 @@ const SYSTEM_PROMPT = [
   '- Leave a cell empty when you do not know its answer, and tell the user which ones are left.',
   '- When a list in a form has too few rows for what the user gave you, add rows after the last row of that list with add_to_table (they come out shaped like that row), read the table again for the new row numbers, then fill them. Do not add rows or columns the user has no content for.',
   '- Remove rows or columns only when the user asks for it: what is in them goes too.',
+  '',
+  '## Footnotes and endnotes',
+  '- A footnote explains or gives the source of the words it follows and shows at the foot of the page; an endnote does the same at the end of the document. Use the kind the user asks for; when they do not say, use a footnote, and use endnotes where the document already has them.',
+  '- The mark goes right after the words the note is about: pass those words as after, as short as is unambiguous. The document numbers the notes itself; never type a number into the text or the note.',
+  '- Write the note text plainly: no number, no leading mark, no markdown. A source is written the way the document already cites (author, title, year, page).',
+  '- To change a note, call list_notes and rewrite it with edit_note by its number there; edit_note replaces its whole text. Remove a note only when the user asks.',
   '',
   '## When the user has selected text',
   '- When the context has a "Selected text" block, the user selected that part in the editor and the request is about it: "this", "here", "이 부분", "선택한 부분" mean the selection.',
@@ -163,6 +171,12 @@ const TEXT_FORMAT_SCHEMA = {
 
 /** Cells one read_table answer holds at most (the editor's own limit), as the model is told. */
 const READ_TABLE_HINT = 600
+
+const NOTE_TEXT_SCHEMA = {
+  type: 'string',
+  description:
+    'the text of the note, without its number; a line break starts a new paragraph of the note',
+}
 
 const TOOLS: AgentToolDef[] = [
   {
@@ -448,7 +462,61 @@ const TOOLS: AgentToolDef[] = [
       required: ['field', 'value'],
     },
   },
+  {
+    name: 'list_notes',
+    description:
+      'List the footnotes and endnotes of the body in reading order: their number in this list (what edit_note and delete_note take), kind, the number the document shows, the words in front of the mark, and the text.',
+    inputSchema: { type: 'object', properties: {} },
+  },
+  {
+    name: 'insert_note',
+    description:
+      'Add a footnote or an endnote. Its mark goes right after the given body text, which must occur once (or pass occurrence); the document numbers it. Not inside table cells.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        kind: { type: 'string', enum: ['footnote', 'endnote'] },
+        after: { type: 'string', description: 'the body text the mark goes right after' },
+        occurrence: {
+          type: 'integer',
+          minimum: 1,
+          description: 'which occurrence of after, when it occurs more than once',
+        },
+        text: NOTE_TEXT_SCHEMA,
+      },
+      required: ['kind', 'after', 'text'],
+    },
+  },
+  {
+    name: 'edit_note',
+    description: 'Replace the whole text of a note, picked by its number from list_notes.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        note: { type: 'integer', minimum: 1, description: 'the note number from list_notes' },
+        text: NOTE_TEXT_SCHEMA,
+      },
+      required: ['note', 'text'],
+    },
+  },
+  {
+    name: 'delete_note',
+    description:
+      'Remove a note, its mark and its text, picked by its number from list_notes. Only when the user asks.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        note: { type: 'integer', minimum: 1, description: 'the note number from list_notes' },
+      },
+      required: ['note'],
+    },
+  },
 ]
+
+const NO_NOTE_HELP = (count: number) =>
+  count === 0
+    ? 'This document has no footnotes or endnotes in its body text.'
+    : `There is no such note: the body has ${count}. Call list_notes for the numbers.`
 
 const NOT_FOUND_HELP =
   'Not found; nothing was changed. The text must match exactly (letters, spaces, punctuation) and lie inside one paragraph or one table cell. Read that part of the document again. The guide text of an empty form field is not document text: use fill_field for it.'
@@ -738,6 +806,10 @@ export function createHwpSkill(deps: HwpSkillDeps): HwpSkill {
       ),
     }),
   })
+
+  /** A note as the user knows it: "footnote 3", in the UI language. */
+  const noteName = (kind: 'footnote' | 'endnote', number: number | null): string =>
+    label(kind === 'endnote' ? 'aiNoteEndnote' : 'aiNoteFootnote', { number: number ?? '' }).trim()
 
   const run = async (call: AgentToolCall): Promise<ToolExecution> => {
     switch (call.name) {
@@ -1255,6 +1327,105 @@ export function createHwpSkill(deps: HwpSkillDeps): HwpSkill {
           summary: label('aiToolFill', { name: quote(name) }),
         }
       }
+      case 'list_notes': {
+        const listed = await bridge.listNotes()
+        const elsewhere =
+          listed.elsewhere > 0
+            ? `\n${listed.elsewhere} more note(s) sit inside table cells or text boxes, which these tools cannot reach.`
+            : ''
+        return {
+          output:
+            listed.count === 0
+              ? `This document has no footnotes or endnotes in its body text.${elsewhere}`
+              : `${JSON.stringify(listed.notes, null, 1)}${listed.count > listed.notes.length ? `\n[${listed.count - listed.notes.length} more not listed]` : ''}${elsewhere}`,
+          summary: label('aiToolNotes', { count: listed.count }),
+        }
+      }
+      case 'insert_note': {
+        const kind = call.input.kind
+        const after = textArg(call, 'after')
+        const text = textArg(call, 'text')
+        if ((kind !== 'footnote' && kind !== 'endnote') || !after || !text?.trim()) {
+          return bad(call, 'kind must be footnote or endnote, and after and text non-empty strings')
+        }
+        if (hasLineBreak(after)) return bad(call, ONE_LINE_HELP)
+        const occurrence = call.input.occurrence
+        const result = await bridge.insertNote(
+          kind,
+          after,
+          typeof occurrence === 'number' ? occurrence : null,
+          text.replace(/\r\n?/g, '\n'),
+        )
+        if (!result.ok) {
+          return bad(
+            call,
+            result.reason === 'unsupported_place'
+              ? 'Nothing was changed: that text is inside a table cell or an equation, where a note cannot go here. Put the mark after words of the body text, or tell the user.'
+              : placeRefusal(result),
+          )
+        }
+        const name = noteName(result.kind, result.number)
+        deps.onChange({
+          kind: 'note',
+          from: name,
+          to: changeText(text),
+          count: 1,
+          place: result.place,
+        })
+        return {
+          output: `Added ${result.kind} ${result.number ?? ''} after the text.`.replace('  ', ' '),
+          mutated: true,
+          summary: label('aiToolAddNote', { note: name }),
+        }
+      }
+      case 'edit_note': {
+        const note = call.input.note
+        const text = textArg(call, 'text')
+        if (typeof note !== 'number' || !text?.trim()) {
+          return bad(call, 'note must be a number from list_notes and text a non-empty string')
+        }
+        const result = await bridge.editNote(note, text.replace(/\r\n?/g, '\n'))
+        if (!result.ok) {
+          return bad(
+            call,
+            result.reason === 'has_objects'
+              ? 'Nothing was changed: that note holds an equation or a picture besides text, which would be lost.'
+              : NO_NOTE_HELP(result.count),
+          )
+        }
+        const name = noteName(result.kind, result.number)
+        deps.onChange({
+          kind: 'note',
+          from: name,
+          to: changeText(text),
+          count: 1,
+          place: result.place,
+        })
+        return {
+          output: 'Rewrote the note.',
+          mutated: true,
+          summary: label('aiToolEditNote', { note: name }),
+        }
+      }
+      case 'delete_note': {
+        const note = call.input.note
+        if (typeof note !== 'number') return bad(call, 'note must be a number from list_notes')
+        const result = await bridge.deleteNote(note)
+        if (!result.ok) return bad(call, NO_NOTE_HELP(result.count))
+        const name = noteName(result.kind, result.number)
+        deps.onChange({
+          kind: 'delete',
+          from: changeText(`${name}: ${result.text}`),
+          to: '',
+          count: 1,
+          place: result.place,
+        })
+        return {
+          output: 'Removed the note. The notes after it are renumbered by the document.',
+          mutated: true,
+          summary: label('aiToolDeleteNote', { note: name }),
+        }
+      }
       default:
         return bad(call, `unknown tool: ${call.name}`)
     }
@@ -1282,11 +1453,14 @@ export function createHwpSkill(deps: HwpSkillDeps): HwpSkill {
     },
     refreshContext: async () => {
       try {
-        const [text, fields, tables] = await Promise.all([
+        const [text, fields, tables, notes] = await Promise.all([
           bridge.readText(),
           bridge.listFields(),
           bridge.listTables(),
+          // the notes are a line of the context; the document is still worth sending without it
+          bridge.listNotes().catch(() => null),
         ])
+        const footnotes = notes?.notes.filter((note) => note.kind === 'footnote').length ?? 0
         // numbered: the number is what fill_field takes, and names repeat
         const names = fields
           .slice(0, CONTEXT_MAX_FIELDS)
@@ -1301,6 +1475,11 @@ export function createHwpSkill(deps: HwpSkillDeps): HwpSkill {
           tables.count === 0
             ? 'Tables: none.'
             : `Tables: ${tables.count} (list_tables lists them; the text below shows their words but not their empty cells).`,
+          notes === null
+            ? 'Footnotes and endnotes: could not be listed (list_notes may still work).'
+            : notes.count === 0
+              ? 'Footnotes and endnotes: none.'
+              : `Footnotes and endnotes: ${footnotes} footnote(s), ${notes.count - footnotes} endnote(s) (list_notes shows them; the text below does not).`,
           whole
             ? 'Text (complete):'
             : `Text (the first ${CONTEXT_MAX_CHARS} characters; read_document returns the rest):`,

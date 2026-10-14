@@ -37,6 +37,10 @@ const METHODS = [
   'formatSelection',
   'listFields',
   'fillField',
+  'listNotes',
+  'insertNote',
+  'editNote',
+  'deleteNote',
   'undo',
 ] as const satisfies readonly (keyof AgentPluginSurface)[]
 

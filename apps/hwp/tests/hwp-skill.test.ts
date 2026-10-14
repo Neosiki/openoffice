@@ -84,6 +84,27 @@ function setup(overrides: Partial<AgentBridge> = {}) {
     formatSelection: vi.fn(async () => ({ ok: true as const, count: 2, place: PLACE })),
     listFields: vi.fn(async () => []),
     fillField: vi.fn(async () => ({ ok: true as const, name: '성명' })),
+    listNotes: vi.fn(async () => ({ count: 0, elsewhere: 0, notes: [] })),
+    insertNote: vi.fn(async () => ({
+      ok: true as const,
+      kind: 'footnote' as const,
+      number: 2,
+      place: PLACE,
+    })),
+    editNote: vi.fn(async () => ({
+      ok: true as const,
+      kind: 'endnote' as const,
+      number: 1,
+      was: '옛 설명',
+      place: PLACE,
+    })),
+    deleteNote: vi.fn(async () => ({
+      ok: true as const,
+      kind: 'footnote' as const,
+      number: 3,
+      text: '지운 각주',
+      place: PLACE,
+    })),
     undo: vi.fn(async () => ({ ok: true, undone: 1 })),
     ...overrides,
   }
@@ -930,6 +951,123 @@ describe('form fields', () => {
   })
 })
 
+describe('footnotes and endnotes', () => {
+  it('puts a note after the words it is about and lists it as a change', async () => {
+    const { bridge, call, changes } = setup()
+    const result = await call('insert_note', {
+      kind: 'footnote',
+      after: '국가인권위원회',
+      text: '「국가인권위원회법」 제1조\r\n둘째 줄',
+    })
+    expect(result.isError).toBeFalsy()
+    expect(result.mutated).toBe(true)
+    expect(bridge.insertNote).toHaveBeenCalledWith(
+      'footnote',
+      '국가인권위원회',
+      null,
+      '「국가인권위원회법」 제1조\n둘째 줄',
+    )
+    expect(changes).toEqual([
+      {
+        kind: 'note',
+        from: 'aiNoteFootnote:{"number":2}',
+        to: '「국가인권위원회법」 제1조 둘째 줄',
+        count: 1,
+        place: PLACE,
+      },
+    ])
+    expect(result.summary).toBe('aiToolAddNote:{"note":"aiNoteFootnote:{\\"number\\":2}"}')
+  })
+
+  it('says a note cannot go into a table cell', async () => {
+    const { call } = setup({
+      insertNote: async () => ({
+        ok: false as const,
+        reason: 'unsupported_place' as const,
+        count: 1,
+      }),
+    })
+    const result = await call('insert_note', { kind: 'endnote', after: '칸 글', text: '설명' })
+    expect(result.isError).toBe(true)
+    expect(result.output).toContain('table cell')
+  })
+
+  it('refuses a kind it does not know and a note without text', async () => {
+    const { bridge, call } = setup()
+    expect(
+      (await call('insert_note', { kind: 'sidenote', after: '글', text: '설명' })).isError,
+    ).toBe(true)
+    expect((await call('insert_note', { kind: 'footnote', after: '글', text: '  ' })).isError).toBe(
+      true,
+    )
+    expect(bridge.insertNote).not.toHaveBeenCalled()
+  })
+
+  it('rewrites a note by its number and says when there is no such note', async () => {
+    const { call, changes } = setup()
+    expect((await call('edit_note', { note: 1, text: '새 설명' })).mutated).toBe(true)
+    expect(changes[0]).toMatchObject({
+      kind: 'note',
+      from: 'aiNoteEndnote:{"number":1}',
+      to: '새 설명',
+    })
+    const none = setup({
+      editNote: async () => ({ ok: false as const, reason: 'no_such_note' as const, count: 2 }),
+    })
+    const result = await none.call('edit_note', { note: 9, text: '새 설명' })
+    expect(result.isError).toBe(true)
+    expect(result.output).toContain('the body has 2')
+  })
+
+  it('removes a note and lists what went', async () => {
+    const { call, changes } = setup()
+    expect((await call('delete_note', { note: 3 })).mutated).toBe(true)
+    expect(changes[0]).toMatchObject({
+      kind: 'delete',
+      from: 'aiNoteFootnote:{"number":3}: 지운 각주',
+    })
+  })
+
+  it('lists the notes, and the ones it cannot reach', async () => {
+    const { call } = setup({
+      listNotes: async () => ({
+        count: 1,
+        elsewhere: 2,
+        notes: [{ note: 1, kind: 'footnote' as const, number: 1, after: '본문', text: '설명' }],
+      }),
+    })
+    const result = await call('list_notes')
+    expect(result.output).toContain('"after": "본문"')
+    expect(result.output).toContain('2 more note(s) sit inside table cells')
+  })
+
+  it('tells the model how many notes there are, which the text does not show', async () => {
+    const { skill, refreshContext } = setup({
+      listNotes: async () => ({
+        count: 3,
+        elsewhere: 0,
+        notes: [
+          { note: 1, kind: 'footnote' as const, number: 1, after: '', text: '' },
+          { note: 2, kind: 'footnote' as const, number: 2, after: '', text: '' },
+          { note: 3, kind: 'endnote' as const, number: 1, after: '', text: '' },
+        ],
+      }),
+    })
+    await refreshContext()
+    expect(skill.buildContext!()).toContain('Footnotes and endnotes: 2 footnote(s), 1 endnote(s)')
+  })
+
+  it('still sends the document when the notes cannot be listed', async () => {
+    const { skill, refreshContext } = setup({
+      listNotes: async () => {
+        throw new Error('gone')
+      },
+    })
+    await refreshContext()
+    expect(skill.buildContext!()).toContain('Text (complete):')
+  })
+})
+
 describe('the skill as the model sees it', () => {
   it('offers exactly the tools it can execute', async () => {
     const { skill, call } = setup()
@@ -953,6 +1091,10 @@ describe('the skill as the model sees it', () => {
       'remove_from_table',
       'list_fields',
       'fill_field',
+      'list_notes',
+      'insert_note',
+      'edit_note',
+      'delete_note',
     ])
     expect((await call('delete_everything')).isError).toBe(true)
   })
