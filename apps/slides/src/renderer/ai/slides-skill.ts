@@ -656,7 +656,7 @@ const TOOLS: AgentToolDef[] = [
   {
     name: 'save_style_template',
     description:
-      "[Save the current deck's style as a reusable template] Saves the current presentation's Style Skill (visual style guide) under the given name, plus the deck's layout skeleton (recurring title box, brand-image slot, accent shapes and backgrounds). With a built-in design template selected, what is saved is that template's style together with the requests the user added to it. Next time you generate a deck, pass the style_template argument to reuse both directly and skip style generation. Call when the user says \"save this style\" / \"save as template\". A name equal to a built-in design template's id or name (in any letter case) is refused.",
+      "[Save the current deck's style as a reusable template] Saves the current presentation's Style Skill (visual style guide) under the given name, plus the deck's layout skeleton (recurring title box, brand-image slot, accent shapes and backgrounds). With a design template selected (built-in or saved), what is saved is that template's style together with the requests the user added to it. Next time you generate a deck, pass the style_template argument to reuse both directly and skip style generation. Call when the user says \"save this style\" / \"save as template\". A name equal to a built-in design template's id or name (in any letter case) is refused.",
     inputSchema: {
       type: 'object',
       properties: {
@@ -2081,13 +2081,15 @@ async function executeTool(
         if (!topic || !approx) {
           return fail(
             t('aiFailGenDeck'),
-            'generate_deck requires [topic + approx_pages] (system plans internally), or pass [core_hook + style + pages] directly.',
+            'generate_deck requires [topic + approx_pages] (system plans internally), or pass [core_hook + style + pages] directly.' +
+              templateNote,
           )
         }
         if (!access.planDeckOutline)
           return fail(
             t('aiFailGenDeck'),
-            'The current environment does not support internal planning; pass pages directly.',
+            'The current environment does not support internal planning; pass pages directly.' +
+              templateNote,
           )
         access.onProgress?.({
           stage: 'plan',
@@ -2126,7 +2128,10 @@ async function executeTool(
                 status: 'error',
                 summary: t('aiStagePlanFailed'),
               })
-              return fail(t('aiFailGenDeck'), `Planning failed: ${r.error || 'outline is empty'}`)
+              return fail(
+                t('aiFailGenDeck'),
+                `Planning failed: ${r.error || 'outline is empty'}${templateNote}`,
+              )
             }
             break // A later planning batch failed; at least generate what was already planned
           }
@@ -2257,7 +2262,8 @@ async function executeTool(
         styleSkill =
           'Unified clean modern style: main background #FFFFFF, main text #1A1A2E, primary accent #2563EB, secondary accent #F59E0B, cards #F8FAFC, borders #E2E8F0; sans-serif fonts; titles 40-56px, body 16-20px'
       const total = pages.length
-      if (total === 0) return fail(t('aiFailGenDeck'), 'No pages to generate (the plan is empty).')
+      if (total === 0)
+        return fail(t('aiFailGenDeck'), `No pages to generate (the plan is empty).${templateNote}`)
 
       // Store the plan in the progress state (shared with the todolist mechanism; buildContext injects it every turn)
       // Also record styleSkill+topic for the save_style_template tool
@@ -2723,14 +2729,15 @@ async function executeTool(
           t('aiFailSaveTemplate'),
           `"${name}" is taken by the built-in design template "${namesake.name}" (id "${namesake.id}"): a saved style cannot use a built-in template's id or name, in any letter case. Nothing was saved. Save it under another name (ask the user for one if they insisted on this name).`,
         )
-      // With a built-in template selected, the style to save is that template's
-      // text merged with the added requests, and the file records the template.
+      // With a template selected (built-in, or a saved style: also in a window that
+      // generated nothing since the document was reopened), the style to save is its
+      // text merged with the added requests, and the file records the built-in
+      // template it is or came from. Without one, this window's last style.
       const selected = await selectedTemplateOf(access)
-      const fromBuiltin = selected?.kind === 'builtin' ? selected : null
-      const styleSkillToSave = fromBuiltin
-        ? styleWithRequests(fromBuiltin.styleText, fromBuiltin.requests)
+      const styleSkillToSave = selected
+        ? styleWithRequests(selected.styleText, selected.requests)
         : (state?.lastStyleSkill ?? '')
-      const basedOn = fromBuiltin ? fromBuiltin.basedOn : state?.lastStyleBasedOn
+      const basedOn = selected ? selected.basedOn : state?.lastStyleBasedOn
       const topicToSave = state?.lastTopic ?? ''
       if (!styleSkillToSave)
         return fail(
