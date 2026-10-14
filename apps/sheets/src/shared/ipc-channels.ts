@@ -86,8 +86,6 @@ export const IPC_CHANNELS = {
   closeSaveResult: 'workbook:close-save-result',
   exportPdf: 'workbook:export-pdf',
   printWorkbook: 'workbook:print',
-  /** one bundled template font file's bytes (sheets: prefix, answered in the shell too) */
-  templateFontData: 'sheets:template-font-data',
   listPrinters: 'workbook:list-printers',
   exportCsv: 'workbook:export-csv',
   csvSaveConfirm: 'workbook:csv-save-confirm',

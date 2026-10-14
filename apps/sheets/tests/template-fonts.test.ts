@@ -1,10 +1,11 @@
 // The bundled template fonts in the sheets editor: listed in the font pickers even
-// though the OS enumeration cannot see them, registered on the grid canvas from the
-// bundled files, and declared to the PDF export / print page from the same folder.
+// though the OS enumeration cannot see them, registered on the grid canvas by URL at
+// boot and fetched only when used, served from the one folder (listed files only),
+// and declared to the PDF export / print page from the same folder.
 import { existsSync, readFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
-import { fileURLToPath } from 'node:url'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { fileURLToPath, pathToFileURL } from 'node:url'
+import { describe, expect, it, vi } from 'vitest'
 
 import { TEMPLATE_FONT_FAMILY_NAMES, TEMPLATE_FONTS } from '@genoffice/ui/template-fonts'
 
@@ -13,19 +14,28 @@ vi.mock('electron', () => ({
     isPackaged: false,
     getAppPath: () => resolve(import.meta.dirname, '..'),
   },
+  protocol: { handle: () => {} },
 }))
 
+import { DOCX_MEDIA_SCHEME_PRIVILEGE } from '@genoffice/electron-utils/renderer-scheme'
 import {
-  readTemplateFontFile,
   sheetsTemplateFontsDir,
   templateFontFaceCss,
+  templateFontResponse,
   withTemplateFontFaces,
 } from '../src/main/template-fonts'
 import { fontFamilyGroups } from '../src/renderer/system-fonts'
-import { registerTemplateFonts } from '../src/renderer/template-fonts'
+import {
+  isTemplateFontFamily,
+  loadTemplateFontsFor,
+  registerTemplateFonts,
+  workbookTemplateFontUses,
+} from '../src/renderer/template-fonts'
 import {
   TEMPLATE_FONT_FACE_REGISTRATIONS,
   TEMPLATE_FONT_FILES,
+  TEMPLATE_FONT_SCHEME,
+  templateFontUrl,
 } from '../src/shared/template-font-faces'
 import { registeredCellFontAliases } from '../src/renderer/cell-font-fallback'
 
@@ -92,83 +102,153 @@ describe('template font faces', () => {
   })
 })
 
-describe('registerTemplateFonts (grid canvas)', () => {
-  const created: { family: string; source: unknown; weight: string | undefined }[] = []
-
-  beforeEach(() => {
-    created.length = 0
-    vi.stubGlobal(
-      'FontFace',
-      class {
-        constructor(family: string, source: unknown, descriptors?: FontFaceDescriptors) {
-          created.push({ family, source, weight: descriptors?.weight })
-        }
-        load() {
-          return Promise.resolve(this)
-        }
-      },
-    )
-  })
-  afterEach(() => {
-    vi.unstubAllGlobals()
-  })
-
-  it('adds a FontFace per registration from the bytes main hands over, reading each file once', async () => {
-    const reads: string[] = []
+describe('registerTemplateFonts (grid canvas, at boot)', () => {
+  it('registers every face by URL without reading a byte', () => {
+    const created: { family: string; source: unknown; weight: string | undefined }[] = []
     const added: unknown[] = []
-    await registerTemplateFonts(
-      async (file) => {
-        reads.push(file)
-        return new Uint8Array(readFileSync(join(FOLDER, file)))
-      },
-      { add: (face) => (added.push(face), undefined as never) },
+    const loads = vi.fn()
+    class Face {
+      constructor(family: string, source: unknown, descriptors: FontFaceDescriptors) {
+        created.push({ family, source, weight: descriptors.weight })
+      }
+      load = loads
+    }
+    const families = registerTemplateFonts(
+      { add: (face: FontFace) => (added.push(face), undefined as never) },
+      Face as unknown as typeof FontFace,
     )
-    expect([...reads].sort()).toEqual([...TEMPLATE_FONT_FILES].sort())
     expect(added).toHaveLength(TEMPLATE_FONT_FACE_REGISTRATIONS.length)
-    expect(created.map(({ family, weight }) => ({ family, weight }))).toEqual(
-      expect.arrayContaining([
-        { family: 'Pretendard', weight: '600' },
-        { family: 'Pretendard SemiBold', weight: '400' },
-        { family: 'Playfair Display', weight: '400 900' },
-        { family: 'Gowun Dodum', weight: '400' },
-      ]),
+    expect(loads).not.toHaveBeenCalled()
+    expect(created).toEqual(
+      TEMPLATE_FONT_FACE_REGISTRATIONS.map(({ family, file, weight }) => ({
+        family,
+        source: `url("${templateFontUrl(file)}")`,
+        weight,
+      })),
     )
-    const semiBold = created.filter(({ family, weight }) =>
-      family === 'Pretendard SemiBold' ? true : family === 'Pretendard' && weight === '600',
-    )
-    expect(semiBold).toHaveLength(2)
-    expect(semiBold[0]!.source).toBe(semiBold[1]!.source)
-  })
-
-  it('keeps the other families when one file cannot be read', async () => {
-    await registerTemplateFonts(
-      async (file) => {
-        if (file === 'BebasNeue-Regular.ttf') throw new Error('gone')
-        return new Uint8Array(4)
-      },
-      { add: () => undefined as never },
-    )
-    const families = new Set(created.map((face) => face.family))
-    expect(families.has('Bebas Neue')).toBe(false)
-    expect(families.has('Pretendard')).toBe(true)
+    expect(created).toContainEqual({
+      family: 'Pretendard SemiBold',
+      source: 'url("genoffice-docx-media://template-fonts/Pretendard-SemiBold.otf")',
+      weight: '400',
+    })
+    expect(created).toContainEqual({
+      family: 'Playfair Display',
+      source: 'url("genoffice-docx-media://template-fonts/PlayfairDisplay%5Bwght%5D.ttf")',
+      weight: '400 900',
+    })
+    expect(families).toEqual(expect.arrayContaining([...TEMPLATE_FONT_FAMILY_NAMES]))
   })
 })
 
-describe('template font folder (main)', () => {
-  it('resolves to the checkout folder in a dev run', () => {
+const plain = {
+  italic: false,
+  underline: false,
+  strikethrough: false,
+  wrapText: false,
+  diagonalUp: false,
+  diagonalDown: false,
+}
+
+describe('loading a face only when it is used', () => {
+  it('asks the font set for the bundled families a workbook names, at their weights', async () => {
+    const requested: string[] = []
+    const fonts = { load: async (font: string) => (requested.push(font), []) }
+    const uses = workbookTemplateFontUses({
+      styles: [
+        { fontFamily: 'Calibri', bold: false, ...plain },
+        { fontFamily: 'Pretendard', bold: true, ...plain },
+        { fontFamily: 'Gowun Batang', bold: false, ...plain },
+      ],
+      normalFontName: 'Pretendard SemiBold',
+      themeFonts: { major: 'Bebas Neue', minor: 'Calibri' },
+    })
+    await loadTemplateFontsFor(uses, fonts as unknown as FontFaceSet)
+    expect(requested.sort()).toEqual([
+      '400 16px "Bebas Neue"',
+      '400 16px "Gowun Batang"',
+      '400 16px "Pretendard SemiBold"',
+      '700 16px "Pretendard"',
+    ])
+  })
+
+  it('loads nothing for a workbook without bundled families', async () => {
+    const load = vi.fn()
+    const uses = workbookTemplateFontUses({
+      styles: [{ fontFamily: 'Calibri', bold: true, ...plain }],
+    })
+    await loadTemplateFontsFor(uses, { load } as unknown as FontFaceSet)
+    expect(load).not.toHaveBeenCalled()
+  })
+
+  it('counts the bundled families as available before they load', () => {
+    expect(isTemplateFontFamily('"Gowun Dodum"')).toBe(true)
+    expect(isTemplateFontFamily('pretendard semibold')).toBe(true)
+    expect(isTemplateFontFamily('Calibri')).toBe(false)
+  })
+})
+
+describe('serving the bundled files (main)', () => {
+  it('resolves the folder to the checkout in a dev run', () => {
     expect(sheetsTemplateFontsDir()).toBe(FOLDER)
   })
 
-  it('reads a bundled file, brackets in the name included', async () => {
-    const bytes = await readTemplateFontFile(FOLDER, 'PlayfairDisplay[wght].ttf')
+  it('reads a file only when its URL is requested, brackets in the name included', async () => {
+    const read = vi.fn((path: string) => Promise.resolve(new Uint8Array(readFileSync(path))))
+    const url = templateFontUrl('PlayfairDisplay[wght].ttf')
+    expect(read).not.toHaveBeenCalled()
+    const response = await templateFontResponse(url, FOLDER, read)
+    expect(read).toHaveBeenCalledTimes(1)
+    expect(read).toHaveBeenCalledWith(join(FOLDER, 'PlayfairDisplay[wght].ttf'))
+    expect(response!.status).toBe(200)
+    expect(response!.headers.get('Content-Type')).toBe('font/ttf')
+    expect(response!.headers.get('Access-Control-Allow-Origin')).toBe('*')
+    const bytes = Buffer.from(await response!.arrayBuffer())
     expect(bytes.equals(readFileSync(join(FOLDER, 'PlayfairDisplay[wght].ttf')))).toBe(true)
   })
 
-  it('refuses any name outside the bundled list', async () => {
-    await expect(readTemplateFontFile(FOLDER, 'README.md')).rejects.toThrow()
-    await expect(
-      readTemplateFontFile(FOLDER, '../template-fonts/Pretendard-Bold.otf'),
-    ).rejects.toThrow()
+  it('serves only the listed files', async () => {
+    const read = vi.fn(() => Promise.resolve(new Uint8Array(4)))
+    const urls = [
+      'genoffice-docx-media://template-fonts/README.md',
+      'genoffice-docx-media://template-fonts/Pretendard-OFL.txt',
+      'genoffice-docx-media://template-fonts/..%2F..%2Fpackage.json',
+      'genoffice-docx-media://template-fonts/%2E%2E/README.md',
+      `genoffice-docx-media://${'a'.repeat(64)}/Pretendard-Bold.otf`,
+      'genoffice-app://template-fonts/Pretendard-Bold.otf',
+      'not a url',
+    ]
+    for (const url of urls) expect(await templateFontResponse(url, FOLDER, read)).toBeNull()
+    expect(read).not.toHaveBeenCalled()
+  })
+
+  it('answers 404 when the folder lacks a listed file', async () => {
+    const url = templateFontUrl('Pretendard-Bold.otf')
+    const response = await templateFontResponse(url, FOLDER, () =>
+      Promise.reject(new Error('missing')),
+    )
+    expect(response!.status).toBe(404)
+  })
+
+  it('names files on the URLs the Word editor serves them on inside the shell', async () => {
+    // the shell's docs main owns the media scheme; sheets asks it for the same URLs
+    // (imported by a computed path: the docs module is outside this app's typecheck)
+    const docsProtocol = pathToFileURL(
+      resolve(import.meta.dirname, '../../docs/src/main/template-font-protocol.ts'),
+    ).href
+    const docs = (await import(/* @vite-ignore */ docsProtocol)) as {
+      templateFontResponse(url: string, dir: string): Promise<Response | null>
+    }
+    for (const file of TEMPLATE_FONT_FILES) {
+      const response = await docs.templateFontResponse(templateFontUrl(file), FOLDER)
+      expect(response?.status, file).toBe(200)
+    }
+    expect(TEMPLATE_FONT_SCHEME).toBe(DOCX_MEDIA_SCHEME_PRIVILEGE.scheme)
+  })
+
+  it('lets the sheets page load fonts from that scheme', () => {
+    const html = readFileSync(resolve(import.meta.dirname, '../src/renderer/index.html'), 'utf8')
+    const fontSrc = /font-src ([^;"]+)/.exec(html)?.[1] ?? ''
+    expect(fontSrc.split(/\s+/)).toContain(`${TEMPLATE_FONT_SCHEME}:`)
   })
 })
 

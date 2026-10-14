@@ -168,7 +168,7 @@ import { atomicWriteFile } from './atomic-write'
 import { closeGuardDecision, ShutdownLatch } from './close-guard'
 import { SaveEditsTransferStore } from './save-edits-transfer'
 import { exportPdf, printWorkbook } from './pdf-export'
-import { readTemplateFontFile, sheetsTemplateFontsDir } from './template-fonts'
+import { installStandaloneTemplateFontProtocol } from './template-fonts'
 import { allowsAutomaticWorkbookRecovery } from './recovery-policy'
 import {
   setSystemShortDate,
@@ -2627,13 +2627,6 @@ export function registerSheetsIpc(): void {
   ipcMain.removeHandler('app:font-family-info')
   ipcMain.handle('app:font-family-info', (_event, families: unknown) => familyInfoFor(families))
 
-  // The bundled template fonts for the grid canvas, read from the one installed
-  // folder; the file name must be one of the bundled files.
-  ipcMain.handle(IPC_CHANNELS.templateFontData, (event, file: unknown) => {
-    sessionFor(event)
-    return readTemplateFontFile(sheetsTemplateFontsDir(), z.string().parse(file))
-  })
-
   /** returns true once when shell opened this tab for a new blank workbook */
   ipcMain.handle('sheets:consume-new-blank', () => {
     if (pendingNewBlank) {
@@ -4684,6 +4677,8 @@ export function startSheetsStandalone(): void {
   void applyMainProcessProxy()
   app.whenReady().then(() => {
     installRendererProtocol({ sheets: join(__dirname, '../renderer') })
+    // the shell's Word editor serves these URLs there; alone, sheets does
+    installStandaloneTemplateFontProtocol()
     setUiLang(normalizeLang(process.env.GENOFFICE_LANG ?? app.getLocale()))
     app.setAccessibilitySupportEnabled(true)
     installApplicationMenu()

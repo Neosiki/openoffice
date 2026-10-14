@@ -1,7 +1,7 @@
 /// The bundled template fonts as the faces the sheets editor registers. The grid
-/// canvas (renderer FontFaces built from the file bytes) and the PDF export / print
-/// window (@font-face rules naming the files) both read this one table, so the
-/// page prints in the font the grid drew.
+/// canvas (renderer FontFaces naming the files by URL, fetched only when text first
+/// uses a family) and the PDF export / print window (@font-face rules naming the
+/// files) both read this one table, so the page prints in the font the grid drew.
 
 import { TEMPLATE_FONTS } from '@genoffice/ui/template-fonts'
 
@@ -40,3 +40,36 @@ export const TEMPLATE_FONT_FILES: readonly string[] = [
 export const TEMPLATE_FONT_FAMILY_KEYS: ReadonlySet<string> = new Set(
   TEMPLATE_FONT_FACE_REGISTRATIONS.map((face) => face.family.toLowerCase()),
 )
+
+/// Where the renderer loads a bundled file from: the template-fonts host of the
+/// privileged media scheme (DOCX_MEDIA_SCHEME_PRIVILEGE, registered with the renderer
+/// scheme). In the shell the Word editor's main already serves the listed files on
+/// these URLs (apps/docs/src/main/template-font-protocol.ts); a standalone sheets app
+/// serves them itself (main/template-fonts.ts). The page CSP allows fonts from it.
+export const TEMPLATE_FONT_SCHEME = 'genoffice-docx-media'
+export const TEMPLATE_FONT_HOST = 'template-fonts'
+
+/** The URL of a bundled font file; the name is encoded (`PlayfairDisplay[wght].ttf`). */
+export function templateFontUrl(file: string): string {
+  return `${TEMPLATE_FONT_SCHEME}://${TEMPLATE_FONT_HOST}/${encodeURIComponent(file)}`
+}
+
+/** The bundled file a URL names, or null for any other URL (other hosts, unlisted names). */
+export function templateFontFileOf(url: string): string | null {
+  let parsed: URL
+  try {
+    parsed = new URL(url)
+  } catch {
+    return null
+  }
+  if (parsed.protocol !== `${TEMPLATE_FONT_SCHEME}:` || parsed.hostname !== TEMPLATE_FONT_HOST) {
+    return null
+  }
+  let name: string
+  try {
+    name = decodeURIComponent(parsed.pathname.replace(/^\/+/, ''))
+  } catch {
+    return null
+  }
+  return TEMPLATE_FONT_FILES.includes(name) ? name : null
+}

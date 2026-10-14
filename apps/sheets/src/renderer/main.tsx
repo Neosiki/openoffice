@@ -36,6 +36,8 @@ if (!root) throw new Error('Missing application root.')
 
 installScreenTips()
 installCanvasFontFallback()
+// URL-backed faces: no file is read until text first uses its family
+registerTemplateFonts()
 
 function applyTheme(theme: UiTheme): void {
   if (theme === 'system') document.documentElement.removeAttribute('data-theme')
@@ -53,16 +55,13 @@ function applyDocumentTheme(theme: DocTheme): void {
 // first skeleton — MDW, wrap points, and #### overflow all measure with them.
 async function loadCellFonts(): Promise<void> {
   const loads: Promise<unknown>[] = [registerCellFontAliases()]
-  // the bundled template fonts, read by main from the one installed folder
-  const readTemplateFont = window.desktopApi?.templateFontData
-  if (readTemplateFont) loads.push(registerTemplateFonts(readTemplateFont))
   for (const variant of ['', 'bold ', 'italic ', 'italic bold ']) {
     for (const family of ['Calibri', 'Aptos', "'Aptos Narrow'", 'Carlito']) {
       loads.push(document.fonts?.load?.(`${variant}16px ${family}`)?.catch(() => {}) ?? [])
     }
   }
-  // Local assets resolve in milliseconds (the template fonts in about half a
-  // second); the timeout only guards a broken bundle from blanking the app.
+  // Local assets resolve in milliseconds; the timeout only guards a broken
+  // bundle from blanking the app.
   await Promise.race([Promise.all(loads), new Promise((resolve) => setTimeout(resolve, 3000))])
 }
 
