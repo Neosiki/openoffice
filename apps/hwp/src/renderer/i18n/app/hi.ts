@@ -80,6 +80,10 @@ export const hi = {
   aiSumReadAttachmentName: 'अनुलग्नक {name} पढ़ें',
   aiImageReadFail: '{name}: पढ़ने में विफल',
   aiTooManyImages: 'प्रति संदेश अधिकतम {max} चित्र; अतिरिक्त को अनदेखा कर दिया गया',
+  aiScopeSelection: 'चयनित: {words} शब्द',
+  aiScopeSelectionTip:
+    'फिर से लिखने के निर्देश डिफ़ॉल्ट रूप से केवल चयन पर लागू होते हैं; पूर्वावलोकन के लिए क्लिक करें',
+  aiScopeClearTitle: 'चयन दायरा हटाएँ',
   aiToolNotDone: 'नहीं हो सका · {what}',
   aiChangesTitle: 'दस्तावेज़ में बदलाव: {count}',
   aiRevert: 'ये बदलाव वापस लें',

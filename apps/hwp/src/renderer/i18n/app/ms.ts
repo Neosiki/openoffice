@@ -80,6 +80,10 @@ export const ms = {
   aiSumReadAttachmentName: 'Baca lampiran {name}',
   aiImageReadFail: '{name}: gagal dibaca',
   aiTooManyImages: 'Maksimum {max} imej setiap mesej; yang lebihan diabaikan',
+  aiScopeSelection: 'Dipilih: {words} patah perkataan',
+  aiScopeSelectionTip:
+    'Arahan tulis semula secara lalai hanya terpakai pada pilihan; klik untuk pratonton',
+  aiScopeClearTitle: 'Buang skop pilihan',
   aiToolNotDone: 'Tidak dilakukan · {what}',
   aiChangesTitle: 'Perubahan pada dokumen: {count}',
   aiRevert: 'Buat asal perubahan ini',

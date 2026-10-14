@@ -11,6 +11,15 @@ import {
 /** where a change is, as the editor hands it back */
 const PLACE = { sec: 0, para: 1, offset: 0, length: 3 }
 
+/** two paragraphs the user selected, the second from its start to the middle */
+const SELECTED = [
+  { sec: 0, para: 4, offset: 0, length: 9, text: '첫 문단입니다.' },
+  { sec: 0, para: 5, offset: 0, length: 5, text: '둘째 문단' },
+]
+
+/** the same, as the stretch of two paragraphs it is */
+const STRETCH = { segments: SELECTED, inTable: false, contiguous: true }
+
 function setup(overrides: Partial<AgentBridge> = {}) {
   const bridge: AgentBridge = {
     foreignChanges: vi.fn(async () => 0),
@@ -61,13 +70,25 @@ function setup(overrides: Partial<AgentBridge> = {}) {
       place: PLACE,
     })),
     reveal: vi.fn(async () => ({ ok: true })),
+    selection: vi.fn(async () => ({ ok: false as const, reason: 'none' as const })),
+    // one run per text, as the editor answers: a rewrite may change how many there are
+    replaceSelection: vi.fn(async (segments: typeof SELECTED, texts: string[]) => ({
+      ok: true as const,
+      segments: texts.map((text, index) => ({
+        ...(segments[index] ?? segments[segments.length - 1]!),
+        length: text.length,
+        text,
+      })),
+      place: PLACE,
+    })),
+    formatSelection: vi.fn(async () => ({ ok: true as const, count: 2, place: PLACE })),
     listFields: vi.fn(async () => []),
     fillField: vi.fn(async () => ({ ok: true as const, name: '성명' })),
     undo: vi.fn(async () => ({ ok: true, undone: 1 })),
     ...overrides,
   }
   const changes: HwpChange[] = []
-  const { skill, refreshContext } = createHwpSkill({
+  const { skill, refreshContext, setSelection } = createHwpSkill({
     bridge,
     // the key and its parameters, so a test can tell which label was asked for
     label: (key, params) => (params ? `${key}:${JSON.stringify(params)}` : key),
@@ -75,7 +96,7 @@ function setup(overrides: Partial<AgentBridge> = {}) {
   })
   const call = (name: string, input: Record<string, unknown> = {}) =>
     skill.executeTool({ id: '1', name, input } satisfies AgentToolCall)
-  return { bridge, skill, refreshContext, changes, call }
+  return { bridge, skill, refreshContext, setSelection, changes, call }
 }
 
 describe('the document context sent with a message', () => {
@@ -648,6 +669,150 @@ describe('tables that are already in the document', () => {
   })
 })
 
+describe('the part the user selected', () => {
+  it('is put in front of the model with one line per selected paragraph', async () => {
+    const { skill, refreshContext, setSelection } = setup()
+    await refreshContext()
+    expect(skill.buildContext!()).not.toContain('Selected text')
+    setSelection({ segments: SELECTED, inTable: true, contiguous: true })
+    expect(skill.buildContext!().split('\n').slice(-4)).toEqual([
+      '## Selected text',
+      'The user selected 2 paragraph(s), inside a table in the editor. The request is about this part:',
+      '1. 첫 문단입니다.',
+      '2. 둘째 문단',
+    ])
+    setSelection(null)
+    expect(skill.buildContext!()).not.toContain('Selected text')
+  })
+
+  it('replaces the selection with one text per paragraph and lists one change', async () => {
+    const { call, changes, bridge, setSelection } = setup()
+    setSelection(STRETCH)
+    const result = await call('replace_selection', {
+      paragraphs: ['첫째 단락입니다.', '둘째 단락'],
+    })
+    expect(bridge.replaceSelection).toHaveBeenCalledWith(SELECTED, [
+      '첫째 단락입니다.',
+      '둘째 단락',
+    ])
+    expect(result.mutated).toBe(true)
+    expect(changes).toEqual([
+      {
+        kind: 'replace',
+        from: '첫 문단입니다. ⏎ 둘째 문단',
+        to: '첫째 단락입니다. ⏎ 둘째 단락',
+        count: 1,
+        place: PLACE,
+      },
+    ])
+  })
+
+  it('goes on from the text it just wrote', async () => {
+    const { call, bridge, setSelection, skill } = setup()
+    setSelection(STRETCH)
+    await call('replace_selection', { paragraphs: ['가', '나'] })
+    await call('format_selection', { bold: true })
+    const sent = vi.mocked(bridge.formatSelection).mock.calls[0]![0]
+    expect(sent.map((segment) => segment.text)).toEqual(['가', '나'])
+    expect(sent.map((segment) => segment.length)).toEqual([1, 1])
+    expect(skill.buildContext!()).toContain('1. 가')
+  })
+
+  it('formats the selection and lists what was set', async () => {
+    const { call, changes, setSelection } = setup()
+    setSelection(STRETCH)
+    const result = await call('format_selection', { bold: true, align: 'center' })
+    expect(result.summary).toBe('aiToolFormat:{"text":"첫 문단입니다. ⏎ 둘째 문단"}')
+    expect(changes[0]).toMatchObject({
+      kind: 'format',
+      count: 2,
+      to: 'aiFmtAlignCenter · aiFmtBold',
+    })
+  })
+
+  it('lets a stretch of text become more or fewer paragraphs', async () => {
+    const { call, bridge, setSelection, skill } = setup()
+    setSelection(STRETCH)
+    const result = await call('replace_selection', { paragraphs: ['가', '나', '다'] })
+    expect(bridge.replaceSelection).toHaveBeenCalledWith(SELECTED, ['가', '나', '다'])
+    expect(result.output).toBe('Replaced the selected text: its 2 paragraph(s) are now 3.')
+    expect(skill.buildContext!()).toContain('The user selected 3 paragraph(s)')
+  })
+
+  it('wants one text per paragraph when the selection is table cells or separate places', async () => {
+    const { call, bridge, setSelection, skill } = setup()
+    setSelection({ segments: SELECTED, inTable: true, contiguous: false })
+    expect(skill.buildContext!()).toContain('They are not one stretch of text')
+    const result = await call('replace_selection', { paragraphs: ['하나만'] })
+    expect(result.isError).toBe(true)
+    expect(result.output).toContain('Pass exactly 2 string(s)')
+    expect(bridge.replaceSelection).not.toHaveBeenCalled()
+    // as many texts as paragraphs go through
+    await call('replace_selection', { paragraphs: ['가', '나'] })
+    expect(bridge.replaceSelection).toHaveBeenCalledTimes(1)
+  })
+
+  it('replaces a part of the selection from a paragraph number on', async () => {
+    const { call, bridge, setSelection, skill } = setup()
+    setSelection(STRETCH)
+    await call('replace_selection', { paragraphs: ['새 둘째'], first: 2 })
+    expect(bridge.replaceSelection).toHaveBeenCalledWith([SELECTED[1]], ['새 둘째'])
+    const context = skill.buildContext!()
+    expect(context).toContain('1. 첫 문단입니다.')
+    expect(context).toContain('2. 새 둘째')
+    const outside = await call('replace_selection', { paragraphs: ['a', 'b'], first: 2 })
+    expect(outside.isError).toBe(true)
+    expect(outside.output).toContain('paragraphs 2–3 are not all in it')
+  })
+
+  it('shows a long selection in part and reads on by number', async () => {
+    const { call, setSelection, skill } = setup()
+    const many = Array.from({ length: 400 }, (_unused, index) => ({
+      sec: 0,
+      para: index,
+      offset: 0,
+      length: 30,
+      text: `${String(index + 1).padStart(3, '0')}번째 문단입니다. 스물여섯 글자를 채웁니다.`,
+    }))
+    setSelection({ segments: many, inTable: false, contiguous: true })
+    const context = skill.buildContext!()
+    expect(context).toContain('The user selected 400 paragraph(s)')
+    const shown = context.split('\n').filter((line) => /^\d+\. /.test(line)).length
+    expect(shown).toBeGreaterThan(50)
+    expect(shown).toBeLessThan(400)
+    expect(context).toContain(
+      `[paragraphs ${shown + 1}–400 are not shown: read_selection with from ${shown + 1} returns them]`,
+    )
+    const rest = await call('read_selection', { from: shown + 1 })
+    expect(rest.output.split('\n')[0]).toBe(`Paragraphs ${shown + 1}–400 of 400 selected.`)
+    expect(rest.output).toContain('400. 400번째 문단입니다.')
+    expect((await call('read_selection', { from: 401 })).isError).toBe(true)
+  })
+
+  it('refuses a text of several lines', async () => {
+    const { call, bridge, setSelection } = setup()
+    setSelection(STRETCH)
+    expect((await call('replace_selection', { paragraphs: ['a\nb', 'c'] })).isError).toBe(true)
+    expect(bridge.replaceSelection).not.toHaveBeenCalled()
+  })
+
+  it('says so when nothing is selected, and when the selected text is gone', async () => {
+    const none = setup()
+    const result = await none.call('replace_selection', { paragraphs: ['x'] })
+    expect(result.isError).toBe(true)
+    expect(result.output).toContain('Nothing is selected')
+    expect((await none.call('format_selection', { bold: true })).output).toContain(
+      'Nothing is selected',
+    )
+    const gone = setup({ replaceSelection: async () => ({ ok: false, reason: 'changed' }) })
+    gone.setSelection(STRETCH)
+    const stale = await gone.call('replace_selection', { paragraphs: ['a', 'b'] })
+    expect(stale.isError).toBe(true)
+    expect(stale.output).toContain('no longer what it was')
+    expect(gone.changes).toEqual([])
+  })
+})
+
 describe('rows and columns of a table', () => {
   it('adds rows after a row by default and tells the model the new numbers', async () => {
     const { call, changes, bridge } = setup()
@@ -778,6 +943,9 @@ describe('the skill as the model sees it', () => {
       'insert_table',
       'format_text',
       'format_paragraph',
+      'replace_selection',
+      'read_selection',
+      'format_selection',
       'list_tables',
       'read_table',
       'fill_cells',

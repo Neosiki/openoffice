@@ -82,6 +82,10 @@ export const fr = {
   aiSumReadAttachmentName: 'Lire la pièce jointe {name}',
   aiImageReadFail: '{name} : échec de la lecture',
   aiTooManyImages: 'Au plus {max} images par message ; les images en trop ont été ignorées',
+  aiScopeSelection: 'Sélection : {words} mots',
+  aiScopeSelectionTip:
+    "Les instructions de réécriture s'appliquent par défaut à la sélection ; cliquez pour prévisualiser",
+  aiScopeClearTitle: 'Effacer la portée de la sélection',
   aiToolNotDone: 'Non effectué · {what}',
   aiChangesTitle: 'Modifications apportées au document : {count}',
   aiRevert: 'Annuler ces modifications',

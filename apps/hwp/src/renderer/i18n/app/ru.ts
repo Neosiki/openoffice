@@ -81,6 +81,10 @@ export const ru = {
   aiSumReadAttachmentName: 'Чтение вложения {name}',
   aiImageReadFail: '{name}: не удалось прочитать',
   aiTooManyImages: 'Не более {max} изображений на сообщение; лишние проигнорированы',
+  aiScopeSelection: 'Выделено: {words} слов',
+  aiScopeSelectionTip:
+    'Инструкции на переписывание по умолчанию применяются к выделению; нажмите для предпросмотра',
+  aiScopeClearTitle: 'Снять область выделения',
   aiToolNotDone: 'Не выполнено · {what}',
   aiChangesTitle: 'Изменений в документе: {count}',
   aiRevert: 'Отменить эти изменения',

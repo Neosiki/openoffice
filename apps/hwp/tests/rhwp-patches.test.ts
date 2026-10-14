@@ -8,6 +8,8 @@ import {
   APP_SCHEME,
   PASSWORD_FLAG,
   applyPatch,
+  missingPluginHooks,
+  pluginHooks,
 } from '../scripts/rhwp-patches.mjs'
 import { AGENT_PLUGIN_ID } from '../studio-plugin/agent-plugin.mjs'
 
@@ -89,5 +91,27 @@ describe('a patch whose text is gone', () => {
   it('refuses to guess between two matches', () => {
     const twice = "return protocol === 'http:' || protocol === 'https:';\n".repeat(2)
     expect(() => applyPatch('studio-scheme', twice)).toThrow(/exactly one/)
+  })
+})
+
+describe('what the plugin reaches into the studio for', () => {
+  const complete = (file: string) =>
+    pluginHooks.find((hook) => hook.file === file)?.needles.join('\n') ?? null
+
+  it('is all there in a source that has every name', () => {
+    expect(missingPluginHooks(complete)).toEqual([])
+  })
+
+  it('names the file and the name when one is gone', () => {
+    const renamed = (file: string) =>
+      (complete(file) ?? '').replace('getSelectionOrdered()', 'selectionInOrder()')
+    expect(missingPluginHooks(renamed)).toEqual(['src/engine/cursor.ts: getSelectionOrdered()'])
+  })
+
+  it('counts every name of a file that is gone', () => {
+    const gone = (file: string) => (file === 'src/automation/types.ts' ? null : complete(file))
+    expect(missingPluginHooks(gone)).toEqual([
+      'src/automation/types.ts: registerCommand(def: ExtCommandDef): void',
+    ])
   })
 })

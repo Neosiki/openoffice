@@ -80,6 +80,10 @@ export const nl = {
   aiSumReadAttachmentName: 'Bijlage {name} lezen',
   aiImageReadFail: '{name}: lezen mislukt',
   aiTooManyImages: 'Maximaal {max} afbeeldingen per bericht; extra afbeeldingen zijn genegeerd',
+  aiScopeSelection: 'Geselecteerd: {words} woorden',
+  aiScopeSelectionTip:
+    'Herschrijfopdrachten gelden standaard alleen voor de selectie; klik voor een voorbeeld',
+  aiScopeClearTitle: 'Selectiebereik wissen',
   aiToolNotDone: 'Niet uitgevoerd · {what}',
   aiChangesTitle: 'Wijzigingen in het document: {count}',
   aiRevert: 'Deze wijzigingen ongedaan maken',

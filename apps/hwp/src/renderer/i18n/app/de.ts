@@ -83,6 +83,10 @@ export const de = {
   aiSumReadAttachmentName: 'Anlage {name} lesen',
   aiImageReadFail: '{name}: Lesen fehlgeschlagen',
   aiTooManyImages: 'Höchstens {max} Bilder pro Nachricht; überzählige wurden ignoriert',
+  aiScopeSelection: 'Ausgewählt: {words} Wörter',
+  aiScopeSelectionTip:
+    'Umschreib-Anweisungen wirken standardmäßig nur auf die Auswahl; zum Vorschauen klicken',
+  aiScopeClearTitle: 'Auswahlbereich aufheben',
   aiToolNotDone: 'Nicht ausgeführt · {what}',
   aiChangesTitle: 'Änderungen am Dokument: {count}',
   aiRevert: 'Diese Änderungen zurücknehmen',

@@ -10,6 +10,8 @@ import {
   type AiModelPickerBridge,
   AiPanelSideButton,
   AiQueueStrip,
+  AiScopeQuote,
+  type AiScopeQuoteData,
   AiSubscriptionUsageLine,
   AiTypingIndicator,
   Markdown,
@@ -47,6 +49,14 @@ import type { AgentBridge } from './agent-bridge'
 import { blockedRunOf, type AiBlockedRun } from './ai-connection'
 import { AttachmentList, MAX_IMAGES_PER_MESSAGE, PASTE_MIME_EXT } from './attachments'
 import { createFilesSkill } from './files-skill'
+import {
+  SELECTION_POLL_MS,
+  countWords,
+  scopeExcerpt,
+  scopeOf,
+  scopeText,
+  type SelectionScope,
+} from './selection-scope'
 import { createHwpSkill, type HwpChange } from './hwp-skill'
 import { useSubscriptionConnection } from './subscription-client'
 import { createElectronTransport } from './transport'
@@ -109,6 +119,8 @@ interface ChatEntry {
   changes?: RunChanges
   /** attachments this message took from the composer (echoed read-only; a retry sends them again) */
   attachments?: AttachmentMeta[]
+  /** the selection this message was about, frozen at send */
+  scope?: AiScopeQuoteData
 }
 
 const MODEL_BRIDGE: AiModelPickerBridge = {
@@ -133,15 +145,19 @@ export function AiPanel({
   /** an undo of a run is on its way to the editor */
   const [reverting, setReverting] = useState(false)
   /** messages queued while a reply runs; the pump re-runs them through send on settle */
-  const msgQueue = useChatRunQueue<AttachmentMeta[]>({
+  const msgQueue = useChatRunQueue<{
+    attachments: AttachmentMeta[]
+    /** what was selected when the message was queued; checked again when it is changed */
+    scope: SelectionScope | null
+  }>({
     busy,
-    submit: (text, queuedAttachments) => {
+    submit: (text, queued) => {
       const loop = loopRef.current
       if (!loop || loop.busy) return false
       // nothing can run right now: the message stays queued, and in front of "not connected"
       // the queue is paused so it does not start by itself after a sign-in
       if (!sendGateRef.current.admitQueued(() => msgQueueRef.current.setPaused(true))) return false
-      return send(text, queuedAttachments)
+      return send(text, queued.attachments, queued.scope)
     },
   })
   const msgQueueRef = useRef(msgQueue)
@@ -247,6 +263,45 @@ export function AiPanel({
   }
   const availableAttachmentsRef = useRef(availableAttachments)
   availableAttachmentsRef.current = availableAttachments
+
+  // ---- the selection in the editor: a request made with one is about that part ----
+  const [selected, setSelected] = useState<SelectionScope | null>(null)
+  /** the selection the user took out of scope with the chip's x; a new selection is in scope again */
+  const [scopeCleared, setScopeCleared] = useState<string | null>(null)
+  const [scopePreviewOpen, setScopePreviewOpen] = useState(false)
+  useEffect(() => {
+    // not during a run: the run's own changes move the editor's selection around
+    if (busy) return
+    let stopped = false
+    const readSelection = async (): Promise<void> => {
+      try {
+        const result = await bridgeRef.current.selection()
+        if (stopped) return
+        // a selection the editor made itself to show a change is not the user's
+        const next =
+          result.ok && !result.own
+            ? scopeOf(result.segments, result.inTable, result.contiguous)
+            : null
+        setSelected((prev) => (prev?.key === next?.key ? prev : next))
+      } catch {
+        // the editor is not ready, or is gone
+      }
+    }
+    void readSelection()
+    const timer = window.setInterval(() => void readSelection(), SELECTION_POLL_MS)
+    return () => {
+      stopped = true
+      window.clearInterval(timer)
+    }
+  }, [busy])
+  const scope = selected && selected.key !== scopeCleared ? selected : null
+  const scopeRef = useRef(scope)
+  scopeRef.current = scope
+  useEffect(() => {
+    if (!scope) setScopePreviewOpen(false)
+  }, [scope])
+  /** the selection of the run in progress, for a retry of it */
+  const runScopeRef = useRef<SelectionScope | null>(null)
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null)
   const chatRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
@@ -276,12 +331,16 @@ export function AiPanel({
   /** The send gate every editor shares: holds a request made during a status check or in front
       of the first-connection notice, refuses in front of "not connected", and writes this
       panel's settings changes ("continue with …", the acknowledged notice) onto the stored ones */
-  const sendGate = useAiSendGate<{ text: string; attachments?: AttachmentMeta[] }>({
+  const sendGate = useAiSendGate<{
+    text: string
+    attachments?: AttachmentMeta[]
+    scope: SelectionScope | null
+  }>({
     settings: aiSettings,
     statuses,
     store: MODEL_BRIDGE,
     start: (held) => {
-      send(held.text, held.attachments)
+      send(held.text, held.attachments, held.scope)
     },
     onNotConnected: () => refreshSubscriptionRef.current(),
     onSettingsSaved: setAiSettings,
@@ -507,14 +566,22 @@ export function AiPanel({
   const runAttachmentsRef = useRef<AttachmentMeta[]>([])
 
   /** Returns false when no run was started (the text stays with the caller). */
-  const send = (text: string, attachmentsOverride?: AttachmentMeta[]): boolean => {
+  const send = (
+    text: string,
+    attachmentsOverride?: AttachmentMeta[],
+    /** undefined: what is selected now; a value: what was selected when the message was written */
+    scopeOverride?: SelectionScope | null,
+  ): boolean => {
     const instruction = text.trim()
     const loop = loopRef.current
     if (!instruction || !loop || loop.busy || reverting) return false
     // A request made during a status check or in front of the first-connection notice is
     // held and starts by itself once the way is clear; in front of "not connected" nothing
     // is kept. Either way nothing is sent now and the text stays with the caller.
-    if (!sendGate.admit({ text: instruction, attachments: attachmentsOverride })) {
+    const sentScope = scopeOverride === undefined ? scopeRef.current : scopeOverride
+    if (
+      !sendGate.admit({ text: instruction, attachments: attachmentsOverride, scope: sentScope })
+    ) {
       showWhatHoldsTheSend()
       return false
     }
@@ -536,12 +603,22 @@ export function AiPanel({
       if (!attachmentsOverride) setAttachments([])
     }
     runAttachmentsRef.current = sentAtts
+    runScopeRef.current = sentScope
+    skillRef.current!.setSelection(sentScope)
     setChat((prev) => [
       ...prev,
       {
         role: 'user',
         text: instruction,
         ...(sentAtts.length > 0 ? { attachments: sentAtts } : {}),
+        ...(sentScope
+          ? {
+              scope: {
+                label: t('aiScopeSelection', { words: countWords(scopeText(sentScope)) }),
+                text: scopeExcerpt(sentScope),
+              },
+            }
+          : {}),
       },
       { role: 'assistant', text: '', streaming: true },
     ])
@@ -587,14 +664,15 @@ export function AiPanel({
   const enqueueDraft = () => {
     const text = prompt.trim()
     if (!text) return
-    // the queued message owns the composer's attachments; the pump hands them back to send
-    msgQueue.enqueue(text, attachmentsRef.current)
+    // the queued message owns the composer's attachments and the selection it was written
+    // about; the pump hands them back to send
+    msgQueue.enqueue(text, { attachments: attachmentsRef.current, scope: scopeRef.current })
     setAttachments([])
     setPrompt('')
   }
 
   const retry = (): void => {
-    send(runInstructionRef.current, runAttachmentsRef.current)
+    send(runInstructionRef.current, runAttachmentsRef.current, runScopeRef.current)
   }
 
   /** "Continue with …" on a blocked run: that provider becomes the selection, then the request reruns */
@@ -735,6 +813,7 @@ export function AiPanel({
                 revertedNoteDueRef.current = false
                 sentAttachmentsRef.current = []
                 setAttachments([])
+                setScopeCleared(null)
                 setBusy(false)
                 setChat([])
               }}
@@ -774,6 +853,7 @@ export function AiPanel({
           if (entry.role === 'user') {
             return (
               <div key={i} className="ai-msg ai-msg-user">
+                {entry.scope && <AiScopeQuote scope={entry.scope} />}
                 {entry.attachments && entry.attachments.length > 0 && (
                   <div className="ai-msg-attachments">
                     <AttachmentList atts={entry.attachments} previews={attachmentPreviews} />
@@ -786,7 +866,7 @@ export function AiPanel({
                     {!busy && (
                       <button
                         className="ai-retry-btn"
-                        onClick={() => send(entry.text, entry.attachments ?? [])}
+                        onClick={() => send(entry.text, entry.attachments ?? [], null)}
                       >
                         {t('aiRetry')}
                       </button>
@@ -913,6 +993,45 @@ export function AiPanel({
           queuePlaceholder={AI_QUEUE_LABELS[lang].queuePlaceholder}
           value={prompt}
           busy={busy}
+          header={
+            scope && (
+              <div className="ai-scope-row">
+                <span className="ai-scope-hint">
+                  <button
+                    className="ai-scope-label"
+                    onClick={() => setScopePreviewOpen((open) => !open)}
+                    aria-expanded={scopePreviewOpen}
+                    data-tip={t('aiScopeSelectionTip')}
+                  >
+                    {t('aiScopeSelection', { words: countWords(scopeText(scope)) })}
+                  </button>
+                  <button
+                    className="ai-scope-clear"
+                    onClick={() => setScopeCleared(scope.key)}
+                    data-tip={t('aiScopeClearTitle')}
+                    aria-label={t('aiScopeClearTitle')}
+                  >
+                    <svg width="10" height="10" viewBox="0 0 16 16" aria-hidden>
+                      <path
+                        d="M4 4l8 8M12 4l-8 8"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.8"
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                  </button>
+                </span>
+                {scopePreviewOpen && (
+                  <div className="ai-scope-preview">
+                    {scopeText(scope).length > 400
+                      ? `${scopeText(scope).slice(0, 400)}…`
+                      : scopeText(scope)}
+                  </div>
+                )}
+              </div>
+            )
+          }
           placeholder={t('aiComposerPlaceholder')}
           hintIdle={t('aiHintIdle')}
           hintBusy={t('aiHintBusy')}

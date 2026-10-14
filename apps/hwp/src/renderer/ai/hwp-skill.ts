@@ -6,6 +6,7 @@ import type {
   AgentParagraphFormat,
   AgentPlace,
   AgentPlaceRefusal,
+  AgentSegment,
   AgentTableCell,
   AgentTableLinesRefusal,
   AgentTableSummary,
@@ -19,6 +20,8 @@ export const CONTEXT_MAX_CHARS = 8000
 /** Most text one read_document call returns. */
 export const READ_PAGE_CHARS = 24000
 const CONTEXT_MAX_FIELDS = 40
+/** Selected text attached to a user message; a longer selection is read on demand. */
+export const SELECTION_CONTEXT_CHARS = 6000
 /** Longest quote of document text inside an activity label. */
 const LABEL_QUOTE_CHARS = 24
 /** Longest text of an added or removed paragraph kept for the panel's list of changes. */
@@ -46,6 +49,15 @@ export interface HwpChange {
   place?: AgentPlace
 }
 
+/** What the user selected in the editor, as the selection tools work on it. */
+export interface HwpSelection {
+  /** one run per selected paragraph, as the editor handed them out */
+  segments: AgentSegment[]
+  inTable: boolean
+  /** the runs are one stretch of paragraphs: it can become more or fewer paragraphs */
+  contiguous: boolean
+}
+
 export interface HwpSkillDeps {
   bridge: AgentBridge
   /** activity labels, in the UI language */
@@ -61,6 +73,11 @@ export interface HwpSkill {
    * builds its context synchronously, so the panel awaits this before a run.
    */
   refreshContext(): Promise<void>
+  /**
+   * What the user has selected in the editor, for the run about to start: the runs the
+   * selection tools act on. Null when nothing is selected.
+   */
+  setSelection(scope: HwpSelection | null): void
 }
 
 const SYSTEM_PROMPT = [
@@ -99,6 +116,14 @@ const SYSTEM_PROMPT = [
   '- Leave a cell empty when you do not know its answer, and tell the user which ones are left.',
   '- When a list in a form has too few rows for what the user gave you, add rows after the last row of that list with add_to_table (they come out shaped like that row), read the table again for the new row numbers, then fill them. Do not add rows or columns the user has no content for.',
   '- Remove rows or columns only when the user asks for it: what is in them goes too.',
+  '',
+  '## When the user has selected text',
+  '- When the context has a "Selected text" block, the user selected that part in the editor and the request is about it: "this", "here", "이 부분", "선택한 부분" mean the selection.',
+  '- Change it with replace_selection and format_selection, which act on exactly the selected text. Do not use replace_text or format_text for it: the same words may occur elsewhere in the document.',
+  '- replace_selection takes the new text of the selected paragraphs, one string each, in order; pass a paragraph as it is to keep it. When the selection is one stretch of text you may pass more or fewer strings than it has paragraphs: further strings become new paragraphs after it, and paragraphs left without a string are removed. A selection of table cells or of separate places takes exactly one string for each listed paragraph.',
+  '- A long selection is worked on in parts: read_selection shows the paragraphs the context left out, and replace_selection with first replaces a run of paragraphs starting at that number.',
+  '- Leave the rest of the document alone unless the request clearly asks for more.',
+  '- Without that block nothing is selected. If the user then speaks of "the selected part", ask them to select the text in the document first.',
   '',
   '## Formatting rules',
   '- Format only what the user asked for. Do not restyle text on your own: a new paragraph already looks like its neighbour, and official documents keep one look throughout.',
@@ -282,6 +307,51 @@ const TOOLS: AgentToolDef[] = [
     },
   },
   {
+    name: 'replace_selection',
+    description:
+      'Replace the text the user selected in the editor (the "Selected text" block of the context). One string per selected paragraph, in the same order; each takes the place of that paragraph\'s selected text and keeps its formatting. Without first the strings stand for the whole selection, and for a selection that is one stretch of text they may be more or fewer than its paragraphs. With first they replace that many paragraphs starting at that number.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        paragraphs: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'the new text of the selected paragraphs, in order, each one line',
+        },
+        first: {
+          type: 'integer',
+          minimum: 1,
+          description: 'replace only the paragraphs from this number of the selection on',
+        },
+      },
+      required: ['paragraphs'],
+    },
+  },
+  {
+    name: 'read_selection',
+    description:
+      'Read the paragraphs of the selected text by number, for a selection too long to be shown whole in the context.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        from: { type: 'integer', minimum: 1, description: 'paragraph to start from (default 1)' },
+      },
+    },
+  },
+  {
+    name: 'format_selection',
+    description:
+      'Change the formatting of the text the user selected in the editor. Only the properties you pass change; align and line_spacing apply to the whole paragraphs the selection is in.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        align: { type: 'string', enum: ['left', 'center', 'right', 'justify'] },
+        line_spacing: { type: 'number', description: 'line spacing in percent, for example 160' },
+        ...TEXT_FORMAT_SCHEMA,
+      },
+    },
+  },
+  {
     name: 'list_tables',
     description:
       'List the tables of the document in reading order: number, rows and columns, the line of text above it, and its first cells. A table inside a cell of another table is listed too, with the number of that table.',
@@ -390,6 +460,13 @@ const ONE_LINE_HELP =
   'Text with a line break cannot be searched or inserted: a replacement stays inside one paragraph or table cell. Split the change into one call per paragraph.'
 
 const hasLineBreak = (text: string) => /[\r\n]/.test(text)
+
+const NO_SELECTION_HELP =
+  'Nothing is selected in the editor, so there is nothing for this tool to act on. Use the tools that find text, or ask the user to select the part they mean.'
+const SELECTION_COUNT_HELP = (count: number) =>
+  `Nothing was changed: the selected paragraphs are not one stretch of text (they are table cells, or separate places), so the selection cannot become more or fewer paragraphs. Pass exactly ${count} string(s), one for each listed paragraph, or use first to replace some of them.`
+const SELECTION_CHANGED_HELP =
+  'Nothing was changed: the selected text is no longer what it was when the request was sent (it was edited, or changed by an earlier call). Read the document again and use the tools that find text.'
 
 /** A table in the list of tables, as the model reads it. */
 function tableLine(table: AgentTableSummary): string {
@@ -605,6 +682,44 @@ function textArg(call: AgentToolCall, key: string): string | null {
 export function createHwpSkill(deps: HwpSkillDeps): HwpSkill {
   const { bridge, label } = deps
   let context = ''
+  /** the runs the user selected, as they stand now (a replacement moves them on) */
+  let selection: AgentSegment[] | null = null
+  let selectionInTable = false
+  let selectionContiguous = false
+
+  /** The selected paragraphs from number `from` (1-based) as numbered lines, up to `max` characters. */
+  const selectionLines = (from: number, max: number): { lines: string[]; next: number } => {
+    const lines: string[] = []
+    let chars = 0
+    let index = from - 1
+    for (; selection && index < selection.length; index++) {
+      const line = `${index + 1}. ${selection[index]!.text}`
+      // always at least one, however long it is
+      if (lines.length > 0 && chars + line.length > max) break
+      lines.push(line)
+      chars += line.length
+    }
+    return { lines, next: index + 1 }
+  }
+
+  const selectionContext = (): string => {
+    if (!selection) return ''
+    const where = selectionInTable ? ', inside a table' : ''
+    const shape = selectionContiguous
+      ? ''
+      : ' They are not one stretch of text (table cells, or separate places).'
+    const { lines, next } = selectionLines(1, SELECTION_CONTEXT_CHARS)
+    return [
+      '## Selected text',
+      `The user selected ${selection.length} paragraph(s)${where} in the editor.${shape} The request is about this part:`,
+      ...lines,
+      ...(next <= selection.length
+        ? [
+            `[paragraphs ${next}–${selection.length} are not shown: read_selection with from ${next} returns them]`,
+          ]
+        : []),
+    ].join('\n')
+  }
 
   const bad = (call: AgentToolCall, output: string): ToolExecution => ({
     output,
@@ -867,6 +982,110 @@ export function createHwpSkill(deps: HwpSkillDeps): HwpSkill {
           summary: label('aiToolFormat', { text: quote(find) }),
         }
       }
+      case 'read_selection': {
+        if (!selection) return bad(call, NO_SELECTION_HELP)
+        const raw = call.input.from
+        const from = typeof raw === 'number' && Number.isInteger(raw) && raw > 1 ? raw : 1
+        if (from > selection.length) {
+          return bad(call, `The selection has ${selection.length} paragraph(s).`)
+        }
+        const { lines, next } = selectionLines(from, READ_PAGE_CHARS)
+        const more =
+          next <= selection.length ? `\n[more: call read_selection with from ${next}]` : ''
+        return {
+          output: `Paragraphs ${from}–${next - 1} of ${selection.length} selected.\n${lines.join('\n')}${more}`,
+          summary: label('aiToolRead'),
+        }
+      }
+      case 'replace_selection': {
+        if (!selection) return bad(call, NO_SELECTION_HELP)
+        const paragraphs = call.input.paragraphs
+        if (!isTextList(paragraphs)) {
+          return bad(call, 'paragraphs must be a non-empty list of strings')
+        }
+        if (paragraphs.some(hasLineBreak)) return bad(call, ONE_LINE_HELP)
+        const rawFirst = call.input.first
+        const part = typeof rawFirst === 'number'
+        const first = part ? rawFirst : 1
+        // a part is replaced one for one; the whole may change its number of paragraphs
+        const target = part ? selection.slice(first - 1, first - 1 + paragraphs.length) : selection
+        if (
+          part &&
+          (!Number.isInteger(first) || first < 1 || target.length !== paragraphs.length)
+        ) {
+          return bad(
+            call,
+            `Nothing was changed: the selection has ${selection.length} paragraph(s), so paragraphs ${first}–${first + paragraphs.length - 1} are not all in it.`,
+          )
+        }
+        if (!part && paragraphs.length !== selection.length && !selectionContiguous) {
+          return bad(call, SELECTION_COUNT_HELP(selection.length))
+        }
+        const before = target.map((segment) => segment.text).join(' ⏎ ')
+        const result = await bridge.replaceSelection(target, paragraphs)
+        if (!result.ok) {
+          return bad(
+            call,
+            result.reason === 'changed'
+              ? SELECTION_CHANGED_HELP
+              : result.reason === 'count'
+                ? SELECTION_COUNT_HELP(result.count)
+                : HAS_OBJECTS_HELP,
+          )
+        }
+        selection = part
+          ? [
+              ...selection.slice(0, first - 1),
+              ...result.segments,
+              ...selection.slice(first - 1 + paragraphs.length),
+            ]
+          : result.segments
+        const after = paragraphs.join(' ⏎ ')
+        deps.onChange({
+          kind: 'replace',
+          from: changeText(before),
+          to: changeText(after),
+          count: 1,
+          place: result.place,
+        })
+        return {
+          output:
+            target.length === paragraphs.length
+              ? `Replaced the selected text (${paragraphs.length} paragraph(s)).`
+              : `Replaced the selected text: its ${target.length} paragraph(s) are now ${paragraphs.length}.`,
+          mutated: true,
+          summary: arrow(before, after),
+        }
+      }
+      case 'format_selection': {
+        if (!selection) return bad(call, NO_SELECTION_HELP)
+        const format = formatArgs(call)
+        if (Object.keys(format).length === 0) return bad(call, NO_FORMAT_HELP)
+        const text = selection.map((segment) => segment.text).join(' ⏎ ')
+        const result = await bridge.formatSelection(selection, format)
+        if (!result.ok) {
+          return bad(
+            call,
+            result.reason === 'changed'
+              ? SELECTION_CHANGED_HELP
+              : result.reason === 'unsupported_place'
+                ? 'Nothing was changed: the alignment and line spacing of those paragraphs cannot be set here (they are in a table inside another table). Their character formatting can still be changed.'
+                : HAS_OBJECTS_HELP,
+          )
+        }
+        deps.onChange({
+          kind: 'format',
+          from: changeText(text),
+          to: describeFormat(format, label),
+          count: result.count,
+          place: result.place,
+        })
+        return {
+          output: `Formatted the selected text (${result.count} paragraph(s)).`,
+          mutated: true,
+          summary: label('aiToolFormat', { text: quote(text) }),
+        }
+      }
       case 'list_tables': {
         const listed = await bridge.listTables()
         const lines = listed.tables.map(tableLine)
@@ -1046,7 +1265,7 @@ export function createHwpSkill(deps: HwpSkillDeps): HwpSkill {
       id: 'hwp',
       systemPrompt: SYSTEM_PROMPT,
       tools: TOOLS,
-      buildContext: () => context,
+      buildContext: () => [context, selectionContext()].filter(Boolean).join('\n\n'),
       executeTool: async (call) => {
         try {
           return await run(call)
@@ -1055,6 +1274,11 @@ export function createHwpSkill(deps: HwpSkillDeps): HwpSkill {
           return bad(call, error instanceof Error ? error.message : String(error))
         }
       },
+    },
+    setSelection: (scope) => {
+      selection = scope && scope.segments.length > 0 ? scope.segments : null
+      selectionInTable = scope?.inTable === true
+      selectionContiguous = scope?.contiguous === true
     },
     refreshContext: async () => {
       try {

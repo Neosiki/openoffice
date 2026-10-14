@@ -36,6 +36,7 @@ describe('hwp renderer strings', () => {
       aiToolReadTable: ['{table}'],
       aiToolFillCells: ['{table}', '{count}'],
       aiTableName: ['{table}'],
+      aiScopeSelection: ['{words}'],
       aiSumImageAttachment: ['{name}'],
       aiSumReadAttachmentName: ['{name}'],
       aiImageReadFail: ['{name}'],

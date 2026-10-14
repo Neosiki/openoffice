@@ -43,6 +43,13 @@ const MAX_TABLE_LINES = 50
 const FLOATING_KINDS = new Set(['image', 'picture', 'shape', 'group', 'ole', 'textbox'])
 /** The command this plugin registers with the editor to move its caret to a place. */
 const REVEAL_COMMAND = 'ext:ieum-reveal'
+/** The command that reads what the user has selected in the editor. */
+const SELECTION_COMMAND = 'ext:ieum-selection'
+/** The command that selects the word under the caret (a double click in the page). */
+const WORD_COMMAND = 'ext:ieum-select-word'
+/** The most runs and characters of one selection: a sanity limit, far above real use. */
+const MAX_SELECTED_RUNS = 5000
+const MAX_SELECTED_CHARS = 400000
 /** Lookups one walk over the document spends on finding tables inside table cells. */
 const MAX_NESTED_LOOKUPS = 20000
 /** Objects tried in one cell paragraph when looking for a table inside it. */
@@ -172,6 +179,288 @@ function showPlace(services, place) {
   }
   if (input.updateCaret) input.updateCaret()
   return true
+}
+
+/**
+ * What is selected in the editor: the two ends of a run of text in document order, or a
+ * block of table cells (dragged across cells, or picked with F5). Null when nothing is.
+ */
+function cursorSelection(services) {
+  const input = services && services.getInputHandler ? services.getInputHandler() : null
+  const cursor = input ? input.cursor : null
+  if (!cursor) return null
+  if (cursor.isInCellSelectionMode && cursor.isInCellSelectionMode()) {
+    const range = cursor.getSelectedCellRange ? cursor.getSelectedCellRange() : null
+    const table = cursor.getCellTableContext ? cursor.getCellTableContext() : null
+    if (range && table) {
+      const excluded = cursor.getExcludedCells ? [...cursor.getExcludedCells()] : []
+      return { block: { table, range, excluded } }
+    }
+  }
+  if (!cursor.hasSelection()) return null
+  const ordered = cursor.getSelectionOrdered()
+  return ordered ? { start: ordered.start, end: ordered.end } : null
+}
+
+const asCellPath = (entries) =>
+  entries.map((entry) => ({
+    controlIndex: entry.controlIndex,
+    // a text box is addressed like a table of one cell
+    cellIndex: Number.isInteger(entry.cellIndex) ? entry.cellIndex : 0,
+    cellParaIndex: entry.cellParaIndex,
+  }))
+
+/**
+ * One end of a selection in the terms of this plugin: the paragraph it is in (for a cell or
+ * a text box, the body paragraph that holds it and the path to the paragraph inside) and
+ * the offset. Null for a place this plugin has no address for (a note, a header).
+ */
+function endOf(position) {
+  if (!position) return null
+  if (!Number.isInteger(position.sectionIndex) || !Number.isInteger(position.charOffset)) {
+    return null
+  }
+  const cells =
+    Array.isArray(position.cellPath) && position.cellPath.length > 0
+      ? position.cellPath
+      : Number.isInteger(position.cellIndex) || position.isTextBox
+        ? [position]
+        : null
+  if (!cells) {
+    return {
+      sec: position.sectionIndex,
+      para: position.paragraphIndex,
+      path: null,
+      k: position.paragraphIndex,
+      offset: position.charOffset,
+    }
+  }
+  const path = asCellPath(cells)
+  if (
+    path.some(
+      (entry) => !Number.isInteger(entry.controlIndex) || !Number.isInteger(entry.cellParaIndex),
+    )
+  ) {
+    return null
+  }
+  return {
+    sec: position.sectionIndex,
+    para: Number.isInteger(position.parentParaIndex)
+      ? position.parentParaIndex
+      : position.paragraphIndex,
+    path,
+    k: path[path.length - 1].cellParaIndex,
+    offset: position.charOffset,
+  }
+}
+
+/** Whether two ends in cells lie in the same table, and with `cell` in the same cell of it. */
+function sameTable(a, b, cell) {
+  if (a.sec !== b.sec || a.para !== b.para || a.path.length !== b.path.length) return false
+  return a.path.every((entry, index) => {
+    const other = b.path[index]
+    const last = index === a.path.length - 1
+    return (
+      entry.controlIndex === other.controlIndex &&
+      (last
+        ? !cell || entry.cellIndex === other.cellIndex
+        : entry.cellIndex === other.cellIndex && entry.cellParaIndex === other.cellParaIndex)
+    )
+  })
+}
+
+/** The runs of a selection as they are gathered, with what they add up to. */
+function runCollector() {
+  const segments = []
+  let chars = 0
+  return {
+    segments,
+    /** the characters from..to of paragraph k of a box, when there are any */
+    add(box, k, from, to) {
+      const length = box.length(k)
+      const start = Math.min(Math.max(from, 0), length)
+      const end = Math.min(to, length)
+      if (end <= start) return
+      chars += end - start
+      segments.push({
+        ...box.place(k, end - start),
+        offset: start,
+        text: box.text(k, length).slice(start, end),
+      })
+    },
+    tooLong: () => segments.length > MAX_SELECTED_RUNS || chars > MAX_SELECTED_CHARS,
+  }
+}
+
+/**
+ * The text of a table's cells as runs, in reading order: each paragraph of each cell that
+ * `wanted` picks (all of them without it), followed by the tables that sit in it.
+ */
+function collectTable(doc, tables, index, out, wanted) {
+  const table = tables[index]
+  const inside = tables
+    .map((child, at) => ({ child, at }))
+    .filter(({ child }) => child.parent === index)
+  const grid = wanted ? gridOf(doc, table) : null
+  for (let cell = 0; cell < table.cells; cell++) {
+    if (grid && !wanted(grid[cell])) continue
+    const box = cellBox(doc, table, cell)
+    const count = box.count()
+    for (let k = 0; k < count; k++) {
+      out.add(box, k, 0, Infinity)
+      for (const { child, at } of inside) {
+        const holder = child.path[child.path.length - 2]
+        if (holder.cellIndex === cell && holder.cellParaIndex === k) {
+          collectTable(doc, tables, at, out, null)
+        }
+      }
+      if (out.tooLong()) return
+    }
+  }
+}
+
+/**
+ * The text between two places of the body as runs, across sections when need be. A table
+ * goes in whole when the paragraph it sits in is wholly inside the selection.
+ */
+function collectBody(doc, tablesNow, start, end, out) {
+  for (let sec = start.sec; sec <= end.sec; sec++) {
+    const box = containerOf(doc, { sec, para: 0 })
+    const last = box.count() - 1
+    const first = sec === start.sec ? start.k : 0
+    const stop = sec === end.sec ? Math.min(end.k, last) : last
+    for (let k = first; k <= stop; k++) {
+      const length = box.length(k)
+      const from = sec === start.sec && k === start.k ? start.offset : 0
+      const to = sec === end.sec && k === end.k ? end.offset : length
+      out.add(box, k, from, to)
+      if (from <= 0 && to >= length && box.objectPositions(k).length > 0) {
+        const tables = tablesNow()
+        tables.forEach((table, index) => {
+          if (table.parent === null && table.sec === sec && table.para === k) {
+            collectTable(doc, tables, index, out, null)
+          }
+        })
+      }
+      if (out.tooLong()) return
+    }
+  }
+}
+
+/**
+ * Whether the runs are paragraphs of one stretch: in order in the body of a section or in
+ * one cell (a paragraph without text between two of them has no run, and does not break
+ * the stretch). Only such a selection can be rewritten into more or fewer paragraphs than
+ * it has.
+ */
+function isContiguous(segments) {
+  return segments.every((segment, index) => {
+    if (index === 0) return true
+    const before = segments[index - 1]
+    if (segment.sec !== before.sec) return false
+    const path = segment.path ?? null
+    const pathBefore = before.path ?? null
+    if (!path || !pathBefore) return !path && !pathBefore && segment.para > before.para
+    const a = { sec: segment.sec, para: segment.para, path }
+    const b = { sec: before.sec, para: before.para, path: pathBefore }
+    return (
+      sameTable(a, b, true) &&
+      path[path.length - 1].cellParaIndex > pathBefore[pathBefore.length - 1].cellParaIndex
+    )
+  })
+}
+
+const WORD_CHARACTER = /[\p{L}\p{N}]/u
+
+/** The word around an offset of a text: a run of letters and digits. Null on a blank or a mark. */
+function wordAt(text, offset) {
+  let at = Math.min(offset, text.length - 1)
+  if (at < 0) return null
+  // a click behind the last letter of a word still means that word
+  if (!WORD_CHARACTER.test(text[at]) && at > 0 && WORD_CHARACTER.test(text[at - 1])) at -= 1
+  if (!WORD_CHARACTER.test(text[at])) return null
+  let start = at
+  let end = at + 1
+  while (start > 0 && WORD_CHARACTER.test(text[start - 1])) start -= 1
+  while (end < text.length && WORD_CHARACTER.test(text[end])) end += 1
+  return { start, end }
+}
+
+/**
+ * Select the word the caret is in, the way a double click does in Hangul and every other
+ * editor; the studio's own double click only opens headers, text boxes and objects. Leaves
+ * the editor alone while it is in one of those modes.
+ */
+function selectWord(services, readText) {
+  const input = services && services.getInputHandler ? services.getInputHandler() : null
+  const cursor = input ? input.cursor : null
+  if (!cursor || !cursor.getPosition) return false
+  const elsewhere = [
+    'isInPictureObjectSelection',
+    'isInHeaderFooter',
+    'isInCellSelectionMode',
+    'isInFootnote',
+  ].some((mode) => typeof cursor[mode] === 'function' && cursor[mode]())
+  if (elsewhere) return false
+  const position = cursor.getPosition()
+  const at = endOf(position)
+  if (!at) return false
+  const word = wordAt(readText(at), at.offset)
+  if (!word) return false
+  cursor.clearSelection()
+  cursor.moveTo({ ...position, charOffset: word.start })
+  cursor.setAnchor()
+  cursor.moveTo({ ...position, charOffset: word.end })
+  if (input.updateCaret) input.updateCaret()
+  return true
+}
+
+const placeKey = (place) =>
+  [
+    place.sec,
+    place.para,
+    (place.path ?? []).map((e) => `${e.controlIndex}.${e.cellIndex}.${e.cellParaIndex}`).join('/'),
+    place.offset,
+    place.length,
+  ].join(':')
+
+/** The paragraph of the box a segment of a selection is in. */
+const segmentBox = (doc, segment) => {
+  const box = containerOf(doc, { sec: segment.sec, para: segment.para, cellPath: segment.path })
+  return { box, k: box.index }
+}
+
+/** A selection as the panel handed it back: a list of runs, one per paragraph. */
+function checkSegments(segments) {
+  const ok =
+    Array.isArray(segments) &&
+    segments.length > 0 &&
+    segments.length <= MAX_SELECTED_RUNS &&
+    segments.every(
+      (segment) =>
+        segment &&
+        Number.isInteger(segment.sec) &&
+        Number.isInteger(segment.para) &&
+        Number.isInteger(segment.offset) &&
+        Number.isInteger(segment.length) &&
+        segment.offset >= 0 &&
+        segment.length >= 0 &&
+        typeof segment.text === 'string',
+    )
+  if (!ok) throw fail('BAD_ARGUMENT', 'the selection is not one this editor handed out')
+}
+
+/** Whether every run still holds the text it held when the selection was read. */
+function segmentsStand(doc, segments) {
+  return segments.every((segment) => {
+    try {
+      const { box, k } = segmentBox(doc, segment)
+      const whole = box.text(k, box.length(k))
+      return whole.slice(segment.offset, segment.offset + segment.length) === segment.text
+    } catch {
+      return false
+    }
+  })
 }
 
 /** Text inside an equation is a script, not prose: it has no replace path here. */
@@ -894,9 +1183,17 @@ function pickHit(hits, occurrence) {
   return { hit: hits[occurrence - 1] }
 }
 
+/** Takes the plugin's double-click listener off the page again. */
+let stopListening = null
+
 export const agentPlugin = {
   id: AGENT_PLUGIN_ID,
   apiVersion: 1,
+
+  deactivate() {
+    if (stopListening) stopListening()
+    stopListening = null
+  },
 
   activate(host) {
     // counts the changes this plugin did not make (the user typing, the editor's own undo):
@@ -928,6 +1225,64 @@ export const agentPlugin = {
       })
     } catch {
       // registered by an earlier activation of this plugin, or a host without commands
+    }
+
+    // what the selection command saw, and the selection this plugin made itself by showing
+    // a change: that one is not something the user picked
+    let picked = null
+    let shownKey = null
+    try {
+      host.automation.registerCommand({
+        id: SELECTION_COMMAND,
+        label: 'Read the selection',
+        execute: (services) => {
+          try {
+            picked = cursorSelection(services)
+          } catch {
+            picked = null
+          }
+        },
+      })
+    } catch {
+      // as above
+    }
+
+    try {
+      host.automation.registerCommand({
+        id: WORD_COMMAND,
+        label: 'Select the word',
+        execute: (services) => {
+          try {
+            selectWord(services, (at) =>
+              host.read((doc) => {
+                const box = containerOf(doc, { sec: at.sec, para: at.para, cellPath: at.path })
+                return box.text(at.k, box.length(at.k))
+              }),
+            )
+          } catch {
+            // a place the caret cannot be read at: nothing is selected, as before
+          }
+        },
+      })
+    } catch {
+      // as above
+    }
+    const page = globalThis.document
+    if (page) {
+      const onDoubleClick = (event) => {
+        // the studio handled it (a header, a text box, a picture), or it was not in the page
+        if (event.defaultPrevented) return
+        const target = event.target
+        if (!target || !target.closest || !target.closest('#scroll-container')) return
+        try {
+          host.automation.execute(WORD_COMMAND)
+        } catch {
+          // no such command in this editor: the double click stays what it was
+        }
+      }
+      if (stopListening) stopListening()
+      page.addEventListener('dblclick', onDoubleClick)
+      stopListening = () => page.removeEventListener('dblclick', onDoubleClick)
     }
 
     const guarded =
@@ -1709,7 +2064,225 @@ export const agentPlugin = {
         } catch {
           return { ok: false }
         }
+        if (shown) shownKey = placeKey(place)
         return { ok: shown }
+      }),
+
+      /**
+       * What the user has selected in the editor, as runs of text: one per paragraph
+       * touched, in reading order. A selection inside one paragraph or one cell is its
+       * text; one that runs over paragraphs takes the tables between them whole; a block
+       * of cells is the text of those cells. `contiguous` says the runs are the paragraphs
+       * of one stretch (the body, or one cell), which is what a rewrite into more or fewer
+       * paragraphs needs. `own` marks the selection this plugin made itself when it
+       * showed a change.
+       */
+      selection: guarded(() => {
+        picked = null
+        try {
+          host.automation.execute(SELECTION_COMMAND)
+        } catch {
+          return { ok: false, reason: 'none' }
+        }
+        const seen = picked
+        if (!seen) return { ok: false, reason: 'none' }
+        return host.read((doc) => {
+          const out = runCollector()
+          let known = null
+          const tablesNow = () => (known ??= tablesOf(doc).tables)
+          const tableAt = (sec, para, path) => {
+            const key = tableKey(sec, para, path)
+            return tablesNow().findIndex(
+              (table) => tableKey(table.sec, table.para, table.path) === key,
+            )
+          }
+          /** the cells a block between two corners covers, a merged cell by any of its places */
+          const within = (range, skip) => (cell) =>
+            cell.row <= range.endRow &&
+            cell.row + cell.rowSpan - 1 >= range.startRow &&
+            cell.col <= range.endCol &&
+            cell.col + cell.colSpan - 1 >= range.startCol &&
+            !skip.has(`${cell.row},${cell.col}`)
+          let inTable = false
+          if (seen.block) {
+            const { table, range, excluded } = seen.block
+            const path =
+              Array.isArray(table.cellPath) && table.cellPath.length > 0
+                ? asCellPath(table.cellPath)
+                : [{ controlIndex: table.ci, cellIndex: 0, cellParaIndex: 0 }]
+            const index = tableAt(table.sec, table.ppi, path)
+            if (index < 0) return { ok: false, reason: 'unsupported' }
+            collectTable(doc, tablesNow(), index, out, within(range, new Set(excluded)))
+            inTable = true
+          } else {
+            const start = endOf(seen.start)
+            const end = endOf(seen.end)
+            if (!start || !end) return { ok: false, reason: 'unsupported' }
+            if (start.path && end.path && sameTable(start, end, true)) {
+              // inside one cell or text box: its paragraphs
+              const box = containerOf(doc, {
+                sec: start.sec,
+                para: start.para,
+                cellPath: start.path,
+              })
+              for (let k = start.k; k <= end.k; k++) {
+                out.add(
+                  box,
+                  k,
+                  k === start.k ? start.offset : 0,
+                  k === end.k ? end.offset : Infinity,
+                )
+              }
+              inTable = true
+            } else if (start.path && end.path && sameTable(start, end, false)) {
+              // from one cell to another of the same table: the block of cells between them
+              const index = tableAt(start.sec, start.para, start.path)
+              if (index < 0) return { ok: false, reason: 'unsupported' }
+              const grid = gridOf(doc, tablesNow()[index])
+              const a = grid[start.path[start.path.length - 1].cellIndex]
+              const b = grid[end.path[end.path.length - 1].cellIndex]
+              if (!a || !b) return { ok: false, reason: 'unsupported' }
+              const range = {
+                startRow: Math.min(a.row, b.row),
+                endRow: Math.max(a.row + a.rowSpan - 1, b.row + b.rowSpan - 1),
+                startCol: Math.min(a.col, b.col),
+                endCol: Math.max(a.col + a.colSpan - 1, b.col + b.colSpan - 1),
+              }
+              collectTable(doc, tablesNow(), index, out, within(range, new Set()))
+              inTable = true
+            } else {
+              // across the body: an end inside a table takes that table whole
+              collectBody(
+                doc,
+                tablesNow,
+                start.path ? { sec: start.sec, k: start.para, offset: 0 } : start,
+                end.path ? { sec: end.sec, k: end.para, offset: Infinity } : end,
+                out,
+              )
+            }
+          }
+          if (out.tooLong()) return { ok: false, reason: 'too_long' }
+          if (out.segments.length === 0) return { ok: false, reason: 'none' }
+          return {
+            ok: true,
+            inTable,
+            contiguous: isContiguous(out.segments),
+            own: out.segments.length === 1 && placeKey(out.segments[0]) === shownKey,
+            segments: out.segments,
+          }
+        })
+      }),
+
+      /**
+       * Replace the selected runs in one undo step. With as many texts as runs, each text
+       * takes the place of its run. With more or fewer (only for a contiguous selection),
+       * the selection is rewritten: further texts become new paragraphs after the last
+       * run, made like Enter makes them, and runs left without a text are removed, a
+       * wholly selected paragraph with them. `segments` is the selection as selection()
+       * handed it out; when a run no longer holds its text (the user typed there, or the
+       * place moved) nothing changes. The runs come back as they are now, for a further
+       * change of the same selection.
+       */
+      replaceSelection: guarded((segments, texts) => {
+        checkSegments(segments)
+        if (!Array.isArray(texts) || texts.length === 0 || texts.length > MAX_SELECTED_RUNS) {
+          throw fail('BAD_ARGUMENT', 'texts must be a list of one or more strings')
+        }
+        texts.forEach(checkReplacement)
+        if (texts.length !== segments.length && !isContiguous(segments)) {
+          return { ok: false, reason: 'count', count: segments.length }
+        }
+        if (!host.read((doc) => segmentsStand(doc, segments))) {
+          return { ok: false, reason: 'changed' }
+        }
+        return keepingObjects((mustKeep) =>
+          change('replace-selection', (doc) => {
+            if (!segmentsStand(doc, segments))
+              throw fail('CHANGED', 'the document changed mid-call')
+            const before = objectsOf(doc)
+            const asHit = (segment) => ({
+              sec: segment.sec,
+              para: segment.para,
+              cellPath: segment.path,
+              charOffset: segment.offset,
+              length: segment.length,
+            })
+            const kept = Math.min(segments.length, texts.length)
+            // runs left without a text go first, from the end, so that the paragraphs in
+            // front of them keep their numbers
+            for (let index = segments.length - 1; index >= kept; index--) {
+              const segment = segments[index]
+              const { box, k } = segmentBox(doc, segment)
+              const whole = segment.offset === 0 && segment.length === box.length(k)
+              if (whole && k > 0 && box.objectPositions(k).length === 0) {
+                box.deleteRange(k - 1, box.length(k - 1), k, box.length(k))
+              } else replaceHit(doc, asHit(segment), '')
+            }
+            // each run is in a paragraph of its own, so one does not move another
+            for (let index = 0; index < kept; index++) {
+              replaceHit(doc, asHit(segments[index]), texts[index])
+            }
+            const now = segments.slice(0, kept).map((segment, index) => ({
+              ...segment,
+              length: texts[index].length,
+              text: texts[index],
+            }))
+            if (texts.length > segments.length) {
+              // what stood behind the selection in its last paragraph ends up behind the
+              // last new paragraph, as when text of several paragraphs is typed there
+              const last = segments[segments.length - 1]
+              const { box, k } = segmentBox(doc, last)
+              let at = k
+              let offset = last.offset + texts[kept - 1].length
+              for (let index = kept; index < texts.length; index++) {
+                box.split(at, offset)
+                at += 1
+                if (texts[index]) box.insert(at, texts[index])
+                offset = texts[index].length
+                now.push({ ...box.place(at, texts[index].length), text: texts[index] })
+              }
+            }
+            mustKeep(before, objectsOf(doc))
+            const { text: _text, ...place } = now[0]
+            return { ok: true, segments: now, place }
+          }),
+        )
+      }),
+
+      /**
+       * Change the formatting of the selected runs: character formatting for the runs, and
+       * with align or lineSpacing the paragraphs they are in.
+       */
+      formatSelection: guarded((segments, format) => {
+        checkSegments(segments)
+        const { chars, paragraph } = formatOf(format, true)
+        const plan = (doc) => {
+          if (!segmentsStand(doc, segments)) return { refusal: { ok: false, reason: 'changed' } }
+          const boxes = segments.map((segment) => segmentBox(doc, segment))
+          if (paragraph && boxes.some(({ box }) => !box.formatParagraph)) {
+            return { refusal: { ok: false, reason: 'unsupported_place' } }
+          }
+          return { boxes }
+        }
+        const refusal = host.read((doc) => plan(doc).refusal ?? null)
+        if (refusal) return refusal
+        return keepingObjects((mustKeep) =>
+          change('format-selection', (doc) => {
+            const { boxes } = plan(doc)
+            if (!boxes) throw fail('CHANGED', 'the document changed mid-call')
+            const before = objectsOf(doc)
+            segments.forEach((segment, index) => {
+              const { box, k } = boxes[index]
+              if (chars && segment.length > 0) {
+                box.formatChars(k, segment.offset, segment.offset + segment.length, chars)
+              }
+              if (paragraph) box.formatParagraph(k, paragraph)
+            })
+            mustKeep(before, objectsOf(doc))
+            const { text: _text, ...place } = segments[0]
+            return { ok: true, count: segments.length, place }
+          }),
+        )
       }),
 
       /**

@@ -80,6 +80,10 @@ export const id = {
   aiSumReadAttachmentName: 'Baca lampiran {name}',
   aiImageReadFail: '{name}: gagal dibaca',
   aiTooManyImages: 'Maksimal {max} gambar per pesan; kelebihannya diabaikan',
+  aiScopeSelection: 'Terpilih: {words} kata',
+  aiScopeSelectionTip:
+    'Instruksi penulisan ulang secara default hanya berlaku pada teks terpilih; klik untuk pratinjau',
+  aiScopeClearTitle: 'Hapus cakupan pilihan',
   aiToolNotDone: 'Tidak dilakukan · {what}',
   aiChangesTitle: 'Perubahan pada dokumen: {count}',
   aiRevert: 'Batalkan perubahan ini',

@@ -65,6 +65,56 @@ const PATCHES = {
  * @param {string} code
  * @returns {string}
  */
+/**
+ * What the app's plugin uses of the studio beyond the plugin host: the editor's caret, to
+ * show a change, to read the selection and to select a word. The host hands out none of
+ * it; the plugin reaches it through a command it registers, which the studio calls with
+ * its own services. These are names inside the studio, not a contract, so the build looks
+ * for them in the source it fetched: a release that renames one fails the build instead of
+ * turning those three things off without a word.
+ */
+export const pluginHooks = [
+  {
+    file: 'src/engine/cursor.ts',
+    needles: [
+      'hasSelection(): boolean',
+      'getSelectionOrdered()',
+      'clearSelection(): void',
+      'moveTo(pos: DocumentPosition): void',
+      'setAnchor(): void',
+      'getPosition(): DocumentPosition',
+      'isInCellSelectionMode(): boolean',
+      'getSelectedCellRange()',
+      'getCellTableContext()',
+      'getExcludedCells()',
+    ],
+  },
+  {
+    file: 'src/engine/input-handler.ts',
+    needles: ['private cursor: CursorState', 'updateCaret('],
+  },
+  {
+    file: 'src/command/types.ts',
+    needles: [
+      'getInputHandler: () => InputHandler | null',
+      'execute: (services: CommandServices, params?: Record<string, unknown>) => void',
+    ],
+  },
+  { file: 'src/automation/types.ts', needles: ['registerCommand(def: ExtCommandDef): void'] },
+]
+
+/** The hooks a studio source tree lacks; `read` gives the text of one of its files, or null. */
+export function missingPluginHooks(read) {
+  const missing = []
+  for (const { file, needles } of pluginHooks) {
+    const text = read(file)
+    for (const needle of needles) {
+      if (text === null || !text.includes(needle)) missing.push(`${file}: ${needle}`)
+    }
+  }
+  return missing
+}
+
 export function applyPatch(name, code) {
   const patch = PATCHES[name]
   if (!patch) throw new Error(`rhwp patch: unknown patch "${name}"`)

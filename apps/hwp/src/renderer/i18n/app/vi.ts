@@ -80,6 +80,10 @@ export const vi = {
   aiSumReadAttachmentName: 'Đọc tệp đính kèm {name}',
   aiImageReadFail: '{name}: không thể đọc',
   aiTooManyImages: 'Tối đa {max} hình ảnh cho mỗi tin nhắn; các ảnh thừa đã bị bỏ qua',
+  aiScopeSelection: 'Đã chọn: {words} từ',
+  aiScopeSelectionTip:
+    'Các yêu cầu viết lại mặc định sẽ áp dụng cho phần đã chọn; nhấp để xem trước',
+  aiScopeClearTitle: 'Xóa phạm vi vùng chọn',
   aiToolNotDone: 'Chưa thực hiện · {what}',
   aiChangesTitle: 'Thay đổi trong tài liệu: {count}',
   aiRevert: 'Hoàn tác các thay đổi này',

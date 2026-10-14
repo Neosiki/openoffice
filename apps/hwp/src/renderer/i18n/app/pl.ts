@@ -80,6 +80,10 @@ export const pl = {
   aiSumReadAttachmentName: 'Odczyt załącznika {name}',
   aiImageReadFail: '{name}: odczyt nie powiódł się',
   aiTooManyImages: 'Maksymalnie {max} obrazów na wiadomość; nadmiarowe zostały zignorowane',
+  aiScopeSelection: 'Zaznaczono: {words} słów',
+  aiScopeSelectionTip:
+    'Polecenia przepisania domyślnie dotyczą tylko zaznaczenia; kliknij, aby zobaczyć podgląd',
+  aiScopeClearTitle: 'Usuń zakres zaznaczenia',
   aiToolNotDone: 'Nie wykonano · {what}',
   aiChangesTitle: 'Zmiany w dokumencie: {count}',
   aiRevert: 'Cofnij te zmiany',

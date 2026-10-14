@@ -83,6 +83,10 @@ export const es = {
   aiSumReadAttachmentName: 'Leer dato adjunto {name}',
   aiImageReadFail: '{name}: error de lectura',
   aiTooManyImages: 'Como máximo {max} imágenes por mensaje; las sobrantes se ignoraron',
+  aiScopeSelection: 'Seleccionado: {words} palabras',
+  aiScopeSelectionTip:
+    'Las instrucciones de reescritura se aplican por defecto a la selección; haz clic para previsualizar',
+  aiScopeClearTitle: 'Quitar el ámbito de selección',
   aiToolNotDone: 'No realizado · {what}',
   aiChangesTitle: 'Cambios hechos en el documento: {count}',
   aiRevert: 'Deshacer estos cambios',

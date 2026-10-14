@@ -19,7 +19,7 @@ import { createRequire } from 'node:module'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { build } from 'vite'
-import { AGENT_PLUGIN_MODULE, rhwpPatches } from './rhwp-patches.mjs'
+import { AGENT_PLUGIN_MODULE, missingPluginHooks, rhwpPatches } from './rhwp-patches.mjs'
 
 const SCRIPTS = dirname(fileURLToPath(import.meta.url))
 const APP = resolve(SCRIPTS, '..')
@@ -100,6 +100,24 @@ function fetchSource() {
   }
 }
 
+/** Stop the build when the fetched studio no longer has what the app's plugin reaches into. */
+function checkPluginHooks() {
+  const missing = missingPluginHooks((file) => {
+    try {
+      return readFileSync(join(CACHE, 'rhwp-studio', file), 'utf8')
+    } catch {
+      return null
+    }
+  })
+  if (missing.length > 0) {
+    throw new Error(
+      `rhwp-studio ${TAG}: the editor no longer has what the app's plugin uses to show a change, ` +
+        `read the selection and select a word (see pluginHooks in rhwp-patches.mjs):\n  ` +
+        missing.join('\n  '),
+    )
+  }
+}
+
 async function buildStudio() {
   const studio = join(CACHE, 'rhwp-studio')
   const wasmPkg = dirname(require.resolve('@rhwp/core'))
@@ -149,6 +167,7 @@ if (
   console.log(`rhwp-studio: ${TAG} is up to date`)
 } else {
   fetchSource()
+  checkPluginHooks()
   await buildStudio()
   writeFileSync(STAMP, stamp)
   console.log(`rhwp-studio: built ${TAG} into ${OUT}`)

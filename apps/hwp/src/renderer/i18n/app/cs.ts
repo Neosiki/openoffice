@@ -81,6 +81,10 @@ export const cs = {
   aiSumReadAttachmentName: 'Čtení přílohy {name}',
   aiImageReadFail: '{name}: nelze přečíst',
   aiTooManyImages: 'Nejvýše {max} obrázků na zprávu; přebývající byly ignorovány',
+  aiScopeSelection: 'Vybráno: {words} slov',
+  aiScopeSelectionTip:
+    'Požadavky na přepsání se ve výchozím nastavení vztahují na výběr; kliknutím zobrazíte náhled',
+  aiScopeClearTitle: 'Zrušit rozsah výběru',
   aiToolNotDone: 'Neprovedeno · {what}',
   aiChangesTitle: 'Změny v dokumentu: {count}',
   aiRevert: 'Vrátit tyto změny',

@@ -195,6 +195,47 @@ export type AgentFillResult =
   | { ok: true; name: string; place?: AgentPlace }
   | { ok: false; reason: 'no_such_field'; count: number }
 
+/** One run of a selection: the text selected in one paragraph, and where it is. */
+export interface AgentSegment extends AgentPlace {
+  text: string
+}
+
+export type AgentSelectionResult =
+  | {
+      ok: true
+      inTable: boolean
+      /**
+       * the runs are the paragraphs of one stretch (the body, or one cell), so the selection
+       * can be rewritten into more or fewer paragraphs; false for table cells and the like
+       */
+      contiguous: boolean
+      /** the plugin made this selection itself when it showed a change; the user did not */
+      own: boolean
+      /** one run per paragraph touched, in reading order */
+      segments: AgentSegment[]
+    }
+  | {
+      ok: false
+      /**
+       * none: nothing is selected. unsupported: the selection is at a place without an
+       * address here (a note, a header). too_long: beyond the sanity limit of a selection.
+       */
+      reason: 'none' | 'unsupported' | 'too_long'
+    }
+
+export type AgentReplaceSelectionResult =
+  | { ok: true; segments: AgentSegment[]; place: AgentPlace }
+  /** a run no longer holds the text it held when the selection was read */
+  | { ok: false; reason: 'changed' }
+  /** the texts are not as many as the runs, and the runs are not one stretch of paragraphs */
+  | { ok: false; reason: 'count'; count: number }
+  | { ok: false; reason: 'has_objects'; count: number }
+
+export type AgentFormatSelectionResult =
+  | { ok: true; count: number; place: AgentPlace }
+  | { ok: false; reason: 'changed' | 'unsupported_place' }
+  | { ok: false; reason: 'has_objects'; count: number }
+
 /** Rows or columns of a table. */
 export type AgentTableLines = 'rows' | 'columns'
 
@@ -301,6 +342,12 @@ export interface AgentPluginSurface {
     count: number,
   ): AgentRemoveLinesResult
   reveal(place: AgentPlace): { ok: boolean }
+  selection(): AgentSelectionResult
+  replaceSelection(segments: AgentSegment[], texts: string[]): AgentReplaceSelectionResult
+  formatSelection(
+    segments: AgentSegment[],
+    format: AgentParagraphFormat,
+  ): AgentFormatSelectionResult
   listFields(): AgentField[]
   fillField(field: number, value: string): AgentFillResult
   undo(steps: number, expectedForeign: number): AgentUndoResult
