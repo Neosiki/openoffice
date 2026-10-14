@@ -56,6 +56,7 @@ import {
   headlessExitCode,
   parseHeadlessExportArgv,
   setHeadlessMode,
+  setOpenFilesSource,
   type HeadlessArgvParse,
   showOpenDialogWithMemory,
   showSaveDialogWithMemory,
@@ -294,7 +295,11 @@ import extractWorkerPath from './file-index/extract-worker?modulePath'
 import { FileIndexer } from './file-index/indexer'
 import { FileIndexStore } from './file-index/store'
 import { normalizeFileSearchSettings, probeDecision, SearchReranker } from './file-index/rerank'
-import { listKnowledgeFiles, readKnowledgeFilePage, searchKnowledgeBase } from './knowledge-base'
+import {
+  listKnowledgeFiles,
+  readKnowledgeFilePage,
+  searchSavedKnowledgeBase,
+} from './knowledge-base'
 import { runHeadlessExport, type HeadlessExporters } from './headless-export'
 import { TabManager } from './tab-manager'
 import { installShellCloseGuard } from './window-close-guard'
@@ -3642,7 +3647,7 @@ function registerHomeIpc(): void {
   // only thing a knowledge tool may read.
   ipcMain.handle('kb:list', (): unknown => listKnowledgeFiles(readStarredFiles()))
 
-  ipcMain.handle('kb:search', (_event, raw: unknown): unknown => {
+  ipcMain.handle('kb:search', async (_event, raw: unknown): Promise<unknown> => {
     const query = (raw && typeof raw === 'object' ? raw : {}) as { q?: unknown; limit?: unknown }
     const q = typeof query.q === 'string' ? query.q : ''
     const limitRaw = Number(query.limit)
@@ -3650,8 +3655,12 @@ function registerHomeIpc(): void {
     const store = fileIndexStore
     if (!q.trim() || !store) return []
     ensureFileIndexer()?.refreshIfStale(60_000)
-    const starred = readStarredFiles()
-    const hits = searchKnowledgeBase(
+    // a file saved since its last scan is still indexed as it was before the
+    // save, so only the files the index holds as they are on disk are quoted
+    const starred = store.pathsIndexedAsOnDisk(readStarredFiles())
+    // a starred file open with unsaved changes is left out: its excerpt would
+    // be the text as last saved, before any withholding mark still in the editor
+    const hits = await searchSavedKnowledgeBase(
       (qq, pool) =>
         store.search(qq, { limit: pool }).hits.map((h) => ({
           path: h.path,
@@ -3692,7 +3701,8 @@ function registerHomeIpc(): void {
         : []
       if (!q || paths.length < 2 || !ensureFileIndexer() || !fileIndexStore) return null
       searchReranker ??= new SearchReranker(fileIndexStore)
-      return searchReranker.rerank(q, paths, settings)
+      // excerpts leave the machine here: only from files indexed as they are on disk
+      return searchReranker.rerank(q, fileIndexStore.pathsIndexedAsOnDisk(paths), settings)
     },
   )
 
@@ -5573,6 +5583,14 @@ app.whenReady().then(async () => {
   // off the startup path: a symlink / registry write nobody is waiting for
   setTimeout(() => installCliLinkBestEffort(APP_SETTINGS_PATH()), 3000)
   startSheetsCaptureServer()
+  // Which open documents have unsaved changes, for the attachment readers of the
+  // editor mains and the knowledge base: a file being edited is not read as
+  // another document's material until it is saved (a withholding mark only
+  // reaches the file on save).
+  setOpenFilesSource(async () => {
+    const tabs = tabManager ? await tabManager.openDocuments() : []
+    return [...tabs, ...(await detachedOpenDocuments())]
+  })
   // Register the docs renderer bridge listeners before the MCP server can take
   // a visible-editing request.
   installDocsBridge()

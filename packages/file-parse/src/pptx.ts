@@ -2,6 +2,7 @@ import JSZip from 'jszip'
 import { assertZipInflatesWithinLimits, assertZipWithinLimits } from '@genoffice/docx-engine'
 import { resolveTarget } from './opc'
 import { XMLParser } from 'fast-xml-parser'
+import { redactPptxPartXml } from './pptx-redaction'
 
 // Text fidelity: no trim (xml:space="preserve" runs carry the spaces between words),
 // no numeric coercion of tag values (otherwise <a:t>02139</a:t> becomes a number and loses characters).
@@ -209,6 +210,10 @@ interface SlideSection {
 }
 
 function slideSection(heading: string, xml: string, notesXml?: string): SlideSection {
+  // withheld runs become their {{label}} marker before anything reads the part;
+  // a mark that cannot be processed throws, so the deck fails instead of leaking
+  xml = redactPptxPartXml(xml)
+  if (notesXml) notesXml = redactPptxPartXml(notesXml)
   const tree = parser.parse(xml)
   const paras: string[] = []
   collectParagraphs(tree, paras)

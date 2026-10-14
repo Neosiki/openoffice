@@ -1,6 +1,7 @@
 import { DatabaseSync } from 'node:sqlite'
 import { basename, dirname, extname } from 'node:path'
 import { MAX_BODY_CHARS } from './extract'
+import { statOrNull } from './scan'
 import { buildSnippet, containsAny, excerpt, type SnippetPart } from './snippet'
 import {
   parseQuery,
@@ -15,6 +16,13 @@ import {
 
 /** bump when tokenize() changes shape; the index is rebuilt from scratch */
 const TOKENIZER_VERSION = 2
+/**
+ * bump when extraction changes what may enter a body; the index is rebuilt from
+ * scratch. 1: text a file withholds from a model is indexed as its {{label}}
+ * marker. An index with no stamp predates that and may hold the withheld words,
+ * which search excerpts would quote
+ */
+const EXTRACT_VERSION = 1
 
 export type IndexStatus = 'ok' | 'name-only' | 'error'
 
@@ -114,6 +122,10 @@ export class FileIndexStore {
     if (this.meta('tokenizer') !== String(TOKENIZER_VERSION)) {
       this.db.exec('DROP TABLE IF EXISTS file_fts; DELETE FROM files;')
       this.setMeta('tokenizer', String(TOKENIZER_VERSION))
+    }
+    if (this.meta('extract') !== String(EXTRACT_VERSION)) {
+      this.db.exec('DROP TABLE IF EXISTS file_fts; DELETE FROM files;')
+      this.setMeta('extract', String(EXTRACT_VERSION))
     }
     this.db.exec(FTS_SCHEMA)
   }
@@ -339,6 +351,31 @@ export class FileIndexStore {
         })
     }
     return out
+  }
+
+  /**
+   * The paths whose indexed body is the file as it is on disk now: same mtime
+   * and size, the test a scan uses to decide what to re-read. A file saved since
+   * its last scan is still indexed as it was before the save, withheld spans it
+   * has gained included, so a caller that sends excerpts out of the machine
+   * asks this first. Unknown and vanished files are left out too.
+   */
+  pathsIndexedAsOnDisk(paths: readonly string[]): string[] {
+    const indexed = new Map<string, { mtime_ms: number; size_bytes: number }>()
+    for (let i = 0; i < paths.length; i += 500) {
+      const chunk = paths.slice(i, i + 500)
+      const rows = this.db
+        .prepare(
+          `SELECT path, mtime_ms, size_bytes FROM files WHERE path IN (${chunk.map(() => '?').join(',')})`,
+        )
+        .all(...chunk) as unknown as Array<{ path: string; mtime_ms: number; size_bytes: number }>
+      for (const r of rows) indexed.set(r.path, r)
+    }
+    return paths.filter((path) => {
+      const row = indexed.get(path)
+      const now = row ? statOrNull(path) : null
+      return !!row && !!now && now.mtimeMs === row.mtime_ms && now.sizeBytes === row.size_bytes
+    })
   }
 
   private matchScored(expr: string): Array<{ rowid: number; score: number }> {

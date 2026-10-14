@@ -41,6 +41,7 @@ import {
   readBodyCapped,
   printHtmlDocument,
   type PrintDialogOutcome,
+  assertFileSaved,
 } from '@genoffice/electron-utils'
 import { createI18n, getUiLang } from '@genoffice/i18n'
 import {
@@ -780,6 +781,9 @@ function savePastedImage(data: unknown, ext: unknown): string | null {
 }
 
 async function extractAttachmentText(filePath: string): Promise<string> {
+  // a file open with unsaved changes is not read (before the cache): a
+  // withholding mark only reaches the file on save
+  await assertFileSaved(filePath)
   const stat = statSync(filePath)
   const stamp = `${stat.mtimeMs}:${stat.size}`
   const cached = attachmentTextCache.get(filePath)

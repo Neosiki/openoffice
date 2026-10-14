@@ -14,6 +14,7 @@
 
 import { statSync } from 'node:fs'
 import { basename, dirname } from 'node:path'
+import { assertFileSaved, withoutUnsavedFiles } from '@genoffice/electron-utils/unsaved-files'
 import { parseFileToText } from '@genoffice/file-parse'
 
 /** characters of parsed text one read_knowledge_file page returns (aligned
@@ -115,10 +116,28 @@ export function searchKnowledgeBase(
   return out
 }
 
+/**
+ * searchKnowledgeBase over the starred files that are not open with unsaved
+ * changes. The excerpt comes from the index, which holds a file as it was last
+ * saved; a file being edited may carry a withholding mark that has not reached
+ * the disk yet, so nothing of it is quoted until it is saved.
+ */
+export async function searchSavedKnowledgeBase(
+  search: Parameters<typeof searchKnowledgeBase>[0],
+  query: string,
+  starredPaths: readonly string[],
+  limit: number,
+): Promise<KbSearchHit[]> {
+  const saved = await withoutUnsavedFiles(starredPaths, (path) => path)
+  return searchKnowledgeBase(search, query, saved, limit)
+}
+
 /** parsed text of one corpus file; throws with a plain message the panel can
  *  show — shell main has no i18n channel of its own (unlike the docs
  *  attachment reader, whose errors carry locale strings and a larger budget) */
 export async function readKnowledgeFileText(filePath: string): Promise<string> {
+  // before the cache: a file open with unsaved changes is not read at all
+  await assertFileSaved(filePath)
   const stat = statSync(filePath)
   const stamp = `${stat.mtimeMs}:${stat.size}`
   const cached = kbTextCache.get(filePath)

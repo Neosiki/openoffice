@@ -67,6 +67,7 @@ import {
   MAX_REMOTE_IMAGE_BYTES,
   readBodyCapped,
   writeJsonAtomic,
+  assertFileSaved,
 } from '@genoffice/electron-utils'
 import {
   configureMetricsCache,
@@ -3726,6 +3727,9 @@ function savePastedImage(data: unknown, ext: unknown): string | null {
 
 /** parse an attachment to text via @genoffice/file-parse (docx/pdf/pptx/xlsx/plain text) */
 async function extractAttachmentText(filePath: string): Promise<string> {
+  // a file open with unsaved changes is not read (before the cache): a
+  // withholding mark only reaches the file on save
+  await assertFileSaved(filePath)
   const stat = statSync(filePath)
   const stamp = `${stat.mtimeMs}:${stat.size}`
   const cached = attachmentTextCache.get(filePath)

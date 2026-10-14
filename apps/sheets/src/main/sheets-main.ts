@@ -59,6 +59,7 @@ import {
   registerRendererScheme,
   rendererUrl,
   writeJsonAtomic,
+  assertFileSaved,
 } from '@genoffice/electron-utils'
 import {
   brandText,
@@ -2430,6 +2431,9 @@ function savePastedImage(data: unknown, ext: unknown): string | null {
 
 /** Attachment text extraction via @genoffice/file-parse (docx/pdf/pptx/xlsx/plain text) */
 async function extractAttachmentText(filePath: string): Promise<string> {
+  // a file open with unsaved changes is not read (before the cache): a
+  // withholding mark only reaches the file on save
+  await assertFileSaved(filePath)
   const stat = statSync(filePath)
   const stamp = `${stat.mtimeMs}:${stat.size}`
   const cached = attachmentTextCache.get(filePath)
@@ -2834,6 +2838,8 @@ export function registerSheetsIpc(): void {
       const ext = path.slice(path.lastIndexOf('.') + 1).toLowerCase()
       if (!MERGE_SOURCE_EXTS.has(ext)) throw new Error(`Unsupported merge source: ${ext}`)
       if (!existsSync(path)) throw new Error('Merge source not found.')
+      // an attached workbook open with unsaved changes is not read, like any attachment
+      await assertFileSaved(path)
     }
     return openMergeSources(event, paths)
   })
