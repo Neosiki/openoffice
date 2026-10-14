@@ -37,6 +37,8 @@ const MAX_CELL_CHARS = 300
 const MAX_FILLED_CELLS = 400
 /** Lines of text one cell is given. */
 const MAX_CELL_LINES = 50
+/** Cells one call gives a background colour. */
+const MAX_FORMATTED_CELLS = 500
 /** Rows or columns one call adds to or removes from a table. */
 const MAX_TABLE_LINES = 50
 /** What sits on the page as an object and can lie over a table cell without being in it. */
@@ -577,6 +579,7 @@ function containerOf(doc, hit) {
         expectOk(doc.applyCharFormat(sec, k, start, end, json), 'format the text'),
       formatParagraph: (k, json) =>
         expectOk(doc.applyParaFormat(sec, k, json), 'format the paragraph'),
+      applyStyle: (k, id) => expectOk(doc.applyStyle(sec, k, id), 'apply the style'),
     }
   }
   const last = path[path.length - 1]
@@ -616,6 +619,14 @@ function containerOf(doc, hit) {
               'format the paragraph',
             )
         : null,
+    applyStyle:
+      path.length === 1
+        ? (k, id) =>
+            expectOk(
+              doc.applyCellStyle(sec, para, last.controlIndex, last.cellIndex, k, id),
+              'apply the style',
+            )
+        : null,
   }
 }
 
@@ -639,22 +650,41 @@ const HEX_COLOR = /^#[0-9a-fA-F]{6}$/
 const ALIGNMENTS = ['left', 'center', 'right', 'justify']
 const TOGGLES = ['bold', 'italic', 'underline', 'strikethrough']
 
+/** Longest font name taken; real names are far shorter. */
+const MAX_FONT_NAME = 64
+/** The font languages of a character shape: Hangul, Latin, Hanja, Japanese, other, symbol, user. */
+const FONT_LANGUAGES = 7
+/** Paragraph indents, margins and spacing come to the engine at twice their HWPUNIT, 100 to a point. */
+const PARA_UNITS_PER_PT = 200
+/** What a paragraph's indent, margins and spacing may be set to, in points. */
+const PARA_LENGTHS = {
+  indent: { min: -100, max: 100, key: 'indent' },
+  marginLeft: { min: 0, max: 300, key: 'marginLeft' },
+  marginRight: { min: 0, max: 300, key: 'marginRight' },
+  spacingBefore: { min: 0, max: 200, key: 'spacingBefore' },
+  spacingAfter: { min: 0, max: 200, key: 'spacingAfter' },
+}
+/** Style kinds as the engine lists them: paragraph styles are 0. */
+const PARAGRAPH_STYLE = 0
+
 /**
- * A format request as the engine's property lists. Only what was asked for is set, so
- * everything else about the text stays as it is. `chars` and `paragraph` are null when
- * the request holds nothing of that kind.
+ * A format request, checked. `chars` and `paragraph` hold what was asked for, null when
+ * nothing of that kind was; `font` and `style` are names the document resolves when the
+ * change is made (resolveFormat). Only what was asked for is set, so everything else about
+ * the text stays as it is.
  */
 function formatOf(format, allowParagraph) {
   if (!format || typeof format !== 'object' || Array.isArray(format)) {
     throw fail('BAD_ARGUMENT', 'format must be an object')
   }
+  const given = (key) => format[key] !== undefined && format[key] !== null
   const chars = {}
   for (const key of TOGGLES) {
-    if (format[key] === undefined || format[key] === null) continue
+    if (!given(key)) continue
     if (typeof format[key] !== 'boolean') throw fail('BAD_ARGUMENT', `${key} must be true or false`)
     chars[key] = format[key]
   }
-  if (format.size !== undefined && format.size !== null) {
+  if (given('size')) {
     if (
       typeof format.size !== 'number' ||
       !(format.size >= MIN_FONT_PT && format.size <= MAX_FONT_PT)
@@ -664,13 +694,13 @@ function formatOf(format, allowParagraph) {
     // the engine counts in hundredths of a point
     chars.fontSize = Math.round(format.size * 100)
   }
-  if (format.color !== undefined && format.color !== null) {
+  if (given('color')) {
     if (typeof format.color !== 'string' || !HEX_COLOR.test(format.color)) {
       throw fail('BAD_ARGUMENT', 'color must look like #RRGGBB')
     }
     chars.textColor = format.color.toLowerCase()
   }
-  if (format.highlight !== undefined && format.highlight !== null) {
+  if (given('highlight')) {
     const none = format.highlight === 'none'
     if (!none && (typeof format.highlight !== 'string' || !HEX_COLOR.test(format.highlight))) {
       throw fail('BAD_ARGUMENT', 'highlight must look like #RRGGBB, or be "none"')
@@ -678,14 +708,22 @@ function formatOf(format, allowParagraph) {
     // no highlight is a white one: the engine has no other way to say it here
     chars.shadeColor = none ? '#ffffff' : format.highlight.toLowerCase()
   }
+  let font = null
+  if (given('font')) {
+    const name = typeof format.font === 'string' ? format.font.trim() : ''
+    if (!name || name.length > MAX_FONT_NAME || CONTROL_CHARS.test(name)) {
+      throw fail('BAD_ARGUMENT', `font must be a font name of 1 to ${MAX_FONT_NAME} characters`)
+    }
+    font = name
+  }
   const paragraph = {}
-  if (format.align !== undefined && format.align !== null) {
+  if (given('align')) {
     if (!ALIGNMENTS.includes(format.align)) {
       throw fail('BAD_ARGUMENT', `align must be one of ${ALIGNMENTS.join(', ')}`)
     }
     paragraph.alignment = format.align
   }
-  if (format.lineSpacing !== undefined && format.lineSpacing !== null) {
+  if (given('lineSpacing')) {
     const percent = format.lineSpacing
     if (
       typeof percent !== 'number' ||
@@ -699,16 +737,84 @@ function formatOf(format, allowParagraph) {
     paragraph.lineSpacing = Math.round(percent)
     paragraph.lineSpacingType = 'Percent'
   }
-  const hasChars = Object.keys(chars).length > 0
-  const hasParagraph = Object.keys(paragraph).length > 0
+  for (const [name, { min, max, key }] of Object.entries(PARA_LENGTHS)) {
+    if (!given(name)) continue
+    const points = format[name]
+    if (typeof points !== 'number' || !(points >= min && points <= max)) {
+      throw fail('BAD_ARGUMENT', `${name} must be ${min} to ${max} points`)
+    }
+    paragraph[key] = Math.round(points * PARA_UNITS_PER_PT)
+  }
+  let style = null
+  if (given('style')) {
+    const name = typeof format.style === 'string' ? format.style.trim() : ''
+    if (!name || CONTROL_CHARS.test(name)) throw fail('BAD_ARGUMENT', 'style must be a style name')
+    style = name
+  }
+  const hasChars = Object.keys(chars).length > 0 || font !== null
+  const hasParagraph = Object.keys(paragraph).length > 0 || style !== null
   if (hasParagraph && !allowParagraph) {
-    throw fail('BAD_ARGUMENT', 'align and lineSpacing belong to a whole paragraph')
+    throw fail(
+      'BAD_ARGUMENT',
+      'align, lineSpacing, indents, margins, spacing and style belong to a whole paragraph',
+    )
   }
   if (!hasChars && !hasParagraph) throw fail('BAD_ARGUMENT', 'format names nothing to change')
   return {
-    chars: hasChars ? JSON.stringify(chars) : null,
-    paragraph: hasParagraph ? JSON.stringify(paragraph) : null,
+    chars: hasChars ? chars : null,
+    font,
+    paragraph: Object.keys(paragraph).length > 0 ? paragraph : null,
+    style,
   }
+}
+
+/** The paragraph styles of the document, by number, with their names. */
+const paragraphStylesOf = (doc) =>
+  parse(doc.getStyleList()).filter((style) => style.type === PARAGRAPH_STYLE)
+
+/** The number of the paragraph style called `name` (its own or its English name), or null. */
+function styleIdOf(doc, name) {
+  const wanted = name.toLowerCase()
+  const style = paragraphStylesOf(doc).find(
+    (candidate) =>
+      String(candidate.name ?? '').toLowerCase() === wanted ||
+      String(candidate.englishName ?? '').toLowerCase() === wanted,
+  )
+  return style ? style.id : null
+}
+
+/** A refusal for a style the document does not have, with the ones it has. */
+const noSuchStyle = (doc) => ({
+  ok: false,
+  reason: 'no_such_style',
+  styles: paragraphStylesOf(doc).map((style) => style.name),
+})
+
+/**
+ * A checked format as the engine takes it, in a change: a font is looked up in the
+ * document's font lists, one per language, and added to them where it is missing.
+ */
+function resolveFormat(doc, spec) {
+  let chars = null
+  if (spec.chars) {
+    const out = { ...spec.chars }
+    if (spec.font) {
+      const ids = []
+      for (let lang = 0; lang < FONT_LANGUAGES; lang++) {
+        const id = doc.findOrCreateFontIdForLang(lang, spec.font)
+        if (!Number.isInteger(id) || id < 0) throw fail('ENGINE', 'the font could not be set')
+        ids.push(id)
+      }
+      out.fontIds = ids
+    }
+    chars = JSON.stringify(out)
+  }
+  let style = null
+  if (spec.style) {
+    style = styleIdOf(doc, spec.style)
+    if (style === null) throw fail('CHANGED', 'the style is gone')
+  }
+  return { chars, paragraph: spec.paragraph ? JSON.stringify(spec.paragraph) : null, style }
 }
 
 function checkWhere(where) {
@@ -2184,7 +2290,7 @@ export const agentPlugin = {
        * occurrence. Only the named properties change; the text itself is not touched.
        */
       formatText: guarded((find, occurrence, all, format) => {
-        const { chars } = formatOf(format, false)
+        const spec = formatOf(format, false)
         const targets = (doc) => {
           const hits = searchAll(doc, find)
           if (all === true) {
@@ -2212,6 +2318,7 @@ export const agentPlugin = {
             const { hits } = targets(doc)
             if (!hits) throw fail('CHANGED', 'the document changed mid-call')
             const before = objectsOf(doc)
+            const { chars } = resolveFormat(doc, spec)
             for (const hit of hits) {
               const box = containerOf(doc, hit)
               box.formatChars(box.index, hit.charOffset, hit.charOffset + hit.length, chars)
@@ -2227,7 +2334,7 @@ export const agentPlugin = {
        * line spacing, and the character formatting of all its text.
        */
       formatParagraph: guarded((find, occurrence, format) => {
-        const { chars, paragraph } = formatOf(format, true)
+        const spec = formatOf(format, true)
         const plan = (doc) => {
           const hits = searchAll(doc, find)
           const picked = pickHit(hits, occurrence)
@@ -2242,7 +2349,11 @@ export const agentPlugin = {
           if (!picked.hit) return refuse(picked.reason)
           if (!isReplaceable(picked.hit)) return refuse('unsupported_place')
           const box = containerOf(doc, picked.hit)
-          return paragraph && !box.formatParagraph ? refuse('unsupported_place') : { box }
+          if ((spec.paragraph && !box.formatParagraph) || (spec.style && !box.applyStyle))
+            return refuse('unsupported_place')
+          if (spec.style && styleIdOf(doc, spec.style) === null)
+            return { refusal: noSuchStyle(doc) }
+          return { box }
         }
         const refusal = host.read((doc) => plan(doc).refusal ?? null)
         if (refusal) return refusal
@@ -2252,8 +2363,11 @@ export const agentPlugin = {
             if (!box) throw fail('CHANGED', 'the document changed mid-call')
             const before = objectsOf(doc)
             const length = box.length(box.index)
-            if (chars && length > 0) box.formatChars(box.index, 0, length, chars)
+            const { chars, paragraph, style } = resolveFormat(doc, spec)
+            // the style first: what was asked for besides goes over it
+            if (style !== null) box.applyStyle(box.index, style)
             if (paragraph) box.formatParagraph(box.index, paragraph)
+            if (chars && length > 0) box.formatChars(box.index, 0, length, chars)
             mustKeep(before, objectsOf(doc))
             return { ok: true, inTable: box.inTable, place: box.place(box.index, length) }
           }),
@@ -2363,6 +2477,93 @@ export const agentPlugin = {
        * written over with `overwrite`; a cell that holds one click-here field is filled
        * through the field; a cell that holds a picture or another object is never written.
        */
+      /** The paragraph styles of the document, by name: what a format's style takes. */
+      listStyles: guarded(() =>
+        host.read((doc) => paragraphStylesOf(doc).map((style) => style.name)),
+      ),
+
+      /**
+       * Give cells of table `number` (as listTables numbers them) a background colour, or
+       * take it away with "none". `cells` name them by row and column, from 1; a merged
+       * cell by any of the places it covers. A table inside another table's cell cannot be
+       * coloured: the engine sets cell properties by table and cell number only.
+       */
+      formatCells: guarded((number, cells, background) => {
+        if (!Array.isArray(cells) || cells.length === 0 || cells.length > MAX_FORMATTED_CELLS) {
+          throw fail('BAD_ARGUMENT', `cells must be 1 to ${MAX_FORMATTED_CELLS} places`)
+        }
+        for (const cell of cells) {
+          if (!cell || !Number.isInteger(cell.row) || !Number.isInteger(cell.col)) {
+            throw fail('BAD_ARGUMENT', 'each cell needs a row and a col, counted from 1')
+          }
+        }
+        const none = background === 'none'
+        if (!none && (typeof background !== 'string' || !HEX_COLOR.test(background))) {
+          throw fail('BAD_ARGUMENT', 'background must look like #RRGGBB, or be "none"')
+        }
+        const fill = JSON.stringify(
+          none ? { fillType: 'none' } : { fillType: 'solid', fillColor: background.toLowerCase() },
+        )
+        const plan = (doc) => {
+          const { tables } = tablesOf(doc)
+          const table = Number.isInteger(number) ? tables[number - 1] : undefined
+          if (!table) {
+            return { refusal: { ok: false, reason: 'no_such_table', count: tables.length } }
+          }
+          if (table.path.length > 1) {
+            return { refusal: { ok: false, reason: 'unsupported_place', count: tables.length } }
+          }
+          const grid = gridOf(doc, table)
+          const targets = new Set()
+          const missing = []
+          for (const want of cells) {
+            const place = grid.find(
+              (cell) =>
+                want.row - 1 >= cell.row &&
+                want.row - 1 < cell.row + cell.rowSpan &&
+                want.col - 1 >= cell.col &&
+                want.col - 1 < cell.col + cell.colSpan,
+            )
+            if (place) targets.add(place.cell)
+            else missing.push({ row: want.row, col: want.col })
+          }
+          if (missing.length > 0) {
+            return {
+              refusal: {
+                ok: false,
+                reason: 'no_such_cell',
+                cells: missing,
+                rows: table.rows,
+                cols: table.cols,
+              },
+            }
+          }
+          return { table, targets: [...targets] }
+        }
+        const refusal = host.read((doc) => plan(doc).refusal ?? null)
+        if (refusal) return refusal
+        return keepingObjects((mustKeep) =>
+          change('format-cells', (doc) => {
+            const { table, targets } = plan(doc)
+            if (!targets) throw fail('CHANGED', 'the document changed mid-call')
+            const before = objectsOf(doc)
+            const control = table.path[0].controlIndex
+            for (const cell of targets) {
+              expectOk(
+                doc.setCellProperties(table.sec, table.para, control, cell, fill),
+                'colour the cell',
+              )
+            }
+            mustKeep(before, objectsOf(doc))
+            return {
+              ok: true,
+              count: targets.length,
+              place: { sec: table.sec, para: table.para, offset: 0, length: 0 },
+            }
+          }),
+        )
+      }),
+
       fillCells: guarded((number, cells, overwrite) => {
         const wanted = checkCells(cells)
         const plan = (doc) => {
@@ -2844,13 +3045,20 @@ export const agentPlugin = {
        */
       formatSelection: guarded((segments, format) => {
         checkSegments(segments)
-        const { chars, paragraph } = formatOf(format, true)
+        const spec = formatOf(format, true)
         const plan = (doc) => {
           if (!segmentsStand(doc, segments)) return { refusal: { ok: false, reason: 'changed' } }
           const boxes = segments.map((segment) => segmentBox(doc, segment))
-          if (paragraph && boxes.some(({ box }) => !box.formatParagraph)) {
+          if (
+            boxes.some(
+              ({ box }) =>
+                (spec.paragraph && !box.formatParagraph) || (spec.style && !box.applyStyle),
+            )
+          ) {
             return { refusal: { ok: false, reason: 'unsupported_place' } }
           }
+          if (spec.style && styleIdOf(doc, spec.style) === null)
+            return { refusal: noSuchStyle(doc) }
           return { boxes }
         }
         const refusal = host.read((doc) => plan(doc).refusal ?? null)
@@ -2860,12 +3068,14 @@ export const agentPlugin = {
             const { boxes } = plan(doc)
             if (!boxes) throw fail('CHANGED', 'the document changed mid-call')
             const before = objectsOf(doc)
+            const { chars, paragraph, style } = resolveFormat(doc, spec)
             segments.forEach((segment, index) => {
               const { box, k } = boxes[index]
+              if (style !== null) box.applyStyle(k, style)
+              if (paragraph) box.formatParagraph(k, paragraph)
               if (chars && segment.length > 0) {
                 box.formatChars(k, segment.offset, segment.offset + segment.length, chars)
               }
-              if (paragraph) box.formatParagraph(k, paragraph)
             })
             mustKeep(before, objectsOf(doc))
             const { text: _text, ...place } = segments[0]

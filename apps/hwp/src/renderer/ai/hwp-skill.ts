@@ -95,7 +95,7 @@ const SYSTEM_PROMPT = [
   '- Add new paragraphs next to an existing one, in the body or inside a table cell, or at the end of the document (insert_paragraphs). Remove a paragraph (delete_paragraph).',
   '- Add a table of plain-text cells, with a header row when the first row names the columns (insert_table).',
   '- Work on the tables that are already there: list them (list_tables), read one cell by cell (read_table), write text into its cells, many at once (fill_cells), and add or remove rows and columns (add_to_table, remove_from_table).',
-  '- Change formatting: bold, italic, underline, strikethrough, font size, text colour and highlight of a piece of text (format_text); alignment and line spacing of a paragraph, and the character formatting of a whole paragraph (format_paragraph).',
+  '- Change formatting: bold, italic, underline, strikethrough, font, font size, text colour and highlight of a piece of text (format_text); alignment, line spacing, first-line indent, margins, space above and below and the paragraph style of a paragraph, and the character formatting of a whole paragraph (format_paragraph); the background colour of table cells (format_cells).',
   '- Fill the form fields of the document (list_fields, fill_field). In Hangul these are called 누름틀. A field is picked by its number in list_fields, because several fields often share one name.',
   '- Make a table of contents (차례, 목차) from the headings you pick, with their page numbers, and write its page numbers again after the document changed (insert_toc, refresh_toc).',
   '- Add footnotes and endnotes (각주, 미주) with their mark right after a piece of body text (insert_note), list the notes with their text (list_notes), and rewrite or remove one (edit_note, delete_note). The text of the document does not show the notes; list_notes does.',
@@ -145,7 +145,9 @@ const SYSTEM_PROMPT = [
   '- Format only what the user asked for. Do not restyle text on your own: a new paragraph already looks like its neighbour, and official documents keep one look throughout.',
   '- When new content needs a look of its own (a heading, an emphasised line), insert the text first, then format it with a second call.',
   '- For emphasis prefer bold. Use colour and highlight only when the user asks for them.',
-  '- To take formatting away, pass false (bold, italic, underline, strikethrough) or "none" (highlight).',
+  '- To take formatting away, pass false (bold, italic, underline, strikethrough) or "none" (highlight, cell background).',
+  '- For a font prefer one the document already uses, or one every Korean Windows PC has (맑은 고딕, 바탕, 돋움, 굴림, 궁서); a font the PC lacks is shown in another one.',
+  '- A paragraph style (the "Paragraph styles" line of the context) sets the look the document defines for that kind of paragraph; prefer it to setting the same things one by one.',
   '',
   '## Editing rules',
   '- Text you pass to find or anchor must match the document exactly: letters, spaces and punctuation. Copy it from what you read; never retype it from memory.',
@@ -175,7 +177,26 @@ const TEXT_FORMAT_SCHEMA = {
     type: 'string',
     description: 'highlight colour as #RRGGBB, or "none" to remove a highlight',
   },
+  font: { type: 'string', description: 'font name, for example 맑은 고딕' },
 }
+
+/** The paragraph formatting a format tool takes, as schema properties. */
+const PARAGRAPH_FORMAT_SCHEMA = {
+  align: { type: 'string', enum: ['left', 'center', 'right', 'justify'] },
+  line_spacing: { type: 'number', description: 'line spacing in percent, for example 160' },
+  indent: {
+    type: 'number',
+    description: 'first-line indent in points; negative hangs the first line out (-100 to 100)',
+  },
+  margin_left: { type: 'number', description: 'left margin of the paragraph in points (0 to 300)' },
+  margin_right: { type: 'number', description: 'right margin in points (0 to 300)' },
+  space_before: { type: 'number', description: 'space above the paragraph in points (0 to 200)' },
+  space_after: { type: 'number', description: 'space below the paragraph in points (0 to 200)' },
+  style: { type: 'string', description: 'name of a paragraph style of the document' },
+}
+
+/** Paragraph styles named in the context at most. */
+const CONTEXT_MAX_STYLES = 40
 
 /** Cells one read_table answer holds at most (the editor's own limit), as the model is told. */
 const READ_TABLE_HINT = 600
@@ -329,14 +350,13 @@ const TOOLS: AgentToolDef[] = [
   {
     name: 'format_paragraph',
     description:
-      'Change the formatting of the whole paragraph that contains a piece of text: its alignment and line spacing, and character formatting for all of its text. Only the properties you pass change.',
+      'Change the formatting of the whole paragraph that contains a piece of text: its alignment, line spacing, indent, margins, spacing and style, and character formatting for all of its text. Only the properties you pass change; a style is applied first and the rest goes over it.',
     inputSchema: {
       type: 'object',
       properties: {
         find: { type: 'string', description: 'exact text found in the paragraph to format' },
         occurrence: { type: 'integer', minimum: 1 },
-        align: { type: 'string', enum: ['left', 'center', 'right', 'justify'] },
-        line_spacing: { type: 'number', description: 'line spacing in percent, for example 160' },
+        ...PARAGRAPH_FORMAT_SCHEMA,
         ...TEXT_FORMAT_SCHEMA,
       },
       required: ['find'],
@@ -377,14 +397,37 @@ const TOOLS: AgentToolDef[] = [
   {
     name: 'format_selection',
     description:
-      'Change the formatting of the text the user selected in the editor. Only the properties you pass change; align and line_spacing apply to the whole paragraphs the selection is in.',
+      'Change the formatting of the text the user selected in the editor. Only the properties you pass change; the paragraph properties (align, line_spacing, indent, margins, spacing, style) apply to the whole paragraphs the selection is in.',
     inputSchema: {
       type: 'object',
       properties: {
-        align: { type: 'string', enum: ['left', 'center', 'right', 'justify'] },
-        line_spacing: { type: 'number', description: 'line spacing in percent, for example 160' },
+        ...PARAGRAPH_FORMAT_SCHEMA,
         ...TEXT_FORMAT_SCHEMA,
       },
+    },
+  },
+  {
+    name: 'format_cells',
+    description:
+      'Give cells of a table a background colour, or take it away with "none". Cells are named by row and column from 1, as read_table shows them; a merged cell by any place it covers. Not for a table inside another table.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        table: { type: 'integer', minimum: 1, description: 'table number from list_tables' },
+        cells: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              row: { type: 'integer', minimum: 1 },
+              col: { type: 'integer', minimum: 1 },
+            },
+            required: ['row', 'col'],
+          },
+        },
+        background: { type: 'string', description: 'colour as #RRGGBB, or "none"' },
+      },
+      required: ['table', 'cells', 'background'],
     },
   },
   {
@@ -663,13 +706,25 @@ function formatArgs(call: AgentToolCall): AgentParagraphFormat {
     'size',
     'color',
     'highlight',
+    'font',
+    'align',
+    'indent',
+    'style',
   ]) {
     const value = call.input[key]
     if (value !== undefined && value !== null) format[key] = value
   }
-  if (call.input.align !== undefined && call.input.align !== null) format.align = call.input.align
-  const spacing = call.input.line_spacing
-  if (spacing !== undefined && spacing !== null) format.lineSpacing = spacing
+  // the model's names, the editor's names
+  for (const [from, to] of [
+    ['line_spacing', 'lineSpacing'],
+    ['margin_left', 'marginLeft'],
+    ['margin_right', 'marginRight'],
+    ['space_before', 'spacingBefore'],
+    ['space_after', 'spacingAfter'],
+  ] as const) {
+    const value = call.input[from]
+    if (value !== undefined && value !== null) format[to] = value
+  }
   return format as AgentParagraphFormat
 }
 
@@ -695,6 +750,17 @@ function describeFormat(
   }
   if (format.lineSpacing !== undefined) {
     parts.push(`${label('aiFmtLineSpacing')} ${format.lineSpacing}%`)
+  }
+  if (format.font !== undefined) parts.push(`${label('aiFmtFont')} ${format.font}`)
+  if (format.style !== undefined) parts.push(`${label('aiFmtStyle')} ${format.style}`)
+  for (const [key, name] of [
+    ['indent', 'aiFmtIndent'],
+    ['marginLeft', 'aiFmtMarginLeft'],
+    ['marginRight', 'aiFmtMarginRight'],
+    ['spacingBefore', 'aiFmtSpaceBefore'],
+    ['spacingAfter', 'aiFmtSpaceAfter'],
+  ] as const) {
+    if (format[key] !== undefined) parts.push(`${label(name)} ${format[key]}pt`)
   }
   return parts.join(' · ')
 }
@@ -777,7 +843,11 @@ function noSuchTable(table: number, count: number): string {
 const arrow = (from: string, to: string) => `“${quote(from)}” → “${quote(to)}”`
 
 const NO_FORMAT_HELP =
-  'Name at least one property to change: bold, italic, underline, strikethrough, size, color, highlight, and for a paragraph align or line_spacing.'
+  'Name at least one property to change: bold, italic, underline, strikethrough, font, size, color, highlight, and for a paragraph align, line_spacing, indent, margin_left, margin_right, space_before, space_after or style.'
+
+/** Why a style was not applied, with the styles the document has. */
+const noSuchStyle = (styles: string[]): string =>
+  `Nothing was changed: the document has no paragraph style by that name. Its paragraph styles: ${styles.join(', ')}.`
 const WHERE_HELP =
   'where must be "after", "before" or "end"; with "after" and "before" an anchor text is needed.'
 
@@ -1085,10 +1155,11 @@ export function createHwpSkill(deps: HwpSkillDeps): HwpSkill {
           format,
         )
         if (!result.ok) {
+          if (result.reason === 'no_such_style') return bad(call, noSuchStyle(result.styles))
           return bad(
             call,
             result.reason === 'unsupported_place'
-              ? 'Nothing was changed: the alignment and line spacing of that paragraph cannot be set here (it is inside an equation, or in a table inside another table). Its character formatting can still be changed with format_text.'
+              ? 'Nothing was changed: the paragraph properties of that paragraph cannot be set here (it is inside an equation, or in a table inside another table). Its character formatting can still be changed with format_text.'
               : placeRefusal(result),
           )
         }
@@ -1187,12 +1258,13 @@ export function createHwpSkill(deps: HwpSkillDeps): HwpSkill {
         const text = selection.map((segment) => segment.text).join(' ⏎ ')
         const result = await bridge.formatSelection(selection, format)
         if (!result.ok) {
+          if (result.reason === 'no_such_style') return bad(call, noSuchStyle(result.styles))
           return bad(
             call,
             result.reason === 'changed'
               ? SELECTION_CHANGED_HELP
               : result.reason === 'unsupported_place'
-                ? 'Nothing was changed: the alignment and line spacing of those paragraphs cannot be set here (they are in a table inside another table). Their character formatting can still be changed.'
+                ? 'Nothing was changed: the paragraph properties of those paragraphs cannot be set here (they are in a table inside another table). Their character formatting can still be changed.'
                 : HAS_OBJECTS_HELP,
           )
         }
@@ -1238,6 +1310,52 @@ export function createHwpSkill(deps: HwpSkillDeps): HwpSkill {
             read.cells.map(cellLine).join('\n') +
             more,
           summary: label('aiToolReadTable', { table }),
+        }
+      }
+      case 'format_cells': {
+        const table = call.input.table
+        if (typeof table !== 'number' || !Number.isInteger(table) || table < 1) {
+          return bad(call, 'table must be a table number from list_tables')
+        }
+        const cells = call.input.cells
+        if (!Array.isArray(cells) || cells.length === 0) {
+          return bad(call, 'cells must list at least one {row, col}')
+        }
+        const background = call.input.background
+        if (typeof background !== 'string') {
+          return bad(call, 'background must be a colour as #RRGGBB, or "none"')
+        }
+        const result = await bridge.formatCells(
+          table,
+          cells as { row: number; col: number }[],
+          background,
+        )
+        if (!result.ok) {
+          if (result.reason === 'no_such_table') return bad(call, noSuchTable(table, result.count))
+          if (result.reason === 'unsupported_place') {
+            return bad(
+              call,
+              'Nothing was changed: that table sits inside a cell of another table, whose cells cannot be coloured here.',
+            )
+          }
+          const places = result.cells.map((cell) => `${cell.row}.${cell.col}`).join(', ')
+          return bad(
+            call,
+            `Nothing was changed: the table has ${result.rows} row(s) and ${result.cols} column(s), and these places are not in it: ${places}. Read the table again.`,
+          )
+        }
+        const name = label('aiFmtCellFill')
+        deps.onChange({
+          kind: 'format',
+          from: label('aiTableName', { table }),
+          to: background === 'none' ? label('aiFmtOff', { name }) : `${name} ${background}`,
+          count: result.count,
+          place: result.place,
+        })
+        return {
+          output: `Coloured ${result.count} cell(s).`,
+          mutated: true,
+          summary: label('aiToolCellFill', { table, count: result.count }),
         }
       }
       case 'fill_cells': {
@@ -1607,12 +1725,13 @@ export function createHwpSkill(deps: HwpSkillDeps): HwpSkill {
     },
     refreshContext: async () => {
       try {
-        const [text, fields, tables, notes] = await Promise.all([
+        const [text, fields, tables, notes, styles] = await Promise.all([
           bridge.readText(),
           bridge.listFields(),
           bridge.listTables(),
           // the notes are a line of the context; the document is still worth sending without it
           bridge.listNotes().catch(() => null),
+          bridge.listStyles().catch(() => null),
         ])
         const footnotes = notes?.notes.filter((note) => note.kind === 'footnote').length ?? 0
         // numbered: the number is what fill_field takes, and names repeat
@@ -1634,6 +1753,11 @@ export function createHwpSkill(deps: HwpSkillDeps): HwpSkill {
             : notes.count === 0
               ? 'Footnotes and endnotes: none.'
               : `Footnotes and endnotes: ${footnotes} footnote(s), ${notes.count - footnotes} endnote(s) (list_notes shows them; the text below does not).`,
+          ...(styles && styles.length > 0
+            ? [
+                `Paragraph styles: ${styles.slice(0, CONTEXT_MAX_STYLES).join(', ')}${styles.length > CONTEXT_MAX_STYLES ? ', …' : ''}`,
+              ]
+            : []),
           whole
             ? 'Text (complete):'
             : `Text (the first ${CONTEXT_MAX_CHARS} characters; read_document returns the rest):`,

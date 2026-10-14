@@ -97,6 +97,12 @@ function setup(overrides: Partial<AgentBridge> = {}) {
       place: PLACE,
     })),
     listNotes: vi.fn(async () => ({ count: 0, elsewhere: 0, notes: [] })),
+    listStyles: vi.fn(async () => ['바탕글', '본문', '개요 1']),
+    formatCells: vi.fn(async () => ({
+      ok: true,
+      count: 1,
+      place: { sec: 0, para: 0, offset: 0, length: 0 },
+    })),
     insertNote: vi.fn(async () => ({
       ok: true as const,
       kind: 'footnote' as const,
@@ -150,6 +156,8 @@ describe('the document context sent with a message', () => {
     // numbered, because the number is what fill_field takes
     expect(context).toContain('Form fields (2): 1. 성명, 2. 날짜를 쓰세요')
     expect(context).toContain('Tables: none.')
+    // the names a format's style takes
+    expect(context).toContain('Paragraph styles: 바탕글, 본문, 개요 1')
   })
 
   it('says how many tables there are, and that their empty cells are not in the text', async () => {
@@ -529,6 +537,46 @@ describe('format_paragraph', () => {
     ])
   })
 
+  it('sends indents, margins, spacing, a style and a font under the editor’s names', async () => {
+    const { call, changes, bridge } = setup()
+    await call('format_paragraph', {
+      find: '제목',
+      indent: -10,
+      margin_left: 20,
+      margin_right: 5,
+      space_before: 6,
+      space_after: 12,
+      style: '개요 1',
+      font: '맑은 고딕',
+    })
+    expect(bridge.formatParagraph).toHaveBeenCalledWith('제목', null, {
+      font: '맑은 고딕',
+      indent: -10,
+      style: '개요 1',
+      marginLeft: 20,
+      marginRight: 5,
+      spacingBefore: 6,
+      spacingAfter: 12,
+    })
+    expect(changes[0]!.to).toBe(
+      'aiFmtFont 맑은 고딕 · aiFmtStyle 개요 1 · aiFmtIndent -10pt · aiFmtMarginLeft 20pt · aiFmtMarginRight 5pt · aiFmtSpaceBefore 6pt · aiFmtSpaceAfter 12pt',
+    )
+  })
+
+  it('names the styles there are when the model asks for one that is not', async () => {
+    const { call, changes } = setup({
+      formatParagraph: async () => ({
+        ok: false,
+        reason: 'no_such_style',
+        styles: ['바탕글', '본문'],
+      }),
+    })
+    const result = await call('format_paragraph', { find: '제목', style: '제목 1' })
+    expect(result.isError).toBe(true)
+    expect(result.output).toContain('바탕글, 본문')
+    expect(changes).toEqual([])
+  })
+
   it('says what can still be done where a paragraph cannot be aligned', async () => {
     const { call, changes } = setup({
       formatParagraph: async () => ({ ok: false, reason: 'unsupported_place', count: 1 }),
@@ -537,6 +585,53 @@ describe('format_paragraph', () => {
     expect(result.isError).toBe(true)
     expect(result.output).toContain('format_text')
     expect(changes).toEqual([])
+  })
+})
+
+describe('format_cells', () => {
+  it('colours the cells and lists the change on the table', async () => {
+    const { call, changes, bridge } = setup()
+    const result = await call('format_cells', {
+      table: 2,
+      cells: [{ row: 1, col: 1 }],
+      background: '#ffe08a',
+    })
+    expect(bridge.formatCells).toHaveBeenCalledWith(2, [{ row: 1, col: 1 }], '#ffe08a')
+    expect(result.mutated).toBe(true)
+    expect(changes[0]).toMatchObject({
+      kind: 'format',
+      from: 'aiTableName:{"table":2}',
+      to: 'aiFmtCellFill #ffe08a',
+      count: 1,
+    })
+  })
+
+  it('tells the model which places are not in the table', async () => {
+    const { call, changes } = setup({
+      formatCells: async () => ({
+        ok: false,
+        reason: 'no_such_cell',
+        cells: [{ row: 5, col: 1 }],
+        rows: 2,
+        cols: 2,
+      }),
+    })
+    const result = await call('format_cells', {
+      table: 1,
+      cells: [{ row: 5, col: 1 }],
+      background: 'none',
+    })
+    expect(result.isError).toBe(true)
+    expect(result.output).toContain('2 row(s) and 2 column(s)')
+    expect(result.output).toContain('5.1')
+    expect(changes).toEqual([])
+  })
+
+  it('refuses a call without cells before asking the editor', async () => {
+    const { call, bridge } = setup()
+    const result = await call('format_cells', { table: 1, cells: [], background: '#000000' })
+    expect(result.isError).toBe(true)
+    expect(bridge.formatCells).not.toHaveBeenCalled()
   })
 })
 
@@ -1159,6 +1254,7 @@ describe('the skill as the model sees it', () => {
       'replace_selection',
       'read_selection',
       'format_selection',
+      'format_cells',
       'list_tables',
       'read_table',
       'fill_cells',

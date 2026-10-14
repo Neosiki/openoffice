@@ -85,6 +85,8 @@ export interface AgentTextFormat {
   color?: string
   /** highlight colour, #RRGGBB, or "none" to take it away */
   highlight?: string
+  /** font name; one the document lacks is added to its fonts */
+  font?: string
 }
 
 /** Formatting of a whole paragraph: its own properties, and character formatting for all its text. */
@@ -92,7 +94,36 @@ export interface AgentParagraphFormat extends AgentTextFormat {
   align?: 'left' | 'center' | 'right' | 'justify'
   /** line spacing in percent of the font height */
   lineSpacing?: number
+  /** first-line indent in points; negative hangs the first line out */
+  indent?: number
+  /** left and right margins of the paragraph, in points */
+  marginLeft?: number
+  marginRight?: number
+  /** space above and below the paragraph, in points */
+  spacingBefore?: number
+  spacingAfter?: number
+  /** a paragraph style of the document, by its name (listStyles) */
+  style?: string
 }
+
+/** A format named a paragraph style the document does not have; `styles` are the ones it has. */
+export interface AgentNoSuchStyle {
+  ok: false
+  reason: 'no_such_style'
+  styles: string[]
+}
+
+export type AgentFormatCellsResult =
+  | { ok: true; count: number; place: AgentPlace }
+  | { ok: false; reason: 'no_such_table'; count: number }
+  | { ok: false; reason: 'unsupported_place'; count: number }
+  | {
+      ok: false
+      reason: 'no_such_cell'
+      cells: { row: number; col: number }[]
+      rows: number
+      cols: number
+    }
 
 export type AgentFormatTextResult =
   | { ok: true; count: number; place: AgentPlace }
@@ -104,7 +135,7 @@ export type AgentFormatTextResult =
     }
 
 export type AgentFormatParagraphResult =
-  { ok: true; inTable: boolean; place: AgentPlace } | AgentPlaceRefusal
+  { ok: true; inTable: boolean; place: AgentPlace } | AgentPlaceRefusal | AgentNoSuchStyle
 
 /** One table of the document, as listTables lists it. */
 export interface AgentTableSummary {
@@ -235,6 +266,7 @@ export type AgentFormatSelectionResult =
   | { ok: true; count: number; place: AgentPlace }
   | { ok: false; reason: 'changed' | 'unsupported_place' }
   | { ok: false; reason: 'has_objects'; count: number }
+  | AgentNoSuchStyle
 
 /** Rows or columns of a table. */
 export type AgentTableLines = 'rows' | 'columns'
@@ -457,6 +489,12 @@ export interface AgentPluginSurface {
   editNote(note: number, text: string): AgentEditNoteResult
   deleteNote(note: number): AgentDeleteNoteResult
   measureTabs(spots: AgentTabSpot[]): { tabs: (AgentTabMeasure | null)[] }
+  listStyles(): string[]
+  formatCells(
+    table: number,
+    cells: { row: number; col: number }[],
+    background: string,
+  ): AgentFormatCellsResult
   /** take the marks of the changes made so far off the pages */
   clearMarks(): { ok: true }
   undo(steps: number, expectedForeign: number): AgentUndoResult
