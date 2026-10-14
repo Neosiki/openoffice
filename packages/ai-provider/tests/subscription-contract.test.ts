@@ -8,7 +8,12 @@ import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import { sanitizeAiSettings } from '../src/ai-settings-guard'
 import { chatForProvider } from '../src/chat'
-import { AI_PROVIDERS, defaultAiSettings, resolveAiSettings } from '../src/providers'
+import {
+  AI_PROVIDERS,
+  HEADLESS_SUBSCRIPTION_CONSENT_VERSION,
+  defaultAiSettings,
+  resolveAiSettings,
+} from '../src/providers'
 import { AI_PROVIDER_ADAPTERS, getProviderAdapter } from '../src/registry'
 import { AiRunError, aiStreamErrorFields } from '../src/run-error'
 import { AiCreditsError } from '../src/stream'
@@ -61,6 +66,7 @@ describe('defaults', () => {
       providers: {},
       meteredAccepted: { codex: true, bogus: true, 'claude-code': 'yes' },
       headlessSubscriptionEnabled: true,
+      headlessSubscriptionConsentVersion: HEADLESS_SUBSCRIPTION_CONSENT_VERSION,
       subscriptionNoticeSeen: true,
     }
     const settings = resolveAiSettings(stored, defaultAiSettings())

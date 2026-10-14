@@ -1,3 +1,4 @@
+import { headlessSubscriptionOn } from '@genoffice/ai-provider'
 import {
   aiToolCapabilities,
   headlessSubscriptionUsage,
@@ -33,8 +34,8 @@ export const capabilitiesCommand: CommandDef = {
   async run(_args, ctx) {
     const { settingsPath, settings, context } = await headlessCall(ctx.env, 'capabilities')
     const caps = aiToolCapabilities(settings, context)
-    const subscription = settings.headlessSubscriptionEnabled === true
-    // the allowance only exists while the setting is on; off, no subscription request is counted
+    const subscription = headlessSubscriptionOn(settings)
+    // counted only while the setting is on; off, no subscription request is made
     const usage = subscription ? headlessSubscriptionUsage(context.dataDir) : null
     const imageAnalysis = feature(caps.imageAnalysis)
     const videoAnalysis = feature(caps.videoAnalysis)
@@ -49,14 +50,8 @@ export const capabilitiesCommand: CommandDef = {
       video_analysis: videoAnalysis,
       automatic_calls: {
         subscription_enabled: subscription,
-        ...(usage
-          ? {
-              used: usage.used,
-              limit: usage.limit,
-              remaining: Math.max(0, usage.limit - usage.used),
-              ...(usage.resetsAt !== undefined ? { resetsAt: usage.resetsAt } : {}),
-            }
-          : {}),
+        // there is no hourly cap: the count of the last hour is information only
+        ...(usage ? { used: usage.used, limit: null, remaining: null } : {}),
       },
       app: { available: appLaunch(ctx.env) !== null },
       settings_path: settingsPath,

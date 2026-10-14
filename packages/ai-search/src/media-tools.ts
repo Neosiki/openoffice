@@ -267,7 +267,7 @@ export type MediaToolErrorCode = 'unavailable' | AiRunErrorKind
 export interface MediaToolFailure {
   error?: string
   errorCode?: MediaToolErrorCode
-  /** epoch ms at which a used-up limit frees again (`rate-limit`, `headless-limit`) */
+  /** epoch ms at which a used-up limit frees again (`rate-limit`) */
   resetsAt?: number
 }
 
@@ -292,8 +292,7 @@ function failure(err: unknown): MediaToolFailure {
 
 /**
  * A request that runs on a subscription login. On the automatic-call path it
- * waits its turn and takes one slot of the hourly allowance; on the screen
- * path it just runs.
+ * waits its turn and is counted (no cap); on the screen path it just runs.
  */
 function onSubscription<T>(
   context: AiToolCallContext,

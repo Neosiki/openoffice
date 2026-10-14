@@ -245,8 +245,16 @@ export interface AiSettings {
   maxOutputTokens?: number | undefined
   /** per subscription provider: the user accepted a metered (pay-as-you-go) CLI login; absent = false */
   meteredAccepted?: Partial<Record<AiSubscriptionProviderId, boolean>> | undefined
-  /** headless callers (terminal commands, MCP) may use subscription providers; absent = false */
+  /**
+   * headless callers (terminal commands, MCP) may use subscription providers; absent = false.
+   * Reads as false unless `headlessSubscriptionConsentVersion` is the current consent version.
+   */
   headlessSubscriptionEnabled?: boolean | undefined
+  /**
+   * the version of the warning the user agreed to when turning `headlessSubscriptionEnabled`
+   * on (HEADLESS_SUBSCRIPTION_CONSENT_VERSION); absent = 0, no agreement on record
+   */
+  headlessSubscriptionConsentVersion?: number | undefined
   /** the first-connection notice has been shown; absent = false */
   subscriptionNoticeSeen?: boolean | undefined
 }

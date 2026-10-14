@@ -9,6 +9,7 @@ import {
   AI_MEDIA_PROVIDERS,
   AI_PROVIDERS,
   AI_SEARCH_PROVIDERS,
+  HEADLESS_SUBSCRIPTION_CONSENT_VERSION,
   defaultAiSettings,
 } from '@genoffice/ai-provider'
 import type {
@@ -30,7 +31,7 @@ import type { SettingsTarget } from '../src/renderer/src/SettingsModal'
  */
 
 const HEADLESS_WARNING =
-  'Neither company recommends letting a program use your subscription automatically, and your account may be restricted.'
+  'There is no hourly limit, so a program can send as many requests as it likes, and they may carry the whole text of a document and images of its pages. Neither company recommends letting a program use your subscription automatically, and your account may be restricted.'
 
 const actEnvironment = globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean }
 actEnvironment.IS_REACT_ACT_ENVIRONMENT = true
@@ -801,13 +802,46 @@ describe('automatic requests', () => {
     await click(headlessSwitch())
     await click(button('Turn on anyway'))
     expect(lastSaved().headlessSubscriptionEnabled).toBe(true)
+    // passing the warning is the agreement to it: its version is stored with the switch
+    expect(lastSaved().headlessSubscriptionConsentVersion).toBe(
+      HEADLESS_SUBSCRIPTION_CONSENT_VERSION,
+    )
     expect(headlessSwitch().getAttribute('aria-checked')).toBe('true')
     // the warning stays in sight while the switch is on
     expect(host.textContent).toContain(HEADLESS_WARNING)
   })
 
+  it('shows a switch turned on under the older warning as off, and asks again', async () => {
+    // a settings file from before the hourly cap was removed: on, with no consent version
+    installHome({
+      ...defaultAiSettings(),
+      headlessSubscriptionEnabled: true,
+      headlessSubscriptionConsentVersion: undefined,
+    })
+    installSubscription(statusMap('ready', 'ready'))
+    await openModal()
+    await openAiSection()
+    await openAdvanced()
+    expect(headlessSwitch().getAttribute('aria-checked')).toBe('false')
+    expect(host.textContent).not.toContain(HEADLESS_WARNING)
+
+    await click(headlessSwitch())
+    expect(host.querySelector('.set-adv-confirm')?.textContent).toContain(HEADLESS_WARNING)
+    expect(setAiSettings).not.toHaveBeenCalled()
+    await click(button('Turn on anyway'))
+    expect(lastSaved()).toMatchObject({
+      headlessSubscriptionEnabled: true,
+      headlessSubscriptionConsentVersion: HEADLESS_SUBSCRIPTION_CONSENT_VERSION,
+    })
+    expect(headlessSwitch().getAttribute('aria-checked')).toBe('true')
+  })
+
   it('turns off at once, with no question asked', async () => {
-    installHome({ ...defaultAiSettings(), headlessSubscriptionEnabled: true })
+    installHome({
+      ...defaultAiSettings(),
+      headlessSubscriptionEnabled: true,
+      headlessSubscriptionConsentVersion: HEADLESS_SUBSCRIPTION_CONSENT_VERSION,
+    })
     installSubscription(statusMap('ready', 'ready'))
     await openModal()
     await openAiSection()
@@ -836,7 +870,7 @@ describe('automatic requests', () => {
     await openAdvanced()
     await click(host.querySelector('.set-switch[role="switch"]'))
     expect(host.querySelector('.set-adv-confirm')?.textContent).toContain(
-      '프로그램이 자동으로 구독을 쓰는 것은 두 회사가 권장하지 않으며, 계정에 제한이 걸릴 수 있습니다.',
+      '시간당 한도가 없어 프로그램이 요청을 얼마든지 보낼 수 있고, 그 요청에 문서 전체의 글과 페이지 그림이 담길 수 있습니다. 프로그램이 자동으로 구독을 쓰는 것은 두 회사가 권장하지 않으며, 계정에 제한이 걸릴 수 있습니다.',
     )
   })
 })

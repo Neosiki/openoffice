@@ -1,6 +1,7 @@
 import { dirname, join } from 'node:path'
 import {
   AI_SUBSCRIPTION_PROVIDERS,
+  headlessSubscriptionOn,
   isSubscriptionProvider,
   normalizeAiSettings,
   providerSelectionOf,
@@ -95,7 +96,7 @@ export function subscriptionProvidersInPlay(
   use: CloudUse,
   dataDir: string,
 ): AiSubscriptionProviderId[] {
-  const on = settings.headlessSubscriptionEnabled === true
+  const on = headlessSubscriptionOn(settings)
   const wanted = new Set<AiSubscriptionProviderId>()
   if (use !== 'media' && on && codexImageRouteOffered()) wanted.add('codex')
   if (
