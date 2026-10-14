@@ -2,7 +2,9 @@
  * The AI page-reading job (spec §7) on the job engine: one call per page not
  * yet in the store. Pages that share a fingerprint (identical content) are
  * read once. What a call sends and how its answer is checked belongs to the
- * caller's `callModel`.
+ * caller's `callModel`; `createAiReadCallModel` (../ai-read) builds one that
+ * sends the page image, re-asks a malformed answer once and then fails the
+ * page with a JobUnitFailure.
  */
 import type { AiReadPayload } from '../store/store'
 import type { DocumentJobStore } from './engine'
