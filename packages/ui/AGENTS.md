@@ -37,7 +37,7 @@
 - 구독 연결에 관한 문장은 이 패키지의 문자열만 쓴다. 에디터 사전에 같은 문장을 복제하지 않는다. AI 진입 버튼과 패널 제목의 이름도 공용 키 `aiAssistant` 하나다.
 - 문자열 키는 21개 언어 조각 모두에 있어야 한다. `zh.ts`가 키 집합을 정의하고 나머지는 타입으로 같은 키를 강제받는다. 다른 언어에 영어 문장을 복사해 넣지 않는다(비라틴 문자 언어에서 영어와 같은 값은 테스트가 잡는다).
 - `template-fonts/`의 글꼴 파일을 Vite 자산으로 가져오지 않는다(import, `new URL(…, import.meta.url)`, CSS `url()`). 그러면 편집기 빌드마다 사본이 들어간다. 설치 파일에는 `apps/shell/electron-builder.cjs`의 extraResources 항목 하나로 한 번만 들어가고(`resources/template-fonts`), 편집기는 `templateFontsDir`(`@genoffice/electron-utils/template-fonts-dir`)로 그 폴더를 읽는다. shell의 `tests/template-fonts-resource.test.ts`가 둘 다 지킨다.
-- 템플릿 글꼴 파일은 배포처의 것 그대로 둔다. 잘라 내거나 이름을 바꾸지 않는다. 라이선스 글도 배포처의 바이트 그대로다(`.gitattributes`의 `-text`). 글꼴 파일 합계는 `TEMPLATE_FONTS_MAX_BYTES`(45 MiB) 이하여야 하고 `tests/template-fonts.test.ts`가 지킨다. 상한을 올리기 전에 결정 기록 0009를 다시 본다. 글꼴을 더하거나 바꾸면 `src/template-fonts.ts`, 폴더의 `README.md`, 저장소 루트의 `NOTICE`를 함께 고친다.
+- 템플릿 글꼴 파일은 배포처의 것 그대로 둔다. 잘라 내거나 이름을 바꾸지 않는다. 라이선스 글도 배포처의 바이트 그대로다(`.gitattributes`의 `-text`). 글꼴 파일 합계는 `TEMPLATE_FONTS_MAX_BYTES`(45 MiB) 이하여야 하고 `tests/template-fonts.test.ts`가 지킨다. 상한은 사용자가 받아들인 설치 파일 증가(수십 MB) 안에 머물기 위한 값이고, 글꼴은 편집기마다가 아니라 한 벌만 실리기 때문에 이 안에 들어간다. 올리려면 그 범위를 넘지 않는지 먼저 따진다. 글꼴을 더하거나 바꾸면 `src/template-fonts.ts`, 폴더의 `README.md`, 저장소 루트의 `NOTICE`를 함께 고친다.
 - 상태 확인의 오류 문장(`status.error`)을 그대로 화면에 찍지 않는다. `subscriptionStatusErrorKind`로 종류를 읽어 번역된 문장을 쓴다. 로그인·설치 실패의 원문도 마찬가지다(실행 파일 경로가 들어 있을 수 있다).
 
 ## 이 모듈의 방식
