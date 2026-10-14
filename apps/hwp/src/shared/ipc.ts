@@ -12,6 +12,8 @@ export const HWP_CHANNELS = {
   trackingDropped: 'hwp:tracking-dropped',
   abortSave: 'hwp:abort-save',
   saveRequest: 'hwp:save-request',
+  printRequest: 'hwp:print-request',
+  printPages: 'hwp:print-pages',
   dirtyChanged: 'hwp:dirty-changed',
   closeSaveRequest: 'hwp:close-save-request',
   closeSaveResult: 'hwp:close-save-result',
@@ -48,6 +50,36 @@ export const AI_CHANNELS = {
 
 export type UiTheme = 'light' | 'dark' | 'system'
 export type SaveMode = 'save' | 'saveAs'
+
+/** Where the pages go: a PDF file, or the printer through the system print dialog. */
+export type PrintMode = 'pdf' | 'print'
+
+/** One page as the editor draws it for printing: SVG, and its size in CSS pixels. */
+export interface PrintPage {
+  svg: string
+  width: number
+  height: number
+}
+
+/**
+ * The pages of the document for printing. A picture the pages use is in `images` once
+ * (a data URL), and the pages point at it as `href="ieum-image:N"`.
+ */
+export interface PrintJob {
+  mode: PrintMode
+  pages: PrintPage[]
+  images: string[]
+}
+
+export type PrintResult =
+  | { ok: true; canceled: true }
+  | { ok: true; canceled?: false; path?: string }
+  | { ok: false; error: string }
+
+/** Most pages one job takes; past it the job is refused rather than run out of memory. */
+export const MAX_PRINT_PAGES = 5000
+/** Most characters of SVG and pictures one job takes. */
+export const MAX_PRINT_CHARS = 600_000_000
 
 /** The two container formats the editor writes. A document is saved back in the format of its file name. */
 export type HwpFormat = 'hwp' | 'hwpx'
@@ -158,6 +190,10 @@ export interface HwpApi {
   abortSave(): void
   setDirty(dirty: boolean): void
   onSaveRequest(handler: (mode: SaveMode) => void): () => void
+  /** the File menu or Ctrl+P asks for a PDF or a print */
+  onPrintRequest(handler: (mode: PrintMode) => void): () => void
+  /** make the PDF (asking where) or open the print dialog for these pages */
+  printPages(job: PrintJob): Promise<PrintResult>
   onCloseSaveRequest(handler: () => void): () => void
   sendCloseSaveResult(ok: boolean): void
   /** the main process wants the document as it is now, unsaved edits included */

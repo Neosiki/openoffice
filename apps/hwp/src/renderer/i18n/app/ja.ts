@@ -5,6 +5,10 @@ export const ja = {
   editorFailed: 'エディターを起動できませんでした。',
   openFailed: '文書を開けませんでした。',
   saveFailed: '文書を保存できませんでした。',
+  printPreparing: 'ページを準備しています… ({done}/{total})',
+  printSending: 'ページを送っています…',
+  pdfFailed: 'PDF として書き出せませんでした。',
+  printFailed: '印刷できませんでした。',
   saveVerifyFailed:
     '保存しませんでした。書き込もうとした内容を読み戻すと、画面の文書と一致しませんでした。「名前を付けて保存」で新しいファイルに保存してみてください。',
   saveProtected:

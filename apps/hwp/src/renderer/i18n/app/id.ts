@@ -5,6 +5,10 @@ export const id = {
   editorFailed: 'Editor tidak dapat dimulai.',
   openFailed: 'Dokumen tidak dapat dibuka.',
   saveFailed: 'Dokumen tidak dapat disimpan.',
+  printPreparing: 'Menyiapkan halaman… ({done}/{total})',
+  printSending: 'Mengirim halaman…',
+  pdfFailed: 'Dokumen tidak dapat diekspor sebagai PDF.',
+  printFailed: 'Dokumen tidak dapat dicetak.',
   saveVerifyFailed:
     'Tidak ada yang disimpan: salinan yang akan ditulis, saat dibaca kembali, tidak sama dengan dokumen di layar. Coba "Simpan Sebagai" untuk menulis file baru.',
   saveProtected:

@@ -509,6 +509,8 @@ export interface AgentPluginSurface {
   deleteNote(note: number): AgentDeleteNoteResult
   measureTabs(spots: AgentTabSpot[]): { tabs: (AgentTabMeasure | null)[] }
   listStyles(): string[]
+  /** pages for printing from `from`, as many as are drawn in about two seconds */
+  printPages(from: number): AgentPrintPages
   mergeCells(table: number, from: AgentCellPlace, to: AgentCellPlace): AgentMergeCellsResult
   splitCell(
     table: number,
@@ -525,6 +527,13 @@ export interface AgentPluginSurface {
   /** take the marks of the changes made so far off the pages */
   clearMarks(): { ok: true }
   undo(steps: number, expectedForeign: number): AgentUndoResult
+}
+
+/** Pages drawn for printing: SVG, and each page's size in CSS pixels. */
+export interface AgentPrintPages {
+  pageCount: number
+  from: number
+  pages: { svg: string; width: number; height: number }[]
 }
 
 /** The part of the studio's plugin host this plugin uses. */

@@ -5,6 +5,10 @@ export const en = {
   editorFailed: 'The editor could not start.',
   openFailed: 'The document could not be opened.',
   saveFailed: 'The document could not be saved.',
+  printPreparing: 'Preparing pages… ({done}/{total})',
+  printSending: 'Sending the pages…',
+  pdfFailed: 'The document could not be exported as PDF.',
+  printFailed: 'The document could not be printed.',
   saveVerifyFailed:
     'Nothing was saved: the copy about to be written did not read back the same as the document on screen. Try Save As to write a new file.',
   saveProtected:

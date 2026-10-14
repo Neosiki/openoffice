@@ -5,6 +5,10 @@ export const ko = {
   editorFailed: '편집기를 시작하지 못했습니다.',
   openFailed: '문서를 열지 못했습니다.',
   saveFailed: '문서를 저장하지 못했습니다.',
+  printPreparing: '쪽을 준비하는 중… ({done}/{total})',
+  printSending: '쪽을 보내는 중…',
+  pdfFailed: 'PDF로 내보내지 못했습니다.',
+  printFailed: '인쇄하지 못했습니다.',
   saveVerifyFailed:
     '저장하지 않았습니다. 저장될 내용을 다시 읽어 보니 화면의 문서와 달랐습니다. "다른 이름으로 저장"으로 새 파일에 저장해 보세요.',
   saveProtected: '저장하지 않았습니다. 암호가 걸린 문서인데, 여기서 저장하면 암호 없이 저장됩니다.',

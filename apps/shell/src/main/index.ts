@@ -208,6 +208,7 @@ import {
   configureHwpRuntime,
   hwpFileRenamed,
   hwpReadText,
+  requestHwpPrint,
   requestHwpSave,
   setHwpFileSavedHook,
 } from '../../../hwp/src/main/hwp-main'
@@ -448,6 +449,7 @@ configureHwpRuntime({
   preloadPath: join(HWP_OUT, 'preload', 'index.js'),
   rendererUrl: process.env.HWP_RENDERER_URL,
   rendererFile: join(HWP_OUT, 'renderer', 'index.html'),
+  openGeneratedPath: (path) => openGeneratedDocument(path),
 })
 // privileged-scheme registration is only legal before app ready
 registerPrivilegedSchemes()
@@ -4945,9 +4947,9 @@ function buildHwpMenu(): void {
           click: () => tabManager?.openHomeTab(),
         },
         { type: 'separator' },
-        // no accelerators here: the embedded editor swallows Ctrl+S before the
-        // menu sees it, so hwp-main takes the two save shortcuts off the key
-        // event itself; registering them twice would save twice whenever focus
+        // no accelerators here: the embedded editor swallows Ctrl+S and Ctrl+P
+        // before the menu sees them, so hwp-main takes those shortcuts off the key
+        // event itself; registering them twice would run them twice whenever focus
         // sits outside the editor
         {
           label: tm('menuSave'),
@@ -4961,6 +4963,21 @@ function buildHwpMenu(): void {
           click: () => {
             const tab = activeHwpTarget()
             if (tab) void requestHwpSave(tab.webContents, 'saveAs')
+          },
+        },
+        { type: 'separator' },
+        {
+          label: tm('menuExportPdf'),
+          click: () => {
+            const tab = activeHwpTarget()
+            if (tab) requestHwpPrint(tab.webContents, 'pdf')
+          },
+        },
+        {
+          label: tm('menuPrint'),
+          click: () => {
+            const tab = activeHwpTarget()
+            if (tab) requestHwpPrint(tab.webContents, 'print')
           },
         },
         { type: 'separator' },

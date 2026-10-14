@@ -5,6 +5,10 @@ export const nl = {
   editorFailed: 'De editor kon niet worden gestart.',
   openFailed: 'Het document kon niet worden geopend.',
   saveFailed: 'Het document kon niet worden opgeslagen.',
+  printPreparing: "Pagina's voorbereiden… ({done}/{total})",
+  printSending: "Pagina's verzenden…",
+  pdfFailed: 'Het document kon niet als PDF worden geëxporteerd.',
+  printFailed: 'Het document kon niet worden afgedrukt.',
   saveVerifyFailed:
     'Er is niets opgeslagen: de kopie die zou worden weggeschreven kwam bij het teruglezen niet overeen met het document op het scherm. Probeer "Opslaan als" om een nieuw bestand te schrijven.',
   saveProtected:

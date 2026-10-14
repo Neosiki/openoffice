@@ -12,6 +12,7 @@ import { AiPanel } from './ai/AiPanel'
 import { createAgentBridge } from './ai/agent-bridge'
 import blankHwpUrl from './assets/blank.hwp?url'
 import { useI18n, type StringKey } from './i18n/locale'
+import { gatherPrintJob } from './print-flow'
 import { runSave, type SaveEditorPort } from './save-flow'
 import { PASSWORD_FLAG } from '../../scripts/rhwp-patches.mjs'
 import { STUDIO_SETTINGS_KEY, seededStudioSettings, studioUrl } from './studio-settings'
@@ -286,6 +287,38 @@ export default function App() {
       offClose()
     }
   }, [phase, save])
+
+  // PDF and print asked for by the menu and Ctrl+P: the pages are gathered here, and the
+  // main process makes the PDF or opens the print dialog
+  const printingRef = useRef(false)
+  useEffect(
+    () =>
+      window.hwpApi.onPrintRequest((mode) => {
+        if (phase !== 'ready' || printingRef.current) return
+        printingRef.current = true
+        void (async () => {
+          const failed = mode === 'pdf' ? 'pdfFailed' : 'printFailed'
+          try {
+            const job = await gatherPrintJob(agentBridge, mode, (done, total) =>
+              setNotice({
+                tone: 'info',
+                key: 'printPreparing',
+                params: { done, total },
+                sticky: true,
+              }),
+            )
+            setNotice({ tone: 'info', key: 'printSending', sticky: true })
+            const result = await window.hwpApi.printPages(job)
+            setNotice(result.ok ? null : { tone: 'error', key: failed, detail: result.error })
+          } catch (error) {
+            setNotice({ tone: 'error', key: failed, detail: detailOf(error) })
+          } finally {
+            printingRef.current = false
+          }
+        })()
+      }),
+    [phase, agentBridge],
+  )
 
   // the document as it is now, for a reader outside the editor (the MCP tool that reads
   // open documents): exported in its own format, never written anywhere

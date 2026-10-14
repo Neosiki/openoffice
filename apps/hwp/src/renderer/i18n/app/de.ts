@@ -5,6 +5,10 @@ export const de = {
   editorFailed: 'Der Editor konnte nicht gestartet werden.',
   openFailed: 'Das Dokument konnte nicht geöffnet werden.',
   saveFailed: 'Das Dokument konnte nicht gespeichert werden.',
+  printPreparing: 'Seiten werden vorbereitet… ({done}/{total})',
+  printSending: 'Seiten werden gesendet…',
+  pdfFailed: 'Das Dokument konnte nicht als PDF exportiert werden.',
+  printFailed: 'Das Dokument konnte nicht gedruckt werden.',
   saveVerifyFailed:
     'Es wurde nichts gespeichert: Die zu schreibende Kopie stimmte beim Zurücklesen nicht mit dem angezeigten Dokument überein. Versuchen Sie „Speichern unter“, um eine neue Datei zu schreiben.',
   saveProtected:

@@ -5,6 +5,10 @@ export const zhTW = {
   editorFailed: '編輯器無法啟動。',
   openFailed: '無法開啟文件。',
   saveFailed: '無法儲存文件。',
+  printPreparing: '正在準備列印頁面… ({done}/{total})',
+  printSending: '正在傳送頁面…',
+  pdfFailed: '無法匯出為 PDF。',
+  printFailed: '無法列印。',
   saveVerifyFailed:
     '未儲存：即將寫入的內容讀回後與畫面上的文件不一致。請嘗試「另存新檔」儲存為新檔案。',
   saveProtected: '未儲存：此文件有密碼保護，在這裡儲存會寫出不含密碼的檔案。',

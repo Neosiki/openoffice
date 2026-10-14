@@ -4,6 +4,10 @@ export const zh = {
   editorFailed: '编辑器无法启动。',
   openFailed: '无法打开文档。',
   saveFailed: '无法保存文档。',
+  printPreparing: '正在准备打印页面… ({done}/{total})',
+  printSending: '正在发送页面…',
+  pdfFailed: '无法导出为 PDF。',
+  printFailed: '无法打印。',
   saveVerifyFailed:
     '未保存：即将写入的内容读回后与屏幕上的文档不一致。请尝试“另存为”保存到新文件。',
   saveProtected: '未保存：此文档有密码保护，在这里保存会写出不带密码的文件。',

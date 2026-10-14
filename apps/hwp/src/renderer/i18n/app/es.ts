@@ -5,6 +5,10 @@ export const es = {
   editorFailed: 'No se pudo iniciar el editor.',
   openFailed: 'No se pudo abrir el documento.',
   saveFailed: 'No se pudo guardar el documento.',
+  printPreparing: 'Preparando páginas… ({done}/{total})',
+  printSending: 'Enviando las páginas…',
+  pdfFailed: 'No se pudo exportar el documento como PDF.',
+  printFailed: 'No se pudo imprimir el documento.',
   saveVerifyFailed:
     'No se guardó nada: la copia que se iba a escribir no coincidía, al releerla, con el documento en pantalla. Prueba «Guardar como» para escribir un archivo nuevo.',
   saveProtected:

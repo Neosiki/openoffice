@@ -5,6 +5,10 @@ export const vi = {
   editorFailed: 'Không thể khởi động trình soạn thảo.',
   openFailed: 'Không thể mở tài liệu.',
   saveFailed: 'Không thể lưu tài liệu.',
+  printPreparing: 'Đang chuẩn bị trang… ({done}/{total})',
+  printSending: 'Đang gửi các trang…',
+  pdfFailed: 'Không thể xuất tài liệu dưới dạng PDF.',
+  printFailed: 'Không thể in tài liệu.',
   saveVerifyFailed:
     'Chưa lưu gì: bản sao sắp ghi, khi đọc lại, không khớp với tài liệu trên màn hình. Hãy thử "Lưu thành" để ghi vào tệp mới.',
   saveProtected:

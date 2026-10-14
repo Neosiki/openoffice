@@ -5,6 +5,10 @@ export const ms = {
   editorFailed: 'Editor tidak dapat dimulakan.',
   openFailed: 'Dokumen tidak dapat dibuka.',
   saveFailed: 'Dokumen tidak dapat disimpan.',
+  printPreparing: 'Menyediakan halaman… ({done}/{total})',
+  printSending: 'Menghantar halaman…',
+  pdfFailed: 'Dokumen tidak dapat dieksport sebagai PDF.',
+  printFailed: 'Dokumen tidak dapat dicetak.',
   saveVerifyFailed:
     'Tiada apa-apa disimpan: salinan yang akan ditulis, apabila dibaca semula, tidak sama dengan dokumen pada skrin. Cuba "Simpan Sebagai" untuk menulis fail baharu.',
   saveProtected:

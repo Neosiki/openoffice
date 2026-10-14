@@ -5,6 +5,10 @@ export const it = {
   editorFailed: 'Impossibile avviare l’editor.',
   openFailed: 'Impossibile aprire il documento.',
   saveFailed: 'Impossibile salvare il documento.',
+  printPreparing: 'Preparazione delle pagine… ({done}/{total})',
+  printSending: 'Invio delle pagine…',
+  pdfFailed: 'Impossibile esportare il documento in PDF.',
+  printFailed: 'Impossibile stampare il documento.',
   saveVerifyFailed:
     'Non è stato salvato nulla: la copia da scrivere, riletta, non corrispondeva al documento sullo schermo. Prova «Salva con nome» per scrivere un nuovo file.',
   saveProtected:

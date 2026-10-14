@@ -46,6 +46,7 @@ const METHODS = [
   'measureTabs',
   'clearMarks',
   'listStyles',
+  'printPages',
   'formatCells',
   'mergeCells',
   'splitCell',

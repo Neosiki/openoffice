@@ -6,7 +6,7 @@ import type { ProjectApi } from '@genoffice/project-store'
 import type { AiPanelPrefs } from '@genoffice/ui'
 import { installDropOpenBridge } from '@genoffice/electron-utils/drop-open'
 import { AI_CHANNELS, HWP_CHANNELS } from '../shared/ipc'
-import type { HwpApi, SaveMode, UiTheme } from '../shared/ipc'
+import type { HwpApi, PrintMode, SaveMode, UiTheme } from '../shared/ipc'
 import type { SubscriptionApi } from '../shared/subscription-api'
 import {
   SUBSCRIPTION_INSTALL_HELP_CHANNEL,
@@ -71,6 +71,12 @@ const api: HwpApi = {
     ipcRenderer.on(HWP_CHANNELS.saveRequest, listener)
     return () => ipcRenderer.removeListener(HWP_CHANNELS.saveRequest, listener)
   },
+  onPrintRequest: (handler) => {
+    const listener = (_e: Electron.IpcRendererEvent, mode: PrintMode) => handler(mode)
+    ipcRenderer.on(HWP_CHANNELS.printRequest, listener)
+    return () => ipcRenderer.removeListener(HWP_CHANNELS.printRequest, listener)
+  },
+  printPages: (job) => ipcRenderer.invoke(HWP_CHANNELS.printPages, job),
   onCloseSaveRequest: (handler) => {
     const listener = () => handler()
     ipcRenderer.on(HWP_CHANNELS.closeSaveRequest, listener)

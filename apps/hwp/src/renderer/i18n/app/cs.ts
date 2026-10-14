@@ -5,6 +5,10 @@ export const cs = {
   editorFailed: 'Editor se nepodařilo spustit.',
   openFailed: 'Dokument se nepodařilo otevřít.',
   saveFailed: 'Dokument se nepodařilo uložit.',
+  printPreparing: 'Příprava stránek… ({done}/{total})',
+  printSending: 'Odesílání stránek…',
+  pdfFailed: 'Dokument se nepodařilo exportovat do PDF.',
+  printFailed: 'Dokument se nepodařilo vytisknout.',
   saveVerifyFailed:
     'Nic se neuložilo: kopie připravená k zápisu se po zpětném načtení neshodovala s dokumentem na obrazovce. Zkuste „Uložit jako“ a zapište nový soubor.',
   saveProtected:

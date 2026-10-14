@@ -18,6 +18,7 @@ import { hwpToText } from '@genoffice/file-parse'
 import { getUiLang } from '@genoffice/i18n'
 import { registerHwpAttachmentIpc } from './attachments-ipc'
 import { atomicWriteFile } from './atomic-write'
+import { badJob, printJobToPdf, printJobToPrinter } from './print-document'
 import { tm } from './dialog-strings'
 import { fieldKindsOf, restoreFieldKinds } from './field-kinds'
 import type { FieldKinds } from './field-kinds'
@@ -32,6 +33,9 @@ import type {
   CommitSaveResult,
   HwpFormat,
   MeasuredTab,
+  PrintJob,
+  PrintMode,
+  PrintResult,
   SaveMode,
   TabSpot,
 } from '../shared/ipc'
@@ -40,6 +44,8 @@ interface RuntimePaths {
   preloadPath: string
   rendererUrl?: string
   rendererFile?: string
+  /** open a file this editor made (an exported PDF) in the app; false when it cannot */
+  openGeneratedPath?: (path: string) => boolean
 }
 
 let runtime: RuntimePaths = { preloadPath: '' }
@@ -143,6 +149,22 @@ export async function requestHwpClose(
  * keystroke behind, and Ctrl+S right after typing must still save. The
  * renderer asks the editor itself and declines a save with nothing to write.
  */
+/** The File menu or Ctrl+P: the renderer gathers the pages and comes back with printPages. */
+export function requestHwpPrint(contents: WebContents, mode: PrintMode): void {
+  if (!contents.isDestroyed()) contents.send(HWP_CHANNELS.printRequest, mode)
+}
+
+/** A hidden window for printing: no preload, no scripts, sandboxed. */
+const printWindow = (): BrowserWindow =>
+  new BrowserWindow({ show: false, webPreferences: { sandbox: true, javascript: false } })
+
+/** The name an exported PDF is offered under: the document's, or the untitled one. */
+function pdfName(wcId: number): string {
+  const current = savePathByWc.get(wcId)
+  const base = current ? basename(current).replace(/.hwpx?$/i, '') : ''
+  return `${base || tm('untitledFile')}.pdf`
+}
+
 export function requestHwpSave(contents: WebContents, mode: SaveMode): Promise<boolean> {
   if (contents.isDestroyed()) return Promise.resolve(false)
   // one save at a time per view: a request arriving while one is in flight is declined
@@ -272,6 +294,48 @@ function registerHwpIpc(): void {
   })
 
   ipcMain.handle(HWP_CHANNELS.trackingDropped, (e) => trackingDroppedByWc.has(e.sender.id))
+
+  /** one print or PDF at a time per view */
+  const printing = new Set<number>()
+  ipcMain.handle(HWP_CHANNELS.printPages, async (e, job: unknown): Promise<PrintResult> => {
+    const wcId = e.sender.id
+    const bad = badJob(job)
+    if (bad) return { ok: false, error: `hwp: ${bad}` }
+    if (printing.has(wcId)) return { ok: false, error: 'hwp: already printing' }
+    printing.add(wcId)
+    try {
+      const printJob = job as PrintJob
+      if (printJob.mode === 'print') {
+        await printJobToPrinter(printJob, printWindow)
+        return { ok: true }
+      }
+      const win =
+        BrowserWindow.fromWebContents(e.sender) ?? BrowserWindow.getFocusedWindow() ?? undefined
+      const current = savePathByWc.get(wcId)
+      const picked = await showSaveDialogWithMemory(dialog, win, {
+        title: tm('dlgExportPdfTitle'),
+        defaultPath: join(
+          current ? dirname(current) : configuredDefaultSaveDir(app),
+          pdfName(wcId),
+        ),
+        filters: [{ name: 'PDF', extensions: ['pdf'] }],
+      })
+      if (picked.canceled || !picked.filePath) return { ok: true, canceled: true }
+      const target = /.pdf$/i.test(picked.filePath) ? picked.filePath : `${picked.filePath}.pdf`
+      const pdf = await printJobToPdf(printJob, printWindow)
+      await atomicWriteFile(target, pdf)
+      try {
+        if (!runtime.openGeneratedPath?.(target)) shell.showItemInFolder(target)
+      } catch (err) {
+        console.warn('[hwp] could not open the exported PDF:', err)
+      }
+      return { ok: true, path: target }
+    } catch (err) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) }
+    } finally {
+      printing.delete(wcId)
+    }
+  })
 
   ipcMain.handle(HWP_CHANNELS.beginSave, async (e, mode: unknown): Promise<BeginSaveResult> => {
     const wcId = e.sender.id
@@ -425,14 +489,20 @@ function registerHwpIpc(): void {
 }
 
 /**
- * The editor runs in an iframe that swallows Ctrl+S before the page or the
- * application menu can see it, so the shortcut is taken here, ahead of both.
+ * The editor runs in an iframe that swallows Ctrl+S and Ctrl+P before the page or the
+ * application menu can see them, so the shortcuts are taken here, ahead of both.
  */
 function installSaveShortcut(wc: WebContents): void {
   wc.on('before-input-event', (event, input) => {
     if (input.type !== 'keyDown' || input.isAutoRepeat || input.alt) return
     const mod = process.platform === 'darwin' ? input.meta : input.control
-    if (!mod || input.code !== 'KeyS') return
+    if (!mod) return
+    if (input.code === 'KeyP' && !input.shift) {
+      event.preventDefault()
+      requestHwpPrint(wc, 'print')
+      return
+    }
+    if (input.code !== 'KeyS') return
     event.preventDefault()
     void requestHwpSave(wc, input.shift ? 'saveAs' : 'save')
   })

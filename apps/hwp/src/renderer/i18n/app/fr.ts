@@ -5,6 +5,10 @@ export const fr = {
   editorFailed: 'L’éditeur n’a pas pu démarrer.',
   openFailed: 'Le document n’a pas pu être ouvert.',
   saveFailed: 'Le document n’a pas pu être enregistré.',
+  printPreparing: 'Préparation des pages… ({done}/{total})',
+  printSending: 'Envoi des pages…',
+  pdfFailed: "Le document n'a pas pu être exporté en PDF.",
+  printFailed: "Le document n'a pas pu être imprimé.",
   saveVerifyFailed:
     'Rien n’a été enregistré : la copie à écrire ne correspondait pas, à la relecture, au document affiché. Essayez « Enregistrer sous » pour écrire un nouveau fichier.',
   saveProtected:

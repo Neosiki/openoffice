@@ -55,6 +55,8 @@ const WORD_COMMAND = 'ext:ieum-select-word'
 const MARK_COMMAND = 'ext:ieum-mark-changes'
 /** Most places marked at once: a replace-all over a long document stops here. */
 const MAX_MARKS = 500
+/** How long one call of printPages draws pages for; the bridge gives a call ten seconds. */
+const PRINT_BATCH_MS = 2000
 /**
  * How a mark looks: a light fill over the changed text and a line under it, warm so it is
  * not taken for the editor's blue selection. The page is paper white in every theme.
@@ -1794,6 +1796,21 @@ let stopListening = null
 /** Takes the marks off the page again, with what keeps them in place. */
 let stopMarking = null
 
+/**
+ * Run `fn` with the text widths every PC lays out the same (the editor's print and export
+ * do so): with the widths measured on this screen on, pages could break differently. They
+ * are put back afterwards.
+ */
+function withPortableWidths(doc, fn) {
+  const measured = doc.canvasMetricsActive?.() ?? false
+  if (measured) doc.selectCanvasMetrics(false)
+  try {
+    return fn()
+  } finally {
+    if (measured) doc.selectCanvasMetrics(true)
+  }
+}
+
 export const agentPlugin = {
   id: AGENT_PLUGIN_ID,
   apiVersion: 1,
@@ -2531,6 +2548,34 @@ export const agentPlugin = {
        * written over with `overwrite`; a cell that holds one click-here field is filled
        * through the field; a cell that holds a picture or another object is never written.
        */
+      /**
+       * The pages as the editor prints them, from page `from` (0-based): SVG drawn for
+       * print and each page's size in CSS pixels, as many pages as are drawn in about two
+       * seconds (always one). Called again from where it stopped until `pageCount`. Pages
+       * are laid out with the portable text widths, as the editor's own print does, and the
+       * screen's are put back before the call returns.
+       */
+      printPages: guarded((from) =>
+        host.read((doc) =>
+          withPortableWidths(doc, () => {
+            const pageCount = doc.pageCount()
+            const start = Number.isInteger(from) && from > 0 ? Math.min(from, pageCount) : 0
+            const began = Date.now()
+            const pages = []
+            for (let page = start; page < pageCount; page++) {
+              const info = JSON.parse(doc.getPageInfo(page))
+              pages.push({
+                svg: doc.renderPageSvgWithProfile(page, 'print'),
+                width: info.width,
+                height: info.height,
+              })
+              if (Date.now() - began > PRINT_BATCH_MS) break
+            }
+            return { pageCount, from: start, pages }
+          }),
+        ),
+      ),
+
       /** The paragraph styles of the document, by name: what a format's style takes. */
       listStyles: guarded(() =>
         host.read((doc) => paragraphStylesOf(doc).map((style) => style.name)),

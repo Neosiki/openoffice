@@ -5,6 +5,10 @@ export const pl = {
   editorFailed: 'Nie udało się uruchomić edytora.',
   openFailed: 'Nie udało się otworzyć dokumentu.',
   saveFailed: 'Nie udało się zapisać dokumentu.',
+  printPreparing: 'Przygotowywanie stron… ({done}/{total})',
+  printSending: 'Wysyłanie stron…',
+  pdfFailed: 'Nie udało się wyeksportować dokumentu do PDF.',
+  printFailed: 'Nie udało się wydrukować dokumentu.',
   saveVerifyFailed:
     'Niczego nie zapisano: kopia przygotowana do zapisu po ponownym odczytaniu różniła się od dokumentu na ekranie. Spróbuj „Zapisz jako”, aby zapisać nowy plik.',
   saveProtected:
