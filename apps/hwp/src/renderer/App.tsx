@@ -12,6 +12,7 @@ import { AiPanel } from './ai/AiPanel'
 import { createAgentBridge } from './ai/agent-bridge'
 import blankHwpUrl from './assets/blank.hwp?url'
 import { useI18n, type StringKey } from './i18n/locale'
+import { openDocumentsDroppedOn } from './editor-drop'
 import { gatherPrintJob } from './print-flow'
 import { runSave, type SaveEditorPort } from './save-flow'
 import { PASSWORD_FLAG } from '../../scripts/rhwp-patches.mjs'
@@ -98,6 +99,7 @@ export default function App() {
   useEffect(() => {
     let disposed = false
     let editor: RhwpEditor | null = null
+    let stopDrop: (() => void) | null = null
     void (async () => {
       try {
         const [path, theme, lang] = await Promise.all([
@@ -116,6 +118,9 @@ export default function App() {
           return
         }
         editorRef.current = editor
+        stopDrop = openDocumentsDroppedOn(editor.element, (files) =>
+          window.hwpApi.openDroppedDocuments(files),
+        )
         setPhase('loading')
         if (!path) {
           // a new document: the blank one bundled with the app, which has no file until
@@ -148,6 +153,7 @@ export default function App() {
     return () => {
       disposed = true
       editorRef.current = null
+      stopDrop?.()
       editor?.destroy()
     }
   }, [])

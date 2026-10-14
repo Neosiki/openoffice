@@ -211,6 +211,12 @@ export interface HwpApi {
   readAttachmentImage(path: string): Promise<AttachmentImageResult>
   /** the local path of a dropped or pasted file; empty for one that has none (a screenshot) */
   getPathForFile(file: File): string
+  /**
+   * open the documents among files dropped on the editor, as a drop anywhere else in the
+   * app does (the page's drop bridge does not hear the editor's frame); false when none
+   * of them is a document, and the drop is the editor's (a picture to insert)
+   */
+  openDroppedDocuments(files: File[]): boolean
   getLanguage(): Promise<Lang>
   onLanguageChanged(handler: (lang: Lang) => void): () => void
   getTheme(): Promise<UiTheme>

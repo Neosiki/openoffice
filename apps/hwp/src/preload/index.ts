@@ -4,7 +4,14 @@ import { SUBSCRIPTION_IPC_CHANNELS } from '@genoffice/ai-provider/browser'
 import type { Lang } from '@genoffice/i18n'
 import type { ProjectApi } from '@genoffice/project-store'
 import type { AiPanelPrefs } from '@genoffice/ui'
-import { installDropOpenBridge } from '@genoffice/electron-utils/drop-open'
+import {
+  DROP_OPEN_CHANNEL,
+  KNOWN_UNSUPPORTED_DOC_RE,
+  MAX_DROP_PATH_CHARS,
+  MAX_RESOLVED_DROP_PATHS,
+  OPENABLE_DOC_RE,
+  installDropOpenBridge,
+} from '@genoffice/electron-utils/drop-open'
 import { AI_CHANNELS, HWP_CHANNELS } from '../shared/ipc'
 import type { HwpApi, PrintMode, SaveMode, UiTheme } from '../shared/ipc'
 import type { SubscriptionApi } from '../shared/subscription-api'
@@ -96,6 +103,24 @@ const api: HwpApi = {
     ipcRenderer.invoke(HWP_CHANNELS.filesRead, path, offset, maxChars),
   readAttachmentImage: (path) => ipcRenderer.invoke(HWP_CHANNELS.filesReadImage, path),
   getPathForFile: (file) => webUtils.getPathForFile(file),
+  // the drop bridge's rules, for drops it cannot hear: paths come from the dropped files
+  // here, so the page can only pass on files the user dropped
+  openDroppedDocuments: (files) => {
+    const paths: string[] = []
+    for (const file of files.slice(0, MAX_RESOLVED_DROP_PATHS)) {
+      let path = ''
+      try {
+        path = webUtils.getPathForFile(file).trim()
+      } catch {
+        // not a file on disk
+      }
+      if (!path || path.length > MAX_DROP_PATH_CHARS) continue
+      if (OPENABLE_DOC_RE.test(path) || KNOWN_UNSUPPORTED_DOC_RE.test(path)) paths.push(path)
+    }
+    if (paths.length === 0) return false
+    ipcRenderer.send(DROP_OPEN_CHANNEL, paths)
+    return true
+  },
   getLanguage: () => ipcRenderer.invoke(HWP_CHANNELS.getLanguage),
   onLanguageChanged: (handler) => {
     const listener = (_e: Electron.IpcRendererEvent, lang: Lang) => handler(lang)
