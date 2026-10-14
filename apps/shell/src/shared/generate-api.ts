@@ -38,26 +38,8 @@ export interface GenerateRequest {
   text: string
 }
 
-/**
- * What a new tab takes, once (8.5). The receiving editor attaches the
- * materials to its AI panel, puts `text` in the composer and starts the run
- * through its normal send gate — a missing connection blocks it there and
- * leaves the text and the attachments in place.
- */
-export interface GenerateHandoff {
-  /** unique per press of "make" */
-  id: string
-  mode: 'ai'
-  target: AiTargetKind
-  /** the readable materials, in the order the window listed them */
-  materials: Array<{ path: string; name: string }>
-  /** the user's words, or the kind's default request when they wrote none */
-  text: string
-  /** true when `text` is the default request (the box was left empty) */
-  defaultText: boolean
-  /** when "make" was pressed, ms since epoch */
-  createdAt: number
-}
+/** what a new tab takes, once (8.5); the contract lives with the queue */
+export type { GenerateHandoff } from '@genoffice/electron-utils/generate-handoff'
 
 /** why a file was left out of the materials */
 export type MaterialProblem = 'missing' | 'unsupported' | 'too-large' | 'unreadable' | 'untitled'
