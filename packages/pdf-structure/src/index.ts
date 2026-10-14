@@ -22,3 +22,4 @@ export {
 export type { EpubWriteOptions, EpubLanguageOptions } from './epub'
 export * from './jobs'
 export * from './translate'
+export * from './ai-read'
