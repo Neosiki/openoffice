@@ -9,7 +9,7 @@
  * marked below so it lands where it belongs. The theme button opens and closes
  * the theme panel beside the map.
  */
-import { Dropdown, type DropdownOption } from '@genoffice/ui'
+import { AiMark, aiSubscriptionText, Dropdown, type DropdownOption } from '@genoffice/ui'
 import type { ViewLayout } from '@genoffice/xmind-engine'
 import { useI18n } from '../i18n/locale'
 import {
@@ -48,6 +48,8 @@ export interface ToolbarProps {
   pickingRelationship: boolean
   /** the theme panel is open */
   themeOpen: boolean
+  /** the AI panel is open */
+  aiOpen: boolean
   onSave(): void
   onSaveAs(): void
   onUndo(): void
@@ -67,10 +69,11 @@ export interface ToolbarProps {
   onZoomIn(): void
   onZoomOut(): void
   onZoomFit(): void
+  onToggleAi(): void
 }
 
 export function Toolbar(p: ToolbarProps) {
-  const { t } = useI18n()
+  const { lang, t } = useI18n()
   const layouts: DropdownOption<ViewLayout>[] = [
     { value: 'right', label: t('layoutRight') },
     { value: 'left', label: t('layoutLeft') },
@@ -267,7 +270,20 @@ export function Toolbar(p: ToolbarProps) {
           </div>
         </div>
         {/* "make another document from this one" goes here, after its own separator */}
-        <span className="mm-tools-end">{/* the AI button goes here, at the far end */}</span>
+        <span className="mm-tools-end">
+          <button
+            type="button"
+            className={`mm-ai-entry ai-entry${p.aiOpen ? ' active' : ''}`}
+            data-tip={t('aiOpenAssistant')}
+            data-action="ai"
+            aria-pressed={p.aiOpen}
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={p.onToggleAi}
+          >
+            <AiMark size={18} />
+            <span>{aiSubscriptionText(lang, 'aiAssistant')}</span>
+          </button>
+        </span>
       </div>
     </header>
   )
