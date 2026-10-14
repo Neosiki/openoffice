@@ -1,6 +1,7 @@
 /// PDF export: renders the print HTML (laid out by the renderer) in a hidden
 /// scripting-disabled window and writes webContents.printToPDF's output where
-/// the save dialog points.
+/// the save dialog points. That window sees only the fonts its page declares, so
+/// export and print add the bundled template faces (template-fonts.ts).
 
 import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
@@ -13,6 +14,7 @@ import { isHeadlessMode, showSaveDialogWithMemory } from '@genoffice/electron-ut
 import { atomicWriteFile } from './atomic-write'
 import { evenPageRanges, stitchPlan, type PageVariant } from './pdf-page-variants'
 import { printOptionsFor } from './print-options'
+import { sheetsTemplateFontsDir, withTemplateFontFaces } from './template-fonts'
 
 import type { IpcMainInvokeEvent, WebContents } from 'electron'
 import type { PDFDocument } from 'pdf-lib'
@@ -45,7 +47,7 @@ export async function exportPdf(
     webPreferences: { sandbox: true, javascript: false },
   })
   try {
-    await writeFile(htmlPath, request.html, 'utf8')
+    await writeFile(htmlPath, withTemplateFontFaces(request.html, sheetsTemplateFontsDir()), 'utf8')
     await window.loadFile(htmlPath)
     const pdf = await renderPdf(window.webContents, request)
     await atomicWriteFile(selection.filePath, pdf)
@@ -78,7 +80,7 @@ export async function printWorkbook(
     webPreferences: { sandbox: true, javascript: false },
   })
   try {
-    await writeFile(htmlPath, request.html, 'utf8')
+    await writeFile(htmlPath, withTemplateFontFaces(request.html, sheetsTemplateFontsDir()), 'utf8')
     await window.loadFile(htmlPath)
     if (process.platform === 'win32' && request.deviceName === undefined) {
       window.show()

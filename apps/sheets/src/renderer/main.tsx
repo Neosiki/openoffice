@@ -18,6 +18,7 @@ import '@univerjs/preset-sheets-core/lib/index.css'
 import { App } from './App'
 import { installCanvasFontFallback, registerCellFontAliases } from './cell-font-fallback'
 import { LocaleProvider, setModuleLang } from './i18n/locale'
+import { registerTemplateFonts } from './template-fonts'
 import type { DocTheme, UiTheme } from '../shared/desktop-api'
 import './styles.css'
 
@@ -52,13 +53,16 @@ function applyDocumentTheme(theme: DocTheme): void {
 // first skeleton — MDW, wrap points, and #### overflow all measure with them.
 async function loadCellFonts(): Promise<void> {
   const loads: Promise<unknown>[] = [registerCellFontAliases()]
+  // the bundled template fonts, read by main from the one installed folder
+  const readTemplateFont = window.desktopApi?.templateFontData
+  if (readTemplateFont) loads.push(registerTemplateFonts(readTemplateFont))
   for (const variant of ['', 'bold ', 'italic ', 'italic bold ']) {
     for (const family of ['Calibri', 'Aptos', "'Aptos Narrow'", 'Carlito']) {
       loads.push(document.fonts?.load?.(`${variant}16px ${family}`)?.catch(() => {}) ?? [])
     }
   }
-  // Local assets resolve in milliseconds; the timeout only guards a broken
-  // bundle from blanking the app.
+  // Local assets resolve in milliseconds (the template fonts in about half a
+  // second); the timeout only guards a broken bundle from blanking the app.
   await Promise.race([Promise.all(loads), new Promise((resolve) => setTimeout(resolve, 3000))])
 }
 

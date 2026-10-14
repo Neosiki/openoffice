@@ -168,6 +168,7 @@ import { atomicWriteFile } from './atomic-write'
 import { closeGuardDecision, ShutdownLatch } from './close-guard'
 import { SaveEditsTransferStore } from './save-edits-transfer'
 import { exportPdf, printWorkbook } from './pdf-export'
+import { readTemplateFontFile, sheetsTemplateFontsDir } from './template-fonts'
 import { allowsAutomaticWorkbookRecovery } from './recovery-policy'
 import {
   setSystemShortDate,
@@ -2625,6 +2626,13 @@ export function registerSheetsIpc(): void {
   // shared with the other editor modules — last (identical) registration wins
   ipcMain.removeHandler('app:font-family-info')
   ipcMain.handle('app:font-family-info', (_event, families: unknown) => familyInfoFor(families))
+
+  // The bundled template fonts for the grid canvas, read from the one installed
+  // folder; the file name must be one of the bundled files.
+  ipcMain.handle(IPC_CHANNELS.templateFontData, (event, file: unknown) => {
+    sessionFor(event)
+    return readTemplateFontFile(sheetsTemplateFontsDir(), z.string().parse(file))
+  })
 
   /** returns true once when shell opened this tab for a new blank workbook */
   ipcMain.handle('sheets:consume-new-blank', () => {
