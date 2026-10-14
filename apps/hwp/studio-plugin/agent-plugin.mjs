@@ -27,12 +27,36 @@ const MAX_INSERTED_PARAGRAPHS = 100
 const MAX_TABLE_CELLS = 400
 /** Characters of a removed paragraph handed back, for the panel's list of changes. */
 const MAX_REPORTED_CHARS = 200
+/** Tables one listTables call lists. */
+const MAX_LISTED_TABLES = 200
+/** Cells one readTable call returns; a longer table is read on from the row it names. */
+const MAX_READ_CELLS = 600
+/** Characters of one cell handed back by readTable. */
+const MAX_CELL_CHARS = 300
+/** Cells one fillCells call sets. */
+const MAX_FILLED_CELLS = 400
+/** Lines of text one cell is given. */
+const MAX_CELL_LINES = 50
+/** Lookups one walk over the document spends on finding tables inside table cells. */
+const MAX_NESTED_LOOKUPS = 20000
+/** Objects tried in one cell paragraph when looking for a table inside it. */
+const NESTED_CONTROLS_TRIED = 3
+/** How deep tables inside tables are followed. */
+const MAX_TABLE_DEPTH = 3
+/** Cells and characters of a table shown in the list of tables. */
+const PREVIEW_CELLS = 5
+const PREVIEW_CHARS = 24
+/** Lines one readText looks for inside other lines of the plain-text export before adding them. */
+const MAX_CONTAINMENT_CHECKS = 2000
 /** Font sizes a format request may ask for, in points. */
 const MIN_FONT_PT = 4
 const MAX_FONT_PT = 200
 /** Line spacings a format request may ask for, in percent of the font height. */
 const MIN_LINE_SPACING = 50
 const MAX_LINE_SPACING = 500
+
+/** What the engine says when a paragraph has no object at the place asked for. */
+const NO_OBJECT_THERE = '범위 초과'
 
 const parse = (json) => JSON.parse(json)
 
@@ -207,11 +231,19 @@ function containerOf(doc, hit) {
   }
 }
 
-/** What a paragraph edit must leave alone: the objects of the document and the field values. */
-function objectsOf(doc) {
+/**
+ * What an edit must leave alone: the objects of the document and the field values. An edit
+ * that fills cells names the fields it sets itself (`ignore`, by field id); the value of a
+ * named cell is its text, so those are not watched then either.
+ */
+function objectsOf(doc, ignore = null) {
+  const fields = parse(doc.getFieldList())
+  const watched = ignore
+    ? fields.filter((field) => field.cellField !== true && !ignore.has(field.fieldId))
+    : fields
   return {
     controls: parse(doc.getControls()).length,
-    fields: JSON.stringify(parse(doc.getFieldList()).map((field) => field.value ?? '')),
+    fields: JSON.stringify(watched.map((field) => field.value ?? '')),
   }
 }
 
@@ -393,6 +425,326 @@ function tableHtml(table, font, header) {
 }
 
 /** Which match a replace call means, or the reason it cannot be decided. */
+const ENTITY = /&#(\d+);|&#x([0-9a-fA-F]+);/g
+
+/** The engine's plain-text export writes some characters as numeric references. */
+const decodeEntities = (text) =>
+  text.replace(ENTITY, (_match, dec, hex) =>
+    String.fromCodePoint(dec ? Number(dec) : parseInt(hex, 16)),
+  )
+
+const squash = (text) => text.replace(/\s+/g, ' ').trim()
+
+/**
+ * The document as plain text in reading order, one paragraph a line. The base is the
+ * engine's own export, which reaches everything that holds text (text boxes, tables inside
+ * cells, notes) and shows an empty form field by its guide text. That export leaves out
+ * whole tables in some documents, though, and now and then a body paragraph. So the
+ * paragraphs of the body and of its tables are walked as well, and each one the export does
+ * not have is put in after the last line that it does have.
+ *
+ * A paragraph that holds a click-here field is not compared: the export writes the field's
+ * guide into it, so the two never match and the line would come out twice.
+ */
+function textOf(doc) {
+  const flat = decodeEntities(parse(doc.getTextFileText()))
+  const lines = flat.split(/\r?\n/)
+  // where each line of the export is: its places in order, one per occurrence
+  const places = new Map()
+  lines.forEach((line, index) => {
+    const key = squash(line)
+    if (!key) return
+    const list = places.get(key)
+    if (list) list.push(index)
+    else places.set(key, [index])
+  })
+  const fielded = new Set()
+  for (const field of parse(doc.getFieldList())) {
+    const where = field.location
+    // only a click-here field has a guide; a cross-reference or a link is ordinary text
+    if (field.fieldType !== 'clickhere' || field.cellField === true || !where) continue
+    const path = Array.isArray(where.path) ? where.path : []
+    const cell = path[0]
+    fielded.add(
+      cell && cell.type === 'cell'
+        ? `${where.sectionIndex}/${where.paraIndex}/${cell.controlIndex}.${cell.cellIndex}.${cell.paraIndex}`
+        : `${where.sectionIndex}/${where.paraIndex}`,
+    )
+  }
+
+  /** occurrences of a line already matched */
+  const taken = new Map()
+  /** lines put in, by the line of the export they follow (-1: in front of everything) */
+  const extras = new Map()
+  let pointer = -1
+  let checks = MAX_CONTAINMENT_CHECKS
+  let bare = null
+  const match = (key) => {
+    const list = places.get(key)
+    const used = taken.get(key) ?? 0
+    if (!list || used >= list.length) return false
+    taken.set(key, used + 1)
+    pointer = Math.max(pointer, list[used])
+    return true
+  }
+  const add = (text) => {
+    const bucket = extras.get(pointer)
+    if (bucket) bucket.push(text)
+    else extras.set(pointer, [text])
+  }
+  /** One walked paragraph: found in the export, or put in. */
+  const see = (text) => {
+    const key = squash(text)
+    if (!key || match(key)) return
+    // part of a longer line of the export (a paragraph with an equation or a note in it)
+    if (checks > 0) {
+      checks -= 1
+      bare ??= flat.replace(/\s+/g, '')
+      if (bare.includes(key.replace(/\s+/g, ''))) return
+    }
+    add(text.trim())
+  }
+
+  const sections = doc.getSectionCount()
+  for (let sec = 0; sec < sections; sec++) {
+    const paragraphs = doc.getParagraphCount(sec)
+    for (let para = 0; para < paragraphs; para++) {
+      const length = doc.getParagraphLength(sec, para)
+      if (length > 0 && !fielded.has(`${sec}/${para}`)) see(doc.getTextRange(sec, para, 0, length))
+      const controls = parse(doc.getControlTextPositions(sec, para)).length
+      for (let ctrl = 0; ctrl < controls; ctrl++) {
+        let dims
+        try {
+          dims = parse(doc.getTableDimensions(sec, para, ctrl))
+        } catch {
+          continue
+        }
+        const texts = []
+        for (let cell = 0; cell < dims.cellCount; cell++) {
+          const count = doc.getCellParagraphCount(sec, para, ctrl, cell)
+          for (let k = 0; k < count; k++) {
+            if (fielded.has(`${sec}/${para}/${ctrl}.${cell}.${k}`)) continue
+            const size = doc.getCellParagraphLength(sec, para, ctrl, cell, k)
+            if (size > 0) texts.push(doc.getTextInCell(sec, para, ctrl, cell, k, 0, size))
+          }
+        }
+        // a table the export skipped whole goes in whole: a short cell ("1", "예") would
+        // otherwise count as found wherever those characters occur in the document
+        const known = texts.some((text) => {
+          const list = places.get(squash(text))
+          return Boolean(list) && (taken.get(squash(text)) ?? 0) < list.length
+        })
+        for (const text of texts) {
+          if (known) see(text)
+          else if (squash(text)) add(text.trim())
+        }
+      }
+    }
+  }
+  if (extras.size === 0) return lines.join('\n')
+  const out = [...(extras.get(-1) ?? [])]
+  lines.forEach((line, index) => {
+    out.push(line)
+    const more = extras.get(index)
+    if (more) out.push(...more)
+  })
+  return out.join('\n')
+}
+
+/**
+ * A table is named by a path like a cell is: one entry per nesting level, the last one
+ * holding the table's place among the objects of its paragraph. This is the address of
+ * paragraph `k` of cell `cell` of that table.
+ */
+const cellAt = (path, cell, k) => [
+  ...path.slice(0, -1),
+  { controlIndex: path[path.length - 1].controlIndex, cellIndex: cell, cellParaIndex: k },
+]
+
+const tableKey = (sec, para, path) =>
+  [
+    sec,
+    para,
+    ...path.slice(0, -1).map((e) => `${e.controlIndex}.${e.cellIndex}.${e.cellParaIndex}`),
+    path[path.length - 1].controlIndex,
+  ].join('/')
+
+/**
+ * Every table of the document in reading order, a table inside a cell right after the table
+ * it sits in. The engine lists the objects of a body paragraph but not those of a cell
+ * paragraph, so a table inside a cell is found by asking for it; `partial` says the budget
+ * for that ran out and tables inside cells may be missing from the end of the list.
+ */
+function tablesOf(doc) {
+  const tables = []
+  let lookups = MAX_NESTED_LOOKUPS
+  const dimensions = (sec, para, path) => {
+    try {
+      return parse(doc.getTableDimensionsByPath(sec, para, JSON.stringify(path)))
+    } catch {
+      // not a table: a picture, a text box, a section definition
+      return null
+    }
+  }
+  const add = (sec, para, path, dims, parent, depth) => {
+    const index = tables.length
+    tables.push({
+      sec,
+      para,
+      path,
+      rows: dims.rowCount,
+      cols: dims.colCount,
+      cells: dims.cellCount,
+      parent,
+    })
+    if (depth >= MAX_TABLE_DEPTH) return
+    for (let cell = 0; cell < dims.cellCount && lookups > 0; cell++) {
+      const paragraphs = doc.getCellParagraphCountByPath(
+        sec,
+        para,
+        JSON.stringify(cellAt(path, cell, 0)),
+      )
+      for (let k = 0; k < paragraphs && lookups > 0; k++) {
+        for (let inner = 0; inner < NESTED_CONTROLS_TRIED; inner++) {
+          lookups -= 1
+          const innerPath = [
+            ...cellAt(path, cell, k),
+            { controlIndex: inner, cellIndex: 0, cellParaIndex: 0 },
+          ]
+          const innerDims = dimensions(sec, para, innerPath)
+          if (innerDims) add(sec, para, innerPath, innerDims, index, depth + 1)
+        }
+      }
+    }
+  }
+  const sections = doc.getSectionCount()
+  for (let sec = 0; sec < sections; sec++) {
+    const paragraphs = doc.getParagraphCount(sec)
+    for (let para = 0; para < paragraphs; para++) {
+      const controls = parse(doc.getControlTextPositions(sec, para)).length
+      for (let ctrl = 0; ctrl < controls; ctrl++) {
+        const path = [{ controlIndex: ctrl, cellIndex: 0, cellParaIndex: 0 }]
+        const dims = dimensions(sec, para, path)
+        if (dims) add(sec, para, path, dims, null, 1)
+      }
+    }
+  }
+  return { tables, partial: lookups <= 0 }
+}
+
+/** The cells of a table with the place each takes: zero-based row and column, and its spans. */
+function gridOf(doc, table) {
+  const cells = []
+  for (let cell = 0; cell < table.cells; cell++) {
+    const info = parse(
+      doc.getCellInfoByPath(table.sec, table.para, JSON.stringify(cellAt(table.path, cell, 0))),
+    )
+    cells.push({
+      cell,
+      row: info.row,
+      col: info.col,
+      rowSpan: info.rowSpan || 1,
+      colSpan: info.colSpan || 1,
+    })
+  }
+  return cells
+}
+
+/** The paragraphs of one cell, addressed like the paragraphs a match sits in. */
+const cellBox = (doc, table, cell) =>
+  containerOf(doc, { sec: table.sec, para: table.para, cellPath: cellAt(table.path, cell, 0) })
+
+function paragraphsOf(box) {
+  const texts = []
+  const count = box.count()
+  for (let k = 0; k < count; k++) texts.push(box.text(k, box.length(k)))
+  return texts
+}
+
+/**
+ * Whether a cell holds an object: a picture, a shape, a table of its own. Such a cell can
+ * be without a single character and still not be empty, and text written into it lands on
+ * top of the picture. The engine does not list the objects of a cell paragraph, but asked
+ * for a table there it answers "out of range" only when the paragraph holds no object at
+ * all. Should that wording change, every cell reads as holding one and nothing is written:
+ * the safe side, and the engine tests fail.
+ */
+function cellHoldsObject(doc, table, cell) {
+  const paragraphs = doc.getCellParagraphCountByPath(
+    table.sec,
+    table.para,
+    JSON.stringify(cellAt(table.path, cell, 0)),
+  )
+  for (let k = 0; k < paragraphs; k++) {
+    const first = [
+      ...cellAt(table.path, cell, k),
+      { controlIndex: 0, cellIndex: 0, cellParaIndex: 0 },
+    ]
+    try {
+      doc.getTableDimensionsByPath(table.sec, table.para, JSON.stringify(first))
+      return true
+    } catch (thrown) {
+      if (!String(thrown).includes(NO_OBJECT_THERE)) return true
+    }
+  }
+  return false
+}
+
+const clip = (text, max) => (text.length > max ? `${text.slice(0, max)}…` : text)
+
+/**
+ * The click-here fields that sit directly in a table cell, by table and cell. A cell that
+ * holds one is filled through the field: text typed beside an empty field would leave its
+ * guide text standing next to the answer.
+ */
+function fieldsByCell(doc) {
+  const byCell = new Map()
+  parse(doc.getFieldList()).forEach((field, index) => {
+    if (field.cellField === true) return
+    const where = field.location
+    const path = where && Array.isArray(where.path) ? where.path : []
+    if (path.length === 0 || path.some((entry) => entry.type !== 'cell')) return
+    const cells = path.map((entry) => ({
+      controlIndex: entry.controlIndex,
+      cellIndex: entry.cellIndex,
+      cellParaIndex: entry.paraIndex,
+    }))
+    const key = `${tableKey(where.sectionIndex, where.paraIndex, cells)}:${cells[cells.length - 1].cellIndex}`
+    const entry = {
+      number: index + 1,
+      fieldId: field.fieldId,
+      value: field.value ?? '',
+      guide: field.guide ?? '',
+    }
+    const list = byCell.get(key)
+    if (list) list.push(entry)
+    else byCell.set(key, [entry])
+  })
+  return byCell
+}
+
+/** An empty field shows its guide text, which the engine also reports as its value. */
+const fieldIsEmpty = (field) => field.value === '' || field.value === field.guide
+
+/** What fillCells was asked to write: 1-based places, and the text of each as lines. */
+function checkCells(cells) {
+  if (!Array.isArray(cells) || cells.length === 0 || cells.length > MAX_FILLED_CELLS) {
+    throw fail('BAD_ARGUMENT', `cells must be a list of 1 to ${MAX_FILLED_CELLS} entries`)
+  }
+  return cells.map((entry) => {
+    const { row, col, text } = entry ?? {}
+    if (!Number.isInteger(row) || row < 1 || !Number.isInteger(col) || col < 1) {
+      throw fail('BAD_ARGUMENT', 'row and col count from 1 and are whole numbers')
+    }
+    if (typeof text !== 'string') throw fail('BAD_ARGUMENT', 'the text of a cell must be a string')
+    const lines = text.split(/\r?\n/)
+    if (lines.length > MAX_CELL_LINES || lines.some((line) => CONTROL_CHARS.test(line))) {
+      throw fail('BAD_ARGUMENT', `a cell takes plain text of at most ${MAX_CELL_LINES} lines`)
+    }
+    return { row, col, lines }
+  })
+}
+
 function pickHit(hits, occurrence) {
   if (hits.length === 0) return { reason: 'not_found' }
   if (occurrence === undefined || occurrence === null) {
@@ -414,7 +766,10 @@ export const agentPlugin = {
     // the editor's history is one stack and anything on top of the run would be undone first
     let foreign = 0
     let own = false
+    // the text is read for every request; it only changes when the document does
+    let text = null
     host.events.on('document-changed', () => {
+      text = null
       if (!own) foreign += 1
     })
 
@@ -431,6 +786,9 @@ export const agentPlugin = {
     /** One change of this plugin: one undo step, not counted as foreign. */
     const change = (label, fn) => {
       own = true
+      // not left to the editor's event alone: a stale text would send the model after
+      // words that are no longer there
+      text = null
       try {
         return host.transaction(label, (tx) => {
           tx.deferPagination()
@@ -526,7 +884,10 @@ export const agentPlugin = {
       foreignChanges: () => foreign,
 
       /** The whole document as plain text, table cells included, in reading order. */
-      readText: guarded(() => host.read((doc) => parse(doc.getTextFileText()))),
+      readText: guarded(() => {
+        text ??= host.read(textOf)
+        return text
+      }),
 
       /** Where a piece of text occurs. Exact, case-sensitive. */
       findText: guarded((find) =>
@@ -769,6 +1130,207 @@ export const agentPlugin = {
       }),
 
       /**
+       * The tables of the document in reading order, numbered from 1; a table inside a cell
+       * comes right after the table it sits in. The number is what readTable and fillCells
+       * take.
+       */
+      listTables: guarded(() =>
+        host.read((doc) => {
+          const { tables, partial } = tablesOf(doc)
+          const near = (table) => {
+            if (table.parent !== null) return ''
+            // the line the table follows usually says what it is
+            for (let k = table.para; k >= 0 && k > table.para - 4; k--) {
+              const length = doc.getParagraphLength(table.sec, k)
+              if (length > 0) {
+                return clip(doc.getTextRange(table.sec, k, 0, length).trim(), PREVIEW_CHARS * 2)
+              }
+            }
+            return ''
+          }
+          const preview = (table) => {
+            const texts = []
+            for (let cell = 0; cell < table.cells && cell < 12; cell++) {
+              const text = paragraphsOf(cellBox(doc, table, cell))
+                .join(' ')
+                .trim()
+              if (text) texts.push(clip(text, PREVIEW_CHARS))
+              if (texts.length === PREVIEW_CELLS) break
+            }
+            return texts
+          }
+          return {
+            count: tables.length,
+            partial,
+            tables: tables.slice(0, MAX_LISTED_TABLES).map((table, index) => ({
+              table: index + 1,
+              rows: table.rows,
+              cols: table.cols,
+              ...(table.parent === null ? {} : { inTable: table.parent + 1 }),
+              near: near(table),
+              preview: preview(table),
+            })),
+          }
+        }),
+      ),
+
+      /**
+       * The cells of table `number` row by row, from row `fromRow` (1-based). A merged cell
+       * is listed once, at its first place, with its spans. A long table comes in parts:
+       * `nextRow` is the row to go on from.
+       */
+      readTable: guarded((number, fromRow) =>
+        host.read((doc) => {
+          const { tables } = tablesOf(doc)
+          const table = Number.isInteger(number) ? tables[number - 1] : undefined
+          if (!table) return { ok: false, reason: 'no_such_table', count: tables.length }
+          const first = Number.isInteger(fromRow) && fromRow > 1 ? fromRow - 1 : 0
+          const grid = gridOf(doc, table)
+            .filter((cell) => cell.row >= first)
+            .sort((a, b) => a.row - b.row || a.col - b.col)
+          // whole rows only, and always at least one
+          let end = grid.length
+          if (grid.length > MAX_READ_CELLS) {
+            const cut = grid[MAX_READ_CELLS].row
+            end = grid.findIndex((cell) => cell.row === cut)
+            if (end === 0) end = grid.findIndex((cell) => cell.row !== cut)
+            if (end < 0) end = grid.length
+          }
+          const fields = fieldsByCell(doc)
+          const key = tableKey(table.sec, table.para, table.path)
+          const cells = grid.slice(0, end).map((place) => {
+            const held = fields.get(`${key}:${place.cell}`)
+            return {
+              row: place.row + 1,
+              col: place.col + 1,
+              ...(place.rowSpan > 1 ? { rowSpan: place.rowSpan } : {}),
+              ...(place.colSpan > 1 ? { colSpan: place.colSpan } : {}),
+              text: clip(paragraphsOf(cellBox(doc, table, place.cell)).join('\n'), MAX_CELL_CHARS),
+              ...(held ? { fields: held.map((field) => field.number) } : {}),
+              ...(!held && cellHoldsObject(doc, table, place.cell) ? { object: true } : {}),
+            }
+          })
+          return {
+            ok: true,
+            table: number,
+            rows: table.rows,
+            cols: table.cols,
+            cells,
+            ...(end < grid.length ? { nextRow: grid[end].row + 1 } : {}),
+          }
+        }),
+      ),
+
+      /**
+       * Write text into cells of table `number`, all of them in one undo step or none.
+       * `cells` is a list of { row, col, text } with 1-based places; a place inside a merged
+       * cell means that cell. A line break in the text starts a new paragraph in the cell.
+       * The text takes the formatting the cell already has. A cell that holds text is only
+       * written over with `overwrite`; a cell that holds one click-here field is filled
+       * through the field; a cell that holds a picture or another object is never written.
+       */
+      fillCells: guarded((number, cells, overwrite) => {
+        const wanted = checkCells(cells)
+        const plan = (doc) => {
+          const { tables } = tablesOf(doc)
+          const table = Number.isInteger(number) ? tables[number - 1] : undefined
+          if (!table)
+            return { refusal: { ok: false, reason: 'no_such_table', count: tables.length } }
+          const grid = gridOf(doc, table)
+          const fields = fieldsByCell(doc)
+          const key = tableKey(table.sec, table.para, table.path)
+          const targets = []
+          const missing = []
+          const occupied = []
+          const fielded = []
+          const holding = []
+          const taken = new Set()
+          for (const want of wanted) {
+            const at = { row: want.row, col: want.col }
+            const place = grid.find(
+              (cell) =>
+                want.row - 1 >= cell.row &&
+                want.row - 1 < cell.row + cell.rowSpan &&
+                want.col - 1 >= cell.col &&
+                want.col - 1 < cell.col + cell.colSpan,
+            )
+            if (!place) {
+              missing.push(at)
+              continue
+            }
+            if (taken.has(place.cell)) {
+              throw fail('BAD_ARGUMENT', `two entries name the same cell (${want.row}.${want.col})`)
+            }
+            taken.add(place.cell)
+            const held = fields.get(`${key}:${place.cell}`) ?? []
+            if (held.length > 1) {
+              fielded.push({ ...at, fields: held.map((field) => field.number) })
+              continue
+            }
+            if (held.length === 1) {
+              const field = held[0]
+              if (!fieldIsEmpty(field) && overwrite !== true) {
+                occupied.push({ ...at, text: clip(field.value, MAX_REPORTED_CHARS) })
+              } else targets.push({ ...want, cell: place.cell, field })
+              continue
+            }
+            if (cellHoldsObject(doc, table, place.cell)) {
+              holding.push(at)
+              continue
+            }
+            const texts = paragraphsOf(cellBox(doc, table, place.cell))
+            if (texts.join('').trim() !== '' && overwrite !== true) {
+              occupied.push({ ...at, text: clip(texts.join(' ').trim(), MAX_REPORTED_CHARS) })
+            } else {
+              // blanks typed into a cell to be filled in are written over like an empty cell
+              targets.push({ ...want, cell: place.cell, clear: texts.some((text) => text !== '') })
+            }
+          }
+          const refuse = (reason, list) => ({
+            refusal: { ok: false, reason, cells: list, rows: table.rows, cols: table.cols },
+          })
+          if (missing.length > 0) return refuse('no_such_cell', missing)
+          if (fielded.length > 0) return refuse('has_fields', fielded)
+          if (holding.length > 0) return refuse('holds_object', holding)
+          if (occupied.length > 0) return refuse('occupied', occupied)
+          return { table, targets }
+        }
+        const refusal = host.read((doc) => plan(doc).refusal ?? null)
+        if (refusal) return refusal
+        return keepingObjects((mustKeep) =>
+          change('fill-cells', (doc) => {
+            const { table, targets } = plan(doc)
+            if (!targets) throw fail('CHANGED', 'the document changed mid-call')
+            const own = new Set(targets.filter((t) => t.field).map((t) => t.field.fieldId))
+            const before = objectsOf(doc, own)
+            for (const target of targets) {
+              if (target.field) {
+                // a field holds one line
+                expectOk(
+                  doc.setFieldValue(target.field.fieldId, target.lines.join(' ')),
+                  'fill the field',
+                )
+                continue
+              }
+              const box = cellBox(doc, table, target.cell)
+              if (target.clear) {
+                const last = box.count() - 1
+                if (last > 0) box.deleteRange(0, 0, last, box.length(last))
+                else box.deleteText(0, box.length(0))
+              }
+              target.lines.forEach((line, k) => {
+                // a further line is a further paragraph, made like Enter makes one
+                if (k > 0 && k >= box.count()) box.split(k - 1, box.length(k - 1))
+                if (line) box.insert(k, line)
+              })
+            }
+            mustKeep(before, objectsOf(doc, own))
+            return { ok: true, table: number, count: targets.length }
+          }),
+        )
+      }),
+
+      /**
        * The form fields of the document in document order. Names repeat in real forms (a
        * field nobody named carries its guide text), so a field is addressed by its number.
        */
@@ -812,6 +1374,7 @@ export const agentPlugin = {
         if (expectedForeign !== foreign) return { ok: false, reason: 'changed', undone: 0 }
         let undone = 0
         own = true
+        text = null
         try {
           for (let i = 0; i < steps; i++) {
             const result = host.automation.execute('edit:undo')

@@ -25,6 +25,20 @@ function setup(overrides: Partial<AgentBridge> = {}) {
     insertTable: vi.fn(async () => ({ ok: true as const, rows: 2, cols: 3, inTable: false })),
     formatText: vi.fn(async () => ({ ok: true as const, count: 1 })),
     formatParagraph: vi.fn(async () => ({ ok: true as const, inTable: false })),
+    listTables: vi.fn(async () => ({ count: 0, partial: false, tables: [] })),
+    readTable: vi.fn(async () => ({
+      ok: true as const,
+      table: 1,
+      rows: 2,
+      cols: 2,
+      cells: [
+        { row: 1, col: 1, text: '성명' },
+        { row: 1, col: 2, text: '' },
+        { row: 2, col: 1, colSpan: 2, text: '첫 줄\n둘째 줄', fields: [3] },
+        { row: 3, col: 1, text: '', object: true as const },
+      ],
+    })),
+    fillCells: vi.fn(async () => ({ ok: true as const, table: 1, count: 2 })),
     listFields: vi.fn(async () => []),
     fillField: vi.fn(async () => ({ ok: true as const, name: '성명' })),
     undo: vi.fn(async () => ({ ok: true, undone: 1 })),
@@ -59,6 +73,15 @@ describe('the document context sent with a message', () => {
     expect(context).toContain('Text (complete):\n제목\n본문입니다')
     // numbered, because the number is what fill_field takes
     expect(context).toContain('Form fields (2): 1. 성명, 2. 날짜를 쓰세요')
+    expect(context).toContain('Tables: none.')
+  })
+
+  it('says how many tables there are, and that their empty cells are not in the text', async () => {
+    const { skill, refreshContext } = setup({
+      listTables: async () => ({ count: 4, partial: false, tables: [] }),
+    })
+    await refreshContext()
+    expect(skill.buildContext!()).toContain('Tables: 4 (list_tables lists them')
   })
 
   it('carries only the opening of a long document and points at read_document', async () => {
@@ -68,7 +91,7 @@ describe('the document context sent with a message', () => {
     const context = skill.buildContext!()
     expect(context).toContain(`Length: ${long.length} characters.`)
     expect(context).toContain('read_document returns the rest')
-    expect(context.length).toBeLessThan(CONTEXT_MAX_CHARS + 400)
+    expect(context.length).toBeLessThan(CONTEXT_MAX_CHARS + 500)
   })
 
   it('says so when the document cannot be read, instead of failing the send', async () => {
@@ -441,6 +464,161 @@ describe('format_paragraph', () => {
   })
 })
 
+describe('tables that are already in the document', () => {
+  it('lists them with size, place and first cells', async () => {
+    const { call } = setup({
+      listTables: async () => ({
+        count: 3,
+        partial: false,
+        tables: [
+          { table: 1, rows: 3, cols: 4, near: '참여 인력', preview: ['성명', '소속'] },
+          { table: 2, rows: 1, cols: 2, inTable: 1, near: '', preview: [] },
+        ],
+      }),
+    })
+    const result = await call('list_tables')
+    expect(result.output.split('\n')).toEqual([
+      'Table 1: 3 row(s) × 4 column(s), after the line “참여 인력”. Starts: 성명 | 소속',
+      'Table 2: 1 row(s) × 2 column(s), inside a cell of table 1. No text.',
+      '(only the first 2 of 3 are listed)',
+    ])
+    expect(result.summary).toBe('aiToolTables:{"count":3}')
+  })
+
+  it('says so when there are none', async () => {
+    expect((await setup().call('list_tables')).output).toBe('This document has no tables.')
+  })
+
+  it('reads a table as one line per cell, empty cells and merged cells marked', async () => {
+    const { call, bridge } = setup()
+    const result = await call('read_table', { table: 1 })
+    expect(bridge.readTable).toHaveBeenCalledWith(1, null)
+    expect(result.output.split('\n')).toEqual([
+      'Table 1: 2 row(s) × 2 column(s). Cells as row.col:',
+      '1.1: 성명',
+      '1.2: (empty)',
+      '2.1 (merged up to 2.2) [form field #3]: 첫 줄 ⏎ 둘째 줄',
+      '3.1 [holds a picture or another object: not empty]: (no text)',
+    ])
+    expect(result.summary).toBe('aiToolReadTable:{"table":1}')
+  })
+
+  it('names the row to go on from when the table is long', async () => {
+    const { call, bridge } = setup({
+      readTable: vi.fn(async () => ({
+        ok: true as const,
+        table: 2,
+        rows: 900,
+        cols: 3,
+        cells: [{ row: 201, col: 1, text: 'x' }],
+        nextRow: 401,
+      })),
+    })
+    const result = await call('read_table', { table: 2, from_row: 201 })
+    expect(bridge.readTable).toHaveBeenCalledWith(2, 201)
+    expect(result.output).toContain('[more rows: call read_table with from_row 401]')
+  })
+
+  it('points at list_tables for a number that is not there', async () => {
+    const { call } = setup({
+      readTable: async () => ({ ok: false, reason: 'no_such_table', count: 2 }),
+    })
+    const result = await call('read_table', { table: 5 })
+    expect(result.isError).toBe(true)
+    expect(result.output).toContain('the document has 2')
+    expect(result.summary).toBe('aiToolNotDone:{"what":"aiTableName:{\\"table\\":5}"}')
+  })
+
+  it('fills cells in one call and reports one change', async () => {
+    const { call, changes, bridge } = setup()
+    const cells = [
+      { row: 1, col: 2, text: '홍길동' },
+      { row: 2, col: 2, text: '교무기획부' },
+    ]
+    const result = await call('fill_cells', { table: 1, cells })
+    expect(bridge.fillCells).toHaveBeenCalledWith(1, cells, false)
+    expect(result.mutated).toBe(true)
+    expect(result.summary).toBe('aiToolFillCells:{"table":1,"count":2}')
+    expect(changes).toEqual([
+      { kind: 'cells', from: 'aiTableName:{"table":1}', to: '홍길동 | 교무기획부', count: 2 },
+    ])
+  })
+
+  it('passes overwrite only when the model asked for it', async () => {
+    const { call, bridge } = setup()
+    const cells = [{ row: 1, col: 2, text: 'x' }]
+    await call('fill_cells', { table: 1, cells, overwrite: true })
+    expect(bridge.fillCells).toHaveBeenCalledWith(1, cells, true)
+  })
+
+  it('lists the cells that hold text when nothing was written', async () => {
+    const { call, changes } = setup({
+      fillCells: async () => ({
+        ok: false,
+        reason: 'occupied',
+        cells: [{ row: 2, col: 4, text: '기존 내용' }],
+        rows: 3,
+        cols: 4,
+      }),
+    })
+    const result = await call('fill_cells', { table: 1, cells: [{ row: 2, col: 4, text: 'x' }] })
+    expect(result.isError).toBe(true)
+    expect(result.output).toContain('2.4: 기존 내용')
+    expect(result.output).toContain('overwrite')
+    expect(changes).toEqual([])
+  })
+
+  it('names the places that are outside the table, and cells with several fields', async () => {
+    const outside = setup({
+      fillCells: async () => ({
+        ok: false,
+        reason: 'no_such_cell',
+        cells: [{ row: 9, col: 1 }],
+        rows: 3,
+        cols: 4,
+      }),
+    })
+    const cells = [{ row: 9, col: 1, text: 'x' }]
+    expect((await outside.call('fill_cells', { table: 1, cells })).output).toContain(
+      '3 row(s) and 4 column(s), and these places are not in it: 9.1',
+    )
+    const fielded = setup({
+      fillCells: async () => ({
+        ok: false,
+        reason: 'has_fields',
+        cells: [{ row: 1, col: 2, fields: [1, 2] }],
+        rows: 3,
+        cols: 4,
+      }),
+    })
+    expect((await fielded.call('fill_cells', { table: 1, cells })).output).toContain('fill_field')
+    const picture = setup({
+      fillCells: async () => ({
+        ok: false,
+        reason: 'holds_object',
+        cells: [{ row: 1, col: 1 }],
+        rows: 3,
+        cols: 4,
+      }),
+    })
+    expect((await picture.call('fill_cells', { table: 1, cells })).output).toContain(
+      'hold a picture or another object, so they are not empty and text would land on top of it: 1.1',
+    )
+  })
+
+  it('never sends cells it cannot read to the editor', async () => {
+    const { call, bridge } = setup()
+    expect((await call('fill_cells', { table: 1, cells: [] })).isError).toBe(true)
+    expect((await call('fill_cells', { table: 1, cells: [{ row: 1, text: 'x' }] })).isError).toBe(
+      true,
+    )
+    expect((await call('fill_cells', { cells: [{ row: 1, col: 1, text: 'x' }] })).isError).toBe(
+      true,
+    )
+    expect(bridge.fillCells).not.toHaveBeenCalled()
+  })
+})
+
 describe('form fields', () => {
   it('lists them', async () => {
     const { call } = setup({
@@ -502,6 +680,9 @@ describe('the skill as the model sees it', () => {
       'insert_table',
       'format_text',
       'format_paragraph',
+      'list_tables',
+      'read_table',
+      'fill_cells',
       'list_fields',
       'fill_field',
     ])

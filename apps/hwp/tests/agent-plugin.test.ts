@@ -71,6 +71,10 @@ function fakeEditor(
       cell.text = splice(cell.text, offset, 0, text)
       return JSON.stringify({ ok: true })
     },
+    // reading also walks the body; this stand-in has no table objects to walk into
+    getSectionCount: () => 1,
+    getParagraphCount: () => state.body.length,
+    getControlTextPositions: () => '[]',
     getParagraphLength: (_sec: number, para: number) => state.body[para]!.length,
     getTextRange: (_sec: number, para: number, start: number, count: number) =>
       state.body[para]!.slice(start, start + count),

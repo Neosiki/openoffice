@@ -1,9 +1,12 @@
 import type { AgentSkill, AgentToolCall, AgentToolDef, ToolExecution } from '@genoffice/agent-core'
 import { brandText, type Params } from '@genoffice/i18n'
 import type {
+  AgentCellText,
   AgentMatch,
   AgentParagraphFormat,
   AgentPlaceRefusal,
+  AgentTableCell,
+  AgentTableSummary,
   AgentWhere,
 } from '../../../studio-plugin/agent-plugin.mjs'
 import type { AgentBridge } from './agent-bridge'
@@ -21,12 +24,12 @@ const CHANGE_TEXT_CHARS = 200
 
 /** One change a run made to the document, as the panel lists it. */
 export interface HwpChange {
-  kind: 'replace' | 'replaceAll' | 'field' | 'insert' | 'delete' | 'table' | 'format'
-  /** the replaced, removed or formatted text, or the field name; empty for something added */
+  kind: 'replace' | 'replaceAll' | 'field' | 'insert' | 'delete' | 'table' | 'format' | 'cells'
+  /** the replaced, removed or formatted text, the field name, or the table whose cells were filled; empty for something added */
   from: string
-  /** the new text (for a table its first row, for a format what was set); empty for something removed */
+  /** the new text (for a table its first row, for a format what was set, for cells what went into them); empty for something removed */
   to: string
-  /** places changed (more than one only for replaceAll) */
+  /** places changed (more than one for replaceAll and for filled cells) */
   count: number
 }
 
@@ -59,11 +62,12 @@ const SYSTEM_PROMPT = [
   '- Replace a piece of text with another (replace_text, replace_all). The new text takes the formatting of the text it replaces.',
   '- Add new paragraphs next to an existing one, in the body or inside a table cell, or at the end of the document (insert_paragraphs). Remove a paragraph (delete_paragraph).',
   '- Add a table of plain-text cells, with a header row when the first row names the columns (insert_table).',
+  '- Work on the tables that are already there: list them (list_tables), read one cell by cell (read_table), and write text into its cells, many at once (fill_cells).',
   '- Change formatting: bold, italic, underline, strikethrough, font size, text colour and highlight of a piece of text (format_text); alignment and line spacing of a paragraph, and the character formatting of a whole paragraph (format_paragraph).',
   '- Fill the form fields of the document (list_fields, fill_field). In Hangul these are called 누름틀. A field is picked by its number in list_fields, because several fields often share one name.',
   '',
   '## What they cannot do',
-  '- You cannot change the font family, styles, numbering, indents, borders or cell shading, or the page layout. You cannot add or change pictures, or add, remove or merge rows and columns of an existing table.',
+  '- You cannot change the font family, styles, numbering, indents, borders or cell shading, or the page layout. You cannot add or change pictures, or add, remove or merge rows and columns of an existing table: when a form has too few rows for what the user gave you, fill what fits and say what is left.',
   '- One piece of text is always one line: a line break inside a text argument is refused. Several paragraphs are several strings in one insert_paragraphs call.',
   '- When the user asks for something the tools cannot do, say so plainly instead of approximating it.',
   '',
@@ -71,6 +75,15 @@ const SYSTEM_PROMPT = [
   '- A new paragraph is made the way pressing Enter makes one: it takes the formatting of the paragraph you anchor it to. So anchor it to a paragraph that looks the way the new one should: body text next to body text, a list item next to list items, never next to a title unless a title is what you are adding.',
   '- This is not markdown. Write the text exactly as it should appear, with no #, **, or markdown bullets. Korean official documents mark their levels with characters such as □, ㅇ, -, * or 1. / 가. at the start of the line: continue the scheme the document already uses, including its leading spaces.',
   '- Write a longer addition as several paragraphs in one insert_paragraphs call, in order. An empty string is an empty line.',
+  '',
+  '## Filling in forms',
+  '- A Korean form is mostly tables: a cell that names an item (성명, 소속, 연락처) and an empty cell beside or below it for the answer. The text of the document shows the names but not the empty cells, so read the table with read_table before filling it.',
+  '- Tables are numbered in reading order; a table inside a cell of another table has its own number. Cells are named row.col, counted from 1. A merged cell is listed once, with the places it spans.',
+  '- Fill every cell you have an answer for in one fill_cells call per table. The text takes the formatting the cell already has, so do not format it afterwards.',
+  '- fill_cells only writes into empty cells. A cell that holds text is left alone, and so is the whole call, unless you pass overwrite: do that only when the user asked to change what is there. Never write into the cells that name the items.',
+  '- An empty cell cannot be reached with replace_text or insert_paragraphs, which need text to find: use fill_cells.',
+  '- A cell marked as holding a picture or another object is not empty even without text (a logo, a seal, a photo): never fill it.',
+  '- Leave a cell empty when you do not know its answer, and tell the user which ones are left.',
   '',
   '## Formatting rules',
   '- Format only what the user asked for. Do not restyle text on your own: a new paragraph already looks like its neighbour, and official documents keep one look throughout.',
@@ -107,6 +120,9 @@ const TEXT_FORMAT_SCHEMA = {
     description: 'highlight colour as #RRGGBB, or "none" to remove a highlight',
   },
 }
+
+/** Cells one read_table answer holds at most (the editor's own limit), as the model is told. */
+const READ_TABLE_HINT = 600
 
 const TOOLS: AgentToolDef[] = [
   {
@@ -251,6 +267,53 @@ const TOOLS: AgentToolDef[] = [
     },
   },
   {
+    name: 'list_tables',
+    description:
+      'List the tables of the document in reading order: number, rows and columns, the line of text above it, and its first cells. A table inside a cell of another table is listed too, with the number of that table.',
+    inputSchema: { type: 'object', properties: {} },
+  },
+  {
+    name: 'read_table',
+    description: `Read one table cell by cell: each cell as row.col with its text, empty cells included. A merged cell is listed once with the places it spans. A long table comes in parts of about ${READ_TABLE_HINT} cells; call again with from_row to go on.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        table: { type: 'integer', minimum: 1, description: 'the table number from list_tables' },
+        from_row: { type: 'integer', minimum: 1, description: 'row to start from (default 1)' },
+      },
+      required: ['table'],
+    },
+  },
+  {
+    name: 'fill_cells',
+    description:
+      'Write text into cells of one table, all of them at once (one step for the user to undo). The text takes the formatting the cell already has; a line break starts a new paragraph inside the cell. Only empty cells are written unless overwrite is true: if any named cell holds text, nothing is changed and those cells are listed.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        table: { type: 'integer', minimum: 1, description: 'the table number from list_tables' },
+        cells: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              row: { type: 'integer', minimum: 1 },
+              col: { type: 'integer', minimum: 1 },
+              text: { type: 'string' },
+            },
+            required: ['row', 'col', 'text'],
+          },
+          description: 'the cells to write, each by its row and column as read_table lists them',
+        },
+        overwrite: {
+          type: 'boolean',
+          description: 'replace the text of cells that already hold some (default false)',
+        },
+      },
+      required: ['table', 'cells'],
+    },
+  },
+  {
     name: 'list_fields',
     description:
       'List the form fields (누름틀) of the document in document order: number, name, the guide text shown while empty, and the current value.',
@@ -281,6 +344,42 @@ const ONE_LINE_HELP =
   'Text with a line break cannot be searched or inserted: a replacement stays inside one paragraph or table cell. Split the change into one call per paragraph.'
 
 const hasLineBreak = (text: string) => /[\r\n]/.test(text)
+
+/** A table in the list of tables, as the model reads it. */
+function tableLine(table: AgentTableSummary): string {
+  const where = table.inTable ? `, inside a cell of table ${table.inTable}` : ''
+  const near = table.near ? `, after the line “${table.near}”` : ''
+  const cells = table.preview.length > 0 ? `. Starts: ${table.preview.join(' | ')}` : '. No text.'
+  return `Table ${table.table}: ${table.rows} row(s) × ${table.cols} column(s)${where}${near}${cells}`
+}
+
+/** A cell as the model reads it: its place, the places a merged cell spans, and its text. */
+function cellLine(cell: AgentTableCell): string {
+  const rowSpan = cell.rowSpan ?? 1
+  const colSpan = cell.colSpan ?? 1
+  const spans =
+    rowSpan > 1 || colSpan > 1
+      ? ` (merged up to ${cell.row + rowSpan - 1}.${cell.col + colSpan - 1})`
+      : ''
+  const field = cell.fields ? ` [form field ${cell.fields.map((n) => `#${n}`).join(', ')}]` : ''
+  const object = cell.object ? ' [holds a picture or another object: not empty]' : ''
+  const text =
+    cell.text === '' ? (cell.object ? '(no text)' : '(empty)') : cell.text.replace(/\r?\n/g, ' ⏎ ')
+  return `${cell.row}.${cell.col}${spans}${field}${object}: ${text}`
+}
+
+/** The cells a fill_cells call names, or null when it names none that can be read. */
+function cellArgs(call: AgentToolCall): AgentCellText[] | null {
+  const raw = call.input.cells
+  if (!Array.isArray(raw) || raw.length === 0) return null
+  const cells: AgentCellText[] = []
+  for (const entry of raw) {
+    const { row, col, text } = (entry ?? {}) as Record<string, unknown>
+    if (typeof row !== 'number' || typeof col !== 'number' || typeof text !== 'string') return null
+    cells.push({ row, col, text })
+  }
+  return cells
+}
 
 const isWhere = (value: unknown): value is AgentWhere =>
   value === 'after' || value === 'before' || value === 'end'
@@ -394,6 +493,12 @@ function matchLines(matches: AgentMatch[], count: number): string {
   return lines.join('\n')
 }
 
+function noSuchTable(table: number, count: number): string {
+  return count === 0
+    ? 'This document has no tables.'
+    : `There is no table ${table}: the document has ${count}. Call list_tables for the numbers.`
+}
+
 /** A replacement as an activity label; it reads the same in every language. */
 const arrow = (from: string, to: string) => `“${quote(from)}” → “${quote(to)}”`
 
@@ -432,7 +537,11 @@ export function createHwpSkill(deps: HwpSkillDeps): HwpSkill {
         textArg(call, 'find') ??
           textArg(call, 'text') ??
           textArg(call, 'anchor') ??
-          (typeof call.input.field === 'number' ? `#${call.input.field}` : call.name),
+          (typeof call.input.field === 'number'
+            ? `#${call.input.field}`
+            : typeof call.input.table === 'number'
+              ? label('aiTableName', { table: call.input.table })
+              : call.name),
       ),
     }),
   })
@@ -658,6 +767,93 @@ export function createHwpSkill(deps: HwpSkillDeps): HwpSkill {
           summary: label('aiToolFormat', { text: quote(find) }),
         }
       }
+      case 'list_tables': {
+        const listed = await bridge.listTables()
+        const lines = listed.tables.map(tableLine)
+        if (listed.count > listed.tables.length) {
+          lines.push(`(only the first ${listed.tables.length} of ${listed.count} are listed)`)
+        }
+        if (listed.partial) {
+          lines.push('(the document is large: some tables inside table cells may not be listed)')
+        }
+        return {
+          output: listed.count === 0 ? 'This document has no tables.' : lines.join('\n'),
+          summary: label('aiToolTables', { count: listed.count }),
+        }
+      }
+      case 'read_table': {
+        const table = call.input.table
+        if (typeof table !== 'number') return bad(call, 'table must be a number from list_tables')
+        const fromRow = call.input.from_row
+        const read = await bridge.readTable(table, typeof fromRow === 'number' ? fromRow : null)
+        if (!read.ok) return bad(call, noSuchTable(table, read.count))
+        const more = read.nextRow
+          ? `\n[more rows: call read_table with from_row ${read.nextRow}]`
+          : ''
+        return {
+          output:
+            `Table ${read.table}: ${read.rows} row(s) × ${read.cols} column(s). Cells as row.col:\n` +
+            read.cells.map(cellLine).join('\n') +
+            more,
+          summary: label('aiToolReadTable', { table }),
+        }
+      }
+      case 'fill_cells': {
+        const table = call.input.table
+        const cells = cellArgs(call)
+        if (typeof table !== 'number') return bad(call, 'table must be a number from list_tables')
+        if (!cells) {
+          return bad(
+            call,
+            'cells must be a non-empty list of { row, col, text } with whole numbers',
+          )
+        }
+        const result = await bridge.fillCells(table, cells, call.input.overwrite === true)
+        if (result.ok) {
+          deps.onChange({
+            kind: 'cells',
+            from: label('aiTableName', { table }),
+            to: changeText(cells.map((cell) => cell.text).join(' | ')),
+            count: result.count,
+          })
+          return {
+            output: `Filled ${result.count} cell(s) of table ${table}.`,
+            mutated: true,
+            summary: label('aiToolFillCells', { table, count: result.count }),
+          }
+        }
+        if (result.reason === 'no_such_table') return bad(call, noSuchTable(table, result.count))
+        if (result.reason === 'has_objects') {
+          return bad(
+            call,
+            'Nothing was changed: one of those cells holds a table or a picture, which writing over the cell would remove.',
+          )
+        }
+        const places = result.cells.map((cell) => `${cell.row}.${cell.col}`).join(', ')
+        if (result.reason === 'no_such_cell') {
+          return bad(
+            call,
+            `Nothing was changed: the table has ${result.rows} row(s) and ${result.cols} column(s), and these places are not in it: ${places}. Read the table again.`,
+          )
+        }
+        if (result.reason === 'holds_object') {
+          return bad(
+            call,
+            `Nothing was changed: these cells hold a picture or another object, so they are not empty and text would land on top of it: ${places}. Leave them out.`,
+          )
+        }
+        if (result.reason === 'has_fields') {
+          return bad(
+            call,
+            `Nothing was changed: these cells hold several form fields each: ${places}. Fill them one by one with fill_field (list_fields shows the numbers).`,
+          )
+        }
+        return bad(
+          call,
+          'Nothing was changed: these cells already hold text. Leave them out, or pass overwrite when the user asked to replace what is there.\n' +
+            result.cells.map((cell) => `${cell.row}.${cell.col}: ${cell.text ?? ''}`).join('\n'),
+        )
+      }
       case 'list_fields': {
         const fields = await bridge.listFields()
         return {
@@ -715,7 +911,11 @@ export function createHwpSkill(deps: HwpSkillDeps): HwpSkill {
     },
     refreshContext: async () => {
       try {
-        const [text, fields] = await Promise.all([bridge.readText(), bridge.listFields()])
+        const [text, fields, tables] = await Promise.all([
+          bridge.readText(),
+          bridge.listFields(),
+          bridge.listTables(),
+        ])
         // numbered: the number is what fill_field takes, and names repeat
         const names = fields
           .slice(0, CONTEXT_MAX_FIELDS)
@@ -727,6 +927,9 @@ export function createHwpSkill(deps: HwpSkillDeps): HwpSkill {
           fields.length === 0
             ? 'Form fields: none.'
             : `Form fields (${fields.length}): ${names.join(', ')}${fields.length > names.length ? ', …' : ''}`,
+          tables.count === 0
+            ? 'Tables: none.'
+            : `Tables: ${tables.count} (list_tables lists them; the text below shows their words but not their empty cells).`,
           whole
             ? 'Text (complete):'
             : `Text (the first ${CONTEXT_MAX_CHARS} characters; read_document returns the rest):`,

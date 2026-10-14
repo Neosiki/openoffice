@@ -91,6 +91,80 @@ export type AgentFormatTextResult =
 
 export type AgentFormatParagraphResult = { ok: true; inTable: boolean } | AgentPlaceRefusal
 
+/** One table of the document, as listTables lists it. */
+export interface AgentTableSummary {
+  /** 1-based position among all tables in reading order; what readTable and fillCells take */
+  table: number
+  rows: number
+  cols: number
+  /** the number of the table whose cell this one sits in; absent for a table of the body */
+  inTable?: number
+  /** the line of text the table follows, cut short; empty when there is none close by */
+  near: string
+  /** the text of its first cells that hold any, each cut short */
+  preview: string[]
+}
+
+export interface AgentTableList {
+  /** all tables found; `tables` holds the first ones only */
+  count: number
+  /** the search for tables inside table cells ran out of budget: some may be missing */
+  partial: boolean
+  tables: AgentTableSummary[]
+}
+
+/** One cell of a table. A merged cell is listed once, at its first row and column. */
+export interface AgentTableCell {
+  /** 1-based */
+  row: number
+  col: number
+  rowSpan?: number
+  colSpan?: number
+  /** the paragraphs of the cell joined by line breaks, cut when long */
+  text: string
+  /** numbers (as in listFields) of the click-here fields that sit in the cell */
+  fields?: number[]
+  /** the cell holds a picture, a shape or a table of its own: not empty, whatever its text */
+  object?: true
+}
+
+export type AgentReadTableResult =
+  | {
+      ok: true
+      table: number
+      rows: number
+      cols: number
+      cells: AgentTableCell[]
+      /** the table goes on: the row to read from next */
+      nextRow?: number
+    }
+  | { ok: false; reason: 'no_such_table'; count: number }
+
+/** Text for one cell: 1-based place, and the text (a line break starts a new paragraph). */
+export interface AgentCellText {
+  row: number
+  col: number
+  text: string
+}
+
+export type AgentFillCellsResult =
+  | { ok: true; table: number; count: number }
+  | { ok: false; reason: 'no_such_table'; count: number }
+  | {
+      ok: false
+      /**
+       * no_such_cell: the places are outside the table. occupied: the cells hold text and
+       * overwrite was not given. has_fields: the cells hold several form fields each.
+       * holds_object: the cells hold a picture or another object.
+       */
+      reason: 'no_such_cell' | 'occupied' | 'has_fields' | 'holds_object'
+      cells: { row: number; col: number; text?: string; fields?: number[] }[]
+      rows: number
+      cols: number
+    }
+  /** the change would have removed an object of the document, and was rolled back */
+  | { ok: false; reason: 'has_objects'; count: number }
+
 export interface AgentField {
   /** 1-based position in the document; what fillField takes */
   field: number
@@ -140,6 +214,9 @@ export interface AgentPluginSurface {
     occurrence: number | null,
     format: AgentParagraphFormat,
   ): AgentFormatParagraphResult
+  listTables(): AgentTableList
+  readTable(table: number, fromRow?: number | null): AgentReadTableResult
+  fillCells(table: number, cells: AgentCellText[], overwrite: boolean): AgentFillCellsResult
   listFields(): AgentField[]
   fillField(field: number, value: string): AgentFillResult
   undo(steps: number, expectedForeign: number): AgentUndoResult

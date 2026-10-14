@@ -1,0 +1,401 @@
+/**
+ * The plugin's table tools against the real rhwp engine: listing the tables of a
+ * document, reading one cell by cell, and filling cells of a form. The editor's
+ * history is modelled by snapshots, as in agent-plugin-engine.test.ts.
+ */
+import { readFileSync } from 'node:fs'
+import { createRequire } from 'node:module'
+import { dirname, join } from 'node:path'
+import { beforeAll, describe, expect, it } from 'vitest'
+import init, { HwpDocument } from '@rhwp/core'
+import { agentPlugin, type AgentPluginHost } from '../studio-plugin/agent-plugin.mjs'
+
+const require = createRequire(import.meta.url)
+
+beforeAll(async () => {
+  const wasm = join(dirname(require.resolve('@rhwp/core')), 'rhwp_bg.wasm')
+  await init({ module_or_path: readFileSync(wasm) })
+})
+
+const GUIDE = '이곳을 마우스로 누르고 내용을 입력하세요.'
+
+const FORM =
+  '<table>' +
+  '<tr><td>성명</td><td></td><td>소속</td><td></td></tr>' +
+  '<tr><td>연락처</td><td></td><td>비고</td><td>기존 내용</td></tr>' +
+  '<tr><td>활동</td><td></td><td></td><td></td></tr>' +
+  '</table>'
+
+/** The table sits in body paragraph 1; its cells count row by row from 0. */
+const cellPath = (cell: number) =>
+  JSON.stringify([{ controlIndex: 0, cellIndex: cell, cellParaIndex: 0 }])
+
+/**
+ * A form built with the engine itself:
+ *   신청서 / [3×4 table] / 끝.
+ * The last three cells of the third row are one merged cell.
+ */
+function openForm(
+  prepare?: (doc: HwpDocument) => void,
+  /** what the engine's plain-text export answers, given what it really is */
+  exported: (flat: string) => string = (flat) => flat,
+) {
+  let doc = HwpDocument.createEmpty()
+  doc.createBlankDocument()
+  const lines = ['신청서', '', '끝.']
+  lines.forEach((line, index) => {
+    if (index > 0) doc.splitParagraph(0, index - 1, doc.getParagraphLength(0, index - 1))
+    if (line) doc.insertText(0, index, 0, line)
+  })
+  doc.pasteHtml(0, 1, 0, FORM)
+  doc.mergeTableCells(0, 1, 0, 2, 1, 2, 3)
+  prepare?.(doc)
+
+  const history: Uint8Array[] = []
+  const host = {
+    read: (fn: (d: never) => unknown) =>
+      fn(
+        new Proxy(doc, {
+          get(target, key) {
+            if (key === 'getTextFileText') {
+              return () => JSON.stringify(exported(JSON.parse(target.getTextFileText()) as string))
+            }
+            const value = Reflect.get(target, key) as unknown
+            return typeof value === 'function' ? value.bind(target) : value
+          },
+        }) as never,
+      ),
+    transaction: (_label: string, fn: (tx: never) => unknown) => {
+      const before = doc.exportHwp()
+      try {
+        const result = fn({ doc: () => doc, deferPagination: () => {} } as never)
+        history.push(before)
+        return result
+      } catch (thrown) {
+        doc = new HwpDocument(before)
+        throw thrown
+      }
+    },
+    events: { on: () => 0 },
+    automation: {
+      execute: () => {
+        const before = history.pop()
+        if (!before) return { ok: false }
+        doc = new HwpDocument(before)
+        return { ok: true }
+      },
+    },
+  } as unknown as AgentPluginHost
+
+  const plugin = agentPlugin.activate(host)
+  return {
+    plugin,
+    steps: () => history.length,
+    doc: () => doc,
+    /** the text of every cell of the first table, by "row.col" */
+    cells: () => {
+      const read = plugin.readTable(1)
+      if (!read.ok) throw new Error('no table')
+      return Object.fromEntries(read.cells.map((cell) => [`${cell.row}.${cell.col}`, cell.text]))
+    },
+  }
+}
+
+describe('listing and reading tables', () => {
+  it('lists a table with its size, the line above it and its first cells', () => {
+    const { plugin } = openForm()
+    const listed = plugin.listTables()
+    expect(listed.count).toBe(1)
+    expect(listed.partial).toBe(false)
+    expect(listed.tables[0]).toMatchObject({ table: 1, rows: 3, cols: 4, near: '신청서' })
+    expect(listed.tables[0]!.preview.slice(0, 2)).toEqual(['성명', '소속'])
+    expect(listed.tables[0]!.inTable).toBeUndefined()
+  })
+
+  it('reads the cells row by row, a merged cell once with its span', () => {
+    const { plugin } = openForm()
+    const read = plugin.readTable(1)
+    if (!read.ok) throw new Error('expected a table')
+    expect(read).toMatchObject({ table: 1, rows: 3, cols: 4 })
+    expect(read.nextRow).toBeUndefined()
+    expect(read.cells.map((cell) => `${cell.row}.${cell.col}`)).toEqual([
+      '1.1',
+      '1.2',
+      '1.3',
+      '1.4',
+      '2.1',
+      '2.2',
+      '2.3',
+      '2.4',
+      '3.1',
+      '3.2',
+    ])
+    expect(read.cells[0]).toEqual({ row: 1, col: 1, text: '성명' })
+    expect(read.cells[1]).toEqual({ row: 1, col: 2, text: '' })
+    expect(read.cells[9]).toEqual({ row: 3, col: 2, colSpan: 3, text: '' })
+  })
+
+  it('reads on from a row', () => {
+    const { plugin } = openForm()
+    const read = plugin.readTable(1, 3)
+    if (!read.ok) throw new Error('expected a table')
+    expect(read.cells.map((cell) => cell.text)).toEqual(['활동', ''])
+  })
+
+  it('says how many tables there are when the number names none', () => {
+    const { plugin } = openForm()
+    expect(plugin.readTable(2)).toEqual({ ok: false, reason: 'no_such_table', count: 1 })
+    expect(plugin.fillCells(0, [{ row: 1, col: 1, text: 'x' }], false)).toEqual({
+      ok: false,
+      reason: 'no_such_table',
+      count: 1,
+    })
+  })
+
+  // A table inside a table cell is listed and filled the same way (it is found by asking the
+  // engine for a table at each cell paragraph). The engine has no call that makes one, and a
+  // table pasted into a cell comes out as text, so that case is checked on real documents.
+})
+
+describe('filling cells', () => {
+  it('fills several empty cells in one undo step', () => {
+    const { plugin, steps, cells } = openForm()
+    const result = plugin.fillCells(
+      1,
+      [
+        { row: 1, col: 2, text: '홍길동' },
+        { row: 1, col: 4, text: '교무기획부' },
+        { row: 2, col: 2, text: '041-000-0000' },
+      ],
+      false,
+    )
+    expect(result).toEqual({ ok: true, table: 1, count: 3 })
+    expect(steps()).toBe(1)
+    expect(cells()).toMatchObject({
+      '1.1': '성명',
+      '1.2': '홍길동',
+      '1.4': '교무기획부',
+      '2.2': '041-000-0000',
+      '2.4': '기존 내용',
+    })
+  })
+
+  it('takes a place inside a merged cell as that cell, and a line break as a new paragraph', () => {
+    const { plugin, cells, doc } = openForm()
+    const result = plugin.fillCells(1, [{ row: 3, col: 4, text: '첫 줄\n둘째 줄' }], false)
+    expect(result).toMatchObject({ ok: true, count: 1 })
+    expect(cells()['3.2']).toBe('첫 줄\n둘째 줄')
+    expect(doc().getCellParagraphCountByPath(0, 1, cellPath(9))).toBe(2)
+  })
+
+  it('gives the text the formatting the cell already has', () => {
+    const { plugin, doc } = openForm((d) => {
+      // the empty cell beside 성명 is set up bold, the way a form designer leaves it
+      d.insertTextInCellByPath(0, 1, cellPath(1), 0, 'x')
+      d.applyCharFormatInCellByPath(0, 1, cellPath(1), 0, 1, JSON.stringify({ bold: true }))
+      d.deleteTextInCellByPath(0, 1, cellPath(1), 0, 1)
+    })
+    plugin.fillCells(1, [{ row: 1, col: 2, text: '홍길동' }], false)
+    const props = JSON.parse(doc().getCellCharPropertiesAtByPath(0, 1, cellPath(1), 1)) as {
+      bold: boolean
+    }
+    expect(props.bold).toBe(true)
+  })
+
+  it('leaves a cell that holds text alone, and with it every other cell of the call', () => {
+    const { plugin, steps, cells } = openForm()
+    const result = plugin.fillCells(
+      1,
+      [
+        { row: 1, col: 2, text: '홍길동' },
+        { row: 2, col: 4, text: '새 내용' },
+      ],
+      false,
+    )
+    expect(result).toEqual({
+      ok: false,
+      reason: 'occupied',
+      cells: [{ row: 2, col: 4, text: '기존 내용' }],
+      rows: 3,
+      cols: 4,
+    })
+    expect(steps()).toBe(0)
+    expect(cells()).toMatchObject({ '1.2': '', '2.4': '기존 내용' })
+  })
+
+  it('writes over a cell when told to', () => {
+    const { plugin, cells } = openForm()
+    expect(plugin.fillCells(1, [{ row: 2, col: 4, text: '새 내용' }], true)).toMatchObject({
+      ok: true,
+    })
+    expect(cells()['2.4']).toBe('새 내용')
+  })
+
+  it('writes over a cell of several paragraphs, leaving one', () => {
+    const { plugin, cells, doc } = openForm((d) => {
+      d.splitParagraphInCellByPath(0, 1, cellPath(7), 2)
+    })
+    expect(cells()['2.4']).toBe('기존\n 내용')
+    plugin.fillCells(1, [{ row: 2, col: 4, text: '한 줄' }], true)
+    expect(cells()['2.4']).toBe('한 줄')
+    expect(doc().getCellParagraphCountByPath(0, 1, cellPath(7))).toBe(1)
+  })
+
+  it('treats blanks left in a cell as an empty cell', () => {
+    const { plugin, cells } = openForm((d) => {
+      d.insertTextInCellByPath(0, 1, cellPath(5), 0, '      ')
+    })
+    expect(plugin.fillCells(1, [{ row: 2, col: 2, text: '041-000-0000' }], false)).toMatchObject({
+      ok: true,
+    })
+    expect(cells()['2.2']).toBe('041-000-0000')
+  })
+
+  it('names the places that are not in the table', () => {
+    const { plugin, steps } = openForm()
+    expect(plugin.fillCells(1, [{ row: 4, col: 1, text: 'x' }], false)).toEqual({
+      ok: false,
+      reason: 'no_such_cell',
+      cells: [{ row: 4, col: 1 }],
+      rows: 3,
+      cols: 4,
+    })
+    expect(steps()).toBe(0)
+  })
+
+  it('refuses a call that names one cell twice, and bad places or text', () => {
+    const { plugin } = openForm()
+    const twice = [
+      { row: 3, col: 2, text: 'a' },
+      { row: 3, col: 3, text: 'b' },
+    ]
+    expect(() => plugin.fillCells(1, twice, false)).toThrow(/same cell/)
+    expect(() => plugin.fillCells(1, [{ row: 0, col: 1, text: 'a' }], false)).toThrow(/from 1/)
+    expect(() => plugin.fillCells(1, [], false)).toThrow(/1 to/)
+    expect(() => plugin.fillCells(1, [{ row: 1, col: 2, text: 'a\tb' }], false)).toThrow(
+      /plain text/,
+    )
+  })
+
+  it('is taken back by one undo', () => {
+    const { plugin, cells } = openForm()
+    const foreign = plugin.foreignChanges()
+    plugin.fillCells(
+      1,
+      [
+        { row: 1, col: 2, text: '홍길동' },
+        { row: 3, col: 2, text: '활동 내용' },
+      ],
+      false,
+    )
+    expect(plugin.undo(1, foreign)).toEqual({ ok: true, undone: 1 })
+    expect(cells()).toMatchObject({ '1.2': '', '3.2': '' })
+  })
+})
+
+describe('cells that hold a form field', () => {
+  const withField = () =>
+    openForm((doc) => {
+      doc.insertClickHereFieldByPath(0, 1, cellPath(1), 0, GUIDE, '', '', true)
+    })
+
+  it('shows the field number on the cell', () => {
+    const { plugin } = withField()
+    const read = plugin.readTable(1)
+    if (!read.ok) throw new Error('expected a table')
+    expect(read.cells[1]).toMatchObject({ row: 1, col: 2, fields: [1] })
+  })
+
+  it('fills the cell through its field, so the guide text does not stay', () => {
+    const { plugin, steps } = withField()
+    const result = plugin.fillCells(
+      1,
+      [
+        { row: 1, col: 2, text: '홍길동' },
+        { row: 1, col: 4, text: '교무기획부' },
+      ],
+      false,
+    )
+    expect(result).toEqual({ ok: true, table: 1, count: 2 })
+    expect(steps()).toBe(1)
+    expect(plugin.listFields()[0]).toMatchObject({ field: 1, value: '홍길동' })
+    expect(plugin.readText()).not.toContain(GUIDE)
+  })
+
+  it('does not write over a field that was already filled', () => {
+    const { plugin } = withField()
+    plugin.fillField(1, '홍길동')
+    expect(plugin.fillCells(1, [{ row: 1, col: 2, text: '김철수' }], false)).toMatchObject({
+      ok: false,
+      reason: 'occupied',
+      cells: [{ row: 1, col: 2, text: '홍길동' }],
+    })
+    expect(plugin.fillCells(1, [{ row: 1, col: 2, text: '김철수' }], true)).toMatchObject({
+      ok: true,
+    })
+    expect(plugin.listFields()[0]!.value).toBe('김철수')
+  })
+})
+
+describe('reading a document whose plain-text export leaves things out', () => {
+  const lines = (text: string) => text.split('\n').filter((line) => line.trim() !== '')
+
+  it('reads the same as the export when that is complete', () => {
+    const { plugin, doc } = openForm()
+    expect(lines(plugin.readText())).toEqual(
+      lines((JSON.parse(doc().getTextFileText()) as string).replace(/\r/g, '')),
+    )
+  })
+
+  it('puts a table the export skipped back where it stands', () => {
+    // the export without any of the table: only the two lines of the body
+    const { plugin } = openForm(undefined, () => '신청서\r\n\r\n끝.')
+    expect(lines(plugin.readText())).toEqual([
+      '신청서',
+      '성명',
+      '소속',
+      '연락처',
+      '비고',
+      '기존 내용',
+      '활동',
+      '끝.',
+    ])
+  })
+
+  it('puts back single cells and body paragraphs the export lost', () => {
+    const { plugin } = openForm(undefined, (flat) =>
+      flat
+        .split(/\r?\n/)
+        .filter((line) => !['소속', '끝.'].includes(line.trim()))
+        .join('\r\n'),
+    )
+    const text = lines(plugin.readText())
+    expect(text.filter((line) => line === '소속')).toHaveLength(1)
+    expect(text.indexOf('소속')).toBe(text.indexOf('성명') + 1)
+    expect(text[text.length - 1]).toBe('끝.')
+  })
+
+  it('does not repeat a line that holds a form field, which the export shows by its guide', () => {
+    const { plugin } = openForm((d) => {
+      d.insertClickHereFieldByPath(0, 1, cellPath(1), 0, GUIDE, '', '', true)
+      d.insertText(0, 2, 0, '성명: ')
+      d.insertClickHereField(0, 2, 4, GUIDE, '', '', true)
+    })
+    const text = lines(plugin.readText())
+    expect(text.filter((line) => line.includes(GUIDE))).toHaveLength(2)
+    expect(text.filter((line) => line.startsWith('성명:'))).toHaveLength(1)
+  })
+
+  it('writes the characters the export gives as numeric references', () => {
+    const { plugin } = openForm(undefined, (flat) => flat.replace('신청서', '신청&#8199;서'))
+    expect(plugin.readText()).toContain('신청\u2007서')
+    expect(plugin.readText()).not.toContain('&#')
+  })
+
+  it('reads again after the document changed', () => {
+    const { plugin } = openForm()
+    expect(plugin.readText()).not.toContain('홍길동')
+    plugin.fillCells(1, [{ row: 1, col: 2, text: '홍길동' }], false)
+    expect(plugin.readText()).toContain('홍길동')
+  })
+})
