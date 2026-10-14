@@ -65,6 +65,7 @@ describe('open_documents close: untitled documents', () => {
     ['slides', '.pptx'],
     ['markdown', '.md'],
     ['html', '.html'],
+    ['mindmap', '.xmind'],
   ] as const)('saves an untitled dirty %s tab before closing it', async (kind, ext) => {
     const doc = tab({ id: 't1', kind, title: `untitled ${kind}` })
     const { call } = await controlWith([doc], {
@@ -82,6 +83,7 @@ describe('open_documents close: untitled documents', () => {
         discard: async () => undefined,
       },
       html: { read: async () => '', save: async () => undefined, discard: async () => undefined },
+      mindmap: { read: async () => '', save: async () => undefined },
     })
 
     const result = await call({ action: 'close', target: 't1' })
@@ -139,6 +141,51 @@ describe('open_documents close: discard cleanup', () => {
 
     await call({ action: 'close', target: 't5', unsaved: 'discard' })
     expect(discard).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('open_documents on a mind map tab', () => {
+  const mapDoc = (dirty: boolean): OpenDocumentTab =>
+    tab({ id: 't8', kind: 'mindmap', title: 'plan.xmind', filePath: 'C:/maps/plan.xmind', dirty })
+
+  it('reads through the mind map reader and saves through the editor save', async () => {
+    const read = vi.fn(async () => '# Sheet 1\n\n- Plan\n')
+    const save = vi.fn(async () => undefined)
+    const { call } = await controlWith([mapDoc(true)], { mindmap: { read, save } })
+
+    expect((await call({ action: 'read', target: 't8' })).content).toBe('# Sheet 1\n\n- Plan\n')
+    const closed = await call({ action: 'close', target: 't8' })
+    expect(closed.savedTo).toBe('C:/maps/plan.xmind')
+    expect(save).toHaveBeenCalledWith(expect.anything(), 'C:/maps/plan.xmind')
+  })
+
+  it('a clean map closes without a save, and a discard never saves', async () => {
+    const save = vi.fn(async () => undefined)
+    const clean = await controlWith([mapDoc(false)], { mindmap: { read: async () => '', save } })
+    expect(await clean.call({ action: 'close', target: 't8' })).not.toHaveProperty('savedTo')
+    const dirty = await controlWith([mapDoc(true)], { mindmap: { read: async () => '', save } })
+    await dirty.call({ action: 'close', target: 't8', unsaved: 'discard' })
+    expect(save).not.toHaveBeenCalled()
+  })
+
+  it('a refused save keeps the tab open', async () => {
+    const closeTab = vi.fn(() => true)
+    const { call } = await controlWith([mapDoc(true)], {
+      closeTab,
+      mindmap: {
+        read: async () => '',
+        save: async () => {
+          throw new Error('the file did not open, so there is no map to save')
+        },
+      },
+    })
+    await expect(call({ action: 'close', target: 't8' })).rejects.toThrow(/did not open/)
+    expect(closeTab).not.toHaveBeenCalled()
+  })
+
+  it('names the missing editor instead of failing silently', async () => {
+    const { call } = await controlWith([mapDoc(true)])
+    await expect(call({ action: 'read', target: 't8' })).rejects.toThrow(/mind map editor/)
   })
 })
 

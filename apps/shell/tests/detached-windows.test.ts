@@ -212,7 +212,9 @@ describe('detachedOpenDocuments', () => {
 })
 
 describe('a detached mind map', () => {
-  it('is left out of the list reported to MCP agents', async () => {
+  it('is reported to MCP agents as kind mindmap, with its own dirty state', async () => {
+    const { mindmapIsDirty } = await import('../../mindmap/src/main/mindmap-main')
+    vi.mocked(mindmapIsDirty).mockImplementation((id) => id === 41)
     detached.createDetachedEditorWindow({
       view: fakeView(41) as never,
       kind: 'mindmap',
@@ -227,7 +229,11 @@ describe('a detached mind map', () => {
       applyMenuFor: () => {},
     })
     const docs = await detached.detachedOpenDocuments()
-    expect(docs.map((d) => d.id)).toEqual(['detached:42'])
+    expect(docs.map((d) => [d.id, d.kind, d.filePath, d.dirty])).toEqual([
+      ['detached:41', 'mindmap', 'C:/maps/plan.xmind', true],
+      ['detached:42', 'sheets', undefined, false],
+    ])
+    vi.mocked(mindmapIsDirty).mockReturnValue(false)
   })
 
   it('is found by its path, so a second open focuses the window', () => {

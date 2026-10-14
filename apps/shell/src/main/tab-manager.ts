@@ -244,10 +244,7 @@ export class TabManager {
    * renderer. Hence the async signature.
    */
   async openDocuments(): Promise<OpenDocumentTab[]> {
-    const tabs = this.tabs.filter(
-      // a mind map is not reported yet: the MCP tools do not know that kind
-      (tab) => tab.kind !== 'home' && tab.kind !== 'mindmap' && !tab.present && tab.view,
-    )
+    const tabs = this.tabs.filter((tab) => tab.kind !== 'home' && !tab.present && tab.view)
     return Promise.all(
       tabs.map(async (tab) => ({
         id: tab.id,
@@ -277,6 +274,8 @@ export class TabManager {
         return slidesIsDirty(wc.id)
       case 'docs':
         return docsQueryDirty(wc)
+      case 'mindmap':
+        return mindmapIsDirty(wc.id)
       default:
         return false
     }

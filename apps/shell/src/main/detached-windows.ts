@@ -264,8 +264,6 @@ export async function detachedOpenDocuments(): Promise<OpenDocumentTab[]> {
   const out: OpenDocumentTab[] = []
   for (const [wcId, rec] of detached) {
     if (rec.window.isDestroyed()) continue
-    // a mind map is not reported yet: the MCP tools do not know that kind
-    if (rec.kind === 'mindmap') continue
     const dirty = await detachedIsDirty(rec)
     // the dirty query yielded: the window may have closed meanwhile
     if (rec.window.isDestroyed()) continue

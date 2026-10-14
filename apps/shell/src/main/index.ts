@@ -225,12 +225,14 @@ import {
 import {
   configureMindmapRuntime,
   mindmapFileRenamed,
+  mindmapSaveToPath,
   requestMindmapSave,
   sendMindmapExportRequest,
   sendMindmapMenuCommand,
   sendMindmapPrintRequest,
   setMindmapFileSavedHook,
 } from '../../../mindmap/src/main/mindmap-main'
+import { mindmapReadOutline } from '../../../mindmap/src/main/mcp-queries'
 import type {
   AutoSaveDefault,
   FolderListing,
@@ -5953,6 +5955,10 @@ app.whenReady().then(async () => {
         read: htmlReadText,
         save: htmlSaveToPath,
         discard: htmlDiscardPendingAssets,
+      },
+      mindmap: {
+        read: mindmapReadOutline,
+        save: mindmapSaveToPath,
       },
     }),
     // the headless create_*/read_* tools delegate to the bundled genoffice CLI

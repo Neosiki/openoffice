@@ -268,7 +268,14 @@ describe('MCP surface over Streamable HTTP (/mcp)', () => {
         'md',
         'html',
         'pdf',
+        'xmind',
       ])
+      // the mind map entry: editor formats only, nothing generated or read headlessly
+      expect(infoJson.families.find((f) => f.family === 'xmind')).toEqual({
+        family: 'xmind',
+        label: 'mind map',
+        editor: { open: ['xmind'], save: ['xmind'], export: ['png', 'pdf', 'md'] },
+      })
       // the format registry's editor truth survives the wire
       expect(infoJson.families.find((f) => f.family === 'xlsx')!.editor.open).toEqual([
         'xlsx',

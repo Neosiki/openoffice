@@ -1009,11 +1009,20 @@ describe('dirty-tab queries (shell close guard)', () => {
     expect(manager.activeMindmapTab()).toBeUndefined()
   })
 
-  it('leaves mind map tabs out of the list reported to MCP agents', async () => {
+  it('reports mind map tabs to MCP agents as kind mindmap, with their own dirty state', async () => {
     const docsId = manager.openDocsTab('/tmp/a.docx')
-    manager.openMindmapTab('/tmp/plan.xmind')
+    const cleanId = manager.openMindmapTab('/tmp/plan.xmind')
+    const dirtyId = manager.openMindmapTab()
+    const dirtyView = lastCreatedView(createMindmapView)
+    mindmapIsDirty.mockImplementation(
+      ((id: number) => id === dirtyView.webContents.id) as () => boolean,
+    )
     const documents = await manager.openDocuments()
-    expect(documents.map((d) => d.id)).toEqual([docsId])
+    expect(documents.map((d) => [d.id, d.kind, d.filePath, d.dirty])).toEqual([
+      [docsId, 'docs', '/tmp/a.docx', false],
+      [cleanId, 'mindmap', '/tmp/plan.xmind', false],
+      [dirtyId, 'mindmap', undefined, true],
+    ])
   })
 
   it('lists every live docs tab for the async dirtiness sweep', () => {
