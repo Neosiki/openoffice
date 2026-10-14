@@ -4,6 +4,7 @@ import { createI18n, getUiLang } from '@genoffice/i18n'
 const tDlg = createI18n({
   zh: {
     dlgSaveTitle: '保存 HWP 文档',
+    untitledFile: '未命名文档',
     filterHwp: 'HWP 文档 (HWP, HWPX)',
     closeUnsavedMsg: '此文档有未保存的更改。',
     closeUnsavedDetail: '关闭前是否保存？',
@@ -25,6 +26,7 @@ const tDlg = createI18n({
   },
   en: {
     dlgSaveTitle: 'Save HWP Document',
+    untitledFile: 'Untitled',
     filterHwp: 'HWP Documents (HWP, HWPX)',
     closeUnsavedMsg: 'This document has unsaved changes.',
     closeUnsavedDetail: 'Do you want to save them before closing?',
@@ -46,6 +48,7 @@ const tDlg = createI18n({
   },
   vi: {
     dlgSaveTitle: 'Lưu tài liệu HWP',
+    untitledFile: 'Không có tiêu đề',
     filterHwp: 'Tài liệu HWP (HWP, HWPX)',
     closeUnsavedMsg: 'Tài liệu này có những thay đổi chưa được lưu.',
     closeUnsavedDetail: 'Bạn có muốn lưu các thay đổi trước khi đóng không?',
@@ -68,6 +71,7 @@ const tDlg = createI18n({
   },
   ja: {
     dlgSaveTitle: 'HWP ドキュメントを保存',
+    untitledFile: '無題',
     filterHwp: 'HWP ドキュメント (HWP, HWPX)',
     closeUnsavedMsg: 'このドキュメントに未保存の変更があります。',
     closeUnsavedDetail: '閉じる前に保存しますか？',
@@ -90,6 +94,7 @@ const tDlg = createI18n({
   },
   ko: {
     dlgSaveTitle: '한글 문서 저장',
+    untitledFile: '제목 없음',
     filterHwp: '한글 문서 (HWP, HWPX)',
     closeUnsavedMsg: '이 문서에 저장하지 않은 변경 사항이 있습니다.',
     closeUnsavedDetail: '닫기 전에 저장하시겠습니까?',
@@ -112,6 +117,7 @@ const tDlg = createI18n({
   },
   fr: {
     dlgSaveTitle: 'Enregistrer le document HWP',
+    untitledFile: 'Sans titre',
     filterHwp: 'Documents HWP (HWP, HWPX)',
     closeUnsavedMsg: 'Ce document contient des modifications non enregistrées.',
     closeUnsavedDetail: 'Voulez-vous les enregistrer avant de fermer ?',
@@ -134,6 +140,7 @@ const tDlg = createI18n({
   },
   de: {
     dlgSaveTitle: 'HWP-Dokument speichern',
+    untitledFile: 'Unbenannt',
     filterHwp: 'HWP-Dokumente (HWP, HWPX)',
     closeUnsavedMsg: 'Dieses Dokument enthält ungespeicherte Änderungen.',
     closeUnsavedDetail: 'Vor dem Schließen speichern?',
@@ -156,6 +163,7 @@ const tDlg = createI18n({
   },
   es: {
     dlgSaveTitle: 'Guardar documento HWP',
+    untitledFile: 'Sin título',
     filterHwp: 'Documentos HWP (HWP, HWPX)',
     closeUnsavedMsg: 'Este documento tiene cambios sin guardar.',
     closeUnsavedDetail: '¿Quieres guardarlos antes de cerrar?',
@@ -178,6 +186,7 @@ const tDlg = createI18n({
   },
   th: {
     dlgSaveTitle: 'บันทึกเอกสาร HWP',
+    untitledFile: 'ไม่มีชื่อ',
     filterHwp: 'เอกสาร HWP (HWP, HWPX)',
     closeUnsavedMsg: 'เอกสารนี้มีการเปลี่ยนแปลงที่ยังไม่ได้บันทึก',
     closeUnsavedDetail: 'ต้องการบันทึกก่อนปิดหรือไม่?',
@@ -200,6 +209,7 @@ const tDlg = createI18n({
   },
   id: {
     dlgSaveTitle: 'Simpan dokumen HWP',
+    untitledFile: 'Tanpa judul',
     filterHwp: 'Dokumen HWP (HWP, HWPX)',
     closeUnsavedMsg: 'Dokumen ini memiliki perubahan yang belum disimpan.',
     closeUnsavedDetail: 'Simpan sebelum menutup?',
@@ -222,6 +232,7 @@ const tDlg = createI18n({
   },
   ru: {
     dlgSaveTitle: 'Сохранить документ HWP',
+    untitledFile: 'Без названия',
     filterHwp: 'Документы HWP (HWP, HWPX)',
     closeUnsavedMsg: 'В этом документе есть несохранённые изменения.',
     closeUnsavedDetail: 'Сохранить их перед закрытием?',
@@ -244,6 +255,7 @@ const tDlg = createI18n({
   },
   ar: {
     dlgSaveTitle: 'حفظ مستند HWP',
+    untitledFile: 'بدون عنوان',
     filterHwp: 'مستندات HWP (HWP, HWPX)',
     closeUnsavedMsg: 'يحتوي هذا المستند على تغييرات غير محفوظة.',
     closeUnsavedDetail: 'هل تريد حفظها قبل الإغلاق؟',
@@ -266,6 +278,7 @@ const tDlg = createI18n({
   },
   pt: {
     dlgSaveTitle: 'Salvar documento HWP',
+    untitledFile: 'Sem título',
     filterHwp: 'Documentos HWP (HWP, HWPX)',
     closeUnsavedMsg: 'Este documento tem alterações não salvas.',
     closeUnsavedDetail: 'Deseja salvá-las antes de fechar?',
@@ -288,6 +301,7 @@ const tDlg = createI18n({
   },
   it: {
     dlgSaveTitle: 'Salva documento HWP',
+    untitledFile: 'Senza titolo',
     filterHwp: 'Documenti HWP (HWP, HWPX)',
     closeUnsavedMsg: 'Questo documento contiene modifiche non salvate.',
     closeUnsavedDetail: 'Vuoi salvarle prima di chiudere?',
@@ -310,6 +324,7 @@ const tDlg = createI18n({
   },
   pl: {
     dlgSaveTitle: 'Zapisz dokument HWP',
+    untitledFile: 'Bez tytułu',
     filterHwp: 'Dokumenty HWP (HWP, HWPX)',
     closeUnsavedMsg: 'Ten dokument ma niezapisane zmiany.',
     closeUnsavedDetail: 'Czy zapisać je przed zamknięciem?',
@@ -332,6 +347,7 @@ const tDlg = createI18n({
   },
   cs: {
     dlgSaveTitle: 'Uložit dokument HWP',
+    untitledFile: 'Bez názvu',
     filterHwp: 'Dokumenty HWP (HWP, HWPX)',
     closeUnsavedMsg: 'Tento dokument má neuložené změny.',
     closeUnsavedDetail: 'Chcete je před zavřením uložit?',
@@ -354,6 +370,7 @@ const tDlg = createI18n({
   },
   nl: {
     dlgSaveTitle: 'HWP-document opslaan',
+    untitledFile: 'Naamloos',
     filterHwp: 'HWP-documenten (HWP, HWPX)',
     closeUnsavedMsg: 'Dit document bevat niet-opgeslagen wijzigingen.',
     closeUnsavedDetail: 'Wilt u ze opslaan voordat u sluit?',
@@ -376,6 +393,7 @@ const tDlg = createI18n({
   },
   ms: {
     dlgSaveTitle: 'Simpan dokumen HWP',
+    untitledFile: 'Tanpa tajuk',
     filterHwp: 'Dokumen HWP (HWP, HWPX)',
     closeUnsavedMsg: 'Dokumen ini mempunyai perubahan yang belum disimpan.',
     closeUnsavedDetail: 'Simpan sebelum menutup?',
@@ -398,6 +416,7 @@ const tDlg = createI18n({
   },
   he: {
     dlgSaveTitle: 'שמירת מסמך HWP',
+    untitledFile: 'ללא שם',
     filterHwp: 'מסמכי HWP (HWP, HWPX)',
     closeUnsavedMsg: 'במסמך הזה יש שינויים שלא נשמרו.',
     closeUnsavedDetail: 'האם לשמור אותם לפני הסגירה?',
@@ -420,6 +439,7 @@ const tDlg = createI18n({
   },
   hi: {
     dlgSaveTitle: 'HWP दस्तावेज़ सहेजें',
+    untitledFile: 'शीर्षकहीन',
     filterHwp: 'HWP दस्तावेज़ (HWP, HWPX)',
     closeUnsavedMsg: 'इस दस्तावेज़ में सहेजे नहीं गए परिवर्तन हैं।',
     closeUnsavedDetail: 'क्या बंद करने से पहले उन्हें सहेजना चाहते हैं?',
@@ -442,6 +462,7 @@ const tDlg = createI18n({
   },
   'zh-TW': {
     dlgSaveTitle: '儲存 HWP 文件',
+    untitledFile: '未命名文件',
     filterHwp: 'HWP 文件 (HWP, HWPX)',
     closeUnsavedMsg: '此文件有未儲存的變更。',
     closeUnsavedDetail: '關閉前是否儲存？',
@@ -465,6 +486,7 @@ const tDlg = createI18n({
 
 export type DlgKey =
   | 'dlgSaveTitle'
+  | 'untitledFile'
   | 'filterHwp'
   | 'closeUnsavedMsg'
   | 'closeUnsavedDetail'

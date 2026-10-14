@@ -2,7 +2,6 @@ import type { zh } from './zh'
 
 export const ko = {
   loading: '문서를 여는 중…',
-  noDocument: '이 탭에 열린 문서가 없습니다.',
   editorFailed: '편집기를 시작하지 못했습니다.',
   openFailed: '문서를 열지 못했습니다.',
   saveFailed: '문서를 저장하지 못했습니다.',

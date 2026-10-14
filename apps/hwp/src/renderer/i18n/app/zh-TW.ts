@@ -2,7 +2,6 @@ import type { zh } from './zh'
 
 export const zhTW = {
   loading: '正在開啟文件…',
-  noDocument: '此分頁沒有開啟的文件。',
   editorFailed: '編輯器無法啟動。',
   openFailed: '無法開啟文件。',
   saveFailed: '無法儲存文件。',

@@ -2,7 +2,6 @@ import type { zh } from './zh'
 
 export const ru = {
   loading: 'Открытие документа…',
-  noDocument: 'В этой вкладке нет открытого документа.',
   editorFailed: 'Не удалось запустить редактор.',
   openFailed: 'Не удалось открыть документ.',
   saveFailed: 'Не удалось сохранить документ.',

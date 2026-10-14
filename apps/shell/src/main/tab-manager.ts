@@ -424,8 +424,8 @@ export class TabManager {
     return id
   }
 
-  /** HWP/HWPX tabs always carry a file: the editor opens documents, it does not create them */
-  openHwpTab(openPath: string): string {
+  /** Opens an HWP/HWPX file, or with no path a new blank document that has no file until it is saved */
+  openHwpTab(openPath?: string): string {
     const view = createHwpView(openPath)
     const id = `t${this.nextId++}`
     this.shellWindow.contentView.addChildView(view)
@@ -435,7 +435,7 @@ export class TabManager {
       id,
       kind: 'hwp',
       view,
-      title: basename(openPath),
+      title: openPath ? basename(openPath) : this.untitled('hwp', 'HWP'),
       filePath: openPath,
     })
     this.activateTab(id)

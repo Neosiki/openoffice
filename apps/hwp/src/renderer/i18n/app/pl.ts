@@ -2,7 +2,6 @@ import type { zh } from './zh'
 
 export const pl = {
   loading: 'Otwieranie dokumentu…',
-  noDocument: 'W tej karcie nie ma otwartego dokumentu.',
   editorFailed: 'Nie udało się uruchomić edytora.',
   openFailed: 'Nie udało się otworzyć dokumentu.',
   saveFailed: 'Nie udało się zapisać dokumentu.',

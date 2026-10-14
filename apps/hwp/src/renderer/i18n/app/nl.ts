@@ -2,7 +2,6 @@ import type { zh } from './zh'
 
 export const nl = {
   loading: 'Document wordt geopend…',
-  noDocument: 'Er is geen document geopend in dit tabblad.',
   editorFailed: 'De editor kon niet worden gestart.',
   openFailed: 'Het document kon niet worden geopend.',
   saveFailed: 'Het document kon niet worden opgeslagen.',

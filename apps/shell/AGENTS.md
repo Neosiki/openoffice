@@ -45,6 +45,7 @@
 - 홈의 질문 패널은 에디터와 같은 보내기 규칙을 작은 사본(`askSendGate`, `src/renderer/src/kb-ask-connection.ts`)으로 갖는다. 첫 연결 안내은 홈 화면이 띄우고 패널은 그동안 보내지 않는다. `packages/ui`의 규칙을 바꾸면 이 사본도 맞춘다.
 - 첫 연결 안내의 Codex 문장은 `CODEX_MAY_KEEP_HISTORY`로 켜져 있다. 브리지가 대화 이력 파일은 끄지만 Codex가 자체 진단 로그를 남기고, 앱은 그것을 읽을 수도 막을 수도 없기 때문이다.
 - 문자열은 세 군데에 있다. 렌더러 사전 `src/renderer/src/strings.ts`(언어 21개가 한 파일에 있고 `zh`가 키 집합을 정한다), 메인 프로세스의 인라인 사전(`src/main/index.ts`의 `tMain`), 도움말 `i18n/help/topics/<id>.<lang>.md`. 도움말 항목은 `help-registry.ts`의 `HELP_TOPICS`에 등록해야 보이고, 모든 언어 파일의 구조는 영어 원본과 같아야 한다(`npm run check:help-langs`).
+- 새 한글 문서는 홈의 카드, "+" 메뉴, 파일 메뉴에서 만든다(`newHwpTab`, `home:new-hwp`). 다른 새 문서처럼 만든 폴더를 기억해 두고(`rememberPendingDir`), 첫 저장 뒤 한글 저장 훅이 파일을 그 폴더로 옮긴다(`applyPendingDir`). 탭 이름은 저장 전까지 "제목 없는 한글 문서"(`untitledHwp`)다.
 - 한글 문서는 편집기 밖에서 읽기만 한다. 파일 색인·지식 자료는 `parseFileToText`로, 앱 안 MCP의 `read_hwp`(`src/main/mcp/tools/hwp-tools.ts`)는 `hwpToText`로 디스크의 파일을 읽고, 열린 문서 읽기(`open_documents`)는 한글 탭이면 `apps/hwp`의 `hwpReadText`로 저장하지 않은 내용까지 읽는다. 열린 문서를 MCP로 저장하는 길은 한글 탭에 없다. 엔진 WASM은 `electron-builder.cjs`의 `extraResources`가 `Resources/wasm/rhwp_bg.wasm`으로 넣는다.
 - 렌더러 CSS의 크롬 색은 토큰만 쓴다(`npm run check:theme-colors`). shell의 강조색(`--accent` 계열)은 `src/renderer/src/home.css`에서 정의한다.
 - 패키징은 저장소 루트에서 한다: `npm run dist:win -- -- --publish never`. `--`가 두 번 필요하고, `--publish never`가 없으면 electron-builder가 업로드를 시도한다. xlsx 사이드카는 `target/x86_64-pc-windows-gnu/release/`에 있어야 하므로 Windows에서 MSVC로 빌드했다면 `target/release/xlsx-sidecar.exe`를 그리로 복사한다. OCR 도우미 컴파일에는 Windows SDK가 필요하다. Windows만 빌드·검증하며 Linux 패키징에는 원본의 이름이 남아 있다.

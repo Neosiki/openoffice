@@ -583,10 +583,12 @@ const tMain = createI18n({
     untitledDeck: '未命名演示文稿',
     untitledMarkdown: '未命名 Markdown',
     untitledHtml: '未命名 HTML',
+    untitledHwp: '未命名 HWP',
     untitledPdf: '未命名 PDF',
     menuNewSlide: 'AI Slides',
     menuNewMarkdown: 'AI Markdown',
     menuNewHtml: 'AI HTML',
+    menuNewHwp: 'AI HWP',
     menuNewPdf: 'AI PDF',
     menuExportPdf: '导出为 PDF…',
     menuExportImages: '导出为图片…',
@@ -678,10 +680,12 @@ const tMain = createI18n({
     untitledDeck: 'Untitled Presentation',
     untitledMarkdown: 'Untitled Markdown',
     untitledHtml: 'Untitled HTML',
+    untitledHwp: 'Untitled HWP',
     untitledPdf: 'Untitled PDF',
     menuNewSlide: 'AI Slides',
     menuNewMarkdown: 'AI Markdown',
     menuNewHtml: 'AI HTML',
+    menuNewHwp: 'AI HWP',
     menuNewPdf: 'AI PDF',
     menuExportPdf: 'Export as PDF…',
     menuExportImages: 'Export as Images…',
@@ -781,10 +785,12 @@ const tMain = createI18n({
     untitledDeck: 'Bản trình bày chưa có tiêu đề',
     untitledMarkdown: 'Markdown chưa có tiêu đề',
     untitledHtml: 'HTML chưa có tiêu đề',
+    untitledHwp: 'HWP chưa có tiêu đề',
     untitledPdf: 'PDF chưa có tiêu đề',
     menuNewSlide: 'AI Slides',
     menuNewMarkdown: 'AI Markdown',
     menuNewHtml: 'AI HTML',
+    menuNewHwp: 'AI HWP',
     menuNewPdf: 'AI PDF',
     menuExportPdf: 'Xuất dưới dạng PDF…',
     menuExportImages: 'Xuất dưới dạng hình ảnh…',
@@ -884,10 +890,12 @@ const tMain = createI18n({
     untitledDeck: '無題のプレゼンテーション',
     untitledMarkdown: '無題の Markdown',
     untitledHtml: '無題の HTML',
+    untitledHwp: '無題の HWP',
     untitledPdf: '無題の PDF',
     menuNewSlide: 'AI Slides',
     menuNewMarkdown: 'AI Markdown',
     menuNewHtml: 'AI HTML',
+    menuNewHwp: 'AI HWP',
     menuNewPdf: 'AI PDF',
     menuExportPdf: 'PDF として書き出す…',
     menuExportImages: '画像としてエクスポート…',
@@ -987,10 +995,12 @@ const tMain = createI18n({
     untitledDeck: '제목 없는 프레젠테이션',
     untitledMarkdown: '제목 없는 Markdown',
     untitledHtml: '제목 없는 HTML',
+    untitledHwp: '제목 없는 한글 문서',
     untitledPdf: '제목 없는 PDF',
     menuNewSlide: 'AI Slides',
     menuNewMarkdown: 'AI Markdown',
     menuNewHtml: 'AI HTML',
+    menuNewHwp: 'AI 한글',
     menuNewPdf: 'AI PDF',
     menuExportPdf: 'PDF로 내보내기…',
     menuExportImages: '이미지로 내보내기…',
@@ -1089,10 +1099,12 @@ const tMain = createI18n({
     untitledDeck: 'Présentation sans titre',
     untitledMarkdown: 'Markdown sans titre',
     untitledHtml: 'HTML sans titre',
+    untitledHwp: 'HWP sans titre',
     untitledPdf: 'PDF sans titre',
     menuNewSlide: 'AI Slides',
     menuNewMarkdown: 'AI Markdown',
     menuNewHtml: 'AI HTML',
+    menuNewHwp: 'AI HWP',
     menuNewPdf: 'AI PDF',
     menuExportPdf: 'Exporter en PDF…',
     menuExportImages: 'Exporter en images…',
@@ -1193,10 +1205,12 @@ const tMain = createI18n({
     untitledDeck: 'Unbenannte Präsentation',
     untitledMarkdown: 'Unbenanntes Markdown',
     untitledHtml: 'Unbenanntes HTML',
+    untitledHwp: 'Unbenanntes HWP',
     untitledPdf: 'Unbenanntes PDF',
     menuNewSlide: 'AI Slides',
     menuNewMarkdown: 'AI Markdown',
     menuNewHtml: 'AI HTML',
+    menuNewHwp: 'AI HWP',
     menuNewPdf: 'AI PDF',
     menuExportPdf: 'Als PDF exportieren…',
     menuExportImages: 'Als Bilder exportieren…',
@@ -1298,10 +1312,12 @@ const tMain = createI18n({
     untitledDeck: 'Presentación sin título',
     untitledMarkdown: 'Markdown sin título',
     untitledHtml: 'HTML sin título',
+    untitledHwp: 'HWP sin título',
     untitledPdf: 'PDF sin título',
     menuNewSlide: 'AI Slides',
     menuNewMarkdown: 'AI Markdown',
     menuNewHtml: 'AI HTML',
+    menuNewHwp: 'AI HWP',
     menuNewPdf: 'AI PDF',
     menuExportPdf: 'Exportar como PDF…',
     menuExportImages: 'Exportar como imágenes…',
@@ -1402,10 +1418,12 @@ const tMain = createI18n({
     untitledDeck: 'งานนำเสนอไม่มีชื่อ',
     untitledMarkdown: 'Markdown ไม่มีชื่อ',
     untitledHtml: 'HTML ไม่มีชื่อ',
+    untitledHwp: 'HWP ไม่มีชื่อ',
     untitledPdf: 'PDF ไม่มีชื่อ',
     menuNewSlide: 'AI Slides',
     menuNewMarkdown: 'AI Markdown',
     menuNewHtml: 'AI HTML',
+    menuNewHwp: 'AI HWP',
     menuNewPdf: 'AI PDF',
     menuExportPdf: 'ส่งออกเป็น PDF…',
     menuExportImages: 'ส่งออกเป็นรูปภาพ…',
@@ -1502,10 +1520,12 @@ const tMain = createI18n({
     untitledDeck: 'Presentasi tanpa judul',
     untitledMarkdown: 'Markdown tanpa judul',
     untitledHtml: 'HTML tanpa judul',
+    untitledHwp: 'HWP tanpa judul',
     untitledPdf: 'PDF tanpa judul',
     menuNewSlide: 'AI Slides',
     menuNewMarkdown: 'AI Markdown',
     menuNewHtml: 'AI HTML',
+    menuNewHwp: 'AI HWP',
     menuNewPdf: 'AI PDF',
     menuExportPdf: 'Ekspor sebagai PDF…',
     menuExportImages: 'Ekspor sebagai gambar…',
@@ -1606,10 +1626,12 @@ const tMain = createI18n({
     untitledDeck: 'Презентация без названия',
     untitledMarkdown: 'Markdown без названия',
     untitledHtml: 'HTML без названия',
+    untitledHwp: 'HWP без названия',
     untitledPdf: 'PDF без названия',
     menuNewSlide: 'AI Slides',
     menuNewMarkdown: 'AI Markdown',
     menuNewHtml: 'AI HTML',
+    menuNewHwp: 'AI HWP',
     menuNewPdf: 'AI PDF',
     menuExportPdf: 'Экспортировать в PDF…',
     menuExportImages: 'Экспорт в изображения…',
@@ -1710,10 +1732,12 @@ const tMain = createI18n({
     untitledDeck: 'عرض تقديمي بدون عنوان',
     untitledMarkdown: 'Markdown بدون عنوان',
     untitledHtml: 'HTML بدون عنوان',
+    untitledHwp: 'HWP بدون عنوان',
     untitledPdf: 'PDF بدون عنوان',
     menuNewSlide: 'AI Slides',
     menuNewMarkdown: 'AI Markdown',
     menuNewHtml: 'AI HTML',
+    menuNewHwp: 'AI HWP',
     menuNewPdf: 'AI PDF',
     menuExportPdf: 'تصدير بتنسيق PDF…',
     menuExportImages: 'تصدير كصور…',
@@ -1810,10 +1834,12 @@ const tMain = createI18n({
     untitledDeck: 'Apresentação sem título',
     untitledMarkdown: 'Markdown sem título',
     untitledHtml: 'HTML sem título',
+    untitledHwp: 'HWP sem título',
     untitledPdf: 'PDF sem título',
     menuNewSlide: 'AI Slides',
     menuNewMarkdown: 'AI Markdown',
     menuNewHtml: 'AI HTML',
+    menuNewHwp: 'AI HWP',
     menuNewPdf: 'AI PDF',
     menuExportPdf: 'Exportar como PDF…',
     menuExportImages: 'Exportar como imagens…',
@@ -1914,10 +1940,12 @@ const tMain = createI18n({
     untitledDeck: 'Presentazione senza titolo',
     untitledMarkdown: 'Markdown senza titolo',
     untitledHtml: 'HTML senza titolo',
+    untitledHwp: 'HWP senza titolo',
     untitledPdf: 'PDF senza titolo',
     menuNewSlide: 'AI Slides',
     menuNewMarkdown: 'AI Markdown',
     menuNewHtml: 'AI HTML',
+    menuNewHwp: 'AI HWP',
     menuNewPdf: 'AI PDF',
     menuExportPdf: 'Esporta come PDF…',
     menuExportImages: 'Esporta come immagini…',
@@ -2018,10 +2046,12 @@ const tMain = createI18n({
     untitledDeck: 'Prezentacja bez tytułu',
     untitledMarkdown: 'Markdown bez tytułu',
     untitledHtml: 'HTML bez tytułu',
+    untitledHwp: 'HWP bez tytułu',
     untitledPdf: 'PDF bez tytułu',
     menuNewSlide: 'AI Slides',
     menuNewMarkdown: 'AI Markdown',
     menuNewHtml: 'AI HTML',
+    menuNewHwp: 'AI HWP',
     menuNewPdf: 'AI PDF',
     menuExportPdf: 'Eksportuj jako PDF…',
     menuExportImages: 'Eksportuj jako obrazy…',
@@ -2122,10 +2152,12 @@ const tMain = createI18n({
     untitledDeck: 'Prezentace bez názvu',
     untitledMarkdown: 'Markdown bez názvu',
     untitledHtml: 'HTML bez názvu',
+    untitledHwp: 'HWP bez názvu',
     untitledPdf: 'PDF bez názvu',
     menuNewSlide: 'AI Slides',
     menuNewMarkdown: 'AI Markdown',
     menuNewHtml: 'AI HTML',
+    menuNewHwp: 'AI HWP',
     menuNewPdf: 'AI PDF',
     menuExportPdf: 'Exportovat jako PDF…',
     menuExportImages: 'Exportovat jako obrázky…',
@@ -2224,10 +2256,12 @@ const tMain = createI18n({
     untitledDeck: 'Naamloze presentatie',
     untitledMarkdown: 'Naamloos Markdown',
     untitledHtml: 'Naamloos HTML',
+    untitledHwp: 'Naamloos HWP',
     untitledPdf: 'Naamloze PDF',
     menuNewSlide: 'AI Slides',
     menuNewMarkdown: 'AI Markdown',
     menuNewHtml: 'AI HTML',
+    menuNewHwp: 'AI HWP',
     menuNewPdf: 'AI PDF',
     menuExportPdf: 'Exporteren als PDF…',
     menuExportImages: 'Exporteren als afbeeldingen…',
@@ -2328,10 +2362,12 @@ const tMain = createI18n({
     untitledDeck: 'Persembahan tanpa tajuk',
     untitledMarkdown: 'Markdown tanpa tajuk',
     untitledHtml: 'HTML tanpa tajuk',
+    untitledHwp: 'HWP tanpa tajuk',
     untitledPdf: 'PDF tanpa tajuk',
     menuNewSlide: 'AI Slides',
     menuNewMarkdown: 'AI Markdown',
     menuNewHtml: 'AI HTML',
+    menuNewHwp: 'AI HWP',
     menuNewPdf: 'AI PDF',
     menuExportPdf: 'Eksport sebagai PDF…',
     menuExportImages: 'Eksport sebagai imej…',
@@ -2431,10 +2467,12 @@ const tMain = createI18n({
     untitledDeck: 'מצגת ללא שם',
     untitledMarkdown: 'Markdown ללא שם',
     untitledHtml: 'HTML ללא שם',
+    untitledHwp: 'HWP ללא שם',
     untitledPdf: 'PDF ללא שם',
     menuNewSlide: 'AI Slides',
     menuNewMarkdown: 'AI Markdown',
     menuNewHtml: 'AI HTML',
+    menuNewHwp: 'AI HWP',
     menuNewPdf: 'AI PDF',
     menuExportPdf: 'ייצוא כ-PDF…',
     menuExportImages: 'ייצוא כתמונות…',
@@ -2532,10 +2570,12 @@ const tMain = createI18n({
     untitledDeck: 'बिना शीर्षक प्रस्तुति',
     untitledMarkdown: 'अनाम Markdown',
     untitledHtml: 'अनाम HTML',
+    untitledHwp: 'अनाम HWP',
     untitledPdf: 'अनाम PDF',
     menuNewSlide: 'AI Slides',
     menuNewMarkdown: 'AI Markdown',
     menuNewHtml: 'AI HTML',
+    menuNewHwp: 'AI HWP',
     menuNewPdf: 'AI PDF',
     menuExportPdf: 'PDF के रूप में निर्यात…',
     menuExportImages: 'छवियों के रूप में निर्यात…',
@@ -2636,10 +2676,12 @@ const tMain = createI18n({
     untitledDeck: '未命名簡報',
     untitledMarkdown: '未命名 Markdown',
     untitledHtml: '未命名 HTML',
+    untitledHwp: '未命名 HWP',
     untitledPdf: '未命名 PDF',
     menuNewSlide: 'AI Slides',
     menuNewMarkdown: 'AI Markdown',
     menuNewHtml: 'AI HTML',
+    menuNewHwp: 'AI HWP',
     menuNewPdf: 'AI PDF',
     menuExportPdf: '匯出為 PDF…',
     menuExportImages: '匯出為圖片…',
@@ -3080,7 +3122,9 @@ function createShellWindow(): void {
               ? tm('untitledMarkdown')
               : kind === 'html'
                 ? tm('untitledHtml')
-                : tm('untitledSheet'),
+                : kind === 'hwp'
+                  ? tm('untitledHwp')
+                  : tm('untitledSheet'),
   )
   tabManager = manager
 
@@ -3209,6 +3253,7 @@ function createShellWindow(): void {
     manager.setTabFileFor(wc.id, path)
     detachedSetFileFor(wc.id, path)
     recordRecentFile(path)
+    applyPendingDir(wc.id, path)
   })
   setHtmlProvisionalTitleHook((wc, title) => {
     manager.setTabTitleFor(wc.id, title)
@@ -3614,6 +3659,14 @@ function newHtmlTab(): void {
   }
 }
 
+function newHwpTab(): void {
+  try {
+    bindPendingDir('hwp', tabManager?.openHwpTab())
+  } catch (err) {
+    surfaceNewTabError(err)
+  }
+}
+
 /**
  * "New PDF" creates a blank single-page .pdf in the default folder up front and
  * opens it as a regular file tab — the PDF module has no in-memory blank mode
@@ -3864,6 +3917,11 @@ function registerHomeIpc(): void {
   ipcMain.handle(HOME_CHANNELS.newHtml, (_event, opts?: NewFileOpts) => {
     rememberPendingDir('html', opts)
     newHtmlTab()
+  })
+
+  ipcMain.handle(HOME_CHANNELS.newHwp, (_event, opts?: NewFileOpts) => {
+    rememberPendingDir('hwp', opts)
+    newHwpTab()
   })
 
   ipcMain.handle(HOME_CHANNELS.newPdf, (_event, opts?: NewFileOpts) => {
@@ -4601,6 +4659,11 @@ function registerTabsIpc(): void {
         click: () => newHtmlTab(),
       },
       {
+        label: tm('menuNewHwp'),
+        icon: menuIcons().hwp,
+        click: () => newHwpTab(),
+      },
+      {
         label: tm('menuNewPdf'),
         icon: menuIcons().pdf,
         click: () => void newPdfTab(),
@@ -4649,6 +4712,7 @@ function buildHomeMenu(): void {
         { label: tm('menuNewSlide'), click: () => newSlideTab() },
         { label: tm('menuNewMarkdown'), click: () => newMarkdownTab() },
         { label: tm('menuNewHtml'), click: () => newHtmlTab() },
+        { label: tm('menuNewHwp'), click: () => newHwpTab() },
         { label: tm('menuNewPdf'), click: () => void newPdfTab() },
         { type: 'separator' },
         {

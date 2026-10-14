@@ -2,7 +2,6 @@ import type { zh } from './zh'
 
 export const he = {
   loading: 'פותח את המסמך…',
-  noDocument: 'אין מסמך פתוח בלשונית הזו.',
   editorFailed: 'לא ניתן היה להפעיל את העורך.',
   openFailed: 'לא ניתן היה לפתוח את המסמך.',
   saveFailed: 'לא ניתן היה לשמור את המסמך.',

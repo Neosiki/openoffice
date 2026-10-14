@@ -2,7 +2,6 @@ import type { zh } from './zh'
 
 export const vi = {
   loading: 'Đang mở tài liệu…',
-  noDocument: 'Không có tài liệu nào đang mở trong thẻ này.',
   editorFailed: 'Không thể khởi động trình soạn thảo.',
   openFailed: 'Không thể mở tài liệu.',
   saveFailed: 'Không thể lưu tài liệu.',

@@ -2,7 +2,6 @@ import type { zh } from './zh'
 
 export const hi = {
   loading: 'दस्तावेज़ खोला जा रहा है…',
-  noDocument: 'इस टैब में कोई दस्तावेज़ खुला नहीं है।',
   editorFailed: 'संपादक शुरू नहीं हो सका।',
   openFailed: 'दस्तावेज़ खोला नहीं जा सका।',
   saveFailed: 'दस्तावेज़ सहेजा नहीं जा सका।',

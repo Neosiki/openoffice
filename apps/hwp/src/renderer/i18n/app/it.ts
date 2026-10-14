@@ -2,7 +2,6 @@ import type { zh } from './zh'
 
 export const it = {
   loading: 'Apertura del documento…',
-  noDocument: 'Nessun documento aperto in questa scheda.',
   editorFailed: 'Impossibile avviare l’editor.',
   openFailed: 'Impossibile aprire il documento.',
   saveFailed: 'Impossibile salvare il documento.',

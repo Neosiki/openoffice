@@ -2,7 +2,6 @@ import type { zh } from './zh'
 
 export const en = {
   loading: 'Opening document…',
-  noDocument: 'No document is open in this tab.',
   editorFailed: 'The editor could not start.',
   openFailed: 'The document could not be opened.',
   saveFailed: 'The document could not be saved.',

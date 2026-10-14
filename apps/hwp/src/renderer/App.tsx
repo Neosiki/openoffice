@@ -10,6 +10,7 @@ import {
 } from '@genoffice/ui'
 import { AiPanel } from './ai/AiPanel'
 import { createAgentBridge } from './ai/agent-bridge'
+import blankHwpUrl from './assets/blank.hwp?url'
 import { useI18n, type StringKey } from './i18n/locale'
 import { runSave, type SaveEditorPort } from './save-flow'
 import { PASSWORD_FLAG } from '../../scripts/rhwp-patches.mjs'
@@ -20,9 +21,9 @@ import type { HwpFormat, SaveMode, UiTheme } from '../shared/ipc'
 /**
  * booting: the editor itself is starting. loading: the editor is up and working
  * on the document; it stays visible, because this is where it may ask for a
- * document password. empty: editor up, no file queued for this view.
+ * document password.
  */
-type Phase = 'booting' | 'loading' | 'ready' | 'empty' | 'failed'
+type Phase = 'booting' | 'loading' | 'ready' | 'failed'
 
 interface Notice {
   tone: 'info' | 'error'
@@ -44,6 +45,8 @@ const INFO_NOTICE_MS = 8000
 const AI_OPEN_KEY = 'hwpapp.showAi'
 
 const fileNameOf = (path: string) => path.split(/[\\/]/).pop() ?? path
+/** the name the editor holds a new document under; the user names the file at its first save */
+const BLANK_NAME = 'blank.hwp'
 const detailOf = (error: unknown) => (error instanceof Error ? error.message : String(error))
 /**
  * The bridge gives up on a load after a minute, but the editor may still be
@@ -112,13 +115,17 @@ export default function App() {
           return
         }
         editorRef.current = editor
+        setPhase('loading')
         if (!path) {
-          setPhase('empty')
+          // a new document: the blank one bundled with the app, which has no file until
+          // its first save (Save As)
+          const blank = new Uint8Array(await (await fetch(blankHwpUrl)).arrayBuffer())
+          await editor.loadFile(blank, BLANK_NAME, { skipUnsavedGuard: true })
+          if (!disposed) setPhase('ready')
           return
         }
         formatRef.current = hwpFormatOfPath(path) ?? 'hwp'
         setFilePath(path)
-        setPhase('loading')
         const bytes = await window.hwpApi.readFile(path)
         await editor.loadFile(bytes, fileNameOf(path), { skipUnsavedGuard: true })
         if (disposed) return
@@ -337,7 +344,6 @@ export default function App() {
         <div className="hwp-stage">
           <div ref={hostRef} className="hwp-editor-host" />
           {phase === 'booting' && <div className="hwp-cover">{t('loading')}</div>}
-          {phase === 'empty' && <div className="hwp-cover">{t('noDocument')}</div>}
           {notice && (
             <div
               className={`hwp-notice hwp-notice-${notice.tone}`}

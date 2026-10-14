@@ -2,7 +2,6 @@ import type { zh } from './zh'
 
 export const ja = {
   loading: '文書を開いています…',
-  noDocument: 'このタブで開いている文書はありません。',
   editorFailed: 'エディターを起動できませんでした。',
   openFailed: '文書を開けませんでした。',
   saveFailed: '文書を保存できませんでした。',

@@ -4,6 +4,7 @@ import { basename, dirname, join } from 'node:path'
 import { BrowserWindow, WebContentsView, app, dialog, ipcMain, shell } from 'electron'
 import type { WebContents } from 'electron'
 import {
+  configuredDefaultSaveDir,
   contextMenuLabels,
   installContextMenu,
   installNavigationGuard,
@@ -233,9 +234,10 @@ function settleSave(wcId: number, ok: boolean): void {
 let ipcRegistered = false
 
 function registerHwpIpc(): void {
-  registerHwpAttachmentIpc()
+  // every view calls this; the channels are registered once, by the first
   if (ipcRegistered) return
   ipcRegistered = true
+  registerHwpAttachmentIpc()
 
   ipcMain.handle(HWP_CHANNELS.consumePending, (e) => openPathByWc.get(e.sender.id) ?? null)
 
@@ -291,7 +293,11 @@ function registerHwpIpc(): void {
         const fallback: HwpFormat = currentFormat ?? 'hwp'
         const picked = await showSaveDialogWithMemory(dialog, win, {
           title: tm('dlgSaveTitle'),
-          ...(current ? { defaultPath: join(dirname(current), basename(current)) } : {}),
+          // a new document has no file yet: it is offered under the untitled name in the
+          // default save folder, where the shell moves it into the folder it was made from
+          defaultPath: current
+            ? join(dirname(current), basename(current))
+            : join(configuredDefaultSaveDir(app), `${tm('untitledFile')}.hwp`),
           // the document's own format first, so it is the dialog's default type
           filters: [
             {

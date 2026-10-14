@@ -2,7 +2,6 @@ import type { zh } from './zh'
 
 export const ar = {
   loading: 'جارٍ فتح المستند…',
-  noDocument: 'لا يوجد مستند مفتوح في هذه التبويبة.',
   editorFailed: 'تعذّر بدء المحرر.',
   openFailed: 'تعذّر فتح المستند.',
   saveFailed: 'تعذّر حفظ المستند.',

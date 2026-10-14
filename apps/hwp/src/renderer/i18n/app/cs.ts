@@ -2,7 +2,6 @@ import type { zh } from './zh'
 
 export const cs = {
   loading: 'Otevírání dokumentu…',
-  noDocument: 'Na této kartě není otevřen žádný dokument.',
   editorFailed: 'Editor se nepodařilo spustit.',
   openFailed: 'Dokument se nepodařilo otevřít.',
   saveFailed: 'Dokument se nepodařilo uložit.',

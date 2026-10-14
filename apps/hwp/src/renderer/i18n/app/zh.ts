@@ -1,7 +1,6 @@
 /** app strings, zh: defines the key set every other locale shard must match. */
 export const zh = {
   loading: '正在打开文档…',
-  noDocument: '此标签页没有打开的文档。',
   editorFailed: '编辑器无法启动。',
   openFailed: '无法打开文档。',
   saveFailed: '无法保存文档。',

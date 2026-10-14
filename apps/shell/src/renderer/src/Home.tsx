@@ -1780,6 +1780,12 @@ export function Home({
       action: () => window.aiOffice.newHtml(newFileOpts),
     },
     {
+      ext: 'hwp',
+      title: t('newHwp'),
+      sub: '.hwp',
+      action: () => window.aiOffice.newHwp(newFileOpts),
+    },
+    {
       ext: 'pdf',
       title: t('newPdf'),
       sub: '.pdf',

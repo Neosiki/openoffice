@@ -2,7 +2,6 @@ import type { zh } from './zh'
 
 export const ms = {
   loading: 'Membuka dokumen…',
-  noDocument: 'Tiada dokumen dibuka dalam tab ini.',
   editorFailed: 'Editor tidak dapat dimulakan.',
   openFailed: 'Dokumen tidak dapat dibuka.',
   saveFailed: 'Dokumen tidak dapat disimpan.',
