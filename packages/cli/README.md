@@ -22,6 +22,8 @@ ieumoffice guide slides                         # op groups; `ieumoffice guide s
 ieumoffice slides read deck.pptx [--full] --json # durable ids + geometry an agent targets ops at; --full: whole text, tables, notes; text elements add `effective` (displayed style of the first run + `src` = the inheritance layer each value comes from)
 ieumoffice slides read deck.pptx --units in --json # box and size in inches (or cm, pt, px at 96 dpi) with `unit` named; default emu
 ieumoffice create --type pptx --ops deck.json --out deck.pptx
+ieumoffice guide slides templates               # built-in design templates, one line each (id, name, scheme, description, fonts); --json: detail.templates
+ieumoffice guide slides templates coral > deck/style.md   # one template's style sheet, saved as the deck's style.md as is
 ieumoffice create --type pptx --spec deck/pages --outline deck/outline.json --out deck.pptx   # one page spec file per slide (`ieumoffice guide slides design|spec`)
 ieumoffice create --type pptx --spec deck.json --out deck.pptx --render deck/previews --audit   # plus one PNG per slide (detail.previews) and the geometry audit (detail.audit) in the same call
 ieumoffice slides check deck/outline.json | deck/pages/03.json   # outline rules (exit 1 on errors) / build + audit one page file
@@ -157,7 +159,9 @@ client sees the fields without reading the guide; `ieumoffice mcp
 --compact-schemas` (or `GENOFFICE_MCP_COMPACT_SCHEMAS=1`) advertises them as
 plain arrays for clients with a small context budget. The op references are
 also resources (`ieumoffice://guide/docs`, `…/sheets`, `…/slides`,
-`…/slides/design`, `…/slides/spec`).
+`…/slides/design`, `…/slides/spec`, `…/slides/templates` and one
+`…/slides/templates/<id>` per built-in template); the `guide` tool takes the
+template id as a third positional, `guide("slides", "templates", "<id>")`.
 
 A new deck goes through `deck_start` (style sheet + outline, returns the
 design and spec guides), `deck_page` (one page per call, checked against its

@@ -32,6 +32,8 @@ Decide the design system before any content and write it to `deck/style.md`; re-
   - closing: `closing_cta`, `closing_thank_you`
 - **Overall style**: one sentence describing the design language.
 
+A built-in template is a style sheet already written in this shape: `ieumoffice guide slides templates` lists them, and `ieumoffice guide slides templates <id>` prints one that you can save as `deck/style.md` as is (its fonts ship with IeumOffice). When you use a template's style sheet, the devices it prescribes (a bar on cards, rules beside titles, a fixed frame on every page) take precedence over the anti-patterns in section 4; the rest of this guide still applies.
+
 ## 2. Outline, page by page
 
 Write `deck/outline.json`:
