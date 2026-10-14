@@ -30,6 +30,7 @@ import { INTERCEPTOR_POINT, SheetInterceptorService } from '@univerjs/sheets'
 
 import { getWorkbookMdw } from './app-constants'
 import { isSubstitutedCellFamily } from './cell-font-fallback'
+import { isTemplateFontFamily } from './template-fonts'
 import type { UniverRuntime } from './univer-state'
 
 /// Horizontal room a cell's text never gets: Univer's 2+2px cell padding
@@ -550,6 +551,9 @@ const fontAvailabilityCache = new Map<string, boolean>()
 /// across Chromium versions: a family that renders must differ from at
 /// least one generic; a missing one falls back and matches both.
 export function fontAvailable(family: string): boolean {
+  // a bundled face draws once it loads, and loads on first use: measuring it
+  // now would see the fallback (and cache that answer)
+  if (isTemplateFontFamily(family)) return true
   let known = fontAvailabilityCache.get(family)
   if (known === undefined) {
     known = false

@@ -1,21 +1,25 @@
-/// The bundled template fonts on the main side: the file bytes the renderer turns
-/// into canvas FontFaces, and the @font-face rules the hidden PDF export / print
-/// window needs (it loads the print HTML from a temp file with scripting off, so
-/// it only sees fonts the page itself declares). Both read the one installed folder
-/// (templateFontsDir); nothing is copied, downloaded or installed into the OS.
+/// The bundled template fonts on the main side: the answer to a renderer's
+/// template-font URL (one listed file, read when a face is first used), and the
+/// @font-face rules the hidden PDF export / print window needs (it loads the print
+/// HTML from a temp file with scripting off, so it only sees fonts the page itself
+/// declares). Both read the one installed folder (templateFontsDir); nothing is
+/// copied, downloaded or installed into the OS.
 
 import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 
-import { app } from 'electron'
+import { app, protocol } from 'electron'
 
 import { templateFontsDir } from '@genoffice/electron-utils/template-fonts-dir'
 
 import {
   TEMPLATE_FONT_FACE_REGISTRATIONS,
-  TEMPLATE_FONT_FILES,
+  TEMPLATE_FONT_SCHEME,
+  templateFontFileOf,
 } from '../shared/template-font-faces'
+
+const FONT_MIME: Readonly<Record<string, string>> = { ttf: 'font/ttf', otf: 'font/otf' }
 
 /// The installed folder (resources/template-fonts), or the checkout's in a dev run.
 /// The app path is the shell's when this code runs inside the shell and the sheets
@@ -28,10 +32,41 @@ export function sheetsTemplateFontsDir(): string {
   })
 }
 
-/** One bundled font file's bytes; any name outside the bundled list is refused. */
-export async function readTemplateFontFile(dir: string, file: string): Promise<Buffer> {
-  if (!TEMPLATE_FONT_FILES.includes(file)) throw new Error('Unknown template font file.')
-  return readFile(join(dir, file))
+/// The answer to a template-font URL: the listed file read from `dir`, or 404 when
+/// the folder lacks it (the cell's chain then falls back like for any missing font).
+/// Null for every other URL. Only listed names reach the disk, so no path escapes.
+export async function templateFontResponse(
+  url: string,
+  dir: string,
+  read: (path: string) => Promise<Uint8Array> = readFile,
+): Promise<Response | null> {
+  const file = templateFontFileOf(url)
+  if (!file) return null
+  let bytes: Uint8Array
+  try {
+    bytes = await read(join(dir, file))
+  } catch {
+    return new Response(null, { status: 404 })
+  }
+  return new Response(new Uint8Array(bytes), {
+    headers: {
+      'Content-Type': FONT_MIME[file.split('.').pop()?.toLowerCase() ?? ''] ?? 'font/sfnt',
+      'Content-Length': String(bytes.byteLength),
+      // fonts load in CORS mode; the renderer's origin is another scheme (or a dev server)
+      'Access-Control-Allow-Origin': '*',
+    },
+  })
+}
+
+/// A standalone sheets app answers the template-font URLs itself (after app ready;
+/// registerRendererScheme already made the scheme privileged). Inside the shell the
+/// Word editor's main owns this scheme and serves the same files on the same URLs,
+/// so the shell must not call this.
+export function installStandaloneTemplateFontProtocol(): void {
+  const dir = sheetsTemplateFontsDir()
+  protocol.handle(TEMPLATE_FONT_SCHEME, async (request) => {
+    return (await templateFontResponse(request.url, dir)) ?? new Response(null, { status: 404 })
+  })
 }
 
 /// The rules name the files by file URL: the export window loads its page from a
