@@ -5,6 +5,8 @@ export type InspectorMode = 'inspect' | 'browse'
 
 export type ToInspector =
   | { type: 'gx:select'; sid: number | null }
+  /** the rest of a multiple selection, after gx:select named its first element (a reload forgets it) */
+  | { type: 'gx:selectExtra'; sids: number[] }
   | { type: 'gx:highlight'; sids: number[] }
   | { type: 'gx:clearHighlight' }
   | { type: 'gx:setMode'; mode: InspectorMode }
@@ -103,6 +105,8 @@ export type FromInspectorBody =
       inlineEditable: boolean
     }
   | { type: 'gx:select'; element: ElementFingerprint | null; dynamic: boolean }
+  /** shift / ctrl+click changed what is selected alongside the gx:select element; read with readExtraSids */
+  | { type: 'gx:multiSelect'; sids: unknown }
   | {
       type: 'gx:textSelect'
       sid: number
@@ -158,6 +162,7 @@ const KNOWN_FROM_INSPECTOR = new Set([
   'gx:hover',
   'gx:rect',
   'gx:select',
+  'gx:multiSelect',
   'gx:textSelect',
   'gx:textEditCommit',
   'gx:htmlEditCommit',
@@ -186,6 +191,20 @@ export function isFromInspector(data: unknown): data is FromInspector {
     typeof version === 'number' &&
     Number.isFinite(version)
   )
+}
+
+/** more than this many elements at once is not a selection anyone made by clicking */
+const MAX_EXTRA_SIDS = 200
+
+/** The sids of a gx:multiSelect, in click order and without repeats; anything else in the list is dropped. */
+export function readExtraSids(sids: unknown): number[] {
+  if (!Array.isArray(sids)) return []
+  const seen = new Set<number>()
+  for (const sid of sids) {
+    if (typeof sid === 'number' && Number.isInteger(sid) && sid >= 0) seen.add(sid)
+    if (seen.size >= MAX_EXTRA_SIDS) break
+  }
+  return [...seen]
 }
 
 /** what the host draws around the frame in the paper view */

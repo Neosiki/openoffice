@@ -9,6 +9,7 @@ import { PRODUCT_NAME } from '@genoffice/i18n'
 import type {
   AiChatResponse,
   AiProviderConfig,
+  AiSubscriptionModel,
   AiSubscriptionUsage,
   AiUsageWindow,
   CodexModelCatalog,
@@ -20,7 +21,10 @@ import {
   type StreamCallbacks,
 } from './protocols/shared'
 import { AiRunError } from './run-error'
+import { subscriptionModelsOf } from './subscription/contract'
+import { onSubscriptionLoginChange } from './subscription/launch'
 import { resolveSubscriptionProgram, type SubscriptionProgram } from './subscription/locate'
+import { setSubscriptionModelSource } from './subscription/models'
 import {
   killProcessTree,
   spawnSubscriptionProgram,
@@ -71,6 +75,7 @@ interface NativeSession {
 interface ModelEntry {
   id?: unknown
   model?: unknown
+  displayName?: unknown
   hidden?: unknown
   isDefault?: unknown
 }
@@ -350,6 +355,15 @@ class CodexAppServerClient {
     this.stopWhenReleased = true
   }
 
+  /**
+   * The process is out of date (it holds a login that was since changed): it ends now when no
+   * run is using it, otherwise as soon as the last of them is done.
+   */
+  endOnceUnused(): void {
+    this.stopWhenReleased = true
+    if (this.users === 0) this.close()
+  }
+
   async ready(): Promise<void> {
     await this.initialized
   }
@@ -526,6 +540,22 @@ export function shutdownCodexAppServers(): void {
   for (const client of [...clients.values()]) client.stop()
   clients.clear()
 }
+
+/**
+ * The app ran Codex's own login or logout. A running app-server may go on with the login it
+ * started with, so none of them serves another request: each is ended at once when idle, and
+ * after the runs it is serving otherwise. The next request starts a process on the new login.
+ */
+function retireCodexAppServers(): void {
+  for (const [key, client] of [...clients]) {
+    clients.delete(key)
+    client.endOnceUnused()
+  }
+}
+
+onSubscriptionLoginChange((provider) => {
+  if (provider === 'codex') retireCodexAppServers()
+})
 
 async function clientFor(cliPathValue: string | undefined): Promise<CodexAppServerClient> {
   const program = await runtime.resolve('codex', { configuredPath: cliPathValue })
@@ -1313,9 +1343,18 @@ export async function listCodexModels(cliPath?: string): Promise<CodexModelCatal
   })
 }
 
-async function readModelCatalog(client: CodexAppServerClient): Promise<CodexModelCatalog> {
-  const models: string[] = []
-  let defaultModel = ''
+/** The id a `model/list` entry is selected by */
+function modelEntryId(entry: ModelEntry): string {
+  return typeof entry.id === 'string'
+    ? entry.id
+    : typeof entry.model === 'string'
+      ? entry.model
+      : ''
+}
+
+/** Every entry of `model/list` that is not hidden, page by page, as Codex gives it */
+async function readModelEntries(client: CodexAppServerClient): Promise<ModelEntry[]> {
+  const entries: ModelEntry[] = []
   let cursor: string | null = null
   for (let page = 0; page < MAX_MODEL_PAGES; page++) {
     const result = objectValue(
@@ -1325,18 +1364,91 @@ async function readModelCatalog(client: CodexAppServerClient): Promise<CodexMode
     for (const value of data) {
       const entry = objectValue(value) as ModelEntry | undefined
       if (!entry || entry.hidden === true) continue
-      const id =
-        typeof entry.id === 'string' ? entry.id : typeof entry.model === 'string' ? entry.model : ''
-      if (!id || models.includes(id)) continue
-      models.push(id)
-      if (entry.isDefault === true) defaultModel = id
+      entries.push(entry)
     }
     cursor = typeof result?.nextCursor === 'string' ? result.nextCursor : null
     if (!cursor) break
   }
+  return entries
+}
+
+async function readModelCatalog(client: CodexAppServerClient): Promise<CodexModelCatalog> {
+  const models: string[] = []
+  let defaultModel = ''
+  for (const entry of await readModelEntries(client)) {
+    const id = modelEntryId(entry)
+    if (!id || models.includes(id)) continue
+    models.push(id)
+    if (entry.isDefault === true) defaultModel = id
+  }
   if (!defaultModel) defaultModel = models[0] ?? ''
   return { models, defaultModel }
 }
+
+/**
+ * The entries of `model/list` as the connection status lists them: the id a
+ * selection stores, Codex's display name, the model behind the id when that is
+ * another name, and which one an empty selection runs on. That is the entry
+ * Codex flags as its default, or the first one when it flags none: the same
+ * choice `defaultModelFor` makes for a run.
+ */
+export function codexSubscriptionModels(entries: unknown): AiSubscriptionModel[] {
+  if (!Array.isArray(entries)) return []
+  const listed = entries.flatMap((value) => {
+    const entry = objectValue(value) as ModelEntry | undefined
+    if (!entry || entry.hidden === true) return []
+    const id = modelEntryId(entry)
+    return id
+      ? [
+          {
+            id,
+            label: typeof entry.displayName === 'string' ? entry.displayName : '',
+            ...(typeof entry.model === 'string' && entry.model !== id
+              ? { resolved: entry.model }
+              : {}),
+            ...(entry.isDefault === true ? { isDefault: true } : {}),
+          },
+        ]
+      : []
+  })
+  // ids Codex could not be given back, and names out of bounds, end here
+  const models = subscriptionModelsOf(listed) ?? []
+  const flagged = models.filter((model) => model.isDefault)
+  const fallback = flagged.at(-1) ?? models[0]
+  return models.map((model) => ({
+    id: model.id,
+    label: model.label,
+    ...(model.resolved ? { resolved: model.resolved } : {}),
+    ...(model === fallback ? { isDefault: true } : {}),
+  }))
+}
+
+/**
+ * The models Codex offers, read from the app-server's `model/list`: no thread
+ * is opened and no turn is run, so nothing is asked of a model. It is what the
+ * subscription status check asks for.
+ */
+export async function listCodexSubscriptionModels(
+  cliPath?: string,
+  signal?: AbortSignal,
+): Promise<AiSubscriptionModel[]> {
+  if (signal?.aborted) throw abortError()
+  const reading = withClient(
+    cliPath,
+    async (client) => codexSubscriptionModels(await readModelEntries(client)),
+    signal,
+  )
+  if (!signal) return reading
+  return new Promise((resolve, reject) => {
+    const onAbort = (): void => reject(abortError())
+    signal.addEventListener('abort', onAbort, { once: true })
+    reading.then(resolve, reject).finally(() => signal.removeEventListener('abort', onAbort))
+  })
+}
+
+setSubscriptionModelSource('codex', ({ configuredPath, signal }) =>
+  listCodexSubscriptionModels(configuredPath, signal),
+)
 
 /**
  * How `rpcError` words a request Codex does not know: "method not found", or

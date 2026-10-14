@@ -58,6 +58,7 @@ export const th = {
   elementMoveUp: 'ย้ายขึ้น',
   elementMoveDown: 'ย้ายลง',
   elementToolbar: 'แถบเครื่องมือองค์ประกอบ',
+  multiSelected: 'เลือกอยู่ {n} รายการ',
   elementPath: 'เส้นทางองค์ประกอบ',
   fmtBold: 'ตัวหนา',
   fmtItalic: 'ตัวเอียง',

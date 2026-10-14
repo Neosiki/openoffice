@@ -35,6 +35,7 @@ import { instrumentForPreview } from './preview/instrument'
 import { probePages } from './preview/page-probe'
 import { PageRail, usePageThumbs } from './preview/PageRail'
 import {
+  readExtraSids,
   readPaperReport,
   type ComputedSnapshot,
   type ElementRect,
@@ -177,6 +178,15 @@ export default function App() {
   const [askMode, setAskMode] = useState<AskMode | null>(null)
   const [selectedSid, setSelectedSid] = useState<number | null>(null)
   const [selectedState, setSelectedState] = useState<NodeState>('static')
+  /** elements selected alongside selectedSid (shift / ctrl+click, rubber band): delete,
+   * duplicate, style edits and AI requests reach the whole selection */
+  const [extraSids, setExtraSids] = useState<number[]>([])
+  const extraSidsRef = useRef<number[]>([])
+  const setExtras = useCallback((sids: number[]) => {
+    // the ref moves with the call: a flush right after must not write to the old selection
+    extraSidsRef.current = sids
+    setExtraSids(sids)
+  }, [])
   const [textSel, setTextSel] = useState<TextSel | null>(null)
   const wrapSelectionRef = useRef<(tag: string) => void>(() => {})
   const moveSelectedRef = useRef<(dir: -1 | 1) => void>(() => {})
@@ -686,7 +696,8 @@ export default function App() {
       sid: number | null,
       opts: { reveal?: boolean; toPreview?: boolean; state?: NodeState } = {},
     ) => {
-      if (sid !== selectedSidRef.current) flushPending()
+      if (sid !== selectedSidRef.current || extraSidsRef.current.length) flushPending()
+      if (extraSidsRef.current.length) setExtras([])
       setSelectedSid(sid)
       setSelectedState(opts.state ?? 'static')
       setTextSel(null)
@@ -700,9 +711,18 @@ export default function App() {
         if (e) editorRef.current?.revealRange(e.range[0], e.range[1], false)
       }
     },
-    [getMap, flushPending],
+    [getMap, flushPending, setExtras],
   )
   selectSidRef.current = selectSid
+
+  /** the whole selection, first-selected first; extras the source no longer has are left out */
+  const selectionSids = useCallback((): number[] => {
+    const primary = selectedSidRef.current
+    if (primary === null) return []
+    const map = getMap()
+    const extras = extraSidsRef.current.filter((sid) => sid !== primary && map.bySid.has(sid))
+    return [primary, ...extras]
+  }, [getMap])
 
   /** numbered pins for queued edits; stale items (element gone) get no pin */
   const postMarks = useCallback(() => {
@@ -739,6 +759,8 @@ export default function App() {
             previewRef.current?.post({ type: 'gx:scrollTo', y: frameScrollRef.current })
           const sid = selectedSidRef.current
           if (sid !== null) previewRef.current?.post({ type: 'gx:select', sid })
+          if (sid !== null && extraSidsRef.current.length)
+            previewRef.current?.post({ type: 'gx:selectExtra', sids: extraSidsRef.current })
           if (editAfterLoadRef.current !== null && editAfterLoadRef.current === sid)
             previewRef.current?.post({ type: 'gx:beginTextEdit', sid })
           editAfterLoadRef.current = null
@@ -761,6 +783,7 @@ export default function App() {
           if (!msg.element || msg.dynamic || msg.element.sid === null) {
             if (msg.element) {
               flushPending()
+              setExtras([])
               setSelectedSid(null)
               setSelectedState('dynamic')
               setNotice(t('nodeDynamic'))
@@ -833,6 +856,17 @@ export default function App() {
             setPaperPage(pageAtScroll(msg.y, viewHeight, period, paperPagesRef.current))
           }
           return
+        case 'gx:multiSelect': {
+          const map = getMap()
+          const sids = readExtraSids(msg.sids).filter((sid) => {
+            const e = map.bySid.get(sid)
+            return !!e && !STRUCTURAL.has(e.tag)
+          })
+          // style pokes still waiting were made on the selection as it was
+          flushPending()
+          setExtras(sids)
+          return
+        }
         case 'gx:paged':
           setPaperReport(readPaperReport(msg))
           return
@@ -869,7 +903,11 @@ export default function App() {
           if (!e) return
           if (msg.command === 'moveUp' || msg.command === 'moveDown')
             moveSelectedRef.current(msg.command === 'moveUp' ? -1 : 1)
-          else if (msg.command === 'delete') runManual([{ op: 'remove', sid }], 'clear')
+          else if (msg.command === 'delete')
+            runManual(
+              selectionSids().map((s) => ({ op: 'remove', sid: s })),
+              'clear',
+            )
           else if (msg.command === 'escape') selectSid(null)
           else if (msg.command === 'askAi') setAskMode({ kind: 'new' })
           else if (msg.command === 'bold') wrapSelectionRef.current('strong')
@@ -907,7 +945,7 @@ export default function App() {
           return
       }
     },
-    [getMap, postMarks, postPaper, runManual, selectSid, t, flushPending],
+    [getMap, postMarks, postPaper, runManual, selectSid, selectionSids, setExtras, t, flushPending],
   )
 
   // the source cursor picks the covering element (no reveal: the user is already there)
@@ -924,13 +962,39 @@ export default function App() {
 
   const selectedEntry = selectedSid !== null ? getMap().bySid.get(selectedSid) : undefined
 
+  /** selection size: one-element tools (text edit, image tools, reorder) step aside above 1 */
+  const selectionCount = selectedEntry
+    ? 1 + extraSids.filter((sid) => sid !== selectedEntry.sid && getMap().bySid.has(sid)).length
+    : 0
   const duplicateSelected = () => {
-    if (!selectedEntry) return
-    const html = textRef.current.slice(selectedEntry.range[0], selectedEntry.range[1])
-    runManual([{ op: 'insert_html', sid: selectedEntry.sid, position: 'after', html: `\n${html}` }])
+    // pending pokes are written first: the copies must carry them, and the offsets below are of that text
+    flushPending()
+    const map = getMap()
+    const src = textRef.current
+    const picked = selectionSids().flatMap((sid) => map.bySid.get(sid) ?? [])
+    if (!picked.length) return
+    const copy = (e: (typeof picked)[number]) => `\n${src.slice(e.range[0], e.range[1])}`
+    const done = runManual(
+      picked.map((e) => ({ op: 'insert_html', sid: e.sid, position: 'after', html: copy(e) })),
+    )
+    if (!done || picked.length === 1) return
+    // A sid follows its element's path, and a copy inserted ahead of a selected sibling takes
+    // that sibling's path. Find the originals again by where each one starts now: its old
+    // start plus every copy that went in before it.
+    const after = getMap()
+    const sids = picked.flatMap((e) => {
+      const start = picked.reduce(
+        (at, p) => (p.range[1] <= e.range[0] ? at + copy(p).length : at),
+        e.range[0],
+      )
+      return after.elements.find((el) => el.startTag[0] === start)?.sid ?? []
+    })
+    selectSid(sids[0] ?? null)
+    setExtras(sids.slice(1))
   }
   const moveSelected = (dir: -1 | 1) => {
-    if (!selectedEntry) return
+    // where several elements would go relative to each other is not one step up or down
+    if (!selectedEntry || extraSidsRef.current.length) return
     const target = moveTarget(getMap(), selectedEntry.sid, dir)
     if (target) runManual([{ op: 'move', sid: selectedEntry.sid, ...target }])
   }
@@ -1080,13 +1144,33 @@ export default function App() {
       start: selectedEntry.range[0],
     }
   }, [selectedEntry, text])
+  /** the rest of a multiple selection, as targets for the same AI request */
+  const askOthers = useMemo(() => {
+    if (!askTarget) return []
+    const map = getMap()
+    return extraSids.flatMap((sid) => {
+      const e = sid !== askTarget.sid ? map.bySid.get(sid) : undefined
+      if (!e || STRUCTURAL.has(e.tag)) return []
+      const excerpt = sourceText(text, e).trim() || `<${e.tag}>`
+      return [{ sid: e.sid, tag: e.tag, excerpt, start: e.range[0] }]
+    })
+  }, [askTarget, extraSids, text, getMap])
   const queueAdd = (instruction: string) => {
     setAskMode(null)
-    if (!askTarget || editQueue.length >= EDIT_QUEUE_MAX) return
-    const qid = `q${++queueSeqRef.current}`
+    if (!askTarget) return
+    // one queued edit per selected element, as far as the queue has room
+    const room = Math.max(0, EDIT_QUEUE_MAX - editQueue.length)
+    const targets = [askTarget, ...askOthers].slice(0, room)
+    if (!targets.length) return
     setEditQueue((prev) => [
       ...prev,
-      { qid, sid: askTarget.sid, tag: askTarget.tag, capturedText: askTarget.excerpt, instruction },
+      ...targets.map((target) => ({
+        qid: `q${++queueSeqRef.current}`,
+        sid: target.sid,
+        tag: target.tag,
+        capturedText: target.excerpt,
+        instruction,
+      })),
     ])
     setAiOpen(true)
   }
@@ -1111,11 +1195,13 @@ export default function App() {
     flushPending()
     setAiOpen(true)
     const scope: AiScopeQuoteData = {
-      label: t('aiScopeElement', { tag: askTarget.tag }),
+      label: askOthers.length
+        ? t('multiSelected', { n: askOthers.length + 1 })
+        : t('aiScopeElement', { tag: askTarget.tag }),
       ...(askTarget.excerpt.trim() ? { text: askTarget.excerpt.trim() } : {}),
     }
     setAiPreset({
-      text: buildSelectionInstruction(askTarget, instruction),
+      text: buildSelectionInstruction(askTarget, instruction, askOthers),
       displayText: instruction,
       nonce: Date.now(),
       scope,
@@ -1144,22 +1230,26 @@ export default function App() {
     const styles = pendingStylesRef.current
     pendingStylesRef.current = {}
     setPendingCount(0)
-    const sid = selectedSidRef.current
-    if (sid === null || Object.keys(styles).length === 0) return
+    const sids = selectionSids()
+    if (sids.length === 0 || Object.keys(styles).length === 0) return
     flushingStylesRef.current = true
     try {
       // every poke went to the frame as gx:previewStyle: it already shows the committed state
-      runManual([{ op: 'set_style', sid, styles }], 'reselect', { inPlace: true })
+      runManual(
+        sids.map((sid) => ({ op: 'set_style', sid, styles })),
+        'reselect',
+        { inPlace: true },
+      )
     } finally {
       flushingStylesRef.current = false
     }
-  }, [runManual])
+  }, [runManual, selectionSids])
   flushStylesRef.current = flushStyles
 
   const previewStyle = (styles: Record<string, string | null>) => {
-    const sid = selectedSidRef.current
-    if (sid === null) return
-    previewRef.current?.post({ type: 'gx:previewStyle', sid, styles })
+    const sids = selectionSids()
+    if (sids.length === 0) return
+    for (const sid of sids) previewRef.current?.post({ type: 'gx:previewStyle', sid, styles })
     pendingStylesRef.current = { ...pendingStylesRef.current, ...styles }
     setPendingCount(Object.keys(pendingStylesRef.current).length)
     if (styleTimerRef.current !== null) window.clearTimeout(styleTimerRef.current)
@@ -1807,7 +1897,8 @@ export default function App() {
                       {...floatPosition(selRect, floatLayout())}
                       computed={selComputed}
                       pending={pendingStylesRef.current}
-                      canEditText={selText.editable}
+                      count={selectionCount}
+                      canEditText={selText.editable && selectionCount === 1}
                       onStyle={previewStyle}
                       onEditText={() =>
                         previewRef.current?.post({
@@ -1824,7 +1915,10 @@ export default function App() {
                       onMove={moveSelected}
                       onDuplicate={duplicateSelected}
                       onDelete={() =>
-                        runManual([{ op: 'remove', sid: selectedEntry.sid }], 'clear')
+                        runManual(
+                          selectionSids().map((sid) => ({ op: 'remove', sid })),
+                          'clear',
+                        )
                       }
                       panelOpen={panelShown}
                       onTogglePanel={() => {
@@ -1845,7 +1939,7 @@ export default function App() {
                       key={selectedEntry.sid}
                       tag={selectedEntry.tag}
                       computed={selComputed}
-                      textRun={selText.run}
+                      textRun={selectionCount === 1 ? selText.run : null}
                       onStyle={previewStyle}
                       onText={setRunText}
                       onAttr={setAttr}

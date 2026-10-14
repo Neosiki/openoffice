@@ -71,6 +71,7 @@ export const zh = {
   // Home: font
   ribbonGroupFont: '字体',
   ribbonFontsSystem: '系统字体',
+  ribbonFontsHangul: '韩文字体',
   ribbonFontInstallLocal: '安装字体文件…',
   fontMissingBanner: '此文稿使用了未安装的字体:',
   fontMissingDismiss: '忽略',

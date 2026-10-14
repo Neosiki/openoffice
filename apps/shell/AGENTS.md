@@ -23,7 +23,9 @@
 ## 항상 지켜야 하는 것
 
 - 구독 프로그램을 끝내는 책임은 이 프로세스에 있다. `src/main/index.ts`는 `app.whenReady` 뒤 userData 경로가 확정된 다음 `initSubscriptionChildTracking(app.getPath('userData'))`를 한 번 부르고(강제 종료된 이전 실행이 남긴 프로세스를 정리하고 이번 실행의 기록을 시작한다), `will-quit`와 `process.on('exit')` 양쪽에서 `shutdownSubscriptionChildren()`을 부른다. `app.exit()`·`process.exit()`은 `will-quit`를 건너뛰므로(headless 내보내기가 그렇게 끝난다) 둘 중 하나만으로는 부족하다. 에디터 코드에서 `initSubscriptionChildTracking`을 또 부르지 않는다.
-- 구독 IPC 채널(`SUBSCRIPTION_IPC_CHANNELS`)을 shell에서 등록하지 않는다. 같은 채널을 두 번 등록하면 예외가 난다. preload는 채널 이름과 판독 함수를 `@genoffice/ai-provider/browser`에서 가져와 `window.aiOfficeSubscription`으로 내보낸다. 핸들러가 없으면 상태는 `checking`으로 읽힌다.
+- 구독 IPC 채널(`SUBSCRIPTION_IPC_CHANNELS`)을 shell에서 등록하지 않는다. 같은 채널을 두 번 등록하면 예외가 난다. preload는 채널 이름과 판독 함수를 `@genoffice/ai-provider/browser`에서 가져와 `window.aiOfficeSubscription`으로 내보낸다. 핸들러가 없으면 상태는 `checking`으로 읽힌다. 로그아웃(`ai:subscription-logout`)을 내보내는 preload는 이 앱의 것뿐이다. 에디터의 preload에 넣지 않는다(`tests/preload-subscription.test.ts`가 지킨다).
+- 계정 바꾸기와 로그아웃은 확인을 받은 뒤에만 실행한다. 둘 다 벤더 프로그램 자신의 명령이고 이 PC 전체에 적용되어, 터미널에서 쓰는 같은 프로그램도 함께 바뀐다. 설정 화면은 프로그램 이름과 이 사실을 적은 확인(`setSubLogoutConfirm`, `setSubSwitchConfirm`)을 카드 아래에 띄우고, 확인 버튼을 눌렀을 때만 `connection.logout`·`connection.switchAccount`를 부른다. 확인 없이 이 둘을 부르는 경로를 만들지 않는다. 버튼은 설정의 카드에만 있고 첫 실행 안내와 홈의 질문 패널에는 없다.
+- 로그인된 계정(이메일)은 설정 → AI의 카드에만 그린다. 계정 구역의 요약 줄에도, 다른 화면에도 넣지 않는다. 저장하거나 기록에 남기지 않는다.
 - preload는 로그인·설치 실패의 원문 오류를 렌더러에 넘기지 않는다(`subscriptionLaunchResultOf`). 실행 파일 경로가 들어 있을 수 있어서다. 화면은 번역된 일반 문장을 쓴다.
 - PC에 등록되는 이름은 이 제품의 것이고 원본 GenOffice와 겹치지 않는다. 앱 id `io.github.pblsketch.ieumoffice`, 제품 이름 `IeumOffice`, 패키징된 앱 이름 `ieumoffice`(업데이트 캐시 폴더 이름이 여기서 나온다), userData는 설치본 `<appData>/IeumOffice`, 패키징되지 않은 실행 `<appData>/IeumOffice-Dev`다. 원본 앱의 프로필 폴더를 물려받거나 읽지 않는다. `electron-builder.cjs`의 상수, `package.json`의 `productName`, `packages/i18n`의 상수는 서로 같아야 한다.
 - 원본이 PC에 등록한 것(`genoffice` 명령, `~/.genoffice`, 원본의 MCP 항목과 스킬 폴더)은 건드리지 않는다. 실행기 위치 기록은 `~/.ieumoffice/launcher`에만 쓴다.
@@ -42,7 +44,7 @@
 - 개발 모드에서 preload를 고쳤으면 다시 빌드한다. 낡은 preload는 렌더러를 빈 화면으로 만든다(`npm run dev`의 `predev`가 `tools/build-stale-preloads.mjs`를 돌린다).
 - 에디터는 `configure<앱>Runtime({ preloadPath, rendererUrl, rendererFile, … })`으로 자기 빌드 결과의 위치를 주입받는다. 공용 `ai:*` 핸들러는 `registerAiIpc()` 한 번으로 모든 창(문서, 시트, 홈)을 담당한다. 시트 뷰를 `createSheetsView({ includeAiHandlers: false })`로 만드는 이유다.
 - 설정 화면에서 쓰는 AI는 "사용할 AI" 선택 하나로 정해진다. 고급 영역의 제공자 드롭다운은 어느 제공자의 입력란을 보여 줄지만 고른다. 설정은 읽을 때(`readAiSettings`)와 쓸 때(`writeAiSettings`) 모두 `normalizeAiSettings`를 거쳐, 사라진 선택이 다시 저장되지 않는다.
-- 홈의 질문 패널은 에디터와 같은 보내기 규칙을 작은 사본(`askSendGate`, `src/renderer/src/kb-ask-connection.ts`)으로 갖는다. 첫 연결 안내은 홈 화면이 띄우고 패널은 그동안 보내지 않는다. `packages/ui`의 규칙을 바꾸면 이 사본도 맞춘다.
+- 홈의 질문 패널은 에디터와 같은 보내기 규칙을 쓴다. `askSendGate`(`src/renderer/src/kb-ask-connection.ts`)는 `packages/ui`의 `aiSendGate`가 내린 판단을 그대로 읽는다. 연결 상태나 설정을 아직 모르면 질문을 붙잡았다가(`askHeldStep`) 실행할 수 있게 되면 시작하고, "연결 필요"로 정해지면 버리고 연결 안내를 보인다. 이 패널만의 차이는 하나다. 첫 연결 안내는 홈 화면이 띄우므로, 안내가 떠 있는 동안에는 패널이 보내지 않고 붙잡아 둔 질문도 시작하지 않는다.
 - 첫 연결 안내의 Codex 문장은 `CODEX_MAY_KEEP_HISTORY`로 켜져 있다. 브리지가 대화 이력 파일은 끄지만 Codex가 자체 진단 로그를 남기고, 앱은 그것을 읽을 수도 막을 수도 없기 때문이다.
 - 문자열은 세 군데에 있다. 렌더러 사전 `src/renderer/src/strings.ts`(언어 21개가 한 파일에 있고 `zh`가 키 집합을 정한다), 메인 프로세스의 인라인 사전(`src/main/index.ts`의 `tMain`), 도움말 `i18n/help/topics/<id>.<lang>.md`. 도움말 항목은 `help-registry.ts`의 `HELP_TOPICS`에 등록해야 보이고, 모든 언어 파일의 구조는 영어 원본과 같아야 한다(`npm run check:help-langs`).
 - 렌더러 CSS의 크롬 색은 토큰만 쓴다(`npm run check:theme-colors`). shell의 강조색(`--accent` 계열)은 `src/renderer/src/home.css`에서 정의한다.
@@ -52,7 +54,7 @@
 
 - 실행: `npm run test -w @genoffice/shell`(또는 이 폴더에서 `npx vitest run`), `npm run typecheck -w @genoffice/shell`. 환경은 `node`다.
 - `src/main/index.ts`는 실행 중인 Electron이 있어야 불러올 수 있다. 그래서 배선은 소스 글자를 읽어 고정한다(`tests/subscription-lifetime.test.ts`, `tests/main-locale-tables.test.ts`). 종료 처리나 인라인 사전의 모양을 바꾸면 이 테스트들이 깨진다. 로직은 Electron을 import하지 않는 모듈로 빼서 테스트한다(`settings-ai.ts`, `kb-ask-connection.ts`, `app-routing.ts`).
-- 바꾸면 반드시 테스트하는 것: preload가 내보내는 구독 API(핸들러 없음, 깨진 답), 설정 저장 뒤 다시 읽은 값, 제품 정체성(`tests/product-identity.test.ts`: 빌더 설정·`package.json`·HTML 제목·ProgId·저장소 좌표의 일치), 업데이트 피드 설정, 탭 IPC의 인자 검증.
+- 바꾸면 반드시 테스트하는 것: preload가 내보내는 구독 API(핸들러 없음, 깨진 답), 계정 버튼의 확인 흐름(취소하면 아무것도 실행되지 않는지), 설정 저장 뒤 다시 읽은 값, 제품 정체성(`tests/product-identity.test.ts`: 빌더 설정·`package.json`·HTML 제목·ProgId·저장소 좌표의 일치), 업데이트 피드 설정, 탭 IPC의 인자 검증.
 - Windows에서 변경과 무관하게 실패하는 테스트: `tests/headless-export.test.ts`(16건, `/docs/a.docx` 같은 POSIX 경로를 전제로 한다)와 `tests/default-app.test.ts`의 Linux 사례 한 건. `tests/update-resume.test.ts`와 `tests/third-party-notices.test.ts`는 부하가 큰 PC에서 가끔 실패하므로 단독으로 다시 돌려 확인한다.
 - E2E(`npm run test:e2e`, 저장소 루트의 `e2e/`)는 전체 빌드가 필요하다. 실행기(`e2e/helpers.ts`)는 `ai-settings.json`에 `{ providers: {}, subscriptionNoticeSeen: true }`를 미리 써서, Claude·Codex에 로그인된 PC에서 첫 연결 안내이 화면을 가리지 않게 한다(`providers`가 없으면 파일 전체가 기본값으로 읽힌다).
 - 실제 릴리스에서의 업데이트 내려받기·설치, 설치 프로그램 자체는 자동 테스트로 확인하지 못한다. 실제 빌드로 확인한다.

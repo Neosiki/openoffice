@@ -95,7 +95,18 @@ export function liveItems(resolved: ResolvedQueueItem[]): LiveQueueItem[] {
 }
 
 /** "Send now" from the popover: the instruction pinned to its element so a later selection change cannot redirect it */
-export function buildSelectionInstruction(target: QueueTarget, instruction: string): string {
+export function buildSelectionInstruction(
+  target: QueueTarget,
+  instruction: string,
+  /** the rest of a multiple selection: the same request goes to each of them */
+  others: QueueTarget[] = [],
+): string {
+  if (others.length) {
+    const list = [target, ...others].map(
+      (t) => `- sid=${t.sid} <${t.tag}> ("${truncate(t.excerpt, 60)}")`,
+    )
+    return `The user selected ${list.length} elements. Apply this to each of them, addressing each by sid in one apply_ops batch:\n${list.join('\n')}\n${instruction}`
+  }
   return `Apply this to the element sid=${target.sid} <${target.tag}> ("${truncate(target.excerpt, 120)}"), addressing it by sid in apply_ops:\n${instruction}`
 }
 

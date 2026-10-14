@@ -21,6 +21,8 @@ export const pl = {
   actionInstallHelp: 'Oficjalna instrukcja instalacji',
   actionOpenSettings: 'Otwórz ustawienia',
   actionDismiss: 'Zamknij',
+  actionSwitchAccount: 'Zaloguj się na inne konto',
+  actionLogout: 'Wyloguj się',
   installNote:
     'Oficjalne polecenie instalacji firmy {vendor} zostanie uruchomione w nowym oknie terminala.',
   loginNote: 'Strona logowania, która się otworzy, należy do firmy {vendor}.',
@@ -67,7 +69,9 @@ export const pl = {
     'Dane wejściowe były zbyt długie, więc ich część została obcięta przed wysłaniem.',
   pickerAuto: 'Automatycznie',
   pickerAutoUsing: 'Automatycznie · {provider}',
+  pickerAutoUsingModel: 'Automatycznie · {provider} · {model}',
   pickerDefaultModel: 'Model domyślny',
+  pickerDefaultModelNamed: 'Model domyślny · {model}',
   pickerSubscription: 'Subskrypcja',
   pickerPaid: 'Płatne',
   pickerPaidTitle: 'Opłata za zużycie, nieobjęte subskrypcją',

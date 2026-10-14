@@ -1,4 +1,4 @@
-import type { AiPanelPrefs } from '@genoffice/ui'
+import type { AiPanelPrefs, FontFamilyInfo } from '@genoffice/ui'
 /**
  * slides main-process <-> renderer IPC contract (Phase 3: open/save/edit, AI not included yet).
  *
@@ -1301,6 +1301,9 @@ export interface SlidesApi {
   setShowFullScreen: (on: boolean) => Promise<void>
   openPptx: (fitWidthPx: number) => Promise<OpenResult | null>
   openPptxPath: (path: string, fitWidthPx: number) => Promise<OpenResult | null>
+  /** Korean name and Hangul coverage of the enumerated families (read from the font
+   *  files); families that are not Korean are left out */
+  fontFamilyInfo: (families: readonly string[]) => Promise<Array<[string, FontFamilyInfo]>>
   /** Office-private faces referenced by layouts so far; the renderer registers them as FontFaces
    *  (files invisible to Chromium — DFonts/cloud fonts), so drawing uses the measuring font. */
   privateFontFaces: () => Promise<

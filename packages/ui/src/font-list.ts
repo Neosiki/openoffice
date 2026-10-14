@@ -3,6 +3,7 @@ import {
   CJK_FAMILY_ALIASES,
   JAPANESE_FAMILIES,
   KOREAN_FAMILIES,
+  KOREAN_FAMILY_READINGS,
   SIMPLIFIED_CJK_FAMILIES,
   TRADITIONAL_CJK_FAMILIES,
 } from '@genoffice/i18n'
@@ -165,4 +166,92 @@ export function systemFamiliesBesidesCandidates(
 ): readonly string[] {
   const candidateSet = new Set(candidates)
   return systemFamilies.filter((f) => !candidateSet.has(f))
+}
+
+/** What the main process read from a family's font files (the enumeration reports English names only). */
+export interface FontFamilyInfo {
+  /** the font's own Korean family name */
+  readonly ko?: string
+  /** the font covers Hangul */
+  readonly hangul: boolean
+}
+
+/** Keyed by the enumerated family name; families that are not Korean have no entry. */
+export type FontFamilyInfoMap = ReadonlyMap<string, FontFamilyInfo>
+
+/** Case-, space- and hyphen-insensitive, so `나눔 고딕` finds `나눔고딕` and `noto sans` finds `NotoSans`. */
+const fold = (s: string) =>
+  s
+    .normalize('NFKC')
+    .toLowerCase()
+    .replace(/[\s\-_]/g, '')
+
+function koreanReadingsOf(family: string): readonly string[] {
+  const lower = family.toLowerCase()
+  for (const [key, readings] of Object.entries(KOREAN_FAMILY_READINGS)) {
+    if (fold(family) === fold(key) || lower.startsWith(`${key.toLowerCase()} `)) return readings
+  }
+  return []
+}
+
+/** Every name a family answers to in a picker search: its own, its Korean name, its readings. */
+function searchNamesOf(family: string, info?: FontFamilyInfoMap): readonly string[] {
+  const ko = info?.get(family)?.ko
+  return [family, ...(ko ? [ko] : []), ...koreanReadingsOf(family)]
+}
+
+/** Picker label: the family, with the font's own Korean name beside it when it has one. */
+export function fontFamilyLabel(family: string, info?: FontFamilyInfoMap): string {
+  const ko = info?.get(family)?.ko
+  return ko ? `${family} (${ko})` : family
+}
+
+/** The typed text occurs anywhere in one of the family's names; an empty query matches all. */
+export function matchesFontQuery(query: string, family: string, info?: FontFamilyInfoMap): boolean {
+  const q = fold(query)
+  return !q || searchNamesOf(family, info).some((name) => fold(name).includes(q))
+}
+
+/**
+ * Type-ahead target for typed text: the first family whose name it starts (the
+ * only case a font box can complete inline), else the first it matches anywhere
+ * or by a Korean name.
+ */
+export function findFontMatch(
+  query: string,
+  families: readonly string[],
+  info?: FontFamilyInfoMap,
+): { readonly family: string; readonly prefix: boolean } | undefined {
+  const typed = query.trim().toLowerCase()
+  if (!typed) return undefined
+  const starts = families.find((f) => f.toLowerCase().startsWith(typed))
+  if (starts !== undefined) return { family: starts, prefix: true }
+  const anywhere = families.find((f) => matchesFontQuery(query, f, info))
+  return anywhere === undefined ? undefined : { family: anywhere, prefix: false }
+}
+
+/**
+ * The family a committed font-box text stands for: another name of a listed
+ * family typed in full (its Korean name, say) commits that family, since the
+ * document must hold the name the system resolves. Anything else is kept as typed.
+ */
+export function familyForTypedName(
+  text: string,
+  families: readonly string[],
+  info?: FontFamilyInfoMap,
+): string {
+  const typed = fold(text)
+  if (!typed || families.some((f) => fold(f) === typed)) return text
+  return families.find((f) => searchNamesOf(f, info).some((name) => fold(name) === typed)) ?? text
+}
+
+/** Split a picker's system section so Korean fonts can be listed ahead of the rest. */
+export function splitHangulFamilies(
+  families: readonly string[],
+  info?: FontFamilyInfoMap,
+): { readonly hangul: readonly string[]; readonly other: readonly string[] } {
+  const hangul: string[] = []
+  const other: string[] = []
+  for (const f of families) (info?.get(f)?.hangul ? hangul : other).push(f)
+  return { hangul, other }
 }

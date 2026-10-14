@@ -91,6 +91,8 @@
   let mode = 'inspect'
   const selecting = () => mode === 'inspect'
   let selected = null
+  let extras = []
+  let extraBoxes = []
   let editing = null
   let dark = false
   let resizing = null
@@ -119,6 +121,8 @@
     [${MARK}-grip] { position: fixed; z-index: 2147483647; width: 12px; height: 22px; box-sizing: border-box; border-radius: 4px; background: var(--gx-select, #0f7fff); color: #fff; font: 700 10px/22px -apple-system, system-ui, sans-serif; letter-spacing: -1px; text-align: center; cursor: grab; pointer-events: auto; box-shadow: 0 1px 3px rgba(0,0,0,0.3); }
     [${MARK}-drop] { position: fixed; z-index: 2147483647; pointer-events: none; background: var(--gx-select, #0f7fff); border-radius: 2px; box-shadow: 0 0 0 1px #fff; }
     [${MARK}-dragsrc] { opacity: 0.4 !important; }
+    [${MARK}-band] { position: fixed; z-index: 2147483647; pointer-events: none; box-sizing: border-box; border: 1px solid var(--gx-select, #0f7fff); background: rgba(15,127,255,0.08); }
+    html[${MARK}-banding], html[${MARK}-banding] * { user-select: none !important; cursor: crosshair !important; }
     html[${MARK}-dragging], html[${MARK}-dragging] * { cursor: grabbing !important; user-select: none !important; }
     html[${MARK}-cursor="text"] *:not([${MARK}]) { cursor: text !important; }
     html[${MARK}-cursor="move"] *:not([${MARK}]) { cursor: move !important; }
@@ -398,16 +402,29 @@
     rehover()
     place(selectBox, selected)
     placeLabel(selected)
-    placeHandles(selected)
-    placeGrip(selected)
+    // resizing and dragging act on one element: with several selected neither is offered
+    placeHandles(extras.length ? null : selected)
+    placeGrip(extras.length ? null : selected)
+    extras.forEach((el, i) => place(extraBoxes[i], el))
     for (const { box, el } of highlightBoxes) place(box, el)
     for (const { pin, el } of markPins) placePin(pin, el)
     if (selected) postRect()
   }
 
+  /** elements selected alongside `selected` (shift / ctrl+click); the host applies delete,
+   * duplicate, style edits and AI requests to the whole selection */
+  const setExtras = (list, notify) => {
+    extras = list
+    while (extraBoxes.length > extras.length) extraBoxes.pop().remove()
+    while (extraBoxes.length < extras.length) extraBoxes.push(overlay('select'))
+    refresh()
+    if (notify) post({ type: 'gx:multiSelect', sids: extras.map(sidOf) })
+  }
   const select = (el, notify) => {
     if (editing && el !== editing.el) finishEdit(true)
     selected = el
+    // selecting one element starts over: the host drops its extras on the same message
+    if (extras.length) setExtras([], false)
     refresh()
     if (notify) {
       if (!el) post({ type: 'gx:select', element: null, dynamic: false })
@@ -415,6 +432,30 @@
     }
   }
   const bySid = (sid) => document.querySelector(`[${SID}="${sid}"]`)
+  /** shift / ctrl+click: add the element to the selection, or take it out again */
+  const toggleSelect = (el) => {
+    if (sidOf(el) === null) return
+    // a shift+click would also stretch the native text selection up to the click
+    const native = window.getSelection()
+    if (native) native.removeAllRanges()
+    if (!selected || sidOf(selected) === null) {
+      select(el, true)
+      return
+    }
+    const all = [selected, ...extras]
+    const next = all.includes(el)
+      ? all.filter((x) => x !== el)
+      : // an element and something inside it are never selected together (one edit would
+        // swallow the other): the click wins over what contains it or sits inside it
+        [...all.filter((x) => !x.contains(el) && !el.contains(x)), el]
+    if (!next.length) {
+      select(null, true)
+      return
+    }
+    const [first, ...rest] = next
+    if (first !== selected) select(first, true)
+    setExtras(rest, true)
+  }
 
   // ---- inline text editing (one element at a time) ----
   const textNodeIndex = (el, node) => {
@@ -899,6 +940,10 @@
       }
       e.preventDefault()
       e.stopPropagation()
+      if (e.button === 0 && (e.shiftKey || e.metaKey || e.ctrlKey) && !e.altKey) {
+        toggleSelect(el)
+        return
+      }
       select(el, true)
       // A single left click on the text itself starts editing with the caret at the click
       // (PowerPoint/WPS); the box around the text only selects, so it stays the drag surface.
@@ -1090,6 +1135,124 @@
   document.addEventListener('focusout', (e) => {
     if (editing && e.target === editing.el) finishEdit(true)
   })
+
+  // ---- rubber band: drag from a spot that is neither the selection nor text, and everything
+  // the rectangle fully encloses is selected (the outermost such elements, like a slide editor) ----
+  let band = null
+  const BAND_START = 5
+  const bandRect = (from, x, y) => {
+    const x0 = from.x - window.scrollX
+    const y0 = from.y - window.scrollY
+    return {
+      left: Math.min(x0, x),
+      top: Math.min(y0, y),
+      right: Math.max(x0, x),
+      bottom: Math.max(y0, y),
+    }
+  }
+  const enclosedBy = (r) => {
+    const out = []
+    const walk = (parent) => {
+      for (const el of parent.children) {
+        if (isOwn(el) || out.length >= 200) continue
+        const b = el.getBoundingClientRect()
+        const sized = b.width > 0 && b.height > 0
+        const inside =
+          sized && b.left >= r.left && b.right <= r.right && b.top >= r.top && b.bottom <= r.bottom
+        if (inside && sidOf(el) !== null) out.push(el)
+        // a box of no size (display: contents) can still hold boxes that are enclosed
+        else if (
+          !ATOMIC.has(el.tagName.toLowerCase()) &&
+          (!sized || (b.right > r.left && b.left < r.right && b.bottom > r.top && b.top < r.bottom))
+        )
+          walk(el)
+      }
+    }
+    if (document.body) walk(document.body)
+    return out
+  }
+  const endBand = (commit, x, y) => {
+    const done = band
+    band = null
+    if (!done || !done.box) return
+    done.box.remove()
+    document.documentElement.removeAttribute(`${MARK}-banding`)
+    post({ type: 'gx:drag', active: false })
+    if (!commit) return
+    const found = enclosedBy(bandRect(done, x, y))
+    // with shift / ctrl the band adds to what is selected, like the click does
+    const kept = done.additive && selected ? [selected, ...extras] : []
+    const next = [
+      ...kept.filter((k) => !found.some((f) => f.contains(k) || k.contains(f))),
+      ...found,
+    ]
+    if (!next.length) {
+      select(null, true)
+      return
+    }
+    const [first, ...rest] = next
+    if (first !== selected) select(first, true)
+    setExtras(rest, true)
+  }
+  document.addEventListener(
+    'mousedown',
+    (e) => {
+      band = null
+      // a new press: a click still owed to the last drag never came and must not eat this one
+      swallowClick = false
+      if (!selecting() || editing || e.button !== 0 || isOwn(e.target)) return
+      const el = targetOf(e.target)
+      // pressing the selection drags it; pressing words is for the text
+      if (el && (el === selected || extras.includes(el))) return
+      if (el && overText(el, e.clientX, e.clientY)) return
+      band = {
+        x: e.clientX + window.scrollX,
+        y: e.clientY + window.scrollY,
+        additive: e.shiftKey || e.metaKey || e.ctrlKey,
+        box: null,
+      }
+    },
+    true,
+  )
+  document.addEventListener(
+    'mousemove',
+    (e) => {
+      if (!band) return
+      if (!(e.buttons & 1)) return endBand(false)
+      const r = bandRect(band, e.clientX, e.clientY)
+      if (!band.box) {
+        if (r.right - r.left < BAND_START && r.bottom - r.top < BAND_START) return
+        band.box = document.createElement('div')
+        band.box.setAttribute(MARK, '')
+        band.box.setAttribute(`${MARK}-band`, '')
+        document.documentElement.appendChild(band.box)
+        document.documentElement.setAttribute(`${MARK}-banding`, '')
+        const native = window.getSelection()
+        if (native) native.removeAllRanges()
+        hover(null)
+        post({ type: 'gx:drag', active: true })
+      }
+      e.preventDefault()
+      band.box.style.left = `${r.left}px`
+      band.box.style.top = `${r.top}px`
+      band.box.style.width = `${r.right - r.left}px`
+      band.box.style.height = `${r.bottom - r.top}px`
+    },
+    true,
+  )
+  document.addEventListener(
+    'mouseup',
+    (e) => {
+      if (!band || !band.box) {
+        band = null
+        return
+      }
+      // the click that follows this release belongs to the band, not to what is under it
+      swallowClick = true
+      endBand(true, e.clientX, e.clientY)
+    },
+    true,
+  )
 
   // ---- paper view: the same DOM, fragmented into the pages it prints on ----
   // The root becomes a one-column multicol whose rows are page content boxes, so the
@@ -1338,6 +1501,14 @@
           postRect()
         }
         break
+      case 'gx:selectExtra':
+        // after a reload: the rest of the selection the host still holds
+        if (selected && Array.isArray(msg.sids))
+          setExtras(
+            msg.sids.map((sid) => bySid(sid)).filter((el) => el && el !== selected),
+            false,
+          )
+        break
       case 'gx:previewStyle': {
         // live preview only: the host commits the same declarations to the source afterwards
         const el = bySid(msg.sid)
@@ -1384,6 +1555,7 @@
       case 'gx:endDrag':
         if (drag) endDrag(false)
         if (slide) endSlide(false)
+        endBand(false)
         pressed = null
         break
       case 'gx:setMode':

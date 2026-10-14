@@ -6,6 +6,7 @@ import {
   providerSelectionOf,
   type AiSettings,
   type AiSubscriptionProviderId,
+  type AiSubscriptionStatus,
   type AiSubscriptionStatuses,
 } from '@genoffice/ai-provider'
 import {
@@ -131,10 +132,21 @@ async function subscriptionStatuses(
   })
   try {
     const checked = await service.check(providers)
-    return Object.fromEntries(providers.map((id) => [id, checked[id]]))
+    return Object.fromEntries(providers.map((id) => [id, withoutAccount(checked[id])]))
   } catch {
     return {}
   }
+}
+
+/**
+ * The account a CLI names is for the app's Settings card and nothing else. It
+ * is taken off here, so it cannot reach a tool, a result or the audit log of a
+ * command or MCP call.
+ */
+function withoutAccount(status: AiSubscriptionStatus): AiSubscriptionStatus {
+  const copy = { ...status }
+  delete copy.account
+  return copy
 }
 
 interface ProcessEnd {

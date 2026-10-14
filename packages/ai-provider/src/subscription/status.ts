@@ -8,9 +8,11 @@
  * a result. The output is only matched against values this file lists: a kind
  * of login is one of `SUBSCRIPTION_LOGIN_KINDS`, an error text is a sentence
  * written here plus facts the code derived itself (exit code, version number),
- * and anything unrecognised becomes the fixed token `unknown`. The one value
- * that is passed on is the plan name, and only when it looks like a plan
- * identifier.
+ * and anything unrecognised becomes the fixed token `unknown`. Two values are
+ * passed on, each only in its own narrow shape: the plan name when it looks
+ * like a plan identifier, and the account when it is an e-mail address. The
+ * account is for the Settings card alone: it stays in the status in memory and
+ * is never written anywhere. The organisation is dropped as before.
  */
 import { AI_SUBSCRIPTION_PROVIDERS } from '../providers'
 import type {
@@ -18,7 +20,11 @@ import type {
   AiSubscriptionProviderId,
   AiSubscriptionState,
 } from '../types'
-import { subscriptionStatusErrorText, type SubscriptionStatusErrorKind } from './contract'
+import {
+  subscriptionAccountOf,
+  subscriptionStatusErrorText,
+  type SubscriptionStatusErrorKind,
+} from './contract'
 import {
   locateSubscriptionProgram,
   subscriptionProviderLabel,
@@ -48,7 +54,7 @@ export const SUBSCRIPTION_MIN_VERSIONS: Record<AiSubscriptionProviderId, string 
   codex: null,
 }
 
-/** What a CLI says about its login, with the account identity left out */
+/** What a CLI says about its login; of the account identity only the e-mail address is kept */
 export type SubscriptionLogin =
   | { signedIn: false }
   | {
@@ -62,6 +68,8 @@ export type SubscriptionLogin =
        * naming an account; a metered acceptance is remembered against it.
        */
       loginKind: string
+      /** the e-mail address the CLI names, for display only */
+      account?: string
     }
 
 /**
@@ -76,11 +84,13 @@ export interface SubscriptionDetection {
   planName?: string
   error?: string
   loginKind?: string
+  /** the e-mail address of the signed-in account, for display only; never stored */
+  account?: string
 }
 
 /**
  * Raw result of the Codex app-server's `account/read`, supplied by the Codex
- * bridge. Its email is dropped by `codexAccountInfo`.
+ * bridge. `codexAccountInfo` keeps its email for display and nothing else of it.
  */
 export type CodexAccountSource = (context: {
   /** the configured Codex path, as stored in the settings */
@@ -187,12 +197,12 @@ const CLAUDE_METERED_METHODS: ReadonlySet<string> = new Set([
 ])
 
 /**
- * Read `loggedIn`, `authMethod`, `apiProvider` and `subscriptionType` from the
- * CLI's JSON; every other field (email, organisation, directories) is ignored.
+ * Read `loggedIn`, `authMethod`, `apiProvider`, `subscriptionType` and `email`
+ * from the CLI's JSON; every other field (organisation, directories) is ignored.
  * A subscription is reported only for a claude.ai login on Anthropic's own API
  * that names a plan. The fields are compared with known values, not copied: an
- * unexpected value reads as `unknown`. Null when the output is not the expected
- * JSON.
+ * unexpected value reads as `unknown`, and an `email` that is not an address is
+ * left out. Null when the output is not the expected JSON.
  */
 export function parseClaudeAuthStatus(stdout: string): SubscriptionLogin | null {
   const start = stdout.indexOf('{')
@@ -209,6 +219,8 @@ export function parseClaudeAuthStatus(stdout: string): SubscriptionLogin | null 
   const authMethod = listed(parsed.authMethod, CLAUDE_AUTH_KINDS)
   const apiProvider = listed(parsed.apiProvider, CLAUDE_API_PROVIDER_KINDS)
   const planName = planLabel(parsed.subscriptionType)
+  const email = subscriptionAccountOf(parsed.email)
+  const account = email ? { account: email } : {}
   const loginKind = `${authMethod}/${apiProvider}`
   // any named backend other than Anthropic's own API is a paid route, known to this file or not
   const otherBackend =
@@ -216,12 +228,12 @@ export function parseClaudeAuthStatus(stdout: string): SubscriptionLogin | null 
     parsed.apiProvider !== '' &&
     parsed.apiProvider !== 'firstParty'
   if (CLAUDE_METERED_METHODS.has(authMethod) || otherBackend) {
-    return { signedIn: true, loginMethod: 'metered', loginKind }
+    return { signedIn: true, loginMethod: 'metered', loginKind, ...account }
   }
   if (authMethod === 'claude.ai' && apiProvider === 'firstParty' && planName) {
-    return { signedIn: true, loginMethod: 'subscription', planName, loginKind }
+    return { signedIn: true, loginMethod: 'subscription', planName, loginKind, ...account }
   }
-  return { signedIn: true, loginMethod: 'unknown', loginKind }
+  return { signedIn: true, loginMethod: 'unknown', loginKind, ...account }
 }
 
 // ── Codex: `codex login status` ──
@@ -254,8 +266,9 @@ export function parseCodexLoginStatus(output: string): SubscriptionLogin | null 
 
 /**
  * The login `account/read` describes: `{ account: { type: 'chatgpt', planType }
- * | { type: 'apiKey' } | null, requiresOpenaiAuth }`. The account's email is
- * not read, and an account type this file does not know reads as `unknown`.
+ * | { type: 'apiKey' } | null, requiresOpenaiAuth }`. Of a ChatGPT account the
+ * email is kept when it is an address; an account type this file does not know
+ * reads as `unknown`.
  * Null when the value is not an `account/read` result.
  */
 export function codexAccountInfo(accountRead: unknown): SubscriptionLogin | null {
@@ -269,11 +282,13 @@ export function codexAccountInfo(accountRead: unknown): SubscriptionLogin | null
   }
   if (account.type === 'chatgpt') {
     const planName = planLabel(account.planType)
+    const email = subscriptionAccountOf(account.email)
     return {
       signedIn: true,
       loginMethod: 'subscription',
       ...(planName && planName !== 'unknown' ? { planName } : {}),
       loginKind: 'chatgpt',
+      ...(email ? { account: email } : {}),
     }
   }
   if (account.type === 'apiKey') {
@@ -286,7 +301,8 @@ let codexAccountSource: CodexAccountSource | null = null
 
 /**
  * Let the Codex bridge supply `account/read` to the status check (plan name,
- * and a second opinion on the kind of login). Pass null to remove it.
+ * the account shown on the card, and a second opinion on the kind of login).
+ * Pass null to remove it.
  */
 export function setCodexAccountSource(source: CodexAccountSource | null): void {
   codexAccountSource = source
@@ -294,7 +310,8 @@ export function setCodexAccountSource(source: CodexAccountSource | null): void {
 
 /**
  * Two readings of the same login. The more expensive reading wins: metered if
- * either says so, a subscription only if both do.
+ * either says so, a subscription only if both do. The account is taken from
+ * the reading that names it only when both agree on a subscription.
  */
 function mergeLogins(cli: SubscriptionLogin, account: SubscriptionLogin | null): SubscriptionLogin {
   if (!account || !cli.signedIn) return cli
@@ -302,7 +319,11 @@ function mergeLogins(cli: SubscriptionLogin, account: SubscriptionLogin | null):
   if (cli.loginMethod === 'metered') return cli
   if (account.loginMethod === 'metered') return account
   if (cli.loginMethod === 'subscription' && account.loginMethod === 'subscription') {
-    return account.planName ? { ...cli, planName: account.planName } : cli
+    return {
+      ...cli,
+      ...(account.planName ? { planName: account.planName } : {}),
+      ...(account.account ? { account: account.account } : {}),
+    }
   }
   return cli.loginMethod === 'unknown' ? cli : account
 }
@@ -346,6 +367,7 @@ function loginDetection(
     loginMethod: login.loginMethod,
     ...(subscription && login.planName ? { planName: login.planName } : {}),
     loginKind: subscriptionLoginKind(login.loginKind),
+    ...(login.account ? { account: login.account } : {}),
   }
 }
 

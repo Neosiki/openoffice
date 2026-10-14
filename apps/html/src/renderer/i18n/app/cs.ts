@@ -48,6 +48,7 @@ export const cs = {
   elementMoveUp: 'Přesunout nahoru',
   elementMoveDown: 'Přesunout dolů',
   elementToolbar: 'Panel nástrojů prvku',
+  multiSelected: 'Vybráno: {n}',
   elementPath: 'Cesta prvku',
   fmtBold: 'Tučné',
   fmtItalic: 'Kurzíva',

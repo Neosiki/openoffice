@@ -60,6 +60,7 @@ export const id = {
   elementMoveUp: 'Naikkan',
   elementMoveDown: 'Turunkan',
   elementToolbar: 'Bilah alat elemen',
+  multiSelected: '{n} dipilih',
   elementPath: 'Jalur elemen',
   fmtBold: 'Tebal',
   fmtItalic: 'Miring',

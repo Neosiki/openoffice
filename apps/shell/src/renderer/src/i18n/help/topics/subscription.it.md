@@ -45,6 +45,15 @@ Una scheda che dice **Accesso effettuato, ma non con un abbonamento** riporta un
 - Il tuo consenso viene ricordato solo per quel programma. Viene annullato quando esci dal programma o quando il suo accesso cambia.
 - Per usare invece il tuo abbonamento, accedi al programma con l'account dell'abbonamento e premi **Verifica di nuovo**.
 
+## Cambiare account o uscire
+
+Quando il programma ha effettuato l'accesso, la sua scheda mostra l'account in uso accanto al nome del piano, se il programma lo comunica. Ha anche due pulsanti.
+
+- **Accedi con un altro account** avvia di nuovo l'accesso del programma stesso. Completalo nella finestra che si apre, con l'altro account.
+- **Esci** esegue la disconnessione del programma stesso. Dopo, la scheda indica **Accesso non effettuato**.
+- Entrambe le azioni valgono per quel programma su tutto questo PC, non solo per GenOffice. Se usi Claude Code o Codex anche in un terminale, anche lì viene disconnesso o passa all'altro account. Per questo GenOffice ti chiede prima una conferma.
+- L'account e questi due pulsanti compaiono solo qui, in Impostazioni ▸ IA. GenOffice mostra l'account e non lo salva da nessuna parte.
+
 ## Quale IA viene usata
 
 **IA da usare**, in Impostazioni ▸ IA, parte da **Automatico**. Automatico decide in quest'ordine:
@@ -56,6 +65,8 @@ Una scheda che dice **Accesso effettuato, ma non con un abbonamento** riporta un
 Automatico non sceglie mai nulla che costi denaro in più: né una chiave API, né un accesso a consumo. Questi vengono usati solo finché li scegli tu.
 
 Puoi anche scegliere tu un'IA, nello stesso punto oppure nell'elenco dei modelli in fondo al pannello IA. Se quella che hai scelto smette di funzionare, GenOffice non passa a un'altra senza dirtelo. Ti dice che cosa è successo e ti mostra come ricollegarti.
+
+L'elenco dei modelli mostra i modelli comunicati dal programma stesso: ciascuno con il suo nome e, accanto, l'ID esatto del modello, mentre **Modello predefinito** indica a quale modello corrisponde in questo momento. Anche l'etichetta in fondo al pannello IA e **IA da usare** indicano quel modello. Leggere l'elenco non chiede nulla all'IA, quindi non incide sul tuo piano. Se il programma è troppo vecchio per comunicare i suoi modelli, al suo posto viene mostrato un breve elenco integrato.
 
 Ovunque si possa scegliere Codex, compare accanto una riga: «Usare un abbonamento Codex all’interno di un’app non è un metodo ufficialmente consigliato da OpenAI.» Decidi tenendone conto.
 

@@ -12,8 +12,9 @@
   gap: 5px;
   height: 24px;
   max-width: 200px;
+  min-width: 0;
   padding: 0 7px 0 6px;
-  flex-shrink: 0;
+  flex-shrink: 1;
   border: 1px solid transparent;
   border-radius: var(--radius-30);
   background: none;
@@ -130,6 +131,12 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* the concrete model id beside a model's display name, when the CLI listed its models */
+.ai-model-item-id {
+  color: var(--text-dim);
+  font-size: 11px;
 }
 
 .ai-model-manage {

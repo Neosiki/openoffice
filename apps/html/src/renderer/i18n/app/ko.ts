@@ -60,6 +60,7 @@ export const ko = {
   elementMoveUp: '위로 이동',
   elementMoveDown: '아래로 이동',
   elementToolbar: '요소 도구 모음',
+  multiSelected: '{n}개 선택',
   elementPath: '요소 경로',
   fmtBold: '굵게',
   fmtItalic: '기울임',

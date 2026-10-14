@@ -62,6 +62,7 @@ export const de = {
   elementMoveUp: 'Nach oben',
   elementMoveDown: 'Nach unten',
   elementToolbar: 'Element-Symbolleiste',
+  multiSelected: '{n} ausgewählt',
   elementPath: 'Elementpfad',
   fmtBold: 'Fett',
   fmtItalic: 'Kursiv',

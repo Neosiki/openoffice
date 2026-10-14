@@ -45,6 +45,15 @@ Kartu yang bertuliskan **Sudah masuk, tetapi bukan dengan langganan** memuat per
 - Izin Anda diingat hanya untuk program itu. Izin dihapus ketika program tersebut keluar dari akun atau loginnya berubah.
 - Untuk memakai langganan Anda saja, masuklah di program itu dengan akun langganan Anda lalu tekan **Periksa lagi**.
 
+## Mengganti akun atau keluar
+
+Saat program sudah masuk, kartunya menampilkan akun yang sedang dipakai di samping nama paket, bila program melaporkannya. Kartu itu juga punya dua tombol.
+
+- **Masuk dengan akun lain** memulai lagi proses masuk milik program itu sendiri. Selesaikan di jendela yang terbuka, dengan akun yang lain.
+- **Keluar** menjalankan proses keluar milik program itu sendiri. Setelah itu kartu menampilkan **Belum masuk**.
+- Keduanya berlaku untuk program itu di seluruh PC ini, bukan hanya di GenOffice. Jika Anda juga memakai Claude Code atau Codex di terminal, di sana program itu ikut keluar atau berpindah ke akun yang lain. Karena itu GenOffice meminta konfirmasi Anda lebih dulu.
+- Akun dan kedua tombol ini hanya ada di sini, di Pengaturan ▸ AI. GenOffice hanya menampilkan akun itu dan tidak menyimpannya di mana pun.
+
 ## AI mana yang dipakai
 
 **AI yang digunakan**, di Pengaturan ▸ AI, awalnya diatur ke **Otomatis**. Mode Otomatis memutuskan dengan urutan ini:
@@ -56,6 +65,8 @@ Kartu yang bertuliskan **Sudah masuk, tetapi bukan dengan langganan** memuat per
 Mode Otomatis tidak pernah memilih apa pun yang menimbulkan biaya tambahan: bukan kunci API, dan bukan login bayar sesuai pemakaian. Keduanya hanya dipakai selama Anda sendiri yang memilihnya.
 
 Anda juga bisa memilih sendiri satu AI, di tempat yang sama atau di daftar model di bagian bawah panel AI. Jika AI pilihan Anda berhenti berfungsi, GenOffice tidak diam-diam pindah ke AI lain. GenOffice memberi tahu apa yang terjadi dan menunjukkan cara menghubungkan kembali.
+
+Daftar model menampilkan model yang dilaporkan program itu sendiri: masing-masing dengan namanya dan ID model persisnya di sebelahnya, dan **Model bawaan** menyebutkan model yang sedang diwakilinya. Label di bagian bawah panel AI dan **AI yang digunakan** juga menyebut model itu. Membaca daftar ini tidak menanyakan apa pun kepada AI, jadi tidak dihitung dalam paket Anda. Jika program terlalu lama untuk melaporkan modelnya, yang ditampilkan adalah daftar singkat bawaan aplikasi.
 
 Di mana pun Codex bisa dipilih, satu baris ditampilkan bersamanya: "Memakai langganan Codex di dalam aplikasi bukan cara yang direkomendasikan secara resmi oleh OpenAI." Putuskan dengan mempertimbangkan hal itu.
 

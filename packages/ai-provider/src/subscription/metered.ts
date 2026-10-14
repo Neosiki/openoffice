@@ -16,7 +16,10 @@
  * cleared when the kind changes (API key to Bedrock, metered to subscription),
  * when the CLI is signed out, and when the stored flag has no remembered kind
  * at all. Not detected, because it would take an account identifier: one API
- * key swapped for another of the same kind.
+ * key swapped for another of the same kind outside the app. When the app runs
+ * the login or the logout itself it knows of the change without one, and the
+ * acceptance is cleared then, whatever kind the next login has (the listener
+ * in `ipc.ts`, `clearMeteredAcceptance` of the status service).
  */
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'

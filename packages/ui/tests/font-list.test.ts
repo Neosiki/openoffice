@@ -9,9 +9,15 @@ import { describe, expect, it } from 'vitest'
 import { CJK_FAMILY_ALIASES, SIMPLIFIED_CJK_FAMILIES } from '@genoffice/i18n'
 import {
   BUILTIN_FONT_FAMILIES,
+  familyForTypedName,
+  findFontMatch,
   fontFamiliesFor,
+  fontFamilyLabel,
+  matchesFontQuery,
   partitionFontFamilies,
+  splitHangulFamilies,
   systemFamiliesBesidesCandidates,
+  type FontFamilyInfoMap,
 } from '../src/font-list'
 
 // Nanum Myeongjo (the other Korean serif) is not a built-in candidate.
@@ -166,5 +172,77 @@ describe('candidate lists', () => {
 
   it('has no duplicate candidates in the merged list', () => {
     expect(new Set(BUILTIN_FONT_FAMILIES).size).toBe(BUILTIN_FONT_FAMILIES.length)
+  })
+})
+
+// Finding an installed Korean font. The system reports `HCR Batang`, the user
+// knows it as its Korean name and types that; and among hundreds of system
+// fonts in alphabetical order the Korean ones were effectively hidden.
+describe('Korean names in the pickers', () => {
+  const families = ['Arial', 'HCR Batang', 'NanumGothic', 'Pretendard', 'Malgun Gothic']
+  const info: FontFamilyInfoMap = new Map([
+    ['HCR Batang', { ko: '함초롬바탕', hangul: true }],
+    ['NanumGothic', { ko: '나눔고딕', hangul: true }],
+    ['Pretendard', { hangul: true }],
+    ['Malgun Gothic', { ko: '맑은 고딕', hangul: true }],
+  ])
+
+  it('matches typed text anywhere in the name, not only at its start', () => {
+    expect(matchesFontQuery('gothic', 'NanumGothic', info)).toBe(true)
+    expect(matchesFontQuery('batang', 'HCR Batang', info)).toBe(true)
+    expect(matchesFontQuery('gothic', 'Arial', info)).toBe(false)
+    expect(matchesFontQuery('  ', 'Arial', info)).toBe(true)
+  })
+
+  it("matches a font's own Korean name, spaces aside", () => {
+    expect(matchesFontQuery('함초롬', 'HCR Batang', info)).toBe(true)
+    expect(matchesFontQuery('나눔 고딕', 'NanumGothic', info)).toBe(true)
+    expect(matchesFontQuery('맑은고딕', 'Malgun Gothic', info)).toBe(true)
+  })
+
+  it('matches a known Korean reading of a font that carries no Korean name', () => {
+    expect(matchesFontQuery('프리텐다드', 'Pretendard', info)).toBe(true)
+    expect(matchesFontQuery('프리텐', 'Pretendard Variable')).toBe(true)
+    expect(matchesFontQuery('지마켓', 'Gmarket Sans TTF')).toBe(true)
+    expect(matchesFontQuery('프리텐다드', 'Arial', info)).toBe(false)
+  })
+
+  it('prefers the name the text starts, and says whether it can complete inline', () => {
+    expect(findFontMatch('na', families, info)).toEqual({ family: 'NanumGothic', prefix: true })
+    expect(findFontMatch('gothic', families, info)).toEqual({
+      family: 'NanumGothic',
+      prefix: false,
+    })
+    expect(findFontMatch('프리텐', families, info)).toEqual({ family: 'Pretendard', prefix: false })
+    expect(findFontMatch('zzz', families, info)).toBeUndefined()
+    expect(findFontMatch('', families, info)).toBeUndefined()
+  })
+
+  it('commits the family a fully typed Korean name stands for', () => {
+    expect(familyForTypedName('함초롬바탕', families, info)).toBe('HCR Batang')
+    expect(familyForTypedName('프리텐다드', families, info)).toBe('Pretendard')
+  })
+
+  it('keeps typed text that names no listed family, or names one already', () => {
+    expect(familyForTypedName('Gmarket Sans', families, info)).toBe('Gmarket Sans')
+    expect(familyForTypedName('함초롬', families, info)).toBe('함초롬')
+    expect(familyForTypedName('Arial', families, info)).toBe('Arial')
+  })
+
+  it('labels a family with its Korean name only when the font has one', () => {
+    expect(fontFamilyLabel('HCR Batang', info)).toBe('HCR Batang (함초롬바탕)')
+    expect(fontFamilyLabel('Pretendard', info)).toBe('Pretendard')
+    expect(fontFamilyLabel('HCR Batang')).toBe('HCR Batang')
+  })
+
+  it('splits out the Korean fonts in their listed order', () => {
+    expect(splitHangulFamilies(families, info)).toEqual({
+      hangul: ['HCR Batang', 'NanumGothic', 'Pretendard', 'Malgun Gothic'],
+      other: ['Arial'],
+    })
+  })
+
+  it('splits nothing out when no font info is given', () => {
+    expect(splitHangulFamilies(families)).toEqual({ hangul: [], other: families })
   })
 })

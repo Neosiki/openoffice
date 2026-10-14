@@ -61,6 +61,7 @@ export const hi = {
   elementMoveUp: 'ऊपर ले जाएँ',
   elementMoveDown: 'नीचे ले जाएँ',
   elementToolbar: 'तत्व टूलबार',
+  multiSelected: '{n} चयनित',
   elementPath: 'तत्व पथ',
   fmtBold: 'बोल्ड',
   fmtItalic: 'इटैलिक',

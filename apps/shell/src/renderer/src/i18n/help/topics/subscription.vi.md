@@ -45,6 +45,15 @@ Thẻ ghi **Đã đăng nhập nhưng không phải bằng gói đăng ký** có
 - Sự cho phép của bạn chỉ được ghi nhớ cho riêng chương trình đó. Nó sẽ bị xóa khi chương trình đăng xuất hoặc khi thông tin đăng nhập thay đổi.
 - Nếu muốn dùng gói đăng ký, hãy đăng nhập chương trình bằng tài khoản có gói đăng ký rồi nhấn **Kiểm tra lại**.
 
+## Đổi tài khoản hoặc đăng xuất
+
+Khi chương trình đã đăng nhập, thẻ hiển thị tài khoản đang đăng nhập bên cạnh tên gói, nếu chương trình cho biết. Thẻ cũng có thêm hai nút.
+
+- **Đăng nhập bằng tài khoản khác** khởi động lại quy trình đăng nhập của chính chương trình. Hãy hoàn tất trong cửa sổ mở ra, bằng tài khoản kia.
+- **Đăng xuất** chạy lệnh đăng xuất của chính chương trình. Sau đó thẻ hiển thị **Chưa đăng nhập**.
+- Cả hai đều áp dụng cho chương trình đó trên toàn bộ máy tính này, không chỉ riêng GenOffice. Nếu bạn cũng dùng Claude Code hoặc Codex trong terminal, ở đó chương trình cũng bị đăng xuất hoặc chuyển sang tài khoản kia. Vì vậy GenOffice hỏi bạn xác nhận trước.
+- Tài khoản và hai nút này chỉ xuất hiện ở đây, trong Cài đặt ▸ AI. GenOffice chỉ hiển thị tài khoản và không lưu nó ở bất cứ đâu.
+
 ## AI nào được dùng
 
 **AI sử dụng**, trong Cài đặt ▸ AI, ban đầu được đặt là **Tự động**. Tự động quyết định theo thứ tự sau:
@@ -56,6 +65,8 @@ Thẻ ghi **Đã đăng nhập nhưng không phải bằng gói đăng ký** có
 Tự động không bao giờ chọn thứ gì tốn thêm tiền: không chọn khóa API, cũng không chọn đăng nhập tính phí theo mức sử dụng. Những thứ đó chỉ được dùng trong lúc bạn tự chọn chúng.
 
 Bạn cũng có thể tự chọn một AI, ngay tại chỗ đó hoặc trong danh sách mô hình ở cuối bảng AI. Nếu AI bạn chọn ngừng hoạt động, GenOffice không lặng lẽ chuyển sang AI khác. Nó cho bạn biết chuyện gì đã xảy ra và chỉ cách kết nối lại.
+
+Danh sách mô hình hiển thị các mô hình do chính chương trình báo về: mỗi mô hình có tên kèm mã mô hình chính xác bên cạnh, và **Mô hình mặc định** ghi rõ mô hình mà nó đang trỏ tới. Nhãn lựa chọn ở cuối bảng AI và mục **AI sử dụng** cũng ghi tên mô hình đó. Việc đọc danh sách không hỏi AI điều gì nên không tính vào hạn mức gói của bạn. Nếu chương trình quá cũ để báo các mô hình, một danh sách ngắn có sẵn trong ứng dụng sẽ được hiển thị thay thế.
 
 Ở bất cứ chỗ nào chọn được Codex đều có một dòng đi kèm: "Dùng gói đăng ký Codex bên trong một ứng dụng không phải là cách được OpenAI chính thức khuyến nghị." Hãy cân nhắc điều đó khi quyết định.
 

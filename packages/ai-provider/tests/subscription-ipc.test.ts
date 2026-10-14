@@ -4,24 +4,30 @@
  * helper that routes each channel.
  */
 import { readFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { fileURLToPath } from 'node:url'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
 import * as browser from '../src/browser'
 import * as root from '../src/index'
 import {
   SUBSCRIPTION_IPC_CHANNELS,
   checkingSubscriptionStatus,
+  createSubscriptionIpcDeps,
   ensureSubscriptionIpc,
+  notifySubscriptionLoginChange,
   registerSubscriptionIpc,
   resetSharedSubscriptionIpc,
+  setSubscriptionModelSource,
   sharedSubscriptionStatuses,
   subscriptionStatusErrorKind,
   type SubscriptionIpcDeps,
+  type SubscriptionIpcSetup,
   type SubscriptionLaunchResult,
   type SubscriptionMeteredResult,
   type SubscriptionStatusMap,
 } from '../src/subscription'
 import { setCodexImageGenerationAvailable } from '../src/image-backend'
+import { defaultAiSettings } from '../src/providers'
 import type { AiSubscriptionProviderId } from '../src/types'
 
 type Handler = (event: unknown, ...args: unknown[]) => unknown
@@ -70,13 +76,18 @@ function setup(): {
         log.push('getStatuses')
         return READY
       },
-      check: async (providers) => {
-        log.push(`check:${providers ? providers.join(',') : 'all'}`)
+      check: async (providers, options) => {
+        log.push(
+          `check:${providers ? providers.join(',') : 'all'}${options?.fresh ? ':fresh' : ''}`,
+        )
         return READY
       },
       setMeteredAccepted: async (provider, accepted): Promise<SubscriptionMeteredResult> => {
         log.push(`metered:${provider}:${accepted}`)
         return { ok: true, statuses: READY }
+      },
+      clearMeteredAcceptance: async (provider) => {
+        log.push(`clear:${provider}`)
       },
       onChange: (listener) => {
         listeners.add(listener)
@@ -85,6 +96,10 @@ function setup(): {
     },
     launchLogin: async (provider): Promise<SubscriptionLaunchResult> => {
       log.push(`login:${provider}`)
+      return { ok: true }
+    },
+    launchLogout: async (provider): Promise<SubscriptionLaunchResult> => {
+      log.push(`logout:${provider}`)
       return { ok: true }
     },
     launchInstall: async (provider): Promise<SubscriptionLaunchResult> => {
@@ -110,6 +125,7 @@ describe('the channel names', () => {
       statuses: 'ai:subscription-statuses',
       recheck: 'ai:subscription-recheck',
       login: 'ai:subscription-login',
+      logout: 'ai:subscription-logout',
       install: 'ai:subscription-install',
       metered: 'ai:subscription-metered',
       codexImage: 'ai:subscription-codex-image',
@@ -190,6 +206,7 @@ describe('registerSubscriptionIpc', () => {
         SUBSCRIPTION_IPC_CHANNELS.statuses,
         SUBSCRIPTION_IPC_CHANNELS.recheck,
         SUBSCRIPTION_IPC_CHANNELS.login,
+        SUBSCRIPTION_IPC_CHANNELS.logout,
         SUBSCRIPTION_IPC_CHANNELS.install,
         SUBSCRIPTION_IPC_CHANNELS.metered,
         SUBSCRIPTION_IPC_CHANNELS.codexImage,
@@ -248,6 +265,33 @@ describe('registerSubscriptionIpc', () => {
     expect(log).toEqual(['login:claude-code', 'install:codex'])
   })
 
+  it('routes logout to its launcher, then checks that provider again before it answers', async () => {
+    const { ipc, deps, log } = setup()
+    registerSubscriptionIpc(ipc, deps)
+    expect(await ipc.invoke(SUBSCRIPTION_IPC_CHANNELS.logout, { provider: 'codex' })).toEqual({
+      ok: true,
+    })
+    // a check that started after the logout: one already under way may hold the old login
+    expect(log).toEqual(['logout:codex', 'check:codex:fresh'])
+  })
+
+  it('checks again after a logout that failed too: the CLI may be signed out all the same', async () => {
+    const { ipc, deps, log } = setup()
+    deps.launchLogout = async (provider) => {
+      log.push(`logout:${provider}`)
+      return { ok: false, reason: 'failed' }
+    }
+    deps.service.check = async (providers, options) => {
+      log.push(`check:${providers ? providers.join(',') : 'all'}${options?.fresh ? ':fresh' : ''}`)
+      throw new Error('the check failed')
+    }
+    registerSubscriptionIpc(ipc, deps)
+    expect(await ipc.invoke(SUBSCRIPTION_IPC_CHANNELS.logout, { provider: 'claude-code' })).toEqual(
+      { ok: false, reason: 'failed' },
+    )
+    expect(log).toEqual(['logout:claude-code', 'check:claude-code:fresh'])
+  })
+
   it('routes set-metered-acceptance to the service', async () => {
     const { ipc, deps, log } = setup()
     registerSubscriptionIpc(ipc, deps)
@@ -280,6 +324,10 @@ describe('registerSubscriptionIpc', () => {
         ok: false,
         reason: 'invalid',
       })
+      expect(await ipc.invoke(SUBSCRIPTION_IPC_CHANNELS.logout, payload)).toMatchObject({
+        ok: false,
+        reason: 'invalid',
+      })
       expect(await ipc.invoke(SUBSCRIPTION_IPC_CHANNELS.metered, payload)).toMatchObject({
         ok: false,
       })
@@ -301,6 +349,23 @@ describe('registerSubscriptionIpc', () => {
       ok: false,
       reason: 'failed',
     })
+    deps.launchLogout = async () => {
+      throw new Error('boom')
+    }
+    expect(await ipc.invoke(SUBSCRIPTION_IPC_CHANNELS.logout, { provider: 'codex' })).toMatchObject(
+      { ok: false, reason: 'failed' },
+    )
+  })
+
+  it('a login or logout the app ran withdraws the metered acceptance of that provider', () => {
+    const { ipc, deps, log } = setup()
+    const unregister = registerSubscriptionIpc(ipc, deps)
+    // what the launchers do when a login window closed or a logout command ended
+    notifySubscriptionLoginChange('codex')
+    expect(log).toEqual(['clear:codex'])
+    unregister()
+    notifySubscriptionLoginChange('codex')
+    expect(log).toEqual(['clear:codex'])
   })
 
   it('announces status changes on the event channel', () => {
@@ -354,5 +419,70 @@ describe('ensureSubscriptionIpc', () => {
     resetSharedSubscriptionIpc()
     expect(ipc.handlers.size).toBe(0)
     expect(sharedSubscriptionStatuses()).toEqual({})
+  })
+})
+
+describe('createSubscriptionIpcDeps', () => {
+  const MODELS = [{ id: 'opus', label: 'Opus 5.5', resolved: 'claude-opus-5-5' }]
+  const setupFor = (extra: Partial<SubscriptionIpcSetup> = {}): SubscriptionIpcSetup => ({
+    getSettings: () => ({
+      providers: {
+        ...defaultAiSettings().providers,
+        codex: { apiKey: '', model: '', cliPath: 'D:\\tools\\codex.exe' },
+      },
+    }),
+    setMeteredAccepted: () => undefined,
+    dataDir: tmpdir(),
+    detect: async (provider) =>
+      provider === 'claude-code'
+        ? { provider, state: 'ready', loginMethod: 'subscription', account: 'someone@example.com' }
+        : { provider, state: 'not-installed' },
+    ...extra,
+  })
+  const settle = () => new Promise((resolve) => setImmediate(resolve))
+
+  afterEach(() => setSubscriptionModelSource('claude-code', null))
+
+  it('the status service reads the model list through the sources the bridges registered', async () => {
+    setSubscriptionModelSource('claude-code', async () => MODELS)
+    const broadcasts: SubscriptionStatusMap[] = []
+    const deps = createSubscriptionIpcDeps(
+      setupFor({ broadcast: (_channel, statuses) => broadcasts.push(statuses) }),
+    )
+    const ipc = new FakeIpcMain()
+    const unregister = registerSubscriptionIpc(ipc, deps)
+    try {
+      const checked = (await ipc.invoke(SUBSCRIPTION_IPC_CHANNELS.recheck)) as SubscriptionStatusMap
+      expect(checked['claude-code']).toMatchObject({
+        state: 'ready',
+        account: 'someone@example.com',
+      })
+      await settle()
+      // the list follows on the change channel every window already listens to
+      expect(broadcasts.at(-1)!['claude-code'].models).toEqual(MODELS)
+      expect(broadcasts.at(-1)!.codex).toEqual({
+        provider: 'codex',
+        state: 'not-installed',
+        meteredAccepted: false,
+      })
+    } finally {
+      unregister()
+    }
+  })
+
+  it('takes a stand-in lister, and none is asked for a provider that cannot run', async () => {
+    const asked: string[] = []
+    const deps = createSubscriptionIpcDeps(
+      setupFor({
+        listModels: async (provider) => {
+          asked.push(provider)
+          return MODELS
+        },
+      }),
+    )
+    await deps.service.check()
+    await settle()
+    expect(asked).toEqual(['claude-code'])
+    expect(deps.service.getStatuses()['claude-code'].models).toEqual(MODELS)
   })
 })

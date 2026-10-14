@@ -88,6 +88,7 @@ export const pt = {
   ribbonFontFamilyTip: 'Fonte',
   ribbonFontsCommon: 'Fontes comuns',
   ribbonFontsSystem: 'Fontes do sistema',
+  ribbonFontsHangul: 'Fontes coreanas',
   ribbonFontSizeTip: 'Tamanho da Fonte',
   ribbonGrowFont: 'Aumentar Tamanho da Fonte',
   ribbonShrinkFont: 'Diminuir Tamanho da Fonte',

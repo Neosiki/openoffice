@@ -11,9 +11,13 @@ import {
   SUBSCRIPTION_INSTALL_URLS,
   SUBSCRIPTION_LOGIN_ARGS_ENV,
   SUBSCRIPTION_LOGIN_EXE_ENV,
+  SUBSCRIPTION_LOGOUT_TIMEOUT_MS,
   createSubscriptionChildRegistry,
   launchSubscriptionInstall,
   launchSubscriptionLogin,
+  launchSubscriptionLogout,
+  notifySubscriptionLoginChange,
+  onSubscriptionLoginChange,
   subscriptionInstallCommandLine,
   type SubscriptionProgram,
 } from '../src/subscription'
@@ -410,5 +414,164 @@ describe('launchSubscriptionInstall', () => {
       expect(url).toMatch(/^https:\/\//)
     }
     expect(Object.keys(SUBSCRIPTION_INSTALL_URLS).sort()).toEqual(['claude-code', 'codex'])
+  })
+})
+
+/** A child that prints, then ends: what `runSubscriptionProgram` reads */
+class FakeCommand extends FakeChild {
+  readonly stdout = new EventEmitter()
+  readonly stderr = new EventEmitter()
+  finish(code: number | null, stdout = '', stderr = ''): void {
+    if (stdout) this.stdout.emit('data', Buffer.from(stdout))
+    if (stderr) this.stderr.emit('data', Buffer.from(stderr))
+    this.emit('exit', code)
+    this.emit('close', code)
+  }
+}
+
+function commandRecorder(end: (child: FakeCommand) => void = (child) => child.finish(0)): {
+  calls: SpawnCall[]
+  spawn: (command: string, args: string[], options: object) => FakeCommand
+} {
+  const calls: SpawnCall[] = []
+  return {
+    calls,
+    spawn: (command, args, options) => {
+      const child = new FakeCommand(4322)
+      calls.push({ command, args, options: options as Record<string, unknown>, child })
+      setImmediate(() => end(child))
+      return child
+    },
+  }
+}
+
+describe('launchSubscriptionLogout', () => {
+  it("runs the CLI's own logout command: the located file, no shell, no billing-route variables", async () => {
+    for (const [provider, args] of [
+      ['claude-code', ['auth', 'logout']],
+      ['codex', ['logout']],
+    ] as const) {
+      const { calls, spawn } = commandRecorder()
+      const result = await launchSubscriptionLogout(provider, {
+        locate: async () => program(provider),
+        spawn,
+        baseEnv: { ...WINDOWS, ANTHROPIC_API_KEY: 'sk-ant', OPENAI_API_KEY: 'sk-oai', KEEP: '1' },
+      })
+      expect(result).toEqual({ ok: true })
+      expect(calls).toHaveLength(1)
+      const call = calls[0]!
+      expect(call.command).toBe(program(provider).command)
+      expect(call.args).toEqual(args)
+      expect(call.options.shell).toBeUndefined()
+      expect(call.options.windowsHide).toBe(true)
+      // nothing waits on a prompt: stdin is closed from the start
+      expect((call.options.stdio as unknown[])[0]).toBe('ignore')
+      expect(call.options.cwd).toBe(tmpdir())
+      expect(envOf(call).ANTHROPIC_API_KEY).toBeUndefined()
+      expect(envOf(call).OPENAI_API_KEY).toBeUndefined()
+      expect(envOf(call).KEEP).toBe('1')
+    }
+  })
+
+  it('uses the configured path of the CLI and its wrapper arguments', async () => {
+    const { calls, spawn } = commandRecorder()
+    const asked: unknown[] = []
+    await launchSubscriptionLogout('codex', {
+      configuredPath: 'D:\\tools\\codex.exe',
+      locate: async (provider, options) => {
+        asked.push([provider, options?.configuredPath])
+        return { ...program('codex'), command: 'C:\\node.exe', prefixArgs: ['D:\\codex\\cli.js'] }
+      },
+      spawn,
+      baseEnv: WINDOWS,
+    })
+    expect(asked).toEqual([['codex', 'D:\\tools\\codex.exe']])
+    expect(calls[0]!.command).toBe('C:\\node.exe')
+    expect(calls[0]!.args).toEqual(['D:\\codex\\cli.js', 'logout'])
+  })
+
+  it('a logout the CLI reports as failed is a plain failure, without what it printed', async () => {
+    const { spawn } = commandRecorder((child) =>
+      child.finish(1, '', 'Error: could not sign out jun.il@school.kr (Acme Org)\n'),
+    )
+    const result = await launchSubscriptionLogout('claude-code', {
+      locate: async () => program('claude-code'),
+      spawn,
+      baseEnv: WINDOWS,
+    })
+    expect(result).toEqual({ ok: false, reason: 'failed' })
+    expect(JSON.stringify(result)).not.toMatch(/school|Acme/)
+  })
+
+  it('gives up on a CLI that does not finish, and ends it', async () => {
+    const { calls, spawn } = commandRecorder(() => undefined)
+    const started = Date.now()
+    const result = await launchSubscriptionLogout('codex', {
+      locate: async () => program('codex'),
+      spawn,
+      baseEnv: WINDOWS,
+      timeoutMs: 30,
+    })
+    expect(result).toMatchObject({ ok: false, reason: 'failed' })
+    expect(Date.now() - started).toBeLessThan(5_000)
+    expect(calls).toHaveLength(1)
+  })
+
+  it('has a bounded time to finish by default', () => {
+    expect(SUBSCRIPTION_LOGOUT_TIMEOUT_MS).toBeGreaterThan(0)
+    expect(SUBSCRIPTION_LOGOUT_TIMEOUT_MS).toBeLessThanOrEqual(60_000)
+  })
+
+  it('reports a missing CLI and a failing lookup without starting anything', async () => {
+    const { calls, spawn } = commandRecorder()
+    expect(await launchSubscriptionLogout('codex', { locate: async () => null, spawn })).toEqual({
+      ok: false,
+      reason: 'not-installed',
+      installUrl: SUBSCRIPTION_INSTALL_URLS.codex,
+    })
+    expect(
+      await launchSubscriptionLogout('codex', {
+        locate: async () => {
+          throw new Error('EACCES')
+        },
+        spawn,
+      }),
+    ).toMatchObject({ ok: false, reason: 'failed' })
+    expect(await launchSubscriptionLogout('openai' as never, { spawn })).toEqual({
+      ok: false,
+      reason: 'invalid',
+    })
+    expect(calls).toEqual([])
+  })
+
+  it('tells the bridges that the login changed, after a logout and after a login window closed', async () => {
+    const changed: string[] = []
+    const stop = onSubscriptionLoginChange((provider) => changed.push(provider))
+    try {
+      const { spawn } = commandRecorder()
+      await launchSubscriptionLogout('codex', {
+        locate: async () => program('codex'),
+        spawn,
+        baseEnv: WINDOWS,
+      })
+      expect(changed).toEqual(['codex'])
+
+      const login = recorder()
+      await launchSubscriptionLogin('claude-code', {
+        locate: async () => program('claude-code'),
+        spawn: login.spawn,
+        platform: 'win32',
+        baseEnv: WINDOWS,
+        registry: null,
+      })
+      // nothing changed while the window is open
+      expect(changed).toEqual(['codex'])
+      login.calls[0]!.child.emit('exit', 0)
+      expect(changed).toEqual(['codex', 'claude-code'])
+    } finally {
+      stop()
+    }
+    notifySubscriptionLoginChange('codex')
+    expect(changed).toEqual(['codex', 'claude-code'])
   })
 })

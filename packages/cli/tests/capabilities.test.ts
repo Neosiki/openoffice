@@ -1,4 +1,4 @@
-import { mkdirSync, writeFileSync } from 'node:fs'
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { setCodexImageGenerationAvailable } from '@genoffice/ai-provider'
@@ -210,6 +210,33 @@ describe('genoffice capabilities', () => {
     expect(d.image_analysis).toMatchObject({ available: false, via: null, route: null })
     expect(d.image_analysis.message).toContain('no AI provider is connected')
     expect(d.automatic_calls.subscription_enabled).toBe(true)
+  })
+
+  it('says nothing of the account a CLI is signed in with, nor of its models', async () => {
+    fakes.detect.mockImplementation(async (provider: string) => ({
+      ...READY[provider]!,
+      planName: 'max',
+      account: 'jun.il@school.kr',
+    }))
+    const dir = tempDir()
+    const settings = settingsFile(dir, { headlessSubscriptionEnabled: true })
+    const audit = join(dir, 'audit.jsonl')
+    for (const format of [['--json'], []]) {
+      const r = await run(['capabilities', ...format], {
+        env: { ...envFor(settings), GENOFFICE_AUDIT_LOG: audit },
+      })
+      expect(r.code).toBe(0)
+      expect(`${r.stdout}\n${r.stderr}`).not.toMatch(/school\.kr|jun\.il/)
+    }
+    const detail = (await run(['capabilities', '--json'], { env: envFor(settings) })).json().detail
+    expect(detail.image_analysis).toEqual({
+      available: true,
+      via: 'claude-code',
+      route: 'subscription',
+    })
+    expect(JSON.stringify(detail)).not.toMatch(/account|models/)
+    expect(readFileSync(audit, 'utf8')).not.toMatch(/school\.kr|jun\.il/)
+    expect(fakes.detect).toHaveBeenCalled()
   })
 
   it('makes no network call and starts no model: only the status check may run', async () => {

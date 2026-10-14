@@ -21,6 +21,8 @@ export const pt = {
   actionInstallHelp: 'Guia oficial de instalação',
   actionOpenSettings: 'Abrir configurações',
   actionDismiss: 'Fechar',
+  actionSwitchAccount: 'Entrar com outra conta',
+  actionLogout: 'Sair',
   installNote:
     'O comando oficial de instalação da {vendor} é executado em uma nova janela de terminal.',
   loginNote: 'A página de login que se abre é da própria {vendor}.',
@@ -68,7 +70,9 @@ export const pt = {
   truncatedNotice: 'A entrada era longa demais, então parte dela foi cortada antes do envio.',
   pickerAuto: 'Automático',
   pickerAutoUsing: 'Automático · {provider}',
+  pickerAutoUsingModel: 'Automático · {provider} · {model}',
   pickerDefaultModel: 'Modelo padrão',
+  pickerDefaultModelNamed: 'Modelo padrão · {model}',
   pickerSubscription: 'Assinatura',
   pickerPaid: 'Pago',
   pickerPaidTitle: 'Cobrado por consumo, não coberto por assinatura',

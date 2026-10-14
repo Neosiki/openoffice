@@ -19,10 +19,15 @@ import type {
   AiProviderId,
   AiProviderSelection,
   AiSettings,
+  AiSubscriptionProviderId,
   AiSubscriptionStatuses,
 } from '@genoffice/ai-provider/browser'
 import type { AiMediaProviderMeta } from '@genoffice/ai-provider'
-import { aiProviderDisplayName, aiProviderPickerGroups } from '@genoffice/ui'
+import {
+  aiProviderDisplayName,
+  aiProviderPickerGroups,
+  aiSubscriptionModelName,
+} from '@genoffice/ui'
 
 /**
  * Whether the first-connection notice carries its Codex sentence. The Codex
@@ -31,6 +36,24 @@ import { aiProviderDisplayName, aiProviderPickerGroups } from '@genoffice/ui'
  * neither read nor prevent. So the sentence stays in, and says exactly that.
  */
 export const CODEX_MAY_KEEP_HISTORY = true
+
+/**
+ * The vendor program behind each subscription, by the name its users know it
+ * under in a terminal. Said only where the program itself is the subject: the
+ * confirmation before a sign-out or a change of account, which apply to that
+ * program on the whole PC. Everywhere else the connection is "Claude" / "Codex".
+ */
+const SUBSCRIPTION_PROGRAM_NAMES: Record<AiSubscriptionProviderId, string> = {
+  'claude-code': 'Claude Code',
+  codex: 'Codex',
+}
+
+export function subscriptionProgramName(provider: AiSubscriptionProviderId): string {
+  return SUBSCRIPTION_PROGRAM_NAMES[provider]
+}
+
+/** The two things a card can do to the account of a signed-in program; each is confirmed first */
+export type SubscriptionAccountAction = 'switch' | 'logout'
 
 // ── reading and writing ───────────────────────────────────
 
@@ -116,6 +139,8 @@ export interface AiSelectionChoice {
   readonly endpoint?: string | undefined
   /** the provider's name; on `auto`, the provider it runs on right now (absent while none is connected) */
   readonly name?: string | undefined
+  /** a subscription whose program listed its models: the name of the model it runs on right now */
+  readonly model?: string | undefined
   /** an accepted metered login: selectable, shown with a cost marker */
   readonly metered: boolean
   /** the stored selection, listed although it cannot run right now; shown, never offered */
@@ -154,6 +179,7 @@ export function aiSelectionChoices(
       kind: 'auto',
       provider: 'auto',
       name: auto?.label,
+      model: aiSubscriptionModelName(settings, statuses, auto?.resolved),
       metered: false,
       unavailable: false,
     },
@@ -166,6 +192,10 @@ export function aiSelectionChoices(
       provider: group.id,
       endpoint: group.endpoint,
       name: group.label,
+      model:
+        group.kind === 'subscription'
+          ? aiSubscriptionModelName(settings, statuses, group.id)
+          : undefined,
       metered: group.metered,
       unavailable: false,
     })

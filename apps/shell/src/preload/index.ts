@@ -572,6 +572,11 @@ const subscriptionApi: SubscriptionApi = {
       await ipcRenderer.invoke(SUBSCRIPTION_IPC_CHANNELS.login, { provider }),
     )
   },
+  async logout(provider) {
+    return subscriptionLaunchResultOf(
+      await ipcRenderer.invoke(SUBSCRIPTION_IPC_CHANNELS.logout, { provider }),
+    )
+  },
   async install(provider) {
     return subscriptionLaunchResultOf(
       await ipcRenderer.invoke(SUBSCRIPTION_IPC_CHANNELS.install, { provider }),

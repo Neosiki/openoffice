@@ -45,6 +45,15 @@ Une carte qui indique **Connecté, mais pas avec un abonnement** porte un averti
 - Votre autorisation n’est retenue que pour ce programme. Elle est effacée lorsque le programme est déconnecté ou que sa connexion change.
 - Pour utiliser plutôt votre abonnement, connectez le programme avec le compte de votre abonnement et appuyez sur **Vérifier à nouveau**.
 
+## Changer de compte ou se déconnecter
+
+Quand le programme est connecté, sa carte affiche le compte utilisé, à côté du nom du forfait, si le programme l’indique. Elle comporte aussi deux boutons.
+
+- **Se connecter avec un autre compte** relance la procédure de connexion du programme lui-même. Terminez-la dans la fenêtre qui s’ouvre, avec l’autre compte.
+- **Se déconnecter** exécute la déconnexion du programme lui-même. La carte indique ensuite **Non connecté**.
+- Les deux s’appliquent à ce programme sur tout ce PC, pas seulement à GenOffice. Si vous utilisez aussi Claude Code ou Codex dans un terminal, il y est déconnecté lui aussi, ou passe à l’autre compte. GenOffice vous demande donc de confirmer avant.
+- Le compte et ces deux boutons n’apparaissent qu’ici, sous Paramètres ▸ IA. GenOffice affiche le compte et ne l’enregistre nulle part.
+
 ## Quelle IA est utilisée
 
 **IA à utiliser**, sous Paramètres ▸ IA, est réglé au départ sur **Automatique**. Automatique décide dans cet ordre :
@@ -56,6 +65,8 @@ Une carte qui indique **Connecté, mais pas avec un abonnement** porte un averti
 Automatique ne choisit jamais rien qui coûte de l’argent en plus : ni une clé API, ni une connexion facturée à l’usage. Celles-ci ne servent que tant que vous les choisissez vous-même.
 
 Vous pouvez aussi choisir une IA vous-même, au même endroit ou dans la liste des modèles en bas du panneau IA. Si celle que vous avez choisie cesse de fonctionner, GenOffice ne passe pas discrètement à une autre. Il vous dit ce qui s’est passé et montre comment rétablir la connexion.
+
+La liste des modèles affiche les modèles que le programme indique lui-même : chacun par son nom, avec son identifiant exact à côté, et **Modèle par défaut** avec le modèle qu’il désigne actuellement. L’étiquette en bas du panneau IA et **IA à utiliser** nomment aussi ce modèle. Lire cette liste ne demande rien à l’IA et ne compte donc pas dans votre forfait. Si le programme est trop ancien pour indiquer ses modèles, une courte liste intégrée est affichée à la place.
 
 Partout où Codex peut être choisi, une ligne l’accompagne : « Utiliser un abonnement Codex dans une application n’est pas une méthode officiellement recommandée par OpenAI. » Décidez en connaissance de cause.
 

@@ -34,6 +34,7 @@ import {
 } from './protocols/shared'
 import { AiRunError } from './run-error'
 import { resolveSubscriptionProgram, type SubscriptionProgram } from './subscription/locate'
+import { setSubscriptionModelSource } from './subscription/models'
 import {
   killProcessTree,
   spawnSubscriptionProgram,
@@ -43,6 +44,7 @@ import {
 import type {
   AiChatResponse,
   AiProviderConfig,
+  AiSubscriptionModel,
   AiSubscriptionUsage,
   AiTokenUsage,
   AiUsageWindow,
@@ -84,13 +86,18 @@ const STRUCTURED_INSTRUCTIONS =
 const PLAIN_INSTRUCTIONS = `${NO_TOOLS_INSTRUCTIONS} Answer the request directly.`
 
 /**
- * Closes a turn whose last event is a tool result. Every turn is a fresh CLI
- * session that reads the whole conversation as one user message, and a smaller
- * model then tends to answer the first user event again and re-request calls
- * that already ran (seen live: one requested paragraph inserted four times).
+ * The `note` of every tool-result event. Every turn is a fresh CLI session
+ * that reads the whole conversation as one user message, and a smaller model
+ * then tends to answer the first user event again and re-request calls that
+ * already ran (seen live: one requested paragraph inserted four times).
+ *
+ * It is a field of the event, the same text on each one, and never a block of
+ * its own after the events: a block that is last in one turn and gone in the
+ * next would make that turn's blocks no prefix of the next turn's, and a tool
+ * loop would read its whole input uncached every turn.
  */
 const AFTER_TOOL_RESULTS =
-  'The last event above is the result of the tool calls requested in the event before it. The application has already run those calls exactly once: do not request them again. ' +
+  'These are the results of the tool calls requested in the event before this one. The application has already run those calls exactly once: do not request them again. ' +
   'Continue from the results: request only the further calls that are still needed, or finish with an empty "toolCalls" array.'
 
 // ── What the CLI is started with ──
@@ -193,10 +200,11 @@ function initializeRequest(system: string, instructions: string): ClaudeCodeInpu
 /**
  * The two stdin lines of a structured turn. The user message is a list of
  * blocks: the tool list and the schema first, then one JSON object per
- * conversation event with a user event's images right after it, and a closing
- * note when the last event is a tool result. A later turn of the same
- * conversation repeats the earlier event blocks unchanged and appends to them,
- * so the provider's prompt cache can serve the common prefix.
+ * conversation event with a user event's images right after it. A tool-result
+ * event carries a note that its calls already ran. A later turn of the same
+ * conversation repeats the earlier blocks unchanged and appends to them,
+ * whatever event the earlier turn ended on, so the provider's prompt cache can
+ * serve the common prefix.
  */
 export function buildClaudeCodeInput(
   system: string,
@@ -269,12 +277,15 @@ export function buildClaudeCodeInput(
     } else {
       content.push({
         type: 'text',
-        text: JSON.stringify({ role: 'tool', results: message.results }),
+        // the note last: it is what the model reads last when the turn ends on this event
+        text: JSON.stringify({
+          role: 'tool',
+          results: message.results,
+          note: AFTER_TOOL_RESULTS,
+        }),
       })
     }
   }
-  // after the events, so an earlier turn's blocks stay a prefix of this turn's
-  if (messages.at(-1)?.role === 'tool') content.push({ type: 'text', text: AFTER_TOOL_RESULTS })
   return {
     initialize: initializeRequest(system, STRUCTURED_INSTRUCTIONS),
     user: { type: 'user', message: { role: 'user', content } },
@@ -308,6 +319,9 @@ export function parseClaudeCodeTurn(
     // the object may sit inside a sentence the model added around it
     const start = trimmed.indexOf('{')
     const end = trimmed.lastIndexOf('}')
+    // No object at all: the model answered in plain prose (seen live: a bare "done" after
+    // its tool calls had run). That is an answer without tool calls, not a broken one.
+    if (start < 0 && trimmed) return { text: trimmed, toolCalls: [] }
     try {
       if (start < 0 || end <= start) throw error
       parsed = JSON.parse(trimmed.slice(start, end + 1))
@@ -1127,3 +1141,190 @@ export async function chatClaudeCodeCli(
   )
   return content ? { ok: true, content } : { ok: false, error: 'Claude Code returned no content' }
 }
+
+// ── The model list ──
+
+/** How long the CLI is given to answer the setup request with its model list */
+const MODEL_LIST_TIMEOUT_MS = 15_000
+
+/** The entry of the CLI's list that stands for its own default, which an empty selection runs */
+const DEFAULT_MODEL_VALUE = 'default'
+
+/**
+ * The models named in the CLI's answer to the setup request: `{ value,
+ * displayName, resolvedModel }` each. `value` is what `--model` takes, so an
+ * entry whose value could not be passed there is left out. Only the `models`
+ * field is read; the answer also names the account, which is not touched.
+ */
+export function claudeCodeModels(initialized: unknown): AiSubscriptionModel[] {
+  const listed = isPlainObject(initialized) ? initialized.models : undefined
+  if (!Array.isArray(listed)) return []
+  const models: AiSubscriptionModel[] = []
+  for (const entry of listed) {
+    if (!isPlainObject(entry) || typeof entry.value !== 'string') continue
+    const value = entry.value.trim()
+    if (!MODEL_NAME.test(value)) continue
+    const isDefault = value === DEFAULT_MODEL_VALUE
+    const id = isDefault ? '' : value
+    if (models.some((model) => model.id === id)) continue
+    const resolved =
+      typeof entry.resolvedModel === 'string' && MODEL_NAME.test(entry.resolvedModel.trim())
+        ? entry.resolvedModel.trim()
+        : undefined
+    // the default is listed only when the CLI says what it runs on
+    if (isDefault && !resolved) continue
+    const name = typeof entry.displayName === 'string' ? entry.displayName.trim() : ''
+    models.push({
+      id,
+      label: name || value,
+      ...(resolved ? { resolved } : {}),
+      ...(isDefault ? { isDefault: true } : {}),
+    })
+  }
+  return models
+}
+
+export interface ClaudeCodeModelsRequest {
+  /** the user's own path to the CLI, when one is configured */
+  cliPath?: string | undefined
+  /** the caller gave up: the process tree is ended and the reading rejects */
+  signal: AbortSignal
+  timeoutMs?: number | undefined
+}
+
+/**
+ * Ask the CLI which models it offers, without asking a model anything. The CLI
+ * is started exactly as for a turn (the same flags, an empty directory of its
+ * own, the sanitised environment), is sent the setup request and nothing else,
+ * and is told to leave as soon as it answered. No user message is ever
+ * written, so no request reaches the model and no usage is spent.
+ *
+ * Resolves with the list, empty when the CLI names none or does not accept the
+ * request (an older CLI). Rejects when the CLI cannot be started, does not
+ * answer in time, or does anything other than answer; its process tree is
+ * ended in each of those cases, and the CLI's own output is not repeated.
+ */
+export async function listClaudeCodeModels(
+  request: ClaudeCodeModelsRequest,
+  deps: ClaudeCodeCliDeps = {},
+): Promise<AiSubscriptionModel[]> {
+  const { signal } = request
+  if (signal.aborted) throw cancelledError()
+  const args = claudeCodeCliLaunchArgs('')
+  const program = await (
+    deps.resolveProgram ??
+    ((configuredPath) => resolveSubscriptionProgram(PROVIDER, { configuredPath }))
+  )(request.cliPath)
+  if (signal.aborted) throw cancelledError()
+
+  const cwd = await mkdtemp(join(tmpdir(), TEMP_PREFIX))
+  const removeCwd = (): void => {
+    void rm(cwd, { recursive: true, force: true, maxRetries: 3 }).catch(() => undefined)
+  }
+  let child: ChildProcess
+  try {
+    if (signal.aborted) throw cancelledError()
+    child = spawnSubscriptionProgram(program, args, {
+      cwd,
+      baseEnv: deps.baseEnv,
+      spawn: deps.spawn,
+      registry: deps.registry,
+    })
+  } catch (error) {
+    removeCwd()
+    throw error instanceof Error && error.name === 'AbortError' ? error : startFailure(error)
+  }
+
+  const killTree = deps.killTree ?? ((target) => killProcessTree(target, { force: true }))
+  return new Promise<AiSubscriptionModel[]>((resolve, reject) => {
+    let settled = false
+    let exited = false
+    const finish = (models: AiSubscriptionModel[] | undefined, error?: Error): void => {
+      if (settled) return
+      settled = true
+      clearTimeout(timer)
+      signal.removeEventListener('abort', onAbort)
+      if (!exited) {
+        if (error) {
+          killTree(child)
+        } else {
+          // the CLI leaves by itself once its input ends; it is ended if it does not
+          child.stdin?.end()
+          const grace = setTimeout(() => {
+            if (!exited) killTree(child)
+          }, deps.exitGraceMs ?? EXIT_GRACE_MS)
+          grace.unref?.()
+          child.once('close', () => clearTimeout(grace))
+        }
+      }
+      if (error) reject(error)
+      else resolve(models ?? [])
+    }
+    const onAbort = (): void => finish(undefined, cancelledError())
+    const timer = setTimeout(
+      () => finish(undefined, new Error('Claude Code did not list its models in time')),
+      request.timeoutMs ?? MODEL_LIST_TIMEOUT_MS,
+    )
+    timer.unref?.()
+
+    const onLine = (line: string): void => {
+      if (settled) return
+      let event: unknown
+      try {
+        event = JSON.parse(line)
+      } catch {
+        return
+      }
+      if (!isPlainObject(event)) return
+      if (event.type === 'control_response') {
+        const response = event.response
+        if (!isPlainObject(response) || response.request_id !== INITIALIZE_REQUEST_ID) return
+        // a CLI that does not accept the request has no list to give
+        finish(response.subtype === 'success' ? claudeCodeModels(response.response) : [])
+        return
+      }
+      // Nothing was asked of a model, so there is nothing to answer, run or permit. A CLI that
+      // asks for something or produces output is not doing what it was started for.
+      if (
+        event.type === 'control_request' ||
+        event.type === 'stream_event' ||
+        event.type === 'assistant' ||
+        event.type === 'user' ||
+        event.type === 'result'
+      ) {
+        finish(undefined, new Error('Claude Code did more than list its models; it was stopped'))
+      }
+    }
+
+    child.stdin?.on('error', () => undefined)
+    // what the CLI prints is not kept: it can name the account
+    child.stderr?.on('data', () => undefined)
+    if (child.stdout) {
+      readLines(child.stdout, onLine, () =>
+        finish(undefined, new Error('Claude Code wrote an endless line; it was stopped')),
+      )
+    }
+    child.once('error', (error) => {
+      // without a pid the program never started, and no close event follows
+      if (child.pid === undefined) {
+        exited = true
+        removeCwd()
+      }
+      finish(undefined, startFailure(error))
+    })
+    child.once('close', () => {
+      exited = true
+      removeCwd()
+      finish(undefined, new Error('Claude Code exited before it listed its models'))
+    })
+    signal.addEventListener('abort', onAbort, { once: true })
+    if (child.stdin?.writable) {
+      child.stdin.write(`${JSON.stringify(initializeRequest(NO_TOOLS_INSTRUCTIONS, ''))}\n`)
+    }
+  })
+}
+
+// the status check reads the list through this bridge, as it reads Codex's through that one
+setSubscriptionModelSource(PROVIDER, ({ configuredPath, signal }) =>
+  listClaudeCodeModels({ cliPath: configuredPath, signal }),
+)

@@ -57,6 +57,8 @@ function connectionOf(
     codexImageAvailable: false,
     install: vi.fn(),
     login: vi.fn(),
+    switchAccount: vi.fn(),
+    logout: vi.fn(),
     recheck: vi.fn(),
     refresh: vi.fn(),
     acceptMetered: vi.fn(async () => undefined),

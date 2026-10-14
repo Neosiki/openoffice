@@ -22,9 +22,10 @@ import {
   aiSelectionValue,
   changeAiSettings,
   readAiSettings,
+  subscriptionProgramName,
   withAiSelection,
 } from './settings-ai'
-import type { AiSelectionChoice } from './settings-ai'
+import type { AiSelectionChoice, SubscriptionAccountAction } from './settings-ai'
 
 // ── AI section of the settings dialog ─────────────────────
 // What everyone sees is the subscription connection: the two connect cards and
@@ -76,15 +77,18 @@ export function SubscriptionSummary({
 function choiceLabel(choice: AiSelectionChoice, t: TFunc, lang: Lang): string {
   const name = choice.name ?? ''
   if (choice.kind === 'auto') {
-    return name
-      ? aiSubscriptionText(lang, 'pickerAutoUsing', { provider: name })
-      : aiSubscriptionText(lang, 'pickerAuto')
+    if (!name) return aiSubscriptionText(lang, 'pickerAuto')
+    // with the model it runs on, when the program listed its models
+    return choice.model
+      ? aiSubscriptionText(lang, 'pickerAutoUsingModel', { provider: name, model: choice.model })
+      : aiSubscriptionText(lang, 'pickerAutoUsing', { provider: name })
   }
   if (choice.unavailable) return t('setAiUseUnavailable', { provider: name })
-  if (choice.metered) return `${name} · ${aiSubscriptionText(lang, 'pickerPaid')}`
+  const running = choice.model ? `${name} · ${choice.model}` : name
+  if (choice.metered) return `${running} · ${aiSubscriptionText(lang, 'pickerPaid')}`
   // the Anthropic key provider is also called "Claude": the tag tells the two apart
   if (choice.kind === 'subscription') {
-    return `${name} · ${aiSubscriptionText(lang, 'pickerSubscription')}`
+    return `${running} · ${aiSubscriptionText(lang, 'pickerSubscription')}`
   }
   return name
 }
@@ -110,6 +114,11 @@ export function AiSection({
   const [noticeOpen, setNoticeOpen] = useState(false)
   /** the automatic-requests switch was pressed while off: the warning is up, nothing is saved yet */
   const [headlessAsked, setHeadlessAsked] = useState(false)
+  /** an account action was pressed on a card: its confirmation is up, nothing has run yet */
+  const [accountAsked, setAccountAsked] = useState<{
+    provider: AiSubscriptionProviderId
+    action: SubscriptionAccountAction
+  } | null>(null)
 
   useEffect(() => {
     if (!openTab) return
@@ -149,6 +158,21 @@ export function AiSection({
     )
   }
 
+  // Both account actions are the vendor program's own, for the whole PC: a terminal using the
+  // same program is signed out, or moved to the other account, with it. So each is asked first.
+  const runAccountAction = () => {
+    if (!accountAsked) return
+    setAccountAsked(null)
+    if (accountAsked.action === 'logout') connection.logout(accountAsked.provider)
+    else connection.switchAccount(accountAsked.provider)
+  }
+  const accountActionLabel = accountAsked
+    ? aiSubscriptionText(
+        lang,
+        accountAsked.action === 'logout' ? 'actionLogout' : 'actionSwitchAccount',
+      )
+    : ''
+
   const choices = settings ? aiSelectionChoices(settings, statuses) : []
   const running = settings ? selectAiProvider(settings, statuses) : null
   const blocked = running ? aiConnectPromptView(running) : null
@@ -172,20 +196,56 @@ export function AiSection({
               onRecheck={connection.recheck}
               onAcceptMetered={acceptMetered}
               onOpenInstallHelp={connection.openInstallHelp}
+              showAccount
+              onSwitchAccount={(id) => setAccountAsked({ provider: id, action: 'switch' })}
+              onLogout={(id) => setAccountAsked({ provider: id, action: 'logout' })}
             />
-            {failed[provider] && (
-              <div className="set-sub-failed" role="alert" data-provider={provider}>
-                <span>
-                  {t(failed[provider] === 'install' ? 'setSubInstallFailed' : 'setSubLoginFailed')}
-                </span>
-                <button
-                  type="button"
-                  className="set-link"
-                  onClick={() => connection.openInstallHelp(provider)}
-                >
-                  {aiSubscriptionText(lang, 'actionInstallHelp')}
-                </button>
+            {accountAsked?.provider === provider && (
+              <div
+                className="set-adv-confirm set-sub-confirm"
+                role="alertdialog"
+                aria-label={accountActionLabel}
+                data-provider={provider}
+              >
+                <div className="set-field-desc set-adv-warning">
+                  {t(
+                    accountAsked.action === 'logout'
+                      ? 'setSubLogoutConfirm'
+                      : 'setSubSwitchConfirm',
+                    { program: subscriptionProgramName(provider) },
+                  )}
+                </div>
+                <div className="set-btn-row">
+                  <button className="set-btn" onClick={() => setAccountAsked(null)}>
+                    {t('cancel')}
+                  </button>
+                  <button className="set-btn danger" onClick={runAccountAction}>
+                    {accountActionLabel}
+                  </button>
+                </div>
               </div>
+            )}
+            {failed[provider] === 'logout' ? (
+              <div className="set-sub-failed" role="alert" data-provider={provider}>
+                <span>{t('setSubLogoutFailed')}</span>
+              </div>
+            ) : (
+              failed[provider] && (
+                <div className="set-sub-failed" role="alert" data-provider={provider}>
+                  <span>
+                    {t(
+                      failed[provider] === 'install' ? 'setSubInstallFailed' : 'setSubLoginFailed',
+                    )}
+                  </span>
+                  <button
+                    type="button"
+                    className="set-link"
+                    onClick={() => connection.openInstallHelp(provider)}
+                  >
+                    {aiSubscriptionText(lang, 'actionInstallHelp')}
+                  </button>
+                </div>
+              )
             )}
           </Fragment>
         ))}

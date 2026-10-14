@@ -86,6 +86,7 @@ export const th = {
   ribbonFontFamilyTip: 'ฟอนต์',
   ribbonFontsCommon: 'แบบอักษรที่ใช้บ่อย',
   ribbonFontsSystem: 'แบบอักษรของระบบ',
+  ribbonFontsHangul: 'ฟอนต์ภาษาเกาหลี',
   ribbonFontSizeTip: 'ขนาดฟอนต์',
   ribbonGrowFont: 'เพิ่มขนาดฟอนต์',
   ribbonShrinkFont: 'ลดขนาดฟอนต์',

@@ -72,9 +72,16 @@ export { FILE_NAV_SCHEME, createFileNav, fileNavHref, parseFileNavHref } from '.
 export { isSymbolFontFamily } from './symbol-fonts'
 export {
   BUILTIN_FONT_FAMILIES,
+  familyForTypedName,
+  findFontMatch,
   fontFamiliesFor,
+  fontFamilyLabel,
+  matchesFontQuery,
   partitionFontFamilies,
+  splitHangulFamilies,
   systemFamiliesBesidesCandidates,
+  type FontFamilyInfo,
+  type FontFamilyInfoMap,
 } from './font-list'
 export {
   WORDART_PRESETS,
@@ -138,7 +145,9 @@ export { withAiModelSelection, type AiModelPickerSelection } from './ai-model-pi
 export {
   aiProviderPickerGroups,
   aiProviderPickerSelection,
+  aiSubscriptionModelName,
   withAiProviderSelection,
+  type AiPickerModelDetail,
   type AiProviderPickerCurrent,
   type AiProviderPickerGroup,
   type AiProviderPickerSelection,
@@ -166,6 +175,7 @@ export {
   type AiContinueOption,
   type AiRunErrorCause,
   type AiSubscriptionCardAction,
+  type AiSubscriptionCardOptions,
   type AiSubscriptionCardTone,
   type AiSubscriptionCardView,
 } from './ai-subscription'

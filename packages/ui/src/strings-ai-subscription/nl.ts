@@ -22,6 +22,8 @@ export const nl = {
   actionInstallHelp: 'Officiële installatiehandleiding',
   actionOpenSettings: 'Instellingen openen',
   actionDismiss: 'Sluiten',
+  actionSwitchAccount: 'Aanmelden met een ander account',
+  actionLogout: 'Afmelden',
   installNote:
     'De officiële installatieopdracht van {vendor} wordt uitgevoerd in een nieuw terminalvenster.',
   loginNote: 'De aanmeldpagina die wordt geopend is van {vendor} zelf.',
@@ -68,7 +70,9 @@ export const nl = {
   truncatedNotice: 'De invoer was te lang; een deel is afgekapt voordat deze werd verzonden.',
   pickerAuto: 'Automatisch',
   pickerAutoUsing: 'Automatisch · {provider}',
+  pickerAutoUsingModel: 'Automatisch · {provider} · {model}',
   pickerDefaultModel: 'Standaardmodel',
+  pickerDefaultModelNamed: 'Standaardmodel · {model}',
   pickerSubscription: 'Abonnement',
   pickerPaid: 'Betaald',
   pickerPaidTitle: 'Betaald per verbruik, valt niet onder een abonnement',

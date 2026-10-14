@@ -90,6 +90,7 @@ export const ko = {
   ribbonFontFamilyTip: '글꼴',
   ribbonFontsCommon: '자주 쓰는 글꼴',
   ribbonFontsSystem: '시스템 글꼴',
+  ribbonFontsHangul: '한글 글꼴',
   ribbonFontSizeTip: '글꼴 크기',
   ribbonGrowFont: '글꼴 크기 크게',
   ribbonShrinkFont: '글꼴 크기 작게',

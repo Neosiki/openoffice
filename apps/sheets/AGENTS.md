@@ -25,7 +25,7 @@ Excel 통합 문서(.xlsx, .csv 등) 에디터다. 화면은 Univer 격자 위�
 - 원본 파일이 기준이다. 저장은 편집 기록을 사이드카에 넘겨 좁게 패치하는 방식이고, 에디터가 건드리지 않은 것은 그대로 남아야 한다. 열기·저장 경로를 바꾸면 왕복 테스트로 증명한다. 문서 엔진의 동작(해석, 저장, 내보내기)을 AI나 UI 작업의 일부로 바꾸지 않는다.
 - 문서 내용은 테마가 다시 칠하지 않는다. 어두운 시트는 Univer의 `darkMode`를 쓰는 화면 전용 변환이고, 셀 채우기·글자색·차트 색상표는 문서 데이터다. 저장·내보내기·인쇄 결과는 두 테마에서 같아야 한다. 리본 등 크롬 색은 토큰만 쓴다.
 - 요청은 다른 제공자로 넘어가지 않는다. 단독 실행의 `ai:stream`·`ai:chat`은 `resolveAiRunTarget`으로 대상을 정하고, 실행할 수 없으면 제공자를 부르지 않고 원인을 담아 거절한다. 이 규칙은 문서 에디터의 `ai-run.ts`와 같은 답을 내야 한다. 한쪽만 바꾸면 단독 실행과 배포 앱의 동작이 갈린다.
-- 종량 허용를 쓸 때는 정규화된 설정 전체를 쓴다(`withMeteredAccepted`). `providers` 표가 없는 설정 파일은 제공자 도입 이전 파일로 읽혀 기본값이 되고, 그러면 방금 쓴 동의가 사라진다.
+- 종량 허용을 쓸 때는 정규화된 설정 전체를 쓴다(`withMeteredAccepted`). `providers` 표가 없는 설정 파일은 제공자 도입 이전 파일로 읽혀 기본값이 되고, 그러면 방금 쓴 동의가 사라진다.
 - 구독 IPC는 `ensureSubscriptionIpc`로만 등록하고 `initSubscriptionChildTracking`은 부르지 않는다. 단독 실행 진입은 `will-quit`와 `process.on('exit')`에서 `shutdownSubscriptionChildren`을 부른다.
 - shell 안에서도 필요한 시트 전용 AI 채널은 `registerSheetsAiIpc`가 아니라 `registerSheetsIpc`에 등록하고 `sheets:` 접두사를 붙인다(`sheets:ai-generate-image`, `sheets:ai-tool-capabilities`, 첨부 관련 `sheets:files-*`). `registerSheetsAiIpc`에 두면 배포 앱에서 "핸들러 없음"이 된다.
 - 이미지 도구에는 `{ path: 'screen', statuses: sharedSubscriptionStatuses() }`를 넘기고, 읽을 수 있는 로컬 경로는 그 탭이 연 통합 문서들의 폴더와 붙여 넣기 임시 폴더로 제한한다(`sheetsMediaRoots`).

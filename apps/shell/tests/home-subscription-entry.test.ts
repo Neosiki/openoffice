@@ -109,6 +109,8 @@ async function renderHome(map: SubscriptionStatusMap, options: RenderOptions = {
     codexImageAvailable: false,
     install: vi.fn(),
     login: vi.fn(),
+    switchAccount: vi.fn(),
+    logout: vi.fn(),
     recheck: vi.fn(),
     refresh: options.refresh ?? vi.fn(),
     acceptMetered: vi.fn(async () => undefined),

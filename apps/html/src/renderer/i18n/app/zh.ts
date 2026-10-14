@@ -57,6 +57,7 @@ export const zh = {
   elementMoveUp: '上移',
   elementMoveDown: '下移',
   elementToolbar: '元素工具栏',
+  multiSelected: '已选择 {n} 项',
   elementPath: '元素路径',
   fmtBold: '粗体',
   fmtItalic: '斜体',

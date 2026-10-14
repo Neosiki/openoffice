@@ -74,6 +74,7 @@ export const ru = {
     'Добавить раздел перед текущим слайдом (удобно для организации длинных презентаций)',
   ribbonGroupFont: 'Шрифт',
   ribbonFontsSystem: 'Системные шрифты',
+  ribbonFontsHangul: 'Корейские шрифты',
   ribbonFontInstallLocal: 'Установить файл шрифта…',
   fontMissingBanner: 'В этой презентации используются неустановленные шрифты:',
   fontMissingDismiss: 'Скрыть',

@@ -63,6 +63,7 @@ export const it = {
   elementMoveUp: 'Sposta su',
   elementMoveDown: 'Sposta giù',
   elementToolbar: 'Barra degli strumenti elemento',
+  multiSelected: '{n} selezionati',
   elementPath: "Percorso dell'elemento",
   fmtBold: 'Grassetto',
   fmtItalic: 'Corsivo',

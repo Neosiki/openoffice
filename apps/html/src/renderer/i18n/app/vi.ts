@@ -61,6 +61,7 @@ export const vi = {
   elementMoveUp: 'Di chuyển lên',
   elementMoveDown: 'Di chuyển xuống',
   elementToolbar: 'Thanh công cụ phần tử',
+  multiSelected: 'Đã chọn {n}',
   elementPath: 'Đường dẫn phần tử',
   fmtBold: 'In đậm',
   fmtItalic: 'In nghiêng',

@@ -14,7 +14,7 @@
 
 - 모델 호출은 이 모듈의 범위가 아니다. 제공자 선택, 구독 프로그램 브리지, HTTP 프로토콜은 `packages/ai-provider`가 하고, 메인 프로세스의 `ai:stream` 핸들러는 `apps/*/src/main`에 있다. 루프는 `AgentTransport`만 안다.
 - 도구의 구현과 system prompt 본문은 각 에디터(`apps/*/src/renderer/ai`)의 범위다. 여기에는 문서 형식을 아는 코드를 두지 않는다.
-- 보내기 전의 판단(연결됐는지, 첫 연결 안내을 봤는지)과 사용자에게 보이는 오류 문장은 `packages/ui`의 범위다. 전송은 문장을 만들지 않고 호출자가 준 `errorText` 등을 부를 뿐이다.
+- 보내기 전의 판단(연결됐는지, 첫 연결 안내를 봤는지)과 사용자에게 보이는 오류 문장은 `packages/ui`의 범위다. 전송은 문장을 만들지 않고 호출자가 준 `errorText` 등을 부를 뿐이다.
 - 가려진 내용이 파일에 어떻게 저장되는지(docx의 run 속성, pptx의 확장 요소)는 `packages/docx-engine`·`packages/pptx-engine`의 범위다. 여기는 두 엔진이 함께 쓰는 이름만 정의한다.
 
 ## 항상 지켜야 하는 것

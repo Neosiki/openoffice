@@ -65,7 +65,29 @@ export function aiProviderDisplayName(provider: AiProviderId | undefined): strin
 // ---- connect card ----
 
 export type AiSubscriptionCardAction =
-  'install' | 'install-help' | 'login' | 'accept-metered' | 'recheck'
+  'install' | 'install-help' | 'login' | 'accept-metered' | 'recheck' | 'switch-account' | 'logout'
+
+/**
+ * The two actions on the account of a signed-in CLI: sign in with another
+ * account, and sign out. Both change the vendor program for the whole PC, so
+ * neither is ever the highlighted default.
+ */
+export const AI_SUBSCRIPTION_ACCOUNT_ACTIONS = [
+  'switch-account',
+  'logout',
+] as const satisfies readonly AiSubscriptionCardAction[]
+
+export function isAiSubscriptionAccountAction(action: AiSubscriptionCardAction): boolean {
+  return (AI_SUBSCRIPTION_ACCOUNT_ACTIONS as readonly AiSubscriptionCardAction[]).includes(action)
+}
+
+/** What only the card in Settings shows; every other card leaves both off */
+export interface AiSubscriptionCardOptions {
+  /** show the signed-in account the CLI named */
+  readonly account?: boolean | undefined
+  /** offer "sign in with another account" and "sign out" while a login is known */
+  readonly accountActions?: boolean | undefined
+}
 
 export type AiSubscriptionCardTone = 'neutral' | 'ok' | 'warning' | 'error'
 
@@ -77,6 +99,12 @@ export interface AiSubscriptionCardView {
   readonly statusKey: AiSubscriptionStringKey
   /** plan name the CLI reported, on `ready` */
   readonly planName?: string | undefined
+  /**
+   * the signed-in account the CLI named, when the card was asked to show it
+   * (`ready` and `metered`). It is shown with the plan name, which then leaves
+   * the state line.
+   */
+  readonly account?: string | undefined
   /** explanatory lines under the state, in order */
   readonly noteKeys: readonly AiSubscriptionStringKey[]
   /**
@@ -94,8 +122,30 @@ const STATUS_ERROR_KEYS: Record<SubscriptionStatusErrorKind, AiSubscriptionStrin
   failed: 'cardErrFailed',
 }
 
-/** The spec table of connection states: what one provider's card shows in each of the six */
-export function aiSubscriptionCardView(status: AiSubscriptionStatus): AiSubscriptionCardView {
+/**
+ * The spec table of connection states: what one provider's card shows in each
+ * of the six. `options` adds what belongs to the Settings card alone: the
+ * signed-in account, and the two actions on it.
+ */
+export function aiSubscriptionCardView(
+  status: AiSubscriptionStatus,
+  options: AiSubscriptionCardOptions = {},
+): AiSubscriptionCardView {
+  const view = connectionCardView(status)
+  if (status.state !== 'ready' && status.state !== 'metered') return view
+  const account = options.account ? status.account?.trim() || undefined : undefined
+  return {
+    ...view,
+    ...(account
+      ? { account, statusKey: view.statusKey === 'cardReadyPlan' ? 'cardReady' : view.statusKey }
+      : {}),
+    actions: options.accountActions
+      ? [...view.actions, ...AI_SUBSCRIPTION_ACCOUNT_ACTIONS]
+      : view.actions,
+  }
+}
+
+function connectionCardView(status: AiSubscriptionStatus): AiSubscriptionCardView {
   const base = { provider: status.provider, state: status.state }
   switch (status.state) {
     case 'checking':

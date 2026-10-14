@@ -59,6 +59,7 @@ export const ar = {
   elementMoveUp: 'تحريك لأعلى',
   elementMoveDown: 'تحريك لأسفل',
   elementToolbar: 'شريط أدوات العنصر',
+  multiSelected: 'المحدَّد: {n}',
   elementPath: 'مسار العنصر',
   fmtBold: 'غامق',
   fmtItalic: 'مائل',

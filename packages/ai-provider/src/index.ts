@@ -25,6 +25,7 @@ export type {
   AiProviderSelection,
   AiRunErrorKind,
   AiSubscriptionLoginMethod,
+  AiSubscriptionModel,
   AiSubscriptionProviderId,
   AiSubscriptionState,
   AiSubscriptionStatus,

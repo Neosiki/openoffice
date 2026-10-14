@@ -63,6 +63,7 @@ export const nl = {
   elementMoveUp: 'Omhoog',
   elementMoveDown: 'Omlaag',
   elementToolbar: 'Elementwerkbalk',
+  multiSelected: '{n} geselecteerd',
   elementPath: 'Elementpad',
   fmtBold: 'Vet',
   fmtItalic: 'Cursief',

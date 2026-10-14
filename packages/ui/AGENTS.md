@@ -17,7 +17,8 @@
 - 이 패키지는 `@genoffice/ai-provider/browser`만 import한다. Node에 묶인 루트·`/subscription` 진입점을 import하면 렌더러 번들이 깨진다.
 - 에디터 고유의 화면(리본, 문서 캔버스, 에디터별 문자열)과 앱별 강조색(`--accent` 계열)은 각 `apps/*/src/renderer`의 범위다.
 - 문서 내용의 색은 범위가 아니다. `src/wordart-presets.ts`의 색처럼 문서에 저장되는 값은 문서 데이터이고 토큰을 참조하지 않는다.
-- 설정 화면(`apps/shell/src/renderer/src/SettingsAiSection.tsx`)과 홈의 질문 패널은 shell의 범위다. 질문 패널은 같은 규칙의 작은 사본(`askSendGate`)을 따로 갖고 있다.
+- 설정 화면(`apps/shell/src/renderer/src/SettingsAiSection.tsx`)과 홈의 질문 패널은 shell의 범위다. 질문 패널의 `askSendGate`는 이 패키지의 `aiSendGate`를 그대로 읽는다. 따로 판단하지 않는다.
+- 계정 바꾸기·로그아웃을 실행하기 전의 확인과 그 문장은 shell의 범위다. 이 패키지의 카드는 버튼을 보여 주고 콜백만 부른다.
 
 ## 항상 지켜야 하는 것
 
@@ -26,6 +27,9 @@
 - 보내기 규칙은 `aiSendGate` 하나다. 상태 확인이 아직 답하지 않았으면 요청을 붙잡았다가 실행 가능해지는 즉시 시작한다. 실행할 수 있는 것이 없으면 아무것도 보내지 않고, 작성기의 글은 남기고, 연결 안내를 보여 준다. 이때는 나중에 저절로 시작하지 않는다(로그인은 몇 분 걸릴 수 있고 실행은 다시 요청받아야 한다). 구독을 처음 쓰려는 순간이면 첫 연결 안내이 먼저이고 확인을 눌러야 시작한다.
 - 에디터는 자기만의 보내기 판단을 만들지 않는다. `tests/editors-consistency.test.ts`가 여섯 에디터의 소스를 읽어 `useAiSendGate`를 쓰는지, 자체 gate 함수를 내보내지 않는지 확인한다.
 - 저절로 다른 제공자로 바꾸지 않는다. 막힌 실행 뒤의 "다른 연결로 계속"은 사용자가 버튼을 눌렀을 때만이고, 후보(`aiContinueOption`)는 `ready`인 다른 구독, 없으면 이미 동의한 종량제 로그인이다. 막힌 제공자 자신과 키 제공자는 후보가 아니다. 누르면 그 제공자가 저장된 선택이 되어 모델 선택기에 보인다(`withAiContinueProvider`).
+- 로그인된 계정은 설정 화면의 카드에만 보인다. `AiSubscriptionCard`는 `showAccount`를 받았을 때만 계정을 그리고, `onSwitchAccount`·`onLogout`을 둘 다 받았을 때만 두 버튼을 낸다. `compact` 카드는 무엇을 받든 둘 다 내지 않는다. `AiConnectPrompt`와 에디터 패널에는 이 props를 넘기지 않는다. 두 버튼은 강조 버튼(`primary`)이 되지 않는다.
+- 구독 그룹의 모델 목록은 프로그램이 알려 준 것이 있으면 그것을 쓴다(`status.models`). 항목마다 표시 이름과 실제 모델 식별자를 함께 보이고(`AiProviderPickerGroup.details`), 기본 항목에는 그것이 가리키는 모델을 적는다. 목록이 없으면 `AI_PROVIDERS`의 고정 목록을 예전처럼 보인다. 고르면 저장되는 값은 프로그램이 받는 `id`이고 표시 이름이 아니다. 저장된 값이 목록에 없어도 그 값은 목록에 남는다.
+- 선택 표시(칩)와 설정의 "사용할 AI"는 `aiSubscriptionModelName`으로 모델 이름을 얻는다. 자동일 때도 실제로 답할 모델을 보인다. 목록이 없으면 이름을 붙이지 않고 예전 글을 그대로 쓴다.
 - 모델 선택기에 올리는 항목은 고르는 즉시 실행 가능한 것만이다. `auto`는 구독으로 풀릴 때만 나오고, 종량제 로그인은 동의한 것만 비용 표시와 함께 나온다. 목록에 없는 상태로 되돌리는 일은 설정 화면에서 한다.
 - 패널이 설정을 쓸 때는 `changeStoredAiSettings`를 거친다. 패널이 쥐고 있는 사본이 아니라 지금 저장된 값에 변경을 적용한다. 다른 창이나 설정 화면이 그사이 쓴 값을 덮어쓰지 않기 위해서다.
 - 구독 제공자는 글자 이름으로만 표시한다(`Claude`, `Codex`). 벤더 로고를 넣지 않으며 `src/provider-logos.tsx`의 `'claude-code': null`은 의도된 값이다. AI 표시는 `AiMark`를 쓴다.
@@ -49,5 +53,5 @@
 - 실행: `npm run test -w @genoffice/ui`(또는 이 폴더에서 `npx vitest run`), `npm run typecheck -w @genoffice/ui`. Windows에서 전부 통과한다.
 - 기본 환경은 `node`다. DOM이 필요한 테스트는 파일 첫 줄에 `/** @vitest-environment jsdom */`를 달고 `react-dom/client`의 `createRoot`와 `act`로 렌더링한다.
 - `tests/editors-consistency.test.ts`는 저장소의 `apps/*` 소스를 읽는다. 에디터의 패널·리본 파일을 옮기거나 이름을 바꾸면 이 테스트의 `EDITORS` 표도 함께 고친다. 이 패키지만 떼어 놓고는 돌릴 수 없다.
-- 바꾸면 반드시 테스트하는 것: `aiSendGate`의 네 결과(`run`, `checking`, `notice`, `connect`)와 붙잡힌 요청의 전이, 설정이나 상태가 아직 없을 때(`null`), `auto`에서 한쪽만 확인이 끝났을 때, 모델 선택기 목록이 `selectAiProvider`를 통과하는 항목만 담는지, 새 문자열 키가 21개 언어에 있고 `{name}` 자리 표시가 언어마다 같은지.
+- 바꾸면 반드시 테스트하는 것: `aiSendGate`의 네 결과(`run`, `checking`, `notice`, `connect`)와 붙잡힌 요청의 전이, 설정이나 상태가 아직 없을 때(`null`), `auto`에서 한쪽만 확인이 끝났을 때, 모델 선택기 목록이 `selectAiProvider`를 통과하는 항목만 담는지, 프로그램의 모델 목록이 있을 때와 없을 때의 항목과 칩 글, 계정과 계정 버튼이 요청받은 카드에만 나오는지, 새 문자열 키가 21개 언어에 있고 `{name}` 자리 표시가 언어마다 같은지.
 - 토큰 변경은 자동 검사가 없다. 밝은 테마, 어두운 테마, 시스템 모드 세 경우를 실제 화면으로 확인한다.

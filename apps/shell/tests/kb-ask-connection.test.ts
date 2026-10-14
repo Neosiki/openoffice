@@ -5,8 +5,10 @@ import type {
   AiSubscriptionState,
   SubscriptionStatusMap,
 } from '@genoffice/ai-provider/browser'
+import { aiSendGate } from '@genoffice/ui'
 import {
   askBlockedRunOf,
+  askHeldStep,
   askSendGate,
   withContinuedProvider,
 } from '../src/renderer/src/kb-ask-connection'
@@ -37,8 +39,35 @@ describe('askSendGate', () => {
 
   it('asks for a connection when nothing can run', () => {
     expect(askSendGate(settings(), statuses('not-installed', 'signed-out'), false)).toBe('connect')
-    // still being checked is not connected either: nothing goes out on a guess
-    expect(askSendGate(settings(), statuses('checking', 'checking'), false)).toBe('connect')
+    expect(askSendGate(settings(), statuses('error', 'signed-out'), false)).toBe('connect')
+  })
+
+  it('holds the question while a status check that could still connect it is out', () => {
+    // nothing goes out on a guess, and nothing is refused on one either
+    expect(askSendGate(settings(), statuses('checking', 'checking'), false)).toBe('checking')
+    // Codex is ready, but automatic picks Claude first: Claude's answer is waited for
+    expect(askSendGate(settings(), statuses('checking', 'ready'), false)).toBe('checking')
+    expect(askSendGate(settings(), statuses('signed-out', 'checking'), false)).toBe('checking')
+    const selected = settings({ provider: 'codex' })
+    expect(askSendGate(selected, statuses('ready', 'checking'), false)).toBe('checking')
+    // a missing status reads as one that has not answered
+    expect(askSendGate(settings(), {}, false)).toBe('checking')
+  })
+
+  it('agrees with the gate every editor panel uses, whatever the statuses', () => {
+    const states = ['checking', 'not-installed', 'signed-out', 'ready', 'metered', 'error'] as const
+    for (const selection of ['auto', 'claude-code', 'codex', 'openai'] as const) {
+      const stored = settings({ provider: selection, subscriptionNoticeSeen: true })
+      for (const claude of states) {
+        for (const codex of states) {
+          const map = statuses(claude, codex)
+          const shared = aiSendGate(stored, map)
+          expect(askSendGate(stored, map, false), `${selection}:${claude}:${codex}`).toBe(
+            shared.kind,
+          )
+        }
+      }
+    }
   })
 
   it('does not fall over to the other provider when the selected one cannot run', () => {
@@ -48,11 +77,29 @@ describe('askSendGate', () => {
 
   it('holds back while the first-connection notice is owed', () => {
     expect(askSendGate(settings(), statuses('ready', 'signed-out'), true)).toBe('notice')
+    // the home screen owns that dialog: while it is not up, a ready connection runs
+    expect(askSendGate(settings(), statuses('ready', 'signed-out'), false)).toBe('run')
+    // a notice is never shown over a panel that has nothing to run on
+    expect(askSendGate(settings(), statuses('signed-out', 'signed-out'), true)).toBe('connect')
+    expect(askSendGate(settings(), statuses('checking', 'checking'), true)).toBe('checking')
   })
 
-  it('leaves the answer to the main process while the settings are not read yet', () => {
-    expect(askSendGate(null, statuses('not-installed', 'not-installed'), false)).toBe('run')
-    expect(askSendGate(null, statuses('ready', 'ready'), true)).toBe('notice')
+  it('holds the question while the settings are not read yet', () => {
+    expect(askSendGate(null, statuses('not-installed', 'not-installed'), false)).toBe('checking')
+    expect(askSendGate(null, statuses('ready', 'ready'), true)).toBe('checking')
+  })
+})
+
+describe('askHeldStep', () => {
+  it('starts a held question once it can run, and keeps it while the check is still out', () => {
+    expect(askHeldStep('run')).toBe('start')
+    expect(askHeldStep('checking')).toBe('keep')
+  })
+
+  it('drops it when the answer is "not connected" or the notice: it must be asked again', () => {
+    // a sign-in can take minutes, and the notice is read first: nothing starts by itself later
+    expect(askHeldStep('connect')).toBe('drop')
+    expect(askHeldStep('notice')).toBe('drop')
   })
 })
 

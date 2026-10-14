@@ -85,6 +85,7 @@ export const he = {
   ribbonFontFamilyTip: 'גופן',
   ribbonFontsCommon: 'גופנים נפוצים',
   ribbonFontsSystem: 'גופני מערכת',
+  ribbonFontsHangul: 'גופנים קוריאניים',
   ribbonFontSizeTip: 'גודל גופן',
   ribbonGrowFont: 'הגדל גופן',
   ribbonShrinkFont: 'הקטן גופן',

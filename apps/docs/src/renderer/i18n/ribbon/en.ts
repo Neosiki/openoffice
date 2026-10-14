@@ -87,6 +87,7 @@ export const en = {
   ribbonFontFamilyTip: 'Font',
   ribbonFontsCommon: 'Common fonts',
   ribbonFontsSystem: 'System fonts',
+  ribbonFontsHangul: 'Korean fonts',
   ribbonFontSizeTip: 'Font Size',
   ribbonGrowFont: 'Increase Font Size',
   ribbonShrinkFont: 'Decrease Font Size',

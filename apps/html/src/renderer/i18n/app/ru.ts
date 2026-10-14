@@ -60,6 +60,7 @@ export const ru = {
   elementMoveUp: 'Вверх',
   elementMoveDown: 'Вниз',
   elementToolbar: 'Панель инструментов элемента',
+  multiSelected: 'Выбрано: {n}',
   elementPath: 'Путь к элементу',
   fmtBold: 'Жирный',
   fmtItalic: 'Курсив',
