@@ -40,4 +40,17 @@ export const ar = {
   homeMakeFromGroup: 'إنشاء مستند جديد من هذه المجموعة',
   homeMakeFromSelection: 'إنشاء مستند جديد',
   homeMakeFromFile: 'إنشاء مستند جديد من هذا الملف',
+  untitled: 'بلا عنوان',
+  convertLabel: 'تحويل دون ذكاء اصطناعي',
+  convertToMarkdown: 'مستند Markdown',
+  convertToSlides: 'هيكل عرض تقديمي (PPT)',
+  convertToMindmap: 'خريطة ذهنية',
+  convertHint:
+    'دون ذكاء اصطناعي، فلا يُستهلك شيء من حد اشتراكك. تُفتح النتيجة في علامة تبويب جديدة لم تُحفظ بعد.',
+  noticeRedacted: 'تُنقل الأجزاء المخفية في صورة تسمياتها، لا النص الأصلي.',
+  convertUnreadable: 'تعذّرت قراءة المادة، لذلك لم يُحوَّل شيء.',
+  convertRedactionFailed: 'تعذّرت معالجة الأجزاء المخفية في المادة، لذلك لم يُحوَّل شيء.',
+  convertTooManySlides:
+    'في الخريطة فروع رئيسية أكثر مما يتسع له عرض تقديمي واحد (حتى {max} شريحة).',
+  convertFailed: 'تعذّر التحويل. حاول مرة أخرى.',
 } satisfies Record<keyof typeof zh, string>

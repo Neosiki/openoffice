@@ -141,6 +141,16 @@ body {
   cursor: pointer;
 }
 
+/* 8.6: "convert without AI", under the AI kinds */
+.gen-convert {
+  margin-top: 10px;
+}
+
+/* a conversion carries no request text: its section steps aside */
+.gen-section[hidden] {
+  display: none;
+}
+
 .gen-kind:hover:not(:disabled) {
   background: var(--hover);
   color: var(--text);

@@ -41,4 +41,18 @@ export const ru = {
   homeMakeFromGroup: 'Создать новый документ из этой группы',
   homeMakeFromSelection: 'Создать новый документ',
   homeMakeFromFile: 'Создать новый документ из этого файла',
+  untitled: 'Без названия',
+  convertLabel: 'Преобразовать без ИИ',
+  convertToMarkdown: 'Документ Markdown',
+  convertToSlides: 'Каркас презентации (PPT)',
+  convertToMindmap: 'Интеллект-карта',
+  convertHint:
+    'Без ИИ — лимит вашего тарифа не расходуется. Результат откроется в новой, ещё не сохранённой вкладке.',
+  noticeRedacted: 'Скрытые части переносятся в виде своих меток, а не исходного текста.',
+  convertUnreadable: 'Не удалось прочитать материал, поэтому ничего не преобразовано.',
+  convertRedactionFailed:
+    'Не удалось обработать скрытые части материала, поэтому ничего не преобразовано.',
+  convertTooManySlides:
+    'На карте слишком много главных ветвей для одной презентации (до {max} слайдов).',
+  convertFailed: 'Не удалось преобразовать. Попробуйте ещё раз.',
 } satisfies Record<keyof typeof zh, string>

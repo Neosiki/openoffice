@@ -11,6 +11,10 @@
  * - The editor reports "a run started in this tab with at least one handed-over
  *   material attached"; the event is kept in memory (tab, sources, mode) for
  *   a later reader. Nothing is written to disk.
+ * - A conversion without AI (8.6) involves no hand-off: the shell opens the
+ *   new tab with the result and records "converted into this tab, from these
+ *   sources" here (`recordGenerateConverted`, read with
+ *   `generateConvertedEvents`), for the same reader.
  *
  * No Electron import: the shell queues through it and the editor mains
  * (bundled into the shell) import it to register their own
@@ -58,11 +62,41 @@ export interface GenerateRunStarted {
   at: number
 }
 
+/** the conversions without AI (8.6): one source of a fixed type to one new document */
+export type GenerateConvertKind =
+  'mindmap-to-markdown' | 'mindmap-to-slides' | 'markdown-to-mindmap'
+
+/** the editor a conversion's result opens in, as a new unsaved tab */
+export type GenerateConvertTarget = 'markdown' | 'slides' | 'mindmap'
+
+/**
+ * One "a conversion without AI opened this new tab" record (8.6, spec 9): the
+ * conversion is done by the time the tab opens with its content queued. Kept
+ * beside the run-started records for the same later reader; nothing is written
+ * to disk.
+ */
+export interface GenerateConverted {
+  /** the shell tab id of the new tab, when the shell could tell it */
+  tabId?: string
+  webContentsId: number
+  target: GenerateConvertTarget
+  kind: GenerateConvertKind
+  mode: 'convert'
+  /** the handed-over material paths (a conversion reads exactly one) */
+  sources: string[]
+  /** unique per press of "make" */
+  conversionId: string
+  /** ms since epoch */
+  at: number
+}
+
 interface HandoffStore {
   queued: Map<number, GenerateHandoff>
   /** taken but not yet reported as run: what a run-started report is checked against */
   taken: Map<number, GenerateHandoff>
   runs: GenerateRunStarted[]
+  /** conversions without AI, oldest first */
+  converted?: GenerateConverted[]
   tabIdOf: ((webContentsId: number) => string | undefined) | null
 }
 
@@ -189,11 +223,47 @@ export function generateRunStartedEvents(): GenerateRunStarted[] {
   return store().runs.map((e) => ({ ...e, sources: [...e.sources] }))
 }
 
+/**
+ * The shell opened a new tab with the result of a conversion without AI (8.6)
+ * queued for it. Recorded at once: the conversion itself is done by then.
+ */
+export function recordGenerateConverted(input: {
+  webContentsId: number
+  target: GenerateConvertTarget
+  kind: GenerateConvertKind
+  sources: readonly string[]
+  conversionId: string
+}): GenerateConverted {
+  const s = store()
+  const tabId = s.tabIdOf?.(input.webContentsId)
+  const event: GenerateConverted = {
+    ...(tabId ? { tabId } : {}),
+    webContentsId: input.webContentsId,
+    target: input.target,
+    kind: input.kind,
+    mode: 'convert',
+    sources: input.sources.filter((p) => typeof p === 'string' && p !== ''),
+    conversionId: input.conversionId,
+    at: Date.now(),
+  }
+  s.converted ??= []
+  s.converted.push(event)
+  if (s.converted.length > MAX_RUN_EVENTS)
+    s.converted.splice(0, s.converted.length - MAX_RUN_EVENTS)
+  return event
+}
+
+/** the recorded conversions, oldest first (a copy) */
+export function generateConvertedEvents(): GenerateConverted[] {
+  return (store().converted ?? []).map((e) => ({ ...e, sources: [...e.sources] }))
+}
+
 /** tests only: forget everything */
 export function resetGenerateHandoffsForTest(): void {
   const s = store()
   s.queued.clear()
   s.taken.clear()
   s.runs.length = 0
+  s.converted = []
   s.tabIdOf = null
 }

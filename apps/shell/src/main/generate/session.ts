@@ -12,11 +12,19 @@
  * - "make" opens the new tab with the request queued for it, once, and closes
  *   the window. A second press while one is in flight does nothing. No run
  *   starts here.
+ * - A conversion without AI (8.6) is offered only while exactly one material
+ *   is listed and its type is the conversion's source. "Make" then reads that
+ *   one material again (8.4 applies), converts it, and opens the result as a
+ *   new unsaved tab; a failed read converts nothing and says why. A chosen
+ *   conversion that is no longer offered never turns into an AI request.
  */
 import type { Lang } from '@genoffice/i18n'
 import type {
   AiTargetKind,
+  ConvertKind,
+  ConvertProblem,
   GenerateHandoff,
+  GenerateMode,
   GenerateWindowState,
   MaterialView,
 } from '../../shared/generate-api'
@@ -29,7 +37,14 @@ import {
   untitledMaterial,
   type MaterialStatus,
 } from './materials'
-import { isAiTargetKind, prepareGenerateRequest } from './request'
+import {
+  availableConversions,
+  isAiTargetKind,
+  isConvertKind,
+  prepareGenerateRequest,
+} from './request'
+import type { ConvertedDocument, ConvertResult } from './convert'
+import { MAX_OUTLINE_SLIDES } from '../mcp/pptx-outline'
 
 /** where a row came from: a file, or an open document that was never saved */
 export type MaterialRef = { path: string } | { untitled: { webContentsId: number; title: string } }
@@ -50,6 +65,16 @@ export interface GenerateSessionDeps {
   showUntitled(webContentsId: number): Promise<void>
   /** open the new untitled tab with the request queued for it (throws when it cannot) */
   openTargetTab(handoff: GenerateHandoff): void
+  /**
+   * 8.6: run a conversion without AI on one material (read only through the
+   * redaction-aware reader). Conversions are offered only when this and
+   * `openConvertedTab` are given.
+   */
+  convert?(kind: ConvertKind, path: string): Promise<ConvertResult>
+  /** open a conversion's result as a new unsaved tab (throws when it cannot) */
+  openConvertedTab?(doc: ConvertedDocument): void
+  /** whether converting this markdown file carries withheld spans over as their labels */
+  redactionNotice?(path: string): Promise<boolean>
   push(state: GenerateWindowState): void
   close(): void
   newId(): string
@@ -64,6 +89,8 @@ interface Row {
   /** null while being read */
   status: MaterialStatus | null
   saveAction?: 'save' | 'show'
+  /** a markdown file with withheld spans (asked only when it could be converted) */
+  marked?: boolean
 }
 
 function keyOf(ref: MaterialRef): string {
@@ -77,7 +104,10 @@ export class GenerateSession {
   private closed = false
   private readonly saving = new Set<string>()
   private failure: GenerateWindowState['failure'] = null
+  private convertProblem: ConvertProblem | null = null
   private inFlight = 0
+  private mode: GenerateMode = 'ai'
+  private convertKind: ConvertKind | null = null
 
   constructor(
     private readonly deps: GenerateSessionDeps,
@@ -96,6 +126,9 @@ export class GenerateSession {
     this.rows = []
     if (kind) this.kind = kind
     this.failure = null
+    this.convertProblem = null
+    this.mode = 'ai'
+    this.convertKind = null
     this.appendRefs(refs)
     await this.refresh()
   }
@@ -105,23 +138,36 @@ export class GenerateSession {
     const summary = summarizeMaterials(statuses, this.kind)
     const checking = this.inFlight > 0 || this.rows.some((r) => !r.status)
     const materials: MaterialView[] = this.rows.map((row) => this.viewOf(row))
+    const conversions = this.conversions()
+    const convertKind = this.chosenConversion(conversions)
+    // a conversion picked and then taken away by the list: "make" waits rather than run the AI
+    const lostConversion = this.mode === 'convert' && !convertKind
     return {
       lang: this.deps.lang(),
       kind: this.kind,
+      mode: convertKind ? 'convert' : 'ai',
+      convertKind,
+      conversions,
+      redactionNotice:
+        convertKind === 'markdown-to-mindmap' && this.listedRows()[0]?.marked === true,
       materials,
       readyCount: summary.ready.length,
       totalBytes: summary.totalBytes,
-      notices: summary.notices,
+      // no AI, no plan usage: the AI notices do not apply to a conversion
+      notices: convertKind ? { usage: false, longMaterial: false } : summary.notices,
       tooMany: summary.tooMany,
-      canMake: summary.canMake && !checking && !this.making && this.saving.size === 0,
+      canMake:
+        summary.canMake && !checking && !this.making && this.saving.size === 0 && !lostConversion,
       checking,
       making: this.making,
       saving: [...this.saving],
       failure: this.failure,
+      convertProblem: this.failure === 'convert' ? this.convertProblem : null,
       limits: {
         maxMaterials: MAX_MATERIALS,
         maxMaterialMb: Math.round(MAX_MATERIAL_BYTES / 1024 / 1024),
         maxImageMb: Math.round(MAX_IMAGE_MATERIAL_BYTES / 1024 / 1024),
+        maxConvertSlides: MAX_OUTLINE_SLIDES,
       },
     }
   }
@@ -153,6 +199,26 @@ export class GenerateSession {
 
   private push(): void {
     if (!this.closed) this.deps.push(this.state())
+  }
+
+  /** the rows that count as listed material: not left out (or still being read) */
+  private listedRows(): Row[] {
+    return this.rows.filter((r) => !r.status?.problem)
+  }
+
+  /** 8.6: the conversions on offer — exactly one listed material, of a matching type */
+  private conversions(): ConvertKind[] {
+    if (!this.deps.convert || !this.deps.openConvertedTab) return []
+    const listed = this.listedRows()
+    if (listed.length !== 1 || !('path' in listed[0]!.ref)) return []
+    return availableConversions([listed[0]!.ref.path])
+  }
+
+  /** the chosen conversion while it is still on offer */
+  private chosenConversion(conversions: readonly ConvertKind[]): ConvertKind | null {
+    return this.mode === 'convert' && this.convertKind && conversions.includes(this.convertKind)
+      ? this.convertKind
+      : null
   }
 
   private appendRefs(refs: readonly MaterialRef[]): Row[] {
@@ -191,9 +257,19 @@ export class GenerateSession {
     const saveAction = status.unsaved
       ? await this.deps.saveActionFor(path).catch(() => 'show' as const)
       : undefined
+    // only a markdown file that could be converted to a map is asked about its withheld spans
+    const notice = this.deps.redactionNotice
+    const marked =
+      !!notice &&
+      !status.problem &&
+      !status.unsaved &&
+      availableConversions([path]).includes('markdown-to-mindmap')
+        ? await notice(path).catch(() => false)
+        : false
     if (!this.rows.includes(row)) return
     row.status = { ...status, key: row.key }
     row.saveAction = saveAction
+    row.marked = marked
   }
 
   private async inspectRows(rows: readonly Row[]): Promise<void> {
@@ -215,7 +291,23 @@ export class GenerateSession {
   setKind(kind: unknown): void {
     if (!isAiTargetKind(kind) || this.making) return
     this.kind = kind
+    this.mode = 'ai'
     this.failure = null
+    this.push()
+  }
+
+  /** 8.6: choose a conversion on offer, or null for back to the AI kinds */
+  setConvert(kind: unknown): void {
+    if (this.making) return
+    if (kind === null) {
+      this.mode = 'ai'
+    } else {
+      if (!isConvertKind(kind) || !this.conversions().includes(kind)) return
+      this.mode = 'convert'
+      this.convertKind = kind
+    }
+    this.failure = null
+    this.convertProblem = null
     this.push()
   }
 
@@ -277,6 +369,10 @@ export class GenerateSession {
     this.push()
     try {
       await this.refresh()
+      if (this.mode === 'convert') {
+        const convertKind = this.chosenConversion(this.conversions())
+        return convertKind ? await this.convertAndOpen(convertKind) : this.stopMaking(false)
+      }
       const candidates = this.rows.filter((r) => r.status && !r.status.problem && 'path' in r.ref)
       const prepared = await prepareGenerateRequest(
         {
@@ -306,6 +402,39 @@ export class GenerateSession {
       this.failure = 'make'
       return this.stopMaking(false)
     }
+  }
+
+  /**
+   * 8.6: the one material, read again just now (8.4: not open with unsaved
+   * changes, saved at least once), converted without AI and opened as a new
+   * unsaved tab. A failed conversion opens nothing and keeps the window.
+   */
+  private async convertAndOpen(kind: ConvertKind): Promise<boolean> {
+    const [row] = this.listedRows()
+    if (!row || !('path' in row.ref) || !this.deps.convert || !this.deps.openConvertedTab) {
+      return this.stopMaking(false)
+    }
+    const prepared = await prepareGenerateRequest(
+      { mode: 'convert', kind, materials: [row.ref.path], text: '' },
+      (path) => this.deps.inspect(path),
+    )
+    if (!prepared.ok) return this.stopMaking(false)
+    const source = prepared.request.materials[0]!
+    const result = await this.deps.convert(kind, source)
+    if (!result.ok) {
+      this.failure = 'convert'
+      this.convertProblem = result.problem
+      return this.stopMaking(false)
+    }
+    this.deps.openConvertedTab({
+      id: this.deps.newId(),
+      content: result.content,
+      sources: [source],
+      createdAt: this.deps.now(),
+    })
+    this.closed = true
+    this.deps.close()
+    return true
   }
 
   private stopMaking(result: boolean): boolean {

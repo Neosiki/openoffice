@@ -43,4 +43,19 @@ export const de = {
   homeMakeFromGroup: 'Neues Dokument aus dieser Gruppe erstellen',
   homeMakeFromSelection: 'Neues Dokument erstellen',
   homeMakeFromFile: 'Neues Dokument aus dieser Datei erstellen',
+  untitled: 'Unbenannt',
+  convertLabel: 'Ohne KI umwandeln',
+  convertToMarkdown: 'Markdown-Dokument',
+  convertToSlides: 'Präsentationsgerüst (PPT)',
+  convertToMindmap: 'Mindmap',
+  convertHint:
+    'Ohne KI – vom Limit deines Abos wird nichts verbraucht. Das Ergebnis öffnet sich in einem neuen, noch nicht gespeicherten Tab.',
+  noticeRedacted:
+    'Ausgeblendete Stellen werden als ihre Beschriftung übernommen, nicht als ursprünglicher Text.',
+  convertUnreadable: 'Das Material konnte nicht gelesen werden, daher wurde nichts umgewandelt.',
+  convertRedactionFailed:
+    'Die ausgeblendeten Stellen des Materials konnten nicht verarbeitet werden, daher wurde nichts umgewandelt.',
+  convertTooManySlides:
+    'Die Mindmap hat zu viele Hauptzweige für eine Präsentation (bis zu {max} Folien).',
+  convertFailed: 'Die Umwandlung ist fehlgeschlagen. Versuch es noch einmal.',
 } satisfies Record<keyof typeof zh, string>

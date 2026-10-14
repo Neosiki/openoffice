@@ -40,4 +40,18 @@ export const cs = {
   homeMakeFromGroup: 'Vytvořit nový dokument z této skupiny',
   homeMakeFromSelection: 'Vytvořit nový dokument',
   homeMakeFromFile: 'Vytvořit nový dokument z tohoto souboru',
+  untitled: 'Bez názvu',
+  convertLabel: 'Převést bez AI',
+  convertToMarkdown: 'Dokument Markdown',
+  convertToSlides: 'Kostra prezentace (PPT)',
+  convertToMindmap: 'Myšlenková mapa',
+  convertHint:
+    'Bez AI – z limitu tvého tarifu se nic nečerpá. Výsledek se otevře na nové, zatím neuložené kartě.',
+  noticeRedacted: 'Skryté části se přenesou jako jejich štítky, ne jako původní text.',
+  convertUnreadable: 'Podklad se nepodařilo přečíst, proto nebylo nic převedeno.',
+  convertRedactionFailed:
+    'Skryté části podkladu se nepodařilo zpracovat, proto nebylo nic převedeno.',
+  convertTooManySlides:
+    'Mapa má příliš mnoho hlavních větví na jednu prezentaci (nejvýše {max} snímků).',
+  convertFailed: 'Převod se nezdařil. Zkus to znovu.',
 } satisfies Record<keyof typeof zh, string>

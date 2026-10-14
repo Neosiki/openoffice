@@ -40,4 +40,18 @@ export const en = {
   homeMakeFromGroup: 'Make a new document from this group',
   homeMakeFromSelection: 'Make a new document',
   homeMakeFromFile: 'Make a new document from this',
+  untitled: 'Untitled',
+  convertLabel: 'Convert without AI',
+  convertToMarkdown: 'Markdown document',
+  convertToSlides: 'Presentation outline (PPT)',
+  convertToMindmap: 'Mind map',
+  convertHint:
+    'No AI, so none of your plan’s limit is used. The result opens in a new tab, not saved yet.',
+  noticeRedacted: 'Hidden parts are carried over as their labels, not the original text.',
+  convertUnreadable: 'The material couldn’t be read, so nothing was converted.',
+  convertRedactionFailed:
+    'The hidden parts of the material couldn’t be processed, so nothing was converted.',
+  convertTooManySlides:
+    'The map has too many main branches for one presentation (up to {max} slides).',
+  convertFailed: 'The conversion couldn’t be done. Try again.',
 } satisfies Record<keyof typeof zh, string>

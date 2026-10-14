@@ -42,4 +42,19 @@ export const fr = {
   homeMakeFromGroup: 'Créer un nouveau document à partir de ce groupe',
   homeMakeFromSelection: 'Créer un nouveau document',
   homeMakeFromFile: 'Créer un nouveau document à partir de ce fichier',
+  untitled: 'Sans titre',
+  convertLabel: 'Convertir sans IA',
+  convertToMarkdown: 'Document Markdown',
+  convertToSlides: 'Trame de présentation (PPT)',
+  convertToMindmap: 'Carte mentale',
+  convertHint:
+    'Sans IA, rien n’est décompté de la limite de votre abonnement. Le résultat s’ouvre dans un nouvel onglet, pas encore enregistré.',
+  noticeRedacted:
+    'Les parties masquées sont reprises sous forme de leurs étiquettes, pas du texte d’origine.',
+  convertUnreadable: 'Le document source n’a pas pu être lu ; rien n’a été converti.',
+  convertRedactionFailed:
+    'Les parties masquées du document source n’ont pas pu être traitées ; rien n’a été converti.',
+  convertTooManySlides:
+    'La carte a trop de branches principales pour une seule présentation (jusqu’à {max} diapositives).',
+  convertFailed: 'La conversion a échoué. Réessayez.',
 } satisfies Record<keyof typeof zh, string>

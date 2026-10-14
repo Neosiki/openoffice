@@ -40,4 +40,20 @@ export const it = {
   homeMakeFromGroup: 'Crea un nuovo documento da questo gruppo',
   homeMakeFromSelection: 'Crea un nuovo documento',
   homeMakeFromFile: 'Crea un nuovo documento da questo file',
+  untitled: 'Senza titolo',
+  convertLabel: 'Converti senza IA',
+  convertToMarkdown: 'Documento Markdown',
+  convertToSlides: 'Traccia di presentazione (PPT)',
+  convertToMindmap: 'Mappa mentale',
+  convertHint:
+    'Senza IA: non viene usato nulla del limite del tuo piano. Il risultato si apre in una nuova scheda, non ancora salvata.',
+  noticeRedacted:
+    'Le parti nascoste vengono riportate come le loro etichette, non come il testo originale.',
+  convertUnreadable:
+    'Non è stato possibile leggere il materiale, quindi non è stato convertito nulla.',
+  convertRedactionFailed:
+    'Non è stato possibile elaborare le parti nascoste del materiale, quindi non è stato convertito nulla.',
+  convertTooManySlides:
+    'La mappa ha troppi rami principali per una sola presentazione (fino a {max} diapositive).',
+  convertFailed: 'Conversione non riuscita. Riprova.',
 } satisfies Record<keyof typeof zh, string>

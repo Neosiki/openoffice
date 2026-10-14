@@ -41,4 +41,19 @@ export const pl = {
   homeMakeFromGroup: 'Utwórz nowy dokument z tej grupy',
   homeMakeFromSelection: 'Utwórz nowy dokument',
   homeMakeFromFile: 'Utwórz nowy dokument z tego pliku',
+  untitled: 'Bez tytułu',
+  convertLabel: 'Przekształć bez AI',
+  convertToMarkdown: 'Dokument Markdown',
+  convertToSlides: 'Szkielet prezentacji (PPT)',
+  convertToMindmap: 'Mapa myśli',
+  convertHint:
+    'Bez AI – nic nie jest pobierane z limitu Twojego planu. Wynik otworzy się w nowej, jeszcze niezapisanej karcie.',
+  noticeRedacted:
+    'Ukryte fragmenty zostaną przeniesione jako ich etykiety, a nie oryginalny tekst.',
+  convertUnreadable: 'Nie udało się odczytać materiału, więc nic nie zostało przekształcone.',
+  convertRedactionFailed:
+    'Nie udało się przetworzyć ukrytych fragmentów materiału, więc nic nie zostało przekształcone.',
+  convertTooManySlides:
+    'Mapa ma zbyt wiele głównych gałęzi na jedną prezentację (maks. {max} slajdów).',
+  convertFailed: 'Nie udało się przekształcić. Spróbuj ponownie.',
 } satisfies Record<keyof typeof zh, string>
