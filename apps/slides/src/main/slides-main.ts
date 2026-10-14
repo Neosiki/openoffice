@@ -279,6 +279,7 @@ import { followTemplateSelection, inheritTemplateSelection } from './template-se
 import { listPrivateFontFaces, getPrivateFontData, registerEmbeddedFonts } from './fonts'
 import { listMetafileFonts } from './metafile-fonts'
 import { initFontStore, installLocalFontFiles } from './font-store'
+import { initTemplateFonts, registerTemplateFontsIpc } from './template-fonts'
 
 /** One slide, copied from any deck open in this process, waiting to be pasted into another. */
 let slideClipboard: { bundles: SlideBundle[]; pngs?: string[] } | null = null
@@ -1311,6 +1312,8 @@ export function registerSlidesIpc(): void {
   ipcMain.handle('slides:private-font-data', (_e, id: string) => getPrivateFontData(id))
 
   initFontStore()
+  initTemplateFonts()
+  registerTemplateFontsIpc()
   // Fonts changed (local install): rebuild every open session with a fresh
   // registry and push the relaid-out slides + a re-sync ping to all attached windows.
   const afterFontsChanged = (): void => {

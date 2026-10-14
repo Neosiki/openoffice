@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react'
 
-import type { FontFamilyInfoMap } from '@genoffice/ui'
+import { partitionFontFamilies, type FontFamilyInfoMap } from '@genoffice/ui'
+import { TEMPLATE_FONT_FAMILY_NAMES } from '@genoffice/ui/template-fonts'
 
 interface SystemFonts {
   readonly families: readonly string[]
@@ -45,6 +46,15 @@ function loadSystemFonts(): Promise<SystemFonts> {
     return cached
   })
   return pending
+}
+
+/// The picker's sections: the bundled template fonts count as present although
+/// the OS enumeration cannot see them (the main process serves their files).
+export function pickerFontSections(
+  candidates: readonly string[],
+  systemFamilies: readonly string[],
+): ReturnType<typeof partitionFontFamilies> {
+  return partitionFontFamilies(candidates, systemFamilies, TEMPLATE_FONT_FAMILY_NAMES)
 }
 
 /// Empty until load() runs — call it from the picker's open click so the

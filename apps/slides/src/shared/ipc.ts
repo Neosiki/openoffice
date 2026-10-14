@@ -1307,12 +1307,14 @@ export interface SlidesApi {
   /** Office-private faces referenced by layouts so far; the renderer registers them as FontFaces
    *  (files invisible to Chromium — DFonts/cloud fonts), so drawing uses the measuring font. */
   privateFontFaces: () => Promise<
-    Array<{ id: string; family: string; bold: boolean; italic: boolean }>
+    Array<{ id: string; family: string; bold: boolean; italic: boolean; weight?: string }>
   >
   /** Single-face sfnt bytes for one private face (null = gone/unreadable) */
   privateFontData: (id: string) => Promise<ArrayBuffer | null>
   /** File picker → install local font files into the user font store */
   fontInstallLocal: () => Promise<{ families: string[] }>
+  /** Open the bundled template font folder in Explorer; false when it could not be opened */
+  openTemplateFontsFolder: () => Promise<boolean>
   /** The user font store changed (local install): re-sync private FontFaces */
   onFontsChanged: (handler: () => void) => () => void
   consumePendingOpen: (fitWidthPx: number) => Promise<OpenResult | null>
