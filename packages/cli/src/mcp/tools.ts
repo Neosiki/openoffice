@@ -454,12 +454,17 @@ export const TOOLS: ToolSpec[] = [
     readOnly: true,
     plainText: true,
     description:
-      'The op reference an agent reads before writing ops: guide("docs"), guide("sheets") or guide("slides") list the groups; topic narrows to one group or one op. guide("slides", "design") is the staged deck workflow and guide("slides", "spec") the outline and page spec format (deck_start returns both). Also available as ieumoffice://guide/* resources.',
+      'The op reference an agent reads before writing ops: guide("docs"), guide("sheets") or guide("slides") list the groups; topic narrows to one group or one op. guide("slides", "design") is the staged deck workflow and guide("slides", "spec") the outline and page spec format (deck_start returns both). guide("slides", "templates") lists the built-in design templates; guide("slides", "templates", "<id>") prints one as a ready-made style sheet to save as style.md. Also available as ieumoffice://guide/* resources.',
     positionals: [
       { key: 'domain', description: 'slides | docs | sheets' },
       {
         key: 'topic',
-        description: 'a group, an op name, or for slides: design | spec',
+        description: 'a group, an op name, or for slides: design | spec | templates',
+        optional: true,
+      },
+      {
+        key: 'name',
+        description: 'with topic templates: the template id to print',
         optional: true,
       },
     ],

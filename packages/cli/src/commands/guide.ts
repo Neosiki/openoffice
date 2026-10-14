@@ -10,6 +10,7 @@ import {
   type OpCatalog,
   type OpEntry,
 } from '../op-catalog'
+import { branded } from '../names'
 import { CliError, EXIT, type CommandResult } from '../result'
 import { didYouMean } from '../suggest'
 
@@ -22,8 +23,10 @@ const DOMAINS: readonly GuideDomain[] = ['slides', 'docs', 'sheets']
  */
 export const guideCommand: CommandDef = {
   name: 'guide',
-  summary: 'Print the op reference and design guides an agent needs before writing ops or specs.',
-  usage: 'guide <slides|docs|sheets> [group|op|design|spec] [--index] [--fingerprint]',
+  summary:
+    'Print the op reference, design guides and deck templates an agent needs before writing ops or specs.',
+  usage:
+    'guide <slides|docs|sheets> [group|op|design|spec] [--index] [--fingerprint] | guide slides templates [<id>]',
   options: [
     { name: 'index', description: 'one-line signature of every op instead of a group guide' },
     {
@@ -52,6 +55,9 @@ export const guideCommand: CommandDef = {
     if (domain === 'slides' && (topic === 'design' || topic === 'spec')) {
       const { SLIDES_GUIDES } = await import('@genoffice/pipelines/slides')
       return { summary: SLIDES_GUIDES[topic].content }
+    }
+    if (domain === 'slides' && topic === 'templates') {
+      return templatesGuide(args.positionals[2], json)
     }
     const { catalog, text } = await load(domain, topic, flagBool(args, 'index'))
     if (!topic) return { summary: text(), ...(json ? { detail: { ...catalog } } : {}) }
@@ -162,6 +168,66 @@ function opText(entry: OpEntry): string {
   if (entry.doc) lines.push('', entry.doc)
   else if (entry.schema) lines.push('', JSON.stringify(entry.schema, null, 2))
   return lines.join('\n')
+}
+
+/**
+ * The built-in deck templates: the list, or one template's style sheet in the shape
+ * `deck/style.md` takes, so it can be saved as is. Text carries every field because
+ * the MCP guide tool returns text only.
+ */
+async function templatesGuide(id: string | undefined, json: boolean): Promise<CommandResult> {
+  const { listSlideTemplates, findSlideTemplate } =
+    await import('@genoffice/pipelines/slides/templates')
+  const all = listSlideTemplates()
+  const brief = ({ id, name, scheme, description, fonts }: (typeof all)[number]) => ({
+    id,
+    name,
+    scheme,
+    description,
+    fonts,
+  })
+  const fontList = (t: (typeof all)[number]) =>
+    [t.fonts.title, t.fonts.latinTitle, t.fonts.body].filter((f): f is string => !!f)
+  if (id === undefined) {
+    const lines = all.map((t) => {
+      const fonts = [
+        `title ${t.fonts.title}`,
+        ...(t.fonts.latinTitle ? [`Latin title ${t.fonts.latinTitle}`] : []),
+        `body ${t.fonts.body}`,
+      ]
+      return `${t.id} — ${t.name} (${t.scheme}): ${t.description} Fonts: ${fonts.join(', ')}.`
+    })
+    return {
+      summary: [
+        'Built-in deck templates (`ieumoffice guide slides templates <id>` prints one as a style sheet to save as deck/style.md):',
+        ...lines,
+      ].join('\n'),
+      ...(json ? { detail: { templates: all.map(brief) } } : {}),
+    }
+  }
+  const t = findSlideTemplate(id)
+  if (!t) {
+    const ids = all.map((x) => x.id)
+    const guess = didYouMean(id, ids)
+    throw new CliError(
+      EXIT.usage,
+      `unknown template: ${id}`,
+      { templates: ids },
+      {
+        reason: 'invalid_argument',
+        suggestion: guess
+          ? `did you mean ${guess}?`
+          : 'run `ieumoffice guide slides templates` for the list',
+      },
+    )
+  }
+  const shipped = branded(
+    `These fonts ship with GenOffice: ${fontList(t).join(', ')}; a deck that names them shows in them in the app and in \`ieumoffice slides render\`.`,
+  )
+  return {
+    summary: `${t.styleSheet}\n\n${shipped}`,
+    ...(json ? { detail: { ...brief(t), styleSheet: t.styleSheet } } : {}),
+  }
 }
 
 async function fingerprints(
