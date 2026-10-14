@@ -11,7 +11,7 @@ import {
   createVisionOcrEngine,
   createWindowsOcrEngine,
 } from '../../../../../packages/pdf2docx/src/ocr-vision'
-import { runStructureJob } from './jobs'
+import { aiReadingsFromStore, runStructureJob } from './jobs'
 import { errorMessageOf, parseRunMessage, type ChildMessage, type ProcessSetup } from './protocol'
 
 interface ParentPort {
@@ -69,7 +69,11 @@ if (port) {
       port.postMessage({ type: 'error', error: 'invalid-request', message: 'bad run message' })
       return
     }
-    const deps = { pdfium: loadPdfium(run.setup.wasmPath), ocr: ocrEngine(run.setup) }
+    const deps = {
+      pdfium: loadPdfium(run.setup.wasmPath),
+      ocr: ocrEngine(run.setup),
+      aiReadings: run.setup.userDataDir ? aiReadingsFromStore(run.setup.userDataDir) : null,
+    }
     runStructureJob(run.job, deps, (done, total) =>
       port.postMessage({ type: 'progress', done, total }),
     ).then(

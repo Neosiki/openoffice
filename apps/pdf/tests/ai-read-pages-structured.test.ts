@@ -135,6 +135,8 @@ describe('read_pages structured path', () => {
                 { kind: 'paragraph', runs: [{ kind: 'text', text: 'Recovered body.' }] },
               ],
               footnotes: [],
+              droppedRepetitions: 0,
+              reasked: false,
             },
           },
         ],

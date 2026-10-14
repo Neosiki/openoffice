@@ -4771,3 +4771,150 @@ button {
   font-size: 12.5px;
   color: var(--text-secondary);
 }
+
+/* ── AI page reading: window, job strip, resume offer, AI-read search results ── */
+
+.pdf-ai-read-dialog {
+  width: 480px;
+}
+
+.pdf-ai-read-status {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--text-secondary);
+}
+
+.pdf-ai-read-pages {
+  max-height: 240px;
+  margin: 0;
+  padding: 4px 8px;
+  overflow-y: auto;
+  list-style: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.pdf-ai-read-pages li + li {
+  border-top: 1px solid var(--border);
+}
+
+.pdf-ai-read-pages .pdf-modal-check {
+  gap: 8px;
+  padding: 4px 0;
+}
+
+.pdf-ai-read-page {
+  min-width: 64px;
+  color: var(--text);
+}
+
+.pdf-ai-read-reason {
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.pdf-ai-read-add {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pdf-ai-read-add .pdf-modal-input {
+  flex: 1;
+}
+
+.pdf-ai-read-summary {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.pdf-ai-read-paid {
+  font-weight: 600;
+  color: var(--pdf-sig-warn);
+}
+
+.pdf-job-strip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 14px;
+  font-size: 12.5px;
+  color: var(--text);
+  background: var(--pdf-prop-bg);
+  border-bottom: 1px solid var(--border);
+  border-inline-start: 3px solid var(--accent);
+}
+
+.pdf-job-strip.is-done {
+  border-inline-start-color: var(--pdf-ok);
+}
+
+.pdf-job-strip.is-stopped {
+  border-inline-start-color: var(--pdf-sig-warn);
+}
+
+.pdf-job-strip-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.pdf-job-strip-detail {
+  color: var(--text-secondary);
+}
+
+.pdf-job-strip-bar {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--color-bg-subtle);
+  overflow: hidden;
+}
+
+.pdf-job-strip-fill {
+  height: 100%;
+  background: var(--accent);
+  transition: width var(--transition-fast);
+}
+
+.pdf-search-ai {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  max-width: 320px;
+  padding: 5px 8px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: var(--pdf-shadow-popup);
+}
+
+.pdf-search-ai-label {
+  width: 100%;
+}
+
+.pdf-search-ai-page {
+  padding: 2px 8px;
+  font: inherit;
+  color: var(--accent);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.pdf-search-ai-page:hover {
+  background: var(--color-bg-subtle);
+}

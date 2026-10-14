@@ -363,21 +363,18 @@ describe('aiReadPayloadText', () => {
     )
   })
 
-  it('uses a plain text field when the payload has one', () => {
-    expect(aiReadPayloadText({ version: 1, text: '  Read by AI.  ' }, 1)).toBe('Read by AI.')
-  })
-
-  it('skips parts it does not recognize and keeps the rest', () => {
-    const payload = {
+  it('reads a payload only through the AI-read reader: another shape counts as absent', () => {
+    // no plain-text fallback and no lenient skipping: what the reader rejects is re-read later
+    expect(aiReadPayloadText({ version: 1, text: '  Read by AI.  ' }, 1)).toBeNull()
+    const broken = {
       version: 1,
-      blocks: [
-        { kind: 'mystery', runs: [] },
-        { kind: 'paragraph', runs: [{ kind: 'text', text: 'kept' }, { kind: 'bogus' }, 5] },
-        { kind: 'table', table: { rowCount: 'x' } },
-      ],
-      footnotes: 'nope',
+      blocks: [{ kind: 'mystery', runs: [] }],
+      footnotes: [],
+      droppedRepetitions: 0,
+      reasked: false,
     }
-    expect(aiReadPayloadText(payload, 1)).toBe('kept')
+    expect(aiReadPayloadText(broken, 1)).toBeNull()
+    expect(aiReadPayloadText({ ...broken, blocks: [], version: 2 }, 1)).toBeNull()
   })
 
   it('answers null for a payload it cannot read', () => {
@@ -386,7 +383,36 @@ describe('aiReadPayloadText', () => {
     expect(aiReadPayloadText({ version: 1, text: 3 }, 1)).toBeNull()
   })
 
+  it('keeps a note the text points at under its printed label, whatever the fingerprint', () => {
+    const payload = {
+      version: 1,
+      blocks: [
+        {
+          kind: 'paragraph',
+          runs: [
+            { kind: 'text', text: 'See' },
+            { kind: 'footnoteRef', id: '*' },
+          ],
+        },
+      ],
+      footnotes: [{ label: '*', paragraphs: [[{ kind: 'text', text: 'Starred.' }]] }],
+      droppedRepetitions: 1,
+      reasked: true,
+    }
+    const text = `See[^*]
+
+${FOOTNOTES_LABEL}
+[^*] Starred.`
+    expect(aiReadPayloadText(payload, 3)).toBe(text)
+    expect(aiReadPayloadText(payload, 3, 'fp3')).toBe(text)
+  })
+
   it('reads an empty page as empty text', () => {
-    expect(aiReadPayloadText({ version: 1, blocks: [], footnotes: [] }, 1)).toBe('')
+    expect(
+      aiReadPayloadText(
+        { version: 1, blocks: [], footnotes: [], droppedRepetitions: 0, reasked: false },
+        1,
+      ),
+    ).toBe('')
   })
 })

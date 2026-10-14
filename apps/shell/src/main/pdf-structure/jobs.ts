@@ -7,6 +7,11 @@
  * Markdown writes `<name>.md`, its pictures under `assets/` and the editor's
  * app-owned list `assets/.genoffice-assets.json` (merged, never replaced);
  * an `assets/` file the list does not own is never overwritten.
+ *
+ * Pages the user had read by AI (spec §7) replace their pages in Markdown,
+ * EPUB and the structured text: the stored readings of the file's document
+ * hash are merged into the tree before it is written. The tree job itself,
+ * and the tree handed back for the main process's cache, stay the PDF's own.
  */
 import { createHash } from 'node:crypto'
 import { mkdir, readFile, unlink, writeFile } from 'node:fs/promises'
@@ -15,6 +20,7 @@ import type { OcrEngine, PdfiumModule } from '../../../../../packages/pdf2docx/s
 import { withPdfDocument } from '../../../../../packages/pdf2docx/src/extract/pdfium'
 import { renderPageByIndexPng } from '../../../../../packages/pdf2docx/src/extract'
 import {
+  applyStoredAiReadings,
   ASSET_MANIFEST_FILENAME,
   ASSETS_DIR,
   deriveBilingualTree,
@@ -32,7 +38,7 @@ import {
   type OwnedAssetRecord,
 } from '../../../../../packages/pdf-structure/src'
 import { pageFingerprint } from '../../../../../packages/pdf-structure/src/tree/pdfium-doc'
-import { documentHash } from '../../../../../packages/pdf-structure/src/store'
+import { documentHash, ResultStore } from '../../../../../packages/pdf-structure/src/store'
 import { atomicWriteFile } from '../atomic-write'
 import * as plugins from './plugins'
 import type { StructuredTextFormatter, TranslatedPdfWriter } from './plugins'
@@ -58,6 +64,41 @@ export interface JobDeps {
   structuredTextFormatter?: StructuredTextFormatter | null
   /** overrides plugins.translatedPdfWriter (tests) */
   translatedPdfWriter?: TranslatedPdfWriter | null
+  /**
+   * The result store's AI-read pages of a document, keyed by page
+   * fingerprint (aiReadingsFromStore); absent or null = no readings
+   */
+  aiReadings?: StoredAiReadings | null
+}
+
+/** AI-read pages of a document hash, keyed by page fingerprint */
+export type StoredAiReadings = (
+  docHash: string,
+) => Promise<ReadonlyMap<string, { payload: unknown }>>
+
+/** the readings the app's result store holds under `<userDataDir>/pdf-store` */
+export function aiReadingsFromStore(userDataDir: string): StoredAiReadings {
+  let store: ResultStore | null = null
+  return (docHash) => (store ??= new ResultStore(userDataDir)).readAiReadPages(docHash)
+}
+
+/**
+ * The tree with the document's stored AI readings in place. A store that
+ * cannot be read leaves the tree as it is: a conversion never fails for it.
+ */
+async function withAiReadings(
+  tree: DocumentTree,
+  docHash: string,
+  deps: JobDeps,
+): Promise<DocumentTree> {
+  if (!deps.aiReadings || tree.variant !== 'original') return tree
+  let readings: ReadonlyMap<string, { payload: unknown }>
+  try {
+    readings = await deps.aiReadings(docHash)
+  } catch {
+    return tree
+  }
+  return readings.size > 0 ? applyStoredAiReadings(tree, readings) : tree
 }
 
 export type ProgressSink = (done: number, total: number) => void
@@ -267,12 +308,20 @@ export async function runStructureJob(
           ? deps.structuredTextFormatter
           : plugins.structuredTextFormatter
       if (!format) throw new NotAvailableError('structured text is not available yet')
-      if (job.tree) return { docHash, pages: format(job.tree) } satisfies StructuredTextJobValue
+      if (job.tree) {
+        const pages = format(await withAiReadings(job.tree, docHash, deps))
+        return { docHash, pages } satisfies StructuredTextJobValue
+      }
       const extracted = await extract(bytes, job.source, deps, onProgress)
-      return { docHash, pages: format(extracted.tree), extracted } satisfies StructuredTextJobValue
+      const pages = format(await withAiReadings(extracted.tree, docHash, deps))
+      return { docHash, pages, extracted } satisfies StructuredTextJobValue
     }
     case 'markdown': {
-      const tree = job.tree ?? (await extract(bytes, job.source, deps, onProgress)).tree
+      const tree = await withAiReadings(
+        job.tree ?? (await extract(bytes, job.source, deps, onProgress)).tree,
+        docHash,
+        deps,
+      )
       const conversion = treeToMarkdown(applyTranslation(tree, job.translation))
       const counts = await writeMarkdownOutput(job.outPath, conversion)
       return {
@@ -284,7 +333,11 @@ export async function runStructureJob(
       } satisfies MarkdownJobValue
     }
     case 'epub': {
-      const tree = job.tree ?? (await extract(bytes, job.source, deps, onProgress)).tree
+      const tree = await withAiReadings(
+        job.tree ?? (await extract(bytes, job.source, deps, onProgress)).tree,
+        docHash,
+        deps,
+      )
       const options = job.epub
       let coverPng: Uint8Array | undefined
       if (options.cover !== false) {
