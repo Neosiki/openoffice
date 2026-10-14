@@ -65,6 +65,8 @@ export const it = {
     'L’uso di questi contenuti per addestrare l’IA dipende dalle impostazioni del tuo account presso quell’azienda.',
   noticeCodexHistory:
     'Questa app disattiva il salvataggio della cronologia delle conversazioni di Codex, ma Codex può comunque conservare i propri log di diagnostica su questo PC.',
+  noticePdfWholeDocument:
+    'Nell’editor PDF, la lettura delle pagine con l’IA e la traduzione dei documenti possono inviare le immagini delle pagine e l’intero testo del documento.',
   noticeAck: 'Ho capito',
   codexNotice:
     'Usare un abbonamento Codex all’interno di un’app non è un metodo ufficialmente consigliato da OpenAI.',

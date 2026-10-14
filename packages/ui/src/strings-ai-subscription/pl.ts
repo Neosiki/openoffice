@@ -62,6 +62,8 @@ export const pl = {
     'To, czy te treści służą do trenowania AI, zależy od ustawień Twojego konta w danej firmie.',
   noticeCodexHistory:
     'Ta aplikacja wyłącza zapisywanie historii rozmów w Codex, ale Codex może nadal przechowywać własne dzienniki diagnostyczne na tym komputerze.',
+  noticePdfWholeDocument:
+    'W edytorze PDF odczytywanie stron przez AI i tłumaczenie dokumentu mogą wysyłać obrazy stron i cały tekst dokumentu.',
   noticeAck: 'Rozumiem',
   codexNotice:
     'Korzystanie z subskrypcji Codex wewnątrz aplikacji nie jest metodą oficjalnie zalecaną przez OpenAI.',

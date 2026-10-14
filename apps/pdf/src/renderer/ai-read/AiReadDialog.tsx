@@ -518,6 +518,7 @@ function AiReadConfirm({
         <AiFirstConnectionNotice
           lang={lang}
           codexKeepsHistory
+          sendsWholeDocument
           onAcknowledge={sendGate.acknowledgeNotice}
         />
       )}

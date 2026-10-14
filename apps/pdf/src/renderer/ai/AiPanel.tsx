@@ -960,6 +960,7 @@ export function AiPanel({
           <AiFirstConnectionNotice
             lang={lang}
             codexKeepsHistory
+            sendsWholeDocument
             onAcknowledge={sendGate.acknowledgeNotice}
           />
         )}

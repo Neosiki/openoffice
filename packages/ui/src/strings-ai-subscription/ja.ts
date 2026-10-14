@@ -63,6 +63,8 @@ export const ja = {
     'その内容が AI の学習に使われるかどうかは、その会社でのご自身のアカウント設定によって決まります。',
   noticeCodexHistory:
     'このアプリは Codex の会話履歴の保存をオフにしますが、Codex が独自の診断ログをこの PC に残す場合があります。',
+  noticePdfWholeDocument:
+    'PDF エディターでは、AI によるページの読み取りと文書の翻訳で、ページの画像と文書全体のテキストが送信されることがあります。',
   noticeAck: 'わかりました',
   codexNotice:
     'アプリ内で Codex のサブスクリプションを使うことは、OpenAI が公式に推奨している方法ではありません。',

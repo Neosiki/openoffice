@@ -59,6 +59,8 @@ export const en = {
     'Whether that content is used to train AI is decided by your own account settings at that company.',
   noticeCodexHistory:
     'This app turns off conversation history saving in Codex, but Codex may still keep its own diagnostic logs on this PC.',
+  noticePdfWholeDocument:
+    'In the PDF editor, AI page reading and document translation may send page images and the whole text of the document.',
   noticeAck: 'Got it',
   codexNotice:
     'Using a Codex subscription inside an app is not a method officially recommended by OpenAI.',

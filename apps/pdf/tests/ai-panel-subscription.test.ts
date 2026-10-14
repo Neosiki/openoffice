@@ -382,6 +382,8 @@ describe('AI panel: first-connection notice', () => {
     expect(notice).not.toBeNull()
     // Codex keeps a diagnostic log the app cannot read or prevent: the notice says so here too
     expect(notice!.textContent).toContain(aiSubscriptionText('en', 'noticeCodexHistory'))
+    // AI page reading and translation send page images and whole documents (spec §11)
+    expect(notice!.textContent).toContain(aiSubscriptionText('en', 'noticePdfWholeDocument'))
 
     await click(notice!.querySelector('button'))
 

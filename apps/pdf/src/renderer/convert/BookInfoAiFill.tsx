@@ -173,6 +173,7 @@ export function BookInfoAiFill({
         <AiFirstConnectionNotice
           lang={lang}
           codexKeepsHistory
+          sendsWholeDocument
           onAcknowledge={sendGate.acknowledgeNotice}
         />
       )}

@@ -64,6 +64,8 @@ export const pt = {
     'Se esse conteúdo é usado para treinar IA depende das configurações da sua própria conta nessa empresa.',
   noticeCodexHistory:
     'Este aplicativo desativa o salvamento do histórico de conversas do Codex, mas o Codex ainda pode manter seus próprios registros de diagnóstico neste PC.',
+  noticePdfWholeDocument:
+    'No editor de PDF, a leitura de páginas com IA e a tradução de documentos podem enviar imagens das páginas e todo o texto do documento.',
   noticeAck: 'Entendi',
   codexNotice:
     'Usar uma assinatura do Codex dentro de um aplicativo não é um método oficialmente recomendado pela OpenAI.',
