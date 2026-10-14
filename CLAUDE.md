@@ -55,6 +55,7 @@ openoffice/
 │   ├── pptx-render/AGENTS.md      ← 슬라이드 그리기
 │   ├── xlsx-gateway/AGENTS.md     ← 엑셀 저장 경로
 │   ├── pdf2docx/AGENTS.md         ← PDF → 워드 변환
+│   ├── pdf-structure/AGENTS.md    ← PDF 문서 나무, Markdown·EPUB 변환, AI 페이지 읽기·번역, 결과 보관소
 │   ├── html2docx/AGENTS.md        ← HTML → 워드 변환
 │   ├── file-parse/AGENTS.md       ← 첨부·검색용 파일 읽기
 │   ├── zip-gate/AGENTS.md         ← 압축 파일 안전 검사
