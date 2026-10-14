@@ -185,6 +185,7 @@ const api: SlidesApi = {
   privateFontFaces: () => ipcRenderer.invoke('slides:private-font-faces'),
   privateFontData: (id) => ipcRenderer.invoke('slides:private-font-data', id),
   fontInstallLocal: () => ipcRenderer.invoke('slides:font-install-local'),
+  openTemplateFontsFolder: () => ipcRenderer.invoke('slides:open-template-fonts-folder'),
   onFontsChanged: (handler) => {
     const listener = () => handler()
     ipcRenderer.on('slides:fonts-changed', listener)
