@@ -51,6 +51,11 @@ function loadConfig(opts: {
         return {
           ...require(id),
           existsSync: () => true,
+          // packaging also gates on the built PDF structure process; serve one
+          readdirSync: (path: string) =>
+            String(path).replace(/\\/g, '/').endsWith('out/main')
+              ? ['pdf-structure-process-test.js']
+              : require(id).readdirSync(path),
           readFileSync: (path: string, encoding: string) => {
             if (String(path).endsWith('genoffice.cjs')) {
               return `const __cliAppVersion = ${JSON.stringify(baked)};\n`
