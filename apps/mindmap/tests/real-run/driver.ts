@@ -12,7 +12,13 @@
  *
  * Screenshots, the files it wrote and `result.json` go to the folder named by
  * MINDMAP_REAL_RUN_OUT (a folder in the system temp directory when not set).
- * Every map it opens is built here with the engine.
+ * Every map it opens is built here with the engine. The pictures of the look
+ * of the map (`look-run.ts`) go to `look/` in that folder.
+ *
+ * MINDMAP_REAL_RUN_ONLY=look runs the look part alone. MINDMAP_REAL_RUN_SAMPLE
+ * names a map file from another program to draw in the default look; it is
+ * opened from a copy in the system temp directory and only a screenshot of it
+ * is kept.
  */
 import { _electron as electron, type ElectronApplication, type Page } from '@playwright/test'
 import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
@@ -30,6 +36,7 @@ import {
   type XmindSheet,
   type XmindTopic,
 } from '@genoffice/xmind-engine'
+import { lookRun } from './look-run'
 
 const APP_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
 const OUT = process.env.MINDMAP_REAL_RUN_OUT ?? mkdtempSync(join(tmpdir(), 'mindmap-real-run-'))
@@ -165,11 +172,19 @@ interface Launched {
   page: Page
 }
 
-async function launch(openFile?: string): Promise<Launched> {
+interface LaunchOptions {
+  /** how many device pixels one CSS pixel is drawn with; the system's own when left out */
+  scale?: number
+  /** the size of the window's content */
+  size?: { width: number; height: number }
+}
+
+async function launch(openFile?: string, options: LaunchOptions = {}): Promise<Launched> {
   const require = createRequire(join(APP_DIR, 'package.json'))
   const executablePath = require('electron') as unknown as string
   const { ELECTRON_RUN_AS_NODE: _ignored, ...hostEnv } = process.env
   const args = [APP_DIR]
+  if (options.scale) args.unshift(`--force-device-scale-factor=${options.scale}`)
   if (openFile) args.push(openFile)
   const app = await electron.launch({
     executablePath,
@@ -190,6 +205,14 @@ async function launch(openFile?: string): Promise<Launched> {
   })
   const page = await app.firstWindow()
   await page.waitForLoadState('domcontentloaded')
+  // The script runner wraps a named function inside a page function in a helper
+  // the page does not have. Passed as text, this stand-in is not wrapped itself.
+  await page.evaluate('globalThis.__name = (fn) => fn')
+  if (options.size) {
+    await app.evaluate(({ BrowserWindow }, size) => {
+      BrowserWindow.getAllWindows()[0]?.setContentSize(size.width, size.height)
+    }, options.size)
+  }
   return { app, page }
 }
 
@@ -786,10 +809,13 @@ async function main(): Promise<void> {
   console.log(`real run of ${APP_DIR}\nevidence in ${OUT}`)
   let failure: unknown = null
   try {
-    await editingRun()
-    await brokenFileRun()
-    await newMapRun()
-    await largeMapRun()
+    if (process.env.MINDMAP_REAL_RUN_ONLY !== 'look') {
+      await editingRun()
+      await brokenFileRun()
+      await newMapRun()
+      await largeMapRun()
+    }
+    await lookRun({ out: OUT, launch, check, results })
   } catch (error) {
     failure = error
     console.error(error)

@@ -20,6 +20,7 @@
  */
 import {
   addSheet,
+  applySheetTheme,
   checkContentStructure,
   countPreservedInDocument,
   countPreservedWithTopics,
@@ -33,6 +34,7 @@ import {
   type SheetEditResult,
   sheetsToOutline,
   sheetToView,
+  type ThemeId,
   type ViewSheet,
   type XmindDocument,
   type XmindSheet,
@@ -310,6 +312,23 @@ export class DocumentSession {
   /** How many preserve-only elements would go with these topics (or summaries, by summary topic id). */
   preservedWith(key: string, topicIds: readonly string[]): number {
     return countPreservedWithTopics(this.sheet(key), topicIds)
+  }
+
+  // ---- the theme of a sheet: picked in the theme panel, outside the map's history ----
+
+  /** The theme a sheet carries when it is one this app wrote; null for no theme and for any other. */
+  themeOf(key: string): ThemeId | null {
+    return recogniseSheetTheme(this.sheet(key))
+  }
+
+  /**
+   * The user picked a theme for a sheet: it is written into the sheet, in the
+   * place of whatever theme was there. Nothing else ever writes a theme, so a
+   * file whose theme nobody picked keeps it as it was.
+   */
+  applyTheme(key: string, id: ThemeId): void {
+    applySheetTheme(this.#document, this.#at(key).index, id)
+    this.#notify()
   }
 
   /** Whether a sheet carries a theme this app did not write: it is drawn with the default look. */

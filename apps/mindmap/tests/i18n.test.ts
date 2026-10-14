@@ -6,8 +6,10 @@
  */
 import { describe, expect, it } from 'vitest'
 import { LANGS } from '@genoffice/i18n'
+import { THEME_BAND_IDS, THEME_SKELETON_IDS, THEME_VARIANT_IDS } from '@genoffice/xmind-engine'
 import { strings } from '../src/renderer/i18n/strings'
 import { mapStrings } from '../src/renderer/i18n/map-strings'
+import { BAND_NAME, SKELETON_NAME, VARIANT_NAME } from '../src/renderer/components/ThemePanel'
 
 const placeholders = (text: string): string[] => (text.match(/\{\w+\}/g) ?? []).sort()
 const keys = Object.keys(strings.zh) as (keyof typeof strings.zh)[]
@@ -58,6 +60,44 @@ describe('the editor dictionaries', () => {
       for (const key of keys) {
         expect(strings[lang][key], `${lang}.${key}`).not.toMatch(/xmind/i)
         expect(strings[lang][key], `${lang}.${key}`).not.toMatch(/IeumOffice|이음오피스/)
+      }
+    }
+  })
+
+  it('name every shape, band and ground of a theme in every language, each differently', () => {
+    expect(Object.keys(SKELETON_NAME).sort()).toEqual([...THEME_SKELETON_IDS].sort())
+    expect(Object.keys(BAND_NAME).sort()).toEqual([...THEME_BAND_IDS].sort())
+    expect(Object.keys(VARIANT_NAME).sort()).toEqual([...THEME_VARIANT_IDS].sort())
+    for (const lang of LANGS) {
+      for (const names of [SKELETON_NAME, BAND_NAME, VARIANT_NAME]) {
+        const shown = Object.values(names).map((key) => strings[lang][key])
+        expect(new Set(shown).size, `${lang}: ${shown.join(', ')}`).toBe(shown.length)
+        // short names for a small panel
+        for (const name of shown) expect(name.length, `${lang}: ${name}`).toBeLessThanOrEqual(20)
+      }
+    }
+  })
+
+  it('name the markers and a picture that is not shown in every language', () => {
+    for (const lang of LANGS) {
+      const { decoration } = mapStrings(lang)
+      expect(decoration.priority, lang).toHaveLength(9)
+      expect(decoration.progress, lang).toHaveLength(9)
+      expect(new Set(decoration.priority).size, lang).toBe(9)
+      expect(new Set(decoration.progress).size, lang).toBe(9)
+      expect(decoration.priority[0], lang).toContain('1')
+      expect(decoration.progress[4], lang).toContain('50')
+      expect(decoration.progress[8], lang).toContain('100')
+      for (const text of [
+        ...decoration.priority,
+        ...decoration.progress,
+        decoration.flag,
+        decoration.star,
+        decoration.otherMarker,
+        decoration.pictureNotShown,
+      ]) {
+        expect(text.trim(), lang).not.toBe('')
+        expect(text, lang).not.toMatch(/\{\w+\}/)
       }
     }
   })

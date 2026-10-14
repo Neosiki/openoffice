@@ -6,7 +6,8 @@
  * topics | relationship, summary, note, label, link | layout, theme, fold |
  * zoom, export | "make another document from this one" | AI at the far end.
  * A group or button whose function is not built yet is not drawn; its place is
- * marked below so it lands where it belongs.
+ * marked below so it lands where it belongs. The theme button opens and closes
+ * the theme panel beside the map.
  */
 import { Dropdown, type DropdownOption } from '@genoffice/ui'
 import type { ViewLayout } from '@genoffice/xmind-engine'
@@ -24,6 +25,7 @@ import {
   IconSave,
   IconSibling,
   IconSummary,
+  IconTheme,
   IconUndo,
   IconUnfoldAll,
   IconZoomIn,
@@ -44,6 +46,8 @@ export interface ToolbarProps {
   /** false while the layout shown stands in for one the editor cannot draw */
   layoutExact: boolean
   pickingRelationship: boolean
+  /** the theme panel is open */
+  themeOpen: boolean
   onSave(): void
   onSaveAs(): void
   onUndo(): void
@@ -57,6 +61,7 @@ export interface ToolbarProps {
   onLabel(): void
   onLink(): void
   onLayout(layout: ViewLayout): void
+  onToggleTheme(): void
   onFoldAll(): void
   onUnfoldAll(): void
   onZoomIn(): void
@@ -204,7 +209,15 @@ export function Toolbar(p: ToolbarProps) {
                 disabled={p.disabled}
               />
             </span>
-            {/* the theme button goes here */}
+            <ToolButton
+              action="theme"
+              label={t('tbTheme')}
+              active={p.themeOpen}
+              disabled={p.disabled}
+              onClick={p.onToggleTheme}
+            >
+              <IconTheme />
+            </ToolButton>
             <ToolButton
               action="fold-all"
               label={t('tbFoldAll')}

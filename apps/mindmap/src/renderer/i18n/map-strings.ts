@@ -32,5 +32,17 @@ export function mapStrings(lang: Lang): MapStrings {
     menuLabel: text('tbLabel'),
     menuNote: text('tbNote'),
     menuLink: text('tbLink'),
+    decoration: {
+      priority: PRIORITY_LEVELS.map((n) => translateIn(lang, 'markerPriority', { n })),
+      progress: PROGRESS_PERCENT.map((percent) => translateIn(lang, 'markerProgress', { percent })),
+      flag: text('markerFlag'),
+      star: text('markerStar'),
+      otherMarker: text('markerOther'),
+      pictureNotShown: text('pictureNotShown'),
+    },
   }
 }
+
+const PRIORITY_LEVELS = [1, 2, 3, 4, 5, 6, 7, 8, 9] as const
+/** The nine steps of the progress markers, from not started to done, as the share that is done. */
+const PROGRESS_PERCENT = [0, 13, 25, 38, 50, 63, 75, 88, 100] as const
