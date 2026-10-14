@@ -1,8 +1,13 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { setAiTransientRetryDelays } from '../src/fetch'
 import { testMediaProvider } from '../src/media-protocols'
+
+// a refused answer is reported as it came: the retry of busy answers is fetch.test.ts's subject
+beforeEach(() => setAiTransientRetryDelays([]))
 
 afterEach(() => {
   vi.unstubAllGlobals()
+  setAiTransientRetryDelays(null)
 })
 
 function errorResponse(body: unknown, status: number): Response {

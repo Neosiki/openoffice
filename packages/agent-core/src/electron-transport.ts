@@ -32,6 +32,8 @@ export type IpcStreamErrorKind =
   | 'needs-update'
   /** the hourly limit of headless (terminal command, MCP) calls is used up */
   | 'headless-limit'
+  /** today's free allowance of a free key connection (OpenRouter `:free`, Gemini free tier) is used up */
+  | 'free-limit'
 
 /** Providers reached through a locally installed vendor CLI (ai-provider's AiSubscriptionProviderId) */
 export type IpcSubscriptionProviderId = 'claude-code' | 'codex'
@@ -41,7 +43,7 @@ export interface IpcStreamErrorCause {
   kind: IpcStreamErrorKind
   /** subscription provider the error is about */
   provider?: IpcSubscriptionProviderId
-  /** epoch milliseconds: when the limit resets ('rate-limit') or calls are allowed again ('headless-limit') */
+  /** epoch milliseconds: when the limit resets ('rate-limit', 'free-limit') or calls are allowed again ('headless-limit') */
   resetsAt?: number
 }
 

@@ -9,6 +9,7 @@
 - 한 턴 라우팅: `streamForProvider`(`src/stream.ts`), `chatForProvider`(`src/chat.ts`), 프로그램이 읽는 실패 이유 `AiRunError`·`aiStreamErrorFields`(`src/run-error.ts`).
 - 구독 프로그램 공통 계층 `src/subscription/`: 실행 파일 찾기(`locate.ts`), 환경(`env.ts`), 시작·종료와 자식 등록부(`process.ts`), 강제 종료 뒤 정리(`leftovers.ts`), 연결 상태(`status.ts`, `service.ts`), 프로그램의 모델 목록(`models.ts`), 종량제 로그인 동의(`metered.ts`), 로그인·로그아웃·설치 실행(`launch.ts`), IPC 계약과 메인 측 핸들러(`contract.ts`, `ipc.ts`).
 - 두 브리지 `src/claude-code-cli.ts`, `src/codex-app-server.ts`와 키 기반 이미지·미디어 프로토콜(`src/media.ts`, `src/media-protocols.ts`, `src/image-backend.ts`).
+- 무료 연결: 화면용 규칙과 상수(`src/free-ai.ts`, `/browser`로 내보냄: 무료 모델 목록, 연결·해제한 설정, 카드의 "연결됨" 판정, IPC 채널 이름과 답 판독, 오늘 무료 사용량 소진 판정 `freeLimitOf`)와 뒷단 전용 연결부(`src/free-connect.ts`, `/free-connect`: OpenRouter OAuth PKCE와 루프백 서버, Gemini 키 확인, 무료 모델 고르기, 남은 무료 요청 수).
 
 ## 맡지 않는 것 (경계)
 
@@ -39,6 +40,10 @@
 - `auto`는 `ready`인 구독만 고른다. 순서는 `AI_SUBSCRIPTION_PROVIDERS`(Claude 다음 Codex)이고, 키 제공자와 종량제 로그인은 후보가 아니다. `ready`는 로그인 방식이 `subscription`일 때만이고 알 수 없는 로그인은 `metered`다. 종량제 로그인은 설정의 `meteredAccepted[provider]`와 상태의 `meteredAccepted`가 둘 다 참일 때만 쓴다(로그인이 바뀐 뒤 남은 플래그로 유료 실행이 시작되지 않게).
 - 막힌 실행은 멈춘다. 명시적으로 고른 제공자가 실행될 수 없으면 `connected: false`와 원인을 돌려주고, 브리지는 `AiRunError`를 던진다. 어느 쪽도 다른 제공자로 스스로 넘어가지 않는다. `streamForProvider`에 `auto`를 넘기면 `Unknown provider: auto`로 실패한다. 호출자가 먼저 `selectAiProvider`로 풀어야 한다.
 - 앱이 띄운 자식은 앱보다 오래 살지 않는다. 취소는 `killProcessTree`(Windows에서는 System32의 `taskkill.exe`를 전체 경로로 불러 `/T /F`), 종료는 동기 함수 `shutdownSubscriptionChildren`, 강제 종료된 뒤의 다음 시작은 `initSubscriptionChildTracking`이 `subscription-children-<앱 pid>.json` 기록을 읽어 pid·프로그램 파일·시작 시각이 모두 맞는 프로세스만 끝낸다. 사용자가 직접 띄운 claude·codex는 기록에 없으므로 건드리지 않는다. 이 과정에서 띄우는 Windows 시스템 도구(`taskkill.exe`, 프로세스 조회용 PowerShell)도 로그인·설치 창과 마찬가지로 전체 경로로, 작업 폴더를 `windowsSystemDir`로 두고 시작한다. 앱의 작업 폴더는 문서가 있는 폴더일 수 있어 물려주지 않는다.
+- 무료 연결은 키 제공자다. 연결 버튼이 그 제공자를 "사용할 AI"로 저장하는 것은 사용자가 고른 것이기 때문이고, `auto`의 후보는 여전히 구독뿐이다. OpenRouter 무료 연결의 모델 목록(`keyProviderModels`)은 `:free` 모델만 담는다. 무료 연결이 유료 모델로 가지 않게 하는 장치이므로 유료 모델을 섞지 않는다.
+- OpenRouter 브라우저 연결의 서버는 루프백 주소(`127.0.0.1`, 되면 `::1`)에만 열고 `/callback` 한 번만 받는다. 열어 두는 시간은 `OPENROUTER_SIGN_IN_TIMEOUT_MS`(10분)이고 취소·끝·시간 초과 어느 쪽이든 닫는다. 키는 뒷단이 설정 파일에 쓰고 화면으로 돌려주지 않는다. 브라우저가 돌아왔을 때 보이는 페이지에는 스크립트와 바깥 자원을 넣지 않는다.
+- `aiFetch`는 503·529와 "오늘 무료 사용량 소진"이 아닌 429를, 답을 읽기 전이고 본문을 다시 보낼 수 있을 때 두 번까지 다시 보낸다(2초, 5초. `Retry-After`가 20초를 넘으면 기다리지 않는다). 취소되면 바로 그만둔다. 테스트에서 거절 응답을 그대로 보고 싶으면 `setAiTransientRetryDelays([])`로 끈다.
+- 오늘 무료 사용량 소진은 `aiStreamErrorFields`가 혼잡(`overloaded`)보다 먼저 `free-limit`으로 가른다. 판정은 오류 글에 실린 제공자의 본문으로 한다(OpenRouter `free-models-per-day`와 본문의 `X-RateLimit-Reset`, Gemini의 하루 단위 무료 등급 할당량 이름). 분당 한도는 `free-limit`이 아니다.
 - 입력을 말없이 자르지 않는다. Claude 브리지가 줄이는 것은 이미지 100장(`MAX_CLAUDE_CODE_IMAGES`) 초과분뿐이고, 오래된 것부터 빼며 반드시 `onInputTruncated`를 부른다. 글자는 자르지 않는다.
 - 구독 IPC 채널은 프로세스당 한 번, `ensureSubscriptionIpc`로만 등록한다. 패키징된 앱은 여러 에디터의 메인 코드가 한 프로세스에서 돌고 같은 채널을 두 번 등록하면 예외가 나므로 `registerSubscriptionIpc`를 앱에서 직접 부르지 않는다. 등록은 상태 확인을 시작하지 않는다. 첫 `statuses` 요청이 첫 확인을 시작하므로, AI를 보여 주지 않는 프로세스(headless export 등)는 벤더 프로그램을 띄우지 않는다.
 

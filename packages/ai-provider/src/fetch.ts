@@ -8,6 +8,7 @@
  * stack. Renderers never inject one (their fetch already is Chromium's).
  */
 import { PRODUCT_NAME } from '@genoffice/i18n'
+import { freeLimitOf } from './free-ai'
 
 type FetchLike = (url: string, init?: RequestInit) => Promise<Response>
 
@@ -55,8 +56,79 @@ function isBlockPage(response: Response): boolean {
   )
 }
 
+/**
+ * Waits before each new attempt after a transient refusal: a busy model (503,
+ * 529) or a per-minute limit (429). Free tiers answer this way often (Gemini's
+ * free tier refused most requests with 503 "high demand" on 2026-10-14), and a
+ * request is resent only before any of its answer was read.
+ */
+const DEFAULT_TRANSIENT_RETRY_DELAYS_MS: readonly number[] = [2000, 5000]
+let transientRetryDelays: readonly number[] = DEFAULT_TRANSIENT_RETRY_DELAYS_MS
+
+/** Tests shorten or turn off the waits; null restores the default */
+export function setAiTransientRetryDelays(delays: readonly number[] | null): void {
+  transientRetryDelays = delays ?? DEFAULT_TRANSIENT_RETRY_DELAYS_MS
+}
+
+/** a Retry-After longer than this is not waited for: the failure is reported instead */
+const MAX_RETRY_AFTER_MS = 20_000
+
+function retryAfterMs(response: Response): number | undefined {
+  const raw = response.headers.get('retry-after')
+  if (!raw) return undefined
+  const seconds = Number(raw)
+  if (Number.isFinite(seconds)) return Math.max(0, seconds * 1000)
+  const at = Date.parse(raw)
+  return Number.isFinite(at) ? Math.max(0, at - Date.now()) : undefined
+}
+
+function wait(ms: number, signal: AbortSignal | null | undefined): Promise<boolean> {
+  return new Promise((resolve) => {
+    if (signal?.aborted) return resolve(false)
+    const timer = setTimeout(() => {
+      signal?.removeEventListener('abort', onAbort)
+      resolve(true)
+    }, ms)
+    const onAbort = () => {
+      clearTimeout(timer)
+      resolve(false)
+    }
+    signal?.addEventListener('abort', onAbort, { once: true })
+  })
+}
+
+/**
+ * Whether a refusal is worth one more try: a busy answer, or a 429 that is not
+ * today's free allowance being used up (that one lasts until the reset).
+ */
+async function isTransientRefusal(response: Response): Promise<boolean> {
+  if (response.status === 503 || response.status === 529) return true
+  if (response.status !== 429) return false
+  try {
+    return !freeLimitOf(`HTTP 429: ${await response.clone().text()}`)
+  } catch {
+    return true
+  }
+}
+
 export async function aiFetch(url: string, rawInit: RequestInit): Promise<Response> {
   const init = withUserAgent(rawInit)
+  const signal = init.signal as AbortSignal | null | undefined
+  let response = await fetchOnce(url, init)
+  const resendable = init.body == null || typeof init.body === 'string'
+  for (const delay of transientRetryDelays) {
+    if (!resendable || signal?.aborted || !(await isTransientRefusal(response))) break
+    const after = retryAfterMs(response)
+    if (after !== undefined && after > MAX_RETRY_AFTER_MS) break
+    if (!(await wait(after ?? delay, signal))) break
+    // the refused answer is dropped unread; only the last one reaches the caller
+    void response.body?.cancel().catch(() => {})
+    response = await fetchOnce(url, init)
+  }
+  return response
+}
+
+async function fetchOnce(url: string, init: RequestInit): Promise<Response> {
   const signal = init.signal as AbortSignal | null | undefined
   let response: Response
   try {

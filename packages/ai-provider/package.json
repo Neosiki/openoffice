@@ -10,6 +10,7 @@
     "./browser": "./src/browser.ts",
     "./codex-app-server": "./src/codex-app-server.ts",
     "./custom-models": "./src/custom-models.ts",
+    "./free-connect": "./src/free-connect.ts",
     "./subscription": "./src/subscription.ts",
     "./claude-code-cli": "./src/claude-code-cli.ts",
     "./codex-image": "./src/codex-image.ts"

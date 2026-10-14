@@ -1,6 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { PRODUCT_NAME, UPSTREAM_PRODUCT_NAME } from '@genoffice/i18n'
-import { AI_DEFAULT_USER_AGENT, aiFetch, setAiUserAgent, setRescueFetch } from '../src/fetch'
+import {
+  AI_DEFAULT_USER_AGENT,
+  aiFetch,
+  setAiTransientRetryDelays,
+  setAiUserAgent,
+  setRescueFetch,
+} from '../src/fetch'
 
 afterEach(() => {
   vi.unstubAllGlobals()
@@ -121,5 +127,70 @@ describe('aiFetch', () => {
     controller.abort()
     await expect(aiFetch('https://x/', { signal: controller.signal })).rejects.toThrow('aborted')
     expect(rescue).not.toHaveBeenCalled()
+  })
+})
+
+describe('aiFetch transient refusals', () => {
+  afterEach(() => setAiTransientRetryDelays(null))
+
+  it('tries a busy or per-minute-limited request again before giving up', async () => {
+    setAiTransientRetryDelays([0, 0])
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(new Response('high demand', { status: 503 }))
+      .mockResolvedValueOnce(new Response('{"error":"rate limited"}', { status: 429 }))
+      .mockResolvedValueOnce(new Response('ok'))
+    vi.stubGlobal('fetch', fetchMock)
+    const response = await aiFetch('https://x/', { method: 'POST', body: '{}' })
+    expect(await response.text()).toBe('ok')
+    expect(fetchMock).toHaveBeenCalledTimes(3)
+  })
+
+  it('hands back the last refusal once the retries are spent', async () => {
+    setAiTransientRetryDelays([0])
+    const fetchMock = vi.fn(async () => new Response('busy', { status: 503 }))
+    vi.stubGlobal('fetch', fetchMock)
+    const response = await aiFetch('https://x/', { method: 'POST', body: '{}' })
+    expect(response.status).toBe(503)
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+
+  it("does not wait out today's used-up free allowance", async () => {
+    setAiTransientRetryDelays([0, 0])
+    const body = '{"error":{"message":"Rate limit exceeded: free-models-per-day"}}'
+    const fetchMock = vi.fn(async () => new Response(body, { status: 429 }))
+    vi.stubGlobal('fetch', fetchMock)
+    const response = await aiFetch('https://x/', { method: 'POST', body: '{}' })
+    expect(response.status).toBe(429)
+    // the caller can still read the body that names the limit
+    expect(await response.text()).toBe(body)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('stops retrying when the run is cancelled, and never resends a body it cannot replay', async () => {
+    setAiTransientRetryDelays([60_000])
+    const controller = new AbortController()
+    const fetchMock = vi.fn(async () => new Response('busy', { status: 503 }))
+    vi.stubGlobal('fetch', fetchMock)
+    const pending = aiFetch('https://x/', { method: 'POST', body: '{}', signal: controller.signal })
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
+    controller.abort()
+    expect((await pending).status).toBe(503)
+
+    fetchMock.mockClear()
+    setAiTransientRetryDelays([0])
+    const stream = new ReadableStream({ start: (c) => c.close() })
+    await aiFetch('https://x/', { method: 'POST', body: stream, duplex: 'half' } as RequestInit)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not wait for a Retry-After longer than a short pause', async () => {
+    setAiTransientRetryDelays([0])
+    const fetchMock = vi.fn(
+      async () => new Response('slow down', { status: 429, headers: { 'Retry-After': '120' } }),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+    expect((await aiFetch('https://x/', {})).status).toBe(429)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 })
