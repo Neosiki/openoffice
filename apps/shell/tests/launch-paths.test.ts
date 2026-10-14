@@ -46,6 +46,20 @@ describe('collectLaunchPaths', () => {
     ).toEqual(['/notes.txt'])
   })
 
+  it('accepts a mind map file from argv and from the second-instance payload', () => {
+    expect(
+      collectLaunchPaths(['GenOffice.exe', 'C:\\maps\\plan.xmind'], undefined, () => true),
+    ).toEqual(['C:\\maps\\plan.xmind'])
+    expect(collectLaunchPaths(['GenOffice.exe', '/PLAN.XMIND'], undefined, () => true)).toEqual([
+      '/PLAN.XMIND',
+    ])
+    expect(
+      collectLaunchPaths(['GenOffice.exe'], { launchPaths: ['/maps/plan.xmind'] }, () => true),
+    ).toEqual(['/maps/plan.xmind'])
+    // a path that is not on disk is not opened
+    expect(collectLaunchPaths(['GenOffice.exe', '/plan.xmind'], undefined, () => false)).toEqual([])
+  })
+
   it('still drops a path nothing opens', () => {
     // a file that exists but is not a document the shell can route
     expect(collectLaunchPaths(['GenOffice.app', '/photo.png'], undefined, () => true)).toEqual([])

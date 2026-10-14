@@ -16,6 +16,7 @@ const requestSlidesClose = vi.fn(() => Promise.resolve(true))
 const requestPdfClose = vi.fn(() => Promise.resolve(true))
 const requestMarkdownClose = vi.fn(() => Promise.resolve(true))
 const requestHtmlClose = vi.fn(() => Promise.resolve(true))
+const requestMindmapClose = vi.fn(() => Promise.resolve(true))
 
 vi.mock('../../docs/src/main/docs-main', () => ({
   docsQueryDirty: (...args: unknown[]) => docsQueryDirty(...(args as [])),
@@ -41,6 +42,10 @@ vi.mock('../../markdown/src/main/markdown-main', () => ({
 
 vi.mock('../../html/src/main/html-main', () => ({
   requestHtmlClose: (...args: unknown[]) => requestHtmlClose(...(args as [])),
+}))
+
+vi.mock('../../mindmap/src/main/mindmap-main', () => ({
+  requestMindmapClose: (...args: unknown[]) => requestMindmapClose(...(args as [])),
 }))
 
 interface TabStub {
@@ -87,7 +92,7 @@ class FakeWindow {
   }
 }
 
-type DirtyKinds = 'sheets' | 'pdf' | 'markdown' | 'html' | 'slides' | 'docs'
+type DirtyKinds = 'sheets' | 'pdf' | 'markdown' | 'html' | 'mindmap' | 'slides' | 'docs'
 
 function fakeManager(dirty: Partial<Record<DirtyKinds, TabStub[]>> = {}) {
   return {
@@ -96,6 +101,7 @@ function fakeManager(dirty: Partial<Record<DirtyKinds, TabStub[]>> = {}) {
     dirtyPdfTabs: () => dirty.pdf ?? [],
     dirtyMarkdownTabs: () => dirty.markdown ?? [],
     dirtyHtmlTabs: () => dirty.html ?? [],
+    dirtyMindmapTabs: () => dirty.mindmap ?? [],
     dirtySlidesTabs: () => dirty.slides ?? [],
     docsTabs: () => dirty.docs ?? [],
   }
@@ -118,6 +124,7 @@ beforeEach(async () => {
     requestPdfClose,
     requestMarkdownClose,
     requestHtmlClose,
+    requestMindmapClose,
   ]) {
     ask.mockImplementation(() => Promise.resolve(true))
   }
@@ -176,6 +183,7 @@ describe('dirty close', () => {
       pdf: [{ id: 'p', webContents: { id: 1 } }],
       markdown: [{ id: 'm', webContents: { id: 2 } }],
       html: [{ id: 'h', webContents: { id: 3 } }],
+      mindmap: [{ id: 'x', webContents: { id: 5 } }],
       slides: [{ id: 's', webContents: { id: 4 } }],
     })
     install(win as never, manager as never)
@@ -185,12 +193,33 @@ describe('dirty close', () => {
       requestPdfClose,
       requestMarkdownClose,
       requestHtmlClose,
+      requestMindmapClose,
       requestSlidesClose,
     ]) {
       expect(ask).toHaveBeenCalledWith(expect.anything(), win)
     }
     expect(win.destroyed).toBe(true)
     expect(win.closeCalls).toBe(1)
+  })
+})
+
+describe('a dirty mind map tab', () => {
+  it('is activated and asked, and a cancel keeps the window open', async () => {
+    requestMindmapClose.mockResolvedValueOnce(false)
+    const win = new FakeWindow()
+    const tab = { id: 'map-1', webContents: { id: 9 } }
+    const manager = fakeManager({ mindmap: [tab] })
+    install(win as never, manager as never)
+    expect(win.requestClose()).toBe(true)
+    await flush()
+    expect(manager.activateTab).toHaveBeenCalledWith('map-1')
+    expect(requestMindmapClose).toHaveBeenCalledWith(tab.webContents, win)
+    expect(win.destroyed).toBe(false)
+
+    expect(win.requestClose()).toBe(true)
+    await flush()
+    expect(requestMindmapClose).toHaveBeenCalledTimes(2)
+    expect(win.destroyed).toBe(true)
   })
 })
 

@@ -16,6 +16,8 @@ describe('appForPath', () => {
     expect(appForPath('/x/a.pptx')).toBe('slides')
     expect(appForPath('/x/a.pdf')).toBe('pdf')
     expect(appForPath('/x/a.html')).toBe('html')
+    expect(appForPath('/x/a.xmind')).toBe('mindmap')
+    expect(appForPath('/x/A.XMIND')).toBe('mindmap')
   })
 
   it('has no app for an extension nothing opens', () => {
@@ -44,7 +46,7 @@ describe("the open route's text-app pattern", () => {
   })
 
   it('claims nothing else, so an unknown file still gets the unsupported notice', () => {
-    for (const ext of ['docx', 'xlsx', 'pptx', 'pdf', 'html', 'xyz']) {
+    for (const ext of ['docx', 'xlsx', 'pptx', 'pdf', 'html', 'xmind', 'xyz']) {
       expect(TEXT_RE.test(`/x/notes.${ext}`)).toBe(false)
     }
     expect(TEXT_RE.test('/x/noextension')).toBe(false)
@@ -70,6 +72,8 @@ describe('renameStaysInApp', () => {
     expect(renameStaysInApp('/x/a.docx', 'a.pdf')).toBe(false)
     expect(renameStaysInApp('/x/a.xlsx', 'a.csv')).toBe(true)
     expect(renameStaysInApp('/x/a.png', 'a.png')).toBe(true)
+    expect(renameStaysInApp('/x/plan.xmind', 'plan2.xmind')).toBe(true)
+    expect(renameStaysInApp('/x/plan.xmind', 'plan.md')).toBe(false)
   })
 
   it('stays put when the file was never openable to begin with', () => {

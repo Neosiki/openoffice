@@ -168,6 +168,16 @@ vi.mock('../../html/src/main/html-main', () => ({
   requestHtmlClose: (...args: unknown[]) => requestHtmlClose(...(args as [])),
 }))
 
+const createMindmapView = vi.fn(() => makeFakeView())
+const mindmapIsDirty = vi.fn(() => false)
+const requestMindmapClose = vi.fn(() => Promise.resolve(true))
+
+vi.mock('../../mindmap/src/main/mindmap-main', () => ({
+  createMindmapView: (...args: unknown[]) => createMindmapView(...(args as [])),
+  mindmapIsDirty: (...args: unknown[]) => mindmapIsDirty(...(args as [])),
+  requestMindmapClose: (...args: unknown[]) => requestMindmapClose(...(args as [])),
+}))
+
 import { TabManager } from '../src/main/tab-manager'
 import type { TabKind } from '../src/shared/tabs-api'
 
@@ -215,6 +225,8 @@ beforeEach(() => {
   pdfIsDirty.mockImplementation(() => false)
   sheetsPendingEditCount.mockImplementation(() => 0)
   slidesIsDirty.mockImplementation(() => false)
+  mindmapIsDirty.mockImplementation(() => false)
+  requestMindmapClose.mockImplementation(() => Promise.resolve(true))
   shellWindow = makeShellWindow()
   onChanged = vi.fn()
   applyMenuFor = vi.fn()
@@ -299,6 +311,35 @@ describe('opening tabs', () => {
     manager.openSheetsTab()
     manager.openSlidesTab()
     expect(manager.list().map((t) => t.title)).toEqual(['IeumOffice', 'AI Sheets', 'AI Slides'])
+  })
+
+  it('opens a mind map tab for a file and for a new, untitled map', () => {
+    const fileId = manager.openMindmapTab('/tmp/plan.xmind')
+    expect(createMindmapView).toHaveBeenLastCalledWith('/tmp/plan.xmind')
+    expect(manager.list().find((t) => t.id === fileId)).toMatchObject({
+      kind: 'mindmap',
+      title: 'plan.xmind',
+      filePath: '/tmp/plan.xmind',
+      active: true,
+    })
+    expect(applyMenuFor).toHaveBeenLastCalledWith('mindmap')
+
+    const untitledId = manager.openMindmapTab()
+    expect(createMindmapView).toHaveBeenLastCalledWith(undefined)
+    const untitled = manager.list().find((t) => t.id === untitledId)
+    expect(untitled).toMatchObject({ kind: 'mindmap', title: 'Mind Map' })
+    expect(untitled?.filePath).toBeUndefined()
+  })
+
+  it('titles an untitled mind map with the name the shell supplies for that kind', () => {
+    const named = new TabManager(
+      shellWindow as never,
+      () => onChanged(),
+      (kind) => applyMenuFor(kind),
+      (kind) => `untitled:${kind}`,
+    )
+    const id = named.openMindmapTab()
+    expect(named.list().find((t) => t.id === id)?.title).toBe('untitled:mindmap')
   })
 
   it('assigns unique, monotonic tab ids', () => {
@@ -656,6 +697,29 @@ describe('closing tabs', () => {
     expect(manager.list()).toHaveLength(1)
   })
 
+  it('closes a clean mind map tab without asking', async () => {
+    const id = manager.openMindmapTab('/tmp/plan.xmind')
+    const view = lastCreatedView(createMindmapView)
+    await manager.closeTab(id)
+    expect(requestMindmapClose).not.toHaveBeenCalled()
+    expect(manager.list()).toHaveLength(1)
+    expect(view.webContents.close).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps a dirty mind map tab open when the user cancels the close guard', async () => {
+    mindmapIsDirty.mockImplementation(() => true)
+    requestMindmapClose.mockImplementation(() => Promise.resolve(false))
+    const id = manager.openMindmapTab()
+    const view = lastCreatedView(createMindmapView)
+    await manager.closeTab(id)
+    expect(requestMindmapClose).toHaveBeenCalledWith(view.webContents, shellWindow)
+    expect(manager.list().map((t) => t.id)).toEqual(['home', id])
+
+    requestMindmapClose.mockImplementation(() => Promise.resolve(true))
+    await manager.closeTab(id)
+    expect(manager.list()).toHaveLength(1)
+  })
+
   it('does not stack close guards while one prompt is pending', async () => {
     sheetsPendingEditCount.mockImplementation(() => 1)
     let resolveGuard!: (ok: boolean) => void
@@ -773,6 +837,15 @@ describe('file path bookkeeping', () => {
         return lastCreatedView(createHtmlView)
       },
     },
+    {
+      kind: 'mindmap',
+      file: '/tmp/one.xmind',
+      renamed: '/tmp/two.xmind',
+      open: () => {
+        manager.openMindmapTab('/tmp/one.xmind')
+        return lastCreatedView(createMindmapView)
+      },
+    },
   ]
 
   it.each(RENAMABLE)('a rename reports the $kind view', (c) => {
@@ -856,6 +929,7 @@ describe('file path bookkeeping', () => {
     }
     const markdownId = seedTab('markdown', '/real/file')
     const htmlId = seedTab('html', '/real/file')
+    const mindmapId = seedTab('mindmap', '/real/file')
 
     expect(manager.findDocsTabByPath('/canonical/file')).toBe(docsId)
     expect(manager.findSheetsTabByPath('/REAL/FILE')).toBe(sheetsId)
@@ -863,6 +937,7 @@ describe('file path bookkeeping', () => {
     expect(manager.findPdfTabByPath('/REAL/FILE')).toBe(pdfId)
     expect(manager.findMarkdownTabByPath('/canonical/file')).toBe(markdownId)
     expect(manager.findHtmlTabByPath('/REAL/FILE')).toBe(htmlId)
+    expect(manager.findMindmapTabByPath('/canonical/file')).toBe(mindmapId)
     expect(manager.findDocsTabByPath('/missing')).toBeUndefined()
     expect(manager.findDocsTabByPath()).toBeUndefined()
   })
@@ -909,6 +984,38 @@ describe('dirty-tab queries (shell close guard)', () => {
     expect(manager.dirtySlidesTabs().map((t) => t.id)).toEqual([slidesId])
   })
 
+  it('lists dirty mind map tabs', () => {
+    manager.openMindmapTab('/tmp/clean.xmind')
+    const dirtyId = manager.openMindmapTab('/tmp/dirty.xmind')
+    const dirtyView = lastCreatedView(createMindmapView)
+    expect(manager.dirtyMindmapTabs()).toEqual([])
+    mindmapIsDirty.mockImplementation(
+      ((id: number) => id === dirtyView.webContents.id) as () => boolean,
+    )
+    expect(manager.dirtyMindmapTabs()).toEqual([
+      { id: dirtyId, webContents: dirtyView.webContents },
+    ])
+  })
+
+  it('names the active mind map tab as the menu target, and no other kind', () => {
+    const id = manager.openMindmapTab('/tmp/plan.xmind')
+    const view = lastCreatedView(createMindmapView)
+    expect(manager.activeMindmapTab()).toEqual({
+      id,
+      webContents: view.webContents,
+      filePath: '/tmp/plan.xmind',
+    })
+    manager.openSlidesTab()
+    expect(manager.activeMindmapTab()).toBeUndefined()
+  })
+
+  it('leaves mind map tabs out of the list reported to MCP agents', async () => {
+    const docsId = manager.openDocsTab('/tmp/a.docx')
+    manager.openMindmapTab('/tmp/plan.xmind')
+    const documents = await manager.openDocuments()
+    expect(documents.map((d) => d.id)).toEqual([docsId])
+  })
+
   it('lists every live docs tab for the async dirtiness sweep', () => {
     manager.openDocsTab()
     manager.openSheetsTab()
@@ -938,8 +1045,9 @@ describe('detach / attach (Open in New Window, tear-off, dock)', () => {
     const pdf = manager.openPdfTab('/tmp/scan.pdf')
     const markdown = manager.openMarkdownTab()
     const html = manager.openHtmlTab()
+    const mindmap = manager.openMindmapTab()
     const present = manager.openHtmlPresentTab({ id: 999 } as never, 'Preview')
-    for (const id of [docs, sheets, slides, pdf, markdown, html])
+    for (const id of [docs, sheets, slides, pdf, markdown, html, mindmap])
       expect(manager.canDetachTab(id)).toBe(true)
     expect(manager.canDetachTab('home')).toBe(false)
     expect(manager.canDetachTab(present)).toBe(false)

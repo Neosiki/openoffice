@@ -26,6 +26,11 @@ import {
   requestHtmlClose,
 } from '../../../html/src/main/html-main'
 import {
+  createMindmapView,
+  mindmapIsDirty,
+  requestMindmapClose,
+} from '../../../mindmap/src/main/mindmap-main'
+import {
   createPdfView,
   clearPdfDirty,
   pdfIsDirty,
@@ -47,7 +52,7 @@ import {
   slidesIsDirty,
 } from '../../../slides/src/main/slides-main'
 import { rendererUrl, safeExternalUrl } from '@genoffice/electron-utils'
-import type { DocumentTabKind, OpenDocumentTab, TabKind, TabSummary } from '../shared/tabs-api'
+import type { OpenDocumentTab, TabKind, TabSummary } from '../shared/tabs-api'
 import { TAB_STRIP_HEIGHT } from '../shared/tab-drag-geometry'
 
 /** a tab lifted out of the strip with its live view: what "Open in New Window",
@@ -239,11 +244,14 @@ export class TabManager {
    * renderer. Hence the async signature.
    */
   async openDocuments(): Promise<OpenDocumentTab[]> {
-    const tabs = this.tabs.filter((tab) => tab.kind !== 'home' && !tab.present && tab.view)
+    const tabs = this.tabs.filter(
+      // a mind map is not reported yet: the MCP tools do not know that kind
+      (tab) => tab.kind !== 'home' && tab.kind !== 'mindmap' && !tab.present && tab.view,
+    )
     return Promise.all(
       tabs.map(async (tab) => ({
         id: tab.id,
-        kind: tab.kind as DocumentTabKind,
+        kind: tab.kind as OpenDocumentTab['kind'],
         title: tab.title,
         ...(tab.filePath ? { filePath: tab.filePath } : {}),
         active: tab.id === this.activeId,
@@ -421,6 +429,23 @@ export class TabManager {
     return id
   }
 
+  openMindmapTab(openPath?: string): string {
+    const view = createMindmapView(openPath)
+    const id = `t${this.nextId++}`
+    this.shellWindow.contentView.addChildView(view)
+    view.setVisible(false)
+    this.trackHtmlFullScreen(view)
+    this.tabs.push({
+      id,
+      kind: 'mindmap',
+      view,
+      title: openPath ? basename(openPath) : this.untitled('mindmap', 'Mind Map'),
+      filePath: openPath,
+    })
+    this.activateTab(id)
+    return id
+  }
+
   /** Present → New tab: a chrome-free html tab showing the owner tab's live preview */
   openHtmlPresentTab(owner: WebContents, title: string): string {
     const view = createHtmlPresentView(owner, title)
@@ -570,6 +595,13 @@ export class TabManager {
       .map((t) => ({ id: t.id, webContents: t.view!.webContents }))
   }
 
+  /** mind map tabs whose renderer reports unsaved edits (shell-close guard) */
+  dirtyMindmapTabs(): Array<{ id: string; webContents: WebContents }> {
+    return this.tabs
+      .filter((t) => t.kind === 'mindmap' && t.view && mindmapIsDirty(t.view.webContents.id))
+      .map((t) => ({ id: t.id, webContents: t.view!.webContents }))
+  }
+
   /** slides tabs whose main-process session has unsaved edits (shell-close guard) */
   dirtySlidesTabs(): Array<{ id: string; webContents: WebContents }> {
     return this.tabs
@@ -620,6 +652,9 @@ export class TabManager {
               : tab.kind === 'slides' && slidesIsDirty(tab.view.webContents.id)
                 ? requestSlidesClose
                 : null)
+    if (!closeGuard && tab.kind === 'mindmap' && tab.view) {
+      if (mindmapIsDirty(tab.view.webContents.id)) closeGuard = requestMindmapClose
+    }
     // docs dirty state lives in the renderer and needs an async query; skip the guard when clean (avoids a flash activation)
     if (!closeGuard && tab.kind === 'docs' && tab.view) {
       this.closingIds.add(id)
@@ -797,6 +832,18 @@ export class TabManager {
 
   findHtmlTabByPath(path?: string): string | undefined {
     return this.findTabOfKindByPath('html', path)
+  }
+
+  findMindmapTabByPath(path?: string): string | undefined {
+    return this.findTabOfKindByPath('mindmap', path)
+  }
+
+  /** the active tab's mind map view, if the active tab is a mind map (mind map menu target) */
+  activeMindmapTab(): { id: string; webContents: WebContents; filePath?: string } | undefined {
+    const tab = this.tabs.find((t) => t.id === this.activeId)
+    return tab?.kind === 'mindmap' && tab.view
+      ? { id: tab.id, webContents: tab.view.webContents, filePath: tab.filePath }
+      : undefined
   }
 
   /** the active tab's html view, if the active tab is html (html menu target) */

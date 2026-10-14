@@ -186,6 +186,24 @@ describe('coexistence with the upstream app on one machine', () => {
     }
   })
 
+  it('names the mind map type within the ProgId rule, and registers it nowhere on Windows', () => {
+    const entry = config.mac.fileAssociations.find(
+      (candidate: { ext: string }) => candidate.ext === 'xmind',
+    ) as { name: string; description?: string } | undefined
+    expect(entry, '.xmind is not offered on mac / Linux').toBeTruthy()
+    // the same derivation electron-builder.cjs applies to the Windows list
+    const progId = `${PRODUCT_NAME}.${entry!.name.replace(/[^A-Za-z0-9]/g, '')}`
+    expect(progId).toMatch(/^IeumOffice\.[A-Za-z][A-Za-z0-9]*$/)
+    expect(progId.length, progId).toBeLessThanOrEqual(39)
+    expect(UPSTREAM.progIds).not.toContain(progId)
+    // the label is the product's own word for the type
+    expect(`${entry!.name} ${entry!.description ?? ''}`).not.toMatch(/xmind/i)
+    // and Windows gets no registration for it at all: the default program stays
+    const winExts = config.win.fileAssociations.map((candidate: { ext: string }) => candidate.ext)
+    expect(winExts).not.toContain('xmind')
+    for (const type of OFFICE_TYPES) expect(type.ext).not.toBe('xmind')
+  })
+
   it('recognizes only its own ProgIds as "this app is the default"', () => {
     for (const type of OFFICE_TYPES) {
       const packaged = config.win.fileAssociations.find(

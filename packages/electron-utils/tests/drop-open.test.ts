@@ -143,6 +143,12 @@ describe('partitionDropPayload', () => {
     expect(result.unsupportedExts).toEqual([])
   })
 
+  it('routes dropped .xmind files as openable', () => {
+    const result = partitionDropPayload(['/maps/plan.xmind', '/maps/PLAN2.XMIND'])
+    expect(result.supported).toEqual(['/maps/plan.xmind', '/maps/PLAN2.XMIND'])
+    expect(result.unsupportedExts).toEqual([])
+  })
+
   it('collects known-unsupported extensions uniquely, first-seen order', () => {
     const result = partitionDropPayload(['old.doc', 'x.pages', 'y.rtf', 'z.doc'])
     expect(result.supported).toEqual([])
