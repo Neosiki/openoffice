@@ -174,6 +174,36 @@ describe('paragraph styles', () => {
   })
 })
 
+describe('a new table with a header row', () => {
+  it('greys the header cells only: the table’s own fill, painted behind every cell, has none', () => {
+    const { plugin, doc } = open()
+    plugin.insertTable(
+      '둘째 문단',
+      null,
+      'after',
+      [
+        ['항목', '값'],
+        ['가', '1'],
+      ],
+      true,
+    )
+    const d = saved(doc())
+    // the new table is in the paragraph after "둘째 문단"
+    const para = 2
+    const table = JSON.parse(d.getTableProperties(0, para, 0)) as { fillType: string }
+    expect(table.fillType).toBe('none')
+    const cell = (index: number) =>
+      JSON.parse(d.getCellProperties(0, para, 0, index)) as {
+        fillType: string
+        fillColor: string
+        patternType: number
+      }
+    expect(cell(0)).toMatchObject({ fillType: 'solid', fillColor: '#e5e5e5', patternType: -1 })
+    expect(cell(1)).toMatchObject({ fillType: 'solid', fillColor: '#e5e5e5' })
+    expect(cell(2).fillType).toBe('none')
+  })
+})
+
 describe('cell background', () => {
   const fillOf = (doc: HwpDocument, cell: number) => {
     const { para, control } = tableOf(doc)
@@ -200,6 +230,16 @@ describe('cell background', () => {
       expect(fillOf(d, 0).fillType).toBe('none')
       expect(fillOf(d, 3).fillType).toBe('none')
     }
+  })
+
+  it('colours without a pattern, which Hangul would draw as lines', () => {
+    const { plugin, doc } = open()
+    plugin.formatCells(1, [{ row: 2, col: 2 }], '#ffe08a')
+    const { para, control } = tableOf(doc())
+    const props = JSON.parse(doc().getCellProperties(0, para, control, 3)) as {
+      patternType: number
+    }
+    expect(props.patternType).toBe(-1)
   })
 
   it('takes the colour away with "none"', () => {

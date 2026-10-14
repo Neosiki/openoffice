@@ -898,7 +898,7 @@ function fontOf(read) {
  * one line, so each cell carries the font of the paragraph the table is put next to and a
  * height that fits a line of it (a cell whose text wraps still grows).
  */
-function tableHtml(table, font, header) {
+function tableHtml(table, font, header, shadeHeader) {
   const height = Math.round((font.points * TABLE_LINE_SPACING + TABLE_CELL_MARGIN_PT) * 10) / 10
   const text = [
     font.family ? `font-family:${font.family};mso-fareast-font-family:${font.family}` : '',
@@ -910,14 +910,50 @@ function tableHtml(table, font, header) {
   const cell = (value) =>
     `<td style="${box}"><span style="${text}">${escapeHtml(value)}</span></td>`
   // a header cell the way Hangul documents usually have it: bold, centred, on light grey;
-  // as <th> the engine also marks it as a title cell, which repeats on the next page
+  // as <th> the engine also marks it as a title cell, which repeats on the next page. The
+  // grey is left out where it is put on afterwards (shadeHeaderCells)
   const head = (value) =>
-    `<th style="${box};background-color:${TABLE_HEADER_FILL}"><p style="text-align:center">` +
+    `<th style="${box}${shadeHeader ? `;background-color:${TABLE_HEADER_FILL}` : ''}"><p style="text-align:center">` +
     `<span style="${text};font-weight:bold">${escapeHtml(value)}</span></p></th>`
   const rows = table.map(
     (row, index) => `<tr>${row.map(header && index === 0 ? head : cell).join('')}</tr>`,
   )
   return `<table>${rows.join('')}</table>`
+}
+
+/**
+ * Give the header row of a table just pasted in body paragraph `place` its grey, cell by
+ * cell. Pasted with the grey, the engine takes the first cell's border and fill for the
+ * table's own, and Hancom Hangul paints a table's own fill behind every cell: the whole
+ * table came out grey. Pasted without it, the table's own has no fill, and the engine
+ * colours each cell on its own. No table there leaves the paste as it is.
+ */
+function shadeHeaderCells(doc, place, cols) {
+  const controls = parse(doc.getControlTextPositions(place.sec, place.para)).length
+  for (let control = controls - 1; control >= 0; control--) {
+    try {
+      doc.getTableDimensionsByPath(
+        place.sec,
+        place.para,
+        JSON.stringify([{ controlIndex: control, cellIndex: 0, cellParaIndex: 0 }]),
+      )
+    } catch {
+      continue
+    }
+    // pattern -1 is none: left out, the engine puts in 0, which Hangul draws as horizontal lines
+    const fill = JSON.stringify({
+      fillType: 'solid',
+      fillColor: TABLE_HEADER_FILL,
+      patternType: -1,
+    })
+    for (let cell = 0; cell < cols; cell++) {
+      expectOk(
+        doc.setCellProperties(place.sec, place.para, control, cell, fill),
+        'shade the header',
+      )
+    }
+    return
+  }
 }
 
 /** Which match a replace call means, or the reason it cannot be decided. */
@@ -2285,7 +2321,10 @@ export const agentPlugin = {
               openAfter(box, at, plain)
               at += 1
             }
-            box.pasteHtml(at, tableHtml(table, font, header === true))
+            // in the body the header's grey goes on after the paste, cell by cell (shadeHeaderCells)
+            box.pasteHtml(at, tableHtml(table, font, header === true, box.inTable))
+            if (header === true && !box.inTable)
+              shadeHeaderCells(doc, box.place(at, 0), table[0].length)
             const after = objectsOf(doc)
             // the new table is an object of its own; nothing that was there may be gone
             mustKeep(before, { ...after, controls: Math.min(after.controls, before.controls) })
@@ -2517,7 +2556,10 @@ export const agentPlugin = {
           throw fail('BAD_ARGUMENT', 'background must look like #RRGGBB, or be "none"')
         }
         const fill = JSON.stringify(
-          none ? { fillType: 'none' } : { fillType: 'solid', fillColor: background.toLowerCase() },
+          none
+            ? { fillType: 'none' }
+            : // pattern -1 is none (see shadeHeaderCells)
+              { fillType: 'solid', fillColor: background.toLowerCase(), patternType: -1 },
         )
         const plan = (doc) => {
           const { tables } = tablesOf(doc)
