@@ -1,7 +1,10 @@
 import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { setCodexImageGenerationAvailable } from '@genoffice/ai-provider'
+import {
+  HEADLESS_SUBSCRIPTION_CONSENT_VERSION,
+  setCodexImageGenerationAvailable,
+} from '@genoffice/ai-provider'
 import {
   createMeteredAcceptanceFileStore,
   detectSubscriptionLogin,
@@ -33,6 +36,12 @@ vi.mock('@genoffice/ai-provider', async (importOriginal) => ({
   generateImageWithProvider: fakes.generateWithKey,
   analyzeMediaWithProvider: fakes.analyzeWithKey,
 }))
+
+/** the switch as the settings screen turns it on: with the consent of the current warning */
+const ON = {
+  headlessSubscriptionEnabled: true,
+  headlessSubscriptionConsentVersion: HEADLESS_SUBSCRIPTION_CONSENT_VERSION,
+}
 
 const PNG = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
@@ -161,7 +170,7 @@ describe('image on the automatic-call path', () => {
     aiSearch.registerCodexImageGenerator(generate)
     const tool = vi.spyOn(aiSearch, 'generateImageTool')
     const { env, dir } = dataFolder({
-      headlessSubscriptionEnabled: true,
+      ...ON,
       // a key is filled in as well, but Codex is the selected image provider
       media: { ...KEY_IMAGE, imageProvider: 'codex' },
     })
@@ -190,10 +199,7 @@ describe('image on the automatic-call path', () => {
     const elsewhere = tempDir()
     const { env, dir } = dataFolder()
     const settings = join(elsewhere, 'custom-settings.json')
-    writeFileSync(
-      settings,
-      JSON.stringify({ provider: 'auto', providers: {}, headlessSubscriptionEnabled: true }),
-    )
+    writeFileSync(settings, JSON.stringify({ provider: 'auto', providers: {}, ...ON }))
     const r = await run(['image', 'a cat', '--out', join(dir, 'cat.png'), '--json'], {
       env: { ...env, GENOFFICE_AI_SETTINGS: settings },
     })
@@ -204,26 +210,34 @@ describe('image on the automatic-call path', () => {
     expect(existsSync(join(dir, 'headless-subscription-ledger.json'))).toBe(false)
   })
 
-  it('reports the hourly limit with the time it frees again', async () => {
+  it('runs past what used to be the hourly limit', async () => {
+    const generate = vi.fn(async () => ({ bytes: new Uint8Array(PNG), mime: 'image/png' }))
+    setCodexImageGenerationAvailable(true)
+    aiSearch.registerCodexImageGenerator(generate)
+    const { env, dir } = dataFolder(ON)
+    // the old cap was 20 an hour
+    for (let i = 0; i < 20; i++) {
+      await aiSearch.runHeadlessSubscriptionCall(dir, async () => undefined)
+    }
+    const out = join(dir, 'cat.png')
+    const r = await run(['image', 'a cat', '--out', out, '--json'], { env })
+    expect(r.code).toBe(0)
+    expect(generate).toHaveBeenCalledTimes(1)
+    expect(readFileSync(out).equals(PNG)).toBe(true)
+    expect(aiSearch.headlessSubscriptionUsage(dir).used).toBe(21)
+  })
+
+  it('reads a switch turned on under the older warning as off', async () => {
     const generate = vi.fn(async () => ({ bytes: new Uint8Array(PNG), mime: 'image/png' }))
     setCodexImageGenerationAvailable(true)
     aiSearch.registerCodexImageGenerator(generate)
     const { env, dir } = dataFolder({ headlessSubscriptionEnabled: true })
-    for (let i = 0; i < aiSearch.HEADLESS_SUBSCRIPTION_MAX_PER_HOUR; i++) {
-      await aiSearch.runHeadlessSubscriptionCall(dir, async () => undefined)
-    }
     const r = await run(['image', 'a cat', '--out', join(dir, 'cat.png'), '--json'], { env })
     expect(r.code).toBe(4)
-    const error = r.json()
-    expect(error.error).toBe('app_unavailable')
-    expect(error.detail.errorCode).toBe('headless-limit')
-    expect(typeof error.detail.resetsAt).toBe('number')
-    expect(error.detail.resetsAt).toBeGreaterThan(Date.now())
-    const when = new Date(error.detail.resetsAt).toISOString()
-    expect(error.message).toContain(when)
-    expect(error.suggestion).toContain(when)
+    expect(r.json().detail).toEqual({ errorCode: 'unavailable' })
     expect(generate).not.toHaveBeenCalled()
-    expect(existsSync(join(dir, 'cat.png'))).toBe(false)
+    expect(fakes.detect).not.toHaveBeenCalled()
+    expect(existsSync(join(dir, 'headless-subscription-ledger.json'))).toBe(false)
   })
 
   it('passes on the note of an ignored --model and keeps the result shape', async () => {
@@ -275,7 +289,7 @@ describe('media on the automatic-call path', () => {
 
   it('does not ask the CLIs for their status when a key provider answers, even with the switch on', async () => {
     const { env } = dataFolder({
-      headlessSubscriptionEnabled: true,
+      ...ON,
       media: { analysisProvider: 'gemini', providers: { gemini: { apiKey: 'k' } } },
     })
     const r = await run(['media', photo(), '--json'], { env })
@@ -286,7 +300,7 @@ describe('media on the automatic-call path', () => {
 
   it('passes the headless context, the statuses and the data folder when the switch is on', async () => {
     const tool = vi.spyOn(aiSearch, 'analyzeMediaTool').mockResolvedValue({ text: 'A cat.' })
-    const { env, dir } = dataFolder({ headlessSubscriptionEnabled: true })
+    const { env, dir } = dataFolder(ON)
     const file = photo()
     const r = await run(['media', file, '--json'], { env })
     expect(r.code).toBe(0)
@@ -311,7 +325,7 @@ describe('media on the automatic-call path', () => {
       account: ACCOUNT,
     }))
     const tool = vi.spyOn(aiSearch, 'analyzeMediaTool').mockResolvedValue({ text: 'A cat.' })
-    const { env, dir } = dataFolder({ headlessSubscriptionEnabled: true })
+    const { env, dir } = dataFolder(ON)
     const audit = join(dir, 'audit.jsonl')
     const r = await run(['media', photo(), '--json'], {
       env: { ...env, GENOFFICE_AUDIT_LOG: audit },
@@ -330,7 +344,7 @@ describe('media on the automatic-call path', () => {
 
   it('behaves as not connected when the status check fails', async () => {
     fakes.detect.mockRejectedValue(new Error('spawn EACCES'))
-    const { env } = dataFolder({ headlessSubscriptionEnabled: true })
+    const { env } = dataFolder(ON)
     const r = await run(['media', photo(), '--json'], { env })
     expect(r.code).toBe(4)
     expect(r.json().detail).toEqual({ errorCode: 'unavailable' })
@@ -391,7 +405,7 @@ describe('media on the automatic-call path', () => {
       errorCode: 'headless-limit',
       resetsAt,
     })
-    const { env } = dataFolder({ headlessSubscriptionEnabled: true })
+    const { env } = dataFolder(ON)
     const r = await run(['media', photo(), '--json'], { env })
     expect(r.code).toBe(4)
     const error = r.json()
@@ -457,7 +471,7 @@ describe('subscription CLIs started for a request', () => {
     const cloud = await import('../src/cloud')
     const subscription = await import('@genoffice/ai-provider/subscription')
     const registry = subscription.sharedSubscriptionChildRegistry()
-    const { env, dir } = dataFolder({ headlessSubscriptionEnabled: true })
+    const { env, dir } = dataFolder(ON)
     const record = subscription.leftoverRecordFile(dir)
 
     const report = await cloud.headlessCall(env, 'capabilities')
@@ -496,7 +510,7 @@ describe('search on the automatic-call path', () => {
     const images = vi
       .spyOn(aiSearch, 'imageSearchTool')
       .mockResolvedValue({ method: 'duckduckgo', images: [] })
-    const { env, dir } = dataFolder({ provider: 'claude-code', headlessSubscriptionEnabled: true })
+    const { env, dir } = dataFolder({ provider: 'claude-code', ...ON })
     const r = await run(['search', 'ieum office', '--json'], { env })
     expect(r.code).toBe(0)
     expect(r.json().detail).toEqual({

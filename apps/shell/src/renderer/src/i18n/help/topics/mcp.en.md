@@ -62,13 +62,13 @@ A request from the `ieumoffice` command or from an MCP client was not typed by y
 - **Describing a picture** uses a key provider when one is set up. Your Claude or Codex subscription is **not used unless you allow it**.
 - **Video and audio** need a key provider that supports video.
 
-To allow subscription use, open Settings ▸ AI ▸ **Advanced** and turn on **Let automatic requests use a subscription**. A warning comes first — "Neither company recommends letting a program use your subscription automatically, and your account may be restricted." — and the switch goes on only after **Turn on anyway**.
+To allow subscription use, open Settings ▸ AI ▸ **Advanced** and turn on **Let automatic requests use a subscription**. A warning comes first — "There is no hourly limit, so a program can send as many requests as it likes, and they may carry the whole text of a document and images of its pages. Neither company recommends letting a program use your subscription automatically, and your account may be restricted." — and the switch goes on only after **Turn on anyway**.
 
 Even with the switch on:
 
 - Requests are handled one at a time. Others wait their turn.
-- At most 20 subscription requests are handled per hour. The count is shared by every command run and every MCP call. Past it, the request fails with an error that says when requests are possible again.
-- A pay-as-you-go login you allowed with **Use anyway** does not count as a subscription here. It is treated like a key: if you chose it as the AI to use, picture descriptions go through it whatever the switch says, without the hourly limit, and each one is billed.
+- There is no hourly limit. Turns are taken request by request, not job by job, so a long PDF translation takes turns with other callers instead of holding them up. A switch turned on under the older warning has been switched off: read the new warning and turn it on again.
+- A pay-as-you-go login you allowed with **Use anyway** does not count as a subscription here. It is treated like a key: if you chose it as the AI to use, picture descriptions go through it whatever the switch says, and each one is billed.
 
 With the switch off and no key set up, the tool answers that the feature is unavailable and names this setting. An agent can check first with the `capabilities` tool; see [Command line and agents](help://cli).
 

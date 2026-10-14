@@ -11,6 +11,8 @@
 - 자동 업데이트(`updater.ts`, `update-window.ts`, `update-resume.ts`)와 패키징 설정 `electron-builder.cjs`.
 - 외부에서 들어오는 입구: 앱 안 MCP 서버(`src/main/mcp/`), 명령줄용 제어 채널(`control-server.ts`), 열린 문서 목록 게시(`open-documents.ts`), 명령줄 PATH 연결과 실행기 위치 기록(`cli-link.ts`), 스킬·MCP 등록 IPC(`integrations-ipc.ts`).
 - 기본 앱 등록과 파일 연결(`default-app.ts`).
+- PDF 구조 작업과 보관소 채널(`src/main/pdf-structure-ipc.ts`, 로직은 `src/main/pdf-structure/`): PDF 편집기의 `structure*`·`store*` 채널을 등록하고, 구조 작업마다 Electron `utilityProcess`를 하나 띄운다(`runner.ts`, 진입점 `pdf-structure-process.ts`). 앱 안 저장 뒤 끝나지 않은 작업 기록 옮기기(`job-migration.ts`), 출력 형식별 끼움 자리(`plugins.ts`)도 여기 있다.
+- 설정 → 일반의 "PDF AI 결과 보관소" 줄(`SettingsResultStore.tsx`): `<userData>/pdf-store`가 차지한 용량과 "모두 지우기". 채널은 `result-store-ipc.ts`, preload는 `window.aiOfficeResultStore`다.
 
 ## 맡지 않는 것 (경계)
 
@@ -37,6 +39,9 @@
 - "GenOffice를 기반으로 합니다" 고지(문자열 키 `setBasedOn`, 값에 `{{GenOffice}}`)는 21개 언어 모두에 남긴다. 원본 이름이 화면에 나오는 곳은 이 한 줄뿐이어야 한다. 다른 문자열과 도움말 제목·본문에 `{{GenOffice}}`를 쓰면 `tests/product-identity.test.ts`가 실패한다.
 - 없앤 기능(사용 통계 전송, 자체 계정 로그인, 클라우드 프로젝트 목록 등)의 모듈·IPC·호출부를 되살리지 않는다. `tests/removed-features.test.ts`가 지킨다. 원본의 변경을 병합할 때 특히 본다.
 - 모든 창은 `contextIsolation: true`, `nodeIntegration: false`, `sandbox: true`다. `shell.openExternal`은 `safeExternalUrl`을 거친 값만 받는다.
+- 구조 작업은 셸 메인 프로세스에서 돌리지 않는다. 큰 문서에서 창이 멈추지 않도록 작업마다 별도 프로세스를 띄우고, 답했을 때, 실패했을 때, 화면이 취소했을 때, 그 탭(webContents)이 사라졌을 때, 앱이 끝날 때 프로세스를 끝낸다. 한 창이 동시에 돌리는 작업은 4개(`MAX_JOBS_PER_OWNER`)까지다. 기존 워드·PPT·엑셀 변환(`pdf2docx-local.ts` 등)은 예전처럼 메인에서 돈다. 이 경로는 바꾸지 않는다.
+- 구조 작업과 보관소 채널은 화면이 보낸 경로를 믿지 않는다. 읽는 파일은 그 창에 허가된 파일(`pdfPathGranted`)이어야 하고, 쓰는 곳은 셸의 저장 창이 고른 대상(`structurePickTarget`, 작업 하나에 한 번)뿐이며 원본 파일은 쓸 수 없다. 보관소 읽기·쓰기는 셸이 그 창의 파일에서 계산한 문서 해시로만 받는다. 단독 실행처럼 채널이 없으면 화면은 `not-available`을 받는다.
+- 보관소의 "모두 지우기"는 설정 화면에서 확인을 받은 뒤에만 부른다. 도는 작업이 있는지는 보지 않는다(그 작업은 이후 항목을 다시 쓴다).
 
 ## 이 모듈의 방식
 
@@ -49,12 +54,14 @@
 - 첫 연결 안내의 Codex 문장은 `CODEX_MAY_KEEP_HISTORY`로 켜져 있다. 브리지가 대화 이력 파일은 끄지만 Codex가 자체 진단 로그를 남기고, 앱은 그것을 읽을 수도 막을 수도 없기 때문이다.
 - 문자열은 세 군데에 있다. 렌더러 사전 `src/renderer/src/strings.ts`(언어 21개가 한 파일에 있고 `zh`가 키 집합을 정한다), 메인 프로세스의 인라인 사전(`src/main/index.ts`의 `tMain`), 도움말 `i18n/help/topics/<id>.<lang>.md`. 도움말 항목은 `help-registry.ts`의 `HELP_TOPICS`에 등록해야 보이고, 모든 언어 파일의 구조는 영어 원본과 같아야 한다(`npm run check:help-langs`).
 - 렌더러 CSS의 크롬 색은 토큰만 쓴다(`npm run check:theme-colors`). shell의 강조색(`--accent` 계열)은 `src/renderer/src/home.css`에서 정의한다.
+- 구조 작업 프로세스는 메인 번들과 따로 묶인다. `pdf-structure-ipc.ts`가 진입점을 `?modulePath`로 가져오고, 빌드 결과는 `out/main/pdf-structure-process-*.js`다. `electron-builder.cjs`의 `beforePack`이 `assertPdfStructureProcessBuilt`로 이 파일이 있는지 확인하고, 없으면 패키징을 멈춘다. 이 파일이 빠진 설치본은 다른 기능은 되는데 Markdown·EPUB 변환, 그림 꺼내기, 번역 PDF만 실행 중에 실패한다. 번역 PDF에 필요한 `hb-subset.wasm`은 `extraResources`로 `wasm/`에 들어간다(명령줄도 같은 파일을 쓴다).
 - 패키징은 저장소 루트에서 한다: `npm run dist:win -- -- --publish never`. `--`가 두 번 필요하고, `--publish never`가 없으면 electron-builder가 업로드를 시도한다. xlsx 사이드카는 `target/x86_64-pc-windows-gnu/release/`에 있어야 하므로 Windows에서 MSVC로 빌드했다면 `target/release/xlsx-sidecar.exe`를 그리로 복사한다. OCR 도우미 컴파일에는 Windows SDK가 필요하다. Windows만 빌드·검증하며 Linux 패키징에는 원본의 이름이 남아 있다.
 
 ## 테스트
 
 - 실행: `npm run test -w @genoffice/shell`(또는 이 폴더에서 `npx vitest run`), `npm run typecheck -w @genoffice/shell`. 환경은 `node`다.
 - `src/main/index.ts`는 실행 중인 Electron이 있어야 불러올 수 있다. 그래서 배선은 소스 글자를 읽어 고정한다(`tests/subscription-lifetime.test.ts`, `tests/main-locale-tables.test.ts`). 종료 처리나 인라인 사전의 모양을 바꾸면 이 테스트들이 깨진다. 로직은 Electron을 import하지 않는 모듈로 빼서 테스트한다(`settings-ai.ts`, `kb-ask-connection.ts`, `app-routing.ts`).
+- PDF 구조 작업(`tests/pdf-structure-*.test.ts`)은 가짜 프로세스로 실행기의 수명(답·취소·탭 닫기 때 끝나는지)과 채널의 경로 검사를 본다. 진입점 배선은 `pdf-structure-wiring.test.ts`, 설정의 보관소 줄은 `settings-result-store.test.ts`·`result-store-ipc.test.ts`가 본다. `beforePack`을 거치는 패키징 테스트(`packaged-cli-version.test.ts`)는 구조 프로세스 파일이 있는 것처럼 가짜 목록을 준다. 확인 조건을 바꾸면 그 가짜도 고친다.
 - 바꾸면 반드시 테스트하는 것: preload가 내보내는 구독 API(핸들러 없음, 깨진 답), 계정 버튼의 확인 흐름(취소하면 아무것도 실행되지 않는지), 설정 저장 뒤 다시 읽은 값, 제품 정체성(`tests/product-identity.test.ts`: 빌더 설정·`package.json`·HTML 제목·ProgId·저장소 좌표의 일치), 업데이트 피드 설정, 탭 IPC의 인자 검증.
 - Windows에서 변경과 무관하게 실패하는 테스트: `tests/headless-export.test.ts`(16건, `/docs/a.docx` 같은 POSIX 경로를 전제로 한다)와 `tests/default-app.test.ts`의 Linux 사례 한 건. `tests/update-resume.test.ts`와 `tests/third-party-notices.test.ts`는 부하가 큰 PC에서 가끔 실패하므로 단독으로 다시 돌려 확인한다.
 - E2E(`npm run test:e2e`, 저장소 루트의 `e2e/`)는 전체 빌드가 필요하다. 실행기(`e2e/helpers.ts`)는 `ai-settings.json`에 `{ providers: {}, subscriptionNoticeSeen: true }`를 미리 써서, Claude·Codex에 로그인된 PC에서 첫 연결 안내이 화면을 가리지 않게 한다(`providers`가 없으면 파일 전체가 기본값으로 읽힌다).

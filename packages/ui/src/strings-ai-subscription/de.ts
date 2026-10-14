@@ -74,6 +74,8 @@ export const de = {
     'Ob diese Inhalte zum Training von KI verwendet werden, bestimmen die Einstellungen Ihres eigenen Kontos bei dem jeweiligen Unternehmen.',
   noticeCodexHistory:
     'Diese App schaltet das Speichern des Unterhaltungsverlaufs in Codex ab, Codex kann jedoch weiterhin eigene Diagnoseprotokolle auf diesem PC speichern.',
+  noticePdfWholeDocument:
+    'Im PDF-Editor können beim KI-Lesen von Seiten und beim Übersetzen von Dokumenten Bilder der Seiten und der gesamte Text des Dokuments gesendet werden.',
   noticeAck: 'Verstanden',
   codexNotice:
     'Ein Codex-Abonnement in einer App zu nutzen, ist keine von OpenAI offiziell empfohlene Methode.',

@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 import {
   AiRunError,
   AiTimeoutError,
+  HEADLESS_SUBSCRIPTION_CONSENT_VERSION,
   defaultAiSettings,
   type AiSettings,
   type AiStreamChunk,
@@ -87,6 +88,18 @@ describe('aiSettingsFromStored (ai:get-settings)', () => {
     expect(parsed.meteredAccepted).toEqual({ 'claude-code': false, codex: true })
     expect(parsed.subscriptionNoticeSeen).toBe(true)
     expect(parsed.headlessSubscriptionEnabled).toBe(false)
+    expect(parsed.headlessSubscriptionConsentVersion).toBe(0)
+    // a switch turned on with the current consent goes through the schema as it is
+    const on = aiSettingsFromStored(
+      file({
+        headlessSubscriptionEnabled: true,
+        headlessSubscriptionConsentVersion: HEADLESS_SUBSCRIPTION_CONSENT_VERSION,
+      }),
+    )
+    expect(aiSettingsInputSchema.parse(JSON.parse(JSON.stringify(on)))).toMatchObject({
+      headlessSubscriptionEnabled: true,
+      headlessSubscriptionConsentVersion: HEADLESS_SUBSCRIPTION_CONSENT_VERSION,
+    })
   })
 })
 

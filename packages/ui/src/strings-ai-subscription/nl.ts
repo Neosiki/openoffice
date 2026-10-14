@@ -71,6 +71,8 @@ export const nl = {
     'Of die inhoud wordt gebruikt om AI te trainen, wordt bepaald door de instellingen van je eigen account bij dat bedrijf.',
   noticeCodexHistory:
     'Deze app zet het opslaan van de gespreksgeschiedenis in Codex uit, maar Codex kan nog steeds eigen diagnostische logboeken op deze pc bewaren.',
+  noticePdfWholeDocument:
+    'In de pdf-editor kunnen het lezen van pagina’s met AI en het vertalen van documenten afbeeldingen van de pagina’s en de volledige tekst van het document versturen.',
   noticeAck: 'Begrepen',
   codexNotice:
     'Een Codex-abonnement gebruiken in een app is geen methode die OpenAI officieel aanbeveelt.',

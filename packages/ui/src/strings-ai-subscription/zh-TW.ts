@@ -56,6 +56,8 @@ export const zhTW = {
   noticeTraining: '這些內容是否用於 AI 訓練，取決於你在該公司帳戶中的設定。',
   noticeCodexHistory:
     '本應用程式會關閉 Codex 的對話記錄儲存，但 Codex 仍可能在這台電腦上保留自己的診斷記錄檔。',
+  noticePdfWholeDocument:
+    '在 PDF 編輯器中，AI 頁面讀取和文件翻譯可能會傳送頁面圖片和整份文件的文字。',
   noticeAck: '知道了',
   codexNotice: '在應用程式中使用 Codex 訂閱並非 OpenAI 官方建議的方式。',
   truncatedNotice: '輸入內容過長，已截去一部分後傳送。',

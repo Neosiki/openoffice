@@ -3902,8 +3902,10 @@ export function registerAiIpc(): void {
     }
   })
 
-  ipcMain.handle('ai:stream-cancel', (event, requestId: string) => {
+  ipcMain.handle('ai:stream-cancel', (event, requestId: string, scope?: unknown) => {
     activeAiStreams.get(requestId)?.abort()
+    // a call that runs no tool (a PDF document job) ends only its own stream
+    if (scope === 'request') return
     // Stop while a tool runs names a turn that already ended: end the tab's media calls too
     // (whichever editor main started them; this handler answers every editor in the suite)
     abortMediaCalls(event.sender.id)

@@ -62,13 +62,13 @@ Eine Anfrage vom Befehl `ieumoffice` oder von einem MCP-Client haben Sie nicht s
 - **Ein Bild beschreiben** läuft über einen Anbieter mit Schlüssel, wenn einer eingerichtet ist. Ihr Claude- oder Codex-Abonnement wird **nur verwendet, wenn Sie es erlauben**.
 - **Video und Audio** brauchen einen Anbieter mit Schlüssel, der Video unterstützt.
 
-Um die Nutzung des Abonnements zu erlauben, öffnen Sie Einstellungen ▸ KI ▸ **Erweitert** und schalten Sie **Automatische Anfragen dürfen ein Abonnement nutzen** ein. Zuerst erscheint eine Warnung — „Keines der beiden Unternehmen empfiehlt, ein Programm das Abonnement automatisch nutzen zu lassen, und Ihr Konto kann eingeschränkt werden.“ —, und der Schalter wird erst nach **Trotzdem einschalten** aktiv.
+Um die Nutzung des Abonnements zu erlauben, öffnen Sie Einstellungen ▸ KI ▸ **Erweitert** und schalten Sie **Automatische Anfragen dürfen ein Abonnement nutzen** ein. Zuerst erscheint eine Warnung — „Es gibt kein stündliches Limit: Ein Programm kann beliebig viele Anfragen senden, und diese können den gesamten Text eines Dokuments und Bilder seiner Seiten enthalten. Keines der beiden Unternehmen empfiehlt, ein Programm das Abonnement automatisch nutzen zu lassen, und Ihr Konto kann eingeschränkt werden.“ —, und der Schalter wird erst nach **Trotzdem einschalten** aktiv.
 
 Auch bei eingeschaltetem Schalter gilt:
 
 - Anfragen werden einzeln nacheinander bearbeitet. Weitere warten, bis sie an der Reihe sind.
-- Pro Stunde werden höchstens 20 Abonnement-Anfragen bearbeitet. Gezählt wird gemeinsam über alle Befehlsaufrufe und alle MCP-Aufrufe. Danach schlägt die Anfrage mit einem Fehler fehl, der angibt, ab wann Anfragen wieder möglich sind.
-- Eine Anmeldung mit Abrechnung nach Verbrauch, die Sie mit **Trotzdem verwenden** freigegeben haben, zählt hier nicht als Abonnement. Sie wird wie ein Schlüssel behandelt: Haben Sie sie als verwendete KI gewählt, laufen Bildbeschreibungen unabhängig vom Schalter darüber, ohne das Stundenlimit, und jede wird berechnet.
+- Es gibt kein Stundenlimit. Die Reihenfolge wechselt nach jeder einzelnen Anfrage, nicht nach jedem Auftrag, sodass auch eine lange PDF-Übersetzung sich mit anderen Aufrufern abwechselt, statt sie aufzuhalten. Ein Schalter, der unter der früheren Warnung eingeschaltet wurde, ist wieder aus: Lesen Sie die neue Warnung und schalten Sie ihn erneut ein.
+- Eine Anmeldung mit Abrechnung nach Verbrauch, die Sie mit **Trotzdem verwenden** freigegeben haben, zählt hier nicht als Abonnement. Sie wird wie ein Schlüssel behandelt: Haben Sie sie als verwendete KI gewählt, laufen Bildbeschreibungen unabhängig vom Schalter darüber, und jede wird berechnet.
 
 Ist der Schalter aus und kein Schlüssel eingerichtet, antwortet das Werkzeug, dass die Funktion nicht verfügbar ist, und nennt diese Einstellung. Ein Agent kann das vorab mit dem Werkzeug `capabilities` prüfen; siehe [Kommandozeile und Agenten](help://cli).
 

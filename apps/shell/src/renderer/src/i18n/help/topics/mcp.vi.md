@@ -62,13 +62,13 @@ Một yêu cầu đến từ lệnh `ieumoffice` hoặc từ một ứng dụng 
 - **Mô tả một hình ảnh** sẽ dùng nhà cung cấp dùng khóa khi có một nhà cung cấp như vậy được thiết lập. Gói đăng ký Claude hoặc Codex của bạn **không được dùng trừ khi bạn cho phép**.
 - **Video và âm thanh** cần một nhà cung cấp dùng khóa có hỗ trợ video.
 
-Để cho phép dùng gói đăng ký, hãy mở Cài đặt ▸ AI ▸ **Nâng cao** rồi bật **Cho phép yêu cầu tự động dùng gói đăng ký**. Một cảnh báo sẽ hiện ra trước — "Cả hai công ty đều không khuyến nghị để chương trình tự động dùng gói đăng ký, và tài khoản của bạn có thể bị hạn chế." — và công tắc chỉ được bật sau khi bạn nhấn **Vẫn bật**.
+Để cho phép dùng gói đăng ký, hãy mở Cài đặt ▸ AI ▸ **Nâng cao** rồi bật **Cho phép yêu cầu tự động dùng gói đăng ký**. Một cảnh báo sẽ hiện ra trước — "Không có giới hạn theo giờ, nên chương trình có thể gửi bao nhiêu yêu cầu tùy ý, và các yêu cầu đó có thể chứa toàn bộ văn bản của tài liệu cùng hình ảnh các trang. Cả hai công ty đều không khuyến nghị để chương trình tự động dùng gói đăng ký, và tài khoản của bạn có thể bị hạn chế." — và công tắc chỉ được bật sau khi bạn nhấn **Vẫn bật**.
 
 Ngay cả khi công tắc đã bật:
 
 - Các yêu cầu được xử lý lần lượt từng cái một. Những yêu cầu khác chờ đến lượt.
-- Mỗi giờ chỉ xử lý tối đa 20 yêu cầu dùng gói đăng ký. Con số này được tính chung cho mọi lần chạy lệnh và mọi lời gọi MCP. Vượt quá con số đó, yêu cầu sẽ thất bại kèm một lỗi cho biết khi nào có thể gửi yêu cầu trở lại.
-- Một lần đăng nhập tính phí theo mức sử dụng mà bạn đã cho phép bằng **Vẫn sử dụng** không được tính là gói đăng ký ở đây. Nó được xử lý như một khóa: nếu bạn đã chọn nó làm AI sử dụng, việc mô tả hình ảnh sẽ đi qua nó bất kể công tắc đang bật hay tắt, không chịu giới hạn mỗi giờ, và mỗi lần đều bị tính phí.
+- Không có giới hạn theo giờ. Lượt được tính theo từng yêu cầu chứ không theo cả tác vụ, nên một bản dịch PDF dài vẫn xen kẽ với các yêu cầu khác thay vì chặn chúng. Công tắc đã bật theo cảnh báo cũ đã được tắt; hãy đọc cảnh báo mới rồi bật lại.
+- Một lần đăng nhập tính phí theo mức sử dụng mà bạn đã cho phép bằng **Vẫn sử dụng** không được tính là gói đăng ký ở đây. Nó được xử lý như một khóa: nếu bạn đã chọn nó làm AI sử dụng, việc mô tả hình ảnh sẽ đi qua nó bất kể công tắc đang bật hay tắt, và mỗi lần đều bị tính phí.
 
 Khi công tắc tắt và chưa có khóa nào được thiết lập, công cụ sẽ trả lời rằng tính năng không dùng được và nêu tên cài đặt này. Tác nhân có thể kiểm tra trước bằng công cụ `capabilities`; xem [Dòng lệnh và tác nhân](help://cli).
 

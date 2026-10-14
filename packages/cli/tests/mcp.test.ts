@@ -273,7 +273,8 @@ describe('mcp server', () => {
       expect(forbiddenConstructs(schema), tool.name).toEqual([])
     }
     const bytes = JSON.stringify(list).length
-    expect(bytes).toBeLessThanOrEqual(90 * 1024)
+    // 90 KiB before the four PDF document tools (pdf_images, pdf_ai_read, pdf_translate, pdf_status)
+    expect(bytes).toBeLessThanOrEqual(96 * 1024)
     expect(bytes).toBeGreaterThan(60 * 1024)
   })
 
@@ -352,7 +353,8 @@ describe('mcp server', () => {
       >
       expect(props.ops!.anyOf!.map((v) => v.type)).toEqual(['array', 'object'])
       expect(props.ops!.items).toBeUndefined()
-      expect(JSON.stringify(tools).length).toBeLessThan(40 * 1024)
+      // 40 KiB before the four PDF document tools
+      expect(JSON.stringify(tools).length).toBeLessThan(42 * 1024)
     } finally {
       await client2.close()
       disposeContext(ctx2)

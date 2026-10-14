@@ -85,6 +85,8 @@ export interface RunOptions {
   env?: NodeJS.ProcessEnv
   registry?: CommandRegistry
   io?: RunIo
+  /** a long-lived host (the MCP server): document jobs run on after the command answers */
+  background?: boolean
 }
 
 /** Runs one invocation; returns the exit code instead of exiting so tests and hosts can embed it. */
@@ -161,6 +163,7 @@ export async function runCli(argv: readonly string[], opts: RunOptions = {}): Pr
     env: opts.env ?? process.env,
     log: (m) => io.stderr(m),
     warn: (w) => warnings.push(w),
+    ...(opts.background ? { background: true } : {}),
   }
   const started = Date.now()
   const audit = (status: 'ok' | 'error', code: ExitCode, outputPath?: string) =>

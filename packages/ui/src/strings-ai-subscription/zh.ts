@@ -54,6 +54,8 @@ export const zh = {
   noticeTraining: '这些内容是否用于 AI 训练，取决于你在该公司账户中的设置。',
   noticeCodexHistory:
     '本应用会关闭 Codex 的对话历史保存，但 Codex 仍可能在这台电脑上保留自己的诊断日志。',
+  noticePdfWholeDocument:
+    '在 PDF 编辑器中，AI 页面识读和文档翻译可能会发送页面图片和整份文档的文字。',
   noticeAck: '知道了',
   codexNotice: '在应用中使用 Codex 订阅并非 OpenAI 官方推荐的方式。',
   truncatedNotice: '输入内容过长，已截去一部分后发送。',

@@ -68,6 +68,8 @@ export const vi = {
     'Nội dung đó có được dùng để huấn luyện AI hay không tùy thuộc vào cài đặt tài khoản của bạn tại công ty đó.',
   noticeCodexHistory:
     'Ứng dụng này tắt việc lưu lịch sử trò chuyện của Codex, nhưng Codex vẫn có thể lưu nhật ký chẩn đoán riêng trên máy tính này.',
+  noticePdfWholeDocument:
+    'Trong trình chỉnh sửa PDF, tính năng đọc trang bằng AI và dịch tài liệu có thể gửi hình ảnh các trang và toàn bộ văn bản của tài liệu.',
   noticeAck: 'Đã hiểu',
   codexNotice:
     'Dùng gói đăng ký Codex bên trong một ứng dụng không phải là cách được OpenAI chính thức khuyến nghị.',

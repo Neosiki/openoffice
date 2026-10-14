@@ -62,13 +62,13 @@ Una solicitud que llega del comando `ieumoffice` o de un cliente MCP no la ha es
 - **Describir una imagen** usa un proveedor con clave cuando hay uno configurado. Su suscripción de Claude o Codex **no se usa a menos que usted lo permita**.
 - **El vídeo y el audio** necesitan un proveedor con clave que admita vídeo.
 
-Para permitir el uso de la suscripción, abra Configuración ▸ IA ▸ **Avanzado** y active **Permitir que las solicitudes automáticas usen una suscripción**. Antes aparece una advertencia —«Ninguna de las dos empresas recomienda que un programa use tu suscripción automáticamente, y tu cuenta podría quedar restringida.»— y el interruptor solo se activa después de pulsar **Activar de todos modos**.
+Para permitir el uso de la suscripción, abra Configuración ▸ IA ▸ **Avanzado** y active **Permitir que las solicitudes automáticas usen una suscripción**. Antes aparece una advertencia —«No hay límite por hora: un programa puede enviar tantas solicitudes como quiera, y estas pueden incluir todo el texto de un documento e imágenes de sus páginas. Ninguna de las dos empresas recomienda que un programa use tu suscripción automáticamente, y tu cuenta podría quedar restringida.»— y el interruptor solo se activa después de pulsar **Activar de todos modos**.
 
 Incluso con el interruptor activado:
 
 - Las solicitudes se atienden de una en una. Las demás esperan su turno.
-- Se atienden como máximo 20 solicitudes con suscripción por hora. La cuenta es común a todas las ejecuciones del comando y a todas las llamadas MCP. Superada, la solicitud falla con un error que indica cuándo vuelven a ser posibles las solicitudes.
-- Un inicio de sesión de pago por consumo que usted permitió con **Usar de todos modos** no cuenta aquí como suscripción. Se trata como una clave: si lo eligió como IA que se usa, las descripciones de imágenes pasan por él diga lo que diga el interruptor, sin el límite por hora, y cada una se factura.
+- No hay límite por hora. El turno pasa de una solicitud a otra, no de una tarea a otra, así que una traducción larga de un PDF se alterna con las demás llamadas en lugar de bloquearlas. Un interruptor activado con la advertencia anterior se ha desactivado: lea la nueva advertencia y vuelva a activarlo.
+- Un inicio de sesión de pago por consumo que usted permitió con **Usar de todos modos** no cuenta aquí como suscripción. Se trata como una clave: si lo eligió como IA que se usa, las descripciones de imágenes pasan por él diga lo que diga el interruptor, y cada una se factura.
 
 Con el interruptor desactivado y sin ninguna clave configurada, la herramienta responde que la función no está disponible y nombra este ajuste. Un agente puede comprobarlo antes con la herramienta `capabilities`; vea [Línea de comandos y agentes](help://cli).
 

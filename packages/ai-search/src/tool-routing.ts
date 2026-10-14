@@ -6,8 +6,8 @@
  * A request arrives on one of two paths. The screen path is a person asking
  * in an editor. The automatic-call path (`headless`) is the command line or
  * an integration (MCP): there a subscription login is used only when the
- * user turned that on, and then one request at a time and a limited number
- * an hour (headless-ledger.ts). A metered login the user accepted is not a
+ * user turned that on, and then one request at a time, with no hourly cap
+ * (headless-ledger.ts). A metered login the user accepted is not a
  * subscription: it costs money per request like a key, so it is neither
  * switched off nor counted, and it never generates images.
  */
@@ -17,6 +17,7 @@ import {
   codexImageGenerationAvailable,
   getMediaProviderMeta,
   getProviderAdapter,
+  headlessSubscriptionOn,
   isSubscriptionProvider,
   modelLacksVision,
   resolveImageBackend,
@@ -37,7 +38,7 @@ export interface AiToolCallContext {
   path: AiToolCallPath
   /** connection status of the subscription CLIs as the caller last checked it; left out = none connected */
   statuses?: AiSubscriptionStatuses | undefined
-  /** directory of the headless ledger and its lock; a headless caller without one never uses a subscription */
+  /** directory of the headless lock and ledger; a headless caller without one never uses a subscription */
   dataDir?: string | undefined
 }
 
@@ -48,12 +49,12 @@ const HEADLESS_SETTING_HINT =
 
 /** True when this request is on the automatic-call path and may not use a subscription login. */
 export function headlessSubscriptionBlocked(
-  settings: Pick<AiSettings, 'headlessSubscriptionEnabled'>,
+  settings: Pick<AiSettings, 'headlessSubscriptionEnabled' | 'headlessSubscriptionConsentVersion'>,
   context: AiToolCallContext,
 ): boolean {
   if (context.path !== 'headless') return false
-  // without a ledger directory the hourly limit could not be kept, so the answer is no
-  return !(settings.headlessSubscriptionEnabled === true && context.dataDir)
+  // without a directory for the lock, one request at a time could not be kept, so the answer is no
+  return !(headlessSubscriptionOn(settings) && context.dataDir)
 }
 
 /**
@@ -116,7 +117,7 @@ export type AiImageAnalysisRoute =
       /** the AI provider the chat runs on is shown the image */
       kind: 'chat'
       provider: AiProviderId
-      /** `metered` and `key` cost the user money per request and are never limited on the headless path */
+      /** `metered` and `key` cost the user money per request and are never queued or counted on the headless path */
       billing: 'subscription' | 'metered' | 'key'
     }
   | { kind: 'none'; message: string }

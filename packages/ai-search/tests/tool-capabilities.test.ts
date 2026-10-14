@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
+  HEADLESS_SUBSCRIPTION_CONSENT_VERSION,
   defaultAiSettings,
   normalizeAiSettings,
   setCodexImageGenerationAvailable,
@@ -138,7 +139,13 @@ describe('aiToolCapabilities', () => {
     })
 
     it('reports the subscription routes once the setting is on', () => {
-      const c = aiToolCapabilities(settings({ headlessSubscriptionEnabled: true }), headless())
+      const c = aiToolCapabilities(
+        settings({
+          headlessSubscriptionEnabled: true,
+          headlessSubscriptionConsentVersion: HEADLESS_SUBSCRIPTION_CONSENT_VERSION,
+        }),
+        headless(),
+      )
       expect(c.imageGeneration).toEqual({
         available: true,
         route: 'subscription',
@@ -159,6 +166,7 @@ describe('aiToolCapabilities', () => {
             provider: 'codex',
             meteredAccepted: { codex: true },
             headlessSubscriptionEnabled,
+            headlessSubscriptionConsentVersion: HEADLESS_SUBSCRIPTION_CONSENT_VERSION,
           }),
           headless({ codex: metered }),
         )

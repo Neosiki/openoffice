@@ -4,6 +4,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   AiRunError,
+  HEADLESS_SUBSCRIPTION_CONSENT_VERSION,
   defaultAiSettings,
   normalizeAiSettings,
   sanitizeAiSettings,
@@ -288,12 +289,14 @@ describe('stored settings', () => {
       provider: 'auto',
       meteredAccepted: { codex: true },
       headlessSubscriptionEnabled: true,
+      headlessSubscriptionConsentVersion: HEADLESS_SUBSCRIPTION_CONSENT_VERSION,
       subscriptionNoticeSeen: true,
     })
     expect(saved).toMatchObject({
       provider: 'auto',
       meteredAccepted: { codex: true },
       headlessSubscriptionEnabled: true,
+      headlessSubscriptionConsentVersion: HEADLESS_SUBSCRIPTION_CONSENT_VERSION,
       subscriptionNoticeSeen: true,
     })
   })

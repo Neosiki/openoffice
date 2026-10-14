@@ -25,6 +25,7 @@ import {
   readAiSettings,
   subscriptionProgramName,
   withAiSelection,
+  withHeadlessSubscription,
 } from './settings-ai'
 import type { AiSelectionChoice, SubscriptionAccountAction } from './settings-ai'
 
@@ -348,7 +349,7 @@ export function AiSection({
                 aria-label={t('setAiHeadless')}
                 onClick={() => {
                   if (headlessOn) {
-                    change((current) => ({ ...current, headlessSubscriptionEnabled: false }))
+                    change((current) => withHeadlessSubscription(current, false))
                   } else {
                     // turning it on goes through the warning first
                     setHeadlessAsked(true)
@@ -368,7 +369,7 @@ export function AiSection({
                   className="set-btn danger"
                   onClick={() => {
                     setHeadlessAsked(false)
-                    change((current) => ({ ...current, headlessSubscriptionEnabled: true }))
+                    change((current) => withHeadlessSubscription(current, true))
                   }}
                 >
                   {t('setAiHeadlessConfirm')}

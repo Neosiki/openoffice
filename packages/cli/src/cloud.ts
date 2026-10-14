@@ -1,6 +1,7 @@
 import { dirname, join } from 'node:path'
 import {
   AI_SUBSCRIPTION_PROVIDERS,
+  headlessSubscriptionOn,
   isSubscriptionProvider,
   normalizeAiSettings,
   providerSelectionOf,
@@ -76,8 +77,8 @@ export async function prepareCloud(env: NodeJS.ProcessEnv): Promise<void> {
   }
 }
 
-/** What a command is about to do: make an image, read media, or report on both. */
-export type CloudUse = 'image' | 'media' | 'capabilities'
+/** What a command is about to do: make an image, read media, run a PDF document job, or report on all of them. */
+export type CloudUse = 'image' | 'media' | 'pdf' | 'capabilities'
 
 /**
  * The subscription CLIs whose status can change what `use` runs on; empty
@@ -88,19 +89,25 @@ export type CloudUse = 'image' | 'media' | 'capabilities'
  * runs on: with `auto` that is a subscription, so again only with the setting
  * on; a CLI the user selected may be a metered login they accepted, which
  * runs whatever the setting says. When a key route already answers, no
- * status can change it.
+ * status can change it. The PDF document jobs (and their capability items)
+ * always ask the chat's provider, so its status always matters to them.
  */
 export function subscriptionProvidersInPlay(
   settings: AiSettings,
   use: CloudUse,
   dataDir: string,
 ): AiSubscriptionProviderId[] {
-  const on = settings.headlessSubscriptionEnabled === true
+  const on = headlessSubscriptionOn(settings)
   const wanted = new Set<AiSubscriptionProviderId>()
-  if (use !== 'media' && on && codexImageRouteOffered()) wanted.add('codex')
+  if ((use === 'image' || use === 'capabilities') && on && codexImageRouteOffered()) {
+    wanted.add('codex')
+  }
+  // the PDF document jobs always ask the AI provider the chat runs on
   if (
-    use !== 'image' &&
-    !aiToolCapabilities(settings, { path: 'headless', dataDir }).imageAnalysis.available
+    use === 'pdf' ||
+    use === 'capabilities' ||
+    (use === 'media' &&
+      !aiToolCapabilities(settings, { path: 'headless', dataDir }).imageAnalysis.available)
   ) {
     const selection = providerSelectionOf(settings)
     if (isSubscriptionProvider(selection)) wanted.add(selection)
@@ -221,8 +228,9 @@ export async function headlessCall(env: NodeJS.ProcessEnv, use: CloudUse): Promi
 /** The next step for each cause a tool reports; one sentence, as `suggestion` is everywhere else. */
 const NEXT_STEP: Record<NonNullable<MediaToolFailure['errorCode']>, string> = {
   unavailable: `do not retry: it has to be turned on or filled in under Settings > AI in ${PRODUCT_NAME} as the message says, so tell the user or continue without it`,
+  // no longer raised: automatic calls have no hourly cap; kept for the older runners that may still report it
   'headless-limit':
-    'do not retry now: the hourly allowance of subscription requests from the command line and integrations is used up',
+    'retry once: an older version reported its limit of automatic subscription requests, which no longer exists',
   'rate-limit': "do not retry now: the usage limit of the user's subscription is reached",
   'free-limit': `do not retry now: today's free allowance of the free AI connection is used up (detail.resetsAt says when it frees again); the user can choose another AI under Settings > AI in ${PRODUCT_NAME}`,
   'not-connected': `do not retry: ask the user to connect Claude Code or Codex under Settings > AI in ${PRODUCT_NAME}, or to select a provider key under Settings > AI > Advanced`,
@@ -236,6 +244,13 @@ const NEXT_STEP: Record<NonNullable<MediaToolFailure['errorCode']>, string> = {
   network: 'check the network connection (HTTPS_PROXY is honoured), then retry once',
   overloaded: 'the provider is busy: retry once in a minute',
   timeout: 'retry once; if it times out again, continue without it',
+}
+
+/** The next step for a run error code, when it is one the cloud commands know. */
+export function cloudNextStep(errorCode: string): string | undefined {
+  return Object.prototype.hasOwnProperty.call(NEXT_STEP, errorCode)
+    ? NEXT_STEP[errorCode as keyof typeof NEXT_STEP]
+    : undefined
 }
 
 /**

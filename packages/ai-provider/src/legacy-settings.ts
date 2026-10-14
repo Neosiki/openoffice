@@ -16,6 +16,8 @@ import { AI_MEDIA_PROVIDERS, providerHasCapability, type MediaCapability } from 
 import {
   AI_PROVIDERS,
   defaultAiSettings,
+  headlessConsentVersionOf,
+  headlessSubscriptionOn,
   resolveAiSettings,
   sanitizeMeteredAccepted,
 } from './providers'
@@ -134,7 +136,10 @@ export function normalizeAiSettings(
     media: normalizeMedia(resolved.media ?? fallback.media!),
     search: normalizeSearch(resolved.search ?? fallback.search!),
     meteredAccepted: sanitizeMeteredAccepted(resolved.meteredAccepted),
-    headlessSubscriptionEnabled: resolved.headlessSubscriptionEnabled === true,
+    headlessSubscriptionEnabled: headlessSubscriptionOn(resolved),
+    headlessSubscriptionConsentVersion: headlessConsentVersionOf(
+      resolved.headlessSubscriptionConsentVersion,
+    ),
     subscriptionNoticeSeen: resolved.subscriptionNoticeSeen === true,
   }
 }

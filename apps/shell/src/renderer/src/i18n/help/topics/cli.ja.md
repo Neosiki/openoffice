@@ -62,11 +62,11 @@ ieumoffice docs apply brief.docx --ops ops.json
 | -------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `search`、`image_search`、`image_generation`、`image_analysis`、`video_analysis` | 機能ごとに、`available`、誰が応答するかを示す `via`、`free`・`key`・`subscription` のいずれかになる `route`、従量課金のログインの場合の `metered: true`、そして機能が使えないときにコマンド自身が返す文言である `message`。 |
 | `media_analysis`                                                                 | 古いスクリプトのために残してあります。`image_analysis` と同じ内容で、動画だけが使える場合は `video_analysis` と同じになります。                                                                                             |
-| `automatic_calls`                                                                | `subscription_enabled`。これがオンの間は、1 時間あたりの枠についての `used`、`limit`、`remaining`、`resetsAt` も含まれます。                                                                                                |
+| `automatic_calls`                                                                | `subscription_enabled`。これがオンの間は `used`（直近 1 時間に処理した自動呼び出しの件数で、参考用）も含まれ、`limit` と `remaining` は常に `null` です。                                                                   |
 | `app`                                                                            | `available`：コマンドが起動できる場所にアプリがインストールされているかどうか。                                                                                                                                             |
 | `settings_path`                                                                  | これらの回答を読み取った設定ファイル。                                                                                                                                                                                      |
 
-`image` や `media` を実行できないとき、コマンドは終了コード 4 と `error: "app_unavailable"` で終了し、`detail.errorCode` が理由を示します。`unavailable` は、その機能について何も設定されていないという意味なので、やり直しても結果は変わりません。`headless-limit` と `rate-limit` には `detail.resetsAt` が付き、再びリクエストできるようになる時刻（ミリ秒単位）を示します。
+`image` や `media` を実行できないとき、コマンドは終了コード 4 と `error: "app_unavailable"` で終了し、`detail.errorCode` が理由を示します。`unavailable` は、その機能について何も設定されていないという意味なので、やり直しても結果は変わりません。`rate-limit` には `detail.resetsAt` が付き、再びリクエストできるようになる時刻（ミリ秒単位）を示します。
 
 ## この PC に残すもの
 

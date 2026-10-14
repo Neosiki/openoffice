@@ -62,11 +62,11 @@ ieumoffice docs apply brief.docx --ops ops.json
 | -------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `search`, `image_search`, `image_generation`, `image_analysis`, `video_analysis` | 기능마다: `available`(쓸 수 있는지), `via`(누가 처리하는지), `route`(`free`, `key`, `subscription` 중 하나), 쓴 만큼 요금이 나가는 로그인이면 `metered: true`, 쓸 수 없을 때는 명령이 그대로 답하는 문구인 `message`. |
 | `media_analysis`                                                                 | 예전 스크립트를 위해 남겨 둔 값입니다. `image_analysis`와 같고, 동영상만 될 때는 `video_analysis`와 같습니다.                                                                                                         |
-| `automatic_calls`                                                                | `subscription_enabled`, 그리고 켜져 있는 동안에는 시간당 허용량을 나타내는 `used`, `limit`, `remaining`, `resetsAt`.                                                                                                  |
+| `automatic_calls`                                                                | `subscription_enabled`, 그리고 켜져 있는 동안에는 최근 한 시간 동안 처리한 자동 호출 수인 `used`(정보용). `limit`과 `remaining`은 언제나 `null`입니다.                                                                |
 | `app`                                                                            | `available`: 명령이 앱을 실행할 수 있는 위치에 앱이 설치되어 있는지.                                                                                                                                                  |
 | `settings_path`                                                                  | 이 답을 읽어 온 설정 파일.                                                                                                                                                                                            |
 
-`image`나 `media`를 실행할 수 없으면 명령은 종료 코드 4와 `error: "app_unavailable"`로 끝나고, 이유는 `detail.errorCode`에 들어 있습니다. `unavailable`은 그 기능에 설정된 것이 없다는 뜻이라 다시 시도해도 소용없습니다. `headless-limit`과 `rate-limit`에는 다시 요청할 수 있는 시각(밀리초)인 `detail.resetsAt`이 함께 옵니다.
+`image`나 `media`를 실행할 수 없으면 명령은 종료 코드 4와 `error: "app_unavailable"`로 끝나고, 이유는 `detail.errorCode`에 들어 있습니다. `unavailable`은 그 기능에 설정된 것이 없다는 뜻이라 다시 시도해도 소용없습니다. `rate-limit`에는 다시 요청할 수 있는 시각(밀리초)인 `detail.resetsAt`이 함께 옵니다.
 
 ## 이 PC에 남기는 것
 

@@ -1,19 +1,20 @@
 /**
- * Limits on subscription use from the automatic-call path (command line,
- * MCP): one request at a time, and a fixed number an hour.
+ * Subscription use from the automatic-call path (command line, MCP): one
+ * request at a time, and a count of the last hour's requests.
  *
- * Every CLI command is its own process, so neither limit can live in memory.
- * Both are kept in the data directory: a lock file that one request holds
- * for as long as it runs, and a ledger of the start times of the last hour's
+ * Every CLI command is its own process, so neither can live in memory. Both
+ * are kept in the data directory: a lock file that one request holds for as
+ * long as it runs, and a ledger of the start times of the last hour's
  * requests, read and written only while holding the lock.
  *
  * A process can die holding the lock. The holder refreshes the lock file's
  * modification time while it runs; a lock whose process is gone, or whose
  * heartbeat stopped and stays stopped, is taken over.
  *
- * The count fails closed. A ledger whose content is damaged counts as a
- * used-up allowance until one window after it was last written, and a
- * request whose slot cannot be written down is not run.
+ * There is no hourly cap: the count is information only (the capabilities
+ * report shows it). So the ledger never stops a request. A ledger whose
+ * content is damaged or that cannot be read counts as empty, and a request
+ * whose start cannot be written down runs all the same.
  */
 
 import { randomUUID } from 'node:crypto'
@@ -29,8 +30,7 @@ import {
 import { join } from 'node:path'
 import { AiRunError } from '@genoffice/ai-provider'
 
-/** Subscription requests the automatic-call path may start per window (spec default: 20 an hour). */
-export const HEADLESS_SUBSCRIPTION_MAX_PER_HOUR = 20
+/** The span the count of requests covers: the last hour. */
 export const HEADLESS_SUBSCRIPTION_WINDOW_MS = 60 * 60 * 1000
 /** A lock not refreshed for this long belongs to a process that died or hung. */
 export const HEADLESS_LOCK_STALE_MS = 60_000
@@ -50,7 +50,6 @@ export const HEADLESS_LEDGER_FILE = 'headless-subscription-ledger.json'
 export const HEADLESS_LOCK_FILE = 'headless-subscription.lock'
 
 export interface HeadlessLimitOptions {
-  maxPerHour?: number | undefined
   windowMs?: number | undefined
   /** clock for the ledger; lock freshness always follows the file system's clock */
   now?: (() => number) | undefined
@@ -67,21 +66,17 @@ export interface HeadlessCallOptions extends HeadlessLimitOptions {
 }
 
 export interface HeadlessSubscriptionUsage {
+  /** requests started in the last hour, as far as the ledger can tell */
   used: number
-  limit: number
-  /** epoch ms at which the next slot frees; only when the limit is reached */
-  resetsAt?: number
 }
 
 interface Limits {
-  maxPerHour: number
   windowMs: number
   now: () => number
 }
 
 function limitsOf(options: HeadlessLimitOptions): Limits {
   return {
-    maxPerHour: options.maxPerHour ?? HEADLESS_SUBSCRIPTION_MAX_PER_HOUR,
     windowMs: options.windowMs ?? HEADLESS_SUBSCRIPTION_WINDOW_MS,
     now: options.now ?? Date.now,
   }
@@ -94,15 +89,6 @@ function errorCode(err: unknown): string | undefined {
 }
 
 // ── ledger ──────────────────────────────────────────────────────────
-
-/** What the ledger file says about this window. */
-type Ledger =
-  /** request times of this window, oldest first; a missing file is first use and reads as none */
-  | { kind: 'ok'; runs: number[] }
-  /** the content is not a ledger: the count is unknown, so the allowance counts as used up */
-  | { kind: 'damaged'; resetsAt: number }
-  /** the file is there but could not be read just now */
-  | { kind: 'unreadable'; error: unknown }
 
 const LEDGER_RENAME_ATTEMPTS = 5
 const LEDGER_RENAME_RETRY_MS = 20
@@ -124,48 +110,32 @@ function parseLedger(raw: string): number[] | null {
 }
 
 /**
- * Reads the ledger. Damaged content must not erase the count, and must not
- * lock the user out for good either: it is taken as "the allowance was used
- * up when this file was last written", so requests are refused until one
- * window after the file's modification time and a fresh ledger starts then.
+ * The request times of this window, oldest first. A missing file is first
+ * use; a file that cannot be read or whose content is not a ledger counts as
+ * empty too, since the count stops nothing and the next write replaces it.
  * A time in the future (the clock was set back) counts as now, so nothing
- * holds a slot for longer than a window.
+ * stays in the count for longer than a window.
  */
-function readLedger(dir: string, limits: Limits): Ledger {
-  const path = join(dir, HEADLESS_LEDGER_FILE)
+function readLedger(dir: string, limits: Limits): number[] {
   const now = limits.now()
   let raw: string
   try {
-    raw = readFileSync(path, 'utf-8')
-  } catch (error) {
-    return errorCode(error) === 'ENOENT' ? { kind: 'ok', runs: [] } : { kind: 'unreadable', error }
-  }
-  const runs = parseLedger(raw)
-  if (runs) {
-    return {
-      kind: 'ok',
-      runs: runs
-        .map((time) => Math.min(time, now))
-        .filter((time) => time > now - limits.windowMs)
-        .sort((a, b) => a - b),
-    }
-  }
-  let writtenAt = now
-  try {
-    writtenAt = Math.min(Math.round(statSync(path).mtimeMs), now)
+    raw = readFileSync(join(dir, HEADLESS_LEDGER_FILE), 'utf-8')
   } catch {
-    /* gone or unreadable since the read: the full window from now */
+    return []
   }
-  const resetsAt = writtenAt + limits.windowMs
-  return resetsAt > now ? { kind: 'damaged', resetsAt } : { kind: 'ok', runs: [] }
+  return (parseLedger(raw) ?? [])
+    .map((time) => Math.min(time, now))
+    .filter((time) => time > now - limits.windowMs)
+    .sort((a, b) => a - b)
 }
 
 /**
  * Replaces the ledger whole or not at all: the new content goes to a
  * temporary file that is renamed over the old one, and nothing is ever
  * written in place, so neither a crash nor a refused rename can leave half a
- * ledger behind. A rename that keeps being refused fails the request here,
- * before it runs.
+ * ledger behind. A rename that keeps being refused leaves the old ledger as
+ * it was; the request runs regardless.
  */
 async function writeLedger(dir: string, runs: number[]): Promise<void> {
   const path = join(dir, HEADLESS_LEDGER_FILE)
@@ -184,66 +154,22 @@ async function writeLedger(dir: string, runs: number[]): Promise<void> {
         await sleep(LEDGER_RENAME_RETRY_MS, undefined)
       }
     }
-  } catch (err) {
+  } catch {
+    // the count is information only: a request is not refused for it
     removeIfExists(temp)
-    throw ledgerError('record the request in', err)
   }
 }
 
-/** The request is not run when the count cannot be kept. */
-function ledgerError(action: string, cause: unknown): Error {
-  const detail = cause instanceof Error ? cause.message : String(cause)
-  return new Error(
-    `Cannot ${action} the ledger of subscription requests from the command line and integrations, so the request was not run (${detail})`,
-  )
-}
-
-/** When the next slot frees, or undefined while one is free. */
-function resetTime(runs: number[], limits: Limits): number | undefined {
-  if (runs.length < limits.maxPerHour) return undefined
-  return runs[runs.length - limits.maxPerHour]! + limits.windowMs
-}
-
-function limitError(resetsAt: number, limits: Limits): AiRunError {
-  return new AiRunError(
-    'headless-limit',
-    `Subscription use from the command line and integrations is limited to ${limits.maxPerHour} requests per hour; the next one is possible at ${new Date(resetsAt).toISOString()}`,
-    { resetsAt },
-  )
-}
-
-function damagedError(resetsAt: number): AiRunError {
-  return new AiRunError(
-    'headless-limit',
-    `The ledger of subscription requests from the command line and integrations is damaged, so this hour's allowance counts as used up; the next request is possible at ${new Date(resetsAt).toISOString()}`,
-    { resetsAt },
-  )
-}
-
 /**
- * How much of this window's allowance is used. Reads only; takes no slot and
- * no lock. A ledger that is damaged or cannot be read reports the allowance
- * as used up, as a request would find it.
+ * How many subscription requests the automatic-call path started in the last
+ * hour. Information only: nothing is capped. Reads only; takes no slot and no
+ * lock. A ledger that is damaged or cannot be read reports none.
  */
 export function headlessSubscriptionUsage(
   dataDir: string,
   options: HeadlessLimitOptions = {},
 ): HeadlessSubscriptionUsage {
-  const limits = limitsOf(options)
-  const ledger = readLedger(dataDir, limits)
-  if (ledger.kind !== 'ok') {
-    return {
-      used: limits.maxPerHour,
-      limit: limits.maxPerHour,
-      resetsAt: ledger.kind === 'damaged' ? ledger.resetsAt : limits.now() + limits.windowMs,
-    }
-  }
-  const resetsAt = resetTime(ledger.runs, limits)
-  return {
-    used: ledger.runs.length,
-    limit: limits.maxPerHour,
-    ...(resetsAt !== undefined ? { resetsAt } : {}),
-  }
+  return { used: readLedger(dataDir, limitsOf(options)).length }
 }
 
 // ── lock ────────────────────────────────────────────────────────────
@@ -446,14 +372,14 @@ async function acquireLock(dir: string, o: LockOptions): Promise<() => void> {
 
 /**
  * Runs one subscription request of the automatic-call path: waits until no
- * other such request is running (in this or any other process), takes one
- * slot of this hour's allowance, and runs it.
+ * other such request is running (in this or any other process), notes its
+ * start in the ledger, and runs it.
  *
- * Throws AiRunError('headless-limit', …, { resetsAt }) when the allowance is
- * used up or the ledger is damaged, without waiting and without running, and
- * a plain Error when the ledger cannot be read or replaced. The slot is taken
- * when the request starts, so a request that fails still counts: it reached
- * the subscription.
+ * There is no hourly cap, so nothing about the ledger stops a request. It
+ * throws only when the turn never comes (AiRunError('timeout')), when the
+ * wait is aborted, or when the lock file cannot be created. The start is
+ * noted before the request runs, so a request that fails still counts: it
+ * reached the subscription.
  */
 export async function runHeadlessSubscriptionCall<T>(
   dataDir: string,
@@ -462,12 +388,6 @@ export async function runHeadlessSubscriptionCall<T>(
 ): Promise<T> {
   const limits = limitsOf(options)
   mkdirSync(dataDir, { recursive: true })
-  // over the limit there is nothing to queue for: answer before waiting for a turn.
-  // A ledger that could not be read just now is read again under the lock.
-  const early = readLedger(dataDir, limits)
-  if (early.kind === 'damaged') throw damagedError(early.resetsAt)
-  const earlyReset = early.kind === 'ok' ? resetTime(early.runs, limits) : undefined
-  if (earlyReset !== undefined) throw limitError(earlyReset, limits)
   const release = await acquireLock(dataDir, {
     staleMs: options.staleMs ?? HEADLESS_LOCK_STALE_MS,
     heartbeatMs: options.heartbeatMs ?? HEADLESS_LOCK_HEARTBEAT_MS,
@@ -477,13 +397,8 @@ export async function runHeadlessSubscriptionCall<T>(
     isProcessAlive: options.isProcessAlive ?? defaultIsProcessAlive,
   })
   try {
-    // the count that decides: nobody else writes the ledger while we hold the lock
-    const ledger = readLedger(dataDir, limits)
-    if (ledger.kind === 'damaged') throw damagedError(ledger.resetsAt)
-    if (ledger.kind === 'unreadable') throw ledgerError('read', ledger.error)
-    const resetsAt = resetTime(ledger.runs, limits)
-    if (resetsAt !== undefined) throw limitError(resetsAt, limits)
-    await writeLedger(dataDir, [...ledger.runs, limits.now()])
+    // nobody else writes the ledger while we hold the lock
+    await writeLedger(dataDir, [...readLedger(dataDir, limits), limits.now()])
     return await run()
   } finally {
     release()

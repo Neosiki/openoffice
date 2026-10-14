@@ -62,13 +62,13 @@ Każde polecenie jest narzędziem. Najciekawsze:
 - **Opisywanie obrazu** korzysta z dostawcy z kluczem, jeśli jest skonfigurowany. Twoja subskrypcja Claude lub Codex **nie jest używana, dopóki na to nie pozwolisz**.
 - **Wideo i dźwięk** wymagają dostawcy z kluczem obsługującego wideo.
 
-Aby pozwolić na korzystanie z subskrypcji, otwórz Ustawienia ▸ AI ▸ **Zaawansowane** i włącz **Zezwól żądaniom automatycznym na korzystanie z subskrypcji**. Najpierw pojawia się ostrzeżenie — „Żadna z tych dwóch firm nie zaleca, aby program automatycznie korzystał z subskrypcji, a twoje konto może zostać ograniczone.” — a przełącznik włącza się dopiero po wybraniu **Włącz mimo to**.
+Aby pozwolić na korzystanie z subskrypcji, otwórz Ustawienia ▸ AI ▸ **Zaawansowane** i włącz **Zezwól żądaniom automatycznym na korzystanie z subskrypcji**. Najpierw pojawia się ostrzeżenie — „Nie ma limitu godzinowego: program może wysłać dowolnie wiele żądań, a mogą one zawierać cały tekst dokumentu i obrazy jego stron. Żadna z tych dwóch firm nie zaleca, aby program automatycznie korzystał z subskrypcji, a twoje konto może zostać ograniczone.” — a przełącznik włącza się dopiero po wybraniu **Włącz mimo to**.
 
 Nawet przy włączonym przełączniku:
 
 - Żądania są obsługiwane pojedynczo. Pozostałe czekają na swoją kolej.
-- W ciągu godziny obsługiwanych jest najwyżej 20 żądań w ramach subskrypcji. Licznik jest wspólny dla wszystkich uruchomień poleceń i wszystkich wywołań MCP. Po jego przekroczeniu żądanie kończy się błędem, który podaje, kiedy żądania znów będą możliwe.
-- Logowanie rozliczane za zużycie, dopuszczone przez **Użyj mimo to**, nie liczy się tutaj jako subskrypcja. Jest traktowane jak klucz: jeśli zostało wybrane jako używane AI, opisy obrazów przechodzą przez nie bez względu na położenie przełącznika, bez limitu godzinnego, a każdy z nich jest płatny.
+- Nie ma limitu godzinowego. Kolejka idzie żądanie po żądaniu, a nie zadanie po zadaniu, więc długie tłumaczenie PDF przeplata się z innymi wywołaniami, zamiast je wstrzymywać. Przełącznik włączony przy poprzednim ostrzeżeniu został wyłączony: przeczytaj nowe ostrzeżenie i włącz go ponownie.
+- Logowanie rozliczane za zużycie, dopuszczone przez **Użyj mimo to**, nie liczy się tutaj jako subskrypcja. Jest traktowane jak klucz: jeśli zostało wybrane jako używane AI, opisy obrazów przechodzą przez nie bez względu na położenie przełącznika, a każdy z nich jest płatny.
 
 Gdy przełącznik jest wyłączony i nie skonfigurowano żadnego klucza, narzędzie odpowiada, że funkcja jest niedostępna, i wskazuje to ustawienie. Agent może to wcześniej sprawdzić narzędziem `capabilities`; zobacz [Wiersz poleceń i agenci](help://cli).
 

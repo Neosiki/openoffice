@@ -722,6 +722,24 @@ describe('notices', () => {
     expect(onAcknowledge).toHaveBeenCalledOnce()
   })
 
+  it('first connection: adds the PDF whole-document sentence only when asked to', () => {
+    act(() =>
+      root.render(
+        createElement(AiFirstConnectionNotice, {
+          lang: 'en',
+          codexKeepsHistory: true,
+          sendsWholeDocument: true,
+        }),
+      ),
+    )
+    expect(lines()).toEqual([
+      en.noticeSend,
+      en.noticeTraining,
+      en.noticePdfWholeDocument,
+      en.noticeCodexHistory,
+    ])
+  })
+
   it('Codex: the one line about OpenAI’s recommendation', () => {
     act(() => root.render(createElement(AiCodexNotice, { lang: 'en' })))
     expect(host.textContent).toBe(

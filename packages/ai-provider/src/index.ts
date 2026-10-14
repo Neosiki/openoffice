@@ -87,10 +87,12 @@ export { AiRunError, aiStreamErrorFields } from './run-error'
 export {
   AI_PROVIDERS,
   DEFAULT_MAX_OUTPUT_TOKENS,
+  HEADLESS_SUBSCRIPTION_CONSENT_VERSION,
   MAX_MAX_OUTPUT_TOKENS,
   MIN_MAX_OUTPUT_TOKENS,
   clampMaxOutputTokens,
   defaultAiSettings,
+  headlessSubscriptionOn,
   maxOutputTokensOf,
   resolveAiSettings,
 } from './providers'

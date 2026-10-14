@@ -65,6 +65,8 @@ export async function runJson(argv: string[], ctx: McpContext): Promise<Outcome>
     cwd: ctx.cwd,
     env: ctx.env,
     io: { stdout: (t) => out.push(t), stderr: (t) => ctx.log(t) },
+    // the server lives on: a PDF document job runs in it and pdf_status reports it
+    background: true,
   })
   const text = out.join('\n')
   let parsed: JsonOk | JsonError

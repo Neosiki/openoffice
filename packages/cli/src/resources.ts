@@ -58,6 +58,35 @@ export function pdfiumWasmPath(): string {
   throw new Error('pdfium.wasm not found (set GENOFFICE_PDFIUM_WASM)')
 }
 
+/**
+ * The harfbuzz subsetter wasm the translated-PDF writer embeds fonts with.
+ * Packaged: Resources/wasm/hb-subset.wasm (apps/shell/electron-builder.cjs
+ * ships it for the PDF editor). The app's own lookup falls back on
+ * process.resourcesPath, which a Node process does not have, so the command
+ * line resolves the path itself and hands it over.
+ */
+export function hbSubsetWasmPath(): string {
+  if (process.env.GENOFFICE_HB_SUBSET_WASM) return process.env.GENOFFICE_HB_SUBSET_WASM
+  const packaged = packagedResourcesDir()
+  if (packaged) return join(packaged, 'wasm', 'hb-subset.wasm')
+  const root = repoRoot()
+  if (root) {
+    // the copy the PDF editor depends on (and the packaged build ships) first
+    for (const from of [join(root, 'apps', 'pdf', 'package.json'), join(root, 'package.json')]) {
+      const r = createRequire(from)
+      try {
+        return r.resolve('harfbuzzjs/hb-subset.wasm')
+      } catch {}
+      try {
+        // harfbuzzjs >= 1 seals its subpaths; the wasm sits beside the entry point
+        const p = join(dirname(r.resolve('harfbuzzjs')), 'harfbuzz-subset.wasm')
+        if (existsSync(p)) return p
+      } catch {}
+    }
+  }
+  throw new Error('hb-subset.wasm not found (set GENOFFICE_HB_SUBSET_WASM)')
+}
+
 export function xlsxSidecarPath(): string | null {
   if (process.env.XLSX_SIDECAR_PATH) return process.env.XLSX_SIDECAR_PATH
   const executable = process.platform === 'win32' ? 'xlsx-sidecar.exe' : 'xlsx-sidecar'

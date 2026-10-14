@@ -35,6 +35,8 @@ import type {
   IntegrationsStatus,
   SkillInstallState,
 } from '../shared/integrations-api'
+import { RESULT_STORE_CHANNELS } from '../shared/result-store-api'
+import type { ResultStoreApi } from '../shared/result-store-api'
 import type { TabsApi, TabSummary } from '../shared/tabs-api'
 import { TABS_CHANNELS } from '../shared/tabs-api'
 import type { SubscriptionApi } from '../shared/subscription-api'
@@ -569,6 +571,17 @@ const integrationsApi: IntegrationsApi = {
   },
 }
 contextBridge.exposeInMainWorld('aiOfficeIntegrations', integrationsApi)
+
+const resultStoreApi: ResultStoreApi = {
+  async size() {
+    const r: unknown = await ipcRenderer.invoke(RESULT_STORE_CHANNELS.size)
+    return typeof r === 'number' && Number.isFinite(r) && r >= 0 ? r : 0
+  },
+  async deleteAll() {
+    await ipcRenderer.invoke(RESULT_STORE_CHANNELS.deleteAll)
+  },
+}
+contextBridge.exposeInMainWorld('aiOfficeResultStore', resultStoreApi)
 
 // Subscription channels are registered once for the whole app by the docs main.
 // Until that handler exists an invoke rejects; the renderer reads that as

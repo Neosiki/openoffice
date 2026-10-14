@@ -66,6 +66,8 @@ export const id = {
     'Apakah isi itu dipakai untuk melatih AI ditentukan oleh pengaturan akun Anda sendiri di perusahaan tersebut.',
   noticeCodexHistory:
     'Aplikasi ini mematikan penyimpanan riwayat percakapan Codex, tetapi Codex masih dapat menyimpan log diagnostiknya sendiri di PC ini.',
+  noticePdfWholeDocument:
+    'Di editor PDF, pembacaan halaman dengan AI dan terjemahan dokumen dapat mengirim gambar halaman dan seluruh teks dokumen.',
   noticeAck: 'Mengerti',
   codexNotice:
     'Memakai langganan Codex di dalam aplikasi bukan cara yang direkomendasikan secara resmi oleh OpenAI.',

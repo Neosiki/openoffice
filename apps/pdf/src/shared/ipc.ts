@@ -2,6 +2,20 @@ import type { AiPanelPrefs } from '@genoffice/ui'
 import type { Lang } from '@genoffice/i18n'
 import type { AiSettings, AiStreamChunk, AiStreamRequest } from '@genoffice/ai-provider'
 import type { SubscriptionApi } from './subscription-api'
+import type { DocumentTree, InlineRun } from '../../../../packages/pdf-structure/src/tree/types'
+import type { PageFingerprint } from '../../../../packages/pdf-structure/src/tree/extract'
+import type { MarkdownWarning } from '../../../../packages/pdf-structure/src/markdown/write'
+import type { TranslationReport } from '../../../../packages/pdf-structure/src/translate/result'
+import type { WritebackReport } from '../../../../packages/pdf-structure/src/writeback/types'
+import type {
+  AiReadPageEntry,
+  AiReadPayload,
+  JobKind,
+  JobRecordInput,
+  JobStatus,
+  TranslationBlockEntry,
+  TranslationBlockInput,
+} from '../../../../packages/pdf-structure/src/store/store'
 
 export const PDF_CHANNELS = {
   consumePending: 'pdf:consume-pending',
@@ -56,6 +70,29 @@ export const PDF_CHANNELS = {
   themeChanged: 'app:theme-changed',
   getAiPanelPrefs: 'app:get-ai-panel-prefs',
   aiPanelPrefsChanged: 'app:ai-panel-prefs-changed',
+  // document-structure jobs (run in a separate process the shell starts per job)
+  structurePickTarget: 'pdf:structure-pick-target',
+  structureTree: 'pdf:structure-tree',
+  structureText: 'pdf:structure-text',
+  structureConvert: 'pdf:structure-convert',
+  structureExtractImages: 'pdf:structure-extract-images',
+  structureWriteBack: 'pdf:structure-write-back',
+  structureCancel: 'pdf:structure-cancel',
+  structureProgress: 'pdf:structure-progress',
+  // result store (AI-read pages, translations, job records)
+  storeDocHash: 'pdf:store-doc-hash',
+  storeAiReadPages: 'pdf:store-ai-read-pages',
+  storeTranslations: 'pdf:store-translations',
+  storeTranslation: 'pdf:store-translation',
+  storeUnfinishedJobs: 'pdf:store-unfinished-jobs',
+  storeWrite: 'pdf:store-write',
+  storeMigrate: 'pdf:store-migrate',
+  storeDeleteDocument: 'pdf:store-delete-document',
+  // Markdown / EPUB conversion screen (the jobs themselves go through structure*)
+  convertDialogRequest: 'pdf:convert-dialog-request',
+  convertReleaseTarget: 'pdf:convert-release-target',
+  convertOpenResult: 'pdf:convert-open-result',
+  convertRevealResult: 'pdf:convert-reveal-result',
 } as const
 
 export const VISUAL_SIGNATURE_CONTENT_PREFIX = 'GenOffice visual signature field: '
@@ -221,6 +258,17 @@ export interface SavedSignature {
 }
 
 export type PdfConvertFormat = 'docx' | 'xlsx' | 'pptx'
+
+/** the reflowable formats the conversion dialog writes (document-structure jobs) */
+export type PdfReflowFormat = 'md' | 'epub'
+
+/** a converted file and the open PDF it came from (the shell checks the view owns that PDF) */
+export interface PdfConvertOutputRequest {
+  /** the open file of this view */
+  source: string
+  /** the written file (or the picked folder) */
+  path: string
+}
 
 /** target file type of the AI create_document tool (mirrors the docs app's contract) */
 export type CreateDocumentType = 'docx' | 'pdf' | 'md' | 'html'
@@ -864,6 +912,287 @@ export type ExportImagesResult =
   | { ok: true; canceled: true }
   | { ok: false; error: string }
 
+// ── document-structure jobs (window.pdfApi.structure) ──
+// Every job runs in its own process started by the shell and ends with it.
+// Cancelling, closing the tab or quitting the app kills that process.
+
+/**
+ * Why a structure job or a store call did not succeed:
+ * - not-granted: a path or document hash this view was never given
+ * - invalid-request: malformed input
+ * - invalid-target: an output path that is the source document itself
+ * - busy: the job id is already running, or this view runs too many jobs
+ * - cancelled: cancelled, or the tab / app closed
+ * - password-required: no password or a wrong one (PdfLoadError)
+ * - corrupt / unsupported: the PDF cannot be opened (PdfLoadError)
+ * - page-range: pages outside the document; see `validRange`
+ * - asset-conflict: `assets/` holds a file of that name the app does not own
+ * - not-available: the operation is not built yet
+ * - process-exited: the job process ended without an answer (crash, out of memory)
+ * - store-write-failed: the result store could not be written (disk full, …)
+ * - failed: anything else; `message` is English for logs
+ */
+export type PdfStructureErrorCode =
+  | 'not-granted'
+  | 'invalid-request'
+  | 'invalid-target'
+  | 'busy'
+  | 'cancelled'
+  | 'password-required'
+  | 'corrupt'
+  | 'unsupported'
+  | 'page-range'
+  | 'asset-conflict'
+  | 'not-available'
+  | 'process-exited'
+  | 'store-write-failed'
+  | 'failed'
+
+export interface PdfStructureFailure {
+  ok: false
+  error: PdfStructureErrorCode
+  message?: string
+  /** page-range only: the pages the document has */
+  validRange?: { first: number; last: number }
+}
+
+export type PdfStructureOutcome<T> = ({ ok: true } & T) | PdfStructureFailure
+
+/** The document a job reads: always this view's open file */
+export interface PdfStructureSource {
+  /** the open file (granted to this view) */
+  path: string
+  password?: string
+  /** 1-based page numbers; absent = every page */
+  pages?: number[]
+}
+
+/** Caller-chosen id (letters, digits, '-', '_'); progress events and cancel use it */
+export interface PdfStructureJobRef {
+  jobId: string
+}
+
+export interface PdfStructureProgress {
+  jobId: string
+  /** pages (or images) done so far */
+  done: number
+  total: number
+}
+
+export interface PdfStructureTreeRequest extends PdfStructureSource, PdfStructureJobRef {
+  /** keep picture bytes in the answer (default false: `data` arrives empty) */
+  imageData?: boolean
+}
+
+export interface PdfStructureTreeResult {
+  /** result-store key of the analyzed file bytes */
+  docHash: string
+  tree: DocumentTree
+  fingerprints: PageFingerprint[]
+  /** served from this view's cached tree of the same file bytes and pages */
+  cached: boolean
+}
+
+export type PdfStructureTextRequest = PdfStructureSource & PdfStructureJobRef
+
+/** one page of the structured text the AI read path uses (spec §2) */
+export interface PdfStructuredTextPage {
+  /** 1-based original page number */
+  page: number
+  text: string
+}
+
+export interface PdfStructureTextResult {
+  docHash: string
+  pages: PdfStructuredTextPage[]
+}
+
+/** translated or bilingual output */
+export interface PdfStructureTranslationInput {
+  lang: string
+  bilingual: boolean
+  /**
+   * translated runs by text-unit key (see textUnits); absent = the stored
+   * translation of the file's document hash (finished blocks translated, the
+   * rest in the source language), with its report in the result
+   */
+  units?: Array<{ key: string; runs: InlineRun[] }>
+}
+
+export interface PdfStructureEpubOptions {
+  /** dc:title; prefill from the document info, else the file name */
+  title: string
+  author?: string
+  /** cover from the first page (default true) */
+  cover?: boolean
+  /** explicit dc:language; absent = guessed from the text */
+  language?: string
+  /** UI language, used when the guess finds no dominant script */
+  uiLanguage?: string
+  /** alt text of a page kept as a picture; `{page}` is replaced by the page number */
+  pageImageAlt?: string
+}
+
+export interface PdfStructureConvertRequest extends PdfStructureSource, PdfStructureJobRef {
+  format: 'md' | 'epub'
+  /** from structure.pickTarget with the same format; good for one job */
+  outPath: string
+  translation?: PdfStructureTranslationInput
+  /** EPUB only */
+  epub?: PdfStructureEpubOptions
+}
+
+export interface PdfStructureConvertResult {
+  docHash: string
+  outPath: string
+  /** Markdown only: conversion notes (degraded pages, footnotes, …) */
+  warnings: MarkdownWarning[]
+  /** Markdown only: pictures written to `assets/` and pictures already there */
+  assetsWritten: number
+  assetsReused: number
+  /** a stored translation was written: what it holds for the written pages */
+  translation?: TranslationReport
+}
+
+export interface PdfStructureImagesRequest extends PdfStructureSource, PdfStructureJobRef {
+  /** from structure.pickTarget('folder'); good for one job */
+  outDir: string
+  /** file name prefix (default: the PDF's name) */
+  baseName?: string
+  /** skip images narrower or shorter than this (default 32) */
+  minImagePx?: number
+}
+
+export interface PdfStructureImagesResult {
+  docHash: string
+  outDir: string
+  /** `file` is the absolute path written */
+  images: Array<{ page: number; file: string; width: number; height: number }>
+}
+
+/** Translated PDF write-back of the stored translation into `payload.lang` */
+export interface PdfStructureWriteBackRequest extends PdfStructureSource, PdfStructureJobRef {
+  /** from structure.pickTarget('pdf'); never the source file */
+  outPath: string
+  payload: PdfTranslatedPdfPayload
+}
+
+export interface PdfTranslatedPdfPayload {
+  /** target language of the stored translation to write */
+  lang: string
+}
+
+/** the `report` of a translated PDF: the writer's report and the stored translation's, same pages */
+export interface PdfTranslatedPdfReport {
+  writer: WritebackReport
+  translation: TranslationReport
+}
+
+export interface PdfStructureWriteBackResult {
+  docHash: string
+  outPath: string
+  /** the writer's own report (overflowed blocks, pages left as they were, …) */
+  report: unknown
+}
+
+export type PdfStructureTargetKind = 'md' | 'epub' | 'pdf' | 'folder'
+
+export interface PdfStructurePickTargetRequest {
+  kind: PdfStructureTargetKind
+  /** the open file; the dialog starts in its folder */
+  path: string
+  /** suggested file name (files only) */
+  defaultName?: string
+  /** dialog title, already localized */
+  title?: string
+}
+
+export interface PdfStructureApi {
+  /** main-process save / folder dialog; the picked path is granted to this view for one job. null = cancelled */
+  pickTarget(request: PdfStructurePickTargetRequest): Promise<string | null>
+  /** document tree of the open file (cached per view while the file bytes stay the same) */
+  tree(request: PdfStructureTreeRequest): Promise<PdfStructureOutcome<PdfStructureTreeResult>>
+  /** structured text for the AI read path; not-available until the formatter is plugged in */
+  text(request: PdfStructureTextRequest): Promise<PdfStructureOutcome<PdfStructureTextResult>>
+  /** write Markdown (with `assets/` and the app-owned asset list) or EPUB */
+  convert(
+    request: PdfStructureConvertRequest,
+  ): Promise<PdfStructureOutcome<PdfStructureConvertResult>>
+  /** write the images embedded in the pages as PNG files */
+  extractImages(
+    request: PdfStructureImagesRequest,
+  ): Promise<PdfStructureOutcome<PdfStructureImagesResult>>
+  /** translated PDF write-back; not-available until the writer is plugged in */
+  writeBack(
+    request: PdfStructureWriteBackRequest,
+  ): Promise<PdfStructureOutcome<PdfStructureWriteBackResult>>
+  /** kill the job's process; its call answers 'cancelled'. False when no such job runs */
+  cancel(jobId: string): Promise<boolean>
+  onProgress(handler: (progress: PdfStructureProgress) => void): () => void
+}
+
+// ── result store (window.pdfApi.store) ──
+// Document hashes are accepted only after the main process computed them for
+// this view (docHash, migrate, or a structure job's answer).
+
+/** a translation as stored, blocks in a plain list */
+export interface PdfStoredTranslation {
+  lang: string
+  provider: string | null
+  model: string | null
+  blocks: TranslationBlockEntry[]
+}
+
+export type PdfStoreWriteRequest =
+  | {
+      kind: 'aiReadPage'
+      docHash: string
+      pageFingerprint: string
+      payload: AiReadPayload
+      provider?: string
+      model?: string
+    }
+  | { kind: 'translationMeta'; docHash: string; lang: string; provider: string; model: string }
+  | { kind: 'translationBlocks'; docHash: string; lang: string; blocks: TranslationBlockInput[] }
+  | { kind: 'deleteTranslation'; docHash: string; lang: string }
+  | { kind: 'job'; docHash: string; job: JobRecordInput }
+  | { kind: 'heartbeat'; docHash: string; job: JobKind; lang?: string }
+
+export interface PdfStoreMigrateRequest {
+  /** the open file, as saved */
+  path: string
+  /** the document hash before the save */
+  oldDocHash: string
+  password?: string
+}
+
+export interface PdfStoreMigrateResult {
+  docHash: string
+  aiReadPages: number
+  translationBlocks: number
+  languages: string[]
+  /** job records carried to the new hash (finished ones included) */
+  jobs: number
+}
+
+export interface PdfStoreApi {
+  /** result-store key of the open file's current bytes */
+  docHash(path: string): Promise<PdfStructureOutcome<{ docHash: string }>>
+  aiReadPages(docHash: string): Promise<PdfStructureOutcome<{ pages: AiReadPageEntry[] }>>
+  translations(docHash: string): Promise<PdfStructureOutcome<{ langs: string[] }>>
+  translation(
+    docHash: string,
+    lang: string,
+  ): Promise<PdfStructureOutcome<{ translation: PdfStoredTranslation | null }>>
+  /** not complete (stopped, or running elsewhere): the source of the resume offer */
+  unfinishedJobs(docHash: string): Promise<PdfStructureOutcome<{ jobs: JobStatus[] }>>
+  write(request: PdfStoreWriteRequest): Promise<PdfStructureOutcome<object>>
+  /** after an in-app save: carry results and job records to the new hash */
+  migrate(request: PdfStoreMigrateRequest): Promise<PdfStructureOutcome<PdfStoreMigrateResult>>
+  /** forget everything stored for the document */
+  deleteDocument(docHash: string): Promise<PdfStructureOutcome<object>>
+}
+
 /** AI channels are app-wide shared ipcMain handlers (shell registers via docs-main registerAiIpc); pass-through only */
 export const AI_CHANNELS = {
   getSettings: 'ai:get-settings',
@@ -949,6 +1278,14 @@ export interface PdfApi {
   exportImages(request: ExportImagesRequest): Promise<ExportImagesResult>
   /** Convert the current PDF to Word / Excel / PowerPoint via the shell's local conversion flows */
   convertOffice(format: PdfConvertFormat): Promise<void>
+  /** Shell File menu → open the Markdown / EPUB conversion dialog */
+  onConvertDialogRequest(handler: (format: PdfReflowFormat) => void): () => void
+  /** Before a Markdown job writes: close a Markdown tab showing that file (its unsaved-changes guard applies). False = still open */
+  releaseConvertTarget(request: PdfConvertOutputRequest): Promise<boolean>
+  /** Open a converted Markdown file in a Markdown tab (same routing as File > Open) */
+  openConvertResult(request: PdfConvertOutputRequest): Promise<boolean>
+  /** Show a converted file (or an export folder's first file) in the system file manager */
+  revealConvertResult(request: PdfConvertOutputRequest): Promise<boolean>
   /** AI create_document: build a new standalone file in the default folder and open it in a new tab */
   createDocument(request: CreateDocumentRequest): Promise<CreateDocumentResult>
   /** Web image search for AI tools (app-wide ai:image-search handler) */
@@ -1018,9 +1355,18 @@ export interface PdfApi {
   openAiModelSettings(): Promise<void>
   /** subscription providers (Claude, Codex): connection statuses and the connect actions */
   subscription: SubscriptionApi
+  /** document-structure jobs: tree, structured text, Markdown / EPUB, embedded images, write-back */
+  structure: PdfStructureApi
+  /** result store: AI-read pages, translations, job records */
+  store: PdfStoreApi
   /** whether generate_image can run right now (false when the app-wide AI host does not answer) */
   imageGenerationAvailable(): Promise<boolean>
   aiStream(request: AiStreamRequest): Promise<void>
-  aiStreamCancel(requestId: string): Promise<void>
+  /**
+   * End the stream `requestId`. Without a scope this is the AI window's Stop
+   * and also ends the tab's image and media calls; scope 'request' (a
+   * document job's call) ends that stream only.
+   */
+  aiStreamCancel(requestId: string, scope?: 'request'): Promise<void>
   onAiStream(handler: (chunk: AiStreamChunk) => void): () => void
 }

@@ -170,4 +170,18 @@ describe('ai:stream-cancel in the suite', () => {
     expect(mine.aborted).toBe(true)
     expect(theirs.aborted).toBe(false)
   })
+  it("a document job's request-scoped cancel leaves the tab's media calls alone; Stop still ends them", async () => {
+    const tab = new FakeContents()
+    let signal!: AbortSignal
+    void withMediaCallSignal(tab, (s) => {
+      signal = s
+      return new Promise<void>(() => {})
+    })
+    // a PDF document job stops one of its calls while the AI window generates an image
+    await handlers.get('ai:stream-cancel')!({ sender: tab }, 'job-call', 'request')
+    expect(signal.aborted).toBe(false)
+    // the AI window's Stop (no scope) still ends the tab's media calls
+    await handlers.get('ai:stream-cancel')!({ sender: tab }, 'chat-turn')
+    expect(signal.aborted).toBe(true)
+  })
 })

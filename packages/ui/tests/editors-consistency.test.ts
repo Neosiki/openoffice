@@ -193,4 +193,15 @@ describe('the first-connection notice', () => {
     expect(panel).not.toContain('codexKeepsHistory={false}')
     expect(panel).toMatch(/<AiFirstConnectionNotice[^>]*\bcodexKeepsHistory\b/)
   })
+
+  // only the PDF editor sends page images and whole documents (AI page reading, translation)
+  it.each(Object.entries(EDITORS))(
+    '%s: the whole-document sentence is PDF only',
+    (name, editor) => {
+      const panel = source(editor.panel)
+      if (name === 'pdf')
+        expect(panel).toMatch(/<AiFirstConnectionNotice[^>]*\bsendsWholeDocument\b/)
+      else expect(panel).not.toContain('sendsWholeDocument')
+    },
+  )
 })

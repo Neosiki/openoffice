@@ -66,6 +66,8 @@ export const cs = {
     'Zda se tento obsah použije k trénování AI, určuje nastavení vašeho účtu u dané společnosti.',
   noticeCodexHistory:
     'Tato aplikace vypíná ukládání historie konverzací v Codexu, Codex však může v tomto počítači dál uchovávat vlastní diagnostické protokoly.',
+  noticePdfWholeDocument:
+    'V editoru PDF mohou čtení stránek pomocí AI a překlad dokumentu odesílat obrázky stránek a celý text dokumentu.',
   noticeAck: 'Rozumím',
   codexNotice:
     'Používání předplatného Codex uvnitř aplikace není způsob, který OpenAI oficiálně doporučuje.',

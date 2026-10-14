@@ -418,8 +418,33 @@ export function defaultAiSettings(
     search: defaultAiSearchSettings(),
     meteredAccepted: sanitizeMeteredAccepted(undefined),
     headlessSubscriptionEnabled: false,
+    headlessSubscriptionConsentVersion: 0,
     subscriptionNoticeSeen: false,
   }
+}
+
+/**
+ * The version of the warning shown when the automatic-call switch is turned
+ * on. Version 1 was the switch with an hourly cap, which stored no version;
+ * the current one has no cap and may send whole documents. A switch turned
+ * on under an older version reads as off until the user agrees again.
+ */
+export const HEADLESS_SUBSCRIPTION_CONSENT_VERSION = 2
+
+/** A stored consent version, or 0 when there is none or it is not a whole number. */
+export function headlessConsentVersionOf(value: unknown): number {
+  return typeof value === 'number' && Number.isInteger(value) && value > 0 ? value : 0
+}
+
+/** The switch as it takes effect: on only with the consent of the current version. */
+export function headlessSubscriptionOn(
+  settings: Pick<AiSettings, 'headlessSubscriptionEnabled' | 'headlessSubscriptionConsentVersion'>,
+): boolean {
+  return (
+    settings.headlessSubscriptionEnabled === true &&
+    headlessConsentVersionOf(settings.headlessSubscriptionConsentVersion) >=
+      HEADLESS_SUBSCRIPTION_CONSENT_VERSION
+  )
 }
 
 /** Providers reached through the vendor CLI's own login, in the order `auto` tries them */
@@ -559,8 +584,15 @@ export function resolveAiSettings(stored: unknown, defaults: AiSettings): AiSett
     media: resolveAiMediaSettings(settings.media ?? defaults.media),
     search: resolveAiSearchSettings(settings.search ?? defaults.search),
     meteredAccepted: sanitizeMeteredAccepted(settings.meteredAccepted ?? defaults.meteredAccepted),
-    headlessSubscriptionEnabled:
-      (settings.headlessSubscriptionEnabled ?? defaults.headlessSubscriptionEnabled) === true,
+    headlessSubscriptionEnabled: headlessSubscriptionOn({
+      headlessSubscriptionEnabled:
+        settings.headlessSubscriptionEnabled ?? defaults.headlessSubscriptionEnabled,
+      headlessSubscriptionConsentVersion:
+        settings.headlessSubscriptionConsentVersion ?? defaults.headlessSubscriptionConsentVersion,
+    }),
+    headlessSubscriptionConsentVersion: headlessConsentVersionOf(
+      settings.headlessSubscriptionConsentVersion ?? defaults.headlessSubscriptionConsentVersion,
+    ),
     subscriptionNoticeSeen:
       (settings.subscriptionNoticeSeen ?? defaults.subscriptionNoticeSeen) === true,
     // clamped on read: a hand-edited settings file with an absurd cap must not be

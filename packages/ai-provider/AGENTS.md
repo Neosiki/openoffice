@@ -14,7 +14,7 @@
 ## 맡지 않는 것 (경계)
 
 - 도구 실행과 에이전트 루프는 이 모듈의 범위가 아니다. 브리지는 모델이 "요청한" 호출을 `onToolCall`로 넘길 뿐이고, 실행은 `packages/agent-core`의 루프와 각 에디터의 skill이 한다.
-- 웹·이미지 검색, `generate_image`/`analyze_media` 도구, 화면 경로와 자동 호출 경로의 구분, 시간당 한도 장부는 `packages/ai-search`의 범위다. 여기에는 그 판단에 쓰이는 순수 함수(`resolveImageBackend`)만 둔다.
+- 웹·이미지 검색, `generate_image`/`analyze_media` 도구, 화면 경로와 자동 호출 경로의 구분, 자동 호출의 차례 처리와 사용 횟수 장부는 `packages/ai-search`의 범위다. 여기에는 그 판단에 쓰이는 순수 함수(`resolveImageBackend`)만 둔다.
 - 사용자에게 보이는 문장과 연결 카드·알림 컴포넌트는 `packages/ui`의 범위다. 이 모듈이 만드는 오류 문장은 영어 예비 문구이고, 화면은 `AiRunErrorKind`와 `subscriptionStatusErrorKind`로 번역한다.
 - Electron을 import하지 않는다. `ipcMain`은 `SubscriptionIpcMain` 모양으로 주입받고, 어느 앱의 메인이 등록할지·설정 파일을 어디에 쓸지는 `apps/*/src/main`이 정한다.
 - 벤더 프로그램 자체는 고치거나 감싸지 않는다. 앱 안에 Claude·ChatGPT 로그인 폼을 만드는 일도 범위 밖이며 하지 않는다.
