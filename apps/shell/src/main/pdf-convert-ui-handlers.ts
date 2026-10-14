@@ -30,8 +30,8 @@ export interface PdfConvertUiDeps extends PdfConvertUiTabs {
 
 const MAX_PATH = 4096
 const MARKDOWN = /\.md$/i
-/** what the conversion dialog and the picture export write */
-const REVEALABLE = /\.(md|epub|png)$/i
+/** what the conversion dialog, the picture export and the translation write */
+const REVEALABLE = /\.(md|epub|png|pdf)$/i
 
 export function createPdfConvertUiHandlers(deps: PdfConvertUiDeps) {
   const requestOf = (viewId: number, req: unknown): PdfConvertOutputRequest | null => {

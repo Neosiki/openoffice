@@ -41,6 +41,8 @@ import type { CropFractions, ImageBakeOp } from '../image-bake'
 import type { Op, PlanResult } from '../edit-ops'
 import { OP_DOCS, callableOpNames, opSignatureIndex, opVocabulary } from '../../shared/op-docs'
 import type { AiReadOpenAnswer } from '../ai-read/AiPageReading'
+import type { TranslateOpenAnswer } from '../translate/DocumentTranslation'
+import { TRANSLATION_LANGUAGES } from '../../../../../packages/pdf-structure/src/translate/language'
 import {
   aiReadPayloadText,
   pageImageNote,
@@ -218,6 +220,12 @@ export interface PdfAiDeps {
   /** Open the AI page-reading window (page picker, then the confirmation); it never sends
       anything itself and answers at once. Absent where the window has no structure channels */
   startAiPageReading?(pages: number[] | null): AiReadOpenAnswer
+  /** Open the document-translation window with a target language (null = its default); it never
+      sends anything itself and answers at once. Absent where the window has no structure channels */
+  startDocumentTranslation?(request: {
+    lang: string | null
+    pages: number[] | null
+  }): TranslateOpenAnswer
   /** Inline confirmation card for a file-level operation; false when the user declines, the run is stopped, or the panel goes away */
   confirmFileOp(req: FileOpConfirm, signal?: AbortSignal): Promise<boolean>
   /** Pending edit (undoable, saved with the document): a blank page after the given original page; null = first */
@@ -1215,6 +1223,30 @@ export const AGENT_TOOLS: AgentToolDef[] = [
           items: { type: 'integer' },
           description:
             'original 1-based page numbers the user asked for; omit to preselect scanned and unreadable pages',
+        },
+      },
+    },
+  },
+  {
+    name: 'start_document_translation',
+    description:
+      'Open the document-translation window for this PDF: the AI translates the text of the whole document (or the pages named) into another language and writes a translated PDF, Markdown or EPUB file. ' +
+      'The window opens with the requested language preselected; the user picks the pages and output formats and confirms the number of calls and the provider before anything is sent. ' +
+      'The tool only opens the window and returns at once; the translation runs as a separate job while the conversation goes on. Nothing has been translated when it returns: never claim the document was translated, and do not translate the document yourself in the chat.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        language: {
+          type: 'string',
+          enum: [...TRANSLATION_LANGUAGES],
+          description:
+            'target language code the user asked for (en, ko, ja, zh = Simplified Chinese, zh-TW = Traditional Chinese, …); omit when they did not name one',
+        },
+        pages: {
+          type: 'array',
+          items: { type: 'integer' },
+          description:
+            'original 1-based page numbers the user asked for; omit for the whole document',
         },
       },
     },
@@ -3901,6 +3933,8 @@ export async function executePdfTool(
     }
     case 'start_ai_page_reading':
       return startAiPageReading(deps, input)
+    case 'start_document_translation':
+      return startDocumentTranslation(deps, input)
     default:
       return err(`Unknown tool: ${call.name}`, call.name)
   }
@@ -3937,6 +3971,56 @@ function startAiPageReading(deps: PdfAiDeps, input: Record<string, unknown>): To
     output:
       'Opened the AI page-reading window. The user now picks the pages and confirms the calls and the provider; nothing has been sent yet and nothing is read until they press Start. ' +
       'The reading then runs as a separate job with its own progress bar. Tell the user briefly what to do in the window; do not wait for it and do not claim the pages were read.',
+    summary,
+  }
+}
+
+/** open the document-translation window; the user confirms before anything is sent (spec §8, §9) */
+function startDocumentTranslation(deps: PdfAiDeps, input: Record<string, unknown>): ToolExecution {
+  const summary = t('trTitle')
+  let lang: string | null = null
+  if (input.language !== undefined && input.language !== null) {
+    if (
+      typeof input.language !== 'string' ||
+      !TRANSLATION_LANGUAGES.includes(input.language as never)
+    ) {
+      return err(
+        `language must be one of ${TRANSLATION_LANGUAGES.join(', ')}; tell the user which languages are available`,
+        summary,
+      )
+    }
+    lang = input.language
+  }
+  let pages: number[] | null = null
+  if (input.pages !== undefined && input.pages !== null) {
+    if (!Array.isArray(input.pages)) return err('pages must be an array of page numbers', summary)
+    const count = deps.pageCount()
+    const bad = input.pages.filter((p) => !Number.isInteger(p) || p < 1 || p > count)
+    if (bad.length > 0) {
+      return err(
+        `Page number(s) ${bad.map(String).join(', ')} out of range (document has ${count} pages)`,
+        summary,
+      )
+    }
+    pages = [...new Set(input.pages as number[])].sort((a, b) => a - b)
+  }
+  const answer = deps.startDocumentTranslation?.({ lang, pages }) ?? { unavailable: true as const }
+  if ('unavailable' in answer) {
+    return err('Document translation is not available in this window; tell the user.', summary)
+  }
+  if ('running' in answer) {
+    const { done, total } = answer.running
+    return {
+      output: `An AI job is already running on this document (${done}/${total}); its progress is shown in the editor. Only one job runs per document, so nothing new was started.`,
+      summary,
+    }
+  }
+  return {
+    output:
+      'Opened the document-translation window' +
+      (lang ? ` with ${lang} preselected` : '') +
+      '. The user now picks the pages and output formats and confirms the calls and the provider; nothing has been sent yet and nothing is translated until they press Start. ' +
+      'The translation then runs as a separate job with its own progress bar and saves the chosen files when it finishes. Tell the user briefly what to do in the window; do not wait for it, do not claim the document was translated, and do not translate it yourself.',
     summary,
   }
 }
