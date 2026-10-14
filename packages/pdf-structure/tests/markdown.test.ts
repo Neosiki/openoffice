@@ -170,6 +170,11 @@ describe('headings', () => {
     expect(md([heading(1, 'A', br, 'B')])).toBe('# A B\n')
   })
 
+  it('drops bold from a heading set wholly in bold, keeps it on a bold part', () => {
+    expect(md([heading(1, b('Morning garden'))])).toBe('# Morning garden\n')
+    expect(md([heading(2, b('Part'), ' one')])).toBe('## **Part** one\n')
+  })
+
   it('drops an empty heading', () => {
     expect(md([heading(1, '  '), para('x')])).toBe('x\n')
   })

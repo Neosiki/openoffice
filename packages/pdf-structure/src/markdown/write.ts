@@ -192,7 +192,14 @@ class MarkdownWriter {
   }
 
   private heading(block: HeadingBlock): void {
-    const text = this.inline(block.runs, 'heading')
+    // a heading set in a bold face is bold by being a heading; `# **Title**`
+    // would only add noise, so bold is kept just where it sets part apart
+    const texts = block.runs.filter((r) => r.kind === 'text' && r.text.trim() !== '')
+    const allBold = texts.length > 0 && texts.every((r) => r.kind === 'text' && r.bold)
+    const runs = allBold
+      ? block.runs.map((r) => (r.kind === 'text' ? { ...r, bold: undefined } : r))
+      : block.runs
+    const text = this.inline(runs, 'heading')
     if (text === '') return
     // a trailing ` #` run would be read as the closing sequence
     this.push(`${'#'.repeat(block.level)} ${text.replace(/(^|\s)(#+)$/, '$1\\$2')}`)
