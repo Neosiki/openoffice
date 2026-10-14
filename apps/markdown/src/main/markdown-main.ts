@@ -60,7 +60,9 @@ import { normalizeMarkdownTheme, type MarkdownTheme } from '../shared/markdown-t
 import { confirmOdtReport, exportOdt, odtFilterName } from './odt-export'
 import { registerMarkdownSeedIpc } from './seed-main'
 import { MARKDOWN_CHANNELS, MAX_PASTED_IMAGE_BYTES } from '../shared/ipc'
-import type { ImageHostConfig } from '../shared/ipc'
+import type { ImageHostConfig, WikiLinkResolveRequest, WikiLinkResolved } from '../shared/ipc'
+import { resolveWikiLinks } from './wiki-resolve'
+import { rememberWikiFragment, takeWikiFragment } from './wiki-fragment'
 import { isImageHostUsable, normalizeImageHostConfig, uploadImageToHost } from './image-host'
 import {
   EXPORT_IMAGE_EXTS,
@@ -823,6 +825,32 @@ function registerMarkdownIpc(): void {
     await rememberDiskState(e.sender.id, path)
     return text
   })
+
+  ipcMain.handle(
+    MARKDOWN_CHANNELS.resolveWikiLinks,
+    (_e, request: WikiLinkResolveRequest): Record<string, WikiLinkResolved> => {
+      const fromPath = typeof request?.fromPath === 'string' ? request.fromPath : ''
+      const targets = Array.isArray(request?.targets)
+        ? request.targets.filter((t): t is string => typeof t === 'string')
+        : []
+      const resolved = resolveWikiLinks(targets, {
+        fromPath,
+        root: configuredDefaultSaveDir(app),
+      })
+      // a Map is structured-cloneable but arrives as an empty object; ship the
+      // shape the renderer asked for
+      return Object.fromEntries(resolved)
+    },
+  )
+
+  ipcMain.handle(MARKDOWN_CHANNELS.rememberWikiFragment, (_e, path: unknown, fragment: unknown) => {
+    if (typeof path !== 'string' || typeof fragment !== 'string') return
+    rememberWikiFragment(path, fragment)
+  })
+
+  ipcMain.handle(MARKDOWN_CHANNELS.takeWikiFragment, (_e, path: unknown): string =>
+    typeof path === 'string' ? takeWikiFragment(path) : '',
+  )
 
   ipcMain.handle(
     MARKDOWN_CHANNELS.save,

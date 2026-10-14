@@ -71,6 +71,10 @@ const api: MarkdownApi = {
   consumePending: () => ipcRenderer.invoke(MARKDOWN_CHANNELS.consumePending),
   takeSeed: () => ipcRenderer.invoke(MARKDOWN_CHANNELS.seedTake),
   openSourcePath: (path: string) => ipcRenderer.invoke('home:open-path', path),
+  resolveWikiLinks: (request) => ipcRenderer.invoke(MARKDOWN_CHANNELS.resolveWikiLinks, request),
+  rememberWikiFragment: (path, fragment) =>
+    ipcRenderer.invoke(MARKDOWN_CHANNELS.rememberWikiFragment, path, fragment),
+  takeWikiFragment: (path) => ipcRenderer.invoke(MARKDOWN_CHANNELS.takeWikiFragment, path),
   consumeHeadlessExport: () => ipcRenderer.invoke(MARKDOWN_CHANNELS.consumeHeadlessExport),
   headlessExportDone: (result: { ok: boolean; error?: string }) =>
     ipcRenderer.send(MARKDOWN_CHANNELS.headlessExportDone, result),
