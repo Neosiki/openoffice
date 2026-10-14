@@ -83,6 +83,7 @@ export interface ViewSummary {
   end: number
 }
 
+/** A line between two shown topics. An end is a `ViewTopic.id` or a `ViewSummary.topicId`. */
 export interface ViewRelationship {
   id: string
   fromId: string
@@ -106,10 +107,16 @@ export function sheetToView(sheet: XmindSheet, index: number): ViewSheet {
   }
 }
 
-/** Recursion is bounded: the structure check refuses trees deeper than MAX_TOPIC_DEPTH. */
+/**
+ * Recursion is bounded: the structure check refuses trees deeper than
+ * MAX_TOPIC_DEPTH. `shown` collects the ids a relationship may end on: the
+ * topic itself and the summary topics of the summaries it shows.
+ */
 function topicToView(topic: XmindTopic, shown: Set<string>): ViewTopic {
   shown.add(topic.id)
   const attached = topic.children?.attached ?? []
+  const summaries = summariesToView(topic, attached.length)
+  for (const summary of summaries) shown.add(summary.topicId)
   return {
     id: topic.id,
     title: stringOr(topic.title, ''),
@@ -122,7 +129,7 @@ function topicToView(topic: XmindTopic, shown: Set<string>): ViewTopic {
       .map((marker) => marker.markerId)
       .filter((id): id is string => typeof id === 'string'),
     style: styleToView(topic.style),
-    summaries: summariesToView(topic, attached.length),
+    summaries,
     children: attached.map((child) => topicToView(child, shown)),
   }
 }
@@ -209,7 +216,11 @@ export function formatRange(start: number, end: number): string {
   return `(${start},${end})`
 }
 
-/** A relationship is shown when both of its ends are topics the view shows. */
+/**
+ * A relationship is shown when both of its ends are shown: a branch of the
+ * tree, or the summary topic of a shown summary. One that ends on a floating
+ * topic, a callout or a branch under a summary topic stays in the file only.
+ */
 function relationshipsToView(relationships: unknown, shown: Set<string>): ViewRelationship[] {
   const out: ViewRelationship[] = []
   for (const relationship of records(relationships)) {

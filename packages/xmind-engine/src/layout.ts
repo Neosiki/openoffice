@@ -28,9 +28,11 @@ const WRITTEN: Readonly<Record<ViewLayout, string>> = {
  *
  * `exact` is false when the layout is a stand-in: fishbone, timeline, table,
  * an upward org chart and anything newer are drawn to both sides, or to the
- * side their name ends in. The file keeps its own value in that case; only a
- * layout the user actually picks may replace it. A topic without the key uses
- * the format's default, the map that spreads to both sides.
+ * right when their name says they grow that way. A stand-in is never `left`
+ * or `down`; those are drawn only for the classes that mean exactly that. The
+ * file keeps its own value in that case; only a layout the user actually picks
+ * may replace it. A topic without the key uses the format's default, the map
+ * that spreads to both sides.
  */
 export function layoutFromStructureClass(structureClass: unknown): {
   layout: ViewLayout
@@ -39,9 +41,7 @@ export function layoutFromStructureClass(structureClass: unknown): {
   if (structureClass === undefined) return { layout: 'both', exact: true }
   if (typeof structureClass !== 'string') return { layout: 'both', exact: false }
   if (Object.hasOwn(EXACT, structureClass)) return { layout: EXACT[structureClass]!, exact: true }
-  if (structureClass.endsWith('.right')) return { layout: 'right', exact: false }
-  if (structureClass.endsWith('.left')) return { layout: 'left', exact: false }
-  return { layout: 'both', exact: false }
+  return { layout: structureClass.endsWith('.right') ? 'right' : 'both', exact: false }
 }
 
 /** The `structureClass` to write for a layout the user picked. */

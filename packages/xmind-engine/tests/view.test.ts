@@ -141,6 +141,56 @@ describe('sheetToView', () => {
     expect(sheetToView(sheetWithRoot({}, { relationships: {} }), 0).relationships).toEqual([])
   })
 
+  it('carries a relationship that ends on a shown summary topic, from either side', () => {
+    const sheet = sheetWithRoot(
+      {
+        children: {
+          attached: [
+            {
+              id: 'p',
+              children: {
+                attached: [{ id: 'k0' }, { id: 'k1' }],
+                summary: [
+                  {
+                    id: 'shown-summary',
+                    title: 'Shown',
+                    children: { attached: [{ id: 'under-summary' }] },
+                  },
+                  { id: 'unplaced-summary', title: 'Not shown' },
+                ],
+                callout: [{ id: 'callout' }],
+              },
+              summaries: [
+                { id: 'placed', range: '(0,1)', topicId: 'shown-summary' },
+                { id: 'past-end', range: '(0,9)', topicId: 'unplaced-summary' },
+              ],
+            },
+            { id: 'q' },
+          ],
+          detached: [{ id: 'floating' }],
+        },
+      },
+      {
+        relationships: [
+          { id: 'to-summary', end1Id: 'q', end2Id: 'shown-summary', title: 'into' },
+          { id: 'from-summary', end1Id: 'shown-summary', end2Id: 'k0' },
+          { id: 'to-branch-under-summary', end1Id: 'q', end2Id: 'under-summary' },
+          { id: 'to-unplaced-summary', end1Id: 'q', end2Id: 'unplaced-summary' },
+          { id: 'to-callout', end1Id: 'q', end2Id: 'callout' },
+          { id: 'to-floating', end1Id: 'floating', end2Id: 'q' },
+        ],
+      },
+    )
+    const view = sheetToView(sheet, 0)
+    expect(view.root.children[0]!.summaries.map((summary) => summary.topicId)).toEqual([
+      'shown-summary',
+    ])
+    expect(view.relationships).toEqual([
+      { id: 'to-summary', fromId: 'q', toId: 'shown-summary', title: 'into' },
+      { id: 'from-summary', fromId: 'shown-summary', toId: 'k0', title: '' },
+    ])
+  })
+
   it('keeps preserve-only parts out of the view', () => {
     const view = sheetToView(sample(), 0)
     const serialised = JSON.stringify(view)
@@ -225,15 +275,15 @@ describe('layout', () => {
   })
 
   it('draws every other arrangement as a stand-in and says so', () => {
-    expect(layoutFromStructureClass('org.xmind.ui.tree.right')).toEqual({
-      layout: 'right',
-      exact: false,
-    })
-    expect(layoutFromStructureClass('org.xmind.ui.brace.left')).toEqual({
-      layout: 'left',
-      exact: false,
-    })
+    for (const rightward of ['org.xmind.ui.tree.right', 'org.xmind.ui.brace.right']) {
+      expect(layoutFromStructureClass(rightward), rightward).toEqual({
+        layout: 'right',
+        exact: false,
+      })
+    }
     for (const other of [
+      'org.xmind.ui.tree.left',
+      'org.xmind.ui.brace.left',
       'org.xmind.ui.org-chart.up',
       'org.xmind.ui.fishbone.leftHeaded',
       'org.xmind.ui.timeline.horizontal',
@@ -247,6 +297,24 @@ describe('layout', () => {
         layout: 'both',
         exact: false,
       })
+    }
+  })
+
+  it('never stands in with left or down: those are only drawn for the classes that mean them', () => {
+    for (const unknown of [
+      'org.xmind.ui.tree.left',
+      'org.xmind.ui.brace.left',
+      'org.xmind.ui.fishbone.rightHeaded',
+      'org.xmind.ui.timeline.down',
+      'org.xmind.ui.org-chart.up',
+      'vendor.new.left',
+      'vendor.new.down',
+      'left',
+      'down',
+    ]) {
+      const { layout, exact } = layoutFromStructureClass(unknown)
+      expect(exact, unknown).toBe(false)
+      expect(['both', 'right'], unknown).toContain(layout)
     }
   })
 
