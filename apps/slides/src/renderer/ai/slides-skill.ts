@@ -2000,22 +2000,30 @@ async function executeTool(
       // The document's selection applies unless the model names a template: a named one
       // is used and becomes the selection, which drops the requests added to the old one.
       let template = await selectedTemplateOf(access)
+      // The model was shown the <design-template> block only for a selection that
+      // existed before this call; only then can `style` be a request of the user's.
+      let styleIsRequest = template !== null
       let templateNote = ''
       if (styleTemplateName) {
         const named = await findNamedTemplate(access, styleTemplateName)
         if (named) {
+          const before = template
           await access.templateSelection?.select(named.kind, named.key)
           // naming what is already selected keeps its requests
           template = { ...named, requests: selectedRequestsOf(access, named) ?? [] }
+          // a template named just now: the model knew nothing of it, so its `style`
+          // is a design system of its own and is ignored (as with saved styles before)
+          styleIsRequest = before !== null && before.kind === named.kind && before.key === named.key
         } else {
           // fail-open: an unknown name changes nothing and generation continues
           templateNote = await unknownTemplateNote(access, styleTemplateName, template)
         }
       }
-      // With a template in force, `style` carries a look the user asked for on top
-      // of it (the context block says so): it is kept with the document and wins
-      // where it conflicts. Without one, `style` is the style hint it always was.
-      const styleRequest = template ? normalizeRequestText(style) : ''
+      // With a selection the model was told about, `style` carries a look the user
+      // asked for on top of it (the context block says so): it is kept with the
+      // document and wins where it conflicts. Without a template, `style` is the
+      // style hint it always was.
+      const styleRequest = template && styleIsRequest ? normalizeRequestText(style) : ''
       if (template && styleRequest && access.templateSelection) {
         // kept only with the template it was made for
         if (selectedRequestsOf(access, template))

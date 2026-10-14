@@ -320,7 +320,7 @@ describe('added requests (6.4)', () => {
     )
   })
 
-  it('a named template that could not be remembered is used, and its request is not put on the old selection', async () => {
+  it('a named template that could not be remembered is used, and no request lands on the old selection', async () => {
     const deck = makeDeck({
       selected: { kind: 'saved', key: 'Mine', adjustments: ['old request'] },
       saved: { Mine: plainSaved },
@@ -328,7 +328,7 @@ describe('added requests (6.4)', () => {
     })
     await run(deck, topicCall({ style_template: builtin.id, style: 'mostly blue' }))
     expect(deck.stored()).toMatchObject({ key: 'Mine', adjustments: ['old request'] })
-    expect(deck.pageCalls[0]!.style).toBe(styleWithRequests(builtin.styleSheet, ['mostly blue']))
+    expect(deck.pageCalls[0]!.style).toBe(builtin.styleSheet)
     expect(deck.pageCalls[0]!.templateDevices).toBe(true)
   })
 
@@ -409,14 +409,44 @@ describe('naming a template in the conversation (6.5)', () => {
     expect(deck.pageCalls[0]!.style).toBe(builtin.styleSheet)
   })
 
-  it('a request passed along with the name is added after the change', async () => {
+  it('no selection, a built-in named with a style: the style is ignored and nothing is kept', async () => {
+    // the model was never told about a template, so its style is its own design system
+    const deck = makeDeck()
+    await run(deck, topicCall({ style_template: builtin.id, style: 'Deep navy + gold system' }))
+    expect(deck.stored()).toMatchObject({ kind: 'builtin', key: builtin.id, adjustments: [] })
+    for (const args of deck.pageCalls) {
+      expect(args.style).toBe(builtin.styleSheet)
+      expect(args.style).not.toContain('Requests the user added')
+    }
+    expect(deck.generateStyleSkill).not.toHaveBeenCalled()
+  })
+
+  it('no selection, a saved style named with a style: the style is ignored, as before', async () => {
+    const deck = makeDeck({ saved: { Mine: plainSaved } })
+    await run(deck, pagesCall({ style_template: 'Mine', style: 'Deep navy + gold system' }))
+    expect(deck.stored()).toMatchObject({ kind: 'saved', key: 'Mine', adjustments: [] })
+    expect(deck.pageCalls[0]!.style).toBe('PLAIN SAVED STYLE')
+  })
+
+  it('another template named over a selection: requests cleared, the style of this call not kept', async () => {
     const deck = makeDeck({
       selected: { kind: 'saved', key: 'Mine', adjustments: ['old request'] },
       saved: { Mine: plainSaved },
     })
     await run(deck, topicCall({ style_template: builtin.id, style: 'mostly blue' }))
-    expect(deck.stored()).toMatchObject({ key: builtin.id, adjustments: ['mostly blue'] })
-    expect(deck.pageCalls[0]!.style).toBe(styleWithRequests(builtin.styleSheet, ['mostly blue']))
+    expect(deck.stored()).toMatchObject({ key: builtin.id, adjustments: [] })
+    expect(deck.pageCalls[0]!.style).toBe(builtin.styleSheet)
+  })
+
+  it('the selected template named again with a style: the request is kept and applied', async () => {
+    const deck = makeDeck({
+      selected: { kind: 'builtin', key: builtin.id, adjustments: ['mostly blue'] },
+    })
+    await run(deck, topicCall({ style_template: builtin.name, style: 'serif titles' }))
+    expect(deck.stored()?.adjustments).toEqual(['mostly blue', 'serif titles'])
+    expect(deck.pageCalls[0]!.style).toBe(
+      styleWithRequests(builtin.styleSheet, ['mostly blue', 'serif titles']),
+    )
   })
 
   it('naming what is already selected keeps its requests', async () => {
