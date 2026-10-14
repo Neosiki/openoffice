@@ -34,6 +34,8 @@ import type {
 } from '../shared/integrations-api'
 import type { TabsApi, TabSummary } from '../shared/tabs-api'
 import { TABS_CHANNELS } from '../shared/tabs-api'
+import type { GenerateHomeApi } from '../shared/generate-api'
+import { GENERATE_HOME_CHANNELS } from '../shared/generate-home-channels'
 import type { SubscriptionApi } from '../shared/subscription-api'
 import {
   SHELL_SUBSCRIPTION_CHANNELS,
@@ -675,6 +677,17 @@ const tabsApi: TabsApi = {
 }
 
 contextBridge.exposeInMainWorld('aiOfficeTabs', tabsApi)
+
+// Home's entry points into the generate window ("make a new document from these files")
+const generateHomeApi: GenerateHomeApi = {
+  async openWithPaths(paths) {
+    await ipcRenderer.invoke(GENERATE_HOME_CHANNELS.openWithPaths, paths)
+  },
+  async openWithGroup(group) {
+    await ipcRenderer.invoke(GENERATE_HOME_CHANNELS.openWithGroup, group)
+  },
+}
+contextBridge.exposeInMainWorld('aiOfficeGenerate', generateHomeApi)
 
 // open documents dragged from the OS anywhere over Home or the tab strip
 installDropOpenBridge()

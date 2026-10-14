@@ -317,6 +317,7 @@ import {
 } from './knowledge-base'
 import { runHeadlessExport, type HeadlessExporters } from './headless-export'
 import { TabManager } from './tab-manager'
+import { configureGenerateWindow } from './generate/generate-window'
 import { installShellCloseGuard } from './window-close-guard'
 import {
   activateDetached,
@@ -5927,6 +5928,47 @@ app.whenReady().then(async () => {
     openBlankTab: () => openBlankSheetsTabForMcp(),
     authorizeSave: authorizeMcpSheetWrite,
     abandonBlankTab: (wcId) => abandonBlankSheetsTabForMcp(wcId),
+  })
+  // The generate window ("make a new document from these files"): Home's entry
+  // points open it; "make" opens a new untitled tab with the request queued
+  // for it. A material open with unsaved changes is saved in place through the
+  // same dialog-free saves the MCP save-and-close uses, or its tab is shown.
+  configureGenerateWindow({
+    parentWindow: () => shellWindow,
+    lang: () => currentLang(),
+    theme: () => currentTheme(),
+    openTargetTab: (handoff) => {
+      revealShellWindow()
+      ensureTabManager().openGenerateTargetTab(handoff)
+    },
+    starredGroupPaths: (group) => {
+      const groupOf = readStarredGroupMap()
+      return readStarredFiles().filter((p) => groupOf.get(p) === group)
+    },
+    tabIdFor: (wcId) => tabManager?.tabIdForWebContents(wcId),
+    openMaterials: {
+      list: async () => {
+        const tabs = tabManager ? await tabManager.openDocuments() : []
+        return [...tabs, ...(await detachedOpenDocuments())]
+      },
+      webContentsFor: (tabId) =>
+        tabManager?.webContentsForTab(tabId) ?? detachedWebContentsFor(tabId),
+      reveal: (tabId) => {
+        if (activateDetached(tabId)) return
+        tabManager?.activateTab(tabId)
+        revealShellWindow()
+      },
+      save: {
+        docs: (wcId, path) =>
+          mcpDocsControl.runCommand(wcId, 'save_document', { path, overwrite: true }),
+        sheets: (wcId, path) =>
+          mcpSheetsControl.runCommand(wcId, 'save_sheet', { path, overwrite: true }),
+        slides: (wcId, path) => mcpSlidesControl.saveDeck(wcId, path, true),
+        markdown: (wc) => requestMarkdownSave(wc, 'save'),
+        html: (wc) => requestHtmlSave(wc, 'save'),
+        mindmap: (wc) => requestMindmapSave(wc, 'save'),
+      },
+    },
   })
   configureMcpRuntime({
     version: app.getVersion(),
