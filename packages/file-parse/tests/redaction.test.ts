@@ -218,6 +218,15 @@ describe('pptx: a mark that cannot be processed fails the read', () => {
     expectClosedFailure(await readDeck(slideXml([run('Title')], shape)))
   })
 
+  it('a marked run inside another marked run', async () => {
+    // not valid DrawingML; rewriting both would leave the inner words in the part
+    const marked = setRedactExt(RPR, LABEL)
+    const nested =
+      `<a:r>${marked}<a:t>outer</a:t>` + `<a:r>${marked}<a:t>${SECRET}</a:t></a:r>` + `</a:r>`
+    expectClosedFailure(await readDeck(slideXml([run('before ') + nested])))
+    expectClosedFailure(await readDeck(slideXml([run('Title')]), notesXml([nested])))
+  })
+
   it('throws from pptxToText itself, which has no result object to fail with', async () => {
     const bytes = await deck(slideXml([run(SECRET, `<a:rPr>${ext('')}</a:rPr>`)]))
     await expect(pptxToText(bytes)).rejects.toThrow(/redaction/i)
@@ -267,10 +276,29 @@ describe('markdown: a withheld span reads as its marker', () => {
     expect((await readText('plain.md', md)).text).toBe(md)
   })
 
-  it('does not treat a plain-text file as a markdown document', async () => {
-    // .txt opens in the source editor, which has no withholding
-    const txt = `log line ${span(SECRET)}`
-    expect((await readText('raw.txt', txt)).text).toBe(txt)
+  it('reads a markdown document saved under .txt or .json the same way', async () => {
+    // the markdown editor opens all four extensions and its Save As writes the
+    // same text, withheld spans included, whichever one is picked
+    const doc = `call ${span(SECRET, 'phone')} now`
+    for (const name of ['a.md', 'a.markdown', 'a.txt', 'a.json']) {
+      const result = await readText(name, doc)
+      expect(result, name).toEqual({ ok: true, kind: 'text', text: 'call {{phone}} now' })
+    }
+  })
+
+  it('keeps what the editor writes inside a span: escapes, emphasis, a link, a price', () => {
+    const inside = [
+      'plain **bold part** and *it* tail',
+      'a [link text](http://x.y/z_q) b',
+      'price $5,000 and 2\\*3 a\\_b [TODO]',
+      'x\\~y back\\\\slash end',
+      'don\'t (really) "quote" &lt;b&gt;',
+    ]
+    for (const text of inside) {
+      expect(redactMarkdownSource(`before ${span(text)} after`), text).toBe(
+        `before ${MARKER} after`,
+      )
+    }
   })
 
   it('fails the read when a span never closes', async () => {
@@ -284,6 +312,127 @@ describe('markdown: a withheld span reads as its marker', () => {
     const md = `call <span title="a>b" data-redaction="" data-label="${LABEL}">${SECRET}</span>`
     expectClosedFailure(await readText('odd.md', md))
   })
+})
+
+describe('markdown: where a span closes is never guessed', () => {
+  const O = '<span class="redact-span" data-redaction="" data-label="k">'
+
+  /**
+   * The editor closes a span at the next inline `</span` *token*, or by DOM
+   * nesting inside an HTML block. A raw `</span>` that is not that token (it sits
+   * in code, in a comment, in a link, in another tag, behind a backslash) must
+   * not end the span here either: every one of these either hides at least what
+   * the editor hides or fails the read.
+   */
+  const EARLY_CLOSE: Array<[string, string]> = [
+    ['in a code span', `before ${O} see \`</span>\` then ${SECRET}</span> after`],
+    ['behind a backslash', `before ${O} see \\</span> then ${SECRET}</span> after`],
+    ['in a comment', `before ${O} see <!-- </span> --> then ${SECRET}</span> after`],
+    ['in a link destination', `before ${O} see [x](</span>) then ${SECRET}</span> after`],
+    ['after a nested span in an HTML block', `<div>${O} a <span>x</span> ${SECRET}</span></div>`],
+    [
+      'in an attribute inside an HTML block',
+      `<div>${O} a <img alt="</span>"> ${SECRET}</span></div>`,
+    ],
+    ['inside emphasis that ends later', `before ${O} a *b </span> c* ${SECRET}</span> after`],
+    ['inside strikethrough that ends later', `before ${O} a ~~b </span> c~~ ${SECRET}</span> x`],
+    ['inside a link label', `before ${O} [see </span> x](http://u) ${SECRET}</span> after`],
+    ['inside a link title', `before ${O} [a](u "t </span> x") ${SECRET}</span> after`],
+    ['inside a formula', `before ${O} $a </span> b$ ${SECRET}</span> after`],
+    ['as a tag that is not a plain closing tag', `before ${O} a</span foo> ${SECRET}</span> end`],
+    [
+      'inside an attribute of the opening tag itself',
+      `before <span data-redaction="" data-label="k" title="a>b </span> ${SECRET}">x</span> end`,
+    ],
+    [
+      'when the opening tag sits in an attribute of another tag',
+      `before <a title='${O}' href="x </span> ${SECRET}">y</a> tail</span> end`,
+    ],
+    [
+      'when the opening tag sits in a comment',
+      `before <!-- ${O} x </span> --> ${SECRET}</span> end`,
+    ],
+  ]
+
+  for (const [name, md] of EARLY_CLOSE) {
+    it(name, async () => {
+      for (const file of ['early.md', 'early.txt', 'early.json']) {
+        const result = await readText(file, md)
+        if (result.ok) expect(result.text, file).not.toContain(SECRET)
+        else expectClosedFailure(result)
+      }
+    })
+  }
+
+  it('fails every one of the six inputs from the review rather than guess', () => {
+    for (const [, md] of EARLY_CLOSE.slice(0, 6)) {
+      expect(() => redactMarkdownSource(md), md).toThrow(/redaction/i)
+    }
+  })
+
+  it('still closes at the tag when nothing after the span could end a construct', () => {
+    // an unmatched delimiter inside the span cannot swallow the closing tag
+    // unless something later in the paragraph closes it
+    expect(redactMarkdownSource(`a ${O}2*3 [x $5 a_ b~</span> plain tail\n\nnext *p*`)).toBe(
+      'a {{k}} plain tail\n\nnext *p*',
+    )
+    expect(() => redactMarkdownSource(`a ${O}2*3</span> then *this* closes it`)).toThrow(
+      /redaction/i,
+    )
+  })
+
+  it('hides to the closing tag when a paragraph break comes first (more than the editor)', () => {
+    expect(redactMarkdownSource(`a ${O}${SECRET}\n\nnext para</span> after`)).toBe('a {{k}} after')
+  })
+
+  it('reads a span inside an HTML block, where nothing nests', () => {
+    expect(redactMarkdownSource(`<div>${O} ${SECRET}</span> tail</div>`)).toBe(
+      '<div>{{k}} tail</div>',
+    )
+  })
+})
+
+describe('markdown: only something that could be a mark fails the read', () => {
+  const PROSE = [
+    'The attribute data-redaction marks a withheld span.',
+    'Search the page for `data-redaction` and DATA-REDACTION to find them.',
+    '<span class="note">A plain span.</span> Later the text mentions data-redaction in passing.',
+    '{"keys": ["data-redaction", "data-label"], "html": "<span class=\\"x\\">y</span>"}',
+    '{"html": "<span class=\\"x\\">y</span>", "note": "see data-redaction"}',
+    'a < b and c > d, so data-redaction > nothing',
+  ]
+
+  for (const text of PROSE) {
+    it(`reads ${JSON.stringify(text.slice(0, 40))}… as written`, async () => {
+      for (const name of ['prose.md', 'prose.txt', 'prose.json']) {
+        expect(await readText(name, text), name).toEqual({ ok: true, kind: 'text', text })
+      }
+    })
+  }
+
+  const UNREAD: Array<[string, string]> = [
+    [
+      'the attribute after a quoted ">" (an HTML block reads it as a mark)',
+      `<div><span title="a>b" data-redaction="" data-label="k">${SECRET}</span></div>`,
+    ],
+    [
+      'the attribute after a quoted value that runs over several lines',
+      `<pre><span title="a>\n\n b" data-redaction>${SECRET}</span></pre>`,
+    ],
+    [
+      'the attribute after a quoted value that holds a whole withheld span',
+      `<div><span title='<span data-redaction="">x</span> y' data-redaction>${SECRET}</span></div>`,
+    ],
+    ['an opening tag that never ends', `text <span data-redaction ${SECRET}`],
+  ]
+
+  for (const [name, text] of UNREAD) {
+    it(`fails for ${name}`, async () => {
+      for (const file of ['unread.md', 'unread.txt', 'unread.json']) {
+        expectClosedFailure(await readText(file, text))
+      }
+    })
+  }
 })
 
 describe('html: each kind of mark reads as its marker', () => {

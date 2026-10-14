@@ -128,3 +128,46 @@ describe('sheets files-read and a file open with unsaved changes', () => {
     expect((await read(path)).ok).toBe(true)
   })
 })
+
+describe('merging attached workbooks and a file open with unsaved changes', () => {
+  /** how the handler behind merge_attached_workbooks answers: 'opened', or the error text */
+  async function openForMerge(paths: string[]): Promise<string> {
+    if (!lastContents) createSheetsView({ includeAiHandlers: false })
+    const handler = handlers.get(IPC_CHANNELS.openWorkbooksForMerge)!
+    try {
+      await handler({ sender: lastContents }, paths)
+      return 'opened'
+    } catch (error) {
+      return error instanceof Error ? error.message : String(error)
+    }
+  }
+
+  const workbook = (name: string) => {
+    const path = join(dir, name)
+    writeFileSync(path, 'x')
+    return path
+  }
+
+  it('does not open an attached workbook that is open with unsaved changes', async () => {
+    const path = workbook('editing.xlsx')
+    setOpenFilesSource(() => [{ filePath: path, dirty: true }])
+    expect(await openForMerge([path])).toBe(UNSAVED_CHANGES_MESSAGE)
+  })
+
+  it('refuses the whole merge when any one of the workbooks is unsaved', async () => {
+    const saved = workbook('saved.xlsx')
+    const editing = workbook('editing.csv')
+    setOpenFilesSource(() => [
+      { filePath: saved, dirty: false },
+      { filePath: editing, dirty: true },
+    ])
+    expect(await openForMerge([saved, editing])).toBe(UNSAVED_CHANGES_MESSAGE)
+  })
+
+  it('hands a saved workbook on to the engine', async () => {
+    const path = workbook('saved.xlsx')
+    setOpenFilesSource(() => [{ filePath: path, dirty: false }])
+    // the engine is a stub here, so the open itself may fail: only not for this reason
+    expect(await openForMerge([path])).not.toBe(UNSAVED_CHANGES_MESSAGE)
+  })
+})

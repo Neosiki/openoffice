@@ -103,3 +103,72 @@ describe('a markdown file read as another fileâ€™s material matches the editorâ€
     })
   }
 })
+
+describe('a span that covers formatted text reads the same in both', () => {
+  // the hidden range runs across other marks, so the saved span holds markdown
+  const FORMATTED: Array<[string, string]> = [
+    ['plain **bold part** and *it* tail', 'plain bold part and it tail'],
+    ['a [link text](http://x.y/z_q) b', 'a link text b'],
+    ['price $5,000 and 2*3 a_b [TODO] x~y end', 'price $5,000 and 2*3 a_b [TODO] x~y end'],
+    ['keep ~~struck out~~ here', 'keep struck out here'],
+    ['x `inline code` y', 'x inline code y'],
+  ]
+  for (const [md, hidden] of FORMATTED) {
+    it(md, () => {
+      const editor = makeEditor(md)
+      withhold(editor, hidden, 'k')
+      const saved = editor.getMarkdown()
+      expect(saved).toContain('data-redaction')
+      expect(redactMarkdownSource(saved)).toBe(editorModelView(saved))
+    })
+  }
+})
+
+describe('a closing tag that is not the one the editor closes at', () => {
+  const SECRET = '13800138000'
+  const O = '<span class="redact-span" data-redaction="" data-label="k">'
+
+  /**
+   * In each of these the first raw `</span>` after the opening tag is not where
+   * the editor ends the span, so the words after it are still hidden there.
+   * The cross-file read may fail, or hide as much; it may not hand them over.
+   */
+  const EARLY_CLOSE: Array<[string, string]> = [
+    ['in a code span', `before ${O} see \`</span>\` then ${SECRET}</span> after`],
+    ['behind a backslash', `before ${O} see \\</span> then ${SECRET}</span> after`],
+    ['in a comment', `before ${O} see <!-- </span> --> then ${SECRET}</span> after`],
+    ['in a link destination', `before ${O} see [x](</span>) then ${SECRET}</span> after`],
+    ['after a nested span in an HTML block', `<div>${O} a <span>x</span> ${SECRET}</span></div>`],
+    [
+      'in an attribute inside an HTML block',
+      `<div>${O} a <img alt="</span>"> ${SECRET}</span></div>`,
+    ],
+    ['inside emphasis that ends later', `before ${O} a *b </span> c* ${SECRET}</span> after`],
+    ['inside a link label', `before ${O} [see </span> x](http://u) ${SECRET}</span> after`],
+    ['as a tag that is not a plain closing tag', `before ${O} a</span foo> ${SECRET}</span> end`],
+    [
+      'when the attribute follows a quoted ">" in an HTML block',
+      `<div><span title="a>b" data-redaction="" data-label="k">${SECRET}</span></div>`,
+    ],
+  ]
+
+  for (const [name, md] of EARLY_CLOSE) {
+    it(name, () => {
+      // the editor does hide the words: that is what makes this input a trap
+      expect(editorModelView(md)).not.toContain(SECRET)
+      let read: string | null = null
+      try {
+        read = redactMarkdownSource(md)
+      } catch (error) {
+        expect(String(error)).toMatch(/redaction/i)
+      }
+      if (read !== null) expect(read).not.toContain(SECRET)
+    })
+  }
+
+  it('hides more than the editor, never less, when a paragraph ends inside a span', () => {
+    const md = `before ${O}${SECRET}\n\nnext para</span> after`
+    expect(editorModelView(md)).not.toContain(SECRET)
+    expect(redactMarkdownSource(md)).toBe('before {{k}} after')
+  })
+})

@@ -2838,6 +2838,8 @@ export function registerSheetsIpc(): void {
       const ext = path.slice(path.lastIndexOf('.') + 1).toLowerCase()
       if (!MERGE_SOURCE_EXTS.has(ext)) throw new Error(`Unsupported merge source: ${ext}`)
       if (!existsSync(path)) throw new Error('Merge source not found.')
+      // an attached workbook open with unsaved changes is not read, like any attachment
+      await assertFileSaved(path)
     }
     return openMergeSources(event, paths)
   })

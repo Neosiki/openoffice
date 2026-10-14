@@ -204,6 +204,9 @@ export function redactPptxPartXml(xml: string): string {
   const out: string[] = []
   let cursor = 0
   for (const [run, label] of [...runs].sort((a, b) => a[0].start - b[0].start)) {
+    // a marked run inside another marked run (not valid DrawingML): rewriting
+    // both would move backwards and leave the inner words in the part
+    if (run.start < cursor) throw new RedactionMarkError('a marked run sits inside another')
     // the whole inside of the run goes: its properties are of no use to a text
     // reader, and anything else it holds is not this reader's to pass on
     out.push(xml.slice(cursor, run.openEnd), `<a:t>${escapeText(placeholderSource(label))}</a:t>`)

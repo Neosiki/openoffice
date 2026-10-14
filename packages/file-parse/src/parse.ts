@@ -50,6 +50,10 @@ const TEXT_EXTS = new Set([
 const TEXT_REDACTORS: Record<string, (source: string) => string> = {
   md: redactMarkdownSource,
   markdown: redactMarkdownSource,
+  // the markdown editor opens these two as well, and its Save As writes a
+  // document under them with the withheld spans it holds
+  txt: redactMarkdownSource,
+  json: redactMarkdownSource,
   html: redactHtmlSource,
   htm: redactHtmlSource,
 }
