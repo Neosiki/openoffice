@@ -20,3 +20,4 @@ export {
   LANGUAGE_SAMPLE_CHARS,
 } from './epub'
 export type { EpubWriteOptions, EpubLanguageOptions } from './epub'
+export * from './jobs'
