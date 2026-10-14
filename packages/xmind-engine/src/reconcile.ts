@@ -38,7 +38,7 @@ export type ReconcileResult =
  *
  * `state` is the sheet's view data as it stands after the user's edit. What
  * is applied: the topics with their order and nesting, and per topic the
- * title, folding, labels, note and web link; summaries; relationships; the
+ * title, folding, labels, note and link; summaries; relationships; the
  * layout. What is never written from a state: pictures, markers and styles,
  * which the editor shows without editing, and the sheet's own title and
  * place, which `renameSheet` and its neighbours change.

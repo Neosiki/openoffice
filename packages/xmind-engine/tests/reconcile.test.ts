@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest'
+import { createXmindDocumentFromSheets } from '../src/create'
 import type { XmindDocument } from '../src/document'
 import { reconcileSheet } from '../src/reconcile'
 import { MAX_TOPIC_DEPTH } from '../src/structure-check'
 import type { XmindSheet } from '../src/types'
-import type { ViewSheet } from '../src/view'
+import { sheetToView, type ViewSheet } from '../src/view'
 import {
   buildMapFile,
   CONTENT,
@@ -184,6 +185,70 @@ describe('reconcileSheet: a topic that is in both', () => {
       inView(view, 'c').link = 'mailto:someone@example.com'
     })
     expect(inSource(replaced.sheet, 'c')!.href).toBe('mailto:someone@example.com')
+  })
+
+  it('a link nothing would open is a link like any other: kept untouched, written when changed, removed when cleared', async () => {
+    const withLinks = (): XmindSheet => ({
+      id: 's',
+      rootTopic: {
+        id: 'r',
+        title: 'Root',
+        children: {
+          attached: [
+            { id: 'j', title: 'J', href: 'javascript:alert(1)' },
+            { id: 'f', title: 'F', href: 'file:///C:/secret.txt' },
+            { id: 'p', title: 'P', href: 'ftp://example.com/x' },
+            { id: 't', title: 'T', href: 'xmind:#j' },
+          ],
+        },
+      },
+      title: 'Links',
+    })
+    const run = async (change: (view: ViewSheet) => void) => {
+      const document = await createXmindDocumentFromSheets([withLinks()])
+      const view = sheetToView(document.sheets[0]!, 0)
+      change(view)
+      const result = reconcileSheet(document, 0, view)
+      if (!result.ok) throw new Error(result.problem)
+      const topics = document.sheets[0]!.rootTopic.children!.attached!
+      return {
+        document,
+        result,
+        href: (id: string) => topics.find((topic) => topic.id === id)!.href,
+      }
+    }
+
+    const shown = sheetToView(withLinks(), 0).root.children.map((topic) => topic.link)
+    expect(shown).toEqual([
+      'javascript:alert(1)',
+      'file:///C:/secret.txt',
+      'ftp://example.com/x',
+      null,
+    ])
+
+    // an unrelated edit leaves every address exactly as the file had it
+    const unrelated = await run((view) => void (view.root.children[0]!.title = 'J, renamed'))
+    expect(unrelated.result).toMatchObject({ changed: true, inSync: true })
+    expect(['j', 'f', 'p', 't'].map(unrelated.href)).toEqual([
+      'javascript:alert(1)',
+      'file:///C:/secret.txt',
+      'ftp://example.com/x',
+      'xmind:#j',
+    ])
+    const untouched = await run(() => {})
+    expect(untouched.result.changed).toBe(false)
+    expect(untouched.document.changed).toBe(false)
+
+    // changed, cleared, and set where the file holds a link to another topic
+    const edited = await run((view) => {
+      view.root.children[0]!.link = 'javascript:void(0)'
+      view.root.children[1]!.link = null
+      view.root.children[3]!.link = 'file:///D:/other.txt'
+    })
+    expect(edited.href('j')).toBe('javascript:void(0)')
+    expect(edited.href('f')).toBeUndefined()
+    expect(edited.href('p')).toBe('ftp://example.com/x')
+    expect(edited.href('t')).toBe('file:///D:/other.txt')
   })
 
   it('leaves values of a shape it does not read alone until that very value is edited', async () => {
@@ -776,11 +841,16 @@ describe('reconcileSheet: a state that cannot be applied', () => {
       /float/,
     ],
     [
-      'a link that is not a web link',
-      (view) => void (inView(view, 'b').link = 'javascript:alert(1)'),
+      'a link in the form of a link to another topic',
+      (view) => void (inView(view, 'b').link = 'xmind:#a'),
       /link/,
     ],
-    ['a link to a file', (view) => void (inView(view, 'b').link = 'file:///c:/x.txt'), /link/],
+    [
+      'a link in the form of a link to an attachment',
+      (view) => void (inView(view, 'b').link = 'xap:resources/file.pdf'),
+      /link/,
+    ],
+    ['an empty link', (view) => void (inView(view, 'b').link = ''), /link/],
     [
       'the id of a floating topic',
       (view) => void view.root.children.push(freshTopic('float', 'x')),

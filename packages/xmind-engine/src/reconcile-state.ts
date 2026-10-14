@@ -11,7 +11,7 @@
 import type { ViewLayout } from './layout'
 import { MAX_TOPIC_DEPTH } from './structure-check'
 import { isRecord } from './types'
-import { isWebLink } from './view'
+import { isShownLink } from './view'
 
 /** Thrown for a state that cannot be applied. It never leaves the package: callers get a result. */
 export class Refusal extends Error {}
@@ -94,7 +94,9 @@ function readTopic(topic: unknown, depth: number, seen: Set<string>): StateTopic
   if (typeof folded !== 'boolean') refuse(`folded of topic ${id} is not true or false`)
   if (!isTexts(labels)) refuse(`the labels of topic ${id} are not a list of texts`)
   if (note !== null && typeof note !== 'string') refuse(`the note of topic ${id} is not text`)
-  if (link !== null && !isWebLink(link)) refuse(`the link of topic ${id} is not a web link`)
+  if (link !== null && !isShownLink(link)) {
+    refuse(`the link of topic ${id} is empty or a reference into the file`)
+  }
   if (!Array.isArray(summaries)) refuse(`the summaries of topic ${id} are not a list`)
   if (!Array.isArray(children)) refuse(`the children of topic ${id} are not a list`)
   return {

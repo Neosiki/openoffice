@@ -2,7 +2,15 @@ import { describe, expect, it } from 'vitest'
 import { layoutFromStructureClass, structureClassForLayout } from '../src/layout'
 import { htmlToPlainText, noteText } from '../src/notes'
 import type { XmindSheet } from '../src/types'
-import { formatRange, isWebLink, parseRange, sheetToView, type ViewTopic } from '../src/view'
+import {
+  formatRange,
+  isInternalLink,
+  isShownLink,
+  isWebLink,
+  parseRange,
+  sheetToView,
+  type ViewTopic,
+} from '../src/view'
 import { buildMapFile, openOk, sampleSheets } from './helpers'
 
 const sample = (): XmindSheet => sampleSheets()[0] as XmindSheet
@@ -55,12 +63,54 @@ describe('sheetToView', () => {
     expect(beta).toMatchObject({ labels: [], note: null, markers: [], link: null })
   })
 
-  it('shows web links only: a link to a topic or to an attachment is not view data', () => {
+  it('a link to a topic or to an attachment is not view data; every other link is', () => {
     expect(find(sheetToView(sample(), 0).root, 'c')!.link).toBeNull()
+    const linked = (href: unknown) =>
+      sheetToView({ rootTopic: { id: 'r', children: { attached: [{ id: 'x', href }] } } }, 0).root
+        .children[0]!.link
+    // Shown as they are in the file, whether or not anything would open them.
+    for (const shown of [
+      'https://example.com',
+      'mailto:someone@example.com',
+      'javascript:alert(1)',
+      'file:///C:/secret.txt',
+      'ftp://example.com/x',
+      'example.com/no-scheme',
+    ]) {
+      expect(linked(shown), shown).toBe(shown)
+      expect(isShownLink(shown), shown).toBe(true)
+    }
+    // The two kinds that are kept in the file only, and what is no link at all.
+    for (const hidden of [
+      'xmind:#abc',
+      'XMIND:#abc',
+      'xap:resources/file.pdf',
+      'Xap:attachments/a',
+    ]) {
+      expect(linked(hidden), hidden).toBeNull()
+      expect(isInternalLink(hidden), hidden).toBe(true)
+      expect(isShownLink(hidden), hidden).toBe(false)
+    }
+    for (const none of ['', '   ', 7, null, undefined, { url: 'x' }]) {
+      expect(linked(none), String(none)).toBeNull()
+      expect(isShownLink(none), String(none)).toBe(false)
+    }
+  })
+
+  it('a web link keeps its meaning: http, https and mailto only', () => {
     expect(isWebLink('https://example.com')).toBe(true)
     expect(isWebLink('HTTP://example.com')).toBe(true)
     expect(isWebLink('mailto:someone@example.com')).toBe(true)
-    for (const other of ['xmind:#abc', 'xap:resources/file.pdf', 'file:///c:/x.txt', '', 7, null]) {
+    for (const other of [
+      'xmind:#abc',
+      'xap:resources/file.pdf',
+      'file:///c:/x.txt',
+      'javascript:alert(1)',
+      'ftp://example.com/x',
+      '',
+      7,
+      null,
+    ]) {
       expect(isWebLink(other), String(other)).toBe(false)
     }
   })
