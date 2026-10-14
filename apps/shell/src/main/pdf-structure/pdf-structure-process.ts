@@ -6,12 +6,14 @@
  * process after the answer, on cancel, and when the document's tab closes.
  */
 import { readFileSync } from 'node:fs'
+import { readFile } from 'node:fs/promises'
 import type { OcrEngine, PdfiumModule } from '../../../../../packages/pdf2docx/src'
 import {
   createVisionOcrEngine,
   createWindowsOcrEngine,
 } from '../../../../../packages/pdf2docx/src/ocr-vision'
-import { aiReadingsFromStore, runStructureJob } from './jobs'
+import type { HbSubsetWasm } from '../../../../../packages/pdf-structure/src/writeback'
+import { aiReadingsFromStore, runStructureJob, translationsFromStore } from './jobs'
 import { errorMessageOf, parseRunMessage, type ChildMessage, type ProcessSetup } from './protocol'
 
 interface ParentPort {
@@ -44,6 +46,12 @@ function loadPdfium(wasmPath: string): () => Promise<PdfiumModule> {
   }
 }
 
+/** the font subsetter wasm, read once when a translated PDF needs it */
+function loadHbSubsetWasm(path: string): () => Promise<HbSubsetWasm> {
+  let pending: Promise<HbSubsetWasm> | null = null
+  return () => (pending ??= readFile(path).then((buf) => new Uint8Array(buf)))
+}
+
 /** first helper that yields an engine; null = scanned pages stay page images */
 function ocrEngine(setup: ProcessSetup): () => OcrEngine | null {
   let engine: OcrEngine | null | undefined
@@ -73,6 +81,10 @@ if (port) {
       pdfium: loadPdfium(run.setup.wasmPath),
       ocr: ocrEngine(run.setup),
       aiReadings: run.setup.userDataDir ? aiReadingsFromStore(run.setup.userDataDir) : null,
+      translations: run.setup.userDataDir ? translationsFromStore(run.setup.userDataDir) : null,
+      hbSubsetWasm: run.setup.hbSubsetWasmPath
+        ? loadHbSubsetWasm(run.setup.hbSubsetWasmPath)
+        : null,
     }
     runStructureJob(run.job, deps, (done, total) =>
       port.postMessage({ type: 'progress', done, total }),

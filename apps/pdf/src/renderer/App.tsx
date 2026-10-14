@@ -129,6 +129,11 @@ import { ConvertDialog } from './convert/ConvertDialog'
 import { ExportImagesMenu } from './convert/ExportImagesMenu'
 import { exportEmbeddedImages } from './convert/embedded-images'
 import { AiPageReading, type AiPageReadingHandle } from './ai-read/AiPageReading'
+import {
+  DocumentTranslation,
+  type DocumentTranslationHandle,
+} from './translate/DocumentTranslation'
+import { languageName } from './translate/translate-model'
 import { createPageRenderer } from './ai-read/render-page'
 import { loadAiReadTexts } from './ai-read/search-texts'
 import { DocumentJobSession } from './doc-jobs/job-session'
@@ -196,6 +201,7 @@ import type {
   NoteEditInput,
   PageImageRef,
   PdfConvertFormat,
+  PdfConvertOutputRequest,
   PdfReflowFormat,
   PdfSignatureInfo,
   StaticFormFillRecord,
@@ -351,6 +357,7 @@ import {
   IconAiSummarize,
   IconAiKeyPoints,
   IconAiReadPages,
+  IconAiTranslate,
 } from './icons'
 
 GlobalWorkerOptions.workerSrc = workerUrl
@@ -515,6 +522,24 @@ export default function App() {
   }, [])
   const aiReadRef = useRef<AiPageReadingHandle | null>(null)
   const [aiReadMenuOpen, setAiReadMenuOpen] = useState(false)
+  /** document translation: the window's handle and its channels (structure, store, results) */
+  const translateRef = useRef<DocumentTranslationHandle | null>(null)
+  const translateApi = useMemo(() => {
+    const api = window.pdfApi
+    if (!api?.structure || !api.store) return null
+    return {
+      tree: api.structure.tree,
+      cancel: api.structure.cancel,
+      onProgress: api.structure.onProgress,
+      pickTarget: api.structure.pickTarget,
+      convert: api.structure.convert,
+      writeBack: api.structure.writeBack,
+      store: api.store,
+      releaseTarget: (request: PdfConvertOutputRequest) => api.releaseConvertTarget(request),
+      openResult: (request: PdfConvertOutputRequest) => api.openConvertResult(request),
+      revealResult: (request: PdfConvertOutputRequest) => api.revealConvertResult(request),
+    }
+  }, [])
   /** bumped when stored AI readings change, so the search reads them again */
   const [aiReadVersion, setAiReadVersion] = useState(0)
   /** pages (0-based) whose AI-read text alone has the search query */
@@ -6362,6 +6387,8 @@ export default function App() {
     ocrText: (origIdx) => ocrPages.get(origIdx)?.entry.text ?? null,
     startAiPageReading: (pages) =>
       aiReadRef.current?.requestOpen(pages) ?? { unavailable: true as const },
+    startDocumentTranslation: (request) =>
+      translateRef.current?.requestOpen(request) ?? { unavailable: true as const },
     structuredRead: () => {
       const api = window.pdfApi
       if (!filePath || !api?.structure || !api.store) return null
@@ -7576,6 +7603,23 @@ export default function App() {
                       </div>
                     )}
                   </div>
+                  <button
+                    className="rb-big ai-entry"
+                    data-tip={t('trButtonTip')}
+                    data-action="translate-open"
+                    onClick={() => {
+                      const answer = translateRef.current?.requestOpen({ lang: null, pages: null })
+                      if (answer && 'running' in answer) showNotice(t('arBusy', answer.running))
+                      else if (!answer || 'unavailable' in answer) showNotice(t('trUnavailable'))
+                    }}
+                  >
+                    <span className="rb-big-icon">
+                      <span className="ai-feature-icon" aria-hidden="true">
+                        <IconAiTranslate />
+                      </span>
+                    </span>
+                    <span>{t('trButton')}</span>
+                  </button>
                 </div>
               </div>
               <div className="ribbon-sep" />
@@ -8413,6 +8457,27 @@ export default function App() {
             }}
             onStoredChange={() => setAiReadVersion((v) => v + 1)}
             onNotice={showNotice}
+            onResumeTranslation={(job) => translateRef.current?.resume(job)}
+            languageName={(code) => languageName(code, lang)}
+          />
+          <DocumentTranslation
+            ref={translateRef}
+            filePath={filePath || null}
+            fileName={fileName}
+            password={passwordRef.current}
+            pageCount={sizes.length}
+            lang={lang}
+            t={t}
+            encrypted={passwordRef.current !== undefined || documentEncrypted}
+            api={translateApi}
+            session={jobSession}
+            docInfo={metadata ?? docInfo}
+            prepare={flushForStructureJob}
+            onNotice={showNotice}
+            onOpenAiRead={() => {
+              const answer = aiReadRef.current?.requestOpen(null)
+              if (answer && 'running' in answer) showNotice(t('arBusy', answer.running))
+            }}
           />
           <div className="pdf-body">
             {sidebar === 'outline' && outline && (

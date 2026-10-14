@@ -590,6 +590,24 @@ export const IconAiReadPages = () => (
     />
   </svg>
 )
+export const IconAiTranslate = () => (
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.5"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden
+  >
+    <path d="M3.5 5.5H11.5" />
+    <path d="M7.5 3.5V5.5" />
+    <path d="M10 5.5C9.3 8.6 7.4 11.2 4.5 12.8" />
+    <path d="M5.5 8C6.4 9.8 7.8 11.3 9.5 12.3" />
+    <path d="M12 20.5L15.5 11.5L19 20.5" />
+    <path d="M13.2 17.5H17.8" />
+  </svg>
+)
 export const IconAiKeyPoints = () => (
   <svg
     viewBox="0 0 24 24"

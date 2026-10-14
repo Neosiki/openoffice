@@ -11,6 +11,7 @@
 import type { DocumentTree, InlineRun } from '../../../../../packages/pdf-structure/src/tree/types'
 import type { PageFingerprint } from '../../../../../packages/pdf-structure/src/tree/extract'
 import type { MarkdownWarning } from '../../../../../packages/pdf-structure/src/markdown/write'
+import type { TranslationReport } from '../../../../../packages/pdf-structure/src/translate/result'
 import type {
   PdfStructureEpubOptions,
   PdfStructureErrorCode,
@@ -29,7 +30,12 @@ export interface JobSource {
 export interface TranslationInput {
   lang: string
   bilingual: boolean
-  units: Array<{ key: string; runs: InlineRun[] }>
+  /**
+   * translated runs by text-unit key; absent = the result store's translation
+   * of the file's document hash into `lang` (spec §8), finished blocks
+   * translated and the rest in the source language
+   */
+  units?: Array<{ key: string; runs: InlineRun[] }>
 }
 
 /**
@@ -56,7 +62,7 @@ export type StructureJob =
     }
   | { op: 'images'; source: JobSource; outDir: string; baseName: string; minImagePx?: number }
   | { op: 'fingerprints'; source: JobSource }
-  | { op: 'writeBack'; source: JobSource; outPath: string; payload: unknown }
+  | { op: 'writeBack'; source: JobSource; tree?: DocumentTree; outPath: string; payload: unknown }
 
 export type StructureOp = StructureJob['op']
 
@@ -68,6 +74,8 @@ export interface ProcessSetup {
   ocrHelperPaths: string[]
   /** the app's user-data folder: its result store's AI readings go into conversions */
   userDataDir?: string
+  /** harfbuzz subsetter wasm on disk (wasm-path.ts hbSubsetWasmPath); the translated PDF needs it */
+  hbSubsetWasmPath?: string
 }
 
 export interface RunMessage {
@@ -107,11 +115,15 @@ export interface MarkdownJobValue {
   warnings: MarkdownWarning[]
   assetsWritten: number
   assetsReused: number
+  /** a translation read from the result store: what it holds for the written tree */
+  translation?: TranslationReport
 }
 
 export interface EpubJobValue {
   docHash: string
   outPath: string
+  /** as MarkdownJobValue.translation */
+  translation?: TranslationReport
 }
 
 export interface ImagesJobValue {
@@ -199,6 +211,8 @@ export function parseRunMessage(raw: unknown): RunMessage | null {
   if (!Array.isArray(setup.ocrHelperPaths)) return null
   if (!setup.ocrHelperPaths.every((p) => typeof p === 'string')) return null
   if (setup.userDataDir !== undefined && typeof setup.userDataDir !== 'string') return null
+  if (setup.hbSubsetWasmPath !== undefined && typeof setup.hbSubsetWasmPath !== 'string')
+    return null
   if (!isRecord(job) || typeof job.op !== 'string' || !OPS.has(job.op)) return null
   if (!isRecord(job.source) || typeof job.source.pdfPath !== 'string') return null
   return raw as unknown as RunMessage
@@ -227,6 +241,8 @@ export function errorMessageOf(err: unknown): Extract<ChildMessage, { type: 'err
   }
   if (name === 'AssetConflictError') return { type: 'error', error: 'asset-conflict', message }
   if (name === 'NotAvailableError') return { type: 'error', error: 'not-available', message }
+  // a translated PDF cannot be written into an encrypted source
+  if (name === 'WritebackEncryptedError') return { type: 'error', error: 'unsupported', message }
   if (name === 'AbortError') return { type: 'error', error: 'cancelled', message }
   return { type: 'error', error: 'failed', message }
 }

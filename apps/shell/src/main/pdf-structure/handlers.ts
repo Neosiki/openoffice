@@ -248,12 +248,21 @@ export function createPdfStructureHandlers(deps: StructureHandlerDeps) {
   function translationOf(v: unknown): TranslationInput | undefined | null {
     if (v === undefined) return undefined
     if (!isRecord(v) || typeof v.lang !== 'string' || !KEY.test(v.lang)) return null
-    if (typeof v.bilingual !== 'boolean' || !Array.isArray(v.units)) return null
+    if (typeof v.bilingual !== 'boolean') return null
+    // no units: the job reads the stored translation of the file's document hash
+    if (v.units === undefined) return { lang: v.lang, bilingual: v.bilingual }
+    if (!Array.isArray(v.units)) return null
     for (const u of v.units) {
       if (!isRecord(u) || typeof u.key !== 'string' || !Array.isArray(u.runs)) return null
       if (!u.runs.every(isRecord)) return null
     }
     return v as unknown as TranslationInput
+  }
+
+  /** a translated-PDF payload names the target language; nothing else is passed on */
+  function writeBackPayloadOf(v: unknown): { lang: string } | null {
+    if (!isRecord(v) || typeof v.lang !== 'string' || !LANGUAGE_TAG.test(v.lang)) return null
+    return { lang: v.lang }
   }
 
   function epubOptionsOf(v: unknown): PdfStructureEpubOptions | null {
@@ -457,11 +466,15 @@ export function createPdfStructureHandlers(deps: StructureHandlerDeps) {
       if (typeof outPath !== 'string') return outPath
       let ok = false
       try {
+        const payload = writeBackPayloadOf(req.payload)
+        if (!payload) return fail('invalid-request', 'bad translated PDF payload')
+        const hit = await cachedTree(ctx.owner, src.source.pdfPath, src.pagesKey)
         const out = await run(ctx, jobId, {
           op: 'writeBack',
           source: src.source,
+          ...(hit.cached ? { tree: hit.cached.tree } : {}),
           outPath,
-          payload: req.payload,
+          payload,
         })
         if (!out.ok) return out
         ok = true

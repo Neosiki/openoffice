@@ -5,6 +5,8 @@ import type { SubscriptionApi } from './subscription-api'
 import type { DocumentTree, InlineRun } from '../../../../packages/pdf-structure/src/tree/types'
 import type { PageFingerprint } from '../../../../packages/pdf-structure/src/tree/extract'
 import type { MarkdownWarning } from '../../../../packages/pdf-structure/src/markdown/write'
+import type { TranslationReport } from '../../../../packages/pdf-structure/src/translate/result'
+import type { WritebackReport } from '../../../../packages/pdf-structure/src/writeback/types'
 import type {
   AiReadPageEntry,
   AiReadPayload,
@@ -1005,11 +1007,16 @@ export interface PdfStructureTextResult {
   pages: PdfStructuredTextPage[]
 }
 
-/** translated or bilingual output: translated runs by text-unit key (see textUnits) */
+/** translated or bilingual output */
 export interface PdfStructureTranslationInput {
   lang: string
   bilingual: boolean
-  units: Array<{ key: string; runs: InlineRun[] }>
+  /**
+   * translated runs by text-unit key (see textUnits); absent = the stored
+   * translation of the file's document hash (finished blocks translated, the
+   * rest in the source language), with its report in the result
+   */
+  units?: Array<{ key: string; runs: InlineRun[] }>
 }
 
 export interface PdfStructureEpubOptions {
@@ -1043,6 +1050,8 @@ export interface PdfStructureConvertResult {
   /** Markdown only: pictures written to `assets/` and pictures already there */
   assetsWritten: number
   assetsReused: number
+  /** a stored translation was written: what it holds for the written pages */
+  translation?: TranslationReport
 }
 
 export interface PdfStructureImagesRequest extends PdfStructureSource, PdfStructureJobRef {
@@ -1061,11 +1070,22 @@ export interface PdfStructureImagesResult {
   images: Array<{ page: number; file: string; width: number; height: number }>
 }
 
-/** Translated PDF write-back; the payload shape belongs to the writer (T13) */
+/** Translated PDF write-back of the stored translation into `payload.lang` */
 export interface PdfStructureWriteBackRequest extends PdfStructureSource, PdfStructureJobRef {
   /** from structure.pickTarget('pdf'); never the source file */
   outPath: string
-  payload: unknown
+  payload: PdfTranslatedPdfPayload
+}
+
+export interface PdfTranslatedPdfPayload {
+  /** target language of the stored translation to write */
+  lang: string
+}
+
+/** the `report` of a translated PDF: the writer's report and the stored translation's, same pages */
+export interface PdfTranslatedPdfReport {
+  writer: WritebackReport
+  translation: TranslationReport
 }
 
 export interface PdfStructureWriteBackResult {

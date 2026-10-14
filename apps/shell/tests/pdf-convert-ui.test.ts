@@ -62,7 +62,12 @@ describe('pdf conversion screen: shell handlers', () => {
 
   it('shows written results in the file manager', () => {
     const { d, h } = deps()
-    for (const path of ['C:\\out\\a.epub', 'C:\\out\\a.md', 'C:\\out\\pics\\p1.png']) {
+    for (const path of [
+      'C:\\out\\a.epub',
+      'C:\\out\\a.md',
+      'C:\\out\\pics\\p1.png',
+      'C:\\out\\a.ko.pdf',
+    ]) {
       expect(h.revealResult(VIEW, { source: SOURCE, path })).toBe(true)
       expect(d.showInFolder).toHaveBeenLastCalledWith(path)
     }

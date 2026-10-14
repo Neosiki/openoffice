@@ -9,9 +9,14 @@
  * an `assets/` file the list does not own is never overwritten.
  *
  * Pages the user had read by AI (spec §7) replace their pages in Markdown,
- * EPUB and the structured text: the stored readings of the file's document
- * hash are merged into the tree before it is written. The tree job itself,
- * and the tree handed back for the main process's cache, stay the PDF's own.
+ * EPUB, the structured text and the translated PDF: the stored readings of
+ * the file's document hash are merged into the tree before it is written. The
+ * tree job itself, and the tree handed back for the main process's cache,
+ * stay the PDF's own.
+ *
+ * A translated output (spec §8) takes the stored translation of the file's
+ * document hash, unless the request carries its own translated runs: the
+ * finished blocks translated, the rest in the source language.
  */
 import { createHash } from 'node:crypto'
 import { mkdir, readFile, unlink, writeFile } from 'node:fs/promises'
@@ -22,6 +27,8 @@ import { renderPageByIndexPng } from '../../../../../packages/pdf2docx/src/extra
 import {
   applyStoredAiReadings,
   ASSET_MANIFEST_FILENAME,
+  buildBilingualTree,
+  buildTranslatedTree,
   ASSETS_DIR,
   deriveBilingualTree,
   deriveTranslatedTree,
@@ -30,17 +37,25 @@ import {
   mergeAssetManifest,
   PageRangeError,
   parseAssetManifest,
+  translationReport,
   treeToMarkdown,
   writeEpub,
   type DocumentTree,
   type InlineRun,
   type MarkdownConversion,
   type OwnedAssetRecord,
+  type TranslationReport,
 } from '../../../../../packages/pdf-structure/src'
 import { pageFingerprint } from '../../../../../packages/pdf-structure/src/tree/pdfium-doc'
 import { documentHash, ResultStore } from '../../../../../packages/pdf-structure/src/store'
+import type { StoredTranslation } from '../../../../../packages/pdf-structure/src/store/store'
+import type {
+  HbSubsetWasm,
+  WritebackFontLocator,
+} from '../../../../../packages/pdf-structure/src/writeback'
 import { atomicWriteFile } from '../atomic-write'
 import * as plugins from './plugins'
+import { NotAvailableError } from './plugins'
 import type { StructuredTextFormatter, TranslatedPdfWriter } from './plugins'
 import type {
   EpubJobValue,
@@ -69,7 +84,23 @@ export interface JobDeps {
    * fingerprint (aiReadingsFromStore); absent or null = no readings
    */
   aiReadings?: StoredAiReadings | null
+  /**
+   * The result store's translation of a document into a language
+   * (translationsFromStore); absent or null = translated outputs that rely
+   * on the store are not available
+   */
+  translations?: StoredTranslations | null
+  /** the font subsetter wasm the translated PDF embeds fonts with; absent or null = not available */
+  hbSubsetWasm?: (() => Promise<HbSubsetWasm>) | null
+  /** fonts for the translated PDF (tests); default the fonts installed on this PC */
+  writebackFontLocator?: WritebackFontLocator
 }
+
+/** the stored translation of a document hash into a language, or null */
+export type StoredTranslations = (
+  docHash: string,
+  lang: string,
+) => Promise<StoredTranslation | null>
 
 /** AI-read pages of a document hash, keyed by page fingerprint */
 export type StoredAiReadings = (
@@ -80,6 +111,12 @@ export type StoredAiReadings = (
 export function aiReadingsFromStore(userDataDir: string): StoredAiReadings {
   let store: ResultStore | null = null
   return (docHash) => (store ??= new ResultStore(userDataDir)).readAiReadPages(docHash)
+}
+
+/** the translations the app's result store holds under `<userDataDir>/pdf-store` */
+export function translationsFromStore(userDataDir: string): StoredTranslations {
+  let store: ResultStore | null = null
+  return (docHash, lang) => (store ??= new ResultStore(userDataDir)).readTranslation(docHash, lang)
 }
 
 /**
@@ -111,13 +148,7 @@ export class AssetConflictError extends Error {
   }
 }
 
-/** the operation's function is not plugged in yet (see plugins.ts) */
-export class NotAvailableError extends Error {
-  constructor(message: string) {
-    super(message)
-    this.name = 'NotAvailableError'
-  }
-}
+export { NotAvailableError }
 
 /** cover render scale: pixels per point (about 108 dpi) */
 const COVER_SCALE = 1.5
@@ -151,12 +182,33 @@ async function extract(
   })
 }
 
-function applyTranslation(tree: DocumentTree, translation: TranslationInput | undefined) {
-  if (!translation) return tree
-  const tr = new Map<string, InlineRun[]>(translation.units.map((u) => [u.key, u.runs]))
-  return translation.bilingual
-    ? deriveBilingualTree(tree, translation.lang, tr)
-    : deriveTranslatedTree(tree, translation.lang, tr)
+/**
+ * The tree to write for `translation`: the request's translated runs, or the
+ * stored translation (with its report). The tree must already have the AI
+ * readings merged: translations are keyed by the merged tree's blocks.
+ */
+async function applyTranslation(
+  tree: DocumentTree,
+  docHash: string,
+  translation: TranslationInput | undefined,
+  deps: JobDeps,
+): Promise<{ tree: DocumentTree; report?: TranslationReport }> {
+  if (!translation) return { tree }
+  const { lang, bilingual } = translation
+  if (translation.units) {
+    const tr = new Map<string, InlineRun[]>(translation.units.map((u) => [u.key, u.runs]))
+    return {
+      tree: bilingual ? deriveBilingualTree(tree, lang, tr) : deriveTranslatedTree(tree, lang, tr),
+    }
+  }
+  if (!deps.translations) throw new NotAvailableError('the stored translation cannot be read here')
+  const stored = await deps.translations(docHash, lang)
+  return {
+    tree: bilingual
+      ? buildBilingualTree(tree, lang, stored)
+      : buildTranslatedTree(tree, lang, stored),
+    report: translationReport(tree, lang, stored),
+  }
 }
 
 /** 1-based page numbers to read: the source's, checked, or every page */
@@ -322,7 +374,8 @@ export async function runStructureJob(
         docHash,
         deps,
       )
-      const conversion = treeToMarkdown(applyTranslation(tree, job.translation))
+      const translated = await applyTranslation(tree, docHash, job.translation, deps)
+      const conversion = treeToMarkdown(translated.tree)
       const counts = await writeMarkdownOutput(job.outPath, conversion)
       return {
         docHash,
@@ -330,6 +383,7 @@ export async function runStructureJob(
         warnings: conversion.warnings,
         assetsWritten: counts.assetsWritten,
         assetsReused: counts.assetsReused,
+        ...(translated.report ? { translation: translated.report } : {}),
       } satisfies MarkdownJobValue
     }
     case 'epub': {
@@ -350,7 +404,8 @@ export async function runStructureJob(
         )
       }
       const alt = options.pageImageAlt
-      const epub = await writeEpub(applyTranslation(tree, job.translation), {
+      const translated = await applyTranslation(tree, docHash, job.translation, deps)
+      const epub = await writeEpub(translated.tree, {
         title: options.title,
         ...(options.author !== undefined ? { author: options.author } : {}),
         cover: options.cover !== false && coverPng !== undefined,
@@ -363,7 +418,11 @@ export async function runStructureJob(
         ...(deps.now ? { modified: deps.now() } : {}),
       })
       await atomicWriteFile(job.outPath, epub)
-      return { docHash, outPath: job.outPath } satisfies EpubJobValue
+      return {
+        docHash,
+        outPath: job.outPath,
+        ...(translated.report ? { translation: translated.report } : {}),
+      } satisfies EpubJobValue
     }
     case 'images': {
       const m = await deps.pdfium()
@@ -400,11 +459,23 @@ export async function runStructureJob(
           ? deps.translatedPdfWriter
           : plugins.translatedPdfWriter
       if (!write) throw new NotAvailableError('translated PDF write-back is not available yet')
+      const tree = await withAiReadings(
+        job.tree ?? (await extract(bytes, job.source, deps, onProgress)).tree,
+        docHash,
+        deps,
+      )
+      const ocr = deps.ocr()
       const result = await write({
         pdfium: await deps.pdfium(),
         pdf: bytes,
         ...(job.source.password !== undefined ? { password: job.source.password } : {}),
+        docHash,
+        tree,
         payload: job.payload,
+        translations: deps.translations ?? null,
+        hbSubsetWasm: deps.hbSubsetWasm ?? null,
+        ...(ocr ? { ocr } : {}),
+        ...(deps.writebackFontLocator ? { fontLocator: deps.writebackFontLocator } : {}),
         onProgress,
       })
       await atomicWriteFile(job.outPath, result.pdf)

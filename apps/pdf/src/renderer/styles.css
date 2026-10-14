@@ -4883,6 +4883,71 @@ button {
   transition: width var(--transition-fast);
 }
 
+/* ── document translation: window, confirmation, result report ── */
+
+.pdf-translate-dialog,
+.pdf-translate-report {
+  width: 500px;
+}
+
+.pdf-translate-formats .pdf-modal-check[data-disabled] {
+  color: var(--text-dim);
+}
+
+.pdf-translate-note {
+  flex: 1 1 100%;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.pdf-translate-bilingual {
+  flex: 1 1 100%;
+}
+
+.pdf-translate-refusal {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.pdf-translate-warning {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--pdf-sig-warn);
+}
+
+.pdf-translate-restart {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  font-size: 12.5px;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-inline-start: 3px solid var(--pdf-sig-warn);
+  border-radius: 6px;
+}
+
+.pdf-translate-restart p {
+  margin: 0;
+}
+
+.pdf-translate-actions {
+  flex-wrap: wrap;
+}
+
+.pdf-translate-report-part {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pdf-translate-report-head {
+  font-size: 12.5px;
+  color: var(--text);
+}
+
 .pdf-search-ai {
   position: absolute;
   top: calc(100% + 4px);

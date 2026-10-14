@@ -4,7 +4,7 @@
  * what happened and a close button. Presentational and kind-agnostic: the
  * caller words the lines (AI page reading, translation).
  */
-import type { ReactElement } from 'react'
+import type { ReactElement, ReactNode } from 'react'
 import type { TFunc } from '../i18n/locale'
 import type { DocumentJobView } from './job-session'
 
@@ -14,6 +14,8 @@ export interface JobProgressStripProps {
   title: string
   /** further lines (the page in flight, failed pages, the reason it stopped) */
   details?: readonly string[]
+  /** buttons before Close once the job ended (a stopped translation's choices) */
+  actions?: ReactNode
   t: TFunc
   onStop: () => void
   onClose: () => void
@@ -23,6 +25,7 @@ export function JobProgressStrip({
   view,
   title,
   details = [],
+  actions,
   t,
   onStop,
   onClose,
@@ -61,9 +64,12 @@ export function JobProgressStrip({
           {view.stopping ? t('arStopping') : t('arStop')}
         </button>
       ) : (
-        <button type="button" className="pdf-modal-btn" data-action="close-job" onClick={onClose}>
-          {t('arClose')}
-        </button>
+        <>
+          {actions}
+          <button type="button" className="pdf-modal-btn" data-action="close-job" onClick={onClose}>
+            {t('arClose')}
+          </button>
+        </>
       )}
     </div>
   )
