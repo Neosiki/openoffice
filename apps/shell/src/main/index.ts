@@ -189,6 +189,7 @@ import { convertPdfFileToDocxLocalWithPrompt, PdfLoadError } from './pdf2docx-lo
 import { convertPdfFileToPptxLocalWithPrompt } from './pdf2pptx-local'
 import { convertPdfFileToXlsxLocalWithPrompt } from './pdf2xlsx-local'
 import { closePdfPasswordDialog, promptPdfPassword } from './pdf-password-dialog'
+import { registerPdfStructureIpc } from './pdf-structure-ipc'
 import {
   configureMarkdownRuntime,
   exportMarkdownPdfHeadless,
@@ -5452,6 +5453,7 @@ registerIntegrationsIpc({
 })
 registerTabsIpc()
 registerDroppedFilesIpc()
+registerPdfStructureIpc()
 
 // sheets' project:resolveChat goes through the handler registered by docs-main; the sessionId reverse lookup hooks in here
 setSessionPathResolver(resolveSheetsSessionPath)

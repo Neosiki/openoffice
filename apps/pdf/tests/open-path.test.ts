@@ -66,7 +66,12 @@ vi.mock('electron', () => ({
 }))
 
 import { PDF_CHANNELS } from '../src/shared/ipc'
-import { configurePdfRuntime, createPdfView, pdfIsDirty } from '../src/main/pdf-main'
+import {
+  configurePdfRuntime,
+  createPdfView,
+  pdfIsDirty,
+  pdfPathGranted,
+} from '../src/main/pdf-main'
 import type { CreateDocumentRequest, CreateDocumentResult } from '../src/shared/ipc'
 
 function makePdfFile(): string {
@@ -108,6 +113,20 @@ describe('pdf open-path lifecycle', () => {
     expect(pdfIsDirty(wc.id)).toBe(true)
     wc.listeners.get('did-start-loading')?.()
     expect(pdfIsDirty(wc.id)).toBe(false)
+  })
+})
+
+describe('pdfPathGranted (the shell structure-job handlers use it)', () => {
+  it("is true only for the view's own file, and only while the view lives", () => {
+    const path = makePdfFile()
+    createPdfView(path)
+    const wc = lastWebContents
+    expect(pdfPathGranted(wc.id, path)).toBe(true)
+    expect(pdfPathGranted(wc.id, `${path}.other`)).toBe(false)
+    expect(pdfPathGranted(wc.id, 42)).toBe(false)
+    expect(pdfPathGranted(wc.id + 1000, path)).toBe(false)
+    wc.listeners.get('destroyed')?.()
+    expect(pdfPathGranted(wc.id, path)).toBe(false)
   })
 })
 

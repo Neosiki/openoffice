@@ -1,0 +1,361 @@
+/**
+ * What a structure-job process does with its one job. Node-only and
+ * Electron-free (pdf-structure-process.ts wires it to the parent port; the tests call
+ * it directly with a real PDFium).
+ *
+ * The source PDF is only read. Results go to the target the user picked:
+ * Markdown writes `<name>.md`, its pictures under `assets/` and the editor's
+ * app-owned list `assets/.genoffice-assets.json` (merged, never replaced);
+ * an `assets/` file the list does not own is never overwritten.
+ */
+import { createHash } from 'node:crypto'
+import { mkdir, readFile, unlink, writeFile } from 'node:fs/promises'
+import { basename, dirname, join } from 'node:path'
+import type { OcrEngine, PdfiumModule } from '../../../../../packages/pdf2docx/src'
+import { withPdfDocument } from '../../../../../packages/pdf2docx/src/extract/pdfium'
+import { renderPageByIndexPng } from '../../../../../packages/pdf2docx/src/extract'
+import {
+  ASSET_MANIFEST_FILENAME,
+  ASSETS_DIR,
+  deriveBilingualTree,
+  deriveTranslatedTree,
+  extractDocumentTree,
+  extractEmbeddedImages,
+  mergeAssetManifest,
+  PageRangeError,
+  parseAssetManifest,
+  treeToMarkdown,
+  writeEpub,
+  type DocumentTree,
+  type InlineRun,
+  type MarkdownConversion,
+  type OwnedAssetRecord,
+} from '../../../../../packages/pdf-structure/src'
+import { pageFingerprint } from '../../../../../packages/pdf-structure/src/tree/pdfium-doc'
+import { documentHash } from '../../../../../packages/pdf-structure/src/store'
+import { atomicWriteFile } from '../atomic-write'
+import * as plugins from './plugins'
+import type { StructuredTextFormatter, TranslatedPdfWriter } from './plugins'
+import type {
+  EpubJobValue,
+  FingerprintsJobValue,
+  ImagesJobValue,
+  JobSource,
+  MarkdownJobValue,
+  StructuredTextJobValue,
+  StructureJob,
+  TranslationInput,
+  TreeJobValue,
+  WriteBackJobValue,
+} from './protocol'
+
+export interface JobDeps {
+  pdfium: () => Promise<PdfiumModule>
+  ocr: () => OcrEngine | null
+  /** EPUB modified date (tests pin it) */
+  now?: () => Date
+  /** overrides plugins.structuredTextFormatter (tests) */
+  structuredTextFormatter?: StructuredTextFormatter | null
+  /** overrides plugins.translatedPdfWriter (tests) */
+  translatedPdfWriter?: TranslatedPdfWriter | null
+}
+
+export type ProgressSink = (done: number, total: number) => void
+
+/** `assets/` holds a file of that name the app does not own, or an unreadable list */
+export class AssetConflictError extends Error {
+  constructor(message: string, options?: ErrorOptions) {
+    super(message, options)
+    this.name = 'AssetConflictError'
+  }
+}
+
+/** the operation's function is not plugged in yet (see plugins.ts) */
+export class NotAvailableError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'NotAvailableError'
+  }
+}
+
+/** cover render scale: pixels per point (about 108 dpi) */
+const COVER_SCALE = 1.5
+
+const sha256 = (data: Uint8Array): string => createHash('sha256').update(data).digest('hex')
+
+const isNotFound = (err: unknown): boolean =>
+  (err as NodeJS.ErrnoException | undefined)?.code === 'ENOENT'
+const isExists = (err: unknown): boolean =>
+  (err as NodeJS.ErrnoException | undefined)?.code === 'EEXIST'
+
+async function readSource(source: JobSource): Promise<{ bytes: Uint8Array; docHash: string }> {
+  const buf = await readFile(source.pdfPath)
+  const bytes = new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength)
+  return { bytes, docHash: documentHash(bytes) }
+}
+
+async function extract(
+  bytes: Uint8Array,
+  source: JobSource,
+  deps: JobDeps,
+  onProgress: ProgressSink,
+): Promise<{ tree: DocumentTree; fingerprints: TreeJobValue['fingerprints'] }> {
+  const ocr = deps.ocr()
+  return extractDocumentTree(bytes, {
+    pdfium: await deps.pdfium(),
+    ...(source.password !== undefined ? { password: source.password } : {}),
+    ...(source.pages !== undefined ? { pages: source.pages } : {}),
+    ...(ocr ? { ocr } : {}),
+    onProgress,
+  })
+}
+
+function applyTranslation(tree: DocumentTree, translation: TranslationInput | undefined) {
+  if (!translation) return tree
+  const tr = new Map<string, InlineRun[]>(translation.units.map((u) => [u.key, u.runs]))
+  return translation.bilingual
+    ? deriveBilingualTree(tree, translation.lang, tr)
+    : deriveTranslatedTree(tree, translation.lang, tr)
+}
+
+/** 1-based page numbers to read: the source's, checked, or every page */
+function pagesOf(m: PdfiumModule, bytes: Uint8Array, source: JobSource): number[] {
+  const count = withPdfDocument(m, bytes, (doc) => m._FPDF_GetPageCount(doc), source.password)
+  if (source.pages === undefined) return Array.from({ length: count }, (_, i) => i + 1)
+  const bad = source.pages.filter((p) => !Number.isInteger(p) || p < 1 || p > count)
+  if (source.pages.length === 0 || bad.length > 0) {
+    throw new PageRangeError(count, bad.length > 0 ? `page ${bad.join(', ')}` : 'empty range')
+  }
+  return [...new Set(source.pages)]
+}
+
+/** write `data` only when nothing is at `path`; false when something is */
+async function writeNew(path: string, data: Uint8Array): Promise<boolean> {
+  try {
+    await writeFile(path, data, { flag: 'wx' })
+    return true
+  } catch (err) {
+    if (isExists(err)) return false
+    // a partial file of ours must not stay behind as an unowned name
+    await unlink(path).catch(() => {})
+    throw err
+  }
+}
+
+async function readOptional(path: string): Promise<Buffer | null> {
+  try {
+    return await readFile(path)
+  } catch (err) {
+    if (isNotFound(err)) return null
+    throw err
+  }
+}
+
+/**
+ * Write a Markdown conversion next to `outPath`. Order: pictures, then the
+ * asset list, then the .md text, so the text never points at a picture that
+ * is not there. Every conflict is found before anything is written.
+ */
+export async function writeMarkdownOutput(
+  outPath: string,
+  conversion: MarkdownConversion,
+): Promise<{ assetsWritten: number; assetsReused: number }> {
+  const assetsDir = join(dirname(outPath), ASSETS_DIR)
+  const manifestPath = join(assetsDir, ASSET_MANIFEST_FILENAME)
+  const existingBuf = await readOptional(manifestPath)
+  const existing = existingBuf === null ? null : existingBuf.toString('utf8')
+  let owned: Map<string, string>
+  try {
+    owned = new Map(parseAssetManifest(existing).files.map((r) => [r.name, r.sha256]))
+  } catch (err) {
+    throw new AssetConflictError(`${ASSETS_DIR}/${ASSET_MANIFEST_FILENAME} is unreadable`, {
+      cause: err,
+    })
+  }
+
+  const entries = new Map(conversion.manifestEntries.map((r) => [r.name, r]))
+  const toWrite: MarkdownConversion['assets'] = []
+  const records: OwnedAssetRecord[] = []
+  let reused = 0
+  for (const asset of conversion.assets) {
+    const record = entries.get(asset.name) ?? { name: asset.name, sha256: asset.sha256 }
+    const onDisk = await readOptional(join(assetsDir, asset.name))
+    if (onDisk === null) {
+      toWrite.push(asset)
+      records.push(record)
+      continue
+    }
+    if (sha256(onDisk) !== asset.sha256) {
+      throw new AssetConflictError(`${ASSETS_DIR}/${asset.name} already holds another file`)
+    }
+    reused++
+    // an identical file the user put there stays theirs: referenced, not owned
+    if (owned.get(asset.name) === asset.sha256) records.push(record)
+  }
+
+  let manifestText: string | null = null
+  if (records.length > 0 || existing !== null) {
+    try {
+      manifestText = mergeAssetManifest(existing, basename(outPath), records)
+    } catch (err) {
+      throw new AssetConflictError(
+        `${ASSETS_DIR}/${ASSET_MANIFEST_FILENAME} cannot take these pictures`,
+        { cause: err },
+      )
+    }
+  }
+
+  if (toWrite.length > 0) await mkdir(assetsDir, { recursive: true })
+  for (const asset of toWrite) {
+    if (await writeNew(join(assetsDir, asset.name), asset.data)) continue
+    // appeared since the check: only the same content may stand in
+    const now = await readOptional(join(assetsDir, asset.name))
+    if (now === null || sha256(now) !== asset.sha256) {
+      throw new AssetConflictError(`${ASSETS_DIR}/${asset.name} already holds another file`)
+    }
+  }
+  if (manifestText !== null && manifestText !== existing) {
+    await atomicWriteFile(manifestPath, new TextEncoder().encode(manifestText))
+  }
+  await atomicWriteFile(outPath, new TextEncoder().encode(conversion.markdown))
+  return { assetsWritten: toWrite.length, assetsReused: reused }
+}
+
+const safeBaseName = (name: string): string =>
+  // eslint-disable-next-line no-control-regex -- stripping control chars is the point here
+  name.replace(/[\\/:*?"<>|\u0000-\u001f]/g, '_').trim() || 'image'
+
+/** write PNGs without replacing anything: `<base>-p<page>-<n>.png`, then ` (2)` … */
+async function writeImages(
+  outDir: string,
+  baseName: string,
+  images: ReadonlyArray<{ page: number; width: number; height: number; png: Uint8Array }>,
+  onProgress: ProgressSink,
+): Promise<ImagesJobValue['images']> {
+  const base = safeBaseName(baseName)
+  const perPage = new Map<number, number>()
+  const out: ImagesJobValue['images'] = []
+  for (const [i, image] of images.entries()) {
+    const n = (perPage.get(image.page) ?? 0) + 1
+    perPage.set(image.page, n)
+    const stem = `${base}-p${image.page}-${n}`
+    let file = join(outDir, `${stem}.png`)
+    for (let k = 2; !(await writeNew(file, image.png)); k++) {
+      file = join(outDir, `${stem} (${k}).png`)
+    }
+    out.push({ page: image.page, file, width: image.width, height: image.height })
+    onProgress(i + 1, images.length)
+  }
+  return out
+}
+
+/** run one job; resolves with the op's value, throws for the error message */
+export async function runStructureJob(
+  job: StructureJob,
+  deps: JobDeps,
+  onProgress: ProgressSink,
+): Promise<unknown> {
+  const { bytes, docHash } = await readSource(job.source)
+  switch (job.op) {
+    case 'tree': {
+      const { tree, fingerprints } = await extract(bytes, job.source, deps, onProgress)
+      return { docHash, tree, fingerprints } satisfies TreeJobValue
+    }
+    case 'structuredText': {
+      const format =
+        deps.structuredTextFormatter !== undefined
+          ? deps.structuredTextFormatter
+          : plugins.structuredTextFormatter
+      if (!format) throw new NotAvailableError('structured text is not available yet')
+      if (job.tree) return { docHash, pages: format(job.tree) } satisfies StructuredTextJobValue
+      const extracted = await extract(bytes, job.source, deps, onProgress)
+      return { docHash, pages: format(extracted.tree), extracted } satisfies StructuredTextJobValue
+    }
+    case 'markdown': {
+      const tree = job.tree ?? (await extract(bytes, job.source, deps, onProgress)).tree
+      const conversion = treeToMarkdown(applyTranslation(tree, job.translation))
+      const counts = await writeMarkdownOutput(job.outPath, conversion)
+      return {
+        docHash,
+        outPath: job.outPath,
+        warnings: conversion.warnings,
+        assetsWritten: counts.assetsWritten,
+        assetsReused: counts.assetsReused,
+      } satisfies MarkdownJobValue
+    }
+    case 'epub': {
+      const tree = job.tree ?? (await extract(bytes, job.source, deps, onProgress)).tree
+      const options = job.epub
+      let coverPng: Uint8Array | undefined
+      if (options.cover !== false) {
+        const m = await deps.pdfium()
+        coverPng = withPdfDocument(
+          m,
+          bytes,
+          (doc) => renderPageByIndexPng(m, doc, 0, COVER_SCALE)?.data,
+          job.source.password,
+        )
+      }
+      const alt = options.pageImageAlt
+      const epub = await writeEpub(applyTranslation(tree, job.translation), {
+        title: options.title,
+        ...(options.author !== undefined ? { author: options.author } : {}),
+        cover: options.cover !== false && coverPng !== undefined,
+        ...(coverPng ? { coverPng } : {}),
+        ...(options.language !== undefined ? { language: options.language } : {}),
+        ...(options.uiLanguage !== undefined ? { uiLanguage: options.uiLanguage } : {}),
+        ...(alt !== undefined
+          ? { pageImageAlt: (page: number) => alt.split('{page}').join(String(page)) }
+          : {}),
+        ...(deps.now ? { modified: deps.now() } : {}),
+      })
+      await atomicWriteFile(job.outPath, epub)
+      return { docHash, outPath: job.outPath } satisfies EpubJobValue
+    }
+    case 'images': {
+      const m = await deps.pdfium()
+      const pages = pagesOf(m, bytes, job.source)
+      onProgress(0, pages.length)
+      const images = extractEmbeddedImages(m, bytes, pages, {
+        ...(job.source.password !== undefined ? { password: job.source.password } : {}),
+        ...(job.minImagePx !== undefined ? { minImagePx: job.minImagePx } : {}),
+      })
+      const written = await writeImages(job.outDir, job.baseName, images, onProgress)
+      return { docHash, outDir: job.outDir, images: written } satisfies ImagesJobValue
+    }
+    case 'fingerprints': {
+      const m = await deps.pdfium()
+      const fingerprints = withPdfDocument(
+        m,
+        bytes,
+        (doc) => {
+          const count = m._FPDF_GetPageCount(doc)
+          const out: string[] = []
+          for (let i = 0; i < count; i++) {
+            out.push(pageFingerprint(m, doc, i))
+            onProgress(i + 1, count)
+          }
+          return out
+        },
+        job.source.password,
+      )
+      return { docHash, fingerprints } satisfies FingerprintsJobValue
+    }
+    case 'writeBack': {
+      const write =
+        deps.translatedPdfWriter !== undefined
+          ? deps.translatedPdfWriter
+          : plugins.translatedPdfWriter
+      if (!write) throw new NotAvailableError('translated PDF write-back is not available yet')
+      const result = await write({
+        pdfium: await deps.pdfium(),
+        pdf: bytes,
+        ...(job.source.password !== undefined ? { password: job.source.password } : {}),
+        payload: job.payload,
+        onProgress,
+      })
+      await atomicWriteFile(job.outPath, result.pdf)
+      return { docHash, outPath: job.outPath, report: result.report } satisfies WriteBackJobValue
+    }
+  }
+}
