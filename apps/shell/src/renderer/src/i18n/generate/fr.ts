@@ -10,6 +10,7 @@ export const fr = {
   addMaterials: 'Ajouter des fichiers…',
   removeMaterial: 'Retirer',
   totalLine: '{n} fichiers · {size} au total',
+  totalLineOne: '{n} fichier · {size} au total',
   excludedLabel: 'Fichiers non retenus',
   reasonMissing: 'Le fichier est introuvable.',
   reasonUnsupported: 'Ce type de fichier ne peut pas être utilisé.',

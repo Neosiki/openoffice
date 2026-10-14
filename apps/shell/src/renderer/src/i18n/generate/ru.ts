@@ -10,6 +10,7 @@ export const ru = {
   addMaterials: 'Добавить файлы…',
   removeMaterial: 'Убрать',
   totalLine: 'Файлов: {n} · всего {size}',
+  totalLineOne: '{n} файл · всего {size}',
   excludedLabel: 'Не вошли в материалы',
   reasonMissing: 'Файл не найден.',
   reasonUnsupported: 'Файлы этого типа использовать нельзя.',

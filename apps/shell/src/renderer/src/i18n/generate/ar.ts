@@ -10,6 +10,7 @@ export const ar = {
   addMaterials: 'إضافة ملفات…',
   removeMaterial: 'إزالة',
   totalLine: '{n} ملفات · الإجمالي {size}',
+  totalLineOne: 'ملف واحد · الإجمالي {size}',
   excludedLabel: 'ملفات لم تُضمّن في المواد',
   reasonMissing: 'تعذّر العثور على الملف.',
   reasonUnsupported: 'لا يمكن استخدام هذا النوع من الملفات.',

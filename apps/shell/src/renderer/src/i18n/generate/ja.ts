@@ -10,6 +10,7 @@ export const ja = {
   addMaterials: 'ファイルを追加…',
   removeMaterial: '外す',
   totalLine: '資料 {n} 件 · 合計 {size}',
+  totalLineOne: '資料 {n} 件 · 合計 {size}',
   excludedLabel: '資料から外したファイル',
   reasonMissing: 'ファイルが見つかりません。',
   reasonUnsupported: 'この種類のファイルは使えません。',

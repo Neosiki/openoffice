@@ -228,7 +228,7 @@ export function GenerateWindow() {
           <div className="gen-total" data-testid="gen-total">
             {state.checking
               ? t('checking')
-              : t('totalLine', {
+              : t(state.readyCount === 1 ? 'totalLineOne' : 'totalLine', {
                   n: state.readyCount,
                   size: formatBytes(state.totalBytes, state.lang),
                 })}

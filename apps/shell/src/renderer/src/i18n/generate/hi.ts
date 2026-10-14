@@ -10,6 +10,7 @@ export const hi = {
   addMaterials: 'फ़ाइलें जोड़ें…',
   removeMaterial: 'हटाएँ',
   totalLine: '{n} फ़ाइलें · कुल {size}',
+  totalLineOne: '{n} फ़ाइल · कुल {size}',
   excludedLabel: 'सामग्री से बाहर रखी गई फ़ाइलें',
   reasonMissing: 'फ़ाइल नहीं मिली।',
   reasonUnsupported: 'इस प्रकार की फ़ाइल का उपयोग नहीं किया जा सकता।',

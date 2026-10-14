@@ -10,6 +10,7 @@ export const pt = {
   addMaterials: 'Adicionar arquivos…',
   removeMaterial: 'Remover',
   totalLine: '{n} arquivos · {size} no total',
+  totalLineOne: '{n} arquivo · {size} no total',
   excludedLabel: 'Arquivos deixados de fora',
   reasonMissing: 'O arquivo não foi encontrado.',
   reasonUnsupported: 'Este tipo de arquivo não pode ser usado.',

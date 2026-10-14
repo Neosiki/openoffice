@@ -10,6 +10,7 @@ export const es = {
   addMaterials: 'Añadir archivos…',
   removeMaterial: 'Quitar',
   totalLine: '{n} archivos · {size} en total',
+  totalLineOne: '{n} archivo · {size} en total',
   excludedLabel: 'Archivos que no se usarán',
   reasonMissing: 'No se encuentra el archivo.',
   reasonUnsupported: 'Este tipo de archivo no se puede usar.',

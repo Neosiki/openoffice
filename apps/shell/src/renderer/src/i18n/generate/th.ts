@@ -10,6 +10,7 @@ export const th = {
   addMaterials: 'เพิ่มไฟล์…',
   removeMaterial: 'นำออก',
   totalLine: '{n} ไฟล์ · รวม {size}',
+  totalLineOne: '{n} ไฟล์ · รวม {size}',
   excludedLabel: 'ไฟล์ที่ไม่ได้นำมาใช้',
   reasonMissing: 'ไม่พบไฟล์',
   reasonUnsupported: 'ใช้ไฟล์ประเภทนี้ไม่ได้',
