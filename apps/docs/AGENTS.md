@@ -7,6 +7,7 @@ Word 문서(.docx) 에디터다. 그리고 배포되는 앱 전체에서 공용 
 - docx 편집 화면(`src/renderer/`): Tiptap 편집기와 확장(`editor/`), 쪽 나눔(`pagination*.ts`), 머리글·바닥글, 변경 내용 추적, 메모, 리본과 대화 상자(`components/`).
 - 메인 프로세스(`src/main/docs-main.ts`): 창과 뷰 생성, 열기·저장·내보내기·인쇄, 암호화된 docx(`docx-encryption.ts`), 큰 문서의 지연 미디어(`lazy-media.ts`), 디스크의 외부 변경 감지(`external-change.ts`), 최근 파일과 별표(`starred-files.ts`).
 - 공용 AI 핸들러 `registerAiIpc`: `ai:get-settings`, `ai:set-settings`, `ai:stream`, `ai:stream-cancel`, `ai:chat`, `ai:web-search`, `ai:image-search`, `ai:fetch-image`, `ai:tool-capabilities`, `ai:codex-models`, `ai:custom-models` 등과 구독 IPC 채널. 그 규칙은 Electron 없이 테스트되는 `src/main/ai-run.ts`에 있다.
+- 무료 연결 채널(`FREE_AI_IPC_CHANNELS`: `ai:free-connect`, `ai:free-connect-cancel`, `ai:free-disconnect`, `ai:free-quota`, `ai:free-open-key-page`)은 `src/main/free-ai-ipc.ts`의 `registerFreeAiIpc`가 `registerAiIpc` 안에서 등록한다. OpenRouter 브라우저 연결로 받은 키는 여기서 바로 설정 파일에 쓰고 화면에는 넘기지 않는다. 브라우저가 돌아온 뒤 보이는 페이지의 문구는 `src/main/free-ai-strings.ts`(21개 언어)다.
 - 문서 에디터의 AI 패널과 skill(`src/renderer/ai/`): `AiPanel.tsx`, `docs-skill.ts`, 도구(`tools.ts`, `*-ops.ts`), 편집 대기 카드(`edit-queue.ts`), 전송(`transport.ts`).
 - 다른 에디터가 쓰는 문서 생성 흐름 `createAiDocument`(시트와 PDF의 AI가 새 docx·pdf·md를 만들 때 이 함수로 들어온다)와 프로젝트 IPC(`registerProjectIpc`).
 

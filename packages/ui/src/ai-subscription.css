@@ -180,6 +180,15 @@
   color: var(--text-secondary);
 }
 
+/* nothing is connected: the free connections in Settings are the other way in */
+.ai-sub-free {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
 /* a run that stopped because its connection cannot go on */
 .ai-sub-blocked {
   display: flex;

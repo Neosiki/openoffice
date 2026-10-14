@@ -10,6 +10,9 @@ import type {
   AiStreamChunk,
   AiStreamRequest,
   CodexModelCatalog,
+  FreeAiConnectResult,
+  FreeAiProviderId,
+  FreeAiQuota,
 } from '@genoffice/ai-provider'
 import type { UpdateChannel, UpdateUiState } from './update-api'
 import type { KbFileInfo, KbReadPage, KbSearchHit } from '@genoffice/agent-core'
@@ -370,6 +373,22 @@ export interface HomeApi {
     provider: AiSearchProviderId
     apiKey: string
   }): Promise<{ ok: boolean; error?: string }>
+  /**
+   * Make a free connection: OpenRouter through its browser sign-in (resolves
+   * once the browser came back, failed or was cancelled), Gemini by checking a
+   * pasted key. On success the main process has stored it as the AI in use.
+   */
+  connectFreeAi(
+    input: { provider: 'openrouter' } | { provider: 'gemini'; apiKey: string },
+  ): Promise<FreeAiConnectResult>
+  /** stop an OpenRouter browser sign-in that is still waiting */
+  cancelFreeAiConnect(): Promise<void>
+  /** forget a free connection's key; a selection of it goes back to auto */
+  disconnectFreeAi(provider: FreeAiProviderId): Promise<void>
+  /** today's free requests, when the provider reports them (OpenRouter) */
+  getFreeAiQuota(provider: FreeAiProviderId): Promise<FreeAiQuota | null>
+  /** open the provider's page where a key is made */
+  openFreeAiKeyPage(provider: FreeAiProviderId): Promise<void>
 }
 
 export interface AiCatalogEntry extends AiProviderMeta {

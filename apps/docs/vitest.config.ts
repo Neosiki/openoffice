@@ -30,6 +30,9 @@ export default defineConfig({
       '@genoffice/ai-provider/custom-models': local(
         '../../packages/ai-provider/src/custom-models.ts',
       ),
+      '@genoffice/ai-provider/free-connect': local(
+        '../../packages/ai-provider/src/free-connect.ts',
+      ),
       '@genoffice/ai-provider/subscription': local(
         '../../packages/ai-provider/src/subscription.ts',
       ),

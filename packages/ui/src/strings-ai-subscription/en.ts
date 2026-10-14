@@ -27,13 +27,14 @@ export const en = {
   meteredWarning: 'This is not a subscription: you are charged for what you use.',
   meteredMeaning:
     'This login is an API key or a pay-as-you-go account, or its type could not be confirmed. "Use anyway" lets AI run on this connection, and every request is billed to that account.',
-  connectTitle: 'Connect a subscription to use AI',
+  connectTitle: 'Connect an AI to get started',
   connectBody:
     'AI runs on the Claude or Codex subscription you already have. No API key is needed.',
   connectProviderTitle: 'The {provider} connection cannot be used right now',
   connectKeyBody:
     'The {provider} setup is not finished. Complete it in Settings, or choose another AI.',
-  errNotConnected: 'No AI is connected. Connect a Claude or Codex subscription first.',
+  errNotConnected:
+    'No AI is connected. Connect a Claude or Codex subscription, or a free AI, first.',
   errNotInstalled: 'The {provider} program was not found on this PC.',
   errSignedOut: 'The {provider} sign-in has expired. Sign in again to continue.',
   errRateLimit: 'The {provider} subscription limit has been used up.',
@@ -46,6 +47,11 @@ export const en = {
   errHeadlessLimit: 'The hourly limit for automatic requests has been reached.',
   errHeadlessLimitReset:
     'The hourly limit for automatic requests has been reached. Requests are possible again at {time}.',
+  connectFreeHint: 'No subscription? You can connect a free AI in Settings in about a minute.',
+  actionConnectFree: 'Connect a free AI',
+  errFreeLimit:
+    "Today's free allowance is used up. Try again tomorrow, or choose another AI in Settings.",
+  errFreeLimitReset: "Today's free allowance is used up. You can use it again at {time}.",
   continueWith: 'Continue with {provider}',
   continueMeteredNote:
     'The {provider} connection is not a subscription: continuing is charged by usage.',

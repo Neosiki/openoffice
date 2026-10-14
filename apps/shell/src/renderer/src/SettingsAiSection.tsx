@@ -14,6 +14,7 @@ import {
 import type { Lang } from '@genoffice/i18n'
 import { AI_SUBSCRIPTION_PROVIDERS, selectAiProvider } from '@genoffice/ai-provider/browser'
 import type { AiSettings, AiSubscriptionProviderId } from '@genoffice/ai-provider/browser'
+import { FreeAiCards } from './FreeAiCards'
 import type { TFunc } from './locale'
 import type { SubscriptionConnection } from './subscription-client'
 import {
@@ -250,6 +251,11 @@ export function AiSection({
           </Fragment>
         ))}
       </div>
+      <h4 className="set-pane-subtitle set-sub-title free-ai-title" id="set-free-ai">
+        {t('setFreeTitle')}
+      </h4>
+      <div className="set-field-desc set-ai-note">{t('setFreeDesc')}</div>
+      <FreeAiCards t={t} />
       {settings && (
         <>
           <div className="set-field">

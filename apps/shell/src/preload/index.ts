@@ -4,7 +4,10 @@ import {
   AI_MEDIA_PROVIDERS,
   AI_PROVIDERS,
   AI_SEARCH_PROVIDERS,
+  FREE_AI_IPC_CHANNELS,
   SUBSCRIPTION_IPC_CHANNELS,
+  freeAiConnectResultOf,
+  freeAiQuotaOf,
   getProviderAdapter,
 } from '@genoffice/ai-provider/browser'
 import type { AiSettings, CodexModelCatalog } from '@genoffice/ai-provider/browser'
@@ -517,6 +520,21 @@ const homeApi: HomeApi = {
     return raw.ok === true
       ? { ok: true }
       : { ok: false, error: typeof raw.error === 'string' ? raw.error : 'Connection failed' }
+  },
+  async connectFreeAi(input) {
+    return freeAiConnectResultOf(await ipcRenderer.invoke(FREE_AI_IPC_CHANNELS.connect, input))
+  },
+  async cancelFreeAiConnect() {
+    await ipcRenderer.invoke(FREE_AI_IPC_CHANNELS.cancel)
+  },
+  async disconnectFreeAi(provider) {
+    await ipcRenderer.invoke(FREE_AI_IPC_CHANNELS.disconnect, { provider })
+  },
+  async getFreeAiQuota(provider) {
+    return freeAiQuotaOf(await ipcRenderer.invoke(FREE_AI_IPC_CHANNELS.quota, { provider }))
+  },
+  async openFreeAiKeyPage(provider) {
+    await ipcRenderer.invoke(FREE_AI_IPC_CHANNELS.openKeyPage, { provider })
   },
 }
 

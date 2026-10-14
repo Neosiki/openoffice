@@ -197,6 +197,7 @@ import {
   toggleStarredItem,
   writeStarredItems,
 } from './starred-files'
+import { registerFreeAiIpc } from './free-ai-ipc'
 import { initDocsAutoUpdater } from './updater'
 import { registerZoteroIpc, teardownZoteroIpc } from './zotero-ipc'
 
@@ -3822,6 +3823,18 @@ export function registerAiIpc(): void {
     }
     writeJsonAtomic(SETTINGS_PATH(), sanitized)
     broadcastAiSettingsChanged()
+  })
+
+  registerFreeAiIpc({
+    readSettings: storedAiSettings,
+    writeSettings: (settings) => {
+      const sanitized = sanitizeAiSettings(settings)
+      if (!sanitized) return false
+      writeJsonAtomic(SETTINGS_PATH(), sanitized)
+      broadcastAiSettingsChanged()
+      return true
+    },
+    windowFor: hostWindowFor,
   })
 
   ipcMain.handle('ai:codex-models', async (_event, cliPath: unknown) => {

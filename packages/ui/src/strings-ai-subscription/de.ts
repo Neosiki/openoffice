@@ -31,14 +31,14 @@ export const de = {
   meteredWarning: 'Das ist kein Abonnement: Abgerechnet wird nach Verbrauch.',
   meteredMeaning:
     'Diese Anmeldung nutzt einen API-Schlüssel oder ein Konto mit nutzungsbasierter Abrechnung, oder ihre Art ließ sich nicht feststellen. Mit „Trotzdem verwenden“ läuft die KI über diese Verbindung, und jede Anfrage wird diesem Konto berechnet.',
-  connectTitle: 'Abonnement verbinden, um die KI zu nutzen',
+  connectTitle: 'KI verbinden, um loszulegen',
   connectBody:
     'Die KI läuft über Ihr vorhandenes Claude- oder Codex-Abonnement. Ein API-Schlüssel ist nicht nötig.',
   connectProviderTitle: 'Die Verbindung {provider} ist derzeit nicht nutzbar',
   connectKeyBody:
     'Die Einrichtung von {provider} ist noch nicht abgeschlossen. Schließen Sie sie in den Einstellungen ab oder wählen Sie eine andere KI.',
   errNotConnected:
-    'Es ist keine KI verbunden. Verbinden Sie zuerst ein Claude- oder Codex-Abonnement.',
+    'Es ist keine KI verbunden. Verbinden Sie zuerst ein Claude- oder Codex-Abonnement oder eine kostenlose KI.',
   errNotInstalled: 'Das Programm {provider} wurde auf diesem PC nicht gefunden.',
   errSignedOut:
     'Die Anmeldung bei {provider} ist abgelaufen. Melden Sie sich erneut an, um fortzufahren.',
@@ -54,6 +54,13 @@ export const de = {
   errHeadlessLimit: 'Das Stundenlimit für automatische Anfragen ist erreicht.',
   errHeadlessLimitReset:
     'Das Stundenlimit für automatische Anfragen ist erreicht. Anfragen sind ab {time} wieder möglich.',
+  connectFreeHint:
+    'Kein Abonnement? In den Einstellungen verbinden Sie in etwa einer Minute eine kostenlose KI.',
+  actionConnectFree: 'Kostenlose KI verbinden',
+  errFreeLimit:
+    'Das kostenlose Kontingent für heute ist aufgebraucht. Versuchen Sie es morgen erneut oder wählen Sie in den Einstellungen eine andere KI.',
+  errFreeLimitReset:
+    'Das kostenlose Kontingent für heute ist aufgebraucht. Ab {time} können Sie es wieder nutzen.',
   continueWith: 'Mit {provider} fortfahren',
   continueMeteredNote:
     'Die Verbindung {provider} ist kein Abonnement: Beim Fortfahren wird nach Verbrauch abgerechnet.',

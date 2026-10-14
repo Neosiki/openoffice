@@ -29,13 +29,14 @@ export const pl = {
   meteredWarning: 'To nie jest subskrypcja: płacisz za faktyczne zużycie.',
   meteredMeaning:
     'To logowanie korzysta z klucza API lub konta rozliczanego za zużycie albo nie udało się ustalić jego rodzaju. Po wybraniu „Użyj mimo to” AI będzie działać przez to połączenie, a każde żądanie obciąży to konto.',
-  connectTitle: 'Połącz subskrypcję, aby korzystać z AI',
+  connectTitle: 'Połącz AI, aby zacząć',
   connectBody:
     'AI działa w ramach subskrypcji Claude lub Codex, którą już masz. Klucz API nie jest potrzebny.',
   connectProviderTitle: 'Połączenie {provider} jest teraz niedostępne',
   connectKeyBody:
     'Konfiguracja dostawcy {provider} nie została ukończona. Dokończ ją w Ustawieniach lub wybierz inne AI.',
-  errNotConnected: 'Żadne AI nie jest połączone. Najpierw połącz subskrypcję Claude lub Codex.',
+  errNotConnected:
+    'Żadne AI nie jest połączone. Najpierw połącz subskrypcję Claude lub Codex albo darmowe AI.',
   errNotInstalled: 'Na tym komputerze nie znaleziono programu {provider}.',
   errSignedOut: 'Logowanie do {provider} wygasło. Zaloguj się ponownie, aby kontynuować.',
   errRateLimit: 'Limit subskrypcji {provider} został wyczerpany.',
@@ -49,6 +50,12 @@ export const pl = {
   errHeadlessLimit: 'Osiągnięto godzinny limit żądań automatycznych.',
   errHeadlessLimitReset:
     'Osiągnięto godzinny limit żądań automatycznych. Będą znów możliwe o {time}.',
+  connectFreeHint: 'Nie masz subskrypcji? W Ustawieniach połączysz darmowe AI w około minutę.',
+  actionConnectFree: 'Połącz darmowe AI',
+  errFreeLimit:
+    'Dzisiejszy darmowy limit został wykorzystany. Spróbuj ponownie jutro lub wybierz inne AI w Ustawieniach.',
+  errFreeLimitReset:
+    'Dzisiejszy darmowy limit został wykorzystany. Możesz znów korzystać o {time}.',
   continueWith: 'Kontynuuj z {provider}',
   continueMeteredNote:
     'Połączenie {provider} nie jest subskrypcją: dalsza praca jest płatna za zużycie.',

@@ -27,13 +27,14 @@ export const id = {
   meteredWarning: 'Ini bukan langganan: Anda ditagih sesuai pemakaian.',
   meteredMeaning:
     'Login ini memakai kunci API atau akun bayar sesuai pemakaian, atau jenisnya tidak dapat dipastikan. Dengan "Tetap gunakan", AI berjalan melalui koneksi ini dan setiap permintaan ditagihkan ke akun tersebut.',
-  connectTitle: 'Hubungkan langganan untuk memakai AI',
+  connectTitle: 'Hubungkan AI untuk memulai',
   connectBody:
     'AI berjalan dengan langganan Claude atau Codex yang sudah Anda miliki. Kunci API tidak diperlukan.',
   connectProviderTitle: 'Koneksi {provider} belum bisa dipakai saat ini',
   connectKeyBody:
     'Penyiapan {provider} belum selesai. Selesaikan di Pengaturan, atau pilih AI lain.',
-  errNotConnected: 'Belum ada AI yang terhubung. Hubungkan dulu langganan Claude atau Codex.',
+  errNotConnected:
+    'Belum ada AI yang terhubung. Hubungkan dulu langganan Claude atau Codex, atau AI gratis.',
   errNotInstalled: 'Program {provider} tidak ditemukan di PC ini.',
   errSignedOut: 'Sesi masuk {provider} sudah berakhir. Masuk lagi untuk melanjutkan.',
   errRateLimit: 'Batas langganan {provider} sudah habis.',
@@ -46,6 +47,12 @@ export const id = {
   errHeadlessLimit: 'Batas per jam untuk permintaan otomatis sudah tercapai.',
   errHeadlessLimitReset:
     'Batas per jam untuk permintaan otomatis sudah tercapai. Permintaan bisa dilakukan lagi pada {time}.',
+  connectFreeHint:
+    'Tidak punya langganan? Anda bisa menghubungkan AI gratis di Pengaturan dalam sekitar satu menit.',
+  actionConnectFree: 'Hubungkan AI gratis',
+  errFreeLimit:
+    'Jatah gratis hari ini sudah habis. Coba lagi besok, atau pilih AI lain di Pengaturan.',
+  errFreeLimitReset: 'Jatah gratis hari ini sudah habis. Anda bisa memakainya lagi pada {time}.',
   continueWith: 'Lanjutkan dengan {provider}',
   continueMeteredNote:
     'Koneksi {provider} bukan langganan: melanjutkan akan ditagih sesuai pemakaian.',

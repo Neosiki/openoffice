@@ -397,6 +397,34 @@ describe('AiConnectPrompt', () => {
     expect(actions.onInstall).toHaveBeenCalledExactlyOnceWith('codex')
   })
 
+  it('points to the free connections when nothing is connected and settings can be opened', () => {
+    const onOpenSettings = vi.fn()
+    render(
+      defaultAiSettings(),
+      {
+        'claude-code': status('claude-code', 'not-installed'),
+        codex: status('codex', 'signed-out'),
+      },
+      { onOpenSettings },
+    )
+    expect(host.querySelector('[data-note="connectFreeHint"]')!.textContent).toBe(
+      en.connectFreeHint,
+    )
+    click('[data-action="connect-free"]')
+    expect(onOpenSettings).toHaveBeenCalledOnce()
+  })
+
+  it('offers no free way in for a selected provider that cannot run, or without a settings page', () => {
+    render(
+      { ...defaultAiSettings(), provider: 'codex' },
+      { codex: status('codex', 'signed-out') },
+      { onOpenSettings: vi.fn() },
+    )
+    expect(host.querySelector('[data-action="connect-free"]')).toBeNull()
+    render(defaultAiSettings(), { codex: status('codex', 'signed-out') })
+    expect(host.querySelector('[data-action="connect-free"]')).toBeNull()
+  })
+
   it('shows a provider that has not reported yet as checking', () => {
     render(defaultAiSettings(), {})
     expect(cards()).toEqual([

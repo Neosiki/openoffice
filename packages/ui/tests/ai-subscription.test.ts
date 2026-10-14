@@ -253,6 +253,8 @@ describe('aiConnectPromptView', () => {
       bodyKey: 'connectBody',
       providers: ['claude-code', 'codex'],
       settings: false,
+      // with nothing connected, the free connections are the other way in
+      free: true,
     })
   })
 
@@ -267,6 +269,7 @@ describe('aiConnectPromptView', () => {
       providerName: 'Codex',
       providers: ['codex'],
       settings: false,
+      free: false,
     })
   })
 
@@ -278,6 +281,7 @@ describe('aiConnectPromptView', () => {
       providerName: 'Gemini',
       providers: [],
       settings: true,
+      free: false,
     })
   })
 })
@@ -366,7 +370,7 @@ describe('aiRunErrorText', () => {
 
   it('words every kind of the subscription contract in English', () => {
     expect(aiRunErrorText('en', { kind: 'not-connected' })).toBe(
-      'No AI is connected. Connect a Claude or Codex subscription first.',
+      'No AI is connected. Connect a Claude or Codex subscription, or a free AI, first.',
     )
     expect(aiRunErrorText('en', { kind: 'not-installed', provider: 'codex' })).toBe(
       'The Codex program was not found on this PC.',
@@ -394,6 +398,12 @@ describe('aiRunErrorText', () => {
     )
     expect(aiRunErrorText('en', { kind: 'headless-limit', resetsAt }, now)).toBe(
       `The hourly limit for automatic requests has been reached. Requests are possible again at ${time}.`,
+    )
+    expect(aiRunErrorText('en', { kind: 'free-limit' })).toBe(
+      "Today's free allowance is used up. Try again tomorrow, or choose another AI in Settings.",
+    )
+    expect(aiRunErrorText('en', { kind: 'free-limit', resetsAt }, now)).toBe(
+      `Today's free allowance is used up. You can use it again at ${time}.`,
     )
   })
 

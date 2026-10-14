@@ -36,6 +36,16 @@ Kartu yang sama muncul di langkah kedua layar selamat datang saat aplikasi perta
 
 Koneksi diperiksa saat aplikasi dimulai, saat Anda membuka Pengaturan, dan saat Anda kembali ke jendela setelah memulai pemasangan atau proses masuk.
 
+## Tanpa langganan: AI gratis
+
+Tidak punya langganan Claude atau ChatGPT? Di Pengaturan ▸ AI, **Pakai gratis** menghubungkan AI gratis sebagai gantinya. Kartu yang sama muncul di langkah kedua layar selamat datang, dan panel AI menawarkan **Hubungkan AI gratis** ketika belum ada yang terhubung.
+
+- **OpenRouter**: tekan **Hubungkan di browser**. Browser Anda membuka OpenRouter; daftar atau masuk, lalu izinkan akses. Setelah browser menyatakan sudah terhubung, tutup tab itu dan kembalilah. Tidak ada kunci yang perlu disalin, dan kartu menampilkan sisa permintaan gratis hari ini.
+- **Google Gemini**: tekan **Dapatkan kunci**, buat kunci di Google AI Studio, tempelkan ke kartu, lalu tekan **Hubungkan**. Hanya untuk yang berusia 18 tahun ke atas. Kunci yang dibuat di proyek Google dengan penagihan aktif bisa dikenai biaya.
+- Setelah terhubung, AI itu menjadi **AI yang digunakan**. Jika keduanya terhubung, **Pakai AI ini** di kartu akan beralih di antara keduanya. **Putuskan** menghapus kunci dari GenOffice.
+- Model gratis lebih lemah daripada model langganan, dan jumlah permintaan per hari terbatas. Satu kali pengeditan dokumen bisa memakai beberapa permintaan. Saat jatah hari ini habis, panel AI memberitahukannya, beserta kapan AI itu bisa dipakai lagi.
+- Selama Anda memakainya secara gratis, apa yang Anda kirim bisa dipakai untuk meningkatkan AI perusahaan itu. Berhati-hatilah dengan dokumen yang berisi data pribadi.
+
 ## Login bayar sesuai pemakaian
 
 Kartu yang bertuliskan **Sudah masuk, tetapi bukan dengan langganan** memuat peringatan: "Ini bukan langganan: Anda ditagih sesuai pemakaian."

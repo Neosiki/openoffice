@@ -28,12 +28,13 @@ export const vi = {
   meteredWarning: 'Đây không phải gói đăng ký: bạn bị tính phí theo mức sử dụng.',
   meteredMeaning:
     'Lần đăng nhập này dùng khóa API hoặc tài khoản trả phí theo mức sử dụng, hoặc không xác định được loại đăng nhập. Chọn "Vẫn sử dụng" để AI chạy qua kết nối này, và mỗi yêu cầu sẽ được tính vào tài khoản đó.',
-  connectTitle: 'Kết nối gói đăng ký để dùng AI',
+  connectTitle: 'Kết nối AI để bắt đầu',
   connectBody: 'AI chạy bằng gói đăng ký Claude hoặc Codex mà bạn đã có. Không cần khóa API.',
   connectProviderTitle: 'Kết nối {provider} hiện chưa dùng được',
   connectKeyBody:
     'Thiết lập {provider} chưa hoàn tất. Hãy hoàn tất trong Cài đặt hoặc chọn AI khác.',
-  errNotConnected: 'Chưa có AI nào được kết nối. Hãy kết nối gói đăng ký Claude hoặc Codex trước.',
+  errNotConnected:
+    'Chưa có AI nào được kết nối. Hãy kết nối gói đăng ký Claude hoặc Codex, hoặc một AI miễn phí trước.',
   errNotInstalled: 'Không tìm thấy chương trình {provider} trên máy tính này.',
   errSignedOut: 'Phiên đăng nhập {provider} đã hết hạn. Hãy đăng nhập lại để tiếp tục.',
   errRateLimit: 'Đã dùng hết giới hạn của gói đăng ký {provider}.',
@@ -48,6 +49,12 @@ export const vi = {
   errHeadlessLimit: 'Đã đạt giới hạn mỗi giờ cho các yêu cầu tự động.',
   errHeadlessLimitReset:
     'Đã đạt giới hạn mỗi giờ cho các yêu cầu tự động. Có thể gửi lại yêu cầu lúc {time}.',
+  connectFreeHint:
+    'Chưa có gói đăng ký? Bạn có thể kết nối AI miễn phí trong Cài đặt chỉ trong khoảng một phút.',
+  actionConnectFree: 'Kết nối AI miễn phí',
+  errFreeLimit:
+    'Đã dùng hết lượt miễn phí hôm nay. Hãy thử lại vào ngày mai hoặc chọn AI khác trong Cài đặt.',
+  errFreeLimitReset: 'Đã dùng hết lượt miễn phí hôm nay. Bạn có thể dùng lại lúc {time}.',
   continueWith: 'Tiếp tục với {provider}',
   continueMeteredNote:
     'Kết nối {provider} không phải gói đăng ký: tiếp tục sẽ bị tính phí theo mức sử dụng.',

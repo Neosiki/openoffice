@@ -191,7 +191,7 @@ export function AiConnectPrompt({
    * scrolls the prompt into view, so the user sees why nothing was sent
    */
   readonly attention?: number | undefined
-  /** open Settings › AI; offered when the selected key provider is not filled in */
+  /** open Settings › AI; offered when the selected key provider is not filled in, or nothing is connected (the free connections are there) */
   readonly onOpenSettings?: (() => void) | undefined
 }): React.JSX.Element | null {
   const view = aiConnectPromptView(choice)
@@ -229,6 +229,23 @@ export function AiConnectPrompt({
           {...actions}
         />
       ))}
+      {view.free && onOpenSettings && (
+        <div className="ai-sub-free">
+          <p className="ai-sub-note" data-note="connectFreeHint">
+            {aiSubscriptionText(lang, 'connectFreeHint')}
+          </p>
+          <div className="ai-sub-actions">
+            <button
+              type="button"
+              className="ai-sub-btn"
+              data-action="connect-free"
+              onClick={onOpenSettings}
+            >
+              {aiSubscriptionText(lang, 'actionConnectFree')}
+            </button>
+          </div>
+        </div>
+      )}
       {view.settings && onOpenSettings && (
         <div className="ai-sub-actions">
           <button

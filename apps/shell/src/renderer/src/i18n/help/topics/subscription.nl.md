@@ -36,6 +36,16 @@ Dezelfde kaarten verschijnen in de tweede stap van de welkomstschermen bij de ee
 
 De verbinding wordt gecontroleerd wanneer de app start, wanneer je Instellingen opent en wanneer je naar het venster terugkeert nadat je een installatie of een aanmelding hebt gestart.
 
+## Zonder abonnement: gratis AI
+
+Geen abonnement op Claude of ChatGPT? Onder Instellingen ▸ AI verbind je met **Gratis gebruiken** in plaats daarvan een gratis AI. Dezelfde kaarten staan in de tweede stap van de welkomstschermen, en het AI-paneel biedt **Gratis AI koppelen** aan wanneer er niets is verbonden.
+
+- **OpenRouter**: druk op **Verbinden in browser**. Je browser opent OpenRouter; maak een account of meld je aan, en geef toegang. Zegt de browser dat de verbinding er is, sluit dan het tabblad en kom terug. Er is geen sleutel om te kopiëren, en de kaart toont hoeveel gratis verzoeken er vandaag nog over zijn.
+- **Google Gemini**: druk op **Sleutel aanmaken**, maak een sleutel in Google AI Studio, plak die in de kaart en druk op **Verbinden**. Alleen voor wie 18 jaar of ouder is. Een sleutel uit een Google-project waarin facturering aanstaat, kan kosten opleveren.
+- Na het verbinden wordt die AI de **AI die wordt gebruikt**. Zijn ze allebei verbonden, dan wissel je met **Deze AI gebruiken** op een kaart tussen de twee. **Verbinding verbreken** verwijdert de sleutel uit GenOffice.
+- Gratis modellen zijn zwakker dan die van een abonnement, en het aantal verzoeken per dag is beperkt. Eén bewerking van een document kan er meerdere kosten. Is het tegoed van vandaag op, dan meldt het AI-paneel dat, en ook wanneer je de AI weer kunt gebruiken.
+- Zolang je het gratis gebruikt, kan wat je verstuurt worden gebruikt om de AI van dat bedrijf te verbeteren. Wees voorzichtig met documenten die persoonsgegevens bevatten.
+
 ## Aanmeldingen met betaling per verbruik
 
 Een kaart met **Aangemeld, maar niet met een abonnement** bevat een waarschuwing: "Dit is geen abonnement: je betaalt voor wat je gebruikt."

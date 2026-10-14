@@ -29,14 +29,14 @@ export const pt = {
   meteredWarning: 'Isto não é uma assinatura: você paga pelo que usar.',
   meteredMeaning:
     'Este login usa uma chave de API ou uma conta de pagamento por consumo, ou não foi possível confirmar o tipo. “Usar mesmo assim” permite que a IA funcione com esta conexão, e cada solicitação é cobrada dessa conta.',
-  connectTitle: 'Conecte uma assinatura para usar a IA',
+  connectTitle: 'Conecte uma IA para começar',
   connectBody:
     'A IA funciona com a assinatura do Claude ou do Codex que você já tem. Nenhuma chave de API é necessária.',
   connectProviderTitle: 'A conexão {provider} não pode ser usada agora',
   connectKeyBody:
     'A configuração de {provider} não foi concluída. Conclua-a nas Configurações ou escolha outra IA.',
   errNotConnected:
-    'Nenhuma IA está conectada. Conecte primeiro uma assinatura do Claude ou do Codex.',
+    'Nenhuma IA está conectada. Conecte primeiro uma assinatura do Claude ou do Codex, ou uma IA gratuita.',
   errNotInstalled: 'O programa {provider} não foi encontrado neste PC.',
   errSignedOut: 'O login em {provider} expirou. Entre novamente para continuar.',
   errRateLimit: 'O limite da assinatura {provider} foi atingido.',
@@ -51,6 +51,12 @@ export const pt = {
   errHeadlessLimit: 'O limite por hora de solicitações automáticas foi atingido.',
   errHeadlessLimitReset:
     'O limite por hora de solicitações automáticas foi atingido. Elas voltam a ser possíveis às {time}.',
+  connectFreeHint:
+    'Não tem assinatura? Você pode conectar uma IA gratuita nas Configurações em cerca de um minuto.',
+  actionConnectFree: 'Conectar uma IA gratuita',
+  errFreeLimit:
+    'O uso gratuito de hoje acabou. Tente novamente amanhã ou escolha outra IA nas Configurações.',
+  errFreeLimitReset: 'O uso gratuito de hoje acabou. Você poderá usá-lo novamente às {time}.',
   continueWith: 'Continuar com {provider}',
   continueMeteredNote:
     'A conexão {provider} não é uma assinatura: continuar é cobrado por consumo.',

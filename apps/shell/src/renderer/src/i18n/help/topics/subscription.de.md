@@ -36,6 +36,16 @@ Dieselben Karten erscheinen beim ersten Start im zweiten Schritt der Willkommens
 
 Die Verbindung wird geprüft, wenn die App startet, wenn Sie die Einstellungen öffnen und wenn Sie nach dem Start einer Installation oder Anmeldung zum Fenster zurückkehren.
 
+## Ohne Abonnement: kostenlose KI
+
+Kein Claude- oder ChatGPT-Abonnement? Unter Einstellungen ▸ KI verbindet **Kostenlos nutzen** stattdessen eine kostenlose KI. Dieselben Karten erscheinen im zweiten Schritt der Willkommensbildschirme, und der KI-Bereich bietet **Kostenlose KI verbinden** an, solange nichts verbunden ist.
+
+- **OpenRouter**: Klicken Sie auf **Im Browser verbinden**. Ihr Browser öffnet OpenRouter; registrieren Sie sich oder melden Sie sich an, und erlauben Sie den Zugriff. Sobald der Browser meldet, dass die Verbindung steht, schließen Sie den Tab und kehren Sie zurück. Es muss kein Schlüssel kopiert werden, und die Karte zeigt, wie viele kostenlose Anfragen heute noch übrig sind.
+- **Google Gemini**: Klicken Sie auf **Schlüssel erstellen**, erstellen Sie in Google AI Studio einen Schlüssel, fügen Sie ihn in die Karte ein und klicken Sie auf **Verbinden**. Nur für Personen ab 18 Jahren. Ein Schlüssel aus einem Google-Projekt mit aktivierter Abrechnung kann Kosten verursachen.
+- Nach dem Verbinden wird diese KI unter **Verwendete KI** ausgewählt. Sind beide verbunden, wechselt **Diese KI verwenden** auf einer Karte zwischen ihnen. **Trennen** entfernt den Schlüssel aus GenOffice.
+- Kostenlose Modelle sind schwächer als die Modelle eines Abonnements, und pro Tag ist nur eine begrenzte Zahl von Anfragen möglich. Eine einzige Bearbeitung eines Dokuments kann mehrere davon verbrauchen. Ist das heutige Kontingent aufgebraucht, sagt der KI-Bereich das und auch, wann die KI wieder genutzt werden kann.
+- Solange Sie die KI kostenlos nutzen, kann das, was Sie senden, zur Verbesserung der KI dieses Unternehmens verwendet werden. Seien Sie vorsichtig mit Dokumenten, die personenbezogene Daten enthalten.
+
 ## Anmeldungen mit Abrechnung nach Verbrauch
 
 Eine Karte mit **Angemeldet, aber nicht mit einem Abonnement** trägt eine Warnung: „Das ist kein Abonnement: Abgerechnet wird nach Verbrauch.“

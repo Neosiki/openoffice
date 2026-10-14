@@ -36,6 +36,16 @@ Le stesse schede compaiono nel secondo passaggio delle schermate di benvenuto al
 
 La connessione viene verificata all'avvio dell'app, quando apri Impostazioni e quando torni alla finestra dopo aver avviato un'installazione o un accesso.
 
+## Senza abbonamento: un'IA gratuita
+
+Non hai un abbonamento a Claude o a ChatGPT? In Impostazioni ▸ IA, **Usa gratis** collega invece un'IA gratuita. Le stesse schede compaiono nel secondo passaggio delle schermate di benvenuto, e il pannello IA propone **Collega un’IA gratuita** quando non c'è niente di collegato.
+
+- **OpenRouter**: premi **Collega nel browser**. Il browser apre OpenRouter; registrati o accedi, e consenti l'accesso. Quando il browser dice che il collegamento è riuscito, chiudi quella scheda del browser e torna qui. Non c'è nessuna chiave da copiare, e la scheda in GenOffice mostra quante richieste gratuite restano oggi.
+- **Google Gemini**: premi **Ottieni una chiave**, crea una chiave in Google AI Studio, incollala nella scheda e premi **Collega**. Solo per chi ha almeno 18 anni. Una chiave creata in un progetto Google con la fatturazione attiva può comportare addebiti.
+- Una volta collegata, quell'IA diventa l'**IA da usare**. Se sono collegate entrambe, **Usa questa IA** su una scheda passa dall'una all'altra. **Scollega** rimuove la chiave da GenOffice.
+- I modelli gratuiti sono meno capaci di quelli in abbonamento, e ogni giorno consente un numero limitato di richieste. Una sola modifica a un documento può richiederne diverse. Quando la quota di oggi è esaurita, il pannello IA lo segnala e dice quando si potrà usare di nuovo.
+- Finché la usi gratis, ciò che invii può essere usato per migliorare l'IA di quell'azienda. Fai attenzione con i documenti che contengono dati personali.
+
 ## Accessi a consumo
 
 Una scheda che dice **Accesso effettuato, ma non con un abbonamento** riporta un avviso: «Non è un abbonamento: paghi in base a quanto usi.»

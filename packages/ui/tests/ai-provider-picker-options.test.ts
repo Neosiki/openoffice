@@ -61,6 +61,17 @@ function acceptedMetered(provider: AiSubscriptionProviderId): {
 }
 
 describe('aiProviderPickerGroups', () => {
+  it('lists only free models for an OpenRouter free connection', () => {
+    const settings = defaultAiSettings()
+    settings.providers.openrouter = {
+      apiKey: 'sk-or-v1-x',
+      model: 'nvidia/nemotron-3-super-120b-a12b:free',
+    }
+    const group = aiProviderPickerGroups(settings, {}).find((g) => g.id === 'openrouter')
+    expect(group?.models.length).toBeGreaterThan(0)
+    expect(group?.models.every((m) => m.endsWith(':free'))).toBe(true)
+  })
+
   it('lists nothing while no subscription is connected and no key is filled in', () => {
     expect(aiProviderPickerGroups(defaultAiSettings(), {})).toEqual([])
     expect(

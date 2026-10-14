@@ -36,6 +36,16 @@ Kad yang sama muncul pada langkah kedua skrin alu-aluan semasa pelancaran pertam
 
 Sambungan disemak apabila aplikasi dimulakan, apabila anda membuka Tetapan, dan apabila anda kembali ke tetingkap selepas memulakan pemasangan atau log masuk.
 
+## Tanpa langganan: AI percuma
+
+Tiada langganan Claude atau ChatGPT? Di bawah Tetapan ▸ AI, **Guna secara percuma** menyambungkan AI percuma sebagai gantinya. Kad yang sama muncul pada langkah kedua skrin alu-aluan, dan panel AI menawarkan **Sambungkan AI percuma** apabila tiada apa-apa yang disambungkan.
+
+- **OpenRouter**: tekan **Sambung dalam pelayar**. Pelayar anda membuka OpenRouter; daftar atau log masuk, dan benarkan akses. Apabila pelayar menyatakan sudah bersambung, tutup tab itu dan kembali. Tiada kunci untuk disalin, dan kad itu menunjukkan baki permintaan percuma hari ini.
+- **Google Gemini**: tekan **Dapatkan kunci**, buat kunci dalam Google AI Studio, tampalkan ke dalam kad dan tekan **Sambung**. Hanya untuk mereka yang berumur 18 tahun ke atas. Kunci yang dibuat dalam projek Google yang pengebilannya dihidupkan boleh dikenakan caj.
+- Setelah disambungkan, AI itu menjadi **AI yang digunakan**. Jika kedua-duanya disambungkan, **Guna AI ini** pada kad akan bertukar antara keduanya. **Putuskan sambungan** membuang kunci itu daripada GenOffice.
+- Model percuma lebih lemah daripada model langganan, dan setiap hari hanya membenarkan bilangan permintaan yang terhad. Satu suntingan dokumen boleh menggunakan beberapa permintaan. Apabila kuota hari ini habis, panel AI akan memberitahu anda, dan bila ia boleh digunakan semula.
+- Semasa anda menggunakannya secara percuma, apa yang anda hantar mungkin digunakan untuk menambah baik AI syarikat itu. Berhati-hati dengan dokumen yang mengandungi maklumat peribadi.
+
 ## Log masuk bayar ikut guna
 
 Kad yang menyatakan **Sudah log masuk, tetapi bukan dengan langganan** membawa amaran: "Ini bukan langganan: anda dicaj mengikut penggunaan."
