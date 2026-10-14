@@ -30,6 +30,7 @@ export const en = {
   tbFoldAll: 'Fold all',
   tbUnfoldAll: 'Unfold all',
   zoomFit: 'Fit to window',
+  tbMakeFromDocument: 'Make Another Document from This',
   zoomReset: 'Actual size',
   tbExport: 'Export',
   exportPng: 'Export as Image (PNG)…',

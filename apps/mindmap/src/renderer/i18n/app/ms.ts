@@ -30,6 +30,7 @@ export const ms = {
   tbFoldAll: 'Lipat semua',
   tbUnfoldAll: 'Buka semua',
   zoomFit: 'Muat pada tetingkap',
+  tbMakeFromDocument: 'Buat dokumen lain daripada dokumen ini',
   zoomReset: 'Saiz sebenar',
   tbExport: 'Eksport',
   exportPng: 'Eksport sebagai imej (PNG)…',

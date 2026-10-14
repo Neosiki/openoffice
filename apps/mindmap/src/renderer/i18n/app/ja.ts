@@ -30,6 +30,7 @@ export const ja = {
   tbFoldAll: 'すべて折りたたむ',
   tbUnfoldAll: 'すべて展開',
   zoomFit: 'ウィンドウに合わせる',
+  tbMakeFromDocument: 'この文書から別の文書を作成',
   zoomReset: '実際のサイズ',
   tbExport: 'エクスポート',
   exportPng: '画像 (PNG) としてエクスポート…',

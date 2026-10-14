@@ -30,6 +30,7 @@ export const th = {
   tbFoldAll: 'พับทั้งหมด',
   tbUnfoldAll: 'กางทั้งหมด',
   zoomFit: 'พอดีกับหน้าต่าง',
+  tbMakeFromDocument: 'สร้างเอกสารอื่นจากเอกสารนี้',
   zoomReset: 'ขนาดจริง',
   tbExport: 'ส่งออก',
   exportPng: 'ส่งออกเป็นรูปภาพ (PNG)…',

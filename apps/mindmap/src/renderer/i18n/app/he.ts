@@ -30,6 +30,7 @@ export const he = {
   tbFoldAll: 'כיווץ הכול',
   tbUnfoldAll: 'הרחבת הכול',
   zoomFit: 'התאמה לחלון',
+  tbMakeFromDocument: 'יצירת מסמך אחר מהמסמך הזה',
   zoomReset: 'גודל ממשי',
   tbExport: 'ייצוא',
   exportPng: 'ייצוא כתמונה (PNG)…',

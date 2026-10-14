@@ -28,6 +28,7 @@ export const zh = {
   tbFoldAll: '全部折叠',
   tbUnfoldAll: '全部展开',
   zoomFit: '适应窗口',
+  tbMakeFromDocument: '用此文档制作其他文档',
   zoomReset: '实际大小',
   tbExport: '导出',
   exportPng: '导出为图片 (PNG)…',

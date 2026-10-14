@@ -30,6 +30,7 @@ export const nl = {
   tbFoldAll: 'Alles inklappen',
   tbUnfoldAll: 'Alles uitklappen',
   zoomFit: 'Aanpassen aan venster',
+  tbMakeFromDocument: 'Ander document maken van dit document',
   zoomReset: 'Werkelijke grootte',
   tbExport: 'Exporteren',
   exportPng: 'Exporteren als afbeelding (PNG)…',

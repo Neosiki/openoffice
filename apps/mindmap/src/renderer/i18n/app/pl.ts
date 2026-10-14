@@ -30,6 +30,7 @@ export const pl = {
   tbFoldAll: 'Zwiń wszystko',
   tbUnfoldAll: 'Rozwiń wszystko',
   zoomFit: 'Dopasuj do okna',
+  tbMakeFromDocument: 'Utwórz inny dokument z tego',
   zoomReset: 'Rzeczywisty rozmiar',
   tbExport: 'Eksportuj',
   exportPng: 'Eksportuj jako obraz (PNG)…',

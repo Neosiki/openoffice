@@ -30,6 +30,7 @@ export const ko = {
   tbFoldAll: '모두 접기',
   tbUnfoldAll: '모두 펴기',
   zoomFit: '창에 맞춤',
+  tbMakeFromDocument: '이 문서로 다른 문서 만들기',
   zoomReset: '원래 크기',
   tbExport: '내보내기',
   exportPng: '이미지(PNG)로 내보내기…',

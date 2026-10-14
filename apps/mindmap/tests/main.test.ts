@@ -627,3 +627,16 @@ describe('a request handed over by the shell (8.5)', () => {
     expect(generateRunStartedEvents()).toEqual([])
   })
 })
+
+describe('"make another document from this one" (T18)', () => {
+  it('hands the asking view to the shell, and does nothing without one', async () => {
+    const { setMindmapMakeFromDocumentHook } = await import('../src/main/mindmap-main')
+    const contents = view(null)
+    expect(() => call(MINDMAP_CHANNELS.makeFromDocument, contents)).not.toThrow()
+    const asked: number[] = []
+    setMindmapMakeFromDocumentHook((wc) => asked.push(wc.id))
+    call(MINDMAP_CHANNELS.makeFromDocument, contents)
+    expect(asked).toEqual([contents.id])
+    setMindmapMakeFromDocumentHook(null)
+  })
+})

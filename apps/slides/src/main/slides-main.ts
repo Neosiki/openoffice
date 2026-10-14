@@ -4863,6 +4863,15 @@ export function setSlidesExtraFileMenuItems(items: Electron.MenuItemConstructorO
   extraFileMenuItems = items
 }
 
+/** Shell-built File-menu entries for the open document (make another document
+ *  from it, its sources, the documents made from it); asked at every build */
+let documentLinkMenuItems: (() => Electron.MenuItemConstructorOptions[]) | null = null
+export function setSlidesDocumentLinkMenuItems(
+  items: (() => Electron.MenuItemConstructorOptions[]) | null,
+): void {
+  documentLinkMenuItems = items
+}
+
 /** Tab mode: Cmd+W closes the current tab rather than the whole shell window */
 let closeActiveTabHook: (() => void) | null = null
 export function setSlidesCloseTabHook(fn: (() => void) | null): void {
@@ -4896,6 +4905,7 @@ export function buildSlidesMenu(): Menu {
         ...(extraFileMenuItems.length > 0
           ? [{ type: 'separator' as const }, ...extraFileMenuItems]
           : []),
+        ...(documentLinkMenuItems?.() ?? []),
         { type: 'separator' },
         { label: tm('menuSave'), accelerator: 'CmdOrCtrl+S', click: () => send('save') },
         { label: tm('menuSaveAs'), accelerator: 'CmdOrCtrl+Shift+S', click: () => send('save-as') },

@@ -88,6 +88,10 @@ export const MINDMAP_CHANNELS = {
   // ---- a new tab that starts with given content (T17) ----
   /** invoke → `MindmapSeed | null`: take the content left for this view, once. T17 */
   seedTake: 'mindmap:seed-take',
+
+  // ---- "make another document from this one" (T18) ----
+  /** renderer → main: the toolbar button; the shell opens its make window with this map */
+  makeFromDocument: 'mindmap:make-from-document',
 } as const
 
 /** Channels the shell registers for every editor. Called here, never registered (except the language getter, see the main module). */
@@ -388,10 +392,17 @@ export interface MindmapSeedApi {
   takeSeed(): Promise<MindmapSeed | null>
 }
 
+/** "Make another document from this one". T18 */
+export interface MindmapMakeFromApi {
+  /** ask the shell to open its make window with this map as the material */
+  makeFromDocument(): void
+}
+
 /** API exposed by preload to the renderer (window.mindmapApi) */
 export type MindmapApi = MindmapCoreApi &
   MindmapExportApi &
   MindmapAiApi &
   MindmapQueryApi &
   MindmapHandoffApi &
-  MindmapSeedApi
+  MindmapSeedApi &
+  MindmapMakeFromApi

@@ -30,6 +30,7 @@ export const hi = {
   tbFoldAll: 'सभी समेटें',
   tbUnfoldAll: 'सभी फैलाएँ',
   zoomFit: 'विंडो में फ़िट करें',
+  tbMakeFromDocument: 'इस दस्तावेज़ से दूसरा दस्तावेज़ बनाएँ',
   zoomReset: 'वास्तविक आकार',
   tbExport: 'निर्यात',
   exportPng: 'छवि (PNG) के रूप में निर्यात…',

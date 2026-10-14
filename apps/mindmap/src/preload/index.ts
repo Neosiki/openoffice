@@ -14,6 +14,7 @@ import type {
   MindmapCoreApi,
   MindmapExportApi,
   MindmapHandoffApi,
+  MindmapMakeFromApi,
   MindmapMenuCommand,
   MindmapQueryApi,
   MindmapSeedApi,
@@ -159,7 +160,21 @@ const seed: MindmapSeedApi = {
   takeSeed: () => ipcRenderer.invoke(MINDMAP_CHANNELS.seedTake),
 }
 
-const api: MindmapApi = { ...core, ...exporting, ...ai, ...queries, ...handoff, ...seed }
+// ---- "make another document from this one": T18 ----
+
+const makeFrom: MindmapMakeFromApi = {
+  makeFromDocument: () => ipcRenderer.send(MINDMAP_CHANNELS.makeFromDocument),
+}
+
+const api: MindmapApi = {
+  ...core,
+  ...exporting,
+  ...ai,
+  ...queries,
+  ...handoff,
+  ...seed,
+  ...makeFrom,
+}
 
 /** Chat persistence: the shared project:* handlers are registered once by the shell (docs-main registerProjectIpc) */
 const projectApi: Pick<ProjectApi, 'resolveChat' | 'appendChat' | 'loadChat' | 'rebindChat'> = {

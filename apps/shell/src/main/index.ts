@@ -103,6 +103,7 @@ import {
   registerDocsIpc,
   exportDocsHeadless,
   setDocsExtraFileMenuItems,
+  setDocsDocumentLinkMenuItems,
   setDocsMenuGate,
   setDocsShellHooks,
   createAiDocument,
@@ -154,6 +155,7 @@ import {
   sheetsFileRenamed,
   setSheetsCloseTabHook,
   setSheetsExtraFileMenuItems,
+  setSheetsDocumentLinkMenuItems,
   setSheetsHostWindowHook,
   setSheetsShellWindow,
   setSheetsWorkbookOpenedHook,
@@ -169,6 +171,7 @@ import {
   replaceSlidesRecentFile,
   setSlidesCloseTabHook,
   setSlidesExtraFileMenuItems,
+  setSlidesDocumentLinkMenuItems,
   setSlidesOpenedHook,
   setSlidesHostWindowHook,
   setSlidesShellWindow,
@@ -231,6 +234,7 @@ import {
   sendMindmapMenuCommand,
   sendMindmapPrintRequest,
   setMindmapFileSavedHook,
+  setMindmapMakeFromDocumentHook,
   setMindmapProvisionalTitleHook,
 } from '../../../mindmap/src/main/mindmap-main'
 import { mindmapReadOutline } from '../../../mindmap/src/main/mcp-queries'
@@ -318,6 +322,16 @@ import {
 import { runHeadlessExport, type HeadlessExporters } from './headless-export'
 import { TabManager } from './tab-manager'
 import { configureGenerateWindow } from './generate/generate-window'
+import {
+  configureDocumentLinks,
+  documentLinkFileMenuItems,
+  documentLinkFileMoved,
+  documentLinkPaths,
+  makeFromDocument,
+  noteDocumentSaved,
+  refreshDocumentLinkMenu,
+  type LinkedDocument,
+} from './document-links-shell'
 import { installShellCloseGuard } from './window-close-guard'
 import {
   activateDetached,
@@ -606,6 +620,9 @@ const tMain = createI18n({
     menuExportHtml: '导出为单文件 HTML…',
     menuExportMapImage: '导出为图片 (PNG)…',
     menuExportMapOutline: '导出为 Markdown 大纲…',
+    menuMakeFromDocument: '用此文档制作其他文档',
+    menuDocumentSources: '查看资料',
+    menuDerivedDocuments: '用此文档制作的文档',
     menuOpenInDocs: '转换为 Docs 文档并打开',
     menuPrint: '打印…',
     menuOpen: '打开…',
@@ -705,6 +722,9 @@ const tMain = createI18n({
     menuExportHtml: 'Export as Single-File HTML…',
     menuExportMapImage: 'Export as Image (PNG)…',
     menuExportMapOutline: 'Export as Markdown Outline…',
+    menuMakeFromDocument: 'Make Another Document from This',
+    menuDocumentSources: 'View Sources',
+    menuDerivedDocuments: 'Documents Made from This',
     menuOpenInDocs: 'Convert and Open in Docs',
     menuPrint: 'Print…',
     menuOpen: 'Open…',
@@ -812,6 +832,9 @@ const tMain = createI18n({
     menuExportHtml: 'Xuất dưới dạng HTML một tệp…',
     menuExportMapImage: 'Xuất dưới dạng hình ảnh (PNG)…',
     menuExportMapOutline: 'Xuất dưới dạng dàn ý Markdown…',
+    menuMakeFromDocument: 'Tạo tài liệu khác từ tài liệu này',
+    menuDocumentSources: 'Xem tài liệu nguồn',
+    menuDerivedDocuments: 'Tài liệu tạo từ tài liệu này',
     menuOpenInDocs: 'Chuyển đổi và mở trong Docs',
     menuPrint: 'In…',
     menuOpen: 'Mở…',
@@ -919,6 +942,9 @@ const tMain = createI18n({
     menuExportHtml: '単一ファイル HTML として書き出す…',
     menuExportMapImage: '画像 (PNG) としてエクスポート…',
     menuExportMapOutline: 'Markdown アウトラインとしてエクスポート…',
+    menuMakeFromDocument: 'この文書から別の文書を作成',
+    menuDocumentSources: '資料を表示',
+    menuDerivedDocuments: 'この文書から作成した文書',
     menuOpenInDocs: 'Docs 文書に変換して開く',
     menuPrint: '印刷…',
     menuOpen: '開く…',
@@ -1026,6 +1052,9 @@ const tMain = createI18n({
     menuExportHtml: '단일 파일 HTML로 내보내기…',
     menuExportMapImage: '이미지(PNG)로 내보내기…',
     menuExportMapOutline: '마크다운 개요로 내보내기…',
+    menuMakeFromDocument: '이 문서로 다른 문서 만들기',
+    menuDocumentSources: '자료 보기',
+    menuDerivedDocuments: '이 문서로 만든 문서',
     menuOpenInDocs: 'Docs 문서로 변환하여 열기',
     menuPrint: '인쇄…',
     menuOpen: '열기…',
@@ -1132,6 +1161,9 @@ const tMain = createI18n({
     menuExportHtml: 'Exporter en HTML (fichier unique)…',
     menuExportMapImage: 'Exporter en image (PNG)…',
     menuExportMapOutline: 'Exporter en plan Markdown…',
+    menuMakeFromDocument: 'Créer un autre document à partir de celui-ci',
+    menuDocumentSources: 'Voir les sources',
+    menuDerivedDocuments: 'Documents créés à partir de celui-ci',
     menuOpenInDocs: 'Convertir et ouvrir dans Docs',
     menuPrint: 'Imprimer…',
     menuOpen: 'Ouvrir…',
@@ -1240,6 +1272,9 @@ const tMain = createI18n({
     menuExportHtml: 'Als Einzeldatei-HTML exportieren…',
     menuExportMapImage: 'Als Bild (PNG) exportieren…',
     menuExportMapOutline: 'Als Markdown-Gliederung exportieren…',
+    menuMakeFromDocument: 'Anderes Dokument aus diesem erstellen',
+    menuDocumentSources: 'Quellen anzeigen',
+    menuDerivedDocuments: 'Aus diesem erstellte Dokumente',
     menuOpenInDocs: 'In Docs umwandeln und öffnen',
     menuPrint: 'Drucken…',
     menuOpen: 'Öffnen…',
@@ -1349,6 +1384,9 @@ const tMain = createI18n({
     menuExportHtml: 'Exportar como HTML de archivo único…',
     menuExportMapImage: 'Exportar como imagen (PNG)…',
     menuExportMapOutline: 'Exportar como esquema Markdown…',
+    menuMakeFromDocument: 'Crear otro documento a partir de este',
+    menuDocumentSources: 'Ver fuentes',
+    menuDerivedDocuments: 'Documentos creados a partir de este',
     menuOpenInDocs: 'Convertir y abrir en Docs',
     menuPrint: 'Imprimir…',
     menuOpen: 'Abrir…',
@@ -1457,6 +1495,9 @@ const tMain = createI18n({
     menuExportHtml: 'ส่งออกเป็น HTML ไฟล์เดียว…',
     menuExportMapImage: 'ส่งออกเป็นรูปภาพ (PNG)…',
     menuExportMapOutline: 'ส่งออกเป็นโครงร่าง Markdown…',
+    menuMakeFromDocument: 'สร้างเอกสารอื่นจากเอกสารนี้',
+    menuDocumentSources: 'ดูแหล่งข้อมูล',
+    menuDerivedDocuments: 'เอกสารที่สร้างจากเอกสารนี้',
     menuOpenInDocs: 'แปลงและเปิดใน Docs',
     menuPrint: 'พิมพ์…',
     menuOpen: 'เปิด…',
@@ -1561,6 +1602,9 @@ const tMain = createI18n({
     menuExportHtml: 'Ekspor sebagai HTML satu file…',
     menuExportMapImage: 'Ekspor sebagai gambar (PNG)…',
     menuExportMapOutline: 'Ekspor sebagai kerangka Markdown…',
+    menuMakeFromDocument: 'Buat dokumen lain dari dokumen ini',
+    menuDocumentSources: 'Lihat sumber',
+    menuDerivedDocuments: 'Dokumen yang dibuat dari dokumen ini',
     menuOpenInDocs: 'Konversi dan buka di Docs',
     menuPrint: 'Cetak…',
     menuOpen: 'Buka…',
@@ -1669,6 +1713,9 @@ const tMain = createI18n({
     menuExportHtml: 'Экспортировать в один файл HTML…',
     menuExportMapImage: 'Экспорт в изображение (PNG)…',
     menuExportMapOutline: 'Экспорт в структуру Markdown…',
+    menuMakeFromDocument: 'Создать другой документ из этого',
+    menuDocumentSources: 'Показать источники',
+    menuDerivedDocuments: 'Документы, созданные из этого',
     menuOpenInDocs: 'Преобразовать и открыть в Docs',
     menuPrint: 'Печать…',
     menuOpen: 'Открыть…',
@@ -1777,6 +1824,9 @@ const tMain = createI18n({
     menuExportHtml: 'تصدير كملف HTML واحد…',
     menuExportMapImage: 'تصدير كصورة (PNG)…',
     menuExportMapOutline: 'تصدير كمخطط Markdown…',
+    menuMakeFromDocument: 'إنشاء مستند آخر من هذا المستند',
+    menuDocumentSources: 'عرض المصادر',
+    menuDerivedDocuments: 'المستندات المُنشأة من هذا المستند',
     menuOpenInDocs: 'التحويل والفتح في Docs',
     menuPrint: 'طباعة…',
     menuOpen: 'فتح…',
@@ -1881,6 +1931,9 @@ const tMain = createI18n({
     menuExportHtml: 'Exportar como HTML de arquivo único…',
     menuExportMapImage: 'Exportar como imagem (PNG)…',
     menuExportMapOutline: 'Exportar como estrutura de tópicos Markdown…',
+    menuMakeFromDocument: 'Criar outro documento a partir deste',
+    menuDocumentSources: 'Ver fontes',
+    menuDerivedDocuments: 'Documentos criados a partir deste',
     menuOpenInDocs: 'Converter e abrir no Docs',
     menuPrint: 'Imprimir…',
     menuOpen: 'Abrir…',
@@ -1989,6 +2042,9 @@ const tMain = createI18n({
     menuExportHtml: 'Esporta come HTML a file singolo…',
     menuExportMapImage: 'Esporta come immagine (PNG)…',
     menuExportMapOutline: 'Esporta come struttura Markdown…',
+    menuMakeFromDocument: 'Crea un altro documento da questo',
+    menuDocumentSources: 'Mostra le fonti',
+    menuDerivedDocuments: 'Documenti creati da questo',
     menuOpenInDocs: 'Converti e apri in Docs',
     menuPrint: 'Stampa…',
     menuOpen: 'Apri…',
@@ -2097,6 +2153,9 @@ const tMain = createI18n({
     menuExportHtml: 'Eksportuj jako pojedynczy plik HTML…',
     menuExportMapImage: 'Eksportuj jako obraz (PNG)…',
     menuExportMapOutline: 'Eksportuj jako konspekt Markdown…',
+    menuMakeFromDocument: 'Utwórz inny dokument z tego',
+    menuDocumentSources: 'Pokaż źródła',
+    menuDerivedDocuments: 'Dokumenty utworzone z tego',
     menuOpenInDocs: 'Konwertuj i otwórz w Docs',
     menuPrint: 'Drukuj…',
     menuOpen: 'Otwórz…',
@@ -2205,6 +2264,9 @@ const tMain = createI18n({
     menuExportHtml: 'Exportovat jako samostatné HTML…',
     menuExportMapImage: 'Exportovat jako obrázek (PNG)…',
     menuExportMapOutline: 'Exportovat jako osnovu Markdown…',
+    menuMakeFromDocument: 'Vytvořit jiný dokument z tohoto',
+    menuDocumentSources: 'Zobrazit zdroje',
+    menuDerivedDocuments: 'Dokumenty vytvořené z tohoto',
     menuOpenInDocs: 'Převést a otevřít v Docs',
     menuPrint: 'Tisk…',
     menuOpen: 'Otevřít…',
@@ -2311,6 +2373,9 @@ const tMain = createI18n({
     menuExportHtml: 'Exporteren als één HTML-bestand…',
     menuExportMapImage: 'Exporteren als afbeelding (PNG)…',
     menuExportMapOutline: 'Exporteren als Markdown-overzicht…',
+    menuMakeFromDocument: 'Ander document maken van dit document',
+    menuDocumentSources: 'Bronnen weergeven',
+    menuDerivedDocuments: 'Documenten gemaakt van dit document',
     menuOpenInDocs: 'Converteren en openen in Docs',
     menuPrint: 'Afdrukken…',
     menuOpen: 'Openen…',
@@ -2419,6 +2484,9 @@ const tMain = createI18n({
     menuExportHtml: 'Eksport sebagai HTML fail tunggal…',
     menuExportMapImage: 'Eksport sebagai imej (PNG)…',
     menuExportMapOutline: 'Eksport sebagai rangka Markdown…',
+    menuMakeFromDocument: 'Buat dokumen lain daripada dokumen ini',
+    menuDocumentSources: 'Lihat sumber',
+    menuDerivedDocuments: 'Dokumen yang dibuat daripada dokumen ini',
     menuOpenInDocs: 'Tukar dan buka dalam Docs',
     menuPrint: 'Cetak…',
     menuOpen: 'Buka…',
@@ -2526,6 +2594,9 @@ const tMain = createI18n({
     menuExportHtml: 'ייצוא כ-HTML בקובץ יחיד…',
     menuExportMapImage: 'ייצוא כתמונה (PNG)…',
     menuExportMapOutline: 'ייצוא כמתאר Markdown…',
+    menuMakeFromDocument: 'יצירת מסמך אחר מהמסמך הזה',
+    menuDocumentSources: 'הצגת מקורות',
+    menuDerivedDocuments: 'מסמכים שנוצרו מהמסמך הזה',
     menuOpenInDocs: 'המרה ופתיחה ב-Docs',
     menuPrint: 'הדפסה…',
     menuOpen: 'פתיחה…',
@@ -2631,6 +2702,9 @@ const tMain = createI18n({
     menuExportHtml: 'एकल-फ़ाइल HTML के रूप में निर्यात…',
     menuExportMapImage: 'छवि (PNG) के रूप में निर्यात…',
     menuExportMapOutline: 'Markdown रूपरेखा के रूप में निर्यात…',
+    menuMakeFromDocument: 'इस दस्तावेज़ से दूसरा दस्तावेज़ बनाएँ',
+    menuDocumentSources: 'स्रोत देखें',
+    menuDerivedDocuments: 'इस दस्तावेज़ से बने दस्तावेज़',
     menuOpenInDocs: 'Docs में बदलें और खोलें',
     menuPrint: 'प्रिंट करें…',
     menuOpen: 'खोलें…',
@@ -2739,6 +2813,9 @@ const tMain = createI18n({
     menuExportHtml: '匯出為單檔 HTML…',
     menuExportMapImage: '匯出為圖片 (PNG)…',
     menuExportMapOutline: '匯出為 Markdown 大綱…',
+    menuMakeFromDocument: '用此文件製作其他文件',
+    menuDocumentSources: '檢視資料',
+    menuDerivedDocuments: '用此文件製作的文件',
     menuOpenInDocs: '轉換為 Docs 文件並開啟',
     menuPrint: '列印…',
     menuOpen: '開啟…',
@@ -2923,6 +3000,7 @@ function applyPendingDir(wcId: number, filePath: string): string {
 function afterFileMoved(oldPath: string, newPath: string): void {
   replaceRecentFile(oldPath, newPath)
   projectFileRenamed(oldPath, newPath)
+  documentLinkFileMoved(oldPath, newPath)
   if (/\.pptx$/i.test(newPath)) void replaceSlidesRecentFile(oldPath, newPath)
   const affected = tabManager?.renameTabFile(oldPath, newPath) ?? []
   const detachedAffected = detachedRenameFile(oldPath, newPath)
@@ -2946,6 +3024,7 @@ function trackedFilesUnder(dir: string): string[] {
     ...readSlidesRecentFiles(),
     ...(tabManager?.openFilePaths() ?? []),
     ...detachedFilePaths(),
+    ...documentLinkPaths(),
   ])
 }
 
@@ -3159,6 +3238,7 @@ function createShellWindow(): void {
     () => {
       win.webContents.send(TABS_CHANNELS.changed, manager.list())
       publishOpenDocumentsIfOwner([...manager.openFilePaths(), ...detachedFilePaths()])
+      refreshDocumentLinkMenu()
     },
     applyMenuFor,
     // no extension: these tabs have no file on disk yet; the title becomes the
@@ -3269,6 +3349,7 @@ function createShellWindow(): void {
     manager.setTabFileFor(wc.id, path)
     detachedSetFileFor(wc.id, path)
     recordRecentFile(path)
+    noteDocumentSaved(wc, path, { mayBeOpen: true })
     applyPendingDir(wc.id, path)
   })
   // docs' save-as / silent first save lands on a new path → sync the tab title too
@@ -3292,12 +3373,14 @@ function createShellWindow(): void {
     manager.setTabFileFor(wc.id, path)
     detachedSetFileFor(wc.id, path)
     recordRecentFile(path)
+    noteDocumentSaved(wc, path)
     applyPendingDir(wc.id, path)
   })
   setHtmlFileSavedHook((wc, path) => {
     manager.setTabFileFor(wc.id, path)
     detachedSetFileFor(wc.id, path)
     recordRecentFile(path)
+    noteDocumentSaved(wc, path)
     applyPendingDir(wc.id, path)
   })
   // mind map untitled first save / Save As lands on a new path
@@ -3305,8 +3388,11 @@ function createShellWindow(): void {
     manager.setTabFileFor(wc.id, path)
     detachedSetFileFor(wc.id, path)
     recordRecentFile(path)
+    noteDocumentSaved(wc, path)
     applyPendingDir(wc.id, path)
   })
+  // the mind map's toolbar button "make another document from this one"
+  setMindmapMakeFromDocumentHook((wc) => makeFromDocument(wc))
   setHtmlProvisionalTitleHook((wc, title) => {
     manager.setTabTitleFor(wc.id, title)
     detachedSetTitleFor(wc.id, title)
@@ -3328,6 +3414,7 @@ function createShellWindow(): void {
     detachedSetFileFor(wc.id, newPath)
     replaceRecentFile(oldPath, newPath)
     projectFileRenamed(oldPath, newPath)
+    documentLinkFileMoved(oldPath, newPath)
   })
   // markdown "convert & open in Docs" → route the fresh .docx to a docs tab
   setMarkdownDocxExportedHook((path) => {
@@ -4593,6 +4680,49 @@ function activeMindmapTarget() {
   return activeEditorTarget('mindmap', () => tabManager?.activeMindmapTab())
 }
 
+/** the document a kind's File menu acts on, for the provenance entries (spec 8.2, 9) */
+function linkedDocumentFor(kind: TabKind): LinkedDocument | undefined {
+  const target =
+    kind === 'html'
+      ? activeHtmlTarget()
+      : activeEditorTarget(kind, () => {
+          const tab = tabManager?.list().find((t) => t.active && t.kind === kind)
+          const wc = tab ? tabManager?.webContentsForTab(tab.id) : undefined
+          return tab && wc ? { id: tab.id, webContents: wc } : undefined
+        })
+  return target ? linkedDocumentForWebContents(target.webContents) : undefined
+}
+
+/** the document behind a webContents: a shell tab, or the focused detached window */
+function linkedDocumentForWebContents(wc: WebContents): LinkedDocument | undefined {
+  if (wc.isDestroyed()) return undefined
+  const inTab = tabManager?.describeWebContents(wc.id)
+  if (inTab) {
+    return {
+      webContents: wc,
+      title: inTab.title,
+      ...(inTab.filePath ? { filePath: inTab.filePath } : {}),
+    }
+  }
+  const detached = focusedDetachedTab()
+  if (detached?.webContents.id !== wc.id) return undefined
+  return {
+    webContents: wc,
+    title: detached.window.getTitle(),
+    ...(detached.filePath ? { filePath: detached.filePath } : {}),
+  }
+}
+
+/** whose menu is the application menu: the focused detached window's, else the active tab's */
+function linkMenuKind(): TabKind | undefined {
+  const detached = focusedDetachedTab()
+  if (detached) return detached.kind
+  const active = tabManager?.list().find((t) => t.active)
+  // a Present tab shows the Home menu
+  if (active?.kind === 'html' && !tabManager?.activeHtmlTab()) return 'home'
+  return active?.kind
+}
+
 function registerTabsIpc(): void {
   ipcMain.on(TABS_CHANNELS.chromePressed, (event) => broadcastChromePressed(event.sender))
   ipcMain.handle(TABS_CHANNELS.list, () => tabManager?.list() ?? [])
@@ -4836,6 +4966,7 @@ function buildPdfMenu(): void {
           accelerator: 'CmdOrCtrl+Shift+S',
           click: () => void savePdfAs(),
         },
+        ...documentLinkFileMenuItems('pdf'),
         { type: 'separator' },
         // local pdf2docx (P4): in-process PDFium wasm, no cloud counterpart
         {
@@ -4922,6 +5053,7 @@ function buildMarkdownMenu(): void {
             if (tab) void requestMarkdownSave(tab.webContents, 'saveAs')
           },
         },
+        ...documentLinkFileMenuItems('markdown'),
         { type: 'separator' },
         {
           label: tm('menuExportDocx'),
@@ -5021,6 +5153,7 @@ function buildHtmlMenu(): void {
             if (tab) void requestHtmlSave(tab.webContents, 'saveAs')
           },
         },
+        ...documentLinkFileMenuItems('html'),
         { type: 'separator' },
         {
           label: tm('menuExportDocx'),
@@ -5119,6 +5252,7 @@ function buildMindmapMenu(): void {
             if (tab) void requestMindmapSave(tab.webContents, 'saveAs')
           },
         },
+        ...documentLinkFileMenuItems('mindmap'),
         { type: 'separator' },
         {
           label: tm('menuExportMapImage'),
@@ -5645,6 +5779,13 @@ function installBackToHomeItems(): void {
   setSlidesExtraFileMenuItems([backToHomeItem])
 }
 
+/** the editors that build their own menus show the same provenance entries (spec 8.2, 9) */
+function installDocumentLinkMenuItems(): void {
+  setDocsDocumentLinkMenuItems(() => documentLinkFileMenuItems('docs'))
+  setSheetsDocumentLinkMenuItems(() => documentLinkFileMenuItems('sheets'))
+  setSlidesDocumentLinkMenuItems(() => documentLinkFileMenuItems('slides'))
+}
+
 function installDockMenu(): void {
   if (process.platform !== 'darwin') return
   app.dock?.setMenu(
@@ -5974,6 +6115,24 @@ app.whenReady().then(async () => {
       },
     },
   })
+  // Provenance records (spec 9) and the editors' File-menu entry "make another
+  // document from this one" (8.2). After the make window: the records follow
+  // the hand-off store's events, and the entry opens that window.
+  configureDocumentLinks({
+    userDataPath: () => app.getPath('userData'),
+    activeDocument: (kind) => linkedDocumentFor(kind),
+    documentFor: (wc) => linkedDocumentForWebContents(wc),
+    parentFor: (wc) => detachedWindowForWebContents(wc.id) ?? shellWindow,
+    openPath: (path) => void openDocumentPath(path),
+    labels: () => ({
+      make: tm('menuMakeFromDocument'),
+      sources: tm('menuDocumentSources'),
+      derived: tm('menuDerivedDocuments'),
+    }),
+    tabIdFor: (wcId) => tabManager?.tabIdForWebContents(wcId),
+    menuKind: () => linkMenuKind(),
+    applyMenu: (kind) => applyMenuFor(kind),
+  })
   configureMcpRuntime({
     version: app.getVersion(),
     defaultSaveDir: () => defaultSaveDir(),
@@ -6047,6 +6206,7 @@ app.whenReady().then(async () => {
   createShellWindow()
   // deferred to ready: labels need currentLang(), which reads app.getLocale()
   installBackToHomeItems()
+  installDocumentLinkMenuItems()
   installDockMenu()
   setUpdateCheckInvoker(() => void checkForUpdatesNow())
   initAutoUpdater(() => shellWindow, currentUpdateChannel())

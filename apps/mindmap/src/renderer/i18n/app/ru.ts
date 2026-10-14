@@ -30,6 +30,7 @@ export const ru = {
   tbFoldAll: 'Свернуть все',
   tbUnfoldAll: 'Развернуть все',
   zoomFit: 'По размеру окна',
+  tbMakeFromDocument: 'Создать другой документ из этого',
   zoomReset: 'Реальный размер',
   tbExport: 'Экспорт',
   exportPng: 'Экспорт в изображение (PNG)…',
