@@ -5363,6 +5363,16 @@ export function setDocsExtraFileMenuItems(items: MenuItemConstructorOptions[]): 
   extraFileMenuItems = items
 }
 
+/** shell-built File-menu entries for the open document (make another document
+ * from it, its sources, the documents made from it); asked at every build */
+let documentLinkMenuItems: (() => MenuItemConstructorOptions[]) | null = null
+
+export function setDocsDocumentLinkMenuItems(
+  items: (() => MenuItemConstructorOptions[]) | null,
+): void {
+  documentLinkMenuItems = items
+}
+
 /** Shell-installed gate: inside the shell the docs menu may only take over the
  * application menu while a docs tab is active — internal rebuilds (pushRecent
  * after opening/saving any file) must not clobber another tab's menu.
@@ -5428,6 +5438,7 @@ export function buildDocsMenu(): void {
         ...(extraFileMenuItems.length > 0
           ? [{ type: 'separator' as const }, ...extraFileMenuItems]
           : []),
+        ...(documentLinkMenuItems?.() ?? []),
         { type: 'separator' },
         shellHooks
           ? {

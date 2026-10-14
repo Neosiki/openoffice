@@ -30,6 +30,7 @@ export const de = {
   tbFoldAll: 'Alle einklappen',
   tbUnfoldAll: 'Alle ausklappen',
   zoomFit: 'An Fenster anpassen',
+  tbMakeFromDocument: 'Anderes Dokument aus diesem erstellen',
   zoomReset: 'Originalgröße',
   tbExport: 'Exportieren',
   exportPng: 'Als Bild (PNG) exportieren…',

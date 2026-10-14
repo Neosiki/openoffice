@@ -30,6 +30,7 @@ export const fr = {
   tbFoldAll: 'Tout replier',
   tbUnfoldAll: 'Tout déplier',
   zoomFit: 'Ajuster à la fenêtre',
+  tbMakeFromDocument: 'Créer un autre document à partir de celui-ci',
   zoomReset: 'Taille réelle',
   tbExport: 'Exporter',
   exportPng: 'Exporter en image (PNG)…',

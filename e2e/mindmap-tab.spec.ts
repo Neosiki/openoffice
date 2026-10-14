@@ -163,6 +163,9 @@ test.describe('mind map editor in the shell', () => {
         'Save',
         'Save As…',
         '-',
+        // spec 8.2: the make-window entry every editor's File menu has (T18)
+        'Make Another Document from This',
+        '-',
         'Export as Image (PNG)…',
         'Export as PDF…',
         'Export as Markdown Outline…',

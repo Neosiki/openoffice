@@ -103,6 +103,13 @@ export function setMindmapFileSavedHook(hook: (wc: WebContents, path: string) =>
   fileSavedHook = hook
 }
 
+/** The toolbar's "make another document from this one": the shell opens its make window for this view */
+let makeFromDocumentHook: ((wc: WebContents) => void) | null = null
+
+export function setMindmapMakeFromDocumentHook(hook: ((wc: WebContents) => void) | null): void {
+  makeFromDocumentHook = hook
+}
+
 export function mindmapIsDirty(webContentsId: number): boolean {
   return dirtyByWc.has(webContentsId)
 }
@@ -402,6 +409,9 @@ function registerMindmapIpc(): void {
     saveWaiters.delete(e.sender.id)
     waiter?.(ok === true)
   })
+
+  // the toolbar's "make another document from this one": the shell opens its make window (T18)
+  ipcMain.on(MINDMAP_CHANNELS.makeFromDocument, (e) => makeFromDocumentHook?.(e.sender))
 
   // the AI panel's attachments and the provisional name of an untitled map (T12)
   registerMindmapAiIpc({ hasFile: (wcId) => savePathByWc.has(wcId) })

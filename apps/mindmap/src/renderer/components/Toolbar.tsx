@@ -21,6 +21,7 @@ import {
   IconLabel,
   IconLayout,
   IconLink,
+  IconMakeFrom,
   IconNote,
   IconRedo,
   IconRelationship,
@@ -73,6 +74,8 @@ export interface ToolbarProps {
   onZoomFit(): void
   onToggleAi(): void
   onExport(format: ExportFormat): void
+  /** "make another document from this one": the shell's make window with this map */
+  onMakeFromDocument(): void
 }
 
 export function Toolbar(p: ToolbarProps) {
@@ -273,6 +276,19 @@ export function Toolbar(p: ToolbarProps) {
           </div>
         </div>
         {/* "make another document from this one" goes here, after its own separator */}
+        <span className="rb-sep" />
+        <div className="ribbon-group">
+          <div className="ribbon-group-items">
+            <ToolButton
+              action="make-from-document"
+              label={t('tbMakeFromDocument')}
+              disabled={p.disabled}
+              onClick={p.onMakeFromDocument}
+            >
+              <IconMakeFrom />
+            </ToolButton>
+          </div>
+        </div>
         <span className="mm-tools-end">
           <button
             type="button"

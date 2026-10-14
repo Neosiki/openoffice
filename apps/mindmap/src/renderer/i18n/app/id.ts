@@ -30,6 +30,7 @@ export const id = {
   tbFoldAll: 'Lipat semua',
   tbUnfoldAll: 'Buka semua',
   zoomFit: 'Sesuaikan dengan jendela',
+  tbMakeFromDocument: 'Buat dokumen lain dari dokumen ini',
   zoomReset: 'Ukuran sebenarnya',
   tbExport: 'Ekspor',
   exportPng: 'Ekspor sebagai gambar (PNG)…',

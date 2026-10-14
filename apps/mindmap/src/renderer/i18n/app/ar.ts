@@ -30,6 +30,7 @@ export const ar = {
   tbFoldAll: 'طي الكل',
   tbUnfoldAll: 'بسط الكل',
   zoomFit: 'ملاءمة النافذة',
+  tbMakeFromDocument: 'إنشاء مستند آخر من هذا المستند',
   zoomReset: 'الحجم الفعلي',
   tbExport: 'تصدير',
   exportPng: 'تصدير كصورة (PNG)…',

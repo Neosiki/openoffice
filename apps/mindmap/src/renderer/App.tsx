@@ -638,6 +638,7 @@ export default function App() {
           ai.setOpen(!ai.open)
         }}
         onExport={exporter.exportAs}
+        onMakeFromDocument={() => window.mindmapApi.makeFromDocument?.()}
       />
 
       {(notices.preserved > 0 || notices.unknownTheme || picking) && (

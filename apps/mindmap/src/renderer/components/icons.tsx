@@ -176,6 +176,16 @@ export const IconFit = () => (
   </Icon>
 )
 
+/** a topic, an arrow, and the new document made from it */
+export const IconMakeFrom = () => (
+  <Icon>
+    <rect x="2.75" y="7.75" width="5" height="4.5" rx="2.25" />
+    <path d="M8.75 10h1.75M9.25 8.5l1.5 1.5-1.5 1.5" />
+    <path d="M12.25 4.75h2.5l2 2v7.5a1 1 0 0 1-1 1h-3.5a1 1 0 0 1-1-1v-8.5a1 1 0 0 1 1-1z" />
+    <path d="M14.75 4.75v2h2M13.25 10.25h1.5M13.25 12.75h1.5" />
+  </Icon>
+)
+
 export const IconPlus = () => (
   <Icon size={14}>
     <path d="M7 2.75v8.5M2.75 7h8.5" />

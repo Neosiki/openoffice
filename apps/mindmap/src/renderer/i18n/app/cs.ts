@@ -30,6 +30,7 @@ export const cs = {
   tbFoldAll: 'Sbalit vše',
   tbUnfoldAll: 'Rozbalit vše',
   zoomFit: 'Přizpůsobit oknu',
+  tbMakeFromDocument: 'Vytvořit jiný dokument z tohoto',
   zoomReset: 'Skutečná velikost',
   tbExport: 'Exportovat',
   exportPng: 'Exportovat jako obrázek (PNG)…',

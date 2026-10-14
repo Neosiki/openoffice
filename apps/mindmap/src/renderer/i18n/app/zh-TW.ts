@@ -30,6 +30,7 @@ export const zhTW = {
   tbFoldAll: '全部摺疊',
   tbUnfoldAll: '全部展開',
   zoomFit: '符合視窗',
+  tbMakeFromDocument: '用此文件製作其他文件',
   zoomReset: '實際大小',
   tbExport: '匯出',
   exportPng: '匯出為圖片 (PNG)…',

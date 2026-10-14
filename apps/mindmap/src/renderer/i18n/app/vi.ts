@@ -30,6 +30,7 @@ export const vi = {
   tbFoldAll: 'Thu gọn tất cả',
   tbUnfoldAll: 'Mở rộng tất cả',
   zoomFit: 'Vừa với cửa sổ',
+  tbMakeFromDocument: 'Tạo tài liệu khác từ tài liệu này',
   zoomReset: 'Kích thước thực',
   tbExport: 'Xuất',
   exportPng: 'Xuất dưới dạng hình ảnh (PNG)…',

@@ -4518,6 +4518,16 @@ export function setSheetsExtraFileMenuItems(items: MenuItemConstructorOptions[])
   extraFileMenuItems = items
 }
 
+/** shell-built File-menu entries for the open document (make another document
+ * from it, its sources, the documents made from it); asked at every build */
+let documentLinkMenuItems: (() => MenuItemConstructorOptions[]) | null = null
+
+export function setSheetsDocumentLinkMenuItems(
+  items: (() => MenuItemConstructorOptions[]) | null,
+): void {
+  documentLinkMenuItems = items
+}
+
 /** tab mode: closes the sheets tab instead of the whole shell window (Cmd+W / role:'close') */
 let closeActiveTabHook: (() => void) | null = null
 export function setSheetsCloseTabHook(fn: (() => void) | null): void {
@@ -4543,6 +4553,7 @@ function installApplicationMenu(): void {
           ...(extraFileMenuItems.length > 0
             ? [{ type: 'separator' as const }, ...extraFileMenuItems]
             : []),
+          ...(documentLinkMenuItems?.() ?? []),
           { type: 'separator' },
           {
             label: tm('menuSave'),
