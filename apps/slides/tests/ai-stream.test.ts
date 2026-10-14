@@ -7,6 +7,7 @@ import { describe, it, expect, vi } from 'vitest'
 import {
   AiRunError,
   AiTimeoutError,
+  HEADLESS_SUBSCRIPTION_CONSENT_VERSION,
   defaultAiSettings,
   sanitizeAiSettings,
   type AiSettings,
@@ -319,12 +320,14 @@ describe('settings as the main process reads and writes them', () => {
       ...storedAiSettings({}),
       meteredAccepted: { 'claude-code': true },
       headlessSubscriptionEnabled: true,
+      headlessSubscriptionConsentVersion: HEADLESS_SUBSCRIPTION_CONSENT_VERSION,
       subscriptionNoticeSeen: true,
     })
     expect(saved).not.toBeNull()
     const reread = storedAiSettings(JSON.parse(JSON.stringify(saved)))
     expect(reread.meteredAccepted).toMatchObject({ 'claude-code': true })
     expect(reread.headlessSubscriptionEnabled).toBe(true)
+    expect(reread.headlessSubscriptionConsentVersion).toBe(HEADLESS_SUBSCRIPTION_CONSENT_VERSION)
     expect(reread.subscriptionNoticeSeen).toBe(true)
   })
 })

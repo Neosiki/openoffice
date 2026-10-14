@@ -201,6 +201,14 @@ export function sanitizeAiSettings(input: unknown): AiSettings | null {
   if (typeof raw.headlessSubscriptionEnabled === 'boolean') {
     settings.headlessSubscriptionEnabled = raw.headlessSubscriptionEnabled
   }
+  // without it a switch turned on reads as off again: kept, but only as a whole number
+  if (
+    typeof raw.headlessSubscriptionConsentVersion === 'number' &&
+    Number.isInteger(raw.headlessSubscriptionConsentVersion) &&
+    raw.headlessSubscriptionConsentVersion >= 0
+  ) {
+    settings.headlessSubscriptionConsentVersion = raw.headlessSubscriptionConsentVersion
+  }
   if (typeof raw.subscriptionNoticeSeen === 'boolean') {
     settings.subscriptionNoticeSeen = raw.subscriptionNoticeSeen
   }

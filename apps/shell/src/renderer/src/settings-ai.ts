@@ -6,6 +6,7 @@
  */
 import {
   AI_PROVIDERS,
+  HEADLESS_SUBSCRIPTION_CONSENT_VERSION,
   activeCustomEndpoint,
   customEndpointLabel,
   imageProviderSelection,
@@ -122,8 +123,24 @@ export function withLiveSelectionFields(draft: AiSettings, latest: AiSettings | 
     provider: latest.provider,
     meteredAccepted: latest.meteredAccepted,
     headlessSubscriptionEnabled: latest.headlessSubscriptionEnabled,
+    headlessSubscriptionConsentVersion: latest.headlessSubscriptionConsentVersion,
     subscriptionNoticeSeen: latest.subscriptionNoticeSeen,
   }
+}
+
+/**
+ * The automatic-requests switch turned on or off. Turning it on is the user
+ * agreeing to the warning on screen, so it records that warning's version:
+ * a switch without it reads as off (one turned on under an older warning).
+ */
+export function withHeadlessSubscription(settings: AiSettings, on: boolean): AiSettings {
+  return on
+    ? {
+        ...settings,
+        headlessSubscriptionEnabled: true,
+        headlessSubscriptionConsentVersion: HEADLESS_SUBSCRIPTION_CONSENT_VERSION,
+      }
+    : { ...settings, headlessSubscriptionEnabled: false }
 }
 
 // ── which AI to use ───────────────────────────────────────

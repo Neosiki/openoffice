@@ -6,7 +6,6 @@ import {
   HEADLESS_LEDGER_FILE,
   HEADLESS_LOCK_FILE,
   HEADLESS_LOCK_STALE_MS,
-  HEADLESS_SUBSCRIPTION_MAX_PER_HOUR,
   HEADLESS_SUBSCRIPTION_WINDOW_MS,
   headlessSubscriptionUsage,
   runHeadlessSubscriptionCall,
@@ -38,9 +37,10 @@ afterEach(() => {
 })
 
 describe('headless subscription defaults', () => {
-  it('allows 20 requests an hour', () => {
-    expect(HEADLESS_SUBSCRIPTION_MAX_PER_HOUR).toBe(20)
+  it('counts the requests of the last hour, and caps none', async () => {
     expect(HEADLESS_SUBSCRIPTION_WINDOW_MS).toBe(60 * 60 * 1000)
+    const ledger = await import('../src/headless-ledger')
+    expect('HEADLESS_SUBSCRIPTION_MAX_PER_HOUR' in ledger).toBe(false)
   })
 })
 
@@ -71,12 +71,12 @@ describe('one request at a time', () => {
     expect(existsSync(join(dir, HEADLESS_LOCK_FILE))).toBe(false)
   })
 
-  it('serialises a burst that arrives at once', async () => {
+  it('serialises a burst that arrives at once, past what used to be the hourly cap', async () => {
     const dir = tempDir()
     let running = 0
     let peak = 0
     const results = await Promise.all(
-      Array.from({ length: 6 }, (_, i) =>
+      Array.from({ length: 25 }, (_, i) =>
         runHeadlessSubscriptionCall(
           dir,
           async () => {
@@ -90,9 +90,9 @@ describe('one request at a time', () => {
         ),
       ),
     )
-    expect(results).toEqual([0, 1, 2, 3, 4, 5])
+    expect(results).toEqual(Array.from({ length: 25 }, (_, i) => i))
     expect(peak).toBe(1)
-    expect(ledgerRuns(dir)).toHaveLength(6)
+    expect(ledgerRuns(dir)).toHaveLength(25)
   })
 
   it('frees the turn when the request fails, and still counts it', async () => {
@@ -285,87 +285,73 @@ describe('a lock left behind by a crashed process', () => {
   })
 })
 
-describe('the hourly cap', () => {
-  it('counts the requests of two processes together and reports when the next slot frees', async () => {
+describe('no hourly cap', () => {
+  it('runs the 21st request of an hour, and more, across two processes', async () => {
     const dir = tempDir()
     const a = await otherProcess()
     const b = await otherProcess()
     const t0 = 1_800_000_000_000
     let clock = t0
     const options = { ...FAST, now: () => clock }
-    for (let i = 0; i < HEADLESS_SUBSCRIPTION_MAX_PER_HOUR; i++) {
+    // the old cap was 20 an hour; every request past it runs all the same
+    for (let i = 0; i < 25; i++) {
       clock = t0 + i * 60_000
       const process = i % 2 === 0 ? a : b
       expect(await process.runHeadlessSubscriptionCall(dir, async () => i, options)).toBe(i)
     }
-    clock = t0 + 30 * 60_000
-    for (const process of [a, b]) {
-      const run = vi.fn(async () => 'over')
-      const error = await process
-        .runHeadlessSubscriptionCall(dir, run, options)
-        .catch((err: unknown) => err)
-      // instanceof would compare against another copy of the class: check the shape
-      expect(error).toMatchObject({
-        name: 'AiRunError',
-        kind: 'headless-limit',
-        // the oldest request leaves the window one hour after it started
-        resetsAt: t0 + HEADLESS_SUBSCRIPTION_WINDOW_MS,
-      })
-      expect(run).not.toHaveBeenCalled()
-    }
-    expect(ledgerRuns(dir)).toHaveLength(HEADLESS_SUBSCRIPTION_MAX_PER_HOUR)
+    expect(ledgerRuns(dir)).toHaveLength(25)
     expect(existsSync(join(dir, HEADLESS_LOCK_FILE))).toBe(false)
   })
 
-  it('lets a request through again once the oldest one is an hour old', async () => {
+  it('never answers headless-limit, even with a ledger full of this hour', async () => {
+    const dir = tempDir()
+    const t0 = 1_800_000_000_000
+    const full = Array.from({ length: 500 }, (_, i) => t0 - i * 1_000)
+    writeFileSync(join(dir, HEADLESS_LEDGER_FILE), JSON.stringify({ version: 1, runs: full }))
+    const run = vi.fn(async () => 'ran')
+    expect(await runHeadlessSubscriptionCall(dir, run, { ...FAST, now: () => t0 })).toBe('ran')
+    expect(run).toHaveBeenCalledTimes(1)
+    expect(ledgerRuns(dir)).toHaveLength(501)
+  })
+
+  it('keeps only the last hour in the ledger', async () => {
     const dir = tempDir()
     const t0 = 1_800_000_000_000
     let clock = t0
-    const options = { ...FAST, now: () => clock, maxPerHour: 2 }
+    const options = { ...FAST, now: () => clock }
     await runHeadlessSubscriptionCall(dir, async () => 1, options)
     clock = t0 + 10_000
     await runHeadlessSubscriptionCall(dir, async () => 2, options)
-    clock = t0 + 20_000
-    await expect(runHeadlessSubscriptionCall(dir, async () => 3, options)).rejects.toMatchObject({
-      kind: 'headless-limit',
-      resetsAt: t0 + 3_600_000,
-    })
-    clock = t0 + 3_600_000
-    expect(await runHeadlessSubscriptionCall(dir, async () => 3, options)).toBe(3)
-    // the next slot now waits for the second request
-    await expect(runHeadlessSubscriptionCall(dir, async () => 4, options)).rejects.toMatchObject({
-      kind: 'headless-limit',
-      resetsAt: t0 + 10_000 + 3_600_000,
-    })
-    expect(ledgerRuns(dir)).toEqual([t0 + 10_000, t0 + 3_600_000])
+    clock = t0 + HEADLESS_SUBSCRIPTION_WINDOW_MS
+    await runHeadlessSubscriptionCall(dir, async () => 3, options)
+    expect(ledgerRuns(dir)).toEqual([t0 + 10_000, t0 + HEADLESS_SUBSCRIPTION_WINDOW_MS])
   })
 
-  it('reports the usage without taking a slot', async () => {
+  it('reports the requests of the last hour without taking a slot, and nothing more', async () => {
     const dir = tempDir()
     const t0 = 1_800_000_000_000
-    const options = { ...FAST, now: () => t0, maxPerHour: 2 }
-    expect(headlessSubscriptionUsage(dir, options)).toEqual({ used: 0, limit: 2 })
-    await runHeadlessSubscriptionCall(dir, async () => 1, options)
-    expect(headlessSubscriptionUsage(dir, options)).toEqual({ used: 1, limit: 2 })
-    await runHeadlessSubscriptionCall(dir, async () => 2, options)
-    expect(headlessSubscriptionUsage(dir, options)).toEqual({
-      used: 2,
-      limit: 2,
-      resetsAt: t0 + 3_600_000,
-    })
-    expect(ledgerRuns(dir)).toHaveLength(2)
+    let clock = t0
+    const options = { ...FAST, now: () => clock }
+    expect(headlessSubscriptionUsage(dir, options)).toEqual({ used: 0 })
+    for (let i = 0; i < 21; i++) await runHeadlessSubscriptionCall(dir, async () => i, options)
+    expect(headlessSubscriptionUsage(dir, options)).toEqual({ used: 21 })
+    expect(ledgerRuns(dir)).toHaveLength(21)
+    clock = t0 + HEADLESS_SUBSCRIPTION_WINDOW_MS
+    expect(headlessSubscriptionUsage(dir, options)).toEqual({ used: 0 })
   })
 
-  it('does not let a timestamp from the future hold a slot for longer than an hour', async () => {
+  it('does not let a timestamp from the future count for longer than an hour', async () => {
     const dir = tempDir()
     const t0 = 1_800_000_000_000
     writeFileSync(
       join(dir, HEADLESS_LEDGER_FILE),
       JSON.stringify({ version: 1, runs: [t0 + 10 * 3_600_000] }),
     )
-    await expect(
-      runHeadlessSubscriptionCall(dir, async () => 1, { ...FAST, now: () => t0, maxPerHour: 1 }),
-    ).rejects.toMatchObject({ kind: 'headless-limit', resetsAt: t0 + 3_600_000 })
+    expect(headlessSubscriptionUsage(dir, { now: () => t0 })).toEqual({ used: 1 })
+    expect(await runHeadlessSubscriptionCall(dir, async () => 1, { ...FAST, now: () => t0 })).toBe(
+      1,
+    )
+    expect(headlessSubscriptionUsage(dir, { now: () => t0 + 3_600_000 })).toEqual({ used: 0 })
   })
 
   it('creates the data directory when it does not exist yet', async () => {
@@ -377,7 +363,6 @@ describe('the hourly cap', () => {
 
 describe('a damaged ledger', () => {
   const t0 = 1_800_000_000_000
-  const WINDOW = HEADLESS_SUBSCRIPTION_WINDOW_MS
   /** the file was last written ten minutes before t0 */
   const written = t0 - 10 * 60_000
   const DAMAGED = [
@@ -398,76 +383,42 @@ describe('a damaged ledger', () => {
   }
 
   it.each(DAMAGED)(
-    'counts as a used-up hour from the moment it was last written (%s)',
+    'does not block the request, and gives way to a fresh ledger (%s)',
     async (_name, content) => {
       const dir = tempDir()
-      const path = damage(dir, content)
+      damage(dir, content)
       const options = { ...FAST, now: () => t0 }
+      // the count is only information now: what cannot be read counts as nothing
+      expect(headlessSubscriptionUsage(dir, options)).toEqual({ used: 0 })
       const run = vi.fn(async () => 'ran')
-      const error = await runHeadlessSubscriptionCall(dir, run, options).catch(
-        (err: unknown) => err,
-      )
-      expect(error).toBeInstanceOf(AiRunError)
-      expect(error).toMatchObject({ kind: 'headless-limit', resetsAt: written + WINDOW })
-      expect(run).not.toHaveBeenCalled()
-      // the count was not erased: the file is as it was, and no lock is left
-      expect(readFileSync(path, 'utf-8')).toBe(content)
+      expect(await runHeadlessSubscriptionCall(dir, run, options)).toBe('ran')
+      expect(run).toHaveBeenCalledTimes(1)
+      expect(ledgerRuns(dir)).toEqual([t0])
       expect(readdirSync(dir)).toEqual([HEADLESS_LEDGER_FILE])
-      expect(headlessSubscriptionUsage(dir, options)).toEqual({
-        used: HEADLESS_SUBSCRIPTION_MAX_PER_HOUR,
-        limit: HEADLESS_SUBSCRIPTION_MAX_PER_HOUR,
-        resetsAt: written + WINDOW,
-      })
+      expect(headlessSubscriptionUsage(dir, options)).toEqual({ used: 1 })
     },
   )
 
-  it('is refused by every process, and to the last moment of that hour', async () => {
+  it('is run past by every process', async () => {
     const dir = tempDir()
     damage(dir, '{"runs": [1, "two", nul')
     const a = await otherProcess()
     const b = await otherProcess()
-    for (const [process, now] of [
-      [a, t0],
-      [b, t0 + 60_000],
-      [a, written + WINDOW - 1],
-    ] as const) {
+    for (const process of [a, b]) {
       const run = vi.fn(async () => 'ran')
-      await expect(
-        process.runHeadlessSubscriptionCall(dir, run, { ...FAST, now: () => now }),
-      ).rejects.toMatchObject({ kind: 'headless-limit', resetsAt: written + WINDOW })
-      expect(run).not.toHaveBeenCalled()
+      const result = await process.runHeadlessSubscriptionCall(dir, run, {
+        ...FAST,
+        now: () => t0,
+      })
+      expect(result).toBe('ran')
+      expect(run).toHaveBeenCalledTimes(1)
     }
+    expect(ledgerRuns(dir)).toEqual([t0, t0])
   })
 
-  it('gives way to a fresh ledger once that hour has passed', async () => {
+  it('is not told apart from a missing ledger: first use just runs', async () => {
     const dir = tempDir()
-    damage(dir, '{"runs": [1, "two", nul')
-    const now = written + WINDOW
-    const options = { ...FAST, now: () => now }
-    expect(headlessSubscriptionUsage(dir, options)).toEqual({
-      used: 0,
-      limit: HEADLESS_SUBSCRIPTION_MAX_PER_HOUR,
-    })
-    expect(await runHeadlessSubscriptionCall(dir, async () => 'ran', options)).toBe('ran')
-    expect(ledgerRuns(dir)).toEqual([now])
-    expect(await runHeadlessSubscriptionCall(dir, async () => 'again', options)).toBe('again')
-    expect(ledgerRuns(dir)).toEqual([now, now])
-  })
-
-  it('does not hold a slot for longer than an hour when its file time is in the future', async () => {
-    const dir = tempDir()
-    damage(dir, 'not a ledger', t0 + 10 * WINDOW)
-    await expect(
-      runHeadlessSubscriptionCall(dir, async () => 'ran', { ...FAST, now: () => t0 }),
-    ).rejects.toMatchObject({ kind: 'headless-limit', resetsAt: t0 + WINDOW })
-  })
-
-  it('is not what a missing ledger is: first use just runs', async () => {
-    const dir = tempDir()
-    expect(headlessSubscriptionUsage(dir)).toEqual({
-      used: 0,
-      limit: HEADLESS_SUBSCRIPTION_MAX_PER_HOUR,
-    })
+    expect(headlessSubscriptionUsage(dir)).toEqual({ used: 0 })
     expect(await runHeadlessSubscriptionCall(dir, async () => 'ran', FAST)).toBe('ran')
     expect(ledgerRuns(dir)).toHaveLength(1)
   })

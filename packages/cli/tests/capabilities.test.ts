@@ -1,7 +1,10 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { setCodexImageGenerationAvailable } from '@genoffice/ai-provider'
+import {
+  HEADLESS_SUBSCRIPTION_CONSENT_VERSION,
+  setCodexImageGenerationAvailable,
+} from '@genoffice/ai-provider'
 import {
   detectSubscriptionLogin,
   type SubscriptionDetection,
@@ -46,6 +49,12 @@ function settingsFile(dir: string, settings: Record<string, unknown>): string {
   const path = join(dir, 'ai-settings.json')
   writeFileSync(path, JSON.stringify({ provider: 'auto', providers: {}, ...settings }))
   return path
+}
+
+/** the switch as the settings screen turns it on: with the consent of the current warning */
+const ON = {
+  headlessSubscriptionEnabled: true,
+  headlessSubscriptionConsentVersion: HEADLESS_SUBSCRIPTION_CONSENT_VERSION,
 }
 
 function envFor(settings: string, app = ''): NodeJS.ProcessEnv {
@@ -165,11 +174,11 @@ describe('genoffice capabilities', () => {
     expect(d.media_analysis).toEqual(d.video_analysis)
   })
 
-  it('reports the subscription routes and the hourly allowance when the switch is on', async () => {
+  it('reports the subscription routes and the count of automatic calls when the switch is on', async () => {
     setCodexImageGenerationAvailable(true)
     aiSearch.registerCodexImageGenerator(async () => ({ url: 'https://example.invalid/x.png' }))
     const dir = tempDir()
-    const settings = settingsFile(dir, { headlessSubscriptionEnabled: true })
+    const settings = settingsFile(dir, ON)
     const first = (await run(['capabilities', '--json'], { env: envFor(settings) })).json().detail
     expect(first.image_generation).toEqual({ available: true, via: 'codex', route: 'subscription' })
     expect(first.image_analysis).toEqual({
@@ -179,33 +188,44 @@ describe('genoffice capabilities', () => {
     })
     expect(first.media_analysis).toEqual(first.image_analysis)
     expect(first.video_analysis.available).toBe(false)
+    // there is no hourly cap: the count is information, the limit and what remains are null
     expect(first.automatic_calls).toEqual({
       subscription_enabled: true,
       used: 0,
-      limit: 20,
-      remaining: 20,
+      limit: null,
+      remaining: null,
     })
     expect(fakes.detect.mock.calls.map((call) => call[0]).sort()).toEqual(['claude-code', 'codex'])
 
-    for (let i = 0; i < aiSearch.HEADLESS_SUBSCRIPTION_MAX_PER_HOUR; i++) {
+    // past what used to be the hourly cap of 20
+    for (let i = 0; i < 21; i++) {
       await aiSearch.runHeadlessSubscriptionCall(dir, async () => undefined)
     }
-    const spent = (await run(['capabilities', '--json'], { env: envFor(settings) })).json().detail
-    expect(spent.automatic_calls).toEqual({
+    const counted = (await run(['capabilities', '--json'], { env: envFor(settings) })).json().detail
+    expect(counted.automatic_calls).toEqual({
       subscription_enabled: true,
-      used: 20,
-      limit: 20,
-      remaining: 0,
-      resetsAt: expect.any(Number),
+      used: 21,
+      limit: null,
+      remaining: null,
     })
-    expect(spent.automatic_calls.resetsAt).toBeGreaterThan(Date.now())
-    // a used-up allowance is an error of the request, not a missing capability
-    expect(spent.image_analysis.available).toBe(true)
+    expect('resetsAt' in counted.automatic_calls).toBe(false)
+    expect(counted.image_analysis.available).toBe(true)
+  })
+
+  it('reads a switch turned on under the older warning as off, with no count', async () => {
+    const dir = tempDir()
+    const settings = settingsFile(dir, { headlessSubscriptionEnabled: true })
+    await aiSearch.runHeadlessSubscriptionCall(dir, async () => undefined)
+    const d = (await run(['capabilities', '--json'], { env: envFor(settings) })).json().detail
+    expect(d.automatic_calls).toEqual({ subscription_enabled: false })
+    expect(d.image_analysis).toMatchObject({ available: false, via: null, route: null })
+    expect(d.image_analysis.message).toBe(IMAGE_ANALYSIS_HINT)
+    expect(fakes.detect).not.toHaveBeenCalled()
   })
 
   it('reports a signed-out subscription as unavailable even with the switch on', async () => {
     fakes.detect.mockImplementation(async (provider: string) => ({ provider, state: 'signed-out' }))
-    const settings = settingsFile(tempDir(), { headlessSubscriptionEnabled: true })
+    const settings = settingsFile(tempDir(), ON)
     const d = (await run(['capabilities', '--json'], { env: envFor(settings) })).json().detail
     expect(d.image_analysis).toMatchObject({ available: false, via: null, route: null })
     expect(d.image_analysis.message).toContain('no AI provider is connected')
@@ -219,7 +239,7 @@ describe('genoffice capabilities', () => {
       account: 'jun.il@school.kr',
     }))
     const dir = tempDir()
-    const settings = settingsFile(dir, { headlessSubscriptionEnabled: true })
+    const settings = settingsFile(dir, ON)
     const audit = join(dir, 'audit.jsonl')
     for (const format of [['--json'], []]) {
       const r = await run(['capabilities', ...format], {
@@ -244,7 +264,7 @@ describe('genoffice capabilities', () => {
     const analyze = vi.spyOn(aiSearch, 'analyzeMediaTool')
     const generate = vi.spyOn(aiSearch, 'generateImageTool')
     const web = vi.spyOn(aiSearch, 'webSearchTool')
-    const settings = settingsFile(tempDir(), { headlessSubscriptionEnabled: true })
+    const settings = settingsFile(tempDir(), ON)
     expect((await run(['capabilities', '--json'], { env: envFor(settings) })).code).toBe(0)
     expect(fetchSpy).not.toHaveBeenCalled()
     expect(analyze).not.toHaveBeenCalled()
