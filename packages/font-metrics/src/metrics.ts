@@ -10,7 +10,7 @@
 import { closeSync, mkdirSync, openSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 
-import { getFontIndex, norm, readTable, readTableDir, styleScore } from './sfnt'
+import { fontDirsGeneration, getFontIndex, norm, readTable, readTableDir, styleScore } from './sfnt'
 
 export interface FaceVerticalMetrics {
   unitsPerEm: number
@@ -64,6 +64,7 @@ interface CacheEntry {
 let cacheFile: string | null = null
 let persisted: Record<string, CacheEntry> | null = null
 const misses = new Set<string>()
+let missesGeneration = fontDirsGeneration()
 
 /** Point the persistent cache at a directory (e.g. Electron userData); optional. */
 export function configureMetricsCache(dir: string): void {
@@ -114,6 +115,11 @@ function cacheValid(entry: CacheEntry): boolean {
 export function familyVerticalMetrics(family: string): FaceVerticalMetrics | null {
   const key = norm(family)
   if (!key) return null
+  // a family missing before the app's own font folders were named may be there now
+  if (missesGeneration !== fontDirsGeneration()) {
+    misses.clear()
+    missesGeneration = fontDirsGeneration()
+  }
   if (misses.has(key)) return null
   const cache = loadCache()
   const hit = cache[key]
