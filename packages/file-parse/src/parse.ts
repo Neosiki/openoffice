@@ -6,6 +6,7 @@ import { pdfToText } from './pdf'
 import { pptToText } from './ppt'
 import { pptxToText } from './pptx'
 import { xlsxToText } from './xlsx'
+import { xmindToText } from './xmind'
 import { redactHtmlSource } from './html-redaction'
 import { redactMarkdownSource } from './markdown-redaction'
 
@@ -144,6 +145,13 @@ export async function parseFileToText(filePath: string): Promise<ParsedFile> {
         error: `Content mismatch: .${ext} file has ${sniffed} magic bytes`,
       }
     }
+    if (ext === 'xmind' && sniffed !== 'zip') {
+      return {
+        ok: false,
+        kind: 'text',
+        error: `Content mismatch: .xmind file has ${sniffed} magic bytes`,
+      }
+    }
     // a DOCX saved under a .doc name is common enough that it parses as OOXML
     if (
       (ext === 'doc' && sniffed !== 'ole2' && sniffed !== 'zip') ||
@@ -173,6 +181,8 @@ export async function parseFileToText(filePath: string): Promise<ParsedFile> {
         return { ok: true, kind: 'text', text: await xlsxToText(bytes) }
       case 'pdf':
         return { ok: true, kind: 'text', text: await pdfToText(bytes) }
+      case 'xmind':
+        return { ok: true, kind: 'text', text: await xmindToText(bytes) }
     }
   } catch (e) {
     return { ok: false, kind: 'text', error: e instanceof Error ? e.message : String(e) }
