@@ -637,13 +637,33 @@ function nodesOf(parsed: XmindSheet, bothSides: boolean): MapNode {
   return root
 }
 
+/** The id `read_map` writes at the end of a topic line: ` {#id}` or ` {#"id"}`. */
+const READ_ID_TAG = /[ \t]+\{#(?:[\w.:-]+|"(?:[^"\\]|\\.)*")\}[ \t]*$/
+/** A topic line of an outline. */
+const ITEM_LINE = /^[ \t]*(?:[-+*]|\d{1,9}[.)])[ \t]/
+/** The line `read_map` writes for topics folded away. */
+const READ_FOLD_LINE = /^[ \t]*[-+*][ \t]+\(\+\d+ more\)[ \t]*$/
+
+/**
+ * `read_map` output pasted back into `write_map`: its id tags and fold lines
+ * are not part of the map. Only this tool takes them off; the engine's reader
+ * keeps them as text, as it would any title.
+ */
+function withoutReadMarks(text: string): string {
+  return text
+    .split(/\r\n|\n|\r/)
+    .filter((line) => !READ_FOLD_LINE.test(line))
+    .map((line) => (ITEM_LINE.test(line) ? line.replace(READ_ID_TAG, '') : line))
+    .join('\n')
+}
+
 /** The `write_map` tool: outline text into new sheets (or into the blank new map). */
 export async function writeMap(
   host: MapAiHost,
   input: { outline?: unknown },
   turn: MapTurn | null,
 ): Promise<MapToolResult> {
-  const text = typeof input.outline === 'string' ? input.outline : ''
+  const text = typeof input.outline === 'string' ? withoutReadMarks(input.outline) : ''
   if (text.trim() === '') return fail('outline must be non-empty text')
   host.flush()
   const session = host.session()

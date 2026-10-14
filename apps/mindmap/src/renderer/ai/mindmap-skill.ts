@@ -141,7 +141,7 @@ const TOOLS: AgentToolDef[] = [
   {
     name: MAP_TOOL_NAMES.writeMap,
     description:
-      'Write a whole map from an outline: "# Sheet title", then one "- Central topic" item with nested "- " items two spaces deeper per level; "[a, b]" after a title are labels, "<https://…>" a link, "> " lines below an item its note. Adds a new sheet per "# " heading and never changes a sheet that has content; on a new, empty map it fills the empty sheet.',
+      'Write a whole map from an outline: "# Sheet title", then one "- Central topic" item with nested "- " items two spaces deeper per level; "[a, b]" after a title are labels, "<https://…>" a link, "> " lines below an item its note. A trailing " {#id}" on an item and "- (+N more)" lines, as read_map writes them, are dropped, so new topics get new ids. Adds a new sheet per "# " heading and never changes a sheet that has content; on a new, empty map it fills the empty sheet.',
     inputSchema: {
       type: 'object',
       properties: {

@@ -292,9 +292,8 @@ export interface HandoffRunStarted {
 
 /** Content for a new, unsaved map: outline text in the form the engine reads. */
 export interface MindmapSeed {
+  /** the sheet titles come from its `# ` headings */
   outline: string
-  /** title for the tab and the first sheet; the outline's own title when left out */
-  title?: string
 }
 
 // ---- preload API (window.mindmapApi) ----

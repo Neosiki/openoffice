@@ -55,8 +55,6 @@ export async function newMap(titles: {
  */
 export async function seededMap(seed: MindmapSeed, untitled: string): Promise<DocumentSession> {
   const document = await createXmindDocumentFromOutline(seed.outline, { untitled })
-  const title = seed.title?.trim()
-  if (title && document.sheets[0]) document.sheets[0].title = title
   document.markChanged()
   return new DocumentSession(document)
 }

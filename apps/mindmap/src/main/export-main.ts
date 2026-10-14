@@ -20,7 +20,8 @@
  */
 import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { extname, join } from 'node:path'
+import { extname, join, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { BrowserWindow, app, dialog, ipcMain, session } from 'electron'
 import type { IpcMainInvokeEvent } from 'electron'
 import {
@@ -130,6 +131,32 @@ async function pickTarget(
 
 let blockerInstalled = false
 
+/** The temp page files an export window is loading right now, as path keys. */
+const pageFiles = new Set<string>()
+
+function pathKey(path: string): string {
+  const full = resolve(path)
+  return process.platform === 'win32' ? full.toLowerCase() : full
+}
+
+/** Lets the export session load this one page file, until the returned function is called. */
+export function allowPageFile(path: string): () => void {
+  const key = pathKey(path)
+  pageFiles.add(key)
+  return () => pageFiles.delete(key)
+}
+
+/** A `data:` address, or exactly a page file being loaded; no other file, share or host. */
+export function exportRequestAllowed(url: string): boolean {
+  if (/^data:/i.test(url)) return true
+  if (!/^file:/i.test(url)) return false
+  try {
+    return pageFiles.has(pathKey(fileURLToPath(url)))
+  } catch {
+    return false
+  }
+}
+
 /**
  * The export session refuses every request that is not the page file or a
  * `data:` address. Installed once, before the first window of that session.
@@ -139,7 +166,7 @@ function exportSession(): Electron.Session {
   if (!blockerInstalled) {
     blockerInstalled = true
     own.webRequest.onBeforeRequest((details, callback) => {
-      const allowed = /^(?:file|data):/i.test(details.url)
+      const allowed = exportRequestAllowed(details.url)
       if (!allowed) console.warn('[mindmap] export window: refused a request')
       callback({ cancel: !allowed })
     })
@@ -162,9 +189,10 @@ function pageWindow(javascript: boolean): BrowserWindow {
 export async function pageToPdf(html: string): Promise<Buffer> {
   const workDir = await mkdtemp(join(tmpdir(), 'genoffice-mindmap-pdf-'))
   let win: BrowserWindow | undefined
+  const htmlPath = join(workDir, 'map.html')
+  const release = allowPageFile(htmlPath)
   try {
     win = pageWindow(false)
-    const htmlPath = join(workDir, 'map.html')
     await writeFile(htmlPath, html, 'utf8')
     await win.loadFile(htmlPath)
     return await win.webContents.printToPDF({
@@ -176,6 +204,7 @@ export async function pageToPdf(html: string): Promise<Buffer> {
     })
   } finally {
     if (win && !win.isDestroyed()) win.destroy()
+    release()
     await rm(workDir, { recursive: true, force: true })
   }
 }
@@ -186,8 +215,13 @@ export async function pageToPdf(html: string): Promise<Buffer> {
  */
 function printWindow(): PrintDialogWindow {
   const win = pageWindow(true)
+  let release = (): void => {}
   return {
-    loadFile: (path) => win.loadFile(path),
+    loadFile: (path) => {
+      release()
+      release = allowPageFile(path)
+      return win.loadFile(path)
+    },
     webContents: {
       executeJavaScript: (script, userGesture) =>
         win.webContents.executeJavaScript(script, userGesture),
@@ -200,7 +234,10 @@ function printWindow(): PrintDialogWindow {
     show: () => win.show(),
     focus: () => win.focus(),
     isDestroyed: () => win.isDestroyed(),
-    destroy: () => win.destroy(),
+    destroy: () => {
+      release()
+      win.destroy()
+    },
   }
 }
 

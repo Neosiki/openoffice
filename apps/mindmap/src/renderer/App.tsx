@@ -668,7 +668,7 @@ export default function App() {
       )}
 
       <main className="mm-stage">
-        {/* the theme panel docks at this element's end side; the AI panel will dock there too */}
+        {/* the theme panel and the AI panel dock at this element's end side, one open at a time */}
         <div className="mm-card" aria-label={t('appName')}>
           {tabs.map((tab) => (
             <div

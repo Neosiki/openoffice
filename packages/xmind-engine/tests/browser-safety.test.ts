@@ -27,9 +27,14 @@ describe('src/ runs in a browser and in Node alike', () => {
     const code = readFileSync(file, 'utf8')
     expect(code).not.toMatch(/from\s+['"]node:/)
     expect(code).not.toMatch(/from\s+['"](?:fs|path|crypto|zlib|buffer|stream|util|os)['"]/)
+    // a dynamic or bare import of a builtin
+    expect(code).not.toMatch(
+      /\bimport\s*\(?\s*['"](?:node:|(?:fs|path|crypto|zlib|buffer|stream|util|os)['"])/,
+    )
     expect(code).not.toMatch(/\brequire\s*\(/)
     expect(code).not.toMatch(/\bBuffer\b/)
     expect(code).not.toMatch(/\bprocess\./)
+    expect(code).not.toMatch(/\bglobalThis\s*(?:\.\s*|\[\s*['"`])(?:process|Buffer)\b/)
   })
 
   it('keeps index.ts a plain list of re-exports', () => {

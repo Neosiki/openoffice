@@ -386,6 +386,28 @@ describe('write_map', () => {
     expect(r.host.activeSheetKey()).toBe(r.key(2))
   })
 
+  it('takes read_map output pasted back without its id tags and fold lines', async () => {
+    const r = await rigOf(largeSheet())
+    const read = readMap(r.host, {}).output
+    const outline = read.slice(
+      read.indexOf('<map_outline>') + '<map_outline>'.length,
+      read.indexOf('</map_outline>'),
+    )
+    expect(outline).toContain('{#')
+    expect(outline).toContain('(+6 more)')
+    const out = await writeMap(r.host, { outline }, null)
+    expect(out.isError).toBeFalsy()
+    const written = r.sheet(2)
+    expect(written.rootTopic.title).toBe('T')
+    expect(titles(written.rootTopic)).toEqual(['T.1', 'T.2', 'T.3', 'T.4', 'T.5', 'T.6'])
+    const deepest = attached(attached(attached(written.rootTopic)[0]!)[0]!)
+    expect(deepest.map((each) => each.title)).toEqual(
+      ['1', '2', '3', '4', '5', '6'].map((n) => `T.1.1.${n}`),
+    )
+    expect(deepest.every((each) => attached(each).length === 0)).toBe(true)
+    expect(JSON.stringify(written)).not.toMatch(/\{#|more\)/)
+  })
+
   it('fills a blank new map instead of adding a sheet', async () => {
     const r = rig(await newMap({ sheetTitle: 'Sheet 1', rootTitle: 'Central Topic' }), true)
     expect(blankNewMapSheet(r.host)).toBe(r.key(1))

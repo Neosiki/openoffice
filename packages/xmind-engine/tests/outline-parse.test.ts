@@ -159,6 +159,15 @@ describe('an outline read back', () => {
       '---',
       '* * *',
       '___',
+      // with the item's own marker in front, these would make a line that is a rule
+      '--',
+      '-- -',
+      '- - -',
+      '-  -',
+      '***',
+      '_ _ _',
+      '=',
+      '===',
       '(summary) fake',
       '(floating)',
       '(relationship) a -> b',
@@ -251,6 +260,7 @@ describe('an outline read back', () => {
       ...['[', ']', '<', '>', '\\', '#', '-', ' ', '  ', ',', '(summary)', '(other) ', 'a', 'B'],
       ...['https://x.y/z', 'mailto:', '*', '`', '```', '~~~', '1.', '2)', '+', '_', '한글', '<b>'],
       ...['</i>', '(', ')', '{#', '}', '|', '=', '!', '&amp;', ':', '"', "'", '\t', '---', '> '],
+      ...['--', '- -', '==='],
     ]
     const words = (most: number): string =>
       Array.from({ length: Math.floor(random() * most) }, () => pick(pieces)).join('')
@@ -406,6 +416,19 @@ describe('sheets and the central topic', () => {
       read(lines('# Plan', '', 'Why we do this.', '', '- Goal', '  > own note', '  more')),
     ).toEqual([
       { sheet: 'Plan', root: { title: 'Goal', note: 'Why we do this.\n\nown note\n\nmore' } },
+    ])
+    // text after the list comes after the topic's own note, in the order it was written
+    expect(
+      read(lines('# Plan', 'Before.', '', '- Goal', '  > own note', '  - a', '', 'After.')),
+    ).toEqual([
+      {
+        sheet: 'Plan',
+        root: { title: 'Goal', note: 'Before.\n\nown note\n\nAfter.', children: [{ title: 'a' }] },
+      },
+    ])
+    // the same with text before the first heading in front of it all
+    expect(read(lines('Lead.', '# Plan', '- Goal', '  > own note', '', 'After.'))).toEqual([
+      { sheet: 'Plan', root: { title: 'Goal', note: 'Lead.\n\nown note\n\nAfter.' } },
     ])
   })
 })
