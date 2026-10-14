@@ -40,6 +40,7 @@ import { getUiLang, normalizeLang, setUiLang } from '@genoffice/i18n'
 import { openXmind } from '@genoffice/xmind-engine'
 import { registerMindmapAiIpc } from './ai-attachments'
 import { atomicWriteFile } from './atomic-write'
+import { registerMindmapExportIpc } from './export-main'
 import { tm } from './i18n-main'
 import { APP_CHANNELS, MINDMAP_CHANNELS } from '../shared/ipc'
 import { openableLink } from '../shared/links'
@@ -402,6 +403,7 @@ function registerMindmapIpc(): void {
 
   // the AI panel's attachments and the provisional name of an untitled map (T12)
   registerMindmapAiIpc({ hasFile: (wcId) => savePathByWc.has(wcId) })
+  registerMindmapExportIpc({ filePathOf: (wcId) => savePathByWc.get(wcId) })
 
   // Language channel shared with other modules; removeHandler tolerates duplicate registration
   ipcMain.removeHandler(APP_CHANNELS.getLanguage)

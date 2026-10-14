@@ -19,6 +19,7 @@ import { newMap, type OpenFailure, type OpenNotices, openMapBytes } from './docu
 import type { DocumentSession, SheetTab } from './document/session'
 import { deleteSheetAfterConfirm } from './document/sheet-actions'
 import { thumbnailForSave } from './document/thumbnail'
+import { useMapExport } from './export/use-map-export'
 import { MapController, type MapHost, type TopicRequest } from './map/controller'
 import { Toolbar } from './components/Toolbar'
 import { SheetTabs } from './components/SheetTabs'
@@ -478,6 +479,9 @@ export default function App() {
     return () => window.removeEventListener('keydown', onKeyDown, true)
   }, [doSave, runCommand])
 
+  // export, print and the preview picture a save writes (export/use-map-export.ts)
+  const exporter = useMapExport({ session, controllers, activeKey, path, flushAll, say })
+
   // ---- sheets ----
 
   const selectSheet = (key: string): void => {
@@ -618,6 +622,7 @@ export default function App() {
           setThemeOpen(false)
           ai.setOpen(!ai.open)
         }}
+        onExport={exporter.exportAs}
       />
 
       {(notices.preserved > 0 || notices.unknownTheme || picking) && (

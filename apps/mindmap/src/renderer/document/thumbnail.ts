@@ -1,9 +1,9 @@
 /**
  * The preview picture written into the file on save.
  *
- * Nothing makes one yet: without a provider a save passes no picture and the
- * engine keeps the one the file already has. The export work registers a
- * provider here; saving needs no other change.
+ * Without a provider a save passes no picture and the engine keeps the one the
+ * file already has. The editor registers one (`export/use-map-export.ts`): the
+ * first sheet, made only for a save that changes the file.
  */
 
 /** A PNG of the map as it should look in a file browser, or null when none can be made. */

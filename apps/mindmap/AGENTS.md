@@ -11,10 +11,11 @@
     - `branches.ts`: 가지 선의 경로(곡선, 두 모서리를 둥글린 꺾은선, 글자 밑을 지나는 선). 상자 수치만 받는 순수 함수다.
     - `decorate.ts`: 라이브러리가 만든 토픽에 이 편집기가 더하는 것. 큰 가지 색, 표식, 그림, 토픽 자체 스타일. 라이브러리가 선을 재기 직전(`before`)과 직후(`after`)에 돈다(`controller.ts`가 `linkDiv`를 감싼다). `after`는 모든 선을 실제 상자 크기로 다시 그린다.
     - `style-values.ts`: 파일의 스타일 값이 화면 스타일이 되기 전에 지나는 거름망. `markers.ts`: 표식 그림. `images.ts`: 어떤 그림을 보여 주는지, 그림 바이트의 종류, 객체 URL.
-  - `components/`: 도구 줄, 시트 탭, 대화 상자와 안내, 테마 패널(`ThemePanel.tsx`), 직접 그린 그림(`icons.tsx`).
+  - `export/`: 내보내기(PNG, PDF, 마크다운 개요), 인쇄, 저장 때 넣는 미리보기 그림. 아래 "내보내기와 인쇄"를 본다.
+  - `components/`: 도구 줄, 시트 탭, 대화 상자와 안내, 테마 패널(`ThemePanel.tsx`), 내보내기 단추(`ExportMenu.tsx`), 직접 그린 그림(`icons.tsx`).
   - `i18n/`: 21개 언어 문구(`app/<언어>.ts`)와 mind-elixir 메뉴 문구(`map-strings.ts`).
   - `ai/`: AI 창(`AiPanel.tsx`), 창을 지도 오른쪽에 붙이는 자리와 AI가 지도를 보는 창구(`AiDock.tsx`의 `useMindmapAi`·`MindmapAiDock`), 도구가 지도에 하는 일(`map-tools.ts`), 지도 skill과 지시문(`mindmap-skill.ts`), 첨부·검색 skill, 전송과 연결 상태. 문구는 `i18n/ai/<언어>.ts`.
-- 메인 프로세스(`src/main/mindmap-main.ts`): 파일 읽기·쓰기, 뷰마다 허용된 경로, 닫기 전 저장 확인, 이름 바뀜 따라가기, 링크 열기, 단독 실행.
+- 메인 프로세스(`src/main/mindmap-main.ts`): 파일 읽기·쓰기, 뷰마다 허용된 경로, 닫기 전 저장 확인, 이름 바뀜 따라가기, 링크 열기, 단독 실행. 내보내기·인쇄 창구는 `src/main/export-main.ts`.
 - AI 첨부와 제목 없는 지도의 임시 이름(`src/main/ai-attachments.ts`): `mindmap:files-*`, `mindmap:provisional-title`.
 - IPC 계약 `src/shared/ipc.ts`(`MINDMAP_CHANNELS`). 이 편집기가 갖는 창구 이름과 주고받는 자료의 모양이 전부 여기 있다. 아직 받는 쪽이 없는 창구에는 맡을 작업이 주석으로 적혀 있다.
 
@@ -77,6 +78,17 @@
 - **밖에서 시작하는 실행**은 `MindmapAiDock`(`AiPanel`)의 `request`(`{ nonce, text, attachmentPaths }`)로 건넨다. 파일은 `mindmap:files-add`로 받아 첨부 칸에, 글은 입력 칸에 넣은 뒤 보내기 버튼과 같은 `send`를 지난다. 문지기가 붙잡거나 거절하면 글과 첨부는 창에 그대로 남는다. 실행이 실제로 시작될 때마다 `onRunStart({ text, attachments })`가 불린다(입력, 다시 시도, 대기열, 밖에서 시작 모두).
 - 이 편집기는 `ai:*`와 구독 창구를 등록하지 않는다. 제공자는 `selectAiProvider`(뒷단)가 정하고, 화면은 문지기와 막힘 안내만 그린다.
 
+## 내보내기와 인쇄
+
+- 그림(PNG)과 PDF는 지금 보는 시트, 인쇄도 지금 보는 시트다. 마크다운 개요는 파일 전체의 `sheetsToOutline`이다(저장 안 한 편집 포함, 접힘 무관). 도구 줄의 내보내기 단추는 세 가지 내보내기만 연다. 인쇄는 파일 메뉴에만 있다.
+- 시트를 따로 그리지 않는다. 화면에 그려진 시트(`me-nodes`)를 그대로 복사한다(`export/snapshot.ts`). 그래서 접힌 가지는 접힌 채로 나오고, 확대 배율과 상관없이 시트 전체가 나온다. 편집용 표시(선택, 접기 손잡이, 입력 상자, 연결선 손잡이)는 빼고, 남길 요소와 속성의 목록으로 씻는다. 주소를 담은 속성, 코드를 돌리는 속성, `url(`이 든 스타일은 남지 않는다. mind-elixir의 `exportSvg`/`exportPng`는 쓰지 않는다(글을 `innerHTML`로 다시 넣고 이 편집기의 모양을 모른다).
+- 그림은 파일 안의 것만 다시 읽어 `data:` 주소로 넣는다(`archivePictureEntry`, `pictureType`). 바깥 그림은 화면처럼 출처 없는 자리 표시다.
+- 스타일은 라이브러리의 규칙(선택자가 `.map-container`로 시작하는 규칙)과 `map.css`뿐이다. 화면 틀 토큰은 내보낸 결과에 없다. 색은 복사본에 실린 `--mm-` 속성에서만 온다. 그래서 앱이 밝든 어둡든 결과가 같다.
+- PNG는 복사본을 SVG `foreignObject`에 넣어 캔버스에 그린다. SVG는 `data:` 주소로 불러온다(이 앱 스킴의 `blob:` 주소는 캔버스를 오염시켜 `toBlob`이 실패한다). 그림은 그려질 크기로 미리 만들어 넣는다(`export/resample.ts`). 브라우저가 크기를 바꿔 그리면 앞서 그린 것에 따라 몇 픽셀이 달라지기 때문이다.
+- PDF와 인쇄는 가로 A4 한 쪽에 맞춘 HTML 한 장(`render.ts`의 `snapshotPage`)이다. 바탕은 지도의 바탕색이다. 페이지의 CSP가 `data:` 그림 말고는 아무것도 불러오지 못하게 막고, 메인 프로세스의 숨은 창은 자기 세션(`mindmap-export`)에서 파일과 `data:` 말고는 모든 요청을 거절한다. PDF는 `printToPDF`, 인쇄는 `printHtmlDocument`에 가로 A4를 덧붙인 창으로 한다.
+- 내보내기와 인쇄는 차례로 돈다. 하나가 도는 중에 온 요청은 버리지 않고 기다린다.
+- 미리보기 그림: 내용이 바뀐 저장에서만 첫 시트로 만든다(최대 800×600). 첫 시트가 숨어 있으면 그 순간만 보이지 않게 펼쳐 잰다. 그린 적 없는 첫 시트, 실패, 4초 초과면 그림 없이 저장하고 파일의 예전 그림이 남는다.
+
 ## 테스트
 
 - 실행: `npm run test -w @genoffice/mindmap`, `npm run typecheck -w @genoffice/mindmap`. Windows에서 전부 통과한다.
@@ -84,4 +96,5 @@
 - 바꾸면 반드시 테스트하는 것: 열기만 한 지도가 "바뀜 없음"으로 맞춰지는지(`tests/convert.test.ts`), 지운 뒤 되돌리면 원본 나무가 글자 그대로 돌아오고 저장이 원본 바이트인지(`tests/session.test.ts`, `tests/controller.test.ts`), HTML처럼 생긴 글이 요소를 만들지 않는지, 열리지 않을 주소가 글자로 보이고 파일 값이 그대로인지, 잘라내어 붙인 토픽이 원본 그대로 도착하는지, 여기서 열린 적 없는 파일에 어떤 저장 길로도 쓰지 않는지와 링크 거절(`tests/main.test.ts`), 삭제 확인이 뜨는 조건과 치던 제목이 저장에 들어가는지(`tests/app.test.ts`).
 - 바꾸면 반드시 테스트하는 것(모양): 스타일 값 거름망의 표(`tests/style-values.test.ts`), 바깥 그림이 출처 있는 요소를 만들지 않는 것과 표식·그림 규칙(`tests/markers-images.test.ts`, `tests/decorate.test.ts`), 96개 테마를 고르면 파일에 적히고 다시 열면 같은 모양인 것, 앱이 밝든 어둡든 지도 색이 같은 것, 지도 CSS·그리는 코드가 화면 틀 토큰을 쓰지 않는 것(`tests/look.test.ts`), 테마 패널(`tests/app.test.ts`).
 - 바꾸면 반드시 테스트하는 것(AI): 도구마다(`tests/ai-tools.test.ts`: 편집 하나씩의 검사, 50개 상한, 보이지 않는 요소가 딸린 토픽의 지우기 거절, 새 시트·빈 새 지도 채우기·덮어쓰지 않기, 묶음 하나가 되돌리기 한 단계, 차례 되돌리기가 더한 시트를 지우는 것, 꺾쇠가 든 글), 창(`tests/ai-panel.test.ts`: 대본으로 쓴 모델의 답으로 지도가 바뀌고 Ctrl+Z로 물러나는 것, 밖에서 시작한 실행이 막히면 글과 첨부가 남는 것), 첨부(`tests/ai-attachments.test.ts`). 제공자가 구독으로 정해지는 테스트는 전송 창구(`aiStream`)를 가짜로 바꾼다. 실제 `claude`·`codex`에 닿는 테스트를 두지 않는다.
-- 빌드한 앱을 실제로 몰아 보는 확인은 `tests/real-run/driver.ts`다. `npm test`에는 들어 있지 않다. 한글 조합 입력, 끌어 옮기기, 저장 후 다시 열기, 큰 지도의 속도를 본다. 모양은 `tests/real-run/look-run.ts`가 본다. 네 뼈대, 여덟 색 띠, 세 바탕, 테마 패널, 도구 줄 확대, 앱과 지도의 밝기 조합, 표식·그림의 화면을 찍고, "선" 뼈대의 이음매를 재고, 바깥 주소로 나가는 요청이 없는지 세션의 요청 기록과 작은 웹 서버로 확인한다. `MINDMAP_REAL_RUN_ONLY=look`이면 이것만 돈다.
+- 바꾸면 반드시 테스트하는 것(내보내기): 적대적인 글·스타일·바깥 그림을 가진 지도의 페이지와 SVG에 글에서 온 요소, 바깥 주소, 거르지 않은 스타일이 없는 것, 앱이 밝든 어둡든 결과가 같은 것(`tests/export.test.ts`), 마크다운 개요가 `sheetsToOutline`과 글자 그대로 같은 것과 미리보기 그림을 못 만들 때 예전 그림이 남는 것(`tests/app-export.test.ts`), 파일 이름과 확장자(`tests/export-main.test.ts`).
+- 빌드한 앱을 실제로 몰아 보는 확인은 `tests/real-run/driver.ts`다. `npm test`에는 들어 있지 않다. 한글 조합 입력, 끌어 옮기기, 저장 후 다시 열기, 큰 지도의 속도를 본다. 모양은 `tests/real-run/look-run.ts`가 본다. 네 뼈대, 여덟 색 띠, 세 바탕, 테마 패널, 도구 줄 확대, 앱과 지도의 밝기 조합, 표식·그림의 화면을 찍고, "선" 뼈대의 이음매를 재고, 바깥 주소로 나가는 요청이 없는지 세션의 요청 기록과 작은 웹 서버로 확인한다. `MINDMAP_REAL_RUN_ONLY=look`이면 이것만 돈다. 내보내기는 `tests/real-run/export-run.ts`가 본다(`MINDMAP_REAL_RUN_ONLY=export`). 밝은 앱과 어두운 앱의 PNG·미리보기 그림을 픽셀로 견주고, PDF와 인쇄가 가로 A4 한 쪽인지 읽어 보고, 바깥으로 나간 요청을 센다. 인쇄는 그 창의 `print`를 같은 창의 `printToPDF`로 바꿔 확인한다.

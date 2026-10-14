@@ -12,6 +12,8 @@
 import { AiMark, aiSubscriptionText, Dropdown, type DropdownOption } from '@genoffice/ui'
 import type { ViewLayout } from '@genoffice/xmind-engine'
 import { useI18n } from '../i18n/locale'
+import type { ExportFormat } from '../../shared/ipc'
+import { ExportMenu } from './ExportMenu'
 import {
   IconChild,
   IconFit,
@@ -70,6 +72,7 @@ export interface ToolbarProps {
   onZoomOut(): void
   onZoomFit(): void
   onToggleAi(): void
+  onExport(format: ExportFormat): void
 }
 
 export function Toolbar(p: ToolbarProps) {
@@ -266,7 +269,7 @@ export function Toolbar(p: ToolbarProps) {
             >
               <IconFit />
             </ToolButton>
-            {/* the export button goes here */}
+            <ExportMenu disabled={p.disabled} onExport={p.onExport} />
           </div>
         </div>
         {/* "make another document from this one" goes here, after its own separator */}

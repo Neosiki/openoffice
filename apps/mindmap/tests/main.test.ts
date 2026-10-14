@@ -151,6 +151,10 @@ describe('channel names', () => {
       'openFile',
       'save',
       'openLink',
+      'exportPng',
+      'exportPdf',
+      'exportMarkdown',
+      'print',
       'filesPick',
       'filesAdd',
       'filesAddPastedImage',
@@ -161,10 +165,6 @@ describe('channel names', () => {
       expect(handlers.has(MINDMAP_CHANNELS[name])).toBe(true)
     }
     for (const name of [
-      'exportPng',
-      'exportPdf',
-      'exportMarkdown',
-      'print',
       'outlineResult',
       'bytesResult',
       'handoffTake',
