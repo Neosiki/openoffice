@@ -8,7 +8,7 @@
  */
 
 const { execFileSync } = require('node:child_process')
-const { existsSync, readFileSync, rmSync } = require('node:fs')
+const { existsSync, readFileSync, readdirSync, rmSync } = require('node:fs')
 const { join } = require('node:path')
 
 // Product identity of the installed app. PRODUCT_NAME must equal PRODUCT_NAME
@@ -195,6 +195,22 @@ function assertModuleTreesPresent() {
         `electron-builder extraResources source missing: ${rel} (run npm run build:all first)`,
       )
     }
+  }
+}
+
+// The pdf structure-job process (src/main/pdf-structure/pdf-structure-process.ts)
+// is its own electron-vite chunk next to the main bundle and ships through
+// `files: ['out/**']`. Without it every Markdown / EPUB conversion and image
+// extraction fails at run time while the rest of the app works, so a build
+// that lost the chunk must not be packaged.
+function assertPdfStructureProcessBuilt() {
+  const dir = join(__dirname, 'out/main')
+  const found =
+    existsSync(dir) && readdirSync(dir).some((f) => /^pdf-structure-process-.+\.js$/.test(f))
+  if (!found) {
+    throw new Error(
+      'out/main/pdf-structure-process-*.js missing (run "npm run build -w @genoffice/shell" first)',
+    )
   }
 }
 
@@ -659,6 +675,7 @@ const config = {
     assertExtraResourceSources()
     ensureThirdPartyNotices()
     assertModuleTreesPresent()
+    assertPdfStructureProcessBuilt()
     ensureCliBundleCarriesAppVersion()
     if (context.electronPlatformName === 'darwin' && includeMacX64) {
       assertUniversalSidecar()

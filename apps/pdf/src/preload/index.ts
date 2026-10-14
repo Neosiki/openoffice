@@ -5,7 +5,14 @@ import type { AiStreamChunk } from '@genoffice/ai-provider'
 import { SUBSCRIPTION_IPC_CHANNELS } from '@genoffice/ai-provider/browser'
 import { installDropOpenBridge } from '@genoffice/electron-utils/drop-open'
 import { AI_CHANNELS, PDF_CHANNELS } from '../shared/ipc'
-import type { PdfApi, UiTheme } from '../shared/ipc'
+import type {
+  PdfApi,
+  PdfStoreApi,
+  PdfStructureApi,
+  PdfStructureFailure,
+  PdfStructureProgress,
+  UiTheme,
+} from '../shared/ipc'
 import type { SubscriptionApi } from '../shared/subscription-api'
 import {
   AI_TOOL_CAPABILITIES_CHANNEL,
@@ -59,6 +66,51 @@ async function imageGenerationAvailable(): Promise<boolean> {
   } catch {
     return false
   }
+}
+
+// Structure jobs and the result store are shell-only handlers (the
+// standalone pdf app has none): a rejected call answers like a failed one.
+function outcome<T>(channel: string, ...args: unknown[]): Promise<T | PdfStructureFailure> {
+  return (ipcRenderer.invoke(channel, ...args) as Promise<T>).catch(
+    (err: unknown): PdfStructureFailure => ({
+      ok: false,
+      error: 'not-available',
+      message: err instanceof Error ? err.message : String(err),
+    }),
+  )
+}
+
+const structure: PdfStructureApi = {
+  pickTarget: (request) =>
+    (ipcRenderer.invoke(PDF_CHANNELS.structurePickTarget, request) as Promise<string | null>).catch(
+      () => null,
+    ),
+  tree: (request) => outcome(PDF_CHANNELS.structureTree, request),
+  text: (request) => outcome(PDF_CHANNELS.structureText, request),
+  convert: (request) => outcome(PDF_CHANNELS.structureConvert, request),
+  extractImages: (request) => outcome(PDF_CHANNELS.structureExtractImages, request),
+  writeBack: (request) => outcome(PDF_CHANNELS.structureWriteBack, request),
+  cancel: (jobId) =>
+    (ipcRenderer.invoke(PDF_CHANNELS.structureCancel, jobId) as Promise<boolean>).catch(
+      () => false,
+    ),
+  onProgress: (handler) => {
+    const listener = (_e: Electron.IpcRendererEvent, progress: PdfStructureProgress) =>
+      handler(progress)
+    ipcRenderer.on(PDF_CHANNELS.structureProgress, listener)
+    return () => ipcRenderer.removeListener(PDF_CHANNELS.structureProgress, listener)
+  },
+}
+
+const store: PdfStoreApi = {
+  docHash: (path) => outcome(PDF_CHANNELS.storeDocHash, path),
+  aiReadPages: (docHash) => outcome(PDF_CHANNELS.storeAiReadPages, docHash),
+  translations: (docHash) => outcome(PDF_CHANNELS.storeTranslations, docHash),
+  translation: (docHash, lang) => outcome(PDF_CHANNELS.storeTranslation, docHash, lang),
+  unfinishedJobs: (docHash) => outcome(PDF_CHANNELS.storeUnfinishedJobs, docHash),
+  write: (request) => outcome(PDF_CHANNELS.storeWrite, request),
+  migrate: (request) => outcome(PDF_CHANNELS.storeMigrate, request),
+  deleteDocument: (docHash) => outcome(PDF_CHANNELS.storeDeleteDocument, docHash),
 }
 
 const api: PdfApi = {
@@ -169,6 +221,8 @@ const api: PdfApi = {
   },
   openAiModelSettings: () => ipcRenderer.invoke(AI_CHANNELS.openModelSettings),
   subscription,
+  structure,
+  store,
   imageGenerationAvailable,
   aiStream: (request) => ipcRenderer.invoke(AI_CHANNELS.stream, request),
   aiStreamCancel: (requestId) => ipcRenderer.invoke(AI_CHANNELS.streamCancel, requestId),
