@@ -10,6 +10,7 @@ export const pl = {
   addMaterials: 'Dodaj pliki…',
   removeMaterial: 'Usuń',
   totalLine: 'Pliki: {n} · razem {size}',
+  totalLineOne: '{n} plik · razem {size}',
   excludedLabel: 'Pominięte w materiałach',
   reasonMissing: 'Nie można znaleźć pliku.',
   reasonUnsupported: 'Nie można użyć pliku tego typu.',

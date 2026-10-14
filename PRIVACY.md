@@ -59,6 +59,21 @@ It does **not** reach:
   `ieumoffice` commands and MCP tools read PowerPoint, Markdown and HTML files
   as written, hidden parts included. What an agent does with that text is
   up to the agent you run.
+- **Three known faults where a mark is lost or not read.** These apply until
+  they are fixed:
+  - In the PowerPoint editor, if you hide a piece of text that has no
+    character formatting of its own, it can be saved without the mark. It
+    looks hidden in the open tab, but once you reopen the file, or the file
+    is read elsewhere in the app (attachment, Ask, search index, "Make"),
+    the text is visible and can be sent to an AI provider.
+  - In the Markdown editor, if a part you hide contains inline code, the code
+    is saved outside the hidden part. After reopening, or when the file is
+    read elsewhere in the app, that code is visible and can be sent to an AI
+    provider.
+  - A Markdown document saved as `.txt` or `.json` keeps its marks in the
+    file, but when you open it again in the Markdown editor, the editor does
+    not recognise them and its AI panel sees the hidden text. Read elsewhere
+    in the app, the same file stays hidden.
 
 Three more things can cause network traffic that is not a request made by the
 app's own features:
@@ -145,7 +160,10 @@ Nothing in this list is uploaded by the app.
   folder.
 - **Records of which documents were made from which files**
   (`document-links.json` in the data folder), written when a document made
-  with "Make a new document" is first saved. They hold the file paths, the
+  with "Make a new document" is first saved, and only if its tab actually
+  made something: an AI run started there with at least one of the handed-over
+  files attached, or a conversion without AI was done there. They hold the
+  file paths, the
   time and whether AI was used, not your request. Nothing is written into
   the documents themselves, and the records do not travel with a file to
   another PC.

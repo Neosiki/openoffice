@@ -263,7 +263,12 @@ project easy to take.
   PowerPoint, Markdown and HTML editors stay hidden when the file is attached
   in another editor or asked about on the home screen, but hiding marks in
   Word documents are not recognised, and the terminal command and MCP read
-  files as written. [PRIVACY.md](PRIVACY.md) has the details.
+  files as written. Until they are fixed, hidden text can also reach AI in
+  these cases: in PowerPoint, hidden text with no character formatting of its
+  own can be saved without the mark; in Markdown, inline code inside a hidden
+  part is saved outside it; and a Markdown document saved as `.txt` or `.json`
+  shows its hidden text to the Markdown editor's AI when reopened there.
+  [PRIVACY.md](PRIVACY.md) has the details.
 - **Old XMind 8 files** (with only `content.xml` inside) and password-protected
   mind maps do not open.
 - **Updating from a real GitHub release had not been exercised end to end**

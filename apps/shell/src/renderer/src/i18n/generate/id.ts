@@ -10,6 +10,7 @@ export const id = {
   addMaterials: 'Tambahkan file…',
   removeMaterial: 'Hapus',
   totalLine: '{n} file · total {size}',
+  totalLineOne: '{n} file · total {size}',
   excludedLabel: 'Tidak dipakai sebagai materi',
   reasonMissing: 'File tidak ditemukan.',
   reasonUnsupported: 'Jenis file ini tidak dapat digunakan.',

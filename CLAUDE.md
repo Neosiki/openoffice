@@ -25,8 +25,9 @@ system mode).
    brand color.
 4. **Document content is never re-authored by the theme.** Page surfaces, cell
    fills, slide content, PDF page bitmaps, export/print stylesheets, chart
-   palettes, highlight color maps, stamps, and WordArt presets are document
-   data: they stay hardcoded, must not reference chrome tokens, and every
+   palettes, highlight color maps, stamps, WordArt presets, and mind-map colors
+   (map themes and color bands) are document data: they stay hardcoded, must
+   not reference chrome tokens, and every
    save/export/print path must produce identical output in both themes. A
    Word/Excel-style _dark page_ (Sheets via Univer's `darkMode`, Docs via
    `apps/docs/src/renderer/editor/dark-page.ts`) is a display-time remap only:

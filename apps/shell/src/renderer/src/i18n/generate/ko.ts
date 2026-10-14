@@ -10,6 +10,7 @@ export const ko = {
   addMaterials: '파일 더하기…',
   removeMaterial: '빼기',
   totalLine: '자료 {n}개 · 합계 {size}',
+  totalLineOne: '자료 {n}개 · 합계 {size}',
   excludedLabel: '자료에서 뺀 파일',
   reasonMissing: '파일을 찾을 수 없습니다.',
   reasonUnsupported: '쓸 수 없는 파일 종류입니다.',

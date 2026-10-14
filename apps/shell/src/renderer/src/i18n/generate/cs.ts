@@ -10,6 +10,7 @@ export const cs = {
   addMaterials: 'Přidat soubory…',
   removeMaterial: 'Odebrat',
   totalLine: 'Souborů: {n} · celkem {size}',
+  totalLineOne: '{n} soubor · celkem {size}',
   excludedLabel: 'Vynechané z podkladů',
   reasonMissing: 'Soubor nelze najít.',
   reasonUnsupported: 'Tento typ souboru nelze použít.',

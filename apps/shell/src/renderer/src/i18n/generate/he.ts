@@ -10,6 +10,7 @@ export const he = {
   addMaterials: 'הוספת קבצים…',
   removeMaterial: 'הסרה',
   totalLine: '{n} קבצים · {size} בסך הכול',
+  totalLineOne: 'קובץ אחד · {size} בסך הכול',
   excludedLabel: 'קבצים שלא נכללו',
   reasonMissing: 'הקובץ לא נמצא.',
   reasonUnsupported: 'אי אפשר להשתמש בסוג קובץ זה.',

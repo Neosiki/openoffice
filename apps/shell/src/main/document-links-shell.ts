@@ -140,8 +140,22 @@ export function documentLinkFileMenuItems(kind: TabKind): MenuItemConstructorOpt
     labels: d.labels(),
     isMac: process.platform === 'darwin',
     onMake: () => makeFromDocument(contents),
-    onOpen: (path) => d.openPath(path),
+    onOpen: (path) => openListedFile(d, path),
   })
+}
+
+/**
+ * A listed file was picked. Presence is checked when the menu is built, so a
+ * file deleted since then can still be picked: it is then not opened, and the
+ * menu is built again to show it dimmed.
+ */
+function openListedFile(d: DocumentLinksShellDeps, path: string): void {
+  if (existsSync(path)) {
+    d.openPath(path)
+    return
+  }
+  shownSignature = ''
+  refreshDocumentLinkMenu()
 }
 
 /**

@@ -52,7 +52,7 @@ import {
   slidesIsDirty,
 } from '../../../slides/src/main/slides-main'
 import { rendererUrl, safeExternalUrl } from '@genoffice/electron-utils'
-import type { OpenDocumentTab, TabKind, TabSummary } from '../shared/tabs-api'
+import type { DocumentTabKind, OpenDocumentTab, TabKind, TabSummary } from '../shared/tabs-api'
 import { TAB_STRIP_HEIGHT } from '../shared/tab-drag-geometry'
 import type { GenerateHandoff } from '../shared/generate-api'
 import { dropGenerateHandoff, queueGenerateHandoffFor } from './generate/handoff'
@@ -252,7 +252,7 @@ export class TabManager {
     return Promise.all(
       tabs.map(async (tab) => ({
         id: tab.id,
-        kind: tab.kind as OpenDocumentTab['kind'],
+        kind: tab.kind as DocumentTabKind,
         title: tab.title,
         ...(tab.filePath ? { filePath: tab.filePath } : {}),
         active: tab.id === this.activeId,

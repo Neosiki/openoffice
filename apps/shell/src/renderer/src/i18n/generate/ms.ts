@@ -10,6 +10,7 @@ export const ms = {
   addMaterials: 'Tambah fail…',
   removeMaterial: 'Alih keluar',
   totalLine: '{n} fail · jumlah {size}',
+  totalLineOne: '{n} fail · jumlah {size}',
   excludedLabel: 'Tidak digunakan sebagai bahan',
   reasonMissing: 'Fail tidak ditemui.',
   reasonUnsupported: 'Jenis fail ini tidak boleh digunakan.',

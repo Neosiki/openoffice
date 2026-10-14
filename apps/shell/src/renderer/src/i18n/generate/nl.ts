@@ -10,6 +10,7 @@ export const nl = {
   addMaterials: 'Bestanden toevoegen…',
   removeMaterial: 'Verwijderen',
   totalLine: '{n} bestanden · {size} in totaal',
+  totalLineOne: '{n} bestand · {size} in totaal',
   excludedLabel: 'Niet als materiaal gebruikt',
   reasonMissing: 'Het bestand is niet gevonden.',
   reasonUnsupported: 'Dit type bestand kan niet worden gebruikt.',

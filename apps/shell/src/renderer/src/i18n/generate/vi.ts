@@ -10,6 +10,7 @@ export const vi = {
   addMaterials: 'Thêm tệp…',
   removeMaterial: 'Bỏ ra',
   totalLine: '{n} tệp · tổng cộng {size}',
+  totalLineOne: '{n} tệp · tổng cộng {size}',
   excludedLabel: 'Tệp không được dùng làm tài liệu nguồn',
   reasonMissing: 'Không tìm thấy tệp.',
   reasonUnsupported: 'Không thể dùng loại tệp này.',
