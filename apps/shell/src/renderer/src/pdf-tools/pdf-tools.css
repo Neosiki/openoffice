@@ -294,6 +294,12 @@ body {
   flex-basis: 100%;
 }
 
+/* a second set of files in one tool (overlay's background) */
+.pt-subhead {
+  margin: 8px 0 0;
+  font-size: inherit;
+}
+
 .pt-choice,
 .pt-check {
   display: inline-flex;

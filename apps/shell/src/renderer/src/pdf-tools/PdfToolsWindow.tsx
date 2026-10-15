@@ -31,6 +31,7 @@ import {
   IconSplitPdf,
   IconToText,
   IconDuplex,
+  IconOverlay,
   IconWatermark,
 } from '../../../../../pdf/src/renderer/icons'
 
@@ -38,6 +39,7 @@ import {
 const GROUPS: { label: PdfToolsStringKey; tools: PdfToolId[] }[] = [
   { label: 'groupOrganize', tools: ['merge', 'split', 'extract', 'reverse', 'rotate'] },
   { label: 'groupPrint', tools: ['duplex', 'nup', 'pageSize', 'splitPages'] },
+  { label: 'groupDecorate', tools: ['overlay'] },
   { label: 'groupConvert', tools: ['imagesToPdf', 'toText'] },
 ]
 
@@ -66,6 +68,7 @@ const TOOL_TEXT: Record<PdfToolId | PdfEditorToolId, [PdfToolsStringKey, PdfTool
   imagesToPdf: ['toolImagesToPdf', 'descImagesToPdf'],
   toText: ['toolToText', 'descToText'],
   duplex: ['toolDuplex', 'descDuplex'],
+  overlay: ['toolOverlay', 'descOverlay'],
   stamps: ['toolStamps', 'descStamps'],
   crop: ['toolCrop', 'descCrop'],
   exportImages: ['toolExportImages', 'descExportImages'],
@@ -83,6 +86,7 @@ const ERROR_TEXT: Record<PdfToolError, PdfToolsStringKey> = {
   'unsaved-target': 'errUnsavedTarget',
   busy: 'errBusy',
   'no-text': 'errNoText',
+  'need-background': 'errNeedBackground',
   failed: 'errFailed',
 }
 
@@ -107,6 +111,9 @@ const DEFAULT_OPTIONS: PdfToolOptions = {
   imagePaper: 'A4',
   margin: 'small',
   sheetPages: 1,
+  layer: 'behind',
+  backgroundPage: 1,
+  applyPages: '',
 }
 
 type View =
@@ -130,6 +137,7 @@ const TOOL_ICON: Record<PdfToolId | PdfEditorToolId, () => ReactElement> = {
   imagesToPdf: IconImagesToPdf,
   toText: IconToText,
   duplex: IconDuplex,
+  overlay: IconOverlay,
   stamps: IconWatermark,
   crop: IconCropPages,
   exportImages: IconExportImg,
@@ -151,6 +159,8 @@ export function PdfToolsWindow({ lang }: { lang: Lang }) {
   const t = (key: PdfToolsStringKey, params?: Params) => pdfToolsText(lang, key, params)
   const [view, setView] = useState<View>({ kind: 'home' })
   const [inputs, setInputs] = useState<PdfToolInput[]>([])
+  /** overlay: the PDF whose page goes behind or over the document */
+  const [background, setBackground] = useState<PdfToolInput | null>(null)
   const [rejected, setRejected] = useState<string[]>([])
   const [options, setOptions] = useState<PdfToolOptions>(DEFAULT_OPTIONS)
   const [busy, setBusy] = useState(false)
@@ -159,6 +169,7 @@ export function PdfToolsWindow({ lang }: { lang: Lang }) {
   const openTool = (next: View) => {
     setView(next)
     setInputs([])
+    setBackground(null)
     setRejected([])
     setOptions(DEFAULT_OPTIONS)
     setOutcome(null)
@@ -171,6 +182,19 @@ export function PdfToolsWindow({ lang }: { lang: Lang }) {
     if (result.inputs.length === 0) return
     setOutcome(null)
     setInputs((prev) => (many ? [...prev, ...result.inputs] : result.inputs.slice(0, 1)))
+  }
+
+  const pickBackground = async () => {
+    const result = await api.pickInputs(false, 'pdf')
+    setRejected(result.rejected.map((r) => t(REJECT_TEXT[r.problem], { name: r.name })))
+    const picked = result.inputs[0]
+    if (!picked) return
+    setOutcome(null)
+    setBackground(picked)
+    // a page the new background does not have falls back to its first
+    setOptions((prev) =>
+      (prev.backgroundPage ?? 1) > picked.pages ? { ...prev, backgroundPage: 1 } : prev,
+    )
   }
 
   const move = (index: number, by: -1 | 1) => {
@@ -187,7 +211,12 @@ export function PdfToolsWindow({ lang }: { lang: Lang }) {
     setBusy(true)
     setOutcome(null)
     try {
-      const result = await api.run({ tool, inputIds: inputs.map((i) => i.id), options })
+      const result = await api.run({
+        tool,
+        inputIds: inputs.map((i) => i.id),
+        options,
+        ...(tool === 'overlay' && background ? { backgroundId: background.id } : {}),
+      })
       if (result.ok) setOutcome({ kind: 'done', outputs: result.outputs })
       else if ('error' in result)
         setOutcome({ kind: 'error', message: t(ERROR_TEXT[result.error]) })
@@ -277,12 +306,15 @@ export function PdfToolsWindow({ lang }: { lang: Lang }) {
             tool={view.tool}
             t={t}
             inputs={inputs}
+            background={background}
             rejected={rejected}
             options={options}
             busy={busy}
             outcome={outcome}
             onBack={() => openTool({ kind: 'home' })}
             onPick={() => void pick(view.tool)}
+            onPickBackground={() => void pickBackground()}
+            onRemoveBackground={() => setBackground(null)}
             onRemove={(id) => setInputs((prev) => prev.filter((i) => i.id !== id))}
             onMove={move}
             onOptions={set}
@@ -306,12 +338,15 @@ interface ToolPanelProps {
   tool: PdfToolId
   t: (key: PdfToolsStringKey, params?: Params) => string
   inputs: PdfToolInput[]
+  background: PdfToolInput | null
   rejected: string[]
   options: PdfToolOptions
   busy: boolean
   outcome: Outcome
   onBack(): void
   onPick(): void
+  onPickBackground(): void
+  onRemoveBackground(): void
   onRemove(id: string): void
   onMove(index: number, by: -1 | 1): void
   onOptions(patch: PdfToolOptions): void
@@ -326,7 +361,11 @@ function ToolPanel(p: ToolPanelProps) {
   const images = takesImages(tool)
   const first = inputs[0]
   const ready =
-    tool === 'merge' ? inputs.length >= 2 : many ? inputs.length >= 1 : inputs.length === 1
+    tool === 'merge'
+      ? inputs.length >= 2
+      : many
+        ? inputs.length >= 1
+        : inputs.length === 1 && (tool !== 'overlay' || !!p.background)
   const pickLabel: PdfToolsStringKey = images
     ? inputs.length === 0
       ? 'pickImages'
@@ -340,10 +379,16 @@ function ToolPanel(p: ToolPanelProps) {
     ? 'hintImages'
     : tool === 'duplex'
       ? 'hintDuplex'
-      : many
-        ? 'hintMerge'
-        : 'hintOne'
+      : tool === 'overlay'
+        ? 'hintOverlay'
+        : many
+          ? 'hintMerge'
+          : 'hintOne'
   const done = p.outcome?.kind === 'done' ? p.outcome.outputs : null
+  const meta = (input: PdfToolInput) =>
+    input.kind === 'image'
+      ? formatBytes(input.size, p.lang)
+      : `${t(input.pages === 1 ? 'pageCountOne' : 'pageCount', { n: input.pages })} · ${formatBytes(input.size, p.lang)}`
   const firstOutput = done?.[0]
 
   return (
@@ -361,11 +406,7 @@ function ToolPanel(p: ToolPanelProps) {
               <span className="pt-item-name" title={input.name}>
                 {input.name}
               </span>
-              <span className="pt-item-meta">
-                {input.kind === 'image'
-                  ? formatBytes(input.size, p.lang)
-                  : `${t(input.pages === 1 ? 'pageCountOne' : 'pageCount', { n: input.pages })} · ${formatBytes(input.size, p.lang)}`}
-              </span>
+              <span className="pt-item-meta">{meta(input)}</span>
               {many && (
                 <>
                   <button
@@ -408,6 +449,35 @@ function ToolPanel(p: ToolPanelProps) {
           {t(pickLabel)}
         </button>
       </div>
+      {tool === 'overlay' && (
+        <>
+          <h3 className="pt-field-label pt-subhead">{t('labelBackground')}</h3>
+          {p.background && (
+            <ul className="pt-list">
+              <li className="pt-item">
+                <span className="pt-item-name" title={p.background.name}>
+                  {p.background.name}
+                </span>
+                <span className="pt-item-meta">{meta(p.background)}</span>
+                <button
+                  type="button"
+                  className="pt-icon-btn"
+                  aria-label={t('remove')}
+                  title={t('remove')}
+                  onClick={p.onRemoveBackground}
+                >
+                  ×
+                </button>
+              </li>
+            </ul>
+          )}
+          <div className="pt-actions pt-actions-start">
+            <button type="button" className="pt-btn" onClick={p.onPickBackground} disabled={p.busy}>
+              {t(p.background ? 'replaceBackground' : 'pickBackground')}
+            </button>
+          </div>
+        </>
+      )}
       {p.rejected.map((line) => (
         <p className="pt-note pt-note-error" key={line} role="alert">
           {line}
@@ -415,7 +485,14 @@ function ToolPanel(p: ToolPanelProps) {
       ))}
 
       {first && (
-        <Options tool={tool} t={t} options={options} pages={first.pages} onChange={p.onOptions} />
+        <Options
+          tool={tool}
+          t={t}
+          options={options}
+          pages={first.pages}
+          backgroundPages={p.background?.pages ?? 0}
+          onChange={p.onOptions}
+        />
       )}
 
       <div className="pt-actions">
@@ -462,10 +539,12 @@ interface OptionsProps {
   t: (key: PdfToolsStringKey, params?: Params) => string
   options: PdfToolOptions
   pages: number
+  /** overlay: pages of the picked background, 0 before one is picked */
+  backgroundPages: number
   onChange(patch: PdfToolOptions): void
 }
 
-function Options({ tool, t, options, pages, onChange }: OptionsProps) {
+function Options({ tool, t, options, pages, backgroundPages, onChange }: OptionsProps) {
   switch (tool) {
     case 'split':
       return (
@@ -630,6 +709,57 @@ function Options({ tool, t, options, pages, onChange }: OptionsProps) {
         </div>
       )
     }
+    case 'overlay':
+      return (
+        <div className="pt-fields">
+          <fieldset className="pt-field pt-choices">
+            <legend className="pt-field-label">{t('optLayer')}</legend>
+            <Choice
+              name="layer"
+              checked={options.layer !== 'front'}
+              label={t('optBehind')}
+              onPick={() => onChange({ layer: 'behind' })}
+            />
+            <Choice
+              name="layer"
+              checked={options.layer === 'front'}
+              label={t('optFront')}
+              onPick={() => onChange({ layer: 'front' })}
+            />
+          </fieldset>
+          {backgroundPages > 1 && (
+            <label className="pt-field">
+              <span className="pt-field-label">{t('optBackgroundPage')}</span>
+              <input
+                type="number"
+                className="pt-input pt-input-short"
+                min={1}
+                max={backgroundPages}
+                value={options.backgroundPage ?? 1}
+                onChange={(e) =>
+                  onChange({
+                    backgroundPage: Math.min(
+                      backgroundPages,
+                      Math.max(1, Math.floor(Number(e.target.value) || 1)),
+                    ),
+                  })
+                }
+              />
+            </label>
+          )}
+          <label className="pt-field">
+            <span className="pt-field-label">{t('optApplyPages')}</span>
+            <input
+              type="text"
+              className="pt-input"
+              value={options.applyPages ?? ''}
+              placeholder={`1-${pages}`}
+              onChange={(e) => onChange({ applyPages: e.target.value })}
+            />
+          </label>
+          <p className="pt-hint">{t('noteOverlay')}</p>
+        </div>
+      )
     case 'duplex':
       return (
         <div className="pt-fields">

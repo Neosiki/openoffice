@@ -17,6 +17,7 @@ import {
 } from '../../../../pdf/src/main/save-pdf'
 import { imagesToPdfBytes, readImageInfo } from '../../../../pdf/src/main/images-to-pdf'
 import { duplexMergeBytes } from '../../../../pdf/src/main/print-prep'
+import { overlayPdfBytes } from '../../../../pdf/src/main/overlay'
 import { readPdfText, type PdfPageText } from '../../../../pdf/src/main/read-text'
 import { parsePageRange } from '../../../../pdf/src/renderer/convert/page-range'
 import {
@@ -111,7 +112,12 @@ const intIn = (value: unknown, lo: number, hi: number): number | undefined =>
  * `pageCount`; anything missing or out of range takes the dialog's default,
  * except a page range, which must name pages that exist.
  */
-export function checkOptions(tool: PdfToolId, raw: unknown, pageCount: number): CheckedOptions {
+export function checkOptions(
+  tool: PdfToolId,
+  raw: unknown,
+  pageCount: number,
+  backgroundPages = 1,
+): CheckedOptions {
   const o = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>
   switch (tool) {
     case 'split':
@@ -147,6 +153,19 @@ export function checkOptions(tool: PdfToolId, raw: unknown, pageCount: number): 
       }
     case 'splitPages':
       return { ok: true, options: { perPage: o.perPage === 4 || o.perPage === 9 ? o.perPage : 2 } }
+    case 'overlay': {
+      const text = typeof o.applyPages === 'string' ? o.applyPages.trim() : ''
+      const range = text ? parsePageRange(text, pageCount) : null
+      if (range && !range.ok) return { ok: false, error: 'range' }
+      return {
+        ok: true,
+        options: {
+          layer: o.layer === 'front' ? 'front' : 'behind',
+          backgroundPage: intIn(o.backgroundPage, 1, backgroundPages) ?? 1,
+          applyPages: range?.ok ? range.pages.join(',') : '',
+        },
+      }
+    }
     case 'duplex':
       return {
         ok: true,
@@ -240,6 +259,20 @@ export async function runPdfTool(
     case 'duplex':
       // both sides of every sheet: two pages, or two times what N-up puts on a side
       return [await duplexMergeBytes(inputs, 2 * (options.sheetPages ?? 1))]
+    case 'overlay': {
+      const background = inputs[1]
+      if (!background) throw new Error('no background')
+      const pages = options.applyPages
+        ? options.applyPages.split(',').map((p) => Number(p) - 1)
+        : null
+      return [
+        await overlayPdfBytes(first, background, {
+          behind: options.layer !== 'front',
+          backgroundPage: (options.backgroundPage ?? 1) - 1,
+          pages,
+        }),
+      ]
+    }
     case 'toText': {
       const doc = await readPdfText(first)
       if (!doc.pages.some((page) => page.text.trim() !== '')) throw new PdfToolRefusal('no-text')
@@ -268,6 +301,7 @@ export function outputNames(
   const suffix: Record<Exclude<PdfToolId, 'split' | 'imagesToPdf' | 'toText'>, string> = {
     merge: 'merged',
     duplex: 'duplex',
+    overlay: 'background',
     extract: 'pages',
     reverse: 'reversed',
     nup: `${options.perSheet ?? 2}up`,

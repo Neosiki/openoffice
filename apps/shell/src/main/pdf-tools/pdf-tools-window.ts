@@ -152,6 +152,13 @@ async function run(raw: unknown): Promise<PdfToolRunResult> {
   if (chosen.length === 0) return { ok: false, error: 'no-input' }
   const sources = toolTakesMany(tool) ? chosen : chosen.slice(0, 1)
   if (sources.length < toolMinInputs(tool)) return { ok: false, error: 'need-two' }
+  // overlay reads a second PDF, picked on its own as the background
+  if (tool === 'overlay') {
+    const background =
+      typeof req.backgroundId === 'string' ? inputs.get(req.backgroundId) : undefined
+    if (!background || background.kind !== 'pdf') return { ok: false, error: 'need-background' }
+    sources.push(background)
+  }
   if (running) return { ok: false, error: 'busy' }
   running = true
   try {
@@ -165,7 +172,14 @@ async function run(raw: unknown): Promise<PdfToolRunResult> {
     }
     const first = kind === 'image' ? inspectImage(bytes[0]!) : await inspectPdf(bytes[0]!)
     if (!first.ok) return { ok: false, error: 'failed' }
-    const checked = checkOptions(tool, req.options, first.pages)
+    const backgroundInfo = tool === 'overlay' ? await inspectPdf(bytes[1]!) : null
+    if (backgroundInfo && !backgroundInfo.ok) return { ok: false, error: 'failed' }
+    const checked = checkOptions(
+      tool,
+      req.options,
+      first.pages,
+      backgroundInfo?.ok ? backgroundInfo.pages : 1,
+    )
     if (!checked.ok) return { ok: false, error: checked.error }
     let made: Uint8Array[]
     try {

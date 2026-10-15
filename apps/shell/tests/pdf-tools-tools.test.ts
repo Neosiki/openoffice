@@ -1,6 +1,6 @@
 import { crc32, deflateSync } from 'node:zlib'
 import { describe, expect, it } from 'vitest'
-import { PDFDocument, StandardFonts } from 'pdf-lib'
+import { PDFDict, PDFDocument, PDFName, StandardFonts } from 'pdf-lib'
 import {
   PdfToolRefusal,
   checkOptions,
@@ -143,6 +143,19 @@ describe('checking options', () => {
     expect(checkOptions('toText', { pages: '1' }, 3).options).toEqual({})
     expect(checkOptions('duplex', { sheetPages: 3 }, 3).options).toEqual({ sheetPages: 1 })
     expect(checkOptions('duplex', { sheetPages: 4 }, 3).options).toEqual({ sheetPages: 4 })
+    expect(checkOptions('overlay', { layer: 'side', backgroundPage: 5 }, 3, 2).options).toEqual({
+      layer: 'behind',
+      backgroundPage: 1,
+      applyPages: '',
+    })
+    expect(
+      checkOptions('overlay', { layer: 'front', backgroundPage: 2, applyPages: '3,1' }, 3, 2)
+        .options,
+    ).toEqual({ layer: 'front', backgroundPage: 2, applyPages: '1,3' })
+    expect(checkOptions('overlay', { applyPages: '4' }, 3, 1)).toEqual({
+      ok: false,
+      error: 'range',
+    })
   })
 
   it('keeps only the options the tool reads', () => {
@@ -256,6 +269,22 @@ describe('running each tool', () => {
     expect(await widths(out!)).toEqual([100, 101, 102, 102, 200, 200, 200, 200])
   })
 
+  it('lays the chosen background page on the chosen pages only', async () => {
+    const [out] = await runUntouched('overlay', [await pdf(3, 100), await textPdf(['a', 'b'])], {
+      layer: 'behind',
+      backgroundPage: 2,
+      applyPages: '1,3',
+    })
+    const doc = await PDFDocument.load(out!)
+    expect(await widths(out!)).toEqual([100, 101, 102])
+    const drawn = doc
+      .getPages()
+      .map(
+        (p) => p.node.Resources()?.lookupMaybe(PDFName.of('XObject'), PDFDict)?.keys().length ?? 0,
+      )
+    expect(drawn).toEqual([1, 0, 1])
+  })
+
   it('refuses a PDF with no text at all', async () => {
     await expect(runPdfTool('toText', [await textPdf(['', ''])], {})).rejects.toBeInstanceOf(
       PdfToolRefusal,
@@ -278,5 +307,6 @@ describe('suggested file names', () => {
     expect(outputNames('imagesToPdf', 'Photo 1.JPEG', 1, {})).toEqual(['Photo 1.pdf'])
     expect(outputNames('toText', 'Report.pdf', 1, {})).toEqual(['Report.txt'])
     expect(outputNames('duplex', 'a.pdf', 1, {})).toEqual(['a-duplex.pdf'])
+    expect(outputNames('overlay', 'a.pdf', 1, {})).toEqual(['a-background.pdf'])
   })
 })

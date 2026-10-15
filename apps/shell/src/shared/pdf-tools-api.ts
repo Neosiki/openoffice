@@ -32,6 +32,7 @@ export const PDF_TOOL_IDS = [
   'imagesToPdf',
   'toText',
   'duplex',
+  'overlay',
 ] as const
 export type PdfToolId = (typeof PDF_TOOL_IDS)[number]
 
@@ -74,6 +75,12 @@ export interface PdfToolOptions {
   margin?: PdfToolMargin
   /** duplex: pages each sheet side will hold when printed N-up afterwards */
   sheetPages?: number
+  /** overlay: under the page's content or over it */
+  layer?: 'behind' | 'front'
+  /** overlay: 1-based page of the background PDF */
+  backgroundPage?: number
+  /** overlay: "1-3,5" style pages to draw it on, '' for every page */
+  applyPages?: string
 }
 
 /** One picked file, as the window may see it: an opaque id, never the path */
@@ -103,6 +110,7 @@ export type PdfToolError =
   | 'unsaved-target'
   | 'busy'
   | 'no-text'
+  | 'need-background'
   | 'failed'
 
 export interface PdfToolRunRequest {
@@ -110,6 +118,8 @@ export interface PdfToolRunRequest {
   /** ids from pickInputs, in the order the user arranged them */
   inputIds: string[]
   options: PdfToolOptions
+  /** overlay: the id of the PDF picked as the background */
+  backgroundId?: string
 }
 
 export type PdfToolRunResult =

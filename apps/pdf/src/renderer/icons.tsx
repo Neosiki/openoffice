@@ -399,6 +399,14 @@ export const IconDuplex = () => (
     <rect x="12.5" y="5" width="7" height="14" rx="1" strokeDasharray="2.2 1.8" />
   </Icon>
 )
+/** Background overlay: a page laid over a sheet behind it */
+export const IconOverlay = () => (
+  <Icon>
+    <rect x="8" y="4.5" width="11.5" height="13" rx="1" strokeDasharray="2.2 1.8" />
+    <rect x="4.5" y="7.5" width="11.5" height="12" rx="1" />
+    <path d="M7.5 12 H13 M7.5 14.5 H13 M7.5 17 H11" />
+  </Icon>
+)
 /** Save as text: a page of lines */
 export const IconToText = () => (
   <Icon>

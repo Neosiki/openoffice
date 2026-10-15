@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { crc32, deflateSync } from 'node:zlib'
 import { test, expect, type ElectronApplication, type Page } from '@playwright/test'
-import { PDFDocument, StandardFonts } from 'pdf-lib'
+import { PDFDocument, StandardFonts, degrees, rgb } from 'pdf-lib'
 import { closeAndSaveVideo, launchShell, screenshotPath, waitForPageWithUrl } from './helpers'
 
 /**
@@ -323,6 +323,59 @@ test.describe('PDF tools window', () => {
       ])
     } finally {
       await closeAndSaveVideo(launched, 'pdf-tools-duplex')
+    }
+  })
+
+  test('a background behind every page, upright on a turned page', async () => {
+    test.setTimeout(150_000)
+    const dir = await mkdtemp(join(tmpdir(), 'genoffice-pdf-tools-e2e-'))
+    const doc = join(dir, 'letter.pdf')
+    const letterhead = join(dir, 'letterhead.pdf')
+    const out = join(dir, 'letter-background.pdf')
+    const body = await PDFDocument.create()
+    const font = await body.embedFont(StandardFonts.Helvetica)
+    body.addPage([400, 300]).drawText('Upright page', { x: 30, y: 150, size: 24, font })
+    // saved turned: the viewer shows it as a portrait page
+    const turned = body.addPage([400, 300])
+    turned.setRotation(degrees(90))
+    turned.drawText('Turned page', { x: 30, y: 150, size: 24, font })
+    await writeFile(doc, await body.save({ useObjectStreams: false }))
+    const head = await PDFDocument.create()
+    const headFont = await head.embedFont(StandardFonts.HelveticaBold)
+    const sheet = head.addPage([210, 297])
+    sheet.drawRectangle({ x: 0, y: 257, width: 210, height: 40, color: rgb(0.2, 0.45, 0.8) })
+    sheet.drawText('LETTERHEAD', { x: 20, y: 270, size: 18, font: headFont, color: rgb(1, 1, 1) })
+    await writeFile(letterhead, await head.save({ useObjectStreams: false }))
+    if (EVIDENCE_DIR) await mkdir(EVIDENCE_DIR, { recursive: true })
+
+    const launched = await launchShell({ onboardingSeen: true, videoDir: 'pdf-tools-overlay' })
+    const { app, page } = launched
+    try {
+      const tools = await openToolsWindow(app, page, /PDF tools/)
+      await tools.getByRole('button', { name: /Add a background/ }).click()
+      await queueDialogs(app, { open: [[doc], [letterhead]], save: [out] })
+      await tools.getByRole('button', { name: 'Choose PDF', exact: true }).click()
+      const run = tools.getByRole('button', { name: 'Save as new file' })
+      // no background yet
+      await expect(run).toBeDisabled()
+      await tools.getByRole('button', { name: 'Choose background PDF' }).click()
+      await expect(tools.locator('.pt-item')).toHaveCount(2)
+      await tools.screenshot({ path: shot('pdf-tools-overlay-en') })
+      await run.click()
+      await expect(tools.getByText('Made a new file: letter-background.pdf')).toBeVisible()
+      const made = await PDFDocument.load(await readFile(out))
+      expect(made.getPages().map((p) => p.getRotation().angle)).toEqual([0, 90])
+
+      // look at it in the editor: the letterhead stands upright on both pages
+      const before = await pdfPages(app)
+      await tools.getByRole('button', { name: 'Open in a tab' }).click()
+      await expect.poll(() => pdfPages(app), { timeout: 30_000 }).toBe(before + 1)
+      const editor = await waitForPageWithUrl(app, '://pdf/')
+      await expect(editor.locator('.pdf-page')).toHaveCount(2, { timeout: 30_000 })
+      await editor.waitForTimeout(1500)
+      await editor.screenshot({ path: shot('pdf-tools-overlay-result') })
+    } finally {
+      await closeAndSaveVideo(launched, 'pdf-tools-overlay')
     }
   })
 
