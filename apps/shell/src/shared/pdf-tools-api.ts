@@ -33,6 +33,7 @@ export const PDF_TOOL_IDS = [
   'toText',
   'duplex',
   'overlay',
+  'stripAnnots',
 ] as const
 export type PdfToolId = (typeof PDF_TOOL_IDS)[number]
 
@@ -49,6 +50,17 @@ export type PdfToolInputKind = 'pdf' | 'image'
 
 /** Pages a sheet will later hold N-up (duplex): 1 for no N-up */
 export const PDF_TOOL_SHEET_PAGES = [1, 2, 4, 6, 8, 9, 16] as const
+
+/** Kinds of annotation stripAnnots can remove (apps/pdf/src/main/annot-strip.ts) */
+export const PDF_TOOL_ANNOT_KINDS = [
+  'comments',
+  'highlights',
+  'drawings',
+  'stamps',
+  'links',
+  'other',
+] as const
+export type PdfToolAnnotKind = (typeof PDF_TOOL_ANNOT_KINDS)[number]
 
 /** Space around a picture on its page (imagesToPdf) */
 export const PDF_TOOL_MARGINS = ['none', 'small', 'large'] as const
@@ -79,8 +91,10 @@ export interface PdfToolOptions {
   layer?: 'behind' | 'front'
   /** overlay: 1-based page of the background PDF */
   backgroundPage?: number
-  /** overlay: "1-3,5" style pages to draw it on, '' for every page */
+  /** overlay, stripAnnots: "1-3,5" style pages to work on, '' for every page */
   applyPages?: string
+  /** stripAnnots: the kinds to remove */
+  annotKinds?: PdfToolAnnotKind[]
 }
 
 /** One picked file, as the window may see it: an opaque id, never the path */
@@ -111,6 +125,8 @@ export type PdfToolError =
   | 'busy'
   | 'no-text'
   | 'need-background'
+  | 'no-annots'
+  | 'no-kinds'
   | 'failed'
 
 export interface PdfToolRunRequest {

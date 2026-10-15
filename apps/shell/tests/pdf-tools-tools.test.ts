@@ -15,6 +15,8 @@ import {
   toolOutputExtension,
   toolTakesMany,
 } from '../src/main/pdf-tools/tools'
+import { PDF_TOOL_ANNOT_KINDS } from '../src/shared/pdf-tools-api'
+import { ANNOT_KINDS } from '../../pdf/src/main/annot-strip'
 
 /**
  * The PDF tools window's work: each tool's file is read back (page count,
@@ -152,6 +154,17 @@ describe('checking options', () => {
       checkOptions('overlay', { layer: 'front', backgroundPage: 2, applyPages: '3,1' }, 3, 2)
         .options,
     ).toEqual({ layer: 'front', backgroundPage: 2, applyPages: '1,3' })
+    expect(checkOptions('stripAnnots', {}, 3).options).toEqual({
+      annotKinds: ['comments', 'highlights', 'drawings', 'stamps', 'other'],
+      applyPages: '',
+    })
+    expect(
+      checkOptions('stripAnnots', { annotKinds: ['links', 'bogus'], applyPages: '2' }, 3).options,
+    ).toEqual({ annotKinds: ['links'], applyPages: '2' })
+    expect(checkOptions('stripAnnots', { annotKinds: [] }, 3)).toEqual({
+      ok: false,
+      error: 'no-kinds',
+    })
     expect(checkOptions('overlay', { applyPages: '4' }, 3, 1)).toEqual({
       ok: false,
       error: 'range',
@@ -285,6 +298,16 @@ describe('running each tool', () => {
     expect(drawn).toEqual([1, 0, 1])
   })
 
+  it('names a PDF with none of the chosen annotations rather than writing a copy', async () => {
+    await expect(
+      runPdfTool('stripAnnots', [await pdf(2)], { annotKinds: ['comments'], applyPages: '' }),
+    ).rejects.toBeInstanceOf(PdfToolRefusal)
+  })
+
+  it('offers the same annotation kinds the editor module removes', () => {
+    expect([...PDF_TOOL_ANNOT_KINDS]).toEqual([...ANNOT_KINDS])
+  })
+
   it('refuses a PDF with no text at all', async () => {
     await expect(runPdfTool('toText', [await textPdf(['', ''])], {})).rejects.toBeInstanceOf(
       PdfToolRefusal,
@@ -308,5 +331,6 @@ describe('suggested file names', () => {
     expect(outputNames('toText', 'Report.pdf', 1, {})).toEqual(['Report.txt'])
     expect(outputNames('duplex', 'a.pdf', 1, {})).toEqual(['a-duplex.pdf'])
     expect(outputNames('overlay', 'a.pdf', 1, {})).toEqual(['a-background.pdf'])
+    expect(outputNames('stripAnnots', 'a.pdf', 1, {})).toEqual(['a-clean.pdf'])
   })
 })

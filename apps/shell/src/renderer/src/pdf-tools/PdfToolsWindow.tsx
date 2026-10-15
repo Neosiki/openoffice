@@ -1,11 +1,13 @@
 import { useState, type ReactElement } from 'react'
 import type { Lang, Params } from '@genoffice/i18n'
 import {
+  PDF_TOOL_ANNOT_KINDS,
   PDF_TOOL_MARGINS,
   PDF_TOOL_PAPERS,
   PDF_TOOL_SHEET_PAGES,
   type PdfEditorToolId,
   type PdfInputProblem,
+  type PdfToolAnnotKind,
   type PdfToolError,
   type PdfToolId,
   type PdfToolInput,
@@ -32,6 +34,7 @@ import {
   IconToText,
   IconDuplex,
   IconOverlay,
+  IconStripAnnots,
   IconWatermark,
 } from '../../../../../pdf/src/renderer/icons'
 
@@ -40,6 +43,7 @@ const GROUPS: { label: PdfToolsStringKey; tools: PdfToolId[] }[] = [
   { label: 'groupOrganize', tools: ['merge', 'split', 'extract', 'reverse', 'rotate'] },
   { label: 'groupPrint', tools: ['duplex', 'nup', 'pageSize', 'splitPages'] },
   { label: 'groupDecorate', tools: ['overlay'] },
+  { label: 'groupClean', tools: ['stripAnnots'] },
   { label: 'groupConvert', tools: ['imagesToPdf', 'toText'] },
 ]
 
@@ -69,6 +73,7 @@ const TOOL_TEXT: Record<PdfToolId | PdfEditorToolId, [PdfToolsStringKey, PdfTool
   toText: ['toolToText', 'descToText'],
   duplex: ['toolDuplex', 'descDuplex'],
   overlay: ['toolOverlay', 'descOverlay'],
+  stripAnnots: ['toolStripAnnots', 'descStripAnnots'],
   stamps: ['toolStamps', 'descStamps'],
   crop: ['toolCrop', 'descCrop'],
   exportImages: ['toolExportImages', 'descExportImages'],
@@ -87,6 +92,8 @@ const ERROR_TEXT: Record<PdfToolError, PdfToolsStringKey> = {
   busy: 'errBusy',
   'no-text': 'errNoText',
   'need-background': 'errNeedBackground',
+  'no-annots': 'errNoAnnots',
+  'no-kinds': 'errNoKinds',
   failed: 'errFailed',
 }
 
@@ -114,6 +121,16 @@ const DEFAULT_OPTIONS: PdfToolOptions = {
   layer: 'behind',
   backgroundPage: 1,
   applyPages: '',
+  annotKinds: PDF_TOOL_ANNOT_KINDS.filter((kind) => kind !== 'links'),
+}
+
+const ANNOT_KIND_TEXT: Record<PdfToolAnnotKind, PdfToolsStringKey> = {
+  comments: 'kindComments',
+  highlights: 'kindHighlights',
+  drawings: 'kindDrawings',
+  stamps: 'kindStamps',
+  links: 'kindLinks',
+  other: 'kindOther',
 }
 
 type View =
@@ -138,6 +155,7 @@ const TOOL_ICON: Record<PdfToolId | PdfEditorToolId, () => ReactElement> = {
   toText: IconToText,
   duplex: IconDuplex,
   overlay: IconOverlay,
+  stripAnnots: IconStripAnnots,
   stamps: IconWatermark,
   crop: IconCropPages,
   exportImages: IconExportImg,
@@ -365,7 +383,9 @@ function ToolPanel(p: ToolPanelProps) {
       ? inputs.length >= 2
       : many
         ? inputs.length >= 1
-        : inputs.length === 1 && (tool !== 'overlay' || !!p.background)
+        : inputs.length === 1 &&
+          (tool !== 'overlay' || !!p.background) &&
+          (tool !== 'stripAnnots' || (options.annotKinds ?? []).length > 0)
   const pickLabel: PdfToolsStringKey = images
     ? inputs.length === 0
       ? 'pickImages'
@@ -706,6 +726,41 @@ function Options({ tool, t, options, pages, backgroundPages, onChange }: Options
               ))}
             </fieldset>
           )}
+        </div>
+      )
+    }
+    case 'stripAnnots': {
+      const chosen = options.annotKinds ?? []
+      const toggle = (kind: PdfToolAnnotKind, on: boolean) =>
+        onChange({
+          annotKinds: PDF_TOOL_ANNOT_KINDS.filter((k) => (k === kind ? on : chosen.includes(k))),
+        })
+      return (
+        <div className="pt-fields">
+          <fieldset className="pt-field pt-choices">
+            <legend className="pt-field-label">{t('optAnnotKinds')}</legend>
+            {PDF_TOOL_ANNOT_KINDS.map((kind) => (
+              <label className="pt-check" key={kind}>
+                <input
+                  type="checkbox"
+                  checked={chosen.includes(kind)}
+                  onChange={(e) => toggle(kind, e.target.checked)}
+                />
+                {t(ANNOT_KIND_TEXT[kind])}
+              </label>
+            ))}
+          </fieldset>
+          <label className="pt-field">
+            <span className="pt-field-label">{t('optCleanPages')}</span>
+            <input
+              type="text"
+              className="pt-input"
+              value={options.applyPages ?? ''}
+              placeholder={`1-${pages}`}
+              onChange={(e) => onChange({ applyPages: e.target.value })}
+            />
+          </label>
+          <p className="pt-hint">{t('noteStripAnnots')}</p>
         </div>
       )
     }

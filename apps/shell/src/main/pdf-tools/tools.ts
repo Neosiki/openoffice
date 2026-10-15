@@ -18,14 +18,17 @@ import {
 import { imagesToPdfBytes, readImageInfo } from '../../../../pdf/src/main/images-to-pdf'
 import { duplexMergeBytes } from '../../../../pdf/src/main/print-prep'
 import { overlayPdfBytes } from '../../../../pdf/src/main/overlay'
+import { stripAnnotsBytes } from '../../../../pdf/src/main/annot-strip'
 import { readPdfText, type PdfPageText } from '../../../../pdf/src/main/read-text'
 import { parsePageRange } from '../../../../pdf/src/renderer/convert/page-range'
 import {
+  PDF_TOOL_ANNOT_KINDS,
   PDF_TOOL_IDS,
   PDF_TOOL_MARGINS,
   PDF_TOOL_PAPERS,
   PDF_TOOL_SHEET_PAGES,
   type PdfInputProblem,
+  type PdfToolAnnotKind,
   type PdfToolId,
   type PdfToolInputKind,
   type PdfToolMargin,
@@ -72,9 +75,12 @@ export function toolOutputExtension(tool: PdfToolId): 'pdf' | 'txt' {
   return tool === 'toText' ? 'txt' : 'pdf'
 }
 
-/** A tool ran but has nothing to write: a PDF without any text layer (toText) */
+/**
+ * A tool ran but has nothing to write: a PDF without any text layer (toText),
+ * or none of the chosen kinds of annotation (stripAnnots)
+ */
 export class PdfToolRefusal extends Error {
-  constructor(readonly reason: 'no-text') {
+  constructor(readonly reason: 'no-text' | 'no-annots') {
     super(reason)
   }
 }
@@ -100,7 +106,13 @@ export async function inspectPdf(bytes: Uint8Array): Promise<InspectResult> {
   }
 }
 
-export type CheckedOptions = { ok: true; options: PdfToolOptions } | { ok: false; error: 'range' }
+export type CheckedOptions =
+  { ok: true; options: PdfToolOptions } | { ok: false; error: 'range' | 'no-kinds' }
+
+/** Annotation kinds stripAnnots removes when the window sends none (links stay) */
+export const DEFAULT_ANNOT_KINDS: PdfToolAnnotKind[] = PDF_TOOL_ANNOT_KINDS.filter(
+  (kind) => kind !== 'links',
+)
 
 const intIn = (value: unknown, lo: number, hi: number): number | undefined =>
   typeof value === 'number' && Number.isInteger(value) && value >= lo && value <= hi
@@ -153,6 +165,19 @@ export function checkOptions(
       }
     case 'splitPages':
       return { ok: true, options: { perPage: o.perPage === 4 || o.perPage === 9 ? o.perPage : 2 } }
+    case 'stripAnnots': {
+      const text = typeof o.applyPages === 'string' ? o.applyPages.trim() : ''
+      const range = text ? parsePageRange(text, pageCount) : null
+      if (range && !range.ok) return { ok: false, error: 'range' }
+      const kinds = Array.isArray(o.annotKinds)
+        ? PDF_TOOL_ANNOT_KINDS.filter((kind) => (o.annotKinds as unknown[]).includes(kind))
+        : DEFAULT_ANNOT_KINDS
+      if (kinds.length === 0) return { ok: false, error: 'no-kinds' }
+      return {
+        ok: true,
+        options: { annotKinds: kinds, applyPages: range?.ok ? range.pages.join(',') : '' },
+      }
+    }
     case 'overlay': {
       const text = typeof o.applyPages === 'string' ? o.applyPages.trim() : ''
       const range = text ? parsePageRange(text, pageCount) : null
@@ -273,6 +298,17 @@ export async function runPdfTool(
         }),
       ]
     }
+    case 'stripAnnots': {
+      const pages = options.applyPages
+        ? options.applyPages.split(',').map((p) => Number(p) - 1)
+        : null
+      const stripped = await stripAnnotsBytes(first, {
+        kinds: options.annotKinds ?? DEFAULT_ANNOT_KINDS,
+        pages,
+      })
+      if (stripped.removed === 0) throw new PdfToolRefusal('no-annots')
+      return [stripped.bytes]
+    }
     case 'toText': {
       const doc = await readPdfText(first)
       if (!doc.pages.some((page) => page.text.trim() !== '')) throw new PdfToolRefusal('no-text')
@@ -302,6 +338,7 @@ export function outputNames(
     merge: 'merged',
     duplex: 'duplex',
     overlay: 'background',
+    stripAnnots: 'clean',
     extract: 'pages',
     reverse: 'reversed',
     nup: `${options.perSheet ?? 2}up`,

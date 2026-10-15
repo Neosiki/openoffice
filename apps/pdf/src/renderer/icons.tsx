@@ -407,6 +407,14 @@ export const IconOverlay = () => (
     <path d="M7.5 12 H13 M7.5 14.5 H13 M7.5 17 H11" />
   </Icon>
 )
+/** Remove annotations: a comment with a cross */
+export const IconStripAnnots = () => (
+  <Icon>
+    <path d="M4.5 5.5 H16.5 V13 H10 L6.8 15.6 V13 H4.5 Z" />
+    <path d="M7.5 8.4 H13.5 M7.5 10.4 H11.5" />
+    <path d="M15.2 15.7 L19.3 19.8 M19.3 15.7 L15.2 19.8" />
+  </Icon>
+)
 /** Save as text: a page of lines */
 export const IconToText = () => (
   <Icon>

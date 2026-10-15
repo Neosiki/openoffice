@@ -117,5 +117,20 @@ export const nl = {
   noteOverlay:
     'De achtergrondpagina wordt passend gemaakt voor elke pagina, met behoud van verhoudingen.',
   errNeedBackground: 'Kies de pdf die als achtergrond dient.',
+  groupClean: 'Opschonen',
+  toolStripAnnots: 'Aantekeningen verwijderen',
+  descStripAnnots: 'Opmerkingen, markeringen, tekeningen en meer per soort verwijderen',
+  optAnnotKinds: 'Te verwijderen soorten',
+  kindComments: 'Opmerkingen',
+  kindHighlights: 'Markeren, onderstrepen, doorhalen',
+  kindDrawings: 'Tekeningen en vormen',
+  kindStamps: 'Stempels',
+  kindLinks: 'Koppelingen',
+  kindOther: 'Overige aantekeningen',
+  optCleanPages: 'Op te schonen pagina’s (leeg: alle pagina’s)',
+  noteStripAnnots:
+    'Formuliervelden blijven staan. De inhoud van verwijderde aantekeningen blijft niet in het nieuwe bestand.',
+  errNoAnnots: 'Er zijn geen aantekeningen van de gekozen soorten.',
+  errNoKinds: 'Kies ten minste één soort om te verwijderen.',
   close: 'Sluiten',
 } satisfies Record<keyof typeof zh, string>

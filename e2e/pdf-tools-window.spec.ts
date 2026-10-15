@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { crc32, deflateSync } from 'node:zlib'
 import { test, expect, type ElectronApplication, type Page } from '@playwright/test'
-import { PDFDocument, StandardFonts, degrees, rgb } from 'pdf-lib'
+import { PDFDocument, PDFString, StandardFonts, degrees, rgb } from 'pdf-lib'
 import { closeAndSaveVideo, launchShell, screenshotPath, waitForPageWithUrl } from './helpers'
 
 /**
@@ -376,6 +376,66 @@ test.describe('PDF tools window', () => {
       await editor.screenshot({ path: shot('pdf-tools-overlay-result') })
     } finally {
       await closeAndSaveVideo(launched, 'pdf-tools-overlay')
+    }
+  })
+
+  test('removing comments, keeping links, and nothing to remove', async () => {
+    test.setTimeout(120_000)
+    const dir = await mkdtemp(join(tmpdir(), 'genoffice-pdf-tools-e2e-'))
+    const reviewed = join(dir, 'reviewed.pdf')
+    const plain = join(dir, 'plain.pdf')
+    const out = join(dir, 'reviewed-clean.pdf')
+    const doc = await PDFDocument.create()
+    const sheet = doc.addPage([300, 300])
+    for (const [subtype, contents] of [
+      ['Text', 'private remark'],
+      ['Link', 'a link'],
+    ]) {
+      sheet.node.addAnnot(
+        doc.context.register(
+          doc.context.obj({
+            Type: 'Annot',
+            Subtype: subtype,
+            Rect: [10, 10, 60, 60],
+            Contents: PDFString.of(contents!),
+          }),
+        ),
+      )
+    }
+    await writeFile(reviewed, await doc.save({ useObjectStreams: false }))
+    await makePdf(plain, [[300, 300]])
+    if (EVIDENCE_DIR) await mkdir(EVIDENCE_DIR, { recursive: true })
+
+    const launched = await launchShell({ onboardingSeen: true, videoDir: 'pdf-tools-annots' })
+    const { app, page } = launched
+    try {
+      const tools = await openToolsWindow(app, page, /PDF tools/)
+      await tools.getByRole('button', { name: /Remove annotations/ }).click()
+      await queueDialogs(app, { open: [[reviewed]], save: [out] })
+      await tools.getByRole('button', { name: 'Choose PDF', exact: true }).click()
+      // links stay unless ticked
+      await expect(tools.getByRole('checkbox', { name: 'Links' })).not.toBeChecked()
+      await expect(tools.getByRole('checkbox', { name: 'Comments' })).toBeChecked()
+      await tools.screenshot({ path: shot('pdf-tools-annots-en') })
+      await tools.getByRole('button', { name: 'Save as new file' }).click()
+      await expect(tools.getByText('Made a new file: reviewed-clean.pdf')).toBeVisible()
+      const cleaned = await readFile(out)
+      expect(Buffer.from(cleaned).toString('latin1')).not.toContain('private remark')
+      expect((await PDFDocument.load(cleaned)).getPage(0).node.Annots()?.size()).toBe(1)
+
+      // with every kind unticked the tool cannot run
+      for (const box of await tools.getByRole('checkbox').all()) await box.uncheck()
+      await expect(tools.getByRole('button', { name: 'Save as new file' })).toBeDisabled()
+
+      // a PDF without any of the chosen kinds is named, and no file is written
+      await tools.getByRole('checkbox', { name: 'Comments' }).check()
+      await queueDialogs(app, { open: [[plain]], save: [join(dir, 'plain-clean.pdf')] })
+      await tools.getByRole('button', { name: 'Choose another PDF' }).click()
+      await tools.getByRole('button', { name: 'Save as new file' }).click()
+      await expect(tools.getByText('There are no annotations of the chosen kinds.')).toBeVisible()
+      expect(existsSync(join(dir, 'plain-clean.pdf'))).toBe(false)
+    } finally {
+      await closeAndSaveVideo(launched, 'pdf-tools-annots')
     }
   })
 

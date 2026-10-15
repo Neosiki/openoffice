@@ -119,5 +119,20 @@ export const de = {
   noteOverlay:
     'Die Hintergrundseite wird unter Beibehaltung der Proportionen an jede Seite angepasst.',
   errNeedBackground: 'Wählen Sie das PDF für den Hintergrund.',
+  groupClean: 'Bereinigen',
+  toolStripAnnots: 'Anmerkungen entfernen',
+  descStripAnnots: 'Kommentare, Markierungen, Zeichnungen und mehr nach Art entfernen',
+  optAnnotKinds: 'Zu entfernende Arten',
+  kindComments: 'Kommentare',
+  kindHighlights: 'Hervorheben, Unterstreichen, Durchstreichen',
+  kindDrawings: 'Zeichnungen und Formen',
+  kindStamps: 'Stempel',
+  kindLinks: 'Links',
+  kindOther: 'Andere Anmerkungen',
+  optCleanPages: 'Zu bereinigende Seiten (leer: alle Seiten)',
+  noteStripAnnots:
+    'Formularfelder bleiben erhalten. Der Inhalt entfernter Anmerkungen bleibt nicht in der neuen Datei.',
+  errNoAnnots: 'Es gibt keine Anmerkungen der gewählten Arten.',
+  errNoKinds: 'Wählen Sie mindestens eine Art zum Entfernen.',
   close: 'Schließen',
 } satisfies Record<keyof typeof zh, string>

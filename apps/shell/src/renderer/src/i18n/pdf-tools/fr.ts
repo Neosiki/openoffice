@@ -118,5 +118,20 @@ export const fr = {
   noteOverlay:
     'La page d’arrière-plan est mise à l’échelle de chaque page, en gardant ses proportions.',
   errNeedBackground: 'Choisissez le PDF à utiliser comme arrière-plan.',
+  groupClean: 'Nettoyer',
+  toolStripAnnots: 'Supprimer les annotations',
+  descStripAnnots: 'Supprimer commentaires, surlignages, dessins et autres, par type',
+  optAnnotKinds: 'Types à supprimer',
+  kindComments: 'Commentaires',
+  kindHighlights: 'Surlignage, soulignement, barré',
+  kindDrawings: 'Dessins et formes',
+  kindStamps: 'Tampons',
+  kindLinks: 'Liens',
+  kindOther: 'Autres annotations',
+  optCleanPages: 'Pages à nettoyer (vide : toutes les pages)',
+  noteStripAnnots:
+    'Les champs de formulaire sont conservés. Le contenu des annotations supprimées ne reste pas dans le nouveau fichier.',
+  errNoAnnots: 'Il n’y a aucune annotation des types choisis.',
+  errNoKinds: 'Choisissez au moins un type à supprimer.',
   close: 'Fermer',
 } satisfies Record<keyof typeof zh, string>
