@@ -196,9 +196,14 @@ export function createAgentManager(deps: AgentManagerDeps): AgentManager {
     if (!live.has(entry.id)) return
     live.delete(entry.id)
     void entry.appMcp?.stop().catch(() => undefined)
-    void rm(entry.sessionDir, { recursive: true, force: true, maxRetries: 3 }).catch(
-      () => undefined,
-    )
+    // the folder is the program's working directory: Windows refuses to remove it until the
+    // ended process is gone, which can take a few seconds
+    void rm(entry.sessionDir, {
+      recursive: true,
+      force: true,
+      maxRetries: 10,
+      retryDelay: 200,
+    }).catch(() => undefined)
   }
 
   const own = (ownerId: number, sessionId: string): LiveSession | undefined => {

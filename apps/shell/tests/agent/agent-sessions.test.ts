@@ -46,7 +46,10 @@ function temp(): string {
   roots.push(dir)
   return dir
 }
+/** managers made by a test: their sessions end after it, removing their session folders */
+const managers: Array<{ stopAll(): void }> = []
 afterEach(() => {
+  for (const m of managers.splice(0)) m.stopAll()
   for (const dir of roots.splice(0)) rmSync(dir, { recursive: true, force: true })
 })
 
@@ -161,6 +164,7 @@ function manager(
     buildSkills: async () => join(home, 'skills'),
     emit: (owner, id, event) => emitted.push([owner, id, event]),
   })
+  managers.push(m)
   return { m, project, home, session, claude, codex, emitted, mcpStop }
 }
 
