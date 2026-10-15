@@ -34,6 +34,11 @@ jobs:
     env:
       # never pick up a keychain identity: the config signs ad hoc
       CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      # electron-builder skips all signing on pull-request builds unless told
+      # otherwise, which leaves the app's signature broken. The warning that
+      # comes with this switch is about exposing signing secrets to forks;
+      # ad hoc signing uses no key and this job holds no secret.
+      CSC_FOR_PULL_REQUEST: 'true'
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

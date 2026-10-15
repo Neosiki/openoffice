@@ -144,6 +144,13 @@ jobs:
       - name: Install xmllint
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libxml2-utils
 
+      # pdf-structure's write-back tests draw a Korean source page with an
+      # installed Korean TrueType face (Malgun Gothic on a Windows PC); the
+      # runner image has only CFF/collection CJK faces, which the face lookup
+      # skips. NanumGothic is one of the faces it looks for.
+      - name: Install a Korean TrueType font (pdf-structure write-back)
+        run: sudo apt-get install -y --no-install-recommends fonts-nanum
+
       - name: Test
         run: npm test
 
