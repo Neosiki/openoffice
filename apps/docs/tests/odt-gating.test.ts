@@ -12,7 +12,6 @@ import { createRoot } from 'react-dom/client'
 import { Editor } from '@tiptap/core'
 import { Fragment, Slice, type Node as PmNode } from '@tiptap/pm/model'
 import { buildBlankDocx, parseDocx, readDocxPartBase64 } from '@genoffice/docx-engine'
-import { blocksToPmDoc, pmDocOptions, pmDocToSavePlan } from '../src/renderer/editor/convert'
 import { odtToDocx } from '@genoffice/odt-engine'
 import { editorExtensions } from '../src/renderer/editor/extensions'
 import { cleanOdtPaste } from '../src/renderer/editor/odt-guard'
@@ -715,29 +714,18 @@ describe('typing in a table cell that also holds a nested table', () => {
     expect(content).toContain('INNER')
   })
 
-  it('docx documents keep the earlier save plan for the same edit', async () => {
-    // the bridge docx of that ODT, read as an ordinary docx
+  it('a docx save keeps the typed host-cell text and the nested table too', async () => {
+    // the bridge docx of that ODT, opened as an ordinary docx
     const docx = (await odtToDocx(await sampleOdt(hostBody()))).docxBytes
-    const parsed = await parseDocx(docx)
-    const editor = new Editor({
-      element: document.createElement('div'),
-      extensions: editorExtensions,
-      content: blocksToPmDoc(parsed.blocks, undefined, pmDocOptions(parsed)) as never,
-    })
-    editors.push(editor)
+    const ctx = makeCtx()
+    expect(await loadFile(ctx, openResult('/docs/nested.docx', docx))).toBe('ok')
+    const editor = editorOf(ctx)
     editor.view.dispatch(editor.state.tr.insertText('Z', textPos(editor.state.doc, 'HOST') + 1))
-    const json = editor.getJSON() as never
-    const tableIndex = parsed.blocks.find((b) => b.type === 'table')!.docxIndex
-    const kindOf = (plan: ReturnType<typeof pmDocToSavePlan>) =>
-      plan.saveBlocks.find(
-        (b) => (b as { docxIndex?: number }).docxIndex === tableIndex || b.kind === 'xml',
-      )?.kind
-    // docx (default): unchanged behaviour, the table block stays original
-    expect(kindOf(pmDocToSavePlan(json, parsed.blocks))).toBe('original')
-    // the ODT option regenerates the table so the typing is written
-    const odtPlan = pmDocToSavePlan(json, parsed.blocks, { regenerateEditedNestedHosts: true })
-    const xml = odtPlan.saveBlocks.find((b) => b.kind === 'xml') as { xml: string } | undefined
-    expect(xml?.xml).toContain('HZOST')
-    expect(xml?.xml).toContain('INNER')
+    expect(await save(ctx, false)).toBe(true)
+    const saved = written.find((w) => w.channel === 'save')!.bytes
+    const xml = await decode(saved, 'word/document.xml')
+    expect(xml).toContain('HZOST')
+    expect(xml).toContain('INNER')
+    expect(xml).toContain('옆 칸')
   })
 })

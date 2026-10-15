@@ -738,9 +738,7 @@ export async function buildDocBytes(ctx: FileActionContext): Promise<Uint8Array 
   const { doc, editor } = ctx
   if (!doc || !editor) return null
   const pmJson = editor.getJSON() as PmNode
-  const plan = pmDocToSavePlan(pmJson, doc.parsed.blocks, {
-    regenerateEditedNestedHosts: isOdtDoc(doc),
-  })
+  const plan = pmDocToSavePlan(pmJson, doc.parsed.blocks)
   // chart data edits patch the chart's own zip part, not the body XML
   const partXml: Record<string, string> = {}
   const partBinary: Record<string, string> = {}

@@ -1945,22 +1945,7 @@ export function normalizeZoteroFieldParts(doc: PmNode): PmNode {
   return rebuild(doc)
 }
 
-export interface SavePlanOptions {
-  /**
-   * A table cell that holds a nested table and whose own paragraphs were
-   * edited is saved by regenerating the table (`generateTableModelXml`): the
-   * cell-text patch only diffs the nested tables and would drop the typing.
-   * On for ODT documents (the ODT write-back still patches cell by cell, so
-   * untouched bytes stay); docx documents keep the earlier behaviour.
-   */
-  regenerateEditedNestedHosts?: boolean
-}
-
-export function pmDocToSavePlan(
-  inputDoc: PmNode,
-  originalBlocks: Block[],
-  options: SavePlanOptions = {},
-): SavePlan {
+export function pmDocToSavePlan(inputDoc: PmNode, originalBlocks: Block[]): SavePlan {
   const doc = normalizeZoteroFieldParts(inputDoc)
   const originalByIndex = new Map<number, Block>()
   for (const block of originalBlocks) {
@@ -2093,18 +2078,29 @@ export function pmDocToSavePlan(
           pushBlock({ kind: 'xml', xml: unwrapBlockRevisionXml(original.originalXml) })
           continue
         }
-        const hostEdited =
-          options.regenerateEditedNestedHosts === true &&
-          structurallyUnchanged &&
-          formattingUnchanged &&
-          nestedHostTextsChanged(model, original)
         const tableTexts =
-          structurallyUnchanged && formattingUnchanged && !hostEdited
+          structurallyUnchanged && formattingUnchanged
             ? tableTextsPatchFromModel(model, original)
             : null
-        if (structurallyUnchanged && formattingUnchanged && tableTexts && original.originalXml) {
+        // cells holding a nested table whose own paragraphs were edited: the
+        // engine's cell patch only reaches the nested tables, so those
+        // paragraphs are patched here; when that cannot be done in place
+        // (paragraphs added or removed) the table is regenerated instead
+        const hostTexts =
+          structurallyUnchanged && formattingUnchanged
+            ? hostCellParasPatchFromModel(model, original)
+            : null
+        let patchedXml: string | null = null
+        if ((tableTexts || hostTexts) && original.originalXml) {
+          const nestedPatched = tableTexts
+            ? patchTableCellTexts(original.originalXml, tableTexts)
+            : original.originalXml
+          patchedXml = hostTexts ? patchHostCellParas(nestedPatched, hostTexts) : nestedPatched
+        }
+        const hostEdited = hostTexts !== null && patchedXml === null
+        if (patchedXml !== null) {
           changedCount++
-          pushBlock({ kind: 'xml', xml: patchTableCellTexts(original.originalXml, tableTexts) })
+          pushBlock({ kind: 'xml', xml: patchedXml })
         } else if (structurallyUnchanged && formattingUnchanged && !hostEdited) {
           pushBlock({ kind: 'original', docxIndex: idx! })
         } else {
@@ -2763,18 +2759,145 @@ function tableTextsPatch(node: PmNode, original: Block): (string[] | null)[][] |
   return changed ? texts : null
 }
 
-/** a cell holding a nested table had its own paragraphs edited */
-function nestedHostTextsChanged(current: TableModel, original: Block): boolean {
-  if (original.type !== 'table' || !original.table) return false
-  return current.rows.some((row, r) => {
+/**
+ * Own-paragraph patches of the cells that hold a nested table, by row and
+ * cell like `tableTextsPatchFromModel`; null when none of them was edited.
+ */
+function hostCellParasPatchFromModel(
+  current: TableModel,
+  original: Block,
+): (CellParaPatch[] | null)[][] | null {
+  if (original.type !== 'table' || !original.table) return null
+  let changed = false
+  const grid = current.rows.map((row, r) => {
     const origRow = patchableCells(original.table!.rows[r])
-    return patchableCells(row).some((cell, c) => {
+    return patchableCells(row).map((cell, c): CellParaPatch[] | null => {
       const originalCell = origRow[c]
-      if (!originalCell || cell.vMerge === 'continue') return false
-      if (!cell.nestedTables?.length || !originalCell.nestedTables?.length) return false
-      return cell.paras.join('\n') !== parsedCellParaTexts(originalCell).join('\n')
+      if (!originalCell || cell.vMerge === 'continue') return null
+      if (!cell.nestedTables?.length || !originalCell.nestedTables?.length) return null
+      const origTexts = parsedCellParaTexts(originalCell)
+      if (cell.paras.join('\n') === origTexts.join('\n')) return null
+      changed = true
+      const rich = cell.richParas
+      if (rich && rich.length === cell.paras.length && rich.length === origTexts.length) {
+        return rich.map((p, i): CellParaPatch =>
+          p.runs.map((run) => run.text).join('') === origTexts[i] ? null : { runs: p.runs },
+        )
+      }
+      if (cell.paras.length === origTexts.length) {
+        return cell.paras.map((p, i) => (p === origTexts[i] ? null : p))
+      }
+      return [...cell.paras]
     })
   })
+  return changed ? grid : null
+}
+
+/** same-name element ranges in document order, skipping ones nested in a match */
+function sameNameSegments(
+  xml: string,
+  tag: string,
+  from: number,
+  to: number,
+): { start: number; end: number }[] {
+  const re = new RegExp(`<(/?)${tag}(?=[\\s>/])[^>]*?(/?)>`, 'g')
+  re.lastIndex = from
+  const out: { start: number; end: number }[] = []
+  let depth = 0
+  let start = -1
+  for (let m = re.exec(xml); m && m.index < to; m = re.exec(xml)) {
+    if (m[1]) {
+      depth--
+      if (depth === 0) out.push({ start, end: re.lastIndex })
+    } else if (m[2]) {
+      if (depth === 0) out.push({ start: m.index, end: re.lastIndex })
+    } else {
+      if (depth === 0) start = m.index
+      depth++
+    }
+  }
+  return out
+}
+
+/** the direct children of a cell, so its own paragraphs can be told from nested-table ones */
+function cellChildren(tcXml: string): { name: string; start: number; end: number }[] {
+  const open = /^<w:tc(?:\s[^>]*)?>/.exec(tcXml)?.[0]
+  if (!open || !tcXml.endsWith('</w:tc>')) return []
+  const end = tcXml.length - '</w:tc>'.length
+  const re = /<(\/?)([A-Za-z][\w:.-]*)[^>]*?(\/?)>/g
+  re.lastIndex = open.length
+  const out: { name: string; start: number; end: number }[] = []
+  let depth = 0
+  let start = -1
+  let name = ''
+  for (let m = re.exec(tcXml); m && m.index < end; m = re.exec(tcXml)) {
+    if (m[1]) {
+      depth--
+      if (depth === 0) out.push({ name, start, end: re.lastIndex })
+    } else if (m[3]) {
+      if (depth === 0) out.push({ name: m[2]!, start: m.index, end: re.lastIndex })
+    } else {
+      if (depth === 0) {
+        start = m.index
+        name = m[2]!
+      }
+      depth++
+    }
+  }
+  return out
+}
+
+/**
+ * Writes the own paragraphs of cells that also hold nested tables, keeping
+ * every other byte of the table. Each cell's own paragraphs go through the
+ * engine's cell patch as a stand-alone cell and are put back where they
+ * were. Null when a cell's paragraph count changed or its paragraphs could
+ * not be found one to one.
+ */
+function patchHostCellParas(
+  tableXml: string,
+  grid: ReadonlyArray<ReadonlyArray<CellParaPatch[] | null>>,
+): string | null {
+  let out = ''
+  let cursor = 0
+  const rows = sameNameSegments(tableXml, 'w:tr', 0, tableXml.length)
+  for (const [r, tr] of rows.entries()) {
+    const rowPatch = grid[r]
+    if (!rowPatch) continue
+    const cells = sameNameSegments(tableXml, 'w:tc', tr.start, tr.end)
+    for (const [c, tc] of cells.entries()) {
+      const patch = rowPatch[c]
+      if (!patch) continue
+      const tcXml = tableXml.slice(tc.start, tc.end)
+      const children = cellChildren(tcXml)
+      const paras = children.filter((child) => child.name === 'w:p')
+      if (paras.length !== patch.length) return null
+      const tcPr = children.find((child) => child.name === 'w:tcPr')
+      const alone =
+        '<w:tbl><w:tr><w:tc>' +
+        (tcPr ? tcXml.slice(tcPr.start, tcPr.end) : '') +
+        paras.map((p) => tcXml.slice(p.start, p.end)).join('') +
+        '</w:tc></w:tr></w:tbl>'
+      const patched = patchTableCellTexts(alone, [[patch]])
+      // the engine leaves a cell it cannot patch as it was
+      if (patched === alone) return null
+      const patchedTc = sameNameSegments(patched, 'w:tc', 0, patched.length)[0]
+      if (!patchedTc) return null
+      const patchedTcXml = patched.slice(patchedTc.start, patchedTc.end)
+      const newParas = cellChildren(patchedTcXml).filter((child) => child.name === 'w:p')
+      if (newParas.length !== paras.length) return null
+      let cellOut = ''
+      let cellCursor = 0
+      paras.forEach((p, i) => {
+        const next = newParas[i]!
+        cellOut += tcXml.slice(cellCursor, p.start) + patchedTcXml.slice(next.start, next.end)
+        cellCursor = p.end
+      })
+      out += tableXml.slice(cursor, tc.start) + cellOut + tcXml.slice(cellCursor)
+      cursor = tc.end
+    }
+  }
+  return out + tableXml.slice(cursor)
 }
 
 function tableTextsPatchFromModel(
