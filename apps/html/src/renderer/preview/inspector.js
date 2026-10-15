@@ -1512,6 +1512,18 @@
   // beside the preview and asks for one; they are found in the live DOM, so slides a script builds
   // count as well. None of this is markup, so none of it can reach the source. ----
   const SLIDE_SELECTOR = '.slide, [data-slide]'
+  /** classes deck libraries and hand-made decks put on the slide on show */
+  const SHOWN_CLASSES = [
+    'active',
+    'current',
+    'present',
+    'is-active',
+    'is-current',
+    'swiper-slide-active',
+    'remark-visible',
+    'bespoke-marp-active',
+    'bespoke-active',
+  ]
   /** a deck's own keys, tried in this order until one turns the slide: [key, code, keyCode] */
   const NEXT_KEYS = [
     ['ArrowRight', 'ArrowRight', 39],
@@ -1528,29 +1540,113 @@
   const deckKeys = { next: null, prev: null }
   const isOverlay = (el) => !!el.closest(`[${MARK}]`)
   const revealSlides = () => document.querySelector('.reveal .slides')
+  /**
+   * other names a slide goes by: swiper-slide, bespoke-slide, slide-3, slide-container and the
+   * like. Not slides, slide-title or slide-content: those are the row or a part of one.
+   */
+  const SLIDE_NAME = /(^|[-_])slide([-_]?\d+|[-_]?(container|wrapper|page|frame|item|section))?$/i
+  const named = (el) => Array.from(el.classList).some((c) => SLIDE_NAME.test(c))
+  const content = (root) =>
+    Array.from(root.children).filter(
+      (el) => !isOverlay(el) && !/^(SCRIPT|STYLE|TEMPLATE|NOSCRIPT|LINK|META)$/.test(el.tagName),
+    )
+  /** the part of the viewport the element covers, as fractions of its width and height */
+  const cover = (el) => {
+    const r = el.getBoundingClientRect()
+    const w = Math.min(r.right, window.innerWidth) - Math.max(r.left, 0)
+    const h = Math.min(r.bottom, window.innerHeight) - Math.max(r.top, 0)
+    return w > 0 && h > 0 ? { w: w / window.innerWidth, h: h / window.innerHeight } : { w: 0, h: 0 }
+  }
+  /** hidden, faded out, or moved off the screen to the side */
+  const putAway = (el) => {
+    const style = window.getComputedStyle(el)
+    if (
+      style.display === 'none' ||
+      style.visibility === 'hidden' ||
+      parseFloat(style.opacity) < 0.1
+    )
+      return true
+    const r = el.getBoundingClientRect()
+    return r.width === 0 || r.height === 0 || r.right <= 0 || r.left >= window.innerWidth
+  }
+  /** the slide on show fills the screen, as a deck's does and a carousel on a page's does not */
+  const fillsScreen = (group, part) =>
+    group.some((el) => {
+      if (shownArea(el) === 0) return false
+      const c = cover(el)
+      return c.w >= part && c.h >= part
+    })
+  /** the largest row of siblings; a row inside a member of another row is part of that member */
+  const largestRow = (els) => {
+    const groups = new Map()
+    for (const el of els) {
+      const parent = el.parentElement
+      if (!parent || isOverlay(el)) continue
+      const group = groups.get(parent) || []
+      group.push(el)
+      groups.set(parent, group)
+    }
+    const rows = Array.from(groups.values()).filter((group) => group.length >= 2)
+    const inner = (group) =>
+      rows.some((other) => other !== group && other.some((el) => el.contains(group[0])))
+    let best = []
+    for (const group of rows) if (group.length > best.length && !inner(group)) best = group
+    return best
+  }
+  /**
+   * no name at all: a row of like elements on the page's main column, one shown at a time and
+   * that one filling the screen. A tab strip's panels are not slides.
+   */
+  const oneAtATime = () => {
+    let root = document.body
+    for (let depth = 0; root && depth < 4; depth++) {
+      const children = content(root)
+      const byTag = new Map()
+      for (const el of children) byTag.set(el.tagName, [...(byTag.get(el.tagName) || []), el])
+      for (const group of byTag.values()) {
+        if (group.length < 2 || group.length * 2 < children.length) continue
+        if (root.querySelector('[role="tablist"]')) continue
+        const shown = group.filter((el) => shownArea(el) > 0)
+        if (shown.length < 1 || shown.length > 2 || shown.length === group.length) continue
+        // the rest put away, not just further down the page
+        if (group.every((el) => shown.includes(el) || putAway(el)) && fillsScreen(shown, 0.6))
+          return group
+      }
+      // down into the one child that holds the page (a wrapper, a stage)
+      let next = null
+      for (const el of children) {
+        const c = cover(el)
+        if (c.w >= 0.8 && c.h >= 0.8) next = next ? null : el
+      }
+      root = children.length === 1 ? children[0] : next
+    }
+    return []
+  }
   const findSlides = () => {
     const reveal = revealSlides()
     if (reveal) {
       const sections = Array.from(reveal.children).filter((el) => el.tagName === 'SECTION')
       if (sections.length >= 2) return sections
     }
-    // named slides: the largest group of siblings (a slide inside a slide is part of it)
-    const groups = new Map()
-    for (const el of document.querySelectorAll(SLIDE_SELECTOR)) {
-      const parent = el.parentElement
-      if (!parent || isOverlay(el) || parent.closest(SLIDE_SELECTOR)) continue
-      const group = groups.get(parent) || []
-      group.push(el)
-      groups.set(parent, group)
+    // tools that name their slides their own way: impress.js steps, Marp's pages
+    const impress = document.querySelector('#impress')
+    if (impress) {
+      const steps = largestRow(impress.querySelectorAll('.step'))
+      if (steps.length) return steps
     }
-    let best = []
-    for (const group of groups.values()) if (group.length > best.length) best = group
-    if (best.length >= 2) return best
+    const marp = largestRow(document.querySelectorAll('svg[data-marpit-svg]'))
+    if (marp.length) return marp
+    // named slides
+    const plain = largestRow(document.querySelectorAll(SLIDE_SELECTOR))
+    if (plain.length) return plain
+    const others = largestRow(
+      Array.from(document.querySelectorAll('[class*="slide" i]')).filter(
+        // swiper's loop copies are not slides of their own
+        (el) => named(el) && !el.classList.contains('swiper-slide-duplicate'),
+      ),
+    )
+    if (others.length && fillsScreen(others, 0.5)) return others
     // unnamed: sections a screen tall each, straight under <body> or under its single wrapper
-    const content = (root) =>
-      Array.from(root.children).filter(
-        (el) => !isOverlay(el) && !/^(SCRIPT|STYLE|TEMPLATE|NOSCRIPT|LINK|META)$/.test(el.tagName),
-      )
     const top = content(document.body)
     for (const root of top.length === 1 ? [document.body, top[0]] : [document.body]) {
       const sections = content(root).filter((el) => el.tagName === 'SECTION')
@@ -1560,7 +1656,7 @@
       if (shown.length && shown.every((el) => el.getBoundingClientRect().height >= screen))
         return sections
     }
-    return []
+    return oneAtATime()
   }
   /** how much of the slide the viewport shows; a hidden or faded-out slide shows nothing */
   const shownArea = (el) => {
@@ -1583,6 +1679,9 @@
       const at = reveal.getIndices()
       if (at && Number.isInteger(at.h)) return Math.max(0, Math.min(at.h, slides.length - 1))
     }
+    // a class only the shown slide carries says it before a fade or a slide-in has finished
+    const marked = slides.filter((el) => SHOWN_CLASSES.some((c) => el.classList.contains(c)))
+    if (marked.length === 1) return slides.indexOf(marked[0])
     let best = 0
     let bestArea = 0
     slides.forEach((el, i) => {
@@ -1599,6 +1698,42 @@
     const rects = slides.map((el) => el.getBoundingClientRect())
     if (rects.some((r) => r.height === 0)) return false
     return rects.every((r, i) => i === 0 || r.top >= rects[i - 1].bottom - 1)
+  }
+  /**
+   * slides side by side in a row that scrolls sideways. A row that is moved by a transform
+   * instead is left to the deck: scrolling its clipped box would tear its layout.
+   */
+  const sideways = (slides) => {
+    const parent = slides[0].parentElement
+    if (!parent || !/^(auto|scroll)$/.test(window.getComputedStyle(parent).overflowX)) return false
+    const rects = slides.map((el) => el.getBoundingClientRect())
+    if (rects.some((r) => r.width === 0)) return false
+    return rects.every((r, i) => i === 0 || r.left >= rects[i - 1].right - 1)
+  }
+  /** a deck library's own way to a slide, when the page has one */
+  const deckApi = (slides, index) => {
+    const reveal = window.Reveal
+    if (revealSlides() && reveal && typeof reveal.slide === 'function') {
+      reveal.slide(index)
+      return true
+    }
+    const impress = typeof window.impress === 'function' && document.querySelector('#impress')
+    if (impress && impress.contains(slides[0])) {
+      const api = window.impress()
+      if (api && typeof api.goto === 'function') {
+        api.goto(slides[index])
+        return true
+      }
+    }
+    const holder = slides[0].closest('.swiper, .swiper-container')
+    const swiper = holder && holder.swiper
+    if (swiper && typeof swiper.slideTo === 'function') {
+      const loop = swiper.params && swiper.params.loop
+      if (loop && typeof swiper.slideToLoop === 'function') swiper.slideToLoop(index)
+      else swiper.slideTo(index)
+      return true
+    }
+    return false
   }
   /** a key the frame hands the deck itself: the inspector's own key handling stays out of it */
   let pressingDeckKey = false
@@ -1668,9 +1803,10 @@
     await whenSettled()
     const slides = findSlides()
     if (!slides[index]) return
-    const reveal = window.Reveal
-    if (revealSlides() && reveal && typeof reveal.slide === 'function') reveal.slide(index)
-    else if (stacked(slides)) slides[index].scrollIntoView({ block: 'start' })
+    if (deckApi(slides, index)) {
+      // done by the deck's own library
+    } else if (stacked(slides)) slides[index].scrollIntoView({ block: 'start' })
+    else if (sideways(slides)) slides[index].scrollIntoView({ block: 'nearest', inline: 'start' })
     else {
       // the deck's own keys keep its idea of the current slide in step with what it shows
       let at = currentSlide(slides)

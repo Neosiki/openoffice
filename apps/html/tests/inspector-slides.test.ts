@@ -57,6 +57,94 @@ const STACKED_DECK = `<!doctype html><html><body>
 
 const SINGLE_SLIDE = `<!doctype html><html><body><div class="slide">Only</div></body></html>`
 
+/** slides named their own way, one shown at a time */
+const CONTAINER_DECK = `<!doctype html><html><head><style>
+  .slide-container { display: none } .slide-container.active { display: block }
+</style></head><body><div class="slides">
+  <div class="slide-container active"><h2 class="slide-title">One</h2></div>
+  <div class="slide-container"><h2 class="slide-title">Two</h2></div>
+  <div class="slide-container"><h2 class="slide-title">Three</h2></div>
+</div></body></html>`
+
+/** a slide that holds slides of its own is one slide */
+const NESTED_DECK = `<!doctype html><html><body>
+  <div class="slide">One</div>
+  <div class="slide">Two<div class="slide">a</div><div class="slide">b</div></div>
+  <div class="slide">Three</div>
+</body></html>`
+
+/** no slide names at all: pages in a stage, one on show */
+const UNNAMED_DECK = `<!doctype html><html><head><style>
+  .page { display: none } .page.on { display: block }
+</style></head><body><main>
+  <div class="page on">One</div><div class="page">Two</div><div class="page">Three</div>
+</main></body></html>`
+
+/** a small carousel on an ordinary page is not a deck */
+const CAROUSEL_PAGE = `<!doctype html><html><head><style>
+  .carousel-slide { display: none } .carousel-slide.active { display: block }
+</style></head><body>
+  <h1>Shop</h1>
+  <div class="carousel">
+    <div class="carousel-slide active" data-box="400,200">A</div>
+    <div class="carousel-slide" data-box="400,200">B</div>
+    <div class="carousel-slide" data-box="400,200">C</div>
+  </div>
+</body></html>`
+
+/** a screen-tall opening and a block under it: further down the page is not put away */
+const LANDING_PAGE = `<!doctype html><html><body>
+  <div>Welcome</div><div data-box="1000,300,600">Cards</div><p>More</p>
+</body></html>`
+
+/** tab panels show one at a time too, but they are not slides */
+const TABS_PAGE = `<!doctype html><html><head><style>
+  .panel { display: none } .panel.on { display: block }
+</style></head><body><main>
+  <div role="tablist"><button>A</button><button>B</button></div>
+  <div class="panel on">A</div><div class="panel">B</div><div class="panel">C</div>
+</main></body></html>`
+
+const MARP_DECK = `<!doctype html><html><body><div class="marpit">
+  <svg data-marpit-svg=""><foreignObject><section>One</section></foreignObject></svg>
+  <svg data-marpit-svg=""><foreignObject><section>Two</section></foreignObject></svg>
+  <svg data-marpit-svg=""><foreignObject><section>Three</section></foreignObject></svg>
+</div></body></html>`
+
+const SWIPER_DECK = `<!doctype html><html><body>
+  <div class="swiper"><div class="swiper-wrapper">
+    <div class="swiper-slide swiper-slide-duplicate">Three</div>
+    <div class="swiper-slide swiper-slide-active">One</div>
+    <div class="swiper-slide">Two</div>
+    <div class="swiper-slide">Three</div>
+  </div></div>
+  <script>
+    window.swiperCalls = []
+    document.querySelector('.swiper').swiper = {
+      params: { loop: true },
+      slideTo: (i) => window.swiperCalls.push('slideTo:' + i),
+      slideToLoop: (i) => window.swiperCalls.push('slideToLoop:' + i),
+    }
+  </script>
+</body></html>`
+
+const IMPRESS_DECK = `<!doctype html><html><body>
+  <div id="impress"><div>
+    <div class="step">One</div><div class="step active">Two</div><div class="step">Three</div>
+  </div></div>
+  <script>
+    window.impressCalls = []
+    window.impress = () => ({ goto: (el) => window.impressCalls.push(el.textContent) })
+  </script>
+</body></html>`
+
+/** slides side by side in a row that scrolls sideways */
+const ROW_DECK = `<!doctype html><html><head><style>.row { overflow-x: auto }</style></head><body>
+  <div class="row">
+    <div class="slide">One</div><div class="slide">Two</div><div class="slide">Three</div>
+  </div>
+</body></html>`
+
 const W = 1000
 const H = 600
 
@@ -67,11 +155,12 @@ afterEach(() => {
   dom = null
 })
 
-type Layout = 'overlap' | 'stacked'
+type Layout = 'overlap' | 'stacked' | 'row'
 
 /**
  * jsdom lays nothing out: give each element the box a browser would. Overlapping slides all
- * fill the viewport when shown; stacked sections sit a screen each, one under the other.
+ * fill the viewport when shown; stacked sections sit a screen each, one under the other; in a
+ * row the children of `.row` sit a screen each side by side. `data-box="w,h,top"` sets another box.
  */
 function openPage(html: string, layout: Layout = 'overlap') {
   dom = new JSDOM(html, { runScripts: 'dangerously', pretendToBeVisual: true })
@@ -86,11 +175,27 @@ function openPage(html: string, layout: Layout = 'overlap') {
     const none = { x: 0, y: 0, top: 0, left: 0, right: 0, bottom: 0, width: 0, height: 0 }
     if (window.getComputedStyle(this).display === 'none') return none as DOMRect
     let top = 0
+    let left = 0
     if (layout === 'stacked' && this.tagName === 'SECTION') {
       const sections = Array.from(window.document.querySelectorAll('body > section'))
       top = sections.indexOf(this) * H
     }
-    const box = { x: 0, y: top, top, left: 0, right: W, bottom: top + H, width: W, height: H }
+    if (layout === 'row' && this.parentElement?.classList.contains('row'))
+      left = Array.from(this.parentElement.children).indexOf(this) * W
+    const [width, height, boxTop] = (this.getAttribute('data-box') ?? `${W},${H}`)
+      .split(',')
+      .map(Number)
+    if (boxTop !== undefined) top = boxTop
+    const box = {
+      x: left,
+      y: top,
+      top,
+      left,
+      right: left + width,
+      bottom: top + height,
+      width,
+      height,
+    }
     return { ...box, toJSON: () => box } as DOMRect
   }
   const messages: Array<Record<string, unknown>> = []
@@ -111,9 +216,9 @@ function openPage(html: string, layout: Layout = 'overlap') {
     }
     throw new Error(`no matching gx:slides report; last: ${JSON.stringify(lastSlides())}`)
   }
-  const shown = () =>
-    Array.from(window.document.querySelectorAll('.slide'))
-      .map((el, i) => (el.classList.contains('active') ? i : -1))
+  const shown = (selector = '.slide', on = 'active') =>
+    Array.from(window.document.querySelectorAll(selector))
+      .map((el, i) => (el.classList.contains(on) ? i : -1))
       .filter((i) => i >= 0)
   return { window, send, messages, slidesWhere, shown, scrolled }
 }
@@ -175,6 +280,65 @@ describe('slides the preview finds', () => {
     const { slidesWhere } = openPage(SINGLE_SLIDE)
     const report = await slidesWhere(() => true)
     expect(report.count).toBe(0)
+  })
+
+  it('finds slides named their own way, and not the parts inside them', async () => {
+    const { send, slidesWhere, shown } = openPage(CONTAINER_DECK)
+    await slidesWhere((m) => m.count === 3)
+    send({ type: 'gx:goToSlide', index: 2 })
+    await slidesWhere((m) => m.current === 2)
+    expect(shown('.slide-container')).toEqual([2])
+  })
+
+  it('counts a slide that holds slides as one', async () => {
+    const { slidesWhere } = openPage(NESTED_DECK)
+    await slidesWhere((m) => m.count === 3)
+  })
+
+  it('finds unnamed pages shown one at a time in a stage', async () => {
+    const { send, slidesWhere, shown } = openPage(UNNAMED_DECK)
+    await slidesWhere((m) => m.count === 3)
+    send({ type: 'gx:goToSlide', index: 1 })
+    await slidesWhere((m) => m.current === 1)
+    expect(shown('.page', 'on')).toEqual([1])
+  })
+
+  it('reports no deck for a small carousel, a set of tabs or a long page', async () => {
+    for (const page of [CAROUSEL_PAGE, TABS_PAGE, LANDING_PAGE]) {
+      const { slidesWhere } = openPage(page)
+      const report = await slidesWhere(() => true)
+      expect(report.count).toBe(0)
+      dom?.window.close()
+    }
+  })
+
+  it("finds Marp's pages", async () => {
+    const { slidesWhere } = openPage(MARP_DECK)
+    await slidesWhere((m) => m.count === 3)
+  })
+
+  it('asks swiper for the slide, leaving out its loop copies', async () => {
+    const { window, send, slidesWhere } = openPage(SWIPER_DECK)
+    await slidesWhere((m) => m.count === 3 && m.current === 0)
+    send({ type: 'gx:goToSlide', index: 2 })
+    await new Promise((resolve) => setTimeout(resolve, 100))
+    expect((window as unknown as { swiperCalls: string[] }).swiperCalls).toEqual(['slideToLoop:2'])
+  })
+
+  it('asks impress.js for the step, and takes the step it marks as the one on show', async () => {
+    const { window, send, slidesWhere } = openPage(IMPRESS_DECK)
+    await slidesWhere((m) => m.count === 3 && m.current === 1)
+    send({ type: 'gx:goToSlide', index: 2 })
+    await new Promise((resolve) => setTimeout(resolve, 100))
+    expect((window as unknown as { impressCalls: string[] }).impressCalls).toEqual(['Three'])
+  })
+
+  it('scrolls sideways to a slide in a row that scrolls', async () => {
+    const { send, slidesWhere, scrolled } = openPage(ROW_DECK, 'row')
+    await slidesWhere((m) => m.count === 3)
+    send({ type: 'gx:goToSlide', index: 2 })
+    await new Promise((resolve) => setTimeout(resolve, 100))
+    expect(scrolled).toEqual(['Three'])
   })
 
   it('turns a thumbnail frame to its slide and hides its scrollbars', async () => {
