@@ -127,6 +127,7 @@ import {
   applyMcpSettings,
   clearMcpLogs,
   configureMcpRuntime,
+  currentMcpRuntimeDeps,
   getMcpRecentLogs,
   mcpLogFilePath,
   mcpStatus,
@@ -281,6 +282,7 @@ import { SHELL_SUBSCRIPTION_CHANNELS, isSubscriptionProviderId } from '../shared
 import {
   SUBSCRIPTION_INSTALL_URLS,
   initSubscriptionChildTracking,
+  sharedSubscriptionStatuses,
   shutdownSubscriptionChildren,
 } from '@genoffice/ai-provider/subscription'
 import { showErrorDialog } from './error-dialog'
@@ -340,6 +342,17 @@ import {
 import { runHeadlessExport, type HeadlessExporters } from './headless-export'
 import { TabManager } from './tab-manager'
 import { configureGenerateWindow } from './generate/generate-window'
+import { configureAgentWindow, stopAgentSessions } from './agent/agent-window'
+import { startAgentMcpServer } from './agent/agent-mcp'
+import {
+  agentSkillSources,
+  buildAgentSkillBundle,
+  startClaudeAgentSession,
+  startCodexAgentSession,
+} from '@genoffice/ai-provider/agent-session'
+import { normalizeAgentPrefs } from '../shared/agent-api'
+import { normalizeAiSettings, type AiSettings } from '@genoffice/ai-provider'
+import { homedir } from 'node:os'
 import {
   configureDocumentLinks,
   documentLinkFileMenuItems,
@@ -522,6 +535,17 @@ function publishAllOpenDocuments(): void {
   publishOpenDocumentsIfOwner([...(tabManager?.openFilePaths() ?? []), ...detachedFilePaths()])
 }
 setDetachedChangedListener(publishAllOpenDocuments)
+
+/** ai-settings.json as every reader gets it (the docs main owns the file; agent sessions only read it) */
+function readStoredAiSettings(): AiSettings {
+  try {
+    return normalizeAiSettings(
+      JSON.parse(readFileSync(join(app.getPath('userData'), 'ai-settings.json'), 'utf8')),
+    )
+  } catch {
+    return normalizeAiSettings({})
+  }
+}
 
 let uiLang: Lang | null = null
 
@@ -6649,6 +6673,42 @@ app.whenReady().then(async () => {
     }),
     logFilePath: join(app.getPath('userData'), 'mcp-log.txt'),
   })
+  // Agent mode (decision 0032): the person's Claude Code or Codex with its own tools in a
+  // project folder, in a window of its own. Its MCP server is per session and token-guarded,
+  // built from the same controls as the one above; the skills are a copy kept under userData.
+  configureAgentWindow({
+    parentWindow: () => shellWindow,
+    lang: () => currentLang(),
+    theme: () => currentTheme(),
+    statuses: () => sharedSubscriptionStatuses(),
+    aiSettings: () => readStoredAiSettings(),
+    readPrefs: () => normalizeAgentPrefs(readAppSettings(APP_SETTINGS_PATH()).agent),
+    writePrefs: (prefs) => writeAppSetting(APP_SETTINGS_PATH(), 'agent', prefs),
+    openPath: (path) => routeDocumentPath(path),
+    openDocuments: () => [...(tabManager?.openFilePaths() ?? []), ...detachedFilePaths()],
+    userData: app.getPath('userData'),
+    runners: {
+      claude: (options, onEvent) => startClaudeAgentSession(options, onEvent),
+      codex: (options, onEvent) => startCodexAgentSession(options, onEvent),
+    },
+    startAppMcp: (projectRoot) => {
+      const mcp = currentMcpRuntimeDeps()
+      if (!mcp) throw new Error('the MCP runtime is not configured')
+      return startAgentMcpServer(mcp, projectRoot)
+    },
+    buildSkills: async (projectRoot) => {
+      const sources = await agentSkillSources({
+        homeDir: homedir(),
+        projectRoot,
+        appSkillsDir: join(homedir(), '.ieumoffice', 'skills'),
+      })
+      const bundle = await buildAgentSkillBundle(
+        sources,
+        join(app.getPath('userData'), 'agent-skills'),
+      )
+      return bundle.dir
+    },
+  })
   void startMcpFromSettings(currentMcpSettings()).catch((error) => {
     console.error('[mcp] failed to start on boot:', error)
   })
@@ -6751,6 +6811,7 @@ app.on('will-quit', () => {
   controlServer?.close()
   // a second instance that lost the lock quits too; it must not delete the running editor's list
   if (ownsOpenDocumentsRegistry) clearOpenDocuments(OPEN_DOCUMENTS_PATH())
+  stopAgentSessions()
   shutdownSubscriptionChildren()
 })
 

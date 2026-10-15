@@ -213,3 +213,41 @@ describe('MCP server core', () => {
     await b.close()
   })
 })
+
+describe('MCP server for an agent session (decision 0032)', () => {
+  const auth = { authorization: 'Bearer session-token' }
+
+  it('takes a free port when asked for port 0 and reports it', async () => {
+    service = new McpServerService({ port: 0, tools: TOOLS, token: 'session-token' })
+    await service.start()
+    const port = service.getPort()
+    expect(port).toBeGreaterThan(0)
+    const res = await fetch(`http://127.0.0.1:${port}/health`, { headers: auth })
+    expect(res.status).toBe(200)
+  })
+
+  it('refuses a request without the session token, or with another one', async () => {
+    service = new McpServerService({ port: 0, tools: TOOLS, token: 'session-token' })
+    await service.start()
+    const port = service.getPort()
+    expect((await fetch(`http://127.0.0.1:${port}/health`)).status).toBe(401)
+    const wrong = await fetch(`http://127.0.0.1:${port}/health`, {
+      headers: { authorization: 'Bearer other-token!' },
+    })
+    expect(wrong.status).toBe(401)
+  })
+
+  it('lets a client with the token connect and use the tools', async () => {
+    service = new McpServerService({ port: 0, tools: TOOLS, token: 'session-token' })
+    await service.start()
+    const client = new Client({ name: 'agent', version: '0.0.0' })
+    const transport = new StreamableHTTPClientTransport(
+      new URL(`http://127.0.0.1:${service.getPort()}/mcp`),
+      { requestInit: { headers: { Authorization: 'Bearer session-token' } } },
+    )
+    await client.connect(transport)
+    const { tools } = await client.listTools()
+    expect(tools.map((t) => t.name).sort()).toEqual(['boom', 'echo'])
+    await client.close()
+  })
+})

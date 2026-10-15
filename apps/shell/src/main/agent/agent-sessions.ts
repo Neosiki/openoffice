@@ -1,0 +1,327 @@
+import { randomUUID } from 'node:crypto'
+import { existsSync, statSync } from 'node:fs'
+import { mkdtemp, readFile, rm } from 'node:fs/promises'
+import { homedir, tmpdir } from 'node:os'
+import { dirname, isAbsolute, join, parse, resolve } from 'node:path'
+import type {
+  AgentPermissionAnswer,
+  AgentPermissionMode,
+  AgentSession,
+  AgentSessionEvent,
+  AgentSessionOptions,
+} from '@genoffice/ai-provider/agent-session'
+import { comparablePath, isInsidePath } from '@genoffice/ai-provider/agent-session'
+import type {
+  AiSettings,
+  AiSubscriptionProviderId,
+  AiSubscriptionStatus,
+} from '@genoffice/ai-provider'
+import { subscriptionConnection } from '@genoffice/ai-provider'
+
+/**
+ * Agent sessions of the shell (decision 0032): one per agent window, each the
+ * person's Claude Code or Codex working in a project folder they chose.
+ *
+ * Electron-free so the rules can be tested: the IPC module injects the
+ * runners, the app's MCP server, the subscription statuses and settings, the
+ * open tabs, and the event sink.
+ */
+
+export type AgentStartFailure =
+  /** the folder is missing, not a folder, a drive root, the home folder, or a protected place */
+  | 'bad-folder'
+  /** the program is not signed in on a subscription, and no metered login was accepted */
+  | 'not-connected'
+  /** the program could not be started or refused the session (see `message`) */
+  | 'start-failed'
+
+export interface AgentStartRequest {
+  provider: AiSubscriptionProviderId
+  projectRoot: string
+  mode: AgentPermissionMode
+}
+
+export type AgentStartResult =
+  | { ok: true; sessionId: string }
+  | {
+      ok: false
+      reason: AgentStartFailure
+      kind?: string | undefined
+      message?: string | undefined
+    }
+
+export interface AgentRunners {
+  claude: (
+    options: AgentSessionOptions,
+    onEvent: (event: AgentSessionEvent) => void,
+  ) => Promise<AgentSession>
+  codex: (
+    options: AgentSessionOptions & { meteredAccepted: boolean },
+    onEvent: (event: AgentSessionEvent) => void,
+  ) => Promise<AgentSession>
+}
+
+export interface AgentManagerDeps {
+  runners: AgentRunners
+  statuses: () => Partial<Record<AiSubscriptionProviderId, AiSubscriptionStatus>>
+  aiSettings: () => AiSettings
+  /** absolute paths of documents open in tabs */
+  openDocuments: () => string[]
+  /** the app's data folder; protected, and the skill copy lives under it */
+  userData: string
+  homeDir?: string | undefined
+  /** the screen language, for the reply-language line of the instructions */
+  language: () => string
+  /** start the session's own MCP server; absent when the app has no editors to offer */
+  startAppMcp?:
+    | ((projectRoot: string) => Promise<{ url: string; token: string; stop(): Promise<void> }>)
+    | undefined
+  /** refresh the skill copy for Claude and return its folder; absent to give no skills */
+  buildSkills?: ((projectRoot: string) => Promise<string | undefined>) | undefined
+  emit: (ownerId: number, sessionId: string, event: AgentSessionEvent) => void
+  platform?: NodeJS.Platform | undefined
+}
+
+/** Folders no session may use or reach: sign-in stores, the original app, this app's data */
+export function agentProtectedPaths(homeDir: string, userData: string): string[] {
+  return [
+    join(homeDir, '.claude'),
+    join(homeDir, '.codex'),
+    join(homeDir, '.genoffice'),
+    join(homeDir, '.ieumoffice'),
+    userData,
+  ]
+}
+
+/** Why a folder cannot be a project folder, or undefined when it can */
+export function projectFolderProblem(
+  folder: string,
+  homeDir: string,
+  protectedPaths: readonly string[],
+  platform: NodeJS.Platform = process.platform,
+): string | undefined {
+  if (!folder || !isAbsolute(folder)) return 'not-absolute'
+  let info
+  try {
+    info = statSync(folder)
+  } catch {
+    return 'missing'
+  }
+  if (!info.isDirectory()) return 'not-a-folder'
+  const root = comparablePath(folder, folder, platform)
+  if (parse(root).root === root || comparablePath(parse(root).root, root, platform) === root) {
+    return 'drive-root'
+  }
+  if (root === comparablePath(homeDir, homeDir, platform)) return 'home-folder'
+  for (const guard of protectedPaths) {
+    const g = comparablePath(guard, guard, platform)
+    if (isInsidePath(root, g, platform) || isInsidePath(g, root, platform)) return 'protected'
+  }
+  return undefined
+}
+
+const PROJECT_NOTE_FILES = ['CLAUDE.md', 'AGENTS.md']
+const MAX_PROJECT_NOTES_CHARS = 32_000
+
+/**
+ * What the app adds to the program's own instructions. English, as all model
+ * prompts in this app; the reply language follows the screen.
+ */
+export async function agentInstructions(
+  provider: AiSubscriptionProviderId,
+  projectRoot: string,
+  language: string,
+  withAppTools: boolean,
+): Promise<string> {
+  const lines = [
+    'You are working for the person inside an office app, in the project folder they chose.',
+    `Reply in the language with code "${language}" unless the person writes in another language.`,
+    'Work inside the project folder. Create new files there; do not write anywhere else.',
+    'Documents the person has open in the app must not be written as files: the app holds their current state.',
+  ]
+  if (withAppTools) {
+    lines.push(
+      'To read or change a document that is open in the app, use the ieumoffice-editor tools: open_documents (action "list") shows what is open; pass a document\'s id or path as `document` to read_document / insert_content / replace_blocks / apply_ops (Word), read_sheet / apply_sheet_ops (Excel), read_deck / apply_slide_ops (PowerPoint). Changes made this way show in the editor and the person can undo them.',
+      'Some words may read as {{label}}: the person withheld them from AI. Keep every such marker exactly as it is, never guess what it stands for, and never write a marker into a file.',
+      'read_hwp and read_pdf read Hangul and PDF files of the project folder.',
+    )
+  }
+  // Claude Code runs with no project settings, so it does not read these files itself; Codex
+  // reads AGENTS.md on its own, so only CLAUDE.md is added for it
+  const files = provider === 'claude-code' ? PROJECT_NOTE_FILES : ['CLAUDE.md']
+  const notes: string[] = []
+  for (const name of files) {
+    try {
+      const text = await readFile(join(projectRoot, name), 'utf8')
+      if (text.trim()) notes.push(`## ${name}\n${text.slice(0, MAX_PROJECT_NOTES_CHARS)}`)
+    } catch {
+      // no such file
+    }
+  }
+  if (notes.length > 0) {
+    lines.push('', 'The project folder has its own notes for you:', '', ...notes)
+  }
+  return lines.join('\n')
+}
+
+interface LiveSession {
+  id: string
+  ownerId: number
+  session: AgentSession | undefined
+  sessionDir: string
+  appMcp?: { stop(): Promise<void> } | undefined
+  projectRoot: string
+}
+
+export interface AgentManager {
+  start(ownerId: number, request: AgentStartRequest): Promise<AgentStartResult>
+  send(ownerId: number, sessionId: string, text: string): Promise<void>
+  answer(ownerId: number, sessionId: string, requestId: string, answer: AgentPermissionAnswer): void
+  stop(ownerId: number, sessionId: string): void
+  /** the owner window went away: its sessions end */
+  stopOwner(ownerId: number): void
+  /** the app is quitting */
+  stopAll(): void
+  /** the project folder of a live session, for opening its files in tabs */
+  projectRootOf(ownerId: number, sessionId: string): string | undefined
+}
+
+export function createAgentManager(deps: AgentManagerDeps): AgentManager {
+  const platform = deps.platform ?? process.platform
+  const homeDir = deps.homeDir ?? homedir()
+  const protectedPaths = agentProtectedPaths(homeDir, deps.userData)
+  const live = new Map<string, LiveSession>()
+
+  const cleanup = (entry: LiveSession): void => {
+    if (!live.has(entry.id)) return
+    live.delete(entry.id)
+    void entry.appMcp?.stop().catch(() => undefined)
+    void rm(entry.sessionDir, { recursive: true, force: true, maxRetries: 3 }).catch(
+      () => undefined,
+    )
+  }
+
+  const own = (ownerId: number, sessionId: string): LiveSession | undefined => {
+    const entry = live.get(sessionId)
+    return entry && entry.ownerId === ownerId ? entry : undefined
+  }
+
+  return {
+    async start(ownerId, request) {
+      const projectRoot = resolve(request.projectRoot)
+      if (projectFolderProblem(projectRoot, homeDir, protectedPaths, platform)) {
+        return { ok: false, reason: 'bad-folder' }
+      }
+      const settings = deps.aiSettings()
+      const connection = subscriptionConnection(settings, deps.statuses()[request.provider])
+      if (!connection) return { ok: false, reason: 'not-connected' }
+
+      const id = randomUUID()
+      const sessionDir = await mkdtemp(join(tmpdir(), 'ieum-agent-'))
+      const entry: LiveSession = { id, ownerId, session: undefined, sessionDir, projectRoot }
+      live.set(id, entry)
+      try {
+        const appMcp = deps.startAppMcp ? await deps.startAppMcp(projectRoot) : undefined
+        entry.appMcp = appMcp
+        const skillBundleDir =
+          request.provider === 'claude-code' && deps.buildSkills
+            ? await deps.buildSkills(projectRoot)
+            : undefined
+        const config = settings.providers[request.provider]
+        const options: AgentSessionOptions = {
+          projectRoot,
+          mode: request.mode,
+          model: config?.model ?? '',
+          cliPath: config?.cliPath,
+          instructions: await agentInstructions(
+            request.provider,
+            projectRoot,
+            deps.language(),
+            appMcp !== undefined,
+          ),
+          openDocuments: deps.openDocuments(),
+          protectedPaths,
+          skillBundleDir,
+          appMcp: appMcp ? { url: appMcp.url, token: appMcp.token } : undefined,
+          sessionDir,
+        }
+        const onEvent = (event: AgentSessionEvent): void => {
+          deps.emit(ownerId, id, event)
+          if (event.type === 'ended') cleanup(entry)
+        }
+        entry.session =
+          request.provider === 'claude-code'
+            ? await deps.runners.claude(options, onEvent)
+            : await deps.runners.codex(
+                { ...options, meteredAccepted: connection === 'metered' },
+                onEvent,
+              )
+        return { ok: true, sessionId: id }
+      } catch (error) {
+        cleanup(entry)
+        return {
+          ok: false,
+          reason: 'start-failed',
+          kind: (error as { kind?: unknown } | null)?.kind as string | undefined,
+          message: error instanceof Error ? error.message : String(error),
+        }
+      }
+    },
+
+    async send(ownerId, sessionId, text) {
+      const entry = own(ownerId, sessionId)
+      if (!entry?.session) throw new Error('No such agent session')
+      // tabs opened or closed since the last message count from here on
+      entry.session.setOpenDocuments(deps.openDocuments())
+      await entry.session.send(text)
+    },
+
+    answer(ownerId, sessionId, requestId, answer) {
+      own(ownerId, sessionId)?.session?.answer(requestId, answer)
+    },
+
+    stop(ownerId, sessionId) {
+      const entry = own(ownerId, sessionId)
+      if (!entry) return
+      entry.session?.stop()
+      cleanup(entry)
+    },
+
+    stopOwner(ownerId) {
+      for (const entry of [...live.values()]) {
+        if (entry.ownerId !== ownerId) continue
+        entry.session?.stop()
+        cleanup(entry)
+      }
+    },
+
+    stopAll() {
+      for (const entry of [...live.values()]) {
+        entry.session?.stop()
+        cleanup(entry)
+      }
+    },
+
+    projectRootOf(ownerId, sessionId) {
+      return own(ownerId, sessionId)?.projectRoot
+    },
+  }
+}
+
+/** A path the session may open in a tab: an existing file inside its project folder */
+export function openableProjectFile(
+  projectRoot: string,
+  path: string,
+  platform: NodeJS.Platform = process.platform,
+): string | undefined {
+  if (!path) return undefined
+  const full = isAbsolute(path) ? path : join(projectRoot, path)
+  const root = comparablePath(projectRoot, projectRoot, platform)
+  if (!isInsidePath(comparablePath(full, root, platform), root, platform)) return undefined
+  try {
+    if (!statSync(full).isFile()) return undefined
+  } catch {
+    return undefined
+  }
+  return existsSync(dirname(full)) ? full : undefined
+}

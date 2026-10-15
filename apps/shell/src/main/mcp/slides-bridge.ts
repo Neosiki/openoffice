@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs'
 import { extname, isAbsolute } from 'node:path'
 import { webContents } from 'electron'
+import { placeholderSource } from '@genoffice/agent-core/redact-core'
 import { elementDurableId, slideDurableId, type SlideElement } from '@genoffice/pptx-engine'
 import { applySessionTxn, saveSessionDeckTo } from '../../../../slides/src/main/slides-main'
 import { attachedIds, sessions, type Session } from '../../../../slides/src/main/session-state'
@@ -54,6 +55,48 @@ function requireSession(wcId: number): Session {
 }
 
 /**
+ * How a readout treats withheld words. The outside MCP surface reads them as
+ * they are (its output is a published contract, decision 0016); an agent
+ * session reads each withheld run, and every word of a withheld element, as
+ * its `{{label}}` (decision 0032).
+ */
+interface ReadOptions {
+  withhold: boolean
+}
+
+interface RunLike {
+  text: string
+  redact?: string | undefined
+}
+
+function paragraphsText(
+  paragraphs: ReadonlyArray<{ runs: readonly RunLike[] }>,
+  options: ReadOptions,
+  separator: string,
+): string {
+  return paragraphs
+    .map((p) =>
+      p.runs
+        .map((r) => (options.withhold && r.redact ? placeholderSource(r.redact) : r.text))
+        .join(''),
+    )
+    .join(separator)
+}
+
+/** The element itself, or any run in it, carries a withholding mark */
+export function elementWithholds(el: SlideElement): boolean {
+  if (el.redact) return true
+  const runsWithhold = (paragraphs: ReadonlyArray<{ runs: readonly RunLike[] }> | undefined) =>
+    (paragraphs ?? []).some((p) => p.runs.some((r) => Boolean(r.redact)))
+  if (el.type === 'text' || el.type === 'shape') return runsWithhold(el.text?.paragraphs)
+  if (el.type === 'table') {
+    return el.rows.some((row) => row.some((cell) => runsWithhold(cell.text?.paragraphs)))
+  }
+  if (el.type === 'group') return el.children.some(elementWithholds)
+  return false
+}
+
+/**
  * Compact model readout for the agent: ids, geometry (EMU) and text per element.
  *
  * Group children carry the group's child coordinate system, not document-space
@@ -61,7 +104,10 @@ function requireSession(wcId: number): Session {
  * instead of being passed off as an absolute position — an agent placing a
  * follow-up setTransform needs to know which frame it is addressing.
  */
-function elementInfo(el: SlideElement): Record<string, unknown> {
+function elementInfo(
+  el: SlideElement,
+  options: ReadOptions = { withhold: false },
+): Record<string, unknown> {
   const t = el.transform?.offset ?? { x: 0, y: 0, cx: 0, cy: 0 }
   const info: Record<string, unknown> = {
     id: elementDurableId(el) ?? el.id,
@@ -74,7 +120,10 @@ function elementInfo(el: SlideElement): Record<string, unknown> {
   if (el.type === 'text' || el.type === 'shape') {
     const paragraphs = el.text?.paragraphs ?? []
     if (paragraphs.length) {
-      const full = paragraphs.map((p) => p.runs.map((r) => r.text).join('')).join('\n')
+      const full =
+        options.withhold && el.redact
+          ? placeholderSource(el.redact)
+          : paragraphsText(paragraphs, options, '\n')
       info.text = clip(full)
       if (full.length > MAX_TEXT_CHARS) info.textTruncated = true
     }
@@ -84,14 +133,10 @@ function elementInfo(el: SlideElement): Record<string, unknown> {
     const body = rows
       .slice(0, MAX_TABLE_ROWS)
       .map((row) =>
-        row
-          .map((cell) =>
-            (cell.text?.paragraphs ?? []).map((p) => p.runs.map((r) => r.text).join('')).join(''),
-          )
-          .join(' | '),
+        row.map((cell) => paragraphsText(cell.text?.paragraphs ?? [], options, '')).join(' | '),
       )
       .join('\n')
-    info.text = clip(body)
+    info.text = clip(options.withhold && el.redact ? placeholderSource(el.redact) : body)
     if (totalRows > MAX_TABLE_ROWS) {
       info.textTruncated = true
       info.rows = totalRows
@@ -100,14 +145,14 @@ function elementInfo(el: SlideElement): Record<string, unknown> {
     // children are in the group's local frame: say so rather than implying
     // document-space coordinates
     info.children = el.children.map((child) => ({
-      ...elementInfo(child),
+      ...elementInfo(child, options),
       coordinates: 'local-to-group',
     }))
   }
   return info
 }
 
-function readDeckModel(session: Session): Record<string, unknown> {
+function readDeckModel(session: Session, options: ReadOptions): Record<string, unknown> {
   const deck = session.opened.deck
   return {
     emuPerPx: EMU_PER_PX_96,
@@ -119,7 +164,7 @@ function readDeckModel(session: Session): Record<string, unknown> {
     slides: deck.slides.map((slide, index) => ({
       index,
       id: slideDurableId(slide),
-      elements: slide.elements.map(elementInfo),
+      elements: slide.elements.map((el) => elementInfo(el, options)),
     })),
   }
 }
@@ -170,7 +215,12 @@ export function createSlidesControl(deps: SlidesBridgeDeps): SlidesControl {
       const { slides: _renderTree, ...summary } = result
       return summary
     },
-    readDeck: async (wcId: number) => readDeckModel(requireSession(wcId)),
+    readDeck: async (wcId: number, options?: { withhold?: boolean }) =>
+      readDeckModel(requireSession(wcId), { withhold: options?.withhold === true }),
+    deckWithholds: async (wcId: number) =>
+      requireSession(wcId).opened.deck.slides.some((slide) =>
+        slide.elements.some(elementWithholds),
+      ),
     saveDeck: async (wcId: number, filePath: string, overwrite: boolean) => {
       if (!isAbsolute(filePath)) throw new Error('path must be absolute')
       const ext = extname(filePath).toLowerCase()

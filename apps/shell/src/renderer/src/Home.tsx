@@ -48,11 +48,14 @@ import { onFilesChanged } from './file-events'
 import { FirstConnectionDialog } from './FirstConnectionNotice'
 import type { SubscriptionConnection } from './subscription-client'
 import { subscriptionSummary } from './subscription-status'
+import { agentText } from './i18n/strings-agent'
 
 declare global {
   interface Window {
     aiOffice: HomeApi
     aiOfficeIntegrations?: IntegrationsApi
+    /** Home's entry into the agent window (src/preload/index.ts) */
+    aiOfficeAgent?: { open(): Promise<void> }
   }
 }
 
@@ -1838,6 +1841,20 @@ export function Home({
             <span className="quick-sub">{OPEN_LOCAL_EXTENSIONS}</span>
           </span>
         </button>
+        {window.aiOfficeAgent ? (
+          <button className="quick-card" onClick={() => void window.aiOfficeAgent?.open()}>
+            <span className="quick-folder">
+              <FolderIcon size={18} />
+            </span>
+            <span className="quick-text">
+              <span className="quick-title-row">
+                <span className="quick-title">{agentText(lang, 'windowTitle')}</span>
+                <span className="ai-chip">AI</span>
+              </span>
+              <span className="quick-sub">{agentText(lang, 'homeCardSub')}</span>
+            </span>
+          </button>
+        ) : null}
       </div>
     )
   }
