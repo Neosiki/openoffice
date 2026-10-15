@@ -94,6 +94,13 @@ export interface AiSubscriptionCardOptions {
   readonly account?: boolean | undefined
   /** offer "sign in with another account" and "sign out" while a login is known */
   readonly accountActions?: boolean | undefined
+  /**
+   * the app can open a terminal window of its own (Windows): the install
+   * command and the CLI's login window for a pasted code run there. False
+   * elsewhere: a not-installed card offers only the vendor's install page, and
+   * a browser sign-in has no window to open. Default true.
+   */
+  readonly terminalWindows?: boolean | undefined
 }
 
 export type AiSubscriptionCardTone = 'neutral' | 'ok' | 'warning' | 'error'
@@ -138,8 +145,12 @@ export function aiSubscriptionCardView(
   status: AiSubscriptionStatus,
   options: AiSubscriptionCardOptions = {},
 ): AiSubscriptionCardView {
-  if (status.signingIn) return signingInCardView(status)
+  const terminalWindows = options.terminalWindows !== false
+  if (status.signingIn) return signingInCardView(status, terminalWindows)
   const view = connectionCardView(status)
+  if (status.state === 'not-installed' && !terminalWindows) {
+    return { ...view, noteKeys: [], actions: ['install-help'] }
+  }
   if (status.state !== 'ready' && status.state !== 'metered') return view
   const account = options.account ? status.account?.trim() || undefined : undefined
   return {
@@ -158,7 +169,10 @@ export function aiSubscriptionCardView(
  * card says where to sign in. In the browser first, with a way to open the
  * CLI's window for when the browser hands back a code; then, in that window.
  */
-function signingInCardView(status: AiSubscriptionStatus): AiSubscriptionCardView {
+function signingInCardView(
+  status: AiSubscriptionStatus,
+  terminalWindows: boolean,
+): AiSubscriptionCardView {
   const browser = status.signingIn === 'browser'
   return {
     provider: status.provider,
@@ -166,7 +180,7 @@ function signingInCardView(status: AiSubscriptionStatus): AiSubscriptionCardView
     tone: 'neutral',
     statusKey: 'cardSigningIn',
     noteKeys: [browser ? 'signingInBrowserNote' : 'signingInWindowNote'],
-    actions: browser ? ['login-window'] : [],
+    actions: browser && terminalWindows ? ['login-window'] : [],
   }
 }
 

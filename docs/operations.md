@@ -1,6 +1,6 @@
 # 운영
 
-배포하고 확인하는 운영체제는 Windows뿐이다. macOS·Linux용 설정과 코드는 저장소에 남아 있지만 빌드하지도 확인하지도 않는다.
+배포하는 운영체제는 Windows이고, Apple Silicon Mac용은 Apple 개발자 서명 없는 베타로 낸다(결정 0031). Mac판은 GitHub Actions의 Mac 빌드 기계에서 만들고, Mac 사용자들의 보고로 확인한다. Intel Mac·Linux용 설정과 코드는 저장소에 남아 있지만 빌드하지도 확인하지도 않는다.
 
 ## 처음 한 번
 
@@ -97,6 +97,17 @@ npm run dist:win -- -- --publish never
 - `--publish never`를 빼면 빌드 도구가 GitHub에 올리려 한다.
 - 스캔 문서 글자 인식 도우미(`win-ocr.exe`)가 이 과정에서 컴파일된다. Windows SDK가 없으면 여기서 멈춘다.
 - 설치 파일에는 서명이 없다. 설치할 때 Windows가 "알 수 없는 게시자" 경고를 띄운다.
+
+## Mac 설치 파일 만들기
+
+저장소 주인에게 Mac이 없으므로 GitHub Actions에서 만든다.
+
+1. GitHub 저장소의 Actions 탭 → **macOS build** → **Run workflow**. 가지는 릴리스 태그가 가리킬 커밋이 있는 가지를 고른다.
+2. 끝나면 실행 결과의 Artifacts에서 `ieumoffice-mac-arm64`를 내려받는다. 안에 `IeumOffice-<버전>-arm64.dmg`, `IeumOffice-<버전>-arm64-mac.zip`, `latest-mac.yml`(베타 버전 번호면 `beta-mac.yml`)이 있다.
+
+- 빌드는 ad hoc 서명이 되었는지, 엑셀 처리 프로그램과 글자 인식 도우미가 Apple Silicon용으로 들어갔는지 검사하고, 만든 앱을 창 없이 띄워 Markdown·CSV 파일을 PDF로 내보내 본다. 하나라도 실패하면 결과를 올리지 않는다.
+- 비밀 값을 쓰지 않는다. **release_tag**를 적고 `main`에서 실행하면, 빌드가 통과한 뒤 그 태그의 이미 공개된 릴리스에 dmg, zip, `latest-mac.yml`을 붙인다(빌드한 버전과 태그가 같을 때만). 비워 두면 결과물만 남는다. 순서는 `docs/releasing.ko.md`의 "Mac 설치 파일"이다.
+- Mac에서 직접 만들 때: `npm ci`, `npm run build:all`, `npm run dist:mac -w @genoffice/shell -- --publish never`. 루트의 `npm run dist:mac`은 Intel용까지 묶는 원본의 경로라 쓰지 않는다.
 
 ## 새 버전 내기
 
