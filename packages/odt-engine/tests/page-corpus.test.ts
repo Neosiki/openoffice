@@ -22,6 +22,8 @@ function corpusFiles(dir: string): string[] {
   for (const name of readdirSync(dir)) {
     const path = join(dir, name)
     if (statSync(path).isDirectory()) {
+      // generated outputs (out-docx2odt …) are not received files
+      if (name.startsWith('out-')) continue
       for (const inner of readdirSync(path))
         if (inner.toLowerCase().endsWith('.odt')) out.push(join(path, inner))
     } else if (name.toLowerCase().endsWith('.odt')) out.push(path)

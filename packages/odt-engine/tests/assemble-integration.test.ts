@@ -26,7 +26,7 @@ import {
   hTable,
 } from './helpers/hancom-fragments'
 import { PNG_1X1 } from './helpers/hancom-sample'
-import { cellRuns, editRuns, patchCells } from './helpers/table-editor'
+import { cellRuns, editRuns, patchCells, regenerate } from './helpers/table-editor'
 
 const contentOf = async (odt: Uint8Array) => textOf(await readOdtPackage(odt), 'content.xml')
 
@@ -163,5 +163,20 @@ describe('a page run ending with a framed table', () => {
     expect(diff.changed).toEqual(['content.xml'])
     const before = await contentOf(odt)
     expect(await contentOf(edited.saved)).toBe(before.replace('>two b<', '>&gt;two b<'))
+  })
+})
+
+describe('a regenerated table with a picture cell', () => {
+  it('keeps the cell paragraph bytes (span around the frame, bookmark after it)', async () => {
+    const image = hImageFrame('Pictures/a.png', { anchor: 'as-char' })
+    const cellPara = `<text:p text:style-name="P1_0"><text:span text:style-name="T1">${image.frame}</text:span><text:bookmark text:name="CellField1"/></text:p>`
+    const odt = await buildOdt({
+      body: hTable('Table1', 2, [hRow([hCell(cellPara), hCell(hPara('b'))])]),
+      pictures: { 'a.png': PNG_1X1 },
+    })
+    const { saved } = await roundTrip(odt, (blocks) =>
+      blocks.map((b, i) => (b.type === 'table' ? regenerate(b, () => {}) : { keep: i })),
+    )
+    expect(saved).toBe(odt)
   })
 })

@@ -370,12 +370,29 @@ export function paragraphToOdf(
     inserts.push(x)
     for (let k = x.offset; k < x.offset + (x.replaces ?? 0) && k < skip.length; k++) skip[k] = 1
   }
+  // an atom continuing one of the origin's handler markers keeps that marker's
+  // document order among the markers at its offset (a picture before a bookmark)
+  const usedHandlers = new Set<number>()
+  const handlerSeq = (at: number, owner: string): number | null => {
+    if (!origin || opts.placements) return null
+    const index = origin.markers.findIndex(
+      (m, k) =>
+        m.kind === 'handler' &&
+        m.owner === owner &&
+        !usedHandlers.has(k) &&
+        mapper.map(m.offset, 'start') === at,
+    )
+    if (index < 0) return null
+    usedHandlers.add(index)
+    return index
+  }
   let offset = 0
   runs.forEach((run, i) => {
     const len = run.text.length
     const writer = rctx.registry.runWriterFor(run)
     if (writer) {
-      inserts.push({ offset, xml: writer.toOdf(rctx, run, env), attach: 'next', seq: 1e9 + i })
+      const seq = handlerSeq(offset, writer.id) ?? 1e9 + i
+      inserts.push({ offset, xml: writer.toOdf(rctx, run, env), attach: 'next', seq })
       for (let k = offset; k < offset + len; k++) skip[k] = 1
     } else if (run.image || run.noteRef) {
       rctx.warn(`dropped an unsupported ${run.image ? 'picture' : 'note reference'} in a paragraph`)

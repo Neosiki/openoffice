@@ -125,7 +125,9 @@ function sameParagraph(
   origin: BridgeParagraph,
   candidate: string,
 ): boolean {
-  if (origin.markers.some((m) => m.kind === 'handler')) return false
+  // atoms with text (notes) cannot be compared; zero-length ones (pictures,
+  // placeholders) read back as kept markers and are compared by their bytes
+  if (origin.markers.some((m) => m.kind === 'handler' && m.length > 0)) return false
   const a = originalModel(rctx, origin)
   if (!a) return false
   const tops: Array<{
@@ -160,7 +162,7 @@ function sameParagraph(
   return a.markers.every((m, i) => {
     const n = b.markers[i]
     return (
-      m.kind === n.kind &&
+      (m.kind === n.kind || (m.kind === 'handler' && n.kind === 'keep')) &&
       m.offset === n.offset &&
       xml.slice(m.start, m.end) === candidate.slice(n.start, n.end)
     )

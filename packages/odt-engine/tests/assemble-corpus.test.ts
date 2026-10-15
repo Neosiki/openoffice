@@ -14,7 +14,7 @@ import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { parseDocx, readSections } from '@genoffice/docx-engine'
 import { describe, expect, it } from 'vitest'
-import { odtToDocx, saveOdt } from '../src'
+import { odtToDocx, odtToText, saveOdt } from '../src'
 import { readOdtPackage } from '../src/core'
 import { readPageExt } from '../src/page'
 import type { TableExt } from '../src/table'
@@ -29,6 +29,8 @@ function corpusFiles(dir: string): string[] {
   for (const name of readdirSync(dir)) {
     const path = join(dir, name)
     if (statSync(path).isDirectory()) {
+      // generated outputs (out-docx2odt …) are not received files
+      if (name.startsWith('out-')) continue
       for (const inner of readdirSync(path))
         if (inner.toLowerCase().endsWith('.odt')) out.push(join(path, inner))
     } else if (name.toLowerCase().endsWith('.odt')) out.push(path)
@@ -53,8 +55,9 @@ describe.skipIf(!root)('public API over the corpus', () => {
     const files = corpusFiles(root as string)
     expect(files.length).toBeGreaterThan(0)
     const failures: string[] = []
-    const totals = { files: 0, unedited: 0, paragraph: 0, cell: 0, margin: 0 }
+    const totals = { files: 0, text: 0, unedited: 0, paragraph: 0, cell: 0, margin: 0 }
     let largest = { name: '', size: 0, open: 0, save: 0 }
+    let largestContent = { name: '', size: 0, open: 0, save: 0 }
     for (const file of files) {
       const name = file.slice((root as string).length + 1)
       try {
@@ -63,6 +66,9 @@ describe.skipIf(!root)('public API over the corpus', () => {
         const { docxBytes, bridge } = await odtToDocx(odt)
         const t1 = performance.now()
         totals.files++
+        // plain text never throws for content reasons (picture-only files have none)
+        await odtToText(odt)
+        totals.text++
         const keep = await editorSave(docxBytes, (blocks) => blocks.map((_, i) => ({ keep: i })))
         const t2 = performance.now()
         const same = await saveOdt({ originalOdt: odt, bridge, editedDocx: keep.bytes })
@@ -73,6 +79,9 @@ describe.skipIf(!root)('public API over the corpus', () => {
         else failures.push(`${name}: unedited save changed the bytes`)
 
         const pkg = await readOdtPackage(odt)
+        const contentSize = pkg.get('content.xml')?.bytes.length ?? 0
+        if (contentSize > largestContent.size)
+          largestContent = { name, size: contentSize, open: t1 - t0, save: t3 - t2 }
         const content = textOf(pkg, 'content.xml')
         const parsed = await parseDocx(docxBytes)
         const visible = parsed.blocks.filter((b) => !b.hidden)
@@ -198,7 +207,9 @@ describe.skipIf(!root)('public API over the corpus', () => {
     console.log(`api corpus: ${JSON.stringify(totals)}`)
     console.log(
       `largest: ${largest.name} (${(largest.size / 1024 / 1024).toFixed(1)} MB): ` +
-        `open ${largest.open.toFixed(0)} ms, unedited save ${largest.save.toFixed(0)} ms`,
+        `open ${largest.open.toFixed(0)} ms, unedited save ${largest.save.toFixed(0)} ms; ` +
+        `largest content.xml: ${largestContent.name} (${(largestContent.size / 1024 / 1024).toFixed(1)} MB): ` +
+        `open ${largestContent.open.toFixed(0)} ms, unedited save ${largestContent.save.toFixed(0)} ms`,
     )
     expect(failures).toEqual([])
     expect(totals.unedited).toBe(totals.files)
