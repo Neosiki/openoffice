@@ -548,4 +548,17 @@ export const es = {
   appOdtFeatureProtection: 'Restricciones de edición y protección',
   appOdtFeatureFormField: 'Campos de formulario',
   appOdtFeatureObject: 'Otros objetos',
+  appOdtOff: 'No disponible en documentos ODT. Guárdelo como .docx para usarlo.',
+  appOdtProtectedCell: 'Celda protegida. Se bloqueó en Hancom Office y no se puede cambiar.',
+  appOdtProtectedCellTip: 'Celda protegida',
+  appOdtLockedObject: 'Este objeto no se puede cambiar aquí. Solo se puede eliminar entero.',
+  appOdtLabelEquation: 'Ecuación (visible en Hancom)',
+  appOdtLabelShape: 'Forma (visible en Hancom)',
+  appOdtLabelTextbox: 'Cuadro de texto (visible en Hancom)',
+  appOdtLabelToc: 'Tabla de contenido (visible en Hancom)',
+  appOdtLabelChart: 'Gráfico (visible en Hancom)',
+  appOdtLabelRevision: 'Control de cambios (visible en Hancom)',
+  appOdtLabelObject: 'Objeto (visible en Hancom)',
+  appOdtLabelNotice:
+    'Los objetos dibujados como cuadros con etiqueta pueden verse distintos de como los muestra Hancom Office.',
 } satisfies Record<keyof typeof zh, string>

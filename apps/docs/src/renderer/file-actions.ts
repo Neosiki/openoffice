@@ -61,6 +61,13 @@ import { hfSaveOptions } from './hf-sections'
 import { fetchDocBytes } from './doc-bytes'
 import { parseDocxOffThread, parseOdtOffThread } from './parse-off-thread'
 import { captureRenderedObjects } from './odt-objects'
+import {
+  beginOdtSession,
+  hasLabelPlaceholders,
+  noticeLabelsBeforeOutput,
+  rebaseOdtSession,
+} from './odt-gate'
+import { labelPlaceholdersInDocx } from './odt-label-docx'
 import { confirmFormatChange } from './components/format-change-bus'
 import { PHASED_APPEND } from './editor/streaming-tail-guard'
 import { docTextLength, docWeight, openTierFor } from './large-document'
@@ -443,6 +450,8 @@ export async function loadFile(
     ctx.editor.storage.listNumbering.docDefaults = parsed.docDefaults
     ctx.editor.storage.listNumbering.defs = parsed.numbering
     applyDocLayoutSettings(ctx.editor, parsed)
+    // before setContent: the ODT rules (locks, placeholder labels) apply as the content renders
+    beginOdtSession(odt, parsed)
     setContentPhased(
       phasedHostFor(ctx),
       blocksToPmDoc(parsed.blocks, readSections(parsed), pmDocOptions(parsed)),
@@ -601,6 +610,7 @@ export async function newFile(ctx: FileActionContext): Promise<boolean | undefin
     applyDocLayoutSettings(ctx.editor, parsed)
     // a tail still streaming for the previous document must never land in this one
     cancelPhasedContent()
+    beginOdtSession(null, parsed)
     ctx.editor.commands.setContent(
       blocksToPmDoc(parsed.blocks, readSections(parsed), pmDocOptions(parsed)) as never,
     )
@@ -728,7 +738,9 @@ export async function buildDocBytes(ctx: FileActionContext): Promise<Uint8Array 
   const { doc, editor } = ctx
   if (!doc || !editor) return null
   const pmJson = editor.getJSON() as PmNode
-  const plan = pmDocToSavePlan(pmJson, doc.parsed.blocks)
+  const plan = pmDocToSavePlan(pmJson, doc.parsed.blocks, {
+    regenerateEditedNestedHosts: isOdtDoc(doc),
+  })
   // chart data edits patch the chart's own zip part, not the body XML
   const partXml: Record<string, string> = {}
   const partBinary: Record<string, string> = {}
@@ -1049,9 +1061,9 @@ async function saveWithFormatChange(
     data = converted.odtBytes
     report = withOpenPassword(converted.report, doc.encrypted === true)
   } else {
-    // the edited bridge docx is the docx (the report was made when the ODT opened).
-    // Hook: placeholders without a preview picture get the editor's label picture here.
-    data = docx
+    // the edited bridge docx is the docx (the report was made when the ODT opened);
+    // placeholders without a preview picture carry the label the editor draws
+    data = isOdtDoc(doc) && hasLabelPlaceholders() ? await labelPlaceholdersInDocx(docx) : docx
     report = isOdtDoc(doc) ? doc.odt.report : []
   }
   if (report.length > 0 && !(await confirmFormatChange({ to: target, report }))) {
@@ -1238,6 +1250,8 @@ async function saveOnce(
     } catch {
       /* unrepresentable → rewrite */
     }
+    // an ODT document's docxIndex anchors now point into the saved docx too
+    rebaseOdtSession(reparsed)
     // Equal doc: skip the rewrite so undo history, caret and scroll survive.
     if (!unchanged) {
       editor.commands.setContent(rebasedPm as never)
@@ -1343,6 +1357,7 @@ async function saveOnce(
  */
 export function printDoc(ctx: FileActionContext): void {
   if (!ctx.doc) return
+  noticeLabelsBeforeOutput()
   // the print sheet prints the live preview pages: needs the whole document mounted
   if (isPhasedContentPending()) {
     void waitForFullContent().then(() => printDoc(ctx))
@@ -1445,6 +1460,7 @@ let printJobActive = false
 export async function exportPdf(ctx: FileActionContext, outPath?: string): Promise<boolean> {
   const { doc } = ctx
   if (!doc) return false
+  noticeLabelsBeforeOutput()
   await waitForFullContent()
   if (printJobActive) {
     ctx.setStatus(t('appExportingPdf'))

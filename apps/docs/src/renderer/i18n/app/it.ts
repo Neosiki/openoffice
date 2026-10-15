@@ -547,4 +547,19 @@ export const it = {
   appOdtFeatureProtection: 'Restrizioni di modifica e protezione',
   appOdtFeatureFormField: 'Campi modulo',
   appOdtFeatureObject: 'Altri oggetti',
+  appOdtOff: 'Non disponibile nei documenti ODT. Salva come .docx per usarlo.',
+  appOdtProtectedCell:
+    'Cella protetta. È stata bloccata in Hancom Office e non può essere modificata.',
+  appOdtProtectedCellTip: 'Cella protetta',
+  appOdtLockedObject:
+    'Questo oggetto non può essere modificato qui. Puoi solo eliminarlo per intero.',
+  appOdtLabelEquation: 'Equazione (visibile in Hancom)',
+  appOdtLabelShape: 'Forma (visibile in Hancom)',
+  appOdtLabelTextbox: 'Casella di testo (visibile in Hancom)',
+  appOdtLabelToc: 'Sommario (visibile in Hancom)',
+  appOdtLabelChart: 'Grafico (visibile in Hancom)',
+  appOdtLabelRevision: 'Revisioni (visibili in Hancom)',
+  appOdtLabelObject: 'Oggetto (visibile in Hancom)',
+  appOdtLabelNotice:
+    'Gli oggetti disegnati come riquadri con etichetta possono apparire diversi da come li mostra Hancom Office.',
 } satisfies Record<keyof typeof zh, string>

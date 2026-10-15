@@ -615,7 +615,8 @@ export interface DesktopApi {
   onCloseSaveRequest(handler: () => void): () => void
   reportCloseSaveResult(ok: boolean): void
   /** keep the native View menu's checkbox items in sync with renderer state */
-  reportViewMenuState(state: { aiSidebar: boolean; darkCanvas: boolean }): void
+  /** `odt`: the tab shows an ODT document (menu entries of switched-off features are disabled) */
+  reportViewMenuState(state: { aiSidebar: boolean; darkCanvas: boolean; odt?: boolean }): void
 }
 
 /** mirrors VIEW_IMAGE_CHANNEL in @genoffice/electron-utils (kept literal so the preload stays free of main-only deps) */

@@ -20,6 +20,7 @@ import {
 } from '@genoffice/docx-engine'
 import { useI18n } from '../i18n/locale'
 import { FieldError, PasswordInput } from './PasswordInput'
+import { odtOffNotice } from '../odt-gate'
 
 /** every field: undefined = unchanged; null = remove; value = set */
 export interface ProtectDialogResult {
@@ -53,6 +54,7 @@ export function ProtectDialog({
   writeProtection,
   protection,
   removePersonalInfo,
+  odtLocked = false,
   onCancel,
   onApply,
 }: {
@@ -61,6 +63,11 @@ export function ProtectDialog({
   writeProtection: WriteProtection | null
   protection: DocProtection | null
   removePersonalInfo: boolean
+  /**
+   * an ODT document: passwords, editing restriction and read-only
+   * recommended are off there; only the privacy section stays usable
+   */
+  odtLocked?: boolean
   onCancel: () => void
   onApply: (result: ProtectDialogResult) => void
 }) {
@@ -160,128 +167,131 @@ export function ProtectDialog({
         <h2>{t('appProtectTitle')}</h2>
         <p className="modal-desc">{t('appProtectDesc')}</p>
 
-        <h3 className="protect-section-title">{t('appProtectSecurity')}</h3>
-        <div className="fld-row">
-          <label className="fld">
-            {t('appProtectOpenPwd')} <span className="fld-opt">{t('appOptional')}</span>
-            <PasswordInput
-              autoFocus
-              maxLength={255}
-              value={openPwd}
-              hideReveal={openPwd === KEEP}
-              onChange={(v) => {
-                setOpenPwd(v)
-                clearError()
-              }}
-              onKeyDown={onEnter}
-            />
-          </label>
-          <label className="fld">
-            {t('appEncConfirmLabel')}
-            <PasswordInput
-              maxLength={255}
-              value={openPwd2}
-              invalid={mismatch}
-              hideReveal={openPwd2 === KEEP}
-              onChange={(v) => {
-                setOpenPwd2(v)
-                clearError()
-              }}
-              onKeyDown={onEnter}
-            />
-          </label>
-        </div>
-        <div className="fld-row">
-          <label className="fld">
-            {t('appProtectModifyPwd')} <span className="fld-opt">{t('appOptional')}</span>
-            <PasswordInput
-              maxLength={255}
-              value={modifyPwd}
-              hideReveal={modifyPwd === KEEP}
-              onChange={(v) => {
-                setModifyPwd(v)
-                clearError()
-              }}
-              onKeyDown={onEnter}
-            />
-          </label>
-          <label className="fld">
-            {t('appEncConfirmLabel')}
-            <PasswordInput
-              maxLength={255}
-              value={modifyPwd2}
-              invalid={mismatch}
-              hideReveal={modifyPwd2 === KEEP}
-              onChange={(v) => {
-                setModifyPwd2(v)
-                clearError()
-              }}
-              onKeyDown={onEnter}
-            />
-          </label>
-        </div>
-        {(encrypted || hadModifyPwd) && <p className="fld-hint">{t('appProtectPwdKeepHint')}</p>}
-
-        <h3 className="protect-section-title">{t('appProtectSectionTitle')}</h3>
-        <label className="protect-check">
-          <input
-            type="checkbox"
-            checked={protectOn}
-            onChange={(e) => {
-              setProtectOn(e.target.checked)
-              clearError()
-            }}
-          />
-          <span className="ctl" aria-hidden="true" />
-          {t('appProtectFor')}
-        </label>
-        <div className="protect-modes">
-          {PROTECTION_MODES.map((m) => (
-            <label key={m} className="protect-check">
-              <input
-                type="radio"
-                name="protect-mode"
-                disabled={!protectOn}
-                checked={mode === m}
-                onChange={() => {
-                  setMode(m)
+        {odtLocked && <p className="fld-hint">{odtOffNotice()}</p>}
+        <fieldset className="protect-odt-off" disabled={odtLocked}>
+          <h3 className="protect-section-title">{t('appProtectSecurity')}</h3>
+          <div className="fld-row">
+            <label className="fld">
+              {t('appProtectOpenPwd')} <span className="fld-opt">{t('appOptional')}</span>
+              <PasswordInput
+                autoFocus={!odtLocked}
+                maxLength={255}
+                value={openPwd}
+                hideReveal={openPwd === KEEP}
+                onChange={(v) => {
+                  setOpenPwd(v)
                   clearError()
                 }}
+                onKeyDown={onEnter}
               />
-              <span className="ctl" aria-hidden="true" />
-              {t(MODE_LABEL_KEYS[m])}
             </label>
-          ))}
-        </div>
-        {protectOn && (
-          <label className="fld">
-            {t('appProtectPwdOptional')} <span className="fld-opt">{t('appOptionalBlank')}</span>
-            <PasswordInput
-              maxLength={255}
-              value={protectPwd}
-              hideReveal={protectPwd === KEEP}
-              onChange={(v) => {
-                setProtectPwd(v)
+            <label className="fld">
+              {t('appEncConfirmLabel')}
+              <PasswordInput
+                maxLength={255}
+                value={openPwd2}
+                invalid={mismatch}
+                hideReveal={openPwd2 === KEEP}
+                onChange={(v) => {
+                  setOpenPwd2(v)
+                  clearError()
+                }}
+                onKeyDown={onEnter}
+              />
+            </label>
+          </div>
+          <div className="fld-row">
+            <label className="fld">
+              {t('appProtectModifyPwd')} <span className="fld-opt">{t('appOptional')}</span>
+              <PasswordInput
+                maxLength={255}
+                value={modifyPwd}
+                hideReveal={modifyPwd === KEEP}
+                onChange={(v) => {
+                  setModifyPwd(v)
+                  clearError()
+                }}
+                onKeyDown={onEnter}
+              />
+            </label>
+            <label className="fld">
+              {t('appEncConfirmLabel')}
+              <PasswordInput
+                maxLength={255}
+                value={modifyPwd2}
+                invalid={mismatch}
+                hideReveal={modifyPwd2 === KEEP}
+                onChange={(v) => {
+                  setModifyPwd2(v)
+                  clearError()
+                }}
+                onKeyDown={onEnter}
+              />
+            </label>
+          </div>
+          {(encrypted || hadModifyPwd) && <p className="fld-hint">{t('appProtectPwdKeepHint')}</p>}
+
+          <h3 className="protect-section-title">{t('appProtectSectionTitle')}</h3>
+          <label className="protect-check">
+            <input
+              type="checkbox"
+              checked={protectOn}
+              onChange={(e) => {
+                setProtectOn(e.target.checked)
                 clearError()
               }}
-              onKeyDown={onEnter}
             />
+            <span className="ctl" aria-hidden="true" />
+            {t('appProtectFor')}
           </label>
-        )}
-        {locked && protectionChanged && (
-          <label className="fld">
-            {t('appProtectUnlockPwd')}
-            <PasswordInput
-              value={unlockPwd}
-              invalid={errorKey === 'appWrongPassword'}
-              onChange={(v) => {
-                setUnlockPwd(v)
-                clearError()
-              }}
-              onKeyDown={onEnter}
-            />
-          </label>
-        )}
+          <div className="protect-modes">
+            {PROTECTION_MODES.map((m) => (
+              <label key={m} className="protect-check">
+                <input
+                  type="radio"
+                  name="protect-mode"
+                  disabled={!protectOn}
+                  checked={mode === m}
+                  onChange={() => {
+                    setMode(m)
+                    clearError()
+                  }}
+                />
+                <span className="ctl" aria-hidden="true" />
+                {t(MODE_LABEL_KEYS[m])}
+              </label>
+            ))}
+          </div>
+          {protectOn && (
+            <label className="fld">
+              {t('appProtectPwdOptional')} <span className="fld-opt">{t('appOptionalBlank')}</span>
+              <PasswordInput
+                maxLength={255}
+                value={protectPwd}
+                hideReveal={protectPwd === KEEP}
+                onChange={(v) => {
+                  setProtectPwd(v)
+                  clearError()
+                }}
+                onKeyDown={onEnter}
+              />
+            </label>
+          )}
+          {locked && protectionChanged && (
+            <label className="fld">
+              {t('appProtectUnlockPwd')}
+              <PasswordInput
+                value={unlockPwd}
+                invalid={errorKey === 'appWrongPassword'}
+                onChange={(v) => {
+                  setUnlockPwd(v)
+                  clearError()
+                }}
+                onKeyDown={onEnter}
+              />
+            </label>
+          )}
+        </fieldset>
 
         <h3 className="protect-section-title">{t('appProtectPrivacy')}</h3>
         <label className="protect-check">

@@ -544,4 +544,19 @@ export const ms = {
   appOdtFeatureProtection: 'Sekatan pengeditan dan perlindungan',
   appOdtFeatureFormField: 'Medan borang',
   appOdtFeatureObject: 'Objek lain',
+  appOdtOff: 'Tidak tersedia dalam dokumen ODT. Simpan sebagai .docx untuk menggunakannya.',
+  appOdtProtectedCell:
+    'Sel dilindungi. Sel ini dikunci dalam Hancom Office dan tidak boleh diubah.',
+  appOdtProtectedCellTip: 'Sel dilindungi',
+  appOdtLockedObject:
+    'Objek ini tidak boleh diubah di sini. Anda hanya boleh memadamkannya sepenuhnya.',
+  appOdtLabelEquation: 'Persamaan (dipaparkan dalam Hancom)',
+  appOdtLabelShape: 'Bentuk (dipaparkan dalam Hancom)',
+  appOdtLabelTextbox: 'Kotak teks (dipaparkan dalam Hancom)',
+  appOdtLabelToc: 'Jadual kandungan (dipaparkan dalam Hancom)',
+  appOdtLabelChart: 'Carta (dipaparkan dalam Hancom)',
+  appOdtLabelRevision: 'Jejak perubahan (dipaparkan dalam Hancom)',
+  appOdtLabelObject: 'Objek (dipaparkan dalam Hancom)',
+  appOdtLabelNotice:
+    'Objek yang dilukis sebagai kotak berlabel mungkin kelihatan berbeza daripada paparannya dalam Hancom Office.',
 } satisfies Record<keyof typeof zh, string>

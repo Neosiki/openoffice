@@ -566,4 +566,18 @@ export const ja = {
   appOdtFeatureProtection: '編集の制限と保護',
   appOdtFeatureFormField: 'フォーム フィールド',
   appOdtFeatureObject: 'その他のオブジェクト',
+  appOdtOff: 'ODT 文書では使用できません。docx として保存すると使用できます。',
+  appOdtProtectedCell: '保護されたセルです。Hancom Office でロックされているため変更できません。',
+  appOdtProtectedCellTip: '保護されたセル',
+  appOdtLockedObject:
+    'このオブジェクトはここでは変更できません。まとめて削除することだけできます。',
+  appOdtLabelEquation: '数式（Hancom で表示）',
+  appOdtLabelShape: '図形（Hancom で表示）',
+  appOdtLabelTextbox: 'テキストボックス（Hancom で表示）',
+  appOdtLabelToc: '目次（Hancom で表示）',
+  appOdtLabelChart: 'グラフ（Hancom で表示）',
+  appOdtLabelRevision: '変更履歴（Hancom で表示）',
+  appOdtLabelObject: 'オブジェクト（Hancom で表示）',
+  appOdtLabelNotice:
+    'ラベル付きの枠で描かれたオブジェクトは、Hancom Office での表示と異なる場合があります。',
 } satisfies Record<keyof typeof zh, string>

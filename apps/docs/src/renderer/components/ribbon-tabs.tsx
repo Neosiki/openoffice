@@ -28,6 +28,7 @@ import { isStraightLineKind } from '../editor/shape-svg'
 import type { InkTool } from '../editor/ink'
 import { PRODUCT_NAME } from '@genoffice/i18n'
 import { t, useI18n, type StringKey } from '../i18n/locale'
+import { odtOffProps, useOdtSession } from '../odt-gate'
 import iconEditor from '../assets/icon-editor.png'
 import iconTranslate from '../assets/icon-translate.png'
 import type { RevisionDisplayMode } from '../editor/revision-view'
@@ -836,6 +837,7 @@ export function ReviewTab({
   onCompare,
 }: ReviewTabProps) {
   const { t } = useI18n()
+  const odtOff = useOdtSession()
   // One-time acknowledgement before whole-document AI rewrites:
   // Editor / Translate send the full document to the agent, consume credits and
   // may rewrite everything — say so once before the first run.
@@ -936,6 +938,7 @@ export function ReviewTab({
             className="rb-big"
             disabled={!hasDoc || !canComment || (isProtected && !commentsAllowed)}
             data-tip={canComment ? t('ribbonNewCommentTip') : t('ribbonNewCommentSelectTip')}
+            {...odtOffProps(odtOff)}
             onClick={onNewComment}
           >
             <span className="rb-big-icon">
@@ -1024,6 +1027,7 @@ export function ReviewTab({
             className="rb-big"
             disabled={!hasDoc || openCommentCount === 0}
             data-tip={t('ribbonAiCommentsTip', { count: openCommentCount })}
+            {...odtOffProps(odtOff)}
             onClick={() => onAiPreset(t('ribbonAiCommentsPrompt'))}
           >
             <span className="rb-big-icon">
@@ -1058,6 +1062,7 @@ export function ReviewTab({
             className={`rb-big ${trackChanges ? 'active' : ''}`}
             disabled={!hasDoc || isProtected || trackChangesForced}
             data-tip={t('ribbonTrackChangesTip')}
+            {...odtOffProps(odtOff)}
             onClick={() => onTrackChanges(!trackChanges)}
           >
             <span className="rb-big-icon">
@@ -1231,6 +1236,7 @@ export function ReviewTab({
             className="rb-big"
             disabled={!hasDoc}
             data-tip={t('ribbonCompareTip')}
+            {...odtOffProps(odtOff)}
             onClick={onCompare}
           >
             <span className="rb-big-icon">
@@ -1653,6 +1659,7 @@ export function DrawTab({
   onClearAll,
 }: DrawTabProps) {
   const { t } = useI18n()
+  const odtOff = useOdtSession()
   // color/thickness edit the active pen; with no pen active they configure the pen tool
   const editingHighlighter = tool === 'highlighter'
   const active = editingHighlighter ? highlighter : pen
@@ -1684,6 +1691,7 @@ export function DrawTab({
             className={`rb-big ${tool === 'pen' ? 'active' : ''}`}
             disabled={!hasDoc}
             data-tip={t('ribbonPenTip')}
+            {...odtOffProps(odtOff)}
             onClick={() => onTool('pen')}
           >
             <span className="rb-big-icon" style={{ color: `#${pen.color}` }}>
@@ -1695,6 +1703,7 @@ export function DrawTab({
             className={`rb-big ${tool === 'highlighter' ? 'active' : ''}`}
             disabled={!hasDoc}
             data-tip={t('ribbonHighlighterTip')}
+            {...odtOffProps(odtOff)}
             onClick={() => onTool('highlighter')}
           >
             <span className="rb-big-icon" style={{ color: `#${highlighter.color}` }}>
@@ -1706,6 +1715,7 @@ export function DrawTab({
             className={`rb-big ${tool === 'eraser' ? 'active' : ''}`}
             disabled={!hasDoc}
             data-tip={t('ribbonEraserTip')}
+            {...odtOffProps(odtOff)}
             onClick={() => onTool('eraser')}
           >
             <span className="rb-big-icon">

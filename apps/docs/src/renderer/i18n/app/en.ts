@@ -535,4 +535,17 @@ export const en = {
   appOdtFeatureProtection: 'Editing restrictions and protection',
   appOdtFeatureFormField: 'Form fields',
   appOdtFeatureObject: 'Other objects',
+  appOdtOff: 'Not available in ODT documents. Save as .docx to use it.',
+  appOdtProtectedCell: 'Protected cell. It was locked in Hancom Office and cannot be changed.',
+  appOdtProtectedCellTip: 'Protected cell',
+  appOdtLockedObject: 'This object cannot be changed here. You can only delete it as a whole.',
+  appOdtLabelEquation: 'Equation (shown in Hancom)',
+  appOdtLabelShape: 'Shape (shown in Hancom)',
+  appOdtLabelTextbox: 'Text box (shown in Hancom)',
+  appOdtLabelToc: 'Table of contents (shown in Hancom)',
+  appOdtLabelChart: 'Chart (shown in Hancom)',
+  appOdtLabelRevision: 'Tracked changes (shown in Hancom)',
+  appOdtLabelObject: 'Object (shown in Hancom)',
+  appOdtLabelNotice:
+    'Objects drawn as labelled boxes may look different from how Hancom Office shows them.',
 } satisfies Record<keyof typeof zh, string>

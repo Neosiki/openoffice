@@ -5464,17 +5464,28 @@ function sendCommand(command: MenuCommand, payload?: string): void {
  * place (buildDocsMenu also re-runs on every tab focus switch).
  * Defaults mirror the renderer's initial state: sidebar shown, light canvas.
  */
-const viewMenuStateByWebContents = new Map<number, { aiSidebar: boolean; darkCanvas: boolean }>()
+interface ViewMenuState {
+  aiSidebar: boolean
+  darkCanvas: boolean
+  /** the tab shows an ODT document: menu entries of features ODT switches off are disabled */
+  odt: boolean
+}
 
-function activeViewMenuState(): { aiSidebar: boolean; darkCanvas: boolean } {
+const viewMenuStateByWebContents = new Map<number, ViewMenuState>()
+
+function activeViewMenuState(): ViewMenuState {
   const id = activeDocsWebContents()?.id
   return (
     (id !== undefined ? viewMenuStateByWebContents.get(id) : undefined) ?? {
       aiSidebar: true,
       darkCanvas: false,
+      odt: false,
     }
   )
 }
+
+/** Insert-menu entries of features an ODT document switches off (equations, comments) */
+const ODT_OFF_MENU_IDS = ['docs-menu-insert-equation', 'docs-menu-insert-comment'] as const
 
 /** shell-injected items appended to the File menu (e.g. Back to Home); persists
  * across the internal rebuilds pushRecent() triggers */
@@ -5670,9 +5681,19 @@ export function buildDocsMenu(): void {
           accelerator: 'CmdOrCtrl+K',
           click: () => sendCommand('insert-link'),
         },
-        { label: tm('menuInsertEquation'), click: () => sendCommand('insert-equation') },
+        {
+          id: 'docs-menu-insert-equation',
+          label: tm('menuInsertEquation'),
+          enabled: !activeViewMenuState().odt,
+          click: () => sendCommand('insert-equation'),
+        },
         { type: 'separator' },
-        { label: tm('menuComment'), click: () => sendCommand('insert-comment') },
+        {
+          id: 'docs-menu-insert-comment',
+          label: tm('menuComment'),
+          enabled: !activeViewMenuState().odt,
+          click: () => sendCommand('insert-comment'),
+        },
       ],
     },
     {
@@ -5976,8 +5997,12 @@ const closeCheckWaiters = new Map<number, (state: DocsCloseState) => void>()
 const closeSaveWaiters = new Map<number, (ok: boolean) => void>()
 
 ipcMain.on('docs:view-menu-state', (event, state: unknown) => {
-  const s = state as { aiSidebar?: unknown; darkCanvas?: unknown } | null
-  const next = { aiSidebar: s?.aiSidebar === true, darkCanvas: s?.darkCanvas === true }
+  const s = state as { aiSidebar?: unknown; darkCanvas?: unknown; odt?: unknown } | null
+  const next = {
+    aiSidebar: s?.aiSidebar === true,
+    darkCanvas: s?.darkCanvas === true,
+    odt: s?.odt === true,
+  }
   if (!viewMenuStateByWebContents.has(event.sender.id)) {
     const id = event.sender.id
     event.sender.once('destroyed', () => viewMenuStateByWebContents.delete(id))
@@ -5991,6 +6016,10 @@ ipcMain.on('docs:view-menu-state', (event, state: unknown) => {
   if (ai) ai.checked = next.aiSidebar
   const dark = menu?.getMenuItemById('docs-menu-dark-mode')
   if (dark) dark.checked = next.darkCanvas
+  for (const id of ODT_OFF_MENU_IDS) {
+    const item = menu?.getMenuItemById(id)
+    if (item) item.enabled = !next.odt
+  }
 })
 
 ipcMain.on('docs:close-check-result', (event, state: unknown) => {

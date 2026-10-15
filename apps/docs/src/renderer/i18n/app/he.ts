@@ -532,4 +532,17 @@ export const he = {
   appOdtFeatureProtection: 'הגבלות עריכה והגנה',
   appOdtFeatureFormField: 'שדות טופס',
   appOdtFeatureObject: 'אובייקטים אחרים',
+  appOdtOff: 'לא זמין במסמכי ODT. שמור בתור docx כדי להשתמש בזה.',
+  appOdtProtectedCell: 'תא מוגן. הוא ננעל ב-Hancom Office ואי אפשר לשנות אותו.',
+  appOdtProtectedCellTip: 'תא מוגן',
+  appOdtLockedObject: 'אי אפשר לשנות את האובייקט הזה כאן. אפשר רק למחוק אותו בשלמותו.',
+  appOdtLabelEquation: 'משוואה (מוצגת ב-Hancom)',
+  appOdtLabelShape: 'צורה (מוצגת ב-Hancom)',
+  appOdtLabelTextbox: 'תיבת טקסט (מוצגת ב-Hancom)',
+  appOdtLabelToc: 'תוכן עניינים (מוצג ב-Hancom)',
+  appOdtLabelChart: 'תרשים (מוצג ב-Hancom)',
+  appOdtLabelRevision: 'מעקב שינויים (מוצג ב-Hancom)',
+  appOdtLabelObject: 'אובייקט (מוצג ב-Hancom)',
+  appOdtLabelNotice:
+    'אובייקטים שצוירו כתיבות עם תווית עשויים להיראות שונה מהאופן שבו Hancom Office מציג אותם.',
 } satisfies Record<keyof typeof zh, string>

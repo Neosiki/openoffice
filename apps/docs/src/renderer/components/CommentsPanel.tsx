@@ -3,6 +3,7 @@ import type { Node as PmNode } from '@tiptap/pm/model'
 import type { CommentInfo } from '@genoffice/docx-engine'
 import { useI18n } from '../i18n/locale'
 import { IconComment, IconPencil, IconTrash } from './icons'
+import { odtOffNotice, odtOffProps, refuseInOdt } from '../odt-gate'
 
 function formatDate(iso?: string): string {
   if (!iso) return ''
@@ -60,6 +61,7 @@ export const CommentsPanel = memo(function CommentsPanel({
   onDelete,
   onClose,
   focus,
+  odtLocked = false,
 }: {
   comments: CommentInfo[]
   /** current PM doc, used only as the anchor-scan cache key (doc unchanged ⇒ anchors unchanged) */
@@ -78,6 +80,8 @@ export const CommentsPanel = memo(function CommentsPanel({
   onClose: () => void
   /** thread to highlight and scroll to (Review > Previous / Next); nonce re-fires for the same id */
   focus?: { id: string; nonce: number } | null
+  /** an ODT document: existing comments stay readable, but no reply, edit or resolve */
+  odtLocked?: boolean
 }) {
   const { t } = useI18n()
   const [activeId, setActiveId] = useState<string | null>(null)
@@ -105,6 +109,7 @@ export const CommentsPanel = memo(function CommentsPanel({
   }
 
   const startEdit = (c: CommentInfo) => {
+    if (odtLocked && refuseInOdt('comment')) return
     // the pencil toggles: a second click cancels instead of resetting the draft
     if (editingId === c.id) {
       setEditingId(null)
@@ -179,6 +184,8 @@ export const CommentsPanel = memo(function CommentsPanel({
         <span
           className="comment-card-edit"
           data-tip={t('appEditComment')}
+          data-tip-detail={odtLocked ? odtOffNotice() : undefined}
+          aria-disabled={odtLocked || undefined}
           role="button"
           aria-label={t('appEditComment')}
           tabIndex={0}
@@ -261,6 +268,8 @@ export const CommentsPanel = memo(function CommentsPanel({
               <span
                 className="comment-card-edit"
                 data-tip={t('appEditComment')}
+                data-tip-detail={odtLocked ? odtOffNotice() : undefined}
+                aria-disabled={odtLocked || undefined}
                 aria-label={t('appEditComment')}
                 role="button"
                 tabIndex={0}
@@ -336,8 +345,11 @@ export const CommentsPanel = memo(function CommentsPanel({
             </div>
           ) : (
             <>
-              <button onClick={() => setReplyTo(c.id)}>{t('appReply')}</button>
+              <button onClick={() => setReplyTo(c.id)} {...odtOffProps(odtLocked, t('appReply'))}>
+                {t('appReply')}
+              </button>
               <button
+                {...odtOffProps(odtLocked, c.done ? t('appReopen') : t('appResolve'))}
                 onClick={() => {
                   // resolving collapses the thread and would unmount an open composer: commit first
                   flushEditIn(c.id)
