@@ -23,6 +23,8 @@ export default defineConfig({
           generate: resolve(__dirname, 'src/preload/generate.ts'),
           // dedicated preload for the PDF tools window (see src/main/pdf-tools/pdf-tools-window.ts)
           'pdf-tools': resolve(__dirname, 'src/preload/pdf-tools.ts'),
+          // dedicated preload for the agent window (see src/main/agent/agent-window.ts)
+          agent: resolve(__dirname, 'src/preload/agent.ts'),
         },
       },
     },
@@ -41,6 +43,8 @@ export default defineConfig({
           generate: resolve(__dirname, 'src/renderer/generate.html'),
           // PDF tools window (see src/main/pdf-tools/pdf-tools-window.ts)
           'pdf-tools': resolve(__dirname, 'src/renderer/pdf-tools.html'),
+          // agent window (see src/main/agent/agent-window.ts)
+          agent: resolve(__dirname, 'src/renderer/agent.html'),
         },
       },
     },

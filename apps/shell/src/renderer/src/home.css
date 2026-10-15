@@ -192,6 +192,12 @@ body.vib .home {
   font-variant-numeric: tabular-nums;
 }
 
+/* a sidebar item that opens a window of its own */
+.nav-external {
+  display: inline-flex;
+  justify-content: center;
+}
+
 /* ---- bottom-left settings entry: where the AI subscription connection stands ---- */
 /* clicking it opens the settings modal (settings.css) directly, which hosts
    the connection plus preferences (language / theme / save location / update channel) */

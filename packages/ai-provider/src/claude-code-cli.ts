@@ -103,7 +103,7 @@ const AFTER_TOOL_RESULTS =
 // ── What the CLI is started with ──
 
 /** A model alias or id as the CLI takes it; never something that could read as an option */
-const MODEL_NAME = /^[A-Za-z0-9][A-Za-z0-9._:[\]-]{0,127}$/
+export const MODEL_NAME = /^[A-Za-z0-9][A-Za-z0-9._:[\]-]{0,127}$/
 
 /**
  * The whole command line: fixed flags, plus the configured model. Built-in
@@ -540,7 +540,7 @@ const TIMEOUT_TEXT = /timed out|timeout/i
  * `rate_limit`, `overloaded`, `model_not_found`, …), `status` the
  * `api_error_status` of its result, `text` what it would have printed.
  */
-function reportedFailure(
+export function reportedFailure(
   code: string | undefined,
   status: unknown,
   text: string,
@@ -571,7 +571,7 @@ function reportedFailure(
 }
 
 /** The run error for a CLI that ended without a result */
-function exitFailure(code: number | null, stderr: string): Error {
+export function exitFailure(code: number | null, stderr: string): Error {
   const detail = stderr.trim()
   if (UNKNOWN_OPTION.test(detail)) {
     return new AiRunError(
@@ -589,7 +589,7 @@ function exitFailure(code: number | null, stderr: string): Error {
   )
 }
 
-function startFailure(error: unknown): Error {
+export function startFailure(error: unknown): Error {
   if ((error as { code?: unknown } | null)?.code === 'ENOENT') {
     return new AiRunError('not-installed', 'Claude Code CLI could not be started', {
       provider: PROVIDER,
@@ -636,7 +636,7 @@ interface TurnRequest {
 }
 
 /** Split a stream into lines, giving up on a line that grows past the cap */
-function readLines(
+export function readLines(
   stream: NodeJS.ReadableStream,
   onLine: (line: string) => void,
   onOverflow: () => void,

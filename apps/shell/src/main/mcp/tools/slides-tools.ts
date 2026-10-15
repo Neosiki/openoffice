@@ -55,8 +55,13 @@ export interface SlidesControl {
   openBlankTab: () => Promise<number>
   /** apply one transaction to the tab's session (history + journal + live render included) */
   runTxn: (wcId: number, req: SlidesTxnRequest) => Promise<unknown>
-  /** read the visible deck (slides/elements with ids and geometry) */
-  readDeck: (wcId: number) => Promise<unknown>
+  /**
+   * read the visible deck (slides/elements with ids and geometry); `withhold`
+   * reads withheld words as their `{{label}}` (agent sessions)
+   */
+  readDeck: (wcId: number, options?: { withhold?: boolean }) => Promise<unknown>
+  /** the deck carries any withholding mark (agent sessions refuse to edit such a deck) */
+  deckWithholds?: (wcId: number) => Promise<boolean>
   /** save the session's deck to an absolute path */
   saveDeck: (wcId: number, path: string, overwrite: boolean) => Promise<{ path: string }>
 }
