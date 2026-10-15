@@ -142,6 +142,27 @@ describe('AiSubscriptionCard', () => {
     expect(actions.onRecheck).toHaveBeenCalledExactlyOnceWith('claude-code')
   })
 
+  it('error: a Claude below the floor is told which version it has and how to update', () => {
+    for (const lang of ['en', 'ko'] as const) {
+      const props = {
+        status: status('claude-code', 'error', {
+          version: '2.1.237',
+          error:
+            'needs-update: Claude Code 2.1.237 is too old; version 2.1.248 or newer is required',
+        }),
+        lang,
+      }
+      act(() => root.render(createElement(AiSubscriptionCard, { ...props, ...cardActions() })))
+      expect(host.querySelector('.ai-sub-detail')!.textContent).toBe(
+        {
+          en: 'The Claude program on this PC (2.1.237) is too old; 2.1.248 or newer is needed. Run claude update in a terminal, then check again.',
+          ko: '이 PC의 Claude 프로그램(2.1.237)이 오래되었습니다. 2.1.248 이상이 필요합니다. 터미널에서 claude update를 실행한 뒤 다시 확인하세요.',
+        }[lang],
+      )
+      expect(host.textContent).not.toMatch(/needs-update|newer is required/)
+    }
+  })
+
   it('error: one sentence per kind, naming the provider, never the raw detail', () => {
     const cases = [
       {

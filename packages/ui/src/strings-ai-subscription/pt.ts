@@ -13,6 +13,8 @@ export const pt = {
   cardError: 'Não foi possível verificar a conexão',
   cardErrNeedsUpdate:
     'O programa {provider} neste PC é antigo demais. Atualize-o e verifique novamente.',
+  cardErrNeedsUpdateVersion:
+    'O programa {provider} neste PC ({version}) é antigo demais; é necessária a versão {minimum} ou mais recente. Execute {command} em um terminal e verifique novamente.',
   cardErrTimeout: 'O programa {provider} não respondeu a tempo. Verifique novamente em instantes.',
   cardErrFailed: 'Algo deu errado ao verificar {provider}. Verifique novamente.',
   actionInstall: 'Instalar',

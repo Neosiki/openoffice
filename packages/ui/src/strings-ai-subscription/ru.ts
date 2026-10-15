@@ -13,6 +13,8 @@ export const ru = {
   cardError: 'Не удалось проверить подключение',
   cardErrNeedsUpdate:
     'Программа {provider} на этом компьютере слишком старая. Обновите её и проверьте снова.',
+  cardErrNeedsUpdateVersion:
+    'Программа {provider} на этом компьютере ({version}) слишком старая; нужна версия {minimum} или новее. Выполните {command} в терминале и проверьте снова.',
   cardErrTimeout: 'Программа {provider} не ответила вовремя. Проверьте снова чуть позже.',
   cardErrFailed: 'При проверке {provider} что-то пошло не так. Проверьте снова.',
   actionInstall: 'Установить',

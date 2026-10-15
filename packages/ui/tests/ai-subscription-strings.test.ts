@@ -142,6 +142,24 @@ describe('the connection-check error sentences', () => {
   })
 })
 
+describe('the versioned needs-update sentence', () => {
+  it('names the provider, the version found, the floor and the command in every language', () => {
+    for (const lang of LANGS) {
+      const text = AI_SUBSCRIPTION_STRINGS[lang].cardErrNeedsUpdateVersion
+      expect(placeholders(text).sort(), lang).toEqual(['command', 'minimum', 'provider', 'version'])
+      const filled = aiSubscriptionText(lang, 'cardErrNeedsUpdateVersion', {
+        provider: 'Claude',
+        version: '2.1.237',
+        minimum: '2.1.248',
+        command: 'claude update',
+      })
+      for (const part of ['Claude', '2.1.237', '2.1.248', 'claude update']) {
+        expect(filled, lang).toContain(part)
+      }
+    }
+  })
+})
+
 describe('aiSubscriptionText', () => {
   it('fills the placeholders', () => {
     expect(aiSubscriptionText('en', 'continueWith', { provider: 'Codex' })).toBe(

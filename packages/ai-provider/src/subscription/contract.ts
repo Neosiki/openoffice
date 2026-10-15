@@ -113,6 +113,40 @@ export const SUBSCRIPTION_INSTALL_COMMANDS = {
   codex: 'winget install OpenAI.Codex',
 } as const satisfies Record<AiSubscriptionProviderId, string>
 
+/**
+ * Oldest CLI version the app works with; an older one is reported as "needs
+ * update". Claude Code: 2.1.248 introduced `--restricted`, which the bridge
+ * runs with (`claude auth status` itself exists since 2.1.41). The version is
+ * read before anything else is asked, because a Claude too old to know `auth`
+ * would take "auth status" as a prompt. Codex has no floor: an old Codex
+ * rejects `login status` as an unknown subcommand, which reads as "needs
+ * update" too.
+ */
+export const SUBSCRIPTION_MIN_VERSIONS: Record<AiSubscriptionProviderId, string | null> = {
+  'claude-code': '2.1.248',
+  codex: null,
+}
+
+/**
+ * The vendor's own update command, named on the card when the CLI is older than
+ * `SUBSCRIPTION_MIN_VERSIONS` asks. Only a provider with a floor needs one.
+ */
+export const SUBSCRIPTION_UPDATE_COMMANDS: Record<AiSubscriptionProviderId, string | null> = {
+  'claude-code': 'claude update',
+  codex: null,
+}
+
+/** Whether a dotted version number is at least `minimum` */
+export function subscriptionVersionAtLeast(version: string, minimum: string): boolean {
+  const have = version.split('.').map(Number)
+  const need = minimum.split('.').map(Number)
+  for (let index = 0; index < need.length; index++) {
+    const difference = (have[index] ?? 0) - (need[index] ?? 0)
+    if (difference !== 0) return difference > 0
+  }
+  return true
+}
+
 /** The vendor's install instructions, linked when the command cannot run or fails */
 export const SUBSCRIPTION_INSTALL_URLS = {
   'claude-code': 'https://code.claude.com/docs/en/setup',
@@ -150,6 +184,27 @@ export function subscriptionStatusErrorKind(status: {
   if (text.startsWith('needs-update:')) return 'needs-update'
   if (text.startsWith('timeout:')) return 'timeout'
   return 'failed'
+}
+
+/**
+ * What a "needs update" card can tell the user: the version found, the oldest
+ * one the app works with, and the command that updates it. Null unless the
+ * status is that error and the CLI reported a version below the floor (an old
+ * Codex has no floor; it is caught by an unknown subcommand instead).
+ */
+export function subscriptionNeedsUpdate(status: {
+  provider: AiSubscriptionProviderId
+  state: AiSubscriptionState
+  error?: string | undefined
+  version?: string | undefined
+}): { version: string; minimum: string; command: string } | null {
+  if (subscriptionStatusErrorKind(status) !== 'needs-update') return null
+  const minimum = SUBSCRIPTION_MIN_VERSIONS[status.provider]
+  const command = SUBSCRIPTION_UPDATE_COMMANDS[status.provider]
+  const version = status.version
+  if (!minimum || !command || !version) return null
+  if (subscriptionVersionAtLeast(version, minimum)) return null
+  return { version, minimum, command }
 }
 
 // ---------------------------------------------------------------------------

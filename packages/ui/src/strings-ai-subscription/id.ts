@@ -12,6 +12,8 @@ export const id = {
   cardMeteredAccepted: 'Sedang dipakai · ditagih sesuai pemakaian',
   cardError: 'Koneksi tidak dapat diperiksa',
   cardErrNeedsUpdate: 'Program {provider} di PC ini terlalu lama. Perbarui, lalu periksa lagi.',
+  cardErrNeedsUpdateVersion:
+    'Program {provider} di PC ini ({version}) terlalu lama; diperlukan versi {minimum} atau yang lebih baru. Jalankan {command} di terminal, lalu periksa lagi.',
   cardErrTimeout: 'Program {provider} tidak menjawab tepat waktu. Periksa lagi sebentar lagi.',
   cardErrFailed: 'Terjadi masalah saat memeriksa {provider}. Periksa lagi.',
   actionInstall: 'Pasang',

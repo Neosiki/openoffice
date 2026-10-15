@@ -21,8 +21,10 @@ import type {
   AiSubscriptionState,
 } from '../types'
 import {
+  SUBSCRIPTION_MIN_VERSIONS,
   subscriptionAccountOf,
   subscriptionStatusErrorText,
+  subscriptionVersionAtLeast,
   type SubscriptionStatusErrorKind,
 } from './contract'
 import {
@@ -39,20 +41,6 @@ import {
 
 /** A status check that has not answered by then is an `error` */
 export const SUBSCRIPTION_STATUS_TIMEOUT_MS = 20_000
-
-/**
- * Oldest CLI version the app works with; an older one is reported as "needs
- * update". Claude Code: 2.1.248 introduced `--restricted`, which the bridge
- * runs with (`claude auth status` itself exists since 2.1.41). The version is
- * read before anything else is asked, because a Claude too old to know `auth`
- * would take "auth status" as a prompt. Codex has no floor: an old Codex
- * rejects `login status` as an unknown subcommand, which reads as "needs
- * update" too.
- */
-export const SUBSCRIPTION_MIN_VERSIONS: Record<AiSubscriptionProviderId, string | null> = {
-  'claude-code': '2.1.248',
-  codex: null,
-}
 
 /** What a CLI says about its login; of the account identity only the e-mail address is kept */
 export type SubscriptionLogin =
@@ -375,16 +363,6 @@ function parseVersion(output: string): string | undefined {
   return /\d+\.\d+\.\d+/.exec(output)?.[0]
 }
 
-function versionAtLeast(version: string, minimum: string): boolean {
-  const have = version.split('.').map(Number)
-  const need = minimum.split('.').map(Number)
-  for (let index = 0; index < need.length; index++) {
-    const difference = (have[index] ?? 0) - (need[index] ?? 0)
-    if (difference !== 0) return difference > 0
-  }
-  return true
-}
-
 const UNKNOWN_COMMAND =
   /unknown (command|option)|unrecognized (subcommand|option)|unexpected argument/i
 
@@ -444,7 +422,7 @@ async function inspect(
       if (!version) {
         return errorDetection(provider, 'failed', `${name} did not report its version`)
       }
-      if (!versionAtLeast(version, minimum)) {
+      if (!subscriptionVersionAtLeast(version, minimum)) {
         return errorDetection(
           provider,
           'needs-update',

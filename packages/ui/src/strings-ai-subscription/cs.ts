@@ -13,6 +13,8 @@ export const cs = {
   cardError: 'Připojení se nepodařilo ověřit',
   cardErrNeedsUpdate:
     'Program {provider} v tomto počítači je příliš starý. Aktualizujte ho a zkontrolujte znovu.',
+  cardErrNeedsUpdateVersion:
+    'Program {provider} v tomto počítači ({version}) je příliš starý; je potřeba verze {minimum} nebo novější. Spusťte v terminálu {command} a zkontrolujte znovu.',
   cardErrTimeout: 'Program {provider} neodpověděl včas. Zkontrolujte to za chvíli znovu.',
   cardErrFailed: 'Při kontrole {provider} došlo k potížím. Zkontrolujte to znovu.',
   actionInstall: 'Nainstalovat',
