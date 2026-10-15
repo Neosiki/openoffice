@@ -9,13 +9,15 @@ import type { DocFormat } from '../shared/open-file'
 export type { DocFormat }
 
 /**
- * What an ODT document saves against. The editor shows the bridge docx
- * (`DocState.parsed`); a save writes the edited docx back into `original`
- * through `bridge`. Every successful save replaces all three with the ODT
- * just written, so untouched parts stay byte-identical save after save.
+ * What an ODT document saves against: the ODT as opened and its bridge map.
+ * Every save writes the editor's current docx back into `original` through
+ * `bridge`, so untouched parts stay byte-identical however many times it is
+ * saved, and the same edits always give the same bytes. Saves never replace
+ * this baseline (the editor's reference, `DocState.parsed`, follows the saved
+ * docx as for a docx document); opening the file again does.
  */
 export interface OdtBaseline {
-  /** the ODT bytes on disk (as opened, or as last saved) */
+  /** the ODT bytes as opened (a recovered copy counts as opened) */
   original: Uint8Array
   /** the bridge map `odtToDocx` returned for `original` (plain JSON) */
   bridge: BridgeMap

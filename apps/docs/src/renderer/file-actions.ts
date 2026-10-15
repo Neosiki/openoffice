@@ -1191,17 +1191,11 @@ async function saveOnce(
       if (result.dataUrl) fullBytes = await fetchDocBytes(result.dataUrl)
     }
     // parse before the identity check: a document opened during this await must not be rewritten.
-    // An ODT re-baselines on the bytes just written: they become the next save's
-    // original, and their bridge docx/map the editor's new reference.
-    let rebased: OdtBaseline | undefined
-    let reparsed: ParsedDocFull
-    if (format === 'odt') {
-      const reopened = await parseOdtOffThread(bytes)
-      reparsed = reopened.parsed
-      rebased = { original: bytes, bridge: reopened.bridge, report: reopened.report }
-    } else {
-      reparsed = await parseDocxOffThread(fullBytes ?? bytes)
-    }
+    // An ODT document takes the docx it just saved as its reference, exactly
+    // like a docx document; its save baseline stays the ODT it was opened from
+    // (re-deriving one from the written ODT would make the editor redraw and
+    // drop undo whenever the ODF writer's form differs from the editor's)
+    const reparsed = await parseDocxOffThread(fullBytes ?? docx)
     if (
       editor.state.doc !== docSnapshot ||
       passwordIntentPending ||
@@ -1262,7 +1256,6 @@ async function saveOnce(
             parsed: reparsed,
             filePath: savedPath,
             fileName: savedPath?.split(/[\\/]/).pop() ?? prev.fileName,
-            ...(rebased ? { odt: rebased } : {}),
           }
         : prev,
     )

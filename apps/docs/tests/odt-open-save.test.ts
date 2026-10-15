@@ -15,6 +15,7 @@ import { isOdtDoc } from '../src/renderer/doc-state'
 import type { OpenDocxResult } from '../src/shared/ipc'
 import { setFormatChangeHost } from '../src/renderer/components/format-change-bus'
 import { zipEntryNames } from '../src/main/doc-format'
+import { undoDepth } from '@tiptap/pm/history'
 import { buildOdt } from '../../../packages/odt-engine/tests/helpers/build-odt'
 import { hancomSample } from '../../../packages/odt-engine/tests/helpers/hancom-sample'
 import {
@@ -383,8 +384,8 @@ describe('saving an ODT document', () => {
     expect(await save(ctx, false)).toBe(true)
     const first = written[0].bytes
     expect(isOdtBytes(first)).toBe(true)
-    // re-baselined: the ODT just written is the next save's original
-    expect(docOf(ctx).odt?.original).toEqual(first)
+    // the save baseline stays the ODT as opened
+    expect(docOf(ctx).odt?.original).not.toEqual(first)
     const firstParas = await odtParagraphs(first)
     const alpha = firstParas.find((p) => p.includes('Alpha paragraph'))
     expect(alpha).toBeDefined()
@@ -634,5 +635,130 @@ describe('ODT edge cases', () => {
     const untouched = original.filter((p) => !/after .*section|cell one/.test(p))
     expect(untouched.length).toBeGreaterThan(10)
     for (const para of untouched) expect(next).toContain(para)
+  })
+})
+
+function textPos(editor: Editor, text: string): number {
+  let at = -1
+  editor.state.doc.descendants((node, pos) => {
+    if (at < 0 && node.isText && node.text?.includes(text)) at = pos + node.text.indexOf(text)
+    return true
+  })
+  if (at < 0) throw new Error(`no text ${text}`)
+  return at
+}
+
+describe('saving keeps the ODT baseline it was opened with', () => {
+  it('no redraw and no undo loss after a save, whatever the edit', async () => {
+    const ctx = makeCtx()
+    const odt = await hancomOdt()
+    await loadFile(ctx, openResult('/docs/hancom.odt', odt))
+    const editor = ctx.editor as Editor
+    const bridge = docOf(ctx).odt?.bridge
+    // Text edits never redraw. Formatting and paragraph splits redraw after a
+    // save exactly as they do in a docx document (the shared post-save rebase
+    // of the editor's own saved docx), so only the former are asserted here.
+    const keepsEditor = new Set(['paragraph text', 'cell text'])
+    const edits: Array<[string, () => void]> = [
+      ['paragraph text', () => editText(editor, 'after  section', 'edited paragraph')],
+      ['cell text', () => editText(editor, 'cell one', 'edited cell')],
+      [
+        'bold',
+        () => {
+          const at = textPos(editor, 'edited paragraph')
+          editor
+            .chain()
+            .setTextSelection({ from: at, to: at + 6 })
+            .setMark('bold')
+            .run()
+        },
+      ],
+      [
+        'font size',
+        () => {
+          const at = textPos(editor, 'edited cell')
+          editor
+            .chain()
+            .setTextSelection({ from: at, to: at + 6 })
+            .setMark('docTextStyle', { sizeHalfPoints: 40 })
+            .run()
+        },
+      ],
+      [
+        'paragraph split',
+        () => {
+          const at = textPos(editor, 'cell')
+          editor
+            .chain()
+            .setTextSelection(at + 2)
+            .splitBlock()
+            .run()
+        },
+      ],
+    ]
+    for (const [label, edit] of edits) {
+      edit()
+      ctx.dirtyRef.current = true
+      const before = editor.state.doc
+      const depth = undoDepth(editor.state)
+      expect(depth, label).toBeGreaterThan(0)
+      expect(await save(ctx, false), label).toBe(true)
+      if (keepsEditor.has(label)) {
+        expect(editor.state.doc, `${label}: content replaced`).toBe(before)
+        expect(undoDepth(editor.state), `${label}: undo history`).toBe(depth)
+      }
+      expect(ctx.dirtyRef.current, label).toBe(false)
+      // the save baseline is still the ODT as opened, and the editor's
+      // reference is the docx it saved (nothing re-derived from the ODT)
+      expect(docOf(ctx).odt?.original).toEqual(odt)
+      expect(docOf(ctx).odt?.bridge).toBe(bridge)
+    }
+  })
+
+  it('three saves with edits in between keep untouched parts byte-identical', async () => {
+    const ctx = makeCtx()
+    const odt = await hancomOdt()
+    await loadFile(ctx, openResult('/docs/hancom.odt', odt))
+    const editor = ctx.editor as Editor
+    const outputs: Uint8Array[] = []
+    const rounds: Array<() => void> = [
+      () => editText(editor, 'after  section', 'first edit'),
+      () => editText(editor, 'cell one', 'second edit'),
+      () => {
+        const at = textPos(editor, 'back to portrait')
+        editor
+          .chain()
+          .setTextSelection({ from: at, to: at + 4 })
+          .setMark('bold')
+          .run()
+      },
+    ]
+    for (const edit of rounds) {
+      edit()
+      ctx.dirtyRef.current = true
+      expect(await save(ctx, false)).toBe(true)
+      outputs.push(written[written.length - 1].bytes)
+    }
+    const original = await odtParagraphs(odt)
+    const untouched = original.filter((p) => !/after .*section|cell one|back to portrait/.test(p))
+    expect(untouched.length).toBeGreaterThan(10)
+    const [first, second, third] = await Promise.all(outputs.map(odtParagraphs))
+    for (const para of untouched) {
+      expect(first).toContain(para)
+      expect(second).toContain(para)
+      expect(third).toContain(para)
+    }
+    // an edit, once saved, is written the same way by every later save
+    const firstEdit = first.find((p) => p.includes('first edit'))
+    expect(firstEdit).toBeDefined()
+    expect(second).toContain(firstEdit)
+    expect(third).toContain(firstEdit)
+    const secondEdit = second.find((p) => p.includes('second edit'))
+    expect(third).toContain(secondEdit)
+    for (const name of ['meta.xml', 'settings.xml', 'styles.xml'])
+      expect(await part(outputs[2], name), name).toBe(await part(outputs[0], name))
+    // and a save with no further edit is the previous output exactly
+    expect(await save(ctx, false)).toBe(true)
+    expect(written[written.length - 1].bytes).toEqual(outputs[2])
   })
 })
