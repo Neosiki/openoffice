@@ -259,7 +259,7 @@ export function rebuildOdtBody(rctx: OoxmlToOdfContext, items?: EditedItem[]): A
   const aligned = alignItems(rctx, items ?? editedItems(rctx.edited))
   const text = rctx.doc.body.text
   const xml = rctx.doc.contentXml
-  const inner = rebuildFlow(rctx, aligned, { parent: null })
+  const inner = rebuildFlow(rctx, withoutTrailingFiller(rctx, aligned), { parent: null })
   const original = xml.slice(text.openEnd, text.closeStart)
   if (inner === original) return aligned
   if (text.selfClosing) {
@@ -268,6 +268,26 @@ export function rebuildOdtBody(rctx: OoxmlToOdfContext, items?: EditedItem[]): A
     rctx.patch('content.xml', text.start, text.end, `${open}${inner}</${name}>`)
   } else rctx.patch('content.xml', text.openEnd, text.closeStart, inner)
   return aligned
+}
+
+/**
+ * The editor cannot end a document with a table: it keeps an empty paragraph
+ * after it and saves that as a bare `<w:p></w:p>` the bridge never had. When
+ * the bridge docx ends with something other than a paragraph (a table, a
+ * framed table), such a last new element is that filler, not content, and is
+ * not written (it would add an empty paragraph and a new style to the file).
+ */
+function withoutTrailingFiller(rctx: OoxmlToOdfContext, aligned: AlignedItem[]): AlignedItem[] {
+  const last = aligned[aligned.length - 1]
+  if (!last || last.element) return aligned
+  const bridgeLast = rctx.map.elements[rctx.map.elements.length - 1]
+  if (!bridgeLast || bridgeLast.kind === 'paragraph') return aligned
+  const bare = last.item.xml
+    .replace(/<w:bookmark(?:Start|End)\b[^>]*\/>/g, '')
+    .replace(/<w:pPr>\s*<\/w:pPr>|<w:pPr\/>/g, '')
+    .trim()
+  if (!/^(?:<w:p(?:\s[^>]*)?>\s*<\/w:p>|<w:p(?:\s[^>]*)?\/>)$/.test(bare)) return aligned
+  return aligned.slice(0, -1)
 }
 
 /** Rebuilds the flow whose blocks have parent `env.parent` from the aligned items belonging to it. */

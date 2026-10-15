@@ -779,7 +779,12 @@ export class OoxmlToOdfContext {
 
   /** A style name not used by any existing or new style of either part. */
   allocateStyleName(base: string): string {
-    const stem = base.replace(/_io\d+$/, '')
+    // a new name is a valid NCName even when the original is not (Hancom
+    // writes `Table2.[` for the 27th column and spaces in style names)
+    const stem = base
+      .replace(/_io\d+$/, '')
+      .replace(/[^\w.\-·À-￿]/g, '_')
+      .replace(/^(?=[\d.\-·])/, '_')
     for (let n = 1; ; n++) {
       const name = `${stem}_io${n}`
       if (!this.usedNames.has(name)) {

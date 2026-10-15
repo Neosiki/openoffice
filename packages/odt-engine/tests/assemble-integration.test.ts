@@ -7,9 +7,9 @@
  *    rewritten although its OOXML came back unchanged);
  * 3. a space right after an inline picture stays after it.
  */
-import { parseDocx } from '@genoffice/docx-engine'
+import { type SaveBlock, parseDocx, saveDocx } from '@genoffice/docx-engine'
 import { describe, expect, it } from 'vitest'
-import { odtToDocx } from '../src'
+import { odtToDocx, saveOdt } from '../src'
 import { readOdtPackage } from '../src/core'
 import { diffPackages, roundTrip, textOf } from './helpers/api'
 import { replaceText } from './helpers/bridge'
@@ -26,6 +26,7 @@ import {
   hTable,
 } from './helpers/hancom-fragments'
 import { PNG_1X1 } from './helpers/hancom-sample'
+import { PNG_GREY } from './helpers/objects-fixtures'
 import { cellRuns, editRuns, patchCells, regenerate } from './helpers/table-editor'
 
 const contentOf = async (odt: Uint8Array) => textOf(await readOdtPackage(odt), 'content.xml')
@@ -178,5 +179,45 @@ describe('a regenerated table with a picture cell', () => {
       blocks.map((b, i) => (b.type === 'table' ? regenerate(b, () => {}) : { keep: i })),
     )
     expect(saved).toBe(odt)
+  })
+})
+
+describe('a picture in the text paragraph of a framed table', () => {
+  // Hancom puts a floating picture and a framed table in one paragraph; the editor shows the
+  // table, and the picture as a picture block of its own
+  it('is replaced in place, the paragraph and its table written once', async () => {
+    const table = hTable('Table1', 1, [hRow([hCell(hPara('표'))])])
+    const framed = hFramedTable(table)
+    const image = hImageFrame('Pictures/a.png', { anchor: 'paragraph' })
+    // the picture after the frame, in the host paragraph's own span
+    const close = '</text:span></text:p>'
+    const host = framed.paragraph.slice(0, -close.length) + image.frame + close
+    const odt = await buildOdt({
+      body: hPara('앞') + host + hPara('뒤'),
+      pictures: { 'a.png': PNG_1X1 },
+    })
+    const before = await contentOf(odt)
+    const { docxBytes, bridge } = await odtToDocx(odt)
+    const parsed = await parseDocx(docxBytes)
+    const blocks = parsed.blocks.filter((b) => !b.hidden)
+    const pic = blocks.findIndex((b) => b.type === 'image')
+    expect(pic).toBeGreaterThan(0)
+    const save: SaveBlock[] = blocks.map((b, i) =>
+      i === pic
+        ? {
+            kind: 'xml',
+            xml: b.originalXml as string,
+            docxIndex: b.docxIndex as number,
+            replaceImage: { base64: Buffer.from(PNG_GREY).toString('base64'), mime: 'image/png' },
+          }
+        : { kind: 'original', docxIndex: b.docxIndex as number },
+    )
+    const saved = await saveOdt({
+      originalOdt: odt,
+      bridge,
+      editedDocx: await saveDocx(parsed, save),
+    })
+    const after = await contentOf(saved)
+    expect(after).toBe(before.replace('Pictures/a.png', 'Pictures/io_1.png'))
   })
 })
