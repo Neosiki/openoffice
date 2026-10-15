@@ -33,6 +33,7 @@ export function textAutoStyles(): string {
       'fo:line-height="160%"',
       'fo:line-height="160%" fo:break-before="page"',
     ) +
+    '<style:style style:name="T_MARK" style:family="text"><style:text-properties fo:color="#ff0000" fo:background-color="#ffff00" style:text-underline-style="solid" style:text-underline-width="auto" style:text-underline-color="font-color" fo:font-size="14.00pt" style:font-size-asian="14.00pt" style:font-size-complex="14.00pt" style:font-name="함초롬바탕" fo:font-family="함초롬바탕" style:letter-kerning="false"/></style:style>' +
     '<style:style style:name="T_LINK" style:family="text"><style:text-properties fo:color="#0000ff" style:text-underline-style="solid" style:text-underline-width="auto" style:text-underline-color="font-color"/></style:style>' +
     '<style:style style:name="H1_0" style:family="paragraph" style:parent-style-name="바탕글" style:default-outline-level="1"><style:paragraph-properties fo:text-align="start" style:text-autospace="none"/></style:style>' +
     '<text:list-style style:name="NL1"><text:list-level-style-number text:level="1" style:num-format="가, 나, 다, ..." style:num-suffix="."><style:list-level-properties text:list-level-position-and-space-mode="label-alignment"><style:list-level-label-alignment fo:margin-left="0.635cm" fo:text-indent="-0.635cm" text:label-followed-by="listtab" text:list-tab-stop-position="0.635cm"/></style:list-level-properties></text:list-level-style-number><text:list-level-style-bullet text:level="2" text:bullet-char="-"><style:list-level-properties text:list-level-position-and-space-mode="label-alignment"><style:list-level-label-alignment fo:margin-left="1.270cm" fo:text-indent="-0.635cm" text:label-followed-by="listtab"/></style:list-level-properties></text:list-level-style-bullet></text:list-style>'
@@ -75,6 +76,8 @@ export function textSample(): TextSample {
     ),
     // 9: last paragraph
     hPara('마지막', { style: 'P9_0' }),
+    // 10: strongly formatted text (colour, highlight, underline, size) for clearing
+    hPara('강조된 글자', { style: 'P9_0', span: 'T_MARK' }),
   ]
   return {
     options: { body: blocks.join(''), extraContentAutomaticStyles: textAutoStyles() },

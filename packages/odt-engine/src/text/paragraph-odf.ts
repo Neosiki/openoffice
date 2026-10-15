@@ -38,6 +38,7 @@ import {
   type TextKeys,
   changedParaKeys,
   changedTextKeys,
+  clearedToInherited,
   paraFormatFromOdf,
   paraKeys,
   paraOverrides,
@@ -73,6 +74,14 @@ export interface ParagraphWriteOptions {
   part: OdtStylePart
   /** an original paragraph next to a NEW one: its text styles are reused when formatting matches */
   neighbour?: BridgeParagraph | null
+  /**
+   * The original paragraph a NEW one directly follows (the first half of an
+   * Enter split, or the paragraph it was typed after). When both have the same
+   * docx style, the new paragraph's style is derived from this paragraph's
+   * automatic style (all its properties, tab list and Hancom attributes
+   * included) instead of from the common style.
+   */
+  follows?: BridgeParagraph | null
 }
 
 const modelCache = new WeakMap<OoxmlToOdfContext, Map<number, ParagraphModel | null>>()
@@ -144,13 +153,21 @@ export function paragraphToOdf(
   const neighbourModel = !origin && opts.neighbour ? originalModel(rctx, opts.neighbour) : null
 
   // ---- paragraph style
-  const styleInfo = paragraphStyleInfo(rctx, part, origin?.styleName ?? null)
+  // the original whose style this paragraph continues: its own, or for a new
+  // paragraph the one it follows when both have the same docx style
+  let template: BridgeParagraph | null = origin
+  if (!origin && opts.follows && opts.follows.part === part) {
+    const followed = paragraphStyleInfo(rctx, part, opts.follows.styleName)
+    if ((followed.styleId ?? undefined) === (para.styleId ?? undefined)) template = opts.follows
+  }
+  const continues = !origin && template !== null
+  const styleInfo = paragraphStyleInfo(rctx, part, template?.styleName ?? null)
   const scope = part === 'content.xml' ? 'content' : 'styles'
   const baseStyle: OdtStyle | undefined =
-    origin?.styleName != null
-      ? rctx.doc.styles.find(origin.styleName, 'paragraph', scope)
+    template?.styleName != null
+      ? rctx.doc.styles.find(template.styleName, 'paragraph', scope)
       : undefined
-  const f0 = origin
+  const f0 = template
     ? paraFormatFromOdf(styleInfo.ownParagraph, styleInfo.tabStops, styleInfo.marginLeft)
     : {}
   const k0 = paraKeys(f0)
@@ -162,7 +179,7 @@ export function paragraphToOdf(
   const styleChanged = !!origin && (para.styleId ?? undefined) !== (styleInfo.styleId ?? undefined)
   const newParent = entry?.odfName ?? rctx.map.styles.baseParagraphStyle
   const headingText: AttrOverrides = {}
-  if (entry?.headingLevel && (!origin || styleChanged)) {
+  if (entry?.headingLevel && (!template || styleChanged)) {
     const size = [32, 28, 26, 24, 22, 22][entry.headingLevel - 1] ?? 24
     Object.assign(headingText, {
       'fo:font-weight': 'bold',
@@ -177,8 +194,12 @@ export function paragraphToOdf(
   const ownAttr = (style: OdtStyle | undefined, path: string, name: string) =>
     style?.properties[path]?.[name]
   const styleFor = (extra: AttrOverrides): string | null => {
-    const attrs = { ...pOver.attrs, ...extra }
+    const { 'style:master-page-name': masterPage, ...attrs } = { ...pOver.attrs, ...extra }
     const base = baseStyle?.automatic && baseStyle.part === part ? baseStyle : undefined
+    // attributes of the style element itself (a section start lives there)
+    const element: AttrOverrides = { 'style:display-name': null }
+    const dropMaster = masterPage === null && !!base?.masterPageName
+    if (dropMaster) element['style:master-page-name'] = null
     const effective: AttrOverrides = {}
     for (const [k, v] of Object.entries(attrs)) {
       const cur = ownAttr(base, 'style:paragraph-properties', k)
@@ -193,30 +214,32 @@ export function paragraphToOdf(
       !Object.keys(effective).length &&
       pOver.tabStops === undefined &&
       !Object.keys(text).length &&
-      parentChange === undefined
-    if (origin && nothing) return origin.styleName
+      parentChange === undefined &&
+      !dropMaster
+    if (template && nothing) return template.styleName
     const props: Record<string, AttrOverrides> = {}
     if (Object.keys(effective).length) props['style:paragraph-properties'] = effective
     if (Object.keys(text).length) props['style:text-properties'] = text
     const key = JSON.stringify([
       base?.name ?? null,
-      base ? null : (origin?.styleName ?? null),
+      base ? null : (template?.styleName ?? null),
       parentChange ?? null,
       props,
       pOver.tabStops ?? null,
-      origin ? null : newParent,
+      template ? null : newParent,
+      dropMaster,
     ])
     return rctx.derivedStyle(part, key, base?.name ?? 'P', (name) => {
       if (base) {
         return editStyleXml(info.xml.slice(base.start, base.end), prefixes, {
           name,
           ...(parentChange !== undefined ? { parent: parentChange } : {}),
-          attrs: { 'style:display-name': null },
+          attrs: element,
           props,
           tabStops: pOver.tabStops,
         })
       }
-      const parent = parentChange ?? (origin ? origin.styleName : newParent) ?? null
+      const parent = parentChange ?? (template ? template.styleName : newParent) ?? null
       return editStyleXml(newStyleXml(name, 'paragraph', parent), prefixes, {
         props,
         tabStops: pOver.tabStops,
@@ -226,7 +249,11 @@ export function paragraphToOdf(
 
   // ---- character templates
   const tplModel = model ?? neighbourModel
-  const ownText = origin ? styleInfo.ownText : {}
+  const ownText = template ? styleInfo.ownText : {}
+  // what a docx run inherits from its paragraph style chain (cleared run values)
+  const inherited = textKeys(
+    textFormatFromOdf(styleInfo.styleText, rctx.part('styles.xml').fontFaces),
+  )
   const templateSet = (i: number): number => {
     if (!tplModel) return -1
     if (!model) {
@@ -278,9 +305,8 @@ export function paragraphToOdf(
     }
     const changed = changedTextKeys(templateKeys(set), runKeys[runIndex])
     if (changed.length) {
-      const over = textOverrides(changed, runKeys[runIndex], (family) =>
-        rctx.fontFace(part, family),
-      )
+      const target = clearedToInherited(changed, runKeys[runIndex], inherited)
+      const over = textOverrides(changed, target, (family) => rctx.fontFace(part, family))
       let spanAt = -1
       for (let k = frames.length - 1; k >= 0; k--)
         if (frames[k].kind === 'span') {
@@ -512,7 +538,8 @@ export function paragraphToOdf(
     const isFirst = i === 0
     const isLast = i === pieces.length - 1
     if (!isFirst || breakBeforeFirst) extra['fo:break-before'] = 'page'
-    if (!isFirst) extra['style:master-page-name'] = null
+    // a section starts once: never on a split-off part or a paragraph that only follows the start
+    if (!isFirst || continues) extra['style:master-page-name'] = null
     if (isLast && breakAfterLast) extra['fo:break-after'] = 'page'
     else if (styleInfo.breakAfter) extra['fo:break-after'] = 'auto'
     const styleName = styleFor(extra)

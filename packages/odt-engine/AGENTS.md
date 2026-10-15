@@ -119,8 +119,10 @@ const contentXml = applyTextPatches(doc.contentXml, patches['content.xml'])
 - `registerTextConverters(registry)`: 문단·제목·목록 블록(`textBlockConverter`, id `text`)과 새 문단 쓰기(`textFreeWriter`).
 - `convertOdtStyles(ctx)`: 공용 문단 스타일 → docx 문단 스타일(표시 이름 그대로, `basedOn`은 부모 사슬). `Standard`가 있으면 `Normal`과 대응. 기본 스타일 → `w:docDefaults`. ODF는 부모의 탭 목록을 대체하고 OOXML은 합치므로, 탭은 docx 스타일에 넣지 않고 문단에 실제 탭 목록을 직접 넣는다. `style:default-outline-level`(한컴 "개요 n")은 docx 제목으로 바꾸지 않는다(한컴은 `text:h`를 쓰지 않는다). 편집기의 제목·하이퍼링크 명령을 위해 없으면 `Heading1…6`, `Hyperlink`를 더한다.
 - `paragraphToOoxml(ctx, range, { part, owner, block, list })` → `{ xml, paragraph, model }`: 문단 하나를 `w:p`로 바꾸고 기록한다. T3(셀 문단), T4(각주·메모 본문), T5(머리글 문단, `part: 'styles.xml'`)가 그대로 쓴다. `w:pStyle`은 자동 스타일의 부모 공용 스타일, 자동 스타일 자신의 문단 속성은 직접 `w:pPr`, run은 문단 자동 스타일의 글자 속성 위에 span·링크 스타일을 겹친 직접 `w:rPr`이다. OOXML은 엔진의 `generateParagraphXml`이 쓴다. 문단 스타일이 굵게인데 span이 보통이면 `w:b w:val="0"`을 쓴다.
-- `paragraphToOdf(rctx, para, origin, { part, neighbour })`: 편집된 문단(`editedParagraphFromBlock(block)`, 셀이면 `editedParagraphFromTableParagraph(tp)`)을 ODF로. `origin`은 이 문단이 잇는 원래 문단 기록(없으면 새 문단).
-  - 문단 모양: `rawPPr`이 기록의 `pPr`과 같으면 안 바뀐 것. 바뀐 속성만 원래 자동 스타일의 복사본에 덮어쓴다(`editStyleXml`: 이름만 바꾸고 다른 속성·탭 목록·한컴 속성·모르는 자식은 바이트 그대로). 원래 스타일이 공용 스타일이면 그것을 부모로 한 새 자동 스타일. 새 문단은 docx 스타일에 대응하는 공용 스타일(없으면 `baseParagraphStyle`)을 부모로 한 새 자동 스타일.
+- `paragraphToOdf(rctx, para, origin, { part, neighbour, follows })`: 편집된 문단(`editedParagraphFromBlock(block)`, 셀이면 `editedParagraphFromTableParagraph(tp)`)을 ODF로. `origin`은 이 문단이 잇는 원래 문단 기록(없으면 새 문단).
+  - 문단 모양: `rawPPr`이 기록의 `pPr`과 같으면 안 바뀐 것. 바뀐 속성만 원래 자동 스타일의 복사본에 덮어쓴다(`editStyleXml`: 이름만 바꾸고 다른 속성·탭 목록·한컴 속성·모르는 자식은 바이트 그대로). 원래 스타일이 공용 스타일이면 그것을 부모로 한 새 자동 스타일.
+  - 새 문단: 바로 앞의 원래 문단(`follows`, Enter로 쪼갠 앞부분이나 그 뒤에 친 문단, 새 문단이 이어져도 같은 것)과 docx 스타일이 같으면 그 문단의 자동 스타일에서 만든다. 모든 속성·탭 목록·한컴 속성을 복사하고 다른 것만 덮어쓰며, 바뀐 것이 없으면 그 스타일 이름을 그대로 쓴다. 구역 시작(`style:master-page-name`)은 앞 문단의 것이므로 복사본에서 뺀다. 앞에 원래 문단이 없거나 docx 스타일이 다르면 docx 스타일에 대응하는 공용 스타일(없으면 `baseParagraphStyle`)을 부모로 한 새 자동 스타일.
+  - 지운 값: 고친 문단에서 원래 있던 값이 없어졌으면 편집기에서 지운 것이다(고치지 않은 문단은 원래 바이트를 쓰므로 여기 오지 않는다). 문단 속성은 복사본에서 그 속성을 빼서 공용 스타일의 값을 따르게 한다(탭 목록은 빈 목록, 앞 간격은 0). 글자 속성은 docx run이 그때 따르는 문단 스타일 사슬의 값을 쓰고, 그것도 없으면 속성을 뺀다. 색을 지우면 `fo:color`가 빠지고, 형광펜은 `transparent`, 밑줄·취소선·굵게는 끔, 크기는 문단 스타일의 크기.
   - 글자 모양: 편집된 글자마다 원래 글자를 찾아(앞뒤 공통 부분, 가운데는 LCS) 모양이 같으면 원래 span·링크 태그를 그대로 쓰고, 다르면 원래 span 스타일의 복사본에 바뀐 속성만 덮어쓴 새 스타일을 쓴다. 새 문단은 이웃 원래 문단의 끝 글자 모양을 본보기로 쓴다.
   - 누름틀·책갈피: 원래 위치를 편집된 글자 위로 옮긴다. 시작은 앞의 남은 글자 바로 뒤, 끝은 뒤의 남은 글자 바로 앞으로 가므로 쌍 안에서 친 글자는 쌍 안에 남고, 쌍 안 글자를 모두 지우면 빈 쌍이 된다. 문단을 지우면 쌍도 사라진다. 짝 없는 시작·끝, 점 책갈피, 같은 이름도 원문 그대로 옮긴 자리에 쓴다.
   - 공백은 한컴처럼 `' <text:s/>'`, 맨 앞·맨 끝 공백은 `text:s`. 탭 `text:tab`, 줄 바꿈 `text:line-break`. 문단 안에 친 쪽 나누기는 문단을 나누고 뒷부분에 `fo:break-before="page"`를 준다. `fo:break-after="page"`는 다리 docx에서 문단 끝의 쪽 나누기 글자(`\f`)다.
@@ -133,7 +135,8 @@ const contentXml = applyTextPatches(doc.contentXml, patches['content.xml'])
 
 - docx 엔진은 `w:t` 안의 글자 `&#38;`처럼 엔티티 모양의 글자를 한 번 더 풀어 읽는다. 그런 문단을 고치면 그 글자는 `&`가 된다(말뭉치 66개 중 문단 1개).
 - 표 칸의 문단(`TableParagraph`)은 숨은 책갈피를 지니지 않는다. 칸 문단과 원래 문단의 대응은 T3이 칸 위치로 정해 `paragraphToOdf`에 `origin`으로 넘긴다.
-- 문단 모양 중 다리가 옮기지 않는 것(테두리, 세로 정렬 등)은 원래 스타일의 복사본에 그대로 남지만 편집기에서 바꿀 수 없다. 편집기에서 지운 값(예: 글꼴 지우기)은 "안 바뀜"으로 본다.
+- 문단 모양 중 다리가 옮기지 않는 것(테두리, 세로 정렬 등)은 원래 스타일의 복사본에 그대로 남지만 편집기에서 바꿀 수 없다.
+- 지운 글자 속성을 문단 스타일 사슬의 값으로 되돌릴 때, 그 값을 문단 자동 스타일이나 바깥 span이 따로 정하고 있으면 그 값이 남을 수 있다(docx는 그 값을 run에 직접 썼기 때문). 한컴 문서는 span 자동 스타일이 모든 글자 속성을 지녀 해당이 드물다.
 
 ## 테스트
 
@@ -143,5 +146,5 @@ const contentXml = applyTextPatches(doc.contentXml, patches['content.xml'])
   - `hancom-fragments.ts`: 한컴 모양의 조각(`hPara`, `hTable`, `hCell`, `hFramedTable`, `hFieldBookmark`, `hFootnote`, `hAnnotation`, `hImageFrame`, `hFormulaObject`, `hCustomShape` 등). 조각은 쓴 문자열을 그대로 돌려주므로 테스트가 "범위로 자른 원문 = 조각"을 바로 비교할 수 있다.
   - `hancom-sample.ts`: 위 특징을 모두 담은 문서 하나(글상자 안의 표, 본문 표, 셀 안의 표, 병합·가려진 셀, 잠긴 셀, 누름틀 책갈피, 그림, 각주, 메모, 수식 개체, 도형, 목록, 구역, 차례, 같은 바탕쪽을 쓰는 여러 구역).
   - `bridge.ts`: `odtToBridge`(열기, 지도는 JSON 왕복), `editorSave`(편집기처럼 `rawPPr`을 다시 쓰거나 합쳐 `saveDocx`로 저장; `keep`/`edit`/`insert`/`xml`), `editOnly`, `replaceText`, `writeBack`(편집된 docx를 원본 ODT 문자열에 되돌려 씀). 다른 층의 왕복 시험도 이것을 쓴다.
-  - `text-fixtures.ts`: 글자 층 시험 문서(누름틀, 제목, 링크, 목록, 쪽 나누기, 공백, 필드·각주).
-- 실제 파일 점검은 저장소 밖에서만 한다: `ODT_CORPUS=<폴더> npm run test -w @genoffice/odt-engine`. 변수가 없으면 `tests/core-corpus.test.ts`, `tests/text-corpus.test.ts`는 건너뛴다. 글자 층 점검은 모든 문단(셀·글상자·머리글 포함)을 변환해 다리 docx에서 같은 글자로 읽히는지, 편집 없이 되돌려 쓰면 같은 글자이고 새 스타일이 없는지, 편집 없는 저장이 원본과 같은지, 문단 하나를 고치면 그 문단만 바뀌는지 본다.
+  - `text-fixtures.ts`: 글자 층 시험 문서(누름틀, 제목, 링크, 목록, 쪽 나누기, 공백, 필드·각주, 지우기용 강한 글자 모양).
+- 실제 파일 점검은 저장소 밖에서만 한다: `ODT_CORPUS=<폴더> npm run test -w @genoffice/odt-engine`. 변수가 없으면 `tests/core-corpus.test.ts`, `tests/text-corpus.test.ts`는 건너뛴다. 글자 층 점검은 모든 문단(셀·글상자·머리글 포함)을 변환해 다리 docx에서 같은 글자로 읽히는지, 편집 없이 되돌려 쓰면(`rawPPr` 지름길 없이 모든 속성을 비교해도) 같은 글자이고 새 스타일이 없는지, 편집 없는 저장이 원본과 같은지, 문단 하나를 고치면 그 문단만 바뀌는지 본다.

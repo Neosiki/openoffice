@@ -205,6 +205,8 @@ export function writeTextItems(
   const paragraphOf = (e: { paragraph: number | null } | null | undefined) =>
     e && e.paragraph !== null ? (rctx.map.paragraphs[e.paragraph] ?? null) : null
   let neighbour: BridgeParagraph | null = paragraphOf(env.neighbours?.before)
+  // the original paragraph directly before (through consecutive new paragraphs)
+  let follows: BridgeParagraph | null = neighbour
   const xml = rctx.part('content.xml').xml
   items.forEach((a, index) => {
     const block = paragraphBlockOf(a.item)
@@ -214,6 +216,7 @@ export function writeTextItems(
         : null
     if (!block || (a.element && a.element.kind !== 'paragraph') || (a.element && !origin)) {
       flush()
+      follows = null
       if (a.element) {
         const owned = rctx.map.blocks[a.element.block]
         if (a.unchanged) out += blockSource(rctx, owned)
@@ -239,7 +242,9 @@ export function writeTextItems(
         : paragraphToOdf(rctx, editedParagraphFromBlock(block as Block), origin, {
             part: 'content.xml',
             neighbour: origin ? null : neighbour,
+            follows: origin ? null : follows,
           })
+    if (origin) follows = origin
     let list: { numId: string; level: number; continuation: boolean; header: boolean } | null = null
     if (block.type === 'listItem' && block.list) {
       list = { numId: block.list.numId, level: block.list.ilvl, continuation: false, header: false }

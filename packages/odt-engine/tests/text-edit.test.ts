@@ -11,14 +11,17 @@ import { readParagraph } from '../src/text'
 import {
   type Bridge,
   type EditorOp,
+  type WriteBack,
   bodyOf,
   editOnly,
   editorSave,
+  generatedFrom,
   odtToBridge,
   replaceText,
   writeBack,
 } from './helpers/bridge'
 import { buildOdt } from './helpers/build-odt'
+import { hPara } from './helpers/hancom-fragments'
 import { FIELD, FIELD2, textSample } from './helpers/text-fixtures'
 
 let bridge: Bridge
@@ -35,6 +38,7 @@ interface Written {
   /** every paragraph of the new body, in order */
   paragraphs: Array<{ xml: string; text: string; style: string | null; name: string }>
   warnings: string[]
+  rctx: WriteBack['rctx']
 }
 
 async function save(
@@ -66,7 +70,7 @@ async function save(
     })
     return false
   })
-  return { content: wb.content, styles, paragraphs, warnings: wb.rctx.warnings }
+  return { content: wb.content, styles, paragraphs, warnings: wb.rctx.warnings, rctx: wb.rctx }
 }
 
 const originalBody = () => bodyOf(bridge.doc.contentXml)
@@ -174,22 +178,66 @@ describe('formatting changes add new automatic styles that inherit everything', 
     expect(added[0]).toContain('style:name="P9_0_io2"')
   })
 
-  it('a new paragraph (an Enter split) gets an automatic style whose parent is the common style', async () => {
-    const ops = (blocks: Parameters<Parameters<typeof editorSave>[1]>[0]): EditorOp[] => {
+  it('an Enter split keeps both halves on the original automatic style (tab list, Hancom attributes)', async () => {
+    const w = await save((blocks) => [
+      { edit: 0, change: (g) => replaceText(g, 2, 8, '') },
+      {
+        insert: {
+          ...generatedFrom(blocks[0]),
+          runs: [{ ...blocks[0].runs![0], text: ' 문단입니다' }],
+        },
+      },
+      ...blocks.slice(1).map((_, i) => ({ keep: i + 1 })),
+    ])
+    expect(w.paragraphs.slice(0, 2).map((p) => [p.text, p.style])).toEqual([
+      ['첫째', 'P9_0'],
+      [' 문단입니다', 'P9_0'],
+    ])
+    expect(w.paragraphs[1].xml).toContain(
+      '<text:span text:style-name="T1"><text:s/>문단입니다</text:span>',
+    )
+    expect(w.rctx.newAutomaticStyles('content.xml')).toEqual([])
+  })
+
+  it('a split-off half derives from the original automatic style: everything copied, the section start dropped', async () => {
+    const local = await odtToBridge(
+      await buildOdt({
+        body: hPara('구역을 여는 문단', { style: 'P73_0_MS1_b3' }) + hPara('다음'),
+      }),
+    )
+    const { bytes } = await editorSave(local.docx, (blocks) => [
+      { edit: 0, change: (g) => replaceText(g, 6, 9, '') },
+      { insert: { ...generatedFrom(blocks[0]), runs: [{ ...blocks[0].runs![0], text: ' 문단' }] } },
+      { keep: 1 },
+    ])
+    const wb = await writeBack(local, bytes)
+    const styles = readOdtStyles(wb.styles, wb.content)
+    const names = [...wb.content.matchAll(/<text:p text:style-name="([^"]+)">/g)].map((m) => m[1])
+    expect(names[0]).toBe('P73_0_MS1_b3')
+    const copy = styles.find(names[1], 'paragraph', 'content')!
+    const original = local.doc.styles.find('P73_0_MS1_b3', 'paragraph', 'content')!
+    expect(copy.automatic).toBe(true)
+    expect(copy.masterPageName).toBeNull()
+    expect(copy.parentName).toBe(original.parentName)
+    expect(copy.properties).toEqual(original.properties)
+    expect(copy.tabStops).toEqual(original.tabStops)
+  })
+
+  it('a new paragraph with no original before it takes the common style as parent', async () => {
+    const w = await save((blocks) => {
       const out: EditorOp[] = blocks.map((_, i) => ({ keep: i }))
-      const twin = JSON.parse(JSON.stringify(blocks[0])) as GeneratedBlock
+      const twin = generatedFrom(blocks[0])
       twin.runs = [{ ...twin.runs[0], text: '새 문단' }]
-      out.splice(1, 0, { insert: twin })
+      out.unshift({ insert: twin })
       return out
-    }
-    const w = await save(ops)
-    const p = w.paragraphs[1]
+    })
+    const p = w.paragraphs[0]
     expect(p.text).toBe('새 문단')
     const style = w.styles.find(p.style!, 'paragraph', 'content')!
     expect(style.automatic).toBe(true)
     expect(style.parentName).toBe('바탕글')
     expect(style.tabStops?.map((t) => t['style:position'])).toEqual(['3.000cm', '14.993cm'])
-    // the neighbour's text style is reused when the formatting matches
+    // the next original paragraph's text style is reused when the formatting matches
     expect(p.xml).toContain('<text:span text:style-name="T1">새 문단</text:span>')
   })
 })
@@ -280,7 +328,7 @@ describe('headings, lists, hyperlinks, breaks, spaces', () => {
         },
       }),
     )
-    const h = w.paragraphs[w.paragraphs.length - 1]
+    const h = w.paragraphs.find((p) => p.text === '마지막')!
     expect(h.name).toBe('text:h')
     expect(h.xml).toContain('text:outline-level="2"')
     const style = w.styles.find(h.style!, 'paragraph', 'content')!
@@ -445,5 +493,71 @@ describe('style edits', () => {
     expect(wb.styles).toContain('<style:font-face style:name="Arial" svg:font-family="Arial"/>')
     for (const name of ['바탕글', '바탕글 1', '+제목', '개요 1'])
       expect(styles.common(name, 'paragraph')).toBeDefined()
+  })
+})
+
+describe('clearing formatting in the editor', () => {
+  const marked = 11
+  const clear = (change: (run: GeneratedBlock['runs'][number]) => void) =>
+    save(editOnly({ [marked]: (g) => g.runs.forEach(change) }))
+  const markedStyle = (w: Written) => {
+    const p = w.paragraphs.find((x) => x.text === '강조된 글자')!
+    const name = /<text:span text:style-name="([^"]+)">/.exec(p.xml)![1]
+    expect(name).not.toBe('T_MARK')
+    return w.styles.find(name, 'text', 'content')!.properties['style:text-properties']
+  }
+
+  it('clearing the colour removes it from the copied text style', async () => {
+    const props = markedStyle(await clear((r) => delete r.color))
+    expect(props['fo:color']).toBeUndefined()
+    expect(props['fo:background-color']).toBe('#ffff00')
+    expect(props['style:letter-kerning']).toBe('false')
+  })
+
+  it('clearing the highlight makes the background transparent', async () => {
+    const props = markedStyle(
+      await clear((r) => {
+        delete r.shading
+        delete r.highlight
+      }),
+    )
+    expect(props['fo:background-color']).toBe('transparent')
+    expect(props['fo:color']).toBe('#ff0000')
+  })
+
+  it('removing the underline turns it off', async () => {
+    const props = markedStyle(await clear((r) => (r.underline = false)))
+    expect(props['style:text-underline-style']).toBe('none')
+  })
+
+  it('resetting the size takes the size the paragraph style gives', async () => {
+    const props = markedStyle(await clear((r) => delete r.sizeHalfPoints))
+    // 바탕글 (the common parent) is 10pt
+    expect(props['fo:font-size']).toBe('10.00pt')
+    expect(props['style:font-size-asian']).toBe('10.00pt')
+  })
+
+  it('removing an indent removes it from the copied paragraph style', async () => {
+    const w = await save(
+      editOnly({
+        0: (g) => {
+          g.format = { ...g.format }
+          delete g.format.indentLeft
+        },
+      }),
+    )
+    const p = w.paragraphs[0]
+    expect(p.style).not.toBe('P9_0')
+    const style = w.styles.find(p.style!, 'paragraph', 'content')!
+    const props = style.properties['style:paragraph-properties']
+    expect(props['fo:margin-left']).toBeUndefined()
+    expect(props['fo:margin-right']).toBe('0cm')
+    expect(props['style:text-autospace']).toBe('none')
+    expect(style.tabStops).toEqual(bridge.doc.styles.find('P9_0', 'paragraph', 'content')!.tabStops)
+  })
+
+  it('an untouched paragraph next to the cleared one is not rewritten', async () => {
+    const w = await clear((r) => delete r.color)
+    expect(w.paragraphs.find((x) => x.text === '마지막')!.xml).toBe(sample.blocks[9])
   })
 })

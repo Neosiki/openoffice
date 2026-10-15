@@ -43,6 +43,7 @@ describe('ODF → OOXML: the bridge docx', () => {
       'paragraph',
       'paragraph',
       'paragraph',
+      'paragraph',
     ])
   })
 
@@ -215,7 +216,7 @@ describe('whole documents and details', () => {
       await buildOdt({ body: hParaWith('<text:s text:c="2"/>들여 쓴 줄') }),
     )
     expect(b.map.paragraphs[0].text).toBe('  들여 쓴 줄')
-    const { bytes } = await editorSave(b.docx, editOnly({ 0: (g) => replaceText(g, 9, 9, '!') }))
+    const { bytes } = await editorSave(b.docx, editOnly({ 0: (g) => replaceText(g, 8, 8, '!') }))
     const wb = await writeBack(b, bytes)
     expect(bodyOf(wb.content)).toBe(
       '<text:p text:style-name="P1_0"><text:span text:style-name="T1"><text:s text:c="2"/>들여 쓴 줄!</text:span></text:p>',

@@ -163,7 +163,8 @@ export function paraKeys(f: ParaFormat | undefined): ParaKeys {
     indentLeft: num(fmt.indentLeft),
     indentRight: num(fmt.indentRight),
     indentFirstLine: num(fmt.indentFirstLine),
-    spaceBefore: num(fmt.spaceBefore),
+    // the engine never writes w:before="0", so an explicit 0 reads back as absent
+    spaceBefore: fmt.spaceBefore ? num(fmt.spaceBefore) : null,
     spaceAfter: num(fmt.spaceAfter),
     line,
     keepNext: !!fmt.keepNext,
@@ -176,24 +177,23 @@ export function paraKeys(f: ParaFormat | undefined): ParaKeys {
   }
 }
 
-const BOOLEAN_PARA_KEYS = new Set<keyof ParaKeys>(['keepNext', 'keepLines', 'pageBreakBefore'])
-
 /**
- * Keys whose edited value differs from the original. A valued field the
- * edited model no longer carries counts as untouched (the editor never strips
- * a value it did not change); flags compare as booleans.
+ * Keys whose edited value differs from the original. A value the original had
+ * and the edited paragraph lacks was cleared in the editor (null): an
+ * untouched paragraph never gets here, because the editor writes its original
+ * pPr bytes back and the engine reads them as the same keys.
  */
 export function changedParaKeys(original: ParaKeys, edited: ParaKeys): Array<keyof ParaKeys> {
   const out: Array<keyof ParaKeys> = []
   for (const key of Object.keys(original) as Array<keyof ParaKeys>) {
-    const a = original[key]
-    const b = edited[key]
-    if (a === b) continue
-    if (!BOOLEAN_PARA_KEYS.has(key) && b === null) continue
-    out.push(key)
+    if (original[key] !== edited[key]) out.push(key)
   }
   return out
 }
+
+/** Twips as centimetres, or null (remove) for a cleared value. */
+const cm = (value: number | undefined): string | null =>
+  value === undefined ? null : twipsToCm(value)
 
 const ALIGN_TO_ODF: Record<string, string> = {
   left: 'start',
@@ -252,27 +252,30 @@ export function paraOverrides(
   let tabStops: string | undefined
   for (const key of keys) {
     switch (key) {
+      // a cleared value removes the attribute: the paragraph then takes its
+      // common style's value, as the docx paragraph takes its style's
       case 'align': {
-        const a = edited.align ?? 'left'
-        attrs['fo:text-align'] = ALIGN_TO_ODF[a] ?? 'start'
+        const a = edited.align
+        attrs['fo:text-align'] = a ? (ALIGN_TO_ODF[a] ?? 'start') : null
         if (a === 'distribute') attrs['fo:text-align-last'] = 'justify'
-        else if (original.align === 'distribute') attrs['fo:text-align-last'] = 'start'
+        else if (original.align === 'distribute') attrs['fo:text-align-last'] = null
         break
       }
       case 'indentLeft':
-        attrs['fo:margin-left'] = twipsToCm(edited.indentLeft ?? 0)
+        attrs['fo:margin-left'] = cm(edited.indentLeft)
         break
       case 'indentRight':
-        attrs['fo:margin-right'] = twipsToCm(edited.indentRight ?? 0)
+        attrs['fo:margin-right'] = cm(edited.indentRight)
         break
       case 'indentFirstLine':
-        attrs['fo:text-indent'] = twipsToCm(edited.indentFirstLine ?? 0)
+        attrs['fo:text-indent'] = cm(edited.indentFirstLine)
         break
       case 'spaceBefore':
+        // the engine reads an absent w:before for 0
         attrs['fo:margin-top'] = twipsToCm(edited.spaceBefore ?? 0)
         break
       case 'spaceAfter':
-        attrs['fo:margin-bottom'] = twipsToCm(edited.spaceAfter ?? 0)
+        attrs['fo:margin-bottom'] = cm(edited.spaceAfter)
         break
       case 'line': {
         if ((edited.lineRule === 'exact' || edited.lineRule === 'atLeast') && edited.lineRawTwips) {
@@ -285,6 +288,9 @@ export function paraOverrides(
           }
         } else if (edited.lineSpacing && edited.lineSpacing > 0) {
           attrs['fo:line-height'] = `${Math.round(edited.lineSpacing * 100)}%`
+          attrs['style:line-height-at-least'] = null
+        } else {
+          attrs['fo:line-height'] = null
           attrs['style:line-height-at-least'] = null
         }
         break
@@ -301,7 +307,7 @@ export function paraOverrides(
       case 'shading':
         attrs['fo:background-color'] = edited.shadingFill
           ? `#${edited.shadingFill.toLowerCase()}`
-          : 'transparent'
+          : null
         break
       case 'tabs':
         tabStops = tabStopsToOdf(edited.tabStops ?? [], marginLeftTwips)
@@ -468,26 +474,30 @@ export function textKeys(f: TextFormat | undefined): TextKeys {
   }
 }
 
-const VALUED_TEXT_KEYS = new Set<keyof TextKeys>([
-  'color',
-  'size',
-  'font',
-  'fontAscii',
-  'fontCs',
-  'scale',
-])
-
-/** Changed text keys; an edited valued field that is absent counts as untouched (see `changedParaKeys`). */
+/** Text keys whose edited value differs from the original; null in the edited keys = cleared. */
 export function changedTextKeys(original: TextKeys, edited: TextKeys): Array<keyof TextKeys> {
   const out: Array<keyof TextKeys> = []
   for (const key of Object.keys(original) as Array<keyof TextKeys>) {
-    const a = original[key]
-    const b = edited[key]
-    if (a === b) continue
-    if (VALUED_TEXT_KEYS.has(key) && b === null) continue
-    out.push(key)
+    if (original[key] !== edited[key]) out.push(key)
   }
   return out
+}
+
+/**
+ * The values to write for changed keys: the edited value, or for a cleared
+ * one what the docx run then inherits from its paragraph style chain
+ * (`inherited`; null there removes the attribute).
+ */
+export function clearedToInherited(
+  changed: ReadonlyArray<keyof TextKeys>,
+  edited: TextKeys,
+  inherited: TextKeys,
+): TextKeys {
+  const out = { ...edited } as Record<keyof TextKeys, TextKeys[keyof TextKeys]>
+  for (const key of changed) {
+    if (edited[key] === null) out[key] = inherited[key]
+  }
+  return out as TextKeys
 }
 
 /**
@@ -541,25 +551,19 @@ export function textOverrides(
         o['fo:color'] = edited.color ? `#${edited.color.toLowerCase()}` : null
         break
       case 'size':
-        if (edited.size) trio('font-size', halfPointsToPt(edited.size))
+        trio('font-size', edited.size ? halfPointsToPt(edited.size) : null)
         break
       case 'font':
-        if (edited.font) {
-          o['style:font-name-asian'] = face(edited.font)
-          o['style:font-family-asian'] = quoteFamily(edited.font)
-        }
+        o['style:font-name-asian'] = edited.font ? face(edited.font) : null
+        o['style:font-family-asian'] = edited.font ? quoteFamily(edited.font) : null
         break
       case 'fontAscii':
-        if (edited.fontAscii) {
-          o['style:font-name'] = face(edited.fontAscii)
-          o['fo:font-family'] = quoteFamily(edited.fontAscii)
-        }
+        o['style:font-name'] = edited.fontAscii ? face(edited.fontAscii) : null
+        o['fo:font-family'] = edited.fontAscii ? quoteFamily(edited.fontAscii) : null
         break
       case 'fontCs':
-        if (edited.fontCs) {
-          o['style:font-name-complex'] = face(edited.fontCs)
-          o['style:font-family-complex'] = quoteFamily(edited.fontCs)
-        }
+        o['style:font-name-complex'] = edited.fontCs ? face(edited.fontCs) : null
+        o['style:font-family-complex'] = edited.fontCs ? quoteFamily(edited.fontCs) : null
         break
       case 'spacing':
         o['fo:letter-spacing'] = twipsToPt(edited.spacing ?? 0)

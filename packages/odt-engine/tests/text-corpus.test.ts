@@ -176,7 +176,9 @@ describe.skipIf(!root)('text converters over the real corpus (ODT_CORPUS)', () =
             continue
           }
           readBack++
-          const odf = paragraphToOdf(rctx, editedParagraphFromBlock(block), record, {
+          // without the pPr shortcut: every mapped format key must read back unchanged
+          const { rawPPr: _raw, ...unedited } = editedParagraphFromBlock(block)
+          const odf = paragraphToOdf(rctx, unedited, record, {
             part: record.part,
           })
           const xml = `<office:text>${odf}</office:text>`
