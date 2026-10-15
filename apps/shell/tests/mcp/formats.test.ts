@@ -100,6 +100,12 @@ describe('withSaveExtension', () => {
     )
     expect(() => withSaveExtension('pptx', '/tmp/deck.pdf')).toThrow(/must be saved as \.pptx/)
   })
+
+  it('refuses a dialog-free format change to .odt and points at the CLI conversion', () => {
+    expect(() => withSaveExtension('docx', '/tmp/report.odt')).toThrow(
+      /must be saved as \.docx \(got "\.odt"\); save as \.docx, then convert it with `ieumoffice convert <file> --to odt`/,
+    )
+  })
 })
 
 describe('capabilityReport', () => {

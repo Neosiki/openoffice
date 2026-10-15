@@ -55,8 +55,9 @@ export const FORMAT_FAMILIES: readonly FormatFamily[] = [
   {
     family: 'docx',
     label: 'Word document',
-    // .odt opens in the same Word tab and its Save As offers docx and ODT; the
-    // MCP subset below stays docx until the MCP tools learn ODT
+    // .odt opens in the same Word tab and its Save As offers docx and ODT. MCP
+    // sessions stay docx (a dialog-free save never changes a tab's format);
+    // read_docx also reads .odt
     editorOpen: ['docx', 'odt'],
     editorSave: ['docx', 'odt'],
     editorExport: ['pdf'],
@@ -146,7 +147,15 @@ export function withSaveExtension(family: SessionFamily, filePath: string): stri
   if (ext === undefined) return `${filePath}.${formats[0] ?? family}`
   if (formats.includes(ext)) return filePath
   const wanted = formats.map((e) => `.${e}`).join(' or ')
-  throw new Error(`a ${familyLabel(family)} session must be saved as ${wanted} (got ".${ext}")`)
+  // changing the format needs the user to confirm what gets lost, which a
+  // dialog-free save cannot ask: point the agent at the CLI conversion instead
+  const hint =
+    family === 'docx' && ext === 'odt'
+      ? '; save as .docx, then convert it with `ieumoffice convert <file> --to odt`'
+      : ''
+  throw new Error(
+    `a ${familyLabel(family)} session must be saved as ${wanted} (got ".${ext}")${hint}`,
+  )
 }
 
 /**

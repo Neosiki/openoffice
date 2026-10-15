@@ -9,6 +9,7 @@ import { McpServerService } from '../../src/main/mcp/mcp-server'
 import {
   closeSavePath,
   createOpenDocumentTools,
+  documentFormat,
   resolveOpenDocument,
   type OpenDocumentsControl,
 } from '../../src/main/mcp/tools/open-documents-tools'
@@ -128,6 +129,17 @@ describe('closeSavePath', () => {
     expect(closeSavePath(DOCUMENTS[0]!, () => dir)).toBe('C:/docs/one.docx')
   })
 
+  it('reports a Word tab holding an .odt as format "odt"', () => {
+    const odt = doc({ id: 'o1', kind: 'docs', title: 'form.odt', filePath: 'C:/docs/Form.ODT' })
+    expect(documentFormat(odt)).toBe('odt')
+    expect(documentFormat(doc({ id: 'u', kind: 'docs', title: 'Untitled' }))).toBe('docx')
+  })
+
+  it('reuses an ODT document path as it is', () => {
+    const odt = doc({ id: 'o1', kind: 'docs', title: 'form.odt', filePath: 'C:/docs/form.odt' })
+    expect(closeSavePath(odt, () => 'C:/unused')).toBe('C:/docs/form.odt')
+  })
+
   it('falls back to the default folder for an untitled document, with its extension', () => {
     const target = closeSavePath(DOCUMENTS[6]!, () => dir)
     expect(target.startsWith(resolve(dir))).toBe(true)
@@ -177,11 +189,15 @@ describe('open_documents tool', () => {
     expect(first.saved).toBe(true)
     expect(first.dirty).toBe(true)
 
+    expect(first.format).toBe('docx')
+
     // an untitled document reports no path and saved:false
     const untitled = documents.find((d) => d.id === 't7')!
     expect(untitled.path).toBeNull()
     expect(untitled.saved).toBe(false)
     expect(untitled.active).toBe(true)
+    // a never-saved Word tab is kept as the family's own format
+    expect(untitled.format).toBe('docx')
 
     // the family vocabulary carries through for every kind
     const types = Object.fromEntries(documents.map((d) => [d.id, d.type]))

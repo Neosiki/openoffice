@@ -136,12 +136,23 @@ function typeLabel(doc: OpenDocumentTab): string {
   return familyLabel(FAMILY_BY_KIND[doc.kind])
 }
 
+/**
+ * The file format a document is kept in: its file's extension, or the family's
+ * own save format for a never-saved tab. A Word tab can hold .docx or .odt, and
+ * an agent needs to know which before it picks a save path or a conversion.
+ */
+export function documentFormat(doc: OpenDocumentTab): string {
+  const ext = doc.filePath?.toLowerCase().match(/\.([a-z0-9]+)$/)?.[1]
+  return ext ?? extensionFor(FAMILY_BY_KIND[doc.kind]).slice(1)
+}
+
 /** one row of the `list` action */
 function describeDocument(doc: OpenDocumentTab): Record<string, unknown> {
   return {
     id: doc.id,
     type: typeLabel(doc),
     kind: doc.kind,
+    format: documentFormat(doc),
     title: doc.title,
     path: doc.filePath ?? null,
     saved: doc.filePath !== undefined,

@@ -34,6 +34,7 @@
 - 업데이트는 이 제품의 공개 저장소의 GitHub Releases에서만 받는다. 저장소는 `electron-builder.cjs`의 `publish`에서 `app-update.yml`로 구워지고, 빌드 시 주입되는 값이나 토큰이 없다. 확인 실패(릴리스 없음, 네트워크 없음)는 조용히 넘긴다. 설치 프로그램은 서명하지 않는다.
 - 앱 안 MCP 서버와 제어 채널은 로컬 전용이다. MCP 서버는 루프백에만 바인드하고 Host 헤더를 검사한다(인증이 없으므로). 제어 채널은 userData의 소켓·명명된 파이프와 실행마다 새로 만든 토큰을 쓰고, 명령은 "이 위치를 보여 줘"와 "선택을 읽어 줘"뿐이다. 요청으로 파일을 쓰거나 코드를 실행하는 명령을 추가하지 않는다.
 - 스킬과 MCP 등록은 통합 탭에서 사용자가 누를 때만 쓴다. 시작 시 자동으로 에이전트 설정 파일을 고치지 않는다.
+- 앱 안 MCP는 대화 상자 없이 저장하므로 문서의 형식을 바꾸지 않는다. `save_session`은 세션 형식(docx)이 아닌 확장자, 특히 `.odt`를 거절하고 명령줄 `convert`를 쓰라고 안내한다(`withSaveExtension`). 열린 문서 목록은 워드 탭이 담은 형식(`format`: `docx`/`odt`)을 함께 보이고, `read_docx`는 `.odt`도 읽는다. 꺼 둔 기능과 보호된 칸의 거절은 편집기가 한다.
 - "GenOffice를 기반으로 합니다" 고지(문자열 키 `setBasedOn`, 값에 `{{GenOffice}}`)는 21개 언어 모두에 남긴다. 원본 이름이 화면에 나오는 곳은 이 한 줄뿐이어야 한다. 다른 문자열과 도움말 제목·본문에 `{{GenOffice}}`를 쓰면 `tests/product-identity.test.ts`가 실패한다.
 - 없앤 기능(사용 통계 전송, 자체 계정 로그인, 클라우드 프로젝트 목록 등)의 모듈·IPC·호출부를 되살리지 않는다. `tests/removed-features.test.ts`가 지킨다. 원본의 변경을 병합할 때 특히 본다.
 - `.odt`는 워드 문서다. 열기 판정(`app-routing.ts`의 `ODT_RE`, `index.ts`의 `routeDocumentPath`), 열기 창(`OPEN_DIALOG_EXTENSIONS`와 홈의 `filterOdt` 필터), 끌어다 놓기(`drop-open.ts`), 명령줄 경로(`launch-paths.ts`), 폴더 트리·파일 색인(`TREE_FILE_EXTENSIONS`), 최근 파일과 홈의 형식 묶음(`EXT_FAMILY`, `SEARCH_EXT_FAMILY`, `Home.tsx`의 `FILTER_FAMILY`·`OPEN_LOCAL_EXTENSIONS`·`FILE_ICONS`), 앱 안 MCP의 형식 표(`mcp/tools/formats.ts`, `mcp` 부분은 아직 docx만)가 모두 같은 답을 내야 한다. 하나를 고치면 나머지도 고친다(`tests/odt-shell-wiring.test.ts`). 새 문서의 기본 형식은 docx다. `.docx`↔`.odt` 이름 바꾸기는 막는다(내용이 바뀌지 않으므로 `renameStaysInApp`).
