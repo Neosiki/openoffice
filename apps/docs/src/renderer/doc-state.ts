@@ -3,6 +3,25 @@
  * the extracted action modules (file-actions, review-actions, …).
  */
 import type { HeaderFooter, HfPartInfo, ParsedDocFull } from '@genoffice/docx-engine'
+import type { BridgeMap, ConversionReport } from '@genoffice/odt-engine'
+import type { DocFormat } from '../shared/open-file'
+
+export type { DocFormat }
+
+/**
+ * What an ODT document saves against. The editor shows the bridge docx
+ * (`DocState.parsed`); a save writes the edited docx back into `original`
+ * through `bridge`. Every successful save replaces all three with the ODT
+ * just written, so untouched parts stay byte-identical save after save.
+ */
+export interface OdtBaseline {
+  /** the ODT bytes on disk (as opened, or as last saved) */
+  original: Uint8Array
+  /** the bridge map `odtToDocx` returned for `original` (plain JSON) */
+  bridge: BridgeMap
+  /** what saving this document as docx changes (Save As confirmation) */
+  report: ConversionReport
+}
 
 /** first-page / even-page header & footer variants */
 export type HfVariantKey = 'headerFirst' | 'footerFirst' | 'headerEven' | 'footerEven'
@@ -26,6 +45,17 @@ export interface DocState {
   isBlank?: boolean
   /** desired open password is set for the next save; toggled via Review > Protect */
   encrypted?: boolean
+  /** the file format saves write; follows the path's extension (new documents are docx) */
+  format: DocFormat
+  /** present exactly when `format` is 'odt' */
+  odt?: OdtBaseline
+}
+
+/** an ODT document: saves go through `saveOdt` against `doc.odt` */
+export function isOdtDoc(
+  doc: DocState | null | undefined,
+): doc is DocState & { format: 'odt'; odt: OdtBaseline } {
+  return doc?.format === 'odt' && doc.odt !== undefined
 }
 
 /** A restored recovery snapshot has not reached the original path yet. */

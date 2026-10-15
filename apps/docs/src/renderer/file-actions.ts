@@ -43,19 +43,25 @@ import {
   type PictureWatermarkSpec,
   type WatermarkSpec,
 } from '@genoffice/docx-engine'
+import { docxToOdt, isOdtOpenError, saveOdt, type ConversionReport } from '@genoffice/odt-engine'
 import type { Dispatch, SetStateAction } from 'react'
 import type { AiDocContent, OpenDocxResult } from '../shared/ipc'
+import { docFormatOfPath, type DocFormat } from '../shared/open-file'
 import {
   hfVariantsFromParsed,
+  isOdtDoc,
   openedFileStartsDirty,
   type DocState,
+  type OdtBaseline,
   type HfVariantKey,
   type HfVariantsState,
   type PendingNumbering,
 } from './doc-state'
 import { hfSaveOptions } from './hf-sections'
 import { fetchDocBytes } from './doc-bytes'
-import { parseDocxOffThread } from './parse-off-thread'
+import { parseDocxOffThread, parseOdtOffThread } from './parse-off-thread'
+import { captureRenderedObjects } from './odt-objects'
+import { confirmFormatChange } from './components/format-change-bus'
 import { PHASED_APPEND } from './editor/streaming-tail-guard'
 import { docTextLength, docWeight, openTierFor } from './large-document'
 import { blocksHaveRevisions } from './editor/revision-view'
@@ -397,12 +403,24 @@ export async function loadFile(
   const generation = ++openGeneration
   try {
     const bytes = await fetchDocBytes(result.dataUrl)
-    // a 0-byte .docx (touch, failed download) is not a corrupt archive but an
-    // empty document: open the blank template under the file's own path
-    const parsed = await parseDocxOffThread(
-      bytes.byteLength === 0 ? await blankDocxBytes() : bytes,
-      { owned: true },
-    )
+    const format: DocFormat = docFormatOfPath(result.path) ?? 'docx'
+    let parsed: ParsedDocFull
+    let odt: OdtBaseline | undefined
+    if (format === 'odt') {
+      // the editor shows the bridge docx; saves patch the ODT kept here. A
+      // 0-byte .odt opens as an empty ODT made from the blank template.
+      const original =
+        bytes.byteLength === 0 ? (await docxToOdt(await blankDocxBytes())).odtBytes : bytes
+      const opened = await parseOdtOffThread(original)
+      parsed = opened.parsed
+      odt = { original, bridge: opened.bridge, report: opened.report }
+    } else {
+      // a 0-byte .docx (touch, failed download) is not a corrupt archive but an
+      // empty document: open the blank template under the file's own path
+      parsed = await parseDocxOffThread(bytes.byteLength === 0 ? await blankDocxBytes() : bytes, {
+        owned: true,
+      })
+    }
     if (generation !== openGeneration) return 'superseded'
     const tier = openTierFor(docWeight(parsed.blocks))
     if (tier === 'refuse') {
@@ -438,6 +456,8 @@ export async function loadFile(
       fileName: result.name,
       hash: result.hash,
       encrypted: result.encrypted,
+      format,
+      ...(odt ? { odt } : {}),
     })
     ctx.onRevisionsLoaded(blocksHaveRevisions(parsed.blocks))
     // this tab's document was replaced: a password parked for the previous
@@ -536,9 +556,14 @@ export async function loadFile(
     return 'ok'
   } catch (err) {
     if (generation !== openGeneration) return 'superseded'
+    // a password-protected ODT is not opened: the user removes the password
+    // where it was set and opens the file again
+    const message = isOdtOpenError(err, 'encrypted')
+      ? t('appOdtEncrypted', { name: result.name })
+      : t('appOpenFailed', { error: String(err) })
     // visible failure: the status-bar line alone is easy to miss under the start screen
-    ctx.setStatus(t('appOpenFailed', { error: String(err) }))
-    showToast(t('appOpenFailed', { error: String(err) }), 'error')
+    ctx.setStatus(message)
+    showToast(message, 'error')
     return 'failed'
   }
 }
@@ -582,7 +607,14 @@ export async function newFile(ctx: FileActionContext): Promise<boolean | undefin
     resetEditorHistory(ctx.editor)
     focusDocumentStart(ctx.editor)
     noteDocumentSwapped()
-    ctx.setDoc({ parsed, filePath: null, fileName: t('appUntitledDocx'), hash: '', isBlank: true })
+    ctx.setDoc({
+      parsed,
+      filePath: null,
+      fileName: t('appUntitledDocx'),
+      hash: '',
+      isBlank: true,
+      format: 'docx',
+    })
     // a very large document opened in Read Mode must not leave it on for the new one
     ctx.setReadMode(false)
     ctx.setLargeDocSpellOff(false)
@@ -826,13 +858,12 @@ export async function writeRecoveryCopy(ctx: FileActionContext): Promise<void> {
     return
   }
   try {
-    const bytes = await buildDocBytes(ctx)
-    if (!bytes) return
-    const buffer = bytes.buffer.slice(
-      bytes.byteOffset,
-      bytes.byteOffset + bytes.byteLength,
-    ) as ArrayBuffer
-    await window.desktop.writeRecoveryCopy(doc.filePath, buffer)
+    const docx = await buildDocBytes(ctx)
+    if (!docx) return
+    // an ODT tab's copy is the ODT a save would write now: restoring it opens
+    // an ODT document again, and its save writes ODT
+    const bytes = isOdtDoc(doc) ? await odtBytesFor(doc.odt, docx) : docx
+    await window.desktop.writeRecoveryCopy(doc.filePath, toArrayBuffer(bytes))
   } catch {
     /* best-effort */
   }
@@ -970,6 +1001,80 @@ export async function applyAiDocContent(
   await save(ctx, false, true, `${content.title}.docx`)
 }
 
+function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
+  return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer
+}
+
+/** The edited bridge docx written back into the document's ODT (no edit → the ODT's own bytes). */
+export function odtBytesFor(baseline: OdtBaseline, editedDocx: Uint8Array): Promise<Uint8Array> {
+  return saveOdt({ originalOdt: baseline.original, bridge: baseline.bridge, editedDocx })
+}
+
+/** a docx → ODT conversion drops the document's open password: say so in the list */
+function withOpenPassword(report: ConversionReport, encrypted: boolean): ConversionReport {
+  if (!encrypted || report.some((item) => item.feature === 'password')) return report
+  return [...report, { kind: 'dropped', feature: 'password', count: 1 }]
+}
+
+/**
+ * Save As to the other format. docx → ODT pictures the page's charts,
+ * equations, shapes and text boxes and converts the edited docx; ODT → docx
+ * writes the edited bridge docx through the normal docx path. When the format
+ * change converts or leaves anything out, the user confirms the list first
+ * (cancel = nothing written). The tab then reloads from the new file — it is
+ * that format now, and undo starts over. The original file is never touched.
+ */
+async function saveWithFormatChange(
+  ctx: FileActionContext,
+  editor: Editor,
+  doc: DocState,
+  targetPath: string,
+  docx: Uint8Array,
+  target: DocFormat,
+  auto: boolean,
+): Promise<boolean> {
+  ctx.setStatus(t('appSavingAsFormat', { format: target.toUpperCase() }))
+  let data: Uint8Array
+  let report: ConversionReport
+  if (target === 'odt') {
+    // lazily served pictures are only placeholders in the editor's docx
+    let whole = docx
+    if (doc.parsed.extras.lazyMediaHashes.length > 0) {
+      const full = await window.desktop.materializeDocx(toArrayBuffer(docx))
+      if (!full) throw new Error('document pictures unavailable')
+      whole = await fetchDocBytes(full.dataUrl)
+    }
+    const renderedObjects = await captureRenderedObjects(editor, await parseDocx(whole))
+    const converted = await docxToOdt(whole, { renderedObjects })
+    data = converted.odtBytes
+    report = withOpenPassword(converted.report, doc.encrypted === true)
+  } else {
+    // the edited bridge docx is the docx (the report was made when the ODT opened).
+    // Hook: placeholders without a preview picture get the editor's label picture here.
+    data = docx
+    report = isOdtDoc(doc) ? doc.odt.report : []
+  }
+  if (report.length > 0 && !(await confirmFormatChange({ to: target, report }))) {
+    ctx.setStatus('')
+    return false
+  }
+  const result = await window.desktop.saveDocxAs(targetPath, toArrayBuffer(data), doc.filePath)
+  if (!result.ok) {
+    if (result.error) {
+      ctx.setStatus(t('appSaveFailed', { error: result.error }))
+      if (!auto) showToast(t('appSaveFailed', { error: result.error }), 'error')
+    }
+    return false
+  }
+  // the tab shows the file just written, in its new format
+  const opened = await window.desktop.openDocxPath(result.path ?? targetPath)
+  const outcome = await loadFile(ctx, opened)
+  if (outcome !== 'ok') return false
+  ctx.setStatus(t('appSaved'))
+  if (!auto) showToast(t('appSaved'))
+  return true
+}
+
 async function saveOnce(
   ctx: FileActionContext,
   saveAs: boolean,
@@ -993,12 +1098,16 @@ async function saveOnce(
     const fontSettingsVersion = ctx.fontSettingsVersionRef?.current
     const docSnapshot = editor.state.doc
     const selectionPos = editor.state.selection.from
-    const bytes = await buildDocBytes(ctx)
-    if (!bytes) return false
-    const buffer = bytes.buffer.slice(
-      bytes.byteOffset,
-      bytes.byteOffset + bytes.byteLength,
-    ) as ArrayBuffer
+    const docx = await buildDocBytes(ctx)
+    if (!docx) return false
+    const format: DocFormat = isOdtDoc(doc) ? 'odt' : 'docx'
+    // what lands on disk: the edited docx itself, or for an ODT document that
+    // docx written back into its ODT (unchanged → the ODT's own bytes)
+    let bytes = docx
+    const fileBytes = async (): Promise<ArrayBuffer> => {
+      if (isOdtDoc(doc)) bytes = await odtBytesFor(doc.odt, docx)
+      return toArrayBuffer(bytes)
+    }
     // a pathless snapshot may belong to a document that an earlier queued pass
     // already landed on disk — overwrite that file instead of creating another
     let savedPath = doc.filePath ?? pathlessDocSavedPath
@@ -1007,9 +1116,16 @@ async function saveOnce(
     if (explicitTarget) {
       // MCP-driven explicit output: no dialog, no derived name — always write to
       // the caller's path (overwrite policy is enforced in the main process).
+      // The tab's own format only: converting is the convert command's job.
+      if (docFormatOfPath(explicitTarget.path) !== format) {
+        const error = t('appSaveFormatMismatch', { ext: format })
+        ctx.setStatus(t('appSaveFailed', { error }))
+        explicitTarget.onError?.(error)
+        return false
+      }
       const result = await window.desktop.saveDocxTo(
         explicitTarget.path,
-        buffer,
+        await fileBytes(),
         explicitTarget.overwrite,
       )
       if (!result.ok) {
@@ -1028,9 +1144,27 @@ async function saveOnce(
         !doc.filePath && doc.fileName === t('appUntitledDocx') ? deriveAutoFileName(editor) : null
       // Save As keeps the dialog; a new document's first save lands silently in the default
       // folder. The source path identifies the desired password state to snapshot.
-      const result = saveAs
-        ? await window.desktop.saveDocxAs(autoName ?? doc.fileName, buffer, doc.filePath)
-        : await window.desktop.saveDocxNew(newDocName ?? autoName ?? doc.fileName, buffer)
+      let result: Awaited<ReturnType<typeof window.desktop.saveDocxAs>>
+      if (saveAs) {
+        // the dialog offers both formats; the picked extension is the format written
+        const pick = await window.desktop.pickSaveAsPath(
+          autoName ?? doc.fileName,
+          doc.filePath,
+          format,
+        )
+        if (!pick) return false
+        const target = docFormatOfPath(pick.path) ?? format
+        if (target !== format) {
+          return await saveWithFormatChange(ctx, editor, doc, pick.path, docx, target, auto)
+        }
+        result = await window.desktop.saveDocxAs(pick.path, await fileBytes(), doc.filePath)
+      } else {
+        // a pathless document is always a new docx
+        result = await window.desktop.saveDocxNew(
+          newDocName ?? autoName ?? doc.fileName,
+          await fileBytes(),
+        )
+      }
       if (!result.ok) {
         if (result.error) {
           ctx.setStatus(t('appSaveFailed', { error: result.error }))
@@ -1043,7 +1177,7 @@ async function saveOnce(
       if (result.dataUrl) fullBytes = await fetchDocBytes(result.dataUrl)
       if (!doc.filePath) pathlessDocSavedPath = savedPath
     } else {
-      const result = await window.desktop.saveDocx(savedPath, buffer, auto)
+      const result = await window.desktop.saveDocx(savedPath, await fileBytes(), auto)
       if (!result.ok) {
         // external-modified: the main process already prompted (or the autosave
         // deferred to a manual save) — stay dirty, no second dialog/error banner
@@ -1056,8 +1190,18 @@ async function saveOnce(
       passwordIntentPending = result.passwordIntentPending === true
       if (result.dataUrl) fullBytes = await fetchDocBytes(result.dataUrl)
     }
-    // parse before the identity check: a document opened during this await must not be rewritten
-    const reparsed = await parseDocxOffThread(fullBytes ?? bytes)
+    // parse before the identity check: a document opened during this await must not be rewritten.
+    // An ODT re-baselines on the bytes just written: they become the next save's
+    // original, and their bridge docx/map the editor's new reference.
+    let rebased: OdtBaseline | undefined
+    let reparsed: ParsedDocFull
+    if (format === 'odt') {
+      const reopened = await parseOdtOffThread(bytes)
+      reparsed = reopened.parsed
+      rebased = { original: bytes, bridge: reopened.bridge, report: reopened.report }
+    } else {
+      reparsed = await parseDocxOffThread(fullBytes ?? bytes)
+    }
     if (
       editor.state.doc !== docSnapshot ||
       passwordIntentPending ||
@@ -1118,6 +1262,7 @@ async function saveOnce(
             parsed: reparsed,
             filePath: savedPath,
             fileName: savedPath?.split(/[\\/]/).pop() ?? prev.fileName,
+            ...(rebased ? { odt: rebased } : {}),
           }
         : prev,
     )
@@ -1469,7 +1614,7 @@ export async function exportImages(ctx: FileActionContext): Promise<boolean> {
   }
   const pdf = await window.desktop.takeExportPdf(target.pdfPath)
   if (!pdf.ok || !pdf.base64) return fail(pdf.error ?? '')
-  const baseName = doc.fileName.replace(/\.docx$/i, '')
+  const baseName = doc.fileName.replace(/\.(?:docx|odt)$/i, '')
   try {
     const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs')
     const { default: workerUrl } = await import('pdfjs-dist/legacy/build/pdf.worker.min.mjs?url')
@@ -1525,7 +1670,7 @@ export async function exportHtml(ctx: FileActionContext, outPath?: string): Prom
     getComputedStyle(root).getPropertyValue('--section-content-w'),
   )
   const html = buildStandaloneHtml(root, {
-    title: doc.fileName.replace(/\.docx$/i, ''),
+    title: doc.fileName.replace(/\.(?:docx|odt)$/i, ''),
     lang: getLang(),
     textWidthPx: Number.isFinite(textWidthPx) ? textWidthPx : root.clientWidth,
   })

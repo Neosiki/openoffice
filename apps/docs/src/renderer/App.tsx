@@ -280,6 +280,7 @@ import {
   IconWebLayout,
 } from './components/icons'
 import { ToastHost } from './components/toast'
+import { FormatChangeHost } from './components/FormatChangeDialog'
 import {
   AI_REWRITE_ACK_KEY,
   LinkInsertModal,
@@ -7108,6 +7109,7 @@ export function App() {
       className={`app ${readMode ? 'read-mode' : ''}${revisionDisplay !== 'all' ? ` rev-display-${revisionDisplay}` : ''}${revisionDisplay === 'all' && viewMode === 'print' ? ' rev-balloon' : ''}`}
     >
       <ToastHost />
+      <FormatChangeHost />
       {docCss && <style data-doc-css="">{docCss}</style>}
       {liveLineFactor != null && (
         <style data-doc-css="">{`.doc-page { --doc-line-factor:${liveLineFactor} }`}</style>
