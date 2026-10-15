@@ -146,5 +146,18 @@ export const ru = {
   errAllPages: 'Нельзя удалить все страницы.',
   errNotFound: 'Сначала найдите пустые страницы.',
   errNoneChosen: 'Выберите хотя бы одну страницу для удаления.',
+  groupSizeSecurity: 'Размер и защита',
+  toolCompress: 'Уменьшить размер',
+  descCompress: 'Уменьшить и пережать крупные изображения, чтобы файл стал меньше',
+  optLevel: 'Степень',
+  levelLight: 'Слабо (сначала качество)',
+  levelMedium: 'Средне',
+  levelStrong: 'Сильно (сначала размер)',
+  noteCompress:
+    'Текст и рисунки не меняются; уменьшаются только крупные изображения. Ничего не сохраняется, если результат не меньше.',
+  workingProgress: 'Обработка… {done} / {total}',
+  cancelRun: 'Остановить',
+  doneCompressed: 'Создан новый файл: {name} ({before} → {after})',
+  errNotSmaller: 'Этот PDF не удалось уменьшить. Продолжайте пользоваться оригиналом.',
   close: 'Закрыть',
 } satisfies Record<keyof typeof zh, string>

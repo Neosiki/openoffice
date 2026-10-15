@@ -147,5 +147,18 @@ export const es = {
   errAllPages: 'No se pueden quitar todas las páginas.',
   errNotFound: 'Busque primero las páginas en blanco.',
   errNoneChosen: 'Elija al menos una página que quitar.',
+  groupSizeSecurity: 'Tamaño y seguridad',
+  toolCompress: 'Reducir tamaño',
+  descCompress: 'Reducir y recomprimir las imágenes grandes para que el archivo pese menos',
+  optLevel: 'Intensidad',
+  levelLight: 'Ligera (calidad primero)',
+  levelMedium: 'Media',
+  levelStrong: 'Fuerte (tamaño primero)',
+  noteCompress:
+    'El texto y los dibujos no cambian; solo se reducen las imágenes grandes. No se guarda nada si el resultado no es más pequeño.',
+  workingProgress: 'Procesando… {done} / {total}',
+  cancelRun: 'Detener',
+  doneCompressed: 'Archivo nuevo creado: {name} ({before} → {after})',
+  errNotSmaller: 'No se pudo reducir este PDF. Siga usando el original.',
   close: 'Cerrar',
 } satisfies Record<keyof typeof zh, string>

@@ -146,5 +146,18 @@ export const ms = {
   errAllPages: 'Tidak boleh membuang semua halaman.',
   errNotFound: 'Cari halaman kosong dahulu.',
   errNoneChosen: 'Pilih sekurang-kurangnya satu halaman untuk dibuang.',
+  groupSizeSecurity: 'Saiz dan keselamatan',
+  toolCompress: 'Kecilkan saiz',
+  descCompress: 'Kecilkan dan mampatkan semula imej besar supaya fail lebih kecil',
+  optLevel: 'Tahap',
+  levelLight: 'Ringan (kualiti dahulu)',
+  levelMedium: 'Sederhana',
+  levelStrong: 'Kuat (saiz dahulu)',
+  noteCompress:
+    'Teks dan lukisan kekal seperti asal; hanya imej besar dikecilkan. Tiada apa-apa disimpan jika hasilnya tidak lebih kecil.',
+  workingProgress: 'Memproses… {done} / {total}',
+  cancelRun: 'Henti',
+  doneCompressed: 'Fail baharu dibuat: {name} ({before} → {after})',
+  errNotSmaller: 'PDF ini tidak dapat dikecilkan. Teruskan menggunakan fail asal.',
   close: 'Tutup',
 } satisfies Record<keyof typeof zh, string>

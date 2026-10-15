@@ -18,6 +18,8 @@ export const PDF_TOOLS_CHANNELS = {
   openInEditor: 'pdf-tools:open-in-editor',
   findBlankPages: 'pdf-tools:find-blank-pages',
   cancelFind: 'pdf-tools:cancel-find',
+  /** stop a tool that reports progress (compress) */
+  cancelRun: 'pdf-tools:cancel-run',
   /** the task the PDF editor's ribbon asked for, taken once */
   takeStart: 'pdf-tools:take-start',
   /** main → window: a task from the ribbon is waiting */
@@ -43,6 +45,7 @@ export const PDF_TOOL_IDS = [
   'overlay',
   'stripAnnots',
   'blankPages',
+  'compress',
 ] as const
 export type PdfToolId = (typeof PDF_TOOL_IDS)[number]
 
@@ -106,6 +109,8 @@ export interface PdfToolOptions {
   annotKinds?: PdfToolAnnotKind[]
   /** blankPages: "3,7" style 1-based pages to remove, all among the pages found */
   removePages?: string
+  /** compress: how hard to shrink the pictures */
+  compressLevel?: 'light' | 'medium' | 'strong'
 }
 
 /** One picked file, as the window may see it: an opaque id, never the path */
@@ -141,6 +146,7 @@ export type PdfToolError =
   | 'all-pages'
   | 'not-found'
   | 'none-chosen'
+  | 'not-smaller'
   | 'failed'
 
 export interface PdfToolRunRequest {
@@ -153,7 +159,7 @@ export interface PdfToolRunRequest {
 }
 
 export type PdfToolRunResult =
-  | { ok: true; outputs: { id: string; name: string }[] }
+  | { ok: true; outputs: { id: string; name: string; size: number }[] }
   | { ok: false; canceled: true }
   | { ok: false; error: PdfToolError }
 
@@ -199,6 +205,7 @@ export interface PdfToolsWindowApi {
   /** look for blank pages in a picked PDF, in a process of its own */
   findBlankPages(inputId: string): Promise<PdfBlankPagesResult>
   cancelFind(): Promise<void>
+  cancelRun(): Promise<void>
   onProgress(handler: (done: number, total: number) => void): () => void
   /** the task the editor's ribbon opened this window on, once; null when none waits */
   takeStart(): Promise<PdfToolsStart | null>

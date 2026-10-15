@@ -166,6 +166,13 @@ describe('checking options', () => {
       ok: false,
       error: 'no-kinds',
     })
+    expect(checkOptions('compress', {}, 3).options).toEqual({ compressLevel: 'medium' })
+    expect(checkOptions('compress', { compressLevel: 'strong' }, 3).options).toEqual({
+      compressLevel: 'strong',
+    })
+    expect(checkOptions('compress', { compressLevel: 'max' }, 3).options).toEqual({
+      compressLevel: 'medium',
+    })
     expect(checkOptions('blankPages', { removePages: '4, 2,2,9' }, 5).options).toEqual({
       removePages: '2,4',
     })
@@ -325,6 +332,15 @@ describe('running each tool', () => {
     expect(await widths(out!)).toEqual([100, 102, 104])
   })
 
+  it('makes smaller only with the picture code, and names a file that did not shrink', async () => {
+    await expect(runPdfTool('compress', [await pdf(2)], {})).rejects.toThrow()
+    // already as small as pdf-lib writes it: nothing to win
+    const tight = await (await PDFDocument.load(await pdf(1))).save({ useObjectStreams: true })
+    await expect(
+      runPdfTool('compress', [tight], { compressLevel: 'light' }, { recode: async () => null }),
+    ).rejects.toBeInstanceOf(PdfToolRefusal)
+  })
+
   it('refuses a PDF with no text at all', async () => {
     await expect(runPdfTool('toText', [await textPdf(['', ''])], {})).rejects.toBeInstanceOf(
       PdfToolRefusal,
@@ -377,5 +393,6 @@ describe('suggested file names', () => {
     expect(outputNames('duplex', 'a.pdf', 1, {})).toEqual(['a-duplex.pdf'])
     expect(outputNames('overlay', 'a.pdf', 1, {})).toEqual(['a-background.pdf'])
     expect(outputNames('stripAnnots', 'a.pdf', 1, {})).toEqual(['a-clean.pdf'])
+    expect(outputNames('compress', 'a.pdf', 1, {})).toEqual(['a-smaller.pdf'])
   })
 })

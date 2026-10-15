@@ -66,6 +66,14 @@ describe('paths stay in the main process', () => {
     expect(win).toMatch(/event\.sender !== parent\.webContents/)
   })
 
+  it("shrinks pictures with Chromium's code in the main process, and can be stopped", () => {
+    expect(win).toMatch(/recode: recodeWithChromium,\s*signal: stop\.signal,/)
+    expect(win).toMatch(
+      /PDF_TOOLS_CHANNELS\.cancelRun[\s\S]*?fromWindow\(event\)\) runStop\?\.abort\(\)/,
+    )
+    expect(src('../src/main/pdf-tools/image-recode.ts')).toMatch(/size\.width !== source\.width/)
+  })
+
   it('opens a picked PDF without reloading an open tab, and only its own results with a reload', () => {
     expect(win).toMatch(/deps\.openForEditing\(path\)/)
     expect(win).toMatch(/results\.get\(id\)[\s\S]*deps\?\.openResult\(path\)/)

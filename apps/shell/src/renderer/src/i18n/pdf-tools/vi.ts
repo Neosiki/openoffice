@@ -146,5 +146,18 @@ export const vi = {
   errAllPages: 'Không thể xóa tất cả các trang.',
   errNotFound: 'Hãy tìm trang trống trước.',
   errNoneChosen: 'Hãy chọn ít nhất một trang cần xóa.',
+  groupSizeSecurity: 'Kích thước và bảo mật',
+  toolCompress: 'Giảm dung lượng',
+  descCompress: 'Thu nhỏ và nén lại các ảnh lớn để tệp nhẹ hơn',
+  optLevel: 'Mức độ',
+  levelLight: 'Nhẹ (ưu tiên chất lượng)',
+  levelMedium: 'Vừa',
+  levelStrong: 'Mạnh (ưu tiên kích thước)',
+  noteCompress:
+    'Chữ và hình vẽ giữ nguyên; chỉ các ảnh lớn được thu nhỏ. Không lưu gì nếu kết quả không nhỏ hơn.',
+  workingProgress: 'Đang xử lý… {done} / {total}',
+  cancelRun: 'Dừng',
+  doneCompressed: 'Đã tạo tệp mới: {name} ({before} → {after})',
+  errNotSmaller: 'Không thể làm PDF này nhỏ hơn. Hãy tiếp tục dùng tệp gốc.',
   close: 'Đóng',
 } satisfies Record<keyof typeof zh, string>

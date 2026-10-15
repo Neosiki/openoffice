@@ -146,5 +146,18 @@ export const pl = {
   errAllPages: 'Nie można usunąć wszystkich stron.',
   errNotFound: 'Najpierw znajdź puste strony.',
   errNoneChosen: 'Wybierz co najmniej jedną stronę do usunięcia.',
+  groupSizeSecurity: 'Rozmiar i bezpieczeństwo',
+  toolCompress: 'Zmniejsz rozmiar',
+  descCompress: 'Zmniejsz i ponownie skompresuj duże obrazy, aby plik był mniejszy',
+  optLevel: 'Stopień',
+  levelLight: 'Lekki (najpierw jakość)',
+  levelMedium: 'Średni',
+  levelStrong: 'Mocny (najpierw rozmiar)',
+  noteCompress:
+    'Tekst i rysunki zostają bez zmian; zmniejszane są tylko duże obrazy. Nic nie zostanie zapisane, jeśli wynik nie jest mniejszy.',
+  workingProgress: 'Przetwarzanie… {done} / {total}',
+  cancelRun: 'Zatrzymaj',
+  doneCompressed: 'Utworzono nowy plik: {name} ({before} → {after})',
+  errNotSmaller: 'Nie udało się zmniejszyć tego PDF. Używaj dalej oryginału.',
   close: 'Zamknij',
 } satisfies Record<keyof typeof zh, string>

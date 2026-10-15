@@ -56,6 +56,7 @@ import {
   toolOutputExtension,
   toolTakesMany,
 } from './tools'
+import { recodeWithChromium } from './image-recode'
 
 export interface PdfToolsWindowDeps {
   /** the window the tools window sits above */
@@ -98,6 +99,8 @@ const results = new Map<string, string>()
 const blankFound = new Map<string, Set<number>>()
 /** the running blank-page search's job id */
 let finding: string | null = null
+/** stops the running tool when the window asks */
+let runStop: AbortController | null = null
 /** a task the PDF editor's ribbon asked for, until the window takes it */
 let pendingStart: PdfToolsStart | null = null
 
@@ -217,9 +220,19 @@ async function run(raw: unknown): Promise<PdfToolRunResult> {
     }
     let made: Uint8Array[]
     try {
-      made = await runPdfTool(tool, bytes, checked.options)
+      const stop = new AbortController()
+      runStop = stop
+      const contents = owner.webContents
+      made = await runPdfTool(tool, bytes, checked.options, {
+        recode: recodeWithChromium,
+        signal: stop.signal,
+        onProgress: (done, total) => {
+          if (!contents.isDestroyed()) contents.send(PDF_TOOLS_CHANNELS.progress, { done, total })
+        },
+      })
     } catch (err) {
       if (err instanceof PdfToolRefusal) return { ok: false, error: err.reason }
+      if (runStop?.signal.aborted) return { ok: false, canceled: true }
       throw err
     }
     const names = outputNames(tool, sources[0]!.name, made.length, checked.options)
@@ -231,18 +244,19 @@ async function run(raw: unknown): Promise<PdfToolRunResult> {
       }
       if (await fileHasUnsavedChanges(target)) return { ok: false, error: 'unsaved-target' }
     }
-    const outputs: { id: string; name: string }[] = []
+    const outputs: { id: string; name: string; size: number }[] = []
     for (let i = 0; i < made.length; i++) {
       await writePdfAtomically(targets[i]!, made[i]!)
       const id = randomUUID()
       results.set(id, targets[i]!)
-      outputs.push({ id, name: basename(targets[i]!) })
+      outputs.push({ id, name: basename(targets[i]!), size: made[i]!.length })
     }
     return { ok: true, outputs }
   } catch {
     return { ok: false, error: 'failed' }
   } finally {
     running = false
+    runStop = null
   }
 }
 
@@ -391,6 +405,9 @@ function registerIpc(): void {
   ipcMain.handle(PDF_TOOLS_CHANNELS.findBlankPages, (event, inputId: unknown) => {
     if (!fromWindow(event)) return { ok: false, error: 'failed' }
     return findBlankPages(inputId)
+  })
+  ipcMain.handle(PDF_TOOLS_CHANNELS.cancelRun, (event) => {
+    if (fromWindow(event)) runStop?.abort()
   })
   ipcMain.handle(PDF_TOOLS_CHANNELS.cancelFind, (event) => {
     if (fromWindow(event) && finding) deps?.cancelJob(event.sender.id, finding)

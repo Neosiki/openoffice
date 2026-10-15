@@ -38,6 +38,7 @@ import {
   IconOverlay,
   IconStripAnnots,
   IconBlankPages,
+  IconCompress,
   IconWatermark,
 } from '../../../../../pdf/src/renderer/icons'
 
@@ -51,6 +52,7 @@ const GROUPS: { label: PdfToolsStringKey; tools: PdfToolId[] }[] = [
   { label: 'groupDecorate', tools: ['overlay'] },
   { label: 'groupClean', tools: ['stripAnnots'] },
   { label: 'groupConvert', tools: ['imagesToPdf', 'toText'] },
+  { label: 'groupSizeSecurity', tools: ['compress'] },
 ]
 
 /** Tools that take several files; imagesToPdf takes pictures */
@@ -81,6 +83,7 @@ const TOOL_TEXT: Record<PdfToolId | PdfEditorToolId, [PdfToolsStringKey, PdfTool
   overlay: ['toolOverlay', 'descOverlay'],
   stripAnnots: ['toolStripAnnots', 'descStripAnnots'],
   blankPages: ['toolBlankPages', 'descBlankPages'],
+  compress: ['toolCompress', 'descCompress'],
   stamps: ['toolStamps', 'descStamps'],
   crop: ['toolCrop', 'descCrop'],
   exportImages: ['toolExportImages', 'descExportImages'],
@@ -104,6 +107,7 @@ const ERROR_TEXT: Record<PdfToolError, PdfToolsStringKey> = {
   'all-pages': 'errAllPages',
   'not-found': 'errNotFound',
   'none-chosen': 'errNoneChosen',
+  'not-smaller': 'errNotSmaller',
   failed: 'errFailed',
 }
 
@@ -128,10 +132,17 @@ const DEFAULT_OPTIONS: PdfToolOptions = {
   imagePaper: 'A4',
   margin: 'small',
   sheetPages: 1,
+  compressLevel: 'medium',
   layer: 'behind',
   backgroundPage: 1,
   applyPages: '',
   annotKinds: PDF_TOOL_ANNOT_KINDS.filter((kind) => kind !== 'links'),
+}
+
+const LEVEL_TEXT: Record<'light' | 'medium' | 'strong', PdfToolsStringKey> = {
+  light: 'levelLight',
+  medium: 'levelMedium',
+  strong: 'levelStrong',
 }
 
 const ANNOT_KIND_TEXT: Record<PdfToolAnnotKind, PdfToolsStringKey> = {
@@ -156,7 +167,7 @@ type View =
   { kind: 'home' } | { kind: 'tool'; tool: PdfToolId } | { kind: 'editor'; tool: PdfEditorToolId }
 
 type Outcome =
-  | { kind: 'done'; outputs: { id: string; name: string }[] }
+  | { kind: 'done'; outputs: { id: string; name: string; size: number }[] }
   | { kind: 'error'; message: string }
   | null
 
@@ -176,6 +187,7 @@ const TOOL_ICON: Record<PdfToolId | PdfEditorToolId, () => ReactElement> = {
   overlay: IconOverlay,
   stripAnnots: IconStripAnnots,
   blankPages: IconBlankPages,
+  compress: IconCompress,
   stamps: IconWatermark,
   crop: IconCropPages,
   exportImages: IconExportImg,
@@ -205,6 +217,8 @@ export function PdfToolsWindow({ lang }: { lang: Lang }) {
   const [outcome, setOutcome] = useState<Outcome>(null)
   /** blankPages: the search, what it found, and the pages the user picked */
   const [blank, setBlank] = useState<BlankState>(NO_BLANK)
+  /** a long tool's progress while it runs (compress) */
+  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null)
 
   const openTool = (next: View) => {
     setView(next)
@@ -276,6 +290,7 @@ export function PdfToolsWindow({ lang }: { lang: Lang }) {
   const runTool = async (tool: PdfToolId) => {
     setBusy(true)
     setOutcome(null)
+    const stop = api.onProgress((done, total) => setProgress({ done, total }))
     try {
       const result = await api.run({
         tool,
@@ -288,6 +303,8 @@ export function PdfToolsWindow({ lang }: { lang: Lang }) {
       else if ('error' in result)
         setOutcome({ kind: 'error', message: t(ERROR_TEXT[result.error]) })
     } finally {
+      stop()
+      setProgress(null)
       setBusy(false)
     }
   }
@@ -392,6 +409,8 @@ export function PdfToolsWindow({ lang }: { lang: Lang }) {
             inputs={inputs}
             background={background}
             blank={blank}
+            progress={progress}
+            onCancelRun={() => void api.cancelRun()}
             onFindBlank={() => void findBlank()}
             onCancelFind={() => void api.cancelFind()}
             onChooseBlank={(chosen) => setBlank((prev) => ({ ...prev, chosen }))}
@@ -431,6 +450,8 @@ interface ToolPanelProps {
   inputs: PdfToolInput[]
   background: PdfToolInput | null
   blank: BlankState
+  progress: { done: number; total: number } | null
+  onCancelRun(): void
   onFindBlank(): void
   onCancelFind(): void
   onChooseBlank(pages: number[]): void
@@ -613,6 +634,16 @@ function ToolPanel(p: ToolPanelProps) {
           {p.busy ? t('running') : t('run')}
         </button>
       </div>
+      {p.busy && p.progress && (
+        <div className="pt-actions" role="status">
+          <span className="pt-hint">
+            {t('workingProgress', { done: p.progress.done, total: p.progress.total })}
+          </span>
+          <button type="button" className="pt-btn" onClick={p.onCancelRun}>
+            {t('cancelRun')}
+          </button>
+        </div>
+      )}
 
       {p.outcome?.kind === 'error' && (
         <p className="pt-note pt-note-error" role="alert">
@@ -623,7 +654,13 @@ function ToolPanel(p: ToolPanelProps) {
         <div className="pt-note pt-note-done" role="status">
           <span>
             {done.length === 1
-              ? t('doneOne', { name: firstOutput.name })
+              ? tool === 'compress' && first
+                ? t('doneCompressed', {
+                    name: firstOutput.name,
+                    before: formatBytes(first.size, p.lang),
+                    after: formatBytes(firstOutput.size, p.lang),
+                  })
+                : t('doneOne', { name: firstOutput.name })
               : t('doneMany', { n: done.length })}
           </span>
           <span className="pt-done-actions">
@@ -901,6 +938,24 @@ function Options({ tool, t, options, pages, backgroundPages, onChange }: Options
             />
           </label>
           <p className="pt-hint">{t('noteOverlay')}</p>
+        </div>
+      )
+    case 'compress':
+      return (
+        <div className="pt-fields">
+          <fieldset className="pt-field pt-choices">
+            <legend className="pt-field-label">{t('optLevel')}</legend>
+            {(['light', 'medium', 'strong'] as const).map((level) => (
+              <Choice
+                key={level}
+                name="compressLevel"
+                checked={(options.compressLevel ?? 'medium') === level}
+                label={t(LEVEL_TEXT[level])}
+                onPick={() => onChange({ compressLevel: level })}
+              />
+            ))}
+          </fieldset>
+          <p className="pt-hint">{t('noteCompress')}</p>
         </div>
       )
     case 'duplex':

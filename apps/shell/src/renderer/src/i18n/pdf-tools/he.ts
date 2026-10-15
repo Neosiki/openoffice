@@ -143,5 +143,18 @@ export const he = {
   errAllPages: 'אי אפשר להסיר את כל העמודים.',
   errNotFound: 'חפשו קודם את העמודים הריקים.',
   errNoneChosen: 'בחרו לפחות עמוד אחד להסרה.',
+  groupSizeSecurity: 'גודל ואבטחה',
+  toolCompress: 'הקטנת הגודל',
+  descCompress: 'הקטנה ודחיסה מחדש של תמונות גדולות כדי שהקובץ יהיה קטן יותר',
+  optLevel: 'מידה',
+  levelLight: 'קלה (איכות קודם)',
+  levelMedium: 'בינונית',
+  levelStrong: 'חזקה (גודל קודם)',
+  noteCompress:
+    'הטקסט והשרטוטים נשארים כמו שהם; רק תמונות גדולות מוקטנות. לא נשמר דבר אם התוצאה אינה קטנה יותר.',
+  workingProgress: 'מעבד… {done} / {total}',
+  cancelRun: 'עצירה',
+  doneCompressed: 'נוצר קובץ חדש: {name} ({before} → {after})',
+  errNotSmaller: 'לא ניתן היה להקטין את ה-PDF הזה. המשיכו להשתמש במקור.',
   close: 'סגירה',
 } satisfies Record<keyof typeof zh, string>

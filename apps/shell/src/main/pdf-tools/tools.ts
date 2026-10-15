@@ -19,6 +19,11 @@ import { imagesToPdfBytes, readImageInfo } from '../../../../pdf/src/main/images
 import { duplexMergeBytes } from '../../../../pdf/src/main/print-prep'
 import { overlayPdfBytes } from '../../../../pdf/src/main/overlay'
 import { stripAnnotsBytes } from '../../../../pdf/src/main/annot-strip'
+import {
+  COMPRESS_LEVELS,
+  compressPdfBytes,
+  type ImageRecoder,
+} from '../../../../pdf/src/main/compress'
 import { readPdfText, type PdfPageText } from '../../../../pdf/src/main/read-text'
 import { parsePageRange } from '../../../../pdf/src/renderer/convert/page-range'
 import {
@@ -80,7 +85,7 @@ export function toolOutputExtension(tool: PdfToolId): 'pdf' | 'txt' {
  * or none of the chosen kinds of annotation (stripAnnots)
  */
 export class PdfToolRefusal extends Error {
-  constructor(readonly reason: 'no-text' | 'no-annots') {
+  constructor(readonly reason: 'no-text' | 'no-annots' | 'not-smaller') {
     super(reason)
   }
 }
@@ -166,6 +171,15 @@ export function checkOptions(
       }
     case 'splitPages':
       return { ok: true, options: { perPage: o.perPage === 4 || o.perPage === 9 ? o.perPage : 2 } }
+    case 'compress':
+      return {
+        ok: true,
+        options: {
+          compressLevel: (COMPRESS_LEVELS as readonly unknown[]).includes(o.compressLevel)
+            ? (o.compressLevel as 'light' | 'medium' | 'strong')
+            : 'medium',
+        },
+      }
     case 'blankPages': {
       const raw = typeof o.removePages === 'string' ? o.removePages : ''
       const pages = [...new Set(raw.split(',').map((p) => Number(p.trim())))]
@@ -230,10 +244,18 @@ export function checkOptions(
 }
 
 /** Run `tool` on `inputs` (already checked); one file, or one per part for split */
+/** What a long tool needs from the window: Chromium's picture code, progress, a stop */
+export interface RunDeps {
+  recode?: ImageRecoder
+  onProgress?: (done: number, total: number) => void
+  signal?: AbortSignal
+}
+
 export async function runPdfTool(
   tool: PdfToolId,
   inputs: Uint8Array[],
   options: PdfToolOptions,
+  deps: RunDeps = {},
 ): Promise<Uint8Array[]> {
   const [first, ...rest] = inputs
   if (!first) throw new Error('no input')
@@ -308,6 +330,16 @@ export async function runPdfTool(
         }),
       ]
     }
+    case 'compress': {
+      if (!deps.recode) throw new Error('no picture code')
+      const made = await compressPdfBytes(first, options.compressLevel ?? 'medium', deps.recode, {
+        ...(deps.onProgress ? { onProgress: deps.onProgress } : {}),
+        ...(deps.signal ? { signal: deps.signal } : {}),
+      })
+      // a file that did not get smaller is not worth a copy
+      if (made.bytes.length >= first.length) throw new PdfToolRefusal('not-smaller')
+      return [made.bytes]
+    }
     case 'blankPages': {
       // the editor's own page removal on save, which keeps bookmarks and forms
       const deletedPages = (options.removePages ?? '').split(',').map((p) => Number(p) - 1)
@@ -363,6 +395,7 @@ export function outputNames(
     overlay: 'background',
     stripAnnots: 'clean',
     blankPages: 'no-blank',
+    compress: 'smaller',
     extract: 'pages',
     reverse: 'reversed',
     nup: `${options.perSheet ?? 2}up`,

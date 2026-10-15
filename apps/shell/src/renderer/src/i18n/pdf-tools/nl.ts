@@ -149,5 +149,19 @@ export const nl = {
   errAllPages: 'U kunt niet alle pagina’s verwijderen.',
   errNotFound: 'Zoek eerst de lege pagina’s.',
   errNoneChosen: 'Kies ten minste één pagina om te verwijderen.',
+  groupSizeSecurity: 'Grootte en beveiliging',
+  toolCompress: 'Kleiner maken',
+  descCompress:
+    'Grote afbeeldingen verkleinen en opnieuw comprimeren zodat het bestand kleiner wordt',
+  optLevel: 'Hoeveel',
+  levelLight: 'Licht (kwaliteit eerst)',
+  levelMedium: 'Gemiddeld',
+  levelStrong: 'Sterk (grootte eerst)',
+  noteCompress:
+    'Tekst en tekeningen blijven zoals ze zijn; alleen grote afbeeldingen worden verkleind. Er wordt niets opgeslagen als het resultaat niet kleiner is.',
+  workingProgress: 'Bezig… {done} / {total}',
+  cancelRun: 'Stoppen',
+  doneCompressed: 'Nieuw bestand gemaakt: {name} ({before} → {after})',
+  errNotSmaller: 'Deze pdf kon niet kleiner worden gemaakt. Gebruik het origineel.',
   close: 'Sluiten',
 } satisfies Record<keyof typeof zh, string>

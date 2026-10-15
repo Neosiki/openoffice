@@ -53,6 +53,9 @@ const api: PdfToolsWindowApi = {
       PdfBlankPagesResult | undefined
     return result ?? { ok: false, error: 'failed' }
   },
+  async cancelRun() {
+    await ipcRenderer.invoke(PDF_TOOLS_CHANNELS.cancelRun)
+  },
   async cancelFind() {
     await ipcRenderer.invoke(PDF_TOOLS_CHANNELS.cancelFind)
   },

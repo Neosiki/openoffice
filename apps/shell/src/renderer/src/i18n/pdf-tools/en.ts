@@ -145,5 +145,18 @@ export const en = {
   errAllPages: 'You cannot remove every page.',
   errNotFound: 'Find the blank pages first.',
   errNoneChosen: 'Pick at least one page to remove.',
+  groupSizeSecurity: 'Size and security',
+  toolCompress: 'Make smaller',
+  descCompress: 'Shrink and recompress large pictures to make the file smaller',
+  optLevel: 'How much',
+  levelLight: 'Light (quality first)',
+  levelMedium: 'Medium',
+  levelStrong: 'Strong (size first)',
+  noteCompress:
+    'Text and drawings stay as they are; only large pictures are shrunk. Nothing is saved unless the result is smaller.',
+  workingProgress: 'Working… {done} / {total}',
+  cancelRun: 'Stop',
+  doneCompressed: 'Made a new file: {name} ({before} → {after})',
+  errNotSmaller: 'This PDF could not be made smaller. Keep using the original.',
   close: 'Close',
 } satisfies Record<keyof typeof zh, string>

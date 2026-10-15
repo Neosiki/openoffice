@@ -431,6 +431,13 @@ export const IconBlankPages = () => (
     <path d="M17.8 16.8 L20.2 19.2" />
   </Icon>
 )
+/** Make smaller: a page pressed in from both sides */
+export const IconCompress = () => (
+  <Icon>
+    <rect x="8" y="4.5" width="8" height="15" rx="1" />
+    <path d="M3.5 12 H6.2 M5 10.6 L6.4 12 L5 13.4 M20.5 12 H17.8 M19 10.6 L17.6 12 L19 13.4" />
+  </Icon>
+)
 /** Save as text: a page of lines */
 export const IconToText = () => (
   <Icon>

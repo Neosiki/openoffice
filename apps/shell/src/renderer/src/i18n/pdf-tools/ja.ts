@@ -146,5 +146,19 @@ export const ja = {
   errAllPages: 'すべてのページは削除できません。',
   errNotFound: '先に白紙ページを探してください。',
   errNoneChosen: '削除するページを 1 つ以上選んでください。',
+  groupSizeSecurity: 'サイズとセキュリティ',
+  toolCompress: 'サイズを小さくする',
+  descCompress: '大きな画像を縮小・再圧縮してファイルを小さくします',
+  optLevel: '小さくする度合い',
+  levelLight: '弱（画質優先）',
+  levelMedium: '中',
+  levelStrong: '強（サイズ優先）',
+  noteCompress:
+    '文字や図形はそのままで、大きな画像だけを縮小します。元より小さくならない場合は保存しません。',
+  workingProgress: '処理中… {done} / {total}',
+  cancelRun: '中止',
+  doneCompressed: '新しいファイルを作成しました: {name}（{before} → {after}）',
+  errNotSmaller:
+    'この PDF はこれ以上小さくできませんでした。元のファイルをそのまま使ってください。',
   close: '閉じる',
 } satisfies Record<keyof typeof zh, string>

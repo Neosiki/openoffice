@@ -144,5 +144,18 @@ export const cs = {
   errAllPages: 'Nelze odebrat všechny stránky.',
   errNotFound: 'Nejdřív najděte prázdné stránky.',
   errNoneChosen: 'Vyberte aspoň jednu stránku k odebrání.',
+  groupSizeSecurity: 'Velikost a zabezpečení',
+  toolCompress: 'Zmenšit',
+  descCompress: 'Zmenší a znovu zkomprimuje velké obrázky, aby byl soubor menší',
+  optLevel: 'Míra',
+  levelLight: 'Mírně (kvalita napřed)',
+  levelMedium: 'Středně',
+  levelStrong: 'Silně (velikost napřed)',
+  noteCompress:
+    'Text a kresby zůstanou beze změny; zmenší se jen velké obrázky. Nic se neuloží, pokud výsledek není menší.',
+  workingProgress: 'Zpracovávám… {done} / {total}',
+  cancelRun: 'Zastavit',
+  doneCompressed: 'Vytvořen nový soubor: {name} ({before} → {after})',
+  errNotSmaller: 'Toto PDF se nepodařilo zmenšit. Používejte dál originál.',
   close: 'Zavřít',
 } satisfies Record<keyof typeof zh, string>

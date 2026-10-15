@@ -151,5 +151,18 @@ export const de = {
   errAllPages: 'Es können nicht alle Seiten entfernt werden.',
   errNotFound: 'Suchen Sie zuerst die leeren Seiten.',
   errNoneChosen: 'Wählen Sie mindestens eine Seite zum Entfernen.',
+  groupSizeSecurity: 'Größe und Sicherheit',
+  toolCompress: 'Verkleinern',
+  descCompress: 'Große Bilder verkleinern und neu komprimieren, damit die Datei kleiner wird',
+  optLevel: 'Stärke',
+  levelLight: 'Leicht (Qualität zuerst)',
+  levelMedium: 'Mittel',
+  levelStrong: 'Stark (Größe zuerst)',
+  noteCompress:
+    'Text und Zeichnungen bleiben unverändert; nur große Bilder werden verkleinert. Gespeichert wird nur, wenn das Ergebnis kleiner ist.',
+  workingProgress: 'Wird verarbeitet… {done} / {total}',
+  cancelRun: 'Abbrechen',
+  doneCompressed: 'Neue Datei erstellt: {name} ({before} → {after})',
+  errNotSmaller: 'Dieses PDF ließ sich nicht verkleinern. Verwenden Sie weiter das Original.',
   close: 'Schließen',
 } satisfies Record<keyof typeof zh, string>

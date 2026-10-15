@@ -144,5 +144,18 @@ export const ar = {
   errAllPages: 'لا يمكن إزالة كل الصفحات.',
   errNotFound: 'ابحث عن الصفحات الفارغة أولًا.',
   errNoneChosen: 'اختر صفحة واحدة على الأقل لإزالتها.',
+  groupSizeSecurity: 'الحجم والأمان',
+  toolCompress: 'تصغير الحجم',
+  descCompress: 'صغّر الصور الكبيرة وأعد ضغطها ليصبح الملف أصغر',
+  optLevel: 'المقدار',
+  levelLight: 'خفيف (الجودة أولًا)',
+  levelMedium: 'متوسط',
+  levelStrong: 'قوي (الحجم أولًا)',
+  noteCompress:
+    'يبقى النص والرسومات كما هي، وتُصغَّر الصور الكبيرة فقط. لا يُحفظ شيء إذا لم تكن النتيجة أصغر.',
+  workingProgress: 'جارٍ المعالجة… {done} / {total}',
+  cancelRun: 'إيقاف',
+  doneCompressed: 'أُنشئ ملف جديد: {name} ({before} → {after})',
+  errNotSmaller: 'تعذّر تصغير ملف PDF هذا. استمر في استخدام الأصل.',
   close: 'إغلاق',
 } satisfies Record<keyof typeof zh, string>

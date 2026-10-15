@@ -5,7 +5,19 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { crc32, deflateSync } from 'node:zlib'
 import { test, expect, type ElectronApplication, type Page } from '@playwright/test'
-import { PDFDocument, PDFString, StandardFonts, degrees, rgb } from 'pdf-lib'
+import {
+  PDFDocument,
+  PDFName,
+  PDFRawStream,
+  PDFString,
+  StandardFonts,
+  concatTransformationMatrix,
+  degrees,
+  drawObject,
+  popGraphicsState,
+  pushGraphicsState,
+  rgb,
+} from 'pdf-lib'
 import { closeAndSaveVideo, launchShell, screenshotPath, waitForPageWithUrl } from './helpers'
 
 /**
@@ -545,6 +557,81 @@ test.describe('PDF tools window', () => {
       await tools.screenshot({ path: shot('pdf-tools-from-ribbon') })
     } finally {
       await closeAndSaveVideo(launched, 'pdf-tools-ribbon')
+    }
+  })
+
+  test('making a PDF with a large picture smaller', async () => {
+    test.setTimeout(180_000)
+    const dir = await mkdtemp(join(tmpdir(), 'genoffice-pdf-tools-e2e-'))
+    const scan = join(dir, 'photo.pdf')
+    const out = join(dir, 'photo-smaller.pdf')
+    // a noisy 1600×1600 picture: Flate cannot shrink it, JPEG can
+    const width = 1600
+    const rgb = new Uint8Array(width * width * 3)
+    let seed = 11
+    for (let i = 0; i < rgb.length; i++) {
+      seed = (Math.imul(seed, 1103515245) + 12345) & 0x7fffffff
+      rgb[i] = (seed >> 16) & 0xff
+    }
+    const doc = await PDFDocument.create()
+    const page = doc.addPage([600, 600])
+    const image = doc.context.register(
+      doc.context.flateStream(rgb, {
+        Type: 'XObject',
+        Subtype: 'Image',
+        Width: width,
+        Height: width,
+        ColorSpace: 'DeviceRGB',
+        BitsPerComponent: 8,
+      }),
+    )
+    const name = page.node.newXObject('Im', image)
+    page.pushOperators(
+      pushGraphicsState(),
+      concatTransformationMatrix(600, 0, 0, 600, 0, 0),
+      drawObject(name),
+      popGraphicsState(),
+    )
+    await writeFile(scan, await doc.save({ useObjectStreams: false }))
+    const before = (await readFile(scan)).length
+    if (EVIDENCE_DIR) await mkdir(EVIDENCE_DIR, { recursive: true })
+
+    const launched = await launchShell({ onboardingSeen: true, videoDir: 'pdf-tools-compress' })
+    const { app, page: home } = launched
+    try {
+      const tools = await openToolsWindow(app, home, /PDF tools/)
+      await tools.getByRole('button', { name: /Make smaller/ }).click()
+      await queueDialogs(app, { open: [[scan]], save: [out] })
+      await tools.getByRole('button', { name: 'Choose PDF', exact: true }).click()
+      await tools.getByRole('radio', { name: 'Strong (size first)' }).check()
+      await tools.screenshot({ path: shot('pdf-tools-compress-en') })
+      await tools.getByRole('button', { name: 'Save as new file' }).click()
+      await expect(tools.getByText(/Made a new file: photo-smaller\.pdf \(.+ → .+\)/)).toBeVisible({
+        timeout: 60_000,
+      })
+      const made = await readFile(out)
+      expect(made.length).toBeLessThan(before / 3)
+      // the picture is a JPEG now, at the strong level's longest side
+      const smaller = await PDFDocument.load(made)
+      const pictures = smaller.context
+        .enumerateIndirectObjects()
+        .map(([, object]) => object)
+        .filter((object): object is PDFRawStream => object instanceof PDFRawStream)
+        .filter((object) => object.dict.lookup(PDFName.of('Subtype'))?.toString() === '/Image')
+      expect(pictures).toHaveLength(1)
+      expect(pictures[0]!.dict.lookup(PDFName.of('Filter'))?.toString()).toBe('/DCTDecode')
+      expect(pictures[0]!.dict.lookup(PDFName.of('Width'))?.toString()).toBe('1400')
+
+      // and it still draws in the editor
+      const tabs = await pdfPages(app)
+      await tools.getByRole('button', { name: 'Open in a tab' }).click()
+      await expect.poll(() => pdfPages(app), { timeout: 30_000 }).toBe(tabs + 1)
+      const editor = await waitForPageWithUrl(app, '://pdf/')
+      await expect(editor.locator('.pdf-page')).toHaveCount(1, { timeout: 30_000 })
+      await editor.waitForTimeout(1500)
+      await editor.screenshot({ path: shot('pdf-tools-compress-result') })
+    } finally {
+      await closeAndSaveVideo(launched, 'pdf-tools-compress')
     }
   })
 

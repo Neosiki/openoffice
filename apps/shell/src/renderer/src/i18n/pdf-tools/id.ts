@@ -146,5 +146,18 @@ export const id = {
   errAllPages: 'Tidak bisa menghapus semua halaman.',
   errNotFound: 'Cari halaman kosong terlebih dahulu.',
   errNoneChosen: 'Pilih setidaknya satu halaman untuk dihapus.',
+  groupSizeSecurity: 'Ukuran dan keamanan',
+  toolCompress: 'Perkecil ukuran',
+  descCompress: 'Perkecil dan kompres ulang gambar besar agar file lebih kecil',
+  optLevel: 'Tingkat',
+  levelLight: 'Ringan (kualitas dulu)',
+  levelMedium: 'Sedang',
+  levelStrong: 'Kuat (ukuran dulu)',
+  noteCompress:
+    'Teks dan gambar garis tetap seperti semula; hanya gambar besar yang diperkecil. Tidak ada yang disimpan jika hasilnya tidak lebih kecil.',
+  workingProgress: 'Memproses… {done} / {total}',
+  cancelRun: 'Hentikan',
+  doneCompressed: 'File baru dibuat: {name} ({before} → {after})',
+  errNotSmaller: 'PDF ini tidak bisa diperkecil. Tetap gunakan file aslinya.',
   close: 'Tutup',
 } satisfies Record<keyof typeof zh, string>

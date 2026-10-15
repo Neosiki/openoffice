@@ -147,5 +147,18 @@ export const it = {
   errAllPages: 'Non puoi rimuovere tutte le pagine.',
   errNotFound: 'Cerca prima le pagine bianche.',
   errNoneChosen: 'Scegli almeno una pagina da rimuovere.',
+  groupSizeSecurity: 'Dimensioni e sicurezza',
+  toolCompress: 'Riduci dimensioni',
+  descCompress: 'Riduci e ricomprimi le immagini grandi per alleggerire il file',
+  optLevel: 'Intensità',
+  levelLight: 'Leggera (prima la qualità)',
+  levelMedium: 'Media',
+  levelStrong: 'Forte (prima le dimensioni)',
+  noteCompress:
+    'Testo e disegni restano come sono; si riducono solo le immagini grandi. Non si salva nulla se il risultato non è più piccolo.',
+  workingProgress: 'Elaborazione… {done} / {total}',
+  cancelRun: 'Interrompi',
+  doneCompressed: 'Nuovo file creato: {name} ({before} → {after})',
+  errNotSmaller: 'Non è stato possibile ridurre questo PDF. Continua a usare l’originale.',
   close: 'Chiudi',
 } satisfies Record<keyof typeof zh, string>

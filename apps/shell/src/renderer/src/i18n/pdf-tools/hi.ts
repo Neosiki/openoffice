@@ -145,5 +145,18 @@ export const hi = {
   errAllPages: 'सभी पेज नहीं हटाए जा सकते।',
   errNotFound: 'पहले खाली पेज खोजें।',
   errNoneChosen: 'हटाने के लिए कम से कम एक पेज चुनें।',
+  groupSizeSecurity: 'आकार और सुरक्षा',
+  toolCompress: 'आकार छोटा करें',
+  descCompress: 'बड़े चित्रों को छोटा करके दोबारा संपीड़ित करें ताकि फ़ाइल छोटी हो',
+  optLevel: 'कितना',
+  levelLight: 'हल्का (पहले गुणवत्ता)',
+  levelMedium: 'मध्यम',
+  levelStrong: 'तेज़ (पहले आकार)',
+  noteCompress:
+    'टेक्स्ट और आकृतियाँ वैसी ही रहती हैं; केवल बड़े चित्र छोटे होते हैं। नतीजा छोटा न हो तो कुछ नहीं सहेजा जाता।',
+  workingProgress: 'काम हो रहा है… {done} / {total}',
+  cancelRun: 'रोकें',
+  doneCompressed: 'नई फ़ाइल बनी: {name} ({before} → {after})',
+  errNotSmaller: 'इस PDF को और छोटा नहीं किया जा सका। मूल फ़ाइल ही इस्तेमाल करें।',
   close: 'बंद करें',
 } satisfies Record<keyof typeof zh, string>

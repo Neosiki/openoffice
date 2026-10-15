@@ -144,5 +144,18 @@ export const ko = {
   errAllPages: '모든 페이지를 지울 수는 없습니다.',
   errNotFound: '먼저 빈 페이지를 찾으세요.',
   errNoneChosen: '지울 페이지를 하나 이상 고르세요.',
+  groupSizeSecurity: '용량·보안',
+  toolCompress: '용량 줄이기',
+  descCompress: '큰 그림을 줄이고 다시 압축해 파일을 작게 만듭니다',
+  optLevel: '줄이는 정도',
+  levelLight: '약하게 (화질 먼저)',
+  levelMedium: '보통',
+  levelStrong: '강하게 (크기 먼저)',
+  noteCompress:
+    '글자와 도형은 그대로 두고 큰 그림만 줄입니다. 결과가 원본보다 작지 않으면 저장하지 않습니다.',
+  workingProgress: '처리하는 중… {done} / {total}',
+  cancelRun: '그만하기',
+  doneCompressed: '새 파일을 만들었습니다: {name} ({before} → {after})',
+  errNotSmaller: '이 PDF는 더 작게 만들지 못했습니다. 원본을 그대로 쓰세요.',
   close: '닫기',
 } satisfies Record<keyof typeof zh, string>
