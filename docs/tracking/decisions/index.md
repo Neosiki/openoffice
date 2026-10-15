@@ -33,3 +33,4 @@
 | [0029](0029-login-in-the-browser-window-hidden.md)            | 구독 로그인은 창을 숨기고 브라우저에서 하며, 코드가 필요할 때만 창을 보인다                     | 2026-10-15 |
 | [0030](0030-pdf-tools-hub.md)                                 | PDF 도구는 홈의 카드와 별도 창으로 모으고, 일반 사용자의 말로 이름을 짓는다                     | 2026-10-15 |
 | [0031](0031-unsigned-mac-beta.md)                             | macOS판은 Apple 개발자 서명 없이 Apple Silicon용 베타로 낸다                                    | 2026-10-15 |
+| [0032](0032-agent-mode-in-project-folder.md)                  | 프로젝트 폴더에서 구독 프로그램을 도구를 켠 채 돌리는 에이전트 모드를 더한다                    | 2026-10-15 |
