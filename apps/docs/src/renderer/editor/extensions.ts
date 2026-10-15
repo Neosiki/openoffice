@@ -214,6 +214,7 @@ import {
   TextStyleMark,
   UnderlineMark,
 } from './marks'
+import { DocRedaction } from './redaction'
 import {
   DropCapExtension,
   EaHintQuotesExtension,
@@ -6803,6 +6804,7 @@ export const editorExtensions = [
   CtrlCheckboxMark,
   RprChangeMark,
   TextStyleMark,
+  DocRedaction,
   FormatOffClearExtension,
   CommentMark,
   InsMark,

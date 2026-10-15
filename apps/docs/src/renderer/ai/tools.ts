@@ -6,6 +6,7 @@ import { t } from '../i18n/locale'
 import { executeOps, opNames } from './ops'
 import { odtGuardRefusalText, odtToolRefusal, startOdtToolCall } from './odt-tools'
 import { clipExcerpt, repliesOf, resolveCommentAnchor } from './comment-ops'
+import { redactTextBetween } from './redact-view'
 import {
   PAGE_SETUP_TOOL,
   SECTION_BREAK_TOOL,
@@ -1522,7 +1523,9 @@ function executeSyncTool(
         return schema.text(n.text ?? '', marks)
       })
       const blockIndex = $from.index(0)
-      const oldText = doc.textBetween(range.from, range.to, ' ', ' ')
+      // the echo quotes what was replaced back to the model, so a selection
+      // covering a withheld span would undo the withholding right here
+      const oldText = redactTextBetween(editor.getJSON(), range.from, range.to, ' ')
       replaceInlineRange(editor, range.from, range.to, nodes, track)
       const newText = nodes.map((n) => n.textContent).join('')
       return {
