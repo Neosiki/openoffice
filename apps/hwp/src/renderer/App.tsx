@@ -10,6 +10,7 @@ import {
 } from '@genoffice/ui'
 import { AiPanel } from './ai/AiPanel'
 import { createAgentBridge } from './ai/agent-bridge'
+import { FILE_COMMAND_EVENT } from '../../studio-plugin/agent-plugin.mjs'
 import blankHwpUrl from './assets/blank.hwp?url'
 import { useI18n, type StringKey } from './i18n/locale'
 import { openDocumentsDroppedOn } from './editor-drop'
@@ -261,6 +262,30 @@ export default function App() {
     },
     [t],
   )
+
+  // the embedded editor drops its own Save and Print, so its File menu gets the app's: they
+  // go to the main process and come back as the requests Ctrl+S and Ctrl+P make
+  useEffect(() => {
+    if (phase !== 'ready') return
+    const frame = editorRef.current?.element.contentWindow
+    if (!frame) return
+    void agentBridge
+      .installFileMenu({
+        save: t('fileSave'),
+        saveAs: t('fileSaveAs'),
+        pdf: t('fileExportPdf'),
+        print: t('filePrint'),
+      })
+      .catch(() => {})
+    const onCommand = (event: Event) => {
+      const command = (event as CustomEvent<unknown>).detail
+      if (command === 'save' || command === 'saveAs' || command === 'pdf' || command === 'print') {
+        window.hwpApi.requestFileCommand(command)
+      }
+    }
+    frame.addEventListener(FILE_COMMAND_EVENT, onCommand)
+    return () => frame.removeEventListener(FILE_COMMAND_EVENT, onCommand)
+  }, [phase, agentBridge, t])
 
   // saves asked for by the menu, the shortcut and the close prompt
   useEffect(() => {

@@ -69,6 +69,15 @@ function setup(overrides: Partial<AgentBridge> = {}) {
       text: '연락처 | 비고',
       place: PLACE,
     })),
+    deleteTable: vi.fn(async () => ({
+      ok: true as const,
+      table: 3,
+      rows: 4,
+      cols: 2,
+      inner: 0,
+      text: '성취율 | 성취도 | 80% 이상 ~ 100% | A',
+      place: PLACE,
+    })),
     reveal: vi.fn(async () => ({ ok: true })),
     selection: vi.fn(async () => ({ ok: false as const, reason: 'none' as const })),
     // one run per text, as the editor answers: a rewrite may change how many there are
@@ -1074,6 +1083,40 @@ describe('rows and columns of a table', () => {
     }
   })
 
+  it('removes a whole table and lists what went with it', async () => {
+    const { call, changes, bridge } = setup()
+    const result = await call('delete_table', { table: 3 })
+    expect(bridge.deleteTable).toHaveBeenCalledWith(3)
+    expect(result.isError).toBeFalsy()
+    expect(result.output).toContain('list_tables')
+    expect(result.summary).toBe('aiTableName:{"table":3} · aiTableRemoved')
+    expect(changes[0]).toMatchObject({
+      kind: 'lines',
+      to: 'aiTableRemoved · 성취율 | 성취도 | 80% 이상 ~ 100% | A',
+    })
+  })
+
+  it('tells the model why a table was not removed', async () => {
+    const cases = [
+      [{ ok: false, reason: 'no_such_table', count: 2 }, 'the document has 2'],
+      [
+        { ok: false, reason: 'holds_object', cells: [{ row: 2, col: 1 }] },
+        'removed with the table: 2.1',
+      ],
+      [{ ok: false, reason: 'has_objects', count: 1 }, 'Nothing was changed'],
+    ] as const
+    for (const [refusal, said] of cases) {
+      const { call, changes } = setup({ deleteTable: async () => refusal })
+      const result = await call('delete_table', { table: 1 })
+      expect(result.isError).toBe(true)
+      expect(result.output).toContain(said)
+      expect(changes).toEqual([])
+    }
+    const { call, bridge } = setup()
+    expect((await call('delete_table', { table: '1' })).isError).toBe(true)
+    expect(bridge.deleteTable).not.toHaveBeenCalled()
+  })
+
   it('never sends a call it cannot read to the editor', async () => {
     const { call, bridge } = setup()
     expect((await call('add_to_table', { table: 1, what: 'cells', at: 1 })).isError).toBe(true)
@@ -1337,6 +1380,7 @@ describe('the skill as the model sees it', () => {
       'fill_cells',
       'add_to_table',
       'remove_from_table',
+      'delete_table',
       'list_fields',
       'fill_field',
       'insert_toc',

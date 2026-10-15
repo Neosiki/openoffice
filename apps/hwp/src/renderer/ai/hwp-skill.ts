@@ -94,7 +94,7 @@ const SYSTEM_PROMPT = [
   '- Replace a piece of text with another (replace_text, replace_all). The new text takes the formatting of the text it replaces.',
   '- Add new paragraphs next to an existing one, in the body or inside a table cell, or at the end of the document (insert_paragraphs). Remove a paragraph (delete_paragraph).',
   '- Add a table of plain-text cells, with a header row when the first row names the columns (insert_table).',
-  '- Work on the tables that are already there: list them (list_tables), read one cell by cell (read_table), write text into its cells, many at once (fill_cells), and add or remove rows and columns (add_to_table, remove_from_table).',
+  '- Work on the tables that are already there: list them (list_tables), read one cell by cell (read_table), write text into its cells, many at once (fill_cells), add or remove rows and columns (add_to_table, remove_from_table), and remove a whole table (delete_table).',
   '- Change formatting: bold, italic, underline, strikethrough, font, font size, text colour and highlight of a piece of text (format_text); alignment, line spacing, first-line indent, margins, space above and below and the paragraph style of a paragraph, and the character formatting of a whole paragraph (format_paragraph); the background colour of table cells (format_cells).',
   '- Merge table cells into one (merge_cells; their text goes into it, one cell after another) or split a cell into several, or a merged cell back (split_cell). Read the table first: rows and columns count as read_table shows them.',
   '- Fill the form fields of the document (list_fields, fill_field). In Hangul these are called 누름틀. A field is picked by its number in list_fields, because several fields often share one name.',
@@ -102,7 +102,8 @@ const SYSTEM_PROMPT = [
   '- Add footnotes and endnotes (각주, 미주) with their mark right after a piece of body text (insert_note), list the notes with their text (list_notes), and rewrite or remove one (edit_note, delete_note). The text of the document does not show the notes; list_notes does.',
   '',
   '## What they cannot do',
-  '- You cannot change the font family, styles, numbering, indents, borders or cell shading, or the page layout. You cannot add or change pictures, or merge or split the cells of a table. A note cannot be put inside a table cell.',
+  '- You cannot change numbering, borders or the page layout, and you cannot add or change pictures. A note cannot be put inside a table cell.',
+  '- A table inside a cell of another table can be read, filled and removed, but its cells cannot be coloured, merged or split, it cannot get or lose rows and columns, and the alignment and spacing of its paragraphs cannot be changed.',
   '- One piece of text is always one line: a line break inside a text argument is refused. Several paragraphs are several strings in one insert_paragraphs call.',
   '- When the user asks for something the tools cannot do, say so plainly instead of approximating it.',
   '',
@@ -121,6 +122,7 @@ const SYSTEM_PROMPT = [
   '- Leave a cell empty when you do not know its answer, and tell the user which ones are left.',
   '- When a list in a form has too few rows for what the user gave you, add rows after the last row of that list with add_to_table (they come out shaped like that row), read the table again for the new row numbers, then fill them. Do not add rows or columns the user has no content for.',
   '- Remove rows or columns only when the user asks for it: what is in them goes too.',
+  '- Remove a whole table only when the user asks for it, for example the tables of a form that offers several to choose from. Text between the tables, such as an "or" line, is a paragraph of its own: remove it with delete_paragraph.',
   '',
   '## Table of contents',
   '- Make one only when the user asks. Pick the headings from the text: the lines that open the parts of the document, in order (for example Ⅰ./1./가. or □ at the start, or short title lines). Level 1 for the top parts, 2 and 3 for the parts inside them; leave out body lines.',
@@ -164,6 +166,8 @@ const SYSTEM_PROMPT = [
   '## Conversation',
   '- Answer questions about the document directly, without changing it.',
   '- Keep replies short. After editing, say in a sentence or two what you changed. The panel lists every change and lets the user take the whole run back.',
+  '- Say that you changed the document only for changes a tool reported done. Do not describe edits you are about to make instead of making them: call the tool. When a tool refused or failed, say what was not done and why.',
+  '- Write every reply in the language the user writes in, the summary after edits included, even though tool results come back in English.',
 ].join('\n')
 
 /** The character formatting a format tool takes, as schema properties. */
@@ -539,6 +543,18 @@ const TOOLS: AgentToolDef[] = [
         count: { type: 'integer', minimum: 1, description: 'how many to remove (default 1)' },
       },
       required: ['table', 'what', 'at'],
+    },
+  },
+  {
+    name: 'delete_table',
+    description:
+      'Remove a whole table with what is in it, the tables inside its cells included. Use it only when the user asked for it. A table with a picture in a cell is not removed. The table numbers after it go down by one and more: call list_tables again before the next table call.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        table: { type: 'integer', minimum: 1, description: 'the table number from list_tables' },
+      },
+      required: ['table'],
     },
   },
   {
@@ -1625,6 +1641,39 @@ export function createHwpSkill(deps: HwpSkillDeps): HwpSkill {
         })
         return {
           output: `Removed ${result.count} of the ${args.what}. Table ${args.table} now has ${result.rows} row(s) and ${result.cols} column(s).`,
+          mutated: true,
+          summary: `${name} · ${what}`,
+        }
+      }
+      case 'delete_table': {
+        const table = call.input.table
+        if (typeof table !== 'number') return bad(call, 'table must be a number from list_tables')
+        const result = await bridge.deleteTable(table)
+        if (!result.ok) {
+          if (result.reason === 'no_such_table') return bad(call, noSuchTable(table, result.count))
+          if (result.reason === 'holds_object') {
+            return bad(
+              call,
+              `Nothing was changed: these cells hold a picture or another object, which would be removed with the table: ${result.cells.map((cell) => `${cell.row}.${cell.col}`).join(', ')}.`,
+            )
+          }
+          return bad(
+            call,
+            'Nothing was changed: removing the table would also have removed something that is not part of it, such as a picture or a form field. Tell the user.',
+          )
+        }
+        const name = label('aiTableName', { table })
+        const what = label('aiTableRemoved')
+        deps.onChange({
+          kind: 'lines',
+          from: name,
+          to: result.text ? `${what} · ${changeText(result.text)}` : what,
+          count: 1,
+          place: result.place,
+        })
+        const inner = result.inner > 0 ? `, with the ${result.inner} table(s) inside its cells` : ''
+        return {
+          output: `Removed table ${table} (${result.rows} row(s) × ${result.cols} column(s))${inner}. The tables after it are numbered anew: call list_tables before the next table call.`,
           mutated: true,
           summary: `${name} · ${what}`,
         }

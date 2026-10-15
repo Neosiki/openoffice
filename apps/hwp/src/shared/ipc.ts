@@ -13,6 +13,7 @@ export const HWP_CHANNELS = {
   abortSave: 'hwp:abort-save',
   saveRequest: 'hwp:save-request',
   printRequest: 'hwp:print-request',
+  fileCommand: 'hwp:file-command',
   printPages: 'hwp:print-pages',
   dirtyChanged: 'hwp:dirty-changed',
   closeSaveRequest: 'hwp:close-save-request',
@@ -50,6 +51,9 @@ export const AI_CHANNELS = {
 
 export type UiTheme = 'light' | 'dark' | 'system'
 export type SaveMode = 'save' | 'saveAs'
+
+/** What the editor's File menu asks for (see the plugin's FILE_COMMAND_EVENT). */
+export type FileCommand = SaveMode | PrintMode
 
 /** Where the pages go: a PDF file, or the printer through the system print dialog. */
 export type PrintMode = 'pdf' | 'print'
@@ -190,6 +194,11 @@ export interface HwpApi {
   abortSave(): void
   setDirty(dirty: boolean): void
   onSaveRequest(handler: (mode: SaveMode) => void): () => void
+  /**
+   * the editor's own File menu asks to save or print: the main process answers it the way
+   * it answers Ctrl+S and Ctrl+P, with a save or print request back to this view
+   */
+  requestFileCommand(command: FileCommand): void
   /** the File menu or Ctrl+P asks for a PDF or a print */
   onPrintRequest(handler: (mode: PrintMode) => void): () => void
   /** make the PDF (asking where) or open the print dialog for these pages */

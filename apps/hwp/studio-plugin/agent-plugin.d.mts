@@ -341,6 +341,28 @@ export type AgentRemoveLinesResult =
     }
   | AgentTableLinesRefusal
 
+export type AgentDeleteTableResult =
+  | {
+      ok: true
+      table: number
+      rows: number
+      cols: number
+      /** the tables inside its cells that went with it */
+      inner: number
+      /** the text that went with it, cut to a few hundred characters */
+      text: string
+      place: AgentPlace
+    }
+  | { ok: false; reason: 'no_such_table'; count: number }
+  | { ok: false; reason: 'holds_object'; cells: { row: number; col: number }[] }
+  | { ok: false; reason: 'has_objects'; count: number }
+
+/** What a File menu item of the editor asks the app to do. */
+export type AgentFileCommand = 'save' | 'saveAs' | 'pdf' | 'print'
+
+/** The event those items fire on the editor's window; `detail` is the AgentFileCommand. */
+export declare const FILE_COMMAND_EVENT: 'ieum:file-command'
+
 export type AgentNoteKind = 'footnote' | 'endnote'
 
 /** One footnote or endnote of the body, as listNotes lists it. */
@@ -481,6 +503,8 @@ export interface AgentPluginSurface {
     at: number,
     count: number,
   ): AgentRemoveLinesResult
+  deleteTable(table: number): AgentDeleteTableResult
+  installFileMenu(labels: Record<AgentFileCommand, string>): { ok: boolean }
   reveal(place: AgentPlace): { ok: boolean }
   selection(): AgentSelectionResult
   replaceSelection(segments: AgentSegment[], texts: string[]): AgentReplaceSelectionResult
@@ -546,8 +570,10 @@ export interface AgentPluginHost {
     registerCommand?(command: {
       id: string
       label: string
+      shortcutLabel?: string
       execute(services: never, params?: never): void
     }): void
+    addMenuItem?(spec: { menuId: string; commandId: string; position?: 'top' | 'bottom' }): void
   }
 }
 
