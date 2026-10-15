@@ -6,6 +6,7 @@
  * and the package entries only it referenced.
  */
 import { patchImageParagraphXml } from '@genoffice/docx-engine'
+import { FULL_REGISTRY } from './helpers/full'
 import { describe, expect, it } from 'vitest'
 import { NEUTRAL_PLACEHOLDER_PNG, ODT_KEEP_PREFIX, parseKeepName } from '../src/objects'
 import { bodyOf, editOnly, editorSave, replaceText } from './helpers/bridge'
@@ -99,7 +100,8 @@ describe('placeholders: ODF → OOXML', () => {
     expect(blocks[0].runs?.[0].text).toBe('식 ')
   })
 
-  it('a text box holding a table is left to the table owner', async () => {
+  // without the table layer the frame stays a kept marker
+  it.skipIf(FULL_REGISTRY)('a text box holding a table is left to the table owner', async () => {
     const framed = hFramedTable(hTable('Table1', 1, [hRow([hCell(hPara('칸'))])]))
     const fx = await objectsBridge({ body: framed.paragraph })
     expect(fx.ext.placeholders).toEqual([])

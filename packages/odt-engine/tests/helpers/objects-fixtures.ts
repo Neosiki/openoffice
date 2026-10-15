@@ -31,6 +31,7 @@ import {
 import { registerTextConverters, updateOdtStyles } from '../../src/text'
 import { type Bridge, odtToBridge } from './bridge'
 import { type BuildOdtOptions, type BuiltOdt, buildOdtPackage } from './build-odt'
+import { FULL_REGISTRY, fullWriteBack, registryOr } from './full'
 
 /** A second valid PNG (1x1 light grey), different bytes from `PNG_1X1`. */
 export const PNG_GREY = new Uint8Array([
@@ -43,7 +44,9 @@ export const PNG_GREY = new Uint8Array([
 
 /** Text then objects, as the assembling task registers them (tables are not on this branch). */
 export function objectsRegistry(): ConversionRegistry {
-  return registerObjectConverters(registerTextConverters(new ConversionRegistry()))
+  return registryOr(() =>
+    registerObjectConverters(registerTextConverters(new ConversionRegistry())),
+  )
 }
 
 export interface ObjectsFixture {
@@ -119,6 +122,20 @@ export async function writeBackObjects(
   const { bridge, built } = fixture
   const parsed = await parseDocx(edited)
   const editedStylesXml = await readDocxPart(edited, 'word/styles.xml')
+  if (FULL_REGISTRY) {
+    const full = await fullWriteBack(
+      bridge.doc,
+      bridge.map,
+      parsed,
+      bridge.registry,
+      editedStylesXml,
+    )
+    const changes = objectPackageChanges(full.rctx, {
+      contentXml: full.content,
+      stylesXml: full.styles,
+    })
+    return { ...full, manifest: patchManifestXml(built.manifestXml, changes), changes }
+  }
   // the map crosses IPC: write back from a JSON copy, as the app does
   const map = JSON.parse(JSON.stringify(bridge.map)) as typeof bridge.map
   const rctx = new OoxmlToOdfContext(bridge.doc, map, parsed, bridge.registry, {

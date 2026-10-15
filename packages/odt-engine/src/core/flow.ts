@@ -180,7 +180,8 @@ export function alignItems(rctx: OoxmlToOdfContext, items: readonly EditedItem[]
     const candidates = gapCandidates(i)
     for (const converter of rctx.registry.blocks) {
       if (!converter.identify) continue
-      const own = candidates.filter((e) => topBlock(rctx, e.block).owner === converter.id)
+      // the element's own block or any block around it (a table inside a section or a list)
+      const own = candidates.filter((e) => ownedBy(rctx, e.block, converter.id))
       if (!own.length) continue
       const id = converter.identify(rctx, item, own)
       if (id !== null && !used.has(id)) {
@@ -210,10 +211,14 @@ export function alignItems(rctx: OoxmlToOdfContext, items: readonly EditedItem[]
   })
 }
 
-function topBlock(rctx: OoxmlToOdfContext, id: number): BridgeBlock {
-  let b = rctx.map.blocks[id]
-  while (b.parent !== null) b = rctx.map.blocks[b.parent]
-  return b
+/** Whether a block or one of its enclosing blocks belongs to `owner`. */
+function ownedBy(rctx: OoxmlToOdfContext, id: number, owner: string): boolean {
+  let b: BridgeBlock | undefined = rctx.map.blocks[id]
+  while (b) {
+    if (b.owner === owner) return true
+    b = b.parent === null ? undefined : rctx.map.blocks[b.parent]
+  }
+  return false
 }
 
 /** The ancestor of `blockId` (or itself) whose parent is `parent`, or null. */

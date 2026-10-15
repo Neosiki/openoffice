@@ -18,10 +18,11 @@ import { ConversionRegistry } from '../../src/core'
 import { registerTableConverters } from '../../src/table'
 import { registerTextConverters } from '../../src/text'
 import type { EditorOp } from './bridge'
+import { registryOr } from './full'
 
 /** Text first, then tables — the order T6 registers them. */
 export function tableRegistry(): ConversionRegistry {
-  return registerTableConverters(registerTextConverters(new ConversionRegistry()))
+  return registryOr(() => registerTableConverters(registerTextConverters(new ConversionRegistry())))
 }
 
 /** A deep copy of a parsed table block's model. */

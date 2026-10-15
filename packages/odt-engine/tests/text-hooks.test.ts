@@ -4,6 +4,7 @@
  * nothing is registered.
  */
 import { parseDocx } from '@genoffice/docx-engine'
+import { FULL_REGISTRY } from './helpers/full'
 import { describe, expect, it } from 'vitest'
 import { type BlockConverter, ConversionRegistry, blockSource } from '../src/core'
 import { registerTextConverters } from '../src/text'
@@ -14,25 +15,29 @@ import { hPara, hParaWith, hRow, hCell, hTable } from './helpers/hancom-fragment
 const table = hTable('Table2', 1, [hRow([hCell(hPara('칸'))])])
 
 describe('safe defaults', () => {
-  it('blocks without a converter carry no OOXML and are written back verbatim around edits', async () => {
-    const body = hPara('앞') + table + hPara('뒤') + '<!-- note -->'
-    const bridge = await odtToBridge(await buildOdt({ body }))
-    expect(bridge.map.blocks.map((b) => [b.name, b.owner, b.elements.length])).toEqual([
-      ['text:p', 'text', 1],
-      ['table:table', 'keep', 0],
-      ['text:p', 'text', 1],
-      ['#comment', 'keep', 0],
-    ])
-    expect(bridge.map.warnings).toContain('kept without conversion: table:table')
-    const { bytes } = await editorSave(
-      bridge.docx,
-      editOnly({ 0: (g) => replaceText(g, 1, 1, '쪽'), 1: (g) => replaceText(g, 0, 0, '맨 ') }),
-    )
-    const wb = await writeBack(bridge, bytes)
-    expect(bodyOf(wb.content)).toBe(hPara('앞쪽') + table + hPara('맨 뒤') + '<!-- note -->')
-  })
+  // relies on tables having no converter
+  it.skipIf(FULL_REGISTRY)(
+    'blocks without a converter carry no OOXML and are written back verbatim around edits',
+    async () => {
+      const body = hPara('앞') + table + hPara('뒤') + '<!-- note -->'
+      const bridge = await odtToBridge(await buildOdt({ body }))
+      expect(bridge.map.blocks.map((b) => [b.name, b.owner, b.elements.length])).toEqual([
+        ['text:p', 'text', 1],
+        ['table:table', 'keep', 0],
+        ['text:p', 'text', 1],
+        ['#comment', 'keep', 0],
+      ])
+      expect(bridge.map.warnings).toContain('kept without conversion: table:table')
+      const { bytes } = await editorSave(
+        bridge.docx,
+        editOnly({ 0: (g) => replaceText(g, 1, 1, '쪽'), 1: (g) => replaceText(g, 0, 0, '맨 ') }),
+      )
+      const wb = await writeBack(bridge, bytes)
+      expect(bodyOf(wb.content)).toBe(hPara('앞쪽') + table + hPara('맨 뒤') + '<!-- note -->')
+    },
+  )
 
-  it('a deleted neighbour does not take a kept block with it', async () => {
+  it.skipIf(FULL_REGISTRY)('a deleted neighbour does not take a kept block with it', async () => {
     const body = hPara('앞') + table + hPara('뒤')
     const bridge = await odtToBridge(await buildOdt({ body }))
     const { bytes } = await editorSave(bridge.docx, () => [{ keep: 1 }])

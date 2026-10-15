@@ -197,7 +197,23 @@ export function readParagraph(
     return index
   }
   // UTF-16 code units, like every offset of the bridge
+  // a drawing placed as a character (`text:anchor-type="as-char"`) takes a character
+  // position: white space right after it does not collapse into the white space
+  // before it. It shows only when something visible follows in the paragraph (the
+  // docx engine reads a paragraph of drawings and white space as a picture block).
+  let afterObject = false
+  let pendingSpace: number | null = null
+  const flushPending = () => {
+    if (pendingSpace === null) return
+    chars.push(' ')
+    model.charSets.push(pendingSpace)
+    pendingSpace = null
+  }
   const push = (text: string, set: number) => {
+    if (text) {
+      flushPending()
+      afterObject = false
+    }
     for (let i = 0; i < text.length; i++) {
       chars.push(text[i])
       model.charSets.push(set)
@@ -208,6 +224,7 @@ export function readParagraph(
     for (const ch of raw) {
       if (isWs(ch)) {
         if (!ignoreLeading) out += ' '
+        else if (afterObject && pendingSpace === null && out === '') pendingSpace = current
         ignoreLeading = true
       } else {
         out += ch
@@ -217,6 +234,9 @@ export function readParagraph(
     if (out) push(out, current)
   }
   const offset = () => chars.length
+  const isCharacterObject = (el: { name: string; nameEnd: number; openEnd: number }) =>
+    el.name.startsWith('draw:') &&
+    attrOf(xml, el.nameEnd, el.openEnd, prefixes, 'text:anchor-type') === 'as-char'
   const addMarker = (marker: Omit<BridgeMarker, 'ooxmlName'>, withBookmark: boolean) => {
     const index = model.markers.length
     model.markers.push({
@@ -310,9 +330,12 @@ export function readParagraph(
         const rec = recorded.get(el.start)
         if (record && rec && (rec.kind === 'handler' || rec.kind === 'text')) {
           const text = record.text.slice(rec.offset, rec.offset + rec.length)
+          const character = isCharacterObject(el)
+          if (text || character) flushPending()
           const at = offset()
           push(text, rec.kind === 'handler' ? -1 : current)
           if (text) ignoreLeading = false
+          else if (character) afterObject = true
           addMarker({ ...rec, offset: at, pair: null }, false)
           return
         }
@@ -332,10 +355,13 @@ export function readParagraph(
                 text: result.runs.map((r) => r.text).join(''),
               }
             }
+            const character = isCharacterObject(el)
+            if (produced.text || character) flushPending()
             const at = offset()
             model.splices.push({ offset: at, xml: produced.xml, seq: seq })
             push(produced.text, -1)
             if (produced.text) ignoreLeading = false
+            else if (character) afterObject = true
             addMarker(
               {
                 kind: 'handler',
@@ -357,6 +383,7 @@ export function readParagraph(
           const state = { ignoreLeading }
           const text = visibleText(xml, prefixes, el.openEnd, el.closeStart, state, el.selfClosing)
           if (text) {
+            flushPending()
             const at = offset()
             push(text, current)
             ignoreLeading = state.ignoreLeading
@@ -376,6 +403,10 @@ export function readParagraph(
             )
             return
           }
+        }
+        if (isCharacterObject(el)) {
+          flushPending()
+          afterObject = true
         }
         addMarker(
           {

@@ -277,6 +277,10 @@ export function convertOdtPage(ctx: OdfToOoxmlContext): void {
       if (carrier !== null) {
         const el = map.elements[carrier]
         el.xml = injectParagraphSectPr(el.xml, sectPr)
+        // elements after the break paragraph (a table ending the run) show in the
+        // next docx section: record them there, as the edited docx will have them
+        const trailing = d.elements.splice(d.elements.indexOf(carrier) + 1)
+        if (trailing.length) drafts[i + 1].elements.unshift(...trailing)
       }
     } else ctx.docx.sectPr = sectPr
     sections.push({

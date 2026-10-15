@@ -245,7 +245,8 @@ export function listStyleFromNumbering(
           (suffix ? ` style:num-suffix="${escapeXmlAttr(suffix)}"` : '') +
           ` style:num-format="${escapeXmlAttr(numFmtToOdf(l.numFmt))}"` +
           (display > 1 ? ` text:display-levels="${display}"` : '') +
-          (l.start !== 1 ? ` text:start-value="${l.start}"` : '') +
+          // ODF start values are positive integers (a docx list may start at 0)
+          (l.start > 1 ? ` text:start-value="${l.start}"` : '') +
           `>${props}</text:list-level-style-number>`,
       )
     }

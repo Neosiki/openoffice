@@ -27,11 +27,24 @@ import { type AddedEntry, editedNote, noteKey, saveState } from './state'
 function forceRewrite(rctx: OoxmlToOdfContext, paragraphId: number): void {
   const st = saveState(rctx)
   st.dirtyParagraphs.add(paragraphId)
-  const element = rctx.map.elements.find((e) => e.paragraph === paragraphId)
-  if (!element || st.dirtyElements.some((d) => d.id === element.id)) return
-  st.dirtyElements.push({ id: element.id, xml: element.xml })
-  rctx.map.elements[element.id] = { ...element, xml: `${element.xml}<!--odt-objects:rewrite-->` }
+  const own = rctx.map.elements.find((e) => e.paragraph === paragraphId)
+  // a paragraph that is no element of its own (a table cell's): the tables of
+  // its block are marked, and their owner asks `paragraphNeedsRewrite`
+  const block = rctx.map.paragraphs[paragraphId]?.block ?? null
+  const elements = own
+    ? [own]
+    : block === null
+      ? []
+      : rctx.map.elements.filter((e) => e.block === block && e.kind === 'table')
+  for (const element of elements) {
+    if (st.dirtyElements.some((d) => d.id === element.id)) continue
+    st.dirtyElements.push({ id: element.id, xml: element.xml })
+    rctx.map.elements[element.id] = { ...element, xml: `${element.xml}${REWRITE_MARK}` }
+  }
 }
+
+/** Appended to a bridge element's XML so the flow hands it to its owner. */
+export const REWRITE_MARK = '<!--odt-objects:rewrite-->'
 
 /**
  * Before `rebuildOdtBody`: a note whose text the editor changed lives in
@@ -40,8 +53,9 @@ function forceRewrite(rctx: OoxmlToOdfContext, paragraphId: number): void {
  * (their note references then write the new note bodies). Also warns about
  * comment edits and new comments, which ODT documents do not save.
  *
- * Paragraphs that are not bridge elements (table cells) are not marked; their
- * owner asks `paragraphNeedsRewrite`.
+ * For paragraphs that are not bridge elements (table cells) the tables of
+ * their block are marked instead; the table layer then asks
+ * `paragraphNeedsRewrite` for each cell paragraph.
  */
 export function prepareObjectWriteBack(rctx: OoxmlToOdfContext): void {
   const st = saveState(rctx)
