@@ -25,6 +25,7 @@
     "@genoffice/ai-provider": "*",
     "@genoffice/ai-search": "*",
     "@genoffice/docx-engine": "*",
+    "@genoffice/odt-engine": "*",
     "@genoffice/pdf2docx": "*",
     "@genoffice/pipelines": "*",
     "@genoffice/pptx-engine": "*",
