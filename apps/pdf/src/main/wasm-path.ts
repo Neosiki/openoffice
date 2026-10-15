@@ -19,6 +19,15 @@ export function pdfiumWasmPath(): string {
   }
 }
 
+/** qpdf, for adding and removing a PDF's password (the PDF tools window) */
+export function qpdfWasmPath(): string {
+  try {
+    return join(dirname(req().resolve('@neslinesli93/qpdf-wasm')), 'qpdf.wasm')
+  } catch {
+    return packagedPath('qpdf.wasm')
+  }
+}
+
 export function hbSubsetWasmPath(): string {
   const r = req()
   try {

@@ -76,7 +76,8 @@ export const de = {
     'Diese Datei ist mit ungespeicherten Änderungen geöffnet. Wählen Sie einen anderen Namen.',
   errBusy: 'Eine andere Aufgabe läuft. Versuchen Sie es danach erneut.',
   errFailed: 'Diese Aufgabe konnte nicht abgeschlossen werden.',
-  rejectEncrypted: '{name}: Passwortgeschützte PDFs können nicht verwendet werden.',
+  rejectEncrypted:
+    '{name}: Dieses PDF ist passwortgeschützt. Entfernen Sie das Passwort zuerst mit „Passwort entfernen“.',
   rejectUnreadable: '{name}: Kann nicht als PDF gelesen werden.',
   rejectTooLarge: '{name}: Die Datei ist zu groß.',
   groupConvert: 'Umwandeln',
@@ -151,5 +152,48 @@ export const de = {
   errAllPages: 'Es können nicht alle Seiten entfernt werden.',
   errNotFound: 'Suchen Sie zuerst die leeren Seiten.',
   errNoneChosen: 'Wählen Sie mindestens eine Seite zum Entfernen.',
+  groupSizeSecurity: 'Größe und Sicherheit',
+  toolCompress: 'Verkleinern',
+  descCompress: 'Große Bilder verkleinern und neu komprimieren, damit die Datei kleiner wird',
+  optLevel: 'Stärke',
+  levelLight: 'Leicht (Qualität zuerst)',
+  levelMedium: 'Mittel',
+  levelStrong: 'Stark (Größe zuerst)',
+  noteCompress:
+    'Text und Zeichnungen bleiben unverändert; nur große Bilder werden verkleinert. Gespeichert wird nur, wenn das Ergebnis kleiner ist.',
+  workingProgress: 'Wird verarbeitet… {done} / {total}',
+  cancelRun: 'Abbrechen',
+  doneCompressed: 'Neue Datei erstellt: {name} ({before} → {after})',
+  errNotSmaller: 'Dieses PDF ließ sich nicht verkleinern. Verwenden Sie weiter das Original.',
+  toolEncrypt: 'Passwort hinzufügen',
+  descEncrypt: 'Das PDF fragt beim Öffnen nach einem Passwort',
+  toolDecrypt: 'Passwort entfernen',
+  descDecrypt: 'Das PDF mit seinem Passwort öffnen und eine Kopie ohne Passwort speichern',
+  toolRepair: 'Datei reparieren',
+  descRepair:
+    'Ein PDF reparieren, das sich nicht öffnen lässt oder Fehler zeigt, und neu speichern',
+  hintDecrypt: 'Wählen Sie ein passwortgeschütztes PDF.',
+  hintRepair:
+    'Wählen Sie das PDF, das repariert werden soll. Auch Dateien, die der Editor nicht öffnen kann, sind möglich.',
+  optPassword: 'Passwort zum Öffnen',
+  optPasswordConfirm: 'Passwort wiederholen',
+  optRestrict: 'Drucken, Kopieren und Ändern sperren',
+  optPermissionPassword: 'Passwort zum Aufheben der Sperre',
+  optCurrentPassword: 'Aktuelles Passwort',
+  noteEncrypt:
+    'Das Passwort wird mit AES-256 gesetzt. Wird es vergessen, kann niemand die Datei öffnen. Die Originaldatei bleibt unverändert.',
+  noteRestrict:
+    'Die Sperre ist eine Regel, an die sich PDF-Programme halten sollen; ein Programm, das sie ignoriert, kann trotzdem drucken oder kopieren.',
+  noteDecrypt:
+    'Nur ein Passwort, das Sie kennen, kann entfernt werden. Die neue Datei öffnet sich ohne Passwort, und Sperren für Drucken oder Kopieren entfallen ebenfalls.',
+  noteRepair:
+    'Die lesbaren Teile werden in eine neue Datei geschrieben. Verlorene Inhalte lassen sich nicht zurückholen; öffnen und prüfen Sie die neue Datei.',
+  passwordMismatch: 'Die beiden Passwörter stimmen nicht überein.',
+  errPasswordEmpty: 'Geben Sie ein Passwort ein.',
+  errPasswordSame:
+    'Das Passwort zum Aufheben der Sperre muss sich vom Passwort zum Öffnen unterscheiden.',
+  errPasswordLong: 'Das Passwort ist zu lang. Wählen Sie ein kürzeres.',
+  errWrongPassword: 'Das Passwort ist falsch.',
+  rejectNotEncrypted: '{name}: Dieses PDF hat kein Passwort.',
   close: 'Schließen',
 } satisfies Record<keyof typeof zh, string>

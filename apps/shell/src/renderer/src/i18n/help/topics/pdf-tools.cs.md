@@ -10,21 +10,23 @@ Okno pro běžné práce s PDF, které začíná úkolem. Výsledek se vždy ulo
 
 ## Nástroje
 
-| Skupina            | Nástroje                                                                                                    |
-| ------------------ | ----------------------------------------------------------------------------------------------------------- |
-| Uspořádání stránek | Sloučit PDF, Rozdělit PDF, Extrahovat stránky jako PDF, Obrátit pořadí, Otočit vše, Odebrat prázdné stránky |
-| Příprava k tisku   | Připravit pro oboustranný tisk, Sloučit stránky, Velikost stránky, Rozdělit stránky                         |
-| Zdobení            | Přidat pozadí                                                                                               |
-| Úklid              | Odebrat poznámky                                                                                            |
-| Převést            | Obrázky do PDF, Uložit jako text                                                                            |
-| V editoru PDF      | Vodoznak a záhlaví/zápatí, Oříznout stránky, Exportovat obrázky, Převodník PDF, Úpravy, podpis, začernění   |
+| Skupina                | Nástroje                                                                                                    |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------- |
+| Uspořádání stránek     | Sloučit PDF, Rozdělit PDF, Extrahovat stránky jako PDF, Obrátit pořadí, Otočit vše, Odebrat prázdné stránky |
+| Příprava k tisku       | Připravit pro oboustranný tisk, Sloučit stránky, Velikost stránky, Rozdělit stránky                         |
+| Zdobení                | Přidat pozadí                                                                                               |
+| Úklid                  | Odebrat poznámky                                                                                            |
+| Převést                | Obrázky do PDF, Uložit jako text                                                                            |
+| Velikost a zabezpečení | Zmenšit, Přidat heslo, Odebrat heslo, Opravit soubor                                                        |
+| V editoru PDF          | Vodoznak a záhlaví/zápatí, Oříznout stránky, Exportovat obrázky, Převodník PDF, Úpravy, podpis, začernění   |
 
 Karty ve skupině **V editoru PDF** otevřou vybrané PDF na kartě editoru. Tam vyberte příkaz na pásu karet.
 
 ## Dobré vědět
 
 - Nelze ukládat přes zdrojový soubor ani přes soubor otevřený s neuloženými změnami.
-- PDF chráněná heslem zatím nelze použít.
+- PDF chráněné heslem lze v ostatních nástrojích použít až po **Odebrat heslo**. Soubor, jehož heslo neznáte, otevřít nelze.
+- **Opravit soubor** obnoví jen ty části, které jsou ještě čitelné. Otevřete nový soubor a zkontrolujte, že nechybí žádná stránka.
 - **Odebrat prázdné stránky** jen ukazuje kandidáty. Odeberou se jen vybrané stránky a stránka s jediným znakem nikdy není kandidátem.
 - **Odebrat poznámky** ponechá pole formuláře a odkazy odebere jen po zaškrtnutí. Obsah odebraných poznámek v novém souboru nezůstane.
 - **Uložit jako text** čte jen textovou vrstvu. Stránky, kde je text obrázkem, například naskenované, budou prázdné.
@@ -40,3 +42,5 @@ Karty ve skupině **V editoru PDF** otevřou vybrané PDF na kartě editoru. Tam
 | Před odesláním zkontrolovaného dokumentu uklízíte komentáře                       | Odebrat poznámky                                 |
 | Odevzdáváte několik fotek jako jedno PDF                                          | Obrázky do PDF                                   |
 | Chcete použít text z PDF v jiném dokumentu                                        | Uložit jako text                                 |
+| PDF je příliš velké na přílohu e-mailu                                            | Zmenšit                                          |
+| PDF, jehož stahování se přerušilo, nejde otevřít                                  | Opravit soubor                                   |

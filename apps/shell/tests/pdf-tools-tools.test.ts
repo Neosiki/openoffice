@@ -3,17 +3,22 @@ import { describe, expect, it } from 'vitest'
 import { PDFDict, PDFDocument, PDFName, StandardFonts } from 'pdf-lib'
 import {
   PdfToolRefusal,
+  MAX_PASSWORD_BYTES,
   checkOptions,
+  encryptedPageCount,
   foundBlankPagesOf,
   inspectImage,
   inspectPdf,
   isPdfToolId,
+  jobBytesOf,
   outputNames,
   pagesToText,
   runPdfTool,
+  toolAccepts,
   toolInputKind,
   toolMinInputs,
   toolOutputExtension,
+  toolRunsAsJob,
   toolTakesMany,
 } from '../src/main/pdf-tools/tools'
 import { PDF_TOOL_ANNOT_KINDS } from '../src/shared/pdf-tools-api'
@@ -166,6 +171,13 @@ describe('checking options', () => {
       ok: false,
       error: 'no-kinds',
     })
+    expect(checkOptions('compress', {}, 3).options).toEqual({ compressLevel: 'medium' })
+    expect(checkOptions('compress', { compressLevel: 'strong' }, 3).options).toEqual({
+      compressLevel: 'strong',
+    })
+    expect(checkOptions('compress', { compressLevel: 'max' }, 3).options).toEqual({
+      compressLevel: 'medium',
+    })
     expect(checkOptions('blankPages', { removePages: '4, 2,2,9' }, 5).options).toEqual({
       removePages: '2,4',
     })
@@ -181,6 +193,62 @@ describe('checking options', () => {
       ok: false,
       error: 'range',
     })
+  })
+
+  it('takes passwords exactly as typed, and checks them before anything runs', () => {
+    expect(checkOptions('encrypt', { password: ' a b ', passwordConfirm: 'x' }, 1)).toEqual({
+      ok: true,
+      options: { password: ' a b ' },
+    })
+    expect(checkOptions('encrypt', { password: '' }, 1)).toEqual({
+      ok: false,
+      error: 'password-empty',
+    })
+    expect(checkOptions('encrypt', { password: 'a', restrict: true }, 1)).toEqual({
+      ok: false,
+      error: 'password-empty',
+    })
+    expect(
+      checkOptions('encrypt', { password: 'a', restrict: true, permissionPassword: 'a' }, 1),
+    ).toEqual({ ok: false, error: 'password-same' })
+    expect(
+      checkOptions('encrypt', { password: 'a', restrict: true, permissionPassword: 'b' }, 1),
+    ).toEqual({ ok: true, options: { password: 'a', restrict: true, permissionPassword: 'b' } })
+    // 127 bytes of UTF-8 is the most AES-256 keeps: 42 Korean syllables fit, 43 do not
+    expect(MAX_PASSWORD_BYTES).toBe(127)
+    expect(checkOptions('encrypt', { password: '가'.repeat(42) }, 1).ok).toBe(true)
+    expect(checkOptions('encrypt', { password: '가'.repeat(43) }, 1)).toEqual({
+      ok: false,
+      error: 'password-long',
+    })
+    expect(checkOptions('decrypt', {}, 1)).toEqual({ ok: false, error: 'password-empty' })
+    expect(checkOptions('decrypt', { password: 'p', restrict: true }, 1)).toEqual({
+      ok: true,
+      options: { password: 'p' },
+    })
+    expect(checkOptions('repair', { password: 'p' }, 0)).toEqual({ ok: true, options: {} })
+  })
+
+  it('takes password-protected PDFs only to remove the password, and damaged ones only to repair', async () => {
+    expect(toolAccepts('decrypt')).toBe('encrypted')
+    expect(toolAccepts('repair')).toBe('damaged')
+    expect(toolAccepts('encrypt')).toBe('pdf')
+    expect(toolAccepts('merge')).toBe('pdf')
+    for (const tool of ['encrypt', 'decrypt', 'repair'] as const) {
+      expect(toolRunsAsJob(tool)).toBe(true)
+      await expect(runPdfTool(tool, [await pdf(1)], {})).rejects.toThrow(/runs as a job/)
+    }
+    expect(toolRunsAsJob('compress')).toBe(false)
+    expect(await encryptedPageCount(await encryptedPdf())).toBe(1)
+    expect(await encryptedPageCount(new TextEncoder().encode('nothing'))).toBe(0)
+  })
+
+  it('reads only bytes from a tool job', () => {
+    const bytes = new Uint8Array([1, 2])
+    expect(jobBytesOf({ bytes })).toBe(bytes)
+    expect(jobBytesOf({ bytes: new Uint8Array(0) })).toBeNull()
+    expect(jobBytesOf({ bytes: [1, 2] })).toBeNull()
+    expect(jobBytesOf(null)).toBeNull()
   })
 
   it('keeps only the options the tool reads', () => {
@@ -325,6 +393,15 @@ describe('running each tool', () => {
     expect(await widths(out!)).toEqual([100, 102, 104])
   })
 
+  it('makes smaller only with the picture code, and names a file that did not shrink', async () => {
+    await expect(runPdfTool('compress', [await pdf(2)], {})).rejects.toThrow()
+    // already as small as pdf-lib writes it: nothing to win
+    const tight = await (await PDFDocument.load(await pdf(1))).save({ useObjectStreams: true })
+    await expect(
+      runPdfTool('compress', [tight], { compressLevel: 'light' }, { recode: async () => null }),
+    ).rejects.toBeInstanceOf(PdfToolRefusal)
+  })
+
   it('refuses a PDF with no text at all', async () => {
     await expect(runPdfTool('toText', [await textPdf(['', ''])], {})).rejects.toBeInstanceOf(
       PdfToolRefusal,
@@ -377,5 +454,9 @@ describe('suggested file names', () => {
     expect(outputNames('duplex', 'a.pdf', 1, {})).toEqual(['a-duplex.pdf'])
     expect(outputNames('overlay', 'a.pdf', 1, {})).toEqual(['a-background.pdf'])
     expect(outputNames('stripAnnots', 'a.pdf', 1, {})).toEqual(['a-clean.pdf'])
+    expect(outputNames('compress', 'a.pdf', 1, {})).toEqual(['a-smaller.pdf'])
+    expect(outputNames('encrypt', 'a.pdf', 1, {})).toEqual(['a-locked.pdf'])
+    expect(outputNames('decrypt', 'a.pdf', 1, {})).toEqual(['a-unlocked.pdf'])
+    expect(outputNames('repair', 'a.pdf', 1, {})).toEqual(['a-repaired.pdf'])
   })
 })

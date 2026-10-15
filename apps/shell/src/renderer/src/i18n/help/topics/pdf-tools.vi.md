@@ -17,6 +17,7 @@ Cửa sổ cho các việc thường làm với PDF, bắt đầu từ việc c�
 | Trang trí                 | Thêm nền                                                                                    |
 | Dọn dẹp                   | Xóa chú thích                                                                               |
 | Chuyển đổi                | Ảnh sang PDF, Lưu thành văn bản                                                             |
+| Kích thước và bảo mật     | Giảm dung lượng, Đặt mật khẩu, Gỡ mật khẩu, Sửa tệp                                         |
 | Trong trình chỉnh sửa PDF | Hình mờ & đầu/chân trang, Cắt xén trang, Xuất hình ảnh, Chuyển đổi PDF, Sửa, ký, che        |
 
 Các thẻ trong nhóm **Trong trình chỉnh sửa PDF** mở PDF đã chọn trong một thẻ trình chỉnh sửa. Hãy chọn lệnh đó trên dải băng ở đó.
@@ -24,7 +25,8 @@ Các thẻ trong nhóm **Trong trình chỉnh sửa PDF** mở PDF đã chọn t
 ## Cần biết
 
 - Không thể lưu đè lên tệp nguồn hoặc lên tệp đang mở có thay đổi chưa lưu.
-- Hiện chưa dùng được PDF có mật khẩu.
+- PDF có mật khẩu chỉ dùng được trong các công cụ khác sau khi **Gỡ mật khẩu**. Tệp mà bạn không biết mật khẩu thì không mở được.
+- **Sửa tệp** chỉ lấy lại những phần vẫn còn đọc được. Hãy mở tệp mới và kiểm tra xem có thiếu trang nào không.
 - **Xóa trang trống** chỉ hiện các trang nghi là trống. Chỉ những trang bạn chọn mới bị xóa, và trang có dù chỉ một ký tự không bao giờ được đề xuất.
 - **Xóa chú thích** giữ các ô nhập của biểu mẫu và chỉ xóa liên kết khi bạn đánh dấu. Nội dung của chú thích đã xóa không còn trong tệp mới.
 - **Lưu thành văn bản** chỉ đọc lớp chữ. Những trang có chữ ở dạng ảnh, như trang quét, sẽ để trống.
@@ -40,3 +42,5 @@ Các thẻ trong nhóm **Trong trình chỉnh sửa PDF** mở PDF đã chọn t
 | Dọn các nhận xét trước khi gửi tài liệu đã duyệt                          | Xóa chú thích                   |
 | Nộp nhiều ảnh dưới dạng một PDF                                           | Ảnh sang PDF                    |
 | Dùng lại chữ trong PDF cho tài liệu khác                                  | Lưu thành văn bản               |
+| PDF quá lớn để đính kèm vào email                                         | Giảm dung lượng                 |
+| PDF tải xuống bị dừng giữa chừng không mở được                            | Sửa tệp                         |

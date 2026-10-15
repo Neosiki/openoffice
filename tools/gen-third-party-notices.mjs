@@ -75,6 +75,8 @@ function extraResourceSeeds() {
 const NOTE = {
   '@fluentui/react-icons':
     'Copyright (c) Microsoft Corporation. Licensed under the MIT License.\nhttps://github.com/microsoft/fluentui-system-icons',
+  '@neslinesli93/qpdf-wasm':
+    'qpdf: Copyright (c) 2005-2021 Jay Berkenbilt; Copyright (c) 2022-2025 Jay Berkenbilt and Manfred Holger. Licensed under the Apache License, Version 2.0.\nhttps://github.com/qpdf/qpdf\nWebAssembly build and wrapper: ISC License.\nhttps://github.com/neslinesli93/qpdf-wasm',
   '@rhwp/editor':
     'Copyright (c) 2025-2026 Edward Kim. Licensed under the MIT License.\nhttps://github.com/edwardkim/rhwp',
 }
