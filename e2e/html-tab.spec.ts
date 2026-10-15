@@ -2,7 +2,13 @@ import { mkdtemp, readFile, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test, expect } from '@playwright/test'
-import { launchShell, closeAndSaveVideo, waitForPageWithUrl, screenshotPath } from './helpers'
+import {
+  launchShell,
+  closeAndSaveVideo,
+  waitForPageWithUrl,
+  screenshotPath,
+  stubAiReady,
+} from './helpers'
 
 test.describe('html editor', () => {
   test('AI HTML quick card opens an html editor tab in preview view with a ribbon', async () => {
@@ -198,6 +204,8 @@ test.describe('html editor', () => {
     try {
       const editorPage = await waitForPageWithUrl(app, '://html/')
       await expect(editorPage.locator('.ribbon-body')).toBeVisible()
+      // sending needs a connected AI; the stub answers instead of a real program
+      await stubAiReady(app)
       const toggle = editorPage.locator('.ribbon .ai-entry').first()
       // the panel state is remembered; normalize to closed first
       if (await editorPage.locator('.copilot').isVisible()) await toggle.click()
@@ -233,7 +241,7 @@ test.describe('html editor', () => {
       )
       await composer.fill('Rename the heading to Summary')
       await composer.press('Enter')
-      // the instruction lands as a sent user message (the model reply itself needs credentials)
+      // the instruction lands as a sent user message (the reply comes from the stubbed ai:stream)
       await expect(editorPage.locator('.ai-msg-user')).toContainText('Rename the heading')
       await expect(editorPage.locator('.ai-msg-user .ai-msg-attachments img')).toHaveCount(1)
       await expect(editorPage.locator('.copilot .ai-attachments')).toHaveCount(0)

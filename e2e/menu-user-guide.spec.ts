@@ -55,7 +55,8 @@ test('the manual survives an editor switch that swaps the application menu', asy
       [pptx, '://slides/', 'slides'],
       [join(dir, 'sample.md'), '://markdown/', 'markdown again'],
     ] as const) {
-      await writeFile(path, '# Sample\n\nA markdown note.\n').catch(() => {})
+      // the deck is the zipped fixture: only the markdown note is written here
+      if (path.endsWith('.md')) await writeFile(path, '# Sample\n\nA markdown note.\n')
       await page.evaluate((p) => window.aiOffice.openPath(p), path)
       await waitForPageWithUrl(launched.app, url)
       await page.waitForTimeout(1200)

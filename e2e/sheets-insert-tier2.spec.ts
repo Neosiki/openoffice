@@ -67,7 +67,7 @@ test.describe('sheets: Insert → Equation and Checkbox', () => {
       await sheets.screenshot({ path: screenshotPath('equation-preview') })
       await dialog.getByRole('button', { name: 'OK' }).click()
 
-      await expect(sheets.getByRole('status')).toContainText('Picture inserted', {
+      await expect(sheets.locator('.workbook-status')).toContainText('Picture inserted', {
         timeout: 20_000,
       })
       await expect(sheets.locator('.xlsx-image')).toBeVisible({ timeout: 15_000 })

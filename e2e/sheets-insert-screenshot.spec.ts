@@ -57,7 +57,7 @@ test.describe('sheets: Insert → Screenshot', () => {
       await sheets.screenshot({ path: screenshotPath('screenshot-picker') })
       await grid.first().click()
 
-      await expect(sheets.getByRole('status')).toContainText('Picture inserted', {
+      await expect(sheets.locator('.workbook-status')).toContainText('Picture inserted', {
         timeout: 20_000,
       })
       await expect(dialog).not.toBeVisible()
