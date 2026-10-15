@@ -43,6 +43,7 @@ import type { GenerateHomeApi } from '../shared/generate-api'
 import { GENERATE_HOME_CHANNELS } from '../shared/generate-home-channels'
 import type { PdfToolsHomeApi } from '../shared/pdf-tools-api'
 import { PDF_TOOLS_HOME_CHANNELS } from '../shared/pdf-tools-home-channels'
+import { AGENT_HOME_OPEN_CHANNEL } from '../shared/agent-home-channel'
 import type { SubscriptionApi } from '../shared/subscription-api'
 import {
   SHELL_SUBSCRIPTION_CHANNELS,
@@ -745,6 +746,12 @@ const pdfToolsHomeApi: PdfToolsHomeApi = {
   },
 }
 contextBridge.exposeInMainWorld('aiOfficePdfToolsHome', pdfToolsHomeApi)
+// Home's entry point into the agent window (decision 0032); the window has its own preload
+contextBridge.exposeInMainWorld('aiOfficeAgent', {
+  async open() {
+    await ipcRenderer.invoke(AGENT_HOME_OPEN_CHANNEL)
+  },
+})
 
 // open documents dragged from the OS anywhere over Home or the tab strip
 installDropOpenBridge()

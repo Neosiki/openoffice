@@ -16,6 +16,7 @@
 - 외부에서 들어오는 입구: 앱 안 MCP 서버(`src/main/mcp/`), 명령줄용 제어 채널(`control-server.ts`), 열린 문서 목록 게시(`open-documents.ts`), 명령줄 PATH 연결과 실행기 위치 기록(`cli-link.ts`), 스킬·MCP 등록 IPC(`integrations-ipc.ts`).
 - 기본 앱 등록과 파일 연결(`default-app.ts`).
 - PDF 구조 작업과 보관소 채널(`src/main/pdf-structure-ipc.ts`, 로직은 `src/main/pdf-structure/`): PDF 편집기의 `structure*`·`store*` 채널을 등록하고, 구조 작업마다 Electron `utilityProcess`를 하나 띄운다(`runner.ts`, 진입점 `pdf-structure-process.ts`). 앱 안 저장 뒤 끝나지 않은 작업 기록 옮기기(`job-migration.ts`), 출력 형식별 끼움 자리(`plugins.ts`)도 여기 있다.
+- 에이전트 창(결정 0032, `src/main/agent/`): 창과 채널(`agent-window.ts`), 세션 관리와 폴더·지시문(`agent-sessions.ts`), 세션 전용 MCP 서버와 그 도구(`agent-mcp.ts`). 화면은 `src/renderer/agent.html`과 `src/renderer/src/agent/`, preload는 `src/preload/agent.ts`, 문구는 `i18n/strings-agent.ts`와 `i18n/agent/<언어>.ts`. 홈의 입구는 `home:open-agent-window` 하나다.
 - 설정 → 일반의 "PDF AI 결과 보관소" 줄(`SettingsResultStore.tsx`): `<userData>/pdf-store`가 차지한 용량과 "모두 지우기". 채널은 `result-store-ipc.ts`, preload는 `window.aiOfficeResultStore`다.
 
 ## 맡지 않는 것 (경계)
@@ -58,6 +59,9 @@
 - 구조 작업과 보관소 채널은 화면이 보낸 경로를 믿지 않는다. 읽는 파일은 그 창에 허가된 파일(`pdfPathGranted`)이어야 하고, 쓰는 곳은 셸의 저장 창이 고른 대상(`structurePickTarget`, 작업 하나에 한 번)뿐이며 원본 파일은 쓸 수 없다. 보관소 읽기·쓰기는 셸이 그 창의 파일에서 계산한 문서 해시로만 받는다. 단독 실행처럼 채널이 없으면 화면은 `not-available`을 받는다.
 - **PDF 도구 창은 경로를 화면에 넘기지 않는다.** 입력은 메인의 열기 대화 상자로만 고르고 화면에는 불투명한 id만 준다. 결과는 메인의 저장 대화 상자가 고른 곳에만 쓰며, 원본 파일이나 저장하지 않은 변경이 있는 채 열린 파일에는 쓰지 않는다. AI와 네트워크를 쓰지 않고, 처리는 편집기의 페이지 함수(`apps/pdf/src/main/save-pdf.ts`)만 부른다. 결과 열기는 `openGeneratedDocument`(같은 경로의 PDF 탭은 다시 읽음), 편집기로 넘기는 카드는 `openDocumentPath`(열린 탭은 앞으로만)를 쓴다.
 - 보관소의 "모두 지우기"는 설정 화면에서 확인을 받은 뒤에만 부른다. 도는 작업이 있는지는 보지 않는다(그 작업은 이후 항목을 다시 쓴다).
+
+- **에이전트 세션은 사람이 시작한 창에만 속한다.** 채널은 그 창의 webContents만 받고, 세션은 그 창이 닫히면 끝난다. 경고 확인과 폴더 검사와 연결 확인은 화면이 아니라 뒷단이 시작할 때마다 다시 한다. 창에는 오류 문장을 보내지 않고 종류만 보낸다(`agentEventView`).
+- **세션 MCP 서버의 도구는 `AGENT_MCP_TOOL_NAMES`뿐이다.** 탭 닫기, 자체 편집 세션, 창 없는 파일 만들기를 더하지 않는다. 읽기는 가린 자리를 `{{이름}}`으로 내보내고(`withholdingSlides`, `withholdingOpenDocuments`), 가린 내용이 있는 PPT는 고치지 않는다. 연동의 앱 안 MCP 서버는 출력이 바깥에 약속된 것이라 이 처리를 하지 않는다(결정 0016).
 
 ## 이 모듈의 방식
 

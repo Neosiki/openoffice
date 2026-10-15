@@ -7,15 +7,19 @@ test.describe('home screen', () => {
     const { page } = launched
     try {
       await expect(page.locator('.home-hero')).toBeVisible()
-      // the quick-create cards plus the "Open file" browse card
-      await expect(page.locator('.quick-card')).toHaveCount(8)
+      // the quick-create cards, the "Open file" browse card, and the PDF tools and agent windows
+      await expect(page.locator('.quick-card')).toHaveCount(11)
       await expect(page.locator('.quick-card').first()).toContainText('AI Docs')
       await expect(page.locator('.quick-card').nth(1)).toContainText('AI Sheets')
       await expect(page.locator('.quick-card').nth(2)).toContainText('AI Slides')
       await expect(page.locator('.quick-card').nth(3)).toContainText('AI Markdown')
       await expect(page.locator('.quick-card').nth(4)).toContainText('AI HTML')
       await expect(page.locator('.quick-card').nth(5)).toContainText('Mind Map')
-      await expect(page.locator('.quick-card').nth(6)).toContainText('AI PDF')
+      await expect(page.locator('.quick-card').nth(6)).toContainText('AI HWP')
+      await expect(page.locator('.quick-card').nth(7)).toContainText('AI PDF')
+      await expect(page.locator('.quick-card').nth(8)).toContainText('Open Local File')
+      await expect(page.locator('.quick-card').nth(9)).toContainText('PDF tools')
+      await expect(page.locator('.quick-card').nth(10)).toContainText('Agent')
       await expect(page.locator('.tab-bar .tab-item.tab-home')).toBeVisible()
       await page.screenshot({ path: screenshotPath('home-overview') })
     } finally {

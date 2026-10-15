@@ -9,6 +9,7 @@
 - 한 턴 라우팅: `streamForProvider`(`src/stream.ts`), `chatForProvider`(`src/chat.ts`), 프로그램이 읽는 실패 이유 `AiRunError`·`aiStreamErrorFields`(`src/run-error.ts`).
 - 구독 프로그램 공통 계층 `src/subscription/`: 실행 파일 찾기(`locate.ts`), 환경(`env.ts`), 시작·종료와 자식 등록부(`process.ts`), 강제 종료 뒤 정리(`leftovers.ts`), 연결 상태(`status.ts`, `service.ts`), 프로그램의 모델 목록(`models.ts`), 종량제 로그인 동의(`metered.ts`), 로그인·로그아웃·설치 실행(`launch.ts`), IPC 계약과 메인 측 핸들러(`contract.ts`, `ipc.ts`).
 - 두 브리지 `src/claude-code-cli.ts`, `src/codex-app-server.ts`와 키 기반 이미지·미디어 프로토콜(`src/media.ts`, `src/media-protocols.ts`, `src/image-backend.ts`).
+- 에이전트 모드(결정 0032)의 실행부 `src/agent-session/`(진입점 `/agent-session`, Node 전용): 허락 판단 `agentPolicyVerdict`(`policy.ts`), Claude Code 세션(`claude.ts`), Codex 세션(`codex.ts`), Claude에 줄 스킬 묶음(`skills.ts`), 프로그램에 돌려주는 거절 문장(`messages.ts`).
 - 무료 연결: 화면용 규칙과 상수(`src/free-ai.ts`, `/browser`로 내보냄: 무료 모델 목록, 연결·해제한 설정, 카드의 "연결됨" 판정, IPC 채널 이름과 답 판독, 오늘 무료 사용량 소진 판정 `freeLimitOf`)와 뒷단 전용 연결부(`src/free-connect.ts`, `/free-connect`: OpenRouter OAuth PKCE와 루프백 서버, Gemini 키 확인, 무료 모델 고르기, 남은 무료 요청 수).
 
 ## 맡지 않는 것 (경계)
@@ -48,6 +49,13 @@
 - 입력을 말없이 자르지 않는다. Claude 브리지가 줄이는 것은 이미지 100장(`MAX_CLAUDE_CODE_IMAGES`) 초과분뿐이고, 오래된 것부터 빼며 반드시 `onInputTruncated`를 부른다. 글자는 자르지 않는다.
 - 구독 IPC 채널은 프로세스당 한 번, `ensureSubscriptionIpc`로만 등록한다. 패키징된 앱은 여러 에디터의 메인 코드가 한 프로세스에서 돌고 같은 채널을 두 번 등록하면 예외가 나므로 `registerSubscriptionIpc`를 앱에서 직접 부르지 않는다. 등록은 상태 확인을 시작하지 않는다. 첫 `statuses` 요청이 첫 확인을 시작하므로, AI를 보여 주지 않는 프로세스(headless export 등)는 벤더 프로그램을 띄우지 않는다.
 
+- **에이전트 세션은 두뇌 방식의 규칙을 빌려 쓰지 않고 따로 지킨다.** 위의 "도구 0개"와 "Codex 읽기 전용" 규칙은 기본 AI 창의 것이고, 에이전트 세션의 코드를 두뇌 방식 브리지에 섞지 않는다. 대신 이렇게 한다. Claude는 `claudeAgentLaunchArgs`의 고정 인자(`--restricted`, `--setting-sources ""`, `--strict-mcp-config`, `--tools`의 8개, `--permission-prompts host --permission-prompt-tool stdio`)로 띄우고, 시작 보고가 `claudeAgentInitProblem`을 통과해야 진행한다. Codex는 `codexAgentLaunchArgs`(두뇌 방식 덮어쓰기에 스킬 지시문만 켬)로 띄우고, 권한 프로필 `ieumoffice-agent`가 적용됐다는 답과 MCP 목록 확인이 있어야 진행한다. 프로필이 적용되지 않으면 낮춰 돌리지 않고 끝낸다.
+- 에이전트 세션의 모든 권한 요청은 `agentPolicyVerdict`를 거친다. 프로그램의 옵션(`acceptEdits`, 샌드박스)을 믿고 판단을 건너뛰지 않는다. 탭에 열린 문서의 파일 쓰기, 프로젝트 폴더 밖 쓰기, 보호 경로는 어느 허락 방식에서도 거절이다. 판단 규칙을 바꾸면 `tests/agent-session-policy.test.ts`의 표를 함께 고친다.
+- Claude에 `bypassPermissions`·`--dangerously-skip-permissions`를 주지 않는다. "믿고 맡기기"는 Claude Code의 `auto` 모드다. Windows에서 Claude의 명령은 격리되지 않기 때문이다.
+- Codex 에이전트 세션은 MXC 격리(`windows.sandbox="mxc"`)와 `deny`가 든 권한 프로필로만 연다. 승인 정책에 `on-request`를 쓰지 않는다. 그 정책에서 허락한 명령은 격리 밖에서 돈다. `thread/start`의 답에서 프로필과 승인 정책이 요청과 같은지 확인한다. Windows에서는 그 전에 `probeCodexSandbox`(`codex-sandbox-probe.ts`)로 격리가 뜨고 거부를 지키는지 시험하고, 통과하지 못하면 시작하지 않는다.
+- 에이전트 세션도 명령줄에 사용자 글을 올리지 않는다. 설정과 MCP 토큰은 세션 폴더의 파일로, 지시문은 표준 입력(Claude `initialize`의 `appendSystemPrompt`, Codex `developerInstructions`)으로 넘긴다.
+- 스킬은 사용자 설정을 읽게 해서 싣지 않는다(훅이 실행된다). `buildAgentSkillBundle`이 스킬 폴더만 복사한 플러그인 폴더를 만들고, 디렉터리 연결은 쓰지 않는다(연결이 실제 위치로 풀려 작업 폴더 밖으로 막힌다).
+
 ## 이 모듈의 방식
 
 - 브리지는 "한 턴짜리 두뇌"다. 앱의 system prompt, 지금까지의 대화, 앱 도구 목록, 응답 JSON Schema를 주고 `{ text, toolCalls }` 객체 하나를 받는다. Claude는 턴마다 새 프로세스를 띄우고 끝나면 스스로 나가게 둔다(stdin을 닫고 5초 뒤에도 남아 있으면 트리 종료). Codex는 app-server 프로세스를 실행들이 공유하고 쓰는 실행이 없으면 끝낸다.
@@ -67,5 +75,6 @@
 - 어떤 테스트도 실제 `claude`·`codex`에 닿으면 안 된다. 닿으면 개발자의 구독 사용량이 소모된다. 주입 지점을 쓴다: `ClaudeCodeCliDeps`(`spawn`, `resolveProgram`, `registry`, `killTree`), `setCodexAppServerRuntime`, 상태 확인의 `locate`·`run`·`detect`, 상태 서비스의 `listModels`, `setSubscriptionModelSource`, 로그아웃의 `locate`·`run`·`spawn`, IPC의 `resetSharedSubscriptionIpc`와 `SubscriptionIpcSetup`의 `detect`·`listModels`, 프로세스 조회의 `inspectProcesses` 두 번째 인자. `createSubscriptionIpcDeps`가 만든 로그인·로그아웃 실행부는 실제 프로그램을 찾아 띄우므로, 그것을 거치는 테스트는 `vi.mock('../src/subscription/launch')`로 실행부를 바꾼다(`tests/subscription-account-change.test.ts`). 라우터 테스트는 `vi.mock('../src/claude-code-cli')`로 브리지를 통째로 바꾼다.
 - 바꾸면 반드시 테스트하는 것: 시작 인자(플래그 하나가 빠지면 사용자 hook·MCP가 들어온다), 환경에서 지우는 변수 목록, 0-도구 확인의 모든 거절 경로, 상태 파서에 "예상과 다른 형식"의 출력을 넣었을 때 조직 이름이 상태·오류 문장·동의 파일 어디에도 남지 않는지와 계정 이메일이 상태 밖 어디에도 쓰이지 않는지(`tests/subscription-identity.test.ts`), 모델 목록 읽기가 `initialize`만 보내고 프로세스를 끝내는지(`tests/claude-code-cli.test.ts`), 목록이 상태보다 늦게 오고 실패해도 상태가 그대로인지(`tests/subscription-models.test.ts`), 로그아웃이 셸 없이 정리된 환경으로 도는지(`tests/subscription-launch.test.ts`), `selectAiProvider`가 돈이 드는 경로를 스스로 고르지 않는지.
 - 경계 사례: 재전송된 답(`message_start`가 두 번 오면 이미 내보낸 글자를 건너뛴다), `max_tokens`로 잘린 구조화 답, 코드 펜스로 감싼 JSON, 개행 없이 4MB를 넘는 줄, pid 재사용(시작 시각이 다르면 건드리지 않는다), 손상된 동의 파일.
+- 에이전트 세션은 가짜 프로그램으로 시험한다(`tests/agent-session-claude.test.ts`, `tests/agent-session-codex.test.ts`). 주입 지점은 `ClaudeAgentDeps`·`CodexAgentDeps`의 `resolveProgram`, `spawn`, `registry`, `killTree`, `writeFile`이다. 실제 프로그램으로 확인한 것은 결정 0032와 `.dryforge/agent-mode/design.md`에 적었다.
 - Windows에서 `tests/ai-settings-guard.test.ts`의 "keeps Windows-style paths with spaces and non-ASCII" 한 건은 변경과 무관하게 실패한다(임시 폴더 아래에 `C:\…` 경로를 이어 붙여 파일을 만들려다 ENOENT).
 - 실제 프로그램에 대한 확인(플래그가 버전에서 유효한지, 실제 한도 이벤트의 모양)은 사용자 구독을 쓰므로 자동 테스트에 넣지 않는다. 최소 지원 버전은 `SUBSCRIPTION_MIN_VERSIONS`에 있고, 플래그를 추가하면 그 값도 함께 본다.

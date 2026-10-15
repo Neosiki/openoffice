@@ -231,9 +231,29 @@ export const HELP_TOPICS: HelpTopicMeta[] = [
     ],
   },
   {
-    id: 'ai-models',
+    id: 'agent-mode',
     group: 'ai',
     order: 3,
+    keywords: [
+      'agent',
+      '智能体',
+      '项目',
+      'project',
+      'folder',
+      'skills',
+      '技能',
+      'claude code',
+      'codex',
+      'sandbox',
+      '에이전트',
+      '프로젝트',
+      '스킬',
+    ],
+  },
+  {
+    id: 'ai-models',
+    group: 'ai',
+    order: 4,
     keywords: [
       '模型',
       'model',
@@ -250,7 +270,7 @@ export const HELP_TOPICS: HelpTopicMeta[] = [
   {
     id: 'fonts',
     group: 'ai',
-    order: 4,
+    order: 5,
     keywords: ['字体', 'font', 'cjk', '中文', '日文', '韩文', 'install', '安装', 'ttf', 'otf'],
   },
   {

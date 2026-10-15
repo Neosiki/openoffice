@@ -1,0 +1,675 @@
+/**
+ * Agent mode on Codex, driven by a fake app-server: the thread's sandbox and
+ * permissions, the login and MCP checks, approval requests and their answers.
+ * Nothing here reaches a real `codex`.
+ */
+import { EventEmitter } from 'node:events'
+import { join } from 'node:path'
+import { PassThrough, Writable } from 'node:stream'
+import type { SpawnOptions } from 'node:child_process'
+import { describe, expect, it, vi } from 'vitest'
+import {
+  codexAgentAction,
+  codexAgentApprovalPolicy,
+  codexDeclineDecision,
+  codexElicitationAnswer,
+  codexAgentFilesystem,
+  codexAgentLaunchArgs,
+  codexAgentReadableDirs,
+  codexAgentThreadParams,
+  codexSandboxProbeArgs,
+  codexSandboxProbeVerdict,
+  startCodexAgentSession,
+  type AgentSessionEvent,
+  type CodexSandboxProbeResult,
+  type CodexAgentSessionOptions,
+} from '../src/agent-session'
+import type { SubscriptionProgram } from '../src/subscription'
+
+const PROGRAM: SubscriptionProgram = {
+  provider: 'codex',
+  command: 'C:\\fake\\codex.exe',
+  prefixArgs: [],
+  env: {},
+  entry: 'C:\\fake\\codex.exe',
+  source: 'path',
+}
+
+type Handler = (server: FakeCodex, params: any, id: number) => unknown
+
+class FakeCodex extends EventEmitter {
+  readonly pid = 777
+  readonly stdout = new PassThrough()
+  readonly stderr = new PassThrough()
+  readonly received: Array<Record<string, any>> = []
+  readonly stdin: Writable
+  exited = false
+  private pending = ''
+
+  constructor(private readonly handlers: Record<string, Handler>) {
+    super()
+    this.stdin = new Writable({
+      write: (chunk: Buffer, _encoding, done) => {
+        this.pending += chunk.toString('utf8')
+        const parts = this.pending.split('\n')
+        this.pending = parts.pop() ?? ''
+        for (const part of parts) if (part.trim()) this.receive(JSON.parse(part))
+        done()
+      },
+    })
+  }
+
+  private receive(message: Record<string, any>): void {
+    this.received.push(message)
+    if (typeof message.method !== 'string' || message.id === undefined) return
+    const handler = this.handlers[message.method]
+    if (!handler) {
+      this.send({ id: message.id, result: {} })
+      return
+    }
+    const result = handler(this, message.params, message.id)
+    if (result !== undefined) this.send({ id: message.id, result })
+  }
+
+  send(message: unknown): void {
+    if (!this.exited) this.stdout.write(`${JSON.stringify(message)}\n`)
+  }
+
+  exit(code: number | null = 0): void {
+    if (this.exited) return
+    this.exited = true
+    this.stdout.end()
+    setImmediate(() => this.emit('close', code, null))
+  }
+
+  kill(): boolean {
+    return true
+  }
+}
+
+const baseHandlers = (overrides: Record<string, Handler> = {}): Record<string, Handler> => ({
+  initialize: () => ({ userAgent: 'codex' }),
+  'account/read': () => ({ account: { type: 'chatgpt', planType: 'plus' } }),
+  'config/read': () => ({ config: { mcp_servers: { github: { command: 'x' } } } }),
+  'model/list': () => ({ data: [{ id: 'gpt-x', isDefault: true }] }),
+  'thread/start': (_server, params) => ({
+    thread: { id: 'th1' },
+    approvalPolicy: params.approvalPolicy,
+    activePermissionProfile: { id: 'ieumoffice-agent' },
+  }),
+  'mcpServerStatus/list': () => ({
+    data: [{ name: 'github', runtimeStatus: 'disabled', tools: {} }],
+  }),
+  'turn/start': () => ({ turn: { id: 'tu1' } }),
+  ...overrides,
+})
+
+function options(overrides: Partial<CodexAgentSessionOptions> = {}): CodexAgentSessionOptions {
+  return {
+    projectRoot: 'C:\\Users\\me\\Project',
+    mode: 'ask-commands',
+    model: '',
+    instructions: 'Answer in Korean.',
+    openDocuments: ['C:\\Users\\me\\Project\\open.md'],
+    protectedPaths: ['C:\\Users\\me\\.codex'],
+    sessionDir: 'C:\\Temp\\session-2',
+    meteredAccepted: false,
+    ...overrides,
+  }
+}
+
+async function start(
+  handlers: Record<string, Handler>,
+  overrides: Partial<CodexAgentSessionOptions> = {},
+  probe: CodexSandboxProbeResult = 'contained',
+) {
+  const events: AgentSessionEvent[] = []
+  const spawnCalls: Array<{ command: string; args: string[]; options: SpawnOptions }> = []
+  let server!: FakeCodex
+  const killTree = vi.fn((target: { pid?: number }) => {
+    if (target === server) server.exit(null)
+  })
+  const probeSandbox = vi.fn(async () => probe)
+  const run = startCodexAgentSession(options(overrides), (event) => events.push(event), {
+    resolveProgram: async () => PROGRAM,
+    probeSandbox,
+    registry: null,
+    platform: 'win32',
+    baseEnv: { PATH: 'C:\\Windows', OPENAI_API_KEY: 'sk-no' },
+    killTree,
+    spawn: (command, args, spawnOptions) => {
+      spawnCalls.push({ command, args, options: spawnOptions })
+      server = new FakeCodex(handlers)
+      return server
+    },
+  })
+  return { run, events, spawnCalls, killTree, probeSandbox, server: () => server }
+}
+
+const tick = () => new Promise((resolve) => setImmediate(resolve))
+
+describe('the launch and the thread', () => {
+  it('keeps the brain-only overrides and turns skill instructions on', () => {
+    const args = codexAgentLaunchArgs()
+    expect(args).toContain('features.hooks=false')
+    expect(args).toContain('features.plugins=false')
+    expect(args).toContain('skills.include_instructions=true')
+    expect(args).not.toContain('skills.include_instructions=false')
+    expect(args.slice(-2)).toEqual(['--listen', 'stdio://'])
+    // the MXC sandbox, explicitly: it fails rather than fall back to one that cannot deny the sign-in folder
+    expect(args[args.indexOf('windows.sandbox="mxc"') - 1]).toBe('-c')
+  })
+
+  it('maps each choice to an approval policy, never one where an approval leaves the sandbox', () => {
+    expect(codexAgentApprovalPolicy('ask-commands')).toBe('untrusted')
+    expect(codexAgentApprovalPolicy('ask-writes')).toBe('untrusted')
+    expect(codexAgentApprovalPolicy('trust-project')).toBe('never')
+    const params = codexAgentThreadParams(options({ mode: 'trust-project' }), 'gpt-x', {})
+    expect(params).not.toHaveProperty('sandbox')
+    expect((params.config as any).default_permissions).toBe('ieumoffice-agent')
+  })
+
+  it('reads the minimal set and the runtimes, writes the project, keeps open documents read-only and denies protected folders', () => {
+    expect(codexAgentFilesystem(options(), ['C:\\Python314'])).toEqual({
+      ':minimal': 'read',
+      'C:\\Python314': 'read',
+      'C:\\Users\\me\\Project': 'write',
+      'C:\\Users\\me\\Project\\open.md': 'read',
+      'C:\\Users\\me\\.codex': 'deny',
+    })
+  })
+
+  it('lets commands read the folders on PATH, but not a drive root, a protected folder or a missing one', () => {
+    const dirs = codexAgentReadableDirs(
+      [
+        'C:\\Python314',
+        'relative\\bin',
+        'C:\\',
+        'C:\\Users\\me\\.codex\\bin',
+        '"C:\\Program Files\\nodejs"',
+        'C:\\missing',
+        'C:\\python314',
+      ].join(';'),
+      options(),
+      'win32',
+      (dir) => !dir.toLowerCase().includes('missing'),
+    )
+    expect(dirs).toEqual(['C:\\Python314', 'C:\\Program Files\\nodejs'])
+  })
+
+  it('switches user MCP servers off and adds the app one with its token', () => {
+    const params = codexAgentThreadParams(
+      options({ appMcp: { url: 'http://127.0.0.1:3093/mcp', token: 'tok' } }),
+      'gpt-x',
+      { github: { enabled: false } },
+    )
+    expect((params.config as any).mcp_servers).toEqual({
+      github: { enabled: false },
+      'ieumoffice-editor': {
+        url: 'http://127.0.0.1:3093/mcp',
+        http_headers: { Authorization: 'Bearer tok' },
+        default_tools_approval_mode: 'approve',
+      },
+    })
+    expect(params.developerInstructions).toBe('Answer in Korean.')
+    expect(params.ephemeral).toBe(true)
+  })
+
+  it('answers only the tool approvals of the app server', () => {
+    const approval = {
+      serverName: 'ieumoffice-editor',
+      mode: 'form',
+      _meta: { codex_approval_kind: 'mcp_tool_call' },
+    }
+    expect(codexElicitationAnswer(approval).action).toBe('accept')
+    expect(codexElicitationAnswer({ ...approval, serverName: 'github' }).action).toBe('decline')
+    expect(codexElicitationAnswer({ ...approval, _meta: null }).action).toBe('decline')
+    expect(codexDeclineDecision({})).toBe('decline')
+    expect(codexDeclineDecision({ availableDecisions: ['accept', 'decline', 'cancel'] })).toBe(
+      'decline',
+    )
+    expect(codexDeclineDecision({ availableDecisions: ['accept', 'cancel'] })).toBe('cancel')
+  })
+
+  it('keeps the full command for judging and its own reading only for display', () => {
+    const action = codexAgentAction(
+      'item/commandExecution/requestApproval',
+      {
+        command: String.raw`"C:\\WINDOWS\\powershell.exe" -Command "cmd /c echo ok"`,
+        commandActions: [{ type: 'unknown', command: 'cmd /c echo ok' }],
+      },
+      new Map(),
+    )
+    expect(action.command).toBe(String.raw`"C:\\WINDOWS\\powershell.exe" -Command "cmd /c echo ok"`)
+    expect(action.summary).toBe('cmd /c echo ok')
+    expect(
+      codexAgentAction('item/commandExecution/requestApproval', { command: 'dir' }, new Map())
+        .summary,
+    ).toBeUndefined()
+  })
+
+  it('probes with findstr on a readable and a denied marker, judged by their names', () => {
+    const probeDir = join(String.raw`C:\Temp\s 1`, 'sandbox-probe')
+    const { args, readable, denied } = codexSandboxProbeArgs(
+      { ':minimal': 'read', [String.raw`C:\P`]: 'write' },
+      probeDir,
+    )
+    expect(args.slice(0, 3)).toEqual(['sandbox', '-c', 'windows.sandbox="mxc"'])
+    const table = args[6]!
+    expect(table).toContain(`${JSON.stringify(probeDir)} = "read"`)
+    expect(table).toContain(`${JSON.stringify(join(probeDir, 'denied'))} = "deny"`)
+    expect(args.slice(-3)).toEqual(['ieumoffice-sandbox-probe', readable, denied])
+    // a Korean user folder comes back in the console code page: the names still match
+    expect(
+      codexSandboxProbeVerdict(String.raw`C:\Users\??\ieumoffice-probe-readable.txt` + '\r\n'),
+    ).toBe('contained')
+    expect(codexSandboxProbeVerdict(`${readable}\r\n${denied}\r\n`)).toBe('not-contained')
+    expect(codexSandboxProbeVerdict('')).toBe('unavailable')
+    expect(codexSandboxProbeVerdict('Error: unknown variant')).toBe('unavailable')
+  })
+
+  it('reads the paths of a file change from the item that announced it', () => {
+    const action = codexAgentAction(
+      'item/fileChange/requestApproval',
+      { itemId: 'i1', reason: 'save' },
+      new Map([['i1', ['C:\\Users\\me\\Project\\a.md']]]),
+    )
+    expect(action).toMatchObject({
+      kind: 'write',
+      paths: ['C:\\Users\\me\\Project\\a.md'],
+      reason: 'save',
+    })
+  })
+})
+
+describe('starting a session', () => {
+  it('opens a thread in the project folder, sanitised, after checking login and MCP', async () => {
+    const { run, spawnCalls, server } = await start(baseHandlers())
+    const session = await run
+    expect(spawnCalls[0]!.options.cwd).toBe('C:\\Temp\\session-2')
+    expect((spawnCalls[0]!.options.env ?? {}).OPENAI_API_KEY).toBeUndefined()
+    const methods = server().received.map((message) => message.method)
+    expect(methods).toEqual([
+      'initialize',
+      'initialized',
+      'account/read',
+      'config/read',
+      'model/list',
+      'thread/start',
+      'mcpServerStatus/list',
+    ])
+    const thread = server().received.find((message) => message.method === 'thread/start')!
+    expect(thread.params).toMatchObject({
+      model: 'gpt-x',
+      cwd: 'C:\\Users\\me\\Project',
+      approvalPolicy: 'untrusted',
+      config: { mcp_servers: { github: { enabled: false } } },
+    })
+    session.stop()
+  })
+
+  it('checks the sandbox with the session profile before Codex starts', async () => {
+    const { run, probeSandbox, spawnCalls } = await start(baseHandlers())
+    const session = await run
+    const [filesystem, probeDir] = probeSandbox.mock.calls[0] as unknown as [
+      Record<string, string>,
+      string,
+    ]
+    expect(filesystem).toMatchObject({
+      ':minimal': 'read',
+      [String.raw`C:\Users\me\Project`]: 'write',
+      [String.raw`C:\Users\me\.codex`]: 'deny',
+    })
+    expect(probeDir.startsWith(String.raw`C:\Temp\session-2`)).toBe(true)
+    expect(spawnCalls).toHaveLength(1)
+    session.stop()
+  })
+
+  it('does not start when the sandbox cannot start, and says so', async () => {
+    const { run, spawnCalls } = await start(baseHandlers(), {}, 'unavailable')
+    await expect(run).rejects.toMatchObject({ kind: 'sandbox-unavailable' })
+    expect(spawnCalls).toHaveLength(0)
+  })
+
+  it('does not start when the sandbox lets a denied folder be read', async () => {
+    const { run, spawnCalls } = await start(baseHandlers(), {}, 'not-contained')
+    await expect(run).rejects.toMatchObject({ kind: 'unsafe-tools' })
+    expect(spawnCalls).toHaveLength(0)
+  })
+
+  it('refuses a metered login the person did not accept, before any thread', async () => {
+    const { run, server } = await start(
+      baseHandlers({ 'account/read': () => ({ account: { type: 'apiKey' } }) }),
+    )
+    await expect(run).rejects.toMatchObject({ kind: 'metered-not-accepted' })
+    expect(server().received.some((message) => message.method === 'thread/start')).toBe(false)
+  })
+
+  it('runs a metered login the person accepted', async () => {
+    const { run } = await start(
+      baseHandlers({ 'account/read': () => ({ account: { type: 'apiKey' } }) }),
+      { meteredAccepted: true },
+    )
+    const session = await run
+    session.stop()
+  })
+
+  it('refuses a signed-out Codex', async () => {
+    const { run } = await start(
+      baseHandlers({ 'account/read': () => ({ requiresOpenaiAuth: true }) }),
+    )
+    await expect(run).rejects.toMatchObject({ kind: 'signed-out' })
+  })
+
+  it('refuses a thread that runs without the session permissions', async () => {
+    const { run, killTree } = await start(
+      baseHandlers({
+        'thread/start': () => ({ thread: { id: 'th1' }, activePermissionProfile: null }),
+      }),
+    )
+    await expect(run).rejects.toMatchObject({ kind: 'unsafe-tools' })
+    expect(killTree).toHaveBeenCalled()
+  })
+
+  it('refuses a thread that runs under another approval policy than asked', async () => {
+    const { run, killTree } = await start(
+      baseHandlers({
+        'thread/start': () => ({
+          thread: { id: 'th1' },
+          approvalPolicy: 'on-request',
+          activePermissionProfile: { id: 'ieumoffice-agent' },
+        }),
+      }),
+    )
+    await expect(run).rejects.toMatchObject({ kind: 'unsafe-tools' })
+    expect(killTree).toHaveBeenCalled()
+  })
+
+  it('refuses a thread with a user MCP server still attached', async () => {
+    const { run } = await start(
+      baseHandlers({
+        'mcpServerStatus/list': () => ({
+          data: [{ name: 'github', runtimeStatus: 'ready', tools: {} }],
+        }),
+      }),
+    )
+    await expect(run).rejects.toMatchObject({ kind: 'unsafe-tools' })
+  })
+})
+
+describe('a running session', () => {
+  it('passes messages and tool lines on and ends the turn', async () => {
+    const { run, events, server } = await start(
+      baseHandlers({
+        'turn/start': (fake) => {
+          setImmediate(() => {
+            fake.send({ method: 'turn/started', params: { turn: { id: 'tu1' } } })
+            fake.send({
+              method: 'item/started',
+              params: {
+                item: {
+                  type: 'commandExecution',
+                  id: 'c1',
+                  command: 'dir',
+                  cwd: 'C:\\Users\\me\\Project',
+                },
+              },
+            })
+            fake.send({
+              method: 'item/completed',
+              params: {
+                item: { type: 'commandExecution', id: 'c1', command: 'dir', status: 'completed' },
+              },
+            })
+            fake.send({
+              method: 'item/completed',
+              params: { item: { type: 'agentMessage', text: 'Done.' } },
+            })
+            fake.send({
+              method: 'turn/completed',
+              params: { turn: { id: 'tu1', status: 'completed' } },
+            })
+          })
+          return { turn: { id: 'tu1' } }
+        },
+      }),
+    )
+    const session = await run
+    await session.send('list the folder')
+    await tick()
+    await tick()
+    expect(events).toEqual([
+      { type: 'started', provider: 'codex', model: 'gpt-x', skills: [] },
+      {
+        type: 'tool',
+        action: expect.objectContaining({ kind: 'command', command: 'dir' }),
+        status: 'running',
+      },
+      {
+        type: 'tool',
+        action: expect.objectContaining({ kind: 'command', command: 'dir' }),
+        status: 'done',
+      },
+      { type: 'text', text: 'Done.' },
+      { type: 'turn-done', ok: true },
+    ])
+    expect(server().received.find((message) => message.method === 'turn/start')!.params).toEqual({
+      threadId: 'th1',
+      input: [{ type: 'text', text: 'list the folder', text_elements: [] }],
+    })
+    session.stop()
+  })
+
+  it('asks the person about a command that needs approval, and answers Codex', async () => {
+    const { run, events, server } = await start(
+      baseHandlers({
+        'turn/start': (fake) => {
+          setImmediate(() =>
+            fake.send({
+              id: 'srv-1',
+              method: 'item/commandExecution/requestApproval',
+              params: {
+                itemId: 'c1',
+                command: 'curl.exe https://example.com',
+                reason: 'needs network',
+              },
+            }),
+          )
+          return { turn: { id: 'tu1' } }
+        },
+      }),
+    )
+    const session = await run
+    await session.send('fetch')
+    await tick()
+    const asked = events.find((event) => event.type === 'permission')
+    expect(asked).toMatchObject({
+      request: { provider: 'codex', kind: 'command', reason: 'needs network' },
+    })
+    session.answer((asked as any).request.id, { allow: true })
+    expect(server().received.at(-1)).toEqual({ id: 'srv-1', result: { decision: 'accept' } })
+    session.stop()
+  })
+
+  it('declines a change to an open document without asking', async () => {
+    const { run, events, server } = await start(
+      baseHandlers({
+        'turn/start': (fake) => {
+          setImmediate(() => {
+            fake.send({
+              method: 'item/started',
+              params: {
+                item: {
+                  type: 'fileChange',
+                  id: 'f1',
+                  changes: [{ path: 'C:\\Users\\me\\Project\\open.md', kind: 'update', diff: '' }],
+                },
+              },
+            })
+            fake.send({
+              id: 'srv-2',
+              method: 'item/fileChange/requestApproval',
+              params: { itemId: 'f1' },
+            })
+          })
+          return { turn: { id: 'tu1' } }
+        },
+      }),
+    )
+    const session = await run
+    await session.send('edit')
+    await tick()
+    await tick()
+    expect(server().received.at(-1)).toEqual({ id: 'srv-2', result: { decision: 'decline' } })
+    expect(events.some((event) => event.type === 'permission')).toBe(false)
+    session.stop()
+  })
+
+  it('refuses with cancel when the request does not offer decline', async () => {
+    const { run, server } = await start(
+      baseHandlers({
+        'turn/start': (fake) => {
+          setImmediate(() =>
+            fake.send({
+              id: 'srv-5',
+              method: 'item/commandExecution/requestApproval',
+              params: {
+                itemId: 'c1',
+                command: 'type C:\\Users\\me\\.codex\\config.toml',
+                availableDecisions: ['accept', 'cancel'],
+              },
+            }),
+          )
+          return { turn: { id: 'tu1' } }
+        },
+      }),
+    )
+    const session = await run
+    await session.send('x')
+    await tick()
+    expect(server().received.at(-1)).toEqual({ id: 'srv-5', result: { decision: 'cancel' } })
+    session.stop()
+  })
+
+  it('allows the app tools when Codex asks before calling them, and declines other forms', async () => {
+    const { run, server } = await start(
+      baseHandlers({
+        'turn/start': (fake) => {
+          setImmediate(() => {
+            fake.send({
+              id: 'srv-6',
+              method: 'mcpServer/elicitation/request',
+              params: {
+                serverName: 'ieumoffice-editor',
+                mode: 'form',
+                _meta: { codex_approval_kind: 'mcp_tool_call' },
+                message: 'Allow?',
+                requestedSchema: { type: 'object', properties: {} },
+              },
+            })
+            fake.send({
+              id: 'srv-7',
+              method: 'mcpServer/elicitation/request',
+              params: { serverName: 'ieumoffice-editor', mode: 'url', url: 'https://x' },
+            })
+          })
+          return { turn: { id: 'tu1' } }
+        },
+      }),
+    )
+    const session = await run
+    await session.send('x')
+    await tick()
+    await tick()
+    const replies = server().received.filter(
+      (message) => message.id === 'srv-6' || message.id === 'srv-7',
+    )
+    expect(replies).toEqual([
+      { id: 'srv-6', result: { action: 'accept', content: {}, _meta: null } },
+      { id: 'srv-7', result: { action: 'decline', content: null, _meta: null } },
+    ])
+    session.stop()
+  })
+
+  it('refuses requests it does not grant, such as wider permissions or sign-in tokens', async () => {
+    const { run, server } = await start(
+      baseHandlers({
+        'turn/start': (fake) => {
+          setImmediate(() => {
+            fake.send({ id: 'srv-3', method: 'item/permissions/requestApproval', params: {} })
+            fake.send({ id: 'srv-4', method: 'account/chatgptAuthTokens/refresh', params: {} })
+          })
+          return { turn: { id: 'tu1' } }
+        },
+      }),
+    )
+    const session = await run
+    await session.send('x')
+    await tick()
+    await tick()
+    const replies = server().received.filter(
+      (message) => message.id === 'srv-3' || message.id === 'srv-4',
+    )
+    expect(replies).toHaveLength(2)
+    for (const reply of replies) expect(reply.error).toMatchObject({ code: -32601 })
+    session.stop()
+  })
+
+  it('reports a failed turn with its kind', async () => {
+    const { run, events } = await start(
+      baseHandlers({
+        'turn/start': (fake) => {
+          setImmediate(() =>
+            fake.send({
+              method: 'turn/completed',
+              params: {
+                turn: {
+                  id: 'tu1',
+                  status: 'failed',
+                  error: { message: 'usage limit', codexErrorInfo: 'usageLimitExceeded' },
+                },
+              },
+            }),
+          )
+          return { turn: { id: 'tu1' } }
+        },
+      }),
+    )
+    const session = await run
+    await session.send('x')
+    await tick()
+    expect(events).toContainEqual({ type: 'turn-done', ok: false })
+    expect(events).toContainEqual(expect.objectContaining({ type: 'error' }))
+    session.stop()
+  })
+
+  it('stops a switched-off MCP server that starts anyway', async () => {
+    const { run, events } = await start(
+      baseHandlers({
+        'turn/start': (fake) => {
+          setImmediate(() =>
+            fake.send({
+              method: 'mcpServer/startupStatus/updated',
+              params: { name: 'github', status: 'starting' },
+            }),
+          )
+          return { turn: { id: 'tu1' } }
+        },
+      }),
+    )
+    const session = await run
+    await session.send('x')
+    await tick()
+    expect(events).toContainEqual(expect.objectContaining({ type: 'error', kind: 'unsafe-tools' }))
+    expect(events.at(-1)).toEqual({ type: 'ended' })
+  })
+
+  it('ends the process tree when stopped', async () => {
+    const { run, killTree, events } = await start(baseHandlers())
+    const session = await run
+    session.stop()
+    session.stop()
+    expect(killTree).toHaveBeenCalledTimes(1)
+    expect(events.filter((event) => event.type === 'ended')).toHaveLength(1)
+  })
+})

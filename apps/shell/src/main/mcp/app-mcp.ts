@@ -85,6 +85,11 @@ let currentSettings: McpSettings = {
   logging: false,
 }
 
+/** the configured runtime; agent sessions build their own server from the same controls (decision 0032) */
+export function currentMcpRuntimeDeps(): McpRuntimeDeps | null {
+  return deps
+}
+
 export function configureMcpRuntime(runtimeDeps: McpRuntimeDeps): void {
   deps = runtimeDeps
   logger = runtimeDeps.logFilePath ? new McpLogger(runtimeDeps.logFilePath) : null
