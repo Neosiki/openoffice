@@ -48,6 +48,8 @@ export const pt = {
   pageCount: 'Páginas: {n}',
   pageThumbs: 'Miniaturas das páginas',
   pageThumbGo: 'Ir para a página {n}',
+  slideThumbs: 'Lista de slides',
+  slideThumbGo: 'Ir para o slide {n}',
   previewNeedsSave: 'Imagens e estilos relativos aparecem na visualização após salvar o arquivo',
   inspectHint:
     'Clique em um elemento na visualização para selecioná-lo; clique duas vezes para editar o texto',

@@ -4,6 +4,7 @@ De HTML-editor opent .html / .htm met twee modi: **voorbeeld** (de weergegeven p
 
 - **Voorbeeld**: echte weergave; relatieve stylesheets en afbeeldingen worden naast het bestand geladen.
 - **Voorbeeldinspecteur**: klik om een element te selecteren, dubbelklik om de tekst ter plekke te bewerken, verwijderen via de werkbalk en Vraag AI over de selectie.
+- **Dia's**: een pagina met dia's krijgt links van het voorbeeld een dialijst, getekend door de pagina zelf; klik op een dia om die te tonen. Een bewerking die het voorbeeld opnieuw laadt, keert terug naar de dia waar u was, en toetsen die u in de tekst van een dia typt, slaan nooit een dia door.
 - **Bronmodus**: de HTML bewerken; ctrl+F zoeken, Alles vervangen slaat de herschreven markup op.
 - **Opslaan**: bytegetrouw (BOM/CRLF/afsluitende regel blijven behouden); opslaan zonder wijzigingen schrijft niets opnieuw.
 - **Zoom**: ctrl+scrollwiel / knijpen schaalt het voorbeeld; ctrl+Z in het voorbeeld maakt de laatste bewerking ongedaan.

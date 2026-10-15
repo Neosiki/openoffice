@@ -4,6 +4,7 @@ Editor HTML membuka .html / .htm dengan dua mode: **Pratinjau** (halaman yang su
 
 - **Pratinjau**: render yang sesungguhnya; stylesheet dan gambar relatif dimuat dari lokasi di samping berkas.
 - **Inspektur pratinjau**: klik untuk memilih sebuah elemen, klik dua kali untuk menyunting teksnya di tempat, hapus lewat bilah alat, dan Tanya AI untuk bagian yang dipilih.
+- **Slide**: halaman berisi slide mendapat daftar slide di sebelah kiri pratinjau, digambar oleh halaman itu sendiri; klik salah satunya untuk menampilkan slide tersebut. Suntingan yang memuat ulang pratinjau kembali ke slide tempat Anda berada, dan tombol yang Anda ketik di teks slide tidak pernah membalik slide.
 - **Mode sumber**: menyunting HTML; ctrl+F untuk mencari, dan Ganti Semua menyimpan penanda yang ditulis ulang.
 - **Menyimpan**: setia byte demi byte (BOM/CRLF/baris baru di akhir file dipertahankan); penyimpanan tanpa perubahan tidak menulis ulang.
 - **Zoom**: ctrl+roda / cubit untuk memperbesar pratinjau; ctrl+Z di dalam pratinjau membatalkan penyuntingan terakhir.

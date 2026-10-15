@@ -4,6 +4,7 @@ O editor HTML abre .html / .htm com dois modos: **Visualizar** (a página render
 
 - **Visualizar**: renderização a sério; as folhas de estilo e imagens relativas são carregadas a partir de junto do ficheiro.
 - **Inspetor de visualização**: clique para selecionar um elemento, clique duas vezes para editar o respetivo texto no local, elimine pela barra de ferramentas e pergunte à IA sobre a seleção.
+- **Slides**: uma página de slides ganha uma lista de slides à esquerda da pré-visualização, desenhada pela própria página; clique num deles para o mostrar. Uma edição que recarrega a pré-visualização volta ao slide em que estava, e as teclas que escreve no texto de um slide nunca o fazem avançar.
 - **Modo de código**: edita o HTML; ctrl+F procura e Substituir guarda a marcação reescrita.
 - **Salvar**: fiel byte a byte (BOM/CRLF/quebra de linha final preservados); um salvamento sem alterações não reescreve.
 - **Zoom**: ctrl+roda/pinça dimensiona a pré-visualização; ctrl+Z dentro da pré-visualização desfaz a última edição.

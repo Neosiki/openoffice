@@ -3249,6 +3249,26 @@ html.genoffice-popover-open .ribbon-tabs {
   color: var(--text);
 }
 
+/* a slide thumbnail is the deck itself in a frame at the preview's size, scaled down;
+   the button underneath takes the click */
+.slide-thumb-sheet {
+  position: relative;
+}
+
+.slide-thumb-holder {
+  position: absolute;
+  inset: 0;
+}
+
+.slide-thumb-frame {
+  position: absolute;
+  top: 0;
+  left: 0;
+  border: none;
+  transform-origin: 0 0;
+  pointer-events: none;
+}
+
 /* measuring frame for the print layout: laid out like any frame in view (a hidden or
    off-screen one is throttled), never seen and never in the way */
 .page-probe {

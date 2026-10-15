@@ -48,6 +48,8 @@ export const de = {
   pageCount: 'Seiten: {n}',
   pageThumbs: 'Seitenminiaturen',
   pageThumbGo: 'Zu Seite {n}',
+  slideThumbs: 'Folien',
+  slideThumbGo: 'Zu Folie {n} wechseln',
   previewNeedsSave:
     'Relative Bilder und Stile erscheinen in der Vorschau, sobald die Datei gespeichert ist',
   inspectHint: 'Element in der Vorschau anklicken zum Auswählen, Doppelklick zum Textbearbeiten',
