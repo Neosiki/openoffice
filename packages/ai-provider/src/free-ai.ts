@@ -22,13 +22,16 @@ export function isFreeAiProvider(id: unknown): id is FreeAiProviderId {
 
 /**
  * OpenRouter's free models that ran the Word editor's tool loop end to end
- * (2026-10-14), best first. The connection takes the first one OpenRouter still
- * lists with tool support; free variants come and go without notice.
+ * (2026-10-14; the last two 2026-10-15), best first. The connection takes the
+ * first one OpenRouter still lists with tool support; free variants come and go
+ * without notice.
  */
 export const OPENROUTER_FREE_MODELS: readonly string[] = [
   'nvidia/nemotron-3-super-120b-a12b:free',
   'nvidia/nemotron-3-ultra-550b-a55b:free',
   'google/gemma-4-31b-it:free',
+  'nvidia/nemotron-3.5-lightning:free',
+  'dots-studio/dots-3-note-preview:free',
 ]
 
 /**
