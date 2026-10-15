@@ -15,6 +15,14 @@ import { isOdtDoc } from '../src/renderer/doc-state'
 import type { OpenDocxResult } from '../src/shared/ipc'
 import { setFormatChangeHost } from '../src/renderer/components/format-change-bus'
 import { zipEntryNames } from '../src/main/doc-format'
+import { buildOdt } from '../../../packages/odt-engine/tests/helpers/build-odt'
+import { hancomSample } from '../../../packages/odt-engine/tests/helpers/hancom-sample'
+import {
+  hCell,
+  hPara,
+  hRow,
+  hTable,
+} from '../../../packages/odt-engine/tests/helpers/hancom-fragments'
 
 const handoff = new Map<string, Uint8Array>()
 vi.mock('../src/renderer/doc-bytes', () => ({
@@ -538,5 +546,93 @@ describe('crash recovery of an ODT tab', () => {
     expect(saved.channel).toBe('save')
     expect(saved.path).toBe('/docs/form.odt')
     expect(isOdtBytes(saved.bytes)).toBe(true)
+  })
+})
+
+/**
+ * The odt-engine's Hancom-like sample. Its builder hands JSZip TextEncoder
+ * output, which JSZip does not recognise across the jsdom realm: give it
+ * this realm's Uint8Array for the duration of the build.
+ */
+async function hancomOdt(): Promise<Uint8Array> {
+  const Native = globalThis.TextEncoder
+  class RealmEncoder extends Native {
+    encode(input?: string): Uint8Array<ArrayBuffer> {
+      return new Uint8Array(super.encode(input))
+    }
+  }
+  globalThis.TextEncoder = RealmEncoder
+  try {
+    // without its picture: JSZip in this test realm cannot take the engine's
+    // decoded picture bytes either (one realm in the app, no such problem)
+    const sample = hancomSample()
+    const blocks = sample.blocks.filter((b) => !b.includes(sample.pieces.image.frame))
+    // a plain body table next to the sample's nested and framed ones
+    blocks.splice(
+      blocks.length - 1,
+      0,
+      hTable('Table2', 2, [hRow([hCell(hPara('cell one')), hCell(hPara('cell two'))])]),
+    )
+    const body = blocks.join('')
+    return await buildOdt({ ...sample.options, body, pictures: {} })
+  } finally {
+    globalThis.TextEncoder = Native
+  }
+}
+
+/** replace `from` with `to` wherever it sits (body paragraph, table cell …), as typing would */
+function editText(editor: Editor, from: string, to: string): void {
+  let at = -1
+  editor.state.doc.descendants((node, pos) => {
+    if (at >= 0) return false
+    if (node.isText && node.text?.includes(from)) at = pos + node.text.indexOf(from)
+    return true
+  })
+  if (at < 0) throw new Error(`no text ${from}`)
+  editor.view.dispatch(editor.state.tr.insertText(to, at, at + from.length))
+}
+
+describe('ODT edge cases', () => {
+  it('a corrupt ODT shows the open-failure notice and opens nothing', async () => {
+    const ctx = makeCtx()
+    const corrupt = new TextEncoder().encode('PK this is not a real zip archive')
+    expect(await loadFile(ctx, openResult('/docs/broken.odt', corrupt))).toBe('failed')
+    expect((ctx as unknown as { doc: unknown }).doc).toBeNull()
+    expect(toast).toHaveBeenCalledTimes(1)
+    expect(toast.mock.calls[0][1]).toBe('error')
+    expect(written).toHaveLength(0)
+  })
+
+  it('edits arriving during a save stay dirty and the next save writes them all', async () => {
+    const ctx = makeCtx()
+    const odt = await hancomOdt()
+    await loadFile(ctx, openResult('/docs/hancom.odt', odt))
+    const editor = ctx.editor as Editor
+    editText(editor, 'after  section', 'first edit')
+    ctx.dirtyRef.current = true
+    // the user keeps typing while the main process writes
+    desktop.saveDocx.mockImplementationOnce(async (path: string, data: ArrayBuffer) => {
+      written.push({ channel: 'save', path, bytes: new Uint8Array(data) })
+      editText(editor, 'cell one', 'typed meanwhile')
+      return { ok: true }
+    })
+    expect(await save(ctx, false)).toBe(true)
+    expect(ctx.saveIncompleteRef.current).toBe(true)
+    expect(editor.state.doc.textContent).toContain('typed meanwhile')
+    const during = await odtParagraphs(written[0].bytes)
+    expect(during.some((p) => p.includes('first edit'))).toBe(true)
+    expect(during.some((p) => p.includes('typed meanwhile'))).toBe(false)
+
+    ctx.dirtyRef.current = true
+    expect(await save(ctx, false)).toBe(true)
+    const next = await odtParagraphs(written[1].bytes)
+    expect(next.some((p) => p.includes('first edit'))).toBe(true)
+    expect(next.some((p) => p.includes('typed meanwhile'))).toBe(true)
+    // paragraphs nobody touched are still the original bytes
+    const original = await odtParagraphs(odt)
+    // ("after  section" is written with <text:s/> for its second space)
+    const untouched = original.filter((p) => !/after .*section|cell one/.test(p))
+    expect(untouched.length).toBeGreaterThan(10)
+    for (const para of untouched) expect(next).toContain(para)
   })
 })
