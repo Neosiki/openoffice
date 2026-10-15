@@ -4,6 +4,7 @@ Editor HTML membuka fail .html dan .htm dengan dua mod: **pratonton** untuk hala
 
 - **Pratonton**: memaparkan halaman seperti mana ia akan kelihatan, dan stylesheet serta imej relatif dimuatkan dari lokasi berhampiran fail.
 - **Pemeriksa pratonton**: klik untuk memilih elemen, klik dua kali untuk menyunting teksnya di tempat, butang pada bar alat untuk memadam, dan Tanya AI untuk bertanya tentang pilihan semasa.
+- **Slaid**: halaman slaid mendapat senarai slaid di sebelah kiri pratonton, dilukis oleh halaman itu sendiri; klik satu untuk memaparkan slaid itu. Suntingan yang memuat semula pratonton kembali ke slaid tempat anda berada, dan kekunci yang anda taip dalam teks slaid tidak pernah menukar slaid.
 - **Mod sumber**: menyunting HTML secara langsung, dengan ctrl+F untuk mencari dan Ganti Semua untuk menyimpan penanda yang ditulis semula.
 - **Simpanan** mengekalkan setiap bait dengan tepat, termasuk BOM, CRLF, dan baris akhir. Simpanan tanpa perubahan tidak menulis semula fail.
 - **Zum**: ctrl dan roda tetikus, atau mencubit dengan dua jari, akan menukar skala pratonton, dan ctrl+Z di dalam pratonton membatalkan suntingan terakhir.

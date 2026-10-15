@@ -17,6 +17,23 @@ import type {
   TranslationBlockInput,
 } from '../../../../packages/pdf-structure/src/store/store'
 
+/**
+ * The PDF tools window's tasks the ribbon's "PDF tools" menu opens with the
+ * view's file (decision 0030); the shell checks the name again.
+ */
+export const PDF_TOOLS_HANDOFF = [
+  'blankPages',
+  'duplex',
+  'overlay',
+  'stripAnnots',
+  'toText',
+  'compress',
+  'encrypt',
+  'decrypt',
+  'repair',
+] as const
+export type PdfToolsHandoffTool = (typeof PDF_TOOLS_HANDOFF)[number]
+
 export const PDF_CHANNELS = {
   consumePending: 'pdf:consume-pending',
   readFile: 'pdf:read-file',
@@ -45,6 +62,7 @@ export const PDF_CHANNELS = {
   exportImages: 'pdf:export-images',
   convertOffice: 'pdf:convert-office',
   createDocument: 'pdf:create-document',
+  openInPdfTools: 'pdf:open-in-pdf-tools',
   generateImage: 'pdf:generate-image',
   listDigitalSignatures: 'pdf:list-digital-signatures',
   pickCertificate: 'pdf:pick-certificate',
@@ -1288,6 +1306,8 @@ export interface PdfApi {
   revealConvertResult(request: PdfConvertOutputRequest): Promise<boolean>
   /** AI create_document: build a new standalone file in the default folder and open it in a new tab */
   createDocument(request: CreateDocumentRequest): Promise<CreateDocumentResult>
+  /** open the shell's PDF tools window on `tool` with this view's file picked (false: no host) */
+  openInPdfTools(path: string, tool: PdfToolsHandoffTool): Promise<boolean>
   /** Web image search for AI tools (app-wide ai:image-search handler) */
   imageSearch(query: string, maxResults?: number): Promise<ImageSearchResponse>
   /** Download an image URL in the main process (SSRF-guarded, avoids CORS); null on failure */

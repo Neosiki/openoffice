@@ -4,6 +4,7 @@ L’éditeur HTML ouvre les .html / .htm avec deux modes : **Aperçu** (la page 
 
 - **Aperçu** : rendu réel ; les feuilles de style et images relatives se chargent à côté du fichier.
 - **Inspecteur d’aperçu** : cliquez pour sélectionner un élément, double-cliquez pour modifier son texte sur place, supprimez via la barre d’outils, et demandez à l’IA au sujet de la sélection.
+- **Diapositives** : une page de diapositives affiche une liste de diapositives à gauche de l'aperçu, dessinée par la page elle-même ; cliquez sur l'une pour l'afficher. Une modification qui recharge l'aperçu revient à la diapositive où vous étiez, et les touches tapées dans le texte d'une diapositive ne la font jamais défiler.
 - **Mode source** : modifiez le HTML ; ctrl+F pour rechercher, Remplacer tout enregistre le balisage réécrit.
 - **Enregistrement** : fidèle octet pour octet (BOM/CRLF/saut de ligne final préservés) ; un enregistrement sans modification ne réécrit rien.
 - **Zoom** : ctrl+molette / pincement met le résultat à l’échelle de l’aperçu ; ctrl+Z dans l’aperçu annule la dernière modification.

@@ -8,16 +8,21 @@
 - **`npm run lint`가 수천 건의 구문 오류를 낸다.** 저장소 안에 다른 작업 사본(작업 트리)을 두면 그 안의 tsconfig까지 읽혀서 그렇다. → 그 폴더를 빼고 돌린다(`npx eslint . --ignore-pattern "<폴더>/**"`).
 - **`cargo`를 못 찾는다.** 이 PC에서는 Rust가 설치돼 있어도 PATH에 없다. → `export PATH="$HOME/.cargo/bin:$PATH"`.
 - **설치 파일 만들기가 엑셀 처리 프로그램을 못 찾고 멈춘다.** 빌드 설정은 `apps/sheets/native/xlsx-engine/target/x86_64-pc-windows-gnu/release/xlsx-sidecar.exe`를 찾는데, 이 PC의 Rust 빌드는 `target/release/`에 만든다. → 만들기 전에 그 파일을 앞의 경로로 복사한다.
+- **설치본(`release/win-unpacked`)을 띄우면 아무 창 없이 바로 끝난다.** 설치된 이음오피스가 켜져 있으면, 설치본은 같은 데이터 폴더와 단일 실행 잠금을 쓰므로 바로 끝나고 실행 인자를 켜져 있는 앱에 넘긴다. 설치본은 `GENOFFICE_USER_DATA`를 일부러 듣지 않는다. → 사용자의 앱을 끄지 말고 `--user-data-dir=<임시 폴더>`를 붙여 띄운다(Playwright `electron.launch`의 `args`에도 같다).
+- **WebAssembly 파일을 찾는 코드가 개발 실행에서만 맞다.** 묶어 빌드한 코드 옆에는 `node_modules`가 없다. 단위 테스트는 `node_modules`에서 돌아 이 차이를 보지 못한다. → 새 WebAssembly 의존성은 `extraResources`로 `resources/wasm`에 넣고, 빌드한 앱(가능하면 설치본)에서 한 번 돌려 본다.
 - **설치 파일 만들기가 GitHub에 올리려다 실패한다.** 빌드 설정에 릴리스 올리기 대상이 항상 들어 있다. → `npm run dist:win -- -- --publish never`. `--`를 두 번 써야 인자가 끝까지 전달된다.
 
 ## 테스트
 
 - **`npm test`가 첫 실패에서 멈춘다.** 작업 공간을 `&&`로 이어 돌리기 때문이다. Windows에서는 원본 코드 그대로도 실패하는 테스트가 있어(경로 구분자, 크롬 없음, 시간 초과), 한 번에 끝까지 가지 않는다. → 작업 공간별로 따로 돌리고(`npm run test -w @genoffice/<이름>`) 실패 목록을 이전 결과와 비교한다.
 - **부하가 걸리면 시간 초과로 떨어지는 테스트가 있다.** 껍데기 앱의 `third-party-notices`, `update-resume`, `pdf2docx-local-argv`, 워드 엔진의 암호 해시·압축 폭탄 테스트, AI 연결부의 실제 프로세스 끝내기 테스트(`subscription-process`의 "really ends a child and the grandchild"), 엑셀 편집기의 `table-design-create`가 그렇다. → 여러 작업을 동시에 돌리던 중의 실패는 그 파일만 따로 돌려 본 뒤 판단한다.
+- **마인드맵 화면 테스트가 CI에서만 가끔 실패한다(매번 다른 시험).** 엔진은 `.xmind`를 JSZip으로 읽고 쓰는데, JSZip은 일을 잘게 나눠 `setImmediate`로 이어 간다. `setTimeout(0)`을 정해진 횟수만 돌리는 기다림(`settle`)은 빠른 PC에서는 그 사이에 열기·저장이 끝나지만, 느린 CI에서는 끝나기 전에 시험이 확인을 시작한다. → 열기와 저장, 그림 읽기를 기다릴 때는 `apps/mindmap/tests/helpers/wait.ts`의 `until`로 그 상태("불러오는 중"이 사라짐, 저장이 넘어옴, 그림에 `blob:` 주소가 붙음)를 기다린다. 느린 PC는 시험 설정에서 `setImmediate`마다 몇 ms 늦춰 흉내 낼 수 있다.
 - **엑셀 편집기 테스트가 Rust 빌드를 시작한다.** `npm run test -w @genoffice/sheets`는 먼저 엑셀 처리 프로그램을 빌드한다. → 필요 없으면 `apps/sheets`에서 `npx vitest run`을 쓴다.
 - **Rust를 고쳤는데 테스트는 예전 동작을 본다.** 엑셀 처리 프로그램이 필요한 엑셀 편집기 테스트는 `native/xlsx-engine/target/release/`의 실행 파일을 직접 연다. `XLSX_SIDECAR_PATH`는 듣지 않고, `cargo test`는 그 실행 파일을 다시 만들지 않는다. → Rust를 고쳤으면 release 빌드(`npm run native:build -w @genoffice/sheets`)를 먼저 한다. 저장소의 다른 사본에서는 그 파일이 없어 이 테스트들이 돌지 않는다.
 - **명령어 패키지의 엑셀 테스트가 아무것도 시험하지 않고 통과한다.** 엑셀 처리 프로그램을 찾지 못하면 그 테스트들은 조용히 건너뛴다. → 통과 수가 아니라 건너뛴 수를 본다.
 - **구독 제공자로 가는 테스트는 진짜 프로그램을 띄운다.** 제공자가 `claude-code`나 `codex`로 정해지는데 연결부를 가짜로 바꾸지 않으면, 테스트가 사용자 PC의 실제 프로그램을 실행해 구독 한도를 쓴다. 테스트는 통과한 것처럼 보인다. → 연결부를 가짜로 바꾼 것을 확인한다.
+- **AI에게 보내는 화면 시험은 진짜 프로그램에 닿을 수 있다.** 구독이 연결된 PC에서는 보내기 문지기가 통과해 시험이 실제 Claude를 부르고 한도를 쓴다. 연결이 없는 PC(CI)에서는 문지기가 막아 보낸 말이 화면에 나오지 않고 시험이 실패한다. → 보내는 시험은 편집기 화면이 뜬 뒤 `e2e/helpers.ts`의 `stubAiReady(app)`을 부른다. 구독 상태와 `ai:stream`을 가짜로 바꾸고 열린 탭에 그 상태를 알린다.
+- **화면 시험의 제품 이름과 기본 저장 폴더는 `packages/i18n/src/product.ts`에서 읽는다.** 화면은 사전의 `GenOffice`를 제품 이름으로 바꿔 보이고, 기본 저장 폴더는 `Documents/<제품 이름>`이다. 홈의 새 문서 카드는 순번이 자주 밀리므로(한글, PDF 도구 카드가 더해졌다) 순번 대신 글자나 속성으로 집는다.
 - **실제 화면 확인은 스크립트로 한다.** `e2e/helpers.ts`의 `launchShell`이 빌드된 껍데기 앱을 임시 데이터 폴더로 띄운다. 구독에 로그인된 PC에서는 첫 연결 안내가 설정과 질문 창을 덮으므로, 기본으로 "안내를 봤다"는 설정을 심는다(`subscriptionNoticeSeen: false`로 끌 수 있다). 편집기 화면은 `waitForPageWithUrl(app, '://docs/')`로 잡는다.
 
 ## 설정 파일

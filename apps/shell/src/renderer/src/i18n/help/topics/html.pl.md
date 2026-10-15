@@ -4,6 +4,7 @@ Edytor HTML otwiera pliki .html / .htm w dwóch trybach: **podgląd** (wyrendero
 
 - **Podgląd**: rzeczywiste renderowanie; względne arkusze stylów i obrazy wczytują się obok pliku.
 - **Inspektor podglądu**: kliknij, aby zaznaczyć element, kliknij dwukrotnie, aby edytować jego tekst w miejscu, usuń z paska narzędzi oraz Zapytaj AI o zaznaczenie.
+- **Slajdy**: strona ze slajdami dostaje po lewej stronie podglądu listę slajdów, rysowaną przez samą stronę; kliknij slajd, aby go pokazać. Edycja, która ponownie wczytuje podgląd, wraca do slajdu, na którym byłeś, a klawisze wpisywane w tekst slajdu nigdy go nie przewracają.
 - **Tryb źródła**: edycja HTML; ctrl+F do wyszukiwania, Zastąp wszystko zapisuje przepisany znacznik.
 - **Zapisywanie**: wierne bajt w bajt (BOM/CRLF/końcowa nowa linia zachowane); zapis bez zmian nic nie przepisuje.
 - **Powiększenie**: ctrl+kółko / gest szczypania zmienia skalę podglądu; ctrl+Z wewnątrz podglądu cofa ostatnią zmianę.

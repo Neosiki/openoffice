@@ -4,6 +4,7 @@ Der HTML-Editor öffnet .html / .htm mit zwei Modi: **Vorschau** (die gerenderte
 
 - **Vorschau**: echtes Rendering; relative Stylesheets und Bilder werden neben der Datei geladen.
 - **Vorschau-Inspektor**: Klicken, um ein Element auszuwählen, Doppelklick, um dessen Text direkt zu bearbeiten, Löschen über die Werkzeugleiste und KI fragen zur Auswahl.
+- **Folien**: Eine Seite aus Folien erhält links neben der Vorschau eine Folienliste, von der Seite selbst gezeichnet; ein Klick zeigt die Folie. Eine Bearbeitung, die die Vorschau neu lädt, kehrt zur bisherigen Folie zurück, und Tasten, die Sie in den Text einer Folie tippen, blättern nie weiter.
 - **Quelltextmodus**: HTML bearbeiten; Strg+F zum Suchen, „Alle ersetzen“ speichert das neu geschriebene Markup.
 - **Speichern**: bytegetreu (BOM/CRLF/abschließender Zeilenumbruch bleiben erhalten); Speichern ohne Änderung schreibt nicht neu.
 - **Zoom**: Strg+Radrad / Ziehen skaliert die Vorschau; Strg+Z in der Vorschau macht die letzte Änderung rückgängig.

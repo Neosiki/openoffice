@@ -4,6 +4,7 @@ L'editor HTML apre i file .html / .htm con due modalità: **anteprima** (la pagi
 
 - **Anteprima**: rendering reale; i fogli di stile e le immagini relativi vengono caricati accanto al file.
 - **Ispettore dell'anteprima**: fai clic per selezionare un elemento, doppio clic per modificarne il testo sul posto, elimina dalla barra degli strumenti e Chiedi all'IA sulla selezione.
+- **Diapositive**: una pagina di diapositive mostra un elenco di diapositive a sinistra dell'anteprima, disegnato dalla pagina stessa; fai clic su una per mostrarla. Una modifica che ricarica l'anteprima torna alla diapositiva in cui eri, e i tasti digitati nel testo di una diapositiva non la fanno mai avanzare.
 - **Modalità sorgente**: modifica l'HTML; ctrl+F per cercare, Sostituisci tutto salva il markup riscritto.
 - **Salvataggio**: fedele byte per byte (BOM/CRLF/riga finale preservati); i salvataggi senza modifiche non riscrivono nulla.
 - **Zoom**: ctrl+rotellina / pizzicata ridimensiona l'anteprima; ctrl+Z dentro l'anteprima annulla l'ultima modifica.

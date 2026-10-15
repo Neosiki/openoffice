@@ -36,6 +36,8 @@ export const cs = {
   pageCount: 'Stránky: {n}',
   pageThumbs: 'Miniatury stránek',
   pageThumbGo: 'Přejít na stránku {n}',
+  slideThumbs: 'Snímky',
+  slideThumbGo: 'Přejít na snímek {n}',
   previewNeedsSave: 'Relativní obrázky a styly se v náhledu zobrazí po uložení souboru',
   inspectHint: 'Klepnutím na prvek v náhledu ho vyberete, poklepáním upravíte text',
   nodeDynamic:

@@ -47,6 +47,8 @@ export const fr = {
   pageCount: 'Pages : {n}',
   pageThumbs: 'Vignettes des pages',
   pageThumbGo: 'Aller à la page {n}',
+  slideThumbs: 'Diapositives',
+  slideThumbGo: 'Aller à la diapositive {n}',
   previewNeedsSave:
     "Les images et styles relatifs apparaîtront dans l'aperçu une fois le fichier enregistré",
   inspectHint:

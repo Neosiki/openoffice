@@ -5,6 +5,8 @@ import { LANGS } from '@genoffice/i18n'
 import { pdfToolsStrings } from '../src/renderer/src/i18n/strings-pdf-tools'
 import { strings as pdfEditorStrings } from '../../pdf/src/renderer/i18n/strings'
 import { strings as homeStrings } from '../src/renderer/src/strings'
+import { PDF_TOOLS_HANDOFF } from '../../pdf/src/shared/ipc'
+import { isPdfToolId, toolInputKind } from '../src/main/pdf-tools/tools'
 
 /**
  * The PDF tools window (decision 0030), fixed by reading the source where
@@ -44,7 +46,11 @@ describe('paths stay in the main process', () => {
   it('takes inputs only from its own open dialog and hands out ids', () => {
     expect(win).toMatch(/showOpenDialogWithMemory\(dialog, owner/)
     expect(win).toMatch(/inputs\.set\(input\.id, input\)/)
-    expect(win).toMatch(/out\.inputs\.push\(\{ id: input\.id, name, pages: input\.pages, size \}\)/)
+    expect(win).toMatch(
+      /out\.inputs\.push\(\{ id: input\.id, kind, name, pages: input\.pages, size \}\)/,
+    )
+    // a picture never reaches a PDF tool, nor a PDF the picture tool
+    expect(win).toMatch(/input\.kind === kind\)/)
   })
 
   it('writes only where the save dialog points, never over a source or an unsaved open file', () => {
@@ -60,9 +66,68 @@ describe('paths stay in the main process', () => {
     expect(win).toMatch(/event\.sender !== parent\.webContents/)
   })
 
+  it("shrinks pictures with Chromium's code in the main process, and can be stopped", () => {
+    expect(win).toMatch(/recode: recodeWithChromium,\s*signal: stop\.signal,/)
+    expect(win).toMatch(/PDF_TOOLS_CHANNELS\.cancelRun[\s\S]*?runStop\?\.abort\(\)/)
+    expect(src('../src/main/pdf-tools/image-recode.ts')).toMatch(/size\.width !== source\.width/)
+  })
+
+  it('adds and removes passwords in the PDF job process, and checks what comes back', () => {
+    expect(win).toMatch(/deps\.runJob\(owner\.webContents, jobId, jobFor\(tool, path, options\)/)
+    expect(win).toMatch(
+      /tool === 'encrypt' \? !info\.ok && info\.problem === 'encrypted' : info\.ok/,
+    )
+    expect(win).toMatch(/if \(runningJob\) deps\?\.cancelJob\(event\.sender\.id, runningJob\)/)
+    // a password-protected PDF reaches only "remove password"; an unreadable one only "repair"
+    expect(win).toMatch(/info\.problem === 'encrypted' && accept === 'encrypted'/)
+    expect(win).toMatch(/info\.problem === 'unreadable' && accept === 'damaged'/)
+  })
+
+  it('never logs a password, and the window never sends the typed-again one', () => {
+    for (const path of [
+      ...MODULES,
+      '../src/main/pdf-structure/jobs.ts',
+      '../../pdf/src/main/qpdf.ts',
+      '../../pdf/src/main/repair.ts',
+    ]) {
+      expect(src(path), path).not.toMatch(/console\.|log\.(info|warn|error|debug)/)
+    }
+    const page = src('../src/renderer/src/pdf-tools/PdfToolsWindow.tsx')
+    expect(page).toMatch(/const \{ passwordConfirm: _confirm, \.\.\.sent \} = options/)
+    expect(page.match(/type="password"/g)?.length).toBeGreaterThanOrEqual(2)
+  })
+
   it('opens a picked PDF without reloading an open tab, and only its own results with a reload', () => {
     expect(win).toMatch(/deps\.openForEditing\(path\)/)
     expect(win).toMatch(/results\.get\(id\)[\s\S]*deps\?\.openResult\(path\)/)
+  })
+})
+
+describe("the PDF editor ribbon's PDF tools menu", () => {
+  const editorMain = src('../../pdf/src/main/pdf-main.ts')
+  const win = src('../src/main/pdf-tools/pdf-tools-window.ts')
+
+  it("hands over only the view's own file and a task the menu offers", () => {
+    expect(editorMain).toMatch(
+      /PDF_CHANNELS\.openInPdfTools[\s\S]*?pdfPathGranted\(e\.sender\.id, path\)[\s\S]*?PDF_TOOLS_HANDOFF/,
+    )
+  })
+
+  it('offers only tasks that take one PDF, and the shell checks again', () => {
+    for (const tool of PDF_TOOLS_HANDOFF) {
+      expect(isPdfToolId(tool), tool).toBe(true)
+      expect(toolInputKind(tool), tool).toBe('pdf')
+    }
+    expect(win).toMatch(/isPdfToolId\(tool\) \|\| toolInputKind\(tool\) !== 'pdf'\) return false/)
+    // the file goes through the same reading as a dialog pick, and the window takes the task once
+    expect(win).toMatch(/inputsFrom\(\[path\], 'pdf', toolAccepts\(tool\)\)/)
+    expect(win).toMatch(/const start = pendingStart\s*pendingStart = null/)
+  })
+
+  it('is wired from the shell entry', () => {
+    expect(src('../src/main/index.ts')).toMatch(
+      /openPdfTools: \(path, tool\) => openPdfToolsWithFile\(path, tool\)/,
+    )
   })
 })
 
@@ -114,6 +179,27 @@ describe('strings', () => {
       const ours = (pdfToolsStrings as Record<string, Record<string, string>>)[lang]!
       const editor = (pdfEditorStrings as unknown as Record<string, Record<string, string>>)[lang]!
       for (const [mine, theirs] of same) expect(ours[mine], `${lang}.${mine}`).toBe(editor[theirs])
+    }
+  })
+
+  it("names the editor ribbon's PDF tools menu and its tasks as the window does", () => {
+    const same: [string, string][] = [
+      ['pdfToolsMenu', 'windowTitle'],
+      ['pdfToolsBlankPages', 'toolBlankPages'],
+      ['pdfToolsDuplex', 'toolDuplex'],
+      ['pdfToolsOverlay', 'toolOverlay'],
+      ['pdfToolsStripAnnots', 'toolStripAnnots'],
+      ['pdfToolsToText', 'toolToText'],
+      ['pdfToolsCompress', 'toolCompress'],
+      ['pdfToolsEncrypt', 'toolEncrypt'],
+      ['pdfToolsDecrypt', 'toolDecrypt'],
+      ['pdfToolsRepair', 'toolRepair'],
+    ]
+    for (const lang of LANGS) {
+      const ours = (pdfToolsStrings as Record<string, Record<string, string>>)[lang]!
+      const editor = (pdfEditorStrings as unknown as Record<string, Record<string, string>>)[lang]!
+      for (const [theirs, mine] of same)
+        expect(editor[theirs], `${lang}.${theirs}`).toBe(ours[mine])
     }
   })
 

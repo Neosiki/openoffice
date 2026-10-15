@@ -48,6 +48,8 @@ export const nl = {
   pageCount: "Pagina's: {n}",
   pageThumbs: 'Paginaminiaturen',
   pageThumbGo: 'Naar pagina {n}',
+  slideThumbs: "Dia's",
+  slideThumbGo: 'Naar dia {n}',
   previewNeedsSave:
     'Relatieve afbeeldingen en stijlen verschijnen in het voorbeeld zodra het bestand is opgeslagen',
   inspectHint:

@@ -4,6 +4,7 @@ Editor HTML otevírá soubory .html / .htm ve dvou režimech: **náhled** (vykre
 
 - **Náhled**: skutečné vykreslování; relativní styly a obrázky se načítají vedle souboru.
 - **Inspektor náhledu**: kliknutím vyberete prvek, dvojklikem upravíte jeho text přímo na místě, tlačítko na liště jej odstraní a Zeptat se AI se zeptá na výběr.
+- **Snímky**: stránka se snímky dostane vlevo od náhledu seznam snímků, které kreslí sama stránka; kliknutím snímek zobrazíte. Úprava, která náhled znovu načte, se vrátí na snímek, na kterém jste byli, a klávesy psané do textu snímku nikdy snímek nepřepnou.
 - **Režim zdroje**: úprava HTML; ctrl+F hledá, Nahradit vše uloží přepsané značky.
 - **Ukládání**: věrné bajt po bajtu (BOM/CRLF/závěrečný řádek se zachovávají); uložení bez změn nic nepřepíše.
 - **Přiblížení**: ctrl+kolečko / štípek mění měřítko náhledu; ctrl+Z uvnitř náhledu zruší poslední úpravu.

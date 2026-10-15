@@ -47,6 +47,8 @@ export const pl = {
   pageCount: 'Strony: {n}',
   pageThumbs: 'Miniatury stron',
   pageThumbGo: 'Przejdź do strony {n}',
+  slideThumbs: 'Slajdy',
+  slideThumbGo: 'Przejdź do slajdu {n}',
   previewNeedsSave: 'Względne obrazy i style pojawią się w podglądzie po zapisaniu pliku',
   inspectHint: 'Kliknij element w podglądzie, aby go zaznaczyć; dwukrotne kliknięcie edytuje tekst',
   nodeDynamic:

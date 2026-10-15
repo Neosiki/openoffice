@@ -221,3 +221,42 @@ export async function waitForPageWithUrl(
     await app.waitForEvent('window', { timeout: Math.min(remaining, 1_000) }).catch(() => {})
   }
 }
+
+/**
+ * A connected AI that never reaches a real program: Claude reads `ready` and
+ * Codex `not-installed`, the real checker's pushes stop reaching the tabs, the
+ * open tabs are told the stubbed statuses, and `ai:stream` answers a canned
+ * reply. A spec that sends to the AI calls this once the editor page exists;
+ * without it a PC signed in to a subscription would spend the user's limit
+ * (docs/standards.md).
+ */
+export async function stubAiReady(app: ElectronApplication): Promise<void> {
+  await app.evaluate(({ ipcMain, webContents }) => {
+    const proto = Object.getPrototypeOf(webContents.getAllWebContents()[0]) as {
+      send: (channel: string, ...args: unknown[]) => void
+    }
+    const realSend = proto.send
+    proto.send = function (this: unknown, channel: string, ...args: unknown[]) {
+      if (channel === 'ai:subscription-changed') return
+      return realSend.call(this, channel, ...args)
+    }
+    const statuses = {
+      'claude-code': { provider: 'claude-code', state: 'ready', meteredAccepted: false },
+      codex: { provider: 'codex', state: 'not-installed', meteredAccepted: false },
+    }
+    for (const channel of ['ai:subscription-statuses', 'ai:subscription-recheck']) {
+      ipcMain.removeHandler(channel)
+      ipcMain.handle(channel, () => statuses)
+    }
+    ipcMain.removeHandler('ai:stream')
+    ipcMain.handle('ai:stream', (event, request: { requestId: string }) => {
+      const send = (chunk: Record<string, unknown>) =>
+        realSend.call(event.sender, 'ai:stream-chunk', { requestId: request.requestId, ...chunk })
+      send({ type: 'delta', text: 'Stub reply.' })
+      send({ type: 'done' })
+    })
+    for (const wc of webContents.getAllWebContents()) {
+      if (!wc.isDestroyed()) realSend.call(wc, 'ai:subscription-changed', statuses)
+    }
+  })
+}

@@ -47,6 +47,8 @@ export const ko = {
   pageCount: '{n}쪽',
   pageThumbs: '쪽 축소판',
   pageThumbGo: '{n}쪽으로 이동',
+  slideThumbs: '슬라이드 목록',
+  slideThumbGo: '{n}번 슬라이드로 이동',
   previewNeedsSave: '파일을 저장하면 상대 경로의 이미지와 스타일이 미리보기에 표시됩니다',
   inspectHint: '미리보기에서 요소를 클릭해 선택, 더블클릭으로 텍스트 편집',
   nodeDynamic:

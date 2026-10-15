@@ -16,8 +16,8 @@ import { randomUUID } from 'node:crypto'
 import { existsSync } from 'node:fs'
 import { readFile, stat } from 'node:fs/promises'
 import { basename, dirname, join, resolve } from 'node:path'
-import { BrowserWindow, dialog, ipcMain, shell } from 'electron'
-import type { IpcMainInvokeEvent } from 'electron'
+import { BrowserWindow, dialog, ipcMain, nativeImage, shell } from 'electron'
+import type { IpcMainInvokeEvent, WebContents } from 'electron'
 import { productName, type Lang } from '@genoffice/i18n'
 import {
   safeExternalUrl,
@@ -30,22 +30,41 @@ import { writePdfAtomically } from '../../../../pdf/src/main/atomic-write'
 import { uniqueGeneratedPdfPath } from '../../../../pdf/src/main/generated-output'
 import {
   PDF_TOOLS_CHANNELS,
+  type PdfBlankPagesResult,
   type PdfPickResult,
   type PdfToolInput,
+  type PdfToolAccept,
+  type PdfToolInputKind,
+  type PdfToolOptions,
   type PdfToolRunResult,
+  type PdfToolsStart,
   type PdfToolsTheme,
 } from '../../shared/pdf-tools-api'
 import { PDF_TOOLS_HOME_CHANNELS } from '../../shared/pdf-tools-home-channels'
+import type { StructureJob } from '../pdf-structure/protocol'
 import { pdfToolsText } from '../../renderer/src/i18n/strings-pdf-tools'
 import {
   MAX_TOOL_INPUT_BYTES,
+  PdfToolRefusal,
   checkOptions,
+  encryptedPageCount,
+  foundBlankPagesOf,
+  inspectImage,
   inspectPdf,
   isPdfToolId,
+  jobBytesOf,
+  jobFor,
   outputNames,
   runPdfTool,
+  toolAccepts,
+  toolInputKind,
+  toolMinInputs,
+  toolOutputExtension,
+  toolRunsAsJob,
   toolTakesMany,
+  type InspectResult,
 } from './tools'
+import { recodeWithChromium } from './image-recode'
 
 export interface PdfToolsWindowDeps {
   /** the window the tools window sits above */
@@ -60,6 +79,17 @@ export interface PdfToolsWindowDeps {
   openResult(path: string): boolean
   /** Open a PDF the user picked for an editor-only tool; an open tab is only focused */
   openForEditing(path: string): boolean
+  /**
+   * Run a page-rendering job in a process of its own, ended when it answers,
+   * is cancelled, or `owner` goes away (pdf-structure-ipc.ts runWindowJob)
+   */
+  runJob(
+    owner: WebContents,
+    jobId: string,
+    job: StructureJob,
+    onProgress: (done: number, total: number) => void,
+  ): Promise<{ ok: true; value: unknown } | { ok: false; error: string }>
+  cancelJob(owner: number, jobId: string): boolean
 }
 
 interface PickedInput extends PdfToolInput {
@@ -73,8 +103,23 @@ let running = false
 /** this window's inputs and outputs by id; cleared when it closes */
 const inputs = new Map<string, PickedInput>()
 const results = new Map<string, string>()
+/** pages the blank-page search found, by input id: the only pages blankPages removes */
+const blankFound = new Map<string, Set<number>>()
+/** the running blank-page search's job id */
+let finding: string | null = null
+/** stops the running tool when the window asks */
+let runStop: AbortController | null = null
+/** the running add-password, remove-password or repair job's id */
+let runningJob: string | null = null
+/** a task the PDF editor's ribbon asked for, until the window takes it */
+let pendingStart: PdfToolsStart | null = null
 
 const PDF_FILTER = { name: 'PDF', extensions: ['pdf'] }
+const IMAGE_FILTER = { name: 'JPG, PNG', extensions: ['jpg', 'jpeg', 'png'] }
+const OUTPUT_FILTERS: Record<'pdf' | 'txt', { name: string; extensions: string[] }> = {
+  pdf: PDF_FILTER,
+  txt: { name: 'TXT', extensions: ['txt'] },
+}
 
 export function configurePdfToolsWindow(next: PdfToolsWindowDeps): void {
   deps = next
@@ -92,17 +137,50 @@ function samePath(a: string, b: string): boolean {
   return process.platform === 'win32' ? x.toLowerCase() === y.toLowerCase() : x === y
 }
 
-async function pickInputs(multi: boolean): Promise<PdfPickResult> {
+async function pickInputs(
+  multi: boolean,
+  kind: PdfToolInputKind,
+  accept: PdfToolAccept,
+): Promise<PdfPickResult> {
   const owner = win
   const empty: PdfPickResult = { inputs: [], rejected: [] }
   if (!owner) return empty
   const picked = await showOpenDialogWithMemory(dialog, owner, {
-    filters: [PDF_FILTER],
+    filters: [kind === 'image' ? IMAGE_FILTER : PDF_FILTER],
     properties: multi ? ['openFile', 'multiSelections'] : ['openFile'],
   })
   if (picked.canceled) return empty
+  return inputsFrom(picked.filePaths, kind, accept)
+}
+
+/**
+ * How many pages a picked file has for a tool that takes `accept`, or why the
+ * tool cannot take it: password-protected PDFs only for "remove password",
+ * files pdf-lib cannot read only for "repair" (their page count unknown, 0).
+ */
+async function pagesFor(
+  bytes: Uint8Array,
+  kind: PdfToolInputKind,
+  accept: PdfToolAccept,
+): Promise<InspectResult> {
+  if (kind === 'image') return inspectImage(bytes)
+  const info = await inspectPdf(bytes)
+  if (info.ok) return accept === 'encrypted' ? { ok: false, problem: 'not-encrypted' } : info
+  if (info.problem === 'encrypted' && accept === 'encrypted') {
+    return { ok: true, pages: await encryptedPageCount(bytes) }
+  }
+  if (info.problem === 'unreadable' && accept === 'damaged') return { ok: true, pages: 0 }
+  return info
+}
+
+/** Files the main process chose (a dialog, the editor's own file), read and handed out as ids */
+async function inputsFrom(
+  paths: string[],
+  kind: PdfToolInputKind,
+  accept: PdfToolAccept = 'pdf',
+): Promise<PdfPickResult> {
   const out: PdfPickResult = { inputs: [], rejected: [] }
-  for (const path of picked.filePaths) {
+  for (const path of paths) {
     const name = basename(path)
     try {
       const size = (await stat(path)).size
@@ -110,14 +188,15 @@ async function pickInputs(multi: boolean): Promise<PdfPickResult> {
         out.rejected.push({ name, problem: 'too-large' })
         continue
       }
-      const info = await inspectPdf(await readFile(path))
+      const bytes = await readFile(path)
+      const info = await pagesFor(bytes, kind, accept)
       if (!info.ok) {
         out.rejected.push({ name, problem: info.problem })
         continue
       }
-      const input: PickedInput = { id: randomUUID(), name, pages: info.pages, size, path }
+      const input: PickedInput = { id: randomUUID(), kind, name, pages: info.pages, size, path }
       inputs.set(input.id, input)
-      out.inputs.push({ id: input.id, name, pages: input.pages, size })
+      out.inputs.push({ id: input.id, kind, name, pages: input.pages, size })
     } catch {
       out.rejected.push({ name, problem: 'unreadable' })
     }
@@ -132,12 +211,21 @@ async function run(raw: unknown): Promise<PdfToolRunResult> {
   const tool = req.tool
   if (!isPdfToolId(tool)) return { ok: false, error: 'failed' }
   const ids = Array.isArray(req.inputIds) ? req.inputIds : []
+  // only files picked for this kind of tool: a picture never reaches a PDF tool
+  const kind = toolInputKind(tool)
   const chosen = ids
     .map((id) => (typeof id === 'string' ? inputs.get(id) : undefined))
-    .filter((input): input is PickedInput => !!input)
+    .filter((input): input is PickedInput => !!input && input.kind === kind)
   if (chosen.length === 0) return { ok: false, error: 'no-input' }
   const sources = toolTakesMany(tool) ? chosen : chosen.slice(0, 1)
-  if (toolTakesMany(tool) && sources.length < 2) return { ok: false, error: 'need-two' }
+  if (sources.length < toolMinInputs(tool)) return { ok: false, error: 'need-two' }
+  // overlay reads a second PDF, picked on its own as the background
+  if (tool === 'overlay') {
+    const background =
+      typeof req.backgroundId === 'string' ? inputs.get(req.backgroundId) : undefined
+    if (!background || background.kind !== 'pdf') return { ok: false, error: 'need-background' }
+    sources.push(background)
+  }
   if (running) return { ok: false, error: 'busy' }
   running = true
   try {
@@ -149,13 +237,51 @@ async function run(raw: unknown): Promise<PdfToolRunResult> {
       if (total > MAX_TOOL_INPUT_BYTES) return { ok: false, error: 'too-large' }
       bytes.push(await readFile(source.path))
     }
-    const first = await inspectPdf(bytes[0]!)
+    // read again: the file may have changed since it was picked
+    const first = await pagesFor(bytes[0]!, kind, toolAccepts(tool))
     if (!first.ok) return { ok: false, error: 'failed' }
-    const checked = checkOptions(tool, req.options, first.pages)
+    const backgroundInfo = tool === 'overlay' ? await inspectPdf(bytes[1]!) : null
+    if (backgroundInfo && !backgroundInfo.ok) return { ok: false, error: 'failed' }
+    const checked = checkOptions(
+      tool,
+      req.options,
+      first.pages,
+      backgroundInfo?.ok ? backgroundInfo.pages : 1,
+    )
     if (!checked.ok) return { ok: false, error: checked.error }
-    const made = await runPdfTool(tool, bytes, checked.options)
+    if (tool === 'blankPages') {
+      // only pages the search showed the user: nothing else is removed
+      const found = blankFound.get(sources[0]!.id)
+      const chosen = (checked.options.removePages ?? '').split(',').map(Number)
+      if (!found || chosen.some((page) => !found.has(page))) {
+        return { ok: false, error: 'not-found' }
+      }
+    }
+    let made: Uint8Array[]
+    if (toolRunsAsJob(tool)) {
+      const job = await runToolJob(owner, tool, sources[0]!.path, checked.options)
+      if (!job.ok) return job
+      made = [job.bytes]
+    } else {
+      try {
+        const stop = new AbortController()
+        runStop = stop
+        const contents = owner.webContents
+        made = await runPdfTool(tool, bytes, checked.options, {
+          recode: recodeWithChromium,
+          signal: stop.signal,
+          onProgress: (done, total) => {
+            if (!contents.isDestroyed()) contents.send(PDF_TOOLS_CHANNELS.progress, { done, total })
+          },
+        })
+      } catch (err) {
+        if (err instanceof PdfToolRefusal) return { ok: false, error: err.reason }
+        if (runStop?.signal.aborted) return { ok: false, canceled: true }
+        throw err
+      }
+    }
     const names = outputNames(tool, sources[0]!.name, made.length, checked.options)
-    const targets = await pickTargets(owner, sources[0]!.path, names)
+    const targets = await pickTargets(owner, sources[0]!.path, names, toolOutputExtension(tool))
     if (!targets) return { ok: false, canceled: true }
     for (const target of targets) {
       if (sources.some((source) => samePath(source.path, target))) {
@@ -163,19 +289,52 @@ async function run(raw: unknown): Promise<PdfToolRunResult> {
       }
       if (await fileHasUnsavedChanges(target)) return { ok: false, error: 'unsaved-target' }
     }
-    const outputs: { id: string; name: string }[] = []
+    const outputs: { id: string; name: string; size: number }[] = []
     for (let i = 0; i < made.length; i++) {
       await writePdfAtomically(targets[i]!, made[i]!)
       const id = randomUUID()
       results.set(id, targets[i]!)
-      outputs.push({ id, name: basename(targets[i]!) })
+      outputs.push({ id, name: basename(targets[i]!), size: made[i]!.length })
     }
     return { ok: true, outputs }
   } catch {
     return { ok: false, error: 'failed' }
   } finally {
     running = false
+    runStop = null
+    runningJob = null
   }
+}
+
+/**
+ * Add a password, remove one or repair a file in the PDF job process (qpdf,
+ * PDFium), and check its answer is what the tool promises: a file that asks
+ * for a password, or one that opens without one. The password goes to that
+ * process with the job and nowhere else; no error carries it.
+ */
+async function runToolJob(
+  owner: BrowserWindow,
+  tool: 'encrypt' | 'decrypt' | 'repair',
+  path: string,
+  options: PdfToolOptions,
+): Promise<
+  | { ok: true; bytes: Uint8Array }
+  | { ok: false; error: 'failed' | 'wrong-password' }
+  | { ok: false; canceled: true }
+> {
+  if (!deps) return { ok: false, error: 'failed' }
+  const jobId = randomUUID()
+  runningJob = jobId
+  const outcome = await deps.runJob(owner.webContents, jobId, jobFor(tool, path, options), () => {})
+  if (!outcome.ok) {
+    if (outcome.error === 'cancelled') return { ok: false, canceled: true }
+    return { ok: false, error: outcome.error === 'password-required' ? 'wrong-password' : 'failed' }
+  }
+  const bytes = jobBytesOf(outcome.value)
+  if (!bytes) return { ok: false, error: 'failed' }
+  const info = await inspectPdf(bytes)
+  const asPromised = tool === 'encrypt' ? !info.ok && info.problem === 'encrypted' : info.ok
+  return asPromised ? { ok: true, bytes } : { ok: false, error: 'failed' }
 }
 
 /**
@@ -186,14 +345,18 @@ async function pickTargets(
   owner: BrowserWindow,
   sourcePath: string,
   names: string[],
+  extension: 'pdf' | 'txt',
 ): Promise<string[] | null> {
   if (names.length === 1) {
     const saved = await showSaveDialogWithMemory(dialog, owner, {
       defaultPath: saveAsSuggestion(sourcePath, names[0]!),
-      filters: [PDF_FILTER],
+      filters: [OUTPUT_FILTERS[extension]],
     })
     if (saved.canceled || !saved.filePath) return null
-    return [/\.pdf$/i.test(saved.filePath) ? saved.filePath : `${saved.filePath}.pdf`]
+    const ending = `.${extension}`
+    return [
+      saved.filePath.toLowerCase().endsWith(ending) ? saved.filePath : `${saved.filePath}${ending}`,
+    ]
   }
   const folder = await showOpenDialogWithMemory(
     dialog,
@@ -209,6 +372,74 @@ async function pickTargets(
     taken.add(target)
     return target
   })
+}
+
+/** a candidate's thumbnail as a PNG data URL */
+function thumbUrl(thumb: { width: number; height: number; bgra: Uint8Array }): string {
+  const buffer = Buffer.from(thumb.bgra.buffer, thumb.bgra.byteOffset, thumb.bgra.byteLength)
+  return nativeImage
+    .createFromBitmap(buffer, { width: thumb.width, height: thumb.height })
+    .toDataURL()
+}
+
+async function findBlankPages(inputId: unknown): Promise<PdfBlankPagesResult> {
+  const owner = win
+  if (!owner || !deps) return { ok: false, error: 'failed' }
+  const input = typeof inputId === 'string' ? inputs.get(inputId) : undefined
+  if (!input || input.kind !== 'pdf') return { ok: false, error: 'no-input' }
+  if (!existsSync(input.path)) return { ok: false, error: 'missing' }
+  if (finding || running) return { ok: false, error: 'busy' }
+  const jobId = randomUUID()
+  finding = jobId
+  try {
+    const contents = owner.webContents
+    const outcome = await deps.runJob(
+      contents,
+      jobId,
+      { op: 'blankPages', source: { pdfPath: input.path } },
+      (done, total) => {
+        if (!contents.isDestroyed()) contents.send(PDF_TOOLS_CHANNELS.progress, { done, total })
+      },
+    )
+    if (!outcome.ok) {
+      return outcome.error === 'cancelled'
+        ? { ok: false, canceled: true }
+        : { ok: false, error: 'failed' }
+    }
+    const found = foundBlankPagesOf(outcome.value)
+    if (!found) return { ok: false, error: 'failed' }
+    blankFound.set(input.id, new Set(found.candidates.map((c) => c.page)))
+    return {
+      ok: true,
+      pageCount: found.pageCount,
+      candidates: found.candidates.map((c) => ({
+        page: c.page,
+        reason: c.reason,
+        thumb: c.thumb ? thumbUrl(c.thumb) : null,
+      })),
+    }
+  } catch {
+    return { ok: false, error: 'failed' }
+  } finally {
+    finding = null
+  }
+}
+
+/**
+ * The PDF editor's ribbon: open the window on `tool` with the view's own
+ * file picked (the editor checked the file is the view's and saved it).
+ * False for a task that does not take one PDF.
+ */
+export function openPdfToolsWithFile(path: string, tool: unknown): boolean {
+  if (!deps || !isPdfToolId(tool) || toolInputKind(tool) !== 'pdf') return false
+  void inputsFrom([path], 'pdf', toolAccepts(tool)).then((picked) => {
+    pendingStart = { tool, inputs: picked.inputs, rejected: picked.rejected }
+    const open = !!win && !win.isDestroyed()
+    openPdfToolsWindow()
+    // a fresh window takes the task as it loads; an open one is told it waits
+    if (open) win?.webContents.send(PDF_TOOLS_CHANNELS.startReady)
+  })
+  return true
 }
 
 async function openInEditor(): Promise<void> {
@@ -229,10 +460,17 @@ function registerIpc(): void {
     if (!fromWindow(event) || !deps) return null
     return { lang: deps.lang(), theme: deps.theme() }
   })
-  ipcMain.handle(PDF_TOOLS_CHANNELS.pickInputs, (event, multi: unknown) => {
-    if (!fromWindow(event)) return { inputs: [], rejected: [] }
-    return pickInputs(multi === true)
-  })
+  ipcMain.handle(
+    PDF_TOOLS_CHANNELS.pickInputs,
+    (event, multi: unknown, kind: unknown, accept: unknown) => {
+      if (!fromWindow(event)) return { inputs: [], rejected: [] }
+      return pickInputs(
+        multi === true,
+        kind === 'image' ? 'image' : 'pdf',
+        accept === 'encrypted' || accept === 'damaged' ? accept : 'pdf',
+      )
+    },
+  )
   ipcMain.handle(PDF_TOOLS_CHANNELS.run, (event, request: unknown) => {
     if (!fromWindow(event)) return { ok: false, error: 'failed' }
     return run(request)
@@ -247,6 +485,24 @@ function registerIpc(): void {
   })
   ipcMain.handle(PDF_TOOLS_CHANNELS.openInEditor, (event) => {
     if (fromWindow(event)) return openInEditor()
+  })
+  ipcMain.handle(PDF_TOOLS_CHANNELS.findBlankPages, (event, inputId: unknown) => {
+    if (!fromWindow(event)) return { ok: false, error: 'failed' }
+    return findBlankPages(inputId)
+  })
+  ipcMain.handle(PDF_TOOLS_CHANNELS.cancelRun, (event) => {
+    if (!fromWindow(event)) return
+    runStop?.abort()
+    if (runningJob) deps?.cancelJob(event.sender.id, runningJob)
+  })
+  ipcMain.handle(PDF_TOOLS_CHANNELS.cancelFind, (event) => {
+    if (fromWindow(event) && finding) deps?.cancelJob(event.sender.id, finding)
+  })
+  ipcMain.handle(PDF_TOOLS_CHANNELS.takeStart, (event) => {
+    if (!fromWindow(event)) return null
+    const start = pendingStart
+    pendingStart = null
+    return start
   })
   ipcMain.handle(PDF_TOOLS_CHANNELS.close, (event) => {
     if (fromWindow(event)) win?.close()
@@ -302,6 +558,7 @@ export function openPdfToolsWindow(): void {
     win = null
     inputs.clear()
     results.clear()
+    blankFound.clear()
   })
   if (process.env.ELECTRON_RENDERER_URL) {
     void next.loadURL(`${process.env.ELECTRON_RENDERER_URL}/pdf-tools.html`)

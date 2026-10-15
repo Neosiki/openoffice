@@ -47,6 +47,8 @@ export const vi = {
   pageCount: '{n} trang',
   pageThumbs: 'Hình thu nhỏ của trang',
   pageThumbGo: 'Đến trang {n}',
+  slideThumbs: 'Trang chiếu',
+  slideThumbGo: 'Đi tới trang chiếu {n}',
   previewNeedsSave:
     'Hình ảnh và kiểu dáng có đường dẫn tương đối sẽ hiển thị trong bản xem trước sau khi tệp được lưu',
   inspectHint: 'Nhấp vào một phần tử trong bản xem trước để chọn, nhấp đúp để chỉnh sửa văn bản',

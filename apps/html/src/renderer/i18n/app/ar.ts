@@ -47,6 +47,8 @@ export const ar = {
   pageCount: 'الصفحات: {n}',
   pageThumbs: 'مصغّرات الصفحات',
   pageThumbGo: 'الانتقال إلى الصفحة {n}',
+  slideThumbs: 'الشرائح',
+  slideThumbGo: 'الانتقال إلى الشريحة {n}',
   previewNeedsSave: 'ستظهر الصور والأنماط النسبية في المعاينة بعد حفظ الملف',
   inspectHint: 'انقر على عنصر في المعاينة لتحديده، وانقر نقرًا مزدوجًا لتحرير النص',
   nodeDynamic:
