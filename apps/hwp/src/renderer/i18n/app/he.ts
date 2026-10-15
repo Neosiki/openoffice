@@ -103,6 +103,7 @@ export const he = {
   aiTableColsAdded: 'נוספו {count} עמודות',
   aiTableRowsRemoved: 'הוסרו {count} שורות',
   aiTableColsRemoved: 'הוסרו {count} עמודות',
+  aiTableRemoved: 'הטבלה הוסרה',
   aiShowChange: 'הצגת המקום הזה במסמך',
   aiAttachTitle: 'צירוף קבצים מקומיים (אפשר גם לגרור אל החלונית)',
   aiRemoveAttachmentTitle: 'הסרת הקובץ המצורף',

@@ -101,6 +101,7 @@ export const zh = {
   aiTableColsAdded: '添加 {count} 列',
   aiTableRowsRemoved: '删除 {count} 行',
   aiTableColsRemoved: '删除 {count} 列',
+  aiTableRemoved: '删除表格',
   aiShowChange: '在文档中查看此处',
   aiAttachTitle: '添加本地文件作为附件(也可拖拽到面板)',
   aiRemoveAttachmentTitle: '移除附件',

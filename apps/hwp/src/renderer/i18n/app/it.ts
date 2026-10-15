@@ -107,6 +107,7 @@ export const it = {
   aiTableColsAdded: '{count} colonna/e aggiunta/e',
   aiTableRowsRemoved: '{count} riga/righe rimossa/e',
   aiTableColsRemoved: '{count} colonna/e rimossa/e',
+  aiTableRemoved: 'tabella rimossa',
   aiShowChange: 'Mostra questo punto nel documento',
   aiAttachTitle: 'Allega file locali (o trascinali sul pannello)',
   aiRemoveAttachmentTitle: 'Rimuovi allegato',

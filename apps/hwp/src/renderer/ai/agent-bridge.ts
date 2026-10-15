@@ -31,6 +31,7 @@ const METHODS = [
   'fillCells',
   'addTableLines',
   'removeTableLines',
+  'deleteTable',
   'reveal',
   'selection',
   'replaceSelection',

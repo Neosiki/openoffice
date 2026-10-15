@@ -105,6 +105,7 @@ export const pl = {
   aiTableColsAdded: 'Dodano kolumn: {count}',
   aiTableRowsRemoved: 'Usunięto wierszy: {count}',
   aiTableColsRemoved: 'Usunięto kolumn: {count}',
+  aiTableRemoved: 'Usunięto tabelę',
   aiShowChange: 'Pokaż to miejsce w dokumencie',
   aiAttachTitle: 'Załącz pliki lokalne (lub przeciągnij je na panel)',
   aiRemoveAttachmentTitle: 'Usuń załącznik',

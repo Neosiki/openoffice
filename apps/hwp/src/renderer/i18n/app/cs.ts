@@ -106,6 +106,7 @@ export const cs = {
   aiTableColsAdded: 'Přidáno sloupců: {count}',
   aiTableRowsRemoved: 'Odebráno řádků: {count}',
   aiTableColsRemoved: 'Odebráno sloupců: {count}',
+  aiTableRemoved: 'Tabulka odebrána',
   aiShowChange: 'Zobrazit toto místo v dokumentu',
   aiAttachTitle: 'Připojit místní soubory (nebo je přetáhněte na panel)',
   aiRemoveAttachmentTitle: 'Odebrat přílohu',

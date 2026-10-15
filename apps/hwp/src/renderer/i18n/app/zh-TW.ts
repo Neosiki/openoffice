@@ -102,6 +102,7 @@ export const zhTW = {
   aiTableColsAdded: '新增 {count} 欄',
   aiTableRowsRemoved: '刪除 {count} 列',
   aiTableColsRemoved: '刪除 {count} 欄',
+  aiTableRemoved: '刪除表格',
   aiShowChange: '在文件中檢視此處',
   aiAttachTitle: '新增本機檔案作為附件(也可拖曳到面板)',
   aiRemoveAttachmentTitle: '移除附件',

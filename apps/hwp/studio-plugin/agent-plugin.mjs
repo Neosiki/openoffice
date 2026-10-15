@@ -1238,6 +1238,47 @@ function cellHoldsObject(doc, table, cell) {
 }
 
 /**
+ * Whether a cell holds an object other than a table: a picture, a shape. Asked for a table
+ * there, the engine answers with its size, "out of range" when the paragraph has no more
+ * objects, and another error for an object that is not a table. Only the first few objects
+ * of a paragraph are asked about, as tablesOf does; a caller that removes the cell checks
+ * the object count afterwards.
+ */
+function cellHoldsOtherObject(doc, table, cell) {
+  const paragraphs = doc.getCellParagraphCountByPath(
+    table.sec,
+    table.para,
+    JSON.stringify(cellAt(table.path, cell, 0)),
+  )
+  for (let k = 0; k < paragraphs; k++) {
+    for (let inner = 0; inner < NESTED_CONTROLS_TRIED; inner++) {
+      const path = [
+        ...cellAt(table.path, cell, k),
+        { controlIndex: inner, cellIndex: 0, cellParaIndex: 0 },
+      ]
+      try {
+        doc.getTableDimensionsByPath(table.sec, table.para, JSON.stringify(path))
+      } catch (thrown) {
+        if (String(thrown).includes(NO_OBJECT_THERE)) break
+        return true
+      }
+    }
+  }
+  return false
+}
+
+/** Whether the cell paragraph at `cellPath` (its last entry naming the paragraph) holds an object. */
+function paragraphHoldsObject(doc, sec, para, cellPath) {
+  const first = [...cellPath, { controlIndex: 0, cellIndex: 0, cellParaIndex: 0 }]
+  try {
+    doc.getTableDimensionsByPath(sec, para, JSON.stringify(first))
+    return true
+  } catch (thrown) {
+    return !String(thrown).includes(NO_OBJECT_THERE)
+  }
+}
+
+/**
  * The cells of a table that an object of the page lies on: a seal or a logo that belongs to
  * the body text and floats over the cell. It is not in the cell, so cellHoldsObject does not
  * see it, but text written there lands under it all the same. An object counts for the cell
@@ -3093,6 +3134,108 @@ export const agentPlugin = {
               count,
               text,
               place: cellBox(doc, shrunk, 0).place(0, 0),
+            }
+          }),
+        )
+      }),
+
+      /**
+       * Remove table `number` (as listTables numbers them) with what is in it, the tables
+       * inside its cells included. A table with a picture or another object in a cell is left
+       * alone: that would go with it unseen. The paragraph the table stood in goes too when
+       * nothing is left in it and a paragraph before it takes its place, so that removing a
+       * table does not leave an empty line no tool can reach.
+       */
+      deleteTable: guarded((number) => {
+        const plan = (doc) => {
+          const { tables } = tablesOf(doc)
+          const table = Number.isInteger(number) ? tables[number - 1] : undefined
+          if (!table)
+            return { refusal: { ok: false, reason: 'no_such_table', count: tables.length } }
+          // the tables inside it come right after it in the list, each inside one already seen
+          const inside = new Set([number - 1])
+          for (let i = number; i < tables.length && inside.has(tables[i].parent); i++) inside.add(i)
+          const members = [...inside].map((i) => tables[i])
+          const top = gridOf(doc, table)
+          const holding = new Set()
+          for (const member of members) {
+            for (const cell of gridOf(doc, member)) {
+              if (!cellHoldsOtherObject(doc, member, cell.cell)) continue
+              // named by the cell of this table it lies in
+              holding.add(
+                member === table ? cell.cell : member.path[table.path.length - 1].cellIndex,
+              )
+            }
+          }
+          if (holding.size > 0) {
+            const cells = top
+              .filter((cell) => holding.has(cell.cell))
+              .map((cell) => ({ row: cell.row + 1, col: cell.col + 1 }))
+            return { refusal: { ok: false, reason: 'holds_object', cells } }
+          }
+          // the form fields in its cells go with it
+          const keys = members.map((member) => `${tableKey(member.sec, member.para, member.path)}:`)
+          const going = new Set()
+          for (const [key, fields] of fieldsByCell(doc)) {
+            if (keys.some((prefix) => key.startsWith(prefix))) {
+              for (const field of fields) going.add(field.fieldId)
+            }
+          }
+          return { table, top, inner: members.length - 1, going }
+        }
+        const refusal = host.read((doc) => plan(doc).refusal ?? null)
+        if (refusal) return refusal
+        return keepingObjects((mustKeep) =>
+          change('delete-table', (doc) => {
+            const { table, top, inner, going } = plan(doc)
+            if (!table) throw fail('CHANGED', 'the document changed mid-call')
+            const before = objectsOf(doc, going)
+            const text = clip(
+              top
+                .map((cell) =>
+                  paragraphsOf(cellBox(doc, table, cell.cell))
+                    .join(' ')
+                    .trim(),
+                )
+                .filter(Boolean)
+                .join(' | '),
+              MAX_REPORTED_CHARS,
+            )
+            const { sec, para, path } = table
+            const last = path[path.length - 1]
+            const cellPath = path.slice(0, -1)
+            expectOk(
+              cellPath.length === 0
+                ? doc.deleteTableControl(sec, para, last.controlIndex)
+                : doc.deleteCellTableControlByPath(
+                    sec,
+                    para,
+                    JSON.stringify(cellPath),
+                    last.controlIndex,
+                  ),
+              'remove the table',
+            )
+            const box = containerOf(
+              doc,
+              cellPath.length === 0 ? { sec, para } : { sec, para, cellPath },
+            )
+            const k = box.index
+            const bare =
+              box.length(k) === 0 &&
+              (cellPath.length === 0
+                ? box.objectPositions(k).length === 0
+                : !paragraphHoldsObject(doc, sec, para, cellPath))
+            if (k > 0 && bare) box.deleteRange(k - 1, box.length(k - 1), k, 0)
+            // only this table and the tables inside it may be gone
+            mustKeep({ ...before, controls: before.controls - 1 - inner }, objectsOf(doc, going))
+            return {
+              ok: true,
+              table: number,
+              rows: table.rows,
+              cols: table.cols,
+              inner,
+              text,
+              place: box.place(k > 0 && bare ? k - 1 : k, 0),
             }
           }),
         )

@@ -108,6 +108,7 @@ export const es = {
   aiTableColsAdded: '{count} columna(s) añadida(s)',
   aiTableRowsRemoved: '{count} fila(s) eliminada(s)',
   aiTableColsRemoved: '{count} columna(s) eliminada(s)',
+  aiTableRemoved: 'tabla eliminada',
   aiShowChange: 'Mostrar este lugar en el documento',
   aiAttachTitle: 'Adjuntar archivos locales (o arrástralos al panel)',
   aiRemoveAttachmentTitle: 'Quitar dato adjunto',

@@ -105,6 +105,7 @@ export const vi = {
   aiTableColsAdded: 'Đã thêm {count} cột',
   aiTableRowsRemoved: 'Đã xóa {count} hàng',
   aiTableColsRemoved: 'Đã xóa {count} cột',
+  aiTableRemoved: 'Đã xóa bảng',
   aiShowChange: 'Hiển thị vị trí này trong tài liệu',
   aiAttachTitle: 'Đính kèm tệp cục bộ (hoặc kéo thả vào bảng điều khiển)',
   aiRemoveAttachmentTitle: 'Xóa tệp đính kèm',

@@ -107,6 +107,7 @@ export const fr = {
   aiTableColsAdded: '{count} colonne(s) ajoutée(s)',
   aiTableRowsRemoved: '{count} ligne(s) supprimée(s)',
   aiTableColsRemoved: '{count} colonne(s) supprimée(s)',
+  aiTableRemoved: 'tableau supprimé',
   aiShowChange: 'Afficher cet endroit dans le document',
   aiAttachTitle: 'Joindre des fichiers locaux (ou faites-les glisser sur le panneau)',
   aiRemoveAttachmentTitle: 'Supprimer la pièce jointe',

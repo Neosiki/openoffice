@@ -108,6 +108,7 @@ export const de = {
   aiTableColsAdded: '{count} Spalte(n) hinzugefügt',
   aiTableRowsRemoved: '{count} Zeile(n) entfernt',
   aiTableColsRemoved: '{count} Spalte(n) entfernt',
+  aiTableRemoved: 'Tabelle entfernt',
   aiShowChange: 'Diese Stelle im Dokument anzeigen',
   aiAttachTitle: 'Lokale Dateien anhängen (oder auf den Bereich ziehen)',
   aiRemoveAttachmentTitle: 'Anlage entfernen',

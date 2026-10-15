@@ -105,6 +105,7 @@ export const th = {
   aiTableColsAdded: 'เพิ่ม {count} คอลัมน์',
   aiTableRowsRemoved: 'ลบ {count} แถว',
   aiTableColsRemoved: 'ลบ {count} คอลัมน์',
+  aiTableRemoved: 'ลบตาราง',
   aiShowChange: 'แสดงตำแหน่งนี้ในเอกสาร',
   aiAttachTitle: 'แนบไฟล์ในเครื่อง (หรือลากมาวางบนแผงก็ได้)',
   aiRemoveAttachmentTitle: 'เอาสิ่งที่แนบออก',

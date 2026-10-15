@@ -104,6 +104,7 @@ export const ar = {
   aiTableColsAdded: 'تمت إضافة {count} عمود',
   aiTableRowsRemoved: 'تم حذف {count} صف',
   aiTableColsRemoved: 'تم حذف {count} عمود',
+  aiTableRemoved: 'تم حذف الجدول',
   aiShowChange: 'إظهار هذا الموضع في المستند',
   aiAttachTitle: 'إرفاق ملفات محلية (أو اسحبها إلى اللوحة)',
   aiRemoveAttachmentTitle: 'إزالة المرفق',

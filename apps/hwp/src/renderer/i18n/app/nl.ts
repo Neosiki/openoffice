@@ -105,6 +105,7 @@ export const nl = {
   aiTableColsAdded: '{count} kolom(men) toegevoegd',
   aiTableRowsRemoved: '{count} rij(en) verwijderd',
   aiTableColsRemoved: '{count} kolom(men) verwijderd',
+  aiTableRemoved: 'tabel verwijderd',
   aiShowChange: 'Deze plaats in het document tonen',
   aiAttachTitle: 'Lokale bestanden bijvoegen (of sleep ze naar het paneel)',
   aiRemoveAttachmentTitle: 'Bijlage verwijderen',

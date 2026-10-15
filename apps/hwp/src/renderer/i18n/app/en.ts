@@ -105,6 +105,7 @@ export const en = {
   aiTableColsAdded: '{count} column(s) added',
   aiTableRowsRemoved: '{count} row(s) removed',
   aiTableColsRemoved: '{count} column(s) removed',
+  aiTableRemoved: 'table removed',
   aiShowChange: 'Show this place in the document',
   aiAttachTitle: 'Attach local files (or drag them onto the panel)',
   aiRemoveAttachmentTitle: 'Remove attachment',

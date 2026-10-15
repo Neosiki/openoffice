@@ -105,6 +105,7 @@ export const ms = {
   aiTableColsAdded: '{count} lajur ditambah',
   aiTableRowsRemoved: '{count} baris dibuang',
   aiTableColsRemoved: '{count} lajur dibuang',
+  aiTableRemoved: 'jadual dibuang',
   aiShowChange: 'Tunjukkan tempat ini dalam dokumen',
   aiAttachTitle: 'Lampirkan fail setempat (atau seret ke panel)',
   aiRemoveAttachmentTitle: 'Alih keluar lampiran',

@@ -105,6 +105,7 @@ export const hi = {
   aiTableColsAdded: '{count} स्तंभ जोड़े गए',
   aiTableRowsRemoved: '{count} पंक्तियाँ हटाई गईं',
   aiTableColsRemoved: '{count} स्तंभ हटाए गए',
+  aiTableRemoved: 'तालिका हटाई गई',
   aiShowChange: 'दस्तावेज़ में यह स्थान दिखाएँ',
   aiAttachTitle: 'स्थानीय फ़ाइलें संलग्न करें (या उन्हें पैनल पर खींचें)',
   aiRemoveAttachmentTitle: 'अनुलग्नक हटाएँ',

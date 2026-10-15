@@ -105,6 +105,7 @@ export const ja = {
   aiTableColsAdded: '{count} 列を追加',
   aiTableRowsRemoved: '{count} 行を削除',
   aiTableColsRemoved: '{count} 列を削除',
+  aiTableRemoved: '表を削除',
   aiShowChange: '文書内でこの場所を表示',
   aiAttachTitle: 'ローカルファイルを添付(パネルへのドラッグ&ドロップも可)',
   aiRemoveAttachmentTitle: '添付ファイルを削除',

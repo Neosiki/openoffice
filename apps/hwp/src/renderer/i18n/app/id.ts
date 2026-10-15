@@ -105,6 +105,7 @@ export const id = {
   aiTableColsAdded: '{count} kolom ditambahkan',
   aiTableRowsRemoved: '{count} baris dihapus',
   aiTableColsRemoved: '{count} kolom dihapus',
+  aiTableRemoved: 'tabel dihapus',
   aiShowChange: 'Tampilkan tempat ini di dokumen',
   aiAttachTitle: 'Lampirkan file lokal (atau seret ke panel)',
   aiRemoveAttachmentTitle: 'Hapus lampiran',

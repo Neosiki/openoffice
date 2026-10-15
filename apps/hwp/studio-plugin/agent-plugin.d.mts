@@ -341,6 +341,22 @@ export type AgentRemoveLinesResult =
     }
   | AgentTableLinesRefusal
 
+export type AgentDeleteTableResult =
+  | {
+      ok: true
+      table: number
+      rows: number
+      cols: number
+      /** the tables inside its cells that went with it */
+      inner: number
+      /** the text that went with it, cut to a few hundred characters */
+      text: string
+      place: AgentPlace
+    }
+  | { ok: false; reason: 'no_such_table'; count: number }
+  | { ok: false; reason: 'holds_object'; cells: { row: number; col: number }[] }
+  | { ok: false; reason: 'has_objects'; count: number }
+
 export type AgentNoteKind = 'footnote' | 'endnote'
 
 /** One footnote or endnote of the body, as listNotes lists it. */
@@ -481,6 +497,7 @@ export interface AgentPluginSurface {
     at: number,
     count: number,
   ): AgentRemoveLinesResult
+  deleteTable(table: number): AgentDeleteTableResult
   reveal(place: AgentPlace): { ok: boolean }
   selection(): AgentSelectionResult
   replaceSelection(segments: AgentSegment[], texts: string[]): AgentReplaceSelectionResult

@@ -104,6 +104,7 @@ export const ko = {
   aiTableColsAdded: '열 {count}개 추가',
   aiTableRowsRemoved: '행 {count}개 삭제',
   aiTableColsRemoved: '열 {count}개 삭제',
+  aiTableRemoved: '표 삭제',
   aiShowChange: '문서에서 이 곳 보기',
   aiAttachTitle: '로컬 파일을 첨부 (패널로 끌어다 놓아도 됩니다)',
   aiRemoveAttachmentTitle: '첨부 파일 제거',

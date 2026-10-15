@@ -106,6 +106,7 @@ export const ru = {
   aiTableColsAdded: 'Добавлено столбцов: {count}',
   aiTableRowsRemoved: 'Удалено строк: {count}',
   aiTableColsRemoved: 'Удалено столбцов: {count}',
+  aiTableRemoved: 'Таблица удалена',
   aiShowChange: 'Показать это место в документе',
   aiAttachTitle: 'Прикрепить локальные файлы (или перетащите их на панель)',
   aiRemoveAttachmentTitle: 'Удалить вложение',
