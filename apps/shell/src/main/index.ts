@@ -352,7 +352,7 @@ import {
 } from '@genoffice/ai-provider/agent-session'
 import { normalizeAgentPrefs } from '../shared/agent-api'
 import { normalizeAiSettings, type AiSettings } from '@genoffice/ai-provider'
-import { homedir } from 'node:os'
+import { homedir, tmpdir } from 'node:os'
 import {
   configureDocumentLinks,
   documentLinkFileMenuItems,
@@ -6704,7 +6704,9 @@ app.whenReady().then(async () => {
       })
       const bundle = await buildAgentSkillBundle(
         sources,
-        join(app.getPath('userData'), 'agent-skills'),
+        // not under userData: that folder is protected from sessions, and the
+        // copied skills' scripts must be readable to run
+        join(process.env.LOCALAPPDATA ?? tmpdir(), 'IeumOffice', 'agent-skills'),
       )
       return bundle.dir
     },

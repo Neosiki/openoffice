@@ -16,6 +16,8 @@ export const ko = {
     'Windows에서는 허락한 명령이 격리 없이 실행되어 PC 전체와 인터넷에 닿을 수 있습니다.',
   providerCodexNote:
     '명령은 Codex의 격리 공간에서 실행됩니다. 프로젝트 폴더에만 쓸 수 있고 인터넷은 막힙니다.',
+  providerBlocked:
+    '아직 쓸 수 없습니다. Codex가 자기 로그인 파일을 읽지 못하게 막는 방법을 아직 찾지 못했습니다.',
   connChecking: '연결을 확인하는 중…',
   connUnavailable: '연결되지 않았습니다. 설정 → AI에서 로그인하세요.',
   connMetered: '허용해 둔 종량제 로그인으로 연결되어 있습니다.',

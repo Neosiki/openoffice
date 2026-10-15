@@ -125,6 +125,12 @@ describe('protected paths', () => {
       action({ kind: 'read', tool: 'Read', paths: ['C:\\Users\\me\\.codex\\config.toml'] }),
       action({ kind: 'write', tool: 'Write', paths: ['C:\\Users\\me\\.codex\\x'] }),
       action({ kind: 'command', tool: 'Bash', command: 'cat c:/users/me/.codex/config.toml' }),
+      // as Codex reports it: quoted, every backslash doubled
+      action({
+        kind: 'command',
+        tool: 'commandExecution',
+        command: '"powershell.exe" -Command "type C:\\\\Users\\\\me\\\\.codex\\\\config.toml"',
+      }),
     ]) {
       expect(agentPolicyVerdict(a, ctx({ mode: 'trust-project' }))).toEqual({
         decision: 'deny',

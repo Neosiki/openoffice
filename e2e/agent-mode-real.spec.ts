@@ -1,7 +1,7 @@
 import { test, expect, type ElectronApplication, type Page } from '@playwright/test'
-import { copyFile, mkdir, mkdtemp, readdir, readFile, writeFile } from 'node:fs/promises'
+import { copyFile, mkdir, mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
-import { tmpdir } from 'node:os'
+import { homedir, tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { closeAndSaveVideo, launchShell, waitForPageWithUrl, type LaunchedApp } from './helpers'
 
@@ -16,8 +16,9 @@ import { closeAndSaveVideo, launchShell, waitForPageWithUrl, type LaunchedApp } 
  * - a session starts in a project folder and the window shows its progress;
  * - the agent edits a Word document open in a tab through the app's MCP tools,
  *   and the paragraph lands exactly once;
- * - a command asks first (Claude), and the answer from the window reaches the
- *   program; Codex writes inside its sandbox on its own;
+ * - a command asks first, and the answer from the window reaches the program;
+ * - Codex: a command the person allowed still runs in the sandbox, so it can
+ *   write in the project but not in Documents;
  * - closing the window, also in the middle of a turn, ends every program the
  *   app started for it.
  */
@@ -223,9 +224,10 @@ test('Claude Code: edits an open document, asks before a command, ends on close'
   }
 })
 
-test('Codex: edits an open document, writes in its sandbox, ends on close', async () => {
+test('Codex: edits an open document, keeps allowed commands in its sandbox, ends on close', async () => {
   test.skip(REAL !== 'codex' && REAL !== 'both', 'set IEUM_AGENT_REAL=codex or both')
   const { launched, project } = await setup('codex')
+  const outside = join(homedir(), 'Documents', `ieum-agent-e2e-${Date.now()}.txt`)
   try {
     const agent = await openAgentWindow(launched)
     const start = agent.getByRole('button', { name: 'Start' })
@@ -239,10 +241,12 @@ test('Codex: edits an open document, writes in its sandbox, ends on close', asyn
       .fill(
         'Do exactly these two things, then answer in one short sentence. ' +
           '1) With the ieumoffice-editor tools, add one new paragraph with exactly the text AGENT-E2E-CODEX at the end of the open Word document report.docx. ' +
-          '2) Create a file codex-note.txt in the current folder containing the word ok.',
+          '2) Run this command in the project folder: cmd /c "echo ok> codex-cmd.txt" ' +
+          `3) Run this command: cmd /c "echo x> ${outside}" ` +
+          'If a command fails, do not retry it in another form; just say so.',
       )
     await agent.getByRole('button', { name: 'Send' }).click()
-    const asked = await runTurn(agent, () => 'deny')
+    const asked = await runTurn(agent, () => 'allow')
     const pids = (await sessionChildren(launched.userDataDir, 'codex', since)).map(
       (child) => child.pid,
     )
@@ -253,7 +257,10 @@ test('Codex: edits an open document, writes in its sandbox, ends on close', asyn
       since,
     )
 
-    expect(existsSync(join(project, 'codex-note.txt'))).toBe(true)
+    expect(asked.some((detail) => detail.includes('codex-cmd.txt'))).toBe(true)
+    expect(existsSync(join(project, 'codex-cmd.txt'))).toBe(true)
+    // allowed by the person, refused by the sandbox
+    expect(existsSync(outside)).toBe(false)
     const text = await docsText(launched.app)
     expect(text.split('AGENT-E2E-CODEX').length - 1).toBe(1)
     await mkdir(join(__dirname, 'artifacts', 'screenshots'), { recursive: true })
@@ -264,6 +271,7 @@ test('Codex: edits an open document, writes in its sandbox, ends on close', asyn
     await closeAgentWindow(launched.app)
     await expectEnded(pids)
   } finally {
+    await rm(outside, { force: true })
     await closeAndSaveVideo(launched, 'agent-codex')
   }
 })

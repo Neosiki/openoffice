@@ -16,6 +16,8 @@ export const pl = {
     'W systemie Windows polecenia, na które pozwolisz, działają bez izolacji i mają dostęp do całego komputera oraz internetu.',
   providerCodexNote:
     'Polecenia działają w izolowanej przestrzeni Codex: zapisywać można tylko w folderze projektu i nie ma dostępu do internetu.',
+  providerBlocked:
+    'Jeszcze niedostępne: nie da się jeszcze zablokować Codexowi odczytu własnego pliku logowania.',
   connChecking: 'Sprawdzanie połączenia…',
   connUnavailable: 'Brak połączenia. Zaloguj się w Ustawienia → AI.',
   connMetered: 'Zalogowano kontem rozliczanym za użycie, zaakceptowanym przez Ciebie.',

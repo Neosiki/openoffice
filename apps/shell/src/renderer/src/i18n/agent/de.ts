@@ -16,6 +16,8 @@ export const de = {
     'Unter Windows laufen Befehle, die Sie erlauben, ohne Abschottung und können auf Ihren ganzen PC und das Internet zugreifen.',
   providerCodexNote:
     'Befehle laufen im abgeschotteten Bereich von Codex: Nur in den Projektordner kann geschrieben werden, und es gibt kein Internet.',
+  providerBlocked:
+    'Noch nicht verfügbar: Codex kann noch nicht daran gehindert werden, seine eigene Anmeldedatei zu lesen.',
   connChecking: 'Verbindung wird geprüft…',
   connUnavailable: 'Nicht verbunden. Melden Sie sich unter Einstellungen → KI an.',
   connMetered:

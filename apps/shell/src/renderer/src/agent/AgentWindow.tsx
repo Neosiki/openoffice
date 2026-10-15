@@ -40,6 +40,7 @@ const CONNECTION_NOTE: Partial<Record<AgentConnection, AgentStringKey>> = {
   checking: 'connChecking',
   unavailable: 'connUnavailable',
   'metered-accepted': 'connMetered',
+  blocked: 'providerBlocked',
 }
 const ACTION_LABEL: Record<AgentActionView['kind'], AgentStringKey> = {
   read: 'actRead',
@@ -59,6 +60,7 @@ const START_ERROR: Record<string, AgentStringKey> = {
   'bad-folder': 'errBadFolder',
   'not-connected': 'errNotConnected',
   'not-accepted': 'errNotAccepted',
+  'provider-blocked': 'providerBlocked',
 }
 const RUN_ERROR: Record<string, AgentStringKey> = {
   'unsafe-tools': 'errUnsafeTools',
@@ -365,16 +367,21 @@ export function AgentWindow() {
           <span className="agent-label">{t('providerLabel')}</span>
           {AGENT_PROVIDERS.map((provider) => {
             const note = CONNECTION_NOTE[init.connections[provider]]
+            const blocked = init.connections[provider] === 'blocked'
+            const choose = (): void => {
+              if (!blocked) updatePrefs({ provider })
+            }
             return (
               <div
                 key={provider}
                 className="agent-choice"
                 role="radio"
-                tabIndex={0}
+                tabIndex={blocked ? -1 : 0}
                 aria-checked={prefs.provider === provider}
+                aria-disabled={blocked}
                 data-selected={prefs.provider === provider}
-                onClick={() => updatePrefs({ provider })}
-                onKeyDown={(event) => event.key === ' ' && updatePrefs({ provider })}
+                onClick={choose}
+                onKeyDown={(event) => event.key === ' ' && choose()}
               >
                 <div className="agent-choice-text">
                   <span>{t(PROVIDER_LABEL[provider])}</span>

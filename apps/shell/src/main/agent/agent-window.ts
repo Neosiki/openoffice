@@ -6,6 +6,7 @@ import { safeExternalUrl } from '@genoffice/electron-utils'
 import type { AgentSessionEvent } from '@genoffice/ai-provider/agent-session'
 import type { AiSubscriptionProviderId, AiSubscriptionStatus } from '@genoffice/ai-provider'
 import {
+  AGENT_BLOCKED_PROVIDERS,
   AGENT_CHANNELS,
   AGENT_MODES,
   AGENT_PROVIDERS,
@@ -72,11 +73,13 @@ export function agentEventView(event: AgentSessionEvent): AgentEventView {
 export function agentConnections(
   statuses: Partial<Record<AiSubscriptionProviderId, AiSubscriptionStatus>>,
   meteredAccepted: Partial<Record<AiSubscriptionProviderId, boolean>> | undefined,
+  blocked: readonly AgentProvider[] = AGENT_BLOCKED_PROVIDERS,
 ): Record<AgentProvider, AgentConnection> {
   const out = {} as Record<AgentProvider, AgentConnection>
   for (const provider of AGENT_PROVIDERS) {
     const status = statuses[provider]
-    if (!status || status.state === 'checking') out[provider] = 'checking'
+    if (blocked.includes(provider)) out[provider] = 'blocked'
+    else if (!status || status.state === 'checking') out[provider] = 'checking'
     else if (status.state === 'ready') out[provider] = 'ready'
     else if (
       status.state === 'metered' &&
@@ -153,6 +156,8 @@ function registerIpc(): void {
       if (!AGENT_PROVIDERS.includes(provider) || !AGENT_MODES.includes(mode)) {
         return { ok: false, reason: 'start-failed' }
       }
+      if (AGENT_BLOCKED_PROVIDERS.includes(provider))
+        return { ok: false, reason: 'provider-blocked' }
       const prefs = deps.readPrefs()
       // the warning is a precondition the main process checks, not only the window
       if (prefs.warningAccepted < AGENT_WARNING_VERSION)

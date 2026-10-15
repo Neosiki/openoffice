@@ -16,6 +16,7 @@ export const id = {
     'Di Windows, perintah yang Anda izinkan berjalan tanpa isolasi dan dapat menjangkau seluruh PC Anda serta internet.',
   providerCodexNote:
     'Perintah berjalan di ruang terisolasi Codex: hanya folder proyek yang dapat ditulisi, dan tidak ada internet.',
+  providerBlocked: 'Belum tersedia: Codex belum dapat dicegah membaca file masuknya sendiri.',
   connChecking: 'Memeriksa koneksi…',
   connUnavailable: 'Tidak terhubung. Masuk di Pengaturan → AI.',
   connMetered: 'Masuk dengan login bayar per pemakaian yang sudah Anda setujui.',

@@ -15,6 +15,7 @@ export const zhTW = {
   providerClaudeNote:
     '在 Windows 上，你允許的指令會在沒有隔離的情況下執行，可能存取整台電腦和網際網路。',
   providerCodexNote: '指令在 Codex 的隔離空間中執行：只能寫入專案資料夾，且無法連上網際網路。',
+  providerBlocked: '暫不可用：目前還無法阻止 Codex 讀取它自己的登入檔案。',
   connChecking: '正在檢查連線…',
   connUnavailable: '未連線。請在「設定 → AI」中登入。',
   connMetered: '正在使用你已允許的按用量計費登入。',

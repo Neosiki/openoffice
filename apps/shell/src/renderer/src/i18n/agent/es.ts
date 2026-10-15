@@ -16,6 +16,8 @@ export const es = {
     'En Windows, los comandos que permites se ejecutan sin aislamiento y pueden acceder a todo tu PC y a internet.',
   providerCodexNote:
     'Los comandos se ejecutan en el espacio aislado de Codex: solo se puede escribir en la carpeta del proyecto y no hay acceso a internet.',
+  providerBlocked:
+    'Aún no disponible: todavía no se puede impedir que Codex lea su propio archivo de inicio de sesión.',
   connChecking: 'Comprobando la conexión…',
   connUnavailable: 'No conectado. Inicia sesión en Configuración → IA.',
   connMetered: 'Conectado con un inicio de sesión de pago por uso que aceptaste.',

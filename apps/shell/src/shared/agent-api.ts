@@ -26,6 +26,14 @@ export type AgentMode = 'ask-commands' | 'ask-writes' | 'trust-project'
 export const AGENT_PROVIDERS: readonly AgentProvider[] = ['claude-code', 'codex']
 export const AGENT_MODES: readonly AgentMode[] = ['ask-commands', 'ask-writes', 'trust-project']
 
+/**
+ * Programs agent mode does not start, whatever their connection. Empty now:
+ * Codex was held here until its sessions could keep commands out of its own
+ * sign-in folder, which the MXC sandbox does (the agent-session runner). A
+ * program goes back on this list when it cannot be contained.
+ */
+export const AGENT_BLOCKED_PROVIDERS: readonly AgentProvider[] = []
+
 /** Bump when the first-use warning says something new: an older consent no longer counts */
 export const AGENT_WARNING_VERSION = 1
 
@@ -48,7 +56,7 @@ export const DEFAULT_AGENT_PREFS: AgentPrefs = {
 }
 
 /** The connection of each program as the window needs it to offer a start */
-export type AgentConnection = 'ready' | 'metered-accepted' | 'unavailable' | 'checking'
+export type AgentConnection = 'ready' | 'metered-accepted' | 'unavailable' | 'checking' | 'blocked'
 
 export interface AgentInit {
   lang: Lang
@@ -60,7 +68,7 @@ export type AgentStartResponse =
   | { ok: true; sessionId: string }
   | {
       ok: false
-      reason: 'bad-folder' | 'not-connected' | 'start-failed' | 'not-accepted'
+      reason: 'bad-folder' | 'not-connected' | 'start-failed' | 'not-accepted' | 'provider-blocked'
       kind?: string | undefined
     }
 

@@ -16,6 +16,8 @@ export const cs = {
     'Ve Windows běží příkazy, které povolíte, bez izolace a mají přístup k celému počítači i k internetu.',
   providerCodexNote:
     'Příkazy běží v izolovaném prostoru programu Codex: zapisovat lze jen do složky projektu a internet není k dispozici.',
+  providerBlocked:
+    'Zatím nedostupné: Codexu zatím nelze zabránit ve čtení vlastního přihlašovacího souboru.',
   connChecking: 'Kontroluje se připojení…',
   connUnavailable: 'Nepřipojeno. Přihlaste se v Nastavení → AI.',
   connMetered: 'Přihlášeno placeným přihlášením podle spotřeby, které jste přijali.',

@@ -16,6 +16,7 @@ export const vi = {
     'Trên Windows, các lệnh bạn cho phép sẽ chạy không cách ly và có thể truy cập toàn bộ máy tính của bạn cùng internet.',
   providerCodexNote:
     'Các lệnh chạy trong không gian cách ly của Codex: chỉ có thể ghi vào thư mục dự án và không có internet.',
+  providerBlocked: 'Chưa dùng được: hiện chưa thể ngăn Codex đọc tệp đăng nhập của chính nó.',
   connChecking: 'Đang kiểm tra kết nối…',
   connUnavailable: 'Chưa kết nối. Hãy đăng nhập trong Cài đặt → AI.',
   connMetered: 'Đã đăng nhập bằng tài khoản trả tiền theo mức dùng mà bạn đã chấp nhận.',

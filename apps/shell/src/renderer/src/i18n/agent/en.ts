@@ -16,6 +16,7 @@ export const en = {
     'On Windows, commands you allow run without isolation and can reach your whole PC and the internet.',
   providerCodexNote:
     'Commands run in Codex’s isolated space: only the project folder can be written, and there is no internet.',
+  providerBlocked: 'Not available yet: Codex cannot yet be kept from reading its own sign-in file.',
   connChecking: 'Checking the connection…',
   connUnavailable: 'Not connected. Sign in under Settings → AI.',
   connMetered: 'Signed in with a pay-per-use login you accepted.',

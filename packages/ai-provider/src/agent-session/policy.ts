@@ -47,11 +47,16 @@ export function isInsidePath(
   return rel === '' || (!rel.startsWith('..') && !api.isAbsolute(rel))
 }
 
-/** A command line names a protected path when it contains it, written with either separator */
+/**
+ * A command line names a protected path when it contains it, written with
+ * either separator, single or doubled (Codex reports its commands quoted, with
+ * every backslash doubled)
+ */
 function commandNamesPath(command: string, path: string, platform: NodeJS.Platform): boolean {
-  const text = platform === 'win32' ? command.toLowerCase() : command
-  const forms = [path, path.replace(/\\/g, '/'), path.replace(/\//g, '\\')]
-  return forms.some((form) => form.length > 3 && text.includes(form))
+  const separators = (value: string): string => value.replace(/[\\/]+/g, '/')
+  const text = separators(platform === 'win32' ? command.toLowerCase() : command)
+  const form = separators(path)
+  return form.length > 3 && text.includes(form)
 }
 
 export function agentPolicyVerdict(

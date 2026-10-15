@@ -330,20 +330,27 @@ describe('what the window is shown', () => {
   })
 
   it('offers a program only when it is ready or a metered login is fully accepted', () => {
+    const metered = {
+      provider: 'claude-code',
+      state: 'metered',
+      meteredAccepted: true,
+    } as AiSubscriptionStatus
     expect(
-      agentConnections(
-        {
-          'claude-code': ready('claude-code'),
-          codex: {
-            provider: 'codex',
-            state: 'metered',
-            meteredAccepted: true,
-          } as AiSubscriptionStatus,
-        },
-        { codex: false },
-      ),
-    ).toEqual({ 'claude-code': 'ready', codex: 'unavailable' })
-    expect(agentConnections({}, {})).toEqual({ 'claude-code': 'checking', codex: 'checking' })
+      agentConnections({ 'claude-code': metered }, { 'claude-code': false })['claude-code'],
+    ).toBe('unavailable')
+    expect(
+      agentConnections({ 'claude-code': metered }, { 'claude-code': true })['claude-code'],
+    ).toBe('metered-accepted')
+    expect(agentConnections({ 'claude-code': ready('claude-code') }, {})['claude-code']).toBe(
+      'ready',
+    )
+    expect(agentConnections({}, {})['claude-code']).toBe('checking')
+  })
+
+  it('offers Codex now that its sessions are contained, and blocks a program on the block list', () => {
+    expect(agentConnections({ codex: ready('codex') }, {}).codex).toBe('ready')
+    expect(agentConnections({ codex: ready('codex') }, {}, ['codex']).codex).toBe('blocked')
+    expect(agentConnections({}, {}, ['codex']).codex).toBe('blocked')
   })
 })
 

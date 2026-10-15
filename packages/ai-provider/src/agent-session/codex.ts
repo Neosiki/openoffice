@@ -18,6 +18,8 @@
  */
 import type { ChildProcessWithoutNullStreams } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
+import { statSync } from 'node:fs'
+import { posix, win32 } from 'node:path'
 import {
   CODEX_CONFIG_OVERRIDES,
   activePermissionProfileId,
@@ -37,7 +39,7 @@ import {
 } from '../subscription/process'
 import { codexAccountInfo } from '../subscription/status'
 import { APP_MCP_SERVER_NAME } from './claude'
-import { agentPolicyVerdict } from './policy'
+import { agentPolicyVerdict, comparablePath, isInsidePath } from './policy'
 import type {
   AgentAction,
   AgentPermissionAnswer,
@@ -50,6 +52,12 @@ import type {
 const PROVIDER = 'codex'
 export const CODEX_AGENT_PROFILE = 'ieumoffice-agent'
 const REQUEST_TIMEOUT_MS = 30_000
+/**
+ * Opening the thread applies the permission profile, and Codex's Windows sandbox
+ * sets file permissions on every folder the profile names; a folder of many
+ * thousand files takes minutes the first time.
+ */
+export const THREAD_START_TIMEOUT_MS = 5 * 60_000
 const DIAGNOSTIC_LIMIT = 4_000
 const DEFAULT_IDLE_MS = 30 * 60_000
 const MAX_MCP_STATUS_PAGES = 10
@@ -64,23 +72,28 @@ export function codexAgentLaunchArgs(): string[] {
   return [
     'app-server',
     ...overrides.flatMap((override) => ['-c', override]),
+    // Windows: the MXC sandbox, explicitly. It honours denied paths at once and
+    // fails when unavailable, so a session never falls back to a sandbox that
+    // cannot keep commands out of the sign-in folder (the elevated one needs
+    // whole-disk reads and minutes to deny a large folder). Other systems ignore it.
+    '-c',
+    'windows.sandbox="mxc"',
     '--listen',
     'stdio://',
   ]
 }
 
 /**
- * Codex's approval policy for the person's choice. The sandbox is on in all
- * three: `on-request` lets Codex work inside it and ask to go beyond it;
- * `untrusted` asks before anything but known-safe reads; `never` does not ask,
- * and what the sandbox does not allow simply fails.
+ * Codex's approval policy for the person's choice. `untrusted` brings every
+ * command but known-safe reads to the app, which asks the person or decides by
+ * its own rules; `never` does not ask, and what the sandbox does not allow
+ * simply fails. `on-request` is never used: there, an approved command runs
+ * outside the sandbox (checked 2026-10-15, codex-cli 0.159.2: an approved write
+ * to Documents landed under `on-request` and was refused under `untrusted`).
  */
-export function codexAgentApprovalPolicy(
-  mode: AgentPermissionMode,
-): 'on-request' | 'untrusted' | 'never' {
+export function codexAgentApprovalPolicy(mode: AgentPermissionMode): 'untrusted' | 'never' {
   switch (mode) {
     case 'ask-commands':
-      return 'on-request'
     case 'ask-writes':
       return 'untrusted'
     case 'trust-project':
@@ -89,26 +102,79 @@ export function codexAgentApprovalPolicy(
 }
 
 /**
- * The session's file-system rules. Codex's Windows sandbox needs read access
- * from the root to start, so reading is open except where it is taken away.
+ * The session's file-system rules: the platform's minimal set and the folders a
+ * command needs (the project, to write; the runtimes on PATH, to read), the
+ * open documents read-only, and the protected folders denied. Everything else
+ * of the person's disk is out of reach. Checked on this PC (MXC sandbox,
+ * 2026-10-15): the Codex sign-in folder, Documents and the network were
+ * refused, the project was writable, node and python ran.
  */
 export function codexAgentFilesystem(
   options: Pick<
     AgentSessionOptions,
     'projectRoot' | 'openDocuments' | 'protectedPaths' | 'skillBundleDir'
   >,
-): Record<string, 'read' | 'write' | 'none'> {
-  const filesystem: Record<string, 'read' | 'write' | 'none'> = { ':root': 'read' }
+  readableDirs: readonly string[] = [],
+): Record<string, 'read' | 'write' | 'deny'> {
+  const filesystem: Record<string, 'read' | 'write' | 'deny'> = { ':minimal': 'read' }
+  for (const dir of readableDirs) filesystem[dir] = 'read'
   filesystem[options.projectRoot] = 'write'
   for (const path of options.openDocuments) filesystem[path] = 'read'
-  for (const path of options.protectedPaths) filesystem[path] = 'none'
+  for (const path of options.protectedPaths) filesystem[path] = 'deny'
   return filesystem
+}
+
+/**
+ * The folders on PATH a command may read, so scripts can find their runtime
+ * (python, node, …): absolute, existing folders that are not a drive root and
+ * not inside a protected folder or the project.
+ */
+export function codexAgentReadableDirs(
+  pathValue: string | undefined,
+  options: Pick<AgentSessionOptions, 'projectRoot' | 'protectedPaths'>,
+  platform: NodeJS.Platform = process.platform,
+  exists: (dir: string) => boolean = (dir) => {
+    try {
+      return statSync(dir).isDirectory()
+    } catch {
+      return false
+    }
+  },
+): string[] {
+  const api = platform === 'win32' ? win32 : posix
+  const out: string[] = []
+  const seen = new Set<string>()
+  for (const raw of (pathValue ?? '').split(platform === 'win32' ? ';' : ':')) {
+    const dir = raw.trim().replace(/^"|"$/g, '')
+    if (!dir || !api.isAbsolute(dir)) continue
+    const key = comparablePath(dir, dir, platform)
+    if (seen.has(key) || api.parse(key).root === key) continue
+    if (
+      options.protectedPaths.some((guard) =>
+        isInsidePath(key, comparablePath(guard, guard, platform), platform),
+      )
+    )
+      continue
+    if (
+      isInsidePath(
+        key,
+        comparablePath(options.projectRoot, options.projectRoot, platform),
+        platform,
+      )
+    )
+      continue
+    if (!exists(dir)) continue
+    seen.add(key)
+    out.push(dir)
+  }
+  return out
 }
 
 export function codexAgentThreadParams(
   options: AgentSessionOptions,
   model: string,
   userMcpServers: Record<string, { enabled: false }>,
+  readableDirs: readonly string[] = [],
 ): Record<string, unknown> {
   const mcpServers: Record<string, unknown> = { ...userMcpServers }
   if (options.appMcp) {
@@ -126,7 +192,9 @@ export function codexAgentThreadParams(
     ephemeral: true,
     config: {
       default_permissions: CODEX_AGENT_PROFILE,
-      permissions: { [CODEX_AGENT_PROFILE]: { filesystem: codexAgentFilesystem(options) } },
+      permissions: {
+        [CODEX_AGENT_PROFILE]: { filesystem: codexAgentFilesystem(options, readableDirs) },
+      },
       mcp_servers: mcpServers,
     },
   }
@@ -163,6 +231,36 @@ export function codexAgentAction(
     }
   }
   return { kind: 'other', tool: method, paths: [], reason: text(params.reason) }
+}
+
+/**
+ * The refusal an approval request accepts: `decline` lets the turn go on, but a
+ * request may offer only `cancel`, which ends the turn.
+ */
+export function codexDeclineDecision(params: Record<string, unknown>): 'decline' | 'cancel' {
+  const offered = params.availableDecisions
+  return !Array.isArray(offered) || offered.includes('decline') ? 'decline' : 'cancel'
+}
+
+/**
+ * The answer to an MCP elicitation. Codex asks this way before each MCP tool
+ * call; only the app's own server is attached and its tools are the app's to
+ * allow. Anything else (a form a server wants filled, a link to open) is
+ * declined.
+ */
+export function codexElicitationAnswer(params: Record<string, unknown>): {
+  action: 'accept' | 'decline'
+  content: Record<string, never> | null
+  _meta: null
+} {
+  const meta = isPlainObject(params._meta) ? params._meta : {}
+  const toolApproval =
+    params.serverName === APP_MCP_SERVER_NAME &&
+    params.mode === 'form' &&
+    meta.codex_approval_kind === 'mcp_tool_call'
+  return toolApproval
+    ? { action: 'accept', content: {}, _meta: null }
+    : { action: 'decline', content: null, _meta: null }
 }
 
 function itemAction(item: Record<string, unknown>): AgentAction | undefined {
@@ -208,6 +306,7 @@ export interface CodexAgentDeps {
   killTree?: ((child: { readonly pid?: number | undefined }) => void) | undefined
   idleMs?: number | undefined
   platform?: NodeJS.Platform | undefined
+  threadStartTimeoutMs?: number | undefined
 }
 
 export interface CodexAgentSessionOptions extends AgentSessionOptions {
@@ -263,7 +362,7 @@ export async function startCodexAgentSession(
     }
   >()
   /** approval requests waiting for the person, by the id shown to them */
-  const pending = new Map<string, { rpcId: number | string }>()
+  const pending = new Map<string, { rpcId: number | string; declineAs: string }>()
   const fileChangePaths = new Map<string, string[]>()
 
   const emit = (event: AgentSessionEvent): void => {
@@ -301,7 +400,11 @@ export async function startCodexAgentSession(
     idleTimer = setTimeout(() => stopNow(), deps.idleMs ?? DEFAULT_IDLE_MS)
     idleTimer.unref?.()
   }
-  const request = (method: string, params: unknown): Promise<unknown> =>
+  const request = (
+    method: string,
+    params: unknown,
+    timeoutMs = REQUEST_TIMEOUT_MS,
+  ): Promise<unknown> =>
     new Promise((resolve, reject) => {
       if (ended) {
         reject(new Error('The agent session has ended'))
@@ -311,14 +414,14 @@ export async function startCodexAgentSession(
       const timer = setTimeout(() => {
         rpcPending.delete(id)
         reject(new Error(`Codex app-server request timed out: ${method}`))
-      }, REQUEST_TIMEOUT_MS)
+      }, timeoutMs)
       timer.unref?.()
       rpcPending.set(id, { resolve, reject, timer })
       writeLine({ method, id, params })
     })
 
-  const answerApproval = (rpcId: number | string, accept: boolean): void => {
-    writeLine({ id: rpcId, result: { decision: accept ? 'accept' : 'decline' } })
+  const answerApproval = (rpcId: number | string, accept: boolean, declineAs: string): void => {
+    writeLine({ id: rpcId, result: { decision: accept ? 'accept' : declineAs } })
   }
 
   const onServerRequest = (message: Record<string, unknown>): void => {
@@ -330,6 +433,7 @@ export async function startCodexAgentSession(
       method === 'item/fileChange/requestApproval'
     ) {
       const action = codexAgentAction(method, params, fileChangePaths)
+      const declineAs = codexDeclineDecision(params)
       const verdict = agentPolicyVerdict(action, {
         mode: options.mode,
         projectRoot: options.projectRoot,
@@ -339,17 +443,21 @@ export async function startCodexAgentSession(
         platform,
       })
       if (verdict.decision === 'allow') {
-        answerApproval(rpcId, true)
+        answerApproval(rpcId, true, declineAs)
         return
       }
       if (verdict.decision === 'deny') {
         // Codex reports the declined item itself, which the panel shows as denied
-        answerApproval(rpcId, false)
+        answerApproval(rpcId, false, declineAs)
         return
       }
       const id = randomUUID()
-      pending.set(id, { rpcId })
+      pending.set(id, { rpcId, declineAs })
       emit({ type: 'permission', request: { ...action, id, provider: PROVIDER } })
+      return
+    }
+    if (method === 'mcpServer/elicitation/request') {
+      writeLine({ id: rpcId, result: codexElicitationAnswer(params) })
       return
     }
     // anything else (more permissions, questions, attestation, sign-in tokens) is not the
@@ -516,9 +624,23 @@ export async function startCodexAgentSession(
     const model = options.model.trim() || (await defaultModel(request))
     const started = await request(
       'thread/start',
-      codexAgentThreadParams(options, model, userMcpServers),
+      codexAgentThreadParams(
+        options,
+        model,
+        userMcpServers,
+        codexAgentReadableDirs(
+          (deps.baseEnv ?? process.env).PATH ?? (deps.baseEnv ?? process.env).Path,
+          options,
+          platform,
+        ),
+      ),
+      deps.threadStartTimeoutMs ?? THREAD_START_TIMEOUT_MS,
     )
-    if (activePermissionProfileId(started) !== CODEX_AGENT_PROFILE) {
+    if (
+      activePermissionProfileId(started) !== CODEX_AGENT_PROFILE ||
+      !isPlainObject(started) ||
+      started.approvalPolicy !== codexAgentApprovalPolicy(options.mode)
+    ) {
       throw new AiRunError(
         'unsafe-tools',
         'Codex did not apply the session permissions; nothing was run',
@@ -576,7 +698,7 @@ export async function startCodexAgentSession(
       const waiting = pending.get(id)
       if (!waiting) return
       pending.delete(id)
-      answerApproval(waiting.rpcId, answer.allow)
+      answerApproval(waiting.rpcId, answer.allow, waiting.declineAs)
     },
     setOpenDocuments(paths: string[]): void {
       openDocuments = [...paths]

@@ -10,8 +10,11 @@ import { describe, expect, it, vi } from 'vitest'
 import {
   codexAgentAction,
   codexAgentApprovalPolicy,
+  codexDeclineDecision,
+  codexElicitationAnswer,
   codexAgentFilesystem,
   codexAgentLaunchArgs,
+  codexAgentReadableDirs,
   codexAgentThreadParams,
   startCodexAgentSession,
   type AgentSessionEvent,
@@ -85,8 +88,9 @@ const baseHandlers = (overrides: Record<string, Handler> = {}): Record<string, H
   'account/read': () => ({ account: { type: 'chatgpt', planType: 'plus' } }),
   'config/read': () => ({ config: { mcp_servers: { github: { command: 'x' } } } }),
   'model/list': () => ({ data: [{ id: 'gpt-x', isDefault: true }] }),
-  'thread/start': () => ({
+  'thread/start': (_server, params) => ({
     thread: { id: 'th1' },
+    approvalPolicy: params.approvalPolicy,
     activePermissionProfile: { id: 'ieumoffice-agent' },
   }),
   'mcpServerStatus/list': () => ({
@@ -145,10 +149,12 @@ describe('the launch and the thread', () => {
     expect(args).toContain('skills.include_instructions=true')
     expect(args).not.toContain('skills.include_instructions=false')
     expect(args.slice(-2)).toEqual(['--listen', 'stdio://'])
+    // the MXC sandbox, explicitly: it fails rather than fall back to one that cannot deny the sign-in folder
+    expect(args[args.indexOf('windows.sandbox="mxc"') - 1]).toBe('-c')
   })
 
-  it('maps each choice to an approval policy, with the sandbox on in all of them', () => {
-    expect(codexAgentApprovalPolicy('ask-commands')).toBe('on-request')
+  it('maps each choice to an approval policy, never one where an approval leaves the sandbox', () => {
+    expect(codexAgentApprovalPolicy('ask-commands')).toBe('untrusted')
     expect(codexAgentApprovalPolicy('ask-writes')).toBe('untrusted')
     expect(codexAgentApprovalPolicy('trust-project')).toBe('never')
     const params = codexAgentThreadParams(options({ mode: 'trust-project' }), 'gpt-x', {})
@@ -156,13 +162,32 @@ describe('the launch and the thread', () => {
     expect((params.config as any).default_permissions).toBe('ieumoffice-agent')
   })
 
-  it('writes the project, keeps open documents read-only and protected folders unreadable', () => {
-    expect(codexAgentFilesystem(options())).toEqual({
-      ':root': 'read',
+  it('reads the minimal set and the runtimes, writes the project, keeps open documents read-only and denies protected folders', () => {
+    expect(codexAgentFilesystem(options(), ['C:\\Python314'])).toEqual({
+      ':minimal': 'read',
+      'C:\\Python314': 'read',
       'C:\\Users\\me\\Project': 'write',
       'C:\\Users\\me\\Project\\open.md': 'read',
-      'C:\\Users\\me\\.codex': 'none',
+      'C:\\Users\\me\\.codex': 'deny',
     })
+  })
+
+  it('lets commands read the folders on PATH, but not a drive root, a protected folder or a missing one', () => {
+    const dirs = codexAgentReadableDirs(
+      [
+        'C:\\Python314',
+        'relative\\bin',
+        'C:\\',
+        'C:\\Users\\me\\.codex\\bin',
+        '"C:\\Program Files\\nodejs"',
+        'C:\\missing',
+        'C:\\python314',
+      ].join(';'),
+      options(),
+      'win32',
+      (dir) => !dir.toLowerCase().includes('missing'),
+    )
+    expect(dirs).toEqual(['C:\\Python314', 'C:\\Program Files\\nodejs'])
   })
 
   it('switches user MCP servers off and adds the app one with its token', () => {
@@ -180,6 +205,22 @@ describe('the launch and the thread', () => {
     })
     expect(params.developerInstructions).toBe('Answer in Korean.')
     expect(params.ephemeral).toBe(true)
+  })
+
+  it('answers only the tool approvals of the app server', () => {
+    const approval = {
+      serverName: 'ieumoffice-editor',
+      mode: 'form',
+      _meta: { codex_approval_kind: 'mcp_tool_call' },
+    }
+    expect(codexElicitationAnswer(approval).action).toBe('accept')
+    expect(codexElicitationAnswer({ ...approval, serverName: 'github' }).action).toBe('decline')
+    expect(codexElicitationAnswer({ ...approval, _meta: null }).action).toBe('decline')
+    expect(codexDeclineDecision({})).toBe('decline')
+    expect(codexDeclineDecision({ availableDecisions: ['accept', 'decline', 'cancel'] })).toBe(
+      'decline',
+    )
+    expect(codexDeclineDecision({ availableDecisions: ['accept', 'cancel'] })).toBe('cancel')
   })
 
   it('reads the paths of a file change from the item that announced it', () => {
@@ -216,7 +257,7 @@ describe('starting a session', () => {
     expect(thread.params).toMatchObject({
       model: 'gpt-x',
       cwd: 'C:\\Users\\me\\Project',
-      approvalPolicy: 'on-request',
+      approvalPolicy: 'untrusted',
       config: { mcp_servers: { github: { enabled: false } } },
     })
     session.stop()
@@ -250,6 +291,20 @@ describe('starting a session', () => {
     const { run, killTree } = await start(
       baseHandlers({
         'thread/start': () => ({ thread: { id: 'th1' }, activePermissionProfile: null }),
+      }),
+    )
+    await expect(run).rejects.toMatchObject({ kind: 'unsafe-tools' })
+    expect(killTree).toHaveBeenCalled()
+  })
+
+  it('refuses a thread that runs under another approval policy than asked', async () => {
+    const { run, killTree } = await start(
+      baseHandlers({
+        'thread/start': () => ({
+          thread: { id: 'th1' },
+          approvalPolicy: 'on-request',
+          activePermissionProfile: { id: 'ieumoffice-agent' },
+        }),
       }),
     )
     await expect(run).rejects.toMatchObject({ kind: 'unsafe-tools' })
@@ -393,6 +448,72 @@ describe('a running session', () => {
     await tick()
     expect(server().received.at(-1)).toEqual({ id: 'srv-2', result: { decision: 'decline' } })
     expect(events.some((event) => event.type === 'permission')).toBe(false)
+    session.stop()
+  })
+
+  it('refuses with cancel when the request does not offer decline', async () => {
+    const { run, server } = await start(
+      baseHandlers({
+        'turn/start': (fake) => {
+          setImmediate(() =>
+            fake.send({
+              id: 'srv-5',
+              method: 'item/commandExecution/requestApproval',
+              params: {
+                itemId: 'c1',
+                command: 'type C:\\Users\\me\\.codex\\config.toml',
+                availableDecisions: ['accept', 'cancel'],
+              },
+            }),
+          )
+          return { turn: { id: 'tu1' } }
+        },
+      }),
+    )
+    const session = await run
+    await session.send('x')
+    await tick()
+    expect(server().received.at(-1)).toEqual({ id: 'srv-5', result: { decision: 'cancel' } })
+    session.stop()
+  })
+
+  it('allows the app tools when Codex asks before calling them, and declines other forms', async () => {
+    const { run, server } = await start(
+      baseHandlers({
+        'turn/start': (fake) => {
+          setImmediate(() => {
+            fake.send({
+              id: 'srv-6',
+              method: 'mcpServer/elicitation/request',
+              params: {
+                serverName: 'ieumoffice-editor',
+                mode: 'form',
+                _meta: { codex_approval_kind: 'mcp_tool_call' },
+                message: 'Allow?',
+                requestedSchema: { type: 'object', properties: {} },
+              },
+            })
+            fake.send({
+              id: 'srv-7',
+              method: 'mcpServer/elicitation/request',
+              params: { serverName: 'ieumoffice-editor', mode: 'url', url: 'https://x' },
+            })
+          })
+          return { turn: { id: 'tu1' } }
+        },
+      }),
+    )
+    const session = await run
+    await session.send('x')
+    await tick()
+    await tick()
+    const replies = server().received.filter(
+      (message) => message.id === 'srv-6' || message.id === 'srv-7',
+    )
+    expect(replies).toEqual([
+      { id: 'srv-6', result: { action: 'accept', content: {}, _meta: null } },
+      { id: 'srv-7', result: { action: 'decline', content: null, _meta: null } },
+    ])
     session.stop()
   })
 

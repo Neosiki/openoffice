@@ -16,6 +16,8 @@ export const fr = {
     'Sous Windows, les commandes que vous autorisez s’exécutent sans isolement et peuvent accéder à tout votre PC et à Internet.',
   providerCodexNote:
     'Les commandes s’exécutent dans l’espace isolé de Codex : seul le dossier du projet peut être modifié, et il n’y a pas d’accès à Internet.',
+  providerBlocked:
+    'Pas encore disponible : on ne peut pas encore empêcher Codex de lire son propre fichier de connexion.',
   connChecking: 'Vérification de la connexion…',
   connUnavailable: 'Non connecté. Connectez-vous dans Paramètres → IA.',
   connMetered: 'Connecté avec une connexion payante à l’usage que vous avez acceptée.',

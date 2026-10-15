@@ -16,6 +16,8 @@ export const it = {
     'Su Windows i comandi che consenti vengono eseguiti senza isolamento e possono raggiungere tutto il PC e internet.',
   providerCodexNote:
     'I comandi vengono eseguiti nello spazio isolato di Codex: si può scrivere solo nella cartella del progetto e non c’è accesso a internet.',
+  providerBlocked:
+    'Non ancora disponibile: non è ancora possibile impedire a Codex di leggere il proprio file di accesso.',
   connChecking: 'Verifica della connessione…',
   connUnavailable: 'Non connesso. Accedi da Impostazioni → IA.',
   connMetered: 'Connesso con un accesso a consumo che hai accettato.',

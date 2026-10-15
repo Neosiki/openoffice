@@ -17,6 +17,7 @@ export const zh = {
   providerClaudeNote:
     '在 Windows 上，你允许的命令会在没有隔离的情况下运行，可能访问整台电脑和互联网。',
   providerCodexNote: '命令在 Codex 的隔离空间中运行：只能写入项目文件夹，且无法访问互联网。',
+  providerBlocked: '暂不可用：目前还无法阻止 Codex 读取它自己的登录文件。',
   connChecking: '正在检查连接…',
   connUnavailable: '未连接。请在“设置 → AI”中登录。',
   connMetered: '正在使用你已允许的按量计费登录。',

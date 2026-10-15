@@ -16,6 +16,8 @@ export const nl = {
     'Op Windows worden opdrachten die je toestaat zonder afscherming uitgevoerd en kunnen ze bij je hele pc en het internet.',
   providerCodexNote:
     'Opdrachten worden uitgevoerd in de afgeschermde ruimte van Codex: alleen in de projectmap kan worden geschreven en er is geen internet.',
+  providerBlocked:
+    'Nog niet beschikbaar: Codex kan nog niet worden verhinderd zijn eigen aanmeldbestand te lezen.',
   connChecking: 'Verbinding controleren…',
   connUnavailable: 'Niet verbonden. Meld je aan via Instellingen → AI.',
   connMetered: 'Aangemeld met een login met betalen per gebruik die je hebt geaccepteerd.',

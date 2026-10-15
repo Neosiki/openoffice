@@ -16,6 +16,8 @@ export const pt = {
     'No Windows, os comandos que você permite são executados sem isolamento e podem acessar todo o seu PC e a internet.',
   providerCodexNote:
     'Os comandos são executados no espaço isolado do Codex: só a pasta do projeto pode ser alterada, e não há acesso à internet.',
+  providerBlocked:
+    'Ainda não disponível: ainda não é possível impedir que o Codex leia o próprio arquivo de login.',
   connChecking: 'Verificando a conexão…',
   connUnavailable: 'Não conectado. Faça login em Configurações → IA.',
   connMetered: 'Conectado com um login de pagamento por uso que você aceitou.',

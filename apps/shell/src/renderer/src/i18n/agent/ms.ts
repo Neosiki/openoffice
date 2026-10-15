@@ -16,6 +16,8 @@ export const ms = {
     'Pada Windows, arahan yang anda benarkan berjalan tanpa pengasingan dan boleh mencapai seluruh PC anda serta internet.',
   providerCodexNote:
     'Arahan berjalan dalam ruang terasing Codex: hanya folder projek yang boleh ditulis, dan tiada internet.',
+  providerBlocked:
+    'Belum tersedia: Codex belum dapat dihalang daripada membaca fail log masuknya sendiri.',
   connChecking: 'Menyemak sambungan…',
   connUnavailable: 'Tidak bersambung. Log masuk di Tetapan → AI.',
   connMetered: 'Log masuk dengan akaun bayar ikut penggunaan yang telah anda terima.',
