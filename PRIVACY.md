@@ -1,6 +1,6 @@
 # IeumOffice Privacy
 
-Last updated: October 14, 2026
+Last updated: October 15, 2026
 
 IeumOffice opens, edits and saves documents on your own PC. The project runs
 no server of its own: nothing is sent to IeumOffice or to its maintainers, and
@@ -189,6 +189,14 @@ Nothing in this list is uploaded by the app.
   time and whether AI was used, not your request. Nothing is written into
   the documents themselves, and the records do not travel with a file to
   another PC.
+- **The crash record** (`crash-log.jsonl` in the data folder): one line each
+  time an editor's page process, the graphics process or another helper
+  process ends abnormally, or the app meets an unexpected error. A line holds
+  the time, what ended, the reason word Chromium reports (such as `crashed` or
+  `oom`), the exit code and which editor it was (such as `docs`). It holds no
+  document text, file names, paths or error messages, and it is kept under
+  64 KB by dropping the oldest lines. The app never sends it anywhere; if you
+  report a problem, you can attach it yourself. No crash dumps are written.
 - **The command-line audit log** (`~/.ieumoffice/cli-audit.jsonl`): one line
   per `ieumoffice` command with the time, the arguments, the result and the
   output path. Set `GENOFFICE_AUDIT_LOG=off` to disable it.

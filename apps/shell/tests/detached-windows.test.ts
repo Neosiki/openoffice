@@ -125,6 +125,10 @@ vi.mock('../src/main/tab-manager', () => ({
   canonicalPath: (p: string) => p.toLowerCase(),
 }))
 
+vi.mock('../src/main/renderer-disposal', () => ({
+  releaseClosedRenderer: vi.fn(() => true),
+}))
+
 type DetachedModule = typeof import('../src/main/detached-windows')
 
 let detached: DetachedModule
@@ -353,6 +357,21 @@ describe('close guard', () => {
     expect(teardownDocsRenderer).toHaveBeenCalledWith(view.webContents)
     expect(view.webContents.close).not.toHaveBeenCalled()
     expect(detached.isDetachedTabId('detached:7')).toBe(false)
+  })
+
+  it('docs ends the closed window renderer process so its memory comes back', async () => {
+    const { releaseClosedRenderer } = await import('../src/main/renderer-disposal')
+    const view = fakeView(8)
+    detached.createDetachedEditorWindow({
+      view: view as never,
+      kind: 'docs',
+      title: 'b.docx',
+      applyMenuFor: () => {},
+    })
+    expect(detached.detachedDocumentFor(8)).toMatchObject({ id: 'detached:8', kind: 'docs' })
+    expect(detached.closeDetachedWithoutPrompt('detached:8')).toBe(true)
+    expect(releaseClosedRenderer).toHaveBeenCalledWith(view.webContents)
+    expect(detached.detachedDocumentFor(8)).toBeUndefined()
   })
 })
 

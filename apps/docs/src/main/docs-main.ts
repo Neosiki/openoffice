@@ -3435,7 +3435,10 @@ export function teardownDocsRenderer(contents: WebContents): void {
   // Sweep recovery copies for this renderer's documents: every non-crash close
   // either saved (docs:save already cleared it) or explicitly discarded, so a
   // copy still on disk here is a leftover from an in-flight recovery write.
-  for (const p of docWritablePaths.get(contents.id) ?? []) clearRecoveryCopy(p)
+  // A renderer that crashed did neither: its last copy is what reopening the
+  // file offers back, so it stays.
+  const crashed = !contents.isDestroyed() && contents.isCrashed()
+  if (!crashed) for (const p of docWritablePaths.get(contents.id) ?? []) clearRecoveryCopy(p)
   // reclaim every per-wcId grant, not just doc saves — the orphaned renderer
   // must also lose its dialog-authorized PDF targets and disk-state cache
   docWritablePaths.delete(contents.id)
