@@ -35,3 +35,4 @@
 | [0031](0031-unsigned-mac-beta.md)                             | macOS판은 Apple 개발자 서명 없이 Apple Silicon용 베타로 낸다                                    | 2026-10-15 |
 | [0032](0032-agent-mode-in-project-folder.md)                  | 프로젝트 폴더에서 구독 프로그램을 도구를 켠 채 돌리는 에이전트 모드를 더한다                    | 2026-10-15 |
 | [0033](0033-google-drive-connection.md)                       | 앱이 스스로 Google 앱이 되어 드라이브 전체에 연결한다                                           | 2026-10-15 |
+| [0034](0034-odt-through-word-editor.md)                       | ODT는 워드 편집기에서 다리 docx로 고치고, 고친 부분만 원본 ODT에 되돌려 쓴다                    | 2026-10-16 |

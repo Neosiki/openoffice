@@ -15,6 +15,7 @@ const localAlias = {
     '../../packages/docx-engine/src/zip-splice.ts',
   ),
   '@genoffice/docx-engine': resolve(__dirname, '../../packages/docx-engine/src/index.ts'),
+  '@genoffice/odt-engine': resolve(__dirname, '../../packages/odt-engine/src/index.ts'),
 }
 
 export default defineConfig({
@@ -30,6 +31,7 @@ export default defineConfig({
           '@genoffice/docx-engine',
           '@genoffice/electron-utils',
           '@genoffice/font-metrics',
+          '@genoffice/odt-engine',
           // the template font list the media scheme serves from
           '@genoffice/ui',
         ],

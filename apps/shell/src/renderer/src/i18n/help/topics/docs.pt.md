@@ -71,6 +71,7 @@ Clique com o botão direito em qualquer ponto do texto — o menu acompanha aqui
 ## Salvar e exportar
 
 - Salvar em .docx reescreve apenas os parágrafos que mudaram — o conteúdo não tocado permanece byte a byte igual.
+- Também abre e salva .odt (texto OpenDocument): Salvar como oferece .docx ou .odt, e o que fica desativado em documentos ODT está em [Início rápido](help://getting-started).
 - Exporta PDF (com a paginação atual) e imagens de cada página.
 
 ## Imprimir

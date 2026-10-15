@@ -22,9 +22,18 @@ Ein neues Dokument öffnet sich ohne Namen; die Datei auf dem Datenträger entst
 
 ## Dateien öffnen
 
-- Menü **Datei ▸ Öffnen** (⌘O/ctrl+O) öffnet die Systemauswahl: .docx / .doc / .xlsx / .xls / .csv / .tsv / .pptx / .ppt / .pdf / .md / .html.
+- Menü **Datei ▸ Öffnen** (⌘O/ctrl+O) öffnet die Systemauswahl: .docx / .doc / .odt / .xlsx / .xls / .csv / .tsv / .pptx / .ppt / .pdf / .md / .html.
 - Klicken Sie auf einen Eintrag in der Liste **Zuletzt verwendet** auf der Startseite.
 - `ieumoffice <file>` in einem Terminal öffnet Dateien ebenfalls.
+
+## ODT-Dokumente
+
+.odt-Dateien (OpenDocument-Text, das Format, das Hancom Office, LibreOffice und andere speichern) öffnen sich im Docs-Tab, und zwar überall dort, wo sich eine .docx öffnen lässt. Ein neues Dokument ist weiterhin eine .docx.
+
+- **Funktioniert wie gewohnt**: Text bearbeiten, Zeichen- und Absatzformate, Tabellen (Zeilen und Spalten einfügen und löschen, Zellen verbinden und teilen), Bilder, Kopf- und Fußzeilen, Fuß- und Endnoten, Seiteneinrichtung und Abschnitte, Aufzählungen und Nummerierung, Überschriftenformate, Links, Suchen und Ersetzen, Rechtschreibung, Drucken, PDF- und HTML-Export sowie Bearbeiten mit der KI.
+- **In ODT ausgeschaltet**: Kommentare, Änderungen nachverfolgen, Vergleichen, Wasserzeichen, Freihand, Inhaltsverzeichnis, Einfügen von Formeln, Formen, Textfeldern oder Diagrammen, Spalten, Zitate und Literaturverzeichnis, Beschriftungen und Querverweise, Seitenfarbe, Kennwort und Bearbeitungsbeschränkung, Schreibschutz empfehlen, Designschriftarten und -farben, gegenüberliegende Seitenränder. Ihre Schaltflächen sind ausgegraut; speichern Sie als .docx, um sie zu nutzen.
+- **Bleibt, wie es war**: Formeln, Diagramme und Zeichnungen aus dem Original erscheinen als gesperrte Bilder, die sich löschen, aber nicht bearbeiten lassen, und gesperrte Tabellenzellen bleiben gesperrt. Teile, die Sie nicht anfassen, werden unverändert zurückgeschrieben. Ein kennwortgeschütztes ODT öffnet sich nicht; entfernen Sie zuerst das Kennwort.
+- **Speichern unter** bietet .docx und .odt an. Vor einem Formatwechsel wird aufgelistet, was sich ändert oder wegfällt; danach öffnet sich der Tab mit der neuen Datei. Markdown und HTML bieten außerdem **Als ODT exportieren…**.
 
 ## Das Speichermodell
 

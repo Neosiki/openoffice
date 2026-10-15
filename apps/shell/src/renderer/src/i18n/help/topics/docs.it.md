@@ -84,6 +84,7 @@ Fai clic destro ovunque nel corpo del testo — il menu si adatta all'elemento s
 ## Salvataggio ed esportazione
 
 - Salva .docx riscrivendo solo i paragrafi modificati — il contenuto non toccato resta identico byte per byte.
+- Apre e salva anche .odt (testo OpenDocument): Salva con nome offre .docx o .odt, e ciò che è disattivato nei documenti ODT si trova in [Guida rapida](help://getting-started).
 - Esporta in PDF (con l'impaginazione corrente) e in immagini pagina per pagina.
 
 ## Stampa

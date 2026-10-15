@@ -26,6 +26,7 @@ packages/i18n          화면 언어 목록, 제품 이름 한 곳 정의
 packages/cli           터미널 명령어 `ieumoffice`, MCP 도구, 에이전트 스킬 설치
 packages/electron-utils 편집기 뒷단 공용 도구(메뉴, 저장소 주소, 원격 이미지 받기 등), 저장하지 않은 파일 확인,
                        생성 요청을 새 탭에 맡겨 두는 곳(`generate-handoff.ts`)
+packages/odt-engine    ODT 열기(다리 docx로 바꾸기), 고친 부분만 원본 ODT에 되돌려 쓰기, docx → 새 ODT
 packages/pdf-structure PDF의 문서 나무(다시 흐르는 글), Markdown·EPUB 쓰기, 그림 원본 꺼내기, AI 페이지 읽기,
                        번역, 번역 PDF 써 넣기, 문서 작업 엔진, 결과 보관소. pdf2docx의 IR을 읽기만 한다
 packages/xmind-engine  마인드맵 파일 엔진(열기, 원본 보존, 맞추기, 저장, 개요 글, 테마 표). 이 프로젝트가 만든 것이고,
@@ -37,10 +38,20 @@ packages/docx-engine, pptx-engine, pptx-ops, pptx-render, xlsx-gateway,
 apps/sheets/native/xlsx-engine   엑셀 계산·입출력을 맡는 별도 프로그램(Rust). 표준 입출력으로 대화한다
 ```
 
-- 의존 방향은 한쪽이다. `apps/*` → `packages/*`. 패키지끼리는 `ai-provider` → `agent-core`·`i18n`(그래서 `agent-core`는 `ai-provider`를 가져올 수 없다), `ai-search` → `ai-provider`·`electron-utils`, `ui` → `ai-provider`·`agent-core`·`i18n`·`pptx-render`, `cli` → 엔진 패키지·`pdf-structure`·`ai-search`·`ai-provider`·`i18n`, `electron-utils` → `i18n`, `file-parse` → `agent-core`(가리기 이름표)·`xmind-engine`·`docx-engine`, `xmind-engine` → `zip-gate`·`i18n`. `pdf-structure`는 `pdf2docx`·`i18n`·`ai-provider`(그림 입력 판정)·`agent-core`(형)·`font-metrics`의 소스를 상대 경로로 가져오고, `apps/pdf`·`apps/shell`·`cli`도 `pdf-structure`를 상대 경로로 가져온다. `pdf-structure`는 다른 작업 공간 패키지를 이름으로 가져오지 않고 Electron에 기대지 않는다. `i18n`과 `agent-core`는 다른 작업 공간 패키지에 기대지 않는다.
+- 의존 방향은 한쪽이다. `apps/*` → `packages/*`. 패키지끼리는 `ai-provider` → `agent-core`·`i18n`(그래서 `agent-core`는 `ai-provider`를 가져올 수 없다), `ai-search` → `ai-provider`·`electron-utils`, `ui` → `ai-provider`·`agent-core`·`i18n`·`pptx-render`, `odt-engine` → `docx-engine`·`zip-gate`, `cli` → 엔진 패키지·`pdf-structure`·`ai-search`·`ai-provider`·`i18n`, `electron-utils` → `i18n`, `file-parse` → `agent-core`(가리기 이름표)·`xmind-engine`·`docx-engine`, `xmind-engine` → `zip-gate`·`i18n`. `pdf-structure`는 `pdf2docx`·`i18n`·`ai-provider`(그림 입력 판정)·`agent-core`(형)·`font-metrics`의 소스를 상대 경로로 가져오고, `apps/pdf`·`apps/shell`·`cli`도 `pdf-structure`를 상대 경로로 가져온다. `pdf-structure`는 다른 작업 공간 패키지를 이름으로 가져오지 않고 Electron에 기대지 않는다. `i18n`과 `agent-core`는 다른 작업 공간 패키지에 기대지 않는다.
 - `ai-provider`는 진입점이 나뉘어 있다. 화면(renderer)과 preload가 **값**으로 가져오는 것은 `@genoffice/ai-provider/browser`뿐이다. 대표 진입점에서는 형(`import type`)만 가져온다. 프로그램을 실행하는 코드(`/subscription`, `/claude-code-cli`, `/codex-app-server`)는 뒷단에서만 가져온다.
 - 편집기들의 뒷단 코드는 따로 실행되지 않는다. 껍데기 앱을 빌드할 때 함께 묶여, 껍데기 앱의 한 프로세스 안에서 돈다. 그래서 창구 이름(IPC 채널)은 프로세스 전체에서 하나뿐이어야 한다.
 - 편집기 화면은 껍데기 창 위에 얹히는 별도 화면(WebContentsView)이다. 홈 탭만 껍데기 앱 자신의 화면이다.
+
+## ODT 문서가 지나는 길
+
+ODT 전용 화면은 없다. 워드 편집기가 ODT를 "다리 docx"로 바꿔 보여 주고, 저장 때 고친 부분만 원본 ODT에 되돌려 쓴다.
+
+1. 열기: `odtToDocx`가 ODT를 다리 docx와 다리 지도(JSON, docx의 블록이 원본 ODT의 어느 요소였는지)로 바꾼다. 편집기는 그 docx를 보통 docx처럼 연다. 탭의 형식은 `odt`가 되고, ODT에 담을 수 없는 기능은 꺼진다.
+2. 저장: 편집기가 평소처럼 docx를 만들면 `saveOdt`가 연 때의 ODT·다리 지도·그 docx를 받아 요소를 짝짓는다. 다리 docx와 같은 요소는 원본 ODF 바이트를 그대로 쓰고, 바뀐 요소만 ODF로 새로 쓴다. 표는 칸 단위로 고친다.
+3. 다른 형식으로: docx → ODT는 `docxToOdt`가 새 ODT를 만든다. ODT에 담을 수 없는 차트·수식·도형·글상자는 그림이 된다(화면이 있으면 편집 화면을 찍은 그림, 없으면 문서 안의 대체 그림이나 이름표). ODT → docx는 다리 docx를 쓴다. 어느 쪽이든 바뀌거나 빠지는 것은 화면에서는 확인 창, 명령어에서는 `warnings[]`로 알린다.
+
+같은 엔진을 명령어(`docs read`·`apply`·`convert`), AI 첨부와 파일 색인(`file-parse`의 `odtToText`), 마크다운·HTML 편집기의 "ODT로 내보내기"가 함께 쓴다.
 
 ## AI 요청 한 번의 흐름 (화면 경로)
 

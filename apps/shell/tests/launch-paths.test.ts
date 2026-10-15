@@ -13,6 +13,19 @@ describe('collectLaunchPaths', () => {
     ).toEqual(['first.docx', 'second.xlsx'])
   })
 
+  it('accepts an .odt from argv or the second-instance payload', () => {
+    expect(
+      collectLaunchPaths(['IeumOffice.exe', 'C:/a/report.odt'], undefined, () => true),
+    ).toEqual(['C:/a/report.odt'])
+    expect(
+      collectLaunchPaths(['IeumOffice.exe'], { launchPaths: ['/a/REPORT.ODT'] }, () => true),
+    ).toEqual(['/a/REPORT.ODT'])
+    // an .odt next to an unsupported file is opened, not the fallback
+    expect(collectLaunchPaths(['IeumOffice.exe', 'x.rtf', 'y.odt'], undefined, () => true)).toEqual(
+      ['y.odt'],
+    )
+  })
+
   it('accepts a .tsv from argv or the second-instance payload', () => {
     expect(
       collectLaunchPaths(['GenOffice.app', '/data/variants.tsv'], undefined, () => true),

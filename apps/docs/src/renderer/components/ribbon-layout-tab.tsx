@@ -7,6 +7,7 @@ import { PaperSizeDialog } from './PaperSizeDialog'
 import { insertColumnBreak, insertTextWrappingBreak } from '../editor/page-break'
 import { setFloatingWrap, shapeWrapOf } from '../editor/floating-z-order'
 import { useI18n, type StringKey } from '../i18n/locale'
+import { odtOffProps, useOdtSession } from '../odt-gate'
 import { useMeasurement } from '../use-measurement'
 import {
   IconCaret,
@@ -165,6 +166,8 @@ export function LayoutTab({
   onMirrorMargins,
 }: LayoutTabProps) {
   const { t } = useI18n()
+  /** ODT document: the features ODT switches off are disabled (odt-gate.ts) */
+  const odtOff = useOdtSession()
   const { format } = useMeasurement()
   const paraAttrs = activeParaAttrs(editor)
   const enabled = hasDoc && !!section
@@ -383,6 +386,7 @@ export function LayoutTab({
                           key={m.key}
                           className={marginsActive(m) ? 'active' : ''}
                           disabled={!marginsFitPage(m, section.pageWidth, section.pageHeight)}
+                          {...odtOffProps(odtOff && !!m.mirror, t(m.nameKey))}
                           onClick={() => {
                             applyMargins(m, !!m.mirror)
                             setDropdown(() => null)
@@ -480,6 +484,7 @@ export function LayoutTab({
               className={`rb-big ${section && section.columns > 1 ? 'active' : ''}`}
               disabled={!enabled}
               data-tip={t('ribbonColumns')}
+              {...odtOffProps(odtOff)}
               onClick={() => toggleDropdown(setDropdown, 'columns')}
             >
               <span className="rb-big-icon">
@@ -697,6 +702,7 @@ export function LayoutTab({
             left: section.marginLeft,
           }}
           mirror={mirrorMargins}
+          mirrorOff={odtOff}
           pageWidth={section.pageWidth}
           pageHeight={section.pageHeight}
           onApply={(m, mirror) => {

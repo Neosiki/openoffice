@@ -280,6 +280,7 @@ import {
   IconWebLayout,
 } from './components/icons'
 import { ToastHost } from './components/toast'
+import { FormatChangeHost } from './components/FormatChangeDialog'
 import {
   AI_REWRITE_ACK_KEY,
   LinkInsertModal,
@@ -417,6 +418,8 @@ const WORD_COUNT_THROTTLE_MS = 400
 const MAX_FOLLOW_UP_PASSES = 6
 import { runHeadlessDocumentExport } from './headless-export'
 import { installMcpBridge } from './mcp-bridge'
+import { odtOffProps, refuseInOdt, useOdtSession } from './odt-gate'
+import { cleanOdtPaste } from './editor/odt-guard'
 import {
   clampDocsZoom,
   DOCS_ZOOM_MAX,
@@ -1189,7 +1192,9 @@ export function App() {
       // 'merge' formats the whole fragment like typing at the insertion
       // point, keeping emphasis and structure; 'text' passes through — the
       // handlePaste reroute below sends it down the plain-text lane
-      transformPasted: (slice, view) => {
+      transformPasted: (pasted, view) => {
+        // an ODT document keeps only what switched-off kinds (text boxes, equations, comments …) show
+        const slice = cleanOdtPaste(pasted, view.state.schema)
         const mode = consumeForeignPaste()
         if (!mode || mode === 'text') return slice
         const schema = view.state.schema
@@ -1795,6 +1800,9 @@ export function App() {
   const scrollPosRef = useRef({ left: 0, top: 0 })
   const prevZoomRef = useRef(zoom)
 
+  /** an ODT document: the features ODT switches off are refused (odt-gate.ts) */
+  const odtDoc = useOdtSession()
+
   // ---- protection enforcement (Review > Protect Document) ----
   const editRestriction = protection?.enforced ? protection.edit : null
   /** modify password set but not entered: honor-system write lock, document read-only */
@@ -1812,8 +1820,16 @@ export function App() {
 
   // the trackedChanges restriction keeps the recorder on (the ribbon toggle is disabled)
   useEffect(() => {
-    if (trackChangesForced && !trackChanges) setTrackChanges(true)
-  }, [trackChangesForced, trackChanges])
+    if (trackChangesForced && !trackChanges && !odtDoc) setTrackChanges(true)
+  }, [trackChangesForced, trackChanges, odtDoc])
+
+  // an ODT document records no tracked changes and takes no ink
+  useEffect(() => {
+    if (odtDoc && trackChanges) setTrackChanges(false)
+  }, [odtDoc, trackChanges])
+  useEffect(() => {
+    if (odtDoc && inkTool !== 'select') setInkTool('select')
+  }, [odtDoc, inkTool])
 
   // Read Mode / Protect Document: the document becomes read-only; Esc leaves Read Mode.
   // A phased open stays editable (the append boundary is guarded by
@@ -1854,8 +1870,8 @@ export function App() {
   // keep the native View menu's checkmarks (AI Sidebar / Dark Mode) in sync
   // (the IPC field keeps its historical darkCanvas name)
   useEffect(() => {
-    window.desktop.reportViewMenuState?.({ aiSidebar: showAi, darkCanvas: darkPage })
-  }, [showAi, darkPage])
+    window.desktop.reportViewMenuState?.({ aiSidebar: showAi, darkCanvas: darkPage, odt: odtDoc })
+  }, [showAi, darkPage, odtDoc])
 
   // Crash-recovery copy: while the document is dirty, push a serialized
   // copy to the main process every 30s; a normal save (or discarding on close) removes
@@ -2210,8 +2226,15 @@ export function App() {
   }
 
   /** apply the diff the Protect Document dialog produced (undefined field = unchanged) */
-  const applyProtectDialog = async (result: ProtectDialogResult) => {
+  const applyProtectDialog = async (input: ProtectDialogResult) => {
     setShowProtectDialog(false)
+    // an ODT document keeps only Remove personal information (passwords and
+    // editing restrictions are off there)
+    const result: ProtectDialogResult = odtDoc
+      ? input.removePersonalInfo !== undefined
+        ? { removePersonalInfo: input.removePersonalInfo }
+        : {}
+      : input
     let changed = false
     if (result.openPassword !== undefined) {
       const cur = fileCtxRef.current.doc
@@ -5453,7 +5476,7 @@ export function App() {
       // Track changes ⇧⌘E; forced by an editing restriction it cannot be turned off
       if ((e.metaKey || e.ctrlKey) && e.shiftKey && !e.altKey && e.code === 'KeyE' && doc) {
         e.preventDefault()
-        if (!trackChangesForced) setTrackChanges((v) => !v)
+        if (!trackChangesForced && !refuseInOdt('trackChanges')) setTrackChanges((v) => !v)
       }
       // Word count ⇧⌘G
       if ((e.metaKey || e.ctrlKey) && e.shiftKey && !e.altKey && e.code === 'KeyG' && doc) {
@@ -5586,7 +5609,7 @@ export function App() {
           if (editor && doc) setShowLinkModal(true)
           break
         case 'insert-equation':
-          if (editor && doc) setShowEquationModal(true)
+          if (editor && doc && !refuseInOdt('equation')) setShowEquationModal(true)
           break
         // Menu parity with the shortcuts and the right-click menu
         case 'insert-comment':
@@ -6567,6 +6590,9 @@ export function App() {
     onSaveAs: () => void save(true),
     onToggleAi: () => setShowAi((v) => !v),
     onSection: (next: SectionSettings) => {
+      // text columns are off in an ODT document
+      const current = sections[activeSection]?.settings ?? section
+      if ((next.columns ?? 1) !== (current?.columns ?? 1) && refuseInOdt('columns')) return
       // layout applies to the cursor's section; the final section's sectPr goes through SaveOptions.section (also drives canvas geometry)
       setSections((prev) =>
         prev.map((s, i) => (i === activeSection ? { ...s, settings: next } : s)),
@@ -6598,16 +6624,19 @@ export function App() {
     },
     onMirrorMargins: (on: boolean) => {
       if (on === mirrorMargins) return
+      if (on && refuseInOdt('mirrorMargins')) return
       setMirrorMargins(on)
       setMirrorMarginsDirty(true)
     },
     onInsertSectionBreak: (type: 'nextPage' | 'continuous' | 'evenPage' | 'oddPage') =>
       insertSectionBreak(type),
     onPageColor: (next: string | null) => {
+      if (refuseInOdt('pageColor')) return
       setPageColor(next)
       setPageColorDirty(true)
     },
     onWatermark: (next: string | null) => {
+      if (refuseInOdt('watermark')) return
       setWatermark(next)
       setWatermarkDirty(true)
       setWatermarkStyle(null)
@@ -6615,21 +6644,27 @@ export function App() {
       setStatus(next ? t('appWatermarkSet', { text: next }) : t('appWatermarkRemoved'))
     },
     onThemeFonts: (fonts: ThemeFonts) => {
+      if (refuseInOdt('theme')) return
       setThemeFonts(fonts)
       setThemeFontsDirty(true)
       setStatus(t('appThemeFontsChanged'))
     },
     onThemeColors: (colors: ThemeColors) => {
+      if (refuseInOdt('theme')) return
       setThemeColors(colors)
       setThemeColorsDirty(true)
       setStatus(t('appThemeColorsApplied', { name: colors.name ?? '' }))
     },
-    onInkTool: setInkTool,
+    onInkTool: (tool: InkTool) => {
+      if (tool !== 'select' && refuseInOdt('ink')) return
+      setInkTool(tool)
+    },
     onInkPen: setInkPen,
     onInkHighlighter: setInkHighlighter,
     onInkClearAll: clearInks,
     onInsertNote: insertNote,
     onAddSource: (source: SourceInfo) => {
+      if (refuseInOdt('citation')) return
       setSources((prev) => [...prev, source])
       setSourcesDirty(true)
       setStatus(t('appSourceAdded', { title: source.title }))
@@ -6659,7 +6694,10 @@ export function App() {
     onDeleteAllComments: (resolvedOnly: boolean) =>
       deleteAllCommentsImpl(reviewCtxRef.current, resolvedOnly),
     onGotoComment: (dir: 1 | -1) => gotoCommentImpl(reviewCtxRef.current, dir),
-    onTrackChanges: setTrackChanges,
+    onTrackChanges: (on: boolean) => {
+      if (on && refuseInOdt('trackChanges')) return
+      setTrackChanges(on)
+    },
     onSpellcheck: (on: boolean) => {
       if (largeDocSpellOff) setLargeDocSpellOff(false)
       setSpellcheck(on)
@@ -7108,6 +7146,7 @@ export function App() {
       className={`app ${readMode ? 'read-mode' : ''}${revisionDisplay !== 'all' ? ` rev-display-${revisionDisplay}` : ''}${revisionDisplay === 'all' && viewMode === 'print' ? ' rev-balloon' : ''}`}
     >
       <ToastHost />
+      <FormatChangeHost />
       {docCss && <style data-doc-css="">{docCss}</style>}
       {liveLineFactor != null && (
         <style data-doc-css="">{`.doc-page { --doc-line-factor:${liveLineFactor} }`}</style>
@@ -7572,6 +7611,7 @@ export function App() {
                 onDelete={deleteComment}
                 onClose={closeCommentsPanel}
                 focus={commentFocus}
+                odtLocked={odtDoc}
               />
             )}
             {doc && showStylesPane && (
@@ -7622,6 +7662,7 @@ export function App() {
                     data-tip={t('ribbonTrackChangesTip')}
                     aria-pressed={trackChanges}
                     disabled={isProtected || trackChangesForced}
+                    {...odtOffProps(odtDoc)}
                     onClick={() => setTrackChanges((v) => !v)}
                   >
                     {t(trackChanges ? 'appTrackChangesOn' : 'appTrackChangesOff')}
@@ -8013,6 +8054,7 @@ export function App() {
           writeProtection={writeProtection}
           protection={protection}
           removePersonalInfo={removePersonalInfo}
+          odtLocked={odtDoc}
           onCancel={() => setShowProtectDialog(false)}
           onApply={(result) => void applyProtectDialog(result)}
         />

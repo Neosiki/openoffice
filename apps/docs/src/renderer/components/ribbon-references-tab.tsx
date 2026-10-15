@@ -15,6 +15,7 @@ import { Dropdown } from '@genoffice/ui'
 import { PromptModal } from './PromptModal'
 import { collectHeadings } from '../editor/headings'
 import { t, useI18n, type StringKey } from '../i18n/locale'
+import { odtOffProps, useOdtSession } from '../odt-gate'
 import {
   IconBook,
   IconCaption,
@@ -362,6 +363,8 @@ export function ReferencesTab({
   headingPages,
 }: ReferencesTabProps) {
   const { t } = useI18n()
+  /** ODT document: the features ODT switches off are disabled (odt-gate.ts) */
+  const odtOff = useOdtSession()
   const [captionOpen, setCaptionOpen] = useState(false)
   const [sourceOpen, setSourceOpen] = useState(false)
   const [zoteroBusy, setZoteroBusy] = useState<ZoteroCommand | null>(null)
@@ -499,6 +502,7 @@ export function ReferencesTab({
             className="rb-big"
             disabled={!hasDoc || zoteroBusy !== null}
             data-tip={t('zoteroCitationTip')}
+            {...odtOffProps(odtOff)}
             onClick={() => void runZotero('addEditCitation')}
           >
             <span className="rb-big-icon">
@@ -510,6 +514,7 @@ export function ReferencesTab({
             className="rb-big"
             disabled={!hasDoc || zoteroBusy !== null}
             data-tip={t('zoteroBibliographyTip')}
+            {...odtOffProps(odtOff)}
             onClick={() => void runZotero('addEditBibliography')}
           >
             <span className="rb-big-icon">
@@ -521,6 +526,7 @@ export function ReferencesTab({
             className="rb-big"
             disabled={!hasDoc || zoteroBusy !== null}
             data-tip={t('zoteroRefreshTip')}
+            {...odtOffProps(odtOff)}
             onClick={() => void runZotero('refresh')}
           >
             <span className="rb-big-icon">
@@ -533,6 +539,7 @@ export function ReferencesTab({
               className="rb-big"
               disabled={!hasDoc || zoteroBusy !== null}
               data-tip={t('zoteroDocumentSettingsTip')}
+              {...odtOffProps(odtOff)}
               onClick={() => toggleDropdown(setDropdown, 'zotero-settings')}
             >
               <span className="rb-big-icon">
@@ -564,6 +571,7 @@ export function ReferencesTab({
             className="rb-big"
             disabled={!hasDoc}
             data-tip={t('ribbonTocTip')}
+            {...odtOffProps(odtOff)}
             onClick={insertToc}
           >
             <span className="rb-big-icon">
@@ -575,6 +583,7 @@ export function ReferencesTab({
             className="rb-big"
             disabled={!hasDoc}
             data-tip={t('ribbonTocUpdateTip')}
+            {...odtOffProps(odtOff)}
             onClick={() => updateTocField(editor, blocks, headingPages)}
           >
             <span className="rb-big-icon">
@@ -625,6 +634,7 @@ export function ReferencesTab({
               className="rb-big"
               disabled={!hasDoc}
               data-tip={t('ribbonCitationTip')}
+              {...odtOffProps(odtOff)}
               onClick={() => toggleDropdown(setDropdown, 'citation')}
             >
               <span className="rb-big-icon">
@@ -655,6 +665,7 @@ export function ReferencesTab({
             className="rb-big"
             disabled={!hasDoc}
             data-tip={t('ribbonBibliographyTip')}
+            {...odtOffProps(odtOff)}
             onClick={insertBibliography}
           >
             <span className="rb-big-icon">
@@ -666,6 +677,7 @@ export function ReferencesTab({
             className="rb-big"
             disabled={!hasDoc}
             data-tip={t('ribbonCaptionTip')}
+            {...odtOffProps(odtOff)}
             onClick={() => setCaptionOpen(true)}
           >
             <span className="rb-big-icon">

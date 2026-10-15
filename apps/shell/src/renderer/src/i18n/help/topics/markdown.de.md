@@ -35,6 +35,7 @@ Drei schnelle Beispiele:
 Menü Datei, alles lokal und alles fragt nach, wohin das Ergebnis soll:
 
 - **Als Word exportieren…** und **Als PDF exportieren…** schreiben eine echte .docx bzw. .pdf.
+- **Als ODT exportieren…** schreibt eine .odt (OpenDocument-Text) über dieselbe Umwandlung wie der Word-Export; ändert sich dabei etwas oder fällt etwas weg, sehen Sie die Liste und bestätigen zuerst.
 - **Als Bilder exportieren…** schreibt ein PNG pro Seite in einen Ordner, den Sie auswählen.
 - **In Docs umwandeln und öffnen** konvertiert nach .docx und öffnet sie im integrierten Docs-Tab hier in der App — es ist keine Übergabe an etwas in der Cloud, und die konvertierte Kopie liegt in einem Cache-Ordner, der nach etwa einer Woche aufgeräumt wird.
 

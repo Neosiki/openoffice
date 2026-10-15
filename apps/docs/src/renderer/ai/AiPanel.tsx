@@ -102,6 +102,7 @@ import fileVoiceIcon from '../assets/file-voice.png'
 import fileDocumentIcon from '../assets/file-document.png'
 import fileGeneralIcon from '../assets/file-general.png'
 import { IconNewChat, IconSidebarCollapse } from '../components/icons'
+import { odtOffProps, useOdtSession } from '../odt-gate'
 
 interface ToolActivity {
   name: string
@@ -207,7 +208,7 @@ const PASTE_MIME_EXT: Record<string, string> = {
 /** File-type icons for attachment cards (attachment icon set); exts the
  *  attachment allowlist doesn't accept yet are mapped ahead so they light up when added */
 const ATTACHMENT_CARD_ICON_GROUPS: [icon: string, exts: string[]][] = [
-  [fileWordIcon, ['doc', 'docx']],
+  [fileWordIcon, ['doc', 'docx', 'odt']],
   [fileExcelIcon, ['xls', 'xlsx', 'xlsm', 'csv', 'tsv']],
   [filePptIcon, ['ppt', 'pptx']],
   [filePdfIcon, ['pdf']],
@@ -247,7 +248,7 @@ const ATTACHMENT_CARD_ICON_GROUPS: [icon: string, exts: string[]][] = [
   ],
 ]
 
-const ATTACHMENT_CARD_ICONS: Record<string, string> = Object.fromEntries(
+export const ATTACHMENT_CARD_ICONS: Record<string, string> = Object.fromEntries(
   ATTACHMENT_CARD_ICON_GROUPS.flatMap(([icon, exts]) => exts.map((ext) => [ext, icon])),
 )
 
@@ -630,8 +631,11 @@ export function AiPanel({
       seen.has(a.path) ? false : (seen.add(a.path), true),
     )
   }
-  const trackChangesRef = useRef(trackChanges)
-  trackChangesRef.current = trackChanges
+  // tracked changes are off in an ODT document: AI edits land as plain edits
+  const odtDoc = useOdtSession()
+  const trackOn = trackChanges && !odtDoc
+  const trackChangesRef = useRef(trackOn)
+  trackChangesRef.current = trackOn
   const commentsAccessRef = useRef(commentsAccess)
   commentsAccessRef.current = commentsAccess
   const hfAccessRef = useRef(hfAccess)
@@ -1932,9 +1936,10 @@ export function AiPanel({
               </button>
               <DriveAttachButton lang={lang} onPicked={attachFromDrive} />
               <button
-                className={`ai-track-btn${trackChanges ? ' on' : ''}`}
+                className={`ai-track-btn${trackOn ? ' on' : ''}`}
                 onClick={toggleTrackChanges}
-                data-tip={trackChanges ? t('aiTrackOnTitle') : t('aiTrackOffTitle')}
+                data-tip={trackOn ? t('aiTrackOnTitle') : t('aiTrackOffTitle')}
+                {...odtOffProps(odtDoc)}
               >
                 <span className="ai-track-dot" aria-hidden />
                 {t('aiTrackChanges')}

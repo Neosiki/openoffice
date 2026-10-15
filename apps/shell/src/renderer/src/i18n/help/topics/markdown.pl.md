@@ -35,6 +35,7 @@ Trzy szybkie przykłady:
 Menu Plik — wszystko lokalne i wszystko pyta, gdzie umieścić wynik:
 
 - **Eksportuj jako Word…** i **Eksportuj jako PDF…** zapisują prawdziwy plik .docx lub .pdf.
+- **Eksportuj jako ODT…** zapisuje plik .odt (tekst OpenDocument) tą samą konwersją co eksport do Worda; jeśli coś się po drodze zmieni lub przepadnie, zobaczysz listę i najpierw to potwierdzisz.
 - **Eksportuj jako obrazy…** zapisuje po jednym PNG na stronę w katalogu, który wybierzesz.
 - **Konwertuj i otwórz w Docs** konwertuje do .docx i otwiera go we wbudowanej karcie Docs tutaj w aplikacji — to nie jest przekazanie czegokolwiek do chmury, a przekonwertowana kopia leży w folderze pamięci podręcznej, który jest czyszczony po około tygodniu.
 

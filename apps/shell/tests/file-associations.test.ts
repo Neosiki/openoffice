@@ -20,6 +20,9 @@ const config = configModule.exports
 // Declared per platform (a top-level list would be appended to the Windows
 // one); mac and Linux carry the full list.
 const fileAssociations: Array<{ ext: string; mimeType?: string }> = config.linux.fileAssociations
+/** launchable extensions build/installer.nsh offers in "Open with" itself */
+const INSTALLER_OPEN_WITH_EXTS: ReadonlySet<string> = new Set(['odt'])
+const installerScript = readFileSync(resolve(import.meta.dirname, '../build/installer.nsh'), 'utf8')
 
 describe('packaged file associations', () => {
   // The OS can only offer GenOffice in "Open With" (mac CFBundleDocumentTypes,
@@ -29,8 +32,15 @@ describe('packaged file associations', () => {
   // gap this closes.
   it('advertises every extension the app launches', () => {
     for (const ext of LAUNCHABLE_EXTS) {
+      // .odt is offered by the NSIS script alone (tests/odt-open-with.test.ts):
+      // an association would make the app its default opener on Windows
+      if (INSTALLER_OPEN_WITH_EXTS.has(ext)) continue
       const association = fileAssociations.find((entry) => entry.ext === ext)
       expect(association, `no file association declared for .${ext}`).toBeTruthy()
+    }
+    for (const ext of INSTALLER_OPEN_WITH_EXTS) {
+      expect(LAUNCHABLE_EXTS).toContain(ext)
+      expect(installerScript).toContain(`Software\\Classes\\.${ext}\\OpenWithProgids`)
     }
     expect(config.mac.fileAssociations).toEqual(fileAssociations)
     expect(config.fileAssociations).toBeUndefined()

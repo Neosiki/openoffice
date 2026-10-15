@@ -35,7 +35,7 @@ Haken Sie das Kontrollkästchen einer Zeile an oder klicken Sie mit ⌘/Strg, um
 Das Suchfeld oben erfasst gleichzeitig zwei Dinge:
 
 - **Dateinamen**: schnelles Filtern nach Namen.
-- **Dateinhalte**: GenOffice indexiert Ihre Dateien im Hintergrund (Text in docx/xlsx/pptx/pdf/md/html), sodass die Volltextsuche auch Dateien findet. Umfang und Schalter stehen in den Sucheinstellungen.
+- **Dateinhalte**: GenOffice indexiert Ihre Dateien im Hintergrund (Text in docx/odt/xlsx/pptx/pdf/md/html), sodass die Volltextsuche auch Dateien findet. Umfang und Schalter stehen in den Sucheinstellungen.
 
 ## Schnellstart-Karten
 
@@ -51,7 +51,7 @@ Was die einzelnen Karten tun:
 - **AI Markdown** (.md): ein leeres Markdown-Dokument im Markdown-Editor.
 - **AI HTML** (.html): eine leere Webseite im HTML-Editor.
 - **AI PDF** (.pdf): anders als die übrigen — es erzeugt **sofort** eine echte leere einseitige PDF im Zielordner und öffnet sie als gewöhnliche Datei (der PDF-Editor arbeitet mit echten Dateien). Praktisch zum Kommentieren, Schwärzen oder Hinzufügen von Text; die Datei kann beim ersten Speichern automatisch aus ihrem Inhalt benannt werden.
-- **Lokale Datei öffnen**: eine Systemdateiauswahl für Word (.docx/.doc), Excel (.xlsx/.xlsm/.xls/.csv/.tsv), PowerPoint (.pptx/.ppt), PDF, Markdown (.md/.markdown) und Webseiten (.html/.htm). Mehrfachauswahl ist möglich; jede Datei bekommt ihren eigenen Tab. Textdateien (.txt, .json) lassen sich hier ebenfalls öffnen — sie landen in der Quelltextansicht des Markdown-Editors.
+- **Lokale Datei öffnen**: eine Systemdateiauswahl für Word (.docx/.doc/.odt), Excel (.xlsx/.xlsm/.xls/.csv/.tsv), PowerPoint (.pptx/.ppt), PDF, Markdown (.md/.markdown) und Webseiten (.html/.htm). Mehrfachauswahl ist möglich; jede Datei bekommt ihren eigenen Tab. Textdateien (.txt, .json) lassen sich hier ebenfalls öffnen — sie landen in der Quelltextansicht des Markdown-Editors.
 
 > Tipp: Datei ▸ Neu in der Menüleiste erzeugt dieselben Dokumenttypen (⌘N/Ctrl+N erzeugt standardmäßig ein Textdokument); eine ins Fenster gezogene Datei wird direkt geöffnet.
 

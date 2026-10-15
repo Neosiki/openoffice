@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useI18n, type StringKey } from '../i18n/locale'
+import { odtOffNotice } from '../odt-gate'
 import { useModalKeys } from './modal-keys'
 import { LengthInput } from './LengthInput'
 
@@ -35,6 +36,7 @@ export function MarginDialog({
   mirror: initialMirror,
   pageWidth,
   pageHeight,
+  mirrorOff = false,
   onApply,
   onClose,
 }: {
@@ -43,6 +45,8 @@ export function MarginDialog({
   mirror: boolean
   pageWidth: number
   pageHeight: number
+  /** an ODT document: mirror margins are switched off */
+  mirrorOff?: boolean
   onApply: (next: PageMargins, mirror: boolean) => void
   onClose: () => void
 }) {
@@ -105,10 +109,13 @@ export function MarginDialog({
               onChange={(e) => setMirror(e.target.value === 'mirror')}
             >
               <option value="normal">{t('ribbonMarginPagesNormal')}</option>
-              <option value="mirror">{t('ribbonMarginPagesMirror')}</option>
+              <option value="mirror" disabled={mirrorOff && !mirror}>
+                {t('ribbonMarginPagesMirror')}
+              </option>
             </select>
           </label>
         </div>
+        {mirrorOff && <p className="fld-hint">{odtOffNotice()}</p>}
         {tooLarge && <div className="modal-error">{t('ribbonMarginTooLarge')}</div>}
         <div className="modal-actions">
           <button className="btn-ghost" onClick={onClose}>

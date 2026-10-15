@@ -29,6 +29,7 @@ Klicken Sie in der Vorschau auf ein beliebiges Element, und eine Werkzeugleiste 
 Menü Datei, alles lokal und alles fragt nach, wohin das Ergebnis soll:
 
 - **Als Word exportieren…** und **Als PDF exportieren…** schreiben eine echte .docx bzw. .pdf.
+- **Als ODT exportieren…** schreibt eine .odt (OpenDocument-Text) über dieselbe Umwandlung wie der Word-Export; ändert sich dabei etwas oder fällt etwas weg, sehen Sie die Liste und bestätigen zuerst.
 - **Als Einzeldatei-HTML exportieren…** schreibt eine einzelne .html mit eingebetteten Bildern. Sie überschreibt nicht die Datei, die Sie gerade geöffnet haben, und meldet, wie viele Bilder sie nicht einbetten konnte.
 
 ## Gerüst einfügen

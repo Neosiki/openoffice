@@ -22,7 +22,7 @@ import {
   writeFile,
 } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { basename, dirname, extname, isAbsolute, join } from 'node:path'
+import { basename, dirname, isAbsolute, join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import {
   BrowserWindow,
@@ -188,6 +188,14 @@ import {
   snapshotDocPassword,
 } from './docx-encryption'
 import { isExternallyModified, type DiskFileState } from './external-change'
+import {
+  docFormatOfPath,
+  isOdtPackage,
+  prepareSaveBytes,
+  recoveryExtFor,
+  withDocExtension,
+  type DocFormat,
+} from './doc-format'
 import { copyImageDisplaySize, validCopyImageDataUrl } from './copy-image-guard'
 import { printScaleOption, validPrintGeometry } from './print-args'
 import {
@@ -217,6 +225,7 @@ const tMain = createI18n({
   zh: {
     dlgOpenDoc: '打开文档',
     filterWord: 'Word 文档',
+    filterOdt: 'OpenDocument 文本',
     dlgSaveAs: '另存为',
     closeUnsavedMsg: '此文档有未保存的更改。',
     closeUnsavedDetail: '关闭前是否保存？',
@@ -346,6 +355,7 @@ const tMain = createI18n({
   en: {
     dlgOpenDoc: 'Open Document',
     filterWord: 'Word Documents',
+    filterOdt: 'OpenDocument Text',
     dlgSaveAs: 'Save As',
     closeUnsavedMsg: 'This document has unsaved changes.',
     closeUnsavedDetail: 'Do you want to save them before closing?',
@@ -476,6 +486,7 @@ const tMain = createI18n({
   vi: {
     dlgOpenDoc: 'Mở tài liệu',
     filterWord: 'Tài liệu Word',
+    filterOdt: 'Văn bản OpenDocument',
     dlgSaveAs: 'Lưu dưới dạng',
     closeUnsavedMsg: 'Tài liệu này có những thay đổi chưa được lưu.',
     closeUnsavedDetail: 'Bạn có muốn lưu các thay đổi trước khi đóng không?',
@@ -607,6 +618,7 @@ const tMain = createI18n({
   ja: {
     dlgOpenDoc: '文書を開く',
     filterWord: 'Word 文書',
+    filterOdt: 'OpenDocument テキスト',
     dlgSaveAs: '名前を付けて保存',
     closeUnsavedMsg: 'このドキュメントに未保存の変更があります。',
     closeUnsavedDetail: '閉じる前に保存しますか？',
@@ -737,6 +749,7 @@ const tMain = createI18n({
   ko: {
     dlgOpenDoc: '문서 열기',
     filterWord: 'Word 문서',
+    filterOdt: 'OpenDocument 텍스트',
     dlgSaveAs: '다른 이름으로 저장',
     closeUnsavedMsg: '이 문서에 저장하지 않은 변경 사항이 있습니다.',
     closeUnsavedDetail: '닫기 전에 저장하시겠습니까?',
@@ -868,6 +881,7 @@ const tMain = createI18n({
   fr: {
     dlgOpenDoc: 'Ouvrir un document',
     filterWord: 'Documents Word',
+    filterOdt: 'Texte OpenDocument',
     dlgSaveAs: 'Enregistrer sous',
     closeUnsavedMsg: 'Ce document contient des modifications non enregistrées.',
     closeUnsavedDetail: 'Voulez-vous les enregistrer avant de fermer ?',
@@ -1000,6 +1014,7 @@ const tMain = createI18n({
   de: {
     dlgOpenDoc: 'Dokument öffnen',
     filterWord: 'Word-Dokumente',
+    filterOdt: 'OpenDocument-Text',
     dlgSaveAs: 'Speichern unter',
     closeUnsavedMsg: 'Dieses Dokument enthält ungespeicherte Änderungen.',
     closeUnsavedDetail: 'Vor dem Schließen speichern?',
@@ -1132,6 +1147,7 @@ const tMain = createI18n({
   es: {
     dlgOpenDoc: 'Abrir documento',
     filterWord: 'Documentos de Word',
+    filterOdt: 'Texto OpenDocument',
     dlgSaveAs: 'Guardar como',
     closeUnsavedMsg: 'Este documento tiene cambios sin guardar.',
     closeUnsavedDetail: '¿Desea guardarlos antes de cerrar?',
@@ -1264,6 +1280,7 @@ const tMain = createI18n({
   th: {
     dlgOpenDoc: 'เปิดเอกสาร',
     filterWord: 'เอกสาร Word',
+    filterOdt: 'ข้อความ OpenDocument',
     dlgSaveAs: 'บันทึกเป็น',
     closeUnsavedMsg: 'เอกสารนี้มีการเปลี่ยนแปลงที่ยังไม่ได้บันทึก',
     closeUnsavedDetail: 'ต้องการบันทึกก่อนปิดหรือไม่?',
@@ -1394,6 +1411,7 @@ const tMain = createI18n({
   id: {
     dlgOpenDoc: 'Buka Dokumen',
     filterWord: 'Dokumen Word',
+    filterOdt: 'Teks OpenDocument',
     dlgSaveAs: 'Simpan Sebagai',
     closeUnsavedMsg: 'Dokumen ini memiliki perubahan yang belum disimpan.',
     closeUnsavedDetail: 'Simpan sebelum menutup?',
@@ -1525,6 +1543,7 @@ const tMain = createI18n({
   ru: {
     dlgOpenDoc: 'Открыть документ',
     filterWord: 'Документы Word',
+    filterOdt: 'Текст OpenDocument',
     dlgSaveAs: 'Сохранить как',
     closeUnsavedMsg: 'В этом документе есть несохранённые изменения.',
     closeUnsavedDetail: 'Сохранить их перед закрытием?',
@@ -1656,6 +1675,7 @@ const tMain = createI18n({
   ar: {
     dlgOpenDoc: 'فتح مستند',
     filterWord: 'مستندات Word',
+    filterOdt: 'نص OpenDocument',
     dlgSaveAs: 'حفظ باسم',
     closeUnsavedMsg: 'يحتوي هذا المستند على تغييرات غير محفوظة.',
     closeUnsavedDetail: 'هل تريد حفظها قبل الإغلاق؟',
@@ -1787,6 +1807,7 @@ const tMain = createI18n({
   pt: {
     dlgOpenDoc: 'Abrir Documento',
     filterWord: 'Documentos do Word',
+    filterOdt: 'Texto OpenDocument',
     dlgSaveAs: 'Salvar Como',
     closeUnsavedMsg: 'Este documento tem alterações não salvas.',
     closeUnsavedDetail: 'Deseja salvá-las antes de fechar?',
@@ -1918,6 +1939,7 @@ const tMain = createI18n({
   it: {
     dlgOpenDoc: 'Apri documento',
     filterWord: 'Documenti Word',
+    filterOdt: 'Testo OpenDocument',
     dlgSaveAs: 'Salva con nome',
     closeUnsavedMsg: 'Questo documento contiene modifiche non salvate.',
     closeUnsavedDetail: 'Salvarle prima di chiudere?',
@@ -2049,6 +2071,7 @@ const tMain = createI18n({
   pl: {
     dlgOpenDoc: 'Otwórz dokument',
     filterWord: 'Dokumenty programu Word',
+    filterOdt: 'Tekst OpenDocument',
     dlgSaveAs: 'Zapisz jako',
     closeUnsavedMsg: 'Ten dokument zawiera niezapisane zmiany.',
     closeUnsavedDetail: 'Czy zapisać je przed zamknięciem?',
@@ -2180,6 +2203,7 @@ const tMain = createI18n({
   cs: {
     dlgOpenDoc: 'Otevřít dokument',
     filterWord: 'Dokumenty Wordu',
+    filterOdt: 'Text OpenDocument',
     dlgSaveAs: 'Uložit jako',
     closeUnsavedMsg: 'Tento dokument obsahuje neuložené změny.',
     closeUnsavedDetail: 'Chcete je před zavřením uložit?',
@@ -2311,6 +2335,7 @@ const tMain = createI18n({
   nl: {
     dlgOpenDoc: 'Document openen',
     filterWord: 'Word-documenten',
+    filterOdt: 'OpenDocument-tekst',
     dlgSaveAs: 'Opslaan als',
     closeUnsavedMsg: 'Dit document bevat niet-opgeslagen wijzigingen.',
     closeUnsavedDetail: 'Wilt u ze opslaan voordat u sluit?',
@@ -2442,6 +2467,7 @@ const tMain = createI18n({
   ms: {
     dlgOpenDoc: 'Buka Dokumen',
     filterWord: 'Dokumen Word',
+    filterOdt: 'Teks OpenDocument',
     dlgSaveAs: 'Simpan Sebagai',
     closeUnsavedMsg: 'Dokumen ini mempunyai perubahan yang belum disimpan.',
     closeUnsavedDetail: 'Adakah anda mahu menyimpannya sebelum menutup?',
@@ -2573,6 +2599,7 @@ const tMain = createI18n({
   he: {
     dlgOpenDoc: 'פתיחת מסמך',
     filterWord: 'מסמכי Word',
+    filterOdt: 'טקסט OpenDocument',
     dlgSaveAs: 'שמירה בשם',
     closeUnsavedMsg: 'במסמך זה יש שינויים שלא נשמרו.',
     closeUnsavedDetail: 'האם לשמור אותם לפני הסגירה?',
@@ -2703,6 +2730,7 @@ const tMain = createI18n({
   hi: {
     dlgOpenDoc: 'दस्तावेज़ खोलें',
     filterWord: 'Word दस्तावेज़',
+    filterOdt: 'OpenDocument टेक्स्ट',
     dlgSaveAs: 'इस रूप में सहेजें',
     closeUnsavedMsg: 'इस दस्तावेज़ में सहेजे नहीं गए परिवर्तन हैं।',
     closeUnsavedDetail: 'क्या आप बंद करने से पहले उन्हें सहेजना चाहते हैं?',
@@ -2834,6 +2862,7 @@ const tMain = createI18n({
   'zh-TW': {
     dlgOpenDoc: '開啟文件',
     filterWord: 'Word 文件',
+    filterOdt: 'OpenDocument 文字',
     dlgSaveAs: '另存新檔',
     closeUnsavedMsg: '此文件有未儲存的變更。',
     closeUnsavedDetail: '關閉前是否要儲存？',
@@ -3091,7 +3120,7 @@ async function opensAsPasswordPrompt(filePath: string, wcId: number): Promise<bo
 }
 
 export function openExternalDocx(filePath: string | null): void {
-  if (!filePath || !/\.docx$/i.test(filePath)) return
+  if (!filePath || !docFormatOfPath(filePath)) return
   const win = BrowserWindow.getFocusedWindow() ?? mainWindow
   if (!rendererReady || !win) {
     pendingOpenPath = filePath
@@ -3257,7 +3286,7 @@ async function archiveOriginal(filePath: string, hash: string, size: number): Pr
   if (size > ORIGINALS_MAX_BYTES) return
   const dir = userDataPath('originals')
   await mkdir(dir, { recursive: true })
-  const target = join(dir, `${hash}.docx`)
+  const target = join(dir, `${hash}${recoveryExtFor(filePath)}`)
   if (!existsSync(target)) await copyFile(filePath, target)
   void pruneOriginals(dir)
 }
@@ -3383,6 +3412,7 @@ function dropDocWriter(wcId: number): void {
   imageExportTemps.delete(wcId)
   imageExportDirs.delete(wcId)
   docDiskStates.delete(wcId)
+  saveAsPicks.delete(wcId)
   forgetLazyMediaOwner(wcId)
   // Destroyed renderers count as torn down too: window-close paths never run
   // teardownDocsRenderer, but an in-flight save handler resuming after the
@@ -3451,8 +3481,12 @@ export function teardownDocsRenderer(contents: WebContents): void {
 // ── Crash recovery: dirty renderers push a copy every 30s
 // (docs:write-recovery); a normal save cleans it up; open offers Restore/Discard ──
 const recoveryDir = () => userDataPath('docs-autosave')
+// the copy keeps its document's format: an ODT tab's copy is ODT bytes (.odt)
 const recoveryPathFor = (filePath: string) =>
-  join(recoveryDir(), `${createHash('sha1').update(filePath).digest('hex').slice(0, 16)}.docx`)
+  join(
+    recoveryDir(),
+    `${createHash('sha1').update(filePath).digest('hex').slice(0, 16)}${recoveryExtFor(filePath)}`,
+  )
 
 /** Bumped by every clear: an in-flight docs:write-recovery that started before
  * the bump must not recreate the file it is about to land (stale-recovery race). */
@@ -3531,10 +3565,13 @@ async function loadDocx(
   wcId: number,
   password?: string,
 ): Promise<OpenDocxResult> {
-  if (typeof filePath !== 'string' || !/\.docx$/i.test(filePath)) return null
+  const format = typeof filePath === 'string' ? docFormatOfPath(filePath) : null
+  if (!format) return null
   if (!existsSync(filePath)) return null
   const size = (await stat(filePath)).size
-  const lazy = await openLazyDocx(filePath, wcId)
+  // an ODT opens whole: lazy pictures and the open password are docx-only (the
+  // renderer converts it and refuses a password-protected one itself)
+  const lazy = format === 'docx' ? await openLazyDocx(filePath, wcId) : null
   if ((lazy?.bytes.length ?? size) > MAX_OPEN_BYTES) {
     const mb = MAX_OPEN_BYTES / 1024 / 1024
     await showOpenError(wcId, `${basename(filePath)}: ${tm('errTooLarge', { mb })}`)
@@ -3545,7 +3582,7 @@ async function loadDocx(
   // back a marker — the renderer prompts and retries via docs:open-decrypt.
   // No side effects (recents/write grant) until the password checks out.
   let plainBytes: Buffer = original
-  const encrypted = isEncryptedDocx(original)
+  const encrypted = format === 'docx' && isEncryptedDocx(original)
   if (encrypted) {
     const pwd = password ?? docPasswordFor(wcId, filePath)
     if (!pwd) return { needsPassword: true, path: filePath, name: basename(filePath) }
@@ -3571,7 +3608,7 @@ async function loadDocx(
       recovered = false
     }
   }
-  if (recovered) await adoptLazyMediaHashes(bytes, filePath, wcId)
+  if (recovered && format === 'docx') await adoptLazyMediaHashes(bytes, filePath, wcId)
   pushRecent(filePath)
   allowDocWrite(wcId, filePath)
   rememberOpenDoc(wcId, filePath)
@@ -3636,6 +3673,7 @@ const ATTACHMENT_EXTS = new Set([
   ...TEXT_EXTS,
   'doc',
   'docx',
+  'odt',
   'pdf',
   'pptx',
   'ppt',
@@ -4257,6 +4295,43 @@ const reissuedDoc = (
   plain: Buffer,
 ): { dataUrl?: string } => (encrypted && hashes.size > 0 ? { dataUrl: handOffBytes(plain) } : {})
 
+/**
+ * The bytes a save writes to `filePath`, in the format its extension names. A
+ * docx takes the desired password of `passwordSource` and gets its lazy
+ * pictures back; an ODT is written as the renderer built it (both refuse bytes
+ * of the other format).
+ */
+async function prepareDocSave(
+  wcId: number,
+  filePath: string,
+  data: ArrayBuffer,
+  passwordSource: string | null,
+) {
+  const format: DocFormat = docFormatOfPath(filePath) ?? 'docx'
+  const passwordState = format === 'docx' ? snapshotDocPassword(wcId, passwordSource) : null
+  const prepared = await prepareSaveBytes(format, Buffer.from(data), {
+    materialize: materializeLazyDocx,
+    encrypt: encryptDocx,
+    password: passwordState?.password ?? null,
+  })
+  return { ...prepared, passwordState }
+}
+
+/** After a successful write: a docx commits its password snapshot; an ODT is plain on disk. */
+function commitSavePassword(
+  wcId: number,
+  passwordState: ReturnType<typeof snapshotDocPassword> | null,
+  filePath: string,
+): boolean {
+  if (passwordState) return commitDocPasswordSave(wcId, passwordState, filePath)
+  rememberDocPassword(wcId, filePath, null)
+  markDiskEncrypted(wcId, filePath, false)
+  return false
+}
+
+/** paths a Save As dialog returned to each renderer: the write that follows may only target this one */
+const saveAsPicks = new Map<number, string>()
+
 /** document/attachment/window IPC (everything except the AI proxy above) */
 export function registerDocsIpc(): void {
   registerZoteroIpc()
@@ -4292,7 +4367,11 @@ export function registerDocsIpc(): void {
   ipcMain.handle('docs:open', async (event) => {
     const result = await openDialog(event, {
       title: tm('dlgOpenDoc'),
-      filters: [{ name: tm('filterWord'), extensions: ['docx'] }],
+      filters: [
+        { name: tm('filterSupported'), extensions: ['docx', 'odt'] },
+        { name: tm('filterWord'), extensions: ['docx'] },
+        { name: tm('filterOdt'), extensions: ['odt'] },
+      ],
       properties: ['openFile'],
     })
     if (result.canceled || result.filePaths.length === 0) return null
@@ -4489,9 +4568,12 @@ export function registerDocsIpc(): void {
         }
         // Snapshot desired state: the disk password remains unchanged until the
         // atomic write succeeds, and a newer ribbon intent survives this save.
-        const passwordState = snapshotDocPassword(event.sender.id, filePath)
-        const { bytes: plain, hashes } = await materializeLazyDocx(Buffer.from(data))
-        const bytes = passwordState.password ? encryptDocx(plain, passwordState.password) : plain
+        const { bytes, plain, hashes, encrypted, passwordState } = await prepareDocSave(
+          event.sender.id,
+          filePath,
+          data,
+          filePath,
+        )
         await atomicWriteFile(filePath, bytes)
         // Teardown may have cleared all in-memory secrets while the atomic
         // write was pending. Never resurrect state for an orphaned renderer.
@@ -4502,25 +4584,16 @@ export function registerDocsIpc(): void {
         if (tornDownWcIds.has(event.sender.id)) {
           return { ok: false, error: 'save target is not an opened document' }
         }
-        pointLazyMediaAt(
-          hashes,
-          filePath,
-          event.sender.id,
-          passwordState.password ? plain : undefined,
-        )
+        pointLazyMediaAt(hashes, filePath, event.sender.id, encrypted ? plain : undefined)
         // Commit immediately after the final await: intents received during
         // post-write bookkeeping are included, with no later async race.
-        const passwordIntentPending = commitDocPasswordSave(
-          event.sender.id,
-          passwordState,
-          filePath,
-        )
+        const passwordIntentPending = commitSavePassword(event.sender.id, passwordState, filePath)
         clearRecoveryCopy(filePath)
         pushRecent(filePath)
         return {
           ok: true,
           passwordIntentPending,
-          ...reissuedDoc(!!passwordState.password, hashes, plain),
+          ...reissuedDoc(encrypted, hashes, plain),
         }
       } catch (err) {
         return { ok: false, error: String(err) }
@@ -4541,7 +4614,16 @@ export function registerDocsIpc(): void {
       // Recovery follows the current disk state, never the desired next-save
       // password. Missing state for an encrypted disk file skips the tick so
       // plaintext can never be written as its recovery copy.
-      const bytes = prepareRecoveryDocx(event.sender.id, filePath, Buffer.from(data))
+      // An ODT tab's copy is the ODT itself (the renderer patched it like a
+      // save), so restoring and saving it keeps the format; docx bytes are
+      // never accepted for an .odt document.
+      const plain = Buffer.from(data)
+      const bytes =
+        docFormatOfPath(filePath) === 'odt'
+          ? isOdtPackage(plain)
+            ? plain
+            : null
+          : prepareRecoveryDocx(event.sender.id, filePath, plain)
       if (!bytes) return { ok: false }
       await atomicWriteFile(recoveryPathFor(filePath), bytes)
       // The tab may have been closed ("Don't Save" clears the copy, teardown
@@ -4682,56 +4764,73 @@ export function registerDocsIpc(): void {
     await new Promise((r) => setTimeout(r, 120))
   })
 
+  // Save As runs in two steps: the dialog picks the path (its extension picks
+  // the format: Word or ODT, whatever the document is now), then the renderer
+  // builds that format — converting and confirming a format change — and
+  // writes to exactly the picked path.
   ipcMain.handle(
-    'docs:save-as',
-    async (event, defaultName: string, data: ArrayBuffer, sourcePath?: string | null) => {
+    'docs:save-as-pick',
+    async (event, defaultName: string, sourcePath?: string | null, format?: unknown) => {
       // an orphaned (closed-tab) renderer must not open dialogs or land new files
-      if (tornDownWcIds.has(event.sender.id)) return { ok: false }
+      if (tornDownWcIds.has(event.sender.id)) return null
+      if (typeof defaultName !== 'string') return null
+      const current: DocFormat = format === 'odt' ? 'odt' : 'docx'
+      const word = { name: tm('filterWord'), extensions: ['docx'] }
+      const odt = { name: tm('filterOdt'), extensions: ['odt'] }
       const result = await saveDialog(event, {
         title: tm('dlgSaveAs'),
         defaultPath: saveAsSuggestion(
           typeof sourcePath === 'string' ? sourcePath : null,
           defaultName,
         ),
-        filters: [{ name: tm('filterWord'), extensions: ['docx'] }],
+        // the document's own format comes first: it is the dialog's default
+        filters: current === 'odt' ? [odt, word] : [word, odt],
       })
-      if (result.canceled || !result.filePath) return { ok: false }
-      // the tab may have been closed while the dialog was open; checked before the
-      // write because Save As may overwrite an existing file (no safe rollback)
+      if (result.canceled || !result.filePath) return null
+      if (tornDownWcIds.has(event.sender.id)) return null
+      const filePath = withDocExtension(result.filePath, current)
+      saveAsPicks.set(event.sender.id, filePath)
+      return { path: filePath }
+    },
+  )
+
+  ipcMain.handle(
+    'docs:save-as',
+    async (event, filePath: string, data: ArrayBuffer, sourcePath?: string | null) => {
+      // an orphaned (closed-tab) renderer must not open dialogs or land new files
       if (tornDownWcIds.has(event.sender.id)) return { ok: false }
+      // only the path the user just picked in this renderer's Save As dialog
+      if (typeof filePath !== 'string' || saveAsPicks.get(event.sender.id) !== filePath) {
+        return { ok: false, error: 'save target was not picked' }
+      }
+      saveAsPicks.delete(event.sender.id)
       try {
-        const passwordState = snapshotDocPassword(
+        const { bytes, plain, hashes, encrypted, passwordState } = await prepareDocSave(
           event.sender.id,
+          filePath,
+          data,
           typeof sourcePath === 'string' && sourcePath ? sourcePath : null,
         )
-        const { bytes: plain, hashes } = await materializeLazyDocx(Buffer.from(data))
-        const bytes = passwordState.password ? encryptDocx(plain, passwordState.password) : plain
-        await atomicWriteFile(result.filePath, bytes)
+        // the tab may have been closed while the dialog was open; checked before the
+        // write because Save As may overwrite an existing file (no safe rollback)
         if (tornDownWcIds.has(event.sender.id)) return { ok: false }
-        allowDocWrite(event.sender.id, result.filePath)
-        rememberOpenDoc(event.sender.id, result.filePath)
-        await rememberDiskState(event.sender.id, result.filePath, sha256Hex(bytes))
-        pointLazyMediaAt(
-          hashes,
-          result.filePath,
-          event.sender.id,
-          passwordState.password ? plain : undefined,
-        )
+        await atomicWriteFile(filePath, bytes)
         if (tornDownWcIds.has(event.sender.id)) return { ok: false }
-        const passwordIntentPending = commitDocPasswordSave(
-          event.sender.id,
-          passwordState,
-          result.filePath,
-        )
-        pushRecent(result.filePath)
+        allowDocWrite(event.sender.id, filePath)
+        rememberOpenDoc(event.sender.id, filePath)
+        await rememberDiskState(event.sender.id, filePath, sha256Hex(bytes))
+        pointLazyMediaAt(hashes, filePath, event.sender.id, encrypted ? plain : undefined)
+        if (tornDownWcIds.has(event.sender.id)) return { ok: false }
+        const passwordIntentPending = commitSavePassword(event.sender.id, passwordState, filePath)
+        pushRecent(filePath)
         // the renderer has no path yet to match a rename notification against,
         // so the reply must carry the path it may save to next
-        const savedPath = notifyFileSaved(event.sender, result.filePath)
+        const savedPath = notifyFileSaved(event.sender, filePath)
         return {
           ok: true,
           path: savedPath,
           passwordIntentPending,
-          ...reissuedDoc(!!passwordState.password, hashes, plain),
+          ...reissuedDoc(encrypted, hashes, plain),
         }
       } catch (err) {
         return { ok: false, error: String(err) }
@@ -4739,15 +4838,52 @@ export function registerDocsIpc(): void {
     },
   )
 
+  // docx → ODT Save As of a document with lazily served pictures: the
+  // conversion needs the pictures themselves, not their placeholders
+  ipcMain.handle('docs:materialize-docx', async (event, data: ArrayBuffer) => {
+    if (tornDownWcIds.has(event.sender.id) || !(data instanceof ArrayBuffer)) return null
+    try {
+      const { bytes } = await materializeLazyDocx(Buffer.from(data))
+      return { dataUrl: handOffBytes(bytes) }
+    } catch {
+      return null
+    }
+  })
+
+  // docx → ODT Save As: the on-screen look of a chart, equation, shape or text
+  // box, captured from this renderer's own page (viewport coordinates, DIP)
+  ipcMain.handle('docs:capture-rect', async (event, rect: unknown) => {
+    if (tornDownWcIds.has(event.sender.id) || event.sender.isDestroyed()) return null
+    const r = rect as { x?: unknown; y?: unknown; width?: unknown; height?: unknown } | null
+    const nums = [r?.x, r?.y, r?.width, r?.height]
+    if (!nums.every((n) => typeof n === 'number' && Number.isFinite(n))) return null
+    const [x, y, width, height] = nums as number[]
+    if (width < 1 || height < 1 || width > 20000 || height > 20000) return null
+    try {
+      const image = await event.sender.capturePage({
+        x: Math.max(0, Math.floor(x)),
+        y: Math.max(0, Math.floor(y)),
+        width: Math.ceil(width),
+        height: Math.ceil(height),
+      })
+      return image.isEmpty() ? null : new Uint8Array(image.toPNG())
+    } catch {
+      return null
+    }
+  })
+
   ipcMain.handle('docs:save-new', async (event, defaultName: string, data: ArrayBuffer) => {
     try {
       // a discarded draft in an orphaned renderer must not silently persist
       // itself to the default folder after the user chose Don't Save
       if (tornDownWcIds.has(event.sender.id)) return { ok: false }
       const filePath = uniquePathIn(defaultSaveDir(), defaultName)
-      const passwordState = snapshotDocPassword(event.sender.id, null)
-      const { bytes: plain, hashes } = await materializeLazyDocx(Buffer.from(data))
-      const bytes = passwordState.password ? encryptDocx(plain, passwordState.password) : plain
+      const { bytes, plain, hashes, encrypted, passwordState } = await prepareDocSave(
+        event.sender.id,
+        filePath,
+        data,
+        null,
+      )
       await atomicWriteFile(filePath, bytes)
       // teardown may have happened while the write was in flight — the path is
       // freshly created, so rolling it back is safe (mirrors docs:write-recovery)
@@ -4758,24 +4894,19 @@ export function registerDocsIpc(): void {
       allowDocWrite(event.sender.id, filePath)
       rememberOpenDoc(event.sender.id, filePath)
       await rememberDiskState(event.sender.id, filePath, sha256Hex(bytes))
-      pointLazyMediaAt(
-        hashes,
-        filePath,
-        event.sender.id,
-        passwordState.password ? plain : undefined,
-      )
+      pointLazyMediaAt(hashes, filePath, event.sender.id, encrypted ? plain : undefined)
       if (tornDownWcIds.has(event.sender.id)) {
         await unlink(filePath).catch(() => {})
         return { ok: false }
       }
-      const passwordIntentPending = commitDocPasswordSave(event.sender.id, passwordState, filePath)
+      const passwordIntentPending = commitSavePassword(event.sender.id, passwordState, filePath)
       pushRecent(filePath)
       const savedPath = notifyFileSaved(event.sender, filePath)
       return {
         ok: true,
         path: savedPath,
         passwordIntentPending,
-        ...reissuedDoc(!!passwordState.password, hashes, plain),
+        ...reissuedDoc(encrypted, hashes, plain),
       }
     } catch (err) {
       return { ok: false, error: String(err) }
@@ -4800,8 +4931,9 @@ export function registerDocsIpc(): void {
         if (typeof filePath !== 'string' || !isAbsolute(filePath)) {
           return { ok: false, error: 'path must be absolute' }
         }
-        if (extname(filePath).toLowerCase() !== '.docx') {
-          return { ok: false, error: 'path must point to a .docx file' }
+        // the tab's own format: docx bytes to .docx, ODT bytes to .odt (checked below)
+        if (!docFormatOfPath(filePath)) {
+          return { ok: false, error: 'path must point to a .docx or .odt file' }
         }
         // only a target the MCP layer resolved for this tab may be written
         if (!canDocWrite(event.sender.id, filePath)) {
@@ -4815,9 +4947,12 @@ export function registerDocsIpc(): void {
           }
         }
         await mkdir(dirname(filePath), { recursive: true })
-        const passwordState = snapshotDocPassword(event.sender.id, null)
-        const { bytes: plain, hashes } = await materializeLazyDocx(Buffer.from(data))
-        const bytes = passwordState.password ? encryptDocx(plain, passwordState.password) : plain
+        const { bytes, plain, hashes, encrypted, passwordState } = await prepareDocSave(
+          event.sender.id,
+          filePath,
+          data,
+          null,
+        )
         await atomicWriteFile(filePath, bytes)
         // teardown may have happened while the write was in flight — only a file
         // this handler created is safe to roll back; an overwritten one stays
@@ -4827,18 +4962,9 @@ export function registerDocsIpc(): void {
         }
         if (tornDownWcIds.has(event.sender.id)) return rollback()
         await rememberDiskState(event.sender.id, filePath, sha256Hex(bytes))
-        pointLazyMediaAt(
-          hashes,
-          filePath,
-          event.sender.id,
-          passwordState.password ? plain : undefined,
-        )
+        pointLazyMediaAt(hashes, filePath, event.sender.id, encrypted ? plain : undefined)
         if (tornDownWcIds.has(event.sender.id)) return rollback()
-        const passwordIntentPending = commitDocPasswordSave(
-          event.sender.id,
-          passwordState,
-          filePath,
-        )
+        const passwordIntentPending = commitSavePassword(event.sender.id, passwordState, filePath)
         pushRecent(filePath)
         rememberOpenDoc(event.sender.id, filePath)
         notifyFileSaved(event.sender, filePath)
@@ -4846,7 +4972,7 @@ export function registerDocsIpc(): void {
           ok: true,
           path: filePath,
           passwordIntentPending,
-          ...reissuedDoc(!!passwordState.password, hashes, plain),
+          ...reissuedDoc(encrypted, hashes, plain),
         }
       } catch (err) {
         return { ok: false, error: String(err) }
@@ -5049,7 +5175,7 @@ export function registerDocsIpc(): void {
       if (!filePath) {
         const result = await saveDialog(event, {
           title: tm('dlgExportPdf'),
-          defaultPath: defaultName.replace(/\.docx$/i, '') + '.pdf',
+          defaultPath: defaultName.replace(/\.(?:docx|odt)$/i, '') + '.pdf',
           filters: [{ name: 'PDF', extensions: ['pdf'] }],
         })
         if (result.canceled || !result.filePath) return { ok: false }
@@ -5153,7 +5279,7 @@ export function registerDocsIpc(): void {
       if (!filePath) {
         const result = await saveDialog(event, {
           title: tm('dlgExportHtml'),
-          defaultPath: defaultName.replace(/\.docx$/i, '') + '.html',
+          defaultPath: defaultName.replace(/\.(?:docx|odt)$/i, '') + '.html',
           filters: [{ name: 'HTML', extensions: ['html'] }],
         })
         if (result.canceled || !result.filePath) return { ok: false }
@@ -5210,7 +5336,7 @@ export function registerDocsIpc(): void {
       if (!filePath) {
         const result = await saveDialog(event, {
           title: tm('dlgExportPdf'),
-          defaultPath: defaultName.replace(/\.docx$/i, '') + '.pdf',
+          defaultPath: defaultName.replace(/\.(?:docx|odt)$/i, '') + '.pdf',
           filters: [{ name: 'PDF', extensions: ['pdf'] }],
         })
         if (result.canceled || !result.filePath) return { ok: false }
@@ -5373,17 +5499,28 @@ function sendCommand(command: MenuCommand, payload?: string): void {
  * place (buildDocsMenu also re-runs on every tab focus switch).
  * Defaults mirror the renderer's initial state: sidebar shown, light canvas.
  */
-const viewMenuStateByWebContents = new Map<number, { aiSidebar: boolean; darkCanvas: boolean }>()
+interface ViewMenuState {
+  aiSidebar: boolean
+  darkCanvas: boolean
+  /** the tab shows an ODT document: menu entries of features ODT switches off are disabled */
+  odt: boolean
+}
 
-function activeViewMenuState(): { aiSidebar: boolean; darkCanvas: boolean } {
+const viewMenuStateByWebContents = new Map<number, ViewMenuState>()
+
+function activeViewMenuState(): ViewMenuState {
   const id = activeDocsWebContents()?.id
   return (
     (id !== undefined ? viewMenuStateByWebContents.get(id) : undefined) ?? {
       aiSidebar: true,
       darkCanvas: false,
+      odt: false,
     }
   )
 }
+
+/** Insert-menu entries of features an ODT document switches off (equations, comments) */
+const ODT_OFF_MENU_IDS = ['docs-menu-insert-equation', 'docs-menu-insert-comment'] as const
 
 /** shell-injected items appended to the File menu (e.g. Back to Home); persists
  * across the internal rebuilds pushRecent() triggers */
@@ -5590,9 +5727,19 @@ export function buildDocsMenu(): void {
           accelerator: 'CmdOrCtrl+K',
           click: () => sendCommand('insert-link'),
         },
-        { label: tm('menuInsertEquation'), click: () => sendCommand('insert-equation') },
+        {
+          id: 'docs-menu-insert-equation',
+          label: tm('menuInsertEquation'),
+          enabled: !activeViewMenuState().odt,
+          click: () => sendCommand('insert-equation'),
+        },
         { type: 'separator' },
-        { label: tm('menuComment'), click: () => sendCommand('insert-comment') },
+        {
+          id: 'docs-menu-insert-comment',
+          label: tm('menuComment'),
+          enabled: !activeViewMenuState().odt,
+          click: () => sendCommand('insert-comment'),
+        },
       ],
     },
     {
@@ -5896,8 +6043,12 @@ const closeCheckWaiters = new Map<number, (state: DocsCloseState) => void>()
 const closeSaveWaiters = new Map<number, (ok: boolean) => void>()
 
 ipcMain.on('docs:view-menu-state', (event, state: unknown) => {
-  const s = state as { aiSidebar?: unknown; darkCanvas?: unknown } | null
-  const next = { aiSidebar: s?.aiSidebar === true, darkCanvas: s?.darkCanvas === true }
+  const s = state as { aiSidebar?: unknown; darkCanvas?: unknown; odt?: unknown } | null
+  const next = {
+    aiSidebar: s?.aiSidebar === true,
+    darkCanvas: s?.darkCanvas === true,
+    odt: s?.odt === true,
+  }
   if (!viewMenuStateByWebContents.has(event.sender.id)) {
     const id = event.sender.id
     event.sender.once('destroyed', () => viewMenuStateByWebContents.delete(id))
@@ -5911,6 +6062,10 @@ ipcMain.on('docs:view-menu-state', (event, state: unknown) => {
   if (ai) ai.checked = next.aiSidebar
   const dark = menu?.getMenuItemById('docs-menu-dark-mode')
   if (dark) dark.checked = next.darkCanvas
+  for (const id of ODT_OFF_MENU_IDS) {
+    const item = menu?.getMenuItemById(id)
+    if (item) item.enabled = !next.odt
+  }
 })
 
 ipcMain.on('docs:close-check-result', (event, state: unknown) => {

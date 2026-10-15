@@ -29,7 +29,7 @@ const ATTACHMENT_CARD_ICONS: Record<string, string> = Object.fromEntries(
   (
     [
       // a Hangul document has no icon of its own here: it takes the word-processor one
-      [fileWordIcon, ['doc', 'docx', 'hwp', 'hwpx']],
+      [fileWordIcon, ['doc', 'docx', 'odt', 'hwp', 'hwpx']],
       [fileExcelIcon, ['xls', 'xlsx', 'xlsm', 'csv', 'tsv']],
       [filePptIcon, ['ppt', 'pptx']],
       [filePdfIcon, ['pdf']],

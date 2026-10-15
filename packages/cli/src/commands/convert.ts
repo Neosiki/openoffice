@@ -1,4 +1,4 @@
-import { realpathSync } from 'node:fs'
+import { mkdtempSync, readFileSync, realpathSync, rmSync } from 'node:fs'
 import { basename, dirname, extname, join } from 'node:path'
 import { PdfLoadError } from '@genoffice/pdf2docx'
 import { flagBool, flagString, type ParsedArgs } from '../args'
@@ -8,6 +8,7 @@ import { convertLegacyWorkbook, sheetToCsv } from '../formats/xlsx'
 import { exportViaApp, type AppExportTarget } from '../formats/app-export'
 import { htmlToMarkdown, markdownToDocx, markdownToHtml } from '../formats/markdown'
 import { closeDocument, documentHtml, openDocument } from '../formats/docx'
+import { docxBytesToOdt, openOdtBytes, reportOdtConversion } from '../formats/odt'
 import { writeEpubFile, writeMarkdownFile } from '../formats/pdf-outputs'
 import {
   documentHash,
@@ -54,10 +55,31 @@ const APP_ROUTES: Record<string, readonly AppExportTarget[]> = {
   htm: ['pdf', 'docx'],
 }
 
+/**
+ * OpenDocument text routes. They pass through a docx: an .odt is opened as
+ * its bridge docx (odtToDocx) and goes on along the docx routes (the app's
+ * headless export does not take .odt, so pdf/html read a temporary docx);
+ * docx, md and html reach .odt through docx and docxToOdt.
+ */
+const ODT_ROUTES: Record<string, readonly string[]> = {
+  odt: ['docx', 'pdf', 'md', 'html'],
+  docx: ['odt'],
+  md: ['odt'],
+  markdown: ['odt'],
+  html: ['odt'],
+  htm: ['odt'],
+}
+
 const ROUTES: Record<string, readonly string[]> = Object.fromEntries(
-  [...new Set([...Object.keys(NODE_ROUTES), ...Object.keys(APP_ROUTES)])].map((from) => [
+  [
+    ...new Set([
+      ...Object.keys(NODE_ROUTES),
+      ...Object.keys(APP_ROUTES),
+      ...Object.keys(ODT_ROUTES),
+    ]),
+  ].map((from) => [
     from,
-    [...(NODE_ROUTES[from] ?? []), ...(APP_ROUTES[from] ?? [])],
+    [...(NODE_ROUTES[from] ?? []), ...(APP_ROUTES[from] ?? []), ...(ODT_ROUTES[from] ?? [])],
   ]),
 )
 
@@ -167,6 +189,7 @@ async function run(
   args: ParsedArgs,
   ctx: CommandContext,
 ): Promise<Produced> {
+  if (from === 'odt' || to === 'odt') return runOdt(input, from, to, output, ctx)
   const password = flagString(args, 'password')
   const viaApp = appTarget(from, to)
   if (viaApp) {
@@ -208,32 +231,34 @@ async function run(
     // UTF-8 BOM, as the app writes it, so Excel opens the file without a wizard
     return { bytes: Buffer.from('\ufeff' + csv, 'utf-8'), detail }
   }
-  if (to === 'md') {
-    const doc = await openDocument(readInput(input))
-    try {
-      const exported = documentHtml(doc)
-      const markdown = await htmlToMarkdown(exported.html)
-      if (exported.skipped.images > 0) {
-        ctx.warn({
-          code: 'images_dropped',
-          message: `${exported.skipped.images} image(s) have no Markdown form and were dropped`,
-          suggestion: 'use `ieumoffice docs read --html` when the images matter',
-        })
-      }
-      return {
-        bytes: Buffer.from(markdown.replace(/\n{3,}/g, '\n\n').trimEnd() + '\n', 'utf-8'),
-        detail: {
-          blocks: doc.editor.state.doc.childCount,
-          skipped: exported.skipped,
-          formulas_as_text: exported.formulasAsText,
-        },
-      }
-    } finally {
-      closeDocument(doc)
-    }
-  }
+  if (to === 'md') return docxToMarkdown(readInput(input), ctx)
   const r = await convertLegacyWorkbook(input, output)
   return { detail: { sheets: r.sheets, cells: r.cells } }
+}
+
+async function docxToMarkdown(docx: Uint8Array, ctx: CommandContext): Promise<Produced> {
+  const doc = await openDocument(docx)
+  try {
+    const exported = documentHtml(doc)
+    const markdown = await htmlToMarkdown(exported.html)
+    if (exported.skipped.images > 0) {
+      ctx.warn({
+        code: 'images_dropped',
+        message: `${exported.skipped.images} image(s) have no Markdown form and were dropped`,
+        suggestion: 'use `ieumoffice docs read --html` when the images matter',
+      })
+    }
+    return {
+      bytes: Buffer.from(markdown.replace(/\n{3,}/g, '\n\n').trimEnd() + '\n', 'utf-8'),
+      detail: {
+        blocks: doc.editor.state.doc.childCount,
+        skipped: exported.skipped,
+        formulas_as_text: exported.formulasAsText,
+      },
+    }
+  } finally {
+    closeDocument(doc)
+  }
 }
 
 /** Options that belong to one route only are refused on the others rather than ignored. */
@@ -250,6 +275,68 @@ function assertRouteOptions(args: ParsedArgs, from: string, to: string): void {
     throw new CliError(EXIT.usage, `--${option} applies to ${route} only`, undefined, {
       reason: 'invalid_argument',
     })
+  }
+}
+
+/**
+ * Runs `work` on a temporary docx written beside the output (inside the
+ * allowed roots the output already passed), and always deletes it.
+ */
+async function withTempDocx<T>(
+  output: string,
+  stem: string,
+  docx: Uint8Array | null,
+  work: (path: string) => Promise<T>,
+): Promise<T> {
+  const dir = mkdtempSync(join(dirname(output), '.ieumoffice-odt-'))
+  try {
+    const path = join(dir, `${stem}.docx`)
+    if (docx) writeOutput(path, docx)
+    return await work(path)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+}
+
+async function runOdt(
+  input: string,
+  from: string,
+  to: string,
+  output: string,
+  ctx: CommandContext,
+): Promise<Produced> {
+  const stem = basename(input, extname(input))
+  if (from === 'odt') {
+    const { docxBytes, origin } = await openOdtBytes(readInput(input))
+    const odt_report = reportOdtConversion(origin.report, to, ctx)
+    if (to === 'docx') return { bytes: docxBytes, detail: { odt_report } }
+    if (to === 'md') {
+      const r = await docxToMarkdown(docxBytes, ctx)
+      return { ...r, detail: { ...r.detail, odt_report } }
+    }
+    const target = to as AppExportTarget
+    const r = await withTempDocx(output, stem, docxBytes, (docx) =>
+      exportViaApp(docx, target, output, { env: ctx.env, log: ctx.log }),
+    )
+    return { detail: { via: 'ieumoffice --headless-export', summary: r.summary, odt_report } }
+  }
+  let docx: Uint8Array
+  const detail: Record<string, unknown> = {}
+  if (from === 'docx') docx = readInput(input)
+  else if (from === 'md' || from === 'markdown') {
+    const text = Buffer.from(readInput(input)).toString('utf-8')
+    docx = await markdownToDocx(text, { file: input, ctx })
+  } else {
+    docx = await withTempDocx(output, stem, null, async (path) => {
+      await exportViaApp(input, 'docx', path, { env: ctx.env, log: ctx.log })
+      return new Uint8Array(readFileSync(path))
+    })
+    detail.via = 'ieumoffice --headless-export'
+  }
+  const { odtBytes, report } = await docxBytesToOdt(docx)
+  return {
+    bytes: odtBytes,
+    detail: { ...detail, odt_report: reportOdtConversion(report, to, ctx) },
   }
 }
 

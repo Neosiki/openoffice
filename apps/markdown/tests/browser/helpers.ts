@@ -72,6 +72,7 @@ export async function openSource(
         finishImageExport: async () => ({ ok: false, error: 'not used in renderer coverage' }),
         onPrintRequest: () => off,
         exportDocx: async () => ({ ok: false, error: 'not used in renderer coverage' }),
+        exportOdt: async () => ({ ok: false, error: 'not used in renderer coverage' }),
         exportPdf: async () => ({ ok: false, error: 'not used in renderer coverage' }),
         onChromePressed: () => off,
         onViewImage: () => off,

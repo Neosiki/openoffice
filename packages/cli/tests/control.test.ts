@@ -78,14 +78,19 @@ describe('open targets', () => {
     expect(() => target(['--slide', '-1'], '/d.pptx')).toThrow(/integer >= 0/)
     expect(() => target(['--page', '0'], '/d.pdf')).toThrow(/integer >= 1/)
     expect(() => target(['--el', 'e_1'], '/d.pptx')).toThrow(/--el needs --slide/)
-    expect(() => target(['--page', '1'], '/notes.md')).toThrow(/pptx, docx, xlsx and pdf/)
+    expect(() => target(['--page', '1'], '/notes.md')).toThrow(/pptx, docx, odt, xlsx and pdf/)
   })
 
   it('takes a slide target on every presentation extension and nothing that merely looks like one', () => {
     for (const ext of ['.pptx', '.pptm', '.ppsx', '.potx']) {
       expect(target(['--slide', '0'], `/d${ext}`), ext).toEqual({ kind: 'slide', slide: 0 })
     }
-    expect(() => target(['--slide', '0'], '/d.pptxm')).toThrow(/pptx, docx, xlsx and pdf/)
+    expect(() => target(['--slide', '0'], '/d.pptxm')).toThrow(/pptx, docx, odt, xlsx and pdf/)
+  })
+
+  it('takes a block target on an ODT document like a Word document', () => {
+    expect(target(['--block', '2'], '/form.odt')).toEqual(target(['--block', '2'], '/form.docx'))
+    expect(() => target(['--slide', '0'], '/form.odt')).toThrow(CliError)
   })
 })
 

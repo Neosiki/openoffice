@@ -5,7 +5,7 @@ Markdown 에디터다. 일반 `.md` 파일 위에서 TipTap 블록 편집기를 
 ## 맡은 범위
 
 - 렌더러(`src/renderer/`): 블록 편집기와 확장(`editor/`), Markdown 직렬화와 블록 단위 저장(`markdown/roundtripSerializer.ts`, `markdown/sourceSplice.ts`), 원문 편집기(`source/`), 내보내기 화면(`export/`).
-- 메인 프로세스(`src/main/markdown-main.ts`와 주변): 열기·저장, 문서가 소유한 자산 폴더 관리(`asset-lifecycle.ts`), 이미지 호스트 업로드(`image-host.ts`), 이미지 내보내기 세션(`image-export.ts`), PDF 인쇄(`print-pdf.ts`), 변환 임시 세션(`conversion-lifecycle.ts`).
+- 메인 프로세스(`src/main/markdown-main.ts`와 주변): 열기·저장, 문서가 소유한 자산 폴더 관리(`asset-lifecycle.ts`), 이미지 호스트 업로드(`image-host.ts`), 이미지 내보내기 세션(`image-export.ts`), PDF 인쇄(`print-pdf.ts`), 변환 임시 세션(`conversion-lifecycle.ts`), ODT 내보내기(`odt-export.ts`).
 - 공유 계약 `src/shared/`: IPC(`ipc.ts`의 `MARKDOWN_CHANNELS`), 열기 방식 판정(`text-mode.ts`), 원문 형식 보존(`source-text.ts`).
 - Markdown의 AI: 패널(`src/renderer/ai/AiPanel.tsx`), skill과 도구(`markdown-skill.ts`, `tools.ts`, `doc-writer.ts`, `search-skill.ts`), 막힌 실행과 이미지 도구 판정(`ai-connection.ts`), 연결 상태(`subscription-client.ts`), 가림 표시(`src/renderer/editor/redact.ts`).
 
@@ -25,6 +25,8 @@ Markdown 에디터다. 일반 `.md` 파일 위에서 TipTap 블록 편집기를 
 - 이 모듈이 갖는 AI 채널은 `markdown:ai-generate-image` 하나다. 호출할 때 `{ path: 'screen', statuses: sharedSubscriptionStatuses() }`를 넘기고 로컬 경로는 문서 폴더와 붙여 넣기 임시 폴더로 제한한다. 가용성은 `AI_TOOL_CAPABILITIES_CHANNEL`(문서 에디터의 메인이 등록한 채널과 같은 이름이어야 한다)로 묻고, 답이 없으면 이미지 도구를 내놓지 않는다.
 - 구독 API의 채널 이름과 판독 함수는 `@genoffice/ai-provider/browser`의 것을 쓰고 사본을 만들지 않는다. 보내기 판단은 `useAiSendGate`만 쓴다. 다른 제공자로 저절로 넘어가는 코드를 넣지 않는다.
 - 이미지 호스트의 자격 증명은 메인 프로세스에만 둔다. 업로드는 메인에서 하고 로컬 `assets/` 사본을 대체 경로로 유지한다.
+- ODT로 내보내기(`'odt'` 요청, `markdown:export-odt`)는 docx 내보내기가 만든 바로 그 바이트(`exportDocxBytes`)를 `@genoffice/odt-engine`의 `docxToOdt`로 바꾼 것이다. ODT용 문서를 따로 만들지 않는다. 그래서 가린 범위도 docx 내보내기와 똑같이 다뤄진다(가림은 모델에게만 적용되고 내보낸 파일에는 원래 글자가 들어간다). ODT 경로가 docx보다 더 드러내는 것이 없다.
+- ODT 내보내기 순서: 저장 창(`.odt`) → docx → ODT → `report`가 비어 있지 않으면 "바뀌는 것·빠지는 것" 확인 창(뒷단의 `dialog.showMessageBox`, 문구는 `odt-export.ts`의 21개 언어 사전) → 쓰기. 취소하면 아무것도 쓰지 않는다. 테마 부분이 있다는 것만으로는 보고하지 않으므로, 보통의 마크다운 문서는 확인 창 없이 바로 쓴다. 편집 화면 그림(`renderedObjects`)은 넘기지 않고, 수식은 엔진의 이름표 상자가 된다.
 - 미리 보기와 내보내기의 문서 스타일은 문서 내용이다. 크롬 색 토큰은 리본·패널 같은 UI에만 쓴다.
 
 ## 이 모듈의 방식
@@ -33,6 +35,7 @@ Markdown 에디터다. 일반 `.md` 파일 위에서 TipTap 블록 편집기를 
 - 경로는 뷰별로 허가된 것만 다룬다. 새 창을 만들 때 `grantAndTrack`으로 열 파일을 등록한다.
 - TipTap 패키지는 `electron.vite.config.ts`의 `dedupe`로 이 앱의 사본 하나에 고정한다. 문서 에디터가 다른 버전을 쓰고 npm이 일부를 저장소 루트로 올리기 때문에, 고정하지 않으면 번들에 코어가 둘 들어간다. TipTap 확장을 추가하면 이 목록에도 넣는다.
 - 패널은 다른 에디터와 같은 부품으로 조립한다(`AiConnectPrompt`, `AiFirstConnectionNotice`, `AiBlockedNotice`, `aiRunErrorText`). 막힌 실행의 원인은 전송이 기록한 마지막 실패가 그 메시지의 실패일 때만 쓴다.
+- `odt-export.ts`는 HTML 편집기의 같은 이름 파일과 내용이 같다. 한쪽을 고치면 다른 쪽도 고친다.
 - 문자열은 `src/renderer/i18n/strings.ts` 한 파일에 21개 언어가 있고 `zh`가 키 집합을 정한다. 구독 연결 문장과 AI 진입 이름은 `@genoffice/ui`의 것을 쓴다.
 
 ## 테스트

@@ -22,9 +22,18 @@ Un nouveau document s’ouvre sans titre ; le fichier sur le disque n’est cré
 
 ## Ouvrir des fichiers
 
-- Le menu **Fichier ▸ Ouvrir** (⌘O/ctrl+O) ouvre le sélecteur du système : .docx / .doc / .xlsx / .xls / .csv / .tsv / .pptx / .ppt / .pdf / .md / .html.
+- Le menu **Fichier ▸ Ouvrir** (⌘O/ctrl+O) ouvre le sélecteur du système : .docx / .doc / .odt / .xlsx / .xls / .csv / .tsv / .pptx / .ppt / .pdf / .md / .html.
 - Cliquez sur n’importe quel élément de la liste **Récents** de l’accueil.
 - `ieumoffice <file>` depuis un terminal ouvre aussi les fichiers.
+
+## Documents ODT
+
+Les fichiers .odt (texte OpenDocument, le format qu'enregistrent Hancom Office, LibreOffice et d'autres) s'ouvrent dans l'onglet Docs, depuis tous les endroits qui ouvrent un .docx. Un nouveau document reste un .docx.
+
+- **Fonctionne normalement** : saisie du texte, mise en forme des caractères et des paragraphes, tableaux (ajout et suppression de lignes et de colonnes, fusion et fractionnement de cellules), images, en-têtes et pieds de page, notes de bas de page et de fin, mise en page et sections, puces et numérotation, styles de titre, liens, rechercher et remplacer, orthographe, impression, export PDF et HTML, et modifications par l'IA.
+- **Désactivé en ODT** : commentaires, suivi des modifications, comparaison, filigrane, dessin à main levée, table des matières, insertion d'équations, de formes, de zones de texte ou de graphiques, colonnes, citations et bibliographie, légendes et renvois, couleur de page, mot de passe et restriction de modification, lecture seule recommandée, polices et couleurs du thème, marges en miroir. Leurs boutons sont grisés ; enregistrez en .docx pour les utiliser.
+- **Conservé tel quel** : les équations, graphiques et dessins de l'original s'affichent comme des images verrouillées que l'on peut supprimer mais pas modifier, et les cellules de tableau verrouillées le restent. Les parties que vous ne touchez pas sont réenregistrées sans changement. Un ODT protégé par mot de passe ne s'ouvre pas : retirez d'abord le mot de passe.
+- **Enregistrer sous** propose .docx et .odt. Avant de changer de format, la liste de ce qui change ou disparaît s'affiche, puis l'onglet se rouvre sur le nouveau fichier. Markdown et HTML proposent aussi **Exporter en ODT…**.
 
 ## Le modèle d’enregistrement
 

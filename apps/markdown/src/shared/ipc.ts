@@ -31,6 +31,7 @@ export const MARKDOWN_CHANNELS = {
   viewImage: 'genoffice:view-image',
   exportRequest: 'markdown:export-request',
   exportDocx: 'markdown:export-docx',
+  exportOdt: 'markdown:export-odt',
   exportPdf: 'markdown:export-pdf',
   prepareImageExport: 'markdown:prepare-image-export',
   writeExportImage: 'markdown:write-export-image',
@@ -174,7 +175,7 @@ export interface ImageSearchResult {
   error?: string
 }
 
-export type ExportFormat = 'pdf' | 'docx' | 'docs' | 'png'
+export type ExportFormat = 'pdf' | 'docx' | 'docs' | 'png' | 'odt'
 
 export interface ExportDocxRequest {
   /** .docx bytes, base64 */
@@ -183,6 +184,14 @@ export interface ExportDocxRequest {
   suggestedName: string
   /** 'dialog' = save dialog; 'openInDocs' = app-managed temporary copy opened in AI Docs */
   mode: 'dialog' | 'openInDocs'
+}
+
+/** ODT export: the Word export's .docx bytes, converted to ODT in the main process */
+export interface ExportOdtRequest {
+  /** .docx bytes, base64 (the same bytes the Word export writes) */
+  base64: string
+  /** file name (no extension) suggested in the dialog */
+  suggestedName: string
 }
 
 export interface ExportPdfRequest {
@@ -286,6 +295,8 @@ export interface MarkdownApi {
   /** Shell menu Print → renderer builds the print HTML and opens the system print dialog */
   onPrintRequest(handler: () => void): () => void
   exportDocx(request: ExportDocxRequest): Promise<ExportResult>
+  /** save dialog (.odt) → docx → ODT → confirmation when something changes → write */
+  exportOdt(request: ExportOdtRequest): Promise<ExportResult>
   exportPdf(request: ExportPdfRequest): Promise<ExportResult>
   prepareImageExport(request: Omit<ExportPdfRequest, 'outPath'>): Promise<ImageExportPreparation>
   writeExportImage(

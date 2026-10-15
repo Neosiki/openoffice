@@ -19,6 +19,7 @@ import type {
   UiTheme,
   ZoteroRendererRequest,
 } from '../shared/ipc'
+import type { DocFormat } from '../shared/open-file'
 import type { ProjectApi } from '@genoffice/project-store'
 import { installDropOpenBridge } from '@genoffice/electron-utils/drop-open'
 
@@ -133,8 +134,13 @@ const api: DesktopApi = {
   spellReplace: (word: string) => ipcRenderer.invoke('docs:spell-replace', word),
   spellLanguages: () => ipcRenderer.invoke('docs:spell-languages'),
   spellSetLanguages: (langs: string[]) => ipcRenderer.invoke('docs:spell-set-languages', langs),
-  saveDocxAs: (defaultName: string, data: ArrayBuffer, sourcePath?: string | null) =>
-    ipcRenderer.invoke('docs:save-as', defaultName, data, sourcePath ?? null),
+  pickSaveAsPath: (defaultName: string, sourcePath: string | null, format: DocFormat) =>
+    ipcRenderer.invoke('docs:save-as-pick', defaultName, sourcePath, format),
+  saveDocxAs: (path: string, data: ArrayBuffer, sourcePath?: string | null) =>
+    ipcRenderer.invoke('docs:save-as', path, data, sourcePath ?? null),
+  materializeDocx: (data: ArrayBuffer) => ipcRenderer.invoke('docs:materialize-docx', data),
+  captureRect: (rect: { x: number; y: number; width: number; height: number }) =>
+    ipcRenderer.invoke('docs:capture-rect', rect),
   saveDocxNew: (defaultName: string, data: ArrayBuffer) =>
     ipcRenderer.invoke('docs:save-new', defaultName, data),
   saveDocxTo: (path: string, data: ArrayBuffer, overwrite: boolean) =>
@@ -237,10 +243,11 @@ const api: DesktopApi = {
     ipcRenderer.on('docs:close-check', listener)
     return () => ipcRenderer.removeListener('docs:close-check', listener)
   },
-  reportViewMenuState: (state: { aiSidebar: boolean; darkCanvas: boolean }) =>
+  reportViewMenuState: (state: { aiSidebar: boolean; darkCanvas: boolean; odt?: boolean }) =>
     ipcRenderer.send('docs:view-menu-state', {
       aiSidebar: state?.aiSidebar === true,
       darkCanvas: state?.darkCanvas === true,
+      odt: state?.odt === true,
     }),
   reportCloseCheck: (state: { dirty: boolean; autoSave: boolean; filePath?: string | null }) =>
     ipcRenderer.send('docs:close-check-result', {

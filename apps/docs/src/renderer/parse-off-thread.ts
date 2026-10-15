@@ -1,14 +1,23 @@
 import { parseDocx } from '@genoffice/docx-engine'
+import { odtToDocx, type BridgeMap, type ConversionReport } from '@genoffice/odt-engine'
 
 type Parsed = Awaited<ReturnType<typeof parseDocx>>
 
 export interface ParseWorkerRequest {
   id: number
   bytes: ArrayBuffer
+  /** 'odt': convert with odtToDocx first and parse the bridge docx */
+  format?: 'odt'
+}
+
+/** what opening an ODT adds to the parsed bridge docx */
+export interface OdtConversion {
+  bridge: BridgeMap
+  report: ConversionReport
 }
 
 export type ParseWorkerResponse =
-  | { id: number; ok: true; parsed: Parsed }
+  | { id: number; ok: true; parsed: Parsed; odt?: OdtConversion }
   | { id: number; ok: false; error: string; bytes: ArrayBuffer }
 
 /**
@@ -89,6 +98,42 @@ export async function parseDocxOffThread(
   parseStats.inline++
   return parseDocx(new Uint8Array(response.bytes))
 }
+/** ODT → bridge docx → parsed model, the same way the worker does it */
+export async function convertOdtInline(
+  odtBytes: Uint8Array,
+): Promise<{ parsed: Parsed } & OdtConversion> {
+  const { docxBytes, bridge, report } = await odtToDocx(odtBytes)
+  return { parsed: await parseDocx(docxBytes), bridge, report }
+}
+
+/**
+ * Open an ODT off the UI thread: the worker converts it (odtToDocx) and parses
+ * the bridge docx. The ODT bytes are always copied — the caller keeps them as
+ * the save baseline. A conversion error (password, corrupt file) is raised by
+ * the inline retry, so the caller sees the engine's own error class.
+ */
+export async function parseOdtOffThread(
+  odtBytes: Uint8Array,
+): Promise<{ parsed: Parsed } & OdtConversion> {
+  const w = getWorker()
+  if (!w) {
+    parseStats.inline++
+    return convertOdtInline(odtBytes)
+  }
+  const copy = odtBytes.slice().buffer as ArrayBuffer
+  const id = ++nextId
+  const response = await new Promise<ParseWorkerResponse>((resolve) => {
+    pending.set(id, resolve)
+    w.postMessage({ id, bytes: copy, format: 'odt' } satisfies ParseWorkerRequest, [copy])
+  })
+  if (response.ok && response.odt) {
+    parseStats.worker++
+    return { parsed: response.parsed, ...response.odt }
+  }
+  parseStats.inline++
+  return convertOdtInline(odtBytes)
+}
+
 if (typeof window !== 'undefined') {
   ;(window as unknown as Record<string, unknown>).__docsParseStats = parseStats
 }

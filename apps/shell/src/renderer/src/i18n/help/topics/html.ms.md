@@ -29,6 +29,7 @@ Klik pada mana-mana elemen dalam pratonton, dan satu bar alat akan muncul di ata
 Menu Fail, semuanya setempat dan semuanya akan bertanya di mana hasilnya perlu disimpan:
 
 - **Eksport sebagai Word…** dan **Eksport sebagai PDF…** menulis .docx atau .pdf yang sebenar.
+- **Eksport sebagai ODT…** menulis fail .odt (teks OpenDocument) melalui penukaran yang sama dengan eksport Word; jika ada yang berubah atau hilang dalam proses itu, anda melihat senarainya dan mengesahkan dahulu.
 - **Eksport sebagai HTML fail tunggal…** menulis satu .html dengan imej dibbenamkan di dalamnya. Ia tidak akan menimpa fail yang sedang anda buka, dan memberitahu anda berapa imej yang tidak dapat dibbenamkan.
 
 ## Sisip kerangka

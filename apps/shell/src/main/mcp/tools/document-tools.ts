@@ -62,6 +62,8 @@ export interface DocsControl {
 }
 
 const DOCX_EXT = `.${generateExtension('docx')}`
+// read_docx goes through the CLI's `docs read`, which reads .odt the same way
+const READABLE_WORD_EXTS = new Set([DOCX_EXT, '.odt'])
 
 /** sanitize a title into a file base name (mirrors docs' sanitizeAiDocFileBase) */
 export function sanitizeFileBase(title: string): string {
@@ -191,15 +193,16 @@ export function createDocumentTools(deps: DocToolDeps, host: SessionHost): McpTo
     ...(deps.background === false ? [] : [createHeadlessDocxTool(deps)]),
     {
       name: 'read_docx',
-      description: 'Read a Word .docx file and return its visible text (one paragraph per line).',
+      description:
+        'Read a Word .docx or OpenDocument .odt file and return its visible text (one paragraph per line).',
       inputSchema: {
-        path: z.string().describe('absolute path to a .docx file'),
+        path: z.string().describe('absolute path to a .docx or .odt file'),
       },
       handler: async (args) => {
         const filePath = String(args.path ?? '')
         if (!isAbsolute(filePath)) throw new Error('path must be absolute')
-        if (extname(filePath).toLowerCase() !== DOCX_EXT)
-          throw new Error('path must point to a .docx file')
+        if (!READABLE_WORD_EXTS.has(extname(filePath).toLowerCase()))
+          throw new Error('path must point to a .docx or .odt file')
         if (!existsSync(filePath)) throw new Error(`file not found: ${filePath}`)
         if (!deps.cli) throw new Error('reading .docx is not available in this build')
         const text = await readDocxTextViaCli(deps.cli, filePath)

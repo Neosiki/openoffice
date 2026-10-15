@@ -27,6 +27,14 @@
 - 앱의 탭에 열려 있는 파일은 제자리에서 고치지 않는다(종료 코드 2, `detail.gui_pid`). `--force`면 쓴다.
 - 실행한 명령마다 `~/.ieumoffice/cli-audit.jsonl`에 한 줄을 남긴다(`ts`, `pid`, `command`, `argv`, `status`, `code`, `output_path`, `ms`, `cwd`). 2MB에서 돌린다.
 
+**ODT(`.odt`).**
+
+- `docs read`·`docs apply`는 `.odt`를 `.docx`와 같은 방식으로 받는다. `apply`는 `.odt`로 다시 쓰고(`--out`도 `.odt`), 고치지 않은 부분은 원래 바이트 그대로 둔다. `info`처럼 형식을 가리지 않는 명령도 `.odt`를 알아본다.
+- ODT에서 꺼 둔 기능의 편집(메모, `--track`, 변경 내용 받아들이기·되돌리기, 목차, 수식, 차트, 글상자, 다단, 워터마크, 그림 번호·상호 참조·인용·목차 같은 `insertField` 필드)은 `unsupported`, 한컴에서 잠근 칸과 잠긴 개체를 고치는 편집은 `op_rejected`로 거절한다. 묶음 처리는 docx와 같다. 기본은 하나라도 거절되면 묶음 전체를 쓰지 않고, `--best-effort`·`--stop-on-error`일 때만 나머지를 쓰고 `status: "partial"`로 답한다.
+- `convert`가 받는 경로: `odt → docx | pdf | md | html`, `docx | md | html → odt`. `odt → pdf | html`과 `html → odt`는 임시 docx를 거쳐 앱으로 내보내고, 그 임시 파일은 실패해도 지운다.
+- 바꾸는 중에 모양이 바뀌거나 빠지는 것이 있으면 파일은 쓰고, 항목마다 `warnings[]`로 알린다. 코드는 `odt_converted`(바뀜)와 `odt_dropped`(빠짐)다. 같은 목록이 `detail.odt_report`에 `[{ kind: "converted" | "dropped", feature, count }]`로 온다. `feature`는 바뀌지 않는 식별자다: `toc`, `chart`, `equation`, `shape`, `textbox`, `columns`, `citation`, `cross_reference`, `page_color`, `mirror_margins`, `theme`, `comment`, `revision`, `ink`, `watermark`, `password`, `protection`, `form_field`, `object`.
+- 암호가 걸린 ODT는 열지 않는다. 종료 코드 2, `error: "unsupported"`, `suggestion`은 "암호를 푼 뒤 다시 시도하라"다.
+
 ## PDF 명령
 
 `pdf read`, `pdf images`, `pdf status`와 `convert`는 PC 안에서 끝난다. `pdf ai-read`와 `pdf translate`는 아래 "AI를 부르는 PDF 명령"의 규칙을 따른다.
@@ -152,6 +160,7 @@
 
 - 설정 → 연동에서 켠다. 기본은 꺼짐이다. 기본 포트는 3093이고 이 PC(`127.0.0.1`)에서만 닿는다. 인증은 없고, 요청의 Host·Origin이 이 PC의 것이 아니면 거절한다.
 - 도구: `get_app_info`, `open_documents`, `open_in_genoffice`(이 이름은 예전 철자를 유지한다), `create_session`, `save_session`, `read_document`, `read_docx`, `read_sheet`, `read_deck`, `read_pdf`, `create_docx`, `create_xlsx`, `create_pptx`, `apply_ops`, `apply_sheet_ops`, `apply_slide_ops`, `insert_content`, `replace_blocks`.
+- 열린 ODT 탭은 워드 문서로 다룬다(`open_documents`의 `format`이 `odt`). `read_docx`는 `.odt` 파일도 읽는다. `save_session`은 탭의 형식으로만 저장한다. 다른 확장자의 경로를 주면 거절하고 `ieumoffice convert`를 쓰라고 안내한다. 대화 상자가 없는 경로에서 형식이 조용히 바뀌지 않게 하기 위해서다.
 - 에이전트 설정에 넣는 항목 이름은 `ieumoffice-editor`다. 명령어 쪽 서버의 `ieumoffice`와 겹치지 않는다.
 - 에이전트 모드(결정 0032)의 세션 MCP 서버는 이것과 별개다. 앱이 띄운 프로그램만 쓰고, 세션마다 운영체제가 고른 포트와 새 토큰(`Authorization: Bearer`)을 요구하며, 도구는 `open_documents`(`list`·`read`만), `read_document`, `insert_content`, `replace_blocks`, `apply_ops`, `read_sheet`, `apply_sheet_ops`, `read_deck`, `apply_slide_ops`, `read_hwp`, `read_pdf`다. 읽기는 가린 자리를 `{{이름}}`으로 내보내고, `read_hwp`·`read_pdf`는 프로젝트 폴더 안만 읽는다. 바깥 호출자에게 약속하는 출력이 아니다. 위 서버의 출력은 바뀌지 않는다.
 - `open_documents`의 목록에 마인드맵 탭이 `kind: "mindmap"`, `type: "mind map"`으로 나온다(떼어 낸 창도 같다). `read`의 `content`는 지금 지도의 개요 글 문자열이고 저장하지 않은 편집이 들어 있다. 마크다운·HTML 탭의 읽기와 같은 모양이다. `close`의 저장은 편집기의 저장과 같은 길을 지나고, 한 번도 저장하지 않은 지도는 기본 저장 폴더에 겹치지 않는 이름의 `.xmind`로 저장된다. `ok`로 열리지 않은 지도는 어떤 경우에도 쓰지 않는다. 지도를 만들거나 고치는 도구는 없다.
@@ -257,6 +266,7 @@
 - **마인드맵.** XMind 파일(`.xmind`, `content.json`이 든 형식)을 열고 같은 형식으로 저장한다. 이 앱이 보여 주지 않는 요소와 모르는 값도 저장할 때 그대로 나가고, 바뀐 것이 없으면 원본과 바이트까지 같은 파일을 쓴다. 바뀌었으면 `content.json`만 다시 쓰고, 미리보기 그림(`Thumbnails/thumbnail.png`)은 새로 만들었을 때만 바꾸며, `manifest.json`은 고치지 않는다. 예전 형식(`content.xml`만 있는 파일)과 암호가 걸린 파일은 열지 않는다. 테마는 사용자가 고를 때와 새 시트를 만들 때(새 파일 포함, 기본 테마) 파일 형식의 속성표로 적고, 이 앱만의 표식은 넣지 않는다. 그 밖에는 이미 있는 시트의 테마를 그대로 둔다. 터미널 명령어와 그 MCP 서버는 `.xmind`를 다루지 않는다.
 - 가리기 표시는 문서 안에 저장되고, 그 이름공간 주소는 원본과 같다. 원본으로 가린 문서를 열면 가리기가 그대로 인식된다.
 - 문서 곁에 저장되는 보조 파일의 이름(`.genoffice-assets.json` 등)도 원본과 같다.
+- `.odt`는 한컴 한글 2024가 읽은 결과를 기준으로 맞춘다. 받은 ODT를 고쳐 저장하면 고친 부분만 다시 쓰고, 나머지 zip 항목과 XML은 바이트 그대로다. 고친 것이 없으면 원본과 같은 파일이 나온다. 다시 묶을 때 `mimetype`을 맨 앞에 압축 없이 둔다(한컴은 이것을 받은 파일과 똑같이 읽는다). 한컴이 아닌 프로그램의 ODT도 같은 규칙으로 열지만, 합격 기준에는 넣지 않았다.
 - 문서 안에 적히는 작성자 이름(PDF 주석 작성자, 엑셀 메모 작성자, 명령어가 넣는 메모 작성자)은 지금 "GenOffice"다.
 - 파워포인트 편집기에서 고른 디자인 템플릿은 문서 안이나 곁에 쓰지 않는다. 문서에 남는 것은 평범한 도형·글·글꼴 이름뿐이다.
 - 저장한 스타일 파일(`<데이터 폴더>/style-templates/<이름>.json`)에는 선택 항목 `basedOn`(기본 템플릿의 id)이 붙을 수 있다. 이 값을 모르는 예전 버전은 무시하고 그대로 읽는다.
@@ -267,5 +277,6 @@
 
 - 설치 파일 이름은 `IeumOffice-Setup-<버전>.exe`, 설치 식별자는 `io.github.pblsketch.ieumoffice`, 실행 파일은 `IeumOffice.exe`다.
 - 파일 연결의 등록 이름은 `IeumOffice.<종류>` 꼴이다(`IeumOffice.WordDocument` 등).
+- `.odt`는 "연결 프로그램" 후보로만 등록한다(`IeumOffice.OpenDocumentText`와 `.odt\OpenWithProgids`의 값 하나, `apps/shell/build/installer.nsh`). 기본 프로그램은 바꾸지 않는다. 지울 때는 그 값과 등록 이름만 지운다.
 - Windows 설치본은 `.txt`·`.json`·`.xmind`를 이 앱에 연결해 등록하지 않는다. 설치해도 그 파일들의 기본 프로그램이 바뀌지 않는다. 앱 안에서는 열기 창, 끌어다 놓기, 최근 파일, 폴더 나무로 열고, 실행 인자로 경로를 받으면 연다.
 - 자동 업데이트는 `pblsketch/openoffice`의 GitHub 릴리스에서 `latest.yml`과 설치 파일을 읽는다. 릴리스는 `v<버전>` 태그여야 한다.

@@ -17,6 +17,7 @@ import { platformShortcuts } from '@genoffice/i18n'
 import type { TextboxDisplay } from '@genoffice/docx-engine'
 
 import { useI18n, type StringKey } from '../i18n/locale'
+import { isOdtSession, odtOffNotice } from '../odt-gate'
 import { wordRangeAtCaret } from '../editor/comments'
 import {
   bringForward,
@@ -223,6 +224,7 @@ export function EditorContextMenu({
   }
   const field = fieldRangeAt(editor.state, clickPos)
   const canComment = hasSelection || wordRangeAtCaret(editor) !== null
+  const odtDoc = isOdtSession()
   const canEdit = editor.isEditable
   const selectedText = hasSelection ? editor.state.doc.textBetween(from, to, ' ').trim() : ''
   // Synonyms targets a word / short phrase, not long selections
@@ -307,12 +309,15 @@ export function EditorContextMenu({
       onClick?: () => void
       submenuKey?: string
       ai?: boolean
+      /** switched off in an ODT document: disabled, the tip says why */
+      odtOff?: boolean
     },
   ) => (
     <button
       className="ctx-item"
-      disabled={opts.disabled}
-      data-tip={opts.ai ? t('appAiBadgeTip') : undefined}
+      disabled={opts.disabled || opts.odtOff}
+      data-tip={opts.odtOff ? label : opts.ai ? t('appAiBadgeTip') : undefined}
+      data-tip-detail={opts.odtOff ? odtOffNotice() : undefined}
       onMouseEnter={() => setSubmenu(opts.submenuKey ?? null)}
       onClick={opts.submenuKey ? undefined : opts.onClick}
     >
@@ -736,7 +741,11 @@ export function EditorContextMenu({
       ) : (
         item(t('appHyperlinkMenu'), { key: '⌘K', disabled: !canEdit, onClick: run(onLink) })
       )}
-      {item(t('appNewComment'), { disabled: !canComment, onClick: run(onNewComment) })}
+      {item(t('appNewComment'), {
+        disabled: !canComment,
+        odtOff: odtDoc,
+        onClick: run(onNewComment),
+      })}
     </div>
   )
 }

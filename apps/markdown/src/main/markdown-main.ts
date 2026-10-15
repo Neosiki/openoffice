@@ -51,6 +51,7 @@ import {
   writeImageIntoOwnedAssets,
 } from './asset-lifecycle'
 import { createMarkdownConversionSession, writeMarkdownConversion } from './conversion-lifecycle'
+import { confirmOdtReport, exportOdt, odtFilterName } from './odt-export'
 import { registerMarkdownSeedIpc } from './seed-main'
 import { MARKDOWN_CHANNELS, MAX_PASTED_IMAGE_BYTES } from '../shared/ipc'
 import type { ImageHostConfig } from '../shared/ipc'
@@ -63,6 +64,7 @@ import {
 import type {
   ExportDocxRequest,
   ExportFormat,
+  ExportOdtRequest,
   ExportPdfRequest,
   ImageExportPreparation,
   ExportResult,
@@ -1037,6 +1039,44 @@ function registerMarkdownIpc(): void {
       } catch (err) {
         return { ok: false, error: err instanceof Error ? err.message : String(err) }
       }
+    },
+  )
+
+  // ODT export: the Word export's bytes (built by the renderer exactly as for
+  // exportDocx) converted by docxToOdt; a non-empty change report is confirmed first.
+  ipcMain.handle(
+    MARKDOWN_CHANNELS.exportOdt,
+    async (e, request: ExportOdtRequest): Promise<ExportResult> => {
+      if (typeof request?.base64 !== 'string' || !request.base64) {
+        return { ok: false, error: 'markdown: bad export request' }
+      }
+      const safeName =
+        String(request.suggestedName || tm('untitledFile'))
+          .replace(/[/\\:*?"<>|]/g, '_')
+          .slice(0, 80)
+          .trim() || tm('untitledFile')
+      const win =
+        BrowserWindow.fromWebContents(e.sender) ?? BrowserWindow.getFocusedWindow() ?? undefined
+      return exportOdt({
+        pickPath: async () => {
+          const picked = await showSaveDialogWithMemory(
+            dialog,
+            win,
+            {
+              defaultPath: `${safeName}.odt`,
+              filters: [{ name: odtFilterName(), extensions: ['odt'] }],
+            },
+            configuredDefaultSaveDir(app),
+          )
+          return picked.canceled || !picked.filePath ? null : picked.filePath
+        },
+        docx: async () => new Uint8Array(Buffer.from(request.base64, 'base64')),
+        confirm: (report) =>
+          confirmOdtReport(report, (options) =>
+            win ? dialog.showMessageBox(win, options) : dialog.showMessageBox(options),
+          ),
+        write: (path, bytes) => writeFile(path, bytes),
+      })
     },
   )
 

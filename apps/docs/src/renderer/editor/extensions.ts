@@ -2,6 +2,8 @@ import { ScriptFonts } from './script-fonts'
 import { Editor, Extension, Node } from '@tiptap/core'
 import { SHAPE_INLINE_WRAP } from './floating-z-order'
 import { StreamingTailGuardExtension } from './streaming-tail-guard'
+import { OdtGuardExtension } from './odt-guard'
+import { odtLabelSrc } from '../odt-labels'
 import type { ChainedCommands, RawCommands } from '@tiptap/core'
 import { Gapcursor, UndoRedo } from '@tiptap/extensions'
 import { DOMSerializer } from '@tiptap/pm/model'
@@ -1179,7 +1181,8 @@ export const DocInlineImage = Node.create({
     const attrs: Record<string, string> = {
       'data-inline-image': '1',
       class: 'doc-inline-img',
-      src: String(node.attrs.dataUrl),
+      // an ODT placeholder without a preview shows its label box (screen, print, PDF alike)
+      src: odtLabelSrc(node) ?? String(node.attrs.dataUrl),
     }
     const w = Number(node.attrs.widthPx)
     const h = Number(node.attrs.heightPx)
@@ -5022,7 +5025,7 @@ function protectedDomSpec(node: PmNode): DomSpec {
       }
     }
     const imgAttrs: Record<string, string> = {
-      src: String(imageDataUrl),
+      src: odtLabelSrc(node) ?? String(imageDataUrl),
       class: 'doc-protected-img',
     }
     const filterCss = pictureFilterCss(node.attrs.imageEffects as ImageEffects | null)
@@ -6766,6 +6769,7 @@ export const AutoLinkOnDelimiter = Extension.create({
 
 export const editorExtensions = [
   StreamingTailGuardExtension,
+  OdtGuardExtension,
   ScriptFonts,
   DocDocument,
   DocText,

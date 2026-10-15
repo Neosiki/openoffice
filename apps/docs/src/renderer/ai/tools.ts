@@ -4,6 +4,7 @@ import type { ChartDisplay, CommentInfo, NewChart, NoteInfo } from '@genoffice/d
 import type { AgentToolCall, AgentToolDef, CreateDocumentType } from '../../shared/ipc'
 import { t } from '../i18n/locale'
 import { executeOps, opNames } from './ops'
+import { odtGuardRefusalText, odtToolRefusal, startOdtToolCall } from './odt-tools'
 import { clipExcerpt, repliesOf, resolveCommentAnchor } from './comment-ops'
 import {
   PAGE_SETUP_TOOL,
@@ -1186,6 +1187,46 @@ async function insertImageFromUrl(
 }
 
 export function executeTool(
+  editor: Editor,
+  call: AgentToolCall,
+  numIds: NumIds,
+  track?: AiTrack,
+  signal?: AbortSignal,
+  frozen?: FrozenSelection | null,
+  comments?: AiCommentsAccess,
+  hf?: AiHeaderFooterAccess,
+  writer?: AiDocWriter,
+  pageSetup?: AiPageSetupAccess,
+  extras?: AiDocExtras,
+  notes?: AiNotesAccess,
+): ToolExecution | Promise<ToolExecution> {
+  // an ODT document: switched-off features are refused, and so are edits the
+  // editor guard turned away (protected cells, locked placeholders)
+  const odtRefusal = odtToolRefusal(call)
+  if (odtRefusal) return fail(t('appOdtOff'), odtRefusal)
+  startOdtToolCall()
+  const result = executeToolUnguarded(
+    editor,
+    call,
+    numIds,
+    track,
+    signal,
+    frozen,
+    comments,
+    hf,
+    writer,
+    pageSetup,
+    extras,
+    notes,
+  )
+  const settleOdt = (exec: ToolExecution): ToolExecution => {
+    const refused = odtGuardRefusalText()
+    return refused ? { ...exec, isError: true, output: refused } : exec
+  }
+  return result instanceof Promise ? result.then(settleOdt) : settleOdt(result)
+}
+
+function executeToolUnguarded(
   editor: Editor,
   call: AgentToolCall,
   numIds: NumIds,

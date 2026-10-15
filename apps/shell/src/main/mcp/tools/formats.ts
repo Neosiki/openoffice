@@ -4,7 +4,7 @@
  *
  * The authority is the shell's own routing and each editor's Save-As dialog:
  *   - open routing:      apps/shell/src/main/index.ts  (routeDocumentPath,
- *                        OPEN_DIALOG_EXTENSIONS, UNSUPPORTED_DOC_RE)
+ *                        OPEN_DIALOG_EXTENSIONS) and app-routing.ts
  *   - save/export filters: apps/docs|sheets|slides|markdown|html/src/main/*
  *
  * `editor` mirrors that matrix exactly; `mcp` is the subset this server exposes
@@ -55,8 +55,11 @@ export const FORMAT_FAMILIES: readonly FormatFamily[] = [
   {
     family: 'docx',
     label: 'Word document',
-    editorOpen: ['docx'],
-    editorSave: ['docx'],
+    // .odt opens in the same Word tab and its Save As offers docx and ODT. MCP
+    // sessions stay docx (a dialog-free save never changes a tab's format);
+    // read_docx also reads .odt
+    editorOpen: ['docx', 'odt'],
+    editorSave: ['docx', 'odt'],
     editorExport: ['pdf'],
     mcp: { generate: 'docx', save: ['docx'], read: 'docx' },
   },
@@ -88,14 +91,14 @@ export const FORMAT_FAMILIES: readonly FormatFamily[] = [
     label: 'Markdown document',
     editorOpen: ['md', 'markdown'],
     editorSave: ['md', 'markdown'],
-    editorExport: ['docx', 'pdf'],
+    editorExport: ['docx', 'odt', 'pdf'],
   },
   {
     family: 'html',
     label: 'HTML page',
     editorOpen: ['html', 'htm'],
     editorSave: ['html', 'htm'],
-    editorExport: ['docx', 'pdf'],
+    editorExport: ['docx', 'odt', 'pdf'],
   },
   {
     family: 'pdf',
@@ -165,7 +168,15 @@ export function withSaveExtension(family: SessionFamily, filePath: string): stri
   if (ext === undefined) return `${filePath}.${formats[0] ?? family}`
   if (formats.includes(ext)) return filePath
   const wanted = formats.map((e) => `.${e}`).join(' or ')
-  throw new Error(`a ${familyLabel(family)} session must be saved as ${wanted} (got ".${ext}")`)
+  // changing the format needs the user to confirm what gets lost, which a
+  // dialog-free save cannot ask: point the agent at the CLI conversion instead
+  const hint =
+    family === 'docx' && ext === 'odt'
+      ? '; save as .docx, then convert it with `ieumoffice convert <file> --to odt`'
+      : ''
+  throw new Error(
+    `a ${familyLabel(family)} session must be saved as ${wanted} (got ".${ext}")${hint}`,
+  )
 }
 
 /**

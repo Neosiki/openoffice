@@ -35,7 +35,7 @@ Zaznacz pole wyboru w wierszu lub kliknij ⌘/ctrl, aby zbudować zaznaczenie; p
 Pole wyszukiwania u góry filtruje naraz dwie rzeczy:
 
 - **Nazwy plików**: szybkie filtrowanie po nazwie.
-- **Zawartość plików**: GenOffice indeksuje Twoje pliki w tle (tekst w docx/xlsx/pptx/pdf/md/html), więc wyszukiwanie po treści znajduje również pliki. Zakres i przełączniki ustawia się w ustawieniach wyszukiwania.
+- **Zawartość plików**: GenOffice indeksuje Twoje pliki w tle (tekst w docx/odt/xlsx/pptx/pdf/md/html), więc wyszukiwanie po treści znajduje również pliki. Zakres i przełączniki ustawia się w ustawieniach wyszukiwania.
 
 ## Karty szybkiego startu
 
@@ -51,7 +51,7 @@ Co robi każda karta:
 - **AI Markdown** (.md): pusty dokument Markdown w edytorze Markdown.
 - **AI HTML** (.html): pusta strona internetowa w edytorze HTML.
 - **AI PDF** (.pdf): inaczej niż pozostałe — **natychmiast** tworzy prawdziwy pusty plik PDF o jednej stronie w folderze docelowym i otwiera go jako zwykły plik (edytor PDF pracuje na prawdziwych plikach). Dobra do nanoszenia adnotacji, zaciemniania i dodawania tekstu; przy pierwszym zapisaniu plik można automatycznie zmienić na podstawie jego zawartości.
-- **Otwórz plik lokalny**: systemowy selektor plików dla programów Word (.docx/.doc), Excel (.xlsx/.xlsm/.xls/.csv/.tsv), PowerPoint (.pptx/.ppt), PDF, Markdown (.md/.markdown) i stron internetowych (.html/.htm). Można zaznaczyć kilka plików; każdy dostaje własną kartę. Pliki tekstowe (.txt, .json) też tu się otwierają — trafiają do widoku źródła edytora Markdown.
+- **Otwórz plik lokalny**: systemowy selektor plików dla programów Word (.docx/.doc/.odt), Excel (.xlsx/.xlsm/.xls/.csv/.tsv), PowerPoint (.pptx/.ppt), PDF, Markdown (.md/.markdown) i stron internetowych (.html/.htm). Można zaznaczyć kilka plików; każdy dostaje własną kartę. Pliki tekstowe (.txt, .json) też tu się otwierają — trafiają do widoku źródła edytora Markdown.
 
 > Wskazówka: Plik ▸ Nowy na pasku menu tworzy te same typy dokumentów (⌘N/Ctrl+N domyślnie tworzy dokument tekstowy); przeciągnięcie pliku do okna otwiera go.
 

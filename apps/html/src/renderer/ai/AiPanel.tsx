@@ -122,7 +122,7 @@ const PASTE_MIME_EXT: Record<string, string> = {
 const ATTACHMENT_CARD_ICONS: Record<string, string> = Object.fromEntries(
   (
     [
-      [fileWordIcon, ['doc', 'docx']],
+      [fileWordIcon, ['doc', 'docx', 'odt']],
       [fileExcelIcon, ['xls', 'xlsx', 'xlsm', 'csv', 'tsv']],
       [filePptIcon, ['ppt', 'pptx']],
       [filePdfIcon, ['pdf']],

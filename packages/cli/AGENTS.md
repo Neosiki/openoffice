@@ -54,6 +54,11 @@
 - MCP 도구 목록 전체의 크기에는 상한이 있다(`tests/mcp.test.ts`, 91KiB). 도구를 더할 때는 설명과 옵션 설명을 짧게 쓴다.
 - MCP 클라이언트는 셸 없이 프로세스를 띄운다. Windows에서 `.cmd`나 `cmd /c`를 등록하면 공백이 든 경로가 쪼개지므로, 등록하는 명령은 "앱 실행 파일을 Node로, 번들 CLI를 인자로"다(`src/mcp-launch.ts`). 이 파일은 순수 문자열 코드라 렌더러도 import한다.
 - 에이전트 설정 파일은 키 하나만 쓰거나 지운다. `ieumoffice` 이름의 항목이 우리 실행기가 아닌 것을 가리키면 강제 옵션 없이는 바꾸지 않는다. JSON 설정은 다시 직렬화되고 TOML은 해당 표만 줄 단위로 바꾼다. symlink인 설정은 대상에 써서 링크를 보존한다.
+- ODT(`src/formats/odt.ts`): `.odt`는 `odtToDocx`의 다리 docx로 열고(`openDocumentFile`이 `OpenDocument.odt`에 원본·다리 지도·보고를 둔다) `saveDocument`가 `saveOdt`로 원본에 좁게 되돌려 쓴다. 엔진 패키지(`@genoffice/odt-engine`)는 공개 API만 쓰고 고치지 않는다.
+  - 꺼 둔 기능의 작업 목록은 `odtDisabledFeature` 한 곳에 있다(메모, 변경 내용, 목차, 수식 `<formula>`, 차트, 글상자, 워터마크, 다단 `set_page_setup.columns`, 그림 번호·상호 참조·인용 `insertField`). 거절 이유는 `unsupported`다. `--track`과 확장자가 다른 `--out`은 `docs apply`가 작업 전에 거절한다.
+  - `OdtEditGuard`는 작업마다 앞뒤를 비교한다. 잠긴 칸(`isProtectedCell`, 셀 안 표는 바깥 칸)과 `odt-keep:` 자리 표시가 바뀌면 편집기 상태와 곁 상태를 되돌리고 `op_rejected`로 거절한다. 자리 표시를 통째로 지우는 것과 잠긴 칸 둘레의 행 추가는 된다. 격자 모양이 그대로면(칸 합치기·나누기 포함) 같은 자리에서 비교한다. 행만 또는 열만 바뀌었으면 앞뒤 행(열)을 맞춰 잠긴 칸이 옮겨 간 자리에서 비교한다(`movedLockedCell`). 둘 다 바뀌었을 때만 칸 지문의 개수로 본다.
+  - `convert`의 ODT 경로는 docx를 거친다. 앱의 `--headless-export`는 `.odt`를 받지 않으므로 odt→pdf/html은 출력 폴더 안의 임시 폴더(`.ieumoffice-odt-*`)에 docx를 쓰고 끝나면(실패해도) 지운다. html→odt도 같은 임시 폴더를 쓴다. 변환 보고는 항목마다 `warnings[]`(`odt_converted`/`odt_dropped`)와 `detail.odt_report`로 낸다.
+  - 암호 ODT는 종료 코드 2, `unsupported`와 암호를 풀라는 `suggestion`이다(`odtOpenFailure`). 기본 이유 `file_not_found`로 두지 않는다.
 - 이 패키지는 `@genoffice/i18n`과 `@genoffice/electron-utils`를 import하지만 `package.json`의 `dependencies`에는 적혀 있지 않다(workspace 호이스팅에 기대는 기존 구조다).
 
 ## 테스트
@@ -62,6 +67,7 @@
 - 어떤 테스트도 벤더 프로그램이나 네트워크에 닿으면 안 된다. `tests/headless-tools.test.ts`처럼 `@genoffice/ai-provider/subscription`의 `detectSubscriptionLogin`과 키 제공자 호출을 `vi.mock`으로 바꾼다. 구독 경로에 닿을 수 있는 테스트는 도구나 이미지 생성기도 함께 바꾼다.
 - `tests/upstream-coexistence.test.ts`는 원본 앱과의 공존을 고정한다. 등록·삭제·판정 코드를 바꾸면 "원본의 항목이 그대로 남는다"는 경우를 여기에 추가한다.
 - 바꾸면 반드시 테스트하는 것: 설정 스위치 켬·끔·예전 판 동의에 따른 `capabilities`와 실제 명령의 답이 같은지, 한도 소진(`rate-limit`) 때 봉투의 `errorCode`·`resetsAt`, PDF 작업 명령의 예상만 답하기·요금 경로 거절·`--partial` 유무·이어하기·MCP가 바로 답하기·`pdf_status` 모양(`tests/pdf-ai-jobs.test.ts`, `tests/pdf-structure-commands.test.ts`), 허용 폴더 밖 경로와 symlink 우회, 앱이 열어 둔 파일 쓰기, 부분 적용 배치(`status: "partial"`).
+- ODT 시험(`tests/odt.test.ts`, `tests/odt-convert.test.ts`)은 `packages/odt-engine/tests/helpers`의 합성 한컴 조각으로 파일을 만든다(`tests/odt-fixtures.ts`). 실제 파일은 넣지 않는다. 앱 경유 변환은 `exportViaApp`을 `vi.mock`으로 바꾼다.
 - 저장소 검사 도구(`tools/check-no-genspark.mjs`, `tools/check-english-comments.mjs`)의 테스트도 이 폴더의 `tests/`에 있다.
 - Windows에서는 원본에서 물려받은 테스트 여럿이 변경과 무관하게 실패한다. 이 PC에서 실패하는 파일은 `app-export`, `cli`, `cloud`, `control`, `errors`, `install`, `mcp-http`, `mcp-install`, `mcp`, `suggest`(모두 `tests/*.test.ts`)이다. 파일 권한 비트, POSIX 경로와 symlink, 준비 훅의 시간 제한 같은 전제가 Windows에서 맞지 않아서다. 이 파일들에서 새 실패를 봤다면 손대지 않은 체크아웃의 결과와 비교한다. CI는 Linux에서 돈다.
 - `cli`·`errors` 테스트의 일부는 xlsx 사이드카 실행 파일이 필요하다. `XLSX_SIDECAR_PATH`로 빌드된 사이드카를 가리킬 수 있다.

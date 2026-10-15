@@ -35,6 +35,7 @@ Tiga contoh singkat:
 Menu File, semuanya lokal dan semuanya menanyakan tempat untuk menaruh hasilnya:
 
 - **Ekspor sebagai Word…** dan **Ekspor sebagai PDF…** menulis .docx atau .pdf yang sungguhan.
+- **Ekspor sebagai ODT…** menulis file .odt (teks OpenDocument) lewat konversi yang sama dengan ekspor Word; jika ada yang berubah atau hilang di tengah jalan, Anda melihat daftarnya dan mengonfirmasi lebih dulu.
 - **Ekspor sebagai gambar…** menulis satu PNG per halaman ke dalam direktori yang Anda pilih.
 - **Konversi dan buka di Docs** mengonversi ke .docx dan membukanya di tab Docs bawaan di dalam aplikasi ini — ini bukan serah terima ke apa pun di cloud, dan salinan hasil konversi tinggal di folder cache yang dibersihkan setelah sekitar seminggu.
 
