@@ -74,7 +74,8 @@ export const id = {
   errUnsavedTarget: 'File itu terbuka dengan perubahan yang belum disimpan. Pilih nama lain.',
   errBusy: 'Tugas lain sedang berjalan. Coba lagi setelah selesai.',
   errFailed: 'Tugas ini tidak dapat diselesaikan.',
-  rejectEncrypted: '{name}: PDF yang dilindungi kata sandi tidak dapat digunakan.',
+  rejectEncrypted:
+    '{name}: PDF ini dilindungi kata sandi. Hapus kata sandinya dulu dengan “Hapus kata sandi”.',
   rejectUnreadable: '{name}: tidak dapat dibaca sebagai PDF.',
   rejectTooLarge: '{name}: file terlalu besar.',
   groupConvert: 'Konversi',
@@ -159,5 +160,33 @@ export const id = {
   cancelRun: 'Hentikan',
   doneCompressed: 'File baru dibuat: {name} ({before} → {after})',
   errNotSmaller: 'PDF ini tidak bisa diperkecil. Tetap gunakan file aslinya.',
+  toolEncrypt: 'Tambah kata sandi',
+  descEncrypt: 'Buat PDF meminta kata sandi saat dibuka',
+  toolDecrypt: 'Hapus kata sandi',
+  descDecrypt: 'Buka PDF dengan kata sandinya dan simpan salinan tanpa kata sandi',
+  toolRepair: 'Perbaiki file',
+  descRepair: 'Perbaiki PDF yang tidak bisa dibuka atau menampilkan galat, lalu simpan ulang',
+  hintDecrypt: 'Pilih satu PDF yang dilindungi kata sandi.',
+  hintRepair:
+    'Pilih PDF yang akan diperbaiki. File yang tidak bisa dibuka editor juga bisa dipilih.',
+  optPassword: 'Kata sandi untuk membuka',
+  optPasswordConfirm: 'Ketik ulang kata sandi',
+  optRestrict: 'Blokir pencetakan, penyalinan, dan perubahan',
+  optPermissionPassword: 'Kata sandi untuk membuka blokir',
+  optCurrentPassword: 'Kata sandi saat ini',
+  noteEncrypt:
+    'Kata sandi memakai AES-256. Jika terlupa, tidak ada yang bisa membuka file ini. File asli tetap seperti semula.',
+  noteRestrict:
+    'Blokir adalah aturan yang seharusnya diikuti program PDF; program yang mengabaikannya tetap bisa mencetak atau menyalin.',
+  noteDecrypt:
+    'Hanya kata sandi yang Anda ketahui yang bisa dihapus. File baru terbuka tanpa kata sandi, dan blokir cetak atau salin juga hilang.',
+  noteRepair:
+    'Bagian yang terbaca ditulis ke file baru. Konten yang hilang tidak bisa dikembalikan, jadi buka file baru dan periksa.',
+  passwordMismatch: 'Kedua kata sandi tidak sama.',
+  errPasswordEmpty: 'Ketik kata sandi.',
+  errPasswordSame: 'Kata sandi untuk membuka blokir harus berbeda dari kata sandi untuk membuka.',
+  errPasswordLong: 'Kata sandi terlalu panjang. Gunakan yang lebih pendek.',
+  errWrongPassword: 'Kata sandi salah.',
+  rejectNotEncrypted: '{name}: PDF ini tidak memiliki kata sandi.',
   close: 'Tutup',
 } satisfies Record<keyof typeof zh, string>

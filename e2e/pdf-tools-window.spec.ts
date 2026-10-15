@@ -635,6 +635,109 @@ test.describe('PDF tools window', () => {
     }
   })
 
+  test('adding a password, removing it, and repairing a file cut short', async () => {
+    test.setTimeout(180_000)
+    const dir = await mkdtemp(join(tmpdir(), 'genoffice-pdf-tools-e2e-'))
+    const plain = join(dir, 'minutes.pdf')
+    const locked = join(dir, 'minutes-locked.pdf')
+    const unlocked = join(dir, 'minutes-unlocked.pdf')
+    const cut = join(dir, 'download.pdf')
+    const repaired = join(dir, 'download-repaired.pdf')
+    await makePdf(plain, [
+      [300, 400],
+      [300, 400],
+    ])
+    const doc = await PDFDocument.create()
+    const font = await doc.embedFont(StandardFonts.Helvetica)
+    for (let i = 0; i < 3; i++) {
+      doc.addPage([300, 400]).drawText(`Page ${i + 1}`, { x: 30, y: 300, size: 24, font })
+    }
+    const whole = await doc.save({ useObjectStreams: false })
+    // a download that stopped partway: the last page and the cross-reference table are gone
+    await writeFile(cut, whole.slice(0, Math.floor(whole.length * 0.7)))
+    const plainHash = await sha(plain)
+    const password = '열려라 참깨 7'
+    const isEncrypted = async (path: string) =>
+      (await PDFDocument.load(await readFile(path), { ignoreEncryption: true })).isEncrypted
+    if (EVIDENCE_DIR) await mkdir(EVIDENCE_DIR, { recursive: true })
+
+    const launched = await launchShell({ onboardingSeen: true, videoDir: 'pdf-tools-security' })
+    const { app, page: home } = launched
+    try {
+      const tools = await openToolsWindow(app, home, /PDF tools/)
+      await tools.screenshot({ path: shot('pdf-tools-home-security-en') })
+
+      // add password: typed twice, and the button waits until both match
+      await tools.getByRole('button', { name: /Add password/ }).click()
+      await queueDialogs(app, { open: [[plain]], save: [locked] })
+      await tools.getByRole('button', { name: 'Choose PDF', exact: true }).click()
+      const run = tools.getByRole('button', { name: 'Save as new file' })
+      await tools.getByLabel('Password to open').fill(password)
+      await tools.getByLabel('Type the password again').fill('열려라')
+      await expect(tools.getByText('The two passwords do not match.')).toBeVisible()
+      await expect(run).toBeDisabled()
+      await tools.getByLabel('Type the password again').fill(password)
+      await tools.getByRole('checkbox', { name: 'Block printing, copying and changes' }).check()
+      await tools.getByLabel('Password to lift the block').fill(password)
+      await expect(
+        tools.getByText('The password to lift the block must differ from the password to open.'),
+      ).toBeVisible()
+      await tools.getByLabel('Password to lift the block').fill('owner only')
+      await expect(run).toBeEnabled()
+      await tools.screenshot({ path: shot('pdf-tools-encrypt-en') })
+      await run.click()
+      await expect(tools.getByText('Made a new file: minutes-locked.pdf')).toBeVisible({
+        timeout: 60_000,
+      })
+      expect(await isEncrypted(locked)).toBe(true)
+      expect(await sha(plain)).toBe(plainHash)
+      // the passwords are not kept on screen once used
+      await expect(tools.getByLabel('Password to open')).toHaveValue('')
+
+      // remove password: only a protected PDF, and only with its password
+      await tools.getByRole('button', { name: /All tools/ }).click()
+      await tools.getByRole('button', { name: /Remove password/ }).click()
+      await queueDialogs(app, { open: [[plain], [locked]], save: [unlocked] })
+      await tools.getByRole('button', { name: 'Choose PDF', exact: true }).click()
+      await expect(tools.getByText('minutes.pdf: this PDF has no password.')).toBeVisible()
+      await tools.getByRole('button', { name: 'Choose PDF', exact: true }).click()
+      await expect(tools.locator('.pt-item-name')).toHaveText('minutes-locked.pdf')
+      await tools.getByLabel('Current password').fill('wrong')
+      await tools.getByRole('button', { name: 'Save as new file' }).click()
+      await expect(tools.getByText('The password is not correct.')).toBeVisible({ timeout: 60_000 })
+      expect(existsSync(unlocked)).toBe(false)
+      await tools.getByLabel('Current password').fill(password)
+      await tools.screenshot({ path: shot('pdf-tools-decrypt-en') })
+      await tools.getByRole('button', { name: 'Save as new file' }).click()
+      await expect(tools.getByText('Made a new file: minutes-unlocked.pdf')).toBeVisible({
+        timeout: 60_000,
+      })
+      expect(await isEncrypted(unlocked)).toBe(false)
+      expect((await PDFDocument.load(await readFile(unlocked))).getPageCount()).toBe(2)
+
+      // repair: the pages that survived come back as a file every tool reads
+      await tools.getByRole('button', { name: /All tools/ }).click()
+      await tools.getByRole('button', { name: /Repair file/ }).click()
+      await queueDialogs(app, { open: [[cut]], save: [repaired] })
+      await tools.getByRole('button', { name: 'Choose PDF', exact: true }).click()
+      await tools.screenshot({ path: shot('pdf-tools-repair-en') })
+      await tools.getByRole('button', { name: 'Save as new file' }).click()
+      await expect(tools.getByText('Made a new file: download-repaired.pdf')).toBeVisible({
+        timeout: 60_000,
+      })
+      expect((await PDFDocument.load(await readFile(repaired))).getPageCount()).toBe(2)
+      const tabs = await pdfPages(app)
+      await tools.getByRole('button', { name: 'Open in a tab' }).click()
+      await expect.poll(() => pdfPages(app), { timeout: 30_000 }).toBe(tabs + 1)
+      const editor = await waitForPageWithUrl(app, '://pdf/')
+      await expect(editor.locator('.pdf-page')).toHaveCount(2, { timeout: 30_000 })
+      await editor.waitForTimeout(1500)
+      await editor.screenshot({ path: shot('pdf-tools-repair-result') })
+    } finally {
+      await closeAndSaveVideo(launched, 'pdf-tools-security')
+    }
+  })
+
   test('the window in Korean', async () => {
     test.setTimeout(90_000)
     if (EVIDENCE_DIR) await mkdir(EVIDENCE_DIR, { recursive: true })

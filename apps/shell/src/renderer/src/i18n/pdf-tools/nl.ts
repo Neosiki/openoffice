@@ -74,7 +74,8 @@ export const nl = {
   errUnsavedTarget: 'Dat bestand is geopend met niet-opgeslagen wijzigingen. Kies een andere naam.',
   errBusy: 'Er loopt een andere taak. Probeer het opnieuw als die klaar is.',
   errFailed: 'Deze taak kon niet worden voltooid.',
-  rejectEncrypted: '{name}: met een wachtwoord beveiligde pdf’s kunnen niet worden gebruikt.',
+  rejectEncrypted:
+    '{name}: deze pdf is met een wachtwoord beveiligd. Verwijder het wachtwoord eerst met ‘Wachtwoord verwijderen’.',
   rejectUnreadable: '{name}: kan niet als pdf worden gelezen.',
   rejectTooLarge: '{name}: het bestand is te groot.',
   groupConvert: 'Converteren',
@@ -163,5 +164,34 @@ export const nl = {
   cancelRun: 'Stoppen',
   doneCompressed: 'Nieuw bestand gemaakt: {name} ({before} → {after})',
   errNotSmaller: 'Deze pdf kon niet kleiner worden gemaakt. Gebruik het origineel.',
+  toolEncrypt: 'Wachtwoord toevoegen',
+  descEncrypt: 'De pdf vraagt bij het openen om een wachtwoord',
+  toolDecrypt: 'Wachtwoord verwijderen',
+  descDecrypt: 'De pdf met het wachtwoord openen en een kopie zonder wachtwoord opslaan',
+  toolRepair: 'Bestand herstellen',
+  descRepair: 'Een pdf die niet opent of fouten geeft herstellen en opnieuw opslaan',
+  hintDecrypt: 'Kies een met een wachtwoord beveiligde pdf.',
+  hintRepair:
+    'Kies de pdf die u wilt herstellen. Ook bestanden die de editor niet kan openen, kunt u kiezen.',
+  optPassword: 'Wachtwoord om te openen',
+  optPasswordConfirm: 'Typ het wachtwoord opnieuw',
+  optRestrict: 'Afdrukken, kopiëren en wijzigen blokkeren',
+  optPermissionPassword: 'Wachtwoord om de blokkering op te heffen',
+  optCurrentPassword: 'Huidig wachtwoord',
+  noteEncrypt:
+    'Het wachtwoord gebruikt AES-256. Vergeet u het, dan kan niemand het bestand openen. Het originele bestand blijft zoals het is.',
+  noteRestrict:
+    'De blokkering is een regel die pdf-programma’s horen te volgen; een programma dat haar negeert, kan toch afdrukken of kopiëren.',
+  noteDecrypt:
+    'Alleen een wachtwoord dat u kent, kan worden verwijderd. Het nieuwe bestand opent zonder wachtwoord en een blokkering van afdrukken of kopiëren verdwijnt ook.',
+  noteRepair:
+    'De leesbare delen worden in een nieuw bestand geschreven. Verloren inhoud komt niet terug; open het nieuwe bestand en controleer het.',
+  passwordMismatch: 'De twee wachtwoorden komen niet overeen.',
+  errPasswordEmpty: 'Typ een wachtwoord.',
+  errPasswordSame:
+    'Het wachtwoord om de blokkering op te heffen moet anders zijn dan het wachtwoord om te openen.',
+  errPasswordLong: 'Het wachtwoord is te lang. Kies een korter wachtwoord.',
+  errWrongPassword: 'Het wachtwoord klopt niet.',
+  rejectNotEncrypted: '{name}: deze pdf heeft geen wachtwoord.',
   close: 'Sluiten',
 } satisfies Record<keyof typeof zh, string>

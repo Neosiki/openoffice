@@ -73,7 +73,8 @@ export const ar = {
   errUnsavedTarget: 'هذا الملف مفتوح وفيه تغييرات غير محفوظة. اختر اسمًا آخر.',
   errBusy: 'هناك مهمة أخرى قيد التشغيل. حاول مجددًا بعد انتهائها.',
   errFailed: 'تعذّر إكمال هذه المهمة.',
-  rejectEncrypted: '{name}: لا يمكن استخدام ملفات PDF المحمية بكلمة مرور.',
+  rejectEncrypted:
+    '{name}: ملف PDF هذا محمي بكلمة مرور. أزل كلمة المرور أولًا باستخدام «إزالة كلمة المرور».',
   rejectUnreadable: '{name}: تعذّرت قراءته كملف PDF.',
   rejectTooLarge: '{name}: الملف كبير جدًا.',
   groupConvert: 'تحويل',
@@ -157,5 +158,32 @@ export const ar = {
   cancelRun: 'إيقاف',
   doneCompressed: 'أُنشئ ملف جديد: {name} ({before} → {after})',
   errNotSmaller: 'تعذّر تصغير ملف PDF هذا. استمر في استخدام الأصل.',
+  toolEncrypt: 'إضافة كلمة مرور',
+  descEncrypt: 'اجعل ملف PDF يطلب كلمة مرور عند فتحه',
+  toolDecrypt: 'إزالة كلمة المرور',
+  descDecrypt: 'افتح ملف PDF بكلمة مروره واحفظ نسخة بدونها',
+  toolRepair: 'إصلاح الملف',
+  descRepair: 'أصلح ملف PDF لا يُفتح أو تظهر فيه أخطاء، واحفظه من جديد',
+  hintDecrypt: 'اختر ملف PDF واحدًا محميًا بكلمة مرور.',
+  hintRepair: 'اختر ملف PDF الذي تريد إصلاحه. يمكنك أيضًا اختيار ملفات لا يفتحها المحرر.',
+  optPassword: 'كلمة مرور الفتح',
+  optPasswordConfirm: 'اكتب كلمة المرور مرة أخرى',
+  optRestrict: 'منع الطباعة والنسخ والتعديل',
+  optPermissionPassword: 'كلمة مرور رفع المنع',
+  optCurrentPassword: 'كلمة المرور الحالية',
+  noteEncrypt:
+    'تُستخدم كلمة المرور مع تشفير AES-256. إذا نُسيت فلن يتمكن أحد من فتح الملف. يبقى الملف الأصلي كما هو.',
+  noteRestrict:
+    'المنع قاعدة يُفترض أن تلتزم بها برامج PDF؛ والبرنامج الذي يتجاهلها قد يطبع أو ينسخ رغم ذلك.',
+  noteDecrypt:
+    'لا يمكن إزالة إلا كلمة مرور تعرفها. يُفتح الملف الجديد بلا كلمة مرور، ويزول معه أي منع للطباعة أو النسخ.',
+  noteRepair:
+    'تُكتب الأجزاء المقروءة في ملف جديد. لا يمكن استعادة المحتوى المفقود، لذا افتح الملف الجديد وتحقق منه.',
+  passwordMismatch: 'كلمتا المرور غير متطابقتين.',
+  errPasswordEmpty: 'اكتب كلمة مرور.',
+  errPasswordSame: 'يجب أن تختلف كلمة مرور رفع المنع عن كلمة مرور الفتح.',
+  errPasswordLong: 'كلمة المرور طويلة جدًا. استخدم كلمة أقصر.',
+  errWrongPassword: 'كلمة المرور غير صحيحة.',
+  rejectNotEncrypted: '{name}: ملف PDF هذا ليس له كلمة مرور.',
   close: 'إغلاق',
 } satisfies Record<keyof typeof zh, string>

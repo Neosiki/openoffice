@@ -379,6 +379,10 @@ const PDF_TOOLS_MENU = [
   ['overlay', 'pdfToolsOverlay'],
   ['stripAnnots', 'pdfToolsStripAnnots'],
   ['toText', 'pdfToolsToText'],
+  ['compress', 'pdfToolsCompress'],
+  ['encrypt', 'pdfToolsEncrypt'],
+  ['decrypt', 'pdfToolsDecrypt'],
+  ['repair', 'pdfToolsRepair'],
 ] as const satisfies readonly (readonly [PdfToolsHandoffTool, string])[]
 
 // ── ribbon tabs (docs-style tab strip over a fixed 80px band) ──

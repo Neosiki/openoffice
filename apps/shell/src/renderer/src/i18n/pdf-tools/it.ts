@@ -74,7 +74,8 @@ export const it = {
   errUnsavedTarget: 'Quel file è aperto con modifiche non salvate. Scegli un altro nome.',
   errBusy: 'È in corso un’altra attività. Riprova quando termina.',
   errFailed: 'Impossibile completare questa attività.',
-  rejectEncrypted: '{name}: i PDF protetti da password non possono essere usati.',
+  rejectEncrypted:
+    '{name}: questo PDF è protetto da password. Prima rimuovila con «Rimuovi password».',
   rejectUnreadable: '{name}: impossibile leggerlo come PDF.',
   rejectTooLarge: '{name}: il file è troppo grande.',
   groupConvert: 'Converti',
@@ -160,5 +161,34 @@ export const it = {
   cancelRun: 'Interrompi',
   doneCompressed: 'Nuovo file creato: {name} ({before} → {after})',
   errNotSmaller: 'Non è stato possibile ridurre questo PDF. Continua a usare l’originale.',
+  toolEncrypt: 'Aggiungi password',
+  descEncrypt: 'Il PDF chiederà una password all’apertura',
+  toolDecrypt: 'Rimuovi password',
+  descDecrypt: 'Apri il PDF con la sua password e salvane una copia senza',
+  toolRepair: 'Ripara file',
+  descRepair: 'Sistema un PDF che non si apre o dà errori e salvalo di nuovo',
+  hintDecrypt: 'Scegli un PDF protetto da password.',
+  hintRepair:
+    'Scegli il PDF da riparare. Puoi scegliere anche file che l’editor non riesce ad aprire.',
+  optPassword: 'Password di apertura',
+  optPasswordConfirm: 'Ripeti la password',
+  optRestrict: 'Blocca stampa, copia e modifiche',
+  optPermissionPassword: 'Password per togliere il blocco',
+  optCurrentPassword: 'Password attuale',
+  noteEncrypt:
+    'La password usa AES-256. Se la dimentichi, nessuno potrà aprire il file. Il file originale resta com’è.',
+  noteRestrict:
+    'Il blocco è una regola che i programmi PDF dovrebbero rispettare; un programma che la ignora può comunque stampare o copiare.',
+  noteDecrypt:
+    'Puoi rimuovere solo una password che conosci. Il nuovo file si apre senza password e sparisce anche ogni blocco di stampa o copia.',
+  noteRepair:
+    'Le parti leggibili vengono scritte in un nuovo file. Il contenuto perso non si può recuperare: apri il nuovo file e controllalo.',
+  passwordMismatch: 'Le due password non coincidono.',
+  errPasswordEmpty: 'Scrivi una password.',
+  errPasswordSame:
+    'La password per togliere il blocco deve essere diversa dalla password di apertura.',
+  errPasswordLong: 'La password è troppo lunga. Usane una più corta.',
+  errWrongPassword: 'La password non è corretta.',
+  rejectNotEncrypted: '{name}: questo PDF non ha password.',
   close: 'Chiudi',
 } satisfies Record<keyof typeof zh, string>

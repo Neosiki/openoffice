@@ -73,7 +73,8 @@ export const ms = {
   errUnsavedTarget: 'Fail itu dibuka dengan perubahan yang belum disimpan. Pilih nama lain.',
   errBusy: 'Tugas lain sedang berjalan. Cuba lagi apabila selesai.',
   errFailed: 'Tugas ini tidak dapat diselesaikan.',
-  rejectEncrypted: '{name}: PDF yang dilindungi kata laluan tidak boleh digunakan.',
+  rejectEncrypted:
+    '{name}: PDF ini dilindungi kata laluan. Buang kata laluannya dahulu dengan “Buang kata laluan”.',
   rejectUnreadable: '{name}: tidak dapat dibaca sebagai PDF.',
   rejectTooLarge: '{name}: fail terlalu besar.',
   groupConvert: 'Tukar',
@@ -159,5 +160,34 @@ export const ms = {
   cancelRun: 'Henti',
   doneCompressed: 'Fail baharu dibuat: {name} ({before} → {after})',
   errNotSmaller: 'PDF ini tidak dapat dikecilkan. Teruskan menggunakan fail asal.',
+  toolEncrypt: 'Tambah kata laluan',
+  descEncrypt: 'Jadikan PDF meminta kata laluan apabila dibuka',
+  toolDecrypt: 'Buang kata laluan',
+  descDecrypt: 'Buka PDF dengan kata laluannya dan simpan salinan tanpa kata laluan',
+  toolRepair: 'Baiki fail',
+  descRepair: 'Baiki PDF yang tidak dapat dibuka atau menunjukkan ralat, kemudian simpan semula',
+  hintDecrypt: 'Pilih satu PDF yang dilindungi kata laluan.',
+  hintRepair:
+    'Pilih PDF yang hendak dibaiki. Fail yang tidak dapat dibuka oleh editor juga boleh dipilih.',
+  optPassword: 'Kata laluan untuk membuka',
+  optPasswordConfirm: 'Taip kata laluan sekali lagi',
+  optRestrict: 'Sekat cetakan, salinan dan perubahan',
+  optPermissionPassword: 'Kata laluan untuk menarik balik sekatan',
+  optCurrentPassword: 'Kata laluan semasa',
+  noteEncrypt:
+    'Kata laluan menggunakan AES-256. Jika terlupa, tiada sesiapa dapat membuka fail ini. Fail asal kekal seperti sedia ada.',
+  noteRestrict:
+    'Sekatan ialah peraturan yang sepatutnya dipatuhi oleh program PDF; program yang mengabaikannya masih boleh mencetak atau menyalin.',
+  noteDecrypt:
+    'Hanya kata laluan yang anda tahu boleh dibuang. Fail baharu dibuka tanpa kata laluan, dan sekatan cetakan atau salinan juga hilang.',
+  noteRepair:
+    'Bahagian yang boleh dibaca ditulis ke fail baharu. Kandungan yang hilang tidak dapat dikembalikan, jadi buka fail baharu dan semaknya.',
+  passwordMismatch: 'Kedua-dua kata laluan tidak sepadan.',
+  errPasswordEmpty: 'Taip kata laluan.',
+  errPasswordSame:
+    'Kata laluan untuk menarik balik sekatan mesti berbeza daripada kata laluan untuk membuka.',
+  errPasswordLong: 'Kata laluan terlalu panjang. Gunakan yang lebih pendek.',
+  errWrongPassword: 'Kata laluan tidak betul.',
+  rejectNotEncrypted: '{name}: PDF ini tiada kata laluan.',
   close: 'Tutup',
 } satisfies Record<keyof typeof zh, string>

@@ -68,10 +68,33 @@ describe('paths stay in the main process', () => {
 
   it("shrinks pictures with Chromium's code in the main process, and can be stopped", () => {
     expect(win).toMatch(/recode: recodeWithChromium,\s*signal: stop\.signal,/)
-    expect(win).toMatch(
-      /PDF_TOOLS_CHANNELS\.cancelRun[\s\S]*?fromWindow\(event\)\) runStop\?\.abort\(\)/,
-    )
+    expect(win).toMatch(/PDF_TOOLS_CHANNELS\.cancelRun[\s\S]*?runStop\?\.abort\(\)/)
     expect(src('../src/main/pdf-tools/image-recode.ts')).toMatch(/size\.width !== source\.width/)
+  })
+
+  it('adds and removes passwords in the PDF job process, and checks what comes back', () => {
+    expect(win).toMatch(/deps\.runJob\(owner\.webContents, jobId, jobFor\(tool, path, options\)/)
+    expect(win).toMatch(
+      /tool === 'encrypt' \? !info\.ok && info\.problem === 'encrypted' : info\.ok/,
+    )
+    expect(win).toMatch(/if \(runningJob\) deps\?\.cancelJob\(event\.sender\.id, runningJob\)/)
+    // a password-protected PDF reaches only "remove password"; an unreadable one only "repair"
+    expect(win).toMatch(/info\.problem === 'encrypted' && accept === 'encrypted'/)
+    expect(win).toMatch(/info\.problem === 'unreadable' && accept === 'damaged'/)
+  })
+
+  it('never logs a password, and the window never sends the typed-again one', () => {
+    for (const path of [
+      ...MODULES,
+      '../src/main/pdf-structure/jobs.ts',
+      '../../pdf/src/main/qpdf.ts',
+      '../../pdf/src/main/repair.ts',
+    ]) {
+      expect(src(path), path).not.toMatch(/console\.|log\.(info|warn|error|debug)/)
+    }
+    const page = src('../src/renderer/src/pdf-tools/PdfToolsWindow.tsx')
+    expect(page).toMatch(/const \{ passwordConfirm: _confirm, \.\.\.sent \} = options/)
+    expect(page.match(/type="password"/g)?.length).toBeGreaterThanOrEqual(2)
   })
 
   it('opens a picked PDF without reloading an open tab, and only its own results with a reload', () => {
@@ -97,7 +120,7 @@ describe("the PDF editor ribbon's PDF tools menu", () => {
     }
     expect(win).toMatch(/isPdfToolId\(tool\) \|\| toolInputKind\(tool\) !== 'pdf'\) return false/)
     // the file goes through the same reading as a dialog pick, and the window takes the task once
-    expect(win).toMatch(/inputsFrom\(\[path\], 'pdf'\)/)
+    expect(win).toMatch(/inputsFrom\(\[path\], 'pdf', toolAccepts\(tool\)\)/)
     expect(win).toMatch(/const start = pendingStart\s*pendingStart = null/)
   })
 
@@ -167,6 +190,10 @@ describe('strings', () => {
       ['pdfToolsOverlay', 'toolOverlay'],
       ['pdfToolsStripAnnots', 'toolStripAnnots'],
       ['pdfToolsToText', 'toolToText'],
+      ['pdfToolsCompress', 'toolCompress'],
+      ['pdfToolsEncrypt', 'toolEncrypt'],
+      ['pdfToolsDecrypt', 'toolDecrypt'],
+      ['pdfToolsRepair', 'toolRepair'],
     ]
     for (const lang of LANGS) {
       const ours = (pdfToolsStrings as Record<string, Record<string, string>>)[lang]!

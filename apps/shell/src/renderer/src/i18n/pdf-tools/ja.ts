@@ -75,7 +75,7 @@ export const ja = {
     'そのファイルは未保存の変更があるまま開かれています。別の名前を選んでください。',
   errBusy: '別の作業が実行中です。終わってからもう一度お試しください。',
   errFailed: 'この作業を完了できませんでした。',
-  rejectEncrypted: '{name}: パスワード付きの PDF は使えません。',
+  rejectEncrypted: '{name}: パスワード付きの PDF です。先に「パスワードを外す」で外してください。',
   rejectUnreadable: '{name}: PDF として読み込めません。',
   rejectTooLarge: '{name}: ファイルが大きすぎます。',
   groupConvert: '変換',
@@ -160,5 +160,32 @@ export const ja = {
   doneCompressed: '新しいファイルを作成しました: {name}（{before} → {after}）',
   errNotSmaller:
     'この PDF はこれ以上小さくできませんでした。元のファイルをそのまま使ってください。',
+  toolEncrypt: 'パスワードを付ける',
+  descEncrypt: '開くときにパスワードを求める PDF にします',
+  toolDecrypt: 'パスワードを外す',
+  descDecrypt: 'わかっているパスワードで開き、パスワードなしの PDF として保存します',
+  toolRepair: 'ファイルを修復',
+  descRepair: '開けない、またはエラーが出る PDF を直して保存し直します',
+  hintDecrypt: 'パスワード付きの PDF を 1 つ選んでください。',
+  hintRepair: '修復する PDF を選んでください。エディターで開けないファイルも選べます。',
+  optPassword: '開くときのパスワード',
+  optPasswordConfirm: 'パスワードをもう一度入力',
+  optRestrict: '印刷・コピー・変更を禁止する',
+  optPermissionPassword: '禁止を解除するパスワード',
+  optCurrentPassword: '現在のパスワード',
+  noteEncrypt:
+    'パスワードは AES-256 で設定します。忘れると誰もこのファイルを開けません。元のファイルはそのまま残ります。',
+  noteRestrict:
+    '禁止の設定は PDF ソフトが守る約束なので、守らないソフトでは印刷やコピーができる場合があります。',
+  noteDecrypt:
+    'わかっているパスワードだけを外せます。新しいファイルはパスワードなしで開け、印刷やコピーの禁止もなくなります。',
+  noteRepair:
+    '読み取れる部分を新しいファイルに書き出します。失われた内容は戻せないので、新しいファイルを開いて確認してください。',
+  passwordMismatch: '2 回入力したパスワードが一致しません。',
+  errPasswordEmpty: 'パスワードを入力してください。',
+  errPasswordSame: '禁止を解除するパスワードは、開くときのパスワードと別にしてください。',
+  errPasswordLong: 'パスワードが長すぎます。短くしてください。',
+  errWrongPassword: 'パスワードが違います。',
+  rejectNotEncrypted: '{name}: この PDF にはパスワードがありません。',
   close: '閉じる',
 } satisfies Record<keyof typeof zh, string>

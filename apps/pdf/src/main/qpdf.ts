@@ -10,7 +10,6 @@
  * This WebAssembly build cannot catch C++ exceptions, so qpdf's own recovery
  * of damaged files does not run; repair.ts uses PDFium for that.
  */
-import { readFileSync } from 'node:fs'
 import { randomUUID } from 'node:crypto'
 import createQpdf from '@neslinesli93/qpdf-wasm'
 
@@ -50,7 +49,9 @@ async function run(
   args: (pathOf: { in: string; out: string }) => string[],
 ): Promise<{ code: number; output: Uint8Array | null }> {
   const qpdf = await (createQpdf as unknown as CreateQpdf)({
-    wasmBinary: readFileSync(wasmPath),
+    // this build takes no wasmBinary: it reads the file locateFile names, else
+    // one beside its own script (not there once the job process is bundled)
+    locateFile: () => wasmPath,
     noInitialRun: true,
     // emscripten writes argv[0] through an ASCII-only path
     thisProgram: 'qpdf',

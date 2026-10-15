@@ -74,7 +74,8 @@ export const pt = {
   errUnsavedTarget: 'Esse arquivo está aberto com alterações não salvas. Escolha outro nome.',
   errBusy: 'Outra tarefa está em andamento. Tente novamente quando terminar.',
   errFailed: 'Não foi possível concluir esta tarefa.',
-  rejectEncrypted: '{name}: PDFs protegidos por senha não podem ser usados.',
+  rejectEncrypted:
+    '{name}: este PDF é protegido por senha. Remova a senha primeiro com “Remover senha”.',
   rejectUnreadable: '{name}: não foi possível ler como PDF.',
   rejectTooLarge: '{name}: o arquivo é grande demais.',
   groupConvert: 'Converter',
@@ -160,5 +161,33 @@ export const pt = {
   cancelRun: 'Parar',
   doneCompressed: 'Novo arquivo criado: {name} ({before} → {after})',
   errNotSmaller: 'Não foi possível deixar este PDF menor. Continue usando o original.',
+  toolEncrypt: 'Adicionar senha',
+  descEncrypt: 'O PDF pedirá uma senha ao ser aberto',
+  toolDecrypt: 'Remover senha',
+  descDecrypt: 'Abrir o PDF com a senha e salvar uma cópia sem ela',
+  toolRepair: 'Reparar arquivo',
+  descRepair: 'Consertar um PDF que não abre ou mostra erros e salvá-lo de novo',
+  hintDecrypt: 'Escolha um PDF protegido por senha.',
+  hintRepair:
+    'Escolha o PDF que vai reparar. Arquivos que o editor não abre também podem ser escolhidos.',
+  optPassword: 'Senha para abrir',
+  optPasswordConfirm: 'Digite a senha de novo',
+  optRestrict: 'Bloquear impressão, cópia e alterações',
+  optPermissionPassword: 'Senha para tirar o bloqueio',
+  optCurrentPassword: 'Senha atual',
+  noteEncrypt:
+    'A senha usa AES-256. Se for esquecida, ninguém conseguirá abrir o arquivo. O arquivo original fica como está.',
+  noteRestrict:
+    'O bloqueio é uma regra que os programas de PDF devem seguir; um programa que a ignore ainda pode imprimir ou copiar.',
+  noteDecrypt:
+    'Só é possível remover uma senha que você conhece. O novo arquivo abre sem senha, e qualquer bloqueio de impressão ou cópia também some.',
+  noteRepair:
+    'As partes legíveis são gravadas em um novo arquivo. O conteúdo perdido não pode ser recuperado; abra o novo arquivo e confira.',
+  passwordMismatch: 'As duas senhas não são iguais.',
+  errPasswordEmpty: 'Digite uma senha.',
+  errPasswordSame: 'A senha para tirar o bloqueio deve ser diferente da senha para abrir.',
+  errPasswordLong: 'A senha é longa demais. Use uma mais curta.',
+  errWrongPassword: 'A senha está incorreta.',
+  rejectNotEncrypted: '{name}: este PDF não tem senha.',
   close: 'Fechar',
 } satisfies Record<keyof typeof zh, string>

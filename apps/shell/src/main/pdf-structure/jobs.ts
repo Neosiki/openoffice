@@ -25,6 +25,14 @@ import type { OcrEngine, PdfiumModule } from '../../../../../packages/pdf2docx/s
 import { withPdfDocument } from '../../../../../packages/pdf2docx/src/extract/pdfium'
 import { renderPageByIndexPng } from '../../../../../packages/pdf2docx/src/extract'
 import { findBlankPages } from '../../../../pdf/src/main/blank-pages'
+import { decryptPdfBytes, encryptPdfBytes } from '../../../../pdf/src/main/qpdf'
+import {
+  RepairFailedError,
+  pdfiumOpens,
+  repairPdfBytes,
+  salvagePdfBytes,
+  type RepairPdfium,
+} from '../../../../pdf/src/main/repair'
 import {
   applyStoredAiReadings,
   ASSET_MANIFEST_FILENAME,
@@ -95,6 +103,8 @@ export interface JobDeps {
   hbSubsetWasm?: (() => Promise<HbSubsetWasm>) | null
   /** fonts for the translated PDF (tests); default the fonts installed on this PC */
   writebackFontLocator?: WritebackFontLocator
+  /** qpdf's wasm on disk; absent or null = adding and removing a password is not available */
+  qpdfWasmPath?: string | null
 }
 
 /** the stored translation of a document hash into a language, or null */
@@ -435,6 +445,34 @@ export async function runStructureJob(
       })
       const written = await writeImages(job.outDir, job.baseName, images, onProgress)
       return { docHash, outDir: job.outDir, images: written } satisfies ImagesJobValue
+    }
+    case 'encrypt': {
+      if (!deps.qpdfWasmPath) throw new NotAvailableError('qpdf is not available')
+      const locked = await encryptPdfBytes(deps.qpdfWasmPath, bytes, {
+        userPassword: job.userPassword,
+        ...(job.ownerPassword !== undefined ? { ownerPassword: job.ownerPassword } : {}),
+      })
+      return { bytes: locked }
+    }
+    case 'decrypt': {
+      if (!deps.qpdfWasmPath) throw new NotAvailableError('qpdf is not available')
+      const m = (await deps.pdfium()) as unknown as RepairPdfium
+      const open = await decryptPdfBytes(deps.qpdfWasmPath, bytes, job.password, (b, p) =>
+        pdfiumOpens(m, b, p),
+      )
+      return { bytes: open }
+    }
+    case 'repair': {
+      const m = (await deps.pdfium()) as unknown as RepairPdfium
+      try {
+        return { bytes: repairPdfBytes(m, bytes).bytes }
+      } catch (err) {
+        // PDFium gave up on the file: keep the whole pages pdf-lib can still read
+        if (!(err instanceof RepairFailedError) || err.reason !== 'unreadable') throw err
+        const salvaged = await salvagePdfBytes(bytes)
+        if (!salvaged) throw err
+        return { bytes: salvaged.bytes }
+      }
     }
     case 'blankPages': {
       const m = await deps.pdfium()

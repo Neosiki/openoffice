@@ -1,4 +1,7 @@
 // @vitest-environment node
+import { copyFileSync, mkdtempSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { PDFDocument, PDFName, PDFNumber, StandardFonts } from 'pdf-lib'
 import { decryptPdfBytes, encryptPdfBytes, WrongPasswordError } from '../src/main/qpdf'
@@ -6,6 +9,7 @@ import {
   RepairFailedError,
   pdfiumOpens,
   repairPdfBytes,
+  salvagePdfBytes,
   type RepairPdfium,
 } from '../src/main/repair'
 import { loadPdfium } from '../src/main/text-edit'
@@ -42,6 +46,22 @@ describe('encryptPdfBytes and decryptPdfBytes', () => {
     const open = await decrypt(locked, 'open sesame')
     expect(await encrypted(open)).toBe(false)
     expect((await PDFDocument.load(open)).getPageCount()).toBe(2)
+  })
+
+  it('reads qpdf from the path it is given, not from beside its script', async () => {
+    // the bundled job process has no qpdf.wasm beside it: only the given path counts
+    const dir = mkdtempSync(join(tmpdir(), 'qpdf-path-'))
+    try {
+      const moved = join(dir, 'elsewhere.wasm')
+      copyFileSync(wasm, moved)
+      const locked = await encryptPdfBytes(moved, await textPdf(1), { userPassword: 'a' })
+      expect(await encrypted(locked)).toBe(true)
+      await expect(
+        encryptPdfBytes(join(dir, 'missing.wasm'), await textPdf(1), { userPassword: 'a' }),
+      ).rejects.toThrow()
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
   })
 
   it('takes passwords with spaces, a leading dash and Korean', async () => {
@@ -100,6 +120,18 @@ describe('repairPdfBytes', () => {
       const doc = await PDFDocument.load(fixed.bytes)
       expect(doc.getPageCount(), kind).toBe(3)
     }
+  })
+
+  it('copies out the whole pages of a file cut short, and nothing from one with none', async () => {
+    const good = await textPdf(3)
+    const cut = good.slice(0, Math.floor(good.length * 0.7))
+    const m = (await loadPdfium()) as unknown as RepairPdfium
+    // PDFium gives up on this one
+    expect(() => repairPdfBytes(m, cut)).toThrow(RepairFailedError)
+    const salvaged = await salvagePdfBytes(cut)
+    expect(salvaged?.pages).toBe(2)
+    expect((await PDFDocument.load(salvaged!.bytes)).getPageCount()).toBe(2)
+    expect(await salvagePdfBytes(new TextEncoder().encode('%PDF-1.7\nnothing'))).toBeNull()
   })
 
   it('names a password-protected file and one that is no PDF', async () => {

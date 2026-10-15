@@ -75,7 +75,8 @@ export const fr = {
     'Ce fichier est ouvert avec des modifications non enregistrées. Choisissez un autre nom.',
   errBusy: 'Une autre tâche est en cours. Réessayez quand elle sera terminée.',
   errFailed: 'Impossible de terminer cette tâche.',
-  rejectEncrypted: '{name} : les PDF protégés par mot de passe ne peuvent pas être utilisés.',
+  rejectEncrypted:
+    '{name} : ce PDF est protégé par mot de passe. Retirez d’abord le mot de passe avec « Retirer le mot de passe ».',
   rejectUnreadable: '{name} : lecture impossible en tant que PDF.',
   rejectTooLarge: '{name} : le fichier est trop volumineux.',
   groupConvert: 'Convertir',
@@ -163,5 +164,35 @@ export const fr = {
   cancelRun: 'Arrêter',
   doneCompressed: 'Nouveau fichier créé : {name} ({before} → {after})',
   errNotSmaller: 'Ce PDF n’a pas pu être allégé. Gardez l’original.',
+  toolEncrypt: 'Ajouter un mot de passe',
+  descEncrypt: 'Le PDF demandera un mot de passe à l’ouverture',
+  toolDecrypt: 'Retirer le mot de passe',
+  descDecrypt: 'Ouvrir le PDF avec son mot de passe et en enregistrer une copie sans mot de passe',
+  toolRepair: 'Réparer le fichier',
+  descRepair:
+    'Réparer un PDF qui ne s’ouvre pas ou affiche des erreurs, puis l’enregistrer à nouveau',
+  hintDecrypt: 'Choisissez un PDF protégé par mot de passe.',
+  hintRepair:
+    'Choisissez le PDF à réparer. Les fichiers que l’éditeur ne peut pas ouvrir sont acceptés aussi.',
+  optPassword: 'Mot de passe d’ouverture',
+  optPasswordConfirm: 'Retapez le mot de passe',
+  optRestrict: 'Bloquer l’impression, la copie et les modifications',
+  optPermissionPassword: 'Mot de passe pour lever le blocage',
+  optCurrentPassword: 'Mot de passe actuel',
+  noteEncrypt:
+    'Le mot de passe utilise AES-256. S’il est oublié, personne ne pourra ouvrir le fichier. Le fichier d’origine reste tel quel.',
+  noteRestrict:
+    'Le blocage est une règle que les logiciels PDF sont censés respecter ; un logiciel qui l’ignore peut quand même imprimer ou copier.',
+  noteDecrypt:
+    'Seul un mot de passe que vous connaissez peut être retiré. Le nouveau fichier s’ouvre sans mot de passe, et tout blocage de l’impression ou de la copie disparaît aussi.',
+  noteRepair:
+    'Les parties lisibles sont écrites dans un nouveau fichier. Le contenu perdu ne peut pas être récupéré : ouvrez le nouveau fichier pour le vérifier.',
+  passwordMismatch: 'Les deux mots de passe ne correspondent pas.',
+  errPasswordEmpty: 'Saisissez un mot de passe.',
+  errPasswordSame:
+    'Le mot de passe pour lever le blocage doit être différent du mot de passe d’ouverture.',
+  errPasswordLong: 'Le mot de passe est trop long. Choisissez-en un plus court.',
+  errWrongPassword: 'Le mot de passe est incorrect.',
+  rejectNotEncrypted: '{name} : ce PDF n’a pas de mot de passe.',
   close: 'Fermer',
 } satisfies Record<keyof typeof zh, string>

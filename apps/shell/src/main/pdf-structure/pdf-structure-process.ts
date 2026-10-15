@@ -85,6 +85,7 @@ if (port) {
       hbSubsetWasm: run.setup.hbSubsetWasmPath
         ? loadHbSubsetWasm(run.setup.hbSubsetWasmPath)
         : null,
+      qpdfWasmPath: run.setup.qpdfWasmPath ?? null,
     }
     runStructureJob(run.job, deps, (done, total) =>
       port.postMessage({ type: 'progress', done, total }),

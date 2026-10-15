@@ -74,7 +74,8 @@ export const pl = {
   errUnsavedTarget: 'Ten plik jest otwarty z niezapisanymi zmianami. Wybierz inną nazwę.',
   errBusy: 'Trwa inne zadanie. Spróbuj ponownie, gdy się zakończy.',
   errFailed: 'Nie udało się wykonać tego zadania.',
-  rejectEncrypted: '{name}: nie można użyć plików PDF chronionych hasłem.',
+  rejectEncrypted:
+    '{name}: ten PDF jest chroniony hasłem. Najpierw usuń hasło narzędziem „Usuń hasło”.',
   rejectUnreadable: '{name}: nie można odczytać jako PDF.',
   rejectTooLarge: '{name}: plik jest za duży.',
   groupConvert: 'Konwertuj',
@@ -159,5 +160,32 @@ export const pl = {
   cancelRun: 'Zatrzymaj',
   doneCompressed: 'Utworzono nowy plik: {name} ({before} → {after})',
   errNotSmaller: 'Nie udało się zmniejszyć tego PDF. Używaj dalej oryginału.',
+  toolEncrypt: 'Dodaj hasło',
+  descEncrypt: 'PDF będzie prosić o hasło przy otwieraniu',
+  toolDecrypt: 'Usuń hasło',
+  descDecrypt: 'Otwórz PDF jego hasłem i zapisz kopię bez hasła',
+  toolRepair: 'Napraw plik',
+  descRepair: 'Napraw PDF, który się nie otwiera lub pokazuje błędy, i zapisz go ponownie',
+  hintDecrypt: 'Wybierz jeden PDF chroniony hasłem.',
+  hintRepair: 'Wybierz PDF do naprawy. Możesz wybrać także pliki, których edytor nie otwiera.',
+  optPassword: 'Hasło do otwarcia',
+  optPasswordConfirm: 'Wpisz hasło ponownie',
+  optRestrict: 'Zablokuj drukowanie, kopiowanie i zmiany',
+  optPermissionPassword: 'Hasło do zdjęcia blokady',
+  optCurrentPassword: 'Obecne hasło',
+  noteEncrypt:
+    'Hasło używa AES-256. Jeśli zostanie zapomniane, nikt nie otworzy pliku. Oryginalny plik pozostaje bez zmian.',
+  noteRestrict:
+    'Blokada to reguła, której programy PDF powinny przestrzegać; program, który ją pomija, nadal może drukować lub kopiować.',
+  noteDecrypt:
+    'Można usunąć tylko hasło, które znasz. Nowy plik otwiera się bez hasła, znika też blokada drukowania i kopiowania.',
+  noteRepair:
+    'Czytelne części zostaną zapisane w nowym pliku. Utraconej treści nie da się odzyskać, więc otwórz nowy plik i go sprawdź.',
+  passwordMismatch: 'Wpisane hasła się różnią.',
+  errPasswordEmpty: 'Wpisz hasło.',
+  errPasswordSame: 'Hasło do zdjęcia blokady musi być inne niż hasło do otwarcia.',
+  errPasswordLong: 'Hasło jest za długie. Użyj krótszego.',
+  errWrongPassword: 'Hasło jest nieprawidłowe.',
+  rejectNotEncrypted: '{name}: ten PDF nie ma hasła.',
   close: 'Zamknij',
 } satisfies Record<keyof typeof zh, string>

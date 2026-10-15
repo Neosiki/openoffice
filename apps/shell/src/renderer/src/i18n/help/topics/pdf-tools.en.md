@@ -17,6 +17,7 @@ A window for everyday PDF tasks, starting from the task. The result is always sa
 | Decorate          | Add a background                                                                          |
 | Clean up          | Remove annotations                                                                        |
 | Convert           | Images to PDF, Save as text                                                               |
+| Size and security | Make smaller, Add password, Remove password, Repair file                                  |
 | In the PDF editor | Watermark & header/footer, Crop pages, Export images, PDF Converter, Edit, sign, redact   |
 
 The cards in **In the PDF editor** open the chosen PDF in an editor tab. Pick the command there in the ribbon.
@@ -24,7 +25,8 @@ The cards in **In the PDF editor** open the chosen PDF in an editor tab. Pick th
 ## Good to know
 
 - You cannot save over a source file, or over a file that is open with unsaved changes.
-- Password-protected PDFs cannot be used yet.
+- A password-protected PDF works in the other tools only after **Remove password**. A file whose password you do not know cannot be opened.
+- **Repair file** brings back only the parts that can still be read. Open the new file and check that no page is missing.
 - **Remove blank pages** only shows candidates. Only the pages you pick are removed, and a page with even one character is never a candidate.
 - **Remove annotations** keeps form fields and removes links only when you tick them. What the removed annotations said does not stay in the new file.
 - **Save as text** reads the text layer only. Pages whose text is a picture, such as scanned pages, come out empty.
@@ -40,3 +42,5 @@ The cards in **In the PDF editor** open the chosen PDF in an editor tab. Pick th
 | Tidying up comments before sending a reviewed document                          | Remove annotations                       |
 | Handing in several photos as one PDF                                            | Images to PDF                            |
 | Reusing the text of a PDF in another document                                   | Save as text                             |
+| A PDF is too large to attach to an email                                        | Make smaller                             |
+| A PDF whose download stopped partway will not open                              | Repair file                              |

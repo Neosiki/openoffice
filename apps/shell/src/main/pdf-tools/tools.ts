@@ -26,6 +26,7 @@ import {
 } from '../../../../pdf/src/main/compress'
 import { readPdfText, type PdfPageText } from '../../../../pdf/src/main/read-text'
 import { parsePageRange } from '../../../../pdf/src/renderer/convert/page-range'
+import type { StructureJob } from '../pdf-structure/protocol'
 import {
   PDF_TOOL_ANNOT_KINDS,
   PDF_TOOL_IDS,
@@ -33,6 +34,7 @@ import {
   PDF_TOOL_PAPERS,
   PDF_TOOL_SHEET_PAGES,
   type PdfInputProblem,
+  type PdfToolAccept,
   type PdfToolAnnotKind,
   type PdfToolId,
   type PdfToolInputKind,
@@ -70,6 +72,19 @@ export function toolMinInputs(tool: PdfToolId): number {
   return tool === 'merge' ? 2 : 1
 }
 
+/** Which PDFs a tool takes */
+export function toolAccepts(tool: PdfToolId): PdfToolAccept {
+  return tool === 'decrypt' ? 'encrypted' : tool === 'repair' ? 'damaged' : 'pdf'
+}
+
+/** Tools that run in the PDF job process (qpdf, PDFium repair) rather than here */
+export function toolRunsAsJob(tool: PdfToolId): tool is 'encrypt' | 'decrypt' | 'repair' {
+  return tool === 'encrypt' || tool === 'decrypt' || tool === 'repair'
+}
+
+/** the longest password AES-256 PDF encryption keeps (127 bytes of UTF-8) */
+export const MAX_PASSWORD_BYTES = 127
+
 /** imagesToPdf takes pictures; every other tool takes PDFs */
 export function toolInputKind(tool: PdfToolId): PdfToolInputKind {
   return tool === 'imagesToPdf' ? 'image' : 'pdf'
@@ -97,6 +112,16 @@ export function inspectImage(bytes: Uint8Array): InspectResult {
   return readImageInfo(bytes) ? { ok: true, pages: 1 } : { ok: false, problem: 'not-image' }
 }
 
+/** Page count of a password-protected PDF (the page tree itself is not encrypted); 0 if unknown */
+export async function encryptedPageCount(bytes: Uint8Array): Promise<number> {
+  try {
+    const doc = await PDFDocument.load(bytes, { updateMetadata: false, ignoreEncryption: true })
+    return doc.getPageCount()
+  } catch {
+    return 0
+  }
+}
+
 /** Page count of a PDF, or why the tools cannot use it */
 export async function inspectPdf(bytes: Uint8Array): Promise<InspectResult> {
   try {
@@ -113,7 +138,17 @@ export async function inspectPdf(bytes: Uint8Array): Promise<InspectResult> {
 
 export type CheckedOptions =
   | { ok: true; options: PdfToolOptions }
-  | { ok: false; error: 'range' | 'no-kinds' | 'none-chosen' | 'all-pages' }
+  | {
+      ok: false
+      error:
+        | 'range'
+        | 'no-kinds'
+        | 'none-chosen'
+        | 'all-pages'
+        | 'password-empty'
+        | 'password-same'
+        | 'password-long'
+    }
 
 /** Annotation kinds stripAnnots removes when the window sends none (links stay) */
 export const DEFAULT_ANNOT_KINDS: PdfToolAnnotKind[] = PDF_TOOL_ANNOT_KINDS.filter(
@@ -171,6 +206,25 @@ export function checkOptions(
       }
     case 'splitPages':
       return { ok: true, options: { perPage: o.perPage === 4 || o.perPage === 9 ? o.perPage : 2 } }
+    case 'encrypt': {
+      // passwords are taken as typed: no trimming
+      const password = typeof o.password === 'string' ? o.password : ''
+      const restrict = o.restrict === true
+      const permission = typeof o.permissionPassword === 'string' ? o.permissionPassword : ''
+      if (!password || (restrict && !permission)) return { ok: false, error: 'password-empty' }
+      const tooLong = (text: string) => new TextEncoder().encode(text).length > MAX_PASSWORD_BYTES
+      if (tooLong(password) || tooLong(permission)) return { ok: false, error: 'password-long' }
+      if (restrict && permission === password) return { ok: false, error: 'password-same' }
+      return {
+        ok: true,
+        options: restrict ? { password, restrict, permissionPassword: permission } : { password },
+      }
+    }
+    case 'decrypt': {
+      const password = typeof o.password === 'string' ? o.password : ''
+      if (!password) return { ok: false, error: 'password-empty' }
+      return { ok: true, options: { password } }
+    }
     case 'compress':
       return {
         ok: true,
@@ -243,7 +297,6 @@ export function checkOptions(
   }
 }
 
-/** Run `tool` on `inputs` (already checked); one file, or one per part for split */
 /** What a long tool needs from the window: Chromium's picture code, progress, a stop */
 export interface RunDeps {
   recode?: ImageRecoder
@@ -251,6 +304,7 @@ export interface RunDeps {
   signal?: AbortSignal
 }
 
+/** Run `tool` on `inputs` (already checked); one file, or one per part for split */
 export async function runPdfTool(
   tool: PdfToolId,
   inputs: Uint8Array[],
@@ -330,6 +384,11 @@ export async function runPdfTool(
         }),
       ]
     }
+    case 'encrypt':
+    case 'decrypt':
+    case 'repair':
+      // the window runs these in the PDF job process (jobFor)
+      throw new Error(`${tool} runs as a job`)
     case 'compress': {
       if (!deps.recode) throw new Error('no picture code')
       const made = await compressPdfBytes(first, options.compressLevel ?? 'medium', deps.recode, {
@@ -396,6 +455,9 @@ export function outputNames(
     stripAnnots: 'clean',
     blankPages: 'no-blank',
     compress: 'smaller',
+    encrypt: 'locked',
+    decrypt: 'unlocked',
+    repair: 'repaired',
     extract: 'pages',
     reverse: 'reversed',
     nup: `${options.perSheet ?? 2}up`,
@@ -438,4 +500,29 @@ export function foundBlankPagesOf(value: unknown): FoundBlankPages | null {
     candidates.push({ page: c.page, reason: c.reason, thumb })
   }
   return { pageCount: v.pageCount, candidates }
+}
+
+/** The PDF job process's work for a tool that runs there, on the file at `path` */
+export function jobFor(
+  tool: 'encrypt' | 'decrypt' | 'repair',
+  path: string,
+  options: PdfToolOptions,
+): StructureJob {
+  const source = { pdfPath: path }
+  if (tool === 'repair') return { op: 'repair', source }
+  if (tool === 'decrypt') return { op: 'decrypt', source, password: options.password ?? '' }
+  return {
+    op: 'encrypt',
+    source,
+    userPassword: options.password ?? '',
+    ...(options.restrict && options.permissionPassword
+      ? { ownerPassword: options.permissionPassword }
+      : {}),
+  }
+}
+
+/** The bytes a tool job answered with; null when it is not that shape */
+export function jobBytesOf(value: unknown): Uint8Array | null {
+  const bytes = (value as { bytes?: unknown } | null)?.bytes
+  return bytes instanceof Uint8Array && bytes.length > 0 ? bytes : null
 }

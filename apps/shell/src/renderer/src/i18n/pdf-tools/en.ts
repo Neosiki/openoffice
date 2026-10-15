@@ -73,7 +73,8 @@ export const en = {
   errUnsavedTarget: 'That file is open with unsaved changes. Choose another name.',
   errBusy: 'Another task is running. Try again when it ends.',
   errFailed: 'Could not finish this task.',
-  rejectEncrypted: '{name}: password-protected PDFs cannot be used.',
+  rejectEncrypted:
+    '{name}: this PDF is password-protected. Remove its password first with “Remove password”.',
   rejectUnreadable: '{name}: could not be read as a PDF.',
   rejectTooLarge: '{name}: the file is too large.',
   groupConvert: 'Convert',
@@ -158,5 +159,32 @@ export const en = {
   cancelRun: 'Stop',
   doneCompressed: 'Made a new file: {name} ({before} → {after})',
   errNotSmaller: 'This PDF could not be made smaller. Keep using the original.',
+  toolEncrypt: 'Add password',
+  descEncrypt: 'Make the PDF ask for a password when it is opened',
+  toolDecrypt: 'Remove password',
+  descDecrypt: 'Open the PDF with its password and save a copy without one',
+  toolRepair: 'Repair file',
+  descRepair: 'Fix a PDF that will not open or shows errors, and save it again',
+  hintDecrypt: 'Choose one password-protected PDF.',
+  hintRepair: 'Choose the PDF to repair. Files the editor cannot open can be chosen too.',
+  optPassword: 'Password to open',
+  optPasswordConfirm: 'Type the password again',
+  optRestrict: 'Block printing, copying and changes',
+  optPermissionPassword: 'Password to lift the block',
+  optCurrentPassword: 'Current password',
+  noteEncrypt:
+    'The password uses AES-256. If it is forgotten, nobody can open the file. The original file stays as it is.',
+  noteRestrict:
+    'The block is a rule PDF programs are expected to follow; a program that ignores it can still print or copy.',
+  noteDecrypt:
+    'Only a password you know can be removed. The new file opens without a password, and any block on printing or copying is gone too.',
+  noteRepair:
+    'The readable parts are written into a new file. Lost content cannot be brought back, so open the new file and check it.',
+  passwordMismatch: 'The two passwords do not match.',
+  errPasswordEmpty: 'Type a password.',
+  errPasswordSame: 'The password to lift the block must differ from the password to open.',
+  errPasswordLong: 'The password is too long. Use a shorter one.',
+  errWrongPassword: 'The password is not correct.',
+  rejectNotEncrypted: '{name}: this PDF has no password.',
   close: 'Close',
 } satisfies Record<keyof typeof zh, string>

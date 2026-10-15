@@ -73,7 +73,8 @@ export const cs = {
   errUnsavedTarget: 'Tento soubor je otevřený s neuloženými změnami. Zvolte jiný název.',
   errBusy: 'Probíhá jiný úkol. Zkuste to znovu, až skončí.',
   errFailed: 'Tento úkol se nepodařilo dokončit.',
-  rejectEncrypted: '{name}: PDF chráněné heslem nelze použít.',
+  rejectEncrypted:
+    '{name}: toto PDF je chráněné heslem. Nejprve heslo odeberte nástrojem „Odebrat heslo“.',
   rejectUnreadable: '{name}: nelze načíst jako PDF.',
   rejectTooLarge: '{name}: soubor je příliš velký.',
   groupConvert: 'Převést',
@@ -157,5 +158,32 @@ export const cs = {
   cancelRun: 'Zastavit',
   doneCompressed: 'Vytvořen nový soubor: {name} ({before} → {after})',
   errNotSmaller: 'Toto PDF se nepodařilo zmenšit. Používejte dál originál.',
+  toolEncrypt: 'Přidat heslo',
+  descEncrypt: 'PDF bude při otevření žádat heslo',
+  toolDecrypt: 'Odebrat heslo',
+  descDecrypt: 'Otevřít PDF jeho heslem a uložit kopii bez hesla',
+  toolRepair: 'Opravit soubor',
+  descRepair: 'Opravit PDF, které nejde otevřít nebo hlásí chyby, a znovu ho uložit',
+  hintDecrypt: 'Vyberte jedno PDF chráněné heslem.',
+  hintRepair: 'Vyberte PDF k opravě. Lze vybrat i soubory, které editor neotevře.',
+  optPassword: 'Heslo pro otevření',
+  optPasswordConfirm: 'Zadejte heslo znovu',
+  optRestrict: 'Zakázat tisk, kopírování a změny',
+  optPermissionPassword: 'Heslo ke zrušení zákazu',
+  optCurrentPassword: 'Současné heslo',
+  noteEncrypt:
+    'Heslo používá AES-256. Pokud ho zapomenete, soubor nikdo neotevře. Původní soubor zůstane beze změny.',
+  noteRestrict:
+    'Zákaz je pravidlo, které mají programy pro PDF dodržovat; program, který ho nerespektuje, může přesto tisknout nebo kopírovat.',
+  noteDecrypt:
+    'Odebrat lze jen heslo, které znáte. Nový soubor se otevře bez hesla a zmizí i zákaz tisku nebo kopírování.',
+  noteRepair:
+    'Čitelné části se zapíší do nového souboru. Ztracený obsah obnovit nelze, proto nový soubor otevřete a zkontrolujte.',
+  passwordMismatch: 'Zadaná hesla se neshodují.',
+  errPasswordEmpty: 'Zadejte heslo.',
+  errPasswordSame: 'Heslo ke zrušení zákazu se musí lišit od hesla pro otevření.',
+  errPasswordLong: 'Heslo je příliš dlouhé. Použijte kratší.',
+  errWrongPassword: 'Heslo není správné.',
+  rejectNotEncrypted: '{name}: toto PDF nemá heslo.',
   close: 'Zavřít',
 } satisfies Record<keyof typeof zh, string>

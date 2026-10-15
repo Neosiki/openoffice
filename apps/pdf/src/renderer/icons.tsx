@@ -438,6 +438,34 @@ export const IconCompress = () => (
     <path d="M3.5 12 H6.2 M5 10.6 L6.4 12 L5 13.4 M20.5 12 H17.8 M19 10.6 L17.6 12 L19 13.4" />
   </Icon>
 )
+/** Add password: a page beside a closed padlock */
+export const IconLockPdf = () => (
+  <Icon>
+    <rect x="4.5" y="4.5" width="7" height="15" rx="1" />
+    <path d="M6.5 9 H9.5 M6.5 11.5 H9.5 M6.5 14 H8.5" />
+    <rect x="13" y="13" width="7" height="6" rx="1" />
+    <path d="M14.75 13 V11 A1.75 1.75 0 0 1 18.25 11 V13 M16.5 15.2 V16.8" />
+  </Icon>
+)
+/** Remove password: the same padlock, its shackle lifted open */
+export const IconUnlockPdf = () => (
+  <Icon>
+    <rect x="4.5" y="4.5" width="7" height="15" rx="1" />
+    <path d="M6.5 9 H9.5 M6.5 11.5 H9.5 M6.5 14 H8.5" />
+    <rect x="13" y="13" width="7" height="6" rx="1" />
+    <path d="M14.75 13 V8.6 A1.75 1.75 0 0 1 18.25 8.6 V9.6 M16.5 15.2 V16.8" />
+  </Icon>
+)
+/** Repair file: a page with a plaster across it */
+export const IconRepairPdf = () => (
+  <Icon>
+    <rect x="6.5" y="4.5" width="11" height="15" rx="1" />
+    <g transform="rotate(-40 12 12.5)">
+      <rect x="7.75" y="10.7" width="8.5" height="3.6" rx="1.8" />
+      <path d="M10.6 10.7 V14.3 M13.4 10.7 V14.3" />
+    </g>
+  </Icon>
+)
 /** Save as text: a page of lines */
 export const IconToText = () => (
   <Icon>

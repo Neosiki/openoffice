@@ -6,6 +6,7 @@ import {
   PDF_TOOL_PAPERS,
   PDF_TOOL_SHEET_PAGES,
   type PdfEditorToolId,
+  type PdfToolAccept,
   type PdfInputProblem,
   type PdfToolAnnotKind,
   type PdfToolError,
@@ -39,6 +40,9 @@ import {
   IconStripAnnots,
   IconBlankPages,
   IconCompress,
+  IconLockPdf,
+  IconUnlockPdf,
+  IconRepairPdf,
   IconWatermark,
 } from '../../../../../pdf/src/renderer/icons'
 
@@ -52,13 +56,20 @@ const GROUPS: { label: PdfToolsStringKey; tools: PdfToolId[] }[] = [
   { label: 'groupDecorate', tools: ['overlay'] },
   { label: 'groupClean', tools: ['stripAnnots'] },
   { label: 'groupConvert', tools: ['imagesToPdf', 'toText'] },
-  { label: 'groupSizeSecurity', tools: ['compress'] },
+  { label: 'groupSizeSecurity', tools: ['compress', 'encrypt', 'decrypt', 'repair'] },
 ]
 
 /** Tools that take several files; imagesToPdf takes pictures */
 const takesMany = (tool: PdfToolId) =>
   tool === 'merge' || tool === 'imagesToPdf' || tool === 'duplex'
 const takesImages = (tool: PdfToolId) => tool === 'imagesToPdf'
+/** Which PDFs a tool takes (tools.ts toolAccepts) */
+const accepts = (tool: PdfToolId): PdfToolAccept =>
+  tool === 'decrypt' ? 'encrypted' : tool === 'repair' ? 'damaged' : 'pdf'
+/** Tools that run in the PDF job process: no page progress, but they can be stopped */
+const runsAsJob = (tool: PdfToolId) => tool === 'encrypt' || tool === 'decrypt' || tool === 'repair'
+/** the longest password AES-256 PDF encryption keeps (tools.ts MAX_PASSWORD_BYTES) */
+const passwordTooLong = (text: string) => new TextEncoder().encode(text).length > 127
 
 const MARGIN_TEXT: Record<PdfToolMargin, PdfToolsStringKey> = {
   none: 'optMarginNone',
@@ -84,6 +95,9 @@ const TOOL_TEXT: Record<PdfToolId | PdfEditorToolId, [PdfToolsStringKey, PdfTool
   stripAnnots: ['toolStripAnnots', 'descStripAnnots'],
   blankPages: ['toolBlankPages', 'descBlankPages'],
   compress: ['toolCompress', 'descCompress'],
+  encrypt: ['toolEncrypt', 'descEncrypt'],
+  decrypt: ['toolDecrypt', 'descDecrypt'],
+  repair: ['toolRepair', 'descRepair'],
   stamps: ['toolStamps', 'descStamps'],
   crop: ['toolCrop', 'descCrop'],
   exportImages: ['toolExportImages', 'descExportImages'],
@@ -108,6 +122,10 @@ const ERROR_TEXT: Record<PdfToolError, PdfToolsStringKey> = {
   'not-found': 'errNotFound',
   'none-chosen': 'errNoneChosen',
   'not-smaller': 'errNotSmaller',
+  'password-empty': 'errPasswordEmpty',
+  'password-same': 'errPasswordSame',
+  'password-long': 'errPasswordLong',
+  'wrong-password': 'errWrongPassword',
   failed: 'errFailed',
 }
 
@@ -116,6 +134,7 @@ const REJECT_TEXT: Record<PdfInputProblem, PdfToolsStringKey> = {
   unreadable: 'rejectUnreadable',
   'too-large': 'rejectTooLarge',
   'not-image': 'rejectNotImage',
+  'not-encrypted': 'rejectNotEncrypted',
 }
 
 const PER_SHEET = [2, 4, 6, 8, 9, 16]
@@ -188,6 +207,9 @@ const TOOL_ICON: Record<PdfToolId | PdfEditorToolId, () => ReactElement> = {
   stripAnnots: IconStripAnnots,
   blankPages: IconBlankPages,
   compress: IconCompress,
+  encrypt: IconLockPdf,
+  decrypt: IconUnlockPdf,
+  repair: IconRepairPdf,
   stamps: IconWatermark,
   crop: IconCropPages,
   exportImages: IconExportImg,
@@ -232,7 +254,7 @@ export function PdfToolsWindow({ lang }: { lang: Lang }) {
 
   const pick = async (tool: PdfToolId) => {
     const many = takesMany(tool)
-    const result = await api.pickInputs(many, takesImages(tool) ? 'image' : 'pdf')
+    const result = await api.pickInputs(many, takesImages(tool) ? 'image' : 'pdf', accepts(tool))
     setRejected(result.rejected.map((r) => t(REJECT_TEXT[r.problem], { name: r.name })))
     if (result.inputs.length === 0) return
     setOutcome(null)
@@ -291,17 +313,27 @@ export function PdfToolsWindow({ lang }: { lang: Lang }) {
     setBusy(true)
     setOutcome(null)
     const stop = api.onProgress((done, total) => setProgress({ done, total }))
+    // the typed-again password is only checked here; it is never sent
+    const { passwordConfirm: _confirm, ...sent } = options
     try {
       const result = await api.run({
         tool,
         inputIds: inputs.map((i) => i.id),
-        options:
-          tool === 'blankPages' ? { ...options, removePages: blank.chosen.join(',') } : options,
+        options: tool === 'blankPages' ? { ...sent, removePages: blank.chosen.join(',') } : sent,
         ...(tool === 'overlay' && background ? { backgroundId: background.id } : {}),
       })
-      if (result.ok) setOutcome({ kind: 'done', outputs: result.outputs })
-      else if ('error' in result)
+      if (result.ok) {
+        setOutcome({ kind: 'done', outputs: result.outputs })
+        // a password the file now has, or had, is not kept on screen once it is used
+        setOptions((prev) => ({
+          ...prev,
+          password: '',
+          passwordConfirm: '',
+          permissionPassword: '',
+        }))
+      } else if ('error' in result) {
         setOutcome({ kind: 'error', message: t(ERROR_TEXT[result.error]) })
+      }
     } finally {
       stop()
       setProgress(null)
@@ -484,7 +516,9 @@ function ToolPanel(p: ToolPanelProps) {
         : inputs.length === 1 &&
           (tool !== 'overlay' || !!p.background) &&
           (tool !== 'stripAnnots' || (options.annotKinds ?? []).length > 0) &&
-          (tool !== 'blankPages' || p.blank.chosen.length > 0)
+          (tool !== 'blankPages' || p.blank.chosen.length > 0) &&
+          (tool !== 'encrypt' || encryptReady(options)) &&
+          (tool !== 'decrypt' || !!options.password)
   const pickLabel: PdfToolsStringKey = images
     ? inputs.length === 0
       ? 'pickImages'
@@ -500,12 +534,17 @@ function ToolPanel(p: ToolPanelProps) {
       ? 'hintDuplex'
       : tool === 'overlay'
         ? 'hintOverlay'
-        : many
-          ? 'hintMerge'
-          : 'hintOne'
+        : tool === 'decrypt'
+          ? 'hintDecrypt'
+          : tool === 'repair'
+            ? 'hintRepair'
+            : many
+              ? 'hintMerge'
+              : 'hintOne'
   const done = p.outcome?.kind === 'done' ? p.outcome.outputs : null
+  // a damaged file's pages are not known until it is repaired
   const meta = (input: PdfToolInput) =>
-    input.kind === 'image'
+    input.kind === 'image' || input.pages === 0
       ? formatBytes(input.size, p.lang)
       : `${t(input.pages === 1 ? 'pageCountOne' : 'pageCount', { n: input.pages })} · ${formatBytes(input.size, p.lang)}`
   const firstOutput = done?.[0]
@@ -634,11 +673,13 @@ function ToolPanel(p: ToolPanelProps) {
           {p.busy ? t('running') : t('run')}
         </button>
       </div>
-      {p.busy && p.progress && (
+      {p.busy && (p.progress || runsAsJob(tool)) && (
         <div className="pt-actions" role="status">
-          <span className="pt-hint">
-            {t('workingProgress', { done: p.progress.done, total: p.progress.total })}
-          </span>
+          {p.progress && (
+            <span className="pt-hint">
+              {t('workingProgress', { done: p.progress.done, total: p.progress.total })}
+            </span>
+          )}
           <button type="button" className="pt-btn" onClick={p.onCancelRun}>
             {t('cancelRun')}
           </button>
@@ -980,9 +1021,97 @@ function Options({ tool, t, options, pages, backgroundPages, onChange }: Options
       )
     case 'toText':
       return <p className="pt-hint">{t('noteToText')}</p>
+    case 'encrypt':
+      return <EncryptOptions t={t} options={options} onChange={onChange} />
+    case 'decrypt':
+      return (
+        <div className="pt-fields">
+          <label className="pt-field">
+            <span className="pt-field-label">{t('optCurrentPassword')}</span>
+            <input
+              type="password"
+              className="pt-input"
+              autoComplete="off"
+              spellCheck={false}
+              value={options.password ?? ''}
+              onChange={(e) => onChange({ password: e.target.value })}
+            />
+          </label>
+          <p className="pt-hint">{t('noteDecrypt')}</p>
+        </div>
+      )
+    case 'repair':
+      return <p className="pt-hint">{t('noteRepair')}</p>
     default:
       return null
   }
+}
+
+/** encrypt: both passwords typed, the same twice, and the permission one different */
+function encryptReady(o: PdfToolOptions): boolean {
+  const password = o.password ?? ''
+  if (!password || password !== o.passwordConfirm || passwordTooLong(password)) return false
+  if (!o.restrict) return true
+  const permission = o.permissionPassword ?? ''
+  return !!permission && permission !== password && !passwordTooLong(permission)
+}
+
+function EncryptOptions({
+  t,
+  options,
+  onChange,
+}: Pick<OptionsProps, 't' | 'options' | 'onChange'>) {
+  const password = options.password ?? ''
+  const confirm = options.passwordConfirm ?? ''
+  const permission = options.restrict ? (options.permissionPassword ?? '') : ''
+  // what is wrong is said as the user types, so the run button is never greyed out unexplained
+  const problem: PdfToolsStringKey | null =
+    passwordTooLong(password) || passwordTooLong(permission)
+      ? 'errPasswordLong'
+      : confirm && confirm !== password
+        ? 'passwordMismatch'
+        : permission && permission === password
+          ? 'errPasswordSame'
+          : null
+  const field = (label: PdfToolsStringKey, value: string, patch: (v: string) => PdfToolOptions) => (
+    <label className="pt-field">
+      <span className="pt-field-label">{t(label)}</span>
+      <input
+        type="password"
+        className="pt-input"
+        autoComplete="new-password"
+        spellCheck={false}
+        value={value}
+        onChange={(e) => onChange(patch(e.target.value))}
+      />
+    </label>
+  )
+  return (
+    <div className="pt-fields">
+      {field('optPassword', password, (v) => ({ password: v }))}
+      {field('optPasswordConfirm', confirm, (v) => ({ passwordConfirm: v }))}
+      <label className="pt-check">
+        <input
+          type="checkbox"
+          checked={options.restrict === true}
+          onChange={(e) => onChange({ restrict: e.target.checked })}
+        />
+        {t('optRestrict')}
+      </label>
+      {options.restrict && (
+        <>
+          {field('optPermissionPassword', permission, (v) => ({ permissionPassword: v }))}
+          <p className="pt-hint">{t('noteRestrict')}</p>
+        </>
+      )}
+      {problem && (
+        <p className="pt-note pt-note-error" role="alert">
+          {t(problem)}
+        </p>
+      )}
+      <p className="pt-hint">{t('noteEncrypt')}</p>
+    </div>
+  )
 }
 
 interface BlankPagesReviewProps {
