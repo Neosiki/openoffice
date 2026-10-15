@@ -741,6 +741,8 @@ export interface OoxmlToOdfOptions {
  */
 export class OoxmlToOdfContext {
   readonly patches: TextPatch[] = []
+  /** bridge elements some edited element continues (filled by `alignItems`); the rest were deleted */
+  readonly matched = new Set<number>()
   readonly warnings: string[] = []
   private readonly parts: PartCache
   private readonly usedNames = new Set<string>()

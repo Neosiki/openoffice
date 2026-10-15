@@ -9,6 +9,7 @@ import {
   type AlignedItem,
   type BlockConverter,
   type BlockOoxml,
+  type BridgeElement,
   type BridgeParagraph,
   type ConversionRegistry,
   type EditedItem,
@@ -19,6 +20,7 @@ import {
 } from '../core/convert'
 import { blockSource, convertNode, paragraphBlockOf } from '../core/flow'
 import { listInstance, listStyleFromNumbering } from './lists'
+import { type Placement, keptCharacters, placeMarkers } from './markers'
 import { editedParagraphFromBlock, paragraphToOdf } from './paragraph-odf'
 import { paragraphToOoxml } from './paragraph-ooxml'
 
@@ -208,6 +210,7 @@ export function writeTextItems(
   // the original paragraph directly before (through consecutive new paragraphs)
   let follows: BridgeParagraph | null = neighbour
   const xml = rctx.part('content.xml').xml
+  const placements = sequencePlacements(rctx, items)
   items.forEach((a, index) => {
     const block = paragraphBlockOf(a.item)
     const origin =
@@ -243,6 +246,7 @@ export function writeTextItems(
             part: 'content.xml',
             neighbour: origin ? null : neighbour,
             follows: origin ? null : follows,
+            placements: placements.get(index),
           })
     if (origin) follows = origin
     let list: { numId: string; level: number; continuation: boolean; header: boolean } | null = null
@@ -275,6 +279,55 @@ export function writeTextItems(
   return out
 }
 
+/**
+ * Marker placements for changed original paragraphs that were split (followed
+ * by new paragraphs) or joined (followed in the original by deleted paragraphs
+ * whose text survives in them), keyed by item index.
+ */
+function sequencePlacements(
+  rctx: OoxmlToOdfContext,
+  items: readonly AlignedItem[],
+): Map<number, Placement[]> {
+  const out = new Map<number, Placement[]>()
+  items.forEach((a, i) => {
+    const origin = a.element?.paragraph != null ? rctx.map.paragraphs[a.element.paragraph] : null
+    if (!origin || a.unchanged || !paragraphBlockOf(a.item)) return
+    const pieces = [i]
+    for (
+      let k = i + 1;
+      k < items.length && !items[k].element && paragraphBlockOf(items[k].item);
+      k++
+    )
+      pieces.push(k)
+    // originals deleted right after this one: joined into it when their text survives
+    const joined: BridgeParagraph[] = []
+    for (let e = (a.element as BridgeElement).id + 1; e < rctx.map.elements.length; e++) {
+      const element = rctx.map.elements[e]
+      if (rctx.matched.has(e) || element.paragraph === null) break
+      const record = rctx.map.paragraphs[element.paragraph]
+      if (!record || record.part !== origin.part) break
+      joined.push(record)
+    }
+    if (pieces.length === 1 && !joined.length) return
+    const texts = pieces.map((k) =>
+      (paragraphBlockOf(items[k].item)?.runs ?? []).map((r) => r.text).join(''),
+    )
+    // a deleted paragraph whose text did not survive was deleted, not joined
+    const kept = keptCharacters([origin, ...joined], texts)
+    const originals = [origin]
+    joined.forEach((p, n) => {
+      if (p.text.length > 0 && kept[n + 1] * 2 >= p.text.length) originals.push(p)
+      else if (kept[n + 1] > 0 && p.markers.some((m) => m.kind.startsWith('bookmark')))
+        rctx.warn(
+          `bookmarks of a deleted paragraph were dropped although part of its text survives`,
+        )
+    })
+    const placed = placeMarkers(rctx, originals, texts)
+    pieces.forEach((k, n) => out.set(k, placed.placements[n]))
+  })
+  return out
+}
+
 export const textBlockConverter: BlockConverter = {
   id: TEXT_OWNER,
   match(node) {
@@ -292,10 +345,13 @@ export const textBlockConverter: BlockConverter = {
     return writeTextItems(rctx, items, env)
   },
   absorbs(_rctx, block, item) {
-    if (block.name !== 'text:list') return false
     const p = paragraphBlockOf(item)
+    if (!p) return false
+    // a new paragraph next to a paragraph may hold its text (an Enter split):
+    // written together so markers can follow the text
+    if (block.name !== 'text:list') return block.kind === 'paragraph' || block.kind === 'heading'
     const numId = (block.data as { numId?: string } | null)?.numId
-    return !!p && p.type === 'listItem' && p.list?.numId === numId
+    return p.type === 'listItem' && p.list?.numId === numId
   },
 }
 

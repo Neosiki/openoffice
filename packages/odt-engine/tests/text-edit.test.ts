@@ -561,3 +561,96 @@ describe('clearing formatting in the editor', () => {
     expect(w.paragraphs.find((x) => x.text === '마지막')!.xml).toBe(sample.blocks[9])
   })
 })
+
+describe('form fields follow their text across paragraph splits and joins', () => {
+  const fieldIndex = 1
+  const twinOf = (blocks: Parameters<Parameters<typeof editorSave>[1]>[0], text: string) => ({
+    insert: {
+      ...generatedFrom(blocks[fieldIndex]),
+      runs: [{ ...blocks[fieldIndex].runs![0], text }],
+    },
+  })
+  const split = (keepText: (g: GeneratedBlock) => void, twinText: string) =>
+    save((blocks) => [
+      { keep: 0 },
+      { edit: fieldIndex, change: keepText },
+      twinOf(blocks, twinText),
+      ...blocks.slice(2).map((_, i) => ({ keep: i + 2 })),
+    ])
+  const pair = (xml: string, name: string) => {
+    const esc = name
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+    const a = xml.indexOf(`<text:bookmark-start text:name="${esc}"/>`)
+    const b = xml.indexOf(`<text:bookmark-end text:name="${esc}"/>`)
+    return a >= 0 && b > a
+      ? xml
+          .slice(a, b)
+          .replace(/<text:bookmark-start[^>]*>/, '')
+          .replace(/<text:s\/>/g, ' ')
+          .replace(/<text:s text:c="(\d+)"\/>/g, (_m, n: string) => ' '.repeat(Number(n)))
+          .replace(/<[^>]+>/g, '')
+      : null
+  }
+  const others = ['NormalField3¡unfinished¡¡F¡T', 'CellField1¡기관명¡F']
+
+  it('Enter just before a field moves the whole pair with its text', async () => {
+    const w = await split((g) => replaceText(g, 2, 19, ''), '안건  내용 중간 value 뒤')
+    const [first, second] = [w.paragraphs[1], w.paragraphs[2]]
+    expect([first.text, second.text]).toEqual(['앞 ', '안건  내용 중간 value 뒤'])
+    expect(first.xml).not.toContain('NormalField')
+    expect(pair(second.xml, FIELD)).toBe('안건  내용')
+    expect(pair(second.xml, FIELD2)).toBe('value')
+    for (const name of others) expect(second.xml).toContain(name)
+  })
+
+  it('Enter inside a field keeps the pair together, with the bigger part of its text', async () => {
+    const w = await split((g) => replaceText(g, 4, 19, ''), '  내용 중간 value 뒤')
+    const [first, second] = [w.paragraphs[1], w.paragraphs[2]]
+    expect([first.text, second.text]).toEqual(['앞 안건', '  내용 중간 value 뒤'])
+    // "안건" (2 characters) stays above, "  내용" (4) moves down: the pair goes with the bigger part
+    expect(pair(second.xml, FIELD)).toBe('  내용')
+    expect(first.xml).not.toContain('NormalField1')
+    expect(pair(second.xml, FIELD2)).toBe('value')
+    expect(w.warnings.some((x) => x.includes('split by a new paragraph'))).toBe(true)
+  })
+
+  it('Enter at the paragraph start leaves an empty line above and every marker with the text', async () => {
+    const w = await split((g) => replaceText(g, 0, 19, ''), '앞 안건  내용 중간 value 뒤')
+    const [first, second] = [w.paragraphs[1], w.paragraphs[2]]
+    expect([first.text, second.text]).toEqual(['', '앞 안건  내용 중간 value 뒤'])
+    expect(first.xml).not.toContain('text:bookmark')
+    expect(pair(second.xml, FIELD)).toBe('안건  내용')
+    expect(pair(second.xml, FIELD2)).toBe('value')
+    for (const name of others) expect(second.xml).toContain(name)
+  })
+
+  it('Backspace joining a paragraph keeps the fields of its second half', async () => {
+    const w = await save((blocks) => [
+      {
+        edit: 0,
+        change: (g) => {
+          g.runs = [...g.runs, ...JSON.parse(JSON.stringify(blocks[fieldIndex].runs))]
+        },
+      },
+      ...blocks.slice(2).map((_, i) => ({ keep: i + 2 })),
+    ])
+    const merged = w.paragraphs[0]
+    expect(merged.text).toBe('첫째 문단입니다앞 안건  내용 중간 value 뒤')
+    expect(pair(merged.xml, FIELD)).toBe('안건  내용')
+    expect(pair(merged.xml, FIELD2)).toBe('value')
+    for (const name of others) expect(merged.xml).toContain(name)
+    expect(w.paragraphs[1].text).toBe('제목 하나')
+  })
+
+  it('a deleted paragraph still takes its fields with it', async () => {
+    const w = await save((blocks) => [
+      { edit: 0, change: (g) => replaceText(g, 0, 0, '바뀐 ') },
+      ...blocks.slice(2).map((_, i) => ({ keep: i + 2 })),
+    ])
+    expect(w.content).not.toContain('NormalField')
+    expect(w.paragraphs[0].text).toBe('바뀐 첫째 문단입니다')
+  })
+})

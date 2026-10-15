@@ -203,6 +203,7 @@ export function alignItems(rctx: OoxmlToOdfContext, items: readonly EditedItem[]
     match[i] = candidates[0].id
   })
 
+  for (const id of used) rctx.matched.add(id)
   return items.map((item, i) => {
     const element = match[i] === null ? null : elements[match[i] as number]
     return { item, element, unchanged: element !== null && element.xml === item.xml }

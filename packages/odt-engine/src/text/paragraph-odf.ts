@@ -22,7 +22,6 @@
  */
 import type { Block, TableParagraph } from '@genoffice/docx-engine'
 import type {
-  BridgeMarker,
   BridgeParagraph,
   EditedParagraph,
   OoxmlToOdfContext,
@@ -31,6 +30,7 @@ import type {
 import type { OdtStyle, OdtStylePart } from '../core/styles'
 import { escapeXmlAttr, escapeXmlText } from '../core/xml'
 import { alignTexts } from './align'
+import { type Placement, placeMarkers } from './markers'
 import { paragraphStyleInfo } from './paragraph-ooxml'
 import { type Frame, type ParagraphModel, readParagraph } from './paragraph-model'
 import {
@@ -82,6 +82,11 @@ export interface ParagraphWriteOptions {
    * included) instead of from the common style.
    */
   follows?: BridgeParagraph | null
+  /**
+   * Markers already placed on this paragraph's text (by `placeMarkers` over a
+   * split or joined sequence); default: the origin's markers mapped onto it.
+   */
+  placements?: Placement[]
 }
 
 const modelCache = new WeakMap<OoxmlToOdfContext, Map<number, ParagraphModel | null>>()
@@ -359,55 +364,11 @@ export function paragraphToOdf(
   // ---- inserts: markers, run writers, injectors
   const inserts: Insert[] = []
   const skip = new Uint8Array(edited.length)
-  const source = (m: BridgeMarker) => info.xml.slice(m.start, m.end)
-  if (origin) {
-    origin.markers.forEach((m, i) => {
-      switch (m.kind) {
-        case 'bookmark-start': {
-          if (m.pair !== null) {
-            const end = origin.markers[m.pair]
-            const a = mapper.map(m.offset, 'start')
-            const b = Math.max(a, mapper.map(end.offset, 'end'))
-            inserts.push({ offset: a, xml: source(m), attach: 'next', seq: i })
-            inserts.push({ offset: b, xml: source(end), attach: 'prev', seq: m.pair })
-          } else
-            inserts.push({
-              offset: mapper.map(m.offset, 'start'),
-              xml: source(m),
-              attach: 'next',
-              seq: i,
-            })
-          break
-        }
-        case 'bookmark-end':
-          if (m.pair === null)
-            inserts.push({
-              offset: mapper.map(m.offset, 'end'),
-              xml: source(m),
-              attach: 'prev',
-              seq: i,
-            })
-          break
-        case 'bookmark':
-        case 'keep':
-          inserts.push({
-            offset: mapper.map(m.offset, 'start'),
-            xml: source(m),
-            attach: 'next',
-            seq: i,
-          })
-          break
-        case 'text': {
-          if (mapper.intact(m.offset, m.length)) {
-            const at = mapper.map(m.offset, 'start')
-            inserts.push({ offset: at, xml: source(m), attach: 'next', replaces: m.length, seq: i })
-            for (let k = at; k < at + m.length && k < skip.length; k++) skip[k] = 1
-          } else rctx.warn(`an edited ${m.name} became plain text`)
-          break
-        }
-        // 'handler' markers belong to their converters (run writers, injectors)
-      }
-    })
+  const placed =
+    opts.placements ?? (origin ? placeMarkers(rctx, [origin], [edited]).placements[0] : [])
+  for (const x of placed) {
+    inserts.push(x)
+    for (let k = x.offset; k < x.offset + (x.replaces ?? 0) && k < skip.length; k++) skip[k] = 1
   }
   let offset = 0
   runs.forEach((run, i) => {
