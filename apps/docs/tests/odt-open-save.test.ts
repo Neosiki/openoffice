@@ -428,6 +428,8 @@ describe('Save As with a format change', () => {
   it('docx → ODT asks with the report; cancel writes nothing', async () => {
     const ctx = makeCtx()
     await loadFile(ctx, openResult('/docs/a.docx', await buildBlankDocx({})))
+    // a watermark is something ODT cannot keep, so the conversion reports it
+    Object.assign(ctx, { watermark: 'DRAFT', watermarkDirty: true })
     const asked: unknown[] = []
     setFormatChangeHost((request, answer) => {
       asked.push(request)
@@ -436,9 +438,10 @@ describe('Save As with a format change', () => {
     pickedPath = '/docs/a.odt'
     expect(await save(ctx, true)).toBe(false)
     expect(asked).toHaveLength(1)
-    // the blank template has a theme: it is reported as converted
     expect((asked[0] as { to: string }).to).toBe('odt')
-    expect((asked[0] as { report: Array<{ feature: string }> }).report.length).toBeGreaterThan(0)
+    expect((asked[0] as { report: Array<{ feature: string }> }).report).toEqual(
+      expect.arrayContaining([expect.objectContaining({ kind: 'dropped', feature: 'watermark' })]),
+    )
     expect(written).toHaveLength(0)
     expect(docOf(ctx).format).toBe('docx')
     expect(docOf(ctx).filePath).toBe('/docs/a.docx')

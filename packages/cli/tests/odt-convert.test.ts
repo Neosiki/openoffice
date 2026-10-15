@@ -108,11 +108,9 @@ describe('convert routes through .odt', () => {
       'application/vnd.oasis.opendocument.text',
     )
     expect(await odtToText(odt)).toContain('First point.')
-    // the markdown exporter's docx carries a theme part
-    expect(r.json().detail.odt_report).toEqual([{ kind: 'converted', feature: 'theme', count: 1 }])
-    expect(r.json().warnings).toEqual([
-      expect.objectContaining({ code: 'odt_converted', message: expect.stringContaining('theme') }),
-    ])
+    // a theme part alone changes nothing visible, so a plain document reports nothing
+    expect(r.json().detail.odt_report).toEqual([])
+    expect(r.json().warnings ?? []).toEqual([])
 
     // a docx with a comment: the ODT cannot keep it
     const docx = join(dir, 'notes.docx')
