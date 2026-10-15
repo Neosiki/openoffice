@@ -63,9 +63,9 @@ IeumOffice is a modified version of the open-source project
   other 19 are machine translations.
 
 Released for **Windows**, with a separate **beta for Apple Silicon Macs (M1 and
-later)**. The Mac build is unsigned and is verified by the users taking part in
-the beta rather than by the developer
-([Mac beta guide](docs/mac-beta-testing.ko.md), Korean).
+later)**. The Mac build is unsigned and the developer has not been able to
+check it on a Mac; please report problems as
+[issues](https://github.com/pblsketch/openoffice/issues).
 
 ## Connecting your subscription
 
@@ -226,10 +226,21 @@ Silicon Macs (M1 and later) on macOS 12 or newer; it does not run on Intel
 Macs.
 
 The Mac build has no Apple Developer signature, so macOS warns that it cannot
-verify the app the first time you open it. Move the app from the dmg to
-Applications, open it once, then choose **Open Anyway** under **System Settings
-→ Privacy & Security**. The steps, and what to do when macOS says the app is
-damaged, are in the [Mac beta guide](docs/mac-beta-testing.ko.md).
+verify the app the first time you open it. Allow it once:
+
+1. Open the dmg and drag **IeumOffice** to **Applications**.
+2. Open IeumOffice from Applications. When the warning appears, choose **Done**.
+3. Open **System Settings → Privacy & Security**, find "IeumOffice was blocked"
+   near the bottom, choose **Open Anyway** and enter your Mac password.
+4. Choose **Open** in the window that follows. From then on it opens normally.
+
+If macOS says the app "is damaged and can't be opened", do not move it to the
+Trash; run this in Terminal and open it again (it removes the mark macOS puts
+on downloaded files):
+
+```sh
+xattr -dr com.apple.quarantine /Applications/IeumOffice.app
+```
 
 What differs on a Mac:
 
@@ -286,7 +297,7 @@ project easy to take.
 ## Known limitations
 
 - **Windows and Apple Silicon Macs (beta) only.** The developer cannot check
-  the Mac build directly; it is checked through the reports of beta users. The
+  the Mac build directly; it is checked through the reports of Mac users. The
   Intel Mac and Linux code inherited from GenOffice is still in the repository,
   but this project does not build, release or test it.
 - **Unsigned installers**, as described above. That is also why the Mac build
