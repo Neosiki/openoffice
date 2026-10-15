@@ -19,6 +19,13 @@ import { AiMark } from './AiMark'
 import { aiSubscriptionText, type AiSubscriptionStringKey } from './strings-ai-subscription'
 import './ai-subscription.css'
 
+// The main process opens a terminal window of the CLI's own on Windows alone
+// (the install command, the login window for a pasted code); on macOS and
+// Linux the card does not offer them.
+const TERMINAL_WINDOWS = !(
+  typeof navigator !== 'undefined' && /mac|linux/i.test(navigator.platform)
+)
+
 /** What a card's buttons do; each receives the provider so two cards can share one set */
 export interface AiSubscriptionCardActions {
   /** run the vendor's official install command in a visible terminal window */
@@ -85,6 +92,7 @@ export function AiSubscriptionCard({
   const view = aiSubscriptionCardView(status, {
     account: showAccount && !compact,
     accountActions: !compact && onSwitchAccount !== undefined && onLogout !== undefined,
+    terminalWindows: TERMINAL_WINDOWS,
   })
   const provider = view.provider
   const params = {
