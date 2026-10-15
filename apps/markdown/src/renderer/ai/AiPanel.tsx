@@ -14,7 +14,7 @@ import {
 } from '@genoffice/ui'
 import { useEffect, useRef, useState } from 'react'
 import type { PointerEvent as ReactPointerEvent, ReactElement, ReactNode } from 'react'
-import { AgentLoop, composeSkills, streamText, type IpcStreamError } from '@genoffice/agent-core'
+import { AgentLoop, streamText, type IpcStreamError, composeWithDrive } from '@genoffice/agent-core'
 import type {
   AiSettings,
   AiSubscriptionProviderId,
@@ -482,7 +482,7 @@ export function AiPanel({
   if (!loopRef.current) {
     loopRef.current = new AgentLoop<DocSnapshot>({
       transport: transportRef.current,
-      skill: composeSkills('markdown+search', '', [
+      skill: composeWithDrive('markdown+search', '', () => loopRef.current?.messages ?? [], [
         createMarkdownSkill(
           () => depsRef.current.getEditor(),
           {

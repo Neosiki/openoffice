@@ -20,12 +20,17 @@ export {
   DRIVE_READ_TOOL,
   DRIVE_SEARCH_TOOL,
   OUTBOUND_TOOLS,
+  composeWithDrive,
+  createBridgedDriveSkill,
   createDriveSkill,
   guardDriveContent,
+  hasDriveBridge,
   holdsDriveContent,
   isOutboundCall,
+  windowDriveBridge,
 } from './drive-skill'
 export type {
+  DriveBridgeLike,
   DriveCallResult,
   DriveReadPage,
   DriveSearchHit,

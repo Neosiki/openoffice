@@ -135,9 +135,9 @@ import {
 import {
   AgentLoop,
   COMPLETED_VIA_TOOLS_TEXT,
-  composeSkills,
   type AgentImage,
   type IpcStreamError,
+  composeWithDrive,
 } from '@genoffice/agent-core'
 import type {
   AiSettings,
@@ -1423,7 +1423,7 @@ export function App({
         onInputTruncated: () => setInputTruncated(true),
       }),
       systemSuffix: aiLangDirective,
-      skill: composeSkills('sheets+files', '', [
+      skill: composeWithDrive('sheets+files', '', () => agentLoopRef.current?.messages ?? [], [
         createWorkbookSkill(sheetsSkillDeps()),
         createFilesSkill(availableAttachments),
         createMergeSkill({

@@ -20,16 +20,19 @@ export const GOOGLE_EXPORTS: Readonly<Record<string, { mime: string; extension: 
 
 /** Extensions the app's editors open; a Drive file outside this list is listed but not opened */
 export const OPENABLE_EXTENSIONS: readonly string[] = [
+  // the same set the shell routes to an editor (apps/shell/src/main/app-routing.ts)
   '.docx',
-  '.doc',
   '.xlsx',
+  '.xlsm',
   '.xls',
   '.csv',
+  '.tsv',
   '.pptx',
   '.pdf',
   '.md',
   '.markdown',
   '.txt',
+  '.json',
   '.html',
   '.htm',
   '.xmind',
@@ -90,7 +93,7 @@ export function uploadMime(name: string): string {
  */
 export function localFileName(driveName: string, extension: string): string {
   const cleaned = driveName
-    .replace(/[<>:"/\\|?*\u0000-\u001f]/g, '_')
+    .replace(/[<>:"/\\|?*\p{Cc}]/gu, '_')
     .replace(/[. ]+$/, '')
     .trim()
   const base = extensionOf(cleaned) === extension ? cleaned.slice(0, -extension.length) : cleaned

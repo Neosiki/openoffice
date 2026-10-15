@@ -56,11 +56,12 @@ export function entryType(file: { name: string; mimeType: string }): DriveEntryT
   if (plan.kind === 'none') return 'other'
   switch (plan.extension) {
     case '.docx':
-    case '.doc':
       return 'document'
     case '.xlsx':
+    case '.xlsm':
     case '.xls':
     case '.csv':
+    case '.tsv':
       return 'spreadsheet'
     case '.pptx':
       return 'presentation'
@@ -69,6 +70,7 @@ export function entryType(file: { name: string; mimeType: string }): DriveEntryT
     case '.md':
     case '.markdown':
     case '.txt':
+    case '.json':
       return 'markdown'
     case '.html':
     case '.htm':

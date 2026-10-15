@@ -50,6 +50,8 @@ import type { SubscriptionConnection } from './subscription-client'
 import { subscriptionSummary } from './subscription-status'
 import './pdf-tools/globals'
 import { agentText } from './i18n/strings-agent'
+import { DriveNavIcon, DrivePanel, useDriveState } from './DrivePanel'
+import { driveUiText } from './i18n/strings-drive'
 
 declare global {
   interface Window {
@@ -1048,6 +1050,10 @@ export function Home({
   const [view, setView] = useState<'recent' | 'starred'>('recent')
   // the knowledge-base ask panel takes over the content area the same way
   const [askMode, setAskMode] = useState(false)
+  // Google Drive (decision 0033) takes over the content area the same way
+  const [driveMode, setDriveMode] = useState(false)
+  const driveState = useDriveState()
+  const driveOffered = driveState !== null && driveState.state !== 'unavailable'
   const [filter, setFilter] = useState('all')
   // ── Starred groups (named buckets the Starred view can filter on) ──
   // groups that currently have at least one starred file (drives the pills)
@@ -1481,6 +1487,7 @@ export function Home({
     setView(next)
     setSelectedFolder(null)
     setAskMode(false)
+    setDriveMode(false)
     setSelected(new Set())
     setRowMenu(null)
     setGroupFilter(null)
@@ -1501,6 +1508,7 @@ export function Home({
   const selectFolder = (dir: string) => {
     setSelectedFolder(dir)
     setAskMode(false)
+    setDriveMode(false)
     setSelected(new Set())
     setRowMenu(null)
     setFolderMenu(null)
@@ -3077,6 +3085,7 @@ export function Home({
             className={`nav-item${askMode && !selectedFolder ? ' active' : ''}`}
             onClick={() => {
               setAskMode(true)
+              setDriveMode(false)
               setSelectedFolder(null)
               setSelected(new Set())
               setRowMenu(null)
@@ -3098,6 +3107,22 @@ export function Home({
             </svg>
             <span className="nav-label">{t('navAsk')}</span>
           </button>
+          {driveOffered && (
+            <button
+              className={`nav-item${driveMode && !selectedFolder ? ' active' : ''}`}
+              data-testid="home-drive-nav"
+              onClick={() => {
+                setDriveMode(true)
+                setAskMode(false)
+                setSelectedFolder(null)
+                setSelected(new Set())
+                setRowMenu(null)
+              }}
+            >
+              <DriveNavIcon />
+              <span className="nav-label">{driveUiText(lang, 'driveNav')}</span>
+            </button>
+          )}
         </nav>
         <div className="sidebar-divider" />
         {renderFolderPanel()}
@@ -3110,6 +3135,12 @@ export function Home({
       </aside>
       {selectedFolder && rootOf(selectedFolder, roots)?.readable ? (
         renderFolderContent()
+      ) : driveMode && driveOffered ? (
+        <DrivePanel
+          lang={lang}
+          dateLocale={i18n.dateLocale}
+          onOpenSettings={() => setSettingsRequest({ section: 'integrations' })}
+        />
       ) : askMode ? (
         <KbAskPanel
           connection={connection}

@@ -23,12 +23,12 @@ import type { Editor } from '@tiptap/core'
 import type { Block } from '@genoffice/docx-engine'
 import {
   AgentLoop,
-  composeSkills,
   createKnowledgeBaseSkill,
   streamText,
   type AgentImage,
   type IpcStreamError,
   type KbFileInfo,
+  composeWithDrive,
 } from '@genoffice/agent-core'
 import type { AiSubscriptionProviderId, AiSubscriptionUsage } from '@genoffice/ai-provider/browser'
 import type {
@@ -881,7 +881,7 @@ export function AiPanel({
     loopRef.current = new AgentLoop<PmNode>({
       transport: transportRef.current,
       systemSuffix: aiLangDirective,
-      skill: composeSkills('docs+files', '', [
+      skill: composeWithDrive('docs+files', '', () => loopRef.current?.messages ?? [], [
         // the reader's starred files; empty while the user stars nothing —
         // buildContext then returns '' and the skill stays out of the way.
         // Mounted only when the bridge carries the kb channel at all: a test

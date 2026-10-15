@@ -1,5 +1,5 @@
 import type { AgentMessage, AgentToolCall, AgentToolDef, ToolExecution } from './types'
-import type { AgentSkill } from './skill'
+import { composeSkills, type AgentSkill } from './skill'
 
 /**
  * The user's Google Drive as a searchable, readable body (decision 0033).
@@ -221,7 +221,8 @@ export function createDriveSkill(deps: DriveSkillDeps): DriveSkill {
  * holds Drive content. Getters stay live: the composed skill's tools and
  * prompt are read through on every access.
  */
-export function guardDriveContent(skill: AgentSkill, drive: DriveSkill): AgentSkill {
+export function guardDriveContent(skill: AgentSkill, drive: DriveSkill | null): AgentSkill {
+  if (!drive) return skill
   return {
     id: skill.id,
     get systemPrompt() {
@@ -239,4 +240,112 @@ export function guardDriveContent(skill: AgentSkill, drive: DriveSkill): AgentSk
     },
     ...(skill.verifyResponse ? { verifyResponse: skill.verifyResponse.bind(skill) } : {}),
   }
+}
+
+/** The calls an editor's preload exposes for Drive (@genoffice/electron-utils/drive-ai-bridge) */
+export interface DriveBridgeLike {
+  driveAiEnabled(): Promise<boolean>
+  driveSearch(query: string, limit: number): Promise<unknown>
+  driveRead(fileId: string, offset: number): Promise<unknown>
+  onDriveAiChanged?(listener: (on: boolean) => void): () => void
+}
+
+const str = (v: unknown): v is string => typeof v === 'string'
+const num = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v)
+
+function failure(raw: unknown): { ok: false; error: string } {
+  const error = (raw as { error?: unknown } | null)?.error
+  return { ok: false, error: str(error) && error ? error : 'Google Drive did not answer.' }
+}
+
+/** Check a search answer that crossed the preload boundary */
+export function searchAnswerOf(raw: unknown): DriveCallResult<{ hits: DriveSearchHit[] }> {
+  const r = raw as { ok?: unknown; hits?: unknown } | null
+  if (r?.ok !== true || !Array.isArray(r.hits)) return failure(raw)
+  const hits = (r.hits as Record<string, unknown>[]).filter(
+    (h): h is Record<string, unknown> & DriveSearchHit =>
+      Boolean(h) && str(h.id) && str(h.name) && str(h.type) && str(h.modified),
+  )
+  return {
+    ok: true,
+    hits: hits.map(({ id, name, type, modified }) => ({ id, name, type, modified })),
+  }
+}
+
+/** Check a read answer that crossed the preload boundary */
+export function readAnswerOf(raw: unknown): DriveCallResult<{ page: DriveReadPage }> {
+  const r = raw as { ok?: unknown; page?: Record<string, unknown> } | null
+  const p = r?.page
+  if (
+    r?.ok !== true ||
+    !p ||
+    !str(p.name) ||
+    !str(p.text) ||
+    !num(p.totalChars) ||
+    !num(p.offset)
+  ) {
+    return failure(raw)
+  }
+  return {
+    ok: true,
+    page: { name: p.name, text: p.text, totalChars: p.totalChars, offset: p.offset },
+  }
+}
+
+/**
+ * The Drive skill over an editor's preload bridge. Whether Drive is on is
+ * kept here and refreshed from the main process's broadcasts, because the
+ * loop reads the tool list synchronously.
+ */
+export function createBridgedDriveSkill(
+  bridge: DriveBridgeLike,
+  messages: () => readonly AgentMessage[],
+): DriveSkill {
+  let on = false
+  void bridge.driveAiEnabled().then(
+    (value) => (on = value === true),
+    () => (on = false),
+  )
+  bridge.onDriveAiChanged?.((value) => (on = value))
+  return createDriveSkill({
+    enabled: () => on,
+    search: async (query, limit) =>
+      searchAnswerOf(await bridge.driveSearch(query, limit).catch(() => null)),
+    read: async (fileId, offset) =>
+      readAnswerOf(await bridge.driveRead(fileId, offset).catch(() => null)),
+    messages,
+  })
+}
+
+/** Whether a window's bridge carries the Drive calls (an older preload or a test mock may not) */
+export function hasDriveBridge(bridge: unknown): bridge is DriveBridgeLike {
+  const b = bridge as Partial<DriveBridgeLike> | null | undefined
+  return (
+    typeof b?.driveAiEnabled === 'function' &&
+    typeof b.driveSearch === 'function' &&
+    typeof b.driveRead === 'function'
+  )
+}
+
+/** The Drive calls the editor's preload exposed as `window.aiOfficeDriveAi`, if any */
+export function windowDriveBridge(): DriveBridgeLike | null {
+  const bridge = (globalThis as { aiOfficeDriveAi?: unknown }).aiOfficeDriveAi
+  return hasDriveBridge(bridge) ? bridge : null
+}
+
+/**
+ * composeSkills plus Google Drive: when this window's preload carries the
+ * Drive calls, the Drive skill joins the editor's skills and the result is
+ * guarded so outbound tools stop once Drive content is in the conversation.
+ * `messages` reads the loop's history (the loop is built after its skill).
+ */
+export function composeWithDrive(
+  id: string,
+  intro: string,
+  messages: () => readonly AgentMessage[],
+  skills: AgentSkill[],
+): AgentSkill {
+  const bridge = windowDriveBridge()
+  const drive = bridge ? createBridgedDriveSkill(bridge, messages) : null
+  return guardDriveContent(composeSkills(id, intro, drive ? [...skills, drive] : skills), drive)
 }

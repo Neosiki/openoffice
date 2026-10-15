@@ -14,7 +14,7 @@ import {
 } from '@genoffice/ui'
 import { useEffect, useRef, useState } from 'react'
 import type { PointerEvent as ReactPointerEvent, ReactElement, ReactNode } from 'react'
-import { AgentLoop, composeSkills } from '@genoffice/agent-core'
+import { AgentLoop, composeWithDrive } from '@genoffice/agent-core'
 import type { AgentImage, IpcStreamError } from '@genoffice/agent-core'
 import type {
   AiSettings,
@@ -801,7 +801,7 @@ export function AiPanel({
   if (!loopRef.current) {
     loopRef.current = new AgentLoop<DocSnapshot>({
       transport: transportRef.current,
-      skill: composeSkills('html+search', '', [
+      skill: composeWithDrive('html+search', '', () => loopRef.current?.messages ?? [], [
         createDocumentSkill({
           getText: () => depsRef.current.access.getText(),
           getVersion: () => depsRef.current.access.getVersion(),

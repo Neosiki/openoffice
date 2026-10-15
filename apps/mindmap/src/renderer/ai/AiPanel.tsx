@@ -36,7 +36,7 @@ import {
 } from '@genoffice/ui'
 import { useEffect, useRef, useState } from 'react'
 import type { PointerEvent as ReactPointerEvent, ReactElement, ReactNode } from 'react'
-import { AgentLoop, composeSkills } from '@genoffice/agent-core'
+import { AgentLoop, composeWithDrive } from '@genoffice/agent-core'
 import type { AgentImage, IpcStreamError } from '@genoffice/agent-core'
 import type {
   AiSettings,
@@ -565,7 +565,7 @@ export function AiPanel({
   if (!loopRef.current) {
     loopRef.current = new AgentLoop<MapTurn>({
       transport: transportRef.current,
-      skill: composeSkills('mindmap+search', '', [
+      skill: composeWithDrive('mindmap+search', '', () => loopRef.current?.messages ?? [], [
         createMindmapSkill({
           host: () => hostRef.current,
           turn: () => turnRef.current,

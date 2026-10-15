@@ -28,9 +28,9 @@ import type {
 } from 'react'
 import {
   AgentLoop,
-  composeSkills,
   type AgentImage,
   type IpcStreamError,
+  composeWithDrive,
 } from '@genoffice/agent-core'
 import type {
   AiSettings,
@@ -504,7 +504,7 @@ export function AiPanel({
   if (!loopRef.current) {
     loopRef.current = new AgentLoop({
       transport: transportRef.current,
-      skill: composeSkills('hwp+files', '', [
+      skill: composeWithDrive('hwp+files', '', () => loopRef.current?.messages ?? [], [
         skillRef.current.skill,
         createFilesSkill(() => availableAttachmentsRef.current()),
       ]),

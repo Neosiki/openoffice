@@ -16,11 +16,11 @@ import {
 import React, { useEffect, useRef, useState, useCallback } from 'react'
 import {
   AgentLoop,
-  composeSkills,
   IPC_STREAM_SILENCE_TIMEOUT_MS,
   type AgentImage,
   type IpcStreamError,
   type ToolDisplay,
+  composeWithDrive,
 } from '@genoffice/agent-core'
 import type { RenderSlide } from '@genoffice/pptx-render'
 import type { AiSubscriptionProviderId, AiSubscriptionUsage } from '@genoffice/ai-provider/browser'
@@ -1416,7 +1416,7 @@ export function AiPanel({
     loopRef.current = new AgentLoop({
       transport: createElectronTransport(() => settingsRef.current, transportHooksRef.current),
       systemSuffix: aiLangDirective,
-      skill: composeSkills('slides+files', '', [
+      skill: composeWithDrive('slides+files', '', () => loopRef.current?.messages ?? [], [
         createSlidesSkill(access),
         createFilesSkill(availableAttachments, (path) => readAttachmentPathsRef.current.add(path)),
       ]),

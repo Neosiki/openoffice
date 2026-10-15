@@ -1,7 +1,11 @@
 import { describe, expect, it, vi } from 'vitest'
 import {
   DRIVE_OUTBOUND_BLOCKED,
+  composeWithDrive,
+  createBridgedDriveSkill,
   createDriveSkill,
+  readAnswerOf,
+  searchAnswerOf,
   guardDriveContent,
   isOutboundCall,
   type DriveSkillDeps,
@@ -137,5 +141,56 @@ describe('isOutboundCall', () => {
     expect(isOutboundCall(call('apply_ops', { ops: [{ op: 'link', href: 'https://a' }] }))).toBe(
       false,
     )
+  })
+})
+
+describe('the preload bridge', () => {
+  it('drops malformed answers instead of passing them to the model', () => {
+    expect(
+      searchAnswerOf({
+        ok: true,
+        hits: [{ id: 'a', name: 'n', type: 't', modified: 'm' }, { id: 1 }],
+      }),
+    ).toEqual({
+      ok: true,
+      hits: [{ id: 'a', name: 'n', type: 't', modified: 'm' }],
+    })
+    expect(searchAnswerOf(null)).toEqual({ ok: false, error: 'Google Drive did not answer.' })
+    expect(readAnswerOf({ ok: true, page: { name: 'n', text: 1 } }).ok).toBe(false)
+    expect(readAnswerOf({ ok: false, error: 'not connected' })).toEqual({
+      ok: false,
+      error: 'not connected',
+    })
+  })
+
+  it('follows the enabled state the main process broadcasts', async () => {
+    let notify: (on: boolean) => void = () => {}
+    const skill = createBridgedDriveSkill(
+      {
+        driveAiEnabled: async () => false,
+        driveSearch: async () => ({ ok: true, hits: [] }),
+        driveRead: async () => null,
+        onDriveAiChanged: (listener) => {
+          notify = listener
+          return () => {}
+        },
+      },
+      () => [],
+    )
+    await Promise.resolve()
+    expect(skill.tools).toEqual([])
+    notify(true)
+    expect(skill.tools.map((t) => t.name)).toEqual(['drive_search', 'drive_read'])
+  })
+
+  it('composes without Drive when the window has no bridge', () => {
+    const editor: AgentSkill = {
+      id: 'e',
+      systemPrompt: '',
+      tools: [{ name: 'web_search', description: '', inputSchema: { type: 'object' } }],
+      executeTool: () => ({ output: 'ran', summary: '' }),
+    }
+    const skill = composeWithDrive('x', '', () => [], [editor])
+    expect(skill.tools.map((t) => t.name)).toEqual(['web_search'])
   })
 })

@@ -5,18 +5,20 @@
  * Tokens never cross this boundary.
  */
 
+import { DRIVE_AI_CHANNELS } from '@genoffice/electron-utils/drive-ai-channels'
+
 export const DRIVE_CHANNELS = {
   state: 'drive:state',
-  stateChanged: 'drive:state-changed',
+  stateChanged: DRIVE_AI_CHANNELS.changed,
   connect: 'drive:connect',
   cancelConnect: 'drive:cancel-connect',
   disconnect: 'drive:disconnect',
   setAiAccess: 'drive:set-ai-access',
   list: 'drive:list',
   open: 'drive:open',
-  aiEnabled: 'drive:ai-enabled',
-  aiSearch: 'drive:ai-search',
-  aiRead: 'drive:ai-read',
+  aiEnabled: DRIVE_AI_CHANNELS.enabled,
+  aiSearch: DRIVE_AI_CHANNELS.search,
+  aiRead: DRIVE_AI_CHANNELS.read,
 } as const
 
 /** app-settings.json key: the person lets the AI search and read Drive */

@@ -6,7 +6,7 @@ import {
 } from '@genoffice/ui'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { PointerEvent as ReactPointerEvent, ReactElement } from 'react'
-import { AgentLoop } from '@genoffice/agent-core'
+import { AgentLoop, composeWithDrive } from '@genoffice/agent-core'
 import {
   isSubscriptionProvider,
   selectAiProvider,
@@ -498,7 +498,9 @@ export function AiPanel({
           setSubscriptionUsage((prev) => mergeSubscriptionUsage(prev, usage)),
         onInputTruncated: () => setInputTruncated(true),
       }),
-      skill: createPdfSkill(deps),
+      skill: composeWithDrive('pdf', '', () => loopRef.current?.messages ?? [], [
+        createPdfSkill(deps),
+      ]),
       systemSuffix: () => aiLangDirective(langRef.current),
       events: {
         onText: (text) => {
