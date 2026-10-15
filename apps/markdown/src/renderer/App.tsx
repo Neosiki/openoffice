@@ -671,6 +671,15 @@ export default function App() {
           return result.ok ? diagramSvgToPng(result.svg, DOCX_MAX_IMAGE_PX) : null
         }
         const bytes = await exportDocxBytes(current.getJSON(), loadImage, rasterizeDiagram)
+        if (format === 'odt') {
+          // same Word bytes as the docx export; the main process converts them to ODT
+          const result = await window.markdownApi.exportOdt({
+            base64: bytesToBase64(bytes),
+            suggestedName,
+          })
+          if (!result.ok) console.error('[markdown] odt export failed:', result.error)
+          return result.ok && !('canceled' in result)
+        }
         const result = await window.markdownApi.exportDocx({
           base64: bytesToBase64(bytes),
           suggestedName,

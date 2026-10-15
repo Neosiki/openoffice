@@ -1439,7 +1439,9 @@ export default function App() {
           ? await window.htmlApi.exportPdf(request)
           : format === 'html'
             ? await window.htmlApi.exportHtml(request)
-            : await window.htmlApi.exportDocx(request)
+            : format === 'odt'
+              ? await window.htmlApi.exportOdt(request)
+              : await window.htmlApi.exportDocx(request)
       if (!result.ok) {
         console.error('[html] export failed:', result.error)
         setNotice(t('exportFailed'))

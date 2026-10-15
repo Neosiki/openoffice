@@ -73,6 +73,7 @@ import {
   extensionlessAssetMime,
 } from './asset-mime'
 import { buildPreviewDocument } from './preview-document'
+import { confirmOdtReport, exportOdt, odtFilterName } from './odt-export'
 import { inlineImagesForSingleFile, singleFileExportBaseName } from './single-file-html'
 import {
   assetBaseHref,
@@ -89,6 +90,7 @@ import type {
   ExportDocxRequest,
   ExportHtmlRequest,
   ExportFormat,
+  ExportOdtRequest,
   ExportPdfRequest,
   ExportResult,
   ImageData,
@@ -685,6 +687,7 @@ const ATTACHMENT_EXTS = new Set([
   ...TEXT_EXTS,
   'doc',
   'docx',
+  'odt',
   'pdf',
   'pptx',
   'ppt',
@@ -958,6 +961,43 @@ async function renderPrintPdf(
     })
   } finally {
     printWin.destroy()
+  }
+}
+
+/** The Word export's bytes (html2docx in a hidden window); the ODT export converts these. */
+async function renderHtmlDocx(
+  html: string,
+  docPath: string | undefined,
+  workDir: string,
+): Promise<Uint8Array> {
+  let driver: ElectronBrowserDriver | null = null
+  try {
+    // Same document the preview shows (scripts on, relative assets via html-asset://):
+    // html2docx extracts from the rendered DOM, not from a print.
+    const base = docPath ? assetBaseHref(dirname(docPath)) : null
+    const htmlPath = join(workDir, 'export.html')
+    await writeFile(htmlPath, buildPreviewDocument(html, base), 'utf8')
+    driver = await ElectronBrowserDriver.create(HTML2DOCX_VIEWPORT)
+    // AI-generated markup with a script that never yields keeps
+    // executeJavaScript pending forever, which would strand the hidden
+    // window and this handler; race a watchdog and destroy the window on
+    // timeout (same shape as the slides export guard).
+    const conversion = convertHtmlToDocx({ url: pathToFileURL(htmlPath).href }, driver).then(
+      ({ docx }) => docx,
+    )
+    let watchdog: ReturnType<typeof setTimeout> | undefined
+    return await Promise.race([
+      conversion,
+      new Promise<Uint8Array>((_, reject) => {
+        watchdog = setTimeout(() => {
+          if (driver && !driver.isWindowDestroyed()) driver.destroyNow()
+          driver = null
+          reject(new Error('html export timed out'))
+        }, HTML_EXPORT_TIMEOUT_MS)
+      }),
+    ]).finally(() => clearTimeout(watchdog))
+  } finally {
+    await driver?.close()
   }
 }
 
@@ -1665,42 +1705,67 @@ function registerHtmlIpc(): void {
         return { ok: true, canceled: true }
       }
       const workDir = await mkdtemp(join(tmpdir(), 'genoffice-html-docx-'))
-      let driver: ElectronBrowserDriver | null = null
       try {
-        // Same document the preview shows (scripts on, relative assets via html-asset://):
-        // html2docx extracts from the rendered DOM, not from a print.
-        const docPath = savePathByWc.get(e.sender.id)
-        const base = docPath ? assetBaseHref(dirname(docPath)) : null
-        const htmlPath = join(workDir, 'export.html')
-        await writeFile(htmlPath, buildPreviewDocument(request.html, base), 'utf8')
-        driver = await ElectronBrowserDriver.create(HTML2DOCX_VIEWPORT)
-        // AI-generated markup with a script that never yields keeps
-        // executeJavaScript pending forever, which would strand the hidden
-        // window and this handler; race a watchdog and destroy the window on
-        // timeout (same shape as the slides export guard).
-        const conversion = convertHtmlToDocx({ url: pathToFileURL(htmlPath).href }, driver).then(
-          ({ docx }) => docx,
-        )
-        let watchdog: ReturnType<typeof setTimeout> | undefined
-        const docx = await Promise.race([
-          conversion,
-          new Promise<Uint8Array>((_, reject) => {
-            watchdog = setTimeout(() => {
-              if (driver && !driver.isWindowDestroyed()) driver.destroyNow()
-              driver = null
-              reject(new Error('html export timed out'))
-            }, HTML_EXPORT_TIMEOUT_MS)
-          }),
-        ]).finally(() => clearTimeout(watchdog))
+        const docx = await renderHtmlDocx(request.html, savePathByWc.get(e.sender.id), workDir)
         await writeFile(picked.filePath, docx)
         openExportedDocx(picked.filePath)
         return { ok: true, path: picked.filePath }
       } catch (err) {
         return { ok: false, error: err instanceof Error ? err.message : String(err) }
       } finally {
-        await driver?.close()
         await rm(workDir, { recursive: true, force: true }).catch(() => {})
       }
+    },
+  )
+
+  // ODT export: the Word export above (same html2docx bytes) converted by
+  // docxToOdt; a non-empty change report is confirmed before the file is written.
+  ipcMain.handle(
+    HTML_CHANNELS.exportOdt,
+    async (e, request: ExportOdtRequest): Promise<ExportResult> => {
+      if (typeof request?.html !== 'string') {
+        return { ok: false, error: 'html: bad export request' }
+      }
+      const win =
+        BrowserWindow.fromWebContents(e.sender) ?? BrowserWindow.getFocusedWindow() ?? undefined
+      // Headless export has no dialog to authorize a path or confirm; the CLI already chose.
+      const headlessPath =
+        isHeadlessMode() && typeof request.outPath === 'string' && request.outPath
+          ? request.outPath
+          : null
+      const outcome = await exportOdt({
+        pickPath: async () => {
+          if (headlessPath) return headlessPath
+          const picked = await showSaveDialogWithMemory(
+            dialog,
+            win,
+            {
+              defaultPath: `${exportFileName(request.suggestedName)}.odt`,
+              filters: [{ name: odtFilterName(), extensions: ['odt'] }],
+            },
+            configuredDefaultSaveDir(app),
+          )
+          return picked.canceled || !picked.filePath ? null : picked.filePath
+        },
+        docx: async () => {
+          const workDir = await mkdtemp(join(tmpdir(), 'genoffice-html-docx-'))
+          try {
+            return await renderHtmlDocx(request.html, savePathByWc.get(e.sender.id), workDir)
+          } finally {
+            await rm(workDir, { recursive: true, force: true }).catch(() => {})
+          }
+        },
+        confirm: async (report) =>
+          headlessPath !== null ||
+          confirmOdtReport(report, (options) =>
+            win ? dialog.showMessageBox(win, options) : dialog.showMessageBox(options),
+          ),
+        // a docs tab showing the target is closed first, as for the Word export
+        prepare: async (path) => !docxExportPrepareHook || docxExportPrepareHook(path),
+        write: (path, bytes) => writeFile(path, bytes),
+      })
+      if ('path' in outcome) openExportedDocx(outcome.path)
+      return outcome
     },
   )
 

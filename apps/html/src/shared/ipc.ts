@@ -27,6 +27,7 @@ export const HTML_CHANNELS = {
   fetchImage: 'html:fetch-image',
   exportRequest: 'html:export-request',
   exportDocx: 'html:export-docx',
+  exportOdt: 'html:export-odt',
   exportPdf: 'html:export-pdf',
   exportHtml: 'html:export-html',
   consumeHeadlessExport: 'html:consume-headless-export',
@@ -148,10 +149,20 @@ export interface ImageSearchResult {
   error?: string
 }
 
-export type ExportFormat = 'pdf' | 'docx' | 'html'
+export type ExportFormat = 'pdf' | 'docx' | 'html' | 'odt'
 
 /** Word export: html2docx renders the document in a hidden window and writes native OOXML; the result opens in Docs */
 export interface ExportDocxRequest {
+  /** the document text */
+  html: string
+  /** file name (no extension) suggested in the dialog */
+  suggestedName: string
+  /** headless export mode only: write here instead of opening the save dialog */
+  outPath?: string
+}
+
+/** ODT export: the Word export's html2docx bytes, converted to ODT; the result opens in Docs */
+export interface ExportOdtRequest {
   /** the document text */
   html: string
   /** file name (no extension) suggested in the dialog */
@@ -275,6 +286,8 @@ export interface HtmlApi {
   /** Shell menu Print → renderer builds the print HTML and opens the system print dialog */
   onPrintRequest(handler: () => void): () => void
   exportDocx(request: ExportDocxRequest): Promise<ExportResult>
+  /** save dialog (.odt) → the Word export → ODT → confirmation when something changes → write */
+  exportOdt(request: ExportOdtRequest): Promise<ExportResult>
   exportPdf(request: ExportPdfRequest): Promise<ExportResult>
   exportHtml(request: ExportHtmlRequest): Promise<ExportResult>
   /** Shell menu Print → main renders the document and opens the system print dialog */
