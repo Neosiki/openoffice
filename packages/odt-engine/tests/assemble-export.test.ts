@@ -10,7 +10,7 @@ import { describe, expect, it } from 'vitest'
 import { docxToOdt, odtToDocx, odtToText } from '../src'
 import { openOdt, readOdtPackage } from '../src/core'
 import { textOf } from './helpers/api'
-import { buildDocx, chartRun, p, sectPr, shapeRun } from './helpers/build-docx'
+import { buildDocx, chartRun, p, pictureRun, sectPr, shapeRun } from './helpers/build-docx'
 import { kitchenSink, TOC } from './helpers/docx-fixtures'
 import { signature } from './helpers/docx-signature'
 import { PNG_1X1 } from './helpers/hancom-sample'
@@ -116,7 +116,7 @@ describe('docxToOdt: faithful content', () => {
     )
     expect(styles).toMatch(/style:print-orientation="landscape"/)
     // the second section starts at its heading
-    const heading = /<text:h text:style-name="([^"]+)"[^>]*>둘째 구역/.exec(content)?.[1]
+    const heading = /<text:p text:style-name="([^"]+)"[^>]*>둘째 구역/.exec(content)?.[1]
     expect(content).toMatch(new RegExp(`style:name="${heading}"[^>]*style:master-page-name="MP2"`))
   })
 
@@ -135,15 +135,160 @@ describe('docxToOdt: faithful content', () => {
     expect(s.split(',').slice(3, 4)).toEqual(['3540'])
   })
 
-  it('folds continuous sections into the page run and reports columns', async () => {
+  it('keeps a continuous section with its own columns as a text:section', async () => {
     const body =
       p('하나') +
       `<w:p><w:pPr>${sectPr('<w:type w:val="continuous"/>')}</w:pPr><w:r><w:t>둘</w:t></w:r></w:p>` +
       p('셋') +
       sectPr('<w:type w:val="continuous"/><w:cols w:num="2" w:space="720"/>')
-    const { report, reread } = await convert({ body })
-    expect(byFeature(report)['converted:columns']).toBe(1)
+    const { report, reread, pkg } = await convert({ body })
+    const content = textOf(pkg, 'content.xml')
+    expect(content).toMatch(
+      /<text:p[^>]*>둘<\/text:p><text:section text:style-name="([^"]+)"[^>]*><text:p[^>]*>셋/,
+    )
+    const style = /<text:section text:style-name="([^"]+)"/.exec(content)?.[1]
+    expect(content).toMatch(
+      new RegExp(
+        `style:name="${style}" style:family="section"><style:section-properties><style:columns fo:column-count="2" fo:column-gap="1\\.27\\d*cm"><style:column `,
+      ),
+    )
+    expect(byFeature(report)['converted:columns']).toBeUndefined()
+    // one page run; the bridge shows the continuous section break again
     expect(signature(reread).pages.length).toBe(1)
+  })
+
+  it('writes page-wide columns into the page layout', async () => {
+    const { pkg } = await convert({
+      body: p('하나') + sectPr('<w:cols w:num="2" w:space="720"/>'),
+    })
+    expect(textOf(pkg, 'styles.xml')).toMatch(
+      /<style:page-layout-properties [^>]*><style:columns fo:column-count="2" fo:column-gap="1\.27\d*cm"><style:column [^>]*\/><style:column [^>]*\/><\/style:columns><\/style:page-layout-properties>/,
+    )
+  })
+
+  it('makes each page section a master page of its own, even when alike', async () => {
+    const body =
+      p('하나') +
+      `<w:p><w:pPr>${sectPr()}</w:pPr><w:r><w:t>둘</w:t></w:r></w:p>` +
+      p('셋') +
+      sectPr()
+    const { pkg, reread } = await convert({ body })
+    const styles = textOf(pkg, 'styles.xml')
+    expect(styles).toMatch(/<style:master-page style:name="Standard"/)
+    expect(styles).toMatch(/<style:master-page style:name="MP2"/)
+    expect(signature(reread).pages.length).toBe(2)
+  })
+})
+
+describe('docxToOdt: what Hancom reads differently', () => {
+  it('writes headings as paragraphs of an outline-level style, not text:h', async () => {
+    const body =
+      p('제목', '<w:pStyle w:val="Heading1"/>') +
+      p('절', '<w:outlineLvl w:val="1"/>') +
+      p('본문') +
+      sectPr()
+    const { pkg, reread } = await convert({ body })
+    const content = textOf(pkg, 'content.xml')
+    const styles = textOf(pkg, 'styles.xml')
+    expect(content).not.toMatch(/<text:h[\s>]/)
+    // Hancom numbers every text:h; an outline-level style keeps the heading unnumbered
+    const first = /<text:p text:style-name="([^"]+)">제목/.exec(content)?.[1]
+    expect(content).toMatch(
+      new RegExp(
+        `style:name="${first}"[^>]*style:parent-style-name="Heading1"[^>]*style:default-outline-level="1"`,
+      ),
+    )
+    expect(styles).toMatch(/style:name="Heading1"[^>]*style:default-outline-level="1"/)
+    const second = /<text:p text:style-name="([^"]+)">절/.exec(content)?.[1]
+    expect(content).toMatch(
+      new RegExp(`style:name="${second}"[^>]*style:default-outline-level="2"`),
+    )
+    // the plain paragraph's style takes no level
+    const plain = /<text:p text:style-name="([^"]+)">본문/.exec(content)?.[1]
+    expect(plain).not.toBe(second)
+    expect(styles).toMatch(/<text:outline-style style:name="Outline">/)
+    const blocks = reread.blocks.filter((b) => !b.hidden)
+    expect(blocks[0]).toMatchObject({ type: 'heading', level: 1 })
+  })
+
+  it('starts a page where a page break sits inside a paragraph', async () => {
+    const br = '<w:r><w:br w:type="page"/></w:r>'
+    const body =
+      '<w:p><w:r><w:t>앞</w:t></w:r>' +
+      br +
+      '<w:r><w:t>뒤</w:t></w:r></w:p>' +
+      '<w:p>' +
+      br +
+      '</w:p>' +
+      p('다음') +
+      '<w:p><w:r><w:t>끝</w:t></w:r>' +
+      br +
+      '</w:p>' +
+      '<w:tbl><w:tblGrid><w:gridCol w:w="2000"/></w:tblGrid><w:tr><w:tc><w:p><w:r><w:t>칸</w:t></w:r></w:p></w:tc></w:tr></w:tbl>' +
+      sectPr()
+    const { pkg } = await convert({ body })
+    const content = textOf(pkg, 'content.xml')
+    const breaks = new Set(
+      [
+        ...content.matchAll(
+          /style:name="([^"]+)"[^>]*><style:paragraph-properties[^>]*fo:break-before="page"/g,
+        ),
+      ].map((m) => m[1]),
+    )
+    const styleOf = (text: string) =>
+      new RegExp(`<text:p text:style-name="([^"]+)">${text}<`).exec(content)?.[1] ?? ''
+    expect(breaks.has(styleOf('앞'))).toBe(false)
+    expect(breaks.has(styleOf('뒤'))).toBe(true)
+    // a paragraph holding only the break leaves none behind; the next one starts the page
+    expect(breaks.has(styleOf('다음'))).toBe(true)
+    expect(content).not.toMatch(/<text:p[^>]*><\/text:p><text:p[^>]*>다음/)
+    // a break at the end of a paragraph starts the page of the table after it
+    expect(content).toMatch(
+      />끝<\/text:p><text:p text:style-name="([^"]+)"\/?>(<\/text:p>)?<table:table /,
+    )
+    const before = /<text:p text:style-name="([^"]+)"\/?>(?:<\/text:p>)?<table:table /.exec(
+      content,
+    )?.[1]
+    expect(breaks.has(before ?? '')).toBe(true)
+  })
+
+  it('gives table rows the least height Word lays them out at', async () => {
+    const cell = (text: string, pPr = '') =>
+      `<w:tc><w:tcPr><w:tcW w:w="3000" w:type="dxa"/></w:tcPr>${p(text, pPr)}</w:tc>`
+    const body =
+      '<w:tbl><w:tblPr><w:tblW w:w="6000" w:type="dxa"/></w:tblPr><w:tblGrid><w:gridCol w:w="3000"/><w:gridCol w:w="3000"/></w:tblGrid>' +
+      `<w:tr>${cell('한 줄')}${cell('둘째', '<w:spacing w:before="100" w:after="0" w:line="480" w:lineRule="auto"/>')}</w:tr>` +
+      `<w:tr><w:trPr><w:trHeight w:val="400" w:hRule="exact"/></w:trPr>${cell('고정')}${cell('칸')}</w:tr>` +
+      `<w:tr><w:trPr><w:trHeight w:val="2000"/></w:trPr>${cell('높은')}${cell('칸')}</w:tr>` +
+      '</w:tbl>' +
+      sectPr()
+    const { pkg } = await convert({ body })
+    const content = textOf(pkg, 'content.xml')
+    const rows = [...content.matchAll(/<table:table-row(?: table:style-name="([^"]+)")?>/g)].map(
+      (m) =>
+        m[1]
+          ? new RegExp(`style:name="${m[1]}"[^>]*><style:table-row-properties ([^/]*)/>`).exec(
+              content,
+            )?.[1]
+          : '',
+    )
+    // Hangul in Malgun Gothic (a 1.3301 line): 11pt at 259/240 lines + 160 after = 475 twips;
+    // doubled + 100 before = 685 twips = 1.208cm
+    expect(rows[0]).toMatch(/^style:min-row-height="1\.20\d*cm"$/)
+    expect(rows[1]).toMatch(/^style:row-height="0\.70\d*cm"$/)
+    expect(rows[2]).toMatch(/^style:min-row-height="3\.52\d*cm"$/)
+  })
+
+  it('states the whole look in every common paragraph style', async () => {
+    const { pkg } = await convert({ body: p('본문') + sectPr() })
+    const styles = textOf(pkg, 'styles.xml')
+    // Hancom does not take line spacing or alignment from style:default-style
+    expect(styles).toMatch(
+      /<style:style style:name="Standard"[^>]*><style:paragraph-properties fo:text-align="start" fo:margin-bottom="0\.282cm" fo:line-height="108%"/,
+    )
+    expect(styles).toMatch(
+      /<style:style style:name="Heading1"[^>]*><style:paragraph-properties fo:text-align="start"[^>]*fo:line-height="108%"/,
+    )
   })
 })
 
@@ -167,6 +312,21 @@ describe('docxToOdt: objects become pictures', () => {
     expect(frames[2]).toMatch(/<draw:text-box><text:p[^>]*>Chart<\/text:p>/)
     expect(pkg.get('Pictures/io_1.png')?.bytes).toEqual(PNG_GREY)
     expect(byFeature(report)).toMatchObject({ 'converted:shape': 2, 'converted:chart': 1 })
+  })
+
+  it('keeps pictures named by the ODT bridge (a docx that came from an ODT)', async () => {
+    const run = pictureRun('rIdImg', 914400, 914400, 7).replace(
+      /name="Picture 7"/g,
+      'name="odt-pic:Picture1"',
+    )
+    const { pkg, report } = await convert({
+      body: `<w:p>${run}</w:p>` + sectPr(),
+      media: { rIdImg: { name: 'image1.png', data: PNG_1X1 } },
+    })
+    expect(textOf(pkg, 'content.xml')).toMatch(
+      /<draw:frame [^>]*><draw:image xlink:href="Pictures\//,
+    )
+    expect(byFeature(report)['dropped:locked-object']).toBeUndefined()
   })
 
   it('uses the pictures the editor rendered', async () => {

@@ -176,10 +176,13 @@ const LANG = (tag: string | undefined, suffix: '' | '-asian' | '-complex'): Attr
   return out
 }
 
-/** `style:default-style` for paragraphs from the docx document defaults. */
-export function defaultStyleXml(defaults: DocDefaults | undefined, fonts: FontSet): string {
+/** The docx document defaults as paragraph and run formats (Word's built-ins filled in). */
+export function documentDefaults(defaults: DocDefaults | undefined): {
+  para: ParaFormat
+  text: TextFormat
+} {
   const d = defaults ?? {}
-  const format: ParaFormat = {}
+  const format: ParaFormat = { align: 'left' }
   if (d.lineRule === 'exact' || d.lineRule === 'atLeast') {
     if (d.lineRawTwips) {
       format.lineRule = d.lineRule
@@ -188,28 +191,44 @@ export function defaultStyleXml(defaults: DocDefaults | undefined, fonts: FontSe
   } else if (d.lineSpacing) {
     format.lineRule = 'auto'
     format.lineSpacing = d.lineSpacing
+  } else {
+    format.lineRule = 'auto'
+    format.lineSpacing = 1
   }
   format.spaceBefore = d.spaceBeforeTwips ?? 0
   format.spaceAfter = d.spaceAfterTwips ?? 0
-  const para = paragraphProps(format)
-  if (!para.attrs['fo:line-height'] && !para.attrs['style:line-height-at-least'])
-    para.attrs['fo:line-height'] = '100%'
-  const text = textProps(
-    textFormatOf({
-      bold: d.bold,
-      italic: d.italic,
-      color: d.color,
-      // Word's built-in default when no size is stated
-      sizeHalfPoints: d.sizeHalfPoints ?? 20,
-      // Word's built-in Latin face when the document names none
-      fontAscii: d.asciiFont ?? 'Times New Roman',
-      eastAsiaFont: d.eastAsiaFont,
-      csFont: d.csFont,
-    }),
-    fonts,
-  )
-  Object.assign(text, LANG(d.lang, ''), LANG(d.eastAsiaLang, '-asian'))
-  return styleXml('', 'paragraph', {}, para, text, 'style:default-style')
+  const text = textFormatOf({
+    bold: d.bold,
+    italic: d.italic,
+    color: d.color,
+    // Word's built-in default when no size is stated
+    sizeHalfPoints: d.sizeHalfPoints ?? 20,
+    // Word's built-in Latin face when the document names none
+    fontAscii: d.asciiFont ?? 'Times New Roman',
+    eastAsiaFont: d.eastAsiaFont,
+    csFont: d.csFont,
+  })
+  return { para: format, text }
+}
+
+/** `style:default-style` for paragraphs from the docx document defaults. */
+export function defaultStyleXml(defaults: DocDefaults | undefined, fonts: FontSet): string {
+  const base = documentDefaults(defaults)
+  const text = textProps(base.text, fonts)
+  Object.assign(text, LANG(defaults?.lang, ''), LANG(defaults?.eastAsiaLang, '-asian'))
+  return styleXml('', 'paragraph', {}, paragraphProps(base.para), text, 'style:default-style')
+}
+
+/**
+ * The outline numbering of headings: none, stated so that no reader supplies
+ * its own (a docx heading carries its numbering, if any, in its own list).
+ * Hancom ignores it and numbers every `text:h`; see `headings.ts`.
+ */
+export function outlineStyleXml(): string {
+  let levels = ''
+  for (let level = 1; level <= 10; level++)
+    levels += `<text:outline-level-style text:level="${level}" style:num-format=""/>`
+  return `<text:outline-style style:name="Outline">${levels}</text:outline-style>`
 }
 
 /** Common paragraph styles: docx style id → ODF style name. */
@@ -229,7 +248,13 @@ const ncName = (id: string, taken: Set<string>): string => {
   return name
 }
 
+/**
+ * Every common paragraph style states its whole look: the document defaults
+ * under the style's own resolved values. Hancom does not apply every value of
+ * `style:default-style` (line spacing, alignment), so nothing is left to it.
+ */
 export function paragraphStylesXml(parsed: ParsedDoc, fonts: FontSet): ParagraphStyles {
+  const base = documentDefaults(parsed.docDefaults)
   const names = new Map<string, string>()
   const taken = new Set<string>(['standard'])
   let out = ''
@@ -245,13 +270,20 @@ export function paragraphStylesXml(parsed: ParsedDoc, fonts: FontSet): Paragraph
       name,
       'paragraph',
       extra,
-      paragraphProps(paraFormatOf(d)),
-      textProps(textFormatOf(d), fonts),
+      paragraphProps({ ...base.para, ...paraFormatOf(d) }),
+      textProps({ ...base.text, ...textFormatOf(d) }, fonts),
     )
     names.set(styleId, name)
   }
   if (def) write(def.styleId, 'Standard', def.name && def.name !== 'Normal' ? def.name : null)
-  else out += '<style:style style:name="Standard" style:family="paragraph" style:class="text"/>'
+  else
+    out += styleXml(
+      'Standard',
+      'paragraph',
+      { 'style:class': 'text' },
+      paragraphProps(base.para),
+      textProps(base.text, fonts),
+    )
   for (const s of styles) {
     if (s === def) continue
     const display = s.name ? s.name.replace(/^heading (\d)$/, 'Heading $1') : s.styleId
@@ -276,6 +308,8 @@ export interface MasterSpec {
   >
   numFormat: string | null
   mirrored: boolean
+  /** text columns of the page (1 when the run has continuous sections of its own) */
+  columns: { count: number; gap: number }
 }
 
 export function pageLayoutXml(spec: MasterSpec): string {
@@ -312,11 +346,31 @@ export function pageLayoutXml(spec: MasterSpec): string {
   }
   return (
     `<style:page-layout style:name="${escapeXmlAttr(spec.layoutName)}"${spec.mirrored ? ' style:page-usage="mirrored"' : ''}>` +
-    `<style:page-layout-properties${attrs}/>` +
+    (columnsXml(spec.columns)
+      ? `<style:page-layout-properties${attrs}>${columnsXml(spec.columns)}</style:page-layout-properties>`
+      : `<style:page-layout-properties${attrs}/>`) +
     `<style:header-style>${band(spec.header, top, page['fo:margin-top'], 'fo:margin-bottom')}</style:header-style>` +
     `<style:footer-style>${band(spec.footer, s.marginBottom, page['fo:margin-bottom'], 'fo:margin-top')}</style:footer-style>` +
     '</style:page-layout>'
   )
+}
+
+/**
+ * `style:columns` for a column count and gap (twips), '' for one column. The
+ * columns are listed one by one: Hancom stops responding on a `style:columns`
+ * without its `style:column` children.
+ */
+export function columnsXml(columns: { count: number; gap: number }): string {
+  const count = Math.max(1, Math.round(columns.count))
+  if (count < 2) return ''
+  const gap = Math.max(0, columns.gap)
+  const half = twipsToLength(gap / 2)
+  let inner = ''
+  for (let k = 0; k < count; k++)
+    inner +=
+      `<style:column style:rel-width="1000*" fo:start-indent="${k === 0 ? '0cm' : half}" ` +
+      `fo:end-indent="${k === count - 1 ? '0cm' : half}"/>`
+  return `<style:columns fo:column-count="${count}" fo:column-gap="${twipsToLength(gap)}">${inner}</style:columns>`
 }
 
 export function masterPageXml(spec: MasterSpec): string {

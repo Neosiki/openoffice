@@ -40,6 +40,7 @@ import { odtRegistry } from '../registry'
 import { type ConversionReport, ReportBuilder } from '../report'
 import { type ZipEntryInput, writeZip } from '../zip'
 import { BlockNormaliser } from './blocks'
+import { headingsAsParagraphs } from './headings'
 import { type RenderedObject, labelRunWriter } from './objects'
 import {
   FontSet,
@@ -47,6 +48,8 @@ import {
   defaultStyleXml,
   masterPageXml,
   pageLayoutXml,
+  columnsXml,
+  outlineStyleXml,
   paragraphStylesXml,
 } from './styles'
 
@@ -105,6 +108,8 @@ interface PageGroup {
   master: MasterSpec
   /** region → header/footer part shown there (null: an empty region) */
   parts: Partial<Record<Region, string | null>>
+  /** the docx sections of the run (continuous breaks), with their text columns */
+  subsections: Array<{ first: number; last: number; columns: { count: number; gap: number } }>
 }
 
 const encoder = new TextEncoder()
@@ -140,10 +145,10 @@ export async function docxToOdt(
   const items: EditedItem[] = []
   const blocks = []
   for (const b of parsed.blocks) {
-    const item = await normaliser.block(b)
-    if (!item) continue
-    items.push(item)
-    blocks.push(...item.blocks)
+    for (const item of await normaliser.block(b)) {
+      items.push(item)
+      blocks.push(...item.blocks)
+    }
   }
   countTocs(parsed, report)
 
@@ -170,7 +175,7 @@ export async function docxToOdt(
   const stylesXml =
     `${XML_DECL}<office:document-styles ${NAMESPACES} office:version="${ODF_VERSION}">` +
     `<office:font-face-decls>${fonts.decls()}</office:font-face-decls>` +
-    `<office:styles>${defaults}${paragraphStyles.xml}</office:styles>` +
+    `<office:styles>${defaults}${paragraphStyles.xml}${outlineStyleXml()}</office:styles>` +
     `<office:automatic-styles>${masters.map(pageLayoutXml).join('')}</office:automatic-styles>` +
     `<office:master-styles>${masters.map(masterPageXml).join('')}</office:master-styles>` +
     '</office:document-styles>'
@@ -218,11 +223,28 @@ export async function docxToOdt(
   const registry = odtRegistry().addRunWriter(labelRunWriter)
   const rctx = new OoxmlToOdfContext(doc, map, edited, registry)
   let body = ''
+  let sectionSeq = 0
   groups.forEach((g, i) => {
-    const own = items.filter((it) => it.index >= g.first && it.index <= g.last)
-    if (!own.length) return
-    const aligned: AlignedItem[] = own.map((item) => ({ item, element: null, unchanged: false }))
-    let xml = rebuildFlow(rctx, aligned, { parent: null })
+    let xml = ''
+    for (const sub of g.subsections) {
+      const own = items.filter((it) => it.index >= sub.first && it.index <= sub.last)
+      if (!own.length) continue
+      const aligned: AlignedItem[] = own.map((item) => ({ item, element: null, unchanged: false }))
+      const flow = rebuildFlow(rctx, aligned, { parent: null })
+      // a continuous section with its own columns is a text:section of the page run
+      if (g.subsections.length > 1 && sub.columns.count > 1) {
+        const style = rctx.derivedStyle(
+          'content.xml',
+          `export-section:${sub.columns.count}:${sub.columns.gap}`,
+          'Sect',
+          (name) =>
+            `<style:style style:name="${name}" style:family="section"><style:section-properties>` +
+            `${columnsXml(sub.columns)}</style:section-properties></style:style>`,
+        )
+        xml += `<text:section text:style-name="${style}" text:name="Section${++sectionSeq}">${flow}</text:section>`
+      } else xml += flow
+    }
+    if (!xml) return
     const start = i > 0 || g.master.name !== 'Standard' || g.section.pageNumberStart !== undefined
     if (start) xml = startPageRun(rctx, xml, g.master.name, g.section.pageNumberStart)
     body += xml
@@ -248,8 +270,20 @@ export async function docxToOdt(
     }
   }
   const patches = rctx.finish()
-  const content = applyTextPatches(doc.contentXml, patches['content.xml'])
-  const styles = applyTextPatches(doc.stylesXml ?? '', patches['styles.xml'])
+  // headings as Hancom writes them (it numbers every text:h)
+  const levels = new Map<string, number>()
+  for (const [styleId, odfName] of paragraphStyles.names) {
+    const level = parsed.styles.get(styleId)?.headingLevel
+    if (level) levels.set(odfName, level)
+  }
+  const content = headingsAsParagraphs(
+    applyTextPatches(doc.contentXml, patches['content.xml']),
+    levels,
+  )
+  const styles = headingsAsParagraphs(
+    applyTextPatches(doc.stylesXml ?? '', patches['styles.xml']),
+    levels,
+  )
   const changes = objectPackageChanges(rctx, { contentXml: content, stylesXml: styles })
 
   const entries: ZipEntryInput[] = [
@@ -310,14 +344,24 @@ function pageGroups(
   report: ReportBuilder,
 ): PageGroup[] {
   const evenOdd = !!parsed.evenAndOddHeaders
-  const masters = new Map<string, MasterSpec>()
   const groups: PageGroup[] = []
-  let columns = 0
+  let unequal = 0
+  const columnsOf = (s: SectionInfo) => {
+    const st = s.settings
+    if (st.columns > 1 && st.colWidths && new Set(st.colWidths).size > 1) unequal++
+    return { count: Math.max(1, st.columns || 1), gap: st.colSpace ?? 720 }
+  }
   sections.forEach((s, i) => {
-    if (s.settings.columns > 1) columns++
     const prev = groups[groups.length - 1]
     if (prev && (s.startType === 'continuous' || s.startType === 'nextColumn')) {
       prev.last = s.lastBlockIndex
+      prev.subsections.push({
+        first: s.firstBlockIndex,
+        last: s.lastBlockIndex,
+        columns: columnsOf(s),
+      })
+      // a page run of several column layouts gets them from its sections
+      prev.master.columns = { count: 1, gap: 0 }
       return
     }
     const parts: Partial<Record<Region, string | null>> = {}
@@ -330,37 +374,28 @@ function pageGroups(
     const regions = (Object.keys(parts) as Region[]).sort(
       (a, b) => REGION_ORDER.indexOf(a) - REGION_ORDER.indexOf(b),
     )
-    const st = s.settings
-    const key = JSON.stringify([
-      st.pageWidth,
-      st.pageHeight,
-      st.orientation,
-      st.marginTop,
-      st.marginBottom,
-      st.marginLeft,
-      st.marginRight,
-      st.headerDist,
-      st.footerDist,
-      st.gutter,
-      s.pageNumberFmt ?? null,
-      parts,
-    ])
-    let master = masters.get(key)
-    if (!master) {
-      const n = masters.size + 1
-      master = {
-        name: n === 1 ? 'Standard' : `MP${n}`,
-        layoutName: `Mpm${n}`,
-        settings: st,
-        header: regions.some((r) => r.startsWith('header')),
-        footer: regions.some((r) => r.startsWith('footer')),
-        regions,
-        numFormat: s.pageNumberFmt ?? null,
-        mirrored: !!parsed.mirrorMargins,
-      }
-      masters.set(key, master)
+    // one master page per docx page section, so the sections stay sections
+    const n = groups.length + 1
+    const columns = columnsOf(s)
+    const master: MasterSpec = {
+      name: n === 1 ? 'Standard' : `MP${n}`,
+      layoutName: `Mpm${n}`,
+      settings: s.settings,
+      header: regions.some((r) => r.startsWith('header')),
+      footer: regions.some((r) => r.startsWith('footer')),
+      regions,
+      numFormat: s.pageNumberFmt ?? null,
+      mirrored: !!parsed.mirrorMargins,
+      columns,
     }
-    groups.push({ first: s.firstBlockIndex, last: s.lastBlockIndex, section: s, master, parts })
+    groups.push({
+      first: s.firstBlockIndex,
+      last: s.lastBlockIndex,
+      section: s,
+      master,
+      parts,
+      subsections: [{ first: s.firstBlockIndex, last: s.lastBlockIndex, columns }],
+    })
   })
   if (!groups.length) {
     const fallback: MasterSpec = {
@@ -382,6 +417,7 @@ function pageGroups(
       regions: [],
       numFormat: null,
       mirrored: false,
+      columns: { count: 1, gap: 0 },
     }
     groups.push({
       first: 0,
@@ -398,11 +434,15 @@ function pageGroups(
       },
       master: fallback,
       parts: {},
+      subsections: [{ first: 0, last: Number.MAX_SAFE_INTEGER, columns: { count: 1, gap: 0 } }],
     })
   }
   // the last group takes everything after it (trailing elements)
-  groups[groups.length - 1].last = Number.MAX_SAFE_INTEGER
-  report.add('converted', 'columns', columns)
+  const lastGroup = groups[groups.length - 1]
+  lastGroup.last = Number.MAX_SAFE_INTEGER
+  lastGroup.subsections[lastGroup.subsections.length - 1].last = Number.MAX_SAFE_INTEGER
+  // ODF columns are equal: unequal docx column widths become equal ones
+  report.add('converted', 'columns', unequal)
   if (parsed.mirrorMargins) report.add('converted', 'mirror_margins')
   return groups
 }

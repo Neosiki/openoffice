@@ -39,6 +39,7 @@ import {
   pictureRun,
   solidPng,
 } from './objects'
+import { withRowFloors } from './rows'
 
 /** Reads package bytes of a document relationship (null when missing). */
 export type MediaReader = (rId: string) => Promise<Uint8Array | null>
@@ -51,6 +52,9 @@ export interface NormaliseEnv {
 }
 
 const IDENTITY = new PrefixMap()
+
+/** A page break as the docx engine reads it in run text. */
+const FF = '\f'
 
 const RUN_STYLE_KEYS = [
   'bold',
@@ -229,7 +233,7 @@ export class BlockNormaliser {
       }
       rows.push(cells)
     }
-    return { ...model, rows }
+    return withRowFloors({ ...model, rows }, this.env.parsed)
   }
 
   /**
@@ -319,8 +323,87 @@ export class BlockNormaliser {
     }
   }
 
+  /** A page break (`\f`) seen at the end of the previous element, for the next one. */
+  private pendingBreak = false
+
+  /**
+   * One body element → the items the writers take. A page break inside a
+   * paragraph (`w:br w:type="page"`) splits it: the text after the break is a
+   * paragraph of its own that starts a page (`fo:break-before`, which Hancom
+   * and LibreOffice both honour). A break at the end starts the next element's
+   * page; a paragraph holding only a break leaves no empty paragraph behind
+   * (as Hancom reads such a docx).
+   */
+  async block(b: Block): Promise<EditedItem[]> {
+    const one = await this.single(b)
+    if (!one) return []
+    const block = one.blocks[0]
+    const out: EditedItem[] = []
+    const paragraphLike =
+      block.type === 'paragraph' || block.type === 'heading' || block.type === 'listItem'
+    if (!paragraphLike) {
+      if (this.pendingBreak) {
+        this.pendingBreak = false
+        out.push({
+          index: one.index,
+          xml: '',
+          blocks: [
+            {
+              ...block,
+              type: 'paragraph',
+              runs: [],
+              table: undefined,
+              format: { pageBreakBefore: true },
+              rawPPr: undefined,
+              originalXml: '',
+            },
+          ],
+        })
+      }
+      out.push(one)
+      return out
+    }
+    const pieces: Run[][] = [[]]
+    for (const run of block.runs ?? []) {
+      if (!run.text.includes(FF)) {
+        pieces[pieces.length - 1].push(run)
+        continue
+      }
+      run.text.split(FF).forEach((part, k) => {
+        if (k > 0) pieces.push([])
+        if (part) pieces[pieces.length - 1].push({ ...run, text: part })
+      })
+    }
+    let breakBefore = this.pendingBreak
+    this.pendingBreak = false
+    pieces.forEach((runs, k) => {
+      const last = k === pieces.length - 1
+      if (pieces.length > 1 && !runs.length && (k === 0 || last)) {
+        // a break at the start belongs to the next piece, one at the end to the next element
+        if (last) this.pendingBreak = true
+        else breakBefore = true
+        return
+      }
+      const format = { ...(block.format ?? {}) }
+      if (breakBefore || k > 0) format.pageBreakBefore = true
+      breakBefore = false
+      const piece: Block =
+        k === 0
+          ? { ...block, runs, format }
+          : {
+              ...block,
+              runs,
+              format,
+              type: block.type === 'listItem' ? 'paragraph' : block.type,
+              list: undefined,
+            }
+      out.push({ index: one.index, xml: k === 0 ? one.xml : '', blocks: [piece] })
+    })
+    return out
+  }
+
   /** One body element → the item the writers take (null: nothing to write). */
-  async block(b: Block): Promise<EditedItem | null> {
+  private async single(b: Block): Promise<EditedItem | null> {
     if (b.hidden || b.invisibleMarker) return null
     if (b.blockRevision) {
       this.revisions++
