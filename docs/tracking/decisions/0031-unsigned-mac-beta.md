@@ -11,7 +11,7 @@ Mac에서 경고 없이 열리고 스스로 업데이트되는 앱을 내려면 
 - **서명.** Mac판은 ad hoc 서명만 한다(`electron-builder.cjs`의 `config.mac.identity = '-'`). Apple Silicon은 서명이 하나도 없는 프로그램을 실행하지 않으므로 서명을 끄지 않는다. 공증은 하지 않는다. ad hoc 서명에서는 hardened runtime의 라이브러리 검사가 Electron 프레임워크를 거부하므로 hardened runtime을 끈다. dmg에는 서명하지 않는다.
 - **대상.** Apple Silicon(M1 이후)만 낸다. 설정의 기본값 그대로다(`GENOFFICE_MAC_X64`를 켜지 않는다). Intel Mac까지 내면 확인할 것이 두 배가 된다.
 - **업데이트.** Squirrel.Mac은 Developer ID로 서명된 앱에만 업데이트를 설치한다. 그래서 Mac판은 새 버전 확인만 하고(`latest-mac.yml`), 새 버전이 있으면 업데이트 창을 처음부터 "다운로드 페이지 열기" 단계로 띄운다(`updater.ts`의 `SELF_UPDATES`). 사용자는 릴리스 페이지에서 새 dmg를 받아 덮어 설치한다. 내려받기를 시도하지 않고, 종료할 때 설치하지도 않는다.
-- **빌드.** Mac에서만 만들 수 있으므로 GitHub의 Mac 빌드 기계에서 만든다(`.github/workflows/mac-build.yml`, 손으로 실행). 비밀 값을 쓰지 않고 릴리스에 올리지도 않는다. 결과를 내려받아 저장소 주인이 Windows 설치 파일과 같은 릴리스에 손으로 올린다. 빌드는 서명과 묶인 프로그램의 구조를 검사하고, 만든 앱을 창 없이 실행해 Markdown과 CSV 파일을 PDF로 내보내 본다.
+- **빌드.** Mac에서만 만들 수 있으므로 GitHub의 Mac 빌드 기계에서 만든다(`.github/workflows/mac-build.yml`, 손으로 실행). 비밀 값을 쓰지 않는다. `main`에서 손으로 실행하며 릴리스 태그를 주면, 빌드가 통과한 뒤 Windows 설치 파일로 이미 공개한 그 릴리스에 Mac 파일을 붙인다(빌드한 버전과 태그가 같을 때만). 태그를 주지 않으면 결과물만 남고 저장소 주인이 손으로 올린다. 빌드는 서명과 묶인 프로그램의 구조를 검사하고, 만든 앱을 창 없이 실행해 Markdown과 CSV 파일을 PDF로 내보내 본다.
 - **구독 카드.** 앱이 터미널 창을 직접 여는 일은 Windows에서만 한다(설치 명령, 코드를 붙여 넣는 로그인 창). Mac에서는 카드가 그 둘을 내놓지 않는다. 설치되지 않은 프로그램에는 "공식 설치 안내" 링크만 보이고, 로그인하는 동안에는 "코드가 나오나요?" 링크가 없다. Mac의 로그인은 지금처럼 프로그램이 연 브라우저에서 끝난다.
 - **표시.** README와 운영 문서는 "Windows, 그리고 서명 없는 베타로 Apple Silicon Mac"이라고 적는다. Mac에서 무엇이 확인됐는지는 Mac 사용자들의 보고로 `docs/tracking/status.md`에 남긴다.
 

@@ -1,15 +1,21 @@
 name: macOS build
 
-# Builds the macOS installer (Apple Silicon) on a GitHub-hosted Mac, for the
-# maintainer to attach to a release by hand (docs/releasing.ko.md, "Mac 설치
-# 파일"). The app is signed ad hoc and not notarized
-# (docs/tracking/decisions/0031-unsigned-mac-beta.md): no Apple account, no
-# certificate and no repository secret is involved, and nothing is uploaded
-# to a release from here. Run it from the Actions tab on the commit the
-# release tag will point to.
+# Builds the macOS installer (Apple Silicon) on a GitHub-hosted Mac
+# (docs/releasing.ko.md, "Mac 설치 파일"). The app is signed ad hoc and not
+# notarized (docs/tracking/decisions/0031-unsigned-mac-beta.md): no Apple
+# account, no certificate and no repository secret is involved.
+#
+# Run from the Actions tab on main. With a release tag (v0.12.0), the build
+# is also attached to that existing GitHub release, but only from main and
+# only when the built version is the tag's; without one it stays an artifact.
 
 on:
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Existing release to attach the Mac files to (e.g. v0.12.0); empty = artifact only'
+        required: false
+        default: ''
   # a change to the Mac packaging is proved on a real Mac before it merges
   pull_request:
     branches: [main]
@@ -126,3 +132,30 @@ jobs:
             apps/shell/release/*-mac.yml
           if-no-files-found: error
           retention-days: 14
+
+  attach:
+    # the one job that writes: it adds the build to a release the maintainer
+    # already published, and only for a run started by hand on main
+    needs: build
+    if: github.event_name == 'workflow_dispatch' && inputs.release_tag != '' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      actions: read
+      contents: write
+    env:
+      TAG: ${{ inputs.release_tag }}
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: Attach to the release
+        run: |
+          set -euo pipefail
+          gh run download "$GITHUB_RUN_ID" --name ieumoffice-mac-arm64 --dir mac
+          [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$ ]] || { echo "not a version tag: $TAG"; exit 1; }
+          gh release view "$TAG" >/dev/null || { echo "no release $TAG: publish it first"; exit 1; }
+          feed=$(ls mac/*-mac.yml)
+          built=$(sed -n 's/^version: *//p' $feed | tr -d "'\"")
+          [ "v$built" = "$TAG" ] || { echo "built $built, but the release is $TAG"; exit 1; }
+          gh release upload "$TAG" mac/*.dmg mac/*.zip $feed --clobber
+          gh release view "$TAG" --json assets --jq '.assets[].name'
