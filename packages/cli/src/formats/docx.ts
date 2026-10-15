@@ -27,7 +27,7 @@ import type { FloatSpec } from '../../../../apps/docs/src/renderer/ai/floating-o
 import type { AiNotesAccess, NoteKind } from '../../../../apps/docs/src/renderer/ai/note-ops'
 import type { AiCommentsAccess } from '../../../../apps/docs/src/renderer/ai/tools'
 import { ensureDom } from '../dom'
-import type { PathContext } from '../fs'
+import { extension, readInput, type PathContext } from '../fs'
 import type { BatchMode } from '../batch'
 import { classifyOpError, opSuggestion, type OpFailure } from '../op-errors'
 import {
@@ -41,6 +41,14 @@ import { CliError, EXIT } from '../result'
 import { readImageSource } from './image-source'
 import { imageSize } from './image-size'
 import { applySectionEdits, pageSetupAccess } from './docx-sections'
+import {
+  OdtEditGuard,
+  odtDisabledFeature,
+  odtDisabledMessage,
+  openOdtBytes,
+  saveOdtBytes,
+  type OdtOrigin,
+} from './odt'
 
 /**
  * The Word editing surface lives in the docs renderer (Tiptap document,
@@ -137,6 +145,8 @@ export interface OpenDocument {
   numIds: { bullet: string | null; ordered: string | null }
   mods: Modules
   side: SideState
+  /** set when the document is a received .odt: saving writes it back into that package */
+  odt?: OdtOrigin
 }
 
 function hfFromPart(part: HfPartInfo | null | undefined): HeaderFooter | null {
@@ -204,6 +214,16 @@ export async function openDocument(bytes: Uint8Array): Promise<OpenDocument> {
   return { parsed, editor, numIds, mods, side: sideStateOf(parsed) }
 }
 
+/** A .docx, or a received .odt through its bridge docx (saved back into the ODT by saveDocument). */
+export async function openDocumentFile(path: string): Promise<OpenDocument> {
+  const bytes = readInput(path)
+  if (extension(path) !== 'odt') return openDocument(bytes)
+  const { docxBytes, origin } = await openOdtBytes(bytes)
+  const doc = await openDocument(docxBytes)
+  doc.odt = origin
+  return doc
+}
+
 export async function blankDocument(): Promise<OpenDocument> {
   return openDocument(await buildBlankDocx())
 }
@@ -230,7 +250,8 @@ export async function saveDocument(doc: OpenDocument): Promise<Uint8Array> {
     endnotes: side.notesDirty ? side.endnotes : undefined,
     ...(await chartPartPatches(doc, plan.chartPatches)),
   }
-  return saveDocx(doc.parsed, sectionEdits.saveBlocks, options)
+  const docx = await saveDocx(doc.parsed, sectionEdits.saveBlocks, options)
+  return doc.odt ? saveOdtBytes(doc.odt, docx) : docx
 }
 
 /** edit_chart changes live in the chart's own part and its embedded workbook, not in the body XML */
@@ -481,11 +502,13 @@ export async function applyDocOps(
   const pageSetup = pageSetupAccess(doc)
   const extras = docExtras(doc)
   const notes = notesAccess(doc)
+  // a received ODT: protected cells and locked object stand-ins must come out of every op unchanged
+  const guard = doc.odt ? new OdtEditGuard(doc.odt.bridge, doc.editor.state.doc) : null
   for (const [index, op] of ops.entries()) {
     const name = typeof op.op === 'string' ? op.op : ''
     // a rejected op left the document as it was: the executor applies each call whole or not at all
-    const rejected = (output: string): boolean => {
-      const failure = classifyOpError(index, name, output)
+    const rejected = (output: string, reason?: OpFailure['reason']): boolean => {
+      const failure = { ...classifyOpError(index, name, output), ...(reason ? { reason } : {}) }
       if (mode === 'atomic') {
         throw new CliError(
           EXIT.usage,
@@ -498,14 +521,22 @@ export async function applyDocOps(
       return true
     }
     let failed = false
-    if (name === 'insert_image' || name === 'insert_picture') {
-      const r = await insertImage(doc, op, opts, name === 'insert_picture')
-      if (r.error) failed = rejected(r.error)
-      else results.push({ index, op: name, output: r.output! })
+    const odtOff = doc.odt ? odtDisabledFeature(op) : null
+    const before = guard?.active
+      ? {
+          state: doc.editor.state,
+          print: guard.snapshot(doc.editor.state.doc),
+          side: copySide(doc.side),
+        }
+      : null
+    let outcome: { error?: string; output?: string }
+    if (odtOff) {
+      outcome = {}
+      failed = rejected(odtDisabledMessage(odtOff), 'unsupported')
+    } else if (name === 'insert_image' || name === 'insert_picture') {
+      outcome = await insertImage(doc, op, opts, name === 'insert_picture')
     } else if (name === 'set_watermark' && typeof op.image === 'string') {
-      const r = await setPictureWatermark(doc, op, opts)
-      if (r.error) failed = rejected(r.error)
-      else results.push({ index, op: name, output: r.output! })
+      outcome = await setPictureWatermark(doc, op, opts)
     } else {
       const call = HTML_TOOLS.has(name)
         ? { id: `genoffice-${index}`, name, input: htmlToolInput(doc, name, op) }
@@ -528,14 +559,41 @@ export async function applyDocOps(
       )
       // the in-app executor reports a target that matched nothing as a soft result; for a
       // scripted batch that is a wrong index, so the op counts as rejected
-      if (exec.isError || /^No matching blocks/i.test(exec.output)) failed = rejected(exec.output)
-      else results.push({ index, op: name, output: exec.output })
+      outcome =
+        exec.isError || /^No matching blocks/i.test(exec.output)
+          ? { error: exec.output }
+          : { output: exec.output }
+    }
+    if (!odtOff) {
+      const broke = before && guard!.violation(before.print, doc.editor.state.doc)
+      if (outcome.error) failed = rejected(outcome.error)
+      else if (broke) {
+        // put the document back as it was before the op, then refuse it
+        doc.editor.view.updateState(before.state)
+        Object.assign(doc.side, before.side)
+        doc.mods.tools.markDocSeen(doc.editor)
+        failed = rejected(`not applied: ${broke}`, 'op_rejected')
+      } else results.push({ index, op: name, output: outcome.output! })
     }
     if (failed && mode === 'stop_on_error') {
       return { results, failures, skipped: ops.length - index - 1 }
     }
   }
   return { results, failures, skipped: 0 }
+}
+
+/** The side state an op may touch, copied so a refused op can be undone. */
+function copySide(side: SideState): SideState {
+  return {
+    ...side,
+    hf: { ...side.hf },
+    hfDirty: new Set(side.hfDirty),
+    comments: [...side.comments],
+    sectPr: new Map(side.sectPr),
+    styleUpserts: new Map(side.styleUpserts),
+    footnotes: [...side.footnotes],
+    endnotes: [...side.endnotes],
+  }
 }
 
 /** insert_content / insert_chart without a position append at the end; the in-app default ("after the cursor") has no meaning headless. */

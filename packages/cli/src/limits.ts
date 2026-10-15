@@ -28,6 +28,8 @@ const FAMILY: Record<string, keyof typeof LIMITS> = {
   docm: 'docx',
   dotx: 'docx',
   dotm: 'docx',
+  // the ODT engine gates its zip with the docx engine's limits
+  odt: 'docx',
   xlsx: 'xlsx',
   xlsm: 'xlsx',
   xltx: 'xlsx',

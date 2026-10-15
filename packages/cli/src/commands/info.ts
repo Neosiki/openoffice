@@ -1,8 +1,10 @@
 import { statSync } from 'node:fs'
 import { parseDocx } from '@genoffice/docx-engine'
+import { protectedCellsOf } from '@genoffice/odt-engine'
 import { openPptx } from '@genoffice/pptx-engine'
 import { flagString } from '../args'
 import { csvInfo } from '../formats/csv'
+import { openOdtBytes } from '../formats/odt'
 import { pdfInfo } from '../formats/pdf'
 import { workbookSummary } from '../formats/xlsx'
 import { extension, readInput, resolveInput } from '../fs'
@@ -34,7 +36,9 @@ interface Description {
 async function describe(path: string, ext: string, password?: string): Promise<Description> {
   switch (ext) {
     case 'docx':
-      return describeDocx(path)
+      return describeDocx(readInput(path))
+    case 'odt':
+      return describeOdt(path)
     case 'pptx':
       return describePptx(path)
     case 'xlsx':
@@ -60,8 +64,8 @@ async function describe(path: string, ext: string, password?: string): Promise<D
   }
 }
 
-async function describeDocx(path: string): Promise<Description> {
-  const parsed = await parseDocx(readInput(path))
+async function describeDocx(bytes: Uint8Array, locked = false): Promise<Description> {
+  const parsed = await parseDocx(bytes)
   const counts: Record<string, number> = {}
   for (const b of parsed.blocks) counts[b.type] = (counts[b.type] ?? 0) + 1
   const headings = parsed.blocks
@@ -80,9 +84,15 @@ async function describeDocx(path: string): Promise<Description> {
       comments: parsed.comments.length,
       footnotes: parsed.footnotes.length,
       endnotes: parsed.endnotes.length,
-      protected: parsed.protection !== null,
+      protected: locked || parsed.protection !== null,
     },
   }
+}
+
+/** An .odt is described through its bridge docx; locked cells count as protection. */
+async function describeOdt(path: string): Promise<Description> {
+  const { docxBytes, origin } = await openOdtBytes(readInput(path))
+  return describeDocx(docxBytes, protectedCellsOf(origin.bridge).length > 0)
 }
 
 async function describePptx(path: string): Promise<Description> {
