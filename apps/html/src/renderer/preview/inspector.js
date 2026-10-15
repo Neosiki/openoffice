@@ -1029,10 +1029,17 @@
     },
     true,
   )
-  document.addEventListener(
+  /** keys pressed during a text edit: their keyup stays inside the frame as well */
+  const editKeys = new Set()
+  // Window capture runs ahead of the page's own key listeners (a slide deck turning the page on
+  // Space or an arrow): every key typed into an open text edit, and every key the inspector turns
+  // into a command, stops here so the page never acts on it. Typing itself is not prevented.
+  window.addEventListener(
     'keydown',
     (e) => {
       if (editing) {
+        e.stopPropagation()
+        editKeys.add(e.code)
         const mod = (e.metaKey || e.ctrlKey) && !e.altKey
         if (e.key === 'Escape') {
           // Esc = commit the text and return to the selected state (typed input is not lost, as in
@@ -1056,6 +1063,7 @@
       }
       if ((drag || slide) && e.key === 'Escape') {
         e.preventDefault()
+        e.stopPropagation()
         if (drag) endDrag(false)
         else endSlide(false)
         return
@@ -1079,6 +1087,7 @@
                 ]
         if (hostCommand) {
           e.preventDefault()
+          e.stopPropagation()
           post({ type: 'gx:keyCommand', command: hostCommand })
           return
         }
@@ -1102,10 +1111,17 @@
       const command = modKey || altKey || map[e.key]
       if (!command || !selected || inField) return
       e.preventDefault()
+      e.stopPropagation()
       post({ type: 'gx:keyCommand', command })
     },
     true,
   )
+  const keepEditKey = (e) => {
+    if (editing || editKeys.has(e.code)) e.stopPropagation()
+    if (e.type === 'keyup') editKeys.delete(e.code)
+  }
+  window.addEventListener('keypress', keepEditKey, true)
+  window.addEventListener('keyup', keepEditKey, true)
   // Chromium reports trackpad pinch as ctrl+wheel; the frame swallows wheel events, so relay it.
   // Browse mode (present views) has no zoom control: leave the event alone there.
   document.addEventListener(
