@@ -18,6 +18,7 @@ import { ShowMediaLayer } from './ShowMediaLayer'
 import { useI18n } from '../i18n/locale'
 import { MorphStage } from './MorphStage'
 import { InkLayer, type InkStroke } from './ShowInk'
+import { syncPrivateFonts } from '../doc-fonts'
 
 const ANIMATED = ['fade', 'push', 'wipe', 'split', 'circle'] as const
 
@@ -89,6 +90,12 @@ export function AudienceView() {
   const [morph, setMorph] = useState<{ fromIdx: number; toIdx: number; nonce: number } | null>(null)
   const [strokes, setStrokes] = useState<InkStroke[]>([])
   const [laser, setLaser] = useState<{ x: number; y: number } | null>(null)
+  // This window is its own document: the private faces (template fonts, the user store,
+  // Office cloud fonts) the editor registered must be registered here before the first draw
+  const [fontsReady, setFontsReady] = useState(false)
+  useEffect(() => {
+    if (slides) void syncPrivateFonts().then(() => setFontsReady(true))
+  }, [slides])
 
   // Document load: session already shared; retry covers the occasional timing where the window beats the sharing
   useEffect(() => {
@@ -238,7 +245,7 @@ export function AudienceView() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sync, slides, allAnims])
 
-  if (!slide || !sync) {
+  if (!slide || !sync || !fontsReady) {
     return <div className="slideshow" />
   }
 

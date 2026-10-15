@@ -4,6 +4,7 @@ import { protectedCellsOf } from '@genoffice/odt-engine'
 import { openPptx } from '@genoffice/pptx-engine'
 import { flagString } from '../args'
 import { csvInfo } from '../formats/csv'
+import { hwpInfo } from '../formats/hwp'
 import { openOdtBytes } from '../formats/odt'
 import { pdfInfo } from '../formats/pdf'
 import { workbookSummary } from '../formats/xlsx'
@@ -16,6 +17,7 @@ const EMU_PER_INCH = 914400
 export const infoCommand: CommandDef = {
   name: 'info',
   summary: 'Print metadata and a structure summary of a document.',
+  // docx, pptx, xlsx (and xls/xlsb/ods), pdf, hwp/hwpx, csv, md, html, txt
   usage: 'info <file> [--password <pw>]',
   options: [{ name: 'password', value: 'pw', description: 'password for an encrypted PDF' }],
   async run(args, ctx) {
@@ -26,6 +28,20 @@ export const infoCommand: CommandDef = {
     const detail = await describe(path, ext, flagString(args, 'password'))
     return { summary: `${ext} · ${detail.headline}`, detail: { ...base, ...detail.fields } }
   },
+}
+
+async function describeHwp(path: string): Promise<Description> {
+  let info
+  try {
+    info = await hwpInfo(readInput(path))
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    throw new CliError(EXIT.file, message, undefined, { reason: 'unsupported' })
+  }
+  return {
+    headline: `${info.chars} characters, ${info.lines} lines`,
+    fields: { chars: info.chars, lines: info.lines, read_with: 'hwp read' },
+  }
 }
 
 interface Description {
@@ -49,6 +65,9 @@ async function describe(path: string, ext: string, password?: string): Promise<D
       return describeWorkbook(path)
     case 'pdf':
       return describePdf(path, password)
+    case 'hwp':
+    case 'hwpx':
+      return describeHwp(path)
     case 'csv':
       return describeCsv(path)
     case 'md':

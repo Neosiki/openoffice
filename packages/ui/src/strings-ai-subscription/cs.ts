@@ -5,6 +5,7 @@ export const cs = {
   cardChecking: 'Probíhá kontrola…',
   cardNotInstalled: 'Není nainstalováno',
   cardSignedOut: 'Nepřihlášeno',
+  cardSigningIn: 'Probíhá přihlášení…',
   cardReady: 'Připojeno',
   cardReadyPlan: 'Připojeno · {plan}',
   cardMetered: 'Přihlášeno, ale ne přes předplatné',
@@ -16,6 +17,7 @@ export const cs = {
   cardErrFailed: 'Při kontrole {provider} došlo k potížím. Zkontrolujte to znovu.',
   actionInstall: 'Nainstalovat',
   actionLogin: 'Přihlásit se',
+  actionLoginWindow: 'Prohlížeč se neotevřel, nebo zobrazuje kód?',
   actionRecheck: 'Zkontrolovat znovu',
   actionAcceptMetered: 'Přesto použít',
   actionInstallHelp: 'Oficiální návod k instalaci',
@@ -25,15 +27,20 @@ export const cs = {
   actionLogout: 'Odhlásit se',
   installNote: 'Oficiální instalační příkaz společnosti {vendor} se spustí v novém okně terminálu.',
   loginNote: 'Přihlašovací stránka, která se otevře, patří společnosti {vendor}.',
+  signingInBrowserNote:
+    'V otevřeném prohlížeči se přihlaste ke svému účtu {vendor} a povolte přístup. Po dokončení se připojení vytvoří samo.',
+  signingInWindowNote:
+    'Pokud prohlížeč zobrazí kód, zkopírujte ho, vložte do právě otevřeného okna a stiskněte Enter.',
   meteredWarning: 'Toto není předplatné: platíte podle skutečné spotřeby.',
   meteredMeaning:
     'Toto přihlášení používá klíč API nebo účet s platbou podle spotřeby, případně se jeho typ nepodařilo zjistit. Volbou „Přesto použít“ poběží AI přes toto připojení a každý požadavek se naúčtuje tomuto účtu.',
-  connectTitle: 'Chcete-li používat AI, připojte předplatné',
+  connectTitle: 'Začněte připojením AI',
   connectBody: 'AI běží na předplatném Claude nebo Codex, které už máte. Klíč API není potřeba.',
   connectProviderTitle: 'Připojení {provider} teď nelze použít',
   connectKeyBody:
     'Nastavení poskytovatele {provider} není dokončeno. Dokončete ho v Nastavení, nebo zvolte jinou AI.',
-  errNotConnected: 'Není připojena žádná AI. Nejprve připojte předplatné Claude nebo Codex.',
+  errNotConnected:
+    'Není připojena žádná AI. Nejprve připojte předplatné Claude nebo Codex, nebo bezplatnou AI.',
   errNotInstalled: 'Program {provider} nebyl na tomto počítači nalezen.',
   errSignedOut: 'Přihlášení k {provider} vypršelo. Přihlaste se znovu a pokračujte.',
   errRateLimit: 'Limit předplatného {provider} je vyčerpán.',
@@ -47,6 +54,11 @@ export const cs = {
   errHeadlessLimit: 'Byl dosažen hodinový limit automatických požadavků.',
   errHeadlessLimitReset:
     'Byl dosažen hodinový limit automatických požadavků. Znovu budou možné v {time}.',
+  connectFreeHint: 'Nemáte předplatné? V Nastavení můžete bezplatnou AI připojit zhruba za minutu.',
+  actionConnectFree: 'Připojit bezplatnou AI',
+  errFreeLimit:
+    'Dnešní bezplatný limit je vyčerpán. Zkuste to zítra, nebo v Nastavení zvolte jinou AI.',
+  errFreeLimitReset: 'Dnešní bezplatný limit je vyčerpán. Znovu ho můžete použít v {time}.',
   continueWith: 'Pokračovat s {provider}',
   continueMeteredNote:
     'Připojení {provider} není předplatné: pokračování se účtuje podle spotřeby.',
@@ -60,6 +72,8 @@ export const cs = {
     'Zda se tento obsah použije k trénování AI, určuje nastavení vašeho účtu u dané společnosti.',
   noticeCodexHistory:
     'Tato aplikace vypíná ukládání historie konverzací v Codexu, Codex však může v tomto počítači dál uchovávat vlastní diagnostické protokoly.',
+  noticePdfWholeDocument:
+    'V editoru PDF mohou čtení stránek pomocí AI a překlad dokumentu odesílat obrázky stránek a celý text dokumentu.',
   noticeAck: 'Rozumím',
   codexNotice:
     'Používání předplatného Codex uvnitř aplikace není způsob, který OpenAI oficiálně doporučuje.',

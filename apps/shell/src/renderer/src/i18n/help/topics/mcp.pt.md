@@ -62,13 +62,13 @@ Um pedido que chega do comando `ieumoffice` ou de um cliente MCP não foi escrit
 - **Descrever uma imagem** usa um fornecedor com chave quando há um configurado. A sua assinatura do Claude ou do Codex **não é usada a menos que o autorize**.
 - **Vídeo e áudio** precisam de um fornecedor com chave que suporte vídeo.
 
-Para autorizar o uso da assinatura, abra Configurações ▸ IA ▸ **Avançado** e ligue **Permitir que solicitações automáticas usem uma assinatura**. Primeiro aparece um aviso — «Nenhuma das duas empresas recomenda deixar um programa usar a sua assinatura automaticamente, e a sua conta pode sofrer restrições.» — e o interruptor só fica ligado depois de **Ativar mesmo assim**.
+Para autorizar o uso da assinatura, abra Configurações ▸ IA ▸ **Avançado** e ligue **Permitir que solicitações automáticas usem uma assinatura**. Primeiro aparece um aviso — «Não há limite por hora: um programa pode enviar quantas solicitações quiser, e elas podem conter todo o texto de um documento e imagens das suas páginas. Nenhuma das duas empresas recomenda deixar um programa usar a sua assinatura automaticamente, e a sua conta pode sofrer restrições.» — e o interruptor só fica ligado depois de **Ativar mesmo assim**.
 
 Mesmo com o interruptor ligado:
 
 - Os pedidos são tratados um de cada vez. Os outros esperam pela sua vez.
-- São tratados no máximo 20 pedidos com assinatura por hora. A contagem é partilhada por todas as execuções do comando e por todas as chamadas MCP. Ultrapassada, o pedido falha com um erro que diz quando os pedidos voltam a ser possíveis.
-- Um login de pagamento por consumo que autorizou com **Usar mesmo assim** não conta aqui como assinatura. É tratado como uma chave: se o escolheu como IA em uso, as descrições de imagens passam por ele diga o interruptor o que disser, sem o limite horário, e cada uma é cobrada.
+- Não há limite por hora. A vez passa de pedido em pedido, não de tarefa em tarefa, por isso uma tradução longa de um PDF alterna com os outros chamadores em vez de os bloquear. Um interruptor ligado com o aviso anterior foi desligado: leia o novo aviso e volte a ligá-lo.
+- Um login de pagamento por consumo que autorizou com **Usar mesmo assim** não conta aqui como assinatura. É tratado como uma chave: se o escolheu como IA em uso, as descrições de imagens passam por ele diga o interruptor o que disser, e cada uma é cobrada.
 
 Com o interruptor desligado e sem nenhuma chave configurada, a ferramenta responde que a funcionalidade está indisponível e indica esta definição. Um agente pode verificar primeiro com a ferramenta `capabilities`; consulte [Linha de comandos e agentes](help://cli).
 

@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto'
+import { randomUUID, timingSafeEqual } from 'node:crypto'
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http'
 import type { Socket } from 'node:net'
 import { brandText, PRODUCT_NAME } from '@genoffice/i18n'
@@ -45,6 +45,12 @@ export interface McpServerOptions {
   /** EADDRINUSE retry tuning (exposed so tests do not wait out the backoff) */
   maxListenAttempts?: number
   listenRetryDelayMs?: number
+  /**
+   * When set, every request must carry `Authorization: Bearer <token>`. The
+   * agent-session server (decision 0032) uses a fresh token per session; the
+   * server the person turns on under Integrations has none.
+   */
+  token?: string
 }
 
 export const DEFAULT_MCP_PORT = 3093
@@ -79,7 +85,10 @@ export class McpServerService {
     this.version = options.version ?? '0.1.0'
     this.maxListenAttempts = options.maxListenAttempts ?? 5
     this.listenRetryDelayMs = options.listenRetryDelayMs ?? LISTEN_RETRY_DELAY_MS
+    this.token = options.token
   }
+
+  private readonly token?: string | undefined
 
   isRunning(): boolean {
     return this.running
@@ -143,6 +152,7 @@ export class McpServerService {
     // DNS-rebinding defense: the server has no auth, so only loopback host
     // headers are accepted. Requests without an Origin (curl, local CLI) pass.
     if (!this.checkHost(req, res) || !this.checkOrigin(req, res)) return
+    if (!this.checkToken(req, res)) return
 
     if (url.pathname === '/health' && req.method === 'GET') {
       return this.json(res, 200, {
@@ -350,6 +360,17 @@ export class McpServerService {
     return false
   }
 
+  private checkToken(req: IncomingMessage, res: ServerResponse): boolean {
+    if (this.token === undefined) return true
+    const header = headerValue(req.headers.authorization) ?? ''
+    const expected = Buffer.from(`Bearer ${this.token}`)
+    const given = Buffer.from(header)
+    if (given.length === expected.length && timingSafeEqual(given, expected)) return true
+    this.logger('[mcp] rejected a request without the session token')
+    this.json(res, 401, { error: 'Unauthorized' })
+    return false
+  }
+
   private checkOrigin(req: IncomingMessage, res: ServerResponse): boolean {
     const origin = req.headers.origin
     if (!origin) return true
@@ -438,6 +459,9 @@ export class McpServerService {
         }
         settled = true
         this.httpServer = server
+        // port 0 asks the system for a free port; the Host check needs the real one
+        const address = server.address()
+        if (address && typeof address === 'object') this.port = address.port
         resolve()
       })
     })

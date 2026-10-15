@@ -5,6 +5,7 @@ export const ko = {
   cardChecking: '확인 중…',
   cardNotInstalled: '설치되지 않음',
   cardSignedOut: '로그인 필요',
+  cardSigningIn: '로그인하는 중…',
   cardReady: '연결됨',
   cardReadyPlan: '연결됨 · {plan}',
   cardMetered: '구독이 아닌 방식으로 로그인됨',
@@ -15,6 +16,7 @@ export const ko = {
   cardErrFailed: '{provider} 연결을 확인하는 중에 문제가 생겼습니다. 다시 확인해 보세요.',
   actionInstall: '설치',
   actionLogin: '로그인',
+  actionLoginWindow: '브라우저가 안 열리거나 코드가 나오나요?',
   actionRecheck: '다시 확인',
   actionAcceptMetered: '그래도 사용',
   actionInstallHelp: '공식 설치 안내',
@@ -24,15 +26,19 @@ export const ko = {
   actionLogout: '로그아웃',
   installNote: '{vendor}의 공식 설치 명령이 새 터미널 창에서 실행됩니다.',
   loginNote: '열리는 로그인 화면은 {vendor}의 것입니다.',
+  signingInBrowserNote:
+    '열린 브라우저에서 {vendor} 계정으로 로그인하고 허용을 누르세요. 끝나면 저절로 연결됩니다.',
+  signingInWindowNote:
+    '브라우저에 코드가 나오면 복사해서 방금 열린 창에 붙여 넣고 Enter를 누르세요.',
   meteredWarning: '구독이 아니라 쓴 만큼 요금이 나갑니다.',
   meteredMeaning:
     'API 키나 종량제 계정으로 로그인되어 있거나, 로그인 방식을 확인하지 못한 상태입니다. "그래도 사용"을 누르면 이 연결로 AI를 쓰게 되고, 요청할 때마다 그 계정에 요금이 청구됩니다.',
-  connectTitle: 'AI를 쓰려면 구독을 연결하세요',
+  connectTitle: 'AI를 쓰려면 먼저 연결하세요',
   connectBody: '이미 쓰고 있는 Claude 또는 Codex 구독으로 AI를 씁니다. API 키는 필요 없습니다.',
   connectProviderTitle: '{provider} 연결을 지금 쓸 수 없습니다',
   connectKeyBody:
     '{provider} 설정이 아직 끝나지 않았습니다. 설정에서 마무리하거나 다른 AI를 선택하세요.',
-  errNotConnected: '연결된 AI가 없습니다. 먼저 Claude 또는 Codex 구독을 연결하세요.',
+  errNotConnected: '연결된 AI가 없습니다. Claude·Codex 구독이나 무료 AI를 먼저 연결하세요.',
   errNotInstalled: '이 PC에서 {provider} 프로그램을 찾지 못했습니다.',
   errSignedOut: '{provider} 로그인이 풀렸습니다. 다시 로그인한 뒤 계속하세요.',
   errRateLimit: '{provider} 구독 한도를 모두 썼습니다.',
@@ -45,6 +51,11 @@ export const ko = {
     '{provider} 프로그램 버전이 낮아 이 기능을 쓸 수 없습니다. 업데이트한 뒤 다시 시도하세요.',
   errHeadlessLimit: '자동 호출의 시간당 한도에 도달했습니다.',
   errHeadlessLimitReset: '자동 호출의 시간당 한도에 도달했습니다. {time}부터 다시 가능합니다.',
+  connectFreeHint: '구독이 없나요? 설정에서 무료 AI를 1분 안에 연결할 수 있습니다.',
+  actionConnectFree: '무료 AI 연결하기',
+  errFreeLimit:
+    '오늘 쓸 수 있는 무료 사용량을 다 썼습니다. 내일 다시 쓰거나 설정에서 다른 AI를 고르세요.',
+  errFreeLimitReset: '오늘 쓸 수 있는 무료 사용량을 다 썼습니다. {time}부터 다시 쓸 수 있습니다.',
   continueWith: '{provider}로 계속',
   continueMeteredNote: '{provider} 연결은 구독이 아닙니다. 계속하면 쓴 만큼 요금이 나갑니다.',
   usageLine: '{percent}% 사용 · {time}에 초기화',
@@ -55,6 +66,8 @@ export const ko = {
   noticeTraining: '그 내용이 AI 학습에 쓰이는지는 해당 회사의 사용자 계정 설정에 따라 정해집니다.',
   noticeCodexHistory:
     '이 앱은 Codex의 대화 기록 저장을 꺼 둡니다. 다만 Codex가 자체 진단 로그를 이 PC에 남길 수 있습니다.',
+  noticePdfWholeDocument:
+    'PDF 편집기에서는 AI 페이지 읽기와 문서 번역 때 페이지 그림과 문서 전체의 글이 보내질 수 있습니다.',
   noticeAck: '확인',
   codexNotice: '앱에서 Codex 구독을 쓰는 것은 OpenAI가 공식 권장하는 방식이 아닙니다.',
   truncatedNotice: '입력이 너무 길어 일부를 잘라내고 보냈습니다.',

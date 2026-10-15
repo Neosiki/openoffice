@@ -21,6 +21,8 @@ export default tseslint.config(
       // Browser-side extractor fragments are function-body slices (top-level
       // return), not modules; they are injected as raw text.
       'packages/html2docx/src/browser/**',
+      // rhwp-studio build output (apps/hwp/scripts/build-studio.mjs), git-ignored
+      'apps/hwp/public/**',
     ],
   },
   js.configs.recommended,

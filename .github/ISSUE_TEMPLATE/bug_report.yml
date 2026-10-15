@@ -14,6 +14,7 @@ body:
         - PDF (pdf)
         - Markdown (markdown)
         - HTML (html)
+        - Mind map (mindmap)
         - Shell / home screen
         - AI panel / subscription connection / providers
         - Command line / MCP / agent skill

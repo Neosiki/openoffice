@@ -14,6 +14,7 @@ import type { FontSizeStep } from '@genoffice/pptx-ops/font-size'
 import type { LayoutSkeleton } from '../renderer/ai/layout-skeleton'
 import type { AiSettings, AiStreamChunk, AiStreamRequest } from '@genoffice/ai-provider'
 import type { AiToolCapabilities } from '@genoffice/ai-search'
+import type { TemplateSelection, TemplateSelectionInput } from './template-selection'
 import type { SubscriptionApi } from './subscription-api'
 
 import type {
@@ -49,6 +50,11 @@ export type {
   AiStreamRequest,
 } from '@genoffice/ai-provider'
 export type { AiToolCapabilities, AiToolCapability } from '@genoffice/ai-search'
+export type {
+  TemplateSelection,
+  TemplateSelectionInput,
+  TemplateSelectionKind,
+} from './template-selection'
 export { AI_PROVIDERS } from '@genoffice/ai-provider/browser'
 export type { AgentToolCall, AgentToolDef } from '@genoffice/agent-core'
 
@@ -1265,6 +1271,9 @@ export type MenuCommand =
   | 'copy'
   | 'paste'
 
+/** Which of a design template's two sample covers to draw: Korean for a Korean UI, English otherwise */
+export type TemplateCoverLang = 'ko' | 'en'
+
 export interface SlidesApi {
   /** current UI language (persisted by the shell in app-settings.json) */
   getLanguage: () => Promise<
@@ -1301,12 +1310,16 @@ export interface SlidesApi {
   /** Office-private faces referenced by layouts so far; the renderer registers them as FontFaces
    *  (files invisible to Chromium — DFonts/cloud fonts), so drawing uses the measuring font. */
   privateFontFaces: () => Promise<
-    Array<{ id: string; family: string; bold: boolean; italic: boolean }>
+    Array<{ id: string; family: string; bold: boolean; italic: boolean; weight?: string }>
   >
   /** Single-face sfnt bytes for one private face (null = gone/unreadable) */
   privateFontData: (id: string) => Promise<ArrayBuffer | null>
   /** File picker → install local font files into the user font store */
   fontInstallLocal: () => Promise<{ families: string[] }>
+  /** Open the bundled template font folder in Explorer; false when it could not be opened */
+  openTemplateFontsFolder: () => Promise<boolean>
+  /** A built-in template's sample cover laid out as one slide (no document involved); null for an unknown id */
+  renderTemplateCover: (id: string, lang: TemplateCoverLang) => Promise<RenderSlide | null>
   /** The user font store changed (local install): re-sync private FontFaces */
   onFontsChanged: (handler: () => void) => () => void
   consumePendingOpen: (fitWidthPx: number) => Promise<OpenResult | null>
@@ -1781,6 +1794,12 @@ export interface SlidesApi {
     layout?: LayoutSkeleton
     error?: string
   }>
+  /** The design template remembered for this window's document, on this PC only; null when there is none */
+  getTemplateSelection: () => Promise<TemplateSelection | null>
+  /** Remember a selection for this window's document (null forgets it; malformed input is ignored). Answers with what is stored afterwards */
+  setTemplateSelection: (
+    selection: TemplateSelectionInput | null,
+  ) => Promise<TemplateSelection | null>
   /** New blank page (with a specific layout): inserted after slide sourceIndex, rels pointing at the chosen layout */
   addSlideWithLayout: (
     op: AddSlideWithLayoutOp,
@@ -1820,6 +1839,17 @@ export interface SlidesApi {
   onShowInk: (handler: (ev: ShowInkEvent) => void) => () => void
   /** Presenter: subscribe to navigation actions sent back by the audience window */
   onAudienceNav: (handler: (action: AudienceNavAction) => void) => () => void
+  // ── Generate hand-off (spec 8.5): the request the shell's "make" window left for this new tab ──
+  /** Take the request left for this tab, once: null when there is none or it was already taken (a reload) */
+  takeGenerateHandoff?: () => Promise<{
+    id: string
+    /** the request text (the default request when the user wrote none) */
+    text: string
+    /** the materials to attach, in the order the user listed them */
+    materials: Array<{ path: string; name: string }>
+  } | null>
+  /** A run started in this tab with these attachments; true when it was recorded as the hand-off's start */
+  reportGenerateRunStarted?: (attachedPaths: string[]) => Promise<boolean>
 }
 
 declare global {

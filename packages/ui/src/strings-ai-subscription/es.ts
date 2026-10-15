@@ -5,6 +5,7 @@ export const es = {
   cardChecking: 'Comprobando…',
   cardNotInstalled: 'No instalado',
   cardSignedOut: 'Sesión no iniciada',
+  cardSigningIn: 'Iniciando sesión…',
   cardReady: 'Conectado',
   cardReadyPlan: 'Conectado · {plan}',
   cardMetered: 'Sesión iniciada, pero no con una suscripción',
@@ -16,6 +17,7 @@ export const es = {
   cardErrFailed: 'Algo salió mal al comprobar {provider}. Comprueba de nuevo.',
   actionInstall: 'Instalar',
   actionLogin: 'Iniciar sesión',
+  actionLoginWindow: '¿No se abrió el navegador o muestra un código?',
   actionRecheck: 'Comprobar de nuevo',
   actionAcceptMetered: 'Usar de todos modos',
   actionInstallHelp: 'Guía oficial de instalación',
@@ -26,17 +28,21 @@ export const es = {
   installNote:
     'El comando de instalación oficial de {vendor} se ejecuta en una nueva ventana de terminal.',
   loginNote: 'La página de inicio de sesión que se abre es la de {vendor}.',
+  signingInBrowserNote:
+    'Inicia sesión con tu cuenta de {vendor} en el navegador que se abrió y permite el acceso. Se conecta solo cuando termines.',
+  signingInWindowNote:
+    'Si el navegador muestra un código, cópialo, pégalo en la ventana que se acaba de abrir y pulsa Intro.',
   meteredWarning: 'Esto no es una suscripción: se cobra según lo que uses.',
   meteredMeaning:
     'Este inicio de sesión usa una clave de API o una cuenta de pago por consumo, o no se pudo confirmar su tipo. «Usar de todos modos» permite que la IA funcione con esta conexión, y cada solicitud se factura a esa cuenta.',
-  connectTitle: 'Conecta una suscripción para usar la IA',
+  connectTitle: 'Conecta una IA para empezar',
   connectBody:
     'La IA funciona con la suscripción de Claude o Codex que ya tienes. No hace falta ninguna clave de API.',
   connectProviderTitle: 'La conexión de {provider} no se puede usar ahora',
   connectKeyBody:
     'La configuración de {provider} no está terminada. Complétala en Ajustes o elige otra IA.',
   errNotConnected:
-    'No hay ninguna IA conectada. Conecta primero una suscripción de Claude o Codex.',
+    'No hay ninguna IA conectada. Conecta primero una suscripción de Claude o Codex, o una IA gratuita.',
   errNotInstalled: 'No se encontró el programa {provider} en este PC.',
   errSignedOut: 'La sesión de {provider} ha caducado. Vuelve a iniciar sesión para continuar.',
   errRateLimit: 'Se ha agotado el límite de la suscripción de {provider}.',
@@ -51,6 +57,12 @@ export const es = {
   errHeadlessLimit: 'Se alcanzó el límite por hora de solicitudes automáticas.',
   errHeadlessLimitReset:
     'Se alcanzó el límite por hora de solicitudes automáticas. Volverán a ser posibles a las {time}.',
+  connectFreeHint:
+    '¿No tienes suscripción? Puedes conectar una IA gratuita en Ajustes en un minuto aproximadamente.',
+  actionConnectFree: 'Conectar una IA gratuita',
+  errFreeLimit:
+    'Se agotó el uso gratuito de hoy. Vuelve a intentarlo mañana o elige otra IA en Ajustes.',
+  errFreeLimitReset: 'Se agotó el uso gratuito de hoy. Podrás volver a usarlo a las {time}.',
   continueWith: 'Continuar con {provider}',
   continueMeteredNote:
     'La conexión de {provider} no es una suscripción: continuar se cobra por consumo.',
@@ -64,6 +76,8 @@ export const es = {
     'Que ese contenido se use para entrenar IA depende de los ajustes de tu propia cuenta en esa empresa.',
   noticeCodexHistory:
     'Esta aplicación desactiva el guardado del historial de conversaciones de Codex, pero Codex puede seguir guardando sus propios registros de diagnóstico en este PC.',
+  noticePdfWholeDocument:
+    'En el editor de PDF, la lectura de páginas con IA y la traducción de documentos pueden enviar imágenes de las páginas y todo el texto del documento.',
   noticeAck: 'Entendido',
   codexNotice:
     'Usar una suscripción de Codex dentro de una aplicación no es un método recomendado oficialmente por OpenAI.',

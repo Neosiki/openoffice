@@ -1,4 +1,5 @@
 import { basename, dirname } from 'node:path'
+import { withoutUnsavedFiles } from '@genoffice/electron-utils/unsaved-files'
 import type { DecisionEndpoint, FileSearchRerank, FileSearchSettings } from '../../shared/home-api'
 import {
   evaluate,
@@ -109,7 +110,10 @@ export class SearchReranker {
     if (!settings.rerank || (!isLocalEndpoint(settings.endpoint) && !opts.key)) return null
     if (settings.endpoint === 'custom' && !settings.customBaseUrl.trim()) return null
     if (settings.endpoint === 'cloudflare' && !settings.cloudflareAccountId.trim()) return null
-    const hits = this.store.excerptsFor(paths.slice(0, MAX_DOCS), q, EXCERPT_CHARS)
+    // the index holds a file as it was last saved; one being edited may carry a
+    // withholding mark that has not reached the disk, so its excerpt stays here
+    const saved = await withoutUnsavedFiles(paths, (path) => path)
+    const hits = this.store.excerptsFor(saved.slice(0, MAX_DOCS), q, EXCERPT_CHARS)
     if (hits.length < 2) return null
     const cacheKey = [
       settings.endpoint,

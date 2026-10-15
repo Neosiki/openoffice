@@ -62,11 +62,11 @@ ieumoffice docs apply brief.docx --ops ops.json
 | -------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `search`, `image_search`, `image_generation`, `image_analysis`, `video_analysis` | לכל תכונה: `available`; ‏`via`, מי עונה; ‏`route`, אחד מבין `free`, ‏`key` או `subscription`; ‏`metered: true` לכניסה בתשלום לפי שימוש; וכשהתכונה אינה זמינה, `message`, הטקסט שהפקודה עצמה עונה בו. |
 | `media_analysis`                                                                 | נשמר בשביל סקריפטים ישנים: זהה ל-`image_analysis`, או ל-`video_analysis` כשרק וידאו פועל.                                                                                                            |
-| `automatic_calls`                                                                | ‏`subscription_enabled`, וכל עוד הוא מופעל, `used`, ‏`limit`, ‏`remaining` ו-`resetsAt` של המכסה השעתית.                                                                                             |
+| `automatic_calls`                                                                | ‏`subscription_enabled`, וכל עוד הוא מופעל, `used`, מספר הבקשות האוטומטיות שטופלו בשעה האחרונה (לידיעה בלבד); ‏`limit` ו-`remaining` הם תמיד `null`.                                                 |
 | `app`                                                                            | ‏`available`: האם האפליקציה מותקנת במקום שממנו הפקודה יכולה להפעיל אותה.                                                                                                                             |
 | `settings_path`                                                                  | קובץ ההגדרות שממנו נקראו התשובות האלה.                                                                                                                                                               |
 
-כש-`image` או `media` אינן יכולות לרוץ, הפקודה מסתיימת בקוד יציאה 4 ועם `error: "app_unavailable"`‎, ו-`detail.errorCode` מסביר למה. ‏`unavailable` פירושו ששום דבר לא הוגדר עבור התכונה, ולכן ניסיון נוסף לא יעזור. ‏`headless-limit` ו-`rate-limit` מגיעים עם `detail.resetsAt`, המועד (באלפיות שנייה) שבו שוב אפשר לשלוח בקשות.
+כש-`image` או `media` אינן יכולות לרוץ, הפקודה מסתיימת בקוד יציאה 4 ועם `error: "app_unavailable"`‎, ו-`detail.errorCode` מסביר למה. ‏`unavailable` פירושו ששום דבר לא הוגדר עבור התכונה, ולכן ניסיון נוסף לא יעזור. ‏`rate-limit` מגיע עם `detail.resetsAt`, המועד (באלפיות שנייה) שבו שוב אפשר לשלוח בקשות.
 
 ## מה היא שומרת במחשב הזה
 

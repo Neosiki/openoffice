@@ -11,6 +11,10 @@ export const strings = {
     askTitle: '问知识库',
     askEmptyCorpusHint: '还没有收藏文件——先在最近或文件夹里点星收藏,AI 就能读它们。',
     askCorpusCount: '知识库:{n} 个收藏文件',
+    askScopeLabel: '提问范围',
+    askScopeAll: '全部',
+    askCorpusCountGroup: '{group}：{n} 个收藏文件',
+    askScopeGone: '这个分组里已经没有收藏文件，所以没有提问。请选择其他分组或“全部”。',
     askIntro: '基于你收藏的文件提问,回答会标注来源文件,点击即可打开。',
     askToolSearch: '搜索知识库',
     askToolRead: '读取文件',
@@ -48,6 +52,10 @@ export const strings = {
     newSlide: 'AI Slides',
     newMarkdown: 'AI Markdown',
     newHtml: 'AI HTML',
+    newMindmap: '思维导图',
+    newHwp: 'AI HWP',
+    pdfToolsCard: 'PDF 工具',
+    pdfToolsCardSub: '合并 · 拆分 · 整理',
     newPdf: 'AI PDF',
     openLocal: '打开本地文件',
     dropToOpenTitle: '松开以打开文件',
@@ -68,6 +76,8 @@ export const strings = {
     filterPdf: 'PDF',
     filterMd: 'Markdown',
     filterHtml: 'HTML',
+    filterMindmap: '思维导图',
+    filterHwp: 'HWP',
     filterAria: '按类型筛选',
     // List / bulk actions
     fileCount: '{n} 个文件',
@@ -146,6 +156,8 @@ export const strings = {
     account: '账号',
     appVersion: '版本 {v}',
     versionLabel: '版本',
+    betaBadge: '测试版',
+    betaTooltip: '这是测试版。部分功能可能还会改变，或无法正常工作。',
     setUpdateAvailableLabel: '可用更新',
     setUpdateTo: '更新到 {version}',
     setUpdateDownloading: '正在下载更新（{percent}%）',
@@ -162,6 +174,11 @@ export const strings = {
     saveLocation: '默认保存位置',
     setAutoSave: '所有文档自动保存',
     setAutoSaveDesc: '在每个编辑器中默认开启自动保存，仍可在单个窗口中关闭。',
+    setResultStore: '已保存的 PDF AI 结果',
+    setResultStoreDesc: 'AI 读取的页面和译文会保存在本机，直到你删除。已占用：{size}',
+    setResultStoreDeleteAll: '全部删除',
+    setResultStoreConfirm: '要删除所有已保存的 AI 读取结果和译文吗？重新生成需要再次使用 AI。',
+    setResultStoreDeleteFailed: '无法删除，请重试。',
     setSearchRerank: 'Jev 搜索重排',
     setSearchRerankDesc:
       '把本机搜索的前 20 条命中片段发给 TypeSafe 的 Jev 模型，按相关性重新排序。默认关闭；开启后命中片段会离开本机。',
@@ -242,8 +259,9 @@ export const strings = {
       '使用该服务商的对话会用你自己填写的 key，并由该服务商向你收费。只有在“使用的 AI”中亲自选择它时才会使用。',
     setAiHeadless: '允许自动调用使用订阅',
     setAiHeadlessDesc:
-      '允许由终端命令或其他程序（MCP）发起的生图和图片解析使用你的 Claude 或 Codex 订阅。关闭时，这类请求只使用 key 方式的服务商。',
-    setAiHeadlessWarning: '两家公司都不建议让程序自动使用订阅，你的账号可能会受到限制。',
+      '允许由终端命令或其他程序（MCP）发起的生图、图片解析、PDF 翻译和 AI 页面识读使用你的 Claude 或 Codex 订阅。关闭时，这类请求只使用 key 方式的服务商。',
+    setAiHeadlessWarning:
+      '没有每小时次数上限，程序可以发送任意多的请求，请求中可能包含整份文档的文字和页面图片。两家公司都不建议让程序自动使用订阅，你的账号可能会受到限制。',
     setAiHeadlessConfirm: '仍然开启',
     setAiImageCodex: 'Codex 订阅',
     setAiImageCodexHint:
@@ -393,18 +411,44 @@ export const strings = {
     onbTitle1: '欢迎使用 GenOffice',
     onbWelcomeSubtitle: '开源办公套件',
     onbWelcomeBody:
-      '打开并编辑 Word、Excel、PowerPoint、PDF、Markdown 和 HTML 文档。AI 通过你已有的 Claude 或 Codex 订阅运行。',
+      '打开并编辑 Word、Excel、PowerPoint、PDF、Markdown 和 HTML 文档。AI 通过你已有的 Claude 或 Codex 订阅运行，也可以通过免费 AI 连接运行。',
     onbSkip: '跳过',
     onbNext: '下一步',
     onbStart: '开始使用',
     onbStepAria: '第 {n} 页，共 {total} 页',
     onbBody3: '无授权费用，无广告，无水印。',
     onbBack: '上一步',
-    onbConnectTitle: '连接你的 AI 订阅',
+    onbConnectTitle: '连接 AI',
     onbConnectSkipNote: '可以跳过这一步，之后在“设置 → AI”中连接。',
+    setFreeTitle: '免费使用',
+    setFreeDesc: '没有订阅？连接免费 AI 即可马上开始。免费使用有每日额度限制。',
+    freeBadge: '免费',
+    freeOpenRouterDesc: '一键连接：在浏览器中注册或登录 OpenRouter，然后允许访问。',
+    freeGeminiDesc: '用你的 Google 账户创建密钥并粘贴到这里。仅限 18 岁及以上用户使用。',
+    freeConnectBrowser: '在浏览器中连接',
+    freeWaiting: '请在浏览器中登录 OpenRouter 并选择“允许”。完成后此页面会自动更新。',
+    freeGetKey: '获取密钥',
+    freeKeyPlaceholder: '粘贴你的 Gemini 密钥',
+    freeKeyConnect: '连接',
+    freeStatusNotConnected: '未连接',
+    freeStatusWaiting: '正在等待浏览器…',
+    freeStatusChecking: '正在检查…',
+    freeStatusConnected: '已连接',
+    freeStatusInUse: '已连接 · 使用中',
+    freeUse: '使用此 AI',
+    freeDisconnect: '断开连接',
+    freeQuota: '今日免费请求剩余 {remaining} 次（共 {limit} 次）',
+    freeFailedTimeout: '登录未能及时完成。请重试。',
+    freeFailedDenied: '未获得访问许可。请重试并选择“允许”。',
+    freeFailedInvalid: '此密钥未被接受。请检查你复制的密钥。',
+    freeFailedNetwork: '无法连接。请检查网络连接后重试。',
+    freePrivacy:
+      '免费使用期间，你发送的内容可能会被该公司用于改进其 AI。处理含有个人信息的文档时请注意。',
+    freeGeminiBilling: '在已开启结算的 Google 项目中创建的密钥可能会产生费用。',
+    onbFreeTitle: '没有订阅？免费开始',
     onbDoneTitle: '一切就绪',
     onbDoneConnected: 'AI 已连接：{provider}。',
-    onbDoneNotConnected: 'AI 尚未连接。你可以随时在“设置 → AI”中连接订阅。',
+    onbDoneNotConnected: 'AI 尚未连接。你可以随时在“设置 → AI”中连接订阅或免费 AI。',
     helpSearchPlaceholder: '搜索手册…（按 / 聚焦）',
     helpSearchLabel: '搜索手册',
     helpContentsLabel: '手册目录',
@@ -423,6 +467,11 @@ export const strings = {
     askTitle: 'Ask your knowledge base',
     askEmptyCorpusHint: 'No starred files yet — star some files first and the AI can read them.',
     askCorpusCount: 'Knowledge base: {n} starred files',
+    askScopeLabel: 'Ask within',
+    askScopeAll: 'All',
+    askCorpusCountGroup: '{group}: {n} starred files',
+    askScopeGone:
+      'This group has no starred files any more, so nothing was asked. Choose another group or All.',
     askIntro: 'Ask about your starred files. Answers cite their sources — click one to open it.',
     askToolSearch: 'Searching the knowledge base',
     askToolRead: 'Reading a file',
@@ -460,6 +509,10 @@ export const strings = {
     newSlide: 'AI Slides',
     newMarkdown: 'AI Markdown',
     newHtml: 'AI HTML',
+    newMindmap: 'Mind Map',
+    newHwp: 'AI HWP',
+    pdfToolsCard: 'PDF tools',
+    pdfToolsCardSub: 'Merge · split · organize',
     newPdf: 'AI PDF',
     openLocal: 'Open Local File',
     dropToOpenTitle: 'Drop to open',
@@ -479,6 +532,8 @@ export const strings = {
     filterPdf: 'PDF',
     filterMd: 'Markdown',
     filterHtml: 'HTML',
+    filterMindmap: 'Mind Map',
+    filterHwp: 'HWP',
     filterAria: 'Filter by type',
     fileCount: '{n} files',
     fileCountOne: '{n} file',
@@ -555,6 +610,8 @@ export const strings = {
     account: 'Account',
     appVersion: 'Version {v}',
     versionLabel: 'Version',
+    betaBadge: 'Beta',
+    betaTooltip: 'This is a beta. Some features may still change or not work as expected.',
     setUpdateAvailableLabel: 'Update available',
     setUpdateTo: 'Update to {version}',
     setUpdateDownloading: 'Downloading update ({percent}%)',
@@ -572,6 +629,13 @@ export const strings = {
     setAutoSave: 'Auto-save all documents',
     setAutoSaveDesc:
       'Turn on AutoSave by default in every editor. You can still switch it off for a single window.',
+    setResultStore: 'Saved PDF AI results',
+    setResultStoreDesc:
+      'Pages read by AI and translations stay on this PC until you delete them. In use: {size}',
+    setResultStoreDeleteAll: 'Delete all',
+    setResultStoreConfirm:
+      'Delete all saved AI readings and translations? Getting them back means using AI again.',
+    setResultStoreDeleteFailed: 'Could not delete them. Try again.',
     setSearchRerank: 'Jev search reranking',
     setSearchRerankDesc:
       "Sends the top 20 local hits' excerpts to TypeSafe's Jev model and reorders them by relevance. Off by default; when on, excerpts leave this device.",
@@ -656,9 +720,9 @@ export const strings = {
       'Chats on this provider use your own key, and that provider charges you for them. It is used only while you choose it yourself under "AI to use".',
     setAiHeadless: 'Let automatic requests use a subscription',
     setAiHeadlessDesc:
-      'Allows image generation and image analysis requested by a terminal command or another program (MCP) to run on your Claude or Codex subscription. When off, those requests use key providers only.',
+      'Allows image generation, image analysis, PDF translation and AI page reading requested by a terminal command or another program (MCP) to run on your Claude or Codex subscription. When off, those requests use key providers only.',
     setAiHeadlessWarning:
-      'Neither company recommends letting a program use your subscription automatically, and your account may be restricted.',
+      'There is no hourly limit, so a program can send as many requests as it likes, and they may carry the whole text of a document and images of its pages. Neither company recommends letting a program use your subscription automatically, and your account may be restricted.',
     setAiHeadlessConfirm: 'Turn on anyway',
     setAiImageCodex: 'Codex subscription',
     setAiImageCodexHint:
@@ -816,19 +880,49 @@ export const strings = {
     onbTitle1: 'Welcome to GenOffice',
     onbWelcomeSubtitle: 'An open-source office suite',
     onbWelcomeBody:
-      'Open and edit Word, Excel, PowerPoint, PDF, Markdown and HTML documents. AI works through the Claude or Codex subscription you already have.',
+      'Open and edit Word, Excel, PowerPoint, PDF, Markdown and HTML documents. AI works through the Claude or Codex subscription you already have, or through a free AI connection.',
     onbSkip: 'Skip',
     onbNext: 'Next',
     onbStart: 'Get started',
     onbStepAria: 'Page {n} of {total}',
     onbBody3: 'No license fees. No ads. No watermarks.',
     onbBack: 'Back',
-    onbConnectTitle: 'Connect your AI subscription',
+    onbConnectTitle: 'Connect an AI',
     onbConnectSkipNote: 'You can skip this step and connect later in Settings → AI.',
+    setFreeTitle: 'Use for free',
+    setFreeDesc:
+      'No subscription? Connect a free AI and start right away. Free use has a daily limit.',
+    freeBadge: 'Free',
+    freeOpenRouterDesc:
+      'Connect with one button: sign up or sign in to OpenRouter in your browser and allow access.',
+    freeGeminiDesc:
+      'Make a key with your Google account and paste it here. Only for people aged 18 or older.',
+    freeConnectBrowser: 'Connect in browser',
+    freeWaiting:
+      'Sign in to OpenRouter in your browser and choose Allow. This screen updates when you are done.',
+    freeGetKey: 'Get a key',
+    freeKeyPlaceholder: 'Paste your Gemini key',
+    freeKeyConnect: 'Connect',
+    freeStatusNotConnected: 'Not connected',
+    freeStatusWaiting: 'Waiting for the browser…',
+    freeStatusChecking: 'Checking…',
+    freeStatusConnected: 'Connected',
+    freeStatusInUse: 'Connected · in use',
+    freeUse: 'Use this AI',
+    freeDisconnect: 'Disconnect',
+    freeQuota: '{remaining} of {limit} free requests left today',
+    freeFailedTimeout: 'The sign-in did not finish in time. Try again.',
+    freeFailedDenied: 'Access was not allowed. Try again and choose Allow.',
+    freeFailedInvalid: 'That key was not accepted. Check the key you copied.',
+    freeFailedNetwork: 'Could not connect. Check your internet connection and try again.',
+    freePrivacy:
+      "While you use it for free, what you send may be used to improve that company's AI. Take care with documents that hold personal information.",
+    freeGeminiBilling: 'A key made in a Google project with billing turned on can be charged.',
+    onbFreeTitle: 'No subscription? Start for free',
     onbDoneTitle: 'You’re all set',
     onbDoneConnected: 'AI is connected: {provider}.',
     onbDoneNotConnected:
-      'AI is not connected yet. You can connect a subscription anytime in Settings → AI.',
+      'AI is not connected yet. You can connect a subscription or a free AI anytime in Settings → AI.',
     helpSearchPlaceholder: 'Search the manual… (press /)',
     helpSearchLabel: 'Search the manual',
     helpContentsLabel: 'Manual contents',
@@ -848,6 +942,11 @@ export const strings = {
     askEmptyCorpusHint:
       'Chưa có tệp nào được đánh dấu — hãy đánh dấu tệp trước để AI có thể đọc chúng.',
     askCorpusCount: 'Cơ sở tri thức: {n} tệp đã đánh dấu',
+    askScopeLabel: 'Phạm vi hỏi',
+    askScopeAll: 'Tất cả',
+    askCorpusCountGroup: '{group}: {n} tệp đã đánh dấu',
+    askScopeGone:
+      'Nhóm này không còn tệp đã đánh dấu nào nên chưa có câu hỏi nào được gửi. Hãy chọn nhóm khác hoặc Tất cả.',
     askIntro: 'Hỏi về các tệp bạn đã đánh dấu. Câu trả lời dẫn nguồn — nhấp để mở.',
     askToolSearch: 'Đang tìm cơ sở tri thức',
     askToolRead: 'Đang đọc tệp',
@@ -885,6 +984,10 @@ export const strings = {
     newSlide: 'Bản trình bày AI',
     newMarkdown: 'AI Markdown',
     newHtml: 'AI HTML',
+    newMindmap: 'Sơ đồ tư duy',
+    newHwp: 'AI HWP',
+    pdfToolsCard: 'Công cụ PDF',
+    pdfToolsCardSub: 'Gộp · tách · sắp xếp',
     newPdf: 'AI PDF',
     openLocal: 'Mở tệp cục bộ',
     dropToOpenTitle: 'Thả để mở',
@@ -904,6 +1007,8 @@ export const strings = {
     filterPdf: 'PDF',
     filterMd: 'Markdown',
     filterHtml: 'HTML',
+    filterMindmap: 'Sơ đồ tư duy',
+    filterHwp: 'HWP',
     filterAria: 'Lọc theo loại',
     fileCount: '{n} tệp',
     fileCountOne: '{n} tệp',
@@ -979,6 +1084,9 @@ export const strings = {
     account: 'Tài khoản',
     appVersion: 'Phiên bản {v}',
     versionLabel: 'Phiên bản',
+    betaBadge: 'Beta',
+    betaTooltip:
+      'Đây là bản beta. Một số tính năng có thể còn thay đổi hoặc chưa hoạt động như mong đợi.',
     setUpdateAvailableLabel: 'Có bản cập nhật',
     setUpdateTo: 'Cập nhật lên {version}',
     setUpdateDownloading: 'Đang tải bản cập nhật ({percent}%)',
@@ -996,6 +1104,13 @@ export const strings = {
     setAutoSave: 'Tự động lưu tất cả tài liệu',
     setAutoSaveDesc:
       'Bật Tự động lưu theo mặc định trong mọi trình soạn thảo. Bạn vẫn có thể tắt tính năng này cho từng cửa sổ riêng lẻ.',
+    setResultStore: 'Kết quả AI của PDF đã lưu',
+    setResultStoreDesc:
+      'Các trang do AI đọc và bản dịch được lưu trên máy tính này cho đến khi bạn xóa. Đang dùng: {size}',
+    setResultStoreDeleteAll: 'Xóa tất cả',
+    setResultStoreConfirm:
+      'Xóa tất cả kết quả đọc bằng AI và bản dịch đã lưu? Muốn có lại sẽ phải dùng AI lần nữa.',
+    setResultStoreDeleteFailed: 'Không xóa được. Hãy thử lại.',
     setSearchRerank: 'Sắp xếp lại kết quả tìm kiếm Jev',
     setSearchRerankDesc:
       'Gửi đoạn trích của 20 kết quả hàng đầu cục bộ tới mô hình Jev của TypeSafe và sắp xếp lại theo mức độ liên quan. Tắt theo mặc định; khi bật, các đoạn trích sẽ được gửi ra ngoài thiết bị này.',
@@ -1079,9 +1194,9 @@ export const strings = {
       'Các cuộc trò chuyện qua nhà cung cấp này dùng khóa của riêng bạn và nhà cung cấp đó sẽ tính phí. Nhà cung cấp này chỉ được dùng khi bạn tự chọn trong mục "AI sử dụng".',
     setAiHeadless: 'Cho phép yêu cầu tự động dùng gói đăng ký',
     setAiHeadlessDesc:
-      'Cho phép việc tạo hình ảnh và phân tích hình ảnh do lệnh terminal hoặc chương trình khác (MCP) yêu cầu chạy bằng gói đăng ký Claude hoặc Codex của bạn. Khi tắt, các yêu cầu đó chỉ dùng nhà cung cấp theo khóa.',
+      'Cho phép việc tạo hình ảnh, phân tích hình ảnh, dịch PDF và đọc trang bằng AI do lệnh terminal hoặc chương trình khác (MCP) yêu cầu chạy bằng gói đăng ký Claude hoặc Codex của bạn. Khi tắt, các yêu cầu đó chỉ dùng nhà cung cấp theo khóa.',
     setAiHeadlessWarning:
-      'Cả hai công ty đều không khuyến nghị để chương trình tự động dùng gói đăng ký, và tài khoản của bạn có thể bị hạn chế.',
+      'Không có giới hạn theo giờ, nên chương trình có thể gửi bao nhiêu yêu cầu tùy ý, và các yêu cầu đó có thể chứa toàn bộ văn bản của tài liệu cùng hình ảnh các trang. Cả hai công ty đều không khuyến nghị để chương trình tự động dùng gói đăng ký, và tài khoản của bạn có thể bị hạn chế.',
     setAiHeadlessConfirm: 'Vẫn bật',
     setAiImageCodex: 'Gói đăng ký Codex',
     setAiImageCodexHint:
@@ -1241,19 +1356,49 @@ export const strings = {
     onbTitle1: 'Chào mừng đến với GenOffice',
     onbWelcomeSubtitle: 'Bộ ứng dụng văn phòng mã nguồn mở',
     onbWelcomeBody:
-      'Mở và chỉnh sửa tài liệu Word, Excel, PowerPoint, PDF, Markdown và HTML. AI hoạt động qua gói đăng ký Claude hoặc Codex mà bạn đã có.',
+      'Mở và chỉnh sửa tài liệu Word, Excel, PowerPoint, PDF, Markdown và HTML. AI hoạt động qua gói đăng ký Claude hoặc Codex mà bạn đã có, hoặc qua kết nối AI miễn phí.',
     onbSkip: 'Bỏ qua',
     onbNext: 'Tiếp theo',
     onbStart: 'Bắt đầu',
     onbStepAria: 'Trang {n} / {total}',
     onbBody3: 'Không phí bản quyền. Không quảng cáo. Không hình mờ.',
     onbBack: 'Quay lại',
-    onbConnectTitle: 'Kết nối gói đăng ký AI của bạn',
+    onbConnectTitle: 'Kết nối AI',
     onbConnectSkipNote: 'Bạn có thể bỏ qua bước này và kết nối sau trong Cài đặt → AI.',
+    setFreeTitle: 'Dùng miễn phí',
+    setFreeDesc:
+      'Chưa có gói đăng ký? Hãy kết nối một AI miễn phí và bắt đầu ngay. Dùng miễn phí có giới hạn mỗi ngày.',
+    freeBadge: 'Miễn phí',
+    freeOpenRouterDesc:
+      'Kết nối chỉ với một nút bấm: đăng ký hoặc đăng nhập OpenRouter trong trình duyệt rồi cho phép truy cập.',
+    freeGeminiDesc:
+      'Tạo khóa bằng tài khoản Google của bạn rồi dán vào đây. Chỉ dành cho người từ 18 tuổi trở lên.',
+    freeConnectBrowser: 'Kết nối trong trình duyệt',
+    freeWaiting:
+      'Hãy đăng nhập OpenRouter trong trình duyệt và chọn Cho phép. Màn hình này sẽ tự cập nhật khi bạn hoàn tất.',
+    freeGetKey: 'Lấy khóa',
+    freeKeyPlaceholder: 'Dán khóa Gemini của bạn',
+    freeKeyConnect: 'Kết nối',
+    freeStatusNotConnected: 'Chưa kết nối',
+    freeStatusWaiting: 'Đang chờ trình duyệt…',
+    freeStatusChecking: 'Đang kiểm tra…',
+    freeStatusConnected: 'Đã kết nối',
+    freeStatusInUse: 'Đã kết nối · đang dùng',
+    freeUse: 'Dùng AI này',
+    freeDisconnect: 'Ngắt kết nối',
+    freeQuota: 'Hôm nay còn {remaining}/{limit} yêu cầu miễn phí',
+    freeFailedTimeout: 'Quá trình đăng nhập không hoàn tất kịp thời. Hãy thử lại.',
+    freeFailedDenied: 'Quyền truy cập chưa được cho phép. Hãy thử lại và chọn Cho phép.',
+    freeFailedInvalid: 'Khóa này không được chấp nhận. Hãy kiểm tra lại khóa bạn đã sao chép.',
+    freeFailedNetwork: 'Không thể kết nối. Hãy kiểm tra kết nối internet rồi thử lại.',
+    freePrivacy:
+      'Khi dùng miễn phí, nội dung bạn gửi có thể được dùng để cải thiện AI của công ty đó. Hãy cẩn thận với tài liệu chứa thông tin cá nhân.',
+    freeGeminiBilling: 'Khóa được tạo trong dự án Google đã bật thanh toán có thể bị tính phí.',
+    onbFreeTitle: 'Chưa có gói đăng ký? Bắt đầu miễn phí',
     onbDoneTitle: 'Mọi thứ đã sẵn sàng',
     onbDoneConnected: 'AI đã được kết nối: {provider}.',
     onbDoneNotConnected:
-      'AI chưa được kết nối. Bạn có thể kết nối gói đăng ký bất cứ lúc nào trong Cài đặt → AI.',
+      'AI chưa được kết nối. Bạn có thể kết nối gói đăng ký hoặc AI miễn phí bất cứ lúc nào trong Cài đặt → AI.',
     helpSearchPlaceholder: 'Tìm kiếm trong sổ tay… (nhấn /)',
     helpSearchLabel: 'Tìm kiếm trong sổ tay',
     helpContentsLabel: 'Mục lục sổ tay',
@@ -1274,6 +1419,11 @@ export const strings = {
     askEmptyCorpusHint:
       'スター付きファイルがまだありません。先にファイルをスターすると、AI が読めます。',
     askCorpusCount: 'ナレッジベース:スター付き {n} 件',
+    askScopeLabel: '質問の範囲',
+    askScopeAll: 'すべて',
+    askCorpusCountGroup: '{group}：スター付き {n} 件',
+    askScopeGone:
+      'このグループにはスター付きファイルがもうないため、質問しませんでした。別のグループか「すべて」を選んでください。',
     askIntro: 'スター付きファイルについて質問できます。回答には出典が付き、クリックで開けます。',
     askToolSearch: 'ナレッジベースを検索中',
     askToolRead: 'ファイルを読み込み中',
@@ -1313,6 +1463,10 @@ export const strings = {
     newSlide: 'AI Slides',
     newMarkdown: 'AI Markdown',
     newHtml: 'AI HTML',
+    newMindmap: 'マインドマップ',
+    newHwp: 'AI HWP',
+    pdfToolsCard: 'PDF ツール',
+    pdfToolsCardSub: '結合・分割・整理',
     newPdf: 'AI PDF',
     openLocal: 'ローカルファイルを開く',
     dropToOpenTitle: 'ドロップして開く',
@@ -1333,6 +1487,8 @@ export const strings = {
     filterPdf: 'PDF',
     filterMd: 'Markdown',
     filterHtml: 'HTML',
+    filterMindmap: 'マインドマップ',
+    filterHwp: 'HWP',
     filterAria: '種類で絞り込み',
     // List / bulk actions
     fileCount: '{n} 個のファイル',
@@ -1412,6 +1568,9 @@ export const strings = {
     account: 'アカウント',
     appVersion: 'バージョン {v}',
     versionLabel: 'バージョン',
+    betaBadge: 'ベータ',
+    betaTooltip:
+      'ベータ版です。一部の機能は変わったり、期待どおりに動かなかったりすることがあります。',
     setUpdateAvailableLabel: '更新があります',
     setUpdateTo: '{version} に更新する',
     setUpdateDownloading: '更新をダウンロード中（{percent}%）',
@@ -1429,6 +1588,13 @@ export const strings = {
     setAutoSave: 'すべてのドキュメントを自動保存',
     setAutoSaveDesc:
       'すべてのエディターで自動保存をデフォルトでオンにします。個々のウィンドウでオフにすることもできます。',
+    setResultStore: '保存済みの PDF AI 結果',
+    setResultStoreDesc:
+      'AI で読み取ったページと翻訳は、削除するまでこの PC に保存されます。使用量：{size}',
+    setResultStoreDeleteAll: 'すべて削除',
+    setResultStoreConfirm:
+      '保存済みの AI 読み取り結果と翻訳をすべて削除しますか？作り直すには AI をもう一度使います。',
+    setResultStoreDeleteFailed: '削除できませんでした。もう一度お試しください。',
     setSearchRerank: 'Jev 検索リランク',
     setSearchRerankDesc:
       'ローカル検索の上位 20 件の抜粋を TypeSafe の Jev モデルに送り、関連度で並べ替えます。既定ではオフ。オンにすると抜粋が端末外に送信されます。',
@@ -1514,9 +1680,9 @@ export const strings = {
       'このプロバイダーでの会話には自分で入力したキーが使われ、料金はそのプロバイダーから請求されます。「使用する AI」で自分で選んでいる間だけ使われます。',
     setAiHeadless: '自動呼び出しでサブスクリプションを使う',
     setAiHeadlessDesc:
-      'ターミナルのコマンドや他のプログラム（MCP）から要求された画像生成と画像解析を、Claude または Codex のサブスクリプションで処理できるようにします。オフの場合、こうした要求にはキー方式のプロバイダーだけが使われます。',
+      'ターミナルのコマンドや他のプログラム（MCP）から要求された画像生成、画像解析、PDF 翻訳、AI によるページ読み取りを、Claude または Codex のサブスクリプションで処理できるようにします。オフの場合、こうした要求にはキー方式のプロバイダーだけが使われます。',
     setAiHeadlessWarning:
-      'プログラムがサブスクリプションを自動的に使うことは両社とも推奨しておらず、アカウントが制限される可能性があります。',
+      '1 時間あたりの上限はないため、プログラムはいくらでも要求を送ることができ、その要求には文書全体のテキストやページの画像が含まれることがあります。プログラムがサブスクリプションを自動的に使うことは両社とも推奨しておらず、アカウントが制限される可能性があります。',
     setAiHeadlessConfirm: 'それでもオンにする',
     setAiImageCodex: 'Codex のサブスクリプション',
     setAiImageCodexHint:
@@ -1678,19 +1844,52 @@ export const strings = {
     onbTitle1: 'GenOffice へようこそ',
     onbWelcomeSubtitle: 'オープンソースのオフィススイート',
     onbWelcomeBody:
-      'Word、Excel、PowerPoint、PDF、Markdown、HTML の文書を開いて編集できます。AI は、すでにお持ちの Claude または Codex のサブスクリプションで動作します。',
+      'Word、Excel、PowerPoint、PDF、Markdown、HTML の文書を開いて編集できます。AI は、すでにお持ちの Claude または Codex のサブスクリプション、または無料の AI 接続で動作します。',
     onbSkip: 'スキップ',
     onbNext: '次へ',
     onbStart: 'はじめる',
     onbStepAria: '{total} ページ中 {n} ページ目',
     onbBody3: 'ライセンス料なし、広告なし、透かしなし。',
     onbBack: '戻る',
-    onbConnectTitle: 'AI サブスクリプションを接続',
+    onbConnectTitle: 'AI を接続',
     onbConnectSkipNote: 'この手順はスキップして、あとで「設定 → AI」から接続できます。',
+    setFreeTitle: '無料で使う',
+    setFreeDesc:
+      'サブスクリプションがなくても、無料の AI を接続してすぐに始められます。無料で使える量には 1 日あたりの上限があります。',
+    freeBadge: '無料',
+    freeOpenRouterDesc:
+      'ボタンひとつで接続できます。ブラウザーで OpenRouter に登録またはログインし、アクセスを許可してください。',
+    freeGeminiDesc:
+      'Google アカウントでキーを作成し、ここに貼り付けます。18 歳以上の方のみ利用できます。',
+    freeConnectBrowser: 'ブラウザーで接続',
+    freeWaiting:
+      'ブラウザーで OpenRouter にログインし、「許可」を選んでください。完了するとこの画面が切り替わります。',
+    freeGetKey: 'キーを作成',
+    freeKeyPlaceholder: 'Gemini のキーを貼り付けてください',
+    freeKeyConnect: '接続',
+    freeStatusNotConnected: '未接続',
+    freeStatusWaiting: 'ブラウザーを待っています…',
+    freeStatusChecking: '確認中…',
+    freeStatusConnected: '接続済み',
+    freeStatusInUse: '接続済み · 使用中',
+    freeUse: 'この AI を使う',
+    freeDisconnect: '接続を解除',
+    freeQuota: '今日の無料リクエスト残り {remaining} 回（{limit} 回中）',
+    freeFailedTimeout: 'ログインが時間内に完了しませんでした。もう一度お試しください。',
+    freeFailedDenied:
+      'アクセスが許可されませんでした。もう一度お試しのうえ、「許可」を選んでください。',
+    freeFailedInvalid: 'このキーは使用できません。コピーしたキーを確認してください。',
+    freeFailedNetwork:
+      '接続できませんでした。インターネット接続を確認して、もう一度お試しください。',
+    freePrivacy:
+      '無料で使っている間、送信した内容がその会社の AI の改善に使われることがあります。個人情報を含む文書には注意してください。',
+    freeGeminiBilling:
+      '課金が有効な Google プロジェクトで作成したキーは、料金が発生することがあります。',
+    onbFreeTitle: 'サブスクリプションがなくても無料で始められます',
     onbDoneTitle: '準備が整いました',
     onbDoneConnected: 'AI に接続済み：{provider}',
     onbDoneNotConnected:
-      'AI はまだ接続されていません。「設定 → AI」からいつでもサブスクリプションを接続できます。',
+      'AI はまだ接続されていません。「設定 → AI」からいつでもサブスクリプションまたは無料の AI を接続できます。',
     helpSearchPlaceholder: 'マニュアル内を検索…（/ キーでフォーカス）',
     helpSearchLabel: 'マニュアル内を検索',
     helpContentsLabel: 'マニュアル目次',
@@ -1711,6 +1910,11 @@ export const strings = {
     askEmptyCorpusHint:
       '즐겨찾기한 파일이 아직 없습니다. 먼저 파일을 즐겨찾기하면 AI가 읽을 수 있습니다.',
     askCorpusCount: '지식 베이스: 즐겨찾기 {n}개',
+    askScopeLabel: '묻는 범위',
+    askScopeAll: '전체',
+    askCorpusCountGroup: '{group}: 즐겨찾기 {n}개',
+    askScopeGone:
+      '이 그룹에 즐겨찾기한 파일이 더 이상 없어 질문하지 않았습니다. 다른 그룹이나 전체를 고르세요.',
     askIntro: '즐겨찾기한 파일에 대해 질문하세요. 답변에는 출처가 표시되며 클릭하면 열립니다.',
     askToolSearch: '지식 베이스 검색 중',
     askToolRead: '파일 읽는 중',
@@ -1750,6 +1954,10 @@ export const strings = {
     newSlide: 'AI Slides',
     newMarkdown: 'AI Markdown',
     newHtml: 'AI HTML',
+    newMindmap: '마인드맵',
+    newHwp: 'AI 한글',
+    pdfToolsCard: 'PDF 도구',
+    pdfToolsCardSub: '병합 · 분할 · 정리',
     newPdf: 'AI PDF',
     openLocal: '로컬 파일 열기',
     dropToOpenTitle: '놓아서 파일 열기',
@@ -1770,6 +1978,8 @@ export const strings = {
     filterPdf: 'PDF',
     filterMd: 'Markdown',
     filterHtml: 'HTML',
+    filterMindmap: '마인드맵',
+    filterHwp: '한글',
     filterAria: '유형별 필터',
     // List / bulk actions
     fileCount: '파일 {n}개',
@@ -1848,6 +2058,8 @@ export const strings = {
     account: '계정',
     appVersion: '버전 {v}',
     versionLabel: '버전',
+    betaBadge: '베타',
+    betaTooltip: '베타 버전입니다. 일부 기능은 바뀌거나 제대로 동작하지 않을 수 있습니다.',
     setUpdateAvailableLabel: '업데이트 가능',
     setUpdateTo: '{version}(으)로 업데이트',
     setUpdateDownloading: '업데이트 다운로드 중({percent}%)',
@@ -1864,6 +2076,13 @@ export const strings = {
     saveLocation: '저장 위치',
     setAutoSave: '모든 문서 자동 저장',
     setAutoSaveDesc: '모든 편집기에서 자동 저장을 기본으로 켭니다. 개별 창에서는 끌 수 있습니다.',
+    setResultStore: 'PDF AI 결과 보관소',
+    setResultStoreDesc:
+      'AI로 읽은 페이지와 번역본은 지울 때까지 이 PC에 보관됩니다. 사용 중: {size}',
+    setResultStoreDeleteAll: '모두 지우기',
+    setResultStoreConfirm:
+      '보관된 AI 읽기 결과와 번역본을 모두 지울까요? 다시 만들려면 AI를 다시 써야 합니다.',
+    setResultStoreDeleteFailed: '지우지 못했습니다. 다시 시도해 주세요.',
     setSearchRerank: 'Jev 검색 재정렬',
     setSearchRerankDesc:
       '로컬 검색 상위 20개 결과의 발췌문을 TypeSafe의 Jev 모델로 보내 관련도 순으로 재정렬합니다. 기본은 꺼짐이며, 켜면 발췌문이 기기 밖으로 전송됩니다.',
@@ -1947,9 +2166,9 @@ export const strings = {
       '이 제공업체로 하는 대화는 직접 넣은 키를 쓰고, 요금은 그 회사에서 청구됩니다. "사용할 AI"에서 직접 고른 동안에만 쓰입니다.',
     setAiHeadless: '자동 호출에 구독 사용',
     setAiHeadlessDesc:
-      '터미널 명령이나 다른 프로그램(MCP)이 요청한 이미지 생성·이미지 분석을 Claude 또는 Codex 구독으로 처리하도록 허용합니다. 꺼져 있으면 그런 요청은 키 방식 제공업체만 씁니다.',
+      '터미널 명령이나 다른 프로그램(MCP)이 요청한 이미지 생성·이미지 분석·PDF 번역·AI 페이지 읽기를 Claude 또는 Codex 구독으로 처리하도록 허용합니다. 꺼져 있으면 그런 요청은 키 방식 제공업체만 씁니다.',
     setAiHeadlessWarning:
-      '프로그램이 자동으로 구독을 쓰는 것은 두 회사가 권장하지 않으며, 계정에 제한이 걸릴 수 있습니다.',
+      '시간당 한도가 없어 프로그램이 요청을 얼마든지 보낼 수 있고, 그 요청에 문서 전체의 글과 페이지 그림이 담길 수 있습니다. 프로그램이 자동으로 구독을 쓰는 것은 두 회사가 권장하지 않으며, 계정에 제한이 걸릴 수 있습니다.',
     setAiHeadlessConfirm: '그래도 켜기',
     setAiImageCodex: 'Codex 구독',
     setAiImageCodexHint:
@@ -2106,19 +2325,48 @@ export const strings = {
     onbTitle1: 'GenOffice에 오신 것을 환영합니다',
     onbWelcomeSubtitle: '오픈소스 오피스 제품군',
     onbWelcomeBody:
-      'Word, Excel, PowerPoint, PDF, Markdown, HTML 문서를 열고 편집합니다. AI는 이미 쓰고 있는 Claude 또는 Codex 구독으로 동작합니다.',
+      'Word, Excel, PowerPoint, PDF, Markdown, HTML 문서를 열고 편집합니다. AI는 이미 쓰고 있는 Claude·Codex 구독이나 무료 AI 연결로 동작합니다.',
     onbSkip: '건너뛰기',
     onbNext: '다음',
     onbStart: '시작하기',
     onbStepAria: '총 {total}페이지 중 {n}페이지',
     onbBody3: '라이선스 비용 없음, 광고 없음, 워터마크 없음.',
     onbBack: '이전',
-    onbConnectTitle: 'AI 구독 연결',
+    onbConnectTitle: 'AI 연결',
     onbConnectSkipNote: '이 단계는 건너뛰고 나중에 설정 → AI에서 연결해도 됩니다.',
+    setFreeTitle: '무료로 쓰기',
+    setFreeDesc:
+      '구독이 없어도 무료 AI를 연결해 바로 쓸 수 있습니다. 하루에 쓸 수 있는 양에 한도가 있습니다.',
+    freeBadge: '무료',
+    freeOpenRouterDesc:
+      '버튼 한 번으로 연결합니다. 브라우저에서 OpenRouter에 가입하거나 로그인한 뒤 허용을 누르면 끝납니다.',
+    freeGeminiDesc: 'Google 계정으로 키를 만들어 여기에 붙여넣습니다. 18세 이상만 쓸 수 있습니다.',
+    freeConnectBrowser: '브라우저로 연결',
+    freeWaiting:
+      '브라우저에서 OpenRouter에 로그인한 뒤 허용을 누르세요. 끝나면 이 화면이 바뀝니다.',
+    freeGetKey: '키 만들기',
+    freeKeyPlaceholder: 'Gemini 키를 붙여넣으세요',
+    freeKeyConnect: '연결',
+    freeStatusNotConnected: '연결 안 됨',
+    freeStatusWaiting: '브라우저를 기다리는 중…',
+    freeStatusChecking: '확인 중…',
+    freeStatusConnected: '연결됨',
+    freeStatusInUse: '연결됨 · 사용 중',
+    freeUse: '이 AI 쓰기',
+    freeDisconnect: '연결 해제',
+    freeQuota: '오늘 무료 요청 {limit}번 중 {remaining}번 남음',
+    freeFailedTimeout: '로그인이 제때 끝나지 않았습니다. 다시 시도하세요.',
+    freeFailedDenied: '연결이 허용되지 않았습니다. 다시 시도한 뒤 허용을 누르세요.',
+    freeFailedInvalid: '이 키는 쓸 수 없습니다. 복사한 키가 맞는지 확인하세요.',
+    freeFailedNetwork: '연결하지 못했습니다. 인터넷 연결을 확인하고 다시 시도하세요.',
+    freePrivacy:
+      '무료로 쓰는 동안 보낸 내용은 그 회사의 AI 개선에 쓰일 수 있습니다. 개인정보가 담긴 문서는 주의하세요.',
+    freeGeminiBilling: '결제가 연결된 Google 프로젝트에서 만든 키는 요금이 나갈 수 있습니다.',
+    onbFreeTitle: '구독이 없나요? 무료로 시작하기',
     onbDoneTitle: '준비가 끝났습니다',
     onbDoneConnected: 'AI가 연결되었습니다: {provider}',
     onbDoneNotConnected:
-      '아직 AI가 연결되지 않았습니다. 설정 → AI에서 언제든지 구독을 연결할 수 있습니다.',
+      '아직 AI가 연결되지 않았습니다. 설정 → AI에서 언제든지 구독이나 무료 AI를 연결할 수 있습니다.',
     helpSearchPlaceholder: '매뉴얼 검색…(/ 키로 포커스)',
     helpSearchLabel: '매뉴얼 검색',
     helpContentsLabel: '매뉴얼 목차',
@@ -2139,6 +2387,11 @@ export const strings = {
     askEmptyCorpusHint:
       'Aucun fichier favori pour l’instant — ajoutez-en d’abord pour que l’IA puisse les lire.',
     askCorpusCount: 'Base de connaissances : {n} fichiers favoris',
+    askScopeLabel: 'Interroger',
+    askScopeAll: 'Tous',
+    askCorpusCountGroup: '{group} : {n} fichiers favoris',
+    askScopeGone:
+      'Ce groupe n’a plus de fichiers favoris : la question n’a donc pas été posée. Choisissez un autre groupe ou Tous.',
     askIntro:
       'Posez des questions sur vos fichiers favoris. Les réponses citent leurs sources — cliquez pour ouvrir.',
     askToolSearch: 'Recherche dans la base',
@@ -2180,6 +2433,10 @@ export const strings = {
     newSlide: 'AI Slides',
     newMarkdown: 'AI Markdown',
     newHtml: 'AI HTML',
+    newMindmap: 'Carte mentale',
+    newHwp: 'AI HWP',
+    pdfToolsCard: 'Outils PDF',
+    pdfToolsCardSub: 'Fusionner · diviser · organiser',
     newPdf: 'AI PDF',
     openLocal: 'Ouvrir un fichier local',
     dropToOpenTitle: 'Déposer pour ouvrir',
@@ -2200,6 +2457,8 @@ export const strings = {
     filterPdf: 'PDF',
     filterMd: 'Markdown',
     filterHtml: 'HTML',
+    filterMindmap: 'Carte mentale',
+    filterHwp: 'HWP',
     filterAria: 'Filtrer par type',
     // List / bulk actions
     fileCount: '{n} fichiers',
@@ -2280,6 +2539,9 @@ export const strings = {
     account: 'Compte',
     appVersion: 'Version {v}',
     versionLabel: 'Version',
+    betaBadge: 'Bêta',
+    betaTooltip:
+      'Ceci est une version bêta. Certaines fonctions peuvent encore changer ou ne pas fonctionner comme prévu.',
     setUpdateAvailableLabel: 'Mise à jour disponible',
     setUpdateTo: 'Mettre à jour vers {version}',
     setUpdateDownloading: 'Téléchargement ({percent} %)',
@@ -2297,6 +2559,13 @@ export const strings = {
     setAutoSave: 'Enregistrer automatiquement tous les documents',
     setAutoSaveDesc:
       "Active l'enregistrement automatique par défaut dans chaque éditeur. Vous pouvez toujours le désactiver pour une fenêtre.",
+    setResultStore: 'Résultats IA des PDF enregistrés',
+    setResultStoreDesc:
+      "Les pages lues par l'IA et les traductions restent sur ce PC jusqu'à ce que vous les supprimiez. Espace utilisé : {size}",
+    setResultStoreDeleteAll: 'Tout supprimer',
+    setResultStoreConfirm:
+      "Supprimer toutes les lectures IA et traductions enregistrées ? Pour les retrouver, il faudra refaire appel à l'IA.",
+    setResultStoreDeleteFailed: 'Impossible de les supprimer. Réessayez.',
     setSearchRerank: 'Reclassement Jev',
     setSearchRerankDesc:
       'Envoie les extraits des 20 premiers résultats locaux au modèle Jev de TypeSafe et les réordonne par pertinence. Désactivé par défaut ; une fois activé, les extraits quittent cet appareil.',
@@ -2382,9 +2651,9 @@ export const strings = {
       'Les conversations avec ce fournisseur utilisent votre propre clé, et c’est lui qui vous les facture. Il n’est utilisé que si vous le choisissez vous-même sous « IA à utiliser ».',
     setAiHeadless: 'Autoriser les requêtes automatiques à utiliser un abonnement',
     setAiHeadlessDesc:
-      'Permet à la génération et à l’analyse d’images demandées par une commande du terminal ou par un autre programme (MCP) de passer par votre abonnement Claude ou Codex. Lorsque l’option est désactivée, ces requêtes n’utilisent que les fournisseurs à clé.',
+      'Permet à la génération et à l’analyse d’images, à la traduction de PDF et à la lecture de pages par l’IA demandées par une commande du terminal ou par un autre programme (MCP) de passer par votre abonnement Claude ou Codex. Lorsque l’option est désactivée, ces requêtes n’utilisent que les fournisseurs à clé.',
     setAiHeadlessWarning:
-      'Aucune des deux entreprises ne recommande de laisser un programme utiliser automatiquement votre abonnement, et votre compte pourrait être restreint.',
+      'Il n’y a pas de limite horaire : un programme peut envoyer autant de requêtes qu’il le souhaite, et elles peuvent contenir tout le texte d’un document et des images de ses pages. Aucune des deux entreprises ne recommande de laisser un programme utiliser automatiquement votre abonnement, et votre compte pourrait être restreint.',
     setAiHeadlessConfirm: 'Activer quand même',
     setAiImageCodex: 'Abonnement Codex',
     setAiImageCodexHint:
@@ -2549,20 +2818,51 @@ export const strings = {
     onbTitle1: 'Bienvenue dans GenOffice',
     onbWelcomeSubtitle: 'Une suite bureautique open source',
     onbWelcomeBody:
-      'Ouvrez et modifiez des documents Word, Excel, PowerPoint, PDF, Markdown et HTML. L’IA fonctionne avec l’abonnement Claude ou Codex que vous avez déjà.',
+      'Ouvrez et modifiez des documents Word, Excel, PowerPoint, PDF, Markdown et HTML. L’IA fonctionne avec l’abonnement Claude ou Codex que vous avez déjà, ou avec une connexion à une IA gratuite.',
     onbSkip: 'Passer',
     onbNext: 'Suivant',
     onbStart: 'Commencer',
     onbStepAria: 'Page {n} sur {total}',
     onbBody3: 'Pas de licence. Pas de publicité. Pas de filigrane.',
     onbBack: 'Retour',
-    onbConnectTitle: 'Connectez votre abonnement IA',
+    onbConnectTitle: 'Connectez une IA',
     onbConnectSkipNote:
       'Vous pouvez passer cette étape et vous connecter plus tard dans Paramètres → IA.',
+    setFreeTitle: 'Utiliser gratuitement',
+    setFreeDesc:
+      'Pas d’abonnement ? Connectez une IA gratuite et commencez tout de suite. L’utilisation gratuite est limitée chaque jour.',
+    freeBadge: 'Gratuit',
+    freeOpenRouterDesc:
+      'Connexion en un clic : inscrivez-vous ou connectez-vous à OpenRouter dans votre navigateur, puis autorisez l’accès.',
+    freeGeminiDesc:
+      'Créez une clé avec votre compte Google et collez-la ici. Réservé aux personnes de 18 ans ou plus.',
+    freeConnectBrowser: 'Connecter dans le navigateur',
+    freeWaiting:
+      'Connectez-vous à OpenRouter dans votre navigateur et choisissez « Autoriser ». Cet écran se met à jour une fois que c’est fait.',
+    freeGetKey: 'Obtenir une clé',
+    freeKeyPlaceholder: 'Collez votre clé Gemini',
+    freeKeyConnect: 'Connecter',
+    freeStatusNotConnected: 'Non connecté',
+    freeStatusWaiting: 'En attente du navigateur…',
+    freeStatusChecking: 'Vérification…',
+    freeStatusConnected: 'Connecté',
+    freeStatusInUse: 'Connecté · en cours d’utilisation',
+    freeUse: 'Utiliser cette IA',
+    freeDisconnect: 'Déconnecter',
+    freeQuota: '{remaining} requêtes gratuites restantes sur {limit} aujourd’hui',
+    freeFailedTimeout: 'La connexion n’a pas abouti à temps. Réessayez.',
+    freeFailedDenied: 'L’accès n’a pas été autorisé. Réessayez et choisissez « Autoriser ».',
+    freeFailedInvalid: 'Cette clé n’a pas été acceptée. Vérifiez la clé que vous avez copiée.',
+    freeFailedNetwork: 'Connexion impossible. Vérifiez votre connexion Internet et réessayez.',
+    freePrivacy:
+      'Pendant l’utilisation gratuite, ce que vous envoyez peut servir à améliorer l’IA de cette entreprise. Soyez prudent avec les documents qui contiennent des informations personnelles.',
+    freeGeminiBilling:
+      'Une clé créée dans un projet Google dont la facturation est activée peut entraîner des frais.',
+    onbFreeTitle: 'Pas d’abonnement ? Commencez gratuitement',
     onbDoneTitle: 'Tout est prêt',
     onbDoneConnected: 'L’IA est connectée : {provider}.',
     onbDoneNotConnected:
-      'L’IA n’est pas encore connectée. Vous pouvez connecter un abonnement à tout moment dans Paramètres → IA.',
+      'L’IA n’est pas encore connectée. Vous pouvez connecter un abonnement ou une IA gratuite à tout moment dans Paramètres → IA.',
     helpSearchPlaceholder: 'Rechercher dans le manuel… (appuyez sur /)',
     helpSearchLabel: 'Rechercher dans le manuel',
     helpContentsLabel: 'Sommaire du manuel',
@@ -2583,6 +2883,11 @@ export const strings = {
     askEmptyCorpusHint:
       'Noch keine Favoriten — markieren Sie zuerst Dateien, damit die KI sie lesen kann.',
     askCorpusCount: 'Wissensbasis: {n} favorisierte Dateien',
+    askScopeLabel: 'Fragen in',
+    askScopeAll: 'Alle',
+    askCorpusCountGroup: '{group}: {n} favorisierte Dateien',
+    askScopeGone:
+      'Diese Gruppe enthält keine favorisierten Dateien mehr, daher wurde nichts gefragt. Wählen Sie eine andere Gruppe oder „Alle“.',
     askIntro:
       'Fragen Sie zu Ihren Favoriten. Antworten nennen ihre Quellen — Klick öffnet die Datei.',
     askToolSearch: 'Wissensbasis durchsuchen',
@@ -2624,6 +2929,10 @@ export const strings = {
     newSlide: 'AI Slides',
     newMarkdown: 'AI Markdown',
     newHtml: 'AI HTML',
+    newMindmap: 'Mindmap',
+    newHwp: 'AI HWP',
+    pdfToolsCard: 'PDF-Werkzeuge',
+    pdfToolsCardSub: 'Zusammenfügen · teilen · ordnen',
     newPdf: 'AI PDF',
     openLocal: 'Lokale Datei öffnen',
     dropToOpenTitle: 'Zum Öffnen ablegen',
@@ -2644,6 +2953,8 @@ export const strings = {
     filterPdf: 'PDF',
     filterMd: 'Markdown',
     filterHtml: 'HTML',
+    filterMindmap: 'Mindmap',
+    filterHwp: 'HWP',
     filterAria: 'Nach Typ filtern',
     // List / bulk actions
     fileCount: '{n} Dateien',
@@ -2727,6 +3038,9 @@ export const strings = {
     account: 'Konto',
     appVersion: 'Version {v}',
     versionLabel: 'Version',
+    betaBadge: 'Beta',
+    betaTooltip:
+      'Dies ist eine Beta-Version. Manche Funktionen können sich noch ändern oder nicht wie erwartet funktionieren.',
     setUpdateAvailableLabel: 'Update verfügbar',
     setUpdateTo: 'Auf {version} aktualisieren',
     setUpdateDownloading: 'Update wird geladen ({percent} %)',
@@ -2744,6 +3058,13 @@ export const strings = {
     setAutoSave: 'Alle Dokumente automatisch speichern',
     setAutoSaveDesc:
       'Aktiviert AutoSave standardmäßig in jedem Editor. Für ein einzelnes Fenster kann es weiterhin ausgeschaltet werden.',
+    setResultStore: 'Gespeicherte KI-Ergebnisse für PDFs',
+    setResultStoreDesc:
+      'Von der KI gelesene Seiten und Übersetzungen bleiben auf diesem PC, bis Sie sie löschen. Belegt: {size}',
+    setResultStoreDeleteAll: 'Alle löschen',
+    setResultStoreConfirm:
+      'Alle gespeicherten KI-Lesungen und Übersetzungen löschen? Um sie zurückzubekommen, muss die KI erneut genutzt werden.',
+    setResultStoreDeleteFailed: 'Löschen fehlgeschlagen. Bitte erneut versuchen.',
     setSearchRerank: 'Jev-Neusortierung',
     setSearchRerankDesc:
       'Sendet die Auszüge der 20 besten lokalen Treffer an das Jev-Modell von TypeSafe und sortiert sie nach Relevanz. Standardmäßig aus; wenn aktiv, verlassen Auszüge dieses Gerät.',
@@ -2830,9 +3151,9 @@ export const strings = {
       'Chats über diesen Anbieter verwenden Ihren eigenen Schlüssel und werden von diesem Anbieter berechnet. Er wird nur verwendet, solange Sie ihn unter „Verwendete KI“ selbst auswählen.',
     setAiHeadless: 'Automatische Anfragen dürfen ein Abonnement nutzen',
     setAiHeadlessDesc:
-      'Erlaubt, dass Bildgenerierung und Bildanalyse, die ein Terminalbefehl oder ein anderes Programm (MCP) anfordert, über Ihr Claude- oder Codex-Abonnement laufen. Ist die Option aus, nutzen solche Anfragen nur Anbieter mit Schlüssel.',
+      'Erlaubt, dass Bildgenerierung, Bildanalyse, PDF-Übersetzung und das Lesen von Seiten per KI, die ein Terminalbefehl oder ein anderes Programm (MCP) anfordert, über Ihr Claude- oder Codex-Abonnement laufen. Ist die Option aus, nutzen solche Anfragen nur Anbieter mit Schlüssel.',
     setAiHeadlessWarning:
-      'Keines der beiden Unternehmen empfiehlt, ein Programm das Abonnement automatisch nutzen zu lassen, und Ihr Konto kann eingeschränkt werden.',
+      'Es gibt kein stündliches Limit: Ein Programm kann beliebig viele Anfragen senden, und diese können den gesamten Text eines Dokuments und Bilder seiner Seiten enthalten. Keines der beiden Unternehmen empfiehlt, ein Programm das Abonnement automatisch nutzen zu lassen, und Ihr Konto kann eingeschränkt werden.',
     setAiHeadlessConfirm: 'Trotzdem einschalten',
     setAiImageCodex: 'Codex-Abonnement',
     setAiImageCodexHint:
@@ -2996,20 +3317,55 @@ export const strings = {
     onbTitle1: 'Willkommen bei GenOffice',
     onbWelcomeSubtitle: 'Eine quelloffene Office-Suite',
     onbWelcomeBody:
-      'Öffnen und bearbeiten Sie Word-, Excel-, PowerPoint-, PDF-, Markdown- und HTML-Dokumente. Die KI läuft über das Claude- oder Codex-Abonnement, das Sie bereits haben.',
+      'Öffnen und bearbeiten Sie Word-, Excel-, PowerPoint-, PDF-, Markdown- und HTML-Dokumente. Die KI läuft über das Claude- oder Codex-Abonnement, das Sie bereits haben, oder über eine kostenlose KI-Verbindung.',
     onbSkip: 'Überspringen',
     onbNext: 'Weiter',
     onbStart: 'Loslegen',
     onbStepAria: 'Seite {n} von {total}',
     onbBody3: 'Keine Lizenzgebühren. Keine Werbung. Keine Wasserzeichen.',
     onbBack: 'Zurück',
-    onbConnectTitle: 'KI-Abonnement verbinden',
+    onbConnectTitle: 'KI verbinden',
     onbConnectSkipNote:
       'Sie können diesen Schritt überspringen und die Verbindung später unter Einstellungen → KI herstellen.',
+    setFreeTitle: 'Kostenlos nutzen',
+    setFreeDesc:
+      'Kein Abonnement? Verbinden Sie eine kostenlose KI und legen Sie sofort los. Die kostenlose Nutzung ist pro Tag begrenzt.',
+    freeBadge: 'Kostenlos',
+    freeOpenRouterDesc:
+      'Mit einem Klick verbinden: Registrieren Sie sich im Browser bei OpenRouter oder melden Sie sich an und erlauben Sie den Zugriff.',
+    freeGeminiDesc:
+      'Erstellen Sie mit Ihrem Google-Konto einen Schlüssel und fügen Sie ihn hier ein. Nur für Personen ab 18 Jahren.',
+    freeConnectBrowser: 'Im Browser verbinden',
+    freeWaiting:
+      'Melden Sie sich im Browser bei OpenRouter an und wählen Sie „Erlauben“. Diese Ansicht wird aktualisiert, sobald Sie fertig sind.',
+    freeGetKey: 'Schlüssel erstellen',
+    freeKeyPlaceholder: 'Gemini-Schlüssel einfügen',
+    freeKeyConnect: 'Verbinden',
+    freeStatusNotConnected: 'Nicht verbunden',
+    freeStatusWaiting: 'Warten auf den Browser…',
+    freeStatusChecking: 'Wird geprüft…',
+    freeStatusConnected: 'Verbunden',
+    freeStatusInUse: 'Verbunden · wird verwendet',
+    freeUse: 'Diese KI verwenden',
+    freeDisconnect: 'Trennen',
+    freeQuota: 'Heute noch {remaining} von {limit} kostenlosen Anfragen',
+    freeFailedTimeout:
+      'Die Anmeldung wurde nicht rechtzeitig abgeschlossen. Versuchen Sie es erneut.',
+    freeFailedDenied:
+      'Der Zugriff wurde nicht erlaubt. Versuchen Sie es erneut und wählen Sie „Erlauben“.',
+    freeFailedInvalid:
+      'Dieser Schlüssel wurde nicht akzeptiert. Prüfen Sie den kopierten Schlüssel.',
+    freeFailedNetwork:
+      'Verbindung nicht möglich. Prüfen Sie Ihre Internetverbindung und versuchen Sie es erneut.',
+    freePrivacy:
+      'Während der kostenlosen Nutzung können Ihre gesendeten Inhalte zur Verbesserung der KI dieses Unternehmens verwendet werden. Seien Sie vorsichtig mit Dokumenten, die personenbezogene Daten enthalten.',
+    freeGeminiBilling:
+      'Für einen Schlüssel aus einem Google-Projekt mit aktivierter Abrechnung können Kosten anfallen.',
+    onbFreeTitle: 'Kein Abonnement? Kostenlos starten',
     onbDoneTitle: 'Alles ist bereit',
     onbDoneConnected: 'Die KI ist verbunden: {provider}.',
     onbDoneNotConnected:
-      'Die KI ist noch nicht verbunden. Sie können ein Abonnement jederzeit unter Einstellungen → KI verbinden.',
+      'Die KI ist noch nicht verbunden. Sie können jederzeit unter Einstellungen → KI ein Abonnement oder eine kostenlose KI verbinden.',
     helpSearchPlaceholder: 'Handbuch durchsuchen… (/) drücken',
     helpSearchLabel: 'Handbuch durchsuchen',
     helpContentsLabel: 'Handbuchinhalt',
@@ -3030,6 +3386,11 @@ export const strings = {
     askEmptyCorpusHint:
       'Aún no hay archivos favoritos: marca algunos primero para que la IA pueda leerlos.',
     askCorpusCount: 'Base de conocimientos: {n} archivos favoritos',
+    askScopeLabel: 'Preguntar en',
+    askScopeAll: 'Todos',
+    askCorpusCountGroup: '{group}: {n} archivos favoritos',
+    askScopeGone:
+      'Este grupo ya no tiene archivos favoritos, así que no se ha preguntado nada. Elige otro grupo o Todos.',
     askIntro:
       'Pregunta sobre tus archivos favoritos. Las respuestas citan la fuente; haz clic para abrirla.',
     askToolSearch: 'Buscando en la base',
@@ -3071,6 +3432,10 @@ export const strings = {
     newSlide: 'AI Slides',
     newMarkdown: 'AI Markdown',
     newHtml: 'AI HTML',
+    newMindmap: 'Mapa mental',
+    newHwp: 'AI HWP',
+    pdfToolsCard: 'Herramientas PDF',
+    pdfToolsCardSub: 'Combinar · dividir · organizar',
     newPdf: 'AI PDF',
     openLocal: 'Abrir archivo local',
     dropToOpenTitle: 'Suelta para abrir',
@@ -3091,6 +3456,8 @@ export const strings = {
     filterPdf: 'PDF',
     filterMd: 'Markdown',
     filterHtml: 'HTML',
+    filterMindmap: 'Mapa mental',
+    filterHwp: 'HWP',
     filterAria: 'Filtrar por tipo',
     // List / bulk actions
     fileCount: '{n} archivos',
@@ -3172,6 +3539,9 @@ export const strings = {
     account: 'Cuenta',
     appVersion: 'Versión {v}',
     versionLabel: 'Versión',
+    betaBadge: 'Beta',
+    betaTooltip:
+      'Esta es una versión beta. Algunas funciones aún pueden cambiar o no funcionar como se espera.',
     setUpdateAvailableLabel: 'Actualización disponible',
     setUpdateTo: 'Actualizar a {version}',
     setUpdateDownloading: 'Descargando actualización ({percent} %)',
@@ -3189,6 +3559,13 @@ export const strings = {
     setAutoSave: 'Guardar automáticamente todos los documentos',
     setAutoSaveDesc:
       'Activa el autoguardado de forma predeterminada en todos los editores. Aún puedes desactivarlo en una ventana concreta.',
+    setResultStore: 'Resultados de IA de PDF guardados',
+    setResultStoreDesc:
+      'Las páginas leídas por la IA y las traducciones se guardan en este PC hasta que las elimines. En uso: {size}',
+    setResultStoreDeleteAll: 'Eliminar todo',
+    setResultStoreConfirm:
+      '¿Eliminar todas las lecturas de IA y traducciones guardadas? Para recuperarlas habrá que volver a usar la IA.',
+    setResultStoreDeleteFailed: 'No se pudieron eliminar. Inténtalo de nuevo.',
     setSearchRerank: 'Reordenación con Jev',
     setSearchRerankDesc:
       'Envía los extractos de los 20 mejores resultados locales al modelo Jev de TypeSafe y los reordena por relevancia. Desactivado por defecto; al activarlo, los extractos salen de este dispositivo.',
@@ -3275,9 +3652,9 @@ export const strings = {
       'Los chats con este proveedor usan tu propia clave y es ese proveedor quien te los cobra. Solo se usa mientras lo elijas tú mismo en «IA que se usa».',
     setAiHeadless: 'Permitir que las solicitudes automáticas usen una suscripción',
     setAiHeadlessDesc:
-      'Permite que la generación y el análisis de imágenes que pide un comando del terminal u otro programa (MCP) se ejecuten con tu suscripción de Claude o Codex. Si está desactivado, esas solicitudes solo usan proveedores con clave.',
+      'Permite que la generación y el análisis de imágenes, la traducción de PDF y la lectura de páginas con IA que pide un comando del terminal u otro programa (MCP) se ejecuten con tu suscripción de Claude o Codex. Si está desactivado, esas solicitudes solo usan proveedores con clave.',
     setAiHeadlessWarning:
-      'Ninguna de las dos empresas recomienda que un programa use tu suscripción automáticamente, y tu cuenta podría quedar restringida.',
+      'No hay límite por hora: un programa puede enviar tantas solicitudes como quiera, y estas pueden incluir todo el texto de un documento e imágenes de sus páginas. Ninguna de las dos empresas recomienda que un programa use tu suscripción automáticamente, y tu cuenta podría quedar restringida.',
     setAiHeadlessConfirm: 'Activar de todos modos',
     setAiImageCodex: 'Suscripción de Codex',
     setAiImageCodexHint:
@@ -3438,19 +3815,51 @@ export const strings = {
     onbTitle1: 'Bienvenido a GenOffice',
     onbWelcomeSubtitle: 'Una suite ofimática de código abierto',
     onbWelcomeBody:
-      'Abre y edita documentos de Word, Excel, PowerPoint, PDF, Markdown y HTML. La IA funciona con la suscripción de Claude o Codex que ya tienes.',
+      'Abre y edita documentos de Word, Excel, PowerPoint, PDF, Markdown y HTML. La IA funciona con la suscripción de Claude o Codex que ya tienes, o con una conexión a una IA gratuita.',
     onbSkip: 'Omitir',
     onbNext: 'Siguiente',
     onbStart: 'Empezar',
     onbStepAria: 'Página {n} de {total}',
     onbBody3: 'Sin licencias. Sin anuncios. Sin marcas de agua.',
     onbBack: 'Atrás',
-    onbConnectTitle: 'Conecta tu suscripción de IA',
+    onbConnectTitle: 'Conecta una IA',
     onbConnectSkipNote: 'Puedes omitir este paso y conectarla más tarde en Configuración → IA.',
+    setFreeTitle: 'Usar gratis',
+    setFreeDesc:
+      '¿No tienes suscripción? Conecta una IA gratuita y empieza ahora mismo. El uso gratuito tiene un límite diario.',
+    freeBadge: 'Gratis',
+    freeOpenRouterDesc:
+      'Conéctate con un solo botón: regístrate o inicia sesión en OpenRouter en tu navegador y permite el acceso.',
+    freeGeminiDesc:
+      'Crea una clave con tu cuenta de Google y pégala aquí. Solo para personas de 18 años o más.',
+    freeConnectBrowser: 'Conectar en el navegador',
+    freeWaiting:
+      'Inicia sesión en OpenRouter en tu navegador y elige «Permitir». Esta pantalla se actualizará cuando termines.',
+    freeGetKey: 'Obtener una clave',
+    freeKeyPlaceholder: 'Pega tu clave de Gemini',
+    freeKeyConnect: 'Conectar',
+    freeStatusNotConnected: 'Sin conectar',
+    freeStatusWaiting: 'Esperando al navegador…',
+    freeStatusChecking: 'Comprobando…',
+    freeStatusConnected: 'Conectado',
+    freeStatusInUse: 'Conectado · en uso',
+    freeUse: 'Usar esta IA',
+    freeDisconnect: 'Desconectar',
+    freeQuota: 'Te quedan {remaining} de {limit} solicitudes gratuitas hoy',
+    freeFailedTimeout: 'El inicio de sesión no terminó a tiempo. Vuelve a intentarlo.',
+    freeFailedDenied: 'No se permitió el acceso. Vuelve a intentarlo y elige «Permitir».',
+    freeFailedInvalid: 'No se aceptó esa clave. Comprueba la clave que copiaste.',
+    freeFailedNetwork:
+      'No se pudo conectar. Comprueba tu conexión a internet y vuelve a intentarlo.',
+    freePrivacy:
+      'Mientras la uses gratis, lo que envíes puede usarse para mejorar la IA de esa empresa. Ten cuidado con los documentos que contengan datos personales.',
+    freeGeminiBilling:
+      'Una clave creada en un proyecto de Google con la facturación activada puede generar cargos.',
+    onbFreeTitle: '¿No tienes suscripción? Empieza gratis',
     onbDoneTitle: 'Todo listo',
     onbDoneConnected: 'La IA está conectada: {provider}.',
     onbDoneNotConnected:
-      'La IA aún no está conectada. Puedes conectar una suscripción cuando quieras en Configuración → IA.',
+      'La IA aún no está conectada. Puedes conectar una suscripción o una IA gratuita cuando quieras en Configuración → IA.',
     helpSearchPlaceholder: 'Buscar en el manual… (pulsa /)',
     helpSearchLabel: 'Buscar en el manual',
     helpContentsLabel: 'Contenido del manual',
@@ -3470,6 +3879,11 @@ export const strings = {
     askTitle: 'ถามคลังความรู้ของคุณ',
     askEmptyCorpusHint: 'ยังไม่มีไฟล์ที่ติดดาว — ติดดาวไฟล์ก่อนเพื่อให้ AI อ่านได้',
     askCorpusCount: 'คลังความรู้: {n} ไฟล์ที่ติดดาว',
+    askScopeLabel: 'ขอบเขตการถาม',
+    askScopeAll: 'ทั้งหมด',
+    askCorpusCountGroup: '{group}: {n} ไฟล์ที่ติดดาว',
+    askScopeGone:
+      'กลุ่มนี้ไม่มีไฟล์ที่ติดดาวแล้ว จึงยังไม่ได้ส่งคำถาม เลือกกลุ่มอื่นหรือ “ทั้งหมด”',
     askIntro: 'ถามเกี่ยวกับไฟล์ที่ติดดาวของคุณ คำตอบจะอ้างอิงแหล่งที่มา — คลิกเพื่อเปิด',
     askToolSearch: 'กำลังค้นคลังความรู้',
     askToolRead: 'กำลังอ่านไฟล์',
@@ -3509,6 +3923,10 @@ export const strings = {
     newSlide: 'AI Slides',
     newMarkdown: 'AI Markdown',
     newHtml: 'AI HTML',
+    newMindmap: 'แผนที่ความคิด',
+    newHwp: 'AI HWP',
+    pdfToolsCard: 'เครื่องมือ PDF',
+    pdfToolsCardSub: 'รวม · แยก · จัดระเบียบ',
     newPdf: 'AI PDF',
     openLocal: 'เปิดไฟล์ในเครื่อง',
     dropToOpenTitle: 'วางเพื่อเปิดไฟล์',
@@ -3529,6 +3947,8 @@ export const strings = {
     filterPdf: 'PDF',
     filterMd: 'Markdown',
     filterHtml: 'HTML',
+    filterMindmap: 'แผนที่ความคิด',
+    filterHwp: 'HWP',
     filterAria: 'กรองตามชนิด',
     // List / bulk actions
     fileCount: '{n} ไฟล์',
@@ -3607,6 +4027,8 @@ export const strings = {
     account: 'บัญชี',
     appVersion: 'เวอร์ชัน {v}',
     versionLabel: 'เวอร์ชัน',
+    betaBadge: 'เบต้า',
+    betaTooltip: 'นี่คือรุ่นเบต้า ฟีเจอร์บางอย่างอาจยังเปลี่ยนแปลงหรือทำงานไม่เป็นไปตามที่คาดไว้',
     setUpdateAvailableLabel: 'มีอัปเดต',
     setUpdateTo: 'อัปเดตเป็น {version}',
     setUpdateDownloading: 'กำลังดาวน์โหลด ({percent}%)',
@@ -3623,6 +4045,13 @@ export const strings = {
     saveLocation: 'ตำแหน่งบันทึก',
     setAutoSave: 'บันทึกอัตโนมัติทุกเอกสาร',
     setAutoSaveDesc: 'เปิดบันทึกอัตโนมัติเป็นค่าเริ่มต้นในทุกตัวแก้ไข คุณยังปิดได้ในแต่ละหน้าต่าง',
+    setResultStore: 'ผลลัพธ์ AI ของ PDF ที่บันทึกไว้',
+    setResultStoreDesc:
+      'หน้าที่ AI อ่านและคำแปลจะเก็บไว้ในพีซีเครื่องนี้จนกว่าคุณจะลบ ใช้พื้นที่: {size}',
+    setResultStoreDeleteAll: 'ลบทั้งหมด',
+    setResultStoreConfirm:
+      'ลบผลการอ่านด้วย AI และคำแปลที่บันทึกไว้ทั้งหมดหรือไม่ หากต้องการอีกครั้งจะต้องใช้ AI ใหม่',
+    setResultStoreDeleteFailed: 'ลบไม่สำเร็จ โปรดลองอีกครั้ง',
     setSearchRerank: 'จัดอันดับใหม่ด้วย Jev',
     setSearchRerankDesc:
       'ส่งข้อความตัดตอนของผลลัพธ์ 20 อันดับแรกไปยังโมเดล Jev ของ TypeSafe เพื่อจัดอันดับใหม่ตามความเกี่ยวข้อง ปิดเป็นค่าเริ่มต้น เมื่อเปิด ข้อความตัดตอนจะถูกส่งออกจากอุปกรณ์นี้',
@@ -3706,9 +4135,9 @@ export const strings = {
       'แชตที่ใช้ผู้ให้บริการรายนี้จะใช้คีย์ของคุณเอง และผู้ให้บริการรายนั้นจะเรียกเก็บค่าบริการจากคุณ โดยจะถูกใช้เฉพาะเมื่อคุณเลือกเองในหัวข้อ "AI ที่ใช้" เท่านั้น',
     setAiHeadless: 'อนุญาตให้คำขออัตโนมัติใช้การสมัครสมาชิก',
     setAiHeadlessDesc:
-      'อนุญาตให้การสร้างภาพและการวิเคราะห์ภาพที่ร้องขอจากคำสั่งในเทอร์มินัลหรือโปรแกรมอื่น (MCP) ทำงานด้วยการสมัครสมาชิก Claude หรือ Codex ของคุณ เมื่อปิดอยู่ คำขอเหล่านั้นจะใช้เฉพาะผู้ให้บริการแบบใช้คีย์',
+      'อนุญาตให้การสร้างภาพ การวิเคราะห์ภาพ การแปล PDF และการอ่านหน้าด้วย AI ที่ร้องขอจากคำสั่งในเทอร์มินัลหรือโปรแกรมอื่น (MCP) ทำงานด้วยการสมัครสมาชิก Claude หรือ Codex ของคุณ เมื่อปิดอยู่ คำขอเหล่านั้นจะใช้เฉพาะผู้ให้บริการแบบใช้คีย์',
     setAiHeadlessWarning:
-      'ทั้งสองบริษัทไม่แนะนำให้โปรแกรมใช้การสมัครสมาชิกของคุณโดยอัตโนมัติ และบัญชีของคุณอาจถูกจำกัดการใช้งาน',
+      'ไม่มีขีดจำกัดรายชั่วโมง โปรแกรมจึงส่งคำขอได้มากเท่าที่ต้องการ และคำขอเหล่านั้นอาจมีข้อความทั้งหมดของเอกสารและภาพของแต่ละหน้า ทั้งสองบริษัทไม่แนะนำให้โปรแกรมใช้การสมัครสมาชิกของคุณโดยอัตโนมัติ และบัญชีของคุณอาจถูกจำกัดการใช้งาน',
     setAiHeadlessConfirm: 'เปิดต่อไป',
     setAiImageCodex: 'การสมัครสมาชิก Codex',
     setAiImageCodexHint:
@@ -3863,19 +4292,49 @@ export const strings = {
     onbTitle1: 'ยินดีต้อนรับสู่ GenOffice',
     onbWelcomeSubtitle: 'ชุดโปรแกรมออฟฟิศโอเพนซอร์ส',
     onbWelcomeBody:
-      'เปิดและแก้ไขเอกสาร Word, Excel, PowerPoint, PDF, Markdown และ HTML โดย AI ทำงานผ่านการสมัครสมาชิก Claude หรือ Codex ที่คุณมีอยู่แล้ว',
+      'เปิดและแก้ไขเอกสาร Word, Excel, PowerPoint, PDF, Markdown และ HTML โดย AI ทำงานผ่านการสมัครสมาชิก Claude หรือ Codex ที่คุณมีอยู่แล้ว หรือผ่านการเชื่อมต่อ AI ฟรี',
     onbSkip: 'ข้าม',
     onbNext: 'ถัดไป',
     onbStart: 'เริ่มใช้งาน',
     onbStepAria: 'หน้า {n} จาก {total}',
     onbBody3: 'ไม่มีค่าลิขสิทธิ์ ไม่มีโฆษณา ไม่มีลายน้ำ',
     onbBack: 'ย้อนกลับ',
-    onbConnectTitle: 'เชื่อมต่อการสมัครสมาชิก AI ของคุณ',
+    onbConnectTitle: 'เชื่อมต่อ AI',
     onbConnectSkipNote: 'คุณสามารถข้ามขั้นตอนนี้แล้วเชื่อมต่อภายหลังได้ที่ การตั้งค่า → AI',
+    setFreeTitle: 'ใช้ฟรี',
+    setFreeDesc:
+      'ไม่มีการสมัครสมาชิกใช่ไหม เชื่อมต่อ AI ฟรีแล้วเริ่มใช้ได้ทันที การใช้ฟรีมีขีดจำกัดต่อวัน',
+    freeBadge: 'ฟรี',
+    freeOpenRouterDesc:
+      'เชื่อมต่อได้ด้วยปุ่มเดียว: สมัครหรือเข้าสู่ระบบ OpenRouter ในเบราว์เซอร์ แล้วอนุญาตการเข้าถึง',
+    freeGeminiDesc:
+      'สร้างคีย์ด้วยบัญชี Google ของคุณแล้ววางที่นี่ สำหรับผู้ที่มีอายุ 18 ปีขึ้นไปเท่านั้น',
+    freeConnectBrowser: 'เชื่อมต่อในเบราว์เซอร์',
+    freeWaiting:
+      'เข้าสู่ระบบ OpenRouter ในเบราว์เซอร์แล้วเลือก "อนุญาต" หน้าจอนี้จะอัปเดตเมื่อคุณทำเสร็จ',
+    freeGetKey: 'รับคีย์',
+    freeKeyPlaceholder: 'วางคีย์ Gemini ของคุณ',
+    freeKeyConnect: 'เชื่อมต่อ',
+    freeStatusNotConnected: 'ยังไม่ได้เชื่อมต่อ',
+    freeStatusWaiting: 'กำลังรอเบราว์เซอร์…',
+    freeStatusChecking: 'กำลังตรวจสอบ…',
+    freeStatusConnected: 'เชื่อมต่อแล้ว',
+    freeStatusInUse: 'เชื่อมต่อแล้ว · กำลังใช้งาน',
+    freeUse: 'ใช้ AI นี้',
+    freeDisconnect: 'ยกเลิกการเชื่อมต่อ',
+    freeQuota: 'วันนี้เหลือคำขอฟรี {remaining} จาก {limit} ครั้ง',
+    freeFailedTimeout: 'การเข้าสู่ระบบไม่เสร็จภายในเวลาที่กำหนด โปรดลองอีกครั้ง',
+    freeFailedDenied: 'ไม่ได้รับอนุญาตให้เข้าถึง โปรดลองอีกครั้งแล้วเลือก "อนุญาต"',
+    freeFailedInvalid: 'ไม่สามารถใช้คีย์นี้ได้ โปรดตรวจสอบคีย์ที่คุณคัดลอกมา',
+    freeFailedNetwork: 'ไม่สามารถเชื่อมต่อได้ โปรดตรวจสอบการเชื่อมต่ออินเทอร์เน็ตแล้วลองอีกครั้ง',
+    freePrivacy:
+      'ระหว่างที่ใช้ฟรี ข้อมูลที่คุณส่งอาจถูกนำไปใช้ปรับปรุง AI ของบริษัทนั้น โปรดระวังเอกสารที่มีข้อมูลส่วนบุคคล',
+    freeGeminiBilling: 'คีย์ที่สร้างในโปรเจกต์ Google ที่เปิดการเรียกเก็บเงินไว้อาจมีค่าใช้จ่าย',
+    onbFreeTitle: 'ไม่มีการสมัครสมาชิกใช่ไหม เริ่มใช้ฟรีได้เลย',
     onbDoneTitle: 'พร้อมใช้งานแล้ว',
     onbDoneConnected: 'เชื่อมต่อ AI แล้ว: {provider}',
     onbDoneNotConnected:
-      'ยังไม่ได้เชื่อมต่อ AI คุณสามารถเชื่อมต่อการสมัครสมาชิกได้ทุกเมื่อที่ การตั้งค่า → AI',
+      'ยังไม่ได้เชื่อมต่อ AI คุณสามารถเชื่อมต่อการสมัครสมาชิกหรือ AI ฟรีได้ทุกเมื่อที่ การตั้งค่า → AI',
     helpSearchPlaceholder: 'ค้นหาในคู่มือ… (กด /)',
     helpSearchLabel: 'ค้นหาในคู่มือ',
     helpContentsLabel: 'สารบัญคู่มือ',
@@ -3896,6 +4355,11 @@ export const strings = {
     askEmptyCorpusHint:
       'Belum ada file berbintang — tandai beberapa file dahulu agar AI bisa membacanya.',
     askCorpusCount: 'Basis pengetahuan: {n} file berbintang',
+    askScopeLabel: 'Tanya di',
+    askScopeAll: 'Semua',
+    askCorpusCountGroup: '{group}: {n} file berbintang',
+    askScopeGone:
+      'Grup ini tidak lagi berisi file berbintang, jadi pertanyaan tidak dikirim. Pilih grup lain atau Semua.',
     askIntro:
       'Bertanyalah tentang file berbintang anda. Jawaban menyebut sumbernya — klik untuk membuka.',
     askToolSearch: 'Mencari basis pengetahuan',
@@ -3937,6 +4401,10 @@ export const strings = {
     newSlide: 'AI Slides',
     newMarkdown: 'AI Markdown',
     newHtml: 'AI HTML',
+    newMindmap: 'Peta pikiran',
+    newHwp: 'AI HWP',
+    pdfToolsCard: 'Alat PDF',
+    pdfToolsCardSub: 'Gabung · pisah · atur',
     newPdf: 'AI PDF',
     openLocal: 'Buka File Lokal',
     dropToOpenTitle: 'Lepaskan untuk membuka',
@@ -3957,6 +4425,8 @@ export const strings = {
     filterPdf: 'PDF',
     filterMd: 'Markdown',
     filterHtml: 'HTML',
+    filterMindmap: 'Peta pikiran',
+    filterHwp: 'HWP',
     filterAria: 'Filter menurut jenis',
     // List / bulk actions
     fileCount: '{n} file',
@@ -4037,6 +4507,9 @@ export const strings = {
     account: 'Akun',
     appVersion: 'Versi {v}',
     versionLabel: 'Versi',
+    betaBadge: 'Beta',
+    betaTooltip:
+      'Ini versi beta. Beberapa fitur mungkin masih berubah atau tidak berfungsi seperti yang diharapkan.',
     setUpdateAvailableLabel: 'Pembaruan tersedia',
     setUpdateTo: 'Perbarui ke {version}',
     setUpdateDownloading: 'Mengunduh pembaruan ({percent}%)',
@@ -4054,6 +4527,13 @@ export const strings = {
     setAutoSave: 'Simpan otomatis semua dokumen',
     setAutoSaveDesc:
       'Aktifkan Simpan Otomatis secara default di setiap editor. Anda masih dapat menonaktifkannya untuk satu jendela.',
+    setResultStore: 'Hasil AI PDF tersimpan',
+    setResultStoreDesc:
+      'Halaman yang dibaca AI dan terjemahan disimpan di PC ini sampai Anda menghapusnya. Terpakai: {size}',
+    setResultStoreDeleteAll: 'Hapus semua',
+    setResultStoreConfirm:
+      'Hapus semua hasil baca AI dan terjemahan yang tersimpan? Untuk mendapatkannya lagi, AI harus digunakan lagi.',
+    setResultStoreDeleteFailed: 'Tidak dapat menghapus. Coba lagi.',
     setSearchRerank: 'Peringkat ulang Jev',
     setSearchRerankDesc:
       'Mengirim kutipan 20 hasil lokal teratas ke model Jev dari TypeSafe dan mengurutkannya ulang berdasarkan relevansi. Nonaktif secara bawaan; saat aktif, kutipan keluar dari perangkat ini.',
@@ -4138,9 +4618,9 @@ export const strings = {
       'Percakapan lewat penyedia ini memakai kunci Anda sendiri, dan penyedia itulah yang menagih Anda. Penyedia ini hanya dipakai selama Anda sendiri memilihnya di "AI yang digunakan".',
     setAiHeadless: 'Izinkan permintaan otomatis memakai langganan',
     setAiHeadlessDesc:
-      'Mengizinkan pembuatan gambar dan analisis gambar yang diminta oleh perintah terminal atau program lain (MCP) berjalan dengan langganan Claude atau Codex Anda. Jika dimatikan, permintaan tersebut hanya memakai penyedia berbasis kunci.',
+      'Mengizinkan pembuatan gambar, analisis gambar, terjemahan PDF, dan pembacaan halaman dengan AI yang diminta oleh perintah terminal atau program lain (MCP) berjalan dengan langganan Claude atau Codex Anda. Jika dimatikan, permintaan tersebut hanya memakai penyedia berbasis kunci.',
     setAiHeadlessWarning:
-      'Kedua perusahaan tidak menyarankan program memakai langganan Anda secara otomatis, dan akun Anda bisa dibatasi.',
+      'Tidak ada batas per jam, jadi program dapat mengirim permintaan sebanyak yang diinginkan, dan permintaan itu dapat memuat seluruh teks dokumen serta gambar halamannya. Kedua perusahaan tidak menyarankan program memakai langganan Anda secara otomatis, dan akun Anda bisa dibatasi.',
     setAiHeadlessConfirm: 'Tetap aktifkan',
     setAiImageCodex: 'Langganan Codex',
     setAiImageCodexHint:
@@ -4300,20 +4780,51 @@ export const strings = {
     onbTitle1: 'Selamat datang di GenOffice',
     onbWelcomeSubtitle: 'Suite office open source',
     onbWelcomeBody:
-      'Buka dan edit dokumen Word, Excel, PowerPoint, PDF, Markdown, dan HTML. AI berjalan melalui langganan Claude atau Codex yang sudah Anda miliki.',
+      'Buka dan edit dokumen Word, Excel, PowerPoint, PDF, Markdown, dan HTML. AI berjalan melalui langganan Claude atau Codex yang sudah Anda miliki, atau melalui koneksi AI gratis.',
     onbSkip: 'Lewati',
     onbNext: 'Berikutnya',
     onbStart: 'Mulai',
     onbStepAria: 'Halaman {n} dari {total}',
     onbBody3: 'Tanpa biaya lisensi. Tanpa iklan. Tanpa watermark.',
     onbBack: 'Kembali',
-    onbConnectTitle: 'Hubungkan langganan AI Anda',
+    onbConnectTitle: 'Hubungkan AI',
     onbConnectSkipNote:
       'Anda dapat melewati langkah ini dan menghubungkannya nanti di Pengaturan → AI.',
+    setFreeTitle: 'Pakai gratis',
+    setFreeDesc:
+      'Tidak punya langganan? Hubungkan AI gratis dan langsung mulai. Pemakaian gratis memiliki batas harian.',
+    freeBadge: 'Gratis',
+    freeOpenRouterDesc:
+      'Hubungkan dengan satu tombol: daftar atau masuk ke OpenRouter di browser, lalu izinkan akses.',
+    freeGeminiDesc:
+      'Buat kunci dengan akun Google Anda, lalu tempelkan di sini. Hanya untuk yang berusia 18 tahun ke atas.',
+    freeConnectBrowser: 'Hubungkan di browser',
+    freeWaiting:
+      'Masuk ke OpenRouter di browser, lalu pilih Izinkan. Layar ini akan diperbarui setelah Anda selesai.',
+    freeGetKey: 'Dapatkan kunci',
+    freeKeyPlaceholder: 'Tempelkan kunci Gemini Anda',
+    freeKeyConnect: 'Hubungkan',
+    freeStatusNotConnected: 'Belum terhubung',
+    freeStatusWaiting: 'Menunggu browser…',
+    freeStatusChecking: 'Memeriksa…',
+    freeStatusConnected: 'Terhubung',
+    freeStatusInUse: 'Terhubung · sedang dipakai',
+    freeUse: 'Pakai AI ini',
+    freeDisconnect: 'Putuskan',
+    freeQuota: 'Sisa {remaining} dari {limit} permintaan gratis hari ini',
+    freeFailedTimeout: 'Proses masuk tidak selesai tepat waktu. Coba lagi.',
+    freeFailedDenied: 'Akses tidak diizinkan. Coba lagi dan pilih Izinkan.',
+    freeFailedInvalid: 'Kunci itu tidak diterima. Periksa kunci yang Anda salin.',
+    freeFailedNetwork: 'Tidak dapat terhubung. Periksa koneksi internet Anda, lalu coba lagi.',
+    freePrivacy:
+      'Selama Anda memakainya secara gratis, apa yang Anda kirim dapat digunakan untuk meningkatkan AI perusahaan tersebut. Berhati-hatilah dengan dokumen yang berisi informasi pribadi.',
+    freeGeminiBilling:
+      'Kunci yang dibuat di proyek Google dengan penagihan aktif dapat dikenai biaya.',
+    onbFreeTitle: 'Tidak punya langganan? Mulai gratis',
     onbDoneTitle: 'Semuanya sudah siap',
     onbDoneConnected: 'AI terhubung: {provider}.',
     onbDoneNotConnected:
-      'AI belum terhubung. Anda dapat menghubungkan langganan kapan saja di Pengaturan → AI.',
+      'AI belum terhubung. Anda dapat menghubungkan langganan atau AI gratis kapan saja di Pengaturan → AI.',
     helpSearchPlaceholder: 'Cari di manual… (tekan /)',
     helpSearchLabel: 'Cari di manual',
     helpContentsLabel: 'Isi manual',
@@ -4334,6 +4845,11 @@ export const strings = {
     askEmptyCorpusHint:
       'Пока нет избранных файлов — отметьте файлы звёздочкой, чтобы ИИ мог их читать.',
     askCorpusCount: 'База знаний: избранных файлов — {n}',
+    askScopeLabel: 'Где спрашивать',
+    askScopeAll: 'Все',
+    askCorpusCountGroup: '{group}: избранных файлов — {n}',
+    askScopeGone:
+      'В этой группе больше нет избранных файлов, поэтому вопрос не задан. Выберите другую группу или «Все».',
     askIntro:
       'Задавайте вопросы по избранным файлам. Ответы ссылаются на источники — нажмите, чтобы открыть.',
     askToolSearch: 'Поиск по базе',
@@ -4374,6 +4890,10 @@ export const strings = {
     newSlide: 'AI Slides',
     newMarkdown: 'AI Markdown',
     newHtml: 'AI HTML',
+    newMindmap: 'Интеллект-карта',
+    newHwp: 'AI HWP',
+    pdfToolsCard: 'Инструменты PDF',
+    pdfToolsCardSub: 'Объединить · разделить · упорядочить',
     newPdf: 'AI PDF',
     openLocal: 'Открыть локальный файл',
     dropToOpenTitle: 'Отпустите, чтобы открыть',
@@ -4394,6 +4914,8 @@ export const strings = {
     filterPdf: 'PDF',
     filterMd: 'Markdown',
     filterHtml: 'HTML',
+    filterMindmap: 'Интеллект-карта',
+    filterHwp: 'HWP',
     filterAria: 'Фильтр по типу',
     // List / bulk actions
     fileCount: 'Файлов: {n}',
@@ -4473,6 +4995,9 @@ export const strings = {
     account: 'Учётная запись',
     appVersion: 'Версия {v}',
     versionLabel: 'Версия',
+    betaBadge: 'Бета',
+    betaTooltip:
+      'Это бета-версия. Некоторые функции ещё могут измениться или работать не так, как ожидается.',
     setUpdateAvailableLabel: 'Доступно обновление',
     setUpdateTo: 'Обновить до {version}',
     setUpdateDownloading: 'Загрузка обновления ({percent}%)',
@@ -4490,6 +5015,13 @@ export const strings = {
     setAutoSave: 'Автосохранение всех документов',
     setAutoSaveDesc:
       'Включает автосохранение по умолчанию во всех редакторах. Его по-прежнему можно выключить для отдельного окна.',
+    setResultStore: 'Сохранённые результаты ИИ для PDF',
+    setResultStoreDesc:
+      'Страницы, прочитанные ИИ, и переводы хранятся на этом компьютере, пока вы их не удалите. Занято: {size}',
+    setResultStoreDeleteAll: 'Удалить всё',
+    setResultStoreConfirm:
+      'Удалить все сохранённые результаты чтения ИИ и переводы? Чтобы получить их снова, придётся снова обратиться к ИИ.',
+    setResultStoreDeleteFailed: 'Не удалось удалить. Повторите попытку.',
     setSearchRerank: 'Переранжирование Jev',
     setSearchRerankDesc:
       'Отправляет фрагменты 20 лучших локальных результатов модели Jev от TypeSafe и переупорядочивает их по релевантности. По умолчанию выключено; при включении фрагменты покидают это устройство.',
@@ -4574,9 +5106,9 @@ export const strings = {
       'Чаты через этого провайдера используют ваш собственный ключ, и оплату взимает этот провайдер. Он используется, только пока вы сами выбираете его в пункте «Используемый ИИ».',
     setAiHeadless: 'Разрешить автоматическим запросам использовать подписку',
     setAiHeadlessDesc:
-      'Разрешает выполнять генерацию и анализ изображений, запрошенные командой терминала или другой программой (MCP), по вашей подписке Claude или Codex. Если параметр выключен, такие запросы используют только провайдеров с ключом.',
+      'Разрешает выполнять генерацию и анализ изображений, перевод PDF и чтение страниц с помощью ИИ, запрошенные командой терминала или другой программой (MCP), по вашей подписке Claude или Codex. Если параметр выключен, такие запросы используют только провайдеров с ключом.',
     setAiHeadlessWarning:
-      'Ни одна из двух компаний не рекомендует позволять программе автоматически использовать подписку, и ваш аккаунт может быть ограничен.',
+      'Почасового лимита нет: программа может отправлять сколько угодно запросов, и в них может попасть весь текст документа и изображения его страниц. Ни одна из двух компаний не рекомендует позволять программе автоматически использовать подписку, и ваш аккаунт может быть ограничен.',
     setAiHeadlessConfirm: 'Всё равно включить',
     setAiImageCodex: 'Подписка Codex',
     setAiImageCodexHint:
@@ -4738,20 +5270,52 @@ export const strings = {
     onbTitle1: 'Добро пожаловать в GenOffice',
     onbWelcomeSubtitle: 'Офисный пакет с открытым исходным кодом',
     onbWelcomeBody:
-      'Открывайте и редактируйте документы Word, Excel, PowerPoint, PDF, Markdown и HTML. ИИ работает через уже имеющуюся у вас подписку Claude или Codex.',
+      'Открывайте и редактируйте документы Word, Excel, PowerPoint, PDF, Markdown и HTML. ИИ работает через уже имеющуюся у вас подписку Claude или Codex либо через бесплатное подключение к ИИ.',
     onbSkip: 'Пропустить',
     onbNext: 'Далее',
     onbStart: 'Начать',
     onbStepAria: 'Страница {n} из {total}',
     onbBody3: 'Без лицензий. Без рекламы. Без водяных знаков.',
     onbBack: 'Назад',
-    onbConnectTitle: 'Подключите подписку на ИИ',
+    onbConnectTitle: 'Подключите ИИ',
     onbConnectSkipNote:
       'Этот шаг можно пропустить и подключить подписку позже в разделе «Настройки → ИИ».',
+    setFreeTitle: 'Бесплатное использование',
+    setFreeDesc:
+      'Нет подписки? Подключите бесплатный ИИ и начните прямо сейчас. У бесплатного использования есть дневной лимит.',
+    freeBadge: 'Бесплатно',
+    freeOpenRouterDesc:
+      'Подключение одной кнопкой: зарегистрируйтесь или войдите в OpenRouter в браузере и разрешите доступ.',
+    freeGeminiDesc:
+      'Создайте ключ в своём аккаунте Google и вставьте его сюда. Только для лиц от 18 лет.',
+    freeConnectBrowser: 'Подключить в браузере',
+    freeWaiting:
+      'Войдите в OpenRouter в браузере и нажмите «Разрешить». Когда вы закончите, этот экран обновится.',
+    freeGetKey: 'Получить ключ',
+    freeKeyPlaceholder: 'Вставьте ключ Gemini',
+    freeKeyConnect: 'Подключить',
+    freeStatusNotConnected: 'Не подключено',
+    freeStatusWaiting: 'Ожидание браузера…',
+    freeStatusChecking: 'Проверка…',
+    freeStatusConnected: 'Подключено',
+    freeStatusInUse: 'Подключено · используется',
+    freeUse: 'Использовать этот ИИ',
+    freeDisconnect: 'Отключить',
+    freeQuota: 'Сегодня осталось {remaining} из {limit} бесплатных запросов',
+    freeFailedTimeout: 'Вход не был завершён вовремя. Попробуйте ещё раз.',
+    freeFailedDenied: 'Доступ не был разрешён. Попробуйте ещё раз и нажмите «Разрешить».',
+    freeFailedInvalid: 'Этот ключ не принят. Проверьте скопированный ключ.',
+    freeFailedNetwork:
+      'Не удалось подключиться. Проверьте подключение к интернету и повторите попытку.',
+    freePrivacy:
+      'При бесплатном использовании отправленные вами данные могут использоваться для улучшения ИИ этой компании. Будьте осторожны с документами, содержащими персональные данные.',
+    freeGeminiBilling:
+      'За ключ, созданный в проекте Google с включённой оплатой, может взиматься плата.',
+    onbFreeTitle: 'Нет подписки? Начните бесплатно',
     onbDoneTitle: 'Всё готово',
     onbDoneConnected: 'ИИ подключён: {provider}.',
     onbDoneNotConnected:
-      'ИИ пока не подключён. Подписку можно подключить в любой момент в разделе «Настройки → ИИ».',
+      'ИИ пока не подключён. Подписку или бесплатный ИИ можно подключить в любой момент в разделе «Настройки → ИИ».',
     helpSearchPlaceholder: 'Поиск по руководству… (нажмите /)',
     helpSearchLabel: 'Поиск по руководству',
     helpContentsLabel: 'Содержание руководства',
@@ -4772,6 +5336,11 @@ export const strings = {
     askEmptyCorpusHint:
       'لا توجد ملفات مفضلة بعد — ضع نجمة على بعض الملفات أولاً ليتمكن الذكاء الاصطناعي من قراءتها.',
     askCorpusCount: 'قاعدة المعارف: {n} ملف مفضل',
+    askScopeLabel: 'نطاق السؤال',
+    askScopeAll: 'الكل',
+    askCorpusCountGroup: '{group}: {n} ملف مفضل',
+    askScopeGone:
+      'لم تعد هذه المجموعة تحتوي على ملفات مفضلة، لذلك لم يُرسل السؤال. اختر مجموعة أخرى أو «الكل».',
     askIntro: 'اسأل عن ملفاتك المفضلة. تذكر الإجابات مصادرها — انقر لفتحها.',
     askToolSearch: 'جارٍ البحث في القاعدة',
     askToolRead: 'جارٍ قراءة ملف',
@@ -4811,6 +5380,10 @@ export const strings = {
     newSlide: 'AI Slides',
     newMarkdown: 'AI Markdown',
     newHtml: 'AI HTML',
+    newMindmap: 'خريطة ذهنية',
+    newHwp: 'AI HWP',
+    pdfToolsCard: 'أدوات PDF',
+    pdfToolsCardSub: 'دمج · تقسيم · تنظيم',
     newPdf: 'AI PDF',
     openLocal: 'فتح ملف محلي',
     dropToOpenTitle: 'أفلت للفتح',
@@ -4831,6 +5404,8 @@ export const strings = {
     filterPdf: 'PDF',
     filterMd: 'Markdown',
     filterHtml: 'HTML',
+    filterMindmap: 'خريطة ذهنية',
+    filterHwp: 'HWP',
     filterAria: 'تصفية حسب النوع',
     // List / bulk actions
     fileCount: '{n} ملفات',
@@ -4909,6 +5484,8 @@ export const strings = {
     account: 'الحساب',
     appVersion: 'الإصدار {v}',
     versionLabel: 'الإصدار',
+    betaBadge: 'تجريبي',
+    betaTooltip: 'هذا إصدار تجريبي. قد تتغير بعض الميزات أو لا تعمل كما هو متوقع.',
     setUpdateAvailableLabel: 'يتوفر تحديث',
     setUpdateTo: 'تحديث إلى {version}',
     setUpdateDownloading: 'جارٍ تنزيل التحديث ({percent}%)',
@@ -4926,6 +5503,13 @@ export const strings = {
     setAutoSave: 'حفظ جميع المستندات تلقائيًا',
     setAutoSaveDesc:
       'تشغيل الحفظ التلقائي افتراضيًا في كل محرر. لا يزال بإمكانك إيقافه لنافذة واحدة.',
+    setResultStore: 'نتائج الذكاء الاصطناعي المحفوظة لملفات PDF',
+    setResultStoreDesc:
+      'تبقى الصفحات التي قرأها الذكاء الاصطناعي والترجمات على هذا الكمبيوتر حتى تحذفها. المساحة المستخدمة: {size}',
+    setResultStoreDeleteAll: 'حذف الكل',
+    setResultStoreConfirm:
+      'هل تريد حذف كل نتائج قراءة الذكاء الاصطناعي والترجمات المحفوظة؟ للحصول عليها مجددًا يجب استخدام الذكاء الاصطناعي مرة أخرى.',
+    setResultStoreDeleteFailed: 'تعذّر الحذف. حاول مرة أخرى.',
     setSearchRerank: 'إعادة ترتيب Jev',
     setSearchRerankDesc:
       'يرسل مقتطفات أفضل 20 نتيجة محلية إلى نموذج Jev من TypeSafe ويعيد ترتيبها حسب الصلة. معطّل افتراضيًا؛ عند التفعيل تخرج المقتطفات من هذا الجهاز.',
@@ -5009,9 +5593,9 @@ export const strings = {
       'تستخدم المحادثات عبر هذا المزوّد مفتاحك الخاص، وهذا المزوّد هو من يحتسب رسومها عليك. ولا يُستخدم إلا عندما تختاره بنفسك ضمن «الذكاء الاصطناعي المستخدم».',
     setAiHeadless: 'السماح للطلبات التلقائية باستخدام الاشتراك',
     setAiHeadlessDesc:
-      'يسمح بتنفيذ توليد الصور وتحليل الصور اللذين يطلبهما أمر في الطرفية أو برنامج آخر (MCP) عبر اشتراكك في Claude أو Codex. عند إيقاف هذا الخيار تستخدم تلك الطلبات المزوّدين الذين يعملون بمفتاح فقط.',
+      'يسمح بتنفيذ توليد الصور وتحليلها وترجمة ملفات PDF وقراءة الصفحات بالذكاء الاصطناعي التي يطلبها أمر في الطرفية أو برنامج آخر (MCP) عبر اشتراكك في Claude أو Codex. عند إيقاف هذا الخيار تستخدم تلك الطلبات المزوّدين الذين يعملون بمفتاح فقط.',
     setAiHeadlessWarning:
-      'لا توصي أيٌّ من الشركتين بأن يستخدم برنامجٌ اشتراكك تلقائيًا، وقد تُفرض قيود على حسابك.',
+      'لا يوجد حد بالساعة، لذا يمكن لبرنامج أن يرسل ما يشاء من الطلبات، وقد تتضمن هذه الطلبات النص الكامل للمستند وصور صفحاته. لا توصي أيٌّ من الشركتين بأن يستخدم برنامجٌ اشتراكك تلقائيًا، وقد تُفرض قيود على حسابك.',
     setAiHeadlessConfirm: 'تشغيل على أي حال',
     setAiImageCodex: 'اشتراك Codex',
     setAiImageCodexHint:
@@ -5166,19 +5750,49 @@ export const strings = {
     onbTitle1: 'مرحبًا بك في GenOffice',
     onbWelcomeSubtitle: 'حزمة مكتبية مفتوحة المصدر',
     onbWelcomeBody:
-      'افتح مستندات Word وExcel وPowerPoint وPDF وMarkdown وHTML وحرّرها. يعمل الذكاء الاصطناعي عبر اشتراك Claude أو Codex الذي لديك بالفعل.',
+      'افتح مستندات Word وExcel وPowerPoint وPDF وMarkdown وHTML وحرّرها. يعمل الذكاء الاصطناعي عبر اشتراك Claude أو Codex الذي لديك بالفعل، أو عبر اتصال مجاني بذكاء اصطناعي.',
     onbSkip: 'تخطي',
     onbNext: 'التالي',
     onbStart: 'ابدأ الآن',
     onbStepAria: 'الصفحة {n} من {total}',
     onbBody3: 'بلا رسوم ترخيص، بلا إعلانات، بلا علامات مائية.',
     onbBack: 'رجوع',
-    onbConnectTitle: 'اربط اشتراك الذكاء الاصطناعي',
+    onbConnectTitle: 'اربط ذكاءً اصطناعيًا',
     onbConnectSkipNote: 'يمكنك تخطي هذه الخطوة والربط لاحقًا من الإعدادات ← الذكاء الاصطناعي.',
+    setFreeTitle: 'الاستخدام مجانًا',
+    setFreeDesc:
+      'ليس لديك اشتراك؟ اربط ذكاءً اصطناعيًا مجانيًا وابدأ فورًا. للاستخدام المجاني حد يومي.',
+    freeBadge: 'مجاني',
+    freeOpenRouterDesc:
+      'اربط بزر واحد: أنشئ حسابًا أو سجّل الدخول إلى OpenRouter في متصفحك ثم اسمح بالوصول.',
+    freeGeminiDesc:
+      'أنشئ مفتاحًا باستخدام حسابك في Google والصقه هنا. متاح فقط لمن بلغوا 18 عامًا أو أكثر.',
+    freeConnectBrowser: 'الربط عبر المتصفح',
+    freeWaiting:
+      'سجّل الدخول إلى OpenRouter في متصفحك واختر «السماح». ستتحدّث هذه الشاشة عند الانتهاء.',
+    freeGetKey: 'الحصول على مفتاح',
+    freeKeyPlaceholder: 'الصق مفتاح Gemini',
+    freeKeyConnect: 'ربط',
+    freeStatusNotConnected: 'غير متصل',
+    freeStatusWaiting: 'بانتظار المتصفح…',
+    freeStatusChecking: 'جارٍ التحقق…',
+    freeStatusConnected: 'متصل',
+    freeStatusInUse: 'متصل · قيد الاستخدام',
+    freeUse: 'استخدام هذا الذكاء الاصطناعي',
+    freeDisconnect: 'قطع الاتصال',
+    freeQuota: 'تبقّى {remaining} من {limit} طلبات مجانية اليوم',
+    freeFailedTimeout: 'لم يكتمل تسجيل الدخول في الوقت المحدد. حاول مجددًا.',
+    freeFailedDenied: 'لم يُسمح بالوصول. حاول مجددًا واختر «السماح».',
+    freeFailedInvalid: 'لم يُقبل هذا المفتاح. تحقّق من المفتاح الذي نسخته.',
+    freeFailedNetwork: 'تعذّر الاتصال. تحقّق من اتصالك بالإنترنت ثم حاول مجددًا.',
+    freePrivacy:
+      'أثناء الاستخدام المجاني، قد يُستخدم ما ترسله لتحسين الذكاء الاصطناعي لدى تلك الشركة. توخَّ الحذر مع المستندات التي تحتوي على معلومات شخصية.',
+    freeGeminiBilling: 'قد تُفرض رسوم على المفتاح الذي أُنشئ في مشروع Google مفعَّلة فيه الفوترة.',
+    onbFreeTitle: 'ليس لديك اشتراك؟ ابدأ مجانًا',
     onbDoneTitle: 'كل شيء جاهز',
     onbDoneConnected: 'تم ربط الذكاء الاصطناعي: {provider}.',
     onbDoneNotConnected:
-      'لم يتم ربط الذكاء الاصطناعي بعد. يمكنك ربط اشتراك في أي وقت من الإعدادات ← الذكاء الاصطناعي.',
+      'لم يتم ربط الذكاء الاصطناعي بعد. يمكنك ربط اشتراك أو ذكاء اصطناعي مجاني في أي وقت من الإعدادات ← الذكاء الاصطناعي.',
     helpSearchPlaceholder: 'البحث في الدليل… (اضغط /)',
     helpSearchLabel: 'البحث في الدليل',
     helpContentsLabel: 'فهرس الدليل',
@@ -5198,6 +5812,11 @@ export const strings = {
     askEmptyCorpusHint:
       'Ainda não há arquivos favoritos — marque alguns primeiro para a IA poder lê-los.',
     askCorpusCount: 'Base de conhecimento: {n} arquivos favoritos',
+    askScopeLabel: 'Perguntar em',
+    askScopeAll: 'Todos',
+    askCorpusCountGroup: '{group}: {n} arquivos favoritos',
+    askScopeGone:
+      'Este grupo não tem mais arquivos favoritos, então nada foi perguntado. Escolha outro grupo ou Todos.',
     askIntro:
       'Pergunte sobre seus arquivos favoritos. As respostas citam as fontes — clique para abrir.',
     askToolSearch: 'Pesquisando na base',
@@ -5238,6 +5857,10 @@ export const strings = {
     newSlide: 'AI Slides',
     newMarkdown: 'AI Markdown',
     newHtml: 'AI HTML',
+    newMindmap: 'Mapa mental',
+    newHwp: 'AI HWP',
+    pdfToolsCard: 'Ferramentas de PDF',
+    pdfToolsCardSub: 'Combinar · dividir · organizar',
     newPdf: 'AI PDF',
     openLocal: 'Abrir arquivo local',
     dropToOpenTitle: 'Solte para abrir',
@@ -5257,6 +5880,8 @@ export const strings = {
     filterPdf: 'PDF',
     filterMd: 'Markdown',
     filterHtml: 'HTML',
+    filterMindmap: 'Mapa mental',
+    filterHwp: 'HWP',
     filterAria: 'Filtrar por tipo',
     fileCount: '{n} arquivos',
     fileCountOne: '{n} arquivo',
@@ -5334,6 +5959,9 @@ export const strings = {
     account: 'Conta',
     appVersion: 'Versão {v}',
     versionLabel: 'Versão',
+    betaBadge: 'Beta',
+    betaTooltip:
+      'Esta é uma versão beta. Alguns recursos ainda podem mudar ou não funcionar como esperado.',
     setUpdateAvailableLabel: 'Atualização disponível',
     setUpdateTo: 'Atualizar para {version}',
     setUpdateDownloading: 'Baixando atualização ({percent}%)',
@@ -5351,6 +5979,13 @@ export const strings = {
     setAutoSave: 'Salvar automaticamente todos os documentos',
     setAutoSaveDesc:
       'Ativa o salvamento automático por padrão em todos os editores. Você ainda pode desativá-lo em uma janela específica.',
+    setResultStore: 'Resultados de IA de PDF salvos',
+    setResultStoreDesc:
+      'Páginas lidas pela IA e traduções ficam neste PC até você excluí-las. Em uso: {size}',
+    setResultStoreDeleteAll: 'Excluir tudo',
+    setResultStoreConfirm:
+      'Excluir todas as leituras de IA e traduções salvas? Para obtê-las de novo, será preciso usar a IA outra vez.',
+    setResultStoreDeleteFailed: 'Não foi possível excluir. Tente novamente.',
     setSearchRerank: 'Reordenação com Jev',
     setSearchRerankDesc:
       'Envia os trechos dos 20 melhores resultados locais ao modelo Jev da TypeSafe e os reordena por relevância. Desativado por padrão; quando ativo, os trechos saem deste dispositivo.',
@@ -5437,9 +6072,9 @@ export const strings = {
       'As conversas com este provedor usam a sua própria chave, e é ele quem cobra por elas. Ele só é usado enquanto você mesmo o escolhe em "IA em uso".',
     setAiHeadless: 'Permitir que solicitações automáticas usem uma assinatura',
     setAiHeadlessDesc:
-      'Permite que a geração e a análise de imagens pedidas por um comando do terminal ou por outro programa (MCP) sejam feitas com a sua assinatura do Claude ou do Codex. Quando desativado, essas solicitações usam apenas provedores com chave.',
+      'Permite que a geração e a análise de imagens, a tradução de PDF e a leitura de páginas por IA pedidas por um comando do terminal ou por outro programa (MCP) sejam feitas com a sua assinatura do Claude ou do Codex. Quando desativado, essas solicitações usam apenas provedores com chave.',
     setAiHeadlessWarning:
-      'Nenhuma das duas empresas recomenda deixar um programa usar a sua assinatura automaticamente, e a sua conta pode sofrer restrições.',
+      'Não há limite por hora: um programa pode enviar quantas solicitações quiser, e elas podem conter todo o texto de um documento e imagens das suas páginas. Nenhuma das duas empresas recomenda deixar um programa usar a sua assinatura automaticamente, e a sua conta pode sofrer restrições.',
     setAiHeadlessConfirm: 'Ativar mesmo assim',
     setAiImageCodex: 'Assinatura do Codex',
     setAiImageCodexHint:
@@ -5599,19 +6234,51 @@ export const strings = {
     onbTitle1: 'Bem-vindo ao GenOffice',
     onbWelcomeSubtitle: 'Uma suíte de escritório de código aberto',
     onbWelcomeBody:
-      'Abra e edite documentos do Word, Excel, PowerPoint, PDF, Markdown e HTML. A IA funciona com a assinatura do Claude ou do Codex que você já tem.',
+      'Abra e edite documentos do Word, Excel, PowerPoint, PDF, Markdown e HTML. A IA funciona com a assinatura do Claude ou do Codex que você já tem, ou com uma conexão de IA gratuita.',
     onbSkip: 'Pular',
     onbNext: 'Avançar',
     onbStart: 'Começar',
     onbStepAria: 'Página {n} de {total}',
     onbBody3: "Sem licenças. Sem anúncios. Sem marcas d'água.",
     onbBack: 'Voltar',
-    onbConnectTitle: 'Conecte sua assinatura de IA',
+    onbConnectTitle: 'Conecte uma IA',
     onbConnectSkipNote: 'Você pode pular esta etapa e conectar depois em Configurações → IA.',
+    setFreeTitle: 'Usar de graça',
+    setFreeDesc:
+      'Não tem assinatura? Conecte uma IA gratuita e comece agora mesmo. O uso gratuito tem um limite diário.',
+    freeBadge: 'Grátis',
+    freeOpenRouterDesc:
+      'Conecte com um só botão: crie uma conta ou entre no OpenRouter pelo navegador e permita o acesso.',
+    freeGeminiDesc:
+      'Crie uma chave com sua conta do Google e cole-a aqui. Somente para pessoas com 18 anos ou mais.',
+    freeConnectBrowser: 'Conectar pelo navegador',
+    freeWaiting:
+      'Entre no OpenRouter pelo navegador e escolha Permitir. Esta tela será atualizada quando você terminar.',
+    freeGetKey: 'Obter uma chave',
+    freeKeyPlaceholder: 'Cole sua chave do Gemini',
+    freeKeyConnect: 'Conectar',
+    freeStatusNotConnected: 'Não conectado',
+    freeStatusWaiting: 'Aguardando o navegador…',
+    freeStatusChecking: 'Verificando…',
+    freeStatusConnected: 'Conectado',
+    freeStatusInUse: 'Conectado · em uso',
+    freeUse: 'Usar esta IA',
+    freeDisconnect: 'Desconectar',
+    freeQuota: 'Restam {remaining} de {limit} solicitações gratuitas hoje',
+    freeFailedTimeout: 'O login não foi concluído a tempo. Tente novamente.',
+    freeFailedDenied: 'O acesso não foi permitido. Tente novamente e escolha Permitir.',
+    freeFailedInvalid: 'Essa chave não foi aceita. Verifique a chave que você copiou.',
+    freeFailedNetwork:
+      'Não foi possível conectar. Verifique sua conexão com a internet e tente novamente.',
+    freePrivacy:
+      'Enquanto você usa de graça, o que você envia pode ser usado para melhorar a IA dessa empresa. Tenha cuidado com documentos que contêm dados pessoais.',
+    freeGeminiBilling:
+      'Uma chave criada em um projeto do Google com faturamento ativado pode gerar cobranças.',
+    onbFreeTitle: 'Não tem assinatura? Comece de graça',
     onbDoneTitle: 'Tudo pronto',
     onbDoneConnected: 'A IA está conectada: {provider}.',
     onbDoneNotConnected:
-      'A IA ainda não está conectada. Você pode conectar uma assinatura a qualquer momento em Configurações → IA.',
+      'A IA ainda não está conectada. Você pode conectar uma assinatura ou uma IA gratuita a qualquer momento em Configurações → IA.',
     helpSearchPlaceholder: 'Pesquisar no manual… (pressione /)',
     helpSearchLabel: 'Pesquisar no manual',
     helpContentsLabel: 'Conteúdo do manual',
@@ -5631,6 +6298,11 @@ export const strings = {
     askEmptyCorpusHint:
       'Ancora nessun file preferito — contrassegnane prima alcuni perché l’IA possa leggerli.',
     askCorpusCount: 'Base di conoscenza: {n} file preferiti',
+    askScopeLabel: 'Chiedi in',
+    askScopeAll: 'Tutti',
+    askCorpusCountGroup: '{group}: {n} file preferiti',
+    askScopeGone:
+      'Questo gruppo non contiene più file preferiti, quindi la domanda non è stata inviata. Scegli un altro gruppo o Tutti.',
     askIntro:
       'Chiedi informazioni sui tuoi file preferiti. Le risposte citano la fonte — clicca per aprire.',
     askToolSearch: 'Ricerca nella base',
@@ -5670,6 +6342,10 @@ export const strings = {
     newSlide: 'AI Slides',
     newMarkdown: 'AI Markdown',
     newHtml: 'AI HTML',
+    newMindmap: 'Mappa mentale',
+    newHwp: 'AI HWP',
+    pdfToolsCard: 'Strumenti PDF',
+    pdfToolsCardSub: 'Unisci · dividi · organizza',
     newPdf: 'AI PDF',
     openLocal: 'Apri file locale',
     dropToOpenTitle: 'Rilascia per aprire',
@@ -5689,6 +6365,8 @@ export const strings = {
     filterPdf: 'PDF',
     filterMd: 'Markdown',
     filterHtml: 'HTML',
+    filterMindmap: 'Mappa mentale',
+    filterHwp: 'HWP',
     filterAria: 'Filtra per tipo',
     fileCount: '{n} file',
     fileCountOne: '{n} file',
@@ -5766,6 +6444,9 @@ export const strings = {
     account: 'Account',
     appVersion: 'Versione {v}',
     versionLabel: 'Versione',
+    betaBadge: 'Beta',
+    betaTooltip:
+      'Questa è una versione beta. Alcune funzioni potrebbero ancora cambiare o non funzionare come previsto.',
     setUpdateAvailableLabel: 'Aggiornamento disponibile',
     setUpdateTo: 'Aggiorna alla versione {version}',
     setUpdateDownloading: 'Download aggiornamento ({percent}%)',
@@ -5783,6 +6464,13 @@ export const strings = {
     setAutoSave: 'Salva automaticamente tutti i documenti',
     setAutoSaveDesc:
       'Attiva il salvataggio automatico per impostazione predefinita in ogni editor. Puoi comunque disattivarlo per una singola finestra.',
+    setResultStore: 'Risultati IA dei PDF salvati',
+    setResultStoreDesc:
+      "Le pagine lette dall'IA e le traduzioni restano su questo PC finché non le elimini. Spazio usato: {size}",
+    setResultStoreDeleteAll: 'Elimina tutto',
+    setResultStoreConfirm:
+      "Eliminare tutte le letture IA e le traduzioni salvate? Per riaverle bisognerà usare di nuovo l'IA.",
+    setResultStoreDeleteFailed: 'Impossibile eliminarli. Riprova.',
     setSearchRerank: 'Riordino con Jev',
     setSearchRerankDesc:
       'Invia gli estratti dei 20 migliori risultati locali al modello Jev di TypeSafe e li riordina per pertinenza. Disattivato per impostazione predefinita; se attivo, gli estratti lasciano questo dispositivo.',
@@ -5868,9 +6556,9 @@ export const strings = {
       'Le chat con questo provider usano la tua chiave ed è il provider ad addebitartele. Viene usato solo finché lo scegli tu in "IA da usare".',
     setAiHeadless: 'Consenti alle richieste automatiche di usare un abbonamento',
     setAiHeadlessDesc:
-      'Consente alla generazione e all’analisi di immagini richieste da un comando del terminale o da un altro programma (MCP) di usare il tuo abbonamento Claude o Codex. Se disattivata, queste richieste usano solo i provider con chiave.',
+      'Consente alla generazione e all’analisi di immagini, alla traduzione di PDF e alla lettura delle pagine con l’IA richieste da un comando del terminale o da un altro programma (MCP) di usare il tuo abbonamento Claude o Codex. Se disattivata, queste richieste usano solo i provider con chiave.',
     setAiHeadlessWarning:
-      'Nessuna delle due aziende consiglia di lasciare che un programma usi automaticamente il tuo abbonamento, e il tuo account potrebbe subire limitazioni.',
+      'Non c’è un limite orario: un programma può inviare tutte le richieste che vuole, e queste possono contenere l’intero testo di un documento e le immagini delle sue pagine. Nessuna delle due aziende consiglia di lasciare che un programma usi automaticamente il tuo abbonamento, e il tuo account potrebbe subire limitazioni.',
     setAiHeadlessConfirm: 'Attiva comunque',
     setAiImageCodex: 'Abbonamento Codex',
     setAiImageCodexHint:
@@ -6030,20 +6718,51 @@ export const strings = {
     onbTitle1: 'Benvenuto in GenOffice',
     onbWelcomeSubtitle: 'Una suite per ufficio open source',
     onbWelcomeBody:
-      'Apri e modifica documenti Word, Excel, PowerPoint, PDF, Markdown e HTML. L’IA funziona con l’abbonamento Claude o Codex che hai già.',
+      'Apri e modifica documenti Word, Excel, PowerPoint, PDF, Markdown e HTML. L’IA funziona con l’abbonamento Claude o Codex che hai già, oppure con un collegamento a un’IA gratuita.',
     onbSkip: 'Salta',
     onbNext: 'Avanti',
     onbStart: 'Inizia',
     onbStepAria: 'Pagina {n} di {total}',
     onbBody3: 'Nessuna licenza. Nessuna pubblicità. Nessuna filigrana.',
     onbBack: 'Indietro',
-    onbConnectTitle: 'Collega il tuo abbonamento IA',
+    onbConnectTitle: 'Collega un’IA',
     onbConnectSkipNote:
       'Puoi saltare questo passaggio e collegarlo più tardi in Impostazioni → IA.',
+    setFreeTitle: 'Usa gratis',
+    setFreeDesc:
+      'Non hai un abbonamento? Collega un’IA gratuita e inizia subito. L’uso gratuito ha un limite giornaliero.',
+    freeBadge: 'Gratis',
+    freeOpenRouterDesc:
+      'Collegati con un solo pulsante: registrati o accedi a OpenRouter nel browser e consenti l’accesso.',
+    freeGeminiDesc:
+      'Crea una chiave con il tuo account Google e incollala qui. Solo per chi ha almeno 18 anni.',
+    freeConnectBrowser: 'Collega nel browser',
+    freeWaiting:
+      'Accedi a OpenRouter nel browser e scegli Consenti. Questa schermata si aggiorna quando hai finito.',
+    freeGetKey: 'Ottieni una chiave',
+    freeKeyPlaceholder: 'Incolla la tua chiave Gemini',
+    freeKeyConnect: 'Collega',
+    freeStatusNotConnected: 'Non collegato',
+    freeStatusWaiting: 'In attesa del browser…',
+    freeStatusChecking: 'Verifica in corso…',
+    freeStatusConnected: 'Collegato',
+    freeStatusInUse: 'Collegato · in uso',
+    freeUse: 'Usa questa IA',
+    freeDisconnect: 'Scollega',
+    freeQuota: 'Oggi restano {remaining} richieste gratuite su {limit}',
+    freeFailedTimeout: 'L’accesso non è stato completato in tempo. Riprova.',
+    freeFailedDenied: 'L’accesso non è stato consentito. Riprova e scegli Consenti.',
+    freeFailedInvalid: 'La chiave non è stata accettata. Controlla la chiave che hai copiato.',
+    freeFailedNetwork: 'Impossibile connettersi. Controlla la connessione a Internet e riprova.',
+    freePrivacy:
+      'Durante l’uso gratuito, ciò che invii può essere usato per migliorare l’IA di quell’azienda. Fai attenzione ai documenti che contengono dati personali.',
+    freeGeminiBilling:
+      'Una chiave creata in un progetto Google con la fatturazione attiva può generare addebiti.',
+    onbFreeTitle: 'Non hai un abbonamento? Inizia gratis',
     onbDoneTitle: 'È tutto pronto',
     onbDoneConnected: 'L’IA è collegata: {provider}.',
     onbDoneNotConnected:
-      'L’IA non è ancora collegata. Puoi collegare un abbonamento in qualsiasi momento in Impostazioni → IA.',
+      'L’IA non è ancora collegata. Puoi collegare un abbonamento o un’IA gratuita in qualsiasi momento in Impostazioni → IA.',
     helpSearchPlaceholder: 'Cerca nel manuale… (premi /)',
     helpSearchLabel: 'Cerca nel manuale',
     helpContentsLabel: 'Indice del manuale',
@@ -6063,6 +6782,11 @@ export const strings = {
     askEmptyCorpusHint:
       'Nie ma jeszcze ulubionych plików — najpierw oznacz je gwiazdką, aby AI mogło je czytać.',
     askCorpusCount: 'Baza wiedzy: {n} ulubionych plików',
+    askScopeLabel: 'Zakres pytania',
+    askScopeAll: 'Wszystkie',
+    askCorpusCountGroup: '{group}: {n} ulubionych plików',
+    askScopeGone:
+      'Ta grupa nie ma już ulubionych plików, więc pytanie nie zostało wysłane. Wybierz inną grupę lub Wszystkie.',
     askIntro: 'Zadawaj pytania o swoje pliki. Odpowiedzi podają źródła — kliknij, aby otworzyć.',
     askToolSearch: 'Wyszukiwanie w bazie',
     askToolRead: 'Czytanie pliku',
@@ -6100,6 +6824,10 @@ export const strings = {
     newSlide: 'AI Slides',
     newMarkdown: 'AI Markdown',
     newHtml: 'AI HTML',
+    newMindmap: 'Mapa myśli',
+    newHwp: 'AI HWP',
+    pdfToolsCard: 'Narzędzia PDF',
+    pdfToolsCardSub: 'Łącz · dziel · porządkuj',
     newPdf: 'AI PDF',
     openLocal: 'Otwórz plik lokalny',
     dropToOpenTitle: 'Upuść, aby otworzyć',
@@ -6119,6 +6847,8 @@ export const strings = {
     filterPdf: 'PDF',
     filterMd: 'Markdown',
     filterHtml: 'HTML',
+    filterMindmap: 'Mapa myśli',
+    filterHwp: 'HWP',
     filterAria: 'Filtruj według typu',
     fileCount: 'Pliki: {n}',
     fileCountOne: '{n} plik',
@@ -6196,6 +6926,9 @@ export const strings = {
     account: 'Konto',
     appVersion: 'Wersja {v}',
     versionLabel: 'Wersja',
+    betaBadge: 'Beta',
+    betaTooltip:
+      'To jest wersja beta. Niektóre funkcje mogą się jeszcze zmienić lub nie działać zgodnie z oczekiwaniami.',
     setUpdateAvailableLabel: 'Dostępna aktualizacja',
     setUpdateTo: 'Zaktualizuj do {version}',
     setUpdateDownloading: 'Pobieranie aktualizacji ({percent}%)',
@@ -6213,6 +6946,13 @@ export const strings = {
     setAutoSave: 'Automatycznie zapisuj wszystkie dokumenty',
     setAutoSaveDesc:
       'Włącza autozapis domyślnie w każdym edytorze. Nadal możesz go wyłączyć dla pojedynczego okna.',
+    setResultStore: 'Zapisane wyniki AI dla PDF',
+    setResultStoreDesc:
+      'Strony odczytane przez AI i tłumaczenia pozostają na tym komputerze, dopóki ich nie usuniesz. Zajęte: {size}',
+    setResultStoreDeleteAll: 'Usuń wszystko',
+    setResultStoreConfirm:
+      'Usunąć wszystkie zapisane odczyty AI i tłumaczenia? Aby uzyskać je ponownie, trzeba będzie znów użyć AI.',
+    setResultStoreDeleteFailed: 'Nie udało się usunąć. Spróbuj ponownie.',
     setSearchRerank: 'Ponowne sortowanie Jev',
     setSearchRerankDesc:
       'Wysyła fragmenty 20 najlepszych lokalnych wyników do modelu Jev firmy TypeSafe i sortuje je według trafności. Domyślnie wyłączone; po włączeniu fragmenty opuszczają to urządzenie.',
@@ -6297,9 +7037,9 @@ export const strings = {
       'Rozmowy przez tego dostawcę korzystają z twojego własnego klucza i to on pobiera za nie opłaty. Jest używany tylko wtedy, gdy samodzielnie wybierzesz go w polu „Używane AI”.',
     setAiHeadless: 'Zezwól żądaniom automatycznym na korzystanie z subskrypcji',
     setAiHeadlessDesc:
-      'Pozwala, aby generowanie i analiza obrazów zlecane przez polecenie terminala lub inny program (MCP) korzystały z twojej subskrypcji Claude lub Codex. Gdy opcja jest wyłączona, takie żądania korzystają wyłącznie z dostawców z kluczem.',
+      'Pozwala, aby generowanie i analiza obrazów, tłumaczenie PDF oraz odczyt stron przez AI zlecane przez polecenie terminala lub inny program (MCP) korzystały z twojej subskrypcji Claude lub Codex. Gdy opcja jest wyłączona, takie żądania korzystają wyłącznie z dostawców z kluczem.',
     setAiHeadlessWarning:
-      'Żadna z tych dwóch firm nie zaleca, aby program automatycznie korzystał z subskrypcji, a twoje konto może zostać ograniczone.',
+      'Nie ma limitu godzinowego: program może wysłać dowolnie wiele żądań, a mogą one zawierać cały tekst dokumentu i obrazy jego stron. Żadna z tych dwóch firm nie zaleca, aby program automatycznie korzystał z subskrypcji, a twoje konto może zostać ograniczone.',
     setAiHeadlessConfirm: 'Włącz mimo to',
     setAiImageCodex: 'Subskrypcja Codex',
     setAiImageCodexHint:
@@ -6458,20 +7198,52 @@ export const strings = {
     onbTitle1: 'Witamy w GenOffice',
     onbWelcomeSubtitle: 'Otwartoźródłowy pakiet biurowy',
     onbWelcomeBody:
-      'Otwieraj i edytuj dokumenty Word, Excel, PowerPoint, PDF, Markdown i HTML. AI działa w ramach subskrypcji Claude lub Codex, którą już masz.',
+      'Otwieraj i edytuj dokumenty Word, Excel, PowerPoint, PDF, Markdown i HTML. AI działa w ramach subskrypcji Claude lub Codex, którą już masz, albo przez darmowe połączenie z AI.',
     onbSkip: 'Pomiń',
     onbNext: 'Dalej',
     onbStart: 'Rozpocznij',
     onbStepAria: 'Strona {n} z {total}',
     onbBody3: 'Bez opłat licencyjnych. Bez reklam. Bez znaków wodnych.',
     onbBack: 'Wstecz',
-    onbConnectTitle: 'Połącz swoją subskrypcję AI',
+    onbConnectTitle: 'Połącz AI',
     onbConnectSkipNote:
       'Możesz pominąć ten krok i połączyć subskrypcję później w sekcji Ustawienia → AI.',
+    setFreeTitle: 'Korzystaj za darmo',
+    setFreeDesc:
+      'Nie masz subskrypcji? Połącz darmowe AI i zacznij od razu. Darmowe korzystanie ma dzienny limit.',
+    freeBadge: 'Za darmo',
+    freeOpenRouterDesc:
+      'Połącz jednym przyciskiem: zarejestruj się lub zaloguj w OpenRouter w przeglądarce i zezwól na dostęp.',
+    freeGeminiDesc:
+      'Utwórz klucz na swoim koncie Google i wklej go tutaj. Tylko dla osób, które ukończyły 18 lat.',
+    freeConnectBrowser: 'Połącz w przeglądarce',
+    freeWaiting:
+      'Zaloguj się w OpenRouter w przeglądarce i wybierz „Zezwól”. Ten ekran zaktualizuje się, gdy skończysz.',
+    freeGetKey: 'Uzyskaj klucz',
+    freeKeyPlaceholder: 'Wklej klucz Gemini',
+    freeKeyConnect: 'Połącz',
+    freeStatusNotConnected: 'Nie połączono',
+    freeStatusWaiting: 'Czekanie na przeglądarkę…',
+    freeStatusChecking: 'Sprawdzanie…',
+    freeStatusConnected: 'Połączono',
+    freeStatusInUse: 'Połączono · w użyciu',
+    freeUse: 'Użyj tego AI',
+    freeDisconnect: 'Rozłącz',
+    freeQuota: 'Pozostało dziś {remaining} z {limit} darmowych żądań',
+    freeFailedTimeout: 'Logowanie nie zakończyło się na czas. Spróbuj ponownie.',
+    freeFailedDenied: 'Nie zezwolono na dostęp. Spróbuj ponownie i wybierz „Zezwól”.',
+    freeFailedInvalid: 'Ten klucz nie został zaakceptowany. Sprawdź skopiowany klucz.',
+    freeFailedNetwork:
+      'Nie udało się połączyć. Sprawdź połączenie z internetem i spróbuj ponownie.',
+    freePrivacy:
+      'Podczas darmowego korzystania wysyłane treści mogą zostać użyte do ulepszania AI tej firmy. Uważaj na dokumenty zawierające dane osobowe.',
+    freeGeminiBilling:
+      'Klucz utworzony w projekcie Google z włączonymi płatnościami może generować opłaty.',
+    onbFreeTitle: 'Nie masz subskrypcji? Zacznij za darmo',
     onbDoneTitle: 'Wszystko gotowe',
     onbDoneConnected: 'AI jest połączone: {provider}.',
     onbDoneNotConnected:
-      'AI nie jest jeszcze połączone. Subskrypcję możesz połączyć w dowolnej chwili w sekcji Ustawienia → AI.',
+      'AI nie jest jeszcze połączone. Subskrypcję lub darmowe AI możesz połączyć w dowolnej chwili w sekcji Ustawienia → AI.',
     helpSearchPlaceholder: 'Szukaj w podręczniku… (naciśnij /)',
     helpSearchLabel: 'Szukaj w podręczniku',
     helpContentsLabel: 'Spis podręcznika',
@@ -6491,6 +7263,11 @@ export const strings = {
     askEmptyCorpusHint:
       'Zatím nejsou žádné oblíbené soubory — nejprve je označte hvězdičkou, aby je AI mohla číst.',
     askCorpusCount: 'Znalostní databáze: {n} oblíbených souborů',
+    askScopeLabel: 'Rozsah dotazu',
+    askScopeAll: 'Vše',
+    askCorpusCountGroup: '{group}: {n} oblíbených souborů',
+    askScopeGone:
+      'Tato skupina už neobsahuje žádné oblíbené soubory, proto dotaz nebyl odeslán. Vyberte jinou skupinu nebo Vše.',
     askIntro: 'Ptejte se na své oblíbené soubory. Odpovědi uvádějí zdroje — kliknutím otevřete.',
     askToolSearch: 'Prohledávání databáze',
     askToolRead: 'Čtení souboru',
@@ -6528,6 +7305,10 @@ export const strings = {
     newSlide: 'AI Slides',
     newMarkdown: 'AI Markdown',
     newHtml: 'AI HTML',
+    newMindmap: 'Myšlenková mapa',
+    newHwp: 'AI HWP',
+    pdfToolsCard: 'Nástroje PDF',
+    pdfToolsCardSub: 'Spojit · rozdělit · uspořádat',
     newPdf: 'AI PDF',
     openLocal: 'Otevřít místní soubor',
     dropToOpenTitle: 'Přetažením otevřete',
@@ -6547,6 +7328,8 @@ export const strings = {
     filterPdf: 'PDF',
     filterMd: 'Markdown',
     filterHtml: 'HTML',
+    filterMindmap: 'Myšlenková mapa',
+    filterHwp: 'HWP',
     filterAria: 'Filtrovat podle typu',
     fileCount: '{n} souborů',
     fileCountOne: '{n} soubor',
@@ -6622,6 +7405,9 @@ export const strings = {
     account: 'Účet',
     appVersion: 'Verze {v}',
     versionLabel: 'Verze',
+    betaBadge: 'Beta',
+    betaTooltip:
+      'Toto je beta verze. Některé funkce se ještě mohou změnit nebo nefungovat podle očekávání.',
     setUpdateAvailableLabel: 'K dispozici je aktualizace',
     setUpdateTo: 'Aktualizovat na {version}',
     setUpdateDownloading: 'Stahování aktualizace ({percent} %)',
@@ -6691,9 +7477,9 @@ export const strings = {
       'Konverzace přes tohoto poskytovatele používají váš vlastní klíč a účtuje je tento poskytovatel. Používá se jen tehdy, když ho sami vyberete v položce „Používaná AI“.',
     setAiHeadless: 'Povolit automatickým požadavkům používat předplatné',
     setAiHeadlessDesc:
-      'Umožní, aby generování a analýza obrázků vyžádané příkazem v terminálu nebo jiným programem (MCP) běžely na vašem předplatném Claude nebo Codex. Když je volba vypnutá, tyto požadavky používají jen poskytovatele s klíčem.',
+      'Umožní, aby generování a analýza obrázků, překlad PDF a čtení stránek pomocí AI vyžádané příkazem v terminálu nebo jiným programem (MCP) běžely na vašem předplatném Claude nebo Codex. Když je volba vypnutá, tyto požadavky používají jen poskytovatele s klíčem.',
     setAiHeadlessWarning:
-      'Ani jedna z obou společností nedoporučuje, aby program používal předplatné automaticky, a váš účet může být omezen.',
+      'Neexistuje žádný hodinový limit: program může poslat libovolně mnoho požadavků a ty mohou obsahovat celý text dokumentu i obrázky jeho stránek. Ani jedna z obou společností nedoporučuje, aby program používal předplatné automaticky, a váš účet může být omezen.',
     setAiHeadlessConfirm: 'Přesto zapnout',
     setAiImageCodex: 'Předplatné Codex',
     setAiImageCodexHint:
@@ -6851,22 +7637,61 @@ export const strings = {
     onbTitle1: 'Vítejte v GenOffice',
     onbWelcomeSubtitle: 'Kancelářský balík s otevřeným zdrojovým kódem',
     onbWelcomeBody:
-      'Otevírejte a upravujte dokumenty Word, Excel, PowerPoint, PDF, Markdown a HTML. AI funguje přes předplatné Claude nebo Codex, které už máte.',
+      'Otevírejte a upravujte dokumenty Word, Excel, PowerPoint, PDF, Markdown a HTML. AI funguje přes předplatné Claude nebo Codex, které už máte, nebo přes bezplatné připojení k AI.',
     onbSkip: 'Přeskočit',
     onbNext: 'Další',
     onbStart: 'Začít',
     onbStepAria: 'Stránka {n} z {total}',
     onbBody3: 'Žádné licenční poplatky. Žádné reklamy. Žádné vodoznaky.',
     onbBack: 'Zpět',
-    onbConnectTitle: 'Připojte své předplatné AI',
+    onbConnectTitle: 'Připojte AI',
     onbConnectSkipNote: 'Tento krok můžete přeskočit a připojit se později v Nastavení → AI.',
+    setFreeTitle: 'Používat zdarma',
+    setFreeDesc:
+      'Nemáte předplatné? Připojte bezplatnou AI a začněte hned. Bezplatné používání má denní limit.',
+    freeBadge: 'Zdarma',
+    freeOpenRouterDesc:
+      'Připojení jedním tlačítkem: v prohlížeči se zaregistrujte nebo přihlaste k OpenRouter a povolte přístup.',
+    freeGeminiDesc:
+      'Vytvořte klíč pomocí svého účtu Google a vložte ho sem. Pouze pro osoby od 18 let.',
+    freeConnectBrowser: 'Připojit v prohlížeči',
+    freeWaiting:
+      'V prohlížeči se přihlaste k OpenRouter a zvolte „Povolit“. Až budete hotovi, tato obrazovka se aktualizuje.',
+    freeGetKey: 'Získat klíč',
+    freeKeyPlaceholder: 'Vložte svůj klíč Gemini',
+    freeKeyConnect: 'Připojit',
+    freeStatusNotConnected: 'Nepřipojeno',
+    freeStatusWaiting: 'Čeká se na prohlížeč…',
+    freeStatusChecking: 'Kontrola…',
+    freeStatusConnected: 'Připojeno',
+    freeStatusInUse: 'Připojeno · používá se',
+    freeUse: 'Použít tuto AI',
+    freeDisconnect: 'Odpojit',
+    freeQuota: 'Dnes zbývá {remaining} z {limit} bezplatných požadavků',
+    freeFailedTimeout: 'Přihlášení se nedokončilo včas. Zkuste to znovu.',
+    freeFailedDenied: 'Přístup nebyl povolen. Zkuste to znovu a zvolte „Povolit“.',
+    freeFailedInvalid: 'Tento klíč nebyl přijat. Zkontrolujte zkopírovaný klíč.',
+    freeFailedNetwork:
+      'Nepodařilo se připojit. Zkontrolujte připojení k internetu a zkuste to znovu.',
+    freePrivacy:
+      'Při bezplatném používání může být to, co odešlete, použito ke zlepšování AI dané společnosti. Dávejte pozor na dokumenty s osobními údaji.',
+    freeGeminiBilling:
+      'Klíč vytvořený v projektu Google se zapnutou fakturací může být zpoplatněn.',
+    onbFreeTitle: 'Nemáte předplatné? Začněte zdarma',
     onbDoneTitle: 'Vše je připraveno',
     onbDoneConnected: 'AI je připojena: {provider}.',
     onbDoneNotConnected:
-      'AI zatím není připojena. Předplatné můžete kdykoli připojit v Nastavení → AI.',
+      'AI zatím není připojena. Předplatné nebo bezplatnou AI můžete kdykoli připojit v Nastavení → AI.',
     setAutoSave: 'Automaticky ukládat všechny dokumenty',
     setAutoSaveDesc:
       'Zapne automatické ukládání ve všech editorech jako výchozí. Pro jednotlivé okno ho lze stále vypnout.',
+    setResultStore: 'Uložené výsledky AI pro PDF',
+    setResultStoreDesc:
+      'Stránky přečtené AI a překlady zůstávají v tomto počítači, dokud je nesmažete. Využito: {size}',
+    setResultStoreDeleteAll: 'Smazat vše',
+    setResultStoreConfirm:
+      'Smazat všechna uložená čtení AI a překlady? Pro jejich opětovné získání bude nutné znovu použít AI.',
+    setResultStoreDeleteFailed: 'Smazání se nezdařilo. Zkuste to znovu.',
     setSearchRerank: 'Přeřazení Jev',
     setSearchRerankDesc:
       'Odešle výňatky 20 nejlepších místních výsledků modelu Jev od TypeSafe a seřadí je podle relevance. Ve výchozím stavu vypnuto; po zapnutí výňatky opouštějí toto zařízení.',
@@ -6914,6 +7739,11 @@ export const strings = {
     askTitle: 'Vraag je kennisbank',
     askEmptyCorpusHint: 'Nog geen favorieten — markeer eerst bestanden zodat de AI ze kan lezen.',
     askCorpusCount: 'Kennisbank: {n} favoriete bestanden',
+    askScopeLabel: 'Vragen in',
+    askScopeAll: 'Alle',
+    askCorpusCountGroup: '{group}: {n} favoriete bestanden',
+    askScopeGone:
+      'Deze groep heeft geen favoriete bestanden meer, dus er is niets gevraagd. Kies een andere groep of Alle.',
     askIntro: 'Vraag naar je favoriete bestanden. Antwoorden noemen hun bron — klik om te openen.',
     askToolSearch: 'Kennisbank doorzoeken',
     askToolRead: 'Bestand lezen',
@@ -6952,6 +7782,10 @@ export const strings = {
     newSlide: 'AI Slides',
     newMarkdown: 'AI Markdown',
     newHtml: 'AI HTML',
+    newMindmap: 'Mindmap',
+    newHwp: 'AI HWP',
+    pdfToolsCard: 'PDF-hulpmiddelen',
+    pdfToolsCardSub: 'Samenvoegen · splitsen · ordenen',
     newPdf: 'AI PDF',
     openLocal: 'Lokaal bestand openen',
     dropToOpenTitle: 'Loslaten om te openen',
@@ -6971,6 +7805,8 @@ export const strings = {
     filterPdf: 'PDF',
     filterMd: 'Markdown',
     filterHtml: 'HTML',
+    filterMindmap: 'Mindmap',
+    filterHwp: 'HWP',
     filterAria: 'Filteren op type',
     fileCount: '{n} bestanden',
     fileCountOne: '{n} bestand',
@@ -7047,6 +7883,9 @@ export const strings = {
     account: 'Account',
     appVersion: 'Versie {v}',
     versionLabel: 'Versie',
+    betaBadge: 'Bèta',
+    betaTooltip:
+      'Dit is een bètaversie. Sommige functies kunnen nog veranderen of niet werken zoals verwacht.',
     setUpdateAvailableLabel: 'Update beschikbaar',
     setUpdateTo: 'Bijwerken naar {version}',
     setUpdateDownloading: 'Update downloaden ({percent}%)',
@@ -7064,6 +7903,13 @@ export const strings = {
     setAutoSave: 'Alle documenten automatisch opslaan',
     setAutoSaveDesc:
       'Zet automatisch opslaan standaard aan in elke editor. Je kunt het nog steeds uitschakelen voor één venster.',
+    setResultStore: "Opgeslagen AI-resultaten van pdf's",
+    setResultStoreDesc:
+      "Door AI gelezen pagina's en vertalingen blijven op deze pc staan tot je ze verwijdert. In gebruik: {size}",
+    setResultStoreDeleteAll: 'Alles verwijderen',
+    setResultStoreConfirm:
+      'Alle opgeslagen AI-leesresultaten en vertalingen verwijderen? Om ze terug te krijgen, moet je AI opnieuw gebruiken.',
+    setResultStoreDeleteFailed: 'Verwijderen is mislukt. Probeer het opnieuw.',
     setSearchRerank: 'Jev-herordening',
     setSearchRerankDesc:
       'Stuurt de fragmenten van de 20 beste lokale resultaten naar het Jev-model van TypeSafe en sorteert ze op relevantie. Standaard uit; indien aan verlaten fragmenten dit apparaat.',
@@ -7149,9 +7995,9 @@ export const strings = {
       'Chats via deze provider gebruiken je eigen sleutel en worden door die provider in rekening gebracht. De provider wordt alleen gebruikt zolang je hem zelf kiest bij "AI die wordt gebruikt".',
     setAiHeadless: 'Automatische verzoeken een abonnement laten gebruiken',
     setAiHeadlessDesc:
-      'Staat toe dat het genereren en analyseren van afbeeldingen, aangevraagd door een terminalopdracht of een ander programma (MCP), via je Claude- of Codex-abonnement verloopt. Als dit uit staat, gebruiken zulke verzoeken alleen providers met een sleutel.',
+      'Staat toe dat het genereren en analyseren van afbeeldingen, het vertalen van pdf’s en het lezen van pagina’s met AI, aangevraagd door een terminalopdracht of een ander programma (MCP), via je Claude- of Codex-abonnement verloopt. Als dit uit staat, gebruiken zulke verzoeken alleen providers met een sleutel.',
     setAiHeadlessWarning:
-      'Geen van beide bedrijven raadt aan een programma je abonnement automatisch te laten gebruiken, en je account kan worden beperkt.',
+      'Er is geen limiet per uur: een programma kan zoveel verzoeken sturen als het wil, en die kunnen de volledige tekst van een document en afbeeldingen van de pagina’s bevatten. Geen van beide bedrijven raadt aan een programma je abonnement automatisch te laten gebruiken, en je account kan worden beperkt.',
     setAiHeadlessConfirm: 'Toch inschakelen',
     setAiImageCodex: 'Codex-abonnement',
     setAiImageCodexHint:
@@ -7310,19 +8156,52 @@ export const strings = {
     onbTitle1: 'Welkom bij GenOffice',
     onbWelcomeSubtitle: 'Een opensource-officesuite',
     onbWelcomeBody:
-      'Open en bewerk Word-, Excel-, PowerPoint-, PDF-, Markdown- en HTML-documenten. AI werkt via het Claude- of Codex-abonnement dat je al hebt.',
+      'Open en bewerk Word-, Excel-, PowerPoint-, PDF-, Markdown- en HTML-documenten. AI werkt via het Claude- of Codex-abonnement dat je al hebt, of via een gratis AI-verbinding.',
     onbSkip: 'Overslaan',
     onbNext: 'Volgende',
     onbStart: 'Aan de slag',
     onbStepAria: 'Pagina {n} van {total}',
     onbBody3: 'Geen licentiekosten. Geen advertenties. Geen watermerken.',
     onbBack: 'Terug',
-    onbConnectTitle: 'Verbind je AI-abonnement',
+    onbConnectTitle: 'Verbind een AI',
     onbConnectSkipNote: 'Je kunt deze stap overslaan en later verbinden via Instellingen → AI.',
+    setFreeTitle: 'Gratis gebruiken',
+    setFreeDesc:
+      'Geen abonnement? Verbind een gratis AI en ga meteen aan de slag. Gratis gebruik heeft een daglimiet.',
+    freeBadge: 'Gratis',
+    freeOpenRouterDesc:
+      'Verbinden met één knop: maak een account aan of meld je aan bij OpenRouter in je browser en sta toegang toe.',
+    freeGeminiDesc:
+      'Maak met je Google-account een sleutel en plak die hier. Alleen voor mensen van 18 jaar of ouder.',
+    freeConnectBrowser: 'Verbinden in browser',
+    freeWaiting:
+      'Meld je in je browser aan bij OpenRouter en kies Toestaan. Dit scherm wordt bijgewerkt zodra je klaar bent.',
+    freeGetKey: 'Sleutel aanmaken',
+    freeKeyPlaceholder: 'Plak je Gemini-sleutel',
+    freeKeyConnect: 'Verbinden',
+    freeStatusNotConnected: 'Niet verbonden',
+    freeStatusWaiting: 'Wachten op de browser…',
+    freeStatusChecking: 'Controleren…',
+    freeStatusConnected: 'Verbonden',
+    freeStatusInUse: 'Verbonden · in gebruik',
+    freeUse: 'Deze AI gebruiken',
+    freeDisconnect: 'Verbinding verbreken',
+    freeQuota: 'Nog {remaining} van {limit} gratis verzoeken over vandaag',
+    freeFailedTimeout: 'Het aanmelden is niet op tijd afgerond. Probeer het opnieuw.',
+    freeFailedDenied: 'Toegang is niet toegestaan. Probeer het opnieuw en kies Toestaan.',
+    freeFailedInvalid:
+      'Die sleutel is niet geaccepteerd. Controleer de sleutel die je hebt gekopieerd.',
+    freeFailedNetwork:
+      'Kan geen verbinding maken. Controleer je internetverbinding en probeer het opnieuw.',
+    freePrivacy:
+      'Zolang je het gratis gebruikt, kan wat je verstuurt worden gebruikt om de AI van dat bedrijf te verbeteren. Wees voorzichtig met documenten die persoonsgegevens bevatten.',
+    freeGeminiBilling:
+      'Voor een sleutel uit een Google-project waarin facturering aanstaat, kunnen kosten in rekening worden gebracht.',
+    onbFreeTitle: 'Geen abonnement? Begin gratis',
     onbDoneTitle: 'Alles is klaar',
     onbDoneConnected: 'AI is verbonden: {provider}.',
     onbDoneNotConnected:
-      'AI is nog niet verbonden. Je kunt op elk moment een abonnement verbinden via Instellingen → AI.',
+      'AI is nog niet verbonden. Je kunt op elk moment een abonnement of een gratis AI verbinden via Instellingen → AI.',
     helpSearchPlaceholder: 'Zoek in de handleiding… (druk op /)',
     helpSearchLabel: 'Zoek in de handleiding',
     helpContentsLabel: 'Inhoud van de handleiding',
@@ -7342,6 +8221,11 @@ export const strings = {
     askEmptyCorpusHint:
       'Tiada fail kegemaran lagi — tanda beberapa fail dahulu supaya AI boleh membacanya.',
     askCorpusCount: 'Pangkalan pengetahuan: {n} fail kegemaran',
+    askScopeLabel: 'Tanya dalam',
+    askScopeAll: 'Semua',
+    askCorpusCountGroup: '{group}: {n} fail kegemaran',
+    askScopeGone:
+      'Kumpulan ini tidak lagi mempunyai fail kegemaran, jadi soalan tidak dihantar. Pilih kumpulan lain atau Semua.',
     askIntro: 'Tanya tentang fail kegemaran anda. Jawapan memetik sumbernya — klik untuk membuka.',
     askToolSearch: 'Mencari pangkalan pengetahuan',
     askToolRead: 'Membaca fail',
@@ -7380,6 +8264,10 @@ export const strings = {
     newSlide: 'AI Slides',
     newMarkdown: 'AI Markdown',
     newHtml: 'AI HTML',
+    newMindmap: 'Peta minda',
+    newHwp: 'AI HWP',
+    pdfToolsCard: 'Alat PDF',
+    pdfToolsCardSub: 'Gabung · pisah · susun',
     newPdf: 'AI PDF',
     openLocal: 'Buka Fail Setempat',
     dropToOpenTitle: 'Lepaskan untuk membuka',
@@ -7399,6 +8287,8 @@ export const strings = {
     filterPdf: 'PDF',
     filterMd: 'Markdown',
     filterHtml: 'HTML',
+    filterMindmap: 'Peta minda',
+    filterHwp: 'HWP',
     filterAria: 'Tapis mengikut jenis',
     fileCount: '{n} fail',
     fileCountOne: '{n} fail',
@@ -7475,6 +8365,9 @@ export const strings = {
     account: 'Akaun',
     appVersion: 'Versi {v}',
     versionLabel: 'Versi',
+    betaBadge: 'Beta',
+    betaTooltip:
+      'Ini versi beta. Sesetengah ciri mungkin masih berubah atau tidak berfungsi seperti yang dijangka.',
     setUpdateAvailableLabel: 'Kemas kini tersedia',
     setUpdateTo: 'Kemas kini ke {version}',
     setUpdateDownloading: 'Memuat turun kemas kini ({percent}%)',
@@ -7492,6 +8385,13 @@ export const strings = {
     setAutoSave: 'Simpan automatik semua dokumen',
     setAutoSaveDesc:
       'Hidupkan Simpan Automatik secara lalai dalam setiap editor. Anda masih boleh mematikannya untuk satu tetingkap.',
+    setResultStore: 'Hasil AI PDF yang disimpan',
+    setResultStoreDesc:
+      'Halaman yang dibaca AI dan terjemahan disimpan dalam PC ini sehingga anda memadamkannya. Digunakan: {size}',
+    setResultStoreDeleteAll: 'Padam semua',
+    setResultStoreConfirm:
+      'Padam semua hasil bacaan AI dan terjemahan yang disimpan? Untuk mendapatkannya semula, AI perlu digunakan sekali lagi.',
+    setResultStoreDeleteFailed: 'Tidak dapat memadam. Cuba lagi.',
     setSearchRerank: 'Susunan semula Jev',
     setSearchRerankDesc:
       'Menghantar petikan 20 hasil tempatan teratas ke model Jev TypeSafe dan menyusunnya semula mengikut kaitan. Dimatikan secara lalai; apabila dihidupkan, petikan keluar dari peranti ini.',
@@ -7577,9 +8477,9 @@ export const strings = {
       'Sembang melalui penyedia ini menggunakan kunci anda sendiri, dan penyedia itu yang mengenakan caj kepada anda. Penyedia ini hanya digunakan selagi anda sendiri memilihnya di bawah "AI yang digunakan".',
     setAiHeadless: 'Benarkan permintaan automatik menggunakan langganan',
     setAiHeadlessDesc:
-      'Membenarkan penjanaan imej dan analisis imej yang diminta oleh arahan terminal atau program lain (MCP) dijalankan dengan langganan Claude atau Codex anda. Apabila dimatikan, permintaan tersebut hanya menggunakan penyedia berasaskan kunci.',
+      'Membenarkan penjanaan imej, analisis imej, terjemahan PDF dan pembacaan halaman dengan AI yang diminta oleh arahan terminal atau program lain (MCP) dijalankan dengan langganan Claude atau Codex anda. Apabila dimatikan, permintaan tersebut hanya menggunakan penyedia berasaskan kunci.',
     setAiHeadlessWarning:
-      'Kedua-dua syarikat tidak mengesyorkan program menggunakan langganan anda secara automatik, dan akaun anda mungkin dihadkan.',
+      'Tiada had sejam, jadi program boleh menghantar seberapa banyak permintaan yang dikehendaki, dan permintaan itu mungkin mengandungi seluruh teks dokumen serta imej halamannya. Kedua-dua syarikat tidak mengesyorkan program menggunakan langganan anda secara automatik, dan akaun anda mungkin dihadkan.',
     setAiHeadlessConfirm: 'Hidupkan juga',
     setAiImageCodex: 'Langganan Codex',
     setAiImageCodexHint:
@@ -7741,19 +8641,50 @@ export const strings = {
     onbTitle1: 'Selamat datang ke GenOffice',
     onbWelcomeSubtitle: 'Suite pejabat sumber terbuka',
     onbWelcomeBody:
-      'Buka dan sunting dokumen Word, Excel, PowerPoint, PDF, Markdown dan HTML. AI berfungsi melalui langganan Claude atau Codex yang sudah anda miliki.',
+      'Buka dan sunting dokumen Word, Excel, PowerPoint, PDF, Markdown dan HTML. AI berfungsi melalui langganan Claude atau Codex yang sudah anda miliki, atau melalui sambungan AI percuma.',
     onbSkip: 'Langkau',
     onbNext: 'Seterusnya',
     onbStart: 'Mula',
     onbStepAria: 'Halaman {n} daripada {total}',
     onbBody3: 'Tiada yuran lesen. Tiada iklan. Tiada tera air.',
     onbBack: 'Kembali',
-    onbConnectTitle: 'Sambungkan langganan AI anda',
+    onbConnectTitle: 'Sambungkan AI',
     onbConnectSkipNote: 'Anda boleh langkau langkah ini dan menyambung kemudian di Tetapan → AI.',
+    setFreeTitle: 'Guna secara percuma',
+    setFreeDesc:
+      'Tiada langganan? Sambungkan AI percuma dan mula serta-merta. Penggunaan percuma mempunyai had harian.',
+    freeBadge: 'Percuma',
+    freeOpenRouterDesc:
+      'Sambung dengan satu butang: daftar atau log masuk ke OpenRouter dalam pelayar anda, kemudian benarkan akses.',
+    freeGeminiDesc:
+      'Buat kunci dengan akaun Google anda dan tampalkan di sini. Hanya untuk mereka yang berumur 18 tahun ke atas.',
+    freeConnectBrowser: 'Sambung dalam pelayar',
+    freeWaiting:
+      'Log masuk ke OpenRouter dalam pelayar dan pilih Benarkan. Skrin ini akan dikemas kini apabila anda selesai.',
+    freeGetKey: 'Dapatkan kunci',
+    freeKeyPlaceholder: 'Tampalkan kunci Gemini anda',
+    freeKeyConnect: 'Sambung',
+    freeStatusNotConnected: 'Tidak disambungkan',
+    freeStatusWaiting: 'Menunggu pelayar…',
+    freeStatusChecking: 'Menyemak…',
+    freeStatusConnected: 'Disambungkan',
+    freeStatusInUse: 'Disambungkan · sedang digunakan',
+    freeUse: 'Guna AI ini',
+    freeDisconnect: 'Putuskan sambungan',
+    freeQuota: '{remaining} daripada {limit} permintaan percuma lagi hari ini',
+    freeFailedTimeout: 'Log masuk tidak selesai dalam masa. Cuba lagi.',
+    freeFailedDenied: 'Akses tidak dibenarkan. Cuba lagi dan pilih Benarkan.',
+    freeFailedInvalid: 'Kunci itu tidak diterima. Semak kunci yang anda salin.',
+    freeFailedNetwork: 'Tidak dapat menyambung. Semak sambungan internet anda dan cuba lagi.',
+    freePrivacy:
+      'Semasa anda menggunakannya secara percuma, apa yang anda hantar mungkin digunakan untuk menambah baik AI syarikat tersebut. Berhati-hati dengan dokumen yang mengandungi maklumat peribadi.',
+    freeGeminiBilling:
+      'Kunci yang dibuat dalam projek Google yang pengebilannya dihidupkan boleh dikenakan caj.',
+    onbFreeTitle: 'Tiada langganan? Mula secara percuma',
     onbDoneTitle: 'Semuanya sudah sedia',
     onbDoneConnected: 'AI telah disambungkan: {provider}.',
     onbDoneNotConnected:
-      'AI belum disambungkan. Anda boleh menyambungkan langganan pada bila-bila masa di Tetapan → AI.',
+      'AI belum disambungkan. Anda boleh menyambungkan langganan atau AI percuma pada bila-bila masa di Tetapan → AI.',
     helpSearchPlaceholder: 'Cari dalam manual… (tekan /)',
     helpSearchLabel: 'Cari dalam manual',
     helpContentsLabel: 'Kandungan manual',
@@ -7773,6 +8704,11 @@ export const strings = {
     askEmptyCorpusHint:
       'אין עדיין קבצים מסומנים — סמן קבצים בכוכבית תחילה כדי שה-AI יוכל לקרוא אותם.',
     askCorpusCount: 'בסיס ידע: {n} קבצים מסומנים',
+    askScopeLabel: 'היקף השאלה',
+    askScopeAll: 'הכול',
+    askCorpusCountGroup: '{group}: {n} קבצים מסומנים',
+    askScopeGone:
+      'בקבוצה הזו כבר אין קבצים מסומנים, ולכן השאלה לא נשלחה. בחרו קבוצה אחרת או ״הכול״.',
     askIntro: 'שאל על הקבצים המסומנים שלך. תשובות מציינות את המקור — לחיצה פותחת אותו.',
     askToolSearch: 'מחפש בבסיס הידע',
     askToolRead: 'קורא קובץ',
@@ -7810,6 +8746,10 @@ export const strings = {
     newSlide: 'AI Slides',
     newMarkdown: 'AI Markdown',
     newHtml: 'AI HTML',
+    newMindmap: 'מפת חשיבה',
+    newHwp: 'AI HWP',
+    pdfToolsCard: 'כלי PDF',
+    pdfToolsCardSub: 'איחוד · פיצול · סידור',
     newPdf: 'AI PDF',
     openLocal: 'פתיחת קובץ מקומי',
     dropToOpenTitle: 'שחרר כדי לפתוח',
@@ -7829,6 +8769,8 @@ export const strings = {
     filterPdf: 'PDF',
     filterMd: 'Markdown',
     filterHtml: 'HTML',
+    filterMindmap: 'מפת חשיבה',
+    filterHwp: 'HWP',
     filterAria: 'סינון לפי סוג',
     fileCount: '{n} קבצים',
     fileCountOne: 'קובץ אחד',
@@ -7904,6 +8846,8 @@ export const strings = {
     account: 'חשבון',
     appVersion: 'גרסה {v}',
     versionLabel: 'גרסה',
+    betaBadge: 'בטא',
+    betaTooltip: 'זוהי גרסת בטא. חלק מהתכונות עדיין עשויות להשתנות או לא לפעול כמצופה.',
     setUpdateAvailableLabel: 'עדכון זמין',
     setUpdateTo: 'עדכן ל-{version}',
     setUpdateDownloading: 'מוריד עדכון ({percent}%)',
@@ -7920,6 +8864,12 @@ export const strings = {
     saveLocation: 'מיקום שמירה',
     setAutoSave: 'שמירה אוטומטית של כל המסמכים',
     setAutoSaveDesc: 'מפעיל שמירה אוטומטית כברירת מחדל בכל עורך. עדיין אפשר לכבות אותה בחלון בודד.',
+    setResultStore: 'תוצאות AI שמורות של PDF',
+    setResultStoreDesc: 'דפים שה-AI קרא ותרגומים נשמרים במחשב הזה עד שתמחק אותם. בשימוש: {size}',
+    setResultStoreDeleteAll: 'מחק הכול',
+    setResultStoreConfirm:
+      'למחוק את כל תוצאות הקריאה של ה-AI והתרגומים השמורים? כדי לקבל אותם שוב יהיה צורך להשתמש שוב ב-AI.',
+    setResultStoreDeleteFailed: 'המחיקה נכשלה. נסה שוב.',
     setSearchRerank: 'סידור מחדש עם Jev',
     setSearchRerankDesc:
       'שולח את הקטעים של 20 התוצאות המקומיות המובילות למודל Jev של TypeSafe ומסדר אותן מחדש לפי רלוונטיות. כבוי כברירת מחדל; כשמופעל, הקטעים יוצאים מהמכשיר הזה.',
@@ -8003,9 +8953,9 @@ export const strings = {
       'שיחות דרך הספק הזה משתמשות במפתח שלכם, והספק הוא שמחייב אתכם עליהן. הוא נמצא בשימוש רק כל עוד בחרתם בו בעצמכם תחת "ה-AI שבשימוש".',
     setAiHeadless: 'לאפשר לבקשות אוטומטיות להשתמש במינוי',
     setAiHeadlessDesc:
-      'מאפשר ליצירת תמונות ולניתוח תמונות שמבקשים פקודת מסוף או תוכנה אחרת (MCP) לפעול דרך מינוי Claude או Codex שלכם. כשהאפשרות כבויה, בקשות כאלה משתמשות רק בספקים עם מפתח.',
+      'מאפשר ליצירת תמונות, לניתוח תמונות, לתרגום PDF ולקריאת עמודים בעזרת AI שמבקשים פקודת מסוף או תוכנה אחרת (MCP) לפעול דרך מינוי Claude או Codex שלכם. כשהאפשרות כבויה, בקשות כאלה משתמשות רק בספקים עם מפתח.',
     setAiHeadlessWarning:
-      'אף אחת משתי החברות אינה ממליצה לאפשר לתוכנה להשתמש במינוי באופן אוטומטי, והחשבון שלכם עלול להיות מוגבל.',
+      'אין מגבלה שעתית, ולכן תוכנה יכולה לשלוח כמה בקשות שתרצה, והן עשויות לכלול את כל הטקסט של מסמך ותמונות של עמודיו. אף אחת משתי החברות אינה ממליצה לאפשר לתוכנה להשתמש במינוי באופן אוטומטי, והחשבון שלכם עלול להיות מוגבל.',
     setAiHeadlessConfirm: 'להפעיל בכל זאת',
     setAiImageCodex: 'מינוי Codex',
     setAiImageCodexHint:
@@ -8156,18 +9106,44 @@ export const strings = {
     onbTitle1: 'ברוכים הבאים ל-GenOffice',
     onbWelcomeSubtitle: 'חבילת משרד בקוד פתוח',
     onbWelcomeBody:
-      'פתחו וערכו מסמכי Word, Excel, PowerPoint, PDF, Markdown ו-HTML. ה-AI פועל דרך מינוי Claude או Codex שכבר יש לכם.',
+      'פתחו וערכו מסמכי Word, Excel, PowerPoint, PDF, Markdown ו-HTML. ה-AI פועל דרך מינוי Claude או Codex שכבר יש לכם, או דרך חיבור ל-AI בחינם.',
     onbSkip: 'דילוג',
     onbNext: 'הבא',
     onbStart: 'להתחיל',
     onbStepAria: 'עמוד {n} מתוך {total}',
     onbBody3: 'ללא דמי רישיון, ללא פרסומות, ללא סימני מים.',
     onbBack: 'חזרה',
-    onbConnectTitle: 'חיבור מינוי ה-AI שלכם',
+    onbConnectTitle: 'חיבור AI',
     onbConnectSkipNote: 'אפשר לדלג על השלב הזה ולהתחבר מאוחר יותר דרך הגדרות ← AI.',
+    setFreeTitle: 'שימוש בחינם',
+    setFreeDesc: 'אין לכם מינוי? חברו AI בחינם והתחילו מיד. לשימוש בחינם יש מגבלה יומית.',
+    freeBadge: 'חינם',
+    freeOpenRouterDesc: 'חיבור בלחיצה אחת: הירשמו או היכנסו ל-OpenRouter בדפדפן ואשרו את הגישה.',
+    freeGeminiDesc: 'צרו מפתח עם חשבון Google שלכם והדביקו אותו כאן. מיועד לבני 18 ומעלה בלבד.',
+    freeConnectBrowser: 'חיבור בדפדפן',
+    freeWaiting: 'היכנסו ל-OpenRouter בדפדפן ואשרו את הגישה. המסך הזה יתעדכן כשתסיימו.',
+    freeGetKey: 'קבלת מפתח',
+    freeKeyPlaceholder: 'הדביקו את מפתח Gemini שלכם',
+    freeKeyConnect: 'חיבור',
+    freeStatusNotConnected: 'לא מחובר',
+    freeStatusWaiting: 'ממתין לדפדפן…',
+    freeStatusChecking: 'בודק…',
+    freeStatusConnected: 'מחובר',
+    freeStatusInUse: 'מחובר · בשימוש',
+    freeUse: 'שימוש ב-AI הזה',
+    freeDisconnect: 'ניתוק',
+    freeQuota: 'נותרו היום {remaining} מתוך {limit} בקשות בחינם',
+    freeFailedTimeout: 'הכניסה לא הושלמה בזמן. נסו שוב.',
+    freeFailedDenied: 'הגישה לא אושרה. נסו שוב ואשרו את הגישה.',
+    freeFailedInvalid: 'המפתח לא התקבל. בדקו את המפתח שהעתקתם.',
+    freeFailedNetwork: 'לא ניתן היה להתחבר. בדקו את החיבור לאינטרנט ונסו שוב.',
+    freePrivacy:
+      'בזמן השימוש בחינם, מה שאתם שולחים עשוי לשמש לשיפור ה-AI של אותה חברה. היזהרו עם מסמכים שמכילים מידע אישי.',
+    freeGeminiBilling: 'מפתח שנוצר בפרויקט Google שהחיוב בו מופעל עלול לגרום לחיובים.',
+    onbFreeTitle: 'אין לכם מינוי? התחילו בחינם',
     onbDoneTitle: 'הכול מוכן',
     onbDoneConnected: 'ה-AI מחובר: {provider}.',
-    onbDoneNotConnected: 'ה-AI עדיין לא מחובר. אפשר לחבר מינוי בכל עת דרך הגדרות ← AI.',
+    onbDoneNotConnected: 'ה-AI עדיין לא מחובר. אפשר לחבר מינוי או AI בחינם בכל עת דרך הגדרות ← AI.',
     helpSearchPlaceholder: 'חיפוש במדריך… (הקש /)',
     helpSearchLabel: 'חיפוש במדריך',
     helpContentsLabel: 'תוכן המדריך',
@@ -8187,6 +9163,11 @@ export const strings = {
     askEmptyCorpusHint:
       'अभी कोई स्टार की गई फ़ाइल नहीं है — पहले फ़ाइलों को स्टार करें ताकि AI उन्हें पढ़ सके।',
     askCorpusCount: 'नॉलेज बेस: {n} स्टार की गई फ़ाइलें',
+    askScopeLabel: 'कहाँ पूछें',
+    askScopeAll: 'सभी',
+    askCorpusCountGroup: '{group}: {n} स्टार की गई फ़ाइलें',
+    askScopeGone:
+      'इस समूह में अब कोई स्टार की गई फ़ाइल नहीं है, इसलिए प्रश्न नहीं भेजा गया। कोई दूसरा समूह या सभी चुनें।',
     askIntro:
       'अपनी स्टार की गई फ़ाइलों के बारे में पूछें। उत्तर स्रोत बताते हैं — खोलने के लिए क्लिक करें।',
     askToolSearch: 'नॉलेज बेस खोज रहा है',
@@ -8225,6 +9206,10 @@ export const strings = {
     newSlide: 'AI Slides',
     newMarkdown: 'AI Markdown',
     newHtml: 'AI HTML',
+    newMindmap: 'माइंड मैप',
+    newHwp: 'AI HWP',
+    pdfToolsCard: 'PDF टूल',
+    pdfToolsCardSub: 'जोड़ें · बाँटें · व्यवस्थित करें',
     newPdf: 'AI PDF',
     openLocal: 'स्थानीय फ़ाइल खोलें',
     dropToOpenTitle: 'खोलने के लिए छोड़ें',
@@ -8244,6 +9229,8 @@ export const strings = {
     filterPdf: 'PDF',
     filterMd: 'Markdown',
     filterHtml: 'HTML',
+    filterMindmap: 'माइंड मैप',
+    filterHwp: 'HWP',
     filterAria: 'प्रकार के अनुसार फ़िल्टर करें',
     fileCount: '{n} फ़ाइलें',
     fileCountOne: '{n} फ़ाइल',
@@ -8321,6 +9308,9 @@ export const strings = {
     account: 'खाता',
     appVersion: 'संस्करण {v}',
     versionLabel: 'संस्करण',
+    betaBadge: 'बीटा',
+    betaTooltip:
+      'यह बीटा संस्करण है। कुछ सुविधाएँ अभी बदल सकती हैं या अपेक्षा के अनुसार काम नहीं कर सकतीं।',
     setUpdateAvailableLabel: 'अपडेट उपलब्ध',
     setUpdateTo: '{version} पर अपडेट करें',
     setUpdateDownloading: 'अपडेट डाउनलोड हो रहा है ({percent}%)',
@@ -8338,6 +9328,13 @@ export const strings = {
     setAutoSave: 'सभी दस्तावेज़ स्वतः सहेजें',
     setAutoSaveDesc:
       'हर संपादक में स्वतः सहेजना डिफ़ॉल्ट रूप से चालू करता है। आप इसे किसी एक विंडो के लिए अब भी बंद कर सकते हैं।',
+    setResultStore: 'सहेजे गए PDF AI परिणाम',
+    setResultStoreDesc:
+      'AI द्वारा पढ़े गए पेज और अनुवाद इस PC पर तब तक रहते हैं जब तक आप उन्हें हटा नहीं देते। उपयोग में: {size}',
+    setResultStoreDeleteAll: 'सभी हटाएँ',
+    setResultStoreConfirm:
+      'सहेजे गए सभी AI पठन परिणाम और अनुवाद हटाएँ? उन्हें फिर से पाने के लिए AI का दोबारा उपयोग करना होगा।',
+    setResultStoreDeleteFailed: 'हटाया नहीं जा सका। फिर से कोशिश करें।',
     setSearchRerank: 'Jev खोज पुनर्क्रमण',
     setSearchRerankDesc:
       'स्थानीय खोज के शीर्ष 20 परिणामों के अंश TypeSafe के Jev मॉडल को भेजता है और उन्हें प्रासंगिकता के अनुसार पुनः क्रमित करता है। डिफ़ॉल्ट रूप से बंद; चालू होने पर अंश इस डिवाइस से बाहर जाते हैं।',
@@ -8422,9 +9419,9 @@ export const strings = {
       'इस प्रदाता के ज़रिए होने वाली चैट आपकी अपनी कुंजी का उपयोग करती हैं और उनका शुल्क वही प्रदाता लेता है। इसका उपयोग तभी होता है जब आप इसे "उपयोग किया जाने वाला AI" में स्वयं चुनते हैं।',
     setAiHeadless: 'स्वचालित अनुरोधों को सदस्यता का उपयोग करने दें',
     setAiHeadlessDesc:
-      'टर्मिनल कमांड या किसी अन्य प्रोग्राम (MCP) द्वारा माँगे गए इमेज जनरेशन और इमेज विश्लेषण को आपकी Claude या Codex सदस्यता पर चलने देता है। बंद होने पर ऐसे अनुरोध केवल कुंजी वाले प्रदाताओं का उपयोग करते हैं।',
+      'टर्मिनल कमांड या किसी अन्य प्रोग्राम (MCP) द्वारा माँगे गए इमेज जनरेशन, इमेज विश्लेषण, PDF अनुवाद और AI से पेज पढ़ने को आपकी Claude या Codex सदस्यता पर चलने देता है। बंद होने पर ऐसे अनुरोध केवल कुंजी वाले प्रदाताओं का उपयोग करते हैं।',
     setAiHeadlessWarning:
-      'दोनों में से कोई भी कंपनी यह सुझाव नहीं देती कि कोई प्रोग्राम आपकी सदस्यता का अपने-आप उपयोग करे, और आपके खाते पर प्रतिबंध लग सकता है।',
+      'प्रति घंटे की कोई सीमा नहीं है, इसलिए कोई प्रोग्राम जितने चाहे उतने अनुरोध भेज सकता है, और उनमें दस्तावेज़ का पूरा टेक्स्ट और उसके पेजों की छवियाँ शामिल हो सकती हैं। दोनों में से कोई भी कंपनी यह सुझाव नहीं देती कि कोई प्रोग्राम आपकी सदस्यता का अपने-आप उपयोग करे, और आपके खाते पर प्रतिबंध लग सकता है।',
     setAiHeadlessConfirm: 'फिर भी चालू करें',
     setAiImageCodex: 'Codex सदस्यता',
     setAiImageCodexHint:
@@ -8581,19 +9578,49 @@ export const strings = {
     onbTitle1: 'GenOffice में आपका स्वागत है',
     onbWelcomeSubtitle: 'ओपन-सोर्स ऑफ़िस सुइट',
     onbWelcomeBody:
-      'Word, Excel, PowerPoint, PDF, Markdown और HTML दस्तावेज़ खोलें और संपादित करें। AI आपकी मौजूदा Claude या Codex सदस्यता के ज़रिए काम करता है।',
+      'Word, Excel, PowerPoint, PDF, Markdown और HTML दस्तावेज़ खोलें और संपादित करें। AI आपकी मौजूदा Claude या Codex सदस्यता के ज़रिए, या मुफ़्त AI कनेक्शन के ज़रिए काम करता है।',
     onbSkip: 'छोड़ें',
     onbNext: 'आगे',
     onbStart: 'शुरू करें',
     onbStepAria: 'कुल {total} में से पृष्ठ {n}',
     onbBody3: 'कोई लाइसेंस शुल्क नहीं। कोई विज्ञापन नहीं। कोई वॉटरमार्क नहीं।',
     onbBack: 'वापस',
-    onbConnectTitle: 'अपनी AI सदस्यता कनेक्ट करें',
+    onbConnectTitle: 'AI कनेक्ट करें',
     onbConnectSkipNote: 'आप इस चरण को छोड़कर बाद में सेटिंग्स → AI में कनेक्ट कर सकते हैं।',
+    setFreeTitle: 'मुफ़्त में उपयोग करें',
+    setFreeDesc:
+      'सदस्यता नहीं है? मुफ़्त AI कनेक्ट करें और तुरंत शुरू करें। मुफ़्त उपयोग की एक दैनिक सीमा है।',
+    freeBadge: 'मुफ़्त',
+    freeOpenRouterDesc:
+      'एक बटन से कनेक्ट करें: अपने ब्राउज़र में OpenRouter पर साइन अप या साइन इन करें और एक्सेस की अनुमति दें।',
+    freeGeminiDesc:
+      'अपने Google खाते से एक कुंजी बनाएँ और उसे यहाँ चिपकाएँ। केवल 18 वर्ष या उससे अधिक आयु के लोगों के लिए।',
+    freeConnectBrowser: 'ब्राउज़र में कनेक्ट करें',
+    freeWaiting:
+      'अपने ब्राउज़र में OpenRouter पर साइन इन करें और "अनुमति दें" चुनें। पूरा होने पर यह स्क्रीन अपडेट हो जाएगी।',
+    freeGetKey: 'कुंजी पाएँ',
+    freeKeyPlaceholder: 'अपनी Gemini कुंजी चिपकाएँ',
+    freeKeyConnect: 'कनेक्ट करें',
+    freeStatusNotConnected: 'कनेक्ट नहीं है',
+    freeStatusWaiting: 'ब्राउज़र की प्रतीक्षा हो रही है…',
+    freeStatusChecking: 'जाँच हो रही है…',
+    freeStatusConnected: 'कनेक्ट है',
+    freeStatusInUse: 'कनेक्ट है · उपयोग में',
+    freeUse: 'यह AI उपयोग करें',
+    freeDisconnect: 'डिस्कनेक्ट करें',
+    freeQuota: 'आज {limit} में से {remaining} मुफ़्त अनुरोध बचे हैं',
+    freeFailedTimeout: 'साइन-इन समय पर पूरा नहीं हुआ। दोबारा कोशिश करें।',
+    freeFailedDenied: 'एक्सेस की अनुमति नहीं दी गई। दोबारा कोशिश करें और "अनुमति दें" चुनें।',
+    freeFailedInvalid: 'वह कुंजी स्वीकार नहीं की गई। कॉपी की गई कुंजी जाँचें।',
+    freeFailedNetwork: 'कनेक्ट नहीं हो सका। अपना इंटरनेट कनेक्शन जाँचें और दोबारा कोशिश करें।',
+    freePrivacy:
+      'मुफ़्त उपयोग के दौरान, आप जो भेजते हैं उसका उपयोग उस कंपनी के AI को बेहतर बनाने के लिए किया जा सकता है। निजी जानकारी वाले दस्तावेज़ों के साथ सावधानी बरतें।',
+    freeGeminiBilling: 'बिलिंग चालू वाले Google प्रोजेक्ट में बनाई गई कुंजी पर शुल्क लग सकता है।',
+    onbFreeTitle: 'सदस्यता नहीं है? मुफ़्त में शुरू करें',
     onbDoneTitle: 'सब कुछ तैयार है',
     onbDoneConnected: 'AI कनेक्ट हो गया है: {provider}।',
     onbDoneNotConnected:
-      'AI अभी कनेक्ट नहीं है। आप किसी भी समय सेटिंग्स → AI में सदस्यता कनेक्ट कर सकते हैं।',
+      'AI अभी कनेक्ट नहीं है। आप किसी भी समय सेटिंग्स → AI में सदस्यता या मुफ़्त AI कनेक्ट कर सकते हैं।',
     helpSearchPlaceholder: 'मैनुअल में खोजें… (/) दबाएँ',
     helpSearchLabel: 'मैनुअल में खोजें',
     helpContentsLabel: 'मैनुअल की सामग्री',
@@ -8612,6 +9639,10 @@ export const strings = {
     askTitle: '問知識庫',
     askEmptyCorpusHint: '還沒有收藏檔案——先在最近或資料夾裡點星收藏,AI 就能讀取它們。',
     askCorpusCount: '知識庫:{n} 個收藏檔案',
+    askScopeLabel: '提問範圍',
+    askScopeAll: '全部',
+    askCorpusCountGroup: '{group}：{n} 個收藏檔案',
+    askScopeGone: '這個群組已經沒有收藏檔案，所以沒有提問。請選擇其他群組或「全部」。',
     askIntro: '根據你收藏的檔案提問,回答會標註來源檔案,點擊即可開啟。',
     askToolSearch: '搜尋知識庫',
     askToolRead: '讀取檔案',
@@ -8648,6 +9679,10 @@ export const strings = {
     newSlide: 'AI Slides',
     newMarkdown: 'AI Markdown',
     newHtml: 'AI HTML',
+    newMindmap: '心智圖',
+    newHwp: 'AI HWP',
+    pdfToolsCard: 'PDF 工具',
+    pdfToolsCardSub: '合併 · 分割 · 整理',
     newPdf: 'AI PDF',
     openLocal: '開啟本機檔案',
     dropToOpenTitle: '放開以開啟檔案',
@@ -8667,6 +9702,8 @@ export const strings = {
     filterPdf: 'PDF',
     filterMd: 'Markdown',
     filterHtml: 'HTML',
+    filterMindmap: '心智圖',
+    filterHwp: 'HWP',
     filterAria: '依類型篩選',
     fileCount: '{n} 個檔案',
     fileCountOne: '{n} 個檔案',
@@ -8742,6 +9779,8 @@ export const strings = {
     account: '帳號',
     appVersion: '版本 {v}',
     versionLabel: '版本',
+    betaBadge: '測試版',
+    betaTooltip: '這是測試版。部分功能可能還會改變，或無法正常運作。',
     setUpdateAvailableLabel: '可用更新',
     setUpdateTo: '更新到 {version}',
     setUpdateDownloading: '正在下載更新（{percent}%）',
@@ -8758,6 +9797,11 @@ export const strings = {
     saveLocation: '預設儲存位置',
     setAutoSave: '所有文件自動儲存',
     setAutoSaveDesc: '在每個編輯器中預設開啟自動儲存，仍可在單一視窗中關閉。',
+    setResultStore: '已儲存的 PDF AI 結果',
+    setResultStoreDesc: 'AI 讀取的頁面和譯文會保存在這台電腦上，直到你刪除。已使用：{size}',
+    setResultStoreDeleteAll: '全部刪除',
+    setResultStoreConfirm: '要刪除所有已儲存的 AI 讀取結果和譯文嗎？重新產生需要再次使用 AI。',
+    setResultStoreDeleteFailed: '無法刪除，請再試一次。',
     setSearchRerank: 'Jev 搜尋重排',
     setSearchRerankDesc:
       '將本機搜尋前 20 筆命中片段傳給 TypeSafe 的 Jev 模型，依相關性重新排序。預設關閉；開啟後命中片段會離開本機。',
@@ -8837,8 +9881,9 @@ export const strings = {
       '使用該服務商的對話會用你自己填寫的 key，並由該服務商向你收費。只有在「使用的 AI」中親自選擇它時才會使用。',
     setAiHeadless: '允許自動呼叫使用訂閱',
     setAiHeadlessDesc:
-      '允許由終端機指令或其他程式（MCP）發起的生圖和圖片解析使用你的 Claude 或 Codex 訂閱。關閉時，這類請求只使用 key 方式的服務商。',
-    setAiHeadlessWarning: '兩家公司都不建議讓程式自動使用訂閱，你的帳號可能會受到限制。',
+      '允許由終端機指令或其他程式（MCP）發起的生圖、圖片解析、PDF 翻譯和 AI 頁面讀取使用你的 Claude 或 Codex 訂閱。關閉時，這類請求只使用 key 方式的服務商。',
+    setAiHeadlessWarning:
+      '沒有每小時次數上限，程式可以傳送任意多的請求，請求中可能包含整份文件的文字和頁面圖片。兩家公司都不建議讓程式自動使用訂閱，你的帳號可能會受到限制。',
     setAiHeadlessConfirm: '仍要開啟',
     setAiImageCodex: 'Codex 訂閱',
     setAiImageCodexHint:
@@ -8986,18 +10031,44 @@ export const strings = {
     onbTitle1: '歡迎使用 GenOffice',
     onbWelcomeSubtitle: '開源辦公套件',
     onbWelcomeBody:
-      '開啟並編輯 Word、Excel、PowerPoint、PDF、Markdown 和 HTML 文件。AI 透過你已有的 Claude 或 Codex 訂閱運作。',
+      '開啟並編輯 Word、Excel、PowerPoint、PDF、Markdown 和 HTML 文件。AI 透過你已有的 Claude 或 Codex 訂閱運作，也可以透過免費 AI 連線運作。',
     onbSkip: '略過',
     onbNext: '下一步',
     onbStart: '開始使用',
     onbStepAria: '第 {n} 頁，共 {total} 頁',
     onbBody3: '無授權費用，無廣告，無浮水印。',
     onbBack: '上一步',
-    onbConnectTitle: '連接你的 AI 訂閱',
+    onbConnectTitle: '連接 AI',
     onbConnectSkipNote: '可以略過這個步驟，之後在「設定 → AI」中連接。',
+    setFreeTitle: '免費使用',
+    setFreeDesc: '沒有訂閱？連接免費 AI 即可馬上開始。免費使用有每日額度限制。',
+    freeBadge: '免費',
+    freeOpenRouterDesc: '一鍵連接：在瀏覽器中註冊或登入 OpenRouter，然後允許存取。',
+    freeGeminiDesc: '用你的 Google 帳戶建立金鑰並貼到這裡。僅限年滿 18 歲的使用者使用。',
+    freeConnectBrowser: '在瀏覽器中連接',
+    freeWaiting: '請在瀏覽器中登入 OpenRouter 並選擇「允許」。完成後此畫面會自動更新。',
+    freeGetKey: '取得金鑰',
+    freeKeyPlaceholder: '貼上你的 Gemini 金鑰',
+    freeKeyConnect: '連接',
+    freeStatusNotConnected: '未連線',
+    freeStatusWaiting: '正在等待瀏覽器…',
+    freeStatusChecking: '正在檢查…',
+    freeStatusConnected: '已連線',
+    freeStatusInUse: '已連線 · 使用中',
+    freeUse: '使用此 AI',
+    freeDisconnect: '中斷連線',
+    freeQuota: '今日免費請求剩餘 {remaining} 次（共 {limit} 次）',
+    freeFailedTimeout: '登入未能及時完成。請再試一次。',
+    freeFailedDenied: '未獲得存取許可。請再試一次並選擇「允許」。',
+    freeFailedInvalid: '此金鑰未被接受。請檢查你複製的金鑰。',
+    freeFailedNetwork: '無法連線。請檢查網路連線後再試一次。',
+    freePrivacy:
+      '免費使用期間，你傳送的內容可能會被該公司用於改進其 AI。處理含有個人資料的文件時請留意。',
+    freeGeminiBilling: '在已啟用計費的 Google 專案中建立的金鑰可能會產生費用。',
+    onbFreeTitle: '沒有訂閱？免費開始',
     onbDoneTitle: '一切就緒',
     onbDoneConnected: 'AI 已連接：{provider}。',
-    onbDoneNotConnected: 'AI 尚未連接。你可以隨時在「設定 → AI」中連接訂閱。',
+    onbDoneNotConnected: 'AI 尚未連接。你可以隨時在「設定 → AI」中連接訂閱或免費 AI。',
     helpSearchPlaceholder: '搜尋手冊…（按 / 聚焦）',
     helpSearchLabel: '搜尋手冊',
     helpContentsLabel: '手冊目錄',

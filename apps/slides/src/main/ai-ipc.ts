@@ -56,6 +56,7 @@ import { EMU_PER_PX_96 } from '@genoffice/pptx-render'
 import { runAiStream, storedAiSettings, withMeteredAccepted } from './ai-stream'
 import { tm } from './i18n-main'
 import { pushHistory, rebuildSlide, scheduleHistoryNotify, sessions } from './session-state'
+import { registerTemplateSelectionIpc } from './template-selection-ipc'
 
 // ---- AI settings + streaming proxy (the main process does the networking to avoid renderer CORS; implementation shared via @genoffice/ai-provider) ----
 
@@ -237,6 +238,9 @@ export function registerAiIpc(): void {
 // never called; docs does not have these channels, so putting them in the wrong place raises
 // "No handler registered".
 export function registerSlidesOnlyAiIpc(): void {
+  // The design template remembered per document (slides:ai-template-selection-get / -set)
+  registerTemplateSelectionIpc()
+
   // What the search/image/media tools can do right now (settings + subscription connections):
   // the renderer offers the model only the tools that have a route.
   ipcMain.handle('slides:ai-tool-capabilities', (): AiToolCapabilities =>
@@ -477,21 +481,39 @@ export function registerSlidesOnlyAiIpc(): void {
 
   // ── Style template save: stored in userData/style-templates/<name>.json
   const STYLE_TEMPLATES_DIR = () => join(app.getPath('userData'), 'style-templates')
+  /** A saved style's `basedOn` as it is stored and answered: a non-empty id, or nothing */
+  const savedStyleBasedOn = (value: unknown): string | undefined =>
+    typeof value === 'string' && value.trim() ? value.trim() : undefined
 
   ipcMain.handle(
     'ai:save-style-template',
     async (
       _event,
       name: string,
-      data: { topic: string; styleSkill: string; createdAt: string; layout?: unknown },
+      data: {
+        topic: string
+        styleSkill: string
+        createdAt: string
+        layout?: unknown
+        basedOn?: unknown
+      },
     ): Promise<{ ok: boolean; error?: string }> => {
       try {
         const dir = STYLE_TEMPLATES_DIR()
         // Filename: replace illegal characters in the name with _ then truncate to 64 chars
         const safeName = name.replace(/[/\\:*?"<>|]/g, '_').slice(0, 64)
         if (!safeName) return { ok: false, error: tm('errTplNameInvalid') }
-        // `layout` (the deck's chrome skeleton) rides along verbatim when present
-        writeJsonAtomic(join(dir, `${safeName}.json`), { ...data, name: safeName })
+        // `layout` (the deck's chrome skeleton) rides along verbatim when present.
+        // `basedOn` (the id of the built-in design template the style was saved
+        // from) is optional: it is written only when it is one, so every other
+        // style's file stays as it always was.
+        const { basedOn: rawBasedOn, ...rest } = data
+        const basedOn = savedStyleBasedOn(rawBasedOn)
+        writeJsonAtomic(join(dir, `${safeName}.json`), {
+          ...rest,
+          ...(basedOn ? { basedOn } : {}),
+          name: safeName,
+        })
         return { ok: true }
       } catch (err) {
         return { ok: false, error: err instanceof Error ? err.message : String(err) }
@@ -538,22 +560,34 @@ export function registerSlidesOnlyAiIpc(): void {
     (
       _event,
       name: string,
-    ): { ok: boolean; styleSkill?: string; topic?: string; layout?: unknown; error?: string } => {
+    ): {
+      ok: boolean
+      styleSkill?: string
+      topic?: string
+      layout?: unknown
+      basedOn?: string
+      error?: string
+    } => {
       try {
         const dir = STYLE_TEMPLATES_DIR()
         const safeName = name.replace(/[/\\:*?"<>|]/g, '_').slice(0, 64)
         const filePath = join(dir, `${safeName}.json`)
         if (!existsSync(filePath)) return { ok: false, error: tm('errTplMissing', { name }) }
-        const raw = readJson<{ styleSkill?: string; topic?: string; layout?: unknown }>(
-          filePath,
-          {},
-        )
+        const raw = readJson<{
+          styleSkill?: string
+          topic?: string
+          layout?: unknown
+          basedOn?: unknown
+        }>(filePath, {})
         if (!raw.styleSkill) return { ok: false, error: tm('errTplNoSkill', { name }) }
+        // absent in files saved before the field existed, and in styles not saved from a template
+        const basedOn = savedStyleBasedOn(raw.basedOn)
         return {
           ok: true,
           styleSkill: raw.styleSkill,
           topic: raw.topic ?? '',
           ...(raw.layout !== undefined && raw.layout !== null ? { layout: raw.layout } : {}),
+          ...(basedOn ? { basedOn } : {}),
         }
       } catch (err) {
         return { ok: false, error: err instanceof Error ? err.message : String(err) }

@@ -4,6 +4,7 @@ import { McpLogger } from './mcp-logger'
 import type { CliRunner } from './cli-runner'
 import { createDocumentTools, documentDriver, type DocsControl } from './tools/document-tools'
 import { createPdfTools } from './tools/pdf-tools'
+import { createHwpTools } from './tools/hwp-tools'
 import { createSlidesTools, slidesDriver, type SlidesControl } from './tools/slides-tools'
 import { createSheetsTools, sheetsDriver, type SheetsControl } from './tools/sheets-tools'
 import {
@@ -82,6 +83,11 @@ let currentSettings: McpSettings = {
   port: DEFAULT_MCP_PORT,
   background: false,
   logging: false,
+}
+
+/** the configured runtime; agent sessions build their own server from the same controls (decision 0032) */
+export function currentMcpRuntimeDeps(): McpRuntimeDeps | null {
+  return deps
 }
 
 export function configureMcpRuntime(runtimeDeps: McpRuntimeDeps): void {
@@ -178,6 +184,8 @@ function buildTools(): McpToolDefinition[] {
     // headless, session-free read access (read_pdf); registered whenever the
     // pdf workspace is bundled in, which the shell always does
     ...createPdfTools(),
+    // the same for Hangul documents (read_hwp)
+    ...createHwpTools(),
     // documents the user has open, independent of the session above
     ...createOpenDocumentTools({
       defaultSaveDir: deps.defaultSaveDir,
@@ -261,6 +269,8 @@ export function mcpStatus(): McpStatus {
       // read_pdf is headless and always registered, so the family is always
       // visible (read-only until the pdf editor is driven)
       'pdf',
+      // read_hwp likewise
+      'hwp',
     ],
   }
 }

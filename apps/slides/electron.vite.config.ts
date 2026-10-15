@@ -36,6 +36,10 @@ const workspaceAlias = {
     here,
     '../../packages/pipelines/src/slides/layout-audit.ts',
   ),
+  '@genoffice/pipelines/slides/templates': resolve(
+    here,
+    '../../packages/pipelines/src/slides/templates/index.ts',
+  ),
   '@genoffice/pipelines/slides': resolve(here, '../../packages/pipelines/src/slides/index.ts'),
   // Metafile (EMF/WMF) rasterizer shared with the docs engine (renderer-only: needs canvas)
   '@genoffice/docx-engine/metafile': resolve(here, '../../packages/docx-engine/src/metafile.ts'),

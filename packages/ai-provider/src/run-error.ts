@@ -4,6 +4,7 @@
  * stream chunk, so the renderer can show the right guidance (connect, sign in,
  * wait until the limit resets) instead of a raw message.
  */
+import { freeLimitOf } from './free-ai'
 import { isAiNetworkError } from './network-error'
 import { isAiOverloadedError } from './overload-error'
 import { AiCreditsError } from './protocols/shared'
@@ -48,6 +49,14 @@ export function aiStreamErrorFields(
   if (err instanceof AiTimeoutError) return { errorCode: 'timeout' }
   if (err instanceof AiCreditsError) return { errorCode: 'credits' }
   if (isAiNetworkError(err)) return { errorCode: 'network' }
+  // a used-up daily free allowance is also a 429: tell it apart before "busy, try again shortly"
+  const freeLimit = freeLimitOf(err)
+  if (freeLimit) {
+    return {
+      errorCode: 'free-limit',
+      ...(freeLimit.resetsAt !== undefined ? { errorResetsAt: freeLimit.resetsAt } : {}),
+    }
+  }
   if (isAiOverloadedError(err)) return { errorCode: 'overloaded' }
   return {}
 }

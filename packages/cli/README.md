@@ -22,6 +22,8 @@ ieumoffice guide slides                         # op groups; `ieumoffice guide s
 ieumoffice slides read deck.pptx [--full] --json # durable ids + geometry an agent targets ops at; --full: whole text, tables, notes; text elements add `effective` (displayed style of the first run + `src` = the inheritance layer each value comes from)
 ieumoffice slides read deck.pptx --units in --json # box and size in inches (or cm, pt, px at 96 dpi) with `unit` named; default emu
 ieumoffice create --type pptx --ops deck.json --out deck.pptx
+ieumoffice guide slides templates               # built-in design templates, one line each (id, name, scheme, description, fonts); --json: detail.templates
+ieumoffice guide slides templates coral > deck/style.md   # one template's style sheet, saved as the deck's style.md as is
 ieumoffice create --type pptx --spec deck/pages --outline deck/outline.json --out deck.pptx   # one page spec file per slide (`ieumoffice guide slides design|spec`)
 ieumoffice create --type pptx --spec deck.json --out deck.pptx --render deck/previews --audit   # plus one PNG per slide (detail.previews) and the geometry audit (detail.audit) in the same call
 ieumoffice slides check deck/outline.json | deck/pages/03.json   # outline rules (exit 1 on errors) / build + audit one page file
@@ -46,7 +48,7 @@ ieumoffice convert report.docx --to md                 # GFM via the markdown ed
 ieumoffice convert book.xlsx --to csv [--sheet Data]   # one sheet, cell text as displayed, UTF-8 BOM, CRLF
 ieumoffice convert form.odt --to docx|pdf|md|html      # through the ODT bridge docx (pdf/html: a temporary docx the app exports, always deleted)
 ieumoffice convert report.docx --to odt                # also md→odt and html→odt; warnings[] odt_converted / odt_dropped + detail.odt_report
-ieumoffice capabilities --json                        # which of search, image generation and image/video analysis work here and by which route (free, key, subscription); no model call
+ieumoffice capabilities --json                        # which of search, image generation, image/video analysis and the PDF AI jobs work here and by which route (free, key, subscription); no model call
 ieumoffice search "electron headless export" [--images] [--max 6] --json
 ieumoffice image "isometric office, soft light" --aspect 16:9 --out hero.png
 ieumoffice media photo.jpg --ask "What text is in this picture?" --json
@@ -56,6 +58,16 @@ ieumoffice docs check report.docx --json                               # fields 
 ieumoffice docs apply form.odt --ops ops.json         # an .odt is written back as .odt (narrow patch); --out keeps .odt; comment / tracked-change / TOC / equation / chart / text box / column / watermark ops → unsupported, locked cells and locked objects → op_rejected
 ieumoffice merge invoice-template.docx --data values.json --out invoice.docx [--force] [--strict]   # fill {{key}} placeholders in a docx/pptx/xlsx template; reports used, unused and unresolved keys (or --data '{"name":"Ada"}')
 ieumoffice pdf read scan.pdf [--page 3 | --range 1-5] [--full] --json     # text layer page by page (pages 1-20 by default, 4000 characters each) with page sizes and metadata; headless pdfium, no app process
+ieumoffice pdf read book.pdf --structured --range 1-5 --json   # same shape, each page's text from the document tree: headings, lists, tables, captions, footnotes (detail.structured: true)
+ieumoffice convert book.pdf --to md [--pages 1-5,8]            # reflowed Markdown, pictures in assets/ beside it
+ieumoffice convert book.pdf --to epub --title "Field Notes" [--no-cover]   # EPUB 3; title and author from the PDF unless given
+ieumoffice pdf images book.pdf --out pictures/ [--pages 2-4] --json   # the pictures on the pages as <name>-p<page>-<n>.png (detail.images[]: page, file, width, height)
+ieumoffice pdf ai-read scan.pdf --pages 1-3 --json             # estimate only: detail.estimate { calls, pages, provider, route, metered }; nothing is sent
+ieumoffice pdf ai-read scan.pdf --pages 1-3 --yes [--allow-paid] --json   # send the page images, one request per page; --allow-paid when the route bills per request
+ieumoffice pdf translate book.pdf --to ko --format pdf,md --yes --json   # book.ko.pdf + book.ko.md beside the source; progress on stderr
+ieumoffice pdf translate book.pdf --to de --format md,epub --bilingual --out out/book --partial --restart --yes --force   # each paragraph followed by its translation; --partial writes what is done when the job stops, --restart starts over
+ieumoffice pdf status book.pdf --json                          # what the result store holds: pages read by AI, translations, each with its job
+ieumoffice hwp read notice.hwp [--offset 20000] [--full] --json           # text of a Hangul (HWP / HWPX) document, tables as "a | b" rows (first 20000 characters by default); read-only, no app process
 ieumoffice guide docs                                                   # op signatures + restricted-HTML rules (`guide <domain> --json` = the catalog with each op's schema and a fingerprint)
 ieumoffice selection report.docx --json   # what the user has selected in the editor showing the file
 ieumoffice skill list   # coding agents found on this machine and the skill version each has
@@ -74,6 +86,8 @@ Workbook writes go through `@genoffice/xlsx-gateway` (the app's save path). The 
 `create`/`slides apply` take the same ops the in-app AI uses (`@genoffice/pptx-ops`), as a JSON array or `{ "ops": [...] }`; `--ops -` reads stdin. Image ops accept a local file path in their `bytes` field. A rejected op comes back with the guided error and its usage line so the caller can fix and retry; atomic transactions leave the file untouched.
 
 `create --type pptx --spec` is the CLI end of the app's deck generation pipeline (`@genoffice/pipelines`): the caller's agent does the design work following `ieumoffice guide slides design`, writing the style sheet, the outline and one page spec file per slide (`ieumoffice guide slides spec`), and the same page builder the app uses turns them into a pptx, measuring every text box and growing it to its content. Where the app separates the stages into model calls, the CLI separates them into files: `slides check` validates the outline against the planning rules and builds and audits a single page file, then checks it against its outline entry and the style sheet's palette (both found beside the page files), `create --spec <dir>` runs the same checks on every file and refuses to assemble a deck with pages missing or disagreeing with the outline, and `slides replace` rebuilds one slide from its file. `slides audit` runs the app's deterministic layout audit; `slides render` gives the agent PNGs to look at. No model call happens inside ieumoffice.
+
+In Windows PowerShell 5.1, `>` writes UTF-16, and `slides check` then finds no palette in the saved style sheet. Save it with `ieumoffice guide slides templates coral | Out-File -Encoding utf8 deck/style.md` there, or run the command in a shell that writes UTF-8.
 
 Every command prints a one-line human summary by default or a single JSON
 object with `--json` (`{ status, command, summary, output_path?, warnings?, detail? }`);
@@ -160,7 +174,9 @@ client sees the fields without reading the guide; `ieumoffice mcp
 --compact-schemas` (or `GENOFFICE_MCP_COMPACT_SCHEMAS=1`) advertises them as
 plain arrays for clients with a small context budget. The op references are
 also resources (`ieumoffice://guide/docs`, `…/sheets`, `…/slides`,
-`…/slides/design`, `…/slides/spec`).
+`…/slides/design`, `…/slides/spec`, `…/slides/templates` and one
+`…/slides/templates/<id>` per built-in template); the `guide` tool takes the
+template id as a third positional, `guide("slides", "templates", "<id>")`.
 
 A new deck goes through `deck_start` (style sheet + outline, returns the
 design and spec guides), `deck_page` (one page per call, checked against its
@@ -201,11 +217,12 @@ Independently of the PATH, every launch of the packaged app writes the launcher 
 - `src/registry.ts` — `CommandDef` table (`name`, `usage`, `run`), the single
   place future entry points (in-app AI, MCP) dispatch through.
 - `src/commands/` — `info`, `convert`, `create`, `render`, `slides`, `sheet`, `docs`,
-  `guide`, `open`, `capabilities`, `search`, `image`, `media`, `install-cli`.
+  `pdf`, `guide`, `open`, `capabilities`, `search`, `image`, `media`, `install-cli`.
 - `src/dom.ts` — the jsdom bootstrap the Word/Markdown paths need.
 - `src/formats/` — thin adapters over `@genoffice/pdf2docx`, the xlsx sidecar
   and the sheets CSV importer.
-- `src/resources.ts` — locates pdfium wasm, the xlsx sidecar and the OCR
+- `src/resources.ts` — locates pdfium wasm, the harfbuzz subsetter wasm (the
+  translated-PDF writer embeds fonts with it), the xlsx sidecar and the OCR
   helper in both the packaged `Resources/` layout and the dev checkout.
 - `bin/ieumoffice`, `bin/ieumoffice.cmd` — launchers copied next to `genoffice.cjs` in the
   packaged app.
@@ -236,7 +253,8 @@ directory, override with `GENOFFICE_AI_SETTINGS`). The command line only reads
 those settings; it has no login of its own and stores no credentials.
 `HTTPS_PROXY` / `HTTP_PROXY` / `ALL_PROXY` are honoured. Search results, image
 bytes and analysis text come back in the JSON `detail`; `image` also writes the
-file. These are the only commands that send data off the machine.
+file. These, and the PDF document jobs below (`pdf ai-read`, `pdf translate`),
+are the only commands that send data off the machine.
 
 A command, like an MCP tool call, is an **automatic call**: nobody is looking
 at a screen when it runs. That decides which route it may take.
@@ -261,16 +279,45 @@ at a screen when it runs. That decides which route it may take.
   Switched off, the commands behave as if no subscription existed: a key
   route is used when there is one, and otherwise the answer is "unavailable"
   together with the place of that setting. Switched on, subscription requests
-  run one at a time and at most 20 an hour, counted across every command and
-  MCP process; over the limit the answer is `headless-limit` with the time it
-  frees up. A login billed by usage that the user accepted and selected
-  counts as a key route, not as a subscription.
+  run one at a time across every command and MCP process, one request per
+  turn, so a long PDF job takes turns with the other callers. There is no
+  hourly cap. A switch turned on under the older warning (which promised one)
+  reads as off until the user turns it on again. A login billed by usage that
+  the user accepted and selected counts as a key route, not as a subscription.
+
+### PDF document jobs
+
+`pdf ai-read` sends page images and `pdf translate` sends the text of the
+chosen pages to the AI provider the chat runs on, chosen as above. Both keep
+their results in the result store the app uses (`pdf-store` in the app's data
+folder), so a second run skips what is done and the PDF editor sees it too.
+
+- Without `--yes` nothing is sent: the answer is `detail.started: false` with
+  `detail.estimate { calls, pages, provider, route, metered }` (exit 0).
+- A route billed per request (`metered: true`: a provider key, or a metered
+  login the user accepted) needs `--allow-paid`; without it the answer is
+  exit 4, `error: "paid_route_not_allowed"`, `detail.route`, `detail.via`.
+- `pdf translate` runs in the foreground with its progress on stderr. When a
+  usage limit or failures in a row stop it, it answers exit 4 with
+  `detail.errorCode`, `detail.resetsAt` and `detail.done_blocks` /
+  `detail.total_blocks` and writes no file; with `--partial` it writes the
+  files with what is translated (the rest in the source language) and answers
+  `status: "partial"` with `detail.stopped { errorCode, resetsAt? }`. Running
+  it again continues from the store; `--restart` starts over.
+- Arabic, Hebrew and Hindi cannot be written into a PDF, nor can an encrypted
+  PDF: `--format pdf` is refused before anything is sent (use `md,epub`).
+- One job per document at a time. `pdf status` shows the pages read by AI and
+  each translation with its job
+  `{ state, last_error?, resetsAt?, outputs, progress? }`.
+- The MCP tools `pdf_ai_read` and `pdf_translate` start the job inside the MCP
+  server and answer at once with `detail.started: true`; `pdf_status` follows
+  it. When the server ends, its jobs stop as `interrupted`.
 
 ### `capabilities`
 
 `ieumoffice capabilities --json` reports, without calling a model, what the
-three commands above would do right now. Agents read it once before planning
-work that needs photos or web facts. `detail` holds:
+commands above would do right now. Agents read it once before planning work
+that needs photos, web facts or a PDF job. `detail` holds:
 
 - `search`, `image_search`, `image_generation`, `image_analysis`,
   `video_analysis`, `media_analysis`: each
@@ -281,8 +328,13 @@ work that needs photos or web facts. `detail` holds:
   appears only when unavailable and is the exact text the command would
   answer with. `media_analysis` is kept for compatibility: it repeats
   `image_analysis`, or `video_analysis` when only video works.
+- `pdf_ai_read`, `pdf_translation`: the same shape, for the PDF document
+  jobs (the AI provider the chat runs on; page reading needs a model that
+  reads images).
 - `automatic_calls`: `{ subscription_enabled }`, plus
-  `{ used, limit, remaining, resetsAt? }` while the setting is on.
+  `{ used, limit: null, remaining: null }` while the setting is on (`used`
+  counts the automatic subscription requests of the last hour, for
+  information only).
 - `app`: `{ available }` (whether the app binary the renderer-backed
   conversions need was found) and `settings_path`.
 
@@ -293,10 +345,10 @@ always reported available with route `free` unless a key provider is selected.
 
 A cloud command that cannot run exits 4 with `error: "app_unavailable"`.
 `detail.errorCode` says why: `unavailable` (nothing is set up for it; do not
-retry, change the settings) or the kind of a failed run, such as `rate-limit`,
-`signed-out` or `headless-limit`. `detail.resetsAt` (epoch milliseconds)
-accompanies `rate-limit` and `headless-limit`. The MCP tools return the same
-fields.
+retry, change the settings) or the kind of a failed run, such as `rate-limit`
+or `signed-out`. `detail.resetsAt` (epoch milliseconds) accompanies
+`rate-limit` when the provider names the time. `headless-limit` is no longer
+raised. The MCP tools return the same fields.
 
 ## Build and run in a checkout
 

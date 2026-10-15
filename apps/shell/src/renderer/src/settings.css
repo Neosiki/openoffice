@@ -900,6 +900,11 @@
   margin-top: 0;
 }
 
+/* "Use for free" follows the subscription cards as a second group */
+.set-sub-title.free-ai-title {
+  margin-top: 20px;
+}
+
 /* the two connect cards (@genoffice/ui ai-sub-card) stacked, with room before the rows */
 .set-sub-cards {
   display: flex;

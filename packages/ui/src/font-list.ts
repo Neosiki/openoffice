@@ -33,6 +33,11 @@ const LATIN = [
   'Segoe UI',
   'Courier New',
   'Impact',
+  // title faces bundled with the design templates (./template-fonts.ts)
+  'Bebas Neue',
+  'Space Grotesk',
+  'Playfair Display',
+  'Archivo Black',
 ]
 
 export const BUILTIN_FONT_FAMILIES: readonly string[] = [

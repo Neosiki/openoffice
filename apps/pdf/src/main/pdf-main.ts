@@ -818,6 +818,11 @@ function parseSignOptions(request: SignWithCertificateRequest): {
   return out
 }
 
+/** Whether `path` is one of the files granted to the view (the shell's structure-job handlers use the same rule) */
+export function pdfPathGranted(webContentsId: number, path: unknown): path is string {
+  return typeof path === 'string' && !!allowedByWc.get(webContentsId)?.has(path)
+}
+
 export function pdfIsDirty(webContentsId: number): boolean {
   return dirtyByWc.has(webContentsId)
 }

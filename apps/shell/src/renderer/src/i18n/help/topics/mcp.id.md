@@ -62,13 +62,13 @@ Permintaan dari perintah `ieumoffice` atau dari klien MCP tidak Anda ketik sendi
 - **Mendeskripsikan gambar** memakai penyedia berbasis kunci bila ada yang disiapkan. Langganan Claude atau Codex Anda **tidak dipakai kecuali Anda mengizinkannya**.
 - **Video dan audio** memerlukan penyedia berbasis kunci yang mendukung video.
 
-Untuk mengizinkan pemakaian langganan, buka Pengaturan ▸ AI ▸ **Lanjutan** lalu aktifkan **Izinkan permintaan otomatis memakai langganan**. Peringatan muncul lebih dulu — "Kedua perusahaan tidak menyarankan program memakai langganan Anda secara otomatis, dan akun Anda bisa dibatasi." — dan sakelar baru aktif setelah Anda memilih **Tetap aktifkan**.
+Untuk mengizinkan pemakaian langganan, buka Pengaturan ▸ AI ▸ **Lanjutan** lalu aktifkan **Izinkan permintaan otomatis memakai langganan**. Peringatan muncul lebih dulu — "Tidak ada batas per jam, jadi program dapat mengirim permintaan sebanyak yang diinginkan, dan permintaan itu dapat memuat seluruh teks dokumen serta gambar halamannya. Kedua perusahaan tidak menyarankan program memakai langganan Anda secara otomatis, dan akun Anda bisa dibatasi." — dan sakelar baru aktif setelah Anda memilih **Tetap aktifkan**.
 
 Bahkan saat sakelar aktif:
 
 - Permintaan ditangani satu per satu. Yang lain menunggu giliran.
-- Paling banyak 20 permintaan langganan ditangani per jam. Hitungannya dipakai bersama oleh setiap perintah yang dijalankan dan setiap panggilan MCP. Setelah melewatinya, permintaan gagal dengan galat yang menyebutkan kapan permintaan bisa dilakukan lagi.
-- Login bayar sesuai pemakaian yang Anda izinkan dengan **Tetap gunakan** tidak dihitung sebagai langganan di sini. Login itu diperlakukan seperti kunci: jika Anda memilihnya sebagai AI yang digunakan, deskripsi gambar berjalan lewat login itu apa pun posisi sakelarnya, tanpa batas per jam, dan masing-masing ditagih.
+- Tidak ada batas per jam. Giliran dihitung per permintaan, bukan per tugas, sehingga terjemahan PDF yang panjang tetap bergantian dengan pemanggil lain alih-alih menahannya. Sakelar yang diaktifkan dengan peringatan lama sudah dimatikan; baca peringatan baru lalu aktifkan lagi.
+- Login bayar sesuai pemakaian yang Anda izinkan dengan **Tetap gunakan** tidak dihitung sebagai langganan di sini. Login itu diperlakukan seperti kunci: jika Anda memilihnya sebagai AI yang digunakan, deskripsi gambar berjalan lewat login itu apa pun posisi sakelarnya, dan masing-masing ditagih.
 
 Jika sakelar nonaktif dan tidak ada kunci yang disiapkan, alat menjawab bahwa fiturnya tidak tersedia dan menyebutkan pengaturan ini. Agen bisa memeriksa lebih dulu dengan alat `capabilities`; lihat [Baris perintah dan agen](help://cli).
 

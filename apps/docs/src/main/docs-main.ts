@@ -64,11 +64,14 @@ import {
   installRendererProtocol,
   registerRendererScheme,
   rendererUrl,
+  templateFontsDir,
   MAX_REMOTE_IMAGE_BYTES,
   readBodyCapped,
   writeJsonAtomic,
+  assertFileSaved,
 } from '@genoffice/electron-utils'
 import {
+  configureExtraFontDirs,
   configureMetricsCache,
   familyInfoFor,
   familyVerticalMetrics,
@@ -205,6 +208,7 @@ import {
   toggleStarredItem,
   writeStarredItems,
 } from './starred-files'
+import { registerFreeAiIpc } from './free-ai-ipc'
 import { initDocsAutoUpdater } from './updater'
 import { registerZoteroIpc, teardownZoteroIpc } from './zotero-ipc'
 
@@ -3461,7 +3465,10 @@ export function teardownDocsRenderer(contents: WebContents): void {
   // Sweep recovery copies for this renderer's documents: every non-crash close
   // either saved (docs:save already cleared it) or explicitly discarded, so a
   // copy still on disk here is a leftover from an in-flight recovery write.
-  for (const p of docWritablePaths.get(contents.id) ?? []) clearRecoveryCopy(p)
+  // A renderer that crashed did neither: its last copy is what reopening the
+  // file offers back, so it stays.
+  const crashed = !contents.isDestroyed() && contents.isCrashed()
+  if (!crashed) for (const p of docWritablePaths.get(contents.id) ?? []) clearRecoveryCopy(p)
   // reclaim every per-wcId grant, not just doc saves — the orphaned renderer
   // must also lose its dialog-authorized PDF targets and disk-state cache
   docWritablePaths.delete(contents.id)
@@ -3673,6 +3680,9 @@ const ATTACHMENT_EXTS = new Set([
   'xlsx',
   'xlsm',
   'xls',
+  'xmind',
+  'hwp',
+  'hwpx',
   ...ATTACHMENT_IMAGE_EXTS,
 ])
 
@@ -3764,6 +3774,9 @@ function savePastedImage(data: unknown, ext: unknown): string | null {
 
 /** parse an attachment to text via @genoffice/file-parse (docx/pdf/pptx/xlsx/plain text) */
 async function extractAttachmentText(filePath: string): Promise<string> {
+  // a file open with unsaved changes is not read (before the cache): a
+  // withholding mark only reaches the file on save
+  await assertFileSaved(filePath)
   const stat = statSync(filePath)
   const stamp = `${stat.mtimeMs}:${stat.size}`
   const cached = attachmentTextCache.get(filePath)
@@ -3862,6 +3875,18 @@ export function registerAiIpc(): void {
     broadcastAiSettingsChanged()
   })
 
+  registerFreeAiIpc({
+    readSettings: storedAiSettings,
+    writeSettings: (settings) => {
+      const sanitized = sanitizeAiSettings(settings)
+      if (!sanitized) return false
+      writeJsonAtomic(SETTINGS_PATH(), sanitized)
+      broadcastAiSettingsChanged()
+      return true
+    },
+    windowFor: hostWindowFor,
+  })
+
   ipcMain.handle('ai:codex-models', async (_event, cliPath: unknown) => {
     // the probe spawns the path directly, so it gets the same metacharacter and
     // existence check as the stored setting (anything else: auto-detect)
@@ -3927,8 +3952,10 @@ export function registerAiIpc(): void {
     }
   })
 
-  ipcMain.handle('ai:stream-cancel', (event, requestId: string) => {
+  ipcMain.handle('ai:stream-cancel', (event, requestId: string, scope?: unknown) => {
     activeAiStreams.get(requestId)?.abort()
+    // a call that runs no tool (a PDF document job) ends only its own stream
+    if (scope === 'request') return
     // Stop while a tool runs names a turn that already ended: end the tab's media calls too
     // (whichever editor main started them; this handler answers every editor in the suite)
     abortMediaCalls(event.sender.id)
@@ -4308,7 +4335,15 @@ const saveAsPicks = new Map<number, string>()
 /** document/attachment/window IPC (everything except the AI proxy above) */
 export function registerDocsIpc(): void {
   registerZoteroIpc()
-  void app.whenReady().then(registerLazyMediaProtocol)
+  // the design templates' fonts: shipped once (resources/template-fonts), served to the
+  // renderer on the media scheme and indexed for vertical metrics and family info
+  const fontsDir = templateFontsDir({
+    isPackaged: app.isPackaged,
+    getAppPath: () => app.getAppPath(),
+    resourcesPath: process.resourcesPath,
+  })
+  configureExtraFontDirs([fontsDir])
+  void app.whenReady().then(() => registerLazyMediaProtocol(fontsDir))
   // Node fetch (undici) direct connections get reset under VPN/tun setups; retry over Chromium's stack
   setRescueFetch((url, init) => net.fetch(url, init))
   setAiUserAgent(`${PRODUCT_NAME}/${app.getVersion()}`)
@@ -5495,6 +5530,16 @@ export function setDocsExtraFileMenuItems(items: MenuItemConstructorOptions[]): 
   extraFileMenuItems = items
 }
 
+/** shell-built File-menu entries for the open document (make another document
+ * from it, its sources, the documents made from it); asked at every build */
+let documentLinkMenuItems: (() => MenuItemConstructorOptions[]) | null = null
+
+export function setDocsDocumentLinkMenuItems(
+  items: (() => MenuItemConstructorOptions[]) | null,
+): void {
+  documentLinkMenuItems = items
+}
+
 /** Shell-installed gate: inside the shell the docs menu may only take over the
  * application menu while a docs tab is active — internal rebuilds (pushRecent
  * after opening/saving any file) must not clobber another tab's menu.
@@ -5560,6 +5605,7 @@ export function buildDocsMenu(): void {
         ...(extraFileMenuItems.length > 0
           ? [{ type: 'separator' as const }, ...extraFileMenuItems]
           : []),
+        ...(documentLinkMenuItems?.() ?? []),
         { type: 'separator' },
         shellHooks
           ? {

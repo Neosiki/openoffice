@@ -355,8 +355,21 @@ export default function App() {
         } else {
           envelopeRef.current = { ...EMPTY_ENVELOPE }
         }
+        // a new tab that starts with given text (a conversion's result, T17), taken once: unsaved
+        const seed = path ? null : ((await window.markdownApi.takeSeed?.()) ?? null)
+        if (cancelled) return
+        if (seed !== null) {
+          editor
+            .chain()
+            .setMeta('addToHistory', false)
+            .setContent(seed, { contentType: 'markdown' })
+            .setTextSelection(1)
+            .run()
+          sourceMapRef.current = buildSourceMap(editor, editor.state.doc, seed)
+        }
         statusRef.current = 'ready'
         setStatus('ready')
+        if (seed !== null) markDirty()
       } catch (err) {
         console.error('[markdown] load failed:', err)
         if (!cancelled) {
@@ -368,7 +381,7 @@ export default function App() {
     return () => {
       cancelled = true
     }
-  }, [editor, roundTripEnabled, loadFromPath])
+  }, [editor, roundTripEnabled, loadFromPath, markDirty])
 
   const onFrontmatterChange = useCallback(
     (inner: string) => {

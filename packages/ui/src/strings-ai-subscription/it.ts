@@ -5,6 +5,7 @@ export const it = {
   cardChecking: 'Verifica in corso…',
   cardNotInstalled: 'Non installato',
   cardSignedOut: 'Accesso non effettuato',
+  cardSigningIn: 'Accesso in corso…',
   cardReady: 'Connesso',
   cardReadyPlan: 'Connesso · {plan}',
   cardMetered: 'Accesso effettuato, ma non con un abbonamento',
@@ -18,6 +19,7 @@ export const it = {
     'Si è verificato un problema durante la verifica di {provider}. Verifica di nuovo.',
   actionInstall: 'Installa',
   actionLogin: 'Accedi',
+  actionLoginWindow: 'Il browser non si è aperto o mostra un codice?',
   actionRecheck: 'Verifica di nuovo',
   actionAcceptMetered: 'Usa comunque',
   actionInstallHelp: 'Guida ufficiale all’installazione',
@@ -28,16 +30,21 @@ export const it = {
   installNote:
     'Il comando di installazione ufficiale di {vendor} viene eseguito in una nuova finestra del terminale.',
   loginNote: 'La pagina di accesso che si apre è quella di {vendor}.',
+  signingInBrowserNote:
+    'Accedi al tuo account {vendor} nel browser che si è aperto e consenti l’accesso. La connessione avviene da sola quando hai finito.',
+  signingInWindowNote:
+    'Se il browser mostra un codice, copialo, incollalo nella finestra appena aperta e premi Invio.',
   meteredWarning: 'Non è un abbonamento: paghi in base a quanto usi.',
   meteredMeaning:
     'Questo accesso usa una chiave API o un account a consumo, oppure non è stato possibile confermarne il tipo. Con “Usa comunque” l’IA funziona su questa connessione e ogni richiesta viene addebitata a quell’account.',
-  connectTitle: 'Collega un abbonamento per usare l’IA',
+  connectTitle: 'Collega un’IA per iniziare',
   connectBody:
     'L’IA funziona con l’abbonamento Claude o Codex che hai già. Non serve alcuna chiave API.',
   connectProviderTitle: 'La connessione {provider} non è utilizzabile al momento',
   connectKeyBody:
     'La configurazione di {provider} non è completa. Completala nelle Impostazioni oppure scegli un’altra IA.',
-  errNotConnected: 'Nessuna IA è collegata. Collega prima un abbonamento Claude o Codex.',
+  errNotConnected:
+    'Nessuna IA è collegata. Collega prima un abbonamento Claude o Codex, oppure un’IA gratuita.',
   errNotInstalled: 'Il programma {provider} non è stato trovato su questo PC.',
   errSignedOut: 'L’accesso a {provider} è scaduto. Accedi di nuovo per continuare.',
   errRateLimit: 'Il limite dell’abbonamento {provider} è stato raggiunto.',
@@ -52,6 +59,12 @@ export const it = {
   errHeadlessLimit: 'È stato raggiunto il limite orario delle richieste automatiche.',
   errHeadlessLimitReset:
     'È stato raggiunto il limite orario delle richieste automatiche. Saranno di nuovo possibili alle {time}.',
+  connectFreeHint:
+    'Non hai un abbonamento? Puoi collegare un’IA gratuita nelle Impostazioni in circa un minuto.',
+  actionConnectFree: 'Collega un’IA gratuita',
+  errFreeLimit:
+    'La quota gratuita di oggi è esaurita. Riprova domani oppure scegli un’altra IA nelle Impostazioni.',
+  errFreeLimitReset: 'La quota gratuita di oggi è esaurita. Potrai usarla di nuovo alle {time}.',
   continueWith: 'Continua con {provider}',
   continueMeteredNote:
     'La connessione {provider} non è un abbonamento: continuando paghi a consumo.',
@@ -65,6 +78,8 @@ export const it = {
     'L’uso di questi contenuti per addestrare l’IA dipende dalle impostazioni del tuo account presso quell’azienda.',
   noticeCodexHistory:
     'Questa app disattiva il salvataggio della cronologia delle conversazioni di Codex, ma Codex può comunque conservare i propri log di diagnostica su questo PC.',
+  noticePdfWholeDocument:
+    'Nell’editor PDF, la lettura delle pagine con l’IA e la traduzione dei documenti possono inviare le immagini delle pagine e l’intero testo del documento.',
   noticeAck: 'Ho capito',
   codexNotice:
     'Usare un abbonamento Codex all’interno di un’app non è un metodo ufficialmente consigliato da OpenAI.',

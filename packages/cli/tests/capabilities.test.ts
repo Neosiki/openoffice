@@ -1,9 +1,14 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { setCodexImageGenerationAvailable } from '@genoffice/ai-provider'
 import {
+  HEADLESS_SUBSCRIPTION_CONSENT_VERSION,
+  setCodexImageGenerationAvailable,
+} from '@genoffice/ai-provider'
+import {
+  createMeteredAcceptanceFileStore,
   detectSubscriptionLogin,
+  meteredLoginFingerprint,
   type SubscriptionDetection,
 } from '@genoffice/ai-provider/subscription'
 import * as aiSearch from '@genoffice/ai-search'
@@ -27,6 +32,10 @@ const IMAGE_GENERATION_HINT =
   'Image generation is unavailable: add an image provider key under Settings > AI > Advanced. Use image search for imagery instead.'
 const IMAGE_ANALYSIS_HINT =
   'Image analysis is unavailable: select an image analysis provider key under Settings > AI > Advanced. Command-line and integration requests use a subscription login only after that is turned on under Settings > AI > Advanced.'
+const PDF_AI_READ_BLOCKED =
+  'PDF AI page reading is unavailable: no AI provider can be used from the command line. Select a provider key under Settings > AI > Advanced, or turn on subscription use for command-line and integration requests there.'
+const PDF_TRANSLATION_BLOCKED =
+  'PDF translation is unavailable: no AI provider can be used from the command line. Select a provider key under Settings > AI > Advanced, or turn on subscription use for command-line and integration requests there.'
 const VIDEO_ANALYSIS_HINT =
   'Video and audio analysis is unavailable: it needs a key provider that reads video (for example Gemini), selected as the video analysis provider under Settings > AI > Advanced.'
 
@@ -48,6 +57,12 @@ function settingsFile(dir: string, settings: Record<string, unknown>): string {
   return path
 }
 
+/** the switch as the settings screen turns it on: with the consent of the current warning */
+const ON = {
+  headlessSubscriptionEnabled: true,
+  headlessSubscriptionConsentVersion: HEADLESS_SUBSCRIPTION_CONSENT_VERSION,
+}
+
 function envFor(settings: string, app = ''): NodeJS.ProcessEnv {
   return { ...process.env, GENOFFICE_AI_SETTINGS: settings, GENOFFICE_APP_BIN: app }
 }
@@ -63,7 +78,7 @@ describe('genoffice capabilities', () => {
       command: 'capabilities',
       // a checkout finds its own development build; an installed command line may find no app
       summary: expect.stringMatching(
-        /^available: search, image_search(, app)?; unavailable: image_generation, image_analysis, video_analysis(, app)?$/,
+        /^available: search, image_search(, app)?; unavailable: image_generation, image_analysis, video_analysis, pdf_ai_read, pdf_translation(, app)?$/,
       ),
       detail: {
         search: { available: true, via: 'parallel', route: 'free' },
@@ -77,6 +92,13 @@ describe('genoffice capabilities', () => {
         media_analysis: { available: false, via: null, route: null, message: IMAGE_ANALYSIS_HINT },
         image_analysis: { available: false, via: null, route: null, message: IMAGE_ANALYSIS_HINT },
         video_analysis: { available: false, via: null, route: null, message: VIDEO_ANALYSIS_HINT },
+        pdf_ai_read: { available: false, via: null, route: null, message: PDF_AI_READ_BLOCKED },
+        pdf_translation: {
+          available: false,
+          via: null,
+          route: null,
+          message: PDF_TRANSLATION_BLOCKED,
+        },
         automatic_calls: { subscription_enabled: false },
         app: { available: expect.any(Boolean) },
         settings_path: settings,
@@ -129,7 +151,7 @@ describe('genoffice capabilities', () => {
     expect(d.video_analysis).toEqual({ available: true, via: 'gemini', route: 'key' })
     expect(d.app.available).toBe(true)
     expect(r.json().summary).toBe(
-      'available: search, image_search, image_generation, image_analysis, video_analysis, app',
+      'available: search, image_search, image_generation, image_analysis, video_analysis, app; unavailable: pdf_ai_read, pdf_translation',
     )
     expect(fakes.detect).not.toHaveBeenCalled()
   })
@@ -165,11 +187,11 @@ describe('genoffice capabilities', () => {
     expect(d.media_analysis).toEqual(d.video_analysis)
   })
 
-  it('reports the subscription routes and the hourly allowance when the switch is on', async () => {
+  it('reports the subscription routes and the count of automatic calls when the switch is on', async () => {
     setCodexImageGenerationAvailable(true)
     aiSearch.registerCodexImageGenerator(async () => ({ url: 'https://example.invalid/x.png' }))
     const dir = tempDir()
-    const settings = settingsFile(dir, { headlessSubscriptionEnabled: true })
+    const settings = settingsFile(dir, ON)
     const first = (await run(['capabilities', '--json'], { env: envFor(settings) })).json().detail
     expect(first.image_generation).toEqual({ available: true, via: 'codex', route: 'subscription' })
     expect(first.image_analysis).toEqual({
@@ -179,33 +201,50 @@ describe('genoffice capabilities', () => {
     })
     expect(first.media_analysis).toEqual(first.image_analysis)
     expect(first.video_analysis.available).toBe(false)
+    expect(first.pdf_ai_read).toEqual({
+      available: true,
+      via: 'claude-code',
+      route: 'subscription',
+    })
+    expect(first.pdf_translation).toEqual(first.pdf_ai_read)
+    // there is no hourly cap: the count is information, the limit and what remains are null
     expect(first.automatic_calls).toEqual({
       subscription_enabled: true,
       used: 0,
-      limit: 20,
-      remaining: 20,
+      limit: null,
+      remaining: null,
     })
     expect(fakes.detect.mock.calls.map((call) => call[0]).sort()).toEqual(['claude-code', 'codex'])
 
-    for (let i = 0; i < aiSearch.HEADLESS_SUBSCRIPTION_MAX_PER_HOUR; i++) {
+    // past what used to be the hourly cap of 20
+    for (let i = 0; i < 21; i++) {
       await aiSearch.runHeadlessSubscriptionCall(dir, async () => undefined)
     }
-    const spent = (await run(['capabilities', '--json'], { env: envFor(settings) })).json().detail
-    expect(spent.automatic_calls).toEqual({
+    const counted = (await run(['capabilities', '--json'], { env: envFor(settings) })).json().detail
+    expect(counted.automatic_calls).toEqual({
       subscription_enabled: true,
-      used: 20,
-      limit: 20,
-      remaining: 0,
-      resetsAt: expect.any(Number),
+      used: 21,
+      limit: null,
+      remaining: null,
     })
-    expect(spent.automatic_calls.resetsAt).toBeGreaterThan(Date.now())
-    // a used-up allowance is an error of the request, not a missing capability
-    expect(spent.image_analysis.available).toBe(true)
+    expect('resetsAt' in counted.automatic_calls).toBe(false)
+    expect(counted.image_analysis.available).toBe(true)
+  })
+
+  it('reads a switch turned on under the older warning as off, with no count', async () => {
+    const dir = tempDir()
+    const settings = settingsFile(dir, { headlessSubscriptionEnabled: true })
+    await aiSearch.runHeadlessSubscriptionCall(dir, async () => undefined)
+    const d = (await run(['capabilities', '--json'], { env: envFor(settings) })).json().detail
+    expect(d.automatic_calls).toEqual({ subscription_enabled: false })
+    expect(d.image_analysis).toMatchObject({ available: false, via: null, route: null })
+    expect(d.image_analysis.message).toBe(IMAGE_ANALYSIS_HINT)
+    expect(fakes.detect).not.toHaveBeenCalled()
   })
 
   it('reports a signed-out subscription as unavailable even with the switch on', async () => {
     fakes.detect.mockImplementation(async (provider: string) => ({ provider, state: 'signed-out' }))
-    const settings = settingsFile(tempDir(), { headlessSubscriptionEnabled: true })
+    const settings = settingsFile(tempDir(), ON)
     const d = (await run(['capabilities', '--json'], { env: envFor(settings) })).json().detail
     expect(d.image_analysis).toMatchObject({ available: false, via: null, route: null })
     expect(d.image_analysis.message).toContain('no AI provider is connected')
@@ -219,7 +258,7 @@ describe('genoffice capabilities', () => {
       account: 'jun.il@school.kr',
     }))
     const dir = tempDir()
-    const settings = settingsFile(dir, { headlessSubscriptionEnabled: true })
+    const settings = settingsFile(dir, ON)
     const audit = join(dir, 'audit.jsonl')
     for (const format of [['--json'], []]) {
       const r = await run(['capabilities', ...format], {
@@ -244,11 +283,62 @@ describe('genoffice capabilities', () => {
     const analyze = vi.spyOn(aiSearch, 'analyzeMediaTool')
     const generate = vi.spyOn(aiSearch, 'generateImageTool')
     const web = vi.spyOn(aiSearch, 'webSearchTool')
-    const settings = settingsFile(tempDir(), { headlessSubscriptionEnabled: true })
+    const settings = settingsFile(tempDir(), ON)
     expect((await run(['capabilities', '--json'], { env: envFor(settings) })).code).toBe(0)
     expect(fetchSpy).not.toHaveBeenCalled()
     expect(analyze).not.toHaveBeenCalled()
     expect(generate).not.toHaveBeenCalled()
     expect(web).not.toHaveBeenCalled()
+  })
+})
+
+describe('capabilities of the PDF document jobs', () => {
+  it('reports the chat provider the jobs would use: a key, billed per request', async () => {
+    const settings = settingsFile(tempDir(), {
+      provider: 'anthropic',
+      providers: { anthropic: { apiKey: 'sk', model: 'claude-sonnet-4-5' } },
+    })
+    const d = (await run(['capabilities', '--json'], { env: envFor(settings) })).json().detail
+    expect(d.pdf_ai_read).toEqual({ available: true, via: 'anthropic', route: 'key' })
+    expect(d.pdf_translation).toEqual({ available: true, via: 'anthropic', route: 'key' })
+    expect(fakes.detect).not.toHaveBeenCalled()
+  })
+
+  it('marks an accepted metered login as metered, whatever the switch says', async () => {
+    const metered: SubscriptionDetection = {
+      provider: 'claude-code',
+      state: 'metered',
+      loginMethod: 'metered',
+      loginKind: 'api_key/firstParty',
+    }
+    fakes.detect.mockResolvedValue(metered)
+    const dir = tempDir()
+    const settings = settingsFile(dir, {
+      provider: 'claude-code',
+      meteredAccepted: { 'claude-code': true },
+    })
+    // the acceptance as the app records it, beside the settings
+    await createMeteredAcceptanceFileStore(dir).write({
+      'claude-code': meteredLoginFingerprint(metered)!,
+    })
+    const d = (await run(['capabilities', '--json'], { env: envFor(settings) })).json().detail
+    expect(d.pdf_ai_read).toEqual({
+      available: true,
+      via: 'claude-code',
+      route: 'key',
+      metered: true,
+    })
+    expect(d.pdf_translation).toEqual(d.pdf_ai_read)
+  })
+
+  it('leaves page reading out when the selected model cannot read images', async () => {
+    const settings = settingsFile(tempDir(), {
+      provider: 'deepseek',
+      providers: { deepseek: { apiKey: 'sk', model: 'deepseek-v4-pro' } },
+    })
+    const d = (await run(['capabilities', '--json'], { env: envFor(settings) })).json().detail
+    expect(d.pdf_ai_read).toMatchObject({ available: false, via: null, route: null })
+    expect(d.pdf_ai_read.message).toContain('cannot read images')
+    expect(d.pdf_translation).toEqual({ available: true, via: 'deepseek', route: 'key' })
   })
 })

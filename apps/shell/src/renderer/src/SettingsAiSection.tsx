@@ -14,6 +14,7 @@ import {
 import type { Lang } from '@genoffice/i18n'
 import { AI_SUBSCRIPTION_PROVIDERS, selectAiProvider } from '@genoffice/ai-provider/browser'
 import type { AiSettings, AiSubscriptionProviderId } from '@genoffice/ai-provider/browser'
+import { FreeAiCards } from './FreeAiCards'
 import type { TFunc } from './locale'
 import type { SubscriptionConnection } from './subscription-client'
 import {
@@ -24,6 +25,7 @@ import {
   readAiSettings,
   subscriptionProgramName,
   withAiSelection,
+  withHeadlessSubscription,
 } from './settings-ai'
 import type { AiSelectionChoice, SubscriptionAccountAction } from './settings-ai'
 
@@ -250,6 +252,11 @@ export function AiSection({
           </Fragment>
         ))}
       </div>
+      <h4 className="set-pane-subtitle set-sub-title free-ai-title" id="set-free-ai">
+        {t('setFreeTitle')}
+      </h4>
+      <div className="set-field-desc set-ai-note">{t('setFreeDesc')}</div>
+      <FreeAiCards t={t} />
       {settings && (
         <>
           <div className="set-field">
@@ -342,7 +349,7 @@ export function AiSection({
                 aria-label={t('setAiHeadless')}
                 onClick={() => {
                   if (headlessOn) {
-                    change((current) => ({ ...current, headlessSubscriptionEnabled: false }))
+                    change((current) => withHeadlessSubscription(current, false))
                   } else {
                     // turning it on goes through the warning first
                     setHeadlessAsked(true)
@@ -362,7 +369,7 @@ export function AiSection({
                   className="set-btn danger"
                   onClick={() => {
                     setHeadlessAsked(false)
-                    change((current) => ({ ...current, headlessSubscriptionEnabled: true }))
+                    change((current) => withHeadlessSubscription(current, true))
                   }}
                 >
                   {t('setAiHeadlessConfirm')}

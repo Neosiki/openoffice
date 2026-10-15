@@ -32,6 +32,8 @@ export default defineConfig({
           '@genoffice/electron-utils',
           '@genoffice/font-metrics',
           '@genoffice/odt-engine',
+          // the template font list the media scheme serves from
+          '@genoffice/ui',
         ],
       }),
     ],

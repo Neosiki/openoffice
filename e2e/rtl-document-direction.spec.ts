@@ -19,7 +19,8 @@ const APPS = [
   { name: 'slides', card: 2, url: '://slides/', host: '.stage-wrap' },
   { name: 'markdown', card: 3, url: '://markdown/', host: '.editor-scroll' },
   { name: 'html', card: 4, url: '://html/', host: '.preview-stage' },
-  { name: 'pdf', card: 5, url: '://pdf/', host: '.pdf-scroll' },
+  { name: 'mindmap', card: 5, url: '://mindmap/', host: '.mm-card' },
+  { name: 'pdf', card: 6, url: '://pdf/', host: '.pdf-scroll' },
 ] as const
 
 const directionOf = (page: Page, host: string) =>

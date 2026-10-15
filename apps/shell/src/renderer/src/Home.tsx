@@ -8,6 +8,8 @@ import iconPptx from './assets/file-pptx.svg'
 import iconPdf from './assets/file-pdf.svg'
 import iconMd from './assets/file-md.svg'
 import iconHtml from './assets/file-html.svg'
+import iconMindmap from './assets/file-mindmap.svg'
+import iconHwp from './assets/file-hwp.svg'
 import type {
   FolderEntry,
   FolderListing,
@@ -30,9 +32,15 @@ import {
 } from '@genoffice/ui'
 import type { AiSettings } from '@genoffice/ai-provider/browser'
 import { productName } from '@genoffice/i18n'
+import { RELEASE_IS_BETA } from '../../shared/release-stage'
 import { fileCountLabel, visiblePageCount } from './counts'
 import { useI18n } from './locale'
 import type { I18n, StringKey } from './locale'
+import {
+  generateEntryLabel,
+  openGenerateWithGroup,
+  openGenerateWithPaths,
+} from './generate/home-entry'
 import { SettingsModal } from './SettingsModal'
 import type { SettingsTarget } from './SettingsModal'
 import { skillUpdateDue } from './IntegrationsPane'
@@ -40,11 +48,15 @@ import { onFilesChanged } from './file-events'
 import { FirstConnectionDialog } from './FirstConnectionNotice'
 import type { SubscriptionConnection } from './subscription-client'
 import { subscriptionSummary } from './subscription-status'
+import './pdf-tools/globals'
+import { agentText } from './i18n/strings-agent'
 
 declare global {
   interface Window {
     aiOffice: HomeApi
     aiOfficeIntegrations?: IntegrationsApi
+    /** Home's entry into the agent window (src/preload/index.ts) */
+    aiOfficeAgent?: { open(): Promise<void> }
   }
 }
 
@@ -73,13 +85,16 @@ const FILE_ICONS: Record<string, string> = {
   markdown: iconMd,
   html: iconHtml,
   htm: iconHtml,
+  xmind: iconMindmap,
+  hwp: iconHwp,
+  hwpx: iconHwp,
 }
 
 /* Formats the open-local card advertises. Too long for the card at any window
    width, so it ellipsizes and a hover ScreenTip carries the full list. Keep in
    sync with the main-process open-dialog filter (OPEN_DIALOG_EXTENSIONS). */
 const OPEN_LOCAL_EXTENSIONS =
-  '.docx / .odt / .xlsx / .xlsm / .xls / .csv / .tsv / .pptx / .pdf / .md / .html'
+  '.docx / .odt / .xlsx / .xlsm / .xls / .csv / .tsv / .pptx / .pdf / .md / .html / .xmind / .hwp / .hwpx'
 
 /** drag payload of home file/folder rows (JSON array of absolute paths) */
 const DRAG_PATHS_MIME = 'application/x-genoffice-paths'
@@ -258,6 +273,8 @@ const FILTERS: { key: string; label: StringKey }[] = [
   { key: 'pdf', label: 'filterPdf' },
   { key: 'md', label: 'filterMd' },
   { key: 'html', label: 'filterHtml' },
+  { key: 'xmind', label: 'filterMindmap' },
+  { key: 'hwp', label: 'filterHwp' },
 ]
 
 /** sidebar filter keys that stand for a family of extensions (mirrors recent-files.ts) */
@@ -267,6 +284,7 @@ const FILTER_FAMILY: Record<string, readonly string[]> = {
   pptx: ['pptx', 'ppt'],
   md: ['md', 'markdown', 'txt', 'json'],
   html: ['html', 'htm'],
+  hwp: ['hwp', 'hwpx'],
 }
 
 function matchesFilter(entry: RecentEntry, filter: string): boolean {
@@ -1777,6 +1795,18 @@ export function Home({
       action: () => window.aiOffice.newHtml(newFileOpts),
     },
     {
+      ext: 'xmind',
+      title: t('newMindmap'),
+      sub: '.xmind',
+      action: () => window.aiOffice.newMindmap(newFileOpts),
+    },
+    {
+      ext: 'hwp',
+      title: t('newHwp'),
+      sub: '.hwp',
+      action: () => window.aiOffice.newHwp(newFileOpts),
+    },
+    {
       ext: 'pdf',
       title: t('newPdf'),
       sub: '.pdf',
@@ -1814,6 +1844,30 @@ export function Home({
             <span className="quick-sub">{OPEN_LOCAL_EXTENSIONS}</span>
           </span>
         </button>
+        {/* decision 0030: PDF tasks without AI, in their own window */}
+        <button className="quick-card" onClick={() => void window.aiOfficePdfToolsHome.open()}>
+          <FileBadge ext="pdf" size={30} />
+          <span className="quick-text">
+            <span className="quick-title-row">
+              <span className="quick-title">{t('pdfToolsCard')}</span>
+            </span>
+            <span className="quick-sub">{t('pdfToolsCardSub')}</span>
+          </span>
+        </button>
+        {window.aiOfficeAgent ? (
+          <button className="quick-card" onClick={() => void window.aiOfficeAgent?.open()}>
+            <span className="quick-folder">
+              <FolderIcon size={18} />
+            </span>
+            <span className="quick-text">
+              <span className="quick-title-row">
+                <span className="quick-title">{agentText(lang, 'windowTitle')}</span>
+                <span className="ai-chip">AI</span>
+              </span>
+              <span className="quick-sub">{agentText(lang, 'homeCardSub')}</span>
+            </span>
+          </button>
+        ) : null}
       </div>
     )
   }
@@ -2270,6 +2324,18 @@ export function Home({
                 >
                   {t('copyPath')}
                 </button>
+                {!entry.missing && (
+                  <button
+                    role="menuitem"
+                    data-testid="home-generate-from-file"
+                    onClick={() => {
+                      setRowMenu(null)
+                      openGenerateWithPaths([entry.path])
+                    }}
+                  >
+                    {generateEntryLabel(lang, 'homeMakeFromFile')}
+                  </button>
+                )}
                 {canMove && editable && !entry.missing && (
                   <>
                     <div className="row-menu-divider" />
@@ -2686,6 +2752,13 @@ export function Home({
                 <span className="selection-count">
                   {t('selectedCount', { n: folderSelectedPaths.length })}
                 </span>
+                <button
+                  className="selection-action"
+                  data-testid="home-generate-from-selection"
+                  onClick={() => openGenerateWithPaths(folderSelectedPaths)}
+                >
+                  {generateEntryLabel(lang, 'homeMakeFromSelection')}
+                </button>
                 {selectedFolder && editableAt(selectedFolder) && (
                   <>
                     <button
@@ -2807,6 +2880,13 @@ export function Home({
                 <span className="selection-count">
                   {t('selectedCount', { n: selectedPaths.length })}
                 </span>
+                <button
+                  className="selection-action"
+                  data-testid="home-generate-from-selection"
+                  onClick={() => openGenerateWithPaths(selectedPaths)}
+                >
+                  {generateEntryLabel(lang, 'homeMakeFromSelection')}
+                </button>
                 {canMove && (
                   <button className="selection-action" onClick={() => startMove(selectedPaths)}>
                     {t('moveToFolder')}
@@ -2870,6 +2950,16 @@ export function Home({
                       </button>
                     ))}
                   </div>
+                )}
+                {view === 'starred' && groupFilter !== null && (
+                  // the group as material: every file in it, whatever the type pill shows
+                  <button
+                    className="selection-action"
+                    data-testid="home-generate-from-group"
+                    onClick={() => openGenerateWithGroup(groupFilter)}
+                  >
+                    {generateEntryLabel(lang, 'homeMakeFromGroup')}
+                  </button>
                 )}
               </div>
             )}
@@ -2947,6 +3037,11 @@ export function Home({
       <aside className="sidebar">
         <div className="sidebar-logo">
           <img className="logo-lockup" src={logoLockup} alt={productName(lang)} />
+          {RELEASE_IS_BETA && (
+            <span className="beta-badge" title={t('betaTooltip')}>
+              {t('betaBadge')}
+            </span>
+          )}
         </div>
         <nav className="sidebar-nav">
           <button

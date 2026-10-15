@@ -133,3 +133,27 @@ export function searchInIndex(index: SearchIndex, query: string): SearchMatch[] 
   }
   return matches
 }
+
+/**
+ * Pages to list as "found in AI-read text" (spec §7). AI-read text has no
+ * positions, so a page is listed only when its AI-read text holds the query
+ * and its positioned text (the text layer, with Windows OCR for scanned
+ * pages: the `index` the viewer searches) holds none of it. `aiTexts` is keyed
+ * by 1-based page; the answer is 0-based page indices, ascending.
+ */
+export function aiReadOnlyPages(
+  index: SearchIndex,
+  aiTexts: ReadonlyMap<number, string>,
+  query: string,
+): number[] {
+  const q = foldCase(query)
+  if (!q) return []
+  const out: number[] = []
+  for (const [page, text] of aiTexts) {
+    const pageIndex = page - 1
+    if (pageIndex < 0) continue
+    if (index[pageIndex]?.lower.includes(q)) continue
+    if (foldCase(text).includes(q)) out.push(pageIndex)
+  }
+  return out.sort((a, b) => a - b)
+}

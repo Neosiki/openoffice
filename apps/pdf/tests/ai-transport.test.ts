@@ -136,6 +136,24 @@ describe('pdf AI transport', () => {
     listener?.({ requestId: started!.requestId, type: 'error', error: 'boom' })
     expect(errors).toEqual(['boom'])
   })
+
+  it("the AI window's Stop names the request alone; a request-scoped cancel says so", () => {
+    const cancel = (window as unknown as { pdfApi: { aiStreamCancel: ReturnType<typeof vi.fn> } })
+      .pdfApi.aiStreamCancel
+    const chat = startTurn()
+    chat.handle.cancel()
+    expect(cancel).toHaveBeenLastCalledWith(started!.requestId)
+    expect(cancel.mock.calls.at(-1)).toHaveLength(1)
+    const job = createElectronTransport(() => normalizeAiSettings({}), {
+      lang: () => 'en',
+      cancelScope: 'request',
+    }).stream(
+      { system: 's', messages: [], tools: [] },
+      { onDelta: vi.fn(), onToolCall: vi.fn(), onDone: vi.fn(), onError: vi.fn() },
+    )
+    job.cancel()
+    expect(cancel).toHaveBeenLastCalledWith(started!.requestId, 'request')
+  })
 })
 
 /** a settled turn ignores what arrives afterwards */

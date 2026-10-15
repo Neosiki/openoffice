@@ -8,14 +8,13 @@ import {
   familyForTypedName,
   isSymbolFontFamily,
   matchesFontQuery,
-  partitionFontFamilies,
   splitHangulFamilies,
 } from '@genoffice/ui'
 import { useI18n } from '../i18n/locale'
 import { saveEditSelection } from '../TextEditOverlay'
 import { armColorInput } from '../color-input'
 import { displayFontFamily } from '../konva-adapter'
-import { useSystemFontFamilies } from '../system-fonts'
+import { pickerFontSections, useSystemFontFamilies } from '../system-fonts'
 import { installLocalFonts } from '../font-manager'
 import {
   IconAiBeautify,
@@ -183,7 +182,7 @@ export function RibbonHomeTab({ rb }: { rb: RibbonTabCtx }) {
   } = useSystemFontFamilies()
   // Candidates the machine proves absent drop out; when enumeration is
   // unavailable the full candidate list stays visible.
-  const { builtin: fontFamilies, system: systemFontFamilies } = partitionFontFamilies(
+  const { builtin: fontFamilies, system: systemFontFamilies } = pickerFontSections(
     FONT_FAMILIES,
     allSystemFontFamilies,
   )

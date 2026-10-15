@@ -116,8 +116,17 @@ vi.mock('../../html/src/main/html-main', () => ({
   requestHtmlClose: vi.fn(() => Promise.resolve(true)),
 }))
 
+vi.mock('../../mindmap/src/main/mindmap-main', () => ({
+  mindmapIsDirty: vi.fn(() => false),
+  requestMindmapClose: vi.fn(() => Promise.resolve(true)),
+}))
+
 vi.mock('../src/main/tab-manager', () => ({
   canonicalPath: (p: string) => p.toLowerCase(),
+}))
+
+vi.mock('../src/main/renderer-disposal', () => ({
+  releaseClosedRenderer: vi.fn(() => true),
 }))
 
 type DetachedModule = typeof import('../src/main/detached-windows')
@@ -206,6 +215,90 @@ describe('detachedOpenDocuments', () => {
   })
 })
 
+describe('a detached mind map', () => {
+  it('is reported to MCP agents as kind mindmap, with its own dirty state', async () => {
+    const { mindmapIsDirty } = await import('../../mindmap/src/main/mindmap-main')
+    vi.mocked(mindmapIsDirty).mockImplementation((id) => id === 41)
+    detached.createDetachedEditorWindow({
+      view: fakeView(41) as never,
+      kind: 'mindmap',
+      title: 'plan.xmind',
+      filePath: 'C:/maps/plan.xmind',
+      applyMenuFor: () => {},
+    })
+    detached.createDetachedEditorWindow({
+      view: fakeView(42) as never,
+      kind: 'sheets',
+      title: 'b',
+      applyMenuFor: () => {},
+    })
+    const docs = await detached.detachedOpenDocuments()
+    expect(docs.map((d) => [d.id, d.kind, d.filePath, d.dirty])).toEqual([
+      ['detached:41', 'mindmap', 'C:/maps/plan.xmind', true],
+      ['detached:42', 'sheets', undefined, false],
+    ])
+    vi.mocked(mindmapIsDirty).mockReturnValue(false)
+  })
+
+  it('is found by its path, so a second open focuses the window', () => {
+    detached.createDetachedEditorWindow({
+      view: fakeView(43) as never,
+      kind: 'mindmap',
+      title: 'plan.xmind',
+      filePath: 'C:/maps/plan.xmind',
+      applyMenuFor: () => {},
+    })
+    expect(detached.focusDetachedByPath('c:/maps/PLAN.xmind')).toBe(true)
+    expect(detached.findDetachedTabByPath('C:/maps/plan.xmind')).toMatchObject({
+      id: 'detached:43',
+      kind: 'mindmap',
+    })
+  })
+
+  it('closes without a prompt when clean', async () => {
+    const view = fakeView(44)
+    detached.createDetachedEditorWindow({
+      view: view as never,
+      kind: 'mindmap',
+      title: 'plan.xmind',
+      applyMenuFor: () => {},
+    })
+    const win = instances[0]!
+    win.emit('close', { preventDefault: vi.fn() })
+    await flush()
+    const { requestMindmapClose } = await import('../../mindmap/src/main/mindmap-main')
+    expect(requestMindmapClose).not.toHaveBeenCalled()
+    expect(win.destroyed).toBe(true)
+    expect(view.webContents.close).toHaveBeenCalled()
+  })
+
+  it('asks before closing when dirty and keeps the window on cancel', async () => {
+    const { mindmapIsDirty, requestMindmapClose } =
+      await import('../../mindmap/src/main/mindmap-main')
+    vi.mocked(mindmapIsDirty).mockReturnValue(true)
+    vi.mocked(requestMindmapClose).mockResolvedValueOnce(false)
+    const view = fakeView(45)
+    detached.createDetachedEditorWindow({
+      view: view as never,
+      kind: 'mindmap',
+      title: 'plan.xmind',
+      applyMenuFor: () => {},
+    })
+    const win = instances[0]!
+    win.emit('close', { preventDefault: vi.fn() })
+    await flush()
+    expect(requestMindmapClose).toHaveBeenCalledWith(view.webContents, win)
+    expect(win.destroyed).toBe(false)
+    expect(view.webContents.close).not.toHaveBeenCalled()
+
+    vi.mocked(requestMindmapClose).mockResolvedValueOnce(true)
+    win.emit('close', { preventDefault: vi.fn() })
+    await flush()
+    expect(win.destroyed).toBe(true)
+    vi.mocked(mindmapIsDirty).mockReturnValue(false)
+  })
+})
+
 describe('close guard', () => {
   it('closes a clean window of any kind without a prompt and releases the renderer', async () => {
     const view = fakeView(5)
@@ -264,6 +357,21 @@ describe('close guard', () => {
     expect(teardownDocsRenderer).toHaveBeenCalledWith(view.webContents)
     expect(view.webContents.close).not.toHaveBeenCalled()
     expect(detached.isDetachedTabId('detached:7')).toBe(false)
+  })
+
+  it('docs ends the closed window renderer process so its memory comes back', async () => {
+    const { releaseClosedRenderer } = await import('../src/main/renderer-disposal')
+    const view = fakeView(8)
+    detached.createDetachedEditorWindow({
+      view: view as never,
+      kind: 'docs',
+      title: 'b.docx',
+      applyMenuFor: () => {},
+    })
+    expect(detached.detachedDocumentFor(8)).toMatchObject({ id: 'detached:8', kind: 'docs' })
+    expect(detached.closeDetachedWithoutPrompt('detached:8')).toBe(true)
+    expect(releaseClosedRenderer).toHaveBeenCalledWith(view.webContents)
+    expect(detached.detachedDocumentFor(8)).toBeUndefined()
   })
 })
 

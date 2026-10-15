@@ -227,6 +227,72 @@ describe('aiSubscriptionCardView', () => {
     expect(JSON.stringify(view)).not.toContain('spawn')
   })
 
+  it('a browser sign-in under way: where to sign in, and the way to the window for a code', () => {
+    expect(
+      aiSubscriptionCardView(status('claude-code', 'signed-out', { signingIn: 'browser' })),
+    ).toEqual({
+      provider: 'claude-code',
+      state: 'signed-out',
+      tone: 'neutral',
+      statusKey: 'cardSigningIn',
+      noteKeys: ['signingInBrowserNote'],
+      actions: ['login-window'],
+    })
+  })
+
+  it('the window open for a code: what to do in it, and nothing to press', () => {
+    expect(aiSubscriptionCardView(status('codex', 'signed-out', { signingIn: 'window' }))).toEqual({
+      provider: 'codex',
+      state: 'signed-out',
+      tone: 'neutral',
+      statusKey: 'cardSigningIn',
+      noteKeys: ['signingInWindowNote'],
+      actions: [],
+    })
+  })
+
+  it('a sign-in with another account under way hides the account and its actions', () => {
+    const view = aiSubscriptionCardView(
+      status('claude-code', 'ready', { account: 'a@example.com', signingIn: 'browser' }),
+      { account: true, accountActions: true },
+    )
+    expect(view.account).toBeUndefined()
+    expect(view.statusKey).toBe('cardSigningIn')
+    expect(view.actions).toEqual(['login-window'])
+  })
+
+  describe('where the app cannot open a terminal window (macOS, Linux)', () => {
+    const noWindows = { terminalWindows: false }
+
+    it('not-installed: only the official instructions, no install button or its note', () => {
+      expect(aiSubscriptionCardView(status('codex', 'not-installed'), noWindows)).toEqual({
+        provider: 'codex',
+        state: 'not-installed',
+        tone: 'neutral',
+        statusKey: 'cardNotInstalled',
+        noteKeys: [],
+        actions: ['install-help'],
+      })
+    })
+
+    it('a browser sign-in under way: where to sign in, with no window to open', () => {
+      const view = aiSubscriptionCardView(
+        status('claude-code', 'signed-out', { signingIn: 'browser' }),
+        noWindows,
+      )
+      expect(view.noteKeys).toEqual(['signingInBrowserNote'])
+      expect(view.actions).toEqual([])
+    })
+
+    it('the other states read the same as on Windows', () => {
+      for (const state of ['signed-out', 'ready', 'metered', 'error', 'checking'] as const) {
+        expect(aiSubscriptionCardView(status('codex', state), noWindows)).toEqual(
+          aiSubscriptionCardView(status('codex', state)),
+        )
+      }
+    })
+  })
+
   it('reads a provider that has not reported yet as checking', () => {
     expect(aiSubscriptionStatusOf({}, 'codex')).toEqual({
       provider: 'codex',
@@ -253,6 +319,8 @@ describe('aiConnectPromptView', () => {
       bodyKey: 'connectBody',
       providers: ['claude-code', 'codex'],
       settings: false,
+      // with nothing connected, the free connections are the other way in
+      free: true,
     })
   })
 
@@ -267,6 +335,7 @@ describe('aiConnectPromptView', () => {
       providerName: 'Codex',
       providers: ['codex'],
       settings: false,
+      free: false,
     })
   })
 
@@ -278,6 +347,7 @@ describe('aiConnectPromptView', () => {
       providerName: 'Gemini',
       providers: [],
       settings: true,
+      free: false,
     })
   })
 })
@@ -366,7 +436,7 @@ describe('aiRunErrorText', () => {
 
   it('words every kind of the subscription contract in English', () => {
     expect(aiRunErrorText('en', { kind: 'not-connected' })).toBe(
-      'No AI is connected. Connect a Claude or Codex subscription first.',
+      'No AI is connected. Connect a Claude or Codex subscription, or a free AI, first.',
     )
     expect(aiRunErrorText('en', { kind: 'not-installed', provider: 'codex' })).toBe(
       'The Codex program was not found on this PC.',
@@ -394,6 +464,12 @@ describe('aiRunErrorText', () => {
     )
     expect(aiRunErrorText('en', { kind: 'headless-limit', resetsAt }, now)).toBe(
       `The hourly limit for automatic requests has been reached. Requests are possible again at ${time}.`,
+    )
+    expect(aiRunErrorText('en', { kind: 'free-limit' })).toBe(
+      "Today's free allowance is used up. Try again tomorrow, or choose another AI in Settings.",
+    )
+    expect(aiRunErrorText('en', { kind: 'free-limit', resetsAt }, now)).toBe(
+      `Today's free allowance is used up. You can use it again at ${time}.`,
     )
   })
 

@@ -567,6 +567,47 @@ export const IconAiSummarize = () => (
     />
   </svg>
 )
+/** AI page reading: a page in scan corners with the AI sparkle */
+export const IconAiReadPages = () => (
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.5"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden
+  >
+    <path d="M3.5 7.5V5C3.5 4.17157 4.17157 3.5 5 3.5H7.5" />
+    <path d="M16.5 3.5H19C19.8284 3.5 20.5 4.17157 20.5 5V7.5" />
+    <path d="M3.5 16.5V19C3.5 19.8284 4.17157 20.5 5 20.5H7.5" />
+    <path d="M7.5 8H13.5" />
+    <path d="M7.5 11.5H12" />
+    <path d="M7.5 15H10" />
+    <path
+      d="M17 12L17.2579 12.697C17.5961 13.611 17.7652 14.068 18.0986 14.4014C18.432 14.7348 18.889 14.9039 19.803 15.2421L20.5 15.5L19.803 15.7579C18.889 16.0961 18.432 16.2652 18.0986 16.5986C17.7652 16.932 17.5961 17.389 17.2579 18.303L17 19L16.7421 18.303C16.4039 17.389 16.2348 16.932 15.9014 16.5986C15.568 16.2652 15.111 16.0961 14.197 15.7579L13.5 15.5L14.197 15.2421C15.111 14.9039 15.568 14.7348 15.9014 14.4014C16.2348 14.068 16.4039 13.611 16.7421 12.697L17 12Z"
+      strokeLinejoin="round"
+    />
+  </svg>
+)
+export const IconAiTranslate = () => (
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.5"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden
+  >
+    <path d="M3.5 5.5H11.5" />
+    <path d="M7.5 3.5V5.5" />
+    <path d="M10 5.5C9.3 8.6 7.4 11.2 4.5 12.8" />
+    <path d="M5.5 8C6.4 9.8 7.8 11.3 9.5 12.3" />
+    <path d="M12 20.5L15.5 11.5L19 20.5" />
+    <path d="M13.2 17.5H17.8" />
+  </svg>
+)
 export const IconAiKeyPoints = () => (
   <svg
     viewBox="0 0 24 24"

@@ -4,9 +4,8 @@
  * which tools to offer the model. It asks the same routing functions the
  * tools start a request with, so the report follows the settings, the
  * connection statuses the caller passes and, on the automatic-call path, the
- * subscription setting. It does not look at the hourly ledger: a used-up
- * allowance is an error of the request, not a missing capability
- * (headlessSubscriptionUsage reports it).
+ * subscription setting. It does not look at the ledger of automatic calls,
+ * which only counts them (headlessSubscriptionUsage reports the count).
  */
 
 import { normalizeAiSettings, type AiSettings } from '@genoffice/ai-provider'

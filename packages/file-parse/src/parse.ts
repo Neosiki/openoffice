@@ -3,11 +3,15 @@ import { extname } from 'node:path'
 import { OdtNotTextError, isOdtOpenError } from '@genoffice/odt-engine'
 import { docToText } from './doc'
 import { docxToText } from './docx'
+import { hwpToText } from './hwp'
 import { odtToText } from './odt'
 import { pdfToText } from './pdf'
 import { pptToText } from './ppt'
 import { pptxToText } from './pptx'
 import { xlsxToText } from './xlsx'
+import { xmindToText } from './xmind'
+import { redactHtmlSource } from './html-redaction'
+import { redactMarkdownSource } from './markdown-redaction'
 
 export type ParsedFileKind = 'text' | 'image' | 'unsupported'
 
@@ -42,6 +46,22 @@ const TEXT_EXTS = new Set([
   'py',
 ])
 
+/**
+ * Formats whose own editor can withhold a span from a model: the text is handed
+ * over with each withheld span as its `{{label}}` marker. These throw on a mark
+ * they cannot process, which the catch below turns into a failed read.
+ */
+const TEXT_REDACTORS: Record<string, (source: string) => string> = {
+  md: redactMarkdownSource,
+  markdown: redactMarkdownSource,
+  // the markdown editor opens these two as well, and its Save As writes a
+  // document under them with the withheld spans it holds
+  txt: redactMarkdownSource,
+  json: redactMarkdownSource,
+  html: redactHtmlSource,
+  htm: redactHtmlSource,
+}
+
 const FATAL_UTF8_DECODER = new TextDecoder('utf-8', { fatal: true })
 // windows-1252 maps every byte, so this fallback can never fail
 const WINDOWS_1252_DECODER = new TextDecoder('windows-1252')
@@ -68,7 +88,10 @@ function decodeTextBytes(bytes: Buffer): string | null {
   }
 }
 
-type BinaryKind = 'zip' | 'pdf' | 'ole2' | 'unknown'
+type BinaryKind = 'zip' | 'pdf' | 'ole2' | 'hwp3' | 'unknown'
+
+/** How a Hangul 3.x document begins; Hangul 5 is an OLE2 file and HWPX a zip. */
+const HWP3_SIGNATURE = Buffer.from('HWP Document File')
 
 /** pdf.js scans the first 1024 bytes for the header, and leading junk before it
  *  (HTTP header remnants, whitespace) is common in the wild, so match the header
@@ -86,6 +109,7 @@ function sniffBinary(bytes: Buffer): BinaryKind {
     bytes[3] === 0xe0
   )
     return 'ole2'
+  if (bytes.subarray(0, HWP3_SIGNATURE.length).equals(HWP3_SIGNATURE)) return 'hwp3'
   return 'unknown'
 }
 
@@ -133,6 +157,8 @@ export async function parseFileToText(filePath: string): Promise<ParsedFile> {
             'Unsupported text encoding: BOM-declared UTF-32 cannot be decoded (UTF-8 and UTF-16 are supported)',
         }
       }
+      const redact = TEXT_REDACTORS[ext]
+      if (redact) return { ok: true, kind: 'text', text: redact(text) }
       return { ok: true, kind: 'text', text }
     }
     const bytes = await readFile(filePath)
@@ -154,6 +180,13 @@ export async function parseFileToText(filePath: string): Promise<ParsedFile> {
         error: `Content mismatch: .${ext} file has ${sniffed} magic bytes`,
       }
     }
+    if (ext === 'xmind' && sniffed !== 'zip') {
+      return {
+        ok: false,
+        kind: 'text',
+        error: `Content mismatch: .xmind file has ${sniffed} magic bytes`,
+      }
+    }
     // a DOCX saved under a .doc name is common enough that it parses as OOXML
     if (
       (ext === 'doc' && sniffed !== 'ole2' && sniffed !== 'zip') ||
@@ -165,7 +198,22 @@ export async function parseFileToText(filePath: string): Promise<ParsedFile> {
         error: `Content mismatch: .${ext} file has ${sniffed} magic bytes`,
       }
     }
+    // .hwpx is a zip; a .hwp is Hangul 5 (OLE2) or Hangul 3, and now and then an
+    // HWPX saved under the old name, which the engine reads by its content
+    if (
+      (ext === 'hwpx' && sniffed !== 'zip') ||
+      (ext === 'hwp' && sniffed !== 'ole2' && sniffed !== 'hwp3' && sniffed !== 'zip')
+    ) {
+      return {
+        ok: false,
+        kind: 'text',
+        error: `Content mismatch: .${ext} file has ${sniffed} magic bytes`,
+      }
+    }
     switch (ext) {
+      case 'hwp':
+      case 'hwpx':
+        return { ok: true, kind: 'text', text: await hwpToText(bytes) }
       case 'doc':
         return {
           ok: true,
@@ -185,6 +233,8 @@ export async function parseFileToText(filePath: string): Promise<ParsedFile> {
         return { ok: true, kind: 'text', text: await xlsxToText(bytes) }
       case 'pdf':
         return { ok: true, kind: 'text', text: await pdfToText(bytes) }
+      case 'xmind':
+        return { ok: true, kind: 'text', text: await xmindToText(bytes) }
     }
   } catch (e) {
     return { ok: false, kind: 'text', error: e instanceof Error ? e.message : String(e) }

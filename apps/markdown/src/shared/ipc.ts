@@ -9,6 +9,8 @@ export const MAX_PASTED_IMAGE_BYTES = 50 * 1024 * 1024
 
 export const MARKDOWN_CHANNELS = {
   consumePending: 'markdown:consume-pending',
+  /** invoke → the text a new tab starts with (8.6 "convert without AI"), once; null otherwise */
+  seedTake: 'markdown:seed-take',
   readFile: 'markdown:read-file',
   save: 'markdown:save',
   saveRequest: 'markdown:save-request',
@@ -217,6 +219,8 @@ export interface ImageData {
 export interface MarkdownApi {
   /** Take the md path pending for this view (queued at tab creation); null = new untitled document */
   consumePending(): Promise<string | null>
+  /** A new untitled tab's starting text (a conversion's result), taken once; null otherwise */
+  takeSeed?(): Promise<string | null>
   /** open any shell-routed document path (an AI answer's filenav citation) */
   openSourcePath(path: string): Promise<void>
   /** Headless export mode: the PDF path this hidden renderer must export to, null in normal use */

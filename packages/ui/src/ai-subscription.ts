@@ -65,7 +65,14 @@ export function aiProviderDisplayName(provider: AiProviderId | undefined): strin
 // ---- connect card ----
 
 export type AiSubscriptionCardAction =
-  'install' | 'install-help' | 'login' | 'accept-metered' | 'recheck' | 'switch-account' | 'logout'
+  | 'install'
+  | 'install-help'
+  | 'login'
+  | 'login-window'
+  | 'accept-metered'
+  | 'recheck'
+  | 'switch-account'
+  | 'logout'
 
 /**
  * The two actions on the account of a signed-in CLI: sign in with another
@@ -87,6 +94,13 @@ export interface AiSubscriptionCardOptions {
   readonly account?: boolean | undefined
   /** offer "sign in with another account" and "sign out" while a login is known */
   readonly accountActions?: boolean | undefined
+  /**
+   * the app can open a terminal window of its own (Windows): the install
+   * command and the CLI's login window for a pasted code run there. False
+   * elsewhere: a not-installed card offers only the vendor's install page, and
+   * a browser sign-in has no window to open. Default true.
+   */
+  readonly terminalWindows?: boolean | undefined
 }
 
 export type AiSubscriptionCardTone = 'neutral' | 'ok' | 'warning' | 'error'
@@ -131,7 +145,12 @@ export function aiSubscriptionCardView(
   status: AiSubscriptionStatus,
   options: AiSubscriptionCardOptions = {},
 ): AiSubscriptionCardView {
+  const terminalWindows = options.terminalWindows !== false
+  if (status.signingIn) return signingInCardView(status, terminalWindows)
   const view = connectionCardView(status)
+  if (status.state === 'not-installed' && !terminalWindows) {
+    return { ...view, noteKeys: [], actions: ['install-help'] }
+  }
   if (status.state !== 'ready' && status.state !== 'metered') return view
   const account = options.account ? status.account?.trim() || undefined : undefined
   return {
@@ -142,6 +161,26 @@ export function aiSubscriptionCardView(
     actions: options.accountActions
       ? [...view.actions, ...AI_SUBSCRIPTION_ACCOUNT_ACTIONS]
       : view.actions,
+  }
+}
+
+/**
+ * A login the app started is under way, whatever was detected before it: the
+ * card says where to sign in. In the browser first, with a way to open the
+ * CLI's window for when the browser hands back a code; then, in that window.
+ */
+function signingInCardView(
+  status: AiSubscriptionStatus,
+  terminalWindows: boolean,
+): AiSubscriptionCardView {
+  const browser = status.signingIn === 'browser'
+  return {
+    provider: status.provider,
+    state: status.state,
+    tone: 'neutral',
+    statusKey: 'cardSigningIn',
+    noteKeys: [browser ? 'signingInBrowserNote' : 'signingInWindowNote'],
+    actions: browser && terminalWindows ? ['login-window'] : [],
   }
 }
 
@@ -225,6 +264,8 @@ export interface AiConnectPromptView {
   readonly providers: readonly AiSubscriptionProviderId[]
   /** a key provider is selected but not filled in: the way out is the settings page */
   readonly settings: boolean
+  /** nothing is connected: the free connections in the settings page are the other way in */
+  readonly free: boolean
 }
 
 /**
@@ -241,6 +282,7 @@ export function aiConnectPromptView(choice: AiProviderChoice): AiConnectPromptVi
       bodyKey: 'connectBody',
       providers: AI_SUBSCRIPTION_PROVIDERS,
       settings: false,
+      free: true,
     }
   }
   const providerName = aiProviderDisplayName(choice.provider)
@@ -250,6 +292,7 @@ export function aiConnectPromptView(choice: AiProviderChoice): AiConnectPromptVi
       providerName,
       providers: [choice.provider],
       settings: false,
+      free: false,
     }
   }
   return {
@@ -258,6 +301,7 @@ export function aiConnectPromptView(choice: AiProviderChoice): AiConnectPromptVi
     providerName,
     providers: [],
     settings: true,
+    free: false,
   }
 }
 
@@ -272,6 +316,7 @@ export const AI_BLOCKED_RUN_KINDS = [
   'metered-not-accepted',
   'unsafe-tools',
   'not-connected',
+  'free-limit',
 ] as const satisfies readonly AiRunErrorKind[]
 
 export type AiBlockedRunKind = (typeof AI_BLOCKED_RUN_KINDS)[number]
@@ -374,6 +419,10 @@ export function aiRunErrorText(
       return hasTime
         ? aiSubscriptionText(lang, 'errHeadlessLimitReset', { time })
         : aiSubscriptionText(lang, 'errHeadlessLimit')
+    case 'free-limit':
+      return hasTime
+        ? aiSubscriptionText(lang, 'errFreeLimitReset', { time })
+        : aiSubscriptionText(lang, 'errFreeLimit')
     default:
       return undefined
   }

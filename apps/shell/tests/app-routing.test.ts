@@ -16,6 +16,16 @@ describe('appForPath', () => {
     expect(appForPath('/x/a.pptx')).toBe('slides')
     expect(appForPath('/x/a.pdf')).toBe('pdf')
     expect(appForPath('/x/a.html')).toBe('html')
+    expect(appForPath('/x/a.xmind')).toBe('mindmap')
+    expect(appForPath('/x/A.XMIND')).toBe('mindmap')
+  })
+
+  it('routes both Hangul formats to the hwp app', () => {
+    expect(appForPath('/x/a.hwp')).toBe('hwp')
+    expect(appForPath('/x/a.hwpx')).toBe('hwp')
+    expect(appForPath('/x/A.HWPX')).toBe('hwp')
+    // the backup the hwp editor leaves beside a document is not a document
+    expect(appForPath('/x/a.hwp.bak')).toBeUndefined()
   })
 
   it('opens OpenDocument text in the Word tab', () => {
@@ -49,7 +59,7 @@ describe("the open route's text-app pattern", () => {
   })
 
   it('claims nothing else, so an unknown file still gets the unsupported notice', () => {
-    for (const ext of ['docx', 'xlsx', 'pptx', 'pdf', 'html', 'xyz']) {
+    for (const ext of ['docx', 'xlsx', 'pptx', 'pdf', 'html', 'xmind', 'xyz']) {
       expect(TEXT_RE.test(`/x/notes.${ext}`)).toBe(false)
     }
     expect(TEXT_RE.test('/x/noextension')).toBe(false)
@@ -75,6 +85,8 @@ describe('renameStaysInApp', () => {
     expect(renameStaysInApp('/x/a.docx', 'a.pdf')).toBe(false)
     expect(renameStaysInApp('/x/a.xlsx', 'a.csv')).toBe(true)
     expect(renameStaysInApp('/x/a.png', 'a.png')).toBe(true)
+    expect(renameStaysInApp('/x/plan.xmind', 'plan2.xmind')).toBe(true)
+    expect(renameStaysInApp('/x/plan.xmind', 'plan.md')).toBe(false)
   })
 
   it('refuses a rename between .docx and .odt: same tab, different bytes', () => {

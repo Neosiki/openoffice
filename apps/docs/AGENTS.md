@@ -7,6 +7,7 @@ Word 문서(.docx)와 ODT(.odt) 에디터다. 그리고 배포되는 앱 전체�
 - docx 편집 화면(`src/renderer/`): Tiptap 편집기와 확장(`editor/`), 쪽 나눔(`pagination*.ts`), 머리글·바닥글, 변경 내용 추적, 메모, 리본과 대화 상자(`components/`).
 - 메인 프로세스(`src/main/docs-main.ts`): 창과 뷰 생성, 열기·저장·내보내기·인쇄, 암호화된 docx(`docx-encryption.ts`), 큰 문서의 지연 미디어(`lazy-media.ts`), 디스크의 외부 변경 감지(`external-change.ts`), 최근 파일과 별표(`starred-files.ts`).
 - 공용 AI 핸들러 `registerAiIpc`: `ai:get-settings`, `ai:set-settings`, `ai:stream`, `ai:stream-cancel`, `ai:chat`, `ai:web-search`, `ai:image-search`, `ai:fetch-image`, `ai:tool-capabilities`, `ai:codex-models`, `ai:custom-models` 등과 구독 IPC 채널. 그 규칙은 Electron 없이 테스트되는 `src/main/ai-run.ts`에 있다.
+- 무료 연결 채널(`FREE_AI_IPC_CHANNELS`: `ai:free-connect`, `ai:free-connect-cancel`, `ai:free-disconnect`, `ai:free-quota`, `ai:free-open-key-page`)은 `src/main/free-ai-ipc.ts`의 `registerFreeAiIpc`가 `registerAiIpc` 안에서 등록한다. OpenRouter 브라우저 연결로 받은 키는 여기서 바로 설정 파일에 쓰고 화면에는 넘기지 않는다. 브라우저가 돌아온 뒤 보이는 페이지의 문구는 `src/main/free-ai-strings.ts`(21개 언어)다.
 - 문서 에디터의 AI 패널과 skill(`src/renderer/ai/`): `AiPanel.tsx`, `docs-skill.ts`, 도구(`tools.ts`, `*-ops.ts`), 편집 대기 카드(`edit-queue.ts`), 전송(`transport.ts`).
 - 다른 에디터가 쓰는 문서 생성 흐름 `createAiDocument`(시트와 PDF의 AI가 새 docx·pdf·md를 만들 때 이 함수로 들어온다)와 프로젝트 IPC(`registerProjectIpc`).
 
@@ -35,7 +36,7 @@ Word 문서(.docx)와 ODT(.odt) 에디터다. 그리고 배포되는 앱 전체�
 - 메인 코드는 shell 번들에 들어간다. shell이 `../../../docs/src/main/docs-main`을 상대 경로로 import하므로 `src/main`을 고친 뒤에는 shell을 다시 빌드해야 변경이 실행된다. 단독 실행(`src/main/index.ts` → `startDocsStandalone`)은 개발용이다.
 - 채널 이름으로 소유를 구분한다. `ai:*`는 앱 전체가 공유하고 여기서 한 번 등록된다. 다른 에디터와 겹칠 수 있는 것은 `docs:` 접두사를 붙인다(`docs:analyze-media`, `docs:ai-generate-image`). 슬라이드가 같은 프로세스에서 자기 `ai:generate-image`·`ai:analyze-media`를 등록하기 때문이다.
 - 스트림 중에는 제공자 쪽에서 움직임이 있을 때 `ping` 조각을 보낸다(5초에 한 번을 넘지 않는다). 렌더러의 침묵 감시가 "느린 턴"과 "죽은 턴"을 구별하는 근거다. 렌더러가 사라지면 `abortOnDestroyed`가 요청을 끊는다.
-- `ai:stream-cancel`은 그 id의 스트림과 함께, 보낸 창이 진행 중인 이미지 생성·미디어 분석 호출도 끊는다(`abortMediaCalls`). 도구가 실행되는 동안의 중단은 이미 끝난 턴의 id로 오기 때문에 호출을 창으로 찾는다. shell 안에서는 이 핸들러가 모든 에디터의 중단에 응답하므로, 이미지·미디어 핸들러는 어느 에디터의 것이든 `withMediaCallSignal`로 감싼다.
+- `ai:stream-cancel`은 그 id의 스트림과 함께, 보낸 창이 진행 중인 이미지 생성·미디어 분석 호출도 끊는다(`abortMediaCalls`). 도구가 실행되는 동안의 중단은 이미 끝난 턴의 id로 오기 때문에 호출을 창으로 찾는다. shell 안에서는 이 핸들러가 모든 에디터의 중단에 응답하므로, 이미지·미디어 핸들러는 어느 에디터의 것이든 `withMediaCallSignal`로 감싼다. 두 번째 인자로 `'request'`를 받으면 그 id의 스트림만 끊고 미디어 호출은 두는데, 도구를 쓰지 않는 PDF 문서 작업의 호출이 이렇게 중단해 같은 탭의 AI 창 작업을 건드리지 않는다.
 - 렌더러의 패널은 공용 부품으로 조립한다. 보내기는 `useAiSendGate`의 `admit`을 지나고, 연결이 없으면 `AiConnectPrompt`, 구독 첫 사용이면 `AiFirstConnectionNotice`(Codex가 진단 기록을 남길 수 있다는 문장을 켠 채로, `codexKeepsHistory`), 막힌 실행이면 `AiBlockedNotice`를 그린다. 전송은 `errorText: (cause) => aiRunErrorText(lang, cause)`를 넘겨 다른 에디터와 같은 문장을 쓴다. 구독 API는 preload가 `window.aiOfficeSubscription`으로 내보내고, 없거나 실패하면 상태는 `checking`으로 남는다.
 - 문자열은 언어별 조각이다. `i18n/strings-ai.ts`·`strings-app.ts`·`strings-ribbon.ts`는 `i18n/<영역>/<lang>.ts`를 모으는 집계 파일이고 `zh.ts`가 키 집합을 정한다. 키를 추가하면 21개 조각 모두에 넣는다. 구독 연결 문장은 `@genoffice/ui`의 공용 문자열을 쓰고 여기에 복제하지 않는다. `useI18n()`의 `t`는 훅 의존성 배열에 넣지 않는다.
 - `electron.vite.config.ts`의 `externalizeDepsPlugin`은 `dependencies`의 패키지를 번들 밖에 둔다. `@genoffice/*` 패키지는 TS 소스라 밖에 두면 실행 시 해석에 실패하므로, `dependencies`에 workspace 패키지를 추가하면 `exclude` 목록에도 넣는다.
@@ -51,6 +52,7 @@ Word 문서(.docx)와 ODT(.odt) 에디터다. 그리고 배포되는 앱 전체�
   - 미리 보기 그림이 없는 자리 표시는 이름표 SVG로 그린다(`odt-labels.ts`, 화면·인쇄·PDF 같음). 인쇄·PDF 전에 한 번 알린다. ODT→docx 다른 이름으로 저장은 그 그림을 이름표 PNG로 바꿔 쓴다(`odt-label-docx.ts`, 다른 zip 항목은 바이트 그대로 복사).
 - 중첩 표가 든 칸의 자기 문단은 엔진의 칸 글자 패치(`patchTableCellTexts`)가 닿지 않는다(중첩 표만 고친다). 그래서 `pmDocToSavePlan`이 그 칸의 자기 문단만 떼어 혼자 있는 칸으로 엔진 패치에 넘기고 제자리에 돌려놓는다(`patchHostCellParas`). 문단 스타일, 중첩 표, 다른 칸의 바이트는 그대로다. 칸 안에서 문단 수가 바뀌었으면 예전처럼 표를 다시 쓴다(`generateTableModelXml`). 예전에는 그 칸에 친 글자가 저장에서 빠졌다.
 - 문서 바이트는 IPC 응답이 아니라 미디어 프로토콜의 일회용 주소로 렌더러에 건넨다(`byte-handoff.ts`). IPC 직렬화가 버퍼를 통째로 복사해 1GB 파일에서 메인 프로세스가 죽었기 때문이다.
+- 디자인 템플릿 글꼴은 설치 파일에 한 번만 들어 있고(`resources/template-fonts`) 렌더러 빌드 자산으로 import하지 않는다. 같은 미디어 프로토콜의 `template-fonts` 호스트가 목록에 있는 파일만 내주고(`main/lazy-media.ts`가 `@genoffice/electron-utils/template-font-response`로 답한다. 면 목록과 주소는 `@genoffice/ui/template-fonts`에 있다), 렌더러가 시작할 때 실제 패밀리 이름으로 등록한다(`renderer/template-fonts.ts`). 인쇄와 PDF 내보내기(창 없는 내보내기 포함)는 같은 렌더러에서 돌므로 따로 등록하지 않는다.
 
 ## 테스트
 

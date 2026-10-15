@@ -219,4 +219,39 @@ export const ar = {
   aiSumSaveTemplate: 'حفظ قالب النمط "{name}"',
   aiSumTemplatesEmpty: 'قوالب الأنماط (فارغ)',
   aiSumListTemplates: 'سرد {count} من قوالب الأنماط',
+  aiTplGalleryTitle: 'اختر قالبًا',
+  aiTplSectionBuiltin: 'القوالب المضمّنة',
+  aiTplSectionSaved: 'أنماطي المحفوظة',
+  aiTplChipPick: 'قالب',
+  aiTplChipChange: 'تغيير القالب',
+  aiTplChipRemove: 'إزالة القالب',
+  aiTplAdjustMark: 'توجد طلبات إضافية',
+  aiTplAdjustClear: 'مسح الطلبات الإضافية',
+  aiTplSchemeLight: 'فاتح',
+  aiTplSchemeDark: 'داكن',
+  aiTplSchemeMixed: 'مختلط',
+  aiTplSavedOn: 'حُفظ في {date}',
+  aiTplPreviewAlt: 'معاينة غلاف {name}',
+  aiTplAppliesToNew:
+    'شرائحك الحالية تبقى كما هي. يُطبَّق هذا القالب على الشرائح التي ينشئها الذكاء الاصطناعي من الآن فصاعدًا.',
+  aiTplFontsNotice:
+    'خطوط القالب مضمّنة في هذا التطبيق. قد تعرض برامج أخرى مثل PowerPoint خطًا مختلفًا.',
+  aiTplOpenFonts: 'فتح مجلد الخطوط',
+  aiTplDesc_coral: 'كريمي ووردي مائل إلى البرتقالي على خلفية شبه سوداء، مع عناوين ضخمة وضيقة.',
+  aiTplDesc_blue_professional:
+    'خلفية كريمية مع لمسات من الأزرق الكوبالتي الزاهي. نظيف وعصري ورسمي.',
+  aiTplDesc_monochrome: 'خلفية عاجية ونص أسود بالكامل وعناوين بخط مذيّل. بلا أي لون.',
+  aiTplDesc_neo_grid_bold:
+    'خلفية بيضاء مطفأة مع لمسة واحدة من الأصفر النيوني. خطوط سميكة بطابع المجلات.',
+  aiTplDesc_block_frame: 'مساحات لونية باستيلية نيونية بحدود سوداء سميكة. مرح ولافت للنظر.',
+  aiTplDesc_raw_grid: 'وردي وأخضر مريمي وأسود حبري مع حدود سميكة ومساحات لونية مزاحة. خشن وقوي.',
+  aiTplDesc_studio: 'خلفية سوداء ونص أصفر ساطع. مفعم بالطاقة وجريء.',
+  aiTplDesc_signal: 'كحلي داكن وأبيض عاجي مع لمسة واحدة من الذهبي الهادئ. رسمي ورصين.',
+  aiTplDesc_grove:
+    'خلفية خضراء داكنة بلون الغابة ونص كريمي وعناوين مذيّلة كلاسيكية مع لمسة بلون الصدأ.',
+  aiTplDesc_editorial_tri_tone: 'ثلاثة ألوان بأسلوب المجلات: وردي باهت وكريمي خردلي وعنّابي داكن.',
+  aiTplDesc_emerald_editorial:
+    'أخضر زاهٍ وكحلي وأبيض ورقي. خطوط مزدوجة وعناوين مذيّلة عريضة، كغلاف مجلة.',
+  aiTplDesc_vellum:
+    'خلفية كحلية داكنة ونص مذيّل بأصفر دافئ مع لمسة من الأزرق المخضر الباهت. هادئ وأكاديمي.',
 } satisfies Record<keyof typeof zh, string>

@@ -56,6 +56,29 @@
 - **한컴 확인 도구는 `tools/odt-hancom/`에 있다.** 받은 ODT를 고친 사본 만들기, 한컴으로 읽어 쪽·표·개체·누름틀·서식 적기, ODF 검사, 판정까지 한다(사용법은 그 폴더의 `README.md`). 한컴 한글 2024가 설치된 Windows에서만 돈다.
 - **확인 자료는 저장소 밖에 있다.** 한컴·정부 ODT와 시험용 docx, 한컴이 읽은 기준값은 `E:\github\odt-corpus`에 있다. 정부 문서에는 개인정보가 있어 저장소에 넣지 않는다.
 
+## 에이전트 모드
+
+- **Claude의 권한 요청이 앱에 오지 않고 "This command requires approval"로 끝난다.** `--permission-prompts host`만으로는 표준 출력으로 오지 않는다. → `--permission-prompt-tool stdio`를 함께 준다. 그러면 `control_request`(`can_use_tool`)로 오고, `{ behavior: 'allow', updatedInput }` 또는 `{ behavior: 'deny', message }`로 답한다.
+- **`--restricted`를 켜면 사용자 스킬이 하나도 실리지 않는다.** `--setting-sources user`를 줘도 같다. 반대로 `--restricted` 없이 사용자 설정을 읽게 하면 모델을 부르기 전에 사용자 훅이 실행된다. → 스킬 폴더를 복사한 플러그인을 `--plugin-dir`로 준다.
+- **디렉터리 연결(junction)로 붙인 스킬의 스크립트가 막힌다.** `blockReadsOutsideWorkingDirectories`가 연결을 실제 위치로 풀어 "작업 폴더 밖"으로 본다. → 복사하고, 그 폴더를 `--add-dir`로 준다.
+- **Claude `auto` 모드가 `--model haiku`에서 `default`로 내려간다.** `auto`는 지원하는 모델에서만 켜진다. 시작 요청의 `current_permission_mode`로 확인할 수 있다(모델 호출 없음).
+- **Codex 권한 프로필이 "elevated Windows sandbox requires effective `:root` read access"로 시작하지 않는다.** 기본 격리(권한 상승 방식)는 `:root` 읽기가 있어야 하고, 큰 폴더(`~/.codex`)를 막으면 처음 80초, 그 뒤 19초가 걸리거나 `thread/start`가 끝나지 않는다. → MXC 격리(`-c windows.sandbox="mxc"`)를 쓴다. MXC는 `{ ':minimal': 'read', <PATH의 프로그램 폴더>: 'read', <프로젝트>: 'write', <열린 문서>: 'read', <보호 폴더>: 'deny' }`를 1~3초에 받는다. 막는 값은 `deny`다(`none`이 아니다). 드라이브 루트(예: `G:\`)를 읽기로 주면 MXC가 거절하므로 PATH에서 뺀다. 격리 확인은 모델 호출 없이 `codex sandbox -c windows.sandbox='mxc' -c default_permissions=... -c permissions.<이름>.filesystem=... -- cmd /c ...`로 한다. PowerShell 5.1은 네이티브 인자의 큰따옴표를 지우므로 TOML 값은 작은따옴표 문자열로 쓴다.
+- **Codex `on-request`에서 허락한 명령이 격리 밖에서 돈다.** 모델이 격리 밖 실행을 요청하고 승인 요청이 오는데, 요청에는 그것을 가리는 표시가 없다(`reason`만 붙는다). `untrusted`에서 허락한 명령은 격리 안에서 돈다. → 묻는 방식은 `untrusted`만 쓰고, `thread/start` 응답의 `approvalPolicy`가 요청과 같은지 본다. 승인 요청의 `availableDecisions`에 `decline`이 없을 수 있다. 그때는 `cancel`로 거절한다.
+- **"믿고 맡기기"(승인 정책 `never`)에서 Codex가 앱 MCP 도구를 묻지 않고 거절한다.** `never`는 확인 요청을 보내지 않고 거절로 처리한다. → 앱 서버 설정에 `default_tools_approval_mode = "approve"`를 준다(값은 `auto`·`prompt`·`writes`·`approve`).
+- **격리 시험의 `findstr` 출력에서 경로가 깨진다.** `findstr`는 경로를 콘솔 코드 페이지로 내보내므로, 사용자 폴더 이름이 한글이면 UTF-8로 읽은 경로가 원래 경로와 다르다. → 표식 파일 이름(ASCII)으로만 판정한다.
+- **Codex가 앱 MCP 도구를 "user rejected MCP tool call"로 바로 실패시킨다.** 도구를 부르기 전에 `mcpServer/elicitation/request`(`_meta.codex_approval_kind: "mcp_tool_call"`, 빈 양식)로 확인을 받는데, 모르는 요청으로 거절하면 이렇게 된다. → 앱 서버의 그 요청에만 `{ action: 'accept', content: {}, _meta: null }`로 답한다. 프로토콜 전체는 `codex app-server generate-ts --out <폴더>`로 받아 볼 수 있다.
+- **Codex 파일 변경 승인 요청에는 경로가 없다.** 앞서 오는 `item/started`(`fileChange`의 `changes[].path`)에서 기억해 둔다.
+
+## 무료 연결
+
+- **Gemini 무료 등급이 Flash 모델을 "수요 많음(503)"으로 거절한다.** 2026-10-14 시험에서 3.5~3.8 Flash가 번갈아 거절됐고, 작은 요청은 가끔 통과해도 앱의 실제 요청(약 1만 6천 토큰)은 두 번 다 거절됐다. `gemini-3.5-flash-lite`는 매번 답했다. → 무료 연결은 Flash-Lite로 시작한다. 503은 앱이 두 번까지 다시 보내지만 길게 막히면 소용없다.
+- **Gemini의 예전 모델은 새 사용자에게 열려 있지 않다.** `gemini-2.5-flash`는 "no longer available to new users"(404)를 낸다. 3.1 Pro 미리보기는 무료 한도가 0이라 바로 429다.
+- **OpenRouter의 어떤 무료 모델은 등록된 앱에서만 열린다.** `thinkingmachines/inkling:free`는 "only available on agentic harnesses"(403)를 낸다. 무료 모델 목록에 넣기 전에 실제 키로 도구 호출을 한 번 시험한다.
+- **도구 호출을 지원한다고 나온 무료 모델도 앱에서는 실패한다.** 2026-10-15 시험에서 도구 하나짜리 짧은 요청은 대부분 통과했지만, 워드 편집기에서 두 요청(문단 넣기, 제목 바꾸고 요약 목록 넣기)을 끝까지 해낸 것은 `nvidia/nemotron-3.5-lightning:free`와 `dots-studio/dots-3-note-preview:free`뿐이었다. `cohere/north-mini-code:free`는 두 번째 요청에서 모델을 계속 부르며 4분 넘게 끝내지 않았고, `poolside/laguna-s-2.1:free`와 `google/gemma-4-26b-a4b-it:free`는 제공 회사가 혼잡(429)으로 자주 거절했고, `nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free`는 한 번 답하는 데 59초가 걸렸다. → 목록에는 앱에서 두 요청을 모두 해낸 모델만 넣는다. 시험은 `npm run free-models:trial`이다(`docs/operations.md`의 "무료 모델 점검". 실제 키와 무료 요청을 쓰므로 평소 검사에 넣지 않는다).
+- **`process.exit()`로 끝낸 도구 스크립트가 Windows에서 비정상 종료한다.** `fetch` 직후 `process.exit()`을 부르면 Node가 `Assertion failed: !(handle->flags & UV_HANDLE_CLOSING)`로 죽고 종료 코드가 127이 된다. → 네트워크를 쓴 뒤에는 `process.exitCode`만 정하고 끝까지 흘러가게 둔다.
+- **OpenRouter의 하루 무료 요청 수는 모델 호출 수다.** 문서를 한 번 고치는 데 2~5번이 든다. 남은 수는 `GET /api/v1/key`의 `free_model_daily_requests`로 읽는다(무료 요청을 쓰지 않는다). 사용한 수는 늦게 반영된다. 2026-10-15에는 몇 분씩 그대로였다.
+- **브라우저 연결의 돌아올 주소는 `localhost`다.** 브라우저가 `localhost`를 IPv6(`::1`)로 먼저 풀 수 있어 서버를 두 루프백 주소에 함께 연다. `::1`이 없는 PC에서는 그쪽만 조용히 건너뛴다.
+
 ## 작업 사본을 여럿 둘 때
 
 - **작업 사본을 지웠더니 본 저장소의 `node_modules`가 비었다.** 의존성을 연결(정션)로 나눠 쓰는 작업 사본을 `git worktree remove`로 지우면, 삭제가 연결을 따라가 본 설치를 지운다. → 지우기 전에 연결부터 끊는다. 지운 뒤 `node_modules/.bin`의 항목 수가 그대로인지 확인한다.
@@ -65,4 +88,10 @@
 
 - **첫 실행 안내의 두 번째 단계에서 첫 연결 안내가 겹쳐 뜬다.** 구독이 이미 연결된 PC에서는 연결 단계에 들어서는 순간 "처음 쓸 수 있게 된 때"가 되기 때문이다. 의도된 동작이다. 확인을 누르면 연결 카드가 보인다.
 - **편집기 화면은 껍데기 앱의 화면보다 위에 그려진다.** 편집기 탭이 켜져 있으면 껍데기 앱의 겹침 화면(첫 실행 안내 등)은 가려진다. 그래서 그런 화면은 홈 탭이 켜져 있을 때만 그린다.
-- **Electron은 잡히지 않은 예외로 꺼지지 않는다.** 대화 상자를 띄우고 계속 돈다. 그래서 따로 예외 처리기를 두지 않았고, 프로그램 정리는 종료 경로(`will-quit`, 프로세스 `exit`)에 걸려 있다.
+- **Electron은 잡히지 않은 예외로 꺼지지 않는다.** 대화 상자를 띄우고 계속 돈다. 그래서 동작을 바꾸는 예외 처리기를 두지 않았고, 프로그램 정리는 종료 경로(`will-quit`, 프로세스 `exit`)에 걸려 있다. 크래시 기록은 보기만 하는 `uncaughtExceptionMonitor`로 받는다. `uncaughtException`에 처리기를 붙이면 Electron의 대화 상자가 사라진다.
+
+## 메모리와 크래시
+
+- **창을 여러 번 열고 닫으면 메모리가 계속 는다.** 닫은 워드 탭과 떼어 낸 워드 창은 UI 멈춤을 피하려고 webContents를 닫지 않는다. 예전에는 렌더러 프로세스(빈 문서 하나에 약 215MB)까지 앱이 끝날 때까지 남아, 8GB PC에서 메모리가 바닥날 수 있었다. → 닫을 때 `releaseClosedRenderer`로 프로세스만 끝낸다(`renderer-disposal.ts`). 다른 열린 화면과 프로세스를 함께 쓰면 끝내지 않는다. 다른 편집기는 `webContents.close()`로 프로세스가 끝난다. 빌드한 앱에서 탭을 닫은 뒤 `app.getAppMetrics()`의 `Tab` 수가 처음으로 돌아오는지 본다.
+- **앱이 꺼졌는데 흔적이 없다.** 렌더러·GPU 프로세스의 비정상 종료와 메인 프로세스의 예외는 데이터 폴더의 `crash-log.jsonl`에 한 줄씩 남는다(`crash-log.ts`, `crash-watch.ts`). 시각, 종류, 이유, 종료 코드, 편집기만 적고, 64KB를 넘으면 오래된 줄부터 버린다. 앱이 일부러 끝낸 렌더러(닫은 워드 탭)와 유틸리티 프로세스는 적지 않는다.
+- **열린 문서의 렌더러가 죽으면 알린다.** 슬라이드는 덱이 메인 프로세스에 있어 다시 불러오면 되살아난다. 다른 편집기는 저장하지 않은 상태가 렌더러에 있었으므로, 탭을 저장 확인 없이 닫고 파일을 다시 연다(워드는 복구 사본이 남아 있으면 다시 열 때 제안한다). 제목 없는 문서는 닫기만 한다.

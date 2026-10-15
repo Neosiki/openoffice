@@ -17,7 +17,11 @@
     "./renderer-protocol": "./src/renderer-protocol.ts",
     "./renderer-scheme": "./src/renderer-scheme.ts",
     "./safe-external-url": "./src/safe-external-url.ts",
-    "./safe-remote-url": "./src/safe-remote-url.ts"
+    "./safe-remote-url": "./src/safe-remote-url.ts",
+    "./generate-handoff": "./src/generate-handoff.ts",
+    "./unsaved-files": "./src/unsaved-files.ts",
+    "./template-font-response": "./src/template-font-response.ts",
+    "./template-fonts-dir": "./src/template-fonts-dir.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

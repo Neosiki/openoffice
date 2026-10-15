@@ -27,12 +27,13 @@ afterEach(() => {
 })
 
 describe('a ledger that cannot be replaced', () => {
-  it('fails the request before it reaches the subscription, and leaves no half-written file', async () => {
+  it('does not hold the request back, and leaves no half-written file', async () => {
     const dir = tempDir()
     rename.mockImplementation(() => refuse('EPERM'))
     const run = vi.fn(async () => 'ran')
-    await expect(runHeadlessSubscriptionCall(dir, run, FAST)).rejects.toThrow(/ledger/i)
-    expect(run).not.toHaveBeenCalled()
+    // the count is information only: failing to write it down is no reason to refuse
+    expect(await runHeadlessSubscriptionCall(dir, run, FAST)).toBe('ran')
+    expect(run).toHaveBeenCalledTimes(1)
     expect(rename).toHaveBeenCalled()
     // no ledger, no temporary file, and the turn is free again
     expect(readdirSync(dir)).toEqual([])
@@ -46,19 +47,19 @@ describe('a ledger that cannot be replaced', () => {
     writeFileSync(path, before)
     rename.mockImplementation(() => refuse('EBUSY'))
     const run = vi.fn(async () => 'ran')
-    await expect(runHeadlessSubscriptionCall(dir, run, FAST)).rejects.toThrow(/ledger/i)
-    expect(run).not.toHaveBeenCalled()
+    expect(await runHeadlessSubscriptionCall(dir, run, FAST)).toBe('ran')
+    expect(run).toHaveBeenCalledTimes(1)
     expect(readFileSync(path, 'utf-8')).toBe(before)
     expect(readdirSync(dir)).toEqual([HEADLESS_LEDGER_FILE])
   })
 
-  it('does not report the failure as the hourly limit', async () => {
+  it('never reports the failure as the hourly limit', async () => {
     rename.mockImplementation(() => refuse('EPERM'))
-    const error = await runHeadlessSubscriptionCall(tempDir(), async () => 'ran', FAST).catch(
+    const result = await runHeadlessSubscriptionCall(tempDir(), async () => 'ran', FAST).catch(
       (err: unknown) => err,
     )
-    expect(error).toBeInstanceOf(Error)
-    expect(error).not.toMatchObject({ kind: 'headless-limit' })
+    expect(result).toBe('ran')
+    expect(result).not.toMatchObject({ kind: 'headless-limit' })
   })
 
   it('gets through a refusal that passes, as a scanner holding the file does', async () => {

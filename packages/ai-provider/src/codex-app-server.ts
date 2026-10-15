@@ -225,7 +225,7 @@ function signedOutError(): AiRunError {
  * MCP servers are named tables that cannot be emptied from here; they are
  * switched off per thread (see `codexMcpServerOverrides`).
  */
-const CODEX_CONFIG_OVERRIDES = [
+export const CODEX_CONFIG_OVERRIDES: readonly string[] = [
   // user hooks, plugins (with their MCP servers, skills and hooks), ChatGPT
   // connectors, and personal memories
   'features.hooks=false',

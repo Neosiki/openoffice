@@ -96,6 +96,32 @@ describe('unsigned Windows builds can update', () => {
   })
 })
 
+describe('macOS builds carry no Apple Developer ID', () => {
+  it('signs ad hoc, notarizes nothing and keeps hardened runtime off', () => {
+    // ad hoc ('-'), not null: Apple Silicon refuses to run an unsigned binary,
+    // and without the setting electron-builder would pick a keychain identity
+    const config = loadBuilderConfig({
+      APPLE_ID: 'someone@example.test',
+      CSC_NAME: 'Developer ID Application: Someone',
+    })
+    expect(config.mac.identity).toBe('-')
+    expect(config.mac.notarize).toBe(false)
+    // signed ad hoc, library validation would reject the Electron frameworks
+    expect(config.mac.hardenedRuntime).toBe(false)
+    expect(config.dmg.sign).toBe(false)
+  })
+
+  it('still ships the zip and its feed beside the dmg, arm64 only', () => {
+    // the zip is what electron-builder writes latest-mac.yml from; the updater
+    // reads that file to tell a Mac install a new version is out
+    const config = loadBuilderConfig()
+    expect(config.mac.target).toEqual([
+      { target: 'dmg', arch: ['arm64'] },
+      { target: 'zip', arch: ['arm64'] },
+    ])
+  })
+})
+
 describe('no trace of the upstream update service', () => {
   const sources = [
     'apps/shell/src/main/updater.ts',

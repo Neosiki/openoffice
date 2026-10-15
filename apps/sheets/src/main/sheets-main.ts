@@ -59,6 +59,7 @@ import {
   registerRendererScheme,
   rendererUrl,
   writeJsonAtomic,
+  assertFileSaved,
 } from '@genoffice/electron-utils'
 import {
   brandText,
@@ -168,6 +169,7 @@ import { atomicWriteFile } from './atomic-write'
 import { closeGuardDecision, ShutdownLatch } from './close-guard'
 import { SaveEditsTransferStore } from './save-edits-transfer'
 import { exportPdf, printWorkbook } from './pdf-export'
+import { installStandaloneTemplateFontProtocol } from './template-fonts'
 import { allowsAutomaticWorkbookRecovery } from './recovery-policy'
 import {
   setSystemShortDate,
@@ -2360,6 +2362,9 @@ const ATTACHMENT_EXTS = new Set([
   'xlsx',
   'xlsm',
   'xls',
+  'xmind',
+  'hwp',
+  'hwpx',
   ...ATTACHMENT_IMAGE_EXTS,
 ])
 
@@ -2431,6 +2436,9 @@ function savePastedImage(data: unknown, ext: unknown): string | null {
 
 /** Attachment text extraction via @genoffice/file-parse (docx/pdf/pptx/xlsx/plain text) */
 async function extractAttachmentText(filePath: string): Promise<string> {
+  // a file open with unsaved changes is not read (before the cache): a
+  // withholding mark only reaches the file on save
+  await assertFileSaved(filePath)
   const stat = statSync(filePath)
   const stamp = `${stat.mtimeMs}:${stat.size}`
   const cached = attachmentTextCache.get(filePath)
@@ -2835,6 +2843,8 @@ export function registerSheetsIpc(): void {
       const ext = path.slice(path.lastIndexOf('.') + 1).toLowerCase()
       if (!MERGE_SOURCE_EXTS.has(ext)) throw new Error(`Unsupported merge source: ${ext}`)
       if (!existsSync(path)) throw new Error('Merge source not found.')
+      // an attached workbook open with unsaved changes is not read, like any attachment
+      await assertFileSaved(path)
     }
     return openMergeSources(event, paths)
   })
@@ -4512,6 +4522,16 @@ export function setSheetsExtraFileMenuItems(items: MenuItemConstructorOptions[])
   extraFileMenuItems = items
 }
 
+/** shell-built File-menu entries for the open document (make another document
+ * from it, its sources, the documents made from it); asked at every build */
+let documentLinkMenuItems: (() => MenuItemConstructorOptions[]) | null = null
+
+export function setSheetsDocumentLinkMenuItems(
+  items: (() => MenuItemConstructorOptions[]) | null,
+): void {
+  documentLinkMenuItems = items
+}
+
 /** tab mode: closes the sheets tab instead of the whole shell window (Cmd+W / role:'close') */
 let closeActiveTabHook: (() => void) | null = null
 export function setSheetsCloseTabHook(fn: (() => void) | null): void {
@@ -4537,6 +4557,7 @@ function installApplicationMenu(): void {
           ...(extraFileMenuItems.length > 0
             ? [{ type: 'separator' as const }, ...extraFileMenuItems]
             : []),
+          ...(documentLinkMenuItems?.() ?? []),
           { type: 'separator' },
           {
             label: tm('menuSave'),
@@ -4564,10 +4585,12 @@ function installApplicationMenu(): void {
             click: () => sendMenuAction('export-csv'),
           },
           { type: 'separator' },
+          // tab mode: the item closes the focused tab or window, never the app,
+          // so it is named and bound like every other editor's Close
           closeActiveTabHook
             ? {
-                label: process.platform === 'darwin' ? tm('menuClose') : tm('menuQuit'),
-                accelerator: process.platform === 'darwin' ? 'CmdOrCtrl+W' : 'CmdOrCtrl+Q',
+                label: tm('menuClose'),
+                accelerator: 'CmdOrCtrl+W',
                 click: () => closeActiveTabHook?.(),
               }
             : process.platform === 'darwin'
@@ -4677,6 +4700,8 @@ export function startSheetsStandalone(): void {
   void applyMainProcessProxy()
   app.whenReady().then(() => {
     installRendererProtocol({ sheets: join(__dirname, '../renderer') })
+    // the shell's Word editor serves these URLs there; alone, sheets does
+    installStandaloneTemplateFontProtocol()
     setUiLang(normalizeLang(process.env.GENOFFICE_LANG ?? app.getLocale()))
     app.setAccessibilitySupportEnabled(true)
     installApplicationMenu()

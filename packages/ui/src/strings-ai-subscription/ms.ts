@@ -5,6 +5,7 @@ export const ms = {
   cardChecking: 'Sedang menyemak…',
   cardNotInstalled: 'Belum dipasang',
   cardSignedOut: 'Belum log masuk',
+  cardSigningIn: 'Sedang log masuk…',
   cardReady: 'Disambungkan',
   cardReadyPlan: 'Disambungkan · {plan}',
   cardMetered: 'Sudah log masuk, tetapi bukan dengan langganan',
@@ -17,6 +18,7 @@ export const ms = {
   cardErrFailed: 'Masalah berlaku semasa menyemak {provider}. Semak semula.',
   actionInstall: 'Pasang',
   actionLogin: 'Log masuk',
+  actionLoginWindow: 'Pelayar tidak dibuka, atau menunjukkan kod?',
   actionRecheck: 'Semak semula',
   actionAcceptMetered: 'Guna juga',
   actionInstallHelp: 'Panduan pemasangan rasmi',
@@ -26,16 +28,21 @@ export const ms = {
   actionLogout: 'Log keluar',
   installNote: 'Arahan pemasangan rasmi {vendor} dijalankan dalam tetingkap terminal baharu.',
   loginNote: 'Halaman log masuk yang dibuka ialah milik {vendor}.',
+  signingInBrowserNote:
+    'Log masuk ke akaun {vendor} anda dalam pelayar yang dibuka, kemudian benarkan akses. Sambungan akan dibuat sendiri apabila selesai.',
+  signingInWindowNote:
+    'Jika pelayar menunjukkan kod, salin dan tampalkannya ke tetingkap yang baru dibuka, kemudian tekan Enter.',
   meteredWarning: 'Ini bukan langganan: anda dicaj mengikut penggunaan.',
   meteredMeaning:
     'Log masuk ini menggunakan kunci API atau akaun bayar ikut guna, atau jenisnya tidak dapat disahkan. Dengan "Guna juga", AI berjalan melalui sambungan ini dan setiap permintaan dicaj kepada akaun tersebut.',
-  connectTitle: 'Sambungkan langganan untuk menggunakan AI',
+  connectTitle: 'Sambungkan AI untuk bermula',
   connectBody:
     'AI berjalan dengan langganan Claude atau Codex yang anda sudah ada. Kunci API tidak diperlukan.',
   connectProviderTitle: 'Sambungan {provider} tidak boleh digunakan sekarang',
   connectKeyBody:
     'Persediaan {provider} belum selesai. Lengkapkannya dalam Tetapan, atau pilih AI lain.',
-  errNotConnected: 'Tiada AI yang disambungkan. Sambungkan langganan Claude atau Codex dahulu.',
+  errNotConnected:
+    'Tiada AI yang disambungkan. Sambungkan langganan Claude atau Codex, atau AI percuma, dahulu.',
   errNotInstalled: 'Program {provider} tidak ditemui pada PC ini.',
   errSignedOut: 'Log masuk {provider} telah tamat. Log masuk semula untuk meneruskan.',
   errRateLimit: 'Had langganan {provider} telah habis digunakan.',
@@ -49,6 +56,13 @@ export const ms = {
   errHeadlessLimit: 'Had sejam bagi permintaan automatik telah dicapai.',
   errHeadlessLimitReset:
     'Had sejam bagi permintaan automatik telah dicapai. Permintaan boleh dibuat semula pada {time}.',
+  connectFreeHint:
+    'Tiada langganan? Anda boleh menyambungkan AI percuma dalam Tetapan dalam masa kira-kira seminit.',
+  actionConnectFree: 'Sambungkan AI percuma',
+  errFreeLimit:
+    'Peruntukan percuma hari ini telah habis. Cuba lagi esok, atau pilih AI lain dalam Tetapan.',
+  errFreeLimitReset:
+    'Peruntukan percuma hari ini telah habis. Anda boleh menggunakannya semula pada {time}.',
   continueWith: 'Teruskan dengan {provider}',
   continueMeteredNote:
     'Sambungan {provider} bukan langganan: meneruskan akan dicaj mengikut penggunaan.',
@@ -62,6 +76,8 @@ export const ms = {
     'Sama ada kandungan itu digunakan untuk melatih AI ditentukan oleh tetapan akaun anda sendiri di syarikat tersebut.',
   noticeCodexHistory:
     'Aplikasi ini mematikan penyimpanan sejarah perbualan Codex, tetapi Codex mungkin masih menyimpan log diagnostiknya sendiri pada PC ini.',
+  noticePdfWholeDocument:
+    'Dalam editor PDF, bacaan halaman dengan AI dan terjemahan dokumen mungkin menghantar imej halaman dan seluruh teks dokumen.',
   noticeAck: 'Faham',
   codexNotice:
     'Menggunakan langganan Codex di dalam aplikasi bukan kaedah yang disyorkan secara rasmi oleh OpenAI.',

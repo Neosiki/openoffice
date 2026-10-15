@@ -221,4 +221,45 @@ export const pl = {
   aiSumSaveTemplate: 'Zapisano szablon stylu „{name}”',
   aiSumTemplatesEmpty: 'Szablony stylu (pusto)',
   aiSumListTemplates: 'Wyświetlono szablony stylu: {count}',
+  aiTplGalleryTitle: 'Wybierz szablon',
+  aiTplSectionBuiltin: 'Szablony wbudowane',
+  aiTplSectionSaved: 'Moje zapisane style',
+  aiTplChipPick: 'Szablon',
+  aiTplChipChange: 'Zmień szablon',
+  aiTplChipRemove: 'Usuń szablon',
+  aiTplAdjustMark: 'Z dodatkowymi życzeniami',
+  aiTplAdjustClear: 'Wyczyść dodatkowe życzenia',
+  aiTplSchemeLight: 'Jasny',
+  aiTplSchemeDark: 'Ciemny',
+  aiTplSchemeMixed: 'Mieszany',
+  aiTplSavedOn: 'Zapisano {date}',
+  aiTplPreviewAlt: 'Podgląd okładki: {name}',
+  aiTplAppliesToNew:
+    'Istniejące slajdy pozostają bez zmian. Ten szablon obejmie slajdy, które AI utworzy od teraz.',
+  aiTplFontsNotice:
+    'Czcionki szablonu są dołączone do tej aplikacji. Inne programy, takie jak PowerPoint, mogą pokazać inną czcionkę.',
+  aiTplOpenFonts: 'Otwórz folder czcionek',
+  aiTplDesc_coral:
+    'Krem i pomarańczowy róż na prawie czarnym tle, z ogromnymi, wąskimi nagłówkami.',
+  aiTplDesc_blue_professional:
+    'Kremowe tło z intensywnymi kobaltowymi akcentami. Czysty, nowoczesny i rzeczowy.',
+  aiTplDesc_monochrome:
+    'Tło w kolorze kości słoniowej, wyłącznie czarny tekst, nagłówki szeryfowe. Zero koloru.',
+  aiTplDesc_neo_grid_bold:
+    'Złamana biel z jednym neonowożółtym akcentem. Grube linie, klimat magazynu.',
+  aiTplDesc_block_frame:
+    'Pastelowo-neonowe płaszczyzny koloru z grubymi czarnymi obramowaniami. Wesoły i wyrazisty.',
+  aiTplDesc_raw_grid:
+    'Róż, szałwiowa zieleń i atrament, grube obramowania i przesunięte płaszczyzny. Surowy i mocny.',
+  aiTplDesc_studio: 'Czarne tło z jaskrawożółtym tekstem. Energiczny i efektowny.',
+  aiTplDesc_signal:
+    'Głęboki granat i biel kości z jednym stonowanym złotym akcentem. Oficjalny i spokojny.',
+  aiTplDesc_grove:
+    'Tło w kolorze leśnej zieleni, kremowy tekst, klasyczne nagłówki szeryfowe i rdzawy akcent.',
+  aiTplDesc_editorial_tri_tone:
+    'Trzy kolory w stylu magazynu: przygaszony róż, musztardowy krem i głęboki burgund.',
+  aiTplDesc_emerald_editorial:
+    'Żywa zieleń, granat i biel papieru. Podwójne linie i mocne szeryfowe tytuły jak na okładce magazynu.',
+  aiTplDesc_vellum:
+    'Głęboki granat z ciepłożółtym tekstem szeryfowym i stonowanym morskim akcentem. Spokojny i uczony.',
 } satisfies Record<keyof typeof zh, string>

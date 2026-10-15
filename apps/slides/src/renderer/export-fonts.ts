@@ -74,7 +74,7 @@ async function bundledFaces(names: Set<string>): Promise<string[]> {
 
 /** Office-private faces (embedded / Office-bundled fonts) the page uses. */
 async function privateFaces(names: Set<string>): Promise<string[]> {
-  let faces: Array<{ id: string; family: string; bold: boolean; italic: boolean }>
+  let faces: Array<{ id: string; family: string; bold: boolean; italic: boolean; weight?: string }>
   try {
     faces = await window.slidesApi.privateFontFaces()
   } catch {
@@ -90,7 +90,7 @@ async function privateFaces(names: Set<string>): Promise<string[]> {
           if (!data) return null
           return faceRule(
             f.family,
-            f.bold ? '700' : '400',
+            f.weight ?? (f.bold ? '700' : '400'),
             f.italic ? 'italic' : 'normal',
             toBase64(data),
           )

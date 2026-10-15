@@ -1815,6 +1815,7 @@ export default function App() {
             deps={aiDeps}
             filePath={path}
             preset={aiPreset}
+            onGenerateHandoff={() => setAiOpen(true)}
             editQueue={editQueue}
             onQueueEditInstruction={queueUpdate}
             onQueueRemove={queueRemove}

@@ -62,11 +62,11 @@ ieumoffice docs apply brief.docx --ops ops.json
 | -------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `search`、`image_search`、`image_generation`、`image_analysis`、`video_analysis` | 每项功能各有：`available`；`via`，由谁来回答；`route`，取值为 `free`、`key` 或 `subscription` 之一；按量付费的登录会带 `metered: true`；功能不可用时还有 `message`，即命令自己给出的回答文字。 |
 | `media_analysis`                                                                 | 为旧脚本保留：与 `image_analysis` 相同；只有视频可用时与 `video_analysis` 相同。                                                                                                               |
-| `automatic_calls`                                                                | `subscription_enabled`；开启期间还有每小时配额的 `used`、`limit`、`remaining` 和 `resetsAt`。                                                                                                  |
+| `automatic_calls`                                                                | `subscription_enabled`；开启期间还有 `used`，即最近一小时处理的自动调用次数（仅供参考），`limit` 和 `remaining` 始终为 `null`。                                                                |
 | `app`                                                                            | `available`：应用是否安装在命令能够启动它的位置。                                                                                                                                              |
 | `settings_path`                                                                  | 这些回答所读取的设置文件。                                                                                                                                                                     |
 
-`image` 或 `media` 无法运行时，命令以退出码 4 和 `error: "app_unavailable"` 结束，`detail.errorCode` 说明原因。`unavailable` 表示这项功能什么都没有配置，重试也没用。`headless-limit` 和 `rate-limit` 会带上 `detail.resetsAt`，即可以再次请求的时间（单位为毫秒）。
+`image` 或 `media` 无法运行时，命令以退出码 4 和 `error: "app_unavailable"` 结束，`detail.errorCode` 说明原因。`unavailable` 表示这项功能什么都没有配置，重试也没用。`rate-limit` 会带上 `detail.resetsAt`，即可以再次请求的时间（单位为毫秒）。
 
 ## 它在这台电脑上保存什么
 

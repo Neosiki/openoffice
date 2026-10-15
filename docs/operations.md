@@ -1,6 +1,6 @@
 # 운영
 
-배포하고 확인하는 운영체제는 Windows뿐이다. macOS·Linux용 설정과 코드는 저장소에 남아 있지만 빌드하지도 확인하지도 않는다.
+배포하는 운영체제는 Windows이고, Apple Silicon Mac용은 Apple 개발자 서명 없는 베타로 낸다(결정 0031). Mac판은 GitHub Actions의 Mac 빌드 기계에서 만들고, Mac 사용자들의 보고로 확인한다. Intel Mac·Linux용 설정과 코드는 저장소에 남아 있지만 빌드하지도 확인하지도 않는다.
 
 ## 처음 한 번
 
@@ -23,7 +23,7 @@ npm run native:build -w @genoffice/sheets   # 엑셀 처리 프로그램(Rust) �
 | 하려는 일                         | 명령                                | 알아 둘 것                                                          |
 | --------------------------------- | ----------------------------------- | ------------------------------------------------------------------- |
 | 모든 편집기와 앱 창을 개발 모드로 | `npm run dev`                       | preload를 고쳤으면 다시 빌드해야 화면이 뜬다                        |
-| 전체를 빌드해서 앱 실행           | `npm run shell`                     | 편집기 여섯, 명령어, 껍데기 앱 순으로 빌드한 뒤 실행                |
+| 전체를 빌드해서 앱 실행           | `npm run shell`                     | 편집기들, 명령어, 껍데기 앱 순으로 빌드한 뒤 실행                   |
 | 전체 빌드만                       | `npm run build:all`                 | 화면 확인 스크립트(`npm run test:e2e`)는 이 결과물을 띄운다         |
 | 껍데기 앱만 다시 빌드             | `npm run build -w @genoffice/shell` | 편집기 뒷단(`apps/*/src/main`)을 고친 뒤에는 이것까지 해야 반영된다 |
 
@@ -83,6 +83,18 @@ cd apps/shell && npx vitest run tests/<파일>.test.ts   # 파일 하나만
 3. 확인할 것: Claude로 도구 호출이 든 대화 한 번(문서에 문단을 넣게 하고 **한 번만** 들어갔는지 본다), Claude로 사진이 든 대화 한 번, Codex로 도구 호출이 든 대화 한 번, 실행 중 중단했을 때와 실행 중 앱을 껐을 때 앱의 하위 프로세스에 `claude`·`codex`가 남지 않는지.
 4. 하위 프로세스는 앱 프로세스의 자손만 센다. 같은 PC에서 사람이 따로 쓰는 Claude·Codex와 구분해야 한다.
 
+## 무료 모델 점검
+
+OpenRouter 무료 연결에서 고를 수 있는 모델은 `packages/ai-provider/src/free-ai.ts`의 `OPENROUTER_FREE_MODELS`다. 무료 모델은 예고 없이 생기고 사라지므로 두 단계로 살핀다.
+
+1. **목록 확인(매주, 자동).** `.github/workflows/free-models.yml`이 월요일 오전 9시에 OpenRouter의 공개 모델 목록과 비교한다. 키를 쓰지 않고 무료 요청도 쓰지 않는다. 앱이 보여 주는 모델이 사라졌거나 도구 호출 지원이 꺼졌으면, 또는 시험해 볼 새 무료 모델이 있으면 실행이 실패로 끝나고 실행 결과 요약에 보고서가 남는다. 실패한 예약 실행은 GitHub이 저장소 주인에게 메일로 알린다. 이 PC에서는 `npm run free-models:check`로 같은 보고서를 본다.
+2. **앱에서 시험(사람이).** `npm run build:all` 뒤 `npm run free-models:trial`. 후보마다 도구 하나짜리 짧은 요청을 보내고, 통과하면 빌드된 앱의 워드 편집기에서 두 요청(문단 넣기, 제목 바꾸고 요약 목록 넣기)을 시킨 뒤 결과를 표로 낸다. 모델 이름을 붙이면 그 모델만, `--listed`를 붙이면 앱이 지금 보여 주는 모델을 다시 시험한다.
+
+- 시험은 설치된 앱에 저장된 OpenRouter 키(`%APPDATA%/IeumOffice/ai-settings.json`)로 하고 그 키의 하루 무료 요청을 쓴다. 키는 화면에 찍히지 않는다. 모델 하나에 짧은 확인 1번, 앱 시험 약 12번이 든다. 남은 수가 모자라면 그 모델은 건너뛴다.
+- 통과한 모델은 실행기가 알려 주는 대로 `OPENROUTER_FREE_MODELS`에 더한다. 순서가 곧 새 연결의 기본 모델 순위이므로 맨 앞은 함부로 바꾸지 않는다.
+- 떨어진 모델은 실행기가 `tools/free-models-rejected.json`에 날짜·이유와 함께 적는다. 거기 있는 모델은 매주 확인에서 후보로 다시 나오지 않는다. 다시 시험하려면 그 줄을 지운다.
+- 앱이 보여 주는 모델이 사라졌다는 보고가 오면 목록에서 빼고 새 버전을 낸다. 새 버전이 나가기 전까지는 그 모델을 고른 사용자가 실패를 본다.
+
 ## Windows 설치 파일 만들기
 
 ```bash
@@ -97,6 +109,17 @@ npm run dist:win -- -- --publish never
 - `--publish never`를 빼면 빌드 도구가 GitHub에 올리려 한다.
 - 스캔 문서 글자 인식 도우미(`win-ocr.exe`)가 이 과정에서 컴파일된다. Windows SDK가 없으면 여기서 멈춘다.
 - 설치 파일에는 서명이 없다. 설치할 때 Windows가 "알 수 없는 게시자" 경고를 띄운다.
+
+## Mac 설치 파일 만들기
+
+저장소 주인에게 Mac이 없으므로 GitHub Actions에서 만든다.
+
+1. GitHub 저장소의 Actions 탭 → **macOS build** → **Run workflow**. 가지는 릴리스 태그가 가리킬 커밋이 있는 가지를 고른다.
+2. 끝나면 실행 결과의 Artifacts에서 `ieumoffice-mac-arm64`를 내려받는다. 안에 `IeumOffice-<버전>-arm64.dmg`, `IeumOffice-<버전>-arm64-mac.zip`, `latest-mac.yml`(베타 버전 번호면 `beta-mac.yml`)이 있다.
+
+- 빌드는 ad hoc 서명이 되었는지, 엑셀 처리 프로그램과 글자 인식 도우미가 Apple Silicon용으로 들어갔는지 검사하고, 만든 앱을 창 없이 띄워 Markdown·CSV 파일을 PDF로 내보내 본다. 하나라도 실패하면 결과를 올리지 않는다.
+- 비밀 값을 쓰지 않는다. **release_tag**를 적고 `main`에서 실행하면, 빌드가 통과한 뒤 그 태그의 이미 공개된 릴리스에 dmg, zip, `latest-mac.yml`을 붙인다(빌드한 버전과 태그가 같을 때만). 비워 두면 결과물만 남는다. 순서는 `docs/releasing.ko.md`의 "Mac 설치 파일"이다.
+- Mac에서 직접 만들 때: `npm ci`, `npm run build:all`, `npm run dist:mac -w @genoffice/shell -- --publish never`. 루트의 `npm run dist:mac`은 Intel용까지 묶는 원본의 경로라 쓰지 않는다.
 
 ## 새 버전 내기
 

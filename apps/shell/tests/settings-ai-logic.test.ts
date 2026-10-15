@@ -1,5 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { AI_MEDIA_PROVIDERS, AI_PROVIDERS, defaultAiSettings } from '@genoffice/ai-provider'
+import {
+  AI_MEDIA_PROVIDERS,
+  AI_PROVIDERS,
+  HEADLESS_SUBSCRIPTION_CONSENT_VERSION,
+  defaultAiSettings,
+} from '@genoffice/ai-provider'
 import type { AiSettings, AiSubscriptionStatus } from '@genoffice/ai-provider'
 import {
   advancedProviderIds,
@@ -11,7 +16,9 @@ import {
   mediaSelection,
   mediaSpecialChoices,
   withAiSelection,
+  withHeadlessSubscription,
   withLiveSelectionFields,
+  writeAiSettings,
 } from '../src/renderer/src/settings-ai'
 import {
   checkingSubscriptionStatuses,
@@ -160,6 +167,7 @@ describe('a key pane save', () => {
     const latest = settingsWith({
       provider: 'codex',
       headlessSubscriptionEnabled: true,
+      headlessSubscriptionConsentVersion: HEADLESS_SUBSCRIPTION_CONSENT_VERSION,
       subscriptionNoticeSeen: true,
       meteredAccepted: { codex: true },
     })
@@ -167,12 +175,41 @@ describe('a key pane save', () => {
     expect(merged).toMatchObject({
       provider: 'codex',
       headlessSubscriptionEnabled: true,
+      // without the consent the switch the file has on would be saved as off
+      headlessSubscriptionConsentVersion: HEADLESS_SUBSCRIPTION_CONSENT_VERSION,
       subscriptionNoticeSeen: true,
       meteredAccepted: { codex: true },
       maxOutputTokens: 9216,
     })
     // nothing readable: the draft goes out as it is
     expect(withLiveSelectionFields(draft, null)).toBe(draft)
+  })
+})
+
+describe('the automatic-requests switch', () => {
+  it('records the version of the warning the user agreed to when turned on', () => {
+    const on = withHeadlessSubscription(settingsWith(), true)
+    expect(on).toMatchObject({
+      headlessSubscriptionEnabled: true,
+      headlessSubscriptionConsentVersion: HEADLESS_SUBSCRIPTION_CONSENT_VERSION,
+    })
+    const off = withHeadlessSubscription(on, false)
+    expect(off.headlessSubscriptionEnabled).toBe(false)
+  })
+
+  it('stays off on save when turned on without that version, as an older file has it', async () => {
+    const draft = settingsWith({
+      headlessSubscriptionEnabled: true,
+      headlessSubscriptionConsentVersion: undefined,
+    })
+    vi.stubGlobal('window', { aiOffice: { setAiSettings: vi.fn(async () => {}) } })
+    try {
+      expect((await writeAiSettings(draft)).headlessSubscriptionEnabled).toBe(false)
+      const on = withHeadlessSubscription(draft, true)
+      expect((await writeAiSettings(on)).headlessSubscriptionEnabled).toBe(true)
+    } finally {
+      vi.unstubAllGlobals()
+    }
   })
 })
 
@@ -201,7 +238,7 @@ describe('a change saved at once', () => {
   it('starts from the file as it is, so two quick changes both land', async () => {
     const file = stubSettingsFile(settingsWith())
     const [first, second] = await Promise.all([
-      changeAiSettings((current) => ({ ...current, headlessSubscriptionEnabled: true })),
+      changeAiSettings((current) => withHeadlessSubscription(current, true)),
       changeAiSettings((current) => ({ ...current, provider: 'codex' })),
     ])
     expect(first).toMatchObject({ headlessSubscriptionEnabled: true, provider: 'auto' })

@@ -1,6 +1,6 @@
 # packages/ui (`@genoffice/ui`)
 
-여섯 에디터와 shell의 렌더러가 함께 쓰는 React 부품, 디자인 토큰, 그리고 "모든 에디터가 똑같이 동작해야 하는" AI 패널 규칙을 담는다. 소스(TS/CSS)를 그대로 내보내고 빌드 단계가 없다.
+모든 에디터와 shell의 렌더러가 함께 쓰는 React 부품, 디자인 토큰, 그리고 "모든 에디터가 똑같이 동작해야 하는" AI 패널 규칙을 담는다. 소스(TS/CSS)를 그대로 내보내고 빌드 단계가 없다.
 
 ## 맡은 범위
 
@@ -10,6 +10,7 @@
 - 보내기 규칙: `aiSendGate`와 관련 순수 함수(`src/ai-send-gate.ts`), 그것을 패널에 배선한 훅 `useAiSendGate`(`src/use-ai-send-gate.ts`).
 - 구독 연결 관련 문자열 21개 언어(`src/strings-ai-subscription/<lang>.ts`, 집계 파일 `src/strings-ai-subscription.ts`)와 실행 오류 문장 `aiRunErrorText`.
 - AI와 무관한 공용 부품: `Dropdown`, 색 선택기, 찾기 패널, 리본 접기, 이미지 대화 상자·뷰어, `Markdown`, 아이콘, 글꼴 목록, WordArt 프리셋.
+- 디자인 템플릿 글꼴: 폴더 `template-fonts/`(글꼴 파일, 패밀리마다의 라이선스 글, `README.md`)와 그 목록 `src/template-fonts.ts`(`@genoffice/ui/template-fonts`). 폴더는 `src/` 밖에 있어 어느 편집기 빌드에도 복사되지 않는다.
 
 ## 맡지 않는 것 (경계)
 
@@ -25,7 +26,7 @@
 - 크롬 색은 토큰으로만 쓴다. 이 폴더의 CSS에 `#hex`·`rgb()`를 직접 쓰지 않고 `var(--surface)` 등을 참조한다. `npm run check:theme-colors`는 `apps/*/src/renderer`의 CSS만 검사하므로 이 패키지의 CSS는 검사에 걸리지 않는다. 그래서 직접 지켜야 한다.
 - 토큰을 추가하면 `tokens.css`의 세 블록(`:root`, `[data-theme='dark']`, `prefers-color-scheme: dark` 미디어 쿼리 안의 시스템 모드)에 모두 넣는다. 한 곳이라도 빠지면 그 테마에서 값이 비어 버린다. 경고 전용 토큰은 없다. 비용 표시와 경고는 `--danger` 계열을 쓴다.
 - 보내기 규칙은 `aiSendGate` 하나다. 상태 확인이 아직 답하지 않았으면 요청을 붙잡았다가 실행 가능해지는 즉시 시작한다. 실행할 수 있는 것이 없으면 아무것도 보내지 않고, 작성기의 글은 남기고, 연결 안내를 보여 준다. 이때는 나중에 저절로 시작하지 않는다(로그인은 몇 분 걸릴 수 있고 실행은 다시 요청받아야 한다). 구독을 처음 쓰려는 순간이면 첫 연결 안내이 먼저이고 확인을 눌러야 시작한다.
-- 에디터는 자기만의 보내기 판단을 만들지 않는다. `tests/editors-consistency.test.ts`가 여섯 에디터의 소스를 읽어 `useAiSendGate`를 쓰는지, 자체 gate 함수를 내보내지 않는지 확인한다.
+- 에디터는 자기만의 보내기 판단을 만들지 않는다. `tests/editors-consistency.test.ts`가 모든 에디터의 소스를 읽어 `useAiSendGate`를 쓰는지, 자체 gate 함수를 내보내지 않는지 확인한다.
 - 저절로 다른 제공자로 바꾸지 않는다. 막힌 실행 뒤의 "다른 연결로 계속"은 사용자가 버튼을 눌렀을 때만이고, 후보(`aiContinueOption`)는 `ready`인 다른 구독, 없으면 이미 동의한 종량제 로그인이다. 막힌 제공자 자신과 키 제공자는 후보가 아니다. 누르면 그 제공자가 저장된 선택이 되어 모델 선택기에 보인다(`withAiContinueProvider`).
 - 로그인된 계정은 설정 화면의 카드에만 보인다. `AiSubscriptionCard`는 `showAccount`를 받았을 때만 계정을 그리고, `onSwitchAccount`·`onLogout`을 둘 다 받았을 때만 두 버튼을 낸다. `compact` 카드는 무엇을 받든 둘 다 내지 않는다. `AiConnectPrompt`와 에디터 패널에는 이 props를 넘기지 않는다. 두 버튼은 강조 버튼(`primary`)이 되지 않는다.
 - 구독 그룹의 모델 목록은 프로그램이 알려 준 것이 있으면 그것을 쓴다(`status.models`). 항목마다 표시 이름과 실제 모델 식별자를 함께 보이고(`AiProviderPickerGroup.details`), 기본 항목에는 그것이 가리키는 모델을 적는다. 목록이 없으면 `AI_PROVIDERS`의 고정 목록을 예전처럼 보인다. 고르면 저장되는 값은 프로그램이 받는 `id`이고 표시 이름이 아니다. 저장된 값이 목록에 없어도 그 값은 목록에 남는다.
@@ -35,6 +36,8 @@
 - 구독 제공자는 글자 이름으로만 표시한다(`Claude`, `Codex`). 벤더 로고를 넣지 않으며 `src/provider-logos.tsx`의 `'claude-code': null`은 의도된 값이다. AI 표시는 `AiMark`를 쓴다.
 - 구독 연결에 관한 문장은 이 패키지의 문자열만 쓴다. 에디터 사전에 같은 문장을 복제하지 않는다. AI 진입 버튼과 패널 제목의 이름도 공용 키 `aiAssistant` 하나다.
 - 문자열 키는 21개 언어 조각 모두에 있어야 한다. `zh.ts`가 키 집합을 정의하고 나머지는 타입으로 같은 키를 강제받는다. 다른 언어에 영어 문장을 복사해 넣지 않는다(비라틴 문자 언어에서 영어와 같은 값은 테스트가 잡는다).
+- `template-fonts/`의 글꼴 파일을 Vite 자산으로 가져오지 않는다(import, `new URL(…, import.meta.url)`, CSS `url()`). 그러면 편집기 빌드마다 사본이 들어간다. 설치 파일에는 `apps/shell/electron-builder.cjs`의 extraResources 항목 하나로 한 번만 들어가고(`resources/template-fonts`), 편집기는 `templateFontsDir`(`@genoffice/electron-utils/template-fonts-dir`)로 그 폴더를 읽는다. shell의 `tests/template-fonts-resource.test.ts`가 둘 다 지킨다.
+- 템플릿 글꼴 파일은 배포처의 것 그대로 둔다. 잘라 내거나 이름을 바꾸지 않는다. 라이선스 글도 배포처의 바이트 그대로다(`.gitattributes`의 `-text`). 글꼴 파일 합계는 `TEMPLATE_FONTS_MAX_BYTES`(45 MiB) 이하여야 하고 `tests/template-fonts.test.ts`가 지킨다. 상한은 사용자가 받아들인 설치 파일 증가(수십 MB) 안에 머물기 위한 값이고, 글꼴은 편집기마다가 아니라 한 벌만 실리기 때문에 이 안에 들어간다. 올리려면 그 범위를 넘지 않는지 먼저 따진다. 글꼴을 더하거나 바꾸면 `src/template-fonts.ts`, 폴더의 `README.md`, 저장소 루트의 `NOTICE`를 함께 고친다.
 - 상태 확인의 오류 문장(`status.error`)을 그대로 화면에 찍지 않는다. `subscriptionStatusErrorKind`로 종류를 읽어 번역된 문장을 쓴다. 로그인·설치 실패의 원문도 마찬가지다(실행 파일 경로가 들어 있을 수 있다).
 
 ## 이 모듈의 방식
@@ -43,6 +46,8 @@
 - 패널 배선은 `useAiSendGate` 하나로 한다. 보내기 경로는 `admit(request)`를 묻고(거짓이면 보내지 않고 작성기 글을 남긴다), 대기열은 `admitQueued`를, 첫 연결 안내의 확인 버튼은 `acknowledgeNotice`를, 막힌 실행의 버튼은 `continueWith(provider, rerun)`을 부른다. 붙잡힌 요청은 `start`로 되돌아오고 패널의 보내기 경로를 다시 지나며 `admit`을 한 번 더 묻는다.
 - 붙잡힌 요청의 운명은 `aiHeldRequestStep`이 정한다. 상태 확인 때문에 붙잡힌 요청은 답이 "연결 안 됨"이면 버려진다. 알림 때문에 붙잡힌 요청은 확인 버튼만이 시작시키고, 다른 이유로 알림이 사라지면(제공자 변경, 연결 끊김) 버려진다.
 - `AiModelPicker`는 `subscriptionStatuses`를 받는다. 넘기지 않으면 어떤 구독도 연결된 것으로 치지 않는다. 선택 변경은 `withAiProviderSelection`으로 쓴다.
+- 아무것도 연결되지 않은 "AI 연결" 안내(`aiConnectPromptView`의 `free`)에는 무료 연결로 가는 버튼이 붙는다. 버튼은 호스트가 준 `onOpenSettings`를 부른다(설정 → AI가 열린다). 이 패키지는 무료 연결을 직접 실행하지 않는다.
+- `free-limit`(무료 연결의 오늘 사용량 소진)은 막힌 실행 종류(`AI_BLOCKED_RUN_KINDS`)다. 문장은 `errFreeLimit`·`errFreeLimitReset`이다.
 - 오류 문장: `aiRunErrorText(lang, cause)`는 구독 계약의 종류에만 문장을 주고 `timeout`·`credits`·`network`·`overloaded`에는 `undefined`를 돌려준다. 그래서 전송의 `errorText` 옵션에 그대로 꽂으면 에디터의 기존 문장이 살아 있다. `unsafe-tools`에 제공자가 없으면 Claude로 읽는다.
 - 문자열은 `createI18n`을 거치므로 사전 안의 `GenOffice`는 출력에서 제품명으로 바뀐다. 사전은 원본의 표기를 유지한다.
 - CSS는 컴포넌트가 스스로 import한다(`ai-subscription.css`, `ai-usage.css`). 새 클래스는 `ai-sub-` 접두사를 쓴다. 에디터가 따로 import해야 하는 CSS는 `package.json`의 `exports`에 올린 것뿐이다.

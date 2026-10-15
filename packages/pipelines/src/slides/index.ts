@@ -7,3 +7,6 @@ export { coverCropFractions } from './cover-crop'
 export { SLIDES_GUIDES } from './guides'
 export * from './outline'
 export * from './stage-check'
+// The templates folder is also its own renderer-safe subpath; the validator below is Node only.
+export * from './templates/index'
+export * from './template-check'

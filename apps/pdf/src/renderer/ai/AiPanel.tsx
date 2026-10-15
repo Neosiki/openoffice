@@ -431,6 +431,7 @@ export function AiPanel({
       currentPage: () => apiRef.current.currentPage(),
       readOnly: () => apiRef.current.readOnly(),
       ocrText: (idx) => apiRef.current.ocrText(idx),
+      structuredRead: () => apiRef.current.structuredRead?.() ?? null,
       selection: () => apiRef.current.selection(),
       pendingSummary: () => apiRef.current.pendingSummary(),
       outline: () => apiRef.current.outline(),
@@ -959,6 +960,7 @@ export function AiPanel({
           <AiFirstConnectionNotice
             lang={lang}
             codexKeepsHistory
+            sendsWholeDocument
             onAcknowledge={sendGate.acknowledgeNotice}
           />
         )}

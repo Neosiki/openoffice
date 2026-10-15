@@ -7,6 +7,7 @@ import { defaultRegistry, VERSION } from '../cli'
 import type { OpFailure } from '../op-errors'
 import type { CommandRegistry } from '../registry'
 import type { JsonOk } from '../result'
+import { stopBackgroundJobs } from '../pdf-jobs'
 import { DECK_TOOLS, runDeckTool } from './deck'
 import { loadTypedSchemas, type TypedSchemas } from './op-schemas'
 import { attachOutputs, defaultOut, materializeInputs, urlErrorOutcome } from './remote'
@@ -30,7 +31,7 @@ const WORKFLOW = [
 /** What the client shows the model about this server before any tool is called. */
 export const INSTRUCTIONS = [
   ABOUT,
-  `Paths are absolute, or relative to the working directory the server was started in. Only search, image and media send data off the machine, to the provider configured in ${PRODUCT_NAME}.`,
+  `Paths are absolute, or relative to the working directory the server was started in. Only search, image, media, pdf_ai_read and pdf_translate send data off the machine, to the provider configured in ${PRODUCT_NAME}; pdf_ai_read and pdf_translate send nothing until called with yes=true.`,
   ...WORKFLOW,
   `A file open in a ${PRODUCT_NAME} tab is not written unless force is set. Do not call open unless the user asks to see the file.`,
 ].join('\n')
@@ -41,7 +42,7 @@ export function remoteInstructions(baseUrl: string): string {
   return [
     ABOUT,
     `This server runs on another machine: paths you know are not visible to it. To work on a file you have, upload it first (curl -T report.docx ${base}/files/ — the reply carries its url) and pass that url wherever a tool takes a file; any other http(s) URL the server can reach works too. Relative paths and deck folders live in a private scratch directory of this session.`,
-    `Omit out: the file a tool writes comes back in the result as output_url (download it with curl -o) and, when small, as an embedded resource with the bytes. Only search, image and media send data to the cloud provider configured in ${PRODUCT_NAME}.`,
+    `Omit out: the file a tool writes comes back in the result as output_url (download it with curl -o) and, when small, as an embedded resource with the bytes. Only search, image, media, pdf_ai_read and pdf_translate send data to the cloud provider configured in ${PRODUCT_NAME}.`,
     ...WORKFLOW,
   ].join('\n')
 }
@@ -77,7 +78,25 @@ const GUIDES: { uri: string; name: string; argv: string[]; description: string }
     argv: ['guide', 'slides', 'spec'],
     description: 'the outline and one-page spec JSON the deck_* tools take',
   },
+  {
+    uri: 'ieumoffice://guide/slides/templates',
+    name: 'Deck templates',
+    argv: ['guide', 'slides', 'templates'],
+    description:
+      'the built-in design templates: id, name, scheme, description and fonts, one per line',
+  },
 ]
+
+/** One resource per built-in template: its style sheet, ready to save as the deck's style.md. */
+async function templateGuides(): Promise<typeof GUIDES> {
+  const { listSlideTemplates } = await import('@genoffice/pipelines/slides/templates')
+  return listSlideTemplates().map((t) => ({
+    uri: `ieumoffice://guide/slides/templates/${t.id}`,
+    name: `Deck template: ${t.name}`,
+    argv: ['guide', 'slides', 'templates', t.id],
+    description: `the ${t.name} template as a style sheet (${t.scheme}): ${t.description}`,
+  }))
+}
 
 export interface ServerOptions {
   registry?: CommandRegistry
@@ -132,7 +151,7 @@ export async function createMcpServer(
     )
   }
 
-  for (const g of GUIDES) {
+  for (const g of [...GUIDES, ...(await templateGuides())]) {
     server.registerResource(
       g.name,
       g.uri,
@@ -218,6 +237,8 @@ export async function serveStdio(opts: ServeOptions): Promise<void> {
       server.connect(transport).catch(reject)
     })
   } finally {
+    // a PDF job started by a tool call ends with the server ('interrupted'); what it stored stays
+    await stopBackgroundJobs()
     disposeContext(ctx)
   }
 }

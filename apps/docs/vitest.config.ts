@@ -23,6 +23,12 @@ export default defineConfig({
       '@genoffice/electron-utils/safe-external-url': local(
         '../../packages/electron-utils/src/safe-external-url.ts',
       ),
+      '@genoffice/electron-utils/renderer-scheme': local(
+        '../../packages/electron-utils/src/renderer-scheme.ts',
+      ),
+      '@genoffice/electron-utils/template-font-response': local(
+        '../../packages/electron-utils/src/template-font-response.ts',
+      ),
       '@genoffice/electron-utils': local('../../packages/electron-utils/src/index.ts'),
       '@genoffice/ai-provider/browser': local('../../packages/ai-provider/src/browser.ts'),
       '@genoffice/ai-provider/codex-app-server': local(
@@ -31,11 +37,15 @@ export default defineConfig({
       '@genoffice/ai-provider/custom-models': local(
         '../../packages/ai-provider/src/custom-models.ts',
       ),
+      '@genoffice/ai-provider/free-connect': local(
+        '../../packages/ai-provider/src/free-connect.ts',
+      ),
       '@genoffice/ai-provider/subscription': local(
         '../../packages/ai-provider/src/subscription.ts',
       ),
       '@genoffice/ai-provider': local('../../packages/ai-provider/src/index.ts'),
       '@genoffice/i18n': local('../../packages/i18n/src/index.ts'),
+      '@genoffice/ui/template-fonts': local('../../packages/ui/src/template-fonts.ts'),
       '@genoffice/ui': local('../../packages/ui/src/index.ts'),
     },
   },

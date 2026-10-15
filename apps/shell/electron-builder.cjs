@@ -8,7 +8,7 @@
  */
 
 const { execFileSync } = require('node:child_process')
-const { existsSync, readFileSync, rmSync } = require('node:fs')
+const { existsSync, readFileSync, readdirSync, rmSync } = require('node:fs')
 const { join } = require('node:path')
 
 // Product identity of the installed app. PRODUCT_NAME must equal PRODUCT_NAME
@@ -61,6 +61,8 @@ function assertExtraResourceSources() {
     '../../node_modules/electron/dist/LICENSES.chromium.html',
     '../../node_modules/@embedpdf/pdfium/dist/pdfium.wasm',
     '../pdf/node_modules/harfbuzzjs/hb-subset.wasm',
+    '../../packages/ui/template-fonts/README.md',
+    '../../node_modules/@rhwp/core/rhwp_bg.wasm',
   ]) {
     if (!existsSync(join(__dirname, rel))) {
       throw new Error(
@@ -187,6 +189,8 @@ function assertModuleTreesPresent() {
     '../pdf/out',
     '../markdown/out',
     '../html/out',
+    '../mindmap/out',
+    '../hwp/out',
     '../../packages/cli/dist/genoffice.cjs',
     '../../packages/cli/dist/node_modules/jsdom',
   ]) {
@@ -195,6 +199,22 @@ function assertModuleTreesPresent() {
         `electron-builder extraResources source missing: ${rel} (run npm run build:all first)`,
       )
     }
+  }
+}
+
+// The pdf structure-job process (src/main/pdf-structure/pdf-structure-process.ts)
+// is its own electron-vite chunk next to the main bundle and ships through
+// `files: ['out/**']`. Without it every Markdown / EPUB conversion and image
+// extraction fails at run time while the rest of the app works, so a build
+// that lost the chunk must not be packaged.
+function assertPdfStructureProcessBuilt() {
+  const dir = join(__dirname, 'out/main')
+  const found =
+    existsSync(dir) && readdirSync(dir).some((f) => /^pdf-structure-process-.+\.js$/.test(f))
+  if (!found) {
+    throw new Error(
+      'out/main/pdf-structure-process-*.js missing (run "npm run build -w @genoffice/shell" first)',
+    )
   }
 }
 
@@ -275,7 +295,11 @@ function ensureThirdPartyNotices() {
 // office types that is the point, for plain text and JSON it would hijack the
 // system editor, so Windows leaves those two out (mac/Linux only offer them
 // in Open With).
-const WIN_OPEN_WITH_ONLY_EXTS = new Set(['txt', 'json'])
+// A mind map file keeps the program the user already opens it with: installing
+// must not take .xmind over, so Windows registers nothing for it either. HWP
+// and HWPX stay out for the same reason: installing this app must not take the
+// documents away from Hancom Office on a PC that has it.
+const WIN_OPEN_WITH_ONLY_EXTS = new Set(['txt', 'json', 'xmind', 'hwp', 'hwpx'])
 // NSIS registers each association under a ProgId taken from its `name`
 // (HKCU\Software\Classes\<name>). The upstream app registers the bare names
 // below ("Word Document"), so sharing them would let either install overwrite
@@ -388,6 +412,32 @@ const FILE_ASSOCIATIONS = [
     icon: 'html',
     mimeType: 'text/html',
   },
+  {
+    // Open With only: Windows leaves it out (WIN_OPEN_WITH_ONLY_EXTS) and
+    // macOS ranks the app as an alternate, so the file's own program stays
+    // the default.
+    ext: 'xmind',
+    name: 'Mind Map',
+    description: 'Mind Map',
+    role: 'Editor',
+    rank: 'Alternate',
+    icon: 'mindmap',
+    mimeType: 'application/vnd.xmind.workbook',
+  },
+  {
+    ext: 'hwp',
+    name: 'HWP Document',
+    role: 'Editor',
+    icon: 'hwp',
+    mimeType: 'application/x-hwp',
+  },
+  {
+    ext: 'hwpx',
+    name: 'HWPX Document',
+    role: 'Editor',
+    icon: 'hwp',
+    mimeType: 'application/hwp+zip',
+  },
 ]
 
 const config = {
@@ -434,6 +484,14 @@ const config = {
       from: '../html/out',
       to: 'modules/html',
     },
+    {
+      from: '../mindmap/out',
+      to: 'modules/mindmap',
+    },
+    {
+      from: '../hwp/out',
+      to: 'modules/hwp',
+    },
     // PDF text editing engines: the bundled main resolves these under
     // Resources/wasm when node_modules is absent (apps/pdf/src/main/wasm-path.ts)
     {
@@ -443,6 +501,12 @@ const config = {
     {
       from: '../pdf/node_modules/harfbuzzjs/hb-subset.wasm',
       to: 'wasm/hb-subset.wasm',
+    },
+    // HWP / HWPX reading outside the editor (file search, knowledge base,
+    // attachments, MCP, command line): packages/file-parse/src/hwp.ts
+    {
+      from: '../../node_modules/@rhwp/core/rhwp_bg.wasm',
+      to: 'wasm/rhwp_bg.wasm',
     },
     // platform system-OCR helpers for scanned-page recovery (each exists only
     // on its own build platform; electron-builder skips absent sources and the
@@ -486,6 +550,13 @@ const config = {
     {
       from: '../../packages/cli/dist/node_modules',
       to: 'cli/node_modules',
+    },
+    // the design templates' shared fonts, shipped once for every editor (an
+    // asset import would copy them into each editor's out/); main code finds
+    // the folder with templateFontsDir (@genoffice/electron-utils)
+    {
+      from: '../../packages/ui/template-fonts',
+      to: 'template-fonts',
     },
   ],
   // `mimeType` is read only by the Linux target, where it becomes the
@@ -659,6 +730,7 @@ const config = {
     assertExtraResourceSources()
     ensureThirdPartyNotices()
     assertModuleTreesPresent()
+    assertPdfStructureProcessBuilt()
     ensureCliBundleCarriesAppVersion()
     if (context.electronPlatformName === 'darwin' && includeMacX64) {
       assertUniversalSidecar()
@@ -708,6 +780,19 @@ if (winSignMode) {
     },
   }
 }
+
+// This product's macOS builds carry no Apple Developer ID (docs/tracking/
+// decisions/0031-unsigned-mac-beta.md): the app is signed ad hoc, which
+// Apple Silicon needs before it runs a binary at all, and nothing is
+// notarized. Hardened runtime is off because, signed ad hoc, its library
+// validation rejects the Electron frameworks. First launch therefore needs
+// the user's explicit "Open Anyway", and Squirrel.Mac cannot install updates
+// into such an app (src/main/updater.ts points a Mac install at the release
+// page instead).
+config.mac.identity = '-'
+config.mac.hardenedRuntime = false
+config.mac.notarize = false
+config.dmg.sign = false
 
 // Auto-update feed: the releases of the public repository. Always configured,
 // so every installer carries an app-update.yml and can update itself — the

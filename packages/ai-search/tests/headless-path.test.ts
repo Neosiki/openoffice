@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, statSync, writeFileSync } from 'node:fs'
+import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -10,6 +10,7 @@ vi.mock('@genoffice/ai-provider', async (importOriginal) => ({
 }))
 
 import {
+  HEADLESS_SUBSCRIPTION_CONSENT_VERSION,
   analyzeMediaWithProvider,
   generateImageWithProvider,
   setCodexImageGenerationAvailable,
@@ -17,12 +18,7 @@ import {
   type AiSubscriptionStatuses,
 } from '@genoffice/ai-provider'
 import { registerCodexImageGenerator, type CodexImageGenerator } from '../src/codex-image-generator'
-import {
-  HEADLESS_LEDGER_FILE,
-  HEADLESS_LOCK_FILE,
-  HEADLESS_SUBSCRIPTION_MAX_PER_HOUR,
-  HEADLESS_SUBSCRIPTION_WINDOW_MS,
-} from '../src/headless-ledger'
+import { HEADLESS_LEDGER_FILE, HEADLESS_LOCK_FILE } from '../src/headless-ledger'
 import { analyzeMediaTool, generateImageTool } from '../src/media-tools'
 import type { AiToolCallContext } from '../src/tool-routing'
 import { dataUrl, keyMedia, status, tempDir, writeSettings } from './routing-helpers'
@@ -37,7 +33,13 @@ const READY: AiSubscriptionStatuses = {
   'claude-code': status('claude-code', 'ready'),
   codex: status('codex', 'ready'),
 }
-const ON = { headlessSubscriptionEnabled: true }
+/** the switch as the settings screen turns it on: with the consent of the current warning */
+const ON = {
+  headlessSubscriptionEnabled: true,
+  headlessSubscriptionConsentVersion: HEADLESS_SUBSCRIPTION_CONSENT_VERSION,
+}
+/** the hourly cap there used to be; requests past it must run all the same */
+const OLD_HOURLY_CAP = 20
 const image = { mediaUrls: [dataUrl(8)], requirements: 'describe' }
 
 let dataDir: string
@@ -51,10 +53,10 @@ const ledgerRuns = (): number[] =>
   existsSync(ledgerPath())
     ? (JSON.parse(readFileSync(ledgerPath(), 'utf-8')) as { runs: number[] }).runs
     : []
-/** a ledger that already holds this hour's whole allowance */
+/** a ledger that already holds what used to be this hour's whole allowance */
 function fillLedger(): number {
   const oldest = Date.now() - 10 * 60_000
-  const runs = Array.from({ length: HEADLESS_SUBSCRIPTION_MAX_PER_HOUR }, (_, i) => oldest + i)
+  const runs = Array.from({ length: OLD_HOURLY_CAP }, (_, i) => oldest + i)
   writeFileSync(ledgerPath(), JSON.stringify({ version: 1, runs }))
   return oldest
 }
@@ -181,57 +183,63 @@ describe('automatic-call path with the subscription setting on', () => {
     expect(ledgerRuns()).toHaveLength(3)
   })
 
-  it('answers the hourly limit with the time the next slot frees', async () => {
-    const oldest = fillLedger()
+  it('runs past what used to be the hourly limit', async () => {
+    fillLedger()
     const settings = writeSettings(ON)
     const generated = await generateImageTool(
       settings,
       { prompt: 'a logo' },
       { context: headless() },
     )
-    expect(generated.url).toBeUndefined()
-    expect(generated.errorCode).toBe('headless-limit')
-    expect(generated.resetsAt).toBe(oldest + HEADLESS_SUBSCRIPTION_WINDOW_MS)
-    expect(generated.error).toEqual(expect.any(String))
+    expect(generated.url).toMatch(/^file:/)
+    expect(generated.errorCode).toBeUndefined()
+    expect(generated.resetsAt).toBeUndefined()
     const analyzed = await analyzeMediaTool(settings, image, { context: headless() })
-    expect(analyzed.text).toBeUndefined()
-    expect(analyzed.errorCode).toBe('headless-limit')
-    expect(analyzed.resetsAt).toBe(oldest + HEADLESS_SUBSCRIPTION_WINDOW_MS)
-    expect(codexGen).not.toHaveBeenCalled()
-    expect(stream).not.toHaveBeenCalled()
+    expect(analyzed).toEqual({ text: 'from the AI provider' })
+    expect(codexGen).toHaveBeenCalledTimes(1)
+    expect(stream).toHaveBeenCalledTimes(1)
+    expect(ledgerRuns()).toHaveLength(OLD_HOURLY_CAP + 2)
   })
 
-  it('treats a damaged ledger as a used-up hour instead of starting the count over', async () => {
+  it('runs past a damaged ledger and starts the count over', async () => {
     writeFileSync(ledgerPath(), '{"version":1,"runs":[18')
-    const written = Math.round(statSync(ledgerPath()).mtimeMs)
     const settings = writeSettings(ON)
     const generated = await generateImageTool(
       settings,
       { prompt: 'a logo' },
       { context: headless() },
     )
-    expect(generated.url).toBeUndefined()
-    expect(generated.errorCode).toBe('headless-limit')
-    // one window after the file was written (file times and the clock agree to the millisecond)
-    expect(
-      Math.abs(generated.resetsAt! - (written + HEADLESS_SUBSCRIPTION_WINDOW_MS)),
-    ).toBeLessThanOrEqual(2)
+    expect(generated.url).toMatch(/^file:/)
+    expect(generated.errorCode).toBeUndefined()
     const analyzed = await analyzeMediaTool(settings, image, { context: headless() })
-    expect(analyzed.errorCode).toBe('headless-limit')
-    expect(codexGen).not.toHaveBeenCalled()
-    expect(stream).not.toHaveBeenCalled()
-    expect(readFileSync(ledgerPath(), 'utf-8')).toBe('{"version":1,"runs":[18')
+    expect(analyzed).toEqual({ text: 'from the AI provider' })
+    expect(codexGen).toHaveBeenCalledTimes(1)
+    expect(stream).toHaveBeenCalledTimes(1)
+    expect(ledgerRuns()).toHaveLength(2)
   })
 
-  it('does not fall to a key provider when the limit is hit', async () => {
+  it('stays on the subscription it chose, past what used to be the limit', async () => {
     fillLedger()
     const settings = writeSettings({
       ...ON,
       media: keyMedia({ imageProvider: 'codex' }, 'openai'),
     })
     const r = await generateImageTool(settings, { prompt: 'a logo' }, { context: headless() })
-    expect(r.errorCode).toBe('headless-limit')
+    expect(r.url).toMatch(/^file:/)
+    expect(codexGen).toHaveBeenCalledTimes(1)
     expect(keyGen).not.toHaveBeenCalled()
+  })
+
+  it('reads a switch turned on under the older warning as off', async () => {
+    const old = writeSettings({ headlessSubscriptionEnabled: true })
+    const generated = await generateImageTool(old, { prompt: 'a logo' }, { context: headless() })
+    expect(generated.errorCode).toBe('unavailable')
+    expect(generated.error).toMatch(/Settings > AI > Advanced/)
+    const analyzed = await analyzeMediaTool(old, image, { context: headless() })
+    expect(analyzed.errorCode).toBe('unavailable')
+    expect(codexGen).not.toHaveBeenCalled()
+    expect(stream).not.toHaveBeenCalled()
+    expect(ledgerRuns()).toEqual([])
   })
 
   it('leaves key routes out of the count and the queue', async () => {
@@ -249,7 +257,7 @@ describe('automatic-call path with the subscription setting on', () => {
     expect(await analyzeMediaTool(settings, image, { context: headless() })).toEqual({
       text: 'from the key provider',
     })
-    expect(ledgerRuns()).toHaveLength(HEADLESS_SUBSCRIPTION_MAX_PER_HOUR)
+    expect(ledgerRuns()).toHaveLength(OLD_HOURLY_CAP)
   })
 
   it('counts a request that ends in an error', async () => {
@@ -287,13 +295,13 @@ describe('an accepted metered login on the automatic-call path', () => {
     expect(ledgerRuns()).toEqual([])
   })
 
-  it('is not held back by the hourly limit', async () => {
+  it('is not counted, and not held back', async () => {
     fillLedger()
     const r = await analyzeMediaTool(writeSettings({ ...selected, ...ON }), image, {
       context: headless({ codex: metered }),
     })
     expect(r).toEqual({ text: 'from the AI provider' })
-    expect(ledgerRuns()).toHaveLength(HEADLESS_SUBSCRIPTION_MAX_PER_HOUR)
+    expect(ledgerRuns()).toHaveLength(OLD_HOURLY_CAP)
   })
 
   it('is not picked by `auto`, and not used without the acceptance', async () => {
@@ -324,7 +332,7 @@ describe('an accepted metered login on the automatic-call path', () => {
 })
 
 describe('screen path', () => {
-  it('applies neither the setting nor the hourly limit', async () => {
+  it('applies neither the setting nor the count', async () => {
     fillLedger()
     const context: AiToolCallContext = { path: 'screen', statuses: READY, dataDir }
     const generated = await generateImageTool(writeSettings(), { prompt: 'a logo' }, { context })
@@ -333,6 +341,6 @@ describe('screen path', () => {
     expect(await analyzeMediaTool(writeSettings(), image, { context })).toEqual({
       text: 'from the AI provider',
     })
-    expect(ledgerRuns()).toHaveLength(HEADLESS_SUBSCRIPTION_MAX_PER_HOUR)
+    expect(ledgerRuns()).toHaveLength(OLD_HOURLY_CAP)
   })
 })

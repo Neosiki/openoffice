@@ -31,6 +31,8 @@ const BUILTIN = new Set(builtinModules)
 const SRC_GLOBS = [
   'apps/docs/src',
   'apps/html/src',
+  'apps/mindmap/src',
+  'apps/hwp/src',
   'apps/markdown/src',
   'apps/pdf/src',
   'apps/sheets/src',
@@ -43,8 +45,14 @@ const SRC_GLOBS = [
 const CODE_EXT = /\.(ts|tsx|js|jsx|mjs|cjs)$/
 const SKIP_DIR = /^(node_modules|out|dist|release|tests|__tests__|target)$/
 
-/** Runtime that is always present but never imported by specifier */
-const IMPLICIT = ['electron']
+/**
+ * Runtime that is always present but never imported by specifier. The three
+ * after electron are bundled into the rhwp-studio build the HWP editor hosts
+ * (apps/hwp/scripts/build-studio.mjs); the studio's own source is the same
+ * MIT-licensed repository as @rhwp/core, and that build also ships rhwp's
+ * LICENSE and THIRD_PARTY_LICENSES files beside itself.
+ */
+const IMPLICIT = ['electron', '@rhwp/core', 'canvaskit-wasm', '@noble/hashes']
 
 /**
  * Packages copied into the installer verbatim by electron-builder rather than
@@ -67,6 +75,8 @@ function extraResourceSeeds() {
 const NOTE = {
   '@fluentui/react-icons':
     'Copyright (c) Microsoft Corporation. Licensed under the MIT License.\nhttps://github.com/microsoft/fluentui-system-icons',
+  '@rhwp/editor':
+    'Copyright (c) 2025-2026 Edward Kim. Licensed under the MIT License.\nhttps://github.com/edwardkim/rhwp',
 }
 
 /** SPDX strings that need a word on which side of a dual license we take */

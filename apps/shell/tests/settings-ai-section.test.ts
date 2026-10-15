@@ -9,6 +9,7 @@ import {
   AI_MEDIA_PROVIDERS,
   AI_PROVIDERS,
   AI_SEARCH_PROVIDERS,
+  HEADLESS_SUBSCRIPTION_CONSENT_VERSION,
   defaultAiSettings,
 } from '@genoffice/ai-provider'
 import type {
@@ -30,7 +31,7 @@ import type { SettingsTarget } from '../src/renderer/src/SettingsModal'
  */
 
 const HEADLESS_WARNING =
-  'Neither company recommends letting a program use your subscription automatically, and your account may be restricted.'
+  'There is no hourly limit, so a program can send as many requests as it likes, and they may carry the whole text of a document and images of its pages. Neither company recommends letting a program use your subscription automatically, and your account may be restricted.'
 
 const actEnvironment = globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean }
 actEnvironment.IS_REACT_ACT_ENVIRONMENT = true
@@ -273,7 +274,7 @@ describe('the default view', () => {
     expect(labels).toEqual(['Account', 'AI', 'General', 'Integrations', 'About'])
   })
 
-  it('shows both subscription cards and no key input', async () => {
+  it('shows both subscription cards, the free cards, and no paid key input', async () => {
     installHome(defaultAiSettings())
     installSubscription(statusMap('ready', 'signed-out'))
     await openModal()
@@ -281,11 +282,13 @@ describe('the default view', () => {
 
     expect(card('claude-code').dataset.state).toBe('ready')
     expect(card('codex').dataset.state).toBe('signed-out')
-    expect(host.querySelectorAll('.ai-sub-card')).toHaveLength(2)
+    expect(host.querySelectorAll('.ai-sub-card:not(.free-ai-card)')).toHaveLength(2)
+    // the free connections sit outside Advanced (decision 0009); Gemini's key field is theirs
+    expect(host.querySelectorAll('.free-ai-card')).toHaveLength(2)
 
-    expect(host.querySelector('input[type="password"]')).toBeNull()
+    expect(host.querySelector('input[type="password"]:not(.free-ai-key)')).toBeNull()
     expect(host.querySelector('#set-ai-key')).toBeNull()
-    expect(host.querySelector('.set-input')).toBeNull()
+    expect(host.querySelector('.set-input:not(.free-ai-key)')).toBeNull()
     expect(host.textContent).not.toContain('API Key')
     expect(host.querySelector('.set-adv-toggle')?.getAttribute('aria-expanded')).toBe('false')
   })
@@ -309,9 +312,9 @@ describe('the default view', () => {
     expect(host.textContent).toContain('Image generation')
     expect(host.textContent).toContain('Video analysis')
 
-    // closing Advanced takes every key field out again
+    // closing Advanced takes every key field out again (the free Gemini card's own field stays)
     await openAdvanced()
-    expect(host.querySelector('input[type="password"]')).toBeNull()
+    expect(host.querySelector('input[type="password"]:not(.free-ai-key)')).toBeNull()
   })
 
   it('does not offer Claude in the key pane', async () => {
@@ -353,7 +356,7 @@ describe('the default view', () => {
 
     await click(button('Manage connections'))
     expect(nav('AI')?.classList.contains('active')).toBe(true)
-    expect(host.querySelectorAll('.ai-sub-card')).toHaveLength(2)
+    expect(host.querySelectorAll('.ai-sub-card:not(.free-ai-card)')).toHaveLength(2)
   })
 })
 
@@ -432,7 +435,7 @@ describe('"AI to use"', () => {
     // a configured key provider is offered, but auto never lands on it
     expect(dropdown('AI to use')?.textContent).toBe('Automatic')
     expect(host.querySelector('[data-ai-blocked]')?.textContent).toBe(
-      'Connect a subscription to use AI',
+      'Connect an AI to get started',
     )
   })
 
@@ -801,13 +804,46 @@ describe('automatic requests', () => {
     await click(headlessSwitch())
     await click(button('Turn on anyway'))
     expect(lastSaved().headlessSubscriptionEnabled).toBe(true)
+    // passing the warning is the agreement to it: its version is stored with the switch
+    expect(lastSaved().headlessSubscriptionConsentVersion).toBe(
+      HEADLESS_SUBSCRIPTION_CONSENT_VERSION,
+    )
     expect(headlessSwitch().getAttribute('aria-checked')).toBe('true')
     // the warning stays in sight while the switch is on
     expect(host.textContent).toContain(HEADLESS_WARNING)
   })
 
+  it('shows a switch turned on under the older warning as off, and asks again', async () => {
+    // a settings file from before the hourly cap was removed: on, with no consent version
+    installHome({
+      ...defaultAiSettings(),
+      headlessSubscriptionEnabled: true,
+      headlessSubscriptionConsentVersion: undefined,
+    })
+    installSubscription(statusMap('ready', 'ready'))
+    await openModal()
+    await openAiSection()
+    await openAdvanced()
+    expect(headlessSwitch().getAttribute('aria-checked')).toBe('false')
+    expect(host.textContent).not.toContain(HEADLESS_WARNING)
+
+    await click(headlessSwitch())
+    expect(host.querySelector('.set-adv-confirm')?.textContent).toContain(HEADLESS_WARNING)
+    expect(setAiSettings).not.toHaveBeenCalled()
+    await click(button('Turn on anyway'))
+    expect(lastSaved()).toMatchObject({
+      headlessSubscriptionEnabled: true,
+      headlessSubscriptionConsentVersion: HEADLESS_SUBSCRIPTION_CONSENT_VERSION,
+    })
+    expect(headlessSwitch().getAttribute('aria-checked')).toBe('true')
+  })
+
   it('turns off at once, with no question asked', async () => {
-    installHome({ ...defaultAiSettings(), headlessSubscriptionEnabled: true })
+    installHome({
+      ...defaultAiSettings(),
+      headlessSubscriptionEnabled: true,
+      headlessSubscriptionConsentVersion: HEADLESS_SUBSCRIPTION_CONSENT_VERSION,
+    })
     installSubscription(statusMap('ready', 'ready'))
     await openModal()
     await openAiSection()
@@ -836,7 +872,7 @@ describe('automatic requests', () => {
     await openAdvanced()
     await click(host.querySelector('.set-switch[role="switch"]'))
     expect(host.querySelector('.set-adv-confirm')?.textContent).toContain(
-      '프로그램이 자동으로 구독을 쓰는 것은 두 회사가 권장하지 않으며, 계정에 제한이 걸릴 수 있습니다.',
+      '시간당 한도가 없어 프로그램이 요청을 얼마든지 보낼 수 있고, 그 요청에 문서 전체의 글과 페이지 그림이 담길 수 있습니다. 프로그램이 자동으로 구독을 쓰는 것은 두 회사가 권장하지 않으며, 계정에 제한이 걸릴 수 있습니다.',
     )
   })
 })

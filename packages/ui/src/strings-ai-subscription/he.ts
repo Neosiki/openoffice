@@ -5,6 +5,7 @@ export const he = {
   cardChecking: 'בודק…',
   cardNotInstalled: 'לא מותקן',
   cardSignedOut: 'לא מחובר לחשבון',
+  cardSigningIn: 'מתבצעת כניסה…',
   cardReady: 'מחובר',
   cardReadyPlan: 'מחובר · {plan}',
   cardMetered: 'בוצעה כניסה, אך לא באמצעות מינוי',
@@ -15,6 +16,7 @@ export const he = {
   cardErrFailed: 'משהו השתבש במהלך הבדיקה של {provider}. בדקו שוב.',
   actionInstall: 'התקנה',
   actionLogin: 'כניסה',
+  actionLoginWindow: 'הדפדפן לא נפתח, או שהוא מציג קוד?',
   actionRecheck: 'בדיקה חוזרת',
   actionAcceptMetered: 'להשתמש בכל זאת',
   actionInstallHelp: 'מדריך ההתקנה הרשמי',
@@ -24,15 +26,20 @@ export const he = {
   actionLogout: 'יציאה מהחשבון',
   installNote: 'פקודת ההתקנה הרשמית של {vendor} תופעל בחלון מסוף חדש.',
   loginNote: 'דף הכניסה שייפתח הוא של {vendor}.',
+  signingInBrowserNote:
+    'היכנסו לחשבון {vendor} שלכם בדפדפן שנפתח ואשרו את הגישה. החיבור יתבצע מעצמו כשתסיימו.',
+  signingInWindowNote:
+    'אם הדפדפן מציג קוד, העתיקו אותו, הדביקו אותו בחלון שנפתח זה עתה והקישו Enter.',
   meteredWarning: 'זה אינו מינוי: החיוב הוא לפי השימוש בפועל.',
   meteredMeaning:
     'הכניסה הזו משתמשת במפתח API או בחשבון בתשלום לפי שימוש, או שלא ניתן היה לאמת את סוגה. בחירה ב"להשתמש בכל זאת" מאפשרת לבינה המלאכותית לפעול דרך החיבור הזה, וכל בקשה תחויב בחשבון הזה.',
-  connectTitle: 'חברו מינוי כדי להשתמש בבינה המלאכותית',
+  connectTitle: 'חברו בינה מלאכותית כדי להתחיל',
   connectBody: 'הבינה המלאכותית פועלת עם מינוי Claude או Codex שכבר יש לכם. אין צורך במפתח API.',
   connectProviderTitle: 'החיבור {provider} אינו זמין לשימוש כרגע',
   connectKeyBody:
     'ההגדרה של {provider} עדיין לא הושלמה. השלימו אותה בהגדרות או בחרו בינה מלאכותית אחרת.',
-  errNotConnected: 'אין בינה מלאכותית מחוברת. חברו תחילה מינוי Claude או Codex.',
+  errNotConnected:
+    'אין בינה מלאכותית מחוברת. חברו תחילה מינוי Claude או Codex, או בינה מלאכותית בחינם.',
   errNotInstalled: 'התוכנה {provider} לא נמצאה במחשב הזה.',
   errSignedOut: 'תוקף הכניסה אל {provider} פג. היכנסו שוב כדי להמשיך.',
   errRateLimit: 'מכסת המינוי של {provider} נוצלה במלואה.',
@@ -45,6 +52,10 @@ export const he = {
   errHeadlessLimit: 'הושגה המכסה השעתית של בקשות אוטומטיות.',
   errHeadlessLimitReset:
     'הושגה המכסה השעתית של בקשות אוטומטיות. אפשר יהיה לשלוח בקשות שוב ב-{time}.',
+  connectFreeHint: 'אין לכם מינוי? אפשר לחבר בינה מלאכותית בחינם בהגדרות תוך כדקה.',
+  actionConnectFree: 'חיבור בינה מלאכותית בחינם',
+  errFreeLimit: 'המכסה החינמית להיום נוצלה. נסו שוב מחר, או בחרו בינה מלאכותית אחרת בהגדרות.',
+  errFreeLimitReset: 'המכסה החינמית להיום נוצלה. אפשר יהיה להשתמש בה שוב ב-{time}.',
   continueWith: 'המשך עם {provider}',
   continueMeteredNote: 'החיבור {provider} אינו מינוי: המשך העבודה יחויב לפי שימוש.',
   usageLine: 'נוצלו {percent}% · איפוס ב-{time}',
@@ -56,6 +67,8 @@ export const he = {
     'השאלה אם התוכן הזה ישמש לאימון בינה מלאכותית נקבעת בהגדרות החשבון שלכם באותה חברה.',
   noticeCodexHistory:
     'האפליקציה מכבה את שמירת היסטוריית השיחות ב-Codex, אך ייתכן ש-Codex עדיין ישמור יומני אבחון משלו במחשב הזה.',
+  noticePdfWholeDocument:
+    'בעורך ה-PDF, קריאת עמודים בעזרת AI ותרגום מסמכים עשויים לשלוח תמונות של העמודים ואת כל הטקסט של המסמך.',
   noticeAck: 'הבנתי',
   codexNotice: 'שימוש במינוי Codex בתוך אפליקציה אינו שיטה ש-OpenAI ממליצה עליה באופן רשמי.',
   truncatedNotice: 'הקלט היה ארוך מדי, ולכן חלק ממנו נחתך לפני השליחה.',

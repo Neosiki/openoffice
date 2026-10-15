@@ -46,6 +46,13 @@ export type AiSubscriptionState =
 export type AiSubscriptionLoginMethod = 'subscription' | 'metered' | 'unknown'
 
 /**
+ * A login the app started is under way. `browser`: the CLI runs without a window
+ * and the user signs in on the vendor's page in the browser. `window`: the CLI's
+ * own window is open, for when the browser hands back a code to paste there.
+ */
+export type AiSubscriptionSigningIn = 'browser' | 'window'
+
+/**
  * One model a subscription CLI offers, as the CLI itself lists it. Display
  * data for the model picker: only `id` ever becomes a setting.
  */
@@ -86,6 +93,8 @@ export interface AiSubscriptionStatus {
   meteredAccepted: boolean
   /** what went wrong, on state `error` */
   error?: string | undefined
+  /** a login the app started is under way; absent otherwise */
+  signingIn?: AiSubscriptionSigningIn | undefined
 }
 
 export type AiSubscriptionStatuses = Partial<Record<AiSubscriptionProviderId, AiSubscriptionStatus>>
@@ -245,8 +254,16 @@ export interface AiSettings {
   maxOutputTokens?: number | undefined
   /** per subscription provider: the user accepted a metered (pay-as-you-go) CLI login; absent = false */
   meteredAccepted?: Partial<Record<AiSubscriptionProviderId, boolean>> | undefined
-  /** headless callers (terminal commands, MCP) may use subscription providers; absent = false */
+  /**
+   * headless callers (terminal commands, MCP) may use subscription providers; absent = false.
+   * Reads as false unless `headlessSubscriptionConsentVersion` is the current consent version.
+   */
   headlessSubscriptionEnabled?: boolean | undefined
+  /**
+   * the version of the warning the user agreed to when turning `headlessSubscriptionEnabled`
+   * on (HEADLESS_SUBSCRIPTION_CONSENT_VERSION); absent = 0, no agreement on record
+   */
+  headlessSubscriptionConsentVersion?: number | undefined
   /** the first-connection notice has been shown; absent = false */
   subscriptionNoticeSeen?: boolean | undefined
 }

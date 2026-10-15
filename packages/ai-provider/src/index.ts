@@ -25,6 +25,7 @@ export type {
   AiProviderSelection,
   AiRunErrorKind,
   AiSubscriptionLoginMethod,
+  AiSubscriptionSigningIn,
   AiSubscriptionModel,
   AiSubscriptionProviderId,
   AiSubscriptionState,
@@ -87,10 +88,12 @@ export { AiRunError, aiStreamErrorFields } from './run-error'
 export {
   AI_PROVIDERS,
   DEFAULT_MAX_OUTPUT_TOKENS,
+  HEADLESS_SUBSCRIPTION_CONSENT_VERSION,
   MAX_MAX_OUTPUT_TOKENS,
   MIN_MAX_OUTPUT_TOKENS,
   clampMaxOutputTokens,
   defaultAiSettings,
+  headlessSubscriptionOn,
   maxOutputTokensOf,
   resolveAiSettings,
 } from './providers'
@@ -151,6 +154,8 @@ export { chatForProvider } from './chat'
 export { setAiUserAgent, setRescueFetch } from './fetch'
 export { isAiNetworkError } from './network-error'
 export { isAiOverloadedError } from './overload-error'
+export { freeLimitOf } from './free-ai'
+export type { FreeAiConnectResult, FreeAiProviderId, FreeAiQuota } from './free-ai'
 export { parseOutputCapRejection } from './output-cap'
 export { AiCreditsError, sseLines, streamForProvider } from './stream'
 export type { StreamCallbacks } from './stream'

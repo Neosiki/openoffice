@@ -5,6 +5,7 @@ export const nl = {
   cardChecking: 'Controleren…',
   cardNotInstalled: 'Niet geïnstalleerd',
   cardSignedOut: 'Niet aangemeld',
+  cardSigningIn: 'Bezig met aanmelden…',
   cardReady: 'Verbonden',
   cardReadyPlan: 'Verbonden · {plan}',
   cardMetered: 'Aangemeld, maar niet met een abonnement',
@@ -17,6 +18,7 @@ export const nl = {
   cardErrFailed: 'Er ging iets mis bij het controleren van {provider}. Controleer het opnieuw.',
   actionInstall: 'Installeren',
   actionLogin: 'Aanmelden',
+  actionLoginWindow: 'Browser niet geopend, of toont hij een code?',
   actionRecheck: 'Opnieuw controleren',
   actionAcceptMetered: 'Toch gebruiken',
   actionInstallHelp: 'Officiële installatiehandleiding',
@@ -27,16 +29,21 @@ export const nl = {
   installNote:
     'De officiële installatieopdracht van {vendor} wordt uitgevoerd in een nieuw terminalvenster.',
   loginNote: 'De aanmeldpagina die wordt geopend is van {vendor} zelf.',
+  signingInBrowserNote:
+    'Meld je in de geopende browser aan bij je {vendor}-account en sta toegang toe. De verbinding komt vanzelf tot stand als je klaar bent.',
+  signingInWindowNote:
+    'Als de browser een code toont, kopieer die, plak hem in het venster dat net is geopend en druk op Enter.',
   meteredWarning: 'Dit is geen abonnement: je betaalt voor wat je gebruikt.',
   meteredMeaning:
     'Deze aanmelding gebruikt een API-sleutel of een account met betaling per verbruik, of het type kon niet worden vastgesteld. Met ‘Toch gebruiken’ draait AI via deze verbinding en wordt elk verzoek bij dat account in rekening gebracht.',
-  connectTitle: 'Koppel een abonnement om AI te gebruiken',
+  connectTitle: 'Koppel een AI om te beginnen',
   connectBody:
     'AI draait op het Claude- of Codex-abonnement dat je al hebt. Een API-sleutel is niet nodig.',
   connectProviderTitle: 'De verbinding {provider} is nu niet bruikbaar',
   connectKeyBody:
     'De configuratie van {provider} is nog niet af. Rond die af in Instellingen of kies een andere AI.',
-  errNotConnected: 'Er is geen AI verbonden. Koppel eerst een Claude- of Codex-abonnement.',
+  errNotConnected:
+    'Er is geen AI verbonden. Koppel eerst een Claude- of Codex-abonnement, of een gratis AI.',
   errNotInstalled: 'Het programma {provider} is niet gevonden op deze pc.',
   errSignedOut: 'De aanmelding bij {provider} is verlopen. Meld je opnieuw aan om door te gaan.',
   errRateLimit: 'De limiet van het abonnement {provider} is bereikt.',
@@ -51,6 +58,12 @@ export const nl = {
   errHeadlessLimit: 'De uurlimiet voor automatische verzoeken is bereikt.',
   errHeadlessLimitReset:
     'De uurlimiet voor automatische verzoeken is bereikt. Verzoeken zijn weer mogelijk om {time}.',
+  connectFreeHint:
+    'Geen abonnement? In Instellingen koppel je in ongeveer een minuut een gratis AI.',
+  actionConnectFree: 'Gratis AI koppelen',
+  errFreeLimit:
+    'Het gratis tegoed van vandaag is op. Probeer het morgen opnieuw of kies een andere AI in Instellingen.',
+  errFreeLimitReset: 'Het gratis tegoed van vandaag is op. Je kunt het weer gebruiken om {time}.',
   continueWith: 'Doorgaan met {provider}',
   continueMeteredNote:
     'De verbinding {provider} is geen abonnement: doorgaan wordt per verbruik in rekening gebracht.',
@@ -64,6 +77,8 @@ export const nl = {
     'Of die inhoud wordt gebruikt om AI te trainen, wordt bepaald door de instellingen van je eigen account bij dat bedrijf.',
   noticeCodexHistory:
     'Deze app zet het opslaan van de gespreksgeschiedenis in Codex uit, maar Codex kan nog steeds eigen diagnostische logboeken op deze pc bewaren.',
+  noticePdfWholeDocument:
+    'In de pdf-editor kunnen het lezen van pagina’s met AI en het vertalen van documenten afbeeldingen van de pagina’s en de volledige tekst van het document versturen.',
   noticeAck: 'Begrepen',
   codexNotice:
     'Een Codex-abonnement gebruiken in een app is geen methode die OpenAI officieel aanbeveelt.',

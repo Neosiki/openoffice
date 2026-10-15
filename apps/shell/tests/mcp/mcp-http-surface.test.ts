@@ -45,6 +45,7 @@ const DEFAULT_NAMES = [
   'read_deck',
   'read_document',
   'read_docx',
+  'read_hwp',
   'read_pdf',
   'read_sheet',
   'replace_blocks',
@@ -231,7 +232,7 @@ describe('MCP surface over Streamable HTTP (/mcp)', () => {
       // ── 1. handshake + tools/list ──────────────────────────────────────────
       const listed = (await client.listTools()).tools.map((t) => t.name).sort()
       expect(listed).toEqual(DEFAULT_NAMES)
-      expect(mcpStatus().capabilities).toEqual(['docs', 'slides', 'sheets', 'pdf'])
+      expect(mcpStatus().capabilities).toEqual(['docs', 'slides', 'sheets', 'pdf', 'hwp'])
 
       // ── 2. get_app_info: editor matrix + exposed formats ──────────────────
       const info = await call(client, 'get_app_info', {})
@@ -268,7 +269,15 @@ describe('MCP surface over Streamable HTTP (/mcp)', () => {
         'md',
         'html',
         'pdf',
+        'xmind',
+        'hwp',
       ])
+      // the mind map entry: editor formats only, nothing generated or read headlessly
+      expect(infoJson.families.find((f) => f.family === 'xmind')).toEqual({
+        family: 'xmind',
+        label: 'mind map',
+        editor: { open: ['xmind'], save: ['xmind'], export: ['png', 'pdf', 'md'] },
+      })
       // the format registry's editor truth survives the wire
       expect(infoJson.families.find((f) => f.family === 'xlsx')!.editor.open).toEqual([
         'xlsx',

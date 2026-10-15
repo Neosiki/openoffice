@@ -189,6 +189,26 @@ describe('AiSubscriptionCard', () => {
     expect(host.querySelector('.gs-provider-logo')).toBeNull()
   })
 
+  it('a browser sign-in under way: says where, and the link to the window signs in again', () => {
+    const actions = render(status('claude-code', 'signed-out', { signingIn: 'browser' }))
+    expect(statusText()).toBe(en.cardSigningIn)
+    expect(notes()).toEqual([
+      'Sign in to your Anthropic account in the browser that opened and allow access. It connects by itself when you are done.',
+    ])
+    expect(actionsShown()).toEqual(['login-window'])
+    const link = host.querySelector<HTMLButtonElement>('[data-action="login-window"]')!
+    expect(link.className).toBe('ai-sub-link')
+    click('[data-action="login-window"]')
+    expect(actions.onLogin).toHaveBeenCalledExactlyOnceWith('claude-code')
+  })
+
+  it('the window open for a code: says what to do there, nothing to press', () => {
+    render(status('codex', 'signed-out', { signingIn: 'window' }))
+    expect(statusText()).toBe(en.cardSigningIn)
+    expect(notes()).toEqual([en.signingInWindowNote])
+    expect(actionsShown()).toEqual([])
+  })
+
   it('keeps the buttons inert while an action is in flight', () => {
     const actions = cardActions()
     act(() =>
@@ -395,6 +415,34 @@ describe('AiConnectPrompt', () => {
     expect(actions.onLogin).toHaveBeenCalledExactlyOnceWith('claude-code')
     click('[data-provider="codex"] [data-action="install"]')
     expect(actions.onInstall).toHaveBeenCalledExactlyOnceWith('codex')
+  })
+
+  it('points to the free connections when nothing is connected and settings can be opened', () => {
+    const onOpenSettings = vi.fn()
+    render(
+      defaultAiSettings(),
+      {
+        'claude-code': status('claude-code', 'not-installed'),
+        codex: status('codex', 'signed-out'),
+      },
+      { onOpenSettings },
+    )
+    expect(host.querySelector('[data-note="connectFreeHint"]')!.textContent).toBe(
+      en.connectFreeHint,
+    )
+    click('[data-action="connect-free"]')
+    expect(onOpenSettings).toHaveBeenCalledOnce()
+  })
+
+  it('offers no free way in for a selected provider that cannot run, or without a settings page', () => {
+    render(
+      { ...defaultAiSettings(), provider: 'codex' },
+      { codex: status('codex', 'signed-out') },
+      { onOpenSettings: vi.fn() },
+    )
+    expect(host.querySelector('[data-action="connect-free"]')).toBeNull()
+    render(defaultAiSettings(), { codex: status('codex', 'signed-out') })
+    expect(host.querySelector('[data-action="connect-free"]')).toBeNull()
   })
 
   it('shows a provider that has not reported yet as checking', () => {
@@ -692,6 +740,24 @@ describe('notices', () => {
     expect(lines()).toEqual([en.noticeSend, en.noticeTraining, en.noticeCodexHistory])
     click('button')
     expect(onAcknowledge).toHaveBeenCalledOnce()
+  })
+
+  it('first connection: adds the PDF whole-document sentence only when asked to', () => {
+    act(() =>
+      root.render(
+        createElement(AiFirstConnectionNotice, {
+          lang: 'en',
+          codexKeepsHistory: true,
+          sendsWholeDocument: true,
+        }),
+      ),
+    )
+    expect(lines()).toEqual([
+      en.noticeSend,
+      en.noticeTraining,
+      en.noticePdfWholeDocument,
+      en.noticeCodexHistory,
+    ])
   })
 
   it('Codex: the one line about OpenAI’s recommendation', () => {

@@ -5,7 +5,7 @@
  */
 import { codexImageGenerationAvailable } from '../image-backend'
 import { isSubscriptionProvider } from '../provider-selection'
-import type { AiSettings, AiSubscriptionProviderId } from '../types'
+import type { AiSettings, AiSubscriptionProviderId, AiSubscriptionSigningIn } from '../types'
 import {
   SUBSCRIPTION_INSTALL_URLS,
   SUBSCRIPTION_IPC_CHANNELS,
@@ -19,9 +19,11 @@ import {
   launchSubscriptionLogout,
   onSubscriptionLoginChange,
 } from './launch'
+import type { SubscriptionLocator } from './locate'
 import { createMeteredAcceptanceFileStore } from './metered'
 import { listSubscriptionModels, type SubscriptionModelLister } from './models'
 import { createSubscriptionStatusService, type SubscriptionStatusService } from './service'
+import type { SubscriptionChildLike, SubscriptionSpawn } from './process'
 import type { SubscriptionDetector } from './status'
 
 /** The part of Electron's `ipcMain` this helper uses */
@@ -157,6 +159,26 @@ export interface SubscriptionIpcSetup {
   detect?: SubscriptionDetector | undefined
   /** stand-in for tests; the lists the bridges registered (`listSubscriptionModels`) when absent */
   listModels?: SubscriptionModelLister | undefined
+  /** stand-ins for tests: how the login is started, and on which system */
+  spawn?: SubscriptionSpawn | undefined
+  locate?: SubscriptionLocator | undefined
+  platform?: NodeJS.Platform | undefined
+  /** stand-in for tests: how a login is ended */
+  killTree?: ((child: SubscriptionChildLike) => void) | undefined
+  /** stand-in for tests; `HIDDEN_LOGIN_TIMEOUT_MS` when absent */
+  hiddenLoginTimeoutMs?: number | undefined
+}
+
+/**
+ * A browser sign-in the app started, with the CLI's window hidden, is ended
+ * after this long; the provider then shows its login button again.
+ */
+export const HIDDEN_LOGIN_TIMEOUT_MS = 10 * 60_000
+
+interface PendingLogin {
+  mode: AiSubscriptionSigningIn
+  stop: () => void
+  timer?: ReturnType<typeof setTimeout> | undefined
 }
 
 /**
@@ -173,14 +195,53 @@ export function createSubscriptionIpcDeps(setup: SubscriptionIpcSetup): Subscrip
     detect: setup.detect,
     listModels: setup.listModels ?? listSubscriptionModels,
   })
+  const logins = new Map<AiSubscriptionProviderId, PendingLogin>()
+  const platform = setup.platform ?? process.platform
+  const launchLogin = async (provider: AiSubscriptionProviderId) => {
+    const current = logins.get(provider)
+    // the window is already open: it is where the user is now
+    if (current?.mode === 'window') return { ok: true }
+    // On Windows the first press signs in in the browser alone, with the CLI's window
+    // hidden; a press while that runs opens the window instead, for a code to paste.
+    // Elsewhere the CLI has no window to show, so a press while it runs changes nothing.
+    if (current && platform !== 'win32') return { ok: true }
+    const mode: AiSubscriptionSigningIn = current ? 'window' : 'browser'
+    current?.stop()
+    const login: PendingLogin = { mode, stop: () => undefined }
+    logins.set(provider, login)
+    service.setSigningIn(provider, mode)
+    const end = (): void => {
+      clearTimeout(login.timer)
+      // a login replaced by its window has ended, but the window has not
+      if (logins.get(provider) !== login) return
+      logins.delete(provider)
+      service.setSigningIn(provider, undefined)
+      // a check of its own time: one already under way may have asked before the login ended
+      void service.check([provider], { fresh: true }).catch(() => undefined)
+    }
+    const result = await launchSubscriptionLogin(provider, {
+      configuredPath: setup.getSettings().providers?.[provider]?.cliPath,
+      window: mode === 'browser' ? 'hidden' : 'visible',
+      onStarted: (stop) => {
+        login.stop = stop
+        // a sign-in nobody finishes does not wait unseen for ever
+        if (mode === 'browser') {
+          login.timer = setTimeout(stop, setup.hiddenLoginTimeoutMs ?? HIDDEN_LOGIN_TIMEOUT_MS)
+          login.timer.unref?.()
+        }
+      },
+      onExit: end,
+      spawn: setup.spawn,
+      locate: setup.locate,
+      platform,
+      killTree: setup.killTree,
+    })
+    if (!result.ok) end()
+    return result
+  }
   return {
     service,
-    launchLogin: (provider) =>
-      launchSubscriptionLogin(provider, {
-        configuredPath: setup.getSettings().providers?.[provider]?.cliPath,
-        // a check of its own time: one already under way may have asked before the login ended
-        onExit: () => void service.check([provider], { fresh: true }).catch(() => undefined),
-      }),
+    launchLogin,
     launchLogout: (provider) =>
       launchSubscriptionLogout(provider, {
         configuredPath: setup.getSettings().providers?.[provider]?.cliPath,

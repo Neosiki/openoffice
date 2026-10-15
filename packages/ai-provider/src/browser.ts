@@ -12,6 +12,7 @@ export type {
   AiProviderSelection,
   AiRunErrorKind,
   AiSubscriptionLoginMethod,
+  AiSubscriptionSigningIn,
   AiSubscriptionModel,
   AiSubscriptionProviderId,
   AiSubscriptionState,
@@ -73,9 +74,11 @@ export type {
 export {
   AI_PROVIDERS,
   DEFAULT_MAX_OUTPUT_TOKENS,
+  HEADLESS_SUBSCRIPTION_CONSENT_VERSION,
   MAX_MAX_OUTPUT_TOKENS,
   MIN_MAX_OUTPUT_TOKENS,
   clampMaxOutputTokens,
+  headlessSubscriptionOn,
 } from './providers'
 export {
   activeCustomEndpoint,
@@ -87,5 +90,26 @@ export {
   upsertCustomEndpoint,
 } from './custom-endpoints'
 export { getProviderAdapter, modelLacksVision } from './registry'
+export {
+  FREE_AI_IPC_CHANNELS,
+  FREE_AI_KEY_PAGES,
+  FREE_AI_PROVIDERS,
+  GEMINI_FREE_MODEL,
+  OPENROUTER_FREE_MODELS,
+  freeAiConnectResultOf,
+  freeAiConnected,
+  freeAiQuotaOf,
+  isFreeAiProvider,
+  isOpenRouterFreeModel,
+  keyProviderModels,
+  withFreeAiConnection,
+  withoutFreeAiConnection,
+} from './free-ai'
+export type {
+  FreeAiConnectFailure,
+  FreeAiConnectResult,
+  FreeAiProviderId,
+  FreeAiQuota,
+} from './free-ai'
 export { AI_MEDIA_PROVIDERS } from './media'
 export { AI_SEARCH_PROVIDERS } from './search-settings'

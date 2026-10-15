@@ -221,4 +221,45 @@ export const ms = {
   aiSumSaveTemplate: 'Menyimpan templat gaya "{name}"',
   aiSumTemplatesEmpty: 'Templat gaya (kosong)',
   aiSumListTemplates: 'Menyenaraikan {count} templat gaya',
+  aiTplGalleryTitle: 'Pilih templat',
+  aiTplSectionBuiltin: 'Templat terbina dalam',
+  aiTplSectionSaved: 'Gaya yang saya simpan',
+  aiTplChipPick: 'Templat',
+  aiTplChipChange: 'Tukar templat',
+  aiTplChipRemove: 'Buang templat',
+  aiTplAdjustMark: 'Ada permintaan tambahan',
+  aiTplAdjustClear: 'Kosongkan permintaan tambahan',
+  aiTplSchemeLight: 'Cerah',
+  aiTplSchemeDark: 'Gelap',
+  aiTplSchemeMixed: 'Campuran',
+  aiTplSavedOn: 'Disimpan pada {date}',
+  aiTplPreviewAlt: 'Pratonton muka depan {name}',
+  aiTplAppliesToNew:
+    'Slaid sedia ada kekal seperti asal. Templat ini digunakan untuk slaid yang dibuat oleh AI mulai sekarang.',
+  aiTplFontsNotice:
+    'Fon templat disertakan dalam aplikasi ini. Program lain seperti PowerPoint mungkin memaparkan fon yang berbeza.',
+  aiTplOpenFonts: 'Buka folder fon',
+  aiTplDesc_coral:
+    'Krim dan merah jambu jingga pada latar hampir hitam, dengan tajuk besar dan tirus.',
+  aiTplDesc_blue_professional:
+    'Latar krim dengan aksen biru kobalt yang terang. Kemas, moden dan formal.',
+  aiTplDesc_monochrome:
+    'Latar gading dengan teks hitam sepenuhnya dan tajuk serif. Tiada warna langsung.',
+  aiTplDesc_neo_grid_bold:
+    'Latar putih pudar dengan satu aksen kuning neon. Garisan tebal, bergaya majalah.',
+  aiTplDesc_block_frame:
+    'Bidang warna pastel neon dengan sempadan hitam tebal. Ceria dan menarik perhatian.',
+  aiTplDesc_raw_grid:
+    'Merah jambu, hijau sage dan hitam dakwat dengan sempadan tebal dan bidang teranjak. Kasar dan bertenaga.',
+  aiTplDesc_studio: 'Latar hitam dengan teks kuning terang. Bertenaga dan menyerlah.',
+  aiTplDesc_signal:
+    'Biru laut gelap dan putih tulang dengan satu aksen emas malap. Rasmi dan tenang.',
+  aiTplDesc_grove:
+    'Latar hijau hutan dengan teks krim, tajuk serif klasik dan satu aksen warna karat.',
+  aiTplDesc_editorial_tri_tone:
+    'Tiga warna bergaya majalah: merah jambu pudar, krim mustard dan merah burgundi gelap.',
+  aiTplDesc_emerald_editorial:
+    'Hijau terang, biru laut gelap dan putih kertas. Garisan berkembar dan tajuk serif tebal, seperti kulit majalah.',
+  aiTplDesc_vellum:
+    'Biru laut gelap dengan teks serif kuning hangat dan satu aksen hijau kebiruan pudar. Tenang dan ilmiah.',
 } satisfies Record<keyof typeof zh, string>

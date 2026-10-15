@@ -5,6 +5,7 @@ export const en = {
   cardChecking: 'Checking…',
   cardNotInstalled: 'Not installed',
   cardSignedOut: 'Not signed in',
+  cardSigningIn: 'Signing in…',
   cardReady: 'Connected',
   cardReadyPlan: 'Connected · {plan}',
   cardMetered: 'Signed in, but not with a subscription',
@@ -15,6 +16,7 @@ export const en = {
   cardErrFailed: 'Something went wrong while checking {provider}. Check again.',
   actionInstall: 'Install',
   actionLogin: 'Sign in',
+  actionLoginWindow: 'Browser did not open, or shows a code?',
   actionRecheck: 'Check again',
   actionAcceptMetered: 'Use anyway',
   actionInstallHelp: 'Official install guide',
@@ -24,16 +26,21 @@ export const en = {
   actionLogout: 'Sign out',
   installNote: "{vendor}'s official install command runs in a new terminal window.",
   loginNote: "The sign-in page that opens is {vendor}'s own.",
+  signingInBrowserNote:
+    'Sign in to your {vendor} account in the browser that opened and allow access. It connects by itself when you are done.',
+  signingInWindowNote:
+    'If the browser shows a code, copy it, paste it into the window that just opened, and press Enter.',
   meteredWarning: 'This is not a subscription: you are charged for what you use.',
   meteredMeaning:
     'This login is an API key or a pay-as-you-go account, or its type could not be confirmed. "Use anyway" lets AI run on this connection, and every request is billed to that account.',
-  connectTitle: 'Connect a subscription to use AI',
+  connectTitle: 'Connect an AI to get started',
   connectBody:
     'AI runs on the Claude or Codex subscription you already have. No API key is needed.',
   connectProviderTitle: 'The {provider} connection cannot be used right now',
   connectKeyBody:
     'The {provider} setup is not finished. Complete it in Settings, or choose another AI.',
-  errNotConnected: 'No AI is connected. Connect a Claude or Codex subscription first.',
+  errNotConnected:
+    'No AI is connected. Connect a Claude or Codex subscription, or a free AI, first.',
   errNotInstalled: 'The {provider} program was not found on this PC.',
   errSignedOut: 'The {provider} sign-in has expired. Sign in again to continue.',
   errRateLimit: 'The {provider} subscription limit has been used up.',
@@ -46,6 +53,11 @@ export const en = {
   errHeadlessLimit: 'The hourly limit for automatic requests has been reached.',
   errHeadlessLimitReset:
     'The hourly limit for automatic requests has been reached. Requests are possible again at {time}.',
+  connectFreeHint: 'No subscription? You can connect a free AI in Settings in about a minute.',
+  actionConnectFree: 'Connect a free AI',
+  errFreeLimit:
+    "Today's free allowance is used up. Try again tomorrow, or choose another AI in Settings.",
+  errFreeLimitReset: "Today's free allowance is used up. You can use it again at {time}.",
   continueWith: 'Continue with {provider}',
   continueMeteredNote:
     'The {provider} connection is not a subscription: continuing is charged by usage.',
@@ -59,6 +71,8 @@ export const en = {
     'Whether that content is used to train AI is decided by your own account settings at that company.',
   noticeCodexHistory:
     'This app turns off conversation history saving in Codex, but Codex may still keep its own diagnostic logs on this PC.',
+  noticePdfWholeDocument:
+    'In the PDF editor, AI page reading and document translation may send page images and the whole text of the document.',
   noticeAck: 'Got it',
   codexNotice:
     'Using a Codex subscription inside an app is not a method officially recommended by OpenAI.',

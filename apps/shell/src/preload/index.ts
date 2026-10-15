@@ -4,7 +4,10 @@ import {
   AI_MEDIA_PROVIDERS,
   AI_PROVIDERS,
   AI_SEARCH_PROVIDERS,
+  FREE_AI_IPC_CHANNELS,
   SUBSCRIPTION_IPC_CHANNELS,
+  freeAiConnectResultOf,
+  freeAiQuotaOf,
   getProviderAdapter,
 } from '@genoffice/ai-provider/browser'
 import type { AiSettings, CodexModelCatalog } from '@genoffice/ai-provider/browser'
@@ -32,8 +35,15 @@ import type {
   IntegrationsStatus,
   SkillInstallState,
 } from '../shared/integrations-api'
+import { RESULT_STORE_CHANNELS } from '../shared/result-store-api'
+import type { ResultStoreApi } from '../shared/result-store-api'
 import type { TabsApi, TabSummary } from '../shared/tabs-api'
 import { TABS_CHANNELS } from '../shared/tabs-api'
+import type { GenerateHomeApi } from '../shared/generate-api'
+import { GENERATE_HOME_CHANNELS } from '../shared/generate-home-channels'
+import type { PdfToolsHomeApi } from '../shared/pdf-tools-api'
+import { PDF_TOOLS_HOME_CHANNELS } from '../shared/pdf-tools-home-channels'
+import { AGENT_HOME_OPEN_CHANNEL } from '../shared/agent-home-channel'
 import type { SubscriptionApi } from '../shared/subscription-api'
 import {
   SHELL_SUBSCRIPTION_CHANNELS,
@@ -155,14 +165,27 @@ const homeApi: HomeApi = {
   },
   // knowledge-base ask panel (handlers live in the shell main, same process
   // that owns the index and the shared ai:stream registration)
-  async kbList() {
-    return ipcRenderer.invoke('kb:list')
+  async kbList(scope) {
+    return scope === undefined
+      ? ipcRenderer.invoke('kb:list')
+      : ipcRenderer.invoke('kb:list', { scope })
   },
-  async kbSearch(query) {
-    return ipcRenderer.invoke('kb:search', query)
+  async kbSearch(query, scope) {
+    return ipcRenderer.invoke('kb:search', scope === undefined ? query : { ...query, scope })
   },
-  async kbRead(path, offset) {
-    return ipcRenderer.invoke('kb:read', { path, offset })
+  async kbRead(path, offset, scope) {
+    return ipcRenderer.invoke(
+      'kb:read',
+      scope === undefined ? { path, offset } : { path, offset, scope },
+    )
+  },
+  async kbOpenScope(group) {
+    const scope: unknown = await ipcRenderer.invoke('kb:open-scope', group)
+    if (typeof scope !== 'string' || !scope) throw new Error('knowledge-base scope is not open')
+    return scope
+  },
+  async kbCloseScope(scope) {
+    await ipcRenderer.invoke('kb:close-scope', scope)
   },
   async aiGetSettings() {
     return ipcRenderer.invoke('ai:get-settings')
@@ -199,6 +222,12 @@ const homeApi: HomeApi = {
   },
   async newHtml(opts) {
     await ipcRenderer.invoke(HOME_CHANNELS.newHtml, opts)
+  },
+  async newMindmap(opts) {
+    await ipcRenderer.invoke(HOME_CHANNELS.newMindmap, opts)
+  },
+  async newHwp(opts) {
+    await ipcRenderer.invoke(HOME_CHANNELS.newHwp, opts)
   },
   async newPdf(opts) {
     await ipcRenderer.invoke(HOME_CHANNELS.newPdf, opts)
@@ -518,6 +547,21 @@ const homeApi: HomeApi = {
       ? { ok: true }
       : { ok: false, error: typeof raw.error === 'string' ? raw.error : 'Connection failed' }
   },
+  async connectFreeAi(input) {
+    return freeAiConnectResultOf(await ipcRenderer.invoke(FREE_AI_IPC_CHANNELS.connect, input))
+  },
+  async cancelFreeAiConnect() {
+    await ipcRenderer.invoke(FREE_AI_IPC_CHANNELS.cancel)
+  },
+  async disconnectFreeAi(provider) {
+    await ipcRenderer.invoke(FREE_AI_IPC_CHANNELS.disconnect, { provider })
+  },
+  async getFreeAiQuota(provider) {
+    return freeAiQuotaOf(await ipcRenderer.invoke(FREE_AI_IPC_CHANNELS.quota, { provider }))
+  },
+  async openFreeAiKeyPage(provider) {
+    await ipcRenderer.invoke(FREE_AI_IPC_CHANNELS.openKeyPage, { provider })
+  },
 }
 
 contextBridge.exposeInMainWorld('aiOffice', homeApi)
@@ -551,6 +595,17 @@ const integrationsApi: IntegrationsApi = {
   },
 }
 contextBridge.exposeInMainWorld('aiOfficeIntegrations', integrationsApi)
+
+const resultStoreApi: ResultStoreApi = {
+  async size() {
+    const r: unknown = await ipcRenderer.invoke(RESULT_STORE_CHANNELS.size)
+    return typeof r === 'number' && Number.isFinite(r) && r >= 0 ? r : 0
+  },
+  async deleteAll() {
+    await ipcRenderer.invoke(RESULT_STORE_CHANNELS.deleteAll)
+  },
+}
+contextBridge.exposeInMainWorld('aiOfficeResultStore', resultStoreApi)
 
 // Subscription channels are registered once for the whole app by the docs main.
 // Until that handler exists an invoke rejects; the renderer reads that as
@@ -672,6 +727,31 @@ const tabsApi: TabsApi = {
 }
 
 contextBridge.exposeInMainWorld('aiOfficeTabs', tabsApi)
+
+// Home's entry points into the generate window ("make a new document from these files")
+const generateHomeApi: GenerateHomeApi = {
+  async openWithPaths(paths) {
+    await ipcRenderer.invoke(GENERATE_HOME_CHANNELS.openWithPaths, paths)
+  },
+  async openWithGroup(group) {
+    await ipcRenderer.invoke(GENERATE_HOME_CHANNELS.openWithGroup, group)
+  },
+}
+contextBridge.exposeInMainWorld('aiOfficeGenerate', generateHomeApi)
+
+// Home's entry into the PDF tools window
+const pdfToolsHomeApi: PdfToolsHomeApi = {
+  async open() {
+    await ipcRenderer.invoke(PDF_TOOLS_HOME_CHANNELS.open)
+  },
+}
+contextBridge.exposeInMainWorld('aiOfficePdfToolsHome', pdfToolsHomeApi)
+// Home's entry point into the agent window (decision 0032); the window has its own preload
+contextBridge.exposeInMainWorld('aiOfficeAgent', {
+  async open() {
+    await ipcRenderer.invoke(AGENT_HOME_OPEN_CHANNEL)
+  },
+})
 
 // open documents dragged from the OS anywhere over Home or the tab strip
 installDropOpenBridge()

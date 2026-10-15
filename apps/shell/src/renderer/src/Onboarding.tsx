@@ -6,9 +6,15 @@ import {
   aiSubscriptionProviderName,
   aiSubscriptionText,
 } from '@genoffice/ui'
-import { AI_SUBSCRIPTION_PROVIDERS } from '@genoffice/ai-provider/browser'
+import {
+  AI_SUBSCRIPTION_PROVIDERS,
+  FREE_AI_PROVIDERS,
+  freeAiConnected,
+} from '@genoffice/ai-provider/browser'
 import appIcon from './assets/app-icon.png'
 import { FirstConnectionDialog } from './FirstConnectionNotice'
+import { FreeAiCards, useAiSettings as useFreeAiSettings } from './FreeAiCards'
+import { FREE_AI_PROVIDER_NAMES } from './free-ai-cards'
 import { useI18n } from './locale'
 import {
   ONBOARDING_CONNECT_STEP,
@@ -76,7 +82,13 @@ export function Onboarding({
   const isLast = isLastOnboardingStep(index)
   // the notice waits for the step that is about the connection
   const noticeOpen = noticeDue && index >= ONBOARDING_CONNECT_STEP
-  const connected = usableSubscriptionProviders(connection.statuses)
+  const freeSettings = useFreeAiSettings()
+  const connected = [
+    ...usableSubscriptionProviders(connection.statuses).map(aiSubscriptionProviderName),
+    ...FREE_AI_PROVIDERS.filter(
+      (provider) => freeSettings && freeAiConnected(freeSettings, provider),
+    ).map((provider) => FREE_AI_PROVIDER_NAMES[provider]),
+  ]
 
   const titles: Record<OnboardingStepId, string> = {
     welcome: t('onbTitle1'),
@@ -202,6 +214,10 @@ export function Onboarding({
             ))}
             <AiCodexNotice lang={lang} />
           </div>
+          <div className="onb-free">
+            <p className="onb-free-title">{t('onbFreeTitle')}</p>
+            <FreeAiCards t={t} compact />
+          </div>
           <p className="onb-note">{t('onbConnectSkipNote')}</p>
         </>
       )
@@ -211,7 +227,7 @@ export function Onboarding({
         <p className="onb-subtitle" data-connected={connected.length > 0}>
           {connected.length > 0
             ? t('onbDoneConnected', {
-                provider: connected.map(aiSubscriptionProviderName).join(' · '),
+                provider: connected.join(' · '),
               })
             : t('onbDoneNotConnected')}
         </p>

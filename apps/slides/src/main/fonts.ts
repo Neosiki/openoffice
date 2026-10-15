@@ -15,11 +15,12 @@
  *     return undefined (callers use heuristic metrics).
  */
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { basename, dirname, join } from 'node:path'
 import { homedir, tmpdir } from 'node:os'
 import { createHash } from 'node:crypto'
 import * as opentype from 'opentype.js'
 import type { EmbeddedFontFace } from '@genoffice/pptx-engine'
+import { TEMPLATE_FONTS } from '@genoffice/ui/template-fonts'
 import {
   OpentypeMetrics,
   HeuristicMetrics,
@@ -62,6 +63,37 @@ export function setUserFontDir(dir: string): void {
 }
 export function getUserFontDir(): string | null {
   return userFontDir
+}
+
+/**
+ * The design templates' shared font set (@genoffice/ui/template-fonts): a second read-only
+ * source beside the user store, never written to and invisible to Chromium the same way.
+ * Indexed by the family list rather than file names: Space Grotesk ships a Bold file only,
+ * and Playfair Display one variable file.
+ * slides-main injects a resolver because the folder's location needs Electron's app facts.
+ */
+let templateFontDir: (() => string) | null = null
+export function setTemplateFontDir(dir: (() => string) | null): void {
+  templateFontDir = dir
+}
+export function getTemplateFontDir(): string | null {
+  try {
+    return templateFontDir?.() ?? null
+  } catch {
+    return null
+  }
+}
+
+/** A template face's wght range as a CSS font-weight descriptor (variable files only). */
+function templateWeightRange(path: string): { weight: string } | undefined {
+  const dir = getTemplateFontDir()
+  if (!dir || dirname(path) !== dir) return undefined
+  const file = basename(path)
+  for (const fam of TEMPLATE_FONTS) {
+    const range = fam.faces.find((f) => f.file === file)?.variableWeight
+    if (range) return { weight: `${range.min} ${range.max}` }
+  }
+  return undefined
 }
 
 /**
@@ -589,6 +621,8 @@ class FontRegistry {
   private index = new Map<string, string>()
   /** Normalized cloud family dir name -> font file paths (numeric filenames, one per style) */
   private cloud = new Map<string, string[]>()
+  /** Normalized template family (and Office family of a face outside regular/bold) -> font file paths */
+  private templates = new Map<string, string[]>()
   /** Dir prefixes invisible to Chromium (Office DFonts / cloud-font roots) */
   private privateDirs: string[] = []
   /** Path -> face directory */
@@ -622,6 +656,17 @@ class FontRegistry {
     for (const dir of officeFontDirs()) {
       this.privateDirs.push(dir)
       flat.push(dir)
+    }
+    // Template fonts: listed, not scanned — the files are known by name
+    const templateDir = getTemplateFontDir()
+    if (templateDir) {
+      this.privateDirs.push(templateDir)
+      for (const fam of TEMPLATE_FONTS) {
+        this.templates.set(
+          norm(fam.family),
+          fam.faces.map((f) => join(templateDir, f.file)),
+        )
+      }
     }
     // One prefix each covers every scanned asset dir for the isPrivate check
     this.privateDirs.push(APPLE_FONT_ASSET_ROOT, APPLE_FONT_SUBSETS, EMBEDDED_FONT_DIR)
@@ -831,6 +876,12 @@ class FontRegistry {
         const hit = this.loadBestCloud(cloudPaths, base, style, origKey, reqWeight)
         if (hit) return { ...hit, family: hit.family || family }
       }
+      // The app's template fonts: after any installed or Office copy of the same family
+      const templatePaths = this.templates.get(base)
+      if (templatePaths) {
+        const hit = this.loadBestCloud(templatePaths, base, style, origKey, reqWeight)
+        if (hit) return { ...hit, family: hit.family || family }
+      }
       return undefined
     }
     const exact = tryFamily(candidates[0]!)
@@ -1010,6 +1061,8 @@ export interface PrivateFontFaceInfo {
   family: string
   bold: boolean
   italic: boolean
+  /** CSS font-weight descriptor overriding the bold flag's 700/400 (a variable face's range) */
+  weight?: string
 }
 
 /** id -> file location of private faces referenced by layouts so far (grows as decks open). */
@@ -1024,6 +1077,7 @@ export function listPrivateFontFaces(): PrivateFontFaceInfo[] {
     family: f.family,
     bold: f.bold,
     italic: f.italic,
+    ...templateWeightRange(f.path),
   }))
 }
 

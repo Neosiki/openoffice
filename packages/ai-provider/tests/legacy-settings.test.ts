@@ -15,6 +15,7 @@ import {
   DEFAULT_AI_VIDEO_ANALYSIS_PROVIDER,
   normalizeAiSettings,
 } from '../src/legacy-settings'
+import { HEADLESS_SUBSCRIPTION_CONSENT_VERSION } from '../src/providers'
 import { activeSearchProvider } from '../src/search-settings'
 
 /** what an untouched GenOffice install has on disk */
@@ -169,6 +170,7 @@ describe('normalizeAiSettings', () => {
       ...gensparkEraFile(),
       meteredAccepted: { 'claude-code': true, codex: false, anthropic: true },
       headlessSubscriptionEnabled: true,
+      headlessSubscriptionConsentVersion: HEADLESS_SUBSCRIPTION_CONSENT_VERSION,
       subscriptionNoticeSeen: true,
     })
     expect(kept.meteredAccepted).toEqual({ 'claude-code': true, codex: false })

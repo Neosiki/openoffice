@@ -125,6 +125,18 @@ import { buildHeadingOutline, remapOutlinePages } from './heading-outline'
 import { printPdf } from './print'
 import { PasswordDialog } from './PasswordDialog'
 import { PropertiesDialog } from './PropertiesDialog'
+import { ConvertDialog } from './convert/ConvertDialog'
+import { ExportImagesMenu } from './convert/ExportImagesMenu'
+import { exportEmbeddedImages } from './convert/embedded-images'
+import { AiPageReading, type AiPageReadingHandle } from './ai-read/AiPageReading'
+import {
+  DocumentTranslation,
+  type DocumentTranslationHandle,
+} from './translate/DocumentTranslation'
+import { languageName } from './translate/translate-model'
+import { createPageRenderer } from './ai-read/render-page'
+import { loadAiReadTexts } from './ai-read/search-texts'
+import { DocumentJobSession } from './doc-jobs/job-session'
 import { CertSignDialog } from './CertSignDialog'
 import { SignaturesDialog, overallSignatureStatus } from './SignaturesDialog'
 import { SignatureDialog, fileToCanvas } from './SignatureDialog'
@@ -138,7 +150,7 @@ import {
 import { StampDialog } from './StampDialog'
 import { buildStamps } from './stamps'
 import type { HeaderFooterConfig, WatermarkConfig } from './stamps'
-import { createSearchIndexCache, searchInIndex } from './search'
+import { aiReadOnlyPages, createSearchIndexCache, searchInIndex } from './search'
 import type { SearchIndex, SearchMatch } from './search'
 import { mapDocFont, type DocFontStyle } from './doc-font'
 import { groupPageBlocks, reflowOverflows, type TextBlock } from './text-block'
@@ -189,6 +201,8 @@ import type {
   NoteEditInput,
   PageImageRef,
   PdfConvertFormat,
+  PdfConvertOutputRequest,
+  PdfReflowFormat,
   PdfSignatureInfo,
   StaticFormFillRecord,
   StampInput,
@@ -342,6 +356,8 @@ import {
   IconOpacity,
   IconAiSummarize,
   IconAiKeyPoints,
+  IconAiReadPages,
+  IconAiTranslate,
 } from './icons'
 
 GlobalWorkerOptions.workerSrc = workerUrl
@@ -490,6 +506,46 @@ export default function App() {
   const [highlightColorOpen, setHighlightColorOpen] = useState(false)
   const [convertOpen, setConvertOpen] = useState(false)
   const [convertBusy, setConvertBusy] = useState(false)
+  /** the Markdown / EPUB conversion dialog that is open */
+  const [convertDialog, setConvertDialog] = useState<PdfReflowFormat | null>(null)
+  /** AI page reading: this tab's document jobs, the window's handle, the ribbon menu */
+  const jobSession = useMemo(() => new DocumentJobSession(), [])
+  const aiReadApi = useMemo(() => {
+    const api = window.pdfApi
+    if (!api?.structure || !api.store) return null
+    return {
+      tree: api.structure.tree,
+      cancel: api.structure.cancel,
+      onProgress: api.structure.onProgress,
+      store: api.store,
+    }
+  }, [])
+  const aiReadRef = useRef<AiPageReadingHandle | null>(null)
+  const [aiReadMenuOpen, setAiReadMenuOpen] = useState(false)
+  /** document translation: the window's handle and its channels (structure, store, results) */
+  const translateRef = useRef<DocumentTranslationHandle | null>(null)
+  const translateApi = useMemo(() => {
+    const api = window.pdfApi
+    if (!api?.structure || !api.store) return null
+    return {
+      tree: api.structure.tree,
+      cancel: api.structure.cancel,
+      onProgress: api.structure.onProgress,
+      pickTarget: api.structure.pickTarget,
+      convert: api.structure.convert,
+      writeBack: api.structure.writeBack,
+      store: api.store,
+      releaseTarget: (request: PdfConvertOutputRequest) => api.releaseConvertTarget(request),
+      openResult: (request: PdfConvertOutputRequest) => api.openConvertResult(request),
+      revealResult: (request: PdfConvertOutputRequest) => api.revealConvertResult(request),
+    }
+  }, [])
+  /** bumped when stored AI readings change, so the search reads them again */
+  const [aiReadVersion, setAiReadVersion] = useState(0)
+  /** pages (0-based) whose AI-read text alone has the search query */
+  const [searchAiPages, setSearchAiPages] = useState<number[]>([])
+  /** "only the pictures in the pages" export: progress of the running job */
+  const [imagesProgress, setImagesProgress] = useState<{ done: number; total: number } | null>(null)
   const [drawings, setDrawings] = useState<LocalDrawing[]>([])
   const drawingsRef = useRef(drawings)
   drawingsRef.current = drawings
@@ -2382,9 +2438,29 @@ export default function App() {
     }
   }, [doc, visibleRows, rows, savedMarkups])
 
+  /** AI-read text per page (spec §7), read from the store once per document and store change */
+  const aiReadTextsRef = useRef<{
+    doc: PDFDocumentProxy
+    version: number
+    texts: Promise<Map<number, string>>
+  } | null>(null)
+  const getAiReadTexts = useCallback((): Promise<Map<number, string>> => {
+    const api = window.pdfApi
+    if (!doc || !filePath || !api?.structure || !api.store) return Promise.resolve(new Map())
+    const cached = aiReadTextsRef.current
+    if (cached && cached.doc === doc && cached.version === aiReadVersion) return cached.texts
+    const texts = loadAiReadTexts(
+      { tree: (request) => api.structure.tree(request), store: api.store },
+      { path: filePath, password: passwordRef.current },
+    )
+    aiReadTextsRef.current = { doc, version: aiReadVersion, texts }
+    return texts
+  }, [doc, filePath, aiReadVersion])
+
   useEffect(() => {
     if (!searchOpen || !searchQuery.trim()) {
       setSearchMatches([])
+      setSearchAiPages([])
       setSearchCur(0)
       return
     }
@@ -2392,15 +2468,20 @@ export default function App() {
     const timer = setTimeout(() => {
       void getSearchIndex()?.then((idx) => {
         if (cancelled) return
-        setSearchMatches(searchInIndex(idx, searchQuery.trim()))
+        const query = searchQuery.trim()
+        setSearchMatches(searchInIndex(idx, query))
         setSearchCur(0)
+        // pages whose positioned text has no hit may still have it in their AI reading
+        void getAiReadTexts().then((texts) => {
+          if (!cancelled) setSearchAiPages(aiReadOnlyPages(idx, texts, query))
+        })
       })
     }, 200)
     return () => {
       cancelled = true
       clearTimeout(timer)
     }
-  }, [searchOpen, searchQuery, getSearchIndex])
+  }, [searchOpen, searchQuery, getSearchIndex, getAiReadTexts])
 
   /** Pages with unsaved deletion are excluded from match navigation */
   const activeMatches = useMemo(
@@ -2408,6 +2489,10 @@ export default function App() {
     [searchMatches, deleted],
   )
   const searchCurClamped = Math.min(searchCur, Math.max(0, activeMatches.length - 1))
+  const activeAiPages = useMemo(
+    () => searchAiPages.filter((pageIndex) => !deleted.has(pageIndex)),
+    [searchAiPages, deleted],
+  )
 
   const gotoMatch = useCallback(
     (idx: number) => {
@@ -4354,6 +4439,9 @@ export default function App() {
       } catch {
         /* Save already succeeded; a reload failure doesn't block (takes effect on next open) */
       }
+      // the saved bytes are a new document for the result store: carry the AI
+      // readings, translations and unfinished job records over (spec §6)
+      await aiReadRef.current?.afterSave().catch(() => {})
       // Content-derived naming (docs/sheets analog): a shell-created blank still
       // carrying its untitled name takes its file name from the topmost text this
       // save inserted; the main process no-ops for every other file, so
@@ -6297,6 +6385,21 @@ export default function App() {
     currentPage: () => (visList[currentPage - 1] ?? 0) + 1,
     readOnly: () => readOnly,
     ocrText: (origIdx) => ocrPages.get(origIdx)?.entry.text ?? null,
+    startAiPageReading: (pages) =>
+      aiReadRef.current?.requestOpen(pages) ?? { unavailable: true as const },
+    startDocumentTranslation: (request) =>
+      translateRef.current?.requestOpen(request) ?? { unavailable: true as const },
+    structuredRead: () => {
+      const api = window.pdfApi
+      if (!filePath || !api?.structure || !api.store) return null
+      const password = passwordRef.current
+      return {
+        source: { path: filePath, ...(password !== undefined ? { password } : {}) },
+        text: (request) => api.structure.text(request),
+        tree: (request) => api.structure.tree(request),
+        aiReadPages: (docHash) => api.store.aiReadPages(docHash),
+      }
+    },
     selection: () => aiSelection,
     pendingSummary: aiPendingSummary,
     annotationSummary: aiAnnotationSummary,
@@ -6599,6 +6702,7 @@ export default function App() {
   const opacityMenuRef = useRef<HTMLDivElement | null>(null)
   const staticColorFieldRef = useRef<HTMLDivElement | null>(null)
   const convertWrapRef = useRef<HTMLDivElement | null>(null)
+  const aiReadWrapRef = useRef<HTMLDivElement | null>(null)
 
   // Thumbnail context menu
   useDismissablePopover(thumbMenu != null, () => setThumbMenu(null), {
@@ -6654,6 +6758,10 @@ export default function App() {
   useDismissablePopover(convertOpen, () => setConvertOpen(false), {
     inside: () => [convertWrapRef.current],
   })
+  // AI page reading menu (Home tab)
+  useDismissablePopover(aiReadMenuOpen, () => setAiReadMenuOpen(false), {
+    inside: () => [aiReadWrapRef.current],
+  })
 
   // Main process asked for a save (close prompt, menu Save, export) → save and report the result
   useEffect(() => {
@@ -6683,6 +6791,9 @@ export default function App() {
   useEffect(() => {
     return window.pdfApi.onPrintRequest(openPrintDlg)
   })
+
+  // Shell File menu › Markdown / EPUB → the same dialog as the converter dropdown
+  useEffect(() => window.pdfApi.onConvertDialogRequest((format) => setConvertDialog(format)), [])
 
   // Shortcuts: ⌘S/⌘F/⌘P/⌘±/⌘0 + page navigation (only ⌘ combos kept while an input control is focused)
   useEffect(() => {
@@ -6956,6 +7067,58 @@ export default function App() {
     } finally {
       setConvertBusy(false)
     }
+  }
+
+  /** Converter dropdown › Markdown / EPUB → the conversion dialog */
+  const openConvertDialog = (format: PdfReflowFormat): void => {
+    setConvertOpen(false)
+    setConvertDialog(format)
+  }
+
+  /** Conversion jobs read the file on disk: save pending edits first */
+  const flushForStructureJob = async (): Promise<boolean> =>
+    (await flushThen(async () => true)) === true
+
+  /** Text of a 1-based visible page as pdf.js extracts it (the AI fill of the EPUB dialog) */
+  const visiblePageText = async (page: number): Promise<string> => {
+    const origIdx = visList[page - 1]
+    if (origIdx === undefined || isBlankPage(origIdx)) return ''
+    const pdfPage = await doc.getPage(origIdx + 1)
+    const content = await pdfPage.getTextContent()
+    let text = ''
+    for (const item of content.items) {
+      if ('str' in item) {
+        text += item.str
+        if (item.hasEOL) text += '\n'
+      }
+    }
+    pdfPage.cleanup()
+    return text
+  }
+
+  /** Export images › only the pictures in the pages: a structure job on the saved file */
+  const exportPagePictures = (): void => {
+    if (exporting) return
+    setExporting(true)
+    setImagesProgress(null)
+    void exportEmbeddedImages({
+      api: {
+        pickTarget: (request) => window.pdfApi.structure.pickTarget(request),
+        extractImages: (request) => window.pdfApi.structure.extractImages(request),
+        onProgress: (handler) => window.pdfApi.structure.onProgress(handler),
+        revealResult: (request) => window.pdfApi.revealConvertResult(request),
+      },
+      filePath,
+      password: passwordRef.current,
+      baseName: fileName.replace(/\.pdf$/i, ''),
+      t,
+      prepare: flushForStructureJob,
+      onProgress: (done, total) => setImagesProgress({ done, total }),
+      notice: showNotice,
+    }).finally(() => {
+      setExporting(false)
+      setImagesProgress(null)
+    })
   }
 
   // ── shared ribbon groups (rendered on more than one tab) ──
@@ -7398,6 +7561,65 @@ export default function App() {
                     </span>
                     <span>{t('aiKeyPointsBtn')}</span>
                   </button>
+                  <div className="rb-drop-wrap" ref={aiReadWrapRef}>
+                    <button
+                      className={`rb-big ai-entry${aiReadMenuOpen ? ' active' : ''}`}
+                      data-tip={t('arButtonTip')}
+                      data-action="ai-read-menu"
+                      onClick={() => setAiReadMenuOpen((v) => !v)}
+                    >
+                      <span className="rb-big-icon">
+                        <span className="ai-feature-icon" aria-hidden="true">
+                          <IconAiReadPages />
+                        </span>
+                        <RbCaret />
+                      </span>
+                      <span>{t('arButton')}</span>
+                    </button>
+                    {aiReadMenuOpen && (
+                      <div className="rb-drop rb-menu">
+                        <button
+                          data-action="ai-read-open"
+                          onClick={() => {
+                            setAiReadMenuOpen(false)
+                            const answer = aiReadRef.current?.requestOpen(null)
+                            if (answer && 'running' in answer)
+                              showNotice(t('arBusy', answer.running))
+                            else if (!answer || 'unavailable' in answer)
+                              showNotice(t('arUnavailable'))
+                          }}
+                        >
+                          {t('arMenuRead')}
+                        </button>
+                        <button
+                          data-action="ai-read-delete"
+                          onClick={() => {
+                            setAiReadMenuOpen(false)
+                            void aiReadRef.current?.deleteStored()
+                          }}
+                        >
+                          {t('arMenuDelete')}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  <button
+                    className="rb-big ai-entry"
+                    data-tip={t('trButtonTip')}
+                    data-action="translate-open"
+                    onClick={() => {
+                      const answer = translateRef.current?.requestOpen({ lang: null, pages: null })
+                      if (answer && 'running' in answer) showNotice(t('arBusy', answer.running))
+                      else if (!answer || 'unavailable' in answer) showNotice(t('trUnavailable'))
+                    }}
+                  >
+                    <span className="rb-big-icon">
+                      <span className="ai-feature-icon" aria-hidden="true">
+                        <IconAiTranslate />
+                      </span>
+                    </span>
+                    <span>{t('trButton')}</span>
+                  </button>
                 </div>
               </div>
               <div className="ribbon-sep" />
@@ -7433,6 +7655,8 @@ export default function App() {
                           {t('convertToExcel')}
                         </button>
                         <button onClick={() => void convertTo('pptx')}>{t('convertToPpt')}</button>
+                        <button onClick={() => openConvertDialog('md')}>{t('cvToMarkdown')}</button>
+                        <button onClick={() => openConvertDialog('epub')}>{t('cvToEpub')}</button>
                       </div>
                     )}
                   </div>
@@ -7455,17 +7679,20 @@ export default function App() {
                     </span>
                     {printing ? t('printPreparing') : t('print')}
                   </button>
-                  <button
-                    className="rb-big"
-                    data-tip={t('exportImagesAll')}
-                    disabled={exporting}
-                    onClick={() => void exportImages(true)}
-                  >
-                    <span className="rb-big-icon">
-                      <IconExportImg />
-                    </span>
-                    {exporting ? t('exporting') : t('exportImages')}
-                  </button>
+                  <ExportImagesMenu
+                    t={t}
+                    icon={<IconExportImg />}
+                    busy={exporting}
+                    label={
+                      exporting
+                        ? imagesProgress && imagesProgress.total > 0
+                          ? t('imgExportProgress', imagesProgress)
+                          : t('exporting')
+                        : t('exportImages')
+                    }
+                    onWholePages={() => void exportImages(true)}
+                    onEmbedded={exportPagePictures}
+                  />
                   <button
                     className="rb-big"
                     data-tip={t('propsTitle')}
@@ -8205,6 +8432,53 @@ export default function App() {
               </button>
             </div>
           )}
+          <AiPageReading
+            ref={aiReadRef}
+            filePath={filePath || null}
+            password={passwordRef.current}
+            pageCount={sizes.length}
+            lang={lang}
+            t={t}
+            api={aiReadApi}
+            session={jobSession}
+            openPageRenderer={async () => {
+              const data = await window.pdfApi.readFile(filePath)
+              const task = getDocument({
+                data: new Uint8Array(data),
+                password: passwordRef.current,
+                ...DOC_OPTS,
+              })
+              try {
+                return createPageRenderer(await task.promise)
+              } catch (err) {
+                void task.destroy()
+                throw err
+              }
+            }}
+            onStoredChange={() => setAiReadVersion((v) => v + 1)}
+            onNotice={showNotice}
+            onResumeTranslation={(job) => translateRef.current?.resume(job)}
+            languageName={(code) => languageName(code, lang)}
+          />
+          <DocumentTranslation
+            ref={translateRef}
+            filePath={filePath || null}
+            fileName={fileName}
+            password={passwordRef.current}
+            pageCount={sizes.length}
+            lang={lang}
+            t={t}
+            encrypted={passwordRef.current !== undefined || documentEncrypted}
+            api={translateApi}
+            session={jobSession}
+            docInfo={metadata ?? docInfo}
+            prepare={flushForStructureJob}
+            onNotice={showNotice}
+            onOpenAiRead={() => {
+              const answer = aiReadRef.current?.requestOpen(null)
+              if (answer && 'running' in answer) showNotice(t('arBusy', answer.running))
+            }}
+          />
           <div className="pdf-body">
             {sidebar === 'outline' && outline && (
               <div className="pdf-thumbs pdf-outline-pane" style={{ width: sidebarW }}>
@@ -9707,7 +9981,9 @@ export default function App() {
                           current: searchCurClamped + 1,
                           total: activeMatches.length,
                         })
-                      : t('searchNoResults')
+                      : activeAiPages.length > 0
+                        ? ''
+                        : t('searchNoResults')
                     : ''}
                 </span>
                 <button
@@ -9731,6 +10007,22 @@ export default function App() {
                 <button className="rb-icon" onClick={closeSearch}>
                   ×
                 </button>
+                {activeAiPages.length > 0 && (
+                  <div className="pdf-search-ai" data-tip={t('searchAiReadTip')}>
+                    <span className="pdf-search-ai-label">{t('searchAiRead')}</span>
+                    {activeAiPages.map((pageIndex) => (
+                      <button
+                        key={pageIndex}
+                        type="button"
+                        className="pdf-search-ai-page"
+                        data-ai-page={pageIndex + 1}
+                        onClick={() => aiApi.gotoPage(pageIndex + 1)}
+                      >
+                        {t('arPageLabel', { page: pageIndex + 1 })}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
             {selPopup && (
@@ -10171,6 +10463,31 @@ export default function App() {
                   setPropsDlg(false)
                   applyEditOps([{ op: 'setMetadata', metadata: meta }])
                 }}
+              />
+            )}
+            {convertDialog && (
+              <ConvertDialog
+                key={convertDialog}
+                format={convertDialog}
+                filePath={filePath}
+                fileName={fileName}
+                pageCount={pageCount}
+                docInfo={metadata ?? docInfo}
+                password={passwordRef.current}
+                lang={lang}
+                t={t}
+                api={{
+                  pickTarget: (request) => window.pdfApi.structure.pickTarget(request),
+                  convert: (request) => window.pdfApi.structure.convert(request),
+                  cancel: (jobId) => window.pdfApi.structure.cancel(jobId),
+                  onProgress: (handler) => window.pdfApi.structure.onProgress(handler),
+                  releaseTarget: (request) => window.pdfApi.releaseConvertTarget(request),
+                  openResult: (request) => window.pdfApi.openConvertResult(request),
+                  revealResult: (request) => window.pdfApi.revealConvertResult(request),
+                }}
+                prepare={flushForStructureJob}
+                pageText={visiblePageText}
+                onClose={() => setConvertDialog(null)}
               />
             )}
             {certSignDlg && (

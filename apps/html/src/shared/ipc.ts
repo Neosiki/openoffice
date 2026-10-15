@@ -330,3 +330,34 @@ export interface HtmlApi {
     error?: string
   }>
 }
+
+// ---- the generate hand-off (8.5): a new tab opened by "make" takes its request ----
+
+/** html-owned channels over the shell's shared hand-off queue (`@genoffice/electron-utils/generate-handoff`) */
+export const HTML_HANDOFF_CHANNELS = {
+  /** invoke → `HtmlGenerateHandoff | null`: the request left for this view, once */
+  take: 'html:handoff-take',
+  /** invoke(attachedPaths: string[]) → boolean: a run started with handed-over material attached */
+  runStarted: 'html:handoff-run-started',
+} as const
+
+/** What a new HTML tab takes: the materials to attach and the request to send. */
+export interface HtmlGenerateHandoff {
+  id: string
+  /** the user's words, or the kind's default request when they wrote none */
+  text: string
+  /** the materials, in the order the generate window listed them */
+  materials: Array<{ path: string; name: string }>
+}
+
+/** The hand-off half of the preload API (merged into `HtmlApi`). */
+export interface HtmlApi {
+  /** Take the generate request left for this tab; null when there is none (or no shell) */
+  takeGenerateHandoff(): Promise<HtmlGenerateHandoff | null>
+  /**
+   * A run was admitted with these attachments. The main process records it
+   * only for a tab that took a request, only with a handed-over material among
+   * them, and only once; true when it was recorded.
+   */
+  reportGenerateRunStarted(attachedPaths: string[]): Promise<boolean>
+}

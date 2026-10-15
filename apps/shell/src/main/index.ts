@@ -37,6 +37,10 @@ import menuMdIcon1x from './assets/menu-md.png?asset'
 import menuMdIcon2x from './assets/menu-md@2x.png?asset'
 import menuHtmlIcon1x from './assets/menu-html.png?asset'
 import menuHtmlIcon2x from './assets/menu-html@2x.png?asset'
+import menuMindmapIcon1x from './assets/menu-mindmap.png?asset'
+import menuMindmapIcon2x from './assets/menu-mindmap@2x.png?asset'
+import menuHwpIcon1x from './assets/menu-hwp.png?asset'
+import menuHwpIcon2x from './assets/menu-hwp@2x.png?asset'
 import menuHomeIcon1x from './assets/menu-home.png?asset'
 import menuHomeIcon2x from './assets/menu-home@2x.png?asset'
 import { createI18n, isLang, normalizeLang, setUiLang, type Lang } from '@genoffice/i18n'
@@ -56,6 +60,7 @@ import {
   headlessExitCode,
   parseHeadlessExportArgv,
   setHeadlessMode,
+  setOpenFilesSource,
   type HeadlessArgvParse,
   showOpenDialogWithMemory,
   showSaveDialogWithMemory,
@@ -78,6 +83,7 @@ import { controlHandler } from './control-handlers'
 import { installCliLinkBestEffort } from './cli-link'
 import { createDefaultAppService, execFileRunner } from './default-app'
 import { registerIntegrationsIpc } from './integrations-ipc'
+import { registerResultStoreIpc } from './result-store-ipc'
 import { handleDroppedFiles } from './dropped-files'
 import { collectLaunchPaths } from './launch-paths'
 
@@ -100,6 +106,7 @@ import {
   registerDocsIpc,
   exportDocsHeadless,
   setDocsExtraFileMenuItems,
+  setDocsDocumentLinkMenuItems,
   setDocsMenuGate,
   setDocsShellHooks,
   createAiDocument,
@@ -120,6 +127,7 @@ import {
   applyMcpSettings,
   clearMcpLogs,
   configureMcpRuntime,
+  currentMcpRuntimeDeps,
   getMcpRecentLogs,
   mcpLogFilePath,
   mcpStatus,
@@ -151,6 +159,7 @@ import {
   sheetsFileRenamed,
   setSheetsCloseTabHook,
   setSheetsExtraFileMenuItems,
+  setSheetsDocumentLinkMenuItems,
   setSheetsHostWindowHook,
   setSheetsShellWindow,
   setSheetsWorkbookOpenedHook,
@@ -166,12 +175,14 @@ import {
   replaceSlidesRecentFile,
   setSlidesCloseTabHook,
   setSlidesExtraFileMenuItems,
+  setSlidesDocumentLinkMenuItems,
   setSlidesOpenedHook,
   setSlidesHostWindowHook,
   setSlidesShellWindow,
   setSlidesShowBleed,
   slidesFileRenamed,
 } from '../../../slides/src/main/slides-main'
+import { moveSlidesTemplateSelection } from '../../../slides/src/main/template-selection-ipc'
 import {
   configurePdfRuntime,
   flushPdfSave,
@@ -189,6 +200,8 @@ import { convertPdfFileToDocxLocalWithPrompt, PdfLoadError } from './pdf2docx-lo
 import { convertPdfFileToPptxLocalWithPrompt } from './pdf2pptx-local'
 import { convertPdfFileToXlsxLocalWithPrompt } from './pdf2xlsx-local'
 import { closePdfPasswordDialog, promptPdfPassword } from './pdf-password-dialog'
+import { registerPdfStructureIpc } from './pdf-structure-ipc'
+import { registerPdfConvertUiIpc, requestPdfConvertDialog } from './pdf-convert-ui'
 import {
   configureMarkdownRuntime,
   exportMarkdownPdfHeadless,
@@ -202,6 +215,14 @@ import {
   setMarkdownDocxExportedHook,
   setMarkdownFileSavedHook,
 } from '../../../markdown/src/main/markdown-main'
+import {
+  configureHwpRuntime,
+  hwpFileRenamed,
+  hwpReadText,
+  requestHwpPrint,
+  requestHwpSave,
+  setHwpFileSavedHook,
+} from '../../../hwp/src/main/hwp-main'
 import {
   configureHtmlRuntime,
   exportHtmlHeadless,
@@ -219,6 +240,19 @@ import {
   setHtmlPresentHooks,
   setHtmlProvisionalTitleHook,
 } from '../../../html/src/main/html-main'
+import {
+  configureMindmapRuntime,
+  mindmapFileRenamed,
+  mindmapSaveToPath,
+  requestMindmapSave,
+  sendMindmapExportRequest,
+  sendMindmapMenuCommand,
+  sendMindmapPrintRequest,
+  setMindmapFileSavedHook,
+  setMindmapMakeFromDocumentHook,
+  setMindmapProvisionalTitleHook,
+} from '../../../mindmap/src/main/mindmap-main'
+import { mindmapReadOutline } from '../../../mindmap/src/main/mcp-queries'
 import type {
   AutoSaveDefault,
   FolderListing,
@@ -248,10 +282,12 @@ import { SHELL_SUBSCRIPTION_CHANNELS, isSubscriptionProviderId } from '../shared
 import {
   SUBSCRIPTION_INSTALL_URLS,
   initSubscriptionChildTracking,
+  sharedSubscriptionStatuses,
   shutdownSubscriptionChildren,
 } from '@genoffice/ai-provider/subscription'
 import { showErrorDialog } from './error-dialog'
 import { startRendererWatchdog } from './renderer-watchdog'
+import { startCrashWatch } from './crash-watch'
 import {
   capStatPaths,
   matchesExtFamily,
@@ -264,6 +300,8 @@ import {
   DOCX_RE,
   HTML_RE,
   ODT_RE,
+  MINDMAP_RE,
+  HWP_RE,
   PDF_RE,
   PPTX_RE,
   TEXT_RE,
@@ -295,9 +333,38 @@ import extractWorkerPath from './file-index/extract-worker?modulePath'
 import { FileIndexer } from './file-index/indexer'
 import { FileIndexStore } from './file-index/store'
 import { normalizeFileSearchSettings, probeDecision, SearchReranker } from './file-index/rerank'
-import { listKnowledgeFiles, readKnowledgeFilePage, searchKnowledgeBase } from './knowledge-base'
+import {
+  KB_NOT_IN_BASE,
+  KbRunScopes,
+  listKnowledgeFiles,
+  readKnowledgeFilePage,
+  searchSavedKnowledgeBase,
+} from './knowledge-base'
 import { runHeadlessExport, type HeadlessExporters } from './headless-export'
 import { TabManager } from './tab-manager'
+import { configureGenerateWindow } from './generate/generate-window'
+import { configurePdfToolsWindow } from './pdf-tools/pdf-tools-window'
+import { configureAgentWindow, stopAgentSessions } from './agent/agent-window'
+import { startAgentMcpServer } from './agent/agent-mcp'
+import {
+  agentSkillSources,
+  buildAgentSkillBundle,
+  startClaudeAgentSession,
+  startCodexAgentSession,
+} from '@genoffice/ai-provider/agent-session'
+import { normalizeAgentPrefs } from '../shared/agent-api'
+import { normalizeAiSettings, type AiSettings } from '@genoffice/ai-provider'
+import { homedir, tmpdir } from 'node:os'
+import {
+  configureDocumentLinks,
+  documentLinkFileMenuItems,
+  documentLinkFileMoved,
+  documentLinkPaths,
+  makeFromDocument,
+  noteDocumentSaved,
+  refreshDocumentLinkMenu,
+  type LinkedDocument,
+} from './document-links-shell'
 import { installShellCloseGuard } from './window-close-guard'
 import {
   activateDetached,
@@ -309,6 +376,7 @@ import {
   detachedSetFileFor,
   detachedWebContentsFor,
   detachedSetTitleFor,
+  detachedDocumentFor,
   detachedWindowForWebContents,
   dockBandFor,
   dragTornWindow,
@@ -388,6 +456,12 @@ const MARKDOWN_OUT = app.isPackaged
 const HTML_OUT = app.isPackaged
   ? join(process.resourcesPath, 'modules', 'html')
   : join(APPS_ROOT, 'html', 'out')
+const MINDMAP_OUT = app.isPackaged
+  ? join(process.resourcesPath, 'modules', 'mindmap')
+  : join(APPS_ROOT, 'mindmap', 'out')
+const HWP_OUT = app.isPackaged
+  ? join(process.resourcesPath, 'modules', 'hwp')
+  : join(APPS_ROOT, 'hwp', 'out')
 const SIDECAR_BIN = app.isPackaged
   ? join(process.resourcesPath, 'native', SIDECAR_EXE)
   : join(APPS_ROOT, 'sheets', 'native', 'xlsx-engine', 'target', 'release', SIDECAR_EXE)
@@ -432,6 +506,17 @@ configureHtmlRuntime({
   rendererFile: join(HTML_OUT, 'renderer', 'index.html'),
   openGeneratedPath: (path) => openGeneratedDocument(path),
 })
+configureMindmapRuntime({
+  preloadPath: join(MINDMAP_OUT, 'preload', 'index.js'),
+  rendererUrl: process.env.MINDMAP_RENDERER_URL,
+  rendererFile: join(MINDMAP_OUT, 'renderer', 'index.html'),
+})
+configureHwpRuntime({
+  preloadPath: join(HWP_OUT, 'preload', 'index.js'),
+  rendererUrl: process.env.HWP_RENDERER_URL,
+  rendererFile: join(HWP_OUT, 'renderer', 'index.html'),
+  openGeneratedPath: (path) => openGeneratedDocument(path),
+})
 // privileged-scheme registration is only legal before app ready
 registerPrivilegedSchemes()
 
@@ -452,6 +537,17 @@ function publishAllOpenDocuments(): void {
   publishOpenDocumentsIfOwner([...(tabManager?.openFilePaths() ?? []), ...detachedFilePaths()])
 }
 setDetachedChangedListener(publishAllOpenDocuments)
+
+/** ai-settings.json as every reader gets it (the docs main owns the file; agent sessions only read it) */
+function readStoredAiSettings(): AiSettings {
+  try {
+    return normalizeAiSettings(
+      JSON.parse(readFileSync(join(app.getPath('userData'), 'ai-settings.json'), 'utf8')),
+    )
+  } catch {
+    return normalizeAiSettings({})
+  }
+}
 
 let uiLang: Lang | null = null
 
@@ -555,6 +651,12 @@ const tMain = createI18n({
       '“{title}” 已持续数分钟占用大量内存或 CPU（内存 {memory} MB，CPU {cpu}%）。可以继续等待，或关闭这个文档（有未保存的改动会先询问是否保存）。诊断信息已记录。', // public-hygiene: allow
     watchdogWait: '继续等待',
     watchdogClose: '关闭文档',
+    crashTitle: '文档意外停止',
+    crashBody: '“{title}” 意外停止。上次保存后的改动可能已丢失。',
+    crashReopen: '重新打开',
+    crashReload: '重新加载',
+    crashClose: '关闭',
+    crashLater: '暂不处理',
     errFolderRootUnusable: '无法读取所选文件夹',
     menuFile: '文件',
     menuSectionNew: '新建',
@@ -566,14 +668,23 @@ const tMain = createI18n({
     untitledDeck: '未命名演示文稿',
     untitledMarkdown: '未命名 Markdown',
     untitledHtml: '未命名 HTML',
+    untitledMindmap: '未命名思维导图',
+    untitledHwp: '未命名 HWP',
     untitledPdf: '未命名 PDF',
     menuNewSlide: 'AI Slides',
     menuNewMarkdown: 'AI Markdown',
     menuNewHtml: 'AI HTML',
+    menuNewMindmap: '思维导图',
+    menuNewHwp: 'AI HWP',
     menuNewPdf: 'AI PDF',
     menuExportPdf: '导出为 PDF…',
     menuExportImages: '导出为图片…',
     menuExportHtml: '导出为单文件 HTML…',
+    menuExportMapImage: '导出为图片 (PNG)…',
+    menuExportMapOutline: '导出为 Markdown 大纲…',
+    menuMakeFromDocument: '用此文档新建其他文档',
+    menuDocumentSources: '查看资料',
+    menuDerivedDocuments: '用此文档新建的文档',
     menuOpenInDocs: '转换为 Docs 文档并打开',
     menuPrint: '打印…',
     menuOpen: '打开…',
@@ -592,6 +703,8 @@ const tMain = createI18n({
     filterPpt: 'PowerPoint 演示文稿',
     filterMarkdown: '文本文件 (Markdown, TXT, JSON)',
     filterHtml: 'HTML 文档',
+    filterMindmap: '思维导图 (XMind 文件)',
+    filterHwp: 'HWP 文档 (HWP, HWPX)',
     filterPdf: 'PDF 文档',
     errBadArgs: '参数无效',
     errBadName: '文件名不合法',
@@ -617,6 +730,8 @@ const tMain = createI18n({
     pdfPptxBusyMsg: '正在转换中，请等待当前导出完成。',
     pdfPptxLocalScannedDetail: '本地转换已按图片保真导出各页，幻灯片中的文字不可编辑。',
     menuExportXlsx: '导出为 Excel…',
+    menuExportMd: '导出为 Markdown…',
+    menuExportEpub: '导出为 EPUB…',
     pdfXlsxFailedMsg: '导出为 Excel 失败',
     pdfXlsxBusyMsg: '正在转换中，请等待当前导出完成。',
     pdfXlsxLocalScannedDetail: '扫描页无法转换为单元格，对应工作表中已写入提示行。',
@@ -651,6 +766,12 @@ const tMain = createI18n({
       '"{title}" has been using a lot of memory or CPU for several minutes ({memory} MB, {cpu}% CPU). You can keep waiting, or close the document (you will be asked to save unsaved changes first). Diagnostics have been recorded.',
     watchdogWait: 'Keep Waiting',
     watchdogClose: 'Close Document',
+    crashTitle: 'A document stopped unexpectedly',
+    crashBody: '"{title}" stopped unexpectedly. Changes made since it was last saved may be lost.',
+    crashReopen: 'Reopen',
+    crashReload: 'Reload',
+    crashClose: 'Close',
+    crashLater: 'Not Now',
     errFolderRootUnusable: 'The selected folder cannot be read',
     menuFile: 'File',
     menuSectionNew: 'New',
@@ -662,14 +783,23 @@ const tMain = createI18n({
     untitledDeck: 'Untitled Presentation',
     untitledMarkdown: 'Untitled Markdown',
     untitledHtml: 'Untitled HTML',
+    untitledMindmap: 'Untitled Mind Map',
+    untitledHwp: 'Untitled HWP',
     untitledPdf: 'Untitled PDF',
     menuNewSlide: 'AI Slides',
     menuNewMarkdown: 'AI Markdown',
     menuNewHtml: 'AI HTML',
+    menuNewMindmap: 'Mind Map',
+    menuNewHwp: 'AI HWP',
     menuNewPdf: 'AI PDF',
     menuExportPdf: 'Export as PDF…',
     menuExportImages: 'Export as Images…',
     menuExportHtml: 'Export as Single-File HTML…',
+    menuExportMapImage: 'Export as Image (PNG)…',
+    menuExportMapOutline: 'Export as Markdown Outline…',
+    menuMakeFromDocument: 'Make Another Document from This',
+    menuDocumentSources: 'View Sources',
+    menuDerivedDocuments: 'Documents Made from This',
     menuOpenInDocs: 'Convert and Open in Docs',
     menuPrint: 'Print…',
     menuOpen: 'Open…',
@@ -688,6 +818,8 @@ const tMain = createI18n({
     filterPpt: 'PowerPoint Presentations',
     filterMarkdown: 'Text Files (Markdown, TXT, JSON)',
     filterHtml: 'HTML Documents',
+    filterMindmap: 'Mind Maps (XMind files)',
+    filterHwp: 'HWP Documents (HWP, HWPX)',
     filterPdf: 'PDF Documents',
     errBadArgs: 'Invalid arguments',
     errBadName: 'Invalid file name',
@@ -714,6 +846,8 @@ const tMain = createI18n({
     pdfPptxLocalScannedDetail:
       'Each page was exported as a full-page image; the text on the slides is not editable.',
     menuExportXlsx: 'Export as Excel…',
+    menuExportMd: 'Export as Markdown…',
+    menuExportEpub: 'Export as EPUB…',
     pdfXlsxFailedMsg: 'Export as Excel failed',
     pdfXlsxBusyMsg: 'An export is already in progress. Please wait for it to finish.',
     pdfXlsxLocalScannedDetail:
@@ -755,6 +889,12 @@ const tMain = createI18n({
       '"{title}" đã dùng nhiều bộ nhớ hoặc CPU trong vài phút ({memory} MB, {cpu}% CPU). Bạn có thể tiếp tục chờ hoặc đóng tài liệu này (sẽ hỏi lưu các thay đổi chưa lưu trước). Thông tin chẩn đoán đã được ghi lại.',
     watchdogWait: 'Tiếp tục chờ',
     watchdogClose: 'Đóng tài liệu',
+    crashTitle: 'Tài liệu dừng đột ngột',
+    crashBody: '"{title}" đã dừng đột ngột. Những thay đổi sau lần lưu gần nhất có thể đã bị mất.',
+    crashReopen: 'Mở lại',
+    crashReload: 'Tải lại',
+    crashClose: 'Đóng',
+    crashLater: 'Để sau',
     errFolderRootUnusable: 'Không thể đọc thư mục đã chọn',
     menuFile: 'Tệp',
     menuSectionNew: 'Mới',
@@ -766,14 +906,23 @@ const tMain = createI18n({
     untitledDeck: 'Bản trình bày chưa có tiêu đề',
     untitledMarkdown: 'Markdown chưa có tiêu đề',
     untitledHtml: 'HTML chưa có tiêu đề',
+    untitledMindmap: 'Sơ đồ tư duy chưa có tiêu đề',
+    untitledHwp: 'HWP chưa có tiêu đề',
     untitledPdf: 'PDF chưa có tiêu đề',
     menuNewSlide: 'AI Slides',
     menuNewMarkdown: 'AI Markdown',
     menuNewHtml: 'AI HTML',
+    menuNewMindmap: 'Sơ đồ tư duy',
+    menuNewHwp: 'AI HWP',
     menuNewPdf: 'AI PDF',
     menuExportPdf: 'Xuất dưới dạng PDF…',
     menuExportImages: 'Xuất dưới dạng hình ảnh…',
     menuExportHtml: 'Xuất dưới dạng HTML một tệp…',
+    menuExportMapImage: 'Xuất dưới dạng hình ảnh (PNG)…',
+    menuExportMapOutline: 'Xuất dưới dạng dàn ý Markdown…',
+    menuMakeFromDocument: 'Tạo tài liệu khác từ tài liệu này',
+    menuDocumentSources: 'Xem tài liệu nguồn',
+    menuDerivedDocuments: 'Tài liệu tạo từ tài liệu này',
     menuOpenInDocs: 'Chuyển đổi và mở trong Docs',
     menuPrint: 'In…',
     menuOpen: 'Mở…',
@@ -792,6 +941,8 @@ const tMain = createI18n({
     filterPpt: 'Bản trình bày PowerPoint',
     filterMarkdown: 'Tệp văn bản (Markdown, TXT, JSON)',
     filterHtml: 'Tài liệu HTML',
+    filterMindmap: 'Sơ đồ tư duy (tệp XMind)',
+    filterHwp: 'Tài liệu HWP (HWP, HWPX)',
     filterPdf: 'Tài liệu PDF',
     errBadArgs: 'Đối số không hợp lệ',
     errBadName: 'Tên tệp không hợp lệ',
@@ -818,6 +969,8 @@ const tMain = createI18n({
     pdfPptxLocalScannedDetail:
       'Mỗi trang đã được xuất dưới dạng hình ảnh toàn trang; văn bản trên các trang trình bày không thể chỉnh sửa.',
     menuExportXlsx: 'Xuất dưới dạng Excel…',
+    menuExportMd: 'Xuất dưới dạng Markdown…',
+    menuExportEpub: 'Xuất dưới dạng EPUB…',
     pdfXlsxFailedMsg: 'Xuất dưới dạng Excel thất bại',
     pdfXlsxBusyMsg: 'Một tác vụ xuất đang được tiến hành. Vui lòng đợi tác vụ hoàn tất.',
     pdfXlsxLocalScannedDetail:
@@ -859,6 +1012,13 @@ const tMain = createI18n({
       '「{title}」が数分間にわたり大量のメモリまたは CPU を使用しています（メモリ {memory} MB、CPU {cpu}%）。そのまま待つか、このドキュメントを閉じることができます（未保存の変更がある場合は保存を確認します）。診断情報を記録しました。',
     watchdogWait: '待つ',
     watchdogClose: 'ドキュメントを閉じる',
+    crashTitle: 'ドキュメントが予期せず停止しました',
+    crashBody:
+      '「{title}」が予期せず停止しました。最後に保存した後の変更は失われた可能性があります。',
+    crashReopen: '開き直す',
+    crashReload: '再読み込み',
+    crashClose: '閉じる',
+    crashLater: '後で',
     errFolderRootUnusable: '選択したフォルダーを読み取れません',
     menuFile: 'ファイル',
     menuSectionNew: '新規作成',
@@ -870,14 +1030,23 @@ const tMain = createI18n({
     untitledDeck: '無題のプレゼンテーション',
     untitledMarkdown: '無題の Markdown',
     untitledHtml: '無題の HTML',
+    untitledMindmap: '無題のマインドマップ',
+    untitledHwp: '無題の HWP',
     untitledPdf: '無題の PDF',
     menuNewSlide: 'AI Slides',
     menuNewMarkdown: 'AI Markdown',
     menuNewHtml: 'AI HTML',
+    menuNewMindmap: 'マインドマップ',
+    menuNewHwp: 'AI HWP',
     menuNewPdf: 'AI PDF',
     menuExportPdf: 'PDF として書き出す…',
     menuExportImages: '画像としてエクスポート…',
     menuExportHtml: '単一ファイル HTML として書き出す…',
+    menuExportMapImage: '画像 (PNG) としてエクスポート…',
+    menuExportMapOutline: 'Markdown アウトラインとしてエクスポート…',
+    menuMakeFromDocument: 'この文書から別の文書を作成',
+    menuDocumentSources: '資料を表示',
+    menuDerivedDocuments: 'この文書から作成した文書',
     menuOpenInDocs: 'Docs 文書に変換して開く',
     menuPrint: '印刷…',
     menuOpen: '開く…',
@@ -896,6 +1065,8 @@ const tMain = createI18n({
     filterPpt: 'PowerPoint プレゼンテーション',
     filterMarkdown: 'テキストファイル (Markdown, TXT, JSON)',
     filterHtml: 'HTML ドキュメント',
+    filterMindmap: 'マインドマップ (XMind ファイル)',
+    filterHwp: 'HWP ドキュメント (HWP, HWPX)',
     filterPdf: 'PDF ドキュメント',
     errBadArgs: '引数が無効です',
     errBadName: 'ファイル名が無効です',
@@ -922,6 +1093,8 @@ const tMain = createI18n({
     pdfPptxLocalScannedDetail:
       '各ページは画像として書き出されたため、スライド内のテキストは編集できません。',
     menuExportXlsx: 'Excel として書き出す…',
+    menuExportMd: 'Markdown として書き出す…',
+    menuExportEpub: 'EPUB として書き出す…',
     pdfXlsxFailedMsg: 'Excel への書き出しに失敗しました',
     pdfXlsxBusyMsg: '変換が進行中です。現在の書き出しが完了するまでお待ちください。',
     pdfXlsxLocalScannedDetail:
@@ -963,6 +1136,13 @@ const tMain = createI18n({
       '"{title}"이(가) 몇 분 동안 많은 메모리 또는 CPU를 사용하고 있습니다(메모리 {memory} MB, CPU {cpu}%). 계속 기다리거나 이 문서를 닫을 수 있습니다(저장되지 않은 변경 사항이 있으면 먼저 저장 여부를 묻습니다). 진단 정보가 기록되었습니다.',
     watchdogWait: '계속 기다리기',
     watchdogClose: '문서 닫기',
+    crashTitle: '문서가 예기치 않게 멈췄습니다',
+    crashBody:
+      '"{title}" 화면이 예기치 않게 꺼졌습니다. 마지막으로 저장한 뒤의 변경은 사라졌을 수 있습니다.',
+    crashReopen: '다시 열기',
+    crashReload: '다시 불러오기',
+    crashClose: '닫기',
+    crashLater: '나중에',
     errFolderRootUnusable: '선택한 폴더를 읽을 수 없습니다',
     menuFile: '파일',
     menuSectionNew: '새로 만들기',
@@ -974,14 +1154,23 @@ const tMain = createI18n({
     untitledDeck: '제목 없는 프레젠테이션',
     untitledMarkdown: '제목 없는 Markdown',
     untitledHtml: '제목 없는 HTML',
+    untitledMindmap: '제목 없는 마인드맵',
+    untitledHwp: '제목 없는 한글 문서',
     untitledPdf: '제목 없는 PDF',
     menuNewSlide: 'AI Slides',
     menuNewMarkdown: 'AI Markdown',
     menuNewHtml: 'AI HTML',
+    menuNewMindmap: '마인드맵',
+    menuNewHwp: 'AI 한글',
     menuNewPdf: 'AI PDF',
     menuExportPdf: 'PDF로 내보내기…',
     menuExportImages: '이미지로 내보내기…',
     menuExportHtml: '단일 파일 HTML로 내보내기…',
+    menuExportMapImage: '이미지(PNG)로 내보내기…',
+    menuExportMapOutline: '마크다운 개요로 내보내기…',
+    menuMakeFromDocument: '이 문서로 다른 문서 만들기',
+    menuDocumentSources: '자료 보기',
+    menuDerivedDocuments: '이 문서로 만든 문서',
     menuOpenInDocs: 'Docs 문서로 변환하여 열기',
     menuPrint: '인쇄…',
     menuOpen: '열기…',
@@ -1000,6 +1189,8 @@ const tMain = createI18n({
     filterPpt: 'PowerPoint 프레젠테이션',
     filterMarkdown: '텍스트 파일 (Markdown, TXT, JSON)',
     filterHtml: 'HTML 문서',
+    filterMindmap: '마인드맵 (XMind 파일)',
+    filterHwp: '한글 문서 (HWP, HWPX)',
     filterPdf: 'PDF 문서',
     errBadArgs: '잘못된 인수입니다',
     errBadName: '파일 이름이 잘못되었습니다',
@@ -1026,6 +1217,8 @@ const tMain = createI18n({
     pdfPptxLocalScannedDetail:
       '각 페이지가 이미지로 내보내져 슬라이드의 텍스트를 편집할 수 없습니다.',
     menuExportXlsx: 'Excel로 내보내기…',
+    menuExportMd: 'Markdown으로 내보내기…',
+    menuExportEpub: 'EPUB으로 내보내기…',
     pdfXlsxFailedMsg: 'Excel 내보내기 실패',
     pdfXlsxBusyMsg: '변환이 진행 중입니다. 현재 내보내기가 완료될 때까지 기다려 주세요.',
     pdfXlsxLocalScannedDetail:
@@ -1066,6 +1259,13 @@ const tMain = createI18n({
       '« {title} » utilise beaucoup de mémoire ou de processeur depuis plusieurs minutes ({memory} Mo, {cpu} % CPU). Vous pouvez continuer à attendre ou fermer ce document (il vous sera d’abord demandé d’enregistrer les modifications non sauvegardées). Les diagnostics ont été enregistrés.',
     watchdogWait: 'Continuer d’attendre',
     watchdogClose: 'Fermer le document',
+    crashTitle: 'Un document s’est arrêté de façon inattendue',
+    crashBody:
+      '« {title} » s’est arrêté de façon inattendue. Les modifications faites depuis le dernier enregistrement ont peut-être été perdues.',
+    crashReopen: 'Rouvrir',
+    crashReload: 'Recharger',
+    crashClose: 'Fermer',
+    crashLater: 'Plus tard',
     errFolderRootUnusable: 'Le dossier sélectionné ne peut pas être lu',
     menuFile: 'Fichier',
     menuSectionNew: 'Nouveau',
@@ -1077,14 +1277,23 @@ const tMain = createI18n({
     untitledDeck: 'Présentation sans titre',
     untitledMarkdown: 'Markdown sans titre',
     untitledHtml: 'HTML sans titre',
+    untitledMindmap: 'Carte mentale sans titre',
+    untitledHwp: 'HWP sans titre',
     untitledPdf: 'PDF sans titre',
     menuNewSlide: 'AI Slides',
     menuNewMarkdown: 'AI Markdown',
     menuNewHtml: 'AI HTML',
+    menuNewMindmap: 'Carte mentale',
+    menuNewHwp: 'AI HWP',
     menuNewPdf: 'AI PDF',
     menuExportPdf: 'Exporter en PDF…',
     menuExportImages: 'Exporter en images…',
     menuExportHtml: 'Exporter en HTML (fichier unique)…',
+    menuExportMapImage: 'Exporter en image (PNG)…',
+    menuExportMapOutline: 'Exporter en plan Markdown…',
+    menuMakeFromDocument: 'Créer un autre document à partir de celui-ci',
+    menuDocumentSources: 'Voir les sources',
+    menuDerivedDocuments: 'Documents créés à partir de celui-ci',
     menuOpenInDocs: 'Convertir et ouvrir dans Docs',
     menuPrint: 'Imprimer…',
     menuOpen: 'Ouvrir…',
@@ -1103,6 +1312,8 @@ const tMain = createI18n({
     filterPpt: 'Présentations PowerPoint',
     filterMarkdown: 'Fichiers texte (Markdown, TXT, JSON)',
     filterHtml: 'Documents HTML',
+    filterMindmap: 'Cartes mentales (fichiers XMind)',
+    filterHwp: 'Documents HWP (HWP, HWPX)',
     filterPdf: 'Documents PDF',
     errBadArgs: 'Arguments non valides',
     errBadName: 'Nom de fichier non valide',
@@ -1129,6 +1340,8 @@ const tMain = createI18n({
     pdfPptxLocalScannedDetail:
       "Chaque page a été exportée sous forme d'image ; le texte des diapositives n'est pas modifiable.",
     menuExportXlsx: 'Exporter en Excel…',
+    menuExportMd: 'Exporter en Markdown…',
+    menuExportEpub: 'Exporter en EPUB…',
     pdfXlsxFailedMsg: "Échec de l'exportation en Excel",
     pdfXlsxBusyMsg: "Une exportation est déjà en cours. Veuillez attendre qu'elle se termine.",
     pdfXlsxLocalScannedDetail:
@@ -1171,6 +1384,13 @@ const tMain = createI18n({
       '„{title}“ belegt seit mehreren Minuten viel Arbeitsspeicher oder CPU ({memory} MB, {cpu} % CPU). Sie können weiter warten oder das Dokument schließen (bei ungespeicherten Änderungen werden Sie zuerst zum Speichern gefragt). Diagnosedaten wurden aufgezeichnet.',
     watchdogWait: 'Weiter warten',
     watchdogClose: 'Dokument schließen',
+    crashTitle: 'Ein Dokument wurde unerwartet beendet',
+    crashBody:
+      '„{title}“ wurde unerwartet beendet. Änderungen seit dem letzten Speichern sind möglicherweise verloren.',
+    crashReopen: 'Erneut öffnen',
+    crashReload: 'Neu laden',
+    crashClose: 'Schließen',
+    crashLater: 'Später',
     errFolderRootUnusable: 'Der ausgewählte Ordner kann nicht gelesen werden',
     menuFile: 'Datei',
     menuSectionNew: 'Neu',
@@ -1182,14 +1402,23 @@ const tMain = createI18n({
     untitledDeck: 'Unbenannte Präsentation',
     untitledMarkdown: 'Unbenanntes Markdown',
     untitledHtml: 'Unbenanntes HTML',
+    untitledMindmap: 'Unbenannte Mindmap',
+    untitledHwp: 'Unbenanntes HWP',
     untitledPdf: 'Unbenanntes PDF',
     menuNewSlide: 'AI Slides',
     menuNewMarkdown: 'AI Markdown',
     menuNewHtml: 'AI HTML',
+    menuNewMindmap: 'Mindmap',
+    menuNewHwp: 'AI HWP',
     menuNewPdf: 'AI PDF',
     menuExportPdf: 'Als PDF exportieren…',
     menuExportImages: 'Als Bilder exportieren…',
     menuExportHtml: 'Als Einzeldatei-HTML exportieren…',
+    menuExportMapImage: 'Als Bild (PNG) exportieren…',
+    menuExportMapOutline: 'Als Markdown-Gliederung exportieren…',
+    menuMakeFromDocument: 'Anderes Dokument aus diesem erstellen',
+    menuDocumentSources: 'Quellen anzeigen',
+    menuDerivedDocuments: 'Aus diesem erstellte Dokumente',
     menuOpenInDocs: 'In Docs umwandeln und öffnen',
     menuPrint: 'Drucken…',
     menuOpen: 'Öffnen…',
@@ -1208,6 +1437,8 @@ const tMain = createI18n({
     filterPpt: 'PowerPoint-Präsentationen',
     filterMarkdown: 'Textdateien (Markdown, TXT, JSON)',
     filterHtml: 'HTML-Dokumente',
+    filterMindmap: 'Mindmaps (XMind-Dateien)',
+    filterHwp: 'HWP-Dokumente (HWP, HWPX)',
     filterPdf: 'PDF-Dokumente',
     errBadArgs: 'Ungültige Argumente',
     errBadName: 'Ungültiger Dateiname',
@@ -1235,6 +1466,8 @@ const tMain = createI18n({
     pdfPptxLocalScannedDetail:
       'Jede Seite wurde als Bild exportiert; der Text auf den Folien ist nicht bearbeitbar.',
     menuExportXlsx: 'Als Excel exportieren…',
+    menuExportMd: 'Als Markdown exportieren…',
+    menuExportEpub: 'Als EPUB exportieren…',
     pdfXlsxFailedMsg: 'Export als Excel fehlgeschlagen',
     pdfXlsxBusyMsg: 'Ein Export läuft bereits. Bitte warten Sie, bis er abgeschlossen ist.',
     pdfXlsxLocalScannedDetail:
@@ -1277,6 +1510,13 @@ const tMain = createI18n({
       '«{title}» lleva varios minutos usando mucha memoria o CPU ({memory} MB, {cpu} % de CPU). Puedes seguir esperando o cerrar el documento (antes se te pedirá guardar los cambios sin guardar). Se ha registrado el diagnóstico.',
     watchdogWait: 'Seguir esperando',
     watchdogClose: 'Cerrar documento',
+    crashTitle: 'Un documento se detuvo inesperadamente',
+    crashBody:
+      '«{title}» se detuvo inesperadamente. Es posible que se hayan perdido los cambios hechos desde la última vez que se guardó.',
+    crashReopen: 'Volver a abrir',
+    crashReload: 'Volver a cargar',
+    crashClose: 'Cerrar',
+    crashLater: 'Ahora no',
     errFolderRootUnusable: 'No se puede leer la carpeta seleccionada',
     menuFile: 'Archivo',
     menuSectionNew: 'Nuevo',
@@ -1288,14 +1528,23 @@ const tMain = createI18n({
     untitledDeck: 'Presentación sin título',
     untitledMarkdown: 'Markdown sin título',
     untitledHtml: 'HTML sin título',
+    untitledMindmap: 'Mapa mental sin título',
+    untitledHwp: 'HWP sin título',
     untitledPdf: 'PDF sin título',
     menuNewSlide: 'AI Slides',
     menuNewMarkdown: 'AI Markdown',
     menuNewHtml: 'AI HTML',
+    menuNewMindmap: 'Mapa mental',
+    menuNewHwp: 'AI HWP',
     menuNewPdf: 'AI PDF',
     menuExportPdf: 'Exportar como PDF…',
     menuExportImages: 'Exportar como imágenes…',
     menuExportHtml: 'Exportar como HTML de archivo único…',
+    menuExportMapImage: 'Exportar como imagen (PNG)…',
+    menuExportMapOutline: 'Exportar como esquema Markdown…',
+    menuMakeFromDocument: 'Crear otro documento a partir de este',
+    menuDocumentSources: 'Ver fuentes',
+    menuDerivedDocuments: 'Documentos creados a partir de este',
     menuOpenInDocs: 'Convertir y abrir en Docs',
     menuPrint: 'Imprimir…',
     menuOpen: 'Abrir…',
@@ -1314,6 +1563,8 @@ const tMain = createI18n({
     filterPpt: 'Presentaciones de PowerPoint',
     filterMarkdown: 'Archivos de texto (Markdown, TXT, JSON)',
     filterHtml: 'Documentos HTML',
+    filterMindmap: 'Mapas mentales (archivos XMind)',
+    filterHwp: 'Documentos HWP (HWP, HWPX)',
     filterPdf: 'Documentos PDF',
     errBadArgs: 'Argumentos no válidos',
     errBadName: 'Nombre de archivo no válido',
@@ -1340,6 +1591,8 @@ const tMain = createI18n({
     pdfPptxLocalScannedDetail:
       'Cada página se exportó como imagen; el texto de las diapositivas no es editable.',
     menuExportXlsx: 'Exportar como Excel…',
+    menuExportMd: 'Exportar como Markdown…',
+    menuExportEpub: 'Exportar como EPUB…',
     pdfXlsxFailedMsg: 'Error al exportar como Excel',
     pdfXlsxBusyMsg: 'Ya hay una exportación en curso. Espere a que termine.',
     pdfXlsxLocalScannedDetail:
@@ -1382,6 +1635,12 @@ const tMain = createI18n({
       '"{title}" ใช้หน่วยความจำหรือ CPU จำนวนมากติดต่อกันหลายนาที (หน่วยความจำ {memory} MB, CPU {cpu}%) คุณสามารถรอต่อไปหรือปิดเอกสารนี้ได้ (หากมีการเปลี่ยนแปลงที่ยังไม่บันทึกจะถามให้บันทึกก่อน) บันทึกข้อมูลวินิจฉัยแล้ว',
     watchdogWait: 'รอต่อไป',
     watchdogClose: 'ปิดเอกสาร',
+    crashTitle: 'เอกสารหยุดทำงานโดยไม่คาดคิด',
+    crashBody: '"{title}" หยุดทำงานโดยไม่คาดคิด การเปลี่ยนแปลงหลังการบันทึกครั้งล่าสุดอาจสูญหาย',
+    crashReopen: 'เปิดอีกครั้ง',
+    crashReload: 'โหลดใหม่',
+    crashClose: 'ปิด',
+    crashLater: 'ไว้ทีหลัง',
     errFolderRootUnusable: 'ไม่สามารถอ่านโฟลเดอร์ที่เลือกได้',
     menuFile: 'ไฟล์',
     menuSectionNew: 'สร้างใหม่',
@@ -1393,14 +1652,23 @@ const tMain = createI18n({
     untitledDeck: 'งานนำเสนอไม่มีชื่อ',
     untitledMarkdown: 'Markdown ไม่มีชื่อ',
     untitledHtml: 'HTML ไม่มีชื่อ',
+    untitledMindmap: 'แผนที่ความคิดไม่มีชื่อ',
+    untitledHwp: 'HWP ไม่มีชื่อ',
     untitledPdf: 'PDF ไม่มีชื่อ',
     menuNewSlide: 'AI Slides',
     menuNewMarkdown: 'AI Markdown',
     menuNewHtml: 'AI HTML',
+    menuNewMindmap: 'แผนที่ความคิด',
+    menuNewHwp: 'AI HWP',
     menuNewPdf: 'AI PDF',
     menuExportPdf: 'ส่งออกเป็น PDF…',
     menuExportImages: 'ส่งออกเป็นรูปภาพ…',
     menuExportHtml: 'ส่งออกเป็น HTML ไฟล์เดียว…',
+    menuExportMapImage: 'ส่งออกเป็นรูปภาพ (PNG)…',
+    menuExportMapOutline: 'ส่งออกเป็นโครงร่าง Markdown…',
+    menuMakeFromDocument: 'สร้างเอกสารอื่นจากเอกสารนี้',
+    menuDocumentSources: 'ดูแหล่งข้อมูล',
+    menuDerivedDocuments: 'เอกสารที่สร้างจากเอกสารนี้',
     menuOpenInDocs: 'แปลงและเปิดใน Docs',
     menuPrint: 'พิมพ์…',
     menuOpen: 'เปิด…',
@@ -1419,6 +1687,8 @@ const tMain = createI18n({
     filterPpt: 'งานนำเสนอ PowerPoint',
     filterMarkdown: 'ไฟล์ข้อความ (Markdown, TXT, JSON)',
     filterHtml: 'เอกสาร HTML',
+    filterMindmap: 'แผนที่ความคิด (ไฟล์ XMind)',
+    filterHwp: 'เอกสาร HWP (HWP, HWPX)',
     filterPdf: 'เอกสาร PDF',
     errBadArgs: 'อาร์กิวเมนต์ไม่ถูกต้อง',
     errBadName: 'ชื่อไฟล์ไม่ถูกต้อง',
@@ -1444,6 +1714,8 @@ const tMain = createI18n({
     pdfPptxBusyMsg: 'กำลังแปลงอยู่ โปรดรอให้การส่งออกปัจจุบันเสร็จสิ้น',
     pdfPptxLocalScannedDetail: 'แต่ละหน้าถูกส่งออกเป็นรูปภาพ ข้อความในสไลด์จึงแก้ไขไม่ได้',
     menuExportXlsx: 'ส่งออกเป็น Excel…',
+    menuExportMd: 'ส่งออกเป็น Markdown…',
+    menuExportEpub: 'ส่งออกเป็น EPUB…',
     pdfXlsxFailedMsg: 'การส่งออกเป็น Excel ล้มเหลว',
     pdfXlsxBusyMsg: 'กำลังแปลงอยู่ โปรดรอให้การส่งออกปัจจุบันเสร็จสิ้น',
     pdfXlsxLocalScannedDetail:
@@ -1483,6 +1755,13 @@ const tMain = createI18n({
       '"{title}" telah menggunakan banyak memori atau CPU selama beberapa menit ({memory} MB, CPU {cpu}%). Anda dapat terus menunggu atau menutup dokumen ini (perubahan yang belum disimpan akan ditanyakan lebih dulu). Diagnostik telah dicatat.',
     watchdogWait: 'Terus Menunggu',
     watchdogClose: 'Tutup Dokumen',
+    crashTitle: 'Dokumen berhenti secara tak terduga',
+    crashBody:
+      '"{title}" berhenti secara tak terduga. Perubahan sejak terakhir disimpan mungkin hilang.',
+    crashReopen: 'Buka Lagi',
+    crashReload: 'Muat Ulang',
+    crashClose: 'Tutup',
+    crashLater: 'Nanti',
     errFolderRootUnusable: 'Folder yang dipilih tidak dapat dibaca',
     menuFile: 'File',
     menuSectionNew: 'Baru',
@@ -1494,14 +1773,23 @@ const tMain = createI18n({
     untitledDeck: 'Presentasi tanpa judul',
     untitledMarkdown: 'Markdown tanpa judul',
     untitledHtml: 'HTML tanpa judul',
+    untitledMindmap: 'Peta pikiran tanpa judul',
+    untitledHwp: 'HWP tanpa judul',
     untitledPdf: 'PDF tanpa judul',
     menuNewSlide: 'AI Slides',
     menuNewMarkdown: 'AI Markdown',
     menuNewHtml: 'AI HTML',
+    menuNewMindmap: 'Peta pikiran',
+    menuNewHwp: 'AI HWP',
     menuNewPdf: 'AI PDF',
     menuExportPdf: 'Ekspor sebagai PDF…',
     menuExportImages: 'Ekspor sebagai gambar…',
     menuExportHtml: 'Ekspor sebagai HTML satu file…',
+    menuExportMapImage: 'Ekspor sebagai gambar (PNG)…',
+    menuExportMapOutline: 'Ekspor sebagai kerangka Markdown…',
+    menuMakeFromDocument: 'Buat dokumen lain dari dokumen ini',
+    menuDocumentSources: 'Lihat sumber',
+    menuDerivedDocuments: 'Dokumen yang dibuat dari dokumen ini',
     menuOpenInDocs: 'Konversi dan buka di Docs',
     menuPrint: 'Cetak…',
     menuOpen: 'Buka…',
@@ -1520,6 +1808,8 @@ const tMain = createI18n({
     filterPpt: 'Presentasi PowerPoint',
     filterMarkdown: 'File teks (Markdown, TXT, JSON)',
     filterHtml: 'Dokumen HTML',
+    filterMindmap: 'Peta pikiran (file XMind)',
+    filterHwp: 'Dokumen HWP (HWP, HWPX)',
     filterPdf: 'Dokumen PDF',
     errBadArgs: 'Argumen tidak valid',
     errBadName: 'Nama file tidak valid',
@@ -1546,6 +1836,8 @@ const tMain = createI18n({
     pdfPptxLocalScannedDetail:
       'Setiap halaman diekspor sebagai gambar; teks pada slide tidak dapat diedit.',
     menuExportXlsx: 'Ekspor sebagai Excel…',
+    menuExportMd: 'Ekspor sebagai Markdown…',
+    menuExportEpub: 'Ekspor sebagai EPUB…',
     pdfXlsxFailedMsg: 'Gagal mengekspor sebagai Excel',
     pdfXlsxBusyMsg: 'Ekspor sedang berlangsung. Harap tunggu hingga selesai.',
     pdfXlsxLocalScannedDetail:
@@ -1588,6 +1880,13 @@ const tMain = createI18n({
       '«{title}» уже несколько минут использует много памяти или процессора ({memory} МБ, {cpu}% CPU). Можно подождать ещё или закрыть документ (при несохранённых изменениях сначала будет предложено сохранить). Диагностика записана.',
     watchdogWait: 'Подождать',
     watchdogClose: 'Закрыть документ',
+    crashTitle: 'Документ неожиданно остановился',
+    crashBody:
+      '«{title}» неожиданно остановился. Изменения после последнего сохранения могли быть потеряны.',
+    crashReopen: 'Открыть снова',
+    crashReload: 'Перезагрузить',
+    crashClose: 'Закрыть',
+    crashLater: 'Не сейчас',
     errFolderRootUnusable: 'Не удалось прочитать выбранную папку',
     menuFile: 'Файл',
     menuSectionNew: 'Создать',
@@ -1599,14 +1898,23 @@ const tMain = createI18n({
     untitledDeck: 'Презентация без названия',
     untitledMarkdown: 'Markdown без названия',
     untitledHtml: 'HTML без названия',
+    untitledMindmap: 'Интеллект-карта без названия',
+    untitledHwp: 'HWP без названия',
     untitledPdf: 'PDF без названия',
     menuNewSlide: 'AI Slides',
     menuNewMarkdown: 'AI Markdown',
     menuNewHtml: 'AI HTML',
+    menuNewMindmap: 'Интеллект-карта',
+    menuNewHwp: 'AI HWP',
     menuNewPdf: 'AI PDF',
     menuExportPdf: 'Экспортировать в PDF…',
     menuExportImages: 'Экспорт в изображения…',
     menuExportHtml: 'Экспортировать в один файл HTML…',
+    menuExportMapImage: 'Экспорт в изображение (PNG)…',
+    menuExportMapOutline: 'Экспорт в структуру Markdown…',
+    menuMakeFromDocument: 'Создать другой документ из этого',
+    menuDocumentSources: 'Показать источники',
+    menuDerivedDocuments: 'Документы, созданные из этого',
     menuOpenInDocs: 'Преобразовать и открыть в Docs',
     menuPrint: 'Печать…',
     menuOpen: 'Открыть…',
@@ -1625,6 +1933,8 @@ const tMain = createI18n({
     filterPpt: 'Презентации PowerPoint',
     filterMarkdown: 'Текстовые файлы (Markdown, TXT, JSON)',
     filterHtml: 'Документы HTML',
+    filterMindmap: 'Интеллект-карты (файлы XMind)',
+    filterHwp: 'Документы HWP (HWP, HWPX)',
     filterPdf: 'Документы PDF',
     errBadArgs: 'Недопустимые аргументы',
     errBadName: 'Недопустимое имя файла',
@@ -1651,6 +1961,8 @@ const tMain = createI18n({
     pdfPptxLocalScannedDetail:
       'Каждая страница экспортирована как изображение; текст на слайдах нельзя редактировать.',
     menuExportXlsx: 'Экспортировать в Excel…',
+    menuExportMd: 'Экспортировать в Markdown…',
+    menuExportEpub: 'Экспортировать в EPUB…',
     pdfXlsxFailedMsg: 'Не удалось экспортировать в Excel',
     pdfXlsxBusyMsg: 'Экспорт уже выполняется. Дождитесь его завершения.',
     pdfXlsxLocalScannedDetail:
@@ -1693,6 +2005,12 @@ const tMain = createI18n({
       'يستهلك "{title}" قدرًا كبيرًا من الذاكرة أو المعالج منذ عدة دقائق (الذاكرة {memory} م.ب، المعالج {cpu}%). يمكنك مواصلة الانتظار أو إغلاق هذا المستند (سيُطلب حفظ التغييرات غير المحفوظة أولًا). تم تسجيل بيانات التشخيص.',
     watchdogWait: 'مواصلة الانتظار',
     watchdogClose: 'إغلاق المستند',
+    crashTitle: 'توقف مستند بشكل غير متوقع',
+    crashBody: 'توقف "{title}" بشكل غير متوقع. ربما فُقدت التغييرات التي أُجريت منذ آخر حفظ.',
+    crashReopen: 'إعادة الفتح',
+    crashReload: 'إعادة التحميل',
+    crashClose: 'إغلاق',
+    crashLater: 'ليس الآن',
     errFolderRootUnusable: 'لا يمكن قراءة المجلد المحدد',
     menuFile: 'ملف',
     menuSectionNew: 'جديد',
@@ -1704,14 +2022,23 @@ const tMain = createI18n({
     untitledDeck: 'عرض تقديمي بدون عنوان',
     untitledMarkdown: 'Markdown بدون عنوان',
     untitledHtml: 'HTML بدون عنوان',
+    untitledMindmap: 'خريطة ذهنية بدون عنوان',
+    untitledHwp: 'HWP بدون عنوان',
     untitledPdf: 'PDF بدون عنوان',
     menuNewSlide: 'AI Slides',
     menuNewMarkdown: 'AI Markdown',
     menuNewHtml: 'AI HTML',
+    menuNewMindmap: 'خريطة ذهنية',
+    menuNewHwp: 'AI HWP',
     menuNewPdf: 'AI PDF',
     menuExportPdf: 'تصدير بتنسيق PDF…',
     menuExportImages: 'تصدير كصور…',
     menuExportHtml: 'تصدير كملف HTML واحد…',
+    menuExportMapImage: 'تصدير كصورة (PNG)…',
+    menuExportMapOutline: 'تصدير كمخطط Markdown…',
+    menuMakeFromDocument: 'إنشاء مستند آخر من هذا المستند',
+    menuDocumentSources: 'عرض المصادر',
+    menuDerivedDocuments: 'المستندات المُنشأة من هذا المستند',
     menuOpenInDocs: 'التحويل والفتح في Docs',
     menuPrint: 'طباعة…',
     menuOpen: 'فتح…',
@@ -1730,6 +2057,8 @@ const tMain = createI18n({
     filterPpt: 'عروض PowerPoint التقديمية',
     filterMarkdown: 'ملفات نصية (Markdown, TXT, JSON)',
     filterHtml: 'مستندات HTML',
+    filterMindmap: 'خرائط ذهنية (ملفات XMind)',
+    filterHwp: 'مستندات HWP (HWP, HWPX)',
     filterPdf: 'مستندات PDF',
     errBadArgs: 'وسيطات غير صالحة',
     errBadName: 'اسم ملف غير صالح',
@@ -1755,6 +2084,8 @@ const tMain = createI18n({
     pdfPptxBusyMsg: 'هناك عملية تصدير قيد التنفيذ. يرجى الانتظار حتى تكتمل.',
     pdfPptxLocalScannedDetail: 'تم تصدير كل صفحة كصورة؛ النص في الشرائح غير قابل للتحرير.',
     menuExportXlsx: 'تصدير كملف Excel…',
+    menuExportMd: 'تصدير كملف Markdown…',
+    menuExportEpub: 'تصدير كملف EPUB…',
     pdfXlsxFailedMsg: 'فشل التصدير كملف Excel',
     pdfXlsxBusyMsg: 'هناك عملية تصدير قيد التنفيذ. يرجى الانتظار حتى تكتمل.',
     pdfXlsxLocalScannedDetail:
@@ -1794,6 +2125,13 @@ const tMain = createI18n({
       '"{title}" está a usar muita memória ou CPU há vários minutos ({memory} MB, {cpu}% de CPU). Pode continuar a aguardar ou fechar o documento (será pedido para guardar alterações não guardadas primeiro). O diagnóstico foi registado.',
     watchdogWait: 'Continuar a aguardar',
     watchdogClose: 'Fechar documento',
+    crashTitle: 'Um documento parou inesperadamente',
+    crashBody:
+      '"{title}" parou inesperadamente. As alterações feitas desde a última gravação podem ter-se perdido.',
+    crashReopen: 'Reabrir',
+    crashReload: 'Recarregar',
+    crashClose: 'Fechar',
+    crashLater: 'Agora não',
     errFolderRootUnusable: 'Não é possível ler a pasta selecionada',
     menuFile: 'Arquivo',
     menuSectionNew: 'Novo',
@@ -1805,14 +2143,23 @@ const tMain = createI18n({
     untitledDeck: 'Apresentação sem título',
     untitledMarkdown: 'Markdown sem título',
     untitledHtml: 'HTML sem título',
+    untitledMindmap: 'Mapa mental sem título',
+    untitledHwp: 'HWP sem título',
     untitledPdf: 'PDF sem título',
     menuNewSlide: 'AI Slides',
     menuNewMarkdown: 'AI Markdown',
     menuNewHtml: 'AI HTML',
+    menuNewMindmap: 'Mapa mental',
+    menuNewHwp: 'AI HWP',
     menuNewPdf: 'AI PDF',
     menuExportPdf: 'Exportar como PDF…',
     menuExportImages: 'Exportar como imagens…',
     menuExportHtml: 'Exportar como HTML de arquivo único…',
+    menuExportMapImage: 'Exportar como imagem (PNG)…',
+    menuExportMapOutline: 'Exportar como estrutura de tópicos Markdown…',
+    menuMakeFromDocument: 'Criar outro documento a partir deste',
+    menuDocumentSources: 'Ver fontes',
+    menuDerivedDocuments: 'Documentos criados a partir deste',
     menuOpenInDocs: 'Converter e abrir no Docs',
     menuPrint: 'Imprimir…',
     menuOpen: 'Abrir…',
@@ -1831,6 +2178,8 @@ const tMain = createI18n({
     filterPpt: 'Apresentações do PowerPoint',
     filterMarkdown: 'Arquivos de texto (Markdown, TXT, JSON)',
     filterHtml: 'Documentos HTML',
+    filterMindmap: 'Mapas mentais (arquivos XMind)',
+    filterHwp: 'Documentos HWP (HWP, HWPX)',
     filterPdf: 'Documentos PDF',
     errBadArgs: 'Argumentos inválidos',
     errBadName: 'Nome de arquivo inválido',
@@ -1857,6 +2206,8 @@ const tMain = createI18n({
     pdfPptxLocalScannedDetail:
       'Cada página foi exportada como imagem; o texto dos slides não é editável.',
     menuExportXlsx: 'Exportar como Excel…',
+    menuExportMd: 'Exportar como Markdown…',
+    menuExportEpub: 'Exportar como EPUB…',
     pdfXlsxFailedMsg: 'Falha ao exportar como Excel',
     pdfXlsxBusyMsg: 'Já há uma exportação em andamento. Aguarde a conclusão.',
     pdfXlsxLocalScannedDetail:
@@ -1899,6 +2250,13 @@ const tMain = createI18n({
       '"{title}" sta usando molta memoria o CPU da diversi minuti ({memory} MB, {cpu}% CPU). Puoi continuare ad attendere o chiudere il documento (ti verrà chiesto prima di salvare le modifiche non salvate). La diagnostica è stata registrata.',
     watchdogWait: 'Continua ad attendere',
     watchdogClose: 'Chiudi documento',
+    crashTitle: 'Un documento si è interrotto inaspettatamente',
+    crashBody:
+      '"{title}" si è interrotto inaspettatamente. Le modifiche successive all’ultimo salvataggio potrebbero essere andate perse.',
+    crashReopen: 'Riapri',
+    crashReload: 'Ricarica',
+    crashClose: 'Chiudi',
+    crashLater: 'Non ora',
     errFolderRootUnusable: 'Impossibile leggere la cartella selezionata',
     menuFile: 'File',
     menuSectionNew: 'Nuovo',
@@ -1910,14 +2268,23 @@ const tMain = createI18n({
     untitledDeck: 'Presentazione senza titolo',
     untitledMarkdown: 'Markdown senza titolo',
     untitledHtml: 'HTML senza titolo',
+    untitledMindmap: 'Mappa mentale senza titolo',
+    untitledHwp: 'HWP senza titolo',
     untitledPdf: 'PDF senza titolo',
     menuNewSlide: 'AI Slides',
     menuNewMarkdown: 'AI Markdown',
     menuNewHtml: 'AI HTML',
+    menuNewMindmap: 'Mappa mentale',
+    menuNewHwp: 'AI HWP',
     menuNewPdf: 'AI PDF',
     menuExportPdf: 'Esporta come PDF…',
     menuExportImages: 'Esporta come immagini…',
     menuExportHtml: 'Esporta come HTML a file singolo…',
+    menuExportMapImage: 'Esporta come immagine (PNG)…',
+    menuExportMapOutline: 'Esporta come struttura Markdown…',
+    menuMakeFromDocument: 'Crea un altro documento da questo',
+    menuDocumentSources: 'Mostra le fonti',
+    menuDerivedDocuments: 'Documenti creati da questo',
     menuOpenInDocs: 'Converti e apri in Docs',
     menuPrint: 'Stampa…',
     menuOpen: 'Apri…',
@@ -1936,6 +2303,8 @@ const tMain = createI18n({
     filterPpt: 'Presentazioni PowerPoint',
     filterMarkdown: 'File di testo (Markdown, TXT, JSON)',
     filterHtml: 'Documenti HTML',
+    filterMindmap: 'Mappe mentali (file XMind)',
+    filterHwp: 'Documenti HWP (HWP, HWPX)',
     filterPdf: 'Documenti PDF',
     errBadArgs: 'Argomenti non validi',
     errBadName: 'Nome file non valido',
@@ -1962,6 +2331,8 @@ const tMain = createI18n({
     pdfPptxLocalScannedDetail:
       'Ogni pagina è stata esportata come immagine; il testo delle diapositive non è modificabile.',
     menuExportXlsx: 'Esporta come Excel…',
+    menuExportMd: 'Esporta come Markdown…',
+    menuExportEpub: 'Esporta come EPUB…',
     pdfXlsxFailedMsg: 'Esportazione come Excel non riuscita',
     pdfXlsxBusyMsg: "Un'esportazione è già in corso. Attendere che finisca.",
     pdfXlsxLocalScannedDetail:
@@ -2004,6 +2375,13 @@ const tMain = createI18n({
       '„{title}” od kilku minut zużywa dużo pamięci lub procesora ({memory} MB, {cpu}% CPU). Możesz dalej czekać albo zamknąć dokument (najpierw pojawi się pytanie o zapisanie niezapisanych zmian). Dane diagnostyczne zostały zapisane.',
     watchdogWait: 'Czekaj dalej',
     watchdogClose: 'Zamknij dokument',
+    crashTitle: 'Dokument nieoczekiwanie przestał działać',
+    crashBody:
+      '„{title}” nieoczekiwanie przestał działać. Zmiany wprowadzone od ostatniego zapisu mogły zostać utracone.',
+    crashReopen: 'Otwórz ponownie',
+    crashReload: 'Wczytaj ponownie',
+    crashClose: 'Zamknij',
+    crashLater: 'Nie teraz',
     errFolderRootUnusable: 'Nie można odczytać wybranego folderu',
     menuFile: 'Plik',
     menuSectionNew: 'Nowy',
@@ -2015,14 +2393,23 @@ const tMain = createI18n({
     untitledDeck: 'Prezentacja bez tytułu',
     untitledMarkdown: 'Markdown bez tytułu',
     untitledHtml: 'HTML bez tytułu',
+    untitledMindmap: 'Mapa myśli bez tytułu',
+    untitledHwp: 'HWP bez tytułu',
     untitledPdf: 'PDF bez tytułu',
     menuNewSlide: 'AI Slides',
     menuNewMarkdown: 'AI Markdown',
     menuNewHtml: 'AI HTML',
+    menuNewMindmap: 'Mapa myśli',
+    menuNewHwp: 'AI HWP',
     menuNewPdf: 'AI PDF',
     menuExportPdf: 'Eksportuj jako PDF…',
     menuExportImages: 'Eksportuj jako obrazy…',
     menuExportHtml: 'Eksportuj jako pojedynczy plik HTML…',
+    menuExportMapImage: 'Eksportuj jako obraz (PNG)…',
+    menuExportMapOutline: 'Eksportuj jako konspekt Markdown…',
+    menuMakeFromDocument: 'Utwórz inny dokument z tego',
+    menuDocumentSources: 'Pokaż źródła',
+    menuDerivedDocuments: 'Dokumenty utworzone z tego',
     menuOpenInDocs: 'Konwertuj i otwórz w Docs',
     menuPrint: 'Drukuj…',
     menuOpen: 'Otwórz…',
@@ -2041,6 +2428,8 @@ const tMain = createI18n({
     filterPpt: 'Prezentacje programu PowerPoint',
     filterMarkdown: 'Pliki tekstowe (Markdown, TXT, JSON)',
     filterHtml: 'Dokumenty HTML',
+    filterMindmap: 'Mapy myśli (pliki XMind)',
+    filterHwp: 'Dokumenty HWP (HWP, HWPX)',
     filterPdf: 'Dokumenty PDF',
     errBadArgs: 'Nieprawidłowe argumenty',
     errBadName: 'Nieprawidłowa nazwa pliku',
@@ -2067,6 +2456,8 @@ const tMain = createI18n({
     pdfPptxLocalScannedDetail:
       'Każda strona została wyeksportowana jako obraz; tekst na slajdach nie jest edytowalny.',
     menuExportXlsx: 'Eksportuj jako Excel…',
+    menuExportMd: 'Eksportuj jako Markdown…',
+    menuExportEpub: 'Eksportuj jako EPUB…',
     pdfXlsxFailedMsg: 'Eksport jako Excel nie powiódł się',
     pdfXlsxBusyMsg: 'Eksport już trwa. Poczekaj na jego zakończenie.',
     pdfXlsxLocalScannedDetail:
@@ -2109,6 +2500,12 @@ const tMain = createI18n({
       '„{title}“ už několik minut využívá hodně paměti nebo procesoru ({memory} MB, {cpu} % CPU). Můžete dál čekat, nebo dokument zavřít (u neuložených změn se nejdřív zeptáme na uložení). Diagnostika byla zaznamenána.',
     watchdogWait: 'Dál čekat',
     watchdogClose: 'Zavřít dokument',
+    crashTitle: 'Dokument se neočekávaně zastavil',
+    crashBody: '„{title}“ se neočekávaně zastavil. Změny od posledního uložení mohly být ztraceny.',
+    crashReopen: 'Znovu otevřít',
+    crashReload: 'Znovu načíst',
+    crashClose: 'Zavřít',
+    crashLater: 'Teď ne',
     errFolderRootUnusable: 'Vybranou složku nelze načíst',
     menuFile: 'Soubor',
     menuSectionNew: 'Nový',
@@ -2120,14 +2517,23 @@ const tMain = createI18n({
     untitledDeck: 'Prezentace bez názvu',
     untitledMarkdown: 'Markdown bez názvu',
     untitledHtml: 'HTML bez názvu',
+    untitledMindmap: 'Myšlenková mapa bez názvu',
+    untitledHwp: 'HWP bez názvu',
     untitledPdf: 'PDF bez názvu',
     menuNewSlide: 'AI Slides',
     menuNewMarkdown: 'AI Markdown',
     menuNewHtml: 'AI HTML',
+    menuNewMindmap: 'Myšlenková mapa',
+    menuNewHwp: 'AI HWP',
     menuNewPdf: 'AI PDF',
     menuExportPdf: 'Exportovat jako PDF…',
     menuExportImages: 'Exportovat jako obrázky…',
     menuExportHtml: 'Exportovat jako samostatné HTML…',
+    menuExportMapImage: 'Exportovat jako obrázek (PNG)…',
+    menuExportMapOutline: 'Exportovat jako osnovu Markdown…',
+    menuMakeFromDocument: 'Vytvořit jiný dokument z tohoto',
+    menuDocumentSources: 'Zobrazit zdroje',
+    menuDerivedDocuments: 'Dokumenty vytvořené z tohoto',
     menuOpenInDocs: 'Převést a otevřít v Docs',
     menuPrint: 'Tisk…',
     menuOpen: 'Otevřít…',
@@ -2146,6 +2552,8 @@ const tMain = createI18n({
     filterPpt: 'Prezentace PowerPoint',
     filterMarkdown: 'Textové soubory (Markdown, TXT, JSON)',
     filterHtml: 'Dokumenty HTML',
+    filterMindmap: 'Myšlenkové mapy (soubory XMind)',
+    filterHwp: 'Dokumenty HWP (HWP, HWPX)',
     filterPdf: 'Dokumenty PDF',
     errBadArgs: 'Neplatné argumenty',
     errBadName: 'Neplatný název souboru',
@@ -2172,6 +2580,8 @@ const tMain = createI18n({
     pdfPptxLocalScannedDetail:
       'Každá stránka byla exportována jako celostránkový obrázek; text na snímcích nelze upravovat.',
     menuExportXlsx: 'Exportovat jako Excel…',
+    menuExportMd: 'Exportovat jako Markdown…',
+    menuExportEpub: 'Exportovat jako EPUB…',
     pdfXlsxFailedMsg: 'Export do Excelu se nezdařil',
     pdfXlsxBusyMsg: 'Export už probíhá. Počkejte, až se dokončí.',
     pdfXlsxLocalScannedDetail:
@@ -2212,6 +2622,13 @@ const tMain = createI18n({
       '"{title}" gebruikt al enkele minuten veel geheugen of CPU ({memory} MB, {cpu}% CPU). U kunt blijven wachten of het document sluiten (bij niet-opgeslagen wijzigingen wordt eerst gevraagd of u wilt opslaan). Diagnostische gegevens zijn vastgelegd.',
     watchdogWait: 'Blijven wachten',
     watchdogClose: 'Document sluiten',
+    crashTitle: 'Een document is onverwacht gestopt',
+    crashBody:
+      '"{title}" is onverwacht gestopt. Wijzigingen sinds de laatste keer opslaan zijn mogelijk verloren gegaan.',
+    crashReopen: 'Opnieuw openen',
+    crashReload: 'Opnieuw laden',
+    crashClose: 'Sluiten',
+    crashLater: 'Niet nu',
     errFolderRootUnusable: 'De geselecteerde map kan niet worden gelezen',
     menuFile: 'Bestand',
     menuSectionNew: 'Nieuw',
@@ -2223,14 +2640,23 @@ const tMain = createI18n({
     untitledDeck: 'Naamloze presentatie',
     untitledMarkdown: 'Naamloos Markdown',
     untitledHtml: 'Naamloos HTML',
+    untitledMindmap: 'Naamloze mindmap',
+    untitledHwp: 'Naamloos HWP',
     untitledPdf: 'Naamloze PDF',
     menuNewSlide: 'AI Slides',
     menuNewMarkdown: 'AI Markdown',
     menuNewHtml: 'AI HTML',
+    menuNewMindmap: 'Mindmap',
+    menuNewHwp: 'AI HWP',
     menuNewPdf: 'AI PDF',
     menuExportPdf: 'Exporteren als PDF…',
     menuExportImages: 'Exporteren als afbeeldingen…',
     menuExportHtml: 'Exporteren als één HTML-bestand…',
+    menuExportMapImage: 'Exporteren als afbeelding (PNG)…',
+    menuExportMapOutline: 'Exporteren als Markdown-overzicht…',
+    menuMakeFromDocument: 'Ander document maken van dit document',
+    menuDocumentSources: 'Bronnen weergeven',
+    menuDerivedDocuments: 'Documenten gemaakt van dit document',
     menuOpenInDocs: 'Converteren en openen in Docs',
     menuPrint: 'Afdrukken…',
     menuOpen: 'Openen…',
@@ -2249,6 +2675,8 @@ const tMain = createI18n({
     filterPpt: 'PowerPoint-presentaties',
     filterMarkdown: 'Tekstbestanden (Markdown, TXT, JSON)',
     filterHtml: 'HTML-documenten',
+    filterMindmap: 'Mindmaps (XMind-bestanden)',
+    filterHwp: 'HWP-documenten (HWP, HWPX)',
     filterPdf: 'PDF-documenten',
     errBadArgs: 'Ongeldige argumenten',
     errBadName: 'Ongeldige bestandsnaam',
@@ -2275,6 +2703,8 @@ const tMain = createI18n({
     pdfPptxLocalScannedDetail:
       'Elke pagina is als afbeelding geëxporteerd; de tekst op de dia’s is niet bewerkbaar.',
     menuExportXlsx: 'Exporteren als Excel…',
+    menuExportMd: 'Exporteren als Markdown…',
+    menuExportEpub: 'Exporteren als EPUB…',
     pdfXlsxFailedMsg: 'Exporteren als Excel mislukt',
     pdfXlsxBusyMsg: 'Er is al een export bezig. Wacht tot deze is voltooid.',
     pdfXlsxLocalScannedDetail:
@@ -2317,6 +2747,13 @@ const tMain = createI18n({
       '"{title}" telah menggunakan banyak memori atau CPU selama beberapa minit ({memory} MB, CPU {cpu}%). Anda boleh terus menunggu atau menutup dokumen ini (perubahan yang belum disimpan akan ditanya dahulu). Diagnostik telah direkodkan.',
     watchdogWait: 'Terus Menunggu',
     watchdogClose: 'Tutup Dokumen',
+    crashTitle: 'Dokumen berhenti secara tidak dijangka',
+    crashBody:
+      '"{title}" berhenti secara tidak dijangka. Perubahan sejak simpanan terakhir mungkin telah hilang.',
+    crashReopen: 'Buka Semula',
+    crashReload: 'Muat Semula',
+    crashClose: 'Tutup',
+    crashLater: 'Bukan Sekarang',
     errFolderRootUnusable: 'Folder yang dipilih tidak dapat dibaca',
     menuFile: 'Fail',
     menuSectionNew: 'Baharu',
@@ -2328,14 +2765,23 @@ const tMain = createI18n({
     untitledDeck: 'Persembahan tanpa tajuk',
     untitledMarkdown: 'Markdown tanpa tajuk',
     untitledHtml: 'HTML tanpa tajuk',
+    untitledMindmap: 'Peta minda tanpa tajuk',
+    untitledHwp: 'HWP tanpa tajuk',
     untitledPdf: 'PDF tanpa tajuk',
     menuNewSlide: 'AI Slides',
     menuNewMarkdown: 'AI Markdown',
     menuNewHtml: 'AI HTML',
+    menuNewMindmap: 'Peta minda',
+    menuNewHwp: 'AI HWP',
     menuNewPdf: 'AI PDF',
     menuExportPdf: 'Eksport sebagai PDF…',
     menuExportImages: 'Eksport sebagai imej…',
     menuExportHtml: 'Eksport sebagai HTML fail tunggal…',
+    menuExportMapImage: 'Eksport sebagai imej (PNG)…',
+    menuExportMapOutline: 'Eksport sebagai rangka Markdown…',
+    menuMakeFromDocument: 'Buat dokumen lain daripada dokumen ini',
+    menuDocumentSources: 'Lihat sumber',
+    menuDerivedDocuments: 'Dokumen yang dibuat daripada dokumen ini',
     menuOpenInDocs: 'Tukar dan buka dalam Docs',
     menuPrint: 'Cetak…',
     menuOpen: 'Buka…',
@@ -2354,6 +2800,8 @@ const tMain = createI18n({
     filterPpt: 'Persembahan PowerPoint',
     filterMarkdown: 'Fail teks (Markdown, TXT, JSON)',
     filterHtml: 'Dokumen HTML',
+    filterMindmap: 'Peta minda (fail XMind)',
+    filterHwp: 'Dokumen HWP (HWP, HWPX)',
     filterPdf: 'Dokumen PDF',
     errBadArgs: 'Argumen tidak sah',
     errBadName: 'Nama fail tidak sah',
@@ -2380,6 +2828,8 @@ const tMain = createI18n({
     pdfPptxLocalScannedDetail:
       'Setiap halaman dieksport sebagai imej; teks pada slaid tidak boleh diedit.',
     menuExportXlsx: 'Eksport sebagai Excel…',
+    menuExportMd: 'Eksport sebagai Markdown…',
+    menuExportEpub: 'Eksport sebagai EPUB…',
     pdfXlsxFailedMsg: 'Eksport sebagai Excel gagal',
     pdfXlsxBusyMsg: 'Eksport sedang berjalan. Sila tunggu sehingga selesai.',
     pdfXlsxLocalScannedDetail:
@@ -2421,6 +2871,12 @@ const tMain = createI18n({
       '"{title}" משתמש בהרבה זיכרון או מעבד כבר כמה דקות (זיכרון {memory} MB, מעבד {cpu}%). אפשר להמשיך לחכות או לסגור את המסמך (אם יש שינויים שלא נשמרו, תתבקשו לשמור קודם). נתוני האבחון נרשמו.',
     watchdogWait: 'להמשיך לחכות',
     watchdogClose: 'סגירת המסמך',
+    crashTitle: 'מסמך נעצר באופן בלתי צפוי',
+    crashBody: '"{title}" נעצר באופן בלתי צפוי. ייתכן ששינויים שנעשו מאז השמירה האחרונה אבדו.',
+    crashReopen: 'פתיחה מחדש',
+    crashReload: 'טעינה מחדש',
+    crashClose: 'סגירה',
+    crashLater: 'לא עכשיו',
     errFolderRootUnusable: 'לא ניתן לקרוא את התיקייה שנבחרה',
     menuFile: 'קובץ',
     menuSectionNew: 'חדש',
@@ -2432,14 +2888,23 @@ const tMain = createI18n({
     untitledDeck: 'מצגת ללא שם',
     untitledMarkdown: 'Markdown ללא שם',
     untitledHtml: 'HTML ללא שם',
+    untitledMindmap: 'מפת חשיבה ללא שם',
+    untitledHwp: 'HWP ללא שם',
     untitledPdf: 'PDF ללא שם',
     menuNewSlide: 'AI Slides',
     menuNewMarkdown: 'AI Markdown',
     menuNewHtml: 'AI HTML',
+    menuNewMindmap: 'מפת חשיבה',
+    menuNewHwp: 'AI HWP',
     menuNewPdf: 'AI PDF',
     menuExportPdf: 'ייצוא כ-PDF…',
     menuExportImages: 'ייצוא כתמונות…',
     menuExportHtml: 'ייצוא כ-HTML בקובץ יחיד…',
+    menuExportMapImage: 'ייצוא כתמונה (PNG)…',
+    menuExportMapOutline: 'ייצוא כמתאר Markdown…',
+    menuMakeFromDocument: 'יצירת מסמך אחר מהמסמך הזה',
+    menuDocumentSources: 'הצגת מקורות',
+    menuDerivedDocuments: 'מסמכים שנוצרו מהמסמך הזה',
     menuOpenInDocs: 'המרה ופתיחה ב-Docs',
     menuPrint: 'הדפסה…',
     menuOpen: 'פתיחה…',
@@ -2458,6 +2923,8 @@ const tMain = createI18n({
     filterPpt: 'מצגות PowerPoint',
     filterMarkdown: 'קובצי טקסט (Markdown, TXT, JSON)',
     filterHtml: 'מסמכי HTML',
+    filterMindmap: 'מפות חשיבה (קובצי XMind)',
+    filterHwp: 'מסמכי HWP (HWP, HWPX)',
     filterPdf: 'מסמכי PDF',
     errBadArgs: 'ארגומנטים לא חוקיים',
     errBadName: 'שם קובץ לא חוקי',
@@ -2483,6 +2950,8 @@ const tMain = createI18n({
     pdfPptxBusyMsg: 'ייצוא כבר מתבצע. יש להמתין לסיומו.',
     pdfPptxLocalScannedDetail: 'כל עמוד יוצא כתמונה; הטקסט בשקופיות אינו ניתן לעריכה.',
     menuExportXlsx: 'ייצוא כ-Excel…',
+    menuExportMd: 'ייצוא כ-Markdown…',
+    menuExportEpub: 'ייצוא כ-EPUB…',
     pdfXlsxFailedMsg: 'הייצוא כ-Excel נכשל',
     pdfXlsxBusyMsg: 'ייצוא כבר מתבצע. יש להמתין לסיומו.',
     pdfXlsxLocalScannedDetail:
@@ -2523,6 +2992,13 @@ const tMain = createI18n({
       '"{title}" कई मिनटों से बहुत अधिक मेमोरी या CPU इस्तेमाल कर रहा है (मेमोरी {memory} MB, CPU {cpu}%)। आप इंतज़ार जारी रख सकते हैं या यह दस्तावेज़ बंद कर सकते हैं (बिना सहेजे बदलाव होने पर पहले सहेजने के लिए पूछा जाएगा)। निदान जानकारी दर्ज कर ली गई है।',
     watchdogWait: 'इंतज़ार जारी रखें',
     watchdogClose: 'दस्तावेज़ बंद करें',
+    crashTitle: 'दस्तावेज़ अचानक बंद हो गया',
+    crashBody:
+      '"{title}" अचानक बंद हो गया। पिछली बार सहेजने के बाद किए गए बदलाव खो गए हो सकते हैं।',
+    crashReopen: 'फिर से खोलें',
+    crashReload: 'फिर से लोड करें',
+    crashClose: 'बंद करें',
+    crashLater: 'अभी नहीं',
     errFolderRootUnusable: 'चयनित फ़ोल्डर पढ़ा नहीं जा सका',
     menuFile: 'फ़ाइल',
     menuSectionNew: 'नया',
@@ -2534,14 +3010,23 @@ const tMain = createI18n({
     untitledDeck: 'बिना शीर्षक प्रस्तुति',
     untitledMarkdown: 'अनाम Markdown',
     untitledHtml: 'अनाम HTML',
+    untitledMindmap: 'अनाम माइंड मैप',
+    untitledHwp: 'अनाम HWP',
     untitledPdf: 'अनाम PDF',
     menuNewSlide: 'AI Slides',
     menuNewMarkdown: 'AI Markdown',
     menuNewHtml: 'AI HTML',
+    menuNewMindmap: 'माइंड मैप',
+    menuNewHwp: 'AI HWP',
     menuNewPdf: 'AI PDF',
     menuExportPdf: 'PDF के रूप में निर्यात…',
     menuExportImages: 'छवियों के रूप में निर्यात…',
     menuExportHtml: 'एकल-फ़ाइल HTML के रूप में निर्यात…',
+    menuExportMapImage: 'छवि (PNG) के रूप में निर्यात…',
+    menuExportMapOutline: 'Markdown रूपरेखा के रूप में निर्यात…',
+    menuMakeFromDocument: 'इस दस्तावेज़ से दूसरा दस्तावेज़ बनाएँ',
+    menuDocumentSources: 'स्रोत देखें',
+    menuDerivedDocuments: 'इस दस्तावेज़ से बने दस्तावेज़',
     menuOpenInDocs: 'Docs में बदलें और खोलें',
     menuPrint: 'प्रिंट करें…',
     menuOpen: 'खोलें…',
@@ -2560,6 +3045,8 @@ const tMain = createI18n({
     filterPpt: 'PowerPoint प्रस्तुतियाँ',
     filterMarkdown: 'पाठ फ़ाइलें (Markdown, TXT, JSON)',
     filterHtml: 'HTML दस्तावेज़',
+    filterMindmap: 'माइंड मैप (XMind फ़ाइलें)',
+    filterHwp: 'HWP दस्तावेज़ (HWP, HWPX)',
     filterPdf: 'PDF दस्तावेज़',
     errBadArgs: 'अमान्य आर्ग्युमेंट',
     errBadName: 'अमान्य फ़ाइल नाम',
@@ -2586,6 +3073,8 @@ const tMain = createI18n({
     pdfPptxLocalScannedDetail:
       'प्रत्येक पृष्ठ छवि के रूप में निर्यात किया गया; स्लाइड का टेक्स्ट संपादन योग्य नहीं है।',
     menuExportXlsx: 'Excel के रूप में निर्यात करें…',
+    menuExportMd: 'Markdown के रूप में निर्यात करें…',
+    menuExportEpub: 'EPUB के रूप में निर्यात करें…',
     pdfXlsxFailedMsg: 'Excel के रूप में निर्यात विफल रहा',
     pdfXlsxBusyMsg: 'एक निर्यात पहले से चल रहा है। कृपया उसके पूरा होने की प्रतीक्षा करें।',
     pdfXlsxLocalScannedDetail:
@@ -2628,6 +3117,12 @@ const tMain = createI18n({
       '「{title}」已持續數分鐘佔用大量記憶體或 CPU（記憶體 {memory} MB，CPU {cpu}%）。可以繼續等待，或關閉這個文件（有未儲存的變更會先詢問是否儲存）。診斷資訊已記錄。', // public-hygiene: allow
     watchdogWait: '繼續等待',
     watchdogClose: '關閉文件',
+    crashTitle: '文件意外停止',
+    crashBody: '「{title}」意外停止。上次儲存後的變更可能已遺失。',
+    crashReopen: '重新開啟',
+    crashReload: '重新載入',
+    crashClose: '關閉',
+    crashLater: '暫不處理',
     errFolderRootUnusable: '無法讀取所選資料夾',
     menuFile: '檔案',
     menuSectionNew: '新增',
@@ -2639,14 +3134,23 @@ const tMain = createI18n({
     untitledDeck: '未命名簡報',
     untitledMarkdown: '未命名 Markdown',
     untitledHtml: '未命名 HTML',
+    untitledMindmap: '未命名心智圖',
+    untitledHwp: '未命名 HWP',
     untitledPdf: '未命名 PDF',
     menuNewSlide: 'AI Slides',
     menuNewMarkdown: 'AI Markdown',
     menuNewHtml: 'AI HTML',
+    menuNewMindmap: '心智圖',
+    menuNewHwp: 'AI HWP',
     menuNewPdf: 'AI PDF',
     menuExportPdf: '匯出為 PDF…',
     menuExportImages: '匯出為圖片…',
     menuExportHtml: '匯出為單檔 HTML…',
+    menuExportMapImage: '匯出為圖片 (PNG)…',
+    menuExportMapOutline: '匯出為 Markdown 大綱…',
+    menuMakeFromDocument: '用此文件新增其他文件',
+    menuDocumentSources: '檢視資料',
+    menuDerivedDocuments: '用此文件新增的文件',
     menuOpenInDocs: '轉換為 Docs 文件並開啟',
     menuPrint: '列印…',
     menuOpen: '開啟…',
@@ -2665,6 +3169,8 @@ const tMain = createI18n({
     filterPpt: 'PowerPoint 簡報',
     filterMarkdown: '文字檔 (Markdown, TXT, JSON)',
     filterHtml: 'HTML 文件',
+    filterMindmap: '心智圖 (XMind 檔案)',
+    filterHwp: 'HWP 文件 (HWP, HWPX)',
     filterPdf: 'PDF 文件',
     errBadArgs: '參數無效',
     errBadName: '檔案名稱不合法',
@@ -2690,6 +3196,8 @@ const tMain = createI18n({
     pdfPptxBusyMsg: '正在轉換中，請等待目前匯出完成。',
     pdfPptxLocalScannedDetail: '本機轉換已將各頁以圖片保真匯出，簡報中的文字無法編輯。',
     menuExportXlsx: '匯出為 Excel…',
+    menuExportMd: '匯出為 Markdown…',
+    menuExportEpub: '匯出為 EPUB…',
     pdfXlsxFailedMsg: '匯出為 Excel 失敗',
     pdfXlsxBusyMsg: '正在轉換中，請等待目前匯出完成。',
     pdfXlsxLocalScannedDetail: '掃描頁無法轉換為儲存格，對應工作表中已寫入提示列。',
@@ -2832,7 +3340,9 @@ function applyPendingDir(wcId: number, filePath: string): string {
 function afterFileMoved(oldPath: string, newPath: string): void {
   replaceRecentFile(oldPath, newPath)
   projectFileRenamed(oldPath, newPath)
+  documentLinkFileMoved(oldPath, newPath)
   if (/\.pptx$/i.test(newPath)) void replaceSlidesRecentFile(oldPath, newPath)
+  if (/\.pptx$/i.test(newPath)) moveSlidesTemplateSelection(oldPath, newPath)
   const affected = tabManager?.renameTabFile(oldPath, newPath) ?? []
   const detachedAffected = detachedRenameFile(oldPath, newPath)
   if (detachedAffected) affected.push(detachedAffected)
@@ -2842,6 +3352,8 @@ function afterFileMoved(oldPath: string, newPath: string): void {
     else if (t.kind === 'sheets') sheetsFileRenamed(t.webContents, oldPath, newPath)
     else if (t.kind === 'markdown') markdownFileRenamed(t.webContents, oldPath, newPath)
     else if (t.kind === 'html') htmlFileRenamed(t.webContents, oldPath, newPath)
+    else if (t.kind === 'mindmap') mindmapFileRenamed(t.webContents, oldPath, newPath)
+    else if (t.kind === 'hwp') hwpFileRenamed(t.webContents, oldPath, newPath)
     else if (t.kind === 'pdf') pdfFileRenamed(t.webContents, oldPath, newPath)
   }
 }
@@ -2854,6 +3366,7 @@ function trackedFilesUnder(dir: string): string[] {
     ...readSlidesRecentFiles(),
     ...(tabManager?.openFilePaths() ?? []),
     ...detachedFilePaths(),
+    ...documentLinkPaths(),
   ])
 }
 
@@ -2916,6 +3429,7 @@ const SEARCH_EXT_FAMILY: Record<string, readonly string[]> = {
   pptx: ['pptx', 'ppt'],
   md: ['md', 'markdown', 'txt', 'json'],
   html: ['html', 'htm'],
+  hwp: ['hwp', 'hwpx'],
 }
 
 /** one recursive watcher per tree root; follows the save-folder setting and the added folders */
@@ -3007,6 +3521,12 @@ function applyMenuFor(kind: TabKind): void {
     case 'html':
       buildHtmlMenu()
       break
+    case 'mindmap':
+      buildMindmapMenu()
+      break
+    case 'hwp':
+      buildHwpMenu()
+      break
     default:
       buildHomeMenu()
   }
@@ -3064,6 +3584,7 @@ function createShellWindow(): void {
     () => {
       win.webContents.send(TABS_CHANNELS.changed, manager.list())
       publishOpenDocumentsIfOwner([...manager.openFilePaths(), ...detachedFilePaths()])
+      refreshDocumentLinkMenu()
     },
     applyMenuFor,
     // no extension: these tabs have no file on disk yet; the title becomes the
@@ -3079,7 +3600,11 @@ function createShellWindow(): void {
               ? tm('untitledMarkdown')
               : kind === 'html'
                 ? tm('untitledHtml')
-                : tm('untitledSheet'),
+                : kind === 'mindmap'
+                  ? tm('untitledMindmap')
+                  : kind === 'hwp'
+                    ? tm('untitledHwp')
+                    : tm('untitledSheet'),
   )
   tabManager = manager
 
@@ -3172,6 +3697,7 @@ function createShellWindow(): void {
     manager.setTabFileFor(wc.id, path)
     detachedSetFileFor(wc.id, path)
     recordRecentFile(path)
+    noteDocumentSaved(wc, path, { mayBeOpen: true })
     applyPendingDir(wc.id, path)
   })
   // docs' save-as / silent first save lands on a new path → sync the tab title too
@@ -3195,15 +3721,38 @@ function createShellWindow(): void {
     manager.setTabFileFor(wc.id, path)
     detachedSetFileFor(wc.id, path)
     recordRecentFile(path)
+    noteDocumentSaved(wc, path)
     applyPendingDir(wc.id, path)
   })
   setHtmlFileSavedHook((wc, path) => {
     manager.setTabFileFor(wc.id, path)
     detachedSetFileFor(wc.id, path)
     recordRecentFile(path)
+    noteDocumentSaved(wc, path)
+    applyPendingDir(wc.id, path)
+  })
+  // mind map untitled first save / Save As lands on a new path
+  setMindmapFileSavedHook((wc, path) => {
+    manager.setTabFileFor(wc.id, path)
+    detachedSetFileFor(wc.id, path)
+    recordRecentFile(path)
+    noteDocumentSaved(wc, path)
+    applyPendingDir(wc.id, path)
+  })
+  // the mind map's toolbar button "make another document from this one"
+  setMindmapMakeFromDocumentHook((wc) => makeFromDocument(wc))
+  // hwp Save As lands on a new path
+  setHwpFileSavedHook((wc, path) => {
+    manager.setTabFileFor(wc.id, path)
+    detachedSetFileFor(wc.id, path)
+    recordRecentFile(path)
     applyPendingDir(wc.id, path)
   })
   setHtmlProvisionalTitleHook((wc, title) => {
+    manager.setTabTitleFor(wc.id, title)
+    detachedSetTitleFor(wc.id, title)
+  })
+  setMindmapProvisionalTitleHook((wc, title) => {
     manager.setTabTitleFor(wc.id, title)
     detachedSetTitleFor(wc.id, title)
   })
@@ -3220,6 +3769,7 @@ function createShellWindow(): void {
     detachedSetFileFor(wc.id, newPath)
     replaceRecentFile(oldPath, newPath)
     projectFileRenamed(oldPath, newPath)
+    documentLinkFileMoved(oldPath, newPath)
   })
   // markdown "convert & open in Docs" → route the fresh .docx to a docs tab
   setMarkdownDocxExportedHook((path) => {
@@ -3286,6 +3836,9 @@ const OPEN_DIALOG_EXTENSIONS = [
   'json',
   'html',
   'htm',
+  'xmind',
+  'hwp',
+  'hwpx',
 ]
 
 function notifyUnsupportedFile(filePath: string): void {
@@ -3401,6 +3954,20 @@ function routeDocumentPath(filePath: string): boolean {
     const existing = tabManager.findHtmlTabByPath(filePath)
     if (existing) tabManager.activateTab(existing)
     else tabManager.openHtmlTab(filePath)
+    return true
+  }
+  if (MINDMAP_RE.test(filePath)) {
+    recordRecentFile(filePath)
+    const existing = tabManager.findMindmapTabByPath(filePath)
+    if (existing) tabManager.activateTab(existing)
+    else tabManager.openMindmapTab(filePath)
+    return true
+  }
+  if (HWP_RE.test(filePath)) {
+    recordRecentFile(filePath)
+    const existing = tabManager.findHwpTabByPath(filePath)
+    if (existing) tabManager.activateTab(existing)
+    else tabManager.openHwpTab(filePath)
     return true
   }
   notifyUnsupportedFile(filePath)
@@ -3599,6 +4166,22 @@ function newHtmlTab(): void {
   }
 }
 
+function newMindmapTab(): void {
+  try {
+    bindPendingDir('mindmap', tabManager?.openMindmapTab())
+  } catch (err) {
+    surfaceNewTabError(err)
+  }
+}
+
+function newHwpTab(): void {
+  try {
+    bindPendingDir('hwp', tabManager?.openHwpTab())
+  } catch (err) {
+    surfaceNewTabError(err)
+  }
+}
+
 /**
  * "New PDF" creates a blank single-page .pdf in the default folder up front and
  * opens it as a regular file tab — the PDF module has no in-memory blank mode
@@ -3684,9 +4267,28 @@ function registerHomeIpc(): void {
   // files (docs wires these into its panel; see knowledge-base.ts). Path
   // arguments are validated against the starred set — a corpus file is the
   // only thing a knowledge tool may read.
-  ipcMain.handle('kb:list', (): unknown => listKnowledgeFiles(readStarredFiles()))
+  // A home ask narrowed to one starred group (spec 8.8) carries a scope main
+  // minted for that run; main resolves the group's members itself on every
+  // call (see KbRunScopes). A call without a scope is an unscoped ask.
+  const kbRunScopes = new KbRunScopes()
+  ipcMain.handle('kb:open-scope', (event, group: unknown): string =>
+    kbRunScopes.open(event.sender.id, group, readStarredGroupMap()),
+  )
+  ipcMain.handle('kb:close-scope', (event, scope: unknown): void =>
+    kbRunScopes.close(event.sender.id, scope),
+  )
 
-  ipcMain.handle('kb:search', (_event, raw: unknown): unknown => {
+  ipcMain.handle('kb:list', (event, raw: unknown): unknown => {
+    const starred = kbRunScopes.narrow(
+      event.sender.id,
+      raw,
+      readStarredFiles(),
+      readStarredGroupMap,
+    )
+    return listKnowledgeFiles(starred)
+  })
+
+  ipcMain.handle('kb:search', async (event, raw: unknown): Promise<unknown> => {
     const query = (raw && typeof raw === 'object' ? raw : {}) as { q?: unknown; limit?: unknown }
     const q = typeof query.q === 'string' ? query.q : ''
     const limitRaw = Number(query.limit)
@@ -3694,8 +4296,14 @@ function registerHomeIpc(): void {
     const store = fileIndexStore
     if (!q.trim() || !store) return []
     ensureFileIndexer()?.refreshIfStale(60_000)
-    const starred = readStarredFiles()
-    const hits = searchKnowledgeBase(
+    // a file saved since its last scan is still indexed as it was before the
+    // save, so only the files the index holds as they are on disk are quoted
+    const starred = store.pathsIndexedAsOnDisk(readStarredFiles())
+    // a group-scoped ask searches its group only: a further filter on the set above, never a wider one
+    const inScope = kbRunScopes.narrow(event.sender.id, raw, starred, readStarredGroupMap)
+    // a starred file open with unsaved changes is left out: its excerpt would
+    // be the text as last saved, before any withholding mark still in the editor
+    const hits = await searchSavedKnowledgeBase(
       (qq, pool) =>
         store.search(qq, { limit: pool }).hits.map((h) => ({
           path: h.path,
@@ -3704,13 +4312,13 @@ function registerHomeIpc(): void {
           snippetText: (h.snippet ?? []).map((part) => part.text).join(''),
         })),
       q,
-      starred,
+      inScope,
       Math.min(limit, 20),
     )
     return hits
   })
 
-  ipcMain.handle('kb:read', async (_event, raw: unknown): Promise<unknown> => {
+  ipcMain.handle('kb:read', async (event, raw: unknown): Promise<unknown> => {
     const req = (raw && typeof raw === 'object' ? raw : {}) as {
       path?: unknown
       offset?: unknown
@@ -3720,6 +4328,10 @@ function registerHomeIpc(): void {
     const offset = Number.isFinite(offsetRaw) ? Math.floor(offsetRaw) : 0
     if (!path || !readStarredFiles().includes(path)) {
       throw new Error('path is not in the knowledge base')
+    }
+    // a group-scoped ask reads its group only: the same refusal, on top of the check above
+    if (!kbRunScopes.narrow(event.sender.id, raw, [path], readStarredGroupMap).includes(path)) {
+      throw new Error(KB_NOT_IN_BASE)
     }
     return readKnowledgeFilePage(path, offset)
   })
@@ -3736,7 +4348,8 @@ function registerHomeIpc(): void {
         : []
       if (!q || paths.length < 2 || !ensureFileIndexer() || !fileIndexStore) return null
       searchReranker ??= new SearchReranker(fileIndexStore)
-      return searchReranker.rerank(q, paths, settings)
+      // excerpts leave the machine here: only from files indexed as they are on disk
+      return searchReranker.rerank(q, fileIndexStore.pathsIndexedAsOnDisk(paths), settings)
     },
   )
 
@@ -3820,6 +4433,8 @@ function registerHomeIpc(): void {
         { name: tm('filterPdf'), extensions: ['pdf'] },
         { name: tm('filterMarkdown'), extensions: ['md', 'markdown', 'txt', 'json'] },
         { name: tm('filterHtml'), extensions: ['html', 'htm'] },
+        { name: tm('filterMindmap'), extensions: ['xmind'] },
+        { name: tm('filterHwp'), extensions: ['hwp', 'hwpx'] },
       ],
       properties: ['openFile', 'multiSelections'],
     })
@@ -3849,6 +4464,16 @@ function registerHomeIpc(): void {
   ipcMain.handle(HOME_CHANNELS.newHtml, (_event, opts?: NewFileOpts) => {
     rememberPendingDir('html', opts)
     newHtmlTab()
+  })
+
+  ipcMain.handle(HOME_CHANNELS.newMindmap, (_event, opts?: NewFileOpts) => {
+    rememberPendingDir('mindmap', opts)
+    newMindmapTab()
+  })
+
+  ipcMain.handle(HOME_CHANNELS.newHwp, (_event, opts?: NewFileOpts) => {
+    rememberPendingDir('hwp', opts)
+    newHwpTab()
   })
 
   ipcMain.handle(HOME_CHANNELS.newPdf, (_event, opts?: NewFileOpts) => {
@@ -4347,6 +4972,8 @@ interface MenuIconSet {
   pdf: NativeImage
   md: NativeImage
   html: NativeImage
+  mindmap: NativeImage
+  hwp: NativeImage
   home: NativeImage
 }
 let menuIconCache: MenuIconSet | null = null
@@ -4358,6 +4985,8 @@ function menuIcons(): MenuIconSet {
     pdf: loadMenuIcon(menuPdfIcon1x, menuPdfIcon2x),
     md: loadMenuIcon(menuMdIcon1x, menuMdIcon2x),
     html: loadMenuIcon(menuHtmlIcon1x, menuHtmlIcon2x),
+    mindmap: loadMenuIcon(menuMindmapIcon1x, menuMindmapIcon2x),
+    hwp: loadMenuIcon(menuHwpIcon1x, menuHwpIcon2x),
     home: loadMenuIcon(menuHomeIcon1x, menuHomeIcon2x),
   }
   return menuIconCache
@@ -4371,6 +5000,8 @@ const TAB_MENU_ICON: Record<TabKind, keyof MenuIconSet> = {
   pdf: 'pdf',
   markdown: 'md',
   html: 'html',
+  mindmap: 'mindmap',
+  hwp: 'hwp',
   help: 'home',
 }
 
@@ -4452,6 +5083,55 @@ function activeMarkdownTarget() {
 }
 function activeHtmlTarget() {
   return activeEditorTarget('html', () => tabManager?.activeHtmlTab())
+}
+function activeMindmapTarget() {
+  return activeEditorTarget('mindmap', () => tabManager?.activeMindmapTab())
+}
+
+/** the document a kind's File menu acts on, for the provenance entries (spec 8.2, 9) */
+function linkedDocumentFor(kind: TabKind): LinkedDocument | undefined {
+  const target =
+    kind === 'html'
+      ? activeHtmlTarget()
+      : activeEditorTarget(kind, () => {
+          const tab = tabManager?.list().find((t) => t.active && t.kind === kind)
+          const wc = tab ? tabManager?.webContentsForTab(tab.id) : undefined
+          return tab && wc ? { id: tab.id, webContents: wc } : undefined
+        })
+  return target ? linkedDocumentForWebContents(target.webContents) : undefined
+}
+
+/** the document behind a webContents: a shell tab, or the focused detached window */
+function linkedDocumentForWebContents(wc: WebContents): LinkedDocument | undefined {
+  if (wc.isDestroyed()) return undefined
+  const inTab = tabManager?.describeWebContents(wc.id)
+  if (inTab) {
+    return {
+      webContents: wc,
+      title: inTab.title,
+      ...(inTab.filePath ? { filePath: inTab.filePath } : {}),
+    }
+  }
+  const detached = focusedDetachedTab()
+  if (detached?.webContents.id !== wc.id) return undefined
+  return {
+    webContents: wc,
+    title: detached.window.getTitle(),
+    ...(detached.filePath ? { filePath: detached.filePath } : {}),
+  }
+}
+
+/** whose menu is the application menu: the focused detached window's, else the active tab's */
+function linkMenuKind(): TabKind | undefined {
+  const detached = focusedDetachedTab()
+  if (detached) return detached.kind
+  const active = tabManager?.list().find((t) => t.active)
+  // a Present tab shows the Home menu
+  if (active?.kind === 'html' && !tabManager?.activeHtmlTab()) return 'home'
+  return active?.kind
+}
+function activeHwpTarget() {
+  return activeEditorTarget('hwp', () => tabManager?.activeHwpTab())
 }
 
 function registerTabsIpc(): void {
@@ -4580,6 +5260,16 @@ function registerTabsIpc(): void {
         click: () => newHtmlTab(),
       },
       {
+        label: tm('menuNewMindmap'),
+        icon: menuIcons().mindmap,
+        click: () => newMindmapTab(),
+      },
+      {
+        label: tm('menuNewHwp'),
+        icon: menuIcons().hwp,
+        click: () => newHwpTab(),
+      },
+      {
         label: tm('menuNewPdf'),
         icon: menuIcons().pdf,
         click: () => void newPdfTab(),
@@ -4628,6 +5318,8 @@ function buildHomeMenu(): void {
         { label: tm('menuNewSlide'), click: () => newSlideTab() },
         { label: tm('menuNewMarkdown'), click: () => newMarkdownTab() },
         { label: tm('menuNewHtml'), click: () => newHtmlTab() },
+        { label: tm('menuNewMindmap'), click: () => newMindmapTab() },
+        { label: tm('menuNewHwp'), click: () => newHwpTab() },
         { label: tm('menuNewPdf'), click: () => void newPdfTab() },
         { type: 'separator' },
         {
@@ -4691,6 +5383,7 @@ function buildPdfMenu(): void {
           accelerator: 'CmdOrCtrl+Shift+S',
           click: () => void savePdfAs(),
         },
+        ...documentLinkFileMenuItems('pdf'),
         { type: 'separator' },
         // local pdf2docx (P4): in-process PDFium wasm, no cloud counterpart
         {
@@ -4706,6 +5399,15 @@ function buildPdfMenu(): void {
         {
           label: tm('menuExportXlsx'),
           click: () => void exportPdfAsXlsxLocal(),
+        },
+        // Markdown / EPUB: the pdf tab's conversion dialog (page range, save location, progress)
+        {
+          label: tm('menuExportMd'),
+          click: () => requestPdfConvertDialog(activePdfTarget()?.webContents, 'md'),
+        },
+        {
+          label: tm('menuExportEpub'),
+          click: () => requestPdfConvertDialog(activePdfTarget()?.webContents, 'epub'),
         },
         { type: 'separator' },
         {
@@ -4777,6 +5479,7 @@ function buildMarkdownMenu(): void {
             if (tab) void requestMarkdownSave(tab.webContents, 'saveAs')
           },
         },
+        ...documentLinkFileMenuItems('markdown'),
         { type: 'separator' },
         {
           label: tm('menuExportDocx'),
@@ -4846,6 +5549,84 @@ function buildMarkdownMenu(): void {
   Menu.setApplicationMenu(Menu.buildFromTemplate(template))
 }
 
+// ---- hwp menu (hwp-main has no menu of its own; the shell owns hwp tabs) ----
+
+function buildHwpMenu(): void {
+  const isMac = process.platform === 'darwin'
+  const template: MenuItemConstructorOptions[] = [
+    ...(isMac ? [{ role: 'appMenu' as const }] : []),
+    {
+      label: tm('menuFile'),
+      submenu: [
+        {
+          label: tm('menuOpen'),
+          accelerator: 'CmdOrCtrl+O',
+          click: () => void openFileViaDialog(),
+        },
+        { type: 'separator' },
+        {
+          label: tm('backToHome'),
+          accelerator: 'Shift+CmdOrCtrl+H',
+          click: () => tabManager?.openHomeTab(),
+        },
+        { type: 'separator' },
+        // no accelerators here: the embedded editor swallows Ctrl+S and Ctrl+P
+        // before the menu sees them, so hwp-main takes those shortcuts off the key
+        // event itself; registering them twice would run them twice whenever focus
+        // sits outside the editor
+        {
+          label: tm('menuSave'),
+          click: () => {
+            const tab = activeHwpTarget()
+            if (tab) void requestHwpSave(tab.webContents, 'save')
+          },
+        },
+        {
+          label: tm('menuSaveAs'),
+          click: () => {
+            const tab = activeHwpTarget()
+            if (tab) void requestHwpSave(tab.webContents, 'saveAs')
+          },
+        },
+        { type: 'separator' },
+        {
+          label: tm('menuExportPdf'),
+          click: () => {
+            const tab = activeHwpTarget()
+            if (tab) requestHwpPrint(tab.webContents, 'pdf')
+          },
+        },
+        {
+          label: tm('menuPrint'),
+          click: () => {
+            const tab = activeHwpTarget()
+            if (tab) requestHwpPrint(tab.webContents, 'print')
+          },
+        },
+        { type: 'separator' },
+        {
+          label: tm('menuClose'),
+          accelerator: 'CmdOrCtrl+W',
+          click: () => closeFocusedEditor(),
+        },
+      ],
+    },
+    editMenuTemplate(process.platform, appMenuLabels(currentLang())),
+    windowMenuTemplate(process.platform, appMenuLabels(currentLang())),
+    {
+      role: 'help',
+      label: tm('menuHelp'),
+      submenu: [
+        { label: tm('thirdPartyNotices'), click: () => void openThirdPartyNotices() },
+        { type: 'separator' },
+        checkUpdatesMenuItem(appMenuLabels(currentLang())),
+        aboutMenuItem(appMenuLabels(currentLang())),
+      ],
+    },
+  ]
+  Menu.setApplicationMenu(Menu.buildFromTemplate(template))
+}
+
 // ---- html menu (html-main has no menu of its own; the shell owns html tabs) ----
 
 function buildHtmlMenu(): void {
@@ -4883,6 +5664,7 @@ function buildHtmlMenu(): void {
             if (tab) void requestHtmlSave(tab.webContents, 'saveAs')
           },
         },
+        ...documentLinkFileMenuItems('html'),
         { type: 'separator' },
         {
           label: tm('menuExportDocx'),
@@ -4930,6 +5712,138 @@ function buildHtmlMenu(): void {
       ],
     },
     editMenuTemplate(process.platform, appMenuLabels(currentLang())),
+    windowMenuTemplate(process.platform, appMenuLabels(currentLang())),
+    {
+      role: 'help',
+      label: tm('menuHelp'),
+      submenu: [
+        { label: tm('thirdPartyNotices'), click: () => void openThirdPartyNotices() },
+        { type: 'separator' },
+        checkUpdatesMenuItem(appMenuLabels(currentLang())),
+        aboutMenuItem(appMenuLabels(currentLang())),
+      ],
+    },
+  ]
+  Menu.setApplicationMenu(Menu.buildFromTemplate(template))
+}
+
+// ---- mind map menu (mindmap-main has no menu of its own; the shell owns mind map tabs) ----
+
+function buildMindmapMenu(): void {
+  const isMac = process.platform === 'darwin'
+  const labels = appMenuLabels(currentLang())
+  const template: MenuItemConstructorOptions[] = [
+    ...(isMac ? [{ role: 'appMenu' as const }] : []),
+    {
+      label: tm('menuFile'),
+      submenu: [
+        {
+          label: tm('menuSectionNew'),
+          accelerator: 'CmdOrCtrl+N',
+          click: () => newMindmapTab(),
+        },
+        {
+          label: tm('menuOpen'),
+          accelerator: 'CmdOrCtrl+O',
+          click: () => void openFileViaDialog(),
+        },
+        { type: 'separator' },
+        {
+          label: tm('backToHome'),
+          accelerator: 'Shift+CmdOrCtrl+H',
+          click: () => tabManager?.openHomeTab(),
+        },
+        { type: 'separator' },
+        {
+          label: tm('menuSave'),
+          accelerator: 'CmdOrCtrl+S',
+          click: () => {
+            const tab = activeMindmapTarget()
+            if (tab) void requestMindmapSave(tab.webContents, 'save')
+          },
+        },
+        {
+          label: tm('menuSaveAs'),
+          accelerator: 'CmdOrCtrl+Shift+S',
+          click: () => {
+            const tab = activeMindmapTarget()
+            if (tab) void requestMindmapSave(tab.webContents, 'saveAs')
+          },
+        },
+        ...documentLinkFileMenuItems('mindmap'),
+        { type: 'separator' },
+        {
+          label: tm('menuExportMapImage'),
+          click: () => {
+            const tab = activeMindmapTarget()
+            if (tab) sendMindmapExportRequest(tab.webContents, 'png')
+          },
+        },
+        {
+          label: tm('menuExportPdf'),
+          click: () => {
+            const tab = activeMindmapTarget()
+            if (tab) sendMindmapExportRequest(tab.webContents, 'pdf')
+          },
+        },
+        {
+          label: tm('menuExportMapOutline'),
+          click: () => {
+            const tab = activeMindmapTarget()
+            if (tab) sendMindmapExportRequest(tab.webContents, 'markdown')
+          },
+        },
+        { type: 'separator' },
+        {
+          label: tm('menuPrint'),
+          accelerator: 'CmdOrCtrl+P',
+          click: () => {
+            const tab = activeMindmapTarget()
+            if (tab) sendMindmapPrintRequest(tab.webContents)
+          },
+        },
+        { type: 'separator' },
+        {
+          label: tm('menuClose'),
+          accelerator: 'CmdOrCtrl+W',
+          click: () => closeFocusedEditor(),
+        },
+      ],
+    },
+    {
+      label: labels.edit,
+      submenu: [
+        // Undo and redo go to the map: its history is not the page's own, so the
+        // undo / redo roles would not reach it. The map already takes the keys
+        // itself; on Windows and Linux the shortcut is shown but not registered,
+        // or one press would undo twice.
+        {
+          label: labels.undo,
+          accelerator: 'CmdOrCtrl+Z',
+          registerAccelerator: false,
+          click: () => {
+            const tab = activeMindmapTarget()
+            if (tab) sendMindmapMenuCommand(tab.webContents, 'undo')
+          },
+        },
+        {
+          label: labels.redo,
+          accelerator: isMac ? 'Shift+Cmd+Z' : 'Ctrl+Y',
+          registerAccelerator: false,
+          click: () => {
+            const tab = activeMindmapTarget()
+            if (tab) sendMindmapMenuCommand(tab.webContents, 'redo')
+          },
+        },
+        { type: 'separator' },
+        { role: 'cut', label: labels.cut },
+        { role: 'copy', label: labels.copy },
+        { role: 'paste', label: labels.paste },
+        { role: 'delete', label: labels.delete },
+        { type: 'separator' },
+        { role: 'selectAll', label: labels.selectAll },
+      ],
+    },
     windowMenuTemplate(process.platform, appMenuLabels(currentLang())),
     {
       role: 'help',
@@ -5383,6 +6297,13 @@ function installBackToHomeItems(): void {
   setSlidesExtraFileMenuItems([backToHomeItem])
 }
 
+/** the editors that build their own menus show the same provenance entries (spec 8.2, 9) */
+function installDocumentLinkMenuItems(): void {
+  setDocsDocumentLinkMenuItems(() => documentLinkFileMenuItems('docs'))
+  setSheetsDocumentLinkMenuItems(() => documentLinkFileMenuItems('sheets'))
+  setSlidesDocumentLinkMenuItems(() => documentLinkFileMenuItems('slides'))
+}
+
 function installDockMenu(): void {
   if (process.platform !== 'darwin') return
   app.dock?.setMenu(
@@ -5509,8 +6430,21 @@ registerIntegrationsIpc({
     ? join(process.resourcesPath, 'cli', 'package.json')
     : join(APPS_ROOT, '..', 'packages', 'cli', 'package.json'),
 })
+registerResultStoreIpc(ipcMain, () => app.getPath('userData'))
 registerTabsIpc()
 registerDroppedFilesIpc()
+registerPdfStructureIpc()
+registerPdfConvertUiIpc({
+  findMarkdownTab: (path) => tabManager?.findMarkdownTabByPath(path),
+  closeTab: async (tabId) => {
+    await tabManager?.closeTab(tabId)
+  },
+  activateView: (viewId) => {
+    const tabId = tabManager?.tabIdForWebContents(viewId)
+    if (tabId) tabManager?.activateTab(tabId)
+  },
+  openDocument: (path) => openDocumentPath(path),
+})
 
 // sheets' project:resolveChat goes through the handler registered by docs-main; the sessionId reverse lookup hooks in here
 setSessionPathResolver(resolveSheetsSessionPath)
@@ -5567,6 +6501,8 @@ app.whenReady().then(async () => {
     pdf: join(PDF_OUT, 'renderer'),
     markdown: join(MARKDOWN_OUT, 'renderer'),
     html: join(HTML_OUT, 'renderer'),
+    mindmap: join(MINDMAP_OUT, 'renderer'),
+    hwp: join(HWP_OUT, 'renderer'),
     // the manual shares the shell's own renderer bundle (help mode)
     help: join(__dirname, '../renderer'),
   })
@@ -5632,6 +6568,14 @@ app.whenReady().then(async () => {
   // off the startup path: a symlink / registry write nobody is waiting for
   setTimeout(() => installCliLinkBestEffort(APP_SETTINGS_PATH()), 3000)
   startSheetsCaptureServer()
+  // Which open documents have unsaved changes, for the attachment readers of the
+  // editor mains and the knowledge base: a file being edited is not read as
+  // another document's material until it is saved (a withholding mark only
+  // reaches the file on save).
+  setOpenFilesSource(async () => {
+    const tabs = tabManager ? await tabManager.openDocuments() : []
+    return [...tabs, ...(await detachedOpenDocuments())]
+  })
   // Register the docs renderer bridge listeners before the MCP server can take
   // a visible-editing request.
   installDocsBridge()
@@ -5657,6 +6601,84 @@ app.whenReady().then(async () => {
     openBlankTab: () => openBlankSheetsTabForMcp(),
     authorizeSave: authorizeMcpSheetWrite,
     abandonBlankTab: (wcId) => abandonBlankSheetsTabForMcp(wcId),
+  })
+  // The PDF tools window (decision 0030): Home's "PDF tools" card opens it; what it
+  // writes, or a PDF picked for an editor-only tool, opens in a tab here.
+  configurePdfToolsWindow({
+    parentWindow: () => shellWindow,
+    lang: () => currentLang(),
+    theme: () => currentTheme(),
+    openResult: (path) => {
+      revealShellWindow()
+      return openGeneratedDocument(path)
+    },
+    openForEditing: (path) => {
+      revealShellWindow()
+      return openDocumentPath(path)
+    },
+  })
+  // The generate window ("make a new document from these files"): Home's entry
+  // points open it; "make" opens a new untitled tab with the request queued
+  // for it. A material open with unsaved changes is saved in place through the
+  // same dialog-free saves the MCP save-and-close uses, or its tab is shown.
+  configureGenerateWindow({
+    parentWindow: () => shellWindow,
+    lang: () => currentLang(),
+    theme: () => currentTheme(),
+    openTargetTab: (handoff) => {
+      revealShellWindow()
+      ensureTabManager().openGenerateTargetTab(handoff)
+    },
+    openConvertedTab: (doc) => {
+      revealShellWindow()
+      ensureTabManager().openConversionResult(doc)
+    },
+    starredGroupPaths: (group) => {
+      const groupOf = readStarredGroupMap()
+      return readStarredFiles().filter((p) => groupOf.get(p) === group)
+    },
+    tabIdFor: (wcId) => tabManager?.tabIdForWebContents(wcId),
+    openMaterials: {
+      list: async () => {
+        const tabs = tabManager ? await tabManager.openDocuments() : []
+        return [...tabs, ...(await detachedOpenDocuments())]
+      },
+      webContentsFor: (tabId) =>
+        tabManager?.webContentsForTab(tabId) ?? detachedWebContentsFor(tabId),
+      reveal: (tabId) => {
+        if (activateDetached(tabId)) return
+        tabManager?.activateTab(tabId)
+        revealShellWindow()
+      },
+      save: {
+        docs: (wcId, path) =>
+          mcpDocsControl.runCommand(wcId, 'save_document', { path, overwrite: true }),
+        sheets: (wcId, path) =>
+          mcpSheetsControl.runCommand(wcId, 'save_sheet', { path, overwrite: true }),
+        slides: (wcId, path) => mcpSlidesControl.saveDeck(wcId, path, true),
+        markdown: (wc) => requestMarkdownSave(wc, 'save'),
+        html: (wc) => requestHtmlSave(wc, 'save'),
+        mindmap: (wc) => requestMindmapSave(wc, 'save'),
+      },
+    },
+  })
+  // Provenance records (spec 9) and the editors' File-menu entry "make another
+  // document from this one" (8.2). After the make window: the records follow
+  // the hand-off store's events, and the entry opens that window.
+  configureDocumentLinks({
+    userDataPath: () => app.getPath('userData'),
+    activeDocument: (kind) => linkedDocumentFor(kind),
+    documentFor: (wc) => linkedDocumentForWebContents(wc),
+    parentFor: (wc) => detachedWindowForWebContents(wc.id) ?? shellWindow,
+    openPath: (path) => void openDocumentPath(path),
+    labels: () => ({
+      make: tm('menuMakeFromDocument'),
+      sources: tm('menuDocumentSources'),
+      derived: tm('menuDerivedDocuments'),
+    }),
+    tabIdFor: (wcId) => tabManager?.tabIdForWebContents(wcId),
+    menuKind: () => linkMenuKind(),
+    applyMenu: (kind) => applyMenuFor(kind),
   })
   configureMcpRuntime({
     version: app.getVersion(),
@@ -5691,6 +6713,11 @@ app.whenReady().then(async () => {
         save: htmlSaveToPath,
         discard: htmlDiscardPendingAssets,
       },
+      mindmap: {
+        read: mindmapReadOutline,
+        save: mindmapSaveToPath,
+      },
+      hwp: { read: hwpReadText },
     }),
     // the headless create_*/read_* tools delegate to the bundled genoffice CLI
     // (the same engines, no second implementation); it runs on the app's own
@@ -5721,15 +6748,80 @@ app.whenReady().then(async () => {
     }),
     logFilePath: join(app.getPath('userData'), 'mcp-log.txt'),
   })
+  // Agent mode (decision 0032): the person's Claude Code or Codex with its own tools in a
+  // project folder, in a window of its own. Its MCP server is per session and token-guarded,
+  // built from the same controls as the one above; the skills are a copy kept under userData.
+  configureAgentWindow({
+    parentWindow: () => shellWindow,
+    lang: () => currentLang(),
+    theme: () => currentTheme(),
+    statuses: () => sharedSubscriptionStatuses(),
+    aiSettings: () => readStoredAiSettings(),
+    readPrefs: () => normalizeAgentPrefs(readAppSettings(APP_SETTINGS_PATH()).agent),
+    writePrefs: (prefs) => writeAppSetting(APP_SETTINGS_PATH(), 'agent', prefs),
+    openPath: (path) => routeDocumentPath(path),
+    openDocuments: () => [...(tabManager?.openFilePaths() ?? []), ...detachedFilePaths()],
+    userData: app.getPath('userData'),
+    runners: {
+      claude: (options, onEvent) => startClaudeAgentSession(options, onEvent),
+      codex: (options, onEvent) => startCodexAgentSession(options, onEvent),
+    },
+    startAppMcp: (projectRoot) => {
+      const mcp = currentMcpRuntimeDeps()
+      if (!mcp) throw new Error('the MCP runtime is not configured')
+      return startAgentMcpServer(mcp, projectRoot)
+    },
+    buildSkills: async (projectRoot) => {
+      const sources = await agentSkillSources({
+        homeDir: homedir(),
+        projectRoot,
+        appSkillsDir: join(homedir(), '.ieumoffice', 'skills'),
+      })
+      const bundle = await buildAgentSkillBundle(
+        sources,
+        // not under userData: that folder is protected from sessions, and the
+        // copied skills' scripts must be readable to run
+        join(process.env.LOCALAPPDATA ?? tmpdir(), 'IeumOffice', 'agent-skills'),
+      )
+      return bundle.dir
+    },
+  })
   void startMcpFromSettings(currentMcpSettings()).catch((error) => {
     console.error('[mcp] failed to start on boot:', error)
   })
   createShellWindow()
   // deferred to ready: labels need currentLang(), which reads app.getLocale()
   installBackToHomeItems()
+  installDocumentLinkMenuItems()
   installDockMenu()
   setUpdateCheckInvoker(() => void checkForUpdatesNow())
   initAutoUpdater(() => shellWindow, currentUpdateChannel())
+  // crash record on this PC (crash-log.jsonl in userData) and, outside
+  // headless runs, a prompt when the renderer of an open document dies
+  startCrashWatch({
+    prompt: headlessArgv.kind === 'none',
+    editorOf: (wc) => {
+      if (shellWindow && !shellWindow.isDestroyed() && shellWindow.webContents.id === wc.id) {
+        return 'home'
+      }
+      return (
+        tabManager?.describeWebContents(wc.id)?.kind ?? detachedDocumentFor(wc.id)?.kind ?? 'other'
+      )
+    },
+    documentOf: (wc) => {
+      const doc = tabManager?.describeWebContents(wc.id) ?? detachedDocumentFor(wc.id)
+      return doc && doc.kind !== 'home' && doc.kind !== 'help' ? doc : null
+    },
+    parentWindow: (wc) => detachedWindowForWebContents(wc.id) ?? shellWindow,
+    closeDocument: (wc) => {
+      const id = tabManager?.tabIdForWebContents(wc.id)
+      if (id && tabManager) return tabManager.closeTabWithoutPrompt(id)
+      const detachedId = detachedDocumentFor(wc.id)?.id
+      return detachedId ? closeDetachedWithoutPrompt(detachedId) : false
+    },
+    reopen: (filePath) => void openDocumentPath(filePath),
+    t: (key, params) => tm(key, params),
+  })
   // resource watchdog: a renderer that stays hot for minutes gets diagnostics
   // recorded and the user an offer to close the document (headless exports
   // are short-lived and unattended)
@@ -5796,6 +6888,7 @@ app.on('will-quit', () => {
   controlServer?.close()
   // a second instance that lost the lock quits too; it must not delete the running editor's list
   if (ownsOpenDocumentsRegistry) clearOpenDocuments(OPEN_DOCUMENTS_PATH())
+  stopAgentSessions()
   shutdownSubscriptionChildren()
 })
 

@@ -14,6 +14,8 @@
 import carlitoBoldUrl from '@genoffice/ui/fonts/Carlito-Bold.ttf?url'
 import carlitoRegularUrl from '@genoffice/ui/fonts/Carlito-Regular.ttf?url'
 
+import { TEMPLATE_FONT_FAMILY_KEYS } from '../shared/template-font-faces'
+
 const GENERIC_FAMILY =
   /(?:^|[\s,])(?:serif|sans-serif|monospace|cursive|fantasy|system-ui|math|ui-serif|ui-sans-serif|ui-monospace|ui-rounded)$/i
 
@@ -732,6 +734,15 @@ function registerAlias(alias: CellFontAlias, loads: Promise<unknown>[]): void {
     )
 }
 
+/// The aliases to register: a family the app ships (template-fonts.ts registers
+/// the real faces) needs no stand-in, whose local() chain could otherwise win
+/// the match. It stays in ALIAS_FAMILY_NAMES, so its fallback intent holds.
+export function registeredCellFontAliases(): readonly CellFontAlias[] {
+  return CELL_FONT_ALIASES.filter(
+    (alias) => !TEMPLATE_FONT_FAMILY_KEYS.has(alias.family.toLowerCase()),
+  )
+}
+
 /// Register + load alias faces before the first skeleton: canvas fillText
 /// never triggers lazy @font-face loads, and Univer measures only once.
 export function registerCellFontAliases(): Promise<unknown> {
@@ -743,7 +754,7 @@ export function registerCellFontAliases(): Promise<unknown> {
     { weight: '400', unicodeRange: TEXT_DINGBATS_RANGE },
     loads,
   )
-  for (const alias of CELL_FONT_ALIASES) {
+  for (const alias of registeredCellFontAliases()) {
     if (alias.skipIfLocal) {
       gated.push(
         genuineLocalExists(alias.skipIfLocal).then((genuine) => {

@@ -10,11 +10,14 @@ import './ai-subscription.css'
 export function AiFirstConnectionNotice({
   lang,
   codexKeepsHistory = false,
+  sendsWholeDocument = false,
   onAcknowledge,
 }: {
   readonly lang: Lang
   /** add the sentence that Codex may keep conversation content on this PC */
   readonly codexKeepsHistory?: boolean | undefined
+  /** add the sentence that page images and the whole document text may be sent (the PDF editor) */
+  readonly sendsWholeDocument?: boolean | undefined
   /** adds the acknowledge button; omit where the notice is only re-read */
   readonly onAcknowledge?: (() => void) | undefined
 }): React.JSX.Element {
@@ -24,6 +27,7 @@ export function AiFirstConnectionNotice({
       <ul className="ai-sub-first-list">
         <li>{aiSubscriptionText(lang, 'noticeSend')}</li>
         <li>{aiSubscriptionText(lang, 'noticeTraining')}</li>
+        {sendsWholeDocument && <li>{aiSubscriptionText(lang, 'noticePdfWholeDocument')}</li>}
         {codexKeepsHistory && <li>{aiSubscriptionText(lang, 'noticeCodexHistory')}</li>}
       </ul>
       {onAcknowledge && (

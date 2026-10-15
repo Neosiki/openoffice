@@ -275,9 +275,12 @@ import {
   type Session,
 } from './session-state'
 import { registerAiIpc, registerSlidesOnlyAiIpc } from './ai-ipc'
+import { followTemplateSelection, inheritTemplateSelection } from './template-selection-ipc'
 import { listPrivateFontFaces, getPrivateFontData, registerEmbeddedFonts } from './fonts'
 import { listMetafileFonts } from './metafile-fonts'
 import { initFontStore, installLocalFontFiles } from './font-store'
+import { initTemplateFonts, registerTemplateFontsIpc } from './template-fonts'
+import { registerTemplateCoverIpc } from './template-cover'
 
 /** One slide, copied from any deck open in this process, waiting to be pasted into another. */
 let slideClipboard: { bundles: SlideBundle[]; pngs?: string[] } | null = null
@@ -291,6 +294,8 @@ const CLOUD_PAGE_PREFIX = 'cloudpptx:'
 const issuedCloudPages = new Set<string>()
 import { registerPresenterIpc } from './presenter-show'
 import { registerAttachmentIpc } from './attachments-ipc'
+import { registerGenerateHandoffIpc } from './generate-handoff-ipc'
+import { openSlidesSeed } from './seed-deck'
 
 export {
   configureSlidesRuntime,
@@ -472,6 +477,7 @@ export async function saveSessionDeckTo(session: Session, filePath: string): Pro
   await mkdir(dirname(filePath), { recursive: true })
   const metaRevAtSave = session.metaRev ?? 0
   await savePptxToFile(session.opened, filePath)
+  followTemplateSelection(session, session.path, filePath)
   session.path = filePath
   autosaveBackoff.delete(filePath)
   // mirror slides:save-as: a saved deck is no longer an unsaved untitled draft
@@ -939,6 +945,7 @@ async function saveDraftAfterGenerate(
     }
 
     await writeFile(draftPath, Buffer.from(bytes))
+    followTemplateSelection(session, session.path, draftPath)
     session.path = draftPath
     await pushRecent(draftPath)
     slidesOpenedHook?.(wc, draftPath)
@@ -1308,6 +1315,9 @@ export function registerSlidesIpc(): void {
   ipcMain.handle('slides:private-font-data', (_e, id: string) => getPrivateFontData(id))
 
   initFontStore()
+  initTemplateFonts()
+  registerTemplateFontsIpc()
+  registerTemplateCoverIpc()
   // Fonts changed (local install): rebuild every open session with a fresh
   // registry and push the relaid-out slides + a re-sync ping to all attached windows.
   const afterFontsChanged = (): void => {
@@ -1401,6 +1411,9 @@ export function registerSlidesIpc(): void {
       dropQueued()
       return result
     }
+    // A new tab that starts with a given deck (a conversion's result, T17): taken once, unsaved
+    const seeded = await openSlidesSeed(e.sender, fitWidthPx, deckDefaultFont)
+    if (seeded) return seeded
     // No queued path but the main process already has a session (remount after an HMR full
     // reload/crash recovery) -> restore from the session; otherwise the document is lost leaving
     // only the start screen, and reopening the same file just activates this empty tab with no
@@ -2025,6 +2038,7 @@ export function registerSlidesIpc(): void {
         }
         const old = sessions.get(e.sender.id)
         carryHistoryForReplacement(old, replaceSession)
+        inheritTemplateSelection(old, replaceSession)
         sessions.set(e.sender.id, replaceSession)
         // Re-point windows that shared the old session, or they diverge onto a dead deck
         if (old) for (const id of attachedIds(old)) sessions.set(id, replaceSession)
@@ -4360,6 +4374,7 @@ export function registerSlidesIpc(): void {
       const draftsDir = getDraftsDir()
       if (!existsSync(draftsDir)) mkdirSync(draftsDir, { recursive: true })
       session.path = pickDraftPath(draftsDir, tm('untitledDeck'))
+      followTemplateSelection(session, '', session.path)
       await pushRecent(session.path)
       slidesOpenedHook?.(e.sender, session.path)
     }
@@ -4398,6 +4413,7 @@ export function registerSlidesIpc(): void {
     try {
       const metaRevAtSave = session.metaRev ?? 0
       await savePptxToFile(session.opened, r.filePath)
+      followTemplateSelection(session, session.path, r.filePath)
       session.path = r.filePath
       autosaveBackoff.delete(r.filePath)
       dropUntitledRecovery(e.sender.id)
@@ -4593,6 +4609,9 @@ export function registerSlidesIpc(): void {
 
   // ── Chat attachments (slides:files-*) ──
   registerAttachmentIpc()
+
+  // ── Generate hand-off from the shell's "make" window (slides:handoff-*) ──
+  registerGenerateHandoffIpc()
 
   // ── Presenter-view multi-screen show (registered inside registerSlidesIpc: shell
   // aggregate mode only calls this function) ──
@@ -4855,6 +4874,15 @@ export function setSlidesExtraFileMenuItems(items: Electron.MenuItemConstructorO
   extraFileMenuItems = items
 }
 
+/** Shell-built File-menu entries for the open document (make another document
+ *  from it, its sources, the documents made from it); asked at every build */
+let documentLinkMenuItems: (() => Electron.MenuItemConstructorOptions[]) | null = null
+export function setSlidesDocumentLinkMenuItems(
+  items: (() => Electron.MenuItemConstructorOptions[]) | null,
+): void {
+  documentLinkMenuItems = items
+}
+
 /** Tab mode: Cmd+W closes the current tab rather than the whole shell window */
 let closeActiveTabHook: (() => void) | null = null
 export function setSlidesCloseTabHook(fn: (() => void) | null): void {
@@ -4888,6 +4916,7 @@ export function buildSlidesMenu(): Menu {
         ...(extraFileMenuItems.length > 0
           ? [{ type: 'separator' as const }, ...extraFileMenuItems]
           : []),
+        ...(documentLinkMenuItems?.() ?? []),
         { type: 'separator' },
         { label: tm('menuSave'), accelerator: 'CmdOrCtrl+S', click: () => send('save') },
         { label: tm('menuSaveAs'), accelerator: 'CmdOrCtrl+Shift+S', click: () => send('save-as') },
@@ -4898,10 +4927,12 @@ export function buildSlidesMenu(): Menu {
         { label: tm('menuExportImages'), click: () => send('export-images') },
         { label: tm('menuPrint'), accelerator: 'CmdOrCtrl+P', click: () => send('print') },
         { type: 'separator' },
+        // tab mode: the item closes the focused tab or window, never the app,
+        // so it is named and bound like every other editor's Close
         closeActiveTabHook
           ? {
-              label: isMac ? tm('menuClose') : tm('menuQuit'),
-              accelerator: isMac ? 'CmdOrCtrl+W' : 'CmdOrCtrl+Q',
+              label: tm('menuClose'),
+              accelerator: 'CmdOrCtrl+W',
               click: () => closeActiveTabHook?.(),
             }
           : isMac

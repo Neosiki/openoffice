@@ -28,6 +28,7 @@ import {
   type SubscriptionProgram,
 } from './locate'
 import {
+  killProcessTree,
   runSubscriptionProgram,
   sharedSubscriptionChildRegistry,
   spawnSubscriptionProgram,
@@ -90,12 +91,24 @@ export const SUBSCRIPTION_LOGIN_ARGS_ENV = 'GENOFFICE_SUBSCRIPTION_LOGIN_ARGS'
  * configured is ever read as PowerShell code. The two variables are removed
  * before the program starts.
  */
-const LOGIN_WINDOW_SCRIPT = [
-  `$exe = $env:${SUBSCRIPTION_LOGIN_EXE_ENV}`,
-  `$arguments = $env:${SUBSCRIPTION_LOGIN_ARGS_ENV} -split "\`n"`,
-  `Remove-Item Env:${SUBSCRIPTION_LOGIN_EXE_ENV}, Env:${SUBSCRIPTION_LOGIN_ARGS_ENV}`,
-  'Start-Process -FilePath $exe -ArgumentList $arguments -Wait',
-].join('; ')
+function loginWindowScript(windowStyle: 'Normal' | 'Hidden'): string {
+  return [
+    `$exe = $env:${SUBSCRIPTION_LOGIN_EXE_ENV}`,
+    `$arguments = $env:${SUBSCRIPTION_LOGIN_ARGS_ENV} -split "\`n"`,
+    `Remove-Item Env:${SUBSCRIPTION_LOGIN_EXE_ENV}, Env:${SUBSCRIPTION_LOGIN_ARGS_ENV}`,
+    `Start-Process -FilePath $exe -ArgumentList $arguments -WindowStyle ${windowStyle} -Wait`,
+  ].join('; ')
+}
+
+/** The login in a console window the user sees */
+const LOGIN_WINDOW_SCRIPT = loginWindowScript('Normal')
+
+/**
+ * The login in a console of its own that is never shown: the CLI still has a
+ * real console, opens the browser itself and takes the sign-in back from it.
+ * Only a code to paste needs the window; the visible login is for that.
+ */
+const LOGIN_HIDDEN_SCRIPT = loginWindowScript('Hidden')
 
 /** `Start-Process` joins its argument list with spaces, so an argument with a space is quoted here */
 function quoteWindowsArgument(argument: string): string {
@@ -138,6 +151,16 @@ export interface SubscriptionLoginOptions {
   configuredPath?: string | undefined
   /** called once when the login has ended, however it ended */
   onExit?: (() => void) | undefined
+  /**
+   * Windows: `hidden` runs the CLI's login without showing its window (the user
+   * signs in in the browser it opens); `visible`, the default, shows the window,
+   * where a code the browser hands back can be pasted.
+   */
+  window?: 'hidden' | 'visible' | undefined
+  /** called once the login has started, with a way to end it (its window and the CLI in it) */
+  onStarted?: ((stop: () => void) => void) | undefined
+  /** stand-in for tests: how `stop` ends the login's process tree (`killProcessTree` when absent) */
+  killTree?: ((child: SubscriptionChildLike) => void) | undefined
   locate?: SubscriptionLocator | undefined
   spawn?: SubscriptionSpawn | undefined
   platform?: NodeJS.Platform | undefined
@@ -187,7 +210,7 @@ function startLogin(
       '-WindowStyle',
       'Hidden',
       '-Command',
-      LOGIN_WINDOW_SCRIPT,
+      options.window === 'hidden' ? LOGIN_HIDDEN_SCRIPT : LOGIN_WINDOW_SCRIPT,
     ],
     // the login program inherits this directory, not the folder the app was started in
     { cwd: windowsSystemDir(env), env, stdio: 'ignore', windowsHide: true },
@@ -202,9 +225,10 @@ function startLogin(
 
 /**
  * Start the CLI's own login (`claude auth login`, `codex login`) with the
- * sanitised environment. On Windows it runs in a console window of its own,
- * where the vendor's flow prints its link and takes a pasted code; elsewhere
- * the flow runs in the browser the CLI opens. The app shows no login form and
+ * sanitised environment. On Windows it runs in a console of its own: hidden
+ * (`window: 'hidden'`), where the user signs in in the browser the CLI opens,
+ * or shown, where the vendor's flow prints its link and takes a pasted code;
+ * elsewhere the flow runs in the browser the CLI opens. The app shows no login form and
  * never sees the credentials. A window the user closes without signing in
  * simply leaves the provider `signed-out`.
  */
@@ -232,6 +256,9 @@ export async function launchSubscriptionLogin(
     child.once('exit', () => notifySubscriptionLoginChange(provider))
     if (options.onExit) child.once('exit', options.onExit)
     child.unref?.()
+    // the launcher's tree holds the CLI, so ending the tree ends the login
+    const killTree = options.killTree ?? ((tree) => killProcessTree(tree, { force: true }))
+    options.onStarted?.(() => killTree(child))
     return { ok: true }
   } catch (error) {
     return { ok: false, reason: 'failed', error: message(error) }

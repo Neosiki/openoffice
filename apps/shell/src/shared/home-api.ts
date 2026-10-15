@@ -10,6 +10,9 @@ import type {
   AiStreamChunk,
   AiStreamRequest,
   CodexModelCatalog,
+  FreeAiConnectResult,
+  FreeAiProviderId,
+  FreeAiQuota,
 } from '@genoffice/ai-provider'
 import type { UpdateChannel, UpdateUiState } from './update-api'
 import type { KbFileInfo, KbReadPage, KbSearchHit } from '@genoffice/agent-core'
@@ -210,12 +213,17 @@ export interface HomeApi {
   /** star / unstar a file */
   toggleStar(path: string): Promise<void>
   // ---- knowledge-base ask panel: the reader's starred corpus, askable ----
-  /** the starred corpus as the AI's knowledge base */
-  kbList(): Promise<KbFileInfo[]>
-  /** full-text search over the corpus */
-  kbSearch(query: { q: string; limit?: number }): Promise<KbSearchHit[]>
-  /** one page of a corpus file's parsed text (path must be in kbList) */
-  kbRead(path: string, offset: number): Promise<KbReadPage>
+  /** the starred corpus as the AI's knowledge base (`scope`: only the run's group, see kbOpenScope) */
+  kbList(scope?: string): Promise<KbFileInfo[]>
+  /** full-text search over the corpus (`scope`: only the run's group) */
+  kbSearch(query: { q: string; limit?: number }, scope?: string): Promise<KbSearchHit[]>
+  /** one page of a corpus file's parsed text (path must be in kbList; with `scope`, in the run's group) */
+  kbRead(path: string, offset: number, scope?: string): Promise<KbReadPage>
+  /** open a run narrowed to one starred group; main mints the scope and keeps the narrowing.
+   *  Rejects when the group has no starred files (the run must not widen to all) */
+  kbOpenScope(group: string): Promise<string>
+  /** the narrowed run is over */
+  kbCloseScope(scope: string): Promise<void>
   /** the user's AI provider settings (shared with every app's panel) */
   aiGetSettings(): Promise<AiSettings>
   /** one streamed model turn over the shared ai:stream handler */
@@ -238,6 +246,10 @@ export interface HomeApi {
   newMarkdown(opts?: NewFileOpts): Promise<void>
   /** open a blank html editor tab */
   newHtml(opts?: NewFileOpts): Promise<void>
+  /** open a new, untitled mind map tab */
+  newMindmap(opts?: NewFileOpts): Promise<void>
+  /** open a blank HWP editor tab; the file is named at its first save */
+  newHwp(opts?: NewFileOpts): Promise<void>
   /** create a blank single-page PDF in the default save folder and open it */
   newPdf(opts?: NewFileOpts): Promise<void>
   /** drop entries from the recent list (does not touch the files) */
@@ -370,6 +382,22 @@ export interface HomeApi {
     provider: AiSearchProviderId
     apiKey: string
   }): Promise<{ ok: boolean; error?: string }>
+  /**
+   * Make a free connection: OpenRouter through its browser sign-in (resolves
+   * once the browser came back, failed or was cancelled), Gemini by checking a
+   * pasted key. On success the main process has stored it as the AI in use.
+   */
+  connectFreeAi(
+    input: { provider: 'openrouter' } | { provider: 'gemini'; apiKey: string },
+  ): Promise<FreeAiConnectResult>
+  /** stop an OpenRouter browser sign-in that is still waiting */
+  cancelFreeAiConnect(): Promise<void>
+  /** forget a free connection's key; a selection of it goes back to auto */
+  disconnectFreeAi(provider: FreeAiProviderId): Promise<void>
+  /** today's free requests, when the provider reports them (OpenRouter) */
+  getFreeAiQuota(provider: FreeAiProviderId): Promise<FreeAiQuota | null>
+  /** open the provider's page where a key is made */
+  openFreeAiKeyPage(provider: FreeAiProviderId): Promise<void>
 }
 
 export interface AiCatalogEntry extends AiProviderMeta {
@@ -466,6 +494,8 @@ export const HOME_CHANNELS = {
   newSlide: 'home:new-slide',
   newMarkdown: 'home:new-markdown',
   newHtml: 'home:new-html',
+  newMindmap: 'home:new-mindmap',
+  newHwp: 'home:new-hwp',
   newPdf: 'home:new-pdf',
   removeRecent: 'home:remove-recent',
   revealPath: 'home:reveal-path',

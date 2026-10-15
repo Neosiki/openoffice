@@ -39,6 +39,7 @@
     <mediatype type="application/pdf" />
     <mediatype type="text/markdown" />
     <mediatype type="text/html" />
+    <mediatype type="application/vnd.xmind.workbook" />
   </provides>
   <releases>
     <release version="0.11.0" date="2026-09-28">

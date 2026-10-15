@@ -21,8 +21,11 @@ import {
 } from '../../../slides/src/main/slides-main'
 import { pdfIsDirty, requestPdfClose } from '../../../pdf/src/main/pdf-main'
 import { markdownIsDirty, requestMarkdownClose } from '../../../markdown/src/main/markdown-main'
+import { hwpIsDirty, requestHwpClose } from '../../../hwp/src/main/hwp-main'
 import { htmlIsDirty, requestHtmlClose } from '../../../html/src/main/html-main'
+import { mindmapIsDirty, requestMindmapClose } from '../../../mindmap/src/main/mindmap-main'
 import { canonicalPath } from './tab-manager'
+import { releaseClosedRenderer } from './renderer-disposal'
 import type { DetachedTab } from './tab-manager'
 import type { OpenDocumentTab, TabKind } from '../shared/tabs-api'
 import { DOCK_DWELL_MS, dockBand, pointInRect } from '../shared/tab-drag-geometry'
@@ -112,6 +115,8 @@ const DEFAULT_SIZE: Record<string, { width: number; height: number }> = {
   pdf: { width: 1200, height: 900 },
   markdown: { width: 1200, height: 850 },
   html: { width: 1200, height: 850 },
+  mindmap: { width: 1200, height: 850 },
+  hwp: { width: 1280, height: 900 },
 }
 
 /** where the pointer sits inside a freshly torn-off window's title bar */
@@ -152,6 +157,20 @@ export function findDetachedTabByPath(
 export function detachedWindowForWebContents(wcId: number): BrowserWindow | undefined {
   const rec = detached.get(wcId)
   return rec && !rec.window.isDestroyed() ? rec.window : undefined
+}
+
+/** the document a detached window shows (crash prompt, crash log) */
+export function detachedDocumentFor(
+  wcId: number,
+): { id: string; kind: TabKind; title: string; filePath?: string } | undefined {
+  const rec = detached.get(wcId)
+  if (!rec || rec.window.isDestroyed()) return undefined
+  return {
+    id: ID_PREFIX + wcId,
+    kind: rec.kind,
+    title: rec.window.getTitle(),
+    ...(rec.filePath ? { filePath: rec.filePath } : {}),
+  }
 }
 
 /** editor kind of the focused detached window, if a detached window has focus */
@@ -224,6 +243,10 @@ async function detachedIsDirty(rec: DetachedRecord): Promise<boolean> {
       return markdownIsDirty(wc.id)
     case 'html':
       return htmlIsDirty(wc.id)
+    case 'mindmap':
+      return mindmapIsDirty(wc.id)
+    case 'hwp':
+      return hwpIsDirty(wc.id)
     default:
       return false
   }
@@ -248,6 +271,10 @@ async function confirmDetachedClose(rec: DetachedRecord): Promise<boolean> {
       return requestMarkdownClose(wc, win)
     case 'html':
       return requestHtmlClose(wc, win)
+    case 'mindmap':
+      return requestMindmapClose(wc, win)
+    case 'hwp':
+      return requestHwpClose(wc, win)
     default:
       return true
   }
@@ -440,8 +467,12 @@ export function createDetachedEditorWindow(options: {
     if (torn?.rec === rec) torn = null
     win.contentView.removeChildView(view)
     detached.delete(wcId)
-    if (kind === 'docs') teardownDocsRenderer(view.webContents)
-    else view.webContents.close()
+    if (kind === 'docs') {
+      teardownDocsRenderer(view.webContents)
+      releaseClosedRenderer(view.webContents)
+    } else {
+      view.webContents.close()
+    }
     win.destroy()
   }
   const rec: DetachedRecord = {

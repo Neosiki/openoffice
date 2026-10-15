@@ -52,6 +52,7 @@ import {
 } from './asset-lifecycle'
 import { createMarkdownConversionSession, writeMarkdownConversion } from './conversion-lifecycle'
 import { confirmOdtReport, exportOdt, odtFilterName } from './odt-export'
+import { registerMarkdownSeedIpc } from './seed-main'
 import { MARKDOWN_CHANNELS, MAX_PASTED_IMAGE_BYTES } from '../shared/ipc'
 import type { ImageHostConfig } from '../shared/ipc'
 import { isImageHostUsable, normalizeImageHostConfig, uploadImageToHost } from './image-host'
@@ -738,6 +739,7 @@ function registerMarkdownIpc(): void {
   registerImageProtocol()
 
   ipcMain.handle(MARKDOWN_CHANNELS.consumePending, (e) => openPathByWc.get(e.sender.id) ?? null)
+  registerMarkdownSeedIpc({ opensFile: (wcId) => openPathByWc.has(wcId) })
 
   // ---- headless export mode (--headless-export) ----
 

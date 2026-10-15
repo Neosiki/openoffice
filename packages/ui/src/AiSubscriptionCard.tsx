@@ -19,11 +19,18 @@ import { AiMark } from './AiMark'
 import { aiSubscriptionText, type AiSubscriptionStringKey } from './strings-ai-subscription'
 import './ai-subscription.css'
 
+// The main process opens a terminal window of the CLI's own on Windows alone
+// (the install command, the login window for a pasted code); on macOS and
+// Linux the card does not offer them.
+const TERMINAL_WINDOWS = !(
+  typeof navigator !== 'undefined' && /mac|linux/i.test(navigator.platform)
+)
+
 /** What a card's buttons do; each receives the provider so two cards can share one set */
 export interface AiSubscriptionCardActions {
   /** run the vendor's official install command in a visible terminal window */
   readonly onInstall: (provider: AiSubscriptionProviderId) => void
-  /** start the CLI's own login */
+  /** start the CLI's own login; while a browser sign-in runs, open the CLI's window instead */
   readonly onLogin: (provider: AiSubscriptionProviderId) => void
   /** check the connection again */
   readonly onRecheck: (provider: AiSubscriptionProviderId) => void
@@ -37,6 +44,7 @@ const ACTION_LABELS: Record<AiSubscriptionCardAction, AiSubscriptionStringKey> =
   install: 'actionInstall',
   'install-help': 'actionInstallHelp',
   login: 'actionLogin',
+  'login-window': 'actionLoginWindow',
   'accept-metered': 'actionAcceptMetered',
   recheck: 'actionRecheck',
   'switch-account': 'actionSwitchAccount',
@@ -84,6 +92,7 @@ export function AiSubscriptionCard({
   const view = aiSubscriptionCardView(status, {
     account: showAccount && !compact,
     accountActions: !compact && onSwitchAccount !== undefined && onLogout !== undefined,
+    terminalWindows: TERMINAL_WINDOWS,
   })
   const provider = view.provider
   const params = {
@@ -95,6 +104,8 @@ export function AiSubscriptionCard({
     install: onInstall,
     'install-help': onOpenInstallHelp,
     login: onLogin,
+    // pressing login again while the browser sign-in runs opens the CLI's window
+    'login-window': onLogin,
     'accept-metered': onAcceptMetered,
     recheck: onRecheck,
     'switch-account': (id) => onSwitchAccount?.(id),
@@ -135,7 +146,8 @@ export function AiSubscriptionCard({
       {view.actions.length > 0 && (
         <div className="ai-sub-actions">
           {view.actions.map((action, index) =>
-            action === 'install-help' ? (
+            // the way out of a step, not the step itself: a link, never the highlighted button
+            action === 'install-help' || action === 'login-window' ? (
               <button
                 key={action}
                 type="button"
@@ -191,7 +203,7 @@ export function AiConnectPrompt({
    * scrolls the prompt into view, so the user sees why nothing was sent
    */
   readonly attention?: number | undefined
-  /** open Settings › AI; offered when the selected key provider is not filled in */
+  /** open Settings › AI; offered when the selected key provider is not filled in, or nothing is connected (the free connections are there) */
   readonly onOpenSettings?: (() => void) | undefined
 }): React.JSX.Element | null {
   const view = aiConnectPromptView(choice)
@@ -229,6 +241,23 @@ export function AiConnectPrompt({
           {...actions}
         />
       ))}
+      {view.free && onOpenSettings && (
+        <div className="ai-sub-free">
+          <p className="ai-sub-note" data-note="connectFreeHint">
+            {aiSubscriptionText(lang, 'connectFreeHint')}
+          </p>
+          <div className="ai-sub-actions">
+            <button
+              type="button"
+              className="ai-sub-btn"
+              data-action="connect-free"
+              onClick={onOpenSettings}
+            >
+              {aiSubscriptionText(lang, 'actionConnectFree')}
+            </button>
+          </div>
+        </div>
+      )}
       {view.settings && onOpenSettings && (
         <div className="ai-sub-actions">
           <button

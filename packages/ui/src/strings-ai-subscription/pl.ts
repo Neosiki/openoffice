@@ -5,6 +5,7 @@ export const pl = {
   cardChecking: 'Sprawdzanie…',
   cardNotInstalled: 'Nie zainstalowano',
   cardSignedOut: 'Nie zalogowano',
+  cardSigningIn: 'Logowanie…',
   cardReady: 'Połączono',
   cardReadyPlan: 'Połączono · {plan}',
   cardMetered: 'Zalogowano, ale nie w ramach subskrypcji',
@@ -16,6 +17,7 @@ export const pl = {
   cardErrFailed: 'Podczas sprawdzania {provider} wystąpił problem. Sprawdź ponownie.',
   actionInstall: 'Zainstaluj',
   actionLogin: 'Zaloguj się',
+  actionLoginWindow: 'Przeglądarka się nie otworzyła albo pokazuje kod?',
   actionRecheck: 'Sprawdź ponownie',
   actionAcceptMetered: 'Użyj mimo to',
   actionInstallHelp: 'Oficjalna instrukcja instalacji',
@@ -26,16 +28,21 @@ export const pl = {
   installNote:
     'Oficjalne polecenie instalacji firmy {vendor} zostanie uruchomione w nowym oknie terminala.',
   loginNote: 'Strona logowania, która się otworzy, należy do firmy {vendor}.',
+  signingInBrowserNote:
+    'Zaloguj się na swoje konto {vendor} w otwartej przeglądarce i zezwól na dostęp. Połączenie nastąpi samo, gdy skończysz.',
+  signingInWindowNote:
+    'Jeśli przeglądarka pokaże kod, skopiuj go, wklej w oknie, które właśnie się otworzyło, i naciśnij Enter.',
   meteredWarning: 'To nie jest subskrypcja: płacisz za faktyczne zużycie.',
   meteredMeaning:
     'To logowanie korzysta z klucza API lub konta rozliczanego za zużycie albo nie udało się ustalić jego rodzaju. Po wybraniu „Użyj mimo to” AI będzie działać przez to połączenie, a każde żądanie obciąży to konto.',
-  connectTitle: 'Połącz subskrypcję, aby korzystać z AI',
+  connectTitle: 'Połącz AI, aby zacząć',
   connectBody:
     'AI działa w ramach subskrypcji Claude lub Codex, którą już masz. Klucz API nie jest potrzebny.',
   connectProviderTitle: 'Połączenie {provider} jest teraz niedostępne',
   connectKeyBody:
     'Konfiguracja dostawcy {provider} nie została ukończona. Dokończ ją w Ustawieniach lub wybierz inne AI.',
-  errNotConnected: 'Żadne AI nie jest połączone. Najpierw połącz subskrypcję Claude lub Codex.',
+  errNotConnected:
+    'Żadne AI nie jest połączone. Najpierw połącz subskrypcję Claude lub Codex albo darmowe AI.',
   errNotInstalled: 'Na tym komputerze nie znaleziono programu {provider}.',
   errSignedOut: 'Logowanie do {provider} wygasło. Zaloguj się ponownie, aby kontynuować.',
   errRateLimit: 'Limit subskrypcji {provider} został wyczerpany.',
@@ -49,6 +56,12 @@ export const pl = {
   errHeadlessLimit: 'Osiągnięto godzinny limit żądań automatycznych.',
   errHeadlessLimitReset:
     'Osiągnięto godzinny limit żądań automatycznych. Będą znów możliwe o {time}.',
+  connectFreeHint: 'Nie masz subskrypcji? W Ustawieniach połączysz darmowe AI w około minutę.',
+  actionConnectFree: 'Połącz darmowe AI',
+  errFreeLimit:
+    'Dzisiejszy darmowy limit został wykorzystany. Spróbuj ponownie jutro lub wybierz inne AI w Ustawieniach.',
+  errFreeLimitReset:
+    'Dzisiejszy darmowy limit został wykorzystany. Możesz znów korzystać o {time}.',
   continueWith: 'Kontynuuj z {provider}',
   continueMeteredNote:
     'Połączenie {provider} nie jest subskrypcją: dalsza praca jest płatna za zużycie.',
@@ -62,6 +75,8 @@ export const pl = {
     'To, czy te treści służą do trenowania AI, zależy od ustawień Twojego konta w danej firmie.',
   noticeCodexHistory:
     'Ta aplikacja wyłącza zapisywanie historii rozmów w Codex, ale Codex może nadal przechowywać własne dzienniki diagnostyczne na tym komputerze.',
+  noticePdfWholeDocument:
+    'W edytorze PDF odczytywanie stron przez AI i tłumaczenie dokumentu mogą wysyłać obrazy stron i cały tekst dokumentu.',
   noticeAck: 'Rozumiem',
   codexNotice:
     'Korzystanie z subskrypcji Codex wewnątrz aplikacji nie jest metodą oficjalnie zalecaną przez OpenAI.',

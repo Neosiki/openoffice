@@ -18,7 +18,7 @@ declare global {
 /** Fetch and register any private faces not yet requested. Safe to call often (idempotent). */
 export async function syncPrivateFonts(): Promise<void> {
   window.__genofficeDocFontsSynced = false
-  let faces: Array<{ id: string; family: string; bold: boolean; italic: boolean }>
+  let faces: Array<{ id: string; family: string; bold: boolean; italic: boolean; weight?: string }>
   try {
     faces = await window.slidesApi.privateFontFaces()
   } catch {
@@ -39,7 +39,7 @@ export async function syncPrivateFonts(): Promise<void> {
           const data = await window.slidesApi.privateFontData(f.id)
           if (!data) return false
           const face = new FontFace(f.family, data, {
-            weight: f.bold ? '700' : '400',
+            weight: f.weight ?? (f.bold ? '700' : '400'),
             style: f.italic ? 'italic' : 'normal',
           })
           document.fonts.add(face)

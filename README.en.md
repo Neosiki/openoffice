@@ -3,12 +3,13 @@
 [한국어](README.md) · **English**
 
 IeumOffice (이음오피스) is a free, open-source desktop office suite. It opens
-and edits Word, Excel, PowerPoint, PDF, Markdown and HTML documents in one
-window, and its AI works on the document itself instead of answering in a
-chat box beside it.
+and edits Word, Excel, PowerPoint, PDF, Markdown and HTML documents and mind
+maps in one window, and its AI works on the document itself instead of
+answering in a chat box beside it.
 
 The AI runs on **the Claude or Codex subscription you already pay for**. You
-do not create an API key and you do not pay IeumOffice anything.
+do not create an API key and you do not pay IeumOffice anything. Without a
+subscription you can connect a **free AI** (OpenRouter or Google Gemini).
 
 IeumOffice is a modified version of the open-source project
 [GenOffice](https://github.com/genspark-ai/genoffice) (see
@@ -18,6 +19,7 @@ IeumOffice is a modified version of the open-source project
 
 - [What works today](#what-works-today)
 - [Connecting your subscription](#connecting-your-subscription)
+- [Using it for free, without a subscription](#using-it-for-free-without-a-subscription)
 - [What the app never does with your login](#what-the-app-never-does-with-your-login)
 - [What it costs](#what-it-costs)
 - [Images, pictures and search](#images-pictures-and-search)
@@ -33,9 +35,9 @@ IeumOffice is a modified version of the open-source project
 
 ## What works today
 
-- **Six editors in one tabbed window**: Word (`.docx`), Excel (`.xlsx`),
-  PowerPoint (`.pptx`), PDF, Markdown and HTML. Files are opened and saved in
-  their real formats on your own PC; edits are written back as narrow changes
+- **Editors in one tabbed window**: Word (`.docx`), Excel (`.xlsx`),
+  PowerPoint (`.pptx`), PDF, Markdown, HTML and mind maps. Files are opened
+  and saved in their real formats on your own PC; edits are written back as narrow changes
   to the original file, so the parts you did not touch are kept as they were.
 - **An AI panel in every editor.** You ask in plain words, and the AI changes
   the document through the app's own editing tools. You see what was changed
@@ -43,13 +45,27 @@ IeumOffice is a modified version of the open-source project
 - **PDF**: edit text on the page and convert a PDF to Word, Excel or
   PowerPoint on your PC.
 - **Slides from a request**: the deck is generated on your PC.
+- **Mind maps**: opens and saves XMind files (`.xmind`) in place. Elements the
+  editor does not show are kept when you save, and a map you did not change is
+  saved byte for byte as it was. Several sheets, themes, export to a picture,
+  PDF or Markdown outline, and printing.
+- **New documents from your documents**: start "Make a new document" from a
+  starred group on the home screen, from files you picked, or from an
+  editor's File menu, and the material is turned into a PowerPoint deck, an
+  HTML page or a mind map. The AI of the editor for the new document writes
+  it. Maps and Markdown convert into each other, and a map into a slide
+  outline, without AI. File → View Sources shows which files a document was
+  made from; that record stays on your PC.
 - **Search across your documents** from the home screen, indexed on your PC.
 - **A terminal command (`ieumoffice`), an MCP server and an agent skill**, so a
   coding agent can read, create and edit the same files.
 - **21 interface languages.** Korean and English were written by hand; the
   other 19 are machine translations.
 
-Released and verified on **Windows only**.
+Released for **Windows**, with a separate **beta for Apple Silicon Macs (M1 and
+later)**. The Mac build is unsigned and the developer has not been able to
+check it on a Mac; please report problems as
+[issues](https://github.com/pblsketch/openoffice/issues).
 
 ## Connecting your subscription
 
@@ -76,6 +92,24 @@ connected and Codex otherwise. You can pick one yourself in the same place or
 in the model picker of the AI panel. Claude Code 2.1.248 or newer is required;
 an older one is reported as needing an update.
 
+## Using it for free, without a subscription
+
+The first-run guide and **Settings → AI → Use for free** connect a free AI.
+
+- **OpenRouter**: press **Connect in browser**, sign up or sign in to
+  OpenRouter in the browser that opens, and allow access. There is no key to
+  copy. Only free models are used, and the card shows how many free requests
+  are left today.
+- **Google Gemini**: **Get a key** opens Google AI Studio, where you make a
+  key; paste it and press **Connect**. Only for people aged 18 or older. A key
+  from a Google project with billing turned on can be charged.
+
+Once connected, that AI becomes the **AI to use**. Free models are weaker than
+the subscription ones and have a daily limit (one edit of a document takes
+several requests). When it runs out, the app says so and when it frees again.
+While you use it for free, what you send may be used to improve that
+company's AI, so take care with documents that hold personal information.
+
 The subscription program is only the "brain". Editing the document, showing
 the changes and undoing them are done by the app. The program is started in an
 empty temporary folder with its own tools switched off, and a Claude run is
@@ -99,11 +133,12 @@ refused if the program reports that any tool is still available.
 
 IeumOffice itself is free. What the AI costs depends on the connection:
 
-| Connection                                                                                     | Cost                                                                     | When it is used                                            |
-| ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ | ---------------------------------------------------------- |
-| Claude or Codex signed in with a **subscription**                                              | Nothing beyond the subscription; requests count against its usage limits | By default (_Automatic_)                                   |
-| Claude or Codex signed in in a way that is **billed by usage** (an API key, a metered account) | You pay the vendor for what you use                                      | Only after you read the warning and choose **Use anyway**  |
-| An **API-key provider** set up under **Settings → AI → Advanced**                              | You pay that provider for what you use                                   | Only while you have chosen it yourself under **AI to use** |
+| Connection                                                                                     | Cost                                                                     | When it is used                                                 |
+| ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ | --------------------------------------------------------------- |
+| Claude or Codex signed in with a **subscription**                                              | Nothing beyond the subscription; requests count against its usage limits | By default (_Automatic_)                                        |
+| Claude or Codex signed in in a way that is **billed by usage** (an API key, a metered account) | You pay the vendor for what you use                                      | Only after you read the warning and choose **Use anyway**       |
+| An **API-key provider** set up under **Settings → AI → Advanced**                              | You pay that provider for what you use                                   | Only while you have chosen it yourself under **AI to use**      |
+| OpenRouter or Gemini connected under **Settings → AI → Use for free**                          | Nothing within the free limit                                            | Once connected, or while you have chosen it under **AI to use** |
 
 The app never moves your AI chat to a connection that costs money on its own.
 When a subscription runs out of its limit, or a login expires, the request
@@ -165,7 +200,7 @@ letting a program use a subscription automatically; an account may be
 restricted for it. So **Settings → AI → Advanced → Let automatic requests use
 a subscription** is off by default. While it is off, these requests use a key
 provider if you set one up and are otherwise answered with "unavailable".
-While it is on, they run one at a time and at most 20 an hour.
+While it is on, they run one at a time, with no hourly limit.
 `ieumoffice capabilities --json` reports what is available and by which route.
 
 IeumOffice can be installed next to GenOffice. It registers only its own names
@@ -184,14 +219,47 @@ choose **More info → Run anyway** (the wording differs between Windows
 versions). Download the installer only from the Releases page of this
 repository.
 
+### Mac (beta)
+
+The same Releases page carries `IeumOffice-<version>-arm64.dmg`, for Apple
+Silicon Macs (M1 and later) on macOS 12 or newer; it does not run on Intel
+Macs.
+
+The Mac build has no Apple Developer signature, so macOS warns that it cannot
+verify the app the first time you open it. Allow it once:
+
+1. Open the dmg and drag **IeumOffice** to **Applications**.
+2. Open IeumOffice from Applications. When the warning appears, choose **Done**.
+3. Open **System Settings → Privacy & Security**, find "IeumOffice was blocked"
+   near the bottom, choose **Open Anyway** and enter your Mac password.
+4. Choose **Open** in the window that follows. From then on it opens normally.
+
+If macOS says the app "is damaged and can't be opened", do not move it to the
+Trash; run this in Terminal and open it again (it removes the mark macOS puts
+on downloaded files):
+
+```sh
+xattr -dr com.apple.quarantine /Applications/IeumOffice.app
+```
+
+What differs on a Mac:
+
+- **It does not update itself.** When a new version is out it tells you and
+  opens the download page; install the new dmg over the old app.
+- The AI connection card has **no install button**. Follow its "official
+  install instructions" link to install Claude Code or Codex.
+- Signing in finishes in the browser. If the browser asks you to paste a code,
+  run `claude auth login` or `codex login` in Terminal yourself.
+
 ## Updates
 
-The installed app looks at this repository's GitHub Releases shortly after it
+The Windows app looks at this repository's GitHub Releases shortly after it
 starts and every four hours after that, and offers the new version in an
 update window. If there is no release, no network or the check fails, nothing
 happens and the app keeps working. To check yourself, use **Help → Check for
 Updates…** in the app menu. Pre-release versions are offered only when you
-choose the beta channel under **Settings → About**.
+choose the beta channel under **Settings → About**. The Mac build only tells
+you about a new version (see "Mac (beta)" above).
 
 ## Building from source
 
@@ -215,7 +283,10 @@ npm run native:build -w @genoffice/sheets
 npm run dist:win -- -- --publish never
 ```
 
-The installer appears in `apps/shell/release`. The details, including the
+The installer appears in `apps/shell/release`. The Mac installer is built by
+running "macOS build" in this repository's GitHub Actions (on a Mac, `npm run
+build:all` and then `npm run dist:mac -w @genoffice/shell -- --publish never`).
+The details, including the
 checks a change must pass, are in [CONTRIBUTING.md](CONTRIBUTING.md); the
 release procedure is in [docs/releasing.ko.md](docs/releasing.ko.md) (Korean).
 
@@ -225,9 +296,12 @@ project easy to take.
 
 ## Known limitations
 
-- **Windows only.** The macOS and Linux code inherited from GenOffice is still
-  in the repository, but this project does not build, release or test it.
-- **Unsigned installer**, as described above.
+- **Windows and Apple Silicon Macs (beta) only.** The developer cannot check
+  the Mac build directly; it is checked through the reports of Mac users. The
+  Intel Mac and Linux code inherited from GenOffice is still in the repository,
+  but this project does not build, release or test it.
+- **Unsigned installers**, as described above. That is also why the Mac build
+  cannot update itself.
 - **A subscription answers a little later than an API key.** Each request
   starts the vendor's program first, so the first words take a few seconds to
   appear (about four seconds with Claude on the development PC).
@@ -248,6 +322,18 @@ project easy to take.
 - **Image generation needs a key**, as described above.
 - **Translations.** 19 of the 21 interface languages are machine-translated
   and have not been reviewed by native speakers.
+- **Hiding does not reach everywhere.** Parts you hid from AI in the
+  PowerPoint, Markdown and HTML editors stay hidden when the file is attached
+  in another editor or asked about on the home screen, but hiding marks in
+  Word documents are not recognised, and the terminal command and MCP read
+  files as written. Until they are fixed, hidden text can also reach AI in
+  these cases: in PowerPoint, hidden text with no character formatting of its
+  own can be saved without the mark; in Markdown, inline code inside a hidden
+  part is saved outside it; and a Markdown document saved as `.txt` or `.json`
+  shows its hidden text to the Markdown editor's AI when reopened there.
+  [PRIVACY.md](PRIVACY.md) has the details.
+- **Old XMind 8 files** (with only `content.xml` inside) and password-protected
+  mind maps do not open.
 - **Updating from a real GitHub release had not been exercised end to end**
   when this was written, because no release existed yet.
 
@@ -255,8 +341,12 @@ project easy to take.
 
 These belong to a later stage and are **not in the app today**:
 
-- Mind-map documents (`.xmind`).
-- Creating a new document from a bundle of existing documents.
+- Making Word and Markdown documents with AI (today: PowerPoint, HTML and mind
+  maps).
+- Importing old XMind 8 files.
+- Showing a theme chosen in XMind with a similar look (today such a map is
+  drawn with the default look, and the file's theme is left as it is).
+- Mind maps in the terminal command (`ieumoffice`).
 
 ## Privacy
 
@@ -265,8 +355,10 @@ stay on your PC. When you use AI, the document content and the conversation go
 to Anthropic or OpenAI under your own account (or to the company whose API key
 you entered), and whether they are used for training is decided by your
 account settings there. Search queries go to Parallel and DuckDuckGo by
-default, and update checks go to GitHub. The full list is in
-[PRIVACY.md](PRIVACY.md).
+default, and update checks go to GitHub. When an editor or the app stops
+abnormally, only the time, what stopped, the reason and the editor are written
+to `crash-log.jsonl` in the data folder; no document text, file names or paths,
+and it is never sent anywhere. The full list is in [PRIVACY.md](PRIVACY.md).
 
 ## Contributing and reporting problems
 
@@ -288,6 +380,12 @@ project; IeumOffice changes how the AI is connected, removes the parts tied to
 Genspark's services and renames the product. The original copyright notices
 are kept, and [NOTICE](NOTICE) records the attribution and the fact that this
 is a modified version.
+
+The slide design templates are re-authored from the designs in
+[frontend-slides](https://github.com/zarazhangrui/frontend-slides) (MIT
+License), and their fonts are all licensed under the SIL Open Font License
+1.1; [NOTICE](NOTICE) carries the notice and the font list. The templates'
+Korean font pairings referred to [k-slide](https://k-slide.web.app).
 
 IeumOffice is an independent project. It is not affiliated with, sponsored by
 or endorsed by Genspark / Mainfunc, Inc., Anthropic or OpenAI. "GenOffice" and

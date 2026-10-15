@@ -45,6 +45,19 @@ export interface OpenDocumentsBridgeDeps {
     save: (contents: WebContents, filePath: string) => Promise<void>
     discard: (contents: WebContents) => Promise<void>
   }
+  /**
+   * mind map: the live outline text and the editor's own save to a given path
+   * (which refuses a map whose file did not open). Nothing is staged beside a
+   * map, so a discard has nothing to clean up.
+   */
+  mindmap?: {
+    read: (contents: WebContents) => Promise<string>
+    save: (contents: WebContents, filePath: string) => Promise<void>
+  }
+  /** hwp: live text only; the document is saved by the user in its editor */
+  hwp?: {
+    read: (contents: WebContents) => Promise<string>
+  }
 }
 
 function requireContents(tab: OpenDocumentTab, deps: OpenDocumentsBridgeDeps): WebContents {
@@ -139,8 +152,18 @@ export function createOpenDocumentsControl(deps: OpenDocumentsBridgeDeps): OpenD
         await deps.html.save(requireContents(tab, deps), filePath)
         return
       }
+      case 'mindmap': {
+        if (!deps.mindmap) throw new Error('the mind map editor is unavailable in this build')
+        await deps.mindmap.save(requireContents(tab, deps), filePath)
+        return
+      }
       case 'pdf':
         throw new Error('a PDF cannot be saved through this tool: the pdf app is a viewer')
+      case 'hwp':
+        throw new Error(
+          'an HWP document cannot be saved through this tool: it is saved by the user in its ' +
+            'editor. Pass unsaved:"discard" to close it without its changes, or leave it open',
+        )
       default:
         throw new Error(`cannot save a ${tab.kind} tab`)
     }
@@ -166,6 +189,12 @@ export function createOpenDocumentsControl(deps: OpenDocumentsBridgeDeps): OpenD
       case 'html':
         if (!deps.html) throw new Error('the HTML editor is unavailable in this build')
         return deps.html.read(requireContents(tab, deps))
+      case 'mindmap':
+        if (!deps.mindmap) throw new Error('the mind map editor is unavailable in this build')
+        return deps.mindmap.read(requireContents(tab, deps))
+      case 'hwp':
+        if (!deps.hwp) throw new Error('the HWP editor is unavailable in this build')
+        return deps.hwp.read(requireContents(tab, deps))
       default:
         throw new Error(`cannot read a ${tab.kind} tab`)
     }

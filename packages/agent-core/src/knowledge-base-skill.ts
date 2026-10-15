@@ -98,7 +98,7 @@ export function createKnowledgeBaseSkill(deps: KnowledgeBaseDeps): AgentSkill {
   const readTool: AgentToolDef = {
     name: 'read_knowledge_file',
     description:
-      'Read a page of a knowledge-base file’s parsed text (docx/pdf/xlsx/pptx/text are parsed locally). ' +
+      'Read a page of a knowledge-base file’s parsed text (docx/pdf/xlsx/pptx/hwp/text are parsed locally). ' +
       'Read offset=0 first; continue with the returned offset while totalChars says more remains.',
     inputSchema: {
       type: 'object',

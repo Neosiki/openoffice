@@ -1,9 +1,11 @@
+import { headlessSubscriptionOn } from '@genoffice/ai-provider'
 import {
   aiToolCapabilities,
   headlessSubscriptionUsage,
   type AiToolCapability,
 } from '@genoffice/ai-search'
 import { headlessCall } from '../cloud'
+import { pdfAiFeature, resolvePdfAiRoute } from '../pdf-ai'
 import type { CommandDef } from '../registry'
 import { appLaunch } from '../resources'
 
@@ -14,6 +16,8 @@ const SUMMARIZED = [
   'image_generation',
   'image_analysis',
   'video_analysis',
+  'pdf_ai_read',
+  'pdf_translation',
   'app',
 ] as const
 
@@ -28,13 +32,13 @@ const SUMMARIZED = [
 export const capabilitiesCommand: CommandDef = {
   name: 'capabilities',
   summary:
-    'Report which cloud features (search, image search, image generation, image and video analysis) are available in GenOffice and by which route, and whether the app is installed.',
+    'Report which cloud features (search, image search, image generation, image and video analysis, PDF AI page reading and translation) are available in GenOffice and by which route, and whether the app is installed.',
   usage: 'capabilities',
   async run(_args, ctx) {
     const { settingsPath, settings, context } = await headlessCall(ctx.env, 'capabilities')
     const caps = aiToolCapabilities(settings, context)
-    const subscription = settings.headlessSubscriptionEnabled === true
-    // the allowance only exists while the setting is on; off, no subscription request is counted
+    const subscription = headlessSubscriptionOn(settings)
+    // counted only while the setting is on; off, no subscription request is made
     const usage = subscription ? headlessSubscriptionUsage(context.dataDir) : null
     const imageAnalysis = feature(caps.imageAnalysis)
     const videoAnalysis = feature(caps.videoAnalysis)
@@ -47,16 +51,13 @@ export const capabilitiesCommand: CommandDef = {
         imageAnalysis.available || !videoAnalysis.available ? imageAnalysis : videoAnalysis,
       image_analysis: imageAnalysis,
       video_analysis: videoAnalysis,
+      // the PDF document jobs: the AI provider the chat runs on (page reading needs one that reads images)
+      pdf_ai_read: pdfAiFeature(resolvePdfAiRoute(settings, context, 'ai-read')),
+      pdf_translation: pdfAiFeature(resolvePdfAiRoute(settings, context, 'translate')),
       automatic_calls: {
         subscription_enabled: subscription,
-        ...(usage
-          ? {
-              used: usage.used,
-              limit: usage.limit,
-              remaining: Math.max(0, usage.limit - usage.used),
-              ...(usage.resetsAt !== undefined ? { resetsAt: usage.resetsAt } : {}),
-            }
-          : {}),
+        // there is no hourly cap: the count of the last hour is information only
+        ...(usage ? { used: usage.used, limit: null, remaining: null } : {}),
       },
       app: { available: appLaunch(ctx.env) !== null },
       settings_path: settingsPath,

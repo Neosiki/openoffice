@@ -299,8 +299,12 @@ export function subscriptionStatusMapOf(result: unknown): SubscriptionStatusMap 
     const models = signedIn ? subscriptionModelsOf(status.models) : undefined
     delete read.account
     delete read.models
+    delete read.signingIn
     if (account) read.account = account
     if (models) read.models = models
+    if (status.signingIn === 'browser' || status.signingIn === 'window') {
+      read.signingIn = status.signingIn
+    }
     return read
   }
   return { 'claude-code': statusOf('claude-code'), codex: statusOf('codex') }

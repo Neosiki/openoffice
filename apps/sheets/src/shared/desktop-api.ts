@@ -2549,6 +2549,7 @@ export const aiSettingsInputSchema = z
     // would make every save of settings that carry it fail)
     meteredAccepted: z.record(z.string(), z.boolean()).optional(),
     headlessSubscriptionEnabled: z.boolean().optional(),
+    headlessSubscriptionConsentVersion: z.number().int().nonnegative().optional(),
     subscriptionNoticeSeen: z.boolean().optional(),
   })
   .strict()

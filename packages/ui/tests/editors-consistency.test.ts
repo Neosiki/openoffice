@@ -1,5 +1,5 @@
 /**
- * The six editors were moved to the subscription contract one by one and
+ * The editors were moved to the subscription contract one by one and
  * drifted apart in small ways. These guards read their sources and keep three
  * things shared: the AI entry label, the send gate, and the reading of
  * subscription IPC answers.
@@ -70,6 +70,21 @@ const EDITORS: Record<string, Editor> = {
     ribbon: 'apps/html/src/renderer/components/Ribbon.tsx',
     gate: 'apps/html/src/renderer/ai/AiPanel.tsx',
     locales: 'apps/html/src/renderer/i18n',
+    retiredKeys: [],
+  },
+  mindmap: {
+    panel: 'apps/mindmap/src/renderer/ai/AiPanel.tsx',
+    ribbon: 'apps/mindmap/src/renderer/components/Toolbar.tsx',
+    gate: 'apps/mindmap/src/renderer/ai/AiPanel.tsx',
+    locales: 'apps/mindmap/src/renderer/i18n',
+    retiredKeys: [],
+  },
+  // no ribbon of its own (the embedded editor brings its chrome): the AI entry is the dock rail
+  hwp: {
+    panel: 'apps/hwp/src/renderer/ai/AiPanel.tsx',
+    ribbon: 'apps/hwp/src/renderer/App.tsx',
+    gate: 'apps/hwp/src/renderer/ai/AiPanel.tsx',
+    locales: 'apps/hwp/src/renderer/i18n',
     retiredKeys: [],
   },
 }
@@ -171,7 +186,7 @@ describe('the send gate', () => {
 })
 
 describe('reading subscription IPC answers', () => {
-  const APPS = ['docs', 'sheets', 'slides', 'pdf', 'markdown', 'html', 'shell']
+  const APPS = ['docs', 'sheets', 'slides', 'pdf', 'markdown', 'html', 'mindmap', 'hwp', 'shell']
 
   it.each(APPS)('%s: the local contract file re-exports the shared readers', (app) => {
     const text = source(`apps/${app}/src/shared/subscription-api.ts`)
@@ -193,4 +208,15 @@ describe('the first-connection notice', () => {
     expect(panel).not.toContain('codexKeepsHistory={false}')
     expect(panel).toMatch(/<AiFirstConnectionNotice[^>]*\bcodexKeepsHistory\b/)
   })
+
+  // only the PDF editor sends page images and whole documents (AI page reading, translation)
+  it.each(Object.entries(EDITORS))(
+    '%s: the whole-document sentence is PDF only',
+    (name, editor) => {
+      const panel = source(editor.panel)
+      if (name === 'pdf')
+        expect(panel).toMatch(/<AiFirstConnectionNotice[^>]*\bsendsWholeDocument\b/)
+      else expect(panel).not.toContain('sendsWholeDocument')
+    },
+  )
 })

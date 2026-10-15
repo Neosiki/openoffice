@@ -5,6 +5,7 @@ export const pt = {
   cardChecking: 'Verificando…',
   cardNotInstalled: 'Não instalado',
   cardSignedOut: 'Sem login',
+  cardSigningIn: 'Entrando…',
   cardReady: 'Conectado',
   cardReadyPlan: 'Conectado · {plan}',
   cardMetered: 'Login feito, mas não com uma assinatura',
@@ -16,6 +17,7 @@ export const pt = {
   cardErrFailed: 'Algo deu errado ao verificar {provider}. Verifique novamente.',
   actionInstall: 'Instalar',
   actionLogin: 'Entrar',
+  actionLoginWindow: 'O navegador não abriu ou mostra um código?',
   actionRecheck: 'Verificar novamente',
   actionAcceptMetered: 'Usar mesmo assim',
   actionInstallHelp: 'Guia oficial de instalação',
@@ -26,17 +28,21 @@ export const pt = {
   installNote:
     'O comando oficial de instalação da {vendor} é executado em uma nova janela de terminal.',
   loginNote: 'A página de login que se abre é da própria {vendor}.',
+  signingInBrowserNote:
+    'Entre na sua conta da {vendor} no navegador que abriu e permita o acesso. A conexão é feita sozinha quando você terminar.',
+  signingInWindowNote:
+    'Se o navegador mostrar um código, copie-o, cole-o na janela que acabou de abrir e pressione Enter.',
   meteredWarning: 'Isto não é uma assinatura: você paga pelo que usar.',
   meteredMeaning:
     'Este login usa uma chave de API ou uma conta de pagamento por consumo, ou não foi possível confirmar o tipo. “Usar mesmo assim” permite que a IA funcione com esta conexão, e cada solicitação é cobrada dessa conta.',
-  connectTitle: 'Conecte uma assinatura para usar a IA',
+  connectTitle: 'Conecte uma IA para começar',
   connectBody:
     'A IA funciona com a assinatura do Claude ou do Codex que você já tem. Nenhuma chave de API é necessária.',
   connectProviderTitle: 'A conexão {provider} não pode ser usada agora',
   connectKeyBody:
     'A configuração de {provider} não foi concluída. Conclua-a nas Configurações ou escolha outra IA.',
   errNotConnected:
-    'Nenhuma IA está conectada. Conecte primeiro uma assinatura do Claude ou do Codex.',
+    'Nenhuma IA está conectada. Conecte primeiro uma assinatura do Claude ou do Codex, ou uma IA gratuita.',
   errNotInstalled: 'O programa {provider} não foi encontrado neste PC.',
   errSignedOut: 'O login em {provider} expirou. Entre novamente para continuar.',
   errRateLimit: 'O limite da assinatura {provider} foi atingido.',
@@ -51,6 +57,12 @@ export const pt = {
   errHeadlessLimit: 'O limite por hora de solicitações automáticas foi atingido.',
   errHeadlessLimitReset:
     'O limite por hora de solicitações automáticas foi atingido. Elas voltam a ser possíveis às {time}.',
+  connectFreeHint:
+    'Não tem assinatura? Você pode conectar uma IA gratuita nas Configurações em cerca de um minuto.',
+  actionConnectFree: 'Conectar uma IA gratuita',
+  errFreeLimit:
+    'O uso gratuito de hoje acabou. Tente novamente amanhã ou escolha outra IA nas Configurações.',
+  errFreeLimitReset: 'O uso gratuito de hoje acabou. Você poderá usá-lo novamente às {time}.',
   continueWith: 'Continuar com {provider}',
   continueMeteredNote:
     'A conexão {provider} não é uma assinatura: continuar é cobrado por consumo.',
@@ -64,6 +76,8 @@ export const pt = {
     'Se esse conteúdo é usado para treinar IA depende das configurações da sua própria conta nessa empresa.',
   noticeCodexHistory:
     'Este aplicativo desativa o salvamento do histórico de conversas do Codex, mas o Codex ainda pode manter seus próprios registros de diagnóstico neste PC.',
+  noticePdfWholeDocument:
+    'No editor de PDF, a leitura de páginas com IA e a tradução de documentos podem enviar imagens das páginas e todo o texto do documento.',
   noticeAck: 'Entendi',
   codexNotice:
     'Usar uma assinatura do Codex dentro de um aplicativo não é um método oficialmente recomendado pela OpenAI.',

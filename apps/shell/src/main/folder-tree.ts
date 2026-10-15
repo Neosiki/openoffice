@@ -44,6 +44,9 @@ export const TREE_FILE_EXTENSIONS: ReadonlySet<string> = new Set([
   'json',
   'html',
   'htm',
+  'xmind',
+  'hwp',
+  'hwpx',
 ])
 
 const HIDDEN_DIR_NAMES = new Set(['node_modules', '__macosx'])

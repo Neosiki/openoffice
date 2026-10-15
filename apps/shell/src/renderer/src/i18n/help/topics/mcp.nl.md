@@ -62,13 +62,13 @@ Een verzoek van de opdracht `ieumoffice` of van een MCP-client heb je niet zelf 
 - **Een afbeelding beschrijven** gebruikt een provider met een sleutel als die is ingesteld. Je Claude- of Codex-abonnement wordt **niet gebruikt tenzij je dat toestaat**.
 - **Video en audio** hebben een provider met een sleutel nodig die video ondersteunt.
 
-Om het gebruik van je abonnement toe te staan, open je Instellingen ▸ AI ▸ **Geavanceerd** en zet je **Automatische verzoeken een abonnement laten gebruiken** aan. Eerst komt er een waarschuwing — "Geen van beide bedrijven raadt aan een programma je abonnement automatisch te laten gebruiken, en je account kan worden beperkt." — en de schakelaar gaat pas aan na **Toch inschakelen**.
+Om het gebruik van je abonnement toe te staan, open je Instellingen ▸ AI ▸ **Geavanceerd** en zet je **Automatische verzoeken een abonnement laten gebruiken** aan. Eerst komt er een waarschuwing — "Er is geen limiet per uur: een programma kan zoveel verzoeken sturen als het wil, en die kunnen de volledige tekst van een document en afbeeldingen van de pagina’s bevatten. Geen van beide bedrijven raadt aan een programma je abonnement automatisch te laten gebruiken, en je account kan worden beperkt." — en de schakelaar gaat pas aan na **Toch inschakelen**.
 
 Ook met de schakelaar aan:
 
 - Verzoeken worden één voor één afgehandeld. De andere wachten op hun beurt.
-- Per uur worden hooguit 20 verzoeken via een abonnement afgehandeld. Alle uitgevoerde opdrachten en alle MCP-aanroepen delen die teller. Daarboven mislukt het verzoek met een fout die zegt wanneer verzoeken weer mogelijk zijn.
-- Een aanmelding met betaling per verbruik die je met **Toch gebruiken** hebt toegestaan, telt hier niet als abonnement. Die wordt behandeld als een sleutel: heb je die gekozen als de AI die wordt gebruikt, dan lopen beschrijvingen van afbeeldingen erlangs, wat de schakelaar ook zegt, zonder de uurlimiet, en wordt elke beschrijving in rekening gebracht.
+- Er is geen limiet per uur. De beurt wisselt per verzoek, niet per taak, dus een lange pdf-vertaling wisselt af met andere aanroepers in plaats van ze op te houden. Een schakelaar die onder de vorige waarschuwing is aangezet, staat weer uit: lees de nieuwe waarschuwing en zet hem opnieuw aan.
+- Een aanmelding met betaling per verbruik die je met **Toch gebruiken** hebt toegestaan, telt hier niet als abonnement. Die wordt behandeld als een sleutel: heb je die gekozen als de AI die wordt gebruikt, dan lopen beschrijvingen van afbeeldingen erlangs, wat de schakelaar ook zegt, en wordt elke beschrijving in rekening gebracht.
 
 Staat de schakelaar uit en is er geen sleutel ingesteld, dan antwoordt de tool dat de functie niet beschikbaar is en noemt hij deze instelling. Een agent kan dat vooraf nagaan met de tool `capabilities`; zie [Opdrachtregel en agents](help://cli).
 
