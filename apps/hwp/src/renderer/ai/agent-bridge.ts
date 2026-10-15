@@ -32,6 +32,7 @@ const METHODS = [
   'addTableLines',
   'removeTableLines',
   'deleteTable',
+  'installFileMenu',
   'reveal',
   'selection',
   'replaceSelection',

@@ -47,6 +47,19 @@ const MAX_TABLE_LINES = 50
 const FLOATING_KINDS = new Set(['image', 'picture', 'shape', 'group', 'ole', 'textbox'])
 /** The command this plugin registers with the editor to move its caret to a place. */
 const REVEAL_COMMAND = 'ext:ieum-reveal'
+
+/**
+ * The event the File menu items this plugin adds fire on the editor's window, with the
+ * command as its detail: the app hears it and saves or prints the way Ctrl+S and Ctrl+P do.
+ */
+export const FILE_COMMAND_EVENT = 'ieum:file-command'
+/** The File menu items, top to bottom: the command the app runs, and the shortcut shown. */
+const FILE_MENU = [
+  { command: 'save', id: 'ext:ieum-save', shortcut: 'Ctrl+S' },
+  { command: 'saveAs', id: 'ext:ieum-save-as', shortcut: 'Ctrl+Shift+S' },
+  { command: 'pdf', id: 'ext:ieum-export-pdf' },
+  { command: 'print', id: 'ext:ieum-print', shortcut: 'Ctrl+P' },
+]
 /** The command that reads what the user has selected in the editor. */
 const SELECTION_COMMAND = 'ext:ieum-selection'
 /** The command that selects the word under the caret (a double click in the page). */
@@ -3239,6 +3252,48 @@ export const agentPlugin = {
             }
           }),
         )
+      }),
+
+      /**
+       * Put Save, Save As, Export as PDF and Print at the top of the editor's File menu. The
+       * embedded editor leaves out its own (the app owns the file), which left the menu with
+       * no way to save. Each item fires FILE_COMMAND_EVENT on the editor's window and the app
+       * does the rest. `labels` holds the four names in the app's language, by command. A
+       * second call puts the items back where they were; the names stay the first ones.
+       */
+      installFileMenu: guarded((labels) => {
+        for (const item of FILE_MENU) {
+          if (typeof labels?.[item.command] !== 'string' || !labels[item.command]) {
+            throw fail('BAD_ARGUMENT', `labels.${item.command} must be a non-empty string`)
+          }
+        }
+        if (!host.automation.registerCommand || !host.automation.addMenuItem) return { ok: false }
+        for (const item of FILE_MENU) {
+          try {
+            host.automation.registerCommand({
+              id: item.id,
+              label: labels[item.command],
+              ...(item.shortcut ? { shortcutLabel: item.shortcut } : {}),
+              execute: () => {
+                globalThis.dispatchEvent?.(
+                  new CustomEvent(FILE_COMMAND_EVENT, { detail: item.command }),
+                )
+              },
+            })
+          } catch {
+            // registered by an earlier call
+          }
+        }
+        try {
+          // each item goes on top, so the last one put there comes first
+          for (const item of [...FILE_MENU].reverse()) {
+            host.automation.addMenuItem({ menuId: 'file', commandId: item.id, position: 'top' })
+          }
+        } catch {
+          // an editor without a File menu
+          return { ok: false }
+        }
+        return { ok: true }
       }),
 
       /**

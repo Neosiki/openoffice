@@ -72,6 +72,7 @@ const api: HwpApi = {
   newTabs: (bytes, format) => ipcRenderer.invoke(HWP_CHANNELS.newTabs, bytes, format),
   commitSave: (bytes, tabs) => ipcRenderer.invoke(HWP_CHANNELS.commitSave, bytes, tabs),
   abortSave: () => ipcRenderer.send(HWP_CHANNELS.abortSave),
+  requestFileCommand: (command) => ipcRenderer.send(HWP_CHANNELS.fileCommand, command),
   setDirty: (dirty) => ipcRenderer.send(HWP_CHANNELS.dirtyChanged, dirty),
   onSaveRequest: (handler) => {
     const listener = (_e: Electron.IpcRendererEvent, mode: SaveMode) => handler(mode)
