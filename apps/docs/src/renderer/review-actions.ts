@@ -28,6 +28,7 @@ import {
   type CompareEntry,
 } from './editor/compare'
 import { pendingCommentPluginKey } from './editor/extensions'
+import { refuseInOdt } from './odt-gate'
 import type { InkAnnotation } from './editor/ink'
 import { renumber } from './ai/note-ops'
 import {
@@ -144,7 +145,7 @@ export function cancelNewComment(ctx: ReviewContext): void {
 /** New comment: open the pane with the composer; the mark is applied on submit */
 export function startNewComment(ctx: ReviewContext): void {
   const editor = ctx.editor
-  if (!editor) return
+  if (!editor || refuseInOdt('comment')) return
   if (editor.state.selection.empty) {
     // Word anchors on the word under a collapsed caret rather than refusing
     const word = wordRangeAtCaret(editor)
@@ -162,6 +163,10 @@ export function startNewComment(ctx: ReviewContext): void {
 
 export function submitNewComment(ctx: ReviewContext, text: string): void {
   if (!ctx.editor) return
+  if (refuseInOdt('comment')) {
+    cancelNewComment(ctx)
+    return
+  }
   setPendingCommentRange(ctx, null)
   const id = nextCommentId(ctx.comments)
   if (!addCommentToSelection(ctx.editor, id)) {
@@ -185,7 +190,7 @@ export function addCommentAt(
   author: string,
   initials?: string,
 ): string | null {
-  if (!ctx.editor) return null
+  if (!ctx.editor || refuseInOdt('comment')) return null
   const id = nextCommentId(ctx.comments)
   if (!addCommentToRange(ctx.editor, range.from, range.to, id)) return null
   const now = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z')
@@ -206,7 +211,7 @@ export function replyToComment(
   text: string,
   author = 'User',
 ): boolean {
-  if (!ctx.editor) return false
+  if (!ctx.editor || refuseInOdt('comment')) return false
   const id = nextCommentId(ctx.comments)
   if (!addReplyToCommentRange(ctx.editor, parentId, id)) {
     ctx.setStatus(t('appCommentAnchorGone'))
@@ -222,6 +227,7 @@ export function replyToComment(
 
 /** Word: comment text edits in place; the author, date and anchor stay */
 export function editComment(ctx: ReviewContext, id: string, text: string): void {
+  if (refuseInOdt('comment')) return
   ctx.setComments((prev) => prev.map((c) => (c.id === id ? { ...c, text } : c)))
   ctx.setCommentsDirty(true)
   ctx.dirtyRef.current = true
@@ -230,6 +236,7 @@ export function editComment(ctx: ReviewContext, id: string, text: string): void 
 
 /** Resolve/reopen: the whole thread (parent + replies) gets done set together */
 export function resolveComment(ctx: ReviewContext, id: string, done: boolean): void {
+  if (refuseInOdt('comment')) return
   ctx.setComments((prev) =>
     prev.map((c) => (c.id === id || c.parentId === id ? { ...c, done } : c)),
   )
@@ -326,6 +333,7 @@ export function handleRevision(
 // ---- Draw: overlay annotations ----
 
 export function addInk(ctx: ReviewContext, annotation: InkAnnotation): void {
+  if (refuseInOdt('ink')) return
   ctx.setInkAnnotations((prev) => [...prev, annotation])
   ctx.setInksDirty(true)
   ctx.dirtyRef.current = true
@@ -347,7 +355,7 @@ export function clearInks(ctx: ReviewContext): void {
 
 /** Compare: pick a second .docx and diff it against the open document */
 export async function compareWithFile(ctx: ReviewContext): Promise<void> {
-  if (!ctx.doc) return
+  if (!ctx.doc || refuseInOdt('compare')) return
   const other = await window.desktop.openDocx()
   if (!other) return
   // password-protected comparison target: not wired through the decrypt prompt (yet)

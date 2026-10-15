@@ -543,4 +543,18 @@ export const id = {
   appOdtFeatureProtection: 'Pembatasan pengeditan dan perlindungan',
   appOdtFeatureFormField: 'Bidang formulir',
   appOdtFeatureObject: 'Objek lainnya',
+  appOdtOff: 'Tidak tersedia di dokumen ODT. Simpan sebagai .docx untuk menggunakannya.',
+  appOdtProtectedCell: 'Sel terlindungi. Sel ini dikunci di Hancom Office dan tidak dapat diubah.',
+  appOdtProtectedCellTip: 'Sel terlindungi',
+  appOdtLockedObject:
+    'Objek ini tidak dapat diubah di sini. Anda hanya dapat menghapusnya secara utuh.',
+  appOdtLabelEquation: 'Persamaan (tampil di Hancom)',
+  appOdtLabelShape: 'Bentuk (tampil di Hancom)',
+  appOdtLabelTextbox: 'Kotak teks (tampil di Hancom)',
+  appOdtLabelToc: 'Daftar isi (tampil di Hancom)',
+  appOdtLabelChart: 'Bagan (tampil di Hancom)',
+  appOdtLabelRevision: 'Lacak perubahan (tampil di Hancom)',
+  appOdtLabelObject: 'Objek (tampil di Hancom)',
+  appOdtLabelNotice:
+    'Objek yang digambar sebagai kotak berlabel mungkin terlihat berbeda dari tampilannya di Hancom Office.',
 } satisfies Record<keyof typeof zh, string>

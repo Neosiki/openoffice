@@ -546,4 +546,19 @@ export const ru = {
   appOdtFeatureProtection: 'Ограничения редактирования и защита',
   appOdtFeatureFormField: 'Поля форм',
   appOdtFeatureObject: 'Другие объекты',
+  appOdtOff:
+    'Недоступно в документах ODT. Сохраните документ как .docx, чтобы использовать эту функцию.',
+  appOdtProtectedCell:
+    'Защищённая ячейка. Она заблокирована в Hancom Office и не может быть изменена.',
+  appOdtProtectedCellTip: 'Защищённая ячейка',
+  appOdtLockedObject: 'Этот объект нельзя изменить здесь. Его можно только удалить целиком.',
+  appOdtLabelEquation: 'Формула (видна в Hancom)',
+  appOdtLabelShape: 'Фигура (видна в Hancom)',
+  appOdtLabelTextbox: 'Надпись (видна в Hancom)',
+  appOdtLabelToc: 'Оглавление (видно в Hancom)',
+  appOdtLabelChart: 'Диаграмма (видна в Hancom)',
+  appOdtLabelRevision: 'Исправления (видны в Hancom)',
+  appOdtLabelObject: 'Объект (виден в Hancom)',
+  appOdtLabelNotice:
+    'Объекты, нарисованные как подписанные рамки, могут выглядеть иначе, чем в Hancom Office.',
 } satisfies Record<keyof typeof zh, string>

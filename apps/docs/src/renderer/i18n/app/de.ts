@@ -554,4 +554,19 @@ export const de = {
   appOdtFeatureProtection: 'Bearbeitungseinschränkungen und Schutz',
   appOdtFeatureFormField: 'Formularfelder',
   appOdtFeatureObject: 'Sonstige Objekte',
+  appOdtOff: 'In ODT-Dokumenten nicht verfügbar. Als .docx speichern, um es zu verwenden.',
+  appOdtProtectedCell:
+    'Geschützte Zelle. Sie wurde in Hancom Office gesperrt und kann nicht geändert werden.',
+  appOdtProtectedCellTip: 'Geschützte Zelle',
+  appOdtLockedObject:
+    'Dieses Objekt kann hier nicht geändert werden. Sie können es nur als Ganzes löschen.',
+  appOdtLabelEquation: 'Formel (in Hancom sichtbar)',
+  appOdtLabelShape: 'Form (in Hancom sichtbar)',
+  appOdtLabelTextbox: 'Textfeld (in Hancom sichtbar)',
+  appOdtLabelToc: 'Inhaltsverzeichnis (in Hancom sichtbar)',
+  appOdtLabelChart: 'Diagramm (in Hancom sichtbar)',
+  appOdtLabelRevision: 'Änderungen (in Hancom sichtbar)',
+  appOdtLabelObject: 'Objekt (in Hancom sichtbar)',
+  appOdtLabelNotice:
+    'Als beschriftete Kästen gezeichnete Objekte können anders aussehen als in Hancom Office.',
 } satisfies Record<keyof typeof zh, string>

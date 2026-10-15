@@ -535,4 +535,17 @@ export const ar = {
   appOdtFeatureProtection: 'قيود التحرير والحماية',
   appOdtFeatureFormField: 'حقول النماذج',
   appOdtFeatureObject: 'كائنات أخرى',
+  appOdtOff: 'غير متاح في مستندات ODT. احفظ المستند بتنسيق docx لاستخدامه.',
+  appOdtProtectedCell: 'خلية محمية. تم قفلها في Hancom Office ولا يمكن تغييرها.',
+  appOdtProtectedCellTip: 'خلية محمية',
+  appOdtLockedObject: 'لا يمكن تغيير هذا الكائن هنا. يمكنك حذفه بالكامل فقط.',
+  appOdtLabelEquation: 'معادلة (تظهر في Hancom)',
+  appOdtLabelShape: 'شكل (يظهر في Hancom)',
+  appOdtLabelTextbox: 'مربع نص (يظهر في Hancom)',
+  appOdtLabelToc: 'جدول المحتويات (يظهر في Hancom)',
+  appOdtLabelChart: 'مخطط (يظهر في Hancom)',
+  appOdtLabelRevision: 'التغييرات المتعقبة (تظهر في Hancom)',
+  appOdtLabelObject: 'كائن (يظهر في Hancom)',
+  appOdtLabelNotice:
+    'قد تبدو الكائنات المرسومة كمربعات معنونة مختلفة عن طريقة عرضها في Hancom Office.',
 } satisfies Record<keyof typeof zh, string>

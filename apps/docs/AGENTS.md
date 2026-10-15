@@ -44,12 +44,19 @@ Word 문서(.docx)와 ODT(.odt) 에디터다. 그리고 배포되는 앱 전체�
   - 뒷단은 확장자로 형식을 가리고(`main/doc-format.ts`), 받은 바이트가 그 형식이 아니면 쓰지 않는다. docx 전용 처리(지연 미디어, 열기 암호)는 ODT에 하지 않는다. 복구본도 형식을 지킨다(ODT 탭의 복구본은 ODT 바이트, 확장자 `.odt`).
   - 암호 ODT는 열지 않고 "암호를 푼 뒤 다시 열어 달라"고 알린다(`isOdtOpenError(err, 'encrypted')`).
   - 다른 이름으로 저장은 두 단계다: `docs:save-as-pick`(창, docx·ODT 필터, 고른 경로만 기억)과 `docs:save-as`(그 경로에만 쓴다). 형식이 바뀌면 `saveWithFormatChange`가 보고를 확인 창(`components/FormatChangeDialog.tsx`, `format-change-bus.ts`)으로 보이고, 확인하면 쓰고 탭을 새 파일로 다시 연다. docx→ODT는 편집 화면의 차트·수식·도형·글상자를 찍어(`odt-objects.ts`, `docs:capture-rect`) `renderedObjects`로 넘긴다.
+- ODT 문서에서 꺼 두는 기능과 잠금은 `odt-gate.ts`(세션·꺼 둔 기능 목록·안내 `appOdtOff`)와 `editor/odt-guard.ts`(편집기 플러그인)가 맡는다. docx 문서에는 세션이 없어 아무것도 바뀌지 않는다.
+  - 세션은 렌더러의 모듈 상태다. `loadFile`이 내용을 넣기 **전에** `beginOdtSession`을 부르고(자리 표시 이름표가 그릴 때 정해진다), 저장 뒤 다시 읽을 때 `rebaseOdtSession`으로 `docxIndex`의 기준을 바꾼다. 컴포넌트는 `useOdtSession`, 단추는 `odtOffProps`(눌리지 않음 + 화면 팁 아래 안내)를 쓴다. 동작 입구(리본 콜백, 단축키, 메뉴 명령, 메모·잉크·비교 동작)는 `refuseInOdt`로 막는다. 네이티브 메뉴의 수식·메모 항목은 `docs:view-menu-state`의 `odt`로 꺼진다(`buildDocsMenu`).
+  - AI·MCP: `ai/odt-tools.ts`가 꺼 둔 기능의 도구를 목록에서 빼고(`docs-skill.ts`), 실행을 거절한다(`executeTool`). 편집기 가드가 거절한 편집(보호된 칸, 잠긴 자리 표시)도 오류로 돌려준다.
+  - 가드: 한컴이 잠근 칸(`protectedCellsOf`, 열 때 최상위 표의 `docxIndex` = 다리 요소 번호로 찾고 그 뒤로는 위치를 따라간다. 저장 뒤 다시 읽으면 표 순서와 격자 칸으로 잇는다)과 자리 표시 그림(`odt-keep:`, 통째 삭제만)을 건드리는 트랜잭션을 거절한다. 붙여넣기(`cleanOdtPaste`, App의 transformPasted)와 그 밖의 삽입(appendTransaction)으로 들어온 글상자·수식·차트·목차·메모·변경 표시는 보이는 그림이나 글로 바뀐다.
+  - 미리 보기 그림이 없는 자리 표시는 이름표 SVG로 그린다(`odt-labels.ts`, 화면·인쇄·PDF 같음). 인쇄·PDF 전에 한 번 알린다. ODT→docx 다른 이름으로 저장은 그 그림을 이름표 PNG로 바꿔 쓴다(`odt-label-docx.ts`, 다른 zip 항목은 바이트 그대로 복사).
+  - 중첩 표가 든 칸의 자기 문단을 고친 표는 ODT 문서에서 `generateTableModelXml`로 저장한다(`pmDocToSavePlan`의 `regenerateEditedNestedHosts`). docx 문서는 아직 예전대로다(그 입력이 사라지는 문제가 남아 있다).
 - 문서 바이트는 IPC 응답이 아니라 미디어 프로토콜의 일회용 주소로 렌더러에 건넨다(`byte-handoff.ts`). IPC 직렬화가 버퍼를 통째로 복사해 1GB 파일에서 메인 프로세스가 죽었기 때문이다.
 
 ## 테스트
 
 - 실행: `npm run test -w @genoffice/docs`(또는 이 폴더에서 `npx vitest run`), `npm run typecheck -w @genoffice/docs`. 환경은 `jsdom`이다. docx 픽스처가 필요한 테스트가 있으므로 처음 한 번, 그리고 `packages/docx-engine`을 바꾼 뒤에는 저장소 루트에서 `npm run fixtures`를 돌린다.
 - `vitest.config.ts`는 workspace 패키지를 `node_modules`가 아니라 이 체크아웃의 소스 경로로 해석한다. 다른 체크아웃의 낡은 코드로 테스트되는 일을 막기 위해서다.
+- ODT에서 꺼 둔 기능·잠금·이름표·붙여넣기: `tests/odt-gating.test.ts`.
 - ODT 열기·저장·다른 이름으로 저장·복구본: `tests/odt-open-save.test.ts`(실제 편집기와 가짜 뒷단), 뒷단 형식 규칙: `tests/odt-doc-format.test.ts`, 개체 그림 열쇠: `tests/odt-objects.test.ts`. 저장 경로를 바꾸면 "연속 두 번 저장"에서 고치지 않은 부분이 바이트 그대로인지 본다.
 - AI 배선에서 바꾸면 반드시 테스트하는 것(`tests/ai-run.test.ts`, `tests/ai-subscription-panel.test.ts`): 연결되지 않은 요청이 제공자를 부르지 않고 원인과 함께 거절되는지, 오류 조각에 원인 필드가 실리는지, 사용량·입력 축소가 전달되는지, 설정 읽기가 정규화되는지.
 - `claude-code`·`codex` 제공자로 가는 테스트는 브리지를 반드시 mock한다. 안 하면 실제 프로그램이 떠서 개발자의 구독 사용량을 쓴다.

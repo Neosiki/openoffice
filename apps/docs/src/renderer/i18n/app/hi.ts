@@ -540,4 +540,18 @@ export const hi = {
   appOdtFeatureProtection: 'संपादन प्रतिबंध और सुरक्षा',
   appOdtFeatureFormField: 'फ़ॉर्म फ़ील्ड',
   appOdtFeatureObject: 'अन्य ऑब्जेक्ट',
+  appOdtOff: 'ODT दस्तावेज़ों में उपलब्ध नहीं है। इसका उपयोग करने के लिए .docx के रूप में सहेजें।',
+  appOdtProtectedCell:
+    'सुरक्षित सेल। इसे Hancom Office में लॉक किया गया था और इसे बदला नहीं जा सकता।',
+  appOdtProtectedCellTip: 'सुरक्षित सेल',
+  appOdtLockedObject: 'इस ऑब्जेक्ट को यहाँ बदला नहीं जा सकता। आप इसे केवल पूरा हटा सकते हैं।',
+  appOdtLabelEquation: 'समीकरण (Hancom में दिखता है)',
+  appOdtLabelShape: 'आकृति (Hancom में दिखती है)',
+  appOdtLabelTextbox: 'टेक्स्ट बॉक्स (Hancom में दिखता है)',
+  appOdtLabelToc: 'विषय-सूची (Hancom में दिखती है)',
+  appOdtLabelChart: 'चार्ट (Hancom में दिखता है)',
+  appOdtLabelRevision: 'ट्रैक किए गए परिवर्तन (Hancom में दिखते हैं)',
+  appOdtLabelObject: 'ऑब्जेक्ट (Hancom में दिखता है)',
+  appOdtLabelNotice:
+    'लेबल वाले बॉक्स के रूप में बनाए गए ऑब्जेक्ट Hancom Office में दिखने के तरीके से अलग दिख सकते हैं।',
 } satisfies Record<keyof typeof zh, string>

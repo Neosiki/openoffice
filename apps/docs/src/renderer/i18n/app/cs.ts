@@ -540,4 +540,18 @@ export const cs = {
   appOdtFeatureProtection: 'Omezení úprav a ochrana',
   appOdtFeatureFormField: 'Pole formuláře',
   appOdtFeatureObject: 'Ostatní objekty',
+  appOdtOff:
+    'V dokumentech ODT není k dispozici. Uložte dokument jako .docx a pak to půjde použít.',
+  appOdtProtectedCell: 'Chráněná buňka. Byla uzamčena v Hancom Office a nelze ji změnit.',
+  appOdtProtectedCellTip: 'Chráněná buňka',
+  appOdtLockedObject: 'Tento objekt zde nelze změnit. Lze jej pouze celý odstranit.',
+  appOdtLabelEquation: 'Rovnice (zobrazí se v Hancom)',
+  appOdtLabelShape: 'Tvar (zobrazí se v Hancom)',
+  appOdtLabelTextbox: 'Textové pole (zobrazí se v Hancom)',
+  appOdtLabelToc: 'Obsah (zobrazí se v Hancom)',
+  appOdtLabelChart: 'Graf (zobrazí se v Hancom)',
+  appOdtLabelRevision: 'Sledované změny (zobrazí se v Hancom)',
+  appOdtLabelObject: 'Objekt (zobrazí se v Hancom)',
+  appOdtLabelNotice:
+    'Objekty nakreslené jako popsané rámečky mohou vypadat jinak než v Hancom Office.',
 } satisfies Record<keyof typeof zh, string>

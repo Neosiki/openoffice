@@ -551,4 +551,19 @@ export const nl = {
   appOdtFeatureProtection: 'Bewerkingsbeperkingen en beveiliging',
   appOdtFeatureFormField: 'Formuliervelden',
   appOdtFeatureObject: 'Overige objecten',
+  appOdtOff: 'Niet beschikbaar in ODT-documenten. Sla op als .docx om het te gebruiken.',
+  appOdtProtectedCell:
+    'Beveiligde cel. Deze is in Hancom Office vergrendeld en kan niet worden gewijzigd.',
+  appOdtProtectedCellTip: 'Beveiligde cel',
+  appOdtLockedObject:
+    'Dit object kan hier niet worden gewijzigd. U kunt het alleen in zijn geheel verwijderen.',
+  appOdtLabelEquation: 'Vergelijking (zichtbaar in Hancom)',
+  appOdtLabelShape: 'Vorm (zichtbaar in Hancom)',
+  appOdtLabelTextbox: 'Tekstvak (zichtbaar in Hancom)',
+  appOdtLabelToc: 'Inhoudsopgave (zichtbaar in Hancom)',
+  appOdtLabelChart: 'Grafiek (zichtbaar in Hancom)',
+  appOdtLabelRevision: 'Bijgehouden wijzigingen (zichtbaar in Hancom)',
+  appOdtLabelObject: 'Object (zichtbaar in Hancom)',
+  appOdtLabelNotice:
+    'Objecten die als gelabelde vakken zijn getekend, kunnen er anders uitzien dan in Hancom Office.',
 } satisfies Record<keyof typeof zh, string>

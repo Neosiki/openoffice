@@ -9802,6 +9802,30 @@ body.docs-crop-active
   border-top: none;
 }
 
+/* ODT document: the password and restriction sections are switched off */
+.protect-dialog .protect-odt-off {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+
+.protect-dialog .protect-odt-off:disabled {
+  opacity: 0.5;
+}
+
+/* ODT document: a locked placeholder is deleted whole, never resized or moved */
+.odt-keep .img-resize-handle,
+.odt-keep > .doc-move-handle {
+  display: none !important;
+}
+
+/* ODT document: a cell Hancom locked */
+.ProseMirror .odt-protected-cell,
+.ProseMirror [data-odt-protected-cell] {
+  cursor: not-allowed;
+}
+
 /* checkbox / radio rows: the native input is visually replaced by the .ctl
    box (18px, black checked state per the dialog palette) */
 .protect-dialog label.protect-check {

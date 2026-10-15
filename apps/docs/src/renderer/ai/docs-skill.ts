@@ -19,6 +19,9 @@ import {
   type AiDocExtras,
 } from './tools'
 import type { AiNotesAccess } from './note-ops'
+import type { AgentToolDef } from '../../shared/ipc'
+import { isOdtSession } from '../odt-gate'
+import { ODT_SYSTEM_NOTE, odtToolFilter } from './odt-tools'
 
 const IMAGE_GEN_OFF_NOTE =
   '\n\nNote: generate_image is currently unavailable (no image provider: no Codex subscription connected and no image API key in Settings). Do not call or promise it; use image_search for imagery.'
@@ -67,11 +70,13 @@ export function createDocsSkill(
     id: 'docx',
     // live: the predicate is re-read before every model request
     get systemPrompt() {
-      return AGENT_SYSTEM_PROMPT + mediaOffNote()
+      return AGENT_SYSTEM_PROMPT + mediaOffNote() + (isOdtSession() ? ODT_SYSTEM_NOTE : '')
     },
     get tools() {
       const hidden = mediaToolsOff()
-      return hidden.size === 0 ? AGENT_TOOLS : AGENT_TOOLS.filter((t) => !hidden.has(t.name))
+      const tools = hidden.size === 0 ? AGENT_TOOLS : AGENT_TOOLS.filter((t) => !hidden.has(t.name))
+      // an ODT document: tools for switched-off features are not offered
+      return odtToolFilter(tools) as AgentToolDef[]
     },
     buildContext: () => {
       const editor = getEditor()

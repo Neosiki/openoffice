@@ -1945,7 +1945,22 @@ export function normalizeZoteroFieldParts(doc: PmNode): PmNode {
   return rebuild(doc)
 }
 
-export function pmDocToSavePlan(inputDoc: PmNode, originalBlocks: Block[]): SavePlan {
+export interface SavePlanOptions {
+  /**
+   * A table cell that holds a nested table and whose own paragraphs were
+   * edited is saved by regenerating the table (`generateTableModelXml`): the
+   * cell-text patch only diffs the nested tables and would drop the typing.
+   * On for ODT documents (the ODT write-back still patches cell by cell, so
+   * untouched bytes stay); docx documents keep the earlier behaviour.
+   */
+  regenerateEditedNestedHosts?: boolean
+}
+
+export function pmDocToSavePlan(
+  inputDoc: PmNode,
+  originalBlocks: Block[],
+  options: SavePlanOptions = {},
+): SavePlan {
   const doc = normalizeZoteroFieldParts(inputDoc)
   const originalByIndex = new Map<number, Block>()
   for (const block of originalBlocks) {
@@ -2078,14 +2093,19 @@ export function pmDocToSavePlan(inputDoc: PmNode, originalBlocks: Block[]): Save
           pushBlock({ kind: 'xml', xml: unwrapBlockRevisionXml(original.originalXml) })
           continue
         }
+        const hostEdited =
+          options.regenerateEditedNestedHosts === true &&
+          structurallyUnchanged &&
+          formattingUnchanged &&
+          nestedHostTextsChanged(model, original)
         const tableTexts =
-          structurallyUnchanged && formattingUnchanged
+          structurallyUnchanged && formattingUnchanged && !hostEdited
             ? tableTextsPatchFromModel(model, original)
             : null
         if (structurallyUnchanged && formattingUnchanged && tableTexts && original.originalXml) {
           changedCount++
           pushBlock({ kind: 'xml', xml: patchTableCellTexts(original.originalXml, tableTexts) })
-        } else if (structurallyUnchanged && formattingUnchanged) {
+        } else if (structurallyUnchanged && formattingUnchanged && !hostEdited) {
           pushBlock({ kind: 'original', docxIndex: idx! })
         } else {
           changedCount++
@@ -2741,6 +2761,20 @@ function tableTextsPatch(node: PmNode, original: Block): (string[] | null)[][] |
     })
   })
   return changed ? texts : null
+}
+
+/** a cell holding a nested table had its own paragraphs edited */
+function nestedHostTextsChanged(current: TableModel, original: Block): boolean {
+  if (original.type !== 'table' || !original.table) return false
+  return current.rows.some((row, r) => {
+    const origRow = patchableCells(original.table!.rows[r])
+    return patchableCells(row).some((cell, c) => {
+      const originalCell = origRow[c]
+      if (!originalCell || cell.vMerge === 'continue') return false
+      if (!cell.nestedTables?.length || !originalCell.nestedTables?.length) return false
+      return cell.paras.join('\n') !== parsedCellParaTexts(originalCell).join('\n')
+    })
+  })
 }
 
 function tableTextsPatchFromModel(

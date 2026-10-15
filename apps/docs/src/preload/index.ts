@@ -242,10 +242,11 @@ const api: DesktopApi = {
     ipcRenderer.on('docs:close-check', listener)
     return () => ipcRenderer.removeListener('docs:close-check', listener)
   },
-  reportViewMenuState: (state: { aiSidebar: boolean; darkCanvas: boolean }) =>
+  reportViewMenuState: (state: { aiSidebar: boolean; darkCanvas: boolean; odt?: boolean }) =>
     ipcRenderer.send('docs:view-menu-state', {
       aiSidebar: state?.aiSidebar === true,
       darkCanvas: state?.darkCanvas === true,
+      odt: state?.odt === true,
     }),
   reportCloseCheck: (state: { dirty: boolean; autoSave: boolean; filePath?: string | null }) =>
     ipcRenderer.send('docs:close-check-result', {

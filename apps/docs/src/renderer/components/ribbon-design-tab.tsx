@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { type SectionSettings, type ThemeColors, type ThemeFonts } from '@genoffice/docx-engine'
 import { PromptModal } from './PromptModal'
 import { useI18n, type StringKey } from '../i18n/locale'
+import { odtOffProps, useOdtSession } from '../odt-gate'
 import {
   IconCaret,
   IconPageBorders,
@@ -219,6 +220,8 @@ export function DesignTab({
   onThemeColors,
 }: DesignTabProps) {
   const { t, lang } = useI18n()
+  /** ODT document: the features ODT switches off are disabled (odt-gate.ts) */
+  const odtOff = useOdtSession()
   const watermarkPresets = [
     ...WATERMARK_KEYS.map((key) => t(key)),
     ...(lang !== 'en' ? ['CONFIDENTIAL', 'DRAFT'] : []),
@@ -242,6 +245,7 @@ export function DesignTab({
               className="rb-big"
               disabled={!hasDoc}
               data-tip={t('ribbonThemesTip')}
+              {...odtOffProps(odtOff)}
               onClick={() => toggleDropdown(setDropdown, 'theme')}
             >
               <span className="rb-big-icon">
@@ -274,6 +278,7 @@ export function DesignTab({
               className="rb-big"
               disabled={!hasDoc}
               data-tip={t('ribbonThemeFontsTip')}
+              {...odtOffProps(odtOff)}
               onClick={() => toggleDropdown(setDropdown, 'themefonts')}
             >
               <span className="rb-big-icon">
@@ -308,6 +313,7 @@ export function DesignTab({
               className="rb-big"
               disabled={!hasDoc}
               data-tip={t('ribbonThemeColorsTip')}
+              {...odtOffProps(odtOff)}
               onClick={() => toggleDropdown(setDropdown, 'themecolors')}
             >
               <span className="rb-big-icon">
@@ -354,6 +360,7 @@ export function DesignTab({
               className="rb-big"
               disabled={!hasDoc}
               data-tip={t('ribbonPageColorTip')}
+              {...odtOffProps(odtOff)}
               onClick={() => toggleDropdown(setDropdown, 'pagecolor')}
             >
               <span className="rb-big-icon rb-big-icon-colored">
@@ -382,6 +389,7 @@ export function DesignTab({
               className={`rb-big ${watermark ? 'active' : ''}`}
               disabled={!hasDoc}
               data-tip={t('ribbonWatermarkTip')}
+              {...odtOffProps(odtOff)}
               onClick={() => toggleDropdown(setDropdown, 'watermark')}
             >
               <span className="rb-big-icon">

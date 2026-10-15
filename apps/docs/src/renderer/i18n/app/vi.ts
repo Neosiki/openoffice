@@ -538,4 +538,18 @@ export const vi = {
   appOdtFeatureProtection: 'Hạn chế chỉnh sửa và bảo vệ',
   appOdtFeatureFormField: 'Trường biểu mẫu',
   appOdtFeatureObject: 'Đối tượng khác',
+  appOdtOff: 'Không dùng được trong tài liệu ODT. Lưu dưới dạng .docx để sử dụng.',
+  appOdtProtectedCell: 'Ô được bảo vệ. Ô này đã bị khóa trong Hancom Office và không thể thay đổi.',
+  appOdtProtectedCellTip: 'Ô được bảo vệ',
+  appOdtLockedObject:
+    'Không thể thay đổi đối tượng này tại đây. Bạn chỉ có thể xóa toàn bộ đối tượng.',
+  appOdtLabelEquation: 'Phương trình (hiển thị trong Hancom)',
+  appOdtLabelShape: 'Hình (hiển thị trong Hancom)',
+  appOdtLabelTextbox: 'Hộp văn bản (hiển thị trong Hancom)',
+  appOdtLabelToc: 'Mục lục (hiển thị trong Hancom)',
+  appOdtLabelChart: 'Biểu đồ (hiển thị trong Hancom)',
+  appOdtLabelRevision: 'Theo dõi thay đổi (hiển thị trong Hancom)',
+  appOdtLabelObject: 'Đối tượng (hiển thị trong Hancom)',
+  appOdtLabelNotice:
+    'Các đối tượng được vẽ dưới dạng hộp có nhãn có thể trông khác với cách Hancom Office hiển thị.',
 } satisfies Record<keyof typeof zh, string>
