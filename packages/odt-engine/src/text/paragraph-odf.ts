@@ -433,8 +433,9 @@ export function paragraphToOdf(
         if (target) switchTo(target)
       }
       body += x.xml
-      // markers are not text: a literal space after one is still leading/collapsed
-      if (x.replaces) spaceOk = true
+      // markers are not text: a literal space after one is still leading/collapsed;
+      // a drawing placed as a character is one, so a space after it is kept
+      if (x.replaces || isCharacterObjectXml(x.xml)) spaceOk = true
     }
     if (k === edited.length) break
     if (skip[k]) continue
@@ -507,6 +508,12 @@ export function paragraphToOdf(
     out.push(wrapParagraph(rctx, para, isFirst ? model : null, styleName, piece.body, part))
   })
   return out.join('')
+}
+
+/** ODF markup that starts with a drawing anchored as a character (it takes a character position). */
+function isCharacterObjectXml(xml: string): boolean {
+  const tag = /^<([\w.-]+):[\w.-]+(?=[\s/>])[^>]*>/.exec(xml)
+  return !!tag && tag[1] === 'draw' && /\stext:anchor-type\s*=\s*["']as-char["']/.test(tag[0])
 }
 
 /** The paragraph element; the original start tag (ids, unknown attributes) is reused when it fits. */

@@ -26,7 +26,9 @@ import {
   readDocxPart,
   rebuildOdtBody,
 } from '../../src/core'
+import { convertOdtPage } from '../../src/page'
 import { convertOdtStyles, registerTextConverters, updateOdtStyles } from '../../src/text'
+import { FULL_REGISTRY, fullWriteBack, registryOr } from './full'
 
 export interface Bridge {
   doc: OdtDocument
@@ -37,7 +39,7 @@ export interface Bridge {
 }
 
 export function textRegistry(): ConversionRegistry {
-  return registerTextConverters(new ConversionRegistry())
+  return registryOr(() => registerTextConverters(new ConversionRegistry()))
 }
 
 export async function odtToBridge(
@@ -48,6 +50,7 @@ export async function odtToBridge(
   const ctx = new OdfToOoxmlContext(doc, registry)
   convertOdtStyles(ctx)
   convertOdtBody(ctx)
+  if (FULL_REGISTRY) convertOdtPage(ctx)
   const docx = await buildBridgeDocx(ctx)
   // the map must survive a JSON round trip (it crosses IPC)
   const map = JSON.parse(JSON.stringify(ctx.map)) as BridgeMap
@@ -144,6 +147,8 @@ export interface WriteBack {
 export async function writeBack(bridge: Bridge, edited: Uint8Array): Promise<WriteBack> {
   const parsed = await parseDocx(edited)
   const editedStylesXml = await readDocxPart(edited, 'word/styles.xml')
+  if (FULL_REGISTRY)
+    return fullWriteBack(bridge.doc, bridge.map, parsed, bridge.registry, editedStylesXml)
   const rctx = new OoxmlToOdfContext(bridge.doc, bridge.map, parsed, bridge.registry, {
     editedStylesXml,
   })

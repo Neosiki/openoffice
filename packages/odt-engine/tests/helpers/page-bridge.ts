@@ -31,9 +31,10 @@ import {
 import { convertOdtPage, preparePageWriteBack, registerPageConverters } from '../../src/page'
 import { convertOdtStyles, registerTextConverters, updateOdtStyles } from '../../src/text'
 import type { Bridge, EditorOp, WriteBack } from './bridge'
+import { FULL_REGISTRY, fullWriteBack, registryOr } from './full'
 
 export function pageRegistry(): ConversionRegistry {
-  return registerPageConverters(registerTextConverters(new ConversionRegistry()))
+  return registryOr(() => registerPageConverters(registerTextConverters(new ConversionRegistry())))
 }
 
 export async function odtToPageBridge(bytes: Uint8Array): Promise<Bridge> {
@@ -52,6 +53,8 @@ export async function odtToPageBridge(bytes: Uint8Array): Promise<Bridge> {
 export async function pageWriteBack(bridge: Bridge, edited: Uint8Array): Promise<WriteBack> {
   const parsed = await parseDocx(edited)
   const editedStylesXml = await readDocxPart(edited, 'word/styles.xml')
+  if (FULL_REGISTRY)
+    return fullWriteBack(bridge.doc, bridge.map, parsed, bridge.registry, editedStylesXml)
   const map = JSON.parse(JSON.stringify(bridge.map)) as Bridge['map']
   const rctx = new OoxmlToOdfContext(bridge.doc, map, parsed, bridge.registry, { editedStylesXml })
   const items = await preparePageWriteBack(rctx)

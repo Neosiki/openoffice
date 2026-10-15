@@ -6,6 +6,7 @@
  * references it.
  */
 import { patchImageParagraphXml } from '@genoffice/docx-engine'
+import { FULL_REGISTRY } from './helpers/full'
 import { describe, expect, it } from 'vitest'
 import {
   OdfToOoxmlContext,
@@ -82,32 +83,41 @@ describe('pictures: ODF → OOXML', () => {
     expect(fx.ext.pictures[0]).toMatchObject({ anchored: true, xEmu: 206280, yEmu: 30960 })
   })
 
-  it('pictures inside table cells go through the same inline handler', async () => {
-    const cellPara = hParaWith(`셀${picture.frame}`)
-    const body = hTable('Table2', 1, [hRow([hCell(cellPara)])])
-    const fx = await objectsBridge({ body, pictures })
-    const doc = await openOdt(fx.built.bytes)
-    const ctx = new OdfToOoxmlContext(doc, objectsRegistry())
-    convertOdtStyles(ctx)
-    convertOdtBody(ctx)
-    // without a table converter the table carries no OOXML; convert its cell paragraph directly
-    const node = nodesOfKind(doc.body.blocks, 'paragraph')[0]
-    const { xml, paragraph } = paragraphToOoxml(ctx, node, { part: 'content.xml', owner: 'table' })
-    expect(xml).toContain('<w:drawing>')
-    expect(paragraph.markers).toEqual([
-      expect.objectContaining({ kind: 'handler', owner: 'objects', name: 'draw:frame' }),
-    ])
-    // the cell paragraph, edited and written back from runs, keeps the frame bytes
-    ctx.addElement(ctx.addBlock(node, null, 'table').id, xml, 'paragraph', paragraph.id)
-    const bridgeDocx = await buildBridgeDocx(ctx)
-    const parsed = await visibleBlocks(bridgeDocx)
-    const map = JSON.parse(JSON.stringify(ctx.map)) as typeof ctx.map
-    const rctx = new OoxmlToOdfContext(doc, map, parsed.parsed, ctx.registry)
-    const edited = editedParagraphFromBlock(parsed.blocks[0])
-    edited.runs[0] = { ...edited.runs[0], text: '칸' }
-    const odf = paragraphToOdf(rctx, edited, map.paragraphs[paragraph.id], { part: 'content.xml' })
-    expect(odf).toBe(hParaWith(`칸${picture.frame}`))
-  })
+  // builds its own partial registry state (tables converted only when the table layer is absent)
+  it.skipIf(FULL_REGISTRY)(
+    'pictures inside table cells go through the same inline handler',
+    async () => {
+      const cellPara = hParaWith(`셀${picture.frame}`)
+      const body = hTable('Table2', 1, [hRow([hCell(cellPara)])])
+      const fx = await objectsBridge({ body, pictures })
+      const doc = await openOdt(fx.built.bytes)
+      const ctx = new OdfToOoxmlContext(doc, objectsRegistry())
+      convertOdtStyles(ctx)
+      convertOdtBody(ctx)
+      // without a table converter the table carries no OOXML; convert its cell paragraph directly
+      const node = nodesOfKind(doc.body.blocks, 'paragraph')[0]
+      const { xml, paragraph } = paragraphToOoxml(ctx, node, {
+        part: 'content.xml',
+        owner: 'table',
+      })
+      expect(xml).toContain('<w:drawing>')
+      expect(paragraph.markers).toEqual([
+        expect.objectContaining({ kind: 'handler', owner: 'objects', name: 'draw:frame' }),
+      ])
+      // the cell paragraph, edited and written back from runs, keeps the frame bytes
+      ctx.addElement(ctx.addBlock(node, null, 'table').id, xml, 'paragraph', paragraph.id)
+      const bridgeDocx = await buildBridgeDocx(ctx)
+      const parsed = await visibleBlocks(bridgeDocx)
+      const map = JSON.parse(JSON.stringify(ctx.map)) as typeof ctx.map
+      const rctx = new OoxmlToOdfContext(doc, map, parsed.parsed, ctx.registry)
+      const edited = editedParagraphFromBlock(parsed.blocks[0])
+      edited.runs[0] = { ...edited.runs[0], text: '칸' }
+      const odf = paragraphToOdf(rctx, edited, map.paragraphs[paragraph.id], {
+        part: 'content.xml',
+      })
+      expect(odf).toBe(hParaWith(`칸${picture.frame}`))
+    },
+  )
 })
 
 describe('pictures: OOXML → ODF', () => {

@@ -217,6 +217,11 @@ export function readParagraph(
     if (out) push(out, current)
   }
   const offset = () => chars.length
+  // a drawing placed as a character (`text:anchor-type="as-char"`) takes a character
+  // position: white space after it does not collapse into the white space before it
+  const isCharacterObject = (el: { name: string; nameEnd: number; openEnd: number }) =>
+    el.name.startsWith('draw:') &&
+    attrOf(xml, el.nameEnd, el.openEnd, prefixes, 'text:anchor-type') === 'as-char'
   const addMarker = (marker: Omit<BridgeMarker, 'ooxmlName'>, withBookmark: boolean) => {
     const index = model.markers.length
     model.markers.push({
@@ -312,7 +317,7 @@ export function readParagraph(
           const text = record.text.slice(rec.offset, rec.offset + rec.length)
           const at = offset()
           push(text, rec.kind === 'handler' ? -1 : current)
-          if (text) ignoreLeading = false
+          if (text || isCharacterObject(el)) ignoreLeading = false
           addMarker({ ...rec, offset: at, pair: null }, false)
           return
         }
@@ -335,7 +340,7 @@ export function readParagraph(
             const at = offset()
             model.splices.push({ offset: at, xml: produced.xml, seq: seq })
             push(produced.text, -1)
-            if (produced.text) ignoreLeading = false
+            if (produced.text || isCharacterObject(el)) ignoreLeading = false
             addMarker(
               {
                 kind: 'handler',
@@ -377,6 +382,7 @@ export function readParagraph(
             return
           }
         }
+        if (isCharacterObject(el)) ignoreLeading = false
         addMarker(
           {
             kind: 'keep',

@@ -112,6 +112,9 @@ export async function buildBridgeDocx(ctx: OdfToOoxmlContext): Promise<Uint8Arra
     '_rels/.rels',
     `${XML_DECL}<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">` +
       '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>' +
+      (ctx.docx.parts.some((p) => p.path === 'docProps/core.xml')
+        ? '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/>'
+        : '') +
       '</Relationships>',
   )
   const rels = [

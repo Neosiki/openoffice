@@ -29,6 +29,7 @@ import {
   applyTextPatches,
 } from '../core/convert'
 import { decodeXmlEntities, walkElements } from '../core/xml'
+import { paragraphNeedsRewrite } from '../objects/package'
 import { keptCharacters, type Placement, placeMarkers } from '../text/markers'
 import { readParagraph } from '../text/paragraph-model'
 import {
@@ -202,7 +203,9 @@ function writeParagraph(
     }
   }
   const src = sourceOf(rctx, origin)
-  if (!opts.placements && opts.bridgeXml !== null && item.xml) {
+  // a note in it changed although the paragraph's OOXML did not (objects layer)
+  const dirty = paragraphNeedsRewrite(rctx, origin.id)
+  if (!dirty && !opts.placements && opts.bridgeXml !== null && item.xml) {
     if (
       item.xml === opts.bridgeXml ||
       withoutBridgeBookmarks(item.xml) === withoutBridgeBookmarks(opts.bridgeXml)
@@ -215,6 +218,7 @@ function writeParagraph(
   })
   if (candidate === src) return { xml: src, changed: false }
   if (
+    !dirty &&
     !opts.placements &&
     paraText(item.para) === origin.text &&
     sameParagraph(rctx, origin, candidate)
@@ -814,7 +818,8 @@ export function writeTable(
   edited: EditedTable,
   bridge: OxTable | null,
 ): TableResult {
-  if (bridge && edited.ox.xml && edited.ox.xml === bridge.xml) return unchangedResult(rctx, rec)
+  if (bridge && edited.ox.xml && edited.ox.xml === bridge.xml && !tableNeedsRewrite(rctx, ext, rec))
+    return unchangedResult(rctx, rec)
   const grid = editedGrid(edited.model, edited.ox)
   if (sameGrid(rec, grid)) return patchTable(rctx, ext, rec, grid, bridge)
   if (rec.structureLocked) {
@@ -822,6 +827,23 @@ export function writeTable(
     return unchangedResult(rctx, rec)
   }
   return rebuildTable(rctx, ext, rec, grid, edited, bridge)
+}
+
+/** A note in one of the cell's paragraphs (or nested tables) changed: the cell must be rewritten. */
+function cellNeedsRewrite(rctx: OoxmlToOdfContext, ext: TableExt, cell: AnchorCellRecord): boolean {
+  return originalItems(rctx, ext, cell, false).some((o) =>
+    o.kind === 'p'
+      ? paragraphNeedsRewrite(rctx, o.para.id)
+      : o.kind === 't'
+        ? tableNeedsRewrite(rctx, ext, o.table)
+        : false,
+  )
+}
+
+function tableNeedsRewrite(rctx: OoxmlToOdfContext, ext: TableExt, rec: TableRecord): boolean {
+  return rec.cells.some((row) =>
+    row.some((cell) => cell.kind === 'cell' && cellNeedsRewrite(rctx, ext, cell)),
+  )
 }
 
 const LOCKED_WARNING = 'a locked table cell (Hancom cell protection) was not changed'
@@ -895,7 +917,13 @@ function patchTable(
       const a = grid.at[r][c]
       if (!a) return
       const b = bridgeCell(bridge, r, cell)
-      if (a.ox && b && a.ox.xml === b.xml) return
+      if (
+        a.ox &&
+        b &&
+        a.ox.xml === b.xml &&
+        !(cell.kind === 'cell' && cellNeedsRewrite(rctx, ext, cell))
+      )
+        return
       if (cell.kind !== 'cell') {
         if (cellItems(a).some((i) => i.kind === 'tbl' || paraText(i.para) !== ''))
           rctx.warn('text typed into a merged-away or missing table cell was not saved')
