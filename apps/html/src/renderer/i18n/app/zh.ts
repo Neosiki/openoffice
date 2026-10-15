@@ -46,6 +46,8 @@ export const zh = {
   pageCount: '{n} 页',
   pageThumbs: '页面缩略图',
   pageThumbGo: '转到第 {n} 页',
+  slideThumbs: '幻灯片',
+  slideThumbGo: '转到第 {n} 张幻灯片',
   previewNeedsSave: '保存文件后，相对路径的图片和样式才会在预览中显示',
   inspectHint: '单击预览中的元素选中，双击编辑文字',
   nodeDynamic: '此元素由页面脚本生成，源码中不存在；请通过源码或 AI 修改',

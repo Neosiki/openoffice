@@ -48,6 +48,8 @@ export const ja = {
   pageCount: '{n} ページ',
   pageThumbs: 'ページのサムネイル',
   pageThumbGo: '{n} ページへ移動',
+  slideThumbs: 'スライド一覧',
+  slideThumbGo: 'スライド {n} に移動',
   previewNeedsSave: 'ファイルを保存すると、相対パスの画像とスタイルがプレビューに表示されます',
   inspectHint: 'プレビューの要素をクリックして選択、ダブルクリックでテキスト編集',
   nodeDynamic:

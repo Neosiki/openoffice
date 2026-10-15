@@ -24,6 +24,10 @@ export type ToInspector =
   | { type: 'gx:setPaged'; paper: PaperLayout | null }
   /** measure the paper view once fonts and pictures have settled; answered with gx:pageReport */
   | { type: 'gx:measurePages' }
+  /** show this slide of the deck the frame found (0-based, in the order gx:slides counts them) */
+  | { type: 'gx:goToSlide'; index: number }
+  /** the frame is a slide thumbnail: no scrollbars, and this slide once the page has loaded */
+  | { type: 'gx:thumbnail'; slide: number }
 
 /** the printed page as the frame draws it: the frame itself is the content box, sheets stack downwards */
 export interface PaperLayout {
@@ -154,6 +158,8 @@ export type FromInspectorBody =
   | { type: 'gx:paged'; pages: number; sheet: string }
   /** answer to gx:measurePages; its fields are read with readPageMeasure, never taken as typed */
   | { type: 'gx:pageReport' }
+  /** the slides the page shows one at a time (or a screen each) and the one in view; read with readSlideReport */
+  | { type: 'gx:slides' }
 
 /** Message tags the instrumented inspector can emit; anything else is forged. */
 const KNOWN_FROM_INSPECTOR = new Set([
@@ -176,6 +182,7 @@ const KNOWN_FROM_INSPECTOR = new Set([
   'gx:drag',
   'gx:paged',
   'gx:pageReport',
+  'gx:slides',
 ])
 
 export function isFromInspector(data: unknown): data is FromInspector {
@@ -221,4 +228,25 @@ export function readPaperReport(msg: { pages: unknown; sheet: unknown }): PaperR
   if (typeof sheet !== 'string' || !/^(#[0-9a-f]{3,8}|rgba?\([\d\s.,/%]+\))$/i.test(sheet))
     return null
   return { pages, sheet }
+}
+
+/** the deck the frame found: how many slides, the one in view, and the frame's viewport they are drawn in */
+export interface SlideReport {
+  count: number
+  current: number
+  width: number
+  height: number
+}
+
+/** a deck longer than this is not one anyone pages through by hand */
+const MAX_SLIDES = 500
+
+/** The frame is untrusted: counts and sizes pass only as small whole numbers. */
+export function readSlideReport(msg: object): SlideReport | null {
+  const { count, current, width, height } = msg as Record<string, unknown>
+  const whole = (v: unknown, max: number): v is number =>
+    typeof v === 'number' && Number.isInteger(v) && v >= 0 && v <= max
+  if (!whole(count, MAX_SLIDES) || !whole(current, MAX_SLIDES)) return null
+  if (!whole(width, 20_000) || !whole(height, 20_000) || width === 0 || height === 0) return null
+  return { count, current: Math.min(current, Math.max(count - 1, 0)), width, height }
 }

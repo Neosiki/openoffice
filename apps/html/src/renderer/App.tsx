@@ -34,13 +34,16 @@ import { PreviewFrame, type PreviewFrameHandle } from './preview/PreviewFrame'
 import { instrumentForPreview } from './preview/instrument'
 import { probePages } from './preview/page-probe'
 import { PageRail, usePageThumbs } from './preview/PageRail'
+import { SlideRail } from './preview/SlideRail'
 import {
   readExtraSids,
   readPaperReport,
+  readSlideReport,
   type ComputedSnapshot,
   type ElementRect,
   type FromInspector,
   type PaperReport,
+  type SlideReport,
 } from './preview/inspector-protocol'
 import inspectorSource from './preview/inspector.js?raw'
 import { AiPanel, type AiPreset, type HtmlAiDeps } from './ai/AiPanel'
@@ -221,6 +224,12 @@ export default function App() {
   paperPagesRef.current = paperReport?.pages ?? 1
   /** page at the reader's eye in the paper view, 0-based: the thumbnail rail marks it */
   const [paperPage, setPaperPage] = useState(0)
+  /** the slides the preview found (two or more): the slide rail lists them */
+  const [deck, setDeck] = useState<SlideReport | null>(null)
+  /** slide in view; a reload after an edit comes back to it instead of the first one */
+  const deckSlideRef = useRef(0)
+  /** parse-map version of the served copy: the slide thumbnails load it */
+  const [servedVersion, setServedVersion] = useState(-1)
   const zoomRef = useRef(zoom)
   zoomRef.current = zoom
   const [panelOpen, setPanelOpen] = useState(
@@ -335,6 +344,8 @@ export default function App() {
         pushedVersionRef.current = map0.version
         frameVersionsRef.current = new Set([map0.version])
         frameScrollRef.current = null
+        deckSlideRef.current = 0
+        setServedVersion(map0.version)
         setPath(pending)
         setText(doc.text)
         setSavedText(doc.text)
@@ -373,6 +384,7 @@ export default function App() {
       window.htmlApi.updatePreview(instrumentForPreview(nextText, map, inspectorSource))
       pushedTextRef.current = nextText
       pushedVersionRef.current = map.version
+      setServedVersion(map.version)
       if (reload) {
         frameVersionsRef.current = new Set([map.version])
         setPreviewNonce((n) => n + 1)
@@ -757,6 +769,9 @@ export default function App() {
           // an edit reloaded the page under the reader: put it back where it was before selecting
           if (frameScrollRef.current !== null)
             previewRef.current?.post({ type: 'gx:scrollTo', y: frameScrollRef.current })
+          // a deck starts on its first slide: put the reader back on the one they were at
+          if (deckSlideRef.current > 0)
+            previewRef.current?.post({ type: 'gx:goToSlide', index: deckSlideRef.current })
           const sid = selectedSidRef.current
           if (sid !== null) previewRef.current?.post({ type: 'gx:select', sid })
           if (sid !== null && extraSidsRef.current.length)
@@ -870,6 +885,13 @@ export default function App() {
         case 'gx:paged':
           setPaperReport(readPaperReport(msg))
           return
+        case 'gx:slides': {
+          const report = readSlideReport(msg)
+          if (!report) return
+          deckSlideRef.current = report.current
+          setDeck(report.count >= 2 ? report : null)
+          return
+        }
         case 'gx:htmlEditCommit':
           runManual([{ op: 'set_inner_html', sid: msg.sid, html: msg.html }])
           return
@@ -1726,6 +1748,7 @@ export default function App() {
       } as CSSProperties)
     : undefined
   const showRail = !!pageSetup && canvasMode !== 'present'
+  const showSlideRail = !!deck && !pageSetup && canvasMode !== 'present' && !!previewUrl
   const panelShown = panelOpen && selectedEntry?.sid !== panelDismissedSid
 
   /** stage geometry for the floating toolbar: frame coordinates scale with the CSS zoom and shift by the centred device host */
@@ -1842,7 +1865,7 @@ export default function App() {
             />
           )}
           <div className={`workspace view-${canvasMode === 'present' ? 'preview' : view}`}>
-            <div className={`pane pane-preview${showRail ? ' with-rail' : ''}`}>
+            <div className={`pane pane-preview${showRail || showSlideRail ? ' with-rail' : ''}`}>
               {showRail && pageSetup && (
                 <PageRail
                   thumbs={thumbs}
@@ -1858,6 +1881,18 @@ export default function App() {
                       y: page * sheetPeriod(pageSetup, PAPER_GAP),
                     })
                   }
+                />
+              )}
+              {showSlideRail && deck && previewUrl && (
+                <SlideRail
+                  url={previewUrl}
+                  version={servedVersion}
+                  deck={deck}
+                  onPick={(index) => {
+                    deckSlideRef.current = index
+                    setDeck({ ...deck, current: index })
+                    previewRef.current?.post({ type: 'gx:goToSlide', index })
+                  }}
                 />
               )}
               <div

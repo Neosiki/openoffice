@@ -1029,10 +1029,18 @@
     },
     true,
   )
-  document.addEventListener(
+  /** keys pressed during a text edit: their keyup stays inside the frame as well */
+  const editKeys = new Set()
+  // Window capture runs ahead of the page's own key listeners (a slide deck turning the page on
+  // Space or an arrow): every key typed into an open text edit, and every key the inspector turns
+  // into a command, stops here so the page never acts on it. Typing itself is not prevented.
+  window.addEventListener(
     'keydown',
     (e) => {
+      if (pressingDeckKey) return
       if (editing) {
+        e.stopPropagation()
+        editKeys.add(e.code)
         const mod = (e.metaKey || e.ctrlKey) && !e.altKey
         if (e.key === 'Escape') {
           // Esc = commit the text and return to the selected state (typed input is not lost, as in
@@ -1056,6 +1064,7 @@
       }
       if ((drag || slide) && e.key === 'Escape') {
         e.preventDefault()
+        e.stopPropagation()
         if (drag) endDrag(false)
         else endSlide(false)
         return
@@ -1079,6 +1088,7 @@
                 ]
         if (hostCommand) {
           e.preventDefault()
+          e.stopPropagation()
           post({ type: 'gx:keyCommand', command: hostCommand })
           return
         }
@@ -1102,10 +1112,18 @@
       const command = modKey || altKey || map[e.key]
       if (!command || !selected || inField) return
       e.preventDefault()
+      e.stopPropagation()
       post({ type: 'gx:keyCommand', command })
     },
     true,
   )
+  const keepEditKey = (e) => {
+    if (pressingDeckKey) return
+    if (editing || editKeys.has(e.code)) e.stopPropagation()
+    if (e.type === 'keyup') editKeys.delete(e.code)
+  }
+  window.addEventListener('keypress', keepEditKey, true)
+  window.addEventListener('keyup', keepEditKey, true)
   // Chromium reports trackpad pinch as ctrl+wheel; the frame swallows wheel events, so relay it.
   // Browse mode (present views) has no zoom control: leave the event alone there.
   document.addEventListener(
@@ -1490,6 +1508,222 @@
     paper.observer.observe(document.documentElement)
   }
 
+  // ---- slides: a deck shown a slide at a time (or stacked, a screen each). The host lists them
+  // beside the preview and asks for one; they are found in the live DOM, so slides a script builds
+  // count as well. None of this is markup, so none of it can reach the source. ----
+  const SLIDE_SELECTOR = '.slide, [data-slide]'
+  /** a deck's own keys, tried in this order until one turns the slide: [key, code, keyCode] */
+  const NEXT_KEYS = [
+    ['ArrowRight', 'ArrowRight', 39],
+    ['PageDown', 'PageDown', 34],
+    [' ', 'Space', 32],
+    ['ArrowDown', 'ArrowDown', 40],
+  ]
+  const PREV_KEYS = [
+    ['ArrowLeft', 'ArrowLeft', 37],
+    ['PageUp', 'PageUp', 33],
+    ['ArrowUp', 'ArrowUp', 38],
+  ]
+  /** the key that turned this deck last time, per direction */
+  const deckKeys = { next: null, prev: null }
+  const isOverlay = (el) => !!el.closest(`[${MARK}]`)
+  const revealSlides = () => document.querySelector('.reveal .slides')
+  const findSlides = () => {
+    const reveal = revealSlides()
+    if (reveal) {
+      const sections = Array.from(reveal.children).filter((el) => el.tagName === 'SECTION')
+      if (sections.length >= 2) return sections
+    }
+    // named slides: the largest group of siblings (a slide inside a slide is part of it)
+    const groups = new Map()
+    for (const el of document.querySelectorAll(SLIDE_SELECTOR)) {
+      const parent = el.parentElement
+      if (!parent || isOverlay(el) || parent.closest(SLIDE_SELECTOR)) continue
+      const group = groups.get(parent) || []
+      group.push(el)
+      groups.set(parent, group)
+    }
+    let best = []
+    for (const group of groups.values()) if (group.length > best.length) best = group
+    if (best.length >= 2) return best
+    // unnamed: sections a screen tall each, straight under <body> or under its single wrapper
+    const content = (root) =>
+      Array.from(root.children).filter(
+        (el) => !isOverlay(el) && !/^(SCRIPT|STYLE|TEMPLATE|NOSCRIPT|LINK|META)$/.test(el.tagName),
+      )
+    const top = content(document.body)
+    for (const root of top.length === 1 ? [document.body, top[0]] : [document.body]) {
+      const sections = content(root).filter((el) => el.tagName === 'SECTION')
+      if (sections.length < 2) continue
+      const shown = sections.filter((el) => window.getComputedStyle(el).display !== 'none')
+      const screen = window.innerHeight * 0.9
+      if (shown.length && shown.every((el) => el.getBoundingClientRect().height >= screen))
+        return sections
+    }
+    return []
+  }
+  /** how much of the slide the viewport shows; a hidden or faded-out slide shows nothing */
+  const shownArea = (el) => {
+    const style = window.getComputedStyle(el)
+    // an opacity the engine leaves unset is a shown slide, not a faded one
+    if (
+      style.display === 'none' ||
+      style.visibility === 'hidden' ||
+      parseFloat(style.opacity) < 0.1
+    )
+      return 0
+    const r = el.getBoundingClientRect()
+    const w = Math.min(r.right, window.innerWidth) - Math.max(r.left, 0)
+    const h = Math.min(r.bottom, window.innerHeight) - Math.max(r.top, 0)
+    return w > 0 && h > 0 ? w * h : 0
+  }
+  const currentSlide = (slides) => {
+    const reveal = window.Reveal
+    if (revealSlides() && reveal && typeof reveal.getIndices === 'function') {
+      const at = reveal.getIndices()
+      if (at && Number.isInteger(at.h)) return Math.max(0, Math.min(at.h, slides.length - 1))
+    }
+    let best = 0
+    let bestArea = 0
+    slides.forEach((el, i) => {
+      const area = shownArea(el)
+      if (area > bestArea) {
+        best = i
+        bestArea = area
+      }
+    })
+    return best
+  }
+  /** slides laid out one under another: the page scrolls from one to the next */
+  const stacked = (slides) => {
+    const rects = slides.map((el) => el.getBoundingClientRect())
+    if (rects.some((r) => r.height === 0)) return false
+    return rects.every((r, i) => i === 0 || r.top >= rects[i - 1].bottom - 1)
+  }
+  /** a key the frame hands the deck itself: the inspector's own key handling stays out of it */
+  let pressingDeckKey = false
+  const pressDeckKey = ([key, code, keyCode]) => {
+    pressingDeckKey = true
+    try {
+      for (const type of ['keydown', 'keyup'])
+        document.body.dispatchEvent(
+          new window.KeyboardEvent(type, {
+            key,
+            code,
+            keyCode,
+            which: keyCode,
+            bubbles: true,
+            cancelable: true,
+          }),
+        )
+    } finally {
+      pressingDeckKey = false
+    }
+  }
+  /** the deck answered: a slide, the row they sit in or the page above them changed */
+  const deckMoved = (records, slides) =>
+    records.some((r) => {
+      const t = r.target
+      if (t.nodeType !== 1 || isOverlay(t)) return false
+      if (r.type === 'childList') return t === slides[0].parentElement
+      return slides.includes(t) || t.contains(slides[0])
+    })
+  const pause = (ms) => new Promise((resolve) => window.setTimeout(resolve, ms))
+  /** one slide on with the deck's own key; false when no key moved it */
+  const stepDeck = async (slides, forward) => {
+    const way = forward ? 'next' : 'prev'
+    const keys = deckKeys[way] ? [deckKeys[way]] : forward ? NEXT_KEYS : PREV_KEYS
+    for (const key of keys) {
+      const watch = new window.MutationObserver(() => {})
+      watch.observe(document.documentElement, { attributes: true, childList: true, subtree: true })
+      pressDeckKey(key)
+      let moved = deckMoved(watch.takeRecords(), slides)
+      // a deck may turn on the next frame rather than inside its key handler
+      if (!moved) {
+        await pause(60)
+        moved = deckMoved(watch.takeRecords(), slides)
+      }
+      watch.disconnect()
+      if (moved) {
+        deckKeys[way] = key
+        return true
+      }
+    }
+    return false
+  }
+  /** last resort for a deck no key turns: move the classes only the shown slide carries */
+  const swapShown = (slides, to) => {
+    const from = slides[currentSlide(slides)]
+    if (!from || from === to) return
+    const others = slides.filter((el) => el !== from)
+    const own = Array.from(from.classList).filter(
+      (c) => !others.some((el) => el.classList.contains(c)),
+    )
+    for (const c of own) {
+      from.classList.remove(c)
+      to.classList.add(c)
+    }
+  }
+  const turnTo = async (index) => {
+    await whenSettled()
+    const slides = findSlides()
+    if (!slides[index]) return
+    const reveal = window.Reveal
+    if (revealSlides() && reveal && typeof reveal.slide === 'function') reveal.slide(index)
+    else if (stacked(slides)) slides[index].scrollIntoView({ block: 'start' })
+    else {
+      // the deck's own keys keep its idea of the current slide in step with what it shows
+      let at = currentSlide(slides)
+      while (at !== index) {
+        const forward = index > at
+        if (!(await stepDeck(slides, forward))) break
+        at += forward ? 1 : -1
+      }
+      if (at !== index) swapShown(slides, slides[index])
+    }
+    refresh()
+    scheduleSlides(0)
+    // a slide that fades or slides in is the current one only once it has arrived
+    window.setTimeout(() => scheduleSlides(0), 600)
+  }
+  let slideQueue = Promise.resolve()
+  const goToSlide = (index) => {
+    slideQueue = slideQueue.then(() => turnTo(index)).catch(() => undefined)
+  }
+  let slideReport = ''
+  let slideTimer = null
+  const reportSlides = () => {
+    slideTimer = null
+    // the paper view has its own rail
+    if (paper) return
+    const slides = findSlides()
+    const report = {
+      count: slides.length,
+      current: slides.length ? currentSlide(slides) : 0,
+      width: Math.round(window.innerWidth),
+      height: Math.round(window.innerHeight),
+    }
+    const key = JSON.stringify(report)
+    if (key === slideReport) return
+    slideReport = key
+    post({ type: 'gx:slides', ...report })
+  }
+  const scheduleSlides = (delay = 150) => {
+    if (slideTimer === null) slideTimer = window.setTimeout(reportSlides, delay)
+  }
+  // a deck turns its slides through classes and styles; the inspector's own boxes do not count
+  new window.MutationObserver((records) => {
+    if (records.some((r) => r.target.nodeType === 1 && !isOverlay(r.target))) scheduleSlides()
+  }).observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ['class', 'style', 'hidden', 'aria-hidden'],
+    childList: true,
+    subtree: true,
+  })
+  window.addEventListener('scroll', () => scheduleSlides(), true)
+  window.addEventListener('resize', () => scheduleSlides())
+  whenSettled().then(() => scheduleSlides(0))
+
   window.addEventListener('message', (e) => {
     const msg = e.data
     if (!msg || typeof msg.type !== 'string') return
@@ -1582,6 +1816,20 @@
           if (paper) post({ type: 'gx:pageReport', ...measurePaper() })
         })
         break
+      case 'gx:goToSlide':
+        if (!Number.isInteger(msg.index) || msg.index < 0) break
+        if (editing) finishEdit(true)
+        goToSlide(msg.index)
+        break
+      case 'gx:thumbnail': {
+        if (!Number.isInteger(msg.slide) || msg.slide < 0) break
+        const style = document.createElement('style')
+        style.setAttribute(MARK, '')
+        style.textContent = '::-webkit-scrollbar { display: none; }'
+        document.documentElement.appendChild(style)
+        goToSlide(msg.slide)
+        break
+      }
       case 'gx:theme':
         dark = !!msg.dark
         document.documentElement.style.setProperty('--gx-select', dark ? '#4a9eff' : '#0f7fff')

@@ -4,6 +4,7 @@ Trình soạn thảo HTML mở .html / .htm ở hai chế độ: **Xem trước*
 
 - **Xem trước**: kết xuất thật; các bảng định kiểu và hình ảnh tương đối được nạp cạnh tệp.
 - **Trình kiểm tra xem trước**: nhấp để chọn một phần tử, nhấp đúp để sửa văn bản tại chỗ, xóa bằng thanh công cụ, và hỏi AI về phần đã chọn.
+- **Trang chiếu**: trang gồm nhiều trang chiếu có danh sách trang chiếu ở bên trái bản xem trước, do chính trang vẽ; bấm vào một trang chiếu để hiển thị nó. Thao tác sửa làm tải lại bản xem trước sẽ quay về trang chiếu bạn đang xem, và các phím bạn gõ vào chữ của trang chiếu không bao giờ lật trang.
 - **Chế độ mã nguồn**: sửa HTML; ctrl+F để tìm, Thay thế tất cả lưu lại đánh dấu đã viết lại.
 - **Lưu**: trung thành từng byte (giữ BOM/CRLF/dấu xuống dòng cuối); lưu mà không sửa gì sẽ không ghi lại.
 - **Thu phóng**: ctrl+lăn chuột / véo tay để phóng bản xem trước; ctrl+Z bên trong bản xem trước hoàn tác chỉnh sửa gần nhất.

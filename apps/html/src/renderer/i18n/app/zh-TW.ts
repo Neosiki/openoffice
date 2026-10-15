@@ -47,6 +47,8 @@ export const zhTW = {
   pageCount: '{n} 頁',
   pageThumbs: '頁面縮圖',
   pageThumbGo: '前往第 {n} 頁',
+  slideThumbs: '投影片',
+  slideThumbGo: '移至第 {n} 張投影片',
   previewNeedsSave: '儲存檔案後，相對路徑的圖片和樣式才會在預覽中顯示',
   inspectHint: '點選預覽中的元素以選取，雙擊編輯文字',
   nodeDynamic: '此元素由頁面腳本產生，原始碼中不存在；請透過原始碼或 AI 修改',

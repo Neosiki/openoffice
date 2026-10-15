@@ -47,6 +47,8 @@ export const id = {
   pageCount: '{n} halaman',
   pageThumbs: 'Gambar mini halaman',
   pageThumbGo: 'Ke halaman {n}',
+  slideThumbs: 'Daftar slide',
+  slideThumbGo: 'Buka slide {n}',
   previewNeedsSave: 'Gambar dan gaya relatif akan tampil di pratinjau setelah file disimpan',
   inspectHint: 'Klik elemen di pratinjau untuk memilih, klik dua kali untuk mengedit teks',
   nodeDynamic:

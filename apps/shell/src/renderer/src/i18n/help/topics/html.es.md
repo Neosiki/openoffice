@@ -4,6 +4,7 @@ El editor HTML abre .html / .htm con dos modos: **Vista previa** (la página ren
 
 - **Vista previa**: renderizado real; las hojas de estilo y las imágenes relativas se cargan junto al archivo.
 - **Inspector de la vista previa**: haga clic para seleccionar un elemento, doble clic para editar su texto en el sitio, borrarlo con la barra de herramientas y Preguntar a la IA sobre la selección.
+- **Diapositivas**: una página de diapositivas muestra una lista de diapositivas a la izquierda de la vista previa, dibujada por la propia página; haga clic en una para mostrarla. Una edición que recarga la vista previa vuelve a la diapositiva en la que estaba, y las teclas que escribe en el texto de una diapositiva nunca la pasan.
 - **Modo de código**: edite el HTML; ctrl+F para buscar, Reemplazar todo guarda el marcado reescrito.
 - **Guardar**: fiel byte a byte (se conservan el BOM, los CRLF y el salto de línea final); los guardados sin cambios no reescriben.
 - **Zoom**: ctrl+rueda o pellizco escala la vista previa; ctrl+Z dentro de la vista previa deshace la última edición.

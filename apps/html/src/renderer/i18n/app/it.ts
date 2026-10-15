@@ -48,6 +48,8 @@ export const it = {
   pageCount: 'Pagine: {n}',
   pageThumbs: 'Miniature delle pagine',
   pageThumbGo: 'Vai a pagina {n}',
+  slideThumbs: 'Diapositive',
+  slideThumbGo: 'Vai alla diapositiva {n}',
   previewNeedsSave:
     "Immagini e stili relativi compaiono nell'anteprima dopo il salvataggio del file",
   inspectHint:
