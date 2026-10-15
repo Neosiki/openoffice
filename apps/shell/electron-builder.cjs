@@ -61,6 +61,7 @@ function assertExtraResourceSources() {
     '../../node_modules/electron/dist/LICENSES.chromium.html',
     '../../node_modules/@embedpdf/pdfium/dist/pdfium.wasm',
     '../pdf/node_modules/harfbuzzjs/hb-subset.wasm',
+    '../../node_modules/@neslinesli93/qpdf-wasm/dist/qpdf.wasm',
     '../../packages/ui/template-fonts/README.md',
     '../../node_modules/@rhwp/core/rhwp_bg.wasm',
   ]) {
@@ -501,6 +502,11 @@ const config = {
     {
       from: '../pdf/node_modules/harfbuzzjs/hb-subset.wasm',
       to: 'wasm/hb-subset.wasm',
+    },
+    // qpdf for the PDF tools window's add / remove password, run in the PDF job process
+    {
+      from: '../../node_modules/@neslinesli93/qpdf-wasm/dist/qpdf.wasm',
+      to: 'wasm/qpdf.wasm',
     },
     // HWP / HWPX reading outside the editor (file search, knowledge base,
     // attachments, MCP, command line): packages/file-parse/src/hwp.ts

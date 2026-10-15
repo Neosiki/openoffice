@@ -64,6 +64,10 @@ export type StructureJob =
   | { op: 'fingerprints'; source: JobSource }
   /** the PDF tools window's blank-page candidates (apps/pdf/src/main/blank-pages.ts) */
   | { op: 'blankPages'; source: JobSource }
+  /** the PDF tools window's add password, remove password and repair (apps/pdf/src/main/qpdf.ts, repair.ts) */
+  | { op: 'encrypt'; source: JobSource; userPassword: string; ownerPassword?: string }
+  | { op: 'decrypt'; source: JobSource; password: string }
+  | { op: 'repair'; source: JobSource }
   | { op: 'writeBack'; source: JobSource; tree?: DocumentTree; outPath: string; payload: unknown }
 
 export type StructureOp = StructureJob['op']
@@ -78,6 +82,8 @@ export interface ProcessSetup {
   userDataDir?: string
   /** harfbuzz subsetter wasm on disk (wasm-path.ts hbSubsetWasmPath); the translated PDF needs it */
   hbSubsetWasmPath?: string
+  /** qpdf wasm on disk (wasm-path.ts qpdfWasmPath); adding and removing a password needs it */
+  qpdfWasmPath?: string
 }
 
 export interface RunMessage {
@@ -204,6 +210,9 @@ const OPS: ReadonlySet<string> = new Set<StructureOp>([
   'fingerprints',
   'writeBack',
   'blankPages',
+  'encrypt',
+  'decrypt',
+  'repair',
 ])
 
 /** the child's view of the parent's message; null when it is not a run message */
@@ -216,6 +225,7 @@ export function parseRunMessage(raw: unknown): RunMessage | null {
   if (setup.userDataDir !== undefined && typeof setup.userDataDir !== 'string') return null
   if (setup.hbSubsetWasmPath !== undefined && typeof setup.hbSubsetWasmPath !== 'string')
     return null
+  if (setup.qpdfWasmPath !== undefined && typeof setup.qpdfWasmPath !== 'string') return null
   if (!isRecord(job) || typeof job.op !== 'string' || !OPS.has(job.op)) return null
   if (!isRecord(job.source) || typeof job.source.pdfPath !== 'string') return null
   return raw as unknown as RunMessage

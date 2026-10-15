@@ -5,7 +5,19 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { crc32, deflateSync } from 'node:zlib'
 import { test, expect, type ElectronApplication, type Page } from '@playwright/test'
-import { PDFDocument, PDFString, StandardFonts, degrees, rgb } from 'pdf-lib'
+import {
+  PDFDocument,
+  PDFName,
+  PDFRawStream,
+  PDFString,
+  StandardFonts,
+  concatTransformationMatrix,
+  degrees,
+  drawObject,
+  popGraphicsState,
+  pushGraphicsState,
+  rgb,
+} from 'pdf-lib'
 import { closeAndSaveVideo, launchShell, screenshotPath, waitForPageWithUrl } from './helpers'
 
 /**
@@ -191,10 +203,15 @@ test.describe('PDF tools window', () => {
       expect(await sha(b)).toBe(before.b)
       expect(existsSync(join(parts, 'a-4.pdf'))).toBe(false)
 
-      await Promise.all([
-        tools.waitForEvent('close'),
-        tools.getByRole('button', { name: 'Close', exact: true }).click(),
-      ])
+      const closed = tools.waitForEvent('close')
+      // the window can close before the click itself has finished: that is the button working
+      await tools
+        .getByRole('button', { name: 'Close', exact: true })
+        .click()
+        .catch((err: unknown) => {
+          if (!tools.isClosed()) throw err
+        })
+      await closed
     } finally {
       await closeAndSaveVideo(launched, 'pdf-tools-window')
     }
@@ -545,6 +562,184 @@ test.describe('PDF tools window', () => {
       await tools.screenshot({ path: shot('pdf-tools-from-ribbon') })
     } finally {
       await closeAndSaveVideo(launched, 'pdf-tools-ribbon')
+    }
+  })
+
+  test('making a PDF with a large picture smaller', async () => {
+    test.setTimeout(180_000)
+    const dir = await mkdtemp(join(tmpdir(), 'genoffice-pdf-tools-e2e-'))
+    const scan = join(dir, 'photo.pdf')
+    const out = join(dir, 'photo-smaller.pdf')
+    // a noisy 1600×1600 picture: Flate cannot shrink it, JPEG can
+    const width = 1600
+    const rgb = new Uint8Array(width * width * 3)
+    let seed = 11
+    for (let i = 0; i < rgb.length; i++) {
+      seed = (Math.imul(seed, 1103515245) + 12345) & 0x7fffffff
+      rgb[i] = (seed >> 16) & 0xff
+    }
+    const doc = await PDFDocument.create()
+    const page = doc.addPage([600, 600])
+    const image = doc.context.register(
+      doc.context.flateStream(rgb, {
+        Type: 'XObject',
+        Subtype: 'Image',
+        Width: width,
+        Height: width,
+        ColorSpace: 'DeviceRGB',
+        BitsPerComponent: 8,
+      }),
+    )
+    const name = page.node.newXObject('Im', image)
+    page.pushOperators(
+      pushGraphicsState(),
+      concatTransformationMatrix(600, 0, 0, 600, 0, 0),
+      drawObject(name),
+      popGraphicsState(),
+    )
+    await writeFile(scan, await doc.save({ useObjectStreams: false }))
+    const before = (await readFile(scan)).length
+    if (EVIDENCE_DIR) await mkdir(EVIDENCE_DIR, { recursive: true })
+
+    const launched = await launchShell({ onboardingSeen: true, videoDir: 'pdf-tools-compress' })
+    const { app, page: home } = launched
+    try {
+      const tools = await openToolsWindow(app, home, /PDF tools/)
+      await tools.getByRole('button', { name: /Make smaller/ }).click()
+      await queueDialogs(app, { open: [[scan]], save: [out] })
+      await tools.getByRole('button', { name: 'Choose PDF', exact: true }).click()
+      await tools.getByRole('radio', { name: 'Strong (size first)' }).check()
+      await tools.screenshot({ path: shot('pdf-tools-compress-en') })
+      await tools.getByRole('button', { name: 'Save as new file' }).click()
+      await expect(tools.getByText(/Made a new file: photo-smaller\.pdf \(.+ → .+\)/)).toBeVisible({
+        timeout: 60_000,
+      })
+      const made = await readFile(out)
+      expect(made.length).toBeLessThan(before / 3)
+      // the picture is a JPEG now, at the strong level's longest side
+      const smaller = await PDFDocument.load(made)
+      const pictures = smaller.context
+        .enumerateIndirectObjects()
+        .map(([, object]) => object)
+        .filter((object): object is PDFRawStream => object instanceof PDFRawStream)
+        .filter((object) => object.dict.lookup(PDFName.of('Subtype'))?.toString() === '/Image')
+      expect(pictures).toHaveLength(1)
+      expect(pictures[0]!.dict.lookup(PDFName.of('Filter'))?.toString()).toBe('/DCTDecode')
+      expect(pictures[0]!.dict.lookup(PDFName.of('Width'))?.toString()).toBe('1400')
+
+      // and it still draws in the editor
+      const tabs = await pdfPages(app)
+      await tools.getByRole('button', { name: 'Open in a tab' }).click()
+      await expect.poll(() => pdfPages(app), { timeout: 30_000 }).toBe(tabs + 1)
+      const editor = await waitForPageWithUrl(app, '://pdf/')
+      await expect(editor.locator('.pdf-page')).toHaveCount(1, { timeout: 30_000 })
+      await editor.waitForTimeout(1500)
+      await editor.screenshot({ path: shot('pdf-tools-compress-result') })
+    } finally {
+      await closeAndSaveVideo(launched, 'pdf-tools-compress')
+    }
+  })
+
+  test('adding a password, removing it, and repairing a file cut short', async () => {
+    test.setTimeout(180_000)
+    const dir = await mkdtemp(join(tmpdir(), 'genoffice-pdf-tools-e2e-'))
+    const plain = join(dir, 'minutes.pdf')
+    const locked = join(dir, 'minutes-locked.pdf')
+    const unlocked = join(dir, 'minutes-unlocked.pdf')
+    const cut = join(dir, 'download.pdf')
+    const repaired = join(dir, 'download-repaired.pdf')
+    await makePdf(plain, [
+      [300, 400],
+      [300, 400],
+    ])
+    const doc = await PDFDocument.create()
+    const font = await doc.embedFont(StandardFonts.Helvetica)
+    for (let i = 0; i < 3; i++) {
+      doc.addPage([300, 400]).drawText(`Page ${i + 1}`, { x: 30, y: 300, size: 24, font })
+    }
+    const whole = await doc.save({ useObjectStreams: false })
+    // a download that stopped partway: the last page and the cross-reference table are gone
+    await writeFile(cut, whole.slice(0, Math.floor(whole.length * 0.7)))
+    const plainHash = await sha(plain)
+    const password = '열려라 참깨 7'
+    const isEncrypted = async (path: string) =>
+      (await PDFDocument.load(await readFile(path), { ignoreEncryption: true })).isEncrypted
+    if (EVIDENCE_DIR) await mkdir(EVIDENCE_DIR, { recursive: true })
+
+    const launched = await launchShell({ onboardingSeen: true, videoDir: 'pdf-tools-security' })
+    const { app, page: home } = launched
+    try {
+      const tools = await openToolsWindow(app, home, /PDF tools/)
+      await tools.screenshot({ path: shot('pdf-tools-home-security-en') })
+
+      // add password: typed twice, and the button waits until both match
+      await tools.getByRole('button', { name: /Add password/ }).click()
+      await queueDialogs(app, { open: [[plain]], save: [locked] })
+      await tools.getByRole('button', { name: 'Choose PDF', exact: true }).click()
+      const run = tools.getByRole('button', { name: 'Save as new file' })
+      await tools.getByLabel('Password to open').fill(password)
+      await tools.getByLabel('Type the password again').fill('열려라')
+      await expect(tools.getByText('The two passwords do not match.')).toBeVisible()
+      await expect(run).toBeDisabled()
+      await tools.getByLabel('Type the password again').fill(password)
+      await tools.getByRole('checkbox', { name: 'Block printing, copying and changes' }).check()
+      await tools.getByLabel('Password to lift the block').fill(password)
+      await expect(
+        tools.getByText('The password to lift the block must differ from the password to open.'),
+      ).toBeVisible()
+      await tools.getByLabel('Password to lift the block').fill('owner only')
+      await expect(run).toBeEnabled()
+      await tools.screenshot({ path: shot('pdf-tools-encrypt-en') })
+      await run.click()
+      await expect(tools.getByText('Made a new file: minutes-locked.pdf')).toBeVisible({
+        timeout: 60_000,
+      })
+      expect(await isEncrypted(locked)).toBe(true)
+      expect(await sha(plain)).toBe(plainHash)
+      // the passwords are not kept on screen once used
+      await expect(tools.getByLabel('Password to open')).toHaveValue('')
+
+      // remove password: only a protected PDF, and only with its password
+      await tools.getByRole('button', { name: /All tools/ }).click()
+      await tools.getByRole('button', { name: /Remove password/ }).click()
+      await queueDialogs(app, { open: [[plain], [locked]], save: [unlocked] })
+      await tools.getByRole('button', { name: 'Choose PDF', exact: true }).click()
+      await expect(tools.getByText('minutes.pdf: this PDF has no password.')).toBeVisible()
+      await tools.getByRole('button', { name: 'Choose PDF', exact: true }).click()
+      await expect(tools.locator('.pt-item-name')).toHaveText('minutes-locked.pdf')
+      await tools.getByLabel('Current password').fill('wrong')
+      await tools.getByRole('button', { name: 'Save as new file' }).click()
+      await expect(tools.getByText('The password is not correct.')).toBeVisible({ timeout: 60_000 })
+      expect(existsSync(unlocked)).toBe(false)
+      await tools.getByLabel('Current password').fill(password)
+      await tools.screenshot({ path: shot('pdf-tools-decrypt-en') })
+      await tools.getByRole('button', { name: 'Save as new file' }).click()
+      await expect(tools.getByText('Made a new file: minutes-unlocked.pdf')).toBeVisible({
+        timeout: 60_000,
+      })
+      expect(await isEncrypted(unlocked)).toBe(false)
+      expect((await PDFDocument.load(await readFile(unlocked))).getPageCount()).toBe(2)
+
+      // repair: the pages that survived come back as a file every tool reads
+      await tools.getByRole('button', { name: /All tools/ }).click()
+      await tools.getByRole('button', { name: /Repair file/ }).click()
+      await queueDialogs(app, { open: [[cut]], save: [repaired] })
+      await tools.getByRole('button', { name: 'Choose PDF', exact: true }).click()
+      await tools.screenshot({ path: shot('pdf-tools-repair-en') })
+      await tools.getByRole('button', { name: 'Save as new file' }).click()
+      await expect(tools.getByText('Made a new file: download-repaired.pdf')).toBeVisible({
+        timeout: 60_000,
+      })
+      expect((await PDFDocument.load(await readFile(repaired))).getPageCount()).toBe(2)
+      const tabs = await pdfPages(app)
+      await tools.getByRole('button', { name: 'Open in a tab' }).click()
+      await expect.poll(() => pdfPages(app), { timeout: 30_000 }).toBe(tabs + 1)
+      const editor = await waitForPageWithUrl(app, '://pdf/')
+      await expect(editor.locator('.pdf-page')).toHaveCount(2, { timeout: 30_000 })
+      await editor.waitForTimeout(1500)
+      await editor.screenshot({ path: shot('pdf-tools-repair-result') })
+    } finally {
+      await closeAndSaveVideo(launched, 'pdf-tools-security')
     }
   })
 

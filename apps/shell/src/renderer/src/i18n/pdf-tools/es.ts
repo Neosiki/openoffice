@@ -74,7 +74,8 @@ export const es = {
   errUnsavedTarget: 'Ese archivo está abierto con cambios sin guardar. Elija otro nombre.',
   errBusy: 'Hay otra tarea en curso. Inténtelo cuando termine.',
   errFailed: 'No se pudo completar esta tarea.',
-  rejectEncrypted: '{name}: no se pueden usar PDF protegidos con contraseña.',
+  rejectEncrypted:
+    '{name}: este PDF está protegido con contraseña. Quite primero la contraseña con «Quitar contraseña».',
   rejectUnreadable: '{name}: no se pudo leer como PDF.',
   rejectTooLarge: '{name}: el archivo es demasiado grande.',
   groupConvert: 'Convertir',
@@ -147,5 +148,47 @@ export const es = {
   errAllPages: 'No se pueden quitar todas las páginas.',
   errNotFound: 'Busque primero las páginas en blanco.',
   errNoneChosen: 'Elija al menos una página que quitar.',
+  groupSizeSecurity: 'Tamaño y seguridad',
+  toolCompress: 'Reducir tamaño',
+  descCompress: 'Reducir y recomprimir las imágenes grandes para que el archivo pese menos',
+  optLevel: 'Intensidad',
+  levelLight: 'Ligera (calidad primero)',
+  levelMedium: 'Media',
+  levelStrong: 'Fuerte (tamaño primero)',
+  noteCompress:
+    'El texto y los dibujos no cambian; solo se reducen las imágenes grandes. No se guarda nada si el resultado no es más pequeño.',
+  workingProgress: 'Procesando… {done} / {total}',
+  cancelRun: 'Detener',
+  doneCompressed: 'Archivo nuevo creado: {name} ({before} → {after})',
+  errNotSmaller: 'No se pudo reducir este PDF. Siga usando el original.',
+  toolEncrypt: 'Añadir contraseña',
+  descEncrypt: 'El PDF pedirá una contraseña al abrirse',
+  toolDecrypt: 'Quitar contraseña',
+  descDecrypt: 'Abrir el PDF con su contraseña y guardar una copia sin ella',
+  toolRepair: 'Reparar archivo',
+  descRepair: 'Arreglar un PDF que no se abre o muestra errores, y guardarlo de nuevo',
+  hintDecrypt: 'Elija un PDF protegido con contraseña.',
+  hintRepair:
+    'Elija el PDF que quiere reparar. También puede elegir archivos que el editor no abre.',
+  optPassword: 'Contraseña para abrir',
+  optPasswordConfirm: 'Repita la contraseña',
+  optRestrict: 'Bloquear impresión, copia y cambios',
+  optPermissionPassword: 'Contraseña para quitar el bloqueo',
+  optCurrentPassword: 'Contraseña actual',
+  noteEncrypt:
+    'La contraseña usa AES-256. Si se olvida, nadie podrá abrir el archivo. El archivo original no cambia.',
+  noteRestrict:
+    'El bloqueo es una regla que los programas PDF deben respetar; un programa que la ignore aún puede imprimir o copiar.',
+  noteDecrypt:
+    'Solo se puede quitar una contraseña que usted conozca. El archivo nuevo se abre sin contraseña y también desaparece cualquier bloqueo de impresión o copia.',
+  noteRepair:
+    'Las partes legibles se escriben en un archivo nuevo. El contenido perdido no se puede recuperar; abra el archivo nuevo y revíselo.',
+  passwordMismatch: 'Las dos contraseñas no coinciden.',
+  errPasswordEmpty: 'Escriba una contraseña.',
+  errPasswordSame:
+    'La contraseña para quitar el bloqueo debe ser distinta de la contraseña para abrir.',
+  errPasswordLong: 'La contraseña es demasiado larga. Use una más corta.',
+  errWrongPassword: 'La contraseña no es correcta.',
+  rejectNotEncrypted: '{name}: este PDF no tiene contraseña.',
   close: 'Cerrar',
 } satisfies Record<keyof typeof zh, string>

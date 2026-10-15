@@ -27,6 +27,10 @@ export const PDF_TOOLS_HANDOFF = [
   'overlay',
   'stripAnnots',
   'toText',
+  'compress',
+  'encrypt',
+  'decrypt',
+  'repair',
 ] as const
 export type PdfToolsHandoffTool = (typeof PDF_TOOLS_HANDOFF)[number]
 

@@ -17,6 +17,7 @@ Una ventana para las tareas habituales con PDF que empieza por la tarea. El resu
 | Decorar                | Añadir un fondo                                                                                              |
 | Limpiar                | Quitar anotaciones                                                                                           |
 | Convertir              | Imágenes a PDF, Guardar como texto                                                                           |
+| Tamaño y seguridad     | Reducir tamaño, Añadir contraseña, Quitar contraseña, Reparar archivo                                        |
 | En el editor de PDF    | Marca de agua y encabezado/pie, Recortar páginas, Exportar imágenes, Convertir PDF, Editar, firmar, censurar |
 
 Las tarjetas de **En el editor de PDF** abren el PDF elegido en una pestaña del editor. Elija allí la función en la cinta.
@@ -24,7 +25,8 @@ Las tarjetas de **En el editor de PDF** abren el PDF elegido en una pestaña del
 ## Conviene saber
 
 - No se puede guardar sobre un archivo de origen ni sobre un archivo abierto con cambios sin guardar.
-- Todavía no se pueden usar PDF protegidos con contraseña.
+- Un PDF protegido con contraseña solo sirve en las demás herramientas después de **Quitar contraseña**. Un archivo cuya contraseña no conoce no se puede abrir.
+- **Reparar archivo** solo recupera las partes que aún se pueden leer. Abra el archivo nuevo y compruebe que no falte ninguna página.
 - **Quitar páginas en blanco** solo muestra candidatas. Solo se quitan las páginas elegidas, y una página con un solo carácter nunca es candidata.
 - **Quitar anotaciones** conserva los campos de formulario y solo quita los vínculos si los marca. El contenido de las anotaciones quitadas no queda en el archivo nuevo.
 - **Guardar como texto** solo lee la capa de texto. Las páginas cuyo texto es una imagen, como las escaneadas, quedarán vacías.
@@ -40,3 +42,5 @@ Las tarjetas de **En el editor de PDF** abren el PDF elegido en una pestaña del
 | Limpiar los comentarios antes de enviar un documento revisado                        | Quitar anotaciones                          |
 | Entregar varias fotos como un solo PDF                                               | Imágenes a PDF                              |
 | Reutilizar el texto de un PDF en otro documento                                      | Guardar como texto                          |
+| Un PDF es demasiado grande para adjuntarlo a un correo                               | Reducir tamaño                              |
+| Un PDF cuya descarga se cortó no se abre                                             | Reparar archivo                             |

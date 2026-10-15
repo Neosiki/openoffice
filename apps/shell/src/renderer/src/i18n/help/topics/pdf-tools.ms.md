@@ -10,21 +10,23 @@ Tetingkap untuk tugas PDF harian yang bermula daripada tugas itu. Hasilnya senti
 
 ## Senarai alat
 
-| Kumpulan          | Alat                                                                                                             |
-| ----------------- | ---------------------------------------------------------------------------------------------------------------- |
-| Susun halaman     | Gabungkan PDF, Pisahkan PDF, Ekstrak halaman sebagai PDF, Terbalikkan susunan, Putar semua, Buang halaman kosong |
-| Sedia untuk cetak | Sedia untuk cetakan dua muka, Gabung halaman, Saiz halaman, Pisahkan halaman                                     |
-| Hias              | Tambah latar                                                                                                     |
-| Kemas             | Buang anotasi                                                                                                    |
-| Tukar             | Imej ke PDF, Simpan sebagai teks                                                                                 |
-| Dalam editor PDF  | Tera air & pengepala/pengaki, Pangkas halaman, Eksport imej, Tukar PDF, Edit, tandatangan, tapis                 |
+| Kumpulan             | Alat                                                                                                             |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| Susun halaman        | Gabungkan PDF, Pisahkan PDF, Ekstrak halaman sebagai PDF, Terbalikkan susunan, Putar semua, Buang halaman kosong |
+| Sedia untuk cetak    | Sedia untuk cetakan dua muka, Gabung halaman, Saiz halaman, Pisahkan halaman                                     |
+| Hias                 | Tambah latar                                                                                                     |
+| Kemas                | Buang anotasi                                                                                                    |
+| Tukar                | Imej ke PDF, Simpan sebagai teks                                                                                 |
+| Saiz dan keselamatan | Kecilkan saiz, Tambah kata laluan, Buang kata laluan, Baiki fail                                                 |
+| Dalam editor PDF     | Tera air & pengepala/pengaki, Pangkas halaman, Eksport imej, Tukar PDF, Edit, tandatangan, tapis                 |
 
 Kad dalam kumpulan **Dalam editor PDF** membuka PDF yang dipilih dalam tab editor. Pilih arahan itu pada reben di sana.
 
 ## Perlu diketahui
 
 - Anda tidak boleh menyimpan di atas fail sumber atau fail yang dibuka dengan perubahan yang belum disimpan.
-- PDF yang dilindungi kata laluan belum boleh digunakan.
+- PDF yang dilindungi kata laluan hanya boleh digunakan dalam alat lain selepas **Buang kata laluan**. Fail yang kata laluannya tidak anda ketahui tidak dapat dibuka.
+- **Baiki fail** hanya mengembalikan bahagian yang masih boleh dibaca. Buka fail baharu dan semak bahawa tiada halaman yang hilang.
 - **Buang halaman kosong** hanya menunjukkan calon. Hanya halaman yang anda pilih dibuang, dan halaman yang ada walau satu aksara tidak pernah menjadi calon.
 - **Buang anotasi** mengekalkan medan borang dan hanya membuang pautan jika anda menandanya. Kandungan anotasi yang dibuang tidak kekal dalam fail baharu.
 - **Simpan sebagai teks** hanya membaca lapisan teks. Halaman yang teksnya ialah imej, seperti halaman imbasan, akan kosong.
@@ -40,3 +42,5 @@ Kad dalam kumpulan **Dalam editor PDF** membuka PDF yang dipilih dalam tab edito
 | Mengemas ulasan sebelum menghantar dokumen yang telah disemak                        | Buang anotasi                                 |
 | Menghantar beberapa foto sebagai satu PDF                                            | Imej ke PDF                                   |
 | Menggunakan teks PDF dalam dokumen lain                                              | Simpan sebagai teks                           |
+| PDF terlalu besar untuk dilampirkan pada e-mel                                       | Kecilkan saiz                                 |
+| PDF yang muat turunnya terputus di tengah jalan tidak dapat dibuka                   | Baiki fail                                    |
