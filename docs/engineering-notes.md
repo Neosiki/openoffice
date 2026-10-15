@@ -48,7 +48,9 @@
 - **Gemini 무료 등급이 Flash 모델을 "수요 많음(503)"으로 거절한다.** 2026-10-14 시험에서 3.5~3.8 Flash가 번갈아 거절됐고, 작은 요청은 가끔 통과해도 앱의 실제 요청(약 1만 6천 토큰)은 두 번 다 거절됐다. `gemini-3.5-flash-lite`는 매번 답했다. → 무료 연결은 Flash-Lite로 시작한다. 503은 앱이 두 번까지 다시 보내지만 길게 막히면 소용없다.
 - **Gemini의 예전 모델은 새 사용자에게 열려 있지 않다.** `gemini-2.5-flash`는 "no longer available to new users"(404)를 낸다. 3.1 Pro 미리보기는 무료 한도가 0이라 바로 429다.
 - **OpenRouter의 어떤 무료 모델은 등록된 앱에서만 열린다.** `thinkingmachines/inkling:free`는 "only available on agentic harnesses"(403)를 낸다. 무료 모델 목록에 넣기 전에 실제 키로 도구 호출을 한 번 시험한다.
-- **OpenRouter의 하루 무료 요청 수는 모델 호출 수다.** 문서를 한 번 고치는 데 2~5번이 든다. 남은 수는 `GET /api/v1/key`의 `free_model_daily_requests`로 읽는다(무료 요청을 쓰지 않는다). 사용한 수가 몇 초 늦게 반영될 수 있다.
+- **도구 호출을 지원한다고 나온 무료 모델도 앱에서는 실패한다.** 2026-10-15 시험에서 도구 하나짜리 짧은 요청은 대부분 통과했지만, 워드 편집기에서 두 요청(문단 넣기, 제목 바꾸고 요약 목록 넣기)을 끝까지 해낸 것은 `nvidia/nemotron-3.5-lightning:free`와 `dots-studio/dots-3-note-preview:free`뿐이었다. `cohere/north-mini-code:free`는 두 번째 요청에서 모델을 계속 부르며 4분 넘게 끝내지 않았고, `poolside/laguna-s-2.1:free`와 `google/gemma-4-26b-a4b-it:free`는 제공 회사가 혼잡(429)으로 자주 거절했고, `nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free`는 한 번 답하는 데 59초가 걸렸다. → 목록에는 앱에서 두 요청을 모두 해낸 모델만 넣는다. 시험은 `npm run free-models:trial`이다(`docs/operations.md`의 "무료 모델 점검". 실제 키와 무료 요청을 쓰므로 평소 검사에 넣지 않는다).
+- **`process.exit()`로 끝낸 도구 스크립트가 Windows에서 비정상 종료한다.** `fetch` 직후 `process.exit()`을 부르면 Node가 `Assertion failed: !(handle->flags & UV_HANDLE_CLOSING)`로 죽고 종료 코드가 127이 된다. → 네트워크를 쓴 뒤에는 `process.exitCode`만 정하고 끝까지 흘러가게 둔다.
+- **OpenRouter의 하루 무료 요청 수는 모델 호출 수다.** 문서를 한 번 고치는 데 2~5번이 든다. 남은 수는 `GET /api/v1/key`의 `free_model_daily_requests`로 읽는다(무료 요청을 쓰지 않는다). 사용한 수는 늦게 반영된다. 2026-10-15에는 몇 분씩 그대로였다.
 - **브라우저 연결의 돌아올 주소는 `localhost`다.** 브라우저가 `localhost`를 IPv6(`::1`)로 먼저 풀 수 있어 서버를 두 루프백 주소에 함께 연다. `::1`이 없는 PC에서는 그쪽만 조용히 건너뛴다.
 
 ## 작업 사본을 여럿 둘 때
