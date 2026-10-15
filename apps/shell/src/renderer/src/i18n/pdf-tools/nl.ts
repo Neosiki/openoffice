@@ -95,5 +95,12 @@ export const nl = {
   errNoText:
     'Er is geen tekst gevonden in deze pdf. In een gescand document is de tekst een afbeelding en kan die niet als tekst worden opgeslagen.',
   rejectNotImage: '{name}: geen JPG- of PNG-afbeelding.',
+  toolDuplex: 'Voorbereiden op dubbelzijdig',
+  descDuplex: 'Elk bestand met lege pagina’s aanvullen tot een even aantal en ze dan samenvoegen',
+  hintDuplex: 'Kies er een of meer. Ze worden van boven naar beneden samengevoegd.',
+  optSheetPages: 'Pagina’s per zijde, als ze later worden samengevoegd',
+  optNoNup: 'Niet samengevoegd',
+  noteDuplex: 'Dubbelzijdig afgedrukt begint elk bestand op de voorkant van een nieuw vel.',
+  pageCountOne: '1 pagina',
   close: 'Sluiten',
 } satisfies Record<keyof typeof zh, string>

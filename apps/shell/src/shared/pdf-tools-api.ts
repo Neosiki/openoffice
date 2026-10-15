@@ -31,6 +31,7 @@ export const PDF_TOOL_IDS = [
   'splitPages',
   'imagesToPdf',
   'toText',
+  'duplex',
 ] as const
 export type PdfToolId = (typeof PDF_TOOL_IDS)[number]
 
@@ -44,6 +45,9 @@ export type PdfToolPaper = (typeof PDF_TOOL_PAPERS)[number]
 
 /** What a tool takes: PDFs, or JPEG and PNG pictures (imagesToPdf) */
 export type PdfToolInputKind = 'pdf' | 'image'
+
+/** Pages a sheet will later hold N-up (duplex): 1 for no N-up */
+export const PDF_TOOL_SHEET_PAGES = [1, 2, 4, 6, 8, 9, 16] as const
 
 /** Space around a picture on its page (imagesToPdf) */
 export const PDF_TOOL_MARGINS = ['none', 'small', 'large'] as const
@@ -68,6 +72,8 @@ export interface PdfToolOptions {
   imagePaper?: PdfToolPaper | 'image'
   /** imagesToPdf: space kept around each picture on a paper page */
   margin?: PdfToolMargin
+  /** duplex: pages each sheet side will hold when printed N-up afterwards */
+  sheetPages?: number
 }
 
 /** One picked file, as the window may see it: an opaque id, never the path */

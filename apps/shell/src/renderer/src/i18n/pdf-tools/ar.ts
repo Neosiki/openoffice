@@ -93,5 +93,12 @@ export const ar = {
   errNoText:
     'لم يُعثر على نص في ملف PDF هذا. في المستند الممسوح ضوئيًا يكون النص صورة، فلا يمكن حفظه كنص.',
   rejectNotImage: '{name}: ليست صورة JPG أو PNG.',
+  toolDuplex: 'تجهيز للطباعة على الوجهين',
+  descDuplex: 'أكمل كل ملف بصفحات فارغة حتى عدد زوجي ثم ادمجها',
+  hintDuplex: 'اختر ملفًا واحدًا أو أكثر. تُدمج من الأعلى إلى الأسفل.',
+  optSheetPages: 'عدد الصفحات في كل وجه عند الدمج لاحقًا',
+  optNoNup: 'بلا دمج',
+  noteDuplex: 'عند الطباعة على الوجهين يبدأ كل ملف على الوجه الأمامي لورقة جديدة.',
+  pageCountOne: 'صفحة واحدة',
   close: 'إغلاق',
 } satisfies Record<keyof typeof zh, string>

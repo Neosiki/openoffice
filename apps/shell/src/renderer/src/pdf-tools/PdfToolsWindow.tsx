@@ -3,6 +3,7 @@ import type { Lang, Params } from '@genoffice/i18n'
 import {
   PDF_TOOL_MARGINS,
   PDF_TOOL_PAPERS,
+  PDF_TOOL_SHEET_PAGES,
   type PdfEditorToolId,
   type PdfInputProblem,
   type PdfToolError,
@@ -29,18 +30,20 @@ import {
   IconSplitPages,
   IconSplitPdf,
   IconToText,
+  IconDuplex,
   IconWatermark,
 } from '../../../../../pdf/src/renderer/icons'
 
 /** Home groups of the tools the window runs itself (decision 0030) */
 const GROUPS: { label: PdfToolsStringKey; tools: PdfToolId[] }[] = [
   { label: 'groupOrganize', tools: ['merge', 'split', 'extract', 'reverse', 'rotate'] },
-  { label: 'groupPrint', tools: ['nup', 'pageSize', 'splitPages'] },
+  { label: 'groupPrint', tools: ['duplex', 'nup', 'pageSize', 'splitPages'] },
   { label: 'groupConvert', tools: ['imagesToPdf', 'toText'] },
 ]
 
 /** Tools that take several files; imagesToPdf takes pictures */
-const takesMany = (tool: PdfToolId) => tool === 'merge' || tool === 'imagesToPdf'
+const takesMany = (tool: PdfToolId) =>
+  tool === 'merge' || tool === 'imagesToPdf' || tool === 'duplex'
 const takesImages = (tool: PdfToolId) => tool === 'imagesToPdf'
 
 const MARGIN_TEXT: Record<PdfToolMargin, PdfToolsStringKey> = {
@@ -62,6 +65,7 @@ const TOOL_TEXT: Record<PdfToolId | PdfEditorToolId, [PdfToolsStringKey, PdfTool
   splitPages: ['toolSplitPages', 'descSplitPages'],
   imagesToPdf: ['toolImagesToPdf', 'descImagesToPdf'],
   toText: ['toolToText', 'descToText'],
+  duplex: ['toolDuplex', 'descDuplex'],
   stamps: ['toolStamps', 'descStamps'],
   crop: ['toolCrop', 'descCrop'],
   exportImages: ['toolExportImages', 'descExportImages'],
@@ -102,6 +106,7 @@ const DEFAULT_OPTIONS: PdfToolOptions = {
   perPage: 2,
   imagePaper: 'A4',
   margin: 'small',
+  sheetPages: 1,
 }
 
 type View =
@@ -124,6 +129,7 @@ const TOOL_ICON: Record<PdfToolId | PdfEditorToolId, () => ReactElement> = {
   splitPages: IconSplitPages,
   imagesToPdf: IconImagesToPdf,
   toText: IconToText,
+  duplex: IconDuplex,
   stamps: IconWatermark,
   crop: IconCropPages,
   exportImages: IconExportImg,
@@ -330,7 +336,13 @@ function ToolPanel(p: ToolPanelProps) {
       : many
         ? 'addMore'
         : 'replaceFile'
-  const hint: PdfToolsStringKey = images ? 'hintImages' : many ? 'hintMerge' : 'hintOne'
+  const hint: PdfToolsStringKey = images
+    ? 'hintImages'
+    : tool === 'duplex'
+      ? 'hintDuplex'
+      : many
+        ? 'hintMerge'
+        : 'hintOne'
   const done = p.outcome?.kind === 'done' ? p.outcome.outputs : null
   const firstOutput = done?.[0]
 
@@ -352,7 +364,7 @@ function ToolPanel(p: ToolPanelProps) {
               <span className="pt-item-meta">
                 {input.kind === 'image'
                   ? formatBytes(input.size, p.lang)
-                  : `${t('pageCount', { n: input.pages })} · ${formatBytes(input.size, p.lang)}`}
+                  : `${t(input.pages === 1 ? 'pageCountOne' : 'pageCount', { n: input.pages })} · ${formatBytes(input.size, p.lang)}`}
               </span>
               {many && (
                 <>
@@ -618,6 +630,26 @@ function Options({ tool, t, options, pages, onChange }: OptionsProps) {
         </div>
       )
     }
+    case 'duplex':
+      return (
+        <div className="pt-fields">
+          <label className="pt-field">
+            <span className="pt-field-label">{t('optSheetPages')}</span>
+            <select
+              className="pt-input pt-input-short"
+              value={options.sheetPages ?? 1}
+              onChange={(e) => onChange({ sheetPages: Number(e.target.value) })}
+            >
+              {PDF_TOOL_SHEET_PAGES.map((n) => (
+                <option key={n} value={n}>
+                  {n === 1 ? t('optNoNup') : n}
+                </option>
+              ))}
+            </select>
+          </label>
+          <p className="pt-hint">{t('noteDuplex')}</p>
+        </div>
+      )
     case 'toText':
       return <p className="pt-hint">{t('noteToText')}</p>
     default:

@@ -94,5 +94,12 @@ export const id = {
   errNoText:
     'Tidak ada teks yang ditemukan di PDF ini. Dalam dokumen pindaian, teksnya berupa gambar sehingga tidak bisa disimpan sebagai teks.',
   rejectNotImage: '{name}: bukan gambar JPG atau PNG.',
+  toolDuplex: 'Siapkan cetak bolak-balik',
+  descDuplex: 'Lengkapi setiap file dengan halaman kosong hingga genap, lalu gabungkan',
+  hintDuplex: 'Pilih satu atau lebih. File digabung dari atas ke bawah.',
+  optSheetPages: 'Halaman per sisi, jika digabung nanti',
+  optNoNup: 'Tidak digabung',
+  noteDuplex: 'Saat dicetak bolak-balik, setiap file dimulai di sisi depan lembar baru.',
+  pageCountOne: '1 halaman',
   close: 'Tutup',
 } satisfies Record<keyof typeof zh, string>

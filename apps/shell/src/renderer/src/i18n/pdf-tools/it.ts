@@ -94,5 +94,12 @@ export const it = {
   errNoText:
     'Nessun testo trovato in questo PDF. In un documento scansionato il testo è un’immagine e non si può salvare come testo.',
   rejectNotImage: '{name}: non è un’immagine JPG o PNG.',
+  toolDuplex: 'Prepara per fronte-retro',
+  descDuplex: 'Completa ogni file con pagine bianche fino a un numero pari, poi uniscili',
+  hintDuplex: 'Scegline uno o più. Vengono uniti dall’alto in basso.',
+  optSheetPages: 'Pagine per facciata, se raggruppate dopo',
+  optNoNup: 'Non raggruppate',
+  noteDuplex: 'Stampando fronte-retro, ogni file inizia sul fronte di un nuovo foglio.',
+  pageCountOne: '1 pagina',
   close: 'Chiudi',
 } satisfies Record<keyof typeof zh, string>

@@ -391,6 +391,14 @@ export const IconImagesToPdf = () => (
     <path d="M4.8 16.6 L8.6 13.7 L11.6 15.9 L13.6 14.4 L16.2 16.4" />
   </Icon>
 )
+/** Duplex: a printed page and the blank page that evens it out */
+export const IconDuplex = () => (
+  <Icon>
+    <rect x="4.5" y="5" width="7" height="14" rx="1" />
+    <path d="M6.75 9 H9.25 M6.75 11.5 H9.25 M6.75 14 H8.25" />
+    <rect x="12.5" y="5" width="7" height="14" rx="1" strokeDasharray="2.2 1.8" />
+  </Icon>
+)
 /** Save as text: a page of lines */
 export const IconToText = () => (
   <Icon>

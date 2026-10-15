@@ -141,6 +141,8 @@ describe('checking options', () => {
       { imagePaper: 'image', margin: 'none' },
     )
     expect(checkOptions('toText', { pages: '1' }, 3).options).toEqual({})
+    expect(checkOptions('duplex', { sheetPages: 3 }, 3).options).toEqual({ sheetPages: 1 })
+    expect(checkOptions('duplex', { sheetPages: 4 }, 3).options).toEqual({ sheetPages: 4 })
   })
 
   it('keeps only the options the tool reads', () => {
@@ -154,6 +156,8 @@ describe('checking options', () => {
     expect(toolTakesMany('merge')).toBe(true)
     expect(toolTakesMany('split')).toBe(false)
     expect(toolTakesMany('imagesToPdf')).toBe(true)
+    expect(toolTakesMany('duplex')).toBe(true)
+    expect(toolMinInputs('duplex')).toBe(1)
     expect(toolMinInputs('merge')).toBe(2)
     expect(toolMinInputs('imagesToPdf')).toBe(1)
     expect(toolInputKind('imagesToPdf')).toBe('image')
@@ -238,6 +242,20 @@ describe('running each tool', () => {
     expect(new TextDecoder().decode(out!)).toBe('Page one\n\nPage three\n')
   })
 
+  it('pads each file to an even page count before combining them', async () => {
+    const [out] = await runUntouched('duplex', [await pdf(3, 100), await pdf(2, 200)], {
+      sheetPages: 1,
+    })
+    expect(await widths(out!)).toEqual([100, 101, 102, 102, 200, 201])
+  })
+
+  it('pads to whole sheets when the pages are put several to a side later', async () => {
+    const [out] = await runUntouched('duplex', [await pdf(3, 100), await pdf(1, 200)], {
+      sheetPages: 2,
+    })
+    expect(await widths(out!)).toEqual([100, 101, 102, 102, 200, 200, 200, 200])
+  })
+
   it('refuses a PDF with no text at all', async () => {
     await expect(runPdfTool('toText', [await textPdf(['', ''])], {})).rejects.toBeInstanceOf(
       PdfToolRefusal,
@@ -259,5 +277,6 @@ describe('suggested file names', () => {
     expect(outputNames('split', 'a.pdf', 3, {})).toEqual(['a-1.pdf', 'a-2.pdf', 'a-3.pdf'])
     expect(outputNames('imagesToPdf', 'Photo 1.JPEG', 1, {})).toEqual(['Photo 1.pdf'])
     expect(outputNames('toText', 'Report.pdf', 1, {})).toEqual(['Report.txt'])
+    expect(outputNames('duplex', 'a.pdf', 1, {})).toEqual(['a-duplex.pdf'])
   })
 })

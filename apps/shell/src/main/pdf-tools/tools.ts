@@ -16,12 +16,14 @@ import {
   splitPdfBytes,
 } from '../../../../pdf/src/main/save-pdf'
 import { imagesToPdfBytes, readImageInfo } from '../../../../pdf/src/main/images-to-pdf'
+import { duplexMergeBytes } from '../../../../pdf/src/main/print-prep'
 import { readPdfText, type PdfPageText } from '../../../../pdf/src/main/read-text'
 import { parsePageRange } from '../../../../pdf/src/renderer/convert/page-range'
 import {
   PDF_TOOL_IDS,
   PDF_TOOL_MARGINS,
   PDF_TOOL_PAPERS,
+  PDF_TOOL_SHEET_PAGES,
   type PdfInputProblem,
   type PdfToolId,
   type PdfToolInputKind,
@@ -49,9 +51,9 @@ export function isPdfToolId(value: unknown): value is PdfToolId {
 /** Points of space around a picture for each margin choice (imagesToPdf) */
 const MARGIN_POINTS: Record<PdfToolMargin, number> = { none: 0, small: 18, large: 36 }
 
-/** Merge and imagesToPdf take several files; every other tool takes one */
+/** Merge, imagesToPdf and duplex take several files; every other tool takes one */
 export function toolTakesMany(tool: PdfToolId): boolean {
-  return tool === 'merge' || tool === 'imagesToPdf'
+  return tool === 'merge' || tool === 'imagesToPdf' || tool === 'duplex'
 }
 
 /** The fewest files a tool runs on: merge needs two */
@@ -145,6 +147,15 @@ export function checkOptions(tool: PdfToolId, raw: unknown, pageCount: number): 
       }
     case 'splitPages':
       return { ok: true, options: { perPage: o.perPage === 4 || o.perPage === 9 ? o.perPage : 2 } }
+    case 'duplex':
+      return {
+        ok: true,
+        options: {
+          sheetPages: (PDF_TOOL_SHEET_PAGES as readonly unknown[]).includes(o.sheetPages)
+            ? (o.sheetPages as number)
+            : 1,
+        },
+      }
     case 'imagesToPdf':
       return {
         ok: true,
@@ -226,6 +237,9 @@ export async function runPdfTool(
         }),
       ]
     }
+    case 'duplex':
+      // both sides of every sheet: two pages, or two times what N-up puts on a side
+      return [await duplexMergeBytes(inputs, 2 * (options.sheetPages ?? 1))]
     case 'toText': {
       const doc = await readPdfText(first)
       if (!doc.pages.some((page) => page.text.trim() !== '')) throw new PdfToolRefusal('no-text')
@@ -253,6 +267,7 @@ export function outputNames(
   if (tool === 'toText') return [`${base}.txt`]
   const suffix: Record<Exclude<PdfToolId, 'split' | 'imagesToPdf' | 'toText'>, string> = {
     merge: 'merged',
+    duplex: 'duplex',
     extract: 'pages',
     reverse: 'reversed',
     nup: `${options.perSheet ?? 2}up`,

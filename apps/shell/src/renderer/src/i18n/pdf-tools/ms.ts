@@ -93,5 +93,12 @@ export const ms = {
   errNoText:
     'Tiada teks ditemui dalam PDF ini. Dalam dokumen imbasan, teks ialah imej dan tidak boleh disimpan sebagai teks.',
   rejectNotImage: '{name}: bukan imej JPG atau PNG.',
+  toolDuplex: 'Sedia untuk cetakan dua muka',
+  descDuplex: 'Lengkapkan setiap fail dengan halaman kosong hingga genap, kemudian gabungkan',
+  hintDuplex: 'Pilih satu atau lebih. Fail digabungkan dari atas ke bawah.',
+  optSheetPages: 'Halaman setiap muka, jika digabungkan kemudian',
+  optNoNup: 'Tidak digabungkan',
+  noteDuplex: 'Apabila dicetak dua muka, setiap fail bermula pada muka hadapan helaian baharu.',
+  pageCountOne: '1 halaman',
   close: 'Tutup',
 } satisfies Record<keyof typeof zh, string>

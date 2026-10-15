@@ -93,5 +93,12 @@ export const en = {
   errNoText:
     'No text was found in this PDF. In a scanned document the text is a picture, so it cannot be saved as text.',
   rejectNotImage: '{name}: not a JPG or PNG picture.',
+  toolDuplex: 'Pad for two-sided printing',
+  descDuplex: 'Even out each file with blank pages, then combine them',
+  hintDuplex: 'Choose one or more. They are combined from top to bottom.',
+  optSheetPages: 'Pages per side, if merged later',
+  optNoNup: 'Not merged',
+  noteDuplex: 'Printed on both sides, each file starts on the front of a new sheet.',
+  pageCountOne: '1 page',
   close: 'Close',
 } satisfies Record<keyof typeof zh, string>

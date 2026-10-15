@@ -93,5 +93,12 @@ export const ko = {
   errNoText:
     '이 PDF에서 글자를 찾지 못했습니다. 스캔한 문서는 글자가 그림으로 들어 있어 텍스트로 저장할 수 없습니다.',
   rejectNotImage: '{name}: JPG나 PNG 그림이 아닙니다.',
+  toolDuplex: '양면 인쇄 맞추기',
+  descDuplex: '파일마다 빈 페이지로 짝수를 맞춘 뒤 하나로 합칩니다',
+  hintDuplex: '하나 이상 고르세요. 위에서부터 차례로 합칩니다.',
+  optSheetPages: '나중에 한 면에 모아찍을 페이지 수',
+  optNoNup: '모아찍지 않음',
+  noteDuplex: '양면으로 인쇄하면 파일마다 새 종이의 앞면에서 시작합니다.',
+  pageCountOne: '1페이지',
   close: '닫기',
 } satisfies Record<keyof typeof zh, string>

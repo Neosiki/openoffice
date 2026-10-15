@@ -94,5 +94,12 @@ export const es = {
   errNoText:
     'No se encontró texto en este PDF. En un documento escaneado el texto es una imagen y no se puede guardar como texto.',
   rejectNotImage: '{name}: no es una imagen JPG o PNG.',
+  toolDuplex: 'Preparar para doble cara',
+  descDuplex: 'Completar cada archivo con páginas en blanco hasta un número par y luego unirlos',
+  hintDuplex: 'Elija uno o más. Se combinan de arriba abajo.',
+  optSheetPages: 'Páginas por cara, si se agrupan después',
+  optNoNup: 'Sin agrupar',
+  noteDuplex: 'Al imprimir a doble cara, cada archivo empieza en el anverso de una hoja nueva.',
+  pageCountOne: '1 página',
   close: 'Cerrar',
 } satisfies Record<keyof typeof zh, string>

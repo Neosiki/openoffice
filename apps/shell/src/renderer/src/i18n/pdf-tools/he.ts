@@ -92,5 +92,12 @@ export const he = {
   noteToText: 'עמודים שהטקסט בהם הוא תמונה, כמו עמודים סרוקים, יהיו ריקים.',
   errNoText: 'לא נמצא טקסט ב-PDF הזה. במסמך סרוק הטקסט הוא תמונה ולכן אי אפשר לשמור אותו כטקסט.',
   rejectNotImage: '{name}: אינה תמונת JPG או PNG.',
+  toolDuplex: 'הכנה להדפסה דו-צדדית',
+  descDuplex: 'השלמת כל קובץ בעמודים ריקים למספר זוגי ואז איחוד',
+  hintDuplex: 'בחרו אחד או יותר. הם יאוחדו מלמעלה למטה.',
+  optSheetPages: 'עמודים לכל צד, אם יאוחדו אחר כך',
+  optNoNup: 'ללא איחוד',
+  noteDuplex: 'בהדפסה דו-צדדית כל קובץ מתחיל בצד הקדמי של דף חדש.',
+  pageCountOne: 'עמוד אחד',
   close: 'סגירה',
 } satisfies Record<keyof typeof zh, string>

@@ -92,5 +92,12 @@ export const zhTW = {
   noteToText: '文字以圖片形式存在的頁面（如掃描頁）將會是空白。',
   errNoText: '在此 PDF 中找不到文字。掃描文件中的文字是圖片，無法儲存為文字檔。',
   rejectNotImage: '{name}：不是 JPG 或 PNG 圖片。',
+  toolDuplex: '雙面列印對齊',
+  descDuplex: '為每個檔案補空白頁使頁數為偶數，再合併為一個',
+  hintDuplex: '請選擇一個或多個。由上而下依序合併。',
+  optSheetPages: '之後每面合併的頁數',
+  optNoNup: '不合併',
+  noteDuplex: '雙面列印時，每個檔案都從新紙張的正面開始。',
+  pageCountOne: '1 頁',
   close: '關閉',
 } satisfies Record<keyof typeof zh, string>

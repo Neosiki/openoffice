@@ -95,5 +95,13 @@ export const fr = {
   errNoText:
     'Aucun texte trouvé dans ce PDF. Dans un document numérisé, le texte est une image et ne peut pas être enregistré en texte.',
   rejectNotImage: '{name} : ce n’est pas une image JPG ou PNG.',
+  toolDuplex: 'Préparer le recto verso',
+  descDuplex:
+    'Compléter chaque fichier par des pages blanches jusqu’à un nombre pair, puis les réunir',
+  hintDuplex: 'Choisissez-en un ou plusieurs. Ils sont combinés de haut en bas.',
+  optSheetPages: 'Pages par face, si regroupées ensuite',
+  optNoNup: 'Non regroupées',
+  noteDuplex: 'En recto verso, chaque fichier commence au recto d’une nouvelle feuille.',
+  pageCountOne: '1 page',
   close: 'Fermer',
 } satisfies Record<keyof typeof zh, string>

@@ -94,5 +94,12 @@ export const pt = {
   errNoText:
     'Nenhum texto foi encontrado neste PDF. Em um documento digitalizado o texto é uma imagem e não pode ser salvo como texto.',
   rejectNotImage: '{name}: não é uma imagem JPG ou PNG.',
+  toolDuplex: 'Preparar para frente e verso',
+  descDuplex: 'Completar cada arquivo com páginas em branco até um número par e depois juntar',
+  hintDuplex: 'Escolha um ou mais. Eles são combinados de cima para baixo.',
+  optSheetPages: 'Páginas por face, se agrupadas depois',
+  optNoNup: 'Sem agrupar',
+  noteDuplex: 'Na impressão frente e verso, cada arquivo começa na frente de uma folha nova.',
+  pageCountOne: '1 página',
   close: 'Fechar',
 } satisfies Record<keyof typeof zh, string>

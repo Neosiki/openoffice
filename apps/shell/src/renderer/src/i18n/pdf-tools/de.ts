@@ -96,5 +96,13 @@ export const de = {
   errNoText:
     'In diesem PDF wurde kein Text gefunden. In einem gescannten Dokument ist der Text ein Bild und kann nicht als Text gespeichert werden.',
   rejectNotImage: '{name}: kein JPG- oder PNG-Bild.',
+  toolDuplex: 'Für Duplexdruck ausgleichen',
+  descDuplex:
+    'Jede Datei mit leeren Seiten auf eine gerade Seitenzahl bringen und dann zusammenfügen',
+  hintDuplex: 'Wählen Sie eine oder mehrere. Sie werden von oben nach unten zusammengefügt.',
+  optSheetPages: 'Seiten pro Blattseite bei späterem Zusammenfassen',
+  optNoNup: 'Nicht zusammengefasst',
+  noteDuplex: 'Beidseitig gedruckt beginnt jede Datei auf der Vorderseite eines neuen Blatts.',
+  pageCountOne: '1 Seite',
   close: 'Schließen',
 } satisfies Record<keyof typeof zh, string>

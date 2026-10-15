@@ -95,5 +95,12 @@ export const ja = {
   errNoText:
     'この PDF には文字が見つかりませんでした。スキャンした文書の文字は画像なので、テキストとして保存できません。',
   rejectNotImage: '{name}: JPG または PNG の画像ではありません。',
+  toolDuplex: '両面印刷用にそろえる',
+  descDuplex: 'ファイルごとに空白ページで偶数にそろえ、1 つにまとめます',
+  hintDuplex: '1 つ以上選んでください。上から順にまとめます。',
+  optSheetPages: 'あとで 1 面にまとめるページ数',
+  optNoNup: 'まとめない',
+  noteDuplex: '両面印刷すると、どのファイルも新しい用紙の表面から始まります。',
+  pageCountOne: '1 ページ',
   close: '閉じる',
 } satisfies Record<keyof typeof zh, string>

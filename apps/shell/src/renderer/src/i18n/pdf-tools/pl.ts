@@ -94,5 +94,12 @@ export const pl = {
   errNoText:
     'Nie znaleziono tekstu w tym PDF. W zeskanowanym dokumencie tekst jest obrazem i nie można go zapisać jako tekst.',
   rejectNotImage: '{name}: to nie jest obraz JPG ani PNG.',
+  toolDuplex: 'Przygotuj do druku dwustronnego',
+  descDuplex: 'Uzupełnij każdy plik pustymi stronami do parzystej liczby, a potem je połącz',
+  hintDuplex: 'Wybierz jeden lub więcej. Są łączone od góry do dołu.',
+  optSheetPages: 'Stron na stronę arkusza, jeśli później łączone',
+  optNoNup: 'Bez łączenia',
+  noteDuplex: 'Przy druku dwustronnym każdy plik zaczyna się na przodzie nowego arkusza.',
+  pageCountOne: 'Stron: 1',
   close: 'Zamknij',
 } satisfies Record<keyof typeof zh, string>

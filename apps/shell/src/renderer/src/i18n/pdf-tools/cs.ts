@@ -93,5 +93,12 @@ export const cs = {
   errNoText:
     'V tomto PDF nebyl nalezen žádný text. V naskenovaném dokumentu je text obrázkem a nelze jej uložit jako text.',
   rejectNotImage: '{name}: není obrázek JPG ani PNG.',
+  toolDuplex: 'Připravit pro oboustranný tisk',
+  descDuplex: 'Doplní každý soubor prázdnými stránkami na sudý počet a pak je spojí',
+  hintDuplex: 'Vyberte jeden nebo více. Spojí se shora dolů.',
+  optSheetPages: 'Stránek na stranu listu, pokud se později sloučí',
+  optNoNup: 'Bez sloučení',
+  noteDuplex: 'Při oboustranném tisku začne každý soubor na přední straně nového listu.',
+  pageCountOne: 'Stránky: 1',
   close: 'Zavřít',
 } satisfies Record<keyof typeof zh, string>

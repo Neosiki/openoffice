@@ -90,5 +90,12 @@ export const zh = {
   noteToText: '文字以图片形式存在的页面（如扫描页）将为空。',
   errNoText: '在此 PDF 中找不到文字。扫描文档中的文字是图片，无法保存为文本。',
   rejectNotImage: '{name}：不是 JPG 或 PNG 图片。',
+  toolDuplex: '双面打印对齐',
+  descDuplex: '为每个文件补空白页使页数为偶数，再合并为一个',
+  hintDuplex: '请选择一个或多个。从上到下依次合并。',
+  optSheetPages: '之后每面合并的页数',
+  optNoNup: '不合并',
+  noteDuplex: '双面打印时，每个文件都从新纸张的正面开始。',
+  pageCountOne: '1 页',
   close: '关闭',
 }

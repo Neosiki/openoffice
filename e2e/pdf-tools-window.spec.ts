@@ -290,6 +290,42 @@ test.describe('PDF tools window', () => {
     }
   })
 
+  test('padding files for two-sided printing', async () => {
+    test.setTimeout(120_000)
+    const dir = await mkdtemp(join(tmpdir(), 'genoffice-pdf-tools-e2e-'))
+    const a = join(dir, 'a.pdf')
+    const b = join(dir, 'b.pdf')
+    const out = join(dir, 'print.pdf')
+    await makePdf(a, [
+      [300, 400],
+      [300, 400],
+      [300, 400],
+    ])
+    await makePdf(b, [[500, 200]])
+    if (EVIDENCE_DIR) await mkdir(EVIDENCE_DIR, { recursive: true })
+
+    const launched = await launchShell({ onboardingSeen: true, videoDir: 'pdf-tools-duplex' })
+    const { app, page } = launched
+    try {
+      const tools = await openToolsWindow(app, page, /PDF tools/)
+      await tools.getByRole('button', { name: /Pad for two-sided printing/ }).click()
+      await queueDialogs(app, { open: [[a, b]], save: [out] })
+      await tools.getByRole('button', { name: 'Choose PDF', exact: true }).click()
+      await expect(tools.locator('.pt-item')).toHaveCount(2)
+      // two pages a side later: every file fills whole sheets (a multiple of 4)
+      await tools.getByLabel('Pages per side, if merged later').selectOption('2')
+      await tools.screenshot({ path: shot('pdf-tools-duplex-en') })
+      await tools.getByRole('button', { name: 'Save as new file' }).click()
+      await expect(tools.getByText('Made a new file: print.pdf')).toBeVisible()
+      const made = await PDFDocument.load(await readFile(out))
+      expect(made.getPages().map((p) => p.getWidth())).toEqual([
+        300, 300, 300, 300, 500, 500, 500, 500,
+      ])
+    } finally {
+      await closeAndSaveVideo(launched, 'pdf-tools-duplex')
+    }
+  })
+
   test('the window in Korean', async () => {
     test.setTimeout(90_000)
     if (EVIDENCE_DIR) await mkdir(EVIDENCE_DIR, { recursive: true })

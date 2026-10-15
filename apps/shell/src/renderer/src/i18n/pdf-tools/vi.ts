@@ -93,5 +93,12 @@ export const vi = {
   errNoText:
     'Không tìm thấy chữ trong PDF này. Trong tài liệu quét, chữ là ảnh nên không thể lưu thành văn bản.',
   rejectNotImage: '{name}: không phải ảnh JPG hoặc PNG.',
+  toolDuplex: 'Chuẩn bị in hai mặt',
+  descDuplex: 'Thêm trang trắng để mỗi tệp có số trang chẵn, rồi gộp lại',
+  hintDuplex: 'Chọn một hoặc nhiều tệp. Các tệp được gộp từ trên xuống dưới.',
+  optSheetPages: 'Số trang mỗi mặt, nếu gộp trang sau đó',
+  optNoNup: 'Không gộp',
+  noteDuplex: 'Khi in hai mặt, mỗi tệp bắt đầu ở mặt trước của một tờ mới.',
+  pageCountOne: '1 trang',
   close: 'Đóng',
 } satisfies Record<keyof typeof zh, string>
