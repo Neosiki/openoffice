@@ -39,6 +39,21 @@ export function formOdt(): Promise<Uint8Array> {
   })
 }
 
+/**
+ * Blocks: 0 "Form", 1 a body table (3 columns) whose first row's first two
+ * cells are locked and empty; the other rows hold empty unlocked cells that
+ * look exactly like them (the way Hancom forms leave blanks), 2 "End".
+ */
+export function lockedBlanksOdt(): Promise<Uint8Array> {
+  const blank = (locked = false) => hCell(hPara(''), locked ? { protected: true } : {})
+  const table = hTable('Table1', 3, [
+    hRow([blank(true), blank(true), hCell(hPara('x'))]),
+    hRow([blank(), blank(), hCell(hPara('y'))]),
+    hRow([blank(), blank(), hCell(hPara('z'))]),
+  ])
+  return buildOdt({ body: hPara('Form') + table + hPara('End') })
+}
+
 /** A password-protected ODT (the manifest marks the parts encrypted). */
 export function encryptedOdt(): Promise<Uint8Array> {
   return buildOdt({ encrypted: true })
