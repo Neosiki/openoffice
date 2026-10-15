@@ -59,6 +59,7 @@ import type { GenerateHandoff } from '../shared/generate-api'
 import { dropGenerateHandoff, queueGenerateHandoffFor } from './generate/handoff'
 import type { ConvertedDocument } from './generate/convert'
 import { queueConvertedContent } from './generate/converted-tab'
+import { releaseClosedRenderer } from './renderer-disposal'
 
 /** a tab lifted out of the strip with its live view: what "Open in New Window",
  *  tear-off and dock hand back and forth between the shell and a detached window */
@@ -787,8 +788,10 @@ export class TabManager {
         // close() vs destroy(), teardown ordering, deferring, and disabling
         // accessibility support — looks like an upstream WebContentsView/Chromium
         // issue, not something fixable from here). Detaching without destroying
-        // avoids the freeze; the orphaned webContents is reclaimed when the app quits.
+        // avoids the freeze; the orphaned webContents object stays until the app
+        // quits, but its renderer process is ended now so its memory comes back.
         teardownDocsRenderer(removed.view.webContents)
+        releaseClosedRenderer(removed.view.webContents)
       } else {
         removed.view.webContents.close()
       }

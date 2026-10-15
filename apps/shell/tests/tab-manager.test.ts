@@ -104,6 +104,12 @@ vi.mock('../../docs/src/main/docs-main', () => ({
   teardownDocsRenderer: (...args: unknown[]) => teardownDocsRenderer(...args),
 }))
 
+const releaseClosedRenderer = vi.fn(() => true)
+
+vi.mock('../src/main/renderer-disposal', () => ({
+  releaseClosedRenderer: (...args: unknown[]) => releaseClosedRenderer(...(args as [])),
+}))
+
 const createPdfView = vi.fn(() => makeFakeView())
 const pdfIsDirty = vi.fn(() => false)
 const clearPdfDirty = vi.fn()
@@ -668,6 +674,17 @@ describe('closing tabs', () => {
     expect(view.webContents.close).not.toHaveBeenCalled()
     // the orphaned renderer must be told to go inert (recovery-copy resurrection guard)
     expect(teardownDocsRenderer).toHaveBeenCalledWith(view.webContents)
+    // and its process ended, so a closed docs tab no longer holds its memory until quit
+    expect(releaseClosedRenderer).toHaveBeenCalledWith(view.webContents)
+    expect(teardownDocsRenderer.mock.invocationCallOrder[0]).toBeLessThan(
+      releaseClosedRenderer.mock.invocationCallOrder[0],
+    )
+  })
+
+  it('leaves the renderer of non-docs tabs to webContents.close()', async () => {
+    const id = manager.openSheetsTab()
+    await manager.closeTab(id)
+    expect(releaseClosedRenderer).not.toHaveBeenCalled()
   })
 
   it('closes a clean docs tab after the async dirty query says clean', async () => {

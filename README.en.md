@@ -313,8 +313,10 @@ stay on your PC. When you use AI, the document content and the conversation go
 to Anthropic or OpenAI under your own account (or to the company whose API key
 you entered), and whether they are used for training is decided by your
 account settings there. Search queries go to Parallel and DuckDuckGo by
-default, and update checks go to GitHub. The full list is in
-[PRIVACY.md](PRIVACY.md).
+default, and update checks go to GitHub. When an editor or the app stops
+abnormally, only the time, what stopped, the reason and the editor are written
+to `crash-log.jsonl` in the data folder; no document text, file names or paths,
+and it is never sent anywhere. The full list is in [PRIVACY.md](PRIVACY.md).
 
 ## Contributing and reporting problems
 

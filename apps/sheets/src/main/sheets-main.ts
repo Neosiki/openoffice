@@ -4584,10 +4584,12 @@ function installApplicationMenu(): void {
             click: () => sendMenuAction('export-csv'),
           },
           { type: 'separator' },
+          // tab mode: the item closes the focused tab or window, never the app,
+          // so it is named and bound like every other editor's Close
           closeActiveTabHook
             ? {
-                label: process.platform === 'darwin' ? tm('menuClose') : tm('menuQuit'),
-                accelerator: process.platform === 'darwin' ? 'CmdOrCtrl+W' : 'CmdOrCtrl+Q',
+                label: tm('menuClose'),
+                accelerator: 'CmdOrCtrl+W',
                 click: () => closeActiveTabHook?.(),
               }
             : process.platform === 'darwin'

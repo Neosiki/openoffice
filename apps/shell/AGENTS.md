@@ -5,7 +5,7 @@
 ## 맡은 범위
 
 - 앱의 수명 주기(`src/main/index.ts`): 단일 인스턴스 잠금, userData 위치, 확장자에 따른 파일 라우팅, 탭별 메뉴 전환, 종료 처리, `--headless-export` 진입.
-- 탭과 창: `src/main/tab-manager.ts`, 떼어 낸 창(`detached-windows.ts`), 닫기 확인(`window-close-guard.ts`), 렌더러 자원 감시(`renderer-watchdog.ts`).
+- 탭과 창: `src/main/tab-manager.ts`, 떼어 낸 창(`detached-windows.ts`), 닫기 확인(`window-close-guard.ts`), 렌더러 자원 감시(`renderer-watchdog.ts`), 닫은 워드 탭·창의 렌더러 프로세스 끝내기(`renderer-disposal.ts`), 크래시 기록과 알림(`crash-log.ts`, `crash-watch.ts`).
 - 홈 화면과 설정(`src/renderer/src/`): `Home.tsx`, `Onboarding.tsx`, `SettingsModal.tsx`, AI 설정 `SettingsAiSection.tsx`·`settings-ai.ts`, 통합 탭 `IntegrationsPane.tsx`, 별표 파일에 묻는 `KbAskPanel.tsx`, 앱 안 도움말(`i18n/help/`).
 - 파일 색인과 지식 기반(`src/main/file-index/`, `knowledge-base.ts`), 최근 파일, 폴더 트리. 홈의 질문을 별표 그룹 하나로 좁히는 일(`knowledge-base.ts`의 `KbRunScopes`, `kb:open-scope`·`kb:close-scope`).
 - 문서로 새 문서 만들기(`src/main/generate/`): 만들기 창(`generate-window.ts`, 화면은 `src/renderer/generate.html`과 `src/renderer/src/generate/`), 창 하나의 상태와 동작(`session.ts`), 요청 검사(`request.ts`), 자료의 상태와 글 길이(`materials.ts`), 자료가 열린 탭과 그 저장(`open-materials.ts`), AI 없이 바꾸기(`convert.ts`, `converted-tab.ts`), 조정 가능한 값(`limits.ts`). 홈의 입구는 `generate:open-with-paths`·`generate:open-with-group`이다.
@@ -50,6 +50,8 @@
 - **Windows 설치본은 `.xmind`를 파일 연결로 등록하지 않는다**(`electron-builder.cjs`의 `WIN_OPEN_WITH_ONLY_EXTS`, `.txt`·`.json`과 같다). 설치가 사용자의 기본 프로그램을 가져가지 않게 하기 위해서다.
 - "GenOffice를 기반으로 합니다" 고지(문자열 키 `setBasedOn`, 값에 `{{GenOffice}}`)는 21개 언어 모두에 남긴다. 원본 이름이 화면에 나오는 곳은 이 한 줄뿐이어야 한다. 다른 문자열과 도움말 제목·본문에 `{{GenOffice}}`를 쓰면 `tests/product-identity.test.ts`가 실패한다.
 - 없앤 기능(사용 통계 전송, 자체 계정 로그인, 클라우드 프로젝트 목록 등)의 모듈·IPC·호출부를 되살리지 않는다. `tests/removed-features.test.ts`가 지킨다. 원본의 변경을 병합할 때 특히 본다.
+- **닫은 워드 탭·창의 webContents는 닫거나 파괴하지 않는다**(UI 멈춤 회피, `tab-manager.ts`의 주석). 대신 `teardownDocsRenderer` 뒤에 `releaseClosedRenderer`로 렌더러 프로세스만 끝낸다. 빠지면 닫을 때마다 약 215MB가 앱이 끝날 때까지 남는다. 다른 열린 화면과 프로세스를 함께 쓰면 끝내지 않는다.
+- **크래시 기록(`<userData>/crash-log.jsonl`)에는 시각, 종류, 이유 낱말, 종료 코드, 편집기 종류만 들어간다.** 문서 내용, 제목, 경로, 파일 이름, URL, 오류 메시지를 넣지 않는다(`crashLine`이 허용한 칸만 쓰고, 경로처럼 보이는 값은 버린다). 64KB를 넘지 않고 밖으로 보내지 않는다. 크래시 덤프(`crashReporter`)는 문서 내용이 담길 수 있어 켜지 않는다. 메인 프로세스 예외는 `uncaughtExceptionMonitor`로만 받는다. `uncaughtException` 처리기를 붙이면 Electron의 기본 동작이 바뀐다.
 - 모든 창은 `contextIsolation: true`, `nodeIntegration: false`, `sandbox: true`다. `shell.openExternal`은 `safeExternalUrl`을 거친 값만 받는다.
 - 구조 작업은 셸 메인 프로세스에서 돌리지 않는다. 큰 문서에서 창이 멈추지 않도록 작업마다 별도 프로세스를 띄우고, 답했을 때, 실패했을 때, 화면이 취소했을 때, 그 탭(webContents)이 사라졌을 때, 앱이 끝날 때 프로세스를 끝낸다. 한 창이 동시에 돌리는 작업은 4개(`MAX_JOBS_PER_OWNER`)까지다. 기존 워드·PPT·엑셀 변환(`pdf2docx-local.ts` 등)은 예전처럼 메인에서 돈다. 이 경로는 바꾸지 않는다.
 - 구조 작업과 보관소 채널은 화면이 보낸 경로를 믿지 않는다. 읽는 파일은 그 창에 허가된 파일(`pdfPathGranted`)이어야 하고, 쓰는 곳은 셸의 저장 창이 고른 대상(`structurePickTarget`, 작업 하나에 한 번)뿐이며 원본 파일은 쓸 수 없다. 보관소 읽기·쓰기는 셸이 그 창의 파일에서 계산한 문서 해시로만 받는다. 단독 실행처럼 채널이 없으면 화면은 `not-available`을 받는다.
@@ -76,6 +78,7 @@
 
 - 실행: `npm run test -w @genoffice/shell`(또는 이 폴더에서 `npx vitest run`), `npm run typecheck -w @genoffice/shell`. 환경은 `node`다.
 - `src/main/index.ts`는 실행 중인 Electron이 있어야 불러올 수 있다. 그래서 배선은 소스 글자를 읽어 고정한다(`tests/subscription-lifetime.test.ts`, `tests/main-locale-tables.test.ts`). 종료 처리나 인라인 사전의 모양을 바꾸면 이 테스트들이 깨진다. 로직은 Electron을 import하지 않는 모듈로 빼서 테스트한다(`settings-ai.ts`, `kb-ask-connection.ts`, `app-routing.ts`).
+- 닫은 렌더러 끝내기는 `tests/renderer-disposal.test.ts`, 크래시 기록의 칸과 크기 상한은 `tests/crash-log.test.ts`, 기록·알림·다시 열기는 `tests/crash-watch.test.ts`가 본다.
 - PDF 구조 작업(`tests/pdf-structure-*.test.ts`)은 가짜 프로세스로 실행기의 수명(답·취소·탭 닫기 때 끝나는지)과 채널의 경로 검사를 본다. 진입점 배선은 `pdf-structure-wiring.test.ts`, 설정의 보관소 줄은 `settings-result-store.test.ts`·`result-store-ipc.test.ts`가 본다. `beforePack`을 거치는 패키징 테스트(`packaged-cli-version.test.ts`)는 구조 프로세스 파일이 있는 것처럼 가짜 목록을 준다. 확인 조건을 바꾸면 그 가짜도 고친다.
 - 바꾸면 반드시 테스트하는 것: preload가 내보내는 구독 API(핸들러 없음, 깨진 답), 계정 버튼의 확인 흐름(취소하면 아무것도 실행되지 않는지), 설정 저장 뒤 다시 읽은 값, 제품 정체성(`tests/product-identity.test.ts`: 빌더 설정·`package.json`·HTML 제목·ProgId·저장소 좌표의 일치), 업데이트 피드 설정, 탭 IPC의 인자 검증.
 - 바꾸면 반드시 테스트하는 것(만들기와 기록): 요청 검사(`tests/generate-request.test.ts`), 저장하지 않은 자료의 차단과 한 번만 맡겨 두기(`tests/generate-session*.test.ts`, `tests/generate-handoff.test.ts`), 자료의 크기·글 길이와 읽을 수 없는 자료의 이유(`tests/generate-materials.test.ts`), 바꾸기와 가린 자리의 이름표(`tests/generate-convert.test.ts`), 시작되지 않은 실행은 기록하지 않는 것·이름 바뀜 따라가기·망가진 파일(`tests/document-links.test.ts`), 다른 파일로 읽기의 가리기와 저장 안 한 파일(`tests/cross-file-redaction.test.ts`), 그룹 밖 파일 읽기의 거절(`tests/kb-ask-scope.test.ts`, `tests/kb-ask-group.test.ts`), `.xmind`가 Windows에서 등록되지 않는 것(`tests/file-associations.test.ts`), 앱 안 MCP의 지도(`tests/mcp/open-documents-mindmap.test.ts`).

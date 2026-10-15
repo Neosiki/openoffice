@@ -299,8 +299,10 @@ npm run dist:win -- -- --publish never
 남습니다. AI를 쓰면 문서 내용과 대화가 사용자 본인 계정으로 Anthropic 또는
 OpenAI에 전송됩니다(API 키를 넣었다면 그 회사로). 그 내용이 AI 학습에
 쓰이는지는 그 회사에 있는 내 계정 설정이 정합니다. 검색어는 기본적으로
-Parallel과 DuckDuckGo로, 업데이트 확인은 GitHub로 갑니다. 전체 목록은
-[PRIVACY.md](PRIVACY.md)(영어)에 있습니다.
+Parallel과 DuckDuckGo로, 업데이트 확인은 GitHub로 갑니다. 편집기나 앱이
+비정상으로 꺼지면 그 시각, 종류, 이유, 어느 편집기였는지만 데이터 폴더의
+`crash-log.jsonl`에 적습니다. 문서 내용, 파일 이름, 경로는 적지 않고 어디에도
+보내지 않습니다. 전체 목록은 [PRIVACY.md](PRIVACY.md)(영어)에 있습니다.
 
 ## 기여와 문제 신고
 

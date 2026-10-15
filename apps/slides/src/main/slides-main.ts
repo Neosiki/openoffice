@@ -4927,10 +4927,12 @@ export function buildSlidesMenu(): Menu {
         { label: tm('menuExportImages'), click: () => send('export-images') },
         { label: tm('menuPrint'), accelerator: 'CmdOrCtrl+P', click: () => send('print') },
         { type: 'separator' },
+        // tab mode: the item closes the focused tab or window, never the app,
+        // so it is named and bound like every other editor's Close
         closeActiveTabHook
           ? {
-              label: isMac ? tm('menuClose') : tm('menuQuit'),
-              accelerator: isMac ? 'CmdOrCtrl+W' : 'CmdOrCtrl+Q',
+              label: tm('menuClose'),
+              accelerator: 'CmdOrCtrl+W',
               click: () => closeActiveTabHook?.(),
             }
           : isMac
