@@ -429,8 +429,12 @@ type ReportFeature = 'toc' | 'chart' | 'equation' | 'shape' | 'textbox' | 'colum
    - `renderedObjects` 열쇠: `"<docxIndex>:<n>"` = 그 본문 요소(`Block.docxIndex`) 안 n번째(0부터, 문서 순서, 표 칸 포함) 변환 개체. `"<docxIndex>"`만 쓰면 첫 개체다.
    - 그림은 패키지에서 관계(`r:embed`/`r:id`)로 원래 바이트를 읽는다(메타파일도 그대로). 없으면 엔진의 data URL. 다리 docx의 이름(`odt-pic:`, `odt-keep:`)은 지운다(새 문서에서는 모두 새 그림). 받은 ODT를 연 다리 docx를 새 ODT로 저장할 때 잠긴 개체 자리 표시는 그 그림이 되고 종류별로 `converted`로 센다.
    - 필드로 잠긴 문단: 차례 줄은 보통 글자(제목 + 탭 + 쪽 번호, 오른쪽 점선 탭), 다른 필드 결과도 보통 글자. 엔진이 읽지 못한 잠긴 문단은 XML에서 글자 run과 개체를 다시 꺼내 만든다. 문단의 `w:sectPr`는 걷어 낸다.
-2. 뼈대 ODT를 만든다(`export/styles.ts`): `w:docDefaults` → `style:default-style`(크기가 없으면 Word 기본 10pt, 라틴 글꼴이 없으면 Times New Roman, 언어), docx 문단 스타일마다 공용 문단 스타일(엔진이 상속을 푼 값 `StyleInfo.display`를 그대로 씀, 기본 스타일은 `Standard`), 쪽 묶음마다 쪽 모양과 바탕쪽. `office:version="1.3"`, 매니페스트 `manifest:version="1.3"`.
-   - 쪽 묶음: 이어지는 구역 나눔(`continuous`, `nextColumn`)은 앞 묶음에 합친다(단은 한 단으로, `columns` 보고). 모양·머리글·꼬리글이 같은 묶음은 바탕쪽을 함께 쓴다(`Standard`, `MP2` …).
+   - 쪽 나누기(`w:br w:type="page"`, 엔진에서는 run 글자 `\f`): 문단을 나누고 뒷부분이 `fo:break-before="page"`로 새 쪽을 시작한다(한컴은 `fo:break-after`를 따르지 않는다). 나누기만 있는 문단은 빈 문단을 남기지 않고 다음 요소가 새 쪽을 시작한다. 다음 요소가 표 같은 문단 아닌 것이면 그 앞에 쪽을 시작하는 빈 문단을 둔다. 나뉜 목록 항목의 뒷부분은 번호 없는 문단이다. 문서 끝의 나누기는 새 쪽을 시작하는 빈 문단 하나가 된다(Word가 보이는 마지막 빈 쪽).
+   - 표 행 높이의 바닥(`export/rows.ts`): 높이가 없거나 "최소" 높이가 더 낮은 행에 Word가 그 행을 그리는 높이보다 크지 않은 최소 높이(`style:min-row-height`)를 준다. 칸마다 위아래 여백 + 문단마다 (앞 간격 + 한 줄 + 뒤 간격), 한 줄은 글자 크기 × 글꼴의 한 줄 비율(Windows의 winAscent+winDescent: Calibri 1.2207, 맑은 고딕 1.3301 등, 목록에 없는 글꼴은 1) × 줄 간격이다. 표 스타일의 문단 간격·글자 크기는 더 작은 쪽을 쓴다. 병합된 칸·세로쓰기 칸은 세지 않고, "고정" 높이는 그대로다. 한컴은 ODT 칸의 마지막 문단 뒤 간격과 마지막 줄의 줄 간격 몫을 빼고 그려서, 높이 없는 행이 글자 높이만큼으로 줄어든다(12pt 한 줄 = 12pt 행). 한컴이 쓴 ODT도 모든 행에 최소 높이를 적는다.
+2. 뼈대 ODT를 만든다(`export/styles.ts`): `w:docDefaults` → `style:default-style`(크기가 없으면 Word 기본 10pt, 라틴 글꼴이 없으면 Times New Roman, 언어), docx 문단 스타일마다 공용 문단 스타일, 쪽 묶음마다 쪽 모양과 바탕쪽. `office:version="1.3"`, 매니페스트 `manifest:version="1.3"`.
+   - 공용 문단 스타일은 모양 전체를 적는다: 문서 기본값(왼쪽 정렬, 줄 간격, 앞뒤 간격, 글꼴, 크기) 위에 엔진이 상속을 푼 값(`StyleInfo.display`). 한컴은 `style:default-style`의 줄 간격·정렬을 쓰지 않고(정렬은 양쪽으로 본다) 스타일에 적힌 값만 쓰기 때문이다. 기본 스타일은 `Standard`.
+   - 개요 스타일(`text:outline-style`)은 번호 없음으로 적는다. 한컴은 이것을 보지 않고 모든 `text:h`에 "1.", "1.1." 번호를 붙이므로, 제목은 `text:h`가 아니라 `style:default-outline-level`을 지닌 스타일의 `text:p`로 쓴다(한컴이 자기 "개요 n" 문단을 쓰는 방식, `export/headings.ts`). 공용 제목 스타일(`Heading1` …)에 그 수준을 적고, 제목 문단의 자동 스타일에도 적는다. 보통 문단과 함께 쓰는 자동 스타일이나 수준이 다른 경우는 사본(`<이름>_L<수준>`)을 만든다. LibreOffice는 스타일의 수준으로 제목을 알아보고, `odtToDocx`도 `Heading1…`이라는 이름으로 docx 제목으로 읽는다.
+   - 쪽 묶음: docx의 쪽 구역마다 바탕쪽 하나(`Standard`, `MP2` …, 모양이 같아도 따로)를 써서 한컴에서도 구역이 구역으로 남는다. 이어지는 구역 나눔(`continuous`, `nextColumn`)은 앞 묶음에 합치고, 단이 다르면 그 구역을 `text:section`(구역 스타일 `style:section-properties`의 `style:columns`)으로 감싼다. 이때 쪽 모양은 한 단이다. 쪽 전체가 여러 단이면 쪽 모양(`style:page-layout-properties`)에 `style:columns`를 쓴다. 단은 언제나 `style:column` 자식(`style:rel-width="1000*"`, 단 사이 간격의 반씩 `fo:start-indent`/`fo:end-indent`)을 함께 쓴다: 자식 없는 `style:columns fo:column-count="2"`는 한컴을 멈추게 한다("원격 프로시저를 호출하지 못했습니다"). 한 단이면 `style:columns`를 쓰지 않는다. 너비가 다른 단(`w:col` 너비)만 `columns`로 보고한다(같은 너비로 바뀜).
    - 위치: 쪽 층의 계산을 거꾸로 한다. 머리글이 있으면 `fo:margin-top = w:header`, 머리글 높이(`svg:height`) = `w:top − w:header`, 간격 0. 없으면 `fo:margin-top = w:top`. 아래도 같다. 제본 여백은 왼쪽(또는 위) 여백에 더한다. `mirrorMargins`는 `style:page-usage="mirrored"`.
    - 머리글 칸: 기본 `style:header`, `w:titlePg`면 `style:header-first`, `w:evenAndOddHeaders`면 `style:header-left`(없는 쪽은 빈 칸). Word처럼 앞 구역의 머리글을 물려받는다.
 3. 뼈대를 받은 ODT처럼 열고(`openOdt`), 빈 다리 지도에 docx 스타일 id ↔ ODF 공용 스타일 대응만 넣는다. 본문은 쪽 묶음마다 `rebuildFlow`(모든 항목이 새 요소라 새 요소 쓰기 함수가 쓴다: 문단·목록·표·그림·각주)로 쓰고, 두 번째 묶음부터는 첫 요소의 스타일 사본에 `style:master-page-name`(쪽 번호 시작이 있으면 `style:page-number`)을 준다(표면 표 스타일 사본). 머리글·꼬리글은 쪽 층의 `regionInnerXml`로 채운다.
@@ -443,7 +447,8 @@ type ReportFeature = 'toc' | 'chart' | 'equation' | 'shape' | 'textbox' | 'colum
 ### 바뀌는 것 (`report.ts`)
 
 - ODT → docx(`odtToDocx`): 잠긴 개체 자리 표시를 종류별로(`toc`, `chart`, `equation`, `shape`, `textbox`, 그 밖은 `object`) `converted`, 변경 기록 범위(`text:changed-region` 수와 잠긴 범위 중 큰 쪽) `revision` `converted`, 누름틀(시작·점 책갈피 수) `form_field` `converted`, 잠긴 칸과 보호된 구역 `protection` `dropped`.
-- docx → ODT(`docxToOdt`): 차례 수(`toc`), 개체 종류별(`chart`/`equation`/`shape`/`textbox`), 단이 있는 구역(`columns`), 인용·참고 문헌 필드(`citation`), 상호 참조·캡션 필드(`cross_reference`, 차례의 `PAGEREF _Toc`는 빼고), 거울 여백(`mirror_margins`), 테마가 있는 문서(`theme`)는 `converted`. 쪽 색(`page_color`), 메모(`comment`), 변경 기록(`revision`, 표시 수), 잉크(`ink`), 워터마크(`watermark`), 암호 해시(`password`), 편집 제한·읽기 전용 권장(`protection`)은 `dropped`.
+- docx → ODT(`docxToOdt`): 차례 수(`toc`), 개체 종류별(`chart`/`equation`/`shape`/`textbox`), 너비가 다른 단(`columns`), 인용·참고 문헌 필드(`citation`), 상호 참조·캡션 필드(`cross_reference`, 차례의 `PAGEREF _Toc`는 빼고), 테마가 답하지 못하는 테마 참조(`theme`)는 `converted`. 거울 여백은 `style:page-usage="mirrored"`로 그대로 남으므로 보고하지 않는다(`mirror_margins`는 목록에만 남는다).
+- 테마(`export/theme.ts`): 엔진이 읽으면서 테마 글꼴(`w:asciiTheme` 등, 비어 있는 동아시아·복합 문자 칸 포함)과 테마 색(`w:themeColor`/`w:themeFill`, 밝기·어둡기 포함)을 실제 값으로 풀고, 편집기와 ODT가 같은 값을 쓴다. 보이는 것이 같고 테마와의 연결만 없어지므로 보고하지 않는다. 테마 부분이 있다는 것만으로도 보고하지 않는다. 내보내는 내용(본문, 머리글·꼬리글, 그것들이 쓰는 스타일과 그 부모, 문서 기본값)의 테마 참조 가운데 테마가 답하지 못하는 것만 하나씩 센다: 테마 부분이 없거나 읽히지 않는데 글꼴 테마를 가리킴, 가리킨 라틴 글꼴 칸이 비어 있음, 테마에 없는 색 칸을 가리킴(`dk1`/`lt1`은 엔진의 기본값이 있어 빼고). 이때 엔진과 ODT는 Word가 곁에 저장해 둔 값(`w:val`, 글꼴 이름)을 쓰는데, Word라면 테마의 값으로 바꿔 보였을 것이다. 쪽 색(`page_color`), 메모(`comment`), 변경 기록(`revision`, 표시 수), 잉크(`ink`), 워터마크(`watermark`), 암호 해시(`password`), 편집 제한·읽기 전용 권장(`protection`)은 `dropped`.
 - 개수가 0인 항목은 넣지 않는다. 순서는 `REPORT_FEATURES` 순서다.
 
 ### 알려진 한계
@@ -452,7 +457,9 @@ type ReportFeature = 'toc' | 'chart' | 'equation' | 'shape' | 'textbox' | 'colum
 - 새 ODT의 각주 본문은 글자만 옮긴다(각주 스타일·글자 모양 없음, 기본 문단 스타일).
 - 문단 스타일이 굵게인데 run이 굵게를 끈 경우(`w:b w:val="0"`)처럼, 스타일 값을 run에서 끄는 모양은 새 ODT에 옮기지 않는다.
 - 글상자 안 글, 수식의 내용은 그림이나 이름표가 되어 글자로 남지 않는다(편집기가 그린 그림을 주면 보이는 모양은 남는다).
-- `docGrid`(줄 격자), 쪽 테두리, 줄 번호, 세로쓰기, 단은 옮기지 않는다. 짝수/홀수 쪽에서 시작하는 구역은 보통 쪽 나눔이다.
+- `docGrid`(줄 격자), 쪽 테두리, 줄 번호, 세로쓰기는 옮기지 않는다. 짝수/홀수 쪽에서 시작하는 구역은 보통 쪽 나눔이다.
+- 표 스타일(`w:tblStyle`)의 문단 간격(`TableGrid`의 뒤 간격 0, 줄 간격 1)은 칸 문단의 ODF 모양에 넣지 않는다(행 높이 바닥은 더 작은 쪽을 쓴다). 말뭉치에는 그런 표가 없다.
+- 한컴에서 본 모양(2026-10-15, 한글 2024, docx 27개): 쪽 수는 이음오피스 화면(편집기 쪽 나누기, `apps/docs/tests/pagination-parity.test.ts`, Word와 25/25 같음)과 23개가 같다. 다른 4개(01, 12, 13, 16)는 Calibri 라틴 글이 대부분인 문서로, 한컴이 ODF 비율 줄 간격을 글꼴에 따라 늘려 읽는다(`fo:line-height="115%"` → Calibri 183%, SimSun 150%). docx의 값(`w:line="276"` → 115%)을 그대로 적은 것이고, 한컴이 같은 docx를 직접 읽어도 쪽 수가 같이 늘어난다(01 5쪽, 12 4쪽, 13 10쪽, 16 3쪽, 우리 것은 5·4·11·3). 같은 글의 글꼴·크기·굵기·정렬·앞뒤 간격·들여쓰기는 docx를 한컴이 읽은 것과 757개 문단에서 모두 같다(Word 기본값을 쓰는 docDefaults 없는 시험 파일 2개는 한컴이 docx를 자기 기본값으로 읽어 다르다). 각주는 한컴에서 자동 번호 조판 부호(`atno`)가 더 보이고, 한 단 구역은 단 정의 조판 부호(`cold`)가 첫 구역에만 있다(구역 수 `secd`와 용지는 같다).
 - 떠 있는(anchored) 개체의 이름표·그림은 글자처럼(as-char) 놓는다. 떠 있는 그림은 objects 층 규칙대로 문단 기준 위치로 옮긴다.
 
 ## 테스트
@@ -468,7 +475,7 @@ type ReportFeature = 'toc' | 'chart' | 'equation' | 'shape' | 'textbox' | 'colum
 - 조립 층 시험:
   - `tests/assemble-api.test.ts`: 공개 API로 편집 없는 저장 = 원본 바이트, 문단·칸·그림·머리글 하나씩 고치면 그 파트의 그 요소만 바뀜(다른 항목의 푼 바이트 같음, `mimetype` 맨 앞·무압축, 원래 순서), meta.xml은 개인 정보 제거 때만, 암호 ODT는 `OdtEncryptedError`, ODT→docx 보고, `odtToText`(글상자 표, 셀 안 표, 각주).
   - `tests/assemble-integration.test.ts`: 층 사이 고침(구역 안 표의 `identify`, 칸 안 각주, as-char 그림 뒤 공백, 칸 안 그림, 글상자 표로 끝나는 쪽 흐름).
-  - `tests/assemble-export.test.ts`: `docxToOdt` 패키지 표준, 다시 읽은 내용(문단·글자·표 격자·그림·각주·쪽·머리글·기본 글꼴/크기/줄 간격)이 원본 docx와 같음, 제목·목록·링크·글자 모양, 구역별 바탕쪽, 머리글 위치 계산, 이어지는 구역과 단, 대체 그림·이름표·편집기 그림, 보고.
+  - `tests/assemble-export.test.ts`: `docxToOdt` 패키지 표준, 다시 읽은 내용(문단·글자·표 격자·그림·각주·쪽·머리글·기본 글꼴/크기/줄 간격)이 원본 docx와 같음, 제목·목록·링크·글자 모양, 구역별 바탕쪽(모양이 같아도 따로), 머리글 위치 계산, 이어지는 구역의 단(`text:section`)과 쪽 전체 단, 한컴이 다르게 읽는 것(제목을 `text:p`로, 문단 속 쪽 나누기, 표 행 높이 바닥, 공용 스타일의 모양 전체), 다리 docx 이름의 그림, 대체 그림·이름표·편집기 그림, 보고(테마는 테마가 답하지 못하는 참조만, 거울 여백은 보고하지 않음).
   - 도우미: `tests/helpers/api.ts`(공개 API 왕복, 패키지 비교), `build-docx.ts`/`docx-fixtures.ts`(합성 docx, 모든 기능을 담은 `kitchenSink`), `docx-signature.ts`(docx를 비교할 수 있는 값으로).
 - 층 사이 시험: `ODT_FULL_REGISTRY=1 npm run test -w @genoffice/odt-engine`이면 모든 층의 시험이 조립 등록 순서와 조립 저장 순서(`tests/helpers/full.ts`)로 돈다. 일부러 일부 층만 등록해야 뜻이 있는 시험 4개는 이때 건너뛴다.
 - `ODT_CORPUS`가 있으면 `tests/assemble-corpus.test.ts`가 공개 API로 66개를 모두 열고, 편집 없는 저장이 원본 바이트와 같은지, 문단 하나·칸 하나·여백 하나 편집이 그 파트의 그 요소(새 자동 스타일 빼고)만 바꾸는지 보고, 가장 큰 파일의 열기·저장 시간을 찍는다. `tests/assemble-export-corpus.test.ts`는 `<ODT_CORPUS>/docx`의 docx를 `docxToOdt`로 바꿔 `<ODT_CORPUS>/out-docx2odt`(저장소 밖)에 쓰고, 다시 읽어 내용이 같은지 본다. 받은 ODT 66개를 연 다리 docx도 `docxToOdt`로 새 ODT를 만들어 같은지 본다(편집기에서 연 ODT를 다른 이름으로 ODT 저장하는 경우). 말뭉치 점검은 `out-`으로 시작하는 폴더를 건너뛴다.

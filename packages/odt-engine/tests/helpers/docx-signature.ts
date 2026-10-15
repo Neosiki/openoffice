@@ -73,6 +73,9 @@ function drawables(b: Block): number {
   return (b.runs ?? []).filter((r) => (r.image && !r.image.rule) || r.math).length
 }
 
+const breakOnly = (b: Block) =>
+  !!b.runs?.length && b.runs.every((r) => !r.image && /^\f+$/.test(r.text))
+
 export function signature(parsed: ParsedDoc): DocSignature {
   const visible = parsed.blocks.filter((b) => !b.hidden && !b.invisibleMarker)
   let text = ''
@@ -84,7 +87,8 @@ export function signature(parsed: ParsedDoc): DocSignature {
     (s, i) => i === 0 || (s.startType !== 'continuous' && s.startType !== 'nextColumn'),
   )
   return {
-    paragraphs: visible.filter(isParagraphLike).length,
+    // a paragraph holding only a page break is a break before the next one in an ODT
+    paragraphs: visible.filter((b) => isParagraphLike(b) && !breakOnly(b)).length,
     text: squash(text),
     tables: visible
       .filter((b) => b.type === 'table' && b.table)
