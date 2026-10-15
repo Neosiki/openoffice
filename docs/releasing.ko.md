@@ -201,7 +201,7 @@ https://github.com/pblsketch/openoffice/releases/latest/download/latest.yml
 
 ## 11. Mac 설치 파일 (베타)
 
-Mac판은 Apple 개발자 서명 없는 베타로 냅니다(결정 0030). Windows 설치 파일과 **같은 릴리스**에 함께 올립니다. Mac이 없어도 됩니다. GitHub의 Mac 빌드 기계가 만듭니다.
+Mac판은 Apple 개발자 서명 없는 베타로 냅니다(결정 0031). Windows 설치 파일과 **같은 릴리스**에 함께 올립니다. Mac이 없어도 됩니다. GitHub의 Mac 빌드 기계가 만듭니다.
 
 1. 3번에서 버전을 올린 커밋을 push한 뒤, GitHub 저장소의 **Actions** 탭 → 왼쪽의 **macOS build** → **Run workflow**를 누릅니다. 가지는 그 커밋이 있는 가지를 고릅니다.
 2. 20~40분쯤 뒤 초록색 체크가 뜨면 그 실행을 열고, 아래 **Artifacts**의 `ieumoffice-mac-arm64`를 내려받아 압축을 풉니다. 빨간색이면 올리지 않습니다. 빌드가 앱을 실제로 띄워 보는 검사까지 하기 때문에, 실패했다면 그 버전의 Mac판에 문제가 있는 것입니다.

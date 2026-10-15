@@ -439,7 +439,7 @@ const tUpd = createI18n({
 })
 
 // This product's macOS builds are signed ad hoc only (electron-builder.cjs,
-// docs/tracking/decisions/0030-unsigned-mac-beta.md), and Squirrel.Mac only
+// docs/tracking/decisions/0031-unsigned-mac-beta.md), and Squirrel.Mac only
 // installs an update into an app signed with a Developer ID. A Mac install
 // still checks the feed (latest-mac.yml), but an update it finds goes
 // straight to the window's manual phase: the release page, never a download

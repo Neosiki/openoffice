@@ -1,4 +1,4 @@
-# 0030 — macOS판은 Apple 개발자 서명 없이 Apple Silicon용 베타로 낸다
+# 0031 — macOS판은 Apple 개발자 서명 없이 Apple Silicon용 베타로 낸다
 
 ## 맥락
 

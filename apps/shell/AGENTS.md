@@ -70,7 +70,7 @@
 - 렌더러 CSS의 크롬 색은 토큰만 쓴다(`npm run check:theme-colors`). shell의 강조색(`--accent` 계열)은 `src/renderer/src/home.css`에서 정의한다.
 - 구조 작업 프로세스는 메인 번들과 따로 묶인다. `pdf-structure-ipc.ts`가 진입점을 `?modulePath`로 가져오고, 빌드 결과는 `out/main/pdf-structure-process-*.js`다. `electron-builder.cjs`의 `beforePack`이 `assertPdfStructureProcessBuilt`로 이 파일이 있는지 확인하고, 없으면 패키징을 멈춘다. 이 파일이 빠진 설치본은 다른 기능은 되는데 Markdown·EPUB 변환, 그림 꺼내기, 번역 PDF만 실행 중에 실패한다. 번역 PDF에 필요한 `hb-subset.wasm`은 `extraResources`로 `wasm/`에 들어간다(명령줄도 같은 파일을 쓴다).
 - 디자인 템플릿 글꼴(`packages/ui/template-fonts`)은 `electron-builder.cjs`의 extraResources 항목 하나로 `resources/template-fonts`에 한 번만 들어간다. 편집기마다 넣지 않고, 편집기는 `templateFontsDir`로 이 폴더를 읽는다. `tests/template-fonts-resource.test.ts`가 항목이 정확히 하나인지, 어느 편집기의 `src`도 그 글꼴 파일을 빌드 자산으로 가져오지 않는지(import, `new URL`, CSS `url()`) 확인한다. 폴더의 `README.md`가 없으면 빌드 설정이 바로 멈춘다(`assertExtraResourceSources`).
-- Mac판은 ad hoc 서명만 하고 공증하지 않는다(`electron-builder.cjs` 끝의 `config.mac` 덮어쓰기, 결정 0030). 그래서 `updater.ts`는 Mac에서 업데이트를 내려받지 않고(`SELF_UPDATES`) 업데이트 창을 "다운로드 페이지 열기" 단계로 띄운다. Mac 설치 파일은 `.github/workflows/mac-build.yml`(손으로 실행)이 만든다.
+- Mac판은 ad hoc 서명만 하고 공증하지 않는다(`electron-builder.cjs` 끝의 `config.mac` 덮어쓰기, 결정 0031). 그래서 `updater.ts`는 Mac에서 업데이트를 내려받지 않고(`SELF_UPDATES`) 업데이트 창을 "다운로드 페이지 열기" 단계로 띄운다. Mac 설치 파일은 `.github/workflows/mac-build.yml`(손으로 실행)이 만든다.
 - 패키징은 저장소 루트에서 한다: `npm run dist:win -- -- --publish never`. `--`가 두 번 필요하고, `--publish never`가 없으면 electron-builder가 업로드를 시도한다. xlsx 사이드카는 `target/x86_64-pc-windows-gnu/release/`에 있어야 하므로 Windows에서 MSVC로 빌드했다면 `target/release/xlsx-sidecar.exe`를 그리로 복사한다. OCR 도우미 컴파일에는 Windows SDK가 필요하다. Windows만 빌드·검증하며 Linux 패키징에는 원본의 이름이 남아 있다.
 
 ## 테스트

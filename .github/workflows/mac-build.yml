@@ -3,7 +3,7 @@ name: macOS build
 # Builds the macOS installer (Apple Silicon) on a GitHub-hosted Mac, for the
 # maintainer to attach to a release by hand (docs/releasing.ko.md, "Mac 설치
 # 파일"). The app is signed ad hoc and not notarized
-# (docs/tracking/decisions/0030-unsigned-mac-beta.md): no Apple account, no
+# (docs/tracking/decisions/0031-unsigned-mac-beta.md): no Apple account, no
 # certificate and no repository secret is involved, and nothing is uploaded
 # to a release from here. Run it from the Actions tab on the commit the
 # release tag will point to.

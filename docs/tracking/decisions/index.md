@@ -31,4 +31,4 @@
 | [0027](0027-hwp-open-tracked-changes-as-current.md)           | 변경 내용 추적이 든 한글 문서는 지금의 내용으로 열고, 저장하면 추적 기록 없이 저장한다          | 2026-10-14 |
 | [0028](0028-hwp-restore-equation-captions.md)                 | 한글 문서를 저장할 때 엔진이 빠뜨린 수식의 캡션을 원본에서 다시 붙인다                          | 2026-10-14 |
 | [0029](0029-login-in-the-browser-window-hidden.md)            | 구독 로그인은 창을 숨기고 브라우저에서 하며, 코드가 필요할 때만 창을 보인다                     | 2026-10-15 |
-| [0030](0030-unsigned-mac-beta.md)                             | macOS판은 Apple 개발자 서명 없이 Apple Silicon용 베타로 낸다                                    | 2026-10-15 |
+| [0031](0031-unsigned-mac-beta.md)                             | macOS판은 Apple 개발자 서명 없이 Apple Silicon용 베타로 낸다                                    | 2026-10-15 |
