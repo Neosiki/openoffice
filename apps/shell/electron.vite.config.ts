@@ -9,6 +9,14 @@ export default defineConfig({
   main: {
     // node:sqlite is a Node 22+ builtin the bundler's builtin list may predate
     build: { rollupOptions: { external: ['node:sqlite'] } },
+    // the Google client for Drive (decision 0033) comes from the build's
+    // environment only; without it the build offers no Drive at all
+    define: {
+      __GENOFFICE_GOOGLE_CLIENT_ID__: JSON.stringify(process.env.GENOFFICE_GOOGLE_CLIENT_ID ?? ''),
+      __GENOFFICE_GOOGLE_CLIENT_SECRET__: JSON.stringify(
+        process.env.GENOFFICE_GOOGLE_CLIENT_SECRET ?? '',
+      ),
+    },
   },
   preload: {
     build: {
