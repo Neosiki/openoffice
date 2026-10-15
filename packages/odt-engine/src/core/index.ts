@@ -69,3 +69,26 @@ export {
   type XmlRoot,
   type XmlTokenKind,
 } from './xml'
+export * from './convert'
+export {
+  alignItems,
+  blockElements,
+  blockSource,
+  convertContainer,
+  convertFlow,
+  convertNode,
+  convertOdtBody,
+  editedItems,
+  flowChildren,
+  paragraphBlockOf,
+  rebuildContainer,
+  rebuildFlow,
+  rebuildOdtBody,
+} from './flow'
+export {
+  BRIDGE_DOCUMENT_NAMESPACES,
+  bridgeDocumentXml,
+  buildBridgeDocx,
+  defaultSectPr,
+  readDocxPart,
+} from './docx-package'
