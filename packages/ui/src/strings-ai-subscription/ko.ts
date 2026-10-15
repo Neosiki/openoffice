@@ -12,6 +12,8 @@ export const ko = {
   cardMeteredAccepted: '사용 중 · 쓴 만큼 요금 발생',
   cardError: '연결을 확인하지 못했습니다',
   cardErrNeedsUpdate: '이 PC의 {provider} 프로그램 버전이 낮습니다. 업데이트한 뒤 다시 확인하세요.',
+  cardErrNeedsUpdateVersion:
+    '이 PC의 {provider} 프로그램({version})이 오래되었습니다. {minimum} 이상이 필요합니다. 터미널에서 {command}를 실행한 뒤 다시 확인하세요.',
   cardErrTimeout: '{provider} 프로그램이 제때 응답하지 않았습니다. 잠시 뒤 다시 확인하세요.',
   cardErrFailed: '{provider} 연결을 확인하는 중에 문제가 생겼습니다. 다시 확인해 보세요.',
   actionInstall: '설치',

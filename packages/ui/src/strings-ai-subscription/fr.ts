@@ -13,6 +13,8 @@ export const fr = {
   cardError: 'Impossible de vérifier la connexion',
   cardErrNeedsUpdate:
     'Le programme {provider} installé sur ce PC est trop ancien. Mettez-le à jour, puis vérifiez à nouveau.',
+  cardErrNeedsUpdateVersion:
+    'Le programme {provider} installé sur ce PC ({version}) est trop ancien ; la version {minimum} ou plus récente est nécessaire. Exécutez {command} dans un terminal, puis vérifiez à nouveau.',
   cardErrTimeout:
     "Le programme {provider} n'a pas répondu à temps. Vérifiez à nouveau dans un instant.",
   cardErrFailed:

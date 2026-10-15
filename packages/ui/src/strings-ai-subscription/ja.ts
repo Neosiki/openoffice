@@ -13,6 +13,8 @@ export const ja = {
   cardError: '接続を確認できませんでした',
   cardErrNeedsUpdate:
     'この PC の {provider} のプログラムが古すぎます。更新してから、もう一度確認してください。',
+  cardErrNeedsUpdateVersion:
+    'この PC の {provider} のプログラム（{version}）が古すぎます。{minimum} 以降が必要です。ターミナルで {command} を実行してから、もう一度確認してください。',
   cardErrTimeout:
     '{provider} のプログラムから時間内に応答がありませんでした。しばらくしてから、もう一度確認してください。',
   cardErrFailed: '{provider} の確認中に問題が発生しました。もう一度確認してください。',

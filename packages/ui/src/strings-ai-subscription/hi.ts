@@ -13,6 +13,8 @@ export const hi = {
   cardError: 'कनेक्शन की जाँच नहीं हो सकी',
   cardErrNeedsUpdate:
     'इस पीसी पर {provider} प्रोग्राम बहुत पुराना है। इसे अपडेट करके फिर से जाँचें।',
+  cardErrNeedsUpdateVersion:
+    'इस पीसी पर {provider} प्रोग्राम ({version}) बहुत पुराना है; {minimum} या उससे नया संस्करण चाहिए। टर्मिनल में {command} चलाएँ, फिर से जाँचें।',
   cardErrTimeout: '{provider} प्रोग्राम ने समय पर जवाब नहीं दिया। थोड़ी देर बाद फिर से जाँचें।',
   cardErrFailed: '{provider} की जाँच करते समय कोई समस्या हुई। फिर से जाँचें।',
   actionInstall: 'इंस्टॉल करें',

@@ -19,6 +19,7 @@ import {
   resetSharedSubscriptionIpc,
   setSubscriptionModelSource,
   sharedSubscriptionStatuses,
+  subscriptionNeedsUpdate,
   subscriptionStatusErrorKind,
   type SubscriptionIpcDeps,
   type SubscriptionIpcSetup,
@@ -195,6 +196,34 @@ describe('the contract helpers', () => {
     expect(subscriptionStatusErrorKind(error('failed: spawn EACCES'))).toBe('failed')
     expect(subscriptionStatusErrorKind(error())).toBe('failed')
     expect(subscriptionStatusErrorKind({ state: 'ready' })).toBeNull()
+  })
+
+  it('subscriptionNeedsUpdate names the version found, the floor and the update command', () => {
+    const outdated = (
+      provider: 'claude-code' | 'codex',
+      version?: string,
+      error = 'needs-update: old',
+    ) => ({
+      provider,
+      state: 'error' as const,
+      error,
+      ...(version ? { version } : {}),
+    })
+    expect(subscriptionNeedsUpdate(outdated('claude-code', '2.1.237'))).toEqual({
+      version: '2.1.237',
+      minimum: '2.1.248',
+      command: 'claude update',
+    })
+    // no version reported, or one at the floor (an unknown subcommand): nothing to compare
+    expect(subscriptionNeedsUpdate(outdated('claude-code'))).toBeNull()
+    expect(subscriptionNeedsUpdate(outdated('claude-code', '2.1.248'))).toBeNull()
+    // Codex has no floor
+    expect(subscriptionNeedsUpdate(outdated('codex', '0.1.0'))).toBeNull()
+    // another error, or another state
+    expect(subscriptionNeedsUpdate(outdated('claude-code', '2.1.237', 'failed: spawn'))).toBeNull()
+    expect(
+      subscriptionNeedsUpdate({ provider: 'claude-code', state: 'ready', version: '2.1.237' }),
+    ).toBeNull()
   })
 })
 

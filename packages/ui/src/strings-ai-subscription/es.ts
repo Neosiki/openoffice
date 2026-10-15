@@ -13,6 +13,8 @@ export const es = {
   cardError: 'No se pudo comprobar la conexión',
   cardErrNeedsUpdate:
     'El programa {provider} de este PC es demasiado antiguo. Actualízalo y comprueba de nuevo.',
+  cardErrNeedsUpdateVersion:
+    'El programa {provider} de este PC ({version}) es demasiado antiguo; se necesita la {minimum} o posterior. Ejecuta {command} en una terminal y comprueba de nuevo.',
   cardErrTimeout: 'El programa {provider} no respondió a tiempo. Comprueba de nuevo en un momento.',
   cardErrFailed: 'Algo salió mal al comprobar {provider}. Comprueba de nuevo.',
   actionInstall: 'Instalar',

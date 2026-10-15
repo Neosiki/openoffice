@@ -13,6 +13,8 @@ export const de = {
   cardError: 'Die Verbindung konnte nicht geprüft werden',
   cardErrNeedsUpdate:
     'Das Programm {provider} auf diesem PC ist zu alt. Aktualisieren Sie es und prüfen Sie dann erneut.',
+  cardErrNeedsUpdateVersion:
+    'Das Programm {provider} auf diesem PC ({version}) ist zu alt; benötigt wird {minimum} oder neuer. Führen Sie im Terminal {command} aus und prüfen Sie dann erneut.',
   cardErrTimeout:
     'Das Programm {provider} hat nicht rechtzeitig geantwortet. Prüfen Sie es gleich noch einmal.',
   cardErrFailed:

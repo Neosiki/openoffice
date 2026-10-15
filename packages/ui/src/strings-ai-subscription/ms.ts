@@ -13,6 +13,8 @@ export const ms = {
   cardError: 'Sambungan tidak dapat disemak',
   cardErrNeedsUpdate:
     'Program {provider} pada PC ini terlalu lama. Kemas kini, kemudian semak semula.',
+  cardErrNeedsUpdateVersion:
+    'Program {provider} pada PC ini ({version}) terlalu lama; versi {minimum} atau lebih baharu diperlukan. Jalankan {command} dalam terminal, kemudian semak semula.',
   cardErrTimeout:
     'Program {provider} tidak menjawab dalam masa yang ditetapkan. Semak semula sebentar lagi.',
   cardErrFailed: 'Masalah berlaku semasa menyemak {provider}. Semak semula.',

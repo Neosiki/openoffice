@@ -220,6 +220,27 @@ describe('aiSubscriptionCardView', () => {
     expect(keyOf()).toBe('cardErrFailed')
   })
 
+  it('error: a Claude below the floor gets the version found, the floor and the update command', () => {
+    const view = aiSubscriptionCardView(
+      status('claude-code', 'error', {
+        version: '2.1.237',
+        error: 'needs-update: Claude Code 2.1.237 is too old; version 2.1.248 or newer is required',
+      }),
+    )
+    expect(view.detailKey).toBe('cardErrNeedsUpdateVersion')
+    expect(view.detailParams).toEqual({
+      version: '2.1.237',
+      minimum: '2.1.248',
+      command: 'claude update',
+    })
+    // a Codex too old to know the subcommand has no floor to name
+    const codex = aiSubscriptionCardView(
+      status('codex', 'error', { version: '0.1.0', error: 'needs-update: too old' }),
+    )
+    expect(codex.detailKey).toBe('cardErrNeedsUpdate')
+    expect(codex.detailParams).toBeUndefined()
+  })
+
   it('error: the status text itself is never part of the view', () => {
     const raw = 'failed: spawn C:\\Users\\me\\AppData\\Roaming\\npm\\codex.cmd ENOENT'
     const view = aiSubscriptionCardView(status('codex', 'error', { error: raw }))

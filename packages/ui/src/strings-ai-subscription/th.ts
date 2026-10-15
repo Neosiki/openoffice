@@ -12,6 +12,8 @@ export const th = {
   cardMeteredAccepted: 'กำลังใช้งาน · คิดค่าบริการตามการใช้งาน',
   cardError: 'ตรวจสอบการเชื่อมต่อไม่ได้',
   cardErrNeedsUpdate: 'โปรแกรม {provider} บนพีซีเครื่องนี้เก่าเกินไป โปรดอัปเดตแล้วตรวจสอบอีกครั้ง',
+  cardErrNeedsUpdateVersion:
+    'โปรแกรม {provider} บนพีซีเครื่องนี้ ({version}) เก่าเกินไป ต้องใช้รุ่น {minimum} ขึ้นไป โปรดเรียกใช้ {command} ในเทอร์มินัลแล้วตรวจสอบอีกครั้ง',
   cardErrTimeout: 'โปรแกรม {provider} ไม่ตอบกลับภายในเวลาที่กำหนด โปรดตรวจสอบอีกครั้งในอีกสักครู่',
   cardErrFailed: 'เกิดปัญหาขณะตรวจสอบ {provider} โปรดตรวจสอบอีกครั้ง',
   actionInstall: 'ติดตั้ง',
