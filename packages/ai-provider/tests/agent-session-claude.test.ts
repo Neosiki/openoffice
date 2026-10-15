@@ -4,6 +4,7 @@
  * and stopping. Nothing here reaches a real `claude`.
  */
 import { EventEmitter } from 'node:events'
+import { join } from 'node:path'
 import { PassThrough, Writable } from 'node:stream'
 import type { SpawnOptions } from 'node:child_process'
 import { describe, expect, it, vi } from 'vitest'
@@ -277,7 +278,10 @@ describe('a session', () => {
     expect(call.options.shell).toBeFalsy()
     expect((call.options.env ?? {}).ANTHROPIC_API_KEY).toBeUndefined()
     expect(call.args.join(' ')).not.toContain('tok-123')
-    expect(harness.files.get('C:\\Temp\\session-1\\claude-mcp.json')).toContain('Bearer tok-123')
+    // the session joins with the host's separator, so the key is built the same way
+    expect(harness.files.get(join('C:\\Temp\\session-1', 'claude-mcp.json'))).toContain(
+      'Bearer tok-123',
+    )
     expect(harness.child.lines[0]).toMatchObject({
       type: 'control_request',
       request: { subtype: 'initialize', appendSystemPrompt: 'Answer in Korean.' },
