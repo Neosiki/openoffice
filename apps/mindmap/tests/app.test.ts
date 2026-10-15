@@ -123,6 +123,22 @@ async function mountApp(fake: Fake): Promise<void> {
   })
   unmount = () => act(() => root.unmount())
   await settle()
+  await untilOpened()
+}
+
+/**
+ * Opening reads, unzips and draws in several steps; on a loaded runner they
+ * take more turns than settle() waits. Wait for the drawn map or the notice
+ * that the file did not open (5 s at most; the test's own checks report it).
+ */
+async function untilOpened(): Promise<void> {
+  const deadline = Date.now() + 5000
+  while (!container.querySelector('[data-nodeid], [data-open-failure]') && Date.now() < deadline) {
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 10))
+    })
+  }
+  await settle()
 }
 
 async function openWith(...sheets: XmindSheet[]) {
