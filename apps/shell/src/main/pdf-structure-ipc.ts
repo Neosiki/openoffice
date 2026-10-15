@@ -25,8 +25,8 @@ import {
   type CallContext,
   type PdfStructureHandlers,
 } from './pdf-structure/handlers'
-import { StructureJobRunner, type JobProcess } from './pdf-structure/runner'
-import type { ProcessSetup } from './pdf-structure/protocol'
+import { StructureJobRunner, type JobProcess, type JobRunOutcome } from './pdf-structure/runner'
+import type { ProcessSetup, StructureJob } from './pdf-structure/protocol'
 import processEntryPath from './pdf-structure/pdf-structure-process?modulePath'
 
 /** OCR helper candidates, same order as pdf2docx-local.ts (packaged first, then the repo build) */
@@ -80,6 +80,26 @@ function context(e: IpcMainInvokeEvent): CallContext {
       if (!sender.isDestroyed()) sender.send(PDF_CHANNELS.structureProgress, progress)
     },
   }
+}
+
+/**
+ * Run a job for another window of the shell (the PDF tools window) in a
+ * process of its own, ended with that window like a tab's jobs are.
+ */
+export function runWindowJob(
+  owner: WebContents,
+  jobId: string,
+  job: StructureJob,
+  onProgress?: (done: number, total: number) => void,
+): Promise<JobRunOutcome> {
+  if (!runner) return Promise.resolve({ ok: false, error: 'not-available' })
+  watch(owner)
+  return runner.run(owner.id, jobId, job, onProgress)
+}
+
+/** end a job runWindowJob started; false when it no longer runs */
+export function cancelWindowJob(owner: number, jobId: string): boolean {
+  return runner?.cancel(owner, jobId) ?? false
 }
 
 export function registerPdfStructureIpc(): void {

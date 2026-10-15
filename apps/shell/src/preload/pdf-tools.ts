@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import type { IpcRendererEvent } from 'electron'
 import type {
+  PdfBlankPagesResult,
   PdfPickResult,
   PdfToolRunRequest,
   PdfToolRunResult,
@@ -45,6 +46,22 @@ const api: PdfToolsWindowApi = {
   },
   async openInEditor() {
     await ipcRenderer.invoke(PDF_TOOLS_CHANNELS.openInEditor)
+  },
+  async findBlankPages(inputId: string) {
+    const result = (await ipcRenderer.invoke(PDF_TOOLS_CHANNELS.findBlankPages, inputId)) as
+      PdfBlankPagesResult | undefined
+    return result ?? { ok: false, error: 'failed' }
+  },
+  async cancelFind() {
+    await ipcRenderer.invoke(PDF_TOOLS_CHANNELS.cancelFind)
+  },
+  onProgress(handler) {
+    const listener = (_event: IpcRendererEvent, value: unknown) => {
+      const v = (value ?? {}) as { done?: unknown; total?: unknown }
+      if (typeof v.done === 'number' && typeof v.total === 'number') handler(v.done, v.total)
+    }
+    ipcRenderer.on(PDF_TOOLS_CHANNELS.progress, listener)
+    return () => ipcRenderer.removeListener(PDF_TOOLS_CHANNELS.progress, listener)
   },
   async close() {
     await ipcRenderer.invoke(PDF_TOOLS_CHANNELS.close)

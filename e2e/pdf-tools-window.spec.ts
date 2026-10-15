@@ -439,6 +439,69 @@ test.describe('PDF tools window', () => {
     }
   })
 
+  test('finding blank pages in a job process, and removing only the picked ones', async () => {
+    test.setTimeout(150_000)
+    const dir = await mkdtemp(join(tmpdir(), 'genoffice-pdf-tools-e2e-'))
+    const report = join(dir, 'scan.pdf')
+    const out = join(dir, 'scan-no-blank.pdf')
+    const doc = await PDFDocument.create()
+    const font = await doc.embedFont(StandardFonts.Helvetica)
+    doc.addPage([300, 400]).drawText('One', { x: 40, y: 300, size: 24, font })
+    doc.addPage([300, 400])
+    doc.addPage([300, 400]).drawText('Three', { x: 40, y: 300, size: 24, font })
+    doc
+      .addPage([300, 400])
+      .drawRectangle({ x: 0, y: 0, width: 300, height: 400, color: rgb(1, 1, 1) })
+    await writeFile(report, await doc.save({ useObjectStreams: false }))
+    if (EVIDENCE_DIR) await mkdir(EVIDENCE_DIR, { recursive: true })
+
+    const launched = await launchShell({ onboardingSeen: true, videoDir: 'pdf-tools-blank' })
+    const { app, page } = launched
+    try {
+      const tools = await openToolsWindow(app, page, /PDF tools/)
+      await tools.getByRole('button', { name: /Remove blank pages/ }).click()
+      await queueDialogs(app, { open: [[report]], save: [out] })
+      await tools.getByRole('button', { name: 'Choose PDF', exact: true }).click()
+      const run = tools.getByRole('button', { name: 'Save as new file' })
+      // nothing goes before the user has seen the candidates
+      await expect(run).toBeDisabled()
+      await tools.getByRole('button', { name: 'Find blank pages' }).click()
+      await expect(tools.getByText(/Found 2 pages that look blank/)).toBeVisible({
+        timeout: 60_000,
+      })
+      const cards = tools.locator('.pt-blank')
+      await expect(cards).toHaveCount(2)
+      await expect(cards.nth(0)).toContainText('Page 2')
+      await expect(cards.nth(0)).toContainText('Nothing on it')
+      await expect(cards.nth(1)).toContainText('Page 4')
+      await expect(cards.nth(1)).toContainText('Nearly white')
+      // a page that draws nothing starts picked; a nearly white one does not
+      await expect(cards.nth(0).getByRole('checkbox')).toBeChecked()
+      await expect(cards.nth(1).getByRole('checkbox')).not.toBeChecked()
+      await expect(cards.nth(1).locator('img')).toHaveAttribute('src', /^data:image\/png;base64,/)
+      await tools.screenshot({ path: shot('pdf-tools-blank-en') })
+      await cards.nth(1).getByRole('checkbox').check()
+      await run.click()
+      await expect(tools.getByText('Made a new file: scan-no-blank.pdf')).toBeVisible()
+      const made = await PDFDocument.load(await readFile(out))
+      expect(made.getPageCount()).toBe(2)
+
+      // the job process is gone once it answered
+      await expect
+        .poll(
+          () =>
+            app.evaluate(
+              ({ app: electronApp }) =>
+                electronApp.getAppMetrics().filter((m) => m.serviceName === 'pdf-structure').length,
+            ),
+          { timeout: 15_000 },
+        )
+        .toBe(0)
+    } finally {
+      await closeAndSaveVideo(launched, 'pdf-tools-blank')
+    }
+  })
+
   test('the window in Korean', async () => {
     test.setTimeout(90_000)
     if (EVIDENCE_DIR) await mkdir(EVIDENCE_DIR, { recursive: true })

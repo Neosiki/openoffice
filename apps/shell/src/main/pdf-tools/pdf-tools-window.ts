@@ -16,8 +16,8 @@ import { randomUUID } from 'node:crypto'
 import { existsSync } from 'node:fs'
 import { readFile, stat } from 'node:fs/promises'
 import { basename, dirname, join, resolve } from 'node:path'
-import { BrowserWindow, dialog, ipcMain, shell } from 'electron'
-import type { IpcMainInvokeEvent } from 'electron'
+import { BrowserWindow, dialog, ipcMain, nativeImage, shell } from 'electron'
+import type { IpcMainInvokeEvent, WebContents } from 'electron'
 import { productName, type Lang } from '@genoffice/i18n'
 import {
   safeExternalUrl,
@@ -30,6 +30,7 @@ import { writePdfAtomically } from '../../../../pdf/src/main/atomic-write'
 import { uniqueGeneratedPdfPath } from '../../../../pdf/src/main/generated-output'
 import {
   PDF_TOOLS_CHANNELS,
+  type PdfBlankPagesResult,
   type PdfPickResult,
   type PdfToolInput,
   type PdfToolInputKind,
@@ -37,11 +38,13 @@ import {
   type PdfToolsTheme,
 } from '../../shared/pdf-tools-api'
 import { PDF_TOOLS_HOME_CHANNELS } from '../../shared/pdf-tools-home-channels'
+import type { StructureJob } from '../pdf-structure/protocol'
 import { pdfToolsText } from '../../renderer/src/i18n/strings-pdf-tools'
 import {
   MAX_TOOL_INPUT_BYTES,
   PdfToolRefusal,
   checkOptions,
+  foundBlankPagesOf,
   inspectImage,
   inspectPdf,
   isPdfToolId,
@@ -66,6 +69,17 @@ export interface PdfToolsWindowDeps {
   openResult(path: string): boolean
   /** Open a PDF the user picked for an editor-only tool; an open tab is only focused */
   openForEditing(path: string): boolean
+  /**
+   * Run a page-rendering job in a process of its own, ended when it answers,
+   * is cancelled, or `owner` goes away (pdf-structure-ipc.ts runWindowJob)
+   */
+  runJob(
+    owner: WebContents,
+    jobId: string,
+    job: StructureJob,
+    onProgress: (done: number, total: number) => void,
+  ): Promise<{ ok: true; value: unknown } | { ok: false; error: string }>
+  cancelJob(owner: number, jobId: string): boolean
 }
 
 interface PickedInput extends PdfToolInput {
@@ -79,6 +93,10 @@ let running = false
 /** this window's inputs and outputs by id; cleared when it closes */
 const inputs = new Map<string, PickedInput>()
 const results = new Map<string, string>()
+/** pages the blank-page search found, by input id: the only pages blankPages removes */
+const blankFound = new Map<string, Set<number>>()
+/** the running blank-page search's job id */
+let finding: string | null = null
 
 const PDF_FILTER = { name: 'PDF', extensions: ['pdf'] }
 const IMAGE_FILTER = { name: 'JPG, PNG', extensions: ['jpg', 'jpeg', 'png'] }
@@ -181,6 +199,14 @@ async function run(raw: unknown): Promise<PdfToolRunResult> {
       backgroundInfo?.ok ? backgroundInfo.pages : 1,
     )
     if (!checked.ok) return { ok: false, error: checked.error }
+    if (tool === 'blankPages') {
+      // only pages the search showed the user: nothing else is removed
+      const found = blankFound.get(sources[0]!.id)
+      const chosen = (checked.options.removePages ?? '').split(',').map(Number)
+      if (!found || chosen.some((page) => !found.has(page))) {
+        return { ok: false, error: 'not-found' }
+      }
+    }
     let made: Uint8Array[]
     try {
       made = await runPdfTool(tool, bytes, checked.options)
@@ -249,6 +275,57 @@ async function pickTargets(
   })
 }
 
+/** a candidate's thumbnail as a PNG data URL */
+function thumbUrl(thumb: { width: number; height: number; bgra: Uint8Array }): string {
+  const buffer = Buffer.from(thumb.bgra.buffer, thumb.bgra.byteOffset, thumb.bgra.byteLength)
+  return nativeImage
+    .createFromBitmap(buffer, { width: thumb.width, height: thumb.height })
+    .toDataURL()
+}
+
+async function findBlankPages(inputId: unknown): Promise<PdfBlankPagesResult> {
+  const owner = win
+  if (!owner || !deps) return { ok: false, error: 'failed' }
+  const input = typeof inputId === 'string' ? inputs.get(inputId) : undefined
+  if (!input || input.kind !== 'pdf') return { ok: false, error: 'no-input' }
+  if (!existsSync(input.path)) return { ok: false, error: 'missing' }
+  if (finding || running) return { ok: false, error: 'busy' }
+  const jobId = randomUUID()
+  finding = jobId
+  try {
+    const contents = owner.webContents
+    const outcome = await deps.runJob(
+      contents,
+      jobId,
+      { op: 'blankPages', source: { pdfPath: input.path } },
+      (done, total) => {
+        if (!contents.isDestroyed()) contents.send(PDF_TOOLS_CHANNELS.progress, { done, total })
+      },
+    )
+    if (!outcome.ok) {
+      return outcome.error === 'cancelled'
+        ? { ok: false, canceled: true }
+        : { ok: false, error: 'failed' }
+    }
+    const found = foundBlankPagesOf(outcome.value)
+    if (!found) return { ok: false, error: 'failed' }
+    blankFound.set(input.id, new Set(found.candidates.map((c) => c.page)))
+    return {
+      ok: true,
+      pageCount: found.pageCount,
+      candidates: found.candidates.map((c) => ({
+        page: c.page,
+        reason: c.reason,
+        thumb: c.thumb ? thumbUrl(c.thumb) : null,
+      })),
+    }
+  } catch {
+    return { ok: false, error: 'failed' }
+  } finally {
+    finding = null
+  }
+}
+
 async function openInEditor(): Promise<void> {
   const owner = win
   if (!owner || !deps) return
@@ -285,6 +362,13 @@ function registerIpc(): void {
   })
   ipcMain.handle(PDF_TOOLS_CHANNELS.openInEditor, (event) => {
     if (fromWindow(event)) return openInEditor()
+  })
+  ipcMain.handle(PDF_TOOLS_CHANNELS.findBlankPages, (event, inputId: unknown) => {
+    if (!fromWindow(event)) return { ok: false, error: 'failed' }
+    return findBlankPages(inputId)
+  })
+  ipcMain.handle(PDF_TOOLS_CHANNELS.cancelFind, (event) => {
+    if (fromWindow(event) && finding) deps?.cancelJob(event.sender.id, finding)
   })
   ipcMain.handle(PDF_TOOLS_CHANNELS.close, (event) => {
     if (fromWindow(event)) win?.close()
@@ -340,6 +424,7 @@ export function openPdfToolsWindow(): void {
     win = null
     inputs.clear()
     results.clear()
+    blankFound.clear()
   })
   if (process.env.ELECTRON_RENDERER_URL) {
     void next.loadURL(`${process.env.ELECTRON_RENDERER_URL}/pdf-tools.html`)

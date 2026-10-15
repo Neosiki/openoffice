@@ -16,6 +16,10 @@ export const PDF_TOOLS_CHANNELS = {
   openResult: 'pdf-tools:open-result',
   revealResult: 'pdf-tools:reveal-result',
   openInEditor: 'pdf-tools:open-in-editor',
+  findBlankPages: 'pdf-tools:find-blank-pages',
+  cancelFind: 'pdf-tools:cancel-find',
+  /** main → window: { done, total } while blank pages are being looked for */
+  progress: 'pdf-tools:progress',
   close: 'pdf-tools:close',
 } as const
 
@@ -34,6 +38,7 @@ export const PDF_TOOL_IDS = [
   'duplex',
   'overlay',
   'stripAnnots',
+  'blankPages',
 ] as const
 export type PdfToolId = (typeof PDF_TOOL_IDS)[number]
 
@@ -95,6 +100,8 @@ export interface PdfToolOptions {
   applyPages?: string
   /** stripAnnots: the kinds to remove */
   annotKinds?: PdfToolAnnotKind[]
+  /** blankPages: "3,7" style 1-based pages to remove, all among the pages found */
+  removePages?: string
 }
 
 /** One picked file, as the window may see it: an opaque id, never the path */
@@ -127,6 +134,9 @@ export type PdfToolError =
   | 'need-background'
   | 'no-annots'
   | 'no-kinds'
+  | 'all-pages'
+  | 'not-found'
+  | 'none-chosen'
   | 'failed'
 
 export interface PdfToolRunRequest {
@@ -142,6 +152,21 @@ export type PdfToolRunResult =
   | { ok: true; outputs: { id: string; name: string }[] }
   | { ok: false; canceled: true }
   | { ok: false; error: PdfToolError }
+
+/** A page that may be blank, for the user to look at before anything is removed */
+export interface PdfBlankCandidate {
+  /** 1-based */
+  page: number
+  /** draws nothing at all, or white but for specks */
+  reason: 'empty' | 'nearly-white'
+  /** a PNG data URL of the page; null past the candidates that get one */
+  thumb: string | null
+}
+
+export type PdfBlankPagesResult =
+  | { ok: true; pageCount: number; candidates: PdfBlankCandidate[] }
+  | { ok: false; canceled: true }
+  | { ok: false; error: 'no-input' | 'missing' | 'busy' | 'failed' }
 
 export type PdfToolsTheme = 'light' | 'dark' | 'system'
 
@@ -160,6 +185,10 @@ export interface PdfToolsWindowApi {
   revealResult(id: string): Promise<void>
   /** pick a PDF and open it in a PDF editor tab */
   openInEditor(): Promise<void>
+  /** look for blank pages in a picked PDF, in a process of its own */
+  findBlankPages(inputId: string): Promise<PdfBlankPagesResult>
+  cancelFind(): Promise<void>
+  onProgress(handler: (done: number, total: number) => void): () => void
   close(): Promise<void>
 }
 

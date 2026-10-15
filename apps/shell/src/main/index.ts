@@ -199,7 +199,7 @@ import { convertPdfFileToDocxLocalWithPrompt, PdfLoadError } from './pdf2docx-lo
 import { convertPdfFileToPptxLocalWithPrompt } from './pdf2pptx-local'
 import { convertPdfFileToXlsxLocalWithPrompt } from './pdf2xlsx-local'
 import { closePdfPasswordDialog, promptPdfPassword } from './pdf-password-dialog'
-import { registerPdfStructureIpc } from './pdf-structure-ipc'
+import { cancelWindowJob, registerPdfStructureIpc, runWindowJob } from './pdf-structure-ipc'
 import { registerPdfConvertUiIpc, requestPdfConvertDialog } from './pdf-convert-ui'
 import {
   configureMarkdownRuntime,
@@ -6541,6 +6541,8 @@ app.whenReady().then(async () => {
       revealShellWindow()
       return openDocumentPath(path)
     },
+    runJob: runWindowJob,
+    cancelJob: cancelWindowJob,
   })
   // The generate window ("make a new document from these files"): Home's entry
   // points open it; "make" opens a new untitled tab with the request queued

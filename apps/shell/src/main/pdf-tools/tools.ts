@@ -107,7 +107,8 @@ export async function inspectPdf(bytes: Uint8Array): Promise<InspectResult> {
 }
 
 export type CheckedOptions =
-  { ok: true; options: PdfToolOptions } | { ok: false; error: 'range' | 'no-kinds' }
+  | { ok: true; options: PdfToolOptions }
+  | { ok: false; error: 'range' | 'no-kinds' | 'none-chosen' | 'all-pages' }
 
 /** Annotation kinds stripAnnots removes when the window sends none (links stay) */
 export const DEFAULT_ANNOT_KINDS: PdfToolAnnotKind[] = PDF_TOOL_ANNOT_KINDS.filter(
@@ -165,6 +166,15 @@ export function checkOptions(
       }
     case 'splitPages':
       return { ok: true, options: { perPage: o.perPage === 4 || o.perPage === 9 ? o.perPage : 2 } }
+    case 'blankPages': {
+      const raw = typeof o.removePages === 'string' ? o.removePages : ''
+      const pages = [...new Set(raw.split(',').map((p) => Number(p.trim())))]
+        .filter((p) => Number.isInteger(p) && p >= 1 && p <= pageCount)
+        .sort((a, b) => a - b)
+      if (pages.length === 0) return { ok: false, error: 'none-chosen' }
+      if (pages.length >= pageCount) return { ok: false, error: 'all-pages' }
+      return { ok: true, options: { removePages: pages.join(',') } }
+    }
     case 'stripAnnots': {
       const text = typeof o.applyPages === 'string' ? o.applyPages.trim() : ''
       const range = text ? parsePageRange(text, pageCount) : null
@@ -298,6 +308,19 @@ export async function runPdfTool(
         }),
       ]
     }
+    case 'blankPages': {
+      // the editor's own page removal on save, which keeps bookmarks and forms
+      const deletedPages = (options.removePages ?? '').split(',').map((p) => Number(p) - 1)
+      const applied = await applySaveRequest(first, {
+        path: '',
+        markups: [],
+        drawings: [],
+        formValues: [],
+        stamps: [],
+        deletedPages,
+      })
+      return [applied.bytes]
+    }
     case 'stripAnnots': {
       const pages = options.applyPages
         ? options.applyPages.split(',').map((p) => Number(p) - 1)
@@ -339,6 +362,7 @@ export function outputNames(
     duplex: 'duplex',
     overlay: 'background',
     stripAnnots: 'clean',
+    blankPages: 'no-blank',
     extract: 'pages',
     reverse: 'reversed',
     nup: `${options.perSheet ?? 2}up`,
@@ -347,4 +371,38 @@ export function outputNames(
     splitPages: 'split',
   }
   return [`${base}-${suffix[tool]}.pdf`]
+}
+
+export interface FoundBlankPages {
+  pageCount: number
+  candidates: {
+    page: number
+    reason: 'empty' | 'nearly-white'
+    thumb: { width: number; height: number; bgra: Uint8Array } | null
+  }[]
+}
+
+/** The blank-pages job's answer, checked; null when it is not that shape */
+export function foundBlankPagesOf(value: unknown): FoundBlankPages | null {
+  if (!value || typeof value !== 'object') return null
+  const v = value as Record<string, unknown>
+  if (typeof v.pageCount !== 'number' || !Array.isArray(v.candidates)) return null
+  const candidates: FoundBlankPages['candidates'] = []
+  for (const raw of v.candidates as unknown[]) {
+    if (!raw || typeof raw !== 'object') return null
+    const c = raw as Record<string, unknown>
+    if (typeof c.page !== 'number' || !Number.isInteger(c.page)) return null
+    if (c.page < 1 || c.page > v.pageCount) return null
+    if (c.reason !== 'empty' && c.reason !== 'nearly-white') return null
+    let thumb: FoundBlankPages['candidates'][number]['thumb'] = null
+    if (c.thumb) {
+      const t = c.thumb as Record<string, unknown>
+      const { width, height, bgra } = t
+      if (typeof width !== 'number' || typeof height !== 'number') return null
+      if (!(bgra instanceof Uint8Array) || bgra.length !== width * height * 4) return null
+      thumb = { width, height, bgra }
+    }
+    candidates.push({ page: c.page, reason: c.reason, thumb })
+  }
+  return { pageCount: v.pageCount, candidates }
 }

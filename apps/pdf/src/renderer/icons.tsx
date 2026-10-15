@@ -415,6 +415,14 @@ export const IconStripAnnots = () => (
     <path d="M15.2 15.7 L19.3 19.8 M19.3 15.7 L15.2 19.8" />
   </Icon>
 )
+/** Find blank pages: an empty page under a magnifier */
+export const IconBlankPages = () => (
+  <Icon>
+    <rect x="4.5" y="4.5" width="10" height="14" rx="1" strokeDasharray="2.2 1.8" />
+    <circle cx="15.5" cy="14.5" r="3.2" />
+    <path d="M17.8 16.8 L20.2 19.2" />
+  </Icon>
+)
 /** Save as text: a page of lines */
 export const IconToText = () => (
   <Icon>

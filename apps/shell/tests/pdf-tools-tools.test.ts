@@ -4,6 +4,7 @@ import { PDFDict, PDFDocument, PDFName, StandardFonts } from 'pdf-lib'
 import {
   PdfToolRefusal,
   checkOptions,
+  foundBlankPagesOf,
   inspectImage,
   inspectPdf,
   isPdfToolId,
@@ -165,6 +166,17 @@ describe('checking options', () => {
       ok: false,
       error: 'no-kinds',
     })
+    expect(checkOptions('blankPages', { removePages: '4, 2,2,9' }, 5).options).toEqual({
+      removePages: '2,4',
+    })
+    expect(checkOptions('blankPages', { removePages: '' }, 5)).toEqual({
+      ok: false,
+      error: 'none-chosen',
+    })
+    expect(checkOptions('blankPages', { removePages: '1,2' }, 2)).toEqual({
+      ok: false,
+      error: 'all-pages',
+    })
     expect(checkOptions('overlay', { applyPages: '4' }, 3, 1)).toEqual({
       ok: false,
       error: 'range',
@@ -308,10 +320,43 @@ describe('running each tool', () => {
     expect([...PDF_TOOL_ANNOT_KINDS]).toEqual([...ANNOT_KINDS])
   })
 
+  it('removes the chosen pages and keeps the rest in order', async () => {
+    const [out] = await runUntouched('blankPages', [await pdf(5)], { removePages: '2,4' })
+    expect(await widths(out!)).toEqual([100, 102, 104])
+  })
+
   it('refuses a PDF with no text at all', async () => {
     await expect(runPdfTool('toText', [await textPdf(['', ''])], {})).rejects.toBeInstanceOf(
       PdfToolRefusal,
     )
+  })
+})
+
+describe('the blank-page job answer', () => {
+  const thumb = { width: 2, height: 1, bgra: new Uint8Array(8) }
+  it('takes a well-formed answer', () => {
+    const value = { pageCount: 3, candidates: [{ page: 2, reason: 'empty', thumb }] }
+    expect(foundBlankPagesOf(value)).toEqual(value)
+    expect(
+      foundBlankPagesOf({
+        pageCount: 3,
+        candidates: [{ page: 3, reason: 'nearly-white', thumb: null }],
+      }),
+    ).toEqual({ pageCount: 3, candidates: [{ page: 3, reason: 'nearly-white', thumb: null }] })
+  })
+
+  it('refuses pages out of range, unknown reasons and short pixel data', () => {
+    expect(
+      foundBlankPagesOf({ pageCount: 3, candidates: [{ page: 4, reason: 'empty' }] }),
+    ).toBeNull()
+    expect(foundBlankPagesOf({ pageCount: 3, candidates: [{ page: 1, reason: 'odd' }] })).toBeNull()
+    expect(
+      foundBlankPagesOf({
+        pageCount: 3,
+        candidates: [{ page: 1, reason: 'empty', thumb: { ...thumb, bgra: new Uint8Array(4) } }],
+      }),
+    ).toBeNull()
+    expect(foundBlankPagesOf(null)).toBeNull()
   })
 })
 

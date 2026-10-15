@@ -14,6 +14,7 @@ import {
   type PdfToolMargin,
   type PdfToolOptions,
   type PdfToolPaper,
+  type PdfBlankCandidate,
 } from '../../../shared/pdf-tools-api'
 import { pdfToolsText, type PdfToolsStringKey } from '../i18n/strings-pdf-tools'
 import { formatBytes } from '../generate/format'
@@ -35,12 +36,16 @@ import {
   IconDuplex,
   IconOverlay,
   IconStripAnnots,
+  IconBlankPages,
   IconWatermark,
 } from '../../../../../pdf/src/renderer/icons'
 
 /** Home groups of the tools the window runs itself (decision 0030) */
 const GROUPS: { label: PdfToolsStringKey; tools: PdfToolId[] }[] = [
-  { label: 'groupOrganize', tools: ['merge', 'split', 'extract', 'reverse', 'rotate'] },
+  {
+    label: 'groupOrganize',
+    tools: ['merge', 'split', 'extract', 'reverse', 'rotate', 'blankPages'],
+  },
   { label: 'groupPrint', tools: ['duplex', 'nup', 'pageSize', 'splitPages'] },
   { label: 'groupDecorate', tools: ['overlay'] },
   { label: 'groupClean', tools: ['stripAnnots'] },
@@ -74,6 +79,7 @@ const TOOL_TEXT: Record<PdfToolId | PdfEditorToolId, [PdfToolsStringKey, PdfTool
   duplex: ['toolDuplex', 'descDuplex'],
   overlay: ['toolOverlay', 'descOverlay'],
   stripAnnots: ['toolStripAnnots', 'descStripAnnots'],
+  blankPages: ['toolBlankPages', 'descBlankPages'],
   stamps: ['toolStamps', 'descStamps'],
   crop: ['toolCrop', 'descCrop'],
   exportImages: ['toolExportImages', 'descExportImages'],
@@ -94,6 +100,9 @@ const ERROR_TEXT: Record<PdfToolError, PdfToolsStringKey> = {
   'need-background': 'errNeedBackground',
   'no-annots': 'errNoAnnots',
   'no-kinds': 'errNoKinds',
+  'all-pages': 'errAllPages',
+  'not-found': 'errNotFound',
+  'none-chosen': 'errNoneChosen',
   failed: 'errFailed',
 }
 
@@ -133,6 +142,15 @@ const ANNOT_KIND_TEXT: Record<PdfToolAnnotKind, PdfToolsStringKey> = {
   other: 'kindOther',
 }
 
+/** blankPages: a search under way, what it found, and the pages picked to remove */
+interface BlankState {
+  finding: { done: number; total: number } | null
+  found: { pageCount: number; candidates: PdfBlankCandidate[] } | null
+  chosen: number[]
+}
+
+const NO_BLANK: BlankState = { finding: null, found: null, chosen: [] }
+
 type View =
   { kind: 'home' } | { kind: 'tool'; tool: PdfToolId } | { kind: 'editor'; tool: PdfEditorToolId }
 
@@ -156,6 +174,7 @@ const TOOL_ICON: Record<PdfToolId | PdfEditorToolId, () => ReactElement> = {
   duplex: IconDuplex,
   overlay: IconOverlay,
   stripAnnots: IconStripAnnots,
+  blankPages: IconBlankPages,
   stamps: IconWatermark,
   crop: IconCropPages,
   exportImages: IconExportImg,
@@ -183,11 +202,14 @@ export function PdfToolsWindow({ lang }: { lang: Lang }) {
   const [options, setOptions] = useState<PdfToolOptions>(DEFAULT_OPTIONS)
   const [busy, setBusy] = useState(false)
   const [outcome, setOutcome] = useState<Outcome>(null)
+  /** blankPages: the search, what it found, and the pages the user picked */
+  const [blank, setBlank] = useState<BlankState>(NO_BLANK)
 
   const openTool = (next: View) => {
     setView(next)
     setInputs([])
     setBackground(null)
+    setBlank(NO_BLANK)
     setRejected([])
     setOptions(DEFAULT_OPTIONS)
     setOutcome(null)
@@ -199,7 +221,32 @@ export function PdfToolsWindow({ lang }: { lang: Lang }) {
     setRejected(result.rejected.map((r) => t(REJECT_TEXT[r.problem], { name: r.name })))
     if (result.inputs.length === 0) return
     setOutcome(null)
+    // what was found belongs to the PDF it was found in
+    setBlank(NO_BLANK)
     setInputs((prev) => (many ? [...prev, ...result.inputs] : result.inputs.slice(0, 1)))
+  }
+
+  const findBlank = async () => {
+    const input = inputs[0]
+    if (!input) return
+    setOutcome(null)
+    setBlank({ ...NO_BLANK, finding: { done: 0, total: input.pages } })
+    const stop = api.onProgress((done, total) =>
+      setBlank((prev) => (prev.finding ? { ...prev, finding: { done, total } } : prev)),
+    )
+    try {
+      const result = await api.findBlankPages(input.id)
+      if (result.ok) {
+        // pages that draw nothing start picked; nearly white ones wait for the user
+        const chosen = result.candidates.filter((c) => c.reason === 'empty').map((c) => c.page)
+        setBlank({ finding: null, found: result, chosen })
+      } else {
+        setBlank(NO_BLANK)
+        if ('error' in result) setOutcome({ kind: 'error', message: t(ERROR_TEXT[result.error]) })
+      }
+    } finally {
+      stop()
+    }
   }
 
   const pickBackground = async () => {
@@ -232,7 +279,8 @@ export function PdfToolsWindow({ lang }: { lang: Lang }) {
       const result = await api.run({
         tool,
         inputIds: inputs.map((i) => i.id),
-        options,
+        options:
+          tool === 'blankPages' ? { ...options, removePages: blank.chosen.join(',') } : options,
         ...(tool === 'overlay' && background ? { backgroundId: background.id } : {}),
       })
       if (result.ok) setOutcome({ kind: 'done', outputs: result.outputs })
@@ -325,6 +373,10 @@ export function PdfToolsWindow({ lang }: { lang: Lang }) {
             t={t}
             inputs={inputs}
             background={background}
+            blank={blank}
+            onFindBlank={() => void findBlank()}
+            onCancelFind={() => void api.cancelFind()}
+            onChooseBlank={(chosen) => setBlank((prev) => ({ ...prev, chosen }))}
             rejected={rejected}
             options={options}
             busy={busy}
@@ -333,7 +385,10 @@ export function PdfToolsWindow({ lang }: { lang: Lang }) {
             onPick={() => void pick(view.tool)}
             onPickBackground={() => void pickBackground()}
             onRemoveBackground={() => setBackground(null)}
-            onRemove={(id) => setInputs((prev) => prev.filter((i) => i.id !== id))}
+            onRemove={(id) => {
+              setInputs((prev) => prev.filter((i) => i.id !== id))
+              setBlank(NO_BLANK)
+            }}
             onMove={move}
             onOptions={set}
             onRun={() => void runTool(view.tool)}
@@ -357,6 +412,10 @@ interface ToolPanelProps {
   t: (key: PdfToolsStringKey, params?: Params) => string
   inputs: PdfToolInput[]
   background: PdfToolInput | null
+  blank: BlankState
+  onFindBlank(): void
+  onCancelFind(): void
+  onChooseBlank(pages: number[]): void
   rejected: string[]
   options: PdfToolOptions
   busy: boolean
@@ -385,7 +444,8 @@ function ToolPanel(p: ToolPanelProps) {
         ? inputs.length >= 1
         : inputs.length === 1 &&
           (tool !== 'overlay' || !!p.background) &&
-          (tool !== 'stripAnnots' || (options.annotKinds ?? []).length > 0)
+          (tool !== 'stripAnnots' || (options.annotKinds ?? []).length > 0) &&
+          (tool !== 'blankPages' || p.blank.chosen.length > 0)
   const pickLabel: PdfToolsStringKey = images
     ? inputs.length === 0
       ? 'pickImages'
@@ -504,6 +564,16 @@ function ToolPanel(p: ToolPanelProps) {
         </p>
       ))}
 
+      {first && tool === 'blankPages' && (
+        <BlankPagesReview
+          t={t}
+          blank={p.blank}
+          busy={p.busy}
+          onFind={p.onFindBlank}
+          onCancel={p.onCancelFind}
+          onChoose={p.onChooseBlank}
+        />
+      )}
       {first && (
         <Options
           tool={tool}
@@ -840,6 +910,95 @@ function Options({ tool, t, options, pages, backgroundPages, onChange }: Options
     default:
       return null
   }
+}
+
+interface BlankPagesReviewProps {
+  t: (key: PdfToolsStringKey, params?: Params) => string
+  blank: BlankState
+  busy: boolean
+  onFind(): void
+  onCancel(): void
+  onChoose(pages: number[]): void
+}
+
+/** Find blank pages, then show each candidate large enough to judge; only ticked pages go */
+function BlankPagesReview({ t, blank, busy, onFind, onCancel, onChoose }: BlankPagesReviewProps) {
+  const { finding, found, chosen } = blank
+  if (finding) {
+    return (
+      <div className="pt-actions pt-actions-start" role="status">
+        <span className="pt-hint">
+          {t('findingBlank', { done: finding.done, total: finding.total })}
+        </span>
+        <button type="button" className="pt-btn" onClick={onCancel}>
+          {t('cancelFind')}
+        </button>
+      </div>
+    )
+  }
+  if (!found) {
+    return (
+      <>
+        <p className="pt-hint">{t('noteBlank')}</p>
+        <div className="pt-actions pt-actions-start">
+          <button type="button" className="pt-btn" onClick={onFind} disabled={busy}>
+            {t('findBlank')}
+          </button>
+        </div>
+      </>
+    )
+  }
+  if (found.candidates.length === 0) {
+    return (
+      <p className="pt-note" role="status">
+        {t('blankNone')}
+      </p>
+    )
+  }
+  const picked = new Set(chosen)
+  const toggle = (page: number, on: boolean) =>
+    onChoose(found.candidates.map((c) => c.page).filter((p) => (p === page ? on : picked.has(p))))
+  return (
+    <>
+      <div className="pt-actions pt-actions-start">
+        <span className="pt-hint">{t('blankFound', { n: found.candidates.length })}</span>
+        <button
+          type="button"
+          className="pt-btn"
+          onClick={() => onChoose(found.candidates.map((c) => c.page))}
+        >
+          {t('selectAll')}
+        </button>
+        <button type="button" className="pt-btn" onClick={() => onChoose([])}>
+          {t('selectNone')}
+        </button>
+      </div>
+      <ul className="pt-blank-grid">
+        {found.candidates.map((c) => (
+          <li key={c.page}>
+            <label className="pt-blank">
+              {c.thumb ? (
+                <img className="pt-blank-thumb" src={c.thumb} alt="" />
+              ) : (
+                <span className="pt-blank-thumb pt-blank-nothumb" />
+              )}
+              <span className="pt-blank-text">
+                <input
+                  type="checkbox"
+                  checked={picked.has(c.page)}
+                  onChange={(e) => toggle(c.page, e.target.checked)}
+                />
+                {t('blankPageLabel', { n: c.page })}
+              </span>
+              <span className="pt-blank-reason">
+                {t(c.reason === 'empty' ? 'blankEmpty' : 'blankNearlyWhite')}
+              </span>
+            </label>
+          </li>
+        ))}
+      </ul>
+    </>
+  )
 }
 
 function Choice(props: { name: string; checked: boolean; label: string; onPick(): void }) {
