@@ -26,6 +26,7 @@ The sign-in is kept on this PC, encrypted with Windows' own protection for your 
 
 ## The AI and your Drive
 
+- In the AI panel of the Word, Excel, PowerPoint, HTML, mind map and Hangul editors, **Attach from Google Drive** (next to the attach button) opens a window where you tick Drive files or folders. They are attached like files from this PC; a folder brings up to 20 of its files.
 - While **Let the AI find and read files in Drive** is on (it is on once you connect), the AI in every editor can search your Drive and read files. For example: "Find last month's meeting notes in Drive and summarize them."
 - What the AI reads goes to the AI provider you use. Parts hidden from AI stay hidden.
 - The AI cannot change, delete or share Drive files.

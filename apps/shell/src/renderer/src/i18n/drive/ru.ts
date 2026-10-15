@@ -55,4 +55,10 @@ export const ru = {
   driveErrRateLimit: 'Google временно ограничивает запросы. Попробуйте чуть позже.',
   driveErrNetwork: 'Не удалось связаться с Google Диском. Проверьте подключение к интернету.',
   driveErrDisk: 'Не удалось сохранить файл на этом компьютере.',
+  drivePickTitle: 'Прикрепить с Диска',
+  drivePickAttach: 'Прикрепить',
+  drivePickSelected: 'Выбрано: {n}',
+  drivePickWorking: 'Получение файлов с Диска…',
+  drivePickFolderNote: 'Если отметить папку, будет прикреплено до 20 файлов из неё.',
+  drivePickGoogleNote: 'Документ Google прикрепляется как файл Office.',
 } satisfies Record<keyof typeof zh, string>

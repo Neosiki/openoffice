@@ -54,4 +54,10 @@ export const fr = {
   driveErrRateLimit: 'Google limite les requêtes pour un moment. Réessayez bientôt.',
   driveErrNetwork: 'Impossible de joindre Google Drive. Vérifiez votre connexion Internet.',
   driveErrDisk: 'Le fichier n’a pas pu être enregistré sur ce PC.',
+  drivePickTitle: 'Joindre depuis Drive',
+  drivePickAttach: 'Joindre',
+  drivePickSelected: '{n} sélectionné(s)',
+  drivePickWorking: 'Récupération depuis Drive…',
+  drivePickFolderNote: 'Cocher un dossier joint jusqu’à 20 fichiers qu’il contient.',
+  drivePickGoogleNote: 'Un document Google est joint comme fichier Office.',
 } satisfies Record<keyof typeof zh, string>

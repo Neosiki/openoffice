@@ -17,6 +17,8 @@ import {
   aiSubscriptionText,
   useAiSendGate,
   useChatRunQueue,
+  DriveAttachButton,
+  type DriveAttachPicked,
 } from '@genoffice/ui'
 import { useEffect, useRef, useState } from 'react'
 import type { Editor } from '@tiptap/core'
@@ -1349,6 +1351,15 @@ export function AiPanel({
 
   const pickAttachments = async () => mergeAttachments(await window.desktop.pickAttachments())
 
+  /** Drive files the person ticked: attached like files from this PC, notes beside them */
+  const attachFromDrive = async ({ paths, notes }: DriveAttachPicked) => {
+    const added = paths.length > 0 ? await window.desktop.addAttachmentPaths(paths) : null
+    mergeAttachments({
+      accepted: added?.accepted ?? [],
+      rejected: [...(added?.rejected ?? []), ...notes],
+    })
+  }
+
   const onDrop = async (e: React.DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
@@ -1919,6 +1930,7 @@ export function AiPanel({
               >
                 <img src={attachIcon} alt="" aria-hidden />
               </button>
+              <DriveAttachButton lang={lang} onPicked={attachFromDrive} />
               <button
                 className={`ai-track-btn${trackChanges ? ' on' : ''}`}
                 onClick={toggleTrackChanges}

@@ -58,4 +58,10 @@ export const de = {
   driveErrRateLimit: 'Google hält Anfragen kurz zurück. Versuchen Sie es gleich noch einmal.',
   driveErrNetwork: 'Google Drive ist nicht erreichbar. Prüfen Sie Ihre Internetverbindung.',
   driveErrDisk: 'Die Datei konnte nicht auf diesem PC gespeichert werden.',
+  drivePickTitle: 'Aus Drive anhängen',
+  drivePickAttach: 'Anhängen',
+  drivePickSelected: '{n} ausgewählt',
+  drivePickWorking: 'Dateien werden aus Drive geholt…',
+  drivePickFolderNote: 'Ein angehakter Ordner hängt bis zu 20 Dateien daraus an.',
+  drivePickGoogleNote: 'Ein Google-Dokument wird als Office-Datei angehängt.',
 } satisfies Record<keyof typeof zh, string>

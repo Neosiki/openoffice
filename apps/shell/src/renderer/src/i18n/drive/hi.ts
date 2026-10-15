@@ -55,4 +55,10 @@ export const hi = {
   driveErrRateLimit: 'Google कुछ देर के लिए अनुरोध रोक रहा है। थोड़ी देर में फिर से कोशिश करें।',
   driveErrNetwork: 'Google Drive तक नहीं पहुँचा जा सका। अपना इंटरनेट कनेक्शन जाँचें।',
   driveErrDisk: 'फ़ाइल इस पीसी पर सहेजी नहीं जा सकी।',
+  drivePickTitle: 'Drive से संलग्न करें',
+  drivePickAttach: 'संलग्न करें',
+  drivePickSelected: '{n} चुने गए',
+  drivePickWorking: 'Drive से फ़ाइलें ला रहे हैं…',
+  drivePickFolderNote: 'फ़ोल्डर चुनने पर उसकी अधिकतम 20 फ़ाइलें संलग्न होती हैं।',
+  drivePickGoogleNote: 'Google दस्तावेज़ Office फ़ाइल के रूप में संलग्न होता है।',
 } satisfies Record<keyof typeof zh, string>

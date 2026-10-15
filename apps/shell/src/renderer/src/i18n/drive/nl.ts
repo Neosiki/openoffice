@@ -55,4 +55,10 @@ export const nl = {
   driveErrRateLimit: 'Google houdt verzoeken even tegen. Probeer het zo opnieuw.',
   driveErrNetwork: 'Google Drive is niet bereikbaar. Controleer je internetverbinding.',
   driveErrDisk: 'Het bestand kon niet op deze pc worden opgeslagen.',
+  drivePickTitle: 'Bijvoegen uit Drive',
+  drivePickAttach: 'Bijvoegen',
+  drivePickSelected: '{n} geselecteerd',
+  drivePickWorking: 'Bestanden ophalen uit Drive…',
+  drivePickFolderNote: 'Een aangevinkte map voegt tot 20 bestanden eruit bij.',
+  drivePickGoogleNote: 'Een Google-document wordt als Office-bestand bijgevoegd.',
 } satisfies Record<keyof typeof zh, string>

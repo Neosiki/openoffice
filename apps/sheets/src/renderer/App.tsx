@@ -70,6 +70,7 @@ import {
   useAiSendGate,
   type AiTokenUsageView,
   type AiScopeQuoteData,
+  type DriveAttachPicked,
 } from '@genoffice/ui'
 
 import {
@@ -1675,6 +1676,15 @@ export function App({
   async function handleAddAttachmentPaths(paths: readonly string[]): Promise<void> {
     if (paths.length === 0) return
     mergeAttachments(await window.desktopApi.addAttachmentPaths([...paths]))
+  }
+
+  /** Drive files the person ticked: attached like files from this PC, notes beside them */
+  async function handleDrivePicked({ paths, notes }: DriveAttachPicked): Promise<void> {
+    const added = paths.length > 0 ? await window.desktopApi.addAttachmentPaths([...paths]) : null
+    mergeAttachments({
+      accepted: added?.accepted ?? [],
+      rejected: [...(added?.rejected ?? []), ...notes],
+    })
   }
 
   async function handleAddPastedImage(data: ArrayBuffer, ext: string): Promise<void> {
@@ -5164,6 +5174,7 @@ export function App({
         attachments={attachments}
         attachNotice={attachNotice}
         onPickAttachments={() => void handlePickAttachments()}
+        onDrivePicked={handleDrivePicked}
         onAddAttachmentPaths={(paths) => void handleAddAttachmentPaths(paths)}
         onAddPastedImage={(data, ext) => void handleAddPastedImage(data, ext)}
         onRemoveAttachment={handleRemoveAttachment}

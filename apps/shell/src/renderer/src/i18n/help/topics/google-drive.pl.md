@@ -26,6 +26,7 @@ Logowanie jest przechowywane na tym komputerze i zaszyfrowane ochroną, którą 
 
 ## AI i Twój Dysk
 
+- W panelu AI edytorów Word, Excel, PowerPoint, HTML, map myśli i Hangul przycisk **Załącz z Dysku Google** (obok przycisku załączania) otwiera okno, w którym zaznaczasz pliki lub foldery z Dysku. Są załączane jak pliki z tego komputera; z folderu trafia do 20 plików.
 - Dopóki opcja **Pozwól AI wyszukiwać i czytać pliki na Dysku** jest włączona (włącza się po połączeniu), AI w każdym edytorze może przeszukiwać Dysk i czytać pliki. Na przykład: „Znajdź na Dysku notatki ze spotkania z zeszłego miesiąca i streść je”.
 - To, co przeczyta AI, trafia do używanego dostawcy AI. Części ukryte przed AI pozostają ukryte.
 - AI nie może zmieniać, usuwać ani udostępniać plików na Dysku.

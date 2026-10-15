@@ -54,4 +54,10 @@ export const ms = {
   driveErrRateLimit: 'Google menahan permintaan seketika. Cuba lagi sebentar nanti.',
   driveErrNetwork: 'Google Drive tidak dapat dihubungi. Semak sambungan internet anda.',
   driveErrDisk: 'Fail tidak dapat disimpan pada PC ini.',
+  drivePickTitle: 'Lampirkan daripada Drive',
+  drivePickAttach: 'Lampirkan',
+  drivePickSelected: '{n} dipilih',
+  drivePickWorking: 'Mengambil fail daripada Drive…',
+  drivePickFolderNote: 'Menanda folder melampirkan sehingga 20 fail di dalamnya.',
+  drivePickGoogleNote: 'Dokumen Google dilampirkan sebagai fail Office.',
 } satisfies Record<keyof typeof zh, string>

@@ -55,4 +55,10 @@ export const pl = {
   driveErrRateLimit: 'Google chwilowo wstrzymuje żądania. Spróbuj za moment.',
   driveErrNetwork: 'Nie można połączyć się z Dyskiem Google. Sprawdź połączenie z internetem.',
   driveErrDisk: 'Nie udało się zapisać pliku na tym komputerze.',
+  drivePickTitle: 'Załącz z Dysku',
+  drivePickAttach: 'Załącz',
+  drivePickSelected: 'Zaznaczono: {n}',
+  drivePickWorking: 'Pobieranie plików z Dysku…',
+  drivePickFolderNote: 'Zaznaczenie folderu załącza do 20 plików z niego.',
+  drivePickGoogleNote: 'Dokument Google jest załączany jako plik Office.',
 } satisfies Record<keyof typeof zh, string>

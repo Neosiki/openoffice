@@ -15,6 +15,7 @@ import {
   matchesFontQuery,
   rememberAiPanelOpen,
   type AiTokenUsageView,
+  type DriveAttachPicked,
 } from '@genoffice/ui'
 
 import {
@@ -253,6 +254,8 @@ interface ExcelShellProps {
   readonly attachments: readonly AttachmentMeta[]
   readonly attachNotice: string | null
   readonly onPickAttachments: () => void
+  /** Drive files ticked in the attach-from-Drive window */
+  readonly onDrivePicked?: ((picked: DriveAttachPicked) => void | Promise<void>) | undefined
   readonly onAddAttachmentPaths: (paths: readonly string[]) => void
   readonly onAddPastedImage: (data: ArrayBuffer, ext: string) => void
   readonly onRemoveAttachment: (path: string) => void
@@ -464,6 +467,7 @@ export function ExcelShell({
   attachments,
   attachNotice,
   onPickAttachments,
+  onDrivePicked,
   onAddAttachmentPaths,
   onAddPastedImage,
   onRemoveAttachment,
@@ -958,6 +962,7 @@ export function ExcelShell({
           attachments={attachments}
           attachNotice={attachNotice}
           onPickAttachments={onPickAttachments}
+          onDrivePicked={onDrivePicked}
           onAddAttachmentPaths={onAddAttachmentPaths}
           onAddPastedImage={onAddPastedImage}
           onRemoveAttachment={onRemoveAttachment}

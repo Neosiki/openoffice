@@ -4,8 +4,7 @@
  * screens get state and file lists; tokens never leave this process.
  */
 import { join } from 'node:path'
-import { dialog, ipcMain, net, safeStorage, shell, webContents } from 'electron'
-import type { BrowserWindow } from 'electron'
+import { BrowserWindow, app, dialog, ipcMain, net, safeStorage, shell, webContents } from 'electron'
 import type { Lang } from '@genoffice/i18n'
 import { safeExternalUrl } from '@genoffice/electron-utils'
 import {
@@ -33,6 +32,8 @@ import { DriveAi, entryType, type ParseToText } from './drive-ai'
 import { DriveFiles, type SyncAnswer, type SyncNotice, type SyncQuestion } from './drive-files'
 import { copyFileName, driveText } from './drive-strings'
 import { createDriveVault } from './drive-vault'
+import { createDrivePicker } from './drive-picker-window'
+import type { DriveAttachResult, DrivePickerTheme } from '../../shared/drive-picker-api'
 
 declare const __GENOFFICE_GOOGLE_CLIENT_ID__: string
 declare const __GENOFFICE_GOOGLE_CLIENT_SECRET__: string
@@ -57,6 +58,7 @@ export interface DriveIpcDeps {
   openPath: (path: string) => boolean
   isOpen: (path: string) => boolean
   parse: ParseToText
+  theme: () => DrivePickerTheme
 }
 
 export interface DriveService {
@@ -257,21 +259,41 @@ export function registerDriveIpc(deps: DriveIpcDeps): DriveService {
     return uiState()
   })
 
-  ipcMain.handle(
-    DRIVE_CHANNELS.list,
-    async (_event, raw: unknown, pageToken: unknown): Promise<DriveListResult> => {
-      const listing = listingOf(raw)
-      if (!listing) return { ok: false, kind: 'not-found' }
-      const result = await connection.api.list(listing, {
-        pageToken: typeof pageToken === 'string' && pageToken.length < 2000 ? pageToken : undefined,
-      })
-      if (!result.ok) return result
-      const entries = result.files.map(toEntry)
-      return result.nextPageToken
-        ? { ok: true, files: entries, nextPageToken: result.nextPageToken }
-        : { ok: true, files: entries }
-    },
+  const listEntries = async (raw: unknown, pageToken: unknown): Promise<DriveListResult> => {
+    const listing = listingOf(raw)
+    if (!listing) return { ok: false, kind: 'not-found' }
+    const result = await connection.api.list(listing, {
+      pageToken: typeof pageToken === 'string' && pageToken.length < 2000 ? pageToken : undefined,
+    })
+    if (!result.ok) return result
+    const entries = result.files.map(toEntry)
+    return result.nextPageToken
+      ? { ok: true, files: entries, nextPageToken: result.nextPageToken }
+      : { ok: true, files: entries }
+  }
+
+  ipcMain.handle(DRIVE_CHANNELS.list, (_event, raw: unknown, pageToken: unknown) =>
+    listEntries(raw, pageToken),
   )
+
+  // ---- attaching Drive files to an editor's AI panel (a person picks them) ----
+
+  const picker = createDrivePicker({
+    api: () => connection.api,
+    connected: () => connection.connected(),
+    lang: deps.lang,
+    theme: deps.theme,
+    list: listEntries,
+    attachDir: () => join(app.getPath('temp'), 'ieumoffice-drive-attach'),
+  })
+
+  ipcMain.handle(DRIVE_CHANNELS.connected, (): boolean => connection.connected())
+
+  ipcMain.handle(DRIVE_CHANNELS.pickAttachments, (event): Promise<DriveAttachResult> => {
+    if (!connection.connected()) return Promise.resolve({ ok: false, reason: 'not-connected' })
+    const parent = BrowserWindow.fromWebContents(event.sender) ?? deps.window()
+    return picker.open(parent)
+  })
 
   ipcMain.handle(DRIVE_CHANNELS.open, async (_event, fileId: unknown): Promise<DriveOpenResult> => {
     if (typeof fileId !== 'string' || !/^[\w-]{1,200}$/.test(fileId)) {
@@ -308,6 +330,7 @@ export function registerDriveIpc(deps: DriveIpcDeps): DriveService {
       return files.open(entry.sourceId).then((r) => r.ok || deps.openPath(path))
     },
     stop() {
+      picker.close()
       files.stop()
       connection.cancelConnect()
     },

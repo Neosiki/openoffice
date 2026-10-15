@@ -26,6 +26,7 @@ Přihlášení se uloží v tomto počítači a zašifruje ochranou, kterou Wind
 
 ## AI a váš Disk
 
+- V panelu AI editorů Word, Excel, PowerPoint, HTML, myšlenkových map a hangul otevře **Připojit z Disku Google** (vedle tlačítka přílohy) okno, kde zaškrtnete soubory nebo složky z Disku. Připojí se jako soubory z tohoto počítače; ze složky až 20 souborů.
 - Dokud je zapnuto **Nechat AI vyhledávat a číst soubory na Disku** (po připojení je zapnuto), AI v každém editoru může prohledávat Disk a číst soubory. Například: „Najdi na Disku zápis z porady za minulý měsíc a shrň ho.“
 - Co AI přečte, odchází poskytovateli AI, kterého používáte. Části skryté před AI zůstávají skryté.
 - AI nemůže soubory na Disku měnit, mazat ani sdílet.

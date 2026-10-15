@@ -26,6 +26,7 @@ De aanmelding wordt op deze pc bewaard, versleuteld met de beveiliging die Windo
 
 ## De AI en je Drive
 
+- In het AI-paneel van de editors voor Word, Excel, PowerPoint, HTML, mindmaps en Hangul opent **Bijvoegen uit Google Drive** (naast de bijlageknop) een venster waarin je Drive-bestanden of -mappen aanvinkt. Ze worden bijgevoegd als bestanden van deze pc; een map levert tot 20 van zijn bestanden.
 - Zolang **De AI bestanden in Drive laten zoeken en lezen** aan staat (na het koppelen staat het aan), kan de AI in elke editor je Drive doorzoeken en bestanden lezen. Bijvoorbeeld: "Zoek in Drive de notulen van vorige maand en vat ze samen."
 - Wat de AI leest, gaat naar de AI-aanbieder die je gebruikt. Delen die voor de AI verborgen zijn, blijven verborgen.
 - De AI kan Drive-bestanden niet wijzigen, verwijderen of delen.

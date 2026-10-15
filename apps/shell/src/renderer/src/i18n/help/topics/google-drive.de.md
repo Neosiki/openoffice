@@ -26,6 +26,7 @@ Die Anmeldung wird auf diesem PC gespeichert und mit dem Schutz verschlüsselt, 
 
 ## Die KI und Ihr Drive
 
+- Im KI-Bereich der Editoren für Word, Excel, PowerPoint, HTML, Mindmaps und Hangul öffnet **Aus Google Drive anhängen** (neben der Anhang-Schaltfläche) ein Fenster, in dem Sie Drive-Dateien oder -Ordner anhaken. Sie werden wie Dateien von diesem PC angehängt; ein Ordner bringt bis zu 20 seiner Dateien mit.
 - Solange **KI darf Dateien in Drive suchen und lesen** aktiviert ist (nach dem Verbinden ist es das), kann die KI in jedem Editor Ihr Drive durchsuchen und Dateien lesen. Zum Beispiel: „Such im Drive das Besprechungsprotokoll vom letzten Monat und fass es zusammen.“
 - Was die KI liest, geht an den KI-Anbieter, den Sie nutzen. Vor der KI verborgene Teile bleiben verborgen.
 - Die KI kann Drive-Dateien nicht ändern, löschen oder freigeben.

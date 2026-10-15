@@ -26,6 +26,7 @@ Log masuk disimpan pada PC ini, disulitkan dengan perlindungan yang Windows sedi
 
 ## AI dan Drive anda
 
+- Dalam panel AI editor Word, Excel, PowerPoint, HTML, peta minda dan Hangul, **Lampirkan daripada Google Drive** (di sebelah butang lampiran) membuka tetingkap untuk menanda fail atau folder Drive. Ia dilampirkan seperti fail daripada PC ini; folder membawa sehingga 20 failnya.
 - Selagi **Benarkan AI mencari dan membaca fail dalam Drive** dihidupkan (ia hidup selepas disambungkan), AI dalam setiap editor boleh mencari Drive anda dan membaca fail. Contohnya: "Cari minit mesyuarat bulan lepas dalam Drive dan ringkaskan."
 - Apa yang dibaca AI dihantar kepada penyedia AI yang anda gunakan. Bahagian yang disembunyikan daripada AI kekal tersembunyi.
 - AI tidak boleh mengubah, memadam atau berkongsi fail Drive.

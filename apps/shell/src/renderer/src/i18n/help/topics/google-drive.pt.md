@@ -26,6 +26,7 @@ O login fica guardado neste PC, criptografado com a proteção que o Windows ofe
 
 ## A IA e o seu Drive
 
+- No painel de IA dos editores de Word, Excel, PowerPoint, HTML, mapa mental e Hangul, **Anexar do Google Drive** (ao lado do botão de anexo) abre uma janela para marcar arquivos ou pastas do Drive. Eles são anexados como arquivos deste PC; uma pasta traz até 20 de seus arquivos.
 - Enquanto **Deixar a IA encontrar e ler arquivos no Drive** estiver ativado (fica ativado ao conectar), a IA de qualquer editor pode pesquisar no seu Drive e ler arquivos. Por exemplo: "Encontre no Drive a ata da reunião do mês passado e resuma."
 - O que a IA lê vai para o provedor de IA que você usa. As partes ocultas da IA continuam ocultas.
 - A IA não pode alterar, excluir nem compartilhar arquivos do Drive.

@@ -11,6 +11,8 @@ import {
   AiSubscriptionUsageLine,
   aiSubscriptionText,
   useAiSendGate,
+  DriveAttachButton,
+  type DriveAttachPicked,
 } from '@genoffice/ui'
 import { useEffect, useRef, useState } from 'react'
 import type { PointerEvent as ReactPointerEvent, ReactElement, ReactNode } from 'react'
@@ -495,6 +497,15 @@ export function AiPanel({
     showAttachNotice(result.rejected)
   }
   const pickAttachments = async () => mergeAttachments(await window.htmlApi.pickAttachments())
+  /** Drive files the person ticked: attached like files from this PC, notes beside them */
+  const attachFromDrive = async ({ paths, notes }: DriveAttachPicked) => {
+    const added = paths.length > 0 ? await window.htmlApi.addAttachmentPaths(paths) : null
+    mergeAttachments({
+      accepted: added?.accepted ?? [],
+      rejected: [...(added?.rejected ?? []), ...notes],
+    })
+  }
+
   const onDrop = async (e: React.DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
@@ -1847,6 +1858,7 @@ export function AiPanel({
               >
                 <img src={attachIcon} alt="" aria-hidden />
               </button>
+              <DriveAttachButton lang={lang} onPicked={attachFromDrive} />
             </>
           }
         />

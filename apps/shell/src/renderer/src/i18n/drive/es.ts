@@ -55,4 +55,10 @@ export const es = {
   driveErrRateLimit: 'Google está frenando las solicitudes por un momento. Inténtalo en breve.',
   driveErrNetwork: 'No se pudo contactar con Google Drive. Revisa tu conexión a internet.',
   driveErrDisk: 'No se pudo guardar el archivo en este PC.',
+  drivePickTitle: 'Adjuntar desde Drive',
+  drivePickAttach: 'Adjuntar',
+  drivePickSelected: '{n} seleccionados',
+  drivePickWorking: 'Obteniendo archivos de Drive…',
+  drivePickFolderNote: 'Marcar una carpeta adjunta hasta 20 archivos de ella.',
+  drivePickGoogleNote: 'Un documento de Google se adjunta como archivo de Office.',
 } satisfies Record<keyof typeof zh, string>

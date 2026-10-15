@@ -26,6 +26,7 @@ L'accesso è conservato su questo PC, cifrato con la protezione che Windows forn
 
 ## L'IA e il tuo Drive
 
+- Nel pannello IA degli editor di Word, Excel, PowerPoint, HTML, mappe mentali e Hangul, **Allega da Google Drive** (accanto al pulsante di allegato) apre una finestra in cui selezionare file o cartelle di Drive. Vengono allegati come file di questo PC; una cartella porta fino a 20 dei suoi file.
 - Finché **Consenti all'IA di trovare e leggere i file in Drive** è attivo (lo è dopo il collegamento), l'IA di ogni editor può cercare nel tuo Drive e leggere i file. Ad esempio: "Trova su Drive il verbale della riunione del mese scorso e riassumilo."
 - Ciò che l'IA legge va al fornitore di IA che usi. Le parti nascoste all'IA restano nascoste.
 - L'IA non può modificare, eliminare né condividere i file di Drive.

@@ -55,4 +55,10 @@ export const it = {
   driveErrRateLimit: 'Google sta trattenendo le richieste per un momento. Riprova tra poco.',
   driveErrNetwork: 'Impossibile raggiungere Google Drive. Controlla la connessione a internet.',
   driveErrDisk: 'Impossibile salvare il file su questo PC.',
+  drivePickTitle: 'Allega da Drive',
+  drivePickAttach: 'Allega',
+  drivePickSelected: '{n} selezionati',
+  drivePickWorking: 'Recupero dei file da Drive…',
+  drivePickFolderNote: 'Selezionare una cartella allega fino a 20 file al suo interno.',
+  drivePickGoogleNote: 'Un documento Google viene allegato come file Office.',
 } satisfies Record<keyof typeof zh, string>

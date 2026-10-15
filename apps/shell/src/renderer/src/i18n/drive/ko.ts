@@ -53,4 +53,10 @@ export const ko = {
   driveErrRateLimit: 'Google이 요청을 잠시 막았습니다. 조금 뒤에 다시 시도하세요.',
   driveErrNetwork: 'Google 드라이브에 연결하지 못했습니다. 인터넷 연결을 확인하세요.',
   driveErrDisk: '파일을 이 PC에 저장하지 못했습니다.',
+  drivePickTitle: '드라이브에서 첨부',
+  drivePickAttach: '첨부',
+  drivePickSelected: '{n}개 선택',
+  drivePickWorking: '드라이브에서 받는 중…',
+  drivePickFolderNote: '폴더를 고르면 그 안의 파일을 20개까지 첨부합니다.',
+  drivePickGoogleNote: 'Google 문서 형식이라 Office 파일로 받아 첨부합니다.',
 } satisfies Record<keyof typeof zh, string>

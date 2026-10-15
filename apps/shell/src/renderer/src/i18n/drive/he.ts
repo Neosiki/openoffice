@@ -51,4 +51,10 @@ export const he = {
   driveErrRateLimit: 'Google מעכבת בקשות לרגע. נסו שוב בעוד רגע.',
   driveErrNetwork: 'לא ניתן להתחבר ל-Google Drive. בדקו את החיבור לאינטרנט.',
   driveErrDisk: 'לא ניתן היה לשמור את הקובץ במחשב הזה.',
+  drivePickTitle: 'צירוף מ-Drive',
+  drivePickAttach: 'צירוף',
+  drivePickSelected: '{n} נבחרו',
+  drivePickWorking: 'מביא קבצים מ-Drive…',
+  drivePickFolderNote: 'סימון תיקייה מצרף עד 20 קבצים ממנה.',
+  drivePickGoogleNote: 'מסמך Google מצורף כקובץ Office.',
 } satisfies Record<keyof typeof zh, string>

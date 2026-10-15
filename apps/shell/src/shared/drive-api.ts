@@ -19,6 +19,8 @@ export const DRIVE_CHANNELS = {
   aiEnabled: DRIVE_AI_CHANNELS.enabled,
   aiSearch: DRIVE_AI_CHANNELS.search,
   aiRead: DRIVE_AI_CHANNELS.read,
+  connected: DRIVE_AI_CHANNELS.connected,
+  pickAttachments: DRIVE_AI_CHANNELS.pickAttachments,
 } as const
 
 /** app-settings.json key: the person lets the AI search and read Drive */

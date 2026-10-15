@@ -55,4 +55,10 @@ export const ja = {
   driveErrRateLimit: 'Google がリクエストを一時的に制限しています。少し待ってからお試しください。',
   driveErrNetwork: 'Google ドライブに接続できませんでした。インターネット接続を確認してください。',
   driveErrDisk: 'ファイルをこの PC に保存できませんでした。',
+  drivePickTitle: 'ドライブから添付',
+  drivePickAttach: '添付',
+  drivePickSelected: '{n} 件選択',
+  drivePickWorking: 'ドライブから取得しています…',
+  drivePickFolderNote: 'フォルダを選ぶと、その中のファイルを 20 件まで添付します。',
+  drivePickGoogleNote: 'Google 形式のドキュメントは Office ファイルとして添付します。',
 } satisfies Record<keyof typeof zh, string>

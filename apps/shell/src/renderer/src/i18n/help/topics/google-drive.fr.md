@@ -26,6 +26,7 @@ La connexion est conservée sur ce PC, chiffrée avec la protection que Windows 
 
 ## L'IA et votre Drive
 
+- Dans le panneau IA des éditeurs Word, Excel, PowerPoint, HTML, carte mentale et Hangul, **Joindre depuis Google Drive** (à côté du bouton de pièce jointe) ouvre une fenêtre où cocher des fichiers ou dossiers Drive. Ils sont joints comme des fichiers de ce PC ; un dossier apporte jusqu'à 20 de ses fichiers.
 - Tant que **Laisser l'IA trouver et lire des fichiers dans Drive** est activé (c'est le cas dès la connexion), l'IA de chaque éditeur peut chercher dans votre Drive et lire des fichiers. Par exemple : « Trouve dans Drive le compte rendu de réunion du mois dernier et résume-le. »
 - Ce que l'IA lit est envoyé au fournisseur d'IA que vous utilisez. Les parties masquées à l'IA restent masquées.
 - L'IA ne peut pas modifier, supprimer ni partager des fichiers Drive.

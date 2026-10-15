@@ -3,6 +3,8 @@ import {
   AiPanelSideButton,
   AiModelPicker,
   type AiModelPickerBridge,
+  DriveAttachButton,
+  type DriveAttachPicked,
 } from '@genoffice/ui'
 import React, { useEffect, useRef, useState } from 'react'
 import {
@@ -290,6 +292,7 @@ export function AiChatPanel({
   attachments,
   attachNotice,
   onPickAttachments,
+  onDrivePicked,
   onAddAttachmentPaths,
   onAddPastedImage,
   onRemoveAttachment,
@@ -322,6 +325,8 @@ export function AiChatPanel({
   readonly attachments: readonly AttachmentMeta[]
   readonly attachNotice: string | null
   readonly onPickAttachments: () => void
+  /** Drive files the person ticked in the attach-from-Drive window; absent: no Drive button */
+  readonly onDrivePicked?: ((picked: DriveAttachPicked) => void | Promise<void>) | undefined
   readonly onAddAttachmentPaths: (paths: readonly string[]) => void
   /// Clipboard-pasted bitmaps (screenshots etc. without a local path): bytes +
   /// extension
@@ -1006,6 +1011,7 @@ export function AiChatPanel({
               >
                 <img src={attachIcon} alt="" aria-hidden />
               </button>
+              {onDrivePicked && <DriveAttachButton lang={lang} onPicked={onDrivePicked} />}
             </>
           }
           textareaRef={inputRef}

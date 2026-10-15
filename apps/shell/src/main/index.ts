@@ -6532,6 +6532,7 @@ app.whenReady().then(async () => {
         (open) => resolve(open).toLowerCase() === resolve(path).toLowerCase(),
       ),
     parse: (path) => parseFileToText(path),
+    theme: () => currentTheme(),
   })
   // Which open documents have unsaved changes, for the attachment readers of the
   // editor mains and the knowledge base: a file being edited is not read as

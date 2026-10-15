@@ -33,6 +33,8 @@ export default defineConfig({
           'pdf-tools': resolve(__dirname, 'src/preload/pdf-tools.ts'),
           // dedicated preload for the agent window (see src/main/agent/agent-window.ts)
           agent: resolve(__dirname, 'src/preload/agent.ts'),
+          // dedicated preload for the attach-from-Drive window (see src/main/drive/drive-picker-window.ts)
+          'drive-picker': resolve(__dirname, 'src/preload/drive-picker.ts'),
         },
       },
     },
@@ -53,6 +55,8 @@ export default defineConfig({
           'pdf-tools': resolve(__dirname, 'src/renderer/pdf-tools.html'),
           // agent window (see src/main/agent/agent-window.ts)
           agent: resolve(__dirname, 'src/renderer/agent.html'),
+          // attach-from-Drive window (see src/main/drive/drive-picker-window.ts)
+          'drive-picker': resolve(__dirname, 'src/renderer/drive-picker.html'),
         },
       },
     },

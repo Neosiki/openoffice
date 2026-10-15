@@ -278,3 +278,35 @@
   font-weight: 500;
   color: var(--text-primary);
 }
+
+/* The attach picker: a tick box before each row */
+
+.drive-pick-item {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.drive-check {
+  display: flex;
+  align-items: center;
+  padding: 0 4px 0 6px;
+}
+
+.drive-check input {
+  width: 15px;
+  height: 15px;
+  margin: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.drive-row.ticked {
+  background: var(--bg-hover);
+}
+
+.drive-primary:disabled,
+.drive-ghost:disabled {
+  opacity: 0.5;
+  cursor: default;
+}

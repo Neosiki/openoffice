@@ -54,4 +54,10 @@ export const th = {
   driveErrRateLimit: 'Google จำกัดคำขอชั่วคราว โปรดลองอีกครั้งในอีกสักครู่',
   driveErrNetwork: 'ติดต่อ Google ไดรฟ์ไม่ได้ โปรดตรวจสอบการเชื่อมต่ออินเทอร์เน็ต',
   driveErrDisk: 'บันทึกไฟล์ลงพีซีเครื่องนี้ไม่ได้',
+  drivePickTitle: 'แนบจากไดรฟ์',
+  drivePickAttach: 'แนบ',
+  drivePickSelected: 'เลือกแล้ว {n} รายการ',
+  drivePickWorking: 'กำลังดึงไฟล์จากไดรฟ์…',
+  drivePickFolderNote: 'การเลือกโฟลเดอร์จะแนบไฟล์ในโฟลเดอร์นั้นได้สูงสุด 20 ไฟล์',
+  drivePickGoogleNote: 'เอกสาร Google จะแนบเป็นไฟล์ Office',
 } satisfies Record<keyof typeof zh, string>

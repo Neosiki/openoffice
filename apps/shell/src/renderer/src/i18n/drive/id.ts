@@ -54,4 +54,10 @@ export const id = {
   driveErrRateLimit: 'Google sedang menahan permintaan sebentar. Coba lagi sesaat lagi.',
   driveErrNetwork: 'Google Drive tidak dapat dihubungi. Periksa koneksi internet Anda.',
   driveErrDisk: 'File tidak dapat disimpan di PC ini.',
+  drivePickTitle: 'Lampirkan dari Drive',
+  drivePickAttach: 'Lampirkan',
+  drivePickSelected: '{n} dipilih',
+  drivePickWorking: 'Mengambil file dari Drive…',
+  drivePickFolderNote: 'Mencentang folder melampirkan hingga 20 file di dalamnya.',
+  drivePickGoogleNote: 'Dokumen Google dilampirkan sebagai file Office.',
 } satisfies Record<keyof typeof zh, string>

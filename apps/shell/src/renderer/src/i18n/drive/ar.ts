@@ -54,4 +54,10 @@ export const ar = {
   driveErrRateLimit: 'تقيّد Google الطلبات مؤقتًا. حاول مرة أخرى بعد قليل.',
   driveErrNetwork: 'تعذّر الوصول إلى Google Drive. تحقق من اتصالك بالإنترنت.',
   driveErrDisk: 'تعذّر حفظ الملف على هذا الكمبيوتر.',
+  drivePickTitle: 'إرفاق من Drive',
+  drivePickAttach: 'إرفاق',
+  drivePickSelected: 'تم تحديد {n}',
+  drivePickWorking: 'جارٍ جلب الملفات من Drive…',
+  drivePickFolderNote: 'تحديد مجلد يرفق ما يصل إلى 20 ملفًا منه.',
+  drivePickGoogleNote: 'يُرفق مستند Google كملف Office.',
 } satisfies Record<keyof typeof zh, string>

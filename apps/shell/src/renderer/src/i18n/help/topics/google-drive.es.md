@@ -26,6 +26,7 @@ El inicio de sesión se guarda en este PC, cifrado con la protección que Window
 
 ## La IA y tu Drive
 
+- En el panel de IA de los editores de Word, Excel, PowerPoint, HTML, mapas mentales y Hangul, **Adjuntar desde Google Drive** (junto al botón de adjuntar) abre una ventana donde marcar archivos o carpetas de Drive. Se adjuntan como archivos de este PC; una carpeta aporta hasta 20 de sus archivos.
 - Mientras **Dejar que la IA busque y lea archivos en Drive** esté activado (lo está al conectar), la IA de cada editor puede buscar en tu Drive y leer archivos. Por ejemplo: «Busca en Drive el acta de la reunión del mes pasado y resúmela».
 - Lo que lee la IA va al proveedor de IA que usas. Las partes ocultas a la IA siguen ocultas.
 - La IA no puede modificar, eliminar ni compartir archivos de Drive.

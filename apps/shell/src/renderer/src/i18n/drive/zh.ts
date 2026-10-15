@@ -47,4 +47,10 @@ export const zh = {
   driveErrRateLimit: 'Google 暂时限制了请求。请稍后重试。',
   driveErrNetwork: '无法连接到 Google 云端硬盘。请检查网络连接。',
   driveErrDisk: '无法将文件保存到这台电脑。',
+  drivePickTitle: '从云端硬盘附加',
+  drivePickAttach: '附加',
+  drivePickSelected: '已选择 {n} 项',
+  drivePickWorking: '正在从云端硬盘获取…',
+  drivePickFolderNote: '勾选文件夹会附加其中最多 20 个文件。',
+  drivePickGoogleNote: 'Google 文档会以 Office 文件附加。',
 }

@@ -54,4 +54,10 @@ export const cs = {
   driveErrRateLimit: 'Google na chvíli zdržuje požadavky. Zkuste to za chvíli.',
   driveErrNetwork: 'Disk Google není dostupný. Zkontrolujte připojení k internetu.',
   driveErrDisk: 'Soubor se nepodařilo uložit do tohoto počítače.',
+  drivePickTitle: 'Připojit z Disku',
+  drivePickAttach: 'Připojit',
+  drivePickSelected: 'Vybráno: {n}',
+  drivePickWorking: 'Načítání souborů z Disku…',
+  drivePickFolderNote: 'Zaškrtnutí složky připojí až 20 souborů z ní.',
+  drivePickGoogleNote: 'Dokument Google se připojí jako soubor Office.',
 } satisfies Record<keyof typeof zh, string>

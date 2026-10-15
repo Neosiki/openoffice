@@ -56,4 +56,10 @@ export const pt = {
     'O Google está segurando as solicitações por um momento. Tente novamente em instantes.',
   driveErrNetwork: 'Não foi possível acessar o Google Drive. Verifique sua conexão com a internet.',
   driveErrDisk: 'Não foi possível salvar o arquivo neste PC.',
+  drivePickTitle: 'Anexar do Drive',
+  drivePickAttach: 'Anexar',
+  drivePickSelected: '{n} selecionado(s)',
+  drivePickWorking: 'Buscando arquivos no Drive…',
+  drivePickFolderNote: 'Marcar uma pasta anexa até 20 arquivos dela.',
+  drivePickGoogleNote: 'Um documento do Google é anexado como arquivo do Office.',
 } satisfies Record<keyof typeof zh, string>

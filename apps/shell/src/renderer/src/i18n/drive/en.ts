@@ -54,4 +54,10 @@ export const en = {
   driveErrRateLimit: 'Google is holding back requests for a moment. Try again shortly.',
   driveErrNetwork: 'Google Drive could not be reached. Check your internet connection.',
   driveErrDisk: 'The file could not be saved on this PC.',
+  drivePickTitle: 'Attach from Drive',
+  drivePickAttach: 'Attach',
+  drivePickSelected: '{n} selected',
+  drivePickWorking: 'Getting files from Drive…',
+  drivePickFolderNote: 'Ticking a folder attaches up to 20 files in it.',
+  drivePickGoogleNote: 'A Google document is attached as an Office file.',
 } satisfies Record<keyof typeof zh, string>

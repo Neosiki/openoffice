@@ -54,4 +54,10 @@ export const vi = {
   driveErrRateLimit: 'Google đang tạm giữ các yêu cầu. Hãy thử lại sau ít phút.',
   driveErrNetwork: 'Không thể kết nối đến Google Drive. Hãy kiểm tra kết nối Internet.',
   driveErrDisk: 'Không thể lưu tệp vào máy tính này.',
+  drivePickTitle: 'Đính kèm từ Drive',
+  drivePickAttach: 'Đính kèm',
+  drivePickSelected: 'Đã chọn {n}',
+  drivePickWorking: 'Đang lấy tệp từ Drive…',
+  drivePickFolderNote: 'Chọn một thư mục sẽ đính kèm tối đa 20 tệp trong đó.',
+  drivePickGoogleNote: 'Tài liệu Google được đính kèm dưới dạng tệp Office.',
 } satisfies Record<keyof typeof zh, string>

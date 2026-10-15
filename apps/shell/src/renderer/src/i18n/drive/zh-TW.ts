@@ -48,4 +48,10 @@ export const zhTW = {
   driveErrRateLimit: 'Google 暫時限制了要求。請稍後再試。',
   driveErrNetwork: '無法連線到 Google 雲端硬碟。請檢查網路連線。',
   driveErrDisk: '無法將檔案儲存到這台電腦。',
+  drivePickTitle: '從雲端硬碟附加',
+  drivePickAttach: '附加',
+  drivePickSelected: '已選取 {n} 項',
+  drivePickWorking: '正在從雲端硬碟取得…',
+  drivePickFolderNote: '勾選資料夾會附加其中最多 20 個檔案。',
+  drivePickGoogleNote: 'Google 文件會以 Office 檔案附加。',
 } satisfies Record<keyof typeof zh, string>

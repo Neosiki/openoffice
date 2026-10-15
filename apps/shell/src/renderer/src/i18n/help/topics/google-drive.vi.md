@@ -26,6 +26,7 @@ Thông tin đăng nhập được lưu trên máy tính này, mã hóa bằng c�
 
 ## AI và Drive của bạn
 
+- Trong bảng AI của trình soạn thảo Word, Excel, PowerPoint, HTML, sơ đồ tư duy và Hangul, nút **Đính kèm từ Google Drive** (cạnh nút đính kèm) mở cửa sổ để chọn tệp hoặc thư mục trên Drive. Chúng được đính kèm như tệp trên máy tính này; một thư mục đính kèm tối đa 20 tệp bên trong.
 - Khi **Cho AI tìm và đọc tệp trong Drive** đang bật (bật sau khi kết nối), AI trong mọi trình soạn thảo có thể tìm kiếm Drive và đọc tệp. Ví dụ: "Tìm biên bản cuộc họp tháng trước trong Drive và tóm tắt giúp tôi."
 - Nội dung AI đọc được gửi đến nhà cung cấp AI bạn đang dùng. Những phần đã ẩn khỏi AI vẫn được ẩn.
 - AI không thể sửa, xóa hay chia sẻ tệp trên Drive.

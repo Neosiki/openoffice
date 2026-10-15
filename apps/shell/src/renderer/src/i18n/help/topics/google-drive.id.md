@@ -26,6 +26,7 @@ Login disimpan di PC ini, dienkripsi dengan perlindungan yang disediakan Windows
 
 ## AI dan Drive Anda
 
+- Di panel AI editor Word, Excel, PowerPoint, HTML, peta pikiran, dan Hangul, **Lampirkan dari Google Drive** (di samping tombol lampiran) membuka jendela untuk mencentang file atau folder Drive. File itu dilampirkan seperti file dari PC ini; folder membawa hingga 20 file di dalamnya.
 - Selama **Izinkan AI mencari dan membaca file di Drive** aktif (aktif setelah terhubung), AI di setiap editor dapat mencari di Drive dan membaca file. Contoh: "Cari notulen rapat bulan lalu di Drive dan buat ringkasannya."
 - Yang dibaca AI dikirim ke penyedia AI yang Anda gunakan. Bagian yang disembunyikan dari AI tetap tersembunyi.
 - AI tidak dapat mengubah, menghapus, atau membagikan file Drive.

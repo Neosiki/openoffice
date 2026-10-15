@@ -227,7 +227,7 @@
 
 `app-settings.json`의 `driveAiAccess`(참/거짓, 기본 참)는 편집기의 AI가 드라이브를 찾고 읽어도 되는지다. 드라이브가 연결돼 있을 때만 뜻이 있다.
 
-창구 이름은 `drive:state`, `drive:connect`, `drive:cancel-connect`, `drive:disconnect`, `drive:set-ai-access`, `drive:list`, `drive:open`과 변경 알림 `drive:state-changed`, 편집기 AI용 `drive:ai-enabled`, `drive:ai-search`, `drive:ai-read`다. 토큰은 어느 창구로도 화면에 나가지 않는다.
+창구 이름은 `drive:state`, `drive:connect`, `drive:cancel-connect`, `drive:disconnect`, `drive:set-ai-access`, `drive:list`, `drive:open`과 변경 알림 `drive:state-changed`, 편집기 AI용 `drive:ai-enabled`, `drive:ai-search`, `drive:ai-read`, 편집기 첨부용 `drive:connected`, `drive:pick-attachments`다. 고르기 창만 쓰는 창구는 `drive-picker:get-init`, `-list`, `-choose`, `-cancel`이고, 그 창이 아닌 곳에서 오면 답하지 않는다. 토큰은 어느 창구로도 화면에 나가지 않는다.
 
 빌드: `GENOFFICE_GOOGLE_CLIENT_ID`(`….apps.googleusercontent.com`)와 `GENOFFICE_GOOGLE_CLIENT_SECRET`이 껍데기 앱을 빌드하는 환경에 있을 때만 드라이브가 들어간다. 없으면 상태는 `unavailable`이고 화면에 드라이브가 나오지 않는다.
 
