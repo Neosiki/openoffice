@@ -14,13 +14,13 @@ import {
   listTableStyles,
   listRevisions,
   listStyles,
-  openDocument,
+  openDocumentFile,
   saveDocument,
 } from '../formats/docx'
 import { previewChars } from '../preview'
 import { checkDocument, DOCS_CHECKS } from '../formats/docx-check'
 import { listSections } from '../formats/docx-sections'
-import { readInput, resolveInput, resolveOutput, writeOutput } from '../fs'
+import { extension, resolveInput, resolveOutput, writeOutput } from '../fs'
 import { readOpsInput } from '../ops-input'
 import type { CommandContext, CommandDef } from '../registry'
 import { checkResult } from '../check'
@@ -30,8 +30,9 @@ import { opSuggestion } from '../op-errors'
 
 export const docsCommand: CommandDef = {
   name: 'docs',
-  summary: 'Read or edit a .docx with the same ops the in-app AI uses.',
-  usage: 'docs <read|apply|check> <file.docx> [options]',
+  summary:
+    'Read or edit a .docx or .odt with the same ops the in-app AI uses (an .odt is written back as .odt).',
+  usage: 'docs <read|apply|check> <file.docx|file.odt> [options]',
   options: [
     { name: 'range', value: 'a-b', description: 'read: block index range (default: all)' },
     { name: 'html', description: 'read: also return the range as restricted HTML' },
@@ -83,7 +84,7 @@ export const docsCommand: CommandDef = {
     {
       name: 'track',
       description:
-        'apply: record content edits as tracked changes (author: --author, default "AI Assistant")',
+        'apply: record content edits as tracked changes (author: --author, default "AI Assistant"); not for .odt',
     },
     { name: 'author', value: 'name', description: 'apply --track: author of the tracked changes' },
     {
@@ -91,7 +92,12 @@ export const docsCommand: CommandDef = {
       description: 'apply: run the batch in memory and report each step without writing',
     },
     ...BATCH_OPTIONS,
-    { name: 'out', value: 'path', description: 'apply: write here instead of in place' },
+    {
+      name: 'out',
+      value: 'path',
+      description:
+        'apply: write here instead of in place (same extension as the input; use convert to change the format)',
+    },
     {
       name: 'force',
       description:
@@ -150,7 +156,7 @@ async function read(
   ctx: CommandContext,
 ): Promise<CommandResult> {
   const path = resolveInput(file, ctx)
-  const doc = await openDocument(readInput(path))
+  const doc = await openDocumentFile(path)
   try {
     const count = doc.editor.state.doc.childCount
     const range = parseRange(flagString(args, 'range'), count)
@@ -181,7 +187,7 @@ async function read(
 
 async function check(file: string | undefined, ctx: CommandContext): Promise<CommandResult> {
   const path = resolveInput(file, ctx)
-  const doc = await openDocument(readInput(path))
+  const doc = await openDocumentFile(path)
   try {
     return checkResult(path, checkDocument(doc), DOCS_CHECKS)
   } finally {
@@ -192,6 +198,37 @@ async function check(file: string | undefined, ctx: CommandContext): Promise<Com
 function trackFlag(args: Args): string | undefined {
   if (!flagBool(args, 'track')) return undefined
   return flagString(args, 'author')?.trim() || 'AI Assistant'
+}
+
+/**
+ * A received .odt is written back as itself: --out must keep the extension
+ * (a format change is `convert`), and tracked changes stay off as in the app.
+ */
+function assertOdtApply(path: string, out: string | undefined, track: boolean): void {
+  const odt = extension(path) === 'odt'
+  if (odt && track) {
+    throw new CliError(
+      EXIT.usage,
+      '--track is not available for an ODT document (tracked changes are kept off)',
+      undefined,
+      {
+        reason: 'unsupported',
+        suggestion:
+          'apply without --track, or convert to .docx first (`ieumoffice convert <file.odt> --to docx`)',
+      },
+    )
+  }
+  if (out && (odt || extension(out) === 'odt') && extension(out) !== extension(path)) {
+    throw new CliError(
+      EXIT.usage,
+      `--out must keep the input's .${extension(path) || '?'} extension; changing the format is a conversion`,
+      undefined,
+      {
+        reason: 'invalid_argument',
+        suggestion: `apply in the same format, then run \`ieumoffice convert <file> --to ${extension(out) || '<format>'}\``,
+      },
+    )
+  }
 }
 
 async function apply(
@@ -224,7 +261,8 @@ async function apply(
   const dryRun = flagBool(args, 'dry-run')
   const mode = batchMode(args)
   const trackAuthor = trackFlag(args)
-  const doc = await openDocument(readInput(path))
+  assertOdtApply(path, flagString(args, 'out'), trackAuthor !== undefined)
+  const doc = await openDocumentFile(path)
   try {
     let outcome: DocOpsOutcome
     try {
