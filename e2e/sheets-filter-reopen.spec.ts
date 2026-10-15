@@ -4,6 +4,7 @@ import { mkdtemp, readdir } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { launchShell, closeAndSaveVideo, waitForPageWithUrl } from './helpers'
+import { PRODUCT_NAME } from '../packages/i18n/src/product'
 
 // the preload exposes window.__genofficeDebug only under this env var
 process.env.GENOFFICE_DEBUG_HOOKS = '1'
@@ -32,7 +33,7 @@ test.describe('sheets: filter criteria survive save and reopen', () => {
       await app.evaluate(({ app: electronApp }, dir) => {
         electronApp.setPath('documents', dir)
       }, scratch)
-      const saveDir = join(scratch, 'GenOffice')
+      const saveDir = join(scratch, PRODUCT_NAME)
       // the workbook has no file yet: Save answers the Save As picker (genoffice#1036)
       await app.evaluate(
         ({ dialog }, target) => {

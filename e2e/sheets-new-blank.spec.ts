@@ -5,6 +5,7 @@ import { mkdtemp, readdir } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { launchShell, closeAndSaveVideo, waitForPageWithUrl, screenshotPath } from './helpers'
+import { PRODUCT_NAME } from '../packages/i18n/src/product'
 
 /**
  * Regression for "new spreadsheet cannot be saved" (feedback 2368785), updated
@@ -19,11 +20,11 @@ test.describe('sheets: new blank workbook', () => {
     const launched = await launchShell({ onboardingSeen: true, videoDir: 'sheets-new-blank' })
     try {
       const { app, page } = launched
-      // keep the auto-created workbook out of the real ~/Documents/GenOffice
+      // keep the auto-created workbook out of the real ~/Documents/<product name>
       await app.evaluate(({ app: electronApp }, dir) => {
         electronApp.setPath('documents', dir)
       }, scratch)
-      const saveDir = join(scratch, 'GenOffice')
+      const saveDir = join(scratch, PRODUCT_NAME)
       const workbook = join(saveDir, 'quick-create.xlsx')
       // the workbook has no file yet, so Save answers the Save As picker
       await app.evaluate(({ dialog }, target) => {

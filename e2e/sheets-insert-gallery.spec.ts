@@ -96,7 +96,7 @@ test.describe('sheets: Insert → Recommended Charts and Icons', () => {
       await sheets.screenshot({ path: screenshotPath('icons-picker') })
       await hits.first().click()
       await expect(iconsDialog).not.toBeVisible({ timeout: 10_000 })
-      await expect(sheets.getByRole('status')).toContainText('Picture inserted')
+      await expect(sheets.locator('.workbook-status')).toContainText('Picture inserted')
       await expect(sheets.locator('.xlsx-image')).toBeVisible({ timeout: 15_000 })
       await sheets.screenshot({ path: screenshotPath('gallery-inserted') })
 

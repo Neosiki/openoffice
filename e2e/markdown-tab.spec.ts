@@ -2,7 +2,13 @@ import { mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test, expect } from '@playwright/test'
-import { launchShell, closeAndSaveVideo, waitForPageWithUrl, screenshotPath } from './helpers'
+import {
+  launchShell,
+  closeAndSaveVideo,
+  waitForPageWithUrl,
+  screenshotPath,
+  stubAiReady,
+} from './helpers'
 
 test.describe('markdown editor', () => {
   test('newly opened long Markdown starts at the title', async () => {
@@ -180,6 +186,8 @@ test.describe('markdown editor', () => {
     try {
       const editorPage = await waitForPageWithUrl(app, '://markdown/')
       await expect(editorPage.locator('.doc-editor h1')).toHaveText('Topic')
+      // sending needs a connected AI; the stub answers instead of a real program
+      await stubAiReady(app)
 
       const summarizeBtn = editorPage.locator('.rb-big.ai-entry', {
         hasText: /AI Summarize/,
@@ -188,7 +196,7 @@ test.describe('markdown editor', () => {
       await summarizeBtn.click()
 
       await expect(editorPage.locator('.copilot')).toBeVisible()
-      // the preset lands as a sent user message (the model reply itself needs credentials)
+      // the preset lands as a sent user message (the reply comes from the stubbed ai:stream)
       await expect(editorPage.locator('.ai-msg-user')).toContainText(/Summarize/)
       await editorPage.screenshot({ path: screenshotPath('markdown-ai-preset') })
     } finally {

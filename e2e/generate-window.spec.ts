@@ -60,10 +60,15 @@ async function stubAi(app: ElectronApplication): Promise<void> {
 }
 
 async function cancel(page: Page): Promise<void> {
-  await Promise.all([
-    page.waitForEvent('close'),
-    page.getByRole('button', { name: 'Cancel', exact: true }).click(),
-  ])
+  const closed = page.waitForEvent('close')
+  // the click closes its own window: on a slow runner the page can be gone before the click returns
+  await page
+    .getByRole('button', { name: 'Cancel', exact: true })
+    .click()
+    .catch((err: unknown) => {
+      if (!page.isClosed()) throw err
+    })
+  await closed
 }
 
 /** the main process's hand-off store, as plain data */
