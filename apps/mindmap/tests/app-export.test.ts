@@ -29,6 +29,7 @@ import {
   richSheet,
   TINY_PNG,
 } from './helpers/fixtures'
+import { mapLoaded, until } from './helpers/wait'
 
 interface Fake {
   api: MindmapApi
@@ -132,6 +133,7 @@ async function mountWith(
     root.render(createElement(LocaleProvider, { initial: 'en', children: createElement(App) }))
   })
   unmount = () => act(() => root.unmount())
+  await until(() => mapLoaded(container), 'the file to open')
   await settle()
   return fake
 }
@@ -210,6 +212,7 @@ describe('the Markdown outline', () => {
 
     // what the save right after it writes, read back with the engine
     await click('[data-action="save"]')
+    await until(() => fake.saves.length > 0, 'the save')
     const saved = await openXmind(fake.saves.at(-1)!.bytes)
     if (saved.status !== 'ok') throw new Error('did not open')
     expect(text).toBe(sheetsToOutline(saved.document.sheets))
@@ -265,8 +268,8 @@ describe('the preview picture of a save', () => {
     const fake = await mountWith(await document.save())
     await typeTitle(plainSheet().rootTopic.children!.attached![0]!.id, 'Changed')
     await click('[data-action="save"]')
+    await until(() => status() === 'Saved', 'the save')
     expect(fake.saves).toHaveLength(1)
-    expect(status()).toBe('Saved')
     const zip = await JSZip.loadAsync(fake.saves[0]!.bytes)
     const kept = await zip.file('Thumbnails/thumbnail.png')!.async('uint8array')
     expect([...kept]).toEqual([...old])

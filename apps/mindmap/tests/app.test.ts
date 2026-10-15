@@ -23,6 +23,7 @@ import type {
   SaveMode,
 } from '../src/shared/ipc'
 import { documentOf, IDS, plainSheet, RICH_PRESERVED, richSheet } from './helpers/fixtures'
+import { mapLoaded, until } from './helpers/wait'
 
 interface Fake {
   api: MindmapApi
@@ -113,6 +114,10 @@ async function settle(): Promise<void> {
   }
 }
 
+/** the main process has been handed `count` saves */
+const savesReach = (fake: Fake, count = 1) =>
+  until(() => fake.saves.length >= count, `save ${count}`)
+
 async function mountApp(fake: Fake): Promise<void> {
   ;(window as unknown as { mindmapApi: MindmapApi }).mindmapApi = fake.api
   container = document.createElement('div')
@@ -122,6 +127,7 @@ async function mountApp(fake: Fake): Promise<void> {
     root.render(createElement(LocaleProvider, { initial: 'en', children: createElement(App) }))
   })
   unmount = () => act(() => root.unmount())
+  await until(() => mapLoaded(container), 'the file to open')
   await settle()
   await untilOpened()
 }
@@ -259,6 +265,7 @@ describe('a file that opens', () => {
     const { fake, bytes } = await openWith(richSheet(), plainSheet())
     expect(fake.dirty.at(-1)).toBe(false)
     await click('[data-action="save"]')
+    await savesReach(fake)
     expect(fake.saves).toHaveLength(1)
     expect(fake.saves[0]!.mode).toBe('save')
     expect(fake.saves[0]!.bytes).toEqual(bytes)
@@ -312,6 +319,7 @@ describe('the link of a topic', () => {
     expect(container.querySelector('.mm-card a')).toBeNull()
 
     await click('[data-action="save"]')
+    await savesReach(fake)
     const saved = await openXmind(fake.saves[0]!.bytes)
     if (saved.status !== 'ok') throw new Error('did not open')
     expect(saved.document.sheets[0]!.rootTopic.children!.attached![0]!.href).toBe(
@@ -365,6 +373,7 @@ describe('a title still being typed', () => {
     await pressOnMap('F2')
     container.querySelector<HTMLElement>('#input-box')!.textContent = '두 번째로 친 글'
     await click('[data-action="save"]')
+    await savesReach(fake)
     const saved = await openXmind(fake.saves[0]!.bytes)
     if (saved.status !== 'ok') throw new Error('did not open')
     expect(saved.document.sheets[0]!.rootTopic.children!.attached![0]!.title).toBe(
@@ -384,6 +393,7 @@ describe('a new map', () => {
     expect(fake.dirty.at(-1)).toBe(false)
 
     await click('[data-action="save"]')
+    await savesReach(fake)
     const reopened = await openXmind(fake.saves[0]!.bytes)
     expect(reopened.status).toBe('ok')
     // still named by default: the dialog is left to offer "Untitled"
@@ -477,6 +487,7 @@ describe('the theme panel', () => {
     ])
     expect(fake.dirty.at(-1)).toBe(false)
     await click('[data-action="save"]')
+    await savesReach(fake)
     expect(fake.saves[0]!.bytes).toEqual(bytes)
     await click('[data-action="theme-close"]')
     expect(container.querySelector('.mm-theme-panel')).toBeNull()
@@ -496,6 +507,7 @@ describe('the theme panel', () => {
     expect(drawnTheme()).toBe('block/moss/dark')
 
     await click('[data-action="save"]')
+    await savesReach(fake)
     const saved = await openXmind(fake.saves[0]!.bytes)
     if (saved.status !== 'ok') throw new Error('the saved map does not open')
     expect(recogniseSheetTheme(saved.document.sheets[0]!)).toBe('block/moss/dark')
@@ -540,6 +552,7 @@ describe('the theme panel', () => {
     expect(drawnTheme()).toBe('pill/signal/light')
 
     await click('[data-action="save"]')
+    await savesReach(fake)
     const saved = await openXmind(fake.saves[0]!.bytes)
     if (saved.status !== 'ok') throw new Error('the saved map does not open')
     expect(saved.document.sheets.map(recogniseSheetTheme)).toEqual([
@@ -588,7 +601,7 @@ describe('the menu', () => {
     expect(fake.dirty.at(-1)).toBe(false)
 
     fake.emit.saveRequest('save')
-    await settle()
+    await savesReach(fake)
     expect(fake.saves[0]!.bytes).toEqual(bytes)
 
     await act(async () => fake.emit.menu('redo'))
