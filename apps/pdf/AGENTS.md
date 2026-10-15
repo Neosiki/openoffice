@@ -5,7 +5,7 @@ PDF 보기·주석·편집 에디터다. 화면은 PDF.js로 그리고, 저장�
 ## 맡은 범위
 
 - 렌더러(`src/renderer/`): 쪽 렌더링과 글자 계층, 축소판, 주석·서식·그리기 덧그림, 메모 여백, 리본.
-- 메인 프로세스(`src/main/pdf-main.ts`와 주변): 저장(`save-pdf.ts`), 글자 편집(`text-edit.ts`, 글꼴 찾기·부분 집합 `font-*.ts`), 영구 가림(`redaction.ts`), 이미지 편집·내보내기, OCR(`ocr.ts`), 전자 서명(`pdf-sign.ts`, `pdf-signatures.ts`, `signature-store.ts`), 빈 PDF 생성(`blank-pdf.ts`).
+- 메인 프로세스(`src/main/pdf-main.ts`와 주변): 저장(`save-pdf.ts`), 글자 편집(`text-edit.ts`, 글꼴 찾기·부분 집합 `font-*.ts`), 영구 가림(`redaction.ts`), 이미지 편집·내보내기, 그림 여러 장으로 PDF 만들기(`images-to-pdf.ts`, 셸의 PDF 도구 창이 부른다), OCR(`ocr.ts`), 전자 서명(`pdf-sign.ts`, `pdf-signatures.ts`, `signature-store.ts`), 빈 PDF 생성(`blank-pdf.ts`).
 - IPC 계약 `src/shared/ipc.ts`(`PDF_CHANNELS`)와 편집 연산 설명(`src/shared/op-docs.ts`).
 - PDF의 AI: 패널(`src/renderer/ai/AiPanel.tsx`), skill과 도구(`pdf-skill.ts`, `tools.ts`), 막힌 실행 판정(`ai-connection.ts`), 연결 상태 훅(`useSubscriptionConnection.ts`), preload가 내보내는 구독 API의 모양(`src/shared/subscription-api.ts`).
 - Markdown·EPUB 변환 화면(`src/renderer/convert/`): 변환 창(`ConvertDialog.tsx`, 페이지 범위·저장 위치·진행·취소, EPUB은 표지와 책 정보), 책 정보 "AI로 채우기"(`BookInfoAiFill.tsx`, `book-info-ai.ts`), "이미지를 폴더로 내보내기"의 "페이지 안의 그림만"(`ExportImagesMenu.tsx`, `embedded-images.ts`).

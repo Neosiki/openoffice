@@ -382,6 +382,23 @@ export const IconPageSize = () => (
     <rect x="8.5" y="8.5" width="7" height="9" rx="0.8" strokeDasharray="2 1.6" />
   </Icon>
 )
+/** Images to PDF: a stack of pictures */
+export const IconImagesToPdf = () => (
+  <Icon>
+    <path d="M7.5 5.5 A1 1 0 0 1 8.5 4.5 H18.5 A1 1 0 0 1 19.5 5.5 V13.5" />
+    <rect x="4.5" y="7.5" width="12" height="11" rx="1" />
+    <circle cx="8.4" cy="11" r="1.1" />
+    <path d="M4.8 16.6 L8.6 13.7 L11.6 15.9 L13.6 14.4 L16.2 16.4" />
+  </Icon>
+)
+/** Save as text: a page of lines */
+export const IconToText = () => (
+  <Icon>
+    <path d="M7.7 4.5 H13.7 L17.2 8 V18.5 A1 1 0 0 1 16.2 19.5 H7.7 A1 1 0 0 1 6.7 18.5 V5.5 A1 1 0 0 1 7.7 4.5 Z" />
+    <path d="M13.7 4.5 V8 H17.2" />
+    <path d="M9.45 11.25 H14.45 M9.45 13.75 H14.45 M9.45 16.25 H12.45" />
+  </Icon>
+)
 export const IconFitWidth = () => (
   <Icon>
     <path d="M4.5 5.57 L4.5 18.43 M19.5 5.57 L19.5 18.43" />
