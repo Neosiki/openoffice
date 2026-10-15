@@ -16,7 +16,7 @@ import { showOpenDialogWithMemory, showSaveDialogWithMemory } from '@genoffice/e
 import { PDF_CHANNELS } from '../../../pdf/src/shared/ipc'
 import type { PdfStructureProgress } from '../../../pdf/src/shared/ipc'
 import { pdfPathGranted } from '../../../pdf/src/main/pdf-main'
-import { hbSubsetWasmPath, pdfiumWasmPath } from '../../../pdf/src/main/wasm-path'
+import { hbSubsetWasmPath, pdfiumWasmPath, qpdfWasmPath } from '../../../pdf/src/main/wasm-path'
 import { ResultStore, documentHashOfFile } from '../../../../packages/pdf-structure/src/store'
 import {
   createPdfStructureHandlers,
@@ -45,6 +45,7 @@ function processSetup(): ProcessSetup {
     ocrHelperPaths: ocrHelperPaths(),
     userDataDir: app.getPath('userData'),
     hbSubsetWasmPath: hbSubsetWasmPath(),
+    qpdfWasmPath: qpdfWasmPath(),
   }
 }
 

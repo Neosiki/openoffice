@@ -78,6 +78,8 @@ export interface ProcessSetup {
   userDataDir?: string
   /** harfbuzz subsetter wasm on disk (wasm-path.ts hbSubsetWasmPath); the translated PDF needs it */
   hbSubsetWasmPath?: string
+  /** qpdf wasm on disk (wasm-path.ts qpdfWasmPath); adding and removing a password needs it */
+  qpdfWasmPath?: string
 }
 
 export interface RunMessage {
@@ -216,6 +218,7 @@ export function parseRunMessage(raw: unknown): RunMessage | null {
   if (setup.userDataDir !== undefined && typeof setup.userDataDir !== 'string') return null
   if (setup.hbSubsetWasmPath !== undefined && typeof setup.hbSubsetWasmPath !== 'string')
     return null
+  if (setup.qpdfWasmPath !== undefined && typeof setup.qpdfWasmPath !== 'string') return null
   if (!isRecord(job) || typeof job.op !== 'string' || !OPS.has(job.op)) return null
   if (!isRecord(job.source) || typeof job.source.pdfPath !== 'string') return null
   return raw as unknown as RunMessage
