@@ -1,4 +1,5 @@
 import { contextBridge, ipcRenderer, webUtils } from 'electron'
+import { driveAiBridge } from '@genoffice/electron-utils/drive-ai-bridge'
 import type { IpcRendererEvent } from 'electron'
 import { SUBSCRIPTION_IPC_CHANNELS } from '@genoffice/ai-provider/browser'
 import { VIEW_IMAGE_CHANNEL } from '../shared/ipc'
@@ -304,6 +305,8 @@ const subscriptionApi: SubscriptionApi = {
 }
 
 contextBridge.exposeInMainWorld('desktop', api)
+// Google Drive for this editor's AI: search and read only (decision 0033)
+contextBridge.exposeInMainWorld('aiOfficeDriveAi', driveAiBridge())
 contextBridge.exposeInMainWorld('projectApi', projectApi)
 contextBridge.exposeInMainWorld('aiOfficeSubscription', subscriptionApi)
 

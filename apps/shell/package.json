@@ -26,6 +26,7 @@
     "@genoffice/docs": "*",
     "@genoffice/docx-engine": "*",
     "@genoffice/electron-utils": "*",
+    "@genoffice/google-drive": "*",
     "@genoffice/cli": "*",
     "@genoffice/i18n": "*",
     "@genoffice/pipelines": "*",

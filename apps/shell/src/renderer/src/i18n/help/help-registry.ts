@@ -344,6 +344,22 @@ export const HELP_TOPICS: HelpTopicMeta[] = [
     keywords: ['命令行', 'cli', 'ieumoffice', 'convert', 'render', '命令行工具', '终端'],
   },
   {
+    id: 'google-drive',
+    group: 'manage',
+    order: 5,
+    keywords: [
+      'google drive',
+      'drive',
+      '云端硬盘',
+      '드라이브',
+      'ドライブ',
+      'google docs',
+      'sync',
+      '同步',
+      'cloud',
+    ],
+  },
+  {
     id: 'mcp',
     group: 'manage',
     order: 4,

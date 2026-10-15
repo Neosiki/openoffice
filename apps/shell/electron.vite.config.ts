@@ -9,6 +9,14 @@ export default defineConfig({
   main: {
     // node:sqlite is a Node 22+ builtin the bundler's builtin list may predate
     build: { rollupOptions: { external: ['node:sqlite'] } },
+    // the Google client for Drive (decision 0033) comes from the build's
+    // environment only; without it the build offers no Drive at all
+    define: {
+      __GENOFFICE_GOOGLE_CLIENT_ID__: JSON.stringify(process.env.GENOFFICE_GOOGLE_CLIENT_ID ?? ''),
+      __GENOFFICE_GOOGLE_CLIENT_SECRET__: JSON.stringify(
+        process.env.GENOFFICE_GOOGLE_CLIENT_SECRET ?? '',
+      ),
+    },
   },
   preload: {
     build: {
@@ -25,6 +33,8 @@ export default defineConfig({
           'pdf-tools': resolve(__dirname, 'src/preload/pdf-tools.ts'),
           // dedicated preload for the agent window (see src/main/agent/agent-window.ts)
           agent: resolve(__dirname, 'src/preload/agent.ts'),
+          // dedicated preload for the attach-from-Drive window (see src/main/drive/drive-picker-window.ts)
+          'drive-picker': resolve(__dirname, 'src/preload/drive-picker.ts'),
         },
       },
     },
@@ -45,6 +55,8 @@ export default defineConfig({
           'pdf-tools': resolve(__dirname, 'src/renderer/pdf-tools.html'),
           // agent window (see src/main/agent/agent-window.ts)
           agent: resolve(__dirname, 'src/renderer/agent.html'),
+          // attach-from-Drive window (see src/main/drive/drive-picker-window.ts)
+          'drive-picker': resolve(__dirname, 'src/renderer/drive-picker.html'),
         },
       },
     },

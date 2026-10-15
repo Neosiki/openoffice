@@ -84,6 +84,8 @@ import { installCliLinkBestEffort } from './cli-link'
 import { createDefaultAppService, execFileRunner } from './default-app'
 import { registerIntegrationsIpc } from './integrations-ipc'
 import { registerResultStoreIpc } from './result-store-ipc'
+import { registerDriveIpc, type DriveService } from './drive/drive-ipc'
+import { parseFileToText } from '@genoffice/file-parse'
 import { handleDroppedFiles } from './dropped-files'
 import { collectLaunchPaths } from './launch-paths'
 
@@ -525,6 +527,8 @@ registerPrivilegedSchemes()
 // same file when they pick up i18n later. GENOFFICE_LANG overrides for tests.
 
 const APP_SETTINGS_PATH = () => join(app.getPath('userData'), 'app-settings.json')
+/** Google Drive (decision 0033); registered once this instance holds the single-instance lock */
+let driveService: DriveService | null = null
 const OPEN_DOCUMENTS_PATH = () => join(app.getPath('userData'), OPEN_DOCUMENTS_FILE)
 /** only the instance holding the single-instance lock may write or remove the registry */
 let ownsOpenDocumentsRegistry = false
@@ -3835,6 +3839,13 @@ function registerDroppedFilesIpc(): void {
 
 /** the single router: extension decides which module owns the file; false = nothing opened */
 function openDocumentPath(filePath: string): boolean {
+  // a copy of a Drive file (from Recent, say) reopens through Drive, so a copy
+  // older than the file in Drive is refreshed first unless it holds unsent edits
+  const viaDrive = driveService?.reopen(filePath)
+  if (viaDrive) {
+    void viaDrive.catch(() => routeDocumentPath(filePath))
+    return true
+  }
   const opened = routeDocumentPath(filePath)
   return opened
 }
@@ -6510,6 +6521,20 @@ app.whenReady().then(async () => {
   // off the startup path: a symlink / registry write nobody is waiting for
   setTimeout(() => installCliLinkBestEffort(APP_SETTINGS_PATH()), 3000)
   startSheetsCaptureServer()
+  driveService = registerDriveIpc({
+    userData: () => app.getPath('userData'),
+    settingsPath: APP_SETTINGS_PATH,
+    lang: () => currentLang(),
+    window: () => shellWindow,
+    // a Drive copy opens like any local file; the Drive service already chose the copy
+    openPath: (path) => routeDocumentPath(path),
+    isOpen: (path) =>
+      (tabManager?.openFilePaths() ?? []).some(
+        (open) => resolve(open).toLowerCase() === resolve(path).toLowerCase(),
+      ),
+    parse: (path) => parseFileToText(path),
+    theme: () => currentTheme(),
+  })
   // Which open documents have unsaved changes, for the attachment readers of the
   // editor mains and the knowledge base: a file being edited is not read as
   // another document's material until it is saved (a withholding mark only
@@ -6841,6 +6866,7 @@ app.on('will-quit', () => {
   // a second instance that lost the lock quits too; it must not delete the running editor's list
   if (ownsOpenDocumentsRegistry) clearOpenDocuments(OPEN_DOCUMENTS_PATH())
   stopAgentSessions()
+  driveService?.stop()
   shutdownSubscriptionChildren()
 })
 
