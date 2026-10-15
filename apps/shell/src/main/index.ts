@@ -20,6 +20,7 @@ import {
   ipcMain,
   nativeImage,
   nativeTheme,
+  screen,
   session,
   shell,
   webContents,
@@ -3775,6 +3776,8 @@ function createShellWindow(): void {
                   : kind === 'hwp'
                     ? tm('untitledHwp')
                     : tm('untitledSheet'),
+    // interface scale (genoffice#1913) is not ported yet: the strip is unscaled
+    () => 1,
     // every split change: remember it, re-role the pane views, tell the strip
     (state) => handleSplitChanged(win, manager, state),
   )
