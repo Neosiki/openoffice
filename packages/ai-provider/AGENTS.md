@@ -52,6 +52,7 @@
 - **에이전트 세션은 두뇌 방식의 규칙을 빌려 쓰지 않고 따로 지킨다.** 위의 "도구 0개"와 "Codex 읽기 전용" 규칙은 기본 AI 창의 것이고, 에이전트 세션의 코드를 두뇌 방식 브리지에 섞지 않는다. 대신 이렇게 한다. Claude는 `claudeAgentLaunchArgs`의 고정 인자(`--restricted`, `--setting-sources ""`, `--strict-mcp-config`, `--tools`의 8개, `--permission-prompts host --permission-prompt-tool stdio`)로 띄우고, 시작 보고가 `claudeAgentInitProblem`을 통과해야 진행한다. Codex는 `codexAgentLaunchArgs`(두뇌 방식 덮어쓰기에 스킬 지시문만 켬)로 띄우고, 권한 프로필 `ieumoffice-agent`가 적용됐다는 답과 MCP 목록 확인이 있어야 진행한다. 프로필이 적용되지 않으면 낮춰 돌리지 않고 끝낸다.
 - 에이전트 세션의 모든 권한 요청은 `agentPolicyVerdict`를 거친다. 프로그램의 옵션(`acceptEdits`, 샌드박스)을 믿고 판단을 건너뛰지 않는다. 탭에 열린 문서의 파일 쓰기, 프로젝트 폴더 밖 쓰기, 보호 경로는 어느 허락 방식에서도 거절이다. 판단 규칙을 바꾸면 `tests/agent-session-policy.test.ts`의 표를 함께 고친다.
 - Claude에 `bypassPermissions`·`--dangerously-skip-permissions`를 주지 않는다. "믿고 맡기기"는 Claude Code의 `auto` 모드다. Windows에서 Claude의 명령은 격리되지 않기 때문이다.
+- Codex 에이전트 세션은 MXC 격리(`windows.sandbox="mxc"`)와 `deny`가 든 권한 프로필로만 연다. 승인 정책에 `on-request`를 쓰지 않는다. 그 정책에서 허락한 명령은 격리 밖에서 돈다. `thread/start`의 답에서 프로필과 승인 정책이 요청과 같은지 확인한다.
 - 에이전트 세션도 명령줄에 사용자 글을 올리지 않는다. 설정과 MCP 토큰은 세션 폴더의 파일로, 지시문은 표준 입력(Claude `initialize`의 `appendSystemPrompt`, Codex `developerInstructions`)으로 넘긴다.
 - 스킬은 사용자 설정을 읽게 해서 싣지 않는다(훅이 실행된다). `buildAgentSkillBundle`이 스킬 폴더만 복사한 플러그인 폴더를 만들고, 디렉터리 연결은 쓰지 않는다(연결이 실제 위치로 풀려 작업 폴더 밖으로 막힌다).
 

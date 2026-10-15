@@ -154,8 +154,8 @@ there. The same holds for any API-key provider you add.
 
 ## What Claude Code and Codex keep on your PC
 
-- **Agent mode** gives Claude Code a copy of your skill folders, kept in the
-  app's data folder (`agent-skills`), and a temporary folder per session that
+- **Agent mode** gives Claude Code a copy of your skill folders, kept in
+  `%LOCALAPPDATA%\IeumOffice\agent-skills`, and a temporary folder per session that
   is deleted when the session ends. The program can create and change files in
   the project folder you chose; those are your files and stay there.
 
