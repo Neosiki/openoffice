@@ -85,7 +85,10 @@ jobs:
           set -euo pipefail
           app="apps/shell/release/mac-arm64/IeumOffice.app"
           codesign --verify --deep --strict --verbose=2 "$app"
-          codesign -dv "$app" 2>&1 | tee /dev/stderr | grep -q 'Signature=adhoc'
+          # read the whole report first: grep -q quitting early would break the pipe
+          signature="$(codesign -dv "$app" 2>&1)"
+          echo "$signature"
+          grep -q 'Signature=adhoc' <<<"$signature"
           for bin in \
             "$app/Contents/MacOS/IeumOffice" \
             "$app/Contents/Resources/native/xlsx-sidecar" \
