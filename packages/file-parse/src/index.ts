@@ -1,6 +1,7 @@
 export { parseFileToText, type ParsedFile, type ParsedFileKind } from './parse'
 export { docToText } from './doc'
 export { docxToText } from './docx'
+export { odtToText } from './odt'
 export { pptToText } from './ppt'
 export { pptxToText } from './pptx'
 export { xlsxToText } from './xlsx'

@@ -2,11 +2,12 @@
 
 ## 맡은 범위
 
-첨부 파일을 모델에 보낼 평문으로 바꾼다. `parseFileToText(경로)`가 확장자와 매직 바이트를 보고 PDF, docx, doc, pptx, ppt, xlsx/xlsm, 텍스트 계열 파일을 글자로 풀고, 이미지는 내용을 읽지 않고 `kind: 'image'`와 MIME만 돌려준다. Docs·Sheets·Slides·HTML 메인 프로세스의 첨부 처리와 셸의 파일 색인·지식 베이스가 쓴다.
+첨부 파일을 모델에 보낼 평문으로 바꾼다. `parseFileToText(경로)`가 확장자와 매직 바이트를 보고 PDF, docx, doc, odt, pptx, ppt, xlsx/xlsm, 텍스트 계열 파일을 글자로 풀고, 이미지는 내용을 읽지 않고 `kind: 'image'`와 MIME만 돌려준다. Docs·Sheets·Slides·HTML 메인 프로세스의 첨부 처리와 셸의 파일 색인·지식 베이스가 쓴다.
 
 ## 맡지 않는 것 (경계)
 
-- 편집용 파싱이 아니다. 서식, 위치, 왕복 보존에 필요한 정보는 버린다. 문서를 열고 저장하는 일은 `packages/docx-engine`, `packages/pptx-engine`, `packages/xlsx-gateway`와 Rust 사이드카가 한다.
+- 편집용 파싱이 아니다. 서식, 위치, 왕복 보존에 필요한 정보는 버린다. 문서를 열고 저장하는 일은 `packages/docx-engine`, `packages/odt-engine`, `packages/pptx-engine`, `packages/xlsx-gateway`와 Rust 사이드카가 한다.
+- ODT의 글자 풀기는 `packages/odt-engine`의 `odtToText`가 한다. 이 패키지는 그 결과를 그대로 쓰고, 출력 모양을 고치려면 엔진 쪽을 고친다.
 - 이미지를 모델에 넘기는 일은 호출자와 `packages/ai-provider`가 한다.
 - 첨부 개수와 크기 제한, 모델 입력 길이에 맞춘 자르기는 호출자가 한다. 이 패키지에는 파일 크기 상한이 없다.
 - 스캔한 PDF의 글자 인식은 하지 않는다. PDF를 문서로 되살리는 일은 `packages/pdf2docx`다.
@@ -14,8 +15,9 @@
 ## 항상 지켜야 하는 것
 
 - `parseFileToText`는 실패를 던지지 않고 `{ ok: false, error }`로 돌려준다. 깨진 파일 하나가 채팅 요청 전체를 막으면 안 된다. 따로 내보낸 `docxToText` 같은 개별 함수는 던진다.
-- 확장자를 믿지 않는다. 매직 바이트와 어긋나면 `Content mismatch`로 거부한다. 예외는 `.doc` 이름의 zip 하나이고 OOXML로 읽는다. `.ppt` 이름의 zip은 거부한다.
-- zip 기반 형식은 풀기 전에 관문을 거친다. pptx와 xlsx는 `assertZipInflatesWithinLimits`를 먼저 부르고 그다음에 선언 크기 검사를 한다. docx는 `parseDocx` 안에서 같은 검사가 돈다. 순서를 바꾸거나 선언 크기 검사만 남기지 않는다.
+- 확장자를 믿지 않는다. 매직 바이트와 어긋나면 `Content mismatch`로 거부한다. 예외는 `.doc` 이름의 zip 하나이고 OOXML로 읽는다. `.ppt` 이름의 zip은 거부한다. `.odt`는 zip이어야 하고, 그 안의 `mimetype`이 `application/vnd.oasis.opendocument.text`가 아니면(docx, 스프레드시트, 서식 파일 `.ott`) 역시 `Content mismatch`다. 다른 이름(`.docx` 등)으로 저장된 ODT는 내용으로 알아보지 않으며 그 이름의 형식으로 읽다가 `ok: false`가 된다.
+- zip 기반 형식은 풀기 전에 관문을 거친다. pptx와 xlsx는 `assertZipInflatesWithinLimits`를 먼저 부르고 그다음에 선언 크기 검사를 한다. docx는 `parseDocx` 안에서, odt는 `odtToText`(엔진의 `openOdt`) 안에서 같은 검사가 돈다. 순서를 바꾸거나 선언 크기 검사만 남기지 않는다.
+- 암호 걸린 ODT(manifest에 `manifest:encryption-data`)는 읽지 않고 `ok: false`와 암호를 풀어 다시 첨부하라는 오류를 돌려준다. 깨진 ODT와 관문에서 거부된 ODT도 `ok: false`다. 개별 함수 `odtToText`는 엔진의 `OdtOpenError`를 그대로 던진다.
 - 관계(rels) 대상은 `resolveTarget`으로만 푼다. `..`은 zip 루트에서 멈추고, 스킴이 붙은 대상과 디코딩할 수 없는 대상은 빈 문자열이 된다. Windows 계열 생성기가 쓰는 역슬래시 구분자도 여기서 처리한다.
 - 글자를 바꾸지 않는다. XML 파서 설정은 `trimValues: false`, `parseTagValue: false`로 둔다. `02139` 같은 값이 숫자로 바뀌거나 런 사이의 공백이 사라지면 안 된다.
 - 적대적인 xlsx에 메모리를 내주지 않는다. 열 번호가 16,384(`MAX_XLSX_COLS`) 이상이거나 참조가 잘못된 셀은 그 자리를 채우지 않고 뒤에 붙이고, 빈 칸이 8개 넘게 이어지면 `(N empty)`로 줄인다.
@@ -23,7 +25,7 @@
 
 ## 이 모듈의 방식
 
-- 출력 모양은 테스트가 고정한다. docx는 제목을 `#`, 목록을 `-`, 표의 칸 구분을 `|`로 적고 각주와 미주를 끝에 붙인다. pptx와 ppt는 슬라이드마다 `## Slide N`, 발표자 노트는 `### Notes`다. xlsx는 시트마다 `# 시트이름`, PDF는 페이지 사이에 빈 줄을 둔다.
+- 출력 모양은 테스트가 고정한다. docx는 제목을 `#`, 목록을 `-`, 표의 칸 구분을 `|`로 적고 각주와 미주를 끝에 붙인다. odt는 엔진의 모양을 따른다: 문단은 한 줄씩, 표는 행마다 한 줄에 칸을 탭으로 나누고, 한컴이 글상자에 넣은 표는 그 문단 자리에, 각주·미주는 끝에 번호와 함께 붙인다. pptx와 ppt는 슬라이드마다 `## Slide N`, 발표자 노트는 `### Notes`다. xlsx는 시트마다 `# 시트이름`, PDF는 페이지 사이에 빈 줄을 둔다.
 - pptx의 슬라이드 순서는 파일 이름이 아니라 `presentation.xml`의 슬라이드 목록을 따른다. 목록에 없는 슬라이드 파트는 빼고, 목록 파일이 없을 때만 파일 번호순으로 읽는다.
 - 글자가 없고 그림만 있는 슬라이드와 시트는 제목만 남기지 않고 그림 수와 함께 추출할 글자가 없다는 표시를 넣는다. 표시가 없으면 모델과 사용자가 내용이 전달되지 않은 슬라이드를 읽힌 것으로 여긴다.
 - 텍스트 파일은 BOM을 보고 UTF-8과 UTF-16을 풀고, UTF-8로 읽히지 않으면 windows-1252로 읽는다. BOM이 UTF-32라고 알리는 파일만 거부한다.
@@ -33,6 +35,6 @@
 ## 테스트
 
 - `npm run test -w @genoffice/file-parse`, 또는 패키지 폴더에서 `npx vitest run`. 타임아웃은 20초다.
-- OOXML 픽스처는 `tests/helpers/fixtures.ts`가 JSZip으로 그때그때 만들어 임시 폴더에 쓴다. 파일로 들어 있는 것은 옛 형식 두 개(`tests/fixtures/legacy-sample.doc`, `legacy-sample.ppt`)뿐이다. `npm run fixtures`는 필요 없다.
+- OOXML 픽스처는 `tests/helpers/fixtures.ts`가 JSZip으로 그때그때 만들어 임시 폴더에 쓴다. ODT 픽스처는 `tests/odt.test.ts`가 손으로 묶거나(글상자 안 표, 각주, 암호 manifest) docx 픽스처를 `docxToOdt`로 바꿔 만든다. 파일로 들어 있는 것은 옛 형식 두 개(`tests/fixtures/legacy-sample.doc`, `legacy-sample.ppt`)뿐이다. `npm run fixtures`는 필요 없다.
 - 형식 처리를 바꾸면 정상 추출, 깨진 파일이 던지지 않고 `ok: false`가 되는 경우, 글자 원형 보존(앞자리 0, 런 사이 공백)을 덮는다. zip을 여는 경로를 건드리면 `tests/zip-bomb-gate.test.ts`도 함께 본다.
 - Windows에서 원본 코드 그대로도 실패하는 테스트는 없다.
