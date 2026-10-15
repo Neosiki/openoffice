@@ -24,6 +24,7 @@ import type { MapAiHost } from '../src/renderer/ai/map-tools'
 import { newMap } from '../src/renderer/document/open'
 import type { AttachmentMeta, MindmapApi } from '../src/shared/ipc'
 import { documentOf, plainSheet } from './helpers/fixtures'
+import { mapLoaded, until } from './helpers/wait'
 
 const statusMap = (
   claude: AiSubscriptionState,
@@ -176,6 +177,7 @@ async function mountApp(fake: ReturnType<typeof fakeApi>): Promise<void> {
     root.render(createElement(LocaleProvider, { initial: 'en', children: createElement(App) }))
   })
   unmount = () => act(() => root.unmount())
+  await until(() => mapLoaded(container), 'the file to open')
   await settle()
 }
 

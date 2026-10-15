@@ -30,6 +30,7 @@ import {
   TINY_PNG,
   topic,
 } from './helpers/fixtures'
+import { until } from './helpers/wait'
 
 const STRINGS: MapStrings = mapStrings('ko')
 
@@ -520,6 +521,15 @@ describe('pictures', () => {
     const fetched = vi.fn(async () => new Response(''))
     vi.stubGlobal('fetch', fetched)
     const shown = show(await documentWithEntries([pictured()], entries))
+    // the pictures are read out of the zip first; the image element waits for its source
+    await until(
+      () =>
+        [ID.one, ID.two].every(
+          (id) => !!topicEl(shown.el, id).querySelector('.mm-picture img[src^="blob:"]'),
+        ),
+      'the pictures inside the file',
+      { react: false },
+    )
     await settle()
     await settle()
     return { ...shown, fetched }

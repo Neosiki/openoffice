@@ -16,6 +16,7 @@
 
 - **`npm test`가 첫 실패에서 멈춘다.** 작업 공간을 `&&`로 이어 돌리기 때문이다. Windows에서는 원본 코드 그대로도 실패하는 테스트가 있어(경로 구분자, 크롬 없음, 시간 초과), 한 번에 끝까지 가지 않는다. → 작업 공간별로 따로 돌리고(`npm run test -w @genoffice/<이름>`) 실패 목록을 이전 결과와 비교한다.
 - **부하가 걸리면 시간 초과로 떨어지는 테스트가 있다.** 껍데기 앱의 `third-party-notices`, `update-resume`, `pdf2docx-local-argv`, 워드 엔진의 암호 해시·압축 폭탄 테스트, AI 연결부의 실제 프로세스 끝내기 테스트(`subscription-process`의 "really ends a child and the grandchild"), 엑셀 편집기의 `table-design-create`가 그렇다. → 여러 작업을 동시에 돌리던 중의 실패는 그 파일만 따로 돌려 본 뒤 판단한다.
+- **마인드맵 화면 테스트가 CI에서만 가끔 실패한다(매번 다른 시험).** 엔진은 `.xmind`를 JSZip으로 읽고 쓰는데, JSZip은 일을 잘게 나눠 `setImmediate`로 이어 간다. `setTimeout(0)`을 정해진 횟수만 돌리는 기다림(`settle`)은 빠른 PC에서는 그 사이에 열기·저장이 끝나지만, 느린 CI에서는 끝나기 전에 시험이 확인을 시작한다. → 열기와 저장, 그림 읽기를 기다릴 때는 `apps/mindmap/tests/helpers/wait.ts`의 `until`로 그 상태("불러오는 중"이 사라짐, 저장이 넘어옴, 그림에 `blob:` 주소가 붙음)를 기다린다. 느린 PC는 시험 설정에서 `setImmediate`마다 몇 ms 늦춰 흉내 낼 수 있다.
 - **엑셀 편집기 테스트가 Rust 빌드를 시작한다.** `npm run test -w @genoffice/sheets`는 먼저 엑셀 처리 프로그램을 빌드한다. → 필요 없으면 `apps/sheets`에서 `npx vitest run`을 쓴다.
 - **Rust를 고쳤는데 테스트는 예전 동작을 본다.** 엑셀 처리 프로그램이 필요한 엑셀 편집기 테스트는 `native/xlsx-engine/target/release/`의 실행 파일을 직접 연다. `XLSX_SIDECAR_PATH`는 듣지 않고, `cargo test`는 그 실행 파일을 다시 만들지 않는다. → Rust를 고쳤으면 release 빌드(`npm run native:build -w @genoffice/sheets`)를 먼저 한다. 저장소의 다른 사본에서는 그 파일이 없어 이 테스트들이 돌지 않는다.
 - **명령어 패키지의 엑셀 테스트가 아무것도 시험하지 않고 통과한다.** 엑셀 처리 프로그램을 찾지 못하면 그 테스트들은 조용히 건너뛴다. → 통과 수가 아니라 건너뛴 수를 본다.
