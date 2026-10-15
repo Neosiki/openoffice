@@ -9,7 +9,7 @@ Agent traktuje jeden wybrany przez ciebie folder jako projekt i uruchamia w nim 
 
 ## Rozpoczynanie sesji
 
-1. Na stronie głównej kliknij kartę **Agent**. Okno agenta otworzy się osobno.
+1. Na lewym pasku bocznym strony głównej kliknij **Agent**. Okno agenta otworzy się osobno.
 2. Kliknij **Wybierz folder…**, aby wskazać folder projektu. Foldery używane ostatnio są wymienione w sekcji **Ostatnie foldery**.
 3. W polu **Program** wybierz Claude Code lub Codex. Programu, który nie jest połączony, nie da się wybrać.
 4. W polu **Kiedy pytać** wybierz, jak agent ma prosić o zgodę (tabela poniżej).

@@ -9,7 +9,7 @@ L’agent prend comme projet un dossier que vous choisissez et lance dans ce dos
 
 ## Démarrer une session
 
-1. Sur l’accueil, cliquez sur la carte **Agent**. La fenêtre de l’agent s’ouvre à part.
+1. Dans la barre latérale gauche de l’accueil, cliquez sur **Agent**. La fenêtre de l’agent s’ouvre à part.
 2. Cliquez sur **Choisir un dossier…** pour sélectionner le dossier du projet. Les dossiers utilisés récemment figurent sous **Dossiers récents**.
 3. Sous **Programme**, choisissez Claude Code ou Codex. Un programme qui n’est pas connecté ne peut pas être choisi.
 4. Sous **Quand vous demander**, choisissez la façon dont l’agent vous demande l’autorisation (tableau ci-dessous).

@@ -9,7 +9,7 @@ L'agente prende come progetto una cartella che scegli tu ed esegue in quella car
 
 ## Avviare una sessione
 
-1. In Home, fai clic sulla scheda **Agente**. La finestra dell'agente si apre a parte.
+1. Nella barra laterale sinistra di Home, fai clic su **Agente**. La finestra dell'agente si apre a parte.
 2. Fai clic su **Scegli una cartella…** per selezionare la cartella del progetto. Le cartelle usate di recente sono elencate in **Cartelle recenti**.
 3. In **Programma**, scegli Claude Code o Codex. Un programma non collegato non si può scegliere.
 4. In **Quando chiederti conferma**, scegli come l'agente ti chiede il permesso (tabella qui sotto).

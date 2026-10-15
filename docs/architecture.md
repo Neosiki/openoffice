@@ -86,7 +86,7 @@ apps/sheets/native/xlsx-engine   엑셀 계산·입출력을 맡는 별도 프�
                                           └→ 세션 MCP 서버(루프백, 토큰) → 열린 문서의 편집기 실행기
 ```
 
-1. 홈의 "에이전트" 카드가 창을 띄운다(`home:open-agent-window`). 창의 preload(`agent.ts`)는 자기 세션 채널만 내준다.
+1. 홈 사이드바의 "에이전트" 항목이 창을 띄운다(`home:open-agent-window`). 창의 preload(`agent.ts`)는 자기 세션 채널만 내준다.
 2. "시작"을 누르면 뒷단이 경고 확인, 폴더(`projectFolderProblem`), 연결(`subscriptionConnection`)을 본다. 그다음 세션 임시 폴더와 세션 MCP 서버(`startAgentMcpServer`)를 만든다. Claude면 스킬 묶음도 새로 맞춘다(`buildAgentSkillBundle`).
 3. 실행부(`startClaudeAgentSession`, `startCodexAgentSession`)가 프로그램을 띄우고 시작 보고를 확인한다. Claude는 도구 목록, Codex는 권한 프로필과 MCP 목록이다.
 4. 사람이 메시지를 보내면 그 차례가 시작된다. 프로그램이 권한을 물으면 실행부가 `agentPolicyVerdict`로 판단한다. "묻기"면 창에 카드를 띄우고 사람의 답을 프로그램에 돌려준다.

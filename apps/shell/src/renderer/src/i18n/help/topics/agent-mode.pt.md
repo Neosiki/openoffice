@@ -9,7 +9,7 @@ O agente usa como projeto uma pasta que escolher e executa nela o Claude Code ou
 
 ## Iniciar uma sessão
 
-1. No ecrã Início, clique no cartão **Agente**. A janela do agente abre-se à parte.
+1. Na barra lateral esquerda do ecrã Início, clique em **Agente**. A janela do agente abre-se à parte.
 2. Clique em **Escolher uma pasta…** para selecionar a pasta do projeto. As pastas usadas recentemente aparecem em **Pastas recentes**.
 3. Em **Programa**, escolha o Claude Code ou o Codex. Um programa que não esteja conectado não pode ser escolhido.
 4. Em **Quando perguntar a você**, escolha como o agente pede permissão (tabela abaixo).

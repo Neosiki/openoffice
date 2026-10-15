@@ -9,7 +9,7 @@ Der Agent nimmt einen Ordner Ihrer Wahl als Projekt und führt darin Claude Code
 
 ## Eine Sitzung starten
 
-1. Klicken Sie auf der Startseite auf die Karte **Agent**. Das Agentenfenster öffnet sich separat.
+1. Klicken Sie in der linken Seitenleiste der Startseite auf **Agent**. Das Agentenfenster öffnet sich separat.
 2. Wählen Sie über **Ordner wählen…** den Projektordner. Kürzlich verwendete Ordner stehen unter **Zuletzt verwendete Ordner**.
 3. Wählen Sie unter **Programm** Claude Code oder Codex. Ein Programm, das nicht verbunden ist, lässt sich nicht wählen.
 4. Legen Sie unter **Wann nachfragen** fest, wie der Agent um Erlaubnis fragt (Tabelle unten).

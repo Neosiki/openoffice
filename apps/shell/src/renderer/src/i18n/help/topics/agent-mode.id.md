@@ -9,7 +9,7 @@ Agen memakai satu folder yang Anda pilih sebagai proyek, lalu menjalankan Claude
 
 ## Memulai sesi
 
-1. Di Beranda, klik kartu **Agen**. Jendela agen terbuka tersendiri.
+1. Di bilah samping kiri Beranda, klik **Agen**. Jendela agen terbuka tersendiri.
 2. Klik **Pilih folder…** untuk memilih folder proyek. Folder yang baru-baru ini Anda pakai tercantum di **Folder terbaru**.
 3. Di **Program**, pilih Claude Code atau Codex. Program yang belum terhubung tidak dapat dipilih.
 4. Di **Kapan bertanya kepada Anda**, pilih cara agen meminta izin (lihat tabel di bawah).

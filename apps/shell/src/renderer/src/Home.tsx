@@ -1852,20 +1852,6 @@ export function Home({
             <span className="quick-sub">{t('pdfToolsCardSub')}</span>
           </span>
         </button>
-        {window.aiOfficeAgent ? (
-          <button className="quick-card" onClick={() => void window.aiOfficeAgent?.open()}>
-            <span className="quick-folder">
-              <FolderIcon size={18} />
-            </span>
-            <span className="quick-text">
-              <span className="quick-title-row">
-                <span className="quick-title">{agentText(lang, 'windowTitle')}</span>
-                <span className="ai-chip">AI</span>
-              </span>
-              <span className="quick-sub">{agentText(lang, 'homeCardSub')}</span>
-            </span>
-          </button>
-        ) : null}
       </div>
     )
   }
@@ -3098,6 +3084,39 @@ export function Home({
             </svg>
             <span className="nav-label">{t('navAsk')}</span>
           </button>
+          {/* decision 0032: the agent opens a window of its own, hence the mark on the right */}
+          {window.aiOfficeAgent ? (
+            <button
+              className="nav-item"
+              title={agentText(lang, 'homeCardSub')}
+              onClick={() => void window.aiOfficeAgent?.open()}
+            >
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                <path
+                  d="M1.9 4.3c0-.7.6-1.3 1.3-1.3h2.9l1.4 1.5h5.3c.7 0 1.3.6 1.3 1.3v6.3c0 .7-.6 1.3-1.3 1.3H3.2c-.7 0-1.3-.6-1.3-1.3z"
+                  stroke="currentColor"
+                  strokeWidth="1.3"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M8 6.6l.6 1.6 1.6.6-1.6.6L8 11l-.6-1.6-1.6-.6 1.6-.6z"
+                  fill="currentColor"
+                />
+              </svg>
+              <span className="nav-label">{agentText(lang, 'windowTitle')}</span>
+              <span className="nav-count nav-external">
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+                  <path
+                    d="M4.5 2.5h5v5M9.5 2.5L3 9"
+                    stroke="currentColor"
+                    strokeWidth="1.2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </span>
+            </button>
+          ) : null}
         </nav>
         <div className="sidebar-divider" />
         {renderFolderPanel()}

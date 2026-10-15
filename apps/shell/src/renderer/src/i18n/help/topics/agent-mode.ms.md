@@ -9,7 +9,7 @@ Ejen menjadikan satu folder yang anda pilih sebagai projek dan menjalankan Claud
 
 ## Memulakan sesi
 
-1. Di Laman Utama, tekan kad **Ejen**. Tetingkap ejen dibuka secara berasingan.
+1. Di bar sisi kiri Laman Utama, tekan **Ejen**. Tetingkap ejen dibuka secara berasingan.
 2. Tekan **Pilih folder…** untuk memilih folder projek. Folder yang anda gunakan baru-baru ini disenaraikan di bawah **Folder terkini**.
 3. Di bawah **Program**, pilih Claude Code atau Codex. Program yang tidak bersambung tidak boleh dipilih.
 4. Di bawah **Bila hendak bertanya kepada anda**, pilih cara ejen meminta kebenaran (lihat jadual di bawah).

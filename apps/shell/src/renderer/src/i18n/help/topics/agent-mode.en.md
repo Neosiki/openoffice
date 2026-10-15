@@ -9,7 +9,7 @@ The agent takes one folder you choose as a project and runs Claude Code or Codex
 
 ## Starting a session
 
-1. On Home, click the **Agent** card. The agent window opens on its own.
+1. In the left sidebar of Home, click **Agent**. The agent window opens on its own.
 2. Click **Choose a folder…** to pick the project folder. Folders you used recently are listed under **Recent folders**.
 3. Under **Program**, choose Claude Code or Codex. A program that is not connected cannot be chosen.
 4. Under **When to ask you**, choose how the agent asks for permission (table below).

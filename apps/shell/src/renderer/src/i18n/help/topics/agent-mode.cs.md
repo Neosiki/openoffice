@@ -9,7 +9,7 @@ Agent vezme jednu složku, kterou zvolíte, jako projekt a spustí v ní Claude 
 
 ## Zahájení relace
 
-1. Na stránce Domů klikněte na kartu **Agent**. Okno agenta se otevře samostatně.
+1. V levém panelu stránky Domů klikněte na **Agent**. Okno agenta se otevře samostatně.
 2. Klikněte na **Vybrat složku…** a zvolte složku projektu. Nedávno použité složky najdete v seznamu **Nedávné složky**.
 3. V poli **Program** zvolte Claude Code nebo Codex. Program, který není připojen, zvolit nelze.
 4. V poli **Kdy se vás ptát** zvolte, jak bude agent žádat o svolení (viz tabulka níže).

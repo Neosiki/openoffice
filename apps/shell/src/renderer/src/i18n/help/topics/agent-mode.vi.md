@@ -9,7 +9,7 @@ Tác tử lấy một thư mục bạn chọn làm dự án và chạy Claude Co
 
 ## Bắt đầu một phiên
 
-1. Ở Trang chủ, nhấn thẻ **Tác tử**. Cửa sổ tác tử sẽ mở riêng.
+1. Ở thanh bên trái của Trang chủ, nhấn **Tác tử**. Cửa sổ tác tử sẽ mở riêng.
 2. Nhấn **Chọn thư mục…** để chọn thư mục dự án. Các thư mục bạn dùng gần đây được liệt kê dưới **Thư mục gần đây**.
 3. Trong **Chương trình**, chọn Claude Code hoặc Codex. Không thể chọn chương trình chưa được kết nối.
 4. Trong **Khi nào hỏi bạn**, chọn cách tác tử xin phép (xem bảng bên dưới).

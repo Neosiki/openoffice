@@ -9,7 +9,7 @@ De agent neemt één map die je kiest als project en voert in die map Claude Cod
 
 ## Een sessie starten
 
-1. Klik in Start op de kaart **Agent**. Het agentvenster opent apart.
+1. Klik in de linkerzijbalk van Start op **Agent**. Het agentvenster opent apart.
 2. Klik op **Kies een map…** om de projectmap te kiezen. Mappen die je onlangs hebt gebruikt, staan onder **Recente mappen**.
 3. Kies onder **Programma** Claude Code of Codex. Een programma dat niet verbonden is, kun je niet kiezen.
 4. Kies onder **Wanneer je iets vragen** hoe de agent om toestemming vraagt (zie de tabel hieronder).

@@ -9,7 +9,7 @@ El agente toma como proyecto una carpeta que usted elige y ejecuta en ella el Cl
 
 ## Iniciar una sesión
 
-1. En Inicio, haga clic en la tarjeta **Agente**. La ventana del agente se abre aparte.
+1. En la barra lateral izquierda de Inicio, haga clic en **Agente**. La ventana del agente se abre aparte.
 2. Haga clic en **Elegir una carpeta…** para seleccionar la carpeta del proyecto. Las carpetas que usó hace poco aparecen en **Carpetas recientes**.
 3. En **Programa**, elija Claude Code o Codex. No se puede elegir un programa que no esté conectado.
 4. En **Cuándo preguntarte**, elija cómo le pide permiso el agente (tabla de abajo).
