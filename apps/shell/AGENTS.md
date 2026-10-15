@@ -17,6 +17,7 @@
 - 기본 앱 등록과 파일 연결(`default-app.ts`).
 - PDF 구조 작업과 보관소 채널(`src/main/pdf-structure-ipc.ts`, 로직은 `src/main/pdf-structure/`): PDF 편집기의 `structure*`·`store*` 채널을 등록하고, 구조 작업마다 Electron `utilityProcess`를 하나 띄운다(`runner.ts`, 진입점 `pdf-structure-process.ts`). 앱 안 저장 뒤 끝나지 않은 작업 기록 옮기기(`job-migration.ts`), 출력 형식별 끼움 자리(`plugins.ts`)도 여기 있다.
 - 에이전트 창(결정 0032, `src/main/agent/`): 창과 채널(`agent-window.ts`), 세션 관리와 폴더·지시문(`agent-sessions.ts`), 세션 전용 MCP 서버와 그 도구(`agent-mcp.ts`). 화면은 `src/renderer/agent.html`과 `src/renderer/src/agent/`, preload는 `src/preload/agent.ts`, 문구는 `i18n/strings-agent.ts`와 `i18n/agent/<언어>.ts`. 홈의 입구는 `home:open-agent-window` 하나다.
+- Google 드라이브(결정 0033, `src/main/drive/`): 연결과 창구(`drive-ipc.ts`), 갱신 토큰의 암호화 보관(`drive-vault.ts`), 연 파일의 PC 사본과 저장 뒤 올리기(`drive-files.ts`), 편집기 AI의 검색·읽기(`drive-ai.ts`), 브라우저 페이지와 대화 상자 문구(`drive-strings.ts`). 화면은 홈의 `DrivePanel.tsx`와 설정 → 연동의 `DriveSettingsCard.tsx`, 문구는 `i18n/strings-drive.ts`와 `i18n/drive/<언어>.ts`, preload는 `window.aiOfficeDrive`다. Google 클라이언트는 빌드 때 `__GENOFFICE_GOOGLE_CLIENT_ID__`로 들어오고, 없으면 상태가 `unavailable`이라 아무 데도 나오지 않는다.
 - 설정 → 일반의 "PDF AI 결과 보관소" 줄(`SettingsResultStore.tsx`): `<userData>/pdf-store`가 차지한 용량과 "모두 지우기". 채널은 `result-store-ipc.ts`, preload는 `window.aiOfficeResultStore`다.
 
 ## 맡지 않는 것 (경계)
@@ -33,6 +34,7 @@
 
 - 구독 프로그램을 끝내는 책임은 이 프로세스에 있다. `src/main/index.ts`는 `app.whenReady` 뒤 userData 경로가 확정된 다음 `initSubscriptionChildTracking(app.getPath('userData'))`를 한 번 부르고(강제 종료된 이전 실행이 남긴 프로세스를 정리하고 이번 실행의 기록을 시작한다), `will-quit`와 `process.on('exit')` 양쪽에서 `shutdownSubscriptionChildren()`을 부른다. `app.exit()`·`process.exit()`은 `will-quit`를 건너뛰므로(headless 내보내기가 그렇게 끝난다) 둘 중 하나만으로는 부족하다. 에디터 코드에서 `initSubscriptionChildTracking`을 또 부르지 않는다.
 - 구독 IPC 채널(`SUBSCRIPTION_IPC_CHANNELS`)을 shell에서 등록하지 않는다. 같은 채널을 두 번 등록하면 예외가 난다. preload는 채널 이름과 판독 함수를 `@genoffice/ai-provider/browser`에서 가져와 `window.aiOfficeSubscription`으로 내보낸다. 핸들러가 없으면 상태는 `checking`으로 읽힌다. 로그아웃(`ai:subscription-logout`)을 내보내는 preload는 이 앱의 것뿐이다. 에디터의 preload에 넣지 않는다(`tests/preload-subscription.test.ts`가 지킨다).
+- 드라이브의 토큰은 뒷단 밖으로 나가지 않는다. 드라이브 창구는 상태, 파일 목록, 파일 id만 주고받는다. 드라이브에 쓰는 길은 `drive-files.ts`의 저장 뒤 올리기 하나이고, AI 창구(`drive:ai-*`)는 읽기만 한다. 드라이브 창구와 preload 멤버의 이름에 `cloud`·`account`를 쓰지 않는다(`tests/removed-features.test.ts`).
 - 계정 바꾸기와 로그아웃은 확인을 받은 뒤에만 실행한다. 둘 다 벤더 프로그램 자신의 명령이고 이 PC 전체에 적용되어, 터미널에서 쓰는 같은 프로그램도 함께 바뀐다. 설정 화면은 프로그램 이름과 이 사실을 적은 확인(`setSubLogoutConfirm`, `setSubSwitchConfirm`)을 카드 아래에 띄우고, 확인 버튼을 눌렀을 때만 `connection.logout`·`connection.switchAccount`를 부른다. 확인 없이 이 둘을 부르는 경로를 만들지 않는다. 버튼은 설정의 카드에만 있고 첫 실행 안내와 홈의 질문 패널에는 없다.
 - 로그인된 계정(이메일)은 설정 → AI의 카드에만 그린다. 계정 구역의 요약 줄에도, 다른 화면에도 넣지 않는다. 저장하거나 기록에 남기지 않는다.
 - preload는 로그인·설치 실패의 원문 오류를 렌더러에 넘기지 않는다(`subscriptionLaunchResultOf`). 실행 파일 경로가 들어 있을 수 있어서다. 화면은 번역된 일반 문장을 쓴다.

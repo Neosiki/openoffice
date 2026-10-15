@@ -36,7 +36,7 @@ export const hi = {
   driveNotConnectedTitle: 'Google Drive कनेक्ट नहीं है',
   driveNotConnectedBody:
     'कनेक्ट होने के बाद आप यहाँ Drive की फ़ाइलें खोल और संपादित कर सकते हैं, और सहेजने पर वे Drive में वापस चली जाती हैं।',
-  driveOpenSettings: 'सेटिंग में कनेक्ट करें',
+  driveOpenSettings: 'सेटिंग्स में कनेक्ट करें',
   driveEmpty: 'कोई फ़ाइल नहीं।',
   driveLoading: 'लोड हो रहा है…',
   driveLoadMore: 'और दिखाएँ',
@@ -48,7 +48,7 @@ export const hi = {
   driveReadOnlyNote:
     'आप यह फ़ाइल संपादित नहीं कर सकते। सहेजते समय पूछा जाएगा कि क्या Drive में एक प्रति सहेजनी है।',
   driveUnsupported: 'यह ऐप इस प्रकार की फ़ाइल नहीं खोल सकता।',
-  driveErrNotConnected: 'Google Drive डिस्कनेक्ट हो गया है। सेटिंग में फिर से कनेक्ट करें।',
+  driveErrNotConnected: 'Google Drive डिस्कनेक्ट हो गया है। सेटिंग्स में फिर से कनेक्ट करें।',
   driveErrNotFound: 'फ़ाइल नहीं मिली। उसे हटा दिया गया है, या यह खाता उसे नहीं देख सकता।',
   driveErrForbidden: 'इस खाते को यह फ़ाइल डाउनलोड करने की अनुमति नहीं है।',
   driveErrTooLarge: 'फ़ाइल खोलने के लिए बहुत बड़ी है।',

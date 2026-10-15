@@ -56,21 +56,22 @@ cd apps/shell && npx vitest run tests/<파일>.test.ts   # 파일 하나만
 
 ## 환경변수
 
-| 이름                                       | 역할                                                                                                          | 쓰이는 곳                                                                                                         |
-| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `GENOFFICE_USER_DATA`                      | 데이터 폴더를 다른 곳으로 돌린다                                                                              | 앱, 명령어. 화면 확인 스크립트가 임시 폴더를 줄 때 쓴다                                                           |
-| `GENOFFICE_LANG`                           | 화면 언어를 강제한다                                                                                          | 앱. 화면 확인 스크립트는 기본으로 영어를 준다                                                                     |
-| `GENOFFICE_AI_SETTINGS`                    | 명령어가 읽을 AI 설정 파일 위치                                                                               | 명령어, MCP                                                                                                       |
-| `GENOFFICE_APP_BIN`                        | 명령어가 띄울 앱 실행 파일 위치                                                                               | 명령어(화면이 필요한 변환)                                                                                        |
-| `GENOFFICE_ALLOWED_ROOTS`                  | 명령어가 읽고 쓸 수 있는 폴더를 제한한다(PATH처럼 여러 개)                                                    | 명령어, MCP                                                                                                       |
-| `GENOFFICE_AUDIT_LOG`                      | 명령어 실행 기록의 위치. `off`면 끈다                                                                         | 명령어                                                                                                            |
-| `GENOFFICE_MCP_TOKEN`                      | `ieumoffice mcp --http`가 요청마다 요구할 값. `--token`이 없을 때 읽는다                                      | MCP                                                                                                               |
-| `GENOFFICE_TRUST_PROXY_HEADERS`            | `1`이면 HTTP MCP 서버가 앞단 프록시가 붙인 `X-Forwarded-*` 머리글을 믿는다. 믿을 수 있는 프록시 뒤에서만 켠다 | MCP(`--http`)                                                                                                     |
-| `GENOFFICE_AUTH_DIR`                       | `~/.ieumoffice` 대신 쓸 폴더. 명령어 실행 기록과 명령어 위치 기록이 여기로 간다                               | 명령어, 앱                                                                                                        |
-| `GENOFFICE_HOME`                           | 에이전트 설정 폴더를 찾을 때의 홈 폴더                                                                        | 명령어(`mcp install`, 스킬 설치)                                                                                  |
-| `GENOFFICE_MCP_COMPACT_SCHEMAS`            | MCP 도구 설명을 짧게 낸다                                                                                     | MCP                                                                                                               |
-| `XLSX_SIDECAR_PATH`                        | 엑셀 처리 프로그램의 위치를 바꾼다. 설치본과 엑셀 편집기 테스트에는 듣지 않는다                               | 혼자 띄운 엑셀 편집기, 명령어                                                                                     |
-| `HTTPS_PROXY` / `HTTP_PROXY` / `ALL_PROXY` | 프록시                                                                                                        | 앱이 직접 보내는 요청, 명령어. 구독 프로그램에는 이 변수가 그대로 전달된다(프로그램이 따르는지는 확인하지 않았다) |
+| 이름                                                            | 역할                                                                                                               | 쓰이는 곳                                                                                                         |
+| --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------- |
+| `GENOFFICE_USER_DATA`                                           | 데이터 폴더를 다른 곳으로 돌린다                                                                                   | 앱, 명령어. 화면 확인 스크립트가 임시 폴더를 줄 때 쓴다                                                           |
+| `GENOFFICE_LANG`                                                | 화면 언어를 강제한다                                                                                               | 앱. 화면 확인 스크립트는 기본으로 영어를 준다                                                                     |
+| `GENOFFICE_AI_SETTINGS`                                         | 명령어가 읽을 AI 설정 파일 위치                                                                                    | 명령어, MCP                                                                                                       |
+| `GENOFFICE_APP_BIN`                                             | 명령어가 띄울 앱 실행 파일 위치                                                                                    | 명령어(화면이 필요한 변환)                                                                                        |
+| `GENOFFICE_ALLOWED_ROOTS`                                       | 명령어가 읽고 쓸 수 있는 폴더를 제한한다(PATH처럼 여러 개)                                                         | 명령어, MCP                                                                                                       |
+| `GENOFFICE_AUDIT_LOG`                                           | 명령어 실행 기록의 위치. `off`면 끈다                                                                              | 명령어                                                                                                            |
+| `GENOFFICE_MCP_TOKEN`                                           | `ieumoffice mcp --http`가 요청마다 요구할 값. `--token`이 없을 때 읽는다                                           | MCP                                                                                                               |
+| `GENOFFICE_TRUST_PROXY_HEADERS`                                 | `1`이면 HTTP MCP 서버가 앞단 프록시가 붙인 `X-Forwarded-*` 머리글을 믿는다. 믿을 수 있는 프록시 뒤에서만 켠다      | MCP(`--http`)                                                                                                     |
+| `GENOFFICE_AUTH_DIR`                                            | `~/.ieumoffice` 대신 쓸 폴더. 명령어 실행 기록과 명령어 위치 기록이 여기로 간다                                    | 명령어, 앱                                                                                                        |
+| `GENOFFICE_HOME`                                                | 에이전트 설정 폴더를 찾을 때의 홈 폴더                                                                             | 명령어(`mcp install`, 스킬 설치)                                                                                  |
+| `GENOFFICE_MCP_COMPACT_SCHEMAS`                                 | MCP 도구 설명을 짧게 낸다                                                                                          | MCP                                                                                                               |
+| `GENOFFICE_GOOGLE_CLIENT_ID` / `GENOFFICE_GOOGLE_CLIENT_SECRET` | 껍데기 앱을 빌드할 때 넣는 Google OAuth 클라이언트(결정 0033). 없으면 드라이브 기능이 빠진다. 저장소에 적지 않는다 | 빌드(`npm run build -w @genoffice/shell`, `build:all`, 설치 파일 만들기)                                          |
+| `XLSX_SIDECAR_PATH`                                             | 엑셀 처리 프로그램의 위치를 바꾼다. 설치본과 엑셀 편집기 테스트에는 듣지 않는다                                    | 혼자 띄운 엑셀 편집기, 명령어                                                                                     |
+| `HTTPS_PROXY` / `HTTP_PROXY` / `ALL_PROXY`                      | 프록시                                                                                                             | 앱이 직접 보내는 요청, 명령어. 구독 프로그램에는 이 변수가 그대로 전달된다(프로그램이 따르는지는 확인하지 않았다) |
 
 이름에 `GENOFFICE_`가 남아 있는 것은 일부러다. 내부 이름은 원본과 같게 둔다.
 
@@ -82,6 +83,20 @@ cd apps/shell && npx vitest run tests/<파일>.test.ts   # 파일 하나만
 2. 빌드된 앱을 임시 데이터 폴더로 띄운다(`e2e/helpers.ts`의 `launchShell`). 제공자와 모델은 그 폴더의 `ai-settings.json`에 미리 적는다. 예: `{ "provider": "claude-code", "providers": { "claude-code": { "apiKey": "", "model": "haiku" } }, "subscriptionNoticeSeen": true }`. 확인에는 가장 작은 모델을 쓴다.
 3. 확인할 것: Claude로 도구 호출이 든 대화 한 번(문서에 문단을 넣게 하고 **한 번만** 들어갔는지 본다), Claude로 사진이 든 대화 한 번, Codex로 도구 호출이 든 대화 한 번, 실행 중 중단했을 때와 실행 중 앱을 껐을 때 앱의 하위 프로세스에 `claude`·`codex`가 남지 않는지.
 4. 하위 프로세스는 앱 프로세스의 자손만 센다. 같은 PC에서 사람이 따로 쓰는 Claude·Codex와 구분해야 한다.
+
+## Google 드라이브 준비하기 (저장소 주인)
+
+드라이브 연결(결정 0033)에는 저장소 주인의 Google Cloud 프로젝트가 있어야 한다. Google API 약관에 동의하는 일이라 주인만 한다.
+
+1. [Google Cloud 콘솔](https://console.cloud.google.com/)에서 프로젝트를 만들고 **Google Drive API**를 켠다.
+2. **Google 인증 플랫폼 → 브랜딩**: 앱 이름(이음오피스), 지원 이메일, 홈페이지(`https://ieumoffice.vercel.app`), 개인정보 처리방침(`PRIVACY.md`를 소개 사이트에 올린 주소). 승인된 도메인에 홈페이지 도메인을 넣는다.
+3. **대상**: 사용자 유형 "외부". 처음에는 게시 상태를 "테스트"로 두고 시험할 Google 계정을 테스트 사용자로 넣는다(100명까지). 테스트 상태의 로그인은 7일마다 끊긴다.
+4. **데이터 액세스**: 범위 `https://www.googleapis.com/auth/drive` 하나를 넣는다. 제한 등급이다.
+5. **클라이언트**: 유형 "데스크톱 앱"으로 만들고 클라이언트 ID와 비밀값을 받는다.
+6. 빌드할 때 두 값을 환경변수로 준다. 예(Git Bash): `GENOFFICE_GOOGLE_CLIENT_ID=… GENOFFICE_GOOGLE_CLIENT_SECRET=… npm run build:all`. 값은 저장소, 커밋, 로그에 남기지 않는다.
+7. 공개 전: 게시 상태를 "프로덕션"으로 바꾸고 검증을 신청한다. 필요한 것은 Search Console의 도메인 소유 확인, 홈페이지와 같은 도메인의 개인정보 처리방침, 로그인과 권한 허용 과정을 보여 주는 영어 시연 영상, 드라이브 전체 권한이 필요한 이유(드라이브의 파일을 열고 제자리에 저장, AI의 드라이브 검색)다. Google이 요구하면 지정 기관의 연간 보안 심사를 받는다. 검증 전에는 공개 설치 파일에 클라이언트를 넣지 않는다.
+
+확인할 것(시험 계정으로): 연결, 내 드라이브·공유 문서함·최근·검색, PDF·워드·Google 문서 열기, 저장 뒤 드라이브에 올라갔는지, 다른 곳에서 고친 뒤 저장할 때의 질문, 보기 전용 파일 저장, AI 창의 "드라이브에서 찾아 요약해 줘", 드라이브를 읽은 대화에서 웹 검색이 거절되는지, 연결 끊기 뒤 Google 계정의 "서드 파티 앱" 목록에서 사라졌는지.
 
 ## 무료 모델 점검
 
