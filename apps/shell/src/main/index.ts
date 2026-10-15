@@ -340,7 +340,7 @@ import {
 import { runHeadlessExport, type HeadlessExporters } from './headless-export'
 import { TabManager } from './tab-manager'
 import { configureGenerateWindow } from './generate/generate-window'
-import { configurePdfToolsWindow } from './pdf-tools/pdf-tools-window'
+import { configurePdfToolsWindow, openPdfToolsWithFile } from './pdf-tools/pdf-tools-window'
 import {
   configureDocumentLinks,
   documentLinkFileMenuItems,
@@ -479,6 +479,7 @@ configurePdfRuntime({
   rendererFile: join(PDF_OUT, 'renderer', 'index.html'),
   openGeneratedPath: (path) => openGeneratedDocument(path),
   createDocument: createAiDocument,
+  openPdfTools: (path, tool) => openPdfToolsWithFile(path, tool),
 })
 configureMarkdownRuntime({
   preloadPath: join(MARKDOWN_OUT, 'preload', 'index.js'),

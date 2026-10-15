@@ -163,6 +163,10 @@ const api: PdfApi = {
       () => false,
     ),
   createDocument: (request) => ipcRenderer.invoke(PDF_CHANNELS.createDocument, request),
+  openInPdfTools: (path, tool) =>
+    (ipcRenderer.invoke(PDF_CHANNELS.openInPdfTools, path, tool) as Promise<boolean>).catch(
+      () => false,
+    ),
   imageSearch: (query, maxResults) =>
     ipcRenderer.invoke(AI_CHANNELS.imageSearch, query, maxResults),
   fetchImage: (url) => ipcRenderer.invoke(AI_CHANNELS.fetchImage, url),

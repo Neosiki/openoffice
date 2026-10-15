@@ -7,6 +7,7 @@ PDF 보기·주석·편집 에디터다. 화면은 PDF.js로 그리고, 저장�
 - 렌더러(`src/renderer/`): 쪽 렌더링과 글자 계층, 축소판, 주석·서식·그리기 덧그림, 메모 여백, 리본.
 - 메인 프로세스(`src/main/pdf-main.ts`와 주변): 저장(`save-pdf.ts`), 글자 편집(`text-edit.ts`, 글꼴 찾기·부분 집합 `font-*.ts`), 영구 가림(`redaction.ts`), 이미지 편집·내보내기, 셸의 PDF 도구 창이 부르는 처리(그림 여러 장으로 PDF 만들기 `images-to-pdf.ts`, 양면 인쇄 맞추기 `print-prep.ts`, 배경 겹치기 `overlay.ts`, 주석 한꺼번에 지우기 `annot-strip.ts`, 빈 페이지 후보 찾기 `blank-pages.ts`(셸의 구조 작업 프로세스에서 돈다)), OCR(`ocr.ts`), 전자 서명(`pdf-sign.ts`, `pdf-signatures.ts`, `signature-store.ts`), 빈 PDF 생성(`blank-pdf.ts`).
 - IPC 계약 `src/shared/ipc.ts`(`PDF_CHANNELS`)와 편집 연산 설명(`src/shared/op-docs.ts`).
+- 페이지 탭의 "PDF 도구" 메뉴(결정 0030): 저장하지 않은 편집을 먼저 저장한 뒤 `pdf:open-in-pdf-tools`로 그 뷰의 파일과 도구 이름(`PDF_TOOLS_HANDOFF`)을 넘긴다. 메인은 그 뷰에 허가된 파일만 받아 셸이 주입한 `openPdfTools`를 부른다. 단독 실행에는 이 주입이 없어 메뉴가 아무것도 열지 못한다고 알린다.
 - PDF의 AI: 패널(`src/renderer/ai/AiPanel.tsx`), skill과 도구(`pdf-skill.ts`, `tools.ts`), 막힌 실행 판정(`ai-connection.ts`), 연결 상태 훅(`useSubscriptionConnection.ts`), preload가 내보내는 구독 API의 모양(`src/shared/subscription-api.ts`).
 - Markdown·EPUB 변환 화면(`src/renderer/convert/`): 변환 창(`ConvertDialog.tsx`, 페이지 범위·저장 위치·진행·취소, EPUB은 표지와 책 정보), 책 정보 "AI로 채우기"(`BookInfoAiFill.tsx`, `book-info-ai.ts`), "이미지를 폴더로 내보내기"의 "페이지 안의 그림만"(`ExportImagesMenu.tsx`, `embedded-images.ts`).
 - AI 페이지 읽기 화면(`src/renderer/ai-read/`): 페이지 고르기와 시작 전 확인(`AiReadDialog.tsx`), 작업·진행·이어하기 제안·이 문서의 보관분 지우기(`AiPageReading.tsx`), 페이지 그림 그리기(`render-page.ts`, 170dpi), 뷰어 검색의 "AI로 읽은 글에서 찾음"(`search-texts.ts`).

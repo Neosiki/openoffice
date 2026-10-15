@@ -18,6 +18,10 @@ export const PDF_TOOLS_CHANNELS = {
   openInEditor: 'pdf-tools:open-in-editor',
   findBlankPages: 'pdf-tools:find-blank-pages',
   cancelFind: 'pdf-tools:cancel-find',
+  /** the task the PDF editor's ribbon asked for, taken once */
+  takeStart: 'pdf-tools:take-start',
+  /** main → window: a task from the ribbon is waiting */
+  startReady: 'pdf-tools:start-ready',
   /** main → window: { done, total } while blank pages are being looked for */
   progress: 'pdf-tools:progress',
   close: 'pdf-tools:close',
@@ -168,6 +172,13 @@ export type PdfBlankPagesResult =
   | { ok: false; canceled: true }
   | { ok: false; error: 'no-input' | 'missing' | 'busy' | 'failed' }
 
+/** A task opened from the PDF editor's ribbon, its file already picked */
+export interface PdfToolsStart {
+  tool: PdfToolId
+  inputs: PdfToolInput[]
+  rejected: PdfPickResult['rejected']
+}
+
 export type PdfToolsTheme = 'light' | 'dark' | 'system'
 
 export interface PdfToolsInit {
@@ -189,6 +200,9 @@ export interface PdfToolsWindowApi {
   findBlankPages(inputId: string): Promise<PdfBlankPagesResult>
   cancelFind(): Promise<void>
   onProgress(handler: (done: number, total: number) => void): () => void
+  /** the task the editor's ribbon opened this window on, once; null when none waits */
+  takeStart(): Promise<PdfToolsStart | null>
+  onStartReady(handler: () => void): () => void
   close(): Promise<void>
 }
 

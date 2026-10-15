@@ -210,6 +210,7 @@ import type {
   TextEditInput,
   TextInsertFailure,
   TextInsertInput,
+  PdfToolsHandoffTool,
 } from '../shared/ipc'
 import {
   ZOOM_STEPS,
@@ -331,6 +332,7 @@ import {
   IconMergePages,
   IconReplacePages,
   IconSplitPages,
+  IconPdfTools,
   IconCropPages,
   IconPageSize,
   IconFitWidth,
@@ -369,6 +371,15 @@ const DRAW_TOOLS = [
   { tool: 'arrow' as const, icon: IconArrow, key: 'drawArrow' as const },
   { tool: 'note' as const, icon: IconNote, key: 'drawNote' as const },
 ]
+
+/** Pages tab ▸ PDF tools: the window's tasks that take this file, named as the window names them */
+const PDF_TOOLS_MENU = [
+  ['blankPages', 'pdfToolsBlankPages'],
+  ['duplex', 'pdfToolsDuplex'],
+  ['overlay', 'pdfToolsOverlay'],
+  ['stripAnnots', 'pdfToolsStripAnnots'],
+  ['toText', 'pdfToolsToText'],
+] as const satisfies readonly (readonly [PdfToolsHandoffTool, string])[]
 
 // ── ribbon tabs (docs-style tab strip over a fixed 80px band) ──
 const RIBBON_TABS = [
@@ -928,6 +939,9 @@ export default function App() {
   } | null>(null)
   const formMenuRef = useRef<HTMLDivElement | null>(null)
   const [arrangeOpen, setArrangeOpen] = useState(false)
+  /** Pages tab: the "PDF tools" menu */
+  const [pdfToolsOpen, setPdfToolsOpen] = useState(false)
+  const pdfToolsWrapRef = useRef<HTMLDivElement | null>(null)
   const [detectingFields, setDetectingFields] = useState(false)
   const arrangeWrapRef = useRef<HTMLDivElement | null>(null)
   const formClipboardRef = useRef<FormFieldInput[]>([])
@@ -4267,6 +4281,14 @@ export default function App() {
     showNotice(`${t('saveFailed')}: ${friendly}`)
   }
 
+  /** Open a PDF tools window task on this file; pending edits are saved first (decision 0030) */
+  const openInPdfTools = async (tool: PdfToolsHandoffTool) => {
+    setPdfToolsOpen(false)
+    if (!filePath) return
+    const opened = await flushThen(() => window.pdfApi.openInPdfTools(filePath, tool))
+    if (opened === false) showNotice(t('pdfToolsOpenFailed'))
+  }
+
   /** Engine skip reasons are internal English strings; append the first one raw so a
       failure is diagnosable from the toast alone (page numbers never explain WHY) */
   const skipDetail = (skipped: { reason: string }[]): string => {
@@ -6723,6 +6745,9 @@ export default function App() {
   useDismissablePopover(arrangeOpen, () => setArrangeOpen(false), {
     inside: () => [arrangeWrapRef.current],
   })
+  useDismissablePopover(pdfToolsOpen, () => setPdfToolsOpen(false), {
+    inside: () => [pdfToolsWrapRef.current],
+  })
 
   // Draw-color palette (Annotate tab). Guarded by its own wrap ref — the
   // generic `.rb-drop-wrap` class is shared with the highlight split button,
@@ -8366,6 +8391,29 @@ export default function App() {
                     </span>
                     {t('splitPages')}
                   </button>
+                  <div className="rb-drop-wrap" ref={pdfToolsWrapRef}>
+                    <button
+                      className={`rb-big${pdfToolsOpen ? ' active' : ''}`}
+                      disabled={pageCount === 0 || readOnly || !filePath}
+                      data-tip={t('pdfToolsMenuHint')}
+                      onClick={() => setPdfToolsOpen((v) => !v)}
+                    >
+                      <span className="rb-big-icon">
+                        <IconPdfTools />
+                        <RbCaret />
+                      </span>
+                      {t('pdfToolsMenu')}
+                    </button>
+                    {pdfToolsOpen && (
+                      <div className="rb-drop rb-menu">
+                        {PDF_TOOLS_MENU.map(([tool, label]) => (
+                          <button key={tool} onClick={() => void openInPdfTools(tool)}>
+                            {t(label)}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </>

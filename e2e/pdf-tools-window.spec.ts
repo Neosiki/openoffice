@@ -502,6 +502,52 @@ test.describe('PDF tools window', () => {
     }
   })
 
+  test("the PDF editor ribbon opens a task on the editor's own file", async () => {
+    test.setTimeout(150_000)
+    const dir = await mkdtemp(join(tmpdir(), 'genoffice-pdf-tools-e2e-'))
+    const report = join(dir, 'report.pdf')
+    const doc = await PDFDocument.create()
+    const font = await doc.embedFont(StandardFonts.Helvetica)
+    doc.addPage([300, 400]).drawText('Kept page', { x: 40, y: 300, size: 24, font })
+    doc.addPage([300, 400])
+    await writeFile(report, await doc.save({ useObjectStreams: false }))
+    if (EVIDENCE_DIR) await mkdir(EVIDENCE_DIR, { recursive: true })
+
+    const launched = await launchShell({
+      onboardingSeen: true,
+      videoDir: 'pdf-tools-ribbon',
+      openFile: report,
+    })
+    const { app } = launched
+    try {
+      const editor = await waitForPageWithUrl(app, '://pdf/')
+      await expect(editor.locator('.pdf-thumb')).toHaveCount(2, { timeout: 30_000 })
+      await editor.getByRole('button', { name: 'Pages', exact: true }).click()
+      await editor.getByRole('button', { name: 'PDF tools', exact: true }).click()
+      await editor.screenshot({ path: shot('pdf-tools-ribbon-menu') })
+      await editor.getByRole('button', { name: 'Remove blank pages', exact: true }).click()
+
+      // the window opens on that task with the editor's file already picked
+      const tools = await waitForPageWithUrl(app, 'pdf-tools.html')
+      await expect(tools.locator('.pt-tool-title')).toHaveText('Remove blank pages')
+      await expect(tools.locator('.pt-item-name')).toHaveText(['report.pdf'])
+      await tools.getByRole('button', { name: 'Find blank pages' }).click()
+      await expect(tools.getByText(/Found 1 pages that look blank/)).toBeVisible({
+        timeout: 60_000,
+      })
+
+      // with the window open, another task from the ribbon switches it over
+      await editor.bringToFront()
+      await editor.getByRole('button', { name: 'PDF tools', exact: true }).click()
+      await editor.getByRole('button', { name: 'Save as text', exact: true }).click()
+      await expect(tools.locator('.pt-tool-title')).toHaveText('Save as text')
+      await expect(tools.locator('.pt-item-name')).toHaveText(['report.pdf'])
+      await tools.screenshot({ path: shot('pdf-tools-from-ribbon') })
+    } finally {
+      await closeAndSaveVideo(launched, 'pdf-tools-ribbon')
+    }
+  })
+
   test('the window in Korean', async () => {
     test.setTimeout(90_000)
     if (EVIDENCE_DIR) await mkdir(EVIDENCE_DIR, { recursive: true })

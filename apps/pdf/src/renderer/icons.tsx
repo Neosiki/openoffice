@@ -382,6 +382,14 @@ export const IconPageSize = () => (
     <rect x="8.5" y="8.5" width="7" height="9" rx="0.8" strokeDasharray="2 1.6" />
   </Icon>
 )
+/** The PDF tools window: a toolbox */
+export const IconPdfTools = () => (
+  <Icon>
+    <rect x="4.5" y="8.5" width="15" height="10.5" rx="1" />
+    <path d="M9.5 8.5 V6.5 A1 1 0 0 1 10.5 5.5 H13.5 A1 1 0 0 1 14.5 6.5 V8.5" />
+    <path d="M4.5 12.75 H10.5 M13.5 12.75 H19.5 M10.5 11.5 H13.5 V14 H10.5 Z" />
+  </Icon>
+)
 /** Images to PDF: a stack of pictures */
 export const IconImagesToPdf = () => (
   <Icon>

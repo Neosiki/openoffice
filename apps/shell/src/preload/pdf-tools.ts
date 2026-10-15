@@ -6,6 +6,7 @@ import type {
   PdfToolRunRequest,
   PdfToolRunResult,
   PdfToolsInit,
+  PdfToolsStart,
   PdfToolsTheme,
   PdfToolsWindowApi,
 } from '../shared/pdf-tools-api'
@@ -62,6 +63,15 @@ const api: PdfToolsWindowApi = {
     }
     ipcRenderer.on(PDF_TOOLS_CHANNELS.progress, listener)
     return () => ipcRenderer.removeListener(PDF_TOOLS_CHANNELS.progress, listener)
+  },
+  async takeStart() {
+    const start = (await ipcRenderer.invoke(PDF_TOOLS_CHANNELS.takeStart)) as PdfToolsStart | null
+    return start ?? null
+  },
+  onStartReady(handler) {
+    const listener = () => handler()
+    ipcRenderer.on(PDF_TOOLS_CHANNELS.startReady, listener)
+    return () => ipcRenderer.removeListener(PDF_TOOLS_CHANNELS.startReady, listener)
   },
   async close() {
     await ipcRenderer.invoke(PDF_TOOLS_CHANNELS.close)

@@ -1,4 +1,4 @@
-import { useState, type ReactElement } from 'react'
+import { useEffect, useRef, useState, type ReactElement } from 'react'
 import type { Lang, Params } from '@genoffice/i18n'
 import {
   PDF_TOOL_ANNOT_KINDS,
@@ -15,6 +15,7 @@ import {
   type PdfToolOptions,
   type PdfToolPaper,
   type PdfBlankCandidate,
+  type PdfToolsStart,
 } from '../../../shared/pdf-tools-api'
 import { pdfToolsText, type PdfToolsStringKey } from '../i18n/strings-pdf-tools'
 import { formatBytes } from '../generate/format'
@@ -292,6 +293,23 @@ export function PdfToolsWindow({ lang }: { lang: Lang }) {
   }
 
   const set = (patch: PdfToolOptions) => setOptions((prev) => ({ ...prev, ...patch }))
+
+  // a task the PDF editor's ribbon opened this window on, its file already picked;
+  // the latest render's handlers, so the effect itself runs once
+  const startRef = useRef<(start: PdfToolsStart) => void>(() => {})
+  startRef.current = (start) => {
+    openTool({ kind: 'tool', tool: start.tool })
+    setInputs(start.inputs)
+    setRejected(start.rejected.map((r) => t(REJECT_TEXT[r.problem], { name: r.name })))
+  }
+  useEffect(() => {
+    const take = () =>
+      void api.takeStart().then((start) => {
+        if (start) startRef.current(start)
+      })
+    take()
+    return api.onStartReady(take)
+  }, [api])
 
   return (
     <div className="pt">

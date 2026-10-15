@@ -31,7 +31,7 @@ import {
 import { brandText, createI18n, getUiLang } from '@genoffice/i18n'
 import { generateImageTool, documentMediaRoots, withMediaCallSignal } from '@genoffice/ai-search'
 import { sharedSubscriptionStatuses } from '@genoffice/ai-provider/subscription'
-import { PDF_CHANNELS } from '../shared/ipc'
+import { PDF_CHANNELS, PDF_TOOLS_HANDOFF, type PdfToolsHandoffTool } from '../shared/ipc'
 import { buildExportImagePaths, hasValidExportPageNumbers } from './export-images'
 import type {
   ExportImagesRequest,
@@ -602,6 +602,8 @@ interface RuntimePaths {
   openGeneratedPath?: (path: string) => boolean
   /** Host-owned cross-app document creator (the shell routes DOCX into Docs). */
   createDocument?: (request: CreateDocumentRequest) => Promise<CreateDocumentResult>
+  /** The shell's PDF tools window, opened on a task with a file picked (decision 0030) */
+  openPdfTools?: (path: string, tool: PdfToolsHandoffTool) => boolean
 }
 
 let runtime: RuntimePaths = { preloadPath: '' }
@@ -1182,6 +1184,13 @@ function registerPdfIpc(): void {
       }
     },
   )
+
+  // only the view's own file, and only a task the menu offers; the renderer saved first
+  ipcMain.handle(PDF_CHANNELS.openInPdfTools, (e, path: unknown, tool: unknown): boolean => {
+    if (!pdfPathGranted(e.sender.id, path)) return false
+    if (!(PDF_TOOLS_HANDOFF as readonly unknown[]).includes(tool)) return false
+    return runtime.openPdfTools?.(path, tool as PdfToolsHandoffTool) ?? false
+  })
 
   ipcMain.handle(PDF_CHANNELS.save, async (e, request: SavePdfRequest): Promise<SavePdfResult> => {
     const path = request?.path

@@ -35,6 +35,7 @@ import {
   type PdfToolInput,
   type PdfToolInputKind,
   type PdfToolRunResult,
+  type PdfToolsStart,
   type PdfToolsTheme,
 } from '../../shared/pdf-tools-api'
 import { PDF_TOOLS_HOME_CHANNELS } from '../../shared/pdf-tools-home-channels'
@@ -97,6 +98,8 @@ const results = new Map<string, string>()
 const blankFound = new Map<string, Set<number>>()
 /** the running blank-page search's job id */
 let finding: string | null = null
+/** a task the PDF editor's ribbon asked for, until the window takes it */
+let pendingStart: PdfToolsStart | null = null
 
 const PDF_FILTER = { name: 'PDF', extensions: ['pdf'] }
 const IMAGE_FILTER = { name: 'JPG, PNG', extensions: ['jpg', 'jpeg', 'png'] }
@@ -130,8 +133,13 @@ async function pickInputs(multi: boolean, kind: PdfToolInputKind): Promise<PdfPi
     properties: multi ? ['openFile', 'multiSelections'] : ['openFile'],
   })
   if (picked.canceled) return empty
+  return inputsFrom(picked.filePaths, kind)
+}
+
+/** Files the main process chose (a dialog, the editor's own file), read and handed out as ids */
+async function inputsFrom(paths: string[], kind: PdfToolInputKind): Promise<PdfPickResult> {
   const out: PdfPickResult = { inputs: [], rejected: [] }
-  for (const path of picked.filePaths) {
+  for (const path of paths) {
     const name = basename(path)
     try {
       const size = (await stat(path)).size
@@ -326,6 +334,23 @@ async function findBlankPages(inputId: unknown): Promise<PdfBlankPagesResult> {
   }
 }
 
+/**
+ * The PDF editor's ribbon: open the window on `tool` with the view's own
+ * file picked (the editor checked the file is the view's and saved it).
+ * False for a task that does not take one PDF.
+ */
+export function openPdfToolsWithFile(path: string, tool: unknown): boolean {
+  if (!deps || !isPdfToolId(tool) || toolInputKind(tool) !== 'pdf') return false
+  void inputsFrom([path], 'pdf').then((picked) => {
+    pendingStart = { tool, inputs: picked.inputs, rejected: picked.rejected }
+    const open = !!win && !win.isDestroyed()
+    openPdfToolsWindow()
+    // a fresh window takes the task as it loads; an open one is told it waits
+    if (open) win?.webContents.send(PDF_TOOLS_CHANNELS.startReady)
+  })
+  return true
+}
+
 async function openInEditor(): Promise<void> {
   const owner = win
   if (!owner || !deps) return
@@ -369,6 +394,12 @@ function registerIpc(): void {
   })
   ipcMain.handle(PDF_TOOLS_CHANNELS.cancelFind, (event) => {
     if (fromWindow(event) && finding) deps?.cancelJob(event.sender.id, finding)
+  })
+  ipcMain.handle(PDF_TOOLS_CHANNELS.takeStart, (event) => {
+    if (!fromWindow(event)) return null
+    const start = pendingStart
+    pendingStart = null
+    return start
   })
   ipcMain.handle(PDF_TOOLS_CHANNELS.close, (event) => {
     if (fromWindow(event)) win?.close()
