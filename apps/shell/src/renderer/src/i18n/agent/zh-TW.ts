@@ -74,6 +74,8 @@ export const zhTW = {
   errRateLimit: '方案額度已用完。請稍後再試。',
   errSignedOut: '程式已登出。請在「設定 → AI」中登入。',
   errMetered: '程式使用的是你未允許的按用量計費登入。',
+  errSandboxUnavailable:
+    '在這台電腦上，Codex 無法開啟用來隔離指令的沙箱，因此沒有啟動。請將 Windows 更新到最新版本，或改用 Claude Code。',
   errNeedsUpdate: '程式版本過舊，無法使用代理程式模式。請更新後再試一次。',
   errNotInstalled: '未安裝此程式。',
   errGeneric: '發生問題。請再試一次。',

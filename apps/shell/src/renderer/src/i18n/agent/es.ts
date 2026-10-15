@@ -81,6 +81,8 @@ export const es = {
   errRateLimit: 'Has agotado el límite de tu suscripción. Vuelve a intentarlo más tarde.',
   errSignedOut: 'El programa no tiene la sesión iniciada. Inicia sesión en Configuración → IA.',
   errMetered: 'El programa tiene iniciada una sesión de pago por uso que no aceptaste.',
+  errSandboxUnavailable:
+    'Codex no puede abrir en este PC el entorno aislado que contiene sus comandos, así que no se inició. Actualiza Windows o elige Claude Code.',
   errNeedsUpdate:
     'El programa es demasiado antiguo para el modo agente. Actualízalo y vuelve a intentarlo.',
   errNotInstalled: 'El programa no está instalado.',

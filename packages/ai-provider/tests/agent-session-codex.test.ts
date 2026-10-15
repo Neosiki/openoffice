@@ -4,6 +4,7 @@
  * Nothing here reaches a real `codex`.
  */
 import { EventEmitter } from 'node:events'
+import { join } from 'node:path'
 import { PassThrough, Writable } from 'node:stream'
 import type { SpawnOptions } from 'node:child_process'
 import { describe, expect, it, vi } from 'vitest'
@@ -16,8 +17,11 @@ import {
   codexAgentLaunchArgs,
   codexAgentReadableDirs,
   codexAgentThreadParams,
+  codexSandboxProbeArgs,
+  codexSandboxProbeVerdict,
   startCodexAgentSession,
   type AgentSessionEvent,
+  type CodexSandboxProbeResult,
   type CodexAgentSessionOptions,
 } from '../src/agent-session'
 import type { SubscriptionProgram } from '../src/subscription'
@@ -117,6 +121,7 @@ function options(overrides: Partial<CodexAgentSessionOptions> = {}): CodexAgentS
 async function start(
   handlers: Record<string, Handler>,
   overrides: Partial<CodexAgentSessionOptions> = {},
+  probe: CodexSandboxProbeResult = 'contained',
 ) {
   const events: AgentSessionEvent[] = []
   const spawnCalls: Array<{ command: string; args: string[]; options: SpawnOptions }> = []
@@ -124,8 +129,10 @@ async function start(
   const killTree = vi.fn((target: { pid?: number }) => {
     if (target === server) server.exit(null)
   })
+  const probeSandbox = vi.fn(async () => probe)
   const run = startCodexAgentSession(options(overrides), (event) => events.push(event), {
     resolveProgram: async () => PROGRAM,
+    probeSandbox,
     registry: null,
     platform: 'win32',
     baseEnv: { PATH: 'C:\\Windows', OPENAI_API_KEY: 'sk-no' },
@@ -136,7 +143,7 @@ async function start(
       return server
     },
   })
-  return { run, events, spawnCalls, killTree, server: () => server }
+  return { run, events, spawnCalls, killTree, probeSandbox, server: () => server }
 }
 
 const tick = () => new Promise((resolve) => setImmediate(resolve))
@@ -201,6 +208,7 @@ describe('the launch and the thread', () => {
       'ieumoffice-editor': {
         url: 'http://127.0.0.1:3093/mcp',
         http_headers: { Authorization: 'Bearer tok' },
+        default_tools_approval_mode: 'approve',
       },
     })
     expect(params.developerInstructions).toBe('Answer in Korean.')
@@ -221,6 +229,43 @@ describe('the launch and the thread', () => {
       'decline',
     )
     expect(codexDeclineDecision({ availableDecisions: ['accept', 'cancel'] })).toBe('cancel')
+  })
+
+  it('keeps the full command for judging and its own reading only for display', () => {
+    const action = codexAgentAction(
+      'item/commandExecution/requestApproval',
+      {
+        command: String.raw`"C:\\WINDOWS\\powershell.exe" -Command "cmd /c echo ok"`,
+        commandActions: [{ type: 'unknown', command: 'cmd /c echo ok' }],
+      },
+      new Map(),
+    )
+    expect(action.command).toBe(String.raw`"C:\\WINDOWS\\powershell.exe" -Command "cmd /c echo ok"`)
+    expect(action.summary).toBe('cmd /c echo ok')
+    expect(
+      codexAgentAction('item/commandExecution/requestApproval', { command: 'dir' }, new Map())
+        .summary,
+    ).toBeUndefined()
+  })
+
+  it('probes with findstr on a readable and a denied marker, judged by their names', () => {
+    const probeDir = join(String.raw`C:\Temp\s 1`, 'sandbox-probe')
+    const { args, readable, denied } = codexSandboxProbeArgs(
+      { ':minimal': 'read', [String.raw`C:\P`]: 'write' },
+      probeDir,
+    )
+    expect(args.slice(0, 3)).toEqual(['sandbox', '-c', 'windows.sandbox="mxc"'])
+    const table = args[6]!
+    expect(table).toContain(`${JSON.stringify(probeDir)} = "read"`)
+    expect(table).toContain(`${JSON.stringify(join(probeDir, 'denied'))} = "deny"`)
+    expect(args.slice(-3)).toEqual(['ieumoffice-sandbox-probe', readable, denied])
+    // a Korean user folder comes back in the console code page: the names still match
+    expect(
+      codexSandboxProbeVerdict(String.raw`C:\Users\??\ieumoffice-probe-readable.txt` + '\r\n'),
+    ).toBe('contained')
+    expect(codexSandboxProbeVerdict(`${readable}\r\n${denied}\r\n`)).toBe('not-contained')
+    expect(codexSandboxProbeVerdict('')).toBe('unavailable')
+    expect(codexSandboxProbeVerdict('Error: unknown variant')).toBe('unavailable')
   })
 
   it('reads the paths of a file change from the item that announced it', () => {
@@ -261,6 +306,35 @@ describe('starting a session', () => {
       config: { mcp_servers: { github: { enabled: false } } },
     })
     session.stop()
+  })
+
+  it('checks the sandbox with the session profile before Codex starts', async () => {
+    const { run, probeSandbox, spawnCalls } = await start(baseHandlers())
+    const session = await run
+    const [filesystem, probeDir] = probeSandbox.mock.calls[0] as unknown as [
+      Record<string, string>,
+      string,
+    ]
+    expect(filesystem).toMatchObject({
+      ':minimal': 'read',
+      [String.raw`C:\Users\me\Project`]: 'write',
+      [String.raw`C:\Users\me\.codex`]: 'deny',
+    })
+    expect(probeDir.startsWith(String.raw`C:\Temp\session-2`)).toBe(true)
+    expect(spawnCalls).toHaveLength(1)
+    session.stop()
+  })
+
+  it('does not start when the sandbox cannot start, and says so', async () => {
+    const { run, spawnCalls } = await start(baseHandlers(), {}, 'unavailable')
+    await expect(run).rejects.toMatchObject({ kind: 'sandbox-unavailable' })
+    expect(spawnCalls).toHaveLength(0)
+  })
+
+  it('does not start when the sandbox lets a denied folder be read', async () => {
+    const { run, spawnCalls } = await start(baseHandlers(), {}, 'not-contained')
+    await expect(run).rejects.toMatchObject({ kind: 'unsafe-tools' })
+    expect(spawnCalls).toHaveLength(0)
   })
 
   it('refuses a metered login the person did not accept, before any thread', async () => {

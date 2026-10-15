@@ -47,6 +47,11 @@ export interface AgentAction {
   tool: string
   /** the full command line, for a command */
   command?: string | undefined
+  /**
+   * the program's own reading of the command, shorter, for display only; the
+   * policy and the person's approval go by `command`
+   */
+  summary?: string | undefined
   /** absolute paths the action names, when the program said so */
   paths: string[]
   /** the folder a command runs in, when the program said so */

@@ -79,6 +79,8 @@ export const id = {
   errRateLimit: 'Kuota langganan Anda sudah habis. Coba lagi nanti.',
   errSignedOut: 'Program sudah keluar dari akun. Masuk di Pengaturan → AI.',
   errMetered: 'Program masuk dengan login bayar per pemakaian yang belum Anda setujui.',
+  errSandboxUnavailable:
+    'Codex tidak dapat membuka sandbox yang mengurung perintahnya di PC ini, jadi tidak dijalankan. Perbarui Windows, atau pilih Claude Code.',
   errNeedsUpdate: 'Versi program terlalu lama untuk mode agen. Perbarui program, lalu coba lagi.',
   errNotInstalled: 'Program belum terpasang.',
   errGeneric: 'Terjadi masalah. Coba lagi.',

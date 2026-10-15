@@ -83,6 +83,8 @@ export const de = {
   errSignedOut: 'Das Programm ist abgemeldet. Melden Sie sich unter Einstellungen → KI an.',
   errMetered:
     'Das Programm ist mit einem nutzungsabhängig abgerechneten Login angemeldet, den Sie nicht akzeptiert haben.',
+  errSandboxUnavailable:
+    'Codex kann auf diesem PC die Sandbox, die seine Befehle abschottet, nicht öffnen und wurde daher nicht gestartet. Aktualisieren Sie Windows oder wählen Sie Claude Code.',
   errNeedsUpdate:
     'Das Programm ist zu alt für den Agentenmodus. Aktualisieren Sie es und versuchen Sie es erneut.',
   errNotInstalled: 'Das Programm ist nicht installiert.',

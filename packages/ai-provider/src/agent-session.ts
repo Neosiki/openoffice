@@ -21,6 +21,7 @@ export {
   type ClaudeAgentLaunch,
 } from './agent-session/claude'
 export {
+  AgentSandboxUnavailableError,
   CODEX_AGENT_PROFILE,
   codexAgentAction,
   codexAgentApprovalPolicy,
@@ -34,4 +35,5 @@ export {
   type CodexAgentDeps,
   type CodexAgentSessionOptions,
 } from './agent-session/codex'
+export * from './agent-session/codex-sandbox-probe'
 export * from './agent-session/skills'

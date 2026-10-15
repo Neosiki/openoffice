@@ -7,8 +7,10 @@
  * - a permission profile of the session: the project folder is writable, the
  *   documents open in tabs are read-only, protected folders cannot be read,
  *   and there is no network. Codex enforces it in its own sandbox (on Windows,
- *   the restricted-token sandbox). A thread that does not report the profile
- *   as active is ended rather than run under looser rules;
+ *   MXC), checked on this PC before the session opens. A thread that does not
+ *   report the profile and approval policy asked for is ended rather than run
+ *   under looser rules;
+ * - an approval policy under which an approved command stays in the sandbox;
  * - the same configuration overrides as the brain-only bridge (no user hooks,
  *   plugins, apps or memories), except that skill instructions are on;
  * - every user MCP server switched off for the thread, the app's own server
@@ -19,7 +21,7 @@
 import type { ChildProcessWithoutNullStreams } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
 import { statSync } from 'node:fs'
-import { posix, win32 } from 'node:path'
+import { join, posix, win32 } from 'node:path'
 import {
   CODEX_CONFIG_OVERRIDES,
   activePermissionProfileId,
@@ -39,6 +41,7 @@ import {
 } from '../subscription/process'
 import { codexAccountInfo } from '../subscription/status'
 import { APP_MCP_SERVER_NAME } from './claude'
+import { probeCodexSandbox, type CodexSandboxProbeResult } from './codex-sandbox-probe'
 import { agentPolicyVerdict, comparablePath, isInsidePath } from './policy'
 import type {
   AgentAction,
@@ -50,6 +53,15 @@ import type {
 } from './types'
 
 const PROVIDER = 'codex'
+
+/** Codex's sandbox could not start on this PC (a Windows without MXC, a policy against it) */
+export class AgentSandboxUnavailableError extends Error {
+  readonly kind = 'sandbox-unavailable'
+  constructor() {
+    super('Codex sandbox (MXC) is not available on this PC; nothing was run')
+    this.name = 'AgentSandboxUnavailableError'
+  }
+}
 export const CODEX_AGENT_PROFILE = 'ieumoffice-agent'
 const REQUEST_TIMEOUT_MS = 30_000
 /**
@@ -181,6 +193,9 @@ export function codexAgentThreadParams(
     mcpServers[APP_MCP_SERVER_NAME] = {
       url: options.appMcp.url,
       http_headers: { Authorization: `Bearer ${options.appMcp.token}` },
+      // the app's own tools, which keep their own limits: without this, Codex asks before each
+      // call, and under the `never` policy ("trust this project") refuses them unasked
+      default_tools_approval_mode: 'approve',
     }
   }
   return {
@@ -204,6 +219,19 @@ function text(value: unknown): string | undefined {
   return typeof value === 'string' && value ? value : undefined
 }
 
+/**
+ * Codex's own reading of a command (`commandActions`): the command without the
+ * shell it is wrapped in and without doubled backslashes. Best effort, so only
+ * shown, never judged.
+ */
+function commandSummary(source: Record<string, unknown>): string | undefined {
+  const actions = Array.isArray(source.commandActions) ? source.commandActions : []
+  const commands = actions.flatMap((action) =>
+    isPlainObject(action) && text(action.command) ? [action.command as string] : [],
+  )
+  return commands.length > 0 ? commands.join('; ') : undefined
+}
+
 /** What a Codex approval request asks for, in the policy's terms */
 export function codexAgentAction(
   method: string,
@@ -215,6 +243,7 @@ export function codexAgentAction(
       kind: 'command',
       tool: 'commandExecution',
       command: text(params.command) ?? '',
+      summary: commandSummary(params),
       cwd: text(params.cwd),
       paths: [],
       reason: text(params.reason),
@@ -269,6 +298,7 @@ function itemAction(item: Record<string, unknown>): AgentAction | undefined {
       kind: 'command',
       tool: 'commandExecution',
       command: text(item.command) ?? '',
+      summary: commandSummary(item),
       cwd: text(item.cwd),
       paths: [],
     }
@@ -307,6 +337,13 @@ export interface CodexAgentDeps {
   idleMs?: number | undefined
   platform?: NodeJS.Platform | undefined
   threadStartTimeoutMs?: number | undefined
+  /** the check that Codex's sandbox starts and denies (Windows); see `codex-sandbox-probe.ts` */
+  probeSandbox?:
+    | ((
+        filesystem: Record<string, 'read' | 'write' | 'deny'>,
+        probeDir: string,
+      ) => Promise<CodexSandboxProbeResult>)
+    | undefined
 }
 
 export interface CodexAgentSessionOptions extends AgentSessionOptions {
@@ -324,6 +361,34 @@ export async function startCodexAgentSession(
     deps.resolveProgram ??
     ((configuredPath) => resolveSubscriptionProgram(PROVIDER, { configuredPath }))
   )(options.cliPath)
+  const readableDirs = codexAgentReadableDirs(
+    (deps.baseEnv ?? process.env).PATH ?? (deps.baseEnv ?? process.env).Path,
+    options,
+    platform,
+  )
+  if (platform === 'win32') {
+    const probe =
+      deps.probeSandbox ??
+      ((filesystem, probeDir) =>
+        probeCodexSandbox(program, filesystem, probeDir, {
+          spawn: deps.spawn,
+          registry: deps.registry,
+          baseEnv: deps.baseEnv,
+          killTree: deps.killTree,
+        }))
+    const result = await probe(
+      codexAgentFilesystem(options, readableDirs),
+      join(options.sessionDir, 'sandbox-probe'),
+    )
+    if (result === 'unavailable') throw new AgentSandboxUnavailableError()
+    if (result === 'not-contained') {
+      throw new AiRunError(
+        'unsafe-tools',
+        'Codex sandbox did not keep a denied folder out of reach; nothing was run',
+        { provider: PROVIDER },
+      )
+    }
+  }
   let child: ChildProcessWithoutNullStreams
   try {
     // the session folder as working directory: no project configuration of wherever the app
@@ -624,16 +689,7 @@ export async function startCodexAgentSession(
     const model = options.model.trim() || (await defaultModel(request))
     const started = await request(
       'thread/start',
-      codexAgentThreadParams(
-        options,
-        model,
-        userMcpServers,
-        codexAgentReadableDirs(
-          (deps.baseEnv ?? process.env).PATH ?? (deps.baseEnv ?? process.env).Path,
-          options,
-          platform,
-        ),
-      ),
+      codexAgentThreadParams(options, model, userMcpServers, readableDirs),
       deps.threadStartTimeoutMs ?? THREAD_START_TIMEOUT_MS,
     )
     if (

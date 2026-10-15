@@ -78,6 +78,8 @@ export const en = {
   errRateLimit: 'Your subscription limit is used up. Try again later.',
   errSignedOut: 'The program is signed out. Sign in under Settings → AI.',
   errMetered: 'The program is signed in with a pay-per-use login you have not accepted.',
+  errSandboxUnavailable:
+    'Codex cannot open the sandbox that keeps its commands contained on this PC, so it did not start. Update Windows, or choose Claude Code.',
   errNeedsUpdate: 'The program is too old for agent mode. Update it and try again.',
   errNotInstalled: 'The program is not installed.',
   errGeneric: 'Something went wrong. Try again.',

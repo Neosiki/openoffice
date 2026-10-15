@@ -81,6 +81,8 @@ export const ja = {
   errRateLimit: 'プランの上限に達しました。しばらくしてからもう一度お試しください。',
   errSignedOut: 'プログラムがサインアウトしています。設定 → AI でサインインしてください。',
   errMetered: 'プログラムが、許可していない従量課金のログインでサインインしています。',
+  errSandboxUnavailable:
+    'このPCでは、Codex がコマンドを閉じ込めるサンドボックスを開けないため、起動しませんでした。Windows を最新に更新するか、Claude Code を選んでください。',
   errNeedsUpdate:
     'プログラムが古いため、エージェントモードを使えません。更新してから、もう一度お試しください。',
   errNotInstalled: 'プログラムがインストールされていません。',

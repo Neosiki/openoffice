@@ -2,7 +2,7 @@
  * Agent sessions in the shell (decision 0032): which folders may be a project,
  * what a session starts with, who may drive it, and what the window is shown.
  */
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -300,6 +300,15 @@ describe('driving a session', () => {
     await m.start(3, { provider: 'claude-code', projectRoot: project, mode: 'ask-commands' })
     m.stopOwner(3)
     expect(session.stopped).toBe(1)
+  })
+
+  it('removes the session folder before the app quits', async () => {
+    const { m, project, claude } = manager()
+    await m.start(3, { provider: 'claude-code', projectRoot: project, mode: 'ask-commands' })
+    const { sessionDir } = claude.mock.calls[0]![0]
+    expect(existsSync(sessionDir)).toBe(true)
+    m.stopAll()
+    expect(existsSync(sessionDir)).toBe(false)
   })
 })
 

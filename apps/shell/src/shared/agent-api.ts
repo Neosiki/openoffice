@@ -77,6 +77,8 @@ export interface AgentActionView {
   kind: 'read' | 'write' | 'command' | 'app-tool' | 'skill' | 'other'
   tool: string
   command?: string | undefined
+  /** a shorter reading of the command for the progress line; the full one stays in `command` */
+  summary?: string | undefined
   paths: string[]
   reason?: string | undefined
 }

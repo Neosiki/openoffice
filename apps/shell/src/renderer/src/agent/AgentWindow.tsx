@@ -64,6 +64,7 @@ const START_ERROR: Record<string, AgentStringKey> = {
 }
 const RUN_ERROR: Record<string, AgentStringKey> = {
   'unsafe-tools': 'errUnsafeTools',
+  'sandbox-unavailable': 'errSandboxUnavailable',
   'rate-limit': 'errRateLimit',
   'signed-out': 'errSignedOut',
   'metered-not-accepted': 'errMetered',
@@ -73,6 +74,15 @@ const RUN_ERROR: Record<string, AgentStringKey> = {
 
 function runErrorKey(kind: string | undefined): AgentStringKey {
   return (kind && RUN_ERROR[kind]) || 'errGeneric'
+}
+
+/** The app's own tools that only read (`read_sheet`, `open_documents`, …), as either program names them */
+const APP_READ_TOOL = /(?:^|[:_])(?:read_[a-z]+|open_documents)$/
+
+function actionLabel(action: AgentActionView): AgentStringKey {
+  return action.kind === 'app-tool' && APP_READ_TOOL.test(action.tool)
+    ? 'actRead'
+    : ACTION_LABEL[action.kind]
 }
 
 function actionDetail(action: AgentActionView): string {
@@ -193,9 +203,10 @@ export function AgentWindow() {
         return (
           <div key={index} className="agent-tool" data-status={entry.status}>
             <span className="agent-tool-status">{t(STATUS_LABEL[entry.status])}</span>
-            <span>{t(ACTION_LABEL[entry.action.kind])}</span>
+            <span>{t(actionLabel(entry.action))}</span>
             <span className="agent-tool-detail" title={actionDetail(entry.action)}>
-              {actionDetail(entry.action)}
+              {(entry.action.kind === 'command' && entry.action.summary) ||
+                actionDetail(entry.action)}
             </span>
             {path && entry.status === 'done' && entry.action.kind === 'write' ? (
               <button

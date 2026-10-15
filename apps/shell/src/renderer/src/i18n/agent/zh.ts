@@ -76,6 +76,8 @@ export const zh = {
   errRateLimit: '订阅额度已用完。请稍后再试。',
   errSignedOut: '程序已退出登录。请在“设置 → AI”中登录。',
   errMetered: '程序使用的是你未允许的按量计费登录。',
+  errSandboxUnavailable:
+    '在这台电脑上，Codex 无法打开用于隔离命令的沙盒，因此没有启动。请将 Windows 更新到最新版本，或改用 Claude Code。',
   errNeedsUpdate: '程序版本过旧，无法使用智能体模式。请更新后重试。',
   errNotInstalled: '未安装此程序。',
   errGeneric: '出现问题。请重试。',

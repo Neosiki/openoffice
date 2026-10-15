@@ -82,6 +82,8 @@ export const fr = {
   errSignedOut: 'Le programme est déconnecté. Connectez-vous dans Paramètres → IA.',
   errMetered:
     'Le programme est connecté avec une connexion payante à l’usage que vous n’avez pas acceptée.',
+  errSandboxUnavailable:
+    "Codex ne peut pas ouvrir sur ce PC le bac à sable qui isole ses commandes ; il n'a donc pas démarré. Mettez Windows à jour ou choisissez Claude Code.",
   errNeedsUpdate:
     'Le programme est trop ancien pour le mode agent. Mettez-le à jour, puis réessayez.',
   errNotInstalled: 'Le programme n’est pas installé.',

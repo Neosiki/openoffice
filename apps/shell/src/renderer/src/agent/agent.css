@@ -283,8 +283,12 @@ body {
   font-size: 12px;
 }
 
-.agent-tool-status {
+/* only the detail gives way to a long path: the label and the "Open" button keep their width */
+.agent-tool > :not(.agent-tool-detail) {
   flex: none;
+}
+
+.agent-tool-status {
   min-width: 52px;
   color: var(--text-muted);
 }

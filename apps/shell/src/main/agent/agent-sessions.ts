@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto'
-import { existsSync, statSync } from 'node:fs'
+import { existsSync, rmSync, statSync } from 'node:fs'
 import { mkdtemp, readFile, rm } from 'node:fs/promises'
 import { homedir, tmpdir } from 'node:os'
 import { dirname, isAbsolute, join, parse, resolve } from 'node:path'
@@ -192,18 +192,23 @@ export function createAgentManager(deps: AgentManagerDeps): AgentManager {
   const protectedPaths = agentProtectedPaths(homeDir, deps.userData)
   const live = new Map<string, LiveSession>()
 
-  const cleanup = (entry: LiveSession): void => {
+  const cleanup = (entry: LiveSession, { quitting = false } = {}): void => {
     if (!live.has(entry.id)) return
     live.delete(entry.id)
     void entry.appMcp?.stop().catch(() => undefined)
     // the folder is the program's working directory: Windows refuses to remove it until the
-    // ended process is gone, which can take a few seconds
-    void rm(entry.sessionDir, {
-      recursive: true,
-      force: true,
-      maxRetries: 10,
-      retryDelay: 200,
-    }).catch(() => undefined)
+    // ended process is gone, which can take a moment
+    const options = { recursive: true, force: true, maxRetries: 10, retryDelay: 100 }
+    if (!quitting) {
+      void rm(entry.sessionDir, options).catch(() => undefined)
+      return
+    }
+    // the app is going away and would not wait for an asynchronous removal
+    try {
+      rmSync(entry.sessionDir, options)
+    } catch {
+      // left for the system's temporary-file cleanup
+    }
   }
 
   const own = (ownerId: number, sessionId: string): LiveSession | undefined => {
@@ -303,7 +308,7 @@ export function createAgentManager(deps: AgentManagerDeps): AgentManager {
     stopAll() {
       for (const entry of [...live.values()]) {
         entry.session?.stop()
-        cleanup(entry)
+        cleanup(entry, { quitting: true })
       }
     },
 

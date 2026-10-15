@@ -82,6 +82,8 @@ export const nl = {
   errSignedOut: 'Het programma is afgemeld. Meld je aan via Instellingen → AI.',
   errMetered:
     'Het programma is aangemeld met een login met betalen per gebruik die je niet hebt geaccepteerd.',
+  errSandboxUnavailable:
+    'Codex kan op deze pc de sandbox die zijn opdrachten afschermt niet openen en is daarom niet gestart. Werk Windows bij of kies Claude Code.',
   errNeedsUpdate:
     'Het programma is te oud voor de agentmodus. Werk het bij en probeer het opnieuw.',
   errNotInstalled: 'Het programma is niet geïnstalleerd.',

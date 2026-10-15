@@ -78,6 +78,8 @@ export const ko = {
   errRateLimit: '구독 한도를 다 썼습니다. 나중에 다시 시도하세요.',
   errSignedOut: '프로그램이 로그아웃되어 있습니다. 설정 → AI에서 로그인하세요.',
   errMetered: '프로그램이 허용하지 않은 종량제 로그인으로 되어 있습니다.',
+  errSandboxUnavailable:
+    '이 PC에서는 Codex가 명령을 가둘 격리 공간을 열 수 없어서 시작하지 않았습니다. Windows를 최신으로 업데이트하거나 Claude Code를 고르세요.',
   errNeedsUpdate:
     '프로그램이 에이전트 모드를 쓰기에는 오래되었습니다. 업데이트한 뒤 다시 시도하세요.',
   errNotInstalled: '프로그램이 설치되어 있지 않습니다.',

@@ -81,6 +81,8 @@ export const pt = {
   errRateLimit: 'O limite da sua assinatura acabou. Tente novamente mais tarde.',
   errSignedOut: 'O programa está desconectado. Faça login em Configurações → IA.',
   errMetered: 'O programa está conectado com um login de pagamento por uso que você não aceitou.',
+  errSandboxUnavailable:
+    'O Codex não consegue abrir neste PC a área isolada que contém os seus comandos, por isso não foi iniciado. Atualize o Windows ou escolha o Claude Code.',
   errNeedsUpdate: 'O programa é antigo demais para o modo agente. Atualize-o e tente novamente.',
   errNotInstalled: 'O programa não está instalado.',
   errGeneric: 'Algo deu errado. Tente novamente.',

@@ -79,6 +79,8 @@ export const cs = {
   errRateLimit: 'Limit předplatného je vyčerpán. Zkuste to později.',
   errSignedOut: 'Program je odhlášen. Přihlaste se v Nastavení → AI.',
   errMetered: 'Program je přihlášen placeným přihlášením podle spotřeby, které jste nepřijali.',
+  errSandboxUnavailable:
+    'Codex na tomto počítači nemůže otevřít izolované prostředí pro své příkazy, a proto se nespustil. Aktualizujte Windows, nebo zvolte Claude Code.',
   errNeedsUpdate: 'Program je pro režim agenta příliš starý. Aktualizujte ho a zkuste to znovu.',
   errNotInstalled: 'Program není nainstalován.',
   errGeneric: 'Něco se pokazilo. Zkuste to znovu.',

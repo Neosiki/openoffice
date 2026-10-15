@@ -80,6 +80,8 @@ export const ms = {
   errRateLimit: 'Had langganan anda telah habis. Cuba lagi kemudian.',
   errSignedOut: 'Program telah log keluar. Log masuk di Tetapan → AI.',
   errMetered: 'Program log masuk dengan akaun bayar ikut penggunaan yang belum anda terima.',
+  errSandboxUnavailable:
+    'Codex tidak dapat membuka kotak pasir yang mengurung arahannya pada PC ini, jadi ia tidak dimulakan. Kemas kini Windows, atau pilih Claude Code.',
   errNeedsUpdate: 'Program terlalu lama untuk mod ejen. Kemas kini dan cuba lagi.',
   errNotInstalled: 'Program tidak dipasang.',
   errGeneric: 'Berlaku masalah. Cuba lagi.',

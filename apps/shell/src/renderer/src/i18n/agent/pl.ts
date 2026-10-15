@@ -80,6 +80,8 @@ export const pl = {
   errRateLimit: 'Limit subskrypcji został wyczerpany. Spróbuj ponownie później.',
   errSignedOut: 'Program jest wylogowany. Zaloguj się w Ustawienia → AI.',
   errMetered: 'Program jest zalogowany kontem rozliczanym za użycie, na które nie wyrażono zgody.',
+  errSandboxUnavailable:
+    'Codex nie może otworzyć na tym komputerze piaskownicy, która izoluje jego polecenia, więc nie został uruchomiony. Zaktualizuj system Windows albo wybierz Claude Code.',
   errNeedsUpdate: 'Program jest zbyt stary na tryb agenta. Zaktualizuj go i spróbuj ponownie.',
   errNotInstalled: 'Program nie jest zainstalowany.',
   errGeneric: 'Coś poszło nie tak. Spróbuj ponownie.',

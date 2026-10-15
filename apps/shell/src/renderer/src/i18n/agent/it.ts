@@ -80,6 +80,8 @@ export const it = {
   errRateLimit: 'Il limite del tuo abbonamento è esaurito. Riprova più tardi.',
   errSignedOut: 'Il programma è disconnesso. Accedi da Impostazioni → IA.',
   errMetered: 'Il programma è connesso con un accesso a consumo che non hai accettato.',
+  errSandboxUnavailable:
+    'Codex non riesce ad aprire su questo PC la sandbox che isola i suoi comandi, quindi non è stato avviato. Aggiorna Windows oppure scegli Claude Code.',
   errNeedsUpdate: 'Il programma è troppo vecchio per la modalità agente. Aggiornalo e riprova.',
   errNotInstalled: 'Il programma non è installato.',
   errGeneric: 'Si è verificato un problema. Riprova.',

@@ -80,6 +80,8 @@ export const vi = {
   errSignedOut: 'Chương trình đã đăng xuất. Hãy đăng nhập trong Cài đặt → AI.',
   errMetered:
     'Chương trình đang đăng nhập bằng tài khoản trả tiền theo mức dùng mà bạn chưa chấp nhận.',
+  errSandboxUnavailable:
+    'Codex không thể mở hộp cát dùng để cô lập các lệnh của nó trên máy tính này nên đã không khởi động. Hãy cập nhật Windows hoặc chọn Claude Code.',
   errNeedsUpdate: 'Chương trình quá cũ để dùng chế độ tác tử. Hãy cập nhật rồi thử lại.',
   errNotInstalled: 'Chương trình chưa được cài đặt.',
   errGeneric: 'Đã xảy ra lỗi. Hãy thử lại.',
