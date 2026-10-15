@@ -261,6 +261,38 @@ describe('aiSubscriptionCardView', () => {
     expect(view.actions).toEqual(['login-window'])
   })
 
+  describe('where the app cannot open a terminal window (macOS, Linux)', () => {
+    const noWindows = { terminalWindows: false }
+
+    it('not-installed: only the official instructions, no install button or its note', () => {
+      expect(aiSubscriptionCardView(status('codex', 'not-installed'), noWindows)).toEqual({
+        provider: 'codex',
+        state: 'not-installed',
+        tone: 'neutral',
+        statusKey: 'cardNotInstalled',
+        noteKeys: [],
+        actions: ['install-help'],
+      })
+    })
+
+    it('a browser sign-in under way: where to sign in, with no window to open', () => {
+      const view = aiSubscriptionCardView(
+        status('claude-code', 'signed-out', { signingIn: 'browser' }),
+        noWindows,
+      )
+      expect(view.noteKeys).toEqual(['signingInBrowserNote'])
+      expect(view.actions).toEqual([])
+    })
+
+    it('the other states read the same as on Windows', () => {
+      for (const state of ['signed-out', 'ready', 'metered', 'error', 'checking'] as const) {
+        expect(aiSubscriptionCardView(status('codex', state), noWindows)).toEqual(
+          aiSubscriptionCardView(status('codex', state)),
+        )
+      }
+    })
+  })
+
   it('reads a provider that has not reported yet as checking', () => {
     expect(aiSubscriptionStatusOf({}, 'codex')).toEqual({
       provider: 'codex',

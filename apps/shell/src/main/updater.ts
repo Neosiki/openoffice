@@ -35,7 +35,8 @@ import {
  *
  * UX is the strong-guidance modal card (update-window.ts), not a native
  * dialog. Windows updates through the NSIS installer (latest.yml); macOS
- * through the zip target (latest-mac.yml); Linux through the AppImage
+ * reads the zip target's latest-mac.yml but is only pointed at the release
+ * page (see SELF_UPDATES); Linux through the AppImage
  * target (latest-linux.yml). On Linux only AppImage runs self-update
  * (electron-updater replaces the .AppImage file in place, no root needed);
  * deb installs have no updater — users upgrade via `apt install ./<new>.deb`.
@@ -59,6 +60,7 @@ const tUpd = createI18n({
     updUpToDate: '已是最新版本（{version}）。',
     updCheckFailed: '无法检查更新，请检查网络后重试。',
     updOpenDownload: '前往下载页面',
+    updManualMac: 'Mac 版无法自动更新。请从下载页面获取新版本并安装。',
   },
   en: {
     updTitle: 'Software Update',
@@ -76,6 +78,8 @@ const tUpd = createI18n({
     updUpToDate: "You're up to date (version {version}).",
     updCheckFailed: "Couldn't check for updates. Check your network and try again.",
     updOpenDownload: 'Open Download Page',
+    updManualMac:
+      "The Mac version can't update itself. Download the new version from the download page and install it.",
   },
   vi: {
     updTitle: 'Cập nhật phần mềm',
@@ -93,6 +97,8 @@ const tUpd = createI18n({
     updUpToDate: 'Bạn đang sử dụng phiên bản mới nhất (phiên bản {version}).',
     updCheckFailed: 'Không thể kiểm tra bản cập nhật. Kiểm tra mạng của bạn và thử lại.',
     updOpenDownload: 'Mở trang tải xuống',
+    updManualMac:
+      'Phiên bản Mac không thể tự cập nhật. Hãy tải phiên bản mới từ trang tải xuống và cài đặt.',
   },
   ja: {
     updTitle: 'ソフトウェアアップデート',
@@ -110,6 +116,8 @@ const tUpd = createI18n({
     updUpToDate: '最新の状態です（バージョン {version}）。',
     updCheckFailed: '更新を確認できませんでした。ネットワークを確認して再試行してください。',
     updOpenDownload: 'ダウンロードページを開く',
+    updManualMac:
+      'Mac 版は自動で更新できません。ダウンロードページから新しいバージョンを入手してインストールしてください。',
   },
   ko: {
     updTitle: '소프트웨어 업데이트',
@@ -127,6 +135,8 @@ const tUpd = createI18n({
     updUpToDate: '최신 버전입니다 (버전 {version}).',
     updCheckFailed: '업데이트를 확인할 수 없습니다. 네트워크를 확인한 후 다시 시도하세요.',
     updOpenDownload: '다운로드 페이지 열기',
+    updManualMac:
+      'Mac용 설치본은 스스로 업데이트하지 못합니다. 다운로드 페이지에서 새 버전을 받아 설치해 주세요.',
   },
   fr: {
     updTitle: 'Mise à jour logicielle',
@@ -145,6 +155,8 @@ const tUpd = createI18n({
     updCheckFailed:
       'Impossible de rechercher les mises à jour. Vérifiez votre réseau et réessayez.',
     updOpenDownload: 'Ouvrir la page de téléchargement',
+    updManualMac:
+      "La version Mac ne peut pas se mettre à jour d'elle-même. Téléchargez la nouvelle version depuis la page de téléchargement et installez-la.",
   },
   de: {
     updTitle: 'Softwareaktualisierung',
@@ -164,6 +176,8 @@ const tUpd = createI18n({
     updCheckFailed:
       'Updates konnten nicht geprüft werden. Prüfen Sie Ihre Netzwerkverbindung und versuchen Sie es erneut.',
     updOpenDownload: 'Download-Seite öffnen',
+    updManualMac:
+      'Die Mac-Version kann sich nicht selbst aktualisieren. Laden Sie die neue Version von der Download-Seite herunter und installieren Sie sie.',
   },
   es: {
     updTitle: 'Actualización de software',
@@ -181,6 +195,8 @@ const tUpd = createI18n({
     updUpToDate: 'Está actualizado (versión {version}).',
     updCheckFailed: 'No se pudo buscar actualizaciones. Compruebe su red e inténtelo de nuevo.',
     updOpenDownload: 'Abrir página de descargas',
+    updManualMac:
+      'La versión para Mac no puede actualizarse sola. Descarga la nueva versión desde la página de descargas e instálala.',
   },
   th: {
     updTitle: 'อัปเดตซอฟต์แวร์',
@@ -197,6 +213,8 @@ const tUpd = createI18n({
     updUpToDate: 'คุณใช้เวอร์ชันล่าสุดแล้ว (เวอร์ชัน {version})',
     updCheckFailed: 'ไม่สามารถตรวจหาการอัปเดตได้ โปรดตรวจสอบเครือข่ายแล้วลองอีกครั้ง',
     updOpenDownload: 'เปิดหน้าดาวน์โหลด',
+    updManualMac:
+      'เวอร์ชัน Mac ไม่สามารถอัปเดตตัวเองได้ โปรดดาวน์โหลดเวอร์ชันใหม่จากหน้าดาวน์โหลดแล้วติดตั้ง',
   },
   id: {
     updTitle: 'Pembaruan Perangkat Lunak',
@@ -214,6 +232,8 @@ const tUpd = createI18n({
     updUpToDate: 'Sudah versi terbaru (versi {version}).',
     updCheckFailed: 'Tidak dapat memeriksa pembaruan. Periksa jaringan Anda dan coba lagi.',
     updOpenDownload: 'Buka Halaman Unduhan',
+    updManualMac:
+      'Versi Mac tidak dapat memperbarui dirinya sendiri. Unduh versi baru dari halaman unduhan lalu instal.',
   },
   ru: {
     updTitle: 'Обновление программы',
@@ -231,6 +251,8 @@ const tUpd = createI18n({
     updUpToDate: 'У вас последняя версия ({version}).',
     updCheckFailed: 'Не удалось проверить обновления. Проверьте сеть и повторите попытку.',
     updOpenDownload: 'Открыть страницу загрузки',
+    updManualMac:
+      'Версия для Mac не обновляется автоматически. Скачайте новую версию со страницы загрузки и установите её.',
   },
   ar: {
     updTitle: 'تحديث البرنامج',
@@ -246,6 +268,7 @@ const tUpd = createI18n({
     updUpToDate: 'أنت على أحدث إصدار (الإصدار {version}).',
     updCheckFailed: 'تعذر التحقق من التحديثات. تحقق من الشبكة وحاول مرة أخرى.',
     updOpenDownload: 'فتح صفحة التنزيل',
+    updManualMac: 'لا يمكن لإصدار Mac تحديث نفسه. نزّل الإصدار الجديد من صفحة التنزيل وثبّته.',
   },
   pt: {
     updTitle: 'Atualização de Software',
@@ -263,6 +286,8 @@ const tUpd = createI18n({
     updUpToDate: 'Você está atualizado (versão {version}).',
     updCheckFailed: 'Não foi possível procurar atualizações. Verifique sua rede e tente novamente.',
     updOpenDownload: 'Abrir página de download',
+    updManualMac:
+      'A versão para Mac não consegue se atualizar sozinha. Baixe a nova versão na página de download e instale-a.',
   },
   it: {
     updTitle: 'Aggiornamento software',
@@ -280,6 +305,8 @@ const tUpd = createI18n({
     updUpToDate: 'Sei aggiornato (versione {version}).',
     updCheckFailed: 'Impossibile controllare gli aggiornamenti. Verifica la rete e riprova.',
     updOpenDownload: 'Apri pagina di download',
+    updManualMac:
+      'La versione per Mac non può aggiornarsi da sola. Scarica la nuova versione dalla pagina di download e installala.',
   },
   pl: {
     updTitle: 'Aktualizacja oprogramowania',
@@ -297,6 +324,8 @@ const tUpd = createI18n({
     updUpToDate: 'Masz aktualną wersję ({version}).',
     updCheckFailed: 'Nie udało się sprawdzić aktualizacji. Sprawdź sieć i spróbuj ponownie.',
     updOpenDownload: 'Otwórz stronę pobierania',
+    updManualMac:
+      'Wersja na Maca nie może zaktualizować się sama. Pobierz nową wersję ze strony pobierania i zainstaluj ją.',
   },
   cs: {
     updTitle: 'Aktualizace softwaru',
@@ -314,6 +343,8 @@ const tUpd = createI18n({
     updUpToDate: 'Máte aktuální verzi ({version}).',
     updCheckFailed: 'Aktualizace se nepodařilo zkontrolovat. Zkontrolujte síť a zkuste to znovu.',
     updOpenDownload: 'Otevřít stránku pro stažení',
+    updManualMac:
+      'Verze pro Mac se nedokáže aktualizovat sama. Stáhněte novou verzi ze stránky pro stažení a nainstalujte ji.',
   },
   nl: {
     updTitle: 'Software-update',
@@ -332,6 +363,8 @@ const tUpd = createI18n({
     updCheckFailed:
       'Kan niet controleren op updates. Controleer uw netwerk en probeer het opnieuw.',
     updOpenDownload: 'Downloadpagina openen',
+    updManualMac:
+      'De Mac-versie kan zichzelf niet bijwerken. Download de nieuwe versie van de downloadpagina en installeer die.',
   },
   ms: {
     updTitle: 'Kemas Kini Perisian',
@@ -349,6 +382,8 @@ const tUpd = createI18n({
     updUpToDate: 'Anda menggunakan versi terkini (versi {version}).',
     updCheckFailed: 'Tidak dapat menyemak kemas kini. Semak rangkaian anda dan cuba lagi.',
     updOpenDownload: 'Buka Halaman Muat Turun',
+    updManualMac:
+      'Versi Mac tidak dapat mengemas kini dirinya sendiri. Muat turun versi baharu dari halaman muat turun dan pasangnya.',
   },
   he: {
     updTitle: 'עדכון תוכנה',
@@ -364,6 +399,7 @@ const tUpd = createI18n({
     updUpToDate: 'הגרסה שלך עדכנית (גרסה {version}).',
     updCheckFailed: 'לא ניתן לבדוק עדכונים. בדקו את הרשת ונסו שוב.',
     updOpenDownload: 'פתח את דף ההורדות',
+    updManualMac: 'גרסת ה-Mac לא יכולה להתעדכן בעצמה. הורד את הגרסה החדשה מדף ההורדות והתקן אותה.',
   },
   hi: {
     updTitle: 'सॉफ़्टवेयर अपडेट',
@@ -381,6 +417,8 @@ const tUpd = createI18n({
     updUpToDate: 'आप अपडेटेड हैं (संस्करण {version}).',
     updCheckFailed: 'अपडेट जांच नहीं हो सकी। अपना नेटवर्क जांचें और फिर से प्रयास करें।',
     updOpenDownload: 'डाउनलोड पृष्ठ खोलें',
+    updManualMac:
+      'Mac संस्करण अपने आप अपडेट नहीं हो सकता। डाउनलोड पृष्ठ से नया संस्करण लेकर इंस्टॉल करें।',
   },
   'zh-TW': {
     updTitle: '軟體更新',
@@ -396,8 +434,17 @@ const tUpd = createI18n({
     updUpToDate: '已是最新版本（{version}）。',
     updCheckFailed: '無法檢查更新，請檢查網路後重試。',
     updOpenDownload: '前往下載頁面',
+    updManualMac: 'Mac 版無法自動更新。請從下載頁面取得新版本並安裝。',
   },
 })
+
+// This product's macOS builds are signed ad hoc only (electron-builder.cjs,
+// docs/tracking/decisions/0030-unsigned-mac-beta.md), and Squirrel.Mac only
+// installs an update into an app signed with a Developer ID. A Mac install
+// still checks the feed (latest-mac.yml), but an update it finds goes
+// straight to the window's manual phase: the release page, never a download
+// that is bound to fail.
+const SELF_UPDATES = process.platform !== 'darwin'
 
 const FIRST_CHECK_DELAY_MS = 15_000
 const RECHECK_INTERVAL_MS = 4 * 60 * 60 * 1000
@@ -474,7 +521,7 @@ function uiStrings(): UpdateUiStrings {
     downloading: tUpd(lang, 'updDownloading'),
     failed: tUpd(lang, 'updFailed'),
     retry: tUpd(lang, 'updRetry'),
-    manualDesc: tUpd(lang, 'updManual'),
+    manualDesc: tUpd(lang, SELF_UPDATES ? 'updManual' : 'updManualMac'),
     openDownload: tUpd(lang, 'updOpenDownload'),
   }
 }
@@ -602,7 +649,7 @@ export function initAutoUpdater(
   selectChannel(initialChannel)
   autoUpdater.autoDownload = false
   // if the user picked "later" after download, install on normal quit
-  autoUpdater.autoInstallOnAppQuit = true
+  autoUpdater.autoInstallOnAppQuit = SELF_UPDATES
   // full-package policy: never attempt blockmap differential downloads
   // (a release then needs only the installer and its latest.yml)
   autoUpdater.disableDifferentialDownload = true
@@ -660,6 +707,10 @@ export function initAutoUpdater(
   const actions = {
     onDownload: () => {
       if (phase === 'downloading' || phase === 'downloaded') return
+      if (!SELF_UPDATES) {
+        void shell.openExternal(manualDownloadUrlFor(latestSeenVersion))
+        return
+      }
       downloadInFlight = true
       setPhase({ phase: 'downloading', percent: 0 })
       const gen = ++downloadGen
@@ -711,7 +762,7 @@ export function initAutoUpdater(
     }
     if (!sameVersionRecheck) {
       failedAttempts = 0
-      phase = 'available'
+      phase = SELF_UPDATES ? 'available' : 'manual'
       percent = 0
     }
     latestSeenVersion = info.version

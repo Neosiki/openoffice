@@ -1,0 +1,113 @@
+name: macOS build
+
+# Builds the macOS installer (Apple Silicon) on a GitHub-hosted Mac, for the
+# maintainer to attach to a release by hand (docs/releasing.ko.md, "Mac 설치
+# 파일"). The app is signed ad hoc and not notarized
+# (docs/tracking/decisions/0030-unsigned-mac-beta.md): no Apple account, no
+# certificate and no repository secret is involved, and nothing is uploaded
+# to a release from here. Run it from the Actions tab on the commit the
+# release tag will point to.
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: mac-build-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    # Apple Silicon runner: the xlsx sidecar and the OCR helper are built for
+    # the host, and the installer is arm64 only
+    runs-on: macos-15
+    timeout-minutes: 60
+    env:
+      # never pick up a keychain identity: the config signs ad hoc
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4 # stable branch, 2026-07
+        with:
+          toolchain: stable
+
+      - name: Cache cargo (xlsx-sidecar)
+        uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+        with:
+          workspaces: apps/sheets/native/xlsx-engine
+
+      - name: Cache electron binaries
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/Library/Caches/electron
+            ~/Library/Caches/electron-builder
+          key: electron-mac-${{ runner.arch }}-${{ hashFiles('package-lock.json') }}
+          restore-keys: electron-mac-${{ runner.arch }}-
+
+      - name: Install dependencies
+        run: npm ci
+
+      # build:all builds the sheets module, which builds the xlsx sidecar for
+      # this host (target/release/xlsx-sidecar, where the mac config reads it)
+      - name: Build apps
+        run: npm run build:all
+
+      - name: Package
+        run: npm run dist:mac -w @genoffice/shell -- --publish never
+
+      - name: Check the signature and the bundled programs
+        run: |
+          set -euo pipefail
+          app="apps/shell/release/mac-arm64/IeumOffice.app"
+          codesign --verify --deep --strict --verbose=2 "$app"
+          codesign -dv "$app" 2>&1 | tee /dev/stderr | grep -q 'Signature=adhoc'
+          for bin in \
+            "$app/Contents/MacOS/IeumOffice" \
+            "$app/Contents/Resources/native/xlsx-sidecar" \
+            "$app/Contents/Resources/ocr/vision-ocr"; do
+            test -f "$bin" || { echo "missing: $bin"; exit 1; }
+            lipo -archs "$bin" | grep -qw arm64 || { echo "not arm64: $bin"; exit 1; }
+          done
+
+      # The packaged app itself, run without a window: a Markdown and a CSV
+      # file (the latter through the xlsx sidecar) are exported to PDF
+      - name: Smoke test the packaged app
+        run: |
+          set -euo pipefail
+          exe="apps/shell/release/mac-arm64/IeumOffice.app/Contents/MacOS/IeumOffice"
+          work="$RUNNER_TEMP/smoke"
+          mkdir -p "$work"
+          printf '# Smoke test\n\nHello from the macOS build.\n' > "$work/note.md"
+          printf 'name,count\napple,3\npear,5\n' > "$work/table.csv"
+          for input in note.md table.csv; do
+            "$exe" --headless-export "$work/$input" --to pdf --out "$work/$input.pdf" --json
+            test -s "$work/$input.pdf"
+          done
+
+      - name: List the release files
+        run: ls -la apps/shell/release
+
+      - name: Upload the release files
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ieumoffice-mac-arm64
+          path: |
+            apps/shell/release/*.dmg
+            apps/shell/release/*.zip
+            apps/shell/release/*.blockmap
+            apps/shell/release/*-mac.yml
+          if-no-files-found: error
+          retention-days: 14

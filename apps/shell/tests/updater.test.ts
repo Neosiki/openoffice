@@ -316,7 +316,8 @@ beforeEach(() => {
   openExternal.mockClear()
   showMessageBox.mockReset()
   showMessageBox.mockImplementation(() => Promise.resolve({ response: 0 }))
-  setPlatform('darwin')
+  // the platform that updates itself; a Mac install is pointed at the release page
+  setPlatform('win32')
 })
 
 afterEach(() => {
@@ -620,6 +621,55 @@ describe('manual download fallback', () => {
     expect(githubReleaseTagUrl('0.3.0-beta.1')).toBe(
       'https://github.com/pblsketch/openoffice/releases/tag/v0.3.0-beta.1',
     )
+  })
+})
+
+describe('macOS: no self-update for an ad hoc signed app', () => {
+  beforeEach(() => {
+    platformSpy?.restore()
+    setPlatform('darwin')
+  })
+
+  it('still checks the feed, but never installs on quit', async () => {
+    const { initAutoUpdater } = await loadUpdater()
+    initAutoUpdater(() => null)
+    expect(updaterState.autoDownload).toBe(false)
+    expect(updaterState.autoInstallOnAppQuit).toBe(false)
+    vi.advanceTimersByTime(FIRST_CHECK_DELAY_MS)
+    expect(checkForUpdates).toHaveBeenCalledTimes(1)
+  })
+
+  it('opens a found update straight in the manual phase, with the Mac wording', async () => {
+    const { initAutoUpdater } = await loadUpdater()
+    initAutoUpdater(() => null)
+    updaterState.listeners.get('update-available')!({ version: '0.2.0' })
+    const state = lastShownState()
+    expect(state.phase).toBe('manual')
+    expect(state.version).toBe('0.2.0')
+    expect(state.strings.manualDesc).toContain('Mac')
+  })
+
+  it('sends the user to the release page instead of downloading', async () => {
+    const { initAutoUpdater } = await loadUpdater()
+    initAutoUpdater(() => null)
+    updaterState.listeners.get('update-available')!({ version: '0.3.0-beta.1' })
+    const actions = lastShownActions()
+    actions.onOpenDownload()
+    // Settings → About re-opens the window through onDownload
+    actions.onDownload()
+    expect(downloadUpdate).not.toHaveBeenCalled()
+    expect(pushUpdateState).not.toHaveBeenCalledWith({ phase: 'downloading', percent: 0 })
+    expect(openExternal).toHaveBeenCalledTimes(2)
+    expect(openExternal).toHaveBeenNthCalledWith(1, githubReleaseTagUrl('0.3.0-beta.1'))
+    expect(openExternal).toHaveBeenNthCalledWith(2, githubReleaseTagUrl('0.3.0-beta.1'))
+  })
+
+  it('keeps the manual phase when a periodic recheck finds the same version', async () => {
+    const { initAutoUpdater } = await loadUpdater()
+    initAutoUpdater(() => null)
+    updaterState.listeners.get('update-available')!({ version: '0.2.0' })
+    updaterState.listeners.get('update-available')!({ version: '0.2.0' })
+    expect(showUpdateWindow.mock.calls.every((call) => call[1].phase === 'manual')).toBe(true)
   })
 })
 

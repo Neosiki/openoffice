@@ -62,7 +62,10 @@ IeumOffice is a modified version of the open-source project
 - **21 interface languages.** Korean and English were written by hand; the
   other 19 are machine translations.
 
-Released and verified on **Windows only**.
+Released for **Windows**, with a separate **beta for Apple Silicon Macs (M1 and
+later)**. The Mac build is unsigned and is verified by the users taking part in
+the beta rather than by the developer
+([Mac beta guide](docs/mac-beta-testing.ko.md), Korean).
 
 ## Connecting your subscription
 
@@ -216,14 +219,36 @@ choose **More info → Run anyway** (the wording differs between Windows
 versions). Download the installer only from the Releases page of this
 repository.
 
+### Mac (beta)
+
+The same Releases page carries `IeumOffice-<version>-arm64.dmg`, for Apple
+Silicon Macs (M1 and later) on macOS 12 or newer; it does not run on Intel
+Macs.
+
+The Mac build has no Apple Developer signature, so macOS warns that it cannot
+verify the app the first time you open it. Move the app from the dmg to
+Applications, open it once, then choose **Open Anyway** under **System Settings
+→ Privacy & Security**. The steps, and what to do when macOS says the app is
+damaged, are in the [Mac beta guide](docs/mac-beta-testing.ko.md).
+
+What differs on a Mac:
+
+- **It does not update itself.** When a new version is out it tells you and
+  opens the download page; install the new dmg over the old app.
+- The AI connection card has **no install button**. Follow its "official
+  install instructions" link to install Claude Code or Codex.
+- Signing in finishes in the browser. If the browser asks you to paste a code,
+  run `claude auth login` or `codex login` in Terminal yourself.
+
 ## Updates
 
-The installed app looks at this repository's GitHub Releases shortly after it
+The Windows app looks at this repository's GitHub Releases shortly after it
 starts and every four hours after that, and offers the new version in an
 update window. If there is no release, no network or the check fails, nothing
 happens and the app keeps working. To check yourself, use **Help → Check for
 Updates…** in the app menu. Pre-release versions are offered only when you
-choose the beta channel under **Settings → About**.
+choose the beta channel under **Settings → About**. The Mac build only tells
+you about a new version (see "Mac (beta)" above).
 
 ## Building from source
 
@@ -247,7 +272,10 @@ npm run native:build -w @genoffice/sheets
 npm run dist:win -- -- --publish never
 ```
 
-The installer appears in `apps/shell/release`. The details, including the
+The installer appears in `apps/shell/release`. The Mac installer is built by
+running "macOS build" in this repository's GitHub Actions (on a Mac, `npm run
+build:all` and then `npm run dist:mac -w @genoffice/shell -- --publish never`).
+The details, including the
 checks a change must pass, are in [CONTRIBUTING.md](CONTRIBUTING.md); the
 release procedure is in [docs/releasing.ko.md](docs/releasing.ko.md) (Korean).
 
@@ -257,9 +285,12 @@ project easy to take.
 
 ## Known limitations
 
-- **Windows only.** The macOS and Linux code inherited from GenOffice is still
-  in the repository, but this project does not build, release or test it.
-- **Unsigned installer**, as described above.
+- **Windows and Apple Silicon Macs (beta) only.** The developer cannot check
+  the Mac build directly; it is checked through the reports of beta users. The
+  Intel Mac and Linux code inherited from GenOffice is still in the repository,
+  but this project does not build, release or test it.
+- **Unsigned installers**, as described above. That is also why the Mac build
+  cannot update itself.
 - **A subscription answers a little later than an API key.** Each request
   starts the vendor's program first, so the first words take a few seconds to
   appear (about four seconds with Claude on the development PC).

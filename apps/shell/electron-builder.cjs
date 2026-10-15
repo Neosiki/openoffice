@@ -781,6 +781,19 @@ if (winSignMode) {
   }
 }
 
+// This product's macOS builds carry no Apple Developer ID (docs/tracking/
+// decisions/0030-unsigned-mac-beta.md): the app is signed ad hoc, which
+// Apple Silicon needs before it runs a binary at all, and nothing is
+// notarized. Hardened runtime is off because, signed ad hoc, its library
+// validation rejects the Electron frameworks. First launch therefore needs
+// the user's explicit "Open Anyway", and Squirrel.Mac cannot install updates
+// into such an app (src/main/updater.ts points a Mac install at the release
+// page instead).
+config.mac.identity = '-'
+config.mac.hardenedRuntime = false
+config.mac.notarize = false
+config.dmg.sign = false
+
 // Auto-update feed: the releases of the public repository. Always configured,
 // so every installer carries an app-update.yml and can update itself — the
 // repository is public, which is why no token or feed URL has to be injected.
