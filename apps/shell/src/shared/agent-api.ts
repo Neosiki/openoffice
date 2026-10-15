@@ -20,9 +20,6 @@ export const AGENT_CHANNELS = {
   event: 'agent-window:event',
 } as const
 
-/** Home → main: open (or focus) the agent window */
-export const AGENT_HOME_OPEN_CHANNEL = 'home:open-agent-window'
-
 export type AgentProvider = 'claude-code' | 'codex'
 export type AgentMode = 'ask-commands' | 'ask-writes' | 'trust-project'
 

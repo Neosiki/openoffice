@@ -41,7 +41,7 @@ import type { TabsApi, TabSummary } from '../shared/tabs-api'
 import { TABS_CHANNELS } from '../shared/tabs-api'
 import type { GenerateHomeApi } from '../shared/generate-api'
 import { GENERATE_HOME_CHANNELS } from '../shared/generate-home-channels'
-import { AGENT_HOME_OPEN_CHANNEL } from '../shared/agent-api'
+import { AGENT_HOME_OPEN_CHANNEL } from '../shared/agent-home-channel'
 import type { SubscriptionApi } from '../shared/subscription-api'
 import {
   SHELL_SUBSCRIPTION_CHANNELS,

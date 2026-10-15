@@ -104,6 +104,16 @@ export function AgentWindow() {
     })
   }, [api])
 
+  // the connection check may still be running when the window opens; ask again until it settles
+  const checking = init ? Object.values(init.connections).includes('checking') : false
+  useEffect(() => {
+    if (!checking) return
+    const timer = setInterval(() => {
+      void api.getInit().then((value) => setInit(value))
+    }, 2000)
+    return () => clearInterval(timer)
+  }, [api, checking])
+
   useEffect(() => {
     logEnd.current?.scrollIntoView({ block: 'end' })
   }, [log])
@@ -226,7 +236,7 @@ export function AgentWindow() {
 
   if (sessionId) {
     return (
-      <div className="agent">
+      <div className="agent" data-busy={log.busy} data-ended={log.ended}>
         <div className="agent-head">
           <h1 className="agent-title">{t('windowTitle')}</h1>
           {log.ended ? (

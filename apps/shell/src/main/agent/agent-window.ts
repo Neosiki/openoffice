@@ -7,7 +7,6 @@ import type { AgentSessionEvent } from '@genoffice/ai-provider/agent-session'
 import type { AiSubscriptionProviderId, AiSubscriptionStatus } from '@genoffice/ai-provider'
 import {
   AGENT_CHANNELS,
-  AGENT_HOME_OPEN_CHANNEL,
   AGENT_MODES,
   AGENT_PROVIDERS,
   AGENT_WARNING_VERSION,
@@ -21,6 +20,7 @@ import {
   type AgentProvider,
   type AgentStartResponse,
 } from '../../shared/agent-api'
+import { AGENT_HOME_OPEN_CHANNEL } from '../../shared/agent-home-channel'
 import { agentText } from '../../renderer/src/i18n/strings-agent'
 import { createAgentManager, openableProjectFile, type AgentManagerDeps } from './agent-sessions'
 
