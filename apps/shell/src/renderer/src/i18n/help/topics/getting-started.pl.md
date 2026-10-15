@@ -22,9 +22,18 @@ Nowy dokument otwiera się bez tytułu; plik na dysku powstaje dopiero przy pier
 
 ## Otwieranie plików
 
-- Menu **Plik ▸ Otwórz…** (⌘O/ctrl+O) otwiera systemowy selektor: .docx / .doc / .xlsx / .xls / .csv / .tsv / .pptx / .ppt / .pdf / .md / .html.
+- Menu **Plik ▸ Otwórz…** (⌘O/ctrl+O) otwiera systemowy selektor: .docx / .doc / .odt / .xlsx / .xls / .csv / .tsv / .pptx / .ppt / .pdf / .md / .html.
 - Kliknij dowolny element na liście **Ostatnie** na stronie głównej.
 - Także `ieumoffice <plik>` wpisane w terminalu otwiera pliki.
+
+## Dokumenty ODT
+
+Pliki .odt (tekst OpenDocument, format zapisywany przez Hancom Office, LibreOffice i inne programy) otwierają się na karcie Docs, z każdego miejsca, z którego otwiera się plik .docx. Nowy dokument nadal jest plikiem .docx.
+
+- **Działa jak zwykle**: edycja tekstu, formatowanie znaków i akapitów, tabele (wstawianie i usuwanie wierszy oraz kolumn, scalanie i dzielenie komórek), obrazy, nagłówki i stopki, przypisy dolne i końcowe, ustawienia strony i sekcje, punktory i numeracja, style nagłówków, łącza, znajdź i zamień, pisownia, drukowanie, eksport do PDF i HTML oraz edycja przez AI.
+- **Wyłączone w ODT**: komentarze, śledzenie zmian, porównywanie, znak wodny, pismo odręczne, spis treści, wstawianie równań, kształtów, pól tekstowych lub wykresów, kolumny, cytaty i bibliografia, podpisy i odsyłacze, kolor strony, hasło i ograniczanie edycji, zalecanie trybu tylko do odczytu, czcionki i kolory motywu, marginesy lustrzane. Ich przyciski są wyszarzone; aby z nich skorzystać, zapisz jako .docx.
+- **Zostaje bez zmian**: równania, wykresy i rysunki z oryginału widać jako zablokowane obrazy, które można usunąć, ale nie edytować, a zablokowane komórki tabeli pozostają zablokowane. Części, których nie ruszasz, zapisują się bez zmian. Plik ODT chroniony hasłem się nie otworzy; najpierw usuń hasło.
+- **Zapisz jako** oferuje .docx i .odt. Przed zmianą formatu pokazuje listę tego, co się zmieni lub przepadnie, a potem otwiera kartę ponownie z nowym plikiem. Markdown i HTML mają też **Eksportuj jako ODT…**.
 
 ## Model zapisywania
 

@@ -22,9 +22,18 @@ Nový dokument se otevře bez názvu; soubor na disku vznikne až při prvním u
 
 ## Otevírání souborů
 
-- Nabídka **Soubor ▸ Otevřít…** (⌘O/ctrl+O) otevře systémový výběr: .docx / .doc / .xlsx / .xls / .csv / .tsv / .pptx / .ppt / .pdf / .md / .html.
+- Nabídka **Soubor ▸ Otevřít…** (⌘O/ctrl+O) otevře systémový výběr: .docx / .doc / .odt / .xlsx / .xls / .csv / .tsv / .pptx / .ppt / .pdf / .md / .html.
 - Klikněte na cokoliv v seznamu **Nedávné** na domovské stránce.
 - Také `ieumoffice <soubor>` z terminálu soubory otevírá.
+
+## Dokumenty ODT
+
+Soubory .odt (text OpenDocument, formát, který ukládají Hancom Office, LibreOffice a další programy) se otevírají na kartě Docs, ze všech míst, odkud se otevírá .docx. Nový dokument je dál .docx.
+
+- **Funguje jako obvykle**: úpravy textu, formát znaků a odstavců, tabulky (vkládání a odstraňování řádků a sloupců, slučování a rozdělování buněk), obrázky, záhlaví a zápatí, poznámky pod čarou a vysvětlivky, vzhled stránky a oddíly, odrážky a číslování, styly nadpisů, odkazy, najít a nahradit, kontrola pravopisu, tisk, export do PDF a HTML a úpravy pomocí AI.
+- **V ODT vypnuto**: komentáře, sledování změn, porovnání, vodoznak, rukopis, obsah, vkládání rovnic, tvarů, textových polí nebo grafů, sloupce, citace a bibliografie, titulky a křížové odkazy, barva stránky, heslo a omezení úprav, doporučení jen pro čtení, písma a barvy motivu, zrcadlové okraje. Jejich tlačítka jsou šedá; chcete-li je použít, uložte dokument jako .docx.
+- **Zůstává beze změny**: rovnice, grafy a kresby z originálu se zobrazují jako zamčené obrázky, které lze smazat, ale ne upravit, a zamčené buňky tabulek zůstávají zamčené. Části, na které nesáhnete, se uloží beze změny. ODT chráněný heslem se neotevře; nejdřív heslo odstraňte.
+- **Uložit jako** nabízí .docx a .odt. Před změnou formátu vypíše, co se změní nebo vypadne, a pak kartu znovu otevře s novým souborem. Markdown a HTML nabízejí také **Exportovat jako ODT…**.
 
 ## Model ukládání
 

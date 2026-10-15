@@ -22,9 +22,18 @@ Een nieuw document opent zonder titel; het bestand op schijf wordt pas aangemaak
 
 ## Bestanden openen
 
-- Menu **Bestand ▸ Openen…** (⌘O/ctrl+O) opent de systeemkiezer: .docx / .doc / .xlsx / .xls / .csv / .tsv / .pptx / .ppt / .pdf / .md / .html.
+- Menu **Bestand ▸ Openen…** (⌘O/ctrl+O) opent de systeemkiezer: .docx / .doc / .odt / .xlsx / .xls / .csv / .tsv / .pptx / .ppt / .pdf / .md / .html.
 - Klik op een willekeurig item in de lijst **Recent** op Start.
 - Ook `ieumoffice <bestand>` in een terminal opent bestanden.
+
+## ODT-documenten
+
+.odt-bestanden (OpenDocument-tekst, het formaat dat Hancom Office, LibreOffice en andere programma's opslaan) openen in het Docs-tabblad, vanaf elke plek waar een .docx opent. Een nieuw document blijft een .docx.
+
+- **Werkt zoals altijd**: tekst bewerken, teken- en alinea-opmaak, tabellen (rijen en kolommen invoegen en verwijderen, cellen samenvoegen en splitsen), afbeeldingen, kop- en voetteksten, voetnoten en eindnoten, pagina-instelling en secties, opsommingstekens en nummering, kopstijlen, koppelingen, zoeken en vervangen, spelling, afdrukken, exporteren naar PDF en HTML, en bewerken met AI.
+- **Uitgeschakeld in ODT**: opmerkingen, wijzigingen bijhouden, vergelijken, watermerk, inkt, inhoudsopgave, vergelijkingen, vormen, tekstvakken of grafieken invoegen, kolommen, citaten en bibliografie, bijschriften en kruisverwijzingen, paginakleur, wachtwoord en bewerkingsbeperking, alleen-lezen aanbevelen, themalettertypen en -kleuren, gespiegelde marges. Hun knoppen zijn grijs; sla op als .docx om ze te gebruiken.
+- **Blijft zoals het was**: vergelijkingen, grafieken en tekeningen uit het origineel verschijnen als vergrendelde afbeeldingen die u kunt verwijderen maar niet bewerken, en vergrendelde tabelcellen blijven vergrendeld. Delen die u niet aanraakt, worden ongewijzigd teruggeschreven. Een ODT met wachtwoord opent niet; verwijder eerst het wachtwoord.
+- **Opslaan als** biedt .docx en .odt. Voordat het formaat wisselt, ziet u wat verandert of wegvalt; daarna opent het tabblad opnieuw met het nieuwe bestand. Markdown en HTML bieden ook **Exporteren als ODT…**.
 
 ## Het opslagmodel
 

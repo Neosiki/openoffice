@@ -22,9 +22,18 @@ Dokumen baru terbuka tanpa nama; file di disk baru dibuat saat disimpan pertama 
 
 ## Membuka file
 
-- Menu **File ▸ Buka…** (⌘O/ctrl+O) membuka pemilih file sistem: .docx / .doc / .xlsx / .xls / .csv / .tsv / .pptx / .ppt / .pdf / .md / .html.
+- Menu **File ▸ Buka…** (⌘O/ctrl+O) membuka pemilih file sistem: .docx / .doc / .odt / .xlsx / .xls / .csv / .tsv / .pptx / .ppt / .pdf / .md / .html.
 - Klik apa pun di daftar **Terbaru** pada Beranda.
 - `ieumoffice <file>` dari terminal juga dapat membuka file.
+
+## Dokumen ODT
+
+File .odt (teks OpenDocument, format yang disimpan Hancom Office, LibreOffice, dan program lain) terbuka di tab Docs, dari semua tempat yang bisa membuka .docx. Dokumen baru tetap berformat .docx.
+
+- **Berjalan seperti biasa**: mengedit teks, format karakter dan paragraf, tabel (menambah dan menghapus baris serta kolom, menggabung dan memisah sel), gambar, header dan footer, catatan kaki dan catatan akhir, pengaturan halaman dan bagian, poin dan penomoran, gaya judul, tautan, cari dan ganti, ejaan, cetak, ekspor PDF dan HTML, serta penyuntingan oleh AI.
+- **Dimatikan di ODT**: komentar, lacak perubahan, bandingkan, tanda air, tinta, daftar isi, menyisipkan persamaan, bentuk, kotak teks, atau bagan, kolom, kutipan dan bibliografi, keterangan dan referensi silang, warna halaman, kata sandi dan pembatasan pengeditan, anjuran baca-saja, font dan warna tema, margin cermin. Tombolnya tampil abu-abu; simpan sebagai .docx untuk memakainya.
+- **Dibiarkan seperti semula**: persamaan, bagan, dan gambar olahan dari dokumen asli tampil sebagai gambar terkunci yang bisa dihapus tetapi tidak bisa diedit, dan sel tabel yang terkunci tetap terkunci. Bagian yang tidak Anda sentuh disimpan kembali tanpa perubahan. ODT yang berkata sandi tidak bisa dibuka; hapus kata sandinya terlebih dahulu.
+- **Simpan Sebagai** menawarkan .docx dan .odt. Sebelum mengganti format, aplikasi menampilkan daftar hal yang berubah atau hilang, lalu membuka ulang tab dengan file baru. Markdown dan HTML juga punya **Ekspor sebagai ODT…**.
 
 ## Cara kerja penyimpanan
 

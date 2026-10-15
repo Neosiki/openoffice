@@ -22,9 +22,18 @@ A new document opens untitled; the file on disk is only created at the first sav
 
 ## Opening files
 
-- Menu **File ▸ Open** (⌘O/ctrl+O) opens the system picker: .docx / .doc / .xlsx / .xls / .csv / .tsv / .pptx / .ppt / .pdf / .md / .html.
+- Menu **File ▸ Open** (⌘O/ctrl+O) opens the system picker: .docx / .doc / .odt / .xlsx / .xls / .csv / .tsv / .pptx / .ppt / .pdf / .md / .html.
 - Click anything in Home's **Recent** list.
 - `ieumoffice <file>` from a terminal also opens files.
+
+## ODT documents
+
+.odt files (OpenDocument text, the format Hancom Office, LibreOffice and others save) open in the Docs tab, from every place a .docx opens. A new document is still a .docx.
+
+- **Works as usual**: editing text, character and paragraph formatting, tables (insert and delete rows and columns, merge and split cells), pictures, headers and footers, footnotes and endnotes, page setup and sections, bullets and numbering, heading styles, links, find and replace, spelling, printing, PDF and HTML export, and AI editing.
+- **Turned off in ODT**: comments, track changes, compare, watermark, ink, table of contents, inserting equations, shapes, text boxes or charts, columns, citations and bibliography, captions and cross-references, page color, password and editing restrictions, read-only recommendation, theme fonts and colors, mirrored margins. Their buttons are greyed out; save as .docx to use them.
+- **Kept as they were**: equations, charts and drawings from the original show as locked pictures you can delete but not edit, and locked table cells stay locked. Parts you do not touch are saved back unchanged. A password-protected ODT does not open; remove the password first.
+- **Save As** offers .docx and .odt. Before switching format it lists what changes or is dropped, then reopens the tab on the new file. Markdown and HTML can also **Export as ODT…**.
 
 ## The save model
 

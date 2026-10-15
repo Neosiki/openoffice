@@ -84,6 +84,7 @@ Rechtermuisklik ergens in de tekst — het menu volgt waarop je klikte. Hoofdgro
 ## Opslaan en exporteren
 
 - Opslaan als .docx herschrijft alleen de gewijzigde alinea's — ongewijzigde inhoud blijft byte voor byte hetzelfde.
+- Opent en bewaart ook .odt (OpenDocument-tekst): Opslaan als biedt .docx of .odt, en wat in ODT-documenten uitgeschakeld is, staat in [Snel aan de slag](help://getting-started).
 - Exporteren naar pdf (met de huidige paginering) en naar afbeeldingen per pagina.
 
 ## Afdrukken

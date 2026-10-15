@@ -4,7 +4,7 @@
  *
  * The authority is the shell's own routing and each editor's Save-As dialog:
  *   - open routing:      apps/shell/src/main/index.ts  (routeDocumentPath,
- *                        OPEN_DIALOG_EXTENSIONS, UNSUPPORTED_DOC_RE)
+ *                        OPEN_DIALOG_EXTENSIONS) and app-routing.ts
  *   - save/export filters: apps/docs|sheets|slides|markdown|html/src/main/*
  *
  * `editor` mirrors that matrix exactly; `mcp` is the subset this server exposes
@@ -55,8 +55,10 @@ export const FORMAT_FAMILIES: readonly FormatFamily[] = [
   {
     family: 'docx',
     label: 'Word document',
-    editorOpen: ['docx'],
-    editorSave: ['docx'],
+    // .odt opens in the same Word tab and its Save As offers docx and ODT; the
+    // MCP subset below stays docx until the MCP tools learn ODT
+    editorOpen: ['docx', 'odt'],
+    editorSave: ['docx', 'odt'],
     editorExport: ['pdf'],
     mcp: { generate: 'docx', save: ['docx'], read: 'docx' },
   },
@@ -88,14 +90,14 @@ export const FORMAT_FAMILIES: readonly FormatFamily[] = [
     label: 'Markdown document',
     editorOpen: ['md', 'markdown'],
     editorSave: ['md', 'markdown'],
-    editorExport: ['docx', 'pdf'],
+    editorExport: ['docx', 'odt', 'pdf'],
   },
   {
     family: 'html',
     label: 'HTML page',
     editorOpen: ['html', 'htm'],
     editorSave: ['html', 'htm'],
-    editorExport: ['docx', 'pdf'],
+    editorExport: ['docx', 'odt', 'pdf'],
   },
   {
     family: 'pdf',

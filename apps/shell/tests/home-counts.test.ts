@@ -73,6 +73,29 @@ describe('home visible counts', () => {
     expect(page.entries.map((entry) => entry.path)).toEqual([bookPath, macroPath])
   })
 
+  it('counts .odt under the Word (docx) filter', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'shell-counts-'))
+    tempDirs.push(dir)
+    const docPath = join(dir, 'notes.docx')
+    const odtPath = join(dir, 'letter.odt')
+    const slidePath = join(dir, 'deck.pptx')
+    writeFileSync(docPath, 'doc')
+    writeFileSync(odtPath, 'odt')
+    writeFileSync(slidePath, 'slide')
+
+    const page = pageRecentPaths(
+      [docPath, odtPath, slidePath],
+      { ext: 'docx', offset: 0, limit: 50 },
+      new Set(),
+    )
+
+    expect(page.total).toBe(2)
+    expect(page.totalAll).toBe(3)
+    expect(page.entries.map((entry) => entry.path)).toEqual([docPath, odtPath])
+    expect(page.entries[1].ext).toBe('odt')
+    expect(visiblePageCount(page)).toBe(2)
+  })
+
   it('counts legacy .xls under the sheets (xlsx) filter', () => {
     const dir = mkdtempSync(join(tmpdir(), 'shell-counts-'))
     tempDirs.push(dir)

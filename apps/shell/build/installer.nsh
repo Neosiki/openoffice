@@ -27,12 +27,34 @@
   ${EndIf}
 !macroend
 
+; .odt is only offered in Explorer's "Open with": a product-own ProgId plus a
+; value under .odt\OpenWithProgids. A win.fileAssociations entry would also
+; write .odt's default value (APP_ASSOCIATE) and take over the user's ODT
+; program, so ODT is registered here instead. ODT opens in the Word tab, so the
+; ProgId borrows the Word icon the installer already places for .docx.
+!define GENOFFICE_ODT_PROGID "IeumOffice.OpenDocumentText"
+
+!macro GenOfficeRegisterOpenWithOdt
+  WriteRegStr SHELL_CONTEXT "Software\Classes\${GENOFFICE_ODT_PROGID}" "" "OpenDocument Text"
+  WriteRegStr SHELL_CONTEXT "Software\Classes\${GENOFFICE_ODT_PROGID}\DefaultIcon" "" "$INSTDIR\resources\docx.ico"
+  WriteRegStr SHELL_CONTEXT "Software\Classes\${GENOFFICE_ODT_PROGID}\shell\open\command" "" '"$appExe" "%1"'
+  WriteRegNone SHELL_CONTEXT "Software\Classes\.odt\OpenWithProgids" "${GENOFFICE_ODT_PROGID}"
+!macroend
+
+!macro GenOfficeUnregisterOpenWithOdt
+  ; Only our value and our ProgId: the .odt key, its default value and other
+  ; programs' OpenWithProgids entries belong to whoever wrote them.
+  DeleteRegValue SHELL_CONTEXT "Software\Classes\.odt\OpenWithProgids" "${GENOFFICE_ODT_PROGID}"
+  DeleteRegKey SHELL_CONTEXT "Software\Classes\${GENOFFICE_ODT_PROGID}"
+!macroend
+
 !macro customInstall
   Push "$INSTDIR\resources\cli"
   Call GenOfficeAddToUserPath
   !insertmacro GenOfficeRegisterShellNew "docx" "IeumOffice.WordDocument"
   !insertmacro GenOfficeRegisterShellNew "xlsx" "IeumOffice.ExcelWorkbook"
   !insertmacro GenOfficeRegisterShellNew "pptx" "IeumOffice.PowerPointPresentation"
+  !insertmacro GenOfficeRegisterOpenWithOdt
   !insertmacro UPDATEFILEASSOC
 !macroend
 
@@ -43,6 +65,7 @@
   !insertmacro GenOfficeUnregisterShellNew "docx" "IeumOffice.WordDocument"
   !insertmacro GenOfficeUnregisterShellNew "xlsx" "IeumOffice.ExcelWorkbook"
   !insertmacro GenOfficeUnregisterShellNew "pptx" "IeumOffice.PowerPointPresentation"
+  !insertmacro GenOfficeUnregisterOpenWithOdt
   Pop $0
   !insertmacro UPDATEFILEASSOC
 !macroend

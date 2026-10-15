@@ -35,7 +35,7 @@ Marque la casilla de una fila, o haga ⌘/ctrl-clic, para ir formando una selecc
 El cuadro de búsqueda de arriba cubre dos cosas a la vez:
 
 - **Nombres de archivo**: filtrado rápido por nombre.
-- **Contenido de los archivos**: GenOffice indexa sus archivos en segundo plano (el texto de los .docx/xlsx/pptx/pdf/md/html), así que buscar en el cuerpo del texto también encuentra archivos. El ámbito y los interruptores se ajustan en los ajustes de búsqueda.
+- **Contenido de los archivos**: GenOffice indexa sus archivos en segundo plano (el texto de los .docx/odt/xlsx/pptx/pdf/md/html), así que buscar en el cuerpo del texto también encuentra archivos. El ámbito y los interruptores se ajustan en los ajustes de búsqueda.
 
 ## Tarjetas de inicio rápido
 
@@ -51,7 +51,7 @@ Qué hace cada tarjeta:
 - **AI Markdown** (.md): un documento Markdown en blanco en el editor Markdown.
 - **AI HTML** (.html): una página web en blanco en el editor HTML.
 - **AI PDF** (.pdf): distinto de los demás: **crea de inmediato** un PDF real en blanco de una sola página en la carpeta de destino y lo abre como un archivo normal (el editor PDF trabaja con archivos reales). Útil para anotar, censurar o añadir texto; el archivo se puede renombrar automáticamente según su contenido al guardarlo por primera vez.
-- **Abrir archivo local**: un selector de archivos del sistema para Word (.docx/.doc), Excel (.xlsx/.xlsm/.xls/.csv/.tsv), PowerPoint (.pptx/.ppt), PDF, Markdown (.md/.markdown) y páginas web (.html/.htm). Permite seleccionar varios; cada archivo recibe su propia pestaña. Los archivos de texto (.txt, .json) también se abren aquí — aterrizan en la vista de código del editor Markdown.
+- **Abrir archivo local**: un selector de archivos del sistema para Word (.docx/.doc/.odt), Excel (.xlsx/.xlsm/.xls/.csv/.tsv), PowerPoint (.pptx/.ppt), PDF, Markdown (.md/.markdown) y páginas web (.html/.htm). Permite seleccionar varios; cada archivo recibe su propia pestaña. Los archivos de texto (.txt, .json) también se abren aquí — aterrizan en la vista de código del editor Markdown.
 
 > Sugerencia: Archivo ▸ Nuevo en la barra de menús crea los mismos tipos de documento (⌘N/Ctrl+N crea un documento de texto de forma predeterminada); arrastrar un archivo a la ventana lo abre.
 

@@ -29,6 +29,7 @@ import { statPathEntries } from './recent-files'
 export const TREE_FILE_EXTENSIONS: ReadonlySet<string> = new Set([
   'docx',
   'doc',
+  'odt',
   'xlsx',
   'xlsm',
   'xls',

@@ -28,6 +28,7 @@ Fai clic su un qualsiasi elemento nell'anteprima e sopra di esso compare una bar
 Menu File, tutto locale e tutto chiede dove mettere il risultato:
 
 - **Esporta come Word…** e **Esporta come PDF…** scrivono un vero .docx o .pdf.
+- **Esporta come ODT…** scrive un .odt (testo OpenDocument) con la stessa conversione dell'esportazione in Word; se qualcosa cambia o va perso lungo il percorso, vedi l'elenco e confermi prima.
 - **Esporta come HTML a file singolo…** scrive un unico .html con le immagini incorporate. Non sovrascriverà il file che avete aperto e vi dice quante immagini non è riuscito a incorporare.
 
 ## Inserisci scheletro

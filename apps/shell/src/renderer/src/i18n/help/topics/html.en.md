@@ -28,6 +28,7 @@ Click any element in the preview and a toolbar floats above it:
 File menu, all local and all asking where to put the result:
 
 - **Export as Word…** and **Export as PDF…** write a real .docx or .pdf.
+- **Export as ODT…** writes an .odt (OpenDocument text) through the same conversion as the Word export; if something changes or is dropped on the way, you see the list and confirm first.
 - **Export as Single-File HTML…** writes one .html with the images embedded in it. It will not overwrite the file you currently have open, and it tells you how many images it could not embed.
 
 ## Insert skeleton

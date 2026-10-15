@@ -80,6 +80,7 @@ Right-click anywhere in the body — the menu follows what you clicked. Main gro
 ## Saving and export
 
 - Saves .docx rewriting only changed paragraphs — untouched content stays byte-identical.
+- Opens and saves .odt (OpenDocument text) too: Save As picks .docx or .odt, and what ODT documents leave out is in [Quick start](help://getting-started).
 - Exports PDF (as paginated) and per-page images.
 
 ## Print

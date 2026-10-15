@@ -35,7 +35,7 @@ Vink het vakje bij een rij aan, of ⌘/ctrl-klik, om een selectie op te bouwen; 
 Het zoekvak bovenaan filtert op twee dingen tegelijk:
 
 - **Bestandsnamen**: snel filteren op naam.
-- **Bestandsinhoud**: GenOffice indexeert je bestanden op de achtergrond (de tekst in docx/xlsx/pptx/pdf/md/html), dus zoeken naar hoofdtekst vindt ook bestanden. Het bereik en de schakelaars staan in de zoekinstellingen.
+- **Bestandsinhoud**: GenOffice indexeert je bestanden op de achtergrond (de tekst in docx/odt/xlsx/pptx/pdf/md/html), dus zoeken naar hoofdtekst vindt ook bestanden. Het bereik en de schakelaars staan in de zoekinstellingen.
 
 ## Snelstartkaarten
 
@@ -51,7 +51,7 @@ Wat elke kaart doet:
 - **AI Markdown** (.md): een leeg Markdown-document in de Markdown-editor.
 - **AI HTML** (.html): een lege webpagina in de HTML-editor.
 - **AI PDF** (.pdf): anders dan de rest — maakt **onmiddellijk** een echt leeg pdf-bestand van één pagina in de doelmap en opent het als gewoon bestand (de pdf-editor werkt met echte bestanden). Handig om aantekeningen te maken, gebieden zwart te maken of tekst toe te voegen; bij de eerste keer opslaan kan het bestand automatisch op basis van de inhoud worden hernoemd.
-- **Lokaal bestand openen**: een systeemkiezer voor Word (.docx/.doc), Excel (.xlsx/.xlsm/.xls/.csv/.tsv), PowerPoint (.pptx/.ppt), pdf, Markdown (.md/.markdown) en webpagina's (.html/.htm). Je kunt meerdere bestanden selecteren; elk bestand krijgt een eigen tabblad. Tekstbestanden (.txt, .json) openen hier ook — ze landen in de bronweergave van de Markdown-editor.
+- **Lokaal bestand openen**: een systeemkiezer voor Word (.docx/.doc/.odt), Excel (.xlsx/.xlsm/.xls/.csv/.tsv), PowerPoint (.pptx/.ppt), pdf, Markdown (.md/.markdown) en webpagina's (.html/.htm). Je kunt meerdere bestanden selecteren; elk bestand krijgt een eigen tabblad. Tekstbestanden (.txt, .json) openen hier ook — ze landen in de bronweergave van de Markdown-editor.
 
 > Tip: Bestand ▸ Nieuw in de menubalk maakt dezelfde soort documenten (⌘N/Ctrl+N maakt standaard een tekstdocument); een bestand naar het venster slepen opent het.
 

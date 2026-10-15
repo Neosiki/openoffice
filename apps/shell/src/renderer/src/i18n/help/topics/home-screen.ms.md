@@ -35,7 +35,7 @@ Tandakan kotak pada satu baris, atau ⌘/ctrl-klik, untuk membina satu pilihan; 
 Kotak carian di atas menapis dua perkara serentak:
 
 - **Nama fail**: penapisan pantas mengikut nama.
-- **Kandungan fail**: GenOffice mengindeks fail anda di latar belakang, iaitu teks di dalam docx/xlsx/pptx/pdf/md/html. Oleh itu, mencari dalam teks badan turut menemui fail. Skop dan suis ditetapkan dalam tetapan carian.
+- **Kandungan fail**: GenOffice mengindeks fail anda di latar belakang, iaitu teks di dalam docx/odt/xlsx/pptx/pdf/md/html. Oleh itu, mencari dalam teks badan turut menemui fail. Skop dan suis ditetapkan dalam tetapan carian.
 
 ## Kad mula pantas
 
@@ -51,7 +51,7 @@ Apa yang setiap kad lakukan:
 - **AI Markdown** (.md): dokumen Markdown kosong dalam editor Markdown.
 - **AI HTML** (.html): laman web kosong dalam editor HTML.
 - **AI PDF** (.pdf): berbeza daripada yang lain. Ia **segera** mencipta PDF kosong satu halaman yang sebenar dalam folder sasaran, kemudian membukanya sebagai fail biasa. Editor PDF beroperasi pada fail sebenar. Kad ini sesuai untuk membuat anotasi, redact atau menambah teks, dan semasa simpanan pertama fail itu boleh dinamakan semula secara automatik berdasarkan kandungannya.
-- **Buka Fail Setempat**: pemilih fail sistem untuk Word (.docx/.doc), Excel (.xlsx/.xlsm/.xls/.csv/.tsv), PowerPoint (.pptx/.ppt), PDF, Markdown (.md/.markdown) dan laman web (.html/.htm). Pelbagai fail boleh dipilih, dan setiap fail mendapat tabnya sendiri. Fail teks (.txt, .json) turut dibuka di sini — ia masuk ke paparan sumber penyunting Markdown.
+- **Buka Fail Setempat**: pemilih fail sistem untuk Word (.docx/.doc/.odt), Excel (.xlsx/.xlsm/.xls/.csv/.tsv), PowerPoint (.pptx/.ppt), PDF, Markdown (.md/.markdown) dan laman web (.html/.htm). Pelbagai fail boleh dipilih, dan setiap fail mendapat tabnya sendiri. Fail teks (.txt, .json) turut dibuka di sini — ia masuk ke paparan sumber penyunting Markdown.
 
 > Petua: Fail ▸ Baharu pada bar menu mencipta jenis dokumen yang sama. Pintasan ⌘N/Ctrl+N secara lalai mencipta dokumen teks. Menyeret fail ke dalam tingkap akan membukanya.
 

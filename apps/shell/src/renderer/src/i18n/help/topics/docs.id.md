@@ -71,6 +71,7 @@ Klik kanan di mana saja pada isi dokumen — menu menyesuaikan dengan yang Anda 
 ## Menyimpan dan mengekspor
 
 - Menyimpan .docx menulis ulang hanya paragraf yang berubah — isi yang tidak disentuh tetap identik byte demi byte.
+- Juga membuka dan menyimpan .odt (teks OpenDocument): Simpan Sebagai menawarkan .docx atau .odt, dan apa saja yang dimatikan di dokumen ODT ada di [Mulai cepat](help://getting-started).
 - Mengekspor PDF (sesuai penomoran halaman) dan gambar per halaman.
 
 ## Mencetak
