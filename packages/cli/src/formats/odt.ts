@@ -256,11 +256,115 @@ function shapeOf(cells: GridCell[]): string {
     .join(',')
 }
 
+interface PrintedCell {
+  row: number
+  col: number
+  print: string
+}
+
 interface TableSnapshot {
   index: number
   shape: string
-  locked: Array<{ row: number; col: number; print: string }>
+  locked: PrintedCell[]
   counts: Map<string, number>
+  /** every cell of the grid with its print, and the grid's size */
+  cells: PrintedCell[]
+  size: GridSize
+}
+
+interface GridSize {
+  rows: number
+  cols: number
+}
+
+function gridSize(grid: readonly GridCell[]): GridSize {
+  let rows = 0
+  let cols = 0
+  for (const g of grid) {
+    rows = Math.max(rows, g.row + Math.max(1, Number(g.node.attrs.rowspan) || 1))
+    cols = Math.max(cols, g.col + Math.max(1, Number(g.node.attrs.colspan) || 1))
+  }
+  return { rows, cols }
+}
+
+const printed = (grid: readonly GridCell[]): PrintedCell[] =>
+  grid.map((g) => ({ row: g.row, col: g.col, print: cellPrint(g.node) }))
+
+/** One signature per grid row (`by: 'row'`) or column: the prints of the cells starting there. */
+function lineSignatures(cells: readonly PrintedCell[], by: 'row' | 'col'): string[] {
+  const other = by === 'row' ? 'col' : 'row'
+  const lines: PrintedCell[][] = []
+  for (const c of cells) (lines[c[by]] ??= []).push(c)
+  return Array.from(lines, (line) =>
+    (line ?? [])
+      .slice()
+      .sort((a, b) => a[other] - b[other])
+      .map((c) => `${c[other]}:${c.print}`)
+      .join('|'),
+  )
+}
+
+/**
+ * before line index → after line index: identical lines matched in order
+ * (longest common subsequence), then the lines of a gap paired in order when
+ * the gap has as many lines on both sides (a line whose span changed).
+ */
+function alignLines(before: readonly string[], after: readonly string[]): Map<number, number> {
+  const n = before.length
+  const m = after.length
+  const lcs = Array.from({ length: n + 1 }, () => new Array<number>(m + 1).fill(0))
+  for (let i = n - 1; i >= 0; i--)
+    for (let j = m - 1; j >= 0; j--)
+      lcs[i]![j] =
+        before[i] === after[j]
+          ? lcs[i + 1]![j + 1]! + 1
+          : Math.max(lcs[i + 1]![j]!, lcs[i]![j + 1]!)
+  const pairs: Array<[number, number]> = []
+  for (let i = 0, j = 0; i < n && j < m;) {
+    if (before[i] === after[j]) pairs.push([i++, j++])
+    else if (lcs[i + 1]![j]! >= lcs[i]![j + 1]!) i++
+    else j++
+  }
+  const out = new Map<number, number>(pairs)
+  const anchors: Array<[number, number]> = [[-1, -1], ...pairs, [n, m]]
+  for (let k = 1; k < anchors.length; k++) {
+    const [i0, j0] = anchors[k - 1]!
+    const [i1, j1] = anchors[k]!
+    if (i1 - i0 === j1 - j0) for (let d = 1; i0 + d < i1; d++) out.set(i0 + d, j0 + d)
+  }
+  return out
+}
+
+/**
+ * A locked cell the op moved or removed, following it through inserted or
+ * deleted rows (or columns) by lining the grids up; null when every locked
+ * cell is still there, unchanged. Undefined when neither the rows nor the
+ * columns of the two grids line up (the caller falls back to counting).
+ */
+function movedLockedCell(
+  snap: TableSnapshot,
+  now: PrintedCell[],
+  size: GridSize,
+): PrintedCell | null | undefined {
+  const at = (cells: PrintedCell[], row: number, col: number) =>
+    cells.find((c) => c.row === row && c.col === col)
+  const sameRows = snap.size.rows === size.rows
+  const sameCols = snap.size.cols === size.cols
+  if (sameRows && sameCols) {
+    // spans changed in place (merge, split): locked cells stay where they were
+    return snap.locked.find((c) => at(now, c.row, c.col)?.print !== c.print) ?? null
+  }
+  if (!sameRows && !sameCols) return undefined
+  const by = sameCols ? 'row' : 'col'
+  const map = alignLines(lineSignatures(snap.cells, by), lineSignatures(now, by))
+  return (
+    snap.locked.find((c) => {
+      const line = map.get(c[by])
+      if (line === undefined) return true
+      const moved = by === 'row' ? at(now, line, c.col) : at(now, c.row, line)
+      return moved?.print !== c.print
+    }) ?? null
+  )
 }
 
 interface Snapshot {
@@ -351,6 +455,8 @@ export class OdtEditGuard {
         shape: shapeOf(grid),
         locked: cells.map((c) => ({ ...c, print: prints.get(`${c.row}:${c.col}`) ?? '' })),
         counts,
+        cells: printed(grid),
+        size: gridSize(grid),
       })
     }
     return { tables, objects: this.objectPrints(doc) }
@@ -372,7 +478,11 @@ export class OdtEditGuard {
         }
         continue
       }
-      // rows or columns moved: every locked cell must still be there, unchanged
+      // rows or columns moved: follow every locked cell to its new place
+      const moved = movedLockedCell(snap, printed(grid), gridSize(grid))
+      if (moved) return lockedCell(snap.index, moved)
+      if (moved === null) continue
+      // neither rows nor columns line up: every locked print must still be there as often
       const counts = new Map<string, number>()
       for (const g of grid) {
         const print = cellPrint(g.node)

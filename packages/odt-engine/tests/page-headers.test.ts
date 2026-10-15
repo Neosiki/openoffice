@@ -1,7 +1,7 @@
 import { PAGE_MARK } from '@genoffice/docx-engine'
 import { describe, expect, it } from 'vitest'
 import { buildOdt } from './helpers/build-odt'
-import { hPara } from './helpers/hancom-fragments'
+import { hCell, hFramedTable, hPara, hRow, hTable } from './helpers/hancom-fragments'
 import { bodyOf, editorSave, replaceText } from './helpers/bridge'
 import { editedHf, odtToPageBridge, pageWriteBack, sectionsOf } from './helpers/page-bridge'
 import {
@@ -30,6 +30,50 @@ function region(styles: string, master: string, name: string): string | null {
   const hit = re.exec(m)
   return hit ? (hit[1] ?? '') : null
 }
+
+describe('header objects the editor does not show', () => {
+  // a Hancom header: a text paragraph and a paragraph holding only a framed table
+  const framed = hFramedTable(hTable('Table9', 1, [hRow([hCell(hPara('logo'))])]), {
+    anchor: 'paragraph',
+  })
+  const masters = (extra: string) =>
+    masterXml('Standard', 'Mpm1', { header: ['header'], footer: ['footer'] }) +
+    `<style:master-page style:name="MP2" style:page-layout-name="Mpm2"><style:header>${hp('header 2')}${extra}</style:header></style:master-page>`
+
+  async function replaceHeader(extra: string) {
+    const { bridge, parsed, sections } = await open(pageDoc({ masterStyles: masters(extra) }))
+    const rId = sections[1].headerRefs.default as string
+    // the CLI's set_header_footer: the whole header becomes one new paragraph
+    const hf = editedHf(parsed, rId, (paras) => {
+      replaceText(paras[0] as never, 0, 8, 'NEW')
+      paras.splice(1)
+    })
+    const { bytes } = await editorSave(bridge.docx, keepAll, {
+      sectionHf: [{ lastBlockIndex: sections[1].lastBlockIndex, kind: 'header', hf }],
+    })
+    const back = await pageWriteBack(bridge, bytes)
+    return region(back.styles, 'MP2', 'header') as string
+  }
+
+  it('keeps a deleted paragraph that held only a framed table', async () => {
+    const after = await replaceHeader(framed.paragraph)
+    expect(after).toBe(hp('NEW') + framed.paragraph)
+  })
+
+  it('keeps the table of a deleted paragraph that had text too, without the text', async () => {
+    const close = '</text:p>'
+    const mixed = `${framed.paragraph.slice(0, -close.length)}<text:span text:style-name="MT40">gone</text:span>${close}`
+    const after = await replaceHeader(mixed)
+    expect(after).toContain(framed.frame)
+    expect(after).not.toContain('gone')
+    expect(after.startsWith(hp('NEW'))).toBe(true)
+  })
+
+  it('drops a deleted paragraph with nothing hidden in it', async () => {
+    const after = await replaceHeader(hp('second'))
+    expect(after).toBe(hp('NEW'))
+  })
+})
 
 describe('header and footer edits', () => {
   it('rewrites only the edited region of an unshared master page', async () => {

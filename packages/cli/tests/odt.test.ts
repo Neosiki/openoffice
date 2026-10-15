@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest'
 import { closeDocument, openDocumentFile } from '../src/formats/docx'
 import { OdtEditGuard, odtDisabledFeature } from '../src/formats/odt'
 import { run, tempDir } from './helpers'
-import { encryptedOdt, writeFormOdt, zipEntries } from './odt-fixtures'
+import { encryptedOdt, lockedBlanksOdt, writeFormOdt, zipEntries } from './odt-fixtures'
 
 function opsFile(dir: string, ops: unknown[]): string {
   const path = join(dir, `ops-${Math.random().toString(36).slice(2)}.json`)
@@ -195,6 +195,51 @@ describe('docs read / apply on a received .odt', () => {
     const xml = (await zipEntries(readFileSync(odt))).get('content.xml')!.toString('utf8')
     expect(xml).toContain('ALPHA')
     expect(xml.match(/table:protected="true"/g)).toHaveLength(2)
+  })
+
+  it('follows locked cells through row and cell edits elsewhere, even when other cells look the same', async () => {
+    const dir = tempDir()
+    const odt = join(dir, 'blanks.odt')
+    writeFileSync(odt, await lockedBlanksOdt())
+    const original = readFileSync(odt)
+    const apply = (op: unknown) =>
+      run([
+        'docs',
+        'apply',
+        odt,
+        '--ops',
+        opsFile(dir, [op]),
+        '--out',
+        join(dir, 'out.odt'),
+        '--force',
+        '--json',
+      ])
+    const table = { blockIndexes: [1] }
+    // the locked row itself, or a merge with a locked cell: refused
+    for (const op of [
+      { op: 'deleteTableRow', target: table, row: 0 },
+      { op: 'mergeTableCells', target: table, range: { row: 0, col: 1, colEnd: 2 } },
+    ]) {
+      const r = await apply(op)
+      expect(r.json(), JSON.stringify(op)).toMatchObject({ error: 'op_rejected' })
+    }
+    // rows and cells that are not locked: allowed although they print like the locked blanks
+    for (const op of [
+      { op: 'deleteTableRow', target: table, row: 2 },
+      { op: 'deleteTableRow', target: table, row: 1 },
+      { op: 'mergeTableCells', target: table, range: { row: 1, col: 0, colEnd: 1 } },
+      { op: 'insertTableRow', target: table, row: 0, position: 'before' },
+      { op: 'deleteTableColumn', target: table, col: 2 },
+    ]) {
+      const r = await apply(op)
+      expect(r.code, `${JSON.stringify(op)} ${r.stdout}`).toBe(0)
+      const xml = (await zipEntries(readFileSync(join(dir, 'out.odt')))).get('content.xml')!
+      expect(xml.toString('utf8').match(/table:protected="true"/g)).toHaveLength(2)
+    }
+    // a column holding a locked cell: refused
+    const r = await apply({ op: 'deleteTableColumn', target: table, col: 0 })
+    expect(r.json()).toMatchObject({ error: 'op_rejected' })
+    expect(readFileSync(odt).equals(original)).toBe(true)
   })
 
   it('a batch with rejected ops writes the rest and answers partial', async () => {

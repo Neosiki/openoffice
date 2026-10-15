@@ -9,7 +9,7 @@ import { describe, expect, it } from 'vitest'
 import { OdtEncryptedError, isOdtOpenError, odtToDocx, odtToText, saveOdt } from '../src'
 import { readOdtPackage } from '../src/core'
 import { changedRegion, diffPackages, expectedOrder, roundTrip, textOf } from './helpers/api'
-import { editOnly, editorSave, replaceText } from './helpers/bridge'
+import { type EditorOp, editOnly, editorSave, replaceText } from './helpers/bridge'
 import { buildOdt, buildOdtPackage } from './helpers/build-odt'
 import {
   hCell,
@@ -143,6 +143,93 @@ describe('saveOdt with one edit', () => {
     const before = textOf(await readOdtPackage(odt), 'styles.xml')
     const after = textOf(await readOdtPackage(saved), 'styles.xml')
     expect(changedRegion(before, after)).toEqual({ before: 'header', after: 'HEADER' })
+  })
+})
+
+describe('the editor paragraph after a final table', () => {
+  // the editor keeps an empty paragraph after a table that ends the document
+  // and saves it as a bare w:p the bridge never had
+  const filler: EditorOp = { xml: '<w:p></w:p>' }
+  const editFirst = (blocks: unknown[]): EditorOp[] =>
+    blocks.map((_, i) =>
+      i === 0 ? { edit: 0, change: (g) => replaceText(g, 0, 1, '첫') } : { keep: i },
+    )
+
+  it.each([
+    ['a body table', () => hTable('Table1', 1, [hRow([hCell(hPara('b'))])])],
+    [
+      'a framed table',
+      () => hFramedTable(hTable('Table1', 1, [hRow([hCell(hPara('b'))])])).paragraph,
+    ],
+  ])('is not written when the document ends with %s', async (_, last) => {
+    const odt = await buildOdt({ body: hPara('앞') + last() })
+    const { saved } = await roundTrip(odt, (blocks) => [...editFirst(blocks), filler])
+    const before = textOf(await readOdtPackage(odt), 'content.xml')
+    const after = textOf(await readOdtPackage(saved), 'content.xml')
+    expect(after).toBe(before.replace(hPara('앞'), hPara('첫')))
+  })
+
+  it('is written when the paragraph has text', async () => {
+    const odt = await buildOdt({
+      body: hPara('앞') + hTable('Table1', 1, [hRow([hCell(hPara('b'))])]),
+    })
+    const typed = { xml: '<w:p><w:r><w:t>끝</w:t></w:r></w:p>' }
+    const { saved } = await roundTrip(odt, (blocks) => [
+      ...blocks.map((_, i) => ({ keep: i })),
+      typed,
+    ])
+    const after = textOf(await readOdtPackage(saved), 'content.xml')
+    expect(after).toMatch(/<\/table:table><text:p [^>]*>(?:<text:span[^>]*>)?끝/)
+  })
+
+  it('an empty new last paragraph is kept when the document ends with a paragraph', async () => {
+    const odt = await buildOdt({ body: hPara('앞') })
+    const { saved } = await roundTrip(odt, (blocks) => [
+      ...blocks.map((_, i) => ({ keep: i })),
+      filler,
+    ])
+    const before = textOf(await readOdtPackage(odt), 'content.xml')
+    const after = textOf(await readOdtPackage(saved), 'content.xml')
+    expect(after).not.toBe(before)
+    expect(after).toContain(`${hPara('앞')}<text:p `)
+  })
+})
+
+describe('a heading written as a paragraph with an outline-level style', () => {
+  // how docxToOdt writes headings (Hancom numbers every text:h)
+  const headingStyle =
+    '<style:style style:name="Heading1" style:family="paragraph" style:display-name="Heading 1" style:default-outline-level="1"><style:text-properties fo:font-weight="bold"/></style:style>'
+  const body = '<text:p text:style-name="Heading1">제목</text:p>' + hPara('본문')
+
+  it('stays a text:p when its text is edited', async () => {
+    const odt = await buildOdt({ body, extraCommonStyles: headingStyle })
+    const { saved } = await roundTrip(odt, (blocks) => {
+      expect(blocks[0]!.type).toBe('heading')
+      return blocks.map((_, i) =>
+        i === 0 ? { edit: 0, change: (g) => replaceText(g, 0, 0, '새 ') } : { keep: i },
+      )
+    })
+    const after = textOf(await readOdtPackage(saved), 'content.xml')
+    expect(after).toContain('<text:p text:style-name="Heading1">새 제목</text:p>')
+    expect(after).not.toContain('<text:h')
+  })
+
+  it('becomes a text:h when another heading style is applied', async () => {
+    const odt = await buildOdt({ body, extraCommonStyles: headingStyle })
+    const { saved } = await roundTrip(odt, (blocks) =>
+      blocks.map((_, i) =>
+        i === 0
+          ? {
+              edit: 0,
+              change: (g) => {
+                g.level = 2
+                g.styleId = 'Heading2'
+              },
+            }
+          : { keep: i },
+      ),
+    )
+    expect(textOf(await readOdtPackage(saved), 'content.xml')).toContain('text:outline-level="2"')
   })
 })
 

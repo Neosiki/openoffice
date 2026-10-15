@@ -1,5 +1,13 @@
 import { beforeAll, describe, expect, it } from 'vitest'
-import { type OdtDocument, type OdtStyleTable, openOdt, readOdtStyles } from '../src/core'
+import { parseDocx } from '@genoffice/docx-engine'
+import {
+  type OdtDocument,
+  type OdtStyleTable,
+  OoxmlToOdfContext,
+  openOdt,
+  readOdtStyles,
+} from '../src/core'
+import { odtToBridge } from './helpers/bridge'
 import { buildContentXml, buildOdt, buildStylesXml } from './helpers/build-odt'
 import { hParagraphAutoStyle } from './helpers/hancom-fragments'
 
@@ -223,5 +231,24 @@ describe('style table: lists, page layouts and master pages', () => {
     const t = readOdtStyles(null, buildContentXml())
     expect(t.find('P1_0', 'paragraph', 'content')).toBeDefined()
     expect(t.masterPages).toEqual([])
+  })
+})
+
+describe('derived style names', () => {
+  it('are new, unused NCNames even when the original name is not one', async () => {
+    const bridge = await odtToBridge(await buildOdt())
+    const rctx = new OoxmlToOdfContext(
+      bridge.doc,
+      bridge.map,
+      await parseDocx(bridge.docx),
+      bridge.registry,
+    )
+    expect(rctx.allocateStyleName('P1_0')).toBe('P1_0_io1')
+    expect(rctx.allocateStyleName('P1_0')).toBe('P1_0_io2')
+    expect(rctx.allocateStyleName('P1_0_io1')).toBe('P1_0_io3')
+    // Hancom names the 27th column `[`, and puts spaces in style names
+    expect(rctx.allocateStyleName('Table2.[')).toBe('Table2.__io1')
+    expect(rctx.allocateStyleName('바탕글 1')).toBe('바탕글_1_io1')
+    expect(rctx.allocateStyleName('1st')).toBe('_1st_io1')
   })
 })

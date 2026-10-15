@@ -10,6 +10,7 @@ import type {
   EditedItem,
   FreeWriter,
   OdfToOoxmlContext,
+  OoxmlToOdfContext,
 } from '../core/convert'
 import { blockSource, paragraphBlockOf } from '../core/flow'
 import { editedParagraphFromBlock, paragraphToOdf } from '../text/paragraph-odf'
@@ -33,6 +34,34 @@ const tableBlockOf = (item: EditedItem): Block | null =>
   item.blocks.length === 1 && item.blocks[0].type === 'table' && item.blocks[0].table
     ? item.blocks[0]
     : null
+
+/**
+ * A paragraph holding only pictures comes back from the editor as a picture
+ * block that no bookmark ties to its paragraph. When its pictures (`odt-pic:`
+ * / `odt-keep:` names) come from the text paragraph of a frame host, it is
+ * that paragraph: the host writes it, with the pictures as the objects layer
+ * writes them, instead of the paragraph coming out twice (once from the host,
+ * once as a new picture paragraph holding the frames again).
+ */
+function isHostPictureParagraph(
+  rctx: OoxmlToOdfContext,
+  paragraph: number,
+  item: EditedItem,
+): boolean {
+  if (paragraphBlockOf(item) || !item.xml.startsWith('<w:p') || !item.xml.includes('<w:drawing>'))
+    return false
+  const objects = rctx.map.ext.objects as
+    | {
+        pictures?: Array<{ name: string; paragraph: number | null }>
+        placeholders?: Array<{ name: string; paragraph: number | null }>
+      }
+    | undefined
+  const owners = new Map<string, number | null>()
+  for (const o of [...(objects?.pictures ?? []), ...(objects?.placeholders ?? [])])
+    owners.set(o.name, o.paragraph)
+  const names = [...item.xml.matchAll(/\bname="(odt-(?:pic|keep):[^"]+)"/g)].map((m) => m[1])
+  return names.length > 0 && names.every((n) => owners.get(n) === paragraph)
+}
 
 export const tableBlockConverter: BlockConverter = {
   id: TABLE_OWNER,
@@ -93,6 +122,19 @@ export const tableBlockConverter: BlockConverter = {
     let para: Para = data.paragraph === null ? { state: 'unchanged' } : { state: 'deleted' }
     const extra: EditedItem[] = []
     for (const a of items) {
+      if (
+        !a.element &&
+        data.kind === 'frames' &&
+        data.paragraph !== null &&
+        para.state === 'deleted' &&
+        isHostPictureParagraph(rctx, data.paragraph, a.item)
+      ) {
+        const writer = rctx.registry.freeWriterFor(a.item)
+        if (writer) {
+          para = { state: 'changed', xml: writer.toOdf(rctx, [a.item], env) }
+          continue
+        }
+      }
       if (!a.element || a.element.block !== block.id) {
         extra.push(a.item)
         continue
@@ -158,6 +200,14 @@ export const tableBlockConverter: BlockConverter = {
       }
     }
     return out
+  },
+  absorbs(rctx, block, item) {
+    const data = block.data as unknown as TableBlockData | undefined
+    return (
+      data?.kind === 'frames' &&
+      data.paragraph !== null &&
+      isHostPictureParagraph(rctx, data.paragraph, item)
+    )
   },
   identify(rctx, item, candidates) {
     const edited = tableBlockOf(item)

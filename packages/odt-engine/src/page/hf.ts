@@ -301,7 +301,10 @@ export function regionInnerXml(
     }
     const record = records[index]
     const target = pair[index]
-    if (target < 0) continue
+    if (target < 0) {
+      out += hiddenObjects(xml, record)
+      continue
+    }
     emitNew(target, record)
     out += write(edited[target], record, base[index], null, null)
     nextEdited = target + 1
@@ -309,6 +312,24 @@ export function regionInnerXml(
   }
   emitNew(edited.length, records[records.length - 1] ?? null)
   return out
+}
+
+/**
+ * What a deleted header/footer paragraph must still leave behind: the objects
+ * the editor never showed (a framed table, a text box, a picture stay out of
+ * the bridge docx as `keep` markers), so deleting the paragraph in the editor
+ * cannot be meant to delete them. A paragraph holding only such objects keeps
+ * its bytes; one with text too keeps its start tag and the objects. '' when it
+ * held none.
+ */
+function hiddenObjects(xml: string, record: BridgeParagraph): string {
+  const kept = record.markers.filter((m) => m.kind === 'keep')
+  if (!kept.length) return ''
+  if (!record.text.trim()) return xml.slice(record.start, record.end)
+  const source = xml.slice(record.start, record.end)
+  const open = /^<[^>]*>/.exec(source)?.[0] ?? ''
+  const tag = /^<([^\s/>]+)/.exec(open)?.[1] ?? record.element
+  return `${open}${kept.map((m) => xml.slice(m.start, m.end)).join('')}</${tag}>`
 }
 
 /** The inner XML of a region as it is now. */

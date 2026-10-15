@@ -522,7 +522,9 @@ export function paragraphToOdf(
     if (isLast && breakAfterLast) extra['fo:break-after'] = 'page'
     else if (styleInfo.breakAfter) extra['fo:break-after'] = 'auto'
     const styleName = styleFor(extra)
-    out.push(wrapParagraph(rctx, para, isFirst ? model : null, styleName, piece.body, part))
+    out.push(
+      wrapParagraph(rctx, para, isFirst ? model : null, styleName, piece.body, part, !styleChanged),
+    )
   })
   return out.join('')
 }
@@ -533,7 +535,12 @@ function isCharacterObjectXml(xml: string): boolean {
   return !!tag && tag[1] === 'draw' && /\stext:anchor-type\s*=\s*["']as-char["']/.test(tag[0])
 }
 
-/** The paragraph element; the original start tag (ids, unknown attributes) is reused when it fits. */
+/**
+ * The paragraph element; the original start tag (ids, unknown attributes) is reused when it fits.
+ * A `text:p` that is a heading only through its style's outline level (how Hancom writes its
+ * outline paragraphs and how docxToOdt writes headings) stays a `text:p` while its style is
+ * unchanged: Hancom numbers every `text:h` ("1.", "1.1.").
+ */
 function wrapParagraph(
   rctx: OoxmlToOdfContext,
   para: EditedParagraph,
@@ -541,9 +548,10 @@ function wrapParagraph(
   styleName: string | null,
   body: string,
   part: OdtStylePart,
+  sameStyle: boolean,
 ): string {
   const prefixes = rctx.part(part).prefixes
-  const heading = para.type === 'heading'
+  const heading = para.type === 'heading' && !(sameStyle && model?.element === 'text:p')
   const element = heading ? 'text:h' : 'text:p'
   const level = heading ? String(Math.max(1, Math.min(10, para.level ?? 1))) : null
   let open: string
