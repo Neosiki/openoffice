@@ -203,10 +203,15 @@ test.describe('PDF tools window', () => {
       expect(await sha(b)).toBe(before.b)
       expect(existsSync(join(parts, 'a-4.pdf'))).toBe(false)
 
-      await Promise.all([
-        tools.waitForEvent('close'),
-        tools.getByRole('button', { name: 'Close', exact: true }).click(),
-      ])
+      const closed = tools.waitForEvent('close')
+      // the window can close before the click itself has finished: that is the button working
+      await tools
+        .getByRole('button', { name: 'Close', exact: true })
+        .click()
+        .catch((err: unknown) => {
+          if (!tools.isClosed()) throw err
+        })
+      await closed
     } finally {
       await closeAndSaveVideo(launched, 'pdf-tools-window')
     }
