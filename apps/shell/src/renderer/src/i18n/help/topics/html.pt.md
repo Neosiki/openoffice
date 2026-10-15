@@ -28,6 +28,7 @@ Clique num elemento da pré-visualização e uma barra de ferramentas flutua por
 Menu Arquivo, tudo local e tudo pergunta onde colocar o resultado:
 
 - **Exportar como Word…** e **Exportar como PDF…** escrevem um .docx ou .pdf a sério.
+- **Exportar como ODT…** grava um .odt (texto OpenDocument) pela mesma conversão da exportação para Word; se algo mudar ou se perder no caminho, você vê a lista e confirma antes.
 - **Exportar como HTML de arquivo único…** escreve um único .html com as imagens incorporadas. Não substitui o ficheiro que tem aberto neste momento e indica-lhe quantas imagens não conseguiu incorporar.
 
 ## Inserir esqueleto

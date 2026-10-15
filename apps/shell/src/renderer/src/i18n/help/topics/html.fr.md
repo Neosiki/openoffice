@@ -28,6 +28,7 @@ Cliquez sur n’importe quel élément dans l’aperçu et une barre d’outils 
 Menu Fichier, tout est local et tout demande où mettre le résultat :
 
 - **Exporter en Word…** et **Exporter en PDF…** écrivent un vrai .docx ou .pdf.
+- **Exporter en ODT…** écrit un .odt (texte OpenDocument) par la même conversion que l'export Word ; si quelque chose change ou disparaît en route, la liste s'affiche et vous confirmez d'abord.
 - **Exporter en HTML (fichier unique)…** écrit un seul .html avec les images incorporées. Il n’écrasera pas le fichier que vous avez ouvert et il indique combien d’images il n’a pas pu incorporer.
 
 ## Insérer un squelette

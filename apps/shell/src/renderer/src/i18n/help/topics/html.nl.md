@@ -28,6 +28,7 @@ Klik op een willekeurig element in het voorbeeld en er verschijnt een werkbalk b
 Menu Bestand, alles lokaal en alles vraagt waar het resultaat heen moet:
 
 - **Exporteren als Word…** en **Exporteren als PDF…** schrijven een echte .docx of .pdf.
+- **Exporteren als ODT…** schrijft een .odt (OpenDocument-tekst) via dezelfde omzetting als de Word-export; verandert er onderweg iets of valt er iets weg, dan ziet u de lijst en bevestigt u eerst.
 - **Exporteren als één HTML-bestand…** schrijft één .html met de afbeeldingen erin ingesloten. Het overschrijft niet het bestand dat u nu open hebt en het meldt hoeveel afbeeldingen het niet kon insluiten.
 
 ## Skeleton invoegen

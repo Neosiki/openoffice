@@ -28,6 +28,7 @@ Nhấp vào bất kỳ phần tử nào trong bản xem trước, một thanh c�
 Trình đơn Tệp, tất cả đều cục bộ và đều hỏi lưu kết quả ở đâu:
 
 - **Xuất dưới dạng Word…** và **Xuất dưới dạng PDF…** ghi ra tệp .docx hoặc .pdf thật.
+- **Xuất dưới dạng ODT…** ghi một tệp .odt (văn bản OpenDocument) qua cùng phép chuyển đổi với xuất Word; nếu có gì thay đổi hoặc bị bỏ trong quá trình đó, bạn sẽ thấy danh sách và xác nhận trước.
 - **Xuất dưới dạng HTML một tệp…** ghi ra một tệp .html duy nhất có nhúng hình ảnh bên trong. Nó không ghi đè tệp bạn đang mở và cho biết có bao nhiêu hình ảnh không nhúng được.
 
 ## Chèn khung xương

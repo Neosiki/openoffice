@@ -35,7 +35,7 @@ Spunta la casella di una riga, o fai ⌘/ctrl-clic, per comporre una selezione; 
 La casella di ricerca in alto filtra contemporaneamente due cose:
 
 - **Nomi dei file**: filtro rapido per nome.
-- **Contenuto dei file**: GenOffice indicizza i tuoi file in background (il testo dentro docx/xlsx/pptx/pdf/md/html), così cercando nel corpo del testo trovi file. L'ambito e le opzioni si impostano nelle impostazioni di ricerca.
+- **Contenuto dei file**: GenOffice indicizza i tuoi file in background (il testo dentro docx/odt/xlsx/pptx/pdf/md/html), così cercando nel corpo del testo trovi file. L'ambito e le opzioni si impostano nelle impostazioni di ricerca.
 
 ## Schede di avvio rapido
 
@@ -51,7 +51,7 @@ Cosa fa ogni scheda:
 - **AI Markdown** (.md): un documento Markdown vuoto nell'editor Markdown.
 - **AI HTML** (.html): una pagina web vuota nell'editor HTML.
 - **AI PDF** (.pdf): diverso dagli altri — crea **immediatamente** un vero PDF vuoto di una sola pagina nella cartella di destinazione e lo apre come file normale (l'editor PDF lavora su file reali). Utile per annotare, oscurare o aggiungere testo; al primo salvataggio il file può essere rinominato automaticamente in base al suo contenuto.
-- **Apri file locale**: un selettore di file di sistema per Word (.docx/.doc), Excel (.xlsx/.xlsm/.xls/.csv/.tsv), PowerPoint (.pptx/.ppt), PDF, Markdown (.md/.markdown) e pagine web (.html/.htm). È possibile selezionare più file; ogni file ottiene la propria scheda. Anche i file di testo (.txt, .json) si aprono da qui — atterrano nella vista sorgente dell'editor Markdown.
+- **Apri file locale**: un selettore di file di sistema per Word (.docx/.doc/.odt), Excel (.xlsx/.xlsm/.xls/.csv/.tsv), PowerPoint (.pptx/.ppt), PDF, Markdown (.md/.markdown) e pagine web (.html/.htm). È possibile selezionare più file; ogni file ottiene la propria scheda. Anche i file di testo (.txt, .json) si aprono da qui — atterrano nella vista sorgente dell'editor Markdown.
 
 > Suggerimento: File ▸ Nuovo nella barra dei menu crea gli stessi tipi di documento (⌘N/Ctrl+N crea per impostazione predefinita un documento di testo); trascinando un file nella finestra lo si apre.
 

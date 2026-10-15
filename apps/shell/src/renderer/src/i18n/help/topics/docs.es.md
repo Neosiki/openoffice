@@ -71,6 +71,7 @@ Haga clic derecho en cualquier parte del cuerpo: el menú se ajusta a lo que ha 
 ## Guardar y exportar
 
 - Guarda .docx reescribiendo solo los párrafos modificados: el contenido intacto queda idéntico byte a byte.
+- También abre y guarda .odt (texto OpenDocument): Guardar como ofrece .docx o .odt, y lo que se desactiva en los documentos ODT está en [Inicio rápido](help://getting-started).
 - Exporta a PDF (con la paginación actual) y a imágenes página por página.
 
 ## Imprimir

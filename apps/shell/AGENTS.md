@@ -10,7 +10,7 @@
 - 파일 색인과 지식 기반(`src/main/file-index/`, `knowledge-base.ts`), 최근 파일, 폴더 트리.
 - 자동 업데이트(`updater.ts`, `update-window.ts`, `update-resume.ts`)와 패키징 설정 `electron-builder.cjs`.
 - 외부에서 들어오는 입구: 앱 안 MCP 서버(`src/main/mcp/`), 명령줄용 제어 채널(`control-server.ts`), 열린 문서 목록 게시(`open-documents.ts`), 명령줄 PATH 연결과 실행기 위치 기록(`cli-link.ts`), 스킬·MCP 등록 IPC(`integrations-ipc.ts`).
-- 기본 앱 등록과 파일 연결(`default-app.ts`).
+- 기본 앱 등록과 파일 연결(`default-app.ts`), 설치 프로그램이 하는 Windows 등록(`build/installer.nsh`: PATH, 탐색기 "새로 만들기" 서식, `.odt`의 "연결 프로그램" 후보).
 
 ## 맡지 않는 것 (경계)
 
@@ -36,6 +36,9 @@
 - 스킬과 MCP 등록은 통합 탭에서 사용자가 누를 때만 쓴다. 시작 시 자동으로 에이전트 설정 파일을 고치지 않는다.
 - "GenOffice를 기반으로 합니다" 고지(문자열 키 `setBasedOn`, 값에 `{{GenOffice}}`)는 21개 언어 모두에 남긴다. 원본 이름이 화면에 나오는 곳은 이 한 줄뿐이어야 한다. 다른 문자열과 도움말 제목·본문에 `{{GenOffice}}`를 쓰면 `tests/product-identity.test.ts`가 실패한다.
 - 없앤 기능(사용 통계 전송, 자체 계정 로그인, 클라우드 프로젝트 목록 등)의 모듈·IPC·호출부를 되살리지 않는다. `tests/removed-features.test.ts`가 지킨다. 원본의 변경을 병합할 때 특히 본다.
+- `.odt`는 워드 문서다. 열기 판정(`app-routing.ts`의 `ODT_RE`, `index.ts`의 `routeDocumentPath`), 열기 창(`OPEN_DIALOG_EXTENSIONS`와 홈의 `filterOdt` 필터), 끌어다 놓기(`drop-open.ts`), 명령줄 경로(`launch-paths.ts`), 폴더 트리·파일 색인(`TREE_FILE_EXTENSIONS`), 최근 파일과 홈의 형식 묶음(`EXT_FAMILY`, `SEARCH_EXT_FAMILY`, `Home.tsx`의 `FILTER_FAMILY`·`OPEN_LOCAL_EXTENSIONS`·`FILE_ICONS`), 앱 안 MCP의 형식 표(`mcp/tools/formats.ts`, `mcp` 부분은 아직 docx만)가 모두 같은 답을 내야 한다. 하나를 고치면 나머지도 고친다(`tests/odt-shell-wiring.test.ts`). 새 문서의 기본 형식은 docx다. `.docx`↔`.odt` 이름 바꾸기는 막는다(내용이 바뀌지 않으므로 `renameStaysInApp`).
+- `.odt`는 Windows "연결 프로그램" 후보로만 등록한다. electron-builder `fileAssociations`에 넣으면 NSIS가 `.odt`의 기본값을 써서 기본 프로그램을 가져가고, `WIN_OPEN_WITH_ONLY_EXTS`는 Windows 등록을 아예 뺀다. 그래서 `build/installer.nsh`가 제품 전용 ProgId `IeumOffice.OpenDocumentText`(열기 명령, 아이콘은 설치 프로그램이 두는 `resources\docx.ico`를 그대로 쓴다)와 `Software\Classes\.odt\OpenWithProgids`의 값 하나만 쓰고, 제거할 때 그 값과 ProgId만 지운다. `.odt` 키와 다른 프로그램의 값은 건드리지 않는다. `default-app.ts`의 기본 앱 목록에도 넣지 않는다(`tests/odt-open-with.test.ts`). 실제 등록은 설치본을 설치해 봐야 확인된다.
+- 마크다운·HTML 탭 메뉴의 "ODT로 내보내기"(`menuExportOdt`)는 "Word로 내보내기" 바로 뒤에 있고 편집기에 `'odt'` 내보내기 요청을 보낸다. 워드 편집기의 메뉴는 `apps/docs`가 만들므로(`buildDocsMenu`), ODT 문서에서 꺼 두는 메뉴는 그쪽이 정한다.
 - 모든 창은 `contextIsolation: true`, `nodeIntegration: false`, `sandbox: true`다. `shell.openExternal`은 `safeExternalUrl`을 거친 값만 받는다.
 
 ## 이 모듈의 방식

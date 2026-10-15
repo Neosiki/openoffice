@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
   DROP_OPEN_CHANNEL,
+  KNOWN_UNSUPPORTED_DOC_RE,
+  OPENABLE_DOC_RE,
   droppableFilePaths,
   installDropOpenBridge,
   partitionDropPayload,
@@ -141,6 +143,14 @@ describe('partitionDropPayload', () => {
     const result = partitionDropPayload(['/data/variants.tsv', '/x/y.TSV'])
     expect(result.supported).toEqual(['/data/variants.tsv', '/x/y.TSV'])
     expect(result.unsupportedExts).toEqual([])
+  })
+
+  it('treats a dropped .odt as openable (the Word tab opens it), not as unsupported', () => {
+    const result = partitionDropPayload(['/docs/report.odt', 'C:/x/Y.ODT', 'z.odp'])
+    expect(result.supported).toEqual(['/docs/report.odt', 'C:/x/Y.ODT'])
+    expect(result.unsupportedExts).toEqual(['odp'])
+    expect(OPENABLE_DOC_RE.test('a.odt')).toBe(true)
+    expect(KNOWN_UNSUPPORTED_DOC_RE.test('a.odt')).toBe(false)
   })
 
   it('collects known-unsupported extensions uniquely, first-seen order', () => {

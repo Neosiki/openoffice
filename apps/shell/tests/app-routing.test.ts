@@ -18,6 +18,11 @@ describe('appForPath', () => {
     expect(appForPath('/x/a.html')).toBe('html')
   })
 
+  it('opens OpenDocument text in the Word tab', () => {
+    expect(appForPath('/x/a.odt')).toBe('docs')
+    expect(appForPath('C:/x/REPORT.ODT')).toBe('docs')
+  })
+
   it('has no app for an extension nothing opens', () => {
     expect(appForPath('/x/a.xyz')).toBeUndefined()
     expect(appForPath('/x/noextension')).toBeUndefined()
@@ -70,6 +75,14 @@ describe('renameStaysInApp', () => {
     expect(renameStaysInApp('/x/a.docx', 'a.pdf')).toBe(false)
     expect(renameStaysInApp('/x/a.xlsx', 'a.csv')).toBe(true)
     expect(renameStaysInApp('/x/a.png', 'a.png')).toBe(true)
+  })
+
+  it('refuses a rename between .docx and .odt: same tab, different bytes', () => {
+    expect(renameStaysInApp('/x/a.docx', 'a.odt')).toBe(false)
+    expect(renameStaysInApp('/x/a.odt', 'a.docx')).toBe(false)
+    expect(renameStaysInApp('/x/a.odt', 'b.odt')).toBe(true)
+    expect(renameStaysInApp('/x/a.odt', 'b.ODT')).toBe(true)
+    expect(renameStaysInApp('/x/a.odt', 'a.pdf')).toBe(false)
   })
 
   it('stays put when the file was never openable to begin with', () => {

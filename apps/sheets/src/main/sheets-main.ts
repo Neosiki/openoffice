@@ -2353,6 +2353,7 @@ const ATTACHMENT_EXTS = new Set([
   ...ATTACHMENT_TEXT_EXTS,
   'doc',
   'docx',
+  'odt',
   'pdf',
   'pptx',
   'ppt',

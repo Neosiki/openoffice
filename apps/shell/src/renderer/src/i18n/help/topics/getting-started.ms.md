@@ -22,9 +22,18 @@ Dokumen baharu dibuka tanpa tajuk; fail pada cakera hanya dicipta semasa simpana
 
 ## Membuka fail
 
-- Menu **Fail ▸ Buka…** (⌘O/ctrl+O) membuka pemilih sistem: .docx / .doc / .xlsx / .xls / .csv / .tsv / .pptx / .ppt / .pdf / .md / .html.
+- Menu **Fail ▸ Buka…** (⌘O/ctrl+O) membuka pemilih sistem: .docx / .doc / .odt / .xlsx / .xls / .csv / .tsv / .pptx / .ppt / .pdf / .md / .html.
 - Klik mana-mana item dalam senarai **Terkini** pada Laman Utama.
 - `ieumoffice <fail>` daripada terminal turut membuka fail.
+
+## Dokumen ODT
+
+Fail .odt (teks OpenDocument, format yang disimpan oleh Hancom Office, LibreOffice dan program lain) dibuka dalam tab Docs, dari mana-mana tempat yang boleh membuka .docx. Dokumen baharu masih .docx.
+
+- **Berfungsi seperti biasa**: menyunting teks, format aksara dan perenggan, jadual (menambah dan memadam baris serta lajur, menggabung dan memisahkan sel), gambar, pengepala dan pengaki, nota kaki dan nota akhir, persediaan halaman dan seksyen, bulet dan penomboran, gaya tajuk, pautan, cari dan ganti, ejaan, cetakan, eksport PDF dan HTML, serta suntingan oleh AI.
+- **Dimatikan dalam ODT**: ulasan, jejak perubahan, bandingkan, tera air, dakwat, jadual kandungan, memasukkan persamaan, bentuk, kotak teks atau carta, lajur, petikan dan bibliografi, kapsyen dan rujukan silang, warna halaman, kata laluan dan sekatan suntingan, cadangan baca sahaja, fon dan warna tema, jidar cermin. Butangnya dikelabukan; simpan sebagai .docx untuk menggunakannya.
+- **Dikekalkan seperti asal**: persamaan, carta dan lukisan daripada fail asal dipaparkan sebagai gambar berkunci yang boleh dipadam tetapi tidak boleh disunting, dan sel jadual yang berkunci kekal berkunci. Bahagian yang tidak anda sentuh disimpan semula tanpa perubahan. ODT yang berkata laluan tidak dapat dibuka; buang kata laluannya dahulu.
+- **Simpan Sebagai** menawarkan .docx dan .odt. Sebelum format ditukar, senarai perkara yang berubah atau hilang dipaparkan, kemudian tab dibuka semula dengan fail baharu. Markdown dan HTML juga ada **Eksport sebagai ODT…**.
 
 ## Model simpanan
 

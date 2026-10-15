@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { appForPath } from '../../src/main/app-routing'
 import {
   capabilityReport,
   familyLabel,
@@ -16,9 +17,18 @@ import {
 
 describe('format registry', () => {
   it('mirrors the shell open routing for the mcp-driven families', () => {
-    expect(formatFamily('docx').editorOpen).toEqual(['docx'])
+    expect(formatFamily('docx').editorOpen).toEqual(['docx', 'odt'])
     expect(formatFamily('xlsx').editorOpen).toEqual(['xlsx', 'xlsm', 'xls', 'csv', 'tsv'])
     expect(formatFamily('pptx').editorOpen).toEqual(['pptx'])
+  })
+
+  it('opens every Word-family extension in the tab the shell routes it to', () => {
+    for (const ext of formatFamily('docx').editorOpen) {
+      expect(appForPath(`/x/a.${ext}`), `.${ext}`).toBe('docs')
+    }
+    // the Word editor's Save As writes both, but MCP saves stay docx for now
+    expect(formatFamily('docx').editorSave).toEqual(['docx', 'odt'])
+    expect(formatFamily('docx').mcp?.save).toEqual(['docx'])
   })
 
   it('keeps .tsv open-only: it converts on open and saves as .xlsx', () => {
@@ -50,8 +60,8 @@ describe('format registry', () => {
 
   it('records the editor export capabilities even where mcp cannot reach them', () => {
     expect(formatFamily('docx').editorExport).toEqual(['pdf'])
-    expect(formatFamily('md').editorExport).toEqual(['docx', 'pdf'])
-    expect(formatFamily('html').editorExport).toEqual(['docx', 'pdf'])
+    expect(formatFamily('md').editorExport).toEqual(['docx', 'odt', 'pdf'])
+    expect(formatFamily('html').editorExport).toEqual(['docx', 'odt', 'pdf'])
     expect(formatFamily('pdf').editorExport).toEqual(['docx', 'xlsx', 'pptx'])
   })
 
@@ -97,7 +107,7 @@ describe('capabilityReport', () => {
     const report = capabilityReport()
     expect(report.map((r) => r.family)).toEqual(['docx', 'xlsx', 'pptx', 'md', 'html', 'pdf'])
     const docx = report.find((r) => r.family === 'docx')!
-    expect(docx.editor.open).toEqual(['docx'])
+    expect(docx.editor.open).toEqual(['docx', 'odt'])
     expect(docx.editor.export).toEqual(['pdf'])
     expect(docx.mcp).toEqual({ generate: 'docx', save: ['docx'], read: 'docx' })
     // editor-only family carries no mcp key

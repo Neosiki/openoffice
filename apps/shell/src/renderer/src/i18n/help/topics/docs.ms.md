@@ -82,6 +82,7 @@ Klik kanan di mana-mana bahagian teks, dan menu akan mengikut apa yang anda klik
 ## Simpanan dan eksport
 
 - Menyimpan .docx menulis semula hanya perenggan yang berubah. Kandungan yang tidak disentuh kekal sama bait demi bait.
+- Turut membuka dan menyimpan .odt (teks OpenDocument): Simpan Sebagai menawarkan .docx atau .odt, dan perkara yang dimatikan dalam dokumen ODT ada dalam [Mula pantas](help://getting-started).
 - Eksport ke PDF (mengikut pemenggalan semasa) dan ke imej setiap halaman.
 
 ## Cetak

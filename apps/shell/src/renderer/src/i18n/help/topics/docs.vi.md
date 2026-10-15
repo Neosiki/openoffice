@@ -71,6 +71,7 @@ Nhấp chuột phải ở bất kỳ đâu trong nội dung — menu đi theo th
 ## Lưu và xuất
 
 - Lưu .docx chỉ ghi lại những đoạn văn đã thay đổi — phần không đụng tới giữ nguyên từng byte.
+- Cũng mở và lưu .odt (văn bản OpenDocument): Lưu thành cho chọn .docx hoặc .odt, còn những gì bị tắt trong tài liệu ODT có ở [Bắt đầu nhanh](help://getting-started).
 - Xuất PDF (theo cách ngắt trang hiện tại) và ảnh theo từng trang.
 
 ## In

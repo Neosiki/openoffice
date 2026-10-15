@@ -35,7 +35,7 @@ Chọn ô tick của một hàng, hoặc nhấp ⌘/ctrl, để tạo một vùn
 Ô tìm kiếm ở trên khớp với hai thứ cùng lúc:
 
 - **Tên tập tin**: lọc nhanh theo tên.
-- **Nội dung tập tin**: GenOffice lập chỉ mục cho tập tin của bạn ở nền (văn bản bên trong docx/xlsx/pptx/pdf/md/html), nên tìm trong phần chữ cũng ra tập tin. Phạm vi và các công tắc nằm trong cài đặt tìm kiếm.
+- **Nội dung tập tin**: GenOffice lập chỉ mục cho tập tin của bạn ở nền (văn bản bên trong docx/odt/xlsx/pptx/pdf/md/html), nên tìm trong phần chữ cũng ra tập tin. Phạm vi và các công tắc nằm trong cài đặt tìm kiếm.
 
 ## Thẻ bắt đầu nhanh
 
@@ -51,7 +51,7 @@ Từng thẻ dùng để làm gì:
 - **AI Markdown** (.md): tài liệu Markdown trống trong trình soạn thảo Markdown.
 - **AI HTML** (.html): trang web trống trong trình soạn thảo HTML.
 - **AI PDF** (.pdf): khác với những thẻ còn lại — nó **ngay lập tức** tạo một tập tin PDF trắng thật một trang trong thư mục đích và mở nó như một tập tin bình thường (trình soạn thảo PDF làm việc trên tập tin thật). Phù hợp để thêm chú thích, che nội dung hoặc thêm văn bản; tên tập tin có thể được đổi tự động theo nội dung ở lần lưu đầu tiên.
-- **Mở tệp cục bộ**: bộ chọn tập tin của hệ thống cho Word (.docx/.doc), Excel (.xlsx/.xlsm/.xls/.csv/.tsv), PowerPoint (.pptx/.ppt), PDF, Markdown (.md/.markdown) và trang web (.html/.htm). Có thể chọn nhiều; mỗi tập tin mở một thẻ riêng. Tệp văn bản (.txt, .json) cũng mở được ở đây — chúng vào thẳng chế độ mã nguồn của trình soạn Markdown.
+- **Mở tệp cục bộ**: bộ chọn tập tin của hệ thống cho Word (.docx/.doc/.odt), Excel (.xlsx/.xlsm/.xls/.csv/.tsv), PowerPoint (.pptx/.ppt), PDF, Markdown (.md/.markdown) và trang web (.html/.htm). Có thể chọn nhiều; mỗi tập tin mở một thẻ riêng. Tệp văn bản (.txt, .json) cũng mở được ở đây — chúng vào thẳng chế độ mã nguồn của trình soạn Markdown.
 
 > Gợi ý: File ▸ Mới trên dải menu tạo ra cùng những loại tài liệu đó (⌘N/Ctrl+N mặc định tạo tài liệu văn bản); kéo một tập tin vào cửa sổ nghĩa là mở nó.
 

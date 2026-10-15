@@ -22,9 +22,18 @@ Tài liệu mới mở ra chưa có tiêu đề; tập tin trên đĩa chỉ đ�
 
 ## Mở tập tin
 
-- Menu **File ▸ Mở** (⌘O/ctrl+O) mở bộ chọn của hệ thống: .docx / .doc / .xlsx / .xls / .csv / .tsv / .pptx / .ppt / .pdf / .md / .html.
+- Menu **File ▸ Mở** (⌘O/ctrl+O) mở bộ chọn của hệ thống: .docx / .doc / .odt / .xlsx / .xls / .csv / .tsv / .pptx / .ppt / .pdf / .md / .html.
 - Nhấp vào bất kỳ mục nào trong danh sách **Gần đây** của Trang chủ.
 - `ieumoffice <file>` từ terminal cũng mở được tập tin.
+
+## Tài liệu ODT
+
+Tệp .odt (văn bản OpenDocument, định dạng mà Hancom Office, LibreOffice và các chương trình khác lưu) mở trong thẻ Docs, từ mọi nơi có thể mở .docx. Tài liệu mới vẫn là .docx.
+
+- **Dùng như bình thường**: sửa chữ, định dạng ký tự và đoạn văn, bảng (thêm và xóa hàng, cột, gộp và tách ô), hình ảnh, đầu trang và chân trang, chú thích cuối trang và cuối tài liệu, thiết lập trang và phân đoạn, dấu đầu dòng và đánh số, kiểu tiêu đề, liên kết, tìm và thay thế, kiểm tra chính tả, in, xuất PDF và HTML, và chỉnh sửa bằng AI.
+- **Bị tắt trong ODT**: chú thích, theo dõi thay đổi, so sánh tài liệu, hình mờ, viết tay, mục lục, chèn phương trình, hình dạng, hộp văn bản hoặc biểu đồ, chia cột, trích dẫn và thư mục, chú thích hình và tham chiếu chéo, màu trang, mật khẩu và hạn chế chỉnh sửa, khuyến nghị chỉ đọc, phông chữ và màu chủ đề, lề đối xứng. Các nút này sẽ bị mờ; hãy lưu thành .docx để dùng chúng.
+- **Giữ nguyên**: phương trình, biểu đồ và hình vẽ trong tệp gốc hiển thị dưới dạng ảnh bị khóa, có thể xóa nhưng không sửa được; ô bảng bị khóa vẫn bị khóa. Những phần bạn không chạm vào được lưu lại không đổi. ODT có mật khẩu không mở được; hãy gỡ mật khẩu trước.
+- **Lưu thành** cho phép chọn .docx hoặc .odt. Trước khi đổi định dạng, ứng dụng liệt kê những gì sẽ thay đổi hoặc bị bỏ, rồi mở lại thẻ với tệp mới. Markdown và HTML cũng có **Xuất dưới dạng ODT…**.
 
 ## Mô hình lưu
 

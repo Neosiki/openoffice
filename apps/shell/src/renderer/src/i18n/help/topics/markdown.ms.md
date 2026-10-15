@@ -35,6 +35,7 @@ Tiga contoh pantas:
 Menu Fail, semuanya setempat dan semuanya akan bertanya di mana hasilnya perlu disimpan:
 
 - **Eksport sebagai Word…** dan **Eksport sebagai PDF…** menulis .docx atau .pdf yang sebenar.
+- **Eksport sebagai ODT…** menulis fail .odt (teks OpenDocument) melalui penukaran yang sama dengan eksport Word; jika ada yang berubah atau hilang dalam proses itu, anda melihat senarainya dan mengesahkan dahulu.
 - **Eksport sebagai imej…** menulis satu PNG bagi setiap halaman ke dalam folder yang anda pilih.
 - **Tukar dan buka dalam Docs** menukar kepada .docx dan membukanya dalam tab Docs terbina dalam di dalam aplikasi ini — ia bukan serah kepada apa-apa dalam awan, dan salinan yang ditukar tinggal dalam folder cache yang dibersihkan selepas kira-kira seminggu.
 

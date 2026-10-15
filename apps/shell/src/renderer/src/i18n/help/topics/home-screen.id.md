@@ -35,7 +35,7 @@ Centang kotak pada sebuah baris, atau ⌘/ctrl-klik, untuk menyusun sebuah pilih
 Kotak pencarian di atas mencocokkan dua hal sekaligus:
 
 - **Nama file**: penyaringan cepat berdasarkan nama.
-- **Isi file**: GenOffice mengindeks file Anda di latar belakang (teks di dalam docx/xlsx/pptx/pdf/md/html), sehingga mencari teks isi pun menemukan file. Cakupan dan sakelarnya ada di pengaturan pencarian.
+- **Isi file**: GenOffice mengindeks file Anda di latar belakang (teks di dalam docx/odt/xlsx/pptx/pdf/md/html), sehingga mencari teks isi pun menemukan file. Cakupan dan sakelarnya ada di pengaturan pencarian.
 
 ## Kartu Mulai cepat
 
@@ -51,7 +51,7 @@ Apa yang dilakukan tiap kartu:
 - **AI Markdown** (.md): dokumen Markdown kosong di editor Markdown.
 - **AI HTML** (.html): halaman web kosong di editor HTML.
 - **AI PDF** (.pdf): berbeda dari yang lain — kartu ini **segera** membuat PDF kosong satu halaman yang sungguhan di folder tujuan dan membukanya sebagai file biasa (editor PDF bekerja pada file asli). Bagus untuk memberi anotasi, menutupi bagian, atau menambahkan teks; file bisa diberi nama otomatis dari isinya saat penyimpanan pertama.
-- **Buka File Lokal**: pemilih file sistem untuk Word (.docx/.doc), Excel (.xlsx/.xlsm/.xls/.csv/.tsv), PowerPoint (.pptx/.ppt), PDF, Markdown (.md/.markdown), dan halaman web (.html/.htm). Bisa memilih banyak file sekaligus; tiap file mendapat tabnya sendiri. Berkas teks (.txt, .json) juga terbuka di sini — mereka masuk ke tampilan sumber editor Markdown.
+- **Buka File Lokal**: pemilih file sistem untuk Word (.docx/.doc/.odt), Excel (.xlsx/.xlsm/.xls/.csv/.tsv), PowerPoint (.pptx/.ppt), PDF, Markdown (.md/.markdown), dan halaman web (.html/.htm). Bisa memilih banyak file sekaligus; tiap file mendapat tabnya sendiri. Berkas teks (.txt, .json) juga terbuka di sini — mereka masuk ke tampilan sumber editor Markdown.
 
 > Tip: menu Arquivo ▸ Novo di bilah menu membuat jenis dokumen yang sama (⌘N/Ctrl+N memakai dokumen teks secara bawaan); menyeret file ke jendela akan membukanya.
 

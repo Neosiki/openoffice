@@ -80,6 +80,7 @@ Klikněte pravým tlačítkem kamkoli do textu — nabídka se přizpůsobí tom
 ## Ukládání a export
 
 - Ukládání .docx přepisuje pouze změněné odstavce — nedotčený obsah zůstává beze změny bajt po bajtu.
+- Otevírá a ukládá také .odt (text OpenDocument): Uložit jako nabízí .docx nebo .odt a to, co je v dokumentech ODT vypnuté, popisuje [Rychlý start](help://getting-started).
 - Export do PDF (s aktuálním stránkováním) a na obrázky po jednotlivých stránkách.
 
 ## Tisk
