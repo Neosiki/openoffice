@@ -29,6 +29,8 @@ export const PDF_TOOL_IDS = [
   'rotate',
   'pageSize',
   'splitPages',
+  'imagesToPdf',
+  'toText',
 ] as const
 export type PdfToolId = (typeof PDF_TOOL_IDS)[number]
 
@@ -39,6 +41,13 @@ export type PdfEditorToolId = (typeof PDF_EDITOR_TOOL_IDS)[number]
 /** Paper sizes "page size" offers (points, portrait), the PDF editor's list */
 export const PDF_TOOL_PAPERS = ['A3', 'A4', 'A5', 'Letter', 'Legal'] as const
 export type PdfToolPaper = (typeof PDF_TOOL_PAPERS)[number]
+
+/** What a tool takes: PDFs, or JPEG and PNG pictures (imagesToPdf) */
+export type PdfToolInputKind = 'pdf' | 'image'
+
+/** Space around a picture on its page (imagesToPdf) */
+export const PDF_TOOL_MARGINS = ['none', 'small', 'large'] as const
+export type PdfToolMargin = (typeof PDF_TOOL_MARGINS)[number]
 
 export interface PdfToolOptions {
   /** split: pages per output file */
@@ -55,17 +64,23 @@ export interface PdfToolOptions {
   paper?: PdfToolPaper
   /** splitPages: pieces each page is cut into */
   perPage?: 2 | 4 | 9
+  /** imagesToPdf: a paper, or 'image' for pages the size of each picture */
+  imagePaper?: PdfToolPaper | 'image'
+  /** imagesToPdf: space kept around each picture on a paper page */
+  margin?: PdfToolMargin
 }
 
-/** One picked PDF, as the window may see it: an opaque id, never the path */
+/** One picked file, as the window may see it: an opaque id, never the path */
 export interface PdfToolInput {
   id: string
+  kind: PdfToolInputKind
   name: string
+  /** 1 for a picture */
   pages: number
   size: number
 }
 
-export type PdfInputProblem = 'encrypted' | 'unreadable' | 'too-large'
+export type PdfInputProblem = 'encrypted' | 'unreadable' | 'too-large' | 'not-image'
 
 export interface PdfPickResult {
   inputs: PdfToolInput[]
@@ -81,6 +96,7 @@ export type PdfToolError =
   | 'same-as-source'
   | 'unsaved-target'
   | 'busy'
+  | 'no-text'
   | 'failed'
 
 export interface PdfToolRunRequest {
@@ -106,7 +122,7 @@ export interface PdfToolsWindowApi {
   getInit(): Promise<PdfToolsInit>
   onThemeChanged(handler: (theme: PdfToolsTheme) => void): () => void
   /** a main-process open dialog; the window gets ids, never paths */
-  pickInputs(multi: boolean): Promise<PdfPickResult>
+  pickInputs(multi: boolean, kind?: PdfToolInputKind): Promise<PdfPickResult>
   run(request: PdfToolRunRequest): Promise<PdfToolRunResult>
   openResult(id: string): Promise<void>
   revealResult(id: string): Promise<void>

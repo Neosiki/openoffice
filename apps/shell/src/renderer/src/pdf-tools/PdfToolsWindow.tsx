@@ -1,23 +1,53 @@
-import { useState } from 'react'
+import { useState, type ReactElement } from 'react'
 import type { Lang, Params } from '@genoffice/i18n'
 import {
+  PDF_TOOL_MARGINS,
   PDF_TOOL_PAPERS,
   type PdfEditorToolId,
   type PdfInputProblem,
   type PdfToolError,
   type PdfToolId,
   type PdfToolInput,
+  type PdfToolMargin,
   type PdfToolOptions,
   type PdfToolPaper,
 } from '../../../shared/pdf-tools-api'
 import { pdfToolsText, type PdfToolsStringKey } from '../i18n/strings-pdf-tools'
 import { formatBytes } from '../generate/format'
+import {
+  IconConvertPdf,
+  IconCropPages,
+  IconEditText,
+  IconExportImg,
+  IconExtract,
+  IconImagesToPdf,
+  IconMergePages,
+  IconMergePdf,
+  IconPageSize,
+  IconReverse,
+  IconRotateAll,
+  IconSplitPages,
+  IconSplitPdf,
+  IconToText,
+  IconWatermark,
+} from '../../../../../pdf/src/renderer/icons'
 
 /** Home groups of the tools the window runs itself (decision 0030) */
 const GROUPS: { label: PdfToolsStringKey; tools: PdfToolId[] }[] = [
   { label: 'groupOrganize', tools: ['merge', 'split', 'extract', 'reverse', 'rotate'] },
   { label: 'groupPrint', tools: ['nup', 'pageSize', 'splitPages'] },
+  { label: 'groupConvert', tools: ['imagesToPdf', 'toText'] },
 ]
+
+/** Tools that take several files; imagesToPdf takes pictures */
+const takesMany = (tool: PdfToolId) => tool === 'merge' || tool === 'imagesToPdf'
+const takesImages = (tool: PdfToolId) => tool === 'imagesToPdf'
+
+const MARGIN_TEXT: Record<PdfToolMargin, PdfToolsStringKey> = {
+  none: 'optMarginNone',
+  small: 'optMarginSmall',
+  large: 'optMarginLarge',
+}
 
 const EDITOR_TOOLS: PdfEditorToolId[] = ['stamps', 'crop', 'exportImages', 'convert', 'edit']
 
@@ -30,6 +60,8 @@ const TOOL_TEXT: Record<PdfToolId | PdfEditorToolId, [PdfToolsStringKey, PdfTool
   nup: ['toolNup', 'descNup'],
   pageSize: ['toolPageSize', 'descPageSize'],
   splitPages: ['toolSplitPages', 'descSplitPages'],
+  imagesToPdf: ['toolImagesToPdf', 'descImagesToPdf'],
+  toText: ['toolToText', 'descToText'],
   stamps: ['toolStamps', 'descStamps'],
   crop: ['toolCrop', 'descCrop'],
   exportImages: ['toolExportImages', 'descExportImages'],
@@ -46,6 +78,7 @@ const ERROR_TEXT: Record<PdfToolError, PdfToolsStringKey> = {
   'same-as-source': 'errSameAsSource',
   'unsaved-target': 'errUnsavedTarget',
   busy: 'errBusy',
+  'no-text': 'errNoText',
   failed: 'errFailed',
 }
 
@@ -53,6 +86,7 @@ const REJECT_TEXT: Record<PdfInputProblem, PdfToolsStringKey> = {
   encrypted: 'rejectEncrypted',
   unreadable: 'rejectUnreadable',
   'too-large': 'rejectTooLarge',
+  'not-image': 'rejectNotImage',
 }
 
 const PER_SHEET = [2, 4, 6, 8, 9, 16]
@@ -66,6 +100,8 @@ const DEFAULT_OPTIONS: PdfToolOptions = {
   rotation: 90,
   paper: 'A4',
   perPage: 2,
+  imagePaper: 'A4',
+  margin: 'small',
 }
 
 type View =
@@ -76,26 +112,31 @@ type Outcome =
   | { kind: 'error'; message: string }
   | null
 
-function ToolIcon({ group }: { group: 'organize' | 'print' | 'editor' }) {
+/** Each card shows the PDF editor's ribbon icon for the same command (icons.tsx) */
+const TOOL_ICON: Record<PdfToolId | PdfEditorToolId, () => ReactElement> = {
+  merge: IconMergePdf,
+  split: IconSplitPdf,
+  extract: IconExtract,
+  reverse: IconReverse,
+  rotate: IconRotateAll,
+  nup: IconMergePages,
+  pageSize: IconPageSize,
+  splitPages: IconSplitPages,
+  imagesToPdf: IconImagesToPdf,
+  toText: IconToText,
+  stamps: IconWatermark,
+  crop: IconCropPages,
+  exportImages: IconExportImg,
+  convert: IconConvertPdf,
+  edit: IconEditText,
+}
+
+function ToolIcon({ tool }: { tool: PdfToolId | PdfEditorToolId }) {
+  const Glyph = TOOL_ICON[tool]
   return (
-    <svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true" className="pt-card-icon">
-      <path
-        d="M5 2.5h7l3.5 3.5v11.5H5z"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.3"
-        strokeLinejoin="round"
-      />
-      {group === 'organize' && (
-        <path d="M8 9h5M8 12h5M8 15h3" stroke="currentColor" strokeWidth="1.3" />
-      )}
-      {group === 'print' && (
-        <path d="M7.5 9h2.5v3H7.5zM11 9h2.5v3H11zM7.5 13h2.5v3H7.5z" fill="currentColor" />
-      )}
-      {group === 'editor' && (
-        <path d="m8 15 1-3 5-5 2 2-5 5z" fill="none" stroke="currentColor" strokeWidth="1.2" />
-      )}
-    </svg>
+    <span className="pt-card-icon">
+      <Glyph />
+    </span>
   )
 }
 
@@ -118,8 +159,8 @@ export function PdfToolsWindow({ lang }: { lang: Lang }) {
   }
 
   const pick = async (tool: PdfToolId) => {
-    const many = tool === 'merge'
-    const result = await api.pickInputs(many)
+    const many = takesMany(tool)
+    const result = await api.pickInputs(many, takesImages(tool) ? 'image' : 'pdf')
     setRejected(result.rejected.map((r) => t(REJECT_TEXT[r.problem], { name: r.name })))
     if (result.inputs.length === 0) return
     setOutcome(null)
@@ -172,7 +213,7 @@ export function PdfToolsWindow({ lang }: { lang: Lang }) {
                       className="pt-card"
                       onClick={() => openTool({ kind: 'tool', tool })}
                     >
-                      <ToolIcon group={group.label === 'groupPrint' ? 'print' : 'organize'} />
+                      <ToolIcon tool={tool} />
                       <span className="pt-card-text">
                         <span className="pt-card-title">{t(TOOL_TEXT[tool][0])}</span>
                         <span className="pt-card-desc">{t(TOOL_TEXT[tool][1])}</span>
@@ -192,7 +233,7 @@ export function PdfToolsWindow({ lang }: { lang: Lang }) {
                     className="pt-card pt-card-editor"
                     onClick={() => openTool({ kind: 'editor', tool })}
                   >
-                    <ToolIcon group="editor" />
+                    <ToolIcon tool={tool} />
                     <span className="pt-card-text">
                       <span className="pt-card-title">{t(TOOL_TEXT[tool][0])}</span>
                       <span className="pt-card-desc">{t(TOOL_TEXT[tool][1])}</span>
@@ -275,11 +316,21 @@ interface ToolPanelProps {
 
 function ToolPanel(p: ToolPanelProps) {
   const { t, tool, inputs, options } = p
-  const many = tool === 'merge'
+  const many = takesMany(tool)
+  const images = takesImages(tool)
   const first = inputs[0]
-  const ready = many ? inputs.length >= 2 : inputs.length === 1
-  const pickLabel: PdfToolsStringKey =
-    inputs.length === 0 ? 'pickFiles' : many ? 'addMore' : 'replaceFile'
+  const ready =
+    tool === 'merge' ? inputs.length >= 2 : many ? inputs.length >= 1 : inputs.length === 1
+  const pickLabel: PdfToolsStringKey = images
+    ? inputs.length === 0
+      ? 'pickImages'
+      : 'addMoreImages'
+    : inputs.length === 0
+      ? 'pickFiles'
+      : many
+        ? 'addMore'
+        : 'replaceFile'
+  const hint: PdfToolsStringKey = images ? 'hintImages' : many ? 'hintMerge' : 'hintOne'
   const done = p.outcome?.kind === 'done' ? p.outcome.outputs : null
   const firstOutput = done?.[0]
 
@@ -289,7 +340,7 @@ function ToolPanel(p: ToolPanelProps) {
         <span className="pt-back-arrow">←</span> {t('back')}
       </button>
       <h2 className="pt-tool-title">{t(TOOL_TEXT[tool][0])}</h2>
-      <p className="pt-hint">{t(many ? 'hintMerge' : 'hintOne')}</p>
+      <p className="pt-hint">{t(hint)}</p>
 
       {inputs.length > 0 && (
         <ul className="pt-list">
@@ -299,7 +350,9 @@ function ToolPanel(p: ToolPanelProps) {
                 {input.name}
               </span>
               <span className="pt-item-meta">
-                {t('pageCount', { n: input.pages })} · {formatBytes(input.size, p.lang)}
+                {input.kind === 'image'
+                  ? formatBytes(input.size, p.lang)
+                  : `${t('pageCount', { n: input.pages })} · ${formatBytes(input.size, p.lang)}`}
               </span>
               {many && (
                 <>
@@ -529,6 +582,44 @@ function Options({ tool, t, options, pages, onChange }: OptionsProps) {
           ))}
         </fieldset>
       )
+    case 'imagesToPdf': {
+      const paper = options.imagePaper ?? 'A4'
+      return (
+        <div className="pt-fields">
+          <label className="pt-field">
+            <span className="pt-field-label">{t('optPaper')}</span>
+            <select
+              className="pt-input pt-input-short"
+              value={paper}
+              onChange={(e) => onChange({ imagePaper: e.target.value as PdfToolPaper | 'image' })}
+            >
+              {PDF_TOOL_PAPERS.map((name) => (
+                <option key={name} value={name}>
+                  {name}
+                </option>
+              ))}
+              <option value="image">{t('optImageSize')}</option>
+            </select>
+          </label>
+          {paper !== 'image' && (
+            <fieldset className="pt-field pt-choices">
+              <legend className="pt-field-label">{t('optMargin')}</legend>
+              {PDF_TOOL_MARGINS.map((margin) => (
+                <Choice
+                  key={margin}
+                  name="margin"
+                  checked={(options.margin ?? 'small') === margin}
+                  label={t(MARGIN_TEXT[margin])}
+                  onPick={() => onChange({ margin })}
+                />
+              ))}
+            </fieldset>
+          )}
+        </div>
+      )
+    }
+    case 'toText':
+      return <p className="pt-hint">{t('noteToText')}</p>
     default:
       return null
   }

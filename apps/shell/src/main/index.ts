@@ -6527,6 +6527,14 @@ app.whenReady().then(async () => {
     theme: () => currentTheme(),
     openResult: (path) => {
       revealShellWindow()
+      // a text tab already on this path shows the old file: read it again, as a
+      // PDF tab is (the tools never write over a file with unsaved changes)
+      const textTab = TEXT_RE.test(path) ? tabManager?.findMarkdownTabByPath(path) : undefined
+      if (tabManager && textTab) {
+        tabManager.reloadTab(textTab)
+        tabManager.activateTab(textTab)
+        return true
+      }
       return openGeneratedDocument(path)
     },
     openForEditing: (path) => {

@@ -32,6 +32,7 @@ import {
   PDF_TOOLS_CHANNELS,
   type PdfPickResult,
   type PdfToolInput,
+  type PdfToolInputKind,
   type PdfToolRunResult,
   type PdfToolsTheme,
 } from '../../shared/pdf-tools-api'
@@ -39,11 +40,16 @@ import { PDF_TOOLS_HOME_CHANNELS } from '../../shared/pdf-tools-home-channels'
 import { pdfToolsText } from '../../renderer/src/i18n/strings-pdf-tools'
 import {
   MAX_TOOL_INPUT_BYTES,
+  PdfToolRefusal,
   checkOptions,
+  inspectImage,
   inspectPdf,
   isPdfToolId,
   outputNames,
   runPdfTool,
+  toolInputKind,
+  toolMinInputs,
+  toolOutputExtension,
   toolTakesMany,
 } from './tools'
 
@@ -75,6 +81,11 @@ const inputs = new Map<string, PickedInput>()
 const results = new Map<string, string>()
 
 const PDF_FILTER = { name: 'PDF', extensions: ['pdf'] }
+const IMAGE_FILTER = { name: 'JPG, PNG', extensions: ['jpg', 'jpeg', 'png'] }
+const OUTPUT_FILTERS: Record<'pdf' | 'txt', { name: string; extensions: string[] }> = {
+  pdf: PDF_FILTER,
+  txt: { name: 'TXT', extensions: ['txt'] },
+}
 
 export function configurePdfToolsWindow(next: PdfToolsWindowDeps): void {
   deps = next
@@ -92,12 +103,12 @@ function samePath(a: string, b: string): boolean {
   return process.platform === 'win32' ? x.toLowerCase() === y.toLowerCase() : x === y
 }
 
-async function pickInputs(multi: boolean): Promise<PdfPickResult> {
+async function pickInputs(multi: boolean, kind: PdfToolInputKind): Promise<PdfPickResult> {
   const owner = win
   const empty: PdfPickResult = { inputs: [], rejected: [] }
   if (!owner) return empty
   const picked = await showOpenDialogWithMemory(dialog, owner, {
-    filters: [PDF_FILTER],
+    filters: [kind === 'image' ? IMAGE_FILTER : PDF_FILTER],
     properties: multi ? ['openFile', 'multiSelections'] : ['openFile'],
   })
   if (picked.canceled) return empty
@@ -110,14 +121,15 @@ async function pickInputs(multi: boolean): Promise<PdfPickResult> {
         out.rejected.push({ name, problem: 'too-large' })
         continue
       }
-      const info = await inspectPdf(await readFile(path))
+      const bytes = await readFile(path)
+      const info = kind === 'image' ? inspectImage(bytes) : await inspectPdf(bytes)
       if (!info.ok) {
         out.rejected.push({ name, problem: info.problem })
         continue
       }
-      const input: PickedInput = { id: randomUUID(), name, pages: info.pages, size, path }
+      const input: PickedInput = { id: randomUUID(), kind, name, pages: info.pages, size, path }
       inputs.set(input.id, input)
-      out.inputs.push({ id: input.id, name, pages: input.pages, size })
+      out.inputs.push({ id: input.id, kind, name, pages: input.pages, size })
     } catch {
       out.rejected.push({ name, problem: 'unreadable' })
     }
@@ -132,12 +144,14 @@ async function run(raw: unknown): Promise<PdfToolRunResult> {
   const tool = req.tool
   if (!isPdfToolId(tool)) return { ok: false, error: 'failed' }
   const ids = Array.isArray(req.inputIds) ? req.inputIds : []
+  // only files picked for this kind of tool: a picture never reaches a PDF tool
+  const kind = toolInputKind(tool)
   const chosen = ids
     .map((id) => (typeof id === 'string' ? inputs.get(id) : undefined))
-    .filter((input): input is PickedInput => !!input)
+    .filter((input): input is PickedInput => !!input && input.kind === kind)
   if (chosen.length === 0) return { ok: false, error: 'no-input' }
   const sources = toolTakesMany(tool) ? chosen : chosen.slice(0, 1)
-  if (toolTakesMany(tool) && sources.length < 2) return { ok: false, error: 'need-two' }
+  if (sources.length < toolMinInputs(tool)) return { ok: false, error: 'need-two' }
   if (running) return { ok: false, error: 'busy' }
   running = true
   try {
@@ -149,13 +163,19 @@ async function run(raw: unknown): Promise<PdfToolRunResult> {
       if (total > MAX_TOOL_INPUT_BYTES) return { ok: false, error: 'too-large' }
       bytes.push(await readFile(source.path))
     }
-    const first = await inspectPdf(bytes[0]!)
+    const first = kind === 'image' ? inspectImage(bytes[0]!) : await inspectPdf(bytes[0]!)
     if (!first.ok) return { ok: false, error: 'failed' }
     const checked = checkOptions(tool, req.options, first.pages)
     if (!checked.ok) return { ok: false, error: checked.error }
-    const made = await runPdfTool(tool, bytes, checked.options)
+    let made: Uint8Array[]
+    try {
+      made = await runPdfTool(tool, bytes, checked.options)
+    } catch (err) {
+      if (err instanceof PdfToolRefusal) return { ok: false, error: err.reason }
+      throw err
+    }
     const names = outputNames(tool, sources[0]!.name, made.length, checked.options)
-    const targets = await pickTargets(owner, sources[0]!.path, names)
+    const targets = await pickTargets(owner, sources[0]!.path, names, toolOutputExtension(tool))
     if (!targets) return { ok: false, canceled: true }
     for (const target of targets) {
       if (sources.some((source) => samePath(source.path, target))) {
@@ -186,14 +206,18 @@ async function pickTargets(
   owner: BrowserWindow,
   sourcePath: string,
   names: string[],
+  extension: 'pdf' | 'txt',
 ): Promise<string[] | null> {
   if (names.length === 1) {
     const saved = await showSaveDialogWithMemory(dialog, owner, {
       defaultPath: saveAsSuggestion(sourcePath, names[0]!),
-      filters: [PDF_FILTER],
+      filters: [OUTPUT_FILTERS[extension]],
     })
     if (saved.canceled || !saved.filePath) return null
-    return [/\.pdf$/i.test(saved.filePath) ? saved.filePath : `${saved.filePath}.pdf`]
+    const ending = `.${extension}`
+    return [
+      saved.filePath.toLowerCase().endsWith(ending) ? saved.filePath : `${saved.filePath}${ending}`,
+    ]
   }
   const folder = await showOpenDialogWithMemory(
     dialog,
@@ -229,9 +253,9 @@ function registerIpc(): void {
     if (!fromWindow(event) || !deps) return null
     return { lang: deps.lang(), theme: deps.theme() }
   })
-  ipcMain.handle(PDF_TOOLS_CHANNELS.pickInputs, (event, multi: unknown) => {
+  ipcMain.handle(PDF_TOOLS_CHANNELS.pickInputs, (event, multi: unknown, kind: unknown) => {
     if (!fromWindow(event)) return { inputs: [], rejected: [] }
-    return pickInputs(multi === true)
+    return pickInputs(multi === true, kind === 'image' ? 'image' : 'pdf')
   })
   ipcMain.handle(PDF_TOOLS_CHANNELS.run, (event, request: unknown) => {
     if (!fromWindow(event)) return { ok: false, error: 'failed' }

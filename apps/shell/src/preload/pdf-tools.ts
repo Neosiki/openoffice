@@ -27,8 +27,8 @@ const api: PdfToolsWindowApi = {
     ipcRenderer.on('app:theme-changed', listener)
     return () => ipcRenderer.removeListener('app:theme-changed', listener)
   },
-  async pickInputs(multi: boolean) {
-    const result = (await ipcRenderer.invoke(PDF_TOOLS_CHANNELS.pickInputs, multi)) as
+  async pickInputs(multi: boolean, kind = 'pdf') {
+    const result = (await ipcRenderer.invoke(PDF_TOOLS_CHANNELS.pickInputs, multi, kind)) as
       PdfPickResult | undefined
     return result ?? { inputs: [], rejected: [] }
   },

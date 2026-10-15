@@ -77,5 +77,23 @@ export const nl = {
   rejectEncrypted: '{name}: met een wachtwoord beveiligde pdf’s kunnen niet worden gebruikt.',
   rejectUnreadable: '{name}: kan niet als pdf worden gelezen.',
   rejectTooLarge: '{name}: het bestand is te groot.',
+  groupConvert: 'Converteren',
+  toolImagesToPdf: 'Afbeeldingen naar pdf',
+  descImagesToPdf: 'Meerdere foto’s of afbeeldingen samenvoegen tot één pdf',
+  toolToText: 'Opslaan als tekst',
+  descToText: 'De tekst van een pdf per pagina opslaan in een TXT-bestand',
+  hintImages:
+    'Kies afbeeldingen (JPG, PNG). Elke afbeelding wordt één pagina, van boven naar beneden.',
+  pickImages: 'Afbeeldingen kiezen',
+  addMoreImages: 'Meer afbeeldingen toevoegen',
+  optImageSize: 'Zoals de afbeelding',
+  optMargin: 'Marges',
+  optMarginNone: 'Geen',
+  optMarginSmall: 'Smal',
+  optMarginLarge: 'Breed',
+  noteToText: 'Pagina’s waarvan de tekst een afbeelding is, zoals gescande pagina’s, blijven leeg.',
+  errNoText:
+    'Er is geen tekst gevonden in deze pdf. In een gescand document is de tekst een afbeelding en kan die niet als tekst worden opgeslagen.',
+  rejectNotImage: '{name}: geen JPG- of PNG-afbeelding.',
   close: 'Sluiten',
 } satisfies Record<keyof typeof zh, string>

@@ -3,8 +3,9 @@ import { existsSync } from 'node:fs'
 import { mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { crc32, deflateSync } from 'node:zlib'
 import { test, expect, type ElectronApplication, type Page } from '@playwright/test'
-import { PDFDocument } from 'pdf-lib'
+import { PDFDocument, StandardFonts } from 'pdf-lib'
 import { closeAndSaveVideo, launchShell, screenshotPath, waitForPageWithUrl } from './helpers'
 
 /**
@@ -52,13 +53,41 @@ async function queueDialogs(
   }, answers)
 }
 
-async function pdfPages(app: ElectronApplication): Promise<number> {
+/** how many editor views of one kind are open ('://pdf/', '://markdown/') */
+async function editorPages(app: ElectronApplication, marker = '://pdf/'): Promise<number> {
   let count = 0
   for (const candidate of app.windows()) {
     const href = await candidate.evaluate(() => window.location.href).catch(() => '')
-    if (href.includes('://pdf/')) count++
+    if (href.includes(marker)) count++
   }
   return count
+}
+const pdfPages = (app: ElectronApplication) => editorPages(app)
+
+/** a real grey RGB PNG */
+function png(width: number, height: number): Uint8Array {
+  const chunk = (type: string, data: Buffer) => {
+    const len = Buffer.alloc(4)
+    len.writeUInt32BE(data.length)
+    const typed = Buffer.concat([Buffer.from(type, 'latin1'), data])
+    const crc = Buffer.alloc(4)
+    crc.writeUInt32BE(crc32(typed))
+    return Buffer.concat([len, typed, crc])
+  }
+  const ihdr = Buffer.alloc(13)
+  ihdr.writeUInt32BE(width, 0)
+  ihdr.writeUInt32BE(height, 4)
+  ihdr[8] = 8
+  ihdr[9] = 2
+  const row = Buffer.concat([Buffer.from([0]), Buffer.alloc(width * 3, 0x80)])
+  return new Uint8Array(
+    Buffer.concat([
+      Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+      chunk('IHDR', ihdr),
+      chunk('IDAT', deflateSync(Buffer.concat(Array.from({ length: height }, () => row)))),
+      chunk('IEND', Buffer.alloc(0)),
+    ]),
+  )
 }
 
 async function openToolsWindow(app: ElectronApplication, home: Page, card: RegExp): Promise<Page> {
@@ -168,6 +197,96 @@ test.describe('PDF tools window', () => {
       ])
     } finally {
       await closeAndSaveVideo(launched, 'pdf-tools-window')
+    }
+  })
+
+  test('pictures to a PDF, and a PDF to text', async () => {
+    test.setTimeout(180_000)
+    const dir = await mkdtemp(join(tmpdir(), 'genoffice-pdf-tools-e2e-'))
+    const wide = join(dir, 'wide.png')
+    const tall = join(dir, 'tall.png')
+    const notImage = join(dir, 'notes.png')
+    const photos = join(dir, 'photos.pdf')
+    const report = join(dir, 'report.pdf')
+    const scan = join(dir, 'scan.pdf')
+    const reportText = join(dir, 'report.txt')
+    await writeFile(wide, png(60, 30))
+    await writeFile(tall, png(30, 60))
+    await writeFile(notImage, 'not a picture')
+    const doc = await PDFDocument.create()
+    const font = await doc.embedFont(StandardFonts.Helvetica)
+    for (const line of ['First page', 'Second page']) {
+      doc.addPage([300, 300]).drawText(line, { x: 20, y: 200, size: 14, font })
+    }
+    await writeFile(report, await doc.save({ useObjectStreams: false }))
+    await makePdf(scan, [[300, 300]])
+    if (EVIDENCE_DIR) await mkdir(EVIDENCE_DIR, { recursive: true })
+
+    const launched = await launchShell({ onboardingSeen: true, videoDir: 'pdf-tools-convert' })
+    const { app, page } = launched
+    try {
+      const tools = await openToolsWindow(app, page, /PDF tools/)
+
+      // images to PDF: a file that is no picture is named and left out
+      await tools.getByRole('button', { name: /Images to PDF/ }).click()
+      await queueDialogs(app, { open: [[wide, notImage], [tall]], save: [photos] })
+      await tools.getByRole('button', { name: 'Choose pictures' }).click()
+      await expect(tools.getByText('notes.png: not a JPG or PNG picture.')).toBeVisible()
+      await tools.getByRole('button', { name: 'Add more pictures' }).click()
+      await expect(tools.locator('.pt-item')).toHaveCount(2)
+      await tools.getByRole('radio', { name: 'Wide' }).check()
+      await tools.screenshot({ path: shot('pdf-tools-images-en') })
+      await tools.getByRole('button', { name: 'Save as new file' }).click()
+      await expect(tools.getByText('Made a new file: photos.pdf')).toBeVisible()
+      const made = await PDFDocument.load(await readFile(photos))
+      expect(made.getPages().map((p) => [p.getWidth(), p.getHeight()])).toEqual([
+        [842, 595],
+        [595, 842],
+      ])
+
+      // save as text, then open the text file in a tab
+      await tools.getByRole('button', { name: 'All tools' }).click()
+      await tools.getByRole('button', { name: /Save as text/ }).click()
+      await queueDialogs(app, { open: [[report]], save: [join(dir, 'report')] })
+      await tools.getByRole('button', { name: 'Choose PDF', exact: true }).click()
+      await expect(
+        tools.getByText('Pages whose text is a picture, such as scanned pages, come out empty.'),
+      ).toBeVisible()
+      await tools.getByRole('button', { name: 'Save as new file' }).click()
+      await expect(tools.getByText('Made a new file: report.txt')).toBeVisible()
+      expect(await readFile(reportText, 'utf8')).toBe('First page\n\nSecond page\n')
+      await tools.screenshot({ path: shot('pdf-tools-text-en') })
+      const textTabs = await editorPages(app, '://markdown/')
+      await tools.getByRole('button', { name: 'Open in a tab' }).click()
+      await expect
+        .poll(() => editorPages(app, '://markdown/'), { timeout: 30_000 })
+        .toBe(textTabs + 1)
+      const textTab = await waitForPageWithUrl(app, '://markdown/')
+      await expect(textTab.locator('body')).toContainText('Second page')
+
+      // saving the text again over that file: the open tab reads it again
+      const revised = await PDFDocument.create()
+      const revisedFont = await revised.embedFont(StandardFonts.Helvetica)
+      revised
+        .addPage([300, 300])
+        .drawText('Revised page', { x: 20, y: 200, size: 14, font: revisedFont })
+      await writeFile(join(dir, 'revised.pdf'), await revised.save({ useObjectStreams: false }))
+      await queueDialogs(app, { open: [[join(dir, 'revised.pdf')]], save: [reportText] })
+      await tools.getByRole('button', { name: 'Choose another PDF' }).click()
+      await tools.getByRole('button', { name: 'Save as new file' }).click()
+      await expect(tools.getByText('Made a new file: report.txt')).toBeVisible()
+      await tools.getByRole('button', { name: 'Open in a tab' }).click()
+      await expect(textTab.locator('body')).toContainText('Revised page', { timeout: 30_000 })
+      expect(await editorPages(app, '://markdown/')).toBe(textTabs + 1)
+
+      // a PDF without any text is named, and nothing is asked or written
+      await queueDialogs(app, { open: [[scan]], save: [join(dir, 'scan.txt')] })
+      await tools.getByRole('button', { name: 'Choose another PDF' }).click()
+      await tools.getByRole('button', { name: 'Save as new file' }).click()
+      await expect(tools.getByText(/No text was found in this PDF/)).toBeVisible()
+      expect(existsSync(join(dir, 'scan.txt'))).toBe(false)
+    } finally {
+      await closeAndSaveVideo(launched, 'pdf-tools-convert')
     }
   })
 

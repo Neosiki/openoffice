@@ -145,9 +145,17 @@ body {
   background: var(--surface-subtle);
 }
 
+/* the PDF editor's 28px ribbon icon for the same command */
 .pt-card-icon {
+  display: flex;
   flex: none;
-  margin-top: 1px;
+  width: 28px;
+  height: 28px;
+  margin-top: 2px;
+  color: var(--text-secondary);
+}
+
+.pt-card:hover .pt-card-icon {
   color: var(--accent);
 }
 

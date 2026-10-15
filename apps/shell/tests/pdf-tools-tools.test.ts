@@ -1,11 +1,18 @@
+import { crc32, deflateSync } from 'node:zlib'
 import { describe, expect, it } from 'vitest'
-import { PDFDocument } from 'pdf-lib'
+import { PDFDocument, StandardFonts } from 'pdf-lib'
 import {
+  PdfToolRefusal,
   checkOptions,
+  inspectImage,
   inspectPdf,
   isPdfToolId,
   outputNames,
+  pagesToText,
   runPdfTool,
+  toolInputKind,
+  toolMinInputs,
+  toolOutputExtension,
   toolTakesMany,
 } from '../src/main/pdf-tools/tools'
 
@@ -34,6 +41,43 @@ async function encryptedPdf(): Promise<Uint8Array> {
   return new Uint8Array(Buffer.from(marked, 'latin1'))
 }
 
+/** A real grey RGB PNG */
+function png(width: number, height: number): Uint8Array {
+  const chunk = (type: string, data: Buffer) => {
+    const len = Buffer.alloc(4)
+    len.writeUInt32BE(data.length)
+    const typed = Buffer.concat([Buffer.from(type, 'latin1'), data])
+    const crc = Buffer.alloc(4)
+    crc.writeUInt32BE(crc32(typed))
+    return Buffer.concat([len, typed, crc])
+  }
+  const ihdr = Buffer.alloc(13)
+  ihdr.writeUInt32BE(width, 0)
+  ihdr.writeUInt32BE(height, 4)
+  ihdr[8] = 8
+  ihdr[9] = 2
+  const row = Buffer.concat([Buffer.from([0]), Buffer.alloc(width * 3, 0x80)])
+  return new Uint8Array(
+    Buffer.concat([
+      Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+      chunk('IHDR', ihdr),
+      chunk('IDAT', deflateSync(Buffer.concat(Array.from({ length: height }, () => row)))),
+      chunk('IEND', Buffer.alloc(0)),
+    ]),
+  )
+}
+
+/** a PDF with one line of text per entry; '' makes a page without text */
+async function textPdf(lines: string[]): Promise<Uint8Array> {
+  const doc = await PDFDocument.create()
+  const font = await doc.embedFont(StandardFonts.Helvetica)
+  for (const line of lines) {
+    const page = doc.addPage([300, 300])
+    if (line) page.drawText(line, { x: 20, y: 200, size: 14, font })
+  }
+  return doc.save({ useObjectStreams: false })
+}
+
 async function runUntouched(
   tool: Parameters<typeof runPdfTool>[0],
   inputs: Uint8Array[],
@@ -55,6 +99,14 @@ describe('reading a picked PDF', () => {
     expect(await inspectPdf(new TextEncoder().encode('not a pdf'))).toEqual({
       ok: false,
       problem: 'unreadable',
+    })
+  })
+
+  it('takes a JPEG or PNG picture as one page and names anything else', () => {
+    expect(inspectImage(png(4, 3))).toEqual({ ok: true, pages: 1 })
+    expect(inspectImage(new TextEncoder().encode('%PDF-1.7'))).toEqual({
+      ok: false,
+      problem: 'not-image',
     })
   })
 })
@@ -81,6 +133,14 @@ describe('checking options', () => {
     expect(checkOptions('rotate', { rotation: 45 }, 4).options).toEqual({ rotation: 90 })
     expect(checkOptions('pageSize', { paper: 'B5' }, 4).options).toEqual({ paper: 'A4' })
     expect(checkOptions('splitPages', { perPage: 3 }, 4).options).toEqual({ perPage: 2 })
+    expect(checkOptions('imagesToPdf', { imagePaper: 'B5', margin: 'huge' }, 1).options).toEqual({
+      imagePaper: 'A4',
+      margin: 'small',
+    })
+    expect(checkOptions('imagesToPdf', { imagePaper: 'image', margin: 'none' }, 1).options).toEqual(
+      { imagePaper: 'image', margin: 'none' },
+    )
+    expect(checkOptions('toText', { pages: '1' }, 3).options).toEqual({})
   })
 
   it('keeps only the options the tool reads', () => {
@@ -93,6 +153,13 @@ describe('checking options', () => {
     expect(isPdfToolId(undefined)).toBe(false)
     expect(toolTakesMany('merge')).toBe(true)
     expect(toolTakesMany('split')).toBe(false)
+    expect(toolTakesMany('imagesToPdf')).toBe(true)
+    expect(toolMinInputs('merge')).toBe(2)
+    expect(toolMinInputs('imagesToPdf')).toBe(1)
+    expect(toolInputKind('imagesToPdf')).toBe('image')
+    expect(toolInputKind('toText')).toBe('pdf')
+    expect(toolOutputExtension('toText')).toBe('txt')
+    expect(toolOutputExtension('imagesToPdf')).toBe('pdf')
   })
 })
 
@@ -144,6 +211,44 @@ describe('running each tool', () => {
     const [out] = await runUntouched('splitPages', [await pdf(3)], { perPage: 2 })
     expect((await PDFDocument.load(out!)).getPageCount()).toBe(6)
   })
+
+  it('makes one page per picture, in order, on the chosen paper', async () => {
+    const [out] = await runUntouched('imagesToPdf', [png(40, 20), png(20, 40)], {
+      imagePaper: 'A5',
+      margin: 'large',
+    })
+    const doc = await PDFDocument.load(out!)
+    expect(doc.getPages().map((p) => [p.getWidth(), p.getHeight()])).toEqual([
+      [595, 420],
+      [420, 595],
+    ])
+  })
+
+  it('makes pages the size of each picture when asked', async () => {
+    const [out] = await runUntouched('imagesToPdf', [png(40, 20)], {
+      imagePaper: 'image',
+      margin: 'small',
+    })
+    const page = (await PDFDocument.load(out!)).getPage(0)
+    expect([page.getWidth(), page.getHeight()]).toEqual([30, 15])
+  })
+
+  it('saves the text page by page, skipping pages without text', async () => {
+    const [out] = await runUntouched('toText', [await textPdf(['Page one', '', 'Page three'])], {})
+    expect(new TextDecoder().decode(out!)).toBe('Page one\n\nPage three\n')
+  })
+
+  it('refuses a PDF with no text at all', async () => {
+    await expect(runPdfTool('toText', [await textPdf(['', ''])], {})).rejects.toBeInstanceOf(
+      PdfToolRefusal,
+    )
+  })
+})
+
+describe('text output', () => {
+  it('joins the pages with a blank line and ends with one line break', () => {
+    expect(pagesToText([{ text: 'a\nb  ' }, { text: '   ' }, { text: 'c' }])).toBe('a\nb\n\nc\n')
+  })
 })
 
 describe('suggested file names', () => {
@@ -152,5 +257,7 @@ describe('suggested file names', () => {
     expect(outputNames('nup', 'a.pdf', 1, { perSheet: 4 })).toEqual(['a-4up.pdf'])
     expect(outputNames('pageSize', 'a.pdf', 1, { paper: 'Letter' })).toEqual(['a-Letter.pdf'])
     expect(outputNames('split', 'a.pdf', 3, {})).toEqual(['a-1.pdf', 'a-2.pdf', 'a-3.pdf'])
+    expect(outputNames('imagesToPdf', 'Photo 1.JPEG', 1, {})).toEqual(['Photo 1.pdf'])
+    expect(outputNames('toText', 'Report.pdf', 1, {})).toEqual(['Report.txt'])
   })
 })

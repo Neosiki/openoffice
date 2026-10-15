@@ -1,9 +1,9 @@
 /**
  * The PDF tools window's work, without Electron: read what a picked PDF is,
  * check a tool's options against it, and run the tool. Every tool goes
- * through the PDF editor's own page functions (apps/pdf/src/main/save-pdf.ts),
- * so a file made here matches the same command in the editor's ribbon. No AI,
- * no network, and the source bytes are only read.
+ * through the PDF editor's own functions (apps/pdf/src/main: save-pdf.ts for
+ * pages, images-to-pdf.ts, read-text.ts), so a file made here matches the same
+ * command in the editor. No AI, no network, and the source bytes are only read.
  */
 import { PDFDocument } from 'pdf-lib'
 import {
@@ -15,12 +15,17 @@ import {
   splitPagesBytes,
   splitPdfBytes,
 } from '../../../../pdf/src/main/save-pdf'
+import { imagesToPdfBytes, readImageInfo } from '../../../../pdf/src/main/images-to-pdf'
+import { readPdfText, type PdfPageText } from '../../../../pdf/src/main/read-text'
 import { parsePageRange } from '../../../../pdf/src/renderer/convert/page-range'
 import {
   PDF_TOOL_IDS,
+  PDF_TOOL_MARGINS,
   PDF_TOOL_PAPERS,
   type PdfInputProblem,
   type PdfToolId,
+  type PdfToolInputKind,
+  type PdfToolMargin,
   type PdfToolOptions,
   type PdfToolPaper,
 } from '../../shared/pdf-tools-api'
@@ -41,12 +46,42 @@ export function isPdfToolId(value: unknown): value is PdfToolId {
   return typeof value === 'string' && (PDF_TOOL_IDS as readonly string[]).includes(value)
 }
 
-/** Merge takes two or more files; every other tool takes one */
+/** Points of space around a picture for each margin choice (imagesToPdf) */
+const MARGIN_POINTS: Record<PdfToolMargin, number> = { none: 0, small: 18, large: 36 }
+
+/** Merge and imagesToPdf take several files; every other tool takes one */
 export function toolTakesMany(tool: PdfToolId): boolean {
-  return tool === 'merge'
+  return tool === 'merge' || tool === 'imagesToPdf'
+}
+
+/** The fewest files a tool runs on: merge needs two */
+export function toolMinInputs(tool: PdfToolId): number {
+  return tool === 'merge' ? 2 : 1
+}
+
+/** imagesToPdf takes pictures; every other tool takes PDFs */
+export function toolInputKind(tool: PdfToolId): PdfToolInputKind {
+  return tool === 'imagesToPdf' ? 'image' : 'pdf'
+}
+
+/** The kind of file a tool writes */
+export function toolOutputExtension(tool: PdfToolId): 'pdf' | 'txt' {
+  return tool === 'toText' ? 'txt' : 'pdf'
+}
+
+/** A tool ran but has nothing to write: a PDF without any text layer (toText) */
+export class PdfToolRefusal extends Error {
+  constructor(readonly reason: 'no-text') {
+    super(reason)
+  }
 }
 
 export type InspectResult = { ok: true; pages: number } | { ok: false; problem: PdfInputProblem }
+
+/** A picked picture counts as one page, or is not a JPEG or PNG */
+export function inspectImage(bytes: Uint8Array): InspectResult {
+  return readImageInfo(bytes) ? { ok: true, pages: 1 } : { ok: false, problem: 'not-image' }
+}
 
 /** Page count of a PDF, or why the tools cannot use it */
 export async function inspectPdf(bytes: Uint8Array): Promise<InspectResult> {
@@ -110,6 +145,20 @@ export function checkOptions(tool: PdfToolId, raw: unknown, pageCount: number): 
       }
     case 'splitPages':
       return { ok: true, options: { perPage: o.perPage === 4 || o.perPage === 9 ? o.perPage : 2 } }
+    case 'imagesToPdf':
+      return {
+        ok: true,
+        options: {
+          imagePaper:
+            o.imagePaper === 'image' ||
+            (PDF_TOOL_PAPERS as readonly unknown[]).includes(o.imagePaper)
+              ? (o.imagePaper as PdfToolPaper | 'image')
+              : 'A4',
+          margin: (PDF_TOOL_MARGINS as readonly unknown[]).includes(o.margin)
+            ? (o.margin as PdfToolMargin)
+            : 'small',
+        },
+      }
     default:
       return { ok: true, options: {} }
   }
@@ -168,7 +217,27 @@ export async function runPdfTool(
     }
     case 'splitPages':
       return [await splitPagesBytes(first, options.perPage ?? 2)]
+    case 'imagesToPdf': {
+      const paper = options.imagePaper ?? 'A4'
+      return [
+        await imagesToPdfBytes(inputs, {
+          paper: paper === 'image' ? null : PAPER_POINTS[paper],
+          marginPt: MARGIN_POINTS[options.margin ?? 'small'],
+        }),
+      ]
+    }
+    case 'toText': {
+      const doc = await readPdfText(first)
+      if (!doc.pages.some((page) => page.text.trim() !== '')) throw new PdfToolRefusal('no-text')
+      return [new TextEncoder().encode(pagesToText(doc.pages))]
+    }
   }
+}
+
+/** The pages' text in order, a blank line between pages; a page without text adds nothing */
+export function pagesToText(pages: Pick<PdfPageText, 'text'>[]): string {
+  const texts = pages.map((page) => page.text.trimEnd()).filter((text) => text.trim() !== '')
+  return `${texts.join('\n\n')}\n`
 }
 
 /** File names the save dialog suggests, from the first input's name */
@@ -178,9 +247,11 @@ export function outputNames(
   count: number,
   options: PdfToolOptions,
 ): string[] {
-  const base = sourceName.replace(/\.pdf$/i, '') || 'document'
+  const base = sourceName.replace(/\.(pdf|jpe?g|png)$/i, '') || 'document'
   if (tool === 'split') return Array.from({ length: count }, (_, i) => `${base}-${i + 1}.pdf`)
-  const suffix: Record<Exclude<PdfToolId, 'split'>, string> = {
+  if (tool === 'imagesToPdf') return [`${base}.pdf`]
+  if (tool === 'toText') return [`${base}.txt`]
+  const suffix: Record<Exclude<PdfToolId, 'split' | 'imagesToPdf' | 'toText'>, string> = {
     merge: 'merged',
     extract: 'pages',
     reverse: 'reversed',

@@ -44,7 +44,11 @@ describe('paths stay in the main process', () => {
   it('takes inputs only from its own open dialog and hands out ids', () => {
     expect(win).toMatch(/showOpenDialogWithMemory\(dialog, owner/)
     expect(win).toMatch(/inputs\.set\(input\.id, input\)/)
-    expect(win).toMatch(/out\.inputs\.push\(\{ id: input\.id, name, pages: input\.pages, size \}\)/)
+    expect(win).toMatch(
+      /out\.inputs\.push\(\{ id: input\.id, kind, name, pages: input\.pages, size \}\)/,
+    )
+    // a picture never reaches a PDF tool, nor a PDF the picture tool
+    expect(win).toMatch(/input\.kind === kind\)/)
   })
 
   it('writes only where the save dialog points, never over a source or an unsaved open file', () => {
