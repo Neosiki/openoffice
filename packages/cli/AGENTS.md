@@ -46,7 +46,7 @@
 - 에이전트 설정 파일은 키 하나만 쓰거나 지운다. `ieumoffice` 이름의 항목이 우리 실행기가 아닌 것을 가리키면 강제 옵션 없이는 바꾸지 않는다. JSON 설정은 다시 직렬화되고 TOML은 해당 표만 줄 단위로 바꾼다. symlink인 설정은 대상에 써서 링크를 보존한다.
 - ODT(`src/formats/odt.ts`): `.odt`는 `odtToDocx`의 다리 docx로 열고(`openDocumentFile`이 `OpenDocument.odt`에 원본·다리 지도·보고를 둔다) `saveDocument`가 `saveOdt`로 원본에 좁게 되돌려 쓴다. 엔진 패키지(`@genoffice/odt-engine`)는 공개 API만 쓰고 고치지 않는다.
   - 꺼 둔 기능의 작업 목록은 `odtDisabledFeature` 한 곳에 있다(메모, 변경 내용, 목차, 수식 `<formula>`, 차트, 글상자, 워터마크, 다단 `set_page_setup.columns`, 그림 번호·상호 참조·인용 `insertField`). 거절 이유는 `unsupported`다. `--track`과 확장자가 다른 `--out`은 `docs apply`가 작업 전에 거절한다.
-  - `OdtEditGuard`는 작업마다 앞뒤를 비교한다. 잠긴 칸(`isProtectedCell`, 셀 안 표는 바깥 칸)과 `odt-keep:` 자리 표시가 바뀌면 편집기 상태와 곁 상태를 되돌리고 `op_rejected`로 거절한다. 자리 표시를 통째로 지우는 것과 잠긴 칸 둘레의 행 추가는 된다. 격자 모양이 그대로면 위치로, 바뀌었으면 칸 지문의 개수로 본다.
+  - `OdtEditGuard`는 작업마다 앞뒤를 비교한다. 잠긴 칸(`isProtectedCell`, 셀 안 표는 바깥 칸)과 `odt-keep:` 자리 표시가 바뀌면 편집기 상태와 곁 상태를 되돌리고 `op_rejected`로 거절한다. 자리 표시를 통째로 지우는 것과 잠긴 칸 둘레의 행 추가는 된다. 격자 모양이 그대로면(칸 합치기·나누기 포함) 같은 자리에서 비교한다. 행만 또는 열만 바뀌었으면 앞뒤 행(열)을 맞춰 잠긴 칸이 옮겨 간 자리에서 비교한다(`movedLockedCell`). 둘 다 바뀌었을 때만 칸 지문의 개수로 본다.
   - `convert`의 ODT 경로는 docx를 거친다. 앱의 `--headless-export`는 `.odt`를 받지 않으므로 odt→pdf/html은 출력 폴더 안의 임시 폴더(`.ieumoffice-odt-*`)에 docx를 쓰고 끝나면(실패해도) 지운다. html→odt도 같은 임시 폴더를 쓴다. 변환 보고는 항목마다 `warnings[]`(`odt_converted`/`odt_dropped`)와 `detail.odt_report`로 낸다.
   - 암호 ODT는 종료 코드 2, `unsupported`와 암호를 풀라는 `suggestion`이다(`odtOpenFailure`). 기본 이유 `file_not_found`로 두지 않는다.
 - 이 패키지는 `@genoffice/i18n`과 `@genoffice/electron-utils`를 import하지만 `package.json`의 `dependencies`에는 적혀 있지 않다(workspace 호이스팅에 기대는 기존 구조다).

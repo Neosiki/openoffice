@@ -2777,17 +2777,22 @@ function hostCellParasPatchFromModel(
       if (!cell.nestedTables?.length || !originalCell.nestedTables?.length) return null
       const origTexts = parsedCellParaTexts(originalCell)
       if (cell.paras.join('\n') === origTexts.join('\n')) return null
-      changed = true
       const rich = cell.richParas
+      let patch: CellParaPatch[]
       if (rich && rich.length === cell.paras.length && rich.length === origTexts.length) {
-        return rich.map((p, i): CellParaPatch =>
+        patch = rich.map((p, i): CellParaPatch =>
           p.runs.map((run) => run.text).join('') === origTexts[i] ? null : { runs: p.runs },
         )
+      } else if (cell.paras.length === origTexts.length) {
+        patch = cell.paras.map((p, i) => (p === origTexts[i] ? null : p))
+      } else {
+        patch = [...cell.paras]
       }
-      if (cell.paras.length === origTexts.length) {
-        return cell.paras.map((p, i) => (p === origTexts[i] ? null : p))
-      }
-      return [...cell.paras]
+      // the plain and rich texts disagreed but no paragraph actually differs:
+      // the cell is untouched, not a reason to regenerate the table
+      if (patch.every((p) => p === null)) return null
+      changed = true
+      return patch
     })
   })
   return changed ? grid : null

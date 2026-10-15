@@ -8,7 +8,7 @@ OpenDocument Text(`.odt`)를 워드 편집기가 다루는 docx로 바꾸고, �
   - `openOdt`: zip 관문 → 패키지 읽기 → `mimetype` 검사 → 암호 검사 → 본문 위치 지도 → 스타일 표 → 생성 프로그램 판별.
   - `readOdtPackage`: 항목마다 원래 바이트(압축 푼 것), 원래 압축 방식, 원래 순서(로컬 헤더 위치 순)를 지닌다. 다시 묶을 때 이것을 쓴다.
   - `scanOdtBody`: `office:text`의 최상위 요소와 그 안의 문단·목록·구역·색인·표·행·셀·가려진 셀·글상자·그림·개체·도형·책갈피·메모·각주를 원본 문자열의 위치(`start`/`openEnd`/`closeStart`/`end`)로 기록한다.
-  - `readOdtStyles`: 공용 스타일, 기본 스타일, 목록 스타일, 쪽 모양, 바탕쪽(머리글·꼬리글과 왼쪽·첫쪽 변형), 두 파트의 자동 스타일을 위치와 함께 담고 상속을 풀어 준다(`resolve`).
+  - `readOdtStyles`: 공용 스타일, 기본 스타일, 목록 스타일, 쪽 모양, 바탕쪽(머리글·바닥글과 왼쪽·첫쪽 변형), 두 파트의 자동 스타일을 위치와 함께 담고 상속을 풀어 준다(`resolve`).
   - 변환 뼈대(`convert.ts`, `flow.ts`, `docx-package.ts`): 양방향 변환의 문맥, 다리 지도, 처리기 등록, 본문 흐름 걷기, 다리 docx 묶기. 아래 "변환 뼈대" 절.
 - 글자 층(`src/text`, 진입점 `src/text/index.ts`): 문단·제목·글자 묶음(`text:span`)·공백·탭·줄 바꿈·쪽 나누기·하이퍼링크·목록·누름틀 책갈피, 공용 스타일과 기본 스타일. 아래 "글자 층" 절.
 - 표 층(`src/table`), 개체 층(`src/objects`), 쪽 층(`src/page`): 아래 각 절.
@@ -20,6 +20,7 @@ OpenDocument Text(`.odt`)를 워드 편집기가 다루는 docx로 바꾸고, �
 - 편집 화면, 저장 창, 꺼 둔 기능의 안내는 `apps/docs`가 한다.
 - 층끼리는 처리기 등록으로만 만난다. 바깥(편집기, 명령줄, MCP)은 `src/index.ts`의 공개 API만 쓴다.
 - AI에 보내기 전 가리기(redaction)는 이 패키지가 하지 않는다.
+- 원본(GenOffice)에서 받아오는 문서 엔진과 달리 이 패키지는 이 프로젝트가 만들었다. 고칠 때 사람에게 먼저 묻지 않아도 된다. 다만 아래 규칙과 docx 엔진을 바꾸지 않는다는 규칙은 지킨다.
 
 ## 항상 지켜야 하는 것
 
@@ -53,7 +54,7 @@ OpenDocument Text(`.odt`)를 워드 편집기가 다루는 docx로 바꾸고, �
 
 ```ts
 const doc = await openOdt(odtBytes)
-const registry = registerTextConverters(new ConversionRegistry()) // 그다음 T3·T4·T5의 등록 함수
+const registry = registerTextConverters(new ConversionRegistry()) // 그다음 표·개체·쪽 층의 등록 함수
 const ctx = new OdfToOoxmlContext(doc, registry)
 convertOdtStyles(ctx) // 반드시 본문보다 먼저: 문단이 docx 스타일 id를 찾는다
 convertOdtBody(ctx)
@@ -79,7 +80,7 @@ const contentXml = applyTextPatches(doc.contentXml, patches['content.xml'])
 - `BridgeMarker`: 문단 안의 글자 아닌 것을 글자 위치(`offset`)에 묶는다. `kind`는 `bookmark-start`/`bookmark-end`/`bookmark`(책갈피), `keep`(처리기가 없어 OOXML로 옮기지 않은 인라인 요소, 원래 자리에 다시 넣음), `text`(처리기가 없는 필드 등 글자가 있는 인라인 요소, 그 글자가 그대로면 원문을 다시 넣고 바뀌면 보통 글자로 씀), `handler`(등록한 인라인 처리기가 만든 것, `owner`·`length`). `pair`는 같은 문단 안 짝 책갈피의 순번, `field`는 한컴 누름틀(`NormalField…`), `ooxmlName`은 다리 docx에 넣은 숨은 책갈피 이름.
 - `styles`: docx 문단 스타일과 ODF 공용 스타일의 대응(`paragraph[]`, 써 넣은 `w:style` 원문 포함), `docDefaults` 원문, 기본 스타일의 계열, 새 문단의 부모로 쓸 공용 스타일(`baseParagraphStyle`).
 - `lists: BridgeList[]`: `w:numId` ↔ ODF 목록 스타일 이름과 그 목록 블록들.
-- `ext: Record<string, JsonValue>`: 작업별 칸. T3는 `table`, T4는 `objects`, T5는 `page`처럼 자기 이름 하나를 쓴다(`ctx.ext(key, init)`, 저장 때 `rctx.ext(key)`). 보호된 칸 좌표, 자리 표시 id 같은 공개 정보도 여기 둔다.
+- `ext: Record<string, JsonValue>`: 작업별 칸. 표 층은 `table`, 개체 층은 `objects`, 쪽 층은 `page`처럼 자기 이름 하나를 쓴다(`ctx.ext(key, init)`, 저장 때 `rctx.ext(key)`). 보호된 칸 좌표, 자리 표시 id 같은 공개 정보도 여기 둔다.
 - `warnings`: 근사하거나 옮기지 못하고 그대로 둔 것.
 - 숨은 책갈피 이름: 문단마다 `_odtp<문단 id>`(정체 표시, 편집기가 문단을 다시 만들어도 다시 써 준다), 표시 위치마다 `_odtm<문단 id>_<순번>`. `_`로 시작하므로 편집기는 숨긴다. 위치를 되살리는 데는 쓰지 않는다(엔진이 다시 만든 문단은 책갈피를 맨 앞의 빈 쌍으로 옮긴다). 위치는 기록의 `offset`으로 되살린다.
 
@@ -88,7 +89,7 @@ const contentXml = applyTextPatches(doc.contentXml, patches['content.xml'])
 같은 대상에 여럿이 등록되면 나중에 등록한 것이 먼저다. 다른 작업은 이 파일들을 고치지 않고 등록만 한다.
 
 - `addBlock(BlockConverter)`: 본문 흐름의 블록 하나를 맡는다.
-  - `match(node, ctx)`로 고른다. 예: T3은 `node.kind === 'table'`, 그리고 글상자 안 표를 담은 문단(`text:p > draw:frame > draw:text-box > table:table`)을 글자 층보다 먼저 가져간다.
+  - `match(node, ctx)`로 고른다. 예: 표 층은 `node.kind === 'table'`, 그리고 글상자 안 표를 담은 문단(`text:p > draw:frame > draw:text-box > table:table`)을 글자 층보다 먼저 가져간다.
   - `toOoxml(ctx, node, env)` → `{ elements: [{ xml, kind, paragraph }], data }`. `env.blockId`의 블록은 이미 지도에 있다. 순서가 중요한 경우(안쪽에서 `convertNode`를 부르는 경우) `ctx.addElement(env.blockId, …)`로 직접 넣고 빈 `elements`를 돌려준다.
   - `toOdf(rctx, block, items, env)`: 그 블록의 요소가 "바뀌지 않은 채 빠짐없이 순서대로" 돌아오지 않았을 때만 불린다. `items`는 그 블록을 잇는 편집된 요소와 그 사이에 새로 들어온 요소(편집 순서, 지운 것은 없음). 블록의 원본 범위를 대신할 ODF를 돌려준다. 안 바뀐 요소(`item.unchanged`)는 원본 범위를 복사한다.
   - `identify?(rctx, item, candidates)`: XML이 그대로가 아니라 바로 짝을 못 찾은 편집된 요소를 자기 요소로 가져간다(`candidates`는 앞뒤로 짝을 찾은 요소 사이의, 아직 주인이 없는 이 처리기의 요소).
@@ -100,12 +101,12 @@ const contentXml = applyTextPatches(doc.contentXml, patches['content.xml'])
 
 ### 기본 처리 (처리기가 없을 때)
 
-- 블록: 구역(`text:section`)은 컨테이너(`owner: 'container'`, 자식을 흐름으로 변환하고 저장 때 원래 감싸개 안에 다시 씀). 나머지(처리기 없는 표, 차례 등)와 `other`/`opaque`는 OOXML 없이 `keep`: 화면에는 없고 저장 때 원래 자리에 바이트 그대로 남는다(`warnings`에 남김). T5가 구역을 맡을 때는 `convertContainer`/`rebuildContainer`를 감싸 쓴다.
+- 블록: 구역(`text:section`)은 컨테이너(`owner: 'container'`, 자식을 흐름으로 변환하고 저장 때 원래 감싸개 안에 다시 씀). 나머지(처리기 없는 표, 차례 등)와 `other`/`opaque`는 OOXML 없이 `keep`: 화면에는 없고 저장 때 원래 자리에 바이트 그대로 남는다(`warnings`에 남김). 쪽 층이 구역을 맡을 때는 `convertContainer`/`rebuildContainer`를 감싸 쓴다.
 - 인라인: `draw:*`, `office:*`, `text:note`, 변경 기록·색인 표시, `text:soft-page-break` 등은 `keep`(숨은 책갈피 하나, 저장 때 옮긴 위치에 원문 그대로). 글자가 있는 그 밖의 요소(`text:page-number` 같은 필드)는 `text`.
 
 ### 문맥
 
-- `OdfToOoxmlContext`: `doc`, `registry`, `map`, `docx`(스타일·번호 정의·관계·추가 파트·최종 `sectPr`·이름공간을 모으는 곳, `buildBridgeDocx`가 묶음), `generate`(엔진 `generateParagraphXml`용), `part(part)`(파트 문자열·접두사·글꼴 이름표), `addBlock`/`addElement`, `reserveParagraphId`/`addParagraph`(문단을 시작할 때 id를 받고 끝날 때 기록), `allocateBookmarkId`, `addRelationship`/`addHyperlink`, `warn`, `ext`. 그림 바이트는 `docx.parts.push({ path: 'word/media/…', data })`와 `addRelationship`으로 넣는다. T5는 `docx.sectPr`을 채운다(비우면 기본 쪽 모양에서 만든다).
+- `OdfToOoxmlContext`: `doc`, `registry`, `map`, `docx`(스타일·번호 정의·관계·추가 파트·최종 `sectPr`·이름공간을 모으는 곳, `buildBridgeDocx`가 묶음), `generate`(엔진 `generateParagraphXml`용), `part(part)`(파트 문자열·접두사·글꼴 이름표), `addBlock`/`addElement`, `reserveParagraphId`/`addParagraph`(문단을 시작할 때 id를 받고 끝날 때 기록), `allocateBookmarkId`, `addRelationship`/`addHyperlink`, `warn`, `ext`. 그림 바이트는 `docx.parts.push({ path: 'word/media/…', data })`와 `addRelationship`으로 넣는다. 쪽 층은 `docx.sectPr`을 채운다(비우면 기본 쪽 모양에서 만든다).
 - `OoxmlToOdfContext`: `doc`, `map`, `edited`(편집된 docx의 `parseDocx` 결과), `registry`, `options.editedStylesXml`, `part(part)`, `patch(part, start, end, xml)`(좁은 교체, 겹치면 안 됨), `addAutomaticStyle(part, xml)`, `derivedStyle(part, key, base, build)`(같은 `key`면 같은 새 스타일을 공유), `allocateStyleName(base)`(두 파트의 기존·새 이름 어디와도 겹치지 않는 `<base>_io<n>`), `fontFace(part, family)`(없으면 `style:font-face`를 더함), `newAutomaticStyles(part)`, `warn`, `ext`, `finish()`(새 자동 스타일·글꼴 선언·빠진 이름공간 선언을 더한 파트별 패치).
 
 ### 정렬 (`alignItems`, `rebuildFlow`)
@@ -121,7 +122,7 @@ const contentXml = applyTextPatches(doc.contentXml, patches['content.xml'])
 
 - `registerTextConverters(registry)`: 문단·제목·목록 블록(`textBlockConverter`, id `text`)과 새 문단 쓰기(`textFreeWriter`).
 - `convertOdtStyles(ctx)`: 공용 문단 스타일 → docx 문단 스타일(표시 이름 그대로, `basedOn`은 부모 사슬). `Standard`가 있으면 `Normal`과 대응. 기본 스타일 → `w:docDefaults`. ODF는 부모의 탭 목록을 대체하고 OOXML은 합치므로, 탭은 docx 스타일에 넣지 않고 문단에 실제 탭 목록을 직접 넣는다. `style:default-outline-level`(한컴 "개요 n")은 docx 제목으로 바꾸지 않는다(한컴은 `text:h`를 쓰지 않는다). 편집기의 제목·하이퍼링크 명령을 위해 없으면 `Heading1…6`, `Hyperlink`를 더한다.
-- `paragraphToOoxml(ctx, range, { part, owner, block, list })` → `{ xml, paragraph, model }`: 문단 하나를 `w:p`로 바꾸고 기록한다. T3(셀 문단), T4(각주·메모 본문), T5(머리글 문단, `part: 'styles.xml'`)가 그대로 쓴다. `w:pStyle`은 자동 스타일의 부모 공용 스타일, 자동 스타일 자신의 문단 속성은 직접 `w:pPr`, run은 문단 자동 스타일의 글자 속성 위에 span·링크 스타일을 겹친 직접 `w:rPr`이다. OOXML은 엔진의 `generateParagraphXml`이 쓴다. 문단 스타일이 굵게인데 span이 보통이면 `w:b w:val="0"`을 쓴다.
+- `paragraphToOoxml(ctx, range, { part, owner, block, list })` → `{ xml, paragraph, model }`: 문단 하나를 `w:p`로 바꾸고 기록한다. 표 층(셀 문단), 개체 층(각주·메모 본문), 쪽 층(머리글 문단, `part: 'styles.xml'`)가 그대로 쓴다. `w:pStyle`은 자동 스타일의 부모 공용 스타일, 자동 스타일 자신의 문단 속성은 직접 `w:pPr`, run은 문단 자동 스타일의 글자 속성 위에 span·링크 스타일을 겹친 직접 `w:rPr`이다. OOXML은 엔진의 `generateParagraphXml`이 쓴다. 문단 스타일이 굵게인데 span이 보통이면 `w:b w:val="0"`을 쓴다.
 - `paragraphToOdf(rctx, para, origin, { part, neighbour, follows })`: 편집된 문단(`editedParagraphFromBlock(block)`, 셀이면 `editedParagraphFromTableParagraph(tp)`)을 ODF로. `origin`은 이 문단이 잇는 원래 문단 기록(없으면 새 문단).
   - 문단 모양: `rawPPr`이 기록의 `pPr`과 같으면 안 바뀐 것. 바뀐 속성만 원래 자동 스타일의 복사본에 덮어쓴다(`editStyleXml`: 이름만 바꾸고 다른 속성·탭 목록·한컴 속성·모르는 자식은 바이트 그대로). 원래 스타일이 공용 스타일이면 그것을 부모로 한 새 자동 스타일.
   - 새 문단: 바로 앞의 원래 문단(`follows`, Enter로 쪼갠 앞부분이나 그 뒤에 친 문단, 새 문단이 이어져도 같은 것)과 docx 스타일이 같으면 그 문단의 자동 스타일에서 만든다. 모든 속성·탭 목록·한컴 속성을 복사하고 다른 것만 덮어쓰며, 바뀐 것이 없으면 그 스타일 이름을 그대로 쓴다. 구역 시작(`style:master-page-name`)은 앞 문단의 것이므로 복사본에서 뺀다. 앞에 원래 문단이 없거나 docx 스타일이 다르면 docx 스타일에 대응하는 공용 스타일(없으면 `baseParagraphStyle`)을 부모로 한 새 자동 스타일.
@@ -139,7 +140,7 @@ const contentXml = applyTextPatches(doc.contentXml, patches['content.xml'])
 ### 알려진 한계
 
 - docx 엔진은 `w:t` 안의 글자 `&#38;`처럼 엔티티 모양의 글자를 한 번 더 풀어 읽는다. 그런 문단을 고치면 그 글자는 `&`가 된다(말뭉치 66개 중 문단 1개).
-- 표 칸의 문단(`TableParagraph`)은 숨은 책갈피를 지니지 않는다. 칸 문단과 원래 문단의 대응은 T3이 칸 위치로 정해 `paragraphToOdf`에 `origin`으로 넘긴다.
+- 표 칸의 문단(`TableParagraph`)은 숨은 책갈피를 지니지 않는다. 칸 문단과 원래 문단의 대응은 표 층이 칸 위치로 정해 `paragraphToOdf`에 `origin`으로 넘긴다.
 - 문단 모양 중 다리가 옮기지 않는 것(테두리, 세로 정렬 등)은 원래 스타일의 복사본에 그대로 남지만 편집기에서 바꿀 수 없다.
 - 지운 글자 속성을 문단 스타일 사슬의 값으로 되돌릴 때, 그 값을 문단 자동 스타일이나 바깥 span이 따로 정하고 있으면 그 값이 남을 수 있다(docx는 그 값을 run에 직접 썼기 때문). 한컴 문서는 span 자동 스타일이 모든 글자 속성을 지녀 해당이 드물다.
 
@@ -147,7 +148,7 @@ const contentXml = applyTextPatches(doc.contentXml, patches['content.xml'])
 
 - `registerTableConverters(registry)`: 글자 층 다음에 등록한다(조립 순서: 글자 → 표 → 개체 → 쪽). 블록 처리기 id는 `table`, 새 표를 쓰는 `FreeWriter`도 같은 id다.
 - 맡는 것: 본문의 `table:table`, 한컴이 글상자에 넣은 표를 담은 문단(`text:p > draw:frame > draw:text-box > table:table`, 글상자 안에 표 하나만 있는 틀), 셀 안의 표(맨 표와 글상자 표 모두, 몇 겹이든).
-- 다른 층과의 약속: `tableFrameOf(frame)`이 null이 아닌 `draw:frame`은 표 층 몫이다. 개체 층(T4)의 인라인·블록 처리기는 이 틀을 가져가지 않는다. 가져가면 그 표가 편집기에 보이지 않고, 저장 때 틀 안의 표를 바꿔 끼우지 못한다.
+- 다른 층과의 약속: `tableFrameOf(frame)`이 null이 아닌 `draw:frame`은 표 층 몫이다. 개체 층의 인라인·블록 처리기는 이 틀을 가져가지 않는다. 가져가면 그 표가 편집기에 보이지 않고, 저장 때 틀 안의 표를 바꿔 끼우지 못한다.
 
 ### 열기 (ODF → OOXML)
 
@@ -204,7 +205,7 @@ const contentXml = applyTextPatches(doc.contentXml, patches['content.xml'])
 - 행 높이 편집은 쓰지 않는다(새 행은 이웃 행 높이).
 - 혼합 글상자 문단의 글자는 표의 앞이나 뒤 한 곳에만 보인다. 그 글자 문단만 지우는 편집은 무시하고 글자를 남긴다(경고). 한 틀 문단의 표들 사이에 친 새 내용은 그 문단 뒤에 쓴다(경고).
 - 목록 항목 안의 글상자 표 문단(말뭉치 2개)은 글자 층이 문단으로 바꾸므로 표로 보이지 않는다(바이트 그대로 남는다).
-- 머리글·꼬리글(styles.xml)의 표는 맡지 않는다.
+- 머리글·바닥글(styles.xml)의 표는 맡지 않는다.
 - 합쳐진 다른 칸의 셀 안 표는 원래 바이트가 아니라 새 표로 쓴다.
 - 글자가 있는 인라인 처리기(각주 번호)가 든 칸 문단은 모양 비교를 하지 않아, 표를 다시 만든 저장에서 글자 층이 다시 쓴다. 글자가 없는 처리기(그림, 자리 표시)는 다시 읽으면 `keep` 표시가 되므로 원래 바이트와 비교해 같으면 원래 문단을 쓴다.
 - `ext.table`은 격자 칸마다 기록하므로 큰 문서에서 크다(말뭉치에서 가장 큰 content.xml 12.8MB 문서에 5.7MB).
@@ -276,7 +277,7 @@ const changes = objectPackageChanges(rctx, { contentXml, stylesXml }) // 패치 
 
 ### 알려진 한계
 
-- 머리글·꼬리글(`styles.xml`)의 그림과 각주·메모 본문 안의 개체는 OOXML로 옮기지 않고(숨은 책갈피, 원문 그대로) 둔다. 머리글 그림은 머리글 파트의 관계가 필요하다.
+- 머리글·바닥글(`styles.xml`)의 그림과 각주·메모 본문 안의 개체는 OOXML로 옮기지 않고(숨은 책갈피, 원문 그대로) 둔다. 머리글 그림은 머리글 파트의 관계가 필요하다.
 - 변경 기록 범위는 그 범위만이 아니라 범위가 든 최상위 문단 전체를 잠근다(`revision`). 목록·표 칸 안의 변경 기록 표시는 숨은 표시로 남고 글자는 고칠 수 있다.
 - 표 칸 문단의 각주만 고치면 칸 문단 XML이 그대로다. `prepareObjectWriteBack`이 그 문단이 든 블록의 표 요소를 바뀐 것으로 표시하고, 표 층이 칸 문단마다 `paragraphNeedsRewrite(rctx, 문단 id)`를 보고 그 칸(셀 안 표 포함)을 다시 쓴다.
 - 문단을 넘는 메모에서 시작이 든 문단을 지우고 끝이 든 문단을 손대지 않으면 끝 표시가 홀로 남는다.
@@ -285,12 +286,12 @@ const changes = objectPackageChanges(rctx, { contentXml, stylesXml }) // 패치 
 
 ## 쪽 층 (`src/page`)
 
-쪽 모양(`style:page-layout`), 바탕쪽(`style:master-page`, 머리글·꼬리글과 첫쪽·왼쪽 변형), 구역을 docx의 구역과 머리글·꼬리글 파트로 옮기고, 편집 결과를 `styles.xml`의 쪽 모양·바탕쪽과 구역을 시작하는 문단의 스타일에 되돌려 쓴다.
+쪽 모양(`style:page-layout`), 바탕쪽(`style:master-page`, 머리글·바닥글과 첫쪽·왼쪽 변형), 구역을 docx의 구역과 머리글·바닥글 파트로 옮기고, 편집 결과를 `styles.xml`의 쪽 모양·바탕쪽과 구역을 시작하는 문단의 스타일에 되돌려 쓴다.
 
 ### 조립 층이 부르는 순서
 
 ```ts
-const registry = registerPageConverters(registerTextConverters(new ConversionRegistry())) // 그다음 T3·T4
+const registry = registerPageConverters(registerTextConverters(new ConversionRegistry())) // 그다음 표·개체 층의 등록 함수
 // 열기
 convertOdtStyles(ctx)
 convertOdtBody(ctx)
@@ -311,10 +312,10 @@ const patches = rctx.finish()
 
 - 쪽 흐름(run): 문단(또는 표) 스타일의 `style:master-page-name`이 바뀌는 곳마다 새 쪽 흐름이 시작한다. 첫 흐름은 그런 문단이 없으면 `Standard`(없으면 첫 바탕쪽)를 쓴다. 요소가 없는 블록(그대로 두는 표 등)이 바탕쪽을 바꾸면 다음 요소부터다.
 - docx 구역: 쪽 흐름마다 하나, 그리고 `text:section`의 앞뒤에서 이어지는 구역(`w:type continuous`, 그 구역 스타일의 단 수). 마지막이 아닌 구역은 마지막 문단의 `w:pPr`에 `w:sectPr`를 넣는다(문단이 하나도 없는 구역은 다음 구역에 합친다). 마지막 구역은 `ctx.docx.sectPr`. 구역 나눔을 지닌 문단 뒤의 요소(쪽 흐름을 끝내는 글상자 표 등)는 docx에서 다음 구역에 보이므로 지도에도 다음 구역 몫으로 적는다(저장 때 구역 대응이 어긋나지 않게).
-- 위치 계산: ODF는 머리글을 쪽 여백 안에 둔다. 한컴도 `fo:margin-top`을 위쪽 여백으로, 머리글 스타일의 `svg:height`를 머리말 길이로 읽고, 바탕쪽에 머리글이 없어도 그 길이를 비워 둔다(한컴 판독 결과 36개로 확인). 그래서 `w:header = fo:margin-top`, `w:top = fo:margin-top + 머리글 높이(svg:height, 없으면 fo:min-height) + 머리글 간격(fo:margin-bottom)`. 아래쪽도 같다(꼬리글 간격은 `fo:margin-top`).
+- 위치 계산: ODF는 머리글을 쪽 여백 안에 둔다. 한컴도 `fo:margin-top`을 위쪽 여백으로, 머리글 스타일의 `svg:height`를 머리말 길이로 읽고, 바탕쪽에 머리글이 없어도 그 길이를 비워 둔다(한컴 판독 결과 36개로 확인). 그래서 `w:header = fo:margin-top`, `w:top = fo:margin-top + 머리글 높이(svg:height, 없으면 fo:min-height) + 머리글 간격(fo:margin-bottom)`. 아래쪽도 같다(바닥글 간격은 `fo:margin-top`).
 - 쪽 번호: 쪽 모양의 `style:num-format` → `w:pgNumType w:fmt`, 흐름을 시작하는 문단 스타일의 `style:page-number`(숫자) → `w:start`.
 - 단: 쪽 모양의 `style:columns`, 구역 스타일의 `style:columns` → `w:cols`. 보여 주기만 한다.
-- 머리글·꼬리글: 쪽 흐름마다 자기 파트를 따로 받는다(같은 바탕쪽을 쓰는 흐름도 사본). 그래야 한 흐름만 고친 것을 저장 때 알아본다. 문단은 글자 층 `paragraphToOoxml(..., { part: 'styles.xml', owner: 'page' })`, 표 같은 다른 자식은 다리 docx에 넣지 않는다(저장 때 제자리에 바이트 그대로). 칸 채우기:
+- 머리글·바닥글: 쪽 흐름마다 자기 파트를 따로 받는다(같은 바탕쪽을 쓰는 흐름도 사본). 그래야 한 흐름만 고친 것을 저장 때 알아본다. 문단은 글자 층 `paragraphToOoxml(..., { part: 'styles.xml', owner: 'page' })`, 표 같은 다른 자식은 다리 docx에 넣지 않는다(저장 때 제자리에 바이트 그대로). 칸 채우기:
   - `header-first`/`footer-first`가 있으면 `w:titlePg`. 첫 쪽 머리글이 없으면 그 칸에 보통 머리글 사본(`fallback`, ODF도 그렇게 보인다).
   - 어느 바탕쪽이든 `header-left`/`footer-left`가 있으면 `w:evenAndOddHeaders`(settings.xml을 만든다). 왼쪽 머리글이 없는 바탕쪽의 짝수 쪽 칸에는 보통 머리글 사본.
   - 앞 흐름에 머리글이 있었는데 이 흐름의 바탕쪽에는 없으면 빈 파트(`empty`): Word가 앞 구역의 것을 물려받지 않게 한다.
@@ -324,13 +325,13 @@ const patches = rctx.finish()
 
 1. 걷어 내기: 다리 요소와 편집된 요소의 문단 속 `w:sectPr`를 걷어 내, 글자 층은 구역 나눔 없는 문단으로 비교한다. 글자 없는 구역 나눔 문단(엔진의 passthrough)은 문단으로 되돌리고, 편집기가 새로 넣은 빈 구역 나눔 문단은 ODF에 쓰지 않는다.
 2. 구역 대응: 편집된 구역이 다리 구역의 첫 요소(앞 요소가 모두 지워졌으면 첫 남은 요소)로 시작하면 그 구역을 잇는다. 아니면 편집기에서 넣은 나눔이다. 아무도 잇지 않은 다리 쪽 흐름은 나눔이 지워진 것이다. `text:section` 경계의 이어지는 구역은 앞 흐름에 합친다.
-3. 바뀐 것: 편집된 구역의 `w:sectPr`가 온 다리 구역(그 구역을 끝내는 문단, 새 나눔은 그것을 넣은 구역)과 비교한다. 나눔이 지워져 합친 구역은 뒤 구역의 `w:sectPr`를 지니므로, 그것과 같으면 앞 흐름의 바탕쪽을 그대로 따른다. 바뀐 값만 쓴다: 용지 크기·방향·여백(위 계산을 거꾸로: 머리글 간격은 두고 `w:header`를 여백으로, 나머지를 머리글 높이로), 쪽 번호 모양(`style:num-format`), 머리글·꼬리글 영역, 첫쪽(`w:titlePg`)과 짝수 쪽(`w:evenAndOddHeaders`) 켜고 끄기. 단은 쓰지 않는다. 길이는 cm 소수 셋째 자리, 0.1mm로 딱 떨어지면 그 값(21cm는 `21.000cm`).
+3. 바뀐 것: 편집된 구역의 `w:sectPr`가 온 다리 구역(그 구역을 끝내는 문단, 새 나눔은 그것을 넣은 구역)과 비교한다. 나눔이 지워져 합친 구역은 뒤 구역의 `w:sectPr`를 지니므로, 그것과 같으면 앞 흐름의 바탕쪽을 그대로 따른다. 바뀐 값만 쓴다: 용지 크기·방향·여백(위 계산을 거꾸로: 머리글 간격은 두고 `w:header`를 여백으로, 나머지를 머리글 높이로), 쪽 번호 모양(`style:num-format`), 머리글·바닥글 영역, 첫쪽(`w:titlePg`)과 짝수 쪽(`w:evenAndOddHeaders`) 켜고 끄기. 단은 쓰지 않는다. 길이는 cm 소수 셋째 자리, 0.1mm로 딱 떨어지면 그 값(21cm는 `21.000cm`).
 4. 바탕쪽 나누기: 같은 바탕쪽을 쓰는 흐름이 같은 상태를 원하면 바탕쪽을 그대로 고친다. 다르면 바뀌지 않은 흐름(없으면 첫 흐름, 시작 문단을 바꿀 수 없는 흐름이 있으면 그 흐름)이 원래 바탕쪽을 갖고, 나머지는 같은 상태끼리 사본(`<이름>_io<n>`, 원래 바탕쪽 바로 뒤)을 받는다. 새 나눔은 언제나 그 자리 바탕쪽의 사본. 쪽 모양은 그것을 쓰는 모든 바탕쪽이 같은 변경을 원할 때만 그대로 고치고(바뀌지 않은 채 쓰는 바탕쪽이 없으면 한 변경이 원본을 갖는다), 아니면 사본(자동 스타일 끝)을 만든다.
 5. 흐름 시작 문단: 사본을 가리키게 하거나(바탕쪽 이름), 지운 나눔을 따르게 하거나(`style:master-page-name` 빼기), 쪽 시작 번호(`style:page-number`)를 쓸 때:
    - 그 자동 스타일을 그 문단 하나만 쓰고 이미 바탕쪽을 바꾸는 스타일이며 문단이 그대로면 스타일을 제자리에서 고친다(한컴의 `…_MS<n>_…` 스타일이 그렇다). 본문은 바이트 그대로다.
    - 아니면(새 나눔, 여러 문단이 함께 쓰는 스타일, 고친 문단) 감싼 처리기가 그 문단을 쓸 때 스타일을 복사한 새 자동 스타일로 바꾼다. 바뀌지 않은 문단은 원문을 쓰고 시작 태그의 스타일 이름만 바꾼다.
    - 시작이 문단이 아닌 곳(표 앞의 새 나눔), 목록 안 문단, 다른 처리기가 맡은 문단의 새 시작은 쓰지 못하고 경고를 남긴다.
-6. 머리글·꼬리글 영역: 편집된 파트가 다리 파트와 바이트가 같으면 그대로다. 다르면 다리 파트를 엔진으로 다시 읽은 문단(편집된 docx의 styles.xml로)과 문단마다 비교해, 같은 문단은 원래 ODF 바이트, 다른 문단은 원래 문단을 바탕으로 `paragraphToOdf(..., { part: 'styles.xml' })`, 새 문단은 앞 원래 문단을 본보기로 쓴다. 표 등 다른 자식은 제자리에 바이트 그대로. 쪽 번호 필드는 원래 요소(같은 순번)를 다시 쓰고, 새로 넣은 것은 `text:page-number`. 다른 구역의 파트를 물려받은 구역(앞과 같게)은 그 영역 내용을 그대로 복사한다.
+6. 머리글·바닥글 영역: 편집된 파트가 다리 파트와 바이트가 같으면 그대로다. 다르면 다리 파트를 엔진으로 다시 읽은 문단(편집된 docx의 styles.xml로)과 문단마다 비교해, 같은 문단은 원래 ODF 바이트, 다른 문단은 원래 문단을 바탕으로 `paragraphToOdf(..., { part: 'styles.xml' })`, 새 문단은 앞 원래 문단을 본보기로 쓴다. 표 등 다른 자식은 제자리에 바이트 그대로. 쪽 번호 필드는 원래 요소(같은 순번)를 다시 쓰고, 새로 넣은 것은 `text:page-number`. 다른 구역의 파트를 물려받은 구역(앞과 같게)은 그 영역 내용을 그대로 복사한다.
 
 ### 다리 지도 `ext.page` (`PageExt`, JSON)
 
@@ -374,7 +375,7 @@ const patches = rctx.finish()
 
 - `tests/page-forward.test.ts`(구역·위치·머리글 칸·단·쪽 번호, 위치 왕복, 편집 없는 저장), `tests/page-edit.test.ts`(여백·용지·방향, 공유 바탕쪽 복제, 같은 변경은 제자리, 쪽 번호, 단은 쓰지 않음), `tests/page-headers.test.ts`(머리글 글자, 공유 바탕쪽의 한 흐름만 고친 머리글, 첫쪽·짝수 쪽 켜고 끄기, 쪽 번호 필드), `tests/page-breaks.test.ts`(나눔 추가·삭제, 시작 문단 삭제, 암묵적 첫 흐름의 쪽 번호).
 - 도우미: `tests/helpers/page-bridge.ts`(조립 순서로 열기·되돌려 쓰기, 편집기처럼 구역 `w:sectPr` 고치기), `tests/helpers/page-fixtures.ts`(쪽 흐름 셋: `Standard`, `MP2`, `Standard`).
-- `ODT_CORPUS`가 있으면 `tests/page-corpus.test.ts`가 모든 파일을 변환하고, 편집 없는 저장이 같은지, 마지막 구역 여백 편집이 그 쪽 모양만 바꾸는지, 마지막 구역 머리글 편집이 그 바탕쪽(과 새 자동 스타일)만 바꾸는지 본다. 말뭉치 66개: 쪽 흐름 82, docx 구역 82, 여러 흐름이 함께 쓰는 바탕쪽 0, 머리글·꼬리글 파트 22.
+- `ODT_CORPUS`가 있으면 `tests/page-corpus.test.ts`가 모든 파일을 변환하고, 편집 없는 저장이 같은지, 마지막 구역 여백 편집이 그 쪽 모양만 바꾸는지, 마지막 구역 머리글 편집이 그 바탕쪽(과 새 자동 스타일)만 바꾸는지 본다. 말뭉치 66개: 쪽 흐름 82, docx 구역 82, 여러 흐름이 함께 쓰는 바탕쪽 0, 머리글·바닥글 파트 22.
 
 ## 공개 API (`src/index.ts`)
 
@@ -437,7 +438,7 @@ type ReportFeature = 'toc' | 'chart' | 'equation' | 'shape' | 'textbox' | 'colum
    - 쪽 묶음: docx의 쪽 구역마다 바탕쪽 하나(`Standard`, `MP2` …, 모양이 같아도 따로)를 써서 한컴에서도 구역이 구역으로 남는다. 이어지는 구역 나눔(`continuous`, `nextColumn`)은 앞 묶음에 합치고, 단이 다르면 그 구역을 `text:section`(구역 스타일 `style:section-properties`의 `style:columns`)으로 감싼다. 이때 쪽 모양은 한 단이다. 쪽 전체가 여러 단이면 쪽 모양(`style:page-layout-properties`)에 `style:columns`를 쓴다. 단은 언제나 `style:column` 자식(`style:rel-width="1000*"`, 단 사이 간격의 반씩 `fo:start-indent`/`fo:end-indent`)을 함께 쓴다: 자식 없는 `style:columns fo:column-count="2"`는 한컴을 멈추게 한다("원격 프로시저를 호출하지 못했습니다"). 한 단이면 `style:columns`를 쓰지 않는다. 너비가 다른 단(`w:col` 너비)만 `columns`로 보고한다(같은 너비로 바뀜).
    - 위치: 쪽 층의 계산을 거꾸로 한다. 머리글이 있으면 `fo:margin-top = w:header`, 머리글 높이(`svg:height`) = `w:top − w:header`, 간격 0. 없으면 `fo:margin-top = w:top`. 아래도 같다. 제본 여백은 왼쪽(또는 위) 여백에 더한다. `mirrorMargins`는 `style:page-usage="mirrored"`.
    - 머리글 칸: 기본 `style:header`, `w:titlePg`면 `style:header-first`, `w:evenAndOddHeaders`면 `style:header-left`(없는 쪽은 빈 칸). Word처럼 앞 구역의 머리글을 물려받는다.
-3. 뼈대를 받은 ODT처럼 열고(`openOdt`), 빈 다리 지도에 docx 스타일 id ↔ ODF 공용 스타일 대응만 넣는다. 본문은 쪽 묶음마다 `rebuildFlow`(모든 항목이 새 요소라 새 요소 쓰기 함수가 쓴다: 문단·목록·표·그림·각주)로 쓰고, 두 번째 묶음부터는 첫 요소의 스타일 사본에 `style:master-page-name`(쪽 번호 시작이 있으면 `style:page-number`)을 준다(표면 표 스타일 사본). 머리글·꼬리글은 쪽 층의 `regionInnerXml`로 채운다.
+3. 뼈대를 받은 ODT처럼 열고(`openOdt`), 빈 다리 지도에 docx 스타일 id ↔ ODF 공용 스타일 대응만 넣는다. 본문은 쪽 묶음마다 `rebuildFlow`(모든 항목이 새 요소라 새 요소 쓰기 함수가 쓴다: 문단·목록·표·그림·각주)로 쓰고, 두 번째 묶음부터는 첫 요소의 스타일 사본에 `style:master-page-name`(쪽 번호 시작이 있으면 `style:page-number`)을 준다(표면 표 스타일 사본). 머리글·바닥글은 쪽 층의 `regionInnerXml`로 채운다.
 4. `finish` → 패치 적용 → `objectPackageChanges`(새 그림 항목) → 매니페스트를 새로 써서 묶는다(`mimetype` 맨 앞·무압축).
 
 ### `odtToText` (`text.ts`)
@@ -448,12 +449,12 @@ type ReportFeature = 'toc' | 'chart' | 'equation' | 'shape' | 'textbox' | 'colum
 
 - ODT → docx(`odtToDocx`): 잠긴 개체 자리 표시를 종류별로(`toc`, `chart`, `equation`, `shape`, `textbox`, 그 밖은 `object`) `converted`, 변경 기록 범위(`text:changed-region` 수와 잠긴 범위 중 큰 쪽) `revision` `converted`, 누름틀(시작·점 책갈피 수) `form_field` `converted`, 잠긴 칸과 보호된 구역 `protection` `dropped`.
 - docx → ODT(`docxToOdt`): 차례 수(`toc`), 개체 종류별(`chart`/`equation`/`shape`/`textbox`), 너비가 다른 단(`columns`), 인용·참고 문헌 필드(`citation`), 상호 참조·캡션 필드(`cross_reference`, 차례의 `PAGEREF _Toc`는 빼고), 테마가 답하지 못하는 테마 참조(`theme`)는 `converted`. 거울 여백은 `style:page-usage="mirrored"`로 그대로 남으므로 보고하지 않는다(`mirror_margins`는 목록에만 남는다).
-- 테마(`export/theme.ts`): 엔진이 읽으면서 테마 글꼴(`w:asciiTheme` 등, 비어 있는 동아시아·복합 문자 칸 포함)과 테마 색(`w:themeColor`/`w:themeFill`, 밝기·어둡기 포함)을 실제 값으로 풀고, 편집기와 ODT가 같은 값을 쓴다. 보이는 것이 같고 테마와의 연결만 없어지므로 보고하지 않는다. 테마 부분이 있다는 것만으로도 보고하지 않는다. 내보내는 내용(본문, 머리글·꼬리글, 그것들이 쓰는 스타일과 그 부모, 문서 기본값)의 테마 참조 가운데 테마가 답하지 못하는 것만 하나씩 센다: 테마 부분이 없거나 읽히지 않는데 글꼴 테마를 가리킴, 가리킨 라틴 글꼴 칸이 비어 있음, 테마에 없는 색 칸을 가리킴(`dk1`/`lt1`은 엔진의 기본값이 있어 빼고). 이때 엔진과 ODT는 Word가 곁에 저장해 둔 값(`w:val`, 글꼴 이름)을 쓰는데, Word라면 테마의 값으로 바꿔 보였을 것이다. 쪽 색(`page_color`), 메모(`comment`), 변경 기록(`revision`, 표시 수), 잉크(`ink`), 워터마크(`watermark`), 암호 해시(`password`), 편집 제한·읽기 전용 권장(`protection`)은 `dropped`.
+- 테마(`export/theme.ts`): 엔진이 읽으면서 테마 글꼴(`w:asciiTheme` 등, 비어 있는 동아시아·복합 문자 칸 포함)과 테마 색(`w:themeColor`/`w:themeFill`, 밝기·어둡기 포함)을 실제 값으로 풀고, 편집기와 ODT가 같은 값을 쓴다. 보이는 것이 같고 테마와의 연결만 없어지므로 보고하지 않는다. 테마 부분이 있다는 것만으로도 보고하지 않는다. 내보내는 내용(본문, 머리글·바닥글, 그것들이 쓰는 스타일과 그 부모, 문서 기본값)의 테마 참조 가운데 테마가 답하지 못하는 것만 하나씩 센다: 테마 부분이 없거나 읽히지 않는데 글꼴 테마를 가리킴, 가리킨 라틴 글꼴 칸이 비어 있음, 테마에 없는 색 칸을 가리킴(`dk1`/`lt1`은 엔진의 기본값이 있어 빼고). 이때 엔진과 ODT는 Word가 곁에 저장해 둔 값(`w:val`, 글꼴 이름)을 쓰는데, Word라면 테마의 값으로 바꿔 보였을 것이다. 쪽 색(`page_color`), 메모(`comment`), 변경 기록(`revision`, 표시 수), 잉크(`ink`), 워터마크(`watermark`), 암호 해시(`password`), 편집 제한·읽기 전용 권장(`protection`)은 `dropped`.
 - 개수가 0인 항목은 넣지 않는다. 순서는 `REPORT_FEATURES` 순서다.
 
 ### 알려진 한계
 
-- 새 ODT의 머리글·꼬리글: 표와 그림은 넣지 않는다(문단만). 머리글 문단은 docx 스타일 이름을 잃고 엔진이 푼 문단 모양으로 쓴다.
+- 새 ODT의 머리글·바닥글: 표와 그림은 넣지 않는다(문단만). 머리글 문단은 docx 스타일 이름을 잃고 엔진이 푼 문단 모양으로 쓴다.
 - 새 ODT의 각주 본문은 글자만 옮긴다(각주 스타일·글자 모양 없음, 기본 문단 스타일).
 - 문단 스타일이 굵게인데 run이 굵게를 끈 경우(`w:b w:val="0"`)처럼, 스타일 값을 run에서 끄는 모양은 새 ODT에 옮기지 않는다.
 - 글상자 안 글, 수식의 내용은 그림이나 이름표가 되어 글자로 남지 않는다(편집기가 그린 그림을 주면 보이는 모양은 남는다).
@@ -466,7 +467,7 @@ type ReportFeature = 'toc' | 'chart' | 'equation' | 'shape' | 'textbox' | 'colum
 
 - `npm run test -w @genoffice/odt-engine`. 실제 정부 파일은 저장소에 넣지 않고, 한컴 ODT의 특징을 흉내 낸 합성 파일로 시험한다.
 - 합성 파일 생성기는 `tests/helpers/`에 있다. 모든 층의 테스트가 함께 쓴다.
-  - `build-odt.ts`: `buildOdt(options)`/`buildOdtPackage(options)`. 기본값이 한컴과 같다(항목 이름순이라 `mimetype`이 맨 앞이 아니고 압축됨, `office:version` 없음, 문단마다 자동 스타일과 탭 목록, 머리글·꼬리글이 있는 바탕쪽 둘). `body`, `extraContentAutomaticStyles`, `extraCommonStyles`, `masterStyles`, `pictures`, `extraEntries`, `overrideParts`, `encrypted`, `mimetype`, `generator`로 무엇이든 바꿔 넣는다.
+  - `build-odt.ts`: `buildOdt(options)`/`buildOdtPackage(options)`. 기본값이 한컴과 같다(항목 이름순이라 `mimetype`이 맨 앞이 아니고 압축됨, `office:version` 없음, 문단마다 자동 스타일과 탭 목록, 머리글·바닥글이 있는 바탕쪽 둘). `body`, `extraContentAutomaticStyles`, `extraCommonStyles`, `masterStyles`, `pictures`, `extraEntries`, `overrideParts`, `encrypted`, `mimetype`, `generator`로 무엇이든 바꿔 넣는다.
   - `hancom-fragments.ts`: 한컴 모양의 조각(`hPara`, `hTable`, `hCell`, `hFramedTable`, `hFieldBookmark`, `hFootnote`, `hAnnotation`, `hImageFrame`, `hFormulaObject`, `hCustomShape` 등). 조각은 쓴 문자열을 그대로 돌려주므로 테스트가 "범위로 자른 원문 = 조각"을 바로 비교할 수 있다.
   - `hancom-sample.ts`: 위 특징을 모두 담은 문서 하나(글상자 안의 표, 본문 표, 셀 안의 표, 병합·가려진 셀, 잠긴 셀, 누름틀 책갈피, 그림, 각주, 메모, 수식 개체, 도형, 목록, 구역, 차례, 같은 바탕쪽을 쓰는 여러 구역).
   - `bridge.ts`: `odtToBridge`(열기, 지도는 JSON 왕복), `editorSave`(편집기처럼 `rawPPr`을 다시 쓰거나 합쳐 `saveDocx`로 저장; `keep`/`edit`/`insert`/`xml`), `editOnly`, `replaceText`, `writeBack`(편집된 docx를 원본 ODT 문자열에 되돌려 씀). 다른 층의 왕복 시험도 이것을 쓴다.
@@ -479,4 +480,4 @@ type ReportFeature = 'toc' | 'chart' | 'equation' | 'shape' | 'textbox' | 'colum
   - 도우미: `tests/helpers/api.ts`(공개 API 왕복, 패키지 비교), `build-docx.ts`/`docx-fixtures.ts`(합성 docx, 모든 기능을 담은 `kitchenSink`), `docx-signature.ts`(docx를 비교할 수 있는 값으로).
 - 층 사이 시험: `ODT_FULL_REGISTRY=1 npm run test -w @genoffice/odt-engine`이면 모든 층의 시험이 조립 등록 순서와 조립 저장 순서(`tests/helpers/full.ts`)로 돈다. 일부러 일부 층만 등록해야 뜻이 있는 시험 4개는 이때 건너뛴다.
 - `ODT_CORPUS`가 있으면 `tests/assemble-corpus.test.ts`가 공개 API로 66개를 모두 열고, 편집 없는 저장이 원본 바이트와 같은지, 문단 하나·칸 하나·여백 하나 편집이 그 파트의 그 요소(새 자동 스타일 빼고)만 바꾸는지 보고, 가장 큰 파일의 열기·저장 시간을 찍는다. `tests/assemble-export-corpus.test.ts`는 `<ODT_CORPUS>/docx`의 docx를 `docxToOdt`로 바꿔 `<ODT_CORPUS>/out-docx2odt`(저장소 밖)에 쓰고, 다시 읽어 내용이 같은지 본다. 받은 ODT 66개를 연 다리 docx도 `docxToOdt`로 새 ODT를 만들어 같은지 본다(편집기에서 연 ODT를 다른 이름으로 ODT 저장하는 경우). 말뭉치 점검은 `out-`으로 시작하는 폴더를 건너뛴다.
-- 말뭉치 결과(2026-10-15): 66/66 열림, 편집 없는 저장 66/66 바이트 같음, 문단 편집 54개·칸 편집 57개·여백 편집 65개 파일 모두 해당 요소만 바뀜(나머지는 고를 요소가 없음). docx 27개와 받은 ODT 66개의 다리 docx 모두 새 ODT로 바꿔 다시 읽은 내용 같음. ODF 검사기(odfvalidator 0.13, ODF 1.3): docx→ODT 결과 93개 모두 오류 0(목록 시작 값 0을 쓰던 것을 고친 뒤). 받은 ODT 13개를 고쳐 저장하면 오류가 원본보다 늘지 않음(다시 묶기로 패키지 오류 2~~3개가 줄어듦). 시간: 가장 큰 파일(6.7MB) 열기 약 0.4~~1초, 편집 없는 저장 약 0.5초, content.xml이 가장 큰 파일(12.5MB) 열기 약 1.4~2초, 편집 없는 저장 약 3초.
+- 말뭉치 결과(2026-10-15): 66/66 열림, 편집 없는 저장 66/66 바이트 같음, 문단 편집 54개·칸 편집 57개·여백 편집 65개 파일 모두 해당 요소만 바뀜(나머지는 고를 요소가 없음). docx 27개와 받은 ODT 66개의 다리 docx 모두 새 ODT로 바꿔 다시 읽은 내용 같음. ODF 검사기(odfvalidator 0.13, ODF 1.3): docx→ODT 결과 93개 모두 오류 0(목록 시작 값 0을 쓰던 것을 고친 뒤). 받은 ODT 13개를 고쳐 저장하면 오류가 원본보다 늘지 않음(다시 묶기로 패키지 오류가 2개에서 3개 줄어듦). 시간: 가장 큰 파일(6.7MB) 열기 약 0.4초에서 1초, 편집 없는 저장 약 0.5초, content.xml이 가장 큰 파일(12.5MB) 열기 약 1.4초에서 2초, 편집 없는 저장 약 3초.
