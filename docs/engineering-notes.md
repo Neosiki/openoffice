@@ -43,6 +43,15 @@
 - **구독으로 받는 답은 몇 초 늦게 시작한다.** 프로그램이 먼저 켜져야 한다. 이 PC에서 Claude(가장 작은 모델)의 첫 글자까지 3.5초에서 4.5초 사이였다.
 - **앱의 프록시 설정은 구독 프로그램에 전달되지 않는다.** 프로그램은 물려받은 환경의 프록시 변수만 본다. Windows 설정에만 둔 프록시는 닿지 않는다.
 
+## 에이전트 모드
+
+- **Claude의 권한 요청이 앱에 오지 않고 "This command requires approval"로 끝난다.** `--permission-prompts host`만으로는 표준 출력으로 오지 않는다. → `--permission-prompt-tool stdio`를 함께 준다. 그러면 `control_request`(`can_use_tool`)로 오고, `{ behavior: 'allow', updatedInput }` 또는 `{ behavior: 'deny', message }`로 답한다.
+- **`--restricted`를 켜면 사용자 스킬이 하나도 실리지 않는다.** `--setting-sources user`를 줘도 같다. 반대로 `--restricted` 없이 사용자 설정을 읽게 하면 모델을 부르기 전에 사용자 훅이 실행된다. → 스킬 폴더를 복사한 플러그인을 `--plugin-dir`로 준다.
+- **디렉터리 연결(junction)로 붙인 스킬의 스크립트가 막힌다.** `blockReadsOutsideWorkingDirectories`가 연결을 실제 위치로 풀어 "작업 폴더 밖"으로 본다. → 복사하고, 그 폴더를 `--add-dir`로 준다.
+- **Claude `auto` 모드가 `--model haiku`에서 `default`로 내려간다.** `auto`는 지원하는 모델에서만 켜진다. 시작 요청의 `current_permission_mode`로 확인할 수 있다(모델 호출 없음).
+- **Codex 권한 프로필이 "elevated Windows sandbox requires effective `:root` read access"로 시작하지 않는다.** 이 PC의 Codex 격리(권한 상승 방식)는 `:root` 읽기가 있어야 한다. → `{ ':root': 'read', <프로젝트>: 'write', <열린 문서>: 'read', <보호 폴더>: 'none' }`. 격리 확인은 모델 호출 없이 `codex sandbox -c default_permissions=... -c permissions.<이름>.filesystem=... -- cmd /c ...`로 한다. PowerShell 5.1은 네이티브 인자의 큰따옴표를 지우므로 TOML 값은 작은따옴표 문자열로 쓴다.
+- **Codex 파일 변경 승인 요청에는 경로가 없다.** 앞서 오는 `item/started`(`fileChange`의 `changes[].path`)에서 기억해 둔다.
+
 ## 무료 연결
 
 - **Gemini 무료 등급이 Flash 모델을 "수요 많음(503)"으로 거절한다.** 2026-10-14 시험에서 3.5~3.8 Flash가 번갈아 거절됐고, 작은 요청은 가끔 통과해도 앱의 실제 요청(약 1만 6천 토큰)은 두 번 다 거절됐다. `gemini-3.5-flash-lite`는 매번 답했다. → 무료 연결은 Flash-Lite로 시작한다. 503은 앱이 두 번까지 다시 보내지만 길게 막히면 소용없다.

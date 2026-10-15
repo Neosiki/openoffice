@@ -72,6 +72,27 @@ apps/sheets/native/xlsx-engine   엑셀 계산·입출력을 맡는 별도 프�
 
 **AI 없이 바꾸기.** 자료가 하나이고 종류가 맞으면(지도 → 마크다운, 지도 → PPT 뼈대, 마크다운 → 지도) 3에서 껍데기 앱이 직접 바꾼다(`apps/shell/src/main/generate/convert.ts`). 자료는 `parseFileToText`로만 읽으므로 가린 자리는 이름표로 옮겨진다. 결과는 그 종류의 새 탭 앞으로 맡겨 두고, 새 탭이 한 번 가져가 저장하지 않은 새 문서로 연다. 바꾼 사실은 7의 기록에 같이 쓰인다.
 
+## 에이전트 모드의 흐름
+
+결정 0032. 기본 AI 창과 달리 반복은 프로그램 안에서 돈다. 앱은 프로그램을 띄우고, 권한 요청에 답하고, 열린 문서를 다루는 도구를 MCP로 내준다.
+
+```
+에이전트 창(화면) ── agent-window:* ──→ 껍데기 앱 뒷단 agent/agent-window.ts ─ agent-sessions.ts
+   ↑ 진행·권한 요청                        │ 시작: 폴더 검사, 연결 확인, 스킬 복사, 세션 MCP 서버
+   └────────────────────────────────────┘ │
+                                          ↓ packages/ai-provider/agent-session
+                               Claude Code(-p, stream-json) 또는 Codex app-server(스레드 하나)
+                                          │ 프로젝트 폴더에서 자기 도구로 일한다
+                                          └→ 세션 MCP 서버(루프백, 토큰) → 열린 문서의 편집기 실행기
+```
+
+1. 홈의 "에이전트" 카드가 창을 띄운다(`home:open-agent-window`). 창의 preload(`agent.ts`)는 자기 세션 채널만 내준다.
+2. "시작"을 누르면 뒷단이 경고 확인, 폴더(`projectFolderProblem`), 연결(`subscriptionConnection`)을 본다. 그다음 세션 임시 폴더와 세션 MCP 서버(`startAgentMcpServer`)를 만든다. Claude면 스킬 묶음도 새로 맞춘다(`buildAgentSkillBundle`).
+3. 실행부(`startClaudeAgentSession`, `startCodexAgentSession`)가 프로그램을 띄우고 시작 보고를 확인한다. Claude는 도구 목록, Codex는 권한 프로필과 MCP 목록이다.
+4. 사람이 메시지를 보내면 그 차례가 시작된다. 프로그램이 권한을 물으면 실행부가 `agentPolicyVerdict`로 판단한다. "묻기"면 창에 카드를 띄우고 사람의 답을 프로그램에 돌려준다.
+5. 프로그램의 글, 도구 사용, 차례의 끝, 오류 종류가 창으로 흘러간다. 오류 문장은 창에 보내지 않는다.
+6. 멈추기, 창 닫기, 30분 쉼, 앱 종료 때 프로세스 트리를 끝내고 세션 MCP 서버와 임시 폴더를 정리한다.
+
 ## 구독 연결 상태가 화면에 닿는 길
 
 - 뒷단: 상태 서비스가 두 프로그램에 "설치됐나, 로그인됐나, 어떤 방식인가"를 묻는다(버전·로그인 상태 명령. 모델 호출이 아니다). 결과는 프로세스에 하나뿐인 저장소에 있고, AI 요청의 제공자 선택(위 4번)이 같은 값을 읽는다.
