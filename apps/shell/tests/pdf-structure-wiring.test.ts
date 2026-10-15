@@ -15,8 +15,16 @@ describe('pdf structure wiring', () => {
 
   it('is registered once from the shell entry', () => {
     const index = main('index.ts')
-    expect(index).toContain("import { registerPdfStructureIpc } from './pdf-structure-ipc'")
+    expect(index).toMatch(
+      /import \{[^}]*\bregisterPdfStructureIpc\b[^}]*\} from '\.\/pdf-structure-ipc'/,
+    )
     expect(index.match(/^registerPdfStructureIpc\(\)$/gm)).toHaveLength(1)
+  })
+
+  it("lends its runner to the PDF tools window, whose jobs end with that window's contents", () => {
+    const index = main('index.ts')
+    expect(index).toMatch(/runJob: runWindowJob,\s*cancelJob: cancelWindowJob,/)
+    expect(ipc).toMatch(/export function runWindowJob\([\s\S]*?watch\(owner\)[\s\S]*?runner\.run\(/)
   })
 
   it('runs each job in a utility process built from its own entry', () => {

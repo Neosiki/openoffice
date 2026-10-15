@@ -199,7 +199,7 @@ import { convertPdfFileToDocxLocalWithPrompt, PdfLoadError } from './pdf2docx-lo
 import { convertPdfFileToPptxLocalWithPrompt } from './pdf2pptx-local'
 import { convertPdfFileToXlsxLocalWithPrompt } from './pdf2xlsx-local'
 import { closePdfPasswordDialog, promptPdfPassword } from './pdf-password-dialog'
-import { registerPdfStructureIpc } from './pdf-structure-ipc'
+import { cancelWindowJob, registerPdfStructureIpc, runWindowJob } from './pdf-structure-ipc'
 import { registerPdfConvertUiIpc, requestPdfConvertDialog } from './pdf-convert-ui'
 import {
   configureMarkdownRuntime,
@@ -340,7 +340,7 @@ import {
 import { runHeadlessExport, type HeadlessExporters } from './headless-export'
 import { TabManager } from './tab-manager'
 import { configureGenerateWindow } from './generate/generate-window'
-import { configurePdfToolsWindow } from './pdf-tools/pdf-tools-window'
+import { configurePdfToolsWindow, openPdfToolsWithFile } from './pdf-tools/pdf-tools-window'
 import {
   configureDocumentLinks,
   documentLinkFileMenuItems,
@@ -479,6 +479,7 @@ configurePdfRuntime({
   rendererFile: join(PDF_OUT, 'renderer', 'index.html'),
   openGeneratedPath: (path) => openGeneratedDocument(path),
   createDocument: createAiDocument,
+  openPdfTools: (path, tool) => openPdfToolsWithFile(path, tool),
 })
 configureMarkdownRuntime({
   preloadPath: join(MARKDOWN_OUT, 'preload', 'index.js'),
@@ -6527,12 +6528,22 @@ app.whenReady().then(async () => {
     theme: () => currentTheme(),
     openResult: (path) => {
       revealShellWindow()
+      // a text tab already on this path shows the old file: read it again, as a
+      // PDF tab is (the tools never write over a file with unsaved changes)
+      const textTab = TEXT_RE.test(path) ? tabManager?.findMarkdownTabByPath(path) : undefined
+      if (tabManager && textTab) {
+        tabManager.reloadTab(textTab)
+        tabManager.activateTab(textTab)
+        return true
+      }
       return openGeneratedDocument(path)
     },
     openForEditing: (path) => {
       revealShellWindow()
       return openDocumentPath(path)
     },
+    runJob: runWindowJob,
+    cancelJob: cancelWindowJob,
   })
   // The generate window ("make a new document from these files"): Home's entry
   // points open it; "make" opens a new untitled tab with the request queued

@@ -1,10 +1,12 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import type { IpcRendererEvent } from 'electron'
 import type {
+  PdfBlankPagesResult,
   PdfPickResult,
   PdfToolRunRequest,
   PdfToolRunResult,
   PdfToolsInit,
+  PdfToolsStart,
   PdfToolsTheme,
   PdfToolsWindowApi,
 } from '../shared/pdf-tools-api'
@@ -27,8 +29,8 @@ const api: PdfToolsWindowApi = {
     ipcRenderer.on('app:theme-changed', listener)
     return () => ipcRenderer.removeListener('app:theme-changed', listener)
   },
-  async pickInputs(multi: boolean) {
-    const result = (await ipcRenderer.invoke(PDF_TOOLS_CHANNELS.pickInputs, multi)) as
+  async pickInputs(multi: boolean, kind = 'pdf') {
+    const result = (await ipcRenderer.invoke(PDF_TOOLS_CHANNELS.pickInputs, multi, kind)) as
       PdfPickResult | undefined
     return result ?? { inputs: [], rejected: [] }
   },
@@ -45,6 +47,31 @@ const api: PdfToolsWindowApi = {
   },
   async openInEditor() {
     await ipcRenderer.invoke(PDF_TOOLS_CHANNELS.openInEditor)
+  },
+  async findBlankPages(inputId: string) {
+    const result = (await ipcRenderer.invoke(PDF_TOOLS_CHANNELS.findBlankPages, inputId)) as
+      PdfBlankPagesResult | undefined
+    return result ?? { ok: false, error: 'failed' }
+  },
+  async cancelFind() {
+    await ipcRenderer.invoke(PDF_TOOLS_CHANNELS.cancelFind)
+  },
+  onProgress(handler) {
+    const listener = (_event: IpcRendererEvent, value: unknown) => {
+      const v = (value ?? {}) as { done?: unknown; total?: unknown }
+      if (typeof v.done === 'number' && typeof v.total === 'number') handler(v.done, v.total)
+    }
+    ipcRenderer.on(PDF_TOOLS_CHANNELS.progress, listener)
+    return () => ipcRenderer.removeListener(PDF_TOOLS_CHANNELS.progress, listener)
+  },
+  async takeStart() {
+    const start = (await ipcRenderer.invoke(PDF_TOOLS_CHANNELS.takeStart)) as PdfToolsStart | null
+    return start ?? null
+  },
+  onStartReady(handler) {
+    const listener = () => handler()
+    ipcRenderer.on(PDF_TOOLS_CHANNELS.startReady, listener)
+    return () => ipcRenderer.removeListener(PDF_TOOLS_CHANNELS.startReady, listener)
   },
   async close() {
     await ipcRenderer.invoke(PDF_TOOLS_CHANNELS.close)

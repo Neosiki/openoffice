@@ -1,9 +1,9 @@
 /**
  * The PDF tools window's work, without Electron: read what a picked PDF is,
  * check a tool's options against it, and run the tool. Every tool goes
- * through the PDF editor's own page functions (apps/pdf/src/main/save-pdf.ts),
- * so a file made here matches the same command in the editor's ribbon. No AI,
- * no network, and the source bytes are only read.
+ * through the PDF editor's own functions (apps/pdf/src/main: save-pdf.ts for
+ * pages, images-to-pdf.ts, read-text.ts), so a file made here matches the same
+ * command in the editor. No AI, no network, and the source bytes are only read.
  */
 import { PDFDocument } from 'pdf-lib'
 import {
@@ -15,12 +15,23 @@ import {
   splitPagesBytes,
   splitPdfBytes,
 } from '../../../../pdf/src/main/save-pdf'
+import { imagesToPdfBytes, readImageInfo } from '../../../../pdf/src/main/images-to-pdf'
+import { duplexMergeBytes } from '../../../../pdf/src/main/print-prep'
+import { overlayPdfBytes } from '../../../../pdf/src/main/overlay'
+import { stripAnnotsBytes } from '../../../../pdf/src/main/annot-strip'
+import { readPdfText, type PdfPageText } from '../../../../pdf/src/main/read-text'
 import { parsePageRange } from '../../../../pdf/src/renderer/convert/page-range'
 import {
+  PDF_TOOL_ANNOT_KINDS,
   PDF_TOOL_IDS,
+  PDF_TOOL_MARGINS,
   PDF_TOOL_PAPERS,
+  PDF_TOOL_SHEET_PAGES,
   type PdfInputProblem,
+  type PdfToolAnnotKind,
   type PdfToolId,
+  type PdfToolInputKind,
+  type PdfToolMargin,
   type PdfToolOptions,
   type PdfToolPaper,
 } from '../../shared/pdf-tools-api'
@@ -41,12 +52,45 @@ export function isPdfToolId(value: unknown): value is PdfToolId {
   return typeof value === 'string' && (PDF_TOOL_IDS as readonly string[]).includes(value)
 }
 
-/** Merge takes two or more files; every other tool takes one */
+/** Points of space around a picture for each margin choice (imagesToPdf) */
+const MARGIN_POINTS: Record<PdfToolMargin, number> = { none: 0, small: 18, large: 36 }
+
+/** Merge, imagesToPdf and duplex take several files; every other tool takes one */
 export function toolTakesMany(tool: PdfToolId): boolean {
-  return tool === 'merge'
+  return tool === 'merge' || tool === 'imagesToPdf' || tool === 'duplex'
+}
+
+/** The fewest files a tool runs on: merge needs two */
+export function toolMinInputs(tool: PdfToolId): number {
+  return tool === 'merge' ? 2 : 1
+}
+
+/** imagesToPdf takes pictures; every other tool takes PDFs */
+export function toolInputKind(tool: PdfToolId): PdfToolInputKind {
+  return tool === 'imagesToPdf' ? 'image' : 'pdf'
+}
+
+/** The kind of file a tool writes */
+export function toolOutputExtension(tool: PdfToolId): 'pdf' | 'txt' {
+  return tool === 'toText' ? 'txt' : 'pdf'
+}
+
+/**
+ * A tool ran but has nothing to write: a PDF without any text layer (toText),
+ * or none of the chosen kinds of annotation (stripAnnots)
+ */
+export class PdfToolRefusal extends Error {
+  constructor(readonly reason: 'no-text' | 'no-annots') {
+    super(reason)
+  }
 }
 
 export type InspectResult = { ok: true; pages: number } | { ok: false; problem: PdfInputProblem }
+
+/** A picked picture counts as one page, or is not a JPEG or PNG */
+export function inspectImage(bytes: Uint8Array): InspectResult {
+  return readImageInfo(bytes) ? { ok: true, pages: 1 } : { ok: false, problem: 'not-image' }
+}
 
 /** Page count of a PDF, or why the tools cannot use it */
 export async function inspectPdf(bytes: Uint8Array): Promise<InspectResult> {
@@ -62,7 +106,14 @@ export async function inspectPdf(bytes: Uint8Array): Promise<InspectResult> {
   }
 }
 
-export type CheckedOptions = { ok: true; options: PdfToolOptions } | { ok: false; error: 'range' }
+export type CheckedOptions =
+  | { ok: true; options: PdfToolOptions }
+  | { ok: false; error: 'range' | 'no-kinds' | 'none-chosen' | 'all-pages' }
+
+/** Annotation kinds stripAnnots removes when the window sends none (links stay) */
+export const DEFAULT_ANNOT_KINDS: PdfToolAnnotKind[] = PDF_TOOL_ANNOT_KINDS.filter(
+  (kind) => kind !== 'links',
+)
 
 const intIn = (value: unknown, lo: number, hi: number): number | undefined =>
   typeof value === 'number' && Number.isInteger(value) && value >= lo && value <= hi
@@ -74,7 +125,12 @@ const intIn = (value: unknown, lo: number, hi: number): number | undefined =>
  * `pageCount`; anything missing or out of range takes the dialog's default,
  * except a page range, which must name pages that exist.
  */
-export function checkOptions(tool: PdfToolId, raw: unknown, pageCount: number): CheckedOptions {
+export function checkOptions(
+  tool: PdfToolId,
+  raw: unknown,
+  pageCount: number,
+  backgroundPages = 1,
+): CheckedOptions {
   const o = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>
   switch (tool) {
     case 'split':
@@ -110,6 +166,64 @@ export function checkOptions(tool: PdfToolId, raw: unknown, pageCount: number): 
       }
     case 'splitPages':
       return { ok: true, options: { perPage: o.perPage === 4 || o.perPage === 9 ? o.perPage : 2 } }
+    case 'blankPages': {
+      const raw = typeof o.removePages === 'string' ? o.removePages : ''
+      const pages = [...new Set(raw.split(',').map((p) => Number(p.trim())))]
+        .filter((p) => Number.isInteger(p) && p >= 1 && p <= pageCount)
+        .sort((a, b) => a - b)
+      if (pages.length === 0) return { ok: false, error: 'none-chosen' }
+      if (pages.length >= pageCount) return { ok: false, error: 'all-pages' }
+      return { ok: true, options: { removePages: pages.join(',') } }
+    }
+    case 'stripAnnots': {
+      const text = typeof o.applyPages === 'string' ? o.applyPages.trim() : ''
+      const range = text ? parsePageRange(text, pageCount) : null
+      if (range && !range.ok) return { ok: false, error: 'range' }
+      const kinds = Array.isArray(o.annotKinds)
+        ? PDF_TOOL_ANNOT_KINDS.filter((kind) => (o.annotKinds as unknown[]).includes(kind))
+        : DEFAULT_ANNOT_KINDS
+      if (kinds.length === 0) return { ok: false, error: 'no-kinds' }
+      return {
+        ok: true,
+        options: { annotKinds: kinds, applyPages: range?.ok ? range.pages.join(',') : '' },
+      }
+    }
+    case 'overlay': {
+      const text = typeof o.applyPages === 'string' ? o.applyPages.trim() : ''
+      const range = text ? parsePageRange(text, pageCount) : null
+      if (range && !range.ok) return { ok: false, error: 'range' }
+      return {
+        ok: true,
+        options: {
+          layer: o.layer === 'front' ? 'front' : 'behind',
+          backgroundPage: intIn(o.backgroundPage, 1, backgroundPages) ?? 1,
+          applyPages: range?.ok ? range.pages.join(',') : '',
+        },
+      }
+    }
+    case 'duplex':
+      return {
+        ok: true,
+        options: {
+          sheetPages: (PDF_TOOL_SHEET_PAGES as readonly unknown[]).includes(o.sheetPages)
+            ? (o.sheetPages as number)
+            : 1,
+        },
+      }
+    case 'imagesToPdf':
+      return {
+        ok: true,
+        options: {
+          imagePaper:
+            o.imagePaper === 'image' ||
+            (PDF_TOOL_PAPERS as readonly unknown[]).includes(o.imagePaper)
+              ? (o.imagePaper as PdfToolPaper | 'image')
+              : 'A4',
+          margin: (PDF_TOOL_MARGINS as readonly unknown[]).includes(o.margin)
+            ? (o.margin as PdfToolMargin)
+            : 'small',
+        },
+      }
     default:
       return { ok: true, options: {} }
   }
@@ -168,7 +282,68 @@ export async function runPdfTool(
     }
     case 'splitPages':
       return [await splitPagesBytes(first, options.perPage ?? 2)]
+    case 'imagesToPdf': {
+      const paper = options.imagePaper ?? 'A4'
+      return [
+        await imagesToPdfBytes(inputs, {
+          paper: paper === 'image' ? null : PAPER_POINTS[paper],
+          marginPt: MARGIN_POINTS[options.margin ?? 'small'],
+        }),
+      ]
+    }
+    case 'duplex':
+      // both sides of every sheet: two pages, or two times what N-up puts on a side
+      return [await duplexMergeBytes(inputs, 2 * (options.sheetPages ?? 1))]
+    case 'overlay': {
+      const background = inputs[1]
+      if (!background) throw new Error('no background')
+      const pages = options.applyPages
+        ? options.applyPages.split(',').map((p) => Number(p) - 1)
+        : null
+      return [
+        await overlayPdfBytes(first, background, {
+          behind: options.layer !== 'front',
+          backgroundPage: (options.backgroundPage ?? 1) - 1,
+          pages,
+        }),
+      ]
+    }
+    case 'blankPages': {
+      // the editor's own page removal on save, which keeps bookmarks and forms
+      const deletedPages = (options.removePages ?? '').split(',').map((p) => Number(p) - 1)
+      const applied = await applySaveRequest(first, {
+        path: '',
+        markups: [],
+        drawings: [],
+        formValues: [],
+        stamps: [],
+        deletedPages,
+      })
+      return [applied.bytes]
+    }
+    case 'stripAnnots': {
+      const pages = options.applyPages
+        ? options.applyPages.split(',').map((p) => Number(p) - 1)
+        : null
+      const stripped = await stripAnnotsBytes(first, {
+        kinds: options.annotKinds ?? DEFAULT_ANNOT_KINDS,
+        pages,
+      })
+      if (stripped.removed === 0) throw new PdfToolRefusal('no-annots')
+      return [stripped.bytes]
+    }
+    case 'toText': {
+      const doc = await readPdfText(first)
+      if (!doc.pages.some((page) => page.text.trim() !== '')) throw new PdfToolRefusal('no-text')
+      return [new TextEncoder().encode(pagesToText(doc.pages))]
+    }
   }
+}
+
+/** The pages' text in order, a blank line between pages; a page without text adds nothing */
+export function pagesToText(pages: Pick<PdfPageText, 'text'>[]): string {
+  const texts = pages.map((page) => page.text.trimEnd()).filter((text) => text.trim() !== '')
+  return `${texts.join('\n\n')}\n`
 }
 
 /** File names the save dialog suggests, from the first input's name */
@@ -178,10 +353,16 @@ export function outputNames(
   count: number,
   options: PdfToolOptions,
 ): string[] {
-  const base = sourceName.replace(/\.pdf$/i, '') || 'document'
+  const base = sourceName.replace(/\.(pdf|jpe?g|png)$/i, '') || 'document'
   if (tool === 'split') return Array.from({ length: count }, (_, i) => `${base}-${i + 1}.pdf`)
-  const suffix: Record<Exclude<PdfToolId, 'split'>, string> = {
+  if (tool === 'imagesToPdf') return [`${base}.pdf`]
+  if (tool === 'toText') return [`${base}.txt`]
+  const suffix: Record<Exclude<PdfToolId, 'split' | 'imagesToPdf' | 'toText'>, string> = {
     merge: 'merged',
+    duplex: 'duplex',
+    overlay: 'background',
+    stripAnnots: 'clean',
+    blankPages: 'no-blank',
     extract: 'pages',
     reverse: 'reversed',
     nup: `${options.perSheet ?? 2}up`,
@@ -190,4 +371,38 @@ export function outputNames(
     splitPages: 'split',
   }
   return [`${base}-${suffix[tool]}.pdf`]
+}
+
+export interface FoundBlankPages {
+  pageCount: number
+  candidates: {
+    page: number
+    reason: 'empty' | 'nearly-white'
+    thumb: { width: number; height: number; bgra: Uint8Array } | null
+  }[]
+}
+
+/** The blank-pages job's answer, checked; null when it is not that shape */
+export function foundBlankPagesOf(value: unknown): FoundBlankPages | null {
+  if (!value || typeof value !== 'object') return null
+  const v = value as Record<string, unknown>
+  if (typeof v.pageCount !== 'number' || !Array.isArray(v.candidates)) return null
+  const candidates: FoundBlankPages['candidates'] = []
+  for (const raw of v.candidates as unknown[]) {
+    if (!raw || typeof raw !== 'object') return null
+    const c = raw as Record<string, unknown>
+    if (typeof c.page !== 'number' || !Number.isInteger(c.page)) return null
+    if (c.page < 1 || c.page > v.pageCount) return null
+    if (c.reason !== 'empty' && c.reason !== 'nearly-white') return null
+    let thumb: FoundBlankPages['candidates'][number]['thumb'] = null
+    if (c.thumb) {
+      const t = c.thumb as Record<string, unknown>
+      const { width, height, bgra } = t
+      if (typeof width !== 'number' || typeof height !== 'number') return null
+      if (!(bgra instanceof Uint8Array) || bgra.length !== width * height * 4) return null
+      thumb = { width, height, bgra }
+    }
+    candidates.push({ page: c.page, reason: c.reason, thumb })
+  }
+  return { pageCount: v.pageCount, candidates }
 }

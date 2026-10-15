@@ -382,6 +382,63 @@ export const IconPageSize = () => (
     <rect x="8.5" y="8.5" width="7" height="9" rx="0.8" strokeDasharray="2 1.6" />
   </Icon>
 )
+/** The PDF tools window: a toolbox */
+export const IconPdfTools = () => (
+  <Icon>
+    <rect x="4.5" y="8.5" width="15" height="10.5" rx="1" />
+    <path d="M9.5 8.5 V6.5 A1 1 0 0 1 10.5 5.5 H13.5 A1 1 0 0 1 14.5 6.5 V8.5" />
+    <path d="M4.5 12.75 H10.5 M13.5 12.75 H19.5 M10.5 11.5 H13.5 V14 H10.5 Z" />
+  </Icon>
+)
+/** Images to PDF: a stack of pictures */
+export const IconImagesToPdf = () => (
+  <Icon>
+    <path d="M7.5 5.5 A1 1 0 0 1 8.5 4.5 H18.5 A1 1 0 0 1 19.5 5.5 V13.5" />
+    <rect x="4.5" y="7.5" width="12" height="11" rx="1" />
+    <circle cx="8.4" cy="11" r="1.1" />
+    <path d="M4.8 16.6 L8.6 13.7 L11.6 15.9 L13.6 14.4 L16.2 16.4" />
+  </Icon>
+)
+/** Duplex: a printed page and the blank page that evens it out */
+export const IconDuplex = () => (
+  <Icon>
+    <rect x="4.5" y="5" width="7" height="14" rx="1" />
+    <path d="M6.75 9 H9.25 M6.75 11.5 H9.25 M6.75 14 H8.25" />
+    <rect x="12.5" y="5" width="7" height="14" rx="1" strokeDasharray="2.2 1.8" />
+  </Icon>
+)
+/** Background overlay: a page laid over a sheet behind it */
+export const IconOverlay = () => (
+  <Icon>
+    <rect x="8" y="4.5" width="11.5" height="13" rx="1" strokeDasharray="2.2 1.8" />
+    <rect x="4.5" y="7.5" width="11.5" height="12" rx="1" />
+    <path d="M7.5 12 H13 M7.5 14.5 H13 M7.5 17 H11" />
+  </Icon>
+)
+/** Remove annotations: a comment with a cross */
+export const IconStripAnnots = () => (
+  <Icon>
+    <path d="M4.5 5.5 H16.5 V13 H10 L6.8 15.6 V13 H4.5 Z" />
+    <path d="M7.5 8.4 H13.5 M7.5 10.4 H11.5" />
+    <path d="M15.2 15.7 L19.3 19.8 M19.3 15.7 L15.2 19.8" />
+  </Icon>
+)
+/** Find blank pages: an empty page under a magnifier */
+export const IconBlankPages = () => (
+  <Icon>
+    <rect x="4.5" y="4.5" width="10" height="14" rx="1" strokeDasharray="2.2 1.8" />
+    <circle cx="15.5" cy="14.5" r="3.2" />
+    <path d="M17.8 16.8 L20.2 19.2" />
+  </Icon>
+)
+/** Save as text: a page of lines */
+export const IconToText = () => (
+  <Icon>
+    <path d="M7.7 4.5 H13.7 L17.2 8 V18.5 A1 1 0 0 1 16.2 19.5 H7.7 A1 1 0 0 1 6.7 18.5 V5.5 A1 1 0 0 1 7.7 4.5 Z" />
+    <path d="M13.7 4.5 V8 H17.2" />
+    <path d="M9.45 11.25 H14.45 M9.45 13.75 H14.45 M9.45 16.25 H12.45" />
+  </Icon>
+)
 export const IconFitWidth = () => (
   <Icon>
     <path d="M4.5 5.57 L4.5 18.43 M19.5 5.57 L19.5 18.43" />

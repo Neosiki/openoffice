@@ -62,6 +62,8 @@ export type StructureJob =
     }
   | { op: 'images'; source: JobSource; outDir: string; baseName: string; minImagePx?: number }
   | { op: 'fingerprints'; source: JobSource }
+  /** the PDF tools window's blank-page candidates (apps/pdf/src/main/blank-pages.ts) */
+  | { op: 'blankPages'; source: JobSource }
   | { op: 'writeBack'; source: JobSource; tree?: DocumentTree; outPath: string; payload: unknown }
 
 export type StructureOp = StructureJob['op']
@@ -201,6 +203,7 @@ const OPS: ReadonlySet<string> = new Set<StructureOp>([
   'images',
   'fingerprints',
   'writeBack',
+  'blankPages',
 ])
 
 /** the child's view of the parent's message; null when it is not a run message */

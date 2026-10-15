@@ -24,6 +24,7 @@ import { basename, dirname, join } from 'node:path'
 import type { OcrEngine, PdfiumModule } from '../../../../../packages/pdf2docx/src'
 import { withPdfDocument } from '../../../../../packages/pdf2docx/src/extract/pdfium'
 import { renderPageByIndexPng } from '../../../../../packages/pdf2docx/src/extract'
+import { findBlankPages } from '../../../../pdf/src/main/blank-pages'
 import {
   applyStoredAiReadings,
   ASSET_MANIFEST_FILENAME,
@@ -434,6 +435,15 @@ export async function runStructureJob(
       })
       const written = await writeImages(job.outDir, job.baseName, images, onProgress)
       return { docHash, outDir: job.outDir, images: written } satisfies ImagesJobValue
+    }
+    case 'blankPages': {
+      const m = await deps.pdfium()
+      return withPdfDocument(
+        m,
+        bytes,
+        (doc) => findBlankPages(m, doc, onProgress),
+        job.source.password,
+      )
     }
     case 'fingerprints': {
       const m = await deps.pdfium()
