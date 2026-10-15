@@ -202,7 +202,9 @@ export function DrivePanel({
   if (!connected) {
     return (
       <main className="content drive-panel">
-        <h2 className="drive-title">{t('driveNav')}</h2>
+        <div className="drive-head">
+          <h2 className="drive-title">{t('driveNav')}</h2>
+        </div>
         <div className="drive-empty-card">
           <div className="drive-empty-title">{t('driveNotConnectedTitle')}</div>
           <p className="drive-empty-body">{t('driveNotConnectedBody')}</p>
