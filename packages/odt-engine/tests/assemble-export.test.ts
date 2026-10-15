@@ -30,6 +30,20 @@ async function convert(spec: Parameters<typeof buildDocx>[0], options = {}) {
   }
 }
 
+const THEME_PART = {
+  rId: 'rIdTheme',
+  type: 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme',
+  path: 'word/theme/theme1.xml',
+  data:
+    '<a:theme xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" name="T"><a:themeElements>' +
+    '<a:clrScheme name="T"><a:dk1><a:sysClr val="windowText" lastClr="000000"/></a:dk1><a:lt1><a:sysClr val="window" lastClr="FFFFFF"/></a:lt1>' +
+    '<a:dk2><a:srgbClr val="44546A"/></a:dk2><a:lt2><a:srgbClr val="E7E6E6"/></a:lt2><a:accent1><a:srgbClr val="123456"/></a:accent1></a:clrScheme>' +
+    '<a:fontScheme name="T"><a:majorFont><a:latin typeface="Georgia"/><a:ea typeface=""/><a:cs typeface=""/></a:majorFont>' +
+    '<a:minorFont><a:latin typeface="Verdana"/><a:ea typeface=""/><a:cs typeface=""/></a:minorFont></a:fontScheme>' +
+    '</a:themeElements></a:theme>',
+  contentType: 'application/vnd.openxmlformats-officedocument.theme+xml',
+}
+
 const byFeature = (report: Array<{ kind: string; feature: string; count: number }>) =>
   Object.fromEntries(report.map((r) => [`${r.kind}:${r.feature}`, r.count]))
 
@@ -252,6 +266,20 @@ describe('docxToOdt: what Hancom reads differently', () => {
     expect(breaks.has(before ?? '')).toBe(true)
   })
 
+  it('keeps the last page a page break at the end of the document starts', async () => {
+    const body = p('앞') + '<w:p><w:r><w:br w:type="page"/></w:r></w:p>' + sectPr()
+    const { pkg } = await convert({ body })
+    const content = textOf(pkg, 'content.xml')
+    const last = /<text:p text:style-name="([^"]+)"\/?>(?:<\/text:p>)?<\/office:text>/.exec(
+      content,
+    )?.[1]
+    expect(content).toMatch(
+      new RegExp(
+        `style:name="${last}"[^>]*><style:paragraph-properties[^>]*fo:break-before="page"`,
+      ),
+    )
+  })
+
   it('gives table rows the least height Word lays them out at', async () => {
     const cell = (text: string, pPr = '') =>
       `<w:tc><w:tcPr><w:tcW w:w="3000" w:type="dxa"/></w:tcPr>${p(text, pPr)}</w:tc>`
@@ -359,10 +387,49 @@ describe('docxToOdt: report', () => {
       'converted:chart': 1,
       'converted:equation': 2,
       'converted:shape': 2,
-      'converted:mirror_margins': 1,
       'dropped:revision': 2,
     })
+    // mirror margins are kept (style:page-usage="mirrored"): nothing to report
+    expect(byFeature(report)['converted:mirror_margins']).toBeUndefined()
     for (const r of report) expect(r.count).toBeGreaterThan(0)
+  })
+
+  it('reports nothing for a plain document that ships a theme part', async () => {
+    const { report } = await convert({ body: p('본문') + sectPr(), extra: [THEME_PART] })
+    expect(report).toEqual([])
+  })
+
+  it('reports theme references only when the theme cannot answer them', async () => {
+    const themed = (attr: string) => `<w:p><w:r><w:rPr>${attr}</w:rPr><w:t>글</w:t></w:r></w:p>`
+    // resolved exactly: the run shows the theme's accent1, and so does the ODT
+    const exact = await convert({
+      body: themed('<w:color w:val="111111" w:themeColor="accent1"/>') + sectPr(),
+      extra: [THEME_PART],
+    })
+    expect(byFeature(exact.report)['converted:theme']).toBeUndefined()
+    expect(textOf(exact.pkg, 'content.xml')).toContain('fo:color="#123456"')
+    // a slot the theme does not hold: the cached 111111 stands in for it
+    const missing = await convert({
+      body: themed('<w:color w:val="111111" w:themeColor="accent5"/>') + sectPr(),
+      extra: [THEME_PART],
+    })
+    expect(byFeature(missing.report)['converted:theme']).toBe(1)
+    // a theme font without a theme part falls back to the literal face
+    const noTheme = await convert({
+      body:
+        themed(
+          '<w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:asciiTheme="minorHAnsi" w:hAnsiTheme="minorHAnsi"/>',
+        ) + sectPr(),
+    })
+    expect(byFeature(noTheme.report)['converted:theme']).toBe(2)
+    const withTheme = await convert({
+      body:
+        themed(
+          '<w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:asciiTheme="minorHAnsi" w:hAnsiTheme="minorHAnsi"/>',
+        ) + sectPr(),
+      extra: [THEME_PART],
+    })
+    expect(byFeature(withTheme.report)['converted:theme']).toBeUndefined()
   })
 
   it('reports comments as dropped', async () => {

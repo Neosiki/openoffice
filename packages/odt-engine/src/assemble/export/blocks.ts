@@ -336,6 +336,7 @@ export class BlockNormaliser {
    */
   async block(b: Block): Promise<EditedItem[]> {
     const one = await this.single(b)
+    if (one) this.last = one
     if (!one) return []
     const block = one.blocks[0]
     const out: EditedItem[] = []
@@ -401,6 +402,30 @@ export class BlockNormaliser {
     })
     return out
   }
+
+  /**
+   * After the last body element: a page break that ended the document starts
+   * one more page, which holds the empty paragraph Word shows there.
+   */
+  end(): EditedItem[] {
+    const last = this.last
+    if (!this.pendingBreak || !last) return []
+    this.pendingBreak = false
+    const block: Block = {
+      ...last.blocks[0],
+      type: 'paragraph',
+      runs: [],
+      table: undefined,
+      list: undefined,
+      format: { pageBreakBefore: true },
+      rawPPr: undefined,
+      originalXml: '',
+    }
+    return [{ index: last.index, xml: '', blocks: [block] }]
+  }
+
+  /** The last element written. */
+  private last: EditedItem | null = null
 
   /** One body element → the item the writers take (null: nothing to write). */
   private async single(b: Block): Promise<EditedItem | null> {

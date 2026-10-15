@@ -41,6 +41,7 @@ import { type ConversionReport, ReportBuilder } from '../report'
 import { type ZipEntryInput, writeZip } from '../zip'
 import { BlockNormaliser } from './blocks'
 import { headingsAsParagraphs } from './headings'
+import { unresolvedThemeReferences } from './theme'
 import { type RenderedObject, labelRunWriter } from './objects'
 import {
   FontSet,
@@ -150,6 +151,10 @@ export async function docxToOdt(
       blocks.push(...item.blocks)
     }
   }
+  for (const item of normaliser.end()) {
+    items.push(item)
+    blocks.push(...item.blocks)
+  }
   countTocs(parsed, report)
 
   // ---- page groups and master pages
@@ -165,7 +170,22 @@ export async function docxToOdt(
     hfParas.set(rId, paras)
   }
   report.add('dropped', 'revision', normaliser.revisions)
-  documentLevelReport(parsed, report, await readPart(zip, 'word/document.xml'))
+  const documentXml = await readPart(zip, 'word/document.xml')
+  documentLevelReport(parsed, report, documentXml)
+  const hfXml: string[] = []
+  for (const rId of Object.keys(parsed.hfParts ?? {})) {
+    const target = rels.get(rId)
+    if (target) hfXml.push(await readPart(zip, target))
+  }
+  report.add(
+    'converted',
+    'theme',
+    unresolvedThemeReferences(parsed, {
+      documentXml,
+      stylesXml: await readPart(zip, 'word/styles.xml'),
+      parts: hfXml,
+    }),
+  )
 
   // ---- the skeleton
   const fonts = new FontSet()
@@ -443,7 +463,7 @@ function pageGroups(
   lastGroup.subsections[lastGroup.subsections.length - 1].last = Number.MAX_SAFE_INTEGER
   // ODF columns are equal: unequal docx column widths become equal ones
   report.add('converted', 'columns', unequal)
-  if (parsed.mirrorMargins) report.add('converted', 'mirror_margins')
+  // mirror margins are style:page-usage="mirrored": kept as they are, not reported
   return groups
 }
 
@@ -530,11 +550,6 @@ function documentLevelReport(parsed: ParsedDoc, report: ReportBuilder, documentX
   report.add('converted', 'citation', citations)
   report.add('converted', 'cross_reference', references)
   report.add('dropped', 'page_color', readPageColor(parsed) ? 1 : 0)
-  const themed =
-    /\bw:(?:ascii|hAnsi|eastAsia|cs)Theme="|\bw:themeColor="/.test(documentXml) ||
-    !!parsed.themeFonts ||
-    !!parsed.themeColors
-  if (themed) report.add('converted', 'theme')
   report.add('dropped', 'comment', parsed.comments.length)
   report.add('dropped', 'ink', parsed.inks.length)
   if (parsed.watermarkText || parsed.watermarkPicture) report.add('dropped', 'watermark')
