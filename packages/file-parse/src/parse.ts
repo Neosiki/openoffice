@@ -1,8 +1,10 @@
 import { readFile } from 'node:fs/promises'
 import { extname } from 'node:path'
+import { OdtNotTextError, isOdtOpenError } from '@genoffice/odt-engine'
 import { docToText } from './doc'
 import { docxToText } from './docx'
 import { hwpToText } from './hwp'
+import { odtToText } from './odt'
 import { pdfToText } from './pdf'
 import { pptToText } from './ppt'
 import { pptxToText } from './pptx'
@@ -111,6 +113,34 @@ function sniffBinary(bytes: Buffer): BinaryKind {
   return 'unknown'
 }
 
+/**
+ * An ODT is a zip whose `mimetype` names an OpenDocument text document; the
+ * engine checks that after its zip gate, so a zip with any other media type
+ * (a docx, a spreadsheet, a template) surfaces here as a content mismatch.
+ */
+async function parseOdt(bytes: Buffer): Promise<ParsedFile> {
+  try {
+    return { ok: true, kind: 'text', text: await odtToText(bytes) }
+  } catch (e) {
+    if (isOdtOpenError(e, 'not-odt-text')) {
+      const mediaType = e instanceof OdtNotTextError ? e.mediaType : null
+      return {
+        ok: false,
+        kind: 'text',
+        error: `Content mismatch: .odt file is not an OpenDocument text document (media type ${mediaType ?? 'missing'})`,
+      }
+    }
+    if (isOdtOpenError(e, 'encrypted')) {
+      return {
+        ok: false,
+        kind: 'text',
+        error: 'Password-protected ODT: remove the password and attach it again',
+      }
+    }
+    throw e
+  }
+}
+
 /** parse an attachment into plain text (or flag it as image / unsupported) */
 export async function parseFileToText(filePath: string): Promise<ParsedFile> {
   const ext = extname(filePath).slice(1).toLowerCase()
@@ -141,7 +171,7 @@ export async function parseFileToText(filePath: string): Promise<ParsedFile> {
       }
     }
     if (
-      (ext === 'docx' || ext === 'pptx' || ext === 'xlsx' || ext === 'xlsm') &&
+      (ext === 'docx' || ext === 'odt' || ext === 'pptx' || ext === 'xlsx' || ext === 'xlsm') &&
       sniffed !== 'zip'
     ) {
       return {
@@ -192,6 +222,8 @@ export async function parseFileToText(filePath: string): Promise<ParsedFile> {
         }
       case 'docx':
         return { ok: true, kind: 'text', text: await docxToText(bytes) }
+      case 'odt':
+        return await parseOdt(bytes)
       case 'ppt':
         return { ok: true, kind: 'text', text: await pptToText(bytes) }
       case 'pptx':

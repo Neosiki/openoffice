@@ -35,7 +35,7 @@
 頂端的搜尋方塊會同時比對兩種內容：
 
 - **檔案名稱**：依名稱快速篩選。
-- **檔案內容**：GenOffice 會在背景為你的檔案建立索引（docx/xlsx/pptx/pdf/md/html 內的文字），所以搜尋內文也找得到檔案。搜尋範圍與開關可在搜尋設定中調整。
+- **檔案內容**：GenOffice 會在背景為你的檔案建立索引（docx/odt/xlsx/pptx/pdf/md/html 內的文字），所以搜尋內文也找得到檔案。搜尋範圍與開關可在搜尋設定中調整。
 
 ## 快速開始卡片
 
@@ -51,7 +51,7 @@
 - **AI Markdown**（.md）：在 Markdown 編輯器中開啟一份空白 Markdown 文件。
 - **AI HTML**（.html）：在 HTML 編輯器中開啟一份空白網頁。
 - **AI PDF**（.pdf）：與其他卡片不同——它會在目標資料夾中** 立即**建立一個真正的空白單頁 PDF，並以一般檔案的方式開啟（PDF 編輯器處理的是真實檔案）。適合用來加註解、塗黑或加入文字；檔名在第一次儲存時可依內容自動更改。
-- **開啟本機檔案**：開啟系統檔案選擇視窗，支援 Word（.docx/.doc）、Excel（.xlsx/.xlsm/.xls/.csv/.tsv）、PowerPoint（.pptx/.ppt）、PDF、Markdown（.md/.markdown）與網頁（.html/.htm）。可複選；每個檔案各自開一個分頁。 純文字檔案（.txt、.json）也可以在這裡開啟——會直接進入 Markdown 編輯器的原始碼檢視。
+- **開啟本機檔案**：開啟系統檔案選擇視窗，支援 Word（.docx/.doc/.odt）、Excel（.xlsx/.xlsm/.xls/.csv/.tsv）、PowerPoint（.pptx/.ppt）、PDF、Markdown（.md/.markdown）與網頁（.html/.htm）。可複選；每個檔案各自開一個分頁。 純文字檔案（.txt、.json）也可以在這裡開啟——會直接進入 Markdown 編輯器的原始碼檢視。
 
 > 提示：選單列的 檔案 ▸ 新增 也能建立相同類型的文件（⌘N/Ctrl+N 預設建立文字文件）；把檔案直接拖進視窗等同於開啟它。
 

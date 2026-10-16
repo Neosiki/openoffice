@@ -71,6 +71,7 @@ Docs 是类 Word 的文字处理器，读写真 .docx，分页排版所见即所
 ## 保存与导出
 
 - 保存 .docx；只重写变更段落，未改动内容字节级不变。
+- 也能打开和保存 .odt（OpenDocument 文本）：另存为可选 .docx 或 .odt，ODT 文档中关闭的功能见[快速入门](help://getting-started)。
 - 导出 PDF（按当前分页）与逐页图片。
 
 ## 打印

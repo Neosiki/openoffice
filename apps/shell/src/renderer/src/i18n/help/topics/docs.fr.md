@@ -71,6 +71,7 @@ Clic droit n’importe où dans le corps — le menu correspond à ce que vous a
 ## Enregistrement et export
 
 - Enregistre du .docx en ne réécrivant que les paragraphes modifiés — le contenu intact reste identique octet pour octet.
+- Ouvre et enregistre aussi les .odt (texte OpenDocument) : Enregistrer sous propose .docx ou .odt, et ce qui est désactivé dans un document ODT figure dans [Prise en main](help://getting-started).
 - Exporte en PDF (selon la pagination en cours) et en images page par page.
 
 ## Impression

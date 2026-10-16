@@ -12,6 +12,8 @@ export const he = {
   cardMeteredAccepted: 'בשימוש · חיוב לפי שימוש',
   cardError: 'לא ניתן היה לבדוק את החיבור',
   cardErrNeedsUpdate: 'התוכנה {provider} במחשב הזה ישנה מדי. עדכנו אותה ואז בדקו שוב.',
+  cardErrNeedsUpdateVersion:
+    'התוכנה {provider} במחשב הזה ({version}) ישנה מדי; נדרשת גרסה {minimum} ומעלה. הריצו {command} בטרמינל ואז בדקו שוב.',
   cardErrTimeout: 'התוכנה {provider} לא ענתה בזמן. בדקו שוב בעוד רגע.',
   cardErrFailed: 'משהו השתבש במהלך הבדיקה של {provider}. בדקו שוב.',
   actionInstall: 'התקנה',

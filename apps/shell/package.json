@@ -1,7 +1,7 @@
 {
   "name": "@genoffice/shell",
   "productName": "IeumOffice",
-  "version": "0.12.0",
+  "version": "0.12.1",
   "license": "Apache-2.0",
   "homepage": "https://github.com/pblsketch/openoffice",
   "private": true,
@@ -26,6 +26,7 @@
     "@genoffice/docs": "*",
     "@genoffice/docx-engine": "*",
     "@genoffice/electron-utils": "*",
+    "@genoffice/google-drive": "*",
     "@genoffice/cli": "*",
     "@genoffice/i18n": "*",
     "@genoffice/pipelines": "*",

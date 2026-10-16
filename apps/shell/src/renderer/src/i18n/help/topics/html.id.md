@@ -29,6 +29,7 @@ Klik elemen apa pun di pratinjau dan sebuah bilah alat melayang di atasnya:
 Menu File, semuanya lokal dan semuanya menanyakan tempat untuk menaruh hasilnya:
 
 - **Ekspor sebagai Word…** dan **Ekspor sebagai PDF…** menulis .docx atau .pdf yang sungguhan.
+- **Ekspor sebagai ODT…** menulis file .odt (teks OpenDocument) lewat konversi yang sama dengan ekspor Word; jika ada yang berubah atau hilang di tengah jalan, Anda melihat daftarnya dan mengonfirmasi lebih dulu.
 - **Ekspor sebagai HTML satu file…** menulis satu .html dengan gambar tertanam di dalamnya. File ini tidak akan menimpa file yang sedang Anda buka, dan memberi tahu berapa gambar yang tidak bisa ditanam.
 
 ## Sisipkan kerangka

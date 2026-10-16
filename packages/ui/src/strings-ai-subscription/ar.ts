@@ -12,6 +12,8 @@ export const ar = {
   cardMeteredAccepted: 'قيد الاستخدام · الرسوم حسب الاستخدام',
   cardError: 'تعذّر التحقق من الاتصال',
   cardErrNeedsUpdate: 'برنامج {provider} على هذا الحاسوب قديم جدًا. حدّثه ثم تحقق مرة أخرى.',
+  cardErrNeedsUpdateVersion:
+    'برنامج {provider} على هذا الحاسوب ({version}) قديم جدًا، ويلزم الإصدار {minimum} أو أحدث. شغّل {command} في الطرفية ثم تحقق مرة أخرى.',
   cardErrTimeout: 'لم يستجب برنامج {provider} في الوقت المحدد. تحقق مرة أخرى بعد قليل.',
   cardErrFailed: 'حدث خطأ أثناء التحقق من {provider}. تحقق مرة أخرى.',
   actionInstall: 'تثبيت',

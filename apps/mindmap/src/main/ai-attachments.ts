@@ -395,6 +395,7 @@ export const ATTACHMENT_EXTS: ReadonlySet<string> = new Set([
   ...TEXT_EXTS,
   'doc',
   'docx',
+  'odt',
   'pdf',
   'pptx',
   'ppt',

@@ -29,6 +29,7 @@ Kliknij dowolny element w podglądzie, a nad nim pojawi się pasek narzędzi:
 Menu Plik — wszystko lokalne i wszystko pyta, gdzie umieścić wynik:
 
 - **Eksportuj jako Word…** i **Eksportuj jako PDF…** zapisują prawdziwy plik .docx lub .pdf.
+- **Eksportuj jako ODT…** zapisuje plik .odt (tekst OpenDocument) tą samą konwersją co eksport do Worda; jeśli coś się po drodze zmieni lub przepadnie, zobaczysz listę i najpierw to potwierdzisz.
 - **Eksportuj jako pojedynczy plik HTML…** zapisuje jeden .html z osadzonymi obrazami. Nie nadpisuje pliku, który masz teraz otwarty, i mówi, ile obrazów nie udało się osadzić.
 
 ## Wstaw szkielet

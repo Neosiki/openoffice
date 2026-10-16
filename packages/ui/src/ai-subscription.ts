@@ -10,6 +10,7 @@ import {
   AI_SUBSCRIPTION_PROVIDERS,
   isSubscriptionProvider,
   subscriptionConnection,
+  subscriptionNeedsUpdate,
   subscriptionStatusErrorKind,
   type AiProviderChoice,
   type AiProviderId,
@@ -126,6 +127,12 @@ export interface AiSubscriptionCardView {
    * failure. The status's own text (English, possibly naming a path) is never shown.
    */
   readonly detailKey?: AiSubscriptionStringKey | undefined
+  /**
+   * values for the detail sentence besides the provider name: on a CLI below
+   * the app's floor, the version found, the oldest one that works and the
+   * update command. Facts the app derived, never CLI text.
+   */
+  readonly detailParams?: Readonly<Record<'version' | 'minimum' | 'command', string>> | undefined
   /** buttons and links, in order; the first one is the primary action */
   readonly actions: readonly AiSubscriptionCardAction[]
 }
@@ -233,15 +240,19 @@ function connectionCardView(status: AiSubscriptionStatus): AiSubscriptionCardVie
             noteKeys: ['meteredWarning', 'meteredMeaning'],
             actions: ['accept-metered'],
           }
-    case 'error':
+    case 'error': {
+      const outdated = subscriptionNeedsUpdate(status)
       return {
         ...base,
         tone: 'error',
         statusKey: 'cardError',
         noteKeys: [],
-        detailKey: STATUS_ERROR_KEYS[subscriptionStatusErrorKind(status) ?? 'failed'],
+        ...(outdated
+          ? { detailKey: 'cardErrNeedsUpdateVersion', detailParams: outdated }
+          : { detailKey: STATUS_ERROR_KEYS[subscriptionStatusErrorKind(status) ?? 'failed'] }),
         actions: ['recheck'],
       }
+    }
   }
 }
 

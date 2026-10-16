@@ -19,6 +19,8 @@ import {
   aiSubscriptionText,
   useAiSendGate,
   useChatRunQueue,
+  DriveAttachButton,
+  type DriveAttachPicked,
 } from '@genoffice/ui'
 import { useEffect, useRef, useState } from 'react'
 import type {
@@ -28,9 +30,9 @@ import type {
 } from 'react'
 import {
   AgentLoop,
-  composeSkills,
   type AgentImage,
   type IpcStreamError,
+  composeWithDrive,
 } from '@genoffice/agent-core'
 import type {
   AiSettings,
@@ -275,6 +277,15 @@ export function AiPanel({
   }
   const pickAttachments = async (): Promise<void> =>
     mergeAttachments(await window.hwpApi.pickAttachments())
+  /** Drive files the person ticked: attached like files from this PC, notes beside them */
+  const attachFromDrive = async ({ paths, notes }: DriveAttachPicked) => {
+    const added = paths.length > 0 ? await window.hwpApi.addAttachmentPaths(paths) : null
+    mergeAttachments({
+      accepted: added?.accepted ?? [],
+      rejected: [...(added?.rejected ?? []), ...notes],
+    })
+  }
+
   const onDrop = async (e: ReactDragEvent): Promise<void> => {
     // handled here: without this the tab would open the dropped document instead
     e.preventDefault()
@@ -504,7 +515,7 @@ export function AiPanel({
   if (!loopRef.current) {
     loopRef.current = new AgentLoop({
       transport: transportRef.current,
-      skill: composeSkills('hwp+files', '', [
+      skill: composeWithDrive('hwp+files', '', () => loopRef.current?.messages ?? [], [
         skillRef.current.skill,
         createFilesSkill(() => availableAttachmentsRef.current()),
       ]),
@@ -1187,6 +1198,7 @@ export function AiPanel({
               >
                 <img src={attachIcon} alt="" aria-hidden />
               </button>
+              <DriveAttachButton lang={lang} onPicked={attachFromDrive} />
             </>
           }
           onPasteFiles={(files) => void onPasteFiles(files)}

@@ -35,7 +35,7 @@ Zaškrtněte pole u řádku nebo klepněte s ⌘/ctrl, abyste vytvořili výběr
 Vyhledávací pole nahoře filtruje najednou dvě věci:
 
 - **Názvy souborů**: rychlé filtrování podle názvu.
-- **Obsah souborů**: GenOffice na pozadí indexuje vaše soubory (text uvnitř docx/xlsx/pptx/pdf/md/html), takže hledáním v textu najdete i soubory. Rozsah a přepínače se nastavují v nastavení vyhledávání.
+- **Obsah souborů**: GenOffice na pozadí indexuje vaše soubory (text uvnitř docx/odt/xlsx/pptx/pdf/md/html), takže hledáním v textu najdete i soubory. Rozsah a přepínače se nastavují v nastavení vyhledávání.
 
 ## Karty rychlého startu
 
@@ -51,7 +51,7 @@ Co která karta dělá:
 - **AI Markdown** (.md): prázdný dokument Markdown v editoru Markdown.
 - **AI HTML** (.html): prázdná webová stránka v editoru HTML.
 - **AI PDF** (.pdf): ostatní se liší — **okamžitě** vytvoří skutečný prázdný jednostránkový PDF v cílové složce a otevře ho jako běžný soubor (editor PDF pracuje se skutečnými soubory). Hodí se pro poznámky, začernění nebo přidávání textu; při prvním uložení lze soubor automaticky přejmenovat podle jeho obsahu.
-- **Otevřít místní soubor**: systémový výběr souborů pro Word (.docx/.doc), Excel (.xlsx/.xlsm/.xls/.csv/.tsv), PowerPoint (.pptx/.ppt), PDF, Markdown (.md/.markdown) a webové stránky (.html/.htm). Lze vybrat více souborů; každý dostane vlastní kartu. Textové soubory (.txt, .json) se tu také otevírají — přistanou v zobrazení zdroje editoru Markdown.
+- **Otevřít místní soubor**: systémový výběr souborů pro Word (.docx/.doc/.odt), Excel (.xlsx/.xlsm/.xls/.csv/.tsv), PowerPoint (.pptx/.ppt), PDF, Markdown (.md/.markdown) a webové stránky (.html/.htm). Lze vybrat více souborů; každý dostane vlastní kartu. Textové soubory (.txt, .json) se tu také otevírají — přistanou v zobrazení zdroje editoru Markdown.
 
 > Tip: Soubor ▸ Nový v pruhu nabídek vytvoří stejné typy dokumentů (⌘N/Ctrl+N ve výchozím stavu vytvoří textový dokument); přetažení souboru do okna ho otevře.
 

@@ -17,18 +17,20 @@ import {
   aiSubscriptionText,
   useAiSendGate,
   useChatRunQueue,
+  DriveAttachButton,
+  type DriveAttachPicked,
 } from '@genoffice/ui'
 import { useEffect, useRef, useState } from 'react'
 import type { Editor } from '@tiptap/core'
 import type { Block } from '@genoffice/docx-engine'
 import {
   AgentLoop,
-  composeSkills,
   createKnowledgeBaseSkill,
   streamText,
   type AgentImage,
   type IpcStreamError,
   type KbFileInfo,
+  composeWithDrive,
 } from '@genoffice/agent-core'
 import type { AiSubscriptionProviderId, AiSubscriptionUsage } from '@genoffice/ai-provider/browser'
 import type {
@@ -100,6 +102,7 @@ import fileVoiceIcon from '../assets/file-voice.png'
 import fileDocumentIcon from '../assets/file-document.png'
 import fileGeneralIcon from '../assets/file-general.png'
 import { IconNewChat, IconSidebarCollapse } from '../components/icons'
+import { odtOffProps, useOdtSession } from '../odt-gate'
 
 interface ToolActivity {
   name: string
@@ -205,7 +208,7 @@ const PASTE_MIME_EXT: Record<string, string> = {
 /** File-type icons for attachment cards (attachment icon set); exts the
  *  attachment allowlist doesn't accept yet are mapped ahead so they light up when added */
 const ATTACHMENT_CARD_ICON_GROUPS: [icon: string, exts: string[]][] = [
-  [fileWordIcon, ['doc', 'docx']],
+  [fileWordIcon, ['doc', 'docx', 'odt']],
   [fileExcelIcon, ['xls', 'xlsx', 'xlsm', 'csv', 'tsv']],
   [filePptIcon, ['ppt', 'pptx']],
   [filePdfIcon, ['pdf']],
@@ -245,7 +248,7 @@ const ATTACHMENT_CARD_ICON_GROUPS: [icon: string, exts: string[]][] = [
   ],
 ]
 
-const ATTACHMENT_CARD_ICONS: Record<string, string> = Object.fromEntries(
+export const ATTACHMENT_CARD_ICONS: Record<string, string> = Object.fromEntries(
   ATTACHMENT_CARD_ICON_GROUPS.flatMap(([icon, exts]) => exts.map((ext) => [ext, icon])),
 )
 
@@ -628,8 +631,11 @@ export function AiPanel({
       seen.has(a.path) ? false : (seen.add(a.path), true),
     )
   }
-  const trackChangesRef = useRef(trackChanges)
-  trackChangesRef.current = trackChanges
+  // tracked changes are off in an ODT document: AI edits land as plain edits
+  const odtDoc = useOdtSession()
+  const trackOn = trackChanges && !odtDoc
+  const trackChangesRef = useRef(trackOn)
+  trackChangesRef.current = trackOn
   const commentsAccessRef = useRef(commentsAccess)
   commentsAccessRef.current = commentsAccess
   const hfAccessRef = useRef(hfAccess)
@@ -881,7 +887,7 @@ export function AiPanel({
     loopRef.current = new AgentLoop<PmNode>({
       transport: transportRef.current,
       systemSuffix: aiLangDirective,
-      skill: composeSkills('docs+files', '', [
+      skill: composeWithDrive('docs+files', '', () => loopRef.current?.messages ?? [], [
         // the reader's starred files; empty while the user stars nothing —
         // buildContext then returns '' and the skill stays out of the way.
         // Mounted only when the bridge carries the kb channel at all: a test
@@ -1348,6 +1354,15 @@ export function AiPanel({
   }
 
   const pickAttachments = async () => mergeAttachments(await window.desktop.pickAttachments())
+
+  /** Drive files the person ticked: attached like files from this PC, notes beside them */
+  const attachFromDrive = async ({ paths, notes }: DriveAttachPicked) => {
+    const added = paths.length > 0 ? await window.desktop.addAttachmentPaths(paths) : null
+    mergeAttachments({
+      accepted: added?.accepted ?? [],
+      rejected: [...(added?.rejected ?? []), ...notes],
+    })
+  }
 
   const onDrop = async (e: React.DragEvent) => {
     e.preventDefault()
@@ -1919,10 +1934,12 @@ export function AiPanel({
               >
                 <img src={attachIcon} alt="" aria-hidden />
               </button>
+              <DriveAttachButton lang={lang} onPicked={attachFromDrive} />
               <button
-                className={`ai-track-btn${trackChanges ? ' on' : ''}`}
+                className={`ai-track-btn${trackOn ? ' on' : ''}`}
                 onClick={toggleTrackChanges}
-                data-tip={trackChanges ? t('aiTrackOnTitle') : t('aiTrackOffTitle')}
+                data-tip={trackOn ? t('aiTrackOnTitle') : t('aiTrackOffTitle')}
+                {...odtOffProps(odtDoc)}
               >
                 <span className="ai-track-dot" aria-hidden />
                 {t('aiTrackChanges')}

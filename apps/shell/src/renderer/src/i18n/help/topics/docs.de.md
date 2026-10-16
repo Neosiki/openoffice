@@ -71,6 +71,7 @@ Rechtsklicken Sie irgendwo im Text — das Menü richtet sich nach dem, was Sie 
 ## Speichern und exportieren
 
 - Speichert .docx und schreibt nur geänderte Absätze neu — unveränderter Inhalt bleibt byteidentisch.
+- Öffnet und speichert auch .odt (OpenDocument-Text): Speichern unter bietet .docx oder .odt, und was in ODT-Dokumenten ausgeschaltet ist, steht im [Schnellstart](help://getting-started).
 - Exportiert PDF (mit aktuellem Seitenumbruch) und Bilder Seite für Seite.
 
 ## Drucken

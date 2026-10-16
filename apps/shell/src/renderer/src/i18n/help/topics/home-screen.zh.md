@@ -35,7 +35,7 @@
 顶部的搜索框同时搜两类东西：
 
 - **文件名**：按名称快速过滤。
-- **文件内容**：GenOffice 会在后台给文件建索引（docx/xlsx/pptx/pdf/md/html 的文字），所以搜正文也能找到文件。搜索设置里可以调整范围与开关。
+- **文件内容**：GenOffice 会在后台给文件建索引（docx/odt/xlsx/pptx/pdf/md/html 的文字），所以搜正文也能找到文件。搜索设置里可以调整范围与开关。
 
 ## 快速开始卡片
 
@@ -51,7 +51,7 @@
 - **AI Markdown**（.md）：空白 Markdown 文档，进入 Markdown 编辑器。
 - **AI HTML**（.html）：空白网页文档，进入 HTML 编辑器。
 - **AI PDF**（.pdf）：和其他卡片不同——它会** 立即**在目标文件夹创建一个真正的空白单页 PDF，并作为普通文件打开（PDF 编辑器处理的是真实文件）。适合在上面做注释、涂黑、添加文字；首次保存时可按内容自动改名。
-- **打开本地文件**：弹出系统文件选择框，支持 Word（.docx/.doc）、Excel（.xlsx/.xlsm/.xls/.csv/.tsv）、PowerPoint（.pptx/.ppt）、PDF、Markdown（.md/.markdown）和网页（.html/.htm）。可一次选多个文件，每个文件一个标签页。 纯文本文件（.txt、.json）也可以在这里打开——会直接进入 Markdown 编辑器的源码视图。
+- **打开本地文件**：弹出系统文件选择框，支持 Word（.docx/.doc/.odt）、Excel（.xlsx/.xlsm/.xls/.csv/.tsv）、PowerPoint（.pptx/.ppt）、PDF、Markdown（.md/.markdown）和网页（.html/.htm）。可一次选多个文件，每个文件一个标签页。 纯文本文件（.txt、.json）也可以在这里打开——会直接进入 Markdown 编辑器的源码视图。
 
 > 提示：菜单栏 文件 ▸ 新建 也能新建同样类型的文档（⌘N/Ctrl+N 默认新建文字文档）；把文件直接拖进窗口等于打开它。
 

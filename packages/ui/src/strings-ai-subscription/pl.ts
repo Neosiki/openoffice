@@ -13,6 +13,8 @@ export const pl = {
   cardError: 'Nie udało się sprawdzić połączenia',
   cardErrNeedsUpdate:
     'Program {provider} na tym komputerze jest zbyt stary. Zaktualizuj go, a potem sprawdź ponownie.',
+  cardErrNeedsUpdateVersion:
+    'Program {provider} na tym komputerze ({version}) jest zbyt stary; potrzebna jest wersja {minimum} lub nowsza. Uruchom {command} w terminalu, a potem sprawdź ponownie.',
   cardErrTimeout: 'Program {provider} nie odpowiedział na czas. Sprawdź ponownie za chwilę.',
   cardErrFailed: 'Podczas sprawdzania {provider} wystąpił problem. Sprawdź ponownie.',
   actionInstall: 'Zainstaluj',

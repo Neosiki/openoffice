@@ -36,6 +36,8 @@ import type {
   SkillInstallState,
 } from '../shared/integrations-api'
 import { RESULT_STORE_CHANNELS } from '../shared/result-store-api'
+import { DRIVE_CHANNELS } from '../shared/drive-api'
+import type { DriveApi, DriveUiState } from '../shared/drive-api'
 import type { ResultStoreApi } from '../shared/result-store-api'
 import type { TabsApi, TabSummary } from '../shared/tabs-api'
 import { TABS_CHANNELS } from '../shared/tabs-api'
@@ -43,6 +45,7 @@ import type { GenerateHomeApi } from '../shared/generate-api'
 import { GENERATE_HOME_CHANNELS } from '../shared/generate-home-channels'
 import type { PdfToolsHomeApi } from '../shared/pdf-tools-api'
 import { PDF_TOOLS_HOME_CHANNELS } from '../shared/pdf-tools-home-channels'
+import { AGENT_HOME_OPEN_CHANNEL } from '../shared/agent-home-channel'
 import type { SubscriptionApi } from '../shared/subscription-api'
 import {
   SHELL_SUBSCRIPTION_CHANNELS,
@@ -606,6 +609,30 @@ const resultStoreApi: ResultStoreApi = {
 }
 contextBridge.exposeInMainWorld('aiOfficeResultStore', resultStoreApi)
 
+// Google Drive (decision 0033): state, browsing and opening. Main keeps the
+// tokens; this bridge only carries states, file lists and file ids.
+const driveApi: DriveApi = {
+  state: () => ipcRenderer.invoke(DRIVE_CHANNELS.state) as Promise<DriveUiState>,
+  onStateChanged(listener) {
+    const handler = (_event: IpcRendererEvent, state: DriveUiState) => listener(state)
+    ipcRenderer.on(DRIVE_CHANNELS.stateChanged, handler)
+    return () => {
+      ipcRenderer.removeListener(DRIVE_CHANNELS.stateChanged, handler)
+    }
+  },
+  connect: () => ipcRenderer.invoke(DRIVE_CHANNELS.connect),
+  async cancelConnect() {
+    await ipcRenderer.invoke(DRIVE_CHANNELS.cancelConnect)
+  },
+  async disconnect() {
+    await ipcRenderer.invoke(DRIVE_CHANNELS.disconnect)
+  },
+  setAiAccess: (on) => ipcRenderer.invoke(DRIVE_CHANNELS.setAiAccess, on === true),
+  list: (listing, pageToken) => ipcRenderer.invoke(DRIVE_CHANNELS.list, listing, pageToken),
+  open: (fileId) => ipcRenderer.invoke(DRIVE_CHANNELS.open, fileId),
+}
+contextBridge.exposeInMainWorld('aiOfficeDrive', driveApi)
+
 // Subscription channels are registered once for the whole app by the docs main.
 // Until that handler exists an invoke rejects; the renderer reads that as
 // "still checking" (see renderer/src/subscription-client.ts).
@@ -745,6 +772,12 @@ const pdfToolsHomeApi: PdfToolsHomeApi = {
   },
 }
 contextBridge.exposeInMainWorld('aiOfficePdfToolsHome', pdfToolsHomeApi)
+// Home's entry point into the agent window (decision 0032); the window has its own preload
+contextBridge.exposeInMainWorld('aiOfficeAgent', {
+  async open() {
+    await ipcRenderer.invoke(AGENT_HOME_OPEN_CHANNEL)
+  },
+})
 
 // open documents dragged from the OS anywhere over Home or the tab strip
 installDropOpenBridge()

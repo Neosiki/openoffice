@@ -15,6 +15,28 @@ export type {
 export { composeSkills } from './skill'
 export { createKnowledgeBaseSkill, formatKbSize } from './knowledge-base-skill'
 export type { KnowledgeBaseDeps, KbFileInfo, KbSearchHit, KbReadPage } from './knowledge-base-skill'
+export {
+  DRIVE_OUTBOUND_BLOCKED,
+  DRIVE_READ_TOOL,
+  DRIVE_SEARCH_TOOL,
+  OUTBOUND_TOOLS,
+  composeWithDrive,
+  createBridgedDriveSkill,
+  createDriveSkill,
+  guardDriveContent,
+  hasDriveBridge,
+  holdsDriveContent,
+  isOutboundCall,
+  windowDriveBridge,
+} from './drive-skill'
+export type {
+  DriveBridgeLike,
+  DriveCallResult,
+  DriveReadPage,
+  DriveSearchHit,
+  DriveSkill,
+  DriveSkillDeps,
+} from './drive-skill'
 export type { AgentSkill, ExecutedToolCall } from './skill'
 export {
   AgentLoop,

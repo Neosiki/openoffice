@@ -10,6 +10,8 @@ export const zh = {
   cardMeteredAccepted: '使用中 · 按用量计费',
   cardError: '无法检查连接状态',
   cardErrNeedsUpdate: '此电脑上的 {provider} 程序版本过低。请更新后重新检查。',
+  cardErrNeedsUpdateVersion:
+    '此电脑上的 {provider} 程序（{version}）版本过低，需要 {minimum} 或更高版本。请在终端中运行 {command}，然后重新检查。',
   cardErrTimeout: '{provider} 程序未及时响应。请稍后重新检查。',
   cardErrFailed: '检查 {provider} 时出现问题。请重新检查。',
   actionInstall: '安装',

@@ -108,6 +108,7 @@ npm run dist:win -- -- --publish never
 1. `latest.yml`을 메모장으로 열어 `version:` 이 3번에서 정한 번호인지 봅니다.
 2. 같은 파일의 `path:` 에 적힌 이름이 설치 파일 이름과 **글자 하나까지** 같은지 봅니다.
 3. 설치 파일을 실행해 설치하고, 앱이 뜨는지, 설정 → 정보의 버전이 새 번호인지 봅니다.
+4. 탐색기에서 `.odt` 파일을 오른쪽 단추로 눌러 "연결 프로그램"에 이음오피스가 있는지, 골랐을 때 워드 탭으로 열리는지 봅니다. `.odt`를 두 번 눌렀을 때 열리는 프로그램(한컴 등)은 설치 전과 같아야 합니다. _(확인 필요: ODT 등록을 더한 뒤 아직 설치본으로 확인하지 않았습니다. 확인한 뒤 이 표시를 지워 주세요.)_
 
 지켜야 할 것:
 
@@ -246,7 +247,7 @@ Mac판은 Apple 개발자 서명 없는 베타로 냅니다(결정 0031). Window
 3. npm run native:build -w @genoffice/sheets
 4. xlsx-sidecar.exe 를 target\x86_64-pc-windows-gnu\release 로 복사
 5. npm run dist:win -- -- --publish never
-6. apps/shell/release 의 IeumOffice-Setup-<버전>.exe 와 latest.yml 확인
+6. apps/shell/release 의 IeumOffice-Setup-<버전>.exe 와 latest.yml 확인 (설치해서 .odt "연결 프로그램"도)
 7. GitHub 릴리스: 태그 v<버전>, 두 파일 올리기, pre-release 체크(먼저 혼자 확인) → Publish
 8. 옛 버전 앱에서 채널을 "베타 버전"으로 바꿔 업데이트 확인
 9. (Mac) Actions → macOS build → Run workflow → 결과의 dmg, zip, latest-mac.yml 을 같은 릴리스에 올리기

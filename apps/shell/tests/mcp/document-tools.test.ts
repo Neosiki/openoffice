@@ -181,6 +181,18 @@ describe('M3 docx tools', () => {
     expect(cli.last()).toEqual(['docs', 'read', join(dir, 'doc.docx'), '--full'])
   })
 
+  it('read_docx also reads an .odt through the same CLI read', async () => {
+    await writeFile(join(dir, 'form.odt'), 'placeholder')
+    cli.setReadItems([{ index: 0, text: '신청서' }])
+    const result = await client!.callTool({
+      name: 'read_docx',
+      arguments: { path: join(dir, 'form.odt') },
+    })
+    expect(result.isError).toBeFalsy()
+    expect((JSON.parse(text(result.content)) as { text: string }).text).toBe('신청서')
+    expect(cli.last()).toEqual(['docs', 'read', join(dir, 'form.odt'), '--full'])
+  })
+
   it('read_docx rejects a missing file and a non-docx extension', async () => {
     const missing = await client!.callTool({
       name: 'read_docx',

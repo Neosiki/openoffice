@@ -3,6 +3,8 @@ import {
   AiPanelSideButton,
   AiModelPicker,
   type AiModelPickerBridge,
+  DriveAttachButton,
+  type DriveAttachPicked,
 } from '@genoffice/ui'
 import React, { useEffect, useRef, useState } from 'react'
 import {
@@ -64,7 +66,7 @@ const PASTE_MIME_EXT: Record<string, string> = {
 /** File-type icons for attachment cards; exts the
  *  attachment allowlist doesn't accept yet are mapped ahead so they light up when added */
 const ATTACHMENT_CARD_ICON_GROUPS: [icon: string, exts: string[]][] = [
-  [fileWordIcon, ['doc', 'docx']],
+  [fileWordIcon, ['doc', 'docx', 'odt']],
   [fileExcelIcon, ['xls', 'xlsx', 'xlsm', 'csv', 'tsv']],
   [filePptIcon, ['ppt', 'pptx']],
   [filePdfIcon, ['pdf']],
@@ -290,6 +292,7 @@ export function AiChatPanel({
   attachments,
   attachNotice,
   onPickAttachments,
+  onDrivePicked,
   onAddAttachmentPaths,
   onAddPastedImage,
   onRemoveAttachment,
@@ -322,6 +325,8 @@ export function AiChatPanel({
   readonly attachments: readonly AttachmentMeta[]
   readonly attachNotice: string | null
   readonly onPickAttachments: () => void
+  /** Drive files the person ticked in the attach-from-Drive window; absent: no Drive button */
+  readonly onDrivePicked?: ((picked: DriveAttachPicked) => void | Promise<void>) | undefined
   readonly onAddAttachmentPaths: (paths: readonly string[]) => void
   /// Clipboard-pasted bitmaps (screenshots etc. without a local path): bytes +
   /// extension
@@ -1006,6 +1011,7 @@ export function AiChatPanel({
               >
                 <img src={attachIcon} alt="" aria-hidden />
               </button>
+              {onDrivePicked && <DriveAttachButton lang={lang} onPicked={onDrivePicked} />}
             </>
           }
           textareaRef={inputRef}

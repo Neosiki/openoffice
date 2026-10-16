@@ -13,6 +13,8 @@ export const it = {
   cardError: 'Impossibile verificare la connessione',
   cardErrNeedsUpdate:
     'Il programma {provider} su questo PC è troppo vecchio. Aggiornalo, poi verifica di nuovo.',
+  cardErrNeedsUpdateVersion:
+    'Il programma {provider} su questo PC ({version}) è troppo vecchio; serve la {minimum} o successiva. Esegui {command} in un terminale, poi verifica di nuovo.',
   cardErrTimeout:
     'Il programma {provider} non ha risposto in tempo. Verifica di nuovo tra un momento.',
   cardErrFailed:

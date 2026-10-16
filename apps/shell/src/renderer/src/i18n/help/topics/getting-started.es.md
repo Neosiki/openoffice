@@ -22,9 +22,18 @@ Un documento nuevo se abre sin título; el archivo en el disco solo se crea al g
 
 ## Abrir archivos
 
-- El menú **Archivo ▸ Abrir** (⌘O/ctrl+O) abre el selector del sistema: .docx / .doc / .xlsx / .xls / .csv / .tsv / .pptx / .ppt / .pdf / .md / .html.
+- El menú **Archivo ▸ Abrir** (⌘O/ctrl+O) abre el selector del sistema: .docx / .doc / .odt / .xlsx / .xls / .csv / .tsv / .pptx / .ppt / .pdf / .md / .html.
 - Haga clic en cualquier elemento de la lista **Recientes** de la pantalla de inicio.
 - `ieumoffice <file>` en un terminal también abre archivos.
+
+## Documentos ODT
+
+Los archivos .odt (texto OpenDocument, el formato que guardan Hancom Office, LibreOffice y otros) se abren en la pestaña Docs, desde cualquier lugar donde se abre un .docx. Un documento nuevo sigue siendo .docx.
+
+- **Funciona como siempre**: editar texto, formato de caracteres y de párrafo, tablas (insertar y eliminar filas y columnas, combinar y dividir celdas), imágenes, encabezados y pies de página, notas al pie y notas al final, configuración de página y secciones, viñetas y numeración, estilos de título, vínculos, buscar y reemplazar, ortografía, impresión, exportación a PDF y HTML, y edición con IA.
+- **Desactivado en ODT**: comentarios, control de cambios, comparar, marca de agua, entrada manuscrita, tabla de contenido, insertar ecuaciones, formas, cuadros de texto o gráficos, columnas, citas y bibliografía, títulos y referencias cruzadas, color de página, contraseña y restricción de edición, recomendar solo lectura, fuentes y colores del tema, márgenes simétricos. Sus botones aparecen atenuados; guarde como .docx para usarlos.
+- **Se conserva tal cual**: las ecuaciones, gráficos y dibujos del original se muestran como imágenes bloqueadas que se pueden eliminar pero no editar, y las celdas de tabla bloqueadas siguen bloqueadas. Lo que no toque se vuelve a guardar sin cambios. Un ODT con contraseña no se abre; quite antes la contraseña.
+- **Guardar como** ofrece .docx y .odt. Antes de cambiar de formato muestra la lista de lo que cambia o se pierde y después vuelve a abrir la pestaña con el archivo nuevo. Markdown y HTML también ofrecen **Exportar como ODT…**.
 
 ## El modelo de guardado
 

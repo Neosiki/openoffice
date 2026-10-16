@@ -12,6 +12,8 @@ export const zhTW = {
   cardMeteredAccepted: '使用中 · 依用量計費',
   cardError: '無法檢查連線狀態',
   cardErrNeedsUpdate: '這台電腦上的 {provider} 程式版本過舊。請更新後重新檢查。',
+  cardErrNeedsUpdateVersion:
+    '這台電腦上的 {provider} 程式（{version}）版本過舊，需要 {minimum} 或更新版本。請在終端機中執行 {command}，然後重新檢查。',
   cardErrTimeout: '{provider} 程式未及時回應。請稍後重新檢查。',
   cardErrFailed: '檢查 {provider} 時發生問題。請重新檢查。',
   actionInstall: '安裝',

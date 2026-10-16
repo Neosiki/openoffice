@@ -29,6 +29,7 @@ Klikněte na libovolný prvek v náhledu a nad ním se objeví pruh nástrojů:
 Nabídka Soubor, všechno místní a všechno se ptá, kam výsledek uložit:
 
 - **Exportovat jako Word…** a **Exportovat jako PDF…** zapíšou skutečný .docx nebo .pdf.
+- **Exportovat jako ODT…** zapíše .odt (text OpenDocument) stejným převodem jako export do Wordu; pokud se při něm něco změní nebo vypadne, uvidíte seznam a nejdřív to potvrdíte.
 - **Exportovat jako samostatné HTML…** zapíše jeden .html s vloženými obrázky. Nepřepíše soubor, který máte právě otevřený, a řekne vám, kolik obrázků se mu nepodařilo vložit.
 
 ## Vložit kostru

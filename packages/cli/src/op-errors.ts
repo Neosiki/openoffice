@@ -83,6 +83,8 @@ export function opSuggestion(f: OpFailure, domain: 'slides' | 'docs' | 'sheets')
       return f.did_you_mean
         ? `did you mean "${f.did_you_mean}"? (detail.failures[].available lists the ids on that slide), then resend the whole batch`
         : `run \`ieumoffice ${domain} read <file> --json\` for the current ids${f.available ? ' (see detail.failures[].available)' : ''}, then resend the whole batch`
+    case 'unsupported':
+      return `drop op ${f.index}: this file type keeps that feature off (an .odt can be converted with \`ieumoffice convert <file> --to docx\` to use it), then resend the whole batch`
     default:
       return f.usage
         ? `fix op ${f.index} to match its usage line (detail.failures[].usage), then resend the whole batch`

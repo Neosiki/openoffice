@@ -12,15 +12,17 @@ import {
   aiRunErrorText,
   aiSubscriptionText,
   useAiSendGate,
+  DriveAttachButton,
+  type DriveAttachPicked,
 } from '@genoffice/ui'
 import React, { useEffect, useRef, useState, useCallback } from 'react'
 import {
   AgentLoop,
-  composeSkills,
   IPC_STREAM_SILENCE_TIMEOUT_MS,
   type AgentImage,
   type IpcStreamError,
   type ToolDisplay,
+  composeWithDrive,
 } from '@genoffice/agent-core'
 import type { RenderSlide } from '@genoffice/pptx-render'
 import type { AiSubscriptionProviderId, AiSubscriptionUsage } from '@genoffice/ai-provider/browser'
@@ -128,7 +130,7 @@ const PASTE_MIME_EXT: Record<string, string> = {
 /** File-type icons for attachment cards; exts the
  *  attachment allowlist doesn't accept yet are mapped ahead so they light up when added */
 const ATTACHMENT_CARD_ICON_GROUPS: [icon: string, exts: string[]][] = [
-  [fileWordIcon, ['doc', 'docx']],
+  [fileWordIcon, ['doc', 'docx', 'odt']],
   [fileExcelIcon, ['xls', 'xlsx', 'xlsm', 'csv', 'tsv']],
   [filePptIcon, ['ppt', 'pptx']],
   [filePdfIcon, ['pdf']],
@@ -1416,7 +1418,7 @@ export function AiPanel({
     loopRef.current = new AgentLoop({
       transport: createElectronTransport(() => settingsRef.current, transportHooksRef.current),
       systemSuffix: aiLangDirective,
-      skill: composeSkills('slides+files', '', [
+      skill: composeWithDrive('slides+files', '', () => loopRef.current?.messages ?? [], [
         createSlidesSkill(access),
         createFilesSkill(availableAttachments, (path) => readAttachmentPathsRef.current.add(path)),
       ]),
@@ -2118,6 +2120,15 @@ export function AiPanel({
 
   const pickAttachments = async () => mergeAttachments(await window.desktop.pickAttachments())
 
+  /** Drive files the person ticked: attached like files from this PC, notes beside them */
+  const attachFromDrive = async ({ paths, notes }: DriveAttachPicked) => {
+    const added = paths.length > 0 ? await window.desktop.addAttachmentPaths(paths) : null
+    mergeAttachments({
+      accepted: added?.accepted ?? [],
+      rejected: [...(added?.rejected ?? []), ...notes],
+    })
+  }
+
   const onDrop = async (e: React.DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
@@ -2643,6 +2654,7 @@ export function AiPanel({
               >
                 <img src={attachIcon} alt="" aria-hidden />
               </button>
+              <DriveAttachButton lang={lang} onPicked={attachFromDrive} />
               {busy ? (
                 <button
                   className="ai-send-btn ai-stop-btn"

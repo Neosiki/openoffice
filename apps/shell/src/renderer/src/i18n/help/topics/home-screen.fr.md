@@ -35,7 +35,7 @@ Cochez la case d’une ligne, ou faites ⌘/ctrl-clic, pour composer une sélect
 La zone de recherche en haut porte sur deux choses à la fois :
 
 - **Les noms de fichiers** : filtrage rapide par nom.
-- **Le contenu des fichiers** : GenOffice indexe vos fichiers en arrière-plan (le texte des .docx/xlsx/pptx/pdf/md/html), si bien que chercher dans le corps du texte trouve aussi des fichiers. La portée et les interrupteurs se règlent dans les paramètres de recherche.
+- **Le contenu des fichiers** : GenOffice indexe vos fichiers en arrière-plan (le texte des .docx/odt/xlsx/pptx/pdf/md/html), si bien que chercher dans le corps du texte trouve aussi des fichiers. La portée et les interrupteurs se règlent dans les paramètres de recherche.
 
 ## Cartes de démarrage rapide
 
@@ -51,7 +51,7 @@ Ce que fait chaque carte :
 - **AI Markdown** (.md) : un document Markdown vierge dans l’éditeur Markdown.
 - **AI HTML** (.html) : une page web vierge dans l’éditeur HTML.
 - **AI PDF** (.pdf) : différent des autres — il crée **immédiatement** un vrai PDF vierge d’une seule page dans le dossier cible et l’ouvre comme un fichier ordinaire (l’éditeur PDF travaille sur de vrais fichiers). Pratique pour annoter, caviarder ou ajouter du texte ; le fichier peut être renommé automatiquement d’après son contenu à la première sauvegarde.
-- **Ouvrir un fichier local** : un sélecteur de fichiers du système pour Word (.docx/.doc), Excel (.xlsx/.xlsm/.xls/.csv/.tsv), PowerPoint (.pptx/.ppt), PDF, Markdown (.md/.markdown) et pages web (.html/.htm). La sélection multiple fonctionne ; chaque fichier obtient son propre onglet. Les fichiers texte (.txt, .json) s'ouvrent aussi ici — ils arrivent dans la vue source de l'éditeur Markdown.
+- **Ouvrir un fichier local** : un sélecteur de fichiers du système pour Word (.docx/.doc/.odt), Excel (.xlsx/.xlsm/.xls/.csv/.tsv), PowerPoint (.pptx/.ppt), PDF, Markdown (.md/.markdown) et pages web (.html/.htm). La sélection multiple fonctionne ; chaque fichier obtient son propre onglet. Les fichiers texte (.txt, .json) s'ouvrent aussi ici — ils arrivent dans la vue source de l'éditeur Markdown.
 
 > Astuce : Fichier ▸ Nouveau dans la barre de menus crée les mêmes types de documents (⌘N/Ctrl+N crée un document texte par défaut) ; faire glisser un fichier dans la fenêtre l’ouvre.
 

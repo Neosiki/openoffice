@@ -140,7 +140,7 @@ export function AiSubscriptionCard({
       ))}
       {view.detailKey && (
         <p className="ai-sub-detail" data-detail={view.detailKey}>
-          {aiSubscriptionText(lang, view.detailKey, params)}
+          {aiSubscriptionText(lang, view.detailKey, { ...params, ...view.detailParams })}
         </p>
       )}
       {view.actions.length > 0 && (

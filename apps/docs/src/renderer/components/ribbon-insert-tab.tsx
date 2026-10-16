@@ -15,6 +15,7 @@ import {
 } from '../editor/cover-pages'
 import { startShapeDrawMode } from '../editor/shape-draw'
 import { useI18n, type StringKey } from '../i18n/locale'
+import { odtOffProps, useOdtSession } from '../odt-gate'
 import { useModalKeys } from './modal-keys'
 import {
   IconBook,
@@ -694,6 +695,8 @@ export function InsertTab({
   onTableInserted,
 }: InsertTabProps) {
   const { t } = useI18n()
+  /** ODT document: the features ODT switches off are disabled (odt-gate.ts) */
+  const odtOff = useOdtSession()
   const [grid, setGrid] = useState<{ r: number; c: number }>({ r: 0, c: 0 })
   const [tableDialogOpen, setTableDialogOpen] = useState(false)
   const [linkOpen, setLinkOpen] = useState(false)
@@ -856,6 +859,7 @@ export function InsertTab({
             className="rb-big"
             disabled={!hasDoc}
             data-tip={t('ribbonChartTip')}
+            {...odtOffProps(odtOff)}
             onClick={() => setChartOpen(true)}
           >
             <span className="rb-big-icon">
@@ -868,6 +872,7 @@ export function InsertTab({
               className="rb-big"
               disabled={!hasDoc}
               data-tip={t('ribbonShapesTip')}
+              {...odtOffProps(odtOff)}
               onClick={() => toggleDropdown(setDropdown, 'shape')}
             >
               <span className="rb-big-icon">
@@ -920,6 +925,7 @@ export function InsertTab({
               className="rb-big"
               disabled={!hasDoc}
               data-tip={t('ribbonTextBoxTip')}
+              {...odtOffProps(odtOff)}
               onClick={() => toggleDropdown(setDropdown, 'textBox')}
             >
               <span className="rb-big-icon">
@@ -961,6 +967,7 @@ export function InsertTab({
               className="rb-big"
               disabled={!hasDoc}
               data-tip={t('ribbonWordArtTip')}
+              {...odtOffProps(odtOff)}
               onClick={() => toggleDropdown(setDropdown, 'wordArt')}
             >
               <span className="rb-big-icon">
@@ -1114,6 +1121,7 @@ export function InsertTab({
               className="rb-small"
               disabled={!hasDoc}
               data-tip={t('ribbonCrossRefTip')}
+              {...odtOffProps(odtOff)}
               onClick={() => setCrossRefOpen(true)}
             >
               <IconRefresh size={14} /> {t('ribbonCrossRef')}
@@ -1135,6 +1143,7 @@ export function InsertTab({
             className="rb-big"
             disabled={!canComment || (isProtected && !commentsAllowed)}
             data-tip={canComment ? t('ribbonNewCommentTip') : t('ribbonNewCommentSelectTip')}
+            {...odtOffProps(odtOff)}
             onClick={onNewComment}
           >
             <span className="rb-big-icon">
@@ -1322,6 +1331,7 @@ export function InsertTab({
               className="rb-big"
               disabled={!hasDoc}
               data-tip={t('ribbonEquationTip')}
+              {...odtOffProps(odtOff)}
               onClick={() => toggleDropdown(setDropdown, 'equation')}
             >
               <span className="rb-big-icon">

@@ -48,6 +48,32 @@
 - **구독으로 받는 답은 몇 초 늦게 시작한다.** 프로그램이 먼저 켜져야 한다. 이 PC에서 Claude(가장 작은 모델)의 첫 글자까지 3.5초에서 4.5초 사이였다.
 - **앱의 프록시 설정은 구독 프로그램에 전달되지 않는다.** 프로그램은 물려받은 환경의 프록시 변수만 본다. Windows 설정에만 둔 프록시는 닿지 않는다.
 
+## ODT
+
+- **한컴 ODT는 표준 검사기에서 처음부터 오류가 난다.** 한컴이 쓴 ODT는 `mimetype`이 맨 앞이 아니고 압축돼 있으며, `office:version`이 없고 스키마 오류도 있다. → ODF 검사기로는 "우리가 새 오류를 만들지 않았다"만 본다. 받은 파일의 오류는 고치지 않는다. 합격 여부는 한컴 한글 2024가 읽은 결과로 정한다.
+- **한컴 ODT의 표는 대부분 글상자 안에 있다.** 표의 60%가 글자처럼 놓인 틀(`draw:frame` > `draw:text-box`) 안이다. 문단마다 자동 스타일과 탭 위치 목록이 붙고, 제목 요소(`text:h`)는 거의 없다. 누름틀은 `NormalField…` 이름의 책갈피다. → ODT를 읽는 코드는 이 모양을 기본으로 가정한다. 글상자 안의 표를 글자로 납작하게 읽으면 한컴 문서의 표 대부분을 놓친다.
+- **한컴의 `draw:equation`은 수식이 아니다.** 도형의 계산식이다. 한컴 수식 개체는 `draw:object`로 온다.
+- **`<table:table\b`로 표를 찾으면 행과 칸까지 걸린다.** `\b`는 `-` 앞에서도 끊겨 `table:table-row`에 맞는다. → `<table:table(?=[\s>/])`처럼 다음 글자를 정한다.
+- **한컴을 자동으로 돌릴 때 ODT 저장 형식 이름은 `"ODF"`다.** `"ODT"`는 실패한다(`hwp.SaveAs(path, "ODF", "")`, 한글 2024 공식 자동화). docx로 저장하는 형식 이름은 찾지 못했다.
+- **암호 ODT는 시험 파일도 만들 수 없다.** 한컴은 암호 ODT를 만들지 못하고, 다른 곳에서 만든 암호 ODT를 열려고 하면 멈춘다. 그래서 이음오피스도 암호 ODT는 열지 않고 "암호를 푼 뒤 다시 열어 달라"고 알린다.
+- **ODT 문서를 저장한 뒤에도 되돌려 쓰는 기준은 연 때의 ODT다.** 방금 저장한 ODT로 기준을 다시 만들면 ODF 쓰기가 만든 모양이 편집 화면과 달라(굵게, 글자 크기, 문단 나누기) 화면이 다시 그려지고 되돌리기 기록이 지워진다. 편집기의 비교 기준만 docx 문서처럼 옮긴다.
+- **한컴은 ODT의 줄 간격을 다른 숫자로 보여 준다.** 한컴은 ODF의 비율 줄 간격에 글꼴별 배수를 곱해 읽는다(`115%` → SimSun 150%, Calibri 183%, Times New Roman 194%). 한컴이 자기 문서를 ODT로 낼 때는 반대로 나눠 쓴다(한글 160% → `117%`). 그래서 새 ODT를 한컴에서 열면 줄 간격 숫자가 docx와 다르고, 라틴 글이 대부분인 문서는 쪽 수가 늘어난다. 같은 docx를 한컴이 직접 열어도 쪽 수가 거의 같이 늘어난다. → 표준값(docx 값 그대로)을 적는다. 한컴에 맞춘 보정값은 LibreOffice 등에서 줄 간격을 좁히므로 쓰지 않는다(사용자 결정, 2026-10-16).
+- **한컴 확인 도구는 `tools/odt-hancom/`에 있다.** 받은 ODT를 고친 사본 만들기, 한컴으로 읽어 쪽·표·개체·누름틀·서식 적기, ODF 검사, 판정까지 한다(사용법은 그 폴더의 `README.md`). 한컴 한글 2024가 설치된 Windows에서만 돈다.
+- **확인 자료는 저장소 밖에 있다.** 한컴·정부 ODT와 시험용 docx, 한컴이 읽은 기준값은 `E:\github\odt-corpus`에 있다. 정부 문서에는 개인정보가 있어 저장소에 넣지 않는다.
+
+## 에이전트 모드
+
+- **Claude의 권한 요청이 앱에 오지 않고 "This command requires approval"로 끝난다.** `--permission-prompts host`만으로는 표준 출력으로 오지 않는다. → `--permission-prompt-tool stdio`를 함께 준다. 그러면 `control_request`(`can_use_tool`)로 오고, `{ behavior: 'allow', updatedInput }` 또는 `{ behavior: 'deny', message }`로 답한다.
+- **`--restricted`를 켜면 사용자 스킬이 하나도 실리지 않는다.** `--setting-sources user`를 줘도 같다. 반대로 `--restricted` 없이 사용자 설정을 읽게 하면 모델을 부르기 전에 사용자 훅이 실행된다. → 스킬 폴더를 복사한 플러그인을 `--plugin-dir`로 준다.
+- **디렉터리 연결(junction)로 붙인 스킬의 스크립트가 막힌다.** `blockReadsOutsideWorkingDirectories`가 연결을 실제 위치로 풀어 "작업 폴더 밖"으로 본다. → 복사하고, 그 폴더를 `--add-dir`로 준다.
+- **Claude `auto` 모드가 `--model haiku`에서 `default`로 내려간다.** `auto`는 지원하는 모델에서만 켜진다. 시작 요청의 `current_permission_mode`로 확인할 수 있다(모델 호출 없음).
+- **Codex 권한 프로필이 "elevated Windows sandbox requires effective `:root` read access"로 시작하지 않는다.** 기본 격리(권한 상승 방식)는 `:root` 읽기가 있어야 하고, 큰 폴더(`~/.codex`)를 막으면 처음 80초, 그 뒤 19초가 걸리거나 `thread/start`가 끝나지 않는다. → MXC 격리(`-c windows.sandbox="mxc"`)를 쓴다. MXC는 `{ ':minimal': 'read', <PATH의 프로그램 폴더>: 'read', <프로젝트>: 'write', <열린 문서>: 'read', <보호 폴더>: 'deny' }`를 1~3초에 받는다. 막는 값은 `deny`다(`none`이 아니다). 드라이브 루트(예: `G:\`)를 읽기로 주면 MXC가 거절하므로 PATH에서 뺀다. 격리 확인은 모델 호출 없이 `codex sandbox -c windows.sandbox='mxc' -c default_permissions=... -c permissions.<이름>.filesystem=... -- cmd /c ...`로 한다. PowerShell 5.1은 네이티브 인자의 큰따옴표를 지우므로 TOML 값은 작은따옴표 문자열로 쓴다.
+- **Codex `on-request`에서 허락한 명령이 격리 밖에서 돈다.** 모델이 격리 밖 실행을 요청하고 승인 요청이 오는데, 요청에는 그것을 가리는 표시가 없다(`reason`만 붙는다). `untrusted`에서 허락한 명령은 격리 안에서 돈다. → 묻는 방식은 `untrusted`만 쓰고, `thread/start` 응답의 `approvalPolicy`가 요청과 같은지 본다. 승인 요청의 `availableDecisions`에 `decline`이 없을 수 있다. 그때는 `cancel`로 거절한다.
+- **"믿고 맡기기"(승인 정책 `never`)에서 Codex가 앱 MCP 도구를 묻지 않고 거절한다.** `never`는 확인 요청을 보내지 않고 거절로 처리한다. → 앱 서버 설정에 `default_tools_approval_mode = "approve"`를 준다(값은 `auto`·`prompt`·`writes`·`approve`).
+- **격리 시험의 `findstr` 출력에서 경로가 깨진다.** `findstr`는 경로를 콘솔 코드 페이지로 내보내므로, 사용자 폴더 이름이 한글이면 UTF-8로 읽은 경로가 원래 경로와 다르다. → 표식 파일 이름(ASCII)으로만 판정한다.
+- **Codex가 앱 MCP 도구를 "user rejected MCP tool call"로 바로 실패시킨다.** 도구를 부르기 전에 `mcpServer/elicitation/request`(`_meta.codex_approval_kind: "mcp_tool_call"`, 빈 양식)로 확인을 받는데, 모르는 요청으로 거절하면 이렇게 된다. → 앱 서버의 그 요청에만 `{ action: 'accept', content: {}, _meta: null }`로 답한다. 프로토콜 전체는 `codex app-server generate-ts --out <폴더>`로 받아 볼 수 있다.
+- **Codex 파일 변경 승인 요청에는 경로가 없다.** 앞서 오는 `item/started`(`fileChange`의 `changes[].path`)에서 기억해 둔다.
+
 ## 무료 연결
 
 - **Gemini 무료 등급이 Flash 모델을 "수요 많음(503)"으로 거절한다.** 2026-10-14 시험에서 3.5~3.8 Flash가 번갈아 거절됐고, 작은 요청은 가끔 통과해도 앱의 실제 요청(약 1만 6천 토큰)은 두 번 다 거절됐다. `gemini-3.5-flash-lite`는 매번 답했다. → 무료 연결은 Flash-Lite로 시작한다. 503은 앱이 두 번까지 다시 보내지만 길게 막히면 소용없다.

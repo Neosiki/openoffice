@@ -84,6 +84,8 @@ import { installCliLinkBestEffort } from './cli-link'
 import { createDefaultAppService, execFileRunner } from './default-app'
 import { registerIntegrationsIpc } from './integrations-ipc'
 import { registerResultStoreIpc } from './result-store-ipc'
+import { registerDriveIpc, type DriveService } from './drive/drive-ipc'
+import { parseFileToText } from '@genoffice/file-parse'
 import { handleDroppedFiles } from './dropped-files'
 import { collectLaunchPaths } from './launch-paths'
 
@@ -127,6 +129,7 @@ import {
   applyMcpSettings,
   clearMcpLogs,
   configureMcpRuntime,
+  currentMcpRuntimeDeps,
   getMcpRecentLogs,
   mcpLogFilePath,
   mcpStatus,
@@ -281,6 +284,7 @@ import { SHELL_SUBSCRIPTION_CHANNELS, isSubscriptionProviderId } from '../shared
 import {
   SUBSCRIPTION_INSTALL_URLS,
   initSubscriptionChildTracking,
+  sharedSubscriptionStatuses,
   shutdownSubscriptionChildren,
 } from '@genoffice/ai-provider/subscription'
 import { showErrorDialog } from './error-dialog'
@@ -297,6 +301,7 @@ import { isMoveSource, isUserVisibleFile, type FileTargetSources } from './file-
 import {
   DOCX_RE,
   HTML_RE,
+  ODT_RE,
   MINDMAP_RE,
   HWP_RE,
   PDF_RE,
@@ -341,6 +346,17 @@ import { runHeadlessExport, type HeadlessExporters } from './headless-export'
 import { TabManager } from './tab-manager'
 import { configureGenerateWindow } from './generate/generate-window'
 import { configurePdfToolsWindow, openPdfToolsWithFile } from './pdf-tools/pdf-tools-window'
+import { configureAgentWindow, stopAgentSessions } from './agent/agent-window'
+import { startAgentMcpServer } from './agent/agent-mcp'
+import {
+  agentSkillSources,
+  buildAgentSkillBundle,
+  startClaudeAgentSession,
+  startCodexAgentSession,
+} from '@genoffice/ai-provider/agent-session'
+import { normalizeAgentPrefs } from '../shared/agent-api'
+import { normalizeAiSettings, type AiSettings } from '@genoffice/ai-provider'
+import { homedir, tmpdir } from 'node:os'
 import {
   configureDocumentLinks,
   documentLinkFileMenuItems,
@@ -512,6 +528,8 @@ registerPrivilegedSchemes()
 // same file when they pick up i18n later. GENOFFICE_LANG overrides for tests.
 
 const APP_SETTINGS_PATH = () => join(app.getPath('userData'), 'app-settings.json')
+/** Google Drive (decision 0033); registered once this instance holds the single-instance lock */
+let driveService: DriveService | null = null
 const OPEN_DOCUMENTS_PATH = () => join(app.getPath('userData'), OPEN_DOCUMENTS_FILE)
 /** only the instance holding the single-instance lock may write or remove the registry */
 let ownsOpenDocumentsRegistry = false
@@ -524,6 +542,17 @@ function publishAllOpenDocuments(): void {
   publishOpenDocumentsIfOwner([...(tabManager?.openFilePaths() ?? []), ...detachedFilePaths()])
 }
 setDetachedChangedListener(publishAllOpenDocuments)
+
+/** ai-settings.json as every reader gets it (the docs main owns the file; agent sessions only read it) */
+function readStoredAiSettings(): AiSettings {
+  try {
+    return normalizeAiSettings(
+      JSON.parse(readFileSync(join(app.getPath('userData'), 'ai-settings.json'), 'utf8')),
+    )
+  } catch {
+    return normalizeAiSettings({})
+  }
+}
 
 let uiLang: Lang | null = null
 
@@ -674,6 +703,7 @@ const tMain = createI18n({
     dlgOpenTitle: '打开文件',
     filterSupported: '支持的文件',
     filterWord: 'Word 文档',
+    filterOdt: 'OpenDocument 文本',
     filterExcel: 'Excel 工作簿',
     filterPpt: 'PowerPoint 演示文稿',
     filterMarkdown: '文本文件 (Markdown, TXT, JSON)',
@@ -696,6 +726,7 @@ const tMain = createI18n({
     menuUserGuide: '使用手册',
     thirdPartyNotices: '第三方软件声明',
     menuExportDocx: '导出为 Word…',
+    menuExportOdt: '导出为 ODT…',
     btnCancel: '取消',
     pdfDocxFailedMsg: '导出为 Word 失败',
     pdfDocxBusyMsg: '正在转换中，请等待当前导出完成。',
@@ -787,6 +818,7 @@ const tMain = createI18n({
     dlgOpenTitle: 'Open File',
     filterSupported: 'Supported Files',
     filterWord: 'Word Documents',
+    filterOdt: 'OpenDocument Text',
     filterExcel: 'Excel Workbooks',
     filterPpt: 'PowerPoint Presentations',
     filterMarkdown: 'Text Files (Markdown, TXT, JSON)',
@@ -809,6 +841,7 @@ const tMain = createI18n({
     menuUserGuide: 'User Guide',
     thirdPartyNotices: 'Third-Party Notices',
     menuExportDocx: 'Export as Word…',
+    menuExportOdt: 'Export as ODT…',
     btnCancel: 'Cancel',
     pdfDocxFailedMsg: 'Export as Word failed',
     pdfDocxBusyMsg: 'A Word export is already in progress. Please wait for it to finish.',
@@ -908,6 +941,7 @@ const tMain = createI18n({
     dlgOpenTitle: 'Mở tệp',
     filterSupported: 'Các tệp được hỗ trợ',
     filterWord: 'Tài liệu Word',
+    filterOdt: 'Văn bản OpenDocument',
     filterExcel: 'Sổ làm việc Excel',
     filterPpt: 'Bản trình bày PowerPoint',
     filterMarkdown: 'Tệp văn bản (Markdown, TXT, JSON)',
@@ -930,6 +964,7 @@ const tMain = createI18n({
     menuUserGuide: 'Hướng dẫn sử dụng',
     thirdPartyNotices: 'Thông báo của bên thứ ba',
     menuExportDocx: 'Xuất dưới dạng Word…',
+    menuExportOdt: 'Xuất dưới dạng ODT…',
     btnCancel: 'Hủy',
     pdfDocxFailedMsg: 'Xuất dưới dạng Word thất bại',
     pdfDocxBusyMsg: 'Một tác vụ xuất Word đang được tiến hành. Vui lòng đợi tác vụ hoàn tất.',
@@ -1030,6 +1065,7 @@ const tMain = createI18n({
     dlgOpenTitle: 'ファイルを開く',
     filterSupported: '対応ファイル',
     filterWord: 'Word 文書',
+    filterOdt: 'OpenDocument テキスト',
     filterExcel: 'Excel ブック',
     filterPpt: 'PowerPoint プレゼンテーション',
     filterMarkdown: 'テキストファイル (Markdown, TXT, JSON)',
@@ -1052,6 +1088,7 @@ const tMain = createI18n({
     menuUserGuide: 'ユーザーガイド',
     thirdPartyNotices: 'サードパーティソフトウェアに関する通知',
     menuExportDocx: 'Word として書き出す…',
+    menuExportOdt: 'ODT として書き出す…',
     btnCancel: 'キャンセル',
     pdfDocxFailedMsg: 'Word への書き出しに失敗しました',
     pdfDocxBusyMsg: 'Word への書き出しが進行中です。完了までお待ちください。',
@@ -1152,6 +1189,7 @@ const tMain = createI18n({
     dlgOpenTitle: '파일 열기',
     filterSupported: '지원되는 파일',
     filterWord: 'Word 문서',
+    filterOdt: 'OpenDocument 텍스트',
     filterExcel: 'Excel 통합 문서',
     filterPpt: 'PowerPoint 프레젠테이션',
     filterMarkdown: '텍스트 파일 (Markdown, TXT, JSON)',
@@ -1174,6 +1212,7 @@ const tMain = createI18n({
     menuUserGuide: '사용자 가이드',
     thirdPartyNotices: '타사 소프트웨어 고지',
     menuExportDocx: 'Word로 내보내기…',
+    menuExportOdt: 'ODT로 내보내기…',
     btnCancel: '취소',
     pdfDocxFailedMsg: 'Word로 내보내기 실패',
     pdfDocxBusyMsg: 'Word 내보내기가 이미 진행 중입니다. 완료될 때까지 기다려 주세요.',
@@ -1273,6 +1312,7 @@ const tMain = createI18n({
     dlgOpenTitle: 'Ouvrir un fichier',
     filterSupported: 'Fichiers pris en charge',
     filterWord: 'Documents Word',
+    filterOdt: 'Texte OpenDocument',
     filterExcel: 'Classeurs Excel',
     filterPpt: 'Présentations PowerPoint',
     filterMarkdown: 'Fichiers texte (Markdown, TXT, JSON)',
@@ -1295,6 +1335,7 @@ const tMain = createI18n({
     menuUserGuide: "Guide de l'utilisateur",
     thirdPartyNotices: 'Mentions relatives aux logiciels tiers',
     menuExportDocx: 'Exporter en Word…',
+    menuExportOdt: 'Exporter en ODT…',
     btnCancel: 'Annuler',
     pdfDocxFailedMsg: "Échec de l'export en Word",
     pdfDocxBusyMsg: "Un export en Word est déjà en cours. Veuillez attendre qu'il se termine.",
@@ -1396,6 +1437,7 @@ const tMain = createI18n({
     dlgOpenTitle: 'Datei öffnen',
     filterSupported: 'Unterstützte Dateien',
     filterWord: 'Word-Dokumente',
+    filterOdt: 'OpenDocument-Text',
     filterExcel: 'Excel-Arbeitsmappen',
     filterPpt: 'PowerPoint-Präsentationen',
     filterMarkdown: 'Textdateien (Markdown, TXT, JSON)',
@@ -1419,6 +1461,7 @@ const tMain = createI18n({
     menuUserGuide: 'Benutzerhandbuch',
     thirdPartyNotices: 'Hinweise zu Drittanbietersoftware',
     menuExportDocx: 'Als Word exportieren…',
+    menuExportOdt: 'Als ODT exportieren…',
     btnCancel: 'Abbrechen',
     pdfDocxFailedMsg: 'Word-Export fehlgeschlagen',
     pdfDocxBusyMsg: 'Ein Word-Export läuft bereits. Bitte warten Sie, bis er abgeschlossen ist.',
@@ -1520,6 +1563,7 @@ const tMain = createI18n({
     dlgOpenTitle: 'Abrir archivo',
     filterSupported: 'Archivos compatibles',
     filterWord: 'Documentos de Word',
+    filterOdt: 'Texto OpenDocument',
     filterExcel: 'Libros de Excel',
     filterPpt: 'Presentaciones de PowerPoint',
     filterMarkdown: 'Archivos de texto (Markdown, TXT, JSON)',
@@ -1542,6 +1586,7 @@ const tMain = createI18n({
     menuUserGuide: 'Guía del usuario',
     thirdPartyNotices: 'Avisos de software de terceros',
     menuExportDocx: 'Exportar como Word…',
+    menuExportOdt: 'Exportar como ODT…',
     btnCancel: 'Cancelar',
     pdfDocxFailedMsg: 'Error al exportar como Word',
     pdfDocxBusyMsg: 'Ya hay una exportación a Word en curso. Espera a que termine.',
@@ -1642,6 +1687,7 @@ const tMain = createI18n({
     dlgOpenTitle: 'เปิดไฟล์',
     filterSupported: 'ไฟล์ที่รองรับ',
     filterWord: 'เอกสาร Word',
+    filterOdt: 'ข้อความ OpenDocument',
     filterExcel: 'เวิร์กบุ๊ก Excel',
     filterPpt: 'งานนำเสนอ PowerPoint',
     filterMarkdown: 'ไฟล์ข้อความ (Markdown, TXT, JSON)',
@@ -1664,6 +1710,7 @@ const tMain = createI18n({
     menuUserGuide: 'คู่มือผู้ใช้',
     thirdPartyNotices: 'ประกาศเกี่ยวกับซอฟต์แวร์ของบุคคลที่สาม',
     menuExportDocx: 'ส่งออกเป็น Word…',
+    menuExportOdt: 'ส่งออกเป็น ODT…',
     btnCancel: 'ยกเลิก',
     pdfDocxFailedMsg: 'ส่งออกเป็น Word ไม่สำเร็จ',
     pdfDocxBusyMsg: 'กำลังส่งออกเป็น Word อยู่ โปรดรอให้เสร็จสิ้นก่อน',
@@ -1761,6 +1808,7 @@ const tMain = createI18n({
     dlgOpenTitle: 'Buka File',
     filterSupported: 'File yang Didukung',
     filterWord: 'Dokumen Word',
+    filterOdt: 'Teks OpenDocument',
     filterExcel: 'Buku Kerja Excel',
     filterPpt: 'Presentasi PowerPoint',
     filterMarkdown: 'File teks (Markdown, TXT, JSON)',
@@ -1783,6 +1831,7 @@ const tMain = createI18n({
     menuUserGuide: 'Panduan Pengguna',
     thirdPartyNotices: 'Pemberitahuan Perangkat Lunak Pihak Ketiga',
     menuExportDocx: 'Ekspor sebagai Word…',
+    menuExportOdt: 'Ekspor sebagai ODT…',
     btnCancel: 'Batal',
     pdfDocxFailedMsg: 'Gagal mengekspor sebagai Word',
     pdfDocxBusyMsg: 'Ekspor ke Word sedang berlangsung. Harap tunggu hingga selesai.',
@@ -1884,6 +1933,7 @@ const tMain = createI18n({
     dlgOpenTitle: 'Открытие файла',
     filterSupported: 'Поддерживаемые файлы',
     filterWord: 'Документы Word',
+    filterOdt: 'Текст OpenDocument',
     filterExcel: 'Книги Excel',
     filterPpt: 'Презентации PowerPoint',
     filterMarkdown: 'Текстовые файлы (Markdown, TXT, JSON)',
@@ -1906,6 +1956,7 @@ const tMain = createI18n({
     menuUserGuide: 'Руководство пользователя',
     thirdPartyNotices: 'Уведомления о стороннем ПО',
     menuExportDocx: 'Экспортировать в Word…',
+    menuExportOdt: 'Экспортировать в ODT…',
     btnCancel: 'Отмена',
     pdfDocxFailedMsg: 'Не удалось экспортировать в Word',
     pdfDocxBusyMsg: 'Экспорт в Word уже выполняется. Дождитесь его завершения.',
@@ -2006,6 +2057,7 @@ const tMain = createI18n({
     dlgOpenTitle: 'فتح ملف',
     filterSupported: 'الملفات المدعومة',
     filterWord: 'مستندات Word',
+    filterOdt: 'نص OpenDocument',
     filterExcel: 'مصنفات Excel',
     filterPpt: 'عروض PowerPoint التقديمية',
     filterMarkdown: 'ملفات نصية (Markdown, TXT, JSON)',
@@ -2028,6 +2080,7 @@ const tMain = createI18n({
     menuUserGuide: 'دليل المستخدم',
     thirdPartyNotices: 'إشعارات برامج الجهات الخارجية',
     menuExportDocx: 'تصدير كملف Word…',
+    menuExportOdt: 'تصدير كملف ODT…',
     btnCancel: 'إلغاء',
     pdfDocxFailedMsg: 'فشل التصدير كملف Word',
     pdfDocxBusyMsg: 'يجري حاليًا تصدير إلى Word. يُرجى الانتظار حتى يكتمل.',
@@ -2125,6 +2178,7 @@ const tMain = createI18n({
     dlgOpenTitle: 'Abrir arquivo',
     filterSupported: 'Arquivos compatíveis',
     filterWord: 'Documentos do Word',
+    filterOdt: 'Texto OpenDocument',
     filterExcel: 'Pastas de trabalho do Excel',
     filterPpt: 'Apresentações do PowerPoint',
     filterMarkdown: 'Arquivos de texto (Markdown, TXT, JSON)',
@@ -2147,6 +2201,7 @@ const tMain = createI18n({
     menuUserGuide: 'Guia do Usuário',
     thirdPartyNotices: 'Avisos de software de terceiros',
     menuExportDocx: 'Exportar como Word…',
+    menuExportOdt: 'Exportar como ODT…',
     btnCancel: 'Cancelar',
     pdfDocxFailedMsg: 'Falha ao exportar como Word',
     pdfDocxBusyMsg: 'Já há uma exportação para Word em andamento. Aguarde a conclusão.',
@@ -2248,6 +2303,7 @@ const tMain = createI18n({
     dlgOpenTitle: 'Apri file',
     filterSupported: 'File supportati',
     filterWord: 'Documenti Word',
+    filterOdt: 'Testo OpenDocument',
     filterExcel: 'Cartelle di lavoro Excel',
     filterPpt: 'Presentazioni PowerPoint',
     filterMarkdown: 'File di testo (Markdown, TXT, JSON)',
@@ -2270,6 +2326,7 @@ const tMain = createI18n({
     menuUserGuide: "Guida dell'utente",
     thirdPartyNotices: 'Note sul software di terze parti',
     menuExportDocx: 'Esporta come Word…',
+    menuExportOdt: 'Esporta come ODT…',
     btnCancel: 'Annulla',
     pdfDocxFailedMsg: 'Esportazione in Word non riuscita',
     pdfDocxBusyMsg: "Un'esportazione in Word è già in corso. Attendi il completamento.",
@@ -2371,6 +2428,7 @@ const tMain = createI18n({
     dlgOpenTitle: 'Otwieranie pliku',
     filterSupported: 'Obsługiwane pliki',
     filterWord: 'Dokumenty programu Word',
+    filterOdt: 'Tekst OpenDocument',
     filterExcel: 'Skoroszyty programu Excel',
     filterPpt: 'Prezentacje programu PowerPoint',
     filterMarkdown: 'Pliki tekstowe (Markdown, TXT, JSON)',
@@ -2393,6 +2451,7 @@ const tMain = createI18n({
     menuUserGuide: 'Podręcznik użytkownika',
     thirdPartyNotices: 'Informacje o oprogramowaniu innych firm',
     menuExportDocx: 'Eksportuj jako Word…',
+    menuExportOdt: 'Eksportuj jako ODT…',
     btnCancel: 'Anuluj',
     pdfDocxFailedMsg: 'Eksport do formatu Word nie powiódł się',
     pdfDocxBusyMsg: 'Eksport do formatu Word już trwa. Poczekaj na jego zakończenie.',
@@ -2493,6 +2552,7 @@ const tMain = createI18n({
     dlgOpenTitle: 'Otevřít soubor',
     filterSupported: 'Podporované soubory',
     filterWord: 'Dokumenty Word',
+    filterOdt: 'Text OpenDocument',
     filterExcel: 'Sešity Excel',
     filterPpt: 'Prezentace PowerPoint',
     filterMarkdown: 'Textové soubory (Markdown, TXT, JSON)',
@@ -2515,6 +2575,7 @@ const tMain = createI18n({
     menuUserGuide: 'Uživatelská příručka',
     thirdPartyNotices: 'Informace o softwaru třetích stran',
     menuExportDocx: 'Exportovat jako Word…',
+    menuExportOdt: 'Exportovat jako ODT…',
     btnCancel: 'Zrušit',
     pdfDocxFailedMsg: 'Export do Wordu se nezdařil',
     pdfDocxBusyMsg: 'Export do Wordu už probíhá. Počkejte, až se dokončí.',
@@ -2614,6 +2675,7 @@ const tMain = createI18n({
     dlgOpenTitle: 'Bestand openen',
     filterSupported: 'Ondersteunde bestanden',
     filterWord: 'Word-documenten',
+    filterOdt: 'OpenDocument-tekst',
     filterExcel: 'Excel-werkmappen',
     filterPpt: 'PowerPoint-presentaties',
     filterMarkdown: 'Tekstbestanden (Markdown, TXT, JSON)',
@@ -2636,6 +2698,7 @@ const tMain = createI18n({
     menuUserGuide: 'Gebruikershandleiding',
     thirdPartyNotices: 'Kennisgevingen over software van derden',
     menuExportDocx: 'Exporteren als Word…',
+    menuExportOdt: 'Exporteren als ODT…',
     btnCancel: 'Annuleren',
     pdfDocxFailedMsg: 'Exporteren als Word mislukt',
     pdfDocxBusyMsg: 'Er is al een Word-export bezig. Wacht tot deze is voltooid.',
@@ -2737,6 +2800,7 @@ const tMain = createI18n({
     dlgOpenTitle: 'Buka Fail',
     filterSupported: 'Fail yang Disokong',
     filterWord: 'Dokumen Word',
+    filterOdt: 'Teks OpenDocument',
     filterExcel: 'Buku Kerja Excel',
     filterPpt: 'Persembahan PowerPoint',
     filterMarkdown: 'Fail teks (Markdown, TXT, JSON)',
@@ -2759,6 +2823,7 @@ const tMain = createI18n({
     menuUserGuide: 'Panduan Pengguna',
     thirdPartyNotices: 'Notis Perisian Pihak Ketiga',
     menuExportDocx: 'Eksport sebagai Word…',
+    menuExportOdt: 'Eksport sebagai ODT…',
     btnCancel: 'Batal',
     pdfDocxFailedMsg: 'Gagal mengeksport sebagai Word',
     pdfDocxBusyMsg: 'Eksport ke Word sedang dijalankan. Sila tunggu sehingga selesai.',
@@ -2858,6 +2923,7 @@ const tMain = createI18n({
     dlgOpenTitle: 'פתיחת קובץ',
     filterSupported: 'קבצים נתמכים',
     filterWord: 'מסמכי Word',
+    filterOdt: 'טקסט OpenDocument',
     filterExcel: 'חוברות עבודה של Excel',
     filterPpt: 'מצגות PowerPoint',
     filterMarkdown: 'קובצי טקסט (Markdown, TXT, JSON)',
@@ -2880,6 +2946,7 @@ const tMain = createI18n({
     menuUserGuide: 'מדריך למשתמש',
     thirdPartyNotices: 'הודעות על תוכנות צד שלישי',
     menuExportDocx: 'ייצוא כ-Word…',
+    menuExportOdt: 'ייצוא כ-ODT…',
     btnCancel: 'ביטול',
     pdfDocxFailedMsg: 'הייצוא כ-Word נכשל',
     pdfDocxBusyMsg: 'ייצוא ל-Word כבר מתבצע. נא להמתין לסיומו.',
@@ -2978,6 +3045,7 @@ const tMain = createI18n({
     dlgOpenTitle: 'फ़ाइल खोलें',
     filterSupported: 'समर्थित फ़ाइलें',
     filterWord: 'Word दस्तावेज़',
+    filterOdt: 'OpenDocument टेक्स्ट',
     filterExcel: 'Excel वर्कबुक',
     filterPpt: 'PowerPoint प्रस्तुतियाँ',
     filterMarkdown: 'पाठ फ़ाइलें (Markdown, TXT, JSON)',
@@ -3000,6 +3068,7 @@ const tMain = createI18n({
     menuUserGuide: 'उपयोगकर्ता गाइड',
     thirdPartyNotices: 'तृतीय-पक्ष सॉफ़्टवेयर सूचनाएँ',
     menuExportDocx: 'Word के रूप में निर्यात करें…',
+    menuExportOdt: 'ODT के रूप में निर्यात करें…',
     btnCancel: 'रद्द करें',
     pdfDocxFailedMsg: 'Word के रूप में निर्यात विफल रहा',
     pdfDocxBusyMsg: 'Word के रूप में निर्यात पहले से चल रहा है। कृपया पूरा होने तक प्रतीक्षा करें।',
@@ -3100,6 +3169,7 @@ const tMain = createI18n({
     dlgOpenTitle: '開啟檔案',
     filterSupported: '支援的檔案',
     filterWord: 'Word 文件',
+    filterOdt: 'OpenDocument 文字',
     filterExcel: 'Excel 活頁簿',
     filterPpt: 'PowerPoint 簡報',
     filterMarkdown: '文字檔 (Markdown, TXT, JSON)',
@@ -3122,6 +3192,7 @@ const tMain = createI18n({
     menuUserGuide: '使用手冊',
     thirdPartyNotices: '第三方軟體聲明',
     menuExportDocx: '匯出為 Word…',
+    menuExportOdt: '匯出為 ODT…',
     btnCancel: '取消',
     pdfDocxFailedMsg: '匯出為 Word 失敗',
     pdfDocxBusyMsg: '正在轉換中，請等待目前的匯出完成。',
@@ -3358,7 +3429,7 @@ function ensureFileIndexer(): FileIndexer | null {
 }
 
 const SEARCH_EXT_FAMILY: Record<string, readonly string[]> = {
-  docx: ['docx', 'doc'],
+  docx: ['docx', 'doc', 'odt'],
   xlsx: ['xlsx', 'xlsm', 'xls', 'csv', 'tsv'],
   pptx: ['pptx', 'ppt'],
   md: ['md', 'markdown', 'txt', 'json'],
@@ -3755,6 +3826,7 @@ function createShellWindow(): void {
 const OPEN_DIALOG_EXTENSIONS = [
   'docx',
   'doc',
+  'odt',
   'xlsx',
   'xlsm',
   'xls',
@@ -3811,6 +3883,13 @@ function registerDroppedFilesIpc(): void {
 
 /** the single router: extension decides which module owns the file; false = nothing opened */
 function openDocumentPath(filePath: string): boolean {
+  // a copy of a Drive file (from Recent, say) reopens through Drive, so a copy
+  // older than the file in Drive is refreshed first unless it holds unsent edits
+  const viaDrive = driveService?.reopen(filePath)
+  if (viaDrive) {
+    void viaDrive.catch(() => routeDocumentPath(filePath))
+    return true
+  }
   const opened = routeDocumentPath(filePath)
   return opened
 }
@@ -3839,7 +3918,7 @@ function routeDocumentPath(filePath: string): boolean {
   // a detached editor window already shows this file — focus it, never a second copy
   if (focusDetachedByPath(filePath)) return true
   if (!tabManager) return false
-  if (DOCX_RE.test(filePath)) {
+  if (DOCX_RE.test(filePath) || ODT_RE.test(filePath)) {
     recordRecentFile(filePath)
     const existing = tabManager.findDocsTabByPath(filePath)
     if (existing) tabManager.activateTab(existing)
@@ -4360,6 +4439,7 @@ function registerHomeIpc(): void {
       filters: [
         { name: tm('filterSupported'), extensions: OPEN_DIALOG_EXTENSIONS },
         { name: tm('filterWord'), extensions: ['docx', 'doc'] },
+        { name: tm('filterOdt'), extensions: ['odt'] },
         { name: tm('filterExcel'), extensions: ['xlsx', 'xlsm', 'xls', 'csv', 'tsv'] },
         { name: tm('filterPpt'), extensions: ['pptx', 'ppt'] },
         { name: tm('filterPdf'), extensions: ['pdf'] },
@@ -5421,6 +5501,13 @@ function buildMarkdownMenu(): void {
           },
         },
         {
+          label: tm('menuExportOdt'),
+          click: () => {
+            const tab = activeMarkdownTarget()
+            if (tab) sendMarkdownExportRequest(tab.webContents, 'odt')
+          },
+        },
+        {
           label: tm('menuExportPdf'),
           click: () => {
             const tab = activeMarkdownTarget()
@@ -5596,6 +5683,13 @@ function buildHtmlMenu(): void {
           click: () => {
             const tab = activeHtmlTarget()
             if (tab) sendHtmlExportRequest(tab.webContents, 'docx')
+          },
+        },
+        {
+          label: tm('menuExportOdt'),
+          click: () => {
+            const tab = activeHtmlTarget()
+            if (tab) sendHtmlExportRequest(tab.webContents, 'odt')
           },
         },
         {
@@ -6486,6 +6580,20 @@ app.whenReady().then(async () => {
   // off the startup path: a symlink / registry write nobody is waiting for
   setTimeout(() => installCliLinkBestEffort(APP_SETTINGS_PATH()), 3000)
   startSheetsCaptureServer()
+  driveService = registerDriveIpc({
+    userData: () => app.getPath('userData'),
+    settingsPath: APP_SETTINGS_PATH,
+    lang: () => currentLang(),
+    window: () => shellWindow,
+    // a Drive copy opens like any local file; the Drive service already chose the copy
+    openPath: (path) => routeDocumentPath(path),
+    isOpen: (path) =>
+      (tabManager?.openFilePaths() ?? []).some(
+        (open) => resolve(open).toLowerCase() === resolve(path).toLowerCase(),
+      ),
+    parse: (path) => parseFileToText(path),
+    theme: () => currentTheme(),
+  })
   // Which open documents have unsaved changes, for the attachment readers of the
   // editor mains and the knowledge base: a file being edited is not read as
   // another document's material until it is saved (a withholding mark only
@@ -6676,6 +6784,44 @@ app.whenReady().then(async () => {
     }),
     logFilePath: join(app.getPath('userData'), 'mcp-log.txt'),
   })
+  // Agent mode (decision 0032): the person's Claude Code or Codex with its own tools in a
+  // project folder, in a window of its own. Its MCP server is per session and token-guarded,
+  // built from the same controls as the one above; the skills are a copy kept under userData.
+  configureAgentWindow({
+    parentWindow: () => shellWindow,
+    lang: () => currentLang(),
+    theme: () => currentTheme(),
+    statuses: () => sharedSubscriptionStatuses(),
+    aiSettings: () => readStoredAiSettings(),
+    readPrefs: () => normalizeAgentPrefs(readAppSettings(APP_SETTINGS_PATH()).agent),
+    writePrefs: (prefs) => writeAppSetting(APP_SETTINGS_PATH(), 'agent', prefs),
+    openPath: (path) => routeDocumentPath(path),
+    openDocuments: () => [...(tabManager?.openFilePaths() ?? []), ...detachedFilePaths()],
+    userData: app.getPath('userData'),
+    runners: {
+      claude: (options, onEvent) => startClaudeAgentSession(options, onEvent),
+      codex: (options, onEvent) => startCodexAgentSession(options, onEvent),
+    },
+    startAppMcp: (projectRoot) => {
+      const mcp = currentMcpRuntimeDeps()
+      if (!mcp) throw new Error('the MCP runtime is not configured')
+      return startAgentMcpServer(mcp, projectRoot)
+    },
+    buildSkills: async (projectRoot) => {
+      const sources = await agentSkillSources({
+        homeDir: homedir(),
+        projectRoot,
+        appSkillsDir: join(homedir(), '.ieumoffice', 'skills'),
+      })
+      const bundle = await buildAgentSkillBundle(
+        sources,
+        // not under userData: that folder is protected from sessions, and the
+        // copied skills' scripts must be readable to run
+        join(process.env.LOCALAPPDATA ?? tmpdir(), 'IeumOffice', 'agent-skills'),
+      )
+      return bundle.dir
+    },
+  })
   void startMcpFromSettings(currentMcpSettings()).catch((error) => {
     console.error('[mcp] failed to start on boot:', error)
   })
@@ -6778,6 +6924,8 @@ app.on('will-quit', () => {
   controlServer?.close()
   // a second instance that lost the lock quits too; it must not delete the running editor's list
   if (ownsOpenDocumentsRegistry) clearOpenDocuments(OPEN_DOCUMENTS_PATH())
+  stopAgentSessions()
+  driveService?.stop()
   shutdownSubscriptionChildren()
 })
 

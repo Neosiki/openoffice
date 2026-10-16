@@ -49,11 +49,16 @@ import { FirstConnectionDialog } from './FirstConnectionNotice'
 import type { SubscriptionConnection } from './subscription-client'
 import { subscriptionSummary } from './subscription-status'
 import './pdf-tools/globals'
+import { agentText } from './i18n/strings-agent'
+import { DriveNavIcon, DrivePanel, useDriveState } from './DrivePanel'
+import { driveUiText } from './i18n/strings-drive'
 
 declare global {
   interface Window {
     aiOffice: HomeApi
     aiOfficeIntegrations?: IntegrationsApi
+    /** Home's entry into the agent window (src/preload/index.ts) */
+    aiOfficeAgent?: { open(): Promise<void> }
   }
 }
 
@@ -72,6 +77,8 @@ const GREET_ASK_KEYS = [
 
 const FILE_ICONS: Record<string, string> = {
   docx: iconDocx,
+  // ODT opens in the Word tab, so it wears the Word tile
+  odt: iconDocx,
   xlsx: iconXlsx,
   xlsm: iconXlsx,
   pptx: iconPptx,
@@ -89,7 +96,7 @@ const FILE_ICONS: Record<string, string> = {
    width, so it ellipsizes and a hover ScreenTip carries the full list. Keep in
    sync with the main-process open-dialog filter (OPEN_DIALOG_EXTENSIONS). */
 const OPEN_LOCAL_EXTENSIONS =
-  '.docx / .xlsx / .xlsm / .xls / .csv / .tsv / .pptx / .pdf / .md / .html / .xmind / .hwp / .hwpx'
+  '.docx / .odt / .xlsx / .xlsm / .xls / .csv / .tsv / .pptx / .pdf / .md / .html / .xmind / .hwp / .hwpx'
 
 /** drag payload of home file/folder rows (JSON array of absolute paths) */
 const DRAG_PATHS_MIME = 'application/x-genoffice-paths'
@@ -274,7 +281,7 @@ const FILTERS: { key: string; label: StringKey }[] = [
 
 /** sidebar filter keys that stand for a family of extensions (mirrors recent-files.ts) */
 const FILTER_FAMILY: Record<string, readonly string[]> = {
-  docx: ['docx', 'doc'],
+  docx: ['docx', 'doc', 'odt'],
   xlsx: ['xlsx', 'xlsm', 'xls', 'csv', 'tsv'],
   pptx: ['pptx', 'ppt'],
   md: ['md', 'markdown', 'txt', 'json'],
@@ -1045,6 +1052,10 @@ export function Home({
   const [view, setView] = useState<'recent' | 'starred'>('recent')
   // the knowledge-base ask panel takes over the content area the same way
   const [askMode, setAskMode] = useState(false)
+  // Google Drive (decision 0033) takes over the content area the same way
+  const [driveMode, setDriveMode] = useState(false)
+  const driveState = useDriveState()
+  const driveOffered = driveState !== null && driveState.state !== 'unavailable'
   const [filter, setFilter] = useState('all')
   // ── Starred groups (named buckets the Starred view can filter on) ──
   // groups that currently have at least one starred file (drives the pills)
@@ -1478,6 +1489,7 @@ export function Home({
     setView(next)
     setSelectedFolder(null)
     setAskMode(false)
+    setDriveMode(false)
     setSelected(new Set())
     setRowMenu(null)
     setGroupFilter(null)
@@ -1498,6 +1510,7 @@ export function Home({
   const selectFolder = (dir: string) => {
     setSelectedFolder(dir)
     setAskMode(false)
+    setDriveMode(false)
     setSelected(new Set())
     setRowMenu(null)
     setFolderMenu(null)
@@ -3060,6 +3073,7 @@ export function Home({
             className={`nav-item${askMode && !selectedFolder ? ' active' : ''}`}
             onClick={() => {
               setAskMode(true)
+              setDriveMode(false)
               setSelectedFolder(null)
               setSelected(new Set())
               setRowMenu(null)
@@ -3081,6 +3095,55 @@ export function Home({
             </svg>
             <span className="nav-label">{t('navAsk')}</span>
           </button>
+          {/* decision 0032: the agent opens a window of its own, hence the mark on the right */}
+          {window.aiOfficeAgent ? (
+            <button
+              className="nav-item"
+              title={agentText(lang, 'homeCardSub')}
+              onClick={() => void window.aiOfficeAgent?.open()}
+            >
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                <path
+                  d="M1.9 4.3c0-.7.6-1.3 1.3-1.3h2.9l1.4 1.5h5.3c.7 0 1.3.6 1.3 1.3v6.3c0 .7-.6 1.3-1.3 1.3H3.2c-.7 0-1.3-.6-1.3-1.3z"
+                  stroke="currentColor"
+                  strokeWidth="1.3"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M8 6.6l.6 1.6 1.6.6-1.6.6L8 11l-.6-1.6-1.6-.6 1.6-.6z"
+                  fill="currentColor"
+                />
+              </svg>
+              <span className="nav-label">{agentText(lang, 'windowTitle')}</span>
+              <span className="nav-count nav-external">
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+                  <path
+                    d="M4.5 2.5h5v5M9.5 2.5L3 9"
+                    stroke="currentColor"
+                    strokeWidth="1.2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </span>
+            </button>
+          ) : null}
+          {driveOffered && (
+            <button
+              className={`nav-item${driveMode && !selectedFolder ? ' active' : ''}`}
+              data-testid="home-drive-nav"
+              onClick={() => {
+                setDriveMode(true)
+                setAskMode(false)
+                setSelectedFolder(null)
+                setSelected(new Set())
+                setRowMenu(null)
+              }}
+            >
+              <DriveNavIcon />
+              <span className="nav-label">{driveUiText(lang, 'driveNav')}</span>
+            </button>
+          )}
         </nav>
         <div className="sidebar-divider" />
         {renderFolderPanel()}
@@ -3093,6 +3156,12 @@ export function Home({
       </aside>
       {selectedFolder && rootOf(selectedFolder, roots)?.readable ? (
         renderFolderContent()
+      ) : driveMode && driveOffered ? (
+        <DrivePanel
+          lang={lang}
+          dateLocale={i18n.dateLocale}
+          onOpenSettings={() => setSettingsRequest({ section: 'integrations' })}
+        />
       ) : askMode ? (
         <KbAskPanel
           connection={connection}

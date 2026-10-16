@@ -13,6 +13,8 @@ export const nl = {
   cardError: 'De verbinding kon niet worden gecontroleerd',
   cardErrNeedsUpdate:
     'Het programma {provider} op deze pc is te oud. Werk het bij en controleer daarna opnieuw.',
+  cardErrNeedsUpdateVersion:
+    'Het programma {provider} op deze pc ({version}) is te oud; {minimum} of nieuwer is nodig. Voer {command} uit in een terminal en controleer daarna opnieuw.',
   cardErrTimeout:
     'Het programma {provider} heeft niet op tijd gereageerd. Controleer het zo dadelijk opnieuw.',
   cardErrFailed: 'Er ging iets mis bij het controleren van {provider}. Controleer het opnieuw.',

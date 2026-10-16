@@ -174,6 +174,7 @@ describe('open_documents on a mind map: list and read', () => {
           id: 't5',
           type: 'mind map',
           kind: 'mindmap',
+          format: 'xmind',
           title: 'Untitled Mind Map',
           path: null,
           saved: false,

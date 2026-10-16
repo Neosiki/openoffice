@@ -82,6 +82,7 @@ Kliknij prawym przyciskiem w dowolnym miejscu tekstu — menu dostosowuje się d
 ## Zapisywanie i eksport
 
 - Zapis .docx przepisuje tylko zmienione akapity — nietknięta treść pozostaje identyczna bajt w bajt.
+- Otwiera i zapisuje też pliki .odt (tekst OpenDocument): Zapisz jako oferuje .docx lub .odt, a to, co jest wyłączone w dokumentach ODT, opisuje [Szybki start](help://getting-started).
 - Eksport do PDF (z podziałem na strony) i obrazów każdej strony.
 
 ## Drukowanie

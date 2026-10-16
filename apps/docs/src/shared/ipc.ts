@@ -46,6 +46,7 @@ import type { AiToolCapabilities, MediaToolErrorCode } from '@genoffice/ai-searc
 import type { HeadlessExportTarget } from '@genoffice/electron-utils/headless-export'
 import type { FaceVerticalMetrics } from '@genoffice/font-metrics'
 import type { AiPanelPrefs, FontFamilyInfo } from '@genoffice/ui'
+import type { DocFormat } from './open-file'
 
 export type { FaceVerticalMetrics }
 
@@ -403,10 +404,20 @@ export interface DesktopApi {
   spellReplace(word: string): Promise<void>
   spellLanguages(): Promise<SpellLanguages>
   spellSetLanguages(langs: string[]): Promise<SpellLanguages>
-  /** sourcePath: the document's current path — Save As uses its desired next-save
-   *  password and commits that state to the chosen path only after success */
-  saveDocxAs(
+  /** Save As, step one: the dialog offers Word (.docx) and ODT (.odt), the
+   *  document's own `format` first; the picked extension is the format to write.
+   *  null = canceled */
+  pickSaveAsPath(
     defaultName: string,
+    sourcePath: string | null,
+    format: DocFormat,
+  ): Promise<{ path: string } | null>
+  /** Save As, step two: write to the path step one returned (nothing else is
+   *  accepted), docx or ODT bytes as its extension says. sourcePath: the
+   *  document's current path — a docx write uses its desired next-save password
+   *  and commits that state to the chosen path only after success */
+  saveDocxAs(
+    path: string,
     data: ArrayBuffer,
     sourcePath?: string | null,
   ): Promise<{
@@ -430,6 +441,15 @@ export interface DesktopApi {
   /** MCP-driven output: write the current document to an explicit absolute path
    *  with no dialog; refuses to replace an existing file unless overwrite is true */
   saveDocxTo(path: string, data: ArrayBuffer, overwrite: boolean): Promise<McpSaveResult>
+  /** a docx with lazily served pictures, whole again (one-shot URL); null on failure */
+  materializeDocx(data: ArrayBuffer): Promise<{ dataUrl: string } | null>
+  /** PNG of a viewport rectangle (CSS px of this page) as it is on screen; null on failure */
+  captureRect(rect: {
+    x: number
+    y: number
+    width: number
+    height: number
+  }): Promise<Uint8Array | null>
   /** MCP bridge: receive an editor command pushed by the shell main process */
   onMcpCommand(handler: (message: McpCommandMessage) => void): () => void
   /** MCP bridge: report a command's outcome back to the shell main process */
@@ -595,7 +615,8 @@ export interface DesktopApi {
   onCloseSaveRequest(handler: () => void): () => void
   reportCloseSaveResult(ok: boolean): void
   /** keep the native View menu's checkbox items in sync with renderer state */
-  reportViewMenuState(state: { aiSidebar: boolean; darkCanvas: boolean }): void
+  /** `odt`: the tab shows an ODT document (menu entries of switched-off features are disabled) */
+  reportViewMenuState(state: { aiSidebar: boolean; darkCanvas: boolean; odt?: boolean }): void
 }
 
 /** mirrors VIEW_IMAGE_CHANNEL in @genoffice/electron-utils (kept literal so the preload stays free of main-only deps) */

@@ -25,7 +25,11 @@ export const openCommand: CommandDef = {
       value: 'e_12',
       description: 'pptx: select this element on --slide (ids from `slides read`)',
     },
-    { name: 'block', value: 'n', description: 'docx: select block n (0-based, as in `docs read`)' },
+    {
+      name: 'block',
+      value: 'n',
+      description: 'docx/odt: select block n (0-based, as in `docs read`)',
+    },
     {
       name: 'range',
       value: 'B2:D5',
@@ -141,7 +145,7 @@ export function parseTarget(args: ParsedArgs, path: string): ControlTarget | und
     const el = flagString(args, 'el')
     return { kind: 'slide', slide: int('slide', 0), ...(el ? { el } : {}) }
   }
-  if (ext === '.docx' || ext === '.docm' || ext === '.dotx') {
+  if (ext === '.docx' || ext === '.docm' || ext === '.dotx' || ext === '.odt') {
     expect(['block'], 'Word document')
     return { kind: 'block', block: int('block', 0) }
   }
@@ -162,8 +166,8 @@ export function parseTarget(args: ParsedArgs, path: string): ControlTarget | und
   }
   throw new CliError(
     EXIT.usage,
-    `targets are supported for pptx, docx, xlsx and pdf files, not ${ext || 'this file'}`,
-    { supported: ['.pptx', '.docx', '.xlsx', '.pdf'] },
+    `targets are supported for pptx, docx, odt, xlsx and pdf files, not ${ext || 'this file'}`,
+    { supported: ['.pptx', '.docx', '.odt', '.xlsx', '.pdf'] },
     { reason: 'unsupported', suggestion: 'run `ieumoffice open <file>` without a target' },
   )
 }

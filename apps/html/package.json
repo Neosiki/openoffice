@@ -25,6 +25,7 @@
     "@genoffice/ai-provider": "*",
     "@genoffice/ai-search": "*",
     "@genoffice/electron-utils": "*",
+    "@genoffice/odt-engine": "*",
     "@genoffice/file-parse": "*",
     "@genoffice/i18n": "*",
     "@genoffice/project-store": "*",

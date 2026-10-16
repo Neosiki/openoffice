@@ -22,9 +22,18 @@ O documento novo abre sem título; o ficheiro no disco só é criado no primeiro
 
 ## Abrir ficheiros
 
-- O menu **Arquivo ▸ Abrir…** (⌘O/ctrl+O) abre o seletor de ficheiros do sistema: .docx / .doc / .xlsx / .xls / .csv / .tsv / .pptx / .ppt / .pdf / .md / .html.
+- O menu **Arquivo ▸ Abrir…** (⌘O/ctrl+O) abre o seletor de ficheiros do sistema: .docx / .doc / .odt / .xlsx / .xls / .csv / .tsv / .pptx / .ppt / .pdf / .md / .html.
 - Clique em qualquer item da lista **Recentes** no ecrã Início.
 - `ieumoffice <ficheiro>` a partir de um terminal também abre ficheiros.
+
+## Documentos ODT
+
+Os arquivos .odt (texto OpenDocument, o formato que o Hancom Office, o LibreOffice e outros salvam) abrem na guia Docs, de qualquer lugar que abre um .docx. Um documento novo continua sendo .docx.
+
+- **Funciona como sempre**: editar texto, formatação de caracteres e parágrafos, tabelas (inserir e excluir linhas e colunas, mesclar e dividir células), imagens, cabeçalhos e rodapés, notas de rodapé e notas de fim, configuração de página e seções, marcadores e numeração, estilos de título, links, localizar e substituir, ortografia, impressão, exportação para PDF e HTML, e edição com IA.
+- **Desativado em ODT**: comentários, controle de alterações, comparar, marca-d'água, tinta, sumário, inserir equações, formas, caixas de texto ou gráficos, colunas, citações e bibliografia, legendas e referências cruzadas, cor da página, senha e restrição de edição, recomendação de somente leitura, fontes e cores do tema, margens espelhadas. Os botões ficam esmaecidos; salve como .docx para usá-los.
+- **Mantido como estava**: equações, gráficos e desenhos do original aparecem como imagens bloqueadas que podem ser excluídas, mas não editadas, e as células de tabela bloqueadas continuam bloqueadas. O que você não mexer é salvo de volta sem mudanças. Um ODT com senha não abre; remova a senha primeiro.
+- **Salvar como** oferece .docx e .odt. Antes de trocar de formato, mostra a lista do que muda ou se perde e depois reabre a guia com o novo arquivo. Markdown e HTML também oferecem **Exportar como ODT…**.
 
 ## Como funciona o salvamento
 

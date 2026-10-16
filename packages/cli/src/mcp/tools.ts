@@ -101,7 +101,7 @@ export const TOOLS: ToolSpec[] = [
     name: 'convert',
     command: 'convert',
     description:
-      'Convert a document to another format with the GenOffice engines (pdf, docx, xlsx, pptx, md, html, csv, epub; the `to` description lists the routes). Targets that need layout (to pdf, docx to html, html to docx) start a hidden GenOffice process for 1-6 s. pdf to md/epub reflows the text (pictures in assets/ beside the .md) and uses pages read by pdf_ai_read. Output defaults to the input name with the new extension.',
+      'Convert a document to another format with the GenOffice engines (pdf, docx, odt, xlsx, pptx, md, html, csv, epub; the `to` description lists the routes). Targets that need layout (to pdf, docx to html, html to docx) start a hidden GenOffice process for 1-6 s. pdf to md/epub reflows the text (pictures in assets/ beside the .md) and uses pages read by pdf_ai_read. Output defaults to the input name with the new extension.',
     positionals: [{ key: 'file', description: 'path of the source document' }],
     options: ['to', 'out', 'force', 'password', 'sheet', 'pages', 'title', 'author', 'no-cover'],
   },
@@ -210,8 +210,8 @@ export const TOOLS: ToolSpec[] = [
     verb: 'read',
     readOnly: true,
     description:
-      'Structure and text of a .docx as 0-based blocks (paragraphs, headings, tables, images, charts) with a 200-character preview each; the block indexes are what docs_apply ops target. Flags add comments, tracked changes, styles, sections, fields, notes or header/footer text. Use full for whole block text, range to narrow.',
-    positionals: [{ key: 'file', description: 'path of the .docx' }],
+      'Structure and text of a .docx or .odt as 0-based blocks (paragraphs, headings, tables, images, charts) with a 200-character preview each; the block indexes are what docs_apply ops target. Flags add comments, tracked changes, styles, sections, fields, notes or header/footer text. Use full for whole block text, range to narrow.',
+    positionals: [{ key: 'file', description: 'path of the .docx or .odt' }],
     options: [
       'range',
       'html',
@@ -231,11 +231,11 @@ export const TOOLS: ToolSpec[] = [
     command: 'docs',
     verb: 'apply',
     description:
-      'Edit a .docx with a batch of ops (the op reference: guide docs, or the ieumoffice://guide/docs resource). ' +
+      'Edit a .docx or .odt with a batch of ops (the op reference: guide docs, or the ieumoffice://guide/docs resource); an .odt is written back as .odt, ops of features an ODT keeps off (comments, tracked changes, TOC, equations, charts, text boxes, columns, watermark) are rejected as unsupported, and ops touching protected cells or locked objects as op_rejected. ' +
       READ_THEN_APPLY +
       'Block indexes inside one batch are live: after an insert adds two blocks, later indexes shift by two. Atomic by default: one rejected op leaves the file untouched and comes back with its index and reason; fix that op and resend the whole batch. dry_run validates without writing. ' +
       GUI_OPEN,
-    positionals: [{ key: 'file', description: 'path of the .docx' }],
+    positionals: [{ key: 'file', description: 'path of the .docx or .odt' }],
     options: [
       {
         key: 'ops',

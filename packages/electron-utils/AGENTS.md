@@ -40,7 +40,7 @@ shell과 에디터들의 메인 프로세스(일부는 preload)가 함께 쓰는
 - Electron 타입은 `import type`으로만 쓰거나 필요한 부분만 구조적으로 선언한다(`PathProvider`, `DestroyableSender`, `PrintWindow`). 그래서 대부분의 함수가 Electron 없이 단위 테스트된다. 새 도우미도 `app`·`dialog`·창을 인자로 받게 만든다.
 - 프로세스에 하나뿐인 상태는 모듈 변수로 둔다. `setHeadlessMode`는 shell이 `--headless-export` 진입에서 에디터 코드가 등록되기 전에 한 번 켠다. 저장 뒤에 탭을 열거나 폴더를 보여 주는 코드는 `isHeadlessMode()`를 먼저 확인한다.
 - `registerSchemesAsPrivileged`는 프로세스에서 한 번만 부를 수 있다. 다른 스킴도 등록하는 호스트는 `registerRendererScheme`을 부르지 않고 `RENDERER_SCHEME_PRIVILEGE`를 자기 목록에 펼쳐 넣는다. `resolveRendererFile`은 모르는 호스트와 폴더를 벗어나는 경로에 `null`을 준다.
-- 끌어다 놓기는 preload에서 경로를 풀어 채널 하나(`DROP_OPEN_CHANNEL`)로 보낸다. 받을 수 있는 확장자 `OPENABLE_DOC_RE`는 shell의 라우팅과 홈 화면의 열기 대화 상자 목록과 맞춰야 한다. 자기 영역의 드롭을 직접 처리하는 화면 요소는 이벤트를 취소해 이 다리가 끼어들지 않게 한다.
+- 끌어다 놓기는 preload에서 경로를 풀어 채널 하나(`DROP_OPEN_CHANNEL`)로 보낸다. 받을 수 있는 확장자 `OPENABLE_DOC_RE`는 shell의 라우팅과 홈 화면의 열기 대화 상자 목록과 맞춰야 한다. `.odt`는 워드 탭이 여는 지원 형식이고, "지원하지 않음" 목록 `KNOWN_UNSUPPORTED_DOC_RE`는 shell `launch-paths.ts`의 `UNSUPPORTED_LAUNCH_RE`와 같아야 한다. 자기 영역의 드롭을 직접 처리하는 화면 요소는 이벤트를 취소해 이 다리가 끼어들지 않게 한다.
 - AI가 만든 HTML을 인쇄할 때는 `sanitizePrintableBody`로 허용 태그만 남기고 속성과 URL을 모두 지운 뒤, 임시 파일로 불러온다(`data:` URL은 긴 문서를 잘라 버린다). 창과 임시 폴더는 어떤 결과에서도 치운다.
 - 기본 저장 폴더는 설정된 폴더가 쓸 수 없으면(뽑힌 드라이브, 권한 회수) 대체 폴더로 내려간다. 조용한 저장이 깨지지 않게 하기 위해서다.
 - 이 패키지는 `@genoffice/i18n`을 import하지만 `package.json`의 `dependencies`에는 `parse5`만 있다(workspace 호이스팅에 기대는 기존 구조다).

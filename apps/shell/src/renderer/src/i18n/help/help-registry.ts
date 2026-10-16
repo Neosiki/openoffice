@@ -256,9 +256,29 @@ export const HELP_TOPICS: HelpTopicMeta[] = [
     ],
   },
   {
-    id: 'ai-models',
+    id: 'agent-mode',
     group: 'ai',
     order: 3,
+    keywords: [
+      'agent',
+      '智能体',
+      '项目',
+      'project',
+      'folder',
+      'skills',
+      '技能',
+      'claude code',
+      'codex',
+      'sandbox',
+      '에이전트',
+      '프로젝트',
+      '스킬',
+    ],
+  },
+  {
+    id: 'ai-models',
+    group: 'ai',
+    order: 4,
     keywords: [
       '模型',
       'model',
@@ -275,7 +295,7 @@ export const HELP_TOPICS: HelpTopicMeta[] = [
   {
     id: 'fonts',
     group: 'ai',
-    order: 4,
+    order: 5,
     keywords: ['字体', 'font', 'cjk', '中文', '日文', '韩文', 'install', '安装', 'ttf', 'otf'],
   },
   {
@@ -322,6 +342,22 @@ export const HELP_TOPICS: HelpTopicMeta[] = [
     group: 'manage',
     order: 3,
     keywords: ['命令行', 'cli', 'ieumoffice', 'convert', 'render', '命令行工具', '终端'],
+  },
+  {
+    id: 'google-drive',
+    group: 'manage',
+    order: 5,
+    keywords: [
+      'google drive',
+      'drive',
+      '云端硬盘',
+      '드라이브',
+      'ドライブ',
+      'google docs',
+      'sync',
+      '同步',
+      'cloud',
+    ],
   },
   {
     id: 'mcp',

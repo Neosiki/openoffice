@@ -17,6 +17,7 @@
   "dependencies": {
     "@genoffice/agent-core": "*",
     "@genoffice/docx-engine": "*",
+    "@genoffice/odt-engine": "*",
     "@genoffice/xmind-engine": "*",
     "@rhwp/core": "0.8.7",
     "cfb": "^1.2.2",
