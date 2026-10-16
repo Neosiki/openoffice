@@ -115,10 +115,15 @@ async function generatePage(app: ElectronApplication): Promise<Page> {
 }
 
 async function cancel(gen: Page): Promise<void> {
-  await Promise.all([
-    gen.waitForEvent('close'),
-    gen.getByRole('button', { name: 'Cancel', exact: true }).click(),
-  ])
+  const closed = gen.waitForEvent('close')
+  // the window can close before the click itself has finished: that is the button working
+  await gen
+    .getByRole('button', { name: 'Cancel', exact: true })
+    .click()
+    .catch((err: unknown) => {
+      if (!gen.isClosed()) throw err
+    })
+  await closed
 }
 
 const OUTLINE = ['# Plan', '', '- Trip', '  - Day one', '  - Day two', ''].join('\n')
