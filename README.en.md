@@ -62,9 +62,9 @@ IeumOffice is a modified version of the open-source project
 - **21 interface languages.** Korean and English were written by hand; the
   other 19 are machine translations.
 
-Released for **Windows**, with a separate **beta for Apple Silicon Macs (M1 and
-later)**. The Mac build is unsigned and the developer has not been able to
-check it on a Mac; please report problems as
+Released for **Windows**, with separate **betas for Apple Silicon Macs (M1 and
+later) and 64-bit Linux (x64)**. The developer has not been able to check the
+Mac or Linux builds on those machines; please report problems as
 [issues](https://github.com/pblsketch/openoffice/issues).
 
 ## Connecting your subscription
@@ -251,15 +251,37 @@ What differs on a Mac:
 - Signing in finishes in the browser. If the browser asks you to paste a code,
   run `claude auth login` or `codex login` in Terminal yourself.
 
+### Linux (beta)
+
+The same Releases page carries three 64-bit (x86_64) Linux packages:
+
+- `IeumOffice-<version>.AppImage`: a single-file bundle you can make executable
+  (`chmod +x`) and run directly.
+- `ieumoffice_<version>_amd64.deb`: for Ubuntu and Debian distributions
+  (`sudo apt install ./ieumoffice_<version>_amd64.deb`).
+- `ieumoffice-<version>.x86_64.rpm`: for Fedora, RHEL and openSUSE distributions
+  (`sudo dnf install ./ieumoffice-<version>.x86_64.rpm`).
+
+The `deb` and `rpm` packages install under `/opt/IeumOffice` and link the
+terminal command at `/usr/bin/ieumoffice`.
+
+What differs on Linux:
+
+- **Only the `AppImage` updates itself.** A `deb` or `rpm` install tells you
+  when a new version is out and opens the download page.
+- As on a Mac, the AI connection card has **no install button**, and if a
+  sign-in page asks you to paste a code, run `claude auth login` or
+  `codex login` in a terminal yourself.
+
 ## Updates
 
-The Windows app looks at this repository's GitHub Releases shortly after it
-starts and every four hours after that, and offers the new version in an
-update window. If there is no release, no network or the check fails, nothing
-happens and the app keeps working. To check yourself, use **Help → Check for
-Updates…** in the app menu. Pre-release versions are offered only when you
-choose the beta channel under **Settings → About**. The Mac build only tells
-you about a new version (see "Mac (beta)" above).
+The Windows app and the Linux `AppImage` look at this repository's GitHub
+Releases shortly after they start and every four hours after that, and offer
+the new version in an update window. If there is no release, no network or the
+check fails, nothing happens and the app keeps working. To check yourself, use
+**Help → Check for Updates…** in the app menu. Pre-release versions are offered
+only when you choose the beta channel under **Settings → About**. The Mac build
+and the Linux `deb` and `rpm` installs only tell you about a new version.
 
 ## Building from source
 
@@ -284,8 +306,10 @@ npm run dist:win -- -- --publish never
 ```
 
 The installer appears in `apps/shell/release`. The Mac installer is built by
-running "macOS build" in this repository's GitHub Actions (on a Mac, `npm run
-build:all` and then `npm run dist:mac -w @genoffice/shell -- --publish never`).
+running "macOS build" and the Linux packages by running "Linux build" in this
+repository's GitHub Actions (locally, `npm run build:all` and then
+`npm run dist:mac -w @genoffice/shell -- --publish never` on a Mac or
+`npm run dist:linux -w @genoffice/shell -- --publish never` on Linux).
 The details, including the
 checks a change must pass, are in [CONTRIBUTING.md](CONTRIBUTING.md); the
 release procedure is in [docs/releasing.ko.md](docs/releasing.ko.md) (Korean).
@@ -296,10 +320,9 @@ project easy to take.
 
 ## Known limitations
 
-- **Windows and Apple Silicon Macs (beta) only.** The developer cannot check
-  the Mac build directly; it is checked through the reports of Mac users. The
-  Intel Mac and Linux code inherited from GenOffice is still in the repository,
-  but this project does not build, release or test it.
+- **Windows, Apple Silicon Macs (beta) and 64-bit Linux (beta) only.** The
+  developer cannot check the Mac or Linux builds directly; they are checked
+  through user reports. Intel Macs are not built or released.
 - **Unsigned installers**, as described above. That is also why the Mac build
   cannot update itself.
 - **A subscription answers a little later than an API key.** Each request

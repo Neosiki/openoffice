@@ -59,10 +59,10 @@ Google Gemini)를 연결해 쓸 수 있습니다.
   파일을 읽고 만들고 고칠 수 있습니다.
 - **화면 언어 21개.** 한국어와 영어는 직접 썼고, 나머지 19개는 기계 번역입니다.
 
-배포하는 운영체제는 **Windows**이고, **Apple Silicon Mac(M1 이후)용 베타**가
-따로 있습니다. Mac판은 서명 없는 시험판이고, 개발자가 Mac에서 직접 확인하지
-못했습니다. 문제가 있으면 [이슈](https://github.com/pblsketch/openoffice/issues)로
-알려 주세요.
+배포하는 운영체제는 **Windows**이고, **Apple Silicon Mac(M1 이후)용 베타**와
+**Linux(64비트 x64)용 베타**가 따로 있습니다. Mac판과 Linux판은 개발자가 직접
+확인하지 못했습니다. 문제가 있으면
+[이슈](https://github.com/pblsketch/openoffice/issues)로 알려 주세요.
 
 ## 구독 연결하기
 
@@ -241,14 +241,35 @@ Mac판에서 다른 점:
 - 로그인은 브라우저에서 끝납니다. 브라우저가 코드를 붙여 넣으라고 하면 터미널에서
   `claude auth login` 또는 `codex login`을 직접 실행합니다.
 
+### Linux (베타)
+
+같은 릴리스 페이지에 64비트(x86_64) Linux용 파일 세 가지가 올라옵니다.
+
+- `IeumOffice-<버전>.AppImage`: 실행 권한(`chmod +x`)을 주어 바로 실행하는 단일
+  파일입니다.
+- `ieumoffice_<버전>_amd64.deb`: Ubuntu·Debian 계열용 패키지입니다(`sudo apt install ./ieumoffice_<버전>_amd64.deb`).
+- `ieumoffice-<버전>.x86_64.rpm`: Fedora·RHEL·openSUSE 계열용 패키지입니다(`sudo dnf install ./ieumoffice-<버전>.x86_64.rpm`).
+
+`deb`와 `rpm` 패키지는 `/opt/IeumOffice`에 설치되고 `/usr/bin/ieumoffice`에
+터미널 명령어를 연결합니다.
+
+Linux판에서 다른 점:
+
+- **`AppImage`만 스스로 업데이트합니다.** `deb`·`rpm`으로 설치한 경우에는 새
+  버전이 나오면 알려 주고 다운로드 페이지를 엽니다.
+- Mac판과 마찬가지로 AI 연결 카드에 **설치 버튼이 없으며**, 로그인 코드를 붙여
+  넣어야 할 때는 터미널에서 `claude auth login` 또는 `codex login`을 직접
+  실행합니다.
+
 ## 업데이트
 
-Windows 설치본은 켠 직후에 한 번, 그 뒤로는 4시간마다 이 저장소의 GitHub 릴리스를
-확인하고, 새 버전이 있으면 업데이트 창으로 알려 줍니다. 릴리스가 없거나,
-인터넷이 안 되거나, 확인에 실패하면 아무 일도 일어나지 않고 앱은 그대로 쓸 수
-있습니다. 직접 확인하려면 앱 메뉴의 **도움말 → 업데이트 확인…**을 누릅니다.
-시험판(프리릴리스)은 **설정 → 정보**에서 업데이트 채널을 "베타 버전"으로 바꾼
-경우에만 받습니다. Mac판은 새 버전을 알려 주기만 합니다(위 "Mac (베타)").
+Windows 설치본과 Linux `AppImage`는 켠 직후에 한 번, 그 뒤로는 4시간마다 이
+저장소의 GitHub 릴리스를 확인하고, 새 버전이 있으면 업데이트 창으로 알려 줍니다.
+릴리스가 없거나, 인터넷이 안 되거나, 확인에 실패하면 아무 일도 일어나지 않고 앱은
+그대로 쓸 수 있습니다. 직접 확인하려면 앱 메뉴의 **도움말 → 업데이트 확인…**을
+누릅니다. 시험판(프리릴리스)은 **설정 → 정보**에서 업데이트 채널을 "베타 버전"으로
+바꾼 경우에만 받습니다. Mac판과 Linux `deb`·`rpm` 설치본은 새 버전을 알려 주기만
+합니다.
 
 ## 직접 빌드하기
 
@@ -273,8 +294,10 @@ npm run dist:win -- -- --publish never
 ```
 
 설치 파일은 `apps/shell/release`에 생깁니다. Mac 설치 파일은 저장소의 GitHub
-Actions에서 "macOS build"를 실행해 만듭니다(Mac에서 직접 만들려면
-`npm run build:all` 뒤 `npm run dist:mac -w @genoffice/shell -- --publish never`).
+Actions에서 "macOS build"를, Linux 패키지는 "Linux build"를 실행해 만듭니다(직접
+만들려면 `npm run build:all` 뒤 Mac에서는
+`npm run dist:mac -w @genoffice/shell -- --publish never`, Linux에서는
+`npm run dist:linux -w @genoffice/shell -- --publish never`).
 변경할 때 통과해야 하는 검사를
 비롯한 자세한 내용은 [CONTRIBUTING.md](CONTRIBUTING.md)(영어)에, 새 버전을
 내는 절차는 [docs/releasing.ko.md](docs/releasing.ko.md)에 있습니다.
@@ -285,10 +308,9 @@ Actions에서 "macOS build"를 실행해 만듭니다(Mac에서 직접 만들려
 
 ## 알려진 한계
 
-- **Windows와 Apple Silicon Mac(베타)만 지원합니다.** Mac판은 개발자가 직접
-  확인하지 못하고 Mac 사용자들의 보고로 확인합니다. Intel Mac과
-  Linux용 코드는 GenOffice에서 물려받아 저장소에 남아 있지만, 빌드하지도,
-  배포하지도, 시험하지도 않습니다.
+- **Windows와 Apple Silicon Mac(베타)·Linux x64(베타)만 지원합니다.** Mac판과
+  Linux판은 개발자가 직접 확인하지 못하고 사용자들의 보고로 확인합니다. Intel
+  Mac은 빌드하거나 배포하지 않습니다.
 - **설치 파일에 서명이 없습니다.** 위에서 설명한 대로입니다. Mac판은 그래서
   스스로 업데이트하지 못합니다.
 - **구독은 API 키보다 답이 조금 늦게 시작됩니다.** 요청마다 그 회사의

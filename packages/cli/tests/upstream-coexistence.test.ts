@@ -522,11 +522,14 @@ describe('finding the app', () => {
       '/Applications/IeumOffice.app/Contents/MacOS/IeumOffice',
       posix(join(homedir(), 'Applications/IeumOffice.app/Contents/MacOS/IeumOffice')),
     ])
+    expect(installedAppBinaries({}, 'linux', null).map(posix)).toEqual([
+      '/opt/IeumOffice/ieumoffice',
+    ])
     for (const platform of ['win32', 'darwin', 'linux'] as const) {
       const found = installedAppBinaries(env, platform, null).map(posix)
       expect(found.length).toBeGreaterThan(0)
       for (const p of found) {
-        expect(p).not.toMatch(/GenOffice/)
+        expect(p).not.toMatch(/GenOffice|\/genoffice$/)
         expect(p).not.toBe('/usr/bin/genoffice')
         expect(p).toMatch(/\/IeumOffice(\.app)?\//)
       }
@@ -540,6 +543,9 @@ describe('finding the app', () => {
     expect(
       posix(appBinaryForResources('/Volumes/Work/IeumOffice.app/Contents/Resources', 'darwin')),
     ).toBe('/Volumes/Work/IeumOffice.app/Contents/MacOS/IeumOffice')
+    expect(posix(appBinaryForResources('/opt/IeumOffice/resources', 'linux'))).toBe(
+      '/opt/IeumOffice/ieumoffice',
+    )
   })
 
   it('starts the MCP server on our app binary, never on an upstream one beside the launcher', () => {
@@ -666,6 +672,8 @@ describe('what the CLI prints and tells agents to run', () => {
     const cmd = readFileSync(join(bin, 'ieumoffice.cmd'), 'utf-8')
     expect(sh).toContain('MacOS/IeumOffice')
     expect(sh).toContain('IeumOffice.exe')
+    expect(sh).toContain('"$here/../../ieumoffice"')
+    expect(sh).not.toContain('"$here/../../genoffice"')
     expect(cmd).toContain('IeumOffice.exe')
     expect(sh).not.toMatch(/GenOffice/)
     expect(cmd).not.toMatch(/GenOffice/)

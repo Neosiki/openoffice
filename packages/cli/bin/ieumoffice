@@ -21,7 +21,7 @@ case "$here" in
   */Contents/Resources/cli) app="$here/../../MacOS/IeumOffice" ;;
   */resources/cli)
     # Linux install, or the Windows install reached from Git Bash / MSYS
-    if [ -x "$here/../../IeumOffice.exe" ]; then app="$here/../../IeumOffice.exe"; else app="$here/../../genoffice"; fi
+    if [ -x "$here/../../IeumOffice.exe" ]; then app="$here/../../IeumOffice.exe"; else app="$here/../../ieumoffice"; fi
     ;;
   *) app="" ;;
 esac

@@ -136,6 +136,17 @@ npm run dist:win -- -- --publish never
 - 비밀 값을 쓰지 않는다. **release_tag**를 적고 `main`에서 실행하면, 빌드가 통과한 뒤 그 태그의 이미 공개된 릴리스에 dmg, zip, `latest-mac.yml`을 붙인다(빌드한 버전과 태그가 같을 때만). 비워 두면 결과물만 남는다. 순서는 `docs/releasing.ko.md`의 "Mac 설치 파일"이다.
 - Mac에서 직접 만들 때: `npm ci`, `npm run build:all`, `npm run dist:mac -w @genoffice/shell -- --publish never`. 루트의 `npm run dist:mac`은 Intel용까지 묶는 원본의 경로라 쓰지 않는다.
 
+## Linux 설치 파일 만들기
+
+GitHub Actions에서 만든다.
+
+1. GitHub 저장소의 Actions 탭 → **Linux build** → **Run workflow**. 가지는 릴리스 태그가 가리킬 커밋이 있는 가지를 고른다.
+2. 끝나면 실행 결과의 Artifacts에서 `ieumoffice-linux-x64`를 내려받는다. 안에 `IeumOffice-<버전>.AppImage`, `ieumoffice_<버전>_amd64.deb`, `ieumoffice-<버전>.x86_64.rpm`, `latest-linux.yml`(베타 버전 번호면 `beta-linux.yml`)이 있다.
+
+- 빌드는 앱 실행 파일, 엑셀 처리 프로그램, 터미널 명령어가 실행 가능하게 들어갔는지 검사하고, 만든 앱을 Xvfb 아래에서 창 없이 띄워 Markdown·CSV 파일을 PDF로 내보내 본다. 하나라도 실패하면 결과를 올리지 않는다.
+- 비밀 값을 쓰지 않는다. **release_tag**를 적고 `main`에서 실행하면, 빌드가 통과한 뒤 그 태그의 이미 공개된 릴리스에 AppImage, deb, rpm, `latest-linux.yml`을 붙인다(빌드한 버전과 태그가 같을 때만). 비워 두면 결과물만 남는다. 순서는 `docs/releasing.ko.md`의 "Linux 설치 파일"이다.
+- Linux(x64)에서 직접 만들 때(`rpm` 패키지가 설치되어 있어야 한다): `npm ci`, `npm run build:all`, `npm run dist:linux -w @genoffice/shell -- --publish never`.
+
 ## 새 버전 내기
 
 순서:

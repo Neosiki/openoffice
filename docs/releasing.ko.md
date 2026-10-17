@@ -236,6 +236,26 @@ Mac판은 Apple 개발자 서명 없는 베타로 냅니다(결정 0031). Window
 
 > **확인 필요:** 이 절차는 빌드 설정과 업데이트 라이브러리의 코드를 읽고 쓴 것입니다. 첫 Mac 빌드 때 3번의 파일 이름이 실제와 같은지 확인하세요.
 
+## 12. Linux 설치 파일 (베타)
+
+Linux판(64비트 x64)도 베타로 냅니다. Windows·Mac 설치 파일과 **같은 릴리스**에 함께 올립니다. GitHub의 Ubuntu 빌드 기계가 만듭니다.
+
+**자동으로 올리기 (권장).** 6번까지 끝내 릴리스를 먼저 공개한 뒤, **Actions** 탭 → **Linux build** → **Run workflow**에서 가지는 `main`, **release_tag** 칸에 그 릴리스의 태그(예: `v0.12.1`)를 적고 실행합니다. 빌드와 검사가 모두 통과하면 `AppImage`, `deb`, `rpm`, `latest-linux.yml`이 그 릴리스에 저절로 붙습니다.
+
+**손으로 올리기.** release_tag를 비워 두면 실행 결과의 **Artifacts**에서 `ieumoffice-linux-x64`를 내려받아 직접 올립니다.
+
+| 파일                                              | 설명                                                                     | 릴리스에 올리나   |
+| ------------------------------------------------- | ------------------------------------------------------------------------ | ----------------- |
+| `IeumOffice-<버전>.AppImage`                      | 설치 없이 실행하는 단일 파일. 스스로 업데이트한다                        | **올린다 (필수)** |
+| `ieumoffice_<버전>_amd64.deb`                     | Ubuntu·Debian용 패키지(`/opt/IeumOffice`에 설치, `/usr/bin/ieumoffice`)  | **올린다 (필수)** |
+| `ieumoffice-<버전>.x86_64.rpm`                    | Fedora·RHEL·openSUSE용 패키지                                            | **올린다**        |
+| `latest-linux.yml` (베타 번호면 `beta-linux.yml`) | Linux 앱이 새 버전을 알아보는 안내 파일. `AppImage` 자동 업데이트에 쓴다 | **올린다 (필수)** |
+
+알아 둘 것:
+
+- **`AppImage`는 스스로 업데이트하고, `deb`·`rpm`은 새 버전을 알려 주기만 합니다.** `deb`·`rpm`으로 설치한 앱은 `/opt/IeumOffice`가 관리자 권한 폴더여서 스스로 덮어쓰지 않고, 업데이트 창에서 "다운로드 페이지 열기"로 안내합니다. `latest-linux.yml`을 올려 두어야 새 버전을 알아봅니다.
+- Linux판의 동작은 저장소 주인이 직접 확인할 수 없습니다. Linux 사용자에게서 들어온 보고를 `docs/tracking/status.md`에 적습니다.
+
 ---
 
 ## 한눈에 보기
@@ -251,5 +271,6 @@ Mac판은 Apple 개발자 서명 없는 베타로 냅니다(결정 0031). Window
 7. GitHub 릴리스: 태그 v<버전>, 두 파일 올리기, pre-release 체크(먼저 혼자 확인) → Publish
 8. 옛 버전 앱에서 채널을 "베타 버전"으로 바꿔 업데이트 확인
 9. (Mac) Actions → macOS build → Run workflow → 결과의 dmg, zip, latest-mac.yml 을 같은 릴리스에 올리기
-10. 릴리스를 pre-release 해제 + latest 로 바꾸기
+10. (Linux) Actions → Linux build → Run workflow → 결과의 AppImage, deb, rpm, latest-linux.yml 을 같은 릴리스에 올리기
+11. 릴리스를 pre-release 해제 + latest 로 바꾸기
 ```

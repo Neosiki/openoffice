@@ -136,6 +136,12 @@ describe('coexistence with the upstream app on one machine', () => {
     expect(loadBuilderConfig({ GENOFFICE_WIN_ARM64: '1' }).nsis.artifactName).toBe(
       '${productName}-Setup-${version}-arm64.${ext}',
     )
+    expect(shellPackage.desktopName).toBe('ieumoffice.desktop')
+    expect(config.linux.executableName).toBe('ieumoffice')
+    expect(config.deb.packageName).toBe('ieumoffice')
+    expect(config.deb.artifactName).toBe('ieumoffice_${version}_${arch}.deb')
+    expect(config.rpm.packageName).toBe('ieumoffice')
+    expect(config.rpm.artifactName).toBe('ieumoffice-${version}.${arch}.rpm')
   })
 
   it('keeps its settings and data in its own folders', () => {
