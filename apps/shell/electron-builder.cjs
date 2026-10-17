@@ -691,6 +691,28 @@ const config = {
   deb: {
     artifactName: 'ieumoffice_${version}_${arch}.deb',
     packageName: PACKAGED_APP_NAME,
+    // Ubuntu 24.04 (and Debian 13) rebuilt part of the X/GTK stack for 64-bit
+    // time_t and renamed those packages with a "t64" suffix: where the old
+    // name is gone, apt refuses the deb with "<name> ... is not installable"
+    // (gtk3 and atspi resolve today only because the t64 package happens to
+    // declare a versioned Provides). "a | b" satisfies on whichever name the
+    // distribution carries — the plain name on 22.04 and older, the t64 name
+    // on 24.04 and newer. Alternatives are written even for names today's
+    // archive still carries plainly: which pages remain is exactly what keeps
+    // changing. Setting `depends` replaces electron-builder's default list
+    // wholesale (FpmTarget passes it to fpm's -d verbatim, no merge), so every
+    // default entry this product wants is spelled out here.
+    depends: [
+      'libgtk-3-0 | libgtk-3-0t64',
+      'libnotify4 | libnotify4t64',
+      'libnss3',
+      'libxss1',
+      'libxtst6 | libxtst6t64',
+      'xdg-utils',
+      'libatspi2.0-0 | libatspi2.0-0t64',
+      'libuuid1',
+      'libsecret-1-0 | libsecret-1-0t64',
+    ],
     // expose the ieumoffice command line shipped inside the app
     afterInstall: 'build/linux-after-install.sh',
     afterRemove: 'build/linux-after-remove.sh',

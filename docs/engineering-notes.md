@@ -84,6 +84,11 @@
 - **OpenRouter의 하루 무료 요청 수는 모델 호출 수다.** 문서를 한 번 고치는 데 2~5번이 든다. 남은 수는 `GET /api/v1/key`의 `free_model_daily_requests`로 읽는다(무료 요청을 쓰지 않는다). 사용한 수는 늦게 반영된다. 2026-10-15에는 몇 분씩 그대로였다.
 - **브라우저 연결의 돌아올 주소는 `localhost`다.** 브라우저가 `localhost`를 IPv6(`::1`)로 먼저 풀 수 있어 서버를 두 루프백 주소에 함께 연다. `::1`이 없는 PC에서는 그쪽만 조용히 건너뛴다.
 
+## Linux 패키지
+
+- **Ubuntu 24.04에서 deb 설치가 의존성 오류로 멈춘다.** 24.04와 Debian 13은 64비트 time_t 전환으로 여러 라이브러리를 `*t64` 이름으로 다시 지었다(24.04만 봐도 `libgtk-3-0`·`libatspi2.0-0`의 옛 이름은 없다). electron-builder의 기본 `depends`는 옛 이름만 적고, `deb.depends`를 설정하면 기본 목록이 통째로 바뀐다. → `electron-builder.cjs`의 `depends`가 기본 목록을 그대로 적고, 이름이 바뀐 것에는 `libgtk-3-0 | libgtk-3-0t64`처럼 대안을 붙인다. `tests/linux-deb-dependencies.test.ts`와 `linux-build.yml`의 검사가 지킨다.
+- **"apt가 libnotify4를 못 찾는다"는 보고는 빈 24.04에서 재현되지 않는다.** 24.04의 t64 패키지가 옛 이름을 `Provides:`로 제공하고 `libnotify4`·`libxtst6`·`libsecret-1-0`은 24.04에 옛 이름 그대로 남아 있어, 지난 배포본도 `sudo apt install ./ieumoffice_버전_amd64.deb`로는 풀린다(`dpkg -i`는 의존성을 스스로 풀지 않으니 실패한다). → 그래도 대안 표기를 유지한다. 24.10 이후 배포판과 32비트 아키텍처에서는 옛 이름이 아예 없을 수 있다.
+
 ## 작업 사본을 여럿 둘 때
 
 - **작업 사본을 지웠더니 본 저장소의 `node_modules`가 비었다.** 의존성을 연결(정션)로 나눠 쓰는 작업 사본을 `git worktree remove`로 지우면, 삭제가 연결을 따라가 본 설치를 지운다. → 지우기 전에 연결부터 끊는다. 지운 뒤 `node_modules/.bin`의 항목 수가 그대로인지 확인한다.
