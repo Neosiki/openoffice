@@ -186,22 +186,27 @@ describe('coexistence with the upstream app on one machine', () => {
     }
   })
 
-  it('names the mind map type within the ProgId rule, and registers it nowhere on Windows', () => {
+  it('names the mind map type within the ProgId rule, and keeps it off the Windows default path', () => {
     const entry = config.mac.fileAssociations.find(
       (candidate: { ext: string }) => candidate.ext === 'xmind',
     ) as { name: string; description?: string } | undefined
     expect(entry, '.xmind is not offered on mac / Linux').toBeTruthy()
-    // the same derivation electron-builder.cjs applies to the Windows list
+    // the same derivation electron-builder.cjs applies to the Windows list;
+    // the NSIS Open-With ProgId (build/installer.nsh) spells the same value out
     const progId = `${PRODUCT_NAME}.${entry!.name.replace(/[^A-Za-z0-9]/g, '')}`
     expect(progId).toMatch(/^IeumOffice\.[A-Za-z][A-Za-z0-9]*$/)
     expect(progId.length, progId).toBeLessThanOrEqual(39)
     expect(UPSTREAM.progIds).not.toContain(progId)
     // the label is the product's own word for the type
     expect(`${entry!.name} ${entry!.description ?? ''}`).not.toMatch(/xmind/i)
-    // and Windows gets no registration for it at all: the default program stays
+    // Windows does not take the default for it: it stays off win.fileAssociations
+    // and is only offered in "Open with" (with this icon) by the installer
     const winExts = config.win.fileAssociations.map((candidate: { ext: string }) => candidate.ext)
     expect(winExts).not.toContain('xmind')
     for (const type of OFFICE_TYPES) expect(type.ext).not.toBe('xmind')
+    // it is offered Open-With only by the installer, under this same ProgId
+    const nsh = readFileSync(join(SHELL, 'build/installer.nsh'), 'utf8')
+    expect(nsh).toContain(`!define GENOFFICE_MINDMAP_PROGID "${progId}"`)
   })
 
   it('recognizes only its own ProgIds as "this app is the default"', () => {

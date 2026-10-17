@@ -106,6 +106,7 @@ function compileVisionOcr({ universalOnly } = { universalOnly: false }) {
 }
 
 const WIN_OCR_HELPER = '../../packages/pdf2docx/ocr-helper/win-ocr.exe'
+const WIN_QUICKLOOK_HELPER = 'src/main/quick-look/win-quicklook.exe'
 
 function ensurePlatformHelpers() {
   if (process.platform === 'darwin' && !existsSync(join(__dirname, VISION_OCR_HELPER))) {
@@ -120,6 +121,17 @@ function ensurePlatformHelpers() {
       )
     } catch (err) {
       throw new Error(`win-ocr helper compile failed: ${err}`, { cause: err })
+    }
+  }
+  if (process.platform === 'win32' && !existsSync(join(__dirname, WIN_QUICKLOOK_HELPER))) {
+    try {
+      execFileSync(
+        process.execPath,
+        [join(__dirname, 'src/main/quick-look/build-win.mjs')],
+        { stdio: 'inherit' },
+      )
+    } catch (err) {
+      throw new Error(`win-quicklook helper compile failed: ${err}`, { cause: err })
     }
   }
 }
@@ -296,10 +308,13 @@ function ensureThirdPartyNotices() {
 // office types that is the point, for plain text and JSON it would hijack the
 // system editor, so Windows leaves those two out (mac/Linux only offer them
 // in Open With).
-// A mind map file keeps the program the user already opens it with: installing
-// must not take .xmind over, so Windows registers nothing for it either. HWP
-// and HWPX stay out for the same reason: installing this app must not take the
-// documents away from Hancom Office on a PC that has it.
+// A mind map file keeps the program the user already opens it with, and HWP
+// and HWPX must not be taken from Hancom Office on a PC that has it, so
+// Windows takes none of the three as the extension's default. They are still
+// offered in Explorer's "Open with": build/installer.nsh writes a product-own
+// ProgId with the per-type document icon for each, so choosing this app for
+// them shows the Hangul or mind-map icon instead of the bare app icon (the
+// .ico files ship via win.extraResources below).
 const WIN_OPEN_WITH_ONLY_EXTS = new Set(['txt', 'json', 'xmind', 'hwp', 'hwpx'])
 // NSIS registers each association under a ProgId taken from its `name`
 // (HKCU\Software\Classes\<name>). The upstream app registers the bare names
@@ -525,6 +540,10 @@ const config = {
       from: '../../packages/pdf2docx/ocr-helper/win-ocr.exe',
       to: 'ocr/win-ocr.exe',
     },
+    {
+      from: 'src/main/quick-look/win-quicklook.exe',
+      to: 'quicklook/win-quicklook.exe',
+    },
     // genoffice command line: runs on the app binary with ELECTRON_RUN_AS_NODE,
     // so the RunAsNode fuse must stay enabled.
     // Layout (Resources/cli next to wasm/, native/, ocr/) is what
@@ -626,6 +645,18 @@ const config = {
         from: 'build/shell-new',
         to: 'shell-new',
         filter: ['*.docx', '*.xlsx', '*.pptx'],
+      },
+      // The Open-With ProgIds build/installer.nsh writes for .hwp/.hwpx/.xmind
+      // point their DefaultIcon at these; without the explicit entries the
+      // icons are absent (electron-builder places an icon only for the types
+      // in win.fileAssociations, and these three stay off that list).
+      {
+        from: 'build/hwp.ico',
+        to: 'hwp.ico',
+      },
+      {
+        from: 'build/mindmap.ico',
+        to: 'mindmap.ico',
       },
     ],
   },

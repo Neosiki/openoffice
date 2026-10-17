@@ -48,6 +48,56 @@
   DeleteRegKey SHELL_CONTEXT "Software\Classes\${GENOFFICE_ODT_PROGID}"
 !macroend
 
+; .hwp, .hwpx and .xmind are offered in Explorer's "Open with" and never made
+; the default, for the same reason as .odt above: a win.fileAssociations entry
+; would also write the extension's default value and take it over (from Hancom
+; Office for the Hangul formats, from whatever opens the mind map today). Each
+; gets a product-own ProgId whose DefaultIcon is the per-type document icon
+; (resources\hwp.ico / resources\mindmap.ico, placed by the win.extraResources
+; entries in electron-builder.cjs), so choosing this app in "Open with" shows
+; the Hangul or mind-map icon instead of the bare app icon. The ProgIds match
+; the name-to-ProgId rule electron-builder.cjs uses for its Windows list
+; (see tests/product-identity.test.ts).
+!define GENOFFICE_HWP_PROGID "IeumOffice.HWPDocument"
+!define GENOFFICE_HWPX_PROGID "IeumOffice.HWPXDocument"
+!define GENOFFICE_MINDMAP_PROGID "IeumOffice.MindMap"
+
+!macro GenOfficeRegisterOpenWithHwp
+  WriteRegStr SHELL_CONTEXT "Software\Classes\${GENOFFICE_HWP_PROGID}" "" "HWP Document"
+  WriteRegStr SHELL_CONTEXT "Software\Classes\${GENOFFICE_HWP_PROGID}\DefaultIcon" "" "$INSTDIR\resources\hwp.ico"
+  WriteRegStr SHELL_CONTEXT "Software\Classes\${GENOFFICE_HWP_PROGID}\shell\open\command" "" '"$appExe" "%1"'
+  WriteRegNone SHELL_CONTEXT "Software\Classes\.hwp\OpenWithProgids" "${GENOFFICE_HWP_PROGID}"
+!macroend
+
+!macro GenOfficeUnregisterOpenWithHwp
+  DeleteRegValue SHELL_CONTEXT "Software\Classes\.hwp\OpenWithProgids" "${GENOFFICE_HWP_PROGID}"
+  DeleteRegKey SHELL_CONTEXT "Software\Classes\${GENOFFICE_HWP_PROGID}"
+!macroend
+
+!macro GenOfficeRegisterOpenWithHwpx
+  WriteRegStr SHELL_CONTEXT "Software\Classes\${GENOFFICE_HWPX_PROGID}" "" "HWPX Document"
+  WriteRegStr SHELL_CONTEXT "Software\Classes\${GENOFFICE_HWPX_PROGID}\DefaultIcon" "" "$INSTDIR\resources\hwp.ico"
+  WriteRegStr SHELL_CONTEXT "Software\Classes\${GENOFFICE_HWPX_PROGID}\shell\open\command" "" '"$appExe" "%1"'
+  WriteRegNone SHELL_CONTEXT "Software\Classes\.hwpx\OpenWithProgids" "${GENOFFICE_HWPX_PROGID}"
+!macroend
+
+!macro GenOfficeUnregisterOpenWithHwpx
+  DeleteRegValue SHELL_CONTEXT "Software\Classes\.hwpx\OpenWithProgids" "${GENOFFICE_HWPX_PROGID}"
+  DeleteRegKey SHELL_CONTEXT "Software\Classes\${GENOFFICE_HWPX_PROGID}"
+!macroend
+
+!macro GenOfficeRegisterOpenWithMindmap
+  WriteRegStr SHELL_CONTEXT "Software\Classes\${GENOFFICE_MINDMAP_PROGID}" "" "Mind Map"
+  WriteRegStr SHELL_CONTEXT "Software\Classes\${GENOFFICE_MINDMAP_PROGID}\DefaultIcon" "" "$INSTDIR\resources\mindmap.ico"
+  WriteRegStr SHELL_CONTEXT "Software\Classes\${GENOFFICE_MINDMAP_PROGID}\shell\open\command" "" '"$appExe" "%1"'
+  WriteRegNone SHELL_CONTEXT "Software\Classes\.xmind\OpenWithProgids" "${GENOFFICE_MINDMAP_PROGID}"
+!macroend
+
+!macro GenOfficeUnregisterOpenWithMindmap
+  DeleteRegValue SHELL_CONTEXT "Software\Classes\.xmind\OpenWithProgids" "${GENOFFICE_MINDMAP_PROGID}"
+  DeleteRegKey SHELL_CONTEXT "Software\Classes\${GENOFFICE_MINDMAP_PROGID}"
+!macroend
+
 !macro customInstall
   Push "$INSTDIR\resources\cli"
   Call GenOfficeAddToUserPath
@@ -55,6 +105,9 @@
   !insertmacro GenOfficeRegisterShellNew "xlsx" "IeumOffice.ExcelWorkbook"
   !insertmacro GenOfficeRegisterShellNew "pptx" "IeumOffice.PowerPointPresentation"
   !insertmacro GenOfficeRegisterOpenWithOdt
+  !insertmacro GenOfficeRegisterOpenWithHwp
+  !insertmacro GenOfficeRegisterOpenWithHwpx
+  !insertmacro GenOfficeRegisterOpenWithMindmap
   !insertmacro UPDATEFILEASSOC
 !macroend
 
@@ -66,6 +119,9 @@
   !insertmacro GenOfficeUnregisterShellNew "xlsx" "IeumOffice.ExcelWorkbook"
   !insertmacro GenOfficeUnregisterShellNew "pptx" "IeumOffice.PowerPointPresentation"
   !insertmacro GenOfficeUnregisterOpenWithOdt
+  !insertmacro GenOfficeUnregisterOpenWithHwp
+  !insertmacro GenOfficeUnregisterOpenWithHwpx
+  !insertmacro GenOfficeUnregisterOpenWithMindmap
   Pop $0
   !insertmacro UPDATEFILEASSOC
 !macroend
