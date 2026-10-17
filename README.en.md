@@ -2,6 +2,12 @@
 
 [한국어](README.md) · **English**
 
+[![Total downloads](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fpblsketch%2Fopenoffice%2Fmain%2Fdocs%2Ftracking%2Fgrowth-latest.json&query=%24.totalDownloads&label=total%20downloads)](https://github.com/pblsketch/openoffice/releases)
+[![Stars](https://img.shields.io/github/stars/pblsketch/openoffice?style=social)](https://github.com/pblsketch/openoffice/stargazers)
+
+If IeumOffice helps you, please tap the **star** above. Every star makes it
+easier for the next person to find this program.
+
 IeumOffice (이음오피스) is a free, open-source desktop office suite. It opens
 and edits Word, Excel, PowerPoint, PDF, Markdown and HTML documents and mind
 maps in one window, and its AI works on the document itself instead of
