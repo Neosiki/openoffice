@@ -1,18 +1,15 @@
 import React, { useEffect, useState } from 'react'
 import { brandText, type Lang } from '@genoffice/i18n'
-import { DOC_ATTACH_BRIDGE_KEY } from '@genoffice/electron-utils/doc-attach-channels'
 import { DOC_ATTACH_STRINGS } from './strings-doc-attach'
 
-/** The document-picker calls an editor's preload exposes as window[DOC_ATTACH_BRIDGE_KEY] */
+/** The document-picker calls an editor's preload exposes as window.aiOfficeDocs */
 interface DocAttachBridge {
   available(): Promise<boolean>
   pick(): Promise<unknown>
 }
 
 function bridge(): DocAttachBridge | null {
-  const b = (globalThis as unknown as Record<string, Partial<DocAttachBridge> | undefined>)[
-    DOC_ATTACH_BRIDGE_KEY
-  ]
+  const b = (globalThis as { aiOfficeDocs?: Partial<DocAttachBridge> }).aiOfficeDocs
   return typeof b?.available === 'function' && typeof b.pick === 'function'
     ? (b as DocAttachBridge)
     : null

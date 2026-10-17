@@ -2,6 +2,7 @@ import { contextBridge, ipcRenderer } from 'electron'
 import type { IpcRendererEvent } from 'electron'
 import {
   DOC_PICKER_CHANNELS,
+  DOC_PICKER_PAGE_KEY,
   type DocListResult,
   type DocPickerApi,
   type DocPickerChooseResult,
@@ -33,4 +34,4 @@ const api: DocPickerApi = {
     await ipcRenderer.invoke(DOC_PICKER_CHANNELS.cancel)
   },
 }
-contextBridge.exposeInMainWorld('aiOfficeDocPicker', api)
+contextBridge.exposeInMainWorld(DOC_PICKER_PAGE_KEY, api)

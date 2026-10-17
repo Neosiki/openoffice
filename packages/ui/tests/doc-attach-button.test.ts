@@ -3,12 +3,13 @@ import { act, createElement } from 'react'
 import { createRoot } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { brandText, LANGS } from '@genoffice/i18n'
-import { DOC_ATTACH_BRIDGE_KEY } from '@genoffice/electron-utils/doc-attach-channels'
 import { DocAttachButton, docPickedOf } from '../src/DocAttachButton'
 import { DOC_ATTACH_STRINGS } from '../src/strings-doc-attach'
 
+const BRIDGE_KEY = 'aiOfficeDocs'
+
 const setBridge = (value: unknown) => {
-  ;(globalThis as Record<string, unknown>)[DOC_ATTACH_BRIDGE_KEY] = value
+  ;(globalThis as Record<string, unknown>)[BRIDGE_KEY] = value
 }
 
 describe('docPickedOf', () => {
@@ -60,7 +61,7 @@ describe('DocAttachButton', () => {
   afterEach(() => {
     act(() => root.unmount())
     host.remove()
-    delete (globalThis as Record<string, unknown>)[DOC_ATTACH_BRIDGE_KEY]
+    delete (globalThis as Record<string, unknown>)[BRIDGE_KEY]
     vi.unstubAllGlobals()
     vi.restoreAllMocks()
   })
