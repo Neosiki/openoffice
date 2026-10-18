@@ -9,11 +9,13 @@ import {
   writeFileSync,
 } from 'node:fs'
 import { randomUUID } from 'node:crypto'
+import { release } from 'node:os'
 import { basename, dirname, extname, join, resolve } from 'node:path'
 import {
   BrowserWindow,
   Menu,
   app,
+  clipboard,
   dialog,
   ipcMain,
   nativeImage,
@@ -84,6 +86,12 @@ import { installCliLinkBestEffort } from './cli-link'
 import { createDefaultAppService, execFileRunner } from './default-app'
 import { registerIntegrationsIpc } from './integrations-ipc'
 import { registerResultStoreIpc } from './result-store-ipc'
+import {
+  FEEDBACK_SURVEY_URL,
+  feedbackDetails,
+  feedbackText,
+  platformLabel,
+} from './feedback'
 import { registerDriveIpc, type DriveService } from './drive/drive-ipc'
 import { parseFileToText } from '@genoffice/file-parse'
 import { handleDroppedFiles } from './dropped-files'
@@ -3465,7 +3473,42 @@ function ensureFolderWatchers(): void {
 }
 
 /**
- * Put the manual in whatever menu is currently installed.
+ * Show the details that go into the survey, copy them, and open the survey in
+ * the browser. Everything the app contributes is on screen before anything is
+ * copied or opened; the app sends nothing itself.
+ */
+async function openFeedbackSurvey(): Promise<void> {
+  const lang = currentLang()
+  const detail = feedbackDetails(lang, {
+    version: app.getVersion(),
+    os: `${platformLabel(process.platform)} ${release()}`,
+    language: lang,
+  })
+  const options = {
+    type: 'info' as const,
+    title: feedbackText(lang, 'dialogTitle'),
+    message: feedbackText(lang, 'dialogTitle'),
+    detail: `${feedbackText(lang, 'dialogBody')}\n\n${detail}`,
+    buttons: [feedbackText(lang, 'btnOpen'), feedbackText(lang, 'btnCancel')],
+    defaultId: 0,
+    cancelId: 1,
+    noLink: true,
+  }
+  const win = shellWindow ?? BrowserWindow.getFocusedWindow()
+  const { response } = win
+    ? await dialog.showMessageBox(win, options)
+    : await dialog.showMessageBox(options)
+  if (response !== 0) return
+  clipboard.writeText(detail)
+  shell.openExternal(FEEDBACK_SURVEY_URL).catch(() => {
+    // no browser handler available; nothing actionable for the user here
+  })
+}
+
+const FEEDBACK_MENU_ID = 'menu-send-feedback'
+
+/**
+ * Put the manual and the feedback entry in whatever menu is currently installed.
  *
  * Every tab kind builds its own application menu, which is how File and Edit
  * stay tab-shaped — and which is also why an item added to one builder is
@@ -3473,16 +3516,21 @@ function ensureFolderWatchers(): void {
  * manual's own shortcut table was wrong for six of the seven tab kinds.
  *
  * Injecting after the builder has run is the one place that cannot be
- * forgotten: a new tab kind gets the manual for free, and a builder that
- * already has it is left alone rather than getting a second copy.
+ * forgotten: a new tab kind gets both for free, and a builder that already has
+ * them is left alone rather than getting a second copy.
  */
-function withUserGuide(): void {
+function withHelpItems(): void {
   const menu = Menu.getApplicationMenu()
   if (!menu) return
-  const userGuide = {
+  const userGuide: MenuItemConstructorOptions = {
     label: tm('menuUserGuide'),
     accelerator: 'F1',
     click: () => tabManager?.openHelpTab(),
+  }
+  const feedback: MenuItemConstructorOptions = {
+    id: FEEDBACK_MENU_ID,
+    label: feedbackText(currentLang(), 'menuLabel'),
+    click: () => void openFeedbackSurvey(),
   }
   const help = menu.items.find((item) => item.role === 'help')
   // Slides and Sheets build a File/Edit/View template with no Help menu at
@@ -3490,27 +3538,31 @@ function withUserGuide(): void {
   // this the manual would be reachable from four of the seven tab kinds.
   if (!help) {
     menu.append(
-      Menu.buildFromTemplate([{ role: 'help', label: tm('menuHelp'), submenu: [userGuide] }])
-        .items[0]!,
+      Menu.buildFromTemplate([
+        {
+          role: 'help',
+          label: tm('menuHelp'),
+          submenu: [userGuide, { type: 'separator' }, feedback],
+        },
+      ]).items[0]!,
     )
     return
   }
   const submenu = help.submenu
-  if (!submenu || submenu.items.some((i) => i.accelerator === 'F1')) return
+  if (!submenu) return
+  if (submenu.items.some((i) => i.id === FEEDBACK_MENU_ID)) return
   // A separator survives a template only *between* two real items — Electron
   // drops one at either end, so `[userGuide, separator]` builds a single item
   // and the destructure below used to hand `undefined` to `insert`, which threw
   // "Invalid item" and took the main process down on the next tab switch. The
-  // third entry is filler, discarded; the type check is what stops this from
+  // trailing entry is filler, discarded; the type check is what stops this from
   // silently regressing if Electron's rule ever changes again.
-  const [item, separator] = Menu.buildFromTemplate([
-    userGuide,
-    { type: 'separator' },
-    { role: 'undo' },
-  ]).items
-  if (!item) return
-  submenu.insert(0, item)
-  if (separator?.type === 'separator') submenu.insert(1, separator)
+  const hasUserGuide = submenu.items.some((i) => i.accelerator === 'F1')
+  const template: MenuItemConstructorOptions[] = hasUserGuide
+    ? [feedback, { type: 'separator' }, { role: 'undo' }]
+    : [userGuide, { type: 'separator' }, feedback, { type: 'separator' }, { role: 'undo' }]
+  const items = Menu.buildFromTemplate(template).items.filter((i) => i.role !== 'undo')
+  items.forEach((item, index) => submenu.insert(index, item))
 }
 
 function applyMenuFor(kind: TabKind): void {
@@ -3542,7 +3594,7 @@ function applyMenuFor(kind: TabKind): void {
     default:
       buildHomeMenu()
   }
-  withUserGuide()
+  withHelpItems()
 }
 
 function refreshTitleBarOverlay(): void {
@@ -4960,6 +5012,10 @@ function registerHomeIpc(): void {
     shell.openExternal(GITHUB_REPO_URL).catch(() => {
       // no browser handler available; nothing actionable for the user here
     })
+  })
+
+  ipcMain.handle(HOME_CHANNELS.openFeedbackSurvey, () => {
+    void openFeedbackSurvey()
   })
 
   // the page is the vendor's fixed install guide; the renderer only names the provider

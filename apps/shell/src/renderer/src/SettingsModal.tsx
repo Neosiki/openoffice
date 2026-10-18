@@ -1888,6 +1888,18 @@ export function SettingsModal({
                 />
                 <div className="set-field">
                   <div className="set-field-text">
+                    <label className="set-field-label">{t('setFeedback')}</label>
+                    <div className="set-field-desc">{t('setFeedbackDesc')}</div>
+                  </div>
+                  <button
+                    className="set-btn"
+                    onClick={() => void window.aiOffice.openFeedbackSurvey?.()}
+                  >
+                    {t('feedbackOpen')}
+                  </button>
+                </div>
+                <div className="set-field">
+                  <div className="set-field-text">
                     <div className="set-field-desc">{t('setBasedOn')}</div>
                   </div>
                 </div>
