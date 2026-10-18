@@ -5,6 +5,7 @@ import type { Lang } from '@genoffice/i18n'
 import type { AiStreamChunk } from '@genoffice/ai-provider'
 import { SUBSCRIPTION_IPC_CHANNELS } from '@genoffice/ai-provider/browser'
 import { installDropOpenBridge } from '@genoffice/electron-utils/drop-open'
+import { splitPaneBridge } from '@genoffice/electron-utils/split-pane-bridge'
 import { AI_CHANNELS, PDF_CHANNELS } from '../shared/ipc'
 import type {
   PdfApi,
@@ -272,6 +273,8 @@ const projectApi = {
 }
 
 contextBridge.exposeInMainWorld('pdfApi', api)
+// The split-pane role and focus calls the shell drives this pane with
+contextBridge.exposeInMainWorld('aiOfficeSplit', splitPaneBridge(ipcRenderer))
 // Google Drive for this editor's AI: search and read only (decision 0033)
 contextBridge.exposeInMainWorld('aiOfficeDriveAi', driveAiBridge())
 contextBridge.exposeInMainWorld('projectApi', projectApi)
