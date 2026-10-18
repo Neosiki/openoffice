@@ -68,6 +68,7 @@ import {
   useAutoSavePref,
   addTokenUsage,
   useAiSendGate,
+  useSplitPaneFocusPing,
   type AiTokenUsageView,
   type AiScopeQuoteData,
   type DriveAttachPicked,
@@ -575,6 +576,8 @@ export function App({
 }: {
   queuedWorkbookAtBoot?: boolean
 }): React.JSX.Element {
+  // Split panes: fallback focus reporting for this screen (decision 0036)
+  useSplitPaneFocusPing()
   const adapterRef = useRef(new InMemoryWorkbookAdapter(initialSnapshot))
   const univerRef = useRef<UniverRuntime | null>(null)
   const lazyWorkbookRef = useRef<LazyWorkbookState | null>(null)
