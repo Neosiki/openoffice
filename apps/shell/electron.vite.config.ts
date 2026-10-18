@@ -35,6 +35,8 @@ export default defineConfig({
           agent: resolve(__dirname, 'src/preload/agent.ts'),
           // dedicated preload for the attach-from-Drive window (see src/main/drive/drive-picker-window.ts)
           'drive-picker': resolve(__dirname, 'src/preload/drive-picker.ts'),
+          // dedicated preload for the attach-a-document window (see src/main/doc-picker/doc-picker-window.ts)
+          'doc-picker': resolve(__dirname, 'src/preload/doc-picker.ts'),
           // dedicated preload for the Quick Look preview window (see src/main/quick-look/quick-look-window.ts)
           'quick-look': resolve(__dirname, 'src/preload/quick-look.ts'),
         },
@@ -59,6 +61,8 @@ export default defineConfig({
           agent: resolve(__dirname, 'src/renderer/agent.html'),
           // attach-from-Drive window (see src/main/drive/drive-picker-window.ts)
           'drive-picker': resolve(__dirname, 'src/renderer/drive-picker.html'),
+          // attach-a-document window (see src/main/doc-picker/doc-picker-window.ts)
+          'doc-picker': resolve(__dirname, 'src/renderer/doc-picker.html'),
           // Quick Look preview window (see src/main/quick-look/quick-look-window.ts)
           'quick-look': resolve(__dirname, 'src/renderer/quick-look.html'),
         },
