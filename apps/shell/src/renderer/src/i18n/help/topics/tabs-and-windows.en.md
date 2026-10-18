@@ -43,3 +43,21 @@ Each editor tab has a toolbar row at the top (exact layout varies a little per e
 ## The Home tab
 
 The leftmost Home tab cannot be closed; to get back from any editor, click it or use File ▸ **Back to Home**.
+
+## Split view: two panes
+
+**Drag a tab to the right edge of the window**: the tab follows as a small floating copy while a "Split here" hint appears near the edge, and dropping it gives two side-by-side panes. Drop it on the bottom edge instead to get two stacked ones. The tab's right-click menu does the same with **Split Right** and **Split Down**, and on a tab that lives in a pane it also offers **Unsplit**.
+
+- The dragged tab lands in the pane you dropped it on; the other pane keeps the document you were viewing a moment before.
+- When it is the only document open, the same document is placed in both panes as a copy, so you can look at the beginning and the end together. A new document that has never been saved splits the same way.
+- Drag the **divider** between the panes to change their share, double-click it for an even split, or push it all the way to one end to close that pane; the document stays open as a tab.
+
+## One AI window that follows the focus
+
+- Only one AI window is visible. The pane you are working in shows its AI window; the other pane's folds into a rail, and clicking a pane brings that pane's AI window forward.
+- While folded, that pane's conversation and any AI work still running stay alive. Conversations are kept per document.
+- **Two copies of the same document**: after saving in one pane, saving from the other asks "This document has changed elsewhere" before writing. AutoSave waits quietly instead.
+- Starting the app with no file brings back the last pair of split documents exactly as it was left; starting it with a file opens just that file.
+- Home, help and present (preview) tabs cannot enter a pane; while one of them is up the panes hide for the moment and come back when you return to a document tab.
+
+Three or more panes, splitting inside a detached window, and keeping the two copies in live sync are left for later.

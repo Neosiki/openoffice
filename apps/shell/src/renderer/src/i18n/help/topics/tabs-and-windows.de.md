@@ -43,3 +43,21 @@ Jeder Editor-Tab hat oben eine Werkzeugleiste (die genaue Anordnung variiert je 
 ## Der Start-Tab
 
 Der Start-Tab ganz links lässt sich nicht schließen; um aus einem beliebigen Editor zurückzukehren, klicken Sie darauf oder verwenden Sie Datei ▸ **Zurück zur Startseite**.
+
+## Geteilte Ansicht: zwei Bereiche
+
+**Ziehen Sie einen Tab an den rechten Fensterrand**: Der Tab folgt als kleine schwebende Kopie, nahe dem Rand erscheint der Hinweis „Hier teilen“, und beim Loslassen entstehen zwei Bereiche nebeneinander. Lassen Sie ihn am unteren Rand los, entstehen zwei Bereiche übereinander. Das Kontextmenü des Tabs bietet dasselbe mit **Nach rechts teilen** und **Nach unten teilen** und bei einem Tab in einem Bereich zusätzlich **Teilung aufheben**.
+
+- Der gezogene Tab landet in dem Bereich, auf dem Sie ihn abgelegt haben; der andere Bereich behält das Dokument, das Sie gerade eben gesehen haben.
+- Ist nur ein Dokument geöffnet, wird eine Kopie desselben Dokuments in beide Bereiche gelegt, sodass Sie Anfang und Ende zusammen sehen. Auch ein noch nie gespeichertes neues Dokument lässt sich teilen.
+- Ziehen Sie den **Trennsteg** zwischen den Bereichen, um ihr Verhältnis zu ändern; ein Doppelklick teilt halb und halb, und bis an ein Ende geschoben schließt er diesen Bereich. Das Dokument bleibt als Tab offen.
+
+## Ein KI-Fenster, das dem Fokus folgt
+
+- Es ist nur ein KI-Fenster sichtbar. Der Bereich, in dem Sie gerade arbeiten, zeigt seins; das des anderen Bereichs klappt zu einer Leiste ein, und ein Klick auf einen Bereich holt dessen KI-Fenster nach vorn.
+- Während es eingeklappt ist, bleiben die Unterhaltung dieses Bereichs und laufende KI-Arbeiten am Leben. Unterhaltungen werden je Dokument gespeichert.
+- **Zwei Kopien desselben Dokuments**: Nach dem Speichern im einen Bereich fragt das Speichern im anderen zuerst „Dieses Dokument wurde anderswo geändert“. Automatisches Speichern wartet still.
+- **Ohne Datei neu gestartet** kehrt das zuletzt geteilte Dokumentpaar genau so zurück, wie es geteilt war; mit einer Datei gestartet, öffnet sich nur diese Datei.
+- Start-, Hilfe- und Präsentations-(Vorschau-)Tabs können nicht in einen Bereich. Während einer davon offen ist, verbergen sich die beiden Bereiche kurz und kehren zurück, sobald Sie wieder auf einem Dokumenttab sind.
+
+Drei oder mehr Bereiche, das Teilen in einem abgelösten Fenster und die Live-Synchronisierung der beiden Kopien sind zurückgestellt.

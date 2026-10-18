@@ -43,3 +43,21 @@ Každá karta editoru má nahoře pruh nástrojů (přesné rozvržení se mezi 
 ## Karta Domů
 
 Karta Domů, úplně vlevo, nelze zavřít; chcete-li se z libovolného editoru vrátit, klikněte na ni nebo použijte Soubor ▸ **Zpět na domovskou stránku**.
+
+## Rozdělené zobrazení: dva panely
+
+**Přetáhněte kartu na pravý okraj okna**: karta se promění v malou plovoucí kopii, u okraje se objeví nápověda „Zde rozdělit” a po puštění vzniknou dva panely vedle sebe. Puštění na dolním okraji vytvoří dva panely nad sebou. Nabídka karty po kliknutí pravým tlačítkem nabízí totéž přes **Rozdělit vpravo** a **Rozdělit dolů**, a na kartě v panelu navíc **Zrušit rozdělení**.
+
+- Přetažená karta zůstane v panelu, kam jste ji pustili; druhý panel si ponechá dokument, který jste právě prohlíželi.
+- Je-li otevřený jen jeden dokument, umístí se kopie téhož dokumentu do obou panelů — můžete vidět začátek i konec zároveň. Rozdělit lze i nový, dosud neuložený dokument.
+- Přetažením **přepážky** mezi panely změníte jejich poměr, dvojklikem je rozdělíte na polovinu a dotlačením k okraji jeden panel zavřete; dokument zůstává otevřený jako karta.
+
+## Jedno okno AI, které sleduje fokus
+
+- Je vidět jen jedno okno AI. Panel, ve kterém právě pracujete, ukazuje to svoje; okno druhého panelu se sbalí do lišty a kliknutím na panel se jeho okno AI dostane dopředu.
+- Dokud je sbalené, rozhovor toho panelu a běžící práce AI zůstávají živé. Rozhovory se ukládají pro každý dokument zvlášť.
+- **Dvě kopie téhož dokumentu**: po uložení v jednom panelu se uložení z druhého nejprve zeptá „Tento dokument se změnil jinde”. Automatické ukládání tiše počká.
+- **Restart aplikace bez souboru** vrátí poslední dvojici rozdělených dokumentů přesně tak, jak byla rozdělena; spuštění se souborem otevře jen tento soubor.
+- Karty Domů, Nápověda a Prezentace (náhled) nemohou do panelu. Dokud je některá otevřená, oba panely se na chvíli skryjí a vrátí se při návratu na kartu dokumentu.
+
+Tři a více panelů, rozdělování v odděleném okně a živé sladění obou kopií zůstávají na později.
