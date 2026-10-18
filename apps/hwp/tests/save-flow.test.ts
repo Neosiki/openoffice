@@ -54,6 +54,22 @@ describe('runSave', () => {
     ])
   })
 
+  it('treats the copy-pair deferral as a cancel, not a failure', async () => {
+    // the main process refuses the write while a sibling copy holds the disk
+    // version (a deferred autosave or a declined overwrite): the renderer must
+    // stay silent instead of showing a save failure with an internal string
+    const ed = editor()
+    const host = api(
+      { ok: true, path: 'C:/d/a.hwp', format: 'hwp' },
+      {
+        ok: false,
+        error: 'hwp: external-modified',
+      },
+    )
+    await expect(runSave(ed, host, 'save')).resolves.toEqual({ kind: 'canceled' })
+    expect(ed.notifySaved).not.toHaveBeenCalled()
+  })
+
   it('saves without widths when measuring fails', async () => {
     const ed = editor({
       measureTabs: vi.fn(async () => {

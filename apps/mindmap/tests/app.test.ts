@@ -294,6 +294,30 @@ describe('a file that opens', () => {
     await savesReach(fake, 2)
     expect(fake.saves[1]!.auto).toBe(false)
   })
+
+  it('keeps an automatic save deferred by a copy pair quiet, not failed', async () => {
+    // while a sibling copy holds the disk version the main process defers the
+    // automatic save (decision 0036): the map stays dirty and the status line
+    // must not claim a failure
+    localStorage.setItem('mindmapapp.autoSave', '1')
+    const logged = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const { fake } = await openWith(plainSheet())
+    fake.api.save = (async (request: SaveMindmapRequest) => {
+      fake.saves.push(request)
+      return { ok: false, error: 'external-modified' }
+    }) as typeof fake.api.save
+    await typeTitle('cccccccc-cccc-4ccc-8ccc-ccccccccccc2', 'Changed again')
+    await act(async () => {
+      window.dispatchEvent(new Event('blur'))
+    })
+    await savesReach(fake)
+    await settle()
+    expect(fake.saves[0]!.auto).toBe(true)
+    expect(container.textContent).toContain('Unsaved')
+    expect(container.textContent).not.toContain('Save failed')
+    expect(logged).not.toHaveBeenCalled()
+    logged.mockRestore()
+  })
 })
 
 describe('the link of a topic', () => {
