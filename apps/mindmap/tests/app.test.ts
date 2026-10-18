@@ -183,6 +183,13 @@ async function selectOnMap(id: string): Promise<void> {
   await settle()
 }
 
+/** Starts typing a new title for a topic and leaves it in the edit box. */
+async function typeTitle(id: string, title: string): Promise<void> {
+  await selectOnMap(id)
+  await pressOnMap('F2')
+  container.querySelector<HTMLElement>('#input-box')!.textContent = title
+}
+
 describe('a file that does not open', () => {
   it.each([
     ['legacy-format', 'This file is in an older format and cannot be opened'],
@@ -269,6 +276,23 @@ describe('a file that opens', () => {
     expect(fake.saves).toHaveLength(1)
     expect(fake.saves[0]!.mode).toBe('save')
     expect(fake.saves[0]!.bytes).toEqual(bytes)
+  })
+
+  it('marks an automatic save as one and a save by hand as not, for the copy-pair guard', async () => {
+    // auto save on: the window losing focus saves without asking, and that save
+    // carries the flag the main process defers on while a copy pair holds the map
+    localStorage.setItem('mindmapapp.autoSave', '1')
+    const { fake } = await openWith(plainSheet())
+    await typeTitle('cccccccc-cccc-4ccc-8ccc-ccccccccccc1', 'Changed')
+    await act(async () => {
+      window.dispatchEvent(new Event('blur'))
+    })
+    await savesReach(fake)
+    expect(fake.saves[0]!.auto).toBe(true)
+
+    await click('[data-action="save"]')
+    await savesReach(fake, 2)
+    expect(fake.saves[1]!.auto).toBe(false)
   })
 })
 
