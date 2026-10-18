@@ -407,6 +407,8 @@ export const strings = {
     tabList: '全部标签',
     appMenu: '菜单',
     newTab: '新建标签页',
+    splitHintRight: '向右拆分',
+    splitHintBottom: '向下拆分',
     // First-run onboarding
     onbTitle1: '欢迎使用 GenOffice',
     onbWelcomeSubtitle: '开源办公套件',
@@ -876,6 +878,8 @@ export const strings = {
     tabList: 'All tabs',
     appMenu: 'Menu',
     newTab: 'New tab',
+    splitHintRight: 'Split right',
+    splitHintBottom: 'Split below',
     // First-run onboarding
     onbTitle1: 'Welcome to GenOffice',
     onbWelcomeSubtitle: 'An open-source office suite',
@@ -1352,6 +1356,8 @@ export const strings = {
     tabList: 'Tất cả các tab',
     appMenu: 'Menu',
     newTab: 'Tab mới',
+    splitHintRight: 'Chia sang phải',
+    splitHintBottom: 'Chia xuống dưới',
     // First-run onboarding
     onbTitle1: 'Chào mừng đến với GenOffice',
     onbWelcomeSubtitle: 'Bộ ứng dụng văn phòng mã nguồn mở',
@@ -1840,6 +1846,8 @@ export const strings = {
     tabList: 'すべてのタブ',
     appMenu: 'メニュー',
     newTab: '新しいタブ',
+    splitHintRight: '右に分割',
+    splitHintBottom: '下に分割',
     // First-run onboarding
     onbTitle1: 'GenOffice へようこそ',
     onbWelcomeSubtitle: 'オープンソースのオフィススイート',
@@ -2321,6 +2329,8 @@ export const strings = {
     tabList: '모든 탭',
     appMenu: '메뉴',
     newTab: '새 탭',
+    splitHintRight: '오른쪽에 나누기',
+    splitHintBottom: '아래에 나누기',
     // First-run onboarding
     onbTitle1: 'GenOffice에 오신 것을 환영합니다',
     onbWelcomeSubtitle: '오픈소스 오피스 제품군',
@@ -2814,6 +2824,8 @@ export const strings = {
     tabList: 'Tous les onglets',
     appMenu: 'Menu',
     newTab: 'Nouvel onglet',
+    splitHintRight: 'Diviser à droite',
+    splitHintBottom: 'Diviser en bas',
     // First-run onboarding
     onbTitle1: 'Bienvenue dans GenOffice',
     onbWelcomeSubtitle: 'Une suite bureautique open source',
@@ -3313,6 +3325,8 @@ export const strings = {
     tabList: 'Alle Tabs',
     appMenu: 'Menü',
     newTab: 'Neuer Tab',
+    splitHintRight: 'Rechts teilen',
+    splitHintBottom: 'Unten teilen',
     // First-run onboarding
     onbTitle1: 'Willkommen bei GenOffice',
     onbWelcomeSubtitle: 'Eine quelloffene Office-Suite',
@@ -3811,6 +3825,8 @@ export const strings = {
     tabList: 'Todas las pestañas',
     appMenu: 'Menú',
     newTab: 'Nueva pestaña',
+    splitHintRight: 'Dividir a la derecha',
+    splitHintBottom: 'Dividir abajo',
     // First-run onboarding
     onbTitle1: 'Bienvenido a GenOffice',
     onbWelcomeSubtitle: 'Una suite ofimática de código abierto',
@@ -4288,6 +4304,8 @@ export const strings = {
     tabList: 'แท็บทั้งหมด',
     appMenu: 'เมนู',
     newTab: 'แท็บใหม่',
+    splitHintRight: 'แบ่งไปทางขวา',
+    splitHintBottom: 'แบ่งด้านล่าง',
     // First-run onboarding
     onbTitle1: 'ยินดีต้อนรับสู่ GenOffice',
     onbWelcomeSubtitle: 'ชุดโปรแกรมออฟฟิศโอเพนซอร์ส',
@@ -4776,6 +4794,8 @@ export const strings = {
     tabList: 'Semua tab',
     appMenu: 'Menu',
     newTab: 'Tab baru',
+    splitHintRight: 'Bagi ke kanan',
+    splitHintBottom: 'Bagi ke bawah',
     // First-run onboarding
     onbTitle1: 'Selamat datang di GenOffice',
     onbWelcomeSubtitle: 'Suite office open source',
@@ -5266,6 +5286,8 @@ export const strings = {
     tabList: 'Все вкладки',
     appMenu: 'Меню',
     newTab: 'Новая вкладка',
+    splitHintRight: 'Разделить справа',
+    splitHintBottom: 'Разделить снизу',
     // First-run onboarding
     onbTitle1: 'Добро пожаловать в GenOffice',
     onbWelcomeSubtitle: 'Офисный пакет с открытым исходным кодом',
@@ -5746,6 +5768,8 @@ export const strings = {
     tabList: 'كل علامات التبويب',
     appMenu: 'القائمة',
     newTab: 'علامة تبويب جديدة',
+    splitHintRight: 'تقسيم إلى اليمين',
+    splitHintBottom: 'تقسيم إلى الأسفل',
     // First-run onboarding
     onbTitle1: 'مرحبًا بك في GenOffice',
     onbWelcomeSubtitle: 'حزمة مكتبية مفتوحة المصدر',
@@ -6230,6 +6254,8 @@ export const strings = {
     tabList: 'Todas as guias',
     appMenu: 'Menu',
     newTab: 'Nova guia',
+    splitHintRight: 'Dividir à direita',
+    splitHintBottom: 'Dividir abaixo',
     // First-run onboarding
     onbTitle1: 'Bem-vindo ao GenOffice',
     onbWelcomeSubtitle: 'Uma suíte de escritório de código aberto',
@@ -6714,6 +6740,8 @@ export const strings = {
     tabList: 'Tutte le schede',
     appMenu: 'Menu',
     newTab: 'Nuova scheda',
+    splitHintRight: 'Dividi a destra',
+    splitHintBottom: 'Dividi in basso',
     // First-run onboarding
     onbTitle1: 'Benvenuto in GenOffice',
     onbWelcomeSubtitle: 'Una suite per ufficio open source',
@@ -7194,6 +7222,8 @@ export const strings = {
     tabList: 'Wszystkie karty',
     appMenu: 'Menu',
     newTab: 'Nowa karta',
+    splitHintRight: 'Podziel w prawo',
+    splitHintBottom: 'Podziel w dół',
     // First-run onboarding
     onbTitle1: 'Witamy w GenOffice',
     onbWelcomeSubtitle: 'Otwartoźródłowy pakiet biurowy',
@@ -7633,6 +7663,8 @@ export const strings = {
     tabList: 'Všechny karty',
     appMenu: 'Nabídka',
     newTab: 'Nová karta',
+    splitHintRight: 'Rozdělit vpravo',
+    splitHintBottom: 'Rozdělit dole',
     // First-run onboarding
     onbTitle1: 'Vítejte v GenOffice',
     onbWelcomeSubtitle: 'Kancelářský balík s otevřeným zdrojovým kódem',
@@ -8152,6 +8184,8 @@ export const strings = {
     tabList: 'Alle tabbladen',
     appMenu: 'Menu',
     newTab: 'Nieuw tabblad',
+    splitHintRight: 'Rechts splitsen',
+    splitHintBottom: 'Onder splitsen',
     // First-run onboarding
     onbTitle1: 'Welkom bij GenOffice',
     onbWelcomeSubtitle: 'Een opensource-officesuite',
@@ -8637,6 +8671,8 @@ export const strings = {
     tabList: 'Semua tab',
     appMenu: 'Menu',
     newTab: 'Tab baharu',
+    splitHintRight: 'Bahagi ke kanan',
+    splitHintBottom: 'Bahagi ke bawah',
     // First-run onboarding
     onbTitle1: 'Selamat datang ke GenOffice',
     onbWelcomeSubtitle: 'Suite pejabat sumber terbuka',
@@ -9102,6 +9138,8 @@ export const strings = {
     tabList: 'כל הכרטיסיות',
     appMenu: 'תפריט',
     newTab: 'כרטיסייה חדשה',
+    splitHintRight: 'פצל לימין',
+    splitHintBottom: 'פצל למטה',
     // First-run onboarding
     onbTitle1: 'ברוכים הבאים ל-GenOffice',
     onbWelcomeSubtitle: 'חבילת משרד בקוד פתוח',
@@ -9574,6 +9612,8 @@ export const strings = {
     tabList: 'सभी टैब',
     appMenu: 'मेनू',
     newTab: 'नया टैब',
+    splitHintRight: 'दाईं ओर विभाजित करें',
+    splitHintBottom: 'नीचे विभाजित करें',
     // First-run onboarding
     onbTitle1: 'GenOffice में आपका स्वागत है',
     onbWelcomeSubtitle: 'ओपन-सोर्स ऑफ़िस सुइट',
@@ -10027,6 +10067,8 @@ export const strings = {
     tabList: '全部分頁',
     appMenu: '選單',
     newTab: '新分頁',
+    splitHintRight: '向右分割',
+    splitHintBottom: '向下分割',
     // First-run onboarding
     onbTitle1: '歡迎使用 GenOffice',
     onbWelcomeSubtitle: '開源辦公套件',
