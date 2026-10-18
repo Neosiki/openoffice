@@ -43,3 +43,21 @@ Setiap tab editor mempunyai bar alat di bahagian atas, dan susun aturnya berbeza
 ## Tab Laman Utama
 
 Tab Laman Utama, paling kiri, tidak boleh ditutup. Untuk kembali ke sana dari mana-mana editor, klik tab itu atau gunakan Fail ▸ **Kembali ke Laman Utama**.
+
+## Paparan terpecah: dua anak tetingkap
+
+**Seret tab ke tepi kanan tetingkap**: tab mengikut sebagai salinan kecil terapung, petunjuk "Pecah di sini" muncul dekat tepi, dan apabila dilepaskan terhasil dua anak tetingkap bersebelahan. Lepaskan di tepi bawah untuk dua anak tetingkap bertindan. Menu klik kanan tab menawarkan perkara sama dengan **Pecah ke Kanan** dan **Pecah ke Bawah**, serta **Batal Pecah** pada tab yang berada dalam anak tetingkap.
+
+- Tab yang diseret masuk ke anak tetingkap tempat anda melepaskannya; anak tetingkap satu lagi mengekalkan dokumen yang baru anda lihat.
+- Jika hanya satu dokumen dibuka, salinan dokumen yang sama diletakkan dalam kedua-dua anak tetingkap, supaya permulaan dan penghujungnya dapat dilihat serentak. Dokumen baharu yang belum disimpan juga boleh dipecahkan.
+- Seret **pembahagi** antara kedua-dua anak tetingkap untuk mengubah nisbahnya, klik dua kali untuk bahagi sama rata, atau tolak sehingga hujung untuk menutup anak tetingkap itu; dokumen kekal terbuka sebagai tab.
+
+## Satu tetingkap AI yang mengikut fokus
+
+- Hanya satu tetingkap AI kelihatan. Anak tetingkap tempat anda bekerja memaparkan tetingkapnya; tetingkap anak tetingkap satu lagi melipat menjadi rel, dan mengklik sesuatu anak tetingkap membawa tetingkap AI-nya ke hadapan.
+- Semasa terlipat, perbualan anak tetingkap itu dan kerja AI yang sedang berjalan kekal hidup. Perbualan disimpan bagi setiap dokumen.
+- **Dua salinan dokumen yang sama**: selepas menyimpan dalam satu anak tetingkap, menyimpan dari anak tetingkap satu lagi akan bertanya dahulu "Dokumen ini berubah di tempat lain". Manakala simpan automatik menunggu dengan senyap.
+- **Menjalankan semula aplikasi tanpa fail** mengembalikan pasangan dokumen terpecah terakhir tepat seperti sebelumnya; menjalankannya dengan fail hanya membuka fail itu.
+- Tab Utama, Bantuan dan Persembahan (pratonton) tidak boleh masuk ke anak tetingkap; semasa salah satunya dibuka, kedua-dua anak tetingkap tersembunyi seketika dan kembali apabila anda kembali ke tab dokumen.
+
+Tiga anak tetingkap atau lebih, pemecahan dalam tetingkap yang dipisahkan, dan penyegerakan langsung kedua-dua salinan ditangguhkan dahulu.

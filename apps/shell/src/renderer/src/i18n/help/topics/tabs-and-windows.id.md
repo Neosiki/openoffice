@@ -43,3 +43,21 @@ Setiap tab editor punya satu baris alat di bagian atas (tata letaknya sedikit be
 ## Tab Beranda
 
 Tab Beranda paling kiri tidak bisa ditutup; untuk kembali dari editor mana pun, klik tab itu atau gunakan File ▸ **Kembali ke Beranda**.
+
+## Tampilan terbagi: dua panel
+
+**Seret tab ke tepi kanan jendela**: tab mengikuti sebagai salinan kecil yang melayang, petunjuk "Bagi di sini" muncul di dekat tepi, dan saat dilepas terbentuk dua panel berdampingan. Lepaskan di tepi bawah untuk dua panel bertumpuk. Menu klik kanan tab menawarkan hal yang sama dengan **Bagi ke Kanan** dan **Bagi ke Bawah**, dan **Batalkan Bagi** pada tab yang berada di panel.
+
+- Tab yang diseret masuk ke panel tempat Anda melepaskannya; panel lain mempertahankan dokumen yang baru saja Anda lihat.
+- Jika hanya ada satu dokumen terbuka, salinan dokumen yang sama diletakkan di kedua panel, agar awal dan akhir dokumen bisa dilihat bersamaan. Dokumen baru yang belum disimpan juga bisa dibagi.
+- Seret **pembatas** di antara kedua panel untuk mengubah rasionya, klik ganda untuk membagi rata, atau dorong sampai ujung untuk menutup panel itu; dokumen tetap terbuka sebagai tab.
+
+## Satu jendela AI yang mengikuti fokus
+
+- Hanya satu jendela AI yang terlihat. Panel tempat Anda bekerja menampilkan jendela AI-nya; jendela panel lain melipat menjadi rel, dan mengklik sebuah panel memunculkan jendela AI panel itu.
+- Selagi terlipat, percakapan panel itu dan pekerjaan AI yang sedang berjalan tetap hidup. Percakapan disimpan per dokumen.
+- **Dua salinan dokumen yang sama**: setelah menyimpan di satu panel, menyimpan dari panel lain lebih dulu menanyakan "Dokumen ini berubah di tempat lain". Sementara simpan otomatis menunggu dengan tenang.
+- **Menjalankan ulang aplikasi tanpa file** mengembalikan pasangan dokumen terbagi terakhir persis seperti sebelumnya; menjalankannya dengan file hanya membuka file itu.
+- Tab Beranda, Bantuan, dan Presentasi (pratinjau) tidak bisa masuk ke panel; selagi salah satunya terbuka, kedua panel bersembunyi sebentar dan kembali saat Anda kembali ke tab dokumen.
+
+Tiga panel atau lebih, pembagian di dalam jendela yang dilepas, dan sinkronisasi langsung kedua salinan ditunda nanti.

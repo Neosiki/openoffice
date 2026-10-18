@@ -43,3 +43,21 @@ Elk editortabblad heeft bovenaan een werkbalk (de precieze indeling verschilt li
 ## Het Start-tabblad
 
 Het meest linkse Start-tabblad kan niet worden gesloten; klik erop of gebruik Bestand ▸ **Terug naar start** om vanuit een willekeurige editor terug te keren.
+
+## Gesplitste weergave: twee deelvensters
+
+**Sleep een tabblad naar de rechterrand van het venster**: het tabblad volgt als een klein zwevend kopietje, bij de rand verschijnt de aanwijzing 'Hier splitsen' en als je het daar neerzet krijg je twee deelvensters naast elkaar. Zet je het op de onderrand neer, dan krijg je twee deelvensters boven elkaar. Het rechtermuisknopmenu van het tabblad biedt hetzelfde met **Rechts splitsen** en **Onder splitsen**, en **Splitsing opheffen** bij een tabblad dat in een deelvenster zit.
+
+- Het gesleepte tabblad komt in het deelvenster waar je het neerzette; het andere deelvenster houdt het document dat je net bekeek.
+- Is er maar één document open, dan komt een kopie van hetzelfde document in beide deelvensters, zodat je begin en eind samen kunt bekijken. Een nieuw document dat nog nooit is opgeslagen kan ook worden gesplitst.
+- Sleep de **scheiding** tussen de deelvensters om hun verhouding te wijzigen, dubbelklik erop voor half om half, of duw hem naar een uiteinde om dat deelvenster te sluiten; het document blijft open als tabblad.
+
+## Eén AI-venster dat de focus volgt
+
+- Er is maar één AI-venster te zien. Het deelvenster waarin je werkt toont het zijne; dat van het andere deelvenster klapt in tot een rail, en door op een deelvenster te klikken komt het bijbehorende AI-venster naar voren.
+- Terwijl het is ingeklapt, blijven het gesprek van dat deelvenster en lopend AI-werk leven. Gesprekken worden per document bewaard.
+- **Twee kopieën van hetzelfde document**: na opslaan in het ene deelvenster vraagt opslaan vanuit het andere eerst 'Dit document is elders gewijzigd'. Automatisch opslaan wacht stil.
+- **De app opnieuw starten zonder bestand** brengt het laatst gesplitste documentenpaar precies zo terug als het was; met een bestand erbij wordt alleen dat bestand geopend.
+- De tabbladen Start, Help en Presentatie (voorbeeld) kunnen niet in een deelvenster. Zolang een daarvan open is, verbergen de twee deelvensters zich even en komen ze terug zodra je weer op een documenttabblad bent.
+
+Drie of meer deelvensters, splitsen in een losgekoppeld venster en het live synchroniseren van de twee kopieën blijven voor later.

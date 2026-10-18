@@ -43,3 +43,21 @@ Chaque onglet d’éditeur a une barre d’outils en haut (la disposition exacte
 ## L’onglet Accueil
 
 L’onglet Accueil le plus à gauche ne peut pas être fermé ; pour revenir d’un éditeur, cliquez dessus ou utilisez Fichier ▸ **Retour à l’accueil**.
+
+## Affichage scindé : deux volets
+
+**Faites glisser un onglet vers le bord droit de la fenêtre** : l’onglet suit comme une petite copie flottante, l’indication « Scinder ici » apparaît près du bord, et le déposer donne deux volets côte à côte. Déposez-le sur le bord inférieur pour deux volets empilés. Le menu contextuel de l’onglet fait de même avec **Scinder à droite** et **Scinder en bas**, et propose **Annuler la scission** sur un onglet qui se trouve dans un volet.
+
+- L’onglet déposé va dans le volet où vous l’avez lâché ; l’autre volet garde le document que vous consultiez juste avant.
+- S’il n’y a qu’un seul document ouvert, une copie du même document est placée dans les deux volets, pour regarder le début et la fin ensemble. Un nouveau document jamais enregistré se scinde aussi.
+- Faites glisser le **séparateur** entre les volets pour changer leur part, double-cliquez dessus pour un partage égal, ou poussez-le jusqu’à un bord pour fermer ce volet ; le document reste ouvert comme onglet.
+
+## Une seule fenêtre IA, qui suit le focus
+
+- Une seule fenêtre IA est visible. Le volet sur lequel vous travaillez montre la sienne ; celle de l’autre volet se replie en un rail, et un clic sur un volet ramène sa fenêtre IA au premier plan.
+- Pendant qu’elle est repliée, la conversation de ce volet et les travaux IA en cours restent vivants. Les conversations sont conservées par document.
+- **Deux copies du même document** : après un enregistrement dans un volet, enregistrer depuis l’autre demande d’abord « Ce document a été modifié ailleurs ». L’enregistrement automatique, lui, attend silencieusement.
+- **Relancer l’application sans fichier** ramène la dernière paire de documents scindés exactement comme elle était ; la lancer avec un fichier n’ouvre que ce fichier.
+- Les onglets Accueil, Aide et Présentation (aperçu) ne peuvent pas entrer dans un volet ; tant qu’un de ces onglets est ouvert, les deux volets se cachent un moment et reviennent dès que vous retournez à un onglet de document.
+
+Trois volets ou plus, la scission dans une fenêtre détachée et la synchronisation en direct des deux copies sont remises à plus tard.
