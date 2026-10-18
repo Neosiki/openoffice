@@ -27,6 +27,8 @@
 - **AI에게 보내는 화면 시험은 진짜 프로그램에 닿을 수 있다.** 구독이 연결된 PC에서는 보내기 문지기가 통과해 시험이 실제 Claude를 부르고 한도를 쓴다. 연결이 없는 PC(CI)에서는 문지기가 막아 보낸 말이 화면에 나오지 않고 시험이 실패한다. → 보내는 시험은 편집기 화면이 뜬 뒤 `e2e/helpers.ts`의 `stubAiReady(app)`을 부른다. 구독 상태와 `ai:stream`을 가짜로 바꾸고 열린 탭에 그 상태를 알린다.
 - **화면 시험의 제품 이름과 기본 저장 폴더는 `packages/i18n/src/product.ts`에서 읽는다.** 화면은 사전의 `GenOffice`를 제품 이름으로 바꿔 보이고, 기본 저장 폴더는 `Documents/<제품 이름>`이다. 홈의 새 문서 카드는 순번이 자주 밀리므로(한글, PDF 도구 카드가 더해졌다) 순번 대신 글자나 속성으로 집는다.
 - **실제 화면 확인은 스크립트로 한다.** `e2e/helpers.ts`의 `launchShell`이 빌드된 껍데기 앱을 임시 데이터 폴더로 띄운다. 구독에 로그인된 PC에서는 첫 연결 안내가 설정과 질문 창을 덮으므로, 기본으로 "안내를 봤다"는 설정을 심는다(`subscriptionNoticeSeen: false`로 끌 수 있다). 편집기 화면은 `waitForPageWithUrl(app, '://docs/')`로 잡는다.
+- **한 화면 시험이 통째로 시간 초과로 죽어도 다시 돌려 보라.** vite의 변환 캐시가 찬 상태에서 `apps/sheets/tests/table-design.test.ts` 같은 시험이 기본 5초를 넘겨 `Test timed out`으로 떨어진다(문서화된 부하성 실패). 단독 재실행이나 캐시가 데워진 뒤에는 통과한다.
+- **화면 시험(e2e) 전체는 Windows에서 초록이 아니다.** 경로 구분자를 `/`로 가정하는 시험(`text-source` 등)과 화면 캡처·타이밍에 민감한 시험, 이 PC의 실제 설정을 읽는 시험(CLI 계열)이 **손대지 않은 검사본에서도 똑같이** 실패한다. 판정은 항상 "손대지 않은 사본에서도 실패하는가"로 한다. 같은 시험 파일 묶음을 원본 검사본에서 한 번 돌려 실패 목록을 견주면 된다.
 
 ## 설정 파일
 
@@ -96,6 +98,8 @@
 
 - **작업 사본을 지웠더니 본 저장소의 `node_modules`가 비었다.** 의존성을 연결(정션)로 나눠 쓰는 작업 사본을 `git worktree remove`로 지우면, 삭제가 연결을 따라가 본 설치를 지운다. → 지우기 전에 연결부터 끊는다. 지운 뒤 `node_modules/.bin`의 항목 수가 그대로인지 확인한다.
 - 연결로 나눠 쓰는 사본 안에서는 `npm install`·`npm ci`를 돌리지 않는다. 같은 이유다.
+- **작업 사본에서 한글 편집기 짓기가 실패한다.** `apps/hwp/scripts/build-studio.mjs`는 rhwp 스튜디오를 `apps/hwp/node_modules/.cache`에 받아 짓는데, 사본의 `node_modules`는 본 검사본을 가리키는 연결이라 캐시 경로가 사본 밖으로 풀린다. vite가 결과 이름에 `../../…/openoffice/…` 같은 상대 경로를 만들려다 "must be strings that are neither absolute nor relative paths"로 멈춘다. → **이미 지어 둔 검사본의 결과물**(`apps/hwp/public/studio`)을 사본에 복사해 온다. 스탬프(스크립트·플러그인 해시)가 같으면 다시 짓지 않는다.
+- **작업 사본에서 마크다운 시험이 통째로 죽는다.** `Denied ID: …/node_modules/katex/dist/katex.min.css?inline` — vitest의 파일 접근 허용은 실제 경로로 따지는데, 연결된 `node_modules`가 사본 밖으로 풀려서다. → `node_modules/katex`처럼 `?inline`으로 불러오는 패키지는 연결 대신 실제 폴더로 복사한다.
 
 ## 화면
 
