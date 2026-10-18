@@ -6,6 +6,7 @@
 
 - 앱의 수명 주기(`src/main/index.ts`): 단일 인스턴스 잠금, userData 위치, 확장자에 따른 파일 라우팅, 탭별 메뉴 전환, 종료 처리, `--headless-export` 진입.
 - 탭과 창: `src/main/tab-manager.ts`, 떼어 낸 창(`detached-windows.ts`), 닫기 확인(`window-close-guard.ts`), 렌더러 자원 감시(`renderer-watchdog.ts`), 닫은 워드 탭·창의 렌더러 프로세스 끝내기(`renderer-disposal.ts`), 크래시 기록과 알림(`crash-log.ts`, `crash-watch.ts`).
+- 화면 나누기(분할 뷰, 결정 0037): 탭 관리자의 두 칸(가장자리로 끌어다 놓기와 오른쪽 클릭 메뉴로 나누기·풀기, 구분선으로 비율 바꾸기·반반·한쪽 닫기), 초점이 있는 칸에 따르는 AI 창 하나의 배선, 나눈 모습의 기억과 파일 지정 없는 실행에서의 복원(`src/main/split-memory.ts`). 화면과 뒷단이 주고받는 계약은 `src/shared/split-view-api.ts`, 껍데기와 편집기 화면 사이의 다리는 `packages/electron-utils/src/split-pane-bridge.ts`가 정한다.
 - 홈 화면과 설정(`src/renderer/src/`): `Home.tsx`, `Onboarding.tsx`, `SettingsModal.tsx`, AI 설정 `SettingsAiSection.tsx`·`settings-ai.ts`, 통합 탭 `IntegrationsPane.tsx`, 별표 파일에 묻는 `KbAskPanel.tsx`, 앱 안 도움말(`i18n/help/`).
 - 의견 보내기(결정 0036, `src/main/feedback.ts`): 도움말 메뉴와 설정 → 정보의 같은 입구 하나. 제품 버전·운영체제·화면 언어를 대화 상자에 보여 주고 클립보드에 복사한 뒤 Google 설문을 브라우저로 연다. 문구는 `feedback.ts`의 21개 언어 표, 모든 탭의 도움말 메뉴에 끼워 넣는 일은 `withHelpItems`, 채널은 `home:open-feedback-survey`다.
 - 파일 색인과 지식 기반(`src/main/file-index/`, `knowledge-base.ts`), 최근 파일, 폴더 트리. 홈의 질문을 별표 그룹 하나로 좁히는 일(`knowledge-base.ts`의 `KbRunScopes`, `kb:open-scope`·`kb:close-scope`).
@@ -70,6 +71,10 @@
 - **PDF 도구 창은 경로를 화면에 넘기지 않는다.** 입력은 메인의 열기 대화 상자로만 고르고 화면에는 불투명한 id만 준다. 결과는 메인의 저장 대화 상자가 고른 곳에만 쓰며, 원본 파일이나 저장하지 않은 변경이 있는 채 열린 파일에는 쓰지 않는다. AI와 네트워크를 쓰지 않고, 처리는 편집기의 함수(`apps/pdf/src/main`의 `save-pdf.ts`, `images-to-pdf.ts`, `print-prep.ts`, `overlay.ts`, `annot-strip.ts`, `compress.ts`, `read-text.ts`)만 부른다. 용량 줄이기의 그림 처리는 `image-recode.ts`(크로미움 `nativeImage`)가 메인에서 한 장씩 한다(작업 프로세스에는 `nativeImage`가 없다). 빈 페이지 찾기는 페이지를 모두 그리므로 메인에서 돌리지 않고, `pdf-structure-ipc.ts`의 `runWindowJob`으로 구조 작업 프로세스(작업 종류 `blankPages`)에서 돌린다. 그 창이 닫히면 작업도 끝난다. 지우기는 그 찾기가 보여 준 페이지만 받는다. 암호 걸기·풀기와 파일 복구도 같은 작업 프로세스에서 돈다(작업 종류 `encrypt`, `decrypt`, `repair`, `tools.ts`의 `jobFor`). 암호는 그 작업에만 실어 보내고 로그에 쓰지 않으며, 결과는 메인이 다시 읽어 약속대로(암호를 묻는지, 다른 도구가 읽는지)인지 확인한 뒤에 저장 창을 띄운다. 암호가 걸린 PDF는 암호 풀기에만, pdf-lib가 읽지 못하는 PDF는 파일 복구에만 고를 수 있다(`toolAccepts`, 창의 `pagesFor`). PDF 편집기 리본의 "PDF 도구" 메뉴는 `configurePdfRuntime`의 `openPdfTools` → `openPdfToolsWithFile`로 들어온다. 파일은 대화 상자로 고른 것과 같은 검사(`inputsFrom`)를 거치고, 창은 기다리는 작업을 한 번만 가져간다(`pdf-tools:take-start`). 배경 겹치기의 배경 PDF는 입력 목록과 따로 고른 id(`backgroundId`)로 받고, 원본 검사에 함께 든다. 그림을 받는 도구(이미지로 PDF 만들기)에는 그림으로 고른 입력만, PDF 도구에는 PDF로 고른 입력만 들어간다(`input.kind`). 결과 열기는 `openGeneratedDocument`(같은 경로의 PDF 탭은 다시 읽음), 편집기로 넘기는 카드는 `openDocumentPath`(열린 탭은 앞으로만)를 쓴다.
 - 보관소의 "모두 지우기"는 설정 화면에서 확인을 받은 뒤에만 부른다. 도는 작업이 있는지는 보지 않는다(그 작업은 이후 항목을 다시 쓴다).
 - **문서 고르기 창은 경로를 화면에 넘기지 않는다.** 창과 껍데기 앱은 식별자만 주고받고, 껍데기 앱은 방금 창에 건넨 목록에 있는 식별자일 때만(정해진 길이 상한 안에서) 받아들여 그 경로를 편집기로 돌려준다. 목록을 만들 때도 형식과 크기만 보고 파일 내용은 읽지 않는다. 고르기 창은 한 번에 하나이고, 창을 닫으면 취소다. 새 창을 이 앱에 더하면 `electron.vite.config.ts`의 preload 목록과 renderer 입력 목록 양쪽에 넣는다(한쪽만 넣으면 빈 화면이 뜬다).
+
+- **화면 나누기는 칸이 정확히 둘일 때만이다.** 세 칸 이상을 만드는 길과 떼어 낸 창 안에서 나누는 길을 열지 않는다(결정 0037). 홈·도움말·발표(미리보기) 탭은 칸에 들어가지 못한다.
+- **같은 문서가 두 칸에 있을 때 저장은 확인을 받은 뒤에만 쓴다.** 한쪽에서 저장한 뒤 다른 칸에서 또 저장하려 하면 "이 문서가 다른 곳에서 바뀌었습니다"를 먼저 묻고, 사람이 확인한 뒤에만 디스크에 쓴다. 자동 저장은 확인 없이 조용히 미룬다.
+- **나눔 기억은 망가진 값을 무시하고, 나눔을 풀면 지운다.** 기억을 읽어 복원할 때 값이 어긋나 있으면 그 값으로 나누지 않는다. 나눔을 풀면 그 기억을 지운다.
 
 - **에이전트 세션은 사람이 시작한 창에만 속한다.** 채널은 그 창의 webContents만 받고, 세션은 그 창이 닫히면 끝난다. 경고 확인과 폴더 검사와 연결 확인은 화면이 아니라 뒷단이 시작할 때마다 다시 한다. 창에는 오류 문장을 보내지 않고 종류만 보낸다(`agentEventView`).
 - **세션 MCP 서버의 도구는 `AGENT_MCP_TOOL_NAMES`뿐이다.** 탭 닫기, 자체 편집 세션, 창 없는 파일 만들기를 더하지 않는다. 읽기는 가린 자리를 `{{이름}}`으로 내보내고(`withholdingSlides`, `withholdingOpenDocuments`), 가린 내용이 있는 PPT는 고치지 않는다. 연동의 앱 안 MCP 서버는 출력이 바깥에 약속된 것이라 이 처리를 하지 않는다(결정 0016).

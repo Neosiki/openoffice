@@ -152,6 +152,12 @@ export interface SaveMindmapRequest {
   mode: SaveMode
   /** file name (no extension) offered by the save dialog of an untitled map */
   defaultName?: string
+  /**
+   * an automatic save (the 30-second timer or a window blur): while the same
+   * map is open in another pane it defers silently instead of asking to
+   * overwrite that pane's bytes (decision 0036)
+   */
+  auto?: boolean
 }
 
 export type SaveMindmapResult =

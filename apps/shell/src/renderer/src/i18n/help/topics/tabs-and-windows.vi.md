@@ -43,3 +43,21 @@ Mỗi thẻ trình soạn thảo có một dải công cụ ở trên (bố cụ
 ## Thẻ Trang chủ
 
 Thẻ Trang chủ ngoài cùng bên trái không thể đóng; muốn quay về từ bất kỳ trình soạn thảo nào, hãy nhấp vào nó hoặc dùng File ▸ **Quay lại Trang chủ**.
+
+## Chế độ chia đôi: hai khung
+
+**Kéo một thẻ đến mép phải của cửa sổ**: thẻ đi theo như một bản sao nhỏ nổi, gần mép xuất hiện gợi ý "Chia tại đây", và khi thả ra bạn có hai khung cạnh nhau. Thả ở mép dưới thì có hai khung xếp trên dưới. Menu chuột phải của thẻ cũng làm được điều tương tự với **Chia sang phải** và **Chia xuống dưới**, và thẻ nằm trong khung có **Bỏ chia**.
+
+- Thẻ được kéo sẽ vào khung mà bạn thả nó xuống; khung còn lại giữ tài liệu bạn vừa xem lúc trước.
+- Nếu chỉ có một tài liệu đang mở, một bản sao của chính tài liệu đó được đặt vào cả hai khung, để bạn xem phần đầu và phần cuối cùng lúc. Tài liệu mới chưa lưu cũng chia được.
+- Kéo **đường phân cách** giữa hai khung để đổi tỉ lệ, nháy đúp để chia đôi, hoặc đẩy đến hết một bên để đóng khung đó; tài liệu vẫn mở dưới dạng thẻ.
+
+## Một cửa sổ AI đi theo tiêu điểm
+
+- Chỉ một cửa sổ AI hiện ra. Khung bạn đang làm việc hiển thị cửa sổ của nó; cửa sổ của khung kia thu vào thành thanh bên, và nhấn vào khung nào thì cửa sổ AI của khung đó hiện lên.
+- Trong lúc thu gọn, cuộc trò chuyện của khung đó và công việc AI đang chạy vẫn còn sống. Cuộc trò chuyện được lưu theo từng tài liệu.
+- **Hai bản sao của cùng một tài liệu**: sau khi lưu ở một khung, lưu từ khung kia sẽ hỏi trước "Tài liệu này đã thay đổi ở nơi khác". Còn tự động lưu thì lặng lẽ chờ.
+- **Mở lại ứng dụng không kèm tệp** sẽ đưa cặp tài liệu chia đôi lần trước trở lại đúng như cũ; mở kèm tệp thì chỉ mở tệp đó.
+- Thẻ Trang chủ, Trợ giúp và Trình bày (xem trước) không vào được khung; trong lúc một thẻ như vậy đang mở, hai khung tạm ẩn đi và trở lại khi bạn quay về thẻ tài liệu.
+
+Ba khung trở lên, chia ngay trong cửa sổ đã tách ra, và đồng bộ trực tiếp hai bản sao để sau.

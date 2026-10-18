@@ -5,15 +5,19 @@ import { BrowserWindow, WebContentsView, app, dialog, ipcMain, shell } from 'ele
 import type { WebContents } from 'electron'
 import {
   configuredDefaultSaveDir,
+  confirmOverwriteIfConflicted,
   contextMenuLabels,
   installContextMenu,
   installNavigationGuard,
   installRendererProtocol,
+  recordDiskState,
   registerRendererScheme,
   rendererUrl,
   safeExternalUrl,
+  shouldDeferAutoSave,
   showSaveDialogWithMemory,
 } from '@genoffice/electron-utils'
+import type { SaveDiskState } from '@genoffice/electron-utils'
 import { hwpToText } from '@genoffice/file-parse'
 import { getUiLang } from '@genoffice/i18n'
 import { registerHwpAttachmentIpc } from './attachments-ipc'
@@ -83,6 +87,29 @@ const fieldKindsByWc = new Map<number, FieldKinds>()
 const trackedByWc = new Set<number>()
 /** Views whose file had tracked changes, opened without them; see tracked-changes.ts */
 const trackingDroppedByWc = new Set<number>()
+/**
+ * Disk snapshots per view: what each copy last read or wrote of a path. A save
+ * from a split-pane copy compares its record with the file on disk to tell
+ * whether a sibling copy changed it (decision 0036, see save-conflict in
+ * packages/electron-utils).
+ */
+const diskStatesByWc = new Map<number, Map<string, SaveDiskState>>()
+
+/** Why a save stood down: the file moved on disk after this copy read or wrote it. */
+const EXTERNAL_MODIFIED = 'hwp: external-modified'
+
+function recordedDiskState(wcId: number, path: string): SaveDiskState | undefined {
+  return diskStatesByWc.get(wcId)?.get(path)
+}
+
+/** Record what the file holds now; an unreadable file leaves no record and no conflict. */
+async function rememberDiskState(wcId: number, path: string): Promise<void> {
+  const state = await recordDiskState(path)
+  if (!state) return
+  const states = diskStatesByWc.get(wcId) ?? new Map<string, SaveDiskState>()
+  states.set(path, state)
+  diskStatesByWc.set(wcId, states)
+}
 
 /** Fired after a save lands on a NEW path (Save As); the shell syncs tab title, recents, projects */
 let fileSavedHook: ((wc: WebContents, path: string) => void) | null = null
@@ -102,6 +129,13 @@ export function hwpFileRenamed(contents: WebContents, oldPath: string, newPath: 
   if (openPathByWc.get(wcId) === oldPath) openPathByWc.set(wcId, newPath)
   const allowed = allowedByWc.get(wcId)
   if (allowed?.has(oldPath)) allowed.add(newPath)
+  // the renamed file is the same bytes: the recorded state follows the path
+  const states = diskStatesByWc.get(wcId)
+  const recorded = states?.get(oldPath)
+  if (states && recorded) {
+    states.delete(oldPath)
+    states.set(newPath, recorded)
+  }
 }
 
 /**
@@ -272,6 +306,7 @@ function registerHwpIpc(): void {
     let bytes: Uint8Array = await readFile(path)
     // the document the view holds from now on is this file: what is kept follows it
     const wcId = e.sender.id
+    await rememberDiskState(wcId, path)
     trackedByWc.delete(wcId)
     trackingDroppedByWc.delete(wcId)
     if (bytesMatchFormat(bytes, 'hwp') && hasTrackedChanges(bytes)) {
@@ -397,7 +432,7 @@ function registerHwpIpc(): void {
 
   ipcMain.handle(
     HWP_CHANNELS.commitSave,
-    async (e, data: unknown, tabs: unknown): Promise<CommitSaveResult> => {
+    async (e, data: unknown, tabs: unknown, auto?: unknown): Promise<CommitSaveResult> => {
       const wcId = e.sender.id
       const pending = pendingSaveByWc.get(wcId)
       pendingSaveByWc.delete(wcId)
@@ -414,6 +449,29 @@ function registerHwpIpc(): void {
       }
       try {
         const target = pending.path
+        // split-pane copy pair: when a sibling copy changed the file after this copy
+        // read or wrote it, a manual save asks before overwriting and an automatic one
+        // stands down quietly; a file open nowhere else saves exactly as before
+        // (decision 0036). This runs before the backup and the write, so neither
+        // happens when the save is declined.
+        const recorded = recordedDiskState(wcId, target)
+        // today only tests pass auto: HWP has no autosave yet, so every real
+        // save is manual; a future autosave must send the flag through commit-save
+        if (auto === true) {
+          if (await shouldDeferAutoSave(target, recorded)) {
+            return done({ ok: false, error: EXTERNAL_MODIFIED })
+          }
+        } else {
+          const parent =
+            BrowserWindow.fromWebContents(e.sender) ?? BrowserWindow.getFocusedWindow() ?? null
+          const verdict = await confirmOverwriteIfConflicted({
+            parent,
+            path: target,
+            recorded,
+            lang: getUiLang(),
+          })
+          if (verdict === 'cancel') return done({ ok: false, error: EXTERNAL_MODIFIED })
+        }
         let bytes = data
         // the tabs first: their places were found in the engine's bytes, and putting the
         // tails back leaves the body of each section as it is
@@ -439,6 +497,7 @@ function registerHwpIpc(): void {
           await copyFile(target, backupPath)
         }
         await atomicWriteFile(target, Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength))
+        await rememberDiskState(wcId, target)
         written.add(target)
         writtenByWc.set(wcId, written)
         const isNewPath = savePathByWc.get(wcId) !== target
@@ -541,6 +600,7 @@ function grantAndTrack(wc: WebContents, openPath?: string | null): void {
     fieldKindsByWc.delete(wcId)
     trackedByWc.delete(wcId)
     trackingDroppedByWc.delete(wcId)
+    diskStatesByWc.delete(wcId)
     closeSaveWaiters.get(wcId)?.(false)
     closeSaveWaiters.delete(wcId)
     settleSave(wcId, false)

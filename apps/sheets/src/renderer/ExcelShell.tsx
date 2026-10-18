@@ -35,6 +35,7 @@ import {
   UndoIcon,
 } from './ribbon-icons'
 import { sheetContextMenuAction } from './sheet-context-menu'
+import { useAiDock } from './ai/use-ai-dock'
 
 import { ColorDropdown } from './ColorDropdown'
 import { FormatCellsDialog } from './FormatCellsDialog'
@@ -564,6 +565,9 @@ export function ExcelShell({
   useEffect(() => {
     rememberAiPanelOpen('ai-sheets-show-ai', isCopilotOpen)
   }, [isCopilotOpen])
+  // Split panes (decision 0036): as the secondary pane the dock is forced to
+  // the rail, and the rail's click asks the shell to focus this pane first.
+  const aiDock = useAiDock(isCopilotOpen, setIsCopilotOpen)
   const [showFormatCells, setShowFormatCells] = useState(false)
   const [axisSizeTarget, setAxisSizeTarget] = useState<'row' | 'col' | null>(null)
   const [showLinkDialog, setShowLinkDialog] = useState(false)
@@ -833,7 +837,7 @@ export function ExcelShell({
 
   return (
     <main
-      className={`app-shell ${isCopilotOpen ? '' : 'copilot-collapsed'}`}
+      className={`app-shell ${aiDock.open ? '' : 'copilot-collapsed'}`}
       inert={openingWorkbook}
       aria-busy={openingWorkbook}
     >
@@ -947,7 +951,7 @@ export function ExcelShell({
             setIsCopilotOpen(true)
             onSend(nextPrompt)
           }}
-          aiOpen={isCopilotOpen}
+          aiOpen={aiDock.open}
           onAiToggle={() => setIsCopilotOpen((open) => !open)}
         />
       </header>
@@ -955,7 +959,7 @@ export function ExcelShell({
       {/* AI panel docks on the left, full height under the ribbon (unified with docs) */}
       <div className="sheet-body">
         <AiChatPanel
-          isOpen={isCopilotOpen}
+          isOpen={aiDock.open}
           hasContent={sheetHasContent}
           chat={chat}
           {...(historicChat !== undefined ? { historicChat } : {})}
@@ -988,7 +992,7 @@ export function ExcelShell({
           scopeLocked={aiScopeLocked}
           onScopeDismiss={onAiScopeDismiss}
           onCitation={onAiCitation}
-          onExpand={() => setIsCopilotOpen(true)}
+          onExpand={aiDock.onExpand}
           onCollapse={() => setIsCopilotOpen(false)}
         />
         <div className="sheet-main">

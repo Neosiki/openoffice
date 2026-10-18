@@ -82,7 +82,7 @@ const EDITORS: Record<string, Editor> = {
   // no ribbon of its own (the embedded editor brings its chrome): the AI entry is the dock rail
   hwp: {
     panel: 'apps/hwp/src/renderer/ai/AiPanel.tsx',
-    ribbon: 'apps/hwp/src/renderer/App.tsx',
+    ribbon: 'apps/hwp/src/renderer/ai/AiDock.tsx',
     gate: 'apps/hwp/src/renderer/ai/AiPanel.tsx',
     locales: 'apps/hwp/src/renderer/i18n',
     retiredKeys: [],

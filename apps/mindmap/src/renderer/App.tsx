@@ -9,7 +9,7 @@
  * controller's edit functions; this component only wires the screen to them.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useAutoSavePref } from '@genoffice/ui'
+import { useAutoSavePref, useSplitPaneFocusPing } from '@genoffice/ui'
 import type { ThemeId, ViewLayout } from '@genoffice/xmind-engine'
 import { t as translate, useI18n } from './i18n/locale'
 import { mapStrings } from './i18n/map-strings'
@@ -87,6 +87,9 @@ export default function App() {
   const langRef = useRef(lang)
   langRef.current = lang
   statusRef.current = status
+
+  // the shell's split panes: tell it whenever this pane gains focus
+  useSplitPaneFocusPing()
 
   const controller = activeKey ? (controllers.current.get(activeKey) ?? null) : null
 
@@ -294,7 +297,7 @@ export default function App() {
   // ---- saving ----
 
   const doSave = useCallback(
-    async (mode: SaveMode): Promise<boolean> => {
+    async (mode: SaveMode, auto = false): Promise<boolean> => {
       const current = sessionRef.current
       if (statusRef.current !== 'ready' || !current) return false
       // a menu save during an autosave queues behind it instead of being dropped
@@ -308,6 +311,8 @@ export default function App() {
         const result = await window.mindmapApi.save({
           bytes,
           mode,
+          // an automatic save defers to the next manual one while a copy pair holds the map
+          auto,
           // an untitled map is offered its central topic as a name, unless that is still the default one
           defaultName: rootTitle !== translate('centralTopic') ? rootTitle : undefined,
         })
@@ -317,8 +322,12 @@ export default function App() {
           setSaveState(current.dirty ? 'idle' : 'saved')
           return true
         }
-        setSaveState(result.ok ? 'idle' : 'failed')
-        if (!result.ok) console.error('[mindmap] save failed:', result.error)
+        // a sibling copy holding the disk version is not a failure: an
+        // automatic save is deferred silently and a declined overwrite keeps
+        // the map dirty, exactly like the other editors' guard
+        const deferred = !result.ok && result.error === 'external-modified'
+        setSaveState(result.ok || deferred ? 'idle' : 'failed')
+        if (!result.ok && !deferred) console.error('[mindmap] save failed:', result.error)
         return false
       } catch (err) {
         console.error('[mindmap] save failed:', err)
@@ -344,7 +353,7 @@ export default function App() {
       if (onTimer && maps.some((each) => each.editingText)) return
       flushAll()
       if (!sessionRef.current?.dirty) return
-      void doSave('save')
+      void doSave('save', true)
     }
     const onTimer = (): void => tick(true)
     const onBlur = (): void => tick(false)
