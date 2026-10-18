@@ -225,7 +225,10 @@ test.describe('html editor', () => {
 
       const composer = editorPage.locator('.copilot textarea')
       // a pasted bitmap becomes an image attachment chip; sending echoes it on the bubble
-      await expect(editorPage.locator('.copilot .ai-attach-btn')).toBeVisible()
+      // the document- and Drive-attach buttons share the styling class, so name this one
+      await expect(
+        editorPage.locator('.copilot .ai-attach-btn:not(.ai-doc-attach-btn)'),
+      ).toBeVisible()
       await composer.evaluate((ta) => {
         const b64 =
           'iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAEklEQVR4nGP4z8DwHwyBNAMDAB9dB/8dB8xVAAAAAElFTkSuQmCC'
