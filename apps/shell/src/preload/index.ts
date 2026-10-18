@@ -490,6 +490,9 @@ const homeApi: HomeApi = {
   async openGitHubRepo() {
     await ipcRenderer.invoke(HOME_CHANNELS.openGitHubRepo)
   },
+  async openFeedbackSurvey() {
+    await ipcRenderer.invoke(HOME_CHANNELS.openFeedbackSurvey)
+  },
   // AI settings channels are registered once by the shell's aggregated docs handlers
   onAiSettingsChanged(handler) {
     const listener = () => handler()
