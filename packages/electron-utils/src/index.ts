@@ -136,3 +136,13 @@ export {
   templateFontsDir,
   type TemplateFontsHost,
 } from './template-fonts-dir'
+export {
+  confirmOverwriteIfConflicted,
+  isModifiedSince,
+  isPathOpenElsewhere,
+  recordDiskState,
+  setOpenPathProbe,
+  shouldDeferAutoSave,
+  type SaveConflictOptions,
+  type SaveDiskState,
+} from './save-conflict'
