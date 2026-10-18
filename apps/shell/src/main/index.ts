@@ -346,6 +346,13 @@ import { runHeadlessExport, type HeadlessExporters } from './headless-export'
 import { TabManager } from './tab-manager'
 import { configureGenerateWindow } from './generate/generate-window'
 import { configurePdfToolsWindow, openPdfToolsWithFile } from './pdf-tools/pdf-tools-window'
+import {
+  configureQuickLookWindow,
+  notifyQuickLookLangOrThemeChanged,
+  shouldKeepQuickLookInTray,
+  stopQuickLookRuntime,
+} from './quick-look/quick-look-window'
+import { normalizeQuickLookSettings } from '../shared/quick-look-home'
 import { configureAgentWindow, stopAgentSessions } from './agent/agent-window'
 import { startAgentMcpServer } from './agent/agent-mcp'
 import {
@@ -4607,6 +4614,7 @@ function registerHomeIpc(): void {
     buildHomeMenu()
     installDockMenu()
     installBackToHomeItems()
+    notifyQuickLookLangOrThemeChanged()
     for (const wc of webContents.getAllWebContents()) wc.send('app:language-changed', lang)
   })
 
@@ -4644,6 +4652,7 @@ function registerHomeIpc(): void {
     writeAppSetting(APP_SETTINGS_PATH(), 'theme', theme)
     nativeTheme.themeSource = theme
     refreshTitleBarOverlay()
+    notifyQuickLookLangOrThemeChanged()
     for (const wc of webContents.getAllWebContents()) wc.send('app:theme-changed', theme)
   })
 
@@ -6653,6 +6662,31 @@ app.whenReady().then(async () => {
     runJob: runWindowJob,
     cancelJob: cancelWindowJob,
   })
+  configureQuickLookWindow({
+    parentWindow: () => shellWindow,
+    lang: () => currentLang(),
+    theme: () => currentTheme(),
+    trayIcon: () => {
+      try {
+        return menuIcons().home
+      } catch {
+        return null
+      }
+    },
+    readSettings: () => normalizeQuickLookSettings(readAppSettings(APP_SETTINGS_PATH()).quickLook),
+    writeSettings: (next) => writeAppSetting(APP_SETTINGS_PATH(), 'quickLook', next),
+    openInEditor: (filePath) => {
+      revealShellWindow()
+      openDocumentPath(filePath)
+    },
+    showShellWindow: () => {
+      revealShellWindow()
+    },
+    quitApp: () => {
+      stopQuickLookRuntime()
+      app.quit()
+    },
+  })
   // The generate window ("make a new document from these files"): Home's entry
   // points open it; "make" opens a new untitled tab with the request queued
   // for it. A material open with unsaved changes is saved in place through the
@@ -6904,6 +6938,7 @@ app.on('window-all-closed', () => {
   // A headless export destroys its hidden window between documents; only
   // runHeadlessExportEntry decides when that run is over.
   if (headlessArgv.kind !== 'none') return
+  if (shouldKeepQuickLookInTray()) return
   if (process.platform !== 'darwin') app.quit()
 })
 
@@ -6926,6 +6961,7 @@ app.on('will-quit', () => {
   if (ownsOpenDocumentsRegistry) clearOpenDocuments(OPEN_DOCUMENTS_PATH())
   stopAgentSessions()
   driveService?.stop()
+  stopQuickLookRuntime()
   shutdownSubscriptionChildren()
 })
 

@@ -21,7 +21,7 @@ const config = configModule.exports
 // one); mac and Linux carry the full list.
 const fileAssociations: Array<{ ext: string; mimeType?: string }> = config.linux.fileAssociations
 /** launchable extensions build/installer.nsh offers in "Open with" itself */
-const INSTALLER_OPEN_WITH_EXTS: ReadonlySet<string> = new Set(['odt'])
+const INSTALLER_OPEN_WITH_EXTS: ReadonlySet<string> = new Set(['odt', 'hwp', 'hwpx', 'xmind'])
 const installerScript = readFileSync(resolve(import.meta.dirname, '../build/installer.nsh'), 'utf8')
 
 describe('packaged file associations', () => {
@@ -32,8 +32,9 @@ describe('packaged file associations', () => {
   // gap this closes.
   it('advertises every extension the app launches', () => {
     for (const ext of LAUNCHABLE_EXTS) {
-      // .odt is offered by the NSIS script alone (tests/odt-open-with.test.ts):
-      // an association would make the app its default opener on Windows
+      // .odt/.hwp/.hwpx/.xmind are offered by the NSIS script alone
+      // (tests/odt-open-with.test.ts, tests/open-with-icons.test.ts): an
+      // association would make the app their default opener on Windows
       if (INSTALLER_OPEN_WITH_EXTS.has(ext)) continue
       const association = fileAssociations.find((entry) => entry.ext === ext)
       expect(association, `no file association declared for .${ext}`).toBeTruthy()

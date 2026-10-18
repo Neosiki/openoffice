@@ -46,6 +46,13 @@ import { GENERATE_HOME_CHANNELS } from '../shared/generate-home-channels'
 import type { PdfToolsHomeApi } from '../shared/pdf-tools-api'
 import { PDF_TOOLS_HOME_CHANNELS } from '../shared/pdf-tools-home-channels'
 import { AGENT_HOME_OPEN_CHANNEL } from '../shared/agent-home-channel'
+import {
+  QUICK_LOOK_HOME_CHANNELS,
+  normalizeQuickLookSettings,
+  type QuickLookHomeApi,
+  type QuickLookSettings,
+} from '../shared/quick-look-home'
+import type { QuickLookPayload } from '../shared/quick-look-api'
 import type { SubscriptionApi } from '../shared/subscription-api'
 import {
   SHELL_SUBSCRIPTION_CHANNELS,
@@ -778,6 +785,50 @@ contextBridge.exposeInMainWorld('aiOfficeAgent', {
     await ipcRenderer.invoke(AGENT_HOME_OPEN_CHANNEL)
   },
 })
+
+const quickLookHomeApi: QuickLookHomeApi = {
+  async preview(path: string) {
+    if (typeof path !== 'string' || !path.trim()) {
+      return {
+        ok: false,
+        path: '',
+        name: '',
+        ext: '',
+        family: 'unsupported',
+        sizeBytes: 0,
+        mtimeMs: 0,
+        truncated: false,
+        error: 'unreadable',
+      }
+    }
+    const result = (await ipcRenderer.invoke(
+      QUICK_LOOK_HOME_CHANNELS.preview,
+      path,
+    )) as QuickLookPayload | null
+    return (
+      result ?? {
+        ok: false,
+        path,
+        name: path,
+        ext: '',
+        family: 'unsupported',
+        sizeBytes: 0,
+        mtimeMs: 0,
+        truncated: false,
+        error: 'unreadable',
+      }
+    )
+  },
+  async getSettings() {
+    const raw = await ipcRenderer.invoke(QUICK_LOOK_HOME_CHANNELS.getSettings)
+    return normalizeQuickLookSettings(raw)
+  },
+  async setSettings(settings: Partial<QuickLookSettings>) {
+    const raw = await ipcRenderer.invoke(QUICK_LOOK_HOME_CHANNELS.setSettings, settings)
+    return normalizeQuickLookSettings(raw)
+  },
+}
+contextBridge.exposeInMainWorld('aiOfficeQuickLookHome', quickLookHomeApi)
 
 // open documents dragged from the OS anywhere over Home or the tab strip
 installDropOpenBridge()
