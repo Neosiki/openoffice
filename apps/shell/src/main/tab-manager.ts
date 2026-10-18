@@ -126,7 +126,7 @@ export class TabManager {
    *  the path over after mount anyway. */
   private spareSheetsView: WebContentsView | null = null
   private spareSheetsTimer: ReturnType<typeof setTimeout> | null = null
-  /** live two-pane split of this window (decision 0036); null = one visible document */
+  /** live two-pane split of this window (decision 0037); null = one visible document */
   private split: SplitViewState | null = null
   /** the tab shown before the current one: the "other document" a split falls
    *  back to when the dropped tab was itself the visible one */
@@ -699,7 +699,7 @@ export class TabManager {
     this.applyMenuFor(target.present ? 'home' : target.kind)
   }
 
-  // ---- two-pane split (decision 0036) ----
+  // ---- two-pane split (decision 0037) ----
 
   private notifySplitChanged(): void {
     this.onSplitChanged?.(this.split ? { ...this.split } : null)

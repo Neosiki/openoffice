@@ -5175,7 +5175,7 @@ function clearPaneRole(record: DetachedTab): void {
 /** insertion slot the shell strip reported for the current dock preview */
 let lastDockIndex: number | undefined
 
-// ---- two-pane split wiring (decision 0036) ----
+// ---- two-pane split wiring (decision 0037) ----
 
 /** What a tab tear-off drag remembers about the split drop zones. Captured
  *  before tearOffTabToWindow: detaching a pane tab drops the split, so this is
