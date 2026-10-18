@@ -396,6 +396,10 @@ export const strings = {
     setGithub: '开源项目',
     setBasedOn: '基于开源项目 {{GenOffice}} 构建（Apache License 2.0）。',
     viewOnGitHub: '在 GitHub 上查看',
+    setFeedback: '发送反馈',
+    setFeedbackDesc:
+      '意见通过一份简短的 Google 问卷收集。应用本身不会发送任何内容，也不会包含文档内容。',
+    feedbackOpen: '打开问卷',
     setChange: '更改',
     // Dates
     today: '今天',
@@ -869,6 +873,10 @@ export const strings = {
     setGithub: 'Open Source',
     setBasedOn: 'Based on the open-source project {{GenOffice}} (Apache License 2.0).',
     viewOnGitHub: 'View on GitHub',
+    setFeedback: 'Send feedback',
+    setFeedbackDesc:
+      'Feedback is collected through a short Google survey. The app sends nothing itself, and document contents are never included.',
+    feedbackOpen: 'Open survey',
     setChange: 'Change',
     today: 'Today',
     yesterday: 'Yesterday',
@@ -1347,6 +1355,10 @@ export const strings = {
     setGithub: 'Mã nguồn mở',
     setBasedOn: 'Dựa trên dự án mã nguồn mở {{GenOffice}} (Apache License 2.0).',
     viewOnGitHub: 'Xem trên GitHub',
+    setFeedback: 'Gửi phản hồi',
+    setFeedbackDesc:
+      'Phản hồi được thu thập qua một bảng hỏi Google ngắn. Ứng dụng không tự gửi gì và không bao giờ kèm nội dung tài liệu.',
+    feedbackOpen: 'Mở bảng hỏi',
     setChange: 'Thay đổi',
     today: 'Hôm nay',
     yesterday: 'Hôm qua',
@@ -1835,6 +1847,10 @@ export const strings = {
     setBasedOn:
       'オープンソースプロジェクト {{GenOffice}}（Apache License 2.0）をもとに開発されています。',
     viewOnGitHub: 'GitHub で見る',
+    setFeedback: 'フィードバックを送る',
+    setFeedbackDesc:
+      'ご意見は短い Google アンケートで受け付けます。アプリ自体は何も送信せず、文書の内容も含まれません。',
+    feedbackOpen: 'アンケートを開く',
     setChange: '変更',
     // Dates
     today: '今日',
@@ -2318,6 +2334,10 @@ export const strings = {
     setGithub: '오픈 소스',
     setBasedOn: '오픈 소스 프로젝트 {{GenOffice}}(Apache License 2.0)를 바탕으로 만들었습니다.',
     viewOnGitHub: 'GitHub에서 보기',
+    setFeedback: '의견 보내기',
+    setFeedbackDesc:
+      '의견은 짧은 Google 설문으로 받습니다. 앱은 아무것도 보내지 않으며, 문서 내용은 포함되지 않습니다.',
+    feedbackOpen: '설문 열기',
     setChange: '변경',
     // Dates
     today: '오늘',
@@ -2813,6 +2833,10 @@ export const strings = {
     setGithub: 'Open source',
     setBasedOn: 'Basé sur le projet open source {{GenOffice}} (Apache License 2.0).',
     viewOnGitHub: 'Voir sur GitHub',
+    setFeedback: 'Envoyer un commentaire',
+    setFeedbackDesc:
+      "Les commentaires sont recueillis via un court questionnaire Google. L'application n'envoie rien elle-même et le contenu des documents n'est jamais inclus.",
+    feedbackOpen: 'Ouvrir le questionnaire',
     setChange: 'Modifier',
     // Dates
     today: "Aujourd'hui",
@@ -3314,6 +3338,10 @@ export const strings = {
     setGithub: 'Open Source',
     setBasedOn: 'Basiert auf dem Open-Source-Projekt {{GenOffice}} (Apache License 2.0).',
     viewOnGitHub: 'Auf GitHub ansehen',
+    setFeedback: 'Feedback senden',
+    setFeedbackDesc:
+      'Feedback wird über eine kurze Google-Umfrage gesammelt. Die App selbst sendet nichts, und Dokumentinhalte sind nie enthalten.',
+    feedbackOpen: 'Umfrage öffnen',
     setChange: 'Ändern',
     // Dates
     today: 'Heute',
@@ -3814,6 +3842,10 @@ export const strings = {
     setGithub: 'Código abierto',
     setBasedOn: 'Basado en el proyecto de código abierto {{GenOffice}} (Apache License 2.0).',
     viewOnGitHub: 'Ver en GitHub',
+    setFeedback: 'Enviar comentarios',
+    setFeedbackDesc:
+      'Los comentarios se recogen mediante una breve encuesta de Google. La aplicación no envía nada por sí misma y el contenido de los documentos nunca se incluye.',
+    feedbackOpen: 'Abrir la encuesta',
     setChange: 'Cambiar',
     // Dates
     today: 'Hoy',
@@ -4293,6 +4325,10 @@ export const strings = {
     setGithub: 'โอเพนซอร์ส',
     setBasedOn: 'พัฒนาต่อยอดจากโครงการโอเพนซอร์ส {{GenOffice}} (Apache License 2.0)',
     viewOnGitHub: 'ดูบน GitHub',
+    setFeedback: 'ส่งข้อเสนอแนะ',
+    setFeedbackDesc:
+      'ข้อเสนอแนะถูกรวบรวมผ่านแบบสอบถาม Google สั้น ๆ แอปไม่ได้ส่งข้อมูลใด ๆ ด้วยตัวเอง และไม่รวมเนื้อหาเอกสาร',
+    feedbackOpen: 'เปิดแบบสอบถาม',
     setChange: 'เปลี่ยน',
     // Dates
     today: 'วันนี้',
@@ -4783,6 +4819,10 @@ export const strings = {
     setGithub: 'Sumber Terbuka',
     setBasedOn: 'Dibuat berdasarkan proyek sumber terbuka {{GenOffice}} (Apache License 2.0).',
     viewOnGitHub: 'Lihat di GitHub',
+    setFeedback: 'Kirim masukan',
+    setFeedbackDesc:
+      'Masukan dikumpulkan melalui survei Google singkat. Aplikasi tidak mengirim apa pun sendiri, dan isi dokumen tidak pernah disertakan.',
+    feedbackOpen: 'Buka survei',
     setChange: 'Ubah',
     // Dates
     today: 'Hari ini',
@@ -5275,6 +5315,10 @@ export const strings = {
     setBasedOn:
       'Создано на основе проекта с открытым исходным кодом {{GenOffice}} (Apache License 2.0).',
     viewOnGitHub: 'Открыть на GitHub',
+    setFeedback: 'Отправить отзыв',
+    setFeedbackDesc:
+      'Отзывы собираются через короткий опрос Google. Приложение само ничего не отправляет, содержимое документов не включается.',
+    feedbackOpen: 'Открыть опрос',
     setChange: 'Изменить',
     // Dates
     today: 'Сегодня',
@@ -5757,6 +5801,10 @@ export const strings = {
     setGithub: 'مفتوح المصدر',
     setBasedOn: 'مبني على المشروع مفتوح المصدر {{GenOffice}} (Apache License 2.0).',
     viewOnGitHub: 'عرض على GitHub',
+    setFeedback: 'إرسال ملاحظات',
+    setFeedbackDesc:
+      'تُجمع الملاحظات عبر استبيان Google قصير. لا يرسل التطبيق أي شيء بنفسه، ولا يُضمَّن محتوى المستندات أبدًا.',
+    feedbackOpen: 'فتح الاستبيان',
     setChange: 'تغيير',
     // Dates
     today: 'اليوم',
@@ -6245,6 +6293,10 @@ export const strings = {
     setGithub: 'Código aberto',
     setBasedOn: 'Baseado no projeto de código aberto {{GenOffice}} (Apache License 2.0).',
     viewOnGitHub: 'Ver no GitHub',
+    setFeedback: 'Enviar comentários',
+    setFeedbackDesc:
+      'Os comentários são coletados por meio de uma breve pesquisa do Google. O aplicativo não envia nada por conta própria, e o conteúdo dos documentos nunca é incluído.',
+    feedbackOpen: 'Abrir pesquisa',
     setChange: 'Alterar',
     today: 'Hoje',
     yesterday: 'Ontem',
@@ -6731,6 +6783,10 @@ export const strings = {
     setGithub: 'Open source',
     setBasedOn: 'Basato sul progetto open source {{GenOffice}} (Apache License 2.0).',
     viewOnGitHub: 'Vedi su GitHub',
+    setFeedback: 'Invia feedback',
+    setFeedbackDesc:
+      "Il feedback viene raccolto tramite un breve sondaggio Google. L'app non invia nulla da sola e il contenuto dei documenti non viene mai incluso.",
+    feedbackOpen: 'Apri il sondaggio',
     setChange: 'Cambia',
     today: 'Oggi',
     yesterday: 'Ieri',
@@ -7213,6 +7269,10 @@ export const strings = {
     setGithub: 'Open source',
     setBasedOn: 'Oparte na projekcie open source {{GenOffice}} (Apache License 2.0).',
     viewOnGitHub: 'Zobacz na GitHubie',
+    setFeedback: 'Wyślij opinię',
+    setFeedbackDesc:
+      'Opinie zbieramy przez krótką ankietę Google. Aplikacja sama nic nie wysyła, a treść dokumentów nigdy nie jest dołączana.',
+    feedbackOpen: 'Otwórz ankietę',
     setChange: 'Zmień',
     today: 'Dzisiaj',
     yesterday: 'Wczoraj',
@@ -7654,6 +7714,10 @@ export const strings = {
     setGithub: 'Open source',
     setBasedOn: 'Založeno na open source projektu {{GenOffice}} (Apache License 2.0).',
     viewOnGitHub: 'Zobrazit na GitHubu',
+    setFeedback: 'Odeslat zpětnou vazbu',
+    setFeedbackDesc:
+      'Zpětná vazba se sbírá krátkým dotazníkem Google. Aplikace sama nic neodesílá a obsah dokumentů se nikdy nepřikládá.',
+    feedbackOpen: 'Otevřít dotazník',
     setChange: 'Změnit',
     today: 'Dnes',
     yesterday: 'Včera',
@@ -8175,6 +8239,10 @@ export const strings = {
     setGithub: 'Open source',
     setBasedOn: 'Gebaseerd op het opensourceproject {{GenOffice}} (Apache License 2.0).',
     viewOnGitHub: 'Bekijken op GitHub',
+    setFeedback: 'Feedback sturen',
+    setFeedbackDesc:
+      'Feedback wordt verzameld via een korte Google-enquête. De app verstuurt zelf niets en de inhoud van documenten wordt nooit meegestuurd.',
+    feedbackOpen: 'Enquête openen',
     setChange: 'Wijzigen',
     today: 'Vandaag',
     yesterday: 'Gisteren',
@@ -8662,6 +8730,10 @@ export const strings = {
     setGithub: 'Sumber Terbuka',
     setBasedOn: 'Berasaskan projek sumber terbuka {{GenOffice}} (Apache License 2.0).',
     viewOnGitHub: 'Lihat di GitHub',
+    setFeedback: 'Hantar maklum balas',
+    setFeedbackDesc:
+      'Maklum balas dikumpul melalui tinjauan Google yang pendek. Aplikasi tidak menghantar apa-apa sendiri, dan kandungan dokumen tidak pernah disertakan.',
+    feedbackOpen: 'Buka tinjauan',
     setChange: 'Tukar',
     today: 'Hari ini',
     yesterday: 'Semalam',
@@ -9129,6 +9201,10 @@ export const strings = {
     setGithub: 'קוד פתוח',
     setBasedOn: 'מבוסס על פרויקט הקוד הפתוח {{GenOffice}} (Apache License 2.0).',
     viewOnGitHub: 'הצגה ב-GitHub',
+    setFeedback: 'שליחת משוב',
+    setFeedbackDesc:
+      'המשוב נאסף באמצעות שאלון Google קצר. האפליקציה עצמה לא שולחת דבר, ותוכן המסמכים אינו נכלל לעולם.',
+    feedbackOpen: 'פתיחת השאלון',
     setChange: 'שינוי',
     today: 'היום',
     yesterday: 'אתמול',
@@ -9603,6 +9679,10 @@ export const strings = {
     setGithub: 'ओपन सोर्स',
     setBasedOn: 'ओपन सोर्स प्रोजेक्ट {{GenOffice}} (Apache License 2.0) पर आधारित।',
     viewOnGitHub: 'GitHub पर देखें',
+    setFeedback: 'फ़ीडबैक भेजें',
+    setFeedbackDesc:
+      'फ़ीडबैक एक छोटे Google सर्वेक्षण से लिया जाता है। ऐप स्वयं कुछ नहीं भेजता, और दस्तावेज़ की सामग्री कभी शामिल नहीं होती।',
+    feedbackOpen: 'सर्वेक्षण खोलें',
     setChange: 'बदलें',
     today: 'आज',
     yesterday: 'कल',
@@ -10058,6 +10138,10 @@ export const strings = {
     setGithub: '開源專案',
     setBasedOn: '以開源專案 {{GenOffice}} 為基礎打造（Apache License 2.0）。',
     viewOnGitHub: '在 GitHub 上查看',
+    setFeedback: '傳送意見回饋',
+    setFeedbackDesc:
+      '意見透過一份簡短的 Google 問卷收集。應用程式本身不會傳送任何內容，也不會包含文件內容。',
+    feedbackOpen: '開啟問卷',
     setChange: '變更',
     today: '今天',
     yesterday: '昨天',

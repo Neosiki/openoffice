@@ -354,6 +354,11 @@ export interface HomeApi {
   onDocumentThemeChanged(handler: (theme: DocTheme) => void): () => void
   /** open the public GitHub repository in the default browser */
   openGitHubRepo(): Promise<void>
+  /**
+   * Show what the app would contribute (version, OS, UI language), copy it,
+   * and open the feedback survey in the browser. The app sends nothing itself.
+   */
+  openFeedbackSurvey(): Promise<void>
   /** AI settings (userData/ai-settings.json, shared by every editor) */
   getAiSettings(): Promise<AiSettings>
   /** persist AI settings; every renderer gets ai:settings-changed and re-reads */
@@ -539,4 +544,5 @@ export const HOME_CHANNELS = {
   setDefaultApp: 'home:set-default-app',
   pickDefaultSaveDir: 'home:pick-default-save-dir',
   openGitHubRepo: 'home:open-github-repo',
+  openFeedbackSurvey: 'home:open-feedback-survey',
 } as const
