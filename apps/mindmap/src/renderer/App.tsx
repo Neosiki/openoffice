@@ -322,8 +322,12 @@ export default function App() {
           setSaveState(current.dirty ? 'idle' : 'saved')
           return true
         }
-        setSaveState(result.ok ? 'idle' : 'failed')
-        if (!result.ok) console.error('[mindmap] save failed:', result.error)
+        // a sibling copy holding the disk version is not a failure: an
+        // automatic save is deferred silently and a declined overwrite keeps
+        // the map dirty, exactly like the other editors' guard
+        const deferred = !result.ok && result.error === 'external-modified'
+        setSaveState(result.ok || deferred ? 'idle' : 'failed')
+        if (!result.ok && !deferred) console.error('[mindmap] save failed:', result.error)
         return false
       } catch (err) {
         console.error('[mindmap] save failed:', err)
