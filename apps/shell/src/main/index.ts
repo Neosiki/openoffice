@@ -61,6 +61,7 @@ import {
   parseHeadlessExportArgv,
   setHeadlessMode,
   setOpenFilesSource,
+  setOpenPathProbe,
   type HeadlessArgvParse,
   showOpenDialogWithMemory,
   showSaveDialogWithMemory,
@@ -71,6 +72,7 @@ import {
   installRendererProtocol,
   safeExternalUrl,
 } from '@genoffice/electron-utils'
+import { SPLIT_PANE_CHANNELS } from '@genoffice/electron-utils/split-pane-bridge'
 import {
   readAppSettings,
   writeAppSetting,
@@ -288,6 +290,14 @@ import {
 } from '@genoffice/ui/ai-panel-prefs'
 import type { TabKind } from '../shared/tabs-api'
 import { TABS_CHANNELS } from '../shared/tabs-api'
+import { SPLIT_TABS_CHANNELS } from '../shared/split-view-api'
+import type {
+  SplitDropIntent,
+  SplitHint,
+  SplitOrientation,
+  SplitViewState,
+} from '../shared/split-view-api'
+import { TAB_STRIP_HEIGHT } from '../shared/tab-drag-geometry'
 import { SHELL_SUBSCRIPTION_CHANNELS, isSubscriptionProviderId } from '../shared/subscription-api'
 import {
   SUBSCRIPTION_INSTALL_URLS,
@@ -351,7 +361,9 @@ import {
   searchSavedKnowledgeBase,
 } from './knowledge-base'
 import { runHeadlessExport, type HeadlessExporters } from './headless-export'
-import { TabManager } from './tab-manager'
+import { TabManager, canonicalPath, type DetachedTab } from './tab-manager'
+import { readSplitMemory, writeSplitMemory, type SplitMemory } from './split-memory'
+import { SPLIT_EVEN_RATIO, decideSplitDrop, paneRects, splitDropZone } from './split-layout'
 import { configureGenerateWindow } from './generate/generate-window'
 import { configurePdfToolsWindow, openPdfToolsWithFile } from './pdf-tools/pdf-tools-window'
 import {
@@ -681,6 +693,9 @@ const tMain = createI18n({
     menuFile: '文件',
     menuSectionNew: '新建',
     menuOpenInNewWindow: '在新窗口中打开',
+    menuSplitRight: '向右拆分',
+    menuSplitDown: '向下拆分',
+    menuUnsplit: '取消拆分',
     menuNewDoc: 'AI Docs',
     menuNewSheet: 'AI Sheets',
     untitledSheet: '未命名表格',
@@ -796,6 +811,9 @@ const tMain = createI18n({
     menuFile: 'File',
     menuSectionNew: 'New',
     menuOpenInNewWindow: 'Open in New Window',
+    menuSplitRight: 'Split Right',
+    menuSplitDown: 'Split Down',
+    menuUnsplit: 'Unsplit',
     menuNewDoc: 'AI Docs',
     menuNewSheet: 'AI Sheets',
     untitledSheet: 'Untitled Spreadsheet',
@@ -919,6 +937,9 @@ const tMain = createI18n({
     menuFile: 'Tệp',
     menuSectionNew: 'Mới',
     menuOpenInNewWindow: 'Mở trong cửa sổ mới',
+    menuSplitRight: 'Chia sang phải',
+    menuSplitDown: 'Chia xuống dưới',
+    menuUnsplit: 'Hủy chia',
     menuNewDoc: 'AI Docs',
     menuNewSheet: 'AI Sheets',
     untitledSheet: 'Bảng tính chưa có tiêu đề',
@@ -1043,6 +1064,9 @@ const tMain = createI18n({
     menuFile: 'ファイル',
     menuSectionNew: '新規作成',
     menuOpenInNewWindow: '新しいウィンドウで開く',
+    menuSplitRight: '右に分割',
+    menuSplitDown: '下に分割',
+    menuUnsplit: '分割を解除',
     menuNewDoc: 'AI Docs',
     menuNewSheet: 'AI Sheets',
     untitledSheet: '無題のスプレッドシート',
@@ -1167,6 +1191,9 @@ const tMain = createI18n({
     menuFile: '파일',
     menuSectionNew: '새로 만들기',
     menuOpenInNewWindow: '새 창에서 열기',
+    menuSplitRight: '오른쪽에 나누기',
+    menuSplitDown: '아래에 나누기',
+    menuUnsplit: '나누기 풀기',
     menuNewDoc: 'AI Docs',
     menuNewSheet: 'AI Sheets',
     untitledSheet: '제목 없는 스프레드시트',
@@ -1290,6 +1317,9 @@ const tMain = createI18n({
     menuFile: 'Fichier',
     menuSectionNew: 'Nouveau',
     menuOpenInNewWindow: 'Ouvrir dans une nouvelle fenêtre',
+    menuSplitRight: 'Diviser à droite',
+    menuSplitDown: 'Diviser en bas',
+    menuUnsplit: 'Annuler la division',
     menuNewDoc: 'AI Docs',
     menuNewSheet: 'AI Sheets',
     untitledSheet: 'Feuille de calcul sans titre',
@@ -1415,6 +1445,9 @@ const tMain = createI18n({
     menuFile: 'Datei',
     menuSectionNew: 'Neu',
     menuOpenInNewWindow: 'In neuem Fenster öffnen',
+    menuSplitRight: 'Rechts teilen',
+    menuSplitDown: 'Unten teilen',
+    menuUnsplit: 'Teilung aufheben',
     menuNewDoc: 'AI Docs',
     menuNewSheet: 'AI Sheets',
     untitledSheet: 'Unbenannte Tabelle',
@@ -1541,6 +1574,9 @@ const tMain = createI18n({
     menuFile: 'Archivo',
     menuSectionNew: 'Nuevo',
     menuOpenInNewWindow: 'Abrir en una ventana nueva',
+    menuSplitRight: 'Dividir a la derecha',
+    menuSplitDown: 'Dividir abajo',
+    menuUnsplit: 'Quitar división',
     menuNewDoc: 'AI Docs',
     menuNewSheet: 'AI Sheets',
     untitledSheet: 'Hoja de cálculo sin título',
@@ -1665,6 +1701,9 @@ const tMain = createI18n({
     menuFile: 'ไฟล์',
     menuSectionNew: 'สร้างใหม่',
     menuOpenInNewWindow: 'เปิดในหน้าต่างใหม่',
+    menuSplitRight: 'แบ่งด้านขวา',
+    menuSplitDown: 'แบ่งด้านล่าง',
+    menuUnsplit: 'ยกเลิกการแบ่ง',
     menuNewDoc: 'AI Docs',
     menuNewSheet: 'AI Sheets',
     untitledSheet: 'สเปรดชีตไม่มีชื่อ',
@@ -1786,6 +1825,9 @@ const tMain = createI18n({
     menuFile: 'File',
     menuSectionNew: 'Baru',
     menuOpenInNewWindow: 'Buka di Jendela Baru',
+    menuSplitRight: 'Pisahkan ke Kanan',
+    menuSplitDown: 'Pisahkan ke Bawah',
+    menuUnsplit: 'Batalkan Pemisahan',
     menuNewDoc: 'AI Docs',
     menuNewSheet: 'AI Sheets',
     untitledSheet: 'Spreadsheet tanpa judul',
@@ -1911,6 +1953,9 @@ const tMain = createI18n({
     menuFile: 'Файл',
     menuSectionNew: 'Создать',
     menuOpenInNewWindow: 'Открыть в новом окне',
+    menuSplitRight: 'Разделить вправо',
+    menuSplitDown: 'Разделить вниз',
+    menuUnsplit: 'Отменить разделение',
     menuNewDoc: 'AI Docs',
     menuNewSheet: 'AI Sheets',
     untitledSheet: 'Таблица без названия',
@@ -2035,6 +2080,9 @@ const tMain = createI18n({
     menuFile: 'ملف',
     menuSectionNew: 'جديد',
     menuOpenInNewWindow: 'فتح في نافذة جديدة',
+    menuSplitRight: 'تقسيم إلى اليمين',
+    menuSplitDown: 'تقسيم إلى الأسفل',
+    menuUnsplit: 'إلغاء التقسيم',
     menuNewDoc: 'AI Docs',
     menuNewSheet: 'AI Sheets',
     untitledSheet: 'جدول بيانات بلا عنوان',
@@ -2156,6 +2204,9 @@ const tMain = createI18n({
     menuFile: 'Arquivo',
     menuSectionNew: 'Novo',
     menuOpenInNewWindow: 'Abrir em nova janela',
+    menuSplitRight: 'Dividir à direita',
+    menuSplitDown: 'Dividir abaixo',
+    menuUnsplit: 'Remover divisão',
     menuNewDoc: 'AI Docs',
     menuNewSheet: 'AI Sheets',
     untitledSheet: 'Planilha sem título',
@@ -2281,6 +2332,9 @@ const tMain = createI18n({
     menuFile: 'File',
     menuSectionNew: 'Nuovo',
     menuOpenInNewWindow: 'Apri in una nuova finestra',
+    menuSplitRight: 'Dividi a destra',
+    menuSplitDown: 'Dividi in basso',
+    menuUnsplit: 'Rimuovi divisione',
     menuNewDoc: 'AI Docs',
     menuNewSheet: 'AI Sheets',
     untitledSheet: 'Foglio di calcolo senza titolo',
@@ -2406,6 +2460,9 @@ const tMain = createI18n({
     menuFile: 'Plik',
     menuSectionNew: 'Nowy',
     menuOpenInNewWindow: 'Otwórz w nowym oknie',
+    menuSplitRight: 'Podziel w prawo',
+    menuSplitDown: 'Podziel w dół',
+    menuUnsplit: 'Usuń podział',
     menuNewDoc: 'AI Docs',
     menuNewSheet: 'AI Sheets',
     untitledSheet: 'Arkusz bez tytułu',
@@ -2530,6 +2587,9 @@ const tMain = createI18n({
     menuFile: 'Soubor',
     menuSectionNew: 'Nový',
     menuOpenInNewWindow: 'Otevřít v novém okně',
+    menuSplitRight: 'Rozdělit vpravo',
+    menuSplitDown: 'Rozdělit dole',
+    menuUnsplit: 'Zrušit rozdělení',
     menuNewDoc: 'AI Docs',
     menuNewSheet: 'AI Sheets',
     untitledSheet: 'Sešit bez názvu',
@@ -2653,6 +2713,9 @@ const tMain = createI18n({
     menuFile: 'Bestand',
     menuSectionNew: 'Nieuw',
     menuOpenInNewWindow: 'Openen in nieuw venster',
+    menuSplitRight: 'Splitsen naar rechts',
+    menuSplitDown: 'Splitsen naar beneden',
+    menuUnsplit: 'Splitsing opheffen',
     menuNewDoc: 'AI Docs',
     menuNewSheet: 'AI Sheets',
     untitledSheet: 'Naamloze spreadsheet',
@@ -2778,6 +2841,9 @@ const tMain = createI18n({
     menuFile: 'Fail',
     menuSectionNew: 'Baharu',
     menuOpenInNewWindow: 'Buka dalam Tetingkap Baharu',
+    menuSplitRight: 'Bahagi ke Kanan',
+    menuSplitDown: 'Bahagi ke Bawah',
+    menuUnsplit: 'Buang Pembahagian',
     menuNewDoc: 'AI Docs',
     menuNewSheet: 'AI Sheets',
     untitledSheet: 'Hamparan tanpa tajuk',
@@ -2901,6 +2967,9 @@ const tMain = createI18n({
     menuFile: 'קובץ',
     menuSectionNew: 'חדש',
     menuOpenInNewWindow: 'פתח בחלון חדש',
+    menuSplitRight: 'פצל לימין',
+    menuSplitDown: 'פצל למטה',
+    menuUnsplit: 'בטל פיצול',
     menuNewDoc: 'AI Docs',
     menuNewSheet: 'AI Sheets',
     untitledSheet: 'גיליון אלקטרוני ללא שם',
@@ -3023,6 +3092,9 @@ const tMain = createI18n({
     menuFile: 'फ़ाइल',
     menuSectionNew: 'नया',
     menuOpenInNewWindow: 'नई विंडो में खोलें',
+    menuSplitRight: 'दाईं ओर विभाजित करें',
+    menuSplitDown: 'नीचे विभाजित करें',
+    menuUnsplit: 'विभाजन हटाएँ',
     menuNewDoc: 'AI Docs',
     menuNewSheet: 'AI Sheets',
     untitledSheet: 'शीर्षकहीन स्प्रेडशीट',
@@ -3147,6 +3219,9 @@ const tMain = createI18n({
     menuFile: '檔案',
     menuSectionNew: '新增',
     menuOpenInNewWindow: '在新視窗中開啟',
+    menuSplitRight: '向右分割',
+    menuSplitDown: '向下分割',
+    menuUnsplit: '取消分割',
     menuNewDoc: 'AI Docs',
     menuNewSheet: 'AI Sheets',
     untitledSheet: '未命名試算表',
@@ -3625,6 +3700,8 @@ function createShellWindow(): void {
                   : kind === 'hwp'
                     ? tm('untitledHwp')
                     : tm('untitledSheet'),
+    // every split change: remember it, re-role the pane views, tell the strip
+    (state) => handleSplitChanged(win, manager, state),
   )
   tabManager = manager
 
@@ -5060,6 +5137,7 @@ function detachTabToWindow(id: string): void {
   if (!tabManager) return
   const record = tabManager.detachTab(id)
   if (!record) return
+  clearPaneRole(record)
   const win = createDetachedEditorWindow({ ...record, applyMenuFor })
   win.focus()
 }
@@ -5070,12 +5148,313 @@ function tearOffTabToWindow(id: string, x: number, y: number): boolean {
   if (!tabManager || isTearingOff() || !tabManager.canDetachTab(id)) return false
   const record = tabManager.detachTab(id)
   if (!record) return false
+  clearPaneRole(record)
   createDetachedEditorWindow({ ...record, applyMenuFor, tearOffAt: { x, y } })
   return true
 }
 
+/**
+ * A view leaving the strip (detached window or tear-off) is out of any split:
+ * the split-change broadcast no longer reaches it, so its last pane role must
+ * be withdrawn here or its AI panel would stay rail-collapsed in a window
+ * that has no panes.
+ */
+function clearPaneRole(record: DetachedTab): void {
+  if (!record.view.webContents.isDestroyed()) {
+    record.view.webContents.send(SPLIT_PANE_CHANNELS.roleChanged, null)
+  }
+}
+
 /** insertion slot the shell strip reported for the current dock preview */
 let lastDockIndex: number | undefined
+
+// ---- two-pane split wiring (decision 0036) ----
+
+/** What a tab tear-off drag remembers about the split drop zones. Captured
+ *  before tearOffTabToWindow: detaching a pane tab drops the split, so this is
+ *  the only memory of the arrangement the drag started from. */
+interface TornSplitDrag {
+  tabId: string
+  filePath?: string
+  splitAtStart: SplitViewState | null
+}
+
+let tornSplitDrag: TornSplitDrag | null = null
+/** the intent a release at the current drop zone would apply (null: none) */
+let tornSplitDrop: SplitDropIntent | null = null
+/** the last hint sent to the strip, so identical frames are not re-sent */
+let lastSplitHint: SplitHint | null = null
+
+function sameSplitHint(a: SplitHint | null, b: SplitHint | null): boolean {
+  if (a === null || b === null) return a === b
+  return (
+    a.left === b.left &&
+    a.top === b.top &&
+    a.width === b.width &&
+    a.height === b.height &&
+    a.orientation === b.orientation
+  )
+}
+
+/** push the drop-hint rectangle (or its removal) to the strip webContents */
+function sendSplitHint(hint: SplitHint | null): void {
+  if (sameSplitHint(hint, lastSplitHint)) return
+  lastSplitHint = hint
+  if (!shellWindow || shellWindow.isDestroyed()) return
+  shellWindow.webContents.send(SPLIT_TABS_CHANNELS.hint, hint)
+}
+
+/** The pane whose document is the one a menu or a drag is about: the same tab
+ *  id, or a copy of the same canonical file. */
+function splitPaneOfDocument(
+  manager: TabManager,
+  split: Pick<SplitViewState, 'aTabId' | 'bTabId'> | null,
+  dragged: { tabId: string; filePath?: string },
+): 'a' | 'b' | null {
+  if (!split) return null
+  const tabs = manager.list()
+  const wanted = canonicalPath(dragged.filePath)
+  for (const side of ['a', 'b'] as const) {
+    const paneId = side === 'a' ? split.aTabId : split.bTabId
+    if (paneId === dragged.tabId) return side
+    const pane = tabs.find((t) => t.id === paneId)
+    if (
+      wanted !== undefined &&
+      pane?.filePath !== undefined &&
+      canonicalPath(pane.filePath) === wanted
+    ) {
+      return side
+    }
+  }
+  return null
+}
+
+/** the split-drop context of a tab tear-off (null: not a document tab) */
+function tearOffSplitContext(id: string): TornSplitDrag | null {
+  const manager = tabManager
+  if (!manager || !manager.canDetachTab(id)) return null
+  const tab = manager.list().find((t) => t.id === id)
+  if (!tab || tab.kind === 'home' || tab.kind === 'help') return null
+  return { tabId: id, filePath: tab.filePath, splitAtStart: manager.splitState() }
+}
+
+/**
+ * While the pointer is held: decide the zone under it from the drag start's
+ * arrangement and push the hint. The pointer arrives in screen coordinates
+ * (the strip sends pointer positions); the panes live in the window's content
+ * area below the strip.
+ */
+function updateSplitHint(screenX: number, screenY: number): void {
+  const drag = tornSplitDrag
+  const manager = tabManager
+  if (!drag || !manager || !shellWindow || shellWindow.isDestroyed()) return
+  const bounds = shellWindow.getContentBounds()
+  const zone = splitDropZone(screenX - bounds.x, screenY - bounds.y, bounds.width, bounds.height)
+  if (!zone) {
+    tornSplitDrop = null
+    sendSplitHint(null)
+    return
+  }
+  // a pane tab's tear-off already dropped the split, so the decision reads the
+  // arrangement captured at drag start; a strip tab reads the live one
+  const paneAtStart =
+    drag.splitAtStart !== null &&
+    (drag.splitAtStart.aTabId === drag.tabId || drag.splitAtStart.bTabId === drag.tabId)
+  const split = paneAtStart ? drag.splitAtStart : manager.splitState()
+  tornSplitDrop = decideSplitDrop({
+    split,
+    dragged: {
+      isDocument: true,
+      isPaneTab: paneAtStart,
+      docPane: splitPaneOfDocument(manager, split, drag),
+    },
+    dropped: zone,
+  })
+  // the hint marks the b-side pane the drop would land in — the same window
+  // content coordinates the pane views are laid out in (bounding the space
+  // below the strip, like TabManager.contentBounds)
+  const rects = paneRects(
+    {
+      x: 0,
+      y: TAB_STRIP_HEIGHT,
+      width: bounds.width,
+      height: Math.max(0, bounds.height - TAB_STRIP_HEIGHT),
+    },
+    zone,
+    split?.ratio ?? SPLIT_EVEN_RATIO,
+  )
+  sendSplitHint({
+    left: rects.b.x,
+    top: rects.b.y,
+    width: rects.b.width,
+    height: rects.b.height,
+    orientation: zone,
+  })
+}
+
+/**
+ * A released tear-off whose last pointer position was over a split edge: take
+ * the torn tab back (its window is destroyed), re-attach it without activating
+ * and realize the decided intent. False leaves everything to the normal
+ * dock / detached-window flow.
+ */
+function applyTornSplitDrop(): boolean {
+  const drag = tornSplitDrag
+  const intent = tornSplitDrop
+  if (!drag || !intent) {
+    tornSplitDrag = null
+    tornSplitDrop = null
+    sendSplitHint(null)
+    return false
+  }
+  const record = takeTornTab()
+  tornSplitDrag = null
+  tornSplitDrop = null
+  sendSplitHint(null)
+  if (!record) return false
+  const manager = ensureTabManager()
+  const newTabId = manager.attachTab(record, undefined, false)
+  applyTornIntent(manager, newTabId, intent, drag)
+  return true
+}
+
+/** Realize the drop: splitWith covers create/replace/reorient/focus; a pane
+ *  tab flips the orientation or restores the split it was torn out of. */
+function applyTornIntent(
+  manager: TabManager,
+  newTabId: string,
+  intent: SplitDropIntent,
+  drag: TornSplitDrag,
+): void {
+  if (intent.kind === 'flip' || intent.kind === 'noop') {
+    const start = drag.splitAtStart
+    if (!start) {
+      manager.activateTab(newTabId)
+      return
+    }
+    manager.beginSplit(
+      start.aTabId === drag.tabId ? newTabId : start.aTabId,
+      start.bTabId === drag.tabId ? newTabId : start.bTabId,
+      intent.kind === 'flip' ? intent.orientation : start.orientation,
+      start.ratio,
+      start.focus,
+    )
+    return
+  }
+  manager.splitWith(newTabId, intent)
+}
+
+/** one split change: remember the arrangement, tell every pane view its role,
+ *  and push the state to the strip */
+function handleSplitChanged(
+  win: BrowserWindow,
+  manager: TabManager,
+  state: SplitViewState | null,
+): void {
+  persistSplitMemory(manager, state)
+  notifySplitRoles(manager)
+  if (!win.isDestroyed()) win.webContents.send(SPLIT_TABS_CHANNELS.changed, state)
+}
+
+/** save the split, or clear the memory when it is gone; best-effort */
+function persistSplitMemory(manager: TabManager, state: SplitViewState | null): void {
+  try {
+    if (state === null) {
+      writeSplitMemory(null, { settingsPath: APP_SETTINGS_PATH })
+      return
+    }
+    const tabs = new Map(manager.list().map((tab) => [tab.id, tab]))
+    writeSplitMemory(
+      {
+        aTabIdPath: tabs.get(state.aTabId)?.filePath,
+        bTabIdPath: tabs.get(state.bTabId)?.filePath,
+        orientation: state.orientation,
+        ratio: state.ratio,
+        focus: state.focus,
+      },
+      { settingsPath: APP_SETTINGS_PATH },
+    )
+  } catch {
+    // the memory is best-effort: a failed write never disturbs the split
+  }
+}
+
+/** push the current pane role to every tab view (null = not in a split) */
+function notifySplitRoles(manager: TabManager): void {
+  for (const tab of manager.list()) {
+    const wc = manager.webContentsForTab(tab.id)
+    if (!wc || wc.isDestroyed()) continue
+    wc.send(SPLIT_PANE_CHANNELS.roleChanged, manager.splitRoleOf(wc.id))
+  }
+}
+
+/**
+ * A launch with no file argument: reopen the remembered arrangement when its
+ * documents are still on disk, else the home screen as always. A remembered
+ * path that is gone is skipped — one remaining document opens alone, both gone
+ * falls back to home. The memory is left untouched: the next split change
+ * rewrites it.
+ */
+function restoreSplitMemoryOrHome(): void {
+  const manager = ensureTabManager()
+  const memory = readRememberedSplit()
+  const aPath = fileOnDisk(memory?.a)
+  const bPath = fileOnDisk(memory?.b)
+  if (aPath === undefined && bPath === undefined) {
+    manager.openHomeTab()
+    return
+  }
+  const orientation = memory?.orientation ?? 'side'
+  const ratio = memory?.ratio ?? SPLIT_EVEN_RATIO
+  const focus = memory?.focus ?? 'b'
+  // both panes held the same file: one tab, duplicated for the second pane
+  if (aPath !== undefined && bPath !== undefined && canonicalPath(aPath) === canonicalPath(bPath)) {
+    const aTabId = openRememberedTab(aPath)
+    if (aTabId === undefined) {
+      manager.openHomeTab()
+      return
+    }
+    const bTabId = manager.openDuplicatePaneTab(aTabId)
+    if (bTabId === null) return
+    manager.beginSplit(aTabId, bTabId, orientation, ratio, focus)
+    return
+  }
+  const aTabId = openRememberedTab(aPath)
+  const bTabId = openRememberedTab(bPath)
+  if (aTabId === undefined && bTabId === undefined) {
+    manager.openHomeTab()
+    return
+  }
+  if (aTabId !== undefined && bTabId !== undefined) {
+    manager.beginSplit(aTabId, bTabId, orientation, ratio, focus)
+  }
+}
+
+/** the remembered arrangement, or null when there is none to trust */
+function readRememberedSplit(): SplitMemory | null {
+  try {
+    return readSplitMemory({ settingsPath: APP_SETTINGS_PATH })
+  } catch {
+    return null
+  }
+}
+
+/** route one remembered path into its editor tab; the landed tab's id */
+function openRememberedTab(path: string | undefined): string | undefined {
+  if (path === undefined) return undefined
+  routeDocumentPath(path)
+  return tabManager?.findTabByPath(path)?.id
+}
+
+/** the path when it names a file on disk right now */
+function fileOnDisk(path: string | undefined): string | undefined {
+  if (path === undefined) return undefined
+  try {
+    return existsSync(path) ? path : undefined
+  } catch {
+    return undefined
+  }
+}
 
 /** Menu-command target for the editors whose menus resolve through the shell
  *  (pdf / markdown / html): the focused detached window of that kind first,
@@ -5163,6 +5542,47 @@ function activeHwpTarget() {
   return activeEditorTarget('hwp', () => tabManager?.activeHwpTab())
 }
 
+/**
+ * Split-view IPC: the strip's split state and divider channels, the editors'
+ * pane-role bridge (packages/electron-utils/src/split-pane-bridge.ts), and the
+ * same-document save probe the editors consult before writing.
+ */
+function registerSplitIpc(): void {
+  ipcMain.handle(SPLIT_TABS_CHANNELS.get, () => tabManager?.splitState() ?? null)
+  ipcMain.on(SPLIT_TABS_CHANNELS.setRatio, (_event, ratio: unknown) => {
+    if (typeof ratio === 'number' && Number.isFinite(ratio)) tabManager?.setSplitRatio(ratio)
+  })
+  ipcMain.handle(
+    SPLIT_PANE_CHANNELS.getRole,
+    (event) => tabManager?.splitRoleOf(event.sender.id) ?? null,
+  )
+  ipcMain.on(SPLIT_PANE_CHANNELS.requestFocus, (event) =>
+    tabManager?.focusPaneByWebContents(event.sender.id),
+  )
+  ipcMain.on(SPLIT_PANE_CHANNELS.reportFocus, (event) =>
+    tabManager?.focusPaneByWebContents(event.sender.id),
+  )
+  // Same-document save guard: the editors ask whether the path is open in
+  // another copy (another pane or detached window). One copy alone never
+  // counts — a normal save behaves exactly as before.
+  setOpenPathProbe((path) => {
+    try {
+      const wanted = canonicalPath(path)
+      if (wanted === undefined) return false
+      let copies = 0
+      for (const tab of tabManager?.list() ?? []) {
+        if (tab.filePath !== undefined && canonicalPath(tab.filePath) === wanted) copies++
+      }
+      for (const openPath of detachedFilePaths()) {
+        if (canonicalPath(openPath) === wanted) copies++
+      }
+      return copies > 1
+    } catch {
+      return false
+    }
+  })
+}
+
 function registerTabsIpc(): void {
   ipcMain.on(TABS_CHANNELS.chromePressed, (event) => broadcastChromePressed(event.sender))
   ipcMain.handle(TABS_CHANNELS.list, () => tabManager?.list() ?? [])
@@ -5214,18 +5634,36 @@ function registerTabsIpc(): void {
   ipcMain.handle(TABS_CHANNELS.tearOff, (_event, id: unknown, x: unknown, y: unknown) => {
     if (typeof id !== 'string' || typeof x !== 'number' || typeof y !== 'number') return false
     if (!Number.isFinite(x) || !Number.isFinite(y)) return false
-    return tearOffTabToWindow(id, x, y)
+    // remember what the drag started from before the tab leaves the strip:
+    // tearing a pane tab out drops the split, so this is the only record
+    tornSplitDrag = tearOffSplitContext(id)
+    tornSplitDrop = null
+    lastSplitHint = null
+    const torn = tearOffTabToWindow(id, x, y)
+    if (!torn) tornSplitDrag = null
+    return torn
   })
   ipcMain.on(TABS_CHANNELS.dragTornWindow, (_event, x: unknown, y: unknown) => {
-    if (typeof x === 'number' && typeof y === 'number' && Number.isFinite(x) && Number.isFinite(y))
+    if (
+      typeof x === 'number' &&
+      typeof y === 'number' &&
+      Number.isFinite(x) &&
+      Number.isFinite(y)
+    ) {
       dragTornWindow(x, y)
+      updateSplitHint(x, y)
+    }
   })
   ipcMain.handle(TABS_CHANNELS.dockTornWindow, (_event, index: unknown) => {
+    if (applyTornSplitDrop()) return
     const tab = takeTornTab()
     if (!tab) return
     ensureTabManager().attachTab(tab, typeof index === 'number' ? index : undefined)
   })
-  ipcMain.handle(TABS_CHANNELS.endTornDrag, () => endTornDrag())
+  ipcMain.handle(TABS_CHANNELS.endTornDrag, () => {
+    if (applyTornSplitDrop()) return
+    endTornDrag()
+  })
   ipcMain.on(TABS_CHANNELS.dockIndex, (_event, index: unknown) => {
     lastDockIndex = typeof index === 'number' && Number.isInteger(index) ? index : undefined
   })
@@ -5242,6 +5680,32 @@ function registerTabsIpc(): void {
         label: tm('menuOpenInNewWindow'),
         click: () => detachTabToWindow(id),
       })
+      template.push({ type: 'separator' })
+    }
+    // split-view entries: document tabs only (Home returned above; the manual
+    // and a chrome-free Present tab cannot be pane documents)
+    if (tabManager.canDetachTab(id) && tab.kind !== 'help') {
+      const applySplitMenu = (dropped: SplitOrientation): void => {
+        if (!tabManager) return
+        const intent = decideSplitDrop({
+          split: tabManager.splitState(),
+          dragged: {
+            isDocument: true,
+            isPaneTab: tabManager.isPaneTab(id),
+            docPane: splitPaneOfDocument(tabManager, tabManager.splitState(), {
+              tabId: id,
+              filePath: tab.filePath,
+            }),
+          },
+          dropped,
+        })
+        if (intent) tabManager.splitWith(id, intent)
+      }
+      template.push({ label: tm('menuSplitRight'), click: () => applySplitMenu('side') })
+      template.push({ label: tm('menuSplitDown'), click: () => applySplitMenu('stack') })
+      if (tabManager.isPaneTab(id)) {
+        template.push({ label: tm('menuUnsplit'), click: () => tabManager?.unsplit() })
+      }
       template.push({ type: 'separator' })
     }
     template.push({
@@ -6461,6 +6925,7 @@ registerIntegrationsIpc({
 })
 registerResultStoreIpc(ipcMain, () => app.getPath('userData'))
 registerTabsIpc()
+registerSplitIpc()
 registerDroppedFilesIpc()
 registerPdfStructureIpc()
 registerPdfConvertUiIpc({
@@ -6947,7 +7412,11 @@ app.whenReady().then(async () => {
     })
   }
 
-  openLaunchPaths(pendingLaunchPaths)
+  // No file argument: reopen the remembered split when its documents are
+  // still on disk, else the home screen. A launch with a file opens just it
+  // (the memory is left for the next plain launch).
+  if (pendingLaunchPaths.length > 0) openLaunchPaths(pendingLaunchPaths)
+  else restoreSplitMemoryOrHome()
   pendingLaunchPaths = []
   for (const recoverAs of pendingUnsavedNewRecoveries()) void newSheetTab(recoverAs)
 
