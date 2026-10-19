@@ -158,6 +158,14 @@ import { PassageReading, type PassageReadingHandle } from './reading/PassageRead
 import { IconPassageMarks, PassageUnderlines } from './reading/PassageUnderlines'
 import { createSaveConfirmations } from './reading/save-confirmations'
 import { afterReadingSave, usePassageCards } from './reading/usePassageCards'
+import {
+  NoteOpenBar,
+  NoteOpenRibbonButton,
+  joinActions,
+  noteInsertAction,
+  useNoteActions,
+} from './notes/NoteActions'
+import { annotNoteRequest, cardNoteRequest, overviewNoteRequest } from './notes/note-requests'
 import { passageSelectionOf, selectionEnd, type PassageFollowUp } from './reading/passage-cards'
 import { readPageText } from './reading/passage-text'
 import { labelWithKey, selectionBarKey, type SelectionBarAction } from './reading/shortcuts'
@@ -4527,6 +4535,14 @@ export default function App() {
     noticeTimerRef.current = window.setTimeout(() => setNotice(null), 8000)
   }
 
+  // the note of each PDF (reading-assist 4.9): no path crosses, the main process knows both
+  const noteActions = useNoteActions({
+    filePath,
+    title: (metadata ?? docInfo).title?.trim() || '',
+    t,
+    onNotice: showNotice,
+  })
+
   useEffect(() => {
     if (!formHasXfa || !filePath || warnedXfaPathRef.current === filePath) return
     warnedXfaPathRef.current = filePath
@@ -7769,6 +7785,7 @@ export default function App() {
           </span>
           {t('apPanel')}
         </button>
+        <NoteOpenRibbonButton actions={noteActions} t={t} />
         {searchBtn}
         <button
           className={`rb-big${spread === 2 ? ' active' : ''}`}
@@ -8875,6 +8892,14 @@ export default function App() {
                 onSearchTerm={searchFor}
                 onGotoPage={(page) => void aiApi.gotoPage(page)}
                 onNotice={showNotice}
+                sectionActions={(section) =>
+                  noteInsertAction(
+                    noteActions,
+                    overviewNoteRequest(section, t('airOverview')),
+                    t,
+                    'ai-overview-link',
+                  )
+                }
               />
             }
           />
@@ -8956,6 +8981,9 @@ export default function App() {
               setAiCollapsed(false)
             }}
             onNotice={showNotice}
+            cardActions={(card) =>
+              noteInsertAction(noteActions, cardNoteRequest(card, passageCards.pageOf(card)), t)
+            }
           />
           <DocumentTranslation
             ref={translateRef}
@@ -9060,26 +9088,32 @@ export default function App() {
                 facets={[categoryFacet(t)]}
                 categoryOf={(m) => aiHighlights.subjects.get(m.objNum)}
                 toolbar={
-                  <HighlightPanelBar
-                    pending={highlightPending}
-                    run={highlightSnap.run}
-                    t={t}
-                    readOnly={readOnly}
-                    onAcceptLabel={(labelId) =>
-                      acceptSuggestions(highlightPending.filter((v) => v.label.id === labelId))
-                    }
-                    onDismissAll={() => dismissSuggestions(highlightPending)}
-                  />
+                  <>
+                    <NoteOpenBar actions={noteActions} t={t} />
+                    <HighlightPanelBar
+                      pending={highlightPending}
+                      run={highlightSnap.run}
+                      t={t}
+                      readOnly={readOnly}
+                      onAcceptLabel={(labelId) =>
+                        acceptSuggestions(highlightPending.filter((v) => v.label.id === labelId))
+                      }
+                      onDismissAll={() => dismissSuggestions(highlightPending)}
+                    />
+                  </>
                 }
                 renderItemActions={(item) =>
-                  highlightItemActions(item, {
-                    t,
-                    readOnly,
-                    viewOf: (key) => highlightPending.find((v) => v.key === key),
-                    onAccept: (view) => acceptSuggestions([view]),
-                    onDismiss: (view) => dismissSuggestions([view]),
-                    waitingSave: (markupId) => saveConfirmations.isPending(markupId),
-                  })
+                  joinActions(
+                    highlightItemActions(item, {
+                      t,
+                      readOnly,
+                      viewOf: (key) => highlightPending.find((v) => v.key === key),
+                      onAccept: (view) => acceptSuggestions([view]),
+                      onDismiss: (view) => dismissSuggestions([view]),
+                      waitingSave: (markupId) => saveConfirmations.isPending(markupId),
+                    }),
+                    noteInsertAction(noteActions, annotNoteRequest(item), t, 'pdf-modal-btn'),
+                  )
                 }
               />
             )}

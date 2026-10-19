@@ -11,6 +11,10 @@ export const MARKDOWN_CHANNELS = {
   consumePending: 'markdown:consume-pending',
   /** invoke → the text a new tab starts with (8.6 "convert without AI"), once; null otherwise */
   seedTake: 'markdown:seed-take',
+  /** invoke → the texts "Add to note" queued for this note tab (reading-assist 4.9), once */
+  noteAppendTake: 'markdown:note-append-take',
+  /** main → renderer: texts are waiting for this note tab */
+  noteAppendReady: 'markdown:note-append-ready',
   readFile: 'markdown:read-file',
   save: 'markdown:save',
   saveRequest: 'markdown:save-request',
@@ -227,6 +231,10 @@ export interface MarkdownApi {
   consumePending(): Promise<string | null>
   /** A new untitled tab's starting text (a conversion's result), taken once; null otherwise */
   takeSeed?(): Promise<string | null>
+  /** Texts the PDF editor's "Add to note" queued for this note tab, taken once; [] otherwise */
+  takeNoteAppend?(): Promise<string[]>
+  /** The shell queued texts for this note tab; take them with takeNoteAppend */
+  onNoteAppendReady?(handler: () => void): () => void
   /** open any shell-routed document path (an AI answer's filenav citation) */
   openSourcePath(path: string): Promise<void>
   /** Headless export mode: the PDF path this hidden renderer must export to, null in normal use */

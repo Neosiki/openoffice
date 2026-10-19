@@ -85,6 +85,9 @@ export const PDF_CHANNELS = {
   removeSignature: 'pdf:remove-signature',
   getUsername: 'pdf:get-username',
   annotSubjects: 'pdf:annot-subjects',
+  // the note of each PDF (reading-assist 4.9): the view's own PDF, no path from the renderer
+  noteOpen: 'pdf:note-open',
+  noteInsert: 'pdf:note-insert',
   dirtyChanged: 'pdf:dirty-changed',
   closeSaveRequest: 'pdf:close-save-request',
   closeSaveResult: 'pdf:close-save-result',
@@ -352,6 +355,48 @@ export interface PdfAnnotSubject {
   objNum: number
   subj: string
 }
+
+/** "Open note" (reading-assist 4.9): the title heads a note made now */
+export interface PdfNoteOpenRequest {
+  /** the PDF's title ('' or absent: the file name) */
+  title?: string
+}
+
+/**
+ * "Add to note": text parts only. The main process knows the view's PDF and
+ * its linked note, and builds the inserted Markdown (quote, page link, body).
+ */
+export type PdfNoteInsertRequest =
+  | {
+      kind: 'quote'
+      /** the marked text or passage ('' for an item without text) */
+      excerpt: string
+      /** 1-based page of the PDF file on disk */
+      page: number
+      /** a memo, an AI answer; omitted when empty */
+      body?: string
+      title?: string
+    }
+  | {
+      kind: 'overview'
+      /** "Document overview" in the UI language */
+      heading: string
+      body: string
+      title?: string
+    }
+
+/**
+ * unsaved: the PDF has no saved path yet; unavailable: no shell to open the
+ * note in (standalone); cancelled: the save dialog was closed; busy: this
+ * view's dialog is still open
+ */
+export type PdfNoteResult =
+  | { ok: true }
+  | {
+      ok: false
+      reason: 'unsaved' | 'unavailable' | 'cancelled' | 'busy' | 'failed'
+      message?: string
+    }
 
 /** Delete an annotation already saved in the file. Object number is only a lookup
     hint; subtype + rect guard against (and recover from) object renumbering by a rewrite.
@@ -1475,6 +1520,10 @@ export interface PdfApi {
   getUsername(): Promise<string>
   /** The /Subj of the markup annotations in a granted file (accepted AI highlights' categories) */
   annotSubjects(path: string): Promise<PdfAnnotSubject[]>
+  /** open (or first make) the Markdown note linked to this view's PDF in a Markdown tab */
+  noteOpen(request?: PdfNoteOpenRequest): Promise<PdfNoteResult>
+  /** put text at the end of that note's open tab (never written to the file directly) */
+  noteInsert(request: PdfNoteInsertRequest): Promise<PdfNoteResult>
   /** Mirror unsaved-changes state to the main process; drives the save prompt before closing a tab/window */
   setDirty(dirty: boolean): void
   /** Main process asks for a save (close prompt, menu Save, export flows) and waits for sendCloseSaveResult.

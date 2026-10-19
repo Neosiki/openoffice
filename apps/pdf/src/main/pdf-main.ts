@@ -13,7 +13,7 @@ import { randomUUID } from 'node:crypto'
 import { readFile, stat, writeFile } from 'node:fs/promises'
 import { userInfo } from 'node:os'
 import { basename, dirname, join, resolve } from 'node:path'
-import { BrowserWindow, WebContentsView, app, dialog, ipcMain, shell } from 'electron'
+import { BrowserWindow, WebContentsView, app, dialog, ipcMain, shell, webContents } from 'electron'
 import type { WebContents } from 'electron'
 import {
   buildPrintableHtml,
@@ -111,6 +111,14 @@ import {
   listSystemCertificates,
 } from './system-certificates'
 import type { ExportedIdentity, SystemCertificateRef } from './system-certificates'
+import {
+  createNoteLinkService,
+  noteDialogText,
+  parseNoteInsertRequest,
+  parseNoteOpenRequest,
+} from './note-link'
+import type { PdfNoteResult } from '../shared/ipc'
+import { ResultStore, documentHashOfFile } from '../../../../packages/pdf-structure/src/store'
 
 const tDlg = createI18n({
   zh: {
@@ -609,6 +617,10 @@ interface RuntimePaths {
   createDocument?: (request: CreateDocumentRequest) => Promise<CreateDocumentResult>
   /** The shell's PDF tools window, opened on a task with a file picked (decision 0030) */
   openPdfTools?: (path: string, tool: PdfToolsHandoffTool) => boolean
+  /** The shell opens (or brings forward) a PDF's note in a Markdown tab (reading-assist 4.9) */
+  openNote?: (path: string) => boolean | Promise<boolean>
+  /** The shell puts text at the end of the note's open tab; the file is not written */
+  insertIntoNote?: (path: string, text: string) => boolean | Promise<boolean>
 }
 
 let runtime: RuntimePaths = { preloadPath: '' }
@@ -1151,6 +1163,34 @@ function withSignatures(
 
 let ipcRegistered = false
 
+/** the result store under userData (the shell's structure handlers open the same folder) */
+let noteStore: ResultStore | null = null
+
+/** The note of each PDF (reading-assist 4.9): the view's own document, a dialog-picked note */
+const noteLinks = createNoteLinkService({
+  store: () => (noteStore ??= new ResultStore(app.getPath('userData'))),
+  hashFile: documentHashOfFile,
+  isUntitled: (path) => untitledPdfPaths.has(path),
+  pickNotePath: async (owner, defaultPath) => {
+    const sender = webContents.fromId(owner)
+    const parent =
+      (sender && BrowserWindow.fromWebContents(sender)) ?? BrowserWindow.getFocusedWindow()
+    const lang = getUiLang()
+    const options = {
+      title: noteDialogText(lang, 'dialogTitle'),
+      defaultPath,
+      filters: [{ name: noteDialogText(lang, 'filterMarkdown'), extensions: ['md'] }],
+      properties: ['createDirectory' as const],
+    }
+    const picked = parent
+      ? await dialog.showSaveDialog(parent, options)
+      : await dialog.showSaveDialog(options)
+    return picked.canceled || !picked.filePath ? null : picked.filePath
+  },
+  noteWord: () => noteDialogText(getUiLang(), 'noteWord'),
+  host: () => ({ openNote: runtime.openNote, insertIntoNote: runtime.insertIntoNote }),
+})
+
 /** Filesystem seam for readMergeInputs; defaults to node:fs/promises */
 export interface MergeInputIo {
   stat(path: string): Promise<{ size: number }>
@@ -1312,6 +1352,8 @@ function registerPdfIpc(): void {
       )
       // Refresh the record for the written bytes
       await rememberDiskState(e.sender.id, target)
+      // a save in place changed the document's hash: its note link follows (spec 5.4)
+      if (target === path && request.redactions === undefined) void noteLinks.afterSave(path)
       if (request.redactions !== undefined) {
         // Commit document identity only after the atomic write succeeds. Revoke the
         // source grant so stale renderer requests cannot write back to the original.
@@ -1426,6 +1468,24 @@ function registerPdfIpc(): void {
     // Lazy import like the text-edit paths: pdfium wasm only loads when the feature is used
     const { listPageImages } = await import('./image-edit')
     return listPageImages(new Uint8Array(await readFile(path)))
+  })
+
+  // the note of each PDF (reading-assist 4.9): only the view's own document; the
+  // request carries text parts, never a path (a note path comes from the main
+  // process's save dialog or note-links.json)
+  ipcMain.handle(PDF_CHANNELS.noteOpen, (e, request: unknown): Promise<PdfNoteResult> => {
+    if (!allowedByWc.has(e.sender.id)) return Promise.resolve({ ok: false, reason: 'failed' })
+    return noteLinks.open(
+      e.sender.id,
+      openPathByWc.get(e.sender.id) ?? null,
+      parseNoteOpenRequest(request),
+    )
+  })
+  ipcMain.handle(PDF_CHANNELS.noteInsert, (e, request: unknown): Promise<PdfNoteResult> => {
+    if (!allowedByWc.has(e.sender.id)) return Promise.resolve({ ok: false, reason: 'failed' })
+    const parsed = parseNoteInsertRequest(request)
+    if (!parsed) return Promise.resolve({ ok: false, reason: 'failed', message: 'invalid request' })
+    return noteLinks.insert(e.sender.id, openPathByWc.get(e.sender.id) ?? null, parsed)
   })
 
   // only the view's own files: the categories of accepted AI highlights (reading-assist 4.3)
