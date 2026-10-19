@@ -388,6 +388,7 @@ import {
   applyAiDocContent as applyAiDocContentImpl,
   exportPdf as exportPdfImpl,
   exportHtml as exportHtmlImpl,
+  exportMarkdown as exportMarkdownImpl,
   exportImages as exportImagesImpl,
   loadFile as loadFileImpl,
   newFile as newFileImpl,
@@ -2733,6 +2734,10 @@ export function App() {
     (outPath?: string) => exportHtmlImpl(fileCtxRef.current, outPath),
     [],
   )
+  const exportMarkdown = useCallback(
+    (outPath?: string) => exportMarkdownImpl(fileCtxRef.current, outPath),
+    [],
+  )
   const exportImages = useCallback(() => exportImagesImpl(fileCtxRef.current), [])
   const printDoc = useCallback(() => printDocImpl(fileCtxRef.current), [])
 
@@ -2763,11 +2768,11 @@ export function App() {
           const doc = fileCtxRef.current.doc
           return { opened: typeof doc?.filePath === 'string', failed: doc?.filePath === null }
         },
-        target.format === 'html' ? exportHtml : exportPdf,
+        target.format === 'html' ? exportHtml : target.format === 'md' ? exportMarkdown : exportPdf,
       )
       window.desktop.headlessExportDone(report)
     })()
-  }, [exportPdf, exportHtml])
+  }, [exportPdf, exportHtml, exportMarkdown])
 
   useEffect(() => {
     const pending = pendingMixedExportRef.current
@@ -5791,6 +5796,9 @@ export function App() {
         case 'export-html':
           void exportHtml()
           break
+        case 'export-markdown':
+          void exportMarkdown()
+          break
         case 'export-images':
           void exportImages()
           break
@@ -5808,6 +5816,7 @@ export function App() {
     save,
     exportPdf,
     exportHtml,
+    exportMarkdown,
     exportImages,
     printDoc,
     zoomFit,
@@ -6158,8 +6167,9 @@ export function App() {
       getStatus: () => status,
       exportPdfTo: (path: string) => exportPdf(path),
       exportHtmlTo: (path: string) => exportHtml(path),
+      exportMarkdownTo: (path: string) => exportMarkdown(path),
     }
-  }, [editor, openRecent, save, status, exportPdf, exportHtml])
+  }, [editor, openRecent, save, status, exportPdf, exportHtml, exportMarkdown])
 
   // Pending style definitions (Styles pane / AI define_style) show before the
   // save writes them: styles.xml is re-resolved with the patches applied and

@@ -16,6 +16,7 @@ import type {
   AiStreamRequest,
   DesktopApi,
   PdfInternalLink,
+  MarkdownImage,
   MenuCommand,
   AutoSaveDefault,
   ContextMenuRequest,
@@ -180,6 +181,12 @@ const api: DesktopApi = {
     ),
   exportHtml: (defaultName: string, html: string, outPath?: string) =>
     ipcRenderer.invoke('docs:export-html', defaultName, html, outPath),
+  exportMarkdown: (
+    defaultName: string,
+    markdown: string,
+    images: MarkdownImage[],
+    outPath?: string,
+  ) => ipcRenderer.invoke('docs:export-markdown', defaultName, markdown, images, outPath),
   printPdfBuffer: (pageWidthTwips: number, pageHeightTwips: number, scale?: number) =>
     ipcRenderer.invoke('docs:print-pdf-buffer', pageWidthTwips, pageHeightTwips, scale),
   saveMergedPdf: (defaultName: string, base64Parts: string[], outPath?: string, links?: PdfInternalLink[]) =>

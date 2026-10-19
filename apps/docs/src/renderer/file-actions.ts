@@ -71,6 +71,7 @@ import { labelPlaceholdersInDocx } from './odt-label-docx'
 import { confirmFormatChange } from './components/format-change-bus'
 import { PHASED_APPEND } from './editor/streaming-tail-guard'
 import { docTextLength, docWeight, openTierFor } from './large-document'
+import { documentToMarkdown } from './export-markdown'
 import { blocksHaveRevisions } from './editor/revision-view'
 import { docStyleCss } from './doc-style-css'
 import { setNoteNumFmts } from './note-format'
@@ -1746,6 +1747,26 @@ export async function exportHtml(ctx: FileActionContext, outPath?: string): Prom
       : result.error
         ? t('appExportHtmlFailed', { error: result.error })
         : t('appExportHtmlCanceled'),
+  )
+  return result.ok
+}
+
+/** Resolves true only when a Markdown file was written to disk. */
+export async function exportMarkdown(ctx: FileActionContext, outPath?: string): Promise<boolean> {
+  const { doc, editor } = ctx
+  if (!doc || !editor) return false
+  await waitForFullContent()
+  ctx.setStatus(t('appExportingMarkdown'))
+  const { markdown, images } = documentToMarkdown(editor)
+  const result = await window.desktop.exportMarkdown(doc.fileName, markdown, images, outPath)
+  const dropped = result.imagesDropped ?? 0
+  ctx.setStatus(
+    result.ok
+      ? t('appExportedMarkdown', { path: result.path ?? '' }) +
+          (dropped > 0 ? ` ${t('appExportMarkdownImagesDropped', { count: dropped })}` : '')
+      : result.error
+        ? t('appExportMarkdownFailed', { error: result.error })
+        : t('appExportMarkdownCanceled'),
   )
   return result.ok
 }

@@ -159,6 +159,7 @@ export type MenuCommand =
   | 'print'
   | 'export-pdf'
   | 'export-html'
+  | 'export-markdown'
   | 'export-images'
   | 'word-count'
   | 'autocorrect-options'
@@ -311,6 +312,22 @@ export interface PdfInternalLink {
   toPage: number
   toY: number
 }
+
+// ---- Markdown export ----
+
+export interface MarkdownImage {
+  /** file name inside the media folder */
+  name: string
+  /** data: URL or lazy docx-media URL the main process resolves */
+  src: string
+}
+
+/**
+ * Folder token the Markdown references pictures under; the writer swaps it
+ * for the real `<file>_files` folder once the save path is known. User text
+ * can never spell it: `_` is escaped on the way out.
+ */
+export const MARKDOWN_MEDIA_DIR_TOKEN = '__genoffice_media__'
 
 export interface DesktopApi {
   /** current UI language (persisted by the shell in app-settings.json) */
@@ -502,6 +519,12 @@ export interface DesktopApi {
     html: string,
     outPath?: string,
   ): Promise<{ ok: boolean; path?: string; error?: string }>
+  exportMarkdown(
+    defaultName: string,
+    markdown: string,
+    images: MarkdownImage[],
+    outPath?: string,
+  ): Promise<{ ok: boolean; path?: string; error?: string; imagesDropped?: number }>
   /** Mixed paper-size export: produce a set of PDF bytes (base64) at given sizes per the current print layout */
   printPdfBuffer(
     pageWidthTwips: number,

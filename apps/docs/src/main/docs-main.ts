@@ -148,10 +148,12 @@ import type {
   CreateDocumentResult,
   DecryptOpenResult,
   DocsTabInfo,
+  MarkdownImage,
   MenuCommand,
   OpenDocxResult,
   SpellLanguages,
 } from '../shared/ipc'
+import { MARKDOWN_MEDIA_DIR_TOKEN } from '../shared/ipc'
 import { ClickClaims } from '../shared/context-menu-claims'
 import { findDocxPath } from '../shared/open-file'
 import {
@@ -254,6 +256,7 @@ const tMain = createI18n({
     filterAll: '所有文件',
     dlgExportPdf: '导出为 PDF',
     dlgExportHtml: '导出为 HTML',
+    dlgExportMarkdown: '导出为 Markdown',
     dlgPickExportDir: '选择导出目录',
     errUnsupportedExt: '暂不支持 .{ext} 类型',
     errNotFile: '不是文件',
@@ -279,6 +282,7 @@ const tMain = createI18n({
     menuPageSetup: '页面设置…',
     menuExportPdf: '导出为 PDF…',
     menuExportHtml: '导出为 HTML…',
+    menuExportMarkdown: '导出为 Markdown…',
     menuExportImages: '导出为图片…',
     menuPrint: '打印…',
     menuEdit: '编辑',
@@ -385,6 +389,7 @@ const tMain = createI18n({
     filterAll: 'All Files',
     dlgExportPdf: 'Export as PDF',
     dlgExportHtml: 'Export as HTML',
+    dlgExportMarkdown: 'Export as Markdown',
     dlgPickExportDir: 'Choose Export Folder',
     errUnsupportedExt: '.{ext} files are not supported',
     errNotFile: 'not a file',
@@ -410,6 +415,7 @@ const tMain = createI18n({
     menuPageSetup: 'Page Setup…',
     menuExportPdf: 'Export as PDF…',
     menuExportHtml: 'Export as HTML…',
+    menuExportMarkdown: 'Export as Markdown…',
     menuExportImages: 'Export as Images…',
     menuPrint: 'Print…',
     menuEdit: 'Edit',
@@ -516,6 +522,7 @@ const tMain = createI18n({
     filterAll: 'Tất cả các tệp',
     dlgExportPdf: 'Xuất dưới dạng PDF',
     dlgExportHtml: 'Xuất dưới dạng HTML',
+    dlgExportMarkdown: 'Xuất dưới dạng Markdown',
     dlgPickExportDir: 'Chọn thư mục xuất',
     errUnsupportedExt: 'Tệp .{ext} không được hỗ trợ',
     errNotFile: 'không phải là tệp',
@@ -542,6 +549,7 @@ const tMain = createI18n({
     menuPageSetup: 'Thiết lập trang…',
     menuExportPdf: 'Xuất dưới dạng PDF…',
     menuExportHtml: 'Xuất dưới dạng HTML…',
+    menuExportMarkdown: 'Xuất dưới dạng Markdown…',
     menuExportImages: 'Xuất dưới dạng hình ảnh…',
     menuPrint: 'In…',
     menuEdit: 'Chỉnh sửa',
@@ -647,6 +655,7 @@ const tMain = createI18n({
     filterAll: 'すべてのファイル',
     dlgExportPdf: 'PDF としてエクスポート',
     dlgExportHtml: 'HTML としてエクスポート',
+    dlgExportMarkdown: 'Markdown としてエクスポート',
     dlgPickExportDir: 'エクスポート先フォルダーの選択',
     errUnsupportedExt: '.{ext} 形式には対応していません',
     errNotFile: 'ファイルではありません',
@@ -673,6 +682,7 @@ const tMain = createI18n({
     menuPageSetup: 'ページ設定…',
     menuExportPdf: 'PDF としてエクスポート…',
     menuExportHtml: 'HTML としてエクスポート…',
+    menuExportMarkdown: 'Markdown としてエクスポート…',
     menuExportImages: '画像としてエクスポート…',
     menuPrint: '印刷…',
     menuEdit: '編集',
@@ -779,6 +789,7 @@ const tMain = createI18n({
     filterAll: '모든 파일',
     dlgExportPdf: 'PDF로 내보내기',
     dlgExportHtml: 'HTML로 내보내기',
+    dlgExportMarkdown: 'Markdown로 내보내기',
     dlgPickExportDir: '내보낼 폴더 선택',
     errUnsupportedExt: '.{ext} 형식은 지원되지 않습니다',
     errNotFile: '파일이 아닙니다',
@@ -805,6 +816,7 @@ const tMain = createI18n({
     menuPageSetup: '페이지 설정…',
     menuExportPdf: 'PDF로 내보내기…',
     menuExportHtml: 'HTML로 내보내기…',
+    menuExportMarkdown: 'Markdown로 내보내기…',
     menuExportImages: '이미지로 내보내기…',
     menuPrint: '인쇄…',
     menuEdit: '편집',
@@ -912,6 +924,7 @@ const tMain = createI18n({
     filterAll: 'Tous les fichiers',
     dlgExportPdf: 'Exporter au format PDF',
     dlgExportHtml: 'Exporter au format HTML',
+    dlgExportMarkdown: 'Exporter au format Markdown',
     dlgPickExportDir: "Choisir le dossier d'exportation",
     errUnsupportedExt: 'les fichiers .{ext} ne sont pas pris en charge',
     errNotFile: "n'est pas un fichier",
@@ -938,6 +951,7 @@ const tMain = createI18n({
     menuPageSetup: 'Mise en page…',
     menuExportPdf: 'Exporter au format PDF…',
     menuExportHtml: 'Exporter au format HTML…',
+    menuExportMarkdown: 'Exporter au format Markdown…',
     menuExportImages: 'Exporter en images…',
     menuPrint: 'Imprimer…',
     menuEdit: 'Édition',
@@ -1045,6 +1059,7 @@ const tMain = createI18n({
     filterAll: 'Alle Dateien',
     dlgExportPdf: 'Als PDF exportieren',
     dlgExportHtml: 'Als HTML exportieren',
+    dlgExportMarkdown: 'Als Markdown exportieren',
     dlgPickExportDir: 'Exportordner auswählen',
     errUnsupportedExt: '.{ext}-Dateien werden nicht unterstützt',
     errNotFile: 'keine Datei',
@@ -1071,6 +1086,7 @@ const tMain = createI18n({
     menuPageSetup: 'Seite einrichten…',
     menuExportPdf: 'Als PDF exportieren…',
     menuExportHtml: 'Als HTML exportieren…',
+    menuExportMarkdown: 'Als Markdown exportieren…',
     menuExportImages: 'Als Bilder exportieren…',
     menuPrint: 'Drucken…',
     menuEdit: 'Bearbeiten',
@@ -1177,6 +1193,7 @@ const tMain = createI18n({
     filterAll: 'Todos los archivos',
     dlgExportPdf: 'Exportar como PDF',
     dlgExportHtml: 'Exportar como HTML',
+    dlgExportMarkdown: 'Exportar como Markdown',
     dlgPickExportDir: 'Elegir carpeta de exportación',
     errUnsupportedExt: 'los archivos .{ext} no son compatibles',
     errNotFile: 'no es un archivo',
@@ -1204,6 +1221,7 @@ const tMain = createI18n({
     menuPageSetup: 'Configurar página…',
     menuExportPdf: 'Exportar como PDF…',
     menuExportHtml: 'Exportar como HTML…',
+    menuExportMarkdown: 'Exportar como Markdown…',
     menuExportImages: 'Exportar como imágenes…',
     menuPrint: 'Imprimir…',
     menuEdit: 'Edición',
@@ -1309,6 +1327,7 @@ const tMain = createI18n({
     filterAll: 'ไฟล์ทั้งหมด',
     dlgExportPdf: 'ส่งออกเป็น PDF',
     dlgExportHtml: 'ส่งออกเป็น HTML',
+    dlgExportMarkdown: 'ส่งออกเป็น Markdown',
     dlgPickExportDir: 'เลือกโฟลเดอร์ส่งออก',
     errUnsupportedExt: 'ไม่รองรับไฟล์ .{ext}',
     errNotFile: 'ไม่ใช่ไฟล์',
@@ -1335,6 +1354,7 @@ const tMain = createI18n({
     menuPageSetup: 'ตั้งค่าหน้ากระดาษ…',
     menuExportPdf: 'ส่งออกเป็น PDF…',
     menuExportHtml: 'ส่งออกเป็น HTML…',
+    menuExportMarkdown: 'ส่งออกเป็น Markdown…',
     menuExportImages: 'ส่งออกเป็นรูปภาพ…',
     menuPrint: 'พิมพ์…',
     menuEdit: 'แก้ไข',
@@ -1441,6 +1461,7 @@ const tMain = createI18n({
     filterAll: 'Semua File',
     dlgExportPdf: 'Ekspor sebagai PDF',
     dlgExportHtml: 'Ekspor sebagai HTML',
+    dlgExportMarkdown: 'Ekspor sebagai Markdown',
     dlgPickExportDir: 'Pilih Folder Ekspor',
     errUnsupportedExt: 'file .{ext} tidak didukung',
     errNotFile: 'bukan file',
@@ -1467,6 +1488,7 @@ const tMain = createI18n({
     menuPageSetup: 'Penyetelan Halaman…',
     menuExportPdf: 'Ekspor sebagai PDF…',
     menuExportHtml: 'Ekspor sebagai HTML…',
+    menuExportMarkdown: 'Ekspor sebagai Markdown…',
     menuExportImages: 'Ekspor sebagai gambar…',
     menuPrint: 'Cetak…',
     menuEdit: 'Edit',
@@ -1573,6 +1595,7 @@ const tMain = createI18n({
     filterAll: 'Все файлы',
     dlgExportPdf: 'Экспорт в PDF',
     dlgExportHtml: 'Экспорт в HTML',
+    dlgExportMarkdown: 'Экспорт в Markdown',
     dlgPickExportDir: 'Выбор папки для экспорта',
     errUnsupportedExt: 'файлы .{ext} не поддерживаются',
     errNotFile: 'не является файлом',
@@ -1599,6 +1622,7 @@ const tMain = createI18n({
     menuPageSetup: 'Параметры страницы…',
     menuExportPdf: 'Экспорт в PDF…',
     menuExportHtml: 'Экспорт в HTML…',
+    menuExportMarkdown: 'Экспорт в Markdown…',
     menuExportImages: 'Экспорт в изображения…',
     menuPrint: 'Печать…',
     menuEdit: 'Правка',
@@ -1705,6 +1729,7 @@ const tMain = createI18n({
     filterAll: 'كل الملفات',
     dlgExportPdf: 'تصدير بتنسيق PDF',
     dlgExportHtml: 'تصدير بتنسيق HTML',
+    dlgExportMarkdown: 'تصدير بتنسيق Markdown',
     dlgPickExportDir: 'اختيار مجلد التصدير',
     errUnsupportedExt: 'ملفات .{ext} غير مدعومة',
     errNotFile: 'ليس ملفًا',
@@ -1731,6 +1756,7 @@ const tMain = createI18n({
     menuPageSetup: 'إعداد الصفحة…',
     menuExportPdf: 'تصدير بتنسيق PDF…',
     menuExportHtml: 'تصدير بتنسيق HTML…',
+    menuExportMarkdown: 'تصدير بتنسيق Markdown…',
     menuExportImages: 'تصدير كصور…',
     menuPrint: 'طباعة…',
     menuEdit: 'تحرير',
@@ -1837,6 +1863,7 @@ const tMain = createI18n({
     filterAll: 'Todos os Arquivos',
     dlgExportPdf: 'Exportar como PDF',
     dlgExportHtml: 'Exportar como HTML',
+    dlgExportMarkdown: 'Exportar como Markdown',
     dlgPickExportDir: 'Escolher Pasta de Exportação',
     errUnsupportedExt: 'arquivos .{ext} não são suportados',
     errNotFile: 'não é um arquivo',
@@ -1863,6 +1890,7 @@ const tMain = createI18n({
     menuPageSetup: 'Configurar Página…',
     menuExportPdf: 'Exportar como PDF…',
     menuExportHtml: 'Exportar como HTML…',
+    menuExportMarkdown: 'Exportar como Markdown…',
     menuExportImages: 'Exportar como imagens…',
     menuPrint: 'Imprimir…',
     menuEdit: 'Editar',
@@ -1969,6 +1997,7 @@ const tMain = createI18n({
     filterAll: 'Tutti i file',
     dlgExportPdf: 'Esporta come PDF',
     dlgExportHtml: 'Esporta come HTML',
+    dlgExportMarkdown: 'Esporta come Markdown',
     dlgPickExportDir: 'Scegli la cartella di esportazione',
     errUnsupportedExt: 'i file .{ext} non sono supportati',
     errNotFile: 'non è un file',
@@ -1995,6 +2024,7 @@ const tMain = createI18n({
     menuPageSetup: 'Imposta pagina…',
     menuExportPdf: 'Esporta come PDF…',
     menuExportHtml: 'Esporta come HTML…',
+    menuExportMarkdown: 'Esporta come Markdown…',
     menuExportImages: 'Esporta come immagini…',
     menuPrint: 'Stampa…',
     menuEdit: 'Modifica',
@@ -2101,6 +2131,7 @@ const tMain = createI18n({
     filterAll: 'Wszystkie pliki',
     dlgExportPdf: 'Eksportuj jako PDF',
     dlgExportHtml: 'Eksportuj jako HTML',
+    dlgExportMarkdown: 'Eksportuj jako Markdown',
     dlgPickExportDir: 'Wybierz folder eksportu',
     errUnsupportedExt: 'pliki .{ext} nie są obsługiwane',
     errNotFile: 'to nie jest plik',
@@ -2127,6 +2158,7 @@ const tMain = createI18n({
     menuPageSetup: 'Ustawienia strony…',
     menuExportPdf: 'Eksportuj jako PDF…',
     menuExportHtml: 'Eksportuj jako HTML…',
+    menuExportMarkdown: 'Eksportuj jako Markdown…',
     menuExportImages: 'Eksportuj jako obrazy…',
     menuPrint: 'Drukuj…',
     menuEdit: 'Edycja',
@@ -2233,6 +2265,7 @@ const tMain = createI18n({
     filterAll: 'Všechny soubory',
     dlgExportPdf: 'Exportovat jako PDF',
     dlgExportHtml: 'Exportovat jako HTML',
+    dlgExportMarkdown: 'Exportovat jako Markdown',
     dlgPickExportDir: 'Zvolte složku pro export',
     errUnsupportedExt: 'soubory .{ext} nejsou podporovány',
     errNotFile: 'není soubor',
@@ -2259,6 +2292,7 @@ const tMain = createI18n({
     menuPageSetup: 'Vzhled stránky…',
     menuExportPdf: 'Exportovat jako PDF…',
     menuExportHtml: 'Exportovat jako HTML…',
+    menuExportMarkdown: 'Exportovat jako Markdown…',
     menuExportImages: 'Exportovat jako obrázky…',
     menuPrint: 'Tisk…',
     menuEdit: 'Úpravy',
@@ -2365,6 +2399,7 @@ const tMain = createI18n({
     filterAll: 'Alle bestanden',
     dlgExportPdf: 'Exporteren als PDF',
     dlgExportHtml: 'Exporteren als HTML',
+    dlgExportMarkdown: 'Exporteren als Markdown',
     dlgPickExportDir: 'Exportmap kiezen',
     errUnsupportedExt: '.{ext}-bestanden worden niet ondersteund',
     errNotFile: 'geen bestand',
@@ -2391,6 +2426,7 @@ const tMain = createI18n({
     menuPageSetup: 'Pagina-instelling…',
     menuExportPdf: 'Exporteren als PDF…',
     menuExportHtml: 'Exporteren als HTML…',
+    menuExportMarkdown: 'Exporteren als Markdown…',
     menuExportImages: 'Exporteren als afbeeldingen…',
     menuPrint: 'Afdrukken…',
     menuEdit: 'Bewerken',
@@ -2497,6 +2533,7 @@ const tMain = createI18n({
     filterAll: 'Semua Fail',
     dlgExportPdf: 'Eksport sebagai PDF',
     dlgExportHtml: 'Eksport sebagai HTML',
+    dlgExportMarkdown: 'Eksport sebagai Markdown',
     dlgPickExportDir: 'Pilih Folder Eksport',
     errUnsupportedExt: 'fail .{ext} tidak disokong',
     errNotFile: 'bukan fail',
@@ -2523,6 +2560,7 @@ const tMain = createI18n({
     menuPageSetup: 'Persediaan Halaman…',
     menuExportPdf: 'Eksport sebagai PDF…',
     menuExportHtml: 'Eksport sebagai HTML…',
+    menuExportMarkdown: 'Eksport sebagai Markdown…',
     menuExportImages: 'Eksport sebagai imej…',
     menuPrint: 'Cetak…',
     menuEdit: 'Edit',
@@ -2628,6 +2666,7 @@ const tMain = createI18n({
     filterAll: 'כל הקבצים',
     dlgExportPdf: 'ייצוא כ-PDF',
     dlgExportHtml: 'ייצוא כ-HTML',
+    dlgExportMarkdown: 'ייצוא כ-Markdown',
     dlgPickExportDir: 'בחירת תיקיית ייצוא',
     errUnsupportedExt: 'קובצי .{ext} אינם נתמכים',
     errNotFile: 'אינו קובץ',
@@ -2654,6 +2693,7 @@ const tMain = createI18n({
     menuPageSetup: 'הגדרת עמוד…',
     menuExportPdf: 'ייצוא כ-PDF…',
     menuExportHtml: 'ייצוא כ-HTML…',
+    menuExportMarkdown: 'ייצוא כ-Markdown…',
     menuExportImages: 'ייצוא כתמונות…',
     menuPrint: 'הדפסה…',
     menuEdit: 'עריכה',
@@ -2760,6 +2800,7 @@ const tMain = createI18n({
     filterAll: 'सभी फ़ाइलें',
     dlgExportPdf: 'PDF के रूप में निर्यात करें',
     dlgExportHtml: 'HTML के रूप में निर्यात करें',
+    dlgExportMarkdown: 'Markdown के रूप में निर्यात करें',
     dlgPickExportDir: 'निर्यात फ़ोल्डर चुनें',
     errUnsupportedExt: '.{ext} फ़ाइलें समर्थित नहीं हैं',
     errNotFile: 'फ़ाइल नहीं है',
@@ -2786,6 +2827,7 @@ const tMain = createI18n({
     menuPageSetup: 'पृष्ठ सेटअप…',
     menuExportPdf: 'PDF के रूप में निर्यात करें…',
     menuExportHtml: 'HTML के रूप में निर्यात करें…',
+    menuExportMarkdown: 'Markdown के रूप में निर्यात करें…',
     menuExportImages: 'छवियों के रूप में निर्यात…',
     menuPrint: 'प्रिंट करें…',
     menuEdit: 'संपादन',
@@ -2891,6 +2933,7 @@ const tMain = createI18n({
     filterAll: '所有檔案',
     dlgExportPdf: '匯出為 PDF',
     dlgExportHtml: '匯出為 HTML',
+    dlgExportMarkdown: '匯出為 Markdown',
     dlgPickExportDir: '選擇匯出目錄',
     errUnsupportedExt: '暫不支援 .{ext} 類型',
     errNotFile: '不是檔案',
@@ -2916,6 +2959,7 @@ const tMain = createI18n({
     menuPageSetup: '版面設定…',
     menuExportPdf: '匯出為 PDF…',
     menuExportHtml: '匯出為 HTML…',
+    menuExportMarkdown: '匯出為 Markdown…',
     menuExportImages: '匯出為圖片…',
     menuPrint: '列印…',
     menuEdit: '編輯',
@@ -5262,6 +5306,49 @@ export function registerDocsIpc(): void {
     },
   )
 
+  ipcMain.handle(
+    'docs:export-markdown',
+    async (
+      event,
+      defaultName: string,
+      markdown: string,
+      images: MarkdownImage[],
+      outPath?: string,
+    ) => {
+      if (typeof markdown !== 'string' || !markdown) return { ok: false, error: 'empty document' }
+      if (!Array.isArray(images)) return { ok: false, error: 'bad image list' }
+      let filePath = outPath ?? null
+      if (filePath && !canPdfWrite(event.sender.id, filePath)) {
+        return { ok: false, error: 'export target is not an authorized path' }
+      }
+      if (!filePath) {
+        const result = await saveDialog(event, {
+          title: tm('dlgExportMarkdown'),
+          defaultPath: defaultName.replace(/\.docx$/i, '') + '.md',
+          filters: [{ name: 'Markdown', extensions: ['md'] }],
+        })
+        if (result.canceled || !result.filePath) return { ok: false }
+        filePath = result.filePath
+        allowPdfWrite(event.sender.id, filePath)
+      }
+      try {
+        const written = await writeMarkdownMedia(filePath, images)
+        // the Markdown destination was escaped before the swap: parentheses must not survive it
+        const mediaDir = encodeURIComponent(
+          basename(filePath).replace(/\.md$/i, '') + '_files',
+        ).replace(/[()]/g, (c) => (c === '(' ? '%28' : '%29'))
+        await atomicWriteFile(
+          filePath,
+          Buffer.from(markdown.split(`${MARKDOWN_MEDIA_DIR_TOKEN}/`).join(`${mediaDir}/`), 'utf8'),
+        )
+        openGeneratedFile(filePath)
+        return { ok: true, path: filePath, imagesDropped: images.length - written }
+      } catch (err) {
+        return { ok: false, error: String(err), path: filePath }
+      }
+    },
+  )
+
   // mixed paper-size export: the renderer prints group by group per size (other pages hidden via CSS); this produces one group's bytes
   ipcMain.handle(
     'docs:print-pdf-buffer',
@@ -5377,6 +5464,30 @@ export function setDocsShellHooks(hooks: DocsShellHooks | null): void {
 /** After writing an exported/AI-generated file: open it in the right tab
  * (shell) or reveal it in the folder (standalone). Tab-opening failure must
  * not report the write itself as failed — the file is already persisted. */
+/**
+ * Pictures of a Markdown export land in `<file>_files/` next to it, like a
+ * browser's "save page" folder. Returns how many were written; unreadable
+ * sources are skipped and the reference in the Markdown dangles.
+ */
+async function writeMarkdownMedia(mdPath: string, images: MarkdownImage[]): Promise<number> {
+  if (images.length === 0) return 0
+  const dir = join(dirname(mdPath), basename(mdPath).replace(/\.md$/i, '') + '_files')
+  let written = 0
+  for (const img of images) {
+    if (typeof img?.name !== 'string' || !/^image\d+\.\w+$/.test(img.name)) continue
+    if (typeof img.src !== 'string') continue
+    const data = /^data:image\/[\w.+-]+;base64,(.*)$/s.exec(img.src)
+    const body = data
+      ? Buffer.from(data[1], 'base64')
+      : ((await readLazyMedia(img.src).catch(() => null))?.body ?? null)
+    if (!body || body.length === 0) continue
+    if (written === 0) await mkdir(dir, { recursive: true })
+    await atomicWriteFile(join(dir, img.name), body)
+    written++
+  }
+  return written
+}
+
 function openGeneratedFile(path: string): void {
   // Headless export has no tab strip and no user: revealing the file in Finder
   // would be the only visible effect of a run that must stay silent.
@@ -5588,6 +5699,7 @@ export function buildDocsMenu(): void {
         { label: tm('menuPageSetup'), click: () => sendCommand('page-setup') },
         { label: tm('menuExportPdf'), click: () => sendCommand('export-pdf') },
         { label: tm('menuExportHtml'), click: () => sendCommand('export-html') },
+        { label: tm('menuExportMarkdown'), click: () => sendCommand('export-markdown') },
         { label: tm('menuExportImages'), click: () => sendCommand('export-images') },
         {
           label: tm('menuPrint'),
