@@ -88,6 +88,7 @@ export const PDF_CHANNELS = {
   // the note of each PDF (reading-assist 4.9): the view's own PDF, no path from the renderer
   noteOpen: 'pdf:note-open',
   noteInsert: 'pdf:note-insert',
+  noteUnsaved: 'pdf:note-unsaved',
   dirtyChanged: 'pdf:dirty-changed',
   closeSaveRequest: 'pdf:close-save-request',
   closeSaveResult: 'pdf:close-save-result',
@@ -1524,6 +1525,8 @@ export interface PdfApi {
   noteOpen(request?: PdfNoteOpenRequest): Promise<PdfNoteResult>
   /** put text at the end of that note's open tab (never written to the file directly) */
   noteInsert(request: PdfNoteInsertRequest): Promise<PdfNoteResult>
+  /** this view's PDF has no path the person saved yet (a new blank before its first save): the note buttons wait */
+  noteUnsaved(): Promise<boolean>
   /** Mirror unsaved-changes state to the main process; drives the save prompt before closing a tab/window */
   setDirty(dirty: boolean): void
   /** Main process asks for a save (close prompt, menu Save, export flows) and waits for sendCloseSaveResult.

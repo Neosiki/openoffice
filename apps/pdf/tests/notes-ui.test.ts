@@ -147,12 +147,13 @@ afterEach(() => {
 })
 
 function fakeApi(o: { untitled?: boolean; result?: PdfNoteResult } = {}) {
+  const state = { unsaved: o.untitled === true }
   const api = {
     noteOpen: vi.fn(async (_request?: { title?: string }) => o.result ?? { ok: true }),
     noteInsert: vi.fn(async (_request: PdfNoteInsertRequest) => o.result ?? { ok: true }),
-    isUntitled: vi.fn(async () => o.untitled === true),
+    noteUnsaved: vi.fn(async () => state.unsaved),
   } satisfies NoteApi
-  return api
+  return Object.assign(api, { state })
 }
 
 async function mountButtons(
@@ -160,10 +161,12 @@ async function mountButtons(
   filePath: string,
   notices: string[],
   request: PdfNoteInsertRequest | null = { kind: 'quote', excerpt: 'x', page: 1 },
+  savedRev = 0,
 ): Promise<void> {
   function Harness() {
     const actions: NoteActions = useNoteActions({
       filePath,
+      savedRev,
       title: 'A Study',
       t,
       onNotice: (m) => notices.push(m),
@@ -237,6 +240,20 @@ describe('note buttons', () => {
       for (const b of all) expect(b.disabled).toBe(true)
       expect(host.textContent).toContain('Save the PDF first')
     }
+  })
+
+  it('a new blank saved with Ctrl+S is no longer "not saved": the buttons ask again after the save', async () => {
+    const api = fakeApi({ untitled: true })
+    await mountButtons(api, 'C:\\d\\Untitled.pdf', [])
+    expect(buttons('note-open').every((b) => b.disabled)).toBe(true)
+    // the save succeeded: the main process no longer counts the blank as unsaved
+    api.state.unsaved = false
+    await mountButtons(api, 'C:\\d\\Untitled.pdf', [], undefined, 1)
+    expect(api.noteUnsaved).toHaveBeenCalledTimes(2)
+    for (const b of [...buttons('note-open'), ...buttons('note-insert')]) {
+      expect(b.disabled).toBe(false)
+    }
+    expect(host.textContent).not.toContain('Save the PDF first')
   })
 
   it('shows the main process’s refusal', async () => {

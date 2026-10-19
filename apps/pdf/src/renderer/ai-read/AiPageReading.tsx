@@ -94,8 +94,12 @@ export type AiReadOpenAnswer =
 export interface AiPageReadingHandle {
   /** open the window (ribbon, AI tool); never sends anything */
   requestOpen(pages: number[] | null): AiReadOpenAnswer
-  /** after an in-app save: carry the stored results to the saved file's hash */
-  afterSave(): Promise<void>
+  /**
+   * After an in-app save: carry the stored results to the saved file's hash.
+   * Answers that hash once the migration completed, or null when it did not
+   * (no hash read yet, no store, a failed migration).
+   */
+  afterSave(): Promise<string | null>
   /** ask, then delete everything stored for this document */
   deleteStored(): Promise<void>
 }
@@ -260,9 +264,10 @@ export const AiPageReading = forwardRef<AiPageReadingHandle, AiPageReadingProps>
       },
       async afterSave() {
         const from = docHashRef.current
-        if (!from) return
+        if (!from) return null
         const next = await migrate(from)
         if (next) setDocHash(next)
+        return next
       },
       async deleteStored() {
         const p = propsRef.current

@@ -607,6 +607,7 @@ function HighlightConfirm({
   const nothingToSend = !!estimate && estimate.calls === 0
   const canStart =
     !readOnly &&
+    labelProblem(labels) === null &&
     route.state === 'ready' &&
     !!estimate &&
     !nothingToSend &&

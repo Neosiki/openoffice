@@ -115,31 +115,9 @@ export interface StoredTranslation {
   blocks: Map<string, TranslationBlockEntry>
 }
 
-/**
- * Every job kind (reading-assist spec 5.3). The record of a job is found by
- * (kind, key): the key is the language for 'translate', 'translate-page' and
- * 'summary', the run id for 'highlight', and none for 'ai-read'.
- */
-export const JOB_KINDS = ['ai-read', 'translate', 'translate-page', 'highlight', 'summary'] as const
-export type JobKind = (typeof JOB_KINDS)[number]
+import { JOB_KINDS, jobKeyField, type JobKind } from './job-keys'
 
-const LANG_KEYED_JOBS: readonly JobKind[] = ['translate', 'translate-page', 'summary']
-
-/** the record field that holds a kind's second key, or null for 'ai-read' */
-export function jobKeyField(kind: JobKind): 'lang' | 'runId' | null {
-  if (LANG_KEYED_JOBS.includes(kind)) return 'lang'
-  return kind === 'highlight' ? 'runId' : null
-}
-
-/** a job's second key: its language, its run id, or undefined for 'ai-read' */
-export function jobKeyOf(job: {
-  kind: JobKind
-  lang?: string
-  runId?: string
-}): string | undefined {
-  const field = jobKeyField(job.kind)
-  return field === null ? undefined : job[field]
-}
+export { JOB_KINDS, jobKeyField, jobKeyOf, type JobKind } from './job-keys'
 
 const isJobKind = (v: unknown): v is JobKind => (JOB_KINDS as readonly unknown[]).includes(v)
 
@@ -328,8 +306,24 @@ export const JOB_FILE =
 const PASSAGE_FILE = /^([A-Za-z0-9_-]{1,128})\.json$/
 const RUN_FILE = 'run.json'
 
-/** in-process turns of the note-links read-modify-write, by file path */
-const noteLinkTurns = new Map<string, Promise<unknown>>()
+/**
+ * In-process turns of a read-modify-write, by entry path: the note links, a
+ * highlight block's suggestion states, a translation block kept or removed by
+ * a restart. Without them two changes in flight read the same entry and the
+ * later write drops the earlier change.
+ */
+const entryTurns = new Map<string, Promise<unknown>>()
+
+/** run `change` after every earlier change of the entry at `path` in this process */
+async function inTurn<T>(path: string, change: () => Promise<T>): Promise<T> {
+  const turn = (entryTurns.get(path) ?? Promise.resolve()).catch(() => undefined).then(change)
+  entryTurns.set(path, turn)
+  try {
+    return await turn
+  } finally {
+    if (entryTurns.get(path) === turn) entryTurns.delete(path)
+  }
+}
 
 // ── the store ──
 
@@ -493,6 +487,9 @@ export class ResultStore {
       if (block.edited !== true || block.status !== 'translated' || block.runs !== undefined) {
         throw new TypeError('result store: an edited block is translated plain text without runs')
       }
+      if (!isStr(block.text) || block.text.trim() === '') {
+        throw new TypeError('result store: an edited block needs its text')
+      }
     }
     await this.putBlock(docHash, lang, { ...block, savedAt: this.now() })
   }
@@ -560,9 +557,13 @@ export class ResultStore {
         if (!m) continue
         const key = { pageFingerprint: fp, textHash: m[1]!, occurrence: Number(m[2]) }
         const path = join(root, fp, name)
-        if (asBlock(await readJson(path), key)?.edited) continue
-        await removeEntry(path)
-        removed++
+        // an edit written meanwhile is read before the removal, never after it
+        const gone = await inTurn(path, async () => {
+          if (asBlock(await readJson(path), key)?.edited) return false
+          await removeEntry(path)
+          return true
+        })
+        if (gone) removed++
       }
     }
     return removed
@@ -610,7 +611,7 @@ export class ResultStore {
     if (b.runs !== undefined && b.edited !== true) entry.runs = b.runs
     if (b.reason !== undefined) entry.reason = b.reason
     if (b.edited === true) entry.edited = true
-    await writeJsonAtomic(path, entry)
+    await inTurn(path, () => writeJsonAtomic(path, entry))
   }
 
   private async readBlocks(
@@ -812,7 +813,8 @@ export class ResultStore {
   ): Promise<void> {
     const entry = asHighlightBlock({ ...block, savedAt: this.now() }, block.key)
     if (!entry) throw new TypeError('result store: invalid highlight block')
-    await this.putHighlightBlock(docHash, runId, entry)
+    const path = this.highlightBlockPath(docHash, runId, block.key)
+    await inTurn(path, () => this.putHighlightBlock(docHash, runId, entry))
   }
 
   /** each block is its own entry; on failure the earlier ones stay written */
@@ -859,13 +861,23 @@ export class ResultStore {
     key: TranslationBlockKey,
     states: Readonly<Record<string, HighlightSuggestionState>>,
   ): Promise<boolean> {
-    const block = await this.readHighlightBlock(docHash, runId, key)
-    if (!block) return false
-    const suggestions = block.suggestions.map((s) =>
-      Object.hasOwn(states, s.id) ? { ...s, state: states[s.id]! } : s,
-    )
-    await this.writeHighlightBlock(docHash, runId, { key, status: block.status, suggestions })
-    return true
+    // also checks the key: an invalid one has no entry path
+    if (!(await this.readHighlightBlock(docHash, runId, key))) return false
+    // read and write in one turn: two changes in flight both land
+    return inTurn(this.highlightBlockPath(docHash, runId, key), async () => {
+      const current = await this.readHighlightBlock(docHash, runId, key)
+      if (!current) return false
+      const suggestions = current.suggestions.map((s) =>
+        Object.hasOwn(states, s.id) ? { ...s, state: states[s.id]! } : s,
+      )
+      const entry = asHighlightBlock(
+        { key, status: current.status, suggestions, savedAt: this.now() },
+        key,
+      )
+      if (!entry) throw new TypeError('result store: invalid highlight block')
+      await this.putHighlightBlock(docHash, runId, entry)
+      return true
+    })
   }
 
   /** remove a run: its folder and its job record `highlight.<runId>.json` */
@@ -1041,20 +1053,12 @@ export class ResultStore {
     change: (links: Record<string, NoteLink>) => boolean,
   ): Promise<boolean> {
     const path = this.noteLinksPath()
-    const turn = (noteLinkTurns.get(path) ?? Promise.resolve())
-      .catch(() => undefined)
-      .then(async () => {
-        const current = await this.readNoteLinks()
-        if (!change(current.links)) return false
-        await writeJsonAtomic(path, current)
-        return true
-      })
-    noteLinkTurns.set(path, turn)
-    try {
-      return await turn
-    } finally {
-      if (noteLinkTurns.get(path) === turn) noteLinkTurns.delete(path)
-    }
+    return inTurn(path, async () => {
+      const current = await this.readNoteLinks()
+      if (!change(current.links)) return false
+      await writeJsonAtomic(path, current)
+      return true
+    })
   }
 
   // ── migration on in-app save ──

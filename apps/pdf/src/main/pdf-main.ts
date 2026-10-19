@@ -897,12 +897,20 @@ export function clearPdfDirty(webContentsId: number): void {
 
 /** Paths of shell-created blank PDFs still carrying their untitled name; only these may auto-rename */
 const untitledPdfPaths = new Set<string>()
+/**
+ * Shell-created blank PDFs the person has not saved yet (reading-assist 4.9:
+ * the note waits for a PDF's first save). Unlike `untitledPdfPaths`, the
+ * first successful save in place ends this, even while the shell's untitled
+ * name (and with it content-derived naming) stays.
+ */
+const unsavedBlankPdfPaths = new Set<string>()
 /** Shell hook fired after an auto-rename so the tab title / recents / project mapping follow the file */
 let pdfRenamedHook: ((wc: WebContents, oldPath: string, newPath: string) => void) | null = null
 
 /** Called by the shell right after "New PDF" writes the blank file to disk */
 export function markPdfUntitledPath(path: string): void {
   untitledPdfPaths.add(path)
+  unsavedBlankPdfPaths.add(path)
 }
 
 /**
@@ -918,6 +926,7 @@ export function pdfFileRenamed(contents: WebContents, oldPath: string, newPath: 
   if (allowed?.has(oldPath)) allowed.add(newPath)
   if (saveAsTargetByWc.get(wcId) === oldPath) saveAsTargetByWc.set(wcId, newPath)
   if (untitledPdfPaths.delete(oldPath)) untitledPdfPaths.add(newPath)
+  if (unsavedBlankPdfPaths.delete(oldPath)) unsavedBlankPdfPaths.add(newPath)
   const states = docDiskStates.get(wcId)
   const recorded = states?.get(oldPath)
   if (states && recorded) {
@@ -1170,7 +1179,7 @@ let noteStore: ResultStore | null = null
 const noteLinks = createNoteLinkService({
   store: () => (noteStore ??= new ResultStore(app.getPath('userData'))),
   hashFile: documentHashOfFile,
-  isUntitled: (path) => untitledPdfPaths.has(path),
+  isUntitled: (path) => unsavedBlankPdfPaths.has(path),
   pickNotePath: async (owner, defaultPath) => {
     const sender = webContents.fromId(owner)
     const parent =
@@ -1354,6 +1363,8 @@ function registerPdfIpc(): void {
       await rememberDiskState(e.sender.id, target)
       // a save in place changed the document's hash: its note link follows (spec 5.4)
       if (target === path && request.redactions === undefined) void noteLinks.afterSave(path)
+      // the person saved this blank: it now has a saved path (its untitled name may stay)
+      if (target === path) unsavedBlankPdfPaths.delete(path)
       if (request.redactions !== undefined) {
         // Commit document identity only after the atomic write succeeds. Revoke the
         // source grant so stale renderer requests cannot write back to the original.
@@ -1450,6 +1461,7 @@ function registerPdfIpc(): void {
       allowedByWc.set(e.sender.id, new Set([target]))
       if (openPathByWc.get(e.sender.id) === path) openPathByWc.set(e.sender.id, target)
       untitledPdfPaths.delete(path)
+      if (unsavedBlankPdfPaths.delete(path)) unsavedBlankPdfPaths.add(target)
       try {
         pdfRenamedHook?.(e.sender, path, target)
       } catch (err) {
@@ -1480,6 +1492,11 @@ function registerPdfIpc(): void {
       openPathByWc.get(e.sender.id) ?? null,
       parseNoteOpenRequest(request),
     )
+  })
+  // whether the note buttons wait for the view's PDF to be saved (no path crosses)
+  ipcMain.handle(PDF_CHANNELS.noteUnsaved, (e): boolean => {
+    const path = openPathByWc.get(e.sender.id) ?? null
+    return path === null || unsavedBlankPdfPaths.has(path)
   })
   ipcMain.handle(PDF_CHANNELS.noteInsert, (e, request: unknown): Promise<PdfNoteResult> => {
     if (!allowedByWc.has(e.sender.id)) return Promise.resolve({ ok: false, reason: 'failed' })

@@ -98,6 +98,10 @@ export class HighlightSuggestions {
     const seq = ++this.loadSeq
     const file = this.file()
     const accepting = this.stillAccepting()
+    // the places belong to the pages read before: none is shown (or accepted) until placed again
+    if (this.state.views || this.state.fingerprints) {
+      this.set({ ...this.state, views: null, fingerprints: null, accepting })
+    }
     if (!this.store || !file) {
       this.set({ ...EMPTY, accepting })
       return
@@ -229,13 +233,15 @@ export class HighlightSuggestions {
   /**
    * The editing document's highlights now: an accepted suggestion whose
    * highlight was removed again (undo, delete) before any save goes back to
-   * pending, and its confirmation is dropped.
+   * pending, and its confirmation is dropped. A highlight a successful save
+   * wrote (held) left the editing document for the file: it keeps waiting.
    */
   prune(liveMarkupIds: ReadonlySet<string>): void {
     let changed = false
     const accepting = new Map(this.state.accepting)
     for (const [key, markupId] of accepting) {
       if (liveMarkupIds.has(markupId) || !this.confirmations.isPending(markupId)) continue
+      if (this.confirmations.isHeld(markupId)) continue
       this.confirmations.cancel(markupId)
       accepting.delete(key)
       changed = true

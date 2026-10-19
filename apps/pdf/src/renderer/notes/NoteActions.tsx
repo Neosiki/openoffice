@@ -3,9 +3,11 @@
  * "Open note" in the ribbon and the annotation panel, "Add to note" on
  * passage cards, panel items and overview sections.
  *
- * A PDF without a saved path (a new, untitled blank) disables them with
- * "Save the PDF first"; the main process refuses it as well. The calls carry
- * no path: the main process uses the view's own PDF and its linked note.
+ * A PDF without a saved path (a new blank the person has not saved yet)
+ * disables them with "Save the PDF first"; the main process refuses it as
+ * well. The buttons ask again after every successful save, so a blank saved
+ * with Ctrl+S gets them at once. The calls carry no path: the main process
+ * uses the view's own PDF and its linked note.
  */
 import { Fragment, useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import type { PdfNoteInsertRequest, PdfNoteResult } from '../../shared/ipc'
@@ -16,7 +18,8 @@ import { noteResultNotice } from './note-requests'
 export interface NoteApi {
   noteOpen(request?: { title?: string }): Promise<PdfNoteResult>
   noteInsert(request: PdfNoteInsertRequest): Promise<PdfNoteResult>
-  isUntitled(path: string): Promise<boolean>
+  /** the view's PDF has not been saved by the person yet (a new blank) */
+  noteUnsaved(): Promise<boolean>
 }
 
 export interface NoteActions {
@@ -28,11 +31,15 @@ export interface NoteActions {
 
 const defaultApi = (): NoteApi | null => {
   const api = typeof window !== 'undefined' ? window.pdfApi : undefined
-  return api && typeof api.noteOpen === 'function' ? api : null
+  return api && typeof api.noteOpen === 'function' && typeof api.noteUnsaved === 'function'
+    ? api
+    : null
 }
 
 export function useNoteActions(o: {
   filePath: string
+  /** bumped by every successful save of the PDF: the unsaved state is asked again */
+  savedRev?: number
   /** the PDF's title ('' when none): heads a note made now */
   title: string
   t: TFunc
@@ -49,7 +56,7 @@ export function useNoteActions(o: {
     setUntitled(false)
     if (!o.filePath || !api) return
     void api
-      .isUntitled(o.filePath)
+      .noteUnsaved()
       .then((value) => {
         if (!cancelled) setUntitled(value === true)
       })
@@ -57,7 +64,7 @@ export function useNoteActions(o: {
     return () => {
       cancelled = true
     }
-  }, [api, o.filePath])
+  }, [api, o.filePath, o.savedRev])
 
   const blocked = !o.filePath || untitled ? 'ntSaveFirst' : null
 

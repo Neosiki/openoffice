@@ -21,7 +21,8 @@ export type PassageCardBody =
   | { kind: 'busy'; phase: 'waiting' | 'working'; notice?: ReactNode }
   /** refused for want of a connection; the prompt is absent once the gate moved on */
   | { kind: 'connect'; prompt: ReactNode }
-  | { kind: 'failed'; message: string }
+  /** `notice`: the blocked-run notice that replaces the plain line (used-up limit, signed out, …) */
+  | { kind: 'failed'; message: string; notice?: ReactNode }
   | { kind: 'card'; card: PassageCard; note: PassageNoteState }
 
 /** fixed placement next to the passage: below it when there is room, else above */
@@ -150,11 +151,12 @@ export function PassageCardView({
             {body.prompt}
           </>
         )}
-        {body.kind === 'failed' && (
-          <div className="pdf-passage-card-status is-error" role="alert">
-            {t('rdFailed', { reason: body.message })}
-          </div>
-        )}
+        {body.kind === 'failed' &&
+          (body.notice ?? (
+            <div className="pdf-passage-card-status is-error" role="alert">
+              {t('rdFailed', { reason: body.message })}
+            </div>
+          ))}
         {ready && (
           <div className="pdf-passage-card-answer" data-passage-answer dir="auto">
             {ready.card.text}

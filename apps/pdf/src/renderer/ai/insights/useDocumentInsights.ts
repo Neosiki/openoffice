@@ -15,6 +15,8 @@ export function useDocumentInsights(o: {
   lang: string
   /** the document is loaded (an encrypted one only after its password) */
   ready: boolean
+  /** bumped when the open file was rewritten in place under the same path (a page operation) */
+  revision?: number
 }): DocumentInsights {
   const live = useRef(o)
   live.current = o
@@ -36,7 +38,7 @@ export function useDocumentInsights(o: {
   )
   useEffect(() => {
     if (o.ready && o.filePath) void insights.load()
-  }, [insights, o.ready, o.filePath])
+  }, [insights, o.ready, o.filePath, o.revision])
   useEffect(() => {
     void insights.setLang(o.lang)
   }, [insights, o.lang])

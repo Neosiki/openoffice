@@ -102,6 +102,18 @@ export function pdfLinkFromNote(
   return relative.split(p.sep).map(encodeSegment).join('/')
 }
 
+/**
+ * Inserted text is document or model output: a Markdown image (`![…]`) or a
+ * raw `<img>` tag in it would make the note's editor fetch a remote picture.
+ * Both lose their meaning behind a backslash; one already escaped (an odd run
+ * of backslashes before it) stays as it is.
+ */
+function withoutImages(text: string): string {
+  return text.replace(/(\\*)(!\[|<img\b)/gi, (match, slashes: string, mark: string) =>
+    slashes.length % 2 === 1 ? match : `${slashes}\\${mark}`,
+  )
+}
+
 /** the text one "Add to note" puts at the end of the note (spec 4.9) */
 export function noteInsertText(
   notePath: string,
@@ -109,13 +121,13 @@ export function noteInsertText(
   request: PdfNoteInsertRequest,
   platform: NodeJS.Platform = process.platform,
 ): string {
-  const body = request.body?.trim() ?? ''
+  const body = withoutImages(request.body?.trim() ?? '')
   let head: string
   if (request.kind === 'overview') {
-    head = `## ${request.heading.trim()}`
+    head = `## ${withoutImages(request.heading.trim())}`
   } else {
     const link = `([p.${request.page}](${pdfLinkFromNote(notePath, pdfPath, platform)}#page=${request.page}))`
-    const lines = request.excerpt
+    const lines = withoutImages(request.excerpt)
       .replace(/\r\n?/g, '\n')
       .split('\n')
       .map((line) => line.trimEnd())

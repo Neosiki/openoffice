@@ -18,7 +18,9 @@ import {
   type JobSummary,
   type RunningDocumentJob,
 } from '../../../../../packages/pdf-structure/src/jobs'
-import type { JobKind, JobStatus } from '../../../../../packages/pdf-structure/src/store/store'
+import type { JobStatus } from '../../../../../packages/pdf-structure/src/store/store'
+// the store's own record-key rule, from its Node-free module (reading-assist spec 5.3)
+import { jobKeyOf, type JobKind } from '../../../../../packages/pdf-structure/src/store/job-keys'
 
 export interface DocumentJobView {
   /** session-unique */
@@ -62,27 +64,6 @@ export interface StartDocumentJob<U> {
   pageOf?(unit: U): number | null
   /** the job ended (complete, stopped or failed); its last view */
   onEnd?(view: DocumentJobView): void
-}
-
-/**
- * A job record's second key (reading-assist spec 5.3): the language for
- * translate, translate-page and summary, the run id for highlight, none for
- * ai-read. The same rule as the store's jobKeyOf, which lives in a
- * Node-only module the renderer cannot load.
- */
-export function jobRecordKey(job: {
-  kind: JobKind
-  lang?: string
-  runId?: string
-}): string | undefined {
-  switch (job.kind) {
-    case 'ai-read':
-      return undefined
-    case 'highlight':
-      return job.runId
-    default:
-      return job.lang
-  }
 }
 
 const recordKey = (docHash: string, kind: JobKind, key?: string): string =>
@@ -147,7 +128,7 @@ export class DocumentJobSession {
     }
     this.views.set(spec.docHash, view)
     this.controllers.set(spec.docHash, controller)
-    this.ran.add(recordKey(spec.docHash, spec.kind, jobRecordKey(spec)))
+    this.ran.add(recordKey(spec.docHash, spec.kind, jobKeyOf(spec)))
     this.emit()
     const end = (patch: Partial<DocumentJobView>) => {
       if (this.controllers.get(spec.docHash) === controller) this.controllers.delete(spec.docHash)
@@ -193,7 +174,7 @@ export class DocumentJobSession {
   runningElsewhere(docHash: string, records: readonly JobStatus[]): JobStatus | undefined {
     return records.find((job) => {
       if (job.state !== 'running') return false
-      const carriedAt = this.carried.get(recordKey(docHash, job.kind, jobRecordKey(job)))
+      const carriedAt = this.carried.get(recordKey(docHash, job.kind, jobKeyOf(job)))
       return carriedAt === undefined || job.updatedAt === undefined || job.updatedAt > carriedAt
     })
   }

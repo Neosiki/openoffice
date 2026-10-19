@@ -14,6 +14,11 @@ export function usePassageCards(o: {
   lang: string
   /** the document is loaded (an encrypted one only after its password) */
   ready: boolean
+  /**
+   * Bumped when the open file was rewritten in place under the same path (a
+   * page operation): its pages and hash changed, so the cards are read again
+   */
+  revision?: number
 }): PassageCards {
   const live = useRef(o)
   live.current = o
@@ -34,20 +39,23 @@ export function usePassageCards(o: {
   // reads the store only: opening a document never sends anything
   useEffect(() => {
     if (o.ready && o.filePath) void cards.load()
-  }, [cards, o.ready, o.filePath])
+  }, [cards, o.ready, o.filePath, o.revision])
   return cards
 }
 
 /**
  * After a successful PDF save and the store migration (reading-assist spec
- * 3.5): confirm what the save wrote under the saved file's hash, then read the
- * cards again (new hash, pages found again by fingerprint).
+ * 3.5): confirm what the save wrote under the hash the completed migration
+ * moved the store to (`migratedHash`; null when it did not complete, and the
+ * confirmations keep waiting), then read the cards again (new hash, pages
+ * found again by fingerprint).
  */
 export async function afterReadingSave(
   confirmations: SaveConfirmations,
   cards: PassageCards,
   written: Iterable<string>,
+  migratedHash: string | null,
 ): Promise<void> {
-  await confirmations.afterSave(written, () => cards.freshDocHash())
+  await confirmations.afterSave(written, async () => migratedHash)
   await cards.load()
 }

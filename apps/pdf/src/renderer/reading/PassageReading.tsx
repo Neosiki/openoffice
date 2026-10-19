@@ -30,6 +30,7 @@ import {
 import type { AiSettings } from '@genoffice/ai-provider/browser'
 import type { Lang } from '@genoffice/i18n'
 import {
+  AiBlockedNotice,
   AiConnectPrompt,
   AiFirstConnectionNotice,
   aiHeldRequestStep,
@@ -43,6 +44,8 @@ import { defaultTargetLanguage } from '../../../../../packages/pdf-structure/src
 import type { AskAnchorRect } from '../AiAskPopover'
 import type { TFunc } from '../i18n/locale'
 import type { NoteInput } from '../note-threads'
+import type { AiBlockedRun } from '../ai/ai-connection'
+import { modelCallFailure } from '../ai/model-call-failure'
 import { useSubscriptionConnection } from '../ai/useSubscriptionConnection'
 import { createModelCall } from '../doc-jobs/model-call'
 import { documentJobRoute } from '../doc-jobs/route'
@@ -119,6 +122,10 @@ export interface PassageReadingHandle {
 interface Job {
   seq: number
   run: (signal: AbortSignal) => Promise<PassageCard>
+  /** the request it answers (passage, kind, language): a second press finds it */
+  key: string
+  heading: string
+  excerpt: string
   /** the call in flight, once started */
   abort?: AbortController
   /** the card was closed: the job never starts, and a late answer is dropped */
@@ -131,6 +138,8 @@ type View =
       job: Job
       phase: 'waiting' | 'working' | 'connect' | 'failed'
       message?: string
+      /** the failure is a run its connection cannot go on with (shown as the standard notice) */
+      blocked?: AiBlockedRun
       heading: string
       excerpt: string
       anchor: AskAnchorRect
@@ -164,6 +173,8 @@ export const PassageReading = forwardRef<PassageReadingHandle, PassageReadingPro
     const heldRef = useRef<{ job: Job; reason: AiHeldReason } | null>(null)
     /** card id → the pending id of the note "Keep as note" added */
     const keptNotes = useRef(new Map<string, string>())
+    /** request key → its job, while the job may still answer */
+    const jobsByKey = useRef(new Map<string, Job>())
 
     useEffect(() => {
       let alive = true
@@ -218,12 +229,18 @@ export const PassageReading = forwardRef<PassageReadingHandle, PassageReadingPro
         })
         .catch((err: unknown) => {
           if (abort.signal.aborted || job.cancelled) return
-          const message = err instanceof Error ? err.message : String(err)
+          // the shared blocked-run mapping (and a fresh status look), like the overview
+          const { message, blocked } = modelCallFailure(err, connection.recheck)
           setView((v) =>
-            v?.kind === 'job' && v.job === job ? { ...v, phase: 'failed', message } : v,
+            v?.kind === 'job' && v.job === job
+              ? { ...v, phase: 'failed', message, ...(blocked ? { blocked } : {}) }
+              : v,
           )
         })
-        .finally(() => aborts.current.delete(abort))
+        .finally(() => {
+          aborts.current.delete(abort)
+          if (jobsByKey.current.get(job.key) === job) jobsByKey.current.delete(job.key)
+        })
     }
     const startRef = useRef(start)
     startRef.current = start
@@ -337,28 +354,53 @@ export const PassageReading = forwardRef<PassageReadingHandle, PassageReadingPro
         setView({ kind: 'card', id: prepared.existing.id, anchor: sel.anchor })
         return
       }
+      if ('pending' in prepared) {
+        // the same request is still answering: show it again, send nothing
+        const running = jobsByKey.current.get(prepared.pending)
+        if (!running || running.cancelled) return
+        dropHeld()
+        setView({
+          kind: 'job',
+          job: running,
+          phase: 'working',
+          heading: running.heading,
+          excerpt: running.excerpt,
+          anchor: sel.anchor,
+        })
+        return
+      }
       const ready: PreparedPassage = prepared
+      const heading = passageHeading({ kind, lang: target }, p.t, p.languageName)
       const job: Job = {
         seq: ++jobSeq.current,
         run: (signal) => propsRef.current.cards.generate(ready, ask, signal),
+        key: p.cards.targetKey(ready.target),
+        heading,
+        excerpt: sel.excerpt,
       }
-      submit(
-        job,
-        passageHeading({ kind, lang: target }, p.t, p.languageName),
-        sel.excerpt,
-        sel.anchor,
-      )
+      jobsByKey.current.set(job.key, job)
+      submit(job, heading, sel.excerpt, sel.anchor)
     }
 
     const regenerate = async (card: PassageCard, anchor: AskAnchorRect) => {
       const p = propsRef.current
       const origIdx = p.cards.pageOf(card) ?? card.page - 1
       const source = await sourceOf(origIdx, card.quads, card.excerpt)
+      const heading = passageHeading(card, p.t, p.languageName)
       const job: Job = {
         seq: ++jobSeq.current,
         run: (signal) => propsRef.current.cards.regenerate(card.id, source, ask, signal),
+        key: p.cards.targetKey({
+          pageFingerprint: card.pageFingerprint,
+          passageHash: card.passageHash,
+          kind: card.kind,
+          ...(card.lang ? { lang: card.lang } : {}),
+        }),
+        heading,
+        excerpt: card.excerpt,
       }
-      submit(job, passageHeading(card, p.t, p.languageName), card.excerpt, anchor)
+      jobsByKey.current.set(job.key, job)
+      submit(job, heading, card.excerpt, anchor)
     }
 
     useImperativeHandle(ref, () => ({
@@ -378,7 +420,10 @@ export const PassageReading = forwardRef<PassageReadingHandle, PassageReadingPro
     const noteStateOf = (card: PassageCard): PassageNoteState => {
       if (card.savedAsNote) return 'saved'
       const noteId = keptNotes.current.get(card.id)
-      return noteId && confirmations.isPending(noteId) && props.hasPendingDrawing(noteId)
+      // a note a successful save wrote (held) is in the file, no longer in the editing document
+      return noteId &&
+        confirmations.isPending(noteId) &&
+        (confirmations.isHeld(noteId) || props.hasPendingDrawing(noteId))
         ? 'pending'
         : 'none'
     }
@@ -449,7 +494,27 @@ export const PassageReading = forwardRef<PassageReadingHandle, PassageReadingPro
       excerpt = view.excerpt
       body =
         view.phase === 'failed'
-          ? { kind: 'failed', message: view.message ?? '' }
+          ? {
+              kind: 'failed',
+              message: view.message ?? '',
+              ...(view.blocked
+                ? {
+                    notice: (
+                      <AiBlockedNotice
+                        kind={view.blocked.kind}
+                        provider={view.blocked.provider}
+                        resetsAt={view.blocked.resetsAt}
+                        message={view.message}
+                        settings={settings ?? {}}
+                        // no switch to another connection from here: the card is asked again
+                        statuses={{}}
+                        lang={lang}
+                        onContinueWith={() => {}}
+                      />
+                    ),
+                  }
+                : {}),
+            }
           : view.phase === 'connect'
             ? {
                 kind: 'connect',

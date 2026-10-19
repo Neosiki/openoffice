@@ -17,7 +17,7 @@ import type {
   PassageCardInput,
 } from '../../../../../packages/pdf-structure/src/store/reading'
 import type { PdfStoreApi } from '../../shared/ipc'
-import { sameCard, type PassageTarget } from './passage-cards'
+import { passageTargetKey, sameCard, type PassageTarget } from './passage-cards'
 import { passageAnswer, passageRequest, type PassageKind } from './passage-prompt'
 import { passageContext, passageHash } from './passage-text'
 
@@ -87,6 +87,8 @@ export class PassageCards {
   private readonly listeners = new Set<() => void>()
   private loadSeq = 0
   private fingerprintsLoad: Promise<readonly string[] | null> | null = null
+  /** requests whose model call is in flight, by passageTargetKey */
+  private readonly inFlight = new Set<string>()
 
   constructor(o: {
     store: PassageStoreApi | null
@@ -154,6 +156,8 @@ export class PassageCards {
   async load(): Promise<boolean> {
     const seq = ++this.loadSeq
     this.fingerprintsLoad = null
+    // the pages found before may have moved: no card is placed until they are read again
+    if (this.state.fingerprints) this.set({ ...this.state, fingerprints: null })
     const file = this.file()
     if (!this.store || !file) {
       this.set(EMPTY)
@@ -203,16 +207,23 @@ export class PassageCards {
     return this.fingerprintsLoad
   }
 
+  /** the key of the request a target names (what a pending answer is found by) */
+  targetKey(target: PassageTarget): string {
+    return passageTargetKey(target)
+  }
+
   /**
    * The card to open or the request to send for a passage: the stored card
-   * of the same passage when there is one (nothing is sent then), else a
-   * prepared request. Null when the store or the page cannot be read.
+   * of the same passage when there is one (nothing is sent then), the key of
+   * the same request when its answer is still coming (nothing is sent then
+   * either), else a prepared request. Null when the store or the page cannot
+   * be read.
    */
   async prepare(
     kind: PassageKind,
     lang: string | undefined,
     source: PassageSource,
-  ): Promise<{ existing: PassageCard } | PreparedPassage | null> {
+  ): Promise<{ existing: PassageCard } | { pending: string } | PreparedPassage | null> {
     if (!this.store || !this.state.docHash) return null
     const fps = await this.fingerprints()
     const pageFingerprint = fps?.[source.origIdx]
@@ -225,18 +236,38 @@ export class PassageCards {
     }
     const existing = sameCard(this.state.cards, target)
     if (existing) return { existing }
+    const key = passageTargetKey(target)
+    if (this.inFlight.has(key)) return { pending: key }
     return { target, source, page: source.origIdx + 1 }
   }
 
-  /** ask once and store the card (a new one, or the one `prepared.id` names) */
+  /**
+   * Ask once and store the card (a new one, or the one `prepared.id` names).
+   * While the answer is coming the request is in flight: `prepare` finds it
+   * pending instead of preparing it again.
+   */
   async generate(
     prepared: PreparedPassage,
     ask: PassageAsk,
     signal: AbortSignal,
   ): Promise<PassageCard> {
+    const key = passageTargetKey(prepared.target)
+    this.inFlight.add(key)
+    try {
+      return await this.askAndStore(prepared, ask, signal)
+    } finally {
+      this.inFlight.delete(key)
+    }
+  }
+
+  private async askAndStore(
+    prepared: PreparedPassage,
+    ask: PassageAsk,
+    signal: AbortSignal,
+  ): Promise<PassageCard> {
     const { target, source } = prepared
-    const hash = this.state.docHash
-    if (!this.store || !hash) throw new Error('the result store is not available')
+    if (!this.store || !this.state.docHash) throw new Error('the result store is not available')
+    const store = this.store
     const context = passageContext(source.pageText, source.excerpt)
     const reply = await ask(
       passageRequest({
@@ -266,13 +297,19 @@ export class PassageCards {
       model: reply.model,
       createdAt: this.now(),
     }
-    const out = await this.store.write({ kind: 'passage', docHash: hash, card: input })
+    // the file's hash now, not the one before the call: a save during the call
+    // moved the store to the saved file's hash, and the card belongs there
+    const hash = (await this.freshDocHash()) ?? this.state.docHash
+    if (!hash) throw new Error('the result store is not available')
+    const out = await store.write({ kind: 'passage', docHash: hash, card: input })
     if (!out.ok) throw new Error(out.message ?? out.error)
     const saved: PassageCard = { ...input, savedAt: this.now() }
     this.set({
       ...this.state,
       cards: [...this.state.cards.filter((c) => c.id !== saved.id), saved],
     })
+    // the screen still reads the hash before that save: read the saved file's cards
+    if (hash !== this.state.docHash) void this.load()
     return saved
   }
 

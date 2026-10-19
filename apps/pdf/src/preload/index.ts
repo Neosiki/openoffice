@@ -204,6 +204,12 @@ const api: PdfApi = {
     (ipcRenderer.invoke(PDF_CHANNELS.noteInsert, request) as Promise<PdfNoteResult>).catch(
       (): PdfNoteResult => ({ ok: false, reason: 'unavailable' }),
     ),
+  // no path either: the main process answers for the view's own PDF
+  noteUnsaved: () =>
+    (ipcRenderer.invoke(PDF_CHANNELS.noteUnsaved) as Promise<unknown>).then(
+      (value) => value === true,
+      () => false,
+    ),
   setDirty: (dirty) => ipcRenderer.send(PDF_CHANNELS.dirtyChanged, dirty),
   onCloseSaveRequest: (handler) => {
     const listener = (_e: unknown, opts?: { flushAll?: boolean }) =>

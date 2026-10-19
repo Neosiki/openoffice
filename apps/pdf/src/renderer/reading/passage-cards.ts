@@ -20,6 +20,16 @@ export interface PassageTarget {
   lang?: string
 }
 
+/** one string per request a passage card answers (same passage, kind and language) */
+export function passageTargetKey(target: PassageTarget): string {
+  return JSON.stringify([
+    target.pageFingerprint,
+    target.passageHash,
+    target.kind,
+    target.kind === 'translate' ? (target.lang ?? null) : null,
+  ])
+}
+
 export function sameCard(
   cards: readonly PassageCard[],
   target: PassageTarget,

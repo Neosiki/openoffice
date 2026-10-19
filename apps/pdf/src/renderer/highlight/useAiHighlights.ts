@@ -31,6 +31,27 @@ export function saveHighlightPreview(on: boolean): void {
   }
 }
 
+/**
+ * The preview switch: the person's remembered choice, and an "on" a finished
+ * run turns on for this session only (it never overwrites the choice).
+ */
+export interface PreviewSwitch {
+  saved: boolean
+  session: boolean
+}
+
+export const previewShown = (s: PreviewSwitch): boolean => s.saved || s.session
+
+/** the view-tab button: the person's choice, remembered */
+export function togglePreview(s: PreviewSwitch): PreviewSwitch {
+  return previewShown(s) ? { saved: false, session: false } : { saved: true, session: false }
+}
+
+/** a run ended: its suggestions are shown now, the remembered choice stays */
+export function showPreviewForSession(s: PreviewSwitch): PreviewSwitch {
+  return s.session ? s : { ...s, session: true }
+}
+
 export function useAiHighlights(o: {
   filePath: string
   password: string | undefined
@@ -46,6 +67,11 @@ export function useAiHighlights(o: {
   markupIds: readonly string[]
   /** the annotation panel is shown */
   panelOpen: boolean
+  /**
+   * Bumped when the open file was rewritten in place under the same path (a
+   * page operation): the suggestions are read and placed again
+   */
+  revision?: number
 }): { suggestions: HighlightSuggestions; subjects: ReadonlyMap<number, string> } {
   const live = useRef(o)
   live.current = o
@@ -69,7 +95,7 @@ export function useAiHighlights(o: {
   // reads the store only: opening a document never sends anything
   useEffect(() => {
     if (o.ready && o.filePath) void suggestions.load()
-  }, [suggestions, o.ready, o.filePath])
+  }, [suggestions, o.ready, o.filePath, o.revision])
 
   useEffect(() => {
     suggestions.setPlacing(o.preview && o.ready)

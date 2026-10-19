@@ -195,6 +195,52 @@ describe('highlight runs and blocks', () => {
     ).toBe(false)
   })
 
+  it('concurrent state changes of one block all land (no lost update)', async () => {
+    const store = new ResultStore(root)
+    const k1 = keyOn(1, 'One')
+    const ids = Array.from({ length: 8 }, (_, i) => `s${i}`)
+    await store.writeHighlightBlock(DOC_A, RUN, {
+      key: k1,
+      status: 'done',
+      suggestions: ids.map((id) => ({ id, labelId: 'l1', quote: id, state: 'pending' as const })),
+    })
+    await Promise.all(
+      ids.map((id, i) =>
+        store.setHighlightSuggestionStates(DOC_A, RUN, k1, {
+          [id]: i % 2 === 0 ? 'accepted' : 'dismissed',
+        }),
+      ),
+    )
+    const block = await store.readHighlightBlock(DOC_A, RUN, k1)
+    expect(block?.suggestions.map((s) => s.state)).toEqual(
+      ids.map((_, i) => (i % 2 === 0 ? 'accepted' : 'dismissed')),
+    )
+  })
+
+  it('refuses a run whose label names are empty or the same after normalizing', async () => {
+    const store = new ResultStore(root)
+    const named = (a: string, b: string) => ({
+      ...RUN_ENTRY,
+      labels: [
+        { id: 'l1', name: a, color: [1, 0.9, 0.2] as [number, number, number] },
+        { id: 'l2', name: b, color: [0.4, 0.8, 1] as [number, number, number] },
+      ],
+    })
+    await expect(store.writeHighlightRun(DOC_A, named('claim', '  '))).rejects.toThrow(TypeError)
+    await expect(store.writeHighlightRun(DOC_A, named('claim', ' claim '))).rejects.toThrow(
+      TypeError,
+    )
+    await expect(store.writeHighlightRun(DOC_A, named('a  b', 'a b'))).rejects.toThrow(TypeError)
+    // a stored run with such labels reads as absent
+    const dir = join(store.documentDir(DOC_A), 'highlights', RUN2)
+    mkdirSync(dir, { recursive: true })
+    writeFileSync(
+      join(dir, 'run.json'),
+      JSON.stringify({ format: 1, ...named('x', 'x'), runId: RUN2, savedAt: 1 }),
+    )
+    expect(await store.readHighlightRun(DOC_A, RUN2)).toBeNull()
+  })
+
   it('refuses a run with too many labels or a bad preset; unreadable runs are absent', async () => {
     const store = new ResultStore(root)
     const six = Array.from({ length: 6 }, (_, i) => ({
@@ -304,6 +350,16 @@ describe('edited translation blocks', () => {
     ).rejects.toThrow(TypeError)
   })
 
+  it('an edited block must have text', async () => {
+    const store = new ResultStore(root)
+    const k1 = keyOn(1, 'One')
+    await expect(store.writeEditedTranslationBlock(DOC_A, 'ko', k1, '')).rejects.toThrow(TypeError)
+    await expect(store.writeEditedTranslationBlock(DOC_A, 'ko', k1, ' \n ')).rejects.toThrow(
+      TypeError,
+    )
+    expect(await store.readTranslation(DOC_A, 'ko')).toBeNull()
+  })
+
   it('survive migration', async () => {
     let clock = 1
     const store = new ResultStore(root, { now: () => clock })
@@ -329,6 +385,22 @@ describe('edited translation blocks', () => {
     const ko = await store.readTranslation(DOC_A, 'ko')
     expect([...ko!.blocks.keys()]).toEqual([blockKeyString(k1)])
     expect(ko?.provider).toBe('codex')
+  })
+
+  it('a restart keeping edited blocks never removes an edit written while it runs', async () => {
+    const store = new ResultStore(root)
+    const keys = Array.from({ length: 12 }, (_, i) => keyOn(i + 1, `Block ${i}`))
+    await store.writeTranslationMeta(DOC_A, 'ko', { provider: 'codex', model: '' })
+    for (const key of keys) {
+      await store.writeTranslationBlock(DOC_A, 'ko', { key, status: 'translated', text: 'm' })
+    }
+    await Promise.all([
+      store.deleteTranslationExceptEdited(DOC_A, 'ko'),
+      ...keys.map((key, i) => store.writeEditedTranslationBlock(DOC_A, 'ko', key, `hand ${i}`)),
+    ])
+    const ko = await store.readTranslation(DOC_A, 'ko')
+    expect(ko?.blocks.size).toBe(keys.length)
+    expect([...ko!.blocks.values()].every((b) => b.edited)).toBe(true)
   })
 
   it('are counted over every language for the delete confirmation', async () => {
