@@ -53,6 +53,7 @@ export const id = {
   apOpenMd: 'Buka sebagai dokumen Markdown',
   apOpenDocx: 'Buka sebagai dokumen Word',
   apCreateUnavailable: 'Dokumen baru hanya dapat dibuat dari PDF yang dibuka di GenOffice',
+  apDocxUnavailable: 'Dokumen Word hanya dapat dibuat dari PDF yang dibuka di GenOffice',
   apCreateFailed: 'Tidak dapat membuat dokumen. {reason}',
   apMdNote: 'Catatan: {text}',
   apCount: '{count} item',

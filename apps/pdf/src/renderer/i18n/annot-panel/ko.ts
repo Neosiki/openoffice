@@ -53,6 +53,7 @@ export const ko = {
   apOpenMd: '마크다운 문서로 열기',
   apOpenDocx: '워드 문서로 열기',
   apCreateUnavailable: 'GenOffice 안에서 연 PDF에서만 새 문서를 만들 수 있습니다',
+  apDocxUnavailable: '워드 문서는 GenOffice 안에서 연 PDF에서만 만들 수 있습니다',
   apCreateFailed: '문서를 만들지 못했습니다. {reason}',
   apMdNote: '메모: {text}',
   apCount: '{count}개',

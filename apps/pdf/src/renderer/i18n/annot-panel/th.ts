@@ -53,6 +53,7 @@ export const th = {
   apOpenMd: 'เปิดเป็นเอกสาร Markdown',
   apOpenDocx: 'เปิดเป็นเอกสาร Word',
   apCreateUnavailable: 'สร้างเอกสารใหม่ได้เฉพาะจาก PDF ที่เปิดใน GenOffice',
+  apDocxUnavailable: 'สร้างเอกสาร Word ได้เฉพาะจาก PDF ที่เปิดใน GenOffice',
   apCreateFailed: 'สร้างเอกสารไม่ได้ {reason}',
   apMdNote: 'โน้ต: {text}',
   apCount: '{count} รายการ',

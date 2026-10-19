@@ -53,6 +53,7 @@ export const hi = {
   apOpenMd: 'Markdown दस्तावेज़ के रूप में खोलें',
   apOpenDocx: 'Word दस्तावेज़ के रूप में खोलें',
   apCreateUnavailable: 'नए दस्तावेज़ केवल GenOffice में खोले गए PDF से बनाए जा सकते हैं',
+  apDocxUnavailable: 'Word दस्तावेज़ केवल GenOffice में खोले गए PDF से बनाए जा सकते हैं',
   apCreateFailed: 'दस्तावेज़ नहीं बन सका। {reason}',
   apMdNote: 'नोट: {text}',
   apCount: '{count} आइटम',

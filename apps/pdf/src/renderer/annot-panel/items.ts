@@ -10,7 +10,8 @@
  * - `AnnotKind` is open: a new kind is any string; give its items a
  *   `kindLabel`, and `KIND_ORDER` decides where it sits in the kind filter.
  * - `AnnotItem.category`: a label shown with the kind (an accepted AI
- *   highlight's /Subj), filtered through an `AnnotFacet` (filter.ts).
+ *   highlight's /Subj), filtered through an `AnnotFacet` (filter.ts). Saved
+ *   markups get it from `AnnotBuildInput.categoryOf`.
  * - `AnnotTarget` `custom`: an item's own click action.
  * - Per-item actions are rendered by the panel's `renderItemActions` prop.
  */
@@ -151,6 +152,12 @@ export interface AnnotBuildInput {
   languageName: (code: string) => string
   /** items from other features */
   extra?: readonly AnnotItemDraft[]
+  /**
+   * a saved markup's category, shown as "kind · category" and filtered by a
+   * facet (an accepted AI highlight's /Subj, read by a later feature);
+   * undefined = none
+   */
+  categoryOf?: (markup: SavedMarkupRecord) => string | undefined
 }
 
 const SUBTYPE_KEYS = {
@@ -240,6 +247,7 @@ export function buildAnnotItems(o: AnnotBuildInput): AnnotItem[] {
 
   for (const m of o.saved.markups) {
     if (o.deletedObjNums.has(m.objNum)) continue
+    const category = o.categoryOf?.(m)
     drafts.push({
       key: `S${m.objNum}`,
       kind: m.type,
@@ -249,6 +257,7 @@ export function buildAnnotItems(o: AnnotBuildInput): AnnotItem[] {
       rect: m.rect,
       color: m.color,
       text: m.text,
+      ...(category ? { category } : {}),
       createdMs: m.createdMs,
       target: { type: 'location' },
     })

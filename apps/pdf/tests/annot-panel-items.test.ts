@@ -265,6 +265,17 @@ describe('buildAnnotItems', () => {
     expect(byKey(items, 'Cc1').notFound).toBe(true)
   })
 
+  it('takes a category for saved markups from the category hook', () => {
+    const categoryOf = vi.fn((m: { objNum: number }) => (m.objNum === 11 ? '핵심 주장' : undefined))
+    const items = buildAnnotItems(input({ categoryOf }))
+    expect(byKey(items, 'S11').category).toBe('핵심 주장')
+    expect(byKey(items, 'S12').category).toBeUndefined()
+    expect(byKey(items, 'Lm1').category).toBeUndefined()
+    expect(categoryOf).toHaveBeenCalledWith(expect.objectContaining({ objNum: 11, pageIndex: 2 }))
+    const md = annotMarkdown({ title: 'T', items: sortAnnotItems(items, 'page'), t: tKo })
+    expect(md).toContain('> — 형광펜 · 핵심 주장')
+  })
+
   it('takes extra items from other features and fills in their page numbers', () => {
     const items = buildAnnotItems(
       input({

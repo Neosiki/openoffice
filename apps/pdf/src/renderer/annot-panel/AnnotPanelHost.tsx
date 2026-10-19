@@ -11,7 +11,13 @@ import type { LocalDrawing } from '../DrawLayer'
 import type { LocalAnnotDelete, LocalNoteEdit } from '../edit-state'
 import type { PassageCards } from '../reading/passage-controller'
 import { AnnotPanel, type AnnotPanelProps } from './AnnotPanel'
-import { buildAnnotItems, type AnnotItemDraft, type SavedAnnotScan } from './items'
+import { shellHostOnce } from './host-capability'
+import {
+  buildAnnotItems,
+  type AnnotItemDraft,
+  type SavedAnnotScan,
+  type SavedMarkupRecord,
+} from './items'
 import { loadPageTextRuns, scanDocumentAnnots } from './scan'
 import type { TextRun } from './text-under'
 
@@ -55,6 +61,10 @@ export interface AnnotPanelHostProps extends Omit<AnnotPanelProps, 'items' | 'lo
   languageName: (code: string) => string
   /** items from other features (e.g. AI highlight suggestions while previewed) */
   extraItems?: readonly AnnotItemDraft[]
+  /** a saved markup's category (e.g. an accepted AI highlight's /Subj) */
+  categoryOf?: (markup: SavedMarkupRecord) => string | undefined
+  /** whether this window runs inside the shell; defaults to probing the store channel */
+  probeShellHost?: () => Promise<boolean>
 }
 
 export function AnnotPanelHost(props: AnnotPanelHostProps) {
@@ -99,6 +109,19 @@ export function AnnotPanelHost(props: AnnotPanelHostProps) {
     }
   }, [doc, markupPages])
 
+  // a Word document needs the shell; a standalone window shows why up front
+  const [shellHost, setShellHost] = useState<boolean | null>(null)
+  const probe = props.probeShellHost ?? shellHostOnce
+  useEffect(() => {
+    let live = true
+    void probe().then((inShell) => {
+      if (live) setShellHost(inShell)
+    })
+    return () => {
+      live = false
+    }
+  }, [probe])
+
   const cardSnap = useSyncExternalStore(props.cards.subscribe, props.cards.snapshot)
   const saved = scan && scan.doc === doc ? scan.data : null
 
@@ -119,6 +142,7 @@ export function AnnotPanelHost(props: AnnotPanelHostProps) {
     t: props.t,
     languageName: props.languageName,
     extra: props.extraItems,
+    categoryOf: props.categoryOf,
   })
 
   const {
@@ -132,7 +156,16 @@ export function AnnotPanelHost(props: AnnotPanelHostProps) {
     geomOf: _g,
     languageName: _l,
     extraItems: _x,
+    categoryOf: _cat,
+    probeShellHost: _probe,
     ...panel
   } = props
-  return <AnnotPanel {...panel} items={items} loading={doc !== null && saved === null} />
+  return (
+    <AnnotPanel
+      {...panel}
+      items={items}
+      loading={doc !== null && saved === null}
+      docxAvailable={shellHost}
+    />
+  )
 }

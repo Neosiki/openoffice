@@ -53,6 +53,7 @@ export const he = {
   apOpenMd: 'פתיחה כמסמך Markdown',
   apOpenDocx: 'פתיחה כמסמך Word',
   apCreateUnavailable: 'אפשר ליצור מסמכים חדשים רק מקובץ PDF שנפתח ב-GenOffice',
+  apDocxUnavailable: 'אפשר ליצור מסמכי Word רק מקובץ PDF שנפתח ב-GenOffice',
   apCreateFailed: 'לא ניתן ליצור את המסמך. {reason}',
   apMdNote: 'פתק: {text}',
   apCount: 'פריטים: {count}',

@@ -53,6 +53,7 @@ export const vi = {
   apOpenMd: 'Mở thành tài liệu Markdown',
   apOpenDocx: 'Mở thành tài liệu Word',
   apCreateUnavailable: 'Chỉ tạo được tài liệu mới từ PDF mở trong GenOffice',
+  apDocxUnavailable: 'Chỉ tạo được tài liệu Word từ PDF mở trong GenOffice',
   apCreateFailed: 'Không tạo được tài liệu. {reason}',
   apMdNote: 'Ghi chú: {text}',
   apCount: '{count} mục',

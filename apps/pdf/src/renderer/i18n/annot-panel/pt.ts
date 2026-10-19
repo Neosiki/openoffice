@@ -54,6 +54,8 @@ export const pt = {
   apOpenDocx: 'Abrir como documento do Word',
   apCreateUnavailable:
     'Só é possível criar documentos novos a partir de um PDF aberto no GenOffice',
+  apDocxUnavailable:
+    'Só é possível criar documentos do Word a partir de um PDF aberto no GenOffice',
   apCreateFailed: 'Não foi possível criar o documento. {reason}',
   apMdNote: 'Nota: {text}',
   apCount: '{count} itens',

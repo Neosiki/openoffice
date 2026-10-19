@@ -53,6 +53,7 @@ export const zhTW = {
   apOpenMd: '以 Markdown 文件開啟',
   apOpenDocx: '以 Word 文件開啟',
   apCreateUnavailable: '只有在 GenOffice 中開啟的 PDF 才能新增文件',
+  apDocxUnavailable: '只有在 GenOffice 中開啟的 PDF 才能建立 Word 文件',
   apCreateFailed: '無法建立文件。{reason}',
   apMdNote: '註解：{text}',
   apCount: '{count} 項',

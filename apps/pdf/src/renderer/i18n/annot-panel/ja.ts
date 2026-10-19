@@ -53,6 +53,7 @@ export const ja = {
   apOpenMd: 'Markdown 文書として開く',
   apOpenDocx: 'Word 文書として開く',
   apCreateUnavailable: '新しい文書を作れるのは GenOffice で開いた PDF だけです',
+  apDocxUnavailable: 'Word 文書を作れるのは GenOffice で開いた PDF だけです',
   apCreateFailed: '文書を作成できませんでした。{reason}',
   apMdNote: 'コメント: {text}',
   apCount: '{count} 件',

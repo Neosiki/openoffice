@@ -53,6 +53,7 @@ export const cs = {
   apOpenMd: 'Otevřít jako dokument Markdown',
   apOpenDocx: 'Otevřít jako dokument Word',
   apCreateUnavailable: 'Nové dokumenty lze vytvářet jen z PDF otevřeného v GenOffice',
+  apDocxUnavailable: 'Dokumenty Word lze vytvářet jen z PDF otevřeného v GenOffice',
   apCreateFailed: 'Dokument se nepodařilo vytvořit. {reason}',
   apMdNote: 'Poznámka: {text}',
   apCount: 'Položky: {count}',

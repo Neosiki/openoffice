@@ -19,6 +19,7 @@ import { sortAnnotItems } from '../src/renderer/annot-panel/filter'
 
 const translate = createI18n(strings)
 const t: TFunc = (key, params) => translate('en', key, params)
+const tKo: TFunc = (key, params) => translate('ko', key, params)
 
 beforeAll(() => {
   ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
@@ -281,5 +282,38 @@ describe('AnnotPanel menu', () => {
     expect(md.textContent).toContain(reason)
     expect(docx.textContent).toContain(reason)
     expect(button('Copy as Markdown').disabled).toBe(false)
+  })
+})
+
+describe('AnnotPanel without the shell', () => {
+  it('disables the Word item with a translated reason and keeps Markdown working', async () => {
+    const createDocument = vi.fn(async (): Promise<CreateDocumentResult> => ({ ok: true }))
+    render({ createDocument, docxAvailable: false, t: tKo })
+    await click(button('메뉴'))
+    const docx = button('워드 문서로 열기')
+    expect(docx.disabled).toBe(true)
+    const reason = tKo('apDocxUnavailable')
+    expect(reason).not.toBe(t('apDocxUnavailable'))
+    expect(docx.textContent).toContain(reason)
+    const md = button('마크다운 문서로 열기')
+    expect(md.disabled).toBe(false)
+    expect(md.textContent).not.toContain(reason)
+    await click(md)
+    expect(createDocument).toHaveBeenCalledWith(expect.objectContaining({ type: 'md' }))
+  })
+
+  it('keeps the Word item disabled without a reason while the host is still being checked', async () => {
+    render({ createDocument: vi.fn(async () => ({ ok: true })), docxAvailable: null })
+    await click(button('Menu'))
+    const docx = button('Open as Word document')
+    expect(docx.disabled).toBe(true)
+    expect(docx.textContent).not.toContain(t('apDocxUnavailable'))
+  })
+})
+
+describe('AnnotPanel categories', () => {
+  it("shows a saved markup's category with its kind", () => {
+    render({ items: [item({ key: 'S7', category: 'Method' })] })
+    expect(rows()[0]!.textContent).toContain('Highlight · Method')
   })
 })

@@ -53,6 +53,7 @@ export const ar = {
   apOpenMd: 'فتح كمستند Markdown',
   apOpenDocx: 'فتح كمستند Word',
   apCreateUnavailable: 'لا يمكن إنشاء مستندات جديدة إلا من ملف PDF مفتوح في GenOffice',
+  apDocxUnavailable: 'لا يمكن إنشاء مستندات Word إلا من ملف PDF مفتوح في GenOffice',
   apCreateFailed: 'تعذر إنشاء المستند. {reason}',
   apMdNote: 'ملاحظة: {text}',
   apCount: 'العناصر: {count}',

@@ -54,6 +54,8 @@ export const nl = {
   apOpenDocx: 'Openen als Word-document',
   apCreateUnavailable:
     'Nieuwe documenten kun je alleen maken vanuit een pdf die in GenOffice is geopend',
+  apDocxUnavailable:
+    'Word-documenten kun je alleen maken vanuit een pdf die in GenOffice is geopend',
   apCreateFailed: 'Kan het document niet maken. {reason}',
   apMdNote: 'Notitie: {text}',
   apCount: '{count} items',

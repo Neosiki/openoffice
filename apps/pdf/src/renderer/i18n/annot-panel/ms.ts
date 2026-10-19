@@ -54,6 +54,7 @@ export const ms = {
   apOpenDocx: 'Buka sebagai dokumen Word',
   apCreateUnavailable:
     'Dokumen baharu hanya boleh dicipta daripada PDF yang dibuka dalam GenOffice',
+  apDocxUnavailable: 'Dokumen Word hanya boleh dicipta daripada PDF yang dibuka dalam GenOffice',
   apCreateFailed: 'Tidak dapat mencipta dokumen. {reason}',
   apMdNote: 'Nota: {text}',
   apCount: '{count} item',

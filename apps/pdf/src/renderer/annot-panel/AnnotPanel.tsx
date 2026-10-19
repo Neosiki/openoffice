@@ -38,8 +38,14 @@ export interface AnnotPanelProps {
   onActivate: (item: AnnotItem) => void
   onClose: () => void
   onNotice: (message: string) => void
-  /** absent in a standalone window: the two document items show why */
+  /** absent where the channel is missing: the two document items show why */
   createDocument?: CreateDocument
+  /**
+   * a Word document can be made (only inside the shell): false disables the
+   * Word item with the reason, null while it is still being checked (disabled,
+   * no reason yet); absent = available
+   */
+  docxAvailable?: boolean | null
   /** defaults to the clipboard */
   copyText?: (text: string) => Promise<void>
   /** extra filter dimensions (e.g. the category of accepted AI highlights) */
@@ -105,7 +111,7 @@ export function AnnotPanel(props: AnnotPanelProps) {
   const openDocument = async (type: 'md' | 'docx') => {
     setMenuOpen(false)
     const createDocument = props.createDocument
-    if (!createDocument) return
+    if (!createDocument || reasonFor(type) !== null) return
     const result = await openAnnotDocument(type, {
       title: props.title,
       items: shown,
@@ -116,6 +122,13 @@ export function AnnotPanel(props: AnnotPanelProps) {
   }
 
   const unavailable = props.createDocument ? null : t('apCreateUnavailable')
+  const docx = props.docxAvailable === undefined ? true : props.docxAvailable
+  /** why an item is unavailable (shown under it), '' while still checking, null when available */
+  const reasonFor = (type: 'md' | 'docx'): string | null => {
+    if (unavailable) return unavailable
+    if (type === 'docx' && docx !== true) return docx === false ? t('apDocxUnavailable') : ''
+    return null
+  }
 
   return (
     <div className="pdf-thumbs pdf-annot-pane" style={{ width: props.width }}>
@@ -157,19 +170,22 @@ export function AnnotPanel(props: AnnotPanelProps) {
                 >
                   {t('apCopyMd')}
                 </button>
-                {(['md', 'docx'] as const).map((type) => (
-                  <button
-                    key={type}
-                    type="button"
-                    role="menuitem"
-                    disabled={unavailable !== null || shown.length === 0}
-                    title={unavailable ?? undefined}
-                    onClick={() => void openDocument(type)}
-                  >
-                    <span>{type === 'md' ? t('apOpenMd') : t('apOpenDocx')}</span>
-                    {unavailable && <span className="pdf-annot-menu-reason">{unavailable}</span>}
-                  </button>
-                ))}
+                {(['md', 'docx'] as const).map((type) => {
+                  const reason = reasonFor(type)
+                  return (
+                    <button
+                      key={type}
+                      type="button"
+                      role="menuitem"
+                      disabled={reason !== null || shown.length === 0}
+                      title={reason || undefined}
+                      onClick={() => void openDocument(type)}
+                    >
+                      <span>{type === 'md' ? t('apOpenMd') : t('apOpenDocx')}</span>
+                      {reason && <span className="pdf-annot-menu-reason">{reason}</span>}
+                    </button>
+                  )
+                })}
               </div>
             )}
           </div>
