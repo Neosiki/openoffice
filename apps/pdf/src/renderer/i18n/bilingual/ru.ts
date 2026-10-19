@@ -1,3 +1,31 @@
 import type { zh } from './zh'
 
-export const ru = {} satisfies Record<keyof typeof zh, string>
+export const ru = {
+  blToggle: 'Перевод рядом',
+  blToggleTip:
+    'Показывает сохранённый перевод рядом с каждой страницей. Само включение ничего не отправляет ИИ.',
+  blLanguage: 'Язык перевода',
+  blStoredLangs: 'Сохранённые переводы',
+  blOtherLangs: 'Другие языки',
+  blLoading: 'Чтение структуры документа… ({done}/{total} стр.)',
+  blLoadingStart: 'Чтение структуры документа…',
+  blFailed: 'Не удалось прочитать структуру документа, поэтому колонку перевода показать нельзя.',
+  blUnavailable:
+    'Колонка перевода недоступна: файл не сохранён или это окно не может прочитать структуру документа.',
+  blUnsavedPages: 'Сохраните, чтобы колонка перевода совпала со страницами',
+  blContinued: 'Продолжение с предыдущей страницы',
+  blCollapseAsk: 'Свернуть колонку перевода?',
+  blCollapse: 'Свернуть',
+  blKeep: 'Оставить',
+  blExpand: 'Развернуть колонку перевода',
+  blFontSmaller: 'Мельче текст перевода',
+  blFontLarger: 'Крупнее текст перевода',
+  blResize: 'Изменить ширину колонки перевода',
+  blClose: 'Выключить перевод рядом',
+  blPageHeader: 'Страница {page}',
+  blPageCount: 'Переведено {translated}/{units}',
+  blNoText: 'На этой странице нет текста для перевода.',
+  blPendingTip: 'Ещё не переведено (исходный текст).',
+  blFailedTip: 'Этот абзац не удалось перевести (исходный текст).',
+  blEditedTip: 'Перевод, исправленный человеком.',
+} satisfies Record<keyof typeof zh, string>

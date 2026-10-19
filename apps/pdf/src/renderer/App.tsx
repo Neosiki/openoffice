@@ -134,6 +134,8 @@ import {
   type DocumentTranslationHandle,
 } from './translate/DocumentTranslation'
 import { languageName } from './translate/translate-model'
+import { useBilingual } from './bilingual/useBilingual'
+import { hasUnsavedPageEdits, toggleBilingual, toggleSpread } from './bilingual/model'
 import { createPageRenderer } from './ai-read/render-page'
 import { loadAiReadTexts } from './ai-read/search-texts'
 import { DocumentJobSession } from './doc-jobs/job-session'
@@ -497,6 +499,9 @@ export default function App() {
   const [aiPreset, setAiPreset] = useState<{ text: string; nonce: number } | null>(null)
   const [ribbonTab, setRibbonTab] = useState<RibbonTab>('home')
   const [spread, setSpread] = useState<1 | 2>(1)
+  // side-by-side translation view; the revision rebuilds its tree after a save
+  const [bilingualOn, setBilingualOn] = useState(false)
+  const [bilingualRev, setBilingualRev] = useState(0)
   const [nightMode, setNightMode] = useState(false)
   const [outline, setOutline] = useState<OutlineNode[] | null>(null)
   const [outlineGenerated, setOutlineGenerated] = useState(false)
@@ -1543,6 +1548,9 @@ export default function App() {
         })
       // pdfjs-dist 6.x removed PDFDocumentProxy.destroy(); go through the loading task
       if (previous) void previous.loadingTask.destroy()
+      // a reload of the open document (save, or a page operation that rewrote the file in
+      // place): the side-by-side view rebuilds its tree from the new bytes
+      if (previous) setBilingualRev((v) => v + 1)
       return loaded.numPages
     },
     [],
@@ -1694,6 +1702,43 @@ export default function App() {
     [drawTool, noteDraft, drawings, annotDeletes, savedNotes],
   )
 
+  const bilingual = useBilingual({
+    enabled: bilingualOn,
+    onClose: () => setBilingualOn(false),
+    filePath,
+    password: passwordRef.current,
+    uiLang: lang,
+    t,
+    revision: bilingualRev,
+    api:
+      window.pdfApi?.structure && window.pdfApi.store
+        ? {
+            tree: (request) => window.pdfApi.structure.tree(request),
+            cancel: (jobId) => window.pdfApi.structure.cancel(jobId),
+            onProgress: (handler) => window.pdfApi.structure.onProgress(handler),
+            // reads only: the view never writes to the store
+            store: {
+              aiReadPages: (docHash) => window.pdfApi.store.aiReadPages(docHash),
+              translationRecency: (docHash) => window.pdfApi.store.translationRecency(docHash),
+              translation: (docHash, l) => window.pdfApi.store.translation(docHash, l),
+            },
+          }
+        : null,
+    scrollRef,
+    scale,
+    pageGeom,
+    savedRot: (origIdx) => baseRots[origIdx] ?? 0,
+    savedPageCount: sizes.length,
+    rowCount: rows.length,
+    visibleRows,
+    unsavedPageEdits: hasUnsavedPageEdits({
+      insertedPages: blankPages.length,
+      deletedPages: deleted.size,
+      reordered: order !== null,
+    }),
+    reservedWidth: noteMarginOn ? NOTE_MARGIN_W + PAGE_GAP : 0,
+  })
+
   const recomputeFit = useCallback(() => {
     const mode = fitModeRef.current
     const el = scrollRef.current
@@ -1701,7 +1746,11 @@ export default function App() {
     const dims = rows.map((r) => rowSize(r))
     const maxW = Math.max(...dims.map((s) => s.width))
     // The comments margin sits beside the pages and must fit inside the same viewport
-    const availW = el.clientWidth - SCROLL_PAD * 2 - (noteMarginOn ? NOTE_MARGIN_W + PAGE_GAP : 0)
+    const availW =
+      el.clientWidth -
+      SCROLL_PAD * 2 -
+      (noteMarginOn ? NOTE_MARGIN_W + PAGE_GAP : 0) -
+      bilingual.extraWidth
     const next =
       mode === 'width'
         ? clampScale(availW / maxW)
@@ -1713,7 +1762,7 @@ export default function App() {
           )
     anchorZoomScroll(next)
     setScale(next)
-  }, [rows, rowSize, anchorZoomScroll, noteMarginOn])
+  }, [rows, rowSize, anchorZoomScroll, noteMarginOn, bilingual.extraWidth])
 
   useEffect(() => {
     if (status !== 'ready') return
@@ -4481,6 +4530,9 @@ export default function App() {
       // the saved bytes are a new document for the result store: carry the AI
       // readings, translations and unfinished job records over (spec §6)
       await aiReadRef.current?.afterSave().catch(() => {})
+      // again once the stored results moved to the new hash; the build started by the
+      // reload above is discarded
+      setBilingualRev((v) => v + 1)
       // Content-derived naming (docs/sheets analog): a shell-created blank still
       // carrying its untitled name takes its file name from the topmost text this
       // save inserted; the main process no-ops for every other file, so
@@ -7446,10 +7498,29 @@ export default function App() {
         <button
           className={`rb-big${spread === 2 ? ' active' : ''}`}
           data-tip={spread === 2 ? t('singlePage') : t('twoPage')}
-          onClick={() => setSpread((v) => (v === 1 ? 2 : 1))}
+          onClick={() => {
+            const next = toggleSpread(spread === 1 ? 2 : 1, bilingualOn)
+            setSpread(next.spread)
+            setBilingualOn(next.bilingual)
+          }}
         >
           <span className="rb-big-icon">{spread === 2 ? <IconSinglePage /> : <IconSpread />}</span>
           {spread === 2 ? t('singlePage') : t('twoPage')}
+        </button>
+        <button
+          className={`rb-big${bilingualOn ? ' active' : ''}`}
+          data-tip={t('blToggleTip')}
+          aria-pressed={bilingualOn}
+          onClick={() => {
+            const next = toggleBilingual(!bilingualOn, spread)
+            setSpread(next.spread)
+            setBilingualOn(next.bilingual)
+          }}
+        >
+          <span className="rb-big-icon">
+            <IconAiTranslate />
+          </span>
+          {t('blToggle')}
         </button>
         <button
           className={`rb-big${nightMode ? ' active' : ''}`}
@@ -8546,6 +8617,7 @@ export default function App() {
               if (answer && 'running' in answer) showNotice(t('arBusy', answer.running))
             }}
           />
+          {bilingual.bar}
           <div className="pdf-body">
             {sidebar === 'outline' && outline && (
               <div className="pdf-thumbs pdf-outline-pane" style={{ width: sidebarW }}>
@@ -8776,7 +8848,10 @@ export default function App() {
                 ): [number, number] => {
                   const [vx, vy] = pdfToView(geom, at[0], at[1])
                   return [
-                    pageOffset(pageIdxInRow) + vx * scale + 10 - (rowW + PAGE_GAP),
+                    pageOffset(pageIdxInRow) +
+                      vx * scale +
+                      10 -
+                      (rowW + PAGE_GAP + bilingual.extraWidth),
                     vy * scale - 10,
                   ]
                 }
@@ -9980,9 +10055,11 @@ export default function App() {
                               />
                             </>
                           )}
+                          {bilingual.overlay(origIdx)}
                         </div>
                       )
                     })}
+                    {bilingual.column(row, r)}
                     {noteMarginOn && (
                       <NoteMarginColumn
                         width={NOTE_MARGIN_W}

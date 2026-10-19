@@ -1,3 +1,30 @@
 import type { zh } from './zh'
 
-export const cs = {} satisfies Record<keyof typeof zh, string>
+export const cs = {
+  blToggle: 'Překlad vedle sebe',
+  blToggleTip: 'Zobrazí uložený překlad vedle každé stránky. Samotné zapnutí nic neposílá AI.',
+  blLanguage: 'Jazyk překladu',
+  blStoredLangs: 'Uložené překlady',
+  blOtherLangs: 'Další jazyky',
+  blLoading: 'Čtení struktury dokumentu… ({done}/{total} stran)',
+  blLoadingStart: 'Čtení struktury dokumentu…',
+  blFailed: 'Strukturu dokumentu se nepodařilo přečíst, proto nelze zobrazit sloupec překladu.',
+  blUnavailable:
+    'Sloupec překladu není k dispozici: soubor není uložen, nebo toto okno nemůže číst strukturu dokumentu.',
+  blUnsavedPages: 'Uložením srovnáte sloupec překladu se stránkami',
+  blContinued: 'Pokračování z předchozí stránky',
+  blCollapseAsk: 'Sbalit sloupec překladu?',
+  blCollapse: 'Sbalit',
+  blKeep: 'Ponechat',
+  blExpand: 'Rozbalit sloupec překladu',
+  blFontSmaller: 'Menší text překladu',
+  blFontLarger: 'Větší text překladu',
+  blResize: 'Změnit šířku sloupce překladu',
+  blClose: 'Vypnout překlad vedle sebe',
+  blPageHeader: 'Stránka {page}',
+  blPageCount: 'Přeloženo {translated}/{units}',
+  blNoText: 'Na této stránce není text k překladu.',
+  blPendingTip: 'Zatím nepřeloženo (původní text).',
+  blFailedTip: 'Tento odstavec se nepodařilo přeložit (původní text).',
+  blEditedTip: 'Překlad upravený člověkem.',
+} satisfies Record<keyof typeof zh, string>
