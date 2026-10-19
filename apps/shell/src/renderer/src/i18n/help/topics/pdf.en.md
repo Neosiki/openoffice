@@ -124,7 +124,7 @@ Press **E** or **T**, or the explain and translate chips in the **Ask AI** box, 
 ## Translation side by side
 
 - Turn on View ▸ **Translation side by side** and a translation column appears to the right of every page, scrolling with it. Turning it on sends nothing to the AI. A document you already translated with **Translate Document** shows its translation at once; paragraphs without one appear as dimmed source text.
-- **Translate this page** (or **Translate the rest** when part of the page is done) sends that page with one press while you use a subscription; the name of the AI it goes to is shown beside the button. On a connection billed by usage, the first press in a tab asks "will charge for this · Translate / Cancel" first.
+- **Translate this page** (or **Translate the rest** when part of the page is done) sends that page with one press while you use a subscription; the name of the AI it goes to is shown beside the button. On a connection billed by usage, the first press in a tab asks "‹AI name› will charge for this · Translate / Cancel" first.
 - Double-click a translated paragraph to edit it. Edited paragraphs are stored as plain text and are used as they are in translated PDF, Markdown and EPUB files. **Translate again** on a paragraph sends only that paragraph, and asks first if you edited it.
 - Hovering a translated paragraph outlines its place in the source page. The column's width and text size can be changed. **Translate all pages…** opens the **Translate Document** window, whose **Store only (no file)** format keeps the translation without writing a file.
 
