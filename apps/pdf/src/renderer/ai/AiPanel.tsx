@@ -5,7 +5,7 @@ import {
   type AiModelPickerBridge,
 } from '@genoffice/ui'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { PointerEvent as ReactPointerEvent, ReactElement } from 'react'
+import type { PointerEvent as ReactPointerEvent, ReactElement, ReactNode } from 'react'
 import { AgentLoop, composeWithDrive } from '@genoffice/agent-core'
 import {
   isSubscriptionProvider,
@@ -44,7 +44,7 @@ import { createPdfSkill } from './pdf-skill'
 import { createElectronTransport } from './transport'
 import { aiBlockedRunOf, mergeSubscriptionUsage, type AiBlockedRun } from './ai-connection'
 import { useSubscriptionConnection } from './useSubscriptionConnection'
-import { PDF_NAV_SCHEME, parsePdfNavHref } from './pdf-nav'
+import { PDF_NAV_SCHEME, parsePdfNavHref, type PdfNavTarget } from './pdf-nav'
 import type { FileOpConfirm, PdfAiDeps, PdfAppDeps } from './tools'
 import { withFollowUp, type FollowUpSelection } from '../reading/passage-cards'
 
@@ -100,6 +100,9 @@ interface ChatEntry {
   usage?: AiTokenUsageView
 }
 
+/** the empty conversation's suggested questions (reading-assist spec 4.4); a click sends one */
+const SUGGESTED_QUESTIONS = ['airQuestion1', 'airQuestion2', 'airQuestion3'] as const
+
 /** longest selection excerpt echoed on a user bubble */
 const SCOPE_TEXT_MAX = 200
 
@@ -124,6 +127,8 @@ export function AiPanel({
   preset,
   onRunDone,
   onClearSelection,
+  overview,
+  onCitation,
 }: {
   api: PdfAppDeps
   /** Absolute path of the open PDF (chat history is keyed to it) */
@@ -135,6 +140,10 @@ export function AiPanel({
   onRunDone?: () => void
   /** The × on the scope chip: drop the cached selection so runs target the whole document */
   onClearSelection?: () => void
+  /** the "Document overview" section shown at the top of the panel (reading assistant) */
+  overview?: ReactNode
+  /** a citation link was clicked: go to its page and find its quote (default: the page only) */
+  onCitation?: (target: PdfNavTarget) => void
 }): ReactElement {
   const { lang, t } = useI18n()
   const [chat, setChat] = useState<ChatEntry[]>([])
@@ -778,12 +787,16 @@ export function AiPanel({
     if (!hasScopeSelection) setScopePreviewOpen(false)
   }, [hasScopeSelection])
 
-  /** [p.N](pdfnav://page/N) links in replies scroll the reading view to that page */
+  const onCitationRef = useRef(onCitation)
+  onCitationRef.current = onCitation
+  /** [p.N](pdfnav://page/N?q=…) links in replies scroll the reading view to that page (and quote) */
   const pdfNav = {
     scheme: PDF_NAV_SCHEME,
     onNavigate: (href: string) => {
-      const page = parsePdfNavHref(href)
-      if (page !== null) apiRef.current.gotoPage(page)
+      const target = parsePdfNavHref(href)
+      if (!target) return
+      if (onCitationRef.current) onCitationRef.current(target)
+      else apiRef.current.gotoPage(target.page)
     },
   }
   // [name](filenav:///abs/path) citations open the cited file in its own app
@@ -843,6 +856,8 @@ export function AiPanel({
         </div>
       </header>
 
+      {overview}
+
       <div className="ai-chat" ref={chatRef} onScroll={onChatScroll}>
         {chat.length === 0 && (
           <div className="ai-chat-empty">
@@ -867,6 +882,20 @@ export function AiPanel({
               >
                 {t('aiQuickKeyPoints')}
               </button>
+            </div>
+            <div className="ai-suggested" role="group" aria-label={t('airSuggested')}>
+              {SUGGESTED_QUESTIONS.map((key) => (
+                <button
+                  key={key}
+                  type="button"
+                  className="ai-suggested-btn"
+                  data-question={key}
+                  dir="auto"
+                  onClick={() => send(t(key))}
+                >
+                  {t(key)}
+                </button>
+              ))}
             </div>
           </div>
         )}
