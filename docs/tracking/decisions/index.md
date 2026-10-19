@@ -42,3 +42,4 @@
 | [0038](0038-filee-as-reference-only.md)                       | Filee는 앱에 붙이지 않고 참고 자료로만 둔다                                                     | 2026-10-18 |
 | [0039](0039-slide-comments-ai-read.md)                        | 슬라이드 메모(댓글)를 메모 창에서 모두 보고, 앱 AI·MCP·터미널·첨부가 읽는다                     | 2026-10-19 |
 | [0041](0041-open-password-workbooks-and-decks.md)             | 열기 암호가 걸린 엑셀·파워포인트 파일은 암호를 받아 열고, 같은 암호로 다시 잠가 저장한다        | 2026-10-19 |
+| [0042](0042-no-derivation-framework.md)                       | 문서 만들기의 변환 짝을 하나의 틀로 묶지 않는다                                                 | 2026-10-20 |
