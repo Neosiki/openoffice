@@ -200,7 +200,7 @@ describe('read-url failure mapping', () => {
       'The server answered with HTTP 503.',
       4,
       'app_unavailable',
-      { errorCode: 'http_error' },
+      { errorCode: 'http_error', status: 503 },
     ],
     [
       'auth',
@@ -210,7 +210,13 @@ describe('read-url failure mapping', () => {
       { errorCode: 'auth' },
     ],
   ] as const)('maps %s to exit %i and %s', async (errorCode, error, code, reason, detail) => {
-    fakes.read.mockResolvedValue({ ok: false, error, errorCode })
+    // like ReadUrlFailure: only http_error carries the HTTP status
+    fakes.read.mockResolvedValue({
+      ok: false,
+      error,
+      errorCode,
+      ...(errorCode === 'http_error' ? { status: 503 } : {}),
+    })
     const { env } = dataFolder()
     const r = await run(['read-url', 'https://example.com/x', '--json'], { env })
     expect(r.code).toBe(code)
