@@ -1,6 +1,6 @@
 import { readUrlTool, type ReadUrlFailure } from '@genoffice/ai-search'
 import { PRODUCT_NAME } from '@genoffice/i18n'
-import { flagString, type ParsedArgs } from '../args'
+import type { ParsedArgs } from '../args'
 import { aiSettingsPath, prepareCloud } from '../cloud'
 import type { CommandDef } from '../registry'
 import { CliError, EXIT } from '../result'
