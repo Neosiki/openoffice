@@ -153,7 +153,13 @@ function fakeBridge(initial: { settings: AiSettings; statuses: SubscriptionStatu
   }
 }
 
-function fakeChannels(options: { stored?: string[]; unfinished?: JobStatus[] } = {}) {
+function fakeChannels(
+  options: {
+    stored?: string[]
+    unfinished?: JobStatus[]
+    counts?: { editedTranslationBlocks: number; passages: number }
+  } = {},
+) {
   const aiRead = new Map<string, AiReadPageEntry>(
     (options.stored ?? []).map((fp) => [
       fp,
@@ -189,6 +195,17 @@ function fakeChannels(options: { stored?: string[]; unfinished?: JobStatus[] } =
       jobs: 0,
     })),
     deleteDocument: vi.fn(async () => ({ ok: true as const })),
+    deleteCounts: vi.fn(async () => ({
+      ok: true as const,
+      ...(options.counts ?? { editedTranslationBlocks: 0, passages: 0 }),
+    })),
+    passages: vi.fn(async () => ({ ok: true as const, cards: [] })),
+    highlightRuns: vi.fn(async () => ({ ok: true as const, runs: [] })),
+    highlightBlocks: vi.fn(async () => ({ ok: true as const, blocks: [] })),
+    latestHighlight: vi.fn(async () => ({ ok: true as const, run: null, blocks: [] })),
+    insights: vi.fn(async () => ({ ok: true as const, insights: null })),
+    pageFingerprints: vi.fn(async () => ({ ok: true as const, docHash: DOC, fingerprints: FPS })),
+    translationRecency: vi.fn(async () => ({ ok: true as const, langs: [] })),
   }
   const api: AiPageReadingApi = {
     tree: vi.fn(async () => ({
@@ -241,6 +258,7 @@ async function mount(
     settings?: Partial<AiSettings>
     statuses?: SubscriptionStatusMap
     channels?: ReturnType<typeof fakeChannels>
+    props?: Partial<AiPageReadingProps>
   } = {},
 ) {
   bridge = fakeBridge({
@@ -266,6 +284,7 @@ async function mount(
     openPageRenderer,
     onStoredChange,
     onNotice,
+    ...o.props,
   }
   container = document.createElement('div')
   document.body.appendChild(container)
@@ -595,5 +614,70 @@ describe('AI page reading: resume, save, delete', () => {
     await act(async () => m.handle.current!.deleteStored())
     expect(m.channels.store.deleteDocument).toHaveBeenCalledWith(DOC)
     expect(m.onStoredChange).toHaveBeenCalled()
+  })
+
+  it('names the edited translations and passage cards the delete takes along, leaving out zeros', async () => {
+    const confirm = vi.fn(() => false)
+    vi.stubGlobal('confirm', confirm)
+    const cases = [
+      [{ editedTranslationBlocks: 3, passages: 2 }, t('arDeleteAlsoBoth', { edited: 3, cards: 2 })],
+      [{ editedTranslationBlocks: 4, passages: 0 }, t('arDeleteAlsoEdited', { count: 4 })],
+      [{ editedTranslationBlocks: 0, passages: 1 }, t('arDeleteAlsoCards', { count: 1 })],
+    ] as const
+    for (const [counts, extra] of cases) {
+      const m = await mount({ channels: fakeChannels({ counts }) })
+      await act(async () => m.handle.current!.deleteStored())
+      expect(m.channels.store.deleteCounts).toHaveBeenCalledWith(DOC)
+      expect(confirm).toHaveBeenLastCalledWith(`${strings.en.arDeleteConfirm}
+${extra}`)
+      await act(async () => root?.unmount())
+      root = null
+    }
+    // the Korean wording of the spec
+    const ko: AiPageReadingProps['t'] = (key, params) => translate('ko', key, params)
+    expect(ko('arDeleteAlsoBoth', { edited: 3, cards: 2 })).toBe(
+      '사람이 고친 번역 3개, 구절 카드 2개도 지워집니다.',
+    )
+    // no counts (an older shell): the plain question
+    const m = await mount()
+    m.channels.store.deleteCounts.mockResolvedValue({ ok: false, error: 'not-available' } as never)
+    await act(async () => m.handle.current!.deleteStored())
+    expect(confirm).toHaveBeenLastCalledWith(strings.en.arDeleteConfirm)
+  })
+
+  it('offers an unfinished AI highlight run under its own name and hands it to its screen', async () => {
+    const highlight: JobStatus = {
+      kind: 'highlight',
+      runId: 'run1',
+      state: 'stopped',
+      outputs: [],
+      progress: { done: 1, total: 2 },
+    }
+    const onResumeHighlight = vi.fn()
+    const m = await mount({
+      channels: fakeChannels({ unfinished: [highlight] }),
+      props: { onResumeHighlight },
+    })
+    const offer = q(m.el, '[data-resume-kind="highlight"]')
+    expect(offer?.textContent).toContain(t('jobResumeHighlight', { percent: 50 }))
+    expect(offer?.textContent).not.toContain(t('jobResumeAiRead', { percent: 50 }))
+    await click(m.el, '[data-action="resume-job"]')
+    expect(onResumeHighlight).toHaveBeenCalledWith(highlight)
+    // continuing opens no AI-read window and sends nothing
+    expect(q(m.el, '[data-step]')).toBeNull()
+    expect(bridge.api.aiStream).not.toHaveBeenCalled()
+  })
+
+  it('never offers a page translation or a summary, nor a highlight run without its screen', async () => {
+    const others: JobStatus[] = [
+      { kind: 'translate-page', lang: 'en', state: 'stopped', outputs: [] },
+      { kind: 'summary', lang: 'en', state: 'stopped', outputs: [] },
+      { kind: 'highlight', runId: 'run1', state: 'stopped', outputs: [] },
+    ]
+    const m = await mount({
+      channels: fakeChannels({ unfinished: others }),
+      props: { onResumeTranslation: vi.fn() },
+    })
+    expect(q(m.el, '[data-resume-kind]')).toBeNull()
   })
 })

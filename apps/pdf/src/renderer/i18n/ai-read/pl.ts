@@ -68,6 +68,11 @@ export const pl = {
   arDeleteBusy: 'Trwa zadanie AI, więc teraz nie można nic usunąć.',
   jobResumeAiRead: 'Niedokończone czytanie przez AI {percent}% — kontynuować?',
   jobResumeTranslate: 'Niedokończone tłumaczenie ({language}) {percent}% — kontynuować?',
+  jobResumeHighlight: 'Niedokończone wyróżnianie przez AI {percent}% — kontynuować?',
+  arDeleteAlsoBoth:
+    'Zostaną też usunięte tłumaczenia poprawione ręcznie ({edited}) i karty fragmentów ({cards}).',
+  arDeleteAlsoEdited: 'Zostaną też usunięte tłumaczenia poprawione ręcznie ({count}).',
+  arDeleteAlsoCards: 'Zostaną też usunięte karty fragmentów ({count}).',
   jobResumeContinue: 'Kontynuuj',
   jobResumeLater: 'Później',
   searchAiRead: 'Znaleziono w tekście odczytanym przez AI',

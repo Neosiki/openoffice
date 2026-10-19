@@ -69,6 +69,11 @@ export const id = {
   arDeleteBusy: 'Ada tugas AI yang sedang berjalan, jadi tidak ada yang dapat dihapus sekarang.',
   jobResumeAiRead: 'Pembacaan AI belum selesai {percent}% — lanjutkan?',
   jobResumeTranslate: 'Terjemahan belum selesai ({language}) {percent}% — lanjutkan?',
+  jobResumeHighlight: 'Sorotan AI belum selesai {percent}% — lanjutkan?',
+  arDeleteAlsoBoth:
+    'Ikut terhapus: {edited} terjemahan yang diedit manual dan {cards} kartu kutipan.',
+  arDeleteAlsoEdited: 'Ikut terhapus: {count} terjemahan yang diedit manual.',
+  arDeleteAlsoCards: 'Ikut terhapus: {count} kartu kutipan.',
   jobResumeContinue: 'Lanjutkan',
   jobResumeLater: 'Nanti',
   searchAiRead: 'Ditemukan di teks yang dibaca AI',

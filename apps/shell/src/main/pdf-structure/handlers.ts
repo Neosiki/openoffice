@@ -11,14 +11,29 @@
  * Every handler answers an outcome and never throws.
  */
 import { dirname, extname, basename, join, resolve } from 'node:path'
-import { StoreWriteError, type ResultStore } from '../../../../../packages/pdf-structure/src/store'
+import {
+  JOB_KINDS,
+  StoreWriteError,
+  jobKeyOf,
+  type HighlightBlockEntry,
+  type HighlightRun,
+  type InsightsEntry,
+  type JobKind,
+  type PassageCard,
+  type ResultStore,
+  type TranslationBlockKey,
+} from '../../../../../packages/pdf-structure/src/store'
 import type { DocumentTree } from '../../../../../packages/pdf-structure/src/tree/types'
 import type { PageFingerprint } from '../../../../../packages/pdf-structure/src/tree/extract'
 import type {
+  PdfStoreDeleteCounts,
   PdfStoreMigrateRequest,
   PdfStoreMigrateResult,
+  PdfStorePageFingerprintsRequest,
   PdfStoredTranslation,
   PdfStoreWriteRequest,
+  PdfStoreWriteResult,
+  PdfTranslationRecency,
   PdfStructureConvertRequest,
   PdfStructureConvertResult,
   PdfStructureEpubOptions,
@@ -86,6 +101,11 @@ const MAX_PAGES = 100_000
 const MAX_PAGE_NUMBER = 10_000_000
 const MAX_TEXT = 2_000
 const MAX_PASSWORD = 1_024
+/** a person's edit of one translated block */
+const MAX_EDITED_TEXT = 200_000
+/** suggestion states changed in one call */
+const MAX_STATES = 10_000
+const SUGGESTION_STATES: readonly unknown[] = ['pending', 'accepted', 'dismissed']
 
 const fail = (error: PdfStructureFailure['error'], message?: string): PdfStructureFailure => ({
   ok: false,
@@ -100,6 +120,37 @@ const optText = (v: unknown, max = MAX_TEXT): v is string | undefined =>
   v === undefined || (typeof v === 'string' && v.length <= max)
 
 const LANGUAGE_TAG = /^[A-Za-z]{2,8}(?:-[A-Za-z0-9]{1,8})*$/
+
+const isKey = (v: unknown): v is string => typeof v === 'string' && KEY.test(v)
+
+/** a block key (translation and highlight blocks), checked field by field */
+function blockKeyOf(v: unknown): TranslationBlockKey | null {
+  if (!isRecord(v) || !isKey(v.pageFingerprint) || !isKey(v.textHash)) return null
+  const occurrence = v.occurrence
+  if (!Number.isSafeInteger(occurrence) || (occurrence as number) < 0) return null
+  return {
+    pageFingerprint: v.pageFingerprint,
+    textHash: v.textHash,
+    occurrence: occurrence as number,
+  }
+}
+
+type SuggestionState = 'pending' | 'accepted' | 'dismissed'
+
+/** suggestion id -> state, or null when any entry is not one */
+function suggestionStatesOf(v: unknown): Record<string, SuggestionState> | null {
+  if (!isRecord(v)) return null
+  const entries = Object.entries(v)
+  if (entries.length > MAX_STATES) return null
+  const out: Record<string, SuggestionState> = {}
+  for (const [id, state] of entries) {
+    if (id.length === 0 || id.length > 200 || !SUGGESTION_STATES.includes(state)) return null
+    out[id] = state as SuggestionState
+  }
+  return out
+}
+
+const isJobKind = (v: unknown): v is JobKind => (JOB_KINDS as readonly unknown[]).includes(v)
 
 const TARGET_EXT: Record<Exclude<PdfStructureTargetKind, 'folder'>, string> = {
   md: '.md',
@@ -127,6 +178,12 @@ function storeFailure(err: unknown): PdfStructureFailure {
   return fail('failed', messageOf(err))
 }
 
+/** the page fingerprints of one view's file bytes */
+interface CachedFingerprints {
+  docHash: string
+  fingerprints: string[]
+}
+
 interface CachedTree {
   docHash: string
   pagesKey: string
@@ -145,6 +202,11 @@ export function withoutImageData(tree: DocumentTree): DocumentTree {
   }
 }
 
+/** highlight runs, newest first (the panel and the preview show only the first) */
+function newestFirst(runs: HighlightRun[]): HighlightRun[] {
+  return [...runs].sort((a, b) => b.createdAt - a.createdAt || a.runId.localeCompare(b.runId))
+}
+
 export function createPdfStructureHandlers(deps: StructureHandlerDeps) {
   /** dialog-picked targets per view: path -> kind (held until a job using it succeeds) */
   const targets = new Map<number, Map<string, PdfStructureTargetKind>>()
@@ -154,6 +216,8 @@ export function createPdfStructureHandlers(deps: StructureHandlerDeps) {
   const knownHashes = new Map<number, Set<string>>()
   /** one cached tree per view: same file bytes and pages answer without a new job */
   const treeCache = new Map<number, CachedTree>()
+  /** one fingerprint list per view: same file bytes answer without a new job */
+  const fingerprintCache = new Map<number, CachedFingerprints>()
   let internalJobs = 0
 
   const pathKey = (p: string): string =>
@@ -558,7 +622,7 @@ export function createPdfStructureHandlers(deps: StructureHandlerDeps) {
     async storeWrite(
       owner: number,
       req: PdfStoreWriteRequest,
-    ): Promise<PdfStructureOutcome<object>> {
+    ): Promise<PdfStructureOutcome<PdfStoreWriteResult>> {
       if (!isRecord(req)) return fail('invalid-request', 'request must be an object')
       if (!knows(owner, req.docHash)) return fail('not-granted', 'unknown document hash')
       const store = deps.store()
@@ -588,15 +652,227 @@ export function createPdfStructureHandlers(deps: StructureHandlerDeps) {
             if (!isRecord(req.job)) break
             await store.writeJob(req.docHash, req.job)
             return { ok: true }
-          case 'heartbeat':
-            return (await store.heartbeatJob(req.docHash, req.job, req.lang))
+          case 'heartbeat': {
+            if (!isJobKind(req.job) || !optText(req.lang, 128) || !optText(req.runId, 128)) break
+            const key = jobKeyOf({
+              kind: req.job,
+              ...(req.lang !== undefined ? { lang: req.lang } : {}),
+              ...(req.runId !== undefined ? { runId: req.runId } : {}),
+            })
+            return (await store.heartbeatJob(req.docHash, req.job, key))
               ? { ok: true }
               : fail('failed', 'no running job record')
+          }
+          case 'passage':
+            if (!isRecord(req.card)) break
+            await store.writePassage(req.docHash, req.card)
+            return { ok: true }
+          case 'deletePassage':
+            if (!isKey(req.id)) break
+            await store.deletePassage(req.docHash, req.id)
+            return { ok: true }
+          case 'highlightRun':
+            if (!isRecord(req.run)) break
+            await store.writeHighlightRun(req.docHash, req.run)
+            return { ok: true }
+          case 'highlightBlocks':
+            if (!isKey(req.runId) || !Array.isArray(req.blocks)) break
+            if (!req.blocks.every((b) => isRecord(b) && blockKeyOf(b.key))) break
+            await store.writeHighlightBlocks(req.docHash, req.runId, req.blocks)
+            return { ok: true }
+          case 'highlightSuggestionStates': {
+            const key = blockKeyOf(req.key)
+            const states = suggestionStatesOf(req.states)
+            if (!isKey(req.runId) || !key || !states) break
+            return (await store.setHighlightSuggestionStates(req.docHash, req.runId, key, states))
+              ? { ok: true }
+              : fail('failed', 'no such highlight block')
+          }
+          case 'deleteHighlightRun':
+            if (!isKey(req.runId)) break
+            await store.deleteHighlightRun(req.docHash, req.runId)
+            return { ok: true }
+          case 'insights':
+            if (!isRecord(req.entry)) break
+            await store.writeInsights(req.docHash, req.entry)
+            return { ok: true }
+          case 'editedTranslationBlock': {
+            const key = blockKeyOf(req.key)
+            if (!isKey(req.lang) || !key) break
+            if (typeof req.text !== 'string' || req.text.length > MAX_EDITED_TEXT) break
+            await store.writeEditedTranslationBlock(req.docHash, req.lang, key, req.text)
+            return { ok: true }
+          }
+          case 'deleteTranslationExceptEdited':
+            if (!isKey(req.lang)) break
+            return {
+              ok: true,
+              removed: await store.deleteTranslationExceptEdited(req.docHash, req.lang),
+            }
         }
         return fail('invalid-request', 'bad store write')
       } catch (err) {
         return storeFailure(err)
       }
+    },
+
+    async storePassages(
+      owner: number,
+      docHash: unknown,
+    ): Promise<PdfStructureOutcome<{ cards: PassageCard[] }>> {
+      if (!knows(owner, docHash)) return fail('not-granted', 'unknown document hash')
+      try {
+        return { ok: true, cards: await deps.store().readPassages(docHash) }
+      } catch (err) {
+        return storeFailure(err)
+      }
+    },
+
+    async storeHighlightRuns(
+      owner: number,
+      docHash: unknown,
+    ): Promise<PdfStructureOutcome<{ runs: HighlightRun[] }>> {
+      if (!knows(owner, docHash)) return fail('not-granted', 'unknown document hash')
+      try {
+        return { ok: true, runs: newestFirst(await deps.store().listHighlightRuns(docHash)) }
+      } catch (err) {
+        return storeFailure(err)
+      }
+    },
+
+    async storeHighlightBlocks(
+      owner: number,
+      docHash: unknown,
+      runId: unknown,
+    ): Promise<PdfStructureOutcome<{ blocks: HighlightBlockEntry[] }>> {
+      if (!knows(owner, docHash)) return fail('not-granted', 'unknown document hash')
+      if (!isKey(runId)) return fail('invalid-request', 'bad run id')
+      try {
+        return {
+          ok: true,
+          blocks: [...(await deps.store().readHighlightBlocks(docHash, runId)).values()],
+        }
+      } catch (err) {
+        return storeFailure(err)
+      }
+    },
+
+    async storeLatestHighlight(
+      owner: number,
+      docHash: unknown,
+    ): Promise<PdfStructureOutcome<{ run: HighlightRun | null; blocks: HighlightBlockEntry[] }>> {
+      if (!knows(owner, docHash)) return fail('not-granted', 'unknown document hash')
+      try {
+        const store = deps.store()
+        const run = newestFirst(await store.listHighlightRuns(docHash))[0] ?? null
+        const blocks = run
+          ? [...(await store.readHighlightBlocks(docHash, run.runId)).values()]
+          : []
+        return { ok: true, run, blocks }
+      } catch (err) {
+        return storeFailure(err)
+      }
+    },
+
+    async storeInsights(
+      owner: number,
+      docHash: unknown,
+      lang: unknown,
+    ): Promise<PdfStructureOutcome<{ insights: InsightsEntry | null }>> {
+      if (!knows(owner, docHash)) return fail('not-granted', 'unknown document hash')
+      if (!isKey(lang)) return fail('invalid-request', 'bad language')
+      try {
+        return { ok: true, insights: await deps.store().readInsights(docHash, lang) }
+      } catch (err) {
+        return storeFailure(err)
+      }
+    },
+
+    async storeDeleteCounts(
+      owner: number,
+      docHash: unknown,
+    ): Promise<PdfStructureOutcome<PdfStoreDeleteCounts>> {
+      if (!knows(owner, docHash)) return fail('not-granted', 'unknown document hash')
+      try {
+        const store = deps.store()
+        return {
+          ok: true,
+          editedTranslationBlocks: await store.countEditedTranslationBlocks(docHash),
+          passages: await store.countPassages(docHash),
+        }
+      } catch (err) {
+        return storeFailure(err)
+      }
+    },
+
+    async storeTranslationRecency(
+      owner: number,
+      docHash: unknown,
+    ): Promise<PdfStructureOutcome<{ langs: PdfTranslationRecency[] }>> {
+      if (!knows(owner, docHash)) return fail('not-granted', 'unknown document hash')
+      try {
+        const store = deps.store()
+        const langs: PdfTranslationRecency[] = []
+        for (const lang of await store.listTranslations(docHash)) {
+          const stored = await store.readTranslation(docHash, lang)
+          let savedAt: number | null = null
+          for (const b of stored?.blocks.values() ?? []) {
+            if (savedAt === null || b.savedAt > savedAt) savedAt = b.savedAt
+          }
+          langs.push({ lang, savedAt })
+        }
+        // newest first; languages without a block last
+        langs.sort((a, b) => (b.savedAt ?? -Infinity) - (a.savedAt ?? -Infinity))
+        return { ok: true, langs }
+      } catch (err) {
+        return storeFailure(err)
+      }
+    },
+
+    /**
+     * The open file's page fingerprints in page order (reading-assist spec
+     * 5.1): the fingerprint job the migration uses, never the document tree.
+     * Same file bytes answer from this view's cache (or its whole-file tree).
+     */
+    async storePageFingerprints(
+      ctx: CallContext,
+      req: PdfStorePageFingerprintsRequest,
+    ): Promise<PdfStructureOutcome<{ docHash: string; fingerprints: string[] }>> {
+      if (!isRecord(req)) return fail('invalid-request', 'request must be an object')
+      const src = sourceOf(ctx.owner, { path: req.path, password: req.password })
+      if ('ok' in src) return src
+      let docHash: string
+      try {
+        docHash = await deps.hashFile(src.source.pdfPath)
+      } catch (err) {
+        return fail('failed', messageOf(err))
+      }
+      know(ctx.owner, docHash)
+      const cached = fingerprintCache.get(ctx.owner)
+      if (cached?.docHash === docHash) {
+        return { ok: true, docHash, fingerprints: [...cached.fingerprints] }
+      }
+      const tree = treeCache.get(ctx.owner)
+      if (tree?.docHash === docHash && tree.pagesKey === 'all') {
+        const fingerprints = [...tree.fingerprints]
+          .sort((a, b) => a.page - b.page)
+          .map((f) => f.fingerprint)
+        fingerprintCache.set(ctx.owner, { docHash, fingerprints })
+        return { ok: true, docHash, fingerprints: [...fingerprints] }
+      }
+      const out = await deps.runner.run(ctx.owner, `_fingerprints-${++internalJobs}`, {
+        op: 'fingerprints',
+        source: src.source,
+      })
+      if (!out.ok) return out
+      const value = out.value as FingerprintsJobValue
+      // the file changed again while it was read: answer what was read
+      know(ctx.owner, value.docHash)
+      fingerprintCache.set(ctx.owner, {
+        docHash: value.docHash,
+        fingerprints: [...value.fingerprints],
+      })
+      return { ok: true, docHash: value.docHash, fingerprints: [...value.fingerprints] }
     },
 
     async storeMigrate(
@@ -658,6 +934,7 @@ export function createPdfStructureHandlers(deps: StructureHandlerDeps) {
       targets.delete(owner)
       knownHashes.delete(owner)
       treeCache.delete(owner)
+      fingerprintCache.delete(owner)
       for (const key of [...targetsInUse]) {
         if (key.startsWith(`${owner}:`)) targetsInUse.delete(key)
       }

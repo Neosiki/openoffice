@@ -70,6 +70,11 @@ export const pt = {
   arDeleteBusy: 'Há uma tarefa de IA em andamento, por isso nada pode ser excluído agora.',
   jobResumeAiRead: 'Leitura com IA inacabada {percent}% — continuar?',
   jobResumeTranslate: 'Tradução inacabada ({language}) {percent}% — continuar?',
+  jobResumeHighlight: 'Destaques com IA inacabados {percent}% — continuar?',
+  arDeleteAlsoBoth:
+    'Também serão excluídos: traduções corrigidas à mão ({edited}) e cartões de trecho ({cards}).',
+  arDeleteAlsoEdited: 'Também serão excluídas as traduções corrigidas à mão ({count}).',
+  arDeleteAlsoCards: 'Também serão excluídos os cartões de trecho ({count}).',
   jobResumeContinue: 'Continuar',
   jobResumeLater: 'Mais tarde',
   searchAiRead: 'Encontrado no texto lido pela IA',

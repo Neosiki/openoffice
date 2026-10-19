@@ -113,6 +113,14 @@ const store: PdfStoreApi = {
   write: (request) => outcome(PDF_CHANNELS.storeWrite, request),
   migrate: (request) => outcome(PDF_CHANNELS.storeMigrate, request),
   deleteDocument: (docHash) => outcome(PDF_CHANNELS.storeDeleteDocument, docHash),
+  passages: (docHash) => outcome(PDF_CHANNELS.storePassages, docHash),
+  highlightRuns: (docHash) => outcome(PDF_CHANNELS.storeHighlightRuns, docHash),
+  highlightBlocks: (docHash, runId) => outcome(PDF_CHANNELS.storeHighlightBlocks, docHash, runId),
+  latestHighlight: (docHash) => outcome(PDF_CHANNELS.storeLatestHighlight, docHash),
+  insights: (docHash, lang) => outcome(PDF_CHANNELS.storeInsights, docHash, lang),
+  deleteCounts: (docHash) => outcome(PDF_CHANNELS.storeDeleteCounts, docHash),
+  pageFingerprints: (request) => outcome(PDF_CHANNELS.storePageFingerprints, request),
+  translationRecency: (docHash) => outcome(PDF_CHANNELS.storeTranslationRecency, docHash),
 }
 
 const api: PdfApi = {

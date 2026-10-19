@@ -69,6 +69,11 @@ export const ru = {
   arDeleteBusy: 'Выполняется задача ИИ, поэтому сейчас ничего удалить нельзя.',
   jobResumeAiRead: 'Незавершённое чтение ИИ {percent}% — продолжить?',
   jobResumeTranslate: 'Незавершённый перевод ({language}) {percent}% — продолжить?',
+  jobResumeHighlight: 'Незавершённое выделение ИИ {percent}% — продолжить?',
+  arDeleteAlsoBoth:
+    'Также будут удалены переводы, исправленные вручную ({edited}), и карточки фрагментов ({cards}).',
+  arDeleteAlsoEdited: 'Также будут удалены переводы, исправленные вручную ({count}).',
+  arDeleteAlsoCards: 'Также будут удалены карточки фрагментов ({count}).',
   jobResumeContinue: 'Продолжить',
   jobResumeLater: 'Позже',
   searchAiRead: 'Найдено в тексте, прочитанном ИИ',

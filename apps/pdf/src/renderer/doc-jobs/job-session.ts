@@ -26,6 +26,8 @@ export interface DocumentJobView {
   docHash: string
   kind: JobKind
   lang?: string
+  /** the AI highlight run of a 'highlight' job */
+  runId?: string
   /** the provider id the job sends to */
   provider: string
   state: 'running' | 'complete' | 'stopped' | 'failed'
@@ -45,7 +47,10 @@ export interface DocumentJobView {
 export interface StartDocumentJob<U> {
   docHash: string
   kind: JobKind
+  /** target language of a translate, translate-page or summary job */
   lang?: string
+  /** the AI highlight run of a 'highlight' job */
+  runId?: string
   provider: string
   /** start the engine job with this signal, registry and progress sink */
   launch(options: {
@@ -59,8 +64,29 @@ export interface StartDocumentJob<U> {
   onEnd?(view: DocumentJobView): void
 }
 
-const recordKey = (docHash: string, kind: JobKind, lang?: string): string =>
-  JSON.stringify([docHash, kind, lang ?? null])
+/**
+ * A job record's second key (reading-assist spec 5.3): the language for
+ * translate, translate-page and summary, the run id for highlight, none for
+ * ai-read. The same rule as the store's jobKeyOf, which lives in a
+ * Node-only module the renderer cannot load.
+ */
+export function jobRecordKey(job: {
+  kind: JobKind
+  lang?: string
+  runId?: string
+}): string | undefined {
+  switch (job.kind) {
+    case 'ai-read':
+      return undefined
+    case 'highlight':
+      return job.runId
+    default:
+      return job.lang
+  }
+}
+
+const recordKey = (docHash: string, kind: JobKind, key?: string): string =>
+  JSON.stringify([docHash, kind, key ?? null])
 
 export type StartJobOutcome =
   { ok: true; view: DocumentJobView } | { ok: false; running: RunningDocumentJob }
@@ -71,7 +97,7 @@ export class DocumentJobSession {
   private readonly listeners = new Set<() => void>()
   private nextId = 1
   private snapshot: readonly DocumentJobView[] = []
-  /** job records this session's jobs wrote (document hash, kind, language) */
+  /** job records this session's jobs wrote (document hash, kind, second key) */
   private readonly ran = new Set<string>()
   /** copies of those records an in-app save carried to another hash, and when */
   private readonly carried = new Map<string, number>()
@@ -93,6 +119,7 @@ export class DocumentJobSession {
       docHash: spec.docHash,
       kind: spec.kind,
       ...(spec.lang !== undefined ? { lang: spec.lang } : {}),
+      ...(spec.runId !== undefined ? { runId: spec.runId } : {}),
       provider: spec.provider,
       state: 'running',
       done: 0,
@@ -120,7 +147,7 @@ export class DocumentJobSession {
     }
     this.views.set(spec.docHash, view)
     this.controllers.set(spec.docHash, controller)
-    this.ran.add(recordKey(spec.docHash, spec.kind, spec.lang))
+    this.ran.add(recordKey(spec.docHash, spec.kind, jobRecordKey(spec)))
     this.emit()
     const end = (patch: Partial<DocumentJobView>) => {
       if (this.controllers.get(spec.docHash) === controller) this.controllers.delete(spec.docHash)
@@ -152,8 +179,8 @@ export class DocumentJobSession {
     const at = Date.now()
     const own = [...this.ran, ...this.carried.keys()]
     for (const key of own) {
-      const [docHash, kind, lang] = JSON.parse(key) as [string, JobKind, string | null]
-      if (docHash === from) this.carried.set(recordKey(to, kind, lang ?? undefined), at)
+      const [docHash, kind, second] = JSON.parse(key) as [string, JobKind, string | null]
+      if (docHash === from) this.carried.set(recordKey(to, kind, second ?? undefined), at)
     }
   }
 
@@ -166,7 +193,7 @@ export class DocumentJobSession {
   runningElsewhere(docHash: string, records: readonly JobStatus[]): JobStatus | undefined {
     return records.find((job) => {
       if (job.state !== 'running') return false
-      const carriedAt = this.carried.get(recordKey(docHash, job.kind, job.lang))
+      const carriedAt = this.carried.get(recordKey(docHash, job.kind, jobRecordKey(job)))
       return carriedAt === undefined || job.updatedAt === undefined || job.updatedAt > carriedAt
     })
   }

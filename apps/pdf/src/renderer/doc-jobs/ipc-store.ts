@@ -39,7 +39,11 @@ async function write(api: JobStoreApi, request: PdfStoreWriteRequest): Promise<v
   if (!out.ok) throw new JobStoreCallError(out)
 }
 
-/** `DocumentJobStore` over IPC: AI-read pages, translations and job records */
+/**
+ * `DocumentJobStore` over IPC: AI-read pages, translations and job records.
+ * A job record carries its own second key (`lang`, or `runId` for a
+ * highlight job); the shell stores it under that key.
+ */
 export function createIpcJobStore(api: JobStoreApi): DocumentJobStore {
   return {
     async readAiReadPages(docHash) {
@@ -81,6 +85,12 @@ export function createIpcJobStore(api: JobStoreApi): DocumentJobStore {
     writeTranslationBlocks: (docHash, lang, blocks) =>
       write(api, { kind: 'translationBlocks', docHash, lang, blocks: [...blocks] }),
     deleteTranslation: (docHash, lang) => write(api, { kind: 'deleteTranslation', docHash, lang }),
+    /** "translate again from the start" keeping the person's edits; the entries removed */
+    async deleteTranslationExceptEdited(docHash, lang) {
+      const out = await api.write({ kind: 'deleteTranslationExceptEdited', docHash, lang })
+      if (!out.ok) throw new JobStoreCallError(out)
+      return out.removed ?? 0
+    },
     writeJob: (docHash, job) => write(api, { kind: 'job', docHash, job }),
   }
 }
