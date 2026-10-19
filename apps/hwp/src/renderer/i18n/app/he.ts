@@ -57,6 +57,8 @@ export const he = {
   aiStarterProofreadPrompt: 'מצא את שגיאות הכתיב והרווחים במסמך הזה ותקן אותן.',
   aiToolRead: 'המסמך נקרא',
   aiToolFind: 'חיפוש "{text}" · נמצאו {count}',
+  aiToolReadUrl: '{host} נקרא · {n} תווים',
+  aiToolReadUrlFail: 'לא ניתן לקרוא את {host}',
   aiToolFields: 'שדות הטופס נבדקו · {count}',
   aiToolToc: 'נוסף תוכן עניינים · {count} כותרות',
   aiToolTocRefresh: 'מספרי העמודים של תוכן העניינים נכתבו מחדש · {count}',

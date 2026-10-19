@@ -59,6 +59,8 @@ export const th = {
   aiStarterProofreadPrompt: 'ช่วยหาคำที่สะกดผิดและการเว้นวรรคที่ผิดในเอกสารนี้แล้วแก้ไข',
   aiToolRead: 'อ่านเอกสารแล้ว',
   aiToolFind: 'ค้นหา "{text}" · พบ {count} แห่ง',
+  aiToolReadUrl: 'อ่าน {host} · {n} ตัวอักษร',
+  aiToolReadUrlFail: 'อ่าน {host} ไม่ได้',
   aiToolFields: 'ตรวจฟิลด์แบบฟอร์มแล้ว · {count} ฟิลด์',
   aiToolToc: 'เพิ่มสารบัญ · หัวข้อ {count}',
   aiToolTocRefresh: 'เขียนเลขหน้าของสารบัญใหม่ · {count}',

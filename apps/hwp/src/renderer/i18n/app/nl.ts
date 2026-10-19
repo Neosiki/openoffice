@@ -59,6 +59,8 @@ export const nl = {
   aiStarterProofreadPrompt: 'Zoek de spel- en spatiefouten in dit document en corrigeer ze.',
   aiToolRead: 'Document gelezen',
   aiToolFind: 'Gezocht naar "{text}" · {count} gevonden',
+  aiToolReadUrl: '{host} gelezen · {n} tekens',
+  aiToolReadUrlFail: '{host} kon niet worden gelezen',
   aiToolFields: 'Formuliervelden gecontroleerd · {count}',
   aiToolToc: 'Inhoudsopgave toegevoegd · {count} kopjes',
   aiToolTocRefresh: 'Paginanummers van de inhoudsopgave herschreven · {count}',

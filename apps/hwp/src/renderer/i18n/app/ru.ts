@@ -60,6 +60,8 @@ export const ru = {
     'Найди в этом документе орфографические ошибки и ошибки в пробелах и исправь их.',
   aiToolRead: 'Документ прочитан',
   aiToolFind: 'Поиск «{text}» · найдено: {count}',
+  aiToolReadUrl: '{host} прочитано · {n} символов',
+  aiToolReadUrlFail: 'Не удалось прочитать {host}',
   aiToolFields: 'Поля формы проверены · {count}',
   aiToolToc: 'Добавлено оглавление · заголовков: {count}',
   aiToolTocRefresh: 'Номера страниц оглавления обновлены · {count}',

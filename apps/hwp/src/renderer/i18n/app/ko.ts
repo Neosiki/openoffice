@@ -58,6 +58,8 @@ export const ko = {
   aiStarterProofreadPrompt: '이 문서에서 맞춤법과 띄어쓰기가 틀린 곳을 찾아 고쳐 줘.',
   aiToolRead: '문서 읽음',
   aiToolFind: '"{text}" 찾음 · {count}곳',
+  aiToolReadUrl: '{host} 읽음 · {n}자',
+  aiToolReadUrlFail: '{host} 읽지 못함',
   aiToolFields: '누름틀 {count}개 확인',
   aiToolToc: '차례 넣음 · 제목 {count}개',
   aiToolTocRefresh: '차례 쪽 번호 다시 씀 · {count}곳',

@@ -62,6 +62,8 @@ export const es = {
     'Busca los errores de ortografía y de espaciado de este documento y corrígelos.',
   aiToolRead: 'Documento leído',
   aiToolFind: 'Búsqueda de «{text}» · {count} encontrado(s)',
+  aiToolReadUrl: '{host} leído · {n} caracteres',
+  aiToolReadUrlFail: 'No se pudo leer {host}',
   aiToolFields: 'Campos de formulario revisados · {count}',
   aiToolToc: 'Se añadió un índice · {count} títulos',
   aiToolTocRefresh: 'Se reescribieron los números de página del índice · {count}',
