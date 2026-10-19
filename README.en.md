@@ -196,8 +196,9 @@ ieumoffice open report.docx
   Protocol tools. The same settings page shows ready-made snippets, for
   example `claude mcp add --transport stdio ieumoffice -- ieumoffice mcp`.
 
-Document commands run entirely on your PC. Only `search`, `image` and `media`
-send anything out, through the same routes as the app.
+Document commands run entirely on your PC. Only `search`, `image`, `media` and
+`read-url` send anything out. `read-url` sends the address it is given to that
+site, and the rest go through the same routes as the app.
 
 **Requests that arrive this way do not use your subscription unless you allow
 it.** A terminal command or an MCP tool call is made by a program, not by a

@@ -436,8 +436,8 @@
 
 ## 저장소 루트의 `npm run lint`가 `.dryforge` 안까지 검사한다
 
-- **증상.** `.dryforge`는 `.gitignore`에만 있고 eslint의 `ignores`에는 없다. 그래서 저장소 루트에서 `npm run lint`를 돌리면 그 아래가 함께 검사된다 — 실행 중에는 `.dryforge/worktrees/`의 작업 사본들이(수만 건의 tsconfig 파싱 오류), 평소에도 `.dryforge/001/verify/`처럼 보관된 옛 실행의 시험 파일(`no-useless-assignment`)이 걸린다. read_url 실행에서 합치기 전 검사가 이 때문에 실패했다(작업 사본과 001·002 보관본을 치운 뒤 통과).
-- **영향.** dryforge 실행 흐름에서 합치기 전 검사(`npm run lint`)가 저장소 상태에 따라 실패한다. `.dryforge`를 통째로 지우면 풀리지만 보관본이 사라진다.
+- **증상.** `.dryforge`는 `.gitignore`에만 있고 eslint의 `ignores`에는 없다. 그래서 저장소 루트에서 `npm run lint`를 돌리면 그 아래가 함께 검사된다 — 작업 중에는 `.dryforge/worktrees/`의 작업 사본들이(수만 건의 tsconfig 파싱 오류), 평소에도 `.dryforge/001/verify/`처럼 보관된 옛 실행의 시험 파일(`no-useless-assignment`)이 걸린다. read_url 작업에서 합치기 전 검사가 이 때문에 실패했다(작업 사본과 001·002 보관본을 치운 뒤 통과).
+- **영향.** 기능 가지를 만드는 동안 합치기 전 검사(`npm run lint`)가 저장소 상태에 따라 실패한다. `.dryforge`를 통째로 지우면 풀리지만 보관본이 사라진다.
 - **지금 못 푸는 이유.** `eslint.config.mjs`의 `ignores`에 `.dryforge`를 더하는 한 줄이면 풀리지만, read_url 실행의 범위 밖이라 별도로 정해야 한다.
 - **가능한 길.** `ignores`에 `'**/.dryforge/**'`를 더한다(워크트리가 늘어도 같은 일이 재발하지 않는다).
 
