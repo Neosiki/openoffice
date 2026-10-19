@@ -37,7 +37,7 @@ function createEditor(): Editor {
     content: '',
   })
   editor.commands.setContent(
-    '# Chapter 1 Overview\n\nGenSpark is an AI office suite.\n\n## Risk Notes\n\nThis document is for reference only.',
+    '# Chapter 1 Overview\n\nSunSpark is an AI office suite.\n\n## Risk Notes\n\nThis document is for reference only.',
     { contentType: 'markdown' },
   )
   editors.push(editor)
