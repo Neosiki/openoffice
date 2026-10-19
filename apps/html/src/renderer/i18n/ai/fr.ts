@@ -49,6 +49,8 @@ export const fr = {
   aiTimeoutError: 'Délai de réponse IA dépassé',
   aiToolWebSearch: 'Recherche Web',
   aiToolWebSearchDone: 'Recherche « {query} » · {count} résultats',
+  aiToolReadUrl: 'Lecture de la page web',
+  aiToolReadUrlDone: 'Lu {host} · {chars} caractères',
   aiTruncatedNote: '(La réponse a été tronquée par la limite de longueur et peut être incomplète.)',
   aiTurnLimit:
     "Limite d'étapes atteinte pour cette exécution — envoyez une autre instruction pour continuer.",

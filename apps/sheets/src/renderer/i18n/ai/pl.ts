@@ -77,6 +77,8 @@ export const pl = {
   aiToolReadFile: 'Odczyt {name}',
   aiToolWebSearch: 'Wyszukiwanie w internecie',
   aiToolWebSearchDone: 'Wyszukano „{query}” ({count} wyników)',
+  aiToolReadUrl: 'Odczyt strony internetowej',
+  aiToolReadUrlDone: 'Odczytano {host} ({chars} znaków)',
   aiToolFindCells: 'Wyszukaj komórki',
   aiToolFindCellsOf: 'Wyszukano „{query}” ({count} dopasowań)',
   aiToolFindErrors: 'Skanowanie błędów formuł ({count})',

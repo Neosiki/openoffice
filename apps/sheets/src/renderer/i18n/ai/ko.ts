@@ -76,6 +76,8 @@ export const ko = {
   aiToolReadFile: '{name} 읽기',
   aiToolWebSearch: '웹 검색',
   aiToolWebSearchDone: '"{query}" 검색({count}건)',
+  aiToolReadUrl: '웹 문서 읽기',
+  aiToolReadUrlDone: '{host} 읽음({chars}자)',
   aiToolFindCells: '셀 찾기',
   aiToolFindCellsOf: '"{query}" 검색({count}개 일치)',
   aiToolFindErrors: '수식 오류 검사({count}개)',

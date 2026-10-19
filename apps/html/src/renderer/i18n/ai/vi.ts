@@ -49,6 +49,8 @@ export const vi = {
   aiTimeoutError: 'Phản hồi từ AI đã hết thời gian chờ',
   aiToolWebSearch: 'Tìm kiếm trên web',
   aiToolWebSearchDone: 'Đã tìm kiếm "{query}" · {count} kết quả',
+  aiToolReadUrl: 'Đọc trang web',
+  aiToolReadUrlDone: 'Đã đọc {host} · {chars} ký tự',
   aiTruncatedNote: '(Câu trả lời bị cắt ngắn do giới hạn độ dài và có thể chưa hoàn chỉnh.)',
   aiTurnLimit: 'Đã đạt giới hạn số bước cho mỗi lần chạy — hãy gửi hướng dẫn khác để tiếp tục.',
   aiUndelivered: 'Chưa được gửi',

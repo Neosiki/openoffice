@@ -56,6 +56,8 @@ export const fr = {
   aiToolWriteMapFailed: 'Impossible de rédiger la carte',
   aiToolWebSearch: 'Recherche Web',
   aiToolWebSearchDone: 'Recherche « {query} » · {count} résultats',
+  aiToolReadUrl: 'Lecture de la page web',
+  aiToolReadUrlDone: 'Lu {host} · {chars} caractères',
   aiSumReadAttachment: 'Lire la pièce jointe',
   aiSumImageAttachment: 'Pièce jointe image {name}',
   aiSumReadAttachmentName: 'Lire la pièce jointe {name}',

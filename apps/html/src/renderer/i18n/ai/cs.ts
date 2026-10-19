@@ -49,6 +49,8 @@ export const cs = {
   aiTimeoutError: 'Odpověď AI vypršela',
   aiToolWebSearch: 'Hledání na webu',
   aiToolWebSearchDone: 'Hledáno „{query}“ · {count} výsledků',
+  aiToolReadUrl: 'Čtení webové stránky',
+  aiToolReadUrlDone: 'Přečteno {host} · {chars} znaků',
   aiTruncatedNote: '(Odpověď byla zkrácena limitem délky a může být neúplná.)',
   aiTurnLimit: 'Dosažen limit kroků na jeden běh — pokračujte odesláním další instrukce.',
   aiUndelivered: 'Neodesláno',

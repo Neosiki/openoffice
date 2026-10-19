@@ -73,6 +73,8 @@ export const zh = {
   aiToolReadFile: '读取 {name}',
   aiToolWebSearch: '联网搜索',
   aiToolWebSearchDone: '搜索 "{query}"（{count} 条结果）',
+  aiToolReadUrl: '读取网页',
+  aiToolReadUrlDone: '读取 {host}（{chars} 个字符）',
   aiToolFindCells: '查找单元格',
   aiToolFindCellsOf: '查找 "{query}"（{count} 个匹配）',
   aiToolFindErrors: '扫描公式错误（{count} 个）',

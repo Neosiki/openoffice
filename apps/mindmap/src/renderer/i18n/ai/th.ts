@@ -54,6 +54,8 @@ export const th = {
   aiToolWriteMapFailed: 'เขียนแผนผังไม่ได้',
   aiToolWebSearch: 'ค้นหาเว็บ',
   aiToolWebSearchDone: 'ค้นหา "{query}" · {count} รายการ',
+  aiToolReadUrl: 'อ่านหน้าเว็บ',
+  aiToolReadUrlDone: 'อ่าน {host} · {chars} ตัวอักษร',
   aiSumReadAttachment: 'อ่านสิ่งที่แนบ',
   aiSumImageAttachment: 'รูปภาพแนบ {name}',
   aiSumReadAttachmentName: 'อ่านสิ่งที่แนบ {name}',

@@ -50,6 +50,8 @@ export const pt = {
   aiTimeoutError: 'A resposta da IA expirou',
   aiToolWebSearch: 'Pesquisa na Web',
   aiToolWebSearchDone: 'Pesquisa por "{query}" · {count} resultados',
+  aiToolReadUrl: 'Ler página web',
+  aiToolReadUrlDone: 'Lido {host} · {chars} caracteres',
   aiTruncatedNote: '(A resposta foi cortada pelo limite de comprimento e pode estar incompleta.)',
   aiTurnLimit: 'Limite de etapas por execução atingido — envie outra instrução para continuar.',
   aiUndelivered: 'Não enviado',

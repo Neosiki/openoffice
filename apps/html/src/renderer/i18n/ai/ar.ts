@@ -49,6 +49,8 @@ export const ar = {
   aiTimeoutError: 'انتهت مهلة استجابة الذكاء الاصطناعي',
   aiToolWebSearch: 'بحث ويب',
   aiToolWebSearchDone: 'بحث عن "{query}" · {count} نتيجة',
+  aiToolReadUrl: 'قراءة صفحة ويب',
+  aiToolReadUrlDone: 'قُرئ {host} · {chars} حرفًا',
   aiTruncatedNote: '(تم اقتطاع الرد بسبب حد الطول وقد يكون غير مكتمل.)',
   aiTurnLimit: 'تم بلوغ حد الخطوات لكل تشغيل — أرسل تعليمات أخرى للمتابعة.',
   aiUndelivered: 'لم يتم الإرسال',

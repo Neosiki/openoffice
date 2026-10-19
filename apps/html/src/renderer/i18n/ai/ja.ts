@@ -49,6 +49,8 @@ export const ja = {
   aiTimeoutError: 'AI の応答がタイムアウトしました',
   aiToolWebSearch: 'ウェブ検索',
   aiToolWebSearchDone: '「{query}」を検索 · {count} 件',
+  aiToolReadUrl: 'ウェブページの読み取り',
+  aiToolReadUrlDone: '{host} を読み取り · {chars} 文字',
   aiTruncatedNote: '（返信は長さ制限により途中で打ち切られ、不完全な可能性があります。）',
   aiTurnLimit: '1 回の実行のステップ上限に達しました。続けるには指示をもう一度送ってください。',
   aiUndelivered: '送信できませんでした',

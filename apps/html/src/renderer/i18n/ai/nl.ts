@@ -49,6 +49,8 @@ export const nl = {
   aiTimeoutError: 'AI-antwoord time-out',
   aiToolWebSearch: 'Zoeken op internet',
   aiToolWebSearchDone: 'Gezocht naar "{query}" · {count} resultaten',
+  aiToolReadUrl: 'Webpagina lezen',
+  aiToolReadUrlDone: '{host} gelezen · {chars} tekens',
   aiTruncatedNote: '(Het antwoord is afgekapt door de lengtelimiet en is mogelijk onvolledig.)',
   aiTurnLimit: 'Stappenlimiet per run bereikt — stuur nog een instructie om door te gaan.',
   aiUndelivered: 'Niet verzonden',

@@ -79,6 +79,8 @@ export const de = {
   aiToolReadFile: '{name} lesen',
   aiToolWebSearch: 'Websuche',
   aiToolWebSearchDone: '"{query}" gesucht ({count} Ergebnisse)',
+  aiToolReadUrl: 'Webseite lesen',
+  aiToolReadUrlDone: '{host} gelesen ({chars} Zeichen)',
   aiToolFindCells: 'Zellen suchen',
   aiToolFindCellsOf: '"{query}" gesucht ({count} Treffer)',
   aiToolFindErrors: 'Formelfehler gescannt ({count})',

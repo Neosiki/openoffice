@@ -78,6 +78,8 @@ export const cs = {
   aiToolReadFile: 'Načtení souboru {name}',
   aiToolWebSearch: 'Hledání na webu',
   aiToolWebSearchDone: 'Vyhledáno „{query}“ (výsledků: {count})',
+  aiToolReadUrl: 'Čtení webové stránky',
+  aiToolReadUrlDone: 'Přečteno {host} ({chars} znaků)',
   aiToolFindCells: 'Hledání buněk',
   aiToolFindCellsOf: 'Nalezeno „{query}“ (shod: {count})',
   aiToolFindErrors: 'Prohledány chyby vzorců (nalezeno: {count})',

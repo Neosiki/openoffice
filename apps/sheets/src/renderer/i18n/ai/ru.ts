@@ -78,6 +78,8 @@ export const ru = {
   aiToolReadFile: 'Чтение {name}',
   aiToolWebSearch: 'Поиск в Интернете',
   aiToolWebSearchDone: 'Поиск «{query}» ({count} результатов)',
+  aiToolReadUrl: 'Чтение веб-страницы',
+  aiToolReadUrlDone: 'Прочитано {host} ({chars} символов)',
   aiToolFindCells: 'Поиск ячеек',
   aiToolFindCellsOf: 'Поиск «{query}» ({count} совпадений)',
   aiToolFindErrors: 'Поиск ошибок в формулах ({count})',

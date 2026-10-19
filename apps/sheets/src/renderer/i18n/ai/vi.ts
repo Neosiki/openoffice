@@ -77,6 +77,8 @@ export const vi = {
   aiToolReadFile: 'Đọc {name}',
   aiToolWebSearch: 'Tìm kiếm trên web',
   aiToolWebSearchDone: 'Đã tìm kiếm "{query}" ({count} kết quả)',
+  aiToolReadUrl: 'Đọc trang web',
+  aiToolReadUrlDone: 'Đã đọc {host} ({chars} ký tự)',
   aiToolFindCells: 'Tìm ô',
   aiToolFindCellsOf: 'Đã tìm thấy "{query}" ({count} kết quả khớp)',
   aiToolFindErrors: 'Đã quét tìm lỗi công thức (tìm thấy {count} lỗi)',

@@ -80,6 +80,8 @@ export const es = {
   aiToolReadFile: 'Leer {name}',
   aiToolWebSearch: 'Búsqueda web',
   aiToolWebSearchDone: 'Se buscó "{query}" ({count} resultados)',
+  aiToolReadUrl: 'Leer página web',
+  aiToolReadUrlDone: 'Se leyó {host} ({chars} caracteres)',
   aiToolFindCells: 'Buscar celdas',
   aiToolFindCellsOf: 'Se buscó "{query}" ({count} coincidencias)',
   aiToolFindErrors: 'Análisis de errores de fórmula ({count})',

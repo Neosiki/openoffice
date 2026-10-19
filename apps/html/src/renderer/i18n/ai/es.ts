@@ -50,6 +50,8 @@ export const es = {
   aiTimeoutError: 'La respuesta de IA agotó el tiempo',
   aiToolWebSearch: 'Búsqueda web',
   aiToolWebSearchDone: 'Búsqueda de «{query}» · {count} resultados',
+  aiToolReadUrl: 'Leer página web',
+  aiToolReadUrlDone: 'Leído {host} · {chars} caracteres',
   aiTruncatedNote: '(La respuesta fue cortada por el límite de longitud y puede estar incompleta.)',
   aiTurnLimit:
     'Se alcanzó el límite de pasos por ejecución; envía otra instrucción para continuar.',

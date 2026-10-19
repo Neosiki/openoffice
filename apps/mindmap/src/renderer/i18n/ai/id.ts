@@ -55,6 +55,8 @@ export const id = {
   aiToolWriteMapFailed: 'Peta tidak dapat ditulis',
   aiToolWebSearch: 'Pencarian web',
   aiToolWebSearchDone: 'Mencari "{query}" · {count} hasil',
+  aiToolReadUrl: 'Baca halaman web',
+  aiToolReadUrlDone: 'Membaca {host} · {chars} karakter',
   aiSumReadAttachment: 'Baca lampiran',
   aiSumImageAttachment: 'Lampiran gambar {name}',
   aiSumReadAttachmentName: 'Baca lampiran {name}',

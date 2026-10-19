@@ -236,7 +236,15 @@ describe('a run', () => {
       tools: Array<{ name: string }>
     }
     expect(request.tools.map((tool) => tool.name).sort()).toEqual(
-      ['edit_map', 'read_attachment', 'read_map', 'read_topic', 'web_search', 'write_map'].sort(),
+      [
+        'edit_map',
+        'read_attachment',
+        'read_map',
+        'read_topic',
+        'read_url',
+        'web_search',
+        'write_map',
+      ].sort(),
     )
     expect(request.system).toContain(`${PRODUCT_NAME} Mind Map`)
     expect(request.system).not.toContain(UPSTREAM_PRODUCT_NAME)
