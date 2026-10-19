@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import type { SlideComment } from '../src/shared/ipc'
-import { commentNavigationTarget, groupCommentsBySlide } from '../src/renderer/comments-view'
+import {
+  commentNavigationTarget,
+  deckStructureKey,
+  groupCommentsBySlide,
+} from '../src/renderer/comments-view'
 
 const comment = (authorId: number, idx: number, text = `c${authorId}-${idx}`): SlideComment => ({
   authorId,
@@ -51,5 +55,18 @@ describe('commentNavigationTarget', () => {
   it('rejects malformed indexes', () => {
     expect(commentNavigationTarget(1.5, 3)).toBeNull()
     expect(commentNavigationTarget(Number.NaN, 3)).toBeNull()
+  })
+})
+
+describe('deckStructureKey', () => {
+  const deck = (...paths: string[]) => paths.map((partPath) => ({ partPath }))
+
+  it('changes when a slide is added, removed or reordered', () => {
+    expect(deckStructureKey(deck('a', 'b', 'c'))).not.toBe(deckStructureKey(deck('a', 'c')))
+    expect(deckStructureKey(deck('a', 'b', 'c'))).not.toBe(deckStructureKey(deck('a', 'c', 'b')))
+  })
+
+  it('stays the same while only slide content changes', () => {
+    expect(deckStructureKey(deck('a', 'b'))).toBe(deckStructureKey(deck('a', 'b')))
   })
 })

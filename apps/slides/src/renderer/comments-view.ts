@@ -2,15 +2,24 @@
  * Pure view helpers for the comments pane's page/all-pages modes.
  *
  * The pane itself only displays what the main process reports; grouping the
- * per-slide lists, resolving a click's target page and deciding which lists a
- * refresh signal invalidates are pure (and therefore tested without JSDOM).
- * Hidden slides need no special case here: their comments arrive in the same
- * per-slide array, and the deck order is the array order.
+ * per-slide lists, resolving a click's target page and keying the deck's slide
+ * identity are pure (and therefore tested without JSDOM). Hidden slides need no
+ * special case here: their comments arrive in the same per-slide array, and the
+ * deck order is the array order.
  */
 import type { SlideComment } from '../shared/ipc'
 
 /** Which slice of the deck the comments pane shows. */
 export type CommentsMode = 'page' | 'all'
+
+/**
+ * Identity sequence of the deck's slides. Changes on add/delete/reorder (the
+ * part path follows the slide), not on content edits — so comment reads can
+ * key off it without re-reading on every keystroke.
+ */
+export function deckStructureKey(slides: readonly { partPath?: string }[]): string {
+  return slides.map((s) => s.partPath ?? '').join('\n')
+}
 
 /** One page's comments in the all-pages list. */
 export interface CommentSlideGroup {

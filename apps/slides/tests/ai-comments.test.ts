@@ -95,4 +95,12 @@ describe('deck context comment hint', () => {
     const ctx = createSlidesSkill(a).buildContext!()
     expect(ctx).not.toContain('review comment')
   })
+
+  it('counts hidden pages in the hint', () => {
+    const a = access([slide(), slide(true)], [[comment({})], [comment({ idx: 2 })]])
+    const ctx = createSlidesSkill(a).buildContext!()
+    expect(ctx).toContain(
+      'The deck has 2 review comment(s) on page(s) 1, 2. Use read_comments to read them.',
+    )
+  })
 })

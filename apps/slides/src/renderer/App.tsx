@@ -91,7 +91,7 @@ import {
 import { FormatBackgroundPane, type BgPaneOp } from './components/FormatBackgroundPane'
 import { FormatPane } from './components/FormatPane'
 import { CommentsPane } from './components/CommentsPane'
-import { commentNavigationTarget, type CommentsMode } from './comments-view'
+import { commentNavigationTarget, deckStructureKey, type CommentsMode } from './comments-view'
 import { AnimationPane } from './components/AnimationPane'
 import { AnimPreviewOverlay } from './components/AnimatedSlide'
 import { EquationDialog, HeaderFooterDialog, LinkDialog } from './components/InsertDialogs'
@@ -602,6 +602,9 @@ export function App() {
     })
     return { total, pages }
   }, [allComments])
+  /** Slide identity sequence: local add/delete/reorder must refresh comment reads (single window
+   *  gets no deck-changed broadcast), while content edits keep the same paths and don't. */
+  const deckKey = useMemo(() => deckStructureKey(slides), [slides])
   const [commentsMode, setCommentsMode] = useState<CommentsMode>('page')
   const [showComments, setShowComments] = useState(false)
   const [commentsFocusNonce, setCommentsFocusNonce] = useState(0)
@@ -2009,7 +2012,7 @@ export function App() {
     return () => {
       cancelled = true
     }
-  }, [hasDoc, current, path, annotationsNonce, commentsRefreshNonce])
+  }, [hasDoc, current, path, annotationsNonce, commentsRefreshNonce, deckKey])
 
   // ── Comments: every page's list for the all-pages view. Page switches don't change it, so it
   // only follows deck opens, undo/redo and explicit refresh signals.
@@ -2030,7 +2033,7 @@ export function App() {
     return () => {
       cancelled = true
     }
-  }, [hasDoc, path, annotationsNonce, commentsRefreshNonce])
+  }, [hasDoc, path, annotationsNonce, commentsRefreshNonce, deckKey])
 
   /** Re-read the comment lists after a comment mutation (ribbon badge and all-pages list). */
   const refreshComments = useCallback(() => {

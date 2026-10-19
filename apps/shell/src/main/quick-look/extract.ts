@@ -279,9 +279,9 @@ export function parseSlidesFromText(text: string): {
   const lines = text.split(/\r?\n/)
   const slides: QuickLookSlide[] = []
   let current: QuickLookSlide | null = null
-  // Anything after a `###` heading belongs to that section: Notes feeds the notes card;
-  // any other heading (e.g. `### Comments` from the pptx text extractor) is skipped so
-  // its lines are never mistaken for slide bullets.
+  // Anything after a `### Notes`/`### Comments` heading belongs to that section: Notes feeds
+  // the notes card; Comments (pptx text output) is skipped so its lines are never mistaken
+  // for slide bullets. Any other `###` line is ordinary slide text.
   let section: 'body' | 'notes' | 'other' = 'body'
 
   for (const line of lines) {
@@ -298,8 +298,12 @@ export function parseSlidesFromText(text: string): {
       continue
     }
     if (!current) continue
-    if (/^###\s+/.test(line)) {
-      section = /^###\s+Notes\b/i.test(line) ? 'notes' : 'other'
+    if (/^###\s+Notes\b/i.test(line)) {
+      section = 'notes'
+      continue
+    }
+    if (/^###\s+Comments\b/i.test(line)) {
+      section = 'other'
       continue
     }
     const trimmed = line.trim()
