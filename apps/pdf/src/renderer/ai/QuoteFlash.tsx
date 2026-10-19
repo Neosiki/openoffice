@@ -10,6 +10,8 @@ import type { PdfNavTarget } from './pdf-nav'
 import { findQuoteRects } from './quote-find'
 
 export const QUOTE_FLASH_MS = 2000
+/** how long "location not found" stays: a brief word, not the usual notice */
+export const QUOTE_NOT_FOUND_NOTICE_MS = 2500
 
 type Rect = [number, number, number, number]
 

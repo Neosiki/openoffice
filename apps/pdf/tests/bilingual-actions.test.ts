@@ -467,7 +467,9 @@ describe('page translation button', () => {
     const name = aiProviderDisplayName('claude-code')
     await until(() => q(col(m.el, 1), '.bl-provider') !== null, 'the provider name')
     expect(q(col(m.el, 1), '.bl-provider')?.textContent).toBe(name)
-    expect(pageButton(m.el, 1)?.title).toBe(t('blSendsTo', { provider: name }))
+    // the app's screen tip, not the native title
+    expect(pageButton(m.el, 1)?.dataset.tip).toBe(t('blSendsTo', { provider: name }))
+    expect(pageButton(m.el, 1)?.hasAttribute('title')).toBe(false)
     await settle()
     expect(bridge.api.aiStream).not.toHaveBeenCalled()
     expect(m.writes).toEqual([])
@@ -613,6 +615,43 @@ describe('page translation button', () => {
     expect(bridge.starts).toHaveLength(2)
   })
 
+  it('a provider change while the question is shown asks again for the new one; nothing is sent', async () => {
+    const base = normalizeAiSettings({})
+    const m = await mount({
+      settings: {
+        provider: 'anthropic',
+        providers: { ...base.providers, anthropic: { apiKey: 'k', model: 'claude-sonnet-x' } },
+      },
+    })
+    await until(() => q(col(m.el, 1), '.bl-provider') !== null, 'the route')
+    await click(pageButton(m.el, 1))
+    expect(q(col(m.el, 1), '[data-bl-paid-ask="1"]')?.textContent).toContain(
+      t('blPaidAsk', { provider: aiProviderDisplayName('anthropic') }),
+    )
+    // the settings change in another window while the question is on screen
+    bridge.changeSettings({
+      ...base,
+      subscriptionNoticeSeen: true,
+      provider: 'openai',
+      providers: {
+        ...base.providers,
+        openai: { ...base.providers.openai, apiKey: 'sk', model: 'g' },
+      },
+    })
+    await settle()
+    await settle()
+    await click(q(col(m.el, 1), '[data-action="bl-paid-yes"]'))
+    expect(q(col(m.el, 1), '[data-bl-paid-ask="1"]')?.textContent).toContain(
+      t('blPaidAsk', { provider: aiProviderDisplayName('openai') }),
+    )
+    await settle()
+    expect(bridge.api.aiStream).not.toHaveBeenCalled()
+    // agreeing to the provider named now sends with it
+    await click(q(col(m.el, 1), '[data-action="bl-paid-yes"]'))
+    await until(() => bridge.starts.length === 1, 'the call')
+    expect(bridge.starts[0]!.settings.provider).toBe('openai')
+  })
+
   it('goes through the send gate: the first-connection notice holds the press until acknowledged', async () => {
     const m = await mount({ settings: { subscriptionNoticeSeen: false } })
     await click(pageButton(m.el, 2))
@@ -674,6 +713,32 @@ describe('translate again', () => {
     expect(bridge.starts).toHaveLength(1)
     expect(m.writes.filter((w) => w.kind === 'translationBlocks')).toEqual([])
     expect(item(m.el, 'p2.0').textContent).toContain('둘째 쪽')
+  })
+
+  it('waits while another process runs a job on the document: nothing is sent', async () => {
+    const tree = fakeTree()
+    const m = await mount({ stored: { ko: storedOf(tree, 'ko', { 'p2.0': { text: '둘째 쪽' } }) } })
+    m.store.unfinishedJobs.mockResolvedValue({
+      ok: true as const,
+      jobs: [
+        { kind: 'translate', lang: 'ko', state: 'running', outputs: [], updatedAt: Date.now() },
+      ],
+    } as never)
+    await click(q(item(m.el, 'p2.0'), '[data-action="bl-retranslate"]'))
+    await until(() => q(item(m.el, 'p2.0'), '[data-bl-para-note]') !== null, 'the note')
+    expect(q(item(m.el, 'p2.0'), '[data-bl-para-note]')?.textContent).toBe(t('blBusy'))
+    expect(m.store.unfinishedJobs).toHaveBeenCalledWith(DOC)
+    await settle()
+    expect(bridge.api.aiStream).not.toHaveBeenCalled()
+    expect(m.writes).toEqual([])
+  })
+
+  it('uses the screen tip, not the native title', async () => {
+    const tree = fakeTree()
+    const m = await mount({ stored: { ko: storedOf(tree, 'ko', { 'p2.0': { text: '둘째 쪽' } }) } })
+    const again = q(item(m.el, 'p2.0'), '[data-action="bl-retranslate"]')!
+    expect(again.dataset.tip).toBe(t('blRetranslateTip'))
+    expect(again.hasAttribute('title')).toBe(false)
   })
 
   it('an edited paragraph asks first; Cancel sends nothing', async () => {

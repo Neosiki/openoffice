@@ -323,7 +323,9 @@ function PageAction(props: {
           data-action="bl-translate-page"
           data-bl-pending={ctx.pending.length}
           disabled={s.busy}
-          title={s.busy ? t('blWaitingTip') : provider ? t('blSendsTo', { provider }) : undefined}
+          data-tip={
+            s.busy ? t('blWaitingTip') : provider ? t('blSendsTo', { provider }) : undefined
+          }
           onClick={() => ctl.pressPage(docHash, lang, page)}
         >
           {s.busy ? t('blWaiting') : label}
@@ -403,7 +405,7 @@ function ParagraphActions(props: {
         className="bl-mini-btn bl-retranslate"
         data-action="bl-retranslate"
         disabled={s.busy || s.retranslating !== null}
-        title={s.busy ? t('blWaitingTip') : t('blRetranslateTip')}
+        data-tip={s.busy ? t('blWaitingTip') : t('blRetranslateTip')}
         onDoubleClick={stop}
         onClick={() => ctl.pressRetranslate(ctx.docHash, ctx.lang, unit)}
       >
@@ -450,6 +452,7 @@ function ParagraphBody(props: {
       t={t}
       onSave={(text) => void ctl.saveEdit(text)}
       onCancel={ctl.cancelEdit}
+      onDraft={ctl.setDraft}
     />
   )
 }
@@ -462,6 +465,8 @@ function ParagraphEditor(props: {
   t: TFunc
   onSave: (text: string) => void
   onCancel: () => void
+  /** the text as typed, so it survives the editor following a save to a new hash */
+  onDraft: (text: string) => void
 }): ReactElement {
   const { t } = props
   const [text, setText] = useState(props.initial)
@@ -486,7 +491,10 @@ function ParagraphEditor(props: {
         value={text}
         disabled={props.saving}
         rows={Math.min(12, Math.max(3, text.split('\n').length + 1))}
-        onChange={(e) => setText(e.target.value)}
+        onChange={(e) => {
+          setText(e.target.value)
+          props.onDraft(e.target.value)
+        }}
         onKeyDown={(e) => {
           if (e.key === 'Escape') {
             e.preventDefault()
