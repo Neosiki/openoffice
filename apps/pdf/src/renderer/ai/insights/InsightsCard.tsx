@@ -28,8 +28,7 @@ import {
   type ReactElement,
   type ReactNode,
 } from 'react'
-import type { IpcStreamError } from '@genoffice/agent-core'
-import { isSubscriptionProvider, type AiSettings } from '@genoffice/ai-provider/browser'
+import type { AiSettings } from '@genoffice/ai-provider/browser'
 import type { Lang } from '@genoffice/i18n'
 import {
   AiBlockedNotice,
@@ -44,9 +43,10 @@ import {
 } from '@genoffice/ui'
 import type { InsightsEntry } from '../../../../../../packages/pdf-structure/src/store/reading'
 import type { TFunc } from '../../i18n/locale'
-import { aiBlockedRunOf, type AiBlockedRun } from '../ai-connection'
+import type { AiBlockedRun } from '../ai-connection'
+import { modelCallFailure } from '../model-call-failure'
 import { attemptSubscription, useSubscriptionConnection } from '../useSubscriptionConnection'
-import { createModelCall, ModelCallError } from '../../doc-jobs/model-call'
+import { createModelCall } from '../../doc-jobs/model-call'
 import { documentJobRoute, jobRouteRefusal, routeLabel, sameRoute } from '../../doc-jobs/route'
 import type { DocumentJobSession, DocumentJobView } from '../../doc-jobs/job-session'
 import { JobProgressStrip } from '../../doc-jobs/JobProgressStrip'
@@ -205,22 +205,7 @@ export function InsightsCard(props: InsightsCardProps): ReactElement {
       setPhase({ kind: 'failed', message: p.t('airOverviewMalformed') })
       return
     }
-    const message = err instanceof Error ? err.message : String(err)
-    const blocked =
-      err instanceof ModelCallError
-        ? aiBlockedRunOf({
-            message,
-            ...(err.kind !== undefined ? { kind: err.kind as IpcStreamError['kind'] } : {}),
-            ...(err.provider !== undefined
-              ? { provider: err.provider as IpcStreamError['provider'] }
-              : {}),
-            ...(err.resetsAt !== undefined ? { resetsAt: err.resetsAt } : {}),
-          })
-        : null
-    if (blocked?.provider && isSubscriptionProvider(blocked.provider)) {
-      // the shown status may be stale: look again; the connect cards follow if it is unusable
-      connection.recheck(blocked.provider)
-    }
+    const { message, blocked } = modelCallFailure(err, connection.recheck)
     setPhase({
       kind: 'failed',
       message: p.t('airOverviewFailed', { reason: message }),

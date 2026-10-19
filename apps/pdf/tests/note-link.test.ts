@@ -79,6 +79,31 @@ describe('noteInsertText', () => {
     ).toBe('> ([p.1](a.pdf#page=1))')
   })
 
+  it('neutralizes Markdown images and raw image tags in the inserted text', () => {
+    const text = noteInsertText(
+      note,
+      pdf,
+      {
+        kind: 'quote',
+        excerpt: 'see ![x](https://evil.example/a.png)',
+        page: 2,
+        body: '![t](http://evil.example/b.png) and ![r][ref] <img src="http://evil.example/c">',
+      },
+      'win32',
+    )
+    expect(text).toBe(
+      '> see \\![x](https://evil.example/a.png) ([p.2](a.pdf#page=2))\n\n' +
+        '\\![t](http://evil.example/b.png) and \\![r][ref] \\<img src="http://evil.example/c">',
+    )
+    expect(
+      noteInsertText(note, pdf, { kind: 'overview', heading: '![h](http://e/x)', body: '' }),
+    ).toBe('## \\![h](http://e/x)')
+    // the link this insert adds itself is not touched
+    expect(noteInsertText(note, pdf, { kind: 'quote', excerpt: 'a', page: 1 }, 'win32')).toBe(
+      '> a ([p.1](a.pdf#page=1))',
+    )
+  })
+
   it('heads an overview insert with the overview title instead of a quote', () => {
     expect(
       noteInsertText(

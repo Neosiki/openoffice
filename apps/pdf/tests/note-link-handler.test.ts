@@ -54,7 +54,12 @@ vi.mock('electron', () => ({
 }))
 vi.mock('@genoffice/electron-utils/drop-open', () => ({ installDropOpenBridge: vi.fn() }))
 
-import { configurePdfRuntime, createPdfView, markPdfUntitledPath } from '../src/main/pdf-main'
+import {
+  configurePdfRuntime,
+  createPdfView,
+  markPdfUntitledPath,
+  pdfFileRenamed,
+} from '../src/main/pdf-main'
 import { ResultStore, documentHashOfFile } from '../../../packages/pdf-structure/src/store'
 
 const openNote = vi.fn((_path: string) => true)
@@ -159,6 +164,68 @@ describe('pdf:note-insert', () => {
   })
 })
 
+describe('a new blank PDF and its first save', () => {
+  const save = (path: string) =>
+    handlers.get(PDF_CHANNELS.save)!(
+      { sender: lastContents },
+      {
+        path,
+        markups: [
+          {
+            pageIndex: 0,
+            type: 'highlight',
+            color: [1, 1, 0],
+            quads: [[10, 40, 90, 40, 10, 20, 90, 20]],
+          },
+        ],
+        drawings: [],
+        formValues: [],
+        stamps: [],
+      },
+    ) as Promise<{ ok: boolean }>
+  const ask = (channel: string, ...args: unknown[]) =>
+    handlers.get(channel)!({ sender: lastContents }, ...args) as Promise<boolean> | boolean
+
+  it('waits until the person saves it in place, then the note works; auto-naming still may rename', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'note-handler-'))
+    const blank = await writePdf(dir, 'Untitled-7.pdf')
+    markPdfUntitledPath(blank)
+    createPdfView(blank)
+    expect(await ask(PDF_CHANNELS.noteUnsaved)).toBe(true)
+    expect(await call(PDF_CHANNELS.noteOpen, {})).toEqual({ ok: false, reason: 'unsaved' })
+
+    expect((await save(blank)).ok).toBe(true)
+    expect(await ask(PDF_CHANNELS.noteUnsaved)).toBe(false)
+    // the untitled name is still the shell's: content-derived naming keeps working
+    expect(await ask(PDF_CHANNELS.isUntitled, blank)).toBe(true)
+    showSaveDialog.mockImplementation(async (options: { defaultPath: string }) => ({
+      canceled: false,
+      filePath: options.defaultPath,
+    }))
+    expect(await call(PDF_CHANNELS.noteOpen, {})).toEqual({ ok: true })
+    expect(showSaveDialog).toHaveBeenCalled()
+  })
+
+  it('a blank renamed before its first save is still not saved under the new name', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'note-handler-'))
+    const blank = await writePdf(dir, 'Untitled-8.pdf')
+    markPdfUntitledPath(blank)
+    createPdfView(blank)
+    const moved = join(dir, 'Moved.pdf')
+    pdfFileRenamed(lastContents as never, blank, moved)
+    expect(await ask(PDF_CHANNELS.noteUnsaved)).toBe(true)
+    expect(await call(PDF_CHANNELS.noteOpen, {})).toEqual({ ok: false, reason: 'unsaved' })
+  })
+
+  it('a PDF the person opened is saved; a view without a file is not', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'note-handler-'))
+    createPdfView(await writePdf(dir))
+    expect(await ask(PDF_CHANNELS.noteUnsaved)).toBe(false)
+    createPdfView(null)
+    expect(await ask(PDF_CHANNELS.noteUnsaved)).toBe(true)
+  })
+})
+
 describe('the note link after a save', () => {
   it('moves to the saved file’s new hash', async () => {
     const dir = mkdtempSync(join(tmpdir(), 'note-handler-'))
@@ -208,5 +275,10 @@ describe('preload: note calls', () => {
     expect(invoke).toHaveBeenLastCalledWith(PDF_CHANNELS.noteInsert, request)
     invoke.mockRejectedValueOnce(new Error('No handler registered'))
     expect(await api.noteOpen()).toEqual({ ok: false, reason: 'unavailable' })
+    invoke.mockResolvedValueOnce(true)
+    expect(await api.noteUnsaved()).toBe(true)
+    expect(invoke).toHaveBeenLastCalledWith(PDF_CHANNELS.noteUnsaved)
+    invoke.mockRejectedValueOnce(new Error('No handler registered'))
+    expect(await api.noteUnsaved()).toBe(false)
   })
 })

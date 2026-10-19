@@ -34,6 +34,13 @@ import { AnnotPanel } from '../src/renderer/annot-panel/AnnotPanel'
 import { filterAnnotItems, EMPTY_FILTER } from '../src/renderer/annot-panel/filter'
 import { buildAnnotItems, type AnnotBuildInput } from '../src/renderer/annot-panel/items'
 import { createSaveConfirmations } from '../src/renderer/reading/save-confirmations'
+import {
+  loadHighlightPreview,
+  previewShown,
+  saveHighlightPreview,
+  showPreviewForSession,
+  togglePreview,
+} from '../src/renderer/highlight/useAiHighlights'
 import type { PageEntry, SearchIndex } from '../src/renderer/search'
 import type { PdfStoreWriteRequest } from '../src/shared/ipc'
 
@@ -274,6 +281,35 @@ describe('accepting and dismissing', () => {
     expect(s.pending().map((v) => v.id + v.blockKey.pageFingerprint)).toEqual(['s2fp1'])
   })
 
+  it('a save keeps an accepted suggestion confirmed through the reload: accepted lands under the new hash, no duplicate', async () => {
+    const { s, f, confirmations } = await loaded()
+    const first = s.pending()[0]!
+    s.accept([first], () => 'm1')
+    expect(s.pending()).toHaveLength(2)
+    // the save succeeded: what it wrote is held before the reload
+    confirmations.hold(['m1'])
+    // the reload subtracts the saved highlight from the editing document
+    s.prune(new Set())
+    expect(confirmations.isPending('m1')).toBe(true)
+    // still waiting for its save: neither offered again nor acceptable twice
+    expect(s.pending()).toHaveLength(2)
+    expect(s.accept([first], () => 'm2')).toBe(0)
+    // the migration finished: the confirmation runs under the new hash
+    f.saved()
+    await confirmations.afterSave(['m1'], async () => NEW_DOC)
+    expect(f.writes).toEqual([
+      {
+        kind: 'highlightSuggestionStates',
+        docHash: NEW_DOC,
+        runId: RUN.runId,
+        key: key('fp1'),
+        states: { s1: 'accepted' },
+      },
+    ])
+    await s.load()
+    expect(s.pending().map((v) => v.quote)).not.toContain('We show that rivers carry more silt.')
+  })
+
   it('a document closed without saving keeps the suggestion pending', async () => {
     const f = fakeStore()
     const first = await loaded(f)
@@ -338,6 +374,47 @@ describe('the preview', () => {
     })
     expect(el.querySelectorAll('.pdf-hl-preview')).toHaveLength(0)
     expect(f.writes).toEqual([])
+  })
+})
+
+describe('the preview switch', () => {
+  it('a finished run shows the preview for this session without changing the remembered choice', () => {
+    window.localStorage.clear()
+    saveHighlightPreview(false)
+    let sw = { saved: loadHighlightPreview(), session: false }
+    expect(previewShown(sw)).toBe(false)
+    sw = showPreviewForSession(sw)
+    expect(previewShown(sw)).toBe(true)
+    expect(sw.saved).toBe(false)
+    // the person turns it off again: off, and still remembered as off
+    sw = togglePreview(sw)
+    expect(previewShown(sw)).toBe(false)
+    expect(sw).toEqual({ saved: false, session: false })
+    // turned on by the person: remembered
+    sw = togglePreview(sw)
+    expect(sw).toEqual({ saved: true, session: false })
+  })
+
+  it('suggestions read while the preview was off can be accepted and dismissed once it is on', async () => {
+    const f = fakeStore()
+    const confirmations = createSaveConfirmations()
+    const s = new HighlightSuggestions({
+      store: f.store as never,
+      file: () => ({ path: 'C:\\docs\\a.pdf' }),
+      searchIndex: () => Promise.resolve(INDEX),
+      confirmations,
+    })
+    s.setPlacing(false)
+    await s.load()
+    // off: nothing is placed (the panel shows suggestions only with the preview on)
+    expect(s.snapshot().views).toBeNull()
+    s.setPlacing(true)
+    await vi.waitFor(() => expect(s.snapshot().views).not.toBeNull())
+    const [first, , third] = s.pending()
+    expect(s.accept([first!], () => 'm1')).toBe(1)
+    expect(await s.dismiss([third!])).toBe(true)
+    expect(f.writes.map((w) => w.kind)).toEqual(['highlightSuggestionStates'])
+    expect(s.pending().map((v) => v.quote)).toEqual(['A sentence only an image holds.'])
   })
 })
 

@@ -48,7 +48,8 @@ const isRecord = (v: unknown): v is Record<string, unknown> =>
 
 /** the readable links of a parsed file; anything else counts as no links */
 export function asNoteLinks(raw: unknown): NoteLinks {
-  const out: NoteLinks = { version: 1, links: {} }
+  // no prototype: a path key such as `__proto__` stays an ordinary entry
+  const out: NoteLinks = { version: 1, links: Object.create(null) as NoteLinks['links'] }
   if (!isRecord(raw) || raw.version !== 1 || !isRecord(raw.links)) return out
   for (const [key, link] of Object.entries(raw.links)) {
     if (!isRecord(link) || typeof link.notePath !== 'string' || link.notePath === '') continue

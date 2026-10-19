@@ -555,10 +555,28 @@ describe('AI page reading: resume, save, delete', () => {
   it('an in-app save carries the stored results to the saved file', async () => {
     rememberJobPages(DOC, 'ai-read', undefined, [2])
     const m = await mount()
-    await act(async () => m.handle.current!.afterSave())
+    let moved: string | null = null
+    await act(async () => {
+      moved = await m.handle.current!.afterSave()
+    })
     expect(m.channels.store.migrate).toHaveBeenCalledWith({ path: PATH, oldDocHash: DOC })
+    // the save path confirms "in the file" states under exactly this hash
+    expect(moved).toBe(SAVED_DOC)
     // the remembered pages follow, so the resume offer of the saved file has them
     expect(window.localStorage.getItem(`genoffice-pdf-job-pages:${SAVED_DOC}:ai-read`)).toBe('[2]')
+  })
+
+  it('a save whose migration failed answers no hash', async () => {
+    const m = await mount()
+    m.channels.store.migrate.mockImplementation(async () => ({
+      ok: false as const,
+      error: 'io',
+    }))
+    let moved: string | null = 'x'
+    await act(async () => {
+      moved = await m.handle.current!.afterSave()
+    })
+    expect(moved).toBeNull()
   })
 
   it('a second start right after a save is not refused by its own job carried to the saved file', async () => {

@@ -30,6 +30,8 @@ import {
 } from '../src/renderer/reading/passage-cards'
 import { loadPassageMarks, savePassageMarks } from '../src/renderer/view-config'
 import { PassageCards, type PassageStoreApi } from '../src/renderer/reading/passage-controller'
+import { afterReadingSave } from '../src/renderer/reading/usePassageCards'
+import { createSaveConfirmations } from '../src/renderer/reading/save-confirmations'
 
 const translate = createI18n(strings)
 const tKo = ((key: string, params?: Record<string, string | number>) =>
@@ -389,6 +391,89 @@ describe('the card store', () => {
     ])
     expect(cards.get('c1')?.savedAsNote).toBe(true)
     await cards.load()
+    expect(cards.docHash).toBe(SAVED)
+  })
+
+  it('a card answered while a save moved the store lands under the saved file’s hash', async () => {
+    const f = fakeStore([], [DOC, SAVED])
+    const cards = new PassageCards({ store: f.store, file, newId: () => 'n1' })
+    await cards.load()
+    const prepared = await cards.prepare('explain', undefined, selection())
+    if (!prepared || 'existing' in prepared) throw new Error('expected a request')
+    // the PDF is saved (and the store migrated) while the model answers
+    const ask = vi.fn(async () => {
+      f.nextHash()
+      return { text: 'Late.', provider: 'codex', model: '' }
+    })
+    await cards.generate(prepared, ask, new AbortController().signal)
+    expect(f.writes).toEqual([
+      { kind: 'passage', docHash: SAVED, card: expect.objectContaining({ id: 'n1' }) },
+    ])
+    await cards.load()
+    expect(cards.get('n1')?.text).toBe('Late.')
+  })
+
+  it('a second press for a passage whose request is in flight sends nothing and finds it pending', async () => {
+    const f = fakeStore([])
+    const cards = new PassageCards({ store: f.store, file, newId: () => 'n1' })
+    await cards.load()
+    const first = await cards.prepare('explain', undefined, selection())
+    if (!first || 'existing' in first || 'pending' in first) throw new Error('expected a request')
+    let answer: (v: { text: string; provider: string; model: string }) => void = () => {}
+    const ask = vi.fn(
+      () =>
+        new Promise<{ text: string; provider: string; model: string }>((resolve) => {
+          answer = resolve
+        }),
+    )
+    const made = cards.generate(first, ask, new AbortController().signal)
+    const second = await cards.prepare('explain', undefined, selection())
+    expect(second && 'pending' in second && second.pending).toBe(cards.targetKey(first.target))
+    // another kind of the same passage is a different request
+    const other = await cards.prepare('translate', 'en', selection())
+    expect(other && 'target' in other).toBe(true)
+    answer({ text: 'Done.', provider: 'codex', model: '' })
+    await made
+    expect(ask).toHaveBeenCalledTimes(1)
+    const third = await cards.prepare('explain', undefined, selection())
+    expect(third && 'existing' in third).toBe(true)
+  })
+
+  it('a request that failed is no longer in flight', async () => {
+    const f = fakeStore([])
+    const cards = new PassageCards({ store: f.store, file })
+    await cards.load()
+    const first = await cards.prepare('explain', undefined, selection())
+    if (!first || !('target' in first)) throw new Error('expected a request')
+    const ask = vi.fn(async () => {
+      throw new Error('no')
+    })
+    await expect(cards.generate(first, ask, new AbortController().signal)).rejects.toThrow('no')
+    const again = await cards.prepare('explain', undefined, selection())
+    expect(again && 'target' in again).toBe(true)
+  })
+
+  it('after a save, a kept note is confirmed only under the hash the completed migration gave', async () => {
+    const f = fakeStore([card()], [DOC, SAVED])
+    const cards = new PassageCards({ store: f.store, file })
+    await cards.load()
+    const confirmations = createSaveConfirmations()
+    confirmations.register('note-1', (hash) => cards.confirmNote('c1', hash))
+    confirmations.hold(['note-1'])
+    f.nextHash()
+    // the migration did not complete: nothing is written, the note keeps waiting
+    await afterReadingSave(confirmations, cards, ['note-1'], null)
+    expect(f.writes).toEqual([])
+    expect(confirmations.isPending('note-1')).toBe(true)
+    // the next save's migration completed: written under the hash it moved the store to
+    await afterReadingSave(confirmations, cards, [], SAVED)
+    expect(f.writes).toEqual([
+      {
+        kind: 'passage',
+        docHash: SAVED,
+        card: expect.objectContaining({ id: 'c1', savedAsNote: true }),
+      },
+    ])
     expect(cards.docHash).toBe(SAVED)
   })
 

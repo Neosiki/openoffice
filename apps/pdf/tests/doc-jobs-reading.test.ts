@@ -16,7 +16,8 @@ import { strings } from '../src/renderer/i18n/strings'
 import type { TFunc } from '../src/renderer/i18n/locale'
 import { createIpcJobStore, JobStoreCallError } from '../src/renderer/doc-jobs/ipc-store'
 import { ResumeOffer, resumableJobs, resumeOfferText } from '../src/renderer/doc-jobs/ResumeOffer'
-import { DocumentJobSession, jobRecordKey } from '../src/renderer/doc-jobs/job-session'
+import * as jobSessionModule from '../src/renderer/doc-jobs/job-session'
+import { jobKeyOf } from '../../../packages/pdf-structure/src/store/job-keys'
 import type { PdfStoreWriteRequest } from '../src/shared/ipc'
 
 const translate = createI18n(strings)
@@ -178,15 +179,27 @@ describe('resume offer', () => {
 
 describe('job session keys', () => {
   it('keys records by language or run id, and none for AI reading', () => {
-    expect(jobRecordKey({ kind: 'ai-read', lang: 'en' })).toBeUndefined()
-    expect(jobRecordKey({ kind: 'translate', lang: 'en' })).toBe('en')
-    expect(jobRecordKey({ kind: 'translate-page', lang: 'en' })).toBe('en')
-    expect(jobRecordKey({ kind: 'summary', lang: 'en' })).toBe('en')
-    expect(jobRecordKey({ kind: 'highlight', lang: 'en', runId: 'run1' })).toBe('run1')
+    expect(jobKeyOf({ kind: 'ai-read', lang: 'en' })).toBeUndefined()
+    expect(jobKeyOf({ kind: 'translate', lang: 'en' })).toBe('en')
+    expect(jobKeyOf({ kind: 'translate-page', lang: 'en' })).toBe('en')
+    expect(jobKeyOf({ kind: 'summary', lang: 'en' })).toBe('en')
+    expect(jobKeyOf({ kind: 'highlight', lang: 'en', runId: 'run1' })).toBe('run1')
+  })
+
+  it('the session uses the store rule itself, from its Node-free module (no renderer copy)', async () => {
+    expect('jobRecordKey' in jobSessionModule).toBe(false)
+    const { readFileSync } = await import('node:fs')
+    const { join } = await import('node:path')
+    const source = readFileSync(
+      join(__dirname, '..', 'src', 'renderer', 'doc-jobs', 'job-session.ts'),
+      'utf8',
+    )
+    expect(source).toContain("from '../../../../../packages/pdf-structure/src/store/job-keys'")
+    expect(source).not.toMatch(/^import \{[^}]*\} from '[^']*store\/store'/m)
   })
 
   it('tells its own carried highlight record from another run', () => {
-    const session = new DocumentJobSession(new DocumentJobRegistry())
+    const session = new jobSessionModule.DocumentJobSession(new DocumentJobRegistry())
     const never = new Promise<never>(() => {})
     const started = session.start({
       docHash: DOC,

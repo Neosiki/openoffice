@@ -16,6 +16,7 @@
  * migration reads.
  */
 import type { TranslationBlockKey } from './keys'
+import { normalizeLabelName } from '../highlight/run-id'
 
 // ── entry types ──
 
@@ -168,9 +169,14 @@ export function asHighlightRun(raw: unknown): HighlightRun | null {
     return null
   }
   const labels: HighlightLabel[] = []
+  const names = new Set<string>()
   for (const l of r.labels as unknown[]) {
     if (!isRecord(l) || !isStr(l.id) || l.id === '' || !isStr(l.name)) return null
     if (!Array.isArray(l.color) || l.color.length !== 3 || !l.color.every(isUnit)) return null
+    // a name counts as the run id counts it; an empty or repeated one is no category
+    const name = normalizeLabelName(l.name)
+    if (name === '' || names.has(name)) return null
+    names.add(name)
     labels.push({ id: l.id, name: l.name, color: [l.color[0], l.color[1], l.color[2]] })
   }
   if (!Array.isArray(r.pages) || !r.pages.every(isPage)) return null

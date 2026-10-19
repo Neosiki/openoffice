@@ -413,6 +413,22 @@ describe('AI highlights: start window', () => {
     expect(m.channels.writes).toEqual([])
   })
 
+  it('an empty or repeated label name cannot go on to the confirmation', async () => {
+    const m = await mount()
+    await openWindow(m)
+    await until(() => q(m.el, '[data-blocks]') !== null, 'the analysis')
+    await type(m.el, '[data-field="label-1"]', 'Key  claim ')
+    expect(disabled(m.el, '[data-action="next"]')).toBe(true)
+    await type(m.el, '[data-field="label-1"]', '   ')
+    expect(disabled(m.el, '[data-action="next"]')).toBe(true)
+    await click(m.el, '[data-action="next"]')
+    expect(q(m.el, '[data-action="start"]')).toBeNull()
+    await type(m.el, '[data-field="label-1"]', 'Method')
+    expect(disabled(m.el, '[data-action="next"]')).toBe(false)
+    expect(bridge.api.aiStream).not.toHaveBeenCalled()
+    expect(m.channels.writes).toEqual([])
+  })
+
   it('changing a label makes another run id; an old run is kept unless the person deletes it', async () => {
     const old: HighlightRun = {
       runId: DEFAULT_RUN_ID,

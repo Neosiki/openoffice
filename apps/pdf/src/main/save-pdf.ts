@@ -212,13 +212,14 @@ function addMarkup(pdfDoc: PDFDocument, page: PDFPage, m: MarkupInput): void {
   appendAnnot(pdfDoc, page, pdfDoc.context.register(annot))
 }
 
-/** longest /Subj written; a category name is a few words */
+/** longest /Subj written, in characters (code points); a category name is a few words */
 const MAX_SUBJECT_CHARS = 200
 
 /** the markup's /Subj text, or null when it has none (empty or not a string) */
 function markupSubject(m: MarkupInput): string | null {
   if (typeof m.subject !== 'string') return null
-  const text = m.subject.trim().slice(0, MAX_SUBJECT_CHARS)
+  // by code point: a cut never leaves half of a surrogate pair
+  const text = Array.from(m.subject.trim()).slice(0, MAX_SUBJECT_CHARS).join('')
   return text === '' ? null : text
 }
 

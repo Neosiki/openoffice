@@ -188,7 +188,10 @@ import {
 } from './highlight/panel'
 import {
   loadHighlightPreview,
+  previewShown,
   saveHighlightPreview,
+  showPreviewForSession,
+  togglePreview,
   useAiHighlights,
 } from './highlight/useAiHighlights'
 import { SignaturesDialog, overallSignatureStatus } from './SignaturesDialog'
@@ -555,6 +558,8 @@ export default function App() {
   // side-by-side translation view; the revision rebuilds its tree after a save
   const [bilingualOn, setBilingualOn] = useState(false)
   const [bilingualRev, setBilingualRev] = useState(0)
+  /** bumped when the open file was rewritten in place (a page operation, not a save) */
+  const [docReloadRev, setDocReloadRev] = useState(0)
   const [nightMode, setNightMode] = useState(false)
   const [outline, setOutline] = useState<OutlineNode[] | null>(null)
   const [outlineGenerated, setOutlineGenerated] = useState(false)
@@ -1091,6 +1096,8 @@ export default function App() {
   const toastTimerRef = useRef<number | null>(null)
   const [thumbMenu, setThumbMenu] = useState<ThumbMenu | null>(null)
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+  /** bumped by every successful save (the note buttons ask again whether the PDF is saved) */
+  const [savedRev, setSavedRev] = useState(0)
   const [saveError, setSaveError] = useState('')
   /** Transient message toast (save failures, skipped/rejected text edits) */
   const [notice, setNotice] = useState<string | null>(null)
@@ -1611,6 +1618,9 @@ export default function App() {
       // a reload of the open document (save, or a page operation that rewrote the file in
       // place): the side-by-side view rebuilds its tree from the new bytes
       if (previous) setBilingualRev((v) => v + 1)
+      // a page operation rewrote the file in place: the reading results are read again for
+      // its new pages (a save reads them itself, once the store moved to the saved hash)
+      if (previous && !saved) setDocReloadRev((v) => v + 1)
       return loaded.numPages
     },
     [],
@@ -1670,6 +1680,7 @@ export default function App() {
     password: passwordRef.current,
     lang,
     ready: status === 'ready',
+    revision: docReloadRev,
   })
   const readingRef = useRef<PassageReadingHandle | null>(null)
   // ── AI window: the document overview and the 2s highlight of a cited passage ──
@@ -1678,14 +1689,23 @@ export default function App() {
     password: passwordRef.current,
     lang,
     ready: status === 'ready',
+    revision: docReloadRev,
   })
   const quoteFlash = useQuoteFlash()
   const [passageMarks, setPassageMarks] = useState(loadPassageMarks)
   useEffect(() => savePassageMarks(passageMarks), [passageMarks])
   // ── AI highlights: the start window's handle and the preview switch (screen only) ──
   const highlightRef = useRef<AiHighlightsHandle | null>(null)
-  const [highlightPreview, setHighlightPreview] = useState(loadHighlightPreview)
-  useEffect(() => saveHighlightPreview(highlightPreview), [highlightPreview])
+  // the remembered choice, plus an "on" a finished run gives for this session only
+  const [highlightPreviewSwitch, setHighlightPreviewSwitch] = useState(() => ({
+    saved: loadHighlightPreview(),
+    session: false,
+  }))
+  useEffect(
+    () => saveHighlightPreview(highlightPreviewSwitch.saved),
+    [highlightPreviewSwitch.saved],
+  )
+  const highlightPreview = previewShown(highlightPreviewSwitch)
 
   useEffect(() => {
     if (
@@ -2463,6 +2483,7 @@ export default function App() {
     preview: highlightPreview,
     markupIds: markups.map((m) => m.id),
     panelOpen: sidebar === 'notes',
+    revision: docReloadRev,
   })
 
   // Auto-OCR for scanned pages (issue #119): once the base index shows pages with
@@ -4544,6 +4565,7 @@ export default function App() {
   // the note of each PDF (reading-assist 4.9): no path crosses, the main process knows both
   const noteActions = useNoteActions({
     filePath,
+    savedRev,
     title: (metadata ?? docInfo).title?.trim() || '',
     t,
     onNotice: showNotice,
@@ -4727,6 +4749,11 @@ export default function App() {
         else setSaveState('idle')
         return false
       }
+      // what this save wrote is in the file now: the reload below drops those annotations
+      // from the editing document, and their "in the file" confirmations must not read
+      // that as "removed before any save" (reading 3.5)
+      const written = [...snapshot.drawingIds, ...snapshot.markupIds]
+      saveConfirmations.hold(written)
       if (result.skippedTextEdits && result.skippedTextEdits.length > 0) {
         noticeSkippedEdits(result.skippedTextEdits)
       }
@@ -4755,12 +4782,10 @@ export default function App() {
       }
       // the saved bytes are a new document for the result store: carry the AI
       // readings, translations and unfinished job records over (spec §6)
-      await aiReadRef.current?.afterSave().catch(() => {})
-      // "in the file" states wait for this save and land under the saved file's hash (reading 3.5)
-      await afterReadingSave(saveConfirmations, passageCards, [
-        ...snapshot.drawingIds,
-        ...snapshot.markupIds,
-      ]).catch(() => {})
+      const migrated = (await aiReadRef.current?.afterSave().catch(() => null)) ?? null
+      // "in the file" states wait for this save and land under the hash the completed
+      // migration moved the store to; without one they keep waiting (reading 3.5)
+      await afterReadingSave(saveConfirmations, passageCards, written, migrated).catch(() => {})
       // AI highlight suggestions under the saved file's hash (accepted ones now confirmed)
       await aiHighlights.suggestions.load().catch(() => {})
       // the overview follows the saved file only when all its pages are still there
@@ -4787,6 +4812,7 @@ export default function App() {
         }
       }
       setSaveState('saved')
+      setSavedRev((v) => v + 1)
       setTimeout(() => setSaveState((s) => (s === 'saved' ? 'idle' : s)), 2000)
       return true
     })()
@@ -7846,7 +7872,7 @@ export default function App() {
           data-tip={t('hlPreviewTip')}
           data-action="highlight-preview"
           aria-pressed={highlightPreview}
-          onClick={() => setHighlightPreview((v) => !v)}
+          onClick={() => setHighlightPreviewSwitch(togglePreview)}
         >
           <span className="rb-big-icon">
             <IconHighlightPreview />
@@ -9022,7 +9048,7 @@ export default function App() {
             api={translateApi}
             session={jobSession}
             suggestions={aiHighlights.suggestions}
-            onRunEnded={() => setHighlightPreview(true)}
+            onRunEnded={() => setHighlightPreviewSwitch(showPreviewForSession)}
             onNotice={showNotice}
           />
           {bilingual.bar}

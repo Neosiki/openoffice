@@ -86,6 +86,44 @@ describe('save confirmations', () => {
     off()
   })
 
+  it('a hold from a successful save keeps a confirmation from being cancelled until afterSave', async () => {
+    const c = createSaveConfirmations()
+    const confirm = vi.fn()
+    c.register('m1', confirm)
+    c.register('m2', vi.fn())
+    c.hold(['m1', 'unknown'])
+    expect(c.isHeld('m1')).toBe(true)
+    expect(c.isHeld('m2')).toBe(false)
+    expect(c.isHeld('unknown')).toBe(false)
+    // the post-save reload drops the annotation from the editing document: the
+    // highlight sync and the card would cancel it now, and must not
+    c.cancel('m1')
+    c.cancel('m2')
+    expect(c.isPending('m1')).toBe(true)
+    expect(c.isPending('m2')).toBe(false)
+    await c.afterSave(['m1'], async () => 'new-hash')
+    expect(confirm).toHaveBeenCalledWith('new-hash')
+    expect(c.isHeld('m1')).toBe(false)
+    expect(c.isPending('m1')).toBe(false)
+  })
+
+  it('held confirmations keep waiting when the migration gave no hash, and run after the next save', async () => {
+    const c = createSaveConfirmations()
+    const confirm = vi.fn()
+    c.register('m1', confirm)
+    c.hold(['m1'])
+    await c.afterSave(['m1'], async () => null)
+    expect(confirm).not.toHaveBeenCalled()
+    expect(c.isPending('m1')).toBe(true)
+    // still held: the annotation is in the file, only its state is not written yet
+    c.cancel('m1')
+    expect(c.isPending('m1')).toBe(true)
+    // a later save (of something else) whose migration did complete confirms it
+    await c.afterSave(['other'], async () => 'later-hash')
+    expect(confirm).toHaveBeenCalledWith('later-hash')
+    expect(c.isPending('m1')).toBe(false)
+  })
+
   it('a document closed unsaved writes nothing: the confirmations just go away with the tab', () => {
     const c = createSaveConfirmations()
     const confirm = vi.fn()

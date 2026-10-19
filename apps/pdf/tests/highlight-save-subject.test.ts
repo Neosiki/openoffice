@@ -98,6 +98,14 @@ describe('save-pdf: markup subject', () => {
     expect(c.asArray().map((n) => Number(n.toString()))).toEqual([0.4, 0.8, 0.4])
   })
 
+  it('caps a long subject by characters, never cutting a surrogate pair in half', async () => {
+    const input = await fixedPdf()
+    const subject = `${'a'.repeat(199)}😀😀tail`
+    const out = await applySaveRequest(input, request([{ ...MARKUPS[0]!, subject }]))
+    const doc = await PDFDocument.load(out.bytes)
+    expect(subjOf(annotsOf(doc, 0)[0]!)).toBe(`${'a'.repeat(199)}😀`)
+  })
+
   it('keeps the rest of an accepted highlight like any highlight', async () => {
     const input = await fixedPdf()
     const plain = await PDFDocument.load(

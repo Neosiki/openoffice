@@ -17,6 +17,7 @@ import {
   type SubscriptionStatusMap,
 } from '@genoffice/ai-provider/browser'
 import { createI18n } from '@genoffice/i18n'
+import { aiRunErrorText } from '@genoffice/ui'
 import type { PassageCard } from '../../../packages/pdf-structure/src/store/reading'
 import { strings } from '../src/renderer/i18n/strings'
 import type { PdfStoreWriteRequest } from '../src/shared/ipc'
@@ -131,6 +132,14 @@ function fakeBridge(initial: {
     changeStatuses(statuses: SubscriptionStatusMap) {
       state.statuses = statuses
       for (const handler of [...statusListeners]) handler(statuses)
+    },
+    /** every open call fails with this stream error */
+    failAll(chunk: Omit<IpcStreamChunk, 'requestId'>) {
+      for (const s of starts) {
+        if (answered.has(s.requestId)) continue
+        answered.add(s.requestId)
+        push(s.requestId, chunk)
+      }
     },
     answerAll(text: string) {
       for (const s of starts) {
@@ -316,6 +325,26 @@ describe('passage cards: sending', () => {
     expect(bridge.starts).toHaveLength(0)
   })
 
+  it('a second press while the same request is in flight opens it instead of sending again', async () => {
+    const m = await mount({ stored: [stored({ id: 'other', passageHash: passageHash('else') })] })
+    await act(async () => m.handle.current!.request('explain', selection))
+    await until(() => bridge.starts.length === 1, 'the call')
+    // the person looks at another card meanwhile, then presses E on the passage again
+    await act(async () => m.handle.current!.open('other'))
+    await until(() => q(m.el, '[data-passage-answer]') !== null, 'the other card')
+    await act(async () => m.handle.current!.request('explain', selection))
+    await until(
+      () => q(m.el, '.pdf-passage-card-status')?.textContent === strings.en.rdWorking,
+      'the pending card',
+    )
+    await settle()
+    expect(bridge.starts).toHaveLength(1)
+    await act(async () => bridge.answerAll('Only once.'))
+    await until(() => q(m.el, '[data-passage-answer]')?.textContent === 'Only once.', 'the answer')
+    expect(bridge.starts).toHaveLength(1)
+    expect(m.f.writes.filter((w) => w.kind === 'passage')).toHaveLength(1)
+  })
+
   it('"Regenerate" sends again and overwrites the same card', async () => {
     const m = await mount({ stored: [stored()] })
     await act(async () => m.handle.current!.open('c1'))
@@ -410,6 +439,61 @@ describe('passage cards: the gate and closing', () => {
   })
 })
 
+describe('passage cards: a blocked run', () => {
+  it('a used-up limit shows the standard blocked notice, not the raw message, and rechecks', async () => {
+    const m = await mount()
+    await act(async () => m.handle.current!.request('explain', selection))
+    await until(() => bridge.starts.length === 1, 'the call')
+    const resetsAt = Date.now() + 3_600_000
+    await act(async () =>
+      bridge.failAll({
+        type: 'error',
+        error: 'raw provider text',
+        errorCode: 'rate-limit',
+        errorProvider: 'claude-code',
+        errorResetsAt: resetsAt,
+      }),
+    )
+    await until(() => q(m.el, '.pdf-passage-card .ai-sub-blocked') !== null, 'the notice')
+    const notice = q(m.el, '.pdf-passage-card .ai-sub-blocked')!
+    expect(notice.dataset.kind).toBe('rate-limit')
+    expect(notice.textContent).toContain(
+      aiRunErrorText('en', { kind: 'rate-limit', provider: 'claude-code', resetsAt }),
+    )
+    expect(q(m.el, '.pdf-passage-card')!.textContent).not.toContain('raw provider text')
+    expect(bridge.api.subscription.recheck).toHaveBeenCalled()
+    expect(m.f.writes).toHaveLength(0)
+  })
+
+  it('a signed-out connection shows its standard text', async () => {
+    const m = await mount()
+    await act(async () => m.handle.current!.request('explain', selection))
+    await until(() => bridge.starts.length === 1, 'the call')
+    await act(async () =>
+      bridge.failAll({
+        type: 'error',
+        error: 'raw',
+        errorCode: 'signed-out',
+        errorProvider: 'claude-code',
+      }),
+    )
+    await until(() => q(m.el, '.pdf-passage-card .ai-sub-blocked') !== null, 'the notice')
+    expect(q(m.el, '.pdf-passage-card .ai-sub-blocked')!.textContent).toContain(
+      aiRunErrorText('en', { kind: 'signed-out', provider: 'claude-code' }),
+    )
+  })
+
+  it('any other failure keeps the plain error line', async () => {
+    const m = await mount()
+    await act(async () => m.handle.current!.request('explain', selection))
+    await until(() => bridge.starts.length === 1, 'the call')
+    await act(async () => bridge.failAll({ type: 'error', error: 'network down' }))
+    await until(() => q(m.el, '.pdf-passage-card-status.is-error') !== null, 'the error')
+    expect(q(m.el, '.pdf-passage-card-status.is-error')!.textContent).toContain('network down')
+    expect(q(m.el, '.pdf-passage-card .ai-sub-blocked')).toBeNull()
+  })
+})
+
 describe('passage cards: actions', () => {
   it('"Keep as note" adds a note now and writes savedAsNote only after the save, under the new hash', async () => {
     const m = await mount({ stored: [stored()] })
@@ -427,6 +511,33 @@ describe('passage cards: actions', () => {
     await act(async () => m.confirmations.afterSave(['unrelated'], async () => SAVED))
     expect(m.f.writes).toHaveLength(0)
 
+    await act(async () => m.confirmations.afterSave(['note-1'], async () => SAVED))
+    await settle()
+    expect(m.f.writes).toEqual([
+      {
+        kind: 'passage',
+        docHash: SAVED,
+        card: expect.objectContaining({ id: 'c1', savedAsNote: true }),
+      },
+    ])
+    expect(q(m.el, '[data-note-state="saved"]')).not.toBeNull()
+  })
+
+  it('"Keep as note" stays waiting through the save reload and confirms once, under the new hash', async () => {
+    const m = await mount({ stored: [stored()] })
+    await act(async () => m.handle.current!.open('c1'))
+    await until(() => q(m.el, '[data-action="note"]') !== null, 'the card')
+    await click(m.el, '[data-action="note"]')
+    expect(m.notes).toHaveLength(1)
+    // the save succeeded: held before the reload, which then drops the pending note
+    await act(async () => m.confirmations.hold(['note-1']))
+    m.live.delete('note-1')
+    await act(async () => m.handle.current!.open('c1'))
+    await settle()
+    expect(q(m.el, '[data-note-state="pending"]')).not.toBeNull()
+    expect((q(m.el, '[data-action="note"]') as HTMLButtonElement).disabled).toBe(true)
+    await click(m.el, '[data-action="note"]')
+    expect(m.notes).toHaveLength(1)
     await act(async () => m.confirmations.afterSave(['note-1'], async () => SAVED))
     await settle()
     expect(m.f.writes).toEqual([
