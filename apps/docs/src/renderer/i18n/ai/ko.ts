@@ -116,6 +116,8 @@ export const ko = {
   aiSumReadAttachmentName: '첨부 파일 {name} 읽기',
   aiSumWebSearch: '웹 검색',
   aiSumWebSearchDone: '"{query}" 검색({count}건)',
+  aiSumReadUrl: '웹 문서 읽기',
+  aiSumReadUrlDone: '{host} 읽음 · {count}자',
   aiSumImageSearch: '이미지 검색',
   aiSumImageSearchDone: '"{query}" 이미지 검색({count}장)',
   aiSumAnalyzeMedia: '미디어 분석',

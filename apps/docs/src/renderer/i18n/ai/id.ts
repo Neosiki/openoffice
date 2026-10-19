@@ -118,6 +118,8 @@ export const id = {
   aiSumReadAttachmentName: 'Baca lampiran {name}',
   aiSumWebSearch: 'Pencarian web',
   aiSumWebSearchDone: 'Mencari "{query}" ({count} hasil)',
+  aiSumReadUrl: 'Pembacaan halaman web',
+  aiSumReadUrlDone: '{host} dibaca · {count} karakter',
   aiSumImageSearch: 'Pencarian gambar',
   aiSumImageSearchDone: 'Pencarian gambar "{query}" ({count} gambar)',
   aiSumAnalyzeMedia: 'Analisis media',

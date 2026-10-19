@@ -119,6 +119,8 @@ export const ru = {
   aiSumReadAttachmentName: 'Чтение вложения {name}',
   aiSumWebSearch: 'Поиск в Интернете',
   aiSumWebSearchDone: 'Поиск «{query}» ({count} результатов)',
+  aiSumReadUrl: 'Чтение веб-страницы',
+  aiSumReadUrlDone: '{host} прочитано · {count} символов',
   aiSumImageSearch: 'Поиск изображений',
   aiSumImageSearchDone: 'Поиск изображений «{query}» ({count} шт.)',
   aiSumAnalyzeMedia: 'Анализ медиа',
