@@ -141,8 +141,16 @@ async function parseOdt(bytes: Buffer): Promise<ParsedFile> {
   }
 }
 
+/** Character budget for extractors that can stop early (xlsx today). */
+export interface ParseFileOptions {
+  maxChars?: number
+}
+
 /** parse an attachment into plain text (or flag it as image / unsupported) */
-export async function parseFileToText(filePath: string): Promise<ParsedFile> {
+export async function parseFileToText(
+  filePath: string,
+  opts: ParseFileOptions = {},
+): Promise<ParsedFile> {
   const ext = extname(filePath).slice(1).toLowerCase()
   const imageMime = IMAGE_MIMES[ext]
   if (imageMime) return { ok: true, kind: 'image', mime: imageMime }
@@ -230,7 +238,7 @@ export async function parseFileToText(filePath: string): Promise<ParsedFile> {
         return { ok: true, kind: 'text', text: await pptxToText(bytes) }
       case 'xlsx':
       case 'xlsm':
-        return { ok: true, kind: 'text', text: await xlsxToText(bytes) }
+        return { ok: true, kind: 'text', text: await xlsxToText(bytes, opts) }
       case 'pdf':
         return { ok: true, kind: 'text', text: await pdfToText(bytes) }
       case 'xmind':
