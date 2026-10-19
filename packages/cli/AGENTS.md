@@ -7,6 +7,7 @@
 - 진입과 명령 표: `runCli`·`defaultRegistry`(`src/cli.ts`), `CommandDef`·`CommandRegistry`(`src/registry.ts`), 결과 봉투와 종료 코드(`src/result.ts`), 명령 구현(`src/commands/`), 형식별 어댑터(`src/formats/`).
 - MCP 서버: stdio(`src/mcp/server.ts`)와 HTTP(`src/mcp/http.ts`), 명령 표를 MCP 도구로 바꾸는 `src/mcp/tools.ts`.
 - 검색·이미지·미디어 명령의 준비 과정 `headlessCall`·`cloudToolError`(`src/cloud.ts`)와 `capabilities` 명령.
+- 웹 페이지 읽기 명령 `read-url`(`src/commands/read-url.ts`, MCP `read_url`): 주소 하나를 그 사이트에서 받아 글자 offset과 함께 돌려준다. 제공자·구독·자동 호출 장부를 쓰지 않는다.
 - PDF 구조 명령: `convert --to md|epub`, `pdf read --structured`, `pdf images`(`src/commands/convert.ts`, `pdf.ts`, `src/formats/pdf-structure.ts`, `pdf-outputs.ts`). 문서 나무와 출력은 `packages/pdf-structure`를 명령 프로세스 안에서 부른다.
 - PDF 문서 작업 명령: `pdf ai-read`, `pdf translate`, `pdf status`(`src/commands/pdf-ai-read.ts`, `pdf-translate.ts`, `pdf-status.ts`, 공통 준비 `pdf-job.ts`), 이 작업들의 AI 연결(`src/pdf-ai.ts`), MCP 도구로 띄운 작업의 추적(`src/pdf-jobs.ts`).
 - PC에 등록하는 이름(`src/names.ts`)과 등록 작업: PATH 연결(`src/install.ts`), 에이전트 MCP 설정에 항목 쓰기(`src/agent-mcp.ts`), 스킬 설치(`src/agent-skills.ts`), MCP 클라이언트가 실행할 명령 조립(`src/mcp-launch.ts`).
@@ -38,7 +39,7 @@
 - 필요 없는 상태 확인으로 벤더 프로그램을 띄우지 않는다. `subscriptionProvidersInPlay`가 결과를 바꿀 수 있는 제공자만 고르고, 없으면 상태 확인을 건너뛴다. 확인이 실패하거나 시간이 넘으면 연결되지 않은 것으로 본다.
 - 구독 프로그램을 띄울 수 있는 프로세스는 끝날 때 그것을 끝낸다(`endSubscriptionChildrenWith`: `exit`와 `SIGHUP`·`SIGINT`·`SIGTERM`). 실제 요청을 실행하는 경우에는 강제 종료에 대비해 `dataDir`에 자식 기록도 남긴다. 앱의 다음 시작이 그 기록으로 정리한다.
 - 로그인 정보를 다루지 않는다. 명령줄에는 자체 로그인이 없고 자격 증명을 저장하지 않는다. 종량 허용은 앱의 기록을 읽기만 하고(`write`는 아무것도 하지 않는다) 맞지 않는 동의는 "동의 안 됨"으로 보고 앱이 지우게 둔다.
-- 결과 계약을 지킨다. 표준 출력의 JSON 봉투(`status`, `command`, `summary`, `output_path`, `detail`)와 종료 코드 0~4, 오류의 `error` 값(`ErrorReason`)은 프로그램이 분기하는 값이다. 이름을 바꾸지 않고 함부로 늘리지 않는다. 검색·이미지·미디어 실패는 종료 코드 4, `error: "app_unavailable"`, 원인은 `detail.errorCode`, 한도가 풀리는 시각은 `detail.resetsAt`이다.
+- 결과 계약을 지킨다. 표준 출력의 JSON 봉투(`status`, `command`, `summary`, `output_path`, `detail`)와 종료 코드 0~4, 오류의 `error` 값(`ErrorReason`)은 프로그램이 분기하는 값이다. 이름을 바꾸지 않고 함부로 늘리지 않는다. 검색·이미지·미디어 실패는 종료 코드 4, `error: "app_unavailable"`, 원인은 `detail.errorCode`, 한도가 풀리는 시각은 `detail.resetsAt`이다. `read-url`(`read_url`)도 기존 `ErrorReason`만 다시 쓴다(`missing_argument`, `invalid_argument`, `unsupported`, `resource_limit`, `app_unavailable`). 이유는 `detail.reason`(`blocked`, `no_text`), `detail.errorCode`(`network`, `timeout`, `http_error`, `auth`)와 `detail.status`·`detail.max_bytes`로 알린다.
 - 쓰기는 한 곳을 거친다. 출력 경로는 `src/fs.ts`에서 풀고, `GENOFFICE_ALLOWED_ROOTS`를 symlink를 푼 뒤 검사하고, 앱이 탭으로 열어 둔 파일은 `--force` 없이는 덮어쓰지 않는다. 파일은 같은 폴더의 임시 파일에 쓴 뒤 rename한다.
 - 비밀 값은 감사 기록에 남기지 않는다. 기록은 실패해도 명령을 실패시키지 않는다.
 

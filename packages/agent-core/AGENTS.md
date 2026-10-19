@@ -9,6 +9,7 @@
 - 전송 계약 `AgentTransport`(`src/types.ts`)와 그 IPC 구현 `createIpcTransport`(`src/electron-transport.ts`). 렌더러에서 돌며, 메인 프로세스가 보낸 스트림 조각(`IpcStreamChunk`)을 루프의 콜백으로 옮긴다.
 - 도구 없이 답 본문이 곧 결과물인 요청 `streamText`(`src/stream-text.ts`), 별표 파일 묶음을 읽는 `createKnowledgeBaseSkill`(`src/knowledge-base-skill.ts`).
 - "AI에게 보이지 않게" 규칙의 공통 부분: 자리 표시 `{{label}}`의 생성·검사(`src/redact-core.ts`), 문서 범위의 모델용 글 만들기와 저장 식별자 `REDACT_NS`·`REDACT_PREFIX`·`REDACT_EL`(`src/redact-range.ts`).
+- 드라이브에서 읽은 내용이 대화에 들어간 뒤의 바깥 호출 차단: `OUTBOUND_TOOLS`(여기에 `read_url`도 있다)·`isOutboundCall`·`DRIVE_OUTBOUND_BLOCKED`(`src/drive-skill.ts`).
 
 ## 맡지 않는 것 (경계)
 
