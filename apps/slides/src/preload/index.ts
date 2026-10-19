@@ -371,6 +371,7 @@ const api: SlidesApi = {
   getNotes: (slideIndex: number) => ipcRenderer.invoke('slides:get-notes', slideIndex),
   setNotes: (op) => ipcRenderer.invoke('slides:set-notes', op),
   getComments: (slideIndex: number) => ipcRenderer.invoke('slides:get-comments', slideIndex),
+  getAllComments: () => ipcRenderer.invoke('slides:get-all-comments'),
   addComment: (op) => ipcRenderer.invoke('slides:add-comment', op),
   deleteComment: (op) => ipcRenderer.invoke('slides:delete-comment', op),
   nativeClipboard: (op: 'cut' | 'copy' | 'paste') =>

@@ -62,6 +62,12 @@ export const pt = {
   paneCommentsDelete: 'Excluir comentário',
   paneCommentsPlaceholder: 'Novo comentário… (⌘/Ctrl+Enter para publicar)',
   paneCommentsPost: 'Publicar',
+  paneCommentsScopePage: 'Este slide',
+  paneCommentsScopeAll: 'Todos os slides',
+  paneCommentsPageHeading: 'Slide {n}',
+  paneCommentsPageCount: '{n} comentários',
+  paneCommentsAllEmpty: 'Nenhum comentário nesta apresentação',
+  paneCommentsAllEmptySub: 'Os comentários adicionados em qualquer slide são reunidos aqui.',
 
   paneCsdTitle: 'Apresentações Personalizadas',
   paneCsdDefaultName: 'Apresentação Personalizada {n}',

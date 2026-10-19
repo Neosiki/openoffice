@@ -6577,6 +6577,92 @@ body.vib .slide-list {
   align-self: flex-end;
 }
 
+/* Page / all-pages switch at the top of the comments pane */
+.comments-scope {
+  display: flex;
+  gap: 2px;
+  margin: 10px 12px 0;
+  padding: 3px;
+  border-radius: 999px;
+  background: var(--hover);
+}
+
+.comments-scope-btn {
+  flex: 1;
+  min-width: 0;
+  padding: 4px 8px;
+  border: none;
+  border-radius: 999px;
+  background: none;
+  color: var(--text-dim);
+  font: inherit;
+  font-size: 12.5px;
+  line-height: 1.5;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.comments-scope-btn:hover:not(.active) {
+  background: var(--active-bg);
+}
+
+.comments-scope-btn.active {
+  background: var(--accent);
+  color: var(--slides-on-accent);
+}
+
+/* All-pages list: one group per page that carries comments */
+.comments-all-list .comment-group + .comment-group {
+  margin-top: 16px;
+}
+
+.comment-group-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  margin: 0 0 8px;
+  padding: 0 2px 4px;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: start;
+  cursor: pointer;
+}
+
+.comment-group-head:hover {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+.comment-group-count {
+  flex-shrink: 0;
+  color: var(--text-dim);
+  font-size: 11px;
+  font-weight: 400;
+}
+
+/* All-pages cards are navigation targets (delete is hidden in that view) */
+.comment-card-link {
+  cursor: pointer;
+}
+
+.comment-card-link:hover {
+  border-color: var(--accent);
+}
+
+.comment-card-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
 /* ---- Design tab: theme gallery ---- */
 
 .theme-gallery {

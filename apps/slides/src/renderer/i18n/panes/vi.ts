@@ -62,6 +62,12 @@ export const vi = {
   paneCommentsDelete: 'Xóa bình luận',
   paneCommentsPlaceholder: 'Bình luận mới… (⌘/Ctrl+Enter để gửi)',
   paneCommentsPost: 'Gửi',
+  paneCommentsScopePage: 'Trang này',
+  paneCommentsScopeAll: 'Tất cả các trang',
+  paneCommentsPageHeading: 'Trang chiếu {n}',
+  paneCommentsPageCount: '{n} bình luận',
+  paneCommentsAllEmpty: 'Bản trình chiếu này chưa có bình luận nào',
+  paneCommentsAllEmptySub: 'Bình luận được thêm trên bất kỳ trang nào sẽ được tập hợp tại đây.',
 
   paneCsdTitle: 'Trình chiếu tùy chỉnh',
   paneCsdDefaultName: 'Trình chiếu tùy chỉnh {n}',

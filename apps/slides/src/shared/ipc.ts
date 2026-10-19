@@ -1607,6 +1607,8 @@ export interface SlidesApi {
   setNotes: (op: SetNotesOp) => Promise<boolean>
   /** All comments on a page (in add order) */
   getComments: (slideIndex: number) => Promise<SlideComment[]>
+  /** Every page's comments in deck order (one array per slide, empty included; hidden slides too) */
+  getAllComments: () => Promise<SlideComment[][]>
   /** Add a comment; returns the page's updated comment list, null on failure */
   addComment: (op: AddCommentOp) => Promise<SlideComment[] | null>
   /** Delete a comment; returns the page's updated comment list, null on failure */
@@ -1672,9 +1674,7 @@ export interface SlidesApi {
   /** Save the deck in place. auto marks the AutoSave timer's own pass: while a
    *  sibling split-view copy moved the disk past this one, an auto save defers
    *  silently (`reason: 'external-modified'`) where a user's save asks first. */
-  save: (
-    auto?: boolean,
-  ) => Promise<{
+  save: (auto?: boolean) => Promise<{
     ok: boolean
     path?: string
     error?: string

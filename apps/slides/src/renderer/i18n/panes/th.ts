@@ -62,6 +62,12 @@ export const th = {
   paneCommentsDelete: 'ลบข้อคิดเห็น',
   paneCommentsPlaceholder: 'ข้อคิดเห็นใหม่… (⌘/Ctrl+Enter เพื่อโพสต์)',
   paneCommentsPost: 'โพสต์',
+  paneCommentsScopePage: 'สไลด์นี้',
+  paneCommentsScopeAll: 'ทุกสไลด์',
+  paneCommentsPageHeading: 'สไลด์ {n}',
+  paneCommentsPageCount: '{n} ข้อคิดเห็น',
+  paneCommentsAllEmpty: 'ยังไม่มีข้อคิดเห็นในงานนำเสนอนี้',
+  paneCommentsAllEmptySub: 'ข้อคิดเห็นที่เพิ่มในสไลด์ใด ๆ จะถูกรวมไว้ที่นี่',
 
   paneCsdTitle: 'การนำเสนอแบบกำหนดเอง',
   paneCsdDefaultName: 'การนำเสนอแบบกำหนดเอง {n}',

@@ -61,6 +61,12 @@ export const zhTW = {
   paneCommentsDelete: '刪除註解',
   paneCommentsPlaceholder: '新增註解…（⌘/Ctrl+Enter 發佈）',
   paneCommentsPost: '發佈',
+  paneCommentsScopePage: '本頁',
+  paneCommentsScopeAll: '所有頁面',
+  paneCommentsPageHeading: '第 {n} 頁',
+  paneCommentsPageCount: '{n} 則註解',
+  paneCommentsAllEmpty: '此簡報中還沒有註解',
+  paneCommentsAllEmptySub: '在任何頁面新增的註解都會收集在這裡。',
 
   paneCsdTitle: '自訂放映',
   paneCsdDefaultName: '自訂放映 {n}',

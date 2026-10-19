@@ -4275,6 +4275,16 @@ export function registerSlidesIpc(): void {
     return session && slide ? getSlideComments(session.opened.archive, slide.path) : []
   })
 
+  // Read-only snapshot of every page's comments in deck order (one array per slide,
+  // empty included). The all-pages view and its empty state use it; no part is written.
+  ipcMain.handle('slides:get-all-comments', (e) => {
+    const session = sessions.get(e.sender.id)
+    if (!session) return []
+    return session.opened.deck.slides.map((slide) =>
+      getSlideComments(session.opened.archive, slide.path),
+    )
+  })
+
   ipcMain.handle('slides:add-comment', (e, op: AddCommentOp) => {
     const session = sessions.get(e.sender.id)
     const slide = session?.opened.deck.slides[op.slideIndex]
