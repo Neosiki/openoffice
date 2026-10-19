@@ -180,7 +180,7 @@ function readDeckModel(session: Session, options: ReadOptions): Record<string, u
               comments: comments.map((c) => ({
                 authorId: c.authorId,
                 idx: c.idx,
-                author: c.author || 'Unknown author',
+                author: c.author?.trim() ? c.author : 'Unknown author',
                 dt: c.dt,
                 text: c.text,
               })),

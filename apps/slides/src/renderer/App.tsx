@@ -91,12 +91,7 @@ import {
 import { FormatBackgroundPane, type BgPaneOp } from './components/FormatBackgroundPane'
 import { FormatPane } from './components/FormatPane'
 import { CommentsPane } from './components/CommentsPane'
-import {
-  commentNavigationTarget,
-  commentsRefreshPlan,
-  type CommentsMode,
-  type CommentsRefreshReason,
-} from './comments-view'
+import { commentNavigationTarget, type CommentsMode } from './comments-view'
 import { AnimationPane } from './components/AnimationPane'
 import { AnimPreviewOverlay } from './components/AnimatedSlide'
 import { EquationDialog, HeaderFooterDialog, LinkDialog } from './components/InsertDialogs'
@@ -2037,10 +2032,9 @@ export function App() {
     }
   }, [hasDoc, path, annotationsNonce, commentsRefreshNonce])
 
-  /** Re-read the comment lists after a change that happened outside the notes/RenderSlide flow. */
-  const refreshComments = useCallback((reason: CommentsRefreshReason) => {
-    const plan = commentsRefreshPlan(reason)
-    if (plan.currentPage || plan.allPages) setCommentsRefreshNonce((n) => n + 1)
+  /** Re-read the comment lists after a comment mutation (ribbon badge and all-pages list). */
+  const refreshComments = useCallback(() => {
+    setCommentsRefreshNonce((n) => n + 1)
   }, [])
 
   const addComment = useCallback(
@@ -2050,7 +2044,7 @@ export function App() {
         setComments(r)
         setDirty(true)
         setStatus(t('appStatusCommentAdded'))
-        refreshComments('mutation')
+        refreshComments()
       }
     },
     [current, refreshComments],
@@ -2066,7 +2060,7 @@ export function App() {
       if (r) {
         setComments(r)
         setDirty(true)
-        refreshComments('mutation')
+        refreshComments()
       }
     },
     [current, refreshComments],

@@ -1,11 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { SlideComment } from '../src/shared/ipc'
-import {
-  commentNavigationTarget,
-  commentsRefreshPlan,
-  countComments,
-  groupCommentsBySlide,
-} from '../src/renderer/comments-view'
+import { commentNavigationTarget, groupCommentsBySlide } from '../src/renderer/comments-view'
 
 const comment = (authorId: number, idx: number, text = `c${authorId}-${idx}`): SlideComment => ({
   authorId,
@@ -41,13 +36,6 @@ describe('groupCommentsBySlide', () => {
   })
 })
 
-describe('countComments', () => {
-  it('counts every page including empty and hidden ones', () => {
-    expect(countComments([])).toBe(0)
-    expect(countComments([[], [comment(1, 1)], [comment(1, 2), comment(1, 3)]])).toBe(3)
-  })
-})
-
 describe('commentNavigationTarget', () => {
   it('accepts every page that still exists', () => {
     expect(commentNavigationTarget(0, 3)).toBe(0)
@@ -63,25 +51,5 @@ describe('commentNavigationTarget', () => {
   it('rejects malformed indexes', () => {
     expect(commentNavigationTarget(1.5, 3)).toBeNull()
     expect(commentNavigationTarget(Number.NaN, 3)).toBeNull()
-  })
-})
-
-describe('commentsRefreshPlan', () => {
-  it('re-reads the current page list and the all-pages list together', () => {
-    for (const reason of ['open', 'page', 'annotations', 'mutation', 'deck-changed'] as const) {
-      const plan = commentsRefreshPlan(reason)
-      expect(plan.currentPage, reason).toBe(true)
-      expect(plan.allPages, reason).toBe(true)
-    }
-  })
-
-  it('lets undo/redo refresh notes too', () => {
-    expect(commentsRefreshPlan('annotations').notes).toBe(true)
-    expect(commentsRefreshPlan('open').notes).toBe(true)
-  })
-
-  it('leaves notes drafts alone for comment mutations and sibling deck changes', () => {
-    expect(commentsRefreshPlan('mutation').notes).toBe(false)
-    expect(commentsRefreshPlan('deck-changed').notes).toBe(false)
   })
 })

@@ -31,13 +31,6 @@ export function groupCommentsBySlide(all: SlideComment[][]): CommentSlideGroup[]
   return groups
 }
 
-/** Total comments in the deck (drives empty states and count labels). */
-export function countComments(all: SlideComment[][]): number {
-  let total = 0
-  for (const comments of all) total += comments.length
-  return total
-}
-
 /**
  * Page the deck should move to when a group header or card is clicked.
  * Returns null for a stale target (the page was removed or the index is not a
@@ -48,41 +41,4 @@ export function commentNavigationTarget(slideIndex: number, slideCount: number):
   if (!Number.isInteger(slideIndex)) return null
   if (slideIndex < 0 || slideIndex >= slideCount) return null
   return slideIndex
-}
-
-/**
- * Why the comment lists are being re-read.
- *  - open: a deck was opened
- *  - page: the current page changed
- *  - annotations: undo/redo (notes and comments are outside RenderSlide)
- *  - mutation: a comment was added or deleted
- *  - deck-changed: a sibling window / app MCP changed the shared deck
- */
-export type CommentsRefreshReason = 'open' | 'page' | 'annotations' | 'mutation' | 'deck-changed'
-
-/** What a refresh signal invalidates. */
-export interface CommentsRefreshPlan {
-  /** Re-read the current page's list (it also drives the ribbon badge) */
-  currentPage: boolean
-  /** Re-read every page's list (the all-pages view) */
-  allPages: boolean
-  /**
-   * The signal also invalidates speaker notes. Undo/redo and deck opens do;
-   * comment mutations and a sibling window's deck change must leave a notes
-   * draft alone, so App must not bump its annotations nonce for those.
-   */
-  notes: boolean
-}
-
-/**
- * Every refresh reason re-reads the current page and the all-pages list
- * together; only the notes side differs. Keeping this in one place stops a
- * new signal from silently refreshing one list but not the ribbon badge.
- */
-export function commentsRefreshPlan(reason: CommentsRefreshReason): CommentsRefreshPlan {
-  return {
-    currentPage: true,
-    allPages: true,
-    notes: reason === 'open' || reason === 'page' || reason === 'annotations',
-  }
 }

@@ -286,7 +286,7 @@ function summarizeSlide(
       out.comments = stored.map(({ authorId, idx, author, dt, text }) => ({
         authorId,
         idx,
-        author: author || 'Unknown author',
+        author: author?.trim() ? author : 'Unknown author',
         dt,
         text,
       }))
