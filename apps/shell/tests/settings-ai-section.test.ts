@@ -877,6 +877,96 @@ describe('automatic requests', () => {
   })
 })
 
+// ── the GitHub read token ─────────────────────────────────
+
+describe('the GitHub read token', () => {
+  async function openAdvancedAi(): Promise<void> {
+    await openModal()
+    await openAiSection()
+    await openAdvanced()
+  }
+
+  function tokenInput(): HTMLInputElement {
+    return host.querySelector<HTMLInputElement>('#set-read-url-token')!
+  }
+
+  async function typeToken(value: string): Promise<void> {
+    const input = tokenInput()
+    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!
+    await act(async () => {
+      setter.call(input, value)
+      input.dispatchEvent(new Event('input', { bubbles: true }))
+      await Promise.resolve()
+    })
+    await flush()
+  }
+
+  it('shows an empty token masked, with the guidance for the optional key', async () => {
+    installHome(defaultAiSettings())
+    installSubscription(statusMap('ready', 'ready'))
+    await openAdvancedAi()
+
+    expect(tokenInput().type).toBe('password')
+    expect(tokenInput().value).toBe('')
+    expect(host.textContent).toContain('No token')
+    expect(host.textContent).toContain(
+      'Used when reading documents and skill links in private repositories. Paste a read-only token. It is saved in this PC’s settings file.',
+    )
+  })
+
+  it('saves a pasted token and leaves the other settings as they were', async () => {
+    installHome({ ...defaultAiSettings(), maxOutputTokens: 9216 })
+    installSubscription(statusMap('ready', 'ready'))
+    await openAdvancedAi()
+
+    await typeToken('  ghp_pasted  ')
+    await click(button('Save token'))
+
+    expect(lastSaved().readUrl).toEqual({ githubToken: 'ghp_pasted' })
+    expect(lastSaved()).toMatchObject({ provider: 'auto', maxOutputTokens: 9216 })
+    expect(tokenInput().type).toBe('password')
+    expect(tokenInput().value).toBe('ghp_pasted')
+    expect(host.textContent).toContain('Token saved')
+  })
+
+  it('loads a stored token masked, and clears it', async () => {
+    installHome({ ...defaultAiSettings(), readUrl: { githubToken: 'ghp_stored' } })
+    installSubscription(statusMap('ready', 'ready'))
+    await openAdvancedAi()
+
+    expect(tokenInput().type).toBe('password')
+    expect(tokenInput().value).toBe('ghp_stored')
+    expect(host.textContent).toContain('Token saved')
+
+    await click(button('Clear'))
+    expect('readUrl' in lastSaved()).toBe(false)
+    expect(tokenInput().value).toBe('')
+    expect(host.textContent).toContain('No token')
+    expect(lastSaved()).toMatchObject({ provider: 'auto' })
+  })
+
+  it('words the guidance in Korean', async () => {
+    installHome(defaultAiSettings())
+    installSubscription(statusMap('ready', 'ready'))
+    await act(async () => {
+      root.render(
+        createElement(
+          LocaleProvider,
+          { initial: 'ko' },
+          createElement(SettingsModal, { onClose: vi.fn(), target: { section: 'aiModel' } }),
+        ),
+      )
+      await Promise.resolve()
+    })
+    await flush()
+    await openAdvanced()
+    expect(host.textContent).toContain(
+      '비공개 저장소의 문서·스킬 링크를 읽을 때 씁니다. 읽기 전용 토큰을 붙여 넣으세요. 이 PC의 설정 파일에 저장됩니다.',
+    )
+    expect(host.textContent).toContain('토큰 없음')
+  })
+})
+
 // ── media providers ───────────────────────────────────────
 
 describe('media providers', () => {
