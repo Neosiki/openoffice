@@ -4335,6 +4335,10 @@ th.cell-rev-del {
 .doc-autospace-pad {
   margin-inline-start: var(--doc-autospace-pad, 0.125em);
 }
+/* only one of autoSpaceDE/DN is off: the native gap is disabled, the pad carries all of it */
+.doc-autospace-pad-full {
+  margin-inline-start: calc(var(--doc-autospace-pad, 0.125em) * 2);
+}
 
 /* a space with a hangul neighbour advances 0.5em in Word whatever the run font
    (line-metrics hangulSpaceOffsets); the half-width space face supplies that

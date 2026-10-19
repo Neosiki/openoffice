@@ -1867,7 +1867,10 @@ function isHangul(cp: number): boolean {
 // .doc-autospace-pad span whose start margin supplies the other 1/8em. Pads
 // only go between a directly adjacent CJK letter and a Latin letter/digit —
 // never next to spaces or punctuation — matching where Chromium applies its
-// native gap.
+// native gap. Chromium cannot switch letters and digits separately (no
+// ideograph-alpha / ideograph-numeric), so when only one of w:autoSpaceDE/DN
+// is off the native gap goes off and the pad carries the whole 1/4em
+// (.doc-autospace-pad-full).
 
 /** Han/kana/hangul letters; CJK punctuation and full/halfwidth forms get no gap */
 function isCjkAutospaceSide(cp: number): boolean {
@@ -1885,11 +1888,27 @@ function isLatinAlnum(cp: number): boolean {
   return cp >= 0xc0 && cp <= 0x24f && cp !== 0xd7 && cp !== 0xf7
 }
 
-export function needsAutospacePad(prevCp: number, nextCp: number): boolean {
-  return (
-    (isCjkAutospaceSide(prevCp) && isLatinAlnum(nextCp)) ||
-    (isLatinAlnum(prevCp) && isCjkAutospaceSide(nextCp))
-  )
+/** which CJK-Latin gaps a paragraph gets (docx-engine AutoSpace): true = both kinds,
+ *  'latin' = letters only (w:autoSpaceDN off), 'digits' = digits only (w:autoSpaceDE off) */
+export type AutospaceMode = true | 'latin' | 'digits'
+
+function isDigit(cp: number): boolean {
+  return cp >= 0x30 && cp <= 0x39
+}
+
+export function needsAutospacePad(
+  prevCp: number,
+  nextCp: number,
+  mode: AutospaceMode = true,
+): boolean {
+  const latin =
+    isCjkAutospaceSide(prevCp) && isLatinAlnum(nextCp)
+      ? nextCp
+      : isLatinAlnum(prevCp) && isCjkAutospaceSide(nextCp)
+        ? prevCp
+        : -1
+  if (latin < 0) return false
+  return mode === true || (mode === 'digits') === isDigit(latin)
 }
 
 function lastCodePoint(text: string): number {
@@ -1901,9 +1920,24 @@ function lastCodePoint(text: string): number {
 }
 
 /** pad between two adjacent stretches of text (last char of prev vs first of next) */
-export function autospacePadBetween(prev: string, next: string): boolean {
+export function autospacePadBetween(
+  prev: string,
+  next: string,
+  mode: AutospaceMode = true,
+): boolean {
   if (!prev || !next) return false
-  return needsAutospacePad(lastCodePoint(prev), next.codePointAt(0)!)
+  return needsAutospacePad(lastCodePoint(prev), next.codePointAt(0)!, mode)
+}
+
+/** the renderer's pad mode for a paragraph's autoSpace attribute; null = pads off */
+export function autospaceMode(autoSpace: unknown): AutospaceMode | null {
+  if (autoSpace === false) return null
+  return autoSpace === 'latin' || autoSpace === 'digits' ? autoSpace : true
+}
+
+/** pad span class: the full gap when the native text-autospace is switched off */
+export function autospacePadClass(mode: AutospaceMode): string {
+  return mode === true ? 'doc-autospace-pad' : 'doc-autospace-pad doc-autospace-pad-full'
 }
 
 /** UTF-16 length of the code point starting at offset */
@@ -1912,12 +1946,12 @@ export function codePointLengthAt(text: string, offset: number): number {
 }
 
 /** UTF-16 offsets inside text where a pad belongs (between offset-1 and offset) */
-export function autospaceBoundaries(text: string): number[] {
+export function autospaceBoundaries(text: string, mode: AutospaceMode = true): number[] {
   const out: number[] = []
   let prev = -1
   for (let i = 0; i < text.length;) {
     const cp = text.codePointAt(i)!
-    if (prev >= 0 && needsAutospacePad(prev, cp)) out.push(i)
+    if (prev >= 0 && needsAutospacePad(prev, cp, mode)) out.push(i)
     prev = cp
     i += cp > 0xffff ? 2 : 1
   }

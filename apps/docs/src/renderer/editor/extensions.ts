@@ -35,7 +35,10 @@ import {
 import {
   asciiOnlyCjkFace,
   autospaceBoundaries,
+  autospaceMode,
   autospacePadBetween,
+  autospacePadClass,
+  type AutospaceMode,
   codePointLengthAt,
   cjkDeclaredLineFactor,
   cjkScriptRanges,
@@ -297,8 +300,9 @@ const anchorAttrs = {
   /** render-only RTL inferred from run w:rtl / RTL script when w:bidi is absent
       (HTML-converted docs); align is the visual value as-is, never saved */
   bidiInferred: { default: false },
-  /** CJK-Latin/digit auto spacing (w:autoSpaceDE/DN); null = Word default on */
-  autoSpace: { default: null as boolean | null },
+  /** CJK-Latin/digit auto spacing (w:autoSpaceDE/DN); null = Word default on,
+   *  'latin' / 'digits' = only that kind of gap */
+  autoSpace: { default: null as boolean | 'latin' | 'digits' | null },
   /** w:wordWrap; false = hangul words may break between syllables (Word's allow-word-split option) */
   wordWrap: { default: null as boolean | null },
   /** w:overflowPunct; false = a line-end CJK stop never hangs into the margin */
@@ -727,7 +731,7 @@ export function clipboardParaAttrs(el: HTMLElement): Record<string, unknown> | n
   const attrs: Record<string, unknown> = {}
   for (const [key, type] of Object.entries(CLIPBOARD_PARA_ATTR_TYPES)) {
     const v = (parsed as Record<string, unknown>)[key]
-    if (typeof v !== type) continue
+    if (typeof v !== type && !(key === 'autoSpace' && (v === 'latin' || v === 'digits'))) continue
     if (type === 'number' && !Number.isFinite(v)) continue
     attrs[key] = v
   }
@@ -795,8 +799,11 @@ function blockAttrs(
     // table's dir="rtl" mirrors column order but must not reorder cell text
     styles.push('direction:ltr')
   }
-  // explicit autoSpaceDE/DN off also disables the browser's native 1/8em gap
-  if (node.attrs.autoSpace === false) styles.push('text-autospace:no-autospace')
+  // explicit autoSpaceDE/DN off also disables the browser's native 1/8em gap;
+  // with only one switch off the pads supply the remaining kind of gap alone
+  if (node.attrs.autoSpace != null && node.attrs.autoSpace !== true) {
+    styles.push('text-autospace:no-autospace')
+  }
   if (node.attrs.align) styles.push(textAlignDecl(String(node.attrs.align)))
   // the line-height factor follows paragraph content (approximating Word's max-of-inline-fonts
   // line height): CJK paragraphs get the CJK factor, pure-Western ones the document's
@@ -2032,7 +2039,7 @@ function simsunGapRanges(node: PmNode): Array<{ from: number; to: number }> {
  * ranges (relative to the block's content start) of the character after each
  * CJK-Latin pad boundary; that character carries the pad margin (.doc-autospace-pad)
  */
-function autospaceRanges(node: PmNode): Array<{ from: number; to: number }> {
+function autospaceRanges(node: PmNode, mode: AutospaceMode): Array<{ from: number; to: number }> {
   let ranges = autospaceRangesCache.get(node)
   if (ranges === undefined) {
     const found: Array<{ from: number; to: number }> = []
@@ -2041,8 +2048,8 @@ function autospaceRanges(node: PmNode): Array<{ from: number; to: number }> {
     node.forEach((child) => {
       if (child.isText && child.text) {
         const text = child.text
-        const cuts = autospaceBoundaries(text)
-        if (autospacePadBetween(prevText, text)) cuts.unshift(0)
+        const cuts = autospaceBoundaries(text, mode)
+        if (autospacePadBetween(prevText, text, mode)) cuts.unshift(0)
         for (const i of cuts) {
           found.push({ from: offset + i, to: offset + i + codePointLengthAt(text, i) })
         }
@@ -2202,11 +2209,11 @@ function pushLineFactorDecos(node: PmNode, pos: number, decos: Decoration[]): bo
         )
       }
     }
-    if (node.attrs.autoSpace !== false) {
-      for (const r of autospaceRanges(node)) {
-        decos.push(
-          Decoration.inline(pos + 1 + r.from, pos + 1 + r.to, { class: 'doc-autospace-pad' }),
-        )
+    const padMode = autospaceMode(node.attrs.autoSpace)
+    if (padMode) {
+      const padClass = autospacePadClass(padMode)
+      for (const r of autospaceRanges(node, padMode)) {
+        decos.push(Decoration.inline(pos + 1 + r.from, pos + 1 + r.to, { class: padClass }))
       }
     }
     for (const r of hangulSpaceRanges(node)) {
