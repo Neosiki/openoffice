@@ -224,6 +224,12 @@ export interface HomeApi {
   kbOpenScope(group: string): Promise<string>
   /** the narrowed run is over */
   kbCloseScope(scope: string): Promise<void>
+  /** write the AI's markdown as a new .md / .docx in the save folder; resolves to its path */
+  kbCreateDocument(request: {
+    title: string
+    format: 'md' | 'docx'
+    content: string
+  }): Promise<{ path: string }>
   /** the user's AI provider settings (shared with every app's panel) */
   aiGetSettings(): Promise<AiSettings>
   /** one streamed model turn over the shared ai:stream handler */

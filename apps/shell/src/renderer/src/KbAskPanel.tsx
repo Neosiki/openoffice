@@ -1,8 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import {
   AgentLoop,
+  composeSkills,
+  CREATE_DOCUMENT_TOOL,
+  createDocumentSkill,
   createIpcTransport,
   createKnowledgeBaseSkill,
+  type CreateDocumentFormat,
   type KbFileInfo,
 } from '@genoffice/agent-core'
 import {
@@ -59,7 +63,7 @@ import sendStop from './assets/send-stop.png'
 /** one tool a turn used, badge-shaped; the icon follows the call name */
 interface ToolNote {
   label: string
-  kind: 'search' | 'read'
+  kind: 'search' | 'read' | 'create'
 }
 
 interface AskMessage {
@@ -70,6 +74,8 @@ interface AskMessage {
   isError?: boolean
   /** tokens the provider billed for this answer, summed across its turns (absent when unreported) */
   usage?: AiTokenUsageView
+  /** the "save as" buttons' outcome for this answer */
+  saved?: { path: string; name: string } | { error: string } | 'saving'
   /** the run stopped because its connection cannot go on: shown as the blocked notice */
   blocked?: AskBlockedRun
   /** the reason as the transport worded it, for a kind the notice has no text of its own for */
@@ -196,6 +202,9 @@ export function KbAskPanel({
       })
       .catch(() => setCorpusCount(0))
     refreshSettings()
+    const docSkill = createDocumentSkill({
+      create: (request) => window.aiOffice.kbCreateDocument(request),
+    })
     loopRef.current = new AgentLoop({
       transport: createIpcTransport<AiSettings>({
         onStream: (listener) => window.aiOffice.onAiStream(listener),
@@ -209,13 +218,17 @@ export function KbAskPanel({
           streamErrorRef.current = askBlockedRunOf(error)
         },
       }),
-      skill: createKnowledgeBaseSkill({
-        listFiles: () => corpusRef.current,
-        // a narrowed run's calls carry its scope; main keeps them to the group
-        search: (query, limit) =>
-          window.aiOffice.kbSearch({ q: query, limit }, runScopeRef.current),
-        read: (path, offset) => window.aiOffice.kbRead(path, offset, runScopeRef.current),
-      }),
+      skill: composeSkills('home-ask', '', [
+        createKnowledgeBaseSkill({
+          listFiles: () => corpusRef.current,
+          // a narrowed run's calls carry its scope; main keeps them to the group
+          search: (query, limit) =>
+            window.aiOffice.kbSearch({ q: query, limit }, runScopeRef.current),
+          read: (path, offset) => window.aiOffice.kbRead(path, offset, runScopeRef.current),
+          alsoCitable: () => docSkill.createdPaths(),
+        }),
+        docSkill,
+      ]),
       events: {
         onText: (text) => patchLast({ text }),
         onToolStart: (call) =>
@@ -224,7 +237,9 @@ export function KbAskPanel({
               ...last.toolNotes,
               call.name === 'search_knowledge_base'
                 ? { label: t('askToolSearch'), kind: 'search' as const }
-                : { label: t('askToolRead'), kind: 'read' as const },
+                : call.name === CREATE_DOCUMENT_TOOL
+                  ? { label: t('askToolCreate'), kind: 'create' as const }
+                  : { label: t('askToolRead'), kind: 'read' as const },
             ],
           })),
         onDone: () => {
@@ -403,6 +418,28 @@ export function KbAskPanel({
     })
   }
 
+  // the deterministic half of "keep this answer": the question becomes the
+  // file name, the answer's markdown the body, same write path as the tool
+  const saveAnswer = async (index: number, format: CreateDocumentFormat): Promise<void> => {
+    const answer = messages[index]
+    if (!answer || answer.saved === 'saving') return
+    const question = [...messages.slice(0, index)].reverse().find((m) => m.role === 'user')
+    const title = (question?.text ?? '').replace(/\s+/g, ' ').trim().slice(0, 60)
+    const patchAt = (saved: AskMessage['saved']): void =>
+      setMessages((prev) => prev.map((m, i) => (i === index ? { ...m, saved } : m)))
+    patchAt('saving')
+    try {
+      const { path } = await window.aiOffice.kbCreateDocument({
+        title,
+        format,
+        content: answer.text,
+      })
+      patchAt({ path, name: path.split(/[\\/]/).pop() ?? path })
+    } catch (error) {
+      patchAt({ error: error instanceof Error ? error.message : String(error) })
+    }
+  }
+
   const fileNav = createFileNav((path) => onOpenPath(path))
 
   return (
@@ -479,7 +516,13 @@ export function KbAskPanel({
               <div className="kb-ask-tools">
                 {m.toolNotes.map((note, j) => (
                   <span key={j} className="kb-ask-tool-note">
-                    {note.kind === 'search' ? <IconSearch /> : <IconFileText />}
+                    {note.kind === 'search' ? (
+                      <IconSearch />
+                    ) : note.kind === 'create' ? (
+                      <IconFilePlus />
+                    ) : (
+                      <IconFileText />
+                    )}
                     {note.label}
                     {m.streaming && j === m.toolNotes.length - 1 ? '…' : ''}
                   </span>
@@ -498,6 +541,46 @@ export function KbAskPanel({
             {m.role === 'assistant' && m.usage && (
               <div className="ai-message-usage">
                 <AiUsageChip usage={m.usage} lang={lang} />
+              </div>
+            )}
+            {m.role === 'assistant' && m.text && !m.streaming && !m.isError && (
+              <div className="kb-ask-actions">
+                {m.saved && typeof m.saved === 'object' && 'path' in m.saved ? (
+                  <button
+                    type="button"
+                    className="kb-ask-action kb-ask-action-saved"
+                    onClick={() => onOpenPath((m.saved as { path: string }).path)}
+                  >
+                    <IconFileText />
+                    {t('askSavedAs', { name: m.saved.name })}
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      className="kb-ask-action"
+                      disabled={m.saved === 'saving'}
+                      onClick={() => void saveAnswer(i, 'md')}
+                    >
+                      <IconFilePlus />
+                      {t('askSaveMd')}
+                    </button>
+                    <button
+                      type="button"
+                      className="kb-ask-action"
+                      disabled={m.saved === 'saving'}
+                      onClick={() => void saveAnswer(i, 'docx')}
+                    >
+                      <IconFilePlus />
+                      {t('askSaveDocx')}
+                    </button>
+                    {m.saved && typeof m.saved === 'object' && 'error' in m.saved && (
+                      <span className="kb-ask-action-error">
+                        {t('askSaveFailed', { error: m.saved.error })}
+                      </span>
+                    )}
+                  </>
+                )}
               </div>
             )}
             {m.blocked && (
@@ -688,6 +771,27 @@ function IconInfo(): React.JSX.Element {
     >
       <circle cx="12" cy="12" r="9" />
       <path d="M12 8.2v.01M12 11.5V16" />
+    </svg>
+  )
+}
+
+function IconFilePlus(): React.JSX.Element {
+  return (
+    <svg
+      width="11"
+      height="11"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+      <polyline points="14 2 14 8 20 8" />
+      <line x1="12" y1="18" x2="12" y2="12" />
+      <line x1="9" y1="15" x2="15" y2="15" />
     </svg>
   )
 }

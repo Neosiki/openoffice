@@ -198,6 +198,9 @@ const homeApi: HomeApi = {
   async kbCloseScope(scope) {
     await ipcRenderer.invoke('kb:close-scope', scope)
   },
+  async kbCreateDocument(request) {
+    return ipcRenderer.invoke('kb:create-document', request)
+  },
   async aiGetSettings() {
     return ipcRenderer.invoke('ai:get-settings')
   },
