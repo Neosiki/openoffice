@@ -1548,6 +1548,9 @@ export default function App() {
         })
       // pdfjs-dist 6.x removed PDFDocumentProxy.destroy(); go through the loading task
       if (previous) void previous.loadingTask.destroy()
+      // a reload of the open document (save, or a page operation that rewrote the file in
+      // place): the side-by-side view rebuilds its tree from the new bytes
+      if (previous) setBilingualRev((v) => v + 1)
       return loaded.numPages
     },
     [],
@@ -4527,6 +4530,8 @@ export default function App() {
       // the saved bytes are a new document for the result store: carry the AI
       // readings, translations and unfinished job records over (spec §6)
       await aiReadRef.current?.afterSave().catch(() => {})
+      // again once the stored results moved to the new hash; the build started by the
+      // reload above is discarded
       setBilingualRev((v) => v + 1)
       // Content-derived naming (docs/sheets analog): a shell-created blank still
       // carrying its untitled name takes its file name from the topmost text this

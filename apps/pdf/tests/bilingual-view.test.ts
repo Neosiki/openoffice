@@ -624,6 +624,49 @@ describe('bilingual view on screen', () => {
     expect(ch.tree).toHaveBeenCalledTimes(2)
   })
 
+  it('an in-place rewrite (revision) rebuilds the tree and a stale build in flight is discarded', async () => {
+    const before = fakeTree()
+    const after: DocumentTree = {
+      ...fakeTree(),
+      blocks: [pageBreak(1), para('p1.0', 1, 'Rewritten page one.')],
+    }
+    const ch = fakeChannels({ tree: before })
+    // the first build hangs until released; the rebuild answers at once with the new bytes
+    let releaseOld: () => void = () => {}
+    ch.tree
+      .mockImplementationOnce(async () => {
+        await new Promise<void>((resolve) => {
+          releaseOld = resolve
+        })
+        return { ok: true as const, docHash: DOC, tree: before, fingerprints: [], cached: false }
+      })
+      .mockImplementationOnce(async () => ({
+        ok: true as const,
+        docHash: 'c'.repeat(64),
+        tree: after,
+        fingerprints: [],
+        cached: false,
+      }))
+    const h = mount({ enabled: true, api: ch.api })
+    await flush()
+    expect(h.view().data.load.kind).toBe('loading')
+    // the file was rewritten in place and reloaded: the editor bumps the revision
+    h.rerender({ revision: 1 })
+    await flush()
+    expect(ch.tree).toHaveBeenCalledTimes(2)
+    // the older build is stopped
+    expect(ch.cancel).toHaveBeenCalledTimes(1)
+    expect(h.view().data.tree).toBe(after)
+    expect(h.view().data.docHash).toBe('c'.repeat(64))
+    // the stale answer arriving late does not replace the new tree
+    releaseOld()
+    await flush()
+    expect(h.view().data.tree).toBe(after)
+    expect(h.view().data.docHash).toBe('c'.repeat(64))
+    expect(container.textContent).toContain('Rewritten page one.')
+    expect(container.textContent).not.toContain('Same words here.')
+  })
+
   it('opens in the default target language when nothing is stored, and reads the picked language', async () => {
     const tree = fakeTree()
     const ch = fakeChannels({
