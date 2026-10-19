@@ -44,7 +44,7 @@ export const tMain = createI18n({
     legacyPptOk: '知道了',
     encryptedPptxTitle: '无法打开受密码保护的文件',
     encryptedPptxBody:
-      '这个文件是加密的 Office 文档(受密码保护),本应用暂不支持打开。请在 PowerPoint 里打开并解除密码(文件→信息→保护演示文稿),另存后再试。',
+      '此文件使用的加密方式本应用无法解开。请在 PowerPoint 中取消密码(文件→信息→保护演示文稿),另存后再试。',
     chartSimplifyTitle: '编辑将简化此图表',
     chartSimplifyBody:
       '这个图表来自外部文件。编辑后将按本应用的模型重建,数字格式、趋势线、误差线、逐点样式等精细格式会丢失。',
@@ -152,7 +152,7 @@ export const tMain = createI18n({
     legacyPptOk: 'OK',
     encryptedPptxTitle: 'Cannot open password-protected file',
     encryptedPptxBody:
-      'This file is an encrypted Office document. Password-protected files are not supported yet. Open it in PowerPoint, remove the password (File → Info → Protect Presentation), save, and try again.',
+      'This file uses an encryption method this app cannot unlock. Open it in PowerPoint, remove the password (File → Info → Protect Presentation), save, and try again.',
     chartSimplifyTitle: 'Editing will simplify this chart',
     chartSimplifyBody:
       'This chart comes from an external file. Editing rebuilds it with this app’s model; fine-grained formatting such as number formats, trendlines, error bars and per-point styles will be lost.',
@@ -260,7 +260,7 @@ export const tMain = createI18n({
     legacyPptOk: 'OK',
     encryptedPptxTitle: 'Không thể mở tệp được bảo vệ bằng mật khẩu',
     encryptedPptxBody:
-      'Tệp này là tài liệu Office được mã hóa. Tệp được bảo vệ bằng mật khẩu hiện chưa được hỗ trợ. Hãy mở tệp trong PowerPoint, xóa mật khẩu (Tệp → Thông tin → Bảo vệ bản trình bày), lưu lại và thử lại.',
+      'Tệp này dùng phương thức mã hóa mà ứng dụng không thể mở khóa. Hãy mở tệp trong PowerPoint, xóa mật khẩu (Tệp → Thông tin → Bảo vệ bản trình bày), lưu lại và thử lại.',
     chartSimplifyTitle: 'Chỉnh sửa sẽ làm đơn giản hóa biểu đồ này',
     chartSimplifyBody:
       'Biểu đồ này đến từ một tệp bên ngoài. Chỉnh sửa sẽ dựng lại biểu đồ theo mô hình của ứng dụng này; các định dạng chi tiết như định dạng số, đường xu hướng, thanh sai số và kiểu theo từng điểm sẽ bị mất.',
@@ -371,7 +371,7 @@ export const tMain = createI18n({
     legacyPptOk: 'OK',
     encryptedPptxTitle: 'パスワード保護されたファイルは開けません',
     encryptedPptxBody:
-      'このファイルは暗号化された Office ドキュメントです。パスワード保護には未対応です。PowerPoint で開いてパスワードを解除し、保存し直してからお試しください。',
+      'このファイルの暗号化方式はこのアプリでは解除できません。PowerPoint で開いてパスワードを解除し、保存し直してからお試しください。',
     chartSimplifyTitle: '編集するとこのグラフは簡略化されます',
     chartSimplifyBody:
       'このグラフは外部ファイル由来です。編集すると本アプリのモデルで再構築され、表示形式・近似曲線・誤差範囲・要素ごとの書式などの詳細な書式は失われます。',
@@ -483,7 +483,7 @@ export const tMain = createI18n({
     legacyPptOk: '확인',
     encryptedPptxTitle: '암호로 보호된 파일을 열 수 없음',
     encryptedPptxBody:
-      '이 파일은 암호화된 Office 문서입니다. 암호 보호 파일은 아직 지원되지 않습니다. PowerPoint에서 암호를 해제하고 저장한 후 다시 시도하세요.',
+      '이 파일에 쓰인 암호 방식은 이 앱에서 풀 수 없습니다. PowerPoint에서 암호를 해제하고 저장한 후 다시 시도하세요.',
     chartSimplifyTitle: '편집하면 이 차트가 단순화됩니다',
     chartSimplifyBody:
       '이 차트는 외부 파일에서 가져왔습니다. 편집하면 이 앱의 모델로 재구성되어 숫자 서식, 추세선, 오차 막대, 요소별 스타일 등 세부 서식이 손실됩니다.',
@@ -592,7 +592,7 @@ export const tMain = createI18n({
     legacyPptOk: 'OK',
     encryptedPptxTitle: 'Impossible d’ouvrir le fichier protégé par mot de passe',
     encryptedPptxBody:
-      'Ce fichier est un document Office chiffré. Les fichiers protégés par mot de passe ne sont pas encore pris en charge. Ouvrez-le dans PowerPoint, supprimez le mot de passe, enregistrez puis réessayez.',
+      'Ce fichier utilise une méthode de chiffrement que cette application ne peut pas déverrouiller. Ouvrez-le dans PowerPoint, supprimez le mot de passe, enregistrez puis réessayez.',
     chartSimplifyTitle: 'La modification simplifiera ce graphique',
     chartSimplifyBody:
       'Ce graphique provient d’un fichier externe. La modification le reconstruit avec le modèle de l’application ; les formats numériques, courbes de tendance, barres d’erreur et styles par point seront perdus.',
@@ -706,7 +706,7 @@ export const tMain = createI18n({
     legacyPptOk: 'OK',
     encryptedPptxTitle: 'Passwortgeschützte Datei kann nicht geöffnet werden',
     encryptedPptxBody:
-      'Diese Datei ist ein verschlüsseltes Office-Dokument. Passwortgeschützte Dateien werden noch nicht unterstützt. Öffnen Sie sie in PowerPoint, entfernen Sie das Passwort, speichern Sie und versuchen Sie es erneut.',
+      'Diese Datei verwendet ein Verschlüsselungsverfahren, das diese App nicht entsperren kann. Öffnen Sie sie in PowerPoint, entfernen Sie das Passwort, speichern Sie und versuchen Sie es erneut.',
     chartSimplifyTitle: 'Beim Bearbeiten wird dieses Diagramm vereinfacht',
     chartSimplifyBody:
       'Dieses Diagramm stammt aus einer externen Datei. Beim Bearbeiten wird es mit dem Modell dieser App neu aufgebaut; Zahlenformate, Trendlinien, Fehlerbalken und punktbezogene Stile gehen verloren.',
@@ -819,7 +819,7 @@ export const tMain = createI18n({
     legacyPptOk: 'Aceptar',
     encryptedPptxTitle: 'No se puede abrir el archivo protegido con contraseña',
     encryptedPptxBody:
-      'Este archivo es un documento de Office cifrado. Los archivos protegidos con contraseña aún no son compatibles. Ábrelo en PowerPoint, quita la contraseña, guárdalo y vuelve a intentarlo.',
+      'Este archivo usa un método de cifrado que esta aplicación no puede desbloquear. Ábrelo en PowerPoint, quita la contraseña, guárdalo y vuelve a intentarlo.',
     chartSimplifyTitle: 'Editar simplificará este gráfico',
     chartSimplifyBody:
       'Este gráfico proviene de un archivo externo. Al editarlo se reconstruye con el modelo de esta aplicación; se perderán formatos numéricos, líneas de tendencia, barras de error y estilos por punto.',
@@ -931,7 +931,7 @@ export const tMain = createI18n({
     legacyPptOk: 'ตกลง',
     encryptedPptxTitle: 'ไม่สามารถเปิดไฟล์ที่มีรหัสผ่าน',
     encryptedPptxBody:
-      'ไฟล์นี้เป็นเอกสาร Office ที่เข้ารหัส ยังไม่รองรับไฟล์ที่มีรหัสผ่าน โปรดเปิดใน PowerPoint แล้วยกเลิกรหัสผ่าน บันทึก แล้วลองใหม่อีกครั้ง',
+      'ไฟล์นี้ใช้วิธีเข้ารหัสที่แอปนี้ปลดล็อกไม่ได้ โปรดเปิดใน PowerPoint แล้วยกเลิกรหัสผ่าน บันทึก แล้วลองใหม่อีกครั้ง',
     chartSimplifyTitle: 'การแก้ไขจะทำให้แผนภูมินี้ถูกลดรูป',
     chartSimplifyBody:
       'แผนภูมินี้มาจากไฟล์ภายนอก เมื่อแก้ไขจะถูกสร้างใหม่ตามโมเดลของแอปนี้ รูปแบบตัวเลข เส้นแนวโน้ม แถบค่าคลาดเคลื่อน และสไตล์รายจุดจะสูญหาย',
@@ -1040,7 +1040,7 @@ export const tMain = createI18n({
     legacyPptOk: 'OK',
     encryptedPptxTitle: 'Tidak dapat membuka file yang dilindungi kata sandi',
     encryptedPptxBody:
-      'File ini adalah dokumen Office terenkripsi. File yang dilindungi kata sandi belum didukung. Buka di PowerPoint, hapus kata sandi, simpan, lalu coba lagi.',
+      'File ini memakai metode enkripsi yang tidak dapat dibuka aplikasi ini. Buka di PowerPoint, hapus kata sandi, simpan, lalu coba lagi.',
     chartSimplifyTitle: 'Mengedit akan menyederhanakan bagan ini',
     chartSimplifyBody:
       'Bagan ini berasal dari file eksternal. Mengedit akan membangunnya ulang dengan model aplikasi ini; format angka, garis tren, bilah kesalahan, dan gaya per titik akan hilang.',
@@ -1153,7 +1153,7 @@ export const tMain = createI18n({
     legacyPptOk: 'ОК',
     encryptedPptxTitle: 'Не удаётся открыть файл, защищённый паролем',
     encryptedPptxBody:
-      'Это зашифрованный документ Office. Файлы, защищённые паролем, пока не поддерживаются. Откройте файл в PowerPoint, снимите пароль, сохраните и попробуйте снова.',
+      'Файл зашифрован способом, который это приложение не может снять. Откройте файл в PowerPoint, снимите пароль, сохраните и попробуйте снова.',
     chartSimplifyTitle: 'Редактирование упростит эту диаграмму',
     chartSimplifyBody:
       'Эта диаграмма из внешнего файла. При редактировании она будет перестроена по модели приложения; числовые форматы, линии тренда, планки погрешностей и стили отдельных точек будут потеряны.',
@@ -1265,7 +1265,7 @@ export const tMain = createI18n({
     legacyPptOk: 'حسنًا',
     encryptedPptxTitle: 'تعذّر فتح الملف المحمي بكلمة مرور',
     encryptedPptxBody:
-      'هذا الملف مستند Office مشفّر. الملفات المحمية بكلمة مرور غير مدعومة بعد. افتحه في PowerPoint وأزل كلمة المرور ثم احفظه وحاول مجددًا.',
+      'يستخدم هذا الملف طريقة تشفير لا يستطيع هذا التطبيق فكّها. افتحه في PowerPoint وأزل كلمة المرور ثم احفظه وحاول مجددًا.',
     chartSimplifyTitle: 'سيؤدي التحرير إلى تبسيط هذا المخطط',
     chartSimplifyBody:
       'هذا المخطط من ملف خارجي. عند التحرير سيُعاد بناؤه وفق نموذج هذا التطبيق؛ وستُفقد التنسيقات الدقيقة مثل تنسيقات الأرقام وخطوط الاتجاه وأشرطة الخطأ وأنماط النقاط.',
@@ -1374,7 +1374,7 @@ export const tMain = createI18n({
     legacyPptOk: 'OK',
     encryptedPptxTitle: 'Não é possível abrir o arquivo protegido por senha',
     encryptedPptxBody:
-      'Este arquivo é um documento do Office criptografado. Arquivos protegidos por senha ainda não são compatíveis. Abra-o no PowerPoint, remova a senha, salve e tente novamente.',
+      'Este arquivo usa um método de criptografia que este aplicativo não consegue desbloquear. Abra-o no PowerPoint, remova a senha, salve e tente novamente.',
     chartSimplifyTitle: 'Editar simplificará este gráfico',
     chartSimplifyBody:
       'Este gráfico vem de um arquivo externo. Ao editar, ele é reconstruído com o modelo deste aplicativo; formatos numéricos, linhas de tendência, barras de erro e estilos por ponto serão perdidos.',
@@ -1487,7 +1487,7 @@ export const tMain = createI18n({
     legacyPptOk: 'OK',
     encryptedPptxTitle: 'Impossibile aprire il file protetto da password',
     encryptedPptxBody:
-      'Questo file è un documento Office crittografato. I file protetti da password non sono ancora supportati. Aprilo in PowerPoint, rimuovi la password, salva e riprova.',
+      'Questo file usa un metodo di crittografia che questa app non può sbloccare. Aprilo in PowerPoint, rimuovi la password, salva e riprova.',
     chartSimplifyTitle: 'La modifica semplificherà questo grafico',
     chartSimplifyBody:
       'Questo grafico proviene da un file esterno. Modificandolo verrà ricostruito con il modello di questa app; formati numerici, linee di tendenza, barre di errore e stili per punto andranno persi.',
@@ -1601,7 +1601,7 @@ export const tMain = createI18n({
     legacyPptOk: 'OK',
     encryptedPptxTitle: 'Nie można otworzyć pliku chronionego hasłem',
     encryptedPptxBody:
-      'Ten plik to zaszyfrowany dokument Office. Pliki chronione hasłem nie są jeszcze obsługiwane. Otwórz go w programie PowerPoint, usuń hasło, zapisz i spróbuj ponownie.',
+      'Ten plik używa metody szyfrowania, której ta aplikacja nie potrafi odblokować. Otwórz go w programie PowerPoint, usuń hasło, zapisz i spróbuj ponownie.',
     chartSimplifyTitle: 'Edycja uprości ten wykres',
     chartSimplifyBody:
       'Ten wykres pochodzi z zewnętrznego pliku. Edycja przebuduje go według modelu tej aplikacji; formaty liczb, linie trendu, słupki błędów i style punktów zostaną utracone.',
@@ -1713,7 +1713,7 @@ export const tMain = createI18n({
     legacyPptOk: 'OK',
     encryptedPptxTitle: 'Nelze otevřít soubor chráněný heslem',
     encryptedPptxBody:
-      'Tento soubor je šifrovaný dokument Office. Soubory chráněné heslem zatím nejsou podporovány. Otevřete ho v PowerPointu, odstraňte heslo (Soubor → Informace → Zamknout prezentaci), uložte a zkuste to znovu.',
+      'Tento soubor používá způsob šifrování, který tato aplikace neumí odemknout. Otevřete ho v PowerPointu, odstraňte heslo (Soubor → Informace → Zamknout prezentaci), uložte a zkuste to znovu.',
     chartSimplifyTitle: 'Úprava tento graf zjednoduší',
     chartSimplifyBody:
       'Tento graf pochází z externího souboru. Úprava ho znovu sestaví podle modelu této aplikace; podrobné formátování, jako jsou formáty čísel, spojnice trendu, chybové úsečky a styly jednotlivých bodů, bude ztraceno.',
@@ -1824,7 +1824,7 @@ export const tMain = createI18n({
     legacyPptOk: 'OK',
     encryptedPptxTitle: 'Kan met wachtwoord beveiligd bestand niet openen',
     encryptedPptxBody:
-      'Dit bestand is een versleuteld Office-document. Met wachtwoord beveiligde bestanden worden nog niet ondersteund. Open het in PowerPoint, verwijder het wachtwoord, sla op en probeer opnieuw.',
+      'Dit bestand gebruikt een versleutelingsmethode die deze app niet kan ontgrendelen. Open het in PowerPoint, verwijder het wachtwoord, sla op en probeer opnieuw.',
     chartSimplifyTitle: 'Bewerken vereenvoudigt deze grafiek',
     chartSimplifyBody:
       'Deze grafiek komt uit een extern bestand. Bij bewerken wordt hij opnieuw opgebouwd met het model van deze app; getalnotaties, trendlijnen, foutbalken en stijlen per punt gaan verloren.',
@@ -1936,7 +1936,7 @@ export const tMain = createI18n({
     legacyPptOk: 'OK',
     encryptedPptxTitle: 'Tidak dapat membuka fail yang dilindungi kata laluan',
     encryptedPptxBody:
-      'Fail ini ialah dokumen Office yang disulitkan. Fail yang dilindungi kata laluan belum disokong. Buka dalam PowerPoint, buang kata laluan, simpan dan cuba lagi.',
+      'Fail ini menggunakan kaedah penyulitan yang tidak dapat dibuka oleh aplikasi ini. Buka dalam PowerPoint, buang kata laluan, simpan dan cuba lagi.',
     chartSimplifyTitle: 'Pengeditan akan memudahkan carta ini',
     chartSimplifyBody:
       'Carta ini daripada fail luaran. Pengeditan akan membinanya semula dengan model aplikasi ini; format nombor, garis arah aliran, bar ralat dan gaya per titik akan hilang.',
@@ -2046,7 +2046,7 @@ export const tMain = createI18n({
     legacyPptOk: 'הבנתי',
     encryptedPptxTitle: 'לא ניתן לפתוח קובץ מוגן בסיסמה',
     encryptedPptxBody:
-      'קובץ זה הוא מסמך Office מוצפן. קבצים מוגנים בסיסמה אינם נתמכים עדיין. פתחו אותו ב-PowerPoint, הסירו את הסיסמה, שמרו ונסו שוב.',
+      'הקובץ משתמש בשיטת הצפנה שהיישום אינו יכול לפתוח. פתחו אותו ב-PowerPoint, הסירו את הסיסמה, שמרו ונסו שוב.',
     chartSimplifyTitle: 'עריכה תפשט את התרשים הזה',
     chartSimplifyBody:
       'תרשים זה מגיע מקובץ חיצוני. עריכה תבנה אותו מחדש לפי המודל של האפליקציה; עיצובי מספרים, קווי מגמה, פסי שגיאה וסגנונות לפי נקודה יאבדו.',
@@ -2154,7 +2154,7 @@ export const tMain = createI18n({
     legacyPptOk: 'ठीक है',
     encryptedPptxTitle: 'पासवर्ड-संरक्षित फ़ाइल नहीं खोली जा सकती',
     encryptedPptxBody:
-      'यह फ़ाइल एक एन्क्रिप्टेड Office दस्तावेज़ है। पासवर्ड-संरक्षित फ़ाइलें अभी समर्थित नहीं हैं। इसे PowerPoint में खोलकर पासवर्ड हटाएँ, सहेजें और फिर से प्रयास करें।',
+      'यह फ़ाइल ऐसी एन्क्रिप्शन विधि का उपयोग करती है जिसे यह ऐप अनलॉक नहीं कर सकता। इसे PowerPoint में खोलकर पासवर्ड हटाएँ, सहेजें और फिर से प्रयास करें।',
     chartSimplifyTitle: 'संपादन करने से यह चार्ट सरल हो जाएगा',
     chartSimplifyBody:
       'यह चार्ट बाहरी फ़ाइल से है। संपादन करने पर इसे इस ऐप के मॉडल से फिर बनाया जाएगा; संख्या प्रारूप, ट्रेंडलाइन, त्रुटि बार और प्रति-बिंदु शैलियाँ खो जाएँगी।',
@@ -2264,7 +2264,7 @@ export const tMain = createI18n({
     legacyPptOk: '知道了',
     encryptedPptxTitle: '無法開啟受密碼保護的檔案',
     encryptedPptxBody:
-      '這個檔案是加密的 Office 文件(受密碼保護),本應用程式暫不支援。請在 PowerPoint 開啟並解除密碼(檔案→資訊→保護簡報),另存後再試。',
+      '此檔案使用的加密方式本應用程式無法解開。請在 PowerPoint 開啟並解除密碼(檔案→資訊→保護簡報),另存後再試。',
     chartSimplifyTitle: '編輯將簡化此圖表',
     chartSimplifyBody:
       '這個圖表來自外部檔案。編輯後將按本應用程式的模型重建,數字格式、趨勢線、誤差線、逐點樣式等精細格式會遺失。',

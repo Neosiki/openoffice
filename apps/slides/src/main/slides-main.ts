@@ -144,6 +144,15 @@ import {
 import { DEFAULT_PICTURE_DPI, pictureFrame } from './picture-frame'
 import { refineComplexWidths, shapedMetricsReady } from './shaped-metrics'
 import { cfbKind, isCfbHeader } from './cfb-sniff'
+import { atomicWriteFile } from '@genoffice/electron-utils/atomic-write'
+import {
+  decryptOfficeFile,
+  encryptOoxml,
+  isEncryptedOoxml,
+  OfficeDecryptError,
+  unlockOfficeFile,
+  type OfficePasswordAsk,
+} from '@genoffice/electron-utils/office-encryption'
 import { unplayableAudioCodec } from './mp4-audio-sniff'
 import { audioFrame, videoFrame, videoSize, type Point, type Size } from './video-size'
 import { AUDIO_EXTS, VIDEO_EXTS } from '../shared/media-kinds'
@@ -481,7 +490,7 @@ export async function saveSessionDeckTo(session: Session, filePath: string): Pro
   // yet (the dialog-driven paths always land in an existing folder)
   await mkdir(dirname(filePath), { recursive: true })
   const metaRevAtSave = session.metaRev ?? 0
-  await savePptxToFile(session.opened, filePath)
+  await writeDeckFile(session, filePath)
   followTemplateSelection(session, session.path, filePath)
   session.path = filePath
   session.diskState = (await recordDiskState(filePath)) ?? undefined
@@ -626,7 +635,7 @@ setInterval(() => {
       }
       try {
         await mkdir(dirname(target), { recursive: true })
-        await savePptxToFile(session.opened, target)
+        await writeDeckFile(session, target)
         autosaveBackoff.delete(backoffKey)
       } catch (error) {
         autosaveBackoff.set(backoffKey, AUTOSAVE_BACKOFF_TICKS)
@@ -735,6 +744,7 @@ export function discardSlidesRecovery(contents: WebContents): void {
 async function maybeRecoverBytes(
   path: string,
   original: Uint8Array,
+  password?: string,
 ): Promise<{ bytes: Uint8Array; recovered: boolean }> {
   const asPath = autosavePathFor(path)
   try {
@@ -760,18 +770,49 @@ async function maybeRecoverBytes(
     : await dialog.showMessageBox(options)
   if (r.response === 0) {
     const bytes = await readFile(asPath)
+    // an encrypted deck's recovery copy is encrypted with the same password
+    // (a copy the current password cannot open is left alone, not opened)
+    if (password !== undefined && isEncryptedOoxml(bytes)) {
+      try {
+        return { bytes: new Uint8Array(await decryptOfficeFile(bytes, password)), recovered: true }
+      } catch {
+        return { bytes: original, recovered: false }
+      }
+    }
     return { bytes: new Uint8Array(bytes), recovered: true }
   }
   await rm(asPath, { force: true })
   return { bytes: original, recovered: false }
 }
 
+/** One password prompt for a file: `ask` is one attempt, `close` ends the prompt. */
+export interface SlidesPasswordPrompt {
+  ask: OfficePasswordAsk
+  close: () => void
+}
+
+/** shell hook: the open-password prompt for encrypted decks (none in standalone) */
+let passwordPromptFactory:
+  ((parent: BrowserWindow | undefined, fileName: string) => SlidesPasswordPrompt) | null = null
+export function setSlidesPasswordPrompt(
+  fn: ((parent: BrowserWindow | undefined, fileName: string) => SlidesPasswordPrompt) | null,
+): void {
+  passwordPromptFactory = fn
+}
+
+/** A password-protected deck the user unlocked: its plain package and open password. */
+interface UnlockedDeck {
+  bytes: Uint8Array
+  password: string
+}
+
 /**
- * .ppt (97-2003 binary compound document) and encrypted OOXML are unsupported: show an actionable message instead of a parse error.
+ * .ppt (97-2003 binary compound document) is unsupported: show an actionable message instead of a parse error.
  * Detection uses the magic number rather than the extension -- a binary ppt with a renamed suffix is caught too. A CFB containing an
- * EncryptedPackage stream is a password-protected pptx and gets dedicated copy (instead of being mislabeled as the legacy format).
+ * EncryptedPackage stream is a password-protected pptx: ask for its password and hand back the decrypted package.
+ * Resolves 'plain' for an ordinary pptx and 'rejected' when the file will not open (the user was told why, or cancelled the prompt).
  */
-async function rejectLegacyPpt(path: string): Promise<boolean> {
+async function preparePptxOpen(path: string): Promise<'plain' | 'rejected' | UnlockedDeck> {
   let head: Buffer
   try {
     const fh = await open(path, 'r')
@@ -782,25 +823,69 @@ async function rejectLegacyPpt(path: string): Promise<boolean> {
       await fh.close()
     }
   } catch {
-    return false
+    return 'plain'
   }
-  if (!isCfbHeader(head)) return false
-  let kind: 'legacy' | 'encrypted' = 'legacy'
+  if (!isCfbHeader(head)) return 'plain'
+  let bytes: Buffer | null = null
   try {
-    kind = cfbKind(await readFile(path)) ?? 'legacy'
+    bytes = await readFile(path)
   } catch {
     // on read failure, fall back to the legacy-format message
   }
   const parent = dialogParent()
+  // a headless export has no one to ask, so an encrypted deck is simply not opened
+  if (bytes !== null && cfbKind(bytes) === 'encrypted' && isHeadlessMode()) return 'rejected'
+  if (bytes !== null && cfbKind(bytes) === 'encrypted') {
+    const prompt = passwordPromptFactory?.(parent, basename(path))
+    let unlocked: Awaited<ReturnType<typeof unlockOfficeFile>> | 'failed'
+    try {
+      unlocked = await unlockOfficeFile(
+        bytes,
+        prompt?.ask ??
+          (() =>
+            Promise.reject(new OfficeDecryptError('unsupported', 'no password prompt available'))),
+      )
+    } catch (error) {
+      if (!(error instanceof OfficeDecryptError)) throw error
+      unlocked = 'failed'
+    } finally {
+      prompt?.close()
+    }
+    if (unlocked === null) return 'rejected'
+    if (unlocked !== 'failed') {
+      return { bytes: new Uint8Array(unlocked.bytes), password: unlocked.password }
+    }
+  }
+  const encrypted = bytes !== null && cfbKind(bytes) === 'encrypted'
   const options = {
     type: 'warning' as const,
     buttons: [tm('legacyPptOk')],
-    message: tm(kind === 'encrypted' ? 'encryptedPptxTitle' : 'legacyPptTitle'),
-    detail: tm(kind === 'encrypted' ? 'encryptedPptxBody' : 'legacyPptBody'),
+    message: tm(encrypted ? 'encryptedPptxTitle' : 'legacyPptTitle'),
+    detail: tm(encrypted ? 'encryptedPptxBody' : 'legacyPptBody'),
   }
   if (parent) await dialog.showMessageBox(parent, options)
   else await dialog.showMessageBox(options)
-  return true
+  return 'rejected'
+}
+
+/** Package bytes as they land on disk: re-encrypted for a deck opened with a password. */
+function deckFileBytes(session: Session, bytes: Uint8Array): Buffer {
+  const plain = Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength)
+  return session.password === undefined ? plain : encryptOoxml(plain, session.password)
+}
+
+/**
+ * Write the session's deck to `filePath`. A plain deck streams straight to
+ * disk (savePptxToFile); an encrypted one has to be encrypted as one buffer,
+ * so it is assembled in memory, encrypted, then written atomically — its
+ * plaintext never touches the disk.
+ */
+async function writeDeckFile(session: Session, filePath: string): Promise<void> {
+  if (session.password === undefined) {
+    await savePptxToFile(session.opened, filePath)
+    return
+  }
+  await atomicWriteFile(filePath, deckFileBytes(session, await savePptx(session.opened)))
 }
 
 /** Register the deck's usable embedded fonts before layout; new faces invalidate cached metrics. */
@@ -831,6 +916,7 @@ async function openAndBuild(
   wc: WebContents,
   path: string,
   fitWidthPx: number,
+  unlocked?: UnlockedDeck,
 ): Promise<OpenResult> {
   // Same file already open in another window: attach to that session instead of
   // opening an independent copy (which would silently lose the loser's edits on
@@ -850,7 +936,7 @@ async function openAndBuild(
       defaultFont: deckDefaultFont(existing.opened),
     }
   }
-  const raw = await readFile(path)
+  const raw = unlocked?.bytes ?? (await readFile(path))
   // the split-view save guard's baseline: the file's disk state as this copy
   // read it (hashed in parallel; the parse below takes far longer)
   const diskStatePromise = recordDiskState(path)
@@ -859,6 +945,7 @@ async function openAndBuild(
   const { bytes, recovered } = await maybeRecoverBytes(
     path,
     raw.length === 0 ? await createBlankPptx() : new Uint8Array(raw),
+    unlocked?.password,
   )
   await shapedMetricsReady() // Lay out only after complex-script shaped metrics are ready, avoiding an init race falling back to estimation
   const opened = await openPptx(bytes)
@@ -872,6 +959,7 @@ async function openAndBuild(
     redoStack: [],
     ...(recovered ? { metaDirty: true } : {}),
     ...(diskState === null ? {} : { diskState }),
+    ...(unlocked === undefined ? {} : { password: unlocked.password }),
   })
   scheduleHistoryNotify(sessions.get(wc.id)!)
   await pushRecent(path)
@@ -955,7 +1043,7 @@ async function saveDraftAfterGenerate(
       draftPath = pickDraftPath(draftsDir, deckName)
     }
 
-    await writeFile(draftPath, Buffer.from(bytes))
+    await writeFile(draftPath, deckFileBytes(session, bytes))
     followTemplateSelection(session, session.path, draftPath)
     session.path = draftPath
     session.diskState = (await recordDiskState(draftPath)) ?? undefined
@@ -1392,14 +1480,21 @@ export function registerSlidesIpc(): void {
     }
     const r = await showOpenDialogWithMemory(dialog, parent, options)
     if (r.canceled || !r.filePaths[0]) return null
-    if (await rejectLegacyPpt(r.filePaths[0])) return null
-    return openAndBuild(e.sender, r.filePaths[0], fitWidthPx)
+    const prepared = await preparePptxOpen(r.filePaths[0])
+    if (prepared === 'rejected') return null
+    return openAndBuild(
+      e.sender,
+      r.filePaths[0],
+      fitWidthPx,
+      prepared === 'plain' ? undefined : prepared,
+    )
   })
 
   ipcMain.handle('slides:open-path', async (e, path: string, fitWidthPx: number) => {
     if (!path || !existsSync(path)) return null
-    if (await rejectLegacyPpt(path)) return null
-    return openAndBuild(e.sender, path, fitWidthPx)
+    const prepared = await preparePptxOpen(path)
+    if (prepared === 'rejected') return null
+    return openAndBuild(e.sender, path, fitWidthPx, prepared === 'plain' ? undefined : prepared)
   })
 
   ipcMain.handle('slides:consume-pending-open', async (e, fitWidthPx: number) => {
@@ -1412,14 +1507,21 @@ export function registerSlidesIpc(): void {
         if (pendingByWc.get(e.sender.id) === queued) pendingByWc.delete(e.sender.id)
         if (pendingOpenPath === queued) pendingOpenPath = null
       }
-      // A CFB file (legacy .ppt / encrypted, possibly misnamed .pptx) can never
-      // parse: tell the user and drop it, or every relaunch restores a blank tab
-      if (await rejectLegacyPpt(queued)) {
+      // A legacy .ppt (possibly misnamed .pptx) can never parse, and an encrypted
+      // deck whose prompt was cancelled will not open: tell the user and drop it,
+      // or every relaunch restores a blank tab
+      const prepared = await preparePptxOpen(queued)
+      if (prepared === 'rejected') {
         dropQueued()
         return null
       }
       // Clear the queue only after a successful open: keep it on parse failure or a mid-flight renderer reload, so a remount can retry
-      const result = await openAndBuild(e.sender, queued, fitWidthPx)
+      const result = await openAndBuild(
+        e.sender,
+        queued,
+        fitWidthPx,
+        prepared === 'plain' ? undefined : prepared,
+      )
       dropQueued()
       return result
     }
@@ -4425,7 +4527,7 @@ export function registerSlidesIpc(): void {
     }
     try {
       const metaRevAtSave = session.metaRev ?? 0
-      await savePptxToFile(session.opened, session.path)
+      await writeDeckFile(session, session.path)
       // the saved bytes are the new baseline for the split-view guard
       session.diskState = (await recordDiskState(session.path)) ?? undefined
       autosaveBackoff.delete(session.path)
@@ -4459,7 +4561,7 @@ export function registerSlidesIpc(): void {
     if (r.canceled || !r.filePath) return { ok: false }
     try {
       const metaRevAtSave = session.metaRev ?? 0
-      await savePptxToFile(session.opened, r.filePath)
+      await writeDeckFile(session, r.filePath)
       followTemplateSelection(session, session.path, r.filePath)
       session.path = r.filePath
       session.diskState = (await recordDiskState(r.filePath)) ?? undefined

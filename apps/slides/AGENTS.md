@@ -31,6 +31,7 @@ PowerPoint 프레젠테이션(.pptx) 에디터다. 파일을 바이트 그대로
 - 디자인 템플릿의 동작 지시는 `prompts/system.md`에 넣지 않는다. 템플릿을 고른 문서에만 붙는 문맥 블록(`slides-skill.ts`, "The user chose a design template …")에 둔다. 템플릿을 고르지 않은 요청은 템플릿이 생기기 전과 같은 글을 보내야 한다.
 - 쪽 작성기의 시스템 프롬프트는 `buildPageSystemPrompt`(`src/renderer/ai/page-system-prompt.ts`)가 만든다. 템플릿이 없는 요청의 글은 `tests/fixtures/page-system-prompt.baseline.json`과 바이트까지 같아야 한다(`tests/page-system-prompt.test.ts`). 템플릿 장치 예외(`TEMPLATE_DEVICES_EXEMPTION`)는 내장 템플릿이나 거기서 저장한 스타일일 때만 끝에 붙인다. 테스트를 통과시키려고 이 고정 자료를 고치지 않는다.
 - 문서마다 고른 템플릿은 `.pptx` 안이나 곁에 쓰지 않는다. `<userData>/slides-template-selections.json` 한 파일에 정규 경로를 키로 두고(`src/main/template-selection-store.ts`, 최대 2,000개, 오래 안 쓴 것부터 버림), 채널 `slides:ai-template-selection-get`·`-set`은 `registerSlidesOnlyAiIpc`에 있다. 문서는 인자가 아니라 호출한 창의 세션으로 정한다. 첫 저장, 다른 이름으로 저장, 생성한 초안의 이동, 외부 도구의 저장은 기록을 새 경로로 따라가게 하고, 앱 안의 이름 바꾸기·옮기기는 기록을 옮긴다(shell의 `tests/slides-template-selection-move.test.ts`).
+- 열기 암호가 걸린 덱(결정 0041)은 `preparePptxOpen`이 암호를 받아 풀고, 세션에 `password`를 남긴다. 덱을 디스크에 쓰는 모든 길(저장, 다른 이름으로 저장, MCP 저장, 30초 복구 사본, AI 초안)은 `writeDeckFile`·`deckFileBytes`를 지나 같은 암호로 잠긴다. `savePptxToFile`을 직접 부르는 새 저장 길을 만들지 않는다. 화면 없는 내보내기에서는 묻지 않고 열지 않는다.
 - 견본 표지 그리기 채널 `slides:template-cover-render`(`src/main/template-cover.ts`)는 `registerSlidesIpc`에서 등록한다(shell 안에서도 불린다). 카탈로그 id와 `'ko'`·`'en'`만 받는다. 결과를 캐시하고, 열린 문서를 건드리지 않는다.
 
 ## 이 모듈의 방식

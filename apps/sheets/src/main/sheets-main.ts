@@ -9,7 +9,7 @@ import {
   unlinkSync,
   writeFileSync,
 } from 'node:fs'
-import { copyFile, mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
+import { copyFile, mkdir, open, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import { refreshCsvDigest } from './csv-digest'
 import { createServer } from 'node:http'
 import { userInfo } from 'node:os'
@@ -67,6 +67,14 @@ import {
   assertFileSaved,
   type SaveDiskState,
 } from '@genoffice/electron-utils'
+import {
+  encryptOoxml,
+  isCfbHeader,
+  isEncryptedOfficeFile,
+  OfficeDecryptError,
+  unlockOfficeFile,
+  type OfficePasswordAsk,
+} from '@genoffice/electron-utils/office-encryption'
 import {
   brandText,
   createI18n,
@@ -226,6 +234,9 @@ const tMain = createI18n({
     errImgNotFound: '找不到图片文件: {path}',
     errImgTooLarge20: '图片超过 20MB,不支持插入。',
     errImgBadType: '该文件不是 PNG/JPEG/GIF 图片。',
+    errEncryptedOpenTitle: '无法打开受密码保护的工作簿',
+    errEncryptedUnsupported:
+      '此文件使用的加密方式本应用无法解开。请在 Excel 中取消密码后重新打开。',
     errDiskChanged: '工作簿在打开后被磁盘上的改动覆盖——请改用另存为。',
     autosaveFoundTitle: '发现自动恢复版本',
     autosaveFoundBody:
@@ -282,6 +293,9 @@ const tMain = createI18n({
     errImgNotFound: 'Image file not found: {path}',
     errImgTooLarge20: 'Image exceeds 20MB and cannot be inserted.',
     errImgBadType: 'The file is not a PNG/JPEG/GIF image.',
+    errEncryptedOpenTitle: 'Cannot open the password-protected workbook',
+    errEncryptedUnsupported:
+      'This file uses an encryption method this app cannot unlock. Remove the password in Excel, then open it again.',
     errDiskChanged: 'The workbook changed on disk after it was opened — use Save As instead.',
     autosaveFoundTitle: 'Recovered version found',
     autosaveFoundBody:
@@ -341,6 +355,9 @@ const tMain = createI18n({
     errImgNotFound: 'Không tìm thấy tệp hình ảnh: {path}',
     errImgTooLarge20: 'Hình ảnh vượt quá 20MB và không thể chèn.',
     errImgBadType: 'Tệp không phải là hình ảnh PNG/JPEG/GIF.',
+    errEncryptedOpenTitle: 'Không thể mở sổ làm việc được bảo vệ bằng mật khẩu',
+    errEncryptedUnsupported:
+      'Tệp này dùng phương thức mã hóa mà ứng dụng không thể mở khóa. Hãy gỡ mật khẩu trong Excel rồi mở lại.',
     errDiskChanged: 'Sổ làm việc đã thay đổi trên đĩa sau khi mở — hãy sử dụng Lưu dưới dạng.',
     autosaveFoundTitle: 'Tìm thấy phiên bản khôi phục',
     autosaveFoundBody:
@@ -401,6 +418,9 @@ const tMain = createI18n({
     errImgNotFound: '画像ファイルが見つかりません: {path}',
     errImgTooLarge20: '画像が 20MB を超えているため挿入できません。',
     errImgBadType: 'このファイルは PNG/JPEG/GIF 画像ではありません。',
+    errEncryptedOpenTitle: 'パスワードで保護されたブックを開けません',
+    errEncryptedUnsupported:
+      'このファイルの暗号化方式はこのアプリでは解除できません。Excel でパスワードを解除してから、もう一度開いてください。',
     errDiskChanged:
       'ブックを開いた後にディスク上で変更されています — 名前を付けて保存を使用してください。',
     autosaveFoundTitle: '自動回復バージョンがあります',
@@ -462,6 +482,9 @@ const tMain = createI18n({
     errImgNotFound: '이미지 파일을 찾을 수 없습니다: {path}',
     errImgTooLarge20: '이미지가 20MB를 초과하여 삽입할 수 없습니다.',
     errImgBadType: '이 파일은 PNG/JPEG/GIF 이미지가 아닙니다.',
+    errEncryptedOpenTitle: '암호가 걸린 통합 문서를 열 수 없습니다',
+    errEncryptedUnsupported:
+      '이 파일에 쓰인 암호 방식은 이 앱에서 풀 수 없습니다. Excel에서 암호를 해제한 뒤 다시 열어 주세요.',
     errDiskChanged:
       '통합 문서가 열린 후 디스크에서 변경되었습니다. 다른 이름으로 저장을 사용하세요.',
     autosaveFoundTitle: '자동 복구 버전 발견',
@@ -523,6 +546,9 @@ const tMain = createI18n({
     errImgNotFound: 'Fichier image introuvable : {path}',
     errImgTooLarge20: "L'image dépasse 20 Mo et ne peut pas être insérée.",
     errImgBadType: "Ce fichier n'est pas une image PNG/JPEG/GIF.",
+    errEncryptedOpenTitle: "Impossible d'ouvrir le classeur protégé par mot de passe",
+    errEncryptedUnsupported:
+      'Ce fichier utilise une méthode de chiffrement que cette application ne peut pas déverrouiller. Supprimez le mot de passe dans Excel, puis rouvrez-le.',
     errDiskChanged:
       'Le classeur a été modifié sur le disque après son ouverture — utilisez Enregistrer sous.',
     autosaveFoundTitle: 'Version récupérée trouvée',
@@ -585,6 +611,9 @@ const tMain = createI18n({
     errImgNotFound: 'Bilddatei nicht gefunden: {path}',
     errImgTooLarge20: 'Das Bild überschreitet 20 MB und kann nicht eingefügt werden.',
     errImgBadType: 'Die Datei ist kein PNG/JPEG/GIF-Bild.',
+    errEncryptedOpenTitle: 'Die kennwortgeschützte Arbeitsmappe kann nicht geöffnet werden',
+    errEncryptedUnsupported:
+      'Diese Datei verwendet ein Verschlüsselungsverfahren, das diese App nicht entsperren kann. Entfernen Sie das Kennwort in Excel und öffnen Sie die Datei erneut.',
     errDiskChanged:
       'Die Arbeitsmappe wurde nach dem Öffnen auf dem Datenträger geändert — verwenden Sie stattdessen „Speichern unter“.',
     autosaveFoundTitle: 'Wiederhergestellte Version gefunden',
@@ -647,6 +676,9 @@ const tMain = createI18n({
     errImgNotFound: 'No se encontró el archivo de imagen: {path}',
     errImgTooLarge20: 'La imagen supera los 20 MB y no se puede insertar.',
     errImgBadType: 'El archivo no es una imagen PNG/JPEG/GIF.',
+    errEncryptedOpenTitle: 'No se puede abrir el libro protegido con contraseña',
+    errEncryptedUnsupported:
+      'Este archivo usa un método de cifrado que esta aplicación no puede desbloquear. Quita la contraseña en Excel y vuelve a abrirlo.',
     errDiskChanged: 'El libro cambió en el disco después de abrirse; usa Guardar como en su lugar.',
     autosaveFoundTitle: 'Se encontró una versión recuperada',
     autosaveFoundBody:
@@ -707,6 +739,9 @@ const tMain = createI18n({
     errImgNotFound: 'ไม่พบไฟล์รูปภาพ: {path}',
     errImgTooLarge20: 'รูปภาพเกิน 20MB ไม่สามารถแทรกได้',
     errImgBadType: 'ไฟล์นี้ไม่ใช่รูปภาพ PNG/JPEG/GIF',
+    errEncryptedOpenTitle: 'ไม่สามารถเปิดเวิร์กบุ๊กที่ป้องกันด้วยรหัสผ่านได้',
+    errEncryptedUnsupported:
+      'ไฟล์นี้ใช้วิธีเข้ารหัสที่แอปนี้ปลดล็อกไม่ได้ โปรดเอารหัสผ่านออกใน Excel แล้วเปิดอีกครั้ง',
     errDiskChanged: 'เวิร์กบุ๊กถูกเปลี่ยนแปลงบนดิสก์หลังจากเปิด — โปรดใช้บันทึกเป็นแทน',
     autosaveFoundTitle: 'พบเวอร์ชันกู้คืนอัตโนมัติ',
     autosaveFoundBody:
@@ -766,6 +801,9 @@ const tMain = createI18n({
     errImgNotFound: 'File gambar tidak ditemukan: {path}',
     errImgTooLarge20: 'Gambar melebihi 20MB dan tidak dapat disisipkan.',
     errImgBadType: 'File ini bukan gambar PNG/JPEG/GIF.',
+    errEncryptedOpenTitle: 'Tidak dapat membuka buku kerja yang dilindungi kata sandi',
+    errEncryptedUnsupported:
+      'File ini memakai metode enkripsi yang tidak dapat dibuka aplikasi ini. Hapus kata sandinya di Excel, lalu buka lagi.',
     errDiskChanged: 'Buku kerja berubah di disk setelah dibuka — gunakan Simpan Sebagai.',
     autosaveFoundTitle: 'Versi pemulihan ditemukan',
     autosaveFoundBody:
@@ -826,6 +864,9 @@ const tMain = createI18n({
     errImgNotFound: 'Файл изображения не найден: {path}',
     errImgTooLarge20: 'Изображение превышает 20 МБ и не может быть вставлено.',
     errImgBadType: 'Этот файл не является изображением PNG/JPEG/GIF.',
+    errEncryptedOpenTitle: 'Не удаётся открыть книгу, защищённую паролем',
+    errEncryptedUnsupported:
+      'Файл зашифрован способом, который это приложение не может снять. Удалите пароль в Excel и откройте файл снова.',
     errDiskChanged: 'Книга была изменена на диске после открытия — используйте «Сохранить как».',
     autosaveFoundTitle: 'Найдена восстановленная версия',
     autosaveFoundBody:
@@ -885,6 +926,9 @@ const tMain = createI18n({
     errImgNotFound: 'لم يتم العثور على ملف الصورة: {path}',
     errImgTooLarge20: 'الصورة تتجاوز 20 ميغابايت ولا يمكن إدراجها.',
     errImgBadType: 'هذا الملف ليس صورة PNG/JPEG/GIF.',
+    errEncryptedOpenTitle: 'تعذّر فتح المصنف المحمي بكلمة مرور',
+    errEncryptedUnsupported:
+      'يستخدم هذا الملف طريقة تشفير لا يستطيع هذا التطبيق فكّها. أزل كلمة المرور في Excel ثم افتحه مرة أخرى.',
     errDiskChanged: 'تم تغيير المصنف على القرص بعد فتحه — استخدم «حفظ باسم» بدلاً من ذلك.',
     autosaveFoundTitle: 'تم العثور على نسخة مستردة',
     autosaveFoundBody:
@@ -943,6 +987,9 @@ const tMain = createI18n({
     errImgNotFound: 'Arquivo de imagem não encontrado: {path}',
     errImgTooLarge20: 'A imagem excede 20MB e não pode ser inserida.',
     errImgBadType: 'O arquivo não é uma imagem PNG/JPEG/GIF.',
+    errEncryptedOpenTitle: 'Não é possível abrir a pasta de trabalho protegida por senha',
+    errEncryptedUnsupported:
+      'Este arquivo usa um método de criptografia que este aplicativo não consegue desbloquear. Remova a senha no Excel e abra-o novamente.',
     errDiskChanged: 'A pasta de trabalho foi alterada no disco após ser aberta — use Salvar Como.',
     autosaveFoundTitle: 'Versão recuperada encontrada',
     autosaveFoundBody:
@@ -1003,6 +1050,9 @@ const tMain = createI18n({
     errImgNotFound: 'File immagine non trovato: {path}',
     errImgTooLarge20: "L'immagine supera i 20 MB e non può essere inserita.",
     errImgBadType: "Il file non è un'immagine PNG/JPEG/GIF.",
+    errEncryptedOpenTitle: 'Impossibile aprire la cartella di lavoro protetta da password',
+    errEncryptedUnsupported:
+      'Questo file usa un metodo di crittografia che questa app non può sbloccare. Rimuovi la password in Excel, poi riaprilo.',
     errDiskChanged:
       "La cartella di lavoro è stata modificata sul disco dopo l'apertura — usa Salva con nome.",
     autosaveFoundTitle: 'Trovata versione recuperata',
@@ -1064,6 +1114,9 @@ const tMain = createI18n({
     errImgNotFound: 'Nie znaleziono pliku obrazu: {path}',
     errImgTooLarge20: 'Obraz przekracza 20 MB i nie może zostać wstawiony.',
     errImgBadType: 'Plik nie jest obrazem PNG/JPEG/GIF.',
+    errEncryptedOpenTitle: 'Nie można otworzyć skoroszytu chronionego hasłem',
+    errEncryptedUnsupported:
+      'Ten plik używa metody szyfrowania, której ta aplikacja nie potrafi odblokować. Usuń hasło w programie Excel i otwórz plik ponownie.',
     errDiskChanged: 'Skoroszyt został zmieniony na dysku po otwarciu — użyj polecenia Zapisz jako.',
     autosaveFoundTitle: 'Znaleziono odzyskaną wersję',
     autosaveFoundBody:
@@ -1124,6 +1177,9 @@ const tMain = createI18n({
     errImgNotFound: 'Soubor obrázku nebyl nalezen: {path}',
     errImgTooLarge20: 'Obrázek překračuje 20 MB a nelze ho vložit.',
     errImgBadType: 'Soubor není obrázek PNG/JPEG/GIF.',
+    errEncryptedOpenTitle: 'Sešit chráněný heslem nelze otevřít',
+    errEncryptedUnsupported:
+      'Tento soubor používá způsob šifrování, který tato aplikace neumí odemknout. Odeberte heslo v Excelu a soubor otevřete znovu.',
     errDiskChanged: 'Sešit byl po otevření změněn na disku — použijte místo toho Uložit jako.',
     autosaveFoundTitle: 'Nalezena obnovená verze',
     autosaveFoundBody:
@@ -1184,6 +1240,9 @@ const tMain = createI18n({
     errImgNotFound: 'Afbeeldingsbestand niet gevonden: {path}',
     errImgTooLarge20: 'De afbeelding is groter dan 20 MB en kan niet worden ingevoegd.',
     errImgBadType: 'Het bestand is geen PNG/JPEG/GIF-afbeelding.',
+    errEncryptedOpenTitle: 'De met een wachtwoord beveiligde werkmap kan niet worden geopend',
+    errEncryptedUnsupported:
+      'Dit bestand gebruikt een versleutelingsmethode die deze app niet kan ontgrendelen. Verwijder het wachtwoord in Excel en open het bestand opnieuw.',
     errDiskChanged:
       'De werkmap is op de schijf gewijzigd nadat deze was geopend — gebruik Opslaan als.',
     autosaveFoundTitle: 'Herstelde versie gevonden',
@@ -1244,6 +1303,9 @@ const tMain = createI18n({
     errImgNotFound: 'Fail imej tidak ditemui: {path}',
     errImgTooLarge20: 'Imej melebihi 20MB dan tidak boleh disisipkan.',
     errImgBadType: 'Fail ini bukan imej PNG/JPEG/GIF.',
+    errEncryptedOpenTitle: 'Tidak dapat membuka buku kerja yang dilindungi kata laluan',
+    errEncryptedUnsupported:
+      'Fail ini menggunakan kaedah penyulitan yang tidak dapat dibuka oleh aplikasi ini. Buang kata laluan dalam Excel, kemudian buka semula.',
     errDiskChanged: 'Buku kerja telah diubah pada cakera selepas dibuka — gunakan Simpan Sebagai.',
     autosaveFoundTitle: 'Versi pulihan ditemui',
     autosaveFoundBody:
@@ -1304,6 +1366,9 @@ const tMain = createI18n({
     errImgNotFound: 'קובץ התמונה לא נמצא: {path}',
     errImgTooLarge20: 'התמונה חורגת מ-20MB ולא ניתן להוסיף אותה.',
     errImgBadType: 'הקובץ אינו תמונת PNG/JPEG/GIF.',
+    errEncryptedOpenTitle: 'לא ניתן לפתוח את חוברת העבודה המוגנת בסיסמה',
+    errEncryptedUnsupported:
+      'הקובץ משתמש בשיטת הצפנה שהיישום אינו יכול לפתוח. הסירו את הסיסמה ב-Excel ופתחו אותו שוב.',
     errDiskChanged: 'חוברת העבודה השתנתה בדיסק לאחר פתיחתה — השתמש בשמירה בשם.',
     autosaveFoundTitle: 'נמצאה גרסה משוחזרת',
     autosaveFoundBody:
@@ -1361,6 +1426,9 @@ const tMain = createI18n({
     errImgNotFound: 'छवि फ़ाइल नहीं मिली: {path}',
     errImgTooLarge20: 'छवि 20MB से अधिक है और सम्मिलित नहीं की जा सकती।',
     errImgBadType: 'यह फ़ाइल PNG/JPEG/GIF छवि नहीं है।',
+    errEncryptedOpenTitle: 'पासवर्ड से सुरक्षित वर्कबुक नहीं खोली जा सकती',
+    errEncryptedUnsupported:
+      'यह फ़ाइल ऐसी एन्क्रिप्शन विधि का उपयोग करती है जिसे यह ऐप अनलॉक नहीं कर सकता। Excel में पासवर्ड हटाएँ, फिर इसे दोबारा खोलें।',
     errDiskChanged:
       'खोले जाने के बाद कार्यपुस्तिका डिस्क पर बदल गई — इसके बजाय इस रूप में सहेजें का उपयोग करें।',
     autosaveFoundTitle: 'पुनर्प्राप्त संस्करण मिला',
@@ -1421,6 +1489,9 @@ const tMain = createI18n({
     errImgNotFound: '找不到圖片檔案: {path}',
     errImgTooLarge20: '圖片超過 20MB,不支援插入。',
     errImgBadType: '該檔案不是 PNG/JPEG/GIF 圖片。',
+    errEncryptedOpenTitle: '無法開啟受密碼保護的活頁簿',
+    errEncryptedUnsupported:
+      '此檔案使用的加密方式本應用程式無法解開。請在 Excel 中移除密碼後重新開啟。',
     errDiskChanged: '活頁簿在開啟後被磁碟上的變更覆蓋——請改用另存新檔。',
     autosaveFoundTitle: '發現自動復原版本',
     autosaveFoundBody:
@@ -1501,6 +1572,12 @@ interface SessionInfo {
   /// recovery copy, this session still needs its own crash-recovery copy,
   /// keyed by the original.
   readonly emptySource?: boolean
+  /// The user's file is password-protected: the session runs on a decrypted
+  /// copy in importTempDir, restoreTarget (or, for a converted .xls,
+  /// suggestSaveAs) is the encrypted file, and every save re-encrypts with this
+  /// password before it reaches the target. Held in memory only; the crash
+  /// recovery copy is off so no plaintext lands under userData.
+  readonly password?: string
   /// Split-view save guard (@genoffice/electron-utils/save-conflict): the disk
   /// snapshot this copy last read or wrote, with the document path it belongs
   /// to (a CSV session's snapshot is its .csv, not the converted temp copy).
@@ -1942,6 +2019,21 @@ export function setSheetsWorkbookOpenedHook(
   fn: ((wc: WebContents, path: string) => void) | null,
 ): void {
   workbookOpenedHook = fn
+}
+
+/** One password prompt for a file: `ask` is one attempt, `close` ends the prompt. */
+export interface SheetsPasswordPrompt {
+  ask: OfficePasswordAsk
+  close: () => void
+}
+
+/** shell hook: the open-password prompt for encrypted workbooks (none in standalone) */
+let passwordPromptFactory:
+  ((parent: BrowserWindow | undefined, fileName: string) => SheetsPasswordPrompt) | null = null
+export function setSheetsPasswordPrompt(
+  fn: ((parent: BrowserWindow | undefined, fileName: string) => SheetsPasswordPrompt) | null,
+): void {
+  passwordPromptFactory = fn
 }
 
 /** forward an application-menu File command into the sheets renderer */
@@ -2708,6 +2800,7 @@ export function registerSheetsIpc(): void {
       event.sender,
       dialogParent(event),
     )
+    if (prepared === null) return null
     // The recovery prompt (or the file dialog / import conversion) can outlive
     // the tab: once the renderer is destroyed, its 'destroyed' handler has
     // already run closeAllSessions and dropped the tab entry, so a session
@@ -2725,6 +2818,7 @@ export function registerSheetsIpc(): void {
       restoreTarget: prepared.restoreTarget,
       emptySource: prepared.emptySource,
       unsavedNew: prepared.unsavedNew,
+      password: prepared.password,
     })
     // The sidecar open itself can also outlive the tab after the pre-open
     // check. Close the newly registered session instead of stranding it in
@@ -2806,6 +2900,11 @@ export function registerSheetsIpc(): void {
           dialogParent(event),
           { skipRecoveryPrompt: true },
         )
+        // a cancelled password prompt cancels the whole merge pick
+        if (prepared === null) {
+          await closeOpened()
+          return null
+        }
         if (event.sender.isDestroyed()) {
           await discardPreparedOpen(prepared)
           break
@@ -2818,6 +2917,7 @@ export function registerSheetsIpc(): void {
           restoreTarget: prepared.restoreTarget,
           emptySource: prepared.emptySource,
           unsavedNew: prepared.unsavedNew,
+          password: prepared.password,
         })
         opened.push(result as { sessionId: string })
         if (event.sender.isDestroyed()) break
@@ -3355,7 +3455,23 @@ export function registerSheetsIpc(): void {
       }
     }
 
-    const mutation = await writeWorkbookTo(client, session, request, targetPath)
+    // An encrypted workbook's save lands as plaintext only inside its own temp
+    // dir; the target receives the re-encrypted bytes, so no plaintext ever
+    // reaches the user's folder.
+    const plainSaveDir =
+      session.password !== undefined && session.importTempDir !== undefined
+        ? join(session.importTempDir, randomUUID())
+        : undefined
+    const plainSavePath =
+      plainSaveDir === undefined ? undefined : join(plainSaveDir, basename(targetPath))
+    if (plainSaveDir !== undefined) await mkdir(plainSaveDir, { recursive: true })
+    const mutation = await writeWorkbookTo(client, session, request, plainSavePath ?? targetPath)
+    if (plainSavePath !== undefined && session.password !== undefined) {
+      await atomicWriteFile(
+        targetPath,
+        encryptOoxml(await readFile(plainSavePath), session.password),
+      )
+    }
 
     if (csvInPlace && session.csvSourcePath !== undefined && request.csvContent !== undefined) {
       // The temp copy already holds the saved bytes: refresh the session's
@@ -3382,27 +3498,38 @@ export function registerSheetsIpc(): void {
       snapshotPath: session.snapshotPath,
       // A CSV in-place save keeps saving into the temp copy, and a quiet save of
       // an unsaved new workbook just wrote its backing file — the directory
-      // must survive the session swap.
-      importTempDir: csvInPlace || quietUnsavedNew ? undefined : session.importTempDir,
+      // must survive the session swap. So must an encrypted workbook's: the
+      // next session runs on the plaintext copy just written there.
+      importTempDir:
+        csvInPlace || quietUnsavedNew || plainSavePath !== undefined
+          ? undefined
+          : session.importTempDir,
       closeSidecar: () => client.close(request.sessionId),
     })
+    if (plainSavePath !== undefined) await rm(session.path, { force: true }).catch(() => undefined)
     const file = await openWorkbookSession(
       client,
-      targetPath,
+      plainSavePath ?? targetPath,
       entry.sessions,
-      csvInPlace
+      plainSavePath !== undefined
         ? {
-            csvImport: true,
-            csvSourcePath: session.csvSourcePath,
             importTempDir: session.importTempDir,
+            restoreTarget: targetPath,
+            password: session.password,
           }
-        : quietUnsavedNew
+        : csvInPlace
           ? {
-              suggestSaveAs: session.suggestSaveAs,
+              csvImport: true,
+              csvSourcePath: session.csvSourcePath,
               importTempDir: session.importTempDir,
-              unsavedNew: true,
             }
-          : undefined,
+          : quietUnsavedNew
+            ? {
+                suggestSaveAs: session.suggestSaveAs,
+                importTempDir: session.importTempDir,
+                unsavedNew: true,
+              }
+            : undefined,
     )
     if (quietUnsavedNew && session.suggestSaveAs !== undefined) {
       // the temp path must not reach the title or recents; the recovery copy
@@ -4330,6 +4457,7 @@ async function openWorkbookSession(
     restoreTarget?: string | undefined
     emptySource?: boolean | undefined
     unsavedNew?: boolean | undefined
+    password?: string | undefined
   },
 ): Promise<WorkbookFile> {
   const {
@@ -4341,6 +4469,7 @@ async function openWorkbookSession(
     restoreTarget,
     emptySource,
     unsavedNew,
+    password,
   } = options ?? {}
   // Snapshot first, then the sidecar opens the snapshot (not the live path):
   // everything the session serves — cell reads, media, recalc, saves — comes
@@ -4367,12 +4496,15 @@ async function openWorkbookSession(
           : sha256File(csvSourcePath).catch(() => undefined),
         recordDiskState(diskStatePath),
       ])
+    // an encrypted workbook writes no recovery copy: it would be plaintext
+    const automaticRecoveryDisabled =
+      password !== undefined || !allowsAutomaticWorkbookRecovery(opened.sheets)
     sessions.set(opened.sessionId, {
       path,
       snapshotPath,
       sha256: digest,
       sheetNames: new Map(opened.sheets.map((sheet) => [sheet.id, sheet.name])),
-      automaticRecoveryDisabled: !allowsAutomaticWorkbookRecovery(opened.sheets),
+      automaticRecoveryDisabled,
       ...(suggestSaveAs === undefined ? {} : { suggestSaveAs }),
       ...(csvImport ? { csvImport } : {}),
       ...(csvSourcePath === undefined ? {} : { csvSourcePath }),
@@ -4382,6 +4514,7 @@ async function openWorkbookSession(
       ...(restoreTargetSha === undefined ? {} : { restoreTargetSha }),
       ...(emptySource ? { emptySource } : {}),
       ...(unsavedNew ? { unsavedNew } : {}),
+      ...(password === undefined ? {} : { password }),
       ...(diskState === null ? {} : { diskState: { path: diskStatePath, state: diskState } }),
     })
     unsavedNewWorkbooks.delete(path)
@@ -4397,8 +4530,9 @@ async function openWorkbookSession(
       ...(unsavedNew ? { unsavedNew: true } : {}),
       ...(csvSourcePath === undefined ? {} : { csvPath: csvSourcePath }),
       ...(emptyCsv ? { emptyCsv: true } : {}),
-      restoredFromRecovery: restoreTarget !== undefined,
-      automaticRecoveryDisabled: !allowsAutomaticWorkbookRecovery(opened.sheets),
+      // an encrypted workbook's restoreTarget is the file itself, not a restore
+      restoredFromRecovery: restoreTarget !== undefined && password === undefined,
+      automaticRecoveryDisabled,
     })
   } catch (error) {
     await rm(snapshotPath, { force: true }).catch(() => undefined)
@@ -4442,16 +4576,103 @@ function legacyCsvCharset(): string | undefined {
   return byLang[getUiLang()]
 }
 
-/// .xls and .tsv open as a converted copy in the temp dir; the session
-/// remembers the original's .xlsx sibling as the Save As default. .csv converts
-/// the same way but keeps its file identity, so Save writes values back to it.
-async function prepareWorkbookForOpen(
+/** a CFB container: an encrypted .xlsx/.xlsm, or any .xls */
+async function hasCfbHeader(path: string): Promise<boolean> {
+  const handle = await open(path, 'r')
+  try {
+    const head = Buffer.alloc(8)
+    const { bytesRead } = await handle.read(head, 0, 8, 0)
+    return isCfbHeader(head.subarray(0, bytesRead))
+  } finally {
+    await handle.close()
+  }
+}
+
+async function showEncryptedOpenFailure(parent: BrowserWindow | undefined): Promise<void> {
+  const options = {
+    type: 'warning' as const,
+    message: tm('errEncryptedOpenTitle'),
+    detail: tm('errEncryptedUnsupported'),
+  }
+  if (parent && !parent.isDestroyed()) await dialog.showMessageBox(parent, options)
+  else await dialog.showMessageBox(options)
+}
+
+/// A password-protected workbook asks for its password and opens as a
+/// decrypted copy in the temp dir. An .xlsx/.xlsm keeps the user's file as
+/// restoreTarget, so Save writes back to it (re-encrypted); an encrypted .xls
+/// converts like any .xls and its first save is a Save As. Resolves undefined
+/// for a file that is not encrypted, and null when the user cancelled the
+/// prompt or the file cannot be decrypted (the user has been told why).
+async function prepareEncryptedWorkbook(
   client: XlsxSidecarClient,
   path: string,
-  contents?: WebContents | undefined,
-  parent?: BrowserWindow | undefined,
-  options?: { skipRecoveryPrompt?: boolean },
-): Promise<{
+  extension: string,
+  parent: BrowserWindow | undefined,
+): Promise<PreparedWorkbookOpen | null | undefined> {
+  if (extension !== 'xlsx' && extension !== 'xlsm' && extension !== 'xls') return undefined
+  if (!(await hasCfbHeader(path))) return undefined
+  const bytes = await readFile(path)
+  if (!isEncryptedOfficeFile(bytes)) return undefined
+  // a headless export has no one to ask: only a file Excel opens unasked gets through
+  const headless = isHeadlessMode()
+  const prompt = headless ? undefined : passwordPromptFactory?.(parent, basename(path))
+  let unlocked: Awaited<ReturnType<typeof unlockOfficeFile>> | 'failed'
+  try {
+    unlocked = await unlockOfficeFile(
+      bytes,
+      prompt?.ask ??
+        (headless
+          ? () => Promise.resolve(null)
+          : () =>
+              Promise.reject(
+                new OfficeDecryptError('unsupported', 'no password prompt available'),
+              )),
+    )
+  } catch (error) {
+    if (!(error instanceof OfficeDecryptError)) throw error
+    unlocked = 'failed'
+  } finally {
+    prompt?.close()
+  }
+  if (unlocked === 'failed') {
+    if (!headless) await showEncryptedOpenFailure(parent)
+    return null
+  }
+  if (unlocked === null) return null
+  const directory = join(app.getPath('temp'), 'genoffice-imports', randomUUID())
+  await mkdir(directory, { recursive: true })
+  try {
+    if (extension !== 'xls') {
+      const openPath = join(directory, basename(path))
+      await writeFile(openPath, unlocked.bytes)
+      return {
+        openPath,
+        importTempDir: directory,
+        restoreTarget: path,
+        password: unlocked.password,
+      }
+    }
+    const stem = basename(path).replace(/\.[^.]+$/, '')
+    const plainXls = join(directory, `${stem}.xls`)
+    const openPath = join(directory, `${stem}.xlsx`)
+    await writeFile(plainXls, unlocked.bytes)
+    await client.convertWorkbook({ path: plainXls, targetPath: openPath })
+    await rm(plainXls, { force: true })
+    return {
+      openPath,
+      importTempDir: directory,
+      suggestSaveAs: path.replace(/\.[^.]+$/, '.xlsx'),
+      // Excel's built-in password guarded only editing: the new .xlsx gets no open password
+      ...(unlocked.asked ? { password: unlocked.password } : {}),
+    }
+  } catch (error) {
+    await cleanupImportTempDirectory(app.getPath('temp'), directory)
+    throw error
+  }
+}
+
+interface PreparedWorkbookOpen {
   openPath: string
   suggestSaveAs?: string
   csvImport?: boolean
@@ -4461,7 +4682,20 @@ async function prepareWorkbookForOpen(
   restoreTarget?: string
   emptySource?: boolean
   unsavedNew?: boolean
-}> {
+  password?: string
+}
+
+/// .xls and .tsv open as a converted copy in the temp dir; the session
+/// remembers the original's .xlsx sibling as the Save As default. .csv converts
+/// the same way but keeps its file identity, so Save writes values back to it.
+/// Resolves null when an encrypted file's open was cancelled or refused.
+async function prepareWorkbookForOpen(
+  client: XlsxSidecarClient,
+  path: string,
+  contents?: WebContents | undefined,
+  parent?: BrowserWindow | undefined,
+  options?: { skipRecoveryPrompt?: boolean },
+): Promise<PreparedWorkbookOpen | null> {
   // A shell-created "New spreadsheet" opens from a temp directory and has no
   // user-visible file yet: Save As produces it, and closing unsaved discards
   // the directory. The mark is consumed once the session exists (see
@@ -4496,6 +4730,9 @@ async function prepareWorkbookForOpen(
     return { openPath: path, ...base }
   }
   const extension = path.slice(path.lastIndexOf('.') + 1).toLowerCase()
+  // An encrypted file never has a recovery copy: it is not written for one.
+  const encrypted = await prepareEncryptedWorkbook(client, path, extension, parent)
+  if (encrypted !== undefined) return encrypted
   if (extension !== 'csv' && extension !== 'tsv' && extension !== 'xls') {
     // Unsaved work from a lost session: offer the recovery copy. Restoring
     // opens it with restoreTarget pointing back at the original, so a plain

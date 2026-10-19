@@ -1,6 +1,7 @@
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import JSZip from 'jszip'
+import * as CFB from 'cfb'
 import { parseFileToText } from '../src/index'
 import { pptxToText } from '../src/pptx'
 import { xlsxToText } from '../src/xlsx'
@@ -39,6 +40,27 @@ describe('parseFileToText: magic-byte sniffing', () => {
     const result = await parseFileToText(path)
     expect(result.ok).toBe(true)
     expect(result.text).toContain('hello docx')
+  })
+
+  it('names a password-protected OOXML file instead of calling it a mismatch', async () => {
+    // the shape Office writes: an OLE2 container holding the encrypted package
+    const container = CFB.utils.cfb_new()
+    CFB.utils.cfb_add(container, '/EncryptionInfo', Buffer.alloc(64))
+    CFB.utils.cfb_add(container, '/EncryptedPackage', Buffer.alloc(4096))
+    const bytes = CFB.write(container, { type: 'buffer' }) as Buffer
+    for (const ext of ['xlsx', 'docx', 'pptx']) {
+      const result = await parseFileToText(writeFixture(`locked.${ext}`, bytes))
+      expect(result.ok).toBe(false)
+      expect(result.error).toContain(`Password-protected .${ext}`)
+    }
+  })
+
+  it('still calls an OLE2 file without an encrypted package a mismatch', async () => {
+    const container = CFB.utils.cfb_new()
+    CFB.utils.cfb_add(container, '/WordDocument', Buffer.alloc(4096))
+    const bytes = CFB.write(container, { type: 'buffer' }) as Buffer
+    const result = await parseFileToText(writeFixture('legacy-as.docx', bytes))
+    expect(result.error).toContain('Content mismatch')
   })
 
   it('still rejects a ZIP named .ppt with a content-mismatch error', async () => {
