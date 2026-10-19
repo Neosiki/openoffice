@@ -89,12 +89,7 @@ import { installCliLinkBestEffort } from './cli-link'
 import { createDefaultAppService, execFileRunner } from './default-app'
 import { registerIntegrationsIpc } from './integrations-ipc'
 import { registerResultStoreIpc } from './result-store-ipc'
-import {
-  FEEDBACK_SURVEY_URL,
-  feedbackDetails,
-  feedbackText,
-  platformLabel,
-} from './feedback'
+import { FEEDBACK_SURVEY_URL, feedbackDetails, feedbackText, platformLabel } from './feedback'
 import { registerDriveIpc, type DriveService } from './drive/drive-ipc'
 import {
   ATTACHABLE_EXTS,
