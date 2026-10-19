@@ -27,6 +27,7 @@ openoffice/
 │   ├── headless-pdf-export.md     ← 창 없이 PDF로 내보내는 진입점
 │   ├── slides-op-journal.md       ← 슬라이드 편집 기록 형식
 │   ├── plans/
+│   │   ├── ai-web-reading.md      ← AI 웹 읽기 계획(초안)
 │   │   └── pdf-tools.md           ← PDF 도구 모음 계획(초안)
 │   └── tracking/
 │       ├── status.md              ← 된 것과 남은 것
