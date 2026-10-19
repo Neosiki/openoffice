@@ -14,10 +14,10 @@ import { composeSkills, type AgentSkill } from './skill'
  *
  * Once Drive content has entered a conversation, `guardDriveContent` turns
  * off the tools that carry model-chosen text or addresses off the PC (web and
- * image search, image generation, media analysis, images fetched by address)
- * until the conversation starts over. A document read from Drive could carry
- * instructions that steer the model into putting Drive content into a search
- * query or an image address.
+ * image search, image generation, media analysis, pages and images fetched by
+ * address) until the conversation starts over. A document read from Drive could
+ * carry instructions that steer the model into putting Drive content into a
+ * search query or an image address.
  */
 
 export interface DriveSearchHit {
@@ -65,6 +65,7 @@ export const OUTBOUND_TOOLS: ReadonlySet<string> = new Set([
   'remove_image_background',
   'analyze_media',
   'insert_web_image',
+  'read_url',
 ])
 
 /** Input fields an editor fetches when they hold a web address */
@@ -89,8 +90,8 @@ export function isOutboundCall(call: AgentToolCall): boolean {
 export const DRIVE_OUTBOUND_BLOCKED =
   'Refused: this conversation contains content read from Google Drive, so tools that send text ' +
   'or fetch addresses outside this PC (web and image search, image generation, media analysis, ' +
-  'pictures by web address) are off until a new chat. Continue without it, and tell the user ' +
-  'they can start a new chat to use it again.'
+  'and reading pages or pictures by web address) are off until a new chat. Continue without it, ' +
+  'and tell the user they can start a new chat to use it again.'
 
 const DRIVE_SYSTEM_PROMPT = `## Google Drive
 The user connected their Google Drive and lets you search and read it.
