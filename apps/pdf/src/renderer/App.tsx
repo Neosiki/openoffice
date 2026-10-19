@@ -8429,7 +8429,7 @@ export default function App() {
                         <IconPdfTools />
                         <RbCaret />
                       </span>
-                      {t('pdfToolsMenu')}
+                      <span>{t('pdfToolsMenu')}</span>
                     </button>
                     {pdfToolsOpen && (
                       <div className="rb-drop rb-menu">
