@@ -71,6 +71,11 @@ export const nl = {
   arDeleteBusy: 'Er loopt een AI-taak, dus er kan nu niets worden verwijderd.',
   jobResumeAiRead: 'Onvoltooid lezen met AI {percent}% — doorgaan?',
   jobResumeTranslate: 'Onvoltooide vertaling ({language}) {percent}% — doorgaan?',
+  jobResumeHighlight: 'Onvoltooide AI-markering {percent}% — doorgaan?',
+  arDeleteAlsoBoth:
+    'Ook verwijderd worden: met de hand aangepaste vertalingen ({edited}) en passagekaarten ({cards}).',
+  arDeleteAlsoEdited: 'Ook verwijderd worden: met de hand aangepaste vertalingen ({count}).',
+  arDeleteAlsoCards: 'Ook verwijderd worden: passagekaarten ({count}).',
   jobResumeContinue: 'Doorgaan',
   jobResumeLater: 'Later',
   searchAiRead: 'Gevonden in door AI gelezen tekst',

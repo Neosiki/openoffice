@@ -72,6 +72,11 @@ export const de = {
   arDeleteBusy: 'Eine KI-Aufgabe läuft, daher kann jetzt nichts gelöscht werden.',
   jobResumeAiRead: 'Unvollendetes KI-Lesen {percent} % — fortfahren?',
   jobResumeTranslate: 'Unvollendete Übersetzung ({language}) {percent} % — fortfahren?',
+  jobResumeHighlight: 'Unvollendete KI-Markierung {percent} % — fortfahren?',
+  arDeleteAlsoBoth:
+    'Ebenfalls gelöscht werden: von Hand bearbeitete Übersetzungen ({edited}) und Passagenkarten ({cards}).',
+  arDeleteAlsoEdited: 'Ebenfalls gelöscht werden: von Hand bearbeitete Übersetzungen ({count}).',
+  arDeleteAlsoCards: 'Ebenfalls gelöscht werden: Passagenkarten ({count}).',
   jobResumeContinue: 'Fortfahren',
   jobResumeLater: 'Später',
   searchAiRead: 'Im von der KI gelesenen Text gefunden',

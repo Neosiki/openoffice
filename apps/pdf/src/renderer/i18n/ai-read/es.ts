@@ -69,6 +69,11 @@ export const es = {
   arDeleteBusy: 'Hay una tarea de IA en curso, así que ahora no se puede eliminar nada.',
   jobResumeAiRead: 'Lectura con IA sin terminar {percent} % — ¿continuar?',
   jobResumeTranslate: 'Traducción sin terminar ({language}) {percent} % — ¿continuar?',
+  jobResumeHighlight: 'Resaltado con IA sin terminar {percent} % — ¿continuar?',
+  arDeleteAlsoBoth:
+    'También se eliminarán las traducciones corregidas a mano ({edited}) y las tarjetas de pasaje ({cards}).',
+  arDeleteAlsoEdited: 'También se eliminarán las traducciones corregidas a mano ({count}).',
+  arDeleteAlsoCards: 'También se eliminarán las tarjetas de pasaje ({count}).',
   jobResumeContinue: 'Continuar',
   jobResumeLater: 'Más tarde',
   searchAiRead: 'Encontrado en el texto leído por la IA',

@@ -69,6 +69,11 @@ export const ms = {
   arDeleteBusy: 'Tugas AI sedang berjalan, jadi tiada apa-apa boleh dipadam sekarang.',
   jobResumeAiRead: 'Bacaan AI belum selesai {percent}% — teruskan?',
   jobResumeTranslate: 'Terjemahan belum selesai ({language}) {percent}% — teruskan?',
+  jobResumeHighlight: 'Serlahan AI belum selesai {percent}% — teruskan?',
+  arDeleteAlsoBoth:
+    'Turut dipadam: {edited} terjemahan yang disunting secara manual dan {cards} kad petikan.',
+  arDeleteAlsoEdited: 'Turut dipadam: {count} terjemahan yang disunting secara manual.',
+  arDeleteAlsoCards: 'Turut dipadam: {count} kad petikan.',
   jobResumeContinue: 'Teruskan',
   jobResumeLater: 'Kemudian',
   searchAiRead: 'Ditemui dalam teks yang dibaca AI',

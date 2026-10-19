@@ -69,6 +69,11 @@ export const en = {
   arDeleteBusy: 'An AI job is running, so nothing can be deleted now.',
   jobResumeAiRead: 'Unfinished AI reading {percent}% — continue?',
   jobResumeTranslate: 'Unfinished translation ({language}) {percent}% — continue?',
+  jobResumeHighlight: 'Unfinished AI highlights {percent}% — continue?',
+  arDeleteAlsoBoth:
+    'This also deletes hand-edited translations ({edited}) and passage cards ({cards}).',
+  arDeleteAlsoEdited: 'This also deletes hand-edited translations ({count}).',
+  arDeleteAlsoCards: 'This also deletes passage cards ({count}).',
   jobResumeContinue: 'Continue',
   jobResumeLater: 'Later',
   searchAiRead: 'Found in AI-read text',

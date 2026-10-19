@@ -14,7 +14,10 @@
  * - the job sends to the provider the user confirmed and never switches;
  * - the job belongs to the tab: unmounting (closing the tab, quitting) stops
  *   it as 'interrupted';
- * - the resume offer never starts anything: Continue opens the confirmation.
+ * - the resume offer never starts anything: Continue opens the confirmation
+ *   (or hands a translation / AI highlight run to the screen that owns it);
+ * - deleting names what else goes with the document's folder (edited
+ *   translations, passage cards; reading-assist spec 5.5).
  */
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react'
 import type { ReactElement } from 'react'
@@ -27,7 +30,7 @@ import {
   type AiReadPageRef,
 } from '../../../../../packages/pdf-structure/src/jobs'
 import type { JobStatus } from '../../../../../packages/pdf-structure/src/store/store'
-import type { PdfStoreApi, PdfStructureApi } from '../../shared/ipc'
+import type { PdfStoreApi, PdfStoreDeleteCounts, PdfStructureApi } from '../../shared/ipc'
 import type { TFunc } from '../i18n/locale'
 import { attemptSubscription } from '../ai/useSubscriptionConnection'
 import { createIpcJobStore } from '../doc-jobs/ipc-store'
@@ -42,7 +45,7 @@ import {
 } from '../doc-jobs/job-pages'
 import { jobStopConnectionText, pageList } from '../doc-jobs/job-text'
 import { JobProgressStrip } from '../doc-jobs/JobProgressStrip'
-import { ResumeOffer } from '../doc-jobs/ResumeOffer'
+import { ResumeOffer, resumableJobs } from '../doc-jobs/ResumeOffer'
 import { AiReadDialog, type AiReadStartAnswer, type AiReadStartRequest } from './AiReadDialog'
 import type { PageRenderer } from './render-page'
 
@@ -74,6 +77,12 @@ export interface AiPageReadingProps {
    * translation records are not offered here (the translation screen does).
    */
   onResumeTranslation?: (job: JobStatus) => void
+  /**
+   * Continue an unfinished AI highlight run from the resume offer: open its
+   * start window with the run's labels and pages (the job carries `runId`).
+   * Without it, highlight records are not offered here.
+   */
+  onResumeHighlight?: (job: JobStatus) => void
   /** a translation's target language as the user reads it */
   languageName?: (lang: string) => string
 }
@@ -129,13 +138,11 @@ export const AiPageReading = forwardRef<AiPageReadingHandle, AiPageReadingProps>
         offered.current.add(hash.docHash)
         const unfinished = await api.store.unfinishedJobs(hash.docHash).catch(() => null)
         if (!alive || !unfinished?.ok) return
-        const translate = !!propsRef.current.onResumeTranslation
         setResume(
-          unfinished.jobs.filter(
-            (j) =>
-              j.state === 'stopped' &&
-              (j.kind === 'ai-read' || (translate && j.kind === 'translate')),
-          ),
+          resumableJobs(unfinished.jobs, {
+            translate: !!propsRef.current.onResumeTranslation,
+            highlight: !!propsRef.current.onResumeHighlight,
+          }),
         )
       })()
       return () => {
@@ -268,7 +275,8 @@ export const AiPageReading = forwardRef<AiPageReadingHandle, AiPageReadingProps>
           p.onNotice(p.t('arDeleteBusy'))
           return
         }
-        if (!window.confirm(p.t('arDeleteConfirm'))) return
+        const counts = await p.api.store.deleteCounts(hash).catch(() => null)
+        if (!window.confirm(deleteConfirmText(p.t, counts?.ok ? counts : null))) return
         const out = await p.api.store.deleteDocument(hash).catch(() => null)
         if (!out?.ok) {
           p.onNotice(p.t('arDeleteFailed'))
@@ -285,6 +293,10 @@ export const AiPageReading = forwardRef<AiPageReadingHandle, AiPageReadingProps>
       setResume((jobs) => jobs.filter((j) => j !== job))
       if (job.kind === 'translate') {
         propsRef.current.onResumeTranslation?.(job)
+        return
+      }
+      if (job.kind === 'highlight') {
+        propsRef.current.onResumeHighlight?.(job)
         return
       }
       const pages = docHash ? recallJobPages(docHash, 'ai-read') : null
@@ -334,6 +346,29 @@ export const AiPageReading = forwardRef<AiPageReadingHandle, AiPageReadingProps>
     )
   },
 )
+
+/**
+ * The delete question, naming the edited translations and passage cards
+ * that go with the document's folder; an item with none is left out, and
+ * without counts (an older shell) the plain question remains.
+ */
+export function deleteConfirmText(
+  t: TFunc,
+  counts: Pick<PdfStoreDeleteCounts, 'editedTranslationBlocks' | 'passages'> | null,
+): string {
+  const question = t('arDeleteConfirm')
+  const edited = counts?.editedTranslationBlocks ?? 0
+  const cards = counts?.passages ?? 0
+  const also =
+    edited > 0 && cards > 0
+      ? t('arDeleteAlsoBoth', { edited, cards })
+      : edited > 0
+        ? t('arDeleteAlsoEdited', { count: edited })
+        : cards > 0
+          ? t('arDeleteAlsoCards', { count: cards })
+          : null
+  return also ? `${question}\n${also}` : question
+}
 
 /** the strip's headline and lines for an AI-read job */
 function stripText(
