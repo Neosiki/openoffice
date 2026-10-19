@@ -228,6 +228,16 @@ export interface AiSearchSettings {
   providers: Record<AiSearchProviderId, { apiKey: string }>
 }
 
+/**
+ * The read_url tool's GitHub access. The token is stored in the settings file
+ * in plain text, like the provider keys, because the terminal and MCP paths
+ * read that file without Electron. It is sent only to api.github.com.
+ */
+export interface AiReadUrlSettings {
+  /** read-only token; absent or blank = public pages only */
+  githubToken?: string | undefined
+}
+
 export interface AiSettings {
   /** `auto` or one provider id; resolve it with selectAiProvider before indexing `providers` */
   provider: AiProviderSelection
@@ -244,6 +254,8 @@ export interface AiSettings {
   media?: AiMediaSettings | undefined
   /** web/image search backend; absent means the keyless free chain */
   search?: AiSearchSettings | undefined
+  /** read_url's GitHub token; absent = public pages only */
+  readUrl?: AiReadUrlSettings | undefined
   /**
    * Output-token cap for ONE model turn of agent runs (default
    * DEFAULT_MAX_OUTPUT_TOKENS). Reasoning models bill their thinking against
