@@ -131,6 +131,7 @@ import {
   testSearchProvider,
   webSearchTool,
   imageSearchTool,
+  readUrlTool,
   analyzeMediaTool,
   documentMediaRoots,
   withMediaCallSignal,
@@ -214,6 +215,7 @@ import {
   writeStarredItems,
 } from './starred-files'
 import { registerFreeAiIpc } from './free-ai-ipc'
+import { normalizeReadUrlRequest, unexpectedReadUrlFailure } from './read-url-ipc'
 import { initDocsAutoUpdater } from './updater'
 import { registerZoteroIpc, teardownZoteroIpc } from './zotero-ipc'
 
@@ -3935,6 +3937,21 @@ export function registerAiIpc(): void {
       )
     } catch (err) {
       return { images: [], method: 'error', error: String(err) }
+    }
+  })
+
+  // reads one web page as text for the model (article, document, a skill's SKILL.md);
+  // the settings file is only opened for its GitHub read token. The read counts as a
+  // media call, so Stop (ai:stream-cancel → abortMediaCalls) or a closed tab cuts the download.
+  ipcMain.handle('ai:read-url', async (event, url: unknown, offset?: unknown) => {
+    const request = normalizeReadUrlRequest(url, offset)
+    if (!request.ok) return request
+    try {
+      return await withMediaCallSignal(event.sender, (signal) =>
+        readUrlTool(SETTINGS_PATH(), request.url, request.offset, { signal }),
+      )
+    } catch {
+      return unexpectedReadUrlFailure()
     }
   })
 
