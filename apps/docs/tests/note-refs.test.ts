@@ -68,9 +68,7 @@ describe('footnote / endnote reference conversion', () => {
     editor.commands.insertContentAt(2, 'X')
     const plan = pmDocToSavePlan(editor.getJSON() as PmNode, parsed.blocks)
     const out = await saveDocx(parsed, plan.saveBlocks)
-    const xml = await JSZip.loadAsync(out).then((z) =>
-      z.file('word/document.xml')!.async('string'),
-    )
+    const xml = await JSZip.loadAsync(out).then((z) => z.file('word/document.xml')!.async('string'))
     const at = xml.indexOf('<w:footnoteReference')
     const refRun = xml.slice(xml.lastIndexOf('<w:r>', at), xml.indexOf('</w:r>', at) + 6)
     expect(refRun).toContain('<w:rStyle w:val="FootnoteReference"/>')
