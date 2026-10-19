@@ -176,4 +176,119 @@ describe('fetchWithSsrfGuard', () => {
     ).resolves.toBeNull()
     expect(fetchImpl).not.toHaveBeenCalled()
   })
+
+  it('does not request anything when the signal is already aborted', async () => {
+    const controller = new AbortController()
+    controller.abort()
+    const fetchImpl = vi.fn()
+    const out = await fetchWithSsrfGuard('https://8.8.8.8/x.png', {
+      fetchImpl,
+      signal: controller.signal,
+    })
+    expect(out).toBeNull()
+    expect(fetchImpl).not.toHaveBeenCalled()
+  })
+
+  it('passes the signal to every hop', async () => {
+    const controller = new AbortController()
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce(res(301, 'https://1.1.1.1/final.png'))
+      .mockResolvedValueOnce(new Response('ok', { status: 200 }))
+    await fetchWithSsrfGuard('https://8.8.8.8/start.png', {
+      fetchImpl,
+      signal: controller.signal,
+    })
+    expect(fetchImpl).toHaveBeenCalledTimes(2)
+    for (const call of fetchImpl.mock.calls) {
+      expect(call[1]).toMatchObject({ signal: controller.signal, redirect: 'manual' })
+    }
+  })
+
+  it('stops the redirect chain when the signal aborts between hops', async () => {
+    const controller = new AbortController()
+    const fetchImpl = vi.fn().mockImplementationOnce(async () => {
+      controller.abort()
+      return res(302, 'https://1.1.1.1/next.png')
+    })
+    const out = await fetchWithSsrfGuard('https://8.8.8.8/start.png', {
+      fetchImpl,
+      signal: controller.signal,
+    })
+    expect(out).toBeNull()
+    expect(fetchImpl).toHaveBeenCalledTimes(1)
+  })
+
+  it('returns null when an in-flight request is aborted', async () => {
+    const controller = new AbortController()
+    let markStarted = (): void => {}
+    const started = new Promise<void>((resolve) => {
+      markStarted = resolve
+    })
+    const fetchImpl = vi.fn(
+      (_input: URL | RequestInfo, init?: RequestInit) =>
+        new Promise<Response>((_resolve, reject) => {
+          markStarted()
+          init?.signal?.addEventListener('abort', () =>
+            reject(new DOMException('The operation was aborted.', 'AbortError')),
+          )
+        }),
+    ) as unknown as typeof fetch
+    const pending = fetchWithSsrfGuard('https://8.8.8.8/x.png', {
+      fetchImpl,
+      signal: controller.signal,
+    })
+    await started
+    controller.abort()
+    await expect(pending).resolves.toBeNull()
+  })
+
+  it('chooses headers per hop and reports the hop URL and index', async () => {
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce(res(302, 'https://1.1.1.1/final.txt'))
+      .mockResolvedValueOnce(new Response('ok', { status: 200 }))
+    const headersForHop = vi.fn((url: string, hop: number) =>
+      url.startsWith('https://api.github.com/')
+        ? { Authorization: `Bearer token-${hop}` }
+        : undefined,
+    )
+    await fetchWithSsrfGuard('https://api.github.com/repos/x', {
+      fetchImpl,
+      headers: { Accept: 'text/plain' },
+      headersForHop,
+    })
+    expect(headersForHop.mock.calls).toEqual([
+      ['https://api.github.com/repos/x', 0],
+      ['https://1.1.1.1/final.txt', 1],
+    ])
+    expect(fetchImpl.mock.calls[0][1]).toMatchObject({
+      headers: { Authorization: 'Bearer token-0' },
+    })
+    // The redirect target is not api.github.com, so the token is not sent there.
+    expect(fetchImpl.mock.calls[1][1]).toMatchObject({ headers: { Accept: 'text/plain' } })
+  })
+
+  it('uses an empty per-hop header set instead of static headers', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(new Response('ok', { status: 200 }))
+    await fetchWithSsrfGuard('https://8.8.8.8/x.png', {
+      fetchImpl,
+      headers: { 'User-Agent': 'test-agent' },
+      headersForHop: () => ({}),
+    })
+    expect(fetchImpl.mock.calls[0][1]).toMatchObject({ headers: {} })
+  })
+
+  it('keeps static headers on every hop when headersForHop is absent', async () => {
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce(res(302, 'https://1.1.1.1/final.png'))
+      .mockResolvedValueOnce(new Response('ok', { status: 200 }))
+    await fetchWithSsrfGuard('https://8.8.8.8/start.png', {
+      fetchImpl,
+      headers: { 'User-Agent': 'test-agent' },
+    })
+    expect(fetchImpl.mock.calls[0][1]).toMatchObject({ headers: { 'User-Agent': 'test-agent' } })
+    expect(fetchImpl.mock.calls[1][1]).toMatchObject({ headers: { 'User-Agent': 'test-agent' } })
+  })
 })
