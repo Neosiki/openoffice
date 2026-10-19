@@ -3014,6 +3014,8 @@ export interface DesktopApi {
   aiToolCapabilities(): Promise<AiToolCapabilities>
   /// Web search (main-process Serper/DuckDuckGo, shared with docs/slides)
   webSearch(query: string, maxResults?: number): Promise<WebSearchResult>
+  /// Read one web page as text (shared ai:read-url handler), paged by character offset
+  readUrl(url: string, offset?: number): Promise<ReadUrlResult>
   /// Image search (same shared main-process channel as docs/slides)
   imageSearch(query: string, maxResults?: number): Promise<ImageSearchResponse>
   /// AI image generation (sheets-owned channel)
@@ -3060,6 +3062,23 @@ export interface ImageSearchResponse {
   /** failure reason when method === 'error' */
   error?: string
 }
+
+/** One page of a web page read for the AI (the shared ai:read-url handler) */
+export type ReadUrlResult =
+  | {
+      ok: true
+      /** the final address after redirects */
+      url: string
+      title?: string
+      text: string
+      /** where this slice of the text starts */
+      offset: number
+      totalChars: number
+      truncated: boolean
+      /** where the next slice starts; only when truncated */
+      nextOffset?: number
+    }
+  | { ok: false; error: string; errorCode: string }
 
 export interface GenerateImageResult {
   url?: string

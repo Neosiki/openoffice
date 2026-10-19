@@ -446,6 +446,7 @@ const api: SlidesApi = {
   aiLogRunFailure: (entry: AiRunFailure) => ipcRenderer.invoke('ai:log-run-failure', entry),
   webSearch: (query: string, maxResults?: number) =>
     ipcRenderer.invoke('ai:web-search', query, maxResults),
+  readUrl: (url: string, offset?: number) => ipcRenderer.invoke('ai:read-url', url, offset),
   imageSearch: (query: string, maxResults?: number) =>
     ipcRenderer.invoke('ai:image-search', query, maxResults),
   insertImageUrl: (op: {

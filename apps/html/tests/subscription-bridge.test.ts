@@ -135,6 +135,7 @@ describe('html preload', () => {
         'ai:stream-chunk',
         'ai:stream-cancel',
         'ai:web-search',
+        'ai:read-url',
         'ai:image-search',
       ].sort(),
     )

@@ -1227,6 +1227,7 @@ export const AI_CHANNELS = {
   streamChunk: 'ai:stream-chunk',
   streamCancel: 'ai:stream-cancel',
   imageSearch: 'ai:image-search',
+  readUrl: 'ai:read-url',
   fetchImage: 'ai:fetch-image',
 } as const
 
@@ -1243,6 +1244,23 @@ export interface ImageSearchResponse {
   /** failure reason when method === 'error' */
   error?: string
 }
+
+/** One page of a web page read for the AI (the shared ai:read-url handler) */
+export type ReadUrlResult =
+  | {
+      ok: true
+      /** the final address after redirects */
+      url: string
+      title?: string
+      text: string
+      /** where this slice of the text starts */
+      offset: number
+      totalChars: number
+      truncated: boolean
+      /** where the next slice starts; only when truncated */
+      nextOffset?: number
+    }
+  | { ok: false; error: string; errorCode: string }
 
 /** API exposed by preload to the renderer (window.pdfApi) */
 export interface PdfApi {
@@ -1316,6 +1334,8 @@ export interface PdfApi {
   openInPdfTools(path: string, tool: PdfToolsHandoffTool): Promise<boolean>
   /** Web image search for AI tools (app-wide ai:image-search handler) */
   imageSearch(query: string, maxResults?: number): Promise<ImageSearchResponse>
+  /** Read one web page as text for AI tools (app-wide ai:read-url handler), paged by offset */
+  readUrl(url: string, offset?: number): Promise<ReadUrlResult>
   /** Download an image URL in the main process (SSRF-guarded, avoids CORS); null on failure */
   fetchImage(url: string): Promise<{ base64: string; mime: string } | null>
   /** AI image generation (Codex subscription or a media API key); returns a downloadable URL or an error message */

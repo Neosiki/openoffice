@@ -47,6 +47,7 @@ export const AI_CHANNELS = {
   stream: 'ai:stream',
   streamChunk: 'ai:stream-chunk',
   streamCancel: 'ai:stream-cancel',
+  readUrl: 'ai:read-url',
 } as const
 
 export type UiTheme = 'light' | 'dark' | 'system'
@@ -172,6 +173,23 @@ export interface AttachmentImageResult {
   error?: string
 }
 
+/** One page of a web page read for the AI (the shared ai:read-url handler) */
+export type ReadUrlResult =
+  | {
+      ok: true
+      /** the final address after redirects */
+      url: string
+      title?: string
+      text: string
+      /** where this slice of the text starts */
+      offset: number
+      totalChars: number
+      truncated: boolean
+      /** where the next slice starts; only when truncated */
+      nextOffset?: number
+    }
+  | { ok: false; error: string; errorCode: string }
+
 export interface HwpApi {
   /** path queued for this view when its tab was created; null for a view opened without a file */
   consumePending(): Promise<string | null>
@@ -244,5 +262,7 @@ export interface HwpApi {
   aiSubscription: SubscriptionApi
   aiStream(request: AiStreamRequest): Promise<void>
   aiStreamCancel(requestId: string): Promise<void>
+  /** Read one web page as text (the shared ai:read-url handler), paged by character offset */
+  readUrl(url: string, offset?: number): Promise<ReadUrlResult>
   onAiStream(handler: (chunk: AiStreamChunk) => void): () => void
 }
