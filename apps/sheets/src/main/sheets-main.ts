@@ -105,6 +105,7 @@ import {
   readAiSettingsFile,
   webSearchTool,
   imageSearchTool,
+  readUrlTool,
   generateImageTool,
   localMediaRoots,
   withMediaCallSignal,
@@ -3827,6 +3828,22 @@ export function registerSheetsAiIpc(): void {
       )
     } catch (err) {
       return { images: [], method: 'error', error: String(err) }
+    }
+  })
+  // Read one web page as text (the read_url tool), paged by character offset.
+  // A long download ends with the tab or when the tab's AI run is stopped.
+  ipcMain.handle('ai:read-url', async (event, url: unknown, offset?: unknown) => {
+    try {
+      return await withMediaCallSignal(event.sender, (signal) =>
+        readUrlTool(
+          SETTINGS_PATH(),
+          z.string().parse(url),
+          typeof offset === 'number' ? offset : 0,
+          { signal },
+        ),
+      )
+    } catch {
+      return { ok: false, error: 'The read failed.', errorCode: 'network' }
     }
   })
 
