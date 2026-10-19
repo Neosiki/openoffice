@@ -392,7 +392,6 @@ function describeRoutes(): string {
     .join(', ')
 }
 
-
 /**
  * PDF → Markdown / HTML goes through the Word reconstruction: pdf2docx
  * rebuilds paragraphs, headings, lists and tables, then the docx routes

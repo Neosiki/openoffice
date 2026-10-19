@@ -5383,7 +5383,13 @@ export function registerDocsIpc(): void {
   // merge grouped PDF fragments into one file in page order (pdf-lib)
   ipcMain.handle(
     'docs:save-merged-pdf',
-    async (event, defaultName: string, base64Parts: string[], outPath?: string, links?: unknown) => {
+    async (
+      event,
+      defaultName: string,
+      base64Parts: string[],
+      outPath?: string,
+      links?: unknown,
+    ) => {
       let filePath = outPath ?? null
       if (filePath && !canPdfWrite(event.sender.id, filePath)) {
         return { ok: false, error: 'export target is not an authorized path' }
