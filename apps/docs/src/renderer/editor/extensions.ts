@@ -2111,11 +2111,45 @@ const lineFactorCache = new WeakMap<
 
 const autospaceRangesCache = new WeakMap<PmNode, Array<{ from: number; to: number }>>()
 
-const simsunGapCache = new WeakMap<PmNode, Array<{ from: number; to: number }>>()
+const simsunGapCache = new WeakMap<
+  PmNode,
+  { inherited: string | null; ranges: Array<{ from: number; to: number }> }
+>()
+
+/** EA face a run without its own font inherits: paragraph style chain, then
+ *  Normal, then docDefaults (an empty-theme-slot backfill is not a choice) */
+export function inheritedEaFamily(
+  styleId: unknown,
+  storage: ListNumberingStorage | undefined,
+): string | null {
+  if (!storage) return null
+  const ownEa = (d: StyleDisplay | undefined): string | null =>
+    d?.font && !d.eaSlotEmpty && (d.font !== d.fontAscii || isCjkFontName(d.font)) ? d.font : null
+  let id = typeof styleId === 'string' ? styleId : null
+  for (let hops = 0; id && hops < 32; hops++) {
+    const info = storage.styles?.get(id)
+    const fam = ownEa(info?.display)
+    if (fam) return fam
+    id = info?.basedOn ?? null
+  }
+  for (const info of storage.styles?.values() ?? []) {
+    if (info.isDefault && info.type === 'paragraph') {
+      const fam = ownEa(info.display)
+      if (fam) return fam
+      break
+    }
+  }
+  const dd = storage.docDefaults
+  return dd?.eastAsiaFont && !dd.eaSlotEmpty ? dd.eastAsiaFont : null
+}
 
 /** ranges (relative to the block's content start) of ・/〜 in SimSun-substituted runs */
-function simsunGapRanges(node: PmNode): Array<{ from: number; to: number }> {
-  let ranges = simsunGapCache.get(node)
+function simsunGapRanges(
+  node: PmNode,
+  inherited: string | null,
+): Array<{ from: number; to: number }> {
+  const cached = simsunGapCache.get(node)
+  let ranges = cached?.inherited === inherited ? cached.ranges : undefined
   if (ranges === undefined) {
     const found: Array<{ from: number; to: number }> = []
     let offset = 0
@@ -2123,10 +2157,11 @@ function simsunGapRanges(node: PmNode): Array<{ from: number; to: number }> {
       if (child.isText && child.text && SIMSUN_GAP_CHAR_RE.test(child.text)) {
         const mark = child.marks.find((m) => m.type.name === 'docTextStyle')
         // same slot rule as paraLineFactor: these glyphs come from the eastAsia face
+        const own = (mark?.attrs.font ?? mark?.attrs.fontAscii) as string | null | undefined
         const family =
           mark?.attrs.eaSlotEmpty === true || (mark && asciiOnlyCjkFace(mark.attrs))
             ? null
-            : ((mark?.attrs.font ?? mark?.attrs.fontAscii) as string | null | undefined)
+            : (own ?? inherited)
         if (family && simsunGapLineFactor(family) !== null) {
           for (let i = 0; i < child.text.length; i++) {
             if (SIMSUN_GAP_CHAR_RE.test(child.text[i])) {
@@ -2138,7 +2173,7 @@ function simsunGapRanges(node: PmNode): Array<{ from: number; to: number }> {
       offset += child.nodeSize
     })
     ranges = found
-    simsunGapCache.set(node, ranges)
+    simsunGapCache.set(node, { inherited, ranges })
   }
   return ranges
 }
@@ -2222,9 +2257,12 @@ function hostsAnchoredPicture(node: PmNode): boolean {
   return hosts
 }
 
-function lineFactorDecos(doc: PmNode): DecorationSet {
+/** paragraph styleId -> inherited EA face (see inheritedEaFamily) */
+type EaFamilyOf = (styleId: unknown) => string | null
+
+function lineFactorDecos(doc: PmNode, eaOf: EaFamilyOf): DecorationSet {
   const decos: Decoration[] = []
-  doc.descendants((node, pos) => pushLineFactorDecos(node, pos, decos))
+  doc.descendants((node, pos) => pushLineFactorDecos(node, pos, decos, eaOf))
   return DecorationSet.create(doc, decos)
 }
 
@@ -2235,10 +2273,14 @@ function lineFactorDecos(doc: PmNode): DecorationSet {
  * scan of every span for every top-level block, which made each edit or
  * streamed chunk cost (blocks × decorations) on long documents.
  */
-function updateLineFactorDecos(old: DecorationSet, tr: Transaction): DecorationSet {
+function updateLineFactorDecos(
+  old: DecorationSet,
+  tr: Transaction,
+  eaOf: EaFamilyOf,
+): DecorationSet {
   const { doc } = tr
   const touched = touchedTopLevelBlocks(tr)
-  if (!touched) return lineFactorDecos(doc)
+  if (!touched) return lineFactorDecos(doc, eaOf)
   // streamed tail chunks: mapping the whole set walked every decoration per chunk
   let set = appendsAtEnd(tr) ? old : old.map(tr.mapping, doc)
   const decos: Decoration[] = []
@@ -2249,8 +2291,8 @@ function updateLineFactorDecos(old: DecorationSet, tr: Transaction): DecorationS
     // find() also returns neighbours that merely touch the boundary
     const stale = set.find(offset, end).filter((d) => d.from >= offset && d.to <= end)
     if (stale.length) set = set.remove(stale)
-    if (pushLineFactorDecos(node, offset, decos)) {
-      node.descendants((child, pos) => pushLineFactorDecos(child, offset + 1 + pos, decos))
+    if (pushLineFactorDecos(node, offset, decos, eaOf)) {
+      node.descendants((child, pos) => pushLineFactorDecos(child, offset + 1 + pos, decos, eaOf))
     }
   }
   return decos.length ? set.add(doc, decos) : set
@@ -2270,7 +2312,12 @@ function leadingSizedBreaks(node: PmNode): number[] {
 }
 
 /** decorations of one node; returns whether to descend into its children */
-function pushLineFactorDecos(node: PmNode, pos: number, decos: Decoration[]): boolean {
+function pushLineFactorDecos(
+  node: PmNode,
+  pos: number,
+  decos: Decoration[],
+  eaOf: EaFamilyOf,
+): boolean {
   if (!LINE_FACTOR_BLOCKS.has(node.type.name)) return true
   // Word sizes a line holding only a w:br by the break run; a block wrapper
   // keeps the paragraph strut (and shared enclosing marks) off that line
@@ -2333,7 +2380,7 @@ function pushLineFactorDecos(node: PmNode, pos: number, decos: Decoration[]): bo
     // size (probe 2026-08-13); a taller inline strut reproduces the row lift.
     // exact lineRule pins the line, so no lift there.
     if (node.attrs.lineRule !== 'exact') {
-      const ranges = simsunGapRanges(node)
+      const ranges = simsunGapRanges(node, eaOf(node.attrs.styleId))
       if (ranges.length > 0) {
         const m =
           Number(node.attrs.lineSpacing) ||
@@ -2385,18 +2432,30 @@ export const LineFactorExtension = Extension.create({
   addProseMirrorPlugins() {
     const key = new PluginKey<DecorationSet>('lineFactorLive')
     const editor = this.editor
+    // one lookup per style per pass: the style table only changes with the document
+    const eaOf: EaFamilyOf = (styleId) => {
+      const storage = editor?.storage?.listNumbering as ListNumberingStorage | undefined
+      if (!storage?.styles) return inheritedEaFamily(styleId, storage)
+      let memo = eaMemo.get(storage.styles)
+      if (!memo) eaMemo.set(storage.styles, (memo = new Map()))
+      const k = typeof styleId === 'string' ? styleId : ''
+      let fam = memo.get(k)
+      if (fam === undefined) memo.set(k, (fam = inheritedEaFamily(styleId, storage)))
+      return fam
+    }
+    const eaMemo = new WeakMap<object, Map<string, string | null>>()
     return [
       new Plugin<DecorationSet>({
         key,
         state: {
-          init: (_config, state) => lineFactorDecos(state.doc),
+          init: (_config, state) => lineFactorDecos(state.doc, eaOf),
           apply: (tr, old) => {
-            if (tr.getMeta(key)) return lineFactorDecos(tr.doc)
+            if (tr.getMeta(key)) return lineFactorDecos(tr.doc, eaOf)
             if (!tr.docChanged) return old
             // inserting pad widgets next to an active IME composition aborts it;
             // keep the old set mapped and refresh on compositionend
             if (editor?.view?.composing) return old.map(tr.mapping, tr.doc)
-            return updateLineFactorDecos(old, tr)
+            return updateLineFactorDecos(old, tr, eaOf)
           },
         },
         props: {
