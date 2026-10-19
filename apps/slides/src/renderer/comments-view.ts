@@ -34,9 +34,10 @@ export interface CommentSlideGroup {
  */
 export function groupCommentsBySlide(all: SlideComment[][]): CommentSlideGroup[] {
   const groups: CommentSlideGroup[] = []
-  all.forEach((comments, slideIndex) => {
-    if (comments.length > 0) groups.push({ slideIndex, comments })
-  })
+  for (const [slideIndex, comments] of (Array.isArray(all) ? all : []).entries()) {
+    if (!Array.isArray(comments) || comments.length === 0) continue
+    groups.push({ slideIndex, comments })
+  }
   return groups
 }
 

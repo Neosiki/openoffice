@@ -214,11 +214,20 @@ async function slideCommentsForSlide(
     const node = entry as Record<string, unknown>
     const authorId = Number(node['@_authorId'])
     const known = Number.isFinite(authorId) ? authors.get(authorId) : undefined
-    const text = node['text']
+    const rawText = node['text']
+    // fast-xml-parser returns { '#text': … } when the element carries attributes (e.g. xml:space)
+    const text =
+      typeof rawText === 'string'
+        ? rawText
+        : rawText &&
+            typeof rawText === 'object' &&
+            typeof (rawText as { '#text'?: unknown })['#text'] === 'string'
+          ? (rawText as { '#text': string })['#text']
+          : ''
     out.push({
       author: known && known.trim() ? known : 'Unknown author',
       dt: typeof node['@_dt'] === 'string' ? node['@_dt'] : '',
-      text: typeof text === 'string' ? text : '',
+      text,
     })
   }
   return out
