@@ -152,7 +152,12 @@ import { DocumentJobSession } from './doc-jobs/job-session'
 import { CertSignDialog } from './CertSignDialog'
 import { InsightsCard } from './ai/insights/InsightsCard'
 import { useDocumentInsights } from './ai/insights/useDocumentInsights'
-import { QuoteFlashLayer, locateCitation, useQuoteFlash } from './ai/QuoteFlash'
+import {
+  QUOTE_NOT_FOUND_NOTICE_MS,
+  QuoteFlashLayer,
+  locateCitation,
+  useQuoteFlash,
+} from './ai/QuoteFlash'
 import type { PdfNavTarget } from './ai/pdf-nav'
 import { PassageReading, type PassageReadingHandle } from './reading/PassageReading'
 import { IconPassageMarks, PassageUnderlines } from './reading/PassageUnderlines'
@@ -2726,7 +2731,7 @@ export default function App() {
     if (!aiApi.gotoPage(target.page) || !target.quote) return
     void locateCitation(target, getSearchIndex()).then((found) => {
       if (!found) {
-        showNotice(t('airQuoteNotFound'))
+        showNoticeFor(t('airQuoteNotFound'), QUOTE_NOT_FOUND_NOTICE_MS)
         return
       }
       const el = scrollRef.current
@@ -4529,11 +4534,12 @@ export default function App() {
   }
 
   /** Show a transient toast; the save-failure badge alone hides the actual reason */
-  const showNotice = (msg: string) => {
+  const showNoticeFor = (msg: string, ms: number) => {
     if (noticeTimerRef.current !== null) window.clearTimeout(noticeTimerRef.current)
     setNotice(msg)
-    noticeTimerRef.current = window.setTimeout(() => setNotice(null), 8000)
+    noticeTimerRef.current = window.setTimeout(() => setNotice(null), ms)
   }
+  const showNotice = (msg: string) => showNoticeFor(msg, 8000)
 
   // the note of each PDF (reading-assist 4.9): no path crosses, the main process knows both
   const noteActions = useNoteActions({

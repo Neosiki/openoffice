@@ -426,6 +426,56 @@ describe('Markdown export', () => {
     )
   })
 
+  it('escapes quoted lines that Markdown would read as a heading, list or quote', () => {
+    const item = {
+      key: 'S1',
+      kind: 'highlight',
+      kindLabel: '형광펜',
+      origin: 'saved',
+      page: 0,
+      pageNo: 1,
+      rect: null,
+      pos: [0, 0],
+      seq: 0,
+      color: null,
+      text: [
+        '# not a heading',
+        '- not a list',
+        '  * star',
+        '+ plus',
+        '> nested',
+        '12. numbered',
+        '3) numbered too',
+        'plain #1 - text',
+        '2026 was a year',
+      ].join('\n'),
+      createdMs: null,
+      notFound: false,
+      target: { type: 'location' },
+    } as unknown as AnnotItem
+    const md = annotMarkdown({ title: 'T', items: [item], t: tKo })
+    expect(md).toBe(
+      [
+        '# T — 주석 모음',
+        '',
+        '## p.1',
+        '',
+        '> \\# not a heading',
+        '> \\- not a list',
+        '>   \\* star',
+        '> \\+ plus',
+        '> \\> nested',
+        '> 12\\. numbered',
+        '> 3\\) numbered too',
+        '> plain #1 - text',
+        '> 2026 was a year',
+        '>',
+        '> — 형광펜',
+        '',
+      ].join('\n'),
+    )
+  })
+
   it('uses the UI language for the title, kinds and the note label', () => {
     const items = buildAnnotItems(
       input({ t: tEn, unsavedMarkups: [], pendingNotes: [], cards: [] }),

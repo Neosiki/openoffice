@@ -5,8 +5,8 @@
  * text layer reads it (the viewer's search index). The text layer breaks
  * lines and words differently from the block text the model saw, so both
  * sides are folded the way citations are (ai/quote-find.ts: whitespace and
- * hyphens dropped, case and compatibility forms folded), but only the whole
- * quote counts: a suggestion is never placed on part of its sentence. A
+ * hyphens dropped, case and compatibility forms folded), and, as there, only
+ * the whole quote counts: a suggestion is never placed on part of its sentence. A
  * quote that is not found (a scanned or AI-read page, a page that changed)
  * has no place, is not drawn and cannot be accepted. Pure.
  */
@@ -19,27 +19,14 @@ import type {
   HighlightSuggestionState,
 } from '../../../../../packages/pdf-structure/src/store/reading'
 import type { MarkupInput } from '../../shared/ipc'
-import { foldForQuote, spanRects } from '../ai/quote-find'
+import { findQuoteRects } from '../ai/quote-find'
 import type { PageEntry, SearchIndex } from '../search'
 
 export type Rect = [number, number, number, number]
 
-/** shortest folded quote looked for (a few characters would match anywhere) */
-const MIN_FOLDED = 4
-
 /** the whole quote's rectangles on a page (PDF user space), or null when it is not there */
 export function findWholeQuote(entry: PageEntry | undefined, quote: string): Rect[] | null {
-  if (!entry) return null
-  const q = foldForQuote(quote).folded
-  if (q.length < MIN_FOLDED) return null
-  const page = foldForQuote(entry.text)
-  const at = page.folded.indexOf(q)
-  if (at < 0) return null
-  const rects = spanRects(entry, {
-    start: page.map[at]!,
-    end: page.map[at + q.length - 1]! + 1,
-  })
-  return rects.length > 0 ? rects : null
+  return findQuoteRects(entry, quote)
 }
 
 /** one suggestion as the screen shows it */

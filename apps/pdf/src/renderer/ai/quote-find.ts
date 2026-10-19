@@ -23,8 +23,6 @@ export interface QuoteSpan {
 
 /** shortest folded quote worth looking for (a few characters would match anywhere) */
 const MIN_FOLDED = 4
-/** a half of the quote is tried only when it is at least this long */
-const MIN_HALF = 24
 
 const SKIP = /[\s\u00AD\u200B-\u200D\u2060\uFEFF\-\u2010-\u2015\u2212\uFE58\uFE63\uFF0D]/
 const SINGLE_QUOTES = /[\u2018\u2019\u201A\u201B\u2032`\u00B4]/
@@ -58,24 +56,16 @@ function spanOf(map: readonly number[], at: number, length: number): QuoteSpan {
 }
 
 /**
- * Where the quote is in the page text, or null. The whole quote first; when
- * it is not there, its first half, then its second half (a model that changed
- * one word still lands on the passage), each only when long enough to be
- * unambiguous.
+ * Where the whole quote is in the page text, or null. Only the whole quote
+ * counts: a part of it could be another passage, and a citation that is not
+ * found goes to its page alone.
  */
 export function findQuoteSpan(pageText: string, quote: string): QuoteSpan | null {
   const q = foldForQuote(quote).folded
   if (q.length < MIN_FOLDED) return null
   const page = foldForQuote(pageText)
-  const whole = page.folded.indexOf(q)
-  if (whole >= 0) return spanOf(page.map, whole, q.length)
-  const half = Math.floor(q.length / 2)
-  if (half < MIN_HALF) return null
-  for (const part of [q.slice(0, half), q.slice(q.length - half)]) {
-    const at = page.folded.indexOf(part)
-    if (at >= 0) return spanOf(page.map, at, part.length)
-  }
-  return null
+  const at = page.folded.indexOf(q)
+  return at >= 0 ? spanOf(page.map, at, q.length) : null
 }
 
 /** the PDF user-space rectangles of a span, interpolated within runs like the viewer search */

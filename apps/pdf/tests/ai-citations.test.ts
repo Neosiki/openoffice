@@ -3,12 +3,12 @@
  * window accepts (the old page form, `q`, broken encoding, other schemes), the
  * instruction in the PDF skill, and finding the quote on its page with
  * whitespace, line breaks and line-end hyphenation folded, falling back to the
- * page alone when the words are not there.
+ * page alone (with a brief notice) when the whole quote is not there.
  */
 import { describe, expect, it } from 'vitest'
 import { parsePdfNavHref, PDF_NAV_QUOTE_MAX_CHARS } from '../src/renderer/ai/pdf-nav'
 import { findQuoteRects, findQuoteSpan, foldForQuote } from '../src/renderer/ai/quote-find'
-import { locateCitation } from '../src/renderer/ai/QuoteFlash'
+import { QUOTE_NOT_FOUND_NOTICE_MS, locateCitation } from '../src/renderer/ai/QuoteFlash'
 import { createPdfSkill } from '../src/renderer/ai/pdf-skill'
 import type { PdfAiDeps } from '../src/renderer/ai/tools'
 import type { PageEntry, SearchIndex } from '../src/renderer/search'
@@ -108,13 +108,25 @@ describe('finding a quote on its page', () => {
     expect(rects[1]![1]).toBe(686)
   })
 
-  it('lands on the passage when one word differs, if a half is long enough', () => {
+  it('only the whole quote counts: one word off is not found, never a part of it', () => {
+    // its first half is on the page, but a part could be another passage: page only
     expect(
       findQuoteSpan(
         page.text,
         'the information provided by the applicant and found the final well-known numbers',
       ),
-    ).not.toBeNull()
+    ).toBeNull()
+    expect(
+      findQuoteRects(
+        page,
+        'an unrelated opening about budgets, reviewed the information provided by the applicant',
+      ),
+    ).toBeNull()
+  })
+
+  it('says "not found" only briefly', () => {
+    expect(QUOTE_NOT_FOUND_NOTICE_MS).toBeGreaterThanOrEqual(2000)
+    expect(QUOTE_NOT_FOUND_NOTICE_MS).toBeLessThanOrEqual(3000)
   })
 
   it('finds nothing for words the page does not have', () => {

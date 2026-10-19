@@ -23,9 +23,12 @@
  *   record, never `translate.<lang>.json`, never the resume offer, the
  *   provider record only when there is none; one document job at a time;
  * - "translate again" is one call of its own (./retranslate), not a job,
- *   and waits while a document job runs; a person's edit is dropped only
- *   after the person confirmed it;
+ *   and waits while a document job runs here or in another process; a
+ *   person's edit is dropped only after the person confirmed it;
  * - an edit is stored as plain text marked as edited;
+ * - a write lands on the hash its press started on; when a save changed the
+ *   file meanwhile, the results are carried to the new hash afterwards, like
+ *   the page job's;
  * - model answers are document data and are only stored as text.
  */
 import type { AiProviderId, AiRunErrorKind } from '@genoffice/ai-provider/browser'
@@ -107,8 +110,14 @@ export interface BilingualActionsSnapshot {
   busy: boolean
   /** the page job this controller runs, with its progress */
   pageJob: { docHash: string; lang: string; page: number; done: number; total: number } | null
-  /** the paid-route question shown on a page */
-  paidAsk: { docHash: string; lang: string; page: number; provider: string } | null
+  /** the paid-route question shown on a page, and the route (`paidRouteKey`) it names */
+  paidAsk: {
+    docHash: string
+    lang: string
+    page: number
+    provider: string
+    routeKey: string
+  } | null
   /** per page (`pageKey`): why the page translation did not run or stopped */
   pageNotes: ReadonlyMap<string, string>
   /** the block being translated again */
@@ -157,6 +166,8 @@ export class BilingualActionsController {
   private confirmDiscard: string | null = null
   private readonly paraNotes = new Map<string, string>()
   private editing: BilingualEditing | null = null
+  /** the text in the open editor, kept so it survives the editor following a new hash */
+  private draft: string | null = null
   private readonly aborts = new Set<AbortController>()
   private readonly listeners = new Set<() => void>()
   private snap: BilingualActionsSnapshot
@@ -183,13 +194,23 @@ export class BilingualActionsController {
       this.paidAsk = null
       this.confirmDiscard = null
       this.editing = null
+      this.draft = null
       this.emit()
     }
   }
 
-  /** the view's data (tree, hash, language) */
+  /**
+   * The view's data (tree, hash, language). A save that changed the file
+   * rebuilds the tree under the new hash (the store carried the blocks
+   * there): an open editor follows it with the text typed so far.
+   */
   setData(data: BilingualData | null): void {
     this.data = data
+    const e = this.editing
+    if (e && data?.docHash && data.docHash !== e.docHash && data.lang === e.lang) {
+      this.editing = { ...e, docHash: data.docHash, initial: this.draft ?? e.initial }
+      this.emit()
+    }
   }
 
   /** the route the page buttons name; changes re-render them */
@@ -230,20 +251,31 @@ export class BilingualActionsController {
     if (this.host?.admit(request)) this.run(request)
   }
 
-  /** "Translate" on the paid-route question: the tab stops asking for this provider */
+  /**
+   * "Translate" on the paid-route question: the tab stops asking for the
+   * provider the question named. When the route changed while it was shown,
+   * the answer does not cover the new provider: ask again for it.
+   */
   confirmPaid = (): void => {
     const ask = this.paidAsk
     if (!ask) return
-    const route = this.host?.route() ?? CHECKING
-    if (route.state === 'ready' && route.paid) this.paidAck = paidRouteKey(route)
-    this.paidAsk = null
-    this.emit()
-    const request: BilingualActionRequest = {
+    const request: Extract<BilingualActionRequest, { kind: 'page' }> = {
       kind: 'page',
       docHash: ask.docHash,
       lang: ask.lang,
       page: ask.page,
     }
+    const route = this.host?.route() ?? CHECKING
+    if (route.state === 'ready' && route.paid) {
+      if (paidRouteKey(route) !== ask.routeKey) {
+        this.paidAsk = null
+        if (this.askPaid(request)) return
+      } else {
+        this.paidAck = ask.routeKey
+      }
+    }
+    this.paidAsk = null
+    this.emit()
     if (this.host?.admit(request)) this.run(request)
   }
 
@@ -290,6 +322,7 @@ export class BilingualActionsController {
     if (unit.state !== 'translated' || !this.deps.store) return
     if (this.editing?.keyString === unit.keyString && this.editing.docHash === docHash) return
     if (this.retranslating === unit.keyString) return
+    this.draft = null
     this.editing = {
       docHash,
       lang,
@@ -307,7 +340,13 @@ export class BilingualActionsController {
   cancelEdit = (): void => {
     if (!this.editing || this.editing.saving) return
     this.editing = null
+    this.draft = null
     this.emit()
+  }
+
+  /** the open editor's text as typed (no re-render) */
+  setDraft = (text: string): void => {
+    if (this.editing) this.draft = text
   }
 
   saveEdit = async (text: string): Promise<void> => {
@@ -325,14 +364,19 @@ export class BilingualActionsController {
         text,
       })
       .catch(() => null)
-    if (this.editing?.keyString !== e.keyString) return
+    const current = this.editing
+    if (current?.keyString !== e.keyString) return
     if (!out?.ok) {
-      this.editing = { ...e, saving: false, error: this.deps.t('blEditSaveFailed') }
+      // the editor may have followed a save to the new hash meanwhile
+      this.editing = { ...current, saving: false, error: this.deps.t('blEditSaveFailed') }
       this.emit()
       return
     }
     this.editing = null
+    this.draft = null
     this.emit()
+    // a save during the write moved the document: the edit follows it, then shows
+    await this.carry(e.docHash)
     this.refresh()
   }
 
@@ -363,6 +407,7 @@ export class BilingualActionsController {
       lang: request.lang,
       page: request.page,
       provider: aiProviderDisplayName(route.provider),
+      routeKey: paidRouteKey(route),
     }
     this.emit()
     return true
@@ -535,6 +580,13 @@ export class BilingualActionsController {
     const abort = new AbortController()
     this.aborts.add(abort)
     try {
+      // a job another process runs on the same file (the terminal, another window)
+      const records = await store.unfinishedJobs(request.docHash).catch(() => null)
+      if (records?.ok && this.deps.session.runningElsewhere(request.docHash, records.jobs)) {
+        this.paraNotes.set(unit.keyString, t('blBusy'))
+        return
+      }
+      if (abort.signal.aborted) return
       const ask = createModelCall({ settings: () => route.settings, lang: () => this.deps.lang })
       const send: TranslationSend = (req, signal) =>
         ask(
@@ -556,6 +608,8 @@ export class BilingualActionsController {
           t('blRetranslateFailed', { reason: untranslatedReasonText(out.reason, t) }),
         )
       }
+      // a save during the call moved the document: the result follows it, then shows
+      await this.carry(request.docHash)
       this.refresh()
     } catch (err) {
       if (!abort.signal.aborted) {

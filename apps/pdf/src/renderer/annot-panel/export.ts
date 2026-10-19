@@ -55,6 +55,14 @@ export const exportTitle = (title: string, t: TFunc): string => `${title} — ${
 const lines = (s: string): string[] => s.split(/\r\n|\r|\n/)
 
 /**
+ * A quoted line as plain text: a line that starts like a Markdown block (a
+ * heading, a list item, a nested quote, a numbered item) gets its marker
+ * escaped, so the passage stays one quote. Other lines are kept as they are.
+ */
+const quoteLine = (line: string): string =>
+  line.replace(/^(\s*)([#>*+-])/, '$1\\$2').replace(/^(\s*\d+)([.)])/, '$1\\$2')
+
+/**
  * ```markdown
  * # <title> — <collection>
  *
@@ -75,7 +83,7 @@ export function annotMarkdown(o: { title: string; items: readonly AnnotItem[]; t
       if (e.quote) {
         out.push('')
         const text = e.quote.text.trim()
-        if (text) out.push(...lines(text).map((l) => (l ? `> ${l}` : '>')), '>')
+        if (text) out.push(...lines(text).map((l) => (l ? `> ${quoteLine(l)}` : '>')), '>')
         out.push(`> — ${e.quote.by}`)
       }
       for (const p of e.paragraphs) out.push('', p)
