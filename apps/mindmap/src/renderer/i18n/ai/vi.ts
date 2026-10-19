@@ -54,6 +54,8 @@ export const vi = {
   aiToolWriteMapFailed: 'Không thể viết bản đồ',
   aiToolWebSearch: 'Tìm kiếm trên web',
   aiToolWebSearchDone: 'Đã tìm kiếm "{query}" · {count} kết quả',
+  aiToolReadUrl: 'Đọc trang web',
+  aiToolReadUrlDone: 'Đã đọc {host} · {chars} ký tự',
   aiSumReadAttachment: 'Đọc tệp đính kèm',
   aiSumImageAttachment: 'Tệp hình ảnh đính kèm {name}',
   aiSumReadAttachmentName: 'Đọc tệp đính kèm {name}',

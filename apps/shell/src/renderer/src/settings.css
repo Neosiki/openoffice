@@ -896,6 +896,11 @@
 
 /* ── AI section: subscription connection first, keys under Advanced ── */
 
+/* the web-reading block: its title and Save/Clear share one head row */
+.set-read-url-head {
+  justify-content: space-between;
+}
+
 .set-sub-title {
   margin-top: 0;
 }

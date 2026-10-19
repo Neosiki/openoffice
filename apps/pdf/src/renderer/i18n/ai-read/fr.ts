@@ -64,12 +64,17 @@ export const fr = {
     "Une tâche IA est déjà en cours sur ce document ({done}/{total}). Réessayez lorsqu'elle sera terminée ou arrêtée.",
   arUnavailable: "La lecture IA des pages n'est pas disponible dans cette fenêtre.",
   arDeleteConfirm:
-    'Supprimer toutes les lectures IA et traductions conservées pour ce document ? Cette action est irréversible.',
+    'Supprimer tous les résultats IA conservés pour ce document (lectures IA, traductions, fiches de passage, suggestions de surlignage et aperçu) ? Cette action est irréversible.',
   arDeleted: "Les résultats d'IA conservés pour ce document ont été supprimés.",
   arDeleteFailed: "Les résultats d'IA conservés n'ont pas pu être supprimés.",
   arDeleteBusy: 'Une tâche IA est en cours : rien ne peut être supprimé pour le moment.',
   jobResumeAiRead: 'Lecture IA inachevée {percent} % — continuer ?',
   jobResumeTranslate: 'Traduction inachevée ({language}) {percent} % — continuer ?',
+  jobResumeHighlight: 'Surlignage IA inachevé {percent} % — continuer ?',
+  arDeleteAlsoBoth:
+    'Seront aussi supprimées : les traductions corrigées à la main ({edited}) et les fiches de passage ({cards}).',
+  arDeleteAlsoEdited: 'Seront aussi supprimées : les traductions corrigées à la main ({count}).',
+  arDeleteAlsoCards: 'Seront aussi supprimées : les fiches de passage ({count}).',
   jobResumeContinue: 'Continuer',
   jobResumeLater: 'Plus tard',
   searchAiRead: "Trouvé dans le texte lu par l'IA",

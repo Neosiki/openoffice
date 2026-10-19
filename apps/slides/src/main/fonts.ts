@@ -10,11 +10,22 @@
  *   - .ttc collection fonts (nearly all CJK fonts: macOS Hiragino, Windows Yu Gothic, etc.)
  *     are unsupported by opentype.js; here we read the name table to pick a face by requested
  *     family, split it into a standalone sfnt via the offset table, then parse;
- *   - Filename miss -> aliases/style-less variants -> substitute by script
- *     (ja/ko/traditional-zh/serif/mono) with fonts guaranteed on this platform -> if all miss,
- *     return undefined (callers use heuristic metrics).
+ *   - Filename miss -> the families the installed font files declare (name table; a variable
+ *     font's named instances too, e.g. Times New Roman -> times.ttf, Sitka Banner ->
+ *     SitkaVF.ttf) -> aliases/style-less variants -> substitute by script
+ *     (ja/ko/traditional-zh/serif/mono) with fonts guaranteed on this platform -> if all
+ *     miss, return undefined (callers use heuristic metrics).
  */
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
+import {
+  closeSync,
+  existsSync,
+  mkdirSync,
+  openSync,
+  readdirSync,
+  readFileSync,
+  readSync,
+  writeFileSync,
+} from 'node:fs'
 import { basename, dirname, join } from 'node:path'
 import { homedir, tmpdir } from 'node:os'
 import { createHash } from 'node:crypto'
@@ -524,6 +535,226 @@ function readFaceDir(buf: Buffer): FaceInfo[] {
 /** OpenType layout tables — droppable for metrics-only parsing when opentype.js rejects them. */
 const LAYOUT_TABLES: ReadonlySet<string> = new Set(['GSUB', 'GPOS', 'GDEF'])
 
+/**
+ * Tables opentype.js cannot size, dropped together for metrics-only parsing when even the
+ * layout-less parse fails: color/bitmap glyph tables of emoji fonts (Segoe UI Emoji's COLR/
+ * CBDT "Invalid array length"). Advances only need cmap/hmtx/kern.
+ */
+const METRICS_DROP_TABLES: ReadonlySet<string> = new Set([
+  ...LAYOUT_TABLES,
+  'COLR',
+  'CPAL',
+  'CBDT',
+  'CBLC',
+  'sbix',
+  'SVG ',
+  'EBDT',
+  'EBLC',
+  'EBSC',
+])
+
+// ── Family-name index over installed files ─────────────────────────────
+// A family resolves by its file name first (trebuc.ttf -> Trebuchet MS), which is why the
+// registry keeps a normalized-filename index. Many installed families have no such file
+// name, though — Times New Roman ships as times.ttf, Comic Sans MS as comic.ttf, and the
+// OS enumerates a face's family with trailing style/width words dropped (the name table's
+// "A2Z 1 Thin"/"Paperlogy 4 Regular" is listed as "A2Z 1"/"Paperlogy 4", "Barlow Condensed"
+// as "Barlow"). Treated as missing, those fonts would fall to the substitute chain and the
+// canvas would draw Calibri for a font the PC has. The index below keys every installed
+// face by the family spellings its own name table declares (both as written and in the OS
+// form), so the file-name miss can still find the real file.
+
+/** One bounded read of an open font file; null on a short read. */
+function readAt(fd: number, pos: number, len: number): Buffer | null {
+  const buf = Buffer.alloc(len)
+  return readSync(fd, buf, 0, len, pos) === len ? buf : null
+}
+
+/** Face offset-table positions in an open font file ([0] for plain sfnt, <=64 faces for .ttc). */
+function fontFaceOffsets(fd: number): number[] {
+  const head = readAt(fd, 0, 4)
+  if (!head || head.readUInt32BE(0) !== 0x74746366 /* 'ttcf' */) return [0]
+  const count = readAt(fd, 8, 4)?.readUInt32BE(0) ?? 0
+  if (count <= 0 || count > 64) return []
+  const dir = readAt(fd, 12, 4 * count)
+  if (!dir) return []
+  return Array.from({ length: count }, (_, i) => dir.readUInt32BE(4 * i))
+}
+
+/** Every decodable name-table record, keyed by name ID (Windows/Unicode and Mac Roman only). */
+function readNameIds(buf: Buffer): Map<number, string[]> {
+  const out = new Map<number, string[]>()
+  if (buf.length < 6) return out
+  const count = buf.readUInt16BE(2)
+  const strBase = buf.readUInt16BE(4)
+  for (let i = 0; i < count; i++) {
+    const r = 6 + 12 * i
+    if (r + 12 > buf.length) break
+    const platform = buf.readUInt16BE(r)
+    const encoding = buf.readUInt16BE(r + 2)
+    const nameId = buf.readUInt16BE(r + 6)
+    const len = buf.readUInt16BE(r + 8)
+    const off = strBase + buf.readUInt16BE(r + 10)
+    if (off + len > buf.length) continue
+    let s: string
+    if (platform === 0 || platform === 3) {
+      s = Buffer.from(buf.subarray(off, off + len))
+        .swap16()
+        .toString('utf16le')
+    } else if (platform === 1 && encoding === 0) {
+      s = buf.toString('latin1', off, off + len)
+    } else {
+      continue // Mac-platform non-Roman encodings cannot be decoded; skip
+    }
+    if (!s) continue
+    const list = out.get(nameId)
+    if (!list) out.set(nameId, [s])
+    else if (!list.includes(s)) list.push(s)
+  }
+  return out
+}
+
+/**
+ * Named-instance subfamily names declared by an fvar table (a variable font's optical-size
+ * or weight instances: "Banner", "Regular Display", …), resolved through the name table.
+ * Exported for tests.
+ */
+export function fvarInstanceNames(
+  fvar: Buffer,
+  nameOf: (id: number) => string | undefined,
+): string[] {
+  if (fvar.length < 16) return []
+  const axesArrayOffset = fvar.readUInt16BE(4)
+  const axisCount = fvar.readUInt16BE(8)
+  const axisSize = fvar.readUInt16BE(10)
+  const instanceCount = fvar.readUInt16BE(12)
+  const instanceSize = fvar.readUInt16BE(14)
+  if (
+    axisCount === 0 ||
+    axisCount > 64 ||
+    axisSize < 20 ||
+    instanceCount === 0 ||
+    instanceCount > 256 ||
+    instanceSize < 4 + 4 * axisCount ||
+    axesArrayOffset + axisCount * axisSize + instanceCount * instanceSize > fvar.length
+  )
+    return []
+  const out: string[] = []
+  const base = axesArrayOffset + axisCount * axisSize
+  for (let i = 0; i < instanceCount; i++) {
+    const name = nameOf(fvar.readUInt16BE(base + i * instanceSize))
+    if (name && !out.includes(name)) out.push(name)
+  }
+  return out
+}
+
+/** Family/subfamily spellings and fvar named instances of one face, via bounded reads of the
+ *  table directory, name table and fvar table only: CJK collections run 100MB+, so the family
+ *  scan must not read the whole file (readFaceDir above is for the faces that get parsed). */
+function readFaceFamilyNames(
+  fd: number,
+  offset: number,
+): {
+  families: string[]
+  subfamilies: string[]
+  typographic: string[]
+  instances: string[]
+} | null {
+  const head = readAt(fd, offset, 12)
+  if (!head) return null
+  const numTables = head.readUInt16BE(4)
+  if (numTables === 0 || numTables > 64) return null
+  const dir = readAt(fd, offset + 12, 16 * numTables)
+  if (!dir) return null
+  let nameTable: Buffer | null = null
+  let fvar: Buffer | null = null
+  for (let t = 0; t < numTables; t++) {
+    const tag = dir.toString('latin1', 16 * t, 16 * t + 4)
+    const len = dir.readUInt32BE(16 * t + 12)
+    if (tag === 'name' && len >= 6 && len <= 1 << 20) {
+      nameTable = readAt(fd, dir.readUInt32BE(16 * t + 8), len)
+    } else if (tag === 'fvar' && len >= 16 && len <= 1 << 16) {
+      fvar = readAt(fd, dir.readUInt32BE(16 * t + 8), len)
+    }
+  }
+  if (!nameTable) return null
+  const ids = readNameIds(nameTable)
+  const families = [...(ids.get(1) ?? []), ...(ids.get(16) ?? [])]
+  if (!families.length) return null
+  return {
+    families,
+    subfamilies: [...(ids.get(2) ?? []), ...(ids.get(17) ?? [])],
+    typographic: ids.get(16) ?? [],
+    instances: fvar ? fvarInstanceNames(fvar, (id) => ids.get(id)?.[0]) : [],
+  }
+}
+
+/** A style/weight/width word on its own, as the OS's family model treats it. */
+const STYLE_WORD_SOURCE =
+  '(?:(?:extra|ultra|semi|demi)[\\s-]?)?(?:thin|hairline|light|regular|normal|book|roman|medium|bold|heavy|black|italic|oblique|condensed|extended|narrow|expanded|compressed|wide)'
+/** Same words inside a larger string, for osFamilyKeys' removal walk. */
+const STYLE_TOKEN = new RegExp(STYLE_WORD_SOURCE, 'gi')
+const STYLE_WORD = new RegExp(`^${STYLE_WORD_SOURCE}$`, 'i')
+
+/** Normalized keys a declared family spelling answers to: as written, then with the style
+ *  words the OS drops removed (one or several, each removal's result included). */
+function osFamilyKeys(family: string): string[] {
+  const keys = new Set<string>()
+  const add = (name: string) => {
+    const key = norm(name)
+    if (key) keys.add(key)
+  }
+  add(family)
+  const strip = (name: string, depth: number): void => {
+    if (depth >= 3) return
+    for (const m of name.matchAll(STYLE_TOKEN)) {
+      const start = m.index
+      const end = start + m[0].length
+      const before = name.slice(0, start)
+      const after = name.slice(end)
+      // Whole words only: a style word inside a longer word never counts
+      if (!(before === '' || /[\s-]$/.test(before)) || !(after === '' || /^[\s-]/.test(after)))
+        continue
+      const next = (before + after).trim()
+      if (!next) continue
+      const key = norm(next)
+      if (keys.has(key)) continue
+      add(next)
+      strip(next, depth + 1)
+    }
+  }
+  strip(family, 0)
+  return [...keys]
+}
+
+/**
+ * Normalized keys for one of a variable font's named instances: the OS lists an instance as
+ * its own family, named "<typographic family> <instance name minus its style words>"
+ * ("Sitka" + "Banner Semibold" → "Sitka Banner", "Segoe UI Variable" + "Regular Display" →
+ * "Segoe UI Variable Display"). Exported for tests.
+ */
+export function instanceFamilyKeys(family: string, instance: string): string[] {
+  const kept = instance
+    .split(/[\s-]+/)
+    .filter((word) => word && !STYLE_WORD.test(word))
+    .join(' ')
+  if (!kept) return []
+  return osFamilyKeys(`${family.trim()} ${kept}`)
+}
+
+/**
+ * The family the drawing side should use for a hit. When the face's own family is the
+ * requested family plus style words the OS drops, the requested spelling wins: Chromium
+ * resolves what the OS enumerates ("Rage"), not the face's inner spelling ("Rage Italic",
+ * which CSS cannot resolve, so the canvas would fall to the next stack entry while the
+ * metrics used the face). Alias hits keep the face's own family (Calibri → Carlito is
+ * served as a FontFace under "Carlito"). Exported for tests.
+ */
+export function displayFamilyFor(requested: string, faceFamily: string): string {
+  if (!faceFamily) return requested
+  if (norm(faceFamily) === norm(requested)) return faceFamily
+  return osFamilyKeys(faceFamily).includes(norm(requested)) ? requested : faceFamily
+}
 /** Extract a single face from a ttc into a standalone sfnt (rewrite the table directory, copy table data by original offset). */
 function extractFace(buf: Buffer, offset: number, drop?: ReadonlySet<string>): ArrayBuffer {
   const isTtc = buf.toString('ascii', 0, 4) === 'ttcf'
@@ -629,16 +860,92 @@ class FontRegistry {
   private faceDirs = new Map<string, FaceInfo[]>()
   /** `path#offset` -> parsed font (null = parse failed) */
   private parsed = new Map<string, OpentypeFontLike | null>()
+  /** Flat scanned font files, in scan order (family-name index source) */
+  private scannedPaths: string[] = []
+  /** Normalized family spelling (as declared) -> font file paths */
+  private familyExactPaths = new Map<string, string[]>()
+  /** Normalized OS-style spelling (declared name minus dropped style words) -> font file paths */
+  private familyOsPaths = new Map<string, string[]>()
+  private familyPathsBuilt = false
+
   private indexed = false
 
   private addFlatDir(dir: string, files: string[]): void {
     for (const name of files) {
       const m = /^(.+)\.(ttf|otf|ttc|otc)$/i.exec(name)
       if (!m) continue
+      const path = join(dir, name)
+      this.scannedPaths.push(path)
       // Strip the variable-font axis suffix: NotoSansSC[wght].ttf -> notosanssc
       const key = norm(m[1]!.replace(/\[[^\]]*\]$/, ''))
-      if (!this.index.has(key)) this.index.set(key, join(dir, name))
+      if (!this.index.has(key)) this.index.set(key, path)
     }
+  }
+
+  /**
+   * Files whose own name-table families answer `family`: the declared spelling first, then
+   * the OS's style-word-stripped spelling (osFamilyKeys) and the fvar named-instance
+   * spellings (instanceFamilyKeys). Built once, on the first family the file-name index
+   * cannot answer; the scan reads name-table and fvar tables only, with bounded reads.
+   */
+  private filesForFamily(family: string): readonly string[] {
+    if (!this.familyPathsBuilt) {
+      this.familyPathsBuilt = true
+      const add = (map: Map<string, string[]>, key: string, path: string) => {
+        const list = map.get(key)
+        if (list) {
+          if (!list.includes(path)) list.push(path)
+        } else map.set(key, [path])
+      }
+      for (const path of this.scannedPaths) {
+        let fd: number
+        try {
+          fd = openSync(path, 'r')
+        } catch {
+          continue
+        }
+        try {
+          for (const offset of fontFaceOffsets(fd)) {
+            let names: {
+              families: string[]
+              subfamilies: string[]
+              typographic: string[]
+              instances: string[]
+            } | null = null
+            try {
+              names = readFaceFamilyNames(fd, offset)
+            } catch {
+              names = null
+            }
+            if (!names) continue
+            for (const spelling of names.families) {
+              const exactKey = norm(spelling)
+              if (exactKey) add(this.familyExactPaths, exactKey, path)
+              for (const key of osFamilyKeys(spelling)) {
+                if (key !== exactKey) add(this.familyOsPaths, key, path)
+              }
+            }
+            // A variable font's named instances are listed by the OS as their own families
+            // ("Sitka Banner", "Segoe UI Variable Display"), named after the typographic
+            // family plus the instance's non-style words.
+            const bases = names.typographic.length ? names.typographic : names.families
+            for (const instance of names.instances) {
+              for (const base of bases) {
+                for (const key of instanceFamilyKeys(base, instance)) {
+                  add(this.familyOsPaths, key, path)
+                }
+              }
+            }
+          }
+        } catch {
+          /* unreadable or malformed file: skip */
+        } finally {
+          closeSync(fd)
+        }
+      }
+    }
+    const key = norm(family)
+    return this.familyExactPaths.get(key) ?? this.familyOsPaths.get(key) ?? []
   }
 
   private buildIndex(): void {
@@ -720,11 +1027,19 @@ class FontRegistry {
       try {
         font = opentype.parse(extractFace(buf, offset)) as unknown as OpentypeFontLike
       } catch {
-        // Legacy CJK fonts (gulim/batang) carry GSUB versions opentype.js rejects; advances
-        // only need cmap/hmtx/kern, so retry without the OpenType layout tables
-        font = opentype.parse(
-          extractFace(buf, offset, LAYOUT_TABLES),
-        ) as unknown as OpentypeFontLike
+        try {
+          // Legacy CJK fonts (gulim/batang) carry GSUB versions opentype.js rejects; advances
+          // only need cmap/hmtx/kern, so retry without the OpenType layout tables
+          font = opentype.parse(
+            extractFace(buf, offset, LAYOUT_TABLES),
+          ) as unknown as OpentypeFontLike
+        } catch {
+          // Color emoji fonts (Segoe UI Emoji) carry COLR/CBDT tables opentype.js cannot
+          // size; the metrics parse does not need them either.
+          font = opentype.parse(
+            extractFace(buf, offset, METRICS_DROP_TABLES),
+          ) as unknown as OpentypeFontLike
+        }
       }
     } catch {
       font = null
@@ -868,7 +1183,7 @@ class FontRegistry {
         if (!path) continue
         const hit = this.loadBest(path, base, style, origKey, reqWeight)
         if (hit && (!strict || faceMatches(hit.font)))
-          return { ...hit, family: hit.family || family }
+          return { ...hit, family: displayFamilyFor(family, hit.family) }
       }
       if (strict) return undefined
       const cloudPaths = this.cloud.get(base)
@@ -881,6 +1196,25 @@ class FontRegistry {
       if (templatePaths) {
         const hit = this.loadBestCloud(templatePaths, base, style, origKey, reqWeight)
         if (hit) return { ...hit, family: hit.family || family }
+      }
+      // Installed fonts whose file name spells something else entirely (Times New Roman →
+      // times.ttf, A2Z 1 → 에이투지체-1Thin.otf): the families the font files' own name tables
+      // declare — as written and in the OS's style-word-stripped form (osFamilyKeys). The
+      // requested spelling is kept as the drawing family: it is the name the OS enumerates
+      // (CSS resolves it) and the one the model holds. A face whose own weight/slant matches
+      // the request wins across the family's files (comic.ttf vs comicbd.ttf); without one,
+      // the first loadable face stands in for synthesized bold/italic.
+      const familyPaths = this.filesForFamily(base)
+      if (familyPaths.length) {
+        let fallback:
+          { font: OpentypeFontLike; family: string; path: string; offset: number } | undefined
+        for (const path of familyPaths) {
+          const hit = this.loadBest(path, base, style, origKey, reqWeight)
+          if (!hit) continue
+          if (faceMatches(hit.font)) return { ...hit, family }
+          fallback ??= hit
+        }
+        if (fallback) return { ...fallback, family }
       }
       return undefined
     }

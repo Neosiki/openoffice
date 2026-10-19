@@ -49,6 +49,8 @@ export const ru = {
   aiTimeoutError: 'Тайм-аут ответа ИИ',
   aiToolWebSearch: 'Веб-поиск',
   aiToolWebSearchDone: 'Поиск «{query}» · {count} результатов',
+  aiToolReadUrl: 'Чтение веб-страницы',
+  aiToolReadUrlDone: 'Прочитано {host} · {chars} символов',
   aiTruncatedNote: '(Ответ был обрезан из-за ограничения длины и может быть неполным.)',
   aiTurnLimit: 'Достигнут лимит шагов за один запуск — отправьте ещё одну инструкцию.',
   aiUndelivered: 'Не отправлено',

@@ -81,4 +81,8 @@ export const nl = {
   trPageNotEditable: 'de tekst kan niet worden bewerkt',
   trPageVertical: 'verticale of gedraaide tekst',
   trPageToc: 'gedrukte inhoudsopgave',
+  trFormatStore: 'Alleen bewaren (geen bestand)',
+  trRestartEditedCount: '{count} alinea’s zijn door iemand bewerkt.',
+  trRestartDiscardEdited: 'Ook de {count} door iemand bewerkte alinea’s verwijderen',
+  trRestartKeepEdited: 'Bewerkte alinea’s behouden',
 } satisfies Record<keyof typeof zh, string>

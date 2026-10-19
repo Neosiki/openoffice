@@ -6,7 +6,7 @@ import {
   detectSubscriptionLogin,
   type SubscriptionDetection,
 } from '@genoffice/ai-provider/subscription'
-import { ResultStore, documentHash } from '../../pdf-structure/src/store'
+import { ResultStore, blockKeyString, documentHash } from '../../pdf-structure/src/store'
 import { defaultRegistry } from '../src/cli'
 import { createContext, disposeContext, runWithInline } from '../src/mcp/run'
 import { buildArgv, resolveTools } from '../src/mcp/tools'
@@ -509,6 +509,98 @@ describe('pdf translate', () => {
     expect((fakes.stream.mock.calls[2]![3] as Message[])[0]!.text).toContain('Alpha')
   })
 
+  it('--restart keeps the blocks a person edited and sends only the others', async () => {
+    const { dir, env } = dataFolder(SUBSCRIPTION)
+    const pdf = samplePdf(dir)
+    const first = await run(['pdf', 'translate', pdf, '--to', 'fr', '--format', 'md', '--yes'], {
+      env,
+    })
+    expect(first.code).toBe(0)
+    // the person edits the translation of page 1 in the app
+    const docHash = documentHash(new Uint8Array(readFileSync(pdf)))
+    const store = new ResultStore(dir)
+    const fr = await store.readTranslation(docHash, 'fr')
+    const alpha = [...fr!.blocks.values()].find((b) => b.text?.includes('Alpha'))!
+    await store.writeEditedTranslationBlock(docHash, 'fr', alpha.key, 'Alpha edited by hand')
+
+    const estimate = await run(
+      ['pdf', 'translate', pdf, '--to', 'fr', '--format', 'md', '--restart', '--json'],
+      { env },
+    )
+    expect(estimate.json().detail).toMatchObject({ done_blocks: 1, total_blocks: 3 })
+
+    fakes.stream.mockClear()
+    const out = join(dir, 'kept.md')
+    const redo = await run(
+      [
+        'pdf',
+        'translate',
+        pdf,
+        '--to',
+        'fr',
+        '--format',
+        'md',
+        '--out',
+        out,
+        '--restart',
+        '--yes',
+        '--json',
+      ],
+      { env },
+    )
+    expect(redo.code).toBe(0)
+    const sent = fakes.stream.mock.calls.map((c) => (c[3] as Message[])[0]!.text).join('\n')
+    expect(sent).not.toContain('Alpha')
+    expect(sent).toContain('Beta')
+    expect(readFileSync(out, 'utf8')).toContain('Alpha edited by hand')
+    const after = await store.readTranslation(docHash, 'fr')
+    expect(after?.blocks.get(blockKeyString(alpha.key))).toMatchObject({
+      text: 'Alpha edited by hand',
+      edited: true,
+    })
+  })
+
+  it('refuses while a job of any kind runs on the document, naming it', async () => {
+    const { dir, env } = dataFolder(SUBSCRIPTION)
+    const pdf = samplePdf(dir)
+    const docHash = documentHash(new Uint8Array(readFileSync(pdf)))
+    const store = new ResultStore(dir)
+    const runId = 'a'.repeat(64)
+    const cases = [
+      {
+        record: { kind: 'highlight' as const, runId, progress: { done: 1, total: 4 } },
+        job: { kind: 'highlight', runId, progress: { done: 1, total: 4 } },
+        words: 'AI highlighting',
+      },
+      {
+        record: { kind: 'translate-page' as const, lang: 'fr' },
+        job: { kind: 'translate-page', lang: 'fr' },
+        words: 'page translation (fr)',
+      },
+      {
+        record: { kind: 'summary' as const, lang: 'ko' },
+        job: { kind: 'summary', lang: 'ko' },
+        words: 'summary (ko)',
+      },
+    ]
+    for (const c of cases) {
+      await store.writeJob(docHash, { ...c.record, state: 'running' })
+      const r = await run(
+        ['pdf', 'translate', pdf, '--to', 'fr', '--format', 'md', '--yes', '--json'],
+        { env },
+      )
+      expect(r.code).toBe(4)
+      expect(r.json()).toMatchObject({
+        error: 'app_unavailable',
+        detail: { errorCode: 'document-job-running' },
+      })
+      expect(r.json().detail.job).toEqual(c.job)
+      expect(r.json().message).toContain(c.words)
+      await store.writeJob(docHash, { ...c.record, state: 'complete' })
+    }
+    expect(fakes.stream).not.toHaveBeenCalled()
+  })
+
   it('validates the language, the formats and --bilingual before anything else', async () => {
     const { dir, env } = dataFolder(SUBSCRIPTION)
     const pdf = samplePdf(dir)
@@ -541,6 +633,23 @@ describe('pdf status', () => {
       translations: [],
     })
     expect(fakes.detect).not.toHaveBeenCalled()
+  })
+
+  it('keeps its shape when records of the reading-assistant job kinds exist', async () => {
+    const { dir, env } = dataFolder({})
+    const pdf = samplePdf(dir)
+    const docHash = documentHash(new Uint8Array(readFileSync(pdf)))
+    const store = new ResultStore(dir)
+    await store.writeJob(docHash, { kind: 'translate-page', lang: 'fr', state: 'running' })
+    await store.writeJob(docHash, { kind: 'highlight', runId: 'b'.repeat(64), state: 'stopped' })
+    await store.writeJob(docHash, { kind: 'summary', lang: 'en', state: 'complete' })
+    const r = await run(['pdf', 'status', pdf, '--json'], { env })
+    expect(r.code).toBe(0)
+    expect(r.json().detail).toEqual({
+      ai_read: { pages: [], job: { state: 'idle', outputs: [] } },
+      translations: [],
+    })
+    expect(r.json().summary).not.toContain('running')
   })
 
   it('reports a record that stopped refreshing as stopped, interrupted', async () => {

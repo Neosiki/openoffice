@@ -119,6 +119,8 @@ export const cs = {
   aiSumReadAttachmentName: 'Přečtena příloha {name}',
   aiSumWebSearch: 'Hledání na webu',
   aiSumWebSearchDone: 'Hledáno „{query}“ ({count} výsledků)',
+  aiSumReadUrl: 'Čtení webové stránky',
+  aiSumReadUrlDone: 'Přečteno {host} · {count} znaků',
   aiSumImageSearch: 'Hledání obrázků',
   aiSumImageSearchDone: 'Hledání obrázků „{query}“ ({count} obrázků)',
   aiSumAnalyzeMedia: 'Analyzovat média',

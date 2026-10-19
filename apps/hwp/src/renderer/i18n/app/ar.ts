@@ -58,6 +58,8 @@ export const ar = {
   aiStarterProofreadPrompt: 'ابحث عن أخطاء الإملاء والمسافات في هذا المستند وصحّحها.',
   aiToolRead: 'تمت قراءة المستند',
   aiToolFind: 'البحث عن «{text}» · النتائج: {count}',
+  aiToolReadUrl: 'تمت قراءة {host} · {n} حرفًا',
+  aiToolReadUrlFail: 'تعذّرت قراءة {host}',
   aiToolFields: 'تم فحص حقول النموذج · {count}',
   aiToolToc: 'أُضيف جدول محتويات · {count} عناوين',
   aiToolTocRefresh: 'أُعيدت كتابة أرقام صفحات جدول المحتويات · {count}',

@@ -87,6 +87,14 @@ export interface FetchWithSsrfGuardOptions {
   /** Redirect hops to follow. Each hop is revalidated. Defaults to 5. */
   maxRedirects?: number
   headers?: Record<string, string>
+  /**
+   * Headers for one hop, replacing `headers` for that hop. Return undefined
+   * to fall back to `headers`. Lets callers keep a bearer token off redirect
+   * targets on other hosts.
+   */
+  headersForHop?: (url: string, hop: number) => Record<string, string> | undefined
+  /** Aborts the in-flight request and every later hop of the chain. */
+  signal?: AbortSignal
   /** Injectable for tests; defaults to global fetch. */
   fetchImpl?: typeof fetch
 }
@@ -94,13 +102,13 @@ export interface FetchWithSsrfGuardOptions {
 /**
  * fetch() that validates the target before every hop, following redirects
  * manually. Returns null when any hop fails validation, a redirect lacks a
- * usable Location, or the hop budget is exhausted.
+ * usable Location, the hop budget is exhausted, or the caller aborts.
  */
 export async function fetchWithSsrfGuard(
   rawUrl: string,
   options: FetchWithSsrfGuardOptions = {},
 ): Promise<Response | null> {
-  const { maxRedirects = 5, headers, fetchImpl = fetch } = options
+  const { maxRedirects = 5, headers, headersForHop, signal, fetchImpl = fetch } = options
   // maxRedirects arrives from callers (CLI flags, IPC-adjacent config): an
   // Infinity value would follow redirects forever, so normalize to 0..10.
   const hopBudget = Number.isFinite(maxRedirects)
@@ -108,12 +116,24 @@ export async function fetchWithSsrfGuard(
     : 5
   let current = rawUrl
   for (let hop = 0; hop <= hopBudget; hop++) {
+    // Stop between hops too: an aborted chain must not start another request.
+    if (signal?.aborted) return null
     if (!(await isSafeRemoteUrl(current))) return null
+    if (signal?.aborted) return null
     // headers stays absent rather than explicitly undefined (exactOptionalPropertyTypes)
-    const resp = await fetchImpl(current, {
-      ...(headers ? { headers } : {}),
-      redirect: 'manual',
-    })
+    const hopHeaders = headersForHop?.(current, hop) ?? headers
+    let resp: Response
+    try {
+      resp = await fetchImpl(current, {
+        ...(hopHeaders ? { headers: hopHeaders } : {}),
+        redirect: 'manual',
+        ...(signal ? { signal } : {}),
+      })
+    } catch (error) {
+      // An abort is cancellation, not a network failure to hand back.
+      if (signal?.aborted) return null
+      throw error
+    }
     if (resp.status < 300 || resp.status >= 400) return resp
     const location = resp.headers.get('location')
     if (!location) return null

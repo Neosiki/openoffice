@@ -214,6 +214,7 @@ import {
 } from '../../../pdf/src/main/pdf-main'
 import { PDF_CHANNELS } from '../../../pdf/src/shared/ipc'
 import { convertPdfFileToDocxLocalWithPrompt, PdfLoadError } from './pdf2docx-local'
+import { insertIntoNoteTab, openNoteTab, type NoteTabHost } from './pdf-note-tabs'
 import { convertPdfFileToPptxLocalWithPrompt } from './pdf2pptx-local'
 import { convertPdfFileToXlsxLocalWithPrompt } from './pdf2xlsx-local'
 import { closePdfPasswordDialog, promptPdfPassword } from './pdf-password-dialog'
@@ -522,6 +523,24 @@ configureSlidesRuntime({
   rendererFilePath: join(SLIDES_OUT, 'renderer', 'index.html'),
   openGeneratedPath: (path) => openGeneratedDocument(path),
 })
+/** a PDF's note (reading-assist 4.9): its Markdown tab or detached window, else a new tab */
+const noteTabHost: NoteTabHost = {
+  focusExisting: (path) => {
+    const detached = findDetachedTabByPath(path)
+    if (detached?.kind === 'markdown' && focusDetachedByPath(path)) return detached.webContents
+    const id = tabManager?.findMarkdownTabByPath(path)
+    if (!tabManager || !id) return undefined
+    revealShellWindow()
+    tabManager.activateTab(id)
+    return tabManager.webContentsForTab(id)
+  },
+  openNew: (path) => {
+    revealShellWindow()
+    if (!tabManager) return undefined
+    recordRecentFile(path)
+    return tabManager.webContentsForTab(tabManager.openMarkdownTab(path))
+  },
+}
 configurePdfRuntime({
   preloadPath: join(PDF_OUT, 'preload', 'index.js'),
   rendererUrl: process.env.PDF_RENDERER_URL,
@@ -529,6 +548,8 @@ configurePdfRuntime({
   openGeneratedPath: (path) => openGeneratedDocument(path),
   createDocument: createAiDocument,
   openPdfTools: (path, tool) => openPdfToolsWithFile(path, tool),
+  openNote: (path) => openNoteTab(noteTabHost, path) !== null,
+  insertIntoNote: (path, text) => insertIntoNoteTab(noteTabHost, path, text),
 })
 configureMarkdownRuntime({
   preloadPath: join(MARKDOWN_OUT, 'preload', 'index.js'),

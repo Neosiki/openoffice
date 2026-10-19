@@ -67,6 +67,7 @@ import { diagramSvgToPng, renderDiagram } from './editor/diagrams'
 import type { DiagramLanguage } from './editor/diagrams'
 import type { ExportFormat, SaveMode } from '../shared/ipc'
 import { uiOp } from './editor/ops'
+import { appendMarkdownAtEnd, joinNoteAppends } from './note-append'
 
 type LoadStatus = 'loading' | 'ready' | 'error'
 type SaveState = 'idle' | 'saving' | 'saved' | 'failed'
@@ -533,6 +534,32 @@ export default function App() {
   }, [sourceViewOpen])
 
   useEffect(() => () => clearTimeout(sourceApplyTimerRef.current ?? undefined), [])
+
+  // "Add to note" from the PDF editor (reading-assist 4.9): only a loaded
+  // Markdown file takes the queued texts; they go at the end of the document
+  // as a changed, unsaved edit (the file is not written here)
+  const takeNoteAppends = useCallback(async () => {
+    const path = filePathRef.current
+    if (statusRef.current !== 'ready' || !path || isSourceMode(textModeForPath(path))) return
+    const texts = (await window.markdownApi.takeNoteAppend?.()) ?? []
+    const current = editorRef.current
+    const text = joinNoteAppends(texts)
+    if (!current || !text) return
+    flushSource()
+    if (appendMarkdownAtEnd(current, text)) {
+      markDirty()
+      current.chain().setTextSelection(current.state.doc.content.size).scrollIntoView().run()
+    }
+  }, [flushSource, markDirty])
+
+  useEffect(() => {
+    if (status === 'ready') void takeNoteAppends()
+  }, [status, filePath, takeNoteAppends])
+
+  useEffect(
+    () => window.markdownApi.onNoteAppendReady?.(() => void takeNoteAppends()),
+    [takeNoteAppends],
+  )
 
   /** Serialize and write to disk; false when canceled/failed (caller keeps the tab open) */
   const doSave = useCallback(

@@ -52,6 +52,8 @@ export const he = {
   aiToolWriteMapFailed: 'לא ניתן היה לכתוב את המפה',
   aiToolWebSearch: 'חיפוש ברשת',
   aiToolWebSearchDone: 'חיפוש "{query}" · {count} תוצאות',
+  aiToolReadUrl: 'קריאת דף אינטרנט',
+  aiToolReadUrlDone: 'נקרא {host} · {chars} תווים',
   aiSumReadAttachment: 'קריאת קובץ מצורף',
   aiSumImageAttachment: 'תמונה מצורפת {name}',
   aiSumReadAttachmentName: 'קריאת הקובץ המצורף {name}',

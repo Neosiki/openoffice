@@ -305,6 +305,19 @@ export const AGENT_TOOLS: AgentToolDef[] = [
     },
   },
   {
+    name: 'read_url',
+    description:
+      "Read the text of a web page (http/https) — an article, a document, or a skill's instructions (SKILL.md on GitHub). HTML is converted to readable text and links are kept. Long pages are cut at 50,000 characters; continue with offset. Downloads (PDF, images, Office files) are not supported: ask the user to attach those. GitHub blob links are converted to the raw (or API) address automatically; private repositories work when the user adds a read-only GitHub token in settings, and a directory list is readable at api.github.com/repos/…/contents/. Relative links inside a skill document resolve against that document's address.",
+    inputSchema: {
+      type: 'object',
+      properties: {
+        url: { type: 'string', description: 'http(s) address of the page to read' },
+        offset: { type: 'integer', description: 'character to start from (default 0)' },
+      },
+      required: ['url'],
+    },
+  },
+  {
     name: 'goto_page',
     description: 'Scroll the reading view to the given page so the user can see it.',
     inputSchema: {
@@ -1533,6 +1546,43 @@ async function searchText(deps: PdfAiDeps, input: Record<string, unknown>): Prom
   return {
     output: lines.join('\n') || 'No matches found',
     summary: t('aiToolSearch', { query, count: matches.length }),
+  }
+}
+
+/** The display name of a page in the model-facing text: its title, else its host. */
+function hostForLabel(rawUrl: string): string {
+  try {
+    return new URL(rawUrl).host
+  } catch {
+    return rawUrl
+  }
+}
+
+/**
+ * Read one web page through the shared ai:read-url handler (read-url.ts): HTML is
+ * converted to readable text there, pages are cut at 50,000 characters and offset
+ * continues a long page. The model-facing text matches the other editors.
+ */
+async function readUrl(input: Record<string, unknown>): Promise<ToolExecution> {
+  const url = String(input.url ?? '').trim()
+  const requestedHost = hostForLabel(url)
+  if (!url) return err('url must not be empty', t('aiToolReadUrlFail', { host: requestedHost }))
+  const rawOffset = input.offset
+  const offset =
+    typeof rawOffset === 'number' && Number.isFinite(rawOffset)
+      ? Math.max(0, Math.floor(rawOffset))
+      : 0
+  const result = await window.pdfApi.readUrl(url, offset)
+  if (!result.ok) return err(result.error, t('aiToolReadUrlFail', { host: requestedHost }))
+  const end = result.offset + result.text.length
+  const name =
+    result.title !== undefined && result.title !== '' ? result.title : hostForLabel(result.url)
+  return {
+    output:
+      `${name} — characters ${result.offset}..${end} of ${result.totalChars}` +
+      (result.truncated ? ' (continue with offset)' : ' (end)') +
+      `\n${result.url}\n\n${result.text}`,
+    summary: t('aiToolReadUrl', { host: hostForLabel(result.url), n: result.text.length }),
   }
 }
 
@@ -3808,6 +3858,8 @@ export async function executePdfTool(
       return readPages(deps, input, signal)
     case 'search_text':
       return searchText(deps, input)
+    case 'read_url':
+      return readUrl(input)
     case 'goto_page': {
       const summary = t('aiToolGoto', { page: Number(input.page) })
       const r = resolvePage(deps, input.page)

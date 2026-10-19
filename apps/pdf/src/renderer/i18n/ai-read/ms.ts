@@ -63,12 +63,17 @@ export const ms = {
     'Tugas AI sedang berjalan bagi dokumen ini ({done}/{total}). Cuba lagi selepas tugas itu selesai atau dihentikan.',
   arUnavailable: 'Bacaan halaman dengan AI tidak tersedia dalam tetingkap ini.',
   arDeleteConfirm:
-    'Padam semua bacaan AI dan terjemahan yang disimpan bagi dokumen ini? Tindakan ini tidak boleh dibuat asal.',
+    'Padam semua hasil AI yang disimpan bagi dokumen ini (bacaan AI, terjemahan, kad petikan, cadangan serlahan dan gambaran keseluruhan)? Tindakan ini tidak boleh dibuat asal.',
   arDeleted: 'Hasil AI yang disimpan bagi dokumen ini telah dipadam.',
   arDeleteFailed: 'Hasil AI yang disimpan tidak dapat dipadam.',
   arDeleteBusy: 'Tugas AI sedang berjalan, jadi tiada apa-apa boleh dipadam sekarang.',
   jobResumeAiRead: 'Bacaan AI belum selesai {percent}% — teruskan?',
   jobResumeTranslate: 'Terjemahan belum selesai ({language}) {percent}% — teruskan?',
+  jobResumeHighlight: 'Serlahan AI belum selesai {percent}% — teruskan?',
+  arDeleteAlsoBoth:
+    'Turut dipadam: {edited} terjemahan yang disunting secara manual dan {cards} kad petikan.',
+  arDeleteAlsoEdited: 'Turut dipadam: {count} terjemahan yang disunting secara manual.',
+  arDeleteAlsoCards: 'Turut dipadam: {count} kad petikan.',
   jobResumeContinue: 'Teruskan',
   jobResumeLater: 'Kemudian',
   searchAiRead: 'Ditemui dalam teks yang dibaca AI',

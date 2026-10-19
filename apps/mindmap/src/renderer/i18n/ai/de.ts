@@ -55,6 +55,8 @@ export const de = {
   aiToolWriteMapFailed: 'Die Map konnte nicht geschrieben werden',
   aiToolWebSearch: 'Websuche',
   aiToolWebSearchDone: '„{query}" gesucht · {count} Treffer',
+  aiToolReadUrl: 'Webseite lesen',
+  aiToolReadUrlDone: '{host} gelesen · {chars} Zeichen',
   aiSumReadAttachment: 'Anlage lesen',
   aiSumImageAttachment: 'Bildanlage {name}',
   aiSumReadAttachmentName: 'Anlage {name} lesen',

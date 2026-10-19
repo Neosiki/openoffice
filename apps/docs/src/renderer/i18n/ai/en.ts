@@ -117,6 +117,8 @@ export const en = {
   aiSumReadAttachmentName: 'Read attachment {name}',
   aiSumWebSearch: 'Web search',
   aiSumWebSearchDone: 'Searched "{query}" ({count} results)',
+  aiSumReadUrl: 'Web page read',
+  aiSumReadUrlDone: 'Read {host} · {count} chars',
   aiSumImageSearch: 'Image search',
   aiSumImageSearchDone: 'Image search "{query}" ({count} images)',
   aiSumAnalyzeMedia: 'Analyze media',

@@ -69,3 +69,75 @@ export function parsePageRanges(input: string, max: number): number[] | null {
 }
 /** Page bitmap budget: at 800% a hi-dpi Letter page would otherwise be ~125M px */
 export const MAX_PAGE_RENDER_PIXELS = 48_000_000
+
+// ── Side-by-side translation column: width and text size; persisted ──
+export const BILINGUAL_W_KEY = 'genoffice-pdf-bilingual-width'
+export const BILINGUAL_W_DEFAULT = 360
+export const BILINGUAL_W_MIN = 220
+export const BILINGUAL_FONT_KEY = 'genoffice-pdf-bilingual-font'
+export const BILINGUAL_FONT_DEFAULT = 14
+export const BILINGUAL_FONT_MIN = 10
+export const BILINGUAL_FONT_MAX = 24
+
+export const clampBilingualW = (w: number): number =>
+  Math.round(
+    Math.min(
+      Math.max(w, BILINGUAL_W_MIN),
+      Math.max(BILINGUAL_W_MIN, Math.round(window.innerWidth * 0.6)),
+    ),
+  )
+
+export const clampBilingualFont = (px: number): number =>
+  Math.min(Math.max(Math.round(px), BILINGUAL_FONT_MIN), BILINGUAL_FONT_MAX)
+
+const readStoredNumber = (key: string): number | null => {
+  try {
+    const saved = Number(localStorage.getItem(key))
+    return Number.isFinite(saved) && saved > 0 ? saved : null
+  } catch {
+    return null
+  }
+}
+
+const writeStoredNumber = (key: string, value: number): void => {
+  try {
+    localStorage.setItem(key, String(value))
+  } catch {
+    // storage full or blocked: the value lasts for this tab only
+  }
+}
+
+export const loadBilingualW = (): number => {
+  const saved = readStoredNumber(BILINGUAL_W_KEY)
+  return saved !== null ? clampBilingualW(saved) : BILINGUAL_W_DEFAULT
+}
+
+export const saveBilingualW = (w: number): void => writeStoredNumber(BILINGUAL_W_KEY, w)
+
+export const loadBilingualFont = (): number => {
+  const saved = readStoredNumber(BILINGUAL_FONT_KEY)
+  return saved !== null ? clampBilingualFont(saved) : BILINGUAL_FONT_DEFAULT
+}
+
+export const saveBilingualFont = (px: number): void => writeStoredNumber(BILINGUAL_FONT_KEY, px)
+
+// ── Reading assistant: the dotted marks under passages that have a card (View tab, default on) ──
+export const PASSAGE_MARKS_KEY = 'genoffice-pdf-passage-marks'
+
+type FlagStorage = Pick<Storage, 'getItem' | 'setItem'>
+
+export const loadPassageMarks = (storage: FlagStorage = localStorage): boolean => {
+  try {
+    return storage.getItem(PASSAGE_MARKS_KEY) !== '0'
+  } catch {
+    return true
+  }
+}
+
+export const savePassageMarks = (on: boolean, storage: FlagStorage = localStorage): void => {
+  try {
+    storage.setItem(PASSAGE_MARKS_KEY, on ? '1' : '0')
+  } catch {
+    // storage unavailable: the toggle still works for this session
+  }
+}

@@ -77,6 +77,8 @@ export const th = {
   aiToolReadFile: 'อ่าน {name}',
   aiToolWebSearch: 'ค้นหาเว็บ',
   aiToolWebSearchDone: 'ค้นหา "{query}" ({count} ผลลัพธ์)',
+  aiToolReadUrl: 'อ่านหน้าเว็บ',
+  aiToolReadUrlDone: 'อ่าน {host} ({chars} ตัวอักษร)',
   aiToolFindCells: 'ค้นหาเซลล์',
   aiToolFindCellsOf: 'ค้นหา "{query}" ({count} รายการที่ตรงกัน)',
   aiToolFindErrors: 'สแกนข้อผิดพลาดของสูตร ({count} รายการ)',

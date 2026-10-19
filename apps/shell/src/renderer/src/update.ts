@@ -1,4 +1,9 @@
-import type { UpdateUiState, UpdateWindowApi } from '../../shared/update-api'
+import type {
+  UpdateNoteBlock,
+  UpdateNoteRun,
+  UpdateUiState,
+  UpdateWindowApi,
+} from '../../shared/update-api'
 
 // exposed by src/preload/update.ts
 const api = (window as unknown as { aiOfficeUpdate: UpdateWindowApi }).aiOfficeUpdate
@@ -14,8 +19,75 @@ const progressText = el('progress-text')
 const percentText = el('percent')
 const action = el('action') as HTMLButtonElement
 const later = el('later') as HTMLButtonElement
+const notes = el('notes')
+const notesLabel = el('notes-label')
+const notesBox = el('notes-box')
+const notesMore = el('notes-more') as HTMLButtonElement
 
 let phase: UpdateUiState['phase'] = 'available'
+
+/** draws the release notes from the pre-converted block tree; text nodes only, never HTML */
+function renderNotes(state: UpdateUiState): void {
+  const releaseNotes = state.releaseNotes
+  const present = releaseNotes !== null && releaseNotes.sections.length > 0
+  notes.style.display = present ? 'flex' : 'none'
+  notesBox.replaceChildren()
+  if (releaseNotes === null || !present) return
+
+  notesLabel.textContent = state.strings.notesLabel
+  notesBox.setAttribute('aria-label', state.strings.notesLabel)
+  notesMore.textContent = state.strings.notesOnGitHub
+
+  const showVersions = releaseNotes.sections.length > 1
+  for (const section of releaseNotes.sections) {
+    if (showVersions && section.version !== null) {
+      const version = document.createElement('div')
+      version.className = 'nl-ver'
+      version.textContent = `v${section.version}`
+      notesBox.appendChild(version)
+    }
+    for (const block of section.blocks) notesBox.appendChild(blockNode(block))
+  }
+  if (releaseNotes.truncated) {
+    const truncated = document.createElement('div')
+    truncated.className = 'nl-trunc'
+    truncated.textContent = state.strings.notesTruncated
+    notesBox.appendChild(truncated)
+  }
+}
+
+function blockNode(block: UpdateNoteBlock): HTMLElement {
+  if (block.kind === 'list') {
+    const list = document.createElement(block.ordered ? 'ol' : 'ul')
+    for (const item of block.items) {
+      const li = document.createElement('li')
+      appendRuns(li, item)
+      list.appendChild(li)
+    }
+    return list
+  }
+  const node = document.createElement(block.kind === 'heading' ? 'div' : 'p')
+  if (block.kind === 'heading') node.className = 'nl-h'
+  appendRuns(node, block.runs)
+  return node
+}
+
+function appendRuns(parent: HTMLElement, runs: UpdateNoteRun[]): void {
+  for (const run of runs) {
+    let node: Node = document.createTextNode(run.text)
+    if (run.code === true) {
+      const code = document.createElement('code')
+      code.appendChild(node)
+      node = code
+    }
+    if (run.strong === true) {
+      const strong = document.createElement('strong')
+      strong.appendChild(node)
+      node = strong
+    }
+    parent.appendChild(node)
+  }
+}
 
 function render(state: UpdateUiState): void {
   phase = state.phase
@@ -28,7 +100,14 @@ function render(state: UpdateUiState): void {
   verNew.textContent = `v${state.version}`
   later.textContent = s.later
 
+  const hasNotes = state.releaseNotes !== null && state.releaseNotes.sections.length > 0
+  renderNotes(state)
+  // the notes take the generic line's place; failure and manual guidance
+  // always stay (their text explains what to do)
+  desc.style.display = hasNotes ? 'none' : ''
   desc.classList.toggle('error', state.phase === 'error' || state.phase === 'manual')
+  // in the manual phase the main button already opens the same release page
+  notesMore.style.display = state.phase === 'manual' ? 'none' : ''
 
   switch (state.phase) {
     case 'available':
@@ -55,12 +134,14 @@ function render(state: UpdateUiState): void {
       break
     case 'error':
       desc.textContent = s.failed
+      desc.style.display = ''
       progress.style.display = 'none'
       action.style.display = ''
       action.textContent = s.retry
       break
     case 'manual':
       desc.textContent = s.manualDesc
+      desc.style.display = ''
       progress.style.display = 'none'
       action.style.display = ''
       action.textContent = s.openDownload
@@ -74,6 +155,7 @@ action.addEventListener('click', () => {
   else api.download()
 })
 later.addEventListener('click', () => api.later())
+notesMore.addEventListener('click', () => api.openDownload())
 
 api.onState(render)
 void api.getState().then((state) => {

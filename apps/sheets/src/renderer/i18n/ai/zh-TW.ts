@@ -74,6 +74,8 @@ export const zhTW = {
   aiToolReadFile: '讀取 {name}',
   aiToolWebSearch: '網路搜尋',
   aiToolWebSearchDone: '搜尋 "{query}"（{count} 筆結果）',
+  aiToolReadUrl: '讀取網頁',
+  aiToolReadUrlDone: '讀取 {host}（{chars} 個字元）',
   aiToolFindCells: '尋找儲存格',
   aiToolFindCellsOf: '尋找 "{query}"（{count} 筆相符）',
   aiToolFindErrors: '掃描公式錯誤（{count} 筆）',

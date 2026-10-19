@@ -56,6 +56,8 @@ export const zhTW = {
   aiStarterProofreadPrompt: '請找出這份文件中的拼字與空格錯誤並修正。',
   aiToolRead: '已讀取文件',
   aiToolFind: '尋找「{text}」 · {count} 處',
+  aiToolReadUrl: '已讀取 {host} · {n} 字',
+  aiToolReadUrlFail: '無法讀取 {host}',
   aiToolFields: '已查看表單欄位 · {count} 個',
   aiToolToc: '新增了目錄 · {count} 個標題',
   aiToolTocRefresh: '重新寫了目錄頁碼 · {count}',

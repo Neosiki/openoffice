@@ -88,3 +88,66 @@ Enam alat disediakan: **dakwat, segi empat, elips, anak panah, dan nota**, serta
 
 - Simpanan biasa, sama ada manual atau automatik, menulis anotasi dan suntingan kembali ke dalam fail secara atomik.
 - **Penggunaan redaksi** melalui aliran Guna sendiri menghasilkan satu salinan, sambil membiarkan fail asal tidak berubah, jadi kandungan sensitif tidak kekal di dalamnya.
+
+## Pintasan bar pilihan
+
+Selagi bar anotasi kelihatan di atas teks yang dipilih, satu kekunci sahaja terus menjalankan sesuatu tindakan.
+
+| Kekunci | Tindakan                                  |
+| ------- | ----------------------------------------- |
+| H       | Serlah (membuang serlahan jika sudah ada) |
+| U       | Garisan bawah                             |
+| S       | Potongan garis                            |
+| N       | Tambah nota di hujung pilihan             |
+| E       | Penerangan AI (kad petikan)               |
+| T       | Terjemahan AI (kad petikan)               |
+| Enter   | Buka kotak **Tanya AI**                   |
+
+- Kekunci ini berfungsi sama walaupun kaedah input bahasa Korea atau bahasa lain dihidupkan. Kekunci tidak dikira pintasan semasa anda menaip dalam medan atau menahan Ctrl atau Alt.
+- Dalam dokumen yang dikunci daripada disunting (dilindungi kata laluan), H, U, S dan N tidak berbuat apa-apa dan memaparkan sebabnya, sama seperti butang pada bar.
+
+## Kad petikan
+
+Tekan **E** atau **T**, atau cip terangkan dan terjemah dalam kotak **Tanya AI**, lalu jawapannya muncul dalam kad kecil di sebelah pilihan. Kad disimpan, jadi masih ada apabila dokumen dibuka semula, dan boleh disalin. Jika anda bertanya tentang petikan yang sama sekali lagi, kad sedia ada dibuka tanpa menghantar apa-apa.
+
+- **Simpan sebagai nota** mencipta nota di tempat itu. Baris pertamanya berbunyi "Penerangan AI" atau "Terjemahan AI", dan penulisnya ialah nama akaun PC anda. Nota masuk ke dalam fail apabila PDF disimpan; sebelum itu kad memaparkan "Menunggu simpanan".
+- **Tanya lagi dalam panel AI** memindahkan petikan dan jawapan ke panel AI tanpa menghantarnya; **Tambah ke nota** meletakkannya di hujung nota PDF ini.
+- Hanya **Jana semula** yang menghantar petikan kepada AI sekali lagi.
+- **Padam** hanya memadam kad yang disimpan. Nota yang sudah anda simpan kekal.
+- Garisan titik-titik yang samar menandakan setiap petikan yang ada kad; klik garisan itu untuk membuka kad semula. Garisan ini hanya pada skrin dan tidak sekali-kali disimpan atau dicetak. Hidupkan atau matikan melalui Pandangan ▸ **Tanda petikan**.
+
+## Semua anotasi dalam satu senarai
+
+- Pandangan ▸ **Anotasi** memaparkan dalam bar sisi kiri senarai serlahan, garisan bawah, potongan garis, nota dan lukisan dokumen, tanda yang belum disimpan, serta kad petikan. Tanda turut menunjukkan teks di bawahnya.
+- Tapis mengikut jenis, warna, julat halaman atau teks, dan isih mengikut halaman atau tertib penciptaan.
+- Klik sesuatu item untuk pergi ke tempatnya dengan kelipan singkat. Nota membuka bebenang di jidar; kad membuka kad.
+- Arahan menu **Salin sebagai Markdown**, **Buka sebagai dokumen Markdown** dan **Buka sebagai dokumen Word** menggunakan senarai seperti yang ditapis sekarang. AI tidak digunakan. Dokumen baharu hanya boleh dibuat daripada PDF yang dibuka di dalam GenOffice.
+
+## Terjemahan sebelah-menyebelah
+
+- Hidupkan Pandangan ▸ **Terjemahan sebelah-menyebelah**, dan lajur terjemahan muncul di sebelah kanan setiap halaman serta menatal bersamanya. Menghidupkannya sahaja tidak menghantar apa-apa kepada AI. Dokumen yang sudah diterjemah dengan **Terjemah Dokumen** terus memaparkan terjemahannya; perenggan tanpa terjemahan kelihatan sebagai teks asal yang pudar.
+- **Terjemah halaman ini** (atau **Terjemah bakinya** jika sebahagian sudah siap) menghantar halaman itu dengan sekali tekan semasa anda menggunakan langganan; nama AI penerima tertera di sebelah butang. Pada sambungan yang dicaj mengikut penggunaan, tekanan pertama dalam sesuatu tab bertanya dahulu "akan mengenakan caj untuk ini · Terjemah / Batal".
+- Klik dua kali pada perenggan terjemahan untuk menyuntingnya. Perenggan yang disunting disimpan sebagai teks biasa dan digunakan seadanya dalam fail PDF, Markdown dan EPUB terjemahan. **Terjemah semula** pada sesuatu perenggan hanya menghantar perenggan itu, dan bertanya dahulu jika anda telah menyuntingnya.
+- Apabila tetikus berada di atas perenggan terjemahan, tempatnya pada halaman asal diberi bingkai. Lebar dan saiz huruf lajur boleh diubah. **Terjemah semua halaman…** membuka tetingkap **Terjemah Dokumen**, dan format **Simpan sahaja (tiada fail)** di situ menyimpan terjemahan tanpa menulis fail.
+
+## Serlahan AI
+
+- Di Laman Utama ▸ **Serlahan AI**, pilih satu set kategori (Penyelidikan & laporan, Kontrak & terma, Buku teks & manual, atau Tentukan sendiri) dan halamannya. Tiada apa-apa dihantar sehingga anda menyemak anggaran bilangan panggilan dan AI penerima, kemudian menekan **Mula**.
+- Ayat yang dipilih AI dipratonton sebagai kotak berwarna lut sinar pada halaman. Pratonton tidak sekali-kali disimpan; hidupkan atau matikan melalui Pandangan ▸ **Pratonton serlahan**.
+- Dalam panel **Anotasi**, tekan **Terima** atau **Buang** bagi setiap cadangan, atau terima satu kategori sekali gus. Ayat yang tidak ditemui dalam teks halaman tidak boleh diterima.
+- Cadangan yang diterima menjadi serlahan dalam warna kategorinya, dan nama kategori disimpan sebagai subjek anotasi, jadi pemapar PDF lain turut memaparkannya dalam senarai komen. Serlahan masuk ke dalam fail apabila PDF disimpan.
+- Serlahan AI tidak boleh dimulakan dalam dokumen yang dikunci daripada disunting. Ayat rekaan AI yang tiada dalam teks dibuang, dan laporan akhir menyatakan berapa yang diterima dan berapa yang dibuang.
+
+## Gambaran keseluruhan dokumen dan petikan perenggan
+
+- Di bahagian atas panel AI, **Gambaran keseluruhan dokumen** ▸ **Buat gambaran keseluruhan** menghasilkan ringkasan tiga baris, ringkasan dan istilah utama (beserta maksud dan halaman pertama ia muncul). Dokumen panjang diringkaskan mengikut bahagian, jadi anda mengesahkan anggaran bilangan panggilan terlebih dahulu.
+- Gambaran keseluruhan disimpan dan masih ada apabila dibuka semula; hanya **Jana semula** yang menghantar sekali lagi. Klik sesuatu istilah untuk mencarinya dalam dokumen; setiap bahagian boleh disalin atau ditambah ke nota.
+- Apabila perbualan masih kosong, panel AI menawarkan tiga soalan yang dicadangkan. Klik salah satu untuk menghantarnya sekali.
+- Mengklik pautan halaman (p.N) yang diberikan AI sebagai bukti akan membawa anda ke halaman itu dan menonjolkan ayat yang dipetik selama dua saat. Jika ayat itu tidak ditemui, hanya halaman itu yang dibuka.
+
+## Satu nota bagi setiap PDF
+
+- Kali pertama anda menekan **Buka nota** (tab Pandangan atau panel **Anotasi**), tetingkap simpan dibuka, dengan lalai folder PDF dan nama "nama PDF nota.md". Selepas itu nota terus dibuka dalam tab Markdown.
+- Jika anda memilih fail yang sudah wujud, Windows mungkin bertanya sama ada mahu menggantikannya, tetapi fail itu tidak ditulis ganti: ia dipautkan sebagai nota seadanya.
+- **Tambah ke nota** (pada kad, item panel dan gambaran keseluruhan dokumen) meletakkan petikan beserta pautan halaman di hujung tab nota dan membiarkannya belum disimpan; anda sendiri yang menyimpannya dalam tab nota. Pautan ini membuka PDF pada halaman itu dalam program lain juga, seperti pelayar.
+- PDF yang belum pernah disimpan memaparkan "Simpan PDF dahulu". Nota hanya berfungsi untuk PDF yang dibuka di dalam GenOffice.

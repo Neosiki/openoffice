@@ -65,12 +65,17 @@ export const nl = {
     'Er loopt al een AI-taak voor dit document ({done}/{total}). Probeer het opnieuw zodra die klaar of gestopt is.',
   arUnavailable: 'Pagina’s lezen met AI is niet beschikbaar in dit venster.',
   arDeleteConfirm:
-    'Alle voor dit document bewaarde AI-lezingen en vertalingen verwijderen? Dit kan niet ongedaan worden gemaakt.',
+    'Alle voor dit document bewaarde AI-resultaten (AI-lezingen, vertalingen, passagekaarten, markeringsvoorstellen en het overzicht) verwijderen? Dit kan niet ongedaan worden gemaakt.',
   arDeleted: 'De bewaarde AI-resultaten van dit document zijn verwijderd.',
   arDeleteFailed: 'De bewaarde AI-resultaten konden niet worden verwijderd.',
   arDeleteBusy: 'Er loopt een AI-taak, dus er kan nu niets worden verwijderd.',
   jobResumeAiRead: 'Onvoltooid lezen met AI {percent}% — doorgaan?',
   jobResumeTranslate: 'Onvoltooide vertaling ({language}) {percent}% — doorgaan?',
+  jobResumeHighlight: 'Onvoltooide AI-markering {percent}% — doorgaan?',
+  arDeleteAlsoBoth:
+    'Ook verwijderd worden: met de hand aangepaste vertalingen ({edited}) en passagekaarten ({cards}).',
+  arDeleteAlsoEdited: 'Ook verwijderd worden: met de hand aangepaste vertalingen ({count}).',
+  arDeleteAlsoCards: 'Ook verwijderd worden: passagekaarten ({count}).',
   jobResumeContinue: 'Doorgaan',
   jobResumeLater: 'Later',
   searchAiRead: 'Gevonden in door AI gelezen tekst',

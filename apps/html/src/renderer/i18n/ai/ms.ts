@@ -49,6 +49,8 @@ export const ms = {
   aiTimeoutError: 'Respons AI tamat masa',
   aiToolWebSearch: 'Carian web',
   aiToolWebSearchDone: 'Cari "{query}" · {count} hasil',
+  aiToolReadUrl: 'Baca halaman web',
+  aiToolReadUrlDone: 'Membaca {host} · {chars} aksara',
   aiTruncatedNote: '(Balasan terpotong kerana had panjang dan mungkin tidak lengkap.)',
   aiTurnLimit: 'Had langkah setiap larian dicapai — hantar arahan lain untuk teruskan.',
   aiUndelivered: 'Tidak dihantar',

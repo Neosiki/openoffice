@@ -19,7 +19,9 @@ electron-builder.env
 /.task/
 /docs-archive/
 .idea/
-.claude/
+# Local Claude Code state; committed project skills live under .claude/skills
+/.claude/*
+!/.claude/skills/
 
 # Local build artifacts dropped in the repo root
 /*.dmg

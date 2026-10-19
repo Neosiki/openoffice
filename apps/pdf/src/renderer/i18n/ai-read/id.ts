@@ -63,12 +63,17 @@ export const id = {
     'Sudah ada tugas AI yang berjalan untuk dokumen ini ({done}/{total}). Coba lagi setelah tugas itu selesai atau dihentikan.',
   arUnavailable: 'Pembacaan halaman dengan AI tidak tersedia di jendela ini.',
   arDeleteConfirm:
-    'Hapus semua hasil baca AI dan terjemahan yang disimpan untuk dokumen ini? Tindakan ini tidak dapat dibatalkan.',
+    'Hapus semua hasil AI yang disimpan untuk dokumen ini (hasil baca AI, terjemahan, kartu kutipan, saran sorotan, dan ikhtisar)? Tindakan ini tidak dapat dibatalkan.',
   arDeleted: 'Hasil AI yang disimpan untuk dokumen ini telah dihapus.',
   arDeleteFailed: 'Hasil AI yang disimpan tidak dapat dihapus.',
   arDeleteBusy: 'Ada tugas AI yang sedang berjalan, jadi tidak ada yang dapat dihapus sekarang.',
   jobResumeAiRead: 'Pembacaan AI belum selesai {percent}% — lanjutkan?',
   jobResumeTranslate: 'Terjemahan belum selesai ({language}) {percent}% — lanjutkan?',
+  jobResumeHighlight: 'Sorotan AI belum selesai {percent}% — lanjutkan?',
+  arDeleteAlsoBoth:
+    'Ikut terhapus: {edited} terjemahan yang diedit manual dan {cards} kartu kutipan.',
+  arDeleteAlsoEdited: 'Ikut terhapus: {count} terjemahan yang diedit manual.',
+  arDeleteAlsoCards: 'Ikut terhapus: {count} kartu kutipan.',
   jobResumeContinue: 'Lanjutkan',
   jobResumeLater: 'Nanti',
   searchAiRead: 'Ditemukan di teks yang dibaca AI',

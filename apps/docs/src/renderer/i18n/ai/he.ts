@@ -114,6 +114,8 @@ export const he = {
   aiSumReadAttachmentName: 'קריאת הקובץ המצורף {name}',
   aiSumWebSearch: 'חיפוש באינטרנט',
   aiSumWebSearchDone: 'חיפוש "{query}" ({count} תוצאות)',
+  aiSumReadUrl: 'קריאת דף אינטרנט',
+  aiSumReadUrlDone: 'נקרא {host} · {count} תווים',
   aiSumImageSearch: 'חיפוש תמונות',
   aiSumImageSearchDone: 'חיפוש תמונות "{query}" ({count} תמונות)',
   aiSumAnalyzeMedia: 'ניתוח מדיה',

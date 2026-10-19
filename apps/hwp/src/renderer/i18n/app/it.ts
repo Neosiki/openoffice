@@ -61,6 +61,8 @@ export const it = {
     'Trova gli errori di ortografia e di spaziatura in questo documento e correggili.',
   aiToolRead: 'Documento letto',
   aiToolFind: 'Ricerca di «{text}» · {count} trovati',
+  aiToolReadUrl: '{host} letto · {n} caratteri',
+  aiToolReadUrlFail: 'Impossibile leggere {host}',
   aiToolFields: 'Campi modulo controllati · {count}',
   aiToolToc: 'Aggiunto un indice · {count} titoli',
   aiToolTocRefresh: "Riscritti i numeri di pagina dell'indice · {count}",

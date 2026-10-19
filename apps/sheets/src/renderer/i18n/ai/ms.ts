@@ -78,6 +78,8 @@ export const ms = {
   aiToolReadFile: 'Baca {name}',
   aiToolWebSearch: 'Carian web',
   aiToolWebSearchDone: 'Mencari "{query}" ({count} hasil)',
+  aiToolReadUrl: 'Baca halaman web',
+  aiToolReadUrlDone: 'Membaca {host} ({chars} aksara)',
   aiToolFindCells: 'Cari sel',
   aiToolFindCellsOf: 'Mencari "{query}" ({count} padanan)',
   aiToolFindErrors: 'Mengimbas ralat formula ({count})',

@@ -38,6 +38,7 @@ import {
 import {
   webSearchTool,
   imageSearchTool,
+  readUrlTool,
   generateImageTool,
   analyzeMediaTool,
   aiToolCapabilities,
@@ -216,6 +217,20 @@ export function registerAiIpc(): void {
       )
     } catch (err) {
       return { results: [], method: 'error', error: String(err) }
+    }
+  })
+
+  // Read one web page as text (the read_url tool), paged by character offset.
+  // A long download ends with the window or when the window's AI run is stopped.
+  ipcMain.handle('ai:read-url', async (event, url: string, offset?: number) => {
+    try {
+      return await withMediaCallSignal(event.sender, (signal) =>
+        readUrlTool(AI_SETTINGS_PATH(), String(url), typeof offset === 'number' ? offset : 0, {
+          signal,
+        }),
+      )
+    } catch {
+      return { ok: false, error: 'The read failed.', errorCode: 'network' }
     }
   })
 

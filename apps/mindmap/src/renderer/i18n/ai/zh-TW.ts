@@ -52,6 +52,8 @@ export const zhTW = {
   aiToolWriteMapFailed: '無法寫出心智圖',
   aiToolWebSearch: '網路搜尋',
   aiToolWebSearchDone: '搜尋「{query}」· {count} 筆結果',
+  aiToolReadUrl: '讀取網頁',
+  aiToolReadUrlDone: '已讀取 {host} · {chars} 個字元',
   aiSumReadAttachment: '讀取附件',
   aiSumImageAttachment: '圖片附件 {name}',
   aiSumReadAttachmentName: '讀取附件 {name}',

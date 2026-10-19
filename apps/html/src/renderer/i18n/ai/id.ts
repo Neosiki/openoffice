@@ -49,6 +49,8 @@ export const id = {
   aiTimeoutError: 'Respons AI kehabisan waktu',
   aiToolWebSearch: 'Pencarian web',
   aiToolWebSearchDone: 'Mencari "{query}" · {count} hasil',
+  aiToolReadUrl: 'Baca halaman web',
+  aiToolReadUrlDone: 'Membaca {host} · {chars} karakter',
   aiTruncatedNote: '(Balasan terpotong karena batas panjang dan mungkin tidak lengkap.)',
   aiTurnLimit: 'Batas langkah per eksekusi tercapai — kirim instruksi lagi untuk melanjutkan.',
   aiUndelivered: 'Tidak terkirim',

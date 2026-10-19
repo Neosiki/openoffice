@@ -86,3 +86,66 @@ Sáu công cụ: **Vẽ, Hình chữ nhật, Hình elip, Mũi tên, Ghi chú**, 
 
 - Lưu thường / tự động lưu ghi lại chú thích và chỉnh sửa vào tệp (ghi nguyên tử).
 - **Che nội dung luôn đi qua quy trình "Áp dụng" của nó** để tạo ra một bản sao, giữ nguyên tệp gốc, nhờ đó nội dung nhạy cảm không nằm lại trong đó.
+
+## Phím tắt của thanh chọn
+
+Trong lúc thanh chú thích đang hiện phía trên đoạn văn bản đã chọn, chỉ một phím là thực hiện ngay một thao tác.
+
+| Phím  | Thao tác                              |
+| ----- | ------------------------------------- |
+| H     | Tô sáng (bỏ tô nếu chỗ đó đã được tô) |
+| U     | Gạch chân                             |
+| S     | Gạch ngang                            |
+| N     | Thêm ghi chú ở cuối phần đã chọn      |
+| E     | Giải thích của AI (thẻ đoạn văn)      |
+| T     | Bản dịch của AI (thẻ đoạn văn)        |
+| Enter | Mở ô **Hỏi AI**                       |
+
+- Các phím vẫn hoạt động như vậy khi bộ gõ tiếng Hàn hay bộ gõ khác đang bật. Khi bạn đang gõ trong một ô nhập hoặc giữ Ctrl hay Alt, chúng không được coi là phím tắt.
+- Trong tài liệu bị khóa chỉnh sửa (được bảo vệ bằng mật khẩu), H, U, S và N không làm gì và hiện lý do giống các nút trên thanh.
+
+## Thẻ đoạn văn
+
+Nhấn **E** hoặc **T**, hoặc các nút giải thích và dịch trong ô **Hỏi AI**, câu trả lời sẽ hiện trong một thẻ nhỏ cạnh phần đã chọn. Thẻ được lưu giữ nên vẫn còn khi mở lại tài liệu, và có thể sao chép. Hỏi lại cùng một đoạn văn sẽ mở thẻ có sẵn mà không gửi gì.
+
+- **Giữ làm ghi chú** tạo một ghi chú ở vị trí đó. Dòng đầu của ghi chú là "Giải thích của AI" hoặc "Bản dịch của AI", tác giả là tên tài khoản máy tính của bạn. Ghi chú vào tệp khi bạn lưu PDF; trước đó thẻ hiện "Chờ lưu".
+- **Hỏi tiếp trong bảng AI** chuyển đoạn văn và câu trả lời sang bảng AI mà không gửi đi; **Thêm vào ghi chú** đặt chúng vào cuối ghi chú của PDF này.
+- Chỉ **Tạo lại** mới gửi đoạn văn cho AI một lần nữa.
+- **Xóa** chỉ xóa thẻ đã lưu giữ. Ghi chú bạn đã giữ vẫn còn nguyên.
+- Mỗi đoạn văn có thẻ được đánh dấu bằng một đường chấm mờ bên dưới; bấm vào đường đó để mở lại thẻ. Đường này chỉ hiện trên màn hình, không bao giờ được lưu hay in ra. Bật tắt tại Xem ▸ **Dấu đoạn văn**.
+
+## Xem toàn bộ chú thích
+
+- Xem ▸ **Chú thích** liệt kê ở thanh bên trái các chỗ tô sáng, gạch chân, gạch ngang, ghi chú và hình vẽ của tài liệu, các đánh dấu chưa lưu và các thẻ đoạn văn trong một danh sách. Các đánh dấu còn hiện cả chữ nằm bên dưới.
+- Lọc theo loại, màu, khoảng trang hoặc chữ, và sắp xếp theo trang hoặc theo thứ tự tạo.
+- Bấm vào một mục để tới chỗ đó, kèm một lần nhấp nháy ngắn. Ghi chú mở cuộc trao đổi ở lề, thẻ mở thẻ.
+- Các lệnh trong menu **Sao chép dạng Markdown**, **Mở thành tài liệu Markdown** và **Mở thành tài liệu Word** dùng danh sách đúng như đang lọc. Không dùng đến AI. Chỉ tạo được tài liệu mới từ PDF mở bên trong GenOffice.
+
+## Bản dịch song song
+
+- Bật Xem ▸ **Bản dịch song song**, bên phải mỗi trang sẽ có một cột bản dịch cuộn cùng trang. Chỉ bật thôi thì không gửi gì cho AI. Tài liệu đã dịch bằng **Dịch tài liệu** sẽ hiện bản dịch ngay; các đoạn chưa có bản dịch hiện dưới dạng văn bản gốc mờ.
+- **Dịch trang này** (hoặc **Dịch phần còn lại** khi đã dịch một phần) gửi trang đó chỉ với một lần nhấn khi bạn dùng gói đăng ký; cạnh nút có ghi tên AI nhận. Với kết nối tính phí theo mức dùng, lần nhấn đầu tiên trong mỗi thẻ sẽ hỏi trước "sẽ tính phí cho việc này · Dịch / Hủy".
+- Bấm đúp vào một đoạn đã dịch để sửa. Đoạn đã sửa được lưu dưới dạng chữ không định dạng và được dùng nguyên như vậy trong các tệp PDF, Markdown và EPUB đã dịch. **Dịch lại** ở một đoạn chỉ gửi đoạn đó, và hỏi trước nếu bạn đã sửa nó.
+- Rê chuột lên một đoạn đã dịch, vị trí của nó trên trang gốc sẽ được viền khung. Có thể chỉnh độ rộng và cỡ chữ của cột. **Dịch tất cả các trang…** mở cửa sổ **Dịch tài liệu**; định dạng **Chỉ lưu trữ (không tạo tệp)** ở đó giữ bản dịch mà không ghi tệp.
+
+## Tô sáng bằng AI
+
+- Tại Trang chủ ▸ **Tô sáng bằng AI**, chọn một bộ danh mục (Nghiên cứu & báo cáo, Hợp đồng & điều khoản, Giáo trình & hướng dẫn, hoặc Tự đặt) và các trang. Không có gì được gửi cho tới khi bạn xem số lần gọi dự kiến cùng AI nhận và nhấn **Bắt đầu**.
+- Những câu AI chọn được xem trước dưới dạng các khung màu trong mờ trên trang. Bản xem trước không bao giờ được lưu; bật tắt tại Xem ▸ **Xem trước tô sáng**.
+- Trong bảng **Chú thích**, **Chấp nhận** hoặc **Bỏ** từng đề xuất, hoặc chấp nhận cả một danh mục. Câu không tìm thấy trong chữ của trang thì không thể chấp nhận.
+- Đề xuất được chấp nhận trở thành một chỗ tô sáng màu của danh mục, và tên danh mục được lưu làm chủ đề của chú thích, nên các trình xem PDF khác cũng hiện nó trong danh sách bình luận. Nó vào tệp khi bạn lưu PDF.
+- Không thể bắt đầu tô sáng trong tài liệu bị khóa chỉnh sửa. Những câu AI bịa ra không có trong văn bản sẽ bị bỏ, và khi xong sẽ báo nhận được bao nhiêu và bỏ bao nhiêu.
+
+## Tổng quan tài liệu và trích dẫn đoạn văn
+
+- Ở đầu bảng AI, **Tổng quan tài liệu** ▸ **Tạo tổng quan** tạo bản tóm tắt ba dòng, bản tóm tắt và các thuật ngữ chính (kèm nghĩa và trang xuất hiện đầu tiên). Tài liệu dài được tóm tắt theo từng phần, nên trước tiên bạn xác nhận số lần gọi dự kiến.
+- Tổng quan được lưu giữ và vẫn còn khi mở lại; chỉ **Tạo lại** mới gửi lần nữa. Bấm vào một thuật ngữ để tìm nó trong tài liệu; mỗi phần đều có thể sao chép hoặc thêm vào ghi chú.
+- Khi cuộc trò chuyện còn trống, bảng AI đưa ra ba câu hỏi gợi ý. Bấm vào một câu sẽ gửi nó một lần.
+- Bấm vào liên kết trang (p.N) mà AI đưa ra làm bằng chứng sẽ tới trang đó và làm nổi câu được trích trong hai giây. Nếu không tìm thấy câu, chỉ chuyển tới trang.
+
+## Mỗi PDF một ghi chú
+
+- Lần đầu nhấn **Mở ghi chú** (thẻ Xem hoặc bảng **Chú thích**), một hộp thoại lưu sẽ mở ra, mặc định ở thư mục của PDF với tên "tên PDF ghi chú.md". Từ đó trở đi, ghi chú mở thẳng trong một thẻ Markdown.
+- Nếu bạn chọn một tệp đã có, Windows có thể hỏi có thay thế không, nhưng tệp không bị ghi đè: nó được liên kết làm ghi chú đúng như hiện có.
+- **Thêm vào ghi chú** (trên thẻ đoạn văn, mục trong bảng và tổng quan tài liệu) đặt một trích dẫn kèm liên kết trang vào cuối thẻ ghi chú và để ở trạng thái chưa lưu; bạn tự lưu trong thẻ ghi chú. Liên kết này mở PDF tại trang đó trong cả các chương trình khác, như trình duyệt.
+- PDF chưa từng được lưu sẽ hiện "Hãy lưu PDF trước". Ghi chú chỉ dùng được với PDF mở bên trong GenOffice.

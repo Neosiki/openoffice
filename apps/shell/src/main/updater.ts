@@ -8,6 +8,7 @@ import { GITHUB_LATEST_RELEASE_URL, githubReleaseTagUrl } from '@genoffice/elect
 import type {
   UpdateChannel,
   UpdatePhase,
+  UpdateReleaseNotes,
   UpdateUiState,
   UpdateUiStrings,
 } from '../shared/update-api'
@@ -19,6 +20,7 @@ import {
   setUpdateParentWindow,
   showUpdateWindow,
 } from './update-window'
+import { normalizeReleaseNotes } from './update-notes'
 
 /**
  * Full-package auto-update from the GitHub Releases of the product's public
@@ -60,6 +62,9 @@ const tUpd = createI18n({
     updUpToDate: '已是最新版本（{version}）。',
     updCheckFailed: '无法检查更新，请检查网络后重试。',
     updOpenDownload: '前往下载页面',
+    updNotesLabel: '更新内容',
+    updNotesOnGitHub: '在 GitHub 查看完整说明',
+    updNotesTruncated: '仅显示部分内容。',
     updManualMac: 'Mac 版无法自动更新。请从下载页面获取新版本并安装。',
   },
   en: {
@@ -78,6 +83,9 @@ const tUpd = createI18n({
     updUpToDate: "You're up to date (version {version}).",
     updCheckFailed: "Couldn't check for updates. Check your network and try again.",
     updOpenDownload: 'Open Download Page',
+    updNotesLabel: "What's new",
+    updNotesOnGitHub: 'View full notes on GitHub',
+    updNotesTruncated: 'Only part of the notes is shown.',
     updManualMac:
       "The Mac version can't update itself. Download the new version from the download page and install it.",
   },
@@ -97,6 +105,9 @@ const tUpd = createI18n({
     updUpToDate: 'Bạn đang sử dụng phiên bản mới nhất (phiên bản {version}).',
     updCheckFailed: 'Không thể kiểm tra bản cập nhật. Kiểm tra mạng của bạn và thử lại.',
     updOpenDownload: 'Mở trang tải xuống',
+    updNotesLabel: 'Có gì mới',
+    updNotesOnGitHub: 'Xem toàn bộ trên GitHub',
+    updNotesTruncated: 'Chỉ hiển thị một phần.',
     updManualMac:
       'Phiên bản Mac không thể tự cập nhật. Hãy tải phiên bản mới từ trang tải xuống và cài đặt.',
   },
@@ -116,6 +127,9 @@ const tUpd = createI18n({
     updUpToDate: '最新の状態です（バージョン {version}）。',
     updCheckFailed: '更新を確認できませんでした。ネットワークを確認して再試行してください。',
     updOpenDownload: 'ダウンロードページを開く',
+    updNotesLabel: '更新内容',
+    updNotesOnGitHub: 'GitHub で全体を見る',
+    updNotesTruncated: '一部のみ表示しています。',
     updManualMac:
       'Mac 版は自動で更新できません。ダウンロードページから新しいバージョンを入手してインストールしてください。',
   },
@@ -135,6 +149,9 @@ const tUpd = createI18n({
     updUpToDate: '최신 버전입니다 (버전 {version}).',
     updCheckFailed: '업데이트를 확인할 수 없습니다. 네트워크를 확인한 후 다시 시도하세요.',
     updOpenDownload: '다운로드 페이지 열기',
+    updNotesLabel: '업데이트 내용',
+    updNotesOnGitHub: 'GitHub에서 전체 보기',
+    updNotesTruncated: '일부만 표시했습니다.',
     updManualMac:
       'Mac용 설치본은 스스로 업데이트하지 못합니다. 다운로드 페이지에서 새 버전을 받아 설치해 주세요.',
   },
@@ -155,6 +172,9 @@ const tUpd = createI18n({
     updCheckFailed:
       'Impossible de rechercher les mises à jour. Vérifiez votre réseau et réessayez.',
     updOpenDownload: 'Ouvrir la page de téléchargement',
+    updNotesLabel: 'Nouveautés',
+    updNotesOnGitHub: 'Voir les notes complètes sur GitHub',
+    updNotesTruncated: 'Seule une partie du contenu est affichée.',
     updManualMac:
       "La version Mac ne peut pas se mettre à jour d'elle-même. Téléchargez la nouvelle version depuis la page de téléchargement et installez-la.",
   },
@@ -176,6 +196,9 @@ const tUpd = createI18n({
     updCheckFailed:
       'Updates konnten nicht geprüft werden. Prüfen Sie Ihre Netzwerkverbindung und versuchen Sie es erneut.',
     updOpenDownload: 'Download-Seite öffnen',
+    updNotesLabel: 'Neuerungen',
+    updNotesOnGitHub: 'Vollständige Hinweise auf GitHub',
+    updNotesTruncated: 'Es wird nur ein Teil angezeigt.',
     updManualMac:
       'Die Mac-Version kann sich nicht selbst aktualisieren. Laden Sie die neue Version von der Download-Seite herunter und installieren Sie sie.',
   },
@@ -195,6 +218,9 @@ const tUpd = createI18n({
     updUpToDate: 'Está actualizado (versión {version}).',
     updCheckFailed: 'No se pudo buscar actualizaciones. Compruebe su red e inténtelo de nuevo.',
     updOpenDownload: 'Abrir página de descargas',
+    updNotesLabel: 'Novedades',
+    updNotesOnGitHub: 'Ver notas completas en GitHub',
+    updNotesTruncated: 'Solo se muestra una parte.',
     updManualMac:
       'La versión para Mac no puede actualizarse sola. Descarga la nueva versión desde la página de descargas e instálala.',
   },
@@ -213,6 +239,9 @@ const tUpd = createI18n({
     updUpToDate: 'คุณใช้เวอร์ชันล่าสุดแล้ว (เวอร์ชัน {version})',
     updCheckFailed: 'ไม่สามารถตรวจหาการอัปเดตได้ โปรดตรวจสอบเครือข่ายแล้วลองอีกครั้ง',
     updOpenDownload: 'เปิดหน้าดาวน์โหลด',
+    updNotesLabel: 'มีอะไรใหม่',
+    updNotesOnGitHub: 'ดูบันทึกฉบับเต็มบน GitHub',
+    updNotesTruncated: 'แสดงเพียงบางส่วน',
     updManualMac:
       'เวอร์ชัน Mac ไม่สามารถอัปเดตตัวเองได้ โปรดดาวน์โหลดเวอร์ชันใหม่จากหน้าดาวน์โหลดแล้วติดตั้ง',
   },
@@ -232,6 +261,9 @@ const tUpd = createI18n({
     updUpToDate: 'Sudah versi terbaru (versi {version}).',
     updCheckFailed: 'Tidak dapat memeriksa pembaruan. Periksa jaringan Anda dan coba lagi.',
     updOpenDownload: 'Buka Halaman Unduhan',
+    updNotesLabel: 'Yang baru',
+    updNotesOnGitHub: 'Lihat catatan lengkap di GitHub',
+    updNotesTruncated: 'Hanya sebagian yang ditampilkan.',
     updManualMac:
       'Versi Mac tidak dapat memperbarui dirinya sendiri. Unduh versi baru dari halaman unduhan lalu instal.',
   },
@@ -251,6 +283,9 @@ const tUpd = createI18n({
     updUpToDate: 'У вас последняя версия ({version}).',
     updCheckFailed: 'Не удалось проверить обновления. Проверьте сеть и повторите попытку.',
     updOpenDownload: 'Открыть страницу загрузки',
+    updNotesLabel: 'Что нового',
+    updNotesOnGitHub: 'Полные примечания на GitHub',
+    updNotesTruncated: 'Показана только часть.',
     updManualMac:
       'Версия для Mac не обновляется автоматически. Скачайте новую версию со страницы загрузки и установите её.',
   },
@@ -268,6 +303,9 @@ const tUpd = createI18n({
     updUpToDate: 'أنت على أحدث إصدار (الإصدار {version}).',
     updCheckFailed: 'تعذر التحقق من التحديثات. تحقق من الشبكة وحاول مرة أخرى.',
     updOpenDownload: 'فتح صفحة التنزيل',
+    updNotesLabel: 'ما الجديد',
+    updNotesOnGitHub: 'عرض الملاحظات الكاملة على GitHub',
+    updNotesTruncated: 'يُعرض جزء فقط.',
     updManualMac: 'لا يمكن لإصدار Mac تحديث نفسه. نزّل الإصدار الجديد من صفحة التنزيل وثبّته.',
   },
   pt: {
@@ -286,6 +324,9 @@ const tUpd = createI18n({
     updUpToDate: 'Você está atualizado (versão {version}).',
     updCheckFailed: 'Não foi possível procurar atualizações. Verifique sua rede e tente novamente.',
     updOpenDownload: 'Abrir página de download',
+    updNotesLabel: 'Novidades',
+    updNotesOnGitHub: 'Ver notas completas no GitHub',
+    updNotesTruncated: 'Apenas parte do conteúdo é exibida.',
     updManualMac:
       'A versão para Mac não consegue se atualizar sozinha. Baixe a nova versão na página de download e instale-a.',
   },
@@ -305,6 +346,9 @@ const tUpd = createI18n({
     updUpToDate: 'Sei aggiornato (versione {version}).',
     updCheckFailed: 'Impossibile controllare gli aggiornamenti. Verifica la rete e riprova.',
     updOpenDownload: 'Apri pagina di download',
+    updNotesLabel: 'Novità',
+    updNotesOnGitHub: 'Vedi le note complete su GitHub',
+    updNotesTruncated: 'È mostrata solo una parte.',
     updManualMac:
       'La versione per Mac non può aggiornarsi da sola. Scarica la nuova versione dalla pagina di download e installala.',
   },
@@ -324,6 +368,9 @@ const tUpd = createI18n({
     updUpToDate: 'Masz aktualną wersję ({version}).',
     updCheckFailed: 'Nie udało się sprawdzić aktualizacji. Sprawdź sieć i spróbuj ponownie.',
     updOpenDownload: 'Otwórz stronę pobierania',
+    updNotesLabel: 'Co nowego',
+    updNotesOnGitHub: 'Zobacz pełne informacje na GitHubie',
+    updNotesTruncated: 'Wyświetlana jest tylko część.',
     updManualMac:
       'Wersja na Maca nie może zaktualizować się sama. Pobierz nową wersję ze strony pobierania i zainstaluj ją.',
   },
@@ -343,6 +390,9 @@ const tUpd = createI18n({
     updUpToDate: 'Máte aktuální verzi ({version}).',
     updCheckFailed: 'Aktualizace se nepodařilo zkontrolovat. Zkontrolujte síť a zkuste to znovu.',
     updOpenDownload: 'Otevřít stránku pro stažení',
+    updNotesLabel: 'Co je nového',
+    updNotesOnGitHub: 'Zobrazit úplné poznámky na GitHubu',
+    updNotesTruncated: 'Zobrazuje se jen část.',
     updManualMac:
       'Verze pro Mac se nedokáže aktualizovat sama. Stáhněte novou verzi ze stránky pro stažení a nainstalujte ji.',
   },
@@ -363,6 +413,9 @@ const tUpd = createI18n({
     updCheckFailed:
       'Kan niet controleren op updates. Controleer uw netwerk en probeer het opnieuw.',
     updOpenDownload: 'Downloadpagina openen',
+    updNotesLabel: 'Wat is er nieuw',
+    updNotesOnGitHub: 'Volledige notities op GitHub',
+    updNotesTruncated: 'Er wordt slechts een deel weergegeven.',
     updManualMac:
       'De Mac-versie kan zichzelf niet bijwerken. Download de nieuwe versie van de downloadpagina en installeer die.',
   },
@@ -382,6 +435,9 @@ const tUpd = createI18n({
     updUpToDate: 'Anda menggunakan versi terkini (versi {version}).',
     updCheckFailed: 'Tidak dapat menyemak kemas kini. Semak rangkaian anda dan cuba lagi.',
     updOpenDownload: 'Buka Halaman Muat Turun',
+    updNotesLabel: 'Apa yang baharu',
+    updNotesOnGitHub: 'Lihat nota penuh di GitHub',
+    updNotesTruncated: 'Hanya sebahagian dipaparkan.',
     updManualMac:
       'Versi Mac tidak dapat mengemas kini dirinya sendiri. Muat turun versi baharu dari halaman muat turun dan pasangnya.',
   },
@@ -399,6 +455,9 @@ const tUpd = createI18n({
     updUpToDate: 'הגרסה שלך עדכנית (גרסה {version}).',
     updCheckFailed: 'לא ניתן לבדוק עדכונים. בדקו את הרשת ונסו שוב.',
     updOpenDownload: 'פתח את דף ההורדות',
+    updNotesLabel: 'מה חדש',
+    updNotesOnGitHub: 'הצג הערות מלאות ב-GitHub',
+    updNotesTruncated: 'מוצג רק חלק.',
     updManualMac: 'גרסת ה-Mac לא יכולה להתעדכן בעצמה. הורד את הגרסה החדשה מדף ההורדות והתקן אותה.',
   },
   hi: {
@@ -417,6 +476,9 @@ const tUpd = createI18n({
     updUpToDate: 'आप अपडेटेड हैं (संस्करण {version}).',
     updCheckFailed: 'अपडेट जांच नहीं हो सकी। अपना नेटवर्क जांचें और फिर से प्रयास करें।',
     updOpenDownload: 'डाउनलोड पृष्ठ खोलें',
+    updNotesLabel: 'नया क्या है',
+    updNotesOnGitHub: 'GitHub पर पूरी जानकारी देखें',
+    updNotesTruncated: 'केवल एक भाग दिखाया गया है।',
     updManualMac:
       'Mac संस्करण अपने आप अपडेट नहीं हो सकता। डाउनलोड पृष्ठ से नया संस्करण लेकर इंस्टॉल करें।',
   },
@@ -434,6 +496,9 @@ const tUpd = createI18n({
     updUpToDate: '已是最新版本（{version}）。',
     updCheckFailed: '無法檢查更新，請檢查網路後重試。',
     updOpenDownload: '前往下載頁面',
+    updNotesLabel: '更新內容',
+    updNotesOnGitHub: '在 GitHub 查看完整說明',
+    updNotesTruncated: '僅顯示部分內容。',
     updManualMac: 'Mac 版無法自動更新。請從下載頁面取得新版本並安裝。',
   },
 })
@@ -523,10 +588,16 @@ function uiStrings(): UpdateUiStrings {
     retry: tUpd(lang, 'updRetry'),
     manualDesc: tUpd(lang, SELF_UPDATES ? 'updManual' : 'updManualMac'),
     openDownload: tUpd(lang, 'updOpenDownload'),
+    notesLabel: tUpd(lang, 'updNotesLabel'),
+    notesOnGitHub: tUpd(lang, 'updNotesOnGitHub'),
+    notesTruncated: tUpd(lang, 'updNotesTruncated'),
   }
 }
 
-function initialState(version: string): UpdateUiState {
+function initialState(
+  version: string,
+  releaseNotes: UpdateReleaseNotes | null = null,
+): UpdateUiState {
   return {
     phase: 'available',
     version,
@@ -534,6 +605,7 @@ function initialState(version: string): UpdateUiState {
     percent: 0,
     lang: htmlLang(getUiLang()),
     strings: uiStrings(),
+    releaseNotes,
   }
 }
 
@@ -648,6 +720,11 @@ export function initAutoUpdater(
   updaterActive = true
   selectChannel(initialChannel)
   autoUpdater.autoDownload = false
+  // The window shows what changed before the user starts the download
+  // (docs/plans/update-details.md). The full changelog collects the bodies of
+  // every release newer than this install from the feed request the GitHub
+  // provider already makes — no extra network call.
+  autoUpdater.fullChangelog = true
   // if the user picked "later" after download, install on normal quit
   autoUpdater.autoInstallOnAppQuit = SELF_UPDATES
   // full-package policy: never attempt blockmap differential downloads
@@ -656,6 +733,8 @@ export function initAutoUpdater(
   installResumeDownload(autoUpdater as unknown as Parameters<typeof installResumeDownload>[0])
 
   let latestSeenVersion: string | null = null
+  // release notes of latestSeenVersion, converted once when the version lands
+  let latestSeenNotes: UpdateReleaseNotes | null = null
   // consecutive failed attempts for latestSeenVersion; a download can fail
   // through the downloadUpdate() rejection OR only through the 'error' event
   // (macOS: Squirrel.Mac reports signature/apply failures natively), so both
@@ -697,6 +776,7 @@ export function initAutoUpdater(
     downloadToken = null
     downloadGen += 1
     latestSeenVersion = null
+    latestSeenNotes = null
     failedAttempts = 0
     downloadInFlight = false
     phase = 'available'
@@ -756,7 +836,11 @@ export function initAutoUpdater(
       // (a background recheck stays quiet)
       if (manualCheckInFlight && !isUpdateWindowOpen()) {
         const version = latestSeenVersion ?? info.version
-        showUpdateWindow(getWindow(), { ...initialState(version), phase, percent }, actions)
+        showUpdateWindow(
+          getWindow(),
+          { ...initialState(version, latestSeenNotes), phase, percent },
+          actions,
+        )
       }
       return
     }
@@ -764,6 +848,12 @@ export function initAutoUpdater(
       failedAttempts = 0
       phase = SELF_UPDATES ? 'available' : 'manual'
       percent = 0
+      latestSeenNotes = normalizeReleaseNotes(info.releaseNotes)
+    } else {
+      // a repeated event for the same version (periodic recheck) refreshes
+      // the notes only when the feed carried some — never wipe already known
+      // notes with a notes-less repeat
+      latestSeenNotes = normalizeReleaseNotes(info.releaseNotes) ?? latestSeenNotes
     }
     latestSeenVersion = info.version
     log('update available:', info.version)
@@ -772,7 +862,11 @@ export function initAutoUpdater(
     // in-progress download or a terminal 'manual' fallback back to the
     // "Update Now" offer
     if (sameVersionRecheck && isUpdateWindowOpen()) return
-    showUpdateWindow(getWindow(), { ...initialState(info.version), phase, percent }, actions)
+    showUpdateWindow(
+      getWindow(),
+      { ...initialState(info.version, latestSeenNotes), phase, percent },
+      actions,
+    )
   })
 
   autoUpdater.on('download-progress', (progress) => {
@@ -828,6 +922,26 @@ function initFakeUpdate(getWindow: () => BrowserWindow | null, version: string):
       log('[fake] open download page requested')
     },
   }
-  fakeShowAgain = () => showUpdateWindow(getWindow(), initialState(version), actions)
+  // two sections show the skipped-versions layout (per-version headings)
+  const notes = normalizeReleaseNotes([
+    {
+      version,
+      note: `<p>A simulated update for the preview.</p>
+<h2>What's new</h2>
+<ul>
+<li><strong>Update notes</strong>: the window shows what changed before you update.</li>
+<li><code>GENOFFICE_FAKE_UPDATE</code> opens this preview.</li>
+</ul>`,
+    },
+    {
+      version: '9.9.8',
+      note: `<p>Notes of the previous version.</p>
+<h2>Fixed</h2>
+<ul>
+<li>One older fix, shown when versions were skipped.</li>
+</ul>`,
+    },
+  ])
+  fakeShowAgain = () => showUpdateWindow(getWindow(), initialState(version, notes), actions)
   setTimeout(() => fakeShowAgain?.(), 1500)
 }

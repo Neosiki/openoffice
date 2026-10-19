@@ -78,6 +78,8 @@ export const en = {
   aiToolReadFile: 'Read {name}',
   aiToolWebSearch: 'Web search',
   aiToolWebSearchDone: 'Searched "{query}" ({count} results)',
+  aiToolReadUrl: 'Read web page',
+  aiToolReadUrlDone: 'Read {host} ({chars} chars)',
   aiToolFindCells: 'Find cells',
   aiToolFindCellsOf: 'Found "{query}" ({count} matches)',
   aiToolFindErrors: 'Scanned for formula errors ({count} found)',

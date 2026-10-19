@@ -15,7 +15,7 @@ import { statSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 
-import { AI_SUBSCRIPTION_PROVIDERS } from './providers'
+import { AI_SUBSCRIPTION_PROVIDERS, readUrlSettingsOf } from './providers'
 import { AI_PROVIDER_ADAPTERS, normalizeBaseUrl } from './registry'
 import type {
   AiCustomEndpoint,
@@ -211,6 +211,12 @@ export function sanitizeAiSettings(input: unknown): AiSettings | null {
   }
   if (typeof raw.subscriptionNoticeSeen === 'boolean') {
     settings.subscriptionNoticeSeen = raw.subscriptionNoticeSeen
+  }
+  // the read_url token is persisted in the settings file like the provider
+  // keys; a blank or non-string token is left out (public pages only)
+  const readUrl = readUrlSettingsOf(raw.readUrl)
+  if (readUrl?.githubToken) {
+    settings.readUrl = { githubToken: readUrl.githubToken.slice(0, MAX_API_KEY_LENGTH) }
   }
   const customEndpoints = sanitizeCustomEndpoints(raw.customEndpoints)
   if (customEndpoints.length > 0) {

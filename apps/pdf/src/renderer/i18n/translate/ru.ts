@@ -81,4 +81,8 @@ export const ru = {
   trPageNotEditable: 'её текст нельзя изменить',
   trPageVertical: 'вертикальный или повёрнутый текст',
   trPageToc: 'печатное оглавление',
+  trFormatStore: 'Только сохранить (без файла)',
+  trRestartEditedCount: 'Абзацев, изменённых человеком: {count}.',
+  trRestartDiscardEdited: 'Удалить и абзацы, изменённые человеком ({count})',
+  trRestartKeepEdited: 'Оставить изменённые абзацы',
 } satisfies Record<keyof typeof zh, string>

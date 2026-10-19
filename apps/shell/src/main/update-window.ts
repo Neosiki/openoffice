@@ -12,6 +12,10 @@ import { UPDATE_CHANNELS } from '../shared/update-api'
  * surface, plus the settings-facing get-state / open-for-update entry — the
  * last two are registered at module load, since the shell window invokes them
  * before any update is known (see registerSettingsIpc).
+ *
+ * The card grows when the release notes are shown: the extra height fits the
+ * notes box (max ~200px, scrolls) plus its label and footer link. Sizes are
+ * tuned in docs/plans/update-details.md §5.
  */
 
 interface UpdateActions {
@@ -20,6 +24,11 @@ interface UpdateActions {
   onLater: () => void
   onOpenDownload: () => void
 }
+
+const UPDATE_WINDOW_WIDTH = 400
+const UPDATE_WINDOW_HEIGHT = 430
+/** the same card with the release-notes box and its label/footer (~190px) */
+const UPDATE_WINDOW_HEIGHT_WITH_NOTES = 620
 
 let updateWin: BrowserWindow | null = null
 let currentState: UpdateUiState | null = null
@@ -124,9 +133,10 @@ export function showUpdateWindow(
     return
   }
 
+  const hasNotes = (state.releaseNotes?.sections.length ?? 0) > 0
   const win = new BrowserWindow({
-    width: 400,
-    height: 430,
+    width: UPDATE_WINDOW_WIDTH,
+    height: hasNotes ? UPDATE_WINDOW_HEIGHT_WITH_NOTES : UPDATE_WINDOW_HEIGHT,
     ...(parent && !parent.isDestroyed() ? { parent } : {}),
     frame: false,
     transparent: true,

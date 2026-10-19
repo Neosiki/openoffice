@@ -120,6 +120,8 @@ export const fr = {
   aiSumReadAttachmentName: 'Lire la pièce jointe {name}',
   aiSumWebSearch: 'Recherche web',
   aiSumWebSearchDone: 'Recherche « {query} » ({count} résultats)',
+  aiSumReadUrl: 'Lecture de page web',
+  aiSumReadUrlDone: '{host} lu · {count} caractères',
   aiSumImageSearch: "Recherche d'images",
   aiSumImageSearchDone: "Recherche d'images « {query} » ({count} images)",
   aiSumAnalyzeMedia: 'Analyser le média',

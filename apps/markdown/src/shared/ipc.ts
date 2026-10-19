@@ -11,6 +11,10 @@ export const MARKDOWN_CHANNELS = {
   consumePending: 'markdown:consume-pending',
   /** invoke → the text a new tab starts with (8.6 "convert without AI"), once; null otherwise */
   seedTake: 'markdown:seed-take',
+  /** invoke → the texts "Add to note" queued for this note tab (reading-assist 4.9), once */
+  noteAppendTake: 'markdown:note-append-take',
+  /** main → renderer: texts are waiting for this note tab */
+  noteAppendReady: 'markdown:note-append-ready',
   readFile: 'markdown:read-file',
   save: 'markdown:save',
   saveRequest: 'markdown:save-request',
@@ -154,6 +158,7 @@ export const AI_CHANNELS = {
   streamChunk: 'ai:stream-chunk',
   streamCancel: 'ai:stream-cancel',
   webSearch: 'ai:web-search',
+  readUrl: 'ai:read-url',
   imageSearch: 'ai:image-search',
   fetchImage: 'ai:fetch-image',
 } as const
@@ -180,6 +185,23 @@ export interface ImageSearchResult {
   /** failure reason when method === 'error' */
   error?: string
 }
+
+/** One page of a web page read for the AI (the shared ai:read-url handler) */
+export type ReadUrlResult =
+  | {
+      ok: true
+      /** the final address after redirects */
+      url: string
+      title?: string
+      text: string
+      /** where this slice of the text starts */
+      offset: number
+      totalChars: number
+      truncated: boolean
+      /** where the next slice starts; only when truncated */
+      nextOffset?: number
+    }
+  | { ok: false; error: string; errorCode: string }
 
 export type ExportFormat = 'pdf' | 'docx' | 'docs' | 'png' | 'odt'
 
@@ -227,6 +249,10 @@ export interface MarkdownApi {
   consumePending(): Promise<string | null>
   /** A new untitled tab's starting text (a conversion's result), taken once; null otherwise */
   takeSeed?(): Promise<string | null>
+  /** Texts the PDF editor's "Add to note" queued for this note tab, taken once; [] otherwise */
+  takeNoteAppend?(): Promise<string[]>
+  /** The shell queued texts for this note tab; take them with takeNoteAppend */
+  onNoteAppendReady?(handler: () => void): () => void
   /** open any shell-routed document path (an AI answer's filenav citation) */
   openSourcePath(path: string): Promise<void>
   /** Headless export mode: the PDF path this hidden renderer must export to, null in normal use */
@@ -341,6 +367,8 @@ export interface MarkdownApi {
   onAiStream(handler: (chunk: AiStreamChunk) => void): () => void
   /** Main-process web search (Serper/DuckDuckGo via the shared ai:web-search handler) */
   webSearch(query: string, maxResults?: number): Promise<WebSearchResult>
+  /** Read one web page as text (the shared ai:read-url handler), paged by character offset */
+  readUrl(url: string, offset?: number): Promise<ReadUrlResult>
   /** Main-process image search (shared ai:image-search handler) */
   imageSearch(query: string, maxResults?: number): Promise<ImageSearchResult>
   /** Download an image URL in the main process (CORS-free, scheme/target validated) */

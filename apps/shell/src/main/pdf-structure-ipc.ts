@@ -172,6 +172,28 @@ export function registerPdfStructureIpc(): void {
   ipcMain.handle(PDF_CHANNELS.storeDeleteDocument, (e, docHash) =>
     h.storeDeleteDocument(e.sender.id, docHash),
   )
+  ipcMain.handle(PDF_CHANNELS.storePassages, (e, docHash) => h.storePassages(e.sender.id, docHash))
+  ipcMain.handle(PDF_CHANNELS.storeHighlightRuns, (e, docHash) =>
+    h.storeHighlightRuns(e.sender.id, docHash),
+  )
+  ipcMain.handle(PDF_CHANNELS.storeHighlightBlocks, (e, docHash, runId) =>
+    h.storeHighlightBlocks(e.sender.id, docHash, runId),
+  )
+  ipcMain.handle(PDF_CHANNELS.storeLatestHighlight, (e, docHash) =>
+    h.storeLatestHighlight(e.sender.id, docHash),
+  )
+  ipcMain.handle(PDF_CHANNELS.storeInsights, (e, docHash, lang) =>
+    h.storeInsights(e.sender.id, docHash, lang),
+  )
+  ipcMain.handle(PDF_CHANNELS.storeDeleteCounts, (e, docHash) =>
+    h.storeDeleteCounts(e.sender.id, docHash),
+  )
+  ipcMain.handle(PDF_CHANNELS.storePageFingerprints, (e, req) =>
+    h.storePageFingerprints(context(e), req),
+  )
+  ipcMain.handle(PDF_CHANNELS.storeTranslationRecency, (e, docHash) =>
+    h.storeTranslationRecency(e.sender.id, docHash),
+  )
 
   // no job process outlives the app: will-quit for a normal quit, 'exit'
   // for app.exit() / process.exit() (which skip will-quit)

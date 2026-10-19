@@ -63,12 +63,17 @@ export const en = {
     'An AI job is already running on this document ({done}/{total}). Try again once it ends or is stopped.',
   arUnavailable: 'AI page reading is not available in this window.',
   arDeleteConfirm:
-    'Delete every AI reading and translation stored for this document? This cannot be undone.',
+    'Delete every AI result stored for this document (AI readings, translations, passage cards, highlight suggestions and the overview)? This cannot be undone.',
   arDeleted: 'The stored AI results of this document were deleted.',
   arDeleteFailed: 'The stored AI results could not be deleted.',
   arDeleteBusy: 'An AI job is running, so nothing can be deleted now.',
   jobResumeAiRead: 'Unfinished AI reading {percent}% — continue?',
   jobResumeTranslate: 'Unfinished translation ({language}) {percent}% — continue?',
+  jobResumeHighlight: 'Unfinished AI highlights {percent}% — continue?',
+  arDeleteAlsoBoth:
+    'This also deletes hand-edited translations ({edited}) and passage cards ({cards}).',
+  arDeleteAlsoEdited: 'This also deletes hand-edited translations ({count}).',
+  arDeleteAlsoCards: 'This also deletes passage cards ({count}).',
   jobResumeContinue: 'Continue',
   jobResumeLater: 'Later',
   searchAiRead: 'Found in AI-read text',

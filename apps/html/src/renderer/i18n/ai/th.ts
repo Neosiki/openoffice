@@ -49,6 +49,8 @@ export const th = {
   aiTimeoutError: 'การตอบกลับของ AI หมดเวลา',
   aiToolWebSearch: 'ค้นหาเว็บ',
   aiToolWebSearchDone: 'ค้นหา "{query}" · {count} รายการ',
+  aiToolReadUrl: 'อ่านหน้าเว็บ',
+  aiToolReadUrlDone: 'อ่าน {host} · {chars} ตัวอักษร',
   aiTruncatedNote: '(คำตอบถูกตัดเนื่องจากถึงขีดจำกัดความยาว เนื้อหาอาจไม่สมบูรณ์)',
   aiTurnLimit: 'ถึงขีดจำกัดขั้นตอนต่อรอบแล้ว ส่งคำสั่งอีกครั้งเพื่อดำเนินการต่อ',
   aiUndelivered: 'ส่งไม่สำเร็จ',

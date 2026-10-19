@@ -77,4 +77,8 @@ export const th = {
   trPageNotEditable: 'แก้ไขข้อความไม่ได้',
   trPageVertical: 'ข้อความแนวตั้งหรือหมุน',
   trPageToc: 'สารบัญที่พิมพ์ไว้',
+  trFormatStore: 'เก็บไว้เท่านั้น (ไม่สร้างไฟล์)',
+  trRestartEditedCount: 'มี {count} ย่อหน้าที่คนแก้ไข',
+  trRestartDiscardEdited: 'ลบ {count} ย่อหน้าที่คนแก้ไขด้วย',
+  trRestartKeepEdited: 'เก็บย่อหน้าที่แก้ไขไว้',
 } satisfies Record<keyof typeof zh, string>

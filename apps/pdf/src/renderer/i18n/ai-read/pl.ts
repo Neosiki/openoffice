@@ -62,12 +62,17 @@ export const pl = {
     'Dla tego dokumentu trwa już zadanie AI ({done}/{total}). Spróbuj ponownie, gdy się zakończy lub zostanie zatrzymane.',
   arUnavailable: 'Czytanie stron przez AI nie jest dostępne w tym oknie.',
   arDeleteConfirm:
-    'Usunąć wszystkie odczyty AI i tłumaczenia zachowane dla tego dokumentu? Tej operacji nie można cofnąć.',
+    'Usunąć wszystkie wyniki AI zachowane dla tego dokumentu (odczyty AI, tłumaczenia, karty fragmentów, sugestie wyróżnień i przegląd)? Tej operacji nie można cofnąć.',
   arDeleted: 'Zachowane wyniki AI tego dokumentu zostały usunięte.',
   arDeleteFailed: 'Nie udało się usunąć zachowanych wyników AI.',
   arDeleteBusy: 'Trwa zadanie AI, więc teraz nie można nic usunąć.',
   jobResumeAiRead: 'Niedokończone czytanie przez AI {percent}% — kontynuować?',
   jobResumeTranslate: 'Niedokończone tłumaczenie ({language}) {percent}% — kontynuować?',
+  jobResumeHighlight: 'Niedokończone wyróżnianie przez AI {percent}% — kontynuować?',
+  arDeleteAlsoBoth:
+    'Zostaną też usunięte tłumaczenia poprawione ręcznie ({edited}) i karty fragmentów ({cards}).',
+  arDeleteAlsoEdited: 'Zostaną też usunięte tłumaczenia poprawione ręcznie ({count}).',
+  arDeleteAlsoCards: 'Zostaną też usunięte karty fragmentów ({count}).',
   jobResumeContinue: 'Kontynuuj',
   jobResumeLater: 'Później',
   searchAiRead: 'Znaleziono w tekście odczytanym przez AI',

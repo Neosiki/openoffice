@@ -55,6 +55,8 @@ export const ms = {
   aiToolWriteMapFailed: 'Peta tidak dapat ditulis',
   aiToolWebSearch: 'Carian web',
   aiToolWebSearchDone: 'Cari "{query}" · {count} hasil',
+  aiToolReadUrl: 'Baca halaman web',
+  aiToolReadUrlDone: 'Membaca {host} · {chars} aksara',
   aiSumReadAttachment: 'Baca lampiran',
   aiSumImageAttachment: 'Lampiran imej {name}',
   aiSumReadAttachmentName: 'Baca lampiran {name}',

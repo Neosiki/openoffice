@@ -49,6 +49,8 @@ export const en = {
   aiTimeoutError: 'AI response timed out',
   aiToolWebSearch: 'Web search',
   aiToolWebSearchDone: 'Searched "{query}" · {count} results',
+  aiToolReadUrl: 'Read web page',
+  aiToolReadUrlDone: 'Read {host} · {chars} chars',
   aiTruncatedNote: '(The reply was cut off by the length limit and may be incomplete.)',
   aiTurnLimit: 'Reached the per-run step limit — send another instruction to continue.',
   aiUndelivered: 'Not sent',

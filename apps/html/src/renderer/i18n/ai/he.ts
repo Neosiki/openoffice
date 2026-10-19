@@ -47,6 +47,8 @@ export const he = {
   aiTimeoutError: 'תגובת ה-AI חרגה מהזמן',
   aiToolWebSearch: 'חיפוש ברשת',
   aiToolWebSearchDone: 'חיפוש "{query}" · {count} תוצאות',
+  aiToolReadUrl: 'קריאת דף אינטרנט',
+  aiToolReadUrlDone: 'נקרא {host} · {chars} תווים',
   aiTruncatedNote: '(התשובה נחתכה בגלל מגבלת האורך וייתכן שאינה שלמה.)',
   aiTurnLimit: 'הגעתם למגבלת הצעדים להרצה — שלחו הוראה נוספת כדי להמשיך.',
   aiUndelivered: 'לא נשלח',

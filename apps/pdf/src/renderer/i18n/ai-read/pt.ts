@@ -64,12 +64,17 @@ export const pt = {
     'Já há uma tarefa de IA em andamento neste documento ({done}/{total}). Tente de novo quando ela terminar ou for interrompida.',
   arUnavailable: 'A leitura de páginas com IA não está disponível nesta janela.',
   arDeleteConfirm:
-    'Excluir todas as leituras com IA e traduções guardadas deste documento? Isso não pode ser desfeito.',
+    'Excluir todos os resultados de IA guardados deste documento (leituras com IA, traduções, cartões de trecho, sugestões de destaque e a visão geral)? Isso não pode ser desfeito.',
   arDeleted: 'Os resultados de IA guardados deste documento foram excluídos.',
   arDeleteFailed: 'Não foi possível excluir os resultados de IA guardados.',
   arDeleteBusy: 'Há uma tarefa de IA em andamento, por isso nada pode ser excluído agora.',
   jobResumeAiRead: 'Leitura com IA inacabada {percent}% — continuar?',
   jobResumeTranslate: 'Tradução inacabada ({language}) {percent}% — continuar?',
+  jobResumeHighlight: 'Destaques com IA inacabados {percent}% — continuar?',
+  arDeleteAlsoBoth:
+    'Também serão excluídos: traduções corrigidas à mão ({edited}) e cartões de trecho ({cards}).',
+  arDeleteAlsoEdited: 'Também serão excluídas as traduções corrigidas à mão ({count}).',
+  arDeleteAlsoCards: 'Também serão excluídos os cartões de trecho ({count}).',
   jobResumeContinue: 'Continuar',
   jobResumeLater: 'Mais tarde',
   searchAiRead: 'Encontrado no texto lido pela IA',

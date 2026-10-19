@@ -228,6 +228,59 @@ describe('normalizeAiSettings', () => {
     })
   })
 
+  it('keeps a read_url GitHub token through a save and a read', () => {
+    const saved = sanitizeAiSettings({
+      provider: 'auto',
+      providers: {},
+      readUrl: { githubToken: '  github_pat_test  ' },
+    })
+    expect(saved?.readUrl).toEqual({ githubToken: 'github_pat_test' })
+    const reread = normalizeAiSettings(JSON.parse(JSON.stringify(saved)))
+    expect(reread.readUrl).toEqual({ githubToken: 'github_pat_test' })
+  })
+
+  it('reads a missing, blank or non-string read_url token as no token', () => {
+    const slots: unknown[] = [
+      undefined,
+      null,
+      'github_pat_test',
+      [],
+      {},
+      { githubToken: '' },
+      { githubToken: '   ' },
+      { githubToken: 42 },
+      { githubToken: null },
+      { githubToken: { value: 'x' } },
+      { githubToken: ['x'] },
+    ]
+    for (const readUrl of slots) {
+      const file = {
+        providers: {},
+        ...(readUrl === undefined ? {} : { readUrl }),
+      }
+      expect(normalizeAiSettings(file).readUrl).toBeUndefined()
+      expect(sanitizeAiSettings({ provider: 'auto', ...file })?.readUrl).toBeUndefined()
+    }
+  })
+
+  it('keeps the read_url token when there are no provider slots to merge', () => {
+    const settings = normalizeAiSettings({
+      apiKey: 'sk-old',
+      readUrl: { githubToken: 'github_pat_test' },
+    })
+    expect(settings.readUrl).toEqual({ githubToken: 'github_pat_test' })
+    expect(settings.providers.custom).toMatchObject({ apiKey: 'sk-old' })
+  })
+
+  it('does not touch the other settings when the read_url slot is unusable', () => {
+    const settings = normalizeAiSettings({
+      providers: { openai: { apiKey: 'sk-kept', model: 'gpt-4o' } },
+      readUrl: 'github_pat_test',
+    })
+    expect(settings.providers.openai).toMatchObject({ apiKey: 'sk-kept', model: 'gpt-4o' })
+    expect(settings.provider).toBe('auto')
+  })
+
   it('still migrates the pre-provider single-endpoint shape into custom', () => {
     const settings = normalizeAiSettings({ apiKey: 'sk-old', model: 'gpt-4o', baseUrl: '' })
     expect(settings.providers.custom).toMatchObject({ apiKey: 'sk-old', model: 'gpt-4o' })

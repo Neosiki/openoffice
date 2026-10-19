@@ -116,6 +116,8 @@ export const ar = {
   aiSumReadAttachmentName: 'قراءة المرفق {name}',
   aiSumWebSearch: 'بحث على الويب',
   aiSumWebSearchDone: 'تم البحث عن «{query}» ({count} نتيجة)',
+  aiSumReadUrl: 'قراءة صفحة ويب',
+  aiSumReadUrlDone: 'تمت قراءة {host} · {count} حرف',
   aiSumImageSearch: 'بحث عن صور',
   aiSumImageSearchDone: 'بحث عن صور «{query}» ({count} صورة)',
   aiSumAnalyzeMedia: 'تحليل الوسائط',

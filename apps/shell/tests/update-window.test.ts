@@ -73,7 +73,11 @@ const state = (phase: UpdateUiState['phase']): UpdateUiState =>
       retry: 'r',
       manualDesc: 'm',
       openDownload: 'o',
+      notesLabel: 'nl',
+      notesOnGitHub: 'ng',
+      notesTruncated: 'nt',
     },
+    releaseNotes: null,
   }) as UpdateUiState
 
 const actions = () => ({
@@ -104,6 +108,25 @@ describe('update window — settings-facing surface', () => {
     mod.showUpdateWindow(parent, state('available'), actions())
     expect(winOptions[0]!.modal).toBeUndefined()
     expect(winOptions[0]!.parent).toBe(parent)
+  })
+
+  it('sizes the card larger when release notes are shown', async () => {
+    const mod = await loadModule()
+    mod.showUpdateWindow(parent, state('available'), actions())
+    expect(winOptions[0]!.width).toBe(400)
+    expect(winOptions[0]!.height).toBe(430)
+
+    mod.closeUpdateWindow()
+    winOptions.length = 0
+    const withNotes = {
+      ...state('available'),
+      releaseNotes: {
+        sections: [{ version: null, blocks: [{ kind: 'paragraph', runs: [{ text: 'x' }] }] }],
+        truncated: false,
+      },
+    } as UpdateUiState
+    mod.showUpdateWindow(parent, withNotes, actions())
+    expect(winOptions[0]!.height).toBe(620)
   })
 
   it('broadcasts every state push to the shell window', async () => {

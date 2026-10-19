@@ -54,6 +54,8 @@ export const ja = {
   aiToolWriteMapFailed: 'マップを作成できませんでした',
   aiToolWebSearch: 'ウェブ検索',
   aiToolWebSearchDone: '「{query}」を検索 · {count} 件',
+  aiToolReadUrl: 'ウェブページの読み取り',
+  aiToolReadUrlDone: '{host} を読み取り · {chars} 文字',
   aiSumReadAttachment: '添付ファイルを読み取り',
   aiSumImageAttachment: '画像添付 {name}',
   aiSumReadAttachmentName: '添付ファイル {name} を読み取り',

@@ -30,7 +30,7 @@ The sign-in is kept on this PC, encrypted with Windows' own protection for your 
 - While **Let the AI find and read files in Drive** is on (it is on once you connect), the AI in every editor can search your Drive and read files. For example: "Find last month's meeting notes in Drive and summarize them."
 - What the AI reads goes to the AI provider you use. Parts hidden from AI stay hidden.
 - The AI cannot change, delete or share Drive files.
-- Once a chat holds something read from Drive, web search, image search and pictures by web address stop working in that chat. Start a new chat to use them again.
+- Once a chat holds something read from Drive, web search, image search, reading a page by its web address, and pictures by web address stop working in that chat. Start a new chat to use them again.
 
 ## Disconnecting
 

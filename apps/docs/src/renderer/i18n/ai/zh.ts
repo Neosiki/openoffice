@@ -110,6 +110,8 @@ export const zh = {
   aiSumReadAttachmentName: '读取附件 {name}',
   aiSumWebSearch: '联网搜索',
   aiSumWebSearchDone: '搜索“{query}”({count} 条)',
+  aiSumReadUrl: '读取网页',
+  aiSumReadUrlDone: '已读 {host} · {count} 字',
   aiSumImageSearch: '图片搜索',
   aiSumImageSearchDone: '搜图“{query}”({count} 张)',
   aiSumAnalyzeMedia: '分析媒体',
