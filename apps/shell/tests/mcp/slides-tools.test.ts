@@ -283,7 +283,25 @@ function fakeSlidesControl(): { control: SlidesControl; saved: Array<{ path: str
         }
         return { applied: true, records: ops.map((o) => ({ op: o.op })) }
       },
-      readDeck: async (wcId) => ({ slides: [{ index: 0, wc: wcId, elements: [] }] }),
+      readDeck: async (wcId) => ({
+        slides: [
+          {
+            index: 0,
+            wc: wcId,
+            hidden: true,
+            elements: [],
+            comments: [
+              {
+                authorId: 0,
+                idx: 1,
+                author: 'Alice',
+                dt: '2026-02-03T04:05:06Z',
+                text: 'Review this slide.',
+              },
+            ],
+          },
+        ],
+      }),
       saveDeck: async (wcId, path) => {
         if (wcId <= 0) throw new Error('no deck')
         saved.push({ path })
@@ -311,6 +329,19 @@ describe('visible deck session tools', () => {
     const read = await client!.callTool({ name: 'read_deck', arguments: {} })
     expect(read.isError).toBeFalsy()
     expect(text(read.content)).toContain('"wc": 1')
+    const deck = JSON.parse(text(read.content)) as {
+      slides: Array<{ hidden?: boolean; comments?: unknown[] }>
+    }
+    expect(deck.slides[0]!.hidden).toBe(true)
+    expect(deck.slides[0]!.comments).toEqual([
+      {
+        authorId: 0,
+        idx: 1,
+        author: 'Alice',
+        dt: '2026-02-03T04:05:06Z',
+        text: 'Review this slide.',
+      },
+    ])
 
     const apply = await client!.callTool({
       name: 'apply_slide_ops',
@@ -342,6 +373,13 @@ describe('visible deck session tools', () => {
     })
     expect(after.isError).toBe(true)
     expect(text(after.content)).toMatch(/no session is open/)
+  })
+
+  it('describes slide comments and hidden slides on read_deck', async () => {
+    await startService(sessionSurface(fakeSlidesControl().control))
+    const tool = (await client!.listTools()).tools.find((t) => t.name === 'read_deck')
+    expect(tool?.description).toMatch(/hidden:true/)
+    expect(tool?.description).toMatch(/comments/)
   })
 
   it('surfaces failed transactions as errors, keeps dry runs successful, caps batch size', async () => {
