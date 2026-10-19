@@ -16,6 +16,7 @@ import type {
   BilingualUnit,
 } from './model'
 import { pendingUnits } from './model'
+import type { BilingualData } from './useBilingualData'
 
 // ── extension points (task T7 fills them) ──
 
@@ -50,6 +51,10 @@ export interface BilingualSlots {
   onParagraphDoubleClick?: (ctx: BilingualParagraphContext) => void
   /** replaces a paragraph's text (its editor while open); undefined keeps the text */
   renderParagraphBody?: (ctx: BilingualParagraphContext) => ReactNode | undefined
+  /** in the bar above the pages ("translate all pages") */
+  barActions?: (data: BilingualData) => ReactNode
+  /** under the bar (what a press met: the connect prompt, the first-connection notice) */
+  barPanel?: (data: BilingualData) => ReactNode
 }
 
 // ── inline text ──

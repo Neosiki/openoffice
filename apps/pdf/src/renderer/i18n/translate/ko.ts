@@ -77,4 +77,8 @@ export const ko = {
   trPageNotEditable: '글자를 편집할 수 없음',
   trPageVertical: '세로쓰기이거나 회전된 글자',
   trPageToc: '인쇄된 목차',
+  trFormatStore: '보관만(파일 만들지 않음)',
+  trRestartEditedCount: '사람이 고친 문단이 {count}개 있습니다.',
+  trRestartDiscardEdited: '사람이 고친 문단 {count}개도 지웁니다',
+  trRestartKeepEdited: '고친 문단은 남기기',
 } satisfies Record<keyof typeof zh, string>

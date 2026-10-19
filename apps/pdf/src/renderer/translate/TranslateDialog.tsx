@@ -5,7 +5,8 @@
  * - Choices: the target language (one of the 21 UI languages; the default is
  *   the UI language, or English when the document is in it), the pages, the
  *   output formats (translated PDF, Markdown, EPUB; several at once) and the
- *   bilingual option (Markdown and EPUB only). The translated PDF cannot be
+ *   bilingual option (Markdown and EPUB only), or "store only" (no file: the
+ *   translation stays in the result store). The translated PDF cannot be
  *   chosen, with the reason shown, for an encrypted document or a target the
  *   PDF writer cannot lay out (ar, he, hi). A choice with nothing to
  *   translate is refused; a scanned document is pointed to AI page reading.
@@ -13,7 +14,9 @@
  *   AI it sends to, a paid route's charge, and a warning when the stored
  *   translation was made with another provider or model. "Translate again
  *   from the start" asks once more before it replaces the stored
- *   translation. A stored translation can be exported as it is (no call).
+ *   translation; when a person edited blocks of that language, it asks
+ *   whether to delete them too or keep them. A stored translation can be
+ *   exported as it is (no call).
  *   It refuses to start, saying why, when the AI is not connected.
  *
  * The document is analyzed here (a structure job, no AI) with the stored AI
@@ -80,9 +83,12 @@ export interface TranslateStartRequest {
   lang: string
   /** 1-based pages; null = every page */
   pages: number[] | null
+  /** the files to write; empty = store only */
   formats: TranslationFormat[]
   bilingual: boolean
   mode: TranslateMode
+  /** with 'restart': the blocks a person edited stay (only the others are sent again) */
+  keepEdited?: boolean
   /** the confirmed AI (absent for 'export') */
   route?: ReadyRoute
 }
@@ -168,6 +174,8 @@ export function TranslateDialog(props: TranslateDialogProps): ReactElement {
   const [somePages, setSomePages] = useState(!allPages)
   const [rangeText, setRangeText] = useState(allPages ? '' : pagesText(props.initialPages!))
   const [chosen, setChosen] = useState<Set<TranslationFormat>>(new Set())
+  /** "store only (no file)": alone, nothing is written but the store */
+  const [storeOnly, setStoreOnly] = useState(false)
   const [bilingual, setBilingual] = useState(false)
   const [showErrors, setShowErrors] = useState(false)
   const propsRef = useRef(props)
@@ -242,7 +250,7 @@ export function TranslateDialog(props: TranslateDialogProps): ReactElement {
     [analysis, pageSet],
   )
   const scanned = analysis ? treeHasScannedPages(analysis.tree, pageSet) : false
-  const formatError = formats.length === 0 ? t('trFormatRequired') : null
+  const formatError = formats.length === 0 && !storeOnly ? t('trFormatRequired') : null
   const canNext = !!analysis && !rangeError && !formatError && unitCount !== null && unitCount > 0
 
   const changeLanguage = (next: string) => {
@@ -375,6 +383,15 @@ export function TranslateDialog(props: TranslateDialogProps): ReactElement {
                       </label>
                     )
                   })}
+                  <label className="pdf-modal-check" data-format="store">
+                    <input
+                      type="checkbox"
+                      data-field="format-store"
+                      checked={storeOnly}
+                      onChange={(e) => setStoreOnly(e.target.checked)}
+                    />
+                    {t('trFormatStore')}
+                  </label>
                   {pdfBlockText && (
                     <span className="pdf-translate-note" data-pdf-blocked={block ?? undefined}>
                       {pdfBlockText}
@@ -498,9 +515,15 @@ function TranslateConfirm({
   const [message, setMessage] = useState<string | null>(null)
   const [starting, setStarting] = useState(false)
   const [askRestart, setAskRestart] = useState(false)
+  /** blocks of this language a person edited (the restart asks about them) */
+  const [editedCount, setEditedCount] = useState(0)
   const route = documentJobRoute(settings, connection.statuses)
   /** what the user saw when pressing Start; a held start runs only if it still holds */
-  const confirmedRef = useRef<{ route: ReadyRoute; mode: TranslateMode } | null>(null)
+  const confirmedRef = useRef<{
+    route: ReadyRoute
+    mode: TranslateMode
+    keepEdited: boolean
+  } | null>(null)
   const latest = useRef({ settings, statuses: connection.statuses })
   latest.current = { settings, statuses: connection.statuses }
   const routeKey = route.state === 'ready' ? `${route.provider}\n${route.model}` : ''
@@ -522,6 +545,21 @@ function TranslateConfirm({
       off?.()
     }
   }, [])
+
+  // edited blocks of the language: "translate again from the start" asks whether to keep them
+  useEffect(() => {
+    let alive = true
+    void api.store
+      .translation(docHash, target)
+      .then((out) => {
+        if (!alive || !out.ok || !out.translation) return
+        setEditedCount(out.translation.blocks.filter((b) => b.edited === true).length)
+      })
+      .catch(() => {})
+    return () => {
+      alive = false
+    }
+  }, [api, docHash, target])
 
   // the store tells what is already translated; the route's model tells a provider change
   useEffect(() => {
@@ -563,13 +601,17 @@ function TranslateConfirm({
       setMessage(t('arRouteChanged'))
       return
     }
-    await send({ mode: confirmed.mode, route: confirmed.route })
+    await send({ mode: confirmed.mode, route: confirmed.route, keepEdited: confirmed.keepEdited })
     confirmedRef.current = null
   }
   const runRef = useRef(run)
   runRef.current = run
 
-  const send = async (o: { mode: TranslateMode; route?: ReadyRoute }): Promise<void> => {
+  const send = async (o: {
+    mode: TranslateMode
+    route?: ReadyRoute
+    keepEdited?: boolean
+  }): Promise<void> => {
     setStarting(true)
     try {
       const answer = await onStart({
@@ -581,6 +623,7 @@ function TranslateConfirm({
         bilingual,
         mode: o.mode,
         ...(o.route ? { route: o.route } : {}),
+        ...(o.keepEdited ? { keepEdited: true } : {}),
       })
       if (!answer.ok && !('cancelled' in answer)) {
         setMessage(
@@ -606,16 +649,16 @@ function TranslateConfirm({
   const nothingToSend = !!estimate && estimate.calls === 0
   const canStart =
     route.state === 'ready' && !!estimate && !nothingToSend && !starting && !sendGate.noticeDue
-  const startJob = (mode: TranslateMode) => {
+  const startJob = (mode: TranslateMode, keepEdited = false) => {
     if (route.state !== 'ready' || !canStart) return
     setMessage(null)
     setAskRestart(false)
-    confirmedRef.current = { route, mode }
+    confirmedRef.current = { route, mode, keepEdited }
     if (sendGate.admit(++pressRef.current)) void run()
   }
   /** write the files from what is stored; nothing is sent */
   const exportStored = () => {
-    if (starting || !estimate || estimate.done === 0) return
+    if (starting || !estimate || estimate.done === 0 || formats.length === 0) return
     setMessage(null)
     void send({ mode: 'export' })
   }
@@ -707,6 +750,11 @@ function TranslateConfirm({
               count: estimate.done,
             })}
           </p>
+          {editedCount > 0 && (
+            <p data-edited-count={editedCount}>
+              {t('trRestartEditedCount', { count: editedCount })}
+            </p>
+          )}
           <div className="pdf-modal-actions">
             <button
               type="button"
@@ -716,15 +764,38 @@ function TranslateConfirm({
             >
               {t('arCancel')}
             </button>
-            <button
-              type="button"
-              className="pdf-modal-btn primary"
-              data-action="restart-yes"
-              disabled={route.state !== 'ready' || starting || sendGate.noticeDue}
-              onClick={() => startJob('restart')}
-            >
-              {t('trRestartYes')}
-            </button>
+            {editedCount > 0 ? (
+              <>
+                <button
+                  type="button"
+                  className="pdf-modal-btn"
+                  data-action="restart-discard-edited"
+                  disabled={route.state !== 'ready' || starting || sendGate.noticeDue}
+                  onClick={() => startJob('restart')}
+                >
+                  {t('trRestartDiscardEdited', { count: editedCount })}
+                </button>
+                <button
+                  type="button"
+                  className="pdf-modal-btn primary"
+                  data-action="restart-keep-edited"
+                  disabled={route.state !== 'ready' || starting || sendGate.noticeDue}
+                  onClick={() => startJob('restart', true)}
+                >
+                  {t('trRestartKeepEdited')}
+                </button>
+              </>
+            ) : (
+              <button
+                type="button"
+                className="pdf-modal-btn primary"
+                data-action="restart-yes"
+                disabled={route.state !== 'ready' || starting || sendGate.noticeDue}
+                onClick={() => startJob('restart')}
+              >
+                {t('trRestartYes')}
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -751,7 +822,7 @@ function TranslateConfirm({
         <button type="button" className="pdf-modal-btn" onClick={onCancel}>
           {t('arCancel')}
         </button>
-        {estimate && estimate.done > 0 && !nothingToSend && (
+        {estimate && estimate.done > 0 && !nothingToSend && formats.length > 0 && (
           <button
             type="button"
             className="pdf-modal-btn"
@@ -767,7 +838,7 @@ function TranslateConfirm({
             type="button"
             className="pdf-modal-btn primary"
             data-action="export"
-            disabled={starting}
+            disabled={starting || formats.length === 0}
             onClick={exportStored}
           >
             {t('trExport')}

@@ -4,7 +4,7 @@
  * for, the unsaved-page-edit notice, and the one-time "fold the column?"
  * prompt. Nothing here sends anything.
  */
-import type { ReactElement } from 'react'
+import type { ReactElement, ReactNode } from 'react'
 import type { Lang } from '@genoffice/i18n'
 import { TRANSLATION_LANGUAGES } from '../../../../../packages/pdf-structure/src/translate/language'
 import type { TFunc } from '../i18n/locale'
@@ -27,6 +27,8 @@ export interface BilingualBarProps {
   onCollapse: () => void
   onDismissCollapse: () => void
   onClose: () => void
+  /** the view's actions in the bar ("translate all pages") */
+  actions?: ReactNode
 }
 
 export function BilingualBar(props: BilingualBarProps): ReactElement {
@@ -113,6 +115,7 @@ export function BilingualBar(props: BilingualBarProps): ReactElement {
         </span>
       )}
       <span className="bl-bar-spacer" />
+      {props.actions}
       <button
         type="button"
         className="bl-bar-btn bl-bar-close"

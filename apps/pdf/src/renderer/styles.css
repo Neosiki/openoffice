@@ -5423,3 +5423,124 @@ button {
   padding-top: 6px;
   border-top: 1px solid var(--color-border-default);
 }
+
+/* bilingual actions: page translation, translate again, the paragraph editor (screen only) */
+
+.bl-primary {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.bl-provider {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.bl-page-running {
+  color: var(--text-secondary);
+}
+
+.bl-paid-ask,
+.bl-discard-ask {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+
+.bl-paid-text {
+  font-weight: 600;
+  color: var(--pdf-sig-warn);
+}
+
+.bl-page-note,
+.bl-para-note {
+  flex-basis: 100%;
+  font-size: 11.5px;
+  color: var(--pdf-error);
+  white-space: normal;
+}
+
+.bl-para-note {
+  display: block;
+  margin-top: 2px;
+}
+
+.bl-mini-btn {
+  height: 20px;
+  padding: 0 6px;
+  font: inherit;
+  font-size: 11px;
+  color: var(--text-secondary);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.bl-mini-btn:hover:not(:disabled) {
+  color: var(--text);
+  background: var(--bg-hover);
+}
+
+.bl-mini-btn:disabled {
+  color: var(--text-dim);
+  cursor: default;
+}
+
+/* "translate again" shows on the paragraph under the pointer or in focus */
+.bl-retranslate {
+  opacity: 0;
+}
+
+.bl-item:hover .bl-retranslate,
+.bl-cell-p:hover .bl-retranslate,
+.bl-retranslate:focus-visible {
+  opacity: 1;
+}
+
+.bl-para-running {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.bl-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.bl-editor-hint {
+  font-size: 11px;
+  color: var(--pdf-sig-warn);
+}
+
+.bl-editor-text {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 4px 6px;
+  font: inherit;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  resize: vertical;
+}
+
+.bl-editor-actions {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.bl-gate {
+  position: relative;
+  padding: 8px 36px 8px 12px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.bl-gate-close {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+}

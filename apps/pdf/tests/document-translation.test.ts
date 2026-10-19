@@ -220,7 +220,14 @@ function fakeChannels(
     tree?: DocumentTree
     unfinished?: JobStatus[]
     /** a stored translation: lang, provider, model, how many of the first blocks */
-    stored?: { lang: string; provider: string; model: string; blocks: number }
+    stored?: {
+      lang: string
+      provider: string
+      model: string
+      blocks: number
+      /** how many of those blocks a person edited (the first ones) */
+      edited?: number
+    }
   } = {},
 ) {
   const tree = options.tree ?? fakeTree()
@@ -235,6 +242,7 @@ function fakeChannels(
         status: 'translated',
         text: `[old] ${i}`,
         savedAt: 1,
+        ...(i < (options.stored.edited ?? 0) ? { edited: true as const } : {}),
       })
     }
     translations.set(options.stored.lang, {
@@ -278,6 +286,16 @@ function fakeChannels(
         for (const b of request.blocks) tr.blocks.set(blockKeyString(b.key), { ...b, savedAt: 2 })
       }
       if (request.kind === 'deleteTranslation') translations.delete(request.lang)
+      if (request.kind === 'deleteTranslationExceptEdited') {
+        const tr = translations.get(request.lang)
+        let removed = 0
+        for (const [k, b] of [...(tr?.blocks ?? [])]) {
+          if (b.edited) continue
+          tr!.blocks.delete(k)
+          removed++
+        }
+        return { ok: true as const, removed }
+      }
       if (request.kind === 'job') jobs.push(request.job)
       return { ok: true as const }
     }),
@@ -964,5 +982,81 @@ describe('translation: formats and the report', () => {
     await act(async () => r.unmount())
     host.remove()
     expect(m.el).toBeTruthy()
+  })
+})
+
+describe('translation window: store only, and edited blocks on a restart', () => {
+  it('"store only" alone writes no file: no save dialog, no PDF, no Markdown, no report', async () => {
+    const m = await mount()
+    await openWindow(m, { lang: 'de', pages: null })
+    await click(m.el, '[data-field="format-pdf"]')
+    // no format at all is refused
+    expect(disabled(m.el, '[data-action="next"]')).toBe(true)
+    await click(m.el, '[data-field="format-store"]')
+    expect(disabled(m.el, '[data-action="next"]')).toBe(false)
+    await click(m.el, '[data-action="next"]')
+    await until(() => (q(m.el, '[data-calls]')?.dataset.calls ?? '') !== '', 'the estimate')
+    await click(m.el, '[data-action="start"]')
+    await until(() => bridge.starts.length === 1, 'the call')
+    expect(m.channels.picks).toEqual([])
+    await act(async () => bridge.answerAll())
+    await until(
+      () => q(m.el, '[data-job-kind="translate"][data-job-state="complete"]') !== null,
+      'the job to finish',
+    )
+    await settle()
+    expect(m.channels.writes.filter((w) => w.kind === 'translationBlocks')).not.toHaveLength(0)
+    expect(m.channels.converts).toHaveLength(0)
+    expect(m.channels.writeBacks).toHaveLength(0)
+    expect(m.prepare).not.toHaveBeenCalled()
+    expect(q(m.el, '.pdf-translate-report')).toBeNull()
+  })
+
+  it('a restart with edited blocks offers to keep them: only the others are removed and sent', async () => {
+    const channels = fakeChannels({
+      stored: { lang: 'de', provider: 'claude-code', model: '', blocks: 2, edited: 1 },
+    })
+    const m = await mount({ channels })
+    await openToConfirm(m, { lang: 'de', pages: null })
+    await click(m.el, '[data-action="restart"]')
+    await until(() => q(m.el, '[data-edited-count]') !== null, 'the edited count')
+    expect(q(m.el, '[data-edited-count]')?.textContent).toBe(
+      t('trRestartEditedCount', { count: 1 }),
+    )
+    expect(q(m.el, '[data-action="restart-discard-edited"]')?.textContent).toBe(
+      t('trRestartDiscardEdited', { count: 1 }),
+    )
+    expect(q(m.el, '[data-action="restart-keep-edited"]')?.textContent).toBe(
+      t('trRestartKeepEdited'),
+    )
+    expect(q(m.el, '[data-action="restart-yes"]')).toBeNull()
+    await settle()
+    expect(bridge.api.aiStream).not.toHaveBeenCalled()
+
+    await click(m.el, '[data-action="restart-keep-edited"]')
+    await until(() => bridge.starts.length === 1, 'the job to send')
+    expect(channels.writes.some((w) => w.kind === 'deleteTranslationExceptEdited')).toBe(true)
+    expect(channels.writes.some((w) => w.kind === 'deleteTranslation')).toBe(false)
+    // the edited heading stays and is not sent; the other two blocks are
+    const text = bridge.starts[0]!.messages[0]!.text ?? ''
+    expect(text).not.toContain('Annual report')
+    expect(text).toContain('quick brown fox')
+    expect(text).toContain('harvest grew')
+    expect(channels.translations.get('de')!.blocks.size).toBe(1)
+  })
+
+  it('a restart that also deletes the edited blocks replaces the whole translation', async () => {
+    const channels = fakeChannels({
+      stored: { lang: 'de', provider: 'claude-code', model: '', blocks: 2, edited: 1 },
+    })
+    const m = await mount({ channels })
+    await openToConfirm(m, { lang: 'de', pages: null })
+    await click(m.el, '[data-action="restart"]')
+    await until(() => q(m.el, '[data-action="restart-discard-edited"]') !== null, 'the choice')
+    await click(m.el, '[data-action="restart-discard-edited"]')
+    await until(() => bridge.starts.length === 1, 'the job to send')
+    expect(channels.writes.some((w) => w.kind === 'deleteTranslation')).toBe(true)
+    expect(channels.writes.some((w) => w.kind === 'deleteTranslationExceptEdited')).toBe(false)
+    expect(bridge.starts[0]!.messages[0]!.text).toContain('Annual report')
   })
 })

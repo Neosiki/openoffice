@@ -135,6 +135,7 @@ import {
 } from './translate/DocumentTranslation'
 import { languageName } from './translate/translate-model'
 import { useBilingual } from './bilingual/useBilingual'
+import { useBilingualActions } from './bilingual/BilingualActions'
 import { hasUnsavedPageEdits, toggleBilingual, toggleSpread } from './bilingual/model'
 import { createPageRenderer } from './ai-read/render-page'
 import { loadAiReadTexts } from './ai-read/search-texts'
@@ -1730,6 +1731,20 @@ export default function App() {
     [drawTool, noteDraft, drawings, annotDeletes, savedNotes],
   )
 
+  // the view's buttons: page translation, translate again, edits, "translate all pages"
+  const bilingualActions = useBilingualActions({
+    session: jobSession,
+    store: translateApi?.store ?? null,
+    lang,
+    t,
+    filePath,
+    password: passwordRef.current,
+    onTranslateAll: (target) => {
+      const answer = translateRef.current?.requestOpen({ lang: target, pages: null })
+      if (answer && 'running' in answer) showNotice(t('arBusy', answer.running))
+      else if (!answer || 'unavailable' in answer) showNotice(t('trUnavailable'))
+    },
+  })
   const bilingual = useBilingual({
     enabled: bilingualOn,
     onClose: () => setBilingualOn(false),
@@ -1744,7 +1759,7 @@ export default function App() {
             tree: (request) => window.pdfApi.structure.tree(request),
             cancel: (jobId) => window.pdfApi.structure.cancel(jobId),
             onProgress: (handler) => window.pdfApi.structure.onProgress(handler),
-            // reads only: the view never writes to the store
+            // reads only: the actions write through their own store channel
             store: {
               aiReadPages: (docHash) => window.pdfApi.store.aiReadPages(docHash),
               translationRecency: (docHash) => window.pdfApi.store.translationRecency(docHash),
@@ -1765,6 +1780,7 @@ export default function App() {
       reordered: order !== null,
     }),
     reservedWidth: noteMarginOn ? NOTE_MARGIN_W + PAGE_GAP : 0,
+    slots: bilingualActions.slots,
   })
 
   const recomputeFit = useCallback(() => {

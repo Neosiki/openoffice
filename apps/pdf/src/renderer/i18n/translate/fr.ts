@@ -82,4 +82,8 @@ export const fr = {
   trPageNotEditable: 'son texte n’est pas modifiable',
   trPageVertical: 'texte vertical ou pivoté',
   trPageToc: 'table des matières imprimée',
+  trFormatStore: 'Conserver seulement (aucun fichier)',
+  trRestartEditedCount: '{count} paragraphes ont été modifiés par une personne.',
+  trRestartDiscardEdited: 'Supprimer aussi les {count} paragraphes modifiés par une personne',
+  trRestartKeepEdited: 'Garder les paragraphes modifiés',
 } satisfies Record<keyof typeof zh, string>

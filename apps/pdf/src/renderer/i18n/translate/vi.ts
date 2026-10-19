@@ -79,4 +79,8 @@ export const vi = {
   trPageNotEditable: 'không chỉnh sửa được chữ',
   trPageVertical: 'chữ dọc hoặc bị xoay',
   trPageToc: 'mục lục in sẵn',
+  trFormatStore: 'Chỉ lưu trữ (không tạo tệp)',
+  trRestartEditedCount: 'Có {count} đoạn do người sửa.',
+  trRestartDiscardEdited: 'Xóa cả {count} đoạn do người sửa',
+  trRestartKeepEdited: 'Giữ các đoạn đã sửa',
 } satisfies Record<keyof typeof zh, string>

@@ -80,4 +80,8 @@ export const ja = {
   trPageNotEditable: '文字を編集できない',
   trPageVertical: '縦書きまたは回転した文字',
   trPageToc: '印刷された目次',
+  trFormatStore: '保存のみ（ファイルを作らない）',
+  trRestartEditedCount: '人が修正した段落が {count} 個あります。',
+  trRestartDiscardEdited: '人が修正した段落 {count} 個も削除する',
+  trRestartKeepEdited: '修正した段落は残す',
 } satisfies Record<keyof typeof zh, string>

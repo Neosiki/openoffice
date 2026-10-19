@@ -81,4 +81,8 @@ export const pl = {
   trPageNotEditable: 'jej tekstu nie można edytować',
   trPageVertical: 'tekst pionowy lub obrócony',
   trPageToc: 'drukowany spis treści',
+  trFormatStore: 'Tylko zachowaj (bez pliku)',
+  trRestartEditedCount: 'Liczba akapitów zmienionych przez osobę: {count}.',
+  trRestartDiscardEdited: 'Usuń też akapity zmienione przez osobę ({count})',
+  trRestartKeepEdited: 'Zachowaj zmienione akapity',
 } satisfies Record<keyof typeof zh, string>

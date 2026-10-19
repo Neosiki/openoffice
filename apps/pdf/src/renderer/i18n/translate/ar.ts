@@ -79,4 +79,8 @@ export const ar = {
   trPageNotEditable: 'لا يمكن تحرير نصها',
   trPageVertical: 'نص عمودي أو مُدار',
   trPageToc: 'فهرس محتويات مطبوع',
+  trFormatStore: 'الحفظ فقط (بدون ملف)',
+  trRestartEditedCount: 'عدد الفقرات التي عدّلها شخص: {count}.',
+  trRestartDiscardEdited: 'حذف الفقرات التي عدّلها شخص أيضًا ({count})',
+  trRestartKeepEdited: 'الإبقاء على الفقرات المعدلة',
 } satisfies Record<keyof typeof zh, string>
