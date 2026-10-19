@@ -4,6 +4,7 @@ import { defaultAiSearchSettings, resolveAiSearchSettings } from './search-setti
 import type {
   AiProviderId,
   AiProviderMeta,
+  AiReadUrlSettings,
   AiSettings,
   AiSubscriptionProviderId,
   LegacyAiSettings,
@@ -462,6 +463,16 @@ export function sanitizeMeteredAccepted(
 }
 
 /**
+ * The read_url slot when it carries a usable token; anything else (absent,
+ * not an object, a non-string or blank token) means public pages only.
+ */
+export function readUrlSettingsOf(value: unknown): AiReadUrlSettings | undefined {
+  if (!isRecord(value)) return undefined
+  const token = str(value.githubToken)
+  return token ? { githubToken: token } : undefined
+}
+
+/**
  * Model ids a vendor has stopped serving, mapped to their replacement. A
  * stored selection outlives the provider list, so without this remap an old
  * settings file keeps sending an id the API now rejects.
@@ -561,6 +572,7 @@ function migrateRetiredModels(providers: AiSettings['providers']): AiSettings['p
  */
 export function resolveAiSettings(stored: unknown, defaults: AiSettings): AiSettings {
   const settings = (isRecord(stored) ? stored : {}) as Partial<AiSettings> & LegacyAiSettings
+  const readUrl = readUrlSettingsOf(settings.readUrl ?? defaults.readUrl)
   const storedProviders = isRecord(settings.providers) ? settings.providers : undefined
   if (!storedProviders) {
     if (settings.apiKey) {
@@ -570,12 +582,13 @@ export function resolveAiSettings(stored: unknown, defaults: AiSettings): AiSett
         baseUrl: str(settings.baseUrl) || 'https://api.openai.com/v1',
       }
     }
-    return resolveCustomEndpoints(defaults)
+    return resolveCustomEndpoints(readUrl ? { ...defaults, readUrl } : defaults)
   }
   return resolveCustomEndpoints({
     provider: settings.provider ?? defaults.provider,
     customEndpoints: settings.customEndpoints,
     customEndpoint: settings.customEndpoint,
+    ...(readUrl ? { readUrl } : {}),
     // Trim before migrating: a pasted " deepseek-reasoner " must still hit
     // the retired-id remap instead of being sent to the API verbatim.
     providers: migrateRetiredModels(
