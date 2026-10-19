@@ -71,6 +71,7 @@ openoffice/
 │   ├── pipelines/AGENTS.md        ← 슬라이드 생성 단계
 │   └── project-store/AGENTS.md    ← 프로젝트와 대화 기록 저장
 ├── skills/ieumoffice/SKILL.md     ← 코딩 에이전트에 설치되는 스킬
+├── .claude/skills/release-ieumoffice/SKILL.md ← 릴리스 작업 스킬(에이전트용)
 └── tools/                         ← 검사 도구(`check-*.mjs`), 브랜드 그림·도움말 그림 생성기
 ```
 
@@ -106,6 +107,8 @@ openoffice/
 | 에이전트 모드(도구를 켠 구독 프로그램)를 고친다        | `docs/tracking/decisions/0032-agent-mode-in-project-folder.md`, `docs/security.md`의 "에이전트 모드"     |
 | AI를 실제 구독으로 돌려 확인한다                       | `docs/operations.md`의 "실제 구독으로 확인하기". 사용자의 한도를 쓴다                                    |
 | 새 버전을 낸다                                         | `docs/releasing.ko.md`. 첫 항목은 저장소 주인의 약관 동의다                                              |
+
+- **릴리스 본문은 사용자가 앱 안에서 그대로 읽는다.** 첫 문단 요약 → 새로 들어간 것 → 고친 것 → 설치 안내(맨 아래) 순서와 humanize-korean 윤문은 `docs/releasing.ko.md` 6번이 정한다. 에이전트는 `.claude/skills/release-ieumoffice/SKILL.md`도 함께 읽는다.
 
 ## 문제가 생기면
 
