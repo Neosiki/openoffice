@@ -7,6 +7,7 @@
  * Asian-character figure.
  */
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model'
+import type { Selection } from '@tiptap/pm/state'
 
 // Han (incl. radicals/compat/ext-B+), kana, hangul, bopomofo, CJK symbols
 // and punctuation (U+3001 up: the ideographic space stays whitespace),
