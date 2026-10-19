@@ -9,6 +9,8 @@ Slides è l'editor simile a PowerPoint: legge e scrive veri file.pptx.
 - **Telaio**: modifica WYSIWYG; trascinamento, maniglie di ridimensionamento, guide.
 - **Note**: note per il relatore di ogni diapositiva, conservate nei flussi di esportazione.
 
+- **Commenti**: i commenti di revisione sono salvati nel pptx. Il riquadro Commenti mostra la diapositiva corrente per impostazione predefinita; passando a **Tutte le pagine** si vedono quelli dell'intera presentazione, e l'IA li legge su richiesta.
+
 ## Le schede della barra multifunzione
 
 La barra delle schede (su macOS parte da Home; su Windows c'è anche una scheda File):

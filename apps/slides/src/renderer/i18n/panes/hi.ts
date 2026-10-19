@@ -62,6 +62,12 @@ export const hi = {
   paneCommentsDelete: 'टिप्पणी हटाएँ',
   paneCommentsPlaceholder: 'नई टिप्पणी… (पोस्ट करने के लिए ⌘/Ctrl+Enter)',
   paneCommentsPost: 'पोस्ट करें',
+  paneCommentsScopePage: 'यह स्लाइड',
+  paneCommentsScopeAll: 'सभी स्लाइड',
+  paneCommentsPageHeading: 'स्लाइड {n}',
+  paneCommentsPageCount: '{n} टिप्पणियाँ',
+  paneCommentsAllEmpty: 'इस प्रस्तुति में अभी कोई टिप्पणी नहीं है',
+  paneCommentsAllEmptySub: 'किसी भी स्लाइड में जोड़ी गई टिप्पणियाँ यहाँ एकत्र होती हैं।',
 
   paneCsdTitle: 'कस्टम शो',
   paneCsdDefaultName: 'कस्टम शो {n}',

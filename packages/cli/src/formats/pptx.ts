@@ -5,6 +5,8 @@ import { isAbsolute, resolve } from 'node:path'
 import {
   builtinTableStyleName,
   createBlankPptx,
+  getSlideComments,
+  getSlideHidden,
   getSlideLinks,
   getSlideNotes,
   listSlideLayouts,
@@ -182,6 +184,10 @@ export interface SlideSummary {
   /** the page timeline in play order; absent when the slide has no animations */
   animations?: AnimationEntry[]
   notes?: string
+  /** stored review comments; present with `comments` only when the slide has some */
+  comments?: Array<{ authorId: number; idx: number; author: string; dt: string; text: string }>
+  /** the slide is hidden (`<p:sld show="0">`); present with `comments` only when hidden */
+  hidden?: true
 }
 
 export interface DeckSummary {
@@ -195,7 +201,8 @@ export interface DeckSummary {
 /**
  * Structure an agent needs to target ops: durable ids, geometry in EMU, text previews.
  * `full` drops the clipping (whole text, every table row) and adds speaker notes, for
- * reading a deck as source material rather than targeting it.
+ * reading a deck as source material rather than targeting it. `comments` adds each
+ * slide's stored review comments and its hidden state, independent of `full`.
  */
 export function describeDeck(
   opened: OpenedPptx,
@@ -204,12 +211,13 @@ export function describeDeck(
   maxChars = full ? Infinity : PREVIEW_CHARS,
   layouts = false,
   unit: ReadUnit = 'emu',
+  comments = false,
 ): DeckSummary {
   const { deck } = opened
   const pages = deck.slides
     .map((slide, index) => ({ slide, index }))
     .filter(({ index }) => only === undefined || index === only)
-    .map(({ slide, index }) => summarizeSlide(opened, slide, index, full, maxChars))
+    .map(({ slide, index }) => summarizeSlide(opened, slide, index, full, maxChars, comments))
   if (unit !== 'emu')
     for (const page of pages) for (const el of page.elements) convertBoxes(el, unit)
   return {
@@ -257,6 +265,7 @@ function summarizeSlide(
   index: number,
   full: boolean,
   maxChars: number,
+  comments: boolean,
 ): SlideSummary {
   const links = new Map(getSlideLinks(opened, index).map((l) => [l.elementId, l.target]))
   const out: SlideSummary = {
@@ -269,6 +278,18 @@ function summarizeSlide(
   if (full) {
     const notes = getSlideNotes(opened.archive, slide.path)
     if (notes) out.notes = notes
+  }
+  if (comments) {
+    if (getSlideHidden(slide)) out.hidden = true
+    const stored = getSlideComments(opened.archive, slide.path)
+    if (stored.length)
+      out.comments = stored.map(({ authorId, idx, author, dt, text }) => ({
+        authorId,
+        idx,
+        author: author?.trim() ? author : 'Unknown author',
+        dt,
+        text,
+      }))
   }
   return out
 }

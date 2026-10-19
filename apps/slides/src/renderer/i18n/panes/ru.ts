@@ -62,6 +62,12 @@ export const ru = {
   paneCommentsDelete: 'Удалить примечание',
   paneCommentsPlaceholder: 'Новое примечание… (⌘/Ctrl+Enter — опубликовать)',
   paneCommentsPost: 'Опубликовать',
+  paneCommentsScopePage: 'Этот слайд',
+  paneCommentsScopeAll: 'Все слайды',
+  paneCommentsPageHeading: 'Слайд {n}',
+  paneCommentsPageCount: 'Примечаний: {n}',
+  paneCommentsAllEmpty: 'В этой презентации пока нет примечаний',
+  paneCommentsAllEmptySub: 'Примечания, добавленные на любом слайде, собираются здесь.',
 
   paneCsdTitle: 'Произвольные показы',
   paneCsdDefaultName: 'Произвольный показ {n}',

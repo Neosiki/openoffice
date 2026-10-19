@@ -20,9 +20,9 @@ const TOKENIZER_VERSION = 2
  * bump when extraction changes what may enter a body; the index is rebuilt from
  * scratch. 1: text a file withholds from a model is indexed as its {{label}}
  * marker. An index with no stamp predates that and may hold the withheld words,
- * which search excerpts would quote
+ * which search excerpts would quote. 2: pptx comments join the extracted body.
  */
-const EXTRACT_VERSION = 1
+const EXTRACT_VERSION = 2
 
 export type IndexStatus = 'ok' | 'name-only' | 'error'
 

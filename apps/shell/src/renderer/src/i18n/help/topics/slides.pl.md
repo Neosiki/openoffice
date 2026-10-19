@@ -9,6 +9,8 @@ Slides to edytor podobny do PowerPointa: otwiera i zapisuje prawdziwe pliki.pptx
 - **Obszar roboczy**: edycja WYSIWYG; przeciąganie, uchwyty skalowania, prowadnice.
 - **Notatki**: notatki prelegenta dla każdego slajdu, zachowywane podczas eksportu.
 
+- **Komentarze**: komentarze przeglądowe są zapisywane w pptx. Okienko komentarzy domyślnie pokazuje bieżący slajd; przełącz na **Wszystkie strony**, aby zobaczyć komentarze całej prezentacji, a AI odczyta je na żądanie.
+
 ## Karty wstążki
 
 Pasek kart (w systemie macOS zaczyna się od Narzędzia główne; w Windows dochodzi karta Plik):

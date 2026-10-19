@@ -202,6 +202,7 @@ export const pl = {
   aiLabelInsertSmartart: 'Wstaw grafikę SmartArt',
   aiSumFromScratchGuard: '{label}: aby tworzyć od zera, użyj generate_deck',
   aiSumReadSlide: 'Odczyt slajdu {n}',
+  aiSumReadComments: 'Odczyt komentarzy',
   aiSumScriptNoop: 'Edycja skryptem (slajd {n}, bez zmian)',
   aiSumScript: 'Edycja skryptem na slajdzie {n} ({count} operacji)',
   aiSumWebSearch: 'Wyszukano „{query}” ({count} wyników)',

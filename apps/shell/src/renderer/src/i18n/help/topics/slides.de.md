@@ -9,6 +9,8 @@ Slides ist der PowerPoint-ähnliche Editor: Er liest und schreibt echte.pptx.
 - **Arbeitsfläche**: WYSIWYG-Bearbeitung; ziehen, Größengriffe, Hilfslinien.
 - **Notizen**: Notizen des Vortragenden pro Folie, bleiben in den Exportabläufen erhalten.
 
+- **Kommentare**: Überprüfungskommentare liegen in der pptx. Der Kommentarbereich zeigt standardmäßig die aktuelle Folie; mit **Alle Seiten** sehen Sie die Kommentare des ganzen Decks, und die KI liest sie auf Anfrage.
+
 ## Tabs im Menüband
 
 Die Tab-Leiste (unter macOS beginnt sie mit „Start“; unter Windows kommt ein Tab „Datei“ hinzu):

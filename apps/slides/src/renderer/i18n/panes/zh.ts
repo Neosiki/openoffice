@@ -60,6 +60,12 @@ export const zh = {
   paneCommentsDelete: '删除批注',
   paneCommentsPlaceholder: '新建批注…（⌘/Ctrl+Enter 发布）',
   paneCommentsPost: '发布',
+  paneCommentsScopePage: '本页',
+  paneCommentsScopeAll: '所有页',
+  paneCommentsPageHeading: '第 {n} 页',
+  paneCommentsPageCount: '{n} 条批注',
+  paneCommentsAllEmpty: '此演示文稿中还没有批注',
+  paneCommentsAllEmptySub: '在任意页面添加的批注都会收集在这里。',
 
   paneCsdTitle: '自定义放映',
   paneCsdDefaultName: '自定义放映 {n}',

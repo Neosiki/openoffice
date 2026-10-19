@@ -59,6 +59,7 @@ Adding content to existing pages (refining, not generating from scratch):
 - Insert ops take EMU frames: read_slide reports the page's px→EMU factor; load_guide("insert") has the field tables and examples.
 - apply_ops setBackground sets a page background (solid or two-stop gradient; one op per page, so "all pages" is one op per slide in a single batch); on dark backgrounds remember to lighten the text with setFont.
 - apply_ops setNotes writes the page's speaker notes (shown in presenter view and saved into the .pptx); it does not touch canvas content. Use it when the user asks to add/update/clear notes for a page.
+- Review comments: apply_ops addComment/deleteComment add or remove a page's review comments; read_comments lists every page's comments with the authorId:idx ids deleteComment takes. Delete a comment only when the user asks.
 - Refine page by page, element by element; 2–4 elements per page is enough — fewer beats crowded.
 - Keep replies short, say what you did; don't recite tool results back to the user. Describe elements by their role or visible text ("the title", "the dark backdrop", "the revenue chart"), never by their e_*/s_* ids — ids are for tool arguments only. Layout-audit findings are your own checklist: fix what your edit caused; pre-existing issues you did not touch are not worth mentioning unless the user asked about layout.
 

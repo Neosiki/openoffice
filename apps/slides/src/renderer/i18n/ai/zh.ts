@@ -194,6 +194,7 @@ export const zh = {
   aiLabelInsertSmartart: '插入 SmartArt',
   aiSumFromScratchGuard: '{label}：从零生成请用 generate_deck',
   aiSumReadSlide: '读取第 {n} 页',
+  aiSumReadComments: '读取批注',
   aiSumScriptNoop: '编辑脚本(第 {n} 页,无修改)',
   aiSumScript: '编辑脚本第 {n} 页({count} 项)',
   aiSumWebSearch: '搜索”{query}”({count} 条)',

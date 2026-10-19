@@ -62,6 +62,12 @@ export const ko = {
   paneCommentsDelete: '메모 삭제',
   paneCommentsPlaceholder: '새 메모… (⌘/Ctrl+Enter로 게시)',
   paneCommentsPost: '게시',
+  paneCommentsScopePage: '이 페이지',
+  paneCommentsScopeAll: '모든 페이지',
+  paneCommentsPageHeading: '슬라이드 {n}',
+  paneCommentsPageCount: '메모 {n}개',
+  paneCommentsAllEmpty: '이 문서에는 아직 메모가 없습니다',
+  paneCommentsAllEmptySub: '슬라이드 어디에서든 메모를 추가하면 여기에 모입니다.',
 
   paneCsdTitle: '쇼 재구성',
   paneCsdDefaultName: '쇼 재구성 {n}',

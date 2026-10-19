@@ -414,9 +414,16 @@ export const TOOLS: ToolSpec[] = [
     verb: 'read',
     readOnly: true,
     description:
-      'Structure of a .pptx: slides s_<n> with their elements e_* (kind, text preview, EMU geometry), tables and with full the whole text and speaker notes. The ids are what slides_apply ops target; ids of edited or created elements change, so read again before a second batch. layouts lists the master layouts for addSlideWithLayout.',
+      "Structure of a .pptx: slides s_<n> with their elements e_* (kind, text preview, EMU geometry), tables and with full the whole text and speaker notes. The ids are what slides_apply ops target; ids of edited or created elements change, so read again before a second batch. layouts lists the master layouts for addSlideWithLayout; comments adds each slide's stored comments (authorId, idx, author, dt, text) and hidden.",
     positionals: [{ key: 'file', description: 'path of the .pptx' }],
-    options: ['slide', 'full', 'layouts', 'max-chars', { key: 'units', choices: READ_UNITS }],
+    options: [
+      'slide',
+      'full',
+      'comments',
+      'layouts',
+      'max-chars',
+      { key: 'units', choices: READ_UNITS },
+    ],
   },
   {
     name: 'slides_apply',

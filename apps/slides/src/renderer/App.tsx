@@ -91,6 +91,7 @@ import {
 import { FormatBackgroundPane, type BgPaneOp } from './components/FormatBackgroundPane'
 import { FormatPane } from './components/FormatPane'
 import { CommentsPane } from './components/CommentsPane'
+import { commentNavigationTarget, deckStructureKey, type CommentsMode } from './comments-view'
 import { AnimationPane } from './components/AnimationPane'
 import { AnimPreviewOverlay } from './components/AnimatedSlide'
 import { EquationDialog, HeaderFooterDialog, LinkDialog } from './components/InsertDialogs'
@@ -587,8 +588,28 @@ export function App() {
   }, [])
   // ── Review tab: comments ────────────────────────────────────────────────
   const [comments, setComments] = useState<SlideComment[]>([])
+  /** Deck-order lists for the all-pages view (empty pages and hidden slides included) */
+  const [allComments, setAllComments] = useState<SlideComment[][]>([])
+  /** Live summary for the AI context hint: total + 1-based pages that have comments */
+  const commentSummary = useMemo(() => {
+    const pages: number[] = []
+    let total = 0
+    ;(Array.isArray(allComments) ? allComments : []).forEach((list, i) => {
+      if (list && list.length > 0) {
+        pages.push(i + 1)
+        total += list.length
+      }
+    })
+    return { total, pages }
+  }, [allComments])
+  /** Slide identity sequence: local add/delete/reorder must refresh comment reads (single window
+   *  gets no deck-changed broadcast), while content edits keep the same paths and don't. */
+  const deckKey = useMemo(() => deckStructureKey(slides), [slides])
+  const [commentsMode, setCommentsMode] = useState<CommentsMode>('page')
   const [showComments, setShowComments] = useState(false)
   const [commentsFocusNonce, setCommentsFocusNonce] = useState(0)
+  /** Bumped by comment mutations and sibling-window deck changes (never by notes-only state) */
+  const [commentsRefreshNonce, setCommentsRefreshNonce] = useState(0)
   /** Notes/comments must be re-fetched after undo/redo (they're not in RenderSlide) */
   const [annotationsNonce, setAnnotationsNonce] = useState(0)
   // ── Insert tab extensions: dialogs + screen recording ──────────────────────
@@ -854,6 +875,9 @@ export function App() {
       setDirty(false)
       setInkTool('select')
       setUngroupedSets([])
+      setCommentsMode('page')
+      setAllComments([])
+      setCommentsRefreshNonce((n) => n + 1)
       setAiPanelKey((k) => k + 1)
       // Queue anchors belong to the deck that was open; another file invalidates them all
       setEditQueue([])
@@ -945,6 +969,9 @@ export function App() {
       window.slidesApi.onDeckChanged?.(({ slides: all }) => {
         setSlides(all)
         setCurrent((c) => Math.min(c, Math.max(0, all.length - 1)))
+        // Comments live outside RenderSlide: re-read the current page list (ribbon badge)
+        // and the all-pages list together. Notes drafts stay untouched (no annotations bump).
+        setCommentsRefreshNonce((n) => n + 1)
         // The broadcast also fires for undo back to a clean state — ask the
         // session instead of assuming the change dirtied it
         void window.slidesApi.isDirty?.().then((d) => setDirty(!!d))
@@ -1985,7 +2012,33 @@ export function App() {
     return () => {
       cancelled = true
     }
-  }, [hasDoc, current, path, annotationsNonce])
+  }, [hasDoc, current, path, annotationsNonce, commentsRefreshNonce, deckKey])
+
+  // ── Comments: every page's list for the all-pages view. Page switches don't change it, so it
+  // only follows deck opens, undo/redo and explicit refresh signals.
+  useEffect(() => {
+    if (!hasDoc) {
+      setAllComments([])
+      return
+    }
+    let cancelled = false
+    // Older test doubles (and a preload from an older shell build) may not have this yet.
+    const read = window.slidesApi.getAllComments
+    if (!read) return
+    void read()
+      .then((all) => {
+        if (!cancelled) setAllComments(Array.isArray(all) ? all : [])
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [hasDoc, path, annotationsNonce, commentsRefreshNonce, deckKey])
+
+  /** Re-read the comment lists after a comment mutation (ribbon badge and all-pages list). */
+  const refreshComments = useCallback(() => {
+    setCommentsRefreshNonce((n) => n + 1)
+  }, [])
 
   const addComment = useCallback(
     async (text: string) => {
@@ -1994,9 +2047,10 @@ export function App() {
         setComments(r)
         setDirty(true)
         setStatus(t('appStatusCommentAdded'))
+        refreshComments()
       }
     },
-    [current],
+    [current, refreshComments],
   )
 
   const deleteComment = useCallback(
@@ -2009,9 +2063,21 @@ export function App() {
       if (r) {
         setComments(r)
         setDirty(true)
+        refreshComments()
       }
     },
-    [current],
+    [current, refreshComments],
+  )
+
+  /** Header/card click in the all-pages view: move there and return to the page view. */
+  const goToCommentSlide = useCallback(
+    (index: number) => {
+      const target = commentNavigationTarget(index, slides.length)
+      if (target == null) return
+      setCommentsMode('page')
+      setCurrent(target)
+    },
+    [slides.length],
   )
 
   const openComments = useCallback((focus: boolean) => {
@@ -2019,7 +2085,10 @@ export function App() {
     setShowFormat(false)
     setShowBgFormat(false)
     setShowAnimPane(false)
-    if (focus) setCommentsFocusNonce((n) => n + 1)
+    if (focus) {
+      setCommentsMode('page')
+      setCommentsFocusNonce((n) => n + 1)
+    }
   }, [])
 
   // ── View modes ──────────────────────────────────────────────────────────
@@ -3550,6 +3619,8 @@ export function App() {
                 slides={slides}
                 current={current}
                 selectedIds={selectedIds}
+                getAllComments={() => window.slidesApi.getAllComments()}
+                getCommentSummary={() => commentSummary}
                 deckEmpty={deckEmpty}
                 images={images}
                 applySlide={applySlide}
@@ -4363,9 +4434,13 @@ export function App() {
                   <CommentsPane
                     slideIndex={current}
                     comments={comments}
+                    allComments={allComments}
+                    mode={commentsMode}
+                    onModeChange={setCommentsMode}
                     focusNonce={commentsFocusNonce}
                     onAdd={(text) => void addComment(text)}
                     onDelete={(c) => void deleteComment(c)}
+                    onGoToSlide={goToCommentSlide}
                     onCollapse={() => setShowComments(false)}
                   />
                 ) : null}

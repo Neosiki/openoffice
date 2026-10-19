@@ -202,6 +202,7 @@ export const ms = {
   aiLabelInsertSmartart: 'Selitkan SmartArt',
   aiSumFromScratchGuard: '{label}: gunakan generate_deck untuk membina dari kosong',
   aiSumReadSlide: 'Baca slaid {n}',
+  aiSumReadComments: 'Baca komen',
   aiSumScriptNoop: 'Edit skrip (slaid {n}, tiada perubahan)',
   aiSumScript: 'Edit skrip pada slaid {n} ({count} operasi)',
   aiSumWebSearch: 'Mencari "{query}" ({count} hasil)',

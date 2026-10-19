@@ -21,6 +21,7 @@ ieumoffice convert scan.pdf --to pptx --json
 ieumoffice guide slides                         # op groups; `ieumoffice guide slides insert` for one group, `ieumoffice guide slides setText` for one op
 ieumoffice slides read deck.pptx [--full] --json # durable ids + geometry an agent targets ops at; --full: whole text, tables, notes; text elements add `effective` (displayed style of the first run + `src` = the inheritance layer each value comes from)
 ieumoffice slides read deck.pptx --units in --json # box and size in inches (or cm, pt, px at 96 dpi) with `unit` named; default emu
+ieumoffice slides read deck.pptx --comments --json # each page's stored comments ({authorId, idx, author, dt, text}) and hidden: true, from the saved file
 ieumoffice create --type pptx --ops deck.json --out deck.pptx
 ieumoffice guide slides templates               # built-in design templates, one line each (id, name, scheme, description, fonts); --json: detail.templates
 ieumoffice guide slides templates coral > deck/style.md   # one template's style sheet, saved as the deck's style.md as is

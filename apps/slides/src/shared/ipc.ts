@@ -1624,6 +1624,8 @@ export interface SlidesApi {
   setNotes: (op: SetNotesOp) => Promise<boolean>
   /** All comments on a page (in add order) */
   getComments: (slideIndex: number) => Promise<SlideComment[]>
+  /** Every page's comments in deck order (one array per slide, empty included; hidden slides too) */
+  getAllComments: () => Promise<SlideComment[][]>
   /** Add a comment; returns the page's updated comment list, null on failure */
   addComment: (op: AddCommentOp) => Promise<SlideComment[] | null>
   /** Delete a comment; returns the page's updated comment list, null on failure */

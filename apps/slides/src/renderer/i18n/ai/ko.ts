@@ -202,6 +202,7 @@ export const ko = {
   aiLabelInsertSmartart: 'SmartArt 삽입',
   aiSumFromScratchGuard: '{label}: 처음부터 생성하려면 generate_deck을 사용하세요',
   aiSumReadSlide: '슬라이드 {n} 읽기',
+  aiSumReadComments: '메모 읽기',
   aiSumScriptNoop: '스크립트 편집(슬라이드 {n}, 변경 없음)',
   aiSumScript: '슬라이드 {n} 스크립트 편집({count}건)',
   aiSumWebSearch: '"{query}" 검색({count}건)',

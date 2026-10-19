@@ -201,6 +201,7 @@ export const ja = {
   aiLabelInsertSmartart: 'SmartArt の挿入',
   aiSumFromScratchGuard: '{label}: 新規作成には generate_deck を使用してください',
   aiSumReadSlide: 'スライド {n} を読み取り',
+  aiSumReadComments: 'コメントを読み取り',
   aiSumScriptNoop: 'スクリプト編集（スライド {n}、変更なし）',
   aiSumScript: 'スライド {n} のスクリプトを編集（{count} 件）',
   aiSumWebSearch: '「{query}」を検索（{count} 件）',

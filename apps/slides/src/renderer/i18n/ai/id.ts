@@ -203,6 +203,7 @@ export const id = {
   aiLabelInsertSmartart: 'Sisipkan SmartArt',
   aiSumFromScratchGuard: '{label}: gunakan generate_deck untuk membuat dari awal',
   aiSumReadSlide: 'Baca slide {n}',
+  aiSumReadComments: 'Baca komentar',
   aiSumScriptNoop: 'Edit skrip (slide {n}, tanpa perubahan)',
   aiSumScript: 'Edit skrip di slide {n} ({count} operasi)',
   aiSumWebSearch: 'Mencari "{query}" ({count} hasil)',
