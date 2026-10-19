@@ -1749,6 +1749,23 @@ export function firstFontFamily(cssList: string): string {
 }
 
 /**
+ * The value to hand execCommand('fontName'): the command parses it as a CSS font-family and
+ * silently does nothing when the parser rejects it — a bare number token ("A2Z 1", "Paperlogy 4"),
+ * a leading digit ("Bauhaus 93"), a period ("Modern No. 20") all make the picked font a no-op
+ * while the command still reports success. Quote anything that is not a plain ident sequence
+ * (letters, digits and hyphen per word — East Asian names are letters too); quoting is always
+ * accepted, and the quoted product still reads back through firstFontFamily.
+ */
+const PLAIN_FONT_NAME =
+  /^[A-Za-z_\u00a1-\uffff][A-Za-z0-9_\u00a1-\uffff-]*(?: [A-Za-z_\u00a1-\uffff][A-Za-z0-9_\u00a1-\uffff-]*)*$/
+
+export function fontNameCommandValue(family: string): string {
+  return PLAIN_FONT_NAME.test(family)
+    ? family
+    : `"${family.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`
+}
+
+/**
  * Change the selection's font while editing: execCommand('fontName') on the selection, then unify
  * the product into span style.fontFamily = the display stack with CJK fallbacks (extractParagraphs
  * takes only the first item on commit).
@@ -1757,12 +1774,15 @@ export function applySelectionFontFamily(family: string): void {
   const root = document.activeElement
   if (!(root instanceof HTMLElement) || !root.isContentEditable) return
   document.execCommand('styleWithCSS', false, 'true')
-  document.execCommand('fontName', false, family)
+  document.execCommand('fontName', false, fontNameCommandValue(family))
   // Handle both products: <font face="…"> (path where styleWithCSS doesn't apply) and span style
   root.querySelectorAll('font[face]').forEach((f) => {
     const font = f as HTMLElement
     const span = document.createElement('span')
-    span.style.fontFamily = displayFontFamily(font.getAttribute('face') || family)
+    // The face attribute may carry the quoted command value; read back the bare family name
+    span.style.fontFamily = displayFontFamily(
+      firstFontFamily(font.getAttribute('face') ?? '') || family,
+    )
     while (font.firstChild) span.appendChild(font.firstChild)
     font.replaceWith(span)
   })
