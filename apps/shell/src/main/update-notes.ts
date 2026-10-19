@@ -113,7 +113,8 @@ function htmlToBlocks(html: string): UpdateNoteBlock[] {
 function collectBlocks(nodes: TreeNode[], blocks: UpdateNoteBlock[]): void {
   for (const node of nodes) {
     if (node.nodeName === '#text') {
-      const text = inlineText(node.value ?? '')
+      // the newlines GitHub puts between block tags are not paragraphs
+      const text = inlineText(node.value ?? '').trim()
       if (text !== '') blocks.push({ kind: 'paragraph', runs: [{ text }] })
       continue
     }

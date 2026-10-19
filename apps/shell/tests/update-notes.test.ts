@@ -74,6 +74,20 @@ describe('normalizeReleaseNotes — real feed body', () => {
     expect(installText).toContain('Windows의 PC 보호')
     expect(textOf(blocks)).toContain('워드 탭을 닫으면 쓰던 메모리를 돌려줍니다.')
   })
+
+  it('does not turn the newlines between block tags into blank paragraphs', () => {
+    const blocks = normalizeReleaseNotes(RELEASE_0_12_1)!.sections[0]!.blocks
+    expect(blocks.map((block) => block.kind)).toEqual([
+      'paragraph',
+      'heading',
+      'paragraph',
+      'list',
+      'heading',
+      'list',
+      'heading',
+      'list',
+    ])
+  })
 })
 
 describe('normalizeReleaseNotes — safe text only', () => {
