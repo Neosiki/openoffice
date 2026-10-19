@@ -141,6 +141,10 @@ import { createPageRenderer } from './ai-read/render-page'
 import { loadAiReadTexts } from './ai-read/search-texts'
 import { DocumentJobSession } from './doc-jobs/job-session'
 import { CertSignDialog } from './CertSignDialog'
+import { InsightsCard } from './ai/insights/InsightsCard'
+import { useDocumentInsights } from './ai/insights/useDocumentInsights'
+import { QuoteFlashLayer, locateCitation, useQuoteFlash } from './ai/QuoteFlash'
+import type { PdfNavTarget } from './ai/pdf-nav'
 import { PassageReading, type PassageReadingHandle } from './reading/PassageReading'
 import { IconPassageMarks, PassageUnderlines } from './reading/PassageUnderlines'
 import { createSaveConfirmations } from './reading/save-confirmations'
@@ -1629,6 +1633,14 @@ export default function App() {
     ready: status === 'ready',
   })
   const readingRef = useRef<PassageReadingHandle | null>(null)
+  // ── AI window: the document overview and the 2s highlight of a cited passage ──
+  const documentInsights = useDocumentInsights({
+    filePath,
+    password: passwordRef.current,
+    lang,
+    ready: status === 'ready',
+  })
+  const quoteFlash = useQuoteFlash()
   const [passageMarks, setPassageMarks] = useState(loadPassageMarks)
   useEffect(() => savePassageMarks(passageMarks), [passageMarks])
 
@@ -2651,6 +2663,30 @@ export default function App() {
   }
 
   const closeSearch = () => setSearchOpen(false)
+
+  /** a term of the document overview: the viewer search, opened on it */
+  const searchFor = (text: string) => {
+    setSearchQuery(text)
+    openSearch()
+  }
+
+  /** a citation link in the AI window: its page, then its quote flashed (or "not found") */
+  const openCitation = (target: PdfNavTarget) => {
+    if (!aiApi.gotoPage(target.page) || !target.quote) return
+    void locateCitation(target, getSearchIndex()).then((found) => {
+      if (!found) {
+        showNotice(t('airQuoteNotFound'))
+        return
+      }
+      const el = scrollRef.current
+      const visIdx = visList.indexOf(found.origIdx)
+      if (el && visIdx >= 0) {
+        const box = pdfRectToCss(pageGeom(found.origIdx), found.rects[0]!, scale)
+        el.scrollTop = Math.max(0, pageTop(visIdx) + box.top - el.clientHeight * 0.35)
+      }
+      quoteFlash.show(found.origIdx, found.rects)
+    })
+  }
 
   /** Selection quads in PDF space keyed by original page index; null when nothing usable */
   const selectionQuads = (): Map<number, number[][]> | null => {
@@ -4660,6 +4696,8 @@ export default function App() {
         ...snapshot.drawingIds,
         ...snapshot.markupIds,
       ]).catch(() => {})
+      // the overview follows the saved file only when all its pages are still there
+      await documentInsights.load().catch(() => {})
       // rebuild the side-by-side translation tree once the stored results moved to the
       // new hash; the build started by the reload above is discarded
       setBilingualRev((v) => v + 1)
@@ -8690,6 +8728,18 @@ export default function App() {
             onCollapse={() => setAiCollapsed(true)}
             onRunDone={() => void autoSaveAfterAiRun()}
             onClearSelection={() => setAiSelection(null)}
+            onCitation={openCitation}
+            overview={
+              <InsightsCard
+                insights={documentInsights}
+                session={jobSession}
+                lang={lang}
+                t={t}
+                onSearchTerm={searchFor}
+                onGotoPage={(page) => void aiApi.gotoPage(page)}
+                onNotice={showNotice}
+              />
+            }
           />
         </div>
         <div className="app-content">
@@ -9996,6 +10046,12 @@ export default function App() {
                                   )}
                                 </div>
                               )}
+                              <QuoteFlashLayer
+                                flash={quoteFlash.flash}
+                                origIdx={origIdx}
+                                geom={geom}
+                                scale={scale}
+                              />
                               {(() => {
                                 const ocr = ocrPages.get(origIdx)
                                 return ocr ? (
