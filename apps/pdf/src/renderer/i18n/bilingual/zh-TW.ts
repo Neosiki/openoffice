@@ -1,3 +1,29 @@
 import type { zh } from './zh'
 
-export const zhTW = {} satisfies Record<keyof typeof zh, string>
+export const zhTW = {
+  blToggle: '譯文對照',
+  blToggleTip: '在每頁右側並排顯示已儲存的譯文。僅開啟此檢視不會向 AI 傳送任何內容。',
+  blLanguage: '譯文語言',
+  blStoredLangs: '已儲存的譯文',
+  blOtherLangs: '其他語言',
+  blLoading: '正在讀取文件結構…（{done}/{total} 頁）',
+  blLoadingStart: '正在讀取文件結構…',
+  blFailed: '無法讀取文件結構，因此無法顯示譯文欄。',
+  blUnavailable: '無法顯示譯文欄：檔案尚未儲存，或此視窗無法讀取文件結構。',
+  blUnsavedPages: '儲存後譯文欄將與頁面對齊',
+  blContinued: '接續上一頁',
+  blCollapseAsk: '要收合譯文欄嗎？',
+  blCollapse: '收合',
+  blKeep: '保持不變',
+  blExpand: '展開譯文欄',
+  blFontSmaller: '縮小譯文字級',
+  blFontLarger: '放大譯文字級',
+  blResize: '調整譯文欄寬度',
+  blClose: '關閉譯文對照',
+  blPageHeader: '第 {page} 頁',
+  blPageCount: '已譯 {translated}/{units}',
+  blNoText: '此頁沒有可翻譯的文字。',
+  blPendingTip: '尚未翻譯（原文）。',
+  blFailedTip: '此段未能翻譯（原文）。',
+  blEditedTip: '經人工修改的譯文。',
+} satisfies Record<keyof typeof zh, string>

@@ -1,3 +1,30 @@
 import type { zh } from './zh'
 
-export const he = {} satisfies Record<keyof typeof zh, string>
+export const he = {
+  blToggle: 'תרגום זה לצד זה',
+  blToggleTip: 'מציג את התרגום השמור לצד כל עמוד. עצם ההפעלה אינה שולחת דבר לבינה המלאכותית.',
+  blLanguage: 'שפת התרגום',
+  blStoredLangs: 'תרגומים שמורים',
+  blOtherLangs: 'שפות אחרות',
+  blLoading: 'קורא את מבנה המסמך… ({done}/{total} עמודים)',
+  blLoadingStart: 'קורא את מבנה המסמך…',
+  blFailed: 'לא ניתן היה לקרוא את מבנה המסמך, ולכן אי אפשר להציג את עמודת התרגום.',
+  blUnavailable:
+    'עמודת התרגום אינה זמינה: הקובץ לא נשמר, או שחלון זה אינו יכול לקרוא את מבנה המסמך.',
+  blUnsavedPages: 'שמרו כדי ליישר את עמודת התרגום לעמודים',
+  blContinued: 'המשך מהעמוד הקודם',
+  blCollapseAsk: 'לקפל את עמודת התרגום?',
+  blCollapse: 'קפל',
+  blKeep: 'השאר',
+  blExpand: 'פתח את עמודת התרגום',
+  blFontSmaller: 'טקסט תרגום קטן יותר',
+  blFontLarger: 'טקסט תרגום גדול יותר',
+  blResize: 'שינוי רוחב עמודת התרגום',
+  blClose: 'כיבוי תרגום זה לצד זה',
+  blPageHeader: 'עמוד {page}',
+  blPageCount: 'תורגמו {translated}/{units}',
+  blNoText: 'אין בעמוד זה טקסט לתרגום.',
+  blPendingTip: 'עדיין לא תורגם (טקסט המקור).',
+  blFailedTip: 'לא ניתן היה לתרגם פסקה זו (טקסט המקור).',
+  blEditedTip: 'תרגום שנערך בידי אדם.',
+} satisfies Record<keyof typeof zh, string>
