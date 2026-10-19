@@ -49,6 +49,10 @@ export const slidesCommand: CommandDef = {
       description: 'read: whole text and every table row instead of previews, plus speaker notes',
     },
     {
+      name: 'comments',
+      description: "read: add each slide's stored comments and whether it is hidden",
+    },
+    {
       name: 'layouts',
       description:
         'read: also list the deck layouts (name, index, placeholders) for addSlideWithLayout',
@@ -176,6 +180,7 @@ async function read(
     previewChars(args, PREVIEW_CHARS),
     flagBool(args, 'layouts'),
     unit,
+    flagBool(args, 'comments'),
   )
   return {
     summary: `${basename(path)}: ${deck.slides} slides${deck.layouts ? `, ${deck.layouts.length} layouts` : ''}`,
