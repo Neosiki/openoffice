@@ -16,6 +16,7 @@ import {
   normalizePassage,
   passageContext,
   passageHash,
+  readPageText,
 } from '../src/renderer/reading/passage-text'
 import { passageAnswer, passageRequest } from '../src/renderer/reading/passage-prompt'
 import {
@@ -133,6 +134,27 @@ describe('passage text', () => {
   it('falls back to the start of the page when the passage is not found', () => {
     const ctx = passageContext('z'.repeat(2000), 'missing', 100)
     expect(ctx.before.length + ctx.after.length).toBe(100)
+  })
+})
+
+describe('the page text a card reads', () => {
+  it('reads the page text and leaves the shared page proxy alone (the view may be drawing it)', async () => {
+    const cleanup = vi.fn()
+    const page = {
+      getTextContent: vi.fn(async () => ({
+        items: [
+          { str: 'First line', hasEOL: true },
+          { str: 'second.', hasEOL: false },
+        ],
+      })),
+      cleanup,
+    }
+    const doc = { numPages: 2, getPage: vi.fn(async () => page) }
+    const text = await readPageText(doc as unknown as Parameters<typeof readPageText>[0], 1)
+    expect(text).toBe('First line\nsecond.')
+    expect(doc.getPage).toHaveBeenCalledWith(2)
+    expect(cleanup).not.toHaveBeenCalled()
+    expect(await readPageText(doc as unknown as Parameters<typeof readPageText>[0], 5)).toBe('')
   })
 })
 
@@ -475,6 +497,87 @@ describe('the card store', () => {
       },
     ])
     expect(cards.docHash).toBe(SAVED)
+  })
+
+  it('a press of a passage being regenerated finds it pending, not the old card as if done', async () => {
+    const f = fakeStore([card()])
+    const cards = new PassageCards({ store: f.store, file })
+    await cards.load()
+    let answer: (v: { text: string; provider: string; model: string }) => void = () => {}
+    const ask = vi.fn(
+      () =>
+        new Promise<{ text: string; provider: string; model: string }>((resolve) => {
+          answer = resolve
+        }),
+    )
+    const regenerating = cards.regenerate('c1', selection(), ask, new AbortController().signal)
+    const press = await cards.prepare('explain', undefined, selection())
+    expect(press && 'pending' in press).toBe(true)
+    answer({ text: 'Fresh.', provider: 'codex', model: '' })
+    await regenerating
+    const after = await cards.prepare('explain', undefined, selection())
+    expect(after && 'existing' in after && after.existing.text).toBe('Fresh.')
+    expect(ask).toHaveBeenCalledTimes(1)
+  })
+
+  it('a reload after a save keeps the cards placed until the new page fingerprints arrive', async () => {
+    const f = fakeStore([card()], [DOC, SAVED])
+    const cards = new PassageCards({ store: f.store, file })
+    await cards.load()
+    f.nextHash()
+    let release: () => void = () => {}
+    vi.mocked(f.store.pageFingerprints).mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          release = () =>
+            resolve({ ok: true as const, docHash: SAVED, fingerprints: ['fp9', 'fp2'] })
+        }),
+    )
+    const placed: Array<readonly string[] | null> = []
+    const off = cards.subscribe(() => placed.push(cards.snapshot().fingerprints))
+    const loading = cards.load({ keepPlaces: true })
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    // no flicker: the underline stays where it was while the store answers
+    expect(placed.every((fps) => fps !== null)).toBe(true)
+    expect(cards.pageOf(cards.get('c1')!)).toBe(1)
+    // a request meanwhile waits for the fresh fingerprints instead of using the old ones
+    const prepared = cards.prepare('explain', undefined, selection({ origIdx: 0 }))
+    release()
+    await loading
+    off()
+    expect(cards.snapshot().fingerprints).toEqual(['fp9', 'fp2'])
+    expect(cards.pageOf(cards.get('c1')!)).toBe(1)
+    const ready = await prepared
+    expect(ready && 'target' in ready && ready.target.pageFingerprint).toBe('fp9')
+  })
+
+  it('a reload where the pages changed drops the places at once', async () => {
+    const f = fakeStore([card()], [DOC, SAVED])
+    const cards = new PassageCards({ store: f.store, file })
+    await cards.load()
+    f.nextHash()
+    const loading = cards.load()
+    expect(cards.snapshot().fingerprints).toBeNull()
+    expect(cards.pageOf(cards.get('c1')!)).toBeNull()
+    await loading
+    expect(cards.pageOf(cards.get('c1')!)).toBe(1)
+  })
+
+  it('after a save that kept the pages, the reload keeps the places; one that moved pages drops them', async () => {
+    const f = fakeStore([card()], [DOC, SAVED, 'c'.repeat(64)])
+    const cards = new PassageCards({ store: f.store, file })
+    await cards.load()
+    const confirmations = createSaveConfirmations()
+    const seen: Array<readonly string[] | null> = []
+    const off = cards.subscribe(() => seen.push(cards.snapshot().fingerprints))
+    f.nextHash()
+    await afterReadingSave(confirmations, cards, [], SAVED, { pagesMoved: false })
+    expect(seen.every((fps) => fps !== null)).toBe(true)
+    seen.length = 0
+    f.nextHash()
+    await afterReadingSave(confirmations, cards, [], 'c'.repeat(64), { pagesMoved: true })
+    expect(seen[0]).toBeNull()
+    off()
   })
 
   it('refuses when the store channel is missing (standalone run)', async () => {
