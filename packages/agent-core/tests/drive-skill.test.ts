@@ -100,10 +100,18 @@ describe('guardDriveContent', () => {
     )
   })
 
+  it('names page reading among the blocked tools', () => {
+    expect(DRIVE_OUTBOUND_BLOCKED).toContain('reading pages or pictures by web address')
+  })
+
   it('refuses outbound tools after a Drive read, until a new chat', async () => {
     const { skill, setHistory } = setup()
     await skill.executeTool(call('drive_read', { file_id: 'f1' }))
     expect((await skill.executeTool(call('web_search'))).output).toBe(DRIVE_OUTBOUND_BLOCKED)
+    // reading a page by web address is a fetch too
+    expect((await skill.executeTool(call('read_url', { url: 'https://x.example/a' }))).output).toBe(
+      DRIVE_OUTBOUND_BLOCKED,
+    )
     // an image by web address is a fetch too
     const byUrl = await skill.executeTool(call('insert_image', { url: 'https://x.example/a.png' }))
     expect(byUrl.output).toBe(DRIVE_OUTBOUND_BLOCKED)
@@ -141,6 +149,10 @@ describe('isOutboundCall', () => {
     expect(isOutboundCall(call('apply_ops', { ops: [{ op: 'link', href: 'https://a' }] }))).toBe(
       false,
     )
+  })
+
+  it('treats read_url as outbound even without an address', () => {
+    expect(isOutboundCall(call('read_url'))).toBe(true)
   })
 })
 
