@@ -292,6 +292,44 @@ describe('readUrlTool', () => {
     expect(urls).toHaveLength(1)
   })
 
+  it('reads offset 0 unless the offset is a real number', async () => {
+    const body = 'abcdefghij'
+    const { fetchImpl, urls } = recordFetch(() => text(body))
+    const settings = settingsFile()
+    const url = 'https://8.8.8.8/t30-offset'
+    for (const bogus of ['5', true, Number.POSITIVE_INFINITY] as unknown as number[]) {
+      const result = await readUrlTool(settings, url, bogus, { fetchImpl })
+      expect(result).toMatchObject({ ok: true, offset: 0, text: body })
+    }
+    const fractional = await readUrlTool(settings, url, 2.9, { fetchImpl })
+    expect(fractional).toMatchObject({ ok: true, offset: 2, text: body.slice(2) })
+    expect(urls).toHaveLength(1)
+  })
+
+  it('keeps a shared final address cached when the older redirect entry is evicted', async () => {
+    const final = 'https://1.1.1.1/t31-final'
+    const startA = 'https://8.8.8.8/t31-a'
+    const startB = 'https://8.8.8.8/t31-b'
+    const { fetchImpl, urls } = recordFetch((url) => {
+      if (url === startA || url === startB) return redirect(final)
+      if (url === final) return text('shared page')
+      if (url.startsWith('https://8.8.8.8/t31-page-')) return text('page')
+      return undefined
+    })
+    const settings = settingsFile()
+    await readUrlTool(settings, startA, 0, { fetchImpl })
+    await readUrlTool(settings, startB, 0, { fetchImpl })
+    // fill the cache so the older redirect entry (the one that found the shared
+    // address first) is evicted while the newer entry still holds it
+    for (let i = 0; i < 7; i++) {
+      await readUrlTool(settings, `https://8.8.8.8/t31-page-${i}`, 0, { fetchImpl })
+    }
+    const fetches = urls.length
+    const again = await readUrlTool(settings, final, 0, { fetchImpl })
+    expect(again).toMatchObject({ ok: true, url: final, text: 'shared page' })
+    expect(urls).toHaveLength(fetches)
+  })
+
   it('re-fetches after the three-minute cache window', async () => {
     vi.useFakeTimers()
     try {
@@ -384,6 +422,27 @@ describe('readUrlTool', () => {
     expect(result).toMatchObject({ ok: true })
     if (!result.ok) throw new Error('expected ok')
     expect(result.text).toBe('café')
+  })
+
+  it('ignores a meta charset in non-HTML bodies', async () => {
+    const body = JSON.stringify({ note: "<meta charset='euc-kr'>", text: '안녕' })
+    const rec = recordFetch((url) =>
+      url.includes('t29-json-meta')
+        ? text(body, 'application/json')
+        : url.includes('t29-sniff-meta')
+          ? new Response(body, { headers: { 'content-type': 'application/octet-stream' } })
+          : text(body),
+    )
+    for (const url of [
+      'https://8.8.8.8/t29-json-meta',
+      'https://8.8.8.8/t29-text-meta',
+      'https://8.8.8.8/t29-sniff-meta',
+    ]) {
+      const result = await readUrlTool(settingsFile(), url, 0, { fetchImpl: rec.fetchImpl })
+      expect(result).toMatchObject({ ok: true })
+      if (!result.ok) throw new Error('expected ok')
+      expect(result.text).toBe(body)
+    }
   })
 
   it('gives up on a hung request after its deadline', async () => {
@@ -537,6 +596,24 @@ describe('readUrlTool GitHub addresses', () => {
     )
     expect(result).toMatchObject({ ok: true })
     expect(headers[0]).not.toHaveProperty('authorization')
+  })
+
+  it('sends the token to an api.github.com address given directly, without the raw Accept', async () => {
+    const api = 'https://api.github.com/repos/acme/direct-api/contents/docs'
+    const publicApi = 'https://api.github.com/repos/acme/direct-api/contents/public'
+    const listing = '[\n  {"name": "SKILL.md"}\n]'
+    const { fetchImpl, headers } = recordFetch((url) =>
+      url === api || url === publicApi
+        ? new Response(listing, { headers: { 'content-type': 'application/json' } })
+        : undefined,
+    )
+    const withToken = await readUrlTool(settingsFile('github_pat_test'), api, 0, { fetchImpl })
+    expect(withToken).toMatchObject({ ok: true, text: listing })
+    expect(headers[0]?.authorization).toBe('Bearer github_pat_test')
+    expect(headers[0]).not.toHaveProperty('accept')
+    const withoutToken = await readUrlTool(settingsFile(), publicApi, 0, { fetchImpl })
+    expect(withoutToken).toMatchObject({ ok: true })
+    expect(headers[1]).not.toHaveProperty('authorization')
   })
 
   it('points a tokenless 404 at the GitHub token setting', async () => {

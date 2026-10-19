@@ -133,30 +133,42 @@ function githubPathParts(
 }
 
 /** A GitHub blob address as the request that actually serves its bytes. */
-function githubRequest(target: URL, token: string): { url: string; apiAuth: boolean } {
+function githubRequest(
+  target: URL,
+  token: string,
+): { url: string; blobApi: boolean; tokenForApi: boolean } {
   const blob = githubPathParts(target)
-  if (!blob) return { url: target.toString(), apiAuth: false }
+  if (!blob) {
+    const url = target.toString()
+    // a contents address the model gave directly carries the token too, but not the raw Accept:
+    // its own answer (a directory listing, file metadata) is what should be read
+    return { url, blobApi: false, tokenForApi: token !== '' && hostOf(url) === 'api.github.com' }
+  }
   if (!token) {
     return {
       url: `https://raw.githubusercontent.com/${blob.owner}/${blob.repo}/${blob.ref}/${blob.file}`,
-      apiAuth: false,
+      blobApi: false,
+      tokenForApi: false,
     }
   }
   return {
     url: `https://api.github.com/repos/${blob.owner}/${blob.repo}/contents/${blob.file}?ref=${encodeURIComponent(blob.ref)}`,
-    apiAuth: true,
+    blobApi: true,
+    tokenForApi: true,
   }
 }
 
-/** Headers for one hop: the token only ever rides an api.github.com request. */
+/** Headers for one hop: the token only ever rides an api.github.com request of this chain. */
 function hopHeaders(
   hopUrl: string,
-  request: { apiAuth: boolean },
+  request: { blobApi: boolean; tokenForApi: boolean },
   token: string,
 ): Record<string, string> {
   const base = { 'User-Agent': USER_AGENT }
-  if (!request.apiAuth || !token || hostOf(hopUrl) !== 'api.github.com') return base
-  return { ...base, Accept: GITHUB_RAW_ACCEPT, Authorization: `Bearer ${token}` }
+  if (!request.tokenForApi || !token || hostOf(hopUrl) !== 'api.github.com') return base
+  return request.blobApi
+    ? { ...base, Accept: GITHUB_RAW_ACCEPT, Authorization: `Bearer ${token}` }
+    : { ...base, Authorization: `Bearer ${token}` }
 }
 
 function httpFailure(status: number, host: string, hasToken: boolean): ReadUrlFailure {
@@ -256,8 +268,8 @@ function looksLikeHtml(text: string): boolean {
 }
 
 function normalizeOffset(offset: unknown): number {
-  const value = Number(offset)
-  return Number.isFinite(value) && value > 0 ? Math.floor(value) : 0
+  // only a real number counts: "500", true and non-numbers read from the start
+  return typeof offset === 'number' && Number.isFinite(offset) ? Math.max(0, Math.floor(offset)) : 0
 }
 
 function slicePage(
@@ -280,17 +292,27 @@ function slicePage(
   }
 }
 
+/** Every map key that still points at this entry; a newer entry for the same final address owns that key. */
+function ownedKeys(entry: PageCacheEntry): string[] {
+  return entry.keys.filter((key) => pageCache.get(key) === entry)
+}
+
+/** Drop the keys the entry still owns; a key another entry has taken over stays. */
+function dropEntry(entry: PageCacheEntry): void {
+  for (const key of ownedKeys(entry)) pageCache.delete(key)
+}
+
 /** A cached page, refreshing its recency; an expired one is dropped. */
 function cachedPage(key: string, now: number): PageCacheEntry | undefined {
   const entry = pageCache.get(key)
   if (!entry) return undefined
   if (entry.expiresAt <= now) {
-    for (const entryKey of entry.keys) pageCache.delete(entryKey)
+    dropEntry(entry)
     return undefined
   }
-  for (const entryKey of entry.keys) {
-    pageCache.delete(entryKey)
-    pageCache.set(entryKey, entry)
+  for (const owned of ownedKeys(entry)) {
+    pageCache.delete(owned)
+    pageCache.set(owned, entry)
   }
   return entry
 }
@@ -302,6 +324,9 @@ function cachePage(
 ): PageCacheEntry {
   const keys = requestUrl === page.finalUrl ? [page.finalUrl] : [page.finalUrl, requestUrl]
   const entry: PageCacheEntry = { ...page, expiresAt: now + READ_URL_CACHE_TTL_MS, keys }
+  // delete before set even for a key that already exists: the newest entry for an
+  // address owns it, and the key moves to the newest position for eviction order
+  for (const key of keys) pageCache.delete(key)
   for (const key of keys) pageCache.set(key, entry)
   let entries = new Set(pageCache.values())
   while (entries.size > READ_URL_CACHE_MAX_ENTRIES) {
@@ -309,8 +334,7 @@ function cachePage(
     if (oldestKey === undefined) break
     const oldest = pageCache.get(oldestKey)
     pageCache.delete(oldestKey)
-    if (!oldest) continue
-    for (const key of oldest.keys) pageCache.delete(key)
+    if (oldest) dropEntry(oldest)
     entries = new Set(pageCache.values())
   }
   return entry
@@ -435,7 +459,10 @@ export async function readUrlTool(
 
   let converted: { title?: string; text: string }
   try {
-    const decoded = decodeBody(bytes, declaredCharsetOf(rawContentType), true, bom)
+    // the meta charset is an HTML signal only: a `<meta charset=...>` string inside
+    // JSON, XML or plain text must not change how those bytes are decoded
+    const allowMeta = mime === 'text/html' || mime === 'application/xhtml+xml'
+    const decoded = decodeBody(bytes, declaredCharsetOf(rawContentType), allowMeta, bom)
     const convertAsHtml =
       mime === 'text/html' || mime === 'application/xhtml+xml' || (sniff && looksLikeHtml(decoded))
     converted = convertAsHtml ? htmlToText(decoded, finalUrl) : { text: decoded }
