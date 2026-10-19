@@ -118,6 +118,8 @@ export const hi = {
   aiSumReadAttachmentName: 'अनुलग्नक {name} पढ़ें',
   aiSumWebSearch: 'वेब खोज',
   aiSumWebSearchDone: '"{query}" खोजा ({count} परिणाम)',
+  aiSumReadUrl: 'वेब पेज पढ़ना',
+  aiSumReadUrlDone: '{host} पढ़ा गया · {count} अक्षर',
   aiSumImageSearch: 'चित्र खोज',
   aiSumImageSearchDone: 'चित्र खोज "{query}" ({count} चित्र)',
   aiSumAnalyzeMedia: 'मीडिया का विश्लेषण करें',

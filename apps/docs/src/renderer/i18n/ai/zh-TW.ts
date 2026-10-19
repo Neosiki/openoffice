@@ -112,6 +112,8 @@ export const zhTW = {
   aiSumReadAttachmentName: '讀取附件 {name}',
   aiSumWebSearch: '網路搜尋',
   aiSumWebSearchDone: '搜尋「{query}」({count} 筆)',
+  aiSumReadUrl: '讀取網頁',
+  aiSumReadUrlDone: '已讀取 {host} · {count} 字',
   aiSumImageSearch: '圖片搜尋',
   aiSumImageSearchDone: '搜圖「{query}」({count} 張)',
   aiSumAnalyzeMedia: '分析媒體',

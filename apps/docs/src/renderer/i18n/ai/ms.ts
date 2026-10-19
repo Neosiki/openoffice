@@ -118,6 +118,8 @@ export const ms = {
   aiSumReadAttachmentName: 'Baca lampiran {name}',
   aiSumWebSearch: 'Carian web',
   aiSumWebSearchDone: 'Mencari "{query}" ({count} hasil)',
+  aiSumReadUrl: 'Baca halaman web',
+  aiSumReadUrlDone: '{host} dibaca · {count} aksara',
   aiSumImageSearch: 'Carian imej',
   aiSumImageSearchDone: 'Carian imej "{query}" ({count} imej)',
   aiSumAnalyzeMedia: 'Analisis media',
