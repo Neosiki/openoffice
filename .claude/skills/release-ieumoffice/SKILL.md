@@ -9,7 +9,7 @@ description: IeumOffice의 새 버전을 내는 작업(버전 올리기, Windows
 
 - `docs/releasing.ko.md`를 처음부터 끝까지 읽는다. 명령, 파일 이름, 순서, 확인 항목은 그 문서가 정한다.
 - 이 스킬은 그 문서에 없는 **판단 기준·금지·승인 절차**만 더한다. 문서와 어긋나면 문서를 따른다. 문서가 바뀌면 이 스킬도 고친다.
-- 배경: `docs/plans/update-details.md`, 결정 `docs/tracking/decisions/0038-update-notes-in-the-window.md`.
+- 배경: `docs/plans/update-details.md`, 결정 `docs/tracking/decisions/0044-update-notes-in-the-window.md`.
 
 ## 사람의 승인 없이는 진행하지 않는다
 
