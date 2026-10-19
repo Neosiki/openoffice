@@ -136,21 +136,21 @@ describe('read_url execution', () => {
         truncated: false,
       }
     }
-    let exec = await runReadUrl({ url: 'https://example.com/page' }, stub)
+    const exec = await runReadUrl({ url: 'https://example.com/page' }, stub)
     expect(seen).toEqual([0])
     expect(exec.output).toBe(
       'example.com — characters 0..3 of 3 (end)\nhttps://example.com/page\n\nabc',
     )
     expect(exec.summary).toBe('Read example.com · 3 chars')
 
-    exec = await runReadUrl({ url: 'https://example.com/page', offset: 7.9 }, stub)
+    await runReadUrl({ url: 'https://example.com/page', offset: 7.9 }, stub)
     expect(seen[1]).toBe(7)
 
-    exec = await runReadUrl({ url: 'https://example.com/page', offset: -4 }, stub)
+    await runReadUrl({ url: 'https://example.com/page', offset: -4 }, stub)
     expect(seen[2]).toBe(0)
 
     // a non-number offset reads from the start, like the ai-search normalize it mirrors
-    exec = await runReadUrl({ url: 'https://example.com/page', offset: '30' }, stub)
+    await runReadUrl({ url: 'https://example.com/page', offset: '30' }, stub)
     expect(seen[3]).toBe(0)
   })
 
