@@ -32,6 +32,7 @@ import type {
   AiToolCapabilities,
   AttachmentAddResult,
   AttachmentMeta,
+  SlideComment,
 } from '../../shared/ipc'
 import { ATTACHMENT_IMAGE_EXTS } from '../../shared/ipc'
 import {
@@ -289,6 +290,10 @@ interface AiPanelProps {
   slides: RenderSlide[]
   current: number
   selectedIds: string[]
+  /** Every page's review comments (index = slide; the read_comments tool reads these) */
+  getAllComments?: () => Promise<SlideComment[][]>
+  /** Live summary for the context hint: total comments and 1-based pages that have any */
+  getCommentSummary?: () => { total: number; pages: number[] }
   /** no slide carries real content yet — the empty-state copy offers generation instead of polish */
   deckEmpty?: boolean
   /** Decoded image cache from App (SlideThumb needs it) — powers AI-vision slide screenshots */
@@ -405,6 +410,8 @@ export function AiPanel({
   slides,
   current,
   selectedIds,
+  getAllComments,
+  getCommentSummary,
   deckEmpty,
   images,
   applySlide,
@@ -1045,6 +1052,8 @@ export function AiPanel({
       // A queue run names its targets explicitly; whatever is selected on the
       // canvas right now is unrelated and would only compete with them
       getSelectedIds: () => (queueRunResolverRef.current ? [] : selectedRef.current),
+      ...(getAllComments ? { getAllComments: () => getAllComments() } : {}),
+      ...(getCommentSummary ? { getCommentSummary: () => getCommentSummary() } : {}),
       applySlide: (i, updated) => applySlideRef.current(i, updated),
       applyDeck: (all, goTo) => applyDeckRef.current(all, goTo),
       landGeneratedPages: async (

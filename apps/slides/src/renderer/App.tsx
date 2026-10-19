@@ -595,6 +595,18 @@ export function App() {
   const [comments, setComments] = useState<SlideComment[]>([])
   /** Deck-order lists for the all-pages view (empty pages and hidden slides included) */
   const [allComments, setAllComments] = useState<SlideComment[][]>([])
+  /** Live summary for the AI context hint: total + 1-based pages that have comments */
+  const commentSummary = useMemo(() => {
+    const pages: number[] = []
+    let total = 0
+    allComments.forEach((list, i) => {
+      if (list.length > 0) {
+        pages.push(i + 1)
+        total += list.length
+      }
+    })
+    return { total, pages }
+  }, [allComments])
   const [commentsMode, setCommentsMode] = useState<CommentsMode>('page')
   const [showComments, setShowComments] = useState(false)
   const [commentsFocusNonce, setCommentsFocusNonce] = useState(0)
@@ -3605,6 +3617,8 @@ export function App() {
                 slides={slides}
                 current={current}
                 selectedIds={selectedIds}
+                getAllComments={() => window.slidesApi.getAllComments()}
+                getCommentSummary={() => commentSummary}
                 deckEmpty={deckEmpty}
                 images={images}
                 applySlide={applySlide}

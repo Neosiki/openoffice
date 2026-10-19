@@ -199,6 +199,7 @@ export const th = {
   aiLabelInsertSmartart: 'แทรก SmartArt',
   aiSumFromScratchGuard: '{label}: หากต้องการสร้างตั้งแต่ต้น ให้ใช้ generate_deck',
   aiSumReadSlide: 'อ่านสไลด์ {n}',
+  aiSumReadComments: 'อ่านข้อคิดเห็น',
   aiSumScriptNoop: 'แก้ไขสคริปต์ (สไลด์ {n} ไม่มีการเปลี่ยนแปลง)',
   aiSumScript: 'แก้ไขสคริปต์ในสไลด์ {n} ({count} รายการ)',
   aiSumWebSearch: 'ค้นหา "{query}" ({count} รายการ)',

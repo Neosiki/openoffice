@@ -203,6 +203,7 @@ export const nl = {
   aiLabelInsertSmartart: 'SmartArt invoegen',
   aiSumFromScratchGuard: '{label}: gebruik generate_deck om vanaf nul te bouwen',
   aiSumReadSlide: 'Dia {n} gelezen',
+  aiSumReadComments: 'Opmerkingen gelezen',
   aiSumScriptNoop: 'Script bewerkt (dia {n}, geen wijzigingen)',
   aiSumScript: 'Script bewerkt op dia {n} ({count} bewerkingen)',
   aiSumWebSearch: 'Gezocht naar "{query}" ({count} resultaten)',

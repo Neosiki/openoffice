@@ -202,6 +202,7 @@ export const cs = {
   aiLabelInsertSmartart: 'Vložit SmartArt',
   aiSumFromScratchGuard: '{label}: k vytvoření od začátku použijte generate_deck',
   aiSumReadSlide: 'Přečten snímek {n}',
+  aiSumReadComments: 'Čtení komentářů',
   aiSumScriptNoop: 'Skript úprav (snímek {n}, žádné změny)',
   aiSumScript: 'Skript úprav na snímku {n} ({count} operací)',
   aiSumWebSearch: 'Hledáno „{query}“ ({count} výsledků)',

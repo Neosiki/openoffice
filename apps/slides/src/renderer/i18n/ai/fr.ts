@@ -203,6 +203,7 @@ export const fr = {
   aiLabelInsertSmartart: 'Insérer un SmartArt',
   aiSumFromScratchGuard: '{label} : utilisez generate_deck pour créer à partir de zéro',
   aiSumReadSlide: 'Lecture de la diapositive {n}',
+  aiSumReadComments: 'Commentaires lus',
   aiSumScriptNoop: 'Script modifié (diapositive {n}, aucune modification)',
   aiSumScript: 'Script modifié sur la diapositive {n} ({count} opérations)',
   aiSumWebSearch: 'Recherche « {query} » ({count} résultats)',

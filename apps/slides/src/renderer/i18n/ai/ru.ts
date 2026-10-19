@@ -202,6 +202,7 @@ export const ru = {
   aiLabelInsertSmartart: 'Вставка SmartArt',
   aiSumFromScratchGuard: '{label}: для создания с нуля используйте generate_deck',
   aiSumReadSlide: 'Чтение слайда {n}',
+  aiSumReadComments: 'Чтение примечаний',
   aiSumScriptNoop: 'Правка скриптом (слайд {n}, без изменений)',
   aiSumScript: 'Правка скриптом на слайде {n} ({count} операций)',
   aiSumWebSearch: 'Поиск «{query}» ({count} результатов)',

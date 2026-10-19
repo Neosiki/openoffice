@@ -201,6 +201,7 @@ export const en = {
   aiLabelInsertSmartart: 'Insert SmartArt',
   aiSumFromScratchGuard: '{label}: use generate_deck to build from scratch',
   aiSumReadSlide: 'Read slide {n}',
+  aiSumReadComments: 'Read comments',
   aiSumScriptNoop: 'Edit script (slide {n}, no changes)',
   aiSumScript: 'Edit script on slide {n} ({count} ops)',
   aiSumWebSearch: 'Searched "{query}" ({count} results)',
