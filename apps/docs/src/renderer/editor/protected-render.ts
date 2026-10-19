@@ -2327,6 +2327,7 @@ export function renderTableSpec(model: TableModel, nested = false): DomSpec {
       }
       // not in-flow evidence for the .cell-vert switch (same as tableCellHtml)
       if (cell.gridGap) tdAttrs['data-grid-gap'] = '1'
+      if (cell.hideMark) tdAttrs['data-hide-mark'] = '1'
       if (cell.colSpan && cell.colSpan > 1) tdAttrs.colspan = String(cell.colSpan)
       if (rowSpan > 1) tdAttrs.rowspan = String(rowSpan)
       const paraBlocks: DomSpec[] = cell.richParas?.length

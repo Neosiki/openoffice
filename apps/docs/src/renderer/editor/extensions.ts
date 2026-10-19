@@ -63,6 +63,7 @@ import {
   SPACE_ONLY_RE,
   strutFontCss,
   textHasCjk,
+  textHasComplexScript,
   justifySymbolRanges,
   textHasHangul,
   textHasLatinInk,
@@ -437,6 +438,40 @@ function paraMixedFaceClass(
     return false
   })
   return mixed && oneSize ? 'doc-mixed-face' : undefined
+}
+
+/**
+ * Mixed Latin + complex-script paragraph at one run size: every cs span
+ * (marks.ts data-cs) gives up its own line box (styles.css .doc-cs-mixed) and
+ * the strut, already at the tallest face's factor, sizes the line. Chromium
+ * centres each face in the inherited line-height, so an Arial Arabic span under
+ * a Calibri strut paced 1.31em where Word paces 1.22 (probe 2026-10-13). One
+ * run size only: with mixed sizes the strut shrinks to the smallest run.
+ */
+function paraCsMixedClass(node: {
+  textContent?: string
+  attrs?: Record<string, unknown>
+  descendants?: PmNode['descendants']
+}): string | undefined {
+  const text = node.textContent ?? ''
+  const rule = node.attrs?.lineRule
+  if (rule === 'exact' || rule === 'atLeast' || !node.descendants) return undefined
+  if (!textHasComplexScript(text) || !/[A-Za-z]/.test(text) || textHasCjk(text)) return undefined
+  let csRun = false
+  let oneSize = true
+  let size: number | null | undefined
+  node.descendants((child) => {
+    if (!oneSize) return false
+    if (!child.isText) return true
+    if (SPACE_ONLY_RE.test(child.text ?? '')) return false
+    const attrs = child.marks.find((m) => m.type.name === 'docTextStyle')?.attrs
+    const sz = (attrs?.sizeHalfPoints ?? null) as number | null
+    if (size === undefined) size = sz
+    else if (size !== sz) oneSize = false
+    if (attrs?.csFont && textHasComplexScript(child.text ?? '')) csRun = true
+    return false
+  })
+  return csRun && oneSize ? 'doc-cs-mixed' : undefined
 }
 
 /**
@@ -828,6 +863,8 @@ function blockAttrs(
     const cls = fam ? paraMixedFaceClass(node, factor) : eaStrutClass(node)
     if (fam) styles.push(`font-family:${fam}`, ...fontBoxCss(fam))
     if (cls) classes.push(cls)
+    const csMixed = paraCsMixedClass(node)
+    if (csMixed) classes.push(csMixed)
     // Word's line strut follows run sizes; without this the paragraph inherits the
     // body size (often larger than table-cell runs) and every line box inflates.
     // Mixed sizes shrink-only, a uniform run size sizes every line (strutFontCss)
@@ -2188,6 +2225,8 @@ function pushLineFactorDecos(node: PmNode, pos: number, decos: Decoration[]): bo
         style += `;font-family:${fam}`
         cls = paraMixedFaceClass(node, factor)
       } else cls = eaStrutClass(node)
+      const csMixed = paraCsMixedClass(node)
+      if (csMixed) cls = cls ? `${cls} ${csMixed}` : csMixed
       const strut = explicitStrutHalfPoints(node)
       if (strut) style += `;${strutFontCss(strut).join(';')}`
       cached = { style, ...(cls ? { cls } : {}), ...(perLine ? { runs: perLine.runs } : {}) }
@@ -2870,6 +2909,8 @@ const tableCellAttrs = {
   noWrap: { default: null as boolean | null },
   /** textDirection / cellMar / noWrap were edited: save writes them from the attrs */
   tcPrEdited: { default: false },
+  /** w:hideMark (display-only; the bytes round-trip through rawTcPr) */
+  hideMark: { default: false },
   /** inner clip-box height (twips) when the row is hRule="exact" (computed in convert.ts) */
   clipHeightTwips: { default: null as number | null },
   /** display placeholder for the row's w:gridBefore/w:gridAfter columns (borderless, not saved as w:tc) */
@@ -3042,6 +3083,7 @@ function tableCellHtml(node: PmNode): Record<string, string> {
     const ink = fillInk(node.attrs.fill)
     if (ink) attrs['data-ink'] = ink
   }
+  if (node.attrs.hideMark) attrs['data-hide-mark'] = '1'
   const cellRev = node.attrs.cellRevision as { kind?: string; author?: string } | null
   if (cellRev?.kind) {
     attrs.class = `cell-rev-${cellRev.kind}`
@@ -6615,6 +6657,8 @@ export const TextboxParagraph = Node.create({
       if (textHasCjk(node.textContent)) fontStyles.push('--doc-lead-gap:0px')
       const fam = paraDeclaredFontFamily(node)
       if (fam) fontStyles.push(`font-family:${fam}`, ...fontBoxCss(fam))
+      const csMixed = paraCsMixedClass(node)
+      if (csMixed) attrs.class += ` ${csMixed}`
       const strut = explicitStrutHalfPoints(node)
       if (strut) fontStyles.push(...strutFontCss(strut))
     } else if (node.textContent) {

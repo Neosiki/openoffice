@@ -5498,6 +5498,17 @@ body.docs-crop-active .doc-protected[data-doc-protected='image'] .doc-img-wrap {
   margin: 0 !important;
 }
 
+/* w:hideMark: Word leaves the end-of-cell mark out of the row height, so a cell
+   holding nothing but one empty paragraph collapses to its margins (or trHeight) */
+.doc-table td[data-hide-mark] > .doc-p-empty:only-child,
+.doc-table th[data-hide-mark] > .doc-p-empty:only-child {
+  height: 0;
+  min-height: 0;
+  line-height: 0;
+  padding: 0;
+  margin: 0 !important;
+}
+
 /* Word ignores page-type w:br inside table cells; a visible line break here
    inflates every cell that carries one (HWP-exported TOC/decor tables) */
 .doc-table td .doc-page-br,
@@ -6301,6 +6312,19 @@ body.docs-crop-active .doc-protected[data-doc-protected='image'] .doc-img-wrap {
   line-height: calc(var(--doc-run-lh) * 1em * var(--doc-line-mult, 1));
 }
 
+/* Mixed Latin + complex-script paragraph (extensions paraCsMixedClass): Word sizes
+   the line by the tallest face (Calibri 1.22 over Arial Arabic 1.15); Chromium
+   centres the Arial span's box in the inherited line-height and the union runs
+   1.31em. The strut already carries the tallest factor, so cs spans give up their
+   own box; a superscript/subscript span keeps its box (own size and offset). */
+.doc-page .doc-cs-mixed span[data-cs]:not([style*='vertical-align']),
+.doc-table
+  :is(td, th)
+  .doc-cs-mixed:not(.doc-lh-fixed)
+  span[data-cs][style*='--doc-run-lh']:not([style*='vertical-align']) {
+  line-height: 0;
+}
+
 /* behind text at full opacity (Word); the page's stacking context keeps it above the paper */
 .doc-inline-img--behind {
   z-index: -1;
@@ -6505,6 +6529,13 @@ body.docs-crop-active .doc-protected[data-doc-protected='image'] .doc-img-wrap {
    inline with !important) */
 .doc-inline-rule + .ProseMirror-separator,
 .doc-inline-rule + .ProseMirror-separator + .ProseMirror-trailingBreak {
+  display: none !important;
+}
+
+/* ProseMirror 1.42 puts a separator image in front of an atom that opens a
+   textblock; inline before the block-level rule it would open a text line of
+   its own above the rule (one extra line per rule, cumulative page drift) */
+.ProseMirror-separator:has(+ .doc-inline-rule) {
   display: none !important;
 }
 
