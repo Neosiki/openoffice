@@ -599,8 +599,8 @@ export function App() {
   const commentSummary = useMemo(() => {
     const pages: number[] = []
     let total = 0
-    allComments.forEach((list, i) => {
-      if (list.length > 0) {
+    ;(Array.isArray(allComments) ? allComments : []).forEach((list, i) => {
+      if (list && list.length > 0) {
         pages.push(i + 1)
         total += list.length
       }
@@ -2024,9 +2024,14 @@ export function App() {
       return
     }
     let cancelled = false
-    void window.slidesApi.getAllComments().then((all) => {
-      if (!cancelled) setAllComments(all)
-    })
+    // Older test doubles (and a preload from an older shell build) may not have this yet.
+    const read = window.slidesApi.getAllComments
+    if (!read) return
+    void read()
+      .then((all) => {
+        if (!cancelled) setAllComments(Array.isArray(all) ? all : [])
+      })
+      .catch(() => {})
     return () => {
       cancelled = true
     }
