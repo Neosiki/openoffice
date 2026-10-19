@@ -46,6 +46,7 @@ import { aiBlockedRunOf, mergeSubscriptionUsage, type AiBlockedRun } from './ai-
 import { useSubscriptionConnection } from './useSubscriptionConnection'
 import { PDF_NAV_SCHEME, parsePdfNavHref } from './pdf-nav'
 import type { FileOpConfirm, PdfAiDeps, PdfAppDeps } from './tools'
+import { withFollowUp, type FollowUpSelection } from '../reading/passage-cards'
 
 // Word-parity count (same as docs/markdown): Asian chars one by one + non-Asian words
 const ASIAN_RE =
@@ -432,7 +433,11 @@ export function AiPanel({
       readOnly: () => apiRef.current.readOnly(),
       ocrText: (idx) => apiRef.current.ocrText(idx),
       structuredRead: () => apiRef.current.structuredRead?.() ?? null,
-      selection: () => apiRef.current.selection(),
+      // a passage card's answer handed over with its passage reaches the model as an earlier answer
+      selection: () => {
+        const sel = apiRef.current.selection() as FollowUpSelection | null
+        return sel ? withFollowUp(sel) : null
+      },
       pendingSummary: () => apiRef.current.pendingSummary(),
       outline: () => apiRef.current.outline(),
       searchIndex: () => apiRef.current.searchIndex(),
@@ -747,18 +752,23 @@ export function AiPanel({
     phase === 'replying' ? t('aiReplying') : phase === 'working' ? t('aiWorking') : t('aiThinking')
 
   // scope chip data, read per render (App re-renders on every selection change)
-  const scopeSel = api.selection()
+  const scopeSel = api.selection() as FollowUpSelection | null
   const hasScopeSelection = !!scopeSel && scopeSel.text.trim().length > 0
+  /** the scope chip's label, naming a passage card answer handed over with the selection */
+  const scopeLabel = (sel: FollowUpSelection, words: number): string => {
+    const label = t('aiScopeSelection', {
+      page: sel.lastPage > sel.page ? `${sel.page}-${sel.lastPage}` : sel.page,
+      words,
+    })
+    return sel.followUp ? `${label} · ${sel.followUp.heading}` : label
+  }
 
   const selectionScopeQuote = (): AiScopeQuoteData | undefined => {
-    const sel = api.selection()
+    const sel = api.selection() as FollowUpSelection | null
     const text = sel?.text.replace(/\s+/g, ' ').trim() ?? ''
     if (!sel || !text) return undefined
     return {
-      label: t('aiScopeSelection', {
-        page: sel.lastPage > sel.page ? `${sel.page}-${sel.lastPage}` : sel.page,
-        words: countWords(text),
-      }),
+      label: scopeLabel(sel, countWords(text)),
       text: text.length > SCOPE_TEXT_MAX ? `${text.slice(0, SCOPE_TEXT_MAX)}…` : text,
     }
   }
@@ -1001,13 +1011,7 @@ export function AiPanel({
                     aria-expanded={scopePreviewOpen}
                     data-tip={t('aiScopeSelectionTip')}
                   >
-                    {t('aiScopeSelection', {
-                      page:
-                        scopeSel!.lastPage > scopeSel!.page
-                          ? `${scopeSel!.page}-${scopeSel!.lastPage}`
-                          : scopeSel!.page,
-                      words: countWords(scopeSel!.text),
-                    })}
+                    {scopeLabel(scopeSel!, countWords(scopeSel!.text))}
                   </button>
                   <button
                     className="ai-scope-clear"
@@ -1034,6 +1038,15 @@ export function AiPanel({
                     {scopeSel!.text.length > 400
                       ? `${scopeSel!.text.slice(0, 400)}…`
                       : scopeSel!.text}
+                    {scopeSel!.followUp && (
+                      <div className="ai-scope-followup" dir="auto">
+                        <strong>{scopeSel!.followUp.heading}</strong>
+                        <br />
+                        {scopeSel!.followUp.answer.length > 400
+                          ? `${scopeSel!.followUp.answer.slice(0, 400)}…`
+                          : scopeSel!.followUp.answer}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

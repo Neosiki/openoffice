@@ -2,7 +2,8 @@
  * Anchored "Ask AI" popover opened from the selection markup bar: captures one
  * instruction about the selected passage and sends it immediately as a normal
  * selection-scoped run (pdf deliberately has no edit queue — pending notes are
- * the durable way to mark work for later).
+ * the durable way to mark work for later). The explain and translate chips
+ * answer with a passage card instead (`onCard`, reading-assist spec 4.2).
  *
  * Mounted at the app root with fixed positioning; the anchor rect is captured
  * when the popover opens (the native selection collapses once the input takes
@@ -27,11 +28,18 @@ const INSTRUCTION_MAX = 500
 
 const READ_CHIPS: StringKey[] = ['aiChipExplain', 'aiChipTranslate', 'aiChipSummarizePassage']
 
+/** chips answered by a passage card instead of the chat (reading-assist spec 4.2) */
+const CARD_CHIPS: Partial<Record<StringKey, 'explain' | 'translate'>> = {
+  aiChipExplain: 'explain',
+  aiChipTranslate: 'translate',
+}
+
 export function AiAskPopover({
   rect,
   excerpt,
   readOnly,
   onSend,
+  onCard,
   onClose,
 }: {
   rect: AskAnchorRect
@@ -39,6 +47,8 @@ export function AiAskPopover({
   /** encrypted documents hide the edit-oriented chip */
   readOnly: boolean
   onSend: (text: string) => void
+  /** explain / translate chips: answer with a passage card; absent → they fill the input */
+  onCard?: (kind: 'explain' | 'translate') => void
   onClose: () => void
 }): ReactElement {
   const { t } = useI18n()
@@ -144,8 +154,13 @@ export function AiAskPopover({
           <button
             key={key}
             className="ai-ask-chip"
-            // filling rather than submitting: the shorthand almost always wants a qualifier
             onClick={() => {
+              const card = onCard ? CARD_CHIPS[key] : undefined
+              if (card) {
+                onCard?.(card)
+                return
+              }
+              // filling rather than submitting: the shorthand almost always wants a qualifier
               setText(t(key))
               inputRef.current?.focus()
             }}
