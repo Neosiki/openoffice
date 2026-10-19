@@ -46,6 +46,7 @@ import type {
   WorkbookVisualObject,
   WebSearchResult,
   ImageSearchResponse,
+  ReadUrlResult,
   GenerateImageResult,
 } from '../shared/desktop-api'
 import {
@@ -596,6 +597,16 @@ const desktopApi: DesktopApi = {
       throw new Error('Invalid web search response.')
     }
     return result as unknown as WebSearchResult
+  },
+  async readUrl(url, offset) {
+    if (typeof url !== 'string' || !url.trim()) {
+      throw new Error('Invalid URL.')
+    }
+    const result: unknown = await ipcRenderer.invoke('ai:read-url', url, offset)
+    if (!isRecord(result) || typeof result.ok !== 'boolean') {
+      throw new Error('Invalid read URL response.')
+    }
+    return result as unknown as ReadUrlResult
   },
   async imageSearch(query, maxResults) {
     if (typeof query !== 'string' || !query.trim() || query.length > 512) {

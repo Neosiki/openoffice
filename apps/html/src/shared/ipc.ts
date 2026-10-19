@@ -137,6 +137,7 @@ export const AI_CHANNELS = {
   streamChunk: 'ai:stream-chunk',
   streamCancel: 'ai:stream-cancel',
   webSearch: 'ai:web-search',
+  readUrl: 'ai:read-url',
   imageSearch: 'ai:image-search',
 } as const
 
@@ -154,6 +155,23 @@ export interface ImageSearchResult {
   /** failure reason when method === 'error' */
   error?: string
 }
+
+/** One page of a web page read for the AI (the shared ai:read-url handler) */
+export type ReadUrlResult =
+  | {
+      ok: true
+      /** the final address after redirects */
+      url: string
+      title?: string
+      text: string
+      /** where this slice of the text starts */
+      offset: number
+      totalChars: number
+      truncated: boolean
+      /** where the next slice starts; only when truncated */
+      nextOffset?: number
+    }
+  | { ok: false; error: string; errorCode: string }
 
 export type ExportFormat = 'pdf' | 'docx' | 'html' | 'odt'
 
@@ -326,6 +344,8 @@ export interface HtmlApi {
   onAiStream(handler: (chunk: AiStreamChunk) => void): () => void
   /** Main-process web search (Serper/DuckDuckGo via the shared ai:web-search handler) */
   webSearch(query: string, maxResults?: number): Promise<WebSearchResult>
+  /** Read one web page as text (the shared ai:read-url handler), paged by character offset */
+  readUrl(url: string, offset?: number): Promise<ReadUrlResult>
   /** Main-process image search (shared ai:image-search handler) */
   imageSearch(query: string, maxResults?: number): Promise<ImageSearchResult>
   /** Download an image URL in the main process (CORS-free, scheme/target validated) */
