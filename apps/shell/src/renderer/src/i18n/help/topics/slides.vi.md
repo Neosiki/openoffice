@@ -9,6 +9,8 @@ Slides là trình soạn thảo giống PowerPoint: đọc và ghi.pptx thật.
 - **Canvas**: chỉnh sửa WYSIWYG; kéo, tay cầm đổi kích thước, đường dẫn hướng dẫn.
 - **Ghi chú**: ghi chú người trình bày cho từng trang chiếu, được giữ trong quy trình xuất.
 
+- **Nhận xét**: nhận xét đánh giá được lưu trong pptx. Ngăn nhận xét mặc định hiển thị trang hiện tại; chuyển sang **Tất cả các trang** để xem nhận xét của toàn bộ bài trình bày, và AI sẽ đọc khi được yêu cầu.
+
 ## Các thẻ trên dải ruy-bâng
 
 Dải thẻ (macOS bắt đầu từ Trang chủ; Windows có thêm thẻ Tệp):

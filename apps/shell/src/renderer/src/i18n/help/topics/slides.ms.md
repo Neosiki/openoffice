@@ -9,6 +9,8 @@ Slides ialah editor yang menyerupai PowerPoint. Ia membaca dan menulis fail.pptx
 - **Kanvas**: penyuntingan seperti yang dipaparkan. Seret, kendali penskalaan, dan garis panduan.
 - **Nota**: nota pembicara bagi setiap slaid, yang dikekalkan dalam aliran eksport.
 
+- **Komen**: komen ulasan disimpan dalam pptx. Anak tetingkap Komen memaparkan slaid semasa secara lalai; tukar ke **Semua halaman** untuk melihat komen seluruh persembahan, dan AI membacanya apabila diminta.
+
 ## Tab reben
 
 Baris tab bermula pada Laman Utama dalam macOS, manakala Windows turut menambah tab Fail:

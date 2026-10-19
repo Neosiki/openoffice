@@ -9,6 +9,8 @@ Slides es el editor similar a PowerPoint: lee y escribe.pptx reales.
 - **Lienzo**: edición WYSIWYG; arrastre, tiradores de tamaño, guías.
 - **Notas**: notas del orador por diapositiva, se conservan en los flujos de exportación.
 
+- **Comentarios**: los comentarios de revisión se guardan en el pptx. El panel de comentarios muestra la diapositiva actual por defecto; cámbielo a **Todas las páginas** para ver los de toda la presentación, y la IA los lee cuando se lo pida.
+
 ## Pestañas de la cinta de opciones
 
 La barra de pestañas (en macOS empieza por Inicio; en Windows se añade una pestaña Archivo):

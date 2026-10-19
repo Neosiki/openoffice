@@ -9,6 +9,8 @@ Slides is de PowerPoint-achtige editor: leest en schrijft echte.pptx-bestanden.
 - **Tekenvlak**: WYSIWYG-bewerking; slepen, schaalgrepen, hulplijnen.
 - **Notities**: sprekersnotities per dia, blijven behouden bij het exporteren.
 
+- **Opmerkingen**: beoordelingsopmerkingen staan in de pptx. Het opmerkingenvenster toont standaard de huidige dia; schakel naar **Alle pagina's** om die van de hele presentatie te zien, en de AI leest ze op verzoek.
+
 ## Linttabs
 
 De tabbladenbalk (in macOS begint die bij Start; Windows voegt er een tabblad Bestand aan):

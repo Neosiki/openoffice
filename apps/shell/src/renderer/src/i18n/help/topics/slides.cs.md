@@ -9,6 +9,8 @@ Slides je editor podobný PowerPointu: čte a zapisuje skutečné soubory.pptx.
 - **Plátno**: úpravy WYSIWYG; tažení, úchopy pro změnu velikosti, vodicí čáry.
 - **Poznámky**: poznámky přednášejícího ke každému snímku, zachovávané při exportu.
 
+- **Komentáře**: recenzní komentáře se ukládají do pptx. Podokno komentářů ve výchozím stavu zobrazuje aktuální snímek; přepněte na **Všechny stránky** a uvidíte komentáře celé prezentace, a AI je na požádání přečte.
+
 ## Karty pásku
 
 Pruh karet (na macOS začíná na Domů; Windows přidává kartu Soubor):

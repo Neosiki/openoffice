@@ -9,6 +9,8 @@ Slides adalah editor mirip PowerPoint: membaca dan menulis.pptx asli.
 - **Kanvas**: penyuntingan WYSIWYG; seret, gagang penskalaan, garis pemandu.
 - **Catatan**: catatan pembicara per slide, ikut terbawa dalam alur ekspor.
 
+- **Komentar**: komentar tinjauan tersimpan di pptx. Panel Komentar menampilkan slide saat ini secara bawaan; ganti ke **Semua halaman** untuk melihat komentar seluruh presentasi, dan AI membacanya saat diminta.
+
 ## Tab pita
 
 Baris tab (di macOS dimulai dari Beranda; Windows menambahkan tab File):

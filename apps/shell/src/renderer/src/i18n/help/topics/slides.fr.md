@@ -9,6 +9,8 @@ Slides est l’éditeur analogue à PowerPoint: il lit et écrit de vrais.pptx.
 - **Canevas**: édition en WYSIWYG; glissement, poignées de redimensionnement, repères.
 - **Notes**: notes du présentateur par diapositive, conservées lors des exports.
 
+- **Commentaires** : les commentaires de révision sont enregistrés dans le pptx. Le volet Commentaires affiche la diapositive active par défaut ; passez à **Toutes les pages** pour voir ceux de toute la présentation, et l'IA les lit sur demande.
+
 ## Onglets du ruban
 
 La barre d’onglets (macOS commence à Accueil; Windows ajoute un onglet Fichier):
