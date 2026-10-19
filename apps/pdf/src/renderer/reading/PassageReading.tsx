@@ -32,7 +32,10 @@ import type { Lang } from '@genoffice/i18n'
 import {
   AiConnectPrompt,
   AiFirstConnectionNotice,
+  aiHeldRequestStep,
+  aiHoldReason,
   useAiSendGate,
+  type AiHeldReason,
   type AiModelPickerBridge,
 } from '@genoffice/ui'
 import type { PassageCard } from '../../../../../packages/pdf-structure/src/store/reading'
@@ -116,6 +119,10 @@ export interface PassageReadingHandle {
 interface Job {
   seq: number
   run: (signal: AbortSignal) => Promise<PassageCard>
+  /** the call in flight, once started */
+  abort?: AbortController
+  /** the card was closed: the job never starts, and a late answer is dropped */
+  cancelled?: boolean
 }
 
 type View =
@@ -153,6 +160,8 @@ export const PassageReading = forwardRef<PassageReadingHandle, PassageReadingPro
     statusesRef.current = connection.statuses
     const jobSeq = useRef(0)
     const aborts = useRef(new Set<AbortController>())
+    /** the job the send gate holds (status check or first-connection notice), mirrored here */
+    const heldRef = useRef<{ job: Job; reason: AiHeldReason } | null>(null)
     /** card id → the pending id of the note "Keep as note" added */
     const keptNotes = useRef(new Map<string, string>())
 
@@ -192,19 +201,23 @@ export const PassageReading = forwardRef<PassageReadingHandle, PassageReadingPro
     }
 
     const start = (job: Job) => {
+      if (heldRef.current?.job === job) heldRef.current = null
+      if (job.cancelled) return
       const abort = new AbortController()
+      job.abort = abort
       aborts.current.add(abort)
       setView((v) => (v?.kind === 'job' && v.job === job ? { ...v, phase: 'working' } : v))
       void job
         .run(abort.signal)
         .then((card) => {
+          if (job.cancelled) return
           const v = viewRef.current
-          if (v === null || (v.kind === 'job' && v.job === job)) {
-            setView({ kind: 'card', id: card.id, anchor: v?.anchor ?? centerAnchor() })
+          if (v?.kind === 'job' && v.job === job) {
+            setView({ kind: 'card', id: card.id, anchor: v.anchor })
           }
         })
         .catch((err: unknown) => {
-          if (abort.signal.aborted) return
+          if (abort.signal.aborted || job.cancelled) return
           const message = err instanceof Error ? err.message : String(err)
           setView((v) =>
             v?.kind === 'job' && v.job === job ? { ...v, phase: 'failed', message } : v,
@@ -223,16 +236,74 @@ export const PassageReading = forwardRef<PassageReadingHandle, PassageReadingPro
       onSettingsSaved: (next) => setSettings(next),
     })
 
+    const phaseOf = (job: Job, phase: 'connect' | 'waiting') =>
+      setView((v) => (v?.kind === 'job' && v.job === job ? { ...v, phase } : v))
+
     /** show the job's card and ask the gate; it starts now, later, or not at all */
     const submit = (job: Job, heading: string, excerpt: string, anchor: AskAnchorRect) => {
+      dropHeld()
+      job.cancelled = false
       setView({ kind: 'job', job, phase: 'waiting', heading, excerpt, anchor })
       if (sendGate.admit(job)) {
         start(job)
         return
       }
-      if (sendGate.peek().kind === 'connect') {
-        setView((v) => (v?.kind === 'job' && v.job === job ? { ...v, phase: 'connect' } : v))
+      const reason = aiHoldReason(sendGate.peek())
+      if (reason) heldRef.current = { job, reason }
+      else phaseOf(job, 'connect')
+    }
+
+    /**
+     * Follow the gate for a held job, the way the gate itself decides: it
+     * starts (the gate calls `start`), keeps waiting, or is dropped. Dropped in
+     * front of "not connected", the card shows the connect prompt; dropped
+     * because the gate moved some other way, the card closes. Either way
+     * nothing is sent until the user asks again.
+     */
+    useEffect(() => {
+      const held = heldRef.current
+      if (!held) return
+      const step = aiHeldRequestStep(held.reason, sendGate.gate)
+      if (step.action === 'keep') {
+        held.reason = step.reason
+        return
       }
+      if (step.action === 'start') return
+      heldRef.current = null
+      if (sendGate.gate.kind === 'connect') {
+        phaseOf(held.job, 'connect')
+        return
+      }
+      held.job.cancelled = true
+      setView((v) => (v?.kind === 'job' && v.job === held.job ? null : v))
+      // only a move of the gate matters; the held job is read from a ref
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [sendGate.gate.kind])
+
+    /** forget a job the gate still holds, so it never starts by itself */
+    function dropHeld(): void {
+      const held = heldRef.current
+      if (!held) return
+      heldRef.current = null
+      held.job.cancelled = true
+      sendGate.reset()
+    }
+
+    /** close the card: a held job is dropped and a call in flight stops (its answer is not kept) */
+    const closeView = () => {
+      const v = viewRef.current
+      if (v?.kind === 'job') {
+        if (heldRef.current?.job === v.job) dropHeld()
+        v.job.cancelled = true
+        v.job.abort?.abort()
+      }
+      setView(null)
+    }
+
+    /** "Got it" on the notice: the gate starts the job it holds once the acknowledgement is saved */
+    const acknowledgeNotice = () => {
+      if (heldRef.current?.reason === 'notice') heldRef.current = null
+      sendGate.acknowledgeNotice()
     }
 
     const sourceOf = async (
@@ -262,6 +333,7 @@ export const PassageReading = forwardRef<PassageReadingHandle, PassageReadingPro
         return
       }
       if ('existing' in prepared) {
+        dropHeld()
         setView({ kind: 'card', id: prepared.existing.id, anchor: sel.anchor })
         return
       }
@@ -295,10 +367,11 @@ export const PassageReading = forwardRef<PassageReadingHandle, PassageReadingPro
       },
       open(id, anchor) {
         if (!propsRef.current.cards.get(id)) return
+        dropHeld()
         setView({ kind: 'card', id, anchor: anchor ?? centerAnchor() })
       },
       close() {
-        setView(null)
+        closeView()
       },
     }))
 
@@ -361,17 +434,7 @@ export const PassageReading = forwardRef<PassageReadingHandle, PassageReadingPro
       if (view?.kind === 'card' && !openCard) setView(null)
     }, [view, openCard])
 
-    const heldNotice =
-      sendGate.noticeDue && view?.kind === 'job' && view.phase === 'waiting' ? (
-        <AiFirstConnectionNotice
-          lang={lang}
-          codexKeepsHistory
-          sendsWholeDocument
-          onAcknowledge={sendGate.acknowledgeNotice}
-        />
-      ) : null
-
-    if (!view || (view.kind === 'card' && !openCard)) return heldNotice
+    if (!view || (view.kind === 'card' && !openCard)) return null
 
     let body: PassageCardBody
     let heading: string
@@ -387,10 +450,10 @@ export const PassageReading = forwardRef<PassageReadingHandle, PassageReadingPro
       body =
         view.phase === 'failed'
           ? { kind: 'failed', message: view.message ?? '' }
-          : view.phase === 'connect' && sendGate.connectChoice
+          : view.phase === 'connect'
             ? {
                 kind: 'connect',
-                prompt: (
+                prompt: sendGate.connectChoice && (
                   <AiConnectPrompt
                     choice={sendGate.connectChoice}
                     statuses={connection.statuses}
@@ -406,7 +469,20 @@ export const PassageReading = forwardRef<PassageReadingHandle, PassageReadingPro
                   />
                 ),
               }
-            : { kind: 'busy', phase: view.phase === 'working' ? 'working' : 'waiting' }
+            : {
+                kind: 'busy',
+                phase: view.phase === 'working' ? 'working' : 'waiting',
+                // the first-connection notice is read in the card that waits for it
+                notice:
+                  view.phase === 'waiting' && sendGate.noticeDue ? (
+                    <AiFirstConnectionNotice
+                      lang={lang}
+                      codexKeepsHistory
+                      sendsWholeDocument
+                      onAcknowledge={acknowledgeNotice}
+                    />
+                  ) : null,
+              }
     }
 
     return (
@@ -436,13 +512,12 @@ export const PassageReading = forwardRef<PassageReadingHandle, PassageReadingPro
               void regenerate(openCard, view.anchor)
               return
             }
-            // a failed send: try the same request again, through the gate
+            // a failed or refused send: try the same request again, through the gate
             if (view.kind === 'job') submit(view.job, view.heading, view.excerpt, view.anchor)
           }}
           onDelete={() => openCard && void remove(openCard)}
-          onClose={() => setView(null)}
+          onClose={closeView}
         />
-        {heldNotice}
       </>
     )
   },

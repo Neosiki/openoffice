@@ -18,7 +18,8 @@ const MIN_BELOW = 220
 export type PassageNoteState = 'none' | 'pending' | 'saved'
 
 export type PassageCardBody =
-  | { kind: 'busy'; phase: 'waiting' | 'working' }
+  | { kind: 'busy'; phase: 'waiting' | 'working'; notice?: ReactNode }
+  /** refused for want of a connection; the prompt is absent once the gate moved on */
   | { kind: 'connect'; prompt: ReactNode }
   | { kind: 'failed'; message: string }
   | { kind: 'card'; card: PassageCard; note: PassageNoteState }
@@ -136,9 +137,12 @@ export function PassageCardView({
       )}
       <div className="pdf-passage-card-body">
         {body.kind === 'busy' && (
-          <div className="pdf-passage-card-status" role="status">
-            {body.phase === 'waiting' ? t('rdWaiting') : t('rdWorking')}
-          </div>
+          <>
+            <div className="pdf-passage-card-status" role="status">
+              {body.phase === 'waiting' ? t('rdWaiting') : t('rdWorking')}
+            </div>
+            {body.notice}
+          </>
         )}
         {body.kind === 'connect' && (
           <>
@@ -183,7 +187,7 @@ export function PassageCardView({
           </button>
         </div>
       )}
-      {body.kind === 'failed' && (
+      {(body.kind === 'failed' || (body.kind === 'connect' && !body.prompt)) && (
         <div className="pdf-passage-card-actions">
           <button type="button" data-action="regenerate" onClick={onRegenerate}>
             {t('rdRegenerate')}

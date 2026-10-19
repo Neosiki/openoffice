@@ -64,8 +64,20 @@ interface StreamStart {
   tools?: unknown[]
 }
 
-function fakeBridge(initial: { settings: AiSettings; statuses: SubscriptionStatusMap }) {
+function fakeBridge(initial: {
+  settings: AiSettings
+  statuses: SubscriptionStatusMap
+  /** the status check stays unanswered until `answerCheck` */
+  holdCheck?: boolean
+}) {
   const state = { settings: initial.settings, statuses: initial.statuses }
+  let releaseCheck: (() => void) | null = null
+  const checked = initial.holdCheck
+    ? new Promise<void>((resolve) => {
+        releaseCheck = resolve
+      })
+    : Promise.resolve()
+  const statusListeners = new Set<(s: SubscriptionStatusMap) => void>()
   const starts: StreamStart[] = []
   const answered = new Set<string>()
   const listeners = new Set<(chunk: IpcStreamChunk) => void>()
@@ -78,12 +90,21 @@ function fakeBridge(initial: { settings: AiSettings; statuses: SubscriptionStatu
     openAiModelSettings: vi.fn(async () => {}),
     onLanguageChanged: () => () => {},
     subscription: {
-      statuses: vi.fn(async () => state.statuses),
-      recheck: vi.fn(async () => state.statuses),
+      statuses: vi.fn(async () => {
+        await checked
+        return state.statuses
+      }),
+      recheck: vi.fn(async () => {
+        await checked
+        return state.statuses
+      }),
       login: vi.fn(async () => ({ ok: true })),
       install: vi.fn(async () => ({ ok: true })),
       setMeteredAccepted: vi.fn(async () => ({ ok: true, statuses: state.statuses })),
-      onChanged: () => () => {},
+      onChanged: (handler: (s: SubscriptionStatusMap) => void) => {
+        statusListeners.add(handler)
+        return () => statusListeners.delete(handler)
+      },
       openInstallHelp: vi.fn(async () => {}),
     },
     aiStream: vi.fn(async (request: StreamStart) => {
@@ -101,6 +122,16 @@ function fakeBridge(initial: { settings: AiSettings; statuses: SubscriptionStatu
   return {
     api,
     starts,
+    /** answer the held status check with these statuses */
+    answerCheck(statuses: SubscriptionStatusMap) {
+      state.statuses = statuses
+      releaseCheck?.()
+    },
+    /** the main process reports new statuses */
+    changeStatuses(statuses: SubscriptionStatusMap) {
+      state.statuses = statuses
+      for (const handler of [...statusListeners]) handler(statuses)
+    },
     answerAll(text: string) {
       for (const s of starts) {
         if (answered.has(s.requestId)) continue
@@ -165,11 +196,14 @@ async function mount(
     statuses?: SubscriptionStatusMap
     stored?: PassageCard[]
     props?: Partial<PassageReadingProps>
+    noticeSeen?: boolean
+    holdCheck?: boolean
   } = {},
 ) {
   bridge = fakeBridge({
-    settings: { ...normalizeAiSettings({}), subscriptionNoticeSeen: true },
+    settings: { ...normalizeAiSettings({}), subscriptionNoticeSeen: o.noticeSeen ?? true },
     statuses: o.statuses ?? statusesOf('ready', 'signed-out'),
+    holdCheck: o.holdCheck ?? false,
   })
   vi.stubGlobal('pdfApi', bridge.api)
   const f = fakeStore(o.stored)
@@ -293,6 +327,86 @@ describe('passage cards: sending', () => {
     const writes = m.f.writes.filter((w) => w.kind === 'passage')
     expect(writes).toHaveLength(1)
     expect(writes[0]).toMatchObject({ card: { id: 'c1', text: 'New answer.' } })
+  })
+})
+
+describe('passage cards: the gate and closing', () => {
+  const statusText = (el: Element) => q(el, '.pdf-passage-card-status')?.textContent ?? ''
+
+  it('a request held for the status check shows the connect prompt when the answer is "not connected"', async () => {
+    const m = await mount({ holdCheck: true })
+    await act(async () => m.handle.current!.request('explain', selection))
+    await until(() => q(m.el, '.pdf-passage-card') !== null, 'the card')
+    expect(statusText(m.el)).toBe(strings.en.rdWaiting)
+    await act(async () => bridge.answerCheck(statusesOf('signed-out', 'signed-out')))
+    await until(() => statusText(m.el) === strings.en.rdNeedsConnection, 'the connect state')
+    expect(bridge.starts).toHaveLength(0)
+  })
+
+  it('a request held for the status check starts once a provider can run', async () => {
+    const m = await mount({ holdCheck: true })
+    await act(async () => m.handle.current!.request('explain', selection))
+    await until(() => q(m.el, '.pdf-passage-card') !== null, 'the card')
+    expect(bridge.starts).toHaveLength(0)
+    await act(async () => bridge.answerCheck(statusesOf('ready', 'signed-out')))
+    await until(() => bridge.starts.length === 1, 'the call')
+  })
+
+  it('closing the card drops a held request: nothing starts when the check answers later', async () => {
+    const m = await mount({ holdCheck: true })
+    await act(async () => m.handle.current!.request('explain', selection))
+    await until(() => q(m.el, '.pdf-passage-card') !== null, 'the card')
+    await click(m.el, '.pdf-passage-card-close')
+    expect(q(m.el, '.pdf-passage-card')).toBeNull()
+    await act(async () => bridge.answerCheck(statusesOf('ready', 'signed-out')))
+    await settle()
+    await settle()
+    expect(bridge.starts).toHaveLength(0)
+    expect(q(m.el, '.pdf-passage-card')).toBeNull()
+  })
+
+  it('closing the card during the call stops it; a late answer is neither shown nor stored', async () => {
+    const m = await mount()
+    await act(async () => m.handle.current!.request('explain', selection))
+    await until(() => bridge.starts.length === 1, 'the call')
+    await click(m.el, '.pdf-passage-card-close')
+    expect(bridge.api.aiStreamCancel).toHaveBeenCalled()
+    await act(async () => bridge.answerAll('Late answer.'))
+    await settle()
+    expect(q(m.el, '.pdf-passage-card')).toBeNull()
+    expect(m.f.writes).toHaveLength(0)
+    expect(m.cards.list()).toHaveLength(0)
+  })
+
+  it('sends nothing until the first-connection notice is acknowledged, then exactly once', async () => {
+    const m = await mount({ noticeSeen: false })
+    await act(async () => m.handle.current!.request('explain', selection))
+    await until(() => q(m.el, '.pdf-passage-card .ai-sub-first') !== null, 'the notice in the card')
+    await settle()
+    expect(bridge.starts).toHaveLength(0)
+    await click(m.el, '.pdf-passage-card .ai-sub-first .ai-sub-btn.primary')
+    await until(() => bridge.starts.length === 1, 'the call')
+    await settle()
+    expect(bridge.starts).toHaveLength(1)
+    await act(async () => bridge.answerAll('After the notice.'))
+    await until(
+      () => q(m.el, '[data-passage-answer]')?.textContent === 'After the notice.',
+      'the answer',
+    )
+    expect(bridge.starts).toHaveLength(1)
+  })
+
+  it('a request held behind the notice is dropped when the connection goes away: the connect prompt shows', async () => {
+    const m = await mount({ noticeSeen: false })
+    await act(async () => m.handle.current!.request('explain', selection))
+    await until(() => q(m.el, '.pdf-passage-card .ai-sub-first') !== null, 'the notice')
+    await act(async () => bridge.changeStatuses(statusesOf('signed-out', 'signed-out')))
+    await until(() => statusText(m.el) === strings.en.rdNeedsConnection, 'the connect state')
+    expect(bridge.starts).toHaveLength(0)
+    // signing in again does not start the dropped request by itself
+    await act(async () => bridge.changeStatuses(statusesOf('ready', 'signed-out')))
+    await settle()
+    expect(bridge.starts).toHaveLength(0)
   })
 })
 
