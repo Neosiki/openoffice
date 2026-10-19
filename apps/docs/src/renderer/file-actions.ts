@@ -101,7 +101,12 @@ import { pruneUnreferencedNumbering } from './numbering-actions'
 import { applySectPrRewrites, type SectPrRewrite } from './sectpr-rewrite'
 import { createSaveSerializer } from './save-until-persisted'
 import { checkMissingFonts, collectDocFonts } from './font-check'
-import { hangulSpaceWideningFor, setDocFontTable, setHangulSpaceWidening } from './line-metrics'
+import {
+  hangulSpaceWideningFor,
+  loadBundledStandIns,
+  setDocFontTable,
+  setHangulSpaceWidening,
+} from './line-metrics'
 import { adoptEmbeddedFonts } from './embedded-fonts'
 import { defaultEastAsiaFontFor } from './font-list'
 import { hasPrintableHeaderFooter } from './pagination'
@@ -495,6 +500,8 @@ export async function loadFile(
     const adopted = await adoptEmbeddedFonts(parsed.embeddedFonts)
     if (!adopted || generation !== openGeneration) return 'superseded'
     setDocFontTable(parsed.fontTable)
+    await loadBundledStandIns(collectDocFonts(parsed))
+    if (generation !== openGeneration) return 'superseded'
     ctx.editor.storage.listNumbering.styles = parsed.styles
     ctx.editor.storage.listNumbering.docDefaults = parsed.docDefaults
     ctx.editor.storage.listNumbering.defs = parsed.numbering
@@ -653,6 +660,8 @@ export async function newFile(ctx: FileActionContext): Promise<boolean | undefin
     const adopted = await adoptEmbeddedFonts(parsed.embeddedFonts)
     if (!adopted || generation !== openGeneration) return
     setDocFontTable(parsed.fontTable)
+    await loadBundledStandIns(collectDocFonts(parsed))
+    if (generation !== openGeneration) return
     ctx.editor.storage.listNumbering.styles = parsed.styles
     ctx.editor.storage.listNumbering.docDefaults = parsed.docDefaults
     ctx.editor.storage.listNumbering.defs = parsed.numbering

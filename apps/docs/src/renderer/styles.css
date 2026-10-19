@@ -6549,6 +6549,15 @@ body.docs-crop-active .doc-protected[data-doc-protected='image'] .doc-img-wrap {
   display: none;
 }
 
+/* a column break leading a paragraph with text (.doc-lead-col-br) has no
+   line of its own: Word opens the next column with the first text line
+   (CNKI/PDF-converter output breaks every second column this way); a
+   break-only paragraph keeps its line */
+.doc-page .doc-lead-col-br > br.doc-col-br:first-child,
+.doc-page .doc-lead-col-br > :first-child br.doc-col-br:first-of-type {
+  display: none;
+}
+
 /* a page break ending a paragraph has no line of its own either: the paragraph
    mark sits on the last text line, and the next page starts with the next
    paragraph. The phantom line after it (directly, or after the run-mark span
@@ -12119,6 +12128,18 @@ tr > .page-gap-cut {
 
 /* picture-only cell paragraph (line-height 0 inline): the image sits on the line bottom */
 .doc-table .doc-p-picture > .doc-inline-img {
+  vertical-align: bottom;
+}
+
+/* picture-only paragraph (extensions isPictureOnlyContent): the line is the
+   picture extent, no strut or descent below it; an auto multiple adds its
+   (m - 1) x single line under the picture like Word (cf. .doc-img-para) */
+.doc-page .doc-p-pic:not(.doc-lh-fixed) {
+  line-height: 0;
+  padding-bottom: calc((var(--doc-line-mult, 1) - 1) * var(--doc-line-factor, 1.2) * 1em);
+}
+
+.doc-page .doc-p-pic .doc-inline-img {
   vertical-align: bottom;
 }
 

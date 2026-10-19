@@ -45,6 +45,7 @@ import {
   emptyEaSlotHangulFactor,
   cssAutoLineMult,
   cssFontFamily,
+  cssCsFontFamily,
   cssRunFontFamily,
   hangulSpaceOffsets,
   hangulSpaceWideningOn,
@@ -517,8 +518,52 @@ function latinParaFactor(
  *  so a paragraph face with a taller ascent than the runs' inflates every line
  *  past the computed line-height. No run inherits the face, so only the strut
  *  (and list markers without their own font) changes. */
-function paraDeclaredFontFamily(node: { descendants?: PmNode['descendants'] }): string | null {
+/**
+ * Complex-script-only paragraph (Arabic/Hebrew text, no Latin letters): Word
+ * lays every line in the w:cs face, so the strut takes that face as well. A
+ * Latin strut (Calibri) under cs spans (Arial) unions two differently centred
+ * boxes and paces 1.25em where Word paces Arial's 1.15 (probe 2026-10-13).
+ * Null when a run lacks a cs face or the runs' cs chains differ.
+ */
+function paraComplexScriptFamily(node: {
+  textContent?: string
+  descendants?: PmNode['descendants']
+}): string | null {
+  const text = node.textContent ?? ''
+  if (!node.descendants || !textHasComplexScript(text) || /[A-Za-z]/.test(text)) return null
+  if (textHasCjk(text)) return null
+  let family: string | null = null
+  let bail = false
+  node.descendants((child) => {
+    if (bail) return false
+    if (!child.isText) return true
+    if (SPACE_ONLY_RE.test(child.text ?? '')) return false
+    const attrs = child.marks.find((m) => m.type.name === 'docTextStyle')?.attrs
+    const cs = attrs?.csFont ? String(attrs.csFont) : null
+    if (!cs) {
+      bail = true
+      return false
+    }
+    // same chain the run's span renders (marks.ts), so the strut face equals the run face
+    const chain = cssCsFontFamily(
+      cs,
+      attrs?.fontAscii ? String(attrs.fontAscii) : undefined,
+      attrs?.font ? String(attrs.font) : undefined,
+    )
+    if (family === null) family = chain
+    else if (family !== chain) bail = true
+    return false
+  })
+  return bail ? null : family
+}
+
+function paraDeclaredFontFamily(node: {
+  textContent?: string
+  descendants?: PmNode['descendants']
+}): string | null {
   if (!node.descendants) return null
+  const csFamily = paraComplexScriptFamily(node)
+  if (csFamily) return csFamily
   let first: string | null = null
   let inherited = false
   node.descendants((child) => {
@@ -792,11 +837,27 @@ function paraContentSpec(node: PmNode): DOMOutputSpec | 0 {
   return rtlRun ? 0 : ['span', { class: 'doc-ltr-runs' }, 0]
 }
 
+/** every inline child is an in-flow picture (no wrap, no rule): the paragraph's
+ *  line is the picture extent (CSS .doc-p-pic) */
+function isPictureOnlyContent(node: {
+  childCount?: number
+  descendants?: PmNode['descendants']
+}): boolean {
+  if (!node.descendants) return false
+  let ok = true
+  node.descendants((child) => {
+    if (child.type.name !== 'docInlineImage' || child.attrs.wrap || child.attrs.rule) ok = false
+    return false
+  })
+  return ok
+}
+
 function blockAttrs(
   node: {
     attrs: Record<string, unknown>
     textContent?: string
     childCount?: number
+    firstChild?: PmNode | null
     descendants?: PmNode['descendants']
   },
   {
@@ -821,6 +882,16 @@ function blockAttrs(
   // textless paragraph: table-cell CSS shrinks these to the Latin line height
   // (an empty cell inheriting the CJK factor would out-grow the content cells)
   if (!node.textContent) classes.push('doc-p-empty')
+  // in-line pictures and nothing else: Word sizes the line to the picture
+  // extent, no strut or descent under it (probe 2026-10-13: a 19.5pt icon in a
+  // tcMar 40 cell makes a 23.52pt row; a text run beside it adds its descent)
+  const picOnly = !node.textContent && (node.childCount ?? 0) > 0 && isPictureOnlyContent(node)
+  if (picOnly) classes.push('doc-p-pic')
+  // a column break leading a paragraph with text has no line of its own: Word
+  // opens the next column with the first text line (CSS hides the break)
+  const lead = node.firstChild
+  if (lead?.type.name === 'hardBreak' && lead.attrs.colBreak && node.textContent)
+    classes.push('doc-lead-col-br')
   if (node.attrs.pageBreakBefore) {
     classes.push('page-break-before')
     attrs['data-page-break-label'] = t('editorPageBreak')
@@ -2268,7 +2339,9 @@ function pushLineFactorDecos(node: PmNode, pos: number, decos: Decoration[]): bo
           Number(node.attrs.lineSpacing) ||
           (node.attrs.lineRule === 'auto' && node.attrs.lineRawTwips
             ? Number(node.attrs.lineRawTwips) / 240
-            : 1)
+            : node.attrs.lineRule || node.attrs.lineRawTwips
+              ? 1
+              : 'inherited')
         const gapStyle = `line-height:${cssSimsunGapLineExpr(m)}`
         for (const r of ranges) {
           decos.push(Decoration.inline(pos + 1 + r.from, pos + 1 + r.to, { style: gapStyle }))

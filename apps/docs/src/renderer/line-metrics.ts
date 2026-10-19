@@ -242,7 +242,6 @@ export function noteTemplateFontFamilies(
 export function isTemplateFontFamily(name: string): boolean {
   return templateLineFactors.has(templateKey(name))
 }
-
 /** Names Word for Mac renders with SimSun itself (lower-cased input) */
 const SIMSUN_NAME_RE = /simsun|\u5b8b\u4f53|xiaobiaosong|\u5c0f\u6807\u5b8b/
 
@@ -697,6 +696,7 @@ export const BUNDLED_FONTS = new Set([
   'Aptos GO',
   'Aptos Display GO',
   'Century Gothic GO',
+  'Cambria Math GO',
   'Caladea',
   'Liberation Serif',
   'Liberation Sans',
@@ -749,11 +749,115 @@ export function noteEmbeddedFontsChanged(families: readonly string[]): void {
   for (const f of families) fontAvailableCache.delete(f)
   chainMetricsCache.clear()
 }
+const GENERIC_FAMILIES = new Set([
+  'serif',
+  'sans-serif',
+  'monospace',
+  'cursive',
+  'fantasy',
+  'system-ui',
+])
+
+/**
+ * Bundled web face that leads a chain but has not loaded yet: canvas measures
+ * the next installed family instead (an unloaded font-display:block face is
+ * skipped), so the strut would carry e.g. Apple SD Gothic Neo's 0.90/0.30
+ * under GenOffice Sans KR spans (1.16/0.29) and every hangul line unions
+ * ~1.5px past its line-height (+1pt per Korean table row vs Word).
+ */
+export function unloadedBundledPrimary(chain: string): string | null {
+  const fonts = typeof document === 'undefined' ? undefined : document.fonts
+  if (!fonts?.check) return null
+  const family = bundledPrimary(chain)
+  if (!family) return null
+  try {
+    return fonts.check(`16px "${family}"`) ? null : family
+  } catch {
+    return null
+  }
+}
+
+/** bundled web face a chain resolves to before any installed family or generic */
+function bundledPrimary(chain: string): string | null {
+  for (const raw of chain.split(',')) {
+    const family = raw.trim().replace(/^["']|["']$/g, '')
+    if (!family || GENERIC_FAMILIES.has(family.toLowerCase())) return null
+    if (isBundledFont(family)) return family
+    if (isFontAvailable(family)) return null
+  }
+  return null
+}
+
+const FACE_VARIANTS = ['', 'bold ', 'italic ', 'bold italic ']
+
+/**
+ * Load the bundled stand-in cuts the document's families chain to before the
+ * first layout pass. Canvas measures the system fallback while a web face is
+ * still loading, and the autofit table pass sizes columns from those advances
+ * once: Arial Bold runs ~15% wider than Carlito, so a Calibri table's saved
+ * Word grid grew its short-word columns and wrapped the long ones. A face that
+ * never loads must not hold the open.
+ */
+export async function loadBundledStandIns(
+  families: Iterable<string>,
+  timeoutMs = 3000,
+): Promise<void> {
+  const fonts = typeof document === 'undefined' ? undefined : document.fonts
+  if (!fonts?.check || !fonts.load) return
+  const loads: Promise<unknown>[] = []
+  const seen = new Set<string>()
+  for (const family of families) {
+    const face = bundledPrimary(cssFontFamily(family))
+    if (!face || seen.has(face)) continue
+    seen.add(face)
+    for (const variant of FACE_VARIANTS) {
+      const spec = `${variant}16px "${face}"`
+      try {
+        if (!fonts.check(spec)) loads.push(fonts.load(spec).catch(() => undefined))
+      } catch {
+        /* no FontFaceSet loader */
+      }
+    }
+  }
+  if (loads.length === 0) return
+  await Promise.race([
+    Promise.all(loads),
+    new Promise<void>((resolve) => setTimeout(resolve, timeoutMs)),
+  ])
+}
+
+const metricsPendingFaces = new Set<string>()
+
+/** True once a face measured before it loaded is in: callers re-derive their metric CSS. */
+export function takeSettledMetricFaces(): boolean {
+  let settled = false
+  for (const family of metricsPendingFaces) {
+    try {
+      if (!document.fonts.check(`16px "${family}"`)) continue
+    } catch {
+      continue
+    }
+    metricsPendingFaces.delete(family)
+    settled = true
+  }
+  if (settled) chainMetricsCache.clear()
+  return settled
+}
+
 export function fontChainMetricsPct(
   chain: string,
 ): { ascentPct: number; descentPct: number } | null {
   const cached = chainMetricsCache.get(chain)
   if (cached !== undefined) return cached
+  const pending = unloadedBundledPrimary(chain)
+  if (pending) {
+    metricsPendingFaces.add(pending)
+    try {
+      void document.fonts.load(`16px "${pending}"`).catch(() => {})
+    } catch {
+      /* no FontFaceSet loader */
+    }
+  }
   let out: { ascentPct: number; descentPct: number } | null = null
   try {
     const ctx = document.createElement('canvas').getContext('2d')
@@ -767,7 +871,7 @@ export function fontChainMetricsPct(
   } catch {
     out = null
   }
-  chainMetricsCache.set(chain, out)
+  if (!pending) chainMetricsCache.set(chain, out)
   return out
 }
 
@@ -900,7 +1004,9 @@ export function cssFontFamily(font: string, followAltName = true): string {
   // 'GenOffice Box Drawing' (fonts.css): U+2500 rules would otherwise fall to
   // the fullwidth CJK subset and overflow the column
   const BOX = 'GenOffice Box Drawing'
-  if (f.includes('calibri')) return `${chain(font, 'Carlito GO', CJK_SANS)},sans-serif`
+  // 'Calibri Arabic GO' (fonts.css): Calibri's own Arabic; Carlito has none
+  if (f.includes('calibri'))
+    return `${chain(font, 'Carlito GO', 'Calibri Arabic GO', CJK_SANS)},sans-serif`
   // Aptos (M365 cloud face, never installed locally): line metrics equal
   // Calibri's (Word probe 2026-08-22) but its advances do not, so the
   // size-adjusted Carlito aliases in fonts.css stand in (probe 2026-09-03).
@@ -916,9 +1022,13 @@ export function cssFontFamily(font: string, followAltName = true): string {
         : 'Aptos GO'
     return `${chain(font, alias, 'GenOffice PUA Blank', CJK_SANS)},sans-serif`
   }
+  // Cambria Math text runs lay out with Cambria's advances in Word (fonts.css
+  // alias); only the symbols need a math face
+  if (f.includes('cambria') && f.includes('math'))
+    return `${chain(font, 'Cambria Math GO', 'STIX Two Math', 'Caladea', 'Liberation Serif', BOX, CJK_SERIF)},serif`
   // math faces would fall to the unknown-name sans fallback; STIX Two Math ships with macOS,
   // and on Windows the declared name resolves natively
-  if ((f.includes('cambria') && f.includes('math')) || /stix.*math|latin modern math/.test(f))
+  if (/stix.*math|latin modern math/.test(f))
     return `${chain(font, 'STIX Two Math', 'Caladea', 'Liberation Serif', BOX, CJK_SERIF)},serif`
   if (f.includes('cambria')) return `${chain(font, 'Caladea', BOX, CJK_SERIF)},serif`
   if (f.includes('times')) return `${chain(font, 'Liberation Serif', BOX, CJK_SERIF)},serif`
@@ -1069,15 +1179,15 @@ export function cssFontFamily(font: string, followAltName = true): string {
             ? ['Naskh Digits GO', 'Noto Naskh Arabic TNR']
             : sakkal
               ? ['Sakkal Majalla GO', 'Sakkal Majalla Latin GO']
-              : [
-                  compact
-                    ? compact === 'traditional'
-                      ? 'Noto Naskh Arabic TA'
-                      : 'Noto Naskh Arabic SA'
-                    : scaled
-                      ? 'Noto Naskh Arabic W'
-                      : 'Noto Naskh Arabic',
-                ]),
+              : compact
+                ? [
+                    compact === 'traditional' ? 'Noto Naskh Arabic TA' : 'Noto Naskh Arabic SA',
+                    // the subsets carry no ASCII brackets and neither does
+                    // Geeza Pro, so they fell to Al Bayan (30% wider, 1.5 em
+                    // box); both cloud faces draw them at Times widths
+                    'Times Punct GO',
+                  ]
+                : [scaled ? 'Noto Naskh Arabic W' : 'Noto Naskh Arabic']),
           'Geeza Pro',
           'Al Bayan',
         ]
@@ -1673,10 +1783,12 @@ export function cssGridLineMaxExpr(): string {
  *  single), mirroring computeLineHeight with the 1.7143em lift as natural
  *  height. --doc-grid-single-mult (1 in typed-grid docs, absent otherwise)
  *  keeps the non-grid value at boosted x mult. */
-export function cssSimsunGapLineExpr(multiple: number): string {
+export function cssSimsunGapLineExpr(multiple: number | 'inherited'): string {
   const single = `round(up, calc(${SIMSUN_GAP_LINE_FACTOR} * 1em - ${GRID_PITCH} * ${GRID_SNAP_EPS}), ${GRID_PITCH})`
   if (multiple === 1) return single
-  return `max(calc(${GRID_PITCH} * ${multiple}), calc(${single} * var(--doc-grid-single-mult,${multiple})))`
+  // no own spacing: the style / docDefaults multiple arrives as --doc-line-mult
+  const m = multiple === 'inherited' ? 'var(--doc-line-mult,1)' : String(multiple)
+  return `max(calc(${GRID_PITCH} * ${m}), calc(${single} * var(--doc-grid-single-mult,${m})))`
 }
 
 /** single-spacing line height: snapped length in typed-grid docs, unitless factor otherwise */
@@ -1990,7 +2102,9 @@ export function hangulSpaceWideningOn(): boolean {
 }
 
 /** UTF-16 offsets of the U+0020 in text with a hangul neighbour; prev/next
- *  are the texts adjacent to its ends (empty = no direct neighbour) */
+ *  are the texts adjacent to its ends (empty = no direct neighbour). Word
+ *  widens spaces next to kana/Han the same way (probe 2026-10-13), but the
+ *  half-width space span lifts Japanese line boxes, so that stays unported. */
 export function hangulSpaceOffsets(text: string, prev = '', next = ''): number[] {
   const out: number[] = []
   let prevCp = prev ? lastCodePoint(prev) : -1

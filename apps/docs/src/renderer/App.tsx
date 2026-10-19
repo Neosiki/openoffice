@@ -250,6 +250,7 @@ import {
   noteLineHeightPx,
   FOOTNOTE_SEPARATOR_H,
   textHasCjk,
+  takeSettledMetricFaces,
 } from './line-metrics'
 import { saveUntilPersisted } from './save-until-persisted'
 import { SPELLCHECK_KEY, spellcheckEnabled } from './spellcheck-pref'
@@ -1970,6 +1971,10 @@ export function App() {
 
   /** App state bundle for the extracted file actions (file-actions.ts); refreshed every render. */
   const fileCtxRef = useRef<FileActionContext>(null as unknown as FileActionContext)
+  // style-pane previews patch the parsed styles; a font-settle rebuild must keep them
+  const liveStylesRef = useRef<{ parsed: ParsedDocFull; styles: Map<string, StyleInfo> } | null>(
+    null,
+  )
   fileCtxRef.current = {
     editor,
     doc,
@@ -5057,6 +5062,16 @@ export function App() {
     let hfTimer: number | undefined
     const onFontsChanged = (reprobeHf: boolean) => {
       bumpLineSampleFontEpoch()
+      // strut metrics measured under a fallback face before a bundled font loaded
+      if (takeSettledMetricFaces()) {
+        const parsed = fileCtxRef.current.doc?.parsed
+        const live = liveStylesRef.current
+        if (parsed) {
+          setDocCss(
+            docStyleCss(live?.parsed === parsed ? { ...parsed, styles: live.styles } : parsed),
+          )
+        }
+      }
       if (reprobeHf) {
         bumpHfProbeFontEpoch()
         if (hfTimer) window.clearTimeout(hfTimer)
@@ -6182,6 +6197,7 @@ export function App() {
     const parsed = doc?.parsed
     const upserts = Object.values(styleUpserts)
     if (!parsed || upserts.length === 0) {
+      liveStylesRef.current = null
       setLiveStyles(null)
       return
     }
@@ -6190,6 +6206,7 @@ export function App() {
       .then((r) => {
         // a document switch or a save re-parse while resolving: their open path already set fresh styles
         if (cancelled || fileCtxRef.current.doc?.parsed !== parsed) return
+        liveStylesRef.current = { parsed, styles: r.styles }
         setLiveStyles({ parsed, styles: r.styles })
         editor.storage.listNumbering.styles = r.styles
         setDocCss(docStyleCss({ ...parsed, styles: r.styles }))
