@@ -63,7 +63,7 @@ export const cs = {
     'Pro tento dokument už běží úloha AI ({done}/{total}). Zkuste to znovu, až skončí nebo bude zastavena.',
   arUnavailable: 'Čtení stránek pomocí AI není v tomto okně k dispozici.',
   arDeleteConfirm:
-    'Smazat všechna čtení AI a překlady uložené pro tento dokument? Tuto akci nelze vrátit.',
+    'Smazat všechny výsledky AI uložené pro tento dokument (čtení AI, překlady, karty úryvků, návrhy zvýraznění a přehled)? Tuto akci nelze vrátit.',
   arDeleted: 'Uložené výsledky AI tohoto dokumentu byly smazány.',
   arDeleteFailed: 'Uložené výsledky AI se nepodařilo smazat.',
   arDeleteBusy: 'Běží úloha AI, takže teď nelze nic smazat.',

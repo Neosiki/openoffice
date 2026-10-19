@@ -63,7 +63,7 @@ export const it = {
     'Su questo documento è già in corso un’attività IA ({done}/{total}). Riprova quando sarà finita o interrotta.',
   arUnavailable: 'La lettura delle pagine con IA non è disponibile in questa finestra.',
   arDeleteConfirm:
-    'Eliminare tutte le letture IA e le traduzioni conservate per questo documento? L’operazione non si può annullare.',
+    'Eliminare tutti i risultati IA conservati per questo documento (letture IA, traduzioni, schede dei passaggi, suggerimenti di evidenziazione e panoramica)? L’operazione non si può annullare.',
   arDeleted: 'I risultati IA conservati di questo documento sono stati eliminati.',
   arDeleteFailed: 'Impossibile eliminare i risultati IA conservati.',
   arDeleteBusy: 'È in corso un’attività IA, quindi ora non si può eliminare nulla.',

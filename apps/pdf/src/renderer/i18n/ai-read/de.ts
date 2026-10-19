@@ -66,7 +66,7 @@ export const de = {
     'Für dieses Dokument läuft bereits eine KI-Aufgabe ({done}/{total}). Versuchen Sie es erneut, wenn sie beendet oder gestoppt ist.',
   arUnavailable: 'KI-Seitenlesen ist in diesem Fenster nicht verfügbar.',
   arDeleteConfirm:
-    'Alle für dieses Dokument gespeicherten KI-Lesungen und Übersetzungen löschen? Dies kann nicht rückgängig gemacht werden.',
+    'Alle für dieses Dokument gespeicherten KI-Ergebnisse (KI-Lesungen, Übersetzungen, Passagenkarten, Markierungsvorschläge und die Übersicht) löschen? Dies kann nicht rückgängig gemacht werden.',
   arDeleted: 'Die gespeicherten KI-Ergebnisse dieses Dokuments wurden gelöscht.',
   arDeleteFailed: 'Die gespeicherten KI-Ergebnisse konnten nicht gelöscht werden.',
   arDeleteBusy: 'Eine KI-Aufgabe läuft, daher kann jetzt nichts gelöscht werden.',

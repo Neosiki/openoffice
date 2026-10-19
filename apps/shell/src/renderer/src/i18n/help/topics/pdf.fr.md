@@ -86,3 +86,66 @@ Six outils : **Dessin, Rectangle, Ellipse, Flèche, Note**, plus le **Caviarder 
 
 - L’enregistrement normal ou automatique réécrit les annotations et les modifications dans le fichier (de façon atomique).
 - **Le caviardage passe par sa procédure Appliquer**, qui produit une copie et laisse l’original intact, afin que le contenu sensible ne reste pas dedans.
+
+## Raccourcis de la barre de sélection
+
+Tant que la barre d’annotation est affichée au-dessus d’un texte sélectionné, une seule touche lance une action immédiatement.
+
+| Touche | Action                                       |
+| ------ | -------------------------------------------- |
+| H      | Surligner (retire le surlignage s’il existe) |
+| U      | Souligner                                    |
+| S      | Barrer                                       |
+| N      | Ajouter une note à la fin de la sélection    |
+| E      | Explication IA (fiche de passage)            |
+| T      | Traduction IA (fiche de passage)             |
+| Entrée | Ouvrir la zone **Demander à l’IA**           |
+
+- Les touches fonctionnent de la même façon avec une méthode de saisie coréenne ou toute autre. Elles sont ignorées pendant la saisie dans un champ ou si Ctrl ou Alt est enfoncé.
+- Dans un document verrouillé contre la modification (protégé par mot de passe), H, U, S et N n’ont aucun effet et affichent la raison, comme les boutons de la barre.
+
+## Fiches de passage
+
+Appuyez sur **E** ou **T**, ou sur les puces d’explication et de traduction de la zone **Demander à l’IA** : la réponse s’affiche dans une petite fiche à côté de la sélection. Les fiches sont conservées, elles sont donc encore là quand vous rouvrez le document, et vous pouvez les copier. Redemander le même passage ouvre la fiche existante sans rien envoyer.
+
+- **Garder en note** crée une note à cet endroit. Sa première ligne indique « Explication IA » ou « Traduction IA », et l’auteur est le nom de votre compte sur le PC. Elle entre dans le fichier à l’enregistrement du PDF ; d’ici là, la fiche affiche « En attente d’enregistrement ».
+- **Poursuivre dans le panneau IA** transmet le passage et la réponse au panneau IA sans les envoyer ; **Ajouter à la note** les place à la fin de la note de ce PDF.
+- Seul **Régénérer** renvoie le passage à l’IA.
+- **Supprimer** efface uniquement la fiche conservée. Une note déjà gardée reste en place.
+- Un léger trait pointillé signale chaque passage qui a une fiche ; un clic dessus rouvre la fiche. Ce trait n’existe qu’à l’écran, il n’est jamais enregistré ni imprimé. Activez-le ou désactivez-le avec Affichage ▸ **Repères de passage**.
+
+## Vue d’ensemble des annotations
+
+- Affichage ▸ **Annotations** liste dans la barre latérale gauche les surlignages, soulignements, textes barrés, notes et dessins du document, les marques pas encore enregistrées et les fiches de passage. Les marques affichent le texte qu’elles recouvrent.
+- Filtrez par type, couleur, plage de pages ou texte, et triez par page ou par ordre de création.
+- Cliquer sur un élément y conduit avec un bref clignotement. Une note ouvre son fil dans la marge, une fiche ouvre la fiche.
+- Les commandes du menu **Copier en Markdown**, **Ouvrir en document Markdown** et **Ouvrir en document Word** reprennent la liste telle qu’elle est filtrée. L’IA n’intervient pas. Un nouveau document ne peut être créé qu’à partir d’un PDF ouvert dans GenOffice.
+
+## Traduction en regard
+
+- Activez Affichage ▸ **Traduction en regard** : une colonne de traduction apparaît à droite de chaque page et défile avec elle. L’activer n’envoie rien à l’IA. Un document déjà traduit avec **Traduire le document** affiche aussitôt sa traduction ; les paragraphes sans traduction apparaissent en texte source estompé.
+- **Traduire cette page** (ou **Traduire le reste** si une partie est faite) envoie la page d’un seul clic quand vous utilisez un abonnement ; le nom de l’IA destinataire figure à côté du bouton. Sur une connexion facturée à l’usage, le premier clic dans un onglet demande d’abord « facturera ce service · Traduire / Annuler ».
+- Double-cliquez sur un paragraphe traduit pour le modifier. Les paragraphes modifiés sont conservés en texte brut et repris tels quels dans les fichiers PDF, Markdown et EPUB traduits. **Retraduire** sur un paragraphe n’envoie que celui-ci et demande confirmation si vous l’avez modifié.
+- Survoler un paragraphe traduit entoure son emplacement dans la page source. La largeur et la taille du texte de la colonne sont réglables. **Traduire toutes les pages…** ouvre la fenêtre **Traduire le document**, dont le format **Conserver seulement (aucun fichier)** garde la traduction sans écrire de fichier.
+
+## Surlignage IA
+
+- Dans Accueil ▸ **Surlignage IA**, choisissez un jeu de catégories (Recherche et rapports, Contrats et conditions, Manuels et guides, ou Personnalisé) et les pages. Rien n’est envoyé avant que vous ayez vérifié le nombre d’appels estimé et l’IA destinataire, puis appuyé sur **Démarrer**.
+- Les phrases choisies par l’IA sont prévisualisées par des cadres colorés translucides sur la page. L’aperçu n’est jamais enregistré ; activez-le ou désactivez-le avec Affichage ▸ **Aperçu des surlignages**.
+- Dans le panneau **Annotations**, **Accepter** ou **Écarter** les suggestions une par une, ou acceptez toute une catégorie. Une phrase introuvable dans le texte de la page ne peut pas être acceptée.
+- Une suggestion acceptée devient un surlignage de la couleur de sa catégorie, et le nom de la catégorie est enregistré comme objet de l’annotation : les autres lecteurs PDF l’affichent dans leur liste de commentaires. Elle entre dans le fichier à l’enregistrement du PDF.
+- Le surlignage IA ne peut pas démarrer dans un document verrouillé contre la modification. Les phrases inventées qui ne figurent pas dans le texte sont écartées, et le bilan final indique combien ont été reçues et écartées.
+
+## Aperçu du document et citations de paragraphe
+
+- En haut du panneau IA, **Aperçu du document** ▸ **Créer un aperçu** produit un résumé en trois lignes, un résumé et des termes clés (avec leur sens et leur première page). Un long document est résumé par parties : vous confirmez d’abord le nombre d’appels estimé.
+- L’aperçu est conservé et réapparaît à la réouverture ; seul **Régénérer** renvoie. Cliquer sur un terme le recherche dans le document ; chaque section peut être copiée ou ajoutée à la note.
+- Quand la conversation est vide, le panneau IA propose trois questions suggérées. Un clic envoie la question une fois.
+- Cliquer sur un lien de page (p.N) donné par l’IA comme preuve mène à cette page et met la phrase citée en évidence pendant deux secondes. Si la phrase est introuvable, seule la page s’ouvre.
+
+## Une note par PDF
+
+- La première fois que vous appuyez sur **Ouvrir la note** (onglet Affichage ou panneau **Annotations**), une boîte d’enregistrement s’ouvre, par défaut dans le dossier du PDF avec le nom « nom du PDF note.md ». Ensuite, la note s’ouvre directement dans un onglet Markdown.
+- Si vous choisissez un fichier existant, Windows peut demander s’il faut le remplacer, mais le fichier n’est pas écrasé : il est relié comme note tel quel.
+- **Ajouter à la note** (sur les fiches, les éléments du panneau et l’aperçu du document) place une citation et un lien de page à la fin de l’onglet de la note, sans l’enregistrer ; c’est vous qui enregistrez dans l’onglet de la note. Le lien ouvre le PDF à cette page dans d’autres programmes, comme un navigateur.
+- Un PDF jamais enregistré affiche « Enregistrez d’abord le PDF ». Les notes ne fonctionnent que pour les PDF ouverts dans GenOffice.

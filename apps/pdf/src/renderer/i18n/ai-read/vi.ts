@@ -62,7 +62,7 @@ export const vi = {
     'Tài liệu này đã có một tác vụ AI đang chạy ({done}/{total}). Hãy thử lại khi tác vụ kết thúc hoặc bị dừng.',
   arUnavailable: 'Không dùng được tính năng đọc trang bằng AI trong cửa sổ này.',
   arDeleteConfirm:
-    'Xóa tất cả kết quả đọc bằng AI và bản dịch đã lưu cho tài liệu này? Không thể hoàn tác.',
+    'Xóa tất cả kết quả AI đã lưu cho tài liệu này (kết quả đọc bằng AI, bản dịch, thẻ đoạn văn, đề xuất tô sáng và tổng quan)? Không thể hoàn tác.',
   arDeleted: 'Đã xóa kết quả AI đã lưu của tài liệu này.',
   arDeleteFailed: 'Không xóa được kết quả AI đã lưu.',
   arDeleteBusy: 'Đang có tác vụ AI chạy nên chưa thể xóa.',
