@@ -1,7 +1,7 @@
 import JSZip from 'jszip'
 import { assertZipInflatesWithinLimits, assertZipWithinLimits } from '@genoffice/docx-engine'
 import { resolveTarget } from './opc'
-import { XMLParser } from 'fast-xml-parser'
+import { XMLParser, XMLValidator } from 'fast-xml-parser'
 import { redactPptxPartXml } from './pptx-redaction'
 
 // Text fidelity: no trim (xml:space="preserve" runs carry the spaces between words),
@@ -98,11 +98,17 @@ async function zipText(zip: JSZip, path: string): Promise<string | undefined> {
 
 const NOTES_SLIDE_REL =
   'http://schemas.openxmlformats.org/officeDocument/2006/relationships/notesSlide'
+const COMMENTS_REL = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments'
+const COMMENT_AUTHORS_PATH = 'ppt/commentAuthors.xml'
+
+/** the .rels part that belongs to a package part */
+function relsPathFor(partPath: string): string {
+  const slash = partPath.lastIndexOf('/')
+  return `${partPath.slice(0, slash)}/_rels/${partPath.slice(slash + 1)}.rels`
+}
 
 async function notesXmlForSlide(zip: JSZip, slidePath: string): Promise<string | undefined> {
-  const slash = slidePath.lastIndexOf('/')
-  const relsPath = `${slidePath.slice(0, slash)}/_rels/${slidePath.slice(slash + 1)}.rels`
-  const relsXml = await zipText(zip, relsPath)
+  const relsXml = await zipText(zip, relsPathFor(slidePath))
   if (!relsXml) return undefined
   const doc = manifestParser.parse(relsXml) as {
     Relationships?: { Relationship?: Record<string, string> | Record<string, string>[] }
@@ -124,6 +130,108 @@ function notesParagraphs(notesXml: string): string[] {
     collectParagraphs(parser.parse(m[0]), out)
   }
   return out
+}
+
+const commentParser = new XMLParser({
+  ignoreAttributes: false,
+  attributeNamePrefix: '@_',
+  trimValues: false,
+  parseTagValue: false,
+  removeNSPrefix: true,
+  isArray: (_name, jPath) => jPath === 'cmLst.cm' || jPath === 'cmAuthorLst.cmAuthor',
+})
+
+/**
+ * A comments/author part is optional decoration on a deck. Missing, malformed or
+ * unreadable parts just mean there is nothing to add, never a failed attachment.
+ */
+function parseCommentPart(xml: string | undefined): unknown {
+  if (xml === undefined) return undefined
+  try {
+    if (XMLValidator.validate(xml) !== true) return undefined
+    return commentParser.parse(xml)
+  } catch {
+    return undefined
+  }
+}
+
+interface SlideCommentLine {
+  author: string
+  dt: string
+  text: string
+}
+
+/** author table shared by every comments part; a missing table leaves ids unresolved */
+async function commentAuthors(zip: JSZip): Promise<Map<number, string>> {
+  const authors = new Map<number, string>()
+  let xml: string | undefined
+  try {
+    xml = await zipText(zip, COMMENT_AUTHORS_PATH)
+  } catch {
+    return authors
+  }
+  const doc = parseCommentPart(xml) as { cmAuthorLst?: { cmAuthor?: unknown } } | undefined
+  for (const entry of asArray(doc?.cmAuthorLst?.cmAuthor)) {
+    if (entry === null || typeof entry !== 'object') continue
+    const node = entry as Record<string, unknown>
+    const id = Number(node['@_id'])
+    if (!Number.isFinite(id)) continue
+    const name = node['@_name']
+    if (typeof name === 'string') authors.set(id, name)
+  }
+  return authors
+}
+
+async function commentsXmlForSlide(zip: JSZip, slidePath: string): Promise<string | undefined> {
+  try {
+    const relsXml = await zipText(zip, relsPathFor(slidePath))
+    if (!relsXml) return undefined
+    const doc = manifestParser.parse(relsXml) as {
+      Relationships?: { Relationship?: Record<string, string> | Record<string, string>[] }
+    }
+    for (const rel of asArray(doc.Relationships?.Relationship)) {
+      if (String(rel['@_Type'] ?? '') !== COMMENTS_REL) continue
+      if (String(rel['@_TargetMode'] ?? '').toLowerCase() === 'external') continue
+      const target = String(rel['@_Target'] ?? '')
+      return target ? await zipText(zip, resolveTarget(slidePath, target)) : undefined
+    }
+    return undefined
+  } catch {
+    return undefined
+  }
+}
+
+async function slideCommentsForSlide(
+  zip: JSZip,
+  slidePath: string,
+  authors: Map<number, string>,
+): Promise<SlideCommentLine[]> {
+  const doc = parseCommentPart(await commentsXmlForSlide(zip, slidePath)) as
+    { cmLst?: { cm?: unknown } } | undefined
+  const out: SlideCommentLine[] = []
+  for (const entry of asArray(doc?.cmLst?.cm)) {
+    if (entry === null || typeof entry !== 'object') continue
+    const node = entry as Record<string, unknown>
+    const authorId = Number(node['@_authorId'])
+    const known = Number.isFinite(authorId) ? authors.get(authorId) : undefined
+    const text = node['text']
+    out.push({
+      author: known && known.trim() ? known : 'Unknown author',
+      dt: typeof node['@_dt'] === 'string' ? node['@_dt'] : '',
+      text: typeof text === 'string' ? text : '',
+    })
+  }
+  return out
+}
+
+function commentLines(comments: SlideCommentLine[]): string[] {
+  if (comments.length === 0) return []
+  return [
+    '### Comments',
+    ...comments.map((c) =>
+      c.dt ? `- ${c.author} (${c.dt}): ${c.text}` : `- ${c.author}: ${c.text}`,
+    ),
+  ]
 }
 
 /**
@@ -209,7 +317,12 @@ interface SlideSection {
   pictures: number
 }
 
-function slideSection(heading: string, xml: string, notesXml?: string): SlideSection {
+function slideSection(
+  heading: string,
+  xml: string,
+  notesXml?: string,
+  comments: SlideCommentLine[] = [],
+): SlideSection {
   // withheld runs become their {{label}} marker before anything reads the part;
   // a mark that cannot be processed throws, so the deck fails instead of leaking
   xml = redactPptxPartXml(xml)
@@ -218,17 +331,17 @@ function slideSection(heading: string, xml: string, notesXml?: string): SlideSec
   const paras: string[] = []
   collectParagraphs(tree, paras)
   const notes = notesXml ? notesParagraphs(notesXml) : []
-  const notesBlock = notes.length > 0 ? ['### Notes', ...notes] : []
+  const extras = [...(notes.length > 0 ? ['### Notes', ...notes] : []), ...commentLines(comments)]
   if (paras.length > 0)
     return {
-      section: [heading, ...paras, ...notesBlock].join('\n'),
+      section: [heading, ...paras, ...extras].join('\n'),
       hasText: true,
       pictures: 0,
     }
   const pictures = countPictures(tree)
   const note = `[picture-only slide: ${pictures} image${pictures === 1 ? '' : 's'}, no extractable text]`
-  const lines = [heading, ...(pictures > 0 ? [note] : []), ...notesBlock]
-  return { section: lines.join('\n'), hasText: notes.length > 0, pictures }
+  const lines = [heading, ...(pictures > 0 ? [note] : []), ...extras]
+  return { section: lines.join('\n'), hasText: notes.length > 0 || comments.length > 0, pictures }
 }
 
 function joinSections(sections: SlideSection[]): string {
@@ -246,13 +359,21 @@ export async function pptxToText(bytes: Uint8Array): Promise<string> {
   const zip = await JSZip.loadAsync(bytes)
   assertZipWithinLimits(zip)
   const slideEntries = await presentationSlideEntries(zip)
+  const authors = await commentAuthors(zip)
   const sections: SlideSection[] = []
   if (slideEntries) {
     for (const [index, path] of slideEntries.entries()) {
       if (path === null) continue
       const xml = await zipText(zip, path)
       if (!xml) continue
-      sections.push(slideSection(`## Slide ${index + 1}`, xml, await notesXmlForSlide(zip, path)))
+      sections.push(
+        slideSection(
+          `## Slide ${index + 1}`,
+          xml,
+          await notesXmlForSlide(zip, path),
+          await slideCommentsForSlide(zip, path, authors),
+        ),
+      )
     }
     return joinSections(sections)
   }
@@ -260,7 +381,12 @@ export async function pptxToText(bytes: Uint8Array): Promise<string> {
     const xml = await zipText(zip, path)
     if (!xml) continue
     sections.push(
-      slideSection(`## Slide ${slideNumber(path)}`, xml, await notesXmlForSlide(zip, path)),
+      slideSection(
+        `## Slide ${slideNumber(path)}`,
+        xml,
+        await notesXmlForSlide(zip, path),
+        await slideCommentsForSlide(zip, path, authors),
+      ),
     )
   }
   return joinSections(sections)

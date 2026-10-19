@@ -390,6 +390,112 @@ describe('parseFileToText: pptx', () => {
     )
   })
 
+  function commentsRelationship(target: string): string {
+    return (
+      '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+      `<Relationship Id="rId3" Target="${target}" ` +
+      'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments"/>' +
+      '</Relationships>'
+    )
+  }
+
+  function commentAuthorsXml(authors: { id: number; name: string }[]): string {
+    return (
+      '<p:cmAuthorLst xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">' +
+      authors
+        .map((a) => `<p:cmAuthor id="${a.id}" name="${a.name}" initials="" lastIdx="0"/>`)
+        .join('') +
+      '</p:cmAuthorLst>'
+    )
+  }
+
+  function commentsXml(comments: { authorId: number; dt?: string; text: string }[]): string {
+    return (
+      '<p:cmLst xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">' +
+      comments
+        .map(
+          (c) =>
+            `<p:cm authorId="${c.authorId}" dt="${c.dt ?? ''}" idx="1">` +
+            `<p:pos x="10" y="10"/><p:text>${c.text}</p:text></p:cm>`,
+        )
+        .join('') +
+      '</p:cmLst>'
+    )
+  }
+
+  it('appends slide comments with their author and timestamp', async () => {
+    const zip = await presentationFixture(
+      "<p:sldId id='256' r:id='rId1'/><p:sldId id='257' r:id='rId2'/>",
+      slideRelationship('rId1', 'slides/slide1.xml') +
+        slideRelationship('rId2', 'slides/slide2.xml'),
+    )
+    zip.file('ppt/commentAuthors.xml', commentAuthorsXml([{ id: 0, name: 'Alice' }]))
+    zip.file('ppt/slides/_rels/slide1.xml.rels', commentsRelationship('../comments/comment1.xml'))
+    zip.file(
+      'ppt/comments/comment1.xml',
+      commentsXml([
+        { authorId: 0, dt: '2026-10-19T09:30:00Z', text: 'Tighten the intro' },
+        { authorId: 0, dt: '', text: 'Keep the chart' },
+      ]),
+    )
+    expect(await pptxToText(await zip.generateAsync({ type: 'uint8array' }))).toBe(
+      '## Slide 1\nProductIntro\nFirst slide subtitle\n### Comments\n' +
+        '- Alice (2026-10-19T09:30:00Z): Tighten the intro\n- Alice: Keep the chart' +
+        '\n\n## Slide 2\nMarket Analysis\nOrder 0042',
+    )
+  })
+
+  it('counts comments as text on a slide that otherwise only holds pictures', async () => {
+    const zip = new JSZip()
+    zip.file(
+      'ppt/slides/slide1.xml',
+      '<p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">' +
+        '<p:cSld><p:spTree><p:pic/></p:spTree></p:cSld></p:sld>',
+    )
+    zip.file('ppt/slides/_rels/slide1.xml.rels', commentsRelationship('../comments/comment1.xml'))
+    zip.file(
+      'ppt/comments/comment1.xml',
+      commentsXml([{ authorId: 0, dt: '', text: 'Check the chart' }]),
+    )
+    zip.file('ppt/commentAuthors.xml', commentAuthorsXml([{ id: 0, name: 'Bob' }]))
+    const text = await pptxToText(await zip.generateAsync({ type: 'uint8array' }))
+    expect(text).toBe(
+      '## Slide 1\n[picture-only slide: 1 image, no extractable text]\n### Comments\n- Bob: Check the chart',
+    )
+    expect(text).not.toContain('No extractable text')
+  })
+
+  it('names a comment Unknown author when the author table is missing', async () => {
+    const zip = await presentationFixture(
+      '<p:sldId id="256" r:id="rId1"/>',
+      slideRelationship('rId1', 'slides/slide1.xml'),
+    )
+    zip.file('ppt/slides/_rels/slide1.xml.rels', commentsRelationship('../comments/comment1.xml'))
+    zip.file(
+      'ppt/comments/comment1.xml',
+      commentsXml([{ authorId: 7, dt: '2026-10-19T09:30:00Z', text: 'Look here' }]),
+    )
+    expect(await pptxToText(await zip.generateAsync({ type: 'uint8array' }))).toBe(
+      '## Slide 1\nProductIntro\nFirst slide subtitle\n### Comments\n' +
+        '- Unknown author (2026-10-19T09:30:00Z): Look here',
+    )
+  })
+
+  it('skips a broken comments part instead of failing the deck', async () => {
+    const zip = await presentationFixture(
+      "<p:sldId id='256' r:id='rId1'/><p:sldId id='257' r:id='rId2'/>",
+      slideRelationship('rId1', 'slides/slide1.xml') +
+        slideRelationship('rId2', 'slides/slide2.xml'),
+    )
+    zip.file('ppt/slides/_rels/slide1.xml.rels', commentsRelationship('../comments/comment1.xml'))
+    zip.file('ppt/comments/comment1.xml', '<p:cmLst><p:cm authorId="0"><p:text>unterminated')
+    const text = await pptxToText(await zip.generateAsync({ type: 'uint8array' }))
+    expect(text).toBe(
+      '## Slide 1\nProductIntro\nFirst slide subtitle\n\n## Slide 2\nMarket Analysis\nOrder 0042',
+    )
+    expect(text).not.toContain('### Comments')
+  })
+
   it('follows presentation order with positional numbering and excludes orphan slides', async () => {
     const zip = await presentationFixture(
       "<p:sldId id='265' r:id='rId10'/><p:sldId id='256' r:id='rId1'/>",
