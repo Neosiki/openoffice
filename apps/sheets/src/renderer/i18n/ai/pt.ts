@@ -79,6 +79,8 @@ export const pt = {
   aiToolReadFile: 'Ler {name}',
   aiToolWebSearch: 'Pesquisa na web',
   aiToolWebSearchDone: 'Pesquisou "{query}" ({count} resultados)',
+  aiToolReadUrl: 'Ler página web',
+  aiToolReadUrlDone: 'Leitura de {host} ({chars} caracteres)',
   aiToolFindCells: 'Procurar células',
   aiToolFindCellsOf: 'Pesquisou "{query}" ({count} correspondências)',
   aiToolFindErrors: 'Verificação de erros de fórmula ({count})',

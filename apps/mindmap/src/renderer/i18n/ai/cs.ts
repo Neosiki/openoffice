@@ -54,6 +54,8 @@ export const cs = {
   aiToolWriteMapFailed: 'Mapu se nepodařilo zapsat',
   aiToolWebSearch: 'Hledání na webu',
   aiToolWebSearchDone: 'Hledáno „{query}“ · {count} výsledků',
+  aiToolReadUrl: 'Čtení webové stránky',
+  aiToolReadUrlDone: 'Přečteno {host} · {chars} znaků',
   aiSumReadAttachment: 'Čtení přílohy',
   aiSumImageAttachment: 'Obrázková příloha {name}',
   aiSumReadAttachmentName: 'Čtení přílohy {name}',

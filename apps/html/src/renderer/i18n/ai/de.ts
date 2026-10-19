@@ -49,6 +49,8 @@ export const de = {
   aiTimeoutError: 'Zeitüberschreitung der KI-Antwort',
   aiToolWebSearch: 'Websuche',
   aiToolWebSearchDone: '„{query}" gesucht · {count} Treffer',
+  aiToolReadUrl: 'Webseite lesen',
+  aiToolReadUrlDone: '{host} gelesen · {chars} Zeichen',
   aiTruncatedNote:
     '(Die Antwort wurde durch das Längenlimit abgeschnitten und ist möglicherweise unvollständig.)',
   aiTurnLimit: 'Schrittlimit pro Lauf erreicht — senden Sie eine weitere Anweisung.',

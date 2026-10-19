@@ -78,6 +78,8 @@ export const hi = {
   aiToolReadFile: '{name} पढ़ें',
   aiToolWebSearch: 'वेब खोज',
   aiToolWebSearchDone: '"{query}" खोजा गया ({count} परिणाम)',
+  aiToolReadUrl: 'वेब पेज पढ़ें',
+  aiToolReadUrlDone: '{host} पढ़ा ({chars} अक्षर)',
   aiToolFindCells: 'सेल खोजें',
   aiToolFindCellsOf: '"{query}" खोजा गया ({count} मिलान)',
   aiToolFindErrors: 'सूत्र त्रुटियों की जाँच ({count})',

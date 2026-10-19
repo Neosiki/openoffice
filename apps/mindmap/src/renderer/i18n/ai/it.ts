@@ -56,6 +56,8 @@ export const it = {
   aiToolWriteMapFailed: 'Impossibile scrivere la mappa',
   aiToolWebSearch: 'Ricerca web',
   aiToolWebSearchDone: 'Cercato "{query}" · {count} risultati',
+  aiToolReadUrl: 'Lettura pagina web',
+  aiToolReadUrlDone: 'Letto {host} · {chars} caratteri',
   aiSumReadAttachment: 'Lettura allegato',
   aiSumImageAttachment: 'Immagine allegata {name}',
   aiSumReadAttachmentName: 'Lettura allegato {name}',

@@ -79,6 +79,8 @@ export const nl = {
   aiToolReadFile: '{name} lezen',
   aiToolWebSearch: 'Zoeken op internet',
   aiToolWebSearchDone: 'Gezocht naar "{query}" ({count} resultaten)',
+  aiToolReadUrl: 'Webpagina lezen',
+  aiToolReadUrlDone: '{host} gelezen ({chars} tekens)',
   aiToolFindCells: 'Cellen zoeken',
   aiToolFindCellsOf: 'Gezocht naar "{query}" ({count} overeenkomsten)',
   aiToolFindErrors: 'Formulefouten gescand ({count})',

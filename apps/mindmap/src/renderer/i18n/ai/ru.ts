@@ -54,6 +54,8 @@ export const ru = {
   aiToolWriteMapFailed: 'Не удалось записать карту',
   aiToolWebSearch: 'Веб-поиск',
   aiToolWebSearchDone: 'Поиск «{query}» · {count} результатов',
+  aiToolReadUrl: 'Чтение веб-страницы',
+  aiToolReadUrlDone: 'Прочитано {host} · {chars} символов',
   aiSumReadAttachment: 'Чтение вложения',
   aiSumImageAttachment: 'Вложенное изображение {name}',
   aiSumReadAttachmentName: 'Чтение вложения {name}',

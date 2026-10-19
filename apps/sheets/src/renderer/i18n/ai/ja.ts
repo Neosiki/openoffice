@@ -77,6 +77,8 @@ export const ja = {
   aiToolReadFile: '{name} を読み取り',
   aiToolWebSearch: 'ウェブ検索',
   aiToolWebSearchDone: '「{query}」を検索（{count} 件）',
+  aiToolReadUrl: 'ウェブページの読み取り',
+  aiToolReadUrlDone: '{host} を読み取り（{chars} 文字）',
   aiToolFindCells: 'セルを検索',
   aiToolFindCellsOf: '「{query}」を検索（{count} 件一致）',
   aiToolFindErrors: '数式エラーをスキャン（{count} 件）',
