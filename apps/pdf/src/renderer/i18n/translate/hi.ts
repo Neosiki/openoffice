@@ -80,4 +80,8 @@ export const hi = {
   trPageNotEditable: 'उसका पाठ संपादित नहीं किया जा सकता',
   trPageVertical: 'खड़ा या घुमाया हुआ पाठ',
   trPageToc: 'छपी हुई विषय-सूची',
+  trFormatStore: 'केवल सहेजें (कोई फ़ाइल नहीं)',
+  trRestartEditedCount: '{count} अनुच्छेद किसी व्यक्ति ने संपादित किए हैं।',
+  trRestartDiscardEdited: 'व्यक्ति द्वारा संपादित {count} अनुच्छेद भी हटाएँ',
+  trRestartKeepEdited: 'संपादित अनुच्छेद रखें',
 } satisfies Record<keyof typeof zh, string>

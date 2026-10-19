@@ -191,6 +191,11 @@ const REASON_KEYS: Record<string, StringKey> = {
   'no-position': 'trReasonNoPosition',
 }
 
+/** why a block stayed in the source language, in words */
+export function untranslatedReasonText(reason: string, t: TFunc): string {
+  return t(REASON_KEYS[reason] ?? 'trReasonOther')
+}
+
 const PAGE_REASON_KEYS: Record<string, StringKey> = {
   'ocr-unavailable': 'trPageOcr',
   'scanned-no-text': 'trPageScannedNoText',

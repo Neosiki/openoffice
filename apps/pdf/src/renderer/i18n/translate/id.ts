@@ -81,4 +81,8 @@ export const id = {
   trPageNotEditable: 'teksnya tidak bisa diedit',
   trPageVertical: 'teks vertikal atau diputar',
   trPageToc: 'daftar isi cetak',
+  trFormatStore: 'Simpan saja (tanpa file)',
+  trRestartEditedCount: '{count} paragraf disunting oleh seseorang.',
+  trRestartDiscardEdited: 'Hapus juga {count} paragraf yang disunting seseorang',
+  trRestartKeepEdited: 'Pertahankan paragraf yang disunting',
 } satisfies Record<keyof typeof zh, string>

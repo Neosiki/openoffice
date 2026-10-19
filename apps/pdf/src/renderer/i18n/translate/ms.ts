@@ -80,4 +80,8 @@ export const ms = {
   trPageNotEditable: 'teksnya tidak boleh diedit',
   trPageVertical: 'teks menegak atau berputar',
   trPageToc: 'jadual kandungan bercetak',
+  trFormatStore: 'Simpan sahaja (tiada fail)',
+  trRestartEditedCount: '{count} perenggan telah disunting oleh seseorang.',
+  trRestartDiscardEdited: 'Padam juga {count} perenggan yang disunting oleh seseorang',
+  trRestartKeepEdited: 'Kekalkan perenggan yang disunting',
 } satisfies Record<keyof typeof zh, string>

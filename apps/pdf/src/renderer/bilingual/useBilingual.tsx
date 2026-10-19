@@ -11,8 +11,9 @@
  * pointer over the source text of a block highlights that block's paragraph.
  * Blocks without boxes (AI-read pages) only keep their order.
  *
- * Task T7 plugs its actions into `slots` and calls `refresh` after it wrote
- * to the store. Nothing here sends anything or writes to the store.
+ * The actions (./BilingualActions) plug into `slots` and call `refresh`
+ * after they wrote to the store. Nothing here sends anything or writes to
+ * the store.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { PointerEvent as ReactPointerEvent, ReactNode, RefObject } from 'react'
@@ -226,24 +227,28 @@ export function useBilingual(o: UseBilingualOptions): BilingualView {
 
   const t = o.t
   const bar = enabled ? (
-    <BilingualBar
-      load={data.load}
-      lang={data.lang}
-      storedLangs={data.storedLangs}
-      uiLang={o.uiLang}
-      fontSize={fontSize}
-      unsavedPageEdits={o.unsavedPageEdits}
-      askCollapse={askCollapse}
-      t={t}
-      onLang={data.setLang}
-      onFontSize={onFontSize}
-      onCollapse={() => {
-        setCollapsed(true)
-        setAskCollapse(false)
-      }}
-      onDismissCollapse={() => setAskCollapse(false)}
-      onClose={o.onClose}
-    />
+    <>
+      <BilingualBar
+        load={data.load}
+        lang={data.lang}
+        storedLangs={data.storedLangs}
+        uiLang={o.uiLang}
+        fontSize={fontSize}
+        unsavedPageEdits={o.unsavedPageEdits}
+        askCollapse={askCollapse}
+        t={t}
+        onLang={data.setLang}
+        onFontSize={onFontSize}
+        onCollapse={() => {
+          setCollapsed(true)
+          setAskCollapse(false)
+        }}
+        onDismissCollapse={() => setAskCollapse(false)}
+        onClose={o.onClose}
+        actions={o.slots?.barActions?.(data)}
+      />
+      {o.slots?.barPanel?.(data)}
+    </>
   ) : null
 
   const column = (row: readonly number[], rowIdx: number): ReactNode => {

@@ -81,4 +81,8 @@ export const cs = {
   trPageNotEditable: 'její text nelze upravit',
   trPageVertical: 'svislý nebo otočený text',
   trPageToc: 'tištěný obsah',
+  trFormatStore: 'Jen uložit (bez souboru)',
+  trRestartEditedCount: 'Počet odstavců upravených člověkem: {count}.',
+  trRestartDiscardEdited: 'Smazat i odstavce upravené člověkem ({count})',
+  trRestartKeepEdited: 'Ponechat upravené odstavce',
 } satisfies Record<keyof typeof zh, string>

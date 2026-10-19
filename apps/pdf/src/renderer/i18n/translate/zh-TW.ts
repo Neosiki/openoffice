@@ -76,4 +76,8 @@ export const zhTW = {
   trPageNotEditable: '文字無法編輯',
   trPageVertical: '直排或旋轉的文字',
   trPageToc: '印刷的目錄頁',
+  trFormatStore: '僅保存（不產生檔案）',
+  trRestartEditedCount: '有 {count} 個段落經人工修改。',
+  trRestartDiscardEdited: '連同人工修改的 {count} 個段落一起刪除',
+  trRestartKeepEdited: '保留修改過的段落',
 } satisfies Record<keyof typeof zh, string>

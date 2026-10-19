@@ -80,4 +80,8 @@ export const it = {
   trPageNotEditable: 'il suo testo non è modificabile',
   trPageVertical: 'testo verticale o ruotato',
   trPageToc: 'indice stampato',
+  trFormatStore: 'Solo conservare (nessun file)',
+  trRestartEditedCount: '{count} paragrafi sono stati modificati da una persona.',
+  trRestartDiscardEdited: 'Elimina anche i {count} paragrafi modificati da una persona',
+  trRestartKeepEdited: 'Mantieni i paragrafi modificati',
 } satisfies Record<keyof typeof zh, string>

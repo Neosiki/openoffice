@@ -75,4 +75,8 @@ export const zh = {
   trPageNotEditable: '文字无法编辑',
   trPageVertical: '竖排或旋转的文字',
   trPageToc: '印刷的目录页',
+  trFormatStore: '仅保存（不生成文件）',
+  trRestartEditedCount: '有 {count} 个段落经人工修改。',
+  trRestartDiscardEdited: '连同人工修改的 {count} 个段落一起删除',
+  trRestartKeepEdited: '保留修改过的段落',
 }

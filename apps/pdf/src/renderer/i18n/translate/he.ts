@@ -76,4 +76,8 @@ export const he = {
   trPageNotEditable: 'אי אפשר לערוך את הטקסט שלו',
   trPageVertical: 'טקסט אנכי או מסובב',
   trPageToc: 'תוכן עניינים מודפס',
+  trFormatStore: 'שמירה בלבד (ללא קובץ)',
+  trRestartEditedCount: 'מספר הפסקאות שנערכו בידי אדם: {count}.',
+  trRestartDiscardEdited: 'למחוק גם את הפסקאות שנערכו בידי אדם ({count})',
+  trRestartKeepEdited: 'להשאיר את הפסקאות הערוכות',
 } satisfies Record<keyof typeof zh, string>
