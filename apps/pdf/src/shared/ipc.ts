@@ -84,6 +84,7 @@ export const PDF_CHANNELS = {
   addSignature: 'pdf:add-signature',
   removeSignature: 'pdf:remove-signature',
   getUsername: 'pdf:get-username',
+  annotSubjects: 'pdf:annot-subjects',
   dirtyChanged: 'pdf:dirty-changed',
   closeSaveRequest: 'pdf:close-save-request',
   closeSaveResult: 'pdf:close-save-result',
@@ -336,6 +337,20 @@ export interface MarkupInput {
   /** rgb normalized to 0-1 */
   color: [number, number, number]
   quads: number[][]
+  /**
+   * The category of an accepted AI highlight, saved as /Subj (reading-assist
+   * spec 5.7). Absent: the markup saves exactly as it did before the field.
+   */
+  subject?: string
+}
+
+/** a markup annotation's /Subj in the file (an accepted AI highlight's category) */
+export interface PdfAnnotSubject {
+  /** 0-based original page */
+  pageIndex: number
+  /** PDF object number (pdf.js annotation id "123R" → 123) */
+  objNum: number
+  subj: string
 }
 
 /** Delete an annotation already saved in the file. Object number is only a lookup
@@ -1458,6 +1473,8 @@ export interface PdfApi {
   removeSavedSignature(id: string): Promise<SavedSignature[]>
   /** OS account name, used as the default author of new note comments; '' when unavailable */
   getUsername(): Promise<string>
+  /** The /Subj of the markup annotations in a granted file (accepted AI highlights' categories) */
+  annotSubjects(path: string): Promise<PdfAnnotSubject[]>
   /** Mirror unsaved-changes state to the main process; drives the save prompt before closing a tab/window */
   setDirty(dirty: boolean): void
   /** Main process asks for a save (close prompt, menu Save, export flows) and waits for sendCloseSaveResult.

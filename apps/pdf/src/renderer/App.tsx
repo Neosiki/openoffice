@@ -1,4 +1,13 @@
-import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import {
+  Fragment,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from 'react'
 import { handlePdfControl, type ControlRequest } from './control'
 import type { CSSProperties, MouseEvent as ReactMouseEvent } from 'react'
 // legacy build: the modern build relies on new APIs like Math.sumPrecise that the current
@@ -155,6 +164,20 @@ import { labelWithKey, selectionBarKey, type SelectionBarAction } from './readin
 import { AnnotPanelHost } from './annot-panel/AnnotPanelHost'
 import { AnnotFlash, useAnnotFlash } from './annot-panel/AnnotFlash'
 import { activateAnnotItem, type AnnotItem } from './annot-panel/items'
+import { AiHighlights, type AiHighlightsHandle } from './highlight/AiHighlights'
+import { HighlightPreviewLayer, IconHighlightPreview } from './highlight/HighlightPreview'
+import { suggestionMarkup, type SuggestionView } from './highlight/locate'
+import {
+  HighlightPanelBar,
+  categoryFacet,
+  highlightItemActions,
+  suggestionDrafts,
+} from './highlight/panel'
+import {
+  loadHighlightPreview,
+  saveHighlightPreview,
+  useAiHighlights,
+} from './highlight/useAiHighlights'
 import { SignaturesDialog, overallSignatureStatus } from './SignaturesDialog'
 import { SignatureDialog, fileToCanvas } from './SignatureDialog'
 import type { SignatureData } from './SignatureDialog'
@@ -1646,6 +1669,10 @@ export default function App() {
   const quoteFlash = useQuoteFlash()
   const [passageMarks, setPassageMarks] = useState(loadPassageMarks)
   useEffect(() => savePassageMarks(passageMarks), [passageMarks])
+  // ── AI highlights: the start window's handle and the preview switch (screen only) ──
+  const highlightRef = useRef<AiHighlightsHandle | null>(null)
+  const [highlightPreview, setHighlightPreview] = useState(loadHighlightPreview)
+  useEffect(() => saveHighlightPreview(highlightPreview), [highlightPreview])
 
   useEffect(() => {
     if (
@@ -2411,6 +2438,19 @@ export default function App() {
     if (ocrPages.size === 0) return base
     return base.then((idx) => idx.map((entry, i) => ocrPages.get(i)?.entry ?? entry))
   }, [doc, ocrPages, searchIndexCache])
+
+  // AI highlight suggestions of the open file (reading the store and the text index only)
+  const aiHighlights = useAiHighlights({
+    filePath,
+    password: passwordRef.current,
+    ready: status === 'ready',
+    doc,
+    searchIndex: getSearchIndex,
+    confirmations: saveConfirmations,
+    preview: highlightPreview,
+    markupIds: markups.map((m) => m.id),
+    panelOpen: sidebar === 'notes',
+  })
 
   // Auto-OCR for scanned pages (issue #119): once the base index shows pages with
   // no extractable text, recognize them sequentially in the background, starting
@@ -4699,6 +4739,8 @@ export default function App() {
         ...snapshot.drawingIds,
         ...snapshot.markupIds,
       ]).catch(() => {})
+      // AI highlight suggestions under the saved file's hash (accepted ones now confirmed)
+      await aiHighlights.suggestions.load().catch(() => {})
       // the overview follows the saved file only when all its pages are still there
       await documentInsights.load().catch(() => {})
       // rebuild the side-by-side translation tree once the stored results moved to the
@@ -6969,6 +7011,38 @@ export default function App() {
       openCard: (id) => readingRef.current?.open(id),
     })
 
+  // ── AI highlights in the panel: accept adds a highlight in the label's color with the
+  // label as its category (saved as /Subj); "accepted" is written after a save writes it ──
+  const highlightSnap = useSyncExternalStore(
+    aiHighlights.suggestions.subscribe,
+    aiHighlights.suggestions.snapshot,
+  )
+  const highlightPending = highlightPreview ? aiHighlights.suggestions.pending() : []
+  const acceptSuggestions = (views: readonly SuggestionView[]) => {
+    if (readOnly) return
+    const ops: Op[] = []
+    const count = aiHighlights.suggestions.accept(views, (v) => {
+      const markup = suggestionMarkup(v)
+      if (!markup) return null
+      const id = newId()
+      ops.push({ op: 'addMarkup', id, markup })
+      return id
+    })
+    if (ops.length === 0) return
+    const plan = applyEditOps(ops)
+    if (plan.failures.length > 0) {
+      // nothing was added: the suggestions go back to pending
+      aiHighlights.suggestions.prune(new Set(markups.map((m) => m.id)))
+      return
+    }
+    showNotice(t('hlAcceptedNotice', { count }))
+  }
+  const dismissSuggestions = (views: readonly SuggestionView[]) => {
+    void aiHighlights.suggestions.dismiss(views).then((ok) => {
+      if (!ok) showNotice(t('hlDismissFailed'))
+    })
+  }
+
   const curOrigIdx = visList[currentPage - 1] ?? -1
 
   // ── unified popover dismissal: a press outside the guard roots, a window
@@ -7744,6 +7818,18 @@ export default function App() {
           </span>
           {t('rdUnderlines')}
         </button>
+        <button
+          className={`rb-big${highlightPreview ? ' active' : ''}`}
+          data-tip={t('hlPreviewTip')}
+          data-action="highlight-preview"
+          aria-pressed={highlightPreview}
+          onClick={() => setHighlightPreview((v) => !v)}
+        >
+          <span className="rb-big-icon">
+            <IconHighlightPreview />
+          </span>
+          {t('hlPreview')}
+        </button>
       </div>
     </div>
   )
@@ -7944,6 +8030,24 @@ export default function App() {
                       </span>
                     </span>
                     <span>{t('trButton')}</span>
+                  </button>
+                  <button
+                    className="rb-big ai-entry"
+                    data-tip={readOnly ? t('hlReadOnly') : t('hlButtonTip')}
+                    data-action="highlight-open"
+                    onClick={() => {
+                      // opens the start window only; a read-only document shows why it cannot start
+                      const answer = highlightRef.current?.requestOpen()
+                      if (answer && 'running' in answer) showNotice(t('arBusy', answer.running))
+                      else if (!answer || 'unavailable' in answer) showNotice(t('hlUnavailable'))
+                    }}
+                  >
+                    <span className="rb-big-icon">
+                      <span className="ai-feature-icon" aria-hidden="true">
+                        <IconHighlightPreview />
+                      </span>
+                    </span>
+                    <span>{t('hlButton')}</span>
                   </button>
                 </div>
               </div>
@@ -8820,6 +8924,7 @@ export default function App() {
             onStoredChange={() => setAiReadVersion((v) => v + 1)}
             onNotice={showNotice}
             onResumeTranslation={(job) => translateRef.current?.resume(job)}
+            onResumeHighlight={(job) => highlightRef.current?.resume(job)}
             languageName={(code) => languageName(code, lang)}
           />
           <PassageReading
@@ -8870,6 +8975,21 @@ export default function App() {
               const answer = aiReadRef.current?.requestOpen(null)
               if (answer && 'running' in answer) showNotice(t('arBusy', answer.running))
             }}
+          />
+          <AiHighlights
+            ref={highlightRef}
+            filePath={filePath || null}
+            password={passwordRef.current}
+            pageCount={sizes.length}
+            lang={lang}
+            t={t}
+            readOnly={readOnly}
+            dirty={dirty}
+            api={translateApi}
+            session={jobSession}
+            suggestions={aiHighlights.suggestions}
+            onRunEnded={() => setHighlightPreview(true)}
+            onNotice={showNotice}
           />
           {bilingual.bar}
           <div className="pdf-body">
@@ -8933,6 +9053,34 @@ export default function App() {
                 onActivate={activateAnnot}
                 onClose={() => setSidebar(null)}
                 onNotice={showNotice}
+                extraItems={suggestionDrafts(highlightPending, highlightSnap.run, t, (origIdx) => {
+                  const visIdx = visList.indexOf(origIdx)
+                  if (visIdx >= 0) scrollToPage(visIdx + 1)
+                })}
+                facets={[categoryFacet(t)]}
+                categoryOf={(m) => aiHighlights.subjects.get(m.objNum)}
+                toolbar={
+                  <HighlightPanelBar
+                    pending={highlightPending}
+                    run={highlightSnap.run}
+                    t={t}
+                    readOnly={readOnly}
+                    onAcceptLabel={(labelId) =>
+                      acceptSuggestions(highlightPending.filter((v) => v.label.id === labelId))
+                    }
+                    onDismissAll={() => dismissSuggestions(highlightPending)}
+                  />
+                }
+                renderItemActions={(item) =>
+                  highlightItemActions(item, {
+                    t,
+                    readOnly,
+                    viewOf: (key) => highlightPending.find((v) => v.key === key),
+                    onAccept: (view) => acceptSuggestions([view]),
+                    onDismiss: (view) => dismissSuggestions([view]),
+                    waitingSave: (markupId) => saveConfirmations.isPending(markupId),
+                  })
+                }
               />
             )}
             {sidebar === 'thumbs' && (
@@ -10134,6 +10282,14 @@ export default function App() {
                                   scale={scale}
                                   label={(excerpt) => t('rdOpenCard', { excerpt })}
                                   onOpen={(id, anchor) => readingRef.current?.open(id, anchor)}
+                                />
+                              )}
+                              {highlightPreview && (
+                                <HighlightPreviewLayer
+                                  suggestions={aiHighlights.suggestions}
+                                  origIdx={origIdx}
+                                  geom={geom}
+                                  scale={scale}
                                 />
                               )}
                               {annotFlash?.origIdx === origIdx && (
