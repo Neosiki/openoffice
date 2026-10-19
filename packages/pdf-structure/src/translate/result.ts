@@ -113,7 +113,9 @@ function collect(tree: DocumentTree, lang: string, stored: StoredTranslation | n
     const entry = stored?.blocks.get(blockKeyString(keys[i]!))
     if (!entry) pending++
     else if (entry.status === 'translated' && entry.text !== undefined) {
-      translations.set(unit.key, entry.runs ?? [{ kind: 'text', text: entry.text }])
+      // a person's edit is plain text and always wins over marks
+      const plain: InlineRun[] = [{ kind: 'text', text: entry.text }]
+      translations.set(unit.key, entry.edited ? plain : (entry.runs ?? plain))
     } else {
       untranslated.push({
         unitKey: unit.key,
