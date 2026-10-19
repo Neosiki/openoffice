@@ -58,6 +58,10 @@ export interface Session {
    *  snapshot of `path` this deck last read or wrote. Recorded at open and
    *  after every successful save. */
   diskState?: SaveDiskState
+  /** The deck was opened from a password-protected file: every write of it
+   *  (save, Save As, recovery copy, AI draft) is re-encrypted with this
+   *  password. Held in memory only. */
+  password?: string
   /** Nested history transaction used to collapse an AI tool/run into one undo step. */
   historyBatch?: {
     depth: number
