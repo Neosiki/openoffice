@@ -30,7 +30,7 @@ Log masuk disimpan pada PC ini, disulitkan dengan perlindungan yang Windows sedi
 - Selagi **Benarkan AI mencari dan membaca fail dalam Drive** dihidupkan (ia hidup selepas disambungkan), AI dalam setiap editor boleh mencari Drive anda dan membaca fail. Contohnya: "Cari minit mesyuarat bulan lepas dalam Drive dan ringkaskan."
 - Apa yang dibaca AI dihantar kepada penyedia AI yang anda gunakan. Bahagian yang disembunyikan daripada AI kekal tersembunyi.
 - AI tidak boleh mengubah, memadam atau berkongsi fail Drive.
-- Sebaik sahaja sesuatu yang dibaca daripada Drive ada dalam sembang, carian web, carian imej dan gambar melalui alamat web berhenti berfungsi dalam sembang itu. Mulakan sembang baharu untuk menggunakannya semula.
+- Sebaik sahaja sesuatu yang dibaca daripada Drive ada dalam sembang, carian web, carian imej pembacaan halaman melalui alamat web dan gambar melalui alamat web berhenti berfungsi dalam sembang itu. Mulakan sembang baharu untuk menggunakannya semula.
 
 ## Memutuskan sambungan
 

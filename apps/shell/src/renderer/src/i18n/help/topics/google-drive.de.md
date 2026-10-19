@@ -30,7 +30,7 @@ Die Anmeldung wird auf diesem PC gespeichert und mit dem Schutz verschlüsselt, 
 - Solange **KI darf Dateien in Drive suchen und lesen** aktiviert ist (nach dem Verbinden ist es das), kann die KI in jedem Editor Ihr Drive durchsuchen und Dateien lesen. Zum Beispiel: „Such im Drive das Besprechungsprotokoll vom letzten Monat und fass es zusammen.“
 - Was die KI liest, geht an den KI-Anbieter, den Sie nutzen. Vor der KI verborgene Teile bleiben verborgen.
 - Die KI kann Drive-Dateien nicht ändern, löschen oder freigeben.
-- Sobald ein Chat etwas aus Drive Gelesenes enthält, funktionieren Websuche, Bildsuche und Bilder per Webadresse in diesem Chat nicht mehr. Starten Sie einen neuen Chat, um sie wieder zu nutzen.
+- Sobald ein Chat etwas aus Drive Gelesenes enthält, funktionieren Websuche, Bildsuche , das Lesen von Seiten per Webadresse und Bilder per Webadresse in diesem Chat nicht mehr. Starten Sie einen neuen Chat, um sie wieder zu nutzen.
 
 ## Trennen
 

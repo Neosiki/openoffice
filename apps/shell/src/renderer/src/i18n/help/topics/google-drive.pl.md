@@ -30,7 +30,7 @@ Logowanie jest przechowywane na tym komputerze i zaszyfrowane ochroną, którą 
 - Dopóki opcja **Pozwól AI wyszukiwać i czytać pliki na Dysku** jest włączona (włącza się po połączeniu), AI w każdym edytorze może przeszukiwać Dysk i czytać pliki. Na przykład: „Znajdź na Dysku notatki ze spotkania z zeszłego miesiąca i streść je”.
 - To, co przeczyta AI, trafia do używanego dostawcy AI. Części ukryte przed AI pozostają ukryte.
 - AI nie może zmieniać, usuwać ani udostępniać plików na Dysku.
-- Gdy rozmowa zawiera coś przeczytanego z Dysku, wyszukiwanie w sieci, wyszukiwanie obrazów i obrazy z adresu internetowego przestają działać w tej rozmowie. Zacznij nową rozmowę, aby znów z nich korzystać.
+- Gdy rozmowa zawiera coś przeczytanego z Dysku, wyszukiwanie w sieci, wyszukiwanie obrazów , czytanie stron z adresu internetowego i obrazy z adresu internetowego przestają działać w tej rozmowie. Zacznij nową rozmowę, aby znów z nich korzystać.
 
 ## Rozłączanie
 

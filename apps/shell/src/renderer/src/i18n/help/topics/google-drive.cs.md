@@ -30,7 +30,7 @@ Přihlášení se uloží v tomto počítači a zašifruje ochranou, kterou Wind
 - Dokud je zapnuto **Nechat AI vyhledávat a číst soubory na Disku** (po připojení je zapnuto), AI v každém editoru může prohledávat Disk a číst soubory. Například: „Najdi na Disku zápis z porady za minulý měsíc a shrň ho.“
 - Co AI přečte, odchází poskytovateli AI, kterého používáte. Části skryté před AI zůstávají skryté.
 - AI nemůže soubory na Disku měnit, mazat ani sdílet.
-- Jakmile konverzace obsahuje něco přečteného z Disku, přestane v ní fungovat vyhledávání na webu, vyhledávání obrázků a obrázky z webové adresy. Chcete-li je znovu použít, začněte novou konverzaci.
+- Jakmile konverzace obsahuje něco přečteného z Disku, přestane v ní fungovat vyhledávání na webu, vyhledávání obrázků , čtení stránek z webové adresy a obrázky z webové adresy. Chcete-li je znovu použít, začněte novou konverzaci.
 
 ## Odpojení
 

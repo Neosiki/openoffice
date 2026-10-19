@@ -30,7 +30,7 @@ L'accesso è conservato su questo PC, cifrato con la protezione che Windows forn
 - Finché **Consenti all'IA di trovare e leggere i file in Drive** è attivo (lo è dopo il collegamento), l'IA di ogni editor può cercare nel tuo Drive e leggere i file. Ad esempio: "Trova su Drive il verbale della riunione del mese scorso e riassumilo."
 - Ciò che l'IA legge va al fornitore di IA che usi. Le parti nascoste all'IA restano nascoste.
 - L'IA non può modificare, eliminare né condividere i file di Drive.
-- Quando una chat contiene qualcosa letto da Drive, la ricerca web, la ricerca di immagini e le immagini tramite indirizzo web smettono di funzionare in quella chat. Avvia una nuova chat per usarle di nuovo.
+- Quando una chat contiene qualcosa letto da Drive, la ricerca web, la ricerca di immagini , la lettura di pagine tramite indirizzo web e le immagini tramite indirizzo web smettono di funzionare in quella chat. Avvia una nuova chat per usarle di nuovo.
 
 ## Scollegare
 
