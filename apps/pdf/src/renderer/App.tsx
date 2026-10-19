@@ -147,6 +147,9 @@ import { afterReadingSave, usePassageCards } from './reading/usePassageCards'
 import { passageSelectionOf, selectionEnd, type PassageFollowUp } from './reading/passage-cards'
 import { readPageText } from './reading/passage-text'
 import { labelWithKey, selectionBarKey, type SelectionBarAction } from './reading/shortcuts'
+import { AnnotPanelHost } from './annot-panel/AnnotPanelHost'
+import { AnnotFlash, useAnnotFlash } from './annot-panel/AnnotFlash'
+import { activateAnnotItem, type AnnotItem } from './annot-panel/items'
 import { SignaturesDialog, overallSignatureStatus } from './SignaturesDialog'
 import { SignatureDialog, fileToCanvas } from './SignatureDialog'
 import type { SignatureData } from './SignatureDialog'
@@ -454,7 +457,7 @@ export default function App() {
   const [scale, setScale] = useState(1)
   const [currentPage, setCurrentPage] = useState(1)
   const [pageInput, setPageInput] = useState('1')
-  const [sidebar, setSidebar] = useState<'thumbs' | 'outline' | null>('thumbs')
+  const [sidebar, setSidebar] = useState<'thumbs' | 'outline' | 'notes' | null>('thumbs')
   const [sidebarW, setSidebarW] = useState(loadSidebarW)
   /** raster width for thumbnails — only updated when a drag ends (re-rastering every frame would jank) */
   const [thumbRasterW, setThumbRasterW] = useState(() => loadSidebarW() - SIDEBAR_CHROME)
@@ -6893,6 +6896,25 @@ export default function App() {
     }
   }
 
+  // ── Annotation panel: a click goes to the place and flashes it, opens a note's thread or a card ──
+  const [annotFlash, flashAnnot] = useAnnotFlash()
+  const activateAnnot = (item: AnnotItem) =>
+    activateAnnotItem(item, {
+      reveal: (origIdx, rect) => {
+        const el = scrollRef.current
+        const visIdx = visList.indexOf(origIdx)
+        if (!el || visIdx < 0) return
+        const box = pdfRectToCss(pageGeom(origIdx), rect, scale)
+        el.scrollTop = Math.max(0, pageTop(visIdx) + box.top - el.clientHeight * 0.35)
+        flashAnnot(origIdx, rect)
+      },
+      openNote: (origIdx, rootKey) => {
+        setNoteDraft(null)
+        setActiveNote({ origIdx, rootKey })
+      },
+      openCard: (id) => readingRef.current?.open(id),
+    })
+
   const curOrigIdx = visList[currentPage - 1] ?? -1
 
   // ── unified popover dismissal: a press outside the guard roots, a window
@@ -7607,6 +7629,17 @@ export default function App() {
             <IconOutline />
           </span>
           {t('outline')}
+        </button>
+        <button
+          className={`rb-big${sidebar === 'notes' ? ' active' : ''}`}
+          data-tip={t('apPanelTip')}
+          aria-pressed={sidebar === 'notes'}
+          onClick={() => setSidebar((v) => (v === 'notes' ? null : 'notes'))}
+        >
+          <span className="rb-big-icon">
+            <IconNote />
+          </span>
+          {t('apPanel')}
         </button>
         {searchBtn}
         <button
@@ -8809,6 +8842,33 @@ export default function App() {
                 />
               </div>
             )}
+            {sidebar === 'notes' && (
+              <AnnotPanelHost
+                doc={doc}
+                width={sidebarW}
+                title={(metadata ?? docInfo).title?.trim() || fileName}
+                t={t}
+                unsavedMarkups={markups}
+                drawings={drawings}
+                annotDeletes={annotDeletes}
+                noteEdits={noteEdits}
+                cards={passageCards}
+                displayPage={(origIdx) => {
+                  const v = visList.indexOf(origIdx)
+                  return v < 0 ? null : v + 1
+                }}
+                geomOf={pageGeom}
+                languageName={(code) => languageName(code, lang)}
+                createDocument={
+                  window.pdfApi?.createDocument
+                    ? (request) => window.pdfApi.createDocument(request)
+                    : undefined
+                }
+                onActivate={activateAnnot}
+                onClose={() => setSidebar(null)}
+                onNotice={showNotice}
+              />
+            )}
             {sidebar === 'thumbs' && (
               <div
                 ref={thumbsRef}
@@ -8954,7 +9014,9 @@ export default function App() {
                 })}
               </div>
             )}
-            {(sidebar === 'thumbs' || (sidebar === 'outline' && !!outline)) && (
+            {(sidebar === 'thumbs' ||
+              sidebar === 'notes' ||
+              (sidebar === 'outline' && !!outline)) && (
               <div className="pdf-side-resizer" onPointerDown={startSidebarResize} />
             )}
             <div
@@ -10001,6 +10063,9 @@ export default function App() {
                                   label={(excerpt) => t('rdOpenCard', { excerpt })}
                                   onOpen={(id, anchor) => readingRef.current?.open(id, anchor)}
                                 />
+                              )}
+                              {annotFlash?.origIdx === origIdx && (
+                                <AnnotFlash target={annotFlash} geom={geom} scale={scale} />
                               )}
                               {/* Selection outline for a saved markup annotation (the markup
                                 itself is painted in the canvas raster) */}
