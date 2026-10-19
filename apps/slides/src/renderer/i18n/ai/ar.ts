@@ -199,6 +199,7 @@ export const ar = {
   aiLabelInsertSmartart: 'إدراج SmartArt',
   aiSumFromScratchGuard: '{label}: للإنشاء من الصفر استخدم generate_deck',
   aiSumReadSlide: 'قراءة الشريحة {n}',
+  aiSumReadComments: 'قراءة التعليقات',
   aiSumScriptNoop: 'تحرير بالبرنامج النصي (الشريحة {n}، بلا تغييرات)',
   aiSumScript: 'تحرير بالبرنامج النصي في الشريحة {n} ({count} عملية)',
   aiSumWebSearch: 'البحث عن "{query}" ({count} نتيجة)',

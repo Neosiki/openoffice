@@ -29,13 +29,18 @@ import type { WebContents } from 'electron'
 import {
   RENDERER_SCHEME,
   configuredDefaultSaveDir,
+  confirmOverwriteIfConflicted,
   contextMenuLabels,
   installContextMenu,
   installNavigationGuard,
   installRendererProtocol,
+  isPathOpenElsewhere,
+  recordDiskState,
   registerRendererScheme,
+  shouldDeferAutoSave,
   showSaveDialogWithMemory,
 } from '@genoffice/electron-utils'
+import type { SaveDiskState } from '@genoffice/electron-utils'
 import { getUiLang, normalizeLang, setUiLang } from '@genoffice/i18n'
 import { openXmind } from '@genoffice/xmind-engine'
 import { registerMindmapAiIpc } from './ai-attachments'
@@ -96,6 +101,48 @@ const closeSaveWaiters = new Map<number, (ok: boolean) => void>()
 /** Resolvers for menu-triggered saves, resolved when the renderer's save invoke completes */
 const saveWaiters = new Map<number, (ok: boolean) => void>()
 
+// ── Split-copy save guard (decision 0036): remember the disk state of every
+// read and write per view and path, so that while the same map is open in two
+// panes a save can see the sibling pane's write. A manual save asks before
+// overwriting it; an automatic save defers silently to the next manual one.
+const docDiskStates = new Map<number, Map<string, SaveDiskState>>()
+
+async function rememberDiskState(wcId: number, path: string): Promise<void> {
+  const state = await recordDiskState(path)
+  if (!state) return
+  const states = docDiskStates.get(wcId) ?? new Map<string, SaveDiskState>()
+  states.set(path, state)
+  docDiskStates.set(wcId, states)
+}
+
+function forgetDiskState(wcId: number, path: string): void {
+  const states = docDiskStates.get(wcId)
+  if (!states) return
+  states.delete(path)
+  if (states.size === 0) docDiskStates.delete(wcId)
+}
+
+/** True when this save must stop instead of writing: the sibling copy changed
+ *  the disk since this view's last read or write, and either the automatic
+ *  save defers or the user chose to keep the disk copy. */
+async function conflictStopsSave(
+  contents: WebContents,
+  path: string,
+  auto: boolean,
+): Promise<boolean> {
+  if (!isPathOpenElsewhere(path)) return false
+  const recorded = docDiskStates.get(contents.id)?.get(path)
+  if (auto) return shouldDeferAutoSave(path, recorded)
+  return (
+    (await confirmOverwriteIfConflicted({
+      parent: BrowserWindow.fromWebContents(contents),
+      path,
+      recorded,
+      lang: getUiLang(),
+    })) === 'cancel'
+  )
+}
+
 /** Fired after a save lands on a NEW path (untitled first save / Save As): the shell syncs tab title, recents, projects */
 let fileSavedHook: ((wc: WebContents, path: string) => void) | null = null
 
@@ -125,6 +172,12 @@ export function mindmapFileRenamed(contents: WebContents, oldPath: string, newPa
   if (openPathByWc.get(wcId) === oldPath) openPathByWc.set(wcId, newPath)
   const allowed = allowedByWc.get(wcId)
   if (allowed?.has(oldPath)) allowed.add(newPath)
+  const states = docDiskStates.get(wcId)
+  const recorded = states?.get(oldPath)
+  if (states && recorded) {
+    states.delete(oldPath)
+    states.set(newPath, recorded)
+  }
   if (!contents.isDestroyed()) contents.send(MINDMAP_CHANNELS.fileRenamed, newPath)
 }
 
@@ -320,6 +373,7 @@ function registerMindmapIpc(): void {
     // reload of a view whose file opens again after it was replaced on disk.
     unopenedByWc.delete(wcId)
     savePathByWc.set(wcId, path)
+    await rememberDiskState(wcId, path)
     return { status: 'ok', bytes }
   })
 
@@ -354,6 +408,15 @@ function registerMindmapIpc(): void {
       })
     }
     const mode: SaveMode = rawMode === 'saveAs' ? 'saveAs' : 'save'
+    // Request input is untrusted: only an explicit automatic-save flag counts
+    const auto = (request as { auto?: unknown } | null)?.auto === true
+    // A copy pair saving onto the map's own path settles the conflict first
+    if (mode === 'save') {
+      const current = savePathByWc.get(wcId)
+      if (current && (await conflictStopsSave(e.sender, current, auto))) {
+        return done({ ok: false, error: 'external-modified' })
+      }
+    }
     try {
       const target = await resolveSaveTarget(
         e,
@@ -361,7 +424,8 @@ function registerMindmapIpc(): void {
         typeof defaultName === 'string' ? defaultName : undefined,
       )
       if (target === 'canceled') return done({ ok: true, canceled: true })
-      const isNewPath = savePathByWc.get(wcId) !== target
+      const previousPath = savePathByWc.get(wcId)
+      const isNewPath = previousPath !== target
       await atomicWriteFile(target, Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength))
       savePathByWc.set(wcId, target)
       // keep the reload path in sync: a stale openPathByWc would make a
@@ -371,6 +435,9 @@ function registerMindmapIpc(): void {
       allowed.add(target)
       allowedByWc.set(wcId, allowed)
       dirtyByWc.delete(wcId)
+      // Refresh the record for the written bytes; the view no longer edits a moved-away path
+      await rememberDiskState(wcId, target)
+      if (previousPath && previousPath !== target) forgetDiskState(wcId, previousPath)
       if (isNewPath) fileSavedHook?.(e.sender, target)
       return done({ ok: true, path: target })
     } catch (err) {
@@ -451,6 +518,7 @@ function grantAndTrack(wc: WebContents, openPath?: string | null): void {
     savePathByWc.delete(wcId)
     unopenedByWc.delete(wcId)
     dirtyByWc.delete(wcId)
+    docDiskStates.delete(wcId)
     closeSaveWaiters.get(wcId)?.(false)
     closeSaveWaiters.delete(wcId)
     saveWaiters.get(wcId)?.(false)

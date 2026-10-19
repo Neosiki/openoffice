@@ -194,6 +194,7 @@ export const zhTW = {
   aiLabelInsertSmartart: '插入 SmartArt',
   aiSumFromScratchGuard: '{label}：從零產生請用 generate_deck',
   aiSumReadSlide: '讀取第 {n} 頁',
+  aiSumReadComments: '讀取註解',
   aiSumScriptNoop: '編輯指令碼(第 {n} 頁,無修改)',
   aiSumScript: '編輯指令碼第 {n} 頁({count} 項)',
   aiSumWebSearch: '搜尋”{query}”({count} 條)',

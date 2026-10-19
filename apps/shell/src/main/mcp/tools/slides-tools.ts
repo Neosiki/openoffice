@@ -172,7 +172,9 @@ function createDeckContentTools(deps: SlidesToolDeps, host: SessionHost): McpToo
       description:
         'Read the visible presentation: every slide with its elements (ids, types, text, geometry) ' +
         'so you can target follow-up edits. Element ids and slide indexes are what apply_slide_ops ' +
-        'addresses; geometry is document-space EMU (1 px = 9525 EMU on a standard 16:9 deck).',
+        'addresses; geometry is document-space EMU (1 px = 9525 EMU on a standard 16:9 deck). ' +
+        'Slides skipped in slideshows carry hidden:true; slide comments (author, date, text) appear ' +
+        'under comments when present.',
       inputSchema: { document: documentField },
       handler: async (args) => slides.readDeck(await target(args.document)),
     },

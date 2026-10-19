@@ -6,7 +6,7 @@ import type {
   RenderSlide,
   ShapeRenderNode,
 } from '@genoffice/pptx-render'
-import type { AgentToolCall, AgentToolDef } from '../../shared/ipc'
+import type { AgentToolCall, AgentToolDef, SlideComment } from '../../shared/ipc'
 import { OP_GROUPS, opGuide, opGuideCatalog, opSignatureIndex } from '@genoffice/pptx-ops/op-docs'
 import { auditSlideLayout, formatAudit } from '@genoffice/pipelines/slides/layout-audit'
 import { findSlideTemplate, listSlideTemplates } from '@genoffice/pipelines/slides/templates'
@@ -100,6 +100,10 @@ export interface DeckAccess {
   getSlides(): RenderSlide[]
   getCurrent(): number
   getSelectedIds(): string[]
+  /** Every page's review comments (index = slide index; pages without comments are empty arrays). */
+  getAllComments?(): Promise<SlideComment[][]>
+  /** Live summary for the context hint: total comments and the 1-based pages that have any. */
+  getCommentSummary?(): { total: number; pages: number[] }
   applySlide(slideIndex: number, updated: RenderSlide): void
   /** Replace the whole deck (after adding/removing slides) and jump to the goTo slide */
   applyDeck(slides: RenderSlide[], goTo?: number): void
@@ -299,6 +303,12 @@ const TOOLS: AgentToolDef[] = [
       },
       required: ['slideIndex'],
     },
+  },
+  {
+    name: 'read_comments',
+    description:
+      'List the deck\'s review comments in page order: page number, hidden flag, id "authorId:idx", author, ISO time and text. The ids are what apply_ops deleteComment takes — delete a comment only when the user asks.',
+    inputSchema: { type: 'object', properties: {}, required: [] },
   },
   {
     name: 'execute_slide_script',
@@ -1059,6 +1069,13 @@ export function formatSlideDump(slide: RenderSlide): string {
   return `Canvas ${slide.widthPx}×${slide.heightPx}px (1 px = ${pxToEmu} EMU)\n${parts.join('\n---\n') || '(no elements on this page)'}${colorNote}`
 }
 
+/** One contextual line naming the pages that have review comments (empty when there are none). */
+function buildCommentHint(access: DeckAccess): string {
+  const summary = access.getCommentSummary?.()
+  if (!summary || summary.total <= 0 || summary.pages.length === 0) return ''
+  return `The deck has ${summary.total} review comment(s) on page(s) ${summary.pages.join(', ')}. Use read_comments to read them.`
+}
+
 /** tools that need an image/media route: a connected subscription or a media key in Settings */
 function hiddenMediaTools(access: DeckAccess): Set<string> {
   const hidden = new Set<string>()
@@ -1112,7 +1129,8 @@ export function createSlidesSkill(access: DeckAccess): AgentSkill {
       const progress = buildProgressNote(state)
       // only a document with a selected design template gets this block
       const template = buildTemplateNote(access)
-      return [outline, progress, template].filter(Boolean).join('\n')
+      const comments = buildCommentHint(access)
+      return [outline, progress, template, comments].filter(Boolean).join('\n')
     },
     executeTool: (call, signal) => executeTool(access, call, state, signal),
   }
@@ -1510,6 +1528,26 @@ async function executeTool(
         output: formatSlideDump(slide),
         mutated: false,
         summary: t('aiSumReadSlide', { n: idx + 1 }),
+      }
+    }
+
+    case 'read_comments': {
+      const all = access.getAllComments ? await access.getAllComments() : []
+      const lines: string[] = []
+      all.forEach((list, i) => {
+        if (!list || list.length === 0) return
+        const hidden = slides[i]?.hidden ? ', hidden' : ''
+        lines.push(`Page ${i + 1} (slideIndex=${i}${hidden}):`)
+        for (const c of list) {
+          const author = c.author?.trim() ? c.author : 'Unknown author'
+          const when = c.dt ? ` · ${c.dt}` : ''
+          lines.push(`- ${c.authorId}:${c.idx} · ${author}${when} · ${c.text}`)
+        }
+      })
+      return {
+        output: lines.length > 0 ? lines.join('\n') : '(the deck has no review comments)',
+        mutated: false,
+        summary: t('aiSumReadComments'),
       }
     }
 

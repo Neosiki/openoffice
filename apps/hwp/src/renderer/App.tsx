@@ -3,12 +3,11 @@ import { createEditor } from '@rhwp/editor'
 import type { RhwpEditor } from '@rhwp/editor'
 import type { Params } from '@genoffice/i18n'
 import {
-  AiMark,
   aiPanelInitiallyOpen,
-  aiSubscriptionText,
   rememberAiPanelOpen,
+  useSplitPaneFocusPing,
 } from '@genoffice/ui'
-import { AiPanel } from './ai/AiPanel'
+import { HwpAiDock } from './ai/AiDock'
 import { createAgentBridge } from './ai/agent-bridge'
 import { FILE_COMMAND_EVENT } from '../../studio-plugin/agent-plugin.mjs'
 import blankHwpUrl from './assets/blank.hwp?url'
@@ -78,7 +77,7 @@ function savePortOf(editor: RhwpEditor): SaveEditorPort {
 }
 
 export default function App() {
-  const { lang, t } = useI18n()
+  const { t } = useI18n()
   const hostRef = useRef<HTMLDivElement>(null)
   const editorRef = useRef<RhwpEditor | null>(null)
   const savingRef = useRef(false)
@@ -91,6 +90,9 @@ export default function App() {
   const [filePath, setFilePath] = useState<string | null>(null)
   /** the AI panel's way into the document: the app's plugin inside the editor */
   const agentBridge = useMemo(() => createAgentBridge(() => editorRef.current), [])
+
+  // the shell's split panes: tell it whenever this pane gains focus
+  useSplitPaneFocusPing()
 
   useEffect(() => {
     rememberAiPanelOpen(AI_OPEN_KEY, aiOpen)
@@ -390,20 +392,7 @@ export default function App() {
       <div className="app-main">
         {/* the assistant works on an open document, so it appears with one */}
         {phase === 'ready' && (
-          <div className={`ai-dock${aiOpen ? '' : ' collapsed'}`}>
-            {!aiOpen && (
-              <button
-                type="button"
-                className="ai-rail ai-entry"
-                data-tip={t('aiOpenAssistant')}
-                aria-label={aiSubscriptionText(lang, 'aiAssistant')}
-                onClick={() => setAiOpen(true)}
-              >
-                <AiMark size={22} />
-              </button>
-            )}
-            <AiPanel bridge={agentBridge} filePath={filePath} onCollapse={() => setAiOpen(false)} />
-          </div>
+          <HwpAiDock open={aiOpen} setOpen={setAiOpen} bridge={agentBridge} filePath={filePath} />
         )}
         <div className="hwp-stage">
           <div ref={hostRef} className="hwp-editor-host" />

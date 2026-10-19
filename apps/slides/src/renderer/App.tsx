@@ -91,6 +91,7 @@ import {
 import { FormatBackgroundPane, type BgPaneOp } from './components/FormatBackgroundPane'
 import { FormatPane } from './components/FormatPane'
 import { CommentsPane } from './components/CommentsPane'
+import { commentNavigationTarget, deckStructureKey, type CommentsMode } from './comments-view'
 import { AnimationPane } from './components/AnimationPane'
 import { AnimPreviewOverlay } from './components/AnimatedSlide'
 import { EquationDialog, HeaderFooterDialog, LinkDialog } from './components/InsertDialogs'
@@ -101,6 +102,7 @@ import {
   createWheelPager,
   createZoomWheelClassifier,
   useAutoSavePref,
+  useSplitPaneFocusPing,
   type AiScopeQuoteData,
   type WordArtPreset,
   aiPanelInitiallyOpen,
@@ -114,6 +116,7 @@ import { ToastHost } from './components/toast'
 import { showToast } from './components/toast-bus'
 import { t, useI18n } from './i18n/locale'
 import { AiPanel } from './ai/AiPanel'
+import { useAiDock } from './ai/use-ai-dock'
 import { ChartDataDialog } from './components/ChartDataDialog'
 import type { BrushFormat } from './format-brush'
 import { isTextUndoTarget, shouldRouteHistoryToDeck } from './undo-routing'
@@ -353,6 +356,8 @@ function thumbBox(slide: RenderSlide, width: number) {
 }
 
 export function App() {
+  // Split panes: fallback focus reporting for this screen (decision 0036)
+  useSplitPaneFocusPing()
   const { lang } = useI18n()
   const [slides, setSlides] = useState<RenderSlide[]>([])
   // Layouts may reference Office-private fonts (resolved in main); register them as FontFaces
@@ -452,6 +457,14 @@ export function App() {
     window.slidesApi.setAutoSavePref?.(autoSave)
   }, [autoSave])
   const [showAi, setShowAi] = useState(() => aiPanelInitiallyOpen('ai-slides-show-ai'))
+  // Split panes (decision 0036): as the secondary pane this view's panel is
+  // forced to the rail, and the rail's click asks the shell to focus it first.
+  // The choice the rail records is remembered like the toggle's.
+  const setShowAiPref = useCallback((open: boolean) => {
+    rememberAiPanelOpen('ai-slides-show-ai', open)
+    setShowAi(open)
+  }, [])
+  const aiDock = useAiDock(showAi, setShowAiPref)
   const [showFormat, setShowFormat] = useState(false)
   const [showBgFormat, setShowBgFormat] = useState(false)
   const [aiSettings, setAiSettings] = useState<AiSettings | null>(null)
@@ -575,8 +588,28 @@ export function App() {
   }, [])
   // ── Review tab: comments ────────────────────────────────────────────────
   const [comments, setComments] = useState<SlideComment[]>([])
+  /** Deck-order lists for the all-pages view (empty pages and hidden slides included) */
+  const [allComments, setAllComments] = useState<SlideComment[][]>([])
+  /** Live summary for the AI context hint: total + 1-based pages that have comments */
+  const commentSummary = useMemo(() => {
+    const pages: number[] = []
+    let total = 0
+    ;(Array.isArray(allComments) ? allComments : []).forEach((list, i) => {
+      if (list && list.length > 0) {
+        pages.push(i + 1)
+        total += list.length
+      }
+    })
+    return { total, pages }
+  }, [allComments])
+  /** Slide identity sequence: local add/delete/reorder must refresh comment reads (single window
+   *  gets no deck-changed broadcast), while content edits keep the same paths and don't. */
+  const deckKey = useMemo(() => deckStructureKey(slides), [slides])
+  const [commentsMode, setCommentsMode] = useState<CommentsMode>('page')
   const [showComments, setShowComments] = useState(false)
   const [commentsFocusNonce, setCommentsFocusNonce] = useState(0)
+  /** Bumped by comment mutations and sibling-window deck changes (never by notes-only state) */
+  const [commentsRefreshNonce, setCommentsRefreshNonce] = useState(0)
   /** Notes/comments must be re-fetched after undo/redo (they're not in RenderSlide) */
   const [annotationsNonce, setAnnotationsNonce] = useState(0)
   // ── Insert tab extensions: dialogs + screen recording ──────────────────────
@@ -665,14 +698,14 @@ export function App() {
       const viewportW =
         el?.clientWidth ||
         stageViewportSize.w ||
-        window.innerWidth - (showThumbs ? thumbsW : 0) - (showAi ? 360 : 34)
+        window.innerWidth - (showThumbs ? thumbsW : 0) - (aiDock.open ? 360 : 34)
       const viewportH = el?.clientHeight || stageViewportSize.h || window.innerHeight - 150
       const availW = viewportW - 56
       // -72: vertical padding is 48 (AI-bar headroom) + 32, minus the same 8px slack as width
       const availH = viewportH - 72
       return Math.min(availW / s.widthPx, availH / s.heightPx)
     },
-    [showThumbs, showAi, stageViewportSize.h, stageViewportSize.w, thumbsW],
+    [showThumbs, aiDock.open, stageViewportSize.h, stageViewportSize.w, thumbsW],
   )
   /** Fit zoom for display: rawFit clamped to the 0.1–1.5 auto-fit range */
   const fitZoom = useCallback(
@@ -842,6 +875,9 @@ export function App() {
       setDirty(false)
       setInkTool('select')
       setUngroupedSets([])
+      setCommentsMode('page')
+      setAllComments([])
+      setCommentsRefreshNonce((n) => n + 1)
       setAiPanelKey((k) => k + 1)
       // Queue anchors belong to the deck that was open; another file invalidates them all
       setEditQueue([])
@@ -907,7 +943,7 @@ export function App() {
   const askOpenRef = useRef(false)
 
   const save = useCallback(
-    (quiet = false): Promise<boolean> => fileActions.save(() => ctxRef.current, quiet),
+    (auto = false): Promise<boolean> => fileActions.save(() => ctxRef.current, auto),
     [],
   )
 
@@ -933,6 +969,9 @@ export function App() {
       window.slidesApi.onDeckChanged?.(({ slides: all }) => {
         setSlides(all)
         setCurrent((c) => Math.min(c, Math.max(0, all.length - 1)))
+        // Comments live outside RenderSlide: re-read the current page list (ribbon badge)
+        // and the all-pages list together. Notes drafts stay untouched (no annotations bump).
+        setCommentsRefreshNonce((n) => n + 1)
         // The broadcast also fires for undo back to a clean state — ask the
         // session instead of assuming the change dirtied it
         void window.slidesApi.isDirty?.().then((d) => setDirty(!!d))
@@ -1973,7 +2012,33 @@ export function App() {
     return () => {
       cancelled = true
     }
-  }, [hasDoc, current, path, annotationsNonce])
+  }, [hasDoc, current, path, annotationsNonce, commentsRefreshNonce, deckKey])
+
+  // ── Comments: every page's list for the all-pages view. Page switches don't change it, so it
+  // only follows deck opens, undo/redo and explicit refresh signals.
+  useEffect(() => {
+    if (!hasDoc) {
+      setAllComments([])
+      return
+    }
+    let cancelled = false
+    // Older test doubles (and a preload from an older shell build) may not have this yet.
+    const read = window.slidesApi.getAllComments
+    if (!read) return
+    void read()
+      .then((all) => {
+        if (!cancelled) setAllComments(Array.isArray(all) ? all : [])
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [hasDoc, path, annotationsNonce, commentsRefreshNonce, deckKey])
+
+  /** Re-read the comment lists after a comment mutation (ribbon badge and all-pages list). */
+  const refreshComments = useCallback(() => {
+    setCommentsRefreshNonce((n) => n + 1)
+  }, [])
 
   const addComment = useCallback(
     async (text: string) => {
@@ -1982,9 +2047,10 @@ export function App() {
         setComments(r)
         setDirty(true)
         setStatus(t('appStatusCommentAdded'))
+        refreshComments()
       }
     },
-    [current],
+    [current, refreshComments],
   )
 
   const deleteComment = useCallback(
@@ -1997,9 +2063,21 @@ export function App() {
       if (r) {
         setComments(r)
         setDirty(true)
+        refreshComments()
       }
     },
-    [current],
+    [current, refreshComments],
+  )
+
+  /** Header/card click in the all-pages view: move there and return to the page view. */
+  const goToCommentSlide = useCallback(
+    (index: number) => {
+      const target = commentNavigationTarget(index, slides.length)
+      if (target == null) return
+      setCommentsMode('page')
+      setCurrent(target)
+    },
+    [slides.length],
   )
 
   const openComments = useCallback((focus: boolean) => {
@@ -2007,7 +2085,10 @@ export function App() {
     setShowFormat(false)
     setShowBgFormat(false)
     setShowAnimPane(false)
-    if (focus) setCommentsFocusNonce((n) => n + 1)
+    if (focus) {
+      setCommentsMode('page')
+      setCommentsFocusNonce((n) => n + 1)
+    }
   }, [])
 
   // ── View modes ──────────────────────────────────────────────────────────
@@ -3530,7 +3611,7 @@ export function App() {
 
       <div className="app-main">
         {slide && viewMode !== 'reading' && viewMode !== 'sorter' && (
-          <div className={`ai-dock${showAi && aiSettings ? '' : ' collapsed'}`}>
+          <div className={`ai-dock${aiDock.open && aiSettings ? '' : ' collapsed'}`}>
             {/* always mounted once settings load: collapse must not drop state or in-flight runs */}
             {aiSettings ? (
               <AiPanel
@@ -3538,6 +3619,8 @@ export function App() {
                 slides={slides}
                 current={current}
                 selectedIds={selectedIds}
+                getAllComments={() => window.slidesApi.getAllComments()}
+                getCommentSummary={() => commentSummary}
                 deckEmpty={deckEmpty}
                 images={images}
                 applySlide={applySlide}
@@ -3545,8 +3628,8 @@ export function App() {
                 fitWidthPx={FIT_WIDTH}
                 settings={aiSettings}
                 preset={aiPreset}
-                open={showAi}
-                onExpand={toggleAi}
+                open={aiDock.open}
+                onExpand={aiDock.onExpand}
                 onCollapse={toggleAi}
                 onUndo={() => void undo()}
                 onPathChange={(p) => {
@@ -3890,7 +3973,7 @@ export function App() {
                         <div className="stage-ai-bar">
                           <div className="stage-ai-group">
                             <button
-                              className={`stage-ai-btn${showAi ? ' active' : ''}`}
+                              className={`stage-ai-btn${aiDock.open ? ' active' : ''}`}
                               data-tip={t('aiOpenAssistant')}
                               onClick={toggleAi}
                             >
@@ -4351,9 +4434,13 @@ export function App() {
                   <CommentsPane
                     slideIndex={current}
                     comments={comments}
+                    allComments={allComments}
+                    mode={commentsMode}
+                    onModeChange={setCommentsMode}
                     focusNonce={commentsFocusNonce}
                     onAdd={(text) => void addComment(text)}
                     onDelete={(c) => void deleteComment(c)}
+                    onGoToSlide={goToCommentSlide}
                     onCollapse={() => setShowComments(false)}
                   />
                 ) : null}

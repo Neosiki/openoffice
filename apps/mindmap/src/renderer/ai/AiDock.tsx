@@ -9,7 +9,15 @@
  */
 import { useEffect, useMemo, useState } from 'react'
 import type { MutableRefObject, ReactElement } from 'react'
-import { AiMark, aiPanelInitiallyOpen, applyAiPanelPrefs, rememberAiPanelOpen } from '@genoffice/ui'
+import {
+  AiMark,
+  aiPanelInitiallyOpen,
+  applyAiPanelPrefs,
+  effectiveAiPanelOpen,
+  onAiRailClick,
+  rememberAiPanelOpen,
+  useSplitPaneRole,
+} from '@genoffice/ui'
 import '@genoffice/ui/ai-model-picker.css'
 import '@genoffice/ui/ai-queue-strip.css'
 import '@genoffice/ui/ai-usage.css'
@@ -93,7 +101,12 @@ export interface MindmapAiDockProps {
   onRunStart?: (run: MindmapAiRunStart) => void
 }
 
-/** The panel at the right end of the map, or its rail while collapsed. It stays mounted, so a run and its chat survive. */
+/**
+ * The panel at the right end of the map, or its rail while collapsed; the
+ * panel stays mounted either way, so a run and its chat survive. In a split
+ * (decision 0036) a secondary pane keeps its panel at the rail, and a click
+ * on the rail asks the shell to focus this pane first.
+ */
 export function MindmapAiDock({
   ai,
   filePath,
@@ -101,15 +114,17 @@ export function MindmapAiDock({
   onRunStart,
 }: MindmapAiDockProps): ReactElement {
   const { t } = useI18n()
+  const { role, requestFocus } = useSplitPaneRole()
+  const open = effectiveAiPanelOpen(ai.open, role)
   return (
-    <div className={`ai-dock${ai.open ? '' : ' collapsed'}`} data-ai-open={ai.open}>
-      {!ai.open && (
+    <div className={`ai-dock${open ? '' : ' collapsed'}`} data-ai-open={open}>
+      {!open && (
         <button
           type="button"
           className="ai-rail"
           data-tip={t('aiOpenAssistant')}
           aria-label={t('aiOpenAssistant')}
-          onClick={() => ai.setOpen(true)}
+          onClick={() => onAiRailClick(role, ai.open, ai.setOpen, requestFocus)}
         >
           <AiMark size={18} />
         </button>

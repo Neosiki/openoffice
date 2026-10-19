@@ -3,6 +3,7 @@ import { contextBridge, ipcRenderer, webUtils } from 'electron'
 import { driveAiBridge } from '@genoffice/electron-utils/drive-ai-bridge'
 import { docAttachBridge } from '@genoffice/electron-utils/doc-attach-bridge'
 import { DOC_ATTACH_BRIDGE_KEY } from '@genoffice/electron-utils/doc-attach-channels'
+import { splitPaneBridge } from '@genoffice/electron-utils/split-pane-bridge'
 import type { IpcRendererEvent } from 'electron'
 import type { RenderSlide } from '@genoffice/pptx-render'
 import type { ProjectApi } from '@genoffice/project-store'
@@ -370,6 +371,7 @@ const api: SlidesApi = {
   getNotes: (slideIndex: number) => ipcRenderer.invoke('slides:get-notes', slideIndex),
   setNotes: (op) => ipcRenderer.invoke('slides:set-notes', op),
   getComments: (slideIndex: number) => ipcRenderer.invoke('slides:get-comments', slideIndex),
+  getAllComments: () => ipcRenderer.invoke('slides:get-all-comments'),
   addComment: (op) => ipcRenderer.invoke('slides:add-comment', op),
   deleteComment: (op) => ipcRenderer.invoke('slides:delete-comment', op),
   nativeClipboard: (op: 'cut' | 'copy' | 'paste') =>
@@ -388,7 +390,7 @@ const api: SlidesApi = {
   savePicture: (op: SavePictureOp) => ipcRenderer.invoke('slides:save-picture', op),
   exportPdf: (op: ExportPdfOp) => ipcRenderer.invoke('slides:export-pdf', op),
   printSlides: (op: PrintSlidesOp) => ipcRenderer.invoke('slides:print', op),
-  save: () => ipcRenderer.invoke('slides:save'),
+  save: (auto?: boolean) => ipcRenderer.invoke('slides:save', auto === true),
   saveAs: (defaultName: string) => ipcRenderer.invoke('slides:save-as', defaultName),
   onCloseSaveRequest: (handler: () => void) => {
     const listener = () => handler()
@@ -549,6 +551,9 @@ const projectApi: ProjectApi = {
   rebindChat: (args) => ipcRenderer.invoke('project:rebindChat', args),
 }
 contextBridge.exposeInMainWorld('projectApi', projectApi)
+
+// The shell's split panes: which pane this view is, and focus requests for it
+contextBridge.exposeInMainWorld('aiOfficeSplit', splitPaneBridge(ipcRenderer))
 
 // open documents dragged from the OS onto this tab as a new shell tab
 installDropOpenBridge()

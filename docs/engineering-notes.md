@@ -27,6 +27,8 @@
 - **AI에게 보내는 화면 시험은 진짜 프로그램에 닿을 수 있다.** 구독이 연결된 PC에서는 보내기 문지기가 통과해 시험이 실제 Claude를 부르고 한도를 쓴다. 연결이 없는 PC(CI)에서는 문지기가 막아 보낸 말이 화면에 나오지 않고 시험이 실패한다. → 보내는 시험은 편집기 화면이 뜬 뒤 `e2e/helpers.ts`의 `stubAiReady(app)`을 부른다. 구독 상태와 `ai:stream`을 가짜로 바꾸고 열린 탭에 그 상태를 알린다.
 - **화면 시험의 제품 이름과 기본 저장 폴더는 `packages/i18n/src/product.ts`에서 읽는다.** 화면은 사전의 `GenOffice`를 제품 이름으로 바꿔 보이고, 기본 저장 폴더는 `Documents/<제품 이름>`이다. 홈의 새 문서 카드는 순번이 자주 밀리므로(한글, PDF 도구 카드가 더해졌다) 순번 대신 글자나 속성으로 집는다.
 - **실제 화면 확인은 스크립트로 한다.** `e2e/helpers.ts`의 `launchShell`이 빌드된 껍데기 앱을 임시 데이터 폴더로 띄운다. 구독에 로그인된 PC에서는 첫 연결 안내가 설정과 질문 창을 덮으므로, 기본으로 "안내를 봤다"는 설정을 심는다(`subscriptionNoticeSeen: false`로 끌 수 있다). 편집기 화면은 `waitForPageWithUrl(app, '://docs/')`로 잡는다.
+- **한 시험 파일이 통째로 시간 초과로 죽어도 다시 돌려 보라.** vite의 변환 캐시가 찬 상태에서 `apps/sheets/tests/table-design.test.ts` 같은 단위 시험이 기본 5초를 넘겨 `Test timed out`으로 떨어진다(문서화된 부하성 실패). 단독 재실행이나 캐시가 데워진 뒤에는 통과한다.
+- **화면 시험(e2e) 전체는 Windows에서 초록이 아니다.** 경로 구분자를 `/`로 가정하는 시험(`text-source` 등)과 화면 캡처·타이밍에 민감한 시험, 이 PC의 실제 설정을 읽는 시험(CLI 계열)이 **손대지 않은 검사본에서도 똑같이** 실패한다. 판정은 항상 "손대지 않은 사본에서도 실패하는가"로 한다. 같은 시험 파일 묶음을 원본 검사본에서 한 번 돌려 실패 목록을 견주면 된다.
 
 ## 설정 파일
 
@@ -64,6 +66,24 @@
 - **한컴 확인 도구는 `tools/odt-hancom/`에 있다.** 받은 ODT를 고친 사본 만들기, 한컴으로 읽어 쪽·표·개체·누름틀·서식 적기, ODF 검사, 판정까지 한다(사용법은 그 폴더의 `README.md`). 한컴 한글 2024가 설치된 Windows에서만 돈다.
 - **확인 자료는 저장소 밖에 있다.** 한컴·정부 ODT와 시험용 docx, 한컴이 읽은 기준값은 `E:\github\odt-corpus`에 있다. 정부 문서에는 개인정보가 있어 저장소에 넣지 않는다.
 
+## 한글(HWP·HWPX) 호환
+
+- **한글은 스키마와 다르게 저장하는 곳이 있다.** 결정 0024·0026·0027·0028이 그런 곳을 하나씩 찾아 고친 기록이고, Filee(v1.11.0)의 HWPX writer 문서는 같은 종류를 다섯으로 정리해 두었다(https://github.com/KnifeLemon/Filee/blob/v1.11.0/docs/ENGINES.md). 아래 표가 둘을 합친 점검표다. rhwp를 올리거나 저장 직렬화를 고치거나 HWPX 쓰기를 새로 만들 때 "미확인"부터 본다. 확인은 `tools/odt-hancom/hancom.py look`(한컴 한글 2024가 어떻게 읽는지)과 저장 왕복 절차로 한다(결정 0038).
+- **Filee 항목 다섯은 아직 우리 저장 결과에서 직접 확인하지 않았다(2026-10-18).** 채우는 것은 rhwp 버전 업이나 저장 쪽 변경 때 함께 한다. Filee는 자기 생성물을 rhwp·Unhwp·LibreOffice 세 리더로 다시 읽어 확인한다 — 독립 리더 여럿으로 견주는 방식은 이 저장소의 한컴 판독과 같은 취지다.
+
+| 버릇                             | 내용                                                                                             | 이 저장소 현황                                      | 확인 방법                                     |
+| -------------------------------- | ------------------------------------------------------------------------------------------------ | --------------------------------------------------- | --------------------------------------------- |
+| 문단 여백·고정 줄 간격 이중 기록 | Filee: `hp:default`에 값을 두 배로 겹쳐 쓰고 실제 값은 `hp:case`에 둔다                          | 미확인                                              | 저장한 HWPX의 `hp:case`와 한컴 판독의 줄 간격 |
+| 용지 돌리기                      | Filee: width·height는 항상 세로 값으로 쓰고 가로는 `landscape="NARROWLY"`로 표시한다             | 미확인                                              | 왕복 코퍼스의 가로 문서와 `look.json`의 용지  |
+| 행잉 문단                        | Filee: 첫 줄은 `left`로, 나머지 줄만 들여쓰기로 적는다                                           | 미확인                                              | 들여쓰기 있는 샘플의 한컴 판독                |
+| 개체 오프셋                      | Filee: 여백으로 나간 개체는 부호 없는 값으로, 용지 기준으로 옮겨 적는다                          | 미확인                                              | 여백에 걸친 그림·표 샘플                      |
+| 조판 캐시                        | Filee: 표 행 높이·인라인 탭 폭 같은 캐시를 추정해 써 둔다(한컴이 캐시를 그대로 쓰는 경우가 있다) | 미확인                                              | 쪽 수·표 높이를 한컴 판독과 견주기            |
+| 구역 뒤 바탕쪽·메모              | 결정 0024: rhwp 0.8.7이 고친 구역을 다시 쓸 때 목록 일부를 빠뜨려 한컴이 열지 못한다             | 고침(저장 때 원본에서 다시 붙임)                    | `apps/hwp/tests/section-tails.test.ts`        |
+| 새 탭 폭                         | 결정 0026: rhwp가 새 탭에 폭 0을 쓴다                                                            | 고침(저장 때 측정값을 써 넣음)                      | `apps/hwp/tests/tab-widths.test.ts`           |
+| 필드 여는 글자 종류              | 결정 0026: rhwp가 여는 글자를 `%unk`로 다시 써서 메모가 메모로 읽히지 않는다                     | 고침(제어 기록의 종류로 되돌림)                     | `apps/hwp/tests/field-kinds.test.ts`          |
+| 수식 캡션                        | 결정 0028: 엔진이 수식 제어 기록 아래의 캡션 목록을 쓰지 않는다                                  | 고침(저장 때 다시 붙임)                             | `apps/hwp/tests/section-tails.test.ts`        |
+| 변경 추적 두 번째 본문           | 결정 0027: 두 번째 본문(ViewText)을 그대로 읽고 쓰면 한컴이 열지 못한다                          | 처리(지금의 내용으로 열고, 저장하면 추적 기록 없이) | `apps/hwp/tests/tracked-changes.test.ts`      |
+
 ## 에이전트 모드
 
 - **Claude의 권한 요청이 앱에 오지 않고 "This command requires approval"로 끝난다.** `--permission-prompts host`만으로는 표준 출력으로 오지 않는다. → `--permission-prompt-tool stdio`를 함께 준다. 그러면 `control_request`(`can_use_tool`)로 오고, `{ behavior: 'allow', updatedInput }` 또는 `{ behavior: 'deny', message }`로 답한다.
@@ -96,6 +116,8 @@
 
 - **작업 사본을 지웠더니 본 저장소의 `node_modules`가 비었다.** 의존성을 연결(정션)로 나눠 쓰는 작업 사본을 `git worktree remove`로 지우면, 삭제가 연결을 따라가 본 설치를 지운다. → 지우기 전에 연결부터 끊는다. 지운 뒤 `node_modules/.bin`의 항목 수가 그대로인지 확인한다.
 - 연결로 나눠 쓰는 사본 안에서는 `npm install`·`npm ci`를 돌리지 않는다. 같은 이유다.
+- **작업 사본에서 한글 편집기 짓기가 실패한다.** `apps/hwp/scripts/build-studio.mjs`는 rhwp 스튜디오를 `apps/hwp/node_modules/.cache`에 받아 짓는데, 사본의 `node_modules`는 본 검사본을 가리키는 연결이라 캐시 경로가 사본 밖으로 풀린다. vite가 결과 이름에 `../../…/openoffice/…` 같은 상대 경로를 만들려다 "must be strings that are neither absolute nor relative paths"로 멈춘다. → **이미 지어 둔 검사본의 결과물**(`apps/hwp/public/studio`)을 사본에 복사해 온다. 스탬프(스크립트·플러그인 해시)가 같으면 다시 짓지 않는다.
+- **작업 사본에서 마크다운 시험이 통째로 죽는다.** `Denied ID: …/node_modules/katex/dist/katex.min.css?inline` — vitest의 파일 접근 허용은 실제 경로로 따지는데, 연결된 `node_modules`가 사본 밖으로 풀려서다. → `node_modules/katex`처럼 `?inline`으로 불러오는 패키지는 연결 대신 실제 폴더로 복사한다.
 
 ## 화면
 

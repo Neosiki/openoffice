@@ -196,6 +196,7 @@ export const he = {
   aiLabelInsertSmartart: 'הוסף SmartArt',
   aiSumFromScratchGuard: '{label}: ליצירה מאפס השתמש ב-generate_deck',
   aiSumReadSlide: 'קריאת שקופית {n}',
+  aiSumReadComments: 'קריאת תגובות',
   aiSumScriptNoop: 'עריכת סקריפט (שקופית {n}, ללא שינויים)',
   aiSumScript: 'סקריפט נערך בשקופית {n} ({count} פעולות)',
   aiSumWebSearch: 'חיפוש "{query}" ({count} תוצאות)',

@@ -43,3 +43,21 @@ Ogni scheda di editor ha in alto una riga di strumenti (la disposizione esatta v
 ## La scheda Home
 
 La scheda Home, all'estrema sinistra, non può essere chiusa; per tornarci da un qualsiasi editor, cliccala oppure usa File ▸ **Torna alla Home**.
+
+## Visualizzazione divisa: due riquadri
+
+**Trascina una scheda sul bordo destro della finestra**: la scheda segue come una piccola copia flottante, vicino al bordo compare l'avviso «Dividi qui» e, se la lasci, ottieni due riquadri affiancati. Se la lasci sul bordo inferiore, ottieni due riquadri impilati. Il menu contestuale della scheda offre lo stesso con **Dividi a destra** e **Dividi in basso**, e **Annulla divisione** su una scheda che si trova in un riquadro.
+
+- La scheda trascinata finisce nel riquadro in cui l'hai lasciata; l'altro riquadro conserva il documento che stavi guardando poco prima.
+- Se è aperto un solo documento, una copia dello stesso documento va in entrambi i riquadri, per guardarne insieme l'inizio e la fine. Anche un documento nuovo mai salvato si può dividere.
+- Trascina il **divisore** tra i riquadri per cambiarne la proporzione, fai doppio clic per metà e metà, oppure spingilo fino a un'estremità per chiudere quel riquadro; il documento resta aperto come scheda.
+
+## Una sola finestra IA che segue il fuoco
+
+- Si vede una sola finestra IA. Il riquadro su cui stai lavorando mostra la sua; quella dell'altro riquadro si ripiega in una barra laterale, e un clic su un riquadro porta davanti la sua finestra IA.
+- Mentre è ripiegata, la conversazione di quel riquadro e il lavoro IA in corso restano vivi. Le conversazioni sono conservate per documento.
+- **Due copie dello stesso documento**: dopo aver salvato in un riquadro, salvando dall'altro viene prima chiesto «Questo documento è cambiato altrove». Il salvataggio automatico aspetta in silenzio.
+- **Riavviando l'applicazione senza file** torna l'ultima coppia di documenti divisi esattamente com'era; avviandola con un file si apre solo quel file.
+- Le schede Home, Guida e Presentazione (anteprima) non possono entrare in un riquadro; mentre una è aperta, i due riquadri si nascondono per un momento e tornano quando si rientra in una scheda di documento.
+
+Tre o più riquadri, la divisione dentro una finestra staccata e la sincronizzazione in tempo reale delle due copie sono rimandate.

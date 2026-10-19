@@ -6,6 +6,7 @@
 
 - 앱의 수명 주기(`src/main/index.ts`): 단일 인스턴스 잠금, userData 위치, 확장자에 따른 파일 라우팅, 탭별 메뉴 전환, 종료 처리, `--headless-export` 진입.
 - 탭과 창: `src/main/tab-manager.ts`, 떼어 낸 창(`detached-windows.ts`), 닫기 확인(`window-close-guard.ts`), 렌더러 자원 감시(`renderer-watchdog.ts`), 닫은 워드 탭·창의 렌더러 프로세스 끝내기(`renderer-disposal.ts`), 크래시 기록과 알림(`crash-log.ts`, `crash-watch.ts`).
+- 화면 나누기(분할 뷰, 결정 0037): 탭 관리자의 두 칸(가장자리로 끌어다 놓기와 오른쪽 클릭 메뉴로 나누기·풀기, 구분선으로 비율 바꾸기·반반·한쪽 닫기), 초점이 있는 칸에 따르는 AI 창 하나의 배선, 나눈 모습의 기억과 파일 지정 없는 실행에서의 복원(`src/main/split-memory.ts`). 화면과 뒷단이 주고받는 계약은 `src/shared/split-view-api.ts`, 껍데기와 편집기 화면 사이의 다리는 `packages/electron-utils/src/split-pane-bridge.ts`가 정한다.
 - 홈 화면과 설정(`src/renderer/src/`): `Home.tsx`, `Onboarding.tsx`, `SettingsModal.tsx`, AI 설정 `SettingsAiSection.tsx`·`settings-ai.ts`, 통합 탭 `IntegrationsPane.tsx`, 별표 파일에 묻는 `KbAskPanel.tsx`, 앱 안 도움말(`i18n/help/`).
 - 의견 보내기(결정 0036, `src/main/feedback.ts`): 도움말 메뉴와 설정 → 정보의 같은 입구 하나. 제품 버전·운영체제·화면 언어를 대화 상자에 보여 주고 클립보드에 복사한 뒤 Google 설문을 브라우저로 연다. 문구는 `feedback.ts`의 21개 언어 표, 모든 탭의 도움말 메뉴에 끼워 넣는 일은 `withHelpItems`, 채널은 `home:open-feedback-survey`다.
 - 파일 색인과 지식 기반(`src/main/file-index/`, `knowledge-base.ts`), 최근 파일, 폴더 트리. 홈의 질문을 별표 그룹 하나로 좁히는 일(`knowledge-base.ts`의 `KbRunScopes`, `kb:open-scope`·`kb:close-scope`).
@@ -71,6 +72,10 @@
 - 보관소의 "모두 지우기"는 설정 화면에서 확인을 받은 뒤에만 부른다. 도는 작업이 있는지는 보지 않는다(그 작업은 이후 항목을 다시 쓴다).
 - **문서 고르기 창은 경로를 화면에 넘기지 않는다.** 창과 껍데기 앱은 식별자만 주고받고, 껍데기 앱은 방금 창에 건넨 목록에 있는 식별자일 때만(정해진 길이 상한 안에서) 받아들여 그 경로를 편집기로 돌려준다. 목록을 만들 때도 형식과 크기만 보고 파일 내용은 읽지 않는다. 고르기 창은 한 번에 하나이고, 창을 닫으면 취소다. 새 창을 이 앱에 더하면 `electron.vite.config.ts`의 preload 목록과 renderer 입력 목록 양쪽에 넣는다(한쪽만 넣으면 빈 화면이 뜬다).
 
+- **화면 나누기는 칸이 정확히 둘일 때만이다.** 세 칸 이상을 만드는 길과 떼어 낸 창 안에서 나누는 길을 열지 않는다(결정 0037). 홈·도움말·발표(미리보기) 탭은 칸에 들어가지 못한다.
+- **같은 문서가 두 칸에 있을 때 저장은 확인을 받은 뒤에만 쓴다.** 한쪽에서 저장한 뒤 다른 칸에서 또 저장하려 하면 "이 문서가 다른 곳에서 바뀌었습니다"를 먼저 묻고, 사람이 확인한 뒤에만 디스크에 쓴다. 자동 저장은 확인 없이 조용히 미룬다.
+- **나눔 기억은 망가진 값을 무시하고, 나눔을 풀면 지운다.** 기억을 읽어 복원할 때 값이 어긋나 있으면 그 값으로 나누지 않는다. 나눔을 풀면 그 기억을 지운다.
+
 - **에이전트 세션은 사람이 시작한 창에만 속한다.** 채널은 그 창의 webContents만 받고, 세션은 그 창이 닫히면 끝난다. 경고 확인과 폴더 검사와 연결 확인은 화면이 아니라 뒷단이 시작할 때마다 다시 한다. 창에는 오류 문장을 보내지 않고 종류만 보낸다(`agentEventView`).
 - **세션 MCP 서버의 도구는 `AGENT_MCP_TOOL_NAMES`뿐이다.** 탭 닫기, 자체 편집 세션, 창 없는 파일 만들기를 더하지 않는다. 읽기는 가린 자리를 `{{이름}}`으로 내보내고(`withholdingSlides`, `withholdingOpenDocuments`), 가린 내용이 있는 PPT는 고치지 않는다. 연동의 앱 안 MCP 서버는 출력이 바깥에 약속된 것이라 이 처리를 하지 않는다(결정 0016).
 
@@ -85,6 +90,7 @@
 - 첫 연결 안내의 Codex 문장은 `CODEX_MAY_KEEP_HISTORY`로 켜져 있다. 브리지가 대화 이력 파일은 끄지만 Codex가 자체 진단 로그를 남기고, 앱은 그것을 읽을 수도 막을 수도 없기 때문이다.
 - 문자열은 세 군데에 있다. 렌더러 사전 `src/renderer/src/strings.ts`(언어 21개가 한 파일에 있고 `zh`가 키 집합을 정한다), 메인 프로세스의 인라인 사전(`src/main/index.ts`의 `tMain`), 도움말 `i18n/help/topics/<id>.<lang>.md`. 도움말 항목은 `help-registry.ts`의 `HELP_TOPICS`에 등록해야 보이고, 모든 언어 파일의 구조는 영어 원본과 같아야 한다(`npm run check:help-langs`).
 - 새 한글 문서는 홈의 카드, "+" 메뉴, 파일 메뉴에서 만든다(`newHwpTab`, `home:new-hwp`). 다른 새 문서처럼 만든 폴더를 기억해 두고(`rememberPendingDir`), 첫 저장 뒤 한글 저장 훅이 파일을 그 폴더로 옮긴다(`applyPendingDir`). 탭 이름은 저장 전까지 "제목 없는 한글 문서"(`untitledHwp`)다.
+- 앱 안 MCP의 `read_deck`은 슬라이드마다 `hidden`(숨김일 때)과 `comments`(메모가 있을 때만, `authorId`·`idx`·`작성자`·`시각`·`본문`)를 낸다. 메모는 가리기 표식 대상이 아니므로 withhold 모드에서도 같은 결과다.
 - 한글 문서는 편집기 밖에서 읽기만 한다. 파일 색인·지식 자료는 `parseFileToText`로, 앱 안 MCP의 `read_hwp`(`src/main/mcp/tools/hwp-tools.ts`)는 `hwpToText`로 디스크의 파일을 읽고, 열린 문서 읽기(`open_documents`)는 한글 탭이면 `apps/hwp`의 `hwpReadText`로 저장하지 않은 내용까지 읽는다. 열린 문서를 MCP로 저장하는 길은 한글 탭에 없다. 엔진 WASM은 `electron-builder.cjs`의 `extraResources`가 `Resources/wasm/rhwp_bg.wasm`으로 넣는다.
 - 렌더러 CSS의 크롬 색은 토큰만 쓴다(`npm run check:theme-colors`). shell의 강조색(`--accent` 계열)은 `src/renderer/src/home.css`에서 정의한다.
 - 구조 작업 프로세스는 메인 번들과 따로 묶인다. `pdf-structure-ipc.ts`가 진입점을 `?modulePath`로 가져오고, 빌드 결과는 `out/main/pdf-structure-process-*.js`다. `electron-builder.cjs`의 `beforePack`이 `assertPdfStructureProcessBuilt`로 이 파일이 있는지 확인하고, 없으면 패키징을 멈춘다. 이 파일이 빠진 설치본은 다른 기능은 되는데 Markdown·EPUB 변환, 그림 꺼내기, 번역 PDF만 실행 중에 실패한다. 번역 PDF에 필요한 `hb-subset.wasm`은 `extraResources`로 `wasm/`에 들어간다(명령줄도 같은 파일을 쓴다).

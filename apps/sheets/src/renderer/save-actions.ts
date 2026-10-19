@@ -419,7 +419,9 @@ export async function handleSave(
     return { ok: written.ok === true }
   }
   try {
-    ctx.setMessage(t('appSavingEdits', { count: total }))
+    // a quiet (automatic) save leaves the status line alone: a deferral by the
+    // copy-pair guard ends without any message, so "saving" must not be set
+    if (!quiet) ctx.setMessage(t('appSavingEdits', { count: total }))
     const result = await window.desktopApi.saveWorkbookEdits({
       sessionId: state.file.sessionId,
       mode,
@@ -475,7 +477,9 @@ export async function handleSave(
         )
         return { ok: false }
       }
-      ctx.setMessage(t('appSaveCanceled'))
+      // a quiet (automatic) save deferred by the copy-pair guard stays silent:
+      // the renderer keeps its dirty state and the message would be wrong
+      if (!quiet) ctx.setMessage(t('appSaveCanceled'))
       return { ok: false }
     }
     if (!splitSave) {

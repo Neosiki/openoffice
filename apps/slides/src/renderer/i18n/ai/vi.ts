@@ -201,6 +201,7 @@ export const vi = {
   aiLabelInsertSmartart: 'Chèn SmartArt',
   aiSumFromScratchGuard: '{label}: sử dụng generate_deck để tạo mới từ đầu',
   aiSumReadSlide: 'Đọc trang chiếu {n}',
+  aiSumReadComments: 'Đọc nhận xét',
   aiSumScriptNoop: 'Kịch bản chỉnh sửa (trang chiếu {n}, không có thay đổi)',
   aiSumScript: 'Kịch bản chỉnh sửa trên trang chiếu {n} ({count} thao tác)',
   aiSumWebSearch: 'Đã tìm kiếm "{query}" ({count} kết quả)',

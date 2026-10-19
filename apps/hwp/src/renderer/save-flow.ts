@@ -38,6 +38,9 @@ const fileNameOf = (path: string) => path.split(/[\\/]/).pop() ?? path
 
 const detailOf = (error: unknown) => (error instanceof Error ? error.message : String(error))
 
+/** the main process's refusal reason while a copy pair holds the disk version (hwp-main.ts) */
+const EXTERNAL_MODIFIED = 'hwp: external-modified'
+
 /**
  * The widths for the tabs the engine wrote without one (Hangul would draw them with none,
  * decision 0026), as the editor lays them out. A save never fails on this: whatever cannot
@@ -110,7 +113,13 @@ export async function runSave(
   }
 
   const commit = await api.commitSave(bytes, await measuredTabs(editor, api, bytes, begin.format))
-  if (!commit.ok) return { kind: 'failed', reason: 'write', detail: commit.error }
+  if (!commit.ok) {
+    // a same-document copy holds the disk version: the main process refused
+    // the write (a deferred autosave or a declined overwrite prompt) — that is
+    // a cancel, not a failure, and nothing lands in a notice
+    if (commit.error === EXTERNAL_MODIFIED) return { kind: 'canceled' }
+    return { kind: 'failed', reason: 'write', detail: commit.error }
+  }
   // the file is already written; a failed notification only leaves the editor's own dirty flag set
   await editor.notifySaved(fileNameOf(commit.path)).catch(() => {})
   return {

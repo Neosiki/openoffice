@@ -22,6 +22,7 @@
     "./renderer-scheme": "./src/renderer-scheme.ts",
     "./safe-external-url": "./src/safe-external-url.ts",
     "./safe-remote-url": "./src/safe-remote-url.ts",
+    "./split-pane-bridge": "./src/split-pane-bridge.ts",
     "./generate-handoff": "./src/generate-handoff.ts",
     "./unsaved-files": "./src/unsaved-files.ts",
     "./template-font-response": "./src/template-font-response.ts",

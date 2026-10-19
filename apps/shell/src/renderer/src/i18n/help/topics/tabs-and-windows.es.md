@@ -43,3 +43,21 @@ Cada pestaña de editor tiene una barra de herramientas arriba (la disposición 
 ## La pestaña Inicio
 
 La pestaña Inicio de la izquierda no se puede cerrar; para volver desde cualquier editor, haga clic en ella o use Archivo ▸ **Volver al inicio**.
+
+## Vista dividida: dos paneles
+
+**Arrastre una pestaña al borde derecho de la ventana**: la pestaña lo sigue como una pequeña copia flotante, cerca del borde aparece el aviso «Dividir aquí» y, al soltarla, quedan dos paneles lado a lado. Si la suelta en el borde inferior, quedan dos paneles apilados. El menú contextual de la pestaña ofrece lo mismo con **Dividir a la derecha** y **Dividir abajo**, y **Quitar división** en una pestaña que está en un panel.
+
+- La pestaña arrastrada queda en el panel donde la soltó; el otro panel conserva el documento que estaba viendo justo antes.
+- Si solo hay un documento abierto, se coloca una copia del mismo documento en ambos paneles, para ver el principio y el final a la vez. Un documento nuevo sin guardar también se puede dividir.
+- Arrastre el **separador** entre los paneles para cambiar su proporción, haga doble clic para dejarla mitad y mitad, o empújelo hasta un extremo para cerrar ese panel; el documento sigue abierto como pestaña.
+
+## Una sola ventana de IA que sigue el foco
+
+- Solo se ve una ventana de IA. El panel en el que trabaja muestra la suya; la del otro panel se repliega en un riel, y al hacer clic en un panel su ventana de IA pasa al frente.
+- Mientras está replegada, la conversación de ese panel y el trabajo de IA en curso siguen vivos. Las conversaciones se guardan por documento.
+- **Dos copias del mismo documento**: después de guardar en un panel, guardar desde el otro pregunta primero «Este documento cambió en otro lugar». El guardado automático espera en silencio.
+- **Al reiniciar la aplicación sin archivo**, vuelve la última pareja de documentos divididos tal como estaba; al abrirla con un archivo, solo se abre ese archivo.
+- Las pestañas Inicio, Ayuda y Presentación (vista previa) no pueden entrar en un panel; mientras una está abierta, los dos paneles se ocultan un momento y vuelven al regresar a una pestaña de documento.
+
+Tres o más paneles, la división dentro de una ventana separada y la sincronización en vivo de las dos copias quedan para más adelante.

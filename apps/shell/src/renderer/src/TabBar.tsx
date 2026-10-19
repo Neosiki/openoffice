@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { CSSProperties, PointerEvent as ReactPointerEvent, ReactElement } from 'react'
+import type { SplitHint, SplitViewState } from '../../shared/split-view-api'
 import type { TabsApi, TabSummary } from '../../shared/tabs-api'
 import { TEAR_OFF_SLACK, insertionIndexForX, isBeyondBand } from '../../shared/tab-drag-geometry'
 import { notifyFilesChanged } from './file-events'
@@ -199,9 +200,16 @@ export function renamedFileName(currentPath: string, typedName: string): string 
   return ext ? `${typedName}.${ext}` : typedName
 }
 
-export function TabBar() {
+interface TabBarProps {
+  /** the window's two-pane split; its tab ids decide the pane markers */
+  split: SplitViewState | null
+}
+
+export function TabBar({ split }: TabBarProps) {
   const { t, lang } = useI18n()
   const [tabs, setTabs] = useState<TabSummary[]>([])
+  // where a tab drag would split the window (main sends it while dragging)
+  const [splitHint, setSplitHint] = useState<SplitHint | null>(null)
   const stripRef = useRef<HTMLDivElement>(null)
 
   // Double-click a file tab to rename the underlying file inline (Home's row
@@ -353,6 +361,11 @@ export function TabBar() {
     })
   }, [])
 
+  // A split drop zone under the dragged tab: main sends the hint while the
+  // drag hovers an edge and clears it on release. The pane area itself is
+  // covered by WebContentsViews, so the hint is drawn inside the strip.
+  useEffect(() => window.aiOfficeTabs.onSplitHint(setSplitHint), [])
+
   /** pointer moves during a drag, delivered to the strip (it holds the capture) */
   const handleDragMove = (event: ReactPointerEvent<HTMLDivElement>) => {
     const drag = dragRef.current
@@ -496,6 +509,15 @@ export function TabBar() {
           <div className="tab-dock-indicator" style={{ left: dockX }} aria-hidden="true" />
         )}
         {tabs.map((tab, index) => {
+          // a tab that sits in a split pane keeps a marker: pane a on the
+          // left of its plate, pane b on the right; the focus pane's tab is
+          // still the one with the ordinary active plate
+          const pane =
+            split && tab.id === split.aTabId
+              ? ' split-a'
+              : split && tab.id === split.bTabId
+                ? ' split-b'
+                : ''
           // live transforms: the grabbed tab tracks the pointer; tabs between
           // the origin and the current target slide aside by the grabbed width
           let dragStyle: CSSProperties | undefined
@@ -511,7 +533,7 @@ export function TabBar() {
           return (
             <div
               key={tab.id}
-              className={`tab-item ${tab.kind === 'home' ? 'tab-home' : ''} ${tab.active ? 'active' : ''} ${dragVisual?.id === tab.id ? 'drag-source' : ''}`}
+              className={`tab-item ${tab.kind === 'home' ? 'tab-home' : ''} ${tab.active ? 'active' : ''} ${dragVisual?.id === tab.id ? 'drag-source' : ''}${pane}`}
               // long file names ellipsize in the strip — hover reveals the
               // full title (the close button's own tooltip still wins there)
               title={tab.kind === 'home' ? productName(lang) : tab.title}
@@ -646,6 +668,13 @@ export function TabBar() {
           </svg>
         </button>
       </div>
+      {splitHint && (
+        <div
+          className={`tab-split-hint ${splitHint.orientation === 'side' ? 'for-side' : 'for-stack'}`}
+        >
+          {t(splitHint.orientation === 'side' ? 'splitHintRight' : 'splitHintBottom')}
+        </div>
+      )}
       <button
         className="tab-overflow-btn"
         title={t('tabList')}

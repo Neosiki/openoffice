@@ -9,6 +9,8 @@ O Slides é o editor parecido com o PowerPoint: lê e escreve.pptx a sério.
 - **Tela**: edição WYSIWYG; arrastar, alças de dimensionamento, guias.
 - **Anotações**: notas do orador para cada slide, mantidas nos fluxos de exportação.
 
+- **Comentários**: os comentários de revisão ficam no pptx. O painel de comentários mostra o slide atual por padrão; mude para **Todas as páginas** para ver os de toda a apresentação, e a IA os lê quando pedido.
+
 ## Separadores do friso
 
 A faixa de separadores (no macOS começa em Página Inicial; o Windows acrescenta o separador Arquivo):

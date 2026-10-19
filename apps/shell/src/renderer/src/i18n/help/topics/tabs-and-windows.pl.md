@@ -43,3 +43,21 @@ Każda karta edytora ma u góry pasek narzędzi (dokładny układ różni się n
 ## Karta strony głównej
 
 Karta strony głównej, najbardziej z lewej, nie można zamknąć; aby wrócić do niej z dowolnego edytora, kliknij ją lub użyj Plik ▸ **Wróć do strony głównej**.
+
+## Widok podzielony: dwa okienka
+
+**Przeciągnij kartę na prawą krawędź okna**: karta podąża jako mała unosząca się kopia, przy krawędzi pojawia się podpowiedź „Podziel tutaj”, a po upuszczeniu powstają dwa okienka obok siebie. Upuszczenie na dolnej krawędzi daje dwa okienka jedno nad drugim. Menu podręczne karty oferuje to samo przez **Podziel w prawo** i **Podziel w dół**, a przy karcie znajdującej się w okienku także **Cofnij podział**.
+
+- Przeciągnięta karta trafia do okienka, w którym ją upuszczono; drugie okienko zachowuje dokument, który był przed chwilą oglądany.
+- Gdy otwarty jest tylko jeden dokument, do obu okienek trafia kopia tego samego dokumentu — można patrzeć na początek i koniec razem. Nowy, jeszcze niezapisany dokument też można podzielić.
+- Przeciągnij **przegrodę** między okienkami, aby zmienić proporcje; dwuklik daje podział na pół, a dociśnięcie do końca zamyka to okienko. Dokument pozostaje otwarty jako karta.
+
+## Jedno okno AI podążające za fokusem
+
+- Widoczne jest tylko jedno okno AI. Okienko, w którym właśnie pracujesz, pokazuje swoje; okno drugiego zwija się do szyny, a kliknięcie okienka wysuwa jego okno AI na wierzch.
+- Gdy jest zwinięte, rozmowa tego okienka i trwająca praca AI pozostają żywe. Rozmowy są przechowywane osobno dla każdego dokumentu.
+- **Dwie kopie tego samego dokumentu**: po zapisaniu w jednym okienku zapis z drugiego najpierw pyta „Ten dokument zmienił się gdzie indziej”. Autozapis cicho czeka.
+- **Ponowne uruchomienie aplikacji bez pliku** przywraca ostatnią parę podzielonych dokumentów dokładnie tak, jak były; uruchomienie z plikiem otwiera tylko ten plik.
+- Karty Strona główna, Pomoc i Prezentacja (podgląd) nie mogą trafić do okienka; gdy któraś jest otwarta, oba okienka chowają się na chwilę i wracają po powrocie na kartę dokumentu.
+
+Trzy lub więcej okienek, dzielenie wewnątrz odłączonego okna i synchronizacja kopii na żywo zostają na później.

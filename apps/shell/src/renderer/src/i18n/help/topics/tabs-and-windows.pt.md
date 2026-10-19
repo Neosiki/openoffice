@@ -43,3 +43,21 @@ Cada guia de editor tem uma barra de ferramentas no topo (a disposição exata v
 ## A guia Início
 
 A guia Início mais à esquerda não pode ser fechada; para voltar de qualquer editor, clique nela ou use Arquivo ▸ **Voltar ao início**.
+
+## Vista dividida: dois painéis
+
+**Arraste uma guia até ao bordo direito da janela**: a guia acompanha como uma pequena cópia flutuante, a indicação «Dividir aqui» aparece junto ao bordo e, ao largar, ficam dois painéis lado a lado. Se largar no bordo inferior, ficam dois painéis empilhados. O menu de contexto da guia oferece o mesmo com **Dividir à direita** e **Dividir abaixo**, e **Desfazer divisão** numa guia que está num painel.
+
+- A guia arrastada fica no painel onde a largou; o outro painel mantém o documento que estava a ver momentos antes.
+- Se houver só um documento aberto, uma cópia do mesmo documento vai para os dois painéis, para ver o início e o fim ao mesmo tempo. Um documento novo ainda não salvo também pode ser dividido.
+- Arraste o **divisor** entre os painéis para mudar a proporção, clique duas vezes para meio a meio, ou empurre-o até uma ponta para fechar esse painel; o documento continua aberto como guia.
+
+## Uma única janela de IA que segue o foco
+
+- Só uma janela de IA fica visível. O painel em que está a trabalhar mostra a dele; a do outro painel recolhe-se numa barra, e clicar num painel traz a janela de IA desse painel para a frente.
+- Enquanto está recolhida, a conversa desse painel e o trabalho de IA em curso continuam vivos. As conversas são guardadas por documento.
+- **Duas cópias do mesmo documento**: depois de salvar num painel, salvar a partir do outro pergunta primeiro «Este documento mudou noutro sítio». Já o salvamento automático espera em silêncio.
+- **Reabrir a aplicação sem ficheiro** traz de volta o último par de documentos divididos exatamente como estava; abri-la com um ficheiro abre apenas esse ficheiro.
+- As guias Início, Ajuda e Apresentação (pré-visualização) não podem entrar num painel; enquanto uma delas está aberta, os dois painéis escondem-se por um momento e voltam quando regressa a uma guia de documento.
+
+Três ou mais painéis, a divisão dentro de uma janela destacada e a sincronização em tempo real das duas cópias ficam para mais tarde.

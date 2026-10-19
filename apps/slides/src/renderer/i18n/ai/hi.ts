@@ -201,6 +201,7 @@ export const hi = {
   aiLabelInsertSmartart: 'SmartArt सम्मिलित करें',
   aiSumFromScratchGuard: '{label}: शुरुआत से बनाने के लिए generate_deck का उपयोग करें',
   aiSumReadSlide: 'स्लाइड {n} पढ़ी गई',
+  aiSumReadComments: 'टिप्पणियाँ पढ़ी गईं',
   aiSumScriptNoop: 'स्क्रिप्ट संपादित (स्लाइड {n}, कोई परिवर्तन नहीं)',
   aiSumScript: 'स्लाइड {n} पर स्क्रिप्ट संपादित ({count} कार्रवाइयाँ)',
   aiSumWebSearch: '"{query}" खोजा गया ({count} परिणाम)',

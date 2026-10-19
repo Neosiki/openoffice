@@ -62,6 +62,12 @@ export const es = {
   paneCommentsDelete: 'Eliminar comentario',
   paneCommentsPlaceholder: 'Nuevo comentario… (⌘/Ctrl+Entrar para publicar)',
   paneCommentsPost: 'Publicar',
+  paneCommentsScopePage: 'Esta diapositiva',
+  paneCommentsScopeAll: 'Todas las diapositivas',
+  paneCommentsPageHeading: 'Diapositiva {n}',
+  paneCommentsPageCount: '{n} comentarios',
+  paneCommentsAllEmpty: 'Aún no hay comentarios en esta presentación',
+  paneCommentsAllEmptySub: 'Los comentarios añadidos en cualquier diapositiva se reúnen aquí.',
 
   paneCsdTitle: 'Presentaciones personalizadas',
   paneCsdDefaultName: 'Presentación personalizada {n}',

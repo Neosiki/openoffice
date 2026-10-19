@@ -62,6 +62,12 @@ export const nl = {
   paneCommentsDelete: 'Opmerking verwijderen',
   paneCommentsPlaceholder: 'Nieuwe opmerking… (⌘/Ctrl+Enter om te plaatsen)',
   paneCommentsPost: 'Plaatsen',
+  paneCommentsScopePage: 'Deze dia',
+  paneCommentsScopeAll: 'Alle dia’s',
+  paneCommentsPageHeading: 'Dia {n}',
+  paneCommentsPageCount: '{n} opmerkingen',
+  paneCommentsAllEmpty: 'Nog geen opmerkingen in deze presentatie',
+  paneCommentsAllEmptySub: 'Opmerkingen van alle dia’s worden hier verzameld.',
 
   paneCsdTitle: 'Aangepaste voorstellingen',
   paneCsdDefaultName: 'Aangepaste voorstelling {n}',

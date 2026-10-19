@@ -9,6 +9,8 @@ Slides is the PowerPoint-like editor: reads and writes genuine.pptx.
 - **Canvas**: WYSIWYG editing; drag, scale handles, guides.
 - **Notes**: per-slide speaker notes, kept in export flows.
 
+- **Comments**: review comments live in the pptx. The comments pane shows the current slide by default — switch it to **all pages** to review every slide, and the AI reads them when you ask.
+
 ## Ribbon tabs
 
 The tab strip (macOS starts at Home; Windows adds a File tab):

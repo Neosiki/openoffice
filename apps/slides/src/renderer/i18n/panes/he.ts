@@ -61,6 +61,12 @@ export const he = {
   paneCommentsDelete: 'מחק הערה',
   paneCommentsPlaceholder: 'הערה חדשה… (⌘/Ctrl+Enter לפרסום)',
   paneCommentsPost: 'פרסם',
+  paneCommentsScopePage: 'שקופית זו',
+  paneCommentsScopeAll: 'כל השקופיות',
+  paneCommentsPageHeading: 'שקופית {n}',
+  paneCommentsPageCount: '{n} הערות',
+  paneCommentsAllEmpty: 'אין עדיין הערות במצגת זו',
+  paneCommentsAllEmptySub: 'הערות שנוספו בכל שקופית נאספות כאן.',
 
   paneCsdTitle: 'הצגות מותאמות אישית',
   paneCsdDefaultName: 'הצגה מותאמת אישית {n}',

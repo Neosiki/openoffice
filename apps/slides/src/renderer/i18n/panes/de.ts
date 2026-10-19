@@ -62,6 +62,12 @@ export const de = {
   paneCommentsDelete: 'Kommentar löschen',
   paneCommentsPlaceholder: 'Neuer Kommentar… (⌘/Strg+Eingabetaste zum Veröffentlichen)',
   paneCommentsPost: 'Veröffentlichen',
+  paneCommentsScopePage: 'Diese Folie',
+  paneCommentsScopeAll: 'Alle Folien',
+  paneCommentsPageHeading: 'Folie {n}',
+  paneCommentsPageCount: '{n} Kommentare',
+  paneCommentsAllEmpty: 'Noch keine Kommentare in dieser Präsentation',
+  paneCommentsAllEmptySub: 'Kommentare von allen Folien werden hier gesammelt.',
 
   paneCsdTitle: 'Zielgruppenorientierte Präsentationen',
   paneCsdDefaultName: 'Zielgruppenorientierte Präsentation {n}',
