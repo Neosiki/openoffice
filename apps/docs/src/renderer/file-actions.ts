@@ -105,6 +105,8 @@ import { adoptEmbeddedFonts } from './embedded-fonts'
 import { defaultEastAsiaFontFor } from './font-list'
 import { hasPrintableHeaderFooter } from './pagination'
 import { clearPrintZoom, setPrintZoom } from './print-zoom'
+import { collectPdfInternalLinks } from './pdf-internal-links'
+import type { PdfInternalLink } from '../shared/ipc'
 import { showToast } from './components/toast-bus'
 import { buildStandaloneHtml } from './html-export'
 import { aiPanelInitiallyOpen } from '@genoffice/ui'
@@ -1439,6 +1441,7 @@ async function printGroupsMerged(
   groups: PrintGroup[],
   scale: number,
   outPath?: string,
+  links?: PdfInternalLink[],
 ): Promise<boolean> {
   const parts: string[] = []
   // every printToPDF flips the whole document between print and screen media;
@@ -1474,7 +1477,7 @@ async function printGroupsMerged(
     appRoot?.classList.remove('pv-exporting')
     pvPages.forEach((page) => page.classList.remove('pv-print-skip', 'pv-print-tail'))
   }
-  const result = await window.desktop.saveMergedPdf(fileName, parts, outPath)
+  const result = await window.desktop.saveMergedPdf(fileName, parts, outPath, links)
   const mixed = groups.some((g) => g.w !== groups[0].w || g.h !== groups[0].h)
   ctx.setStatus(
     result.ok
@@ -1524,6 +1527,8 @@ export async function exportPdf(ctx: FileActionContext, outPath?: string): Promi
     // with pdf-lib; each page keeps its section's paper size
     const pvPages = [...document.querySelectorAll('.pv-page')] as HTMLElement[]
     if (pvPages.length > 0) {
+      // measured before the print zoom: fractions of each page box
+      const links = collectPdfInternalLinks(pvPages, doc.parsed.blocks)
       const scale = setPrintZoom()
       const pxToTwips = (px: number) => Math.round((px / 96) * 1440)
       let groups: PrintGroup[] = []
@@ -1541,12 +1546,12 @@ export async function exportPdf(ctx: FileActionContext, outPath?: string): Promi
       const PRINT_CHUNK = 10
       if (pvPages.length > PRINT_CHUNK) groups = chunkPrintGroups(groups, PRINT_CHUNK)
       if (groups.length > 1) {
-        return await printGroupsMerged(ctx, doc.fileName, pvPages, groups, scale, outPath)
+        return await printGroupsMerged(ctx, doc.fileName, pvPages, groups, scale, outPath, links)
       }
       // preview open but uniform paper: single export at the preview size
       const g = groups[0]
       if (g) {
-        const result = await window.desktop.exportPdf(doc.fileName, g.w, g.h, outPath, scale)
+        const result = await window.desktop.exportPdf(doc.fileName, g.w, g.h, outPath, scale, links)
         if (result.ok) {
           ctx.setStatus(t('appExportedPdf', { path: result.path ?? '' }))
           return true
@@ -1567,6 +1572,7 @@ export async function exportPdf(ctx: FileActionContext, outPath?: string): Promi
             chunkPrintGroups([g], PRINT_CHUNK / 2),
             scale,
             retryPath,
+            links,
           )
         }
         ctx.setStatus(t('appExportPdfFailed', { error: result.error }))

@@ -15,6 +15,7 @@ import type {
   AiStreamChunk,
   AiStreamRequest,
   DesktopApi,
+  PdfInternalLink,
   MenuCommand,
   AutoSaveDefault,
   ContextMenuRequest,
@@ -167,6 +168,7 @@ const api: DesktopApi = {
     pageHeightTwips: number,
     outPath?: string,
     scale?: number,
+    links?: PdfInternalLink[],
   ) =>
     ipcRenderer.invoke(
       'docs:export-pdf',
@@ -180,8 +182,8 @@ const api: DesktopApi = {
     ipcRenderer.invoke('docs:export-html', defaultName, html, outPath),
   printPdfBuffer: (pageWidthTwips: number, pageHeightTwips: number, scale?: number) =>
     ipcRenderer.invoke('docs:print-pdf-buffer', pageWidthTwips, pageHeightTwips, scale),
-  saveMergedPdf: (defaultName: string, base64Parts: string[], outPath?: string) =>
-    ipcRenderer.invoke('docs:save-merged-pdf', defaultName, base64Parts, outPath),
+  saveMergedPdf: (defaultName: string, base64Parts: string[], outPath?: string, links?: PdfInternalLink[]) =>
+    ipcRenderer.invoke('docs:save-merged-pdf', defaultName, base64Parts, outPath, links),
   pickExportImagesTarget: () => ipcRenderer.invoke('docs:pick-export-images-target'),
   takeExportPdf: (pdfPath: string) => ipcRenderer.invoke('docs:take-export-pdf', pdfPath),
   writeExportImage: (dir: string, fileName: string, pngBase64: string) =>

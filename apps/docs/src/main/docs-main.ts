@@ -203,6 +203,7 @@ import {
 } from './doc-format'
 import { copyImageDisplaySize, validCopyImageDataUrl } from './copy-image-guard'
 import { printScaleOption, validPrintGeometry } from './print-args'
+import { addPdfInternalLinks } from './pdf-links'
 import {
   assignStarredGroup,
   dropStarredItems,
@@ -5081,6 +5082,13 @@ export function registerDocsIpc(): void {
   // renderer print scale (inverse of the preview's print zoom, see print-zoom.ts)
   // Infinity passes a `> 0` check, so require finiteness before handing it to Chromium.
   const pdfScale = (scale?: number) => printScaleOption(scale)
+  const withInternalLinks = async (data: Buffer, links: unknown): Promise<Buffer> => {
+    if (!Array.isArray(links) || links.length === 0) return data
+    const { PDFDocument } = await import('pdf-lib')
+    const pdf = await PDFDocument.load(data)
+    if (addPdfInternalLinks(pdf, links) === 0) return data
+    return Buffer.from(await pdf.save())
+  }
   const printScale = (scale?: number) =>
     typeof scale === 'number' && Number.isFinite(scale) && scale > 0 && scale !== 1
       ? { scaleFactor: Math.round(scale * 100) }
@@ -5112,6 +5120,7 @@ export function registerDocsIpc(): void {
       pageHeightTwips: number,
       outPath?: string,
       scale?: number,
+      links?: unknown,
     ) => {
       // Renderer-supplied page geometry reaches Chromium printToPDF verbatim:
       // reject non-finite/out-of-range sizes (0.1in..50in) and scales (0.1..5),
@@ -5136,7 +5145,7 @@ export function registerDocsIpc(): void {
         allowPdfWrite(event.sender.id, filePath)
       }
       try {
-        const data = await event.sender.printToPDF({
+        const printed = await event.sender.printToPDF({
           printBackground: true,
           // custom pageSize is in inches; the docx page padding provides the margins
           pageSize: {
@@ -5146,6 +5155,7 @@ export function registerDocsIpc(): void {
           margins: { top: 0, bottom: 0, left: 0, right: 0 },
           ...pdfScale(scale),
         })
+        const data = await withInternalLinks(printed, links)
         await atomicWriteFile(filePath, data)
         if (!isImageExportTemp(event.sender.id, filePath)) openGeneratedFile(filePath)
         return { ok: true, path: filePath }
@@ -5281,7 +5291,7 @@ export function registerDocsIpc(): void {
   // merge grouped PDF fragments into one file in page order (pdf-lib)
   ipcMain.handle(
     'docs:save-merged-pdf',
-    async (event, defaultName: string, base64Parts: string[], outPath?: string) => {
+    async (event, defaultName: string, base64Parts: string[], outPath?: string, links?: unknown) => {
       let filePath = outPath ?? null
       if (filePath && !canPdfWrite(event.sender.id, filePath)) {
         return { ok: false, error: 'export target is not an authorized path' }
@@ -5304,6 +5314,7 @@ export function registerDocsIpc(): void {
           const pages = await merged.copyPages(part, part.getPageIndices())
           for (const page of pages) merged.addPage(page)
         }
+        if (Array.isArray(links) && links.length > 0) addPdfInternalLinks(merged, links)
         await atomicWriteFile(filePath, Buffer.from(await merged.save()))
         if (!isImageExportTemp(event.sender.id, filePath)) openGeneratedFile(filePath)
         return { ok: true, path: filePath }
