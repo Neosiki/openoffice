@@ -1,4 +1,4 @@
-/** Figure-provenance gate: chart data and data-dense briefs must declare dataSource; 'search' requires a real web_search first. */
+/** Figure-provenance gate: chart data and data-dense briefs must declare dataSource; 'search' requires a real web_search or a successful read_url first. */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { createSlidesSkill, type DeckAccess } from '../src/renderer/ai/slides-skill'
 import type { RenderSlide, PlacedBox, ShapeRenderNode } from '@genoffice/pptx-render'
@@ -98,6 +98,15 @@ beforeEach(() => {
     })),
     editChart: vi.fn(async () => ({ slide: richDeck })),
     webSearch: vi.fn(async () => ({ answer: '', results: [] })),
+    readUrl: vi.fn(async () => ({
+      ok: true,
+      url: 'https://example.com/page',
+      title: 'Example page',
+      text: 'page text',
+      offset: 0,
+      totalChars: 9,
+      truncated: false,
+    })),
   }
 })
 
@@ -109,10 +118,12 @@ describe('apply_ops addChart provenance gate', () => {
     expect((window as any).slidesApi.applyTxn).not.toHaveBeenCalled()
   })
 
-  it("refuses dataSource 'search' when no web_search ran in this conversation", async () => {
+  it("refuses dataSource 'search' when neither web_search nor read_url ran in this conversation", async () => {
     const r = await createSlidesSkill(mkAccess()).executeTool!(chartCall({ dataSource: 'search' }))
     expect(r.isError).toBe(true)
+    // the refusal must name both accepted web reads
     expect(r.output).toContain('web_search')
+    expect(r.output).toContain('read_url')
     expect((window as any).slidesApi.applyTxn).not.toHaveBeenCalled()
   })
 
@@ -122,6 +133,36 @@ describe('apply_ops addChart provenance gate', () => {
     const r = await skill.executeTool!(chartCall({ dataSource: 'search' }))
     expect(r.isError).toBeUndefined()
     expect((window as any).slidesApi.applyTxn).toHaveBeenCalledOnce()
+  })
+
+  it("accepts dataSource 'search' after a successful read_url", async () => {
+    const skill = createSlidesSkill(mkAccess())
+    await skill.executeTool!({
+      id: 'u',
+      name: 'read_url',
+      input: { url: 'https://example.com/page' },
+    })
+    const r = await skill.executeTool!(chartCall({ dataSource: 'search' }))
+    expect(r.isError).toBeUndefined()
+    expect((window as any).slidesApi.applyTxn).toHaveBeenCalledOnce()
+  })
+
+  it("a failed read_url does not open 'search'", async () => {
+    ;(window as any).slidesApi.readUrl = vi.fn(async () => ({
+      ok: false,
+      error: 'Could not reach the address: down',
+      errorCode: 'network',
+    }))
+    const skill = createSlidesSkill(mkAccess())
+    const read = await skill.executeTool!({
+      id: 'u',
+      name: 'read_url',
+      input: { url: 'https://example.com/page' },
+    })
+    expect(read.isError).toBe(true)
+    const r = await skill.executeTool!(chartCall({ dataSource: 'search' }))
+    expect(r.isError).toBe(true)
+    expect(r.output).toContain('web_search')
   })
 
   it("accepts 'sample' but forces disclosure in the output", async () => {
