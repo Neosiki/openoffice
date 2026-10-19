@@ -56,7 +56,8 @@ export const zh = {
   arClose: '关闭',
   arBusy: '本文档已有 AI 任务在进行（{done}/{total}）。请在其结束或停止后再试。',
   arUnavailable: '此窗口无法使用 AI 识读页面。',
-  arDeleteConfirm: '要删除为本文档保存的所有 AI 识读结果和译文吗？此操作无法撤销。',
+  arDeleteConfirm:
+    '要删除为本文档保存的所有 AI 结果（AI 识读、译文、段落卡片、重点标注建议和文档概览）吗？此操作无法撤销。',
   arDeleted: '已删除本文档保存的 AI 结果。',
   arDeleteFailed: '无法删除保存的 AI 结果。',
   arDeleteBusy: 'AI 任务正在进行，现在无法删除。',

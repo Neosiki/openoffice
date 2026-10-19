@@ -4,18 +4,19 @@
 
 PDF를 다시 흐르는 글의 **문서 나무**로 바꾸고, 그 나무를 쓰는 출력과 작업을 모은다. PDF 편집기(`apps/pdf`), 셸의 구조 프로세스(`apps/shell/src/main/pdf-structure/`), 명령줄(`packages/cli`)이 같은 코드를 쓴다.
 
-| 모듈                  | 하는 일                                                                                               | 진입점                                                                                                              |
-| --------------------- | ----------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| `src/tree`            | PDF → 문서 나무와 페이지 지문. 번역 나무·대역 나무 만들기                                             | `extractDocumentTree`, `deriveTranslatedTree`, `deriveBilingualTree`, `textUnits`                                   |
-| `src/images`          | 페이지에 박힌 그림 객체를 원래 해상도의 PNG로 꺼내기                                                  | `extractEmbeddedImages`                                                                                             |
-| `src/markdown`        | 나무 → Markdown 글, `assets/`의 그림, 앱 소유 목록(`.genoffice-assets.json`) 항목, 경고               | `treeToMarkdown`, `mergeAssetManifest`                                                                              |
-| `src/epub`            | 나무 → EPUB 3 바이트. 문서 언어 추정                                                                  | `writeEpub`, `guessLanguageFromText`                                                                                |
-| `src/structured-text` | 나무 → AI 창의 `read_pages`와 `pdf read --structured`가 쓰는 페이지별 구조화 글                       | `treeToStructuredText`, `formatStructuredPage`                                                                      |
-| `src/store`           | 결과 보관소. AI가 읽은 페이지, 번역, 작업 기록. **Node 전용**                                         | `@genoffice/pdf-structure/store`의 `ResultStore`, `documentHash`                                                    |
-| `src/jobs`            | 문서 작업 엔진. 호출 순서, 재시도, 멈춤, 이어하기, 문서마다 작업 하나                                 | `startAiReadJob`, `startTranslationJob`, `estimate*`, `plan*`, `runJobUnits`                                        |
-| `src/ai-read`         | AI 페이지 읽기의 지시문·요청, 답 해석과 검사, 반복 걸러내기, 보관 형식, 나무에 반영, 미리 고를 페이지 | `buildAiReadRequest`, `createAiReadCallModel`, `applyStoredAiReadings`, `aiReadPreselectPages`, `aiReadVisionCheck` |
-| `src/translate`       | 번역 단위·묶음, 자리 표시자, 지시문, 모델 호출과 다시 보내기, 기본 목표 언어, 번역·대역·부분 결과     | `translationJobParts`, `createTranslationModelCall`, `buildTranslatedTree`, `translationReport`                     |
-| `src/writeback`       | 번역문을 원본 PDF의 사본에 블록마다 다시 써 넣기(번역 PDF)                                            | `writeTranslatedPdf`                                                                                                |
+| 모듈                  | 하는 일                                                                                                          | 진입점                                                                                                              |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `src/tree`            | PDF → 문서 나무와 페이지 지문. 번역 나무·대역 나무 만들기                                                        | `extractDocumentTree`, `deriveTranslatedTree`, `deriveBilingualTree`, `textUnits`                                   |
+| `src/images`          | 페이지에 박힌 그림 객체를 원래 해상도의 PNG로 꺼내기                                                             | `extractEmbeddedImages`                                                                                             |
+| `src/markdown`        | 나무 → Markdown 글, `assets/`의 그림, 앱 소유 목록(`.genoffice-assets.json`) 항목, 경고                          | `treeToMarkdown`, `mergeAssetManifest`                                                                              |
+| `src/epub`            | 나무 → EPUB 3 바이트. 문서 언어 추정                                                                             | `writeEpub`, `guessLanguageFromText`                                                                                |
+| `src/structured-text` | 나무 → AI 창의 `read_pages`와 `pdf read --structured`가 쓰는 페이지별 구조화 글                                  | `treeToStructuredText`, `formatStructuredPage`                                                                      |
+| `src/store`           | 결과 보관소. AI가 읽은 페이지, 번역, 작업 기록, 읽기 도우미의 카드·핵심 표시·개요, 노트 연결 기록. **Node 전용** | `@genoffice/pdf-structure/store`의 `ResultStore`, `documentHash`                                                    |
+| `src/jobs`            | 문서 작업 엔진. 호출 순서, 재시도, 멈춤, 이어하기, 문서마다 작업 하나                                            | `startAiReadJob`, `startTranslationJob`, `estimate*`, `plan*`, `runJobUnits`                                        |
+| `src/ai-read`         | AI 페이지 읽기의 지시문·요청, 답 해석과 검사, 반복 걸러내기, 보관 형식, 나무에 반영, 미리 고를 페이지            | `buildAiReadRequest`, `createAiReadCallModel`, `applyStoredAiReadings`, `aiReadPreselectPages`, `aiReadVisionCheck` |
+| `src/translate`       | 번역 단위·묶음, 자리 표시자, 지시문, 모델 호출과 다시 보내기, 기본 목표 언어, 번역·대역·부분 결과                | `translationJobParts`, `createTranslationModelCall`, `buildTranslatedTree`, `translationReport`                     |
+| `src/writeback`       | 번역문을 원본 PDF의 사본에 블록마다 다시 써 넣기(번역 PDF)                                                       | `writeTranslatedPdf`                                                                                                |
+| `src/highlight`       | AI 핵심 표시(결정 0043)의 `runId`, 묶기, 지시문, 답 검사, 모델 호출과 다시 묻기, 작업                            | `highlightRunId`, `checkHighlightAnswer`, `createHighlightModelCall`, `startHighlightJob`, `estimateHighlightJob`   |
 
 ### 문서 나무 (`src/tree`)
 
@@ -36,10 +37,15 @@ PDF를 다시 흐르는 글의 **문서 나무**로 바꾸고, 그 나무를 쓰
 ### 보관소 (`src/store`)
 
 - 위치는 호출자가 준 데이터 폴더 아래 `pdf-store`(`STORE_DIR_NAME`)다. 앱은 `app.getPath('userData')`, 명령줄은 `genofficeUserDataDir()`를 준다. 둘이 같은 곳이어야 한다.
-- 배치: `docs/<문서 해시>/ai-read/<페이지 지문>.json`, `translations/<언어>/translation.json`(제공자·모델), `translations/<언어>/blocks/<페이지 지문>/<글 해시>.<순번>.json`, `jobs/ai-read.json`·`jobs/translate.<언어>.json`.
+- 배치: `docs/<문서 해시>/ai-read/<페이지 지문>.json`, `translations/<언어>/translation.json`(제공자·모델), `translations/<언어>/blocks/<페이지 지문>/<글 해시>.<순번>.json`, `jobs/ai-read.json`·`jobs/<종류>.<열쇠>.json`(`translate.<언어>`, `translate-page.<언어>`, `highlight.<runId>`, `summary.<언어>`).
+- 읽기 도우미(결정 0043)의 항목은 같은 문서 폴더 아래 새 폴더에 있다(형과 모양 검사는 `reading.ts`). `passages/<카드 id>.json`(구절 카드), `highlights/<runId>/run.json`(분류 묶음·분류·고른 페이지·제공자), `highlights/<runId>/blocks/<페이지 지문>/<글 해시>.<순번>.json`(번역 블록과 같은 열쇠, 제안과 상태 `pending`·`accepted`·`dismissed`), `insights/<언어>.json`(개요와 보낸 페이지의 지문 목록). `runId`는 묶음 id와 분류 이름 목록(순서대로)의 해시다.
+- 노트 연결 기록은 문서 폴더 밖의 `pdf-store/note-links.json` 하나다(`note-links.ts`). 이 보관소에서 유일하게 파일 경로(PDF의 `path.resolve()` 경로, Windows에서는 소문자)를 열쇠로 쓴다. 저장할 때마다 바뀌는 해시로는 노트를 잃기 때문이다. 경로로 못 찾으면 같은 문서 해시의 가장 최근 항목을 쓰고, 노트 파일이 없으면 없는 것으로 본다. PDF 편집기 메인 프로세스만 읽고 쓴다.
+- 번역 블록의 선택 필드 `edited: true`는 사람이 고친 블록이다. `text`가 고친 서식 없는 글이고 `runs`는 없으며 상태는 `translated`다. 읽기·쓰기·옮기기가 이 필드를 보존한다. 작업 엔진은 고친 블록을 끝난 것으로 치고, 출력(`translate/result.ts`)은 `runs`가 있어도 고친 글을 쓴다. `deleteTranslationExceptEdited`는 고친 블록만 남기고 그 언어의 나머지 블록을 지운다(`pdf translate --restart`와 앱의 "고친 문단은 남기기").
 - 문서 열쇠는 파일 바이트의 SHA-256, 번역 블록 열쇠는 시작 페이지의 지문 + 정규화한 원문 글의 해시 + 그 페이지 안에서 같은 해시의 순번이다(`keys.ts`). 페이지 범위를 바꿔도 글이 같으면 같은 블록이다.
+- 작업 종류는 `JOB_KINDS`의 다섯이다(`ai-read`, `translate`, `translate-page`, `highlight`, `summary`). 기록은 `(종류, 열쇠)`로 찾고, 열쇠는 `translate`·`translate-page`·`summary`의 언어(`lang`), `highlight`의 `runId`(기록의 선택 필드), `ai-read`는 없음이다(`jobKeyField`, `jobKeyOf`). 읽기·쓰기·심장 박동·옮기기·목록(`listJobs`)·파일 이름 검사(`JOB_FILE`)가 모두 이 규칙을 쓴다.
 - 작업 기록이 30초(`JOB_RUNNING_WINDOW_MS`) 안에 갱신되지 않은 `running`은 `stopped`/`interrupted`로 읽는다.
-- `migrateDocument`는 앱 안 저장으로 해시가 바뀐 문서의 결과를 지문이 같은 페이지만 옮긴다(더 새 것이 이긴다). **작업 기록은 옮기지 않는다.** 셸의 `job-migration.ts`가 따로 옮긴다.
+- `migrateDocument`는 앱 안 저장으로 해시가 바뀐 문서의 결과를 지문이 같은 페이지만 옮긴다(더 새 것이 이긴다). 카드는 페이지 지문이 남은 것, 핵심 표시는 `run.json`과 지문이 같은 페이지의 블록, 개요는 보낸 페이지의 지문이 모두 남은 것만 옮긴다. **작업 기록은 옮기지 않는다.** 셸의 `job-migration.ts`가 따로 옮긴다(새 종류 포함).
+- 문서 지우기(`deleteDocument`)는 그 문서 폴더를 통째로 지운다. `note-links.json`은 건드리지 않는다. 지우기 확인에 쓰는 수(고친 번역 블록, 카드)는 따로 읽는다.
 
 ### 문서 작업 (`src/jobs`)
 
@@ -49,10 +55,11 @@ PDF를 다시 흐르는 글의 **문서 나무**로 바꾸고, 그 나무를 쓰
 - 단위는 보관소에 쓰인 뒤에야 끝난 것이다. 보관소 쓰기가 실패하면 `store-write-failed`로 멈춘다. 실패로 기록된 번역 블록은 끝난 것으로 치고, "처음부터 다시"만 다시 보낸다.
 - 문서마다 작업 하나는 프로세스 안의 잠금(`documentJobs`)이 지킨다. 다른 프로세스와의 겹침은 호출자가 보관소의 작업 기록(`running`)으로 막는다.
 - 엔진은 스스로 시작하지 않는다. 호출자가 사용자의 확인 뒤에 부른다.
+- `translate-page`(대역 보기의 페이지 번역)는 번역 엔진에 페이지 범위를 주어 돌리되, `translate.<언어>` 기록을 쓰지 않고 자기 기록에만 진행을 남긴다. 번역 메타(`translation.json`)는 없을 때만 쓴다. 이어 할 작업이 아니다. `summary`(긴 문서의 개요)도 이어 하지 않는다.
 
 ### AI 페이지 읽기와 번역 (`src/ai-read`, `src/translate`)
 
-- 받은 글은 문서 데이터다. 지시를 따르지 않고 도구를 부르지 않는다. 형식이 깨진 페이지 답은 한 번 다시 묻고, 그래도 깨지면 그 페이지를 실패로 둔다(보관하지 않는다). 같은 구절이 비정상적으로 되풀이되는 블록은 버린다.
+- 받은 글은 문서 데이터다. 지시를 따르지 않고 도구를 부르지 않는다. AI 핵심 표시의 답(`{ blockId, label, quote }`)은 그 블록의 글에 공백 정규화만으로 들어 있는 문장, 아는 블록 id와 분류일 때만 받는다(`checkHighlightAnswer`). 한 블록 안의 같은 문장은 하나만 남긴다. 형식이 깨진 묶음은 한 번(`HIGHLIGHT_MAX_RESENDS`) 다시 묻고, 그래도 깨지면 `JobUnitFailure`로 둔다. 형식이 깨진 페이지 답은 한 번 다시 묻고, 그래도 깨지면 그 페이지를 실패로 둔다(보관하지 않는다). 같은 구절이 비정상적으로 되풀이되는 블록은 버린다.
 - AI 읽기 결과는 **원본 나무에만** 반영한다(`applyStoredAiReadings`). 번역·대역 나무는 반영한 뒤에 만든다. 보관 형식은 페이지 지문을 열쇠로 한다.
 - 번역 묶음은 약 2,500토큰(`TRANSLATION_BATCH_TOKENS`)이다. 굵게·기울임 경계, 링크, 각주 표시, 줄 안 수식은 자리 표시자로 바꿔 보내고(링크 주소는 보내지 않는다), 돌아온 자리 표시자의 종류와 개수가 맞지 않으면 두 번까지(`TRANSLATION_MAX_RESENDS`) 다시 보낸다. 해석할 수 없는 묶음은 `JobUnitFailure`라 보관하지 않고 이어 갈 때 다시 보낸다.
 - 기본 목표 언어는 화면 언어이고, 문서 언어가 화면 언어와 같으면 영어다. 문서 언어는 문자 체계로 추정하므로 라틴 문자 문서는 모두 `en`으로 읽힌다(알려진 한계).
@@ -103,4 +110,5 @@ PDF를 다시 흐르는 글의 **문서 나무**로 바꾸고, 그 나무를 쓰
 - 제공자는 항상 가짜다. 테스트는 실제 `claude`·`codex`나 네트워크에 닿지 않는다.
 - **보관소 동시 쓰기**(`tests/store-concurrency.test.ts`)는 Node 프로세스 두 개를 `node --import tsx`로 띄워 같은 항목을 번갈아 쓰게 하고, 다른 핸들이 항목을 열어 둔 채로도 바꿔 쓸 수 있는지 본다. Windows의 rename 거절을 실제로 겪는 것은 Windows에서 돌릴 때뿐이다. 보관소의 쓰기 방식을 바꾸면 Windows에서 이 파일을 여러 번 돌려 본다. 시간이 걸리는 테스트라 시간 제한이 길다(60초).
 - **epubcheck**는 테스트 의존성이 아니다. 개발 PC에서 `PDF_STRUCTURE_EPUB_SAMPLE=<경로.epub>`를 두고 `tests/epub.test.ts`를 돌리면 모든 요소를 담은 표본을 쓴다. 그 파일을 `java -jar epubcheck.jar <경로.epub>`로 검사해 오류 0이어야 한다. EPUB 쓰기를 바꾸면 이 검사를 다시 한다. 테스트 자체는 모든 XHTML·OPF가 잘 짜인 XML인지 `saxes`로 본다.
+- 읽기 도우미의 보관소와 작업(`tests/reading-store.test.ts`, `tests/highlight.test.ts`, `tests/translate-page-job.test.ts`): 새 항목의 왕복, `edited` 보존(읽기·쓰기·옮기기), 다섯 작업 종류의 기록 이름과 목록, 옮기기 규칙, 답 검사, 페이지 번역이 `translate.<언어>` 기록과 번역 메타를 건드리지 않는지. 보관소 쓰기를 바꾸면 위 동시 쓰기 테스트도 Windows에서 여러 번 돌린다.
 - 번역 PDF 테스트(`tests/writeback.test.ts`)는 결과 PDF를 다시 읽어 원문 글자가 사라지고 번역문이 나오는지, 링크·그림·도형이 그대로인지 본다. 설치 글꼴에 기대는 사례는 그 PC의 글꼴에 따라 달라질 수 있다.

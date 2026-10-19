@@ -63,7 +63,7 @@ export const es = {
     'Ya hay una tarea de IA en curso en este documento ({done}/{total}). Vuelve a intentarlo cuando termine o se detenga.',
   arUnavailable: 'La lectura de páginas con IA no está disponible en esta ventana.',
   arDeleteConfirm:
-    '¿Eliminar todas las lecturas con IA y traducciones guardadas de este documento? No se puede deshacer.',
+    '¿Eliminar todos los resultados de IA guardados de este documento (lecturas con IA, traducciones, tarjetas de pasaje, sugerencias de resaltado y el resumen)? No se puede deshacer.',
   arDeleted: 'Se eliminaron los resultados de IA guardados de este documento.',
   arDeleteFailed: 'No se pudieron eliminar los resultados de IA guardados.',
   arDeleteBusy: 'Hay una tarea de IA en curso, así que ahora no se puede eliminar nada.',

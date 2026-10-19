@@ -86,3 +86,66 @@ Sześć narzędzi: **tusz, prostokąt, elipsa, strzałka, notatka**, a ponadto *
 
 - Zwykłe zapisywanie, ręczne lub automatyczne, zapisuje adnotacje i edycje z powrotem w pliku (atomowo).
 - **Zaciemnianie przechodzi przez własny przepływ aplikowania** i tworzy kopię, pozostawiając oryginał nietknięty, dzięki czemu wrażliwa treść nie pozostaje w pliku źródłowym.
+
+## Skróty paska zaznaczenia
+
+Dopóki nad zaznaczonym tekstem widać pasek adnotacji, jeden klawisz od razu wykonuje działanie.
+
+| Klawisz | Działanie                              |
+| ------- | -------------------------------------- |
+| H       | Wyróżnienie (usuwa je, jeśli już jest) |
+| U       | Podkreślenie                           |
+| S       | Przekreślenie                          |
+| N       | Notatka na końcu zaznaczenia           |
+| E       | Wyjaśnienie AI (karta fragmentu)       |
+| T       | Tłumaczenie AI (karta fragmentu)       |
+| Enter   | Otwarcie pola **Zapytaj AI**           |
+
+- Klawisze działają tak samo przy koreańskiej lub dowolnej innej metodzie wprowadzania. Są pomijane, gdy piszesz w polu tekstowym albo trzymasz Ctrl lub Alt.
+- W dokumencie zablokowanym przed edycją (chronionym hasłem) H, U, S i N nic nie robią i pokazują powód, tak jak przyciski paska.
+
+## Karty fragmentów
+
+Naciśnij **E** lub **T** albo żetony wyjaśnienia i tłumaczenia w polu **Zapytaj AI**, a odpowiedź pojawi się w małej karcie obok zaznaczenia. Karty są przechowywane, więc zostają po ponownym otwarciu dokumentu, i można je kopiować. Ponowne pytanie o ten sam fragment otwiera istniejącą kartę bez wysyłania czegokolwiek.
+
+- **Zostaw jako notatkę** tworzy w tym miejscu notatkę. Jej pierwszy wiersz to „Wyjaśnienie AI” lub „Tłumaczenie AI”, a autorem jest nazwa Twojego konta na komputerze. Do pliku trafia przy zapisie PDF; do tego czasu karta pokazuje „Czeka na zapis”.
+- **Pytaj dalej w panelu AI** przekazuje fragment i odpowiedź do panelu AI bez wysyłania; **Dodaj do notatki** dopisuje je na końcu notatki tego PDF.
+- Tylko **Utwórz ponownie** wysyła fragment do AI jeszcze raz.
+- **Usuń** kasuje wyłącznie przechowywaną kartę. Zostawiona już notatka pozostaje.
+- Delikatna kropkowana linia oznacza każdy fragment z kartą; kliknięcie jej ponownie otwiera kartę. Linia istnieje tylko na ekranie i nigdy nie jest zapisywana ani drukowana. Włączysz ją lub wyłączysz w Widok ▸ **Oznaczenia fragmentów**.
+
+## Przegląd adnotacji
+
+- Widok ▸ **Adnotacje** wyświetla w lewym pasku bocznym listę wyróżnień, podkreśleń, przekreśleń, notatek i rysunków dokumentu, jeszcze niezapisanych oznaczeń oraz kart fragmentów. Oznaczenia pokazują tekst, który przykrywają.
+- Filtruj według rodzaju, koloru, zakresu stron lub tekstu, a sortuj według strony albo kolejności utworzenia.
+- Kliknięcie pozycji przenosi w to miejsce z krótkim mignięciem. Notatka otwiera swój wątek na marginesie, karta otwiera kartę.
+- Polecenia menu **Kopiuj jako Markdown**, **Otwórz jako dokument Markdown** i **Otwórz jako dokument Word** używają listy w obecnym przefiltrowaniu. AI nie bierze w tym udziału. Nowe dokumenty można tworzyć tylko z PDF otwartego w GenOffice.
+
+## Tłumaczenie obok
+
+- Włącz Widok ▸ **Tłumaczenie obok**, a po prawej stronie każdej strony pojawi się kolumna tłumaczenia przewijana razem z nią. Samo włączenie niczego nie wysyła do AI. Dokument przetłumaczony już przez **Przetłumacz dokument** od razu pokazuje tłumaczenie; akapity bez tłumaczenia widać jako przygaszony tekst źródłowy.
+- **Przetłumacz tę stronę** (lub **Przetłumacz resztę**, gdy część jest gotowa) wysyła stronę jednym kliknięciem, gdy korzystasz z subskrypcji; obok przycisku widać nazwę docelowej AI. Przy połączeniu rozliczanym za użycie pierwsze kliknięcie na karcie najpierw pyta „pobierze za to opłatę · Przetłumacz / Anuluj”.
+- Kliknij dwukrotnie przetłumaczony akapit, aby go edytować. Edytowane akapity są przechowywane jako zwykły tekst i trafiają bez zmian do przetłumaczonych plików PDF, Markdown i EPUB. **Przetłumacz ponownie** przy akapicie wysyła tylko ten akapit i najpierw pyta, jeśli był edytowany.
+- Najechanie myszą na przetłumaczony akapit obrysowuje jego miejsce na stronie źródłowej. Szerokość kolumny i rozmiar tekstu można zmieniać. **Przetłumacz wszystkie strony…** otwiera okno **Przetłumacz dokument**, którego format **Tylko zachowaj (bez pliku)** zachowuje tłumaczenie bez zapisywania pliku.
+
+## Wyróżnianie przez AI
+
+- W Narzędzia główne ▸ **Wyróżnianie przez AI** wybierz zestaw kategorii (Badania i raporty, Umowy i regulaminy, Podręczniki i instrukcje albo Własne) i strony. Nic nie zostanie wysłane, dopóki nie sprawdzisz szacowanej liczby wywołań i docelowej AI i nie naciśniesz **Rozpocznij**.
+- Zdania wybrane przez AI pojawiają się w podglądzie jako półprzezroczyste kolorowe ramki na stronie. Podgląd nigdy nie jest zapisywany; włączysz go lub wyłączysz w Widok ▸ **Podgląd wyróżnień**.
+- W panelu **Adnotacje** możesz **Akceptuj** lub **Odrzuć** sugestie pojedynczo albo zaakceptować całą kategorię. Zdania, którego nie znaleziono w tekście strony, nie można zaakceptować.
+- Zaakceptowana sugestia staje się wyróżnieniem w kolorze swojej kategorii, a nazwa kategorii zostaje zapisana jako temat adnotacji, więc inne przeglądarki PDF pokazują ją na liście komentarzy. Do pliku trafia przy zapisie PDF.
+- Wyróżniania przez AI nie można uruchomić w dokumencie zablokowanym przed edycją. Zmyślone zdania, których nie ma w tekście, są odrzucane, a raport końcowy podaje, ile otrzymano i ile odrzucono.
+
+## Przegląd dokumentu i cytaty akapitów
+
+- Na górze panelu AI **Przegląd dokumentu** ▸ **Utwórz przegląd** tworzy streszczenie w trzech zdaniach, podsumowanie i kluczowe pojęcia (ze znaczeniem i pierwszą stroną). Długi dokument jest streszczany częściami, więc najpierw potwierdzasz szacowaną liczbę wywołań.
+- Przegląd jest przechowywany i zostaje po ponownym otwarciu; dopiero **Utwórz ponownie** wysyła znowu. Kliknięcie pojęcia wyszukuje je w dokumencie; każdą sekcję można skopiować lub dodać do notatki.
+- Gdy rozmowa jest pusta, panel AI proponuje trzy sugerowane pytania. Kliknięcie wysyła pytanie jeden raz.
+- Kliknięcie odnośnika do strony (p.N), który AI podaje jako dowód, przenosi na tę stronę i podświetla cytowane zdanie przez dwie sekundy. Jeśli zdania nie da się znaleźć, otwiera się tylko strona.
+
+## Notatka dla każdego PDF
+
+- Gdy pierwszy raz naciśniesz **Otwórz notatkę** (karta Widok lub panel **Adnotacje**), otworzy się okno zapisu, domyślnie w folderze PDF z nazwą „nazwa PDF notatka.md”. Później notatka otwiera się od razu na karcie Markdown.
+- Jeśli wybierzesz plik, który już istnieje, Windows może zapytać, czy go zastąpić, ale plik nie zostanie nadpisany: zostanie połączony jako notatka w obecnej postaci.
+- **Dodaj do notatki** (na kartach, pozycjach panelu i w przeglądzie dokumentu) wstawia cytat z odnośnikiem do strony na końcu karty notatki i zostawia ją niezapisaną; zapisujesz sam na karcie notatki. Odnośnik otwiera PDF na tej stronie także w innych programach, np. w przeglądarce.
+- PDF, którego nigdy nie zapisano, pokazuje „Najpierw zapisz PDF”. Notatki działają tylko dla PDF otwartych w GenOffice.

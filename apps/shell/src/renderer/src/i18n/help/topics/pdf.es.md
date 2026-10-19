@@ -86,3 +86,66 @@ Seis herramientas: **Dibujar, Rectángulo, Elipse, Flecha, Nota**, más **Censur
 
 - El guardado normal o el autoguardado vuelven a escribir las anotaciones y las ediciones en el archivo (de forma atómica).
 - **La censura pasa por su procedimiento de aplicación**, que produce una copia y deja el original intacto, para que el contenido sensible no quede en él.
+
+## Atajos de la barra de selección
+
+Mientras la barra de anotación está visible sobre el texto seleccionado, una sola tecla ejecuta una acción al instante.
+
+| Tecla | Acción                                     |
+| ----- | ------------------------------------------ |
+| H     | Resaltar (quita el resaltado si ya existe) |
+| U     | Subrayar                                   |
+| S     | Tachar                                     |
+| N     | Añadir una nota al final de la selección   |
+| E     | Explicación de IA (tarjeta de pasaje)      |
+| T     | Traducción de IA (tarjeta de pasaje)       |
+| Intro | Abrir el cuadro **Preguntar a la IA**      |
+
+- Las teclas funcionan igual con un método de entrada coreano o de cualquier otro idioma. Se ignoran mientras escribe en un campo o mantiene pulsado Ctrl o Alt.
+- En un documento bloqueado para edición (protegido con contraseña), H, U, S y N no hacen nada y muestran el motivo, igual que los botones de la barra.
+
+## Tarjetas de pasaje
+
+Pulse **E** o **T**, o las fichas de explicar y traducir del cuadro **Preguntar a la IA**, y la respuesta aparecerá en una pequeña tarjeta junto a la selección. Las tarjetas se guardan, así que siguen ahí al volver a abrir el documento, y se pueden copiar. Si vuelve a preguntar por el mismo pasaje, se abre la tarjeta existente sin enviar nada.
+
+- **Guardar como nota** crea una nota en ese lugar. Su primera línea dice «Explicación de IA» o «Traducción de IA» y el autor es el nombre de su cuenta del PC. Entra en el archivo al guardar el PDF; hasta entonces la tarjeta muestra «Pendiente de guardar».
+- **Seguir preguntando en el panel de IA** pasa el pasaje y la respuesta al panel de IA sin enviarlos; **Añadir a la nota** los coloca al final de la nota de este PDF.
+- Solo **Volver a generar** envía de nuevo el pasaje a la IA.
+- **Eliminar** borra únicamente la tarjeta guardada. La nota que ya guardó se queda.
+- Una línea punteada tenue marca cada pasaje que tiene tarjeta; al hacer clic en ella se vuelve a abrir. La línea solo existe en pantalla y nunca se guarda ni se imprime. Actívela o desactívela en Vista ▸ **Marcas de pasaje**.
+
+## Resumen de anotaciones
+
+- Vista ▸ **Anotaciones** muestra en la barra lateral izquierda una lista con los resaltados, subrayados, tachados, notas y dibujos del documento, las marcas aún sin guardar y las tarjetas de pasaje. Las marcas muestran el texto que cubren.
+- Filtre por tipo, color, intervalo de páginas o texto, y ordene por página o por orden de creación.
+- Al hacer clic en un elemento se salta a ese lugar con un breve parpadeo. Una nota abre su hilo en el margen; una tarjeta abre la tarjeta.
+- Las opciones del menú **Copiar como Markdown**, **Abrir como documento Markdown** y **Abrir como documento de Word** usan la lista tal como está filtrada. No interviene la IA. Solo se pueden crear documentos nuevos desde un PDF abierto dentro de GenOffice.
+
+## Traducción en paralelo
+
+- Active Vista ▸ **Traducción en paralelo** y a la derecha de cada página aparecerá una columna de traducción que se desplaza con ella. Activarla no envía nada a la IA. Un documento que ya tradujo con **Traducir documento** muestra su traducción enseguida; los párrafos sin traducción se ven como texto original atenuado.
+- **Traducir esta página** (o **Traducir el resto** si ya hay una parte hecha) envía la página con un solo clic mientras usa una suscripción; junto al botón figura el nombre de la IA a la que va. En una conexión que cobra por uso, el primer clic en una pestaña pregunta antes «cobrará por esto · Traducir / Cancelar».
+- Haga doble clic en un párrafo traducido para editarlo. Los párrafos editados se guardan como texto sin formato y se usan tal cual en los archivos PDF, Markdown y EPUB traducidos. **Volver a traducir** en un párrafo envía solo ese párrafo y pregunta antes si lo había editado.
+- Al pasar el ratón sobre un párrafo traducido se recuadra su lugar en la página original. El ancho y el tamaño de letra de la columna se pueden ajustar. **Traducir todas las páginas…** abre la ventana **Traducir documento**, cuyo formato **Solo guardar (sin archivo)** conserva la traducción sin escribir ningún archivo.
+
+## Resaltado con IA
+
+- En Inicio ▸ **Resaltado con IA**, elija un conjunto de categorías (Investigación e informes, Contratos y condiciones, Libros de texto y manuales, o Personalizado) y las páginas. No se envía nada hasta que revise el número estimado de llamadas y la IA de destino y pulse **Empezar**.
+- Las frases que elige la IA se previsualizan como recuadros de color translúcidos sobre la página. La vista previa nunca se guarda; actívela o desactívela en Vista ▸ **Vista previa de resaltados**.
+- En el panel **Anotaciones**, pulse **Aceptar** o **Descartar** en cada sugerencia, o acepte una categoría completa. Una frase que no se encontró en el texto de la página no se puede aceptar.
+- Una sugerencia aceptada se convierte en un resaltado del color de su categoría, y el nombre de la categoría se guarda como asunto de la anotación, de modo que otros visores de PDF lo muestran en su lista de comentarios. Entra en el archivo al guardar el PDF.
+- El resaltado con IA no puede iniciarse en un documento bloqueado para edición. Las frases inventadas que no están en el texto se descartan, y el informe final indica cuántas se recibieron y cuántas se descartaron.
+
+## Resumen del documento y citas de párrafo
+
+- En la parte superior del panel de IA, **Resumen del documento** ▸ **Crear resumen general** produce un resumen en tres líneas, un resumen y términos clave (con su significado y la primera página). Un documento largo se resume por partes, por eso primero confirma el número estimado de llamadas.
+- El resumen se guarda y sigue ahí al volver a abrir; solo **Volver a generar** envía de nuevo. Al hacer clic en un término se busca en el documento; cada sección se puede copiar o añadir a la nota.
+- Cuando la conversación está vacía, el panel de IA ofrece tres preguntas sugeridas. Al hacer clic en una se envía una vez.
+- Al hacer clic en un enlace de página (p.N) que la IA da como prueba, se salta a esa página y la frase citada se resalta durante dos segundos. Si no se encuentra la frase, solo se va a la página.
+
+## Una nota para cada PDF
+
+- La primera vez que pulse **Abrir nota** (pestaña Vista o panel **Anotaciones**) se abre un cuadro de guardado, por defecto en la carpeta del PDF con el nombre «nombre del PDF nota.md». Después, la nota se abre directamente en una pestaña de Markdown.
+- Si elige un archivo que ya existe, Windows puede preguntar si quiere reemplazarlo, pero el archivo no se sobrescribe: queda vinculado como nota tal como está.
+- **Añadir a la nota** (en tarjetas, elementos del panel y el resumen del documento) coloca una cita y un enlace de página al final de la pestaña de la nota y lo deja sin guardar; usted guarda en la pestaña de la nota. El enlace abre el PDF en esa página en otros programas, como un navegador.
+- Un PDF que nunca se guardó muestra «Guarda primero el PDF». Las notas solo funcionan con PDF abiertos dentro de GenOffice.

@@ -86,3 +86,66 @@ Zes gereedschappen: **inkt, rechthoek, ellips, pijl, notitie**, plus de **zwartm
 
 - Gewoon opslaan, handmatig of automatisch, schrijft annotaties en bewerkingen terug in het bestand (atomair).
 - **Zwart maken loopt via de eigen werkstroom Toepassen** en levert een kopie op, waardoor het origineel ongemoeid blijft en gevoelige inhoud er niet in achterblijft.
+
+## Sneltoetsen van de selectiebalk
+
+Zolang de annotatiebalk boven geselecteerde tekst staat, voert één toets meteen een actie uit.
+
+| Toets | Actie                                          |
+| ----- | ---------------------------------------------- |
+| H     | Markeren (haalt een bestaande markering weg)   |
+| U     | Onderstrepen                                   |
+| S     | Doorhalen                                      |
+| N     | Notitie toevoegen aan het eind van de selectie |
+| E     | AI-uitleg (passagekaart)                       |
+| T     | AI-vertaling (passagekaart)                    |
+| Enter | Het vak **Vraag AI** openen                    |
+
+- De toetsen werken hetzelfde met een Koreaanse of elke andere invoermethode. Ze worden genegeerd terwijl je in een veld typt of Ctrl of Alt ingedrukt houdt.
+- In een document dat tegen bewerken is vergrendeld (met wachtwoord), doen H, U, S en N niets en tonen ze de reden, net als de knoppen op de balk.
+
+## Passagekaarten
+
+Druk op **E** of **T**, of op de chips voor uitleggen en vertalen in het vak **Vraag AI**, en het antwoord verschijnt in een kleine kaart naast de selectie. Kaarten worden bewaard, dus ze zijn er nog als je het document opnieuw opent, en je kunt ze kopiëren. Vraag je opnieuw naar dezelfde passage, dan opent de bestaande kaart zonder dat er iets wordt verstuurd.
+
+- **Bewaren als notitie** maakt op die plek een notitie. De eerste regel luidt "AI-uitleg" of "AI-vertaling" en de auteur is de naam van je pc-account. Ze komt in het bestand wanneer je de pdf opslaat; tot dan toont de kaart "Wacht op opslaan".
+- **Verder vragen in het AI-paneel** geeft de passage en het antwoord door aan het AI-paneel zonder ze te versturen; **Toevoegen aan notitie** zet ze onderaan de notitie van deze pdf.
+- Alleen **Opnieuw maken** stuurt de passage nog eens naar de AI.
+- **Verwijderen** wist alleen de bewaarde kaart. Een notitie die je al hebt bewaard, blijft staan.
+- Een vage stippellijn markeert elke passage met een kaart; klik erop om de kaart weer te openen. De lijn staat alleen op het scherm en wordt nooit opgeslagen of afgedrukt. Zet hem aan of uit via Beeld ▸ **Passagemarkeringen**.
+
+## Overzicht van annotaties
+
+- Beeld ▸ **Annotaties** toont in de linkerzijbalk een lijst met de markeringen, onderstrepingen, doorhalingen, notities en tekeningen van het document, nog niet opgeslagen markeringen en passagekaarten. Markeringen laten de tekst eronder zien.
+- Filter op soort, kleur, paginabereik of tekst en sorteer op pagina of op volgorde van aanmaken.
+- Klik op een item om er met een korte knippering naartoe te gaan. Een notitie opent haar draad in de marge; een kaart opent de kaart.
+- De menuopdrachten **Kopiëren als Markdown**, **Openen als Markdown-document** en **Openen als Word-document** gebruiken de lijst zoals die nu gefilterd is. Er komt geen AI aan te pas. Nieuwe documenten kunnen alleen worden gemaakt vanuit een pdf die in GenOffice is geopend.
+
+## Vertaling naast elkaar
+
+- Zet Beeld ▸ **Vertaling naast elkaar** aan en rechts van elke pagina verschijnt een vertaalkolom die meescrollt. Alleen aanzetten stuurt niets naar de AI. Een document dat je al met **Document vertalen** hebt vertaald, toont de vertaling meteen; alinea’s zonder vertaling verschijnen als vervaagde brontekst.
+- **Deze pagina vertalen** (of **De rest vertalen** als een deel al klaar is) verstuurt de pagina met één klik zolang je een abonnement gebruikt; naast de knop staat naar welke AI het gaat. Bij een verbinding die per gebruik betaalt, vraagt de eerste klik in een tabblad eerst "brengt hiervoor kosten in rekening · Vertalen / Annuleren".
+- Dubbelklik op een vertaalde alinea om die te bewerken. Bewerkte alinea’s worden als platte tekst bewaard en ongewijzigd gebruikt in vertaalde pdf-, Markdown- en EPUB-bestanden. **Opnieuw vertalen** bij een alinea stuurt alleen die alinea en vraagt het eerst als je haar hebt bewerkt.
+- Beweeg je de muis over een vertaalde alinea, dan krijgt haar plek op de bronpagina een kader. Breedte en tekstgrootte van de kolom zijn instelbaar. **Alle pagina’s vertalen…** opent het venster **Document vertalen**, waarvan de indeling **Alleen bewaren (geen bestand)** de vertaling bewaart zonder een bestand te schrijven.
+
+## AI-markering
+
+- Kies onder Start ▸ **AI-markering** een categorieset (Onderzoek en rapporten, Contracten en voorwaarden, Lesboeken en handleidingen, of Eigen) en de pagina’s. Er wordt niets verstuurd tot je het geschatte aantal aanroepen en de AI hebt gecontroleerd en op **Starten** drukt.
+- De zinnen die de AI kiest, verschijnen als voorbeeld in doorschijnende gekleurde kaders op de pagina. Het voorbeeld wordt nooit opgeslagen; zet het aan of uit via Beeld ▸ **Voorbeeld van markeringen**.
+- In het paneel **Annotaties** kun je suggesties één voor één **Accepteren** of **Negeren**, of een hele categorie accepteren. Een zin die niet in de paginatekst is gevonden, kan niet worden geaccepteerd.
+- Een geaccepteerde suggestie wordt een markering in de kleur van haar categorie, en de categorienaam wordt opgeslagen als onderwerp van de annotatie, zodat andere pdf-viewers hem in hun opmerkingenlijst tonen. Ze komt in het bestand wanneer je de pdf opslaat.
+- AI-markering kan niet starten in een document dat tegen bewerken is vergrendeld. Verzonnen zinnen die niet in de tekst staan, worden weggegooid, en het eindverslag vermeldt hoeveel er zijn ontvangen en weggegooid.
+
+## Documentoverzicht en alineacitaten
+
+- Boven in het AI-paneel maakt **Documentoverzicht** ▸ **Overzicht maken** een samenvatting in drie regels, een samenvatting en kernbegrippen (met betekenis en eerste pagina). Een lang document wordt in delen samengevat, dus je bevestigt eerst het geschatte aantal aanroepen.
+- Het overzicht wordt bewaard en is er nog als je opnieuw opent; alleen **Opnieuw maken** verstuurt opnieuw. Klik op een begrip om het in het document te zoeken; elk onderdeel kan worden gekopieerd of aan de notitie toegevoegd.
+- Als het gesprek leeg is, biedt het AI-paneel drie voorgestelde vragen aan. Een klik verstuurt de vraag één keer.
+- Een klik op een paginalink (p.N) die de AI als bewijs geeft, springt naar die pagina en licht de geciteerde zin twee seconden op. Wordt de zin niet gevonden, dan ga je alleen naar de pagina.
+
+## Een notitie voor elke pdf
+
+- De eerste keer dat je op **Notitie openen** drukt (tabblad Beeld of paneel **Annotaties**), opent een opslagvenster, standaard in de map van de pdf met de naam "pdf-naam notitie.md". Daarna opent de notitie meteen in een Markdown-tabblad.
+- Kies je een bestand dat al bestaat, dan vraagt Windows misschien of het moet worden vervangen, maar het bestand wordt niet overschreven: het wordt zoals het is als notitie gekoppeld.
+- **Toevoegen aan notitie** (op kaarten, items in het paneel en het documentoverzicht) zet een citaat met paginalink onderaan het tabblad van de notitie en laat het niet-opgeslagen; je slaat zelf op in dat tabblad. De link opent de pdf op die pagina in andere programma’s, zoals een browser.
+- Een pdf die nooit is opgeslagen, toont "Sla eerst de pdf op". Notities werken alleen voor pdf’s die in GenOffice zijn geopend.

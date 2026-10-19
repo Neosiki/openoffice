@@ -86,3 +86,66 @@ Sei strumenti: **inchiostro, rettangolo, ellisse, freccia, nota**, più il **riq
 
 - Il normale salvataggio, manuale o automatico, riscrive annotazioni e modifiche nel file (in modo atomico).
 - **L'oscuramento passa dal proprio flusso di applicazione** e produce una copia, lasciando intatto l'originale, così il contenuto sensibile non resta in esso.
+
+## Scorciatoie della barra di selezione
+
+Finché la barra delle annotazioni è visibile sopra il testo selezionato, un solo tasto esegue subito un’azione.
+
+| Tasto | Azione                                         |
+| ----- | ---------------------------------------------- |
+| H     | Evidenzia (toglie l’evidenziazione se c’è già) |
+| U     | Sottolinea                                     |
+| S     | Barra                                          |
+| N     | Aggiunge una nota alla fine della selezione    |
+| E     | Spiegazione IA (scheda del passaggio)          |
+| T     | Traduzione IA (scheda del passaggio)           |
+| Invio | Apre la casella **Chiedi all'IA**              |
+
+- I tasti funzionano allo stesso modo anche con un metodo di input coreano o di qualsiasi altra lingua. Vengono ignorati mentre scrivi in un campo o tieni premuto Ctrl o Alt.
+- In un documento bloccato alla modifica (protetto da password), H, U, S e N non fanno nulla e mostrano il motivo, come i pulsanti della barra.
+
+## Schede dei passaggi
+
+Premi **E** o **T**, oppure i chip di spiegazione e traduzione nella casella **Chiedi all'IA**, e la risposta compare in una piccola scheda accanto alla selezione. Le schede vengono conservate, quindi restano anche quando riapri il documento, e si possono copiare. Se chiedi di nuovo lo stesso passaggio, si apre la scheda esistente senza inviare nulla.
+
+- **Tieni come nota** crea una nota in quel punto. La prima riga dice «Spiegazione IA» o «Traduzione IA» e l’autore è il nome del tuo account sul PC. Entra nel file quando salvi il PDF; fino ad allora la scheda mostra «In attesa di salvataggio».
+- **Continua nel pannello IA** passa il passaggio e la risposta al pannello IA senza inviarli; **Aggiungi alla nota** li mette in fondo alla nota di questo PDF.
+- Solo **Rigenera** invia di nuovo il passaggio all’IA.
+- **Elimina** cancella soltanto la scheda conservata. Una nota già tenuta resta dov’è.
+- Una sottile linea tratteggiata segna ogni passaggio che ha una scheda; facendo clic sulla linea la scheda si riapre. La linea esiste solo sullo schermo e non viene mai salvata né stampata. Attivala o disattivala da Visualizza ▸ **Segni dei passaggi**.
+
+## Panoramica delle annotazioni
+
+- Visualizza ▸ **Annotazioni** elenca nella barra laterale sinistra evidenziazioni, sottolineature, barrature, note e disegni del documento, i segni non ancora salvati e le schede dei passaggi. I segni mostrano il testo che coprono.
+- Filtra per tipo, colore, intervallo di pagine o testo, e ordina per pagina o per ordine di creazione.
+- Un clic su una voce porta in quel punto con un breve lampeggio. Una nota apre il suo filo a margine; una scheda apre la scheda.
+- Le voci di menu **Copia come Markdown**, **Apri come documento Markdown** e **Apri come documento Word** usano l’elenco così come è filtrato. L’IA non viene coinvolta. I nuovi documenti si possono creare solo da un PDF aperto dentro GenOffice.
+
+## Traduzione a fronte
+
+- Attiva Visualizza ▸ **Traduzione a fronte** e a destra di ogni pagina compare una colonna di traduzione che scorre insieme alla pagina. Attivarla non invia nulla all’IA. Un documento già tradotto con **Traduci documento** mostra subito la traduzione; i paragrafi senza traduzione appaiono come testo originale sbiadito.
+- **Traduci questa pagina** (o **Traduci il resto** se una parte è già fatta) invia la pagina con un solo clic quando usi un abbonamento; accanto al pulsante compare il nome dell’IA a cui va. Su una connessione a consumo, il primo clic in una scheda chiede prima «addebiterà questo servizio · Traduci / Annulla».
+- Fai doppio clic su un paragrafo tradotto per modificarlo. I paragrafi modificati sono conservati come testo semplice e usati così come sono nei file PDF, Markdown ed EPUB tradotti. **Traduci di nuovo** su un paragrafo invia solo quel paragrafo e chiede conferma se lo avevi modificato.
+- Passando il mouse su un paragrafo tradotto, il suo punto nella pagina originale viene contornato. Larghezza e dimensione del testo della colonna sono regolabili. **Traduci tutte le pagine…** apre la finestra **Traduci documento**, il cui formato **Solo conservare (nessun file)** tiene la traduzione senza scrivere file.
+
+## Evidenziazione IA
+
+- In Home ▸ **Evidenziazione IA** scegli un insieme di categorie (Ricerca e rapporti, Contratti e condizioni, Libri di testo e manuali, oppure Personalizzato) e le pagine. Non viene inviato nulla finché non controlli il numero stimato di chiamate e l’IA di destinazione e premi **Avvia**.
+- Le frasi scelte dall’IA vengono mostrate in anteprima come riquadri colorati traslucidi sulla pagina. L’anteprima non viene mai salvata; attivala o disattivala da Visualizza ▸ **Anteprima evidenziazioni**.
+- Nel pannello **Annotazioni** puoi **Accetta** o **Scarta** i suggerimenti uno alla volta, oppure accettare un’intera categoria. Una frase non trovata nel testo della pagina non può essere accettata.
+- Un suggerimento accettato diventa un’evidenziazione del colore della sua categoria, e il nome della categoria viene salvato come oggetto dell’annotazione, così gli altri visualizzatori PDF lo mostrano nell’elenco dei commenti. Entra nel file quando salvi il PDF.
+- L’evidenziazione IA non può partire in un documento bloccato alla modifica. Le frasi inventate che non compaiono nel testo vengono scartate, e il resoconto finale dice quante sono state ricevute e quante scartate.
+
+## Panoramica del documento e citazioni di paragrafo
+
+- In cima al pannello IA, **Panoramica del documento** ▸ **Crea panoramica** produce un riassunto in tre righe, un riassunto e i termini chiave (con significato e prima pagina). Un documento lungo viene riassunto a parti, quindi prima confermi il numero stimato di chiamate.
+- La panoramica viene conservata e ricompare alla riapertura; solo **Rigenera** invia di nuovo. Un clic su un termine lo cerca nel documento; ogni sezione si può copiare o aggiungere alla nota.
+- Quando la conversazione è vuota, il pannello IA propone tre domande suggerite. Un clic invia la domanda una volta.
+- Un clic su un link di pagina (p.N) che l’IA fornisce come prova porta a quella pagina ed evidenzia la frase citata per due secondi. Se la frase non viene trovata, si va solo alla pagina.
+
+## Una nota per ogni PDF
+
+- La prima volta che premi **Apri nota** (scheda Visualizza o pannello **Annotazioni**) si apre una finestra di salvataggio, di base nella cartella del PDF con il nome «nome del PDF nota.md». In seguito la nota si apre subito in una scheda Markdown.
+- Se scegli un file che esiste già, Windows può chiedere se sostituirlo, ma il file non viene sovrascritto: viene collegato come nota così com’è.
+- **Aggiungi alla nota** (su schede, voci del pannello e panoramica del documento) mette una citazione e un link di pagina in fondo alla scheda della nota e la lascia non salvata; il salvataggio lo fai tu nella scheda della nota. Il link apre il PDF a quella pagina anche in altri programmi, come un browser.
+- Un PDF mai salvato mostra «Salva prima il PDF». Le note funzionano solo con PDF aperti dentro GenOffice.

@@ -57,7 +57,8 @@ export const zhTW = {
   arClose: '關閉',
   arBusy: '此文件已有 AI 工作在進行（{done}/{total}）。請在其結束或停止後再試。',
   arUnavailable: '此視窗無法使用 AI 識讀頁面。',
-  arDeleteConfirm: '要刪除為此文件保存的所有 AI 識讀結果和譯文嗎？此操作無法復原。',
+  arDeleteConfirm:
+    '要刪除為此文件保存的所有 AI 結果（AI 識讀、譯文、段落卡片、重點標示建議和文件概覽）嗎？此操作無法復原。',
   arDeleted: '已刪除此文件保存的 AI 結果。',
   arDeleteFailed: '無法刪除保存的 AI 結果。',
   arDeleteBusy: 'AI 工作正在進行，現在無法刪除。',

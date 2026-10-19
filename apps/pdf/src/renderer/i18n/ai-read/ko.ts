@@ -58,7 +58,8 @@ export const ko = {
   arClose: '닫기',
   arBusy: '이 문서의 AI 작업이 이미 진행 중입니다({done}/{total}). 끝나거나 멈춘 뒤 다시 하세요.',
   arUnavailable: '이 창에서는 AI 페이지 읽기를 쓸 수 없습니다.',
-  arDeleteConfirm: '이 문서에 보관한 AI 읽기 결과와 번역을 모두 지울까요? 되돌릴 수 없습니다.',
+  arDeleteConfirm:
+    '이 문서에 보관한 AI 결과(AI 읽기, 번역, 구절 카드, 핵심 표시 제안, 문서 개요)를 모두 지울까요? 되돌릴 수 없습니다.',
   arDeleted: '이 문서의 AI 보관분을 지웠습니다.',
   arDeleteFailed: 'AI 보관분을 지우지 못했습니다.',
   arDeleteBusy: 'AI 작업이 진행 중이라 지금은 지울 수 없습니다.',

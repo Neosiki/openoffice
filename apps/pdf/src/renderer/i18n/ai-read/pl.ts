@@ -62,7 +62,7 @@ export const pl = {
     'Dla tego dokumentu trwa już zadanie AI ({done}/{total}). Spróbuj ponownie, gdy się zakończy lub zostanie zatrzymane.',
   arUnavailable: 'Czytanie stron przez AI nie jest dostępne w tym oknie.',
   arDeleteConfirm:
-    'Usunąć wszystkie odczyty AI i tłumaczenia zachowane dla tego dokumentu? Tej operacji nie można cofnąć.',
+    'Usunąć wszystkie wyniki AI zachowane dla tego dokumentu (odczyty AI, tłumaczenia, karty fragmentów, sugestie wyróżnień i przegląd)? Tej operacji nie można cofnąć.',
   arDeleted: 'Zachowane wyniki AI tego dokumentu zostały usunięte.',
   arDeleteFailed: 'Nie udało się usunąć zachowanych wyników AI.',
   arDeleteBusy: 'Trwa zadanie AI, więc teraz nie można nic usunąć.',
