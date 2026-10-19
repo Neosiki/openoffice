@@ -17,6 +17,7 @@ import type {
   DesktopApi,
   PdfInternalLink,
   MarkdownImage,
+  PrintJobOptions,
   MenuCommand,
   AutoSaveDefault,
   ContextMenuRequest,
@@ -162,7 +163,8 @@ const api: DesktopApi = {
   pickImage: () => ipcRenderer.invoke('docs:pick-image'),
   fontMetrics: (family: string) => ipcRenderer.invoke('docs:font-metrics', family),
   fontFamilyInfo: (families) => ipcRenderer.invoke('app:font-family-info', families),
-  print: (scale?: number) => ipcRenderer.invoke('docs:print', scale),
+  print: (scale?: number, job?: PrintJobOptions) => ipcRenderer.invoke('docs:print', scale, job),
+  listPrinters: () => ipcRenderer.invoke('docs:printers'),
   exportPdf: (
     defaultName: string,
     pageWidthTwips: number,

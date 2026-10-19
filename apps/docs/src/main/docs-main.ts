@@ -204,7 +204,7 @@ import {
   type DocFormat,
 } from './doc-format'
 import { copyImageDisplaySize, validCopyImageDataUrl } from './copy-image-guard'
-import { printScaleOption, validPrintGeometry } from './print-args'
+import { printJobOptions, printScaleOption, validPrintGeometry } from './print-args'
 import { addPdfInternalLinks } from './pdf-links'
 import {
   assignStarredGroup,
@@ -5138,13 +5138,18 @@ export function registerDocsIpc(): void {
       ? { scaleFactor: Math.round(scale * 100) }
       : {}
 
-  ipcMain.handle('docs:print', async (event, scale?: number) => {
+  ipcMain.handle('docs:printers', async (event) => {
+    const printers = await event.sender.getPrintersAsync()
+    return printers.map((p) => ({ name: p.name, displayName: p.displayName || p.name }))
+  })
+
+  ipcMain.handle('docs:print', async (event, scale?: number, job?: unknown) => {
     // print the calling tab's own content; zero margins — the docx page padding provides them.
-    // Resolves when the system dialog is dismissed; the print dialog stays open on cancel
-    // (ok=false without error) and surfaces real failures.
+    // Resolves when the system dialog is dismissed (or the silent job is queued); the print
+    // dialog stays open on cancel (ok=false without error) and surfaces real failures.
     return new Promise<{ ok: boolean; error?: string }>((resolve) => {
       event.sender.print(
-        { margins: { marginType: 'none' }, ...printScale(scale) },
+        { margins: { marginType: 'none' }, ...printScale(scale), ...printJobOptions(job) },
         (success, failureReason) => {
           resolve({
             ok: success,

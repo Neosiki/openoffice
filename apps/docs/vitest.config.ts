@@ -20,6 +20,9 @@ export default defineConfig({
       '@genoffice/electron-utils/headless-export': local(
         '../../packages/electron-utils/src/headless-export.ts',
       ),
+      '@genoffice/electron-utils/print-job': local(
+        '../../packages/electron-utils/src/print-job.ts',
+      ),
       '@genoffice/electron-utils/atomic-write': local(
         '../../packages/electron-utils/src/atomic-write.ts',
       ),

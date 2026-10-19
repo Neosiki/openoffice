@@ -16,6 +16,7 @@
     "./generated-images": "./src/generated-images.ts",
     "./font-store": "./src/font-store.ts",
     "./headless-export": "./src/headless-export.ts",
+    "./print-job": "./src/print-job.ts",
     "./print-window": "./src/print-window.ts",
     "./remote-image": "./src/remote-image.ts",
     "./renderer-protocol": "./src/renderer-protocol.ts",
