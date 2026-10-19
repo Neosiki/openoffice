@@ -138,6 +138,13 @@ import { createPageRenderer } from './ai-read/render-page'
 import { loadAiReadTexts } from './ai-read/search-texts'
 import { DocumentJobSession } from './doc-jobs/job-session'
 import { CertSignDialog } from './CertSignDialog'
+import { PassageReading, type PassageReadingHandle } from './reading/PassageReading'
+import { IconPassageMarks, PassageUnderlines } from './reading/PassageUnderlines'
+import { createSaveConfirmations } from './reading/save-confirmations'
+import { afterReadingSave, usePassageCards } from './reading/usePassageCards'
+import { passageSelectionOf, selectionEnd, type PassageFollowUp } from './reading/passage-cards'
+import { readPageText } from './reading/passage-text'
+import { labelWithKey, selectionBarKey, type SelectionBarAction } from './reading/shortcuts'
 import { SignaturesDialog, overallSignatureStatus } from './SignaturesDialog'
 import { SignatureDialog, fileToCanvas } from './SignatureDialog'
 import type { SignatureData } from './SignatureDialog'
@@ -231,6 +238,8 @@ import {
   STROKE_WIDTH,
   NOTE_MARGIN_W,
   parsePageRanges,
+  loadPassageMarks,
+  savePassageMarks,
 } from './view-config'
 import type { PageSize, FitMode } from './view-config'
 import { useVisibleSet, PdfPage, MarkupOverlay } from './PdfPage'
@@ -979,9 +988,16 @@ export default function App() {
     page: number
     lastPage: number
     text: string
+    /** a passage card answer handed over with the passage ("Ask more in the AI panel") */
+    followUp?: PassageFollowUp
   } | null>(null)
-  /** Ask-AI popover opened from the markup bar; the anchor rect is captured at open */
-  const [askPop, setAskPop] = useState<{ rect: AskAnchorRect; excerpt: string } | null>(null)
+  /** Ask-AI popover opened from the markup bar; the anchor rect is captured at open (and
+      the selection's quads, which its explain / translate chips turn into passage cards) */
+  const [askPop, setAskPop] = useState<{
+    rect: AskAnchorRect
+    excerpt: string
+    quads: Map<number, number[][]> | null
+  } | null>(null)
   /** Whole-document saved-annotation counts per original page for the AI context.
       The scan starts on first AI use, not when the document opens. */
   const [aiAnnotCounts, setAiAnnotCounts] = useState<SavedAnnotCounts | null>(null)
@@ -1594,6 +1610,18 @@ export default function App() {
 
   /** pdf-lib cannot write encrypted files, including owner-protected files that open without a password. */
   const readOnly = status === 'ready' && (passwordRef.current !== undefined || documentEncrypted)
+
+  // ── Reading assistant: passage cards, their dotted marks, save confirmations ──
+  const saveConfirmations = useMemo(() => createSaveConfirmations(), [])
+  const passageCards = usePassageCards({
+    filePath,
+    password: passwordRef.current,
+    lang,
+    ready: status === 'ready',
+  })
+  const readingRef = useRef<PassageReadingHandle | null>(null)
+  const [passageMarks, setPassageMarks] = useState(loadPassageMarks)
+  useEffect(() => savePassageMarks(passageMarks), [passageMarks])
 
   useEffect(() => {
     if (
@@ -2706,8 +2734,89 @@ export default function App() {
         : null
     if (!rect) return
     setSelPopup(null)
-    setAskPop({ rect, excerpt: aiSelection?.text ?? sel?.toString() ?? '' })
+    setAskPop({
+      rect,
+      excerpt: aiSelection?.text ?? sel?.toString() ?? '',
+      quads: selPopup?.quads ?? null,
+    })
   }
+
+  /** E / T on the bar, or an Ask-AI chip: the passage card of the selection (reading-assist 4.2) */
+  const requestPassageCard = (
+    kind: 'explain' | 'translate',
+    quads: Map<number, number[][]> | null,
+    excerpt: string,
+    anchor: AskAnchorRect,
+  ) => {
+    const selection = quads ? passageSelectionOf(quads, excerpt, anchor) : null
+    if (selection) readingRef.current?.request(kind, selection)
+  }
+
+  /** The bar's anchor box: the live selection, else the bar itself */
+  const selectionAnchor = (): AskAnchorRect | null => {
+    const sel = window.getSelection()
+    const box =
+      sel && !sel.isCollapsed && sel.rangeCount > 0
+        ? sel.getRangeAt(0).getBoundingClientRect()
+        : null
+    if (box) return { left: box.left, top: box.top, right: box.right, bottom: box.bottom }
+    return selPopup
+      ? { left: selPopup.x, top: selPopup.y, right: selPopup.x, bottom: selPopup.y + 36 }
+      : null
+  }
+
+  /** One selection-bar shortcut (reading-assist 4.1): the same as pressing its button */
+  const runSelectionBarAction = (action: SelectionBarAction) => {
+    if (!selPopup) return
+    switch (action) {
+      case 'highlight':
+      case 'underline':
+      case 'strikeout':
+        applyMarkup(action)
+        return
+      case 'note': {
+        // an empty note at the end of the selection, its input open (the note tool's draft)
+        const end = selectionEnd(selPopup.quads)
+        if (!end) return
+        setSelPopup(null)
+        setActiveNote(null)
+        setNoteDraft(end)
+        return
+      }
+      case 'explain':
+      case 'translate': {
+        const anchor = selectionAnchor()
+        if (!anchor) return
+        requestPassageCard(
+          action,
+          selPopup.quads,
+          aiSelection?.text ?? window.getSelection()?.toString() ?? '',
+          anchor,
+        )
+        setSelPopup(null)
+        return
+      }
+      case 'ask':
+        openAskPopover()
+    }
+  }
+
+  // Selection-bar shortcuts, only while the bar is up (judged by KeyboardEvent.code)
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const verdict = selectionBarKey(e, { visible: selPopup !== null, readOnly })
+      if (!verdict) return
+      e.preventDefault()
+      if ('blocked' in verdict) {
+        // the same reason the hidden markup buttons stand for
+        showNotice(t('roEncrypted'))
+        return
+      }
+      runSelectionBarAction(verdict.action)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  })
 
   /** Markup types the whole current selection already carries — shown as pressed
       buttons in the bar (clicking one removes the markup) */
@@ -4481,6 +4590,11 @@ export default function App() {
       // the saved bytes are a new document for the result store: carry the AI
       // readings, translations and unfinished job records over (spec §6)
       await aiReadRef.current?.afterSave().catch(() => {})
+      // "in the file" states wait for this save and land under the saved file's hash (reading 3.5)
+      await afterReadingSave(saveConfirmations, passageCards, [
+        ...snapshot.drawingIds,
+        ...snapshot.markupIds,
+      ]).catch(() => {})
       // Content-derived naming (docs/sheets analog): a shell-created blank still
       // carrying its untitled name takes its file name from the topmost text this
       // save inserted; the main process no-ops for every other file, so
@@ -7461,6 +7575,17 @@ export default function App() {
           </span>
           {t('nightMode')}
         </button>
+        <button
+          className={`rb-big${passageMarks ? ' active' : ''}`}
+          data-tip={t('rdUnderlinesTip')}
+          aria-pressed={passageMarks}
+          onClick={() => setPassageMarks((v) => !v)}
+        >
+          <span className="rb-big-icon">
+            <IconPassageMarks />
+          </span>
+          {t('rdUnderlines')}
+        </button>
       </div>
     </div>
   )
@@ -8526,6 +8651,36 @@ export default function App() {
             onNotice={showNotice}
             onResumeTranslation={(job) => translateRef.current?.resume(job)}
             languageName={(code) => languageName(code, lang)}
+          />
+          <PassageReading
+            ref={readingRef}
+            cards={passageCards}
+            confirmations={saveConfirmations}
+            lang={lang}
+            t={t}
+            readOnly={readOnly}
+            title={(metadata ?? docInfo).title?.trim() || fileName}
+            pageText={async (origIdx) => (doc ? readPageText(doc, origIdx) : '')}
+            addNote={(note) => {
+              const id = newId()
+              applyEditOps([{ op: 'addDrawing', id, drawing: note }])
+              return id
+            }}
+            hasPendingDrawing={(id) => drawingsRef.current.some((d) => d.id === id)}
+            author={noteAuthor}
+            noteColor={drawColor}
+            languageName={(code) => languageName(code, lang)}
+            onAskInPanel={(f) => {
+              // handed to the AI window's selection chip; nothing is sent until the user asks
+              setAiSelection({
+                page: f.origIdx + 1,
+                lastPage: f.origIdx + 1,
+                text: f.excerpt,
+                followUp: { heading: f.heading, answer: f.answer },
+              })
+              setAiCollapsed(false)
+            }}
+            onNotice={showNotice}
           />
           <DocumentTranslation
             ref={translateRef}
@@ -9762,6 +9917,16 @@ export default function App() {
                                 scale={scale}
                                 selectedId={selected?.kind === 'markup' ? selected.id : null}
                               />
+                              {passageMarks && (
+                                <PassageUnderlines
+                                  cards={passageCards}
+                                  origIdx={origIdx}
+                                  geom={geom}
+                                  scale={scale}
+                                  label={(excerpt) => t('rdOpenCard', { excerpt })}
+                                  onOpen={(id, anchor) => readingRef.current?.open(id, anchor)}
+                                />
+                              )}
                               {/* Selection outline for a saved markup annotation (the markup
                                 itself is painted in the canvas raster) */}
                               {selected?.kind === 'savedMarkup' &&
@@ -10103,12 +10268,16 @@ export default function App() {
                     <button
                       type="button"
                       className={activeMarkupTypes.has('highlight') ? 'is-active' : undefined}
-                      data-tip={
-                        activeMarkupTypes.has('highlight') ? t('removeMarkup') : t('highlight')
-                      }
-                      aria-label={
-                        activeMarkupTypes.has('highlight') ? t('removeMarkup') : t('highlight')
-                      }
+                      data-tip={labelWithKey(
+                        t,
+                        activeMarkupTypes.has('highlight') ? t('removeMarkup') : t('highlight'),
+                        'highlight',
+                      )}
+                      aria-label={labelWithKey(
+                        t,
+                        activeMarkupTypes.has('highlight') ? t('removeMarkup') : t('highlight'),
+                        'highlight',
+                      )}
                       onClick={() => applyMarkup('highlight')}
                     >
                       <span
@@ -10119,12 +10288,16 @@ export default function App() {
                     <button
                       type="button"
                       className={activeMarkupTypes.has('underline') ? 'is-active' : undefined}
-                      data-tip={
-                        activeMarkupTypes.has('underline') ? t('removeMarkup') : t('underline')
-                      }
-                      aria-label={
-                        activeMarkupTypes.has('underline') ? t('removeMarkup') : t('underline')
-                      }
+                      data-tip={labelWithKey(
+                        t,
+                        activeMarkupTypes.has('underline') ? t('removeMarkup') : t('underline'),
+                        'underline',
+                      )}
+                      aria-label={labelWithKey(
+                        t,
+                        activeMarkupTypes.has('underline') ? t('removeMarkup') : t('underline'),
+                        'underline',
+                      )}
                       onClick={() => applyMarkup('underline')}
                     >
                       <span className="sel-swatch sel-swatch-ul">U</span>
@@ -10132,12 +10305,16 @@ export default function App() {
                     <button
                       type="button"
                       className={activeMarkupTypes.has('strikeout') ? 'is-active' : undefined}
-                      data-tip={
-                        activeMarkupTypes.has('strikeout') ? t('removeMarkup') : t('strikeout')
-                      }
-                      aria-label={
-                        activeMarkupTypes.has('strikeout') ? t('removeMarkup') : t('strikeout')
-                      }
+                      data-tip={labelWithKey(
+                        t,
+                        activeMarkupTypes.has('strikeout') ? t('removeMarkup') : t('strikeout'),
+                        'strikeout',
+                      )}
+                      aria-label={labelWithKey(
+                        t,
+                        activeMarkupTypes.has('strikeout') ? t('removeMarkup') : t('strikeout'),
+                        'strikeout',
+                      )}
                       onClick={() => applyMarkup('strikeout')}
                     >
                       <span className="sel-swatch sel-swatch-st">S</span>
@@ -10148,8 +10325,8 @@ export default function App() {
                 <button
                   type="button"
                   className="pdf-sel-ask"
-                  data-tip={t('aiAskTitle')}
-                  aria-label={t('aiAskBtn')}
+                  data-tip={labelWithKey(t, t('aiAskTitle'), 'ask')}
+                  aria-label={labelWithKey(t, t('aiAskBtn'), 'ask')}
                   onClick={openAskPopover}
                 >
                   <svg viewBox="0 0 24 24" width="15" height="15" fill="none" aria-hidden>
@@ -10170,6 +10347,10 @@ export default function App() {
                 onSend={(text) => {
                   setAskPop(null)
                   runAiPreset(text)
+                }}
+                onCard={(kind) => {
+                  setAskPop(null)
+                  requestPassageCard(kind, askPop.quads, askPop.excerpt, askPop.rect)
                 }}
                 onClose={() => setAskPop(null)}
               />

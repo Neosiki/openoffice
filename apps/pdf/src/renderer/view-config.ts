@@ -69,3 +69,24 @@ export function parsePageRanges(input: string, max: number): number[] | null {
 }
 /** Page bitmap budget: at 800% a hi-dpi Letter page would otherwise be ~125M px */
 export const MAX_PAGE_RENDER_PIXELS = 48_000_000
+
+// ── Reading assistant: the dotted marks under passages that have a card (View tab, default on) ──
+export const PASSAGE_MARKS_KEY = 'genoffice-pdf-passage-marks'
+
+type FlagStorage = Pick<Storage, 'getItem' | 'setItem'>
+
+export const loadPassageMarks = (storage: FlagStorage = localStorage): boolean => {
+  try {
+    return storage.getItem(PASSAGE_MARKS_KEY) !== '0'
+  } catch {
+    return true
+  }
+}
+
+export const savePassageMarks = (on: boolean, storage: FlagStorage = localStorage): void => {
+  try {
+    storage.setItem(PASSAGE_MARKS_KEY, on ? '1' : '0')
+  } catch {
+    // storage unavailable: the toggle still works for this session
+  }
+}

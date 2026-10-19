@@ -4983,3 +4983,150 @@ button {
 .pdf-search-ai-page:hover {
   background: var(--color-bg-subtle);
 }
+
+/* reading: passage cards */
+
+/* the faint dotted line under passages that have a card: screen-only, never saved or printed */
+.pdf-passage-marks {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.pdf-passage-mark {
+  position: absolute;
+  padding: 0;
+  border: none;
+  border-bottom: 1.5px dotted var(--accent);
+  background: transparent;
+  opacity: 0.55;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.pdf-passage-mark:hover,
+.pdf-passage-mark:focus-visible {
+  opacity: 1;
+  outline: none;
+}
+
+.pdf-passage-card {
+  position: fixed;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-sizing: border-box;
+  padding: 12px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-12);
+  background: var(--surface);
+  box-shadow: var(--pdf-shadow-popup);
+}
+
+.pdf-passage-card-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pdf-passage-card-title {
+  flex: 1;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.pdf-passage-card-badge {
+  padding: 1px 7px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.pdf-passage-card-badge.is-saved {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.pdf-passage-card-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+}
+
+.pdf-passage-card-close:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+
+.pdf-passage-card-excerpt {
+  padding-left: 8px;
+  border-left: 2px solid var(--border);
+  font-size: 11.5px;
+  color: var(--text-dim);
+}
+
+.pdf-passage-card-body {
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--text);
+}
+
+.pdf-passage-card-answer {
+  white-space: pre-wrap;
+  word-break: break-word;
+  user-select: text;
+}
+
+.pdf-passage-card-status {
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.pdf-passage-card-status.is-error {
+  color: var(--danger);
+}
+
+.pdf-passage-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.pdf-passage-card-actions button {
+  padding: 3px 9px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: 11.5px;
+  cursor: pointer;
+}
+
+.pdf-passage-card-actions button:hover:not(:disabled) {
+  background: var(--hover);
+  color: var(--text);
+}
+
+.pdf-passage-card-actions button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.ai-scope-followup {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--color-border-default);
+}
