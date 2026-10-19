@@ -23,9 +23,11 @@ import {
   aiSelectionValue,
   changeAiSettings,
   readAiSettings,
+  readUrlGithubToken,
   subscriptionProgramName,
   withAiSelection,
   withHeadlessSubscription,
+  withReadUrlGithubToken,
 } from './settings-ai'
 import type { AiSelectionChoice, SubscriptionAccountAction } from './settings-ai'
 
@@ -93,6 +95,74 @@ function choiceLabel(choice: AiSelectionChoice, t: TFunc, lang: Lang): string {
     return `${running} · ${aiSubscriptionText(lang, 'pickerSubscription')}`
   }
   return name
+}
+
+/**
+ * The GitHub token read_url uses. It is stored in the settings file in plain
+ * text, like a provider key, and is only ever shown masked. Saving writes the
+ * trimmed value; clearing removes the field, so public pages still work.
+ */
+function ReadUrlTokenField({
+  t,
+  token,
+  onSave,
+}: {
+  t: TFunc
+  token: string
+  onSave: (token: string) => void
+}) {
+  const [draft, setDraft] = useState(token)
+  useEffect(() => {
+    setDraft(token)
+  }, [token])
+
+  const next = draft.trim()
+  const dirty = next !== token
+  return (
+    <section className="set-read-url">
+      <div className="set-pane-subhead set-read-url-head">
+        <h4 className="set-pane-subtitle">{t('setReadUrlTitle')}</h4>
+        <div className="set-btn-row">
+          <button className="set-btn primary" disabled={!dirty} onClick={() => onSave(next)}>
+            {t('setReadUrlSave')}
+          </button>
+          <button
+            className="set-btn"
+            disabled={!token && !draft}
+            onClick={() => {
+              setDraft('')
+              onSave('')
+            }}
+          >
+            {t('setReadUrlClear')}
+          </button>
+        </div>
+      </div>
+      <div className="set-field-desc set-ai-note">{t('setReadUrlTokenHint')}</div>
+      <div className="set-field">
+        <div className="set-field-text">
+          <div className="set-field-stack">
+            <label className="set-field-label" htmlFor="set-read-url-token">
+              {t('setReadUrlToken')}
+            </label>
+            <div className="set-field-desc">
+              {token ? t('setReadUrlTokenSaved') : t('setReadUrlNoToken')}
+            </div>
+          </div>
+        </div>
+        <input
+          id="set-read-url-token"
+          className="set-input"
+          type="password"
+          value={draft}
+          placeholder="github_pat_…"
+          spellCheck={false}
+          autoComplete="off"
+          onChange={(e) => setDraft(e.target.value)}
+        />
+      </div>
+    </section>
+  )
 }
 
 export function AiSection({
@@ -376,6 +446,13 @@ export function AiSection({
                 </button>
               </div>
             </div>
+          )}
+          {settings && (
+            <ReadUrlTokenField
+              t={t}
+              token={readUrlGithubToken(settings)}
+              onSave={(token) => change((current) => withReadUrlGithubToken(current, token))}
+            />
           )}
           <div className="set-adv-tabs" role="tablist" aria-label={t('setAiAdvanced')}>
             {(['model', 'media'] as const).map((id) => (
