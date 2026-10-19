@@ -5,7 +5,7 @@
  * `pdf status` reports, and the error a stopped job answers with.
  */
 import { documentJobs, type JobSummary } from '../../../pdf-structure/src'
-import type { JobStatus, ResultStore } from '../../../pdf-structure/src/store'
+import type { JobKind, JobStatus, ResultStore } from '../../../pdf-structure/src/store'
 import { cloudNextStep, headlessCall, prepareCloud } from '../cloud'
 import { resolvePdfAiRoute, type PdfAiJob, type PdfAiRoute } from '../pdf-ai'
 import { CliError, EXIT } from '../result'
@@ -57,18 +57,40 @@ export function assertPaidAllowed(route: AvailableRoute, allowPaid: boolean): vo
   )
 }
 
+/** How the refusal names a running job of each kind. */
+function runningJobLabel(kind: JobKind, lang: string | undefined): string {
+  switch (kind) {
+    case 'ai-read':
+      return 'an AI page reading'
+    case 'translate':
+      return `a translation (${lang})`
+    case 'translate-page':
+      return `a page translation (${lang})`
+    case 'highlight':
+      return 'an AI highlighting'
+    case 'summary':
+      return `a document summary (${lang})`
+    default:
+      return 'a document job'
+  }
+}
+
 /** One document job at a time per document, in this process and in any other (spec §9). */
 export async function assertNoRunningJob(store: ResultStore, docHash: string): Promise<void> {
   const here = documentJobs.running(docHash)
   const elsewhere = here ? null : (await store.listJobs(docHash)).find((j) => j.state === 'running')
   const running = here
-    ? { kind: here.kind, lang: here.lang, progress: here.progress }
+    ? { kind: here.kind, lang: here.lang, runId: here.runId, progress: here.progress }
     : elsewhere
-      ? { kind: elsewhere.kind, lang: elsewhere.lang, progress: elsewhere.progress }
+      ? {
+          kind: elsewhere.kind,
+          lang: elsewhere.lang,
+          runId: elsewhere.runId,
+          progress: elsewhere.progress,
+        }
       : null
   if (!running) return
-  const label =
-    running.kind === 'ai-read' ? 'an AI page reading' : `a translation (${running.lang})`
+  const label = runningJobLabel(running.kind, running.lang)
   const progress = running.progress ? ` (${running.progress.done}/${running.progress.total})` : ''
   throw new CliError(
     EXIT.app,
@@ -78,6 +100,7 @@ export async function assertNoRunningJob(store: ResultStore, docHash: string): P
       job: {
         kind: running.kind,
         ...(running.lang !== undefined ? { lang: running.lang } : {}),
+        ...(running.runId !== undefined ? { runId: running.runId } : {}),
         ...(running.progress ? { progress: running.progress } : {}),
       },
     },

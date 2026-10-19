@@ -77,6 +77,8 @@ export interface RunningDocumentJob {
   docHash: string
   kind: JobKind
   lang?: string
+  /** the run of a 'highlight' job */
+  runId?: string
   /** items (pages or blocks) done / total, including those done before this run */
   progress: JobProgress
 }

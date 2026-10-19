@@ -30,6 +30,7 @@ export interface ProviderChange {
 export interface DocumentJobEstimate {
   kind: JobKind
   lang?: string
+  runId?: string
   /** model calls the job will make */
   calls: number
   /** items (pages or blocks) still to do */
@@ -46,6 +47,7 @@ export interface DocumentJobHandle<U> {
   readonly docHash: string
   readonly kind: JobKind
   readonly lang?: string
+  readonly runId?: string
   /** resolves when the job completes or stops; rejects only if it could not be planned */
   readonly result: Promise<JobSummary<U>>
   /** stop the job ('interrupted' when the tab, app or server ends) */
@@ -74,14 +76,25 @@ export type PlannedJob<U, R> = Pick<
  * job holds it), then plan and run. The lock is released when the job ends.
  */
 export function startDocumentJob<U, R>(
-  head: { docHash: string; kind: JobKind; lang?: string } & StartDocumentJobOptions<U>,
+  head: {
+    docHash: string
+    kind: JobKind
+    lang?: string
+    runId?: string
+  } & StartDocumentJobOptions<U>,
   plan: (signal: AbortSignal) => Promise<PlannedJob<U, R>>,
 ): DocumentJobHandle<U> {
-  const { docHash, kind, lang } = head
+  const { docHash, kind, lang, runId } = head
   const controller = new AbortController()
   let current: JobProgress = { done: 0, total: 0 }
   const lease = (head.registry ?? documentJobs).acquire(
-    { docHash, kind, ...(lang !== undefined ? { lang } : {}), progress: current },
+    {
+      docHash,
+      kind,
+      ...(lang !== undefined ? { lang } : {}),
+      ...(runId !== undefined ? { runId } : {}),
+      progress: current,
+    },
     (reason) => controller.abort(reason),
   )
   const external = head.signal
@@ -103,6 +116,7 @@ export function startDocumentJob<U, R>(
         docHash,
         kind,
         ...(lang !== undefined ? { lang } : {}),
+        ...(runId !== undefined ? { runId } : {}),
         concurrency: head.concurrency,
         maxConsecutiveFailures: head.maxConsecutiveFailures,
         heartbeatMs: head.heartbeatMs,
@@ -127,5 +141,6 @@ export function startDocumentJob<U, R>(
     progress: () => ({ ...current }),
   }
   if (lang !== undefined) (handle as { lang?: string }).lang = lang
+  if (runId !== undefined) (handle as { runId?: string }).runId = runId
   return handle
 }

@@ -329,6 +329,44 @@ export async function folderSize(dir: string): Promise<number> {
   return total
 }
 
+/** a regular file is at `path`; false when it is missing or cannot be looked at */
+export async function fileExists(path: string): Promise<boolean> {
+  try {
+    return (await stat(path)).isFile()
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Delete one entry, taking turns with its writers through the entry lock. A
+ * missing entry is not an error; any other failure is a StoreWriteError.
+ */
+export async function removeEntry(path: string): Promise<void> {
+  try {
+    const lock = await acquireLock(path)
+    try {
+      for (let attempt = 0; ; attempt++) {
+        try {
+          await unlink(path)
+          return
+        } catch (e) {
+          const code = codeOf(e)
+          if (code === 'ENOENT') return
+          if (!RETRYABLE.has(code) || attempt >= READ_ATTEMPTS) throw e
+          await backoff(attempt)
+        }
+      }
+    } finally {
+      await releaseLock(lock)
+    }
+  } catch (e) {
+    // the entry's folder does not exist: nothing to delete
+    if (codeOf(e) === 'ENOENT') return
+    throw new StoreWriteError(path, e)
+  }
+}
+
 export async function removeFolder(dir: string): Promise<void> {
   try {
     await rm(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 })

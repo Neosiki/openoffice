@@ -10,7 +10,11 @@ import { createReadStream } from 'node:fs'
 export {
   ResultStore,
   STORE_DIR_NAME,
+  JOB_FILE,
+  JOB_KINDS,
   JOB_RUNNING_WINDOW_MS,
+  jobKeyField,
+  jobKeyOf,
   type AiReadPayload,
   type AiReadPageEntry,
   type JobKind,
@@ -29,6 +33,27 @@ export {
   type TranslationMetaInput,
 } from './store'
 export { StoreWriteError } from './files'
+export {
+  HIGHLIGHT_MAX_LABELS,
+  HIGHLIGHT_PRESET_IDS,
+  type HighlightBlockEntry,
+  type HighlightBlockInput,
+  type HighlightLabel,
+  type HighlightPresetId,
+  type HighlightRun,
+  type HighlightSuggestion,
+  type HighlightSuggestionState,
+  type InsightsEntry,
+  type PassageCard,
+  type PassageCardInput,
+} from './reading'
+export {
+  NOTE_LINKS_FILE,
+  noteLinkKey,
+  type FoundNoteLink,
+  type NoteLink,
+  type NoteLinks,
+} from './note-links'
 export {
   blockKeyString,
   normalizeSourceText,
