@@ -98,6 +98,9 @@ const HWP3_SIGNATURE = Buffer.from('HWP Document File')
  *  where a real parser does rather than pinning it to bytes 0..3. */
 const PDF_HEADER_WINDOW = 1024
 
+/** The stream an encrypted OOXML package lives in (OLE2 directory names are UTF-16LE). */
+const ENCRYPTED_PACKAGE_STREAM = Buffer.from('EncryptedPackage', 'utf16le')
+
 function sniffBinary(bytes: Buffer): BinaryKind {
   if (bytes.length >= 2 && bytes[0] === 0x50 && bytes[1] === 0x4b) return 'zip'
   if (bytes.subarray(0, PDF_HEADER_WINDOW).includes(Buffer.from('%PDF-'))) return 'pdf'
@@ -174,6 +177,15 @@ export async function parseFileToText(filePath: string): Promise<ParsedFile> {
       (ext === 'docx' || ext === 'odt' || ext === 'pptx' || ext === 'xlsx' || ext === 'xlsm') &&
       sniffed !== 'zip'
     ) {
+      // an OOXML file with an open password is an OLE2 container around the
+      // encrypted package, not a mislabeled file
+      if (sniffed === 'ole2' && bytes.includes(ENCRYPTED_PACKAGE_STREAM)) {
+        return {
+          ok: false,
+          kind: 'text',
+          error: `Password-protected .${ext}: open it in its editor with the password, or remove the password and attach it again`,
+        }
+      }
       return {
         ok: false,
         kind: 'text',

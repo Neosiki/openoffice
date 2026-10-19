@@ -78,8 +78,9 @@ file manager) and the slides recent-files entry.
 - **An unreadable input is an error, not a blank page.** docs and slides
   answer a corrupt file with an untitled blank document; headless treats "a
   document is mounted but it never came from disk" as exit 3.
-- **Password-protected documents** cannot be answered without a user, so they
-  fail on the readiness timeout rather than immediately.
+- **Password-protected documents** cannot be answered without a user. Workbooks
+  and decks are not opened at all (no prompt), so they fail as an unreadable
+  input; Word documents fail on the readiness timeout rather than immediately.
 - **Large workbooks** normally wait for the user's "Full Load" click before
   PDF export is allowed. Headless makes that call itself.
 - **Only the active sheet** is exported for spreadsheets, exactly as in the

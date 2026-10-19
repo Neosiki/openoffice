@@ -176,6 +176,7 @@ import {
   setSheetsExtraFileMenuItems,
   setSheetsDocumentLinkMenuItems,
   setSheetsHostWindowHook,
+  setSheetsPasswordPrompt,
   setSheetsShellWindow,
   setSheetsWorkbookOpenedHook,
   startSheetsCaptureServer,
@@ -193,6 +194,7 @@ import {
   setSlidesDocumentLinkMenuItems,
   setSlidesOpenedHook,
   setSlidesHostWindowHook,
+  setSlidesPasswordPrompt,
   setSlidesShellWindow,
   setSlidesShowBleed,
   slidesFileRenamed,
@@ -216,6 +218,7 @@ import { insertIntoNoteTab, openNoteTab, type NoteTabHost } from './pdf-note-tab
 import { convertPdfFileToPptxLocalWithPrompt } from './pdf2pptx-local'
 import { convertPdfFileToXlsxLocalWithPrompt } from './pdf2xlsx-local'
 import { closePdfPasswordDialog, promptPdfPassword } from './pdf-password-dialog'
+import { createDocumentPasswordPrompt } from './document-password-prompt'
 import { cancelWindowJob, registerPdfStructureIpc, runWindowJob } from './pdf-structure-ipc'
 import { registerPdfConvertUiIpc, requestPdfConvertDialog } from './pdf-convert-ui'
 import {
@@ -807,6 +810,7 @@ const tMain = createI18n({
     pdfDocxLocalUnsupportedEncDetail: '该文件使用证书加密或不支持的加密方式，无法转换。',
     pdfPwdTitle: '输入密码',
     pdfPwdPrompt: '此 PDF 已加密，请输入打开密码：',
+    docPwdPrompt: '此文件受密码保护。请输入打开密码：',
     pdfPwdRetryPrompt: '密码不正确，请重试。',
     pdfPwdOk: '确定',
     pdfPwdVerifying: '正在验证密码…',
@@ -932,6 +936,7 @@ const tMain = createI18n({
       'This PDF uses certificate-based or otherwise unsupported encryption and cannot be converted.',
     pdfPwdTitle: 'Enter Password',
     pdfPwdPrompt: 'This PDF is encrypted. Enter the password to open it:',
+    docPwdPrompt: 'This file is password-protected. Enter the password to open it:',
     pdfPwdRetryPrompt: 'Incorrect password. Please try again.',
     pdfPwdOk: 'OK',
     pdfPwdVerifying: 'Verifying password…',
@@ -1058,6 +1063,7 @@ const tMain = createI18n({
       'Tệp PDF này sử dụng mã hóa dựa trên chứng thư số hoặc mã hóa không được hỗ trợ khác và không thể chuyển đổi.',
     pdfPwdTitle: 'Nhập mật khẩu',
     pdfPwdPrompt: 'Tệp PDF này đã được mã hóa. Nhập mật khẩu để mở:',
+    docPwdPrompt: 'Tệp này được bảo vệ bằng mật khẩu. Nhập mật khẩu để mở:',
     pdfPwdRetryPrompt: 'Mật khẩu không chính xác. Vui lòng thử lại.',
     pdfPwdOk: 'OK',
     pdfPwdVerifying: 'Đang xác minh mật khẩu…',
@@ -1185,6 +1191,8 @@ const tMain = createI18n({
       'このPDFは証明書ベースまたは未対応の暗号化方式を使用しているため、変換できません。',
     pdfPwdTitle: 'パスワードを入力',
     pdfPwdPrompt: 'このPDFは暗号化されています。開くためのパスワードを入力してください：',
+    docPwdPrompt:
+      'このファイルはパスワードで保護されています。開くためのパスワードを入力してください：',
     pdfPwdRetryPrompt: 'パスワードが正しくありません。もう一度お試しください。',
     pdfPwdOk: 'OK',
     pdfPwdVerifying: 'パスワードを確認しています…',
@@ -1312,6 +1320,7 @@ const tMain = createI18n({
       '이 PDF는 인증서 기반이거나 지원되지 않는 암호화 방식을 사용하므로 변환할 수 없습니다.',
     pdfPwdTitle: '비밀번호 입력',
     pdfPwdPrompt: '이 PDF는 암호화되어 있습니다. 열기 위한 비밀번호를 입력하세요:',
+    docPwdPrompt: '이 파일은 암호로 보호되어 있습니다. 열기 위한 비밀번호를 입력하세요:',
     pdfPwdRetryPrompt: '비밀번호가 올바르지 않습니다. 다시 시도하세요.',
     pdfPwdOk: '확인',
     pdfPwdVerifying: '비밀번호 확인 중…',
@@ -1438,6 +1447,8 @@ const tMain = createI18n({
       'Ce PDF utilise un chiffrement par certificat ou un chiffrement non pris en charge et ne peut pas être converti.',
     pdfPwdTitle: 'Saisir le mot de passe',
     pdfPwdPrompt: "Ce PDF est chiffré. Saisissez le mot de passe pour l'ouvrir :",
+    docPwdPrompt:
+      "Ce fichier est protégé par un mot de passe. Saisissez le mot de passe pour l'ouvrir :",
     pdfPwdRetryPrompt: 'Mot de passe incorrect. Veuillez réessayer.',
     pdfPwdOk: 'OK',
     pdfPwdVerifying: 'Vérification du mot de passe…',
@@ -1567,6 +1578,7 @@ const tMain = createI18n({
       'Diese PDF verwendet eine zertifikatsbasierte oder nicht unterstützte Verschlüsselung und kann nicht konvertiert werden.',
     pdfPwdTitle: 'Passwort eingeben',
     pdfPwdPrompt: 'Diese PDF ist verschlüsselt. Geben Sie das Passwort zum Öffnen ein:',
+    docPwdPrompt: 'Diese Datei ist kennwortgeschützt. Geben Sie das Kennwort zum Öffnen ein:',
     pdfPwdRetryPrompt: 'Falsches Passwort. Bitte versuchen Sie es erneut.',
     pdfPwdOk: 'OK',
     pdfPwdVerifying: 'Passwort wird überprüft…',
@@ -1695,6 +1707,8 @@ const tMain = createI18n({
       'Este PDF usa cifrado basado en certificados u otro cifrado no compatible y no se puede convertir.',
     pdfPwdTitle: 'Introducir contraseña',
     pdfPwdPrompt: 'Este PDF está cifrado. Introduzca la contraseña para abrirlo:',
+    docPwdPrompt:
+      'Este archivo está protegido con contraseña. Introduce la contraseña para abrirlo:',
     pdfPwdRetryPrompt: 'Contraseña incorrecta. Inténtelo de nuevo.',
     pdfPwdOk: 'Aceptar',
     pdfPwdVerifying: 'Verificando la contraseña…',
@@ -1820,6 +1834,7 @@ const tMain = createI18n({
       'PDF นี้ใช้การเข้ารหัสแบบใบรับรองหรือการเข้ารหัสที่ไม่รองรับ จึงไม่สามารถแปลงได้',
     pdfPwdTitle: 'ป้อนรหัสผ่าน',
     pdfPwdPrompt: 'PDF นี้ถูกเข้ารหัส โปรดป้อนรหัสผ่านเพื่อเปิด:',
+    docPwdPrompt: 'ไฟล์นี้ป้องกันด้วยรหัสผ่าน ป้อนรหัสผ่านเพื่อเปิด:',
     pdfPwdRetryPrompt: 'รหัสผ่านไม่ถูกต้อง โปรดลองอีกครั้ง',
     pdfPwdOk: 'ตกลง',
     pdfPwdVerifying: 'กำลังตรวจสอบรหัสผ่าน…',
@@ -1946,6 +1961,7 @@ const tMain = createI18n({
       'PDF ini menggunakan enkripsi berbasis sertifikat atau enkripsi yang tidak didukung dan tidak dapat dikonversi.',
     pdfPwdTitle: 'Masukkan Kata Sandi',
     pdfPwdPrompt: 'PDF ini terenkripsi. Masukkan kata sandi untuk membukanya:',
+    docPwdPrompt: 'File ini dilindungi kata sandi. Masukkan kata sandi untuk membukanya:',
     pdfPwdRetryPrompt: 'Kata sandi salah. Silakan coba lagi.',
     pdfPwdOk: 'OK',
     pdfPwdVerifying: 'Memverifikasi kata sandi…',
@@ -2074,6 +2090,7 @@ const tMain = createI18n({
       'Этот PDF использует шифрование на основе сертификата или другое неподдерживаемое шифрование и не может быть преобразован.',
     pdfPwdTitle: 'Введите пароль',
     pdfPwdPrompt: 'Этот PDF зашифрован. Введите пароль, чтобы открыть его:',
+    docPwdPrompt: 'Файл защищён паролем. Введите пароль, чтобы открыть его:',
     pdfPwdRetryPrompt: 'Неверный пароль. Попробуйте ещё раз.',
     pdfPwdOk: 'ОК',
     pdfPwdVerifying: 'Проверка пароля…',
@@ -2199,6 +2216,7 @@ const tMain = createI18n({
       'يستخدم ملف PDF هذا تشفيرًا قائمًا على الشهادات أو تشفيرًا غير مدعوم ولا يمكن تحويله.',
     pdfPwdTitle: 'إدخال كلمة المرور',
     pdfPwdPrompt: 'هذا الملف PDF مشفّر. أدخل كلمة المرور لفتحه:',
+    docPwdPrompt: 'هذا الملف محمي بكلمة مرور. أدخل كلمة المرور لفتحه:',
     pdfPwdRetryPrompt: 'كلمة المرور غير صحيحة. حاول مرة أخرى.',
     pdfPwdOk: 'موافق',
     pdfPwdVerifying: 'جارٍ التحقق من كلمة المرور…',
@@ -2325,6 +2343,7 @@ const tMain = createI18n({
       'Este PDF usa criptografia baseada em certificado ou outra criptografia sem suporte e não pode ser convertido.',
     pdfPwdTitle: 'Digitar senha',
     pdfPwdPrompt: 'Este PDF está criptografado. Digite a senha para abri-lo:',
+    docPwdPrompt: 'Este arquivo está protegido por senha. Digite a senha para abri-lo:',
     pdfPwdRetryPrompt: 'Senha incorreta. Tente novamente.',
     pdfPwdOk: 'OK',
     pdfPwdVerifying: 'Verificando a senha…',
@@ -2453,6 +2472,7 @@ const tMain = createI18n({
       'Questo PDF usa una crittografia basata su certificati o comunque non supportata e non può essere convertito.',
     pdfPwdTitle: 'Inserisci password',
     pdfPwdPrompt: 'Questo PDF è crittografato. Inserisci la password per aprirlo:',
+    docPwdPrompt: 'Questo file è protetto da password. Inserisci la password per aprirlo:',
     pdfPwdRetryPrompt: 'Password errata. Riprova.',
     pdfPwdOk: 'OK',
     pdfPwdVerifying: 'Verifica della password…',
@@ -2581,6 +2601,7 @@ const tMain = createI18n({
       'Ten PDF używa szyfrowania opartego na certyfikatach lub innego nieobsługiwanego szyfrowania i nie można go przekonwertować.',
     pdfPwdTitle: 'Wprowadź hasło',
     pdfPwdPrompt: 'Ten PDF jest zaszyfrowany. Wprowadź hasło, aby go otworzyć:',
+    docPwdPrompt: 'Ten plik jest chroniony hasłem. Wprowadź hasło, aby go otworzyć:',
     pdfPwdRetryPrompt: 'Nieprawidłowe hasło. Spróbuj ponownie.',
     pdfPwdOk: 'OK',
     pdfPwdVerifying: 'Weryfikowanie hasła…',
@@ -2707,6 +2728,7 @@ const tMain = createI18n({
       'Toto PDF používá šifrování založené na certifikátu nebo jiné nepodporované šifrování a nelze ho převést.',
     pdfPwdTitle: 'Zadejte heslo',
     pdfPwdPrompt: 'Toto PDF je šifrované. Pro otevření zadejte heslo:',
+    docPwdPrompt: 'Tento soubor je chráněný heslem. Zadejte heslo pro otevření:',
     pdfPwdRetryPrompt: 'Nesprávné heslo. Zkuste to znovu.',
     pdfPwdOk: 'OK',
     pdfPwdVerifying: 'Ověřování hesla…',
@@ -2834,6 +2856,8 @@ const tMain = createI18n({
       'Deze PDF gebruikt certificaatgebaseerde of anderszins niet-ondersteunde versleuteling en kan niet worden geconverteerd.',
     pdfPwdTitle: 'Wachtwoord invoeren',
     pdfPwdPrompt: 'Deze PDF is versleuteld. Voer het wachtwoord in om te openen:',
+    docPwdPrompt:
+      'Dit bestand is beveiligd met een wachtwoord. Voer het wachtwoord in om het te openen:',
     pdfPwdRetryPrompt: 'Onjuist wachtwoord. Probeer het opnieuw.',
     pdfPwdOk: 'OK',
     pdfPwdVerifying: 'Wachtwoord controleren…',
@@ -2962,6 +2986,7 @@ const tMain = createI18n({
       'PDF ini menggunakan penyulitan berasaskan sijil atau penyulitan yang tidak disokong dan tidak boleh ditukar.',
     pdfPwdTitle: 'Masukkan Kata Laluan',
     pdfPwdPrompt: 'PDF ini disulitkan. Masukkan kata laluan untuk membukanya:',
+    docPwdPrompt: 'Fail ini dilindungi kata laluan. Masukkan kata laluan untuk membukanya:',
     pdfPwdRetryPrompt: 'Kata laluan salah. Sila cuba lagi.',
     pdfPwdOk: 'OK',
     pdfPwdVerifying: 'Mengesahkan kata laluan…',
@@ -3086,6 +3111,7 @@ const tMain = createI18n({
       'קובץ PDF זה משתמש בהצפנה מבוססת אישורים או בהצפנה שאינה נתמכת ולא ניתן להמירו.',
     pdfPwdTitle: 'הזנת סיסמה',
     pdfPwdPrompt: 'קובץ PDF זה מוצפן. הזינו את הסיסמה כדי לפתוח אותו:',
+    docPwdPrompt: 'הקובץ מוגן בסיסמה. הזינו את הסיסמה כדי לפתוח אותו:',
     pdfPwdRetryPrompt: 'סיסמה שגויה. נסו שוב.',
     pdfPwdOk: 'אישור',
     pdfPwdVerifying: 'מאמת את הסיסמה…',
@@ -3213,6 +3239,7 @@ const tMain = createI18n({
       'यह PDF प्रमाणपत्र-आधारित या असमर्थित एन्क्रिप्शन का उपयोग करता है और इसे परिवर्तित नहीं किया जा सकता।',
     pdfPwdTitle: 'पासवर्ड दर्ज करें',
     pdfPwdPrompt: 'यह PDF एन्क्रिप्टेड है। खोलने के लिए पासवर्ड दर्ज करें:',
+    docPwdPrompt: 'यह फ़ाइल पासवर्ड से सुरक्षित है। इसे खोलने के लिए पासवर्ड दर्ज करें:',
     pdfPwdRetryPrompt: 'पासवर्ड गलत है। कृपया फिर से प्रयास करें।',
     pdfPwdOk: 'ठीक है',
     pdfPwdVerifying: 'पासवर्ड सत्यापित किया जा रहा है…',
@@ -3333,6 +3360,7 @@ const tMain = createI18n({
     pdfDocxLocalUnsupportedEncDetail: '該檔案使用憑證加密或不支援的加密方式，無法轉換。',
     pdfPwdTitle: '輸入密碼',
     pdfPwdPrompt: '此 PDF 已加密，請輸入開啟密碼：',
+    docPwdPrompt: '此檔案受密碼保護。請輸入開啟密碼：',
     pdfPwdRetryPrompt: '密碼不正確，請重試。',
     pdfPwdOk: '確定',
     pdfPwdVerifying: '正在驗證密碼…',
@@ -3865,6 +3893,36 @@ function createShellWindow(): void {
     noteDocumentSaved(wc, path, { mayBeOpen: true })
     applyPendingDir(wc.id, path)
   })
+  // Encrypted workbooks and decks ask for their open password in the same
+  // window the PDF conversions use, with document copy instead of PDF copy.
+  const documentPasswordPrompt = (parent: BrowserWindow | undefined, fileName: string) =>
+    createDocumentPasswordPrompt(
+      {
+        prompt: (name, retry) =>
+          promptPdfPassword(parent && !parent.isDestroyed() ? parent : win, {
+            fileName: name,
+            retry,
+            busy: false,
+            lang: currentLang(),
+            strings: {
+              title: tm('pdfPwdTitle'),
+              prompt: tm('docPwdPrompt'),
+              retryPrompt: tm('pdfPwdRetryPrompt'),
+              ok: tm('pdfPwdOk'),
+              cancel: tm('btnCancel'),
+              verifying: tm('pdfPwdVerifying'),
+              label: tm('pdfPwdLabel'),
+              placeholder: tm('pdfPwdPlaceholder'),
+              show: tm('pdfPwdShow'),
+              hide: tm('pdfPwdHide'),
+            },
+          }),
+        close: closePdfPasswordDialog,
+      },
+      fileName,
+    )
+  setSheetsPasswordPrompt(documentPasswordPrompt)
+  setSlidesPasswordPrompt(documentPasswordPrompt)
   // docs' save-as / silent first save lands on a new path → sync the tab title too
   setDocsFileSavedHook((wc, path) => {
     manager.setTabFileFor(wc.id, path)
