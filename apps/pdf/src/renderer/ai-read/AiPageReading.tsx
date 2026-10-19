@@ -1,8 +1,8 @@
 /**
  * AI page reading in the PDF editor (spec §7, §9), app side: the window
  * (picker and confirmation), the job, its progress strip, the resume offer,
- * carrying stored results over an in-app save, and deleting this document's
- * stored results.
+ * carrying stored results over an in-app save or a page operation that
+ * rewrote the file in place, and deleting this document's stored results.
  *
  * Rules kept here:
  * - nothing is sent before the user pressed Start on the confirmation; the
@@ -59,6 +59,12 @@ export interface AiPageReadingApi {
 export interface AiPageReadingProps {
   /** the open file; null while none is open */
   filePath: string | null
+  /**
+   * Bumped when the open file was rewritten in place under the same path (a
+   * page operation): its hash changed, so it is read again and the next
+   * save carries the stored results from the hash they are written under now
+   */
+  revision?: number
   password: string | undefined
   pageCount: number
   lang: Lang
@@ -100,6 +106,12 @@ export interface AiPageReadingHandle {
    * (no hash read yet, no store, a failed migration).
    */
   afterSave(): Promise<string | null>
+  /**
+   * After a page operation rewrote the file in place, before it is read
+   * again: carry the stored results of the pages it kept to the rewritten
+   * file's hash, the same migration a save runs (matched by page fingerprint).
+   */
+  afterPageOperation(): Promise<string | null>
   /** ask, then delete everything stored for this document */
   deleteStored(): Promise<void>
 }
@@ -112,7 +124,7 @@ interface DialogState {
 
 export const AiPageReading = forwardRef<AiPageReadingHandle, AiPageReadingProps>(
   function AiPageReading(props, ref): ReactElement | null {
-    const { filePath, password, pageCount, lang, t, api, session } = props
+    const { filePath, password, pageCount, lang, t, api, session, revision } = props
     const [docHash, setDocHash] = useState<string | null>(null)
     const [dialog, setDialog] = useState<DialogState | null>(null)
     const [resume, setResume] = useState<JobStatus[]>([])
@@ -127,17 +139,33 @@ export const AiPageReading = forwardRef<AiPageReadingHandle, AiPageReadingProps>
     const dialogSeq = useRef(0)
     /** documents whose resume offer was already shown in this tab */
     const offered = useRef(new Set<string>())
+    /** the file the hash below was read for */
+    const readFor = useRef<{ api: AiPageReadingApi | null; filePath: string | null } | null>(null)
 
-    // the document hash of the open file, then its unfinished jobs (offered once)
+    /** the hash in state and in the ref at once (a save may read the ref before a render) */
+    const takeDocHash = (hash: string | null) => {
+      docHashRef.current = hash
+      setDocHash(hash)
+    }
+
+    // the document hash of the open file, then its unfinished jobs (offered once);
+    // read again when a page operation rewrote the same file in place (`revision`)
     useEffect(() => {
-      setDocHash(null)
-      setResume([])
+      const before = readFor.current
+      readFor.current = { api, filePath }
+      if (!before || before.api !== api || before.filePath !== filePath) {
+        takeDocHash(null)
+        setResume([])
+      }
       if (!api || !filePath) return
       let alive = true
+      const seen = docHashRef.current
       void (async () => {
         const hash = await api.store.docHash(filePath).catch(() => null)
         if (!alive || !hash?.ok) return
-        setDocHash(hash.docHash)
+        // a migration (save, page operation) moved the hash meanwhile: it already holds the newer one
+        if (docHashRef.current !== seen) return
+        takeDocHash(hash.docHash)
         if (offered.current.has(hash.docHash)) return
         offered.current.add(hash.docHash)
         const unfinished = await api.store.unfinishedJobs(hash.docHash).catch(() => null)
@@ -152,7 +180,7 @@ export const AiPageReading = forwardRef<AiPageReadingHandle, AiPageReadingProps>
       return () => {
         alive = false
       }
-    }, [api, filePath])
+    }, [api, filePath, revision])
 
     // the tab goes away: its jobs stop (the shell ends their streams and programs)
     useEffect(() => {
@@ -187,6 +215,8 @@ export const AiPageReading = forwardRef<AiPageReadingHandle, AiPageReadingProps>
       if (!out?.ok) return null
       carryJobPages(from, out.docHash)
       p.session.adopt(from, out.docHash)
+      // the carried jobs were this tab's to offer already: reading the hash again does not reoffer them
+      if (offered.current.has(from)) offered.current.add(out.docHash)
       return out.docHash
     }
 
@@ -252,6 +282,15 @@ export const AiPageReading = forwardRef<AiPageReadingHandle, AiPageReadingProps>
       return { ok: true }
     }
 
+    /** carry the stored results from the hash read last to the file's hash now */
+    const carryToFile = async (): Promise<string | null> => {
+      const from = docHashRef.current
+      if (!from) return null
+      const next = await migrate(from)
+      if (next) takeDocHash(next)
+      return next
+    }
+
     useImperativeHandle(ref, () => ({
       requestOpen(pages) {
         const p = propsRef.current
@@ -262,13 +301,8 @@ export const AiPageReading = forwardRef<AiPageReadingHandle, AiPageReadingProps>
         open(pages)
         return { opened: true }
       },
-      async afterSave() {
-        const from = docHashRef.current
-        if (!from) return null
-        const next = await migrate(from)
-        if (next) setDocHash(next)
-        return next
-      },
+      afterSave: carryToFile,
+      afterPageOperation: carryToFile,
       async deleteStored() {
         const p = propsRef.current
         const hash = docHashRef.current

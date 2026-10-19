@@ -48,14 +48,17 @@ export function usePassageCards(o: {
  * 3.5): confirm what the save wrote under the hash the completed migration
  * moved the store to (`migratedHash`; null when it did not complete, and the
  * confirmations keep waiting), then read the cards again (new hash, pages
- * found again by fingerprint).
+ * found again by fingerprint). A save that kept every page where it was
+ * (`pagesMoved: false`) leaves the marks in place until the pages are read
+ * again; one that deleted, reordered or added pages drops them at once.
  */
 export async function afterReadingSave(
   confirmations: SaveConfirmations,
   cards: PassageCards,
   written: Iterable<string>,
   migratedHash: string | null,
+  o: { pagesMoved?: boolean } = {},
 ): Promise<void> {
   await confirmations.afterSave(written, async () => migratedHash)
-  await cards.load()
+  await cards.load({ keepPlaces: o.pagesMoved === false })
 }

@@ -50,21 +50,21 @@ export function passageContext(
   }
 }
 
-/** an original page's text as the PDF.js text layer reads it ('' when it cannot be read) */
+/**
+ * An original page's text as the PDF.js text layer reads it ('' when it
+ * cannot be read). The page proxy is the one the view draws, so it is not
+ * cleaned up here: that would drop a visible page's parsed resources.
+ */
 export async function readPageText(doc: PDFDocumentProxy, origIdx: number): Promise<string> {
   if (origIdx < 0 || origIdx >= doc.numPages) return ''
   const page = await doc.getPage(origIdx + 1)
-  try {
-    const content = await page.getTextContent()
-    let text = ''
-    for (const item of content.items) {
-      if ('str' in item) {
-        text += item.str
-        if (item.hasEOL) text += '\n'
-      }
+  const content = await page.getTextContent()
+  let text = ''
+  for (const item of content.items) {
+    if ('str' in item) {
+      text += item.str
+      if (item.hasEOL) text += '\n'
     }
-    return text
-  } finally {
-    page.cleanup()
   }
+  return text
 }

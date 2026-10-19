@@ -6,6 +6,8 @@
  * the dotted marks are screen-only. The preload bridge and the store channel
  * are fakes; "sending" means a call to the fake `aiStream`.
  */
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { act, createElement, createRef } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -359,6 +361,36 @@ describe('passage cards: sending', () => {
   })
 })
 
+describe('passage cards: a press during "Regenerate"', () => {
+  it('shows the regeneration still answering, not the old card as if done', async () => {
+    const m = await mount({ stored: [stored()] })
+    await act(async () => m.handle.current!.open('c1'))
+    await until(() => q(m.el, '[data-action="regenerate"]') !== null, 'the card')
+    await click(m.el, '[data-action="regenerate"]')
+    await until(() => bridge.starts.length === 1, 'the call')
+    await act(async () => m.handle.current!.request('explain', selection))
+    await settle()
+    expect(q(m.el, '[data-passage-answer]')).toBeNull()
+    expect(q(m.el, '.pdf-passage-card-status')?.textContent).toBe(strings.en.rdWorking)
+    await act(async () => bridge.answerAll('New answer.'))
+    await until(() => q(m.el, '[data-passage-answer]')?.textContent === 'New answer.', 'the answer')
+    expect(bridge.starts).toHaveLength(1)
+  })
+
+  it('shows a regeneration the gate still holds as waiting, and it still starts', async () => {
+    const m = await mount({ stored: [stored()], holdCheck: true })
+    await act(async () => m.handle.current!.open('c1'))
+    await until(() => q(m.el, '[data-action="regenerate"]') !== null, 'the card')
+    await click(m.el, '[data-action="regenerate"]')
+    await act(async () => m.handle.current!.request('explain', selection))
+    await settle()
+    expect(q(m.el, '[data-passage-answer]')).toBeNull()
+    expect(q(m.el, '.pdf-passage-card-status')?.textContent).toBe(strings.en.rdWaiting)
+    await act(async () => bridge.answerCheck(statusesOf('ready', 'signed-out')))
+    await until(() => bridge.starts.length === 1, 'the call')
+  })
+})
+
 describe('passage cards: the gate and closing', () => {
   const statusText = (el: Element) => q(el, '.pdf-passage-card-status')?.textContent ?? ''
 
@@ -481,6 +513,23 @@ describe('passage cards: a blocked run', () => {
     expect(q(m.el, '.pdf-passage-card .ai-sub-blocked')!.textContent).toContain(
       aiRunErrorText('en', { kind: 'signed-out', provider: 'claude-code' }),
     )
+  })
+
+  it('never offers to continue with another connection, even when one is ready', async () => {
+    const m = await mount({ statuses: statusesOf('ready', 'ready') })
+    await act(async () => m.handle.current!.request('explain', selection))
+    await until(() => bridge.starts.length === 1, 'the call')
+    await act(async () =>
+      bridge.failAll({
+        type: 'error',
+        error: 'raw',
+        errorCode: 'rate-limit',
+        errorProvider: 'claude-code',
+        errorResetsAt: Date.now() + 60_000,
+      }),
+    )
+    await until(() => q(m.el, '.pdf-passage-card .ai-sub-blocked') !== null, 'the notice')
+    expect(q(m.el, '.pdf-passage-card [data-action="continue-with"]')).toBeNull()
   })
 
   it('any other failure keeps the plain error line', async () => {
@@ -643,5 +692,16 @@ describe('dotted marks', () => {
     expect(onOpen).toHaveBeenCalledWith('c1', expect.anything())
     // the marks live in the screen DOM only: the print root and the save request never see them
     expect(document.querySelector('.pdf-print-root .pdf-passage-mark')).toBeNull()
+  })
+})
+
+describe('the title a passage request sends', () => {
+  it('is the document title only, never the file name (spec 8)', () => {
+    const app = readFileSync(join(process.cwd(), 'src/renderer/App.tsx'), 'utf8')
+    const start = app.indexOf('<PassageReading\n')
+    const block = app.slice(start, app.indexOf('pageText=', start))
+    expect(start).toBeGreaterThan(-1)
+    expect(block.includes("title={(metadata ?? docInfo).title?.trim() || ''}")).toBe(true)
+    expect(block.includes('fileName')).toBe(false)
   })
 })

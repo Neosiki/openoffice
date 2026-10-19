@@ -4785,7 +4785,9 @@ export default function App() {
       const migrated = (await aiReadRef.current?.afterSave().catch(() => null)) ?? null
       // "in the file" states wait for this save and land under the hash the completed
       // migration moved the store to; without one they keep waiting (reading 3.5)
-      await afterReadingSave(saveConfirmations, passageCards, written, migrated).catch(() => {})
+      await afterReadingSave(saveConfirmations, passageCards, written, migrated, {
+        pagesMoved: deleted.size > 0 || order !== null || blankPages.length > 0,
+      }).catch(() => {})
       // AI highlight suggestions under the saved file's hash (accepted ones now confirmed)
       await aiHighlights.suggestions.load().catch(() => {})
       // the overview follows the saved file only when all its pages are still there
@@ -6385,6 +6387,8 @@ export default function App() {
   ): Promise<FileOpResult> => {
     const result = await runFileOp(run)
     if (!result.ok || 'canceled' in result) return result
+    // the stored AI results of the kept pages follow the rewritten file before it is read again
+    await aiReadRef.current?.afterPageOperation().catch(() => null)
     return { ok: true, pageCount: await loadDoc(filePath, doc) }
   }
   const baseName = () => fileName.replace(/\.pdf$/i, '')
@@ -6459,7 +6463,9 @@ export default function App() {
         opFailed(result.error)
         return
       }
-      if (!('canceled' in result)) await loadDoc(filePath, doc)
+      if ('canceled' in result) return
+      await aiReadRef.current?.afterPageOperation().catch(() => null)
+      await loadDoc(filePath, doc)
     })
   }
 
@@ -8958,6 +8964,7 @@ export default function App() {
           <AiPageReading
             ref={aiReadRef}
             filePath={filePath || null}
+            revision={docReloadRev}
             password={passwordRef.current}
             pageCount={sizes.length}
             lang={lang}
@@ -8991,7 +8998,7 @@ export default function App() {
             lang={lang}
             t={t}
             readOnly={readOnly}
-            title={(metadata ?? docInfo).title?.trim() || fileName}
+            title={(metadata ?? docInfo).title?.trim() || ''}
             pageText={async (origIdx) => (doc ? readPageText(doc, origIdx) : '')}
             addNote={(note) => {
               const id = newId()

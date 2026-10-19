@@ -87,6 +87,8 @@ export class PassageCards {
   private readonly listeners = new Set<() => void>()
   private loadSeq = 0
   private fingerprintsLoad: Promise<readonly string[] | null> | null = null
+  /** the fingerprints in the snapshot were read for this load (not kept from the one before) */
+  private fingerprintsFresh = false
   /** requests whose model call is in flight, by passageTargetKey */
   private readonly inFlight = new Set<string>()
 
@@ -152,12 +154,18 @@ export class PassageCards {
   /**
    * Read the open file's document hash and its cards; the page fingerprints
    * too when there is a card. False when there is no store or no file.
+   *
+   * By default the pages found before may have moved (a page operation), so
+   * no card is placed until they are read again. `keepPlaces` (a save that
+   * kept every page where it was) leaves the cards where they are until the
+   * new fingerprints arrive, so their marks do not flicker; a request still
+   * waits for the new ones.
    */
-  async load(): Promise<boolean> {
+  async load(o: { keepPlaces?: boolean } = {}): Promise<boolean> {
     const seq = ++this.loadSeq
     this.fingerprintsLoad = null
-    // the pages found before may have moved: no card is placed until they are read again
-    if (this.state.fingerprints) this.set({ ...this.state, fingerprints: null })
+    this.fingerprintsFresh = false
+    if (!o.keepPlaces && this.state.fingerprints) this.set({ ...this.state, fingerprints: null })
     const file = this.file()
     if (!this.store || !file) {
       this.set(EMPTY)
@@ -171,7 +179,12 @@ export class PassageCards {
     }
     const read = await this.store.passages(hash.docHash).catch(() => null)
     if (seq !== this.loadSeq) return false
-    this.set({ docHash: hash.docHash, cards: read?.ok ? read.cards : [], fingerprints: null })
+    // the fingerprints now: null, kept from before (keepPlaces), or already read for this load
+    this.set({
+      docHash: hash.docHash,
+      cards: read?.ok ? read.cards : [],
+      fingerprints: this.state.fingerprints,
+    })
     if (this.state.cards.length > 0) await this.fingerprints()
     return seq === this.loadSeq
   }
@@ -186,7 +199,9 @@ export class PassageCards {
 
   /** the open file's page fingerprints, read once per load */
   private fingerprints(): Promise<readonly string[] | null> {
-    if (this.state.fingerprints) return Promise.resolve(this.state.fingerprints)
+    if (this.fingerprintsFresh && this.state.fingerprints) {
+      return Promise.resolve(this.state.fingerprints)
+    }
     const file = this.file()
     if (!this.store || !file) return Promise.resolve(null)
     const seq = this.loadSeq
@@ -198,9 +213,10 @@ export class PassageCards {
       .catch(() => null)
       .then((out) => {
         if (!out?.ok || seq !== this.loadSeq) {
-          this.fingerprintsLoad = null
+          if (seq === this.loadSeq) this.fingerprintsLoad = null
           return null
         }
+        this.fingerprintsFresh = true
         this.set({ ...this.state, docHash: out.docHash, fingerprints: out.fingerprints })
         return out.fingerprints
       })
@@ -213,11 +229,12 @@ export class PassageCards {
   }
 
   /**
-   * The card to open or the request to send for a passage: the stored card
-   * of the same passage when there is one (nothing is sent then), the key of
-   * the same request when its answer is still coming (nothing is sent then
-   * either), else a prepared request. Null when the store or the page cannot
-   * be read.
+   * The card to open or the request to send for a passage: the key of the
+   * same request when its answer is still coming (a first answer, or
+   * "Regenerate" over the stored card: nothing is sent, and the old card is
+   * not shown as if it were the answer), the stored card of the same passage
+   * when there is one (nothing is sent then either), else a prepared request.
+   * Null when the store or the page cannot be read.
    */
   async prepare(
     kind: PassageKind,
@@ -234,10 +251,10 @@ export class PassageCards {
       kind,
       ...(kind === 'translate' && lang ? { lang } : {}),
     }
-    const existing = sameCard(this.state.cards, target)
-    if (existing) return { existing }
     const key = passageTargetKey(target)
     if (this.inFlight.has(key)) return { pending: key }
+    const existing = sameCard(this.state.cards, target)
+    if (existing) return { existing }
     return { target, source, page: source.origIdx + 1 }
   }
 

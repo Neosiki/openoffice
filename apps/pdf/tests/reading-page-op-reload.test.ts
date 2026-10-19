@@ -6,7 +6,9 @@
  * dropped at once, so no mark lands on a wrong page and no Accept writes a
  * highlight onto one. Reading sends nothing.
  */
-import { act, createElement } from 'react'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
+import { act, createElement, createRef } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import type {
@@ -18,10 +20,21 @@ import { useDocumentInsights } from '../src/renderer/ai/insights/useDocumentInsi
 import type { DocumentInsights } from '../src/renderer/ai/insights/insights-controller'
 import type { HighlightSuggestions } from '../src/renderer/highlight/highlight-controller'
 import { useAiHighlights } from '../src/renderer/highlight/useAiHighlights'
+import { createI18n } from '@genoffice/i18n'
+import { DocumentJobRegistry } from '../../../packages/pdf-structure/src/jobs'
+import {
+  AiPageReading,
+  type AiPageReadingApi,
+  type AiPageReadingHandle,
+  type AiPageReadingProps,
+} from '../src/renderer/ai-read/AiPageReading'
+import { DocumentJobSession } from '../src/renderer/doc-jobs/job-session'
+import { strings } from '../src/renderer/i18n/strings'
 import type { PassageCards } from '../src/renderer/reading/passage-controller'
+import type { PdfStoreWriteRequest } from '../src/shared/ipc'
 import { passageHash } from '../src/renderer/reading/passage-text'
 import { createSaveConfirmations } from '../src/renderer/reading/save-confirmations'
-import { usePassageCards } from '../src/renderer/reading/usePassageCards'
+import { afterReadingSave, usePassageCards } from '../src/renderer/reading/usePassageCards'
 import type { PageEntry, SearchIndex } from '../src/renderer/search'
 
 const PATH = 'C:\\docs\\paper.pdf'
@@ -196,5 +209,176 @@ describe('a page operation that rewrites the file in place', () => {
     await m.render(0)
     await settle()
     expect(m.f.store.docHash.mock.calls.length).toBe(reads)
+  })
+})
+
+/**
+ * The store as one file whose hash changes with each rewrite, keeping cards
+ * per hash; migrate copies the cards of surviving pages to the file's hash
+ * now, the way the shell's migration does (spec 5.5).
+ */
+function hashedStore() {
+  const H0 = '0'.repeat(64)
+  let hash = H0
+  let fingerprints = ['fp1', 'fp2']
+  const byHash = new Map<string, PassageCard[]>([[H0, []]])
+  const cardsOf = (h: string) => byHash.get(h) ?? []
+  const store = {
+    docHash: vi.fn(async () => ({ ok: true as const, docHash: hash })),
+    pageFingerprints: vi.fn(async () => ({ ok: true as const, docHash: hash, fingerprints })),
+    passages: vi.fn(async (h: string) => ({
+      ok: true as const,
+      cards: cardsOf(h).map((c) => ({ ...c })),
+    })),
+    write: vi.fn(async (request: PdfStoreWriteRequest) => {
+      if (request.kind === 'passage') {
+        const rest = cardsOf(request.docHash).filter((c) => c.id !== request.card.id)
+        byHash.set(request.docHash, [...rest, { ...request.card, savedAt: 5 }])
+      }
+      return { ok: true as const }
+    }),
+    migrate: vi.fn(async (req: { oldDocHash: string }) => {
+      const moved = cardsOf(req.oldDocHash).filter((c) => fingerprints.includes(c.pageFingerprint))
+      const kept = cardsOf(hash).filter((c) => !moved.some((m) => m.id === c.id))
+      byHash.set(hash, [...kept, ...moved])
+      return {
+        ok: true as const,
+        docHash: hash,
+        aiReadPages: 0,
+        translationBlocks: 0,
+        languages: [],
+        jobs: 0,
+      }
+    }),
+    unfinishedJobs: vi.fn(async () => ({ ok: true as const, jobs: [] })),
+  }
+  let n = 0
+  return {
+    store,
+    cardsOf,
+    hash: () => hash,
+    seed: (card: PassageCard) => byHash.set(hash, [...cardsOf(hash), card]),
+    /** the file is rewritten (a page operation or a save): a new hash, these pages */
+    rewrite: (fps: string[]) => {
+      hash = String(++n).repeat(64)
+      fingerprints = fps
+    },
+  }
+}
+
+const translate = createI18n(strings)
+const tEn: AiPageReadingProps['t'] = (key, params) => translate('en', key, params)
+
+async function mountReading() {
+  const f = hashedStore()
+  vi.stubGlobal('pdfApi', { store: f.store })
+  const api = {
+    tree: vi.fn(),
+    cancel: vi.fn(),
+    onProgress: vi.fn(() => () => {}),
+    store: f.store,
+  } as unknown as AiPageReadingApi
+  const session = new DocumentJobSession(new DocumentJobRegistry())
+  const handle = createRef<AiPageReadingHandle>()
+  const seen = {} as { cards: PassageCards }
+  function Probe({ revision }: { revision: number }) {
+    seen.cards = usePassageCards({
+      filePath: PATH,
+      password: undefined,
+      lang: 'en',
+      ready: true,
+      revision,
+    })
+    const props: AiPageReadingProps = {
+      filePath: PATH,
+      password: undefined,
+      pageCount: 2,
+      lang: 'en',
+      t: tEn,
+      api,
+      session,
+      openPageRenderer: vi.fn(),
+      onNotice: vi.fn(),
+      revision,
+    }
+    return createElement(AiPageReading, { ...props, ref: handle })
+  }
+  container = document.createElement('div')
+  document.body.appendChild(container)
+  root = createRoot(container)
+  const render = (revision: number) =>
+    act(async () => root!.render(createElement(Probe, { revision })))
+  await render(0)
+  await settle()
+  return { f, seen, handle, render }
+}
+
+const SOURCE = {
+  origIdx: 0,
+  quads: [[1, 2, 3, 2, 1, 1, 3, 1]],
+  excerpt: 'Silt doubled.',
+  pageText: 'Silt doubled.',
+  title: '',
+}
+
+describe('the stored results follow a page operation and the next save', () => {
+  it('a card written after a page operation is still there after the next save', async () => {
+    const m = await mountReading()
+    // a page operation rewrote the file in place (page 1 removed): new hash, reload
+    m.f.rewrite(['fp2'])
+    const afterPageOp = m.f.hash()
+    await m.render(1)
+    await settle()
+    expect(m.seen.cards.docHash).toBe(afterPageOp)
+    // a card is made on the rewritten file
+    const prepared = await m.seen.cards.prepare('explain', undefined, SOURCE)
+    if (!prepared || !('target' in prepared)) throw new Error('expected a request')
+    const ask = vi.fn(async () => ({ text: 'An answer.', provider: 'codex', model: '' }))
+    const made = await m.seen.cards.generate(prepared, ask, new AbortController().signal)
+    expect(m.f.cardsOf(afterPageOp).map((c) => c.id)).toEqual([made.id])
+    // the next save: the store moves from the hash the card was written under
+    m.f.rewrite(['fp2'])
+    let migrated: string | null = null
+    await act(async () => {
+      migrated = (await m.handle.current!.afterSave()) ?? null
+    })
+    expect(m.f.store.migrate).toHaveBeenLastCalledWith(
+      expect.objectContaining({ oldDocHash: afterPageOp }),
+    )
+    expect(migrated).toBe(m.f.hash())
+    await afterReadingSave(createSaveConfirmations(), m.seen.cards, [], migrated)
+    expect(m.seen.cards.docHash).toBe(m.f.hash())
+    expect(m.seen.cards.list().map((c) => c.id)).toEqual([made.id])
+  })
+
+  it('a card of a page the page operation kept follows the rewritten file', async () => {
+    const m = await mountReading()
+    m.f.seed({ ...CARD, id: 'kept' })
+    m.f.seed({ ...CARD, id: 'gone', pageFingerprint: 'fp1', page: 1 })
+    // the page operation runs the migration before the reload (App: rewriteInPlace)
+    m.f.rewrite(['fp2'])
+    await act(async () => {
+      await m.handle.current!.afterPageOperation()
+    })
+    await m.render(1)
+    await settle()
+    expect(m.seen.cards.docHash).toBe(m.f.hash())
+    expect(m.seen.cards.list().map((c) => c.id)).toEqual(['kept'])
+    expect(m.seen.cards.pageOf(m.seen.cards.get('kept')!)).toBe(0)
+  })
+
+  it('the editor passes its reload revision and migrates before reloading a rewritten file', () => {
+    const app = readFileSync(join(process.cwd(), 'src/renderer/App.tsx'), 'utf8')
+    const start = app.indexOf('<AiPageReading')
+    const reading = app.slice(start, app.indexOf('/>', app.indexOf('languageName=', start)))
+    expect(reading.includes('revision={docReloadRev}')).toBe(true)
+    const migratesFirst = (block: string) => {
+      const at = block.indexOf('afterPageOperation()')
+      return at > -1 && at < block.indexOf('loadDoc(')
+    }
+    const rewrite = app.slice(app.indexOf('const rewriteInPlace'), app.indexOf('const baseName'))
+    expect(migratesFirst(rewrite)).toBe(true)
+    const insert = app.slice(app.indexOf('const insertPdf'), app.indexOf('const insertBlankPage'))
+    expect(migratesFirst(insert)).toBe(true)
   })
 })

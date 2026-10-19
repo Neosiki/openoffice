@@ -350,6 +350,12 @@ export const PassageReading = forwardRef<PassageReadingHandle, PassageReadingPro
         return
       }
       if ('existing' in prepared) {
+        // "Regenerate" over this card still waits at the gate: show it, not the old answer
+        const waiting = jobsByKey.current.get(cardKey(prepared.existing))
+        if (waiting && !waiting.cancelled && heldRef.current?.job === waiting) {
+          showJob(waiting, 'waiting', sel.anchor)
+          return
+        }
         dropHeld()
         setView({ kind: 'card', id: prepared.existing.id, anchor: sel.anchor })
         return
@@ -358,15 +364,7 @@ export const PassageReading = forwardRef<PassageReadingHandle, PassageReadingPro
         // the same request is still answering: show it again, send nothing
         const running = jobsByKey.current.get(prepared.pending)
         if (!running || running.cancelled) return
-        dropHeld()
-        setView({
-          kind: 'job',
-          job: running,
-          phase: 'working',
-          heading: running.heading,
-          excerpt: running.excerpt,
-          anchor: sel.anchor,
-        })
+        showJob(running, 'working', sel.anchor)
         return
       }
       const ready: PreparedPassage = prepared
@@ -382,6 +380,22 @@ export const PassageReading = forwardRef<PassageReadingHandle, PassageReadingPro
       submit(job, heading, sel.excerpt, sel.anchor)
     }
 
+    /** show a job that answers the pressed passage already; nothing is sent */
+    const showJob = (job: Job, phase: 'waiting' | 'working', anchor: AskAnchorRect) => {
+      if (heldRef.current?.job !== job) dropHeld()
+      const { heading, excerpt } = job
+      setView({ kind: 'job', job, phase, heading, excerpt, anchor })
+    }
+
+    /** the key of the request a stored card answers */
+    const cardKey = (card: PassageCard) =>
+      propsRef.current.cards.targetKey({
+        pageFingerprint: card.pageFingerprint,
+        passageHash: card.passageHash,
+        kind: card.kind,
+        ...(card.lang ? { lang: card.lang } : {}),
+      })
+
     const regenerate = async (card: PassageCard, anchor: AskAnchorRect) => {
       const p = propsRef.current
       const origIdx = p.cards.pageOf(card) ?? card.page - 1
@@ -390,12 +404,7 @@ export const PassageReading = forwardRef<PassageReadingHandle, PassageReadingPro
       const job: Job = {
         seq: ++jobSeq.current,
         run: (signal) => propsRef.current.cards.regenerate(card.id, source, ask, signal),
-        key: p.cards.targetKey({
-          pageFingerprint: card.pageFingerprint,
-          passageHash: card.passageHash,
-          kind: card.kind,
-          ...(card.lang ? { lang: card.lang } : {}),
-        }),
+        key: cardKey(card),
         heading,
         excerpt: card.excerpt,
       }
