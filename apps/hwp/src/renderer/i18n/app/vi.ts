@@ -59,6 +59,8 @@ export const vi = {
     'Hãy tìm các lỗi chính tả và lỗi khoảng trắng trong tài liệu này rồi sửa.',
   aiToolRead: 'Đã đọc tài liệu',
   aiToolFind: 'Tìm "{text}" · thấy {count}',
+  aiToolReadUrl: 'Đã đọc {host} · {n} ký tự',
+  aiToolReadUrlFail: 'Không đọc được {host}',
   aiToolFields: 'Đã kiểm tra trường biểu mẫu · {count}',
   aiToolToc: 'Đã thêm mục lục · {count} đề mục',
   aiToolTocRefresh: 'Đã viết lại số trang của mục lục · {count}',

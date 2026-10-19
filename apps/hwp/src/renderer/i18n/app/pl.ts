@@ -59,6 +59,8 @@ export const pl = {
   aiStarterProofreadPrompt: 'Znajdź w tym dokumencie błędy pisowni i błędy w spacjach i popraw je.',
   aiToolRead: 'Odczytano dokument',
   aiToolFind: 'Szukano „{text}” · znaleziono: {count}',
+  aiToolReadUrl: 'Przeczytano {host} · {n} znaków',
+  aiToolReadUrlFail: 'Nie udało się odczytać {host}',
   aiToolFields: 'Sprawdzono pola formularza · {count}',
   aiToolToc: 'Dodano spis treści · nagłówki: {count}',
   aiToolTocRefresh: 'Przepisano numery stron spisu treści · {count}',

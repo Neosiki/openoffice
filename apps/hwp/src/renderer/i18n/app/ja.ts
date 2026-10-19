@@ -59,6 +59,8 @@ export const ja = {
   aiStarterProofreadPrompt: 'この文書の誤字やスペースの誤りを見つけて修正してください。',
   aiToolRead: '文書を読み取りました',
   aiToolFind: '「{text}」を検索 · {count} 件',
+  aiToolReadUrl: '{host} を読み込み · {n} 字',
+  aiToolReadUrlFail: '{host} を読み込めませんでした',
   aiToolFields: 'フォームフィールドを確認 · {count} 個',
   aiToolToc: '目次を追加 · 見出し {count}',
   aiToolTocRefresh: '目次のページ番号を更新 · {count}',

@@ -59,6 +59,8 @@ export const en = {
   aiStarterProofreadPrompt: 'Find the spelling and spacing mistakes in this document and fix them.',
   aiToolRead: 'Read the document',
   aiToolFind: 'Looked for "{text}" · {count} found',
+  aiToolReadUrl: 'Read {host} · {n} chars',
+  aiToolReadUrlFail: 'Could not read {host}',
   aiToolFields: 'Checked form fields · {count}',
   aiToolToc: 'Added a table of contents · {count} headings',
   aiToolTocRefresh: 'Rewrote the contents page numbers · {count}',

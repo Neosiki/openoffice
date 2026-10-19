@@ -59,6 +59,8 @@ export const hi = {
   aiStarterProofreadPrompt: 'इस दस्तावेज़ में वर्तनी और रिक्त स्थान की गलतियाँ ढूँढकर ठीक करो।',
   aiToolRead: 'दस्तावेज़ पढ़ा गया',
   aiToolFind: '"{text}" खोजा गया · {count} मिले',
+  aiToolReadUrl: '{host} पढ़ा गया · {n} अक्षर',
+  aiToolReadUrlFail: '{host} पढ़ा नहीं जा सका',
   aiToolFields: 'फ़ॉर्म फ़ील्ड देखे गए · {count}',
   aiToolToc: 'विषय-सूची जोड़ी · {count} शीर्षक',
   aiToolTocRefresh: 'विषय-सूची के पृष्ठ क्रमांक फिर से लिखे · {count}',

@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { Op } from '../src/renderer/edit-ops'
 import type { PDFDocumentProxy } from 'pdfjs-dist'
 import { AGENT_TOOLS, executePdfTool, type PdfAiDeps } from '../src/renderer/ai/tools'
@@ -225,6 +225,70 @@ describe('search_text', () => {
   it('reports no matches without erroring', async () => {
     const result = await executePdfTool(makeDeps(), call('search_text', { query: 'zzz' }))
     expect(result.output).toBe('No matches found')
+  })
+})
+
+describe('read_url', () => {
+  afterEach(() => vi.unstubAllGlobals())
+
+  it('returns the page text in the shared, model-facing shape', async () => {
+    const readUrl = vi.fn(async () => ({
+      ok: true as const,
+      url: 'https://example.com/page',
+      title: 'Example',
+      text: 'Hello page',
+      offset: 0,
+      totalChars: 10,
+      truncated: false,
+    }))
+    vi.stubGlobal('pdfApi', { readUrl })
+    const result = await executePdfTool(
+      makeDeps(),
+      call('read_url', { url: 'https://example.com/page' }),
+    )
+    expect(readUrl).toHaveBeenCalledWith('https://example.com/page', 0)
+    expect(result.isError).toBeUndefined()
+    expect(result.output).toBe(
+      'Example — characters 0..10 of 10 (end)\nhttps://example.com/page\n\nHello page',
+    )
+    expect(result.summary).toContain('example.com')
+    expect(result.summary).toContain('10')
+  })
+
+  it('marks a truncated read, floors the offset and falls back to the host', async () => {
+    const readUrl = vi.fn(async () => ({
+      ok: true as const,
+      url: 'https://example.com/long',
+      text: 'x'.repeat(50),
+      offset: 10,
+      totalChars: 60,
+      truncated: true,
+      nextOffset: 60,
+    }))
+    vi.stubGlobal('pdfApi', { readUrl })
+    const result = await executePdfTool(
+      makeDeps(),
+      call('read_url', { url: 'https://example.com/long', offset: 10.7 }),
+    )
+    expect(readUrl).toHaveBeenCalledWith('https://example.com/long', 10)
+    expect(result.output.startsWith('example.com — characters 10..60 of 60')).toBe(true)
+    expect(result.output).toContain('(continue with offset)')
+  })
+
+  it('turns a failed read into the error the handler reported', async () => {
+    const readUrl = vi.fn(async () => ({
+      ok: false as const,
+      error: 'The page had no readable text.',
+      errorCode: 'empty',
+    }))
+    vi.stubGlobal('pdfApi', { readUrl })
+    const result = await executePdfTool(
+      makeDeps(),
+      call('read_url', { url: 'https://example.com/blank' }),
+    )
+    expect(result.isError).toBe(true)
+    expect(result.output).toBe('The page had no readable text.')
+    expect(result.summary).toContain('example.com')
   })
 })
 
