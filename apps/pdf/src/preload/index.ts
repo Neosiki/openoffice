@@ -9,6 +9,7 @@ import { splitPaneBridge } from '@genoffice/electron-utils/split-pane-bridge'
 import { AI_CHANNELS, PDF_CHANNELS } from '../shared/ipc'
 import type {
   PdfApi,
+  PdfNoteResult,
   PdfStoreApi,
   PdfStructureApi,
   PdfStructureFailure,
@@ -194,6 +195,15 @@ const api: PdfApi = {
   removeSavedSignature: (id) => ipcRenderer.invoke(PDF_CHANNELS.removeSignature, id),
   getUsername: () => ipcRenderer.invoke(PDF_CHANNELS.getUsername),
   annotSubjects: (path) => ipcRenderer.invoke(PDF_CHANNELS.annotSubjects, path),
+  // no path crosses: the main process uses the view's own PDF and its linked note
+  noteOpen: (request) =>
+    (
+      ipcRenderer.invoke(PDF_CHANNELS.noteOpen, { title: request?.title }) as Promise<PdfNoteResult>
+    ).catch((): PdfNoteResult => ({ ok: false, reason: 'unavailable' })),
+  noteInsert: (request) =>
+    (ipcRenderer.invoke(PDF_CHANNELS.noteInsert, request) as Promise<PdfNoteResult>).catch(
+      (): PdfNoteResult => ({ ok: false, reason: 'unavailable' }),
+    ),
   setDirty: (dirty) => ipcRenderer.send(PDF_CHANNELS.dirtyChanged, dirty),
   onCloseSaveRequest: (handler) => {
     const listener = (_e: unknown, opts?: { flushAll?: boolean }) =>
