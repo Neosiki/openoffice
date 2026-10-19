@@ -6,7 +6,7 @@
 
 - 모든 바깥 이름은 `ieumoffice`다. 명령어, MCP 등록 이름, 에이전트 스킬 이름과 폴더, 홈 폴더 아래 `.ieumoffice`.
 - 원본이 쓰는 이름(`genoffice` 명령어, `~/.genoffice`, `genoffice` 연동 항목과 스킬 폴더)은 읽지도 쓰지도 않는다. 두 프로그램은 한 PC에 함께 있을 수 있다.
-- 문서 명령은 PC 안에서 끝난다. 밖으로 무언가를 보내는 명령은 `search`, `image`, `media`, `pdf ai-read`, `pdf translate` 다섯뿐이다. 뒤의 둘은 `--yes`가 있을 때만 보낸다.
+- 문서 명령은 PC 안에서 끝난다. 밖으로 무언가를 보내는 명령은 `search`, `image`, `media`, `read-url`, `pdf ai-read`, `pdf translate` 여섯뿐이다. 뒤의 둘은 `--yes`가 있을 때만 보낸다.
 
 ## 터미널 명령어 `ieumoffice`
 
@@ -97,6 +97,27 @@
 - 번역할 글이 없는 범위(스캔 문서 등)는 종료 코드 1, `unsupported`이고 `pdf ai-read`를 먼저 권한다.
 - 결과 파일을 쓰지 못하면 작업 기록은 `stopped`, `last_error: "output-write-failed"`가 된다. 보관된 번역은 남는다.
 
+## 웹 페이지 읽기 (`read-url`)
+
+`ieumoffice read-url <url> [--offset <n>]`은 http(s) 주소 하나를 그 사이트에서 받아 읽을 수 있는 글로 돌려준다. HTML은 글자로 바꾸고, GitHub `blob` 주소는 raw 주소로 바꿔 읽는다. 주소는 `fetchWithSsrfGuard`를 지나며 사설·루프백 주소와 그런 곳으로 가는 리다이렉트는 거절한다. 한 번에 50,000자를 주고, 이어 읽기는 `--offset`(기본 0)으로 한다. 제공자·구독·자동 호출 장부를 쓰지 않는다. 비공개 GitHub 파일은 설정의 읽기 토큰을 쓰며, 그 토큰은 `api.github.com` 요청에만 실린다.
+
+- 성공 요약: `<host>: characters <offset>..<end> of <totalChars> (continue with --offset <next>)`. 더 읽을 글이 없으면 끝에 `(end)`가 붙는다.
+- 성공 `detail`: `{ url, title?, text, offset, totalChars, truncated, nextOffset? }`. `url`은 리다이렉트를 따른 최종 주소, `title`은 페이지 제목이 있을 때, `text`는 이번에 준 글, `offset`은 그 글의 시작 위치, `totalChars`는 글 전체 길이, `truncated`는 뒤에 더 있을 때 참, `nextOffset`은 다음 시작 위치(뒤에 더 있을 때만)다.
+
+| 상황                                   | 종료 | `error`            | `detail`                                 |
+| -------------------------------------- | ---- | ------------------ | ---------------------------------------- |
+| `<url>` 없음                           | 1    | `missing_argument` | —                                        |
+| `--offset`이 0 이상 정수 아님          | 1    | `invalid_argument` | —                                        |
+| 주소가 http(s) 아님/형식 오류          | 1    | `invalid_argument` | —                                        |
+| 가드 거절(사설·루프백·리다이렉트 문제) | 1    | `unsupported`      | `{ reason: "blocked" }`                  |
+| 글 페이지 아님                         | 1    | `unsupported`      | `{ content_type? }`                      |
+| 읽을 글자 없음                         | 1    | `unsupported`      | `{ reason: "no_text" }`                  |
+| 10MB 초과                              | 4    | `resource_limit`   | `{ max_bytes: 10485760 }`                |
+| 연결·DNS·전송 실패                     | 4    | `app_unavailable`  | `{ errorCode: "network" }`               |
+| 30초 초과                              | 4    | `app_unavailable`  | `{ errorCode: "timeout" }`               |
+| HTTP 상태 2xx 아님                     | 4    | `app_unavailable`  | `{ errorCode: "http_error", status }`    |
+| GitHub 인증 실패                       | 4    | `app_unavailable`  | `{ errorCode: "auth" }` + 토큰 확인 제안 |
+
 ## `search` · `image` · `media`와 `capabilities`
 
 이 셋은 자동 호출이다. 화면을 보는 사람이 없는 요청이므로 갈 수 있는 길이 제한된다.
@@ -138,13 +159,15 @@
 | `headless-limit`                                                                                                                                      | 더 이상 쓰이지 않음. 자동 호출의 시간당 한도가 없어져 내지 않는다 | 해당 없음                          |
 | `rate-limit`                                                                                                                                          | 구독 한도 소진                                                    | `detail.resetsAt`이 있으면 그 이후 |
 | `free-limit`                                                                                                                                          | 무료 연결의 오늘 사용량 소진                                      | `detail.resetsAt`이 있으면 그 이후 |
+| `http_error`                                                                                                                                          | 서버가 2xx가 아닌 상태로 답함(`read-url`)                         | 주소를 확인한 뒤 다시              |
+| `auth`                                                                                                                                                | GitHub가 읽기 토큰을 거절함(`read-url`)                           | 설정의 GitHub 읽기 토큰을 확인     |
 | `not-connected`, `signed-out`, `not-installed`, `metered-not-accepted`, `needs-update`, `unsafe-tools`, `timeout`, `network`, `overloaded`, `credits` | 실행이 그 이유로 실패                                             | 이유에 따라                        |
 
 ## MCP 서버 (`ieumoffice mcp`)
 
 - 표준 입출력으로 같은 명령들을 도구로 내놓는다. `--http <포트>`를 주면 Streamable HTTP로 내놓는다(`--host`, `--token`).
 - 등록 예: `claude mcp add --transport stdio ieumoffice -- ieumoffice mcp`. `ieumoffice mcp install <에이전트|all>`이 각 에이전트의 설정 파일에 `ieumoffice` 항목만 쓴다. 같은 이름의 항목이 다른 프로그램을 가리키면 `occupied`로 알리고 `--force` 없이는 건드리지 않는다.
-- 도구는 명령 동사마다 하나다(`docs_read`, `docs_apply`, `sheet_apply`, `slides_render`, `convert`, `pdf_read`, `pdf_images`, `pdf_ai_read`, `pdf_translate`, `pdf_status` 등). 매개변수는 명령의 옵션 목록에서 그대로 나온다(`allow-paid`는 `allow_paid`, `no-cover`는 `no_cover`). 두 표면이 어긋나지 않는다.
+- 도구는 명령 동사마다 하나다(`docs_read`, `docs_apply`, `sheet_apply`, `slides_render`, `convert`, `read_url`, `pdf_read`, `pdf_images`, `pdf_ai_read`, `pdf_translate`, `pdf_status` 등). 매개변수는 명령의 옵션 목록에서 그대로 나온다(`allow-paid`는 `allow_paid`, `no-cover`는 `no_cover`). 두 표면이 어긋나지 않는다.
 - `pdf_ai_read`·`pdf_translate`는 `yes`가 없으면 명령처럼 예상만 답한다. `yes`가 있으면 작업을 MCP 서버 프로세스 안에서 띄우고 바로 답한다(`detail.started: true`, `detail.estimate`). 진행, 멈춘 이유, `resetsAt`, 결과 파일 경로는 `pdf_status`의 `job`으로 본다. 이어하기는 같은 도구를 다시 부르면 된다.
 - 그 결과 파일은 작업이 끝날 때 쓴다. `partial: true`로 부른 작업은 멈출 때 끝난 부분만 반영해 쓴다. 위치 규칙은 명령어와 같고, 경로는 `job.outputs`로 알려 준다.
 - 서버가 끝나면 그 작업도 멈춘다(`last_error: "interrupted"`). 보관된 결과는 남는다.
@@ -187,7 +210,9 @@
 | `customEndpoints`, `customEndpoint`  | 직접 운영하는 서버 목록과 지금 쓰는 것의 식별자  | 없음                                                       |
 | `maxOutputTokens`                    | 모델 한 차례의 출력 상한                         | 코드의 기본값                                              |
 | `media`, `search`                    | 이미지·분석·검색 제공자 선택과 그 키             | 이미지 분석은 `chat`, 영상 분석은 `none`, 검색은 무료 경로 |
+| `readUrl`                            | `{ githubToken }`                                | 없음                                                       |
 
+- `readUrl.githubToken`은 비공개 GitHub 파일을 읽는 읽기 토큰이다. 설정 파일에 평문으로 저장되고(AI 키와 같다), `api.github.com` 요청에만 실린다. 다른 사이트나 리다이렉트 홉에는 보내지 않는다.
 - `headlessSubscriptionEnabled`가 참이어도 `headlessSubscriptionConsentVersion`이 지금 경고의 판(2)보다 작거나 없으면 꺼진 것으로 읽는다. 판 1은 시간당 한도가 있던 예전 경고이고, 그때는 판을 저장하지 않았다.
 - 이미지 생성 제공자의 저장값 기본은 `codex`다. Codex 구독 이미지 생성이 들어 있지 않은 지금은 `none`(선택 없음)과 똑같이 동작한다.
 - 구독 제공자의 식별자는 `claude-code`, `codex`다. 인증 방식은 `claude-subscription`, `codex-chatgpt`, `api-key` 셋이다.

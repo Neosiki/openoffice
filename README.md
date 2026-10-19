@@ -190,7 +190,8 @@ ieumoffice open report.docx
   `claude mcp add --transport stdio ieumoffice -- ieumoffice mcp`
 
 문서 명령은 전부 내 PC 안에서 돌아갑니다. 밖으로 무언가를 보내는 것은
-`search`, `image`, `media` 세 가지뿐이고, 앱과 같은 경로를 씁니다.
+`search`, `image`, `media`, `read-url` 네 가지뿐입니다. `read-url`은 입력한
+주소를 그 사이트로 보내고, 나머지는 앱과 같은 경로를 씁니다.
 
 **이렇게 들어온 요청은 허용하기 전에는 구독을 쓰지 않습니다.** 터미널 명령이나
 MCP 도구 호출은 화면을 보는 사람이 아니라 프로그램이 보내는 요청입니다.
