@@ -337,6 +337,7 @@ async function mountOverview(o: {
       return { ok: true as const }
     }),
     unfinishedJobs: vi.fn(async () => ({ ok: true as const, jobs: [] })),
+    aiReadPages: vi.fn(async () => ({ ok: true as const, pages: [] })),
   }
   const tree = vi.fn(async () => ({
     ok: true as const,

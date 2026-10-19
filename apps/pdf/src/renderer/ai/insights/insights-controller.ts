@@ -15,6 +15,7 @@
  * changed"); a later "Regenerate" replaces it.
  */
 import type { AgentStreamRequest } from '@genoffice/agent-core'
+import { applyStoredAiReadings } from '../../../../../../packages/pdf-structure/src/ai-read'
 import type { InsightsEntry } from '../../../../../../packages/pdf-structure/src/store/reading'
 import {
   JobUnitFailure,
@@ -23,6 +24,7 @@ import {
   type JobProgressEvent,
 } from '../../../../../../packages/pdf-structure/src/jobs'
 import type { JobRecordInput } from '../../../../../../packages/pdf-structure/src/store/store'
+import type { DocumentTree } from '../../../../../../packages/pdf-structure/src/tree/types'
 import type { PdfStoreApi, PdfStructureApi } from '../../../shared/ipc'
 import type { StartDocumentJob } from '../../doc-jobs/job-session'
 import {
@@ -38,7 +40,7 @@ import { insightsPages, planInsights, type InsightsBatch, type InsightsPlan } fr
 
 export type InsightsStoreApi = Pick<
   PdfStoreApi,
-  'docHash' | 'insights' | 'pageFingerprints' | 'write' | 'unfinishedJobs'
+  'docHash' | 'insights' | 'pageFingerprints' | 'write' | 'unfinishedJobs' | 'aiReadPages'
 >
 export type InsightsStructureApi = Pick<PdfStructureApi, 'tree' | 'cancel'>
 
@@ -199,8 +201,9 @@ export class DocumentInsights {
   }
 
   /**
-   * Build the document tree of the open file (a structure job; no AI) and
-   * plan what to send: one call, or a summary job.
+   * Build the document tree of the open file (a structure job; no AI), put
+   * the stored AI page readings in place, and plan what to send: one call, or
+   * a summary job.
    */
   async prepare(signal?: AbortSignal): Promise<PrepareInsightsOutcome> {
     const file = this.file()
@@ -217,7 +220,7 @@ export class DocumentInsights {
         })
         .catch(() => null)
       if (!out?.ok) return { ok: false, reason: 'analyze-failed' }
-      const pages = insightsPages(out.tree)
+      const pages = insightsPages(await this.withAiReadings(out.docHash, out.tree))
       if (pages.length === 0) return { ok: false, reason: 'no-text' }
       const byPage = new Map(out.fingerprints.map((f) => [f.page, f.fingerprint]))
       const fingerprints = pages.map((p) => byPage.get(p.page)).filter((f) => f !== undefined)
@@ -229,6 +232,19 @@ export class DocumentInsights {
     } finally {
       signal?.removeEventListener('abort', onAbort)
     }
+  }
+
+  /**
+   * The tree with the stored AI page readings in place, as the bilingual view
+   * and the shell's jobs read the document: a scanned page read by AI sends
+   * its AI-read text instead of being left out. Without readings (or when
+   * they cannot be read) the tree as analyzed.
+   */
+  private async withAiReadings(docHash: string, tree: DocumentTree): Promise<DocumentTree> {
+    const out = await this.store?.aiReadPages(docHash).catch(() => null)
+    if (!out?.ok || out.pages.length === 0) return tree
+    const readings = new Map(out.pages.map((p) => [p.pageFingerprint, { payload: p.payload }]))
+    return applyStoredAiReadings(tree, readings)
   }
 
   /** one call for a document that fits it; the overview is stored and shown */

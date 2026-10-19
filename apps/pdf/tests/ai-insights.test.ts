@@ -9,7 +9,14 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { AgentStreamRequest } from '@genoffice/agent-core'
 import { DocumentJobRegistry } from '../../../packages/pdf-structure/src/jobs'
+import {
+  AI_READ_CLOSE_TAG,
+  AI_READ_OPEN_TAG,
+  aiReadPayload,
+  parseAiPageResponse,
+} from '../../../packages/pdf-structure/src/ai-read'
 import type { InsightsEntry } from '../../../packages/pdf-structure/src/store/reading'
+import type { AiReadPayload } from '../../../packages/pdf-structure/src/store/store'
 import type { DocumentTree } from '../../../packages/pdf-structure/src/tree/types'
 import type { PdfStoreWriteRequest } from '../src/shared/ipc'
 import { DocumentJobSession } from '../src/renderer/doc-jobs/job-session'
@@ -92,6 +99,8 @@ function fakeChannels(o: {
   stored?: Map<string, InsightsEntry>
   hash?: () => string
   fingerprints?: () => string[]
+  /** stored AI page readings by page fingerprint */
+  aiRead?: Map<string, AiReadPayload>
 }) {
   const stored = o.stored ?? new Map<string, InsightsEntry>()
   const writes: PdfStoreWriteRequest[] = []
@@ -115,6 +124,16 @@ function fakeChannels(o: {
       return { ok: true as const }
     }),
     unfinishedJobs: vi.fn(async () => ({ ok: true as const, jobs: [] })),
+    aiReadPages: vi.fn(async () => ({
+      ok: true as const,
+      pages: [...(o.aiRead ?? new Map<string, AiReadPayload>())].map(
+        ([pageFingerprint, payload]) => ({
+          pageFingerprint,
+          payload,
+          savedAt: 1,
+        }),
+      ),
+    })),
   } satisfies InsightsStoreApi
   const structure = {
     tree: vi.fn(async () => ({
@@ -303,6 +322,29 @@ describe('the overview in the store', () => {
     ).rejects.toBeInstanceOf(InsightsAnswerError)
     expect(f.writes).toHaveLength(0)
     expect(insights.snapshot().entry).toBeNull()
+  })
+
+  it('sends the AI reading of a page that has no text layer of its own', async () => {
+    const reading = parseAiPageResponse(
+      `${AI_READ_OPEN_TAG}\nScanned page read by AI.\n${AI_READ_CLOSE_TAG}`,
+      { page: 2, pageFingerprint: 'fp2' },
+    )
+    if (!reading.ok) throw new Error(reading.problems.join(', '))
+    const payload = JSON.parse(JSON.stringify(aiReadPayload(reading.reading))) as AiReadPayload
+    const f = fakeChannels({ pages: ['Text page.', ''], aiRead: new Map([['fp2', payload]]) })
+    const insights = new DocumentInsights({
+      store: f.store,
+      structure: f.structure,
+      file: () => ({ path: PATH }),
+      lang: 'en',
+    })
+    const prepared = await insights.prepare()
+    if (!prepared.ok) throw new Error(prepared.reason)
+    expect(f.store.aiReadPages).toHaveBeenCalledWith(DOC)
+    expect(prepared.prepared.plan.pages).toEqual([1, 2])
+    expect(prepared.prepared.fingerprints).toEqual(['fp1', 'fp2'])
+    const plan = prepared.prepared.plan
+    expect(plan.mode === 'single' && plan.text).toContain('[page 2]\nScanned page read by AI.')
   })
 
   it('says why nothing can be prepared', async () => {
