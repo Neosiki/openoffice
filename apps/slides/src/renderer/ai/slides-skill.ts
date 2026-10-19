@@ -1665,7 +1665,7 @@ async function executeTool(
       return {
         output: readUrlModelText(r),
         mutated: false,
-        summary: t('aiSumReadUrl', { host: readUrlHost(r.url), n: r.totalChars }),
+        summary: t('aiSumReadUrl', { host: readUrlHost(r.url), n: r.text.length }),
       }
     }
 
