@@ -540,7 +540,7 @@ export const TOOLS: ToolSpec[] = [
     command: 'capabilities',
     readOnly: true,
     description:
-      'Which cloud features this server can use, and by which route (free, key or subscription): web search, image search, image generation, image and video analysis, PDF AI page reading and translation. A subscription login is used only after the user turned that on for automatic calls (detail.automatic_calls); an unavailable feature carries the message its tool would answer with. Check once before planning photos or live facts; everything else runs locally.',
+      'Which cloud features this server can use, and by which route (free, key or subscription): web search, image search, image generation, image and video analysis, PDF AI page reading and translation. A subscription login is used only after the user turned that on for automatic calls (detail.automatic_calls); an unavailable feature carries the message its tool would answer with. Check once before planning photos or live facts; every other tool runs locally, except read_url, which fetches the address it is given.',
   },
   {
     name: 'search',
@@ -551,6 +551,16 @@ export const TOOLS: ToolSpec[] = [
       'Web search, or image search with images=true, through the free search or the search provider key selected in GenOffice (the query leaves the machine). Image results carry imageUrl, width and height for addPicture / insert_image.',
     positionals: [{ key: 'query', description: 'the search query' }],
     options: ['images', 'max'],
+  },
+  {
+    name: 'read_url',
+    command: 'read-url',
+    readOnly: true,
+    openWorld: true,
+    description:
+      "Read the text of a web page (http/https) — an article, a document, or a skill's link; the address is sent to that site. Long pages continue with offset. Private GitHub works with the read-only token set in the app.",
+    positionals: [{ key: 'url', description: 'the http(s) address to read' }],
+    options: ['offset'],
   },
   {
     name: 'image',
