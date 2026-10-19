@@ -103,7 +103,8 @@ export const pdfCommand: CommandDef = {
     },
     {
       name: 'restart',
-      description: 'translate: start over instead of continuing',
+      description:
+        'translate: start over instead of continuing (paragraphs edited in the app are kept)',
     },
     {
       name: 'yes',

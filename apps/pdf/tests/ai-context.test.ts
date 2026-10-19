@@ -83,8 +83,8 @@ describe('buildContext', () => {
 
 describe('parsePdfNavHref', () => {
   it('parses page links', () => {
-    expect(parsePdfNavHref('pdfnav://page/12')).toBe(12)
-    expect(parsePdfNavHref(`${PDF_NAV_SCHEME}page/1`)).toBe(1)
+    expect(parsePdfNavHref('pdfnav://page/12')).toEqual({ page: 12 })
+    expect(parsePdfNavHref(`${PDF_NAV_SCHEME}page/1`)).toEqual({ page: 1 })
   })
 
   it('rejects everything else', () => {

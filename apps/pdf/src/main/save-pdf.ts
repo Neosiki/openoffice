@@ -206,7 +206,21 @@ function addMarkup(pdfDoc: PDFDocument, page: PDFPage, m: MarkupInput): void {
     P: page.ref,
     AP: { N: apRef },
   })
+  // an accepted AI highlight's category; without it nothing changes in the bytes
+  const subject = markupSubject(m)
+  if (subject !== null) annot.set(PDFName.of('Subj'), PDFHexString.fromText(subject))
   appendAnnot(pdfDoc, page, pdfDoc.context.register(annot))
+}
+
+/** longest /Subj written, in characters (code points); a category name is a few words */
+const MAX_SUBJECT_CHARS = 200
+
+/** the markup's /Subj text, or null when it has none (empty or not a string) */
+function markupSubject(m: MarkupInput): string | null {
+  if (typeof m.subject !== 'string') return null
+  // by code point: a cut never leaves half of a surrogate pair
+  const text = Array.from(m.subject.trim()).slice(0, MAX_SUBJECT_CHARS).join('')
+  return text === '' ? null : text
 }
 
 function appendAnnot(pdfDoc: PDFDocument, page: PDFPage, annotRef: PDFRef): void {

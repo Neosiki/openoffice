@@ -86,3 +86,66 @@ Enam alat: **Gambar, Persegi, Elips, Panah, Catatan**, ditambah **Redaksi area**
 
 - Simpan biasa/otomatis menuliskan anotasi dan editan kembali ke dalam file (secara atomik).
 - **Penutupan konten lewat alur Terapkan miliknya sendiri** sehingga menghasilkan salinan dan membiarkan dokumen asli tidak tersentuh, supaya konten sensitif tidak tertinggal di sana.
+
+## Pintasan bilah pilihan
+
+Selama bilah anotasi tampil di atas teks yang dipilih, satu tombol saja langsung menjalankan sebuah tindakan.
+
+| Tombol | Tindakan                                 |
+| ------ | ---------------------------------------- |
+| H      | Sorot (menghapus sorotan bila sudah ada) |
+| U      | Garis bawah                              |
+| S      | Coret                                    |
+| N      | Tambahkan catatan di akhir pilihan       |
+| E      | Penjelasan AI (kartu kutipan)            |
+| T      | Terjemahan AI (kartu kutipan)            |
+| Enter  | Buka kotak **Tanya AI**                  |
+
+- Tombol-tombol ini bekerja sama saja saat metode input Korea atau bahasa lain aktif. Tombol tidak dianggap pintasan selama Anda mengetik di kolom isian atau menahan Ctrl atau Alt.
+- Di dokumen yang dikunci dari penyuntingan (dilindungi kata sandi), H, U, S, dan N tidak melakukan apa pun dan menampilkan alasannya, sama seperti tombol di bilah.
+
+## Kartu kutipan
+
+Tekan **E** atau **T**, atau cip jelaskan dan terjemahkan di kotak **Tanya AI**, lalu jawabannya muncul di kartu kecil di samping pilihan. Kartu disimpan, jadi masih ada ketika dokumen dibuka lagi, dan bisa disalin. Bila Anda menanyakan kutipan yang sama lagi, kartu yang sudah ada dibuka tanpa mengirim apa pun.
+
+- **Simpan sebagai catatan** membuat catatan di tempat itu. Baris pertamanya berbunyi "Penjelasan AI" atau "Terjemahan AI", dan penulisnya adalah nama akun PC Anda. Catatan masuk ke file saat PDF disimpan; sampai saat itu kartu menampilkan "Menunggu disimpan".
+- **Tanya lagi di panel AI** meneruskan kutipan dan jawaban ke panel AI tanpa mengirimnya; **Tambahkan ke catatan** menaruhnya di akhir catatan PDF ini.
+- Hanya **Buat ulang** yang mengirim kutipan ke AI sekali lagi.
+- **Hapus** hanya menghapus kartu yang disimpan. Catatan yang sudah Anda simpan tetap ada.
+- Garis titik-titik samar menandai setiap kutipan yang punya kartu; klik garis itu untuk membuka kartunya lagi. Garis ini hanya ada di layar dan tidak pernah disimpan atau dicetak. Nyalakan atau matikan lewat Tampilan ▸ **Tanda kutipan**.
+
+## Semua anotasi dalam satu daftar
+
+- Tampilan ▸ **Anotasi** menampilkan di bilah samping kiri daftar sorotan, garis bawah, coretan, catatan, dan gambar di dokumen, tanda yang belum disimpan, serta kartu kutipan. Tanda juga memperlihatkan teks di bawahnya.
+- Saring menurut jenis, warna, rentang halaman, atau teks, lalu urutkan menurut halaman atau urutan pembuatan.
+- Klik sebuah item untuk menuju tempatnya dengan kedipan singkat. Catatan membuka utas di margin; kartu membuka kartunya.
+- Perintah menu **Salin sebagai Markdown**, **Buka sebagai dokumen Markdown**, dan **Buka sebagai dokumen Word** memakai daftar sesuai saringan saat ini. AI tidak dipakai. Dokumen baru hanya bisa dibuat dari PDF yang dibuka di dalam GenOffice.
+
+## Terjemahan berdampingan
+
+- Nyalakan Tampilan ▸ **Terjemahan berdampingan**, dan kolom terjemahan muncul di sebelah kanan setiap halaman serta ikut bergulir. Menyalakannya saja tidak mengirim apa pun ke AI. Dokumen yang sudah diterjemahkan dengan **Terjemahkan Dokumen** langsung menampilkan terjemahannya; paragraf tanpa terjemahan tampil sebagai teks asli yang samar.
+- **Terjemahkan halaman ini** (atau **Terjemahkan sisanya** bila sebagian sudah selesai) mengirim halaman itu dengan sekali tekan saat Anda memakai langganan; nama AI tujuannya tertera di samping tombol. Pada koneksi yang ditagih per pemakaian, tekanan pertama di sebuah tab lebih dulu bertanya "akan mengenakan biaya untuk ini · Terjemahkan / Batal".
+- Klik dua kali paragraf terjemahan untuk menyuntingnya. Paragraf yang disunting disimpan sebagai teks polos dan dipakai apa adanya di file PDF, Markdown, dan EPUB terjemahan. **Terjemahkan ulang** pada sebuah paragraf hanya mengirim paragraf itu, dan bertanya dulu bila Anda sudah menyuntingnya.
+- Saat tetikus berada di atas paragraf terjemahan, tempatnya di halaman asli diberi bingkai. Lebar dan ukuran huruf kolom bisa diubah. **Terjemahkan semua halaman…** membuka jendela **Terjemahkan Dokumen**, yang format **Simpan saja (tanpa file)**-nya menyimpan terjemahan tanpa menulis file.
+
+## Sorotan AI
+
+- Di Beranda ▸ **Sorotan AI**, pilih satu set kategori (Riset & laporan, Kontrak & ketentuan, Buku pelajaran & panduan, atau Buat sendiri) dan halamannya. Tidak ada yang dikirim sampai Anda memeriksa perkiraan jumlah panggilan dan AI tujuannya lalu menekan **Mulai**.
+- Kalimat yang dipilih AI ditampilkan sebagai pratinjau berupa kotak berwarna tembus pandang di halaman. Pratinjau tidak pernah disimpan; nyalakan atau matikan lewat Tampilan ▸ **Pratinjau sorotan**.
+- Di panel **Anotasi**, tekan **Terima** atau **Buang** untuk tiap saran, atau terima satu kategori sekaligus. Kalimat yang tidak ditemukan di teks halaman tidak bisa diterima.
+- Saran yang diterima menjadi sorotan dengan warna kategorinya, dan nama kategori disimpan sebagai subjek anotasi, sehingga penampil PDF lain juga menampilkannya di daftar komentar. Sorotan masuk ke file saat PDF disimpan.
+- Sorotan AI tidak bisa dimulai di dokumen yang dikunci dari penyuntingan. Kalimat karangan AI yang tidak ada di teks dibuang, dan laporan akhir menyebut berapa yang diterima dan berapa yang dibuang.
+
+## Ikhtisar dokumen dan kutipan paragraf
+
+- Di bagian atas panel AI, **Ikhtisar dokumen** ▸ **Buat ikhtisar** membuat ringkasan tiga baris, ringkasan, dan istilah kunci (beserta artinya dan halaman pertama kemunculannya). Dokumen panjang diringkas per bagian, jadi Anda lebih dulu mengonfirmasi perkiraan jumlah panggilan.
+- Ikhtisar disimpan dan tetap ada ketika dibuka lagi; hanya **Buat ulang** yang mengirim lagi. Klik sebuah istilah untuk mencarinya di dokumen; setiap bagian bisa disalin atau ditambahkan ke catatan.
+- Saat percakapan masih kosong, panel AI menawarkan tiga pertanyaan yang disarankan. Mengklik salah satunya mengirimnya sekali.
+- Mengklik tautan halaman (p.N) yang diberikan AI sebagai bukti akan membuka halaman itu dan menonjolkan kalimat yang dikutip selama dua detik. Bila kalimatnya tidak ditemukan, hanya halamannya yang dibuka.
+
+## Satu catatan untuk setiap PDF
+
+- Saat pertama kali menekan **Buka catatan** (tab Tampilan atau panel **Anotasi**), jendela simpan terbuka, dengan bawaan folder PDF dan nama "nama PDF catatan.md". Setelah itu catatan langsung terbuka di tab Markdown.
+- Bila Anda memilih file yang sudah ada, Windows mungkin bertanya apakah akan menggantinya, tetapi file tidak ditimpa: file itu ditautkan sebagai catatan apa adanya.
+- **Tambahkan ke catatan** (pada kartu, item panel, dan ikhtisar dokumen) menaruh kutipan dan tautan halaman di akhir tab catatan dan membiarkannya belum disimpan; Anda sendiri yang menyimpan di tab catatan. Tautan ini membuka PDF di halaman tersebut juga di program lain, seperti peramban.
+- PDF yang belum pernah disimpan menampilkan "Simpan PDF terlebih dahulu". Catatan hanya berfungsi untuk PDF yang dibuka di dalam GenOffice.

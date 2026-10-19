@@ -19,7 +19,7 @@ export interface OpDoc {
 export const OP_DOCS: Record<string, OpDoc> = {
   // ── annotate ──────────────────────────────────────────────────────────
   addMarkup: {
-    sig: '{markup:{pageIndex,type:"highlight"|"underline"|"strikeout",color:[r,g,b],quads:[[x1,yT,x2,yT,x1,yB,x2,yB],…]}} — quads payload; use markup_text instead',
+    sig: '{markup:{pageIndex,type:"highlight"|"underline"|"strikeout",color:[r,g,b],quads:[[x1,yT,x2,yT,x1,yB,x2,yB],…],subject?}} — quads payload; subject (the category of an accepted AI highlight) is saved as /Subj, trimmed to 200 chars; use markup_text instead',
     group: 'annotate',
     aiCallable: false,
   },

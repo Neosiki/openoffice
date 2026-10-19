@@ -38,7 +38,11 @@ export const JOB_HEARTBEAT_MS = 10_000
 /** pause before the one retry of a failed call */
 export const JOB_RETRY_DELAY_MS = 1_500
 
-/** the result-store methods the document jobs use; ResultStore satisfies it */
+/**
+ * the result-store methods the document jobs use; ResultStore satisfies it.
+ * `deleteTranslationExceptEdited` is optional: only a restart that keeps the
+ * person's edits needs it, and refuses to run on a store without it.
+ */
 export type DocumentJobStore = Pick<
   ResultStore,
   | 'writeJob'
@@ -48,7 +52,8 @@ export type DocumentJobStore = Pick<
   | 'writeTranslationMeta'
   | 'writeTranslationBlocks'
   | 'deleteTranslation'
->
+> &
+  Partial<Pick<ResultStore, 'deleteTranslationExceptEdited'>>
 
 export interface JobTuning {
   /** calls at a time; default JOB_CONCURRENCY */
@@ -74,8 +79,10 @@ export interface JobProgressEvent<U> {
 export interface RunJobUnitsOptions<U, R> extends JobTuning {
   docHash: string
   kind: JobKind
-  /** target language of a translate job */
+  /** target language of a translate, translate-page or summary job */
   lang?: string
+  /** the run of a highlight job */
+  runId?: string
   store: Pick<DocumentJobStore, 'writeJob'>
   /** the units to send, in order (already-done units left out) */
   units: readonly U[]
@@ -209,8 +216,9 @@ export async function runJobUnits<U, R>(o: RunJobUnitsOptions<U, R>): Promise<Jo
   else external?.addEventListener('abort', onExternalAbort, { once: true })
 
   // ── the job record: writes are serialized so the final one lands last ──
-  const base: Pick<JobRecordInput, 'kind' | 'lang'> = { kind: o.kind }
+  const base: Pick<JobRecordInput, 'kind' | 'lang' | 'runId'> = { kind: o.kind }
   if (o.lang !== undefined) base.lang = o.lang
+  if (o.runId !== undefined) base.runId = o.runId
   let recordWriteFailed = false
   let records: Promise<boolean> = Promise.resolve(true)
   const writeRecord = (record: JobRecordInput): Promise<boolean> => {

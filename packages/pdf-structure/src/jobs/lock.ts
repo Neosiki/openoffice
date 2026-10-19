@@ -66,6 +66,7 @@ function snapshot(info: RunningDocumentJob): RunningDocumentJob {
     progress: { ...info.progress },
   }
   if (info.lang !== undefined) out.lang = info.lang
+  if (info.runId !== undefined) out.runId = info.runId
   return out
 }
 

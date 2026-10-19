@@ -80,4 +80,8 @@ export const en = {
   trPageNotEditable: 'its text cannot be edited',
   trPageVertical: 'vertical or rotated text',
   trPageToc: 'printed table of contents',
+  trFormatStore: 'Store only (no file)',
+  trRestartEditedCount: '{count} paragraphs were edited by a person.',
+  trRestartDiscardEdited: 'Also delete the {count} paragraphs a person edited',
+  trRestartKeepEdited: 'Keep the edited paragraphs',
 } satisfies Record<keyof typeof zh, string>

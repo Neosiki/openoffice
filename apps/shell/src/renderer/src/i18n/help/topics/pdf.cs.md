@@ -86,3 +86,66 @@ Co očekávat:
 
 - Běžné ukládání, ruční i automatické, zapíše anotace a úpravy zpět do souboru (atomicky).
 - **Začerňování prochází vlastním postupem použití** a vytvoří kopii, takže původní dokument zůstane nedotčen a citlivý obsah v něm nezůstane.
+
+## Klávesové zkratky panelu výběru
+
+Dokud je nad vybraným textem vidět panel anotací, jedna klávesa hned provede akci.
+
+| Klávesa | Akce                                   |
+| ------- | -------------------------------------- |
+| H       | Zvýraznění (už zvýrazněné místo zruší) |
+| U       | Podtržení                              |
+| S       | Přeškrtnutí                            |
+| N       | Poznámka na konci výběru               |
+| E       | Vysvětlení AI (karta úryvku)           |
+| T       | Překlad AI (karta úryvku)              |
+| Enter   | Otevření pole **Zeptat se AI**         |
+
+- Klávesy fungují stejně i při korejské nebo jakékoli jiné metodě zadávání. Nevšímají si jich, když píšete do pole nebo držíte Ctrl či Alt.
+- V dokumentu zamčeném proti úpravám (chráněném heslem) H, U, S a N nic neudělají a stejně jako tlačítka panelu ukážou důvod.
+
+## Karty úryvků
+
+Stiskněte **E** nebo **T**, případně čipy pro vysvětlení a překlad v poli **Zeptat se AI**, a odpověď se objeví v malé kartě vedle výběru. Karty se uchovávají, takže po novém otevření dokumentu zůstanou, a lze je kopírovat. Když se na stejný úryvek zeptáte znovu, otevře se existující karta a nic se neodešle.
+
+- **Ponechat jako poznámku** vytvoří na tom místě poznámku. Její první řádek zní „Vysvětlení AI“ nebo „Překlad AI“ a autorem je název vašeho účtu v počítači. Do souboru se dostane při uložení PDF; do té doby karta ukazuje „Čeká na uložení“.
+- **Ptát se dál v panelu AI** předá úryvek a odpověď do panelu AI bez odeslání; **Přidat do poznámky** je vloží na konec poznámky k tomuto PDF.
+- Úryvek znovu odešle do AI jen **Vytvořit znovu**.
+- **Smazat** odstraní pouze uchovanou kartu. Už ponechaná poznámka zůstane.
+- Jemná tečkovaná čára označuje každý úryvek s kartou; kliknutím na ni se karta znovu otevře. Čára je jen na obrazovce a nikdy se neukládá ani netiskne. Zapnete ji nebo vypnete v Zobrazení ▸ **Značky úryvků**.
+
+## Přehled anotací
+
+- Zobrazení ▸ **Anotace** ukáže v levém postranním panelu seznam zvýraznění, podtržení, přeškrtnutí, poznámek a kreseb dokumentu, ještě neuložených značek a karet úryvků. Značky ukazují text, který překrývají.
+- Filtrujte podle druhu, barvy, rozsahu stránek nebo textu a řaďte podle stránky nebo pořadí vytvoření.
+- Kliknutí na položku přenese na dané místo s krátkým bliknutím. Poznámka otevře své vlákno na okraji, karta otevře kartu.
+- Příkazy nabídky **Kopírovat jako Markdown**, **Otevřít jako dokument Markdown** a **Otevřít jako dokument Word** použijí seznam tak, jak je právě filtrovaný. AI se nepoužívá. Nové dokumenty lze vytvořit jen z PDF otevřeného v GenOffice.
+
+## Překlad vedle sebe
+
+- Zapněte Zobrazení ▸ **Překlad vedle sebe** a vpravo od každé stránky se objeví sloupec s překladem, který se posouvá spolu s ní. Samotné zapnutí nic neposílá do AI. Dokument, který jste už přeložili pomocí **Přeložit dokument**, ukáže překlad hned; odstavce bez překladu se zobrazí jako zašedlý původní text.
+- **Přeložit tuto stránku** (nebo **Přeložit zbytek**, když je část hotová) odešle stránku jedním kliknutím, pokud používáte předplatné; vedle tlačítka je vidět název cílové AI. U připojení placeného podle využití se první kliknutí na kartě nejprve zeptá „si za to bude účtovat poplatek · Přeložit / Zrušit“.
+- Dvojklikem na přeložený odstavec ho upravíte. Upravené odstavce se uchovají jako prostý text a beze změny se použijí v přeložených souborech PDF, Markdown a EPUB. **Přeložit znovu** u odstavce odešle jen ten odstavec, a pokud jste ho upravili, napřed se zeptá.
+- Najetím myší na přeložený odstavec se jeho místo na původní stránce orámuje. Šířku sloupce a velikost písma lze měnit. **Přeložit všechny stránky…** otevře okno **Přeložit dokument**, jehož formát **Jen uložit (bez souboru)** ponechá překlad bez zápisu souboru.
+
+## Zvýraznění pomocí AI
+
+- V Domů ▸ **Zvýraznění pomocí AI** vyberte sadu kategorií (Výzkum a zprávy, Smlouvy a podmínky, Učebnice a návody nebo Vlastní) a stránky. Nic se neodešle, dokud nezkontrolujete odhadovaný počet volání a cílovou AI a nestisknete **Spustit**.
+- Věty vybrané AI se zobrazí v náhledu jako průsvitné barevné rámečky na stránce. Náhled se nikdy neukládá; zapnete ho nebo vypnete v Zobrazení ▸ **Náhled zvýraznění**.
+- V panelu **Anotace** můžete návrhy po jednom **Přijmout** nebo **Zahodit**, případně přijmout celou kategorii. Větu, která se v textu stránky nenašla, přijmout nelze.
+- Přijatý návrh se stane zvýrazněním v barvě své kategorie a název kategorie se uloží jako předmět anotace, takže ho jiné prohlížeče PDF ukážou v seznamu komentářů. Do souboru se dostane při uložení PDF.
+- V dokumentu zamčeném proti úpravám nelze zvýraznění pomocí AI spustit. Vymyšlené věty, které v textu nejsou, se zahodí, a závěrečná zpráva uvede, kolik jich přišlo a kolik bylo zahozeno.
+
+## Přehled dokumentu a citace odstavců
+
+- Nahoře v panelu AI vytvoří **Přehled dokumentu** ▸ **Vytvořit přehled** shrnutí ve třech větách, shrnutí a klíčové pojmy (s významem a první stránkou). Dlouhý dokument se shrnuje po částech, proto nejprve potvrdíte odhadovaný počet volání.
+- Přehled se uchová a po novém otevření tam zůstane; znovu odešle jen **Vytvořit znovu**. Kliknutím na pojem ho vyhledáte v dokumentu; každou část lze zkopírovat nebo přidat do poznámky.
+- Když je konverzace prázdná, panel AI nabídne tři navrhované otázky. Kliknutí otázku jednou odešle.
+- Kliknutí na odkaz na stránku (p.N), který AI uvede jako doklad, přejde na tu stránku a citovanou větu na dvě sekundy zvýrazní. Pokud se věta nenajde, otevře se jen stránka.
+
+## Poznámka ke každému PDF
+
+- Když poprvé stisknete **Otevřít poznámku** (karta Zobrazení nebo panel **Anotace**), otevře se okno uložení, výchozí je složka PDF a název „název PDF poznámka.md“. Potom se poznámka otevírá rovnou na kartě Markdown.
+- Pokud zvolíte soubor, který už existuje, Windows se možná zeptá, zda ho nahradit, soubor se ale nepřepíše: připojí se jako poznámka tak, jak je.
+- **Přidat do poznámky** (na kartách, položkách panelu a v přehledu dokumentu) vloží citaci s odkazem na stránku na konec karty poznámky a nechá ji neuloženou; uložíte ji sami na kartě poznámky. Odkaz otevře PDF na dané stránce i v jiných programech, například v prohlížeči.
+- U PDF, které nebylo nikdy uloženo, se zobrazí „Nejprve PDF uložte“. Poznámky fungují jen u PDF otevřených v GenOffice.

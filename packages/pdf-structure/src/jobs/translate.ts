@@ -4,10 +4,16 @@
  * cut into batches by the caller's `batch` (about 2,500 tokens each), one
  * call per batch. Each batch's blocks are stored together once it returns.
  * The translation's provider and model are recorded before its first block.
+ *
+ * Blocks a person edited are stored blocks too, so they count as done and
+ * are never sent. A restart can keep them (`keepEdited`). A page translation
+ * from the bilingual view (`kind: 'translate-page'`) runs on the same engine
+ * but keeps its own job record, leaves an existing provider record alone and
+ * never restarts.
  */
 import type { TextUnit } from '../tree/derive'
 import type { InlineRun } from '../tree/types'
-import type { TranslationBlockInput } from '../store/store'
+import type { StoredTranslation, TranslationBlockInput } from '../store/store'
 import { blockKeyString, translationBlockKeys, type TranslationBlockKey } from '../store/keys'
 import type { DocumentJobStore } from './engine'
 import { JobUnitFailure } from './errors'
@@ -50,10 +56,24 @@ export interface TranslationJobInput<B extends TranslationSourceBlock> {
     | 'writeTranslationMeta'
     | 'writeTranslationBlocks'
     | 'deleteTranslation'
+    | 'deleteTranslationExceptEdited'
     | 'writeJob'
   >
+  /**
+   * 'translate' (default): the document translation, record
+   * `translate.<lang>`. 'translate-page': a page translation, record
+   * `translate-page.<lang>`; the provider record is written only when there
+   * is none; it cannot restart.
+   */
+  kind?: 'translate' | 'translate-page'
   /** start over: the stored translation is replaced (the user confirmed it) */
   restart?: boolean
+  /**
+   * with `restart`: blocks a person edited stay (and count as done); only the
+   * others are removed and sent again. Needs a store with
+   * `deleteTranslationExceptEdited`.
+   */
+  keepEdited?: boolean
 }
 
 export interface TranslationJobPlan<B> {
@@ -68,8 +88,23 @@ type PlanInput<B extends TranslationSourceBlock> = Omit<TranslationJobInput<B>, 
 export async function planTranslationJob<B extends TranslationSourceBlock>(
   input: PlanInput<B>,
 ): Promise<TranslationJobPlan<B>> {
+  return (await planWithStored(input)).plan
+}
+
+/** the plan, and the stored translation it was made against (edited blocks only on a restart) */
+async function planWithStored<B extends TranslationSourceBlock>(
+  input: PlanInput<B>,
+): Promise<{ plan: TranslationJobPlan<B>; stored: StoredTranslation | null }> {
   const keys = translationBlockKeys(input.blocks)
-  const stored = input.restart ? null : await input.store.readTranslation(input.docHash, input.lang)
+  const read =
+    input.restart && !input.keepEdited
+      ? null
+      : await input.store.readTranslation(input.docHash, input.lang)
+  // a restart that keeps the edits starts from them alone
+  const stored =
+    read && input.restart
+      ? { ...read, blocks: new Map([...read.blocks].filter(([, b]) => b.edited === true)) }
+      : read
   const pending: TranslationJobItem<B>[] = []
   input.blocks.forEach((block, i) => {
     const key = keys[i]!
@@ -83,6 +118,7 @@ export async function planTranslationJob<B extends TranslationSourceBlock>(
 
   let providerChange: ProviderChange | null = null
   if (
+    !input.restart &&
     stored &&
     stored.blocks.size > 0 &&
     (stored.provider !== input.model.provider || stored.model !== input.model.model)
@@ -95,16 +131,19 @@ export async function planTranslationJob<B extends TranslationSourceBlock>(
 
   const done = input.blocks.length - pending.length
   return {
-    batches,
-    estimate: {
-      kind: 'translate',
-      lang: input.lang,
-      calls: batches.length,
-      pending: pending.length,
-      done,
-      total: input.blocks.length,
-      model: { ...input.model },
-      providerChange,
+    stored,
+    plan: {
+      batches,
+      estimate: {
+        kind: input.kind ?? 'translate',
+        lang: input.lang,
+        calls: batches.length,
+        pending: pending.length,
+        done,
+        total: input.blocks.length,
+        model: { ...input.model },
+        providerChange,
+      },
     },
   }
 }
@@ -144,11 +183,28 @@ export function startTranslationJob<B extends TranslationSourceBlock>(
   o: StartTranslationJobOptions<B>,
 ): DocumentJobHandle<TranslationJobItem<B>[]> {
   type Batch = TranslationJobItem<B>[]
+  const jobKind = o.kind ?? 'translate'
+  if (jobKind === 'translate-page' && o.restart) {
+    throw new TypeError('translation job: a page translation does not restart')
+  }
   return startDocumentJob<Batch, TranslationBlockResult[]>(
-    { ...o, kind: 'translate' },
+    { ...o, kind: jobKind },
     async (signal) => {
-      if (o.restart && !signal.aborted) await o.store.deleteTranslation(o.docHash, o.lang)
-      const { batches, estimate } = await planTranslationJob({ ...o, restart: false })
+      if (o.restart && !signal.aborted) {
+        if (!o.keepEdited) await o.store.deleteTranslation(o.docHash, o.lang)
+        else if (o.store.deleteTranslationExceptEdited) {
+          await o.store.deleteTranslationExceptEdited(o.docHash, o.lang)
+        } else {
+          // deleting everything instead would lose the person's edits
+          throw new TypeError('translation job: this store cannot keep edited blocks on a restart')
+        }
+      }
+      const {
+        plan: { batches, estimate },
+        stored,
+      } = await planWithStored({ ...o, restart: false })
+      // a page translation leaves the provider record of the document translation alone
+      const writeMeta = jobKind === 'translate' || !stored || stored.provider === null
       let meta: Promise<void> | null = null
       return {
         store: o.store,
@@ -165,10 +221,12 @@ export function startTranslationJob<B extends TranslationSourceBlock>(
           return results
         },
         persist: async (batch, results) => {
-          meta ??= o.store.writeTranslationMeta(o.docHash, o.lang, {
-            provider: o.model.provider,
-            model: o.model.model,
-          })
+          meta ??= writeMeta
+            ? o.store.writeTranslationMeta(o.docHash, o.lang, {
+                provider: o.model.provider,
+                model: o.model.model,
+              })
+            : Promise.resolve()
           await meta
           await o.store.writeTranslationBlocks(
             o.docHash,

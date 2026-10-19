@@ -13,7 +13,7 @@ import { randomUUID } from 'node:crypto'
 import { readFile, stat, writeFile } from 'node:fs/promises'
 import { userInfo } from 'node:os'
 import { basename, dirname, join, resolve } from 'node:path'
-import { BrowserWindow, WebContentsView, app, dialog, ipcMain, shell } from 'electron'
+import { BrowserWindow, WebContentsView, app, dialog, ipcMain, shell, webContents } from 'electron'
 import type { WebContents } from 'electron'
 import {
   buildPrintableHtml,
@@ -111,6 +111,14 @@ import {
   listSystemCertificates,
 } from './system-certificates'
 import type { ExportedIdentity, SystemCertificateRef } from './system-certificates'
+import {
+  createNoteLinkService,
+  noteDialogText,
+  parseNoteInsertRequest,
+  parseNoteOpenRequest,
+} from './note-link'
+import type { PdfNoteResult } from '../shared/ipc'
+import { ResultStore, documentHashOfFile } from '../../../../packages/pdf-structure/src/store'
 
 const tDlg = createI18n({
   zh: {
@@ -609,6 +617,10 @@ interface RuntimePaths {
   createDocument?: (request: CreateDocumentRequest) => Promise<CreateDocumentResult>
   /** The shell's PDF tools window, opened on a task with a file picked (decision 0030) */
   openPdfTools?: (path: string, tool: PdfToolsHandoffTool) => boolean
+  /** The shell opens (or brings forward) a PDF's note in a Markdown tab (reading-assist 4.9) */
+  openNote?: (path: string) => boolean | Promise<boolean>
+  /** The shell puts text at the end of the note's open tab; the file is not written */
+  insertIntoNote?: (path: string, text: string) => boolean | Promise<boolean>
 }
 
 let runtime: RuntimePaths = { preloadPath: '' }
@@ -885,12 +897,20 @@ export function clearPdfDirty(webContentsId: number): void {
 
 /** Paths of shell-created blank PDFs still carrying their untitled name; only these may auto-rename */
 const untitledPdfPaths = new Set<string>()
+/**
+ * Shell-created blank PDFs the person has not saved yet (reading-assist 4.9:
+ * the note waits for a PDF's first save). Unlike `untitledPdfPaths`, the
+ * first successful save in place ends this, even while the shell's untitled
+ * name (and with it content-derived naming) stays.
+ */
+const unsavedBlankPdfPaths = new Set<string>()
 /** Shell hook fired after an auto-rename so the tab title / recents / project mapping follow the file */
 let pdfRenamedHook: ((wc: WebContents, oldPath: string, newPath: string) => void) | null = null
 
 /** Called by the shell right after "New PDF" writes the blank file to disk */
 export function markPdfUntitledPath(path: string): void {
   untitledPdfPaths.add(path)
+  unsavedBlankPdfPaths.add(path)
 }
 
 /**
@@ -906,6 +926,7 @@ export function pdfFileRenamed(contents: WebContents, oldPath: string, newPath: 
   if (allowed?.has(oldPath)) allowed.add(newPath)
   if (saveAsTargetByWc.get(wcId) === oldPath) saveAsTargetByWc.set(wcId, newPath)
   if (untitledPdfPaths.delete(oldPath)) untitledPdfPaths.add(newPath)
+  if (unsavedBlankPdfPaths.delete(oldPath)) unsavedBlankPdfPaths.add(newPath)
   const states = docDiskStates.get(wcId)
   const recorded = states?.get(oldPath)
   if (states && recorded) {
@@ -1151,6 +1172,34 @@ function withSignatures(
 
 let ipcRegistered = false
 
+/** the result store under userData (the shell's structure handlers open the same folder) */
+let noteStore: ResultStore | null = null
+
+/** The note of each PDF (reading-assist 4.9): the view's own document, a dialog-picked note */
+const noteLinks = createNoteLinkService({
+  store: () => (noteStore ??= new ResultStore(app.getPath('userData'))),
+  hashFile: documentHashOfFile,
+  isUntitled: (path) => unsavedBlankPdfPaths.has(path),
+  pickNotePath: async (owner, defaultPath) => {
+    const sender = webContents.fromId(owner)
+    const parent =
+      (sender && BrowserWindow.fromWebContents(sender)) ?? BrowserWindow.getFocusedWindow()
+    const lang = getUiLang()
+    const options = {
+      title: noteDialogText(lang, 'dialogTitle'),
+      defaultPath,
+      filters: [{ name: noteDialogText(lang, 'filterMarkdown'), extensions: ['md'] }],
+      properties: ['createDirectory' as const],
+    }
+    const picked = parent
+      ? await dialog.showSaveDialog(parent, options)
+      : await dialog.showSaveDialog(options)
+    return picked.canceled || !picked.filePath ? null : picked.filePath
+  },
+  noteWord: () => noteDialogText(getUiLang(), 'noteWord'),
+  host: () => ({ openNote: runtime.openNote, insertIntoNote: runtime.insertIntoNote }),
+})
+
 /** Filesystem seam for readMergeInputs; defaults to node:fs/promises */
 export interface MergeInputIo {
   stat(path: string): Promise<{ size: number }>
@@ -1312,6 +1361,10 @@ function registerPdfIpc(): void {
       )
       // Refresh the record for the written bytes
       await rememberDiskState(e.sender.id, target)
+      // a save in place changed the document's hash: its note link follows (spec 5.4)
+      if (target === path && request.redactions === undefined) void noteLinks.afterSave(path)
+      // the person saved this blank: it now has a saved path (its untitled name may stay)
+      if (target === path) unsavedBlankPdfPaths.delete(path)
       if (request.redactions !== undefined) {
         // Commit document identity only after the atomic write succeeds. Revoke the
         // source grant so stale renderer requests cannot write back to the original.
@@ -1408,6 +1461,7 @@ function registerPdfIpc(): void {
       allowedByWc.set(e.sender.id, new Set([target]))
       if (openPathByWc.get(e.sender.id) === path) openPathByWc.set(e.sender.id, target)
       untitledPdfPaths.delete(path)
+      if (unsavedBlankPdfPaths.delete(path)) unsavedBlankPdfPaths.add(target)
       try {
         pdfRenamedHook?.(e.sender, path, target)
       } catch (err) {
@@ -1426,6 +1480,38 @@ function registerPdfIpc(): void {
     // Lazy import like the text-edit paths: pdfium wasm only loads when the feature is used
     const { listPageImages } = await import('./image-edit')
     return listPageImages(new Uint8Array(await readFile(path)))
+  })
+
+  // the note of each PDF (reading-assist 4.9): only the view's own document; the
+  // request carries text parts, never a path (a note path comes from the main
+  // process's save dialog or note-links.json)
+  ipcMain.handle(PDF_CHANNELS.noteOpen, (e, request: unknown): Promise<PdfNoteResult> => {
+    if (!allowedByWc.has(e.sender.id)) return Promise.resolve({ ok: false, reason: 'failed' })
+    return noteLinks.open(
+      e.sender.id,
+      openPathByWc.get(e.sender.id) ?? null,
+      parseNoteOpenRequest(request),
+    )
+  })
+  // whether the note buttons wait for the view's PDF to be saved (no path crosses)
+  ipcMain.handle(PDF_CHANNELS.noteUnsaved, (e): boolean => {
+    const path = openPathByWc.get(e.sender.id) ?? null
+    return path === null || unsavedBlankPdfPaths.has(path)
+  })
+  ipcMain.handle(PDF_CHANNELS.noteInsert, (e, request: unknown): Promise<PdfNoteResult> => {
+    if (!allowedByWc.has(e.sender.id)) return Promise.resolve({ ok: false, reason: 'failed' })
+    const parsed = parseNoteInsertRequest(request)
+    if (!parsed) return Promise.resolve({ ok: false, reason: 'failed', message: 'invalid request' })
+    return noteLinks.insert(e.sender.id, openPathByWc.get(e.sender.id) ?? null, parsed)
+  })
+
+  // only the view's own files: the categories of accepted AI highlights (reading-assist 4.3)
+  ipcMain.handle(PDF_CHANNELS.annotSubjects, async (e, path: unknown) => {
+    if (!pdfPathGranted(e.sender.id, path)) {
+      throw new Error('pdf: path not granted to this view')
+    }
+    const { readAnnotSubjects } = await import('./annot-subjects')
+    return readAnnotSubjects(new Uint8Array(await readFile(path)))
   })
 
   ipcMain.handle(PDF_CHANNELS.listStaticFormFills, async (e, path: unknown) => {

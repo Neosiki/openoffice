@@ -1,4 +1,13 @@
-import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import {
+  Fragment,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from 'react'
 import { handlePdfControl, type ControlRequest } from './control'
 import type { CSSProperties, MouseEvent as ReactMouseEvent } from 'react'
 // legacy build: the modern build relies on new APIs like Math.sumPrecise that the current
@@ -134,10 +143,57 @@ import {
   type DocumentTranslationHandle,
 } from './translate/DocumentTranslation'
 import { languageName } from './translate/translate-model'
+import { useBilingual } from './bilingual/useBilingual'
+import { useBilingualActions } from './bilingual/BilingualActions'
+import { hasUnsavedPageEdits, toggleBilingual, toggleSpread } from './bilingual/model'
 import { createPageRenderer } from './ai-read/render-page'
 import { loadAiReadTexts } from './ai-read/search-texts'
 import { DocumentJobSession } from './doc-jobs/job-session'
 import { CertSignDialog } from './CertSignDialog'
+import { InsightsCard } from './ai/insights/InsightsCard'
+import { useDocumentInsights } from './ai/insights/useDocumentInsights'
+import {
+  QUOTE_NOT_FOUND_NOTICE_MS,
+  QuoteFlashLayer,
+  locateCitation,
+  useQuoteFlash,
+} from './ai/QuoteFlash'
+import type { PdfNavTarget } from './ai/pdf-nav'
+import { PassageReading, type PassageReadingHandle } from './reading/PassageReading'
+import { IconPassageMarks, PassageUnderlines } from './reading/PassageUnderlines'
+import { createSaveConfirmations } from './reading/save-confirmations'
+import { afterReadingSave, usePassageCards } from './reading/usePassageCards'
+import {
+  NoteOpenBar,
+  NoteOpenRibbonButton,
+  joinActions,
+  noteInsertAction,
+  useNoteActions,
+} from './notes/NoteActions'
+import { annotNoteRequest, cardNoteRequest, overviewNoteRequest } from './notes/note-requests'
+import { passageSelectionOf, selectionEnd, type PassageFollowUp } from './reading/passage-cards'
+import { readPageText } from './reading/passage-text'
+import { labelWithKey, selectionBarKey, type SelectionBarAction } from './reading/shortcuts'
+import { AnnotPanelHost } from './annot-panel/AnnotPanelHost'
+import { AnnotFlash, useAnnotFlash } from './annot-panel/AnnotFlash'
+import { activateAnnotItem, type AnnotItem } from './annot-panel/items'
+import { AiHighlights, type AiHighlightsHandle } from './highlight/AiHighlights'
+import { HighlightPreviewLayer, IconHighlightPreview } from './highlight/HighlightPreview'
+import { suggestionMarkup, type SuggestionView } from './highlight/locate'
+import {
+  HighlightPanelBar,
+  categoryFacet,
+  highlightItemActions,
+  suggestionDrafts,
+} from './highlight/panel'
+import {
+  loadHighlightPreview,
+  previewShown,
+  saveHighlightPreview,
+  showPreviewForSession,
+  togglePreview,
+  useAiHighlights,
+} from './highlight/useAiHighlights'
 import { SignaturesDialog, overallSignatureStatus } from './SignaturesDialog'
 import { SignatureDialog, fileToCanvas } from './SignatureDialog'
 import type { SignatureData } from './SignatureDialog'
@@ -231,6 +287,8 @@ import {
   STROKE_WIDTH,
   NOTE_MARGIN_W,
   parsePageRanges,
+  loadPassageMarks,
+  savePassageMarks,
 } from './view-config'
 import type { PageSize, FitMode } from './view-config'
 import { useVisibleSet, PdfPage, MarkupOverlay } from './PdfPage'
@@ -443,7 +501,7 @@ export default function App() {
   const [scale, setScale] = useState(1)
   const [currentPage, setCurrentPage] = useState(1)
   const [pageInput, setPageInput] = useState('1')
-  const [sidebar, setSidebar] = useState<'thumbs' | 'outline' | null>('thumbs')
+  const [sidebar, setSidebar] = useState<'thumbs' | 'outline' | 'notes' | null>('thumbs')
   const [sidebarW, setSidebarW] = useState(loadSidebarW)
   /** raster width for thumbnails — only updated when a drag ends (re-rastering every frame would jank) */
   const [thumbRasterW, setThumbRasterW] = useState(() => loadSidebarW() - SIDEBAR_CHROME)
@@ -497,6 +555,11 @@ export default function App() {
   const [aiPreset, setAiPreset] = useState<{ text: string; nonce: number } | null>(null)
   const [ribbonTab, setRibbonTab] = useState<RibbonTab>('home')
   const [spread, setSpread] = useState<1 | 2>(1)
+  // side-by-side translation view; the revision rebuilds its tree after a save
+  const [bilingualOn, setBilingualOn] = useState(false)
+  const [bilingualRev, setBilingualRev] = useState(0)
+  /** bumped when the open file was rewritten in place (a page operation, not a save) */
+  const [docReloadRev, setDocReloadRev] = useState(0)
   const [nightMode, setNightMode] = useState(false)
   const [outline, setOutline] = useState<OutlineNode[] | null>(null)
   const [outlineGenerated, setOutlineGenerated] = useState(false)
@@ -979,9 +1042,16 @@ export default function App() {
     page: number
     lastPage: number
     text: string
+    /** a passage card answer handed over with the passage ("Ask more in the AI panel") */
+    followUp?: PassageFollowUp
   } | null>(null)
-  /** Ask-AI popover opened from the markup bar; the anchor rect is captured at open */
-  const [askPop, setAskPop] = useState<{ rect: AskAnchorRect; excerpt: string } | null>(null)
+  /** Ask-AI popover opened from the markup bar; the anchor rect is captured at open (and
+      the selection's quads, which its explain / translate chips turn into passage cards) */
+  const [askPop, setAskPop] = useState<{
+    rect: AskAnchorRect
+    excerpt: string
+    quads: Map<number, number[][]> | null
+  } | null>(null)
   /** Whole-document saved-annotation counts per original page for the AI context.
       The scan starts on first AI use, not when the document opens. */
   const [aiAnnotCounts, setAiAnnotCounts] = useState<SavedAnnotCounts | null>(null)
@@ -1026,6 +1096,8 @@ export default function App() {
   const toastTimerRef = useRef<number | null>(null)
   const [thumbMenu, setThumbMenu] = useState<ThumbMenu | null>(null)
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+  /** bumped by every successful save (the note buttons ask again whether the PDF is saved) */
+  const [savedRev, setSavedRev] = useState(0)
   const [saveError, setSaveError] = useState('')
   /** Transient message toast (save failures, skipped/rejected text edits) */
   const [notice, setNotice] = useState<string | null>(null)
@@ -1543,6 +1615,12 @@ export default function App() {
         })
       // pdfjs-dist 6.x removed PDFDocumentProxy.destroy(); go through the loading task
       if (previous) void previous.loadingTask.destroy()
+      // a reload of the open document (save, or a page operation that rewrote the file in
+      // place): the side-by-side view rebuilds its tree from the new bytes
+      if (previous) setBilingualRev((v) => v + 1)
+      // a page operation rewrote the file in place: the reading results are read again for
+      // its new pages (a save reads them itself, once the store moved to the saved hash)
+      if (previous && !saved) setDocReloadRev((v) => v + 1)
       return loaded.numPages
     },
     [],
@@ -1594,6 +1672,40 @@ export default function App() {
 
   /** pdf-lib cannot write encrypted files, including owner-protected files that open without a password. */
   const readOnly = status === 'ready' && (passwordRef.current !== undefined || documentEncrypted)
+
+  // ── Reading assistant: passage cards, their dotted marks, save confirmations ──
+  const saveConfirmations = useMemo(() => createSaveConfirmations(), [])
+  const passageCards = usePassageCards({
+    filePath,
+    password: passwordRef.current,
+    lang,
+    ready: status === 'ready',
+    revision: docReloadRev,
+  })
+  const readingRef = useRef<PassageReadingHandle | null>(null)
+  // ── AI window: the document overview and the 2s highlight of a cited passage ──
+  const documentInsights = useDocumentInsights({
+    filePath,
+    password: passwordRef.current,
+    lang,
+    ready: status === 'ready',
+    revision: docReloadRev,
+  })
+  const quoteFlash = useQuoteFlash()
+  const [passageMarks, setPassageMarks] = useState(loadPassageMarks)
+  useEffect(() => savePassageMarks(passageMarks), [passageMarks])
+  // ── AI highlights: the start window's handle and the preview switch (screen only) ──
+  const highlightRef = useRef<AiHighlightsHandle | null>(null)
+  // the remembered choice, plus an "on" a finished run gives for this session only
+  const [highlightPreviewSwitch, setHighlightPreviewSwitch] = useState(() => ({
+    saved: loadHighlightPreview(),
+    session: false,
+  }))
+  useEffect(
+    () => saveHighlightPreview(highlightPreviewSwitch.saved),
+    [highlightPreviewSwitch.saved],
+  )
+  const highlightPreview = previewShown(highlightPreviewSwitch)
 
   useEffect(() => {
     if (
@@ -1694,6 +1806,58 @@ export default function App() {
     [drawTool, noteDraft, drawings, annotDeletes, savedNotes],
   )
 
+  // the view's buttons: page translation, translate again, edits, "translate all pages"
+  const bilingualActions = useBilingualActions({
+    session: jobSession,
+    store: translateApi?.store ?? null,
+    lang,
+    t,
+    filePath,
+    password: passwordRef.current,
+    onTranslateAll: (target) => {
+      const answer = translateRef.current?.requestOpen({ lang: target, pages: null })
+      if (answer && 'running' in answer) showNotice(t('arBusy', answer.running))
+      else if (!answer || 'unavailable' in answer) showNotice(t('trUnavailable'))
+    },
+  })
+  const bilingual = useBilingual({
+    enabled: bilingualOn,
+    onClose: () => setBilingualOn(false),
+    filePath,
+    password: passwordRef.current,
+    uiLang: lang,
+    t,
+    revision: bilingualRev,
+    api:
+      window.pdfApi?.structure && window.pdfApi.store
+        ? {
+            tree: (request) => window.pdfApi.structure.tree(request),
+            cancel: (jobId) => window.pdfApi.structure.cancel(jobId),
+            onProgress: (handler) => window.pdfApi.structure.onProgress(handler),
+            // reads only: the actions write through their own store channel
+            store: {
+              aiReadPages: (docHash) => window.pdfApi.store.aiReadPages(docHash),
+              translationRecency: (docHash) => window.pdfApi.store.translationRecency(docHash),
+              translation: (docHash, l) => window.pdfApi.store.translation(docHash, l),
+            },
+          }
+        : null,
+    scrollRef,
+    scale,
+    pageGeom,
+    savedRot: (origIdx) => baseRots[origIdx] ?? 0,
+    savedPageCount: sizes.length,
+    rowCount: rows.length,
+    visibleRows,
+    unsavedPageEdits: hasUnsavedPageEdits({
+      insertedPages: blankPages.length,
+      deletedPages: deleted.size,
+      reordered: order !== null,
+    }),
+    reservedWidth: noteMarginOn ? NOTE_MARGIN_W + PAGE_GAP : 0,
+    slots: bilingualActions.slots,
+  })
+
   const recomputeFit = useCallback(() => {
     const mode = fitModeRef.current
     const el = scrollRef.current
@@ -1701,7 +1865,11 @@ export default function App() {
     const dims = rows.map((r) => rowSize(r))
     const maxW = Math.max(...dims.map((s) => s.width))
     // The comments margin sits beside the pages and must fit inside the same viewport
-    const availW = el.clientWidth - SCROLL_PAD * 2 - (noteMarginOn ? NOTE_MARGIN_W + PAGE_GAP : 0)
+    const availW =
+      el.clientWidth -
+      SCROLL_PAD * 2 -
+      (noteMarginOn ? NOTE_MARGIN_W + PAGE_GAP : 0) -
+      bilingual.extraWidth
     const next =
       mode === 'width'
         ? clampScale(availW / maxW)
@@ -1713,7 +1881,7 @@ export default function App() {
           )
     anchorZoomScroll(next)
     setScale(next)
-  }, [rows, rowSize, anchorZoomScroll, noteMarginOn])
+  }, [rows, rowSize, anchorZoomScroll, noteMarginOn, bilingual.extraWidth])
 
   useEffect(() => {
     if (status !== 'ready') return
@@ -2304,6 +2472,20 @@ export default function App() {
     return base.then((idx) => idx.map((entry, i) => ocrPages.get(i)?.entry ?? entry))
   }, [doc, ocrPages, searchIndexCache])
 
+  // AI highlight suggestions of the open file (reading the store and the text index only)
+  const aiHighlights = useAiHighlights({
+    filePath,
+    password: passwordRef.current,
+    ready: status === 'ready',
+    doc,
+    searchIndex: getSearchIndex,
+    confirmations: saveConfirmations,
+    preview: highlightPreview,
+    markupIds: markups.map((m) => m.id),
+    panelOpen: sidebar === 'notes',
+    revision: docReloadRev,
+  })
+
   // Auto-OCR for scanned pages (issue #119): once the base index shows pages with
   // no extractable text, recognize them sequentially in the background, starting
   // at the current page. Boxes are stored in PDF space, so later zooms/rotations
@@ -2559,6 +2741,30 @@ export default function App() {
 
   const closeSearch = () => setSearchOpen(false)
 
+  /** a term of the document overview: the viewer search, opened on it */
+  const searchFor = (text: string) => {
+    setSearchQuery(text)
+    openSearch()
+  }
+
+  /** a citation link in the AI window: its page, then its quote flashed (or "not found") */
+  const openCitation = (target: PdfNavTarget) => {
+    if (!aiApi.gotoPage(target.page) || !target.quote) return
+    void locateCitation(target, getSearchIndex()).then((found) => {
+      if (!found) {
+        showNoticeFor(t('airQuoteNotFound'), QUOTE_NOT_FOUND_NOTICE_MS)
+        return
+      }
+      const el = scrollRef.current
+      const visIdx = visList.indexOf(found.origIdx)
+      if (el && visIdx >= 0) {
+        const box = pdfRectToCss(pageGeom(found.origIdx), found.rects[0]!, scale)
+        el.scrollTop = Math.max(0, pageTop(visIdx) + box.top - el.clientHeight * 0.35)
+      }
+      quoteFlash.show(found.origIdx, found.rects)
+    })
+  }
+
   /** Selection quads in PDF space keyed by original page index; null when nothing usable */
   const selectionQuads = (): Map<number, number[][]> | null => {
     const el = scrollRef.current
@@ -2706,8 +2912,89 @@ export default function App() {
         : null
     if (!rect) return
     setSelPopup(null)
-    setAskPop({ rect, excerpt: aiSelection?.text ?? sel?.toString() ?? '' })
+    setAskPop({
+      rect,
+      excerpt: aiSelection?.text ?? sel?.toString() ?? '',
+      quads: selPopup?.quads ?? null,
+    })
   }
+
+  /** E / T on the bar, or an Ask-AI chip: the passage card of the selection (reading-assist 4.2) */
+  const requestPassageCard = (
+    kind: 'explain' | 'translate',
+    quads: Map<number, number[][]> | null,
+    excerpt: string,
+    anchor: AskAnchorRect,
+  ) => {
+    const selection = quads ? passageSelectionOf(quads, excerpt, anchor) : null
+    if (selection) readingRef.current?.request(kind, selection)
+  }
+
+  /** The bar's anchor box: the live selection, else the bar itself */
+  const selectionAnchor = (): AskAnchorRect | null => {
+    const sel = window.getSelection()
+    const box =
+      sel && !sel.isCollapsed && sel.rangeCount > 0
+        ? sel.getRangeAt(0).getBoundingClientRect()
+        : null
+    if (box) return { left: box.left, top: box.top, right: box.right, bottom: box.bottom }
+    return selPopup
+      ? { left: selPopup.x, top: selPopup.y, right: selPopup.x, bottom: selPopup.y + 36 }
+      : null
+  }
+
+  /** One selection-bar shortcut (reading-assist 4.1): the same as pressing its button */
+  const runSelectionBarAction = (action: SelectionBarAction) => {
+    if (!selPopup) return
+    switch (action) {
+      case 'highlight':
+      case 'underline':
+      case 'strikeout':
+        applyMarkup(action)
+        return
+      case 'note': {
+        // an empty note at the end of the selection, its input open (the note tool's draft)
+        const end = selectionEnd(selPopup.quads)
+        if (!end) return
+        setSelPopup(null)
+        setActiveNote(null)
+        setNoteDraft(end)
+        return
+      }
+      case 'explain':
+      case 'translate': {
+        const anchor = selectionAnchor()
+        if (!anchor) return
+        requestPassageCard(
+          action,
+          selPopup.quads,
+          aiSelection?.text ?? window.getSelection()?.toString() ?? '',
+          anchor,
+        )
+        setSelPopup(null)
+        return
+      }
+      case 'ask':
+        openAskPopover()
+    }
+  }
+
+  // Selection-bar shortcuts, only while the bar is up (judged by KeyboardEvent.code)
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const verdict = selectionBarKey(e, { visible: selPopup !== null, readOnly })
+      if (!verdict) return
+      e.preventDefault()
+      if ('blocked' in verdict) {
+        // the same reason the hidden markup buttons stand for
+        showNotice(t('roEncrypted'))
+        return
+      }
+      runSelectionBarAction(verdict.action)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  })
 
   /** Markup types the whole current selection already carries — shown as pressed
       buttons in the bar (clicking one removes the markup) */
@@ -4268,11 +4555,21 @@ export default function App() {
   }
 
   /** Show a transient toast; the save-failure badge alone hides the actual reason */
-  const showNotice = (msg: string) => {
+  const showNoticeFor = (msg: string, ms: number) => {
     if (noticeTimerRef.current !== null) window.clearTimeout(noticeTimerRef.current)
     setNotice(msg)
-    noticeTimerRef.current = window.setTimeout(() => setNotice(null), 8000)
+    noticeTimerRef.current = window.setTimeout(() => setNotice(null), ms)
   }
+  const showNotice = (msg: string) => showNoticeFor(msg, 8000)
+
+  // the note of each PDF (reading-assist 4.9): no path crosses, the main process knows both
+  const noteActions = useNoteActions({
+    filePath,
+    savedRev,
+    title: (metadata ?? docInfo).title?.trim() || '',
+    t,
+    onNotice: showNotice,
+  })
 
   useEffect(() => {
     if (!formHasXfa || !filePath || warnedXfaPathRef.current === filePath) return
@@ -4452,6 +4749,11 @@ export default function App() {
         else setSaveState('idle')
         return false
       }
+      // what this save wrote is in the file now: the reload below drops those annotations
+      // from the editing document, and their "in the file" confirmations must not read
+      // that as "removed before any save" (reading 3.5)
+      const written = [...snapshot.drawingIds, ...snapshot.markupIds]
+      saveConfirmations.hold(written)
       if (result.skippedTextEdits && result.skippedTextEdits.length > 0) {
         noticeSkippedEdits(result.skippedTextEdits)
       }
@@ -4480,7 +4782,19 @@ export default function App() {
       }
       // the saved bytes are a new document for the result store: carry the AI
       // readings, translations and unfinished job records over (spec §6)
-      await aiReadRef.current?.afterSave().catch(() => {})
+      const migrated = (await aiReadRef.current?.afterSave().catch(() => null)) ?? null
+      // "in the file" states wait for this save and land under the hash the completed
+      // migration moved the store to; without one they keep waiting (reading 3.5)
+      await afterReadingSave(saveConfirmations, passageCards, written, migrated, {
+        pagesMoved: deleted.size > 0 || order !== null || blankPages.length > 0,
+      }).catch(() => {})
+      // AI highlight suggestions under the saved file's hash (accepted ones now confirmed)
+      await aiHighlights.suggestions.load().catch(() => {})
+      // the overview follows the saved file only when all its pages are still there
+      await documentInsights.load().catch(() => {})
+      // rebuild the side-by-side translation tree once the stored results moved to the
+      // new hash; the build started by the reload above is discarded
+      setBilingualRev((v) => v + 1)
       // Content-derived naming (docs/sheets analog): a shell-created blank still
       // carrying its untitled name takes its file name from the topmost text this
       // save inserted; the main process no-ops for every other file, so
@@ -4500,6 +4814,7 @@ export default function App() {
         }
       }
       setSaveState('saved')
+      setSavedRev((v) => v + 1)
       setTimeout(() => setSaveState((s) => (s === 'saved' ? 'idle' : s)), 2000)
       return true
     })()
@@ -6072,6 +6387,8 @@ export default function App() {
   ): Promise<FileOpResult> => {
     const result = await runFileOp(run)
     if (!result.ok || 'canceled' in result) return result
+    // the stored AI results of the kept pages follow the rewritten file before it is read again
+    await aiReadRef.current?.afterPageOperation().catch(() => null)
     return { ok: true, pageCount: await loadDoc(filePath, doc) }
   }
   const baseName = () => fileName.replace(/\.pdf$/i, '')
@@ -6146,7 +6463,9 @@ export default function App() {
         opFailed(result.error)
         return
       }
-      if (!('canceled' in result)) await loadDoc(filePath, doc)
+      if ('canceled' in result) return
+      await aiReadRef.current?.afterPageOperation().catch(() => null)
+      await loadDoc(filePath, doc)
     })
   }
 
@@ -6725,6 +7044,57 @@ export default function App() {
     } catch {
       /* Ignore corrupted destinations */
     }
+  }
+
+  // ── Annotation panel: a click goes to the place and flashes it, opens a note's thread or a card ──
+  const [annotFlash, flashAnnot] = useAnnotFlash()
+  const activateAnnot = (item: AnnotItem) =>
+    activateAnnotItem(item, {
+      reveal: (origIdx, rect) => {
+        const el = scrollRef.current
+        const visIdx = visList.indexOf(origIdx)
+        if (!el || visIdx < 0) return
+        const box = pdfRectToCss(pageGeom(origIdx), rect, scale)
+        el.scrollTop = Math.max(0, pageTop(visIdx) + box.top - el.clientHeight * 0.35)
+        flashAnnot(origIdx, rect)
+      },
+      openNote: (origIdx, rootKey) => {
+        setNoteDraft(null)
+        setActiveNote({ origIdx, rootKey })
+      },
+      openCard: (id) => readingRef.current?.open(id),
+    })
+
+  // ── AI highlights in the panel: accept adds a highlight in the label's color with the
+  // label as its category (saved as /Subj); "accepted" is written after a save writes it ──
+  const highlightSnap = useSyncExternalStore(
+    aiHighlights.suggestions.subscribe,
+    aiHighlights.suggestions.snapshot,
+  )
+  const highlightPending = highlightPreview ? aiHighlights.suggestions.pending() : []
+  const acceptSuggestions = (views: readonly SuggestionView[]) => {
+    if (readOnly) return
+    const ops: Op[] = []
+    const count = aiHighlights.suggestions.accept(views, (v) => {
+      const markup = suggestionMarkup(v)
+      if (!markup) return null
+      const id = newId()
+      ops.push({ op: 'addMarkup', id, markup })
+      return id
+    })
+    if (ops.length === 0) return
+    const plan = applyEditOps(ops)
+    if (plan.failures.length > 0) {
+      // nothing was added: the suggestions go back to pending
+      aiHighlights.suggestions.prune(new Set(markups.map((m) => m.id)))
+      return
+    }
+    showNotice(t('hlAcceptedNotice', { count }))
+  }
+  const dismissSuggestions = (views: readonly SuggestionView[]) => {
+    void aiHighlights.suggestions.dismiss(views).then((ok) => {
+      if (!ok) showNotice(t('hlDismissFailed'))
+    })
   }
 
   const curOrigIdx = visList[currentPage - 1] ?? -1
@@ -7442,14 +7812,45 @@ export default function App() {
           </span>
           {t('outline')}
         </button>
+        <button
+          className={`rb-big${sidebar === 'notes' ? ' active' : ''}`}
+          data-tip={t('apPanelTip')}
+          aria-pressed={sidebar === 'notes'}
+          onClick={() => setSidebar((v) => (v === 'notes' ? null : 'notes'))}
+        >
+          <span className="rb-big-icon">
+            <IconNote />
+          </span>
+          {t('apPanel')}
+        </button>
+        <NoteOpenRibbonButton actions={noteActions} t={t} />
         {searchBtn}
         <button
           className={`rb-big${spread === 2 ? ' active' : ''}`}
           data-tip={spread === 2 ? t('singlePage') : t('twoPage')}
-          onClick={() => setSpread((v) => (v === 1 ? 2 : 1))}
+          onClick={() => {
+            const next = toggleSpread(spread === 1 ? 2 : 1, bilingualOn)
+            setSpread(next.spread)
+            setBilingualOn(next.bilingual)
+          }}
         >
           <span className="rb-big-icon">{spread === 2 ? <IconSinglePage /> : <IconSpread />}</span>
           {spread === 2 ? t('singlePage') : t('twoPage')}
+        </button>
+        <button
+          className={`rb-big${bilingualOn ? ' active' : ''}`}
+          data-tip={t('blToggleTip')}
+          aria-pressed={bilingualOn}
+          onClick={() => {
+            const next = toggleBilingual(!bilingualOn, spread)
+            setSpread(next.spread)
+            setBilingualOn(next.bilingual)
+          }}
+        >
+          <span className="rb-big-icon">
+            <IconAiTranslate />
+          </span>
+          {t('blToggle')}
         </button>
         <button
           className={`rb-big${nightMode ? ' active' : ''}`}
@@ -7460,6 +7861,29 @@ export default function App() {
             <IconNight />
           </span>
           {t('nightMode')}
+        </button>
+        <button
+          className={`rb-big${passageMarks ? ' active' : ''}`}
+          data-tip={t('rdUnderlinesTip')}
+          aria-pressed={passageMarks}
+          onClick={() => setPassageMarks((v) => !v)}
+        >
+          <span className="rb-big-icon">
+            <IconPassageMarks />
+          </span>
+          {t('rdUnderlines')}
+        </button>
+        <button
+          className={`rb-big${highlightPreview ? ' active' : ''}`}
+          data-tip={t('hlPreviewTip')}
+          data-action="highlight-preview"
+          aria-pressed={highlightPreview}
+          onClick={() => setHighlightPreviewSwitch(togglePreview)}
+        >
+          <span className="rb-big-icon">
+            <IconHighlightPreview />
+          </span>
+          {t('hlPreview')}
         </button>
       </div>
     </div>
@@ -7661,6 +8085,24 @@ export default function App() {
                       </span>
                     </span>
                     <span>{t('trButton')}</span>
+                  </button>
+                  <button
+                    className="rb-big ai-entry"
+                    data-tip={readOnly ? t('hlReadOnly') : t('hlButtonTip')}
+                    data-action="highlight-open"
+                    onClick={() => {
+                      // opens the start window only; a read-only document shows why it cannot start
+                      const answer = highlightRef.current?.requestOpen()
+                      if (answer && 'running' in answer) showNotice(t('arBusy', answer.running))
+                      else if (!answer || 'unavailable' in answer) showNotice(t('hlUnavailable'))
+                    }}
+                  >
+                    <span className="rb-big-icon">
+                      <span className="ai-feature-icon" aria-hidden="true">
+                        <IconHighlightPreview />
+                      </span>
+                    </span>
+                    <span>{t('hlButton')}</span>
                   </button>
                 </div>
               </div>
@@ -8478,6 +8920,26 @@ export default function App() {
             onCollapse={() => setAiCollapsed(true)}
             onRunDone={() => void autoSaveAfterAiRun()}
             onClearSelection={() => setAiSelection(null)}
+            onCitation={openCitation}
+            overview={
+              <InsightsCard
+                insights={documentInsights}
+                session={jobSession}
+                lang={lang}
+                t={t}
+                onSearchTerm={searchFor}
+                onGotoPage={(page) => void aiApi.gotoPage(page)}
+                onNotice={showNotice}
+                sectionActions={(section) =>
+                  noteInsertAction(
+                    noteActions,
+                    overviewNoteRequest(section, t('airOverview')),
+                    t,
+                    'ai-overview-link',
+                  )
+                }
+              />
+            }
           />
         </div>
         <div className="app-content">
@@ -8502,6 +8964,7 @@ export default function App() {
           <AiPageReading
             ref={aiReadRef}
             filePath={filePath || null}
+            revision={docReloadRev}
             password={passwordRef.current}
             pageCount={sizes.length}
             lang={lang}
@@ -8525,7 +8988,41 @@ export default function App() {
             onStoredChange={() => setAiReadVersion((v) => v + 1)}
             onNotice={showNotice}
             onResumeTranslation={(job) => translateRef.current?.resume(job)}
+            onResumeHighlight={(job) => highlightRef.current?.resume(job)}
             languageName={(code) => languageName(code, lang)}
+          />
+          <PassageReading
+            ref={readingRef}
+            cards={passageCards}
+            confirmations={saveConfirmations}
+            lang={lang}
+            t={t}
+            readOnly={readOnly}
+            title={(metadata ?? docInfo).title?.trim() || ''}
+            pageText={async (origIdx) => (doc ? readPageText(doc, origIdx) : '')}
+            addNote={(note) => {
+              const id = newId()
+              applyEditOps([{ op: 'addDrawing', id, drawing: note }])
+              return id
+            }}
+            hasPendingDrawing={(id) => drawingsRef.current.some((d) => d.id === id)}
+            author={noteAuthor}
+            noteColor={drawColor}
+            languageName={(code) => languageName(code, lang)}
+            onAskInPanel={(f) => {
+              // handed to the AI window's selection chip; nothing is sent until the user asks
+              setAiSelection({
+                page: f.origIdx + 1,
+                lastPage: f.origIdx + 1,
+                text: f.excerpt,
+                followUp: { heading: f.heading, answer: f.answer },
+              })
+              setAiCollapsed(false)
+            }}
+            onNotice={showNotice}
+            cardActions={(card) =>
+              noteInsertAction(noteActions, cardNoteRequest(card, passageCards.pageOf(card)), t)
+            }
           />
           <DocumentTranslation
             ref={translateRef}
@@ -8546,6 +9043,22 @@ export default function App() {
               if (answer && 'running' in answer) showNotice(t('arBusy', answer.running))
             }}
           />
+          <AiHighlights
+            ref={highlightRef}
+            filePath={filePath || null}
+            password={passwordRef.current}
+            pageCount={sizes.length}
+            lang={lang}
+            t={t}
+            readOnly={readOnly}
+            dirty={dirty}
+            api={translateApi}
+            session={jobSession}
+            suggestions={aiHighlights.suggestions}
+            onRunEnded={() => setHighlightPreviewSwitch(showPreviewForSession)}
+            onNotice={showNotice}
+          />
+          {bilingual.bar}
           <div className="pdf-body">
             {sidebar === 'outline' && outline && (
               <div className="pdf-thumbs pdf-outline-pane" style={{ width: sidebarW }}>
@@ -8581,6 +9094,67 @@ export default function App() {
                   onGoToDest={(dest) => void goToDest(dest)}
                 />
               </div>
+            )}
+            {sidebar === 'notes' && (
+              <AnnotPanelHost
+                doc={doc}
+                width={sidebarW}
+                title={(metadata ?? docInfo).title?.trim() || fileName}
+                t={t}
+                unsavedMarkups={markups}
+                drawings={drawings}
+                annotDeletes={annotDeletes}
+                noteEdits={noteEdits}
+                cards={passageCards}
+                displayPage={(origIdx) => {
+                  const v = visList.indexOf(origIdx)
+                  return v < 0 ? null : v + 1
+                }}
+                geomOf={pageGeom}
+                languageName={(code) => languageName(code, lang)}
+                createDocument={
+                  window.pdfApi?.createDocument
+                    ? (request) => window.pdfApi.createDocument(request)
+                    : undefined
+                }
+                onActivate={activateAnnot}
+                onClose={() => setSidebar(null)}
+                onNotice={showNotice}
+                extraItems={suggestionDrafts(highlightPending, highlightSnap.run, t, (origIdx) => {
+                  const visIdx = visList.indexOf(origIdx)
+                  if (visIdx >= 0) scrollToPage(visIdx + 1)
+                })}
+                facets={[categoryFacet(t)]}
+                categoryOf={(m) => aiHighlights.subjects.get(m.objNum)}
+                toolbar={
+                  <>
+                    <NoteOpenBar actions={noteActions} t={t} />
+                    <HighlightPanelBar
+                      pending={highlightPending}
+                      run={highlightSnap.run}
+                      t={t}
+                      readOnly={readOnly}
+                      onAcceptLabel={(labelId) =>
+                        acceptSuggestions(highlightPending.filter((v) => v.label.id === labelId))
+                      }
+                      onDismissAll={() => dismissSuggestions(highlightPending)}
+                    />
+                  </>
+                }
+                renderItemActions={(item) =>
+                  joinActions(
+                    highlightItemActions(item, {
+                      t,
+                      readOnly,
+                      viewOf: (key) => highlightPending.find((v) => v.key === key),
+                      onAccept: (view) => acceptSuggestions([view]),
+                      onDismiss: (view) => dismissSuggestions([view]),
+                      waitingSave: (markupId) => saveConfirmations.isPending(markupId),
+                    }),
+                    noteInsertAction(noteActions, annotNoteRequest(item), t, 'pdf-modal-btn'),
+                  )
+                }
+              />
             )}
             {sidebar === 'thumbs' && (
               <div
@@ -8727,7 +9301,9 @@ export default function App() {
                 })}
               </div>
             )}
-            {(sidebar === 'thumbs' || (sidebar === 'outline' && !!outline)) && (
+            {(sidebar === 'thumbs' ||
+              sidebar === 'notes' ||
+              (sidebar === 'outline' && !!outline)) && (
               <div className="pdf-side-resizer" onPointerDown={startSidebarResize} />
             )}
             <div
@@ -8776,7 +9352,10 @@ export default function App() {
                 ): [number, number] => {
                   const [vx, vy] = pdfToView(geom, at[0], at[1])
                   return [
-                    pageOffset(pageIdxInRow) + vx * scale + 10 - (rowW + PAGE_GAP),
+                    pageOffset(pageIdxInRow) +
+                      vx * scale +
+                      10 -
+                      (rowW + PAGE_GAP + bilingual.extraWidth),
                     vy * scale - 10,
                   ]
                 }
@@ -9750,6 +10329,12 @@ export default function App() {
                                   )}
                                 </div>
                               )}
+                              <QuoteFlashLayer
+                                flash={quoteFlash.flash}
+                                origIdx={origIdx}
+                                geom={geom}
+                                scale={scale}
+                              />
                               {(() => {
                                 const ocr = ocrPages.get(origIdx)
                                 return ocr ? (
@@ -9762,6 +10347,27 @@ export default function App() {
                                 scale={scale}
                                 selectedId={selected?.kind === 'markup' ? selected.id : null}
                               />
+                              {passageMarks && (
+                                <PassageUnderlines
+                                  cards={passageCards}
+                                  origIdx={origIdx}
+                                  geom={geom}
+                                  scale={scale}
+                                  label={(excerpt) => t('rdOpenCard', { excerpt })}
+                                  onOpen={(id, anchor) => readingRef.current?.open(id, anchor)}
+                                />
+                              )}
+                              {highlightPreview && (
+                                <HighlightPreviewLayer
+                                  suggestions={aiHighlights.suggestions}
+                                  origIdx={origIdx}
+                                  geom={geom}
+                                  scale={scale}
+                                />
+                              )}
+                              {annotFlash?.origIdx === origIdx && (
+                                <AnnotFlash target={annotFlash} geom={geom} scale={scale} />
+                              )}
                               {/* Selection outline for a saved markup annotation (the markup
                                 itself is painted in the canvas raster) */}
                               {selected?.kind === 'savedMarkup' &&
@@ -9980,9 +10586,11 @@ export default function App() {
                               />
                             </>
                           )}
+                          {bilingual.overlay(origIdx)}
                         </div>
                       )
                     })}
+                    {bilingual.column(row, r)}
                     {noteMarginOn && (
                       <NoteMarginColumn
                         width={NOTE_MARGIN_W}
@@ -10103,12 +10711,16 @@ export default function App() {
                     <button
                       type="button"
                       className={activeMarkupTypes.has('highlight') ? 'is-active' : undefined}
-                      data-tip={
-                        activeMarkupTypes.has('highlight') ? t('removeMarkup') : t('highlight')
-                      }
-                      aria-label={
-                        activeMarkupTypes.has('highlight') ? t('removeMarkup') : t('highlight')
-                      }
+                      data-tip={labelWithKey(
+                        t,
+                        activeMarkupTypes.has('highlight') ? t('removeMarkup') : t('highlight'),
+                        'highlight',
+                      )}
+                      aria-label={labelWithKey(
+                        t,
+                        activeMarkupTypes.has('highlight') ? t('removeMarkup') : t('highlight'),
+                        'highlight',
+                      )}
                       onClick={() => applyMarkup('highlight')}
                     >
                       <span
@@ -10119,12 +10731,16 @@ export default function App() {
                     <button
                       type="button"
                       className={activeMarkupTypes.has('underline') ? 'is-active' : undefined}
-                      data-tip={
-                        activeMarkupTypes.has('underline') ? t('removeMarkup') : t('underline')
-                      }
-                      aria-label={
-                        activeMarkupTypes.has('underline') ? t('removeMarkup') : t('underline')
-                      }
+                      data-tip={labelWithKey(
+                        t,
+                        activeMarkupTypes.has('underline') ? t('removeMarkup') : t('underline'),
+                        'underline',
+                      )}
+                      aria-label={labelWithKey(
+                        t,
+                        activeMarkupTypes.has('underline') ? t('removeMarkup') : t('underline'),
+                        'underline',
+                      )}
                       onClick={() => applyMarkup('underline')}
                     >
                       <span className="sel-swatch sel-swatch-ul">U</span>
@@ -10132,12 +10748,16 @@ export default function App() {
                     <button
                       type="button"
                       className={activeMarkupTypes.has('strikeout') ? 'is-active' : undefined}
-                      data-tip={
-                        activeMarkupTypes.has('strikeout') ? t('removeMarkup') : t('strikeout')
-                      }
-                      aria-label={
-                        activeMarkupTypes.has('strikeout') ? t('removeMarkup') : t('strikeout')
-                      }
+                      data-tip={labelWithKey(
+                        t,
+                        activeMarkupTypes.has('strikeout') ? t('removeMarkup') : t('strikeout'),
+                        'strikeout',
+                      )}
+                      aria-label={labelWithKey(
+                        t,
+                        activeMarkupTypes.has('strikeout') ? t('removeMarkup') : t('strikeout'),
+                        'strikeout',
+                      )}
                       onClick={() => applyMarkup('strikeout')}
                     >
                       <span className="sel-swatch sel-swatch-st">S</span>
@@ -10148,8 +10768,8 @@ export default function App() {
                 <button
                   type="button"
                   className="pdf-sel-ask"
-                  data-tip={t('aiAskTitle')}
-                  aria-label={t('aiAskBtn')}
+                  data-tip={labelWithKey(t, t('aiAskTitle'), 'ask')}
+                  aria-label={labelWithKey(t, t('aiAskBtn'), 'ask')}
                   onClick={openAskPopover}
                 >
                   <svg viewBox="0 0 24 24" width="15" height="15" fill="none" aria-hidden>
@@ -10170,6 +10790,10 @@ export default function App() {
                 onSend={(text) => {
                   setAskPop(null)
                   runAiPreset(text)
+                }}
+                onCard={(kind) => {
+                  setAskPop(null)
+                  requestPassageCard(kind, askPop.quads, askPop.excerpt, askPop.rect)
                 }}
                 onClose={() => setAskPop(null)}
               />

@@ -83,4 +83,8 @@ export const de = {
   trPageNotEditable: 'ihr Text lässt sich nicht bearbeiten',
   trPageVertical: 'senkrechter oder gedrehter Text',
   trPageToc: 'gedrucktes Inhaltsverzeichnis',
+  trFormatStore: 'Nur aufbewahren (keine Datei)',
+  trRestartEditedCount: '{count} Absätze wurden von einer Person bearbeitet.',
+  trRestartDiscardEdited: 'Auch die {count} von einer Person bearbeiteten Absätze löschen',
+  trRestartKeepEdited: 'Bearbeitete Absätze behalten',
 } satisfies Record<keyof typeof zh, string>

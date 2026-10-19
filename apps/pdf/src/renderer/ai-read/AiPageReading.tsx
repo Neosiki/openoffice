@@ -1,8 +1,8 @@
 /**
  * AI page reading in the PDF editor (spec §7, §9), app side: the window
  * (picker and confirmation), the job, its progress strip, the resume offer,
- * carrying stored results over an in-app save, and deleting this document's
- * stored results.
+ * carrying stored results over an in-app save or a page operation that
+ * rewrote the file in place, and deleting this document's stored results.
  *
  * Rules kept here:
  * - nothing is sent before the user pressed Start on the confirmation; the
@@ -14,7 +14,10 @@
  * - the job sends to the provider the user confirmed and never switches;
  * - the job belongs to the tab: unmounting (closing the tab, quitting) stops
  *   it as 'interrupted';
- * - the resume offer never starts anything: Continue opens the confirmation.
+ * - the resume offer never starts anything: Continue opens the confirmation
+ *   (or hands a translation / AI highlight run to the screen that owns it);
+ * - deleting names what else goes with the document's folder (edited
+ *   translations, passage cards; reading-assist spec 5.5).
  */
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react'
 import type { ReactElement } from 'react'
@@ -27,7 +30,7 @@ import {
   type AiReadPageRef,
 } from '../../../../../packages/pdf-structure/src/jobs'
 import type { JobStatus } from '../../../../../packages/pdf-structure/src/store/store'
-import type { PdfStoreApi, PdfStructureApi } from '../../shared/ipc'
+import type { PdfStoreApi, PdfStoreDeleteCounts, PdfStructureApi } from '../../shared/ipc'
 import type { TFunc } from '../i18n/locale'
 import { attemptSubscription } from '../ai/useSubscriptionConnection'
 import { createIpcJobStore } from '../doc-jobs/ipc-store'
@@ -42,7 +45,7 @@ import {
 } from '../doc-jobs/job-pages'
 import { jobStopConnectionText, pageList } from '../doc-jobs/job-text'
 import { JobProgressStrip } from '../doc-jobs/JobProgressStrip'
-import { ResumeOffer } from '../doc-jobs/ResumeOffer'
+import { ResumeOffer, resumableJobs } from '../doc-jobs/ResumeOffer'
 import { AiReadDialog, type AiReadStartAnswer, type AiReadStartRequest } from './AiReadDialog'
 import type { PageRenderer } from './render-page'
 
@@ -56,6 +59,12 @@ export interface AiPageReadingApi {
 export interface AiPageReadingProps {
   /** the open file; null while none is open */
   filePath: string | null
+  /**
+   * Bumped when the open file was rewritten in place under the same path (a
+   * page operation): its hash changed, so it is read again and the next
+   * save carries the stored results from the hash they are written under now
+   */
+  revision?: number
   password: string | undefined
   pageCount: number
   lang: Lang
@@ -74,6 +83,12 @@ export interface AiPageReadingProps {
    * translation records are not offered here (the translation screen does).
    */
   onResumeTranslation?: (job: JobStatus) => void
+  /**
+   * Continue an unfinished AI highlight run from the resume offer: open its
+   * start window with the run's labels and pages (the job carries `runId`).
+   * Without it, highlight records are not offered here.
+   */
+  onResumeHighlight?: (job: JobStatus) => void
   /** a translation's target language as the user reads it */
   languageName?: (lang: string) => string
 }
@@ -85,8 +100,18 @@ export type AiReadOpenAnswer =
 export interface AiPageReadingHandle {
   /** open the window (ribbon, AI tool); never sends anything */
   requestOpen(pages: number[] | null): AiReadOpenAnswer
-  /** after an in-app save: carry the stored results to the saved file's hash */
-  afterSave(): Promise<void>
+  /**
+   * After an in-app save: carry the stored results to the saved file's hash.
+   * Answers that hash once the migration completed, or null when it did not
+   * (no hash read yet, no store, a failed migration).
+   */
+  afterSave(): Promise<string | null>
+  /**
+   * After a page operation rewrote the file in place, before it is read
+   * again: carry the stored results of the pages it kept to the rewritten
+   * file's hash, the same migration a save runs (matched by page fingerprint).
+   */
+  afterPageOperation(): Promise<string | null>
   /** ask, then delete everything stored for this document */
   deleteStored(): Promise<void>
 }
@@ -99,7 +124,7 @@ interface DialogState {
 
 export const AiPageReading = forwardRef<AiPageReadingHandle, AiPageReadingProps>(
   function AiPageReading(props, ref): ReactElement | null {
-    const { filePath, password, pageCount, lang, t, api, session } = props
+    const { filePath, password, pageCount, lang, t, api, session, revision } = props
     const [docHash, setDocHash] = useState<string | null>(null)
     const [dialog, setDialog] = useState<DialogState | null>(null)
     const [resume, setResume] = useState<JobStatus[]>([])
@@ -114,34 +139,48 @@ export const AiPageReading = forwardRef<AiPageReadingHandle, AiPageReadingProps>
     const dialogSeq = useRef(0)
     /** documents whose resume offer was already shown in this tab */
     const offered = useRef(new Set<string>())
+    /** the file the hash below was read for */
+    const readFor = useRef<{ api: AiPageReadingApi | null; filePath: string | null } | null>(null)
 
-    // the document hash of the open file, then its unfinished jobs (offered once)
+    /** the hash in state and in the ref at once (a save may read the ref before a render) */
+    const takeDocHash = (hash: string | null) => {
+      docHashRef.current = hash
+      setDocHash(hash)
+    }
+
+    // the document hash of the open file, then its unfinished jobs (offered once);
+    // read again when a page operation rewrote the same file in place (`revision`)
     useEffect(() => {
-      setDocHash(null)
-      setResume([])
+      const before = readFor.current
+      readFor.current = { api, filePath }
+      if (!before || before.api !== api || before.filePath !== filePath) {
+        takeDocHash(null)
+        setResume([])
+      }
       if (!api || !filePath) return
       let alive = true
+      const seen = docHashRef.current
       void (async () => {
         const hash = await api.store.docHash(filePath).catch(() => null)
         if (!alive || !hash?.ok) return
-        setDocHash(hash.docHash)
+        // a migration (save, page operation) moved the hash meanwhile: it already holds the newer one
+        if (docHashRef.current !== seen) return
+        takeDocHash(hash.docHash)
         if (offered.current.has(hash.docHash)) return
         offered.current.add(hash.docHash)
         const unfinished = await api.store.unfinishedJobs(hash.docHash).catch(() => null)
         if (!alive || !unfinished?.ok) return
-        const translate = !!propsRef.current.onResumeTranslation
         setResume(
-          unfinished.jobs.filter(
-            (j) =>
-              j.state === 'stopped' &&
-              (j.kind === 'ai-read' || (translate && j.kind === 'translate')),
-          ),
+          resumableJobs(unfinished.jobs, {
+            translate: !!propsRef.current.onResumeTranslation,
+            highlight: !!propsRef.current.onResumeHighlight,
+          }),
         )
       })()
       return () => {
         alive = false
       }
-    }, [api, filePath])
+    }, [api, filePath, revision])
 
     // the tab goes away: its jobs stop (the shell ends their streams and programs)
     useEffect(() => {
@@ -176,6 +215,8 @@ export const AiPageReading = forwardRef<AiPageReadingHandle, AiPageReadingProps>
       if (!out?.ok) return null
       carryJobPages(from, out.docHash)
       p.session.adopt(from, out.docHash)
+      // the carried jobs were this tab's to offer already: reading the hash again does not reoffer them
+      if (offered.current.has(from)) offered.current.add(out.docHash)
       return out.docHash
     }
 
@@ -241,6 +282,15 @@ export const AiPageReading = forwardRef<AiPageReadingHandle, AiPageReadingProps>
       return { ok: true }
     }
 
+    /** carry the stored results from the hash read last to the file's hash now */
+    const carryToFile = async (): Promise<string | null> => {
+      const from = docHashRef.current
+      if (!from) return null
+      const next = await migrate(from)
+      if (next) takeDocHash(next)
+      return next
+    }
+
     useImperativeHandle(ref, () => ({
       requestOpen(pages) {
         const p = propsRef.current
@@ -251,12 +301,8 @@ export const AiPageReading = forwardRef<AiPageReadingHandle, AiPageReadingProps>
         open(pages)
         return { opened: true }
       },
-      async afterSave() {
-        const from = docHashRef.current
-        if (!from) return
-        const next = await migrate(from)
-        if (next) setDocHash(next)
-      },
+      afterSave: carryToFile,
+      afterPageOperation: carryToFile,
       async deleteStored() {
         const p = propsRef.current
         const hash = docHashRef.current
@@ -268,7 +314,8 @@ export const AiPageReading = forwardRef<AiPageReadingHandle, AiPageReadingProps>
           p.onNotice(p.t('arDeleteBusy'))
           return
         }
-        if (!window.confirm(p.t('arDeleteConfirm'))) return
+        const counts = await p.api.store.deleteCounts(hash).catch(() => null)
+        if (!window.confirm(deleteConfirmText(p.t, counts?.ok ? counts : null))) return
         const out = await p.api.store.deleteDocument(hash).catch(() => null)
         if (!out?.ok) {
           p.onNotice(p.t('arDeleteFailed'))
@@ -285,6 +332,10 @@ export const AiPageReading = forwardRef<AiPageReadingHandle, AiPageReadingProps>
       setResume((jobs) => jobs.filter((j) => j !== job))
       if (job.kind === 'translate') {
         propsRef.current.onResumeTranslation?.(job)
+        return
+      }
+      if (job.kind === 'highlight') {
+        propsRef.current.onResumeHighlight?.(job)
         return
       }
       const pages = docHash ? recallJobPages(docHash, 'ai-read') : null
@@ -334,6 +385,29 @@ export const AiPageReading = forwardRef<AiPageReadingHandle, AiPageReadingProps>
     )
   },
 )
+
+/**
+ * The delete question, naming the edited translations and passage cards
+ * that go with the document's folder; an item with none is left out, and
+ * without counts (an older shell) the plain question remains.
+ */
+export function deleteConfirmText(
+  t: TFunc,
+  counts: Pick<PdfStoreDeleteCounts, 'editedTranslationBlocks' | 'passages'> | null,
+): string {
+  const question = t('arDeleteConfirm')
+  const edited = counts?.editedTranslationBlocks ?? 0
+  const cards = counts?.passages ?? 0
+  const also =
+    edited > 0 && cards > 0
+      ? t('arDeleteAlsoBoth', { edited, cards })
+      : edited > 0
+        ? t('arDeleteAlsoEdited', { count: edited })
+        : cards > 0
+          ? t('arDeleteAlsoCards', { count: cards })
+          : null
+  return also ? `${question}\n${also}` : question
+}
 
 /** the strip's headline and lines for an AI-read job */
 function stripText(

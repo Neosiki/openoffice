@@ -86,12 +86,17 @@
   - `ai-read`는 `detail.pages_skipped`(이미 읽은 페이지)를 함께 준다. `translate`는 `detail.done_blocks`·`detail.total_blocks`를 주고, 보관된 번역과 제공자·모델이 다르면 `detail.provider_change: { stored: { provider, model }, next: { provider, model } }`도 준다.
 - **요금 경로**: `metered`인 길에서 `--yes`를 주면서 `--allow-paid`가 없으면 아무것도 보내지 않고 종료 코드 4, `error: "paid_route_not_allowed"`, `detail.route`, `detail.via`.
 - **쓸 수 있는 길이 없으면**: 종료 코드 4, `app_unavailable`, `detail.errorCode`(`unavailable`, `not-connected`, `signed-out` 등).
-- **한 문서에 작업 하나**: 같은 문서에 작업이 돌고 있으면(같은 프로세스든 다른 프로세스든) 종료 코드 4, `app_unavailable`, `detail.errorCode: "document-job-running"`, `detail.job: { kind, lang?, progress? }`.
+- **한 문서에 작업 하나**: 같은 문서에 작업이 돌고 있으면(같은 프로세스든 다른 프로세스든) 종료 코드 4, `app_unavailable`, `detail.errorCode: "document-job-running"`, `detail.job: { kind, lang?, runId?, progress? }`.
+  - `kind`는 `ai-read | translate | translate-page | highlight | summary` 다섯 중 하나다. 뒤의 셋은 앱의 PDF 읽기 도우미(결정 0043)가 도는 중인 작업이다(대역 보기의 페이지 번역, AI 핵심 표시, 긴 문서의 개요). 명령어로 시작할 수는 없지만 "작업 중" 판정에는 모두 든다.
+  - `lang`은 `translate`·`translate-page`·`summary`에만, `runId`(AI 핵심 표시의 분류 묶음 열쇠)는 `highlight`에만 있다. `ai-read`에는 둘 다 없다.
+  - 사람이 읽는 `message`는 종류마다 다르다(예: `a page translation (de)`, `an AI highlighting`).
 - **`pdf translate`는 끝날 때까지 앞에서 돈다.** 진행은 오류 출력(stderr)에 쓴다. `pdf ai-read`도 같다. Ctrl+C는 작업을 `interrupted`로 멈추고 답하게 한다.
 - **한도 소진·연속 실패로 멈췄을 때**
   - `--partial`이 없으면 파일을 쓰지 않고 기존 약속대로 실패로 답한다: 종료 코드 4, `error: "app_unavailable"`, `detail.errorCode`(`rate-limit`, `failures` 등), `detail.resetsAt`. 끝난 분량은 `detail.done_blocks`·`detail.total_blocks`로 함께 준다. `ai-read`는 `detail.done_pages`·`detail.total_pages`와 `pages_read`, `pages_failed`를 준다.
   - `--partial`이 있으면(`translate`만) 끝난 부분만 반영하고 나머지는 원문으로 둔 파일을 쓰고 `status: "partial"`로 답한다. 성공 `detail`에 `detail.stopped: { errorCode, resetsAt? }`와 `done_blocks`·`total_blocks`가 더해진다.
-  - 다시 실행하면 보관소에서 이어 간다. 끝난 블록과 페이지는 다시 보내지 않는다. `--restart`면 그 언어의 보관된 번역을 지우고 처음부터 한다.
+  - 다시 실행하면 보관소에서 이어 간다. 끝난 블록과 페이지는 다시 보내지 않는다. `--restart`면 그 언어의 보관된 번역 가운데 사람이 앱에서 고친 블록(`edited`)은 남기고 나머지를 지운 뒤 처음부터 한다. 고친 블록은 끝난 것으로 쳐서 다시 보내지 않는다. 고친 블록까지 지우는 옵션은 없다(앱의 "처음부터 다시 번역"에서 고를 수 있다).
+- **사람이 고친 번역**: 앱의 대역 보기에서 고친 블록은 서식 없는 글로 보관되고, `pdf translate`의 결과 파일(PDF·Markdown·EPUB)에 그 글 그대로 쓰인다. 출력 구조와 성공 `detail`의 모양은 바뀌지 않는다. 고친 블록은 `translated_blocks`에 든다.
+- **`pdf status`**: 출력 모양은 그대로다. `ai_read`와 `translations`만 보이고, 앱의 페이지 번역·AI 핵심 표시·개요의 작업 기록은 나오지 않는다. 페이지 번역은 번역 작업 기록(`job`)과 진행(`done_blocks`·`total_blocks`)을 바꾸지 않는다.
 - **결과 파일 위치**: `--out`이 없으면 원본 옆에 `〈원본 이름〉.〈언어 코드〉.〈확장자〉`로 쓴다. 형식이 하나면 `--out`이 그 파일이고, 여럿이면 `--out`은 형식마다 확장자를 붙일 기준 경로다. 이미 있으면 `--force`가 필요하다(기존 파일 규칙). 실행할 때는 보내기 전에 확인하고, 예상만 답할 때는 경고(`output_exists`)로만 알린다.
 - **PDF로 쓸 수 없는 경우**: 목표 언어가 `ar`, `he`, `hi`이거나 PDF가 암호화돼 있으면 `--format pdf`를 보내기 전에 거절한다. 종료 코드 1, `unsupported`, `detail.supported_formats: ["md", "epub"]`.
 - 번역할 글이 없는 범위(스캔 문서 등)는 종료 코드 1, `unsupported`이고 `pdf ai-read`를 먼저 권한다.
@@ -293,7 +298,8 @@
 - 가리기 표시는 문서 안에 저장되고, 그 이름공간 주소는 원본과 같다. 원본으로 가린 문서를 열면 가리기가 그대로 인식된다.
 - 문서 곁에 저장되는 보조 파일의 이름(`.genoffice-assets.json` 등)도 원본과 같다.
 - `.odt`는 한컴 한글 2024가 읽은 결과를 기준으로 맞춘다. 받은 ODT를 고쳐 저장하면 고친 부분만 다시 쓰고, 나머지 zip 항목과 XML은 바이트 그대로다. 고친 것이 없으면 원본과 같은 파일이 나온다. 다시 묶을 때 `mimetype`을 맨 앞에 압축 없이 둔다(한컴은 이것을 받은 파일과 똑같이 읽는다). 한컴이 아닌 프로그램의 ODT도 같은 규칙으로 열지만, 합격 기준에는 넣지 않았다.
-- 문서 안에 적히는 작성자 이름(PDF 주석 작성자, 엑셀 메모 작성자, 명령어가 넣는 메모 작성자)은 지금 "GenOffice"다.
+- 문서 안에 적히는 작성자 이름(PDF 주석 작성자, 엑셀 메모 작성자, 명령어가 넣는 메모 작성자)은 지금 "GenOffice"다. PDF 편집기에서 사람이 새로 단 메모와 구절 카드를 "메모로 남기기"한 메모는 PC 계정 이름이다(모를 때만 "GenOffice").
+- PDF 편집기에서 받아들인 AI 핵심 표시는 표준 형광펜(`/Highlight`)이고, 분류 이름이 주석 제목(`/Subj`, 앞뒤 공백을 떼고 200자까지)에 들어간다. 이 값이 없는 주석의 저장 결과는 예전과 바이트 단위로 같다. 구절 카드에서 남긴 메모는 표준 `/Text` 메모이고, 내용 첫 줄이 화면 언어의 "AI 설명" 또는 "AI 번역(언어)"이다.
 - 파워포인트 편집기에서 고른 디자인 템플릿은 문서 안이나 곁에 쓰지 않는다. 문서에 남는 것은 평범한 도형·글·글꼴 이름뿐이다.
 - 저장한 스타일 파일(`<데이터 폴더>/style-templates/<이름>.json`)에는 선택 항목 `basedOn`(기본 템플릿의 id)이 붙을 수 있다. 이 값을 모르는 예전 버전은 무시하고 그대로 읽는다.
 - 한글 문서(`.hwp`·`.hwpx`)는 연 형식 그대로 저장한다. 한 탭이 파일을 처음 덮어쓰기 전에 원본을 같은 폴더에 `<파일 이름>.bak`으로 남긴다. 암호가 걸린 문서는 저장하지 않는다. AI는 한글 문서에서 글자를 바꾸고, 문단을 넣고 지우고, 본문에 표를 넣고, 있는 표의 빈 칸을 채우고(글자가 있는 칸은 사용자가 바꾸라고 했을 때만 덮어쓰고, 그림이 든 칸은 쓰지 않는다), 본문의 표에 행과 열을 넣고 빼고, 첨부한 파일(한글·워드·엑셀·파워포인트·PDF·글자 파일·그림)을 참고 자료로 읽고, 사용자가 편집기에서 선택한 부분만 고치고, 글자 모양 일부(굵게·기울임·밑줄·취소선·크기·색·형광펜)와 문단의 정렬·줄 간격을 바꾸고, 누름틀을 채운다. 표·그림·누름틀이 놓인 문단은 지우지 않는다.

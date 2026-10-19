@@ -9,6 +9,7 @@ import { splitPaneBridge } from '@genoffice/electron-utils/split-pane-bridge'
 import { AI_CHANNELS, PDF_CHANNELS } from '../shared/ipc'
 import type {
   PdfApi,
+  PdfNoteResult,
   PdfStoreApi,
   PdfStructureApi,
   PdfStructureFailure,
@@ -113,6 +114,14 @@ const store: PdfStoreApi = {
   write: (request) => outcome(PDF_CHANNELS.storeWrite, request),
   migrate: (request) => outcome(PDF_CHANNELS.storeMigrate, request),
   deleteDocument: (docHash) => outcome(PDF_CHANNELS.storeDeleteDocument, docHash),
+  passages: (docHash) => outcome(PDF_CHANNELS.storePassages, docHash),
+  highlightRuns: (docHash) => outcome(PDF_CHANNELS.storeHighlightRuns, docHash),
+  highlightBlocks: (docHash, runId) => outcome(PDF_CHANNELS.storeHighlightBlocks, docHash, runId),
+  latestHighlight: (docHash) => outcome(PDF_CHANNELS.storeLatestHighlight, docHash),
+  insights: (docHash, lang) => outcome(PDF_CHANNELS.storeInsights, docHash, lang),
+  deleteCounts: (docHash) => outcome(PDF_CHANNELS.storeDeleteCounts, docHash),
+  pageFingerprints: (request) => outcome(PDF_CHANNELS.storePageFingerprints, request),
+  translationRecency: (docHash) => outcome(PDF_CHANNELS.storeTranslationRecency, docHash),
 }
 
 const api: PdfApi = {
@@ -186,6 +195,22 @@ const api: PdfApi = {
   addSavedSignature: (data) => ipcRenderer.invoke(PDF_CHANNELS.addSignature, data),
   removeSavedSignature: (id) => ipcRenderer.invoke(PDF_CHANNELS.removeSignature, id),
   getUsername: () => ipcRenderer.invoke(PDF_CHANNELS.getUsername),
+  annotSubjects: (path) => ipcRenderer.invoke(PDF_CHANNELS.annotSubjects, path),
+  // no path crosses: the main process uses the view's own PDF and its linked note
+  noteOpen: (request) =>
+    (
+      ipcRenderer.invoke(PDF_CHANNELS.noteOpen, { title: request?.title }) as Promise<PdfNoteResult>
+    ).catch((): PdfNoteResult => ({ ok: false, reason: 'unavailable' })),
+  noteInsert: (request) =>
+    (ipcRenderer.invoke(PDF_CHANNELS.noteInsert, request) as Promise<PdfNoteResult>).catch(
+      (): PdfNoteResult => ({ ok: false, reason: 'unavailable' }),
+    ),
+  // no path either: the main process answers for the view's own PDF
+  noteUnsaved: () =>
+    (ipcRenderer.invoke(PDF_CHANNELS.noteUnsaved) as Promise<unknown>).then(
+      (value) => value === true,
+      () => false,
+    ),
   setDirty: (dirty) => ipcRenderer.send(PDF_CHANNELS.dirtyChanged, dirty),
   onCloseSaveRequest: (handler) => {
     const listener = (_e: unknown, opts?: { flushAll?: boolean }) =>

@@ -5,7 +5,8 @@
  *
  * The text blocks of the chosen pages go to the AI provider in batches; the
  * translated blocks land in the result store the app shares, so a second run
- * continues where the first stopped (--restart starts over). The result
+ * continues where the first stopped (--restart starts over, keeping the
+ * blocks a person edited in the app: they count as done). The result
  * files are built from the store at the end: a stopped run writes them only
  * with --partial, with the untranslated rest in the source language.
  */
@@ -224,7 +225,8 @@ export async function pdfTranslate(
     })
   }
   const model = { provider: route.provider, model: route.model }
-  const job = { ...parts, docHash, lang, model, store, restart }
+  // a command cannot ask, so a restart keeps what a person edited by hand
+  const job = { ...parts, docHash, lang, model, store, restart, keepEdited: restart }
   const estimate = await estimateTranslationJob(job)
   const providerChange = estimate.providerChange
     ? {

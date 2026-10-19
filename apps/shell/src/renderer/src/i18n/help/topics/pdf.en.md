@@ -86,3 +86,66 @@ Six tools: **ink, rectangle, ellipse, arrow, note**, plus the **redaction box** 
 
 - Regular Save/autosave writes annotations and edits back into the file (atomic).
 - **Redaction goes through its Apply flow** producing a copy, leaving the original untouched so sensitive content does not linger in it.
+
+## Selection bar shortcuts
+
+While the annotation bar is showing over selected text, one key runs an action straight away.
+
+| Key   | Action                                   |
+| ----- | ---------------------------------------- |
+| H     | Highlight (removes it if already marked) |
+| U     | Underline                                |
+| S     | Strikethrough                            |
+| N     | Add a note at the end of the selection   |
+| E     | AI explanation (passage card)            |
+| T     | AI translation (passage card)            |
+| Enter | Open the Ask AI box                      |
+
+- The keys work the same with a Korean or any other input method switched on. They are ignored while you type in a field or hold Ctrl or Alt.
+- In a document that is locked against editing (password-protected), H, U, S and N do nothing and show the reason, as the bar's buttons do.
+
+## Passage cards
+
+Press **E** or **T**, or the explain and translate chips in the **Ask AI** box, and the answer appears in a small card beside the selection. Cards are kept, so they are still there when you reopen the document, and you can copy them. Asking about the same passage again opens the existing card instead of sending anything.
+
+- **Keep as note** makes a note at that spot. Its first line says "AI explanation" or "AI translation", and the author is your PC account name. It goes into the file when you save the PDF; until then the card shows "Waiting for save".
+- **Ask more in the AI panel** hands the passage and the answer to the AI panel without sending them; **Add to note** puts them at the end of this PDF's note.
+- Only **Regenerate** sends the passage to the AI again.
+- **Delete** removes the stored card only. A note you already kept stays.
+- A faint dotted line marks each passage that has a card; click it to reopen the card. The line is on screen only and is never saved or printed. Switch it with View ▸ **Passage marks**.
+
+## Annotation overview
+
+- View ▸ **Annotations** lists, in the left sidebar, this document's highlights, underlines, strikethroughs, notes and drawings, markups not saved yet, and passage cards. Markups show the text under them.
+- Filter by kind, color, page range or text, and sort by page or by creation order.
+- Click an item to jump there with a short flash. A note opens its margin thread; a card opens the card.
+- The panel menu's **Copy as Markdown**, **Open as Markdown document** and **Open as Word document** use the list as currently filtered. No AI is involved. New documents can only be made from a PDF opened inside GenOffice.
+
+## Translation side by side
+
+- Turn on View ▸ **Translation side by side** and a translation column appears to the right of every page, scrolling with it. Turning it on sends nothing to the AI. A document you already translated with **Translate Document** shows its translation at once; paragraphs without one appear as dimmed source text.
+- **Translate this page** (or **Translate the rest** when part of the page is done) sends that page with one press while you use a subscription; the name of the AI it goes to is shown beside the button. On a connection billed by usage, the first press in a tab asks "‹AI name› will charge for this · Translate / Cancel" first.
+- Double-click a translated paragraph to edit it. Edited paragraphs are stored as plain text and are used as they are in translated PDF, Markdown and EPUB files. **Translate again** on a paragraph sends only that paragraph, and asks first if you edited it.
+- Hovering a translated paragraph outlines its place in the source page. The column's width and text size can be changed. **Translate all pages…** opens the **Translate Document** window, whose **Store only (no file)** format keeps the translation without writing a file.
+
+## AI highlights
+
+- Under Home ▸ **AI highlights**, pick a category set (Research & reports, Contracts & terms, Textbooks & manuals, or Your own) and the pages. Nothing is sent until you check the estimated number of calls and the AI it goes to and press **Start**.
+- The sentences the AI picks are previewed as translucent colored boxes on the page. The preview is never saved; switch it with View ▸ **Highlight preview**.
+- In the **Annotations** panel, **Accept** or **Dismiss** suggestions one by one, or accept a whole category. A sentence that could not be found in the page text cannot be accepted.
+- An accepted suggestion becomes a highlight in its category's color, and the category name is saved as the annotation's subject, so other PDF viewers show it in their comment lists. It goes into the file when you save the PDF.
+- AI highlights cannot start in a document locked against editing. Sentences the AI made up that are not in the text are dropped, and the end report says how many were received and dropped.
+
+## Document overview and paragraph citations
+
+- At the top of the AI panel, **Document overview** ▸ **Create overview** makes a three-line summary, a summary and key terms (with their meaning and first page). A long document is summarized in parts, so you confirm the estimated number of calls first.
+- The overview is kept and is there when you reopen the document; only **Regenerate** sends again. Click a term to find it in the document; each section can be copied or added to the note.
+- When the conversation is empty, the AI panel offers three suggested questions. Clicking one sends it once.
+- Clicking a page link (p.N) the AI gives as evidence jumps to that page and highlights the quoted sentence for two seconds. If the sentence cannot be found, it only goes to the page.
+
+## A note for each PDF
+
+- The first time you press **Open note** (View tab or the **Annotations** panel), a save dialog opens, by default in the PDF's folder with the name "PDF name note.md". After that, the note opens straight away in a Markdown tab.
+- If you pick a file that already exists, Windows may ask whether to replace it, but the file is not overwritten: it is linked as the note as it is.
+- **Add to note** (on cards, panel items and the document overview) puts a quote and a page link at the end of the note's tab and leaves it unsaved; you save it in the note tab yourself. The link opens the PDF at that page in other programs such as a browser.
+- A PDF that was never saved shows "Save the PDF first". Notes only work for PDFs opened inside GenOffice.

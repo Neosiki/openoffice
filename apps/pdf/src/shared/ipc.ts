@@ -16,6 +16,16 @@ import type {
   TranslationBlockEntry,
   TranslationBlockInput,
 } from '../../../../packages/pdf-structure/src/store/store'
+import type {
+  HighlightBlockEntry,
+  HighlightBlockInput,
+  HighlightRun,
+  HighlightSuggestionState,
+  InsightsEntry,
+  PassageCard,
+  PassageCardInput,
+} from '../../../../packages/pdf-structure/src/store/reading'
+import type { TranslationBlockKey } from '../../../../packages/pdf-structure/src/store/keys'
 
 /**
  * The PDF tools window's tasks the ribbon's "PDF tools" menu opens with the
@@ -74,6 +84,11 @@ export const PDF_CHANNELS = {
   addSignature: 'pdf:add-signature',
   removeSignature: 'pdf:remove-signature',
   getUsername: 'pdf:get-username',
+  annotSubjects: 'pdf:annot-subjects',
+  // the note of each PDF (reading-assist 4.9): the view's own PDF, no path from the renderer
+  noteOpen: 'pdf:note-open',
+  noteInsert: 'pdf:note-insert',
+  noteUnsaved: 'pdf:note-unsaved',
   dirtyChanged: 'pdf:dirty-changed',
   closeSaveRequest: 'pdf:close-save-request',
   closeSaveResult: 'pdf:close-save-result',
@@ -106,6 +121,15 @@ export const PDF_CHANNELS = {
   storeWrite: 'pdf:store-write',
   storeMigrate: 'pdf:store-migrate',
   storeDeleteDocument: 'pdf:store-delete-document',
+  // result store: the reading assistant (passage cards, AI highlights, insights)
+  storePassages: 'pdf:store-passages',
+  storeHighlightRuns: 'pdf:store-highlight-runs',
+  storeHighlightBlocks: 'pdf:store-highlight-blocks',
+  storeLatestHighlight: 'pdf:store-latest-highlight',
+  storeInsights: 'pdf:store-insights',
+  storeDeleteCounts: 'pdf:store-delete-counts',
+  storePageFingerprints: 'pdf:store-page-fingerprints',
+  storeTranslationRecency: 'pdf:store-translation-recency',
   // Markdown / EPUB conversion screen (the jobs themselves go through structure*)
   convertDialogRequest: 'pdf:convert-dialog-request',
   convertReleaseTarget: 'pdf:convert-release-target',
@@ -317,7 +341,63 @@ export interface MarkupInput {
   /** rgb normalized to 0-1 */
   color: [number, number, number]
   quads: number[][]
+  /**
+   * The category of an accepted AI highlight, saved as /Subj (reading-assist
+   * spec 5.7). Absent: the markup saves exactly as it did before the field.
+   */
+  subject?: string
 }
+
+/** a markup annotation's /Subj in the file (an accepted AI highlight's category) */
+export interface PdfAnnotSubject {
+  /** 0-based original page */
+  pageIndex: number
+  /** PDF object number (pdf.js annotation id "123R" → 123) */
+  objNum: number
+  subj: string
+}
+
+/** "Open note" (reading-assist 4.9): the title heads a note made now */
+export interface PdfNoteOpenRequest {
+  /** the PDF's title ('' or absent: the file name) */
+  title?: string
+}
+
+/**
+ * "Add to note": text parts only. The main process knows the view's PDF and
+ * its linked note, and builds the inserted Markdown (quote, page link, body).
+ */
+export type PdfNoteInsertRequest =
+  | {
+      kind: 'quote'
+      /** the marked text or passage ('' for an item without text) */
+      excerpt: string
+      /** 1-based page of the PDF file on disk */
+      page: number
+      /** a memo, an AI answer; omitted when empty */
+      body?: string
+      title?: string
+    }
+  | {
+      kind: 'overview'
+      /** "Document overview" in the UI language */
+      heading: string
+      body: string
+      title?: string
+    }
+
+/**
+ * unsaved: the PDF has no saved path yet; unavailable: no shell to open the
+ * note in (standalone); cancelled: the save dialog was closed; busy: this
+ * view's dialog is still open
+ */
+export type PdfNoteResult =
+  | { ok: true }
+  | {
+      ok: false
+      reason: 'unsaved' | 'unavailable' | 'cancelled' | 'busy' | 'failed'
+      message?: string
+    }
 
 /** Delete an annotation already saved in the file. Object number is only a lookup
     hint; subtype + rect guard against (and recover from) object renumbering by a rewrite.
@@ -1179,8 +1259,43 @@ export type PdfStoreWriteRequest =
   | { kind: 'translationMeta'; docHash: string; lang: string; provider: string; model: string }
   | { kind: 'translationBlocks'; docHash: string; lang: string; blocks: TranslationBlockInput[] }
   | { kind: 'deleteTranslation'; docHash: string; lang: string }
+  /** the record is found by (kind, key): `lang`, or `runId` for 'highlight' (JobRecordInput) */
   | { kind: 'job'; docHash: string; job: JobRecordInput }
-  | { kind: 'heartbeat'; docHash: string; job: JobKind; lang?: string }
+  /** `lang` for translate / translate-page / summary, `runId` for highlight, neither for ai-read */
+  | { kind: 'heartbeat'; docHash: string; job: JobKind; lang?: string; runId?: string }
+  /** write (or replace) a passage card; the store stamps savedAt */
+  | { kind: 'passage'; docHash: string; card: PassageCardInput }
+  | { kind: 'deletePassage'; docHash: string; id: string }
+  /** write (or replace) an AI highlight run's record */
+  | { kind: 'highlightRun'; docHash: string; run: HighlightRun }
+  | { kind: 'highlightBlocks'; docHash: string; runId: string; blocks: HighlightBlockInput[] }
+  /** suggestion states of one block by suggestion id; fails when the block is missing */
+  | {
+      kind: 'highlightSuggestionStates'
+      docHash: string
+      runId: string
+      key: TranslationBlockKey
+      states: Record<string, HighlightSuggestionState>
+    }
+  /** a run's folder and its job record `highlight.<runId>.json` */
+  | { kind: 'deleteHighlightRun'; docHash: string; runId: string }
+  | { kind: 'insights'; docHash: string; entry: InsightsEntry }
+  /** a person's edit of a translated block: plain text, kept on a restart */
+  | {
+      kind: 'editedTranslationBlock'
+      docHash: string
+      lang: string
+      key: TranslationBlockKey
+      text: string
+    }
+  /** "translate again from the start" keeping the edits; answers `removed` */
+  | { kind: 'deleteTranslationExceptEdited'; docHash: string; lang: string }
+
+/** what a store write answers besides `ok` */
+export interface PdfStoreWriteResult {
+  /** deleteTranslationExceptEdited: the block entries removed */
+  removed?: number
+}
 
 export interface PdfStoreMigrateRequest {
   /** the open file, as saved */
@@ -1197,6 +1312,32 @@ export interface PdfStoreMigrateResult {
   languages: string[]
   /** job records carried to the new hash (finished ones included) */
   jobs: number
+  /** passage cards moved; present only when some were */
+  passages?: number
+  /** highlight blocks moved; present only when some were */
+  highlightBlocks?: number
+  /** insights entries moved; present only when some were */
+  insights?: number
+}
+
+/** what deleting the document's stored results also removes (the confirmation names it) */
+export interface PdfStoreDeleteCounts {
+  /** translation blocks a person edited, in every language */
+  editedTranslationBlocks: number
+  passages: number
+}
+
+/** the open file whose page fingerprints are asked for (granted to this view) */
+export interface PdfStorePageFingerprintsRequest {
+  path: string
+  password?: string
+}
+
+/** a stored translation language and the newest savedAt of its blocks */
+export interface PdfTranslationRecency {
+  lang: string
+  /** null when the language has no readable block */
+  savedAt: number | null
 }
 
 export interface PdfStoreApi {
@@ -1210,11 +1351,42 @@ export interface PdfStoreApi {
   ): Promise<PdfStructureOutcome<{ translation: PdfStoredTranslation | null }>>
   /** not complete (stopped, or running elsewhere): the source of the resume offer */
   unfinishedJobs(docHash: string): Promise<PdfStructureOutcome<{ jobs: JobStatus[] }>>
-  write(request: PdfStoreWriteRequest): Promise<PdfStructureOutcome<object>>
+  write(request: PdfStoreWriteRequest): Promise<PdfStructureOutcome<PdfStoreWriteResult>>
   /** after an in-app save: carry results and job records to the new hash */
   migrate(request: PdfStoreMigrateRequest): Promise<PdfStructureOutcome<PdfStoreMigrateResult>>
   /** forget everything stored for the document */
   deleteDocument(docHash: string): Promise<PdfStructureOutcome<object>>
+  /** every readable passage card of the document */
+  passages(docHash: string): Promise<PdfStructureOutcome<{ cards: PassageCard[] }>>
+  /** every readable AI highlight run, newest (createdAt) first */
+  highlightRuns(docHash: string): Promise<PdfStructureOutcome<{ runs: HighlightRun[] }>>
+  /** every readable block of one run */
+  highlightBlocks(
+    docHash: string,
+    runId: string,
+  ): Promise<PdfStructureOutcome<{ blocks: HighlightBlockEntry[] }>>
+  /** the newest run and its blocks (the preview and the panel show only this one) */
+  latestHighlight(
+    docHash: string,
+  ): Promise<PdfStructureOutcome<{ run: HighlightRun | null; blocks: HighlightBlockEntry[] }>>
+  /** the overview in one language, or null */
+  insights(
+    docHash: string,
+    lang: string,
+  ): Promise<PdfStructureOutcome<{ insights: InsightsEntry | null }>>
+  /** what the "delete this document's stored results" confirmation names */
+  deleteCounts(docHash: string): Promise<PdfStructureOutcome<PdfStoreDeleteCounts>>
+  /**
+   * The open file's page fingerprints in page order, with its document hash
+   * (now usable by this view). Reads the fingerprints only, never the tree.
+   */
+  pageFingerprints(
+    request: PdfStorePageFingerprintsRequest,
+  ): Promise<PdfStructureOutcome<{ docHash: string; fingerprints: string[] }>>
+  /** stored translation languages, most recently written first */
+  translationRecency(
+    docHash: string,
+  ): Promise<PdfStructureOutcome<{ langs: PdfTranslationRecency[] }>>
 }
 
 /** AI channels are app-wide shared ipcMain handlers (shell registers via docs-main registerAiIpc); pass-through only */
@@ -1367,6 +1539,14 @@ export interface PdfApi {
   removeSavedSignature(id: string): Promise<SavedSignature[]>
   /** OS account name, used as the default author of new note comments; '' when unavailable */
   getUsername(): Promise<string>
+  /** The /Subj of the markup annotations in a granted file (accepted AI highlights' categories) */
+  annotSubjects(path: string): Promise<PdfAnnotSubject[]>
+  /** open (or first make) the Markdown note linked to this view's PDF in a Markdown tab */
+  noteOpen(request?: PdfNoteOpenRequest): Promise<PdfNoteResult>
+  /** put text at the end of that note's open tab (never written to the file directly) */
+  noteInsert(request: PdfNoteInsertRequest): Promise<PdfNoteResult>
+  /** this view's PDF has no path the person saved yet (a new blank before its first save): the note buttons wait */
+  noteUnsaved(): Promise<boolean>
   /** Mirror unsaved-changes state to the main process; drives the save prompt before closing a tab/window */
   setDirty(dirty: boolean): void
   /** Main process asks for a save (close prompt, menu Save, export flows) and waits for sendCloseSaveResult.

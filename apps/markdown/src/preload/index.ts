@@ -69,6 +69,13 @@ const aiSubscription: SubscriptionApi = {
 const api: MarkdownApi = {
   consumePending: () => ipcRenderer.invoke(MARKDOWN_CHANNELS.consumePending),
   takeSeed: () => ipcRenderer.invoke(MARKDOWN_CHANNELS.seedTake),
+  takeNoteAppend: () =>
+    (ipcRenderer.invoke(MARKDOWN_CHANNELS.noteAppendTake) as Promise<string[]>).catch(() => []),
+  onNoteAppendReady: (handler) => {
+    const listener = () => handler()
+    ipcRenderer.on(MARKDOWN_CHANNELS.noteAppendReady, listener)
+    return () => ipcRenderer.removeListener(MARKDOWN_CHANNELS.noteAppendReady, listener)
+  },
   openSourcePath: (path: string) => ipcRenderer.invoke('home:open-path', path),
   consumeHeadlessExport: () => ipcRenderer.invoke(MARKDOWN_CHANNELS.consumeHeadlessExport),
   headlessExportDone: (result: { ok: boolean; error?: string }) =>

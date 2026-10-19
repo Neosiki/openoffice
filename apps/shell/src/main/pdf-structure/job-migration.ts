@@ -14,11 +14,15 @@
  * A job still running elsewhere stays 'running' and, unless its owner moves
  * its heartbeat to the new hash, turns 'stopped' / 'interrupted' once the
  * running window passes.
+ *
+ * Every job kind moves by this rule (reading-assist spec 5.5); a record is
+ * found by its kind and second key (jobKeyOf: language or run id).
  */
-import type {
-  JobRecordInput,
-  JobStatus,
-  ResultStore,
+import {
+  jobKeyOf,
+  type JobRecordInput,
+  type JobStatus,
+  type ResultStore,
 } from '../../../../../packages/pdf-structure/src/store'
 
 /** times one record is copied again because its job wrote it while it was being copied */
@@ -31,6 +35,7 @@ function recordOf(job: JobStatus): JobRecordInput {
     outputs: job.outputs,
   }
   if (job.lang !== undefined) record.lang = job.lang
+  if (job.runId !== undefined) record.runId = job.runId
   if (job.last_error !== undefined) record.last_error = job.last_error
   if (job.resetsAt !== undefined) record.resetsAt = job.resetsAt
   if (job.progress !== undefined) record.progress = job.progress
@@ -45,14 +50,16 @@ export async function migrateJobRecords(
   if (oldDocHash === newDocHash) return 0
   let moved = 0
   for (const job of await store.listJobs(oldDocHash)) {
-    const current = await store.readJob(newDocHash, job.kind, job.lang)
+    // found by (kind, key): the language, or the run id of a highlight job
+    const key = jobKeyOf(job)
+    const current = await store.readJob(newDocHash, job.kind, key)
     if (current.state !== 'idle' && (current.updatedAt ?? 0) >= (job.updatedAt ?? 0)) continue
     // the copy is stamped with the time of the copy, so a write the job made
     // while it was being copied would lose to it later: copy that write too
     let source = job
     for (let attempt = 0; attempt < COPY_ATTEMPTS; attempt++) {
       await store.writeJob(newDocHash, recordOf(source))
-      const again = await store.readJob(oldDocHash, job.kind, job.lang)
+      const again = await store.readJob(oldDocHash, job.kind, key)
       if (again.state === 'idle' || again.updatedAt === source.updatedAt) break
       source = again
     }

@@ -86,3 +86,66 @@ Sechs Werkzeuge: **Freihand, Rechteck, Ellipse, Pfeil, Notiz** sowie **Bereich s
 
 - Normales Speichern bzw. AutoSpeichern schreibt Annotationen und Änderungen in die Datei zurück (atomar).
 - **Schwärzen läuft über den Ablauf „Anwenden“** und erzeugt eine Kopie, das Original bleibt unberührt — so bleibt sensible Information nicht darin zurück.
+
+## Tastenkürzel der Auswahlleiste
+
+Solange die Anmerkungsleiste über markiertem Text sichtbar ist, löst eine einzelne Taste sofort eine Aktion aus.
+
+| Taste | Aktion                                            |
+| ----- | ------------------------------------------------- |
+| H     | Hervorheben (entfernt eine vorhandene Markierung) |
+| U     | Unterstreichen                                    |
+| S     | Durchstreichen                                    |
+| N     | Notiz am Ende der Auswahl anlegen                 |
+| E     | KI-Erklärung (Passagenkarte)                      |
+| T     | KI-Übersetzung (Passagenkarte)                    |
+| Enter | Eingabefeld von **KI fragen** öffnen              |
+
+- Die Tasten funktionieren auch mit koreanischer oder jeder anderen Eingabemethode gleich. Während Sie in einem Feld tippen oder Strg bzw. Alt gedrückt halten, werden sie ignoriert.
+- In einem gegen Bearbeitung gesperrten Dokument (Kennwortschutz) bewirken H, U, S und N nichts und nennen wie die Schaltflächen der Leiste den Grund.
+
+## Passagenkarten
+
+Drücken Sie **E** oder **T** oder die Chips für Erklären und Übersetzen im Feld **KI fragen**: Die Antwort erscheint in einer kleinen Karte neben der Auswahl. Karten werden aufbewahrt, sind also beim erneuten Öffnen noch da, und lassen sich kopieren. Fragen Sie erneut nach derselben Passage, öffnet sich die vorhandene Karte, ohne dass etwas gesendet wird.
+
+- **Als Notiz behalten** legt an dieser Stelle eine Notiz an. Ihre erste Zeile lautet „KI-Erklärung“ oder „KI-Übersetzung“, als Autor steht Ihr PC-Kontoname darin. In die Datei gelangt sie erst beim Speichern des PDFs; bis dahin zeigt die Karte „Wartet auf Speichern“.
+- **Im KI-Bereich weiterfragen** übergibt Passage und Antwort an den KI-Bereich, ohne sie zu senden; **Zur Notiz hinzufügen** hängt sie an die Notiz dieses PDFs an.
+- Nur **Neu erstellen** schickt die Passage noch einmal an die KI.
+- **Löschen** entfernt nur die aufbewahrte Karte. Eine bereits behaltene Notiz bleibt bestehen.
+- Eine feine gepunktete Linie kennzeichnet jede Passage mit Karte; ein Klick darauf öffnet die Karte wieder. Die Linie ist nur auf dem Bildschirm zu sehen und wird weder gespeichert noch gedruckt. Ein- und ausschalten unter Ansicht ▸ **Passagenmarken**.
+
+## Anmerkungen im Überblick
+
+- Ansicht ▸ **Anmerkungen** zeigt in der linken Seitenleiste eine Liste aller Hervorhebungen, Unterstreichungen, Durchstreichungen, Notizen und Zeichnungen dieses Dokuments, dazu noch nicht gespeicherte Markierungen und Passagenkarten. Markierungen zeigen den Text, der darunter liegt.
+- Filtern Sie nach Art, Farbe, Seitenbereich oder Text und sortieren Sie nach Seite oder Erstellungsreihenfolge.
+- Ein Klick auf einen Eintrag springt mit kurzem Aufblinken an die Stelle. Eine Notiz öffnet ihren Randverlauf, eine Karte die Karte.
+- Die Menüpunkte **Als Markdown kopieren**, **Als Markdown-Dokument öffnen** und **Als Word-Dokument öffnen** verwenden die gerade gefilterte Liste. Die KI wird dabei nicht gefragt. Neue Dokumente lassen sich nur aus einem PDF anlegen, das in GenOffice geöffnet ist.
+
+## Übersetzung nebeneinander
+
+- Schalten Sie Ansicht ▸ **Übersetzung nebeneinander** ein, erhält jede Seite rechts eine Übersetzungsspalte, die mitscrollt. Das Einschalten allein sendet nichts an die KI. Ein Dokument, das Sie schon mit **Dokument übersetzen** übersetzt haben, zeigt die Übersetzung sofort; Absätze ohne Übersetzung erscheinen als blasser Originaltext.
+- **Diese Seite übersetzen** (oder **Rest übersetzen**, wenn ein Teil schon fertig ist) schickt die Seite bei einem Abonnement mit einem Klick ab; neben der Schaltfläche steht, an welche KI. Bei einer nutzungsabhängig abgerechneten Verbindung fragt der erste Klick in einem Tab zuerst „berechnet dafür Kosten · Übersetzen / Abbrechen“.
+- Mit einem Doppelklick auf einen übersetzten Absatz bearbeiten Sie ihn. Bearbeitete Absätze werden als reiner Text aufbewahrt und unverändert in übersetzte PDF-, Markdown- und EPUB-Dateien übernommen. **Neu übersetzen** an einem Absatz sendet nur diesen einen und fragt vorher nach, wenn Sie ihn bearbeitet haben.
+- Fährt die Maus über einen übersetzten Absatz, wird seine Stelle im Original umrandet. Breite und Schriftgröße der Spalte sind einstellbar. **Alle Seiten übersetzen…** öffnet das Fenster **Dokument übersetzen**; dessen Format **Nur aufbewahren (keine Datei)** behält die Übersetzung, ohne eine Datei zu schreiben.
+
+## KI-Markierung
+
+- Unter Start ▸ **KI-Markierung** wählen Sie einen Kategoriensatz (Forschung & Berichte, Verträge & AGB, Lehrbücher & Anleitungen oder Eigene) und die Seiten. Gesendet wird erst, wenn Sie die geschätzte Zahl der Aufrufe und die Ziel-KI geprüft und **Starten** gedrückt haben.
+- Die von der KI gewählten Sätze erscheinen als Vorschau in halbtransparenten farbigen Kästen auf der Seite. Die Vorschau wird nie gespeichert; ein- und ausschalten unter Ansicht ▸ **Markierungsvorschau**.
+- Im Bereich **Anmerkungen** können Sie Vorschläge einzeln **Annehmen** oder **Verwerfen** oder eine ganze Kategorie annehmen. Ein Satz, der im Seitentext nicht gefunden wurde, lässt sich nicht annehmen.
+- Ein angenommener Vorschlag wird zu einer Hervorhebung in der Farbe seiner Kategorie, und der Kategoriename wird als Betreff der Anmerkung gespeichert, sodass andere PDF-Programme ihn in ihrer Kommentarliste zeigen. In die Datei gelangt er beim Speichern des PDFs.
+- In einem gegen Bearbeitung gesperrten Dokument lässt sich die KI-Markierung nicht starten. Erfundene Sätze, die nicht im Text stehen, werden verworfen; der Abschlussbericht nennt, wie viele empfangen und verworfen wurden.
+
+## Dokumentübersicht und Absatzzitate
+
+- Oben im KI-Bereich erzeugt **Dokumentübersicht** ▸ **Übersicht erstellen** eine Zusammenfassung in drei Zeilen, eine Zusammenfassung und Schlüsselbegriffe (mit Bedeutung und erster Seite). Ein langes Dokument wird in Teilen zusammengefasst, deshalb bestätigen Sie zuerst die geschätzte Zahl der Aufrufe.
+- Die Übersicht wird aufbewahrt und ist beim erneuten Öffnen noch da; erst **Neu erstellen** sendet wieder. Ein Klick auf einen Begriff sucht ihn im Dokument; jeder Abschnitt lässt sich kopieren oder zur Notiz hinzufügen.
+- Ist das Gespräch leer, bietet der KI-Bereich drei vorgeschlagene Fragen an. Ein Klick sendet die Frage einmal.
+- Ein Klick auf einen Seitenlink (p.N), den die KI als Beleg angibt, springt zu dieser Seite und hebt den zitierten Satz zwei Sekunden lang hervor. Wird der Satz nicht gefunden, geht es nur zur Seite.
+
+## Eine Notiz pro PDF
+
+- Beim ersten Klick auf **Notiz öffnen** (Registerkarte Ansicht oder Bereich **Anmerkungen**) erscheint ein Speicherdialog, vorbelegt mit dem Ordner des PDFs und dem Namen „PDF-Name Notiz.md“. Danach öffnet sich die Notiz direkt in einem Markdown-Tab.
+- Wählen Sie eine bereits vorhandene Datei, fragt Windows womöglich, ob sie ersetzt werden soll. Die Datei wird trotzdem nicht überschrieben, sondern unverändert als Notiz verknüpft.
+- **Zur Notiz hinzufügen** (auf Karten, Einträgen im Bereich und in der Dokumentübersicht) setzt ein Zitat mit Seitenlink ans Ende des Notiz-Tabs und lässt es ungespeichert; gespeichert wird im Notiz-Tab von Ihnen selbst. Der Link öffnet das PDF auch in anderen Programmen, etwa einem Browser, auf dieser Seite.
+- Ein nie gespeichertes PDF zeigt „Speichern Sie zuerst das PDF“. Notizen gibt es nur für PDFs, die in GenOffice geöffnet sind.

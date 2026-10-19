@@ -18,7 +18,9 @@
  *
  * The save targets are picked when the user starts (before anything is
  * sent), so a long job writes its files when it finishes. A stopped job
- * offers to write what is done so far, or to continue later.
+ * offers to write what is done so far, or to continue later. "Store only"
+ * picks no target: the translation stays in the result store and no file
+ * is written.
  */
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react'
 import type { ReactElement } from 'react'
@@ -127,6 +129,7 @@ interface TranslationRun {
   lang: string
   pages: number[] | null
   bilingual: boolean
+  /** empty: store only, no file is written */
   targets: Array<{ format: TranslationFormat; path: string }>
 }
 
@@ -343,7 +346,7 @@ export const DocumentTranslation = forwardRef<DocumentTranslationHandle, Documen
     const ended = async (view: DocumentJobView, run: TranslationRun): Promise<void> => {
       await carry(run.docHash)
       if (!aliveRef.current) return
-      if (view.state === 'complete') await writeOutputs(run)
+      if (view.state === 'complete' && run.targets.length > 0) await writeOutputs(run)
     }
 
     const start = async (request: TranslateStartRequest): Promise<TranslateStartAnswer> => {
@@ -368,7 +371,7 @@ export const DocumentTranslation = forwardRef<DocumentTranslationHandle, Documen
       }
       if (request.mode === 'export' || !route) {
         setDialog(null)
-        void writeOutputs(run)
+        if (targets.length > 0) void writeOutputs(run)
         return { ok: true }
       }
 
@@ -411,7 +414,9 @@ export const DocumentTranslation = forwardRef<DocumentTranslationHandle, Documen
             ...parts,
             model: { provider: route.provider, model: route.model },
             store,
-            ...(request.mode === 'restart' ? { restart: true } : {}),
+            ...(request.mode === 'restart'
+              ? { restart: true, ...(request.keepEdited ? { keepEdited: true } : {}) }
+              : {}),
             signal,
             registry,
             onProgress,
@@ -455,7 +460,11 @@ export const DocumentTranslation = forwardRef<DocumentTranslationHandle, Documen
             view={view}
             t={t}
             {...stripText(view, lang, t, nameOf)}
-            {...(view.state === 'stopped' && run && view.done > 0 && !writing
+            {...(view.state === 'stopped' &&
+            run &&
+            run.targets.length > 0 &&
+            view.done > 0 &&
+            !writing
               ? {
                   actions: (
                     <>
