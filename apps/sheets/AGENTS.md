@@ -29,6 +29,7 @@ Excel 통합 문서(.xlsx, .csv 등) 에디터다. 화면은 Univer 격자 위�
 - 구독 IPC는 `ensureSubscriptionIpc`로만 등록하고 `initSubscriptionChildTracking`은 부르지 않는다. 단독 실행 진입은 `will-quit`와 `process.on('exit')`에서 `shutdownSubscriptionChildren`을 부른다.
 - shell 안에서도 필요한 시트 전용 AI 채널은 `registerSheetsAiIpc`가 아니라 `registerSheetsIpc`에 등록하고 `sheets:` 접두사를 붙인다(`sheets:ai-generate-image`, `sheets:ai-tool-capabilities`, 첨부 관련 `sheets:files-*`). `registerSheetsAiIpc`에 두면 배포 앱에서 "핸들러 없음"이 된다.
 - 이미지 도구에는 `{ path: 'screen', statuses: sharedSubscriptionStatuses() }`를 넘기고, 읽을 수 있는 로컬 경로는 그 탭이 연 통합 문서들의 폴더와 붙여 넣기 임시 폴더로 제한한다(`sheetsMediaRoots`).
+- 열기 암호가 걸린 통합 문서(결정 0041)는 평문이 사용자 폴더와 데이터 폴더에 닿지 않게 한다. `prepareEncryptedWorkbook`이 암호를 받아 푼 사본을 임시 폴더(`importTempDir`)에 두고, 세션은 그 사본에서 돈다(`.xlsx`·`.xlsm`은 `restoreTarget`이 사용자 파일, `.xls`는 첫 저장이 다른 이름으로 저장). 저장은 사이드카 결과를 그 임시 폴더에 받은 뒤 `encryptOoxml`로 잠가 대상에 원자적으로 쓰고, 다음 세션도 그 평문 사본에서 연다. 암호 세션은 `automaticRecoveryDisabled`라 복구 사본을 쓰지 않는다. 사이드카 결과를 대상 경로에 바로 쓰는 새 저장 길을 만들 때 `session.password`를 확인한다.
 - 모델에게 보내는 열은 `applyPrivacyPolicy`를 거친다. `deny`는 보내지 않고 `statistics-only`는 값 없이 개수만 보낸다. 값을 직접 읽어 프롬프트에 넣는 우회 경로를 만들지 않는다.
 
 ## 이 모듈의 방식

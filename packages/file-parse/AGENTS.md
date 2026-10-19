@@ -31,7 +31,7 @@
 ## 항상 지켜야 하는 것
 
 - `parseFileToText`는 실패를 던지지 않고 `{ ok: false, error }`로 돌려준다. 깨진 파일 하나가 채팅 요청 전체를 막으면 안 된다. 따로 내보낸 `docxToText` 같은 개별 함수는 던진다.
-- 확장자를 믿지 않는다. 매직 바이트와 어긋나면 `Content mismatch`로 거부한다. 예외는 `.doc` 이름의 zip 하나이고 OOXML로 읽는다. `.ppt` 이름의 zip은 거부한다. `.hwpx`는 zip이어야 하고, `.hwp`는 OLE(HWP 5), `HWP Document File`로 시작하는 옛 HWP 3, zip(이름만 `.hwp`인 HWPX) 셋을 받는다. `.odt`는 zip이어야 하고, 그 안의 `mimetype`이 `application/vnd.oasis.opendocument.text`가 아니면(docx, 스프레드시트, 서식 파일 `.ott`) 역시 `Content mismatch`다. 다른 이름(`.docx` 등)으로 저장된 ODT는 내용으로 알아보지 않으며 그 이름의 형식으로 읽다가 `ok: false`가 된다.
+- 확장자를 믿지 않는다. 매직 바이트와 어긋나면 `Content mismatch`로 거부한다. 예외는 `.doc` 이름의 zip 하나이고 OOXML로 읽는다. `.ppt` 이름의 zip은 거부한다. `.hwpx`는 zip이어야 하고, `.hwp`는 OLE(HWP 5), `HWP Document File`로 시작하는 옛 HWP 3, zip(이름만 `.hwp`인 HWPX) 셋을 받는다. `.odt`는 zip이어야 하고, 그 안의 `mimetype`이 `application/vnd.oasis.opendocument.text`가 아니면(docx, 스프레드시트, 서식 파일 `.ott`) 역시 `Content mismatch`다. 다른 이름(`.docx` 등)으로 저장된 ODT는 내용으로 알아보지 않으며 그 이름의 형식으로 읽다가 `ok: false`가 된다. 열기 암호가 걸린 `.docx`·`.xlsx`·`.xlsm`·`.pptx`(OLE 안에 `EncryptedPackage` 스트림)는 불일치가 아니라 `Password-protected .<확장자>`로 거부한다. 빠른 보기는 이 글을 보고 "암호가 걸린 문서"로 보여 준다.
 - zip 기반 형식은 풀기 전에 관문을 거친다. pptx와 xlsx는 `assertZipInflatesWithinLimits`를 먼저 부르고 그다음에 선언 크기 검사를 한다. hwpx도 zip이므로 엔진에 넘기기 전에 같은 관문을 거친다. docx는 `parseDocx` 안에서, odt는 `odtToText`(엔진의 `openOdt`) 안에서 같은 검사가 돈다. 순서를 바꾸거나 선언 크기 검사만 남기지 않는다.
 - 암호 걸린 ODT(manifest에 `manifest:encryption-data`)는 읽지 않고 `ok: false`와 암호를 풀어 다시 첨부하라는 오류를 돌려준다. 깨진 ODT와 관문에서 거부된 ODT도 `ok: false`다. 개별 함수 `odtToText`는 엔진의 `OdtOpenError`를 그대로 던진다.
 - 관계(rels) 대상은 `resolveTarget`으로만 푼다. `..`은 zip 루트에서 멈추고, 스킴이 붙은 대상과 디코딩할 수 없는 대상은 빈 문자열이 된다. Windows 계열 생성기가 쓰는 역슬래시 구분자도 여기서 처리한다.
