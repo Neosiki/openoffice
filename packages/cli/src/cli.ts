@@ -12,6 +12,7 @@ import { guideCommand } from './commands/guide'
 import { imageCommand } from './commands/image'
 import { mediaCommand } from './commands/media'
 import { mergeCommand } from './commands/merge'
+import { readUrlCommand } from './commands/read-url'
 import { searchCommand } from './commands/search'
 import { selectionCommand } from './commands/selection'
 import { infoCommand } from './commands/info'
@@ -67,6 +68,7 @@ export function defaultRegistry(): CommandRegistry {
     .register(renderCommand)
     .register(guideCommand)
     .register(searchCommand)
+    .register(readUrlCommand)
     .register(imageCommand)
     .register(mediaCommand)
     .register(openCommand)
