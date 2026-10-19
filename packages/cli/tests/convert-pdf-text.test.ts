@@ -4,7 +4,7 @@ import { join } from 'node:path'
 import { run, tempDir, writeMinimalPdf } from './helpers'
 
 describe('genoffice convert pdf → md', () => {
-  it('reconstructs the text through the docx route', async () => {
+  it('reconstructs the text through the PDF reflow route', async () => {
     const dir = tempDir()
     const pdf = writeMinimalPdf(join(dir, 'notes.pdf'), ['Alpha line', 'Beta line'])
     const r = await run(['convert', pdf, '--to', 'md', '--json'])
@@ -13,7 +13,8 @@ describe('genoffice convert pdf → md', () => {
     expect(md).toContain('Alpha line')
     expect(md).toContain('Beta line')
     const detail = r.json().detail
-    expect(detail.intermediate).toBe('docx')
+    // the fork keeps the PDF editor's reflow writer (pictures, pages) for md
+    expect(detail.intermediate).toBeUndefined()
     expect(detail.pages).toBe(2)
   }, 60_000)
 

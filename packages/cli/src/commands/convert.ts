@@ -193,7 +193,7 @@ async function run(
 ): Promise<Produced> {
   if (from === 'odt' || to === 'odt') return runOdt(input, from, to, output, ctx)
   const password = flagString(args, 'password')
-  if (from === 'pdf' && (to === 'md' || to === 'html')) {
+  if (from === 'pdf' && to === 'html') {
     return convertPdfViaDocx(input, to, output, password, ctx)
   }
   const viaApp = appTarget(from, to)
