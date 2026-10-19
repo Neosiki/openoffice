@@ -62,6 +62,12 @@ export const en = {
   paneCommentsDelete: 'Delete comment',
   paneCommentsPlaceholder: 'New comment… (⌘/Ctrl+Enter to post)',
   paneCommentsPost: 'Post',
+  paneCommentsScopePage: 'This page',
+  paneCommentsScopeAll: 'All pages',
+  paneCommentsPageHeading: 'Slide {n}',
+  paneCommentsPageCount: '{n} comments',
+  paneCommentsAllEmpty: 'No comments in this deck yet',
+  paneCommentsAllEmptySub: 'Comments added on any slide collect here.',
 
   paneCsdTitle: 'Custom Shows',
   paneCsdDefaultName: 'Custom Show {n}',

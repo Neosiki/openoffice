@@ -61,6 +61,12 @@ export const ar = {
   paneCommentsDelete: 'حذف التعليق',
   paneCommentsPlaceholder: 'تعليق جديد… (⌘/Ctrl+Enter للنشر)',
   paneCommentsPost: 'نشر',
+  paneCommentsScopePage: 'هذه الشريحة',
+  paneCommentsScopeAll: 'كل الشرائح',
+  paneCommentsPageHeading: 'الشريحة {n}',
+  paneCommentsPageCount: 'التعليقات: {n}',
+  paneCommentsAllEmpty: 'لا توجد تعليقات في هذا العرض بعد',
+  paneCommentsAllEmptySub: 'تُجمع هنا التعليقات المضافة في أي شريحة.',
 
   paneCsdTitle: 'عروض مخصصة',
   paneCsdDefaultName: 'عرض مخصص {n}',

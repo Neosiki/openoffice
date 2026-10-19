@@ -62,6 +62,12 @@ export const cs = {
   paneCommentsDelete: 'Odstranit komentář',
   paneCommentsPlaceholder: 'Nový komentář… (⌘/Ctrl+Enter odešle)',
   paneCommentsPost: 'Odeslat',
+  paneCommentsScopePage: 'Tento snímek',
+  paneCommentsScopeAll: 'Všechny snímky',
+  paneCommentsPageHeading: 'Snímek {n}',
+  paneCommentsPageCount: 'Komentářů: {n}',
+  paneCommentsAllEmpty: 'V této prezentaci zatím nejsou žádné komentáře',
+  paneCommentsAllEmptySub: 'Komentáře přidané na kterémkoli snímku se shromažďují zde.',
 
   paneCsdTitle: 'Vlastní prezentace',
   paneCsdDefaultName: 'Vlastní prezentace {n}',

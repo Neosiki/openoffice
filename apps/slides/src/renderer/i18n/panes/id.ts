@@ -62,6 +62,12 @@ export const id = {
   paneCommentsDelete: 'Hapus komentar',
   paneCommentsPlaceholder: 'Komentar baru… (⌘/Ctrl+Enter untuk memposting)',
   paneCommentsPost: 'Posting',
+  paneCommentsScopePage: 'Slide ini',
+  paneCommentsScopeAll: 'Semua slide',
+  paneCommentsPageHeading: 'Slide {n}',
+  paneCommentsPageCount: '{n} komentar',
+  paneCommentsAllEmpty: 'Belum ada komentar dalam presentasi ini',
+  paneCommentsAllEmptySub: 'Komentar yang ditambahkan pada slide mana pun dikumpulkan di sini.',
 
   paneCsdTitle: 'Peragaan Kustom',
   paneCsdDefaultName: 'Peragaan Kustom {n}',

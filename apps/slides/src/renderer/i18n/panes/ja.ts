@@ -62,6 +62,12 @@ export const ja = {
   paneCommentsDelete: 'コメントを削除',
   paneCommentsPlaceholder: '新しいコメント…（⌘/Ctrl+Enter で投稿）',
   paneCommentsPost: '投稿',
+  paneCommentsScopePage: 'このスライド',
+  paneCommentsScopeAll: 'すべてのスライド',
+  paneCommentsPageHeading: 'スライド {n}',
+  paneCommentsPageCount: 'コメント {n} 件',
+  paneCommentsAllEmpty: 'このプレゼンテーションにはまだコメントがありません',
+  paneCommentsAllEmptySub: '各スライドで追加したコメントがここにまとまります。',
 
   paneCsdTitle: '目的別スライドショー',
   paneCsdDefaultName: '目的別スライドショー {n}',

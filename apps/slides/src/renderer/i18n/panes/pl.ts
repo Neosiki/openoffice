@@ -62,6 +62,12 @@ export const pl = {
   paneCommentsDelete: 'Usuń komentarz',
   paneCommentsPlaceholder: 'Nowy komentarz… (⌘/Ctrl+Enter, aby opublikować)',
   paneCommentsPost: 'Opublikuj',
+  paneCommentsScopePage: 'Ten slajd',
+  paneCommentsScopeAll: 'Wszystkie slajdy',
+  paneCommentsPageHeading: 'Slajd {n}',
+  paneCommentsPageCount: 'Komentarze: {n}',
+  paneCommentsAllEmpty: 'W tej prezentacji nie ma jeszcze komentarzy',
+  paneCommentsAllEmptySub: 'Komentarze dodane na dowolnym slajdzie są zbierane tutaj.',
 
   paneCsdTitle: 'Pokazy niestandardowe',
   paneCsdDefaultName: 'Pokaz niestandardowy {n}',

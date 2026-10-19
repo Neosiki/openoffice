@@ -62,6 +62,12 @@ export const ms = {
   paneCommentsDelete: 'Padam komen',
   paneCommentsPlaceholder: 'Komen baharu… (⌘/Ctrl+Enter untuk menyiarkan)',
   paneCommentsPost: 'Siarkan',
+  paneCommentsScopePage: 'Slaid ini',
+  paneCommentsScopeAll: 'Semua slaid',
+  paneCommentsPageHeading: 'Slaid {n}',
+  paneCommentsPageCount: '{n} komen',
+  paneCommentsAllEmpty: 'Belum ada komen dalam pembentangan ini',
+  paneCommentsAllEmptySub: 'Komen yang ditambah pada mana-mana slaid dikumpulkan di sini.',
 
   paneCsdTitle: 'Persembahan Tersuai',
   paneCsdDefaultName: 'Persembahan Tersuai {n}',
