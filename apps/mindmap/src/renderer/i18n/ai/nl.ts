@@ -55,6 +55,8 @@ export const nl = {
   aiToolWriteMapFailed: 'De map kon niet worden geschreven',
   aiToolWebSearch: 'Zoeken op internet',
   aiToolWebSearchDone: 'Gezocht naar "{query}" · {count} resultaten',
+  aiToolReadUrl: 'Webpagina lezen',
+  aiToolReadUrlDone: '{host} gelezen · {chars} tekens',
   aiSumReadAttachment: 'Bijlage lezen',
   aiSumImageAttachment: 'Afbeeldingsbijlage {name}',
   aiSumReadAttachmentName: 'Bijlage {name} lezen',

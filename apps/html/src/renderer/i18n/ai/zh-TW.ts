@@ -43,6 +43,8 @@ export const zhTW = {
   aiTimeoutError: 'AI 回應逾時',
   aiToolWebSearch: '網路搜尋',
   aiToolWebSearchDone: '搜尋「{query}」· {count} 筆結果',
+  aiToolReadUrl: '讀取網頁',
+  aiToolReadUrlDone: '已讀取 {host} · {chars} 個字元',
   aiTruncatedNote: '（回覆因長度限制被截斷,內容可能不完整。）',
   aiTurnLimit: '已達到單次執行的步驟上限，如需繼續請再傳送一則指令。',
   aiUndelivered: '未傳送成功',

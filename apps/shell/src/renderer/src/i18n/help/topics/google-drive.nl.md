@@ -30,7 +30,7 @@ De aanmelding wordt op deze pc bewaard, versleuteld met de beveiliging die Windo
 - Zolang **De AI bestanden in Drive laten zoeken en lezen** aan staat (na het koppelen staat het aan), kan de AI in elke editor je Drive doorzoeken en bestanden lezen. Bijvoorbeeld: "Zoek in Drive de notulen van vorige maand en vat ze samen."
 - Wat de AI leest, gaat naar de AI-aanbieder die je gebruikt. Delen die voor de AI verborgen zijn, blijven verborgen.
 - De AI kan Drive-bestanden niet wijzigen, verwijderen of delen.
-- Zodra een chat iets bevat dat uit Drive is gelezen, werken zoeken op internet, zoeken naar afbeeldingen en afbeeldingen via een webadres niet meer in die chat. Begin een nieuwe chat om ze weer te gebruiken.
+- Zodra een chat iets bevat dat uit Drive is gelezen, werken zoeken op internet, zoeken naar afbeeldingen , pagina's lezen via een webadres en afbeeldingen via een webadres niet meer in die chat. Begin een nieuwe chat om ze weer te gebruiken.
 
 ## Ontkoppelen
 

@@ -118,6 +118,8 @@ export const ja = {
   aiSumReadAttachmentName: '添付ファイル {name} を読み取り',
   aiSumWebSearch: 'ウェブ検索',
   aiSumWebSearchDone: '「{query}」を検索({count} 件)',
+  aiSumReadUrl: 'ウェブページ読み取り',
+  aiSumReadUrlDone: '{host} を読み取り · {count} 文字',
   aiSumImageSearch: '画像検索',
   aiSumImageSearchDone: '「{query}」の画像を検索({count} 枚)',
   aiSumAnalyzeMedia: 'メディアを解析',

@@ -51,6 +51,8 @@ export const zh = {
   aiToolWriteMapFailed: '无法写出导图',
   aiToolWebSearch: '联网搜索',
   aiToolWebSearchDone: '搜索"{query}" · {count} 条结果',
+  aiToolReadUrl: '读取网页',
+  aiToolReadUrlDone: '已读取 {host} · {chars} 个字符',
   aiSumReadAttachment: '读取附件',
   aiSumImageAttachment: '图片附件 {name}',
   aiSumReadAttachmentName: '读取附件 {name}',

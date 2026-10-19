@@ -49,6 +49,8 @@ export const hi = {
   aiTimeoutError: 'AI प्रतिक्रिया समय समाप्त',
   aiToolWebSearch: 'वेब खोज',
   aiToolWebSearchDone: '"{query}" खोजा · {count} परिणाम',
+  aiToolReadUrl: 'वेब पेज पढ़ें',
+  aiToolReadUrlDone: '{host} पढ़ा · {chars} अक्षर',
   aiTruncatedNote: '(उत्तर लंबाई सीमा के कारण कट गया और अधूरा हो सकता है।)',
   aiTurnLimit: 'प्रति रन चरण सीमा पूरी हुई — जारी रखने के लिए एक और निर्देश भेजें।',
   aiUndelivered: 'भेजा नहीं गया',

@@ -116,6 +116,8 @@ export const th = {
   aiSumReadAttachmentName: 'อ่านสิ่งที่แนบ {name}',
   aiSumWebSearch: 'ค้นหาเว็บ',
   aiSumWebSearchDone: 'ค้นหา "{query}" ({count} รายการ)',
+  aiSumReadUrl: 'อ่านหน้าเว็บ',
+  aiSumReadUrlDone: 'อ่าน {host} · {count} ตัวอักษร',
   aiSumImageSearch: 'ค้นหารูปภาพ',
   aiSumImageSearchDone: 'ค้นหารูป "{query}" ({count} รูป)',
   aiSumAnalyzeMedia: 'วิเคราะห์สื่อ',

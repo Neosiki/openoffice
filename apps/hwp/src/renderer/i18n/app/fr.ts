@@ -61,6 +61,8 @@ export const fr = {
     'Trouve les fautes d’orthographe et d’espacement de ce document et corrige-les.',
   aiToolRead: 'Document lu',
   aiToolFind: 'Recherche de « {text} » · {count} trouvé(s)',
+  aiToolReadUrl: '{host} lu · {n} caractères',
+  aiToolReadUrlFail: 'Impossible de lire {host}',
   aiToolFields: 'Champs de formulaire vérifiés · {count}',
   aiToolToc: 'Table des matières ajoutée · {count} titres',
   aiToolTocRefresh: 'Numéros de page de la table réécrits · {count}',

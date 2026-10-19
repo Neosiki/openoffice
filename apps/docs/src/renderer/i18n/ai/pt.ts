@@ -121,6 +121,8 @@ export const pt = {
   aiSumReadAttachmentName: 'Ler anexo {name}',
   aiSumWebSearch: 'Pesquisa na web',
   aiSumWebSearchDone: 'Pesquisou "{query}" ({count} resultados)',
+  aiSumReadUrl: 'Leitura de página web',
+  aiSumReadUrlDone: '{host} lido · {count} caracteres',
   aiSumImageSearch: 'Pesquisa de imagens',
   aiSumImageSearchDone: 'Pesquisa de imagens "{query}" ({count} imagens)',
   aiSumAnalyzeMedia: 'Analisar mídia',

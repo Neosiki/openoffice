@@ -122,6 +122,8 @@ export const de = {
   aiSumReadAttachmentName: 'Anlage {name} lesen',
   aiSumWebSearch: 'Websuche',
   aiSumWebSearchDone: '„{query}“ gesucht ({count} Ergebnisse)',
+  aiSumReadUrl: 'Webseite lesen',
+  aiSumReadUrlDone: '{host} gelesen · {count} Zeichen',
   aiSumImageSearch: 'Bildersuche',
   aiSumImageSearchDone: 'Bildersuche „{query}“ ({count} Bilder)',
   aiSumAnalyzeMedia: 'Medien analysieren',

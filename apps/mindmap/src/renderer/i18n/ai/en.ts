@@ -55,6 +55,8 @@ export const en = {
   aiToolWriteMapFailed: 'Could not write the map',
   aiToolWebSearch: 'Web search',
   aiToolWebSearchDone: 'Searched "{query}" · {count} results',
+  aiToolReadUrl: 'Read web page',
+  aiToolReadUrlDone: 'Read {host} · {chars} chars',
   aiSumReadAttachment: 'Read attachment',
   aiSumImageAttachment: 'Image attachment {name}',
   aiSumReadAttachmentName: 'Read attachment {name}',

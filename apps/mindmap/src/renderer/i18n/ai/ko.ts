@@ -54,6 +54,8 @@ export const ko = {
   aiToolWriteMapFailed: '지도를 쓰지 못함',
   aiToolWebSearch: '웹 검색',
   aiToolWebSearchDone: '"{query}" 검색 · 결과 {count}개',
+  aiToolReadUrl: '웹 문서 읽기',
+  aiToolReadUrlDone: '{host} 읽음 · {chars}자',
   aiSumReadAttachment: '첨부 파일 읽기',
   aiSumImageAttachment: '이미지 첨부 {name}',
   aiSumReadAttachmentName: '첨부 파일 {name} 읽기',

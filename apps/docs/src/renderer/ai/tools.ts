@@ -1,7 +1,12 @@
 import type { Editor } from '@tiptap/core'
 import type { Mark, Node as ProseMirrorNode } from '@tiptap/pm/model'
 import type { ChartDisplay, CommentInfo, NewChart, NoteInfo } from '@genoffice/docx-engine'
-import type { AgentToolCall, AgentToolDef, CreateDocumentType } from '../../shared/ipc'
+import type {
+  AgentToolCall,
+  AgentToolDef,
+  CreateDocumentType,
+  ReadUrlResult,
+} from '../../shared/ipc'
 import { t } from '../i18n/locale'
 import { executeOps, opNames } from './ops'
 import { odtGuardRefusalText, odtToolRefusal, startOdtToolCall } from './odt-tools'
@@ -441,6 +446,23 @@ export const AGENT_TOOLS: AgentToolDef[] = [
     },
   },
   {
+    name: 'read_url',
+    description:
+      "Read the text of a web page (http/https) — an article, a document, or a skill's instructions (SKILL.md on GitHub). HTML is converted to readable text and links are kept. Long pages are cut at 50,000 characters; continue with offset. Downloads (PDF, images, Office files) are not supported: ask the user to attach those. GitHub blob links are converted to the raw (or API) address automatically; private repositories work when the user adds a read-only GitHub token in settings, and a directory list is readable at api.github.com/repos/…/contents/. Relative links inside a skill document resolve against that document's address.",
+    inputSchema: {
+      type: 'object',
+      properties: {
+        url: { type: 'string', description: 'http(s) address of the page to read' },
+        offset: {
+          type: 'integer',
+          description:
+            'character offset to continue a truncated read (default 0); use the offset given in the previous truncation notice',
+        },
+      },
+      required: ['url'],
+    },
+  },
+  {
     name: 'image_search',
     description:
       'Search for images. Returns a list of image imageUrl entries; after picking one, insert it into the document with insert_image.',
@@ -712,6 +734,31 @@ const fail = (summary: string, output: string): ToolExecution => ({
 const clipText = (text: string, max: number): string =>
   text.length > max ? `${text.slice(0, max)}…` : text
 
+/** Host shown in a read_url summary, from the final address after redirects. */
+function hostOfUrl(url: string): string {
+  try {
+    return new URL(url).host
+  } catch {
+    return url
+  }
+}
+
+/**
+ * Model-facing text of one read_url result. The exact shape of the ai-search
+ * package's readUrlModelText, rebuilt here: that package is main-process code
+ * (Node imports) and cannot be imported into the renderer.
+ */
+function readUrlModelText(result: Extract<ReadUrlResult, { ok: true }>): string {
+  const end = result.offset + result.text.length
+  const name =
+    result.title !== undefined && result.title !== '' ? result.title : hostOfUrl(result.url)
+  return (
+    `${name} — characters ${result.offset}..${end} of ${result.totalChars}` +
+    (result.truncated ? ' (continue with offset)' : ' (end)') +
+    `\n${result.url}\n\n${result.text}`
+  )
+}
+
 /**
  * A model that saw gateway-flattened tool results can regurgitate them as the
  * html argument (raw {"index":…} block dumps, literal </tool_response> tags);
@@ -887,6 +934,18 @@ async function executeAsyncTool(
         output: lines.join('\n') || '(no results)',
         mutated: false,
         summary: t('aiSumWebSearchDone', { query, count: r.results.length }),
+      }
+    }
+    case 'read_url': {
+      const r = await window.desktop.readUrl(
+        String(call.input.url),
+        typeof call.input.offset === 'number' ? Math.max(0, Math.floor(call.input.offset)) : 0,
+      )
+      if (!r.ok) return fail(t('aiSumReadUrl'), r.error || 'reading the page failed')
+      return {
+        output: readUrlModelText(r),
+        mutated: false,
+        summary: t('aiSumReadUrlDone', { host: hostOfUrl(r.url), count: r.text.length }),
       }
     }
     case 'image_search': {
@@ -1254,6 +1313,7 @@ function executeToolUnguarded(
   // insert_image maintains the baseline itself right at its synchronous write.
   if (
     call.name === 'web_search' ||
+    call.name === 'read_url' ||
     call.name === 'image_search' ||
     call.name === 'insert_image' ||
     call.name === 'insert_picture' ||

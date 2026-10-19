@@ -77,6 +77,8 @@ export const id = {
   aiToolReadFile: 'Baca {name}',
   aiToolWebSearch: 'Pencarian web',
   aiToolWebSearchDone: 'Mencari "{query}" ({count} hasil)',
+  aiToolReadUrl: 'Baca halaman web',
+  aiToolReadUrlDone: 'Membaca {host} ({chars} karakter)',
   aiToolFindCells: 'Cari sel',
   aiToolFindCellsOf: 'Mencari "{query}" ({count} kecocokan)',
   aiToolFindErrors: 'Memindai kesalahan rumus ({count})',

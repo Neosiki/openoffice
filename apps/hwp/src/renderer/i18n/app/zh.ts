@@ -55,6 +55,8 @@ export const zh = {
   aiStarterProofreadPrompt: '请找出这篇文档中的拼写和空格错误并修正。',
   aiToolRead: '已读取文档',
   aiToolFind: '查找“{text}” · {count} 处',
+  aiToolReadUrl: '已读取 {host} · {n} 字',
+  aiToolReadUrlFail: '无法读取 {host}',
   aiToolFields: '已查看表单域 · {count} 个',
   aiToolToc: '添加了目录 · {count} 个标题',
   aiToolTocRefresh: '重新写了目录页码 · {count}',

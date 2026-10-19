@@ -6,7 +6,7 @@ import type {
   RenderSlide,
   ShapeRenderNode,
 } from '@genoffice/pptx-render'
-import type { AgentToolCall, AgentToolDef, SlideComment } from '../../shared/ipc'
+import type { AgentToolCall, AgentToolDef, ReadUrlResult, SlideComment } from '../../shared/ipc'
 import { OP_GROUPS, opGuide, opGuideCatalog, opSignatureIndex } from '@genoffice/pptx-ops/op-docs'
 import { auditSlideLayout, formatAudit } from '@genoffice/pipelines/slides/layout-audit'
 import { findSlideTemplate, listSlideTemplates } from '@genoffice/pipelines/slides/templates'
@@ -367,6 +367,26 @@ const TOOLS: AgentToolDef[] = [
     },
   },
   {
+    name: 'read_url',
+    description:
+      "Read the text of a web page (http/https) — an article, a document, or a skill's instructions (SKILL.md on GitHub). HTML is converted to readable text and links are kept. Long pages are cut at 50,000 characters; continue with offset. Downloads (PDF, images, Office files) are not supported: ask the user to attach those. GitHub blob links are converted to the raw (or API) address automatically; private repositories work when the user adds a read-only GitHub token in settings, and a directory list is readable at api.github.com/repos/…/contents/. Relative links inside a skill document resolve against that document's address.",
+    inputSchema: {
+      type: 'object',
+      properties: {
+        url: {
+          type: 'string',
+          description: 'The http(s) address of the page to read',
+        },
+        offset: {
+          type: 'integer',
+          description:
+            'Character offset to start from (default 0); use the next offset of a truncated read to continue',
+        },
+      },
+      required: ['url'],
+    },
+  },
+  {
     name: 'image_search',
     description:
       'Search image assets (for slide imagery). Returns a list of imageUrl; after choosing, insert with insert_web_image.',
@@ -576,7 +596,7 @@ const TOOLS: AgentToolDef[] = [
           type: 'string',
           enum: ['user', 'document', 'search', 'sample'],
           description:
-            "Required when the brief carries specific figures (%, money, magnitudes): where they came from — 'user'/'document'/'search' (run web_search first)/'sample' (disclose to the user)",
+            "Required when the brief carries specific figures (%, money, magnitudes): where they came from — 'user'/'document'/'search' (run web_search or read_url first)/'sample' (disclose to the user)",
         },
       },
       required: ['slideIndex', 'brief'],
@@ -658,7 +678,7 @@ const TOOLS: AgentToolDef[] = [
           type: 'string',
           enum: ['user', 'document', 'search', 'sample'],
           description:
-            "Required when topic/context/briefs carry specific figures (%, money, magnitudes): where they came from — 'user'/'document'/'search' (run web_search first)/'sample' (disclose to the user)",
+            "Required when topic/context/briefs carry specific figures (%, money, magnitudes): where they came from — 'user'/'document'/'search' (run web_search or read_url first)/'sample' (disclose to the user)",
         },
       },
     },
@@ -719,7 +739,7 @@ const TOOLS: AgentToolDef[] = [
           type: 'string',
           enum: ['user', 'document', 'search', 'sample'],
           description:
-            "Required when passing series: provenance of the values ('user'/'document'/'search'/'sample'; 'search' needs a prior web_search, 'sample' must be disclosed to the user)",
+            "Required when passing series: provenance of the values ('user'/'document'/'search'/'sample'; 'search' needs a prior web_search or read_url, 'sample' must be disclosed to the user)",
         },
         colorScheme: {
           type: 'string',
@@ -749,7 +769,7 @@ const TOOLS: AgentToolDef[] = [
       'Units are document-space EMU. read_slide reports px and its exact "1 px = N EMU" factor — convert with that N (9525 only on a standard 16:9 deck; other page sizes differ). Font sizes are pt.\n' +
       'Full op reference (the same executor every editing surface uses), one signature per op; ? marks optional fields:\n' +
       opSignatureIndex() +
-      '\naddChart additionally takes dataSource:"user"|"document"|"search"|"sample" (figure provenance, checked before the batch runs; "search" needs a web_search in this conversation).' +
+      '\naddChart additionally takes dataSource:"user"|"document"|"search"|"sample" (figure provenance, checked before the batch runs; "search" needs a web_search or read_url in this conversation).' +
       '\nFor field tables, runnable JSON examples and common mistakes call load_guide with the group name(s) above before a batch you have not done before. ' +
       "A failing op's error also returns its exact one-line signature, and dry_run rehearses the whole batch without touching the deck. An unknown op name returns the full vocabulary.",
     inputSchema: {
@@ -1138,7 +1158,7 @@ export function createSlidesSkill(access: DeckAccess): AgentSkill {
 
 interface SkillState {
   htmlGenerated: boolean
-  /** A web_search ran in this conversation — unlocks dataSource:'search' in the figure gate */
+  /** A web_search or a successful read_url ran in this conversation — unlocks dataSource:'search' in the figure gate */
   webSearched?: boolean
   /** Number of pages most recently planned by plan_deck, used by the progress checklist to remind the AI to finish */
   plannedPages?: number
@@ -1324,7 +1344,8 @@ const fail = (summary: string, output: string) => ({
 // Prompt rules ("search before writing data") did not stop invented numbers being
 // delivered as fact, so provenance is enforced at the tool layer: chart data and
 // data-dense briefs must declare a dataSource, 'search' is only accepted after a
-// real web_search in this conversation, and 'sample' figures must be disclosed.
+// real web_search or a successful read_url in this conversation, and 'sample'
+// figures must be disclosed.
 
 /** Specific figures: percentages, money, magnitude units, decimals — not bare years/counts */
 const SPECIFIC_FIGURE_RE =
@@ -1352,22 +1373,22 @@ function dataSourceGateErrorForInput(
   if (src === 'search') {
     if (state?.webSearched) return null
     return (
-      "dataSource is 'search' but no web_search has run in this conversation. " +
-      'Run web_search first and build the figures from the results (cite them to the user), ' +
+      "dataSource is 'search' but no web_search has run and no read_url has succeeded in this conversation. " +
+      'Run web_search first (or read a page with read_url) and build the figures from the results (cite them to the user), ' +
       "or declare 'user'/'document' if the figures actually came from the user or this deck."
     )
   }
   return (
     'This call carries specific figures, so dataSource is required: ' +
     "'user' (figures supplied by the user or attachments), 'document' (read from this deck), " +
-    "'search' (from web_search results — run it first), or 'sample' (illustrative placeholders; " +
+    "'search' (from web_search or read_url results — run one first), or 'sample' (illustrative placeholders; " +
     'you must tell the user they are NOT real data). Never present invented numbers as facts.'
   )
 }
 
 /** Appended to a successful tool output when the model declared the figures illustrative. */
 const SAMPLE_DATA_NOTE =
-  '\nNOTE: dataSource is "sample" — you MUST tell the user these figures are illustrative placeholders, not real data, and offer to research real numbers with web_search.'
+  '\nNOTE: dataSource is "sample" — you MUST tell the user these figures are illustrative placeholders, not real data, and offer to research real numbers with web_search or read_url.'
 
 /** Append the missing-image report to the tool output: the model learns which pages lack images and how to fix them, instead of silently treating it as success. */
 function imageFailNote(fails?: { page: number; url: string }[]): string {
@@ -1511,6 +1532,31 @@ function auditTouchedPages(
   )
 }
 
+/** The host of a page address, for the model text's name line when the page has no title. */
+function readUrlHost(rawUrl: string): string {
+  try {
+    return new URL(rawUrl).host
+  } catch {
+    return rawUrl
+  }
+}
+
+/**
+ * The model-facing text of one page read, the same shape the shared tool shapes
+ * (readUrlModelText in packages/ai-search): a name line with the character
+ * window, the final address on its own line, then the text.
+ */
+function readUrlModelText(result: Extract<ReadUrlResult, { ok: true }>): string {
+  const end = result.offset + result.text.length
+  const name =
+    result.title !== undefined && result.title !== '' ? result.title : readUrlHost(result.url)
+  return (
+    `${name} — characters ${result.offset}..${end} of ${result.totalChars}` +
+    (result.truncated ? ' (continue with offset)' : ' (end)') +
+    `\n${result.url}\n\n${result.text}`
+  )
+}
+
 async function executeTool(
   access: DeckAccess,
   call: AgentToolCall,
@@ -1640,6 +1686,24 @@ async function executeTool(
         mutated: false,
         summary: t('aiSumWebSearch', { query, count: r.results.length }),
         display,
+      }
+    }
+
+    case 'read_url': {
+      const rawOffset = call.input.offset
+      const offset =
+        typeof rawOffset === 'number' && Number.isFinite(rawOffset)
+          ? Math.max(0, Math.floor(rawOffset))
+          : 0
+      const r = await window.slidesApi.readUrl(String(call.input.url ?? ''), offset)
+      // the page's own English failure sentence goes to the model; the summary line is the label
+      if (!r.ok) return fail(t('aiFailReadUrl'), r.error)
+      // a page read is source material: the figure gate accepts dataSource:'search' after it
+      if (state) state.webSearched = true
+      return {
+        output: readUrlModelText(r),
+        mutated: false,
+        summary: t('aiSumReadUrl', { host: readUrlHost(r.url), n: r.text.length }),
       }
     }
 

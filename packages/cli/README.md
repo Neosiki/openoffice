@@ -51,6 +51,7 @@ ieumoffice convert form.odt --to docx|pdf|md|html      # through the ODT bridge 
 ieumoffice convert report.docx --to odt                # also md→odt and html→odt; warnings[] odt_converted / odt_dropped + detail.odt_report
 ieumoffice capabilities --json                        # which of search, image generation, image/video analysis and the PDF AI jobs work here and by which route (free, key, subscription); no model call
 ieumoffice search "electron headless export" [--images] [--max 6] --json
+ieumoffice read-url https://example.com/guide.md [--offset 50000] --json   # the readable text of an http(s) page (article, document, skill); the address goes to that site; private GitHub files use the app's read-only token
 ieumoffice image "isometric office, soft light" --aspect 16:9 --out hero.png
 ieumoffice media photo.jpg --ask "What text is in this picture?" --json
 ieumoffice docs read report.docx [--range 0-9] [--html] [--full] [--comments] [--revisions] [--header-footer] --json   # blocks (--full: whole text), comment threads, tracked changes, header/footer text
@@ -252,10 +253,13 @@ Independently of the PATH, every launch of the packaged app writes the launcher 
 app's own AI settings (`IeumOffice/ai-settings.json` in the platform config
 directory, override with `GENOFFICE_AI_SETTINGS`). The command line only reads
 those settings; it has no login of its own and stores no credentials.
-`HTTPS_PROXY` / `HTTP_PROXY` / `ALL_PROXY` are honoured. Search results, image
-bytes and analysis text come back in the JSON `detail`; `image` also writes the
-file. These, and the PDF document jobs below (`pdf ai-read`, `pdf translate`),
-are the only commands that send data off the machine.
+`read-url` reads only the GitHub token from the same file. `HTTPS_PROXY` /
+`HTTP_PROXY` / `ALL_PROXY` are honoured. Search results, image bytes and
+analysis text come back in the JSON `detail`; `image` also writes the file.
+These commands, and the PDF document jobs below (`pdf ai-read`,
+`pdf translate`), are the only ones that send data off the machine: `read-url`
+sends the address it is given to that site, the rest send to the configured
+provider.
 
 A command, like an MCP tool call, is an **automatic call**: nobody is looking
 at a screen when it runs. That decides which route it may take.
@@ -285,6 +289,27 @@ at a screen when it runs. That decides which route it may take.
   hourly cap. A switch turned on under the older warning (which promised one)
   reads as off until the user turns it on again. A login billed by usage that
   the user accepted and selected counts as a key route, not as a subscription.
+
+### Reading web pages
+
+`ieumoffice read-url <url> [--offset <n>]` fetches one http(s) page and returns
+its readable text (HTML is converted; the address goes to that site, not to an
+AI provider). `detail` carries `url` (the final address after redirects),
+`title`, `text`, `offset`, `totalChars`, `truncated` and, while the page
+continues, `nextOffset` — pass it as `--offset` to read on. A page is cut at
+50,000 characters per call. GitHub blob addresses are read as raw text; a
+private file uses the read-only GitHub token set under Settings → AI in
+IeumOffice. The command uses no provider, subscription or automatic-call
+ledger.
+
+A page that is not text (a PDF, image or Office file) is refused: download and
+attach it instead. Such a refusal is exit 1, `error: "unsupported"`, with
+`detail.reason` `blocked` (a private or loopback address) or `no_text`; the
+binary-page message names the reason and asks for an attachment. A fetch that
+fails exits 4, `error: "app_unavailable"`, with `detail.errorCode` `network`,
+`timeout`, `http_error` (plus `detail.status` when the server gave one) or
+`auth` (check the GitHub token). A page over 10 MB exits 4 with
+`error: "resource_limit"` and `detail.max_bytes`.
 
 ### PDF document jobs
 

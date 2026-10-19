@@ -59,6 +59,8 @@ export const id = {
   aiStarterProofreadPrompt: 'Temukan kesalahan ejaan dan spasi dalam dokumen ini lalu perbaiki.',
   aiToolRead: 'Dokumen dibaca',
   aiToolFind: 'Mencari "{text}" · {count} ditemukan',
+  aiToolReadUrl: '{host} dibaca · {n} karakter',
+  aiToolReadUrlFail: 'Tidak dapat membaca {host}',
   aiToolFields: 'Bidang formulir diperiksa · {count}',
   aiToolToc: 'Menambahkan daftar isi · {count} judul',
   aiToolTocRefresh: 'Menulis ulang nomor halaman daftar isi · {count}',

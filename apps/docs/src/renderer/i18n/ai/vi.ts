@@ -118,6 +118,8 @@ export const vi = {
   aiSumReadAttachmentName: 'Đọc tệp đính kèm {name}',
   aiSumWebSearch: 'Tìm kiếm trên web',
   aiSumWebSearchDone: 'Đã tìm kiếm "{query}" ({count} kết quả)',
+  aiSumReadUrl: 'Đọc trang web',
+  aiSumReadUrlDone: 'Đã đọc {host} · {count} ký tự',
   aiSumImageSearch: 'Tìm kiếm hình ảnh',
   aiSumImageSearchDone: 'Đã tìm hình ảnh "{query}" ({count} hình ảnh)',
   aiSumAnalyzeMedia: 'Phân tích phương tiện',

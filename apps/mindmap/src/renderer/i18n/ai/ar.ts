@@ -54,6 +54,8 @@ export const ar = {
   aiToolWriteMapFailed: 'تعذّرت كتابة الخريطة',
   aiToolWebSearch: 'بحث ويب',
   aiToolWebSearchDone: 'بحث عن "{query}" · {count} نتيجة',
+  aiToolReadUrl: 'قراءة صفحة ويب',
+  aiToolReadUrlDone: 'قُرئ {host} · {chars} حرفًا',
   aiSumReadAttachment: 'قراءة المرفق',
   aiSumImageAttachment: 'مرفق صورة {name}',
   aiSumReadAttachmentName: 'قراءة المرفق {name}',

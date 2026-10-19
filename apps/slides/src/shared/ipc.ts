@@ -1274,6 +1274,23 @@ export type MenuCommand =
 /** Which of a design template's two sample covers to draw: Korean for a Korean UI, English otherwise */
 export type TemplateCoverLang = 'ko' | 'en'
 
+/** One page of a web page read for the AI (the shared ai:read-url handler) */
+export type ReadUrlResult =
+  | {
+      ok: true
+      /** the final address after redirects */
+      url: string
+      title?: string
+      text: string
+      /** where this slice of the text starts */
+      offset: number
+      totalChars: number
+      truncated: boolean
+      /** where the next slice starts; only when truncated */
+      nextOffset?: number
+    }
+  | { ok: false; error: string; errorCode: string }
+
 export interface SlidesApi {
   /** current UI language (persisted by the shell in app-settings.json) */
   getLanguage: () => Promise<
@@ -1725,6 +1742,8 @@ export interface SlidesApi {
     /** failure reason when method === 'error' */
     error?: string
   }>
+  /** Read one web page as text (the shared ai:read-url handler), paged by character offset */
+  readUrl: (url: string, offset?: number) => Promise<ReadUrlResult>
   imageSearch: (
     query: string,
     maxResults?: number,

@@ -54,6 +54,8 @@ export const hi = {
   aiToolWriteMapFailed: 'मैप नहीं लिखा जा सका',
   aiToolWebSearch: 'वेब खोज',
   aiToolWebSearchDone: '"{query}" खोजा · {count} परिणाम',
+  aiToolReadUrl: 'वेब पेज पढ़ें',
+  aiToolReadUrlDone: '{host} पढ़ा · {chars} अक्षर',
   aiSumReadAttachment: 'अनुलग्नक पढ़ें',
   aiSumImageAttachment: 'चित्र अनुलग्नक {name}',
   aiSumReadAttachmentName: 'अनुलग्नक {name} पढ़ें',

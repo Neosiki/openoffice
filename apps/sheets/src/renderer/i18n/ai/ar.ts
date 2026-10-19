@@ -77,6 +77,8 @@ export const ar = {
   aiToolReadFile: 'قراءة {name}',
   aiToolWebSearch: 'البحث على الويب',
   aiToolWebSearchDone: 'تم البحث عن "{query}" ({count} من النتائج)',
+  aiToolReadUrl: 'قراءة صفحة ويب',
+  aiToolReadUrlDone: 'قُرئ {host} ({chars} حرفًا)',
   aiToolFindCells: 'البحث عن خلايا',
   aiToolFindCellsOf: 'تم البحث عن "{query}" ({count} من التطابقات)',
   aiToolFindErrors: 'فحص أخطاء الصيغ ({count})',

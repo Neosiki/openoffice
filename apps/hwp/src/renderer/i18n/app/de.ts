@@ -62,6 +62,8 @@ export const de = {
     'Finde die Rechtschreib- und Leerzeichenfehler in diesem Dokument und korrigiere sie.',
   aiToolRead: 'Dokument gelesen',
   aiToolFind: 'Nach „{text}“ gesucht · {count} gefunden',
+  aiToolReadUrl: '{host} gelesen · {n} Zeichen',
+  aiToolReadUrlFail: '{host} konnte nicht gelesen werden',
   aiToolFields: 'Formularfelder geprüft · {count}',
   aiToolToc: 'Inhaltsverzeichnis eingefügt · {count} Überschriften',
   aiToolTocRefresh: 'Seitenzahlen des Inhaltsverzeichnisses neu geschrieben · {count}',

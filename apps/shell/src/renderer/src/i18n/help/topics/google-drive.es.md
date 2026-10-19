@@ -30,7 +30,7 @@ El inicio de sesión se guarda en este PC, cifrado con la protección que Window
 - Mientras **Dejar que la IA busque y lea archivos en Drive** esté activado (lo está al conectar), la IA de cada editor puede buscar en tu Drive y leer archivos. Por ejemplo: «Busca en Drive el acta de la reunión del mes pasado y resúmela».
 - Lo que lee la IA va al proveedor de IA que usas. Las partes ocultas a la IA siguen ocultas.
 - La IA no puede modificar, eliminar ni compartir archivos de Drive.
-- Cuando un chat contiene algo leído de Drive, la búsqueda web, la búsqueda de imágenes y las imágenes por dirección web dejan de funcionar en ese chat. Empieza un chat nuevo para volver a usarlas.
+- Cuando un chat contiene algo leído de Drive, la búsqueda web, la búsqueda de imágenes , la lectura de páginas por dirección web y las imágenes por dirección web dejan de funcionar en ese chat. Empieza un chat nuevo para volver a usarlas.
 
 ## Desconectar
 

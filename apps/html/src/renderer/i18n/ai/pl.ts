@@ -49,6 +49,8 @@ export const pl = {
   aiTimeoutError: 'Przekroczono czas odpowiedzi AI',
   aiToolWebSearch: 'Wyszukiwanie w sieci',
   aiToolWebSearchDone: 'Wyszukano „{query}" · {count} wyników',
+  aiToolReadUrl: 'Odczyt strony internetowej',
+  aiToolReadUrlDone: 'Odczytano {host} · {chars} znaków',
   aiTruncatedNote: '(Odpowiedź została ucięta przez limit długości i może być niepełna.)',
   aiTurnLimit: 'Osiągnięto limit kroków — wyślij kolejną instrukcję, aby kontynuować.',
   aiUndelivered: 'Nie wysłano',

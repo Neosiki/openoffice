@@ -49,6 +49,8 @@ export const it = {
   aiTimeoutError: 'Timeout della risposta IA',
   aiToolWebSearch: 'Ricerca web',
   aiToolWebSearchDone: 'Cercato "{query}" · {count} risultati',
+  aiToolReadUrl: 'Lettura pagina web',
+  aiToolReadUrlDone: 'Letto {host} · {chars} caratteri',
   aiTruncatedNote:
     '(La risposta è stata troncata dal limite di lunghezza e potrebbe essere incompleta.)',
   aiTurnLimit: "Raggiunto il limite di passaggi per esecuzione — invia un'altra istruzione.",

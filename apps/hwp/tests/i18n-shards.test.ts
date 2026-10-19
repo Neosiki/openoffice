@@ -25,6 +25,8 @@ describe('hwp renderer strings', () => {
   it('keeps the placeholders of the AI panel labels in every language', () => {
     const placeholders = {
       aiToolFind: ['{text}', '{count}'],
+      aiToolReadUrl: ['{host}', '{n}'],
+      aiToolReadUrlFail: ['{host}'],
       aiToolFields: ['{count}'],
       aiToolFill: ['{name}'],
       aiToolNotDone: ['{what}'],

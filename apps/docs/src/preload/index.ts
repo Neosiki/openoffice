@@ -206,6 +206,7 @@ const api: DesktopApi = {
   aiToolCapabilities: () => ipcRenderer.invoke('ai:tool-capabilities'),
   webSearch: (query: string, maxResults?: number) =>
     ipcRenderer.invoke('ai:web-search', query, maxResults),
+  readUrl: (url: string, offset?: number) => ipcRenderer.invoke('ai:read-url', url, offset),
   imageSearch: (query: string, maxResults?: number) =>
     ipcRenderer.invoke('ai:image-search', query, maxResults),
   analyzeMedia: (op: { mediaUrls: string[]; requirements: string }) =>

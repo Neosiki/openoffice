@@ -74,6 +74,8 @@ export const he = {
   aiToolReadFile: 'קריאת {name}',
   aiToolWebSearch: 'חיפוש באינטרנט',
   aiToolWebSearchDone: 'בוצע חיפוש "{query}" ({count} תוצאות)',
+  aiToolReadUrl: 'קריאת דף אינטרנט',
+  aiToolReadUrlDone: 'נקרא {host} ({chars} תווים)',
   aiToolFindCells: 'חיפוש תאים',
   aiToolFindCellsOf: 'בוצע חיפוש "{query}" ({count} התאמות)',
   aiToolFindErrors: 'סריקת שגיאות נוסחה ({count})',

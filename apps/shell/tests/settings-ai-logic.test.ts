@@ -15,9 +15,11 @@ import {
   mediaKeyProviders,
   mediaSelection,
   mediaSpecialChoices,
+  readUrlGithubToken,
   withAiSelection,
   withHeadlessSubscription,
   withLiveSelectionFields,
+  withReadUrlGithubToken,
   writeAiSettings,
 } from '../src/renderer/src/settings-ai'
 import {
@@ -170,6 +172,7 @@ describe('a key pane save', () => {
       headlessSubscriptionConsentVersion: HEADLESS_SUBSCRIPTION_CONSENT_VERSION,
       subscriptionNoticeSeen: true,
       meteredAccepted: { codex: true },
+      readUrl: { githubToken: 'ghp_live' },
     })
     const merged = withLiveSelectionFields({ ...draft, maxOutputTokens: 9216 }, latest)
     expect(merged).toMatchObject({
@@ -179,6 +182,8 @@ describe('a key pane save', () => {
       headlessSubscriptionConsentVersion: HEADLESS_SUBSCRIPTION_CONSENT_VERSION,
       subscriptionNoticeSeen: true,
       meteredAccepted: { codex: true },
+      // a key pane draft must not drop a token saved while it was open
+      readUrl: { githubToken: 'ghp_live' },
       maxOutputTokens: 9216,
     })
     // nothing readable: the draft goes out as it is
@@ -210,6 +215,61 @@ describe('the automatic-requests switch', () => {
     } finally {
       vi.unstubAllGlobals()
     }
+  })
+})
+
+describe('the GitHub read token', () => {
+  afterEach(() => vi.unstubAllGlobals())
+
+  it('sets the field, trims it, and removes it when cleared', () => {
+    const empty = settingsWith()
+    expect(readUrlGithubToken(empty)).toBe('')
+    const saved = withReadUrlGithubToken(empty, '  ghp_test  ')
+    expect(saved.readUrl).toEqual({ githubToken: 'ghp_test' })
+    expect(readUrlGithubToken(saved)).toBe('ghp_test')
+    const cleared = withReadUrlGithubToken(saved, '   ')
+    expect('readUrl' in cleared).toBe(false)
+    expect(readUrlGithubToken(cleared)).toBe('')
+  })
+
+  it('saves and deletes the token without touching the other settings', async () => {
+    const initial = settingsWith({
+      provider: 'codex',
+      maxOutputTokens: 9216,
+      providers: {
+        ...settingsWith().providers,
+        openai: { apiKey: 'sk-test', model: 'gpt-test' },
+      },
+    })
+    const file = { stored: initial, writes: 0 }
+    vi.stubGlobal('window', {
+      aiOffice: {
+        getAiSettings: async () => file.stored,
+        setAiSettings: async (next: AiSettings) => {
+          file.stored = next
+          file.writes += 1
+        },
+      },
+    })
+
+    expect(
+      await changeAiSettings((current) => withReadUrlGithubToken(current, ' ghp_test ')),
+    ).toMatchObject({ readUrl: { githubToken: 'ghp_test' } })
+    expect(file.stored.readUrl).toEqual({ githubToken: 'ghp_test' })
+    expect(file.stored).toMatchObject({
+      provider: 'codex',
+      maxOutputTokens: 9216,
+      providers: initial.providers,
+    })
+
+    expect(await changeAiSettings((current) => withReadUrlGithubToken(current, ''))).not.toBeNull()
+    expect('readUrl' in file.stored).toBe(false)
+    expect(file.stored).toMatchObject({
+      provider: 'codex',
+      maxOutputTokens: 9216,
+      providers: initial.providers,
+    })
+    expect(file.writes).toBe(2)
   })
 })
 

@@ -59,6 +59,8 @@ export const ms = {
   aiStarterProofreadPrompt: 'Cari kesalahan ejaan dan jarak dalam dokumen ini dan betulkan.',
   aiToolRead: 'Dokumen dibaca',
   aiToolFind: 'Mencari "{text}" · {count} ditemui',
+  aiToolReadUrl: '{host} dibaca · {n} aksara',
+  aiToolReadUrlFail: 'Gagal membaca {host}',
   aiToolFields: 'Medan borang disemak · {count}',
   aiToolToc: 'Menambah jadual kandungan · {count} tajuk',
   aiToolTocRefresh: 'Menulis semula nombor halaman jadual kandungan · {count}',

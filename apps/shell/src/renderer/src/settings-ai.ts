@@ -113,8 +113,9 @@ export function changeAiSettings(
 /**
  * The fields the always-visible part of the AI screen writes at once (which AI
  * to use, the accepted metered logins, the automatic-requests switch, the
- * notice flag). A key pane saves a draft it loaded earlier; taking these from
- * the file as it is now keeps that save from undoing them.
+ * notice flag, the web-reading token). A key pane saves a draft it loaded
+ * earlier; taking these from the file as it is now keeps that save from
+ * undoing them.
  */
 export function withLiveSelectionFields(draft: AiSettings, latest: AiSettings | null): AiSettings {
   if (!latest) return draft
@@ -125,6 +126,7 @@ export function withLiveSelectionFields(draft: AiSettings, latest: AiSettings | 
     headlessSubscriptionEnabled: latest.headlessSubscriptionEnabled,
     headlessSubscriptionConsentVersion: latest.headlessSubscriptionConsentVersion,
     subscriptionNoticeSeen: latest.subscriptionNoticeSeen,
+    readUrl: latest.readUrl,
   }
 }
 
@@ -141,6 +143,25 @@ export function withHeadlessSubscription(settings: AiSettings, on: boolean): AiS
         headlessSubscriptionConsentVersion: HEADLESS_SUBSCRIPTION_CONSENT_VERSION,
       }
     : { ...settings, headlessSubscriptionEnabled: false }
+}
+
+// ── web reading (read_url) ────────────────────────────────
+
+/** The stored GitHub token for read_url; '' means public pages only. */
+export function readUrlGithubToken(settings: Pick<AiSettings, 'readUrl'>): string {
+  return settings.readUrl?.githubToken ?? ''
+}
+
+/**
+ * Settings with read_url's GitHub token set, or with the field removed when it
+ * is blank. The settings file stores it in plain text, like the provider keys,
+ * because the terminal and MCP paths read that file without Electron.
+ */
+export function withReadUrlGithubToken(settings: AiSettings, token: string): AiSettings {
+  const githubToken = token.trim()
+  if (githubToken) return { ...settings, readUrl: { githubToken } }
+  const { readUrl: _removed, ...rest } = settings
+  return rest
 }
 
 // ── which AI to use ───────────────────────────────────────

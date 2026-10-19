@@ -60,6 +60,8 @@ export const cs = {
     'Najdi v tomto dokumentu pravopisné chyby a chyby v mezerách a oprav je.',
   aiToolRead: 'Dokument přečten',
   aiToolFind: 'Hledáno „{text}“ · nalezeno: {count}',
+  aiToolReadUrl: '{host} přečteno · {n} znaků',
+  aiToolReadUrlFail: 'Nepodařilo se přečíst {host}',
   aiToolFields: 'Pole formuláře zkontrolována · {count}',
   aiToolToc: 'Přidán obsah · nadpisů: {count}',
   aiToolTocRefresh: 'Přepsána čísla stran obsahu · {count}',

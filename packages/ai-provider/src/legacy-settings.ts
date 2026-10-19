@@ -18,6 +18,7 @@ import {
   defaultAiSettings,
   headlessConsentVersionOf,
   headlessSubscriptionOn,
+  readUrlSettingsOf,
   resolveAiSettings,
   sanitizeMeteredAccepted,
 } from './providers'
@@ -123,8 +124,10 @@ export function normalizeAiSettings(
       ? (provider as AiProviderSelection)
       : DEFAULT_AI_PROVIDER_SELECTION
   const fallback = defaultAiSettings()
+  const readUrl = readUrlSettingsOf(resolved.readUrl)
   return {
     ...resolved,
+    ...(readUrl ? { readUrl } : {}),
     provider: selection,
     providers: {
       ...fallback.providers,

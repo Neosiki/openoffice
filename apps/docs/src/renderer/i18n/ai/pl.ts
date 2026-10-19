@@ -119,6 +119,8 @@ export const pl = {
   aiSumReadAttachmentName: 'Odczyt załącznika {name}',
   aiSumWebSearch: 'Wyszukiwanie w internecie',
   aiSumWebSearchDone: 'Wyszukano „{query}” ({count} wyników)',
+  aiSumReadUrl: 'Czytanie strony internetowej',
+  aiSumReadUrlDone: 'Przeczytano {host} · {count} znaków',
   aiSumImageSearch: 'Wyszukiwanie obrazów',
   aiSumImageSearchDone: 'Wyszukiwanie obrazów „{query}” ({count} obrazów)',
   aiSumAnalyzeMedia: 'Analizuj multimedia',

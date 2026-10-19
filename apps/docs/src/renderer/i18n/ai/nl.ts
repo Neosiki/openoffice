@@ -120,6 +120,8 @@ export const nl = {
   aiSumReadAttachmentName: 'Bijlage {name} lezen',
   aiSumWebSearch: 'Zoeken op internet',
   aiSumWebSearchDone: 'Gezocht naar "{query}" ({count} resultaten)',
+  aiSumReadUrl: 'Webpagina lezen',
+  aiSumReadUrlDone: '{host} gelezen · {count} tekens',
   aiSumImageSearch: 'Afbeeldingen zoeken',
   aiSumImageSearchDone: 'Afbeeldingen gezocht met "{query}" ({count} afbeeldingen)',
   aiSumAnalyzeMedia: 'Media analyseren',

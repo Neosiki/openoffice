@@ -5,6 +5,7 @@ AI가 쓰는 부가 도구(웹 검색, 이미지 검색, 이미지 생성, 미�
 ## 맡은 범위
 
 - 검색: `webSearch`·`imageSearch`와 백엔드별 구현(`src/index.ts`), 설정 파일을 읽어 옵션으로 바꾸는 `webSearchTool`·`imageSearchTool`·`searchOptionsFromSettings`(`src/search-tools.ts`), 키 없는 Parallel 검색(`src/parallel-mcp.ts`).
+- 웹 페이지 읽기: `readUrlTool`·`readUrlModelText`(`src/read-url.ts`)과 HTML→글 변환 `htmlToText`(`src/html-text.ts`). 주소는 `fetchWithSsrfGuard`로 받고 10MB·30초·50,000자 상한과 나눠 읽기(offset)를 두며, 설정의 `readUrl.githubToken`은 비공개 GitHub 파일을 읽을 때만 읽는다.
 - 이미지 생성과 미디어 분석: `generateImageTool`·`analyzeMediaTool`(`src/media-tools.ts`), 채팅 제공자에게 이미지를 보여 주는 분석(`src/chat-analysis.ts`).
 - 이미지 생성·미디어 분석 호출의 취소: 진행 중인 호출을 창(webContents id)별로 기억해 두고, 창이 사라지거나 그 창의 AI 실행이 중단되면 끊는 `withMediaCallSignal`·`abortMediaCalls`(`src/media-call-abort.ts`).
 - 경로 결정: `resolveImageRoute`·`resolveImageAnalysisRoute`·`resolveVideoAnalysisRoute`·`headlessSubscriptionBlocked`(`src/tool-routing.ts`)와 같은 함수로 만든 가용성 보고 `aiToolCapabilities`(`src/tool-capabilities.ts`).
@@ -40,6 +41,7 @@ AI가 쓰는 부가 도구(웹 검색, 이미지 검색, 이미지 생성, 미�
 - 키 제공자가 준 이미지 바이트는 로컬 생성 이미지 저장소(`storeGeneratedImage`)에 두고 `file://` 주소로 돌려준다. 에디터의 삽입 경로가 그 주소를 받는다.
 - 이미지 분석은 사용자가 고른 키 분석 제공자가 채워져 있으면 그쪽으로, 아니면 채팅이 도는 제공자(`chat`)로 간다. `chat` 분석은 비전이 없는 모델, 요청당 20MB를 넘는 이미지(`CHAT_ANALYSIS_MAX_BYTES`)를 거절하고 300초(`CHAT_ANALYSIS_TIMEOUT_MS`)에 끊는다. 영상·음성 분석은 영상을 읽는 키 제공자가 있을 때만 된다.
 - 잠금은 죽은 프로세스를 견딘다. 보유자가 잠금 파일의 수정 시각을 주기적으로 갱신하고, 프로세스가 사라졌거나 갱신이 멈춘 잠금은 넘겨받는다. 장부 쓰기는 임시 파일을 rename하는 방식만 쓴다.
+- HTML→글 변환은 `parse5`를 쓴다(이 패키지의 의존성). 페이지 캐시는 프로세스 메모리에만 3분·8개까지 두고, 최종 주소와 요청 주소로 찾는다.
 
 ## 테스트
 

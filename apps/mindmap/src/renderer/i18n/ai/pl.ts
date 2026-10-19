@@ -54,6 +54,8 @@ export const pl = {
   aiToolWriteMapFailed: 'Nie udało się zapisać mapy',
   aiToolWebSearch: 'Wyszukiwanie w sieci',
   aiToolWebSearchDone: 'Wyszukano „{query}" · {count} wyników',
+  aiToolReadUrl: 'Odczyt strony internetowej',
+  aiToolReadUrlDone: 'Odczytano {host} · {chars} znaków',
   aiSumReadAttachment: 'Odczyt załącznika',
   aiSumImageAttachment: 'Załącznik graficzny {name}',
   aiSumReadAttachmentName: 'Odczyt załącznika {name}',

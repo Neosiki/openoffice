@@ -9,7 +9,7 @@ Excel 통합 문서(.xlsx, .csv 등) 에디터다. 화면은 Univer 격자 위�
 - xlsx 엔진 `native/xlsx-engine`(Rust). 사이드카 실행 파일로 빌드되어 요청·응답 프로토콜로 통합 문서를 스트리밍한다.
 - IPC 계약 `src/shared/ipc-channels.ts`(`IPC_CHANNELS`)와 `src/shared/desktop-api.ts`.
 - 시트의 AI: 패널 `src/renderer/ai/AiChatPanel.tsx`, skill과 도구(`workbook-skill.ts`, `tools.ts`, `image-skill.ts`, `search-skill.ts`), 막힌 실행 판정(`subscription-state.ts`), 모델에게 보낼 열을 거르는 정책(`src/ai/privacy-policy.ts`).
-- 단독 실행용 AI 핸들러 `registerSheetsAiIpc`와 그 규칙(`src/main/ai-run.ts`).
+- 단독 실행용 AI 핸들러 `registerSheetsAiIpc`(`ai:read-url` 포함)와 그 규칙(`src/main/ai-run.ts`).
 
 ## 맡지 않는 것 (경계)
 
