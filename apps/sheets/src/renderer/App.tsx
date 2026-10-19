@@ -2124,6 +2124,9 @@ export function App({
       setPendingEdits(journalSize(state.editJournal))
     }
     void window.desktopApi.getUserDisplayName?.().then((name) => threadStore.setAuthor(name))
+    const offAuthorChanged = window.desktopApi.onUserDisplayNameChanged?.((name) =>
+      threadStore.setAuthor(name),
+    )
     // Univer's own UI (rule-management panels, dialogs) follows the app
     // language instead of hard-coded English.
     void applyUniverLocale(runtime, getLang())
@@ -3379,6 +3382,7 @@ export function App({
       unsubscribeCloseSave()
       offThemeChanged?.()
       offDocThemeChanged?.()
+      offAuthorChanged?.()
       undoRedoSub.unsubscribe()
       findRevealDispose()
       gridGrowthDispose()

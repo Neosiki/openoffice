@@ -15,6 +15,7 @@ import { installDropOpenBridge } from '@genoffice/electron-utils/drop-open'
 import type { UpdateUiState } from '../shared/update-api'
 import { normalizeAiPanelPrefs } from '@genoffice/ui/ai-panel-prefs'
 import type {
+  AuthorNameSetting,
   DefaultAppStatus,
   FolderListing,
   FolderRoot,
@@ -119,6 +120,14 @@ function normalizeDefaultAppStatus(result: unknown): DefaultAppStatus {
     state: state === 'default' || state === 'other' || state === 'unknown' ? state : 'unsupported',
     others: Array.isArray(r.others) ? r.others.filter((x) => typeof x === 'string') : [],
     manualOnly: r.manualOnly === true,
+  }
+}
+
+function normalizeAuthorNameSetting(result: unknown): AuthorNameSetting {
+  const r = (result ?? {}) as Partial<AuthorNameSetting>
+  return {
+    value: typeof r.value === 'string' ? r.value : '',
+    fallback: typeof r.fallback === 'string' ? r.fallback : '',
   }
 }
 
@@ -457,6 +466,12 @@ const homeApi: HomeApi = {
   },
   async openMcpLogFile() {
     await ipcRenderer.invoke(HOME_CHANNELS.openMcpLogFile)
+  },
+  async getAuthorName() {
+    return normalizeAuthorNameSetting(await ipcRenderer.invoke(HOME_CHANNELS.getAuthorName))
+  },
+  async setAuthorName(value) {
+    return normalizeAuthorNameSetting(await ipcRenderer.invoke(HOME_CHANNELS.setAuthorName, value))
   },
   async getAiPanelPrefs() {
     return normalizeAiPanelPrefs(await ipcRenderer.invoke(HOME_CHANNELS.getAiPanelPrefs))

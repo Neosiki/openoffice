@@ -472,6 +472,7 @@ import {
   type NotePrompt,
   type ReviewContext,
 } from './review-actions'
+import { authorName, onAuthorNameChanged } from './author-name'
 
 const IS_MAC = navigator.platform.toLowerCase().includes('mac')
 
@@ -1873,6 +1874,10 @@ export function App() {
     if (!editor) return
     const storage = editor.storage.trackChanges as TrackChangesStorage
     storage.enabled = trackChanges
+    storage.author = authorName()
+    return onAuthorNameChanged(() => {
+      storage.author = authorName()
+    })
   }, [editor, trackChanges])
 
   // forms protection locks the body but the form's own checkboxes stay

@@ -80,6 +80,10 @@ import {
   checkUpdatesMenuItem,
   setUpdateCheckInvoker,
   installRendererProtocol,
+  AUTHOR_NAME_KEY,
+  readAuthorNameSetting,
+  sanitizeAuthorName,
+  systemAuthorName,
   safeExternalUrl,
 } from '@genoffice/electron-utils'
 import { SPLIT_PANE_CHANNELS } from '@genoffice/electron-utils/split-pane-bridge'
@@ -280,6 +284,7 @@ import {
 import { mindmapReadOutline } from '../../../mindmap/src/main/mcp-queries'
 import type {
   AutoSaveDefault,
+  AuthorNameSetting,
   FolderListing,
   FolderRoot,
   MoveConflictPolicy,
@@ -5379,6 +5384,28 @@ function registerHomeIpc(): void {
     writeAppSetting(APP_SETTINGS_PATH(), 'documentTheme', theme)
     // the native theme is untouched — only the editors' canvas/paper follows this
     for (const wc of webContents.getAllWebContents()) wc.send('app:document-theme-changed', theme)
+  })
+
+  // comment / tracked-change author (Word: Options → General → User name);
+  // the editor mains resolve the same key via configuredAuthorName
+  const authorNameSetting = (): AuthorNameSetting => ({
+    value: readAuthorNameSetting(APP_SETTINGS_PATH()),
+    fallback: systemAuthorName(),
+  })
+  ipcMain.handle(HOME_CHANNELS.getAuthorName, (): AuthorNameSetting => authorNameSetting())
+  ipcMain.handle('app:get-author-name', (): string => {
+    const { value, fallback } = authorNameSetting()
+    return value || fallback
+  })
+  ipcMain.handle(HOME_CHANNELS.setAuthorName, (_event, raw: unknown): AuthorNameSetting => {
+    const value = sanitizeAuthorName(raw)
+    if (value !== readAuthorNameSetting(APP_SETTINGS_PATH())) {
+      writeAppSetting(APP_SETTINGS_PATH(), AUTHOR_NAME_KEY, value)
+      const effective = value || systemAuthorName()
+      for (const wc of webContents.getAllWebContents())
+        wc.send('app:author-name-changed', effective)
+    }
+    return authorNameSetting()
   })
 
   ipcMain.handle(HOME_CHANNELS.getAutoSaveDefault, (): AutoSaveDefault => currentAutoSaveDefault())
