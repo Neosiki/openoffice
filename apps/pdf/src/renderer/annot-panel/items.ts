@@ -274,6 +274,8 @@ export function buildAnnotItems(o: AnnotBuildInput): AnnotItem[] {
       rect: quadsRect(m.quads),
       color: m.color,
       text: runs ? textUnderQuads(runs, m.quads) : '',
+      // an accepted AI highlight not saved yet: the category it will save as /Subj
+      ...(typeof m.subject === 'string' && m.subject ? { category: m.subject } : {}),
       createdMs: null,
       target: { type: 'location' },
     })

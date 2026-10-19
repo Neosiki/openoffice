@@ -1428,6 +1428,15 @@ function registerPdfIpc(): void {
     return listPageImages(new Uint8Array(await readFile(path)))
   })
 
+  // only the view's own files: the categories of accepted AI highlights (reading-assist 4.3)
+  ipcMain.handle(PDF_CHANNELS.annotSubjects, async (e, path: unknown) => {
+    if (!pdfPathGranted(e.sender.id, path)) {
+      throw new Error('pdf: path not granted to this view')
+    }
+    const { readAnnotSubjects } = await import('./annot-subjects')
+    return readAnnotSubjects(new Uint8Array(await readFile(path)))
+  })
+
   ipcMain.handle(PDF_CHANNELS.listStaticFormFills, async (e, path: unknown) => {
     if (typeof path !== 'string' || !allowedByWc.get(e.sender.id)?.has(path)) {
       throw new Error('pdf: path not granted to this view')

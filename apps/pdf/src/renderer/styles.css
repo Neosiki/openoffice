@@ -6093,3 +6093,75 @@ button.ai-overview-term-page:hover {
     opacity: 0;
   }
 }
+
+/* ai highlight */
+/* the preview boxes: screen-only DOM over the page, never saved, printed or exported;
+   their fill is the label color (document data) set inline */
+.pdf-hl-preview-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.pdf-hl-preview {
+  position: absolute;
+  border-radius: 2px;
+  mix-blend-mode: multiply;
+}
+
+.pdf-highlight-label-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.pdf-highlight-label-row .pdf-modal-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.pdf-highlight-label-row select.pdf-modal-input {
+  flex: 0 0 auto;
+  width: auto;
+}
+
+.pdf-highlight-swatch {
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: 3px;
+}
+
+.pdf-hl-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--text);
+}
+
+.pdf-hl-bar-head,
+.pdf-hl-bar-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pdf-hl-bar-head > span,
+.pdf-hl-bar-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pdf-hl-waiting {
+  font-size: 11px;
+  color: var(--accent);
+}

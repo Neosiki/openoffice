@@ -5,8 +5,8 @@
  * Markdown or Word document through `createDocument` (no AI).
  *
  * Presentational: the items come built (items.ts); a click hands the item to
- * `onActivate`. Later features add filter dimensions (`facets`) and per-item
- * buttons (`renderItemActions`).
+ * `onActivate`. Later features add filter dimensions (`facets`), per-item
+ * buttons (`renderItemActions`) and a bar over the list (`toolbar`).
  */
 import { useMemo, useRef, useState, type ReactNode } from 'react'
 import { useDismissablePopover } from '@genoffice/ui'
@@ -52,6 +52,8 @@ export interface AnnotPanelProps {
   facets?: readonly AnnotFacet[]
   /** extra buttons under an item (e.g. "Add to note") */
   renderItemActions?: (item: AnnotItem) => ReactNode
+  /** a feature's bar between the filters and the list (e.g. AI highlight suggestions by label) */
+  toolbar?: ReactNode
 }
 
 const MARKUP_KINDS = new Set(['highlight', 'underline', 'strikeout'])
@@ -341,6 +343,7 @@ export function AnnotPanel(props: AnnotPanelProps) {
         )}
       </div>
 
+      {props.toolbar}
       <div className="pdf-annot-list" role="list">
         {items.length === 0 && (
           <div className="pdf-annot-empty">{props.loading ? t('apLoading') : t('apEmpty')}</div>
