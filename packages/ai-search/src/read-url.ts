@@ -62,6 +62,8 @@ export interface ReadUrlFailure {
   ok: false
   error: string
   errorCode: ReadUrlErrorCode
+  /** the HTTP status behind an http_error; no other failure carries it */
+  status?: number
 }
 
 export type ReadUrlResult = ReadUrlSuccess | ReadUrlFailure
@@ -88,8 +90,17 @@ interface PageCacheEntry {
 /** Process memory only: pages are re-downloaded after a restart, which is fine. */
 const pageCache = new Map<string, PageCacheEntry>()
 
-function failure(errorCode: ReadUrlErrorCode, error: string): ReadUrlFailure {
-  return { ok: false, error, errorCode }
+function failure(
+  errorCode: ReadUrlErrorCode,
+  error: string,
+  extra: { status?: number } = {},
+): ReadUrlFailure {
+  return {
+    ok: false,
+    error,
+    errorCode,
+    ...(extra.status !== undefined ? { status: extra.status } : {}),
+  }
 }
 
 function errorText(err: unknown): string {
@@ -188,9 +199,10 @@ function httpFailure(status: number, host: string, hasToken: boolean): ReadUrlFa
     return failure(
       'http_error',
       'GitHub answered with HTTP 404 for this file; check the address and that the token can read this repository.',
+      { status },
     )
   }
-  return failure('http_error', `The server answered with HTTP ${status}.`)
+  return failure('http_error', `The server answered with HTTP ${status}.`, { status })
 }
 
 function unsupportedType(mime: string): ReadUrlFailure {

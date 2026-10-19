@@ -520,7 +520,7 @@ describe('readUrlTool', () => {
       () => new Response('nope', { status: 503, headers: { 'content-type': 'text/html' } }),
     )
     const result = await readUrlTool(settingsFile(), 'https://8.8.8.8/t24-503', 0, { fetchImpl })
-    expect(result).toMatchObject({ ok: false, errorCode: 'http_error' })
+    expect(result).toMatchObject({ ok: false, errorCode: 'http_error', status: 503 })
     if (result.ok) throw new Error('expected failure')
     expect(result.error).toContain('503')
   })
@@ -652,7 +652,7 @@ describe('readUrlTool GitHub addresses', () => {
     const result = await readUrlTool(settingsFile('github_pat_test'), blob('gh-404-token'), 0, {
       fetchImpl,
     })
-    expect(result).toMatchObject({ ok: false, errorCode: 'http_error' })
+    expect(result).toMatchObject({ ok: false, errorCode: 'http_error', status: 404 })
     if (result.ok) throw new Error('expected failure')
     expect(result.error).toContain('404')
   })
