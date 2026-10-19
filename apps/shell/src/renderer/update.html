@@ -15,6 +15,8 @@
         --text: #242424;
         --text-muted: #878e96;
         --border: #e3e6ea;
+        --panel: #f7f9fc;
+        --code-bg: #eef1f6;
       }
       * {
         margin: 0;
@@ -109,6 +111,91 @@
       #desc.error {
         color: #b3261e;
       }
+      #notes {
+        width: 100%;
+        display: none;
+        flex-direction: column;
+        gap: 8px;
+      }
+      #notes-label {
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--text-muted);
+        text-align: left;
+      }
+      #notes-box {
+        -webkit-app-region: no-drag;
+        width: 100%;
+        max-height: 200px;
+        overflow-y: auto;
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 10px 12px;
+        text-align: left;
+        font-size: 13px;
+        line-height: 1.7;
+        color: var(--text);
+        user-select: text;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+      }
+      #notes-box .nl-h {
+        font-weight: 600;
+        margin: 10px 0 4px;
+      }
+      #notes-box .nl-h:first-child {
+        margin-top: 0;
+      }
+      #notes-box .nl-ver {
+        font-weight: 700;
+        color: var(--accent);
+        margin: 10px 0 4px;
+      }
+      #notes-box .nl-ver:first-child {
+        margin-top: 0;
+      }
+      #notes-box p {
+        margin: 0 0 8px;
+      }
+      #notes-box p:last-child {
+        margin-bottom: 0;
+      }
+      #notes-box ul,
+      #notes-box ol {
+        margin: 4px 0;
+        padding-left: 18px;
+      }
+      #notes-box li {
+        margin: 2px 0;
+      }
+      #notes-box code {
+        font-family: Consolas, 'Courier New', monospace;
+        font-size: 12px;
+        background: var(--code-bg);
+        border-radius: 4px;
+        padding: 0 4px;
+      }
+      #notes-box .nl-trunc {
+        color: var(--text-muted);
+        font-size: 12px;
+        margin-top: 8px;
+      }
+      #notes-more {
+        -webkit-app-region: no-drag;
+        align-self: flex-start;
+        background: none;
+        border: none;
+        padding: 0;
+        font-size: 12px;
+        color: var(--accent);
+        cursor: pointer;
+        text-decoration: underline;
+        text-underline-offset: 3px;
+      }
+      #notes-more:hover {
+        color: var(--accent-hover);
+      }
       #action {
         -webkit-app-region: no-drag;
         width: 100%;
@@ -179,6 +266,11 @@
         </div>
       </div>
       <div id="body">
+        <div id="notes">
+          <div id="notes-label"></div>
+          <div id="notes-box" role="region" tabindex="0" dir="auto"></div>
+          <button id="notes-more" type="button"></button>
+        </div>
         <div id="desc"></div>
         <div id="progress">
           <div class="track"><div class="bar" id="bar"></div></div>

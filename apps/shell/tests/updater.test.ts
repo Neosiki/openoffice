@@ -50,6 +50,7 @@ const updaterState = {
   autoDownload: true,
   autoInstallOnAppQuit: false,
   disableDifferentialDownload: false,
+  fullChangelog: false,
   channel: null as string | null,
   allowDowngrade: false,
   allowPrerelease: null as boolean | null,
@@ -83,6 +84,12 @@ vi.mock('electron-updater', () => ({
     },
     set disableDifferentialDownload(v: boolean) {
       updaterState.disableDifferentialDownload = v
+    },
+    set fullChangelog(v: boolean) {
+      updaterState.fullChangelog = v
+    },
+    get fullChangelog() {
+      return updaterState.fullChangelog
     },
     set channel(v: string | null) {
       updaterState.channel = v
@@ -188,20 +195,26 @@ interface FakeGitHub {
   latest: string | null
   /** update feed files attached to each release: tag → file name → version */
   assets: Record<string, Record<string, string>>
+  /** release bodies as the feed carries them (HTML; escaped into the XML) */
+  notes?: Record<string, string>
   /** the release list itself does not answer as a feed */
   listAnswers?: 'not-found' | 'server-error' | 'not-a-feed'
 }
 
 const NO_RELEASE: FakeGitHub = { tags: [], latest: null, assets: {} }
 
-function releasesAtom(tags: string[]): string {
+function escapeXml(text: string): string {
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+}
+
+function releasesAtom(tags: string[], notes: Record<string, string> = {}): string {
   const entries = tags.map(
     (tag) => `  <entry>
     <id>tag:github.com,2008:Repository/1/${tag}</id>
     <updated>2026-10-13T00:00:00Z</updated>
     <link rel="alternate" type="text/html" href="https://github.com${RELEASES_PATH}/tag/${tag}"/>
     <title>${tag}</title>
-    <content type="html">notes</content>
+    <content type="html">${escapeXml(notes[tag] ?? 'notes')}</content>
   </entry>
 `,
   )
@@ -242,7 +255,7 @@ function checkAgainstGitHub(github: FakeGitHub): string[] {
       if (github.listAnswers === 'not-found') throw new HttpError(404)
       if (github.listAnswers === 'server-error') throw new HttpError(500)
       if (github.listAnswers === 'not-a-feed') return '<!DOCTYPE html><html><body>Sign in</body>'
-      return releasesAtom(github.tags)
+      return releasesAtom(github.tags, github.notes)
     }
     if (path === `${RELEASES_PATH}/latest`) {
       // electron-updater asks for JSON; without a full release GitHub
@@ -262,8 +275,10 @@ function checkAgainstGitHub(github: FakeGitHub): string[] {
       {
         channel: updaterState.channel,
         allowPrerelease: updaterState.allowPrerelease ?? false,
-        currentVersion: CURRENT_VERSION,
-        fullChangelog: false,
+        // the real AppUpdater hands a semver instance here; full-changelog
+        // notes read `.raw`
+        currentVersion: { raw: CURRENT_VERSION },
+        fullChangelog: updaterState.fullChangelog,
       } as never,
       {
         isUseMultipleRangeRequest: false,
@@ -302,6 +317,7 @@ beforeEach(() => {
   updaterState.autoDownload = true
   updaterState.autoInstallOnAppQuit = false
   updaterState.disableDifferentialDownload = false
+  updaterState.fullChangelog = false
   updaterState.channel = null
   updaterState.allowDowngrade = false
   updaterState.allowPrerelease = null
@@ -354,6 +370,8 @@ describe('initAutoUpdater', () => {
     expect(updaterState.autoDownload).toBe(false)
     expect(updaterState.autoInstallOnAppQuit).toBe(true)
     expect(updaterState.disableDifferentialDownload).toBe(true)
+    // full changelog: the window shows the bodies of every skipped release
+    expect(updaterState.fullChangelog).toBe(true)
     expect(checkForUpdates).not.toHaveBeenCalled()
     vi.advanceTimersByTime(FIRST_CHECK_DELAY_MS)
     expect(checkForUpdates).toHaveBeenCalledTimes(1)
@@ -788,6 +806,44 @@ describe('GitHub Releases feed', () => {
     vi.advanceTimersByTime(0)
     expect(quitAndInstall).toHaveBeenCalledWith(true, true)
   })
+
+  it('converts the release body into notes on the shown state', async () => {
+    await firstCheck({
+      tags: ['v0.2.0'],
+      latest: 'v0.2.0',
+      assets: { 'v0.2.0': { 'latest.yml': '0.2.0' } },
+      notes: {
+        'v0.2.0':
+          '<p>새 기능</p><ul><li><strong>하나</strong></li><li>둘</li></ul><script>alert(1)</script>',
+      },
+    })
+    expect(lastShownState().releaseNotes).toEqual({
+      sections: [
+        {
+          version: '0.2.0',
+          blocks: [
+            { kind: 'paragraph', runs: [{ text: '새 기능' }] },
+            {
+              kind: 'list',
+              ordered: false,
+              items: [[{ text: '하나', strong: true }], [{ text: '둘' }]],
+            },
+          ],
+        },
+      ],
+      truncated: false,
+    })
+  })
+
+  it('shows no notes when the release has no body', async () => {
+    await firstCheck({
+      tags: ['v0.2.0'],
+      latest: 'v0.2.0',
+      assets: { 'v0.2.0': { 'latest.yml': '0.2.0' } },
+      notes: { 'v0.2.0': 'No content.' },
+    })
+    expect(lastShownState().releaseNotes).toBeNull()
+  })
 })
 
 /**
@@ -918,6 +974,8 @@ describe('initAutoUpdater (fake update preview)', () => {
     vi.advanceTimersByTime(1500)
     expect(showUpdateWindow).toHaveBeenCalledTimes(1)
     expect(lastShownState().version).toBe('9.9.9')
+    // two canned sections so the skipped-versions layout is visible
+    expect(lastShownState().releaseNotes?.sections).toHaveLength(2)
 
     lastShownActions().onDownload()
     expect(pushUpdateState).toHaveBeenCalledWith({ phase: 'downloading', percent: 0 })

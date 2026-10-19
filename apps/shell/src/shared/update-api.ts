@@ -33,6 +33,39 @@ export interface UpdateUiStrings {
   retry: string
   manualDesc: string
   openDownload: string
+  /** label above the release-notes box */
+  notesLabel: string
+  /** footer link opening the release page for the full, formatted notes */
+  notesOnGitHub: string
+  /** shown inside the notes box when notes were cut to fit the caps */
+  notesTruncated: string
+}
+
+/** one inline piece of a release-notes block; plain text only, never HTML */
+export interface UpdateNoteRun {
+  text: string
+  strong?: boolean
+  code?: boolean
+}
+
+/** a release-notes block converted main-side from the remote HTML */
+export type UpdateNoteBlock =
+  | { kind: 'heading'; level: 1 | 2 | 3; runs: UpdateNoteRun[] }
+  | { kind: 'paragraph'; runs: UpdateNoteRun[] }
+  | { kind: 'list'; ordered: boolean; items: UpdateNoteRun[][] }
+
+export interface UpdateNoteSection {
+  /** release version of this section; null for a single unversioned note */
+  version: string | null
+  blocks: UpdateNoteBlock[]
+}
+
+/** release notes of the offered update, safe to draw as text; null when the release carries none */
+export interface UpdateReleaseNotes {
+  /** newest version first, as the update feed reports them */
+  sections: UpdateNoteSection[]
+  /** true when notes were cut to fit the size caps */
+  truncated: boolean
 }
 
 export interface UpdateUiState {
@@ -44,6 +77,7 @@ export interface UpdateUiState {
   /** BCP-47 tag for documentElement.lang (drives CJK font selection) */
   lang: string
   strings: UpdateUiStrings
+  releaseNotes: UpdateReleaseNotes | null
 }
 
 /** Settings → About reads the update state and re-opens the dialog on demand */
