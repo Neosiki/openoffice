@@ -30,7 +30,7 @@ La connexion est conservée sur ce PC, chiffrée avec la protection que Windows 
 - Tant que **Laisser l'IA trouver et lire des fichiers dans Drive** est activé (c'est le cas dès la connexion), l'IA de chaque éditeur peut chercher dans votre Drive et lire des fichiers. Par exemple : « Trouve dans Drive le compte rendu de réunion du mois dernier et résume-le. »
 - Ce que l'IA lit est envoyé au fournisseur d'IA que vous utilisez. Les parties masquées à l'IA restent masquées.
 - L'IA ne peut pas modifier, supprimer ni partager des fichiers Drive.
-- Dès qu'une conversation contient un contenu lu dans Drive, la recherche web, la recherche d'images et les images par adresse web cessent de fonctionner dans cette conversation. Commencez une nouvelle conversation pour les retrouver.
+- Dès qu'une conversation contient un contenu lu dans Drive, la recherche web, la recherche d'images , la lecture de pages par adresse web et les images par adresse web cessent de fonctionner dans cette conversation. Commencez une nouvelle conversation pour les retrouver.
 
 ## Se déconnecter
 

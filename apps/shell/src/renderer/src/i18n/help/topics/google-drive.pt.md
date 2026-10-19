@@ -30,7 +30,7 @@ O login fica guardado neste PC, criptografado com a proteção que o Windows ofe
 - Enquanto **Deixar a IA encontrar e ler arquivos no Drive** estiver ativado (fica ativado ao conectar), a IA de qualquer editor pode pesquisar no seu Drive e ler arquivos. Por exemplo: "Encontre no Drive a ata da reunião do mês passado e resuma."
 - O que a IA lê vai para o provedor de IA que você usa. As partes ocultas da IA continuam ocultas.
 - A IA não pode alterar, excluir nem compartilhar arquivos do Drive.
-- Quando uma conversa contém algo lido do Drive, a pesquisa na web, a pesquisa de imagens e as imagens por endereço da web deixam de funcionar nessa conversa. Comece uma nova conversa para usá-las de novo.
+- Quando uma conversa contém algo lido do Drive, a pesquisa na web, a pesquisa de imagens , a leitura de páginas por endereço da web e as imagens por endereço da web deixam de funcionar nessa conversa. Comece uma nova conversa para usá-las de novo.
 
 ## Desconectar
 

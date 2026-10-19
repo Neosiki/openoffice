@@ -25,6 +25,7 @@ ieumoffice guide slides    # the op reference, for writing your own
 | `create`          | 从结构化内容创建文档。                                                                                                                 |
 | `render`          | 每页一张 PNG，按渲染器排出的版式输出。                                                                                                 |
 | `pdf`             | 逐页读取 PDF 的文字层，不需要启动应用进程。                                                                                            |
+| `read-url`        | 在命令行读取网页的正文——文章、文档或技能里的链接；输出文本，并用 `--offset` 接着读。                                                   |
 | `info`            | 文档的元数据与结构摘要。                                                                                                               |
 | `search`          | 网页或图片搜索：默认用免费搜索，或者用你在应用里选中的、填了密钥的搜索服务商。                                                         |
 | `image` / `media` | 生成图片，或描述图片、视频、音频文件并向它们提问。                                                                                     |

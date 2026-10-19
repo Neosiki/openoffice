@@ -30,7 +30,7 @@ Login disimpan di PC ini, dienkripsi dengan perlindungan yang disediakan Windows
 - Selama **Izinkan AI mencari dan membaca file di Drive** aktif (aktif setelah terhubung), AI di setiap editor dapat mencari di Drive dan membaca file. Contoh: "Cari notulen rapat bulan lalu di Drive dan buat ringkasannya."
 - Yang dibaca AI dikirim ke penyedia AI yang Anda gunakan. Bagian yang disembunyikan dari AI tetap tersembunyi.
 - AI tidak dapat mengubah, menghapus, atau membagikan file Drive.
-- Setelah percakapan berisi sesuatu yang dibaca dari Drive, pencarian web, pencarian gambar, dan gambar melalui alamat web berhenti berfungsi di percakapan itu. Mulai percakapan baru untuk menggunakannya lagi.
+- Setelah percakapan berisi sesuatu yang dibaca dari Drive, pencarian web, pencarian gambar, pembacaan halaman melalui alamat web, dan gambar melalui alamat web berhenti berfungsi di percakapan itu. Mulai percakapan baru untuk menggunakannya lagi.
 
 ## Memutuskan koneksi
 
