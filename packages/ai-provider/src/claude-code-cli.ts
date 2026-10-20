@@ -60,6 +60,17 @@ const INITIALIZE_REQUEST_ID = 'initialize'
 const EXIT_GRACE_MS = 5_000
 
 /**
+ * Background work a run started per turn has no use for. A self-update that a
+ * short-lived turn begins could be cut off when the turn ends; the CLI still
+ * updates itself when the user runs it in a terminal. Neither touches the login
+ * or the billing path.
+ */
+const CLAUDE_CODE_RUN_ENV: Readonly<Record<string, string>> = {
+  DISABLE_AUTOUPDATER: '1',
+  DISABLE_TELEMETRY: '1',
+}
+
+/**
  * Most images one request may carry (the Anthropic API's limit per request).
  * Older images beyond it are left out, and the caller is told the input was cut.
  */
@@ -734,6 +745,7 @@ async function runClaudeCodeTurn(
     child = spawnSubscriptionProgram(program, args, {
       cwd,
       baseEnv: deps.baseEnv,
+      env: { ...CLAUDE_CODE_RUN_ENV },
       spawn: deps.spawn,
       registry: deps.registry,
     })
@@ -1227,6 +1239,7 @@ export async function listClaudeCodeModels(
     child = spawnSubscriptionProgram(program, args, {
       cwd,
       baseEnv: deps.baseEnv,
+      env: { ...CLAUDE_CODE_RUN_ENV },
       spawn: deps.spawn,
       registry: deps.registry,
     })

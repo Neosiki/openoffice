@@ -379,6 +379,9 @@ describe('Claude Code bridge: what is started', () => {
       expect(env[name]).toBeUndefined()
     }
     expect(env.HOME).toBe('/home/someone')
+    // no self-update or telemetry from a process that lives for one turn
+    expect(env.DISABLE_AUTOUPDATER).toBe('1')
+    expect(env.DISABLE_TELEMETRY).toBe('1')
   })
 
   it('runs in an empty directory of its own and removes it afterwards', async () => {
@@ -1383,6 +1386,8 @@ describe('Claude Code bridge: the model list', () => {
     const env = record.options?.env as NodeJS.ProcessEnv
     expect(env.ANTHROPIC_API_KEY).toBeUndefined()
     expect(env.CLAUDE_CODE_USE_BEDROCK).toBeUndefined()
+    expect(env.DISABLE_AUTOUPDATER).toBe('1')
+    expect(env.DISABLE_TELEMETRY).toBe('1')
 
     expect(child.lines).toHaveLength(1)
     expect(child.lines[0]).toMatchObject({
