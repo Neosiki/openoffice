@@ -109,6 +109,15 @@ describe('identifiers', () => {
 })
 
 describe('sources', () => {
+  it('skips hidden folders such as an install that is still staging', async () => {
+    const home = temp()
+    const app = join(home, '.ieumoffice', 'skills')
+    skill(app, '.ieum-staging-abc123', { name: 'half-copied' })
+    skill(app, 'kept')
+    const skills = await readUserSkillsFrom([{ source: 'app', dir: app }], { homeDir: home })
+    expect(skills.map((entry) => entry.name)).toEqual(['kept'])
+  })
+
   it('lists builtin, app, Claude, plugins, the agents folder, then the project folders', async () => {
     const { home, builtin } = fakeHome()
     const sources = await userSkillSources({ homeDir: home, builtinDir: builtin, projectRoot: 'P' })

@@ -140,6 +140,8 @@ async function skillFolders(dir: string): Promise<string[]> {
   const names: string[] = []
   for (const entry of entries) {
     if (isReservedUserSkillName(entry.name)) continue
+    // hidden folders are not skills: the install staging folder lives here a moment
+    if (entry.name.startsWith('.')) continue
     if (entry.isDirectory()) {
       names.push(entry.name)
     } else if (entry.isSymbolicLink()) {
