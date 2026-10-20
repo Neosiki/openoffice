@@ -387,6 +387,18 @@ function weightTargetOf(family: string): number | undefined {
   for (const [re, w] of WEIGHT_TARGETS) if (re.test(suffix)) return w
   return undefined
 }
+/** A plain trailing " Bold" — kept out of WEIGHT_SUFFIX_RE (see the FontFace path's use). */
+const BOLD_NAME_RE = /\S\s+bold\s*$/i
+
+/** The weight and slant a face itself carries (OS/2 usWeightClass ≥ 600, post italicAngle). */
+function faceStyleOf(font: OpentypeFontLike): { bold: boolean; italic: boolean } {
+  const w = (font as { tables?: { os2?: { usWeightClass?: number } } }).tables?.os2?.usWeightClass
+  const ang = (font as { tables?: { post?: { italicAngle?: number } } }).tables?.post?.italicAngle
+  return {
+    bold: typeof w === 'number' && w >= 600,
+    italic: typeof ang === 'number' && Math.abs(ang) > 0.01,
+  }
+}
 
 // PowerPoint substitutes a missing font by the run's declared language/charset, not by
 // classifying the font name (see TextRun.fontScriptHint): prod_079's JP-named font with
@@ -1520,7 +1532,14 @@ export function createSystemFontMetrics(): FontMetricsProvider {
     // a FontFace under the requested name, same as the wN weight-in-name path above.
     // Only when the face's OS/2 weight matches the request: a base family without such a
     // face (Georgia Light → georgia.ttf Regular) keeps its own name instead of lying.
-    const weightTarget = wReq ? undefined : weightTargetOf(style.fontFamily)
+    // "Family Bold" counts here although weightTargetOf leaves bold to the rPr flag: Windows
+    // lists a Bold file under its own GDI family ("나눔스퀘어 Bold"), which decks carry as
+    // the typeface, and Chromium's weight-suffix lookup skips " bold" (it strips light,
+    // medium, extrabold…) — the canvas drew Malgun Gothic over Bold-face positions.
+    const weightTarget = wReq
+      ? undefined
+      : (weightTargetOf(style.fontFamily) ??
+        (BOLD_NAME_RE.test(style.fontFamily) ? 700 : undefined))
     if (raw && !raw.substituted && weightTarget != null) {
       const os2W = (raw.font as { tables?: { os2?: { usWeightClass?: number } } }).tables?.os2
         ?.usWeightClass
@@ -1539,10 +1558,17 @@ export function createSystemFontMetrics(): FontMetricsProvider {
         (weightTarget === 400 ? os2W === 400 : os2W !== 400 && Math.abs(os2W - weightTarget) <= 100)
       if (!isRequestedName && weightMatch) raw.family = style.fontFamily.trim()
       if (!registry.isPrivate(raw.path) && (isRequestedName || weightMatch)) {
-        privateFaces.set(`${raw.family}|${style.bold ? 1 : 0}${style.italic ? 1 : 0}`, {
+        // Declare what the face carries, not what the run asks: Chromium draws a FontFace
+        // declared italic over upright data upright (and bold over a Light face unbolded),
+        // where PowerPoint slants/emboldens — an italic "나눔스퀘어 Bold" run lost its slant.
+        // Declared by the face's own style, Chromium synthesizes the rest.
+        const face = faceStyleOf(raw.font)
+        const bold = style.bold && face.bold
+        const italic = style.italic && face.italic
+        privateFaces.set(`${raw.family}|${bold ? 1 : 0}${italic ? 1 : 0}`, {
           family: raw.family,
-          bold: style.bold,
-          italic: style.italic,
+          bold,
+          italic,
           path: raw.path,
           offset: raw.offset,
         })
@@ -1579,12 +1605,15 @@ export function createSystemFontMetrics(): FontMetricsProvider {
       } else {
         // Same file+face as regular: register the regular face (even if no regular run
         // exists in the deck) so Chromium has a real face to synthesize bold/italic from.
-        privateFaces.set(`${base.family}|00`, {
-          family: base.family,
+        // Keyed by the family this run draws with: a weight-named request renamed above
+        // ("X Bold") must not register under the face's own name ("X"), which leaves the
+        // run without a face and hands the sibling Regular's slot to the Bold face.
+        privateFaces.set(`${raw.family}|00`, {
+          family: raw.family,
           bold: false,
           italic: false,
-          path: base.path,
-          offset: base.offset,
+          path: raw.path,
+          offset: raw.offset,
         })
       }
     }
