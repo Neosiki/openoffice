@@ -471,6 +471,17 @@ Ty nemají modifikátor, takže obě platformy vypadají stejně. ↓ a ↑ jsou
 
 Funguje jen tehdy, když je vybrána poznámka, razítko, redakce nebo obrázek.
 
+### Panel miniatur
+
+| Akce                          | macOS                 | Windows / Linux       |
+| ----------------------------- | --------------------- | --------------------- |
+| Vybírat stránky po jedné      | ⌘ + kliknutí          | Ctrl + kliknutí       |
+| Vybrat souvislou řadu stránek | ⇧ + kliknutí          | Shift + kliknutí      |
+| Vybrat všechny stránky        | ⌘A                    | Ctrl+A                |
+| Odstranit vybrané stránky     | Delete nebo Backspace | Delete nebo Backspace |
+
+Vybrané stránky jsou podbarvené. Kliknutím pravým tlačítkem na jednu z nich nebo kartou Stránka je společně otočíte, odstraníte nebo extrahujete; přetažením jedné přesunete všechny. Escape nebo obyčejné kliknutí na stránku výběr zruší. ⌘A a Delete fungují, když má panel fokus.
+
 ### Escape a dialogová okna
 
 | Akce                             | macOS  | Windows / Linux |

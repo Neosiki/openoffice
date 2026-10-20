@@ -1085,6 +1085,18 @@ button {
   font-weight: 600;
 }
 
+/* Pages picked with Ctrl/Shift: tinted cell and accent frame; the current page keeps its bold number */
+.pdf-thumb-selected {
+  background: var(--accent-soft);
+  box-shadow: 0 0 0 4px var(--accent-soft);
+  border-radius: 4px;
+}
+
+.pdf-thumb-selected .pdf-thumb-box,
+.pdf-thumb-selected:hover .pdf-thumb-box {
+  border-color: var(--accent);
+}
+
 /* the page stays ltr under an RTL UI — the chrome mirrors, the content does not */
 
 .pdf-scroll {

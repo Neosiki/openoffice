@@ -471,6 +471,17 @@ Non prendono modificatori, quindi le due piattaforme si leggono allo stesso modo
 
 Attivo solo quando è selezionata un’annotazione, un timbro, una redazione o un’immagine.
 
+### Barra delle miniature
+
+| Azione                             | macOS              | Windows / Linux    |
+| ---------------------------------- | ------------------ | ------------------ |
+| Scegliere le pagine una alla volta | ⌘ + clic           | Ctrl + clic        |
+| Scegliere una serie di pagine      | ⇧ + clic           | Shift + clic       |
+| Scegliere tutte le pagine          | ⌘A                 | Ctrl+A             |
+| Eliminare le pagine scelte         | Delete o Backspace | Delete o Backspace |
+
+Le pagine scelte sono colorate. Un clic destro su una di esse, o la scheda Pagina, le ruota, elimina o estrae insieme; trascinandone una si spostano tutte. Escape o un semplice clic su una pagina annulla la scelta. ⌘A e Canc agiscono quando la barra ha il focus.
+
 ### Escape e finestre
 
 | Azione                          | macOS  | Windows / Linux |

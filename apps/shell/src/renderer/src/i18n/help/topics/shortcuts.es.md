@@ -471,6 +471,17 @@ No llevan modificador, así que las dos plataformas se leen igual. ↓ y ↑ son
 
 Solo está activo cuando hay seleccionada una anotación, un sello, una ocultación o una imagen.
 
+### Barra de miniaturas
+
+| Acción                        | macOS              | Windows / Linux    |
+| ----------------------------- | ------------------ | ------------------ |
+| Elegir páginas una a una      | ⌘ + clic           | Ctrl + clic        |
+| Elegir una serie de páginas   | ⇧ + clic           | Shift + clic       |
+| Elegir todas las páginas      | ⌘A                 | Ctrl+A             |
+| Eliminar las páginas elegidas | Delete o Backspace | Delete o Backspace |
+
+Las páginas elegidas se tiñen. Con clic derecho en una de ellas, o con la pestaña Página, se giran, eliminan o extraen juntas; al arrastrar una se mueven todas. Escape o un clic normal en una página anula la elección. ⌘A y Supr funcionan cuando la barra tiene el foco.
+
 ### Escape y diálogos
 
 | Acción                                 | macOS  | Windows / Linux |

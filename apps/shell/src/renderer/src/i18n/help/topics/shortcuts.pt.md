@@ -471,6 +471,17 @@ Não levam modificador, pelo que as duas plataformas se leem da mesma forma. ↓
 
 Apenas ativo quando está selecionada uma anotação, um carimbo, uma ocultação ou uma imagem.
 
+### Barra de miniaturas
+
+| Ação                              | macOS               | Windows / Linux     |
+| --------------------------------- | ------------------- | ------------------- |
+| Escolher páginas uma a uma        | ⌘ + clique          | Ctrl + clique       |
+| Escolher uma sequência de páginas | ⇧ + clique          | Shift + clique      |
+| Escolher todas as páginas         | ⌘A                  | Ctrl+A              |
+| Excluir as páginas escolhidas     | Delete ou Backspace | Delete ou Backspace |
+
+As páginas escolhidas ficam destacadas. Clique com o botão direito em uma delas, ou use a guia Página, para girar, excluir ou extrair todas juntas; arrastar uma delas move todas. Escape ou um clique simples em uma página desfaz a escolha. ⌘A e Delete funcionam quando a barra está em foco.
+
 ### Escape e caixas de diálogo
 
 | Ação                                | macOS  | Windows / Linux |

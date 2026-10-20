@@ -471,6 +471,17 @@ Ces touches ne prennent aucun modificateur, si bien que les deux plateformes se 
 
 Actif uniquement lorsqu’une annotation, un tampon, une occultation ou une image est sélectionné.
 
+### Barre des miniatures
+
+| Action                       | macOS               | Windows / Linux     |
+| ---------------------------- | ------------------- | ------------------- |
+| Choisir des pages une à une  | ⌘ + clic            | Ctrl + clic         |
+| Choisir une suite de pages   | ⇧ + clic            | Shift + clic        |
+| Choisir toutes les pages     | ⌘A                  | Ctrl+A              |
+| Supprimer les pages choisies | Delete ou Backspace | Delete ou Backspace |
+
+Les pages choisies sont teintées. Un clic droit sur l’une d’elles, ou l’onglet Page, les fait pivoter, les supprime ou les extrait ensemble ; faire glisser l’une d’elles les déplace toutes. Escape ou un simple clic sur une page annule le choix. ⌘A et Suppr agissent quand la barre a le focus.
+
 ### Échap et boîtes de dialogue
 
 | Action                                 | macOS  | Windows / Linux |

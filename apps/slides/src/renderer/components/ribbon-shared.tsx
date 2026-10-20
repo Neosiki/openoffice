@@ -42,6 +42,15 @@ export type FormatCmd =
   | 'fontSizeUp'
   | 'fontSizeDown'
 
+/** Format buttons work while editing text; Grow/Shrink also work on selected text boxes without entering them */
+export function formatCmdLive(
+  cmd: FormatCmd,
+  editing: boolean,
+  hasTextSelection: boolean,
+): boolean {
+  return editing || (hasTextSelection && (cmd === 'fontSizeUp' || cmd === 'fontSizeDown'))
+}
+
 /** View modes: normal editing / outline / slide sorter / reading view. */
 export type SlidesViewMode = 'normal' | 'outline' | 'sorter' | 'reading'
 

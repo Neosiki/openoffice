@@ -471,6 +471,17 @@ Những phím này không dùng phím sửa đổi, nên cả hai nền tảng �
 
 Chỉ hoạt động khi một chú thích, con dấu, vùng che nội dung hoặc hình ảnh đang được chọn.
 
+### Thanh hình thu nhỏ
+
+| Thao tác                     | macOS                 | Windows / Linux       |
+| ---------------------------- | --------------------- | --------------------- |
+| Chọn từng trang một          | ⌘ + nhấp              | Ctrl + nhấp           |
+| Chọn một dãy trang liền nhau | ⇧ + nhấp              | Shift + nhấp          |
+| Chọn tất cả các trang        | ⌘A                    | Ctrl+A                |
+| Xóa các trang đã chọn        | Delete hoặc Backspace | Delete hoặc Backspace |
+
+Các trang đã chọn được tô màu. Nhấp chuột phải vào một trang trong số đó, hoặc dùng thẻ Trang, để xoay, xóa hoặc trích xuất chúng cùng lúc; kéo một trang để di chuyển tất cả. Escape hoặc nhấp thường vào một trang sẽ bỏ chọn. ⌘A và Delete có tác dụng khi thanh đang được chọn.
+
 ### Esc và hộp thoại
 
 | Hành động                  | macOS  | Windows / Linux |

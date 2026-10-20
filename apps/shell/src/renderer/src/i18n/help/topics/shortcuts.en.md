@@ -471,6 +471,17 @@ These take no modifier, so both platforms read the same. ↓ and ↑ are the one
 
 Only active when an annotation, stamp, redaction or image is selected.
 
+### Thumbnail sidebar
+
+| Action                   | macOS               | Windows / Linux     |
+| ------------------------ | ------------------- | ------------------- |
+| Pick pages one at a time | ⌘ + click           | Ctrl + click        |
+| Pick a run of pages      | ⇧ + click           | Shift + click       |
+| Pick all pages           | ⌘A                  | Ctrl+A              |
+| Delete the picked pages  | Delete or Backspace | Delete or Backspace |
+
+Picked pages are tinted. Right-click one of them, or use the Page tab, to rotate, delete or extract them together; drag one of them to move them all. Escape or a plain click on a page clears the pick. ⌘A and Delete apply while the sidebar has focus.
+
 ### Escape and Dialogs
 
 | Action                   | macOS  | Windows / Linux |

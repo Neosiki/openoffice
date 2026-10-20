@@ -120,6 +120,7 @@ import {
 } from './ribbon-shared'
 export type { FormatCmd, SlidesViewMode } from './ribbon-shared'
 import type { FormatCmd } from './ribbon-shared'
+import { formatCmdLive } from './ribbon-shared'
 import { RibbonHomeTab } from './RibbonHomeTab'
 import { RibbonInsertTab } from './RibbonInsertTab'
 import { ShapeGalleryContent } from './ShapeGalleryPopover'
@@ -1594,20 +1595,23 @@ export function Ribbon({
   }
 
   // Format buttons use onMouseDown+preventDefault, avoiding stealing contentEditable focus and triggering a commit
-  const fmtBtn = (cmd: FormatCmd, label: ReactNode, title: string, className?: string) => (
-    <button
-      className={`rb-icon${className ? ` ${className}` : ''}`}
-      disabled={!editing}
-      data-tip={editing ? title : t('ribbonEditableHint', { title })}
-      aria-label={title}
-      onMouseDown={(e) => {
-        e.preventDefault()
-        if (editing) onFormat(cmd)
-      }}
-    >
-      {label}
-    </button>
-  )
+  const fmtBtn = (cmd: FormatCmd, label: ReactNode, title: string, className?: string) => {
+    const live = formatCmdLive(cmd, editing, hasTextSelection)
+    return (
+      <button
+        className={`rb-icon${className ? ` ${className}` : ''}`}
+        disabled={!live}
+        data-tip={live ? title : t('ribbonEditableHint', { title })}
+        aria-label={title}
+        onMouseDown={(e) => {
+          e.preventDefault()
+          if (live) onFormat(cmd)
+        }}
+      >
+        {label}
+      </button>
+    )
+  }
 
   const tabCtx: RibbonTabCtx = {
     aiOpen,

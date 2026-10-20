@@ -471,6 +471,17 @@ Te klawisze nie mają modyfikatora, więc obie platformy wyglądają tak samo. �
 
 Działa tylko wtedy, gdy zaznaczono adnotację, pieczec, zaciemnienie lub obraz.
 
+### Pasek miniatur
+
+| Działanie                   | macOS                | Windows / Linux      |
+| --------------------------- | -------------------- | -------------------- |
+| Wybieranie stron pojedynczo | ⌘ + kliknięcie       | Ctrl + kliknięcie    |
+| Wybieranie ciągu stron      | ⇧ + kliknięcie       | Shift + kliknięcie   |
+| Wybieranie wszystkich stron | ⌘A                   | Ctrl+A               |
+| Usuwanie wybranych stron    | Delete lub Backspace | Delete lub Backspace |
+
+Wybrane strony są zabarwione. Kliknięcie prawym przyciskiem jednej z nich lub karta Strona obraca, usuwa albo wyodrębnia je razem; przeciągnięcie jednej przenosi wszystkie. Escape lub zwykłe kliknięcie strony usuwa wybór. ⌘A i Delete działają, gdy pasek ma fokus.
+
 ### Escape i okna dialogowe
 
 | Czynność                         | macOS  | Windows / Linux |

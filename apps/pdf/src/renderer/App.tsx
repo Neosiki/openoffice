@@ -118,6 +118,15 @@ import { cropRect, flipPixels, multiplyAlpha } from './image-bake'
 import type { CropFractions, ImageBakeOp } from './image-bake'
 import { removeBackground, type PixelImage } from './cutout'
 import { navAction, shouldHandleDocumentUndo } from './keyNav'
+import {
+  EMPTY_PAGE_SELECTION,
+  clickPageSelection,
+  formatPageRanges,
+  livePages,
+  moveBlockOrder,
+  pageTargets,
+} from './page-selection'
+import type { PageSelection } from './page-selection'
 import { rowOfVisIdx, spreadRows, stepPage } from './spread'
 import {
   captureViewState,
@@ -970,6 +979,8 @@ export default function App() {
   const [fileSize, setFileSize] = useState(0)
   const [dragFrom, setDragFrom] = useState<number | null>(null)
   const [dragOver, setDragOver] = useState<number | null>(null)
+  /** Thumbnail multi-selection (original indices); highlighted only when it holds 2+ pages */
+  const [pageSel, setPageSel] = useState<PageSelection>(EMPTY_PAGE_SELECTION)
   const [signDlg, setSignDlg] = useState(false)
   /** Certificate (digital) signatures found in the file on disk, verified by the main process */
   const [digitalSignatures, setDigitalSignatures] = useState<PdfSignatureInfo[]>([])
@@ -1175,6 +1186,11 @@ export default function App() {
     return base.filter((i) => !deleted.has(i))
   }, [allSizes, deleted, order])
   const pageCount = visList.length
+  /** Thumbnails picked with Ctrl/Shift that are still on screen; page actions cover them when there are 2+ */
+  const pickedPages = useMemo(() => {
+    const live = sidebar === 'thumbs' ? livePages(pageSel.pages, visList) : []
+    return live.length > 1 ? live : []
+  }, [pageSel, visList, sidebar])
   // AI tool calls within one turn run before React re-renders, so the order and
   // deletions they read and write go through these refs instead of the closed-over state
   const orderRef = useRef(order)
@@ -1588,6 +1604,7 @@ export default function App() {
       }
       setFileSize(data.byteLength)
       setSelected(null)
+      setPageSel(EMPTY_PAGE_SELECTION)
       setDeleteToast(false)
       setUndoStack([])
       setRedoStack([])
@@ -5037,8 +5054,6 @@ export default function App() {
     return applyEditOps([{ op: 'rotatePages', pages: origIdxs, dir }]).failures[0]?.error ?? null
   }
 
-  const rotatePage = (origIdx: number, dir: 90 | -90) => rotatePages([origIdx], dir)
-
   const rotateAllPages = (dir: 90 | -90) => rotatePages(visList, dir)
 
   /** Reverse the visible page order; deleted pages stay at the tail like movePage */
@@ -5058,6 +5073,17 @@ export default function App() {
     }
     if (pageCount <= 1 || readOnly) return
     applyEditOps([{ op: 'deletePage', pageIndex: origIdx }])
+  }
+
+  /** Delete several pages as one undo step; at least one page must remain */
+  const deletePages = (origIdxs: number[]) => {
+    if (origIdxs.length === 1) return deletePage(origIdxs[0]!)
+    if (redactions.length > 0) {
+      showNotice(t('redactStructureBlocked'))
+      return
+    }
+    if (origIdxs.length === 0 || origIdxs.length >= pageCount || readOnly) return
+    applyEditOps(origIdxs.map((pageIndex) => ({ op: 'deletePage' as const, pageIndex })))
   }
 
   // ── Drawing annotations ──
@@ -5101,6 +5127,16 @@ export default function App() {
     }
     return byPage
   }, [stampCfg, visList, rows, visibleRows, renderStamps])
+
+  /** Thumbnail drop: a picked page drags the whole selection along, otherwise just itself */
+  const dropPages = (from: number, to: number) => {
+    const grabbed = visList[from]
+    if (grabbed === undefined) return
+    const block = pageTargets(pickedPages, grabbed)
+    if (block.length === 1) return movePage(from, to)
+    const next = moveBlockOrder(visList, block, grabbed, to)
+    if (next && !readOnly) commitOrder(next)
+  }
 
   /** Thumbnail drag-and-drop reorder: move the page at position from to position to */
   const movePage = (from: number, to: number) => {
@@ -6393,17 +6429,14 @@ export default function App() {
   }
   const baseName = () => fileName.replace(/\.pdf$/i, '')
 
-  const extractPagesToFile = (visIdxs: number[]) => {
-    const first = visIdxs[0]! + 1
-    const last = visIdxs[visIdxs.length - 1]! + 1
-    return runFileOp(() =>
+  const extractPagesToFile = (visIdxs: number[]) =>
+    runFileOp(() =>
       window.pdfApi.extractPages({
         path: filePath,
         pages: visIdxs,
-        suggestedName: `${baseName()}-${first === last ? `p${first}` : `p${first}-${last}`}.pdf`,
+        suggestedName: `${baseName()}-p${formatPageRanges(visIdxs.map((i) => i + 1))}.pdf`,
       }),
     )
-  }
   const splitPdfToFolder = (chunkSize: number) =>
     runFileOp(() => window.pdfApi.splitPdf({ path: filePath, chunkSize, baseName: baseName() }))
   const mergePagesToFile = (
@@ -6435,10 +6468,15 @@ export default function App() {
   const cropPagesOnDisk = (visIdxs: number[], rect: CropRect) =>
     rewriteInPlace(() => window.pdfApi.cropPages({ path: filePath, pages: visIdxs, rect }))
 
-  const extractPage = (origIdx: number) => extractPagesToFile([visList.indexOf(origIdx)])
+  const extractPages = (origIdxs: number[]) =>
+    extractPagesToFile(origIdxs.map((p) => visList.indexOf(p)).sort((a, b) => a - b))
 
   const openExtractDlg = () => {
-    setExtractInput(String(currentPage))
+    setExtractInput(
+      pickedPages.length
+        ? formatPageRanges(pickedPages.map((p) => visList.indexOf(p) + 1))
+        : String(currentPage),
+    )
     setExtractInvalid(false)
     setExtractDlg(true)
   }
@@ -7246,6 +7284,11 @@ export default function App() {
             return
           }
         }
+        if (k === 'a' && !inEditable && thumbsRef.current?.contains(document.activeElement)) {
+          e.preventDefault()
+          setPageSel({ pages: visList, anchor: curOrigIdx >= 0 ? curOrigIdx : null })
+          return
+        }
         if (k === 's') {
           e.preventDefault()
           void save()
@@ -7289,6 +7332,8 @@ export default function App() {
         else if (formDesignTool) setFormDesignTool(null)
         else if (selectedFormFieldIds.length > 0) setSelectedFormFieldIds([])
         else if (selected) setSelected(null)
+        else if (thumbMenu) setThumbMenu(null)
+        else if (pickedPages.length) setPageSel(EMPTY_PAGE_SELECTION)
         else if (searchOpen) closeSearch()
         return
       }
@@ -7319,6 +7364,15 @@ export default function App() {
       if ((e.key === 'Delete' || e.key === 'Backspace') && selected) {
         e.preventDefault()
         deleteSelected()
+        return
+      }
+      if (
+        (e.key === 'Delete' || e.key === 'Backspace') &&
+        pickedPages.length > 0 &&
+        thumbsRef.current?.contains(document.activeElement)
+      ) {
+        e.preventDefault()
+        deletePages(pickedPages)
         return
       }
       // Shift+navigation extends the text layer's native selection (Excel/
@@ -7460,6 +7514,9 @@ export default function App() {
   const menuOrig = thumbMenu?.origIdx ?? -1
   const menuInGap = thumbMenu != null && thumbMenu.origIdx === null
   const menuInsertAfter = menuInGap ? (thumbMenu.afterOrigIdx ?? -1) : menuOrig
+  const menuPages = pageTargets(pickedPages, menuOrig)
+  /** Pages tab buttons act on the picked thumbnails, else on the current page */
+  const ribbonPages = pickedPages.length ? pickedPages : [curOrigIdx]
 
   /** Ribbon AI buttons: expand the dock and auto-run the prompt in the assistant */
   const runAiPreset = (text: string): void => {
@@ -8692,7 +8749,7 @@ export default function App() {
                   <button
                     className="rb-big"
                     disabled={curOrigIdx < 0 || readOnly}
-                    onClick={() => rotatePage(curOrigIdx, -90)}
+                    onClick={() => rotatePages(ribbonPages, -90)}
                   >
                     <span className="rb-big-icon">
                       <IconRotateL />
@@ -8702,7 +8759,7 @@ export default function App() {
                   <button
                     className="rb-big"
                     disabled={curOrigIdx < 0 || readOnly}
-                    onClick={() => rotatePage(curOrigIdx, 90)}
+                    onClick={() => rotatePages(ribbonPages, 90)}
                   >
                     <span className="rb-big-icon">
                       <IconRotateR />
@@ -8726,13 +8783,15 @@ export default function App() {
                 <div className="ribbon-group-items">
                   <button
                     className="rb-big"
-                    disabled={curOrigIdx < 0 || pageCount <= 1 || readOnly}
-                    onClick={() => deletePage(curOrigIdx)}
+                    disabled={curOrigIdx < 0 || ribbonPages.length >= pageCount || readOnly}
+                    onClick={() => deletePages(ribbonPages)}
                   >
                     <span className="rb-big-icon">
                       <IconDeletePage />
                     </span>
-                    {t('deletePage')}
+                    {ribbonPages.length > 1
+                      ? t('pageSelDelete', { n: ribbonPages.length })
+                      : t('deletePage')}
                   </button>
                   <button
                     className="rb-big"
@@ -9192,7 +9251,11 @@ export default function App() {
                       data-idx={v}
                       tabIndex={-1}
                       className={`pdf-thumb${currentPage === v + 1 ? ' pdf-thumb-active' : ''}${
-                        dragOver === v && dragFrom !== null && dragFrom !== v
+                        pickedPages.includes(origIdx) ? ' pdf-thumb-selected' : ''
+                      }${
+                        dragOver === v &&
+                        dragFrom !== null &&
+                        !pageTargets(pickedPages, visList[dragFrom]!).includes(origIdx)
                           ? ' pdf-thumb-dropbefore'
                           : ''
                       }`}
@@ -9212,7 +9275,7 @@ export default function App() {
                         // no reorder in flight: an OS file drop — leave it to the drop-open bridge
                         if (dragFrom === null) return
                         e.preventDefault()
-                        movePage(dragFrom, v)
+                        dropPages(dragFrom, v)
                         setDragFrom(null)
                         setDragOver(null)
                       }}
@@ -9220,10 +9283,23 @@ export default function App() {
                         setDragFrom(null)
                         setDragOver(null)
                       }}
-                      onClick={() => scrollToPage(v + 1)}
+                      onClick={(e) => {
+                        const toggle = e.ctrlKey || e.metaKey
+                        setPageSel((sel) =>
+                          clickPageSelection(sel, visList, origIdx, curOrigIdx, {
+                            shift: e.shiftKey,
+                            toggle,
+                          }),
+                        )
+                        // Ctrl/Shift picks pages without moving the view
+                        if (!e.shiftKey && !toggle) scrollToPage(v + 1)
+                      }}
                       onContextMenu={(e) => {
                         if (e.target === e.currentTarget) return
                         e.preventDefault()
+                        // right-click inside the selection keeps it; elsewhere it picks that page alone
+                        if (!pickedPages.includes(origIdx))
+                          setPageSel({ pages: [origIdx], anchor: origIdx })
                         setThumbMenu({
                           x: Math.min(e.clientX, window.innerWidth - 190),
                           y: Math.min(e.clientY, window.innerHeight - 190),
@@ -10992,7 +11068,7 @@ export default function App() {
                   <>
                     <button
                       onClick={() => {
-                        rotatePage(menuOrig, -90)
+                        rotatePages(menuPages, -90)
                         setThumbMenu(null)
                       }}
                     >
@@ -11000,28 +11076,32 @@ export default function App() {
                     </button>
                     <button
                       onClick={() => {
-                        rotatePage(menuOrig, 90)
+                        rotatePages(menuPages, 90)
                         setThumbMenu(null)
                       }}
                     >
                       {t('rotateRight')}
                     </button>
                     <button
-                      disabled={pageCount <= 1}
+                      disabled={menuPages.length >= pageCount}
                       onClick={() => {
-                        deletePage(menuOrig)
+                        deletePages(menuPages)
                         setThumbMenu(null)
                       }}
                     >
-                      {t('deletePage')}
+                      {menuPages.length > 1
+                        ? t('pageSelDelete', { n: menuPages.length })
+                        : t('deletePage')}
                     </button>
                     <button
                       onClick={() => {
                         setThumbMenu(null)
-                        void extractPage(menuOrig)
+                        void extractPages(menuPages)
                       }}
                     >
-                      {t('extractPage')}
+                      {menuPages.length > 1
+                        ? t('pageSelExtract', { n: menuPages.length })
+                        : t('extractPage')}
                     </button>
                   </>
                 )}

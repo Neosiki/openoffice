@@ -471,6 +471,17 @@ Deze hebben geen modifier, dus beide platformen lezen hetzelfde. ↓ en ↑ zijn
 
 Alleen actief wanneer een aantekening, stempel, redactie of afbeelding geselecteerd is.
 
+### Miniatuurbalk
+
+| Actie                           | macOS               | Windows / Linux     |
+| ------------------------------- | ------------------- | ------------------- |
+| Pagina’s één voor één kiezen    | ⌘ + klik            | Ctrl + klik         |
+| Een reeks pagina’s kiezen       | ⇧ + klik            | Shift + klik        |
+| Alle pagina’s kiezen            | ⌘A                  | Ctrl+A              |
+| De gekozen pagina’s verwijderen | Delete of Backspace | Delete of Backspace |
+
+Gekozen pagina’s zijn gekleurd. Klik met rechts op een ervan, of gebruik het tabblad Pagina, om ze samen te draaien, te verwijderen of te extraheren; sleep er een om ze allemaal te verplaatsen. Escape of een gewone klik op een pagina heft de keuze op. ⌘A en Delete werken als de balk de focus heeft.
+
 ### Escape en dialoogvensters
 
 | Actie                              | macOS  | Windows / Linux |

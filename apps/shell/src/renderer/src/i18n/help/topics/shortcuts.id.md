@@ -471,6 +471,17 @@ Semuanya tanpa modifier, jadi kedua platform membacanya sama. ↓ dan ↑ adalah
 
 Hanya aktif ketika sebuah anotasi, stempel, redaksi, atau gambar terpilih.
 
+### Bilah gambar mini
+
+| Tindakan                       | macOS                 | Windows / Linux       |
+| ------------------------------ | --------------------- | --------------------- |
+| Memilih halaman satu per satu  | ⌘ + klik              | Ctrl + klik           |
+| Memilih rangkaian halaman      | ⇧ + klik              | Shift + klik          |
+| Memilih semua halaman          | ⌘A                    | Ctrl+A                |
+| Menghapus halaman yang dipilih | Delete atau Backspace | Delete atau Backspace |
+
+Halaman yang dipilih diberi warna. Klik kanan salah satunya, atau gunakan tab Halaman, untuk memutar, menghapus, atau mengekstraknya sekaligus; seret salah satunya untuk memindahkan semuanya. Escape atau klik biasa pada halaman membatalkan pilihan. ⌘A dan Delete berlaku saat bilah sedang fokus.
+
 ### Escape dan Dialog
 
 | Tindakan                       | macOS  | Windows / Linux |
