@@ -205,7 +205,7 @@ export async function githubSkillGet(
         redirect: 'manual',
         credentials: 'omit',
         headers: { Accept: accept, 'User-Agent': 'IeumOffice' },
-        signal: options.signal,
+        ...(options.signal ? { signal: options.signal } : {}),
       })
     } catch (error) {
       if (isAbortError(error, options.signal)) {
