@@ -19,11 +19,14 @@ import { afterEach, describe, expect, it } from 'vitest'
 import {
   MAX_USER_SKILL_BYTES,
   MAX_USER_SKILL_FILES,
+  findSkillUrls,
   listSkillFolderFiles,
+  skillContentHash,
   listUserSkills,
   parseUserSkillId,
   readBuiltinSkillsManifest,
   readUserSkillFolder,
+  readUserSkillsFrom,
   userSkillId,
   userSkillSources,
   type UserSkill,
@@ -451,6 +454,97 @@ describe('one skill folder', () => {
     const read = await readOne(dir, { source: 'app' })
     expect(read.files).toBe(2)
     expect(read.bytes).toBeGreaterThan(5)
+  })
+})
+
+describe('links that lead out of a skill folder', () => {
+  const FILE_LINK_SKIP =
+    'creating file symlinks needs Developer Mode or administrator rights on Windows (EPERM)'
+
+  /** A fake home whose Codex folder holds a sign-in-like file */
+  function homeWithCodexFile(): { home: string; secret: string } {
+    const home = temp()
+    mkdirSync(join(home, '.codex'), { recursive: true })
+    const secret = join(home, '.codex', 'auth.json')
+    writeFileSync(
+      secret,
+      '---\nname: leaked\ndescription: secret https://secret.example/\n---\n{"token":"x"}\n',
+    )
+    return { home, secret }
+  }
+
+  /** Make a file link, or `false` when this machine does not allow it */
+  function fileLink(target: string, path: string): boolean {
+    try {
+      symlinkSync(target, path, 'file')
+      return true
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'EPERM') return false
+      throw error
+    }
+  }
+
+  it('does not read a SKILL.md that links into the Codex home', async (ctx) => {
+    const { home, secret } = homeWithCodexFile()
+    const dir = join(home, '.claude', 'skills', 'trap')
+    mkdirSync(dir, { recursive: true })
+    if (!fileLink(secret, join(dir, 'SKILL.md'))) ctx.skip(FILE_LINK_SKIP)
+    const read = await readOne(dir, { source: 'user' })
+    expect(read.unreadable).toBe('unreadable')
+    expect(read.description).toBe('')
+    expect(read.name).toBe('trap')
+    expect(read.files).toBe(0)
+    const [listed] = await listUserSkills({ homeDir: home })
+    expect(listed).toMatchObject({ id: 'user:trap', unreadable: 'unreadable', description: '' })
+  })
+
+  it('leaves a linked file outside the folder out of the count, the hash and the web addresses', async (ctx) => {
+    const { home, secret } = homeWithCodexFile()
+    const dir = skill(join(home, '.claude', 'skills'), 'notes', {
+      files: { 'references/a.md': 'https://kept.example/' },
+    })
+    const before = await skillContentHash(dir)
+    if (!fileLink(secret, join(dir, 'notes.json'))) ctx.skip(FILE_LINK_SKIP)
+    expect(await findSkillUrls(dir)).toEqual(['https://kept.example/'])
+    expect(await skillContentHash(dir)).toBe(before)
+    expect((await listSkillFolderFiles(dir))?.files.map((file) => file.rel)).toEqual([
+      'SKILL.md',
+      'references/a.md',
+    ])
+    expect((await readOne(dir, { source: 'user' })).files).toBe(2)
+  })
+
+  it('still reads a linked file that stays inside the folder', async (ctx) => {
+    const dir = skill(temp(), 'inside', { files: { 'references/a.md': 'https://in.example/' } })
+    if (!fileLink(join(dir, 'references', 'a.md'), join(dir, 'b.md'))) ctx.skip(FILE_LINK_SKIP)
+    expect((await listSkillFolderFiles(dir))?.files.map((file) => file.rel)).toEqual([
+      'SKILL.md',
+      'b.md',
+      'references/a.md',
+    ])
+  })
+
+  it('does not follow a folder link out of the skill folder', async () => {
+    const { home } = homeWithCodexFile()
+    const dir = skill(join(home, '.claude', 'skills'), 'dirlink')
+    symlinkSync(join(home, '.codex'), join(dir, 'codex'), 'junction')
+    expect((await listSkillFolderFiles(dir))?.files.map((file) => file.rel)).toEqual(['SKILL.md'])
+    expect(await findSkillUrls(dir)).toEqual([])
+  })
+
+  it('skips a source folder whose real place is the Codex home, without listing it', async () => {
+    const home = temp()
+    skill(join(home, '.codex', 'skills'), 'codex-only')
+    mkdirSync(join(home, '.claude'), { recursive: true })
+    symlinkSync(join(home, '.codex', 'skills'), join(home, '.claude', 'skills'), 'junction')
+    const sources = await userSkillSources({ homeDir: home })
+    expect(sources.map((entry) => entry.source)).toEqual(['app', 'codex'])
+    expect(await listUserSkills({ homeDir: home })).toEqual([])
+    expect(
+      await readUserSkillsFrom([{ source: 'user', dir: join(home, '.claude', 'skills') }], {
+        homeDir: home,
+      }),
+    ).toEqual([])
   })
 })
 

@@ -1,7 +1,8 @@
 /**
  * Where the person's skills are read from, and the list of them. The Codex
- * home (`~/.codex`, where Codex keeps its sign-in) is never read: no source is
- * placed there, and a skill folder whose real place is inside it is skipped.
+ * home (`~/.codex`, where Codex keeps its sign-in) is never read: a source or
+ * skill folder whose path or real place is inside it is skipped before it is
+ * opened.
  */
 import type { Dirent } from 'node:fs'
 import { readFile, readdir, realpath, stat } from 'node:fs/promises'
@@ -24,6 +25,20 @@ export interface UserSkillSourceOptions {
 /** `~/.codex`: Codex's own folder, which holds its sign-in */
 export function codexHomeDir(homeDir: string): string {
   return join(homeDir, '.codex')
+}
+
+/**
+ * Whether a folder is the Codex home or inside it, by its path and by its real
+ * place (a link or junction pointing there counts). Resolving a real place
+ * opens no folder and reads no file.
+ */
+export async function isInsideCodexHome(path: string, homeDir: string): Promise<boolean> {
+  const codexHome = codexHomeDir(homeDir)
+  if (isInsideDir(path, codexHome)) return true
+  const codexReal = await realpath(codexHome).catch(() => codexHome)
+  if (isInsideDir(path, codexReal)) return true
+  const real = await realpath(path).catch(() => undefined)
+  return real !== undefined && (isInsideDir(real, codexHome) || isInsideDir(real, codexReal))
 }
 
 /** The app's own skills folder, the only one the app writes to */
@@ -74,8 +89,11 @@ export async function userSkillSources(
     sources.push({ source: 'project', dir: join(options.projectRoot, '.claude', 'skills') })
     sources.push({ source: 'project', dir: join(options.projectRoot, '.agents', 'skills') })
   }
-  const codexHome = codexHomeDir(home)
-  return sources.filter((entry) => !isInsideDir(entry.dir, codexHome))
+  const kept: UserSkillSourceDir[] = []
+  for (const entry of sources) {
+    if (!(await isInsideCodexHome(entry.dir, home))) kept.push(entry)
+  }
+  return kept
 }
 
 /**
@@ -149,16 +167,14 @@ export async function readUserSkillsFrom(
   sources: UserSkillSourceDir[],
   options: ReadUserSkillsOptions,
 ): Promise<UserSkill[]> {
-  const codexHome = codexHomeDir(options.homeDir)
-  const codexReal = await realpath(codexHome).catch(() => codexHome)
   const skills: UserSkill[] = []
   const seen = new Set<string>()
   for (const source of sources) {
-    if (isInsideDir(source.dir, codexHome)) continue
+    // checked before the source folder is opened
+    if (await isInsideCodexHome(source.dir, options.homeDir)) continue
     for (const folder of await skillFolders(source.dir)) {
       const dir = join(source.dir, folder)
-      const real = await realpath(dir).catch(() => dir)
-      if (isInsideDir(real, codexHome) || isInsideDir(real, codexReal)) continue
+      if (await isInsideCodexHome(dir, options.homeDir)) continue
       const skill = await readUserSkillFolder(dir, {
         source: source.source,
         plugin: source.plugin,

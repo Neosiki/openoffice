@@ -5,7 +5,7 @@
  */
 import { createHash } from 'node:crypto'
 import type { Dirent } from 'node:fs'
-import { readFile, readdir, realpath, stat } from 'node:fs/promises'
+import { lstat, readFile, readdir, realpath, stat } from 'node:fs/promises'
 import { basename, extname, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import {
   IEUM_SOURCE_FILE,
@@ -36,9 +36,11 @@ export interface SkillFolderLimits {
 
 /**
  * Every file in a folder, sorted by inside path. Links to folders are not
- * followed; links to files are read as the file. With limits, the walk stops
- * once either is passed and `tooLarge` is set. `undefined` when a folder in it
- * cannot be read.
+ * followed. A link to a file counts only when its real place is inside the
+ * folder's real place, and then `path` is that real place; a link leading out
+ * (into `~/.codex`, for one) is skipped, so nothing reads through it. With
+ * limits, the walk stops once either is passed and `tooLarge` is set.
+ * `undefined` when the folder or a folder in it cannot be read.
  */
 export async function listSkillFolderFiles(
   dir: string,
@@ -47,6 +49,12 @@ export async function listSkillFolderFiles(
   const files: SkillFolderFile[] = []
   let bytes = 0
   let tooLarge = false
+  let root: string
+  try {
+    root = await realpath(dir)
+  } catch {
+    return undefined
+  }
   const walk = async (current: string, rel: string): Promise<boolean> => {
     let entries: Dirent[]
     try {
@@ -62,9 +70,17 @@ export async function listSkillFolderFiles(
         if (!(await walk(path, relPath))) return false
         continue
       }
-      const info = await stat(path).catch(() => undefined)
+      let target = path
+      if (entry.isSymbolicLink()) {
+        const real = await realpath(path).catch(() => undefined)
+        if (!real || !isInsideDir(real, root)) continue
+        target = real
+      } else if (!entry.isFile()) {
+        continue
+      }
+      const info = await stat(target).catch(() => undefined)
       if (!info?.isFile()) continue
-      files.push({ rel: relPath, path, size: info.size })
+      files.push({ rel: relPath, path: target, size: info.size })
       bytes += info.size
       if (limits && (files.length > limits.files || bytes > limits.bytes)) tooLarge = true
     }
@@ -100,16 +116,6 @@ export function isInsideDir(child: string, parent: string): boolean {
   return rel === '' || (!rel.startsWith(`..${sep}`) && rel !== '..' && !isAbsolute(rel))
 }
 
-async function templateFileExists(dir: string, template: string): Promise<boolean> {
-  try {
-    const file = join(dir, ...template.split('/'))
-    if (!(await stat(file)).isFile()) return false
-    return isInsideDir(await realpath(file), await realpath(dir))
-  } catch {
-    return false
-  }
-}
-
 export interface ReadUserSkillFolderOptions {
   source: UserSkillSource
   plugin?: string | undefined
@@ -139,10 +145,20 @@ export async function readUserSkillFolder(
 
   let text: string | undefined
   if (listed) {
-    try {
-      text = await readFile(join(dir, 'SKILL.md'), 'utf8')
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') unreadable ??= 'unreadable'
+    const fold = (rel: string) => (process.platform === 'win32' ? rel.toLowerCase() : rel)
+    const skillMd =
+      listed.files.find((file) => file.rel === 'SKILL.md') ??
+      listed.files.find((file) => fold(file.rel) === fold('SKILL.md'))
+    if (skillMd) {
+      try {
+        text = await readFile(skillMd.path, 'utf8')
+      } catch {
+        unreadable ??= 'unreadable'
+      }
+    } else {
+      // something named SKILL.md that is not a file in the folder, such as a link leading out
+      const there = await lstat(join(dir, 'SKILL.md')).catch(() => undefined)
+      if (there) unreadable ??= 'unreadable'
     }
   }
   const parsed = text === undefined ? undefined : parseSkillMd(text)
@@ -166,7 +182,7 @@ export async function readUserSkillFolder(
     title,
     description,
     template,
-    templateExists: template !== undefined && (await templateFileExists(dir, template)),
+    templateExists: template !== undefined && files.some((file) => file.rel === template),
     hasScripts: files.some((file) => isSkillScriptPath(file.rel)),
     github: options.source === 'app' && files.some((file) => file.rel === IEUM_SOURCE_FILE),
     agentOnly:
