@@ -33,7 +33,7 @@ export const es = {
   signingInBrowserNote:
     'Inicia sesión con tu cuenta de {vendor} en el navegador que se abrió y permite el acceso. Se conecta solo cuando termines.',
   signingInWindowNote:
-    'Si el navegador muestra un código, cópialo, pégalo en la ventana que se acaba de abrir y pulsa Intro.',
+    'Si el navegador no se abrió, copia la dirección que aparece en la ventana que se acaba de abrir y ábrela en el navegador. Cuando el navegador muestre un código, cópialo, pégalo una sola vez en esa ventana y pulsa Intro. Es posible que el código pegado no se vea en la ventana.',
   meteredWarning: 'Esto no es una suscripción: se cobra según lo que uses.',
   meteredMeaning:
     'Este inicio de sesión usa una clave de API o una cuenta de pago por consumo, o no se pudo confirmar su tipo. «Usar de todos modos» permite que la IA funcione con esta conexión, y cada solicitud se factura a esa cuenta.',

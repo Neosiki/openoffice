@@ -33,7 +33,7 @@ export const ms = {
   signingInBrowserNote:
     'Log masuk ke akaun {vendor} anda dalam pelayar yang dibuka, kemudian benarkan akses. Sambungan akan dibuat sendiri apabila selesai.',
   signingInWindowNote:
-    'Jika pelayar menunjukkan kod, salin dan tampalkannya ke tetingkap yang baru dibuka, kemudian tekan Enter.',
+    'Jika pelayar tidak dibuka, salin alamat yang ditunjukkan dalam tetingkap yang baru dibuka dan bukanya dalam pelayar. Apabila pelayar menunjukkan kod, salin dan tampalkannya sekali ke tetingkap itu, kemudian tekan Enter. Kod yang ditampal mungkin tidak kelihatan dalam tetingkap.',
   meteredWarning: 'Ini bukan langganan: anda dicaj mengikut penggunaan.',
   meteredMeaning:
     'Log masuk ini menggunakan kunci API atau akaun bayar ikut guna, atau jenisnya tidak dapat disahkan. Dengan "Guna juga", AI berjalan melalui sambungan ini dan setiap permintaan dicaj kepada akaun tersebut.',

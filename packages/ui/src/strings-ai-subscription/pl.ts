@@ -33,7 +33,7 @@ export const pl = {
   signingInBrowserNote:
     'Zaloguj się na swoje konto {vendor} w otwartej przeglądarce i zezwól na dostęp. Połączenie nastąpi samo, gdy skończysz.',
   signingInWindowNote:
-    'Jeśli przeglądarka pokaże kod, skopiuj go, wklej w oknie, które właśnie się otworzyło, i naciśnij Enter.',
+    'Jeśli przeglądarka się nie otworzyła, skopiuj adres widoczny w oknie, które właśnie się otworzyło, i otwórz go w przeglądarce. Gdy przeglądarka pokaże kod, skopiuj go, wklej raz w tym oknie i naciśnij Enter. Wklejony kod może nie być widoczny w oknie.',
   meteredWarning: 'To nie jest subskrypcja: płacisz za faktyczne zużycie.',
   meteredMeaning:
     'To logowanie korzysta z klucza API lub konta rozliczanego za zużycie albo nie udało się ustalić jego rodzaju. Po wybraniu „Użyj mimo to” AI będzie działać przez to połączenie, a każde żądanie obciąży to konto.',

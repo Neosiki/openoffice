@@ -31,7 +31,7 @@ export const en = {
   signingInBrowserNote:
     'Sign in to your {vendor} account in the browser that opened and allow access. It connects by itself when you are done.',
   signingInWindowNote:
-    'If the browser shows a code, copy it, paste it into the window that just opened, and press Enter.',
+    'If the browser did not open, copy the address shown in the window that just opened and open it in your browser. When the browser shows a code, copy it, paste it once into that window, and press Enter. The pasted code may not appear in the window.',
   meteredWarning: 'This is not a subscription: you are charged for what you use.',
   meteredMeaning:
     'This login is an API key or a pay-as-you-go account, or its type could not be confirmed. "Use anyway" lets AI run on this connection, and every request is billed to that account.',

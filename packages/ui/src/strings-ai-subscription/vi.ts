@@ -32,7 +32,7 @@ export const vi = {
   signingInBrowserNote:
     'Đăng nhập vào tài khoản {vendor} của bạn trong trình duyệt vừa mở và cho phép truy cập. Khi xong, kết nối sẽ tự hoàn tất.',
   signingInWindowNote:
-    'Nếu trình duyệt hiện một mã, hãy sao chép, dán vào cửa sổ vừa mở rồi nhấn Enter.',
+    'Nếu trình duyệt không mở, hãy sao chép địa chỉ hiện trong cửa sổ vừa mở rồi mở nó trong trình duyệt. Khi trình duyệt hiện một mã, hãy sao chép, dán một lần vào cửa sổ đó rồi nhấn Enter. Mã đã dán có thể không hiện trong cửa sổ.',
   meteredWarning: 'Đây không phải gói đăng ký: bạn bị tính phí theo mức sử dụng.',
   meteredMeaning:
     'Lần đăng nhập này dùng khóa API hoặc tài khoản trả phí theo mức sử dụng, hoặc không xác định được loại đăng nhập. Chọn "Vẫn sử dụng" để AI chạy qua kết nối này, và mỗi yêu cầu sẽ được tính vào tài khoản đó.',

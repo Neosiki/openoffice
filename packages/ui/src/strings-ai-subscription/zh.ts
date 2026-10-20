@@ -27,7 +27,8 @@ export const zh = {
   installNote: '将在新的终端窗口中运行 {vendor} 的官方安装命令。',
   loginNote: '打开的登录页面由 {vendor} 提供。',
   signingInBrowserNote: '请在打开的浏览器中登录你的 {vendor} 账户并允许访问。完成后会自动连接。',
-  signingInWindowNote: '如果浏览器显示了代码，请复制它，粘贴到刚打开的窗口中，然后按 Enter。',
+  signingInWindowNote:
+    '如果浏览器没有打开，请复制刚打开的窗口中显示的网址，在浏览器中打开。浏览器显示代码时，请复制它，在该窗口中粘贴一次，然后按 Enter。粘贴的代码可能不会显示在窗口中。',
   meteredWarning: '这不是订阅，而是按实际用量收费。',
   meteredMeaning:
     '当前登录使用的是 API 密钥或按量付费账户，或者无法确认登录方式。选择“仍然使用”后，AI 将通过此连接运行，每次请求都会向该账户计费。',

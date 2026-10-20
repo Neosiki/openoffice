@@ -35,7 +35,7 @@ export const de = {
   signingInBrowserNote:
     'Melden Sie sich im geöffneten Browser bei Ihrem {vendor}-Konto an und erlauben Sie den Zugriff. Danach wird die Verbindung von selbst hergestellt.',
   signingInWindowNote:
-    'Wenn der Browser einen Code anzeigt, kopieren Sie ihn, fügen Sie ihn in das soeben geöffnete Fenster ein und drücken Sie die Eingabetaste.',
+    'Hat sich der Browser nicht geöffnet, kopieren Sie die Adresse aus dem soeben geöffneten Fenster und öffnen Sie sie im Browser. Zeigt der Browser einen Code, kopieren Sie ihn, fügen Sie ihn einmal in dieses Fenster ein und drücken Sie die Eingabetaste. Der eingefügte Code wird im Fenster möglicherweise nicht angezeigt.',
   meteredWarning: 'Das ist kein Abonnement: Abgerechnet wird nach Verbrauch.',
   meteredMeaning:
     'Diese Anmeldung nutzt einen API-Schlüssel oder ein Konto mit nutzungsbasierter Abrechnung, oder ihre Art ließ sich nicht feststellen. Mit „Trotzdem verwenden“ läuft die KI über diese Verbindung, und jede Anfrage wird diesem Konto berechnet.',
