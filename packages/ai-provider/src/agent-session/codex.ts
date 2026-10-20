@@ -74,9 +74,15 @@ const DIAGNOSTIC_LIMIT = 4_000
 const DEFAULT_IDLE_MS = 30 * 60_000
 const MAX_MCP_STATUS_PAGES = 10
 
-/** The brain-only overrides with skill instructions turned on */
+/**
+ * The brain-only overrides with skill instructions turned on. Web search is
+ * left to Codex's own default here: the agent session follows the Codex app,
+ * whose search is on (cached results) unless the person turns it off.
+ */
 export function codexAgentLaunchArgs(): string[] {
-  const overrides = CODEX_CONFIG_OVERRIDES.map((override) =>
+  const overrides = CODEX_CONFIG_OVERRIDES.filter(
+    (override) => !override.startsWith('web_search='),
+  ).map((override) =>
     override.startsWith('skills.include_instructions=')
       ? 'skills.include_instructions=true'
       : override,

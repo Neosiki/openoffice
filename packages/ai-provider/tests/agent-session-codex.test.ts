@@ -155,6 +155,8 @@ describe('the launch and the thread', () => {
     expect(args).toContain('features.plugins=false')
     expect(args).toContain('skills.include_instructions=true')
     expect(args).not.toContain('skills.include_instructions=false')
+    // web search follows the Codex app's default in an agent session, not the chat's "off"
+    expect(args.some((arg) => arg.startsWith('web_search='))).toBe(false)
     expect(args.slice(-2)).toEqual(['--listen', 'stdio://'])
     // the MXC sandbox, explicitly: it fails rather than fall back to one that cannot deny the sign-in folder
     expect(args[args.indexOf('windows.sandbox="mxc"') - 1]).toBe('-c')

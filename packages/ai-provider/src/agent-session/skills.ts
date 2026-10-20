@@ -45,6 +45,12 @@ export interface AgentSkillBundle {
 export const AGENT_SKILL_PLUGIN_NAME = 'ieum-skills'
 const MANIFEST_FILE = '.ieum-skills.json'
 const SKILL_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/
+/**
+ * Names never read from any source: the upstream program's skill (this app
+ * reads nothing the upstream registered) and this app's own command-line skill,
+ * which steers to the terminal command instead of the session's tools.
+ */
+const RESERVED_SKILL_NAMES: ReadonlySet<string> = new Set(['genoffice', 'ieumoffice'])
 export const MAX_AGENT_SKILL_BYTES = 64 * 1024 * 1024
 const MAX_AGENT_SKILL_FILES = 5_000
 /** project skills win over the app's, the app's over the person's, theirs over plugins' */
@@ -178,6 +184,7 @@ export async function buildAgentSkillBundle(
         source: source.kind,
         plugin: source.plugin,
       }
+      if (RESERVED_SKILL_NAMES.has(entry.name.toLowerCase())) continue
       const from = join(source.dir, entry.name)
       if (!SKILL_NAME.test(entry.name)) {
         skipped.push({ ...entryInfo, reason: 'bad-name' })

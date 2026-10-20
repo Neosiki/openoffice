@@ -117,6 +117,20 @@ describe('the bundle', () => {
     ])
   })
 
+  it('never reads the upstream skill or the command-line skill of this app', async () => {
+    const user = temp()
+    skill(user, 'genoffice')
+    skill(user, 'IeumOffice')
+    skill(user, 'kept')
+    const bundle = temp()
+    const result = await buildAgentSkillBundle([{ kind: 'user', dir: user }], bundle)
+    expect(result.skills.map((entry) => entry.name)).toEqual(['kept'])
+    // not even listed as skipped: the folder is not looked into
+    expect(result.skipped).toEqual([])
+    expect(existsSync(join(bundle, 'skills', 'genoffice'))).toBe(false)
+    expect(existsSync(join(bundle, 'skills', 'IeumOffice'))).toBe(false)
+  })
+
   it('copies a changed skill again, restores an edited copy, and drops one that is gone', async () => {
     const user = temp()
     const dir = skill(user, 'deck', 'v1')
