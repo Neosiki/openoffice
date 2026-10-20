@@ -51,6 +51,26 @@ describe('crashLine', () => {
     expect(line).not.toMatch(/salary|plan\.docx|secret|Users/)
   })
 
+  it('writes memory figures as whole non-negative numbers only', () => {
+    const line = crashLine(
+      {
+        kind: 'low-memory',
+        appMB: 2048,
+        freeMB: 0,
+        totalMB: 7.5,
+        aiStreams: -1,
+        cliChildren: 'C:\\secret' as never,
+      },
+      AT,
+    )
+    expect(JSON.parse(line)).toEqual({
+      at: '2026-10-15T01:02:03.000Z',
+      kind: 'low-memory',
+      appMB: 2048,
+      freeMB: 0,
+    })
+  })
+
   it('ignores fields it does not know', () => {
     const entry = { kind: 'renderer', reason: 'crashed', url: 'docs://x/?file=a.docx' } as never
     expect(crashLine(entry, AT)).not.toContain('a.docx')

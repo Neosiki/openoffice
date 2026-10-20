@@ -4,7 +4,9 @@ import { appendFileSync, readFileSync, statSync, writeFileSync } from 'node:fs'
  * A small crash record kept on this PC only. When a renderer, the GPU process
  * or another child process ends abnormally, or the main process meets an
  * uncaught error, one JSON line goes to `<userData>/crash-log.jsonl`: the time,
- * what ended, Chromium's reason word, the exit code, and which editor it was.
+ * what ended, Chromium's reason word, the exit code, and which editor it was,
+ * plus a few memory figures in whole megabytes. A `low-memory` line records the
+ * same figures when the PC runs short of memory while an AI request is running.
  * Nothing else is accepted — no document text, path, file name, URL or error
  * message (those can carry a path) — and nothing is ever sent anywhere.
  */
@@ -13,9 +15,24 @@ export const CRASH_LOG_FILE = 'crash-log.jsonl'
 /** past this size the oldest lines are dropped, keeping about half */
 export const CRASH_LOG_MAX_BYTES = 64 * 1024
 
-export type CrashKind = 'renderer' | 'child-process' | 'main-exception' | 'main-rejection'
+export type CrashKind =
+  'renderer' | 'child-process' | 'main-exception' | 'main-rejection' | 'low-memory'
 
-export interface CrashEntry {
+/** memory at the time of the entry; whole numbers only */
+export interface CrashMemory {
+  /** working set of all the app's own processes, MB */
+  appMB?: number
+  /** free physical memory of the PC, MB */
+  freeMB?: number
+  /** physical memory of the PC, MB */
+  totalMB?: number
+  /** AI requests in flight */
+  aiStreams?: number
+  /** subscription CLI processes the app is running */
+  cliChildren?: number
+}
+
+export interface CrashEntry extends CrashMemory {
   kind: CrashKind
   /** Chromium's reason word ('crashed', 'oom', …) or an error class name */
   reason?: string
@@ -33,6 +50,8 @@ function safeWord(value: unknown): string | undefined {
   return typeof value === 'string' && SAFE_WORD.test(value) ? value : undefined
 }
 
+const MEMORY_FIELDS = ['appMB', 'freeMB', 'totalMB', 'aiStreams', 'cliChildren'] as const
+
 /** one log line, holding only the allowed fields */
 export function crashLine(entry: CrashEntry, now: Date = new Date()): string {
   const line: Record<string, string | number> = { at: now.toISOString(), kind: entry.kind }
@@ -45,6 +64,10 @@ export function crashLine(entry: CrashEntry, now: Date = new Date()): string {
   if (editor) line.editor = editor
   const proc = safeWord(entry.process)
   if (proc) line.process = proc
+  for (const key of MEMORY_FIELDS) {
+    const value = entry[key]
+    if (typeof value === 'number' && Number.isInteger(value) && value >= 0) line[key] = value
+  }
   return `${JSON.stringify(line)}\n`
 }
 

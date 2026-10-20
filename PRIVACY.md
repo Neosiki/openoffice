@@ -272,10 +272,14 @@ Nothing in this list is uploaded by the app.
   another PC.
 - **The crash record** (`crash-log.jsonl` in the data folder): one line each
   time an editor's page process, the graphics process or another helper
-  process ends abnormally, or the app meets an unexpected error. A line holds
-  the time, what ended, the reason word Chromium reports (such as `crashed` or
-  `oom`), the exit code and which editor it was (such as `docs`). It holds no
-  document text, file names, paths or error messages, and it is kept under
+  process ends abnormally, or the app meets an unexpected error, and one line
+  when the PC runs short of memory while an AI request is running (at most
+  every 10 minutes). A line holds the time, what ended, the reason word
+  Chromium reports (such as `crashed` or `oom`), the exit code, which editor it
+  was (such as `docs`), and memory figures in whole megabytes: the app's own
+  memory use, the PC's free and total memory, and how many AI requests and AI
+  programs were running. It holds no document text, file names, paths or
+  error messages, and it is kept under
   64 KB by dropping the oldest lines. The app never sends it anywhere; if you
   report a problem, you can attach it yourself. No crash dumps are written.
 - **The command-line audit log** (`~/.ieumoffice/cli-audit.jsonl`): one line

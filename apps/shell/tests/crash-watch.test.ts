@@ -2,7 +2,7 @@ import { EventEmitter } from 'node:events'
 import { mkdtempSync, readFileSync, rmSync, existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 /**
  * Crash watch (src/main/crash-watch.ts): what gets recorded, and when the user
@@ -12,7 +12,10 @@ import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const userData = mkdtempSync(join(tmpdir(), 'crash-watch-'))
 const { fakeApp, showMessageBox } = vi.hoisted(() => ({
-  fakeApp: {} as EventEmitter & { getPath: (name: string) => string },
+  fakeApp: {} as EventEmitter & {
+    getPath: (name: string) => string
+    getAppMetrics: () => Array<{ memory: { workingSetSize: number } }>
+  },
   showMessageBox: vi.fn(async () => ({ response: 0, checkboxChecked: false })),
 }))
 
@@ -21,6 +24,11 @@ vi.mock('electron', async () => {
   Object.setPrototypeOf(fakeApp, Emitter.prototype)
   Emitter.call(fakeApp)
   fakeApp.getPath = () => userData
+  // working sets in KB, as Electron reports them
+  fakeApp.getAppMetrics = () => [
+    { memory: { workingSetSize: 300 * 1024 } },
+    { memory: { workingSetSize: 212 * 1024 } },
+  ]
   return { app: fakeApp, dialog: { showMessageBox } }
 })
 
@@ -28,14 +36,23 @@ vi.mock('../src/main/renderer-disposal', () => ({
   wasReleasedRenderer: (id: number) => id === 99,
 }))
 
-import { shouldPromptForGoneRenderer, startCrashWatch } from '../src/main/crash-watch'
+import {
+  isLowMemory,
+  memoryFigures,
+  shouldPromptForGoneRenderer,
+  startCrashWatch,
+  startLowMemoryWatch,
+} from '../src/main/crash-watch'
 import type { CrashedDocument } from '../src/main/crash-watch'
+import type { CrashMemory } from '../src/main/crash-log'
 
 const docs = new Map<number, CrashedDocument>()
 const closeDocument = vi.fn(() => true)
 const reopen = vi.fn()
+let memoryNow: CrashMemory = {}
 
 startCrashWatch({
+  memory: () => memoryNow,
   prompt: true,
   editorOf: (wc) => docs.get(wc.id)?.kind ?? 'other',
   documentOf: (wc) => docs.get(wc.id) ?? null,
@@ -63,6 +80,7 @@ const flush = () => new Promise((resolve) => setTimeout(resolve, 0))
 beforeEach(() => {
   rmSync(logFile, { force: true })
   docs.clear()
+  memoryNow = {}
   vi.clearAllMocks()
 })
 
@@ -153,5 +171,83 @@ describe('crash watch', () => {
     expect(shouldPromptForGoneRenderer('oom')).toBe(true)
     expect(shouldPromptForGoneRenderer('killed')).toBe(false)
     expect(shouldPromptForGoneRenderer('clean-exit')).toBe(false)
+  })
+
+  it('writes the memory figures of the moment with each entry', async () => {
+    memoryNow = { appMB: 2400, freeMB: 310, totalMB: 7900, aiStreams: 1, cliChildren: 2 }
+    fakeApp.emit('render-process-gone', {}, fakeWc(7), { reason: 'oom', exitCode: 1 })
+    await flush()
+    expect(lines()).toEqual([
+      expect.objectContaining({
+        kind: 'renderer',
+        reason: 'oom',
+        appMB: 2400,
+        freeMB: 310,
+        totalMB: 7900,
+        aiStreams: 1,
+        cliChildren: 2,
+      }),
+    ])
+  })
+})
+
+describe('memory figures', () => {
+  it('sums the app processes and reads the counts', () => {
+    const figures = memoryFigures({ aiStreams: () => 2, cliChildren: () => 1 })
+    expect(figures).toMatchObject({ appMB: 512, aiStreams: 2, cliChildren: 1 })
+    expect(figures.totalMB).toBeGreaterThan(0)
+    expect(figures.freeMB).toBeGreaterThanOrEqual(0)
+  })
+
+  it('counts a PC as short of memory below 512 MB or 8% of its memory', () => {
+    expect(isLowMemory(400, 8000)).toBe(true)
+    expect(isLowMemory(600, 8000)).toBe(true)
+    expect(isLowMemory(700, 8000)).toBe(false)
+    expect(isLowMemory(1200, 16000)).toBe(true)
+    expect(isLowMemory(1400, 16000)).toBe(false)
+  })
+})
+
+describe('low-memory watch', () => {
+  afterEach(() => vi.useRealTimers())
+
+  it('records only while an AI request runs, at most once per cooldown', () => {
+    vi.useFakeTimers()
+    let streams = 0
+    let clock = 0
+    const stop = startLowMemoryWatch({
+      aiStreams: () => streams,
+      memory: () => ({ appMB: 3000, freeMB: 200, totalMB: 8000, aiStreams: streams }),
+      sampleMs: 1000,
+      cooldownMs: 60_000,
+      now: () => clock,
+    })
+    vi.advanceTimersByTime(1000)
+    expect(lines()).toEqual([])
+    streams = 1
+    clock = 1000
+    vi.advanceTimersByTime(1000)
+    expect(lines()).toEqual([
+      expect.objectContaining({ kind: 'low-memory', freeMB: 200, totalMB: 8000, aiStreams: 1 }),
+    ])
+    clock = 30_000
+    vi.advanceTimersByTime(1000)
+    expect(lines()).toHaveLength(1)
+    clock = 62_000
+    vi.advanceTimersByTime(1000)
+    expect(lines()).toHaveLength(2)
+    stop()
+  })
+
+  it('stays quiet while the PC has memory to spare', () => {
+    vi.useFakeTimers()
+    const stop = startLowMemoryWatch({
+      aiStreams: () => 1,
+      memory: () => ({ freeMB: 4000, totalMB: 8000 }),
+      sampleMs: 1000,
+    })
+    vi.advanceTimersByTime(5000)
+    expect(lines()).toEqual([])
+    stop()
   })
 })

@@ -135,6 +135,7 @@ import {
   defaultSaveDir,
   uniquePathIn,
   authorizeMcpDocWrite,
+  activeAiStreamCount,
 } from '../../../docs/src/main/docs-main'
 import { blankXlsxBuffer } from '@genoffice/xlsx-gateway/gateway/csv-import'
 import { blankPdfBuffer } from '../../../pdf/src/main/blank-pdf'
@@ -311,10 +312,11 @@ import {
   initSubscriptionChildTracking,
   sharedSubscriptionStatuses,
   shutdownSubscriptionChildren,
+  trackedSubscriptionChildCount,
 } from '@genoffice/ai-provider/subscription'
 import { showErrorDialog } from './error-dialog'
 import { startRendererWatchdog } from './renderer-watchdog'
-import { startCrashWatch } from './crash-watch'
+import { memoryFigures, startCrashWatch, startLowMemoryWatch } from './crash-watch'
 import {
   capStatPaths,
   matchesExtFamily,
@@ -7538,8 +7540,14 @@ app.whenReady().then(async () => {
   initAutoUpdater(() => shellWindow, currentUpdateChannel())
   // crash record on this PC (crash-log.jsonl in userData) and, outside
   // headless runs, a prompt when the renderer of an open document dies
+  const crashMemory = () =>
+    memoryFigures({
+      aiStreams: activeAiStreamCount,
+      cliChildren: trackedSubscriptionChildCount,
+    })
   startCrashWatch({
     prompt: headlessArgv.kind === 'none',
+    memory: crashMemory,
     editorOf: (wc) => {
       if (shellWindow && !shellWindow.isDestroyed() && shellWindow.webContents.id === wc.id) {
         return 'home'
@@ -7562,6 +7570,8 @@ app.whenReady().then(async () => {
     reopen: (filePath) => void openDocumentPath(filePath),
     t: (key, params) => tm(key, params),
   })
+  // a PC that runs short of memory during an AI request leaves a line too
+  startLowMemoryWatch({ aiStreams: activeAiStreamCount, memory: crashMemory })
   // resource watchdog: a renderer that stays hot for minutes gets diagnostics
   // recorded and the user an offer to close the document (headless exports
   // are short-lived and unattended)

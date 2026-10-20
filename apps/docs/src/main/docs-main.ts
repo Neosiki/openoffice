@@ -3762,6 +3762,11 @@ const SETTINGS_PATH = () => userDataPath('ai-settings.json')
 
 const activeAiStreams = new Map<string, AbortController>()
 
+/** AI requests in flight across every editor (the shell's memory record reads it) */
+export function activeAiStreamCount(): number {
+  return activeAiStreams.size
+}
+
 /** every renderer (tabs, home) re-reads ai-settings.json — the composer chip and
  *  the settings page edit the same file from different windows */
 function broadcastAiSettingsChanged(): void {
