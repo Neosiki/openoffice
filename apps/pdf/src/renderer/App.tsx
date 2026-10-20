@@ -298,6 +298,8 @@ import {
   parsePageRanges,
   loadPassageMarks,
   savePassageMarks,
+  loadSidebarOpen,
+  saveSidebarOpen,
 } from './view-config'
 import type { PageSize, FitMode } from './view-config'
 import { useVisibleSet, PdfPage, MarkupOverlay } from './PdfPage'
@@ -510,7 +512,10 @@ export default function App() {
   const [scale, setScale] = useState(1)
   const [currentPage, setCurrentPage] = useState(1)
   const [pageInput, setPageInput] = useState('1')
-  const [sidebar, setSidebar] = useState<'thumbs' | 'outline' | 'notes' | null>('thumbs')
+  const [sidebar, setSidebar] = useState<'thumbs' | 'outline' | 'notes' | null>(() =>
+    loadSidebarOpen() ? 'thumbs' : null,
+  )
+  useEffect(() => saveSidebarOpen(sidebar !== null), [sidebar])
   const [sidebarW, setSidebarW] = useState(loadSidebarW)
   /** raster width for thumbnails — only updated when a drag ends (re-rastering every frame would jank) */
   const [thumbRasterW, setThumbRasterW] = useState(() => loadSidebarW() - SIDEBAR_CHROME)
