@@ -33,7 +33,7 @@ export const pt = {
   signingInBrowserNote:
     'Entre na sua conta da {vendor} no navegador que abriu e permita o acesso. A conexão é feita sozinha quando você terminar.',
   signingInWindowNote:
-    'Se o navegador mostrar um código, copie-o, cole-o na janela que acabou de abrir e pressione Enter.',
+    'Se o navegador não abriu, copie o endereço mostrado na janela que acabou de abrir e abra-o no navegador. Quando o navegador mostrar um código, copie-o, cole-o uma única vez nessa janela e pressione Enter. O código colado pode não aparecer na janela.',
   meteredWarning: 'Isto não é uma assinatura: você paga pelo que usar.',
   meteredMeaning:
     'Este login usa uma chave de API ou uma conta de pagamento por consumo, ou não foi possível confirmar o tipo. “Usar mesmo assim” permite que a IA funcione com esta conexão, e cada solicitação é cobrada dessa conta.',

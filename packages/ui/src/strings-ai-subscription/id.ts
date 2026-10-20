@@ -31,7 +31,7 @@ export const id = {
   signingInBrowserNote:
     'Masuk ke akun {vendor} Anda di browser yang terbuka, lalu izinkan akses. Koneksi akan tersambung sendiri setelah selesai.',
   signingInWindowNote:
-    'Jika browser menampilkan kode, salin, tempelkan ke jendela yang baru terbuka, lalu tekan Enter.',
+    'Jika browser tidak terbuka, salin alamat yang tampil di jendela yang baru terbuka lalu buka di browser. Saat browser menampilkan kode, salin, tempelkan sekali ke jendela itu, lalu tekan Enter. Kode yang ditempel mungkin tidak terlihat di jendela.',
   meteredWarning: 'Ini bukan langganan: Anda ditagih sesuai pemakaian.',
   meteredMeaning:
     'Login ini memakai kunci API atau akun bayar sesuai pemakaian, atau jenisnya tidak dapat dipastikan. Dengan "Tetap gunakan", AI berjalan melalui koneksi ini dan setiap permintaan ditagihkan ke akun tersebut.',

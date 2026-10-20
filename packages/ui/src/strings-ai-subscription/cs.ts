@@ -32,7 +32,7 @@ export const cs = {
   signingInBrowserNote:
     'V otevřeném prohlížeči se přihlaste ke svému účtu {vendor} a povolte přístup. Po dokončení se připojení vytvoří samo.',
   signingInWindowNote:
-    'Pokud prohlížeč zobrazí kód, zkopírujte ho, vložte do právě otevřeného okna a stiskněte Enter.',
+    'Pokud se prohlížeč neotevřel, zkopírujte adresu zobrazenou v právě otevřeném okně a otevřete ji v prohlížeči. Když prohlížeč zobrazí kód, zkopírujte ho, vložte ho jednou do toho okna a stiskněte Enter. Vložený kód se v okně nemusí zobrazit.',
   meteredWarning: 'Toto není předplatné: platíte podle skutečné spotřeby.',
   meteredMeaning:
     'Toto přihlášení používá klíč API nebo účet s platbou podle spotřeby, případně se jeho typ nepodařilo zjistit. Volbou „Přesto použít“ poběží AI přes toto připojení a každý požadavek se naúčtuje tomuto účtu.',

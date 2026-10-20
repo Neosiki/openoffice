@@ -29,7 +29,8 @@ export const zhTW = {
   installNote: '將在新的終端機視窗中執行 {vendor} 的官方安裝指令。',
   loginNote: '開啟的登入頁面由 {vendor} 提供。',
   signingInBrowserNote: '請在開啟的瀏覽器中登入你的 {vendor} 帳戶並允許存取。完成後會自動連線。',
-  signingInWindowNote: '如果瀏覽器顯示代碼，請複製並貼到剛開啟的視窗中，然後按 Enter。',
+  signingInWindowNote:
+    '如果瀏覽器沒有開啟，請複製剛開啟的視窗中顯示的網址，在瀏覽器中開啟。瀏覽器顯示代碼時，請複製並在該視窗中貼上一次，然後按 Enter。貼上的代碼可能不會顯示在視窗中。',
   meteredWarning: '這不是訂閱，而是依實際用量收費。',
   meteredMeaning:
     '目前是以 API 金鑰或依用量付費的帳戶登入，或無法確認登入方式。選擇「仍要使用」後，AI 會透過這個連線執行，每次要求都會向該帳戶計費。',

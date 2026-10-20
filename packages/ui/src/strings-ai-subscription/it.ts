@@ -35,7 +35,7 @@ export const it = {
   signingInBrowserNote:
     'Accedi al tuo account {vendor} nel browser che si è aperto e consenti l’accesso. La connessione avviene da sola quando hai finito.',
   signingInWindowNote:
-    'Se il browser mostra un codice, copialo, incollalo nella finestra appena aperta e premi Invio.',
+    'Se il browser non si è aperto, copia l’indirizzo mostrato nella finestra appena aperta e aprilo nel browser. Quando il browser mostra un codice, copialo, incollalo una sola volta in quella finestra e premi Invio. Il codice incollato potrebbe non comparire nella finestra.',
   meteredWarning: 'Non è un abbonamento: paghi in base a quanto usi.',
   meteredMeaning:
     'Questo accesso usa una chiave API o un account a consumo, oppure non è stato possibile confermarne il tipo. Con “Usa comunque” l’IA funziona su questa connessione e ogni richiesta viene addebitata a quell’account.',

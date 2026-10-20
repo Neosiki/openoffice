@@ -34,7 +34,7 @@ export const nl = {
   signingInBrowserNote:
     'Meld je in de geopende browser aan bij je {vendor}-account en sta toegang toe. De verbinding komt vanzelf tot stand als je klaar bent.',
   signingInWindowNote:
-    'Als de browser een code toont, kopieer die, plak hem in het venster dat net is geopend en druk op Enter.',
+    'Is de browser niet geopend, kopieer dan het adres uit het venster dat net is geopend en open het in je browser. Toont de browser een code, kopieer die, plak hem één keer in dat venster en druk op Enter. De geplakte code is mogelijk niet zichtbaar in het venster.',
   meteredWarning: 'Dit is geen abonnement: je betaalt voor wat je gebruikt.',
   meteredMeaning:
     'Deze aanmelding gebruikt een API-sleutel of een account met betaling per verbruik, of het type kon niet worden vastgesteld. Met ‘Toch gebruiken’ draait AI via deze verbinding en wordt elk verzoek bij dat account in rekening gebracht.',

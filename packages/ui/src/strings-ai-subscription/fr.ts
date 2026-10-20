@@ -35,7 +35,7 @@ export const fr = {
   signingInBrowserNote:
     'Connectez-vous à votre compte {vendor} dans le navigateur qui s’est ouvert, puis autorisez l’accès. La connexion se fait d’elle-même une fois terminé.',
   signingInWindowNote:
-    'Si le navigateur affiche un code, copiez-le, collez-le dans la fenêtre qui vient de s’ouvrir et appuyez sur Entrée.',
+    'Si le navigateur ne s’est pas ouvert, copiez l’adresse affichée dans la fenêtre qui vient de s’ouvrir et ouvrez-la dans votre navigateur. Quand le navigateur affiche un code, copiez-le, collez-le une seule fois dans cette fenêtre et appuyez sur Entrée. Le code collé peut ne pas s’afficher dans la fenêtre.',
   meteredWarning: 'Ce n’est pas un abonnement : vous payez ce que vous consommez.',
   meteredMeaning:
     'Cette connexion utilise une clé API ou un compte facturé à l’usage, ou son type n’a pas pu être confirmé. « Utiliser quand même » permet à l’IA de fonctionner avec cette connexion, et chaque requête est facturée à ce compte.',
