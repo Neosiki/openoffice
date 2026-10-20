@@ -237,4 +237,90 @@ describe('streamText', () => {
     expect(outcome).toMatchObject({ status: 'partial', reason: 'max_tokens' })
     expect(cancelled).toBe(true)
   })
+
+  describe('progress pacing', () => {
+    function manualStream() {
+      let callbacks!: AgentStreamCallbacks
+      const transport: AgentTransport = {
+        stream: (_req, cb) => {
+          callbacks = cb
+          return { cancel: () => undefined }
+        },
+      }
+      return { transport, cb: () => callbacks }
+    }
+
+    it('extracts once per interval instead of once per delta, and sends the rest last', async () => {
+      vi.useFakeTimers()
+      try {
+        const { transport, cb } = manualStream()
+        const progress: string[] = []
+        let extracts = 0
+        const promise = streamText({
+          transport,
+          system: 's',
+          user: 'u',
+          maxChars: 100_000,
+          extract: (raw) => {
+            extracts++
+            return { text: raw }
+          },
+          onProgress: (text) => progress.push(text),
+          progressIntervalMs: 100,
+        })
+        for (let i = 0; i < 50; i++) cb().onDelta('x')
+        expect(progress).toEqual(['x'])
+        vi.advanceTimersByTime(100)
+        expect(progress).toEqual(['x', 'x'.repeat(50)])
+        for (let i = 0; i < 50; i++) cb().onDelta('y')
+        cb().onStopReason?.('end_turn')
+        cb().onDone()
+        const outcome = await promise
+        // the delta burst after the last tick still reaches the listener, before the result
+        expect(progress.at(-1)).toBe('x'.repeat(50) + 'y'.repeat(50))
+        expect(outcome).toEqual({ status: 'complete', text: 'x'.repeat(50) + 'y'.repeat(50) })
+        expect(extracts).toBeLessThan(10)
+      } finally {
+        vi.useRealTimers()
+      }
+    })
+
+    it('reports every delta when the interval is zero', async () => {
+      const { transport, cb } = manualStream()
+      const progress: string[] = []
+      const promise = streamText({
+        transport,
+        system: 's',
+        user: 'u',
+        maxChars: 1000,
+        extract: passthrough,
+        onProgress: (text) => progress.push(text),
+        progressIntervalMs: 0,
+      })
+      cb().onDelta('a')
+      cb().onDelta('b')
+      cb().onDelta('c')
+      cb().onDone()
+      await promise
+      expect(progress).toEqual(['a', 'ab', 'abc'])
+    })
+
+    it('does not report the delta that went over the cap', async () => {
+      const { transport, cb } = manualStream()
+      const progress: string[] = []
+      const promise = streamText({
+        transport,
+        system: 's',
+        user: 'u',
+        maxChars: 5,
+        extract: passthrough,
+        onProgress: (text) => progress.push(text),
+      })
+      cb().onDelta('abc')
+      cb().onDelta('d')
+      cb().onDelta('efgh')
+      expect(await promise).toMatchObject({ status: 'partial', reason: 'max_tokens' })
+      expect(progress).toEqual(['abc', 'abcd'])
+    })
+  })
 })

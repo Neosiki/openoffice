@@ -20,9 +20,22 @@ export interface StreamTextOptions {
    * the stop reason decides (a natural end is complete, `max_tokens` is not).
    */
   extract(raw: string): { text: string; complete?: boolean }
-  /** cumulative extracted text; throttle on the caller's side */
+  /**
+   * Cumulative extracted text. Sent for the first delta, then at most once per
+   * `progressIntervalMs`; whatever is still due is sent before the promise
+   * settles, so the last call always carries everything that arrived.
+   */
   onProgress?(text: string): void
+  /** minimum gap between two progress calls (default 120 ms; 0 = every delta) */
+  progressIntervalMs?: number
 }
+
+/**
+ * Extracting runs over the whole reply so far. Per delta that is quadratic in
+ * the reply length (a 200,000-character document arrives in thousands of
+ * deltas); per interval it is bounded by time instead.
+ */
+const DEFAULT_PROGRESS_INTERVAL_MS = 120
 
 export type StreamTextOutcome =
   | { status: 'complete'; text: string }
@@ -50,10 +63,36 @@ export function streamText(opts: StreamTextOptions): Promise<StreamTextOutcome> 
         return { text: input, error: err instanceof Error ? err.message : String(err) }
       }
     }
+    const progressIntervalMs =
+      Number.isFinite(opts.progressIntervalMs) && (opts.progressIntervalMs ?? 0) >= 0
+        ? (opts.progressIntervalMs as number)
+        : DEFAULT_PROGRESS_INTERVAL_MS
+    /** the reply as of the last delta accepted under the cap */
+    let progressRaw = ''
+    let lastProgressAt = -Infinity
+    let progressTimer: ReturnType<typeof setTimeout> | null = null
+    const sendProgress = () => {
+      if (progressTimer !== null) clearTimeout(progressTimer)
+      progressTimer = null
+      lastProgressAt = Date.now()
+      try {
+        opts.onProgress?.(safeExtract(progressRaw).text)
+      } catch {
+        // Ignore progress listener failures so the stream can still settle.
+      }
+    }
+    const scheduleProgress = () => {
+      if (!opts.onProgress || progressTimer !== null) return
+      const wait = lastProgressAt + progressIntervalMs - Date.now()
+      if (wait <= 0) sendProgress()
+      else progressTimer = setTimeout(sendProgress, wait)
+    }
     const finish = (outcome: StreamTextOutcome) => {
       if (settled) return
       settled = true
       opts.signal?.removeEventListener('abort', onAbort)
+      // the listener sees everything that arrived before it learns the outcome
+      if (progressTimer !== null) sendProgress()
       resolve(outcome)
     }
     const partialOrEmpty = (
@@ -91,11 +130,8 @@ export function streamText(opts: StreamTextOptions): Promise<StreamTextOutcome> 
             cancelTransport()
             return
           }
-          try {
-            opts.onProgress?.(safeExtract(raw).text)
-          } catch {
-            // Ignore progress listener failures so the stream can still settle.
-          }
+          progressRaw = raw
+          scheduleProgress()
         },
         onToolCall: () => undefined,
         onStopReason: (reason) => {

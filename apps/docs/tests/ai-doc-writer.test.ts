@@ -13,6 +13,7 @@ import {
   countFragmentBlocks,
   DraftLanding,
   extractFragment,
+  nextDraftTickMs,
   type AiDocWriter,
 } from '../src/renderer/ai/doc-writer'
 import { executeTool } from '../src/renderer/ai/tools'
@@ -72,6 +73,13 @@ describe('buildDocWriterRequest', () => {
 })
 
 describe('DraftLanding', () => {
+  it('waits longer between ticks only when a tick was slow', () => {
+    expect(nextDraftTickMs(5)).toBe(300)
+    expect(nextDraftTickMs(100)).toBe(300)
+    expect(nextDraftTickMs(150)).toBe(450)
+    expect(nextDraftTickMs(5_000)).toBe(2_000)
+  })
+
   it('renders the growing fragment in place, swaps only changed blocks, and leaves no trace on finish', async () => {
     const editor = await createBlankEditor()
     const before = editor.state.doc
