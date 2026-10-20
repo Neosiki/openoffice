@@ -298,6 +298,8 @@ import {
   parsePageRanges,
   loadPassageMarks,
   savePassageMarks,
+  loadSidebarOpen,
+  saveSidebarOpen,
 } from './view-config'
 import type { PageSize, FitMode } from './view-config'
 import { useVisibleSet, PdfPage, MarkupOverlay } from './PdfPage'
@@ -510,7 +512,10 @@ export default function App() {
   const [scale, setScale] = useState(1)
   const [currentPage, setCurrentPage] = useState(1)
   const [pageInput, setPageInput] = useState('1')
-  const [sidebar, setSidebar] = useState<'thumbs' | 'outline' | 'notes' | null>('thumbs')
+  const [sidebar, setSidebar] = useState<'thumbs' | 'outline' | 'notes' | null>(() =>
+    loadSidebarOpen() ? 'thumbs' : null,
+  )
+  useEffect(() => saveSidebarOpen(sidebar !== null), [sidebar])
   const [sidebarW, setSidebarW] = useState(loadSidebarW)
   /** raster width for thumbnails — only updated when a drag ends (re-rastering every frame would jank) */
   const [thumbRasterW, setThumbRasterW] = useState(() => loadSidebarW() - SIDEBAR_CHROME)
@@ -9242,6 +9247,31 @@ export default function App() {
                   })
                 }}
               >
+                {/* Sticky header with the same collapse button as the outline and notes panes */}
+                <div className="pdf-outline-header pdf-thumbs-header">
+                  <span>{t('thumbs')}</span>
+                  <button
+                    type="button"
+                    className="rb-icon"
+                    aria-label={t('aiCollapsePanel')}
+                    data-tip={t('aiCollapsePanel')}
+                    onClick={() => setSidebar(null)}
+                  >
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
+                    >
+                      <path d="m14 6-6 6 6 6" />
+                    </svg>
+                  </button>
+                </div>
                 {visList.map((origIdx, v) => {
                   const size = dispSize(origIdx)
                   return (

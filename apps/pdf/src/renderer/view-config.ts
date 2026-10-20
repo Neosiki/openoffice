@@ -141,3 +141,22 @@ export const savePassageMarks = (on: boolean, storage: FlagStorage = localStorag
     // storage unavailable: the toggle still works for this session
   }
 }
+
+// ── Sidebar open or closed: a closed sidebar stays closed in the next PDF; open starts on the thumbnails ──
+export const SIDEBAR_OPEN_KEY = 'genoffice-pdf-sidebar-open'
+
+export const loadSidebarOpen = (storage: FlagStorage = localStorage): boolean => {
+  try {
+    return storage.getItem(SIDEBAR_OPEN_KEY) !== '0'
+  } catch {
+    return true
+  }
+}
+
+export const saveSidebarOpen = (open: boolean, storage: FlagStorage = localStorage): void => {
+  try {
+    storage.setItem(SIDEBAR_OPEN_KEY, open ? '1' : '0')
+  } catch {
+    // storage unavailable: closing still works for this session
+  }
+}
