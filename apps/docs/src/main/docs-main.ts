@@ -163,6 +163,7 @@ import {
   withMeteredAccepted,
   type AiRunTexts,
 } from './ai-run'
+import { createChunkCoalescer } from './stream-coalesce'
 import { atomicWriteFile, looksLikeZip } from './atomic-write'
 import {
   adoptLazyMediaHashes,
@@ -3876,37 +3877,40 @@ export function registerAiIpc(): void {
     const controller = new AbortController()
     activeAiStreams.set(requestId, controller)
     const unwatchSender = abortOnDestroyed(event.sender, controller)
+    // deltas go out in short batches, everything else in order behind them
+    const out = createChunkCoalescer<AiStreamChunk>(send)
     // wire-activity keepalive: lets the renderer's silence watchdog tell a slow turn from a dead one
     let lastPing = 0
     const ping = () => {
       const now = Date.now()
       if (now - lastPing < 5_000) return
       lastPing = now
-      send({ requestId, type: 'ping' })
+      out.push({ requestId, type: 'ping' })
     }
     try {
       let stopReason: string | undefined
       await streamForProvider(provider, config, system, messages, tools, maxTokens, {
         ...(request.sessionId ? { sessionId: request.sessionId } : {}),
         signal: controller.signal,
-        onDelta: (text) => send({ requestId, type: 'delta', text }),
-        onReasoningDelta: (text) => send({ requestId, type: 'reasoning', text }),
-        onToolCall: (toolCall) => send({ requestId, type: 'tool-call', toolCall }),
+        onDelta: (text) => out.push({ requestId, type: 'delta', text }),
+        onReasoningDelta: (text) => out.push({ requestId, type: 'reasoning', text }),
+        onToolCall: (toolCall) => out.push({ requestId, type: 'tool-call', toolCall }),
         onActivity: ping,
         onStopReason: (reason) => {
           stopReason = reason
         },
-        onUsage: (usage) => send({ requestId, type: 'usage', usage }),
-        ...subscriptionStreamCallbacks(requestId, send),
+        onUsage: (usage) => out.push({ requestId, type: 'usage', usage }),
+        ...subscriptionStreamCallbacks(requestId, out.push),
       })
-      send({ requestId, type: 'done', stopReason })
+      out.push({ requestId, type: 'done', stopReason })
     } catch (err) {
       if (controller.signal.aborted) {
-        send({ requestId, type: 'done' })
+        out.push({ requestId, type: 'done' })
       } else {
-        send(aiStreamErrorChunk(requestId, err))
+        out.push(aiStreamErrorChunk(requestId, err))
       }
     } finally {
+      out.flush()
       unwatchSender()
       activeAiStreams.delete(requestId)
     }
