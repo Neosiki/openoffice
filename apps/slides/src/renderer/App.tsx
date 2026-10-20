@@ -2790,7 +2790,11 @@ export function App() {
   )
 
   // Text / element styling (style-actions.ts)
-  const onFormat = useCallback((cmd: FormatCmd) => styleActions.onFormat(cmd), [])
+  const onFormat = useCallback((cmd: FormatCmd) => {
+    if (cmd === 'fontSizeUp' || cmd === 'fontSizeDown')
+      styleActions.onGrowShrinkFont(ctxRef.current, cmd)
+    else styleActions.onFormat(cmd)
+  }, [])
   const onFontFamily = useCallback(
     (family: string) => styleActions.onFontFamily(ctxRef.current, family),
     [],

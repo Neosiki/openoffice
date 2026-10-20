@@ -84,6 +84,11 @@ export function onFontSizeStep(ctx: ActionCtx, step: FontSizeStep): void {
     .then((r) => r && ctx.applySlide(ctx.current, r))
 }
 
+/** Ribbon Grow/Shrink: the caret selection while editing, every run of the selected boxes otherwise (like ⇧⌘> / ⇧⌘<) */
+export function onGrowShrinkFont(ctx: ActionCtx, cmd: 'fontSizeUp' | 'fontSizeDown'): void {
+  onFontSizeStep(ctx, { dir: cmd === 'fontSizeUp' ? 1 : -1, mode: 'ladder' })
+}
+
 // While editing, change the caret's paragraph; with only an element selected, use the element-level paragraph format op (all paragraphs)
 export function onAlign(ctx: ActionCtx, align: 'left' | 'center' | 'right' | 'justify'): void {
   if (ctx.editing || ctx.editingCell) {
