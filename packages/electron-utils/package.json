@@ -26,6 +26,8 @@
     "./split-pane-bridge": "./src/split-pane-bridge.ts",
     "./generate-handoff": "./src/generate-handoff.ts",
     "./unsaved-files": "./src/unsaved-files.ts",
+    "./user-skills-bridge": "./src/user-skills-bridge.ts",
+    "./user-skills-channels": "./src/user-skills-channels.ts",
     "./template-font-response": "./src/template-font-response.ts",
     "./template-fonts-dir": "./src/template-fonts-dir.ts"
   },

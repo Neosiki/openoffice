@@ -76,11 +76,15 @@ import {
 } from '@genoffice/electron-utils'
 import { SPLIT_PANE_CHANNELS } from '@genoffice/electron-utils/split-pane-bridge'
 import {
+  agentSkillNoticeDue,
+  markAgentSkillNoticeSeen,
   readAppSettings,
+  writeAgentPrefs,
   writeAppSetting,
   writeAppSettings,
   writeAppSettingThen,
 } from './app-settings'
+import { builtinSkillsDirFor, createUserSkillsService, registerUserSkillsIpc } from './user-skills'
 import { OPEN_DOCUMENTS_FILE, clearOpenDocuments, publishOpenDocuments } from './open-documents'
 import { startControlServer, type ControlServer } from './control-server'
 import { controlHandler } from './control-handlers'
@@ -7108,6 +7112,41 @@ registerPdfConvertUiIpc({
   openDocument: (path) => openDocumentPath(path),
 })
 
+// The person's skills (settings → skills, the AI windows' `/` list and skill
+// reads, skill cards, the agent session's skills). Writes go only to
+// ~/.ieumoffice/skills; removing is the OS trash; GitHub only on request.
+const builtinSkillsDir = (): string =>
+  builtinSkillsDirFor({
+    isPackaged: app.isPackaged,
+    resourcesPath: process.resourcesPath,
+    appPath: app.getAppPath(),
+  })
+const userSkills = createUserSkillsService({
+  homeDir: () => homedir(),
+  builtinDir: builtinSkillsDir,
+  settingsPath: APP_SETTINGS_PATH,
+  tempDir: () => join(tmpdir(), 'ieumoffice-skills'),
+  trash: (path) => shell.trashItem(path),
+  // Node's fetch: no browser cookies; the core sets no-redirect and no-credentials per request
+  fetch: (url, init) => fetch(url, init),
+})
+registerUserSkillsIpc({
+  service: userSkills,
+  canManage: (sender) =>
+    !!shellWindow && !shellWindow.isDestroyed() && sender === shellWindow.webContents,
+  openSettings: () => {
+    const win = shellWindow
+    if (!win || win.isDestroyed()) return
+    if (win.isMinimized()) win.restore()
+    win.show()
+    win.focus()
+    tabManager?.openHomeTab()
+    win.webContents.send(HOME_CHANNELS.openSettings, { section: 'skills' })
+  },
+  agentNoticeDue: () => agentSkillNoticeDue(APP_SETTINGS_PATH()),
+  markAgentNoticeSeen: () => markAgentSkillNoticeSeen(APP_SETTINGS_PATH()),
+})
+
 // sheets' project:resolveChat goes through the handler registered by docs-main; the sessionId reverse lookup hooks in here
 setSessionPathResolver(resolveSheetsSessionPath)
 
@@ -7500,7 +7539,7 @@ app.whenReady().then(async () => {
     statuses: () => sharedSubscriptionStatuses(),
     aiSettings: () => readStoredAiSettings(),
     readPrefs: () => normalizeAgentPrefs(readAppSettings(APP_SETTINGS_PATH()).agent),
-    writePrefs: (prefs) => writeAppSetting(APP_SETTINGS_PATH(), 'agent', prefs),
+    writePrefs: (prefs) => writeAgentPrefs(APP_SETTINGS_PATH(), prefs),
     openPath: (path) => routeDocumentPath(path),
     openDocuments: () => [...(tabManager?.openFilePaths() ?? []), ...detachedFilePaths()],
     userData: app.getPath('userData'),
