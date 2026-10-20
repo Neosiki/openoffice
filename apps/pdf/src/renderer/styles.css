@@ -1208,6 +1208,25 @@ button {
   justify-content: center;
 }
 
+/* Thumbnails header: the list itself scrolls, so the header sticks to its top.
+ * Negative margins cancel the pane's 10px padding; the padding then lines the
+ * label and button up with the outline header (pane 8px 4px + header 0 4px 6px 10px).
+ * Kept below .pdf-outline-header so this padding wins. */
+.pdf-thumbs-header {
+  position: sticky;
+  top: -10px;
+  z-index: 1;
+  margin: -10px -10px 0;
+  padding: 8px 8px 6px 14px;
+  background: var(--surface);
+}
+
+/* keep thumbnails scrolled into view (arrow keys, page follow) clear of the
+ * stuck header: 8px + 26px button + 6px */
+.pdf-thumbs:has(> .pdf-thumbs-header) {
+  scroll-padding-top: 40px;
+}
+
 .pdf-outline {
   display: flex;
   flex-direction: column;
