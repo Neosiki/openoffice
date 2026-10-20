@@ -2652,13 +2652,15 @@ export function App() {
       const missing: Array<{ pos: number; attrs: Record<string, unknown> }> = []
       const reuse: Partial<Record<'bullet' | 'ordered', string>> = {}
       editor.state.doc.descendants((node, pos) => {
-        if (node.type.name !== 'docListItem') return
+        // list items are blocks: nothing inside a paragraph's text is worth walking
+        if (node.type.name !== 'docListItem') return !node.isTextblock
         const kind = (node.attrs.kind as 'bullet' | 'ordered') ?? 'bullet'
         if (node.attrs.numId !== null) {
           if (!reuse[kind]) reuse[kind] = String(node.attrs.numId)
-          return
+          return false
         }
         missing.push({ pos, attrs: node.attrs })
+        return false
       })
       if (missing.length === 0) return
       const idOf: Partial<Record<'bullet' | 'ordered', string | null>> = {}
@@ -6764,7 +6766,12 @@ export function App() {
   useEffect(() => {
     if (!editor) return
     const refresh = ({ transaction }: { transaction?: { docChanged: boolean } } = {}) => {
-      setHistState({ canUndo: editor.can().undo(), canRedo: editor.can().redo() })
+      const canUndo = editor.can().undo()
+      const canRedo = editor.can().redo()
+      // same values keep the same object: a selection move re-renders nothing
+      setHistState((prev) =>
+        prev.canUndo === canUndo && prev.canRedo === canRedo ? prev : { canUndo, canRedo },
+      )
       if (transaction?.docChanged) setDocVersion((v) => v + 1)
     }
     refresh()
