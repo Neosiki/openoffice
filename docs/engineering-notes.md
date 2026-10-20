@@ -124,12 +124,14 @@
 - **작업 사본을 지웠더니 본 저장소의 `node_modules`가 비었다.** 의존성을 연결(정션)로 나눠 쓰는 작업 사본을 `git worktree remove`로 지우면, 삭제가 연결을 따라가 본 설치를 지운다. → 지우기 전에 연결부터 끊는다. 지운 뒤 `node_modules/.bin`의 항목 수가 그대로인지 확인한다.
 - 연결로 나눠 쓰는 사본 안에서는 `npm install`·`npm ci`를 돌리지 않는다. 같은 이유다.
 - **작업 사본에서 한글 편집기 짓기가 실패한다.** `apps/hwp/scripts/build-studio.mjs`는 rhwp 스튜디오를 `apps/hwp/node_modules/.cache`에 받아 짓는데, 사본의 `node_modules`는 본 검사본을 가리키는 연결이라 캐시 경로가 사본 밖으로 풀린다. vite가 결과 이름에 `../../…/openoffice/…` 같은 상대 경로를 만들려다 "must be strings that are neither absolute nor relative paths"로 멈춘다. → **이미 지어 둔 검사본의 결과물**(`apps/hwp/public/studio`)을 사본에 복사해 온다. 스탬프(스크립트·플러그인 해시)가 같으면 다시 짓지 않는다.
+- **작업 사본에서 슬라이드를 열거나 내보내면 "slides renderer stopped (crashed)"가 난다.** 껍데기 앱은 슬라이드 화면을 `apps/slides/out`에서 읽는데, 새 사본에는 이 폴더가 없다. → 껍데기 앱과 함께 `npm run build -w @genoffice/slides`도 돌린다.
 - **작업 사본에서 마크다운 시험이 통째로 죽는다.** `Denied ID: …/node_modules/katex/dist/katex.min.css?inline` — vitest의 파일 접근 허용은 실제 경로로 따지는데, 연결된 `node_modules`가 사본 밖으로 풀려서다. → `node_modules/katex`처럼 `?inline`으로 불러오는 패키지는 연결 대신 실제 폴더로 복사한다.
 
 ## 화면
 
 - **워드 리본이 선택을 옮겨도 그대로다.** Tiptap 3의 `useEditor`는 거래마다 React를 다시 그리지 않는다(`shouldRerenderOnTransaction` 기본값). 워드 `App.tsx`에서는 거래마다 새 객체를 넣는 `setHistState`가 App을, 따라서 리본(글꼴 이름·크기, 굵게 등)을 다시 그리는 계기다. → 이 갱신을 "값이 같으면 건너뛰기"로 바꾸지 않는다. 다시 그리기를 줄이려면 리본이 쓰는 값을 따로 구독하게 바꾼 뒤에 한다(`docs-font-combos` e2e가 잡는다).
 
+- **슬라이드 글자의 띄어쓰기가 사라지고 간격·높이가 들쭉날쭉하다.** 글자 위치는 메인 프로세스가 실제 글꼴 파일로 재서 정하고, 캔버스는 같은 이름을 CSS로 찾아 그린다. Windows의 Chromium이 그 이름을 못 찾으면 맑은 고딕 같은 대체 글꼴로 그려 폭이 어긋난다. `나눔스퀘어 Bold`처럼 굵은 파일이 따로 붙인 이름(PowerPoint 글꼴 목록에 보이는 이름)이 그렇다. Chromium은 이름 끝의 Light·Medium·ExtraBold 등은 떼고 찾아 주지만 Bold는 떼지 않는다. → 그런 이름은 측정한 파일을 그 이름의 개인 글꼴(FontFace)로 등록해 그리게 한다(`fonts.ts`의 "Family Weight" 등록). 새 이름 유형을 의심할 때는 Electron 창에서 `measureText`로 `'<이름>', monospace`와 `monospace`의 폭이 다른지 보면 Chromium이 그 이름을 찾는지 알 수 있다.
 - **첫 실행 안내의 두 번째 단계에서 첫 연결 안내가 겹쳐 뜬다.** 구독이 이미 연결된 PC에서는 연결 단계에 들어서는 순간 "처음 쓸 수 있게 된 때"가 되기 때문이다. 의도된 동작이다. 확인을 누르면 연결 카드가 보인다.
 - **편집기 화면은 껍데기 앱의 화면보다 위에 그려진다.** 편집기 탭이 켜져 있으면 껍데기 앱의 겹침 화면(첫 실행 안내 등)은 가려진다. 그래서 그런 화면은 홈 탭이 켜져 있을 때만 그린다.
 - **Electron은 잡히지 않은 예외로 꺼지지 않는다.** 대화 상자를 띄우고 계속 돈다. 그래서 동작을 바꾸는 예외 처리기를 두지 않았고, 프로그램 정리는 종료 경로(`will-quit`, 프로세스 `exit`)에 걸려 있다. 크래시 기록은 보기만 하는 `uncaughtExceptionMonitor`로 받는다. `uncaughtException`에 처리기를 붙이면 Electron의 대화 상자가 사라진다.
