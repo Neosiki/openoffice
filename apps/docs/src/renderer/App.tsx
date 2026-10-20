@@ -6766,12 +6766,7 @@ export function App() {
   useEffect(() => {
     if (!editor) return
     const refresh = ({ transaction }: { transaction?: { docChanged: boolean } } = {}) => {
-      const canUndo = editor.can().undo()
-      const canRedo = editor.can().redo()
-      // same values keep the same object: a selection move re-renders nothing
-      setHistState((prev) =>
-        prev.canUndo === canUndo && prev.canRedo === canRedo ? prev : { canUndo, canRedo },
-      )
+      setHistState({ canUndo: editor.can().undo(), canRedo: editor.can().redo() })
       if (transaction?.docChanged) setDocVersion((v) => v + 1)
     }
     refresh()
