@@ -64,6 +64,7 @@ function assertExtraResourceSources() {
     '../../node_modules/@neslinesli93/qpdf-wasm/dist/qpdf.wasm',
     '../../packages/ui/template-fonts/README.md',
     '../../node_modules/@rhwp/core/rhwp_bg.wasm',
+    'resources/builtin-skills/builtin-skills.json',
   ]) {
     if (!existsSync(join(__dirname, rel))) {
       throw new Error(
@@ -125,11 +126,9 @@ function ensurePlatformHelpers() {
   }
   if (process.platform === 'win32' && !existsSync(join(__dirname, WIN_QUICKLOOK_HELPER))) {
     try {
-      execFileSync(
-        process.execPath,
-        [join(__dirname, 'src/main/quick-look/build-win.mjs')],
-        { stdio: 'inherit' },
-      )
+      execFileSync(process.execPath, [join(__dirname, 'src/main/quick-look/build-win.mjs')], {
+        stdio: 'inherit',
+      })
     } catch (err) {
       throw new Error(`win-quicklook helper compile failed: ${err}`, { cause: err })
     }
@@ -582,6 +581,13 @@ const config = {
     {
       from: '../../packages/ui/template-fonts',
       to: 'template-fonts',
+    },
+    // the skills shipped with the app (read-only in the install folder): each
+    // folder is the upstream skill as fetched, listed with its source, commit
+    // and license in builtin-skills.json and NOTICE
+    {
+      from: 'resources/builtin-skills',
+      to: 'builtin-skills',
     },
   ],
   // `mimeType` is read only by the Linux target, where it becomes the
