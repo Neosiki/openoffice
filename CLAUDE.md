@@ -111,7 +111,7 @@ openoffice/
 | 새 버전을 낸다                                         | `docs/releasing.ko.md`. 첫 항목은 저장소 주인의 약관 동의다                                              |
 
 - **릴리스 본문은 사용자가 앱 안에서 그대로 읽는다.** 첫 문단 요약 → 새로 들어간 것 → 고친 것 → 설치 안내(맨 아래) 순서와 humanize-korean 윤문은 `docs/releasing.ko.md` 6번이 정한다. 에이전트는 `.claude/skills/release-ieumoffice/SKILL.md`도 함께 읽는다.
-- **새 버전을 공개하면 소개 사이트도 고친다.** https://ieumoffice.vercel.app 의 내려받기 버튼은 저절로 바뀌지만 "새 버전" 칸의 글과 캡처는 손으로 고친다. 절차는 `docs/releasing.ko.md` 13번과 사이트 저장소(`E:\github\ieumoffice-site`) `README.md`의 "새 버전을 낸 뒤"에 있다.
+- **새 버전을 공개하면 소개 사이트에 업데이트 소식을 올린다.** https://ieumoffice.vercel.app 의 내려받기 버튼은 저절로 바뀌지만, 업데이트 페이지(`/updates`)의 새 항목과 메인의 한 줄 안내는 손으로 더한다. 절차는 `docs/releasing.ko.md` 13번과 사이트 저장소(`E:\github\ieumoffice-site`) `README.md`의 "새 버전을 낸 뒤"에 있다.
 
 ## 문제가 생기면
 
