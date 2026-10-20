@@ -214,6 +214,16 @@ export {
   type AiSubscriptionStringKey,
 } from './strings-ai-subscription'
 export {
+  BUILTIN_SKILL_NAMES,
+  BUILTIN_SKILL_STRINGS,
+  builtinSkillDesc,
+  builtinSkillText,
+  builtinSkillTitle,
+  isBuiltinSkillName,
+  type BuiltinSkillName,
+  type BuiltinSkillStringKey,
+} from './strings-builtin-skills'
+export {
   AiConnectPrompt,
   AiSubscriptionCard,
   type AiSubscriptionCardActions,
