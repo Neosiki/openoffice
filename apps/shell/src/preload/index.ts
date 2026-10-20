@@ -12,6 +12,8 @@ import {
 } from '@genoffice/ai-provider/browser'
 import type { AiSettings, CodexModelCatalog } from '@genoffice/ai-provider/browser'
 import { installDropOpenBridge } from '@genoffice/electron-utils/drop-open'
+import { userSkillsBridge } from '@genoffice/electron-utils/user-skills-bridge'
+import { USER_SKILLS_BRIDGE_KEY } from '@genoffice/electron-utils/user-skills-channels'
 import type { UpdateUiState } from '../shared/update-api'
 import { normalizeAiPanelPrefs } from '@genoffice/ui/ai-panel-prefs'
 import type {
@@ -644,6 +646,10 @@ const driveApi: DriveApi = {
   open: (fileId) => ipcRenderer.invoke(DRIVE_CHANNELS.open, fileId),
 }
 contextBridge.exposeInMainWorld('aiOfficeDrive', driveApi)
+
+// the person's skills: settings → skills, the home AI question's `/` list,
+// skill reads and cards (the main process checks every request again)
+contextBridge.exposeInMainWorld(USER_SKILLS_BRIDGE_KEY, userSkillsBridge())
 
 // Subscription channels are registered once for the whole app by the docs main.
 // Until that handler exists an invoke rejects; the renderer reads that as
