@@ -14,6 +14,10 @@
  * `undefined` rather than removed from the entry — the panel renders its
  * roll-back button under `entry.snapshot &&`, so a released snapshot also
  * removes the action and no button can ever point at a snapshot that is gone.
+ *
+ * The panel now keeps the document node itself rather than a JSON copy. The
+ * node is immutable and shares what later edits leave untouched with the live
+ * document, so a snapshot costs about what changed after it; the cap stays.
  */
 
 /** Runs whose roll-back point is kept. The sibling html/markdown panels cap at 20 string snapshots; a document JSON tree is far heavier, so this is tighter. */

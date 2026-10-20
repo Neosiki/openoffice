@@ -21,7 +21,7 @@ import {
   type DriveAttachPicked,
   DocAttachButton,
 } from '@genoffice/ui'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Editor } from '@tiptap/core'
 import type { Block } from '@genoffice/docx-engine'
 import {
@@ -41,8 +41,8 @@ import type {
   AttachmentMeta,
 } from '../../shared/ipc'
 import { ATTACHMENT_IMAGE_EXTS } from '../../shared/ipc'
-import type { PmNode } from '../editor/convert'
-import { TABLE_TRAILING_SKIP } from '../editor/extensions'
+import type { Node as ProseMirrorNode } from '@tiptap/pm/model'
+import { captureRollbackSnapshot, restoreRollbackSnapshot } from './rollback-snapshot'
 import { countWords, findNumId, type NumIds } from './protocol'
 import { DOC_NAV_SCHEME, navigateToBlock, parseDocNavHref } from './doc-nav'
 import {
@@ -145,7 +145,7 @@ interface ChatEntry {
   /** tool executions performed during this assistant turn */
   tools?: ToolActivity[]
   /** document state before this turn's first edit — rendered as an inline roll-back action */
-  snapshot?: PmNode
+  snapshot?: ProseMirrorNode
   /** attachments consumed from the composer by this user message (read-only echo chips) */
   attachments?: AttachmentMeta[]
   /** the selection this user message targeted, frozen at send */
@@ -670,7 +670,7 @@ export function AiPanel({
   const instructionRef = useRef('')
   /** document state before the run's first edit — attached to the turn's final
       segment at run end (mid-turn segments never show the action toolbar) */
-  const runSnapshotRef = useRef<PmNode | null>(null)
+  const runSnapshotRef = useRef<ProseMirrorNode | null>(null)
   /** last sent instruction, for one-click retry */
   const lastInstructionRef = useRef('')
   /** Tool activity of the whole run (with args/output, accumulated across turns) — for full
@@ -879,13 +879,13 @@ export function AiPanel({
     decidePartial(false)
   }
 
-  const loopRef = useRef<AgentLoop<PmNode> | null>(null)
+  const loopRef = useRef<AgentLoop<ProseMirrorNode> | null>(null)
   if (!loopRef.current) {
     const numIds = (): NumIds => ({
       bullet: findNumId(blocksRef.current, 'bullet') ?? numIdFallbackRef.current?.bullet ?? null,
       ordered: findNumId(blocksRef.current, 'ordered') ?? numIdFallbackRef.current?.ordered ?? null,
     })
-    loopRef.current = new AgentLoop<PmNode>({
+    loopRef.current = new AgentLoop<ProseMirrorNode>({
       transport: transportRef.current,
       systemSuffix: aiLangDirective,
       skill: composeWithDrive('docs+files', '', () => loopRef.current?.messages ?? [], [
@@ -921,7 +921,7 @@ export function AiPanel({
         ),
         createFilesSkill(availableAttachments),
       ]),
-      captureSnapshot: () => editorRef.current.getJSON() as PmNode,
+      captureSnapshot: () => captureRollbackSnapshot(editorRef.current),
       events: {
         onText: (text) => patchLastAssistant({ text }),
         onToolStart: (call) => {
@@ -1098,18 +1098,22 @@ export function AiPanel({
     }
   }, [editor])
 
-  /** [label](docnav://block/N) links in replies select and scroll to that block */
-  const docNav = {
-    scheme: DOC_NAV_SCHEME,
-    onNavigate: (href: string) => {
-      const index = parseDocNavHref(href)
-      if (index !== null) navigateToBlock(editorRef.current, index)
-    },
-  }
-  // [name](filenav:///abs/path) citations open the cited file in its own app
-  const fileNav = createFileNav((path) => {
-    void window.desktop.openSourcePath(path)
-  })
+  // made once: a stable list lets the memoized Markdown skip unchanged replies
+  const chatNavs = useMemo(() => {
+    /** [label](docnav://block/N) links in replies select and scroll to that block */
+    const docNav = {
+      scheme: DOC_NAV_SCHEME,
+      onNavigate: (href: string) => {
+        const index = parseDocNavHref(href)
+        if (index !== null) navigateToBlock(editorRef.current, index)
+      },
+    }
+    // [name](filenav:///abs/path) citations open the cited file in its own app
+    const fileNav = createFileNav((path) => {
+      void window.desktop.openSourcePath(path)
+    })
+    return [docNav, fileNav]
+  }, [])
 
   // follow the stream, but stop yanking once the user scrolls up to read;
   // `open` dep: re-expanding lands on messages streamed while collapsed
@@ -1406,12 +1410,8 @@ export function AiPanel({
     if (!next) acceptChanges()
   }
 
-  const rollback = (entryIdx: number, snapshot: PmNode) => {
-    editor
-      .chain()
-      .setMeta(TABLE_TRAILING_SKIP, true)
-      .setContent(snapshot as never)
-      .run()
+  const rollback = (entryIdx: number, snapshot: ProseMirrorNode) => {
+    restoreRollbackSnapshot(editor, snapshot)
     // The document rewound to before this turn, so this and every later
     // rollback point now describe discarded futures
     setChat((prev) =>
@@ -1542,7 +1542,7 @@ export function AiPanel({
                 {entry.tools && entry.tools.length > 0 && <ToolChipList tools={entry.tools} />}
                 {entry.text && (
                   <div dir="auto">
-                    <Markdown text={entry.text} navs={[docNav, fileNav]} />
+                    <Markdown text={entry.text} navs={chatNavs} />
                   </div>
                 )}
               </div>
@@ -1616,7 +1616,7 @@ export function AiPanel({
                 </span>
               ) : entry.role === 'assistant' ? (
                 <div dir="auto">
-                  <Markdown text={entry.text} navs={[docNav, fileNav]} />
+                  <Markdown text={entry.text} navs={chatNavs} />
                 </div>
               ) : (
                 <span dir="auto">{entry.text}</span>

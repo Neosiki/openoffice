@@ -2652,13 +2652,15 @@ export function App() {
       const missing: Array<{ pos: number; attrs: Record<string, unknown> }> = []
       const reuse: Partial<Record<'bullet' | 'ordered', string>> = {}
       editor.state.doc.descendants((node, pos) => {
-        if (node.type.name !== 'docListItem') return
+        // list items are blocks: nothing inside a paragraph's text is worth walking
+        if (node.type.name !== 'docListItem') return !node.isTextblock
         const kind = (node.attrs.kind as 'bullet' | 'ordered') ?? 'bullet'
         if (node.attrs.numId !== null) {
           if (!reuse[kind]) reuse[kind] = String(node.attrs.numId)
-          return
+          return false
         }
         missing.push({ pos, attrs: node.attrs })
+        return false
       })
       if (missing.length === 0) return
       const idOf: Partial<Record<'bullet' | 'ordered', string | null>> = {}

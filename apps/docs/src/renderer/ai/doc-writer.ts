@@ -16,6 +16,18 @@ import { blockRangePositions, HTML_RULES, parseHtmlFragment, type NumIds } from 
 export const DOC_MAX_CHARS = 200_000
 const CONTEXT_CAP = 8000
 const DRAFT_TICK_MS = 300
+/** a tick that took long waits this many times its cost before the next, up to the ceiling */
+const DRAFT_TICK_COST_FACTOR = 3
+const DRAFT_TICK_MAX_MS = 2_000
+
+/**
+ * Wait before the next draft tick: the base interval, or longer when the last
+ * tick (parse + swap + layout) was slow, so a large draft never keeps the
+ * renderer busy most of the time. The final render does not wait for it.
+ */
+export function nextDraftTickMs(lastTickMs: number): number {
+  return Math.min(DRAFT_TICK_MAX_MS, Math.max(DRAFT_TICK_MS, lastTickMs * DRAFT_TICK_COST_FACTOR))
+}
 
 export interface DocWriteSpec {
   plan: string
@@ -111,6 +123,7 @@ export class DraftLanding {
   private timer: ReturnType<typeof setTimeout> | null = null
   private closed = false
   private follow = true
+  private tickMs = DRAFT_TICK_MS
   private readonly onTransaction = ({ transaction }: { transaction: Transaction }) => {
     if (!transaction.docChanged || transaction.getMeta(DRAFT_META)) return
     this.from = transaction.mapping.map(this.from, 1)
@@ -134,7 +147,7 @@ export class DraftLanding {
   update(html: string): void {
     if (this.closed) return
     this.pending = html
-    if (this.timer === null) this.timer = setTimeout(() => this.flush(), DRAFT_TICK_MS)
+    if (this.timer === null) this.timer = setTimeout(() => this.tick(), this.tickMs)
   }
 
   /** the top-level block index the draft sits after (-1 = document start), after any user edits */
@@ -184,6 +197,12 @@ export class DraftLanding {
       .setMeta('addToHistory', false)
       .setMeta(TRACK_IGNORE, true)
       .setMeta(TABLE_TRAILING_SKIP, true)
+  }
+
+  private tick(): void {
+    const started = performance.now()
+    this.flush()
+    this.tickMs = nextDraftTickMs(performance.now() - started)
   }
 
   private flush(): void {
