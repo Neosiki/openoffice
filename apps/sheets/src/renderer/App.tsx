@@ -437,6 +437,7 @@ import { installInvalidDataMarkerSuppression } from './data-validation-marker'
 import { installThreadedCommentAffordances, type ThreadHover } from './threaded-comment-marker'
 import { threadPane, threadStore } from './threaded-comments'
 import { ThreadHoverCard, ThreadedCommentsPane } from './ThreadedCommentsPane'
+import { NotePicturesPane } from './NotePicturesPane'
 import { installFormulaNullResultFix } from './formula-null-result'
 import { installNumberFormatFix } from './numfmt-fix'
 import { installIfsEmptySetFix } from './ifs-empty-set'
@@ -535,6 +536,7 @@ import { SlicerFieldPicker, SlicerPanels, type SlicerUiState } from './SlicerPan
 import { WatchWindowPanel, watchKey, type WatchCell, type WatchRowValue } from './WatchWindowPanel'
 import { TimelineFieldPicker, TimelinePanels, type TimelineUiState } from './TimelinePanel'
 import type { DefinedNameAction, DefinedNameRow } from './NameManagerDialog'
+import { workbookMediaDataUrl } from './workbook-media'
 import {
   clearVisualSelection,
   convertibleType,
@@ -5492,6 +5494,7 @@ export function App({
         </div>
       )}
       <ThreadedCommentsPane getRuntime={getRuntime} />
+      <NotePicturesPane file={workbookFile} getRuntime={getRuntime} />
       <ThreadHoverCard hover={threadHover} />
       {findReplaceService && (
         <FindReplacePanel

@@ -42,6 +42,7 @@ import {
   sheetMetrics,
   type SheetMetrics,
 } from './visual-geometry'
+import { workbookMediaDataUrl } from './workbook-media'
 import {
   clearVisualSelection,
   EMU_PER_PIXEL,
