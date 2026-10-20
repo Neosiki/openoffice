@@ -10,6 +10,7 @@
 - 구독 프로그램 공통 계층 `src/subscription/`: 실행 파일 찾기(`locate.ts`), 환경(`env.ts`), 시작·종료와 자식 등록부(`process.ts`), 강제 종료 뒤 정리(`leftovers.ts`), 연결 상태(`status.ts`, `service.ts`), 프로그램의 모델 목록(`models.ts`), 종량제 로그인 동의(`metered.ts`), 로그인·로그아웃·설치 실행(`launch.ts`), IPC 계약과 메인 측 핸들러(`contract.ts`, `ipc.ts`).
 - 두 브리지 `src/claude-code-cli.ts`, `src/codex-app-server.ts`와 키 기반 이미지·미디어 프로토콜(`src/media.ts`, `src/media-protocols.ts`, `src/image-backend.ts`).
 - 에이전트 모드(결정 0032)의 실행부 `src/agent-session/`(진입점 `/agent-session`, Node 전용): 허락 판단 `agentPolicyVerdict`(`policy.ts`), Claude Code 세션(`claude.ts`), Codex 세션(`codex.ts`), Claude에 줄 스킬 묶음(`skills.ts`), 프로그램에 돌려주는 거절 문장(`messages.ts`).
+- 사용자 스킬의 코어 `src/user-skills/`(Node 전용, 대표 진입점에서 내보냄): 출처 목록과 읽기(`userSkillSources`·`listUserSkills`, `~/.codex`는 읽지 않음, `genoffice`·`ieumoffice` 이름 제외), 한 폴더의 판정(읽을 수 없는 이유, 스크립트 포함, 양식), 식별자(`userSkillId`), 켜기·끄기 상태 합치기(`resolveUserSkillStates`)와 켜진 것 사이의 우선순위(`pickEnabledUserSkills`), 앞머리 읽기·쓰기(`parseSkillMd`·`renderSkillMd`), 새 이름 규칙과 제안, 폴더 내용 해시(`skillContentHash`), 웹 주소 찾기, `builtin-skills.json` 읽기.
 - 무료 연결: 화면용 규칙과 상수(`src/free-ai.ts`, `/browser`로 내보냄: 무료 모델 목록, 연결·해제한 설정, 카드의 "연결됨" 판정, IPC 채널 이름과 답 판독, 오늘 무료 사용량 소진 판정 `freeLimitOf`)와 뒷단 전용 연결부(`src/free-connect.ts`, `/free-connect`: OpenRouter OAuth PKCE와 루프백 서버, Gemini 키 확인, 무료 모델 고르기, 남은 무료 요청 수).
 
 ## 맡지 않는 것 (경계)
