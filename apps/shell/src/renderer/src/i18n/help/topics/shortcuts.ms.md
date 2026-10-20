@@ -471,6 +471,17 @@ Semuanya tanpa modifier, jadi kedua platform membacanya sama. ↓ dan ↑ ialah 
 
 Hanya aktif apabila satu anotasi, setem, penyuntingan atau imej dipilih.
 
+### Bar lakaran kecil
+
+| Tindakan                     | macOS                 | Windows / Linux       |
+| ---------------------------- | --------------------- | --------------------- |
+| Pilih halaman satu demi satu | ⌘ + klik              | Ctrl + klik           |
+| Pilih satu siri halaman      | ⇧ + klik              | Shift + klik          |
+| Pilih semua halaman          | ⌘A                    | Ctrl+A                |
+| Padam halaman yang dipilih   | Delete atau Backspace | Delete atau Backspace |
+
+Halaman yang dipilih diwarnakan. Klik kanan salah satu daripadanya, atau guna tab Halaman, untuk memutar, memadam atau mengekstraknya bersama; seret salah satu untuk mengalihkan semuanya. Escape atau klik biasa pada halaman membatalkan pilihan. ⌘A dan Delete berfungsi apabila bar mempunyai fokus.
+
 ### Escape dan Dialog
 
 | Tindakan                   | macOS  | Windows / Linux |

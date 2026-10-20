@@ -471,6 +471,17 @@ Diese Tasten brauchen keine Modifikatortaste, daher lesen sich beide Plattformen
 
 Nur aktiv, wenn eine Anmerkung, ein Stempel, eine Schwärzung oder ein Bild ausgewählt ist.
 
+### Miniaturleiste
+
+| Aktion                          | macOS                 | Windows / Linux       |
+| ------------------------------- | --------------------- | --------------------- |
+| Seiten einzeln auswählen        | ⌘ + Klick             | Ctrl + Klick          |
+| Eine Folge von Seiten auswählen | ⇧ + Klick             | Shift + Klick         |
+| Alle Seiten auswählen           | ⌘A                    | Ctrl+A                |
+| Ausgewählte Seiten löschen      | Delete oder Backspace | Delete oder Backspace |
+
+Ausgewählte Seiten sind eingefärbt. Ein Rechtsklick auf eine davon oder die Registerkarte Seite dreht, löscht oder extrahiert sie gemeinsam; wer eine davon zieht, verschiebt alle. Escape oder ein einfacher Klick auf eine Seite hebt die Auswahl auf. ⌘A und Entf wirken, solange die Leiste den Fokus hat.
+
 ### Escape und Dialoge
 
 | Aktion                     | macOS  | Windows / Linux |
