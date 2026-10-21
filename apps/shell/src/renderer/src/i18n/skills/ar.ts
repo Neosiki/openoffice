@@ -130,6 +130,7 @@ export const ar = {
   failNotAllowed: 'لا يمكن تنفيذ ذلك من هذه النافذة',
   failNotInstallable: 'لا يمكن تثبيت هذه المهارة',
   failNotGitHub: 'لم تُثبَّت هذه المهارة من GitHub',
+  failTrash: 'تعذّر نقل المهارة القديمة إلى سلة المهملات، فبقيت كما هي ولم يُستبدل شيء',
   failHidden: 'أظهر المهارة المدمجة المخفية مجددًا قبل تفعيلها',
   failEmptyTitle: 'أدخل عنوانًا',
   failEmptyDescription: 'أدخل وصفًا',

@@ -176,6 +176,22 @@ describe('removing and copying', () => {
     expect(parseSkillMd(text)!.description).toBe('Codex copy')
   })
 
+  it('keeps the own skill when it cannot go to the trash, and says why', async () => {
+    skill(join(home, '.agents', 'skills', 'mine'), 'mine', 'Codex copy')
+    trash.mockImplementation(async () => {
+      throw new Error('no trash here')
+    })
+    expect(await service.copyToMine('codex:mine', true)).toEqual({
+      ok: false,
+      reason: 'trash-failed',
+    })
+    expect(
+      parseSkillMd(readFileSync(join(appDir(), 'mine', 'SKILL.md'), 'utf8'))!.description,
+    ).toBe('My own')
+    expect(readFileSync(join(appDir(), 'mine', 'notes.md'), 'utf8')).toBe('notes')
+    expect(readdirSync(appDir())).toEqual(['mine'])
+  })
+
   it('does not copy an own skill or a builtin that is not there', async () => {
     expect(await service.copyToMine('app:mine', false)).toMatchObject({ reason: 'invalid' })
     expect(await service.copyToMine('builtin:none', false)).toMatchObject({ reason: 'not-found' })

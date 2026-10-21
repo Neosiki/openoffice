@@ -337,6 +337,7 @@ describe('skills model', () => {
     expect(failureKey('not-found')).toBe('failNotFound')
     expect(failureKey('rate-limited', 'import')).toBe('failRateLimited')
     expect(failureKey('network', 'import')).toBe('failNetwork')
+    expect(failureKey('trash-failed')).toBe('failTrash')
     expect(failureKey('too-large', 'import')).toBe('failTooLarge')
     expect(failureKey('unsafe', 'import')).toBe('failUnsafe')
     expect(failureKey('cancelled', 'import')).toBeUndefined()

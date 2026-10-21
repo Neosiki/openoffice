@@ -133,6 +133,8 @@ export const es = {
   failNotAllowed: 'No se puede hacer desde esta ventana',
   failNotInstallable: 'Esta habilidad no se puede instalar',
   failNotGitHub: 'Esta habilidad no se instaló desde GitHub',
+  failTrash:
+    'No se pudo mover la habilidad anterior a la papelera, así que se conservó y no se reemplazó nada',
   failHidden: 'Vuelve a mostrar la habilidad integrada oculta antes de activarla',
   failEmptyTitle: 'Escribe un título',
   failEmptyDescription: 'Escribe una descripción',

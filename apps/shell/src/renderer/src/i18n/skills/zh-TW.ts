@@ -129,6 +129,7 @@ export const zhTW = {
   failNotAllowed: '無法在此視窗中執行',
   failNotInstallable: '此技能無法安裝',
   failNotGitHub: '此技能不是從 GitHub 安裝的',
+  failTrash: '無法將舊技能移到資源回收筒，因此保留原樣，沒有取代任何內容',
   failHidden: '隱藏的內建技能需要先重新顯示才能開啟',
   failEmptyTitle: '請輸入標題',
   failEmptyDescription: '請輸入說明',

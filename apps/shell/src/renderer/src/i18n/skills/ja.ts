@@ -132,6 +132,7 @@ export const ja = {
   failNotAllowed: 'このウィンドウではこの操作はできません',
   failNotInstallable: 'このスキルはインストールできません',
   failNotGitHub: 'このスキルは GitHub からインストールしたものではありません',
+  failTrash: '古いスキルをごみ箱に移動できなかったため、そのまま残し、何も置き換えていません',
   failHidden: '非表示の標準スキルは、再表示してからオンにしてください',
   failEmptyTitle: 'タイトルを入力してください',
   failEmptyDescription: '説明を入力してください',

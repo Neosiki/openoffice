@@ -163,6 +163,8 @@ export type UserSkillsFailReason =
   | 'needs-choice'
   | 'not-installable'
   | 'invalid-source'
+  /** a replaced skill could not be moved to the OS trash; the old one was kept */
+  | 'trash-failed'
   | 'not-github'
 
 export type UserSkillsFail = { ok: false; reason: UserSkillsFailReason; problem?: string }

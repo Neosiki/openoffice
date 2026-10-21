@@ -227,6 +227,8 @@ export function skillCardSaveFailureKey(reason: string, problem?: string): Skill
         : 'nameCharacters'
     case 'not-allowed':
       return 'noBridge'
+    case 'trash-failed':
+      return 'trashFailed'
     default:
       return 'saveFailed'
   }

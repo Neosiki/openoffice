@@ -126,6 +126,7 @@ export const zh = {
   failNotAllowed: '无法在此窗口中执行',
   failNotInstallable: '此技能无法安装',
   failNotGitHub: '此技能不是从 GitHub 安装的',
+  failTrash: '无法将旧技能移到回收站，因此保留原样，没有替换任何内容',
   failHidden: '隐藏的内置技能需要先重新显示才能开启',
   failEmptyTitle: '请输入标题',
   failEmptyDescription: '请输入说明',

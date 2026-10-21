@@ -281,6 +281,33 @@ describe('installImportedSkills', () => {
     expect(readdirSync(app).filter((n) => n.startsWith(SKILL_STAGING_PREFIX))).toEqual([])
   })
 
+  it('keeps the old folder in place when it cannot go to the trash, and says so', async () => {
+    const { home, app } = setup()
+    writeTree(app, { 'one/SKILL.md': skillMd('one', 'old'), 'one/old.md': 'old' })
+    const folder = temp()
+    writeTree(folder, { 'one/SKILL.md': skillMd('one', 'new'), 'two/SKILL.md': skillMd('two') })
+    const imported = await prepareFolderImport({ folder, appSkillsDir: app, homeDir: home })
+
+    expect(
+      await kindOf(
+        installImportedSkills(imported, {
+          appSkillsDir: app,
+          selected: ['one', 'two'],
+          onCollision: { one: 'replace' },
+          discardReplaced: async () => {
+            throw new Error('no trash here')
+          },
+        }),
+      ),
+    ).toBe('trash-failed')
+    // the old skill is back as it was; nothing was deleted for good
+    expect(listAll(join(app, 'one'))).toEqual(['SKILL.md', 'old.md'])
+    expect(readFileSync(join(app, 'one', 'SKILL.md'), 'utf8')).toContain('old')
+    // nothing of that install stays: the person tries again once the trash works
+    expect(existsSync(join(app, 'two'))).toBe(false)
+    expect(readdirSync(app).filter((n) => n.startsWith(SKILL_STAGING_PREFIX))).toEqual([])
+  })
+
   it('installs nothing when one chosen skill is over the size limit', async () => {
     const { home, app } = setup()
     const folder = temp()

@@ -135,6 +135,8 @@ export const fr = {
   failNotAllowed: 'Impossible depuis cette fenêtre',
   failNotInstallable: 'Cette compétence ne peut pas être installée',
   failNotGitHub: 'Cette compétence n’a pas été installée depuis GitHub',
+  failTrash:
+    'L’ancienne compétence n’a pas pu être mise à la corbeille : elle a été conservée et rien n’a été remplacé',
   failHidden: 'Affichez à nouveau la compétence intégrée masquée avant de l’activer',
   failEmptyTitle: 'Saisissez un titre',
   failEmptyDescription: 'Saisissez une description',

@@ -134,6 +134,8 @@ export const nl = {
   failNotAllowed: 'Dit kan niet vanuit dit venster',
   failNotInstallable: 'Deze vaardigheid kan niet worden geïnstalleerd',
   failNotGitHub: 'Deze vaardigheid is niet via GitHub geïnstalleerd',
+  failTrash:
+    'De oude vaardigheid kon niet naar de prullenbak worden verplaatst. Ze is bewaard en er is niets vervangen',
   failHidden: 'Toon een verborgen ingebouwde vaardigheid eerst weer voordat je hem inschakelt',
   failEmptyTitle: 'Vul een titel in',
   failEmptyDescription: 'Vul een beschrijving in',

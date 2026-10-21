@@ -130,6 +130,7 @@ export const ko = {
   failNotAllowed: '이 창에서는 할 수 없습니다',
   failNotInstallable: '설치할 수 없는 스킬입니다',
   failNotGitHub: '깃허브에서 설치한 스킬이 아닙니다',
+  failTrash: '이전 스킬을 휴지통으로 옮기지 못해 그대로 두었고, 아무것도 바꾸지 않았습니다',
   failHidden: '숨긴 기본 스킬은 다시 보이게 한 뒤 켤 수 있습니다',
   failEmptyTitle: '제목을 적으세요',
   failEmptyDescription: '설명을 적으세요',

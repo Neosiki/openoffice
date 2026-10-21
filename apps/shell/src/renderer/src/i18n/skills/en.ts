@@ -132,6 +132,8 @@ export const en = {
   failNotAllowed: 'This cannot be done from this window',
   failNotInstallable: 'This skill cannot be installed',
   failNotGitHub: 'This skill was not installed from GitHub',
+  failTrash:
+    'The old skill could not be moved to the trash, so it was kept and nothing was replaced',
   failHidden: 'Show a hidden built-in skill again before turning it on',
   failEmptyTitle: 'Enter a title',
   failEmptyDescription: 'Enter a description',

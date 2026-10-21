@@ -131,6 +131,8 @@ export const pl = {
   failNotAllowed: 'Nie można tego zrobić z tego okna',
   failNotInstallable: 'Tej umiejętności nie można zainstalować',
   failNotGitHub: 'Ta umiejętność nie została zainstalowana z serwisu GitHub',
+  failTrash:
+    'Nie udało się przenieść starej umiejętności do kosza, więc została zachowana i nic nie zastąpiono',
   failHidden: 'Zanim włączysz ukrytą wbudowaną umiejętność, pokaż ją ponownie',
   failEmptyTitle: 'Wpisz tytuł',
   failEmptyDescription: 'Wpisz opis',

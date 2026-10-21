@@ -132,6 +132,7 @@ export const hi = {
   failNotAllowed: 'यह काम इस विंडो से नहीं हो सकता',
   failNotInstallable: 'यह कौशल इंस्टॉल नहीं किया जा सकता',
   failNotGitHub: 'यह कौशल GitHub से इंस्टॉल नहीं किया गया था',
+  failTrash: 'पुराना कौशल ट्रैश में नहीं ले जाया जा सका, इसलिए उसे रखा गया और कुछ भी नहीं बदला गया',
   failHidden: 'छिपे हुए अंतर्निहित कौशल को चालू करने से पहले उसे फिर से दिखाएँ',
   failEmptyTitle: 'शीर्षक लिखें',
   failEmptyDescription: 'विवरण लिखें',

@@ -162,6 +162,7 @@ describe('what Save hands to the shell', () => {
     expect(skillNameCheckOf('x')).toEqual({ ok: false, problem: 'empty' })
     expect(skillCardSaveFailureKey('bad-name', 'reserved')).toBe('nameReserved')
     expect(skillCardSaveFailureKey('name-taken')).toBe('nameTaken')
+    expect(skillCardSaveFailureKey('trash-failed')).toBe('trashFailed')
     expect(skillCardSaveFailureKey('failed')).toBe('saveFailed')
   })
 })
