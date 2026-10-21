@@ -17,10 +17,8 @@ export type SkillNameCheck = { ok: true } | { ok: false; problem: SkillNameProbl
 
 /** The template a card saves along (the template flow fills it) */
 export interface SkillCardTemplate {
-  /** the document's bytes (an edited copy that is not on disk) */
-  bytes?: Uint8Array | undefined
-  /** or the document file to copy */
-  sourcePath?: string | undefined
+  /** the document's bytes (read in the main process, or an edited copy) */
+  bytes: Uint8Array
   /** the file name under `assets/`, with the extension */
   fileName: string
 }

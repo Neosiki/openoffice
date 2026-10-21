@@ -25,7 +25,6 @@ import {
   exportSkillZip,
   initialUserSkillState,
   installImportedSkills,
-  isInsideCodexHome,
   isInsideDir,
   listSkillFolderFiles,
   listUserSkills,
@@ -352,38 +351,14 @@ export function createUserSkillsService(deps: UserSkillsServiceDeps) {
     return others.length > 0 ? 'taken' : undefined
   }
 
-  /** The bytes of a card's template, or why it cannot be one */
-  async function templateOf(
+  /** A card's template, or why it cannot be one: its bytes under a document file name */
+  function templateOf(
     input: UserSkillTemplateInput,
-  ): Promise<{ bytes: Uint8Array; fileName: string } | UserSkillsFail> {
+  ): { bytes: Uint8Array; fileName: string } | UserSkillsFail {
     const fileName = templateFileNameOf(input.fileName)
-    if (!fileName) return fail('bad-template')
-    if (input.bytes) {
-      if (input.bytes.byteLength > SKILL_TEMPLATE_MAX_BYTES) return fail('too-large')
-      return { bytes: input.bytes, fileName }
-    }
-    const source = input.sourcePath
-    if (!source || !isAbsolute(source)) return fail('bad-template')
-    if (!TEMPLATE_EXTENSIONS.has(extname(source).toLowerCase())) return fail('bad-template')
-    // never Codex's or Claude's own folders (their sign-in lives there)
-    const home = deps.homeDir()
-    const real = await realpath(source).catch(() => undefined)
-    if (!real) return fail('bad-template')
-    for (const path of [source, real]) {
-      if (
-        (await isInsideCodexHome(path, home)) ||
-        isInsideDir(path, join(home, '.claude')) ||
-        isInsideDir(path, appSkillsDir())
-      ) {
-        return fail('bad-template')
-      }
-    }
-    const info = await stat(source).catch(() => undefined)
-    if (!info?.isFile()) return fail('bad-template')
-    if (info.size > SKILL_TEMPLATE_MAX_BYTES) return fail('too-large')
-    const bytes = await readFile(source).catch(() => undefined)
-    if (!bytes) return fail('bad-template')
-    return { bytes: new Uint8Array(bytes), fileName }
+    if (!fileName || !(input.bytes instanceof Uint8Array)) return fail('bad-template')
+    if (input.bytes.byteLength > SKILL_TEMPLATE_MAX_BYTES) return fail('too-large')
+    return { bytes: input.bytes, fileName }
   }
 
   /** A work folder inside the app's skills folder (hidden from the list) */
@@ -445,7 +420,7 @@ export function createUserSkillsService(deps: UserSkillsServiceDeps) {
 
     let template: { bytes: Uint8Array; fileName: string } | undefined
     if (request.template) {
-      const read = await templateOf(request.template)
+      const read = templateOf(request.template)
       if ('ok' in read) return read
       template = read
     }

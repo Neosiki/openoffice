@@ -5,7 +5,7 @@
  * the template candidates and their redaction check, the one-time notice and
  * the "next session" line. Nothing here starts a program or calls a model.
  */
-import { mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import JSZip from 'jszip'
@@ -26,6 +26,7 @@ import {
   agentSkillProposalOf,
   agentTemplateCandidates,
   projectTemplateFiles,
+  readTemplateCandidate,
   templateRedactionOf,
   userSkillsManageGate,
 } from '../../src/main/agent/agent-skills'
@@ -493,6 +494,41 @@ describe('the skill a change is for', () => {
     expect(targetOf('nope')).toMatch(/No skill/)
     expect(targetOf('ieumoffice')).toMatch(/No skill/)
     expect(targetOf('app:ieumoffice')).toMatch(/No skill/)
+  })
+})
+
+describe('reading a candidate in main', () => {
+  it('never reads the sign-in stores, the original app’s folder or the app’s own data', async () => {
+    const home = temp()
+    const userData = join(home, 'AppData', 'IeumOffice')
+    const guard = {
+      homeDir: home,
+      protectedPaths: ['.claude', '.codex', '.genoffice', '.ieumoffice'].map((n) => join(home, n)),
+    }
+    guard.protectedPaths.push(userData)
+    for (const dir of [...guard.protectedPaths]) {
+      mkdirSync(dir, { recursive: true })
+      writeFileSync(join(dir, 'form.docx'), 'secret')
+      expect(await readTemplateCandidate(join(dir, 'form.docx'), guard), dir).toEqual({
+        ok: false,
+        reason: 'unreadable',
+      })
+    }
+    const docs = join(home, 'Documents')
+    mkdirSync(docs)
+    writeFileSync(join(docs, 'form.docx'), 'mine')
+    const read = await readTemplateCandidate(join(docs, 'form.docx'), guard)
+    expect(read.ok && new TextDecoder().decode(read.bytes)).toBe('mine')
+    // a linked folder leading into one of them is judged by where it really is
+    try {
+      symlinkSync(join(home, '.genoffice'), join(docs, 'linked'), 'junction')
+    } catch {
+      return
+    }
+    expect(await readTemplateCandidate(join(docs, 'linked', 'form.docx'), guard)).toEqual({
+      ok: false,
+      reason: 'unreadable',
+    })
   })
 })
 

@@ -181,12 +181,14 @@ export interface UserSkillSaveInput {
   body: string
 }
 
-/** The template a skill card saves along (spec 5.6) */
+/**
+ * The template a skill card saves along (spec 5.6): the document's bytes. A
+ * window never names a file for the main process to read; the agent window's
+ * candidates are read in main and handed back as bytes.
+ */
 export interface UserSkillTemplateInput {
-  /** the document's bytes (an edited copy that is not on disk) */
-  bytes?: Uint8Array | undefined
-  /** or the document file to copy */
-  sourcePath?: string | undefined
+  /** the document's bytes */
+  bytes: Uint8Array
   /** the file name under `assets/`, with the extension */
   fileName: string
 }
@@ -369,15 +371,10 @@ function templateOf(value: unknown): UserSkillTemplateInput | undefined | null {
   const fileName = text(value.fileName, 1024)
   if (!fileName) return null
   const bytes = value.bytes
-  const sourcePath = value.sourcePath === undefined ? undefined : text(value.sourcePath, 4096)
-  if (bytes !== undefined) {
-    if (!(bytes instanceof Uint8Array) || bytes.byteLength > USER_SKILL_TEMPLATE_MAX_BYTES) {
-      return null
-    }
-    return { bytes, fileName }
+  if (!(bytes instanceof Uint8Array) || bytes.byteLength > USER_SKILL_TEMPLATE_MAX_BYTES) {
+    return null
   }
-  if (!sourcePath) return null
-  return { sourcePath, fileName }
+  return { bytes, fileName }
 }
 
 export function cardSaveInputOf(value: unknown): UserSkillCardSaveInput | undefined {

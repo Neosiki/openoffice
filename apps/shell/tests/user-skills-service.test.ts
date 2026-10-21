@@ -280,28 +280,18 @@ describe('saving skills', () => {
     })
   })
 
-  it('copies the template from a document file, but never from Codex’s or Claude’s folder', async () => {
+  it('takes a template only as bytes with a document file name', async () => {
     const doc = join(root, 'docs', 'form.docx')
     mkdirSync(join(root, 'docs'))
     writeFileSync(doc, 'docx bytes')
+    // a path is never read here: the card hands over bytes only
     expect(
       await service.saveFromCard({
         ...card,
-        template: { sourcePath: doc, fileName: 'form.docx' },
-      }),
-    ).toMatchObject({ ok: true })
-    expect(readFileSync(join(appDir(), 'home-letter', 'assets', 'form.docx'), 'utf8')).toBe(
-      'docx bytes',
-    )
-    mkdirSync(join(home, '.codex'), { recursive: true })
-    writeFileSync(join(home, '.codex', 'form.docx'), 'secret')
-    expect(
-      await service.saveFromCard({
-        ...card,
-        name: 'other',
-        template: { sourcePath: join(home, '.codex', 'form.docx'), fileName: 'form.docx' },
+        template: { sourcePath: doc, fileName: 'form.docx' } as never,
       }),
     ).toEqual({ ok: false, reason: 'bad-template' })
+    expect(existsSync(join(appDir(), 'home-letter'))).toBe(false)
     expect(
       await service.saveFromCard({
         ...card,

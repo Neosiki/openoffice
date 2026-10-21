@@ -9,7 +9,7 @@
  * Nothing in this module writes a file; the card's Save does, through the
  * skills service, after the person's click.
  */
-import { readFile, readdir, stat } from 'node:fs/promises'
+import { readFile, readdir, realpath, stat } from 'node:fs/promises'
 import { basename, dirname, extname, isAbsolute, join, resolve } from 'node:path'
 import JSZip from 'jszip'
 import type { SkillProposal } from '@genoffice/agent-core'
@@ -18,6 +18,7 @@ import {
   IEUM_TEMPLATE_KEY,
   MAX_USER_SKILL_BYTES,
   USER_SKILL_PRIORITY,
+  isInsideCodexHome,
   isReservedUserSkillName,
   parseSkillMd,
 } from '@genoffice/ai-provider'
@@ -399,11 +400,42 @@ export async function templateRedactionOf(
   }
 }
 
-/** A candidate's file, read whole; undefined when it is gone or larger than a skill may be */
+/** Folders a candidate is never read from: the sessions' protected folders */
+export interface TemplateReadGuard {
+  homeDir: string
+  /** sign-in stores, the original app's folder, this app's folders (agentProtectedPaths) */
+  protectedPaths: readonly string[]
+}
+
+/** Whether a path, as written or where it really is, is in a protected folder or the Codex home */
+async function isProtectedPath(path: string, guard: TemplateReadGuard): Promise<boolean> {
+  const real = await realpath(path).catch(() => undefined)
+  if (!real) return true
+  for (const at of [path, real]) {
+    if (await isInsideCodexHome(at, guard.homeDir)) return true
+    for (const dir of guard.protectedPaths) {
+      if (!dir) continue
+      const root = await realpath(dir).catch(() => dir)
+      for (const base of new Set([dir, root])) {
+        if (isInsidePath(comparablePath(at, at), comparablePath(base, base))) return true
+      }
+    }
+  }
+  return false
+}
+
+/**
+ * A candidate's file, read whole in the main process; refused when it is gone,
+ * larger than a skill may be, or (as written or where it really is) inside a
+ * protected folder: `~/.claude`, `~/.codex`, `~/.genoffice`, `~/.ieumoffice`,
+ * the app's data.
+ */
 export async function readTemplateCandidate(
   path: string,
+  guard: TemplateReadGuard,
 ): Promise<{ ok: true; bytes: Uint8Array } | { ok: false; reason: 'unreadable' | 'too-large' }> {
   try {
+    if (await isProtectedPath(path, guard)) return { ok: false, reason: 'unreadable' }
     const info = await stat(path)
     if (!info.isFile()) return { ok: false, reason: 'unreadable' }
     if (info.size > MAX_USER_SKILL_BYTES) return { ok: false, reason: 'too-large' }

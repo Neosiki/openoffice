@@ -138,9 +138,10 @@ describe('what Save hands to the shell', () => {
     const draft = initialSkillCardDraft(NEW)
     expect(skillCardSaveInput(draft, NEW)).not.toHaveProperty('template')
     expect(
-      skillCardSaveInput(draft, NEW, { template: { sourcePath: '/a/b.docx', fileName: 'b.docx' } })
-        .template,
-    ).toEqual({ sourcePath: '/a/b.docx', fileName: 'b.docx' })
+      skillCardSaveInput(draft, NEW, {
+        template: { bytes: new Uint8Array([1]), fileName: 'b.docx' },
+      }).template,
+    ).toEqual({ bytes: new Uint8Array([1]), fileName: 'b.docx' })
   })
 
   it('reads the answers that cross the bridge', () => {

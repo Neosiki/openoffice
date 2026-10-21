@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto'
+import { homedir } from 'node:os'
 import { isAbsolute, join } from 'node:path'
 import { BrowserWindow, dialog, ipcMain, shell } from 'electron'
 import type { IpcMainInvokeEvent, WebContents } from 'electron'
@@ -37,6 +38,7 @@ import { readAgentProjectPref, writeAgentProjectPref } from '../app-settings'
 import { AGENT_HOME_OPEN_CHANNEL } from '../../shared/agent-home-channel'
 import { agentText } from '../../renderer/src/i18n/strings-agent'
 import {
+  agentProtectedPaths,
   createAgentManager,
   openableProjectFile,
   type AgentManagerDeps,
@@ -280,7 +282,11 @@ function openInTab(candidate: AgentTemplateCandidate): boolean {
 
 /** Read a candidate and tell whether it can hold a redaction mark */
 async function readCandidate(candidate: AgentTemplateCandidate) {
-  const read = await readTemplateCandidate(candidate.path)
+  const homeDir = deps?.homeDir ?? homedir()
+  const read = await readTemplateCandidate(candidate.path, {
+    homeDir,
+    protectedPaths: deps ? agentProtectedPaths(homeDir, deps.userData) : [],
+  })
   if (!read.ok) return read
   const redaction = await templateRedactionOf(candidate.fileName, read.bytes, openInTab(candidate))
   return { ok: true as const, bytes: read.bytes, redaction }
