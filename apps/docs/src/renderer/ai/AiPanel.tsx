@@ -20,6 +20,12 @@ import {
   DriveAttachButton,
   type DriveAttachPicked,
   DocAttachButton,
+  NO_SKILL_USE,
+  SentSkillChips,
+  skillChipRefsOf,
+  useComposerSkills,
+  type SkillChipRef,
+  type SkillUse,
 } from '@genoffice/ui'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Editor } from '@tiptap/core'
@@ -150,6 +156,8 @@ interface ChatEntry {
   attachments?: AttachmentMeta[]
   /** the selection this user message targeted, frozen at send */
   scope?: AiScopeQuoteData
+  /** skill chips this user message carried */
+  skills?: SkillChipRef[]
   /** tokens the provider billed for this reply, summed across its turns (absent when unreported) */
   usage?: AiTokenUsageView
 }
@@ -405,6 +413,7 @@ export function AiPanel({
   const msgQueue = useChatRunQueue<{
     attachments: AttachmentMeta[]
     scope: AiScopeQuoteData | null
+    skillUse: SkillUse
   }>({
     busy,
     submit: (text, meta) => {
@@ -413,12 +422,16 @@ export function AiPanel({
       // nothing can run right now: the message stays queued, and in front of "not connected"
       // the queue is paused so it does not start by itself after a sign-in
       if (!sendGateRef.current.admitQueued(() => msgQueueRef.current.setPaused(true))) return false
-      runWith(text, text, meta.attachments, meta.scope)
+      runWith(text, text, meta.attachments, meta.scope, meta.skillUse)
       return true
     },
   })
   const msgQueueRef = useRef(msgQueue)
   msgQueueRef.current = msgQueue
+  /** the skills called with `/` or `$`: the list, the chips and the text a request gets */
+  const skills = useComposerSkills({ lang })
+  const skillsRef = useRef(skills)
+  skillsRef.current = skills
   /** Wall-clock start of the current run, drives the elapsed badge */
   const runStartedAtRef = useRef(0)
   /** a send waiting on a phased open's tail; Stop / New chat abort it before it runs */
@@ -571,12 +584,19 @@ export function AiPanel({
     displayInstruction: string
     attachments: AttachmentMeta[] | undefined
     retryScope: AiScopeQuoteData | null | undefined
+    skillUse: SkillUse
   }>({
     settings,
     statuses: subscription.statuses,
     store: MODEL_BRIDGE,
     start: (held) =>
-      runWith(held.instruction, held.displayInstruction, held.attachments, held.retryScope),
+      runWith(
+        held.instruction,
+        held.displayInstruction,
+        held.attachments,
+        held.retryScope,
+        held.skillUse,
+      ),
     onSettingsSaved: (next) => {
       // a run started right after ("continue with ...") must already see the change
       settingsRef.current = next
@@ -625,6 +645,8 @@ export function AiPanel({
   const lastAttachmentsRef = useRef<AttachmentMeta[]>([])
   /** the scope quote of the last send, so a retry reuses it instead of re-reading the live selection */
   const lastScopeRef = useRef<AiScopeQuoteData | undefined>(undefined)
+  /** the skills of the last send: a retry sends the same skill text */
+  const lastSkillUseRef = useRef<SkillUse>(NO_SKILL_USE)
   /** composer attachments plus everything already sent this session (deduped by path) */
   const availableAttachments = (): AttachmentMeta[] => {
     const seen = new Set<string>()
@@ -716,7 +738,14 @@ export function AiPanel({
                 sizeBytes: a.sizeBytes ?? 0,
               })),
             ...(m.scope ? { scope: m.scope } : {}),
+            ...(m.role === 'user' && skillChipRefsOf(m.skills).length > 0
+              ? { skills: skillChipRefsOf(m.skills) }
+              : {}),
           })),
+        )
+        // the next request re-reads the current text of the skills this conversation used
+        skillsRef.current.restoreHistory(
+          msgs.map((m) => (m.role === 'user' ? skillChipRefsOf(m.skills) : undefined)),
         )
         // restore model context: follow-ups after reopening a file continue the previous conversation (only when the loop is idle with no history)
         loopRef.current?.restore(msgs.map((m) => ({ role: m.role, text: m.text })))
@@ -754,6 +783,7 @@ export function AiPanel({
     }>,
     attachments?: AttachmentMeta[],
     scope?: AiScopeQuoteData,
+    skillChips?: SkillChipRef[],
   ) => {
     const ids = chatRefIds.current
     const api = (window as Window & { projectApi?: typeof window.projectApi }).projectApi
@@ -776,6 +806,7 @@ export function AiPanel({
             }
           : {}),
         ...(scope ? { scope } : {}),
+        ...(skillChips && skillChips.length > 0 ? { skills: skillChips } : {}),
       })
       .catch(() => {
         /* silent */
@@ -1129,7 +1160,11 @@ export function AiPanel({
     stickToBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 48
   }
 
-  const run = () => runWith(input.trim())
+  const run = () => {
+    const text = input.trim()
+    if (!text) return
+    skills.withSkills(text, (skillUse) => runWith(text, text, undefined, undefined, skillUse))
+  }
 
   /** Image attachments are read as base64 and go multimodal with this user message (≤5MB per image, max 20) */
   const MAX_IMAGES_PER_MESSAGE = 20
@@ -1161,6 +1196,8 @@ export function AiPanel({
     attachmentsOverride?: AttachmentMeta[],
     /** null = a retry that had no scope; undefined = capture the live selection */
     retryScope?: AiScopeQuoteData | null,
+    /** the chosen skills: their text goes to the model, their chips onto the bubble */
+    skillUse: SkillUse = NO_SKILL_USE,
   ) => {
     const loop = loopRef.current
     if (!instruction || !loop || loop.busy || pendingSendRef.current) return
@@ -1174,12 +1211,15 @@ export function AiPanel({
         displayInstruction,
         attachments: attachmentsOverride,
         retryScope,
+        skillUse,
       })
     ) {
       return
     }
     setInputTruncated(false)
     setInput('')
+    skillsRef.current.consume(skillUse)
+    lastSkillUseRef.current = skillUse
     // The message consumes the composer attachments: they ride along (echoed on the
     // bubble, images multimodal, files via the files skill) and the composer clears.
     const sentAtts = attachmentsOverride ?? attachmentsRef.current
@@ -1216,6 +1256,7 @@ export function AiPanel({
           text: displayInstruction,
           ...(sentAtts.length > 0 ? { attachments: sentAtts } : {}),
           ...(scope ? { scope } : {}),
+          ...(skillUse.chips.length > 0 ? { skills: skillUse.chips } : {}),
         },
         { role: 'assistant', text: '', streaming: true },
       ]),
@@ -1226,7 +1267,7 @@ export function AiPanel({
     const generation = currentDocGeneration()
     const pending = { aborted: false }
     pendingSendRef.current = pending
-    persistMessage('user', instruction, undefined, sentAtts, scope)
+    persistMessage('user', instruction, undefined, sentAtts, scope, skillUse.chips)
     // a rejected image read must not strand the run (busy would stay true forever): degrade to a no-image send
     void collectImageAttachments(sentAtts)
       .catch((): AgentImage[] => {
@@ -1251,7 +1292,8 @@ export function AiPanel({
           setBusy(false)
           return
         }
-        return loop.run(instruction, images)
+        // the skill text rides with this request only; the bubble and the record keep the chips
+        return loop.run(instruction + skillUse.text, images)
       })
   }
 
@@ -1286,6 +1328,7 @@ export function AiPanel({
       lastInstructionRef.current,
       lastAttachmentsRef.current,
       lastScopeRef.current ?? null,
+      lastSkillUseRef.current,
     )
 
   const continueRun = () => runWith(DOCS_CONTINUE_INSTRUCTION, t('aiContinue'))
@@ -1299,6 +1342,10 @@ export function AiPanel({
   const enqueueDraft = () => {
     const text = input.trim()
     if (!text) return
+    skills.withSkills(text, (skillUse) => enqueueWith(text, skillUse))
+  }
+  const enqueueWith = (text: string, skillUse: SkillUse) => {
+    skillsRef.current.consume(skillUse)
     // snapshot + consume the composer attachments exactly like a send does: the
     // queued message owns them, and pump time hands them to runWith as an override
     const attachments = attachmentsRef.current
@@ -1310,7 +1357,7 @@ export function AiPanel({
       ]
       setAttachments([])
     }
-    msgQueue.enqueue(text, { attachments, scope: selectionScopeQuote() ?? null })
+    msgQueue.enqueue(text, { attachments, scope: selectionScopeQuote() ?? null, skillUse })
     setInput('')
   }
 
@@ -1329,6 +1376,7 @@ export function AiPanel({
     // Restored history is painted above the live turn: without this the
     // previous conversation survives "New chat" on screen (#195).
     setHistoricChat([])
+    skills.resetConversation()
     // Unsent composer attachments would otherwise ride into the next chat's
     // file context (availableAttachments merges sent + live). The typed
     // draft itself is kept — only staged files are dropped.
@@ -1536,6 +1584,13 @@ export function AiPanel({
             {historicChat.map((entry, i) => (
               <div key={`h${i}`} className={`ai-msg ai-msg-${entry.role} ai-msg-historic`}>
                 {entry.role === 'user' && entry.scope && <AiScopeQuote scope={entry.scope} />}
+                {entry.role === 'user' && (
+                  <SentSkillChips
+                    lang={lang}
+                    chips={entry.skills}
+                    isAvailable={skills.isAvailable}
+                  />
+                )}
                 {entry.role === 'user' && entry.attachments && entry.attachments.length > 0 && (
                   <SentAttachments atts={entry.attachments} previews={attachmentPreviews} />
                 )}
@@ -1605,6 +1660,9 @@ export function AiPanel({
               className={`ai-msg ai-msg-${entry.role}${entry.role === 'assistant' && entry.streaming ? ' ai-msg-streaming' : ''}`}
             >
               {entry.role === 'user' && entry.scope && <AiScopeQuote scope={entry.scope} />}
+              {entry.role === 'user' && (
+                <SentSkillChips lang={lang} chips={entry.skills} isAvailable={skills.isAvailable} />
+              )}
               {entry.role === 'user' && entry.attachments && entry.attachments.length > 0 && (
                 <SentAttachments atts={entry.attachments} previews={attachmentPreviews} />
               )}
@@ -1917,6 +1975,7 @@ export function AiPanel({
           onChange={setInput}
           onSend={run}
           onStop={cancel}
+          skills={skills.composer}
           onPasteFiles={(files) => void onPasteFiles(files)}
           footerStart={
             <>

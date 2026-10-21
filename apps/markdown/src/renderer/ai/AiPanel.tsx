@@ -31,8 +31,14 @@ import {
   createFileNav,
   Markdown,
   useChatRunQueue,
+  NO_SKILL_USE,
+  SentSkillChips,
+  skillChipRefsOf,
+  useComposerSkills,
   type AiScopeQuoteData,
   type AiTokenUsageView,
+  type SkillChipRef,
+  type SkillUse,
 } from '@genoffice/ui'
 import type { Editor } from '@tiptap/core'
 import { aiLangDirective, t as tGlobal, useI18n } from '../i18n/locale'
@@ -118,6 +124,8 @@ interface ChatEntry {
   tools?: ToolActivity[]
   /** the selection this user message targeted, frozen at send */
   scope?: AiScopeQuoteData
+  /** skill chips this user message carried */
+  skills?: SkillChipRef[]
   /** tokens the provider billed for this reply, summed across its turns (absent when unreported) */
   usage?: AiTokenUsageView
 }
@@ -201,19 +209,25 @@ export function AiPanel({
   const [prompt, setPrompt] = useState('')
   const [busy, setBusy] = useState(false)
   /** messages queued while a reply runs; the pump re-runs them through send on settle */
-  const msgQueue = useChatRunQueue<void>({
+  const msgQueue = useChatRunQueue<{ skillUse: SkillUse }>({
     busy,
-    submit: (text) => {
+    submit: (text, meta) => {
       const loop = loopRef.current
       if (!loop || loop.busy) return false
       // nothing can run right now: the message stays queued, and in front of "not connected"
       // the queue is paused so it does not start by itself after a sign-in
       if (!sendGateRef.current.admitQueued(() => msgQueueRef.current.setPaused(true))) return false
-      return send(text, text, null)
+      return send(text, text, null, meta.skillUse)
     },
   })
   const msgQueueRef = useRef(msgQueue)
   msgQueueRef.current = msgQueue
+  /** the skills called with `/` or `$`: the list, the chips and the text a request gets */
+  const skills = useComposerSkills({ lang })
+  const skillsRef = useRef(skills)
+  skillsRef.current = skills
+  /** the skills of the last send: a retry sends the same skill text */
+  const lastSkillUseRef = useRef<SkillUse>(NO_SKILL_USE)
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null)
   const [snapshots, setSnapshots] = useState<Snapshot[]>([])
   // bumped on selection/doc changes so the scope chip & queue rows stay fresh
@@ -255,12 +269,13 @@ export function AiPanel({
     text: string
     displayText: string | undefined
     retryScope: AiScopeQuoteData | null | undefined
+    skillUse: SkillUse
   }>({
     settings: aiSettings,
     statuses,
     store: MODEL_BRIDGE,
     start: (held) => {
-      send(held.text, held.displayText, held.retryScope)
+      send(held.text, held.displayText, held.retryScope, held.skillUse)
     },
     onNotConnected: () => refreshSubscriptionRef.current(),
     onSettingsSaved: applyAiSettings,
@@ -344,6 +359,7 @@ export function AiPanel({
       text: string
       tools?: ToolActivity[]
       scope?: AiScopeQuoteData
+      skills?: SkillChipRef[]
     }>
   >([])
 
@@ -362,11 +378,12 @@ export function AiPanel({
     text: string,
     tools?: ToolActivity[],
     scope?: AiScopeQuoteData,
+    skillChips?: SkillChipRef[],
   ) => {
     const ids = chatIdsRef.current
     if (!window.projectApi) return
     if (!ids) {
-      pendingPersistRef.current.push({ role, text, tools, scope })
+      pendingPersistRef.current.push({ role, text, tools, scope, skills: skillChips })
       return
     }
     void window.projectApi
@@ -377,6 +394,7 @@ export function AiPanel({
         text,
         ...(tools && tools.length > 0 ? { tools } : {}),
         ...(scope ? { scope } : {}),
+        ...(skillChips && skillChips.length > 0 ? { skills: skillChips } : {}),
       })
       .catch(() => {
         /* persistence failures are silent */
@@ -623,7 +641,7 @@ export function AiPanel({
       .then((ids) => {
         chatIdsRef.current = ids
         for (const msg of pendingPersistRef.current.splice(0)) {
-          persistMessage(msg.role, msg.text, msg.tools, msg.scope)
+          persistMessage(msg.role, msg.text, msg.tools, msg.scope, msg.skills)
         }
         return api.loadChat({ projectId: ids.projectId, chatId: ids.chatId, limit: 200 })
       })
@@ -645,10 +663,17 @@ export function AiPanel({
               output: tool.output ? tool.output.slice(0, TOOL_OUTPUT_MAX_CHARS) : undefined,
             })),
             ...(m.scope ? { scope: m.scope } : {}),
+            ...(m.role === 'user' && skillChipRefsOf(m.skills).length > 0
+              ? { skills: skillChipRefsOf(m.skills) }
+              : {}),
           }))
         })
         if (applied && !loopRef.current?.busy) {
           loopRef.current?.restore(msgs.map((m) => ({ role: m.role, text: m.text })))
+          // the next request re-reads the current text of the skills this conversation used
+          skillsRef.current.restoreHistory(
+            msgs.map((m) => (m.role === 'user' ? skillChipRefsOf(m.skills) : undefined)),
+          )
         }
       })
       .catch(() => {
@@ -700,6 +725,8 @@ export function AiPanel({
     text: string,
     displayText?: string,
     retryScope?: AiScopeQuoteData | null,
+    /** the chosen skills: their text goes to the model, their chips onto the bubble */
+    skillUse: SkillUse = NO_SKILL_USE,
   ): boolean => {
     const instruction = text.trim()
     const loop = loopRef.current
@@ -707,7 +734,7 @@ export function AiPanel({
     // A request made during a status check or in front of the first-connection notice is
     // held and starts by itself once the way is clear; in front of "not connected" nothing
     // is kept. Either way nothing is sent now and the text stays with the caller.
-    if (!sendGate.admit({ text: instruction, displayText, retryScope })) {
+    if (!sendGate.admit({ text: instruction, displayText, retryScope, skillUse })) {
       showWhatHoldsTheSend()
       return false
     }
@@ -731,14 +758,21 @@ export function AiPanel({
     if (scope) setInactiveSelectionShown(depsRef.current.getEditor(), true)
     setChat((prev) => [
       ...prev,
-      { role: 'user', text: displayText ?? instruction, ...(scope ? { scope } : {}) },
+      {
+        role: 'user',
+        text: displayText ?? instruction,
+        ...(scope ? { scope } : {}),
+        ...(skillUse.chips.length > 0 ? { skills: skillUse.chips } : {}),
+      },
       { role: 'assistant', text: '', streaming: true },
     ])
     setPrompt('')
+    skillsRef.current.consume(skillUse)
+    lastSkillUseRef.current = skillUse
     setBusy(true)
     // persist what the user saw — a restored transcript must not surface the
     // internal batch protocol text behind a queue submission
-    persistMessage('user', displayText ?? instruction, undefined, scope)
+    persistMessage('user', displayText ?? instruction, undefined, scope, skillUse.chips)
     void (async () => {
       try {
         const [settings] = await Promise.all([
@@ -748,7 +782,8 @@ export function AiPanel({
         settingsRef.current = settings
         if (!mountedRef.current) return
         applyAiSettings(settings)
-        await loop.run(instruction)
+        // the skill text rides with this request only; the bubble and the record keep the chips
+        await loop.run(instruction + skillUse.text)
       } catch (err) {
         if (!mountedRef.current) return
         patchLast({
@@ -767,17 +802,39 @@ export function AiPanel({
     loopRef.current?.cancel()
   }
 
+  /** the composer's typed text: the chosen skills ride along */
+  const sendTyped = () => {
+    const text = prompt.trim()
+    if (!text) return
+    skills.withSkills(text, (skillUse) => send(text, undefined, undefined, skillUse))
+  }
+
   /** Enter while a reply runs: the draft joins the queue above the composer */
   const enqueueDraft = () => {
     const text = prompt.trim()
     if (!text) return
-    msgQueue.enqueue(text, undefined)
+    skills.withSkills(text, (skillUse) => enqueueWith(text, skillUse))
+  }
+  const enqueueWith = (text: string, skillUse: SkillUse) => {
+    skillsRef.current.consume(skillUse)
+    msgQueue.enqueue(text, { skillUse })
     setPrompt('')
   }
 
   const retry = (): void => {
-    send(runInstructionRef.current, runDisplayRef.current, lastScopeRef.current ?? null)
+    send(
+      runInstructionRef.current,
+      runDisplayRef.current,
+      lastScopeRef.current ?? null,
+      lastSkillUseRef.current,
+    )
   }
+
+  /** a rerun of the last user bubble sends the last send's skill text again */
+  const retrySkillUse = (entry: ChatEntry): SkillUse =>
+    entry === [...chat].reverse().find((e) => e.role === 'user')
+      ? lastSkillUseRef.current
+      : NO_SKILL_USE
 
   /** "Continue with …" on a blocked run: that provider becomes the selection, then the request reruns */
   const continueWith = (provider: AiSubscriptionProviderId): void =>
@@ -977,6 +1034,7 @@ export function AiPanel({
                 loopRef.current?.reset()
                 setBusy(false)
                 setChat([])
+                skills.resetConversation()
               }}
               data-tip={t('aiNewChat')}
               aria-label={t('aiNewChat')}
@@ -1027,6 +1085,7 @@ export function AiPanel({
             return (
               <div key={i} className="ai-msg ai-msg-user">
                 {entry.scope && <AiScopeQuote scope={entry.scope} />}
+                <SentSkillChips lang={lang} chips={entry.skills} isAvailable={skills.isAvailable} />
                 <span dir="auto">{entry.text}</span>
                 {entry.undelivered && (
                   <div className="ai-msg-undelivered">
@@ -1034,7 +1093,9 @@ export function AiPanel({
                     {!busy && (
                       <button
                         className="ai-retry-btn"
-                        onClick={() => send(entry.text, undefined, entry.scope ?? null)}
+                        onClick={() =>
+                          send(entry.text, undefined, entry.scope ?? null, retrySkillUse(entry))
+                        }
                       >
                         {t('aiRetry')}
                       </button>
@@ -1303,8 +1364,9 @@ export function AiPanel({
           stopIcon={<img src={sendStop} alt="" aria-hidden />}
           textareaRef={inputRef}
           onChange={setPrompt}
-          onSend={() => send(prompt)}
+          onSend={sendTyped}
           onStop={stop}
+          skills={skills.composer}
         />
       </div>
     </aside>

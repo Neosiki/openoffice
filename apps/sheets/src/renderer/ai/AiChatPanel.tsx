@@ -6,6 +6,10 @@ import {
   DriveAttachButton,
   type DriveAttachPicked,
   DocAttachButton,
+  SentSkillChips,
+  useComposerSkills,
+  type SkillChipRef,
+  type SkillUse,
 } from '@genoffice/ui'
 import React, { useEffect, useRef, useState } from 'react'
 import {
@@ -223,6 +227,12 @@ export interface AiToolChip {
   readonly output?: string
 }
 
+/** what a queued message carries until it runs */
+interface QueuedMeta {
+  readonly atts: readonly AttachmentMeta[]
+  readonly skillUse: SkillUse
+}
+
 export interface AiChatMessage {
   readonly role: 'user' | 'assistant'
   readonly text: string
@@ -241,6 +251,8 @@ export interface AiChatMessage {
   readonly attachments?: readonly AttachmentMeta[] | undefined
   /** the range this user message targeted, frozen at send */
   readonly scope?: AiScopeQuoteData | undefined
+  /** skill chips this user message carried */
+  readonly skills?: readonly SkillChipRef[] | undefined
   /** tokens the provider billed for this reply, summed across its turns (absent when unreported) */
   readonly usage?: AiTokenUsageView | undefined
 }
@@ -347,9 +359,16 @@ export function AiChatPanel({
     instruction?: string,
     attachments?: readonly AttachmentMeta[],
     retryIndex?: number,
+    /** the skills chosen in the composer, and a call once the request is admitted */
+    skillUse?: SkillUse,
+    onAdmitted?: () => void,
   ) => void
   /** a queued message is ready to run: return false to keep it queued (panel busy some other way) */
-  readonly onSendQueued?: (instruction: string, attachments: readonly AttachmentMeta[]) => boolean
+  readonly onSendQueued?: (
+    instruction: string,
+    attachments: readonly AttachmentMeta[],
+    skillUse: SkillUse,
+  ) => boolean
   readonly onStop: () => void
   readonly onNewChat: () => void
   readonly onUndo: (steps: number) => void
@@ -373,7 +392,7 @@ export function AiChatPanel({
   // A reply that stopped because its connection cannot go on: the queue is paused, so the next
   // message does not run into the same wall. Declared ahead of the queue so that it runs before
   // the queue's own settle pump when both land in one commit.
-  const msgQueueRef = useRef<ChatRunQueue<readonly AttachmentMeta[]> | null>(null)
+  const msgQueueRef = useRef<ChatRunQueue<QueuedMeta> | null>(null)
   const lastEntry = chat.at(-1)
   const lastReplyBlocked = lastEntry?.role === 'assistant' && lastEntry.blocked !== undefined
   useEffect(() => {
@@ -382,18 +401,28 @@ export function AiChatPanel({
   const subscriptionRef = useRef(subscription)
   subscriptionRef.current = subscription
   /** messages queued while a reply runs; the pump re-sends them through onSend on settle */
-  const msgQueue = useChatRunQueue<readonly AttachmentMeta[]>({
+  const msgQueue = useChatRunQueue<QueuedMeta>({
     busy: aiBusy,
-    submit: (text, atts) => {
+    submit: (text, { atts, skillUse }) => {
       // nothing can run right now: the message stays queued, and in front of "not connected"
       // the queue is paused so it does not start by itself after a sign-in
       const admitted = subscriptionRef.current.admitQueued(() =>
         msgQueueRef.current?.setPaused(true),
       )
-      return admitted ? (onSendQueued?.(text, atts) ?? false) : false
+      return admitted ? (onSendQueued?.(text, atts, skillUse) ?? false) : false
     },
   })
   msgQueueRef.current = msgQueue
+  /** the skills called with `/` or `$` (sheets: `$` only at the start, so $A$1 stays typing) */
+  const skills = useComposerSkills({ lang, dollarAtStartOnly: true })
+  const skillsRef = useRef(skills)
+  skillsRef.current = skills
+  // the next request re-reads the current text of the skills the reopened conversation used
+  useEffect(() => {
+    skillsRef.current.restoreHistory(
+      historicChat.map((m) => (m.role === 'user' ? m.skills : undefined)),
+    )
+  }, [historicChat])
   // Panel chrome follows the UI language; message text follows its own content (dir=auto below)
   const isRtl = lang === 'ar' || lang === 'he'
   const chatRef = useRef<HTMLDivElement | null>(null)
@@ -576,17 +605,23 @@ export function AiChatPanel({
     stickToBottomRef.current = true
     // while nothing can run the send is answered by the connect prompt or the first-use
     // notice instead (see the send gate in App.tsx); the draft stays in the composer
-    onSend()
+    skills.withSkills(prompt.trim(), (skillUse) =>
+      onSend(undefined, undefined, undefined, skillUse, () => skillsRef.current.consume(skillUse)),
+    )
   }
 
   /** Enter while a reply runs: the draft joins the queue above the composer */
   const enqueueDraft = (): void => {
     const text = prompt.trim()
     if (!text) return
+    skills.withSkills(text, (skillUse) => enqueueWith(text, skillUse))
+  }
+  const enqueueWith = (text: string, skillUse: SkillUse): void => {
+    skillsRef.current.consume(skillUse)
     // the queued message owns the composer attachments; the pump hands them to onSend
     const atts = attachments
     for (const a of atts) onRemoveAttachment(a.path)
-    msgQueue.enqueue(text, atts)
+    msgQueue.enqueue(text, { atts, skillUse })
     onPromptChange('')
   }
 
@@ -655,6 +690,7 @@ export function AiChatPanel({
               className="ai-header-btn"
               onClick={() => {
                 msgQueue.clear()
+                skills.resetConversation()
                 onNewChat()
               }}
               data-tip={t('aiNewChat')}
@@ -681,6 +717,13 @@ export function AiChatPanel({
             {historicChat.map((entry, i) => (
               <div key={`h${i}`} className={`ai-msg ai-msg-${entry.role} ai-msg-historic`}>
                 {entry.role === 'user' && entry.scope && <AiScopeQuote scope={entry.scope} />}
+                {entry.role === 'user' && (
+                  <SentSkillChips
+                    lang={lang}
+                    chips={entry.skills}
+                    isAvailable={skills.isAvailable}
+                  />
+                )}
                 {entry.role === 'user' && entry.attachments && entry.attachments.length > 0 && (
                   <SentAttachments atts={entry.attachments} previews={attachmentPreviews} />
                 )}
@@ -713,6 +756,7 @@ export function AiChatPanel({
             {entry.role === 'user' ? (
               <>
                 {entry.scope && <AiScopeQuote scope={entry.scope} />}
+                <SentSkillChips lang={lang} chips={entry.skills} isAvailable={skills.isAvailable} />
                 {entry.attachments && entry.attachments.length > 0 && (
                   <SentAttachments atts={entry.attachments} previews={attachmentPreviews} />
                 )}
@@ -1019,6 +1063,7 @@ export function AiChatPanel({
           textareaRef={inputRef}
           onChange={onPromptChange}
           onSend={send}
+          skills={skills.composer}
           onStop={() => {
             msgQueue.hold()
             onStop()
