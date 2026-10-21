@@ -22,6 +22,8 @@ import {
   checkingSubscriptionStatus,
   subscriptionAccountOf,
   subscriptionModelsOf,
+  subscriptionProgramPathOf,
+  subscriptionStatusErrorKind,
   subscriptionStatusErrorText,
   type SubscriptionMeteredResult,
   type SubscriptionStatusMap,
@@ -131,6 +133,10 @@ function toStatus(
 ): AiSubscriptionStatus {
   // a detection can come from an injected detector: its account is checked again
   const account = signedIn(detection) ? subscriptionAccountOf(detection.account) : undefined
+  const programPath =
+    subscriptionStatusErrorKind(detection) === 'needs-update'
+      ? subscriptionProgramPathOf(detection.programPath)
+      : undefined
   const accepted = detection.state === 'metered' && meteredAccepted
   return {
     provider: detection.provider,
@@ -144,6 +150,7 @@ function toStatus(
       : {}),
     meteredAccepted: accepted,
     ...(detection.state === 'error' && detection.error ? { error: detection.error } : {}),
+    ...(programPath ? { programPath } : {}),
   }
 }
 

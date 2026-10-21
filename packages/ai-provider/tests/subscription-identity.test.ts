@@ -390,6 +390,35 @@ describe('accepting a metered login of an unrecognised kind', () => {
     expect(subscriptionStatusErrorKind(statuses.codex)).toBe('failed')
     expectNoIdentity(statuses)
   })
+
+  it('the status names the program only when it is too old, and only as a full path', async () => {
+    const path = 'C:\\Tools\\npm\\claude.exe'
+    const detections: Record<AiSubscriptionProviderId, SubscriptionDetection> = {
+      'claude-code': {
+        provider: 'claude-code',
+        state: 'error',
+        version: '2.1.114',
+        error: 'needs-update: Claude Code 2.1.114 is too old',
+        programPath: path,
+      },
+      // an injected detector naming a program on another result
+      codex: {
+        provider: 'codex',
+        state: 'error',
+        error: 'failed: spawn',
+        programPath: path,
+      },
+    }
+    const service = createSubscriptionStatusService({
+      getSettings: () => defaultAiSettings(),
+      setMeteredAccepted: () => undefined,
+      acceptanceStore: { read: async () => ({}), write: async () => undefined },
+      detect: async (provider) => detections[provider],
+    })
+    const statuses = await service.check()
+    expect(statuses['claude-code'].programPath).toBe(path)
+    expect(statuses.codex.programPath).toBeUndefined()
+  })
 })
 
 /**

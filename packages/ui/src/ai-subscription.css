@@ -83,6 +83,28 @@
   word-break: break-word;
 }
 
+.ai-sub-path {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ai-sub-path-label {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.ai-sub-path-value {
+  margin: 0;
+  color: var(--text);
+  font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 11px;
+  text-align: start;
+  /* a path has no spaces to wrap at */
+  overflow-wrap: anywhere;
+}
+
 .ai-sub-actions {
   display: flex;
   flex-wrap: wrap;

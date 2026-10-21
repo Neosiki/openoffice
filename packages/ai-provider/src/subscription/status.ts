@@ -71,6 +71,8 @@ export interface SubscriptionDetection {
   loginMethod?: AiSubscriptionLoginMethod
   planName?: string
   error?: string
+  /** the file the check ran, on a `needs-update` error */
+  programPath?: string
   loginKind?: string
   /** the e-mail address of the signed-in account, for display only; never stored */
   account?: string
@@ -328,12 +330,14 @@ function errorDetection(
   kind: SubscriptionStatusErrorKind,
   text: string,
   version?: string,
+  programPath?: string,
 ): SubscriptionDetection {
   return {
     provider,
     state: 'error',
     ...(version ? { version } : {}),
     error: subscriptionStatusErrorText(kind, text),
+    ...(programPath ? { programPath } : {}),
   }
 }
 
@@ -428,6 +432,7 @@ async function inspect(
           'needs-update',
           `${name} ${version} is too old; version ${minimum} or newer is required`,
           version,
+          program.entry,
         )
       }
       status = await ask(STATUS_ARGS[provider])
@@ -462,6 +467,7 @@ async function inspect(
         'needs-update',
         `${name}${version ? ` ${version}` : ''} is too old to report its login status`,
         version,
+        program.entry,
       )
     }
     // what the CLI printed instead stays here: it may name the account

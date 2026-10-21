@@ -163,6 +163,38 @@ describe('AiSubscriptionCard', () => {
     }
   })
 
+  it('error: a Claude below the floor shows the file the app runs, left to right', () => {
+    const path = 'C:\\Users\\me\\AppData\\Roaming\\npm\\claude.exe'
+    for (const lang of ['en', 'ko'] as const) {
+      const props = {
+        status: status('claude-code', 'error', {
+          version: '2.1.114',
+          error:
+            'needs-update: Claude Code 2.1.114 is too old; version 2.1.248 or newer is required',
+          programPath: path,
+        }),
+        lang,
+      }
+      act(() => root.render(createElement(AiSubscriptionCard, { ...props, ...cardActions() })))
+      const value = host.querySelector('.ai-sub-path-value')!
+      expect(value.textContent).toBe(path)
+      expect(value.getAttribute('dir')).toBe('ltr')
+      const labels = [...host.querySelectorAll('.ai-sub-path-label')].map((p) => p.textContent)
+      expect(labels).toEqual(
+        {
+          en: [
+            'The file this app runs:',
+            'Updating Claude inside WSL (Ubuntu) or in another folder does not change this file. Run claude update in Windows PowerShell.',
+          ],
+          ko: [
+            '이 앱이 실행하는 파일:',
+            'WSL(Ubuntu)이나 다른 폴더에 설치된 Claude를 업데이트해도 이 파일은 바뀌지 않습니다. Windows PowerShell에서 claude update를 실행하세요.',
+          ],
+        }[lang],
+      )
+    }
+  })
+
   it('error: one sentence per kind, naming the provider, never the raw detail', () => {
     const cases = [
       {
