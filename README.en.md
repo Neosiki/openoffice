@@ -419,8 +419,22 @@ License), and their fonts are all licensed under the SIL Open Font License
 1.1; [NOTICE](NOTICE) carries the notice and the font list. The templates'
 Korean font pairings referred to [k-slide](https://k-slide.web.app).
 
+The Hangul (HWP/HWPX) editor is built on
+[rhwp](https://github.com/edwardkim/rhwp) (MIT License). As Hancom requires of
+software made with its published HWP format document, we state:
+
+> 본 제품은 한글과컴퓨터의 한글 문서 파일(.hwp) 공개 문서를 참고하여
+> 개발하였습니다.
+>
+> (This product was developed with reference to Hancom's published document
+> on the Hangul document file format (.hwp).)
+
 IeumOffice is an independent project. It is not affiliated with, sponsored by
-or endorsed by Genspark / Mainfunc, Inc., Anthropic or OpenAI. "GenOffice" and
-"Genspark", and their logos, are trademarks of their owners; so are "Claude",
-"Codex" and "ChatGPT". They are named here only to say what this software is
-based on and what it works with.
+or endorsed by Genspark / Mainfunc, Inc., Anthropic, OpenAI, Microsoft, Hancom
+or XMind Ltd. "GenOffice" and "Genspark", and their logos, are trademarks of
+their owners; so are "Claude", "Codex" and "ChatGPT". "Microsoft", "Windows",
+"Word", "Excel" and "PowerPoint" are trademarks of Microsoft Corporation;
+"한글" (Hangul), "한컴" (Hancom), "HWP" and "HWPX" are registered trademarks of
+Hancom Inc.; and "XMind" is a trademark of XMind Ltd. Other product names in
+this document belong to their owners. They are named here only to say what
+this software is based on, what it works with and which files it opens.

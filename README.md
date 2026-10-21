@@ -398,8 +398,20 @@ Parallel과 DuckDuckGo로, 업데이트 확인은 GitHub로 갑니다. 편집기
 License 1.1입니다. 고지와 글꼴 목록은 [NOTICE](NOTICE)에 있습니다. 템플릿의
 한글 글꼴 조합은 [k-slide](https://k-slide.web.app)를 참고했습니다.
 
+한글(HWP·HWPX) 편집기는 [rhwp](https://github.com/edwardkim/rhwp)(MIT
+라이선스)를 바탕으로 합니다. 한글과컴퓨터가 HWP 형식 문서를 공개하며 붙인
+조건에 따라 다음 문구를 밝힙니다.
+
+> 본 제품은 한글과컴퓨터의 한글 문서 파일(.hwp) 공개 문서를 참고하여
+> 개발하였습니다.
+
 이음오피스는 독립된 프로젝트입니다. Genspark / Mainfunc, Inc., Anthropic,
-OpenAI와 제휴하거나 후원·보증을 받은 관계가 아닙니다. "GenOffice"와
-"Genspark"라는 이름과 로고는 각 소유자의 상표이고, "Claude", "Codex",
-"ChatGPT"도 그렇습니다. 여기서는 이 프로그램이 무엇을 바탕으로 만들어졌고
-무엇과 함께 동작하는지 알리기 위해서만 그 이름을 적었습니다.
+OpenAI, Microsoft, 한글과컴퓨터, XMind와 제휴하거나 후원·보증을 받은 관계가
+아닙니다. "GenOffice"와 "Genspark"라는 이름과 로고는 각 소유자의 상표이고,
+"Claude", "Codex", "ChatGPT"도 그렇습니다. "Microsoft", "Windows", "Word",
+"Excel", "PowerPoint"는 Microsoft Corporation의 상표이고, "한글", "한컴",
+"HWP", "HWPX"는 주식회사 한글과컴퓨터의 등록 상표이며, "XMind"는 XMind
+Ltd.의 상표입니다. 그 밖에 이 글에 나오는 제품 이름도 각 소유자의
+상표입니다. 여기서는 이 프로그램이 무엇을 바탕으로 만들어졌고, 무엇과 함께
+동작하며, 어떤 형식의 파일을 열 수 있는지 알리기 위해서만 그 이름을
+적었습니다.
