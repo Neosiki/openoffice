@@ -5,6 +5,7 @@ import {
   readFileSync,
   readdirSync,
   rmSync,
+  symlinkSync,
   writeFileSync,
 } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -138,6 +139,33 @@ describe('the list', () => {
       invoke: 'auto',
     })
     expect(readAppSettings(settingsPath).skills).toEqual({})
+  })
+})
+
+describe('a linked folder in the app’s skills folder', () => {
+  it('is read but never written, deleted or edited through when it leads outside', async () => {
+    const outside = join(root, 'elsewhere', 'linked')
+    skill(outside, 'linked', 'Lives elsewhere')
+    writeFileSync(join(outside, 'notes.md'), 'kept')
+    try {
+      symlinkSync(outside, join(appDir(), 'linked'), 'junction')
+    } catch {
+      return // links not allowed here
+    }
+    const view = await byId('app:linked')
+    expect(view).toMatchObject({ owned: false })
+    expect(view!.can).toMatchObject({ edit: false, remove: false, export: false })
+
+    expect(await service.remove('app:linked')).toEqual({ ok: false, reason: 'not-owned' })
+    expect(trash).not.toHaveBeenCalled()
+    expect(
+      await service.save({ id: 'app:linked', title: 'T', description: 'D', body: 'changed' }),
+    ).toEqual({ ok: false, reason: 'not-owned' })
+    expect(await service.exportInfo('app:linked')).toEqual({ ok: false, reason: 'not-owned' })
+    expect(readFileSync(join(outside, 'SKILL.md'), 'utf8')).toContain('Lives elsewhere')
+    expect(readFileSync(join(outside, 'notes.md'), 'utf8')).toBe('kept')
+    // an own folder that is really there stays owned
+    expect(await byId('app:mine')).toMatchObject({ owned: true })
   })
 })
 
