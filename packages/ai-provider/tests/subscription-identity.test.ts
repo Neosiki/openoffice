@@ -603,6 +603,8 @@ describe('the account shown on the Settings card', () => {
         launchLogin: async () => ({ ok: true }),
         launchLogout: async () => ({ ok: true }),
         launchInstall: async () => ({ ok: true }),
+        launchUpdate: async () => ({ ok: true }),
+        cancelLogin: async () => ({ ok: true }),
       }),
     )
     // tool routing and run selection read this copy
