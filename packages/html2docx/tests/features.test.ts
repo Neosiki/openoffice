@@ -1036,6 +1036,20 @@ test('keeps broken image alt text as an editable fallback', async () => {
   assert.match(documentXml, /FAUGET CO\./)
 })
 
+test('does not wait out the image timeout for an image that already failed', async () => {
+  // the page-side image wait gives each pending image 15 s; a broken image is
+  // complete from the start and must not take that long
+  const started = Date.now()
+  await convertHtml(
+    `<!doctype html><html><body>
+      <img src="file:///definitely-missing-timing-image.png" alt="Missing">
+      <p>Text after the image</p>
+    </body></html>`,
+    'broken-image-timing',
+  )
+  assert.ok(Date.now() - started < 10_000, `took ${Date.now() - started} ms`)
+})
+
 test('rasterizes painted broken-image placeholders at their authored size', async () => {
   const { zip, screenshotText } = await convertHtml(
     `<!doctype html><html><head><style>

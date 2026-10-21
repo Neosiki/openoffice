@@ -5,7 +5,9 @@
  * draws, not pixel positions. The title-table-then-inline-table case is the
  * first reproduction with its inline table moved into the next paragraph. Both
  * title-table files then lost two white labels that stripping the pictures had
- * left invisible on white paper (rhwp's hidden-text check flagged them).
+ * left invisible on white paper (rhwp's hidden-text check flagged them). The
+ * title-table-zone-fill case is the first reproduction with a gray face on the
+ * cell zone border fill, whose picture fill the stripping had emptied.
  */
 import { createHash } from 'node:crypto'
 import { readFileSync } from 'node:fs'
@@ -25,6 +27,7 @@ interface Node {
   type: string
   pi?: number
   ci?: number
+  row?: number
   bbox?: { x: number; y: number; w: number; h: number }
   children?: Node[]
 }
@@ -131,6 +134,29 @@ describe('vendored rhwp engine', () => {
     for (let i = 1; i < after.length; i++) {
       expect(after[i].top).toBeGreaterThanOrEqual(after[i - 1].bottom - 0.5)
     }
+  })
+
+  it('fills a cell zone to the end of the merged cell it ends on', () => {
+    // The title table's cell zone covers row 1, cells 0 and 1, and cell 1 spans
+    // the last two columns. Hangul paints the zone to the table's right edge;
+    // stopping at the grid end of column 1 left half the title undecorated, and
+    // an earlier title table left under it showed through.
+    const doc = open('title-table-zone-fill.hwpx')
+    const tables: Node[] = []
+    const walk = (node: Node) => {
+      if (node.type === 'Table' && node.pi === 0) tables.push(node)
+      else for (const child of node.children ?? []) walk(child)
+    }
+    walk(JSON.parse(doc.getPageRenderTree(0)) as Node)
+    const title = tables.sort((a, b) => a.bbox!.y - b.bbox!.y)[0]
+    const row = title.children!.find((c) => c.type === 'Cell' && c.row === 1)!.bbox!
+    const zone = title.children!.find(
+      (c) => c.type === 'Rect' && Math.abs(c.bbox!.y - row.y) < 0.5,
+    )?.bbox
+    expect(zone).toBeDefined()
+    expect(zone!.x).toBeCloseTo(title.bbox!.x, 0)
+    expect(zone!.x + zone!.w).toBeCloseTo(title.bbox!.x + title.bbox!.w, 0)
+    expect(zone!.h).toBeCloseTo(row.h, 0)
   })
 
   it('moves a picture after a stored page reset to the next page with its lines', () => {
