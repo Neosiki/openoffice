@@ -31,9 +31,15 @@ import {
   aiSubscriptionText,
   useAiSendGate,
   useChatRunQueue,
+  NO_SKILL_USE,
+  SentSkillChips,
+  skillChipRefsOf,
+  useComposerSkills,
   type AiScopeQuoteData,
   type AiTokenUsageView,
   type ChatRunQueue,
+  type SkillChipRef,
+  type SkillUse,
 } from '@genoffice/ui'
 import { aiLangDirective, t as tGlobal, useI18n } from '../i18n/locale'
 import { createFileNav, Markdown } from '@genoffice/ui'
@@ -96,6 +102,8 @@ interface ChatEntry {
   tools?: ToolActivity[]
   /** the passage this user message targeted, frozen at send */
   scope?: AiScopeQuoteData
+  /** skill chips this user message carried */
+  skills?: SkillChipRef[]
   /** tokens the provider billed for this reply, summed across its turns (absent when unreported) */
   usage?: AiTokenUsageView
 }
@@ -150,20 +158,26 @@ export function AiPanel({
   const [prompt, setPrompt] = useState('')
   const [busy, setBusy] = useState(false)
   /** messages queued while a reply runs; the pump re-runs them through send on settle */
-  const msgQueueRef = useRef<ChatRunQueue<void> | null>(null)
-  const msgQueue = useChatRunQueue<void>({
+  const msgQueueRef = useRef<ChatRunQueue<{ skillUse: SkillUse }> | null>(null)
+  const msgQueue = useChatRunQueue<{ skillUse: SkillUse }>({
     busy,
-    submit: (text) => {
+    submit: (text, meta) => {
       const loop = loopRef.current
       if (!loop || loop.busy) return false
       // nothing can run right now: the message stays queued, and in front of "not connected"
       // the queue is paused so it does not start by itself after a sign-in
       if (!sendGate.admitQueued(() => msgQueueRef.current?.setPaused(true))) return false
-      send(text, null)
+      send(text, null, meta.skillUse)
       return true
     },
   })
   msgQueueRef.current = msgQueue
+  /** the skills called with `/` or `$`: the list, the chips and the text a request gets */
+  const skills = useComposerSkills({ lang })
+  const skillsRef = useRef(skills)
+  skillsRef.current = skills
+  /** the skills of the last send: a retry sends the same skill text */
+  const lastSkillUseRef = useRef<SkillUse>(NO_SKILL_USE)
   const [phase, setPhase] = useState<Phase>('thinking')
   /** the scope chip's expandable preview of the selected text */
   const [scopePreviewOpen, setScopePreviewOpen] = useState(false)
@@ -197,6 +211,7 @@ export function AiPanel({
             text: string
             tools?: Array<{ name: string; summary: string; isError?: boolean; output?: string }>
             scope?: AiScopeQuoteData
+            skills?: SkillChipRef[]
           }): Promise<void>
           loadChat(args: { projectId: string; chatId: string; limit?: number }): Promise<
             Array<{
@@ -204,6 +219,7 @@ export function AiPanel({
               text: string
               tools?: Array<{ name: string; summary: string; isError?: boolean; output?: string }>
               scope?: AiScopeQuoteData
+              skills?: unknown
             }>
           >
           rebindChat(args: {
@@ -219,6 +235,7 @@ export function AiPanel({
     text: string,
     tools?: ToolActivity[],
     scope?: AiScopeQuoteData,
+    skillChips?: SkillChipRef[],
   ): void => {
     const ids = chatIdsRef.current
     const store = chatStore()
@@ -240,6 +257,7 @@ export function AiPanel({
             }
           : {}),
         ...(scope ? { scope } : {}),
+        ...(skillChips && skillChips.length > 0 ? { skills: skillChips } : {}),
       })
       .catch(() => {
         /* silent */
@@ -282,9 +300,16 @@ export function AiPanel({
               output: tool.output,
             })),
             ...(m.scope ? { scope: m.scope } : {}),
+            ...(m.role === 'user' && skillChipRefsOf(m.skills).length > 0
+              ? { skills: skillChipRefsOf(m.skills) }
+              : {}),
           })),
           ...prev,
         ])
+        // the next request re-reads the current text of the skills this conversation used
+        skillsRef.current.restoreHistory(
+          msgs.map((m) => (m.role === 'user' ? skillChipRefsOf(m.skills) : undefined)),
+        )
         // follow-ups after reopening continue the previous conversation
         loopRef.current?.restore(msgs.map((m) => ({ role: m.role, text: m.text })))
       })
@@ -369,11 +394,15 @@ export function AiPanel({
   /** The send gate every editor shares: holds a request made during a status check or in front
       of the first-connection notice, refuses in front of "not connected", and writes this
       panel's settings changes ("continue with …", the acknowledged notice) onto the stored ones */
-  const sendGate = useAiSendGate<{ text: string; scope: AiScopeQuoteData | null | undefined }>({
+  const sendGate = useAiSendGate<{
+    text: string
+    scope: AiScopeQuoteData | null | undefined
+    skillUse: SkillUse
+  }>({
     settings: aiSettings,
     statuses: connection.statuses,
     store: MODEL_BRIDGE,
-    start: (held) => send(held.text, held.scope),
+    start: (held) => send(held.text, held.scope, held.skillUse),
     onSettingsSaved: (next) => {
       aiSettingsRef.current = next
       setAiSettings(next)
@@ -636,12 +665,17 @@ export function AiPanel({
   }
 
   /** retryScope: null = a retry that had no scope; undefined = capture the live selection */
-  const send = (text: string, retryScope?: AiScopeQuoteData | null): void => {
+  const send = (
+    text: string,
+    retryScope?: AiScopeQuoteData | null,
+    /** the chosen skills: their text goes to the model, their chips onto the bubble */
+    skillUse: SkillUse = NO_SKILL_USE,
+  ): void => {
     const instruction = text.trim()
     const loop = loopRef.current
     if (!instruction || !loop || loop.busy) return
     stickToBottomRef.current = true
-    if (!sendGate.admit({ text: instruction, scope: retryScope })) {
+    if (!sendGate.admit({ text: instruction, scope: retryScope, skillUse })) {
       // nothing is sent: the request stays in the composer while the panel shows what
       // is missing (a connection) or what must be read first (the first-connection notice).
       // A request held for the status check or the notice starts by itself once the way is clear.
@@ -651,24 +685,32 @@ export function AiPanel({
     setInputTruncated(false)
     streamErrorRef.current = null
     const scope = retryScope !== undefined ? (retryScope ?? undefined) : selectionScopeQuote()
-    persistMessage('user', instruction, undefined, scope)
+    persistMessage('user', instruction, undefined, scope, skillUse.chips)
     segTextRef.current = ''
     runTextsRef.current = []
     runToolsRef.current = []
     runUsageRef.current = undefined
     setChat((prev) => [
       ...prev,
-      { role: 'user', text: instruction, ...(scope ? { scope } : {}) },
+      {
+        role: 'user',
+        text: instruction,
+        ...(scope ? { scope } : {}),
+        ...(skillUse.chips.length > 0 ? { skills: skillUse.chips } : {}),
+      },
       { role: 'assistant', text: '', streaming: true },
     ])
     setPrompt('')
+    skillsRef.current.consume(skillUse)
+    lastSkillUseRef.current = skillUse
     setBusy(true)
     setPhase('thinking')
     runMutatedRef.current = false
     void (async () => {
       try {
         settingsRef.current = await window.pdfApi.getAiSettings()
-        await loop.run(instruction)
+        // the skill text rides with this request only; the bubble and the record keep the chips
+        await loop.run(instruction + skillUse.text)
       } catch (err) {
         patchLast({
           streaming: false,
@@ -690,15 +732,32 @@ export function AiPanel({
     if (loopRef.current?.busy) return
     const request = [...chat].reverse().find((entry) => entry.role === 'user')
     sendGate.continueWith(provider, () => {
-      if (request) send(request.text, request.scope ?? null)
+      if (request) send(request.text, request.scope ?? null, retrySkillUse(request))
     })
+  }
+
+  /** a rerun of the last user bubble sends the last send's skill text again */
+  const retrySkillUse = (entry: ChatEntry): SkillUse =>
+    entry === [...chat].reverse().find((e) => e.role === 'user')
+      ? lastSkillUseRef.current
+      : NO_SKILL_USE
+
+  /** the composer's typed text: the chosen skills ride along */
+  const sendTyped = () => {
+    const text = prompt.trim()
+    if (!text) return
+    skills.withSkills(text, (skillUse) => send(text, undefined, skillUse))
   }
 
   /** Enter while a reply runs: the draft joins the queue above the composer */
   const enqueueDraft = () => {
     const text = prompt.trim()
     if (!text) return
-    msgQueue.enqueue(text, undefined)
+    skills.withSkills(text, (skillUse) => enqueueWith(text, skillUse))
+  }
+  const enqueueWith = (text: string, skillUse: SkillUse) => {
+    skillsRef.current.consume(skillUse)
+    msgQueue.enqueue(text, { skillUse })
     setPrompt('')
   }
 
@@ -838,6 +897,7 @@ export function AiPanel({
                 sendGate.reset()
                 setBusy(false)
                 setChat([])
+                skills.resetConversation()
               }}
               data-tip={t('aiNewChat')}
               aria-label={t('aiNewChat')}
@@ -904,6 +964,7 @@ export function AiPanel({
             return (
               <div key={i} className="ai-msg ai-msg-user">
                 {entry.scope && <AiScopeQuote scope={entry.scope} />}
+                <SentSkillChips lang={lang} chips={entry.skills} isAvailable={skills.isAvailable} />
                 <span dir="auto">{entry.text}</span>
                 {entry.undelivered && (
                   <div className="ai-msg-undelivered">
@@ -911,7 +972,7 @@ export function AiPanel({
                     {!busy && (
                       <button
                         className="ai-retry-btn"
-                        onClick={() => send(entry.text, entry.scope ?? null)}
+                        onClick={() => send(entry.text, entry.scope ?? null, retrySkillUse(entry))}
                       >
                         {t('aiRetry')}
                       </button>
@@ -1108,8 +1169,9 @@ export function AiPanel({
           sendIconDisabled={<img src={sendEnterOff} alt="" aria-hidden />}
           stopIcon={<img src={sendStop} alt="" aria-hidden />}
           onChange={setPrompt}
-          onSend={() => send(prompt)}
+          onSend={sendTyped}
           onStop={stop}
+          skills={skills.composer}
         />
       </div>
     </aside>

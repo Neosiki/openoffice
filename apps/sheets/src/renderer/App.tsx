@@ -69,9 +69,13 @@ import {
   addTokenUsage,
   useAiSendGate,
   useSplitPaneFocusPing,
+  NO_SKILL_USE,
+  skillChipRefsOf,
   type AiTokenUsageView,
   type AiScopeQuoteData,
   type DriveAttachPicked,
+  type SkillChipRef,
+  type SkillUse,
 } from '@genoffice/ui'
 
 import {
@@ -1087,11 +1091,20 @@ export function App({
     instruction: string | undefined
     attachments: readonly AttachmentMeta[] | undefined
     retryIndex: number | undefined
+    skillUse: SkillUse
+    onAdmitted: (() => void) | undefined
   }>({
     settings: aiSettings,
     statuses: subscription.statuses,
     store: AI_SETTINGS_STORE,
-    start: (held) => handleSend(held.instruction, held.attachments, held.retryIndex),
+    start: (held) =>
+      handleSend(
+        held.instruction,
+        held.attachments,
+        held.retryIndex,
+        held.skillUse,
+        held.onAdmitted,
+      ),
     onSettingsSaved: (next) => {
       // the ref is updated at once for a run started right after
       aiSettingsRef.current = next
@@ -1131,6 +1144,8 @@ export function App({
   const [chat, setChat] = useState<readonly AiChatMessage[]>([])
   /** History loaded from project-store (read-only transcript, not fed to the model) */
   const [historicChat, setHistoricChat] = useState<readonly AiChatMessage[]>([])
+  /** the skills of the last send: a retry of a message with chips sends the same skill text */
+  const lastSkillUseRef = useRef<SkillUse>(NO_SKILL_USE)
   // ── Chat attachments (same structure as docs/slides: text types go through the
   // read_attachment tool, images go multimodal) ──
   const [attachments, setAttachments] = useState<readonly AttachmentMeta[]>([])
@@ -1327,6 +1342,9 @@ export function App({
                 }
               : {}),
             ...(m.scope ? { scope: m.scope } : {}),
+            ...(m.role === 'user' && skillChipRefsOf(m.skills).length > 0
+              ? { skills: skillChipRefsOf(m.skills) }
+              : {}),
           })),
         )
         // Restore model context: follow-ups after reopening the file continue the
@@ -1350,6 +1368,7 @@ export function App({
     }>,
     attachments?: readonly AttachmentMeta[],
     scope?: AiScopeQuoteData,
+    skillChips?: readonly SkillChipRef[],
   ): boolean => {
     // Reports whether a write was issued: right after a workbook opens the
     // chat refs resolve asynchronously, and a send in that window is dropped.
@@ -1376,6 +1395,7 @@ export function App({
             }
           : {}),
         ...(scope ? { scope } : {}),
+        ...(skillChips && skillChips.length > 0 ? { skills: [...skillChips] } : {}),
       })
       .catch(() => {
         /* silent */
@@ -3446,9 +3466,20 @@ export function App({
     overrideInstruction?: string,
     overrideAttachments?: readonly AttachmentMeta[],
     retryIndex?: number,
+    /** the chosen skills: their text goes to the model, their chips onto the bubble */
+    givenSkillUse: SkillUse = NO_SKILL_USE,
+    /** the request was admitted (now, or later when a held request starts) */
+    onAdmitted?: () => void,
   ): void {
     const instruction = (overrideInstruction ?? prompt).trim()
     if (!instruction || aiBusy) return
+    // a retried message that carried skills sends the same skill text again
+    const skillUse =
+      retryIndex !== undefined &&
+      givenSkillUse === NO_SKILL_USE &&
+      (chat[retryIndex]?.skills?.length ?? 0) > 0
+        ? lastSkillUseRef.current
+        : givenSkillUse
     // No provider can run, or the first-use notice of a subscription is pending:
     // the panel shows what to do about it and nothing is sent (the draft is kept).
     // A request made during a status check or in front of the notice is held and
@@ -3458,10 +3489,14 @@ export function App({
         instruction: overrideInstruction,
         attachments: overrideAttachments,
         retryIndex,
+        skillUse,
+        onAdmitted,
       })
     ) {
       return
     }
+    onAdmitted?.()
+    lastSkillUseRef.current = skillUse
     runToolsRef.current = []
     runUsageRef.current = undefined
     // The message consumes the composer attachments: they ride along (echoed on the
@@ -3486,7 +3521,8 @@ export function App({
           ? { label: scopeLabel(aiScope.a1, aiScope.columns ?? null, t) }
           : undefined
     const persisted =
-      alreadyPersisted || persistChatMessage('user', instruction, undefined, sentAtts, scope)
+      alreadyPersisted ||
+      persistChatMessage('user', instruction, undefined, sentAtts, scope, skillUse.chips)
     appendChat({
       role: 'user',
       text: instruction,
@@ -3494,6 +3530,7 @@ export function App({
       persisted,
       ...(sentAtts.length > 0 ? { attachments: sentAtts } : {}),
       ...(scope ? { scope } : {}),
+      ...(skillUse.chips.length > 0 ? { skills: skillUse.chips } : {}),
     })
     if (!overrideInstruction) setPrompt('')
     // the deterministic path consumes the composer too — the bubble already echoes the set
@@ -3509,7 +3546,8 @@ export function App({
     // otherwise fall back to the local, deterministic regex planner
     // (kept for offline use and for the fixed micro-DSL it still supports).
     if (agentConfigured) {
-      runAgent(instruction, sentAtts)
+      // the skill text rides with this request only; the bubble and the record keep the chips
+      runAgent(instruction + skillUse.text, sentAtts)
       return
     }
     const outcome = runDeterministicPlan(instruction)

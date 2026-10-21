@@ -16,6 +16,7 @@ import {
   rememberAiPanelOpen,
   type AiTokenUsageView,
   type DriveAttachPicked,
+  type SkillUse,
 } from '@genoffice/ui'
 
 import {
@@ -268,6 +269,8 @@ interface ExcelShellProps {
     instruction?: string,
     attachments?: readonly AttachmentMeta[],
     retryIndex?: number,
+    skillUse?: SkillUse,
+    onAdmitted?: () => void,
   ) => void
   readonly onStop: () => void
   readonly onNewChat: () => void
@@ -977,11 +980,11 @@ export function ExcelShell({
           subscription={aiSubscription}
           onPromptChange={onPromptChange}
           onSend={onSend}
-          onSendQueued={(text, atts) => {
+          onSendQueued={(text, atts, skillUse) => {
             // the panel asks the send gate first: a message stays queued while it asks to
             // connect or shows the first-use notice
             if (aiBusy) return false
-            onSend(text, atts)
+            onSend(text, atts, undefined, skillUse)
             return true
           }}
           onStop={onStop}

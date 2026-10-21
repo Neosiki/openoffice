@@ -36,6 +36,12 @@ import {
   DriveAttachButton,
   type DriveAttachPicked,
   DocAttachButton,
+  NO_SKILL_USE,
+  SentSkillChips,
+  skillChipRefsOf,
+  useComposerSkills,
+  type SkillChipRef,
+  type SkillUse,
 } from '@genoffice/ui'
 import { useEffect, useRef, useState } from 'react'
 import type { PointerEvent as ReactPointerEvent, ReactElement, ReactNode } from 'react'
@@ -182,6 +188,10 @@ interface ChatEntry {
   undelivered?: boolean
   /** attachments this message took from the composer (shown read-only; a retry sends them again) */
   attachments?: AttachmentMeta[]
+  /** skill chips this user message carried */
+  skills?: SkillChipRef[]
+  /** the skill text this message's request carried (live only): a retry resends it */
+  skillText?: string
   tools?: ToolActivity[]
   /** tokens the provider billed for this reply (absent when unreported) */
   usage?: AiTokenUsageView
@@ -310,12 +320,16 @@ export function AiPanel({
   /** The send gate every editor shares: holds a request made during a status check or in front
       of the first-connection notice, refuses in front of "not connected", and writes this
       panel's settings changes ("continue with …", the acknowledged notice) onto the stored ones. */
-  const sendGate = useAiSendGate<{ text: string; attachments: AttachmentMeta[] | undefined }>({
+  const sendGate = useAiSendGate<{
+    text: string
+    attachments: AttachmentMeta[] | undefined
+    skillUse: SkillUse
+  }>({
     settings: aiSettings,
     statuses: subscription.statuses,
     store: MODEL_BRIDGE,
     start: (held) => {
-      send(held.text, held.attachments)
+      send(held.text, held.attachments, held.skillUse)
     },
     onSettingsSaved: setAiSettings,
   })
@@ -328,19 +342,23 @@ export function AiPanel({
   /** structured cause of the last failed stream */
   const lastStreamErrorRef = useRef<IpcStreamError | null>(null)
   /** messages queued while a reply runs; the pump re-runs them through send on settle */
-  const msgQueue = useChatRunQueue<AttachmentMeta[]>({
+  const msgQueue = useChatRunQueue<{ atts: AttachmentMeta[]; skillUse: SkillUse }>({
     busy,
-    submit: (text, atts) => {
+    submit: (text, meta) => {
       const loop = loopRef.current
       if (!loop || loop.busy) return false
       // a queued message waits instead of being refused and dropped; in front of "not
       // connected" the queue is paused so it does not start by itself after a sign-in
       if (!sendGateRef.current.admitQueued(() => msgQueueRef.current.setPaused(true))) return false
-      return send(text, atts)
+      return send(text, meta.atts, meta.skillUse)
     },
   })
   const msgQueueRef = useRef(msgQueue)
   msgQueueRef.current = msgQueue
+  /** the skills called with `/` or `$`: the list, the chips and the text a request gets */
+  const skills = useComposerSkills({ lang })
+  const skillsRef = useRef(skills)
+  skillsRef.current = skills
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null)
   /** the turns that changed the map, oldest first: each one can be taken back */
   const [turns, setTurns] = useState<TurnPoint[]>([])
@@ -502,6 +520,8 @@ export function AiPanel({
   const filePathRef = useRef(filePath)
   /** the instruction of the run in flight: labels its undo point, and the header retry sends it again */
   const runInstructionRef = useRef('')
+  /** the skills of the last send: a retry sends the same skill text */
+  const lastSkillUseRef = useRef<SkillUse>(NO_SKILL_USE)
   /** the undo point of the run in flight */
   const turnRef = useRef<MapTurn | null>(null)
   /** an untitled map was already given a name from a request */
@@ -520,6 +540,7 @@ export function AiPanel({
       text: string
       tools?: ToolActivity[]
       attachments?: AttachmentMeta[]
+      skillChips?: SkillChipRef[]
     }>
   >([])
 
@@ -538,11 +559,12 @@ export function AiPanel({
     text: string,
     tools?: ToolActivity[],
     atts?: AttachmentMeta[],
+    skillChips?: SkillChipRef[],
   ) => {
     const ids = chatIdsRef.current
     if (!window.projectApi) return
     if (!ids) {
-      pendingPersistRef.current.push({ role, text, tools, attachments: atts })
+      pendingPersistRef.current.push({ role, text, tools, attachments: atts, skillChips })
       return
     }
     void window.projectApi
@@ -553,6 +575,7 @@ export function AiPanel({
         text,
         ...(tools && tools.length > 0 ? { tools } : {}),
         ...(atts && atts.length > 0 ? { attachments: atts } : {}),
+        ...(skillChips && skillChips.length > 0 ? { skills: skillChips } : {}),
       })
       .catch(() => {
         /* the transcript is a convenience: failures are silent */
@@ -702,7 +725,7 @@ export function AiPanel({
       .then((ids) => {
         chatIdsRef.current = ids
         for (const msg of pendingPersistRef.current.splice(0)) {
-          persistMessage(msg.role, msg.text, msg.tools, msg.attachments)
+          persistMessage(msg.role, msg.text, msg.tools, msg.attachments, msg.skillChips)
         }
         return api.loadChat({ projectId: ids.projectId, chatId: ids.chatId, limit: 200 })
       })
@@ -732,8 +755,17 @@ export function AiPanel({
               output: tool.output ? tool.output.slice(0, TOOL_OUTPUT_MAX_CHARS) : undefined,
             })),
             attachments: restoredAtts(m),
+            ...(m.role === 'user' && skillChipRefsOf(m.skills).length > 0
+              ? { skills: skillChipRefsOf(m.skills) }
+              : {}),
           }))
         })
+        // the next request re-reads the current text of the skills this conversation used
+        if (applied) {
+          skillsRef.current.restoreHistory(
+            msgs.map((m) => (m.role === 'user' ? skillChipRefsOf(m.skills) : undefined)),
+          )
+        }
         if (applied && !loopRef.current?.busy) {
           loopRef.current?.restore(msgs.map((m) => ({ role: m.role, text: m.text })))
           const seen = new Set(sentAttachmentsRef.current.map((a) => a.path))
@@ -777,14 +809,19 @@ export function AiPanel({
   }
 
   /** false when nothing was started (empty text, a run already active, or the gate held or refused it) */
-  const send = (text: string, attachmentsOverride?: AttachmentMeta[]): boolean => {
+  const send = (
+    text: string,
+    attachmentsOverride?: AttachmentMeta[],
+    /** the chosen skills: their text goes to the model, their chips onto the bubble */
+    skillUse: SkillUse = NO_SKILL_USE,
+  ): boolean => {
     const instruction = text.trim()
     const loop = loopRef.current
     if (!instruction || !loop || loop.busy) return false
     // Nothing connected, or the first-connection notice not acknowledged: nothing is sent, the
     // composer keeps the text and the files, and the dock above it says what to do. A request
     // made during a status check or in front of the notice is held and starts by itself.
-    if (!sendGate.admit({ text: instruction, attachments: attachmentsOverride })) {
+    if (!sendGate.admit({ text: instruction, attachments: attachmentsOverride, skillUse })) {
       return false
     }
     lastStreamErrorRef.current = null
@@ -823,12 +860,15 @@ export function AiPanel({
         role: 'user',
         text: instruction,
         attachments: sentAtts.length > 0 ? sentAtts : undefined,
+        ...(skillUse.chips.length > 0 ? { skills: skillUse.chips, skillText: skillUse.text } : {}),
       },
       { role: 'assistant', text: '', streaming: true },
     ])
     setPrompt('')
+    skillsRef.current.consume(skillUse)
+    lastSkillUseRef.current = skillUse
     setBusy(true)
-    persistMessage('user', instruction, undefined, sentAtts)
+    persistMessage('user', instruction, undefined, sentAtts, skillUse.chips)
     // Stop or New chat during the reads before the run bump the sequence; a stale send never starts the loop
     const seq = ++sendSeqRef.current
     void (async () => {
@@ -838,7 +878,8 @@ export function AiPanel({
         settingsRef.current = settings
         const images = sentAtts.length > 0 ? await collectImages(sentAtts) : []
         if (!mountedRef.current || seq !== sendSeqRef.current) return
-        await loop.run(instruction, images.length > 0 ? images : undefined)
+        // the skill text rides with this request only; the bubble and the record keep the chips
+        await loop.run(instruction + skillUse.text, images.length > 0 ? images : undefined)
       } catch (err) {
         if (!mountedRef.current || seq !== sendSeqRef.current) return
         patchLast({
@@ -876,15 +917,32 @@ export function AiPanel({
   const enqueueDraft = () => {
     const text = prompt.trim()
     if (!text) return
+    skills.withSkills(text, (skillUse) => enqueueWith(text, skillUse))
+  }
+  const enqueueWith = (text: string, skillUse: SkillUse) => {
+    skillsRef.current.consume(skillUse)
     // the queued message owns the composer attachments; they go with it when it runs
     const atts = attachmentsRef.current
     if (atts.length > 0) {
       attachmentsRef.current = []
       setAttachments([])
     }
-    msgQueue.enqueue(text, atts)
+    msgQueue.enqueue(text, { atts, skillUse })
     setPrompt('')
   }
+
+  /** the composer's send: the typed text goes out with the chosen skills */
+  const sendDraft = () => {
+    const text = prompt.trim()
+    if (!text) return
+    skills.withSkills(text, (skillUse) => send(text, undefined, skillUse))
+  }
+
+  /** the skills a past user message was sent with, for resending it (none for a restored one) */
+  const entrySkillUse = (entry: ChatEntry): SkillUse =>
+    entry.skills && entry.skillText !== undefined
+      ? { text: entry.skillText, chips: entry.skills }
+      : NO_SKILL_USE
 
   const stop = (): void => {
     msgQueue.hold()
@@ -894,7 +952,7 @@ export function AiPanel({
   }
 
   const retry = (): void => {
-    send(runInstructionRef.current, [])
+    send(runInstructionRef.current, [], lastSkillUseRef.current)
   }
 
   /** "Continue with …" on a blocked run: that provider becomes the selection and the request runs again */
@@ -902,7 +960,7 @@ export function AiPanel({
     // the blocked request again, with the attachments it was sent with
     const last = [...chat].reverse().find((entry) => entry.role === 'user')
     sendGate.continueWith(provider, () => {
-      if (last) send(last.text, last.attachments ?? [])
+      if (last) send(last.text, last.attachments ?? [], entrySkillUse(last))
       else retry()
     })
   }
@@ -1038,6 +1096,7 @@ export function AiPanel({
                 loopRef.current?.reset()
                 setBusy(false)
                 setChat([])
+                skills.resetConversation()
                 attachmentsRef.current = []
                 setAttachments([])
                 setAttachNotice(null)
@@ -1087,6 +1146,7 @@ export function AiPanel({
           if (entry.role === 'user') {
             return (
               <div key={i} className="ai-msg ai-msg-user">
+                <SentSkillChips lang={lang} chips={entry.skills} isAvailable={skills.isAvailable} />
                 {entry.attachments && entry.attachments.length > 0 && (
                   <div className="ai-msg-attachments">
                     <AttachmentList atts={entry.attachments} previews={attachmentPreviews} />
@@ -1100,7 +1160,9 @@ export function AiPanel({
                       <button
                         type="button"
                         className="ai-retry-btn"
-                        onClick={() => send(entry.text, entry.attachments ?? [])}
+                        onClick={() =>
+                          send(entry.text, entry.attachments ?? [], entrySkillUse(entry))
+                        }
                       >
                         {t('aiRetry')}
                       </button>
@@ -1278,8 +1340,9 @@ export function AiPanel({
           stopIcon={<img src={sendStop} alt="" aria-hidden />}
           textareaRef={inputRef}
           onChange={setPrompt}
-          onSend={() => send(prompt)}
+          onSend={sendDraft}
           onStop={stop}
+          skills={skills.composer}
           onPasteFiles={(files) => void onPasteFiles(files)}
           footerStart={
             <>

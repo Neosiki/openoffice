@@ -4,6 +4,57 @@ export type { DriveAttachPicked } from './DriveAttachButton'
 export { DocAttachButton, docPickedOf } from './DocAttachButton'
 export type { DocAttachPicked } from './DocAttachButton'
 export { AiComposer } from './AiComposer'
+export {
+  SKILL_CHIPS_MAX,
+  aiSkillsBridge,
+  chipsAfterListChange,
+  filterPickerSkills,
+  pickerSkillsOf,
+  removeSkillTrigger,
+  skillChipOf,
+  skillChipRef,
+  skillChipRefsOf,
+  skillPickerKeyAction,
+  skillSourceLabel,
+  skillTriggerAt,
+  withSkillChip,
+  type AiSkillsBridge,
+  type SkillChipRef,
+  type SkillChipView,
+  type SkillPickerItem,
+  type SkillPickerKeyAction,
+  type SkillPickerSurface,
+  type SkillTrigger,
+  type SkillTriggerChar,
+  type SkillTriggerOptions,
+} from './skill-picker-model'
+export {
+  SKILL_SEND_MAX_CHARS,
+  buildSkillRequest,
+  readSkillsForRequest,
+  skillForRequestOf,
+  skillRequestText,
+  type SkillForRequest,
+  type SkillRequestBuild,
+} from './skill-send'
+export { SentSkillChips, SkillChip, SkillChipRow, SkillPicker } from './SkillPicker'
+export {
+  NO_SKILL_USE,
+  useComposerSkills,
+  useSkillPickerInput,
+  type AiComposerSkills,
+  type ComposerSkills,
+  type ComposerSkillsOptions,
+  type OnTemplateSkill,
+  type SkillPickerInput,
+  type SkillUse,
+  type TemplateSkillRequest,
+} from './use-composer-skills'
+export {
+  SKILL_PICKER_STRINGS,
+  skillPickerText,
+  type SkillPickerStringKey,
+} from './strings-skill-picker'
 export { AiQueueStrip } from './AiQueueStrip'
 export { useChatRunQueue, type ChatRunQueue, type QueuedChatMessage } from './chat-run-queue'
 export { AI_QUEUE_LABELS, type AiQueueStripLabels } from './strings-ai-queue'
