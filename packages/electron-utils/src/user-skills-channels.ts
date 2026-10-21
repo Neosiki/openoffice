@@ -149,6 +149,8 @@ export type UserSkillsFailReason =
   | 'no-template'
   /** the request came from a window that may not do this */
   | 'not-allowed'
+  /** a template preview's original may withhold something: it is not saved as it is */
+  | 'redacted'
   | 'invalid'
   | 'cancelled'
   /** another import or update is running for this window */
