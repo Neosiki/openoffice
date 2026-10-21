@@ -22,4 +22,5 @@ export const ar = {
   installDismiss: 'إغلاق',
   installDismissed: 'لم تُثبَّت',
   installCancel: 'إلغاء',
+  actProposeSkill: 'اقتراح مهارة',
 } satisfies Record<keyof typeof zh, string>

@@ -22,4 +22,5 @@ export const cs = {
   installDismiss: 'Zavřít',
   installDismissed: 'Nenainstalováno',
   installCancel: 'Zrušit',
+  actProposeSkill: 'Návrh dovednosti',
 } satisfies Record<keyof typeof zh, string>

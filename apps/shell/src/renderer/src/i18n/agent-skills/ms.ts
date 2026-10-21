@@ -22,4 +22,5 @@ export const ms = {
   installDismiss: 'Tutup',
   installDismissed: 'Tidak dipasang',
   installCancel: 'Batal',
+  actProposeSkill: 'Cadangkan kemahiran',
 } satisfies Record<keyof typeof zh, string>

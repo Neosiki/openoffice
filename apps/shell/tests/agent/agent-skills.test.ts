@@ -328,6 +328,14 @@ describe('a chip in the agent window', () => {
     })
   })
 
+  it('keeps the title the chip showed, such as a default skill’s translated one', () => {
+    const builtin = { ...SKILL, id: 'builtin:meeting-minutes', name: 'meeting-minutes', title: '' }
+    const request = agentSkillRequest('go', [{ id: builtin.id, title: '회의록 정리' }], [builtin])
+    expect(request).toEqual(expect.objectContaining({ ok: true, titles: ['회의록 정리'] }))
+    const untitled = agentSkillRequest('go', [{ id: builtin.id }], [builtin])
+    expect(untitled).toEqual(expect.objectContaining({ titles: ['meeting-minutes'] }))
+  })
+
   it('carries a skill used only when called the same way', () => {
     const manual = { ...SKILL, id: 'claude:deck', name: 'deck', invoke: 'manual' as const }
     expect(agentSkillInstruction(manual)).toBe(

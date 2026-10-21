@@ -58,7 +58,12 @@ export function agentLogWith(state: AgentLogState, event: AgentEventView): Agent
             sameAction(entry.action, event.action)
           ) {
             const entries = [...state.entries]
-            entries[i] = { ...entry, status: event.status }
+            // Codex names a search's words only when the search is done
+            const action =
+              event.action.target && !entry.action.target
+                ? { ...entry.action, target: event.action.target }
+                : entry.action
+            entries[i] = { ...entry, action, status: event.status }
             return { ...state, entries }
           }
         }
@@ -108,6 +113,27 @@ export function agentLogAfterSkillsChanged(state: AgentLogState): AgentLogState 
 
 export function agentLogAfterAnswer(state: AgentLogState, id: string): AgentLogState {
   return { ...state, pending: state.pending.filter((request) => request.id !== id) }
+}
+
+/**
+ * The other waiting requests that allowing `id` for the session also covers:
+ * every web search, or page reads of the same site
+ */
+export function coveredBySessionAllow(state: AgentLogState, id: string): string[] {
+  const asked = state.pending.find((request) => request.id === id)?.action
+  if (!asked) return []
+  return state.pending
+    .filter(({ id: other, action }) => {
+      if (other === id) return false
+      if (asked.kind === 'web-search') return action.kind === 'web-search'
+      return (
+        asked.kind === 'web-fetch' &&
+        !!asked.host &&
+        action.kind === 'web-fetch' &&
+        action.host === asked.host
+      )
+    })
+    .map((request) => request.id)
 }
 
 /** The file a tool line can open: the first path it names */

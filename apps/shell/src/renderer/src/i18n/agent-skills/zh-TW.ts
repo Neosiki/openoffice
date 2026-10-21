@@ -21,4 +21,5 @@ export const zhTW = {
   installDismiss: '關閉',
   installDismissed: '未安裝',
   installCancel: '取消',
+  actProposeSkill: '建議技能',
 } satisfies Record<keyof typeof zh, string>

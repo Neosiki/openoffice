@@ -23,4 +23,5 @@ export const id = {
   installDismiss: 'Tutup',
   installDismissed: 'Tidak dipasang',
   installCancel: 'Batal',
+  actProposeSkill: 'Usulkan skill',
 } satisfies Record<keyof typeof zh, string>

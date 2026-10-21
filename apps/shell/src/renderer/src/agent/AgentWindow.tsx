@@ -48,6 +48,7 @@ import {
 import {
   EMPTY_AGENT_LOG,
   agentLogAfterAnswer,
+  coveredBySessionAllow,
   agentLogAfterSend,
   agentLogAfterSkillsChanged,
   agentLogWith,
@@ -124,10 +125,15 @@ function runErrorKey(kind: string | undefined): AgentStringKey {
 
 /** The app's own tools that only read (`read_sheet`, `open_documents`, …), as either program names them */
 const APP_READ_TOOL = /(?:^|[:_])(?:read_[a-z]+|open_documents)$/
+/** The app's tools that only offer a skill card; they do not touch a document */
+const APP_SKILL_TOOL = /(?:^|[:_])propose_skill(?:_install)?$/
 
 function actionLabel(lang: Lang, action: AgentActionView): string {
   if (action.kind === 'web-search' || action.kind === 'web-fetch') {
     return agentWebText(lang, WEB_ACTION_LABEL[action.kind])
+  }
+  if (action.kind === 'app-tool' && APP_SKILL_TOOL.test(action.tool)) {
+    return agentSkillsText(lang, 'actProposeSkill')
   }
   return agentText(
     lang,
@@ -364,8 +370,12 @@ export function AgentWindow() {
 
   const answer = (id: string, allow: boolean, scope: AgentAllowScope = 'once'): void => {
     if (!sessionId) return
-    setLog((current) => agentLogAfterAnswer(current, id))
-    void api.answer(sessionId, id, allow, scope)
+    // a session-wide allowance also answers the same kind of request still waiting
+    const ids = [id, ...(allow && scope === 'session' ? coveredBySessionAllow(log, id) : [])]
+    for (const each of ids) {
+      setLog((current) => agentLogAfterAnswer(current, each))
+      void api.answer(sessionId, each, allow, scope)
+    }
   }
 
   const stop = (): void => {

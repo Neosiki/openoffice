@@ -24,4 +24,5 @@ export const zh = {
   installDismiss: '关闭',
   installDismissed: '未安装',
   installCancel: '取消',
+  actProposeSkill: '建议技能',
 }

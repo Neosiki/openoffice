@@ -22,4 +22,5 @@ export const ru = {
   installDismiss: 'Закрыть',
   installDismissed: 'Не установлен',
   installCancel: 'Отмена',
+  actProposeSkill: 'Предложить навык',
 } satisfies Record<keyof typeof zh, string>

@@ -22,4 +22,5 @@ export const ko = {
   installDismiss: '닫기',
   installDismissed: '설치하지 않음',
   installCancel: '취소',
+  actProposeSkill: '스킬 제안',
 } satisfies Record<keyof typeof zh, string>

@@ -22,4 +22,5 @@ export const vi = {
   installDismiss: 'Đóng',
   installDismissed: 'Chưa cài đặt',
   installCancel: 'Hủy',
+  actProposeSkill: 'Đề xuất kỹ năng',
 } satisfies Record<keyof typeof zh, string>

@@ -22,4 +22,5 @@ export const pl = {
   installDismiss: 'Zamknij',
   installDismissed: 'Nie zainstalowano',
   installCancel: 'Anuluj',
+  actProposeSkill: 'Propozycja umiejętności',
 } satisfies Record<keyof typeof zh, string>

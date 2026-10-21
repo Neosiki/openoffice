@@ -31,6 +31,7 @@ import {
   agentLogAfterAnswer,
   agentLogAfterSend,
   agentLogWith,
+  coveredBySessionAllow,
 } from '../../src/renderer/src/agent/agent-log'
 
 vi.mock('electron', () => ({
@@ -518,6 +519,52 @@ describe('the window log', () => {
     ])
     expect(log.pending).toEqual([])
     expect(log.busy).toBe(false)
+  })
+
+  it('shows the search words a finished search names when its start had none', () => {
+    const started = { kind: 'web-search' as const, tool: 'webSearch', paths: [] }
+    let log = agentLogAfterSend(EMPTY_AGENT_LOG, 'go')
+    log = agentLogWith(log, { type: 'tool', action: started, status: 'running' })
+    log = agentLogWith(log, {
+      type: 'tool',
+      action: { ...started, target: 'pblsketch openoffice' },
+      status: 'done',
+    })
+    expect(log.entries[1]).toEqual({
+      kind: 'tool',
+      action: { ...started, target: 'pblsketch openoffice' },
+      status: 'done',
+    })
+  })
+
+  it('lets a session-wide allowance answer the same kind of request still waiting', () => {
+    const search = (target: string) => ({
+      kind: 'web-search' as const,
+      tool: 'WebSearch',
+      paths: [],
+      target,
+    })
+    const fetch = (host: string) => ({
+      kind: 'web-fetch' as const,
+      tool: 'WebFetch',
+      paths: [],
+      host,
+    })
+    let log = agentLogAfterSend(EMPTY_AGENT_LOG, 'go')
+    log = agentLogWith(log, { type: 'permission', id: 's1', action: search('a') })
+    log = agentLogWith(log, { type: 'permission', id: 's2', action: search('b') })
+    log = agentLogWith(log, { type: 'permission', id: 'f1', action: fetch('example.com') })
+    log = agentLogWith(log, { type: 'permission', id: 'f2', action: fetch('example.com') })
+    log = agentLogWith(log, { type: 'permission', id: 'f3', action: fetch('other.org') })
+    log = agentLogWith(log, {
+      type: 'permission',
+      id: 'c1',
+      action: { kind: 'command' as const, tool: 'Bash', command: 'dir', paths: [] },
+    })
+    expect(coveredBySessionAllow(log, 's1')).toEqual(['s2'])
+    expect(coveredBySessionAllow(log, 'f1')).toEqual(['f2'])
+    expect(coveredBySessionAllow(log, 'c1')).toEqual([])
+    expect(coveredBySessionAllow(log, 'gone')).toEqual([])
   })
 
   it('marks a failed turn and the end', () => {

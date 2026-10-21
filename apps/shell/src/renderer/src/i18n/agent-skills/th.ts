@@ -22,4 +22,5 @@ export const th = {
   installDismiss: 'ปิด',
   installDismissed: 'ไม่ได้ติดตั้ง',
   installCancel: 'ยกเลิก',
+  actProposeSkill: 'เสนอสกิล',
 } satisfies Record<keyof typeof zh, string>

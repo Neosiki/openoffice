@@ -22,4 +22,5 @@ export const hi = {
   installDismiss: 'बंद करें',
   installDismissed: 'इंस्टॉल नहीं किया',
   installCancel: 'रद्द करें',
+  actProposeSkill: 'कौशल का सुझाव',
 } satisfies Record<keyof typeof zh, string>

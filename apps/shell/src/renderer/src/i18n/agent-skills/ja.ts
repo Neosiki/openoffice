@@ -23,4 +23,5 @@ export const ja = {
   installDismiss: '閉じる',
   installDismissed: 'インストールしませんでした',
   installCancel: 'キャンセル',
+  actProposeSkill: 'スキルの提案',
 } satisfies Record<keyof typeof zh, string>

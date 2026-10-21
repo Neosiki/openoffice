@@ -23,4 +23,5 @@ export const de = {
   installDismiss: 'Schließen',
   installDismissed: 'Nicht installiert',
   installCancel: 'Abbrechen',
+  actProposeSkill: 'Skill vorschlagen',
 } satisfies Record<keyof typeof zh, string>

@@ -47,11 +47,13 @@ export type AgentSkillRequest =
 /**
  * The text a message with chips sends (spec 6.2): each chip's instruction in
  * the order the chips were put in, then what the person typed. A chip whose
- * skill the session does not hold is not sent around (spec 9.1).
+ * skill the session does not hold is not sent around (spec 9.1). The sent
+ * message keeps the titles its chips showed: a default skill's title is
+ * translated on screen, and the session only holds its name.
  */
 export function agentSkillRequest(
   text: string,
-  chips: readonly Pick<SkillChipView, 'id'>[],
+  chips: readonly (Pick<SkillChipView, 'id'> & { title?: string | undefined })[],
   skills: readonly AgentSessionSkill[],
 ): AgentSkillRequest {
   if (chips.length === 0) return { ok: true, text, titles: [] }
@@ -62,7 +64,7 @@ export function agentSkillRequest(
   return {
     ok: true,
     text: [...chosen.map(agentSkillInstruction), '', text].join('\n'),
-    titles: chosen.map((skill) => skill.title || skill.name),
+    titles: chips.map((chip, i) => chip.title || chosen[i]!.title || chosen[i]!.name),
   }
 }
 
