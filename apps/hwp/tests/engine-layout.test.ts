@@ -3,7 +3,9 @@
  * the editor runs it. Each case is a public reproduction saved by Hangul 2024
  * (its text replaced by filler): the page layout must keep the relations Hangul
  * draws, not pixel positions. The title-table-then-inline-table case is the
- * first reproduction with its inline table moved into the next paragraph.
+ * first reproduction with its inline table moved into the next paragraph. Both
+ * title-table files then lost two white labels that stripping the pictures had
+ * left invisible on white paper (rhwp's hidden-text check flagged them).
  */
 import { createHash } from 'node:crypto'
 import { readFileSync } from 'node:fs'
