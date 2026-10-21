@@ -65,7 +65,8 @@ export const ar = {
   usageWindowFiveHour: 'حد 5 ساعات',
   usageWindowSevenDay: 'حد 7 أيام',
   noticeTitle: 'قبل استخدام الذكاء الاصطناعي باشتراكك',
-  noticeSend: 'يُرسَل محتوى المستند ومحادثتك إلى Anthropic أو OpenAI عبر حسابك الشخصي.',
+  noticeSend:
+    'يُرسَل محتوى المستند ومحادثتك إلى Anthropic أو OpenAI عبر حسابك الشخصي. وتُرسَل معها المهارات المستخدمة وملفات المهارات التي يقرؤها الذكاء الاصطناعي.',
   noticeTraining:
     'استخدام هذا المحتوى في تدريب الذكاء الاصطناعي تحدده إعدادات حسابك لدى تلك الشركة.',
   noticeCodexHistory:

@@ -72,7 +72,7 @@ export const pl = {
   usageWindowSevenDay: 'Limit 7-dniowy',
   noticeTitle: 'Zanim użyjesz AI w ramach subskrypcji',
   noticeSend:
-    'Treść dokumentu i rozmowa są wysyłane do Anthropic lub OpenAI z Twojego własnego konta.',
+    'Treść dokumentu i rozmowa są wysyłane do Anthropic lub OpenAI z Twojego własnego konta. Wysyłane są też używane umiejętności i pliki umiejętności odczytane przez AI.',
   noticeTraining:
     'To, czy te treści służą do trenowania AI, zależy od ustawień Twojego konta w danej firmie.',
   noticeCodexHistory:

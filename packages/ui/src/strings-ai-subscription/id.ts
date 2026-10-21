@@ -69,7 +69,7 @@ export const id = {
   usageWindowSevenDay: 'Batas 7 hari',
   noticeTitle: 'Sebelum memakai AI dengan langganan Anda',
   noticeSend:
-    'Isi dokumen dan percakapan Anda dikirim ke Anthropic atau OpenAI dengan akun Anda sendiri.',
+    'Isi dokumen dan percakapan Anda dikirim ke Anthropic atau OpenAI dengan akun Anda sendiri. Skill yang dipakai dan file skill yang dibaca AI juga ikut dikirim.',
   noticeTraining:
     'Apakah isi itu dipakai untuk melatih AI ditentukan oleh pengaturan akun Anda sendiri di perusahaan tersebut.',
   noticeCodexHistory:
