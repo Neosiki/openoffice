@@ -235,6 +235,27 @@ export const WRITTEN_THEME_TABLES: readonly ThemeTableEntry[] = THEME_IDS.map((t
 }))
 
 /**
+ * The sizes the 0.12 releases wrote for the three levels, in the units of the
+ * file. They are put back into today's tables to make the tables those
+ * releases wrote.
+ */
+const SHIPPED_FONT_SIZES: Readonly<Record<string, string>> = {
+  centralTopic: '21pt',
+  mainTopic: '15pt',
+  subTopic: '14pt',
+}
+
+/** A table this app wrote before the text sizes changed: today's table with the sizes of that release. */
+function shippedProperties(properties: ThemeProperties): ThemeProperties {
+  const levels: Record<string, ThemeLevelProperties> = {}
+  for (const [name, level] of Object.entries(properties)) {
+    const size = SHIPPED_FONT_SIZES[name]
+    levels[name] = size === undefined ? level : { ...level, 'fo:font-size': size }
+  }
+  return frozen(levels)
+}
+
+/**
  * The second list: tables an earlier release wrote for a theme whose values
  * have changed since. They are recognised and never written.
  *
@@ -245,11 +266,17 @@ export const WRITTEN_THEME_TABLES: readonly ThemeTableEntry[] = THEME_IDS.map((t
  * file is then drawn with the theme's present look, and keeps the old
  * properties until the user picks a theme again. `tests/theme-table.test.ts`
  * pins the tables written today and fails when one of them moves, as the
- * reminder to do this. Values that never shipped need no entry.
+ * reminder to do this.
  *
- * Nothing has shipped yet, so the list is empty.
+ * The 0.12 releases wrote 21pt, 15pt and 14pt. The text is smaller now, so
+ * every theme has the table of 0.12 in here: today's table with those sizes
+ * put back. A test pins this list as well, so a colour or a rule that moves
+ * later is caught before it changes what an older file is recognised by. The
+ * tables in here are then written out by hand, as the rule above says.
  */
-export const SHIPPED_THEME_TABLES: readonly ThemeTableEntry[] = []
+export const SHIPPED_THEME_TABLES: readonly ThemeTableEntry[] = WRITTEN_THEME_TABLES.map(
+  ({ themeId, properties }) => ({ themeId, properties: shippedProperties(properties) }),
+)
 
 const written = new Map(WRITTEN_THEME_TABLES.map((entry) => [entry.themeId, entry.properties]))
 

@@ -557,6 +557,38 @@ export async function lookRun(tools: LookRunTools): Promise<void> {
       'looking at the map and opening the theme panel does not change the document',
     )
 
+    // the text steps down from the centre, and again below the third level
+    const defaultLook = themeLook(DEFAULT_THEME_ID)
+    const sizes = await page.evaluate((visible) => {
+      const sizeOf = (title: string): number | null => {
+        const topic = [...document.querySelectorAll<HTMLElement>(`${visible} me-tpc`)].find(
+          (each) => each.querySelector('.text')?.textContent === title,
+        )
+        return topic ? Number.parseFloat(getComputedStyle(topic).fontSize) : null
+      }
+      return {
+        central: sizeOf('가을 제주 여행'),
+        main: sizeOf('일정'),
+        third: sizeOf('첫째 날 · 동쪽 해안'),
+        fourth: sizeOf('성산 일출봉'),
+      }
+    }, VISIBLE)
+    results.typeSizes = sizes
+    check(
+      sizes.central === defaultLook.shapes.central.fontSize &&
+        sizes.main === defaultLook.shapes.main.fontSize &&
+        sizes.third === defaultLook.shapes.sub.fontSize &&
+        sizes.fourth === defaultLook.deepSizes[0],
+      'the text steps down from the centre to the fourth level',
+    )
+    check(
+      (await page.locator(`${VISIBLE} me-tpc[data-mm-level]`).count()) > 0 &&
+        (await page
+          .locator(`${VISIBLE} me-tpc[data-mm-level]`)
+          .evaluateAll((topics) => topics.every((topic) => topic.dataset.mmLevel === '4'))),
+      'and only the levels below the third carry the mark the stylesheet steps',
+    )
+
     // 1: the four skeletons, in the default band
     for (const [at, skeleton] of THEME_SKELETON_IDS.entries()) {
       if (skeleton !== 'pill') await pick(page, 'skeleton', skeleton)

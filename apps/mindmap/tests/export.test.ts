@@ -327,6 +327,13 @@ describe('cleaning a copy', () => {
     )
   })
 
+  it('keeps the mark of a level below the third, which the map stylesheet steps', () => {
+    const root = document.createElement('me-nodes')
+    root.innerHTML = '<me-tpc data-mm-level="4">t</me-tpc>'
+    cleanCopy(root)
+    expect(root.querySelector('me-tpc')!.getAttribute('data-mm-level')).toBe('4')
+  })
+
   it('keeps on a topic only the style properties the editor sets', () => {
     const root = document.createElement('me-nodes')
     root.innerHTML =
