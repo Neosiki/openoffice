@@ -133,6 +133,11 @@ export interface UserSkillLabels {
 export interface UserSkillsDeps {
   /** the skill list as of now (a synchronous snapshot) */
   list(): readonly UserSkillEntry[]
+  /**
+   * read the list again now; `use_skill` and `read_skill_file` call it once
+   * for an id the snapshot does not have before refusing (spec 9.2)
+   */
+  reload?: (() => Promise<void>) | undefined
   /** `use_skill`: the skill's text; the main process refuses again */
   read(id: string): Promise<UserSkillRead<{ skill: UserSkillText }>>
   /** `read_skill_file`: one text file in the skill's folder; the main process refuses again */
@@ -403,13 +408,20 @@ export function createUserSkillsSkill(deps: UserSkillsDeps): AgentSkill {
   const labels = deps.labels ?? DEFAULT_LABELS
   const toolDefs = tools()
   const find = (id: string) => deps.list().find((s) => s.id === id)
+  /** the entry, reading the list again once when the snapshot does not have it yet */
+  const findFresh = async (id: string): Promise<UserSkillEntry | undefined> => {
+    const known = find(id)
+    if (known || !id || !deps.reload) return known
+    await deps.reload().catch(() => undefined)
+    return find(id)
+  }
   const titleOf = (skill: { id: string; source: string; name: string; title: string }) =>
     deps.displayTitle?.(skill) || skill.title || skill.name
   const attached = () => attachedSkillIdsOf(lastUserText(deps.messages?.() ?? []))
 
   const useSkill = async (call: AgentToolCall): Promise<ToolExecution> => {
     const id = str(call.input.id).trim()
-    const entry = find(id)
+    const entry = await findFresh(id)
     const refusal = entryRefusal(entry, id)
     if (refusal || !entry) return fail(refusal ?? refusalText('not-found', id), USE_SKILL_TOOL)
     const title = titleOf(entry)
@@ -445,7 +457,7 @@ export function createUserSkillsSkill(deps: UserSkillsDeps): AgentSkill {
   const readSkillFile = async (call: AgentToolCall): Promise<ToolExecution> => {
     const id = str(call.input.id).trim()
     const path = str(call.input.path).trim()
-    const entry = find(id)
+    const entry = await findFresh(id)
     const refusal = entryRefusal(entry, id)
     if (refusal || !entry)
       return fail(refusal ?? refusalText('not-found', id), READ_SKILL_FILE_TOOL)
@@ -631,20 +643,21 @@ export function createBridgedUserSkillsSkill(
 ): UserSkillsSkill {
   let entries: UserSkillEntry[] = []
   let seq = 0
-  const refresh = () => {
+  /** read the list; an older read that answers later does not overwrite a newer one */
+  const reload = async () => {
     const mine = ++seq
-    void bridge.list().then(
-      (raw) => {
-        if (mine === seq) entries = userSkillEntriesOf(raw)
-      },
-      () => undefined,
-    )
+    const raw = await bridge.list()
+    if (mine === seq) entries = userSkillEntriesOf(raw)
+  }
+  const refresh = () => {
+    void reload().catch(() => undefined)
   }
   refresh()
   const off = bridge.onChanged(refresh)
   const skill = createUserSkillsSkill({
     ...options,
     list: () => entries,
+    reload,
     read: async (id) => skillTextAnswerOf(await bridge.aiRead(id).catch(() => null)),
     readFile: async (id, path) =>
       skillFileAnswerOf(await bridge.aiReadFile(id, path).catch(() => null)),

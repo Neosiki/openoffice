@@ -489,6 +489,45 @@ describe('createBridgedUserSkillsSkill', () => {
     expect(changed).toBeUndefined()
   })
 
+  it('reads the list again once before refusing a skill it does not know yet', async () => {
+    // a skill added in Settings while the change notice is still on its way (spec 9.2)
+    let views: unknown[] = []
+    const bridge = {
+      list: vi.fn(async () => views),
+      aiRead: vi.fn(async (id: string) => ({
+        ok: true,
+        skill: { id, name: 'new', title: 'New', body: 'fresh body', files: [], hasScripts: false },
+      })),
+      aiReadFile: vi.fn(async () => ({ ok: true, text: 'file text' })),
+      onChanged: () => () => {},
+    }
+    const skill = createBridgedUserSkillsSkill(bridge, { onProposal: () => {} })
+    await vi.waitFor(() => expect(bridge.list).toHaveBeenCalledTimes(1))
+    views = [
+      { id: 'app:new', source: 'app', name: 'new', title: 'New', description: 'd', enabled: true },
+    ]
+    const used = await skill.executeTool(call(USE_SKILL_TOOL, { id: 'app:new' }))
+    expect(used.isError).toBeFalsy()
+    expect(used.output).toContain('fresh body')
+    expect(bridge.list).toHaveBeenCalledTimes(2)
+    const file = await skill.executeTool(
+      call(READ_SKILL_FILE_TOOL, { id: 'app:new', path: 'x.md' }),
+    )
+    expect(file.output).toContain('file text')
+    // known now: no further list read
+    expect(bridge.list).toHaveBeenCalledTimes(2)
+    // still unknown after one more read: refused, with one read per call
+    const missing = await skill.executeTool(call(USE_SKILL_TOOL, { id: 'app:gone' }))
+    expect(missing.isError).toBe(true)
+    expect(bridge.list).toHaveBeenCalledTimes(3)
+    const missingFile = await skill.executeTool(
+      call(READ_SKILL_FILE_TOOL, { id: 'app:gone', path: 'x.md' }),
+    )
+    expect(missingFile.isError).toBe(true)
+    expect(bridge.list).toHaveBeenCalledTimes(4)
+    expect(bridge.aiRead).toHaveBeenCalledTimes(1)
+  })
+
   it('treats a malformed bridge answer as a failure', async () => {
     const bridge = {
       list: async () => [
