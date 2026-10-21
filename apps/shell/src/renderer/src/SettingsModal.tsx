@@ -46,6 +46,8 @@ import { AiSection, SubscriptionSummary } from './SettingsAiSection'
 import { QuickLookField } from './SettingsQuickLook'
 import { ResultStoreField } from './SettingsResultStore'
 import { useSubscriptionConnection } from './subscription-client'
+import { SkillsPane } from './skills/SkillsPane'
+import { skillsText } from './i18n/strings-skills'
 import {
   advancedProviderIds,
   initialAdvancedProvider,
@@ -168,12 +170,19 @@ function CustomFontSizeInput({
   )
 }
 
-export type SectionId = 'account' | 'aiModel' | 'aiMedia' | 'general' | 'integrations' | 'about'
+export type SectionId =
+  'account' | 'aiModel' | 'aiMedia' | 'skills' | 'general' | 'integrations' | 'about'
 
-const SECTIONS: readonly { id: SectionId; labelKey: StringKey }[] = [
+/** a section labelled from the home dictionary, or by a feature's own dictionary */
+type SectionEntry = { id: SectionId } & (
+  { labelKey: StringKey } | { label: (lang: Lang) => string }
+)
+
+const SECTIONS: readonly SectionEntry[] = [
   { id: 'account', labelKey: 'setSecAccount' },
   // one AI entry: 'aiMedia' stays a valid target and opens it on the Advanced media area
   { id: 'aiModel', labelKey: 'setSecAi' },
+  { id: 'skills', label: (lang) => skillsText(lang, 'navLabel') },
   { id: 'general', labelKey: 'setSecGeneral' },
   { id: 'integrations', labelKey: 'setSecIntegrations' },
   { id: 'about', labelKey: 'setSecAbout' },
@@ -210,6 +219,25 @@ function SectionIcon({ id }: { id: SectionId }) {
           strokeLinejoin="round"
         />
         <circle cx="10.5" cy="6" r="1.1" fill="currentColor" />
+      </svg>
+    )
+  }
+  if (id === 'skills') {
+    return (
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        <path
+          d="M3.5 2.5h6l3 3v8h-9v-11Z"
+          stroke="currentColor"
+          strokeWidth="1.3"
+          strokeLinejoin="round"
+        />
+        <path
+          d="M9.5 2.5v3h3M5.8 8.5h4.4M5.8 11h2.9"
+          stroke="currentColor"
+          strokeWidth="1.3"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
       </svg>
     )
   }
@@ -1609,7 +1637,7 @@ export function SettingsModal({
                 onClick={() => setSection(s.id)}
               >
                 <SectionIcon id={s.id} />
-                {t(s.labelKey)}
+                {'label' in s ? s.label(lang) : t(s.labelKey)}
                 {s.id === 'integrations' && updateDue && (
                   <span className="set-nav-dot" role="img" aria-label={t('intgUpdateDue')} />
                 )}
@@ -1818,6 +1846,7 @@ export function SettingsModal({
                 <ResultStoreField />
               </>
             )}
+            {section === 'skills' && <SkillsPane />}
             {section === 'integrations' && (
               <IntegrationsPane t={t} onStatus={(st) => onSkillUpdateDue?.(skillUpdateDue(st))} />
             )}
