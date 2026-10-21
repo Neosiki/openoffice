@@ -360,8 +360,8 @@ describe('mcp server', () => {
       >
       expect(props.ops!.anyOf!.map((v) => v.type)).toEqual(['array', 'object'])
       expect(props.ops!.items).toBeUndefined()
-      // 40 KiB before the four PDF document tools
-      expect(JSON.stringify(tools).length).toBeLessThan(42 * 1024)
+      // 42 KiB before hwp_read (about 1 KiB) joined the catalog
+      expect(JSON.stringify(tools).length).toBeLessThan(43 * 1024)
     } finally {
       await client2.close()
       disposeContext(ctx2)
