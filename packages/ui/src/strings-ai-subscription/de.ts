@@ -15,6 +15,9 @@ export const de = {
     'Das Programm {provider} auf diesem PC ist zu alt. Aktualisieren Sie es und prüfen Sie dann erneut.',
   cardErrNeedsUpdateVersion:
     'Das Programm {provider} auf diesem PC ({version}) ist zu alt; benötigt wird {minimum} oder neuer. Führen Sie im Terminal {command} aus und prüfen Sie dann erneut.',
+  cardErrNeedsUpdatePath: 'Von dieser App ausgeführte Datei:',
+  cardErrNeedsUpdateWindows:
+    'Wenn Sie {provider} in WSL (Ubuntu) oder in einem anderen Ordner aktualisieren, ändert sich diese Datei nicht. Führen Sie {command} in Windows PowerShell aus.',
   cardErrTimeout:
     'Das Programm {provider} hat nicht rechtzeitig geantwortet. Prüfen Sie es gleich noch einmal.',
   cardErrFailed:

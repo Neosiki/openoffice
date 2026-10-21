@@ -15,6 +15,9 @@ export const ru = {
     'Программа {provider} на этом компьютере слишком старая. Обновите её и проверьте снова.',
   cardErrNeedsUpdateVersion:
     'Программа {provider} на этом компьютере ({version}) слишком старая; нужна версия {minimum} или новее. Выполните {command} в терминале и проверьте снова.',
+  cardErrNeedsUpdatePath: 'Файл, который запускает это приложение:',
+  cardErrNeedsUpdateWindows:
+    'Обновление {provider} внутри WSL (Ubuntu) или в другой папке не меняет этот файл. Выполните {command} в Windows PowerShell.',
   cardErrTimeout: 'Программа {provider} не ответила вовремя. Проверьте снова чуть позже.',
   cardErrFailed: 'При проверке {provider} что-то пошло не так. Проверьте снова.',
   actionInstall: 'Установить',

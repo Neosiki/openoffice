@@ -15,6 +15,9 @@ export const ja = {
     'この PC の {provider} のプログラムが古すぎます。更新してから、もう一度確認してください。',
   cardErrNeedsUpdateVersion:
     'この PC の {provider} のプログラム（{version}）が古すぎます。{minimum} 以降が必要です。ターミナルで {command} を実行してから、もう一度確認してください。',
+  cardErrNeedsUpdatePath: 'このアプリが実行するファイル:',
+  cardErrNeedsUpdateWindows:
+    'WSL（Ubuntu）や別のフォルダーにある {provider} を更新しても、このファイルは変わりません。Windows PowerShell で {command} を実行してください。',
   cardErrTimeout:
     '{provider} のプログラムから時間内に応答がありませんでした。しばらくしてから、もう一度確認してください。',
   cardErrFailed: '{provider} の確認中に問題が発生しました。もう一度確認してください。',

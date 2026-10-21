@@ -15,6 +15,9 @@ export const nl = {
     'Het programma {provider} op deze pc is te oud. Werk het bij en controleer daarna opnieuw.',
   cardErrNeedsUpdateVersion:
     'Het programma {provider} op deze pc ({version}) is te oud; {minimum} of nieuwer is nodig. Voer {command} uit in een terminal en controleer daarna opnieuw.',
+  cardErrNeedsUpdatePath: 'Bestand dat deze app uitvoert:',
+  cardErrNeedsUpdateWindows:
+    'Als je {provider} in WSL (Ubuntu) of in een andere map bijwerkt, verandert dit bestand niet. Voer {command} uit in Windows PowerShell.',
   cardErrTimeout:
     'Het programma {provider} heeft niet op tijd gereageerd. Controleer het zo dadelijk opnieuw.',
   cardErrFailed: 'Er ging iets mis bij het controleren van {provider}. Controleer het opnieuw.',

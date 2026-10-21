@@ -14,6 +14,9 @@ export const he = {
   cardErrNeedsUpdate: 'התוכנה {provider} במחשב הזה ישנה מדי. עדכנו אותה ואז בדקו שוב.',
   cardErrNeedsUpdateVersion:
     'התוכנה {provider} במחשב הזה ({version}) ישנה מדי; נדרשת גרסה {minimum} ומעלה. הריצו {command} בטרמינל ואז בדקו שוב.',
+  cardErrNeedsUpdatePath: 'הקובץ שהאפליקציה הזו מריצה:',
+  cardErrNeedsUpdateWindows:
+    'עדכון {provider} בתוך WSL (Ubuntu) או בתיקייה אחרת לא משנה את הקובץ הזה. הריצו {command} ב-Windows PowerShell.',
   cardErrTimeout: 'התוכנה {provider} לא ענתה בזמן. בדקו שוב בעוד רגע.',
   cardErrFailed: 'משהו השתבש במהלך הבדיקה של {provider}. בדקו שוב.',
   actionInstall: 'התקנה',

@@ -15,6 +15,9 @@ export const es = {
     'El programa {provider} de este PC es demasiado antiguo. Actualízalo y comprueba de nuevo.',
   cardErrNeedsUpdateVersion:
     'El programa {provider} de este PC ({version}) es demasiado antiguo; se necesita la {minimum} o posterior. Ejecuta {command} en una terminal y comprueba de nuevo.',
+  cardErrNeedsUpdatePath: 'Archivo que ejecuta esta aplicación:',
+  cardErrNeedsUpdateWindows:
+    'Actualizar {provider} dentro de WSL (Ubuntu) o en otra carpeta no cambia este archivo. Ejecuta {command} en Windows PowerShell.',
   cardErrTimeout: 'El programa {provider} no respondió a tiempo. Comprueba de nuevo en un momento.',
   cardErrFailed: 'Algo salió mal al comprobar {provider}. Comprueba de nuevo.',
   actionInstall: 'Instalar',

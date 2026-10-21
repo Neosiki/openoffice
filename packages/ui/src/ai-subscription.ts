@@ -153,6 +153,14 @@ export interface AiSubscriptionCardView {
    * update command. Facts the app derived, never CLI text.
    */
   readonly detailParams?: Readonly<Record<'version' | 'minimum' | 'command', string>> | undefined
+  /**
+   * on a CLI below the floor, the file the check ran, shown under the detail:
+   * a PC can hold another copy (under WSL, an old npm install) that the user
+   * may have updated instead
+   */
+  readonly programPath?: string | undefined
+  /** lines under `programPath`, in order */
+  readonly pathNoteKeys?: readonly AiSubscriptionStringKey[] | undefined
   /** buttons and links, in order; the first one is the primary action */
   readonly actions: readonly AiSubscriptionCardAction[]
   /**
@@ -195,12 +203,17 @@ export function aiSubscriptionCardView(
     return { ...view, noteKeys: [], actions: ['install-help'], links: ['install-help'] }
   }
   if (view.detailKey && subscriptionStatusErrorKind(status) === 'needs-update') {
+    // the copy a Linux terminal under WSL updates is not the one Windows runs
+    const pathed: AiSubscriptionCardView =
+      view.programPath && terminalWindows
+        ? { ...view, pathNoteKeys: ['cardErrNeedsUpdateWindows'] }
+        : view
     // the update runs in a terminal window of its own, like the install
-    if (!options.update || !terminalWindows) return view
+    if (!options.update || !terminalWindows) return pathed
     return {
-      ...view,
-      noteKeys: [...view.noteKeys, 'updateNote'],
-      actions: ['update', ...view.actions],
+      ...pathed,
+      noteKeys: [...pathed.noteKeys, 'updateNote'],
+      actions: ['update', ...pathed.actions],
     }
   }
   if (status.state !== 'ready' && status.state !== 'metered') return view
@@ -304,6 +317,7 @@ function connectionCardParts(status: AiSubscriptionStatus): Omit<AiSubscriptionC
           }
     case 'error': {
       const outdated = subscriptionNeedsUpdate(status)
+      const programPath = outdated ? status.programPath?.trim() || undefined : undefined
       return {
         ...base,
         tone: 'error',
@@ -312,6 +326,7 @@ function connectionCardParts(status: AiSubscriptionStatus): Omit<AiSubscriptionC
         ...(outdated
           ? { detailKey: 'cardErrNeedsUpdateVersion', detailParams: outdated }
           : { detailKey: STATUS_ERROR_KEYS[subscriptionStatusErrorKind(status) ?? 'failed'] }),
+        ...(programPath ? { programPath } : {}),
         actions: ['recheck'],
       }
     }

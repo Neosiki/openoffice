@@ -14,6 +14,9 @@ export const id = {
   cardErrNeedsUpdate: 'Program {provider} di PC ini terlalu lama. Perbarui, lalu periksa lagi.',
   cardErrNeedsUpdateVersion:
     'Program {provider} di PC ini ({version}) terlalu lama; diperlukan versi {minimum} atau yang lebih baru. Jalankan {command} di terminal, lalu periksa lagi.',
+  cardErrNeedsUpdatePath: 'File yang dijalankan aplikasi ini:',
+  cardErrNeedsUpdateWindows:
+    'Memperbarui {provider} di dalam WSL (Ubuntu) atau di folder lain tidak mengubah file ini. Jalankan {command} di Windows PowerShell.',
   cardErrTimeout: 'Program {provider} tidak menjawab tepat waktu. Periksa lagi sebentar lagi.',
   cardErrFailed: 'Terjadi masalah saat memeriksa {provider}. Periksa lagi.',
   actionInstall: 'Pasang',

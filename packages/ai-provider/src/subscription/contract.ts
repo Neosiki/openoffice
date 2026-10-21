@@ -219,6 +219,22 @@ export function subscriptionNeedsUpdate(status: {
   return { version, minimum, command }
 }
 
+/** A Windows long path is at most this long; a longer value is not a path we found */
+const SUBSCRIPTION_PROGRAM_PATH_MAX_LENGTH = 32_767
+
+/**
+ * The program path a status carries, when it is one: an absolute path on one
+ * line. It is shown on a "needs update" card and nowhere else, so the user
+ * updates the copy the app runs rather than another one on the same PC.
+ */
+export function subscriptionProgramPathOf(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined
+  if (!value || value.length > SUBSCRIPTION_PROGRAM_PATH_MAX_LENGTH) return undefined
+  if (/\p{Cc}/u.test(value)) return undefined
+  // a drive (`C:\`), a UNC share (`\\server`), or a POSIX root
+  return /^(?:[A-Za-z]:[\\/]|\\\\|\/)/.test(value) ? value : undefined
+}
+
 // ---------------------------------------------------------------------------
 // Reading IPC answers. A renderer cannot trust what comes back over IPC (no
 // handler registered yet, an older main, a half-filled object), so every answer
@@ -364,11 +380,17 @@ export function subscriptionStatusMapOf(result: unknown): SubscriptionStatusMap 
     const signedIn = read.state === 'ready' || read.state === 'metered'
     const account = signedIn ? subscriptionAccountOf(status.account) : undefined
     const models = signedIn ? subscriptionModelsOf(status.models) : undefined
+    const programPath =
+      subscriptionStatusErrorKind(read) === 'needs-update'
+        ? subscriptionProgramPathOf(status.programPath)
+        : undefined
     delete read.account
     delete read.models
     delete read.signingIn
+    delete read.programPath
     if (account) read.account = account
     if (models) read.models = models
+    if (programPath) read.programPath = programPath
     if (status.signingIn === 'browser' || status.signingIn === 'window') {
       read.signingIn = status.signingIn
     }

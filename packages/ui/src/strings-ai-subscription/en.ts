@@ -14,6 +14,9 @@ export const en = {
   cardErrNeedsUpdate: 'The {provider} program on this PC is too old. Update it, then check again.',
   cardErrNeedsUpdateVersion:
     'The {provider} program on this PC ({version}) is too old; {minimum} or newer is needed. Run {command} in a terminal, then check again.',
+  cardErrNeedsUpdatePath: 'The file this app runs:',
+  cardErrNeedsUpdateWindows:
+    'Updating {provider} inside WSL (Ubuntu) or in another folder does not change this file. Run {command} in Windows PowerShell.',
   cardErrTimeout: 'The {provider} program did not answer in time. Check again in a moment.',
   cardErrFailed: 'Something went wrong while checking {provider}. Check again.',
   actionInstall: 'Install',

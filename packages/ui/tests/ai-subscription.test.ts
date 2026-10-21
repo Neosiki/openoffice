@@ -249,6 +249,30 @@ describe('aiSubscriptionCardView', () => {
     expect(codex.detailParams).toBeUndefined()
   })
 
+  it('error: a Claude below the floor names the file the check ran, with the WSL hint on Windows', () => {
+    const outdated = status('claude-code', 'error', {
+      version: '2.1.114',
+      error: 'needs-update: Claude Code 2.1.114 is too old; version 2.1.248 or newer is required',
+      programPath: 'C:\\Users\\me\\AppData\\Roaming\\npm\\claude.exe',
+    })
+    const windows = aiSubscriptionCardView(outdated)
+    expect(windows.programPath).toBe('C:\\Users\\me\\AppData\\Roaming\\npm\\claude.exe')
+    expect(windows.pathNoteKeys).toEqual(['cardErrNeedsUpdateWindows'])
+    const elsewhere = aiSubscriptionCardView(outdated, { terminalWindows: false })
+    expect(elsewhere.programPath).toBe(windows.programPath)
+    expect(elsewhere.pathNoteKeys).toBeUndefined()
+    // no path without a version below the floor to go with it
+    const failed = aiSubscriptionCardView({ ...outdated, error: 'failed: spawn' })
+    expect(failed.programPath).toBeUndefined()
+    expect(failed.pathNoteKeys).toBeUndefined()
+    // the update button keeps the file and its hint beside it
+    const updatable = aiSubscriptionCardView(outdated, { update: true })
+    expect(updatable.programPath).toBe(windows.programPath)
+    expect(updatable.pathNoteKeys).toEqual(['cardErrNeedsUpdateWindows'])
+    expect(updatable.actions).toEqual(['update', 'recheck'])
+    expect(updatable.noteKeys).toEqual(['updateNote'])
+  })
+
   it('error: the status text itself is never part of the view', () => {
     const raw = 'failed: spawn C:\\Users\\me\\AppData\\Roaming\\npm\\codex.cmd ENOENT'
     const view = aiSubscriptionCardView(status('codex', 'error', { error: raw }))
