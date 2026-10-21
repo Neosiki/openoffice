@@ -1,4 +1,4 @@
-import { join } from 'node:path'
+import { isAbsolute, join } from 'node:path'
 import { BrowserWindow, dialog, ipcMain, shell } from 'electron'
 import type { IpcMainInvokeEvent } from 'electron'
 import { productName, type Lang } from '@genoffice/i18n'
@@ -11,16 +11,20 @@ import {
   AGENT_MODES,
   AGENT_PROVIDERS,
   AGENT_WARNING_VERSION,
+  agentProjectPrefsPatch,
   normalizeAgentPrefs,
   withRecentFolder,
+  type AgentAllowScope,
   type AgentConnection,
   type AgentEventView,
   type AgentInit,
   type AgentMode,
   type AgentPrefs,
+  type AgentProjectPrefs,
   type AgentProvider,
   type AgentStartResponse,
 } from '../../shared/agent-api'
+import { readAgentProjectPref, writeAgentProjectPref } from '../app-settings'
 import { AGENT_HOME_OPEN_CHANNEL } from '../../shared/agent-home-channel'
 import { agentText } from '../../renderer/src/i18n/strings-agent'
 import { createAgentManager, openableProjectFile, type AgentManagerDeps } from './agent-sessions'
@@ -40,6 +44,56 @@ export interface AgentWindowDeps extends Omit<AgentManagerDeps, 'emit' | 'langua
   writePrefs(prefs: AgentPrefs): void
   /** open a file in a tab; false when nothing could open it */
   openPath(path: string): boolean
+  /**
+   * the Codex choices remembered for a project folder; by default the app
+   * settings file in the data folder (`agentProjectPrefs`)
+   */
+  readProjectPrefs?: ((folder: string) => AgentProjectPrefs) | undefined
+  writeProjectPrefs?:
+    ((folder: string, patch: Partial<AgentProjectPrefs>) => AgentProjectPrefs) | undefined
+}
+
+/** The app settings file, as the shell keeps it in the data folder */
+function appSettingsPath(userData: string): string {
+  return join(userData, 'app-settings.json')
+}
+
+function readProjectPrefsOf(d: AgentWindowDeps, folder: string): AgentProjectPrefs {
+  return d.readProjectPrefs
+    ? d.readProjectPrefs(folder)
+    : readAgentProjectPref(appSettingsPath(d.userData), folder)
+}
+
+function writeProjectPrefsOf(
+  d: AgentWindowDeps,
+  folder: string,
+  patch: Partial<AgentProjectPrefs>,
+): AgentProjectPrefs {
+  return d.writeProjectPrefs
+    ? d.writeProjectPrefs(folder, patch)
+    : writeAgentProjectPref(appSettingsPath(d.userData), folder, patch)
+}
+
+/**
+ * What a Codex session gets from the folder's remembered choices: its web
+ * search and whether commands reach the internet. Claude Code takes neither.
+ */
+export function agentCodexStartChoices(
+  provider: AgentProvider,
+  prefs: AgentProjectPrefs,
+): { webSearch: AgentProjectPrefs['codexWebSearch']; network: boolean } | undefined {
+  return provider === 'codex'
+    ? { webSearch: prefs.codexWebSearch, network: prefs.codexNetwork === true }
+    : undefined
+}
+
+/** The person's answer as the session takes it; only an allow can last the session */
+export function agentPermissionAnswer(
+  allow: unknown,
+  scope: unknown,
+): { allow: true; scope: AgentAllowScope } | { allow: false } {
+  if (allow !== true) return { allow: false }
+  return { allow: true, scope: scope === 'session' ? 'session' : 'once' }
 }
 
 let deps: AgentWindowDeps | null = null
@@ -141,6 +195,26 @@ function registerIpc(): void {
     return next
   })
 
+  ipcMain.handle(AGENT_CHANNELS.getProjectPrefs, (event, folder: unknown) => {
+    if (ownerOf(event) === null || !deps) return null
+    if (typeof folder !== 'string' || !isAbsolute(folder)) return null
+    try {
+      return readProjectPrefsOf(deps, folder)
+    } catch {
+      return null
+    }
+  })
+
+  ipcMain.handle(AGENT_CHANNELS.setProjectPrefs, (event, folder: unknown, patch: unknown) => {
+    if (ownerOf(event) === null || !deps) return null
+    if (typeof folder !== 'string' || !isAbsolute(folder)) return null
+    try {
+      return writeProjectPrefsOf(deps, folder, agentProjectPrefsPatch(patch))
+    } catch {
+      return null
+    }
+  })
+
   ipcMain.handle(
     AGENT_CHANNELS.start,
     async (event, request: unknown): Promise<AgentStartResponse> => {
@@ -162,7 +236,14 @@ function registerIpc(): void {
       // the warning is a precondition the main process checks, not only the window
       if (prefs.warningAccepted < AGENT_WARNING_VERSION)
         return { ok: false, reason: 'not-accepted' }
-      const result = await manager.start(owner, { provider, mode, projectRoot: folder })
+      // the folder's remembered Codex choices, read here rather than taken from the window
+      let codex: ReturnType<typeof agentCodexStartChoices>
+      try {
+        codex = agentCodexStartChoices(provider, readProjectPrefsOf(deps, folder))
+      } catch {
+        return { ok: false, reason: 'bad-folder' }
+      }
+      const result = await manager.start(owner, { provider, mode, projectRoot: folder, codex })
       if (!result.ok) return { ok: false, reason: result.reason, kind: result.kind }
       deps.writePrefs(withRecentFolder({ ...prefs, provider, mode }, folder))
       return { ok: true, sessionId: result.sessionId }
@@ -184,7 +265,7 @@ function registerIpc(): void {
 
   ipcMain.handle(
     AGENT_CHANNELS.answer,
-    (event, sessionId: unknown, requestId: unknown, allow: unknown) => {
+    (event, sessionId: unknown, requestId: unknown, allow: unknown, scope: unknown) => {
       const owner = ownerOf(event)
       if (
         owner === null ||
@@ -193,12 +274,7 @@ function registerIpc(): void {
         typeof requestId !== 'string'
       )
         return
-      manager.answer(
-        owner,
-        sessionId,
-        requestId,
-        allow === true ? { allow: true } : { allow: false },
-      )
+      manager.answer(owner, sessionId, requestId, agentPermissionAnswer(allow, scope))
     },
   )
 

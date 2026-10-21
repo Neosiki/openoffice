@@ -4,6 +4,7 @@ import { mkdtemp, readFile, rm } from 'node:fs/promises'
 import { homedir, tmpdir } from 'node:os'
 import { dirname, isAbsolute, join, parse, resolve } from 'node:path'
 import type {
+  AgentCodexWebSearch,
   AgentPermissionAnswer,
   AgentPermissionMode,
   AgentSession,
@@ -41,6 +42,11 @@ export interface AgentStartRequest {
   provider: AiSubscriptionProviderId
   projectRoot: string
   mode: AgentPermissionMode
+  /**
+   * Codex only: its web search and whether commands reach the internet, as
+   * remembered for the project folder; the Codex app's defaults when absent
+   */
+  codex?: { webSearch: AgentCodexWebSearch; network: boolean } | undefined
 }
 
 export type AgentStartResult =
@@ -58,7 +64,11 @@ export interface AgentRunners {
     onEvent: (event: AgentSessionEvent) => void,
   ) => Promise<AgentSession>
   codex: (
-    options: AgentSessionOptions & { meteredAccepted: boolean },
+    options: AgentSessionOptions & {
+      meteredAccepted: boolean
+      webSearch: AgentCodexWebSearch
+      network: boolean
+    },
     onEvent: (event: AgentSessionEvent) => void,
   ) => Promise<AgentSession>
 }
@@ -297,7 +307,12 @@ export function createAgentManager(deps: AgentManagerDeps): AgentManager {
           request.provider === 'claude-code'
             ? await deps.runners.claude(options, onEvent)
             : await deps.runners.codex(
-                { ...options, meteredAccepted: connection === 'metered' },
+                {
+                  ...options,
+                  meteredAccepted: connection === 'metered',
+                  webSearch: request.codex?.webSearch ?? 'cached',
+                  network: request.codex?.network === true,
+                },
                 onEvent,
               )
         return { ok: true, sessionId: id }

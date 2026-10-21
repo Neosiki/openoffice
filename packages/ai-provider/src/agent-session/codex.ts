@@ -6,7 +6,8 @@
  * What keeps it contained:
  * - a permission profile of the session: the project folder is writable, the
  *   documents open in tabs are read-only, protected folders cannot be read,
- *   and there is no network. Codex enforces it in its own sandbox (on Windows,
+ *   and commands reach the internet only when the person turned that on for
+ *   the project folder. Codex enforces it in its own sandbox (on Windows,
  *   MXC), checked on this PC before the session opens. A thread that does not
  *   report the profile and approval policy asked for is ended rather than run
  *   under looser rules;
@@ -15,7 +16,8 @@
  *   plugins, apps or memories, and no list of Codex's own skills): the skills
  *   are the app's copy of the enabled ones, readable in the sandbox and listed
  *   in the instructions, so Codex follows the same on/off states as every
- *   other AI window;
+ *   other AI window. Only web search differs: the person's choice for the
+ *   project folder, as in the Codex app;
  * - every user MCP server switched off for the thread, the app's own server
  *   added, and the attached list checked afterwards;
  * - the login checked before the thread opens: a metered login runs only when
@@ -48,6 +50,7 @@ import { probeCodexSandbox, type CodexSandboxProbeResult } from './codex-sandbox
 import { agentPolicyVerdict, comparablePath, isInsidePath } from './policy'
 import type {
   AgentAction,
+  AgentCodexWebSearch,
   AgentPermissionAnswer,
   AgentPermissionMode,
   AgentSession,
@@ -81,15 +84,18 @@ const MAX_MCP_STATUS_PAGES = 10
  * The brain-only overrides. Skill instructions stay off
  * (`skills.include_instructions=false`): Codex would list the skills of its
  * own folders, whatever the person turned off; the app lists the enabled ones
- * in the instructions instead. Web search is left to Codex's own default
- * here: the agent session follows the Codex app, whose search is on (cached
- * results) unless the person turns it off.
+ * in the instructions instead. Web search is the person's choice for the
+ * project folder (the Codex app's default is cached results), given after the
+ * inherited overrides: the chat window's "off" is left out, and a later `-c`
+ * of the same key wins anyway (checked 2026-10-21, codex-cli 0.159.2).
  */
-export function codexAgentLaunchArgs(): string[] {
+export function codexAgentLaunchArgs(webSearch: AgentCodexWebSearch = 'cached'): string[] {
   const overrides = CODEX_CONFIG_OVERRIDES.filter((override) => !override.startsWith('web_search='))
   return [
     'app-server',
     ...overrides.flatMap((override) => ['-c', override]),
+    '-c',
+    `web_search="${codexWebSearchValue(webSearch)}"`,
     // Windows: the MXC sandbox, explicitly. It honours denied paths at once and
     // fails when unavailable, so a session never falls back to a sandbox that
     // cannot keep commands out of the sign-in folder (the elevated one needs
@@ -99,6 +105,11 @@ export function codexAgentLaunchArgs(): string[] {
     '--listen',
     'stdio://',
   ]
+}
+
+/** A known web search value; anything else is the default */
+function codexWebSearchValue(value: unknown): AgentCodexWebSearch {
+  return value === 'live' || value === 'disabled' ? value : 'cached'
 }
 
 /**
@@ -190,8 +201,23 @@ export function codexAgentReadableDirs(
   return out
 }
 
+/**
+ * The session's permission profile: the file-system rules, and the network
+ * opened only when the person turned commands' internet access on for the
+ * project folder (no list of sites, as in the Codex app). Checked on this PC
+ * (MXC, 2026-10-21): with `network.enabled = true` a command reached the
+ * internet and a denied folder stayed unreadable; without it, no internet.
+ */
+function codexAgentProfile(
+  options: AgentSessionOptions & { network?: boolean | undefined },
+  readableDirs: readonly string[],
+): Record<string, unknown> {
+  const filesystem = codexAgentFilesystem(options, readableDirs)
+  return options.network === true ? { filesystem, network: { enabled: true } } : { filesystem }
+}
+
 export function codexAgentThreadParams(
-  options: AgentSessionOptions,
+  options: AgentSessionOptions & { network?: boolean | undefined },
   model: string,
   userMcpServers: Record<string, { enabled: false }>,
   readableDirs: readonly string[] = [],
@@ -215,9 +241,7 @@ export function codexAgentThreadParams(
     ephemeral: true,
     config: {
       default_permissions: CODEX_AGENT_PROFILE,
-      permissions: {
-        [CODEX_AGENT_PROFILE]: { filesystem: codexAgentFilesystem(options, readableDirs) },
-      },
+      permissions: { [CODEX_AGENT_PROFILE]: codexAgentProfile(options, readableDirs) },
       mcp_servers: mcpServers,
     },
   }
@@ -318,6 +342,9 @@ function itemAction(item: Record<string, unknown>): AgentAction | undefined {
     )
     return { kind: 'write', tool: 'fileChange', paths }
   }
+  if (item.type === 'webSearch') {
+    return { kind: 'web-search', tool: 'webSearch', target: text(item.query), paths: [] }
+  }
   if (item.type === 'mcpToolCall') {
     return {
       kind: 'app-tool',
@@ -350,6 +377,7 @@ export interface CodexAgentDeps {
     | ((
         filesystem: Record<string, 'read' | 'write' | 'deny'>,
         probeDir: string,
+        network: boolean,
       ) => Promise<CodexSandboxProbeResult>)
     | undefined
 }
@@ -357,6 +385,10 @@ export interface CodexAgentDeps {
 export interface CodexAgentSessionOptions extends AgentSessionOptions {
   /** the person accepted a metered login for Codex (settings and the acceptance record agree) */
   meteredAccepted: boolean
+  /** Codex's own web search, as chosen for the project folder; cached results when absent */
+  webSearch?: AgentCodexWebSearch | undefined
+  /** commands may reach the internet (chosen for the project folder); off when absent */
+  network?: boolean | undefined
 }
 
 export async function startCodexAgentSession(
@@ -365,6 +397,7 @@ export async function startCodexAgentSession(
   deps: CodexAgentDeps = {},
 ): Promise<AgentSession> {
   const platform = deps.platform ?? process.platform
+  const network = options.network === true
   const program = await (
     deps.resolveProgram ??
     ((configuredPath) => resolveSubscriptionProgram(PROVIDER, { configuredPath }))
@@ -377,16 +410,20 @@ export async function startCodexAgentSession(
   if (platform === 'win32') {
     const probe =
       deps.probeSandbox ??
-      ((filesystem, probeDir) =>
+      ((filesystem, probeDir, withNetwork) =>
         probeCodexSandbox(program, filesystem, probeDir, {
           spawn: deps.spawn,
           registry: deps.registry,
           baseEnv: deps.baseEnv,
           killTree: deps.killTree,
+          network: withNetwork,
         }))
+    // the profile as the session uses it, network included: a sandbox that cannot start with
+    // the network on does not start the session (it is not run with the network off instead)
     const result = await probe(
       codexAgentFilesystem(options, readableDirs),
       join(options.sessionDir, 'sandbox-probe'),
+      network,
     )
     if (result === 'unavailable') throw new AgentSandboxUnavailableError()
     if (result === 'not-contained') {
@@ -401,7 +438,7 @@ export async function startCodexAgentSession(
   try {
     // the session folder as working directory: no project configuration of wherever the app
     // was started applies to the process; the thread's own folder is given per thread
-    child = spawnSubscriptionProgram(program, codexAgentLaunchArgs(), {
+    child = spawnSubscriptionProgram(program, codexAgentLaunchArgs(options.webSearch), {
       cwd: options.sessionDir,
       stdio: ['pipe', 'pipe', 'pipe'],
       baseEnv: deps.baseEnv,
@@ -710,6 +747,13 @@ export async function startCodexAgentSession(
         'Codex did not apply the session permissions; nothing was run',
       )
     }
+    // the network the thread reports, when it does: open while the person left it off is not run
+    if (!network && codexThreadNetworkAccess(started) === true) {
+      throw new AiRunError(
+        'unsafe-tools',
+        'Codex opened the network for commands, which was left off; nothing was run',
+      )
+    }
     const thread =
       isPlainObject(started) && isPlainObject(started.thread) ? started.thread : undefined
     threadId = typeof thread?.id === 'string' ? thread.id : ''
@@ -774,6 +818,12 @@ export async function startCodexAgentSession(
       stopNow()
     },
   }
+}
+
+/** Whether the thread's sandbox lets commands reach the network, as `thread/start` reports it */
+function codexThreadNetworkAccess(started: unknown): boolean | undefined {
+  const sandbox = isPlainObject(started) && isPlainObject(started.sandbox) ? started.sandbox : {}
+  return typeof sandbox.networkAccess === 'boolean' ? sandbox.networkAccess : undefined
 }
 
 async function defaultModel(

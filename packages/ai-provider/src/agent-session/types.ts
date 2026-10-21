@@ -39,6 +39,10 @@ export type AgentActionKind =
   | 'app-tool'
   /** load a skill's instructions */
   | 'skill'
+  /** search the web (the program's own search tool) */
+  | 'web-search'
+  /** read a web page at an address */
+  | 'web-fetch'
   | 'other'
 
 export interface AgentAction {
@@ -58,6 +62,10 @@ export interface AgentAction {
   cwd?: string | undefined
   /** the program's own explanation, when it gave one */
   reason?: string | undefined
+  /** what a web action names: the search words, or the page address */
+  target?: string | undefined
+  /** the site (host name, lower case) of a page address, when it has one */
+  host?: string | undefined
 }
 
 /** A request shown to the person; `id` is answered with `AgentPermissionAnswer` */
@@ -66,7 +74,27 @@ export interface AgentPermissionRequest extends AgentAction {
   provider: AiSubscriptionProviderId
 }
 
-export type AgentPermissionAnswer = { allow: true } | { allow: false; message?: string | undefined }
+/**
+ * The person's answer. `scope: 'session'` on a web action also allows the same
+ * kind of action for the rest of the session: every search, or every page of
+ * the same site. It lives in the session's memory only.
+ */
+export type AgentPermissionAnswer =
+  | { allow: true; scope?: 'once' | 'session' | undefined }
+  | { allow: false; message?: string | undefined }
+
+/** What the person allowed for the rest of a session (web actions only) */
+export interface AgentSessionAllowances {
+  /** every web search */
+  webSearch: boolean
+  /** sites (lower-case host names) whose pages may be read */
+  webHosts: ReadonlySet<string>
+}
+
+/** Codex's own web search for an agent session (`web_search` of its configuration) */
+export type AgentCodexWebSearch = 'cached' | 'live' | 'disabled'
+
+export const AGENT_CODEX_WEB_SEARCH: readonly AgentCodexWebSearch[] = ['cached', 'live', 'disabled']
 
 /** What the policy decided before anyone is asked */
 export type AgentPolicyVerdict =
