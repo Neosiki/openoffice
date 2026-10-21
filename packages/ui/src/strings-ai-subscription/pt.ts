@@ -15,6 +15,9 @@ export const pt = {
     'O programa {provider} neste PC é antigo demais. Atualize-o e verifique novamente.',
   cardErrNeedsUpdateVersion:
     'O programa {provider} neste PC ({version}) é antigo demais; é necessária a versão {minimum} ou mais recente. Execute {command} em um terminal e verifique novamente.',
+  cardErrNeedsUpdatePath: 'Arquivo que este aplicativo executa:',
+  cardErrNeedsUpdateWindows:
+    'Atualizar o {provider} dentro do WSL (Ubuntu) ou em outra pasta não altera este arquivo. Execute {command} no Windows PowerShell.',
   cardErrTimeout: 'O programa {provider} não respondeu a tempo. Verifique novamente em instantes.',
   cardErrFailed: 'Algo deu errado ao verificar {provider}. Verifique novamente.',
   actionInstall: 'Instalar',
@@ -93,4 +96,37 @@ export const pt = {
   pickerPaid: 'Pago',
   pickerPaidTitle: 'Cobrado por consumo, não coberto por assinatura',
   pickerNotConnected: 'Conectar IA',
+  guideQuestion: 'Qual IA você já usa?',
+  guidePathClaudeTitle: 'Tenho uma assinatura paga do Claude',
+  guidePathClaudeBody:
+    'É preciso ter um plano Pro ou Max. Uma conta gratuita do Claude não consegue se conectar.',
+  guidePathCodexTitle: 'Uso o ChatGPT',
+  guidePathCodexBody:
+    'Entre no programa Codex da OpenAI com sua conta do ChatGPT. O plano gratuito permite pouco uso.',
+  guidePathFreeTitle: 'Nenhuma ainda',
+  guidePathFreeBody:
+    'Conecte uma IA gratuita em cerca de um minuto. Enquanto você usa de graça, o que você envia pode ser usado para melhorar a IA dessa empresa.',
+  guideBack: 'Escolher outra forma',
+  guideBadgeReady: 'Conectado',
+  guideBadgeInstalled: 'Instalado',
+  guideBadgeCheck: 'Verificar',
+  guideStepsLabel: 'Etapas da conexão',
+  stepInstall: 'Instalar o programa',
+  stepLogin: 'Entrar',
+  stepReady: 'Conectado',
+  installReturnNote:
+    'Quando a instalação terminar naquela janela, volte para cá. O app verifica de novo sozinho.',
+  loginHowNote:
+    'Ao clicar, um navegador se abre. Entre com sua conta da {vendor} e clique em Permitir; a conexão é concluída sozinha.',
+  signingInStalledNote:
+    'O navegador não abriu ou mostra um código? Abra a janela de login com o botão abaixo. Cole no navegador o endereço mostrado na janela, ou cole na janela o código do navegador.',
+  actionLoginWindowOpen: 'Abrir a janela de login',
+  actionCancelLogin: 'Cancelar login',
+  actionUpdate: 'Atualizar',
+  updateNote:
+    'Ao clicar, a atualização oficial da {vendor} é executada em uma nova janela. Quando terminar lá, volte para cá.',
+  guideInfoHint:
+    'Ainda não funciona? Copie as informações da conexão e envie para quem está ajudando você. Elas não incluem conta nem caminhos de arquivos.',
+  actionCopyInfo: 'Copiar informações para ajuda',
+  copyInfoDone: 'Copiado',
 } satisfies Record<keyof typeof zh, string>

@@ -14,6 +14,9 @@ export const en = {
   cardErrNeedsUpdate: 'The {provider} program on this PC is too old. Update it, then check again.',
   cardErrNeedsUpdateVersion:
     'The {provider} program on this PC ({version}) is too old; {minimum} or newer is needed. Run {command} in a terminal, then check again.',
+  cardErrNeedsUpdatePath: 'The file this app runs:',
+  cardErrNeedsUpdateWindows:
+    'Updating {provider} inside WSL (Ubuntu) or in another folder does not change this file. Run {command} in Windows PowerShell.',
   cardErrTimeout: 'The {provider} program did not answer in time. Check again in a moment.',
   cardErrFailed: 'Something went wrong while checking {provider}. Check again.',
   actionInstall: 'Install',
@@ -88,4 +91,36 @@ export const en = {
   pickerPaid: 'Paid',
   pickerPaidTitle: 'Charged by usage, not covered by a subscription',
   pickerNotConnected: 'Connect AI',
+  guideQuestion: 'Which AI do you already use?',
+  guidePathClaudeTitle: 'I pay for Claude',
+  guidePathClaudeBody: 'Needs a Pro or Max plan. A free Claude account cannot connect.',
+  guidePathCodexTitle: 'I use ChatGPT',
+  guidePathCodexBody:
+    "Sign in to OpenAI's Codex program with your ChatGPT account. The free plan allows only a little use.",
+  guidePathFreeTitle: 'Neither yet',
+  guidePathFreeBody:
+    "Connect a free AI in about a minute. While you use it for free, what you send may be used to improve that company's AI.",
+  guideBack: 'Choose another way',
+  guideBadgeReady: 'Connected',
+  guideBadgeInstalled: 'Installed',
+  guideBadgeCheck: 'Needs attention',
+  guideStepsLabel: 'Connection steps',
+  stepInstall: 'Install the program',
+  stepLogin: 'Sign in',
+  stepReady: 'Connected',
+  installReturnNote:
+    'When the install has finished in that window, come back here. The app checks again by itself.',
+  loginHowNote:
+    'A browser opens when you press it. Sign in with your {vendor} account and press Allow; the connection finishes by itself.',
+  signingInStalledNote:
+    "The browser did not open, or it shows a code? Open the sign-in window with the button below. Paste the address shown there into your browser, or paste the browser's code into the window.",
+  actionLoginWindowOpen: 'Open the sign-in window',
+  actionCancelLogin: 'Cancel sign-in',
+  actionUpdate: 'Update',
+  updateNote:
+    "{vendor}'s official update runs in a new window when you press it. When it has finished there, come back here.",
+  guideInfoHint:
+    'Still stuck? Copy the connection details and send them to whoever is helping you. They contain no account and no file paths.',
+  actionCopyInfo: 'Copy details for help',
+  copyInfoDone: 'Copied',
 } satisfies Record<keyof typeof zh, string>

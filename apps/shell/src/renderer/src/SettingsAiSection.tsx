@@ -264,6 +264,8 @@ export function AiSection({
               lang={lang}
               disabled={busy}
               onInstall={connection.install}
+              onUpdate={connection.update}
+              onCancelLogin={connection.cancelLogin}
               onLogin={connection.login}
               onRecheck={connection.recheck}
               onAcceptMetered={acceptMetered}

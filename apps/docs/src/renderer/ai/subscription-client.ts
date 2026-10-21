@@ -22,6 +22,10 @@ export interface SubscriptionConnection {
   /** an action is in flight: the cards keep their buttons but ignore them */
   readonly busy: boolean
   readonly install: (provider: AiSubscriptionProviderId) => void
+  /** the official update of a program below the app's floor, in a terminal window */
+  readonly update: (provider: AiSubscriptionProviderId) => void
+  /** end a sign-in the app started */
+  readonly cancelLogin: (provider: AiSubscriptionProviderId) => void
   readonly login: (provider: AiSubscriptionProviderId) => void
   readonly recheck: (provider: AiSubscriptionProviderId) => void
   /** "use anyway" on a metered login */
@@ -93,13 +97,18 @@ export function useSubscriptionConnection(): SubscriptionConnection {
   }, [apply, check])
 
   const launch = useCallback(
-    (kind: 'install' | 'login', provider: AiSubscriptionProviderId) => {
+    (kind: 'install' | 'login' | 'update', provider: AiSubscriptionProviderId) => {
       setBusy(true)
-      void attempt((api) => (kind === 'install' ? api.install(provider) : api.login(provider)))
+      void attempt((api) => api[kind](provider))
         .then((result) => {
           if (!alive.current) return
           if (result?.ok) {
             launched.current.set(provider, statusesRef.current[provider].state)
+            return
+          }
+          // the update could not be started here: the vendor's own guide is the way on
+          if (kind === 'update') {
+            window.open(AI_SUBSCRIPTION_INSTALL_HELP_URLS[provider])
             return
           }
           // a launch that could not start means the shown status may be out of date
@@ -120,6 +129,14 @@ export function useSubscriptionConnection(): SubscriptionConnection {
     (provider: AiSubscriptionProviderId) => launch('login', provider),
     [launch],
   )
+  const update = useCallback(
+    (provider: AiSubscriptionProviderId) => launch('update', provider),
+    [launch],
+  )
+  const cancelLogin = useCallback((provider: AiSubscriptionProviderId) => {
+    // the main process ends the sign-in and looks again; the change event follows
+    void attempt((api) => api.cancelLogin(provider))
+  }, [])
   const recheck = useCallback(
     (provider: AiSubscriptionProviderId) => {
       setBusy(true)
@@ -151,5 +168,16 @@ export function useSubscriptionConnection(): SubscriptionConnection {
     [check],
   )
 
-  return { statuses, busy, install, login, recheck, acceptMetered, openInstallHelp, refresh }
+  return {
+    statuses,
+    busy,
+    install,
+    update,
+    cancelLogin,
+    login,
+    recheck,
+    acceptMetered,
+    openInstallHelp,
+    refresh,
+  }
 }

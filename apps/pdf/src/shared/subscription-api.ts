@@ -29,6 +29,10 @@ export interface SubscriptionApi {
   login(provider: AiSubscriptionProviderId): Promise<SubscriptionLaunchResult>
   /** run the vendor's official install command in a visible terminal window */
   install(provider: AiSubscriptionProviderId): Promise<SubscriptionLaunchResult>
+  /** run the official update of a program below the app's floor, in a terminal window */
+  update(provider: AiSubscriptionProviderId): Promise<SubscriptionLaunchResult>
+  /** end a sign-in the app started (nothing under way is not a failure) */
+  cancelLogin(provider: AiSubscriptionProviderId): Promise<SubscriptionLaunchResult>
   /** "use anyway" for a metered login (or take that back) */
   setMeteredAccepted(
     provider: AiSubscriptionProviderId,

@@ -35,6 +35,10 @@ export interface SubscriptionConnection {
   /** this build can generate images through the Codex subscription */
   readonly codexImageAvailable: boolean
   readonly install: (provider: AiSubscriptionProviderId) => void
+  /** the official update of a program below the app's floor, in a terminal window */
+  readonly update: (provider: AiSubscriptionProviderId) => void
+  /** end a sign-in the app started */
+  readonly cancelLogin: (provider: AiSubscriptionProviderId) => void
   readonly login: (provider: AiSubscriptionProviderId) => void
   /**
    * Sign in with another account: the program's own sign-in, started again
@@ -132,14 +136,23 @@ export function useSubscriptionConnection(): SubscriptionConnection {
   }, [apply, check])
 
   const launch = useCallback(
-    (kind: 'install' | 'login', provider: AiSubscriptionProviderId, sameState = false) => {
+    (
+      kind: 'install' | 'login' | 'update',
+      provider: AiSubscriptionProviderId,
+      sameState = false,
+    ) => {
       setBusy(true)
       setFailed((current) => ({ ...current, [provider]: undefined }))
-      void attempt((api) => (kind === 'install' ? api.install(provider) : api.login(provider)))
+      void attempt((api) => api[kind](provider))
         .then((result) => {
           if (!alive.current) return
           if (result?.ok) {
             launched.current.set(provider, sameState ? null : statusesRef.current[provider].state)
+            return
+          }
+          // the update could not be started here: the vendor's own guide is the way on
+          if (kind === 'update') {
+            void attempt((api) => api.openInstallHelp(provider))
             return
           }
           setFailed((current) => ({ ...current, [provider]: kind }))
@@ -161,6 +174,14 @@ export function useSubscriptionConnection(): SubscriptionConnection {
     (provider: AiSubscriptionProviderId) => launch('login', provider),
     [launch],
   )
+  const update = useCallback(
+    (provider: AiSubscriptionProviderId) => launch('update', provider),
+    [launch],
+  )
+  const cancelLogin = useCallback((provider: AiSubscriptionProviderId) => {
+    // the main process ends the sign-in and looks again; the change event follows
+    void attempt((api) => api.cancelLogin(provider))
+  }, [])
   const switchAccount = useCallback(
     (provider: AiSubscriptionProviderId) => launch('login', provider, true),
     [launch],
@@ -213,6 +234,8 @@ export function useSubscriptionConnection(): SubscriptionConnection {
     failed,
     codexImageAvailable,
     install,
+    update,
+    cancelLogin,
     login,
     switchAccount,
     logout,

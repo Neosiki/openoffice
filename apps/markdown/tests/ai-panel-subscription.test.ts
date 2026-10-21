@@ -206,8 +206,12 @@ describe('AiPanel under the subscription contract', () => {
     // the refused send points at the prompt
     expect(scrolled).toContain(container.querySelector('.ai-sub-prompt'))
 
+    // which AI the user has comes first; each answer leads to its own card
+    await click(container, '.ai-sub-prompt [data-path="claude-code"]')
     await click(container, '.ai-sub-prompt [data-action="login"]')
     expect(bridge.subscription.login).toHaveBeenCalledWith('claude-code')
+    await click(container, '.ai-sub-prompt [data-action="guide-back"]')
+    await click(container, '.ai-sub-prompt [data-path="codex"]')
     await click(container, '.ai-sub-prompt [data-action="install"]')
     expect(bridge.subscription.install).toHaveBeenCalledWith('codex')
   })

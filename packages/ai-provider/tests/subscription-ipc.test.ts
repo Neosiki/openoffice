@@ -108,6 +108,14 @@ function setup(): {
       log.push(`install:${provider}`)
       return { ok: true }
     },
+    launchUpdate: async (provider): Promise<SubscriptionLaunchResult> => {
+      log.push(`update:${provider}`)
+      return { ok: true }
+    },
+    cancelLogin: async (provider): Promise<SubscriptionLaunchResult> => {
+      log.push(`cancel:${provider}`)
+      return { ok: true }
+    },
     broadcast: (channel, payload) => broadcasts.push([channel, payload]),
   }
   return {
@@ -129,6 +137,8 @@ describe('the channel names', () => {
       login: 'ai:subscription-login',
       logout: 'ai:subscription-logout',
       install: 'ai:subscription-install',
+      update: 'ai:subscription-update',
+      cancelLogin: 'ai:subscription-cancel-login',
       metered: 'ai:subscription-metered',
       codexImage: 'ai:subscription-codex-image',
       changed: 'ai:subscription-changed',
@@ -238,6 +248,8 @@ describe('registerSubscriptionIpc', () => {
         SUBSCRIPTION_IPC_CHANNELS.login,
         SUBSCRIPTION_IPC_CHANNELS.logout,
         SUBSCRIPTION_IPC_CHANNELS.install,
+        SUBSCRIPTION_IPC_CHANNELS.update,
+        SUBSCRIPTION_IPC_CHANNELS.cancelLogin,
         SUBSCRIPTION_IPC_CHANNELS.metered,
         SUBSCRIPTION_IPC_CHANNELS.codexImage,
       ].sort(),
@@ -293,6 +305,22 @@ describe('registerSubscriptionIpc', () => {
       ok: true,
     })
     expect(log).toEqual(['login:claude-code', 'install:codex'])
+  })
+
+  it('routes update and cancel-login to theirs', async () => {
+    const { ipc, deps, log } = setup()
+    registerSubscriptionIpc(ipc, deps)
+    expect(await ipc.invoke(SUBSCRIPTION_IPC_CHANNELS.update, { provider: 'codex' })).toEqual({
+      ok: true,
+    })
+    expect(
+      await ipc.invoke(SUBSCRIPTION_IPC_CHANNELS.cancelLogin, { provider: 'claude-code' }),
+    ).toEqual({ ok: true })
+    expect(await ipc.invoke(SUBSCRIPTION_IPC_CHANNELS.update, { provider: 'gpt' })).toEqual({
+      ok: false,
+      reason: 'invalid',
+    })
+    expect(log).toEqual(['update:codex', 'cancel:claude-code'])
   })
 
   it('routes logout to its launcher, then checks that provider again before it answers', async () => {

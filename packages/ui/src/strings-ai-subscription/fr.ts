@@ -15,6 +15,9 @@ export const fr = {
     'Le programme {provider} installé sur ce PC est trop ancien. Mettez-le à jour, puis vérifiez à nouveau.',
   cardErrNeedsUpdateVersion:
     'Le programme {provider} installé sur ce PC ({version}) est trop ancien ; la version {minimum} ou plus récente est nécessaire. Exécutez {command} dans un terminal, puis vérifiez à nouveau.',
+  cardErrNeedsUpdatePath: 'Fichier exécuté par cette application :',
+  cardErrNeedsUpdateWindows:
+    'Mettre à jour {provider} dans WSL (Ubuntu) ou dans un autre dossier ne modifie pas ce fichier. Exécutez {command} dans Windows PowerShell.',
   cardErrTimeout:
     "Le programme {provider} n'a pas répondu à temps. Vérifiez à nouveau dans un instant.",
   cardErrFailed:
@@ -96,4 +99,37 @@ export const fr = {
   pickerPaid: 'Payant',
   pickerPaidTitle: 'Facturé à l’usage, non couvert par un abonnement',
   pickerNotConnected: 'Connecter l’IA',
+  guideQuestion: 'Quelle IA utilisez-vous déjà ?',
+  guidePathClaudeTitle: 'J’ai un abonnement Claude payant',
+  guidePathClaudeBody:
+    'Un forfait Pro ou Max est nécessaire. Un compte Claude gratuit ne peut pas se connecter.',
+  guidePathCodexTitle: 'J’utilise ChatGPT',
+  guidePathCodexBody:
+    'Connectez-vous au programme Codex d’OpenAI avec votre compte ChatGPT. Le forfait gratuit ne permet qu’une utilisation limitée.',
+  guidePathFreeTitle: 'Ni l’un ni l’autre pour l’instant',
+  guidePathFreeBody:
+    'Connectez une IA gratuite en une minute environ. Tant que vous l’utilisez gratuitement, ce que vous envoyez peut servir à améliorer l’IA de cette entreprise.',
+  guideBack: 'Choisir une autre méthode',
+  guideBadgeReady: 'Connecté',
+  guideBadgeInstalled: 'Installé',
+  guideBadgeCheck: 'À vérifier',
+  guideStepsLabel: 'Étapes de connexion',
+  stepInstall: 'Installer le programme',
+  stepLogin: 'Se connecter',
+  stepReady: 'Connecté',
+  installReturnNote:
+    'Une fois l’installation terminée dans cette fenêtre, revenez ici. L’application vérifie à nouveau d’elle-même.',
+  loginHowNote:
+    'Un navigateur s’ouvre quand vous cliquez. Connectez-vous avec votre compte {vendor} et cliquez sur Autoriser : la connexion se fait d’elle-même.',
+  signingInStalledNote:
+    'Le navigateur ne s’est pas ouvert ou affiche un code ? Ouvrez la fenêtre de connexion avec le bouton ci-dessous. Collez l’adresse qui y est affichée dans votre navigateur, ou collez le code du navigateur dans la fenêtre.',
+  actionLoginWindowOpen: 'Ouvrir la fenêtre de connexion',
+  actionCancelLogin: 'Annuler la connexion',
+  actionUpdate: 'Mettre à jour',
+  updateNote:
+    'La mise à jour officielle de {vendor} s’exécute dans une nouvelle fenêtre quand vous cliquez. Une fois terminée, revenez ici.',
+  guideInfoHint:
+    'Toujours bloqué ? Copiez les informations de connexion et envoyez-les à la personne qui vous aide. Elles ne contiennent ni compte ni chemin de fichier.',
+  actionCopyInfo: 'Copier les infos pour obtenir de l’aide',
+  copyInfoDone: 'Copié',
 } satisfies Record<keyof typeof zh, string>

@@ -158,7 +158,7 @@ describe('the send gate', () => {
     '%s: the connect prompt is told when a send was refused',
     (name) => {
       const panel = source(EDITORS[name]!.panel)
-      const prompt = panel.match(/<AiConnectPrompt[\s\S]{0,700}?\/>/)
+      const prompt = panel.match(/<AiConnectPrompt[\s\S]{0,900}?\/>/)
       expect(prompt?.[0], 'connect prompt').toMatch(/attention=\{[\w.]*connectAttention\}/)
     },
   )

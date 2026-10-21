@@ -49,7 +49,7 @@ test('Settings › AI shows the free connections, and a seeded free connection a
   }
 })
 
-test('the first-run connect step offers the free connections under the subscriptions', async () => {
+test('the first-run connect step offers the free connections as the "neither yet" path', async () => {
   const launched = await launchShell({ videoDir: 'free-ai-onboarding' })
   const { page } = launched
   try {
@@ -57,7 +57,10 @@ test('the first-run connect step offers the free connections under the subscript
     await expect(dialog).toBeVisible()
     await page.locator('.onb-next').click()
     const step = page.locator('.onb-slide[data-step="connect"]')
-    await expect(step.locator('.onb-free-title')).toHaveText('No subscription? Start for free')
+    // which AI the user has comes first; the free cards are the answer "neither yet"
+    await expect(step.locator('.ai-sub-guide-question')).toHaveText('Which AI do you already use?')
+    await expect(step.locator('.free-ai-card')).toHaveCount(0)
+    await step.locator('[data-path="free"]').click()
     await expect(step.locator('.free-ai-card')).toHaveCount(2)
     await expect(
       step.locator('[data-provider="openrouter"] [data-action="connect-browser"]'),

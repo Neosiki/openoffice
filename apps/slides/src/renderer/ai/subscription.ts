@@ -143,19 +143,24 @@ export function useSubscriptionConnection(): SubscriptionConnection {
     })
   }, [])
 
+  const openHelp = useCallback((provider: AiSubscriptionProviderId) => {
+    // routed to the system browser by the main process's window-open handler
+    window.open(AI_SUBSCRIPTION_INSTALL_HELP_URLS[provider], '_blank', 'noreferrer')
+  }, [])
+
   const launch = useCallback(
-    (kind: 'install' | 'login', provider: AiSubscriptionProviderId) => {
+    (kind: 'install' | 'login' | 'update', provider: AiSubscriptionProviderId) => {
       during(
-        attempt((api) => (kind === 'install' ? api.install(provider) : api.login(provider))).then(
-          (result) => {
-            if (result?.ok) launched.current.set(provider, statusesRef.current[provider].state)
-            // nothing was started: show what the connection really is
-            else return check([provider])
-          },
-        ),
+        attempt((api) => api[kind](provider)).then((result) => {
+          if (result?.ok) launched.current.set(provider, statusesRef.current[provider].state)
+          // the update could not be started here: the vendor's own guide is the way on
+          else if (kind === 'update') openHelp(provider)
+          // nothing was started: show what the connection really is
+          else return check([provider])
+        }),
       )
     },
-    [check, during],
+    [check, during, openHelp],
   )
 
   const actions = useMemo<AiSubscriptionCardActions>(
@@ -167,12 +172,14 @@ export function useSubscriptionConnection(): SubscriptionConnection {
         during(
           attempt((api) => api.setMeteredAccepted(provider, true)).then((r) => apply(r?.statuses)),
         ),
-      onOpenInstallHelp: (provider) => {
-        // routed to the system browser by the main process's window-open handler
-        window.open(AI_SUBSCRIPTION_INSTALL_HELP_URLS[provider], '_blank', 'noreferrer')
+      onOpenInstallHelp: openHelp,
+      onUpdate: (provider) => launch('update', provider),
+      onCancelLogin: (provider) => {
+        // the main process ends the sign-in and looks again; the change event follows
+        void attempt((api) => api.cancelLogin(provider))
       },
     }),
-    [apply, check, during, launch],
+    [apply, check, during, launch, openHelp],
   )
 
   return { statuses, busy, refresh, actions }

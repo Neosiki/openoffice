@@ -23,6 +23,10 @@ export const SUBSCRIPTION_IPC_CHANNELS = {
   logout: 'ai:subscription-logout',
   /** (SubscriptionProviderRequest) → SubscriptionLaunchResult: run the vendor install command */
   install: 'ai:subscription-install',
+  /** (SubscriptionProviderRequest) → SubscriptionLaunchResult: run the official update in a terminal window */
+  update: 'ai:subscription-update',
+  /** (SubscriptionProviderRequest) → SubscriptionLaunchResult: end a login the app started, then look again */
+  cancelLogin: 'ai:subscription-cancel-login',
   /** (SubscriptionMeteredRequest) → SubscriptionMeteredResult: "use anyway" for a metered login */
   metered: 'ai:subscription-metered',
   /** () → boolean: whether this build can generate images through the Codex subscription */
@@ -52,10 +56,10 @@ export interface SubscriptionMeteredRequest {
 }
 
 /**
- * Why a login, logout or install could not be started (a logout: or did not
- * succeed). `not-installed`: no program to sign in to. `unsupported`: no vendor
- * command for this system. `invalid`: the request did not name a subscription
- * provider.
+ * Why a login, logout, install or update could not be started (a logout: or
+ * did not succeed). `not-installed`: no program to sign in to. `unsupported`:
+ * no vendor command for this system, or no way the app knows to update the copy
+ * it found. `invalid`: the request did not name a subscription provider.
  */
 export type SubscriptionLaunchFailure = 'not-installed' | 'unsupported' | 'failed' | 'invalid'
 
@@ -93,6 +97,14 @@ export interface SubscriptionIpcContract {
     response: SubscriptionLaunchResult
   }
   [SUBSCRIPTION_IPC_CHANNELS.install]: {
+    request: SubscriptionProviderRequest
+    response: SubscriptionLaunchResult
+  }
+  [SUBSCRIPTION_IPC_CHANNELS.update]: {
+    request: SubscriptionProviderRequest
+    response: SubscriptionLaunchResult
+  }
+  [SUBSCRIPTION_IPC_CHANNELS.cancelLogin]: {
     request: SubscriptionProviderRequest
     response: SubscriptionLaunchResult
   }
@@ -205,6 +217,22 @@ export function subscriptionNeedsUpdate(status: {
   if (!minimum || !command || !version) return null
   if (subscriptionVersionAtLeast(version, minimum)) return null
   return { version, minimum, command }
+}
+
+/** A Windows long path is at most this long; a longer value is not a path we found */
+const SUBSCRIPTION_PROGRAM_PATH_MAX_LENGTH = 32_767
+
+/**
+ * The program path a status carries, when it is one: an absolute path on one
+ * line. It is shown on a "needs update" card and nowhere else, so the user
+ * updates the copy the app runs rather than another one on the same PC.
+ */
+export function subscriptionProgramPathOf(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined
+  if (!value || value.length > SUBSCRIPTION_PROGRAM_PATH_MAX_LENGTH) return undefined
+  if (/\p{Cc}/u.test(value)) return undefined
+  // a drive (`C:\`), a UNC share (`\\server`), or a POSIX root
+  return /^(?:[A-Za-z]:[\\/]|\\\\|\/)/.test(value) ? value : undefined
 }
 
 // ---------------------------------------------------------------------------
@@ -352,11 +380,17 @@ export function subscriptionStatusMapOf(result: unknown): SubscriptionStatusMap 
     const signedIn = read.state === 'ready' || read.state === 'metered'
     const account = signedIn ? subscriptionAccountOf(status.account) : undefined
     const models = signedIn ? subscriptionModelsOf(status.models) : undefined
+    const programPath =
+      subscriptionStatusErrorKind(read) === 'needs-update'
+        ? subscriptionProgramPathOf(status.programPath)
+        : undefined
     delete read.account
     delete read.models
     delete read.signingIn
+    delete read.programPath
     if (account) read.account = account
     if (models) read.models = models
+    if (programPath) read.programPath = programPath
     if (status.signingIn === 'browser' || status.signingIn === 'window') {
       read.signingIn = status.signingIn
     }

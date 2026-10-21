@@ -6,7 +6,7 @@
 
 - 디자인 토큰 `src/tokens.css`. UI 크롬 색의 유일한 정의처다.
 - AI 패널 공용 부품: 작성기 `AiComposer`, 모델 선택 `AiModelPicker`(`src/ai-model-picker-options.ts`의 `aiProviderPickerGroups`·`withAiProviderSelection`), 대기열 `useChatRunQueue`(`src/chat-run-queue.ts`), 패널 표시 설정(`src/ai-panel-prefs.ts`).
-- 구독 연결 화면 부품과 그 규칙: `AiSubscriptionCard`·`AiConnectPrompt`, `AiBlockedNotice`, `AiSubscriptionUsageLine`, `AiFirstConnectionNotice`·`AiCodexNotice`·`AiMeteredWarning`·`AiInputTruncatedNotice`, `AiMark`. 무엇을 보여 줄지는 순수 함수(`src/ai-subscription.ts`)가 정하고 컴포넌트는 배치만 한다.
+- 구독 연결 화면 부품과 그 규칙: `AiSubscriptionCard`·`AiConnectPrompt`, 연결 도우미 `AiConnectGuide`(규칙은 `src/connect-guide.ts`), `AiBlockedNotice`, `AiSubscriptionUsageLine`, `AiFirstConnectionNotice`·`AiCodexNotice`·`AiMeteredWarning`·`AiInputTruncatedNotice`, `AiMark`. 무엇을 보여 줄지는 순수 함수(`src/ai-subscription.ts`)가 정하고 컴포넌트는 배치만 한다.
 - AI 창의 "Google 드라이브에서 첨부" 버튼 `DriveAttachButton`과 그 문구(`src/strings-drive-attach.ts`, 결정 0033). 편집기 preload의 `window.aiOfficeDriveAi`가 있고 드라이브가 연결돼 있을 때만 그린다. 고르기 창과 내려받기는 껍데기 앱의 일이고, 이 부품은 돌아온 경로와 알림 글을 편집기에 넘길 뿐이다.
 - AI 창의 "이음오피스 문서에서 첨부" 버튼 `DocAttachButton`과 그 문구(`src/strings-doc-attach.ts`, 결정 0035). 편집기 preload의 `window.aiOfficeDocs`가 있을 때만(껍데기 앱 안에서 돌 때만) 그린다. 열린 문서·최근 문서의 고르기 창은 껍데기 앱의 일이고, 이 부품은 고른 파일 경로와 알림 글(`docPickedOf`로 거른 `{ paths, notes }`)을 편집기에 넘길 뿐이다. 고르는 동안에는 잠긴다.
 - 보내기 규칙: `aiSendGate`와 관련 순수 함수(`src/ai-send-gate.ts`), 그것을 패널에 배선한 훅 `useAiSendGate`(`src/use-ai-send-gate.ts`).
@@ -49,7 +49,9 @@
 - 패널 배선은 `useAiSendGate` 하나로 한다. 보내기 경로는 `admit(request)`를 묻고(거짓이면 보내지 않고 작성기 글을 남긴다), 대기열은 `admitQueued`를, 첫 연결 안내의 확인 버튼은 `acknowledgeNotice`를, 막힌 실행의 버튼은 `continueWith(provider, rerun)`을 부른다. 붙잡힌 요청은 `start`로 되돌아오고 패널의 보내기 경로를 다시 지나며 `admit`을 한 번 더 묻는다.
 - 붙잡힌 요청의 운명은 `aiHeldRequestStep`이 정한다. 상태 확인 때문에 붙잡힌 요청은 답이 "연결 안 됨"이면 버려진다. 알림 때문에 붙잡힌 요청은 확인 버튼만이 시작시키고, 다른 이유로 알림이 사라지면(제공자 변경, 연결 끊김) 버려진다.
 - `AiModelPicker`는 `subscriptionStatuses`를 받는다. 넘기지 않으면 어떤 구독도 연결된 것으로 치지 않는다. 선택 변경은 `withAiProviderSelection`으로 쓴다.
-- 아무것도 연결되지 않은 "AI 연결" 안내(`aiConnectPromptView`의 `free`)에는 무료 연결로 가는 버튼이 붙는다. 버튼은 호스트가 준 `onOpenSettings`를 부른다(설정 → AI가 열린다). 이 패키지는 무료 연결을 직접 실행하지 않는다.
+- 아무것도 연결되지 않은 "AI 연결" 안내(`aiConnectPromptView`의 `free`)는 카드 두 개 대신 `AiConnectGuide`를 그린다. 도우미는 어느 AI가 있는지 묻고(`aiConnectGuideView`), 고른 구독 길에 단계(`aiConnectStepsView`)와 그 카드 하나를 보인다. 무료 길의 버튼은 호스트가 준 `onOpenSettings`를 부른다(설정 → AI가 열린다). 첫 실행 안내처럼 무료 카드를 그 자리에 그릴 호스트는 `freeContent`와 `freeConnected`를 준다. 이 패키지는 무료 연결을 직접 실행하지 않는다. 고른 길은 컴포넌트 상태일 뿐 저장하지 않는다.
+- 카드의 업데이트 버튼과 로그인 취소 링크는 호스트가 `onUpdate`·`onCancelLogin`을 줬을 때만 나온다. 업데이트는 터미널 창을 여는 일이라 `terminalWindows`(Windows)일 때만이다. 브라우저 로그인이 `AI_SIGNING_IN_STALLED_MS`를 넘으면 카드가 스스로 로그인 창 링크를 버튼으로 올린다. 링크로 그릴 동작은 `aiSubscriptionCardView`의 `links`가 정한다.
+- "도움 요청용 정보 복사"(`aiConnectInfoText`)에는 상태의 종류·오류 종류·버전 모양의 값·로그인 중인지·종량 허용 여부와 `navigator`의 플랫폼·사용자 에이전트만 들어간다. 계정, 경로, 오류 원문은 넣지 않는다. 새 값을 넣을 때도 이 원칙을 지킨다.
 - `free-limit`(무료 연결의 오늘 사용량 소진)은 막힌 실행 종류(`AI_BLOCKED_RUN_KINDS`)다. 문장은 `errFreeLimit`·`errFreeLimitReset`이다.
 - 오류 문장: `aiRunErrorText(lang, cause)`는 구독 계약의 종류에만 문장을 주고 `timeout`·`credits`·`network`·`overloaded`에는 `undefined`를 돌려준다. 그래서 전송의 `errorText` 옵션에 그대로 꽂으면 에디터의 기존 문장이 살아 있다. `unsafe-tools`에 제공자가 없으면 Claude로 읽는다.
 - 문자열은 `createI18n`을 거치므로 사전 안의 `GenOffice`는 출력에서 제품명으로 바뀐다. 사전은 원본의 표기를 유지한다.

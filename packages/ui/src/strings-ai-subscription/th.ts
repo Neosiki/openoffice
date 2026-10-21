@@ -14,6 +14,9 @@ export const th = {
   cardErrNeedsUpdate: 'โปรแกรม {provider} บนพีซีเครื่องนี้เก่าเกินไป โปรดอัปเดตแล้วตรวจสอบอีกครั้ง',
   cardErrNeedsUpdateVersion:
     'โปรแกรม {provider} บนพีซีเครื่องนี้ ({version}) เก่าเกินไป ต้องใช้รุ่น {minimum} ขึ้นไป โปรดเรียกใช้ {command} ในเทอร์มินัลแล้วตรวจสอบอีกครั้ง',
+  cardErrNeedsUpdatePath: 'ไฟล์ที่แอปนี้เรียกใช้:',
+  cardErrNeedsUpdateWindows:
+    'การอัปเดต {provider} ใน WSL (Ubuntu) หรือในโฟลเดอร์อื่นจะไม่เปลี่ยนไฟล์นี้ โปรดเรียกใช้ {command} ใน Windows PowerShell',
   cardErrTimeout: 'โปรแกรม {provider} ไม่ตอบกลับภายในเวลาที่กำหนด โปรดตรวจสอบอีกครั้งในอีกสักครู่',
   cardErrFailed: 'เกิดปัญหาขณะตรวจสอบ {provider} โปรดตรวจสอบอีกครั้ง',
   actionInstall: 'ติดตั้ง',
@@ -86,4 +89,36 @@ export const th = {
   pickerPaid: 'มีค่าใช้จ่าย',
   pickerPaidTitle: 'คิดค่าบริการตามการใช้งาน ไม่รวมอยู่ในการสมัครสมาชิก',
   pickerNotConnected: 'เชื่อมต่อ AI',
+  guideQuestion: 'ตอนนี้คุณใช้ AI ตัวไหนอยู่',
+  guidePathClaudeTitle: 'ฉันสมัครสมาชิก Claude แบบชำระเงิน',
+  guidePathClaudeBody: 'ต้องใช้แพ็กเกจ Pro หรือ Max บัญชี Claude แบบฟรีเชื่อมต่อไม่ได้',
+  guidePathCodexTitle: 'ฉันใช้ ChatGPT',
+  guidePathCodexBody:
+    'เข้าสู่ระบบโปรแกรม Codex ของ OpenAI ด้วยบัญชี ChatGPT ของคุณ แพ็กเกจฟรีใช้งานได้เพียงเล็กน้อย',
+  guidePathFreeTitle: 'ยังไม่มีทั้งสองอย่าง',
+  guidePathFreeBody:
+    'เชื่อมต่อ AI ฟรีได้ในเวลาประมาณหนึ่งนาที ระหว่างที่ใช้ฟรี เนื้อหาที่คุณส่งอาจถูกนำไปใช้ปรับปรุง AI ของบริษัทนั้น',
+  guideBack: 'เลือกวิธีอื่น',
+  guideBadgeReady: 'เชื่อมต่อแล้ว',
+  guideBadgeInstalled: 'ติดตั้งแล้ว',
+  guideBadgeCheck: 'ต้องตรวจสอบ',
+  guideStepsLabel: 'ขั้นตอนการเชื่อมต่อ',
+  stepInstall: 'ติดตั้งโปรแกรม',
+  stepLogin: 'เข้าสู่ระบบ',
+  stepReady: 'เชื่อมต่อเสร็จสิ้น',
+  installReturnNote:
+    'เมื่อติดตั้งในหน้าต่างนั้นเสร็จแล้ว โปรดกลับมาที่หน้านี้ แอปจะตรวจสอบอีกครั้งให้เอง',
+  loginHowNote:
+    'เมื่อกดแล้วเบราว์เซอร์จะเปิดขึ้น เข้าสู่ระบบด้วยบัญชี {vendor} แล้วกดอนุญาต ระบบจะเชื่อมต่อให้เอง',
+  signingInStalledNote:
+    'เบราว์เซอร์ไม่เปิด หรือแสดงรหัสใช่ไหม เปิดหน้าต่างเข้าสู่ระบบด้วยปุ่มด้านล่าง แล้ววางที่อยู่ที่แสดงในหน้าต่างลงในเบราว์เซอร์ หรือวางรหัสที่แสดงในเบราว์เซอร์ลงในหน้าต่าง',
+  actionLoginWindowOpen: 'เปิดหน้าต่างเข้าสู่ระบบ',
+  actionCancelLogin: 'ยกเลิกการเข้าสู่ระบบ',
+  actionUpdate: 'อัปเดต',
+  updateNote:
+    'เมื่อกดแล้ว การอัปเดตอย่างเป็นทางการของ {vendor} จะทำงานในหน้าต่างใหม่ เมื่ออัปเดตในหน้าต่างนั้นเสร็จแล้ว โปรดกลับมาที่หน้านี้',
+  guideInfoHint:
+    'ยังใช้ไม่ได้ใช่ไหม คัดลอกข้อมูลการเชื่อมต่อแล้วส่งให้คนที่ช่วยคุณ ข้อมูลนี้ไม่มีบัญชีและเส้นทางไฟล์',
+  actionCopyInfo: 'คัดลอกข้อมูลเพื่อขอความช่วยเหลือ',
+  copyInfoDone: 'คัดลอกแล้ว',
 } satisfies Record<keyof typeof zh, string>
