@@ -68,7 +68,7 @@ export const en = {
   usageWindowSevenDay: '7-day limit',
   noticeTitle: 'Before you use AI with your subscription',
   noticeSend:
-    'Document content and your conversation are sent to Anthropic or OpenAI under your own account. Skills in use, and skill files the AI reads, go along with them.',
+    'Document content and your conversation are sent to Anthropic or OpenAI under your own account. Each request also carries the name, title and description of every skill set to “AI decides”; skills in use, and skill files the AI reads, go along with them.',
   noticeTraining:
     'Whether that content is used to train AI is decided by your own account settings at that company.',
   noticeCodexHistory:

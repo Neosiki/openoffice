@@ -73,7 +73,7 @@ export const ms = {
   usageWindowSevenDay: 'Had 7 hari',
   noticeTitle: 'Sebelum menggunakan AI dengan langganan anda',
   noticeSend:
-    'Kandungan dokumen dan perbualan anda dihantar kepada Anthropic atau OpenAI di bawah akaun anda sendiri. Kemahiran yang digunakan dan fail kemahiran yang dibaca oleh AI turut dihantar.',
+    'Kandungan dokumen dan perbualan anda dihantar kepada Anthropic atau OpenAI di bawah akaun anda sendiri. Setiap permintaan juga membawa nama, tajuk dan penerangan setiap kemahiran yang ditetapkan kepada "AI tentukan"; kemahiran yang digunakan dan fail kemahiran yang dibaca oleh AI turut dihantar.',
   noticeTraining:
     'Sama ada kandungan itu digunakan untuk melatih AI ditentukan oleh tetapan akaun anda sendiri di syarikat tersebut.',
   noticeCodexHistory:

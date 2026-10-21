@@ -60,7 +60,7 @@ export const zhTW = {
   usageWindowSevenDay: '7 天額度',
   noticeTitle: '以訂閱使用 AI 之前',
   noticeSend:
-    '文件內容和對話會以你本人的帳戶傳送給 Anthropic 或 OpenAI。使用的技能內容和 AI 讀取的技能檔案也會一併傳送。',
+    '文件內容和對話會以你本人的帳戶傳送給 Anthropic 或 OpenAI。每次請求也會附上設為「自動使用」的每個技能的名稱、標題和說明；使用的技能內容和 AI 讀取的技能檔案也會一併傳送。',
   noticeTraining: '這些內容是否用於 AI 訓練，取決於你在該公司帳戶中的設定。',
   noticeCodexHistory:
     '本應用程式會關閉 Codex 的對話記錄儲存，但 Codex 仍可能在這台電腦上保留自己的診斷記錄檔。',
