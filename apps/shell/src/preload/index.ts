@@ -173,8 +173,8 @@ const homeApi: HomeApi = {
     if (typeof path !== 'string' || !path) throw new Error('Invalid path.')
     await ipcRenderer.invoke(HOME_CHANNELS.toggleStar, path)
   },
-  async openHelp() {
-    await ipcRenderer.invoke(HOME_CHANNELS.openHelp)
+  async openHelp(topic) {
+    await ipcRenderer.invoke(HOME_CHANNELS.openHelp, typeof topic === 'string' ? topic : undefined)
   },
   // knowledge-base ask panel (handlers live in the shell main, same process
   // that owns the index and the shared ai:stream registration)
