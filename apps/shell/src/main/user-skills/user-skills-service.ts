@@ -902,6 +902,33 @@ export function createUserSkillsService(deps: UserSkillsServiceDeps) {
     },
 
     /**
+     * The template document of an enabled skill (spec 5.7), for its copy in a
+     * new tab: the file's absolute place, only when it is a document the
+     * editors open and it lies inside the skill's folder. A skill whose
+     * template file is gone answers `no-template`; nothing is read here.
+     */
+    async templateFile(
+      id: string,
+    ): Promise<UserSkillsResult<{ path: string; fileName: string; title: string }>> {
+      const skill = await find(id)
+      if (!skill) return fail('not-found')
+      if (skill.agentOnly) return fail('agent-only')
+      if (skill.unreadable) return fail('unreadable')
+      if (!skill.enabled) return fail('disabled')
+      if (!skill.template) return fail('no-template')
+      const fileName = templateFileNameOf(skill.template)
+      if (!fileName) return fail('bad-template')
+      const path = join(skill.dir, ...skill.template.split('/'))
+      const info = await stat(path).catch(() => undefined)
+      if (!info?.isFile()) return fail('no-template')
+      const root = await realpath(skill.dir).catch(() => undefined)
+      const real = await realpath(path).catch(() => undefined)
+      if (!root || !real || !isInsideDir(real, root)) return fail('bad-template')
+      if (info.size > SKILL_TEMPLATE_MAX_BYTES) return fail('too-large')
+      return { ok: true, path: real, fileName, title: skill.title }
+    },
+
+    /**
      * `read_skill_file` (spec 5.8): one text file inside an enabled skill's
      * folder, by its path inside the folder. The file must be one the folder
      * listing finds (links leading out are never listed), its real place must

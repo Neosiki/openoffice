@@ -252,6 +252,8 @@ import {
   useRibbonCollapse,
   useSplitPaneFocusPing,
   useSplitPaneRole,
+  templateDocumentOf,
+  type TemplateDocument,
 } from '@genoffice/ui'
 import { useI18n } from './i18n/locale'
 import { useAutosave } from './useAutosave'
@@ -478,6 +480,20 @@ export default function App() {
   })
   const [doc, setDoc] = useState<PDFDocumentProxy | null>(null)
   const [filePath, setFilePath] = useState('')
+  /** this tab shows an untitled copy (a skill template's): its first save asks where */
+  const untitledCopyRef = useRef(false)
+  useEffect(() => {
+    if (!filePath) return
+    let live = true
+    void (window.pdfApi.isUntitledCopy?.(filePath) ?? Promise.resolve(false))
+      .then((copy) => {
+        if (live) untitledCopyRef.current = copy === true
+      })
+      .catch(() => undefined)
+    return () => {
+      live = false
+    }
+  }, [filePath])
   const [status, setStatus] = useState<'loading' | 'error' | 'empty' | 'password' | 'ready'>(
     'loading',
   )
@@ -4704,7 +4720,7 @@ export default function App() {
 
   // flushAll also writes the field whose card is open: callers that treat success as
   // "everything is in the file" (close-tab Save, flushThen) must not leave it behind
-  const save = (autosave = false, flushAll = false): Promise<boolean> => {
+  const saveInPlace = (autosave = false, flushAll = false): Promise<boolean> => {
     if (redactionRequestInFlightRef.current) return Promise.resolve(false)
     // A save is already writing: queue behind it instead of reporting failure — the
     // close prompt's "Save" and ⌘S regularly collide with the blur-triggered autosave
@@ -4849,6 +4865,24 @@ export default function App() {
     })
     saveInFlightRef.current = tracked
     return tracked
+  }
+
+  /**
+   * Save, and for an untitled copy (a skill template's, spec 5.7) the first
+   * explicit save then asks where the document goes: the edits land in the
+   * copy first, the chosen file becomes this tab's document. Automatic saves
+   * stay in the copy.
+   */
+  const save = async (autosave = false, flushAll = false): Promise<boolean> => {
+    const ok = await saveInPlace(autosave, flushAll)
+    if (autosave || !ok || !untitledCopyRef.current || !filePath) return ok
+    const target = await window.pdfApi
+      .adoptUntitledCopy?.(filePath, fileName || 'document.pdf')
+      .catch(() => null)
+    if (!target) return false
+    untitledCopyRef.current = false
+    setFilePath(target)
+    return true
   }
 
   // Drain queued saves. This effect runs after every commit, so by the time it fires
@@ -7477,6 +7511,35 @@ export default function App() {
     return () => el.removeEventListener('wheel', onWheel)
   })
 
+  /** what a save would apply now, read when a template button is pressed */
+  const editsPayloadRef = useRef(editsPayload)
+  editsPayloadRef.current = editsPayload
+  const pendingRedactionsRef = useRef(redactions.length)
+  pendingRedactionsRef.current = redactions.length
+  /**
+   * The PDF as a skill's template (spec 5.7), with the edits a save would
+   * apply, never written. PDF has no "withheld from the model" marks; a
+   * permanent redaction still waiting to be applied (its words are still in
+   * the file) blocks "save as is" all the same.
+   */
+  const templateDocument = useMemo<TemplateDocument | null>(
+    () =>
+      status !== 'ready' || !filePath
+        ? null
+        : templateDocumentOf({
+            filePath,
+            extensions: ['pdf'],
+            defaultExtension: 'pdf',
+            untitledTitle: () => 'document',
+            bytes: async () =>
+              (await window.pdfApi
+                .templateBytes?.({ path: filePath, ...editsPayloadRef.current() })
+                .catch(() => null)) ?? null,
+            redacted: () => pendingRedactionsRef.current > 0,
+          }),
+    [status, filePath],
+  )
+
   if (status === 'password') {
     return (
       <div className="app">
@@ -8985,6 +9048,8 @@ export default function App() {
             onRunDone={() => void autoSaveAfterAiRun()}
             onClearSelection={() => setAiSelection(null)}
             onCitation={openCitation}
+            templateDocument={templateDocument}
+            onSkillHandoff={() => setAiCollapsed(false)}
             overview={
               <InsightsCard
                 insights={documentInsights}

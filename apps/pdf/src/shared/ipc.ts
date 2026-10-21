@@ -51,6 +51,9 @@ export const PDF_CHANNELS = {
   requestRedactionCopy: 'pdf:request-redaction-copy',
   autoRename: 'pdf:auto-rename',
   isUntitled: 'pdf:is-untitled',
+  isUntitledCopy: 'pdf:is-untitled-copy',
+  templateBytes: 'pdf:template-bytes',
+  adoptUntitledCopy: 'pdf:adopt-untitled-copy',
   validateTextEdits: 'pdf:validate-text-edits',
   listEditFonts: 'pdf:list-edit-fonts',
   canDrawText: 'pdf:can-draw-text',
@@ -1453,6 +1456,16 @@ export interface PdfApi {
   /** Whether the file is a shell-created blank still carrying its untitled name
       (gates the after-AI-run silent save; a PDF the user merely opened must never auto-write) */
   isUntitled(path: string): Promise<boolean>
+  /** Whether the file is an untitled copy (a skill template's): its first save asks where */
+  isUntitledCopy?(path: string): Promise<boolean>
+  /** The document with its pending edits, as bytes, for a skill's template; nothing is written */
+  templateBytes?(request: SavePdfRequest): Promise<Uint8Array | null>
+  /**
+   * An untitled copy's first explicit save, after its edits were saved into the
+   * copy: asks where the document goes and makes that file this tab's
+   * document. The chosen path, or null when cancelled.
+   */
+  adoptUntitledCopy?(path: string, defaultName: string): Promise<string | null>
   /** Dry-run match of pending text edits against the file: reason null = would apply */
   validateTextEdits(request: ValidateTextEditsRequest): Promise<TextEditValidation[]>
   /** EDIT_FONTS ids whose font file exists on this machine */

@@ -72,6 +72,7 @@ const aiSubscription: SubscriptionApi = {
 
 const api: HwpApi = {
   consumePending: () => ipcRenderer.invoke(HWP_CHANNELS.consumePending),
+  untitledCopy: () => ipcRenderer.invoke(HWP_CHANNELS.untitledCopy),
   readFile: (path) => ipcRenderer.invoke(HWP_CHANNELS.readFile, path),
   trackingDropped: () => ipcRenderer.invoke(HWP_CHANNELS.trackingDropped),
   beginSave: (mode) => ipcRenderer.invoke(HWP_CHANNELS.beginSave, mode),

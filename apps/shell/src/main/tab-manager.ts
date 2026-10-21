@@ -9,6 +9,7 @@ import {
   docsQueryDirty,
   markDocsNewBlank,
   queueDocsAiContent,
+  queueDocsCopy,
   requestDocsClose,
   setActiveDocsResolver,
   teardownDocsRenderer,
@@ -25,6 +26,10 @@ import {
   htmlIsDirty,
   requestHtmlClose,
 } from '../../../html/src/main/html-main'
+import { queueHtmlSeedFor } from '../../../html/src/main/seed-main'
+import { queueMarkdownSeedFor } from '../../../markdown/src/main/seed-main'
+import { queueMindmapSeedFor } from '../../../mindmap/src/main/seed-main'
+import { queueSlidesSeedFor } from '../../../slides/src/main/seed-queue'
 import { createHwpView, hwpIsDirty, requestHwpClose } from '../../../hwp/src/main/hwp-main'
 import {
   createMindmapView,
@@ -34,6 +39,7 @@ import {
 import {
   createPdfView,
   clearPdfDirty,
+  markPdfUntitledCopy,
   pdfIsDirty,
   requestPdfClose,
 } from '../../../pdf/src/main/pdf-main'
@@ -591,8 +597,9 @@ export class TabManager {
   }
 
   /** Opens an HWP/HWPX file, or with no path a new blank document that has no file until it is saved */
-  openHwpTab(openPath?: string): string {
-    const view = createHwpView(openPath)
+  openHwpTab(openPath?: string, options?: { untitledCopy?: { title: string } }): string {
+    const copy = options?.untitledCopy
+    const view = createHwpView(openPath, { untitledCopy: !!copy })
     const id = `t${this.nextId++}`
     this.shellWindow.contentView.addChildView(view)
     view.setVisible(false)
@@ -602,11 +609,72 @@ export class TabManager {
       id,
       kind: 'hwp',
       view,
-      title: openPath ? basename(openPath) : this.untitled('hwp', 'HWP'),
-      filePath: openPath,
+      // an untitled copy reads a temp file but is not that file
+      title: copy ? copy.title : openPath ? basename(openPath) : this.untitled('hwp', 'HWP'),
+      filePath: copy ? undefined : openPath,
     })
     this.activateTab(id)
     return id
+  }
+
+  /**
+   * A skill template's copy (spec 5.7) as a NEW, UNTITLED document of its
+   * editor, in a new tab: the copy's bytes go to the editor in the same tick
+   * as the view is made, the tab shows `title`, and the first save asks where.
+   * Sheets is opened by the shell itself (its backing workbook needs the new
+   * file folder); null for it here and when the tab could not be made.
+   */
+  openTemplateCopy(copy: {
+    editor: 'docs' | 'sheets' | 'slides' | 'pdf' | 'markdown' | 'html' | 'mindmap' | 'hwp'
+    path: string
+    bytes: Uint8Array
+    fileName: string
+    title: string
+  }): { tabId: string; contents: WebContents } | null {
+    let id: string
+    switch (copy.editor) {
+      case 'docs':
+        id = this.openDocsTab()
+        break
+      case 'markdown':
+        id = this.openMarkdownTab()
+        break
+      case 'html':
+        id = this.openHtmlTab()
+        break
+      case 'mindmap':
+        id = this.openMindmapTab()
+        break
+      case 'slides':
+        id = this.openSlidesTab()
+        break
+      case 'hwp':
+        id = this.openHwpTab(copy.path, { untitledCopy: { title: copy.title } })
+        break
+      case 'pdf':
+        markPdfUntitledCopy(copy.path)
+        id = this.openPdfTab(copy.path)
+        break
+      default:
+        return null
+    }
+    const contents = this.webContentsForTab(id)
+    if (!contents) return null
+    // the decoder drops a leading byte order mark
+    const text = () => new TextDecoder('utf-8').decode(copy.bytes)
+    if (copy.editor === 'docs') queueDocsCopy(contents.id, { path: copy.path, name: copy.fileName })
+    else if (copy.editor === 'markdown') queueMarkdownSeedFor(contents, text())
+    else if (copy.editor === 'html') queueHtmlSeedFor(contents, text())
+    else if (copy.editor === 'mindmap') queueMindmapSeedFor(contents, { bytes: copy.bytes })
+    else if (copy.editor === 'slides') {
+      queueSlidesSeedFor(contents, copy.bytes, {
+        askPathOnFirstSave: true,
+        suggestedName: copy.fileName,
+      })
+    }
+    // a tab without a file takes the copy's title (one with the copy's path shows its name)
+    this.setTabTitleFor(contents.id, copy.title)
+    return { tabId: id, contents }
   }
 
   /** Present → New tab: a chrome-free html tab showing the owner tab's live preview */

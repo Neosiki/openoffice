@@ -131,6 +131,8 @@ export interface SkillPickerItem {
   hasScripts: boolean
   /** names a template document that is there */
   template: boolean
+  /** names a template document whose file is not there (spec 5.7: nothing is sent) */
+  templateMissing?: boolean | undefined
 }
 
 /** Where a list is shown: the regular AI panels and home ask, or the agent window */
@@ -202,6 +204,7 @@ export function pickerSkillsOf(
       sourceLabel: skillSourceLabel(lang, { source, plugin, github: view.github }),
       hasScripts: view.hasScripts === true,
       template: !!view.template && view.templateExists === true,
+      ...(view.template && view.templateExists !== true ? { templateMissing: true } : {}),
     })
   }
   return items
@@ -250,6 +253,8 @@ export interface SkillChipView extends SkillChipRef {
   sourceLabel?: string | undefined
   hasScripts?: boolean | undefined
   template?: boolean | undefined
+  /** names a template whose file is not there */
+  templateMissing?: boolean | undefined
   /** the skill is gone or off: shown as unavailable and never sent */
   missing?: boolean | undefined
 }
@@ -288,6 +293,7 @@ export function skillChipOf(item: SkillPickerItem): SkillChipView {
     sourceLabel: item.sourceLabel,
     hasScripts: item.hasScripts,
     template: item.template,
+    ...(item.templateMissing ? { templateMissing: true } : {}),
   }
 }
 

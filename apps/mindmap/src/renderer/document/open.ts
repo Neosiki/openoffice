@@ -11,7 +11,7 @@ import {
   openXmind,
   type XmindOpenStatus,
 } from '@genoffice/xmind-engine'
-import type { MindmapSeed } from '../../shared/ipc'
+import type { MindmapCopySeed, MindmapOutlineSeed } from '../../shared/ipc'
 import { DocumentSession } from './session'
 
 export type OpenFailure = Exclude<XmindOpenStatus, 'ok'>
@@ -53,8 +53,28 @@ export async function newMap(titles: {
  * `untitled` names a sheet without a `# ` heading (and its central topic when
  * the text has no single outermost item), in the user's language.
  */
-export async function seededMap(seed: MindmapSeed, untitled: string): Promise<DocumentSession> {
+export async function seededMap(
+  seed: MindmapOutlineSeed,
+  untitled: string,
+): Promise<DocumentSession> {
   const document = await createXmindDocumentFromOutline(seed.outline, { untitled })
   document.markChanged()
   return new DocumentSession(document)
+}
+
+/**
+ * A byte copy of a map file opened as a NEW, UNSAVED map (a skill's template,
+ * spec 5.7): read like any file, then marked changed, so it has no path and
+ * counts as unsaved until written; the first save asks where.
+ */
+export async function openCopiedMap(seed: MindmapCopySeed): Promise<OpenedMap> {
+  const opened = await openXmind(seed.bytes)
+  if (opened.status !== 'ok') return { status: opened.status }
+  opened.document.markChanged()
+  const session = new DocumentSession(opened.document)
+  return {
+    status: 'ok',
+    session,
+    notices: { preserved: session.preservedTotal(), unknownTheme: session.hasUnknownTheme() },
+  }
 }

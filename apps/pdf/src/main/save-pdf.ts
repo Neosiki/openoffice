@@ -1207,6 +1207,24 @@ export async function savePdfToPath(
   return skips
 }
 
+/**
+ * The document as a save would write it, as bytes, without writing anything
+ * (a skill's template, spec 5.6). Pending permanent redactions are never part
+ * of it: they are applied only through their own Save As copy.
+ */
+export async function pdfBytesWithEdits(
+  sourcePath: string,
+  request: SavePdfRequest,
+): Promise<Uint8Array> {
+  const { redactions: _redactions, ...ordinary } = request
+  const { bytes, ...skips } = await applySaveRequest(
+    new Uint8Array(await readFile(sourcePath)),
+    ordinary,
+  )
+  await verifyContentEdits(bytes, ordinary, skips)
+  return bytes
+}
+
 export interface AppliedSaveRequest {
   bytes: Uint8Array
   /** Text edits that could not be matched to the document; the rest of the request is in `bytes` */

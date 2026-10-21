@@ -73,6 +73,9 @@ import {
   skillChipRefsOf,
   panelUserSkills,
   useSkillProposals,
+  useSkillTemplates,
+  templateDocumentOf,
+  type TemplateDocument,
   type AiTokenUsageView,
   type AiScopeQuoteData,
   type DriveAttachPicked,
@@ -863,7 +866,7 @@ export function App({
   /// menuActionRef, so the interval closure never goes stale).
   const handleSaveRef = useRef<
     (
-      mode: 'save' | 'save-as' | 'recovery',
+      mode: 'save' | 'save-as' | 'recovery' | 'template',
       quiet?: boolean,
       explicitTarget?: { path: string; overwrite: boolean },
     ) => Promise<SaveOutcome>
@@ -1146,15 +1149,57 @@ export function App({
   const [chat, setChat] = useState<readonly AiChatMessage[]>([])
   /** History loaded from project-store (read-only transcript, not fed to the model) */
   const [historicChat, setHistoricChat] = useState<readonly AiChatMessage[]>([])
+  /**
+   * The workbook as a skill's template (spec 5.7): an .xlsx, .xlsm, .xls,
+   * .csv or .tsv file, or a new workbook, as a save would write it now (an
+   * .xlsx, or .xlsm for one). Sheets recognizes no redaction marks.
+   */
+  const templateFilePath = workbookFile ? (workbookFile.csvPath ?? workbookFile.path) : null
+  const templateDocument = useMemo<TemplateDocument | null>(
+    () =>
+      !templateFilePath
+        ? null
+        : templateDocumentOf({
+            filePath: templateFilePath,
+            extensions: ['xlsx', 'xlsm', 'xls', 'csv', 'tsv'],
+            defaultExtension: 'xlsx',
+            savedExtension: (ext) => (ext === 'xlsm' ? 'xlsm' : 'xlsx'),
+            untitledTitle: () => 'workbook',
+            bytes: async () => (await handleSaveRef.current('template')).bytes ?? null,
+          }),
+    [templateFilePath],
+  )
   /** the skill cards `propose_skill` shows; nothing is written before their Save */
   const skillCards = useSkillProposals({
     lang: getLang(),
-    // the template flow decides when this workbook can go along as a template
-    canBeTemplate: false,
+    // the workbook goes along as a template while it can be one (spec 5.7)
+    templateDocument,
     persistSaved: (record) => void persistChatMessage('assistant', '', [record]),
   })
   const skillCardsRef = useRef(skillCards)
   skillCardsRef.current = skillCards
+  /** a request handed over by the template flow opens the AI panel */
+  const [openAiRequest, setOpenAiRequest] = useState(0)
+  /**
+   * The template flow (spec 5.6, 5.7): a chip whose skill has a template runs
+   * in a new tab, a template the model used offers its new document, and the
+   * request a new tab was opened for runs here once (after the workbook is
+   * open) through the send gate.
+   */
+  const skillTemplates = useSkillTemplates({
+    lang: getLang(),
+    editor: 'sheets',
+    cards: skillCards,
+    busy: aiBusy,
+    ready: !!workbookFile,
+    send: (text, use) => {
+      handleSend(text, undefined, undefined, use)
+    },
+    onTaken: () => setOpenAiRequest((n) => n + 1),
+    setComposer: setPrompt,
+  })
+  const skillTemplatesRef = useRef(skillTemplates)
+  skillTemplatesRef.current = skillTemplates
   /** the skills of the last send: a retry of a message with chips sends the same skill text */
   const lastSkillUseRef = useRef<SkillUse>(NO_SKILL_USE)
   // ── Chat attachments (same structure as docs/slides: text types go through the
@@ -1478,6 +1523,8 @@ export function App({
         ...panelUserSkills({
           lang: getLang,
           messages: () => agentLoopRef.current?.messages ?? [],
+          // a template skill the model used offers its new document (spec 5.7)
+          onUsed: (skill) => skillTemplatesRef.current.onUsed(skill),
           onProposal: (proposal) => {
             skillCardsRef.current.add(proposal)
             patchLastAssistant((entry) => ({
@@ -1765,6 +1812,7 @@ export function App({
     setChat([])
     setHistoricChat([])
     skillCards.reset()
+    skillTemplates.reset()
     // Unsent composer attachments would otherwise ride into the next chat's
     // file context (availableAttachments merges sent + live) — same as docs
     // (#224) and slides. The typed draft itself is kept.
@@ -3524,6 +3572,7 @@ export function App({
     }
     onAdmitted?.()
     lastSkillUseRef.current = skillUse
+    skillTemplatesRef.current.noteRequest(instruction)
     runToolsRef.current = []
     runUsageRef.current = undefined
     // The message consumes the composer attachments: they ride along (echoed on the
@@ -4747,7 +4796,7 @@ export function App({
   }
 
   async function handleSave(
-    mode: 'save' | 'save-as' | 'recovery',
+    mode: 'save' | 'save-as' | 'recovery' | 'template',
     quiet = false,
     explicitTarget?: { path: string; overwrite: boolean },
   ): Promise<SaveOutcome> {
@@ -5240,6 +5289,9 @@ export function App({
         chat={chat}
         historicChat={historicChat}
         renderSkillCard={skillCards.render}
+        skillNotes={skillTemplates.notes}
+        onTemplateSkill={(request) => skillTemplatesRef.current.onTemplateSkill(request)}
+        openAiRequest={openAiRequest}
         attachments={attachments}
         attachNotice={attachNotice}
         onPickAttachments={() => void handlePickAttachments()}

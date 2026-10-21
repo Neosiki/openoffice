@@ -199,3 +199,28 @@
   color: var(--text-secondary);
   font-size: 12px;
 }
+
+/* the template flow's lines after a chat's messages (spec 5.6, 5.7) */
+.ai-skill-template-notes {
+  display: flex;
+  flex-direction: column;
+}
+
+.ai-skill-card-line.is-template {
+  border-color: var(--accent);
+  color: var(--text-primary);
+}
+
+.ai-skill-card-line.is-error {
+  color: var(--danger);
+}
+
+.ai-skill-card-line .ai-skill-card-link:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+/* a template button's reason or failure takes the actions' whole row */
+.ai-skill-card .ai-skill-card-actions .ai-skill-card-template-note {
+  flex-basis: 100%;
+}

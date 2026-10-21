@@ -95,6 +95,38 @@ export {
   type SkillProposalsOptions,
 } from './use-skill-proposals'
 export { SKILL_CARD_STRINGS, skillCardText, type SkillCardStringKey } from './strings-skill-card'
+export {
+  TEMPLATE_EDITORS,
+  chipRefForSkill,
+  handedRequestOf,
+  isTemplateMissing,
+  skillTemplateBridge,
+  templateChoice,
+  templateDocumentOf,
+  templateFileNameFor,
+  type HandedPreview,
+  type HandedRequest,
+  type SkillTemplateBridge,
+  type TemplateDocument,
+  type TemplateDocumentInput,
+  type TemplateEditor,
+} from './skill-template-model'
+export {
+  OriginalTemplateActions,
+  PreviewTemplateActions,
+  SkillCardPreviewLine,
+} from './SkillTemplateActions'
+export {
+  useSkillTemplates,
+  type SkillTemplateNote,
+  type SkillTemplates,
+  type SkillTemplatesOptions,
+} from './use-skill-templates'
+export {
+  SKILL_TEMPLATE_STRINGS,
+  skillTemplateText,
+  type SkillTemplateStringKey,
+} from './strings-skill-template'
 export { AiQueueStrip } from './AiQueueStrip'
 export { useChatRunQueue, type ChatRunQueue, type QueuedChatMessage } from './chat-run-queue'
 export { AI_QUEUE_LABELS, type AiQueueStripLabels } from './strings-ai-queue'

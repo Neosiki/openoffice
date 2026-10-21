@@ -51,6 +51,11 @@ export interface DocState {
   format: DocFormat
   /** present exactly when `format` is 'odt' */
   odt?: OdtBaseline
+  /**
+   * An untitled copy (a skill template's, spec 5.7): its first save asks
+   * where, and no automatic save writes it before that.
+   */
+  askPathOnFirstSave?: boolean
 }
 
 /** an ODT document: saves go through `saveOdt` against `doc.odt` */

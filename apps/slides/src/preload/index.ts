@@ -525,6 +525,8 @@ const api: SlidesApi = {
   takeGenerateHandoff: () => ipcRenderer.invoke('slides:handoff-take'),
   reportGenerateRunStarted: (attachedPaths: string[]) =>
     ipcRenderer.invoke('slides:handoff-run-started', attachedPaths),
+  // the open deck as edited, for a skill's template (spec 5.6)
+  templateBytes: () => ipcRenderer.invoke('slides:template-bytes'),
 }
 
 contextBridge.exposeInMainWorld('slidesApi', api)

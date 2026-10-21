@@ -3,8 +3,10 @@
 /// checks every request again; answers cross contextBridge as plain data. A
 /// window with no shell behind it gets empty lists and failures, not errors.
 import { ipcRenderer } from 'electron'
+import type { HandoffEditor, SkillHandoff } from './generate-handoff'
 import {
   USER_SKILLS_CHANNELS as C,
+  previewEndedOf,
   skillViewsOf,
   skillsResultOf,
   type UserSkillAiRead,
@@ -14,7 +16,11 @@ import {
   type UserSkillImportPreview,
   type UserSkillInvokeValue,
   type UserSkillNameProblem,
+  type UserSkillPreviewEnded,
+  type UserSkillPreviewInput,
+  type UserSkillPreviewOutcome,
   type UserSkillSaveInput,
+  type UserSkillTemplateOpenInput,
   type UserSkillUpdateCheck,
   type UserSkillView,
   type UserSkillsResult,
@@ -75,6 +81,28 @@ export interface UserSkillsBridge {
   /** the agent window's one-time notice is due (spec 6.5) */
   agentNotice(): Promise<boolean>
   markAgentNoticeSeen(): Promise<void>
+  /** a template skill's copy in a new tab, with the request handed over (spec 5.7) */
+  openTemplate(input: UserSkillTemplateOpenInput): Promise<UserSkillsResult<{ tabId: string }>>
+  /** the current document's copy in a template preview tab (spec 5.6) */
+  openPreview(
+    input: UserSkillPreviewInput,
+  ): Promise<UserSkillsResult<{ tabId: string; previewId: string }>>
+  /** the preview tab: the original document as it was handed over */
+  previewOriginal(
+    previewId: string,
+  ): Promise<UserSkillsResult<{ bytes: Uint8Array; fileName: string }>>
+  /** the preview tab: its card was saved (with the skill) or left unsaved */
+  finishPreview(
+    previewId: string,
+    outcome: UserSkillPreviewOutcome,
+    saved?: { skillId: string; title: string },
+  ): Promise<UserSkillsResult>
+  /** this tab's skill hand-off, once; null when none waits */
+  takeHandoff(target: HandoffEditor): Promise<SkillHandoff | null>
+  /** bring a tab this flow opened to the front */
+  focusTab(tabId: string): Promise<UserSkillsResult>
+  /** a template preview this tab opened ended */
+  onPreviewEnded(listener: (ended: UserSkillPreviewEnded) => void): () => void
   /** the list or a state changed somewhere */
   onChanged(listener: () => void): () => void
 }
@@ -152,6 +180,32 @@ export function userSkillsBridge(): UserSkillsBridge {
     agentNotice: async () => (await ipcRenderer.invoke(C.agentNotice).catch(() => false)) === true,
     markAgentNoticeSeen: async () => {
       await ipcRenderer.invoke(C.agentNoticeSeen).catch(() => undefined)
+    },
+    openTemplate: (input) => result(C.openTemplate, input),
+    openPreview: (input) => result(C.openPreview, input),
+    previewOriginal: (previewId) => result(C.previewOriginal, String(previewId)),
+    finishPreview: (previewId, outcome, saved) =>
+      result(C.finishPreview, {
+        previewId: String(previewId),
+        outcome,
+        ...(saved ? { skillId: saved.skillId, title: saved.title } : {}),
+      }),
+    takeHandoff: async (target) => {
+      const answer: unknown = await ipcRenderer
+        .invoke(C.takeHandoff, String(target))
+        .catch(() => null)
+      return answer && typeof answer === 'object' ? (answer as SkillHandoff) : null
+    },
+    focusTab: (tabId) => result(C.focusTab, String(tabId)),
+    onPreviewEnded(listener) {
+      const handler = (_event: unknown, raw: unknown) => {
+        const ended = previewEndedOf(raw)
+        if (ended) listener(ended)
+      }
+      ipcRenderer.on(C.previewEnded, handler)
+      return () => {
+        ipcRenderer.removeListener(C.previewEnded, handler)
+      }
     },
     onChanged(listener) {
       const handler = () => listener()

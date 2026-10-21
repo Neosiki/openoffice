@@ -16,6 +16,7 @@ import {
   rememberAiPanelOpen,
   type AiTokenUsageView,
   type DriveAttachPicked,
+  type OnTemplateSkill,
   type SkillUse,
 } from '@genoffice/ui'
 
@@ -253,6 +254,12 @@ interface ExcelShellProps {
   readonly historicChat?: readonly AiChatMessage[]
   /** the skill card for a key a chat message carries */
   readonly renderSkillCard?: ((key: string) => ReactNode) | undefined
+  /** the template flow's lines and its preview card, after the chat's messages */
+  readonly skillNotes?: ReactNode
+  /** a chip whose skill has a template runs in a new tab (spec 5.7) */
+  readonly onTemplateSkill?: OnTemplateSkill | undefined
+  /** bumped when a request was handed over to this tab: the AI panel opens */
+  readonly openAiRequest?: number | undefined
   /// Chat attachments (chips + 📎 button + drag-and-drop), same structure as the
   /// docs/slides AI panels.
   readonly attachments: readonly AttachmentMeta[]
@@ -471,6 +478,9 @@ export function ExcelShell({
   chat,
   historicChat,
   renderSkillCard,
+  skillNotes,
+  onTemplateSkill,
+  openAiRequest,
   attachments,
   attachNotice,
   onPickAttachments,
@@ -574,6 +584,9 @@ export function ExcelShell({
   // Split panes (decision 0036): as the secondary pane the dock is forced to
   // the rail, and the rail's click asks the shell to focus this pane first.
   const aiDock = useAiDock(isCopilotOpen, setIsCopilotOpen)
+  useEffect(() => {
+    if (openAiRequest) setIsCopilotOpen(true)
+  }, [openAiRequest])
   const [showFormatCells, setShowFormatCells] = useState(false)
   const [axisSizeTarget, setAxisSizeTarget] = useState<'row' | 'col' | null>(null)
   const [showLinkDialog, setShowLinkDialog] = useState(false)
@@ -970,6 +983,8 @@ export function ExcelShell({
           chat={chat}
           {...(historicChat !== undefined ? { historicChat } : {})}
           renderSkillCard={renderSkillCard}
+          skillNotes={skillNotes}
+          onTemplateSkill={onTemplateSkill}
           attachments={attachments}
           attachNotice={attachNotice}
           onPickAttachments={onPickAttachments}

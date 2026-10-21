@@ -71,10 +71,31 @@ describe.each(Object.entries(PANELS))('%s AI panel', (_name, panel) => {
     expect(view).toMatch(/skillProposals\?\.map\(\(key\) => /)
   })
 
-  it('leaves the template box off until the template flow turns it on', () => {
+  it('offers the template box through the panel’s document; the home panel never', () => {
     const options = loop.match(/useSkillProposals\(\{[\s\S]*?\}\)/)?.[0] ?? ''
-    if (panel.loop.includes('KbAskPanel')) expect(options).not.toContain('canBeTemplate')
-    else expect(options).toContain('canBeTemplate: false')
+    expect(options).not.toContain('canBeTemplate')
+    if (panel.loop.includes('KbAskPanel')) expect(options).not.toContain('templateDocument')
+    else expect(options).toContain('templateDocument')
+  })
+
+  it('runs the template flow: chips with a template, the model’s template, the hand-off', () => {
+    expect(loop).toMatch(/useSkillTemplates\(\{/)
+    expect(loop).toContain('onTemplateSkill')
+    expect(loop).toMatch(/onUsed: \(skill\) => skillTemplatesRef\.current\.onUsed\(skill\)/)
+    expect(loop).toMatch(/skillTemplatesRef\.current\.noteRequest\(/)
+    const templates = loop.match(/useSkillTemplates\(\{[\s\S]*?\}\)/)?.[0] ?? ''
+    if (panel.loop.includes('KbAskPanel')) {
+      // no document: nothing is ever handed to the home panel
+      expect(templates).toContain('editor: null')
+    } else {
+      expect(templates).toMatch(/editor: '(docs|sheets|slides|pdf|markdown|html|mindmap|hwp)'/)
+      expect(templates).toMatch(/send: /)
+      expect(templates).toMatch(/busy/)
+    }
+    // the template lines sit after the chat's messages (sheets hands them to its chat view)
+    expect(view).toContain(
+      panel.view.includes('AiChatPanel') ? '{skillNotes}' : '{skillTemplates.notes}',
+    )
   })
 
   it.runIf(panel.stores)('stores a saved card and reads stored cards back closed', () => {

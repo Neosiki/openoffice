@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import type { Lang } from '@genoffice/i18n'
 import {
   createBridgedUserSkillsSkill,
@@ -25,6 +25,18 @@ import {
 } from './SkillProposalCard'
 import { builtinSkillTitle, isBuiltinSkillName } from './strings-builtin-skills'
 import { skillCardText } from './strings-skill-card'
+import {
+  OriginalTemplateActions,
+  PreviewTemplateActions,
+  SkillCardPreviewLine,
+} from './SkillTemplateActions'
+import {
+  previewEndedOf,
+  skillTemplateBridge,
+  type HandedPreview,
+  type SkillTemplateBridge,
+  type TemplateDocument,
+} from './skill-template-model'
 
 // ---- the capability an AI panel composes ------------------------------------
 
@@ -68,11 +80,18 @@ export function panelUserSkills(options: PanelUserSkillsOptions): AgentSkill[] {
 
 // ---- the cards in a panel's chat ----------------------------------------------
 
+/** 'preview': the card continues in a template preview tab (spec 5.6) */
+type CardEntryStatus = SkillCardStatus | 'preview'
+
 interface CardEntry {
   /** the live proposal; absent for a card read back from a stored conversation */
   proposal?: SkillProposal
   title: string
-  status: SkillCardStatus
+  status: CardEntryStatus
+  /** the preview tab this card continues in */
+  continuesIn?: { tabId: string; previewId: string } | undefined
+  /** this card is the one a template preview tab took over */
+  preview?: HandedPreview | undefined
 }
 
 export interface SkillProposalsOptions {
@@ -86,6 +105,14 @@ export interface SkillProposalsOptions {
   /** the template buttons (the template flow); see SkillProposalCard */
   renderTemplateActions?: ((context: SkillCardTemplateContext) => React.ReactNode) | undefined
   /**
+   * The panel's document while it can be a template (spec 5.7); null or
+   * absent: none. With it, the card shows the template box and the template
+   * flow's own buttons (unless `renderTemplateActions` is given).
+   */
+  templateDocument?: TemplateDocument | null | undefined
+  /** tests inject one; the default is the window's `aiOfficeUserSkills` */
+  templateBridge?: SkillTemplateBridge | null | undefined
+  /**
    * Store a saved card's record: an assistant message with no text and this
    * one tool record. Absent in panels that store no conversation.
    */
@@ -97,6 +124,11 @@ export interface SkillProposalsOptions {
 export interface SkillProposals {
   /** a proposal came in: its card is open from now on */
   add: (proposal: SkillProposal) => void
+  /**
+   * A template preview tab took a card over (spec 5.6): its card opens here
+   * with the preview's buttons. Returns the card's key.
+   */
+  addPreview: (preview: HandedPreview) => string
   /** the card for a key a chat entry carries (null for an unknown key) */
   render: (key: string) => React.ReactNode
   /**
@@ -156,30 +188,125 @@ export function useSkillProposals(options: SkillProposalsOptions): SkillProposal
     [],
   )
 
+  const addPreview = useCallback((preview: HandedPreview): string => {
+    const key = `preview-${preview.previewId}`
+    setCards((prev) => {
+      if (prev.has(key)) return prev
+      const next = new Map(prev)
+      next.set(key, {
+        proposal: preview.proposal,
+        title: preview.draft?.title ?? preview.proposal.title,
+        status: 'open',
+        preview,
+      })
+      return next
+    })
+    return key
+  }, [])
+
   const reset = useCallback(() => setCards(new Map()), [])
 
   const bridge = options.bridge !== undefined ? options.bridge : skillCardBridge()
+  const templateBridge =
+    options.templateBridge !== undefined ? options.templateBridge : skillTemplateBridge()
+
+  // a template preview this tab opened ended in its own tab: saved, or not (spec 9.11)
+  const cardsRef = useRef(cards)
+  cardsRef.current = cards
+  useEffect(() => {
+    if (!templateBridge) return
+    return templateBridge.onPreviewEnded((raw) => {
+      const ended = previewEndedOf(raw)
+      if (!ended) return
+      for (const [key, card] of cardsRef.current) {
+        if (card.status !== 'preview' || card.continuesIn?.previewId !== ended.previewId) continue
+        if (ended.outcome === 'saved') {
+          setCard(key, { status: 'saved', title: ended.title || card.title })
+          if (ended.skillId) {
+            optionsRef.current.persistSaved?.(
+              skillCardSavedRecord(card.proposal?.title ?? card.title, ended.skillId),
+            )
+          }
+        } else {
+          setCard(key, { status: 'unsaved' })
+        }
+      }
+    })
+  }, [templateBridge, setCard])
 
   const render = (key: string): React.ReactNode => {
     const card = cards.get(key)
     if (!card) return null
     const { lang } = options
+    const document = options.templateDocument ?? null
     if (card.status === 'open' && card.proposal) {
       const proposal = card.proposal
+      const preview = card.preview
+      const renderTemplateActions =
+        options.renderTemplateActions ??
+        (preview
+          ? (context: SkillCardTemplateContext) => (
+              <PreviewTemplateActions
+                context={context}
+                preview={preview}
+                document={document}
+                bridge={templateBridge}
+              />
+            )
+          : document
+            ? (context: SkillCardTemplateContext) => (
+                <OriginalTemplateActions
+                  context={context}
+                  document={document}
+                  bridge={templateBridge}
+                  onPreviewOpened={(continuesIn) =>
+                    setCard(key, { status: 'preview', title: context.draft.title, continuesIn })
+                  }
+                />
+              )
+            : undefined)
       return (
         <SkillProposalCard
           key={key}
           lang={lang}
           proposal={proposal}
           bridge={bridge}
-          canBeTemplate={options.canBeTemplate}
-          renderTemplateActions={options.renderTemplateActions}
+          canBeTemplate={preview ? true : (options.canBeTemplate ?? !!document)}
+          renderTemplateActions={renderTemplateActions}
+          initialDraft={preview ? { ...preview.draft, withTemplate: true } : undefined}
           onSaved={(id, draft) => {
             setCard(key, { status: 'saved', title: draft.title })
             // the stored record names the proposal as the model titled it
             optionsRef.current.persistSaved?.(skillCardSavedRecord(proposal.title, id))
+            if (preview) {
+              void templateBridge
+                ?.finishPreview(preview.previewId, 'saved', { skillId: id, title: draft.title })
+                .catch(() => undefined)
+            }
           }}
-          onCancel={() => setCard(key, { status: 'unsaved' })}
+          onCancel={() => {
+            setCard(key, { status: 'unsaved' })
+            if (preview) {
+              void templateBridge
+                ?.finishPreview(preview.previewId, 'unsaved')
+                .catch(() => undefined)
+            }
+          }}
+        />
+      )
+    }
+    if (card.status === 'preview') {
+      const tabId = card.continuesIn?.tabId
+      return (
+        <SkillCardPreviewLine
+          key={key}
+          lang={lang}
+          title={card.title}
+          onGoToTab={
+            templateBridge && tabId
+              ? () => void templateBridge.focusTab(tabId).catch(() => undefined)
+              : undefined
+          }
         />
       )
     }
@@ -194,5 +321,5 @@ export function useSkillProposals(options: SkillProposalsOptions): SkillProposal
     )
   }
 
-  return { add, render, restore, reset }
+  return { add, addPreview, render, restore, reset }
 }

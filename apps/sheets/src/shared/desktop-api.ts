@@ -2946,6 +2946,10 @@ export interface DesktopApi {
   /// Crash-recovery copy of the pending edits, written under userData.
   /// Best-effort: never prompts, never touches the opened file.
   writeWorkbookRecovery(request: WorkbookSaveRequest): Promise<{ ok: boolean }>
+  /// The workbook as edited, as .xlsx bytes, for a skill's template (spec
+  /// 5.6). Written to a temp file and read back; the opened file and the
+  /// session are untouched.
+  workbookTemplateBytes?(request: WorkbookSaveRequest): Promise<{ ok: boolean; bytes?: Uint8Array }>
   /// Rename a still-untitled workbook after AI-generated content (no-op unless
   /// the file still carries the shell's auto-created untitled name).
   autoRenameWorkbook(

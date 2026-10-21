@@ -76,6 +76,8 @@ export const IPC_CHANNELS = {
   saveEditsAbort: 'workbook:save-edits-abort',
   /** Crash-recovery copy of a dirty workbook, written under userData */
   writeWorkbookRecovery: 'workbook:write-recovery',
+  /** The workbook as edited, as bytes, for a skill's template (spec 5.6); nothing is written for the user */
+  workbookTemplateBytes: 'workbook:template-bytes',
   /** Main found a newer recovery copy while opening; renderer shows the styled prompt */
   recoveryPrompt: 'workbook:recovery-prompt',
   recoveryPromptReply: 'workbook:recovery-prompt-reply',

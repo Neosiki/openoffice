@@ -9,6 +9,11 @@ export interface OpenFileResult {
   encrypted?: boolean
   /** content came from a newer crash-recovery copy and still needs an explicit save */
   recovered?: boolean
+  /**
+   * An untitled copy (a skill template's, spec 5.7): `path` is only the copy's
+   * file name; the document has no file and its first save asks where.
+   */
+  untitledCopy?: boolean
 }
 
 /** Password-protected (ECMA-376 encrypted) docx: the renderer prompts for the
@@ -367,6 +372,8 @@ export interface DesktopApi {
   consumeNewBlankDoc(): Promise<boolean>
   /** AI-authored content queued for this tab by create_document; one-shot, null when none */
   consumeAiDocContent(): Promise<AiDocContent | null>
+  /** an untitled copy queued for this tab (a skill template's); one-shot, null when none */
+  consumeDocCopy?(): Promise<OpenFileResult | null>
   /** Headless export mode: the path and format this hidden renderer must export, null in normal use */
   consumeHeadlessExport(): Promise<HeadlessExportTarget | null>
   /** Headless export mode: report the export outcome so the main process can quit */

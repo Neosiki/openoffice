@@ -4,6 +4,7 @@
  * what they receive. The main process alone reads and writes skill folders;
  * the screens and the editors' AI only ask. No Electron here (plain data).
  */
+import { isHandoffEditor, type HandoffEditor, type HandoffSkillChip } from './generate-handoff'
 
 /** The renderer-exposed bridge name every window shares */
 export const USER_SKILLS_BRIDGE_KEY = 'aiOfficeUserSkills'
@@ -36,6 +37,20 @@ export const USER_SKILLS_CHANNELS = {
   openSettings: 'skills:open-settings',
   agentNotice: 'skills:agent-notice',
   agentNoticeSeen: 'skills:agent-notice-seen',
+  /** a template skill's copy in a new tab of its editor, with the request handed over (spec 5.7) */
+  openTemplate: 'skills:open-template',
+  /** the current document's copy in a template preview tab (spec 5.6) */
+  openPreview: 'skills:open-preview',
+  /** the preview tab: the original document's bytes, for "save the original as is" */
+  previewOriginal: 'skills:preview-original',
+  /** the preview tab: its card was saved or cancelled */
+  finishPreview: 'skills:finish-preview',
+  /** a new tab's AI panel takes its skill hand-off, once */
+  takeHandoff: 'skills:take-handoff',
+  /** bring a tab this flow opened to the front */
+  focusTab: 'skills:focus-tab',
+  /** main → the original tab: its template preview ended (saved, or not) */
+  previewEnded: 'skills:preview-ended',
   /** main → every window: the list or a state changed; read the list again */
   changed: 'skills:changed',
 } as const
@@ -129,6 +144,8 @@ export type UserSkillsFailReason =
   | 'hidden'
   /** the template is not a document the app's editors open, or cannot be read */
   | 'bad-template'
+  /** the skill names a template whose file is not there (spec 5.7) */
+  | 'no-template'
   /** the request came from a window that may not do this */
   | 'not-allowed'
   | 'invalid'
@@ -248,6 +265,48 @@ export interface UserSkillAiRead {
   /** the template path when the skill names one and the file is there */
   template: string | undefined
   hasScripts: boolean
+}
+
+/** Open a template skill's copy in a new tab and hand the request over (spec 5.7) */
+export interface UserSkillTemplateOpenInput {
+  /** the skill whose template is copied */
+  skillId: string
+  /** the person's request */
+  text: string
+  /** every chip the request carried; the receiving panel reads their skills */
+  chips: HandoffSkillChip[]
+}
+
+/** Open the current document's copy in a template preview tab (spec 5.6) */
+export interface UserSkillPreviewInput {
+  /** the current document as edited */
+  bytes: Uint8Array
+  /** the file name the template is saved under, with its extension */
+  fileName: string
+  /** the document's title as this tab shows it */
+  title: string
+  /** the new tab's title ("Template preview - <title>", in the UI language) */
+  tabTitle: string
+  /** the clearing request the preview tab's AI runs */
+  text: string
+  /** the document has redaction marks: "save the original as is" stays blocked */
+  originalRedacted: boolean
+  /** the pending skill proposal (plain data) */
+  proposal: unknown
+  /** the card's fields as the person left them (plain data) */
+  draft?: unknown
+}
+
+export type UserSkillPreviewOutcome = 'saved' | 'unsaved'
+
+/** What the original tab hears when its template preview ends */
+export interface UserSkillPreviewEnded {
+  previewId: string
+  outcome: UserSkillPreviewOutcome
+  /** the saved skill */
+  skillId?: string | undefined
+  /** the title it was saved with */
+  title?: string | undefined
 }
 
 // ---- checks ------------------------------------------------------------
@@ -372,4 +431,92 @@ export function skillViewsOf(value: unknown): UserSkillView[] {
 export function skillsResultOf<T extends object>(value: unknown): UserSkillsResult<T> {
   if (isRecord(value) && typeof value.ok === 'boolean') return value as UserSkillsResult<T>
   return { ok: false, reason: 'failed' }
+}
+
+function chipsOf(value: unknown): HandoffSkillChip[] | undefined {
+  if (!Array.isArray(value) || value.length > 50) return undefined
+  const chips: HandoffSkillChip[] = []
+  for (const item of value) {
+    if (!isRecord(item)) return undefined
+    const id = skillIdOf(item.id)
+    const source = text(item.source, 64)
+    const title = text(item.title, 10_000)
+    if (!id || source === undefined || title === undefined) return undefined
+    chips.push({ id, source, title })
+  }
+  return chips
+}
+
+/** Longest request a hand-off carries */
+export const USER_SKILL_HANDOFF_TEXT_MAX = 200_000
+
+export function templateOpenInputOf(value: unknown): UserSkillTemplateOpenInput | undefined {
+  if (!isRecord(value)) return undefined
+  const skillId = skillIdOf(value.skillId)
+  const request = text(value.text, USER_SKILL_HANDOFF_TEXT_MAX)
+  const chips = chipsOf(value.chips)
+  if (!skillId || request === undefined || !chips) return undefined
+  return { skillId, text: request, chips }
+}
+
+/** Largest plain-data proposal or draft a preview carries */
+const PREVIEW_DATA_MAX_CHARS = 4_000_000
+
+function plainDataOf(value: unknown): unknown {
+  if (value === undefined) return undefined
+  try {
+    const json = JSON.stringify(value)
+    if (json === undefined || json.length > PREVIEW_DATA_MAX_CHARS) return null
+    return JSON.parse(json) as unknown
+  } catch {
+    return null
+  }
+}
+
+export function previewInputOf(value: unknown): UserSkillPreviewInput | undefined {
+  if (!isRecord(value)) return undefined
+  const bytes = value.bytes
+  if (!(bytes instanceof Uint8Array) || bytes.byteLength > USER_SKILL_TEMPLATE_MAX_BYTES) {
+    return undefined
+  }
+  const fileName = text(value.fileName, 1024)
+  const title = text(value.title, 10_000)
+  const tabTitle = text(value.tabTitle, 10_000)
+  const request = text(value.text, USER_SKILL_HANDOFF_TEXT_MAX)
+  if (!fileName || title === undefined || !tabTitle || request === undefined) return undefined
+  if (typeof value.originalRedacted !== 'boolean') return undefined
+  const proposal = plainDataOf(value.proposal)
+  const draft = plainDataOf(value.draft)
+  if (!isRecord(proposal) || draft === null) return undefined
+  return {
+    bytes,
+    fileName,
+    title,
+    tabTitle,
+    text: request,
+    originalRedacted: value.originalRedacted,
+    proposal,
+    ...(draft !== undefined ? { draft } : {}),
+  }
+}
+
+/** The editor a take names, or undefined */
+export function handoffTargetOf(value: unknown): HandoffEditor | undefined {
+  return isHandoffEditor(value) ? value : undefined
+}
+
+/** A preview's end as the screens send it and hear it */
+export function previewEndedOf(value: unknown): UserSkillPreviewEnded | undefined {
+  if (!isRecord(value)) return undefined
+  const previewId = text(value.previewId, 128)
+  const outcome = value.outcome === 'saved' || value.outcome === 'unsaved' ? value.outcome : null
+  if (!previewId || !outcome) return undefined
+  const skillId = value.skillId === undefined ? undefined : skillIdOf(value.skillId)
+  const title = value.title === undefined ? undefined : text(value.title, 10_000)
+  return {
+    previewId,
+    outcome,
+    ...(skillId ? { skillId } : {}),
+    ...(title !== undefined ? { title } : {}),
+  }
 }
