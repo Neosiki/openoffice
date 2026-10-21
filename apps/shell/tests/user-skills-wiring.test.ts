@@ -99,6 +99,49 @@ describe('the skills bridge in every window', () => {
     expect(electronMocks.on.mock.calls.at(-1)![0]).toBe(USER_SKILLS_CHANNELS.changed)
     off()
   })
+
+  it('gives the agent window the install preview and the template preview calls under the shared names', async () => {
+    await import('../src/preload/agent')
+    const api = electronMocks.exposed.get(USER_SKILLS_BRIDGE_KEY) as Record<
+      string,
+      (...args: unknown[]) => Promise<unknown>
+    >
+    await api.importGitHub!('a/b@c')
+    await api.cancelImport!('tok')
+    await api.install!('tok', ['k'])
+    await api.focusTab!('tab-1')
+    expect(electronMocks.invoke.mock.calls).toEqual([
+      [USER_SKILLS_CHANNELS.importGitHub, 'a/b@c'],
+      [USER_SKILLS_CHANNELS.cancelImport, 'tok'],
+      [USER_SKILLS_CHANNELS.install, { token: 'tok', selected: ['k'], onCollision: {} }],
+      [USER_SKILLS_CHANNELS.focusTab, 'tab-1'],
+    ])
+    const listener = vi.fn()
+    const off = (api.onPreviewEnded as unknown as (l: (e: unknown) => void) => () => void)(listener)
+    const [channel, handler] = electronMocks.on.mock.calls.at(-1)! as [
+      string,
+      (event: unknown, raw: unknown) => void,
+    ]
+    expect(channel).toBe(USER_SKILLS_CHANNELS.previewEnded)
+    handler({}, { previewId: 'p', outcome: 'saved', skillId: 'app:x', title: 'X' })
+    handler({}, { previewId: 'p', outcome: 'bogus' })
+    expect(listener.mock.calls).toEqual([
+      [{ previewId: 'p', outcome: 'saved', skillId: 'app:x', title: 'X' }],
+    ])
+    off()
+  })
+})
+
+describe('the agent window and the management gate', () => {
+  const index = src('../src/main/index.ts')
+
+  it('lets the agent window through the gate only by the install-preview channel set', () => {
+    expect(index).toMatch(/canManage: userSkillsManageGate\(\{/)
+    expect(index).toMatch(/isAgentWindow: \(sender\) => isAgentWindowContents\(sender\)/)
+    expect(src('../src/main/user-skills/user-skills-ipc.ts')).toMatch(
+      /deps\.canManage\(event\.sender, channel\)/,
+    )
+  })
 })
 
 describe('the main process wiring', () => {

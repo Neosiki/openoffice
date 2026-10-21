@@ -394,8 +394,13 @@ import {
   stopQuickLookRuntime,
 } from './quick-look/quick-look-window'
 import { normalizeQuickLookSettings } from '../shared/quick-look-home'
-import { configureAgentWindow, stopAgentSessions } from './agent/agent-window'
+import {
+  configureAgentWindow,
+  isAgentWindowContents,
+  stopAgentSessions,
+} from './agent/agent-window'
 import { startAgentMcpServer } from './agent/agent-mcp'
+import { userSkillsManageGate } from './agent/agent-skills'
 import {
   buildAgentSkillBundle,
   startClaudeAgentSession,
@@ -7139,8 +7144,12 @@ const userSkills = createUserSkillsService({
 })
 registerUserSkillsIpc({
   service: userSkills,
-  canManage: (sender) =>
-    !!shellWindow && !shellWindow.isDestroyed() && sender === shellWindow.webContents,
+  // the settings screen; the agent window only for the install preview a session proposed
+  canManage: userSkillsManageGate({
+    isMainWindow: (sender) =>
+      !!shellWindow && !shellWindow.isDestroyed() && sender === shellWindow.webContents,
+    isAgentWindow: (sender) => isAgentWindowContents(sender),
+  }),
   openSettings: () => {
     const win = shellWindow
     if (!win || win.isDestroyed()) return
@@ -7618,11 +7627,14 @@ app.whenReady().then(async () => {
       claude: (options, onEvent) => startClaudeAgentSession(options, onEvent),
       codex: (options, onEvent) => startCodexAgentSession(options, onEvent),
     },
-    startAppMcp: (projectRoot) => {
+    // the session's skill tools only show a card or an install proposal in the agent window
+    startAppMcp: (projectRoot, { skillTools }) => {
       const mcp = currentMcpRuntimeDeps()
       if (!mcp) throw new Error('the MCP runtime is not configured')
-      return startAgentMcpServer(mcp, projectRoot)
+      return startAgentMcpServer({ ...mcp, skillTools }, projectRoot)
     },
+    listSkills: () => userSkills.list(),
+    openTemplatePreview: (owner, input) => templateTabs.openPreview(owner, input),
     // the enabled skills (settings → skills) and the project's, as they are at the start
     buildSkills: async (projectRoot) =>
       buildAgentSkillBundle(

@@ -11,6 +11,7 @@ import { describe, expect, it, vi } from 'vitest'
 import {
   codexAgentAction,
   codexAgentApprovalPolicy,
+  codexAppMcpExtraTools,
   codexDeclineDecision,
   codexElicitationAnswer,
   codexAgentFilesystem,
@@ -499,6 +500,62 @@ describe('starting a session', () => {
       }),
     )
     await expect(run).rejects.toMatchObject({ kind: 'unsafe-tools' })
+  })
+})
+
+describe('the tools of the app server at the start', () => {
+  it('starts when the app server lists only the session tools', async () => {
+    const { run } = await start(
+      baseHandlers({
+        'mcpServerStatus/list': () => ({
+          data: [
+            { name: 'github', runtimeStatus: 'disabled', tools: {} },
+            {
+              name: 'ieumoffice-editor',
+              runtimeStatus: 'ready',
+              tools: { read_document: {}, propose_skill: {}, propose_skill_install: {} },
+            },
+          ],
+        }),
+      }),
+    )
+    await expect(run).resolves.toBeDefined()
+  })
+
+  it('refuses a thread whose app server lists a tool outside the 13', async () => {
+    const { run, killTree } = await start(
+      baseHandlers({
+        'mcpServerStatus/list': () => ({
+          data: [
+            {
+              name: 'ieumoffice-editor',
+              runtimeStatus: 'ready',
+              tools: { read_document: {}, create_docx: {} },
+            },
+          ],
+        }),
+      }),
+    )
+    await expect(run).rejects.toMatchObject({ kind: 'unsafe-tools' })
+    expect(killTree).toHaveBeenCalled()
+  })
+
+  it('reads qualified and bare tool names alike', () => {
+    expect(
+      codexAppMcpExtraTools({
+        data: [
+          {
+            name: 'ieumoffice-editor',
+            tools: {
+              'mcp__ieumoffice-editor__propose_skill': {},
+              read_pdf: {},
+              'mcp__ieumoffice-editor__use_skill': {},
+            },
+          },
+          { name: 'other', tools: { anything: {} } },
+        ],
+      }),
+    ).toEqual(['mcp__ieumoffice-editor__use_skill'])
   })
 })
 

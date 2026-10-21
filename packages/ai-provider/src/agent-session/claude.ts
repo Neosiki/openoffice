@@ -62,6 +62,36 @@ export const CLAUDE_AGENT_TOOLS = [
 /** Name of the app's MCP server for open documents, as the programs see it */
 export const APP_MCP_SERVER_NAME = 'ieumoffice-editor'
 
+/**
+ * The tools of the app's MCP server an agent session gets (spec 6.6): the
+ * open-document tools, the two file readers and the two skill proposals. The
+ * start checks of both programs end a session that reports any other tool of
+ * that server.
+ */
+export const AGENT_APP_MCP_TOOLS = [
+  'open_documents',
+  'read_document',
+  'insert_content',
+  'replace_blocks',
+  'apply_ops',
+  'read_sheet',
+  'apply_sheet_ops',
+  'read_deck',
+  'apply_slide_ops',
+  'read_hwp',
+  'read_pdf',
+  'propose_skill',
+  'propose_skill_install',
+] as const
+
+const APP_MCP_TOOL_SET: ReadonlySet<string> = new Set(AGENT_APP_MCP_TOOLS)
+
+/** A tool name of the app's server, bare or as a program prefixes it, is one the session gets */
+export function isAgentAppMcpTool(name: string): boolean {
+  const prefix = `mcp__${APP_MCP_SERVER_NAME}__`
+  return APP_MCP_TOOL_SET.has(name.startsWith(prefix) ? name.slice(prefix.length) : name)
+}
+
 const SETTINGS_FILE = 'claude-settings.json'
 const MCP_CONFIG_FILE = 'claude-mcp.json'
 const INITIALIZE_REQUEST_ID = 'initialize'
@@ -247,10 +277,12 @@ export function claudeAgentInitProblem(init: Record<string, unknown>): string | 
   const tools = init.tools
   if (!Array.isArray(tools)) return 'Claude Code did not report its tool list'
   const allowed = new Set<string>(CLAUDE_AGENT_TOOLS)
+  const appPrefix = `mcp__${APP_MCP_SERVER_NAME}__`
+  // the app's own tools by name: a tool of its server the session was not meant to get is extra
   const extra = tools.filter(
     (tool) =>
       typeof tool !== 'string' ||
-      (!allowed.has(tool) && !tool.startsWith(`mcp__${APP_MCP_SERVER_NAME}__`)),
+      (!allowed.has(tool) && !(tool.startsWith(appPrefix) && isAgentAppMcpTool(tool))),
   )
   if (extra.length > 0)
     return `Claude Code started with tools the app did not turn on: ${extra.length}`

@@ -38,6 +38,7 @@ vi.mock('electron', () => ({
 
 const settings = { id: 1, once: vi.fn(), isDestroyed: () => false }
 const editor = { id: 2, once: vi.fn(), isDestroyed: () => false }
+const agent = { id: 3, once: vi.fn(), isDestroyed: () => false }
 
 const service = {
   list: vi.fn(async () => []),
@@ -50,10 +51,14 @@ const service = {
 }
 
 const { registerUserSkillsIpc } = await import('../src/main/user-skills/user-skills-ipc')
+const { userSkillsManageGate } = await import('../src/main/agent/agent-skills')
 const openSettings = vi.fn()
 registerUserSkillsIpc({
   service: service as unknown as UserSkillsService,
-  canManage: (sender) => sender === (settings as unknown),
+  canManage: userSkillsManageGate({
+    isMainWindow: (sender) => sender === (settings as unknown),
+    isAgentWindow: (sender) => sender === (agent as unknown),
+  }),
   openSettings,
   agentNoticeDue: () => true,
   markAgentNoticeSeen: () => undefined,
@@ -79,6 +84,24 @@ describe('who may do what', () => {
     })
     expect(service.setState).not.toHaveBeenCalled()
     expect(service.remove).not.toHaveBeenCalled()
+  })
+
+  it('lets the agent window make only the install-preview calls', async () => {
+    expect(await call(C.setState, agent, 'app:a', { enabled: false })).toMatchObject({
+      reason: 'not-allowed',
+    })
+    expect(await call(C.remove, agent, 'app:a')).toMatchObject({ reason: 'not-allowed' })
+    expect(await call(C.copyToMine, agent, 'app:a')).toMatchObject({ reason: 'not-allowed' })
+    expect(await call(C.importFolder, agent)).toMatchObject({ reason: 'not-allowed' })
+    expect(await call(C.checkUpdate, agent, 'app:a')).toMatchObject({ reason: 'not-allowed' })
+    // past the gate: a token the agent window never previewed is not found
+    expect(await call(C.install, agent, { token: 't', selected: ['k'] })).toMatchObject({
+      reason: 'not-found',
+    })
+    expect(await call(C.cancelImport, agent, 't')).toEqual({ ok: true })
+    expect(service.setState).not.toHaveBeenCalled()
+    expect(service.remove).not.toHaveBeenCalled()
+    expect(service.copyToMine).not.toHaveBeenCalled()
   })
 
   it('lets the settings screen change a state and tells every window', async () => {
