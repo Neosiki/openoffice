@@ -14,6 +14,7 @@ import {
   parseThemeId,
   THEME_BAND_IDS,
   THEME_BANDS,
+  THEME_DEEP_LEVELS,
   THEME_IDS,
   THEME_LINES,
   THEME_SKELETON_IDS,
@@ -22,6 +23,7 @@ import {
   THEME_VARIANT_IDS,
   themeId,
 } from '../src/theme-data'
+import { buildThemeLook } from '../src/theme-look'
 
 /** The lightness steps the four accents of a band must keep between them (CIE L*). */
 const MIN_ACCENT_LIGHTNESS_GAP = 7
@@ -188,7 +190,7 @@ describe('skeletons', () => {
 
   it('starts from the sizes the prototype settled on', () => {
     const { central, main, sub } = THEME_SKELETONS.pill
-    expect([central.fontSize, main.fontSize, sub.fontSize]).toEqual([21, 15.5, 14])
+    expect([central.fontSize, main.fontSize, sub.fontSize]).toEqual([18, 14.5, 13.5])
     expect([central.fontWeight, main.fontWeight, sub.fontWeight]).toEqual([700, 650, 400])
     expect([central.padding, main.padding, sub.padding]).toEqual([
       [14, 26],
@@ -197,5 +199,18 @@ describe('skeletons', () => {
     ])
     expect(THEME_LINES).toEqual({ main: 2.25, sub: 1.5, subOpacity: 0.72, cornerRadius: 8 })
     expect(THEME_SPACING).toEqual({ mainGapX: 56, mainGapY: 22, subGapX: 26, subGapY: 6 })
+  })
+
+  it('steps the levels below the third down, to a floor that holds for everything deeper', () => {
+    const deep = buildThemeLook(parseThemeId('pill/paper/light')!).deepSizes
+    expect(THEME_DEEP_LEVELS).toEqual({ step: 0.5, floor: 12, last: 6 })
+    expect(deep).toEqual([13, 12.5, 12])
+    for (const [upper, lower] of pairs(deep)) expect(upper).toBeGreaterThan(lower)
+    // a theme whose third level is already at the floor does not go below it
+    const low = buildThemeLook(parseThemeId('pill/paper/light')!, undefined, {
+      ...THEME_SKELETONS.pill,
+      sub: { ...THEME_SKELETONS.pill.sub, fontSize: THEME_DEEP_LEVELS.floor },
+    }).deepSizes
+    expect(low.every((size) => size === THEME_DEEP_LEVELS.floor)).toBe(true)
   })
 })

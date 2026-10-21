@@ -26,6 +26,6 @@ XMind 파일의 테마는 단계마다(`map`, `centralTopic`, `mainTopic`, `subT
 
 ## 결과
 
-- 테마의 값을 바꾸는 사람은 배포 여부를 확인하고 표를 옮겨야 한다. 지금 적는 표를 고정한 테스트(`packages/xmind-engine/tests/theme-table.test.ts`)가 값이 바뀌면 실패해서 이 일을 알린다. 아직 배포한 판이 없어 목록은 비어 있다.
+- 테마의 값을 바꾸는 사람은 배포 여부를 확인하고 표를 옮겨야 한다. 지금 적는 표를 고정한 테스트(`packages/xmind-engine/tests/theme-table.test.ts`)가 값이 바뀌면 실패해서 이 일을 알린다. 아직 배포한 판이 없어 목록은 비어 있다. (2026-10-21 덧붙임: 0.12 판이 배포되어, 그 판이 적은 표를 0045에서 `SHIPPED_THEME_TABLES`로 옮겼다.)
 - XMind에서 다시 저장한 지도는 이 앱에서 기본 모양으로 보인다.
 - 지도 쪽 CSS와 그리는 코드에는 색 값이 없고, 색은 모두 엔진의 테마 자료에서 온다.

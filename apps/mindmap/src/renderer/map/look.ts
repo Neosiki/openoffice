@@ -70,6 +70,17 @@ function shapeVars(level: 'central' | 'main' | 'sub', shape: ThemeTopicShape) {
   }
 }
 
+/** The levels below the third: `--mm-level-<n>-size` and `-lh`, `n` from 4 (see `THEME_DEEP_LEVELS`). */
+function deepShapeVars(look: ThemeLook) {
+  const vars: Record<string, string> = {}
+  look.deepSizes.forEach((size, at) => {
+    const level = at + 4
+    vars[`--mm-level-${level}-size`] = px(size)
+    vars[`--mm-level-${level}-lh`] = px(lineHeightFor(size))
+  })
+  return vars
+}
+
 /** Of the band's two ends, the one that reads better on a fill. */
 export function readableOn(look: ThemeLook, fill: string): string {
   const light = look.bandColors[0]
@@ -111,6 +122,7 @@ export function containerVars(look: ThemeLook): Record<string, string> {
     ...shapeVars('central', shapes.central),
     ...shapeVars('main', shapes.main),
     ...shapeVars('sub', shapes.sub),
+    ...deepShapeVars(look),
     '--mm-line-main': String(lines.main.width),
     '--mm-line-sub': String(lines.sub.width),
     '--mm-line-sub-opacity': String(lines.sub.opacity),

@@ -83,6 +83,22 @@
   line-height: var(--mm-sub-lh);
 }
 
+/* below the third level the text steps down, so that depth reads at a glance */
+.mm-card .map-container me-nodes me-children me-parent > me-tpc[data-mm-level='4'] {
+  font-size: var(--mm-level-4-size);
+  line-height: var(--mm-level-4-lh);
+}
+
+.mm-card .map-container me-nodes me-children me-parent > me-tpc[data-mm-level='5'] {
+  font-size: var(--mm-level-5-size);
+  line-height: var(--mm-level-5-lh);
+}
+
+.mm-card .map-container me-nodes me-children me-parent > me-tpc[data-mm-level='6'] {
+  font-size: var(--mm-level-6-size);
+  line-height: var(--mm-level-6-lh);
+}
+
 /* a topic filled with a colour of its own is a box, also where the skeleton draws bare text */
 .mm-card .map-container me-nodes me-main > me-wrapper > me-parent > me-tpc[data-mm-own-fill] {
   border-radius: max(6px, var(--mm-main-radius));
