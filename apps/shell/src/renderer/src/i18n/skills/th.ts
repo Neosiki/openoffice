@@ -130,6 +130,7 @@ export const th = {
   failNotAllowed: 'ทำจากหน้าต่างนี้ไม่ได้',
   failNotInstallable: 'ติดตั้งสกิลนี้ไม่ได้',
   failNotGitHub: 'สกิลนี้ไม่ได้ติดตั้งจาก GitHub',
+  failTrash: 'ย้ายสกิลเดิมไปถังขยะไม่ได้ จึงเก็บไว้ตามเดิมและไม่ได้แทนที่อะไร',
   failHidden: 'แสดงสกิลในตัวที่ซ่อนไว้อีกครั้งก่อนเปิดใช้',
   failEmptyTitle: 'ป้อนชื่อเรื่อง',
   failEmptyDescription: 'ป้อนคำอธิบาย',

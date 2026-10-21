@@ -131,6 +131,8 @@ export const cs = {
   failNotAllowed: 'V tomto okně to nelze provést',
   failNotInstallable: 'Tuto dovednost nelze nainstalovat',
   failNotGitHub: 'Tato dovednost nebyla nainstalována ze služby GitHub',
+  failTrash:
+    'Starou dovednost nebylo možné přesunout do koše, proto zůstala zachována a nic nebylo nahrazeno',
   failHidden: 'Skrytou vestavěnou dovednost nejprve znovu zobrazte, teprve pak ji zapněte',
   failEmptyTitle: 'Zadejte nadpis',
   failEmptyDescription: 'Zadejte popis',

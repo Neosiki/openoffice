@@ -1,4 +1,5 @@
 import type { Lang } from '@genoffice/i18n'
+import { RESERVED_USER_SKILL_NAMES } from '@genoffice/agent-core'
 import { builtinSkillDesc, builtinSkillTitle, isBuiltinSkillName } from './strings-builtin-skills'
 import { skillPickerText } from './strings-skill-picker'
 
@@ -138,9 +139,6 @@ export interface SkillPickerItem {
 /** Where a list is shown: the regular AI panels and home ask, or the agent window */
 export type SkillPickerSurface = 'panel' | 'agent'
 
-/** Names no window shows, from any source (case-insensitive) */
-const HIDDEN_SKILL_NAMES = new Set(['genoffice', 'ieumoffice'])
-
 function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === 'object' && !Array.isArray(value)
 }
@@ -191,7 +189,7 @@ export function pickerSkillsOf(
     if (!id.includes(':') || !name || !source) continue
     if (view.enabled !== true || view.hidden === true || view.unreadable) continue
     if (view.agentOnly === true && surface !== 'agent') continue
-    if (HIDDEN_SKILL_NAMES.has(name.toLowerCase())) continue
+    if (RESERVED_USER_SKILL_NAMES.has(name.toLowerCase())) continue
     const plugin = typeof view.plugin === 'string' ? view.plugin : undefined
     const builtin = source === 'builtin' && isBuiltinSkillName(name)
     items.push({

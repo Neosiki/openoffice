@@ -5,6 +5,7 @@ import {
   readFileSync,
   readdirSync,
   rmSync,
+  symlinkSync,
   writeFileSync,
 } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -141,6 +142,33 @@ describe('the list', () => {
   })
 })
 
+describe('a linked folder in the app’s skills folder', () => {
+  it('is read but never written, deleted or edited through when it leads outside', async () => {
+    const outside = join(root, 'elsewhere', 'linked')
+    skill(outside, 'linked', 'Lives elsewhere')
+    writeFileSync(join(outside, 'notes.md'), 'kept')
+    try {
+      symlinkSync(outside, join(appDir(), 'linked'), 'junction')
+    } catch {
+      return // links not allowed here
+    }
+    const view = await byId('app:linked')
+    expect(view).toMatchObject({ owned: false })
+    expect(view!.can).toMatchObject({ edit: false, remove: false, export: false })
+
+    expect(await service.remove('app:linked')).toEqual({ ok: false, reason: 'not-owned' })
+    expect(trash).not.toHaveBeenCalled()
+    expect(
+      await service.save({ id: 'app:linked', title: 'T', description: 'D', body: 'changed' }),
+    ).toEqual({ ok: false, reason: 'not-owned' })
+    expect(await service.exportInfo('app:linked')).toEqual({ ok: false, reason: 'not-owned' })
+    expect(readFileSync(join(outside, 'SKILL.md'), 'utf8')).toContain('Lives elsewhere')
+    expect(readFileSync(join(outside, 'notes.md'), 'utf8')).toBe('kept')
+    // an own folder that is really there stays owned
+    expect(await byId('app:mine')).toMatchObject({ owned: true })
+  })
+})
+
 describe('removing and copying', () => {
   it('sends only own skills to the trash', async () => {
     expect(await service.remove('user:claude-one')).toEqual({ ok: false, reason: 'not-owned' })
@@ -174,6 +202,22 @@ describe('removing and copying', () => {
     expect(trash).toHaveBeenCalledTimes(1)
     const text = readFileSync(join(appDir(), 'mine', 'SKILL.md'), 'utf8')
     expect(parseSkillMd(text)!.description).toBe('Codex copy')
+  })
+
+  it('keeps the own skill when it cannot go to the trash, and says why', async () => {
+    skill(join(home, '.agents', 'skills', 'mine'), 'mine', 'Codex copy')
+    trash.mockImplementation(async () => {
+      throw new Error('no trash here')
+    })
+    expect(await service.copyToMine('codex:mine', true)).toEqual({
+      ok: false,
+      reason: 'trash-failed',
+    })
+    expect(
+      parseSkillMd(readFileSync(join(appDir(), 'mine', 'SKILL.md'), 'utf8'))!.description,
+    ).toBe('My own')
+    expect(readFileSync(join(appDir(), 'mine', 'notes.md'), 'utf8')).toBe('notes')
+    expect(readdirSync(appDir())).toEqual(['mine'])
   })
 
   it('does not copy an own skill or a builtin that is not there', async () => {
@@ -236,28 +280,18 @@ describe('saving skills', () => {
     })
   })
 
-  it('copies the template from a document file, but never from Codex’s or Claude’s folder', async () => {
+  it('takes a template only as bytes with a document file name', async () => {
     const doc = join(root, 'docs', 'form.docx')
     mkdirSync(join(root, 'docs'))
     writeFileSync(doc, 'docx bytes')
+    // a path is never read here: the card hands over bytes only
     expect(
       await service.saveFromCard({
         ...card,
-        template: { sourcePath: doc, fileName: 'form.docx' },
-      }),
-    ).toMatchObject({ ok: true })
-    expect(readFileSync(join(appDir(), 'home-letter', 'assets', 'form.docx'), 'utf8')).toBe(
-      'docx bytes',
-    )
-    mkdirSync(join(home, '.codex'), { recursive: true })
-    writeFileSync(join(home, '.codex', 'form.docx'), 'secret')
-    expect(
-      await service.saveFromCard({
-        ...card,
-        name: 'other',
-        template: { sourcePath: join(home, '.codex', 'form.docx'), fileName: 'form.docx' },
+        template: { sourcePath: doc, fileName: 'form.docx' } as never,
       }),
     ).toEqual({ ok: false, reason: 'bad-template' })
+    expect(existsSync(join(appDir(), 'home-letter'))).toBe(false)
     expect(
       await service.saveFromCard({
         ...card,

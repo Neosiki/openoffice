@@ -132,6 +132,7 @@ export const vi = {
   failNotAllowed: 'Không thể thực hiện từ cửa sổ này',
   failNotInstallable: 'Không thể cài đặt kỹ năng này',
   failNotGitHub: 'Kỹ năng này không được cài từ GitHub',
+  failTrash: 'Không thể chuyển kỹ năng cũ vào thùng rác nên đã giữ nguyên và không thay thế gì',
   failHidden: 'Hãy hiện lại kỹ năng có sẵn đã ẩn trước khi bật',
   failEmptyTitle: 'Nhập tiêu đề',
   failEmptyDescription: 'Nhập mô tả',

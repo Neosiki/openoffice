@@ -6,7 +6,7 @@ import { createRoot } from 'react-dom/client'
 import type { Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { LANGS, PRODUCT_NAME, UPSTREAM_PRODUCT_NAME } from '@genoffice/i18n'
-import { builtinSkillTitle } from '@genoffice/ui'
+import { aiSubscriptionText, builtinSkillTitle } from '@genoffice/ui'
 import type { UserSkillsBridge } from '@genoffice/electron-utils/user-skills-bridge'
 import type {
   UserSkillImportCandidateView,
@@ -337,6 +337,7 @@ describe('skills model', () => {
     expect(failureKey('not-found')).toBe('failNotFound')
     expect(failureKey('rate-limited', 'import')).toBe('failRateLimited')
     expect(failureKey('network', 'import')).toBe('failNetwork')
+    expect(failureKey('trash-failed')).toBe('failTrash')
     expect(failureKey('too-large', 'import')).toBe('failTooLarge')
     expect(failureKey('unsafe', 'import')).toBe('failUnsafe')
     expect(failureKey('cancelled', 'import')).toBeUndefined()
@@ -705,6 +706,14 @@ describe('Skills strings in 21 languages', () => {
     for (const lang of LANGS) {
       if (lang === 'en') continue
       expect(same(lang).length, `${lang}: ${same(lang).join(', ')}`).toBeLessThan(4)
+    }
+  })
+
+  it('tells at first connection that every request carries the skills the AI may use on its own', () => {
+    // the list of "AI decides" skills goes with each request (agent-core autoSkillsSection);
+    // the notice names that setting with the words of the skills screen
+    for (const lang of LANGS) {
+      expect(aiSubscriptionText(lang, 'noticeSend'), lang).toContain(skillsText(lang, 'invokeAuto'))
     }
   })
 })

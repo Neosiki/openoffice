@@ -215,6 +215,8 @@ export function failureKey(
       return 'failNotInstallable'
     case 'not-github':
       return 'failNotGitHub'
+    case 'trash-failed':
+      return 'failTrash'
     case 'hidden':
       return 'failHidden'
     case 'needs-choice':

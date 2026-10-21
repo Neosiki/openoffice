@@ -222,6 +222,13 @@ describe('the template preview (make a blank template)', () => {
     })
   })
 
+  it('never gives out an original its editor reported as withholding something', async () => {
+    const { templates } = setup()
+    await templates.openPreview(new FakeOwner(1), previewInput({ originalRedacted: true }))
+    // the preview tab's own button is off for it; main refuses even when asked
+    expect(templates.previewOriginal(101, 'id-1')).toEqual({ ok: false, reason: 'redacted' })
+  })
+
   it('tells the original tab once when the preview was saved', async () => {
     const { templates } = setup()
     const owner = new FakeOwner(1)

@@ -511,7 +511,8 @@ export async function commitSkillInstall(
   const stage = join(appSkillsDir, `${SKILL_STAGING_PREFIX}${suffix}`)
   await mkdir(stage)
   const moved: Array<{ from: string; to: string }> = []
-  const replaced: string[] = []
+  /** per plan, the folders it replaced as moved aside into the staging folder */
+  const replaced: Array<Array<{ from: string; aside: string }>> = plans.map(() => [])
   const installed: string[] = []
   try {
     const staged: string[] = []
@@ -536,7 +537,7 @@ export async function commitSkillInstall(
         await mkdir(dirname(aside), { recursive: true })
         await rename(dir, aside)
         moved.push({ from: dir, to: aside })
-        replaced.push(aside)
+        replaced[index]!.push({ from: dir, aside })
       }
       const target = join(appSkillsDir, plan.folderName)
       if (await exists(target)) {
@@ -560,11 +561,54 @@ export async function commitSkillInstall(
     if (error instanceof SkillImportError) throw error
     throw new SkillImportError('failed', 'Installing the skill failed')
   }
-  for (const dir of replaced) {
-    if (options.discardReplaced) await options.discardReplaced(dir).catch(() => undefined)
+  if (options.discardReplaced && !(await discardOrRestore(options.discardReplaced))) {
+    throw new SkillImportError(
+      'trash-failed',
+      'A replaced skill could not be moved to the trash; it was put back',
+    )
   }
   await removeQuietly(stage)
   return installed
+
+  /**
+   * Hand the replaced folders to `discard` (the OS trash). If one cannot go,
+   * nothing is deleted for good: every plan none of whose folders has gone yet
+   * is undone (its new folder out, its old ones back), and the staging folder
+   * is kept when anything could not be put back. False when one could not go.
+   */
+  async function discardOrRestore(discard: (dir: string) => Promise<void>): Promise<boolean> {
+    const gone = new Set<string>()
+    let failed = false
+    for (const folders of replaced) {
+      for (const { aside } of folders) {
+        try {
+          await discard(aside)
+          gone.add(aside)
+        } catch {
+          failed = true
+          break
+        }
+      }
+      if (failed) break
+    }
+    if (!failed) return true
+    let restored = true
+    for (const [index, folders] of [...replaced.entries()].reverse()) {
+      // a plan whose old folder is already in the trash stays installed: undoing it would lose both
+      if (folders.some(({ aside }) => gone.has(aside))) {
+        if (folders.some(({ aside }) => !gone.has(aside))) restored = false
+        continue
+      }
+      try {
+        await rename(installed[index]!, join(stage, `undone-${index}`))
+        for (const { from, aside } of folders) await rename(aside, from)
+      } catch {
+        restored = false
+      }
+    }
+    if (restored) await removeQuietly(stage)
+    return false
+  }
 }
 
 /** What to do with a chosen skill whose name the app's skills folder already has */

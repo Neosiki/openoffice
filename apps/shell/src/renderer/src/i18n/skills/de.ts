@@ -133,6 +133,8 @@ export const de = {
   failNotAllowed: 'Das ist in diesem Fenster nicht möglich',
   failNotInstallable: 'Dieser Skill kann nicht installiert werden',
   failNotGitHub: 'Dieser Skill wurde nicht von GitHub installiert',
+  failTrash:
+    'Der alte Skill konnte nicht in den Papierkorb verschoben werden. Er bleibt erhalten, nichts wurde ersetzt',
   failHidden:
     'Blenden Sie einen ausgeblendeten integrierten Skill erst wieder ein, bevor Sie ihn einschalten',
   failEmptyTitle: 'Geben Sie einen Titel ein',

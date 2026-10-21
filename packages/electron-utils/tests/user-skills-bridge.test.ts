@@ -90,8 +90,8 @@ describe('user skills channels', () => {
         body: 'b',
         template: { sourcePath: 'C:\\docs\\a.docx', fileName: 'a.docx' },
       }),
-    ).toMatchObject({ invoke: 'auto', template: { sourcePath: 'C:\\docs\\a.docx' } })
-    // a template with neither bytes nor a file is not a template
+    ).toBeUndefined()
+    // a template is its bytes: a path from a window is not taken
     expect(
       cardSaveInputOf({
         title: 'L',

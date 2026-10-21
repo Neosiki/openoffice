@@ -132,6 +132,8 @@ export const id = {
   failNotAllowed: 'Ini tidak dapat dilakukan dari jendela ini',
   failNotInstallable: 'Skill ini tidak dapat dipasang',
   failNotGitHub: 'Skill ini tidak dipasang dari GitHub',
+  failTrash:
+    'Skill lama tidak dapat dipindahkan ke tempat sampah, jadi skill itu disimpan dan tidak ada yang diganti',
   failHidden: 'Tampilkan lagi skill bawaan yang disembunyikan sebelum mengaktifkannya',
   failEmptyTitle: 'Masukkan judul',
   failEmptyDescription: 'Masukkan deskripsi',

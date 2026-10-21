@@ -9,13 +9,22 @@
  * Nothing in this module writes a file; the card's Save does, through the
  * skills service, after the person's click.
  */
-import { readFile, readdir, stat } from 'node:fs/promises'
+import { readFile, readdir, realpath, stat } from 'node:fs/promises'
 import { basename, dirname, extname, isAbsolute, join, resolve } from 'node:path'
 import JSZip from 'jszip'
 import type { SkillProposal } from '@genoffice/agent-core'
 import { REDACT_NS } from '@genoffice/agent-core/redact-range'
-import { IEUM_TEMPLATE_KEY, MAX_USER_SKILL_BYTES, parseSkillMd } from '@genoffice/ai-provider'
 import {
+  IEUM_TEMPLATE_KEY,
+  MAX_USER_SKILL_BYTES,
+  USER_SKILL_PRIORITY,
+  isInsideCodexHome,
+  isReservedUserSkillName,
+  normalizeSkillTemplatePath,
+  parseSkillMd,
+} from '@genoffice/ai-provider'
+import {
+  AGENT_SKILL_PLUGIN_NAME,
   comparablePath,
   isInsidePath,
   type AgentSkillEntry,
@@ -54,13 +63,9 @@ export function userSkillsManageGate<S>(windows: {
 
 // ---- the session's skills -----------------------------------------------
 
-/** A template path as a skill names it: relative, `/` between parts, never leaving the folder */
+/** A template path as a skill names it: under `assets/`, the same rule as the skill list */
 function templateRelOf(value: string | undefined): string[] | undefined {
-  if (!value) return undefined
-  const parts = value.replace(/\\/g, '/').split('/')
-  if (value.startsWith('/') || /^[A-Za-z]:/.test(value)) return undefined
-  if (parts.some((part) => part === '' || part === '.' || part === '..')) return undefined
-  return parts
+  return normalizeSkillTemplatePath(value)?.split('/')
 }
 
 /**
@@ -110,29 +115,63 @@ export interface AgentSkillListEntry {
   unreadable?: unknown
 }
 
-/** Names no window shows, from any source (spec 3.6) */
-const HIDDEN_SKILL_NAMES = new Set(['genoffice', 'ieumoffice'])
-
 export type AgentSkillProposalResult =
   { ok: true; proposal: SkillProposal } | { ok: false; message: string }
 
+/** A skill of the session's copy as a change's target needs it: its identifier and name there */
+export type AgentSessionSkillName = Pick<AgentSkillEntry, 'id' | 'name'>
+
+function priorityOf(entry: AgentSkillListEntry): number {
+  const at = USER_SKILL_PRIORITY.indexOf(entry.source as (typeof USER_SKILL_PRIORITY)[number])
+  return at === -1 ? USER_SKILL_PRIORITY.length : at
+}
+
+/**
+ * The skill a change names. The model knows a skill by its name in the
+ * session's copy (Claude may prefix the plugin's name, `ieum-skills:`), a
+ * renamed duplicate (`<name>--<source>`, `<name>--plugin-<plugin>`) included;
+ * Codex is also told the identifier. Either is taken. A plain name shared by
+ * several skills is the one that won the name in the copy; one not in the copy
+ * (turned off) goes by the same priority.
+ */
+function targetEntryOf(
+  targetId: string,
+  list: readonly AgentSkillListEntry[],
+  sessionSkills: readonly AgentSessionSkillName[],
+): AgentSkillListEntry | undefined {
+  const shown = list.filter((skill) => !isReservedUserSkillName(skill.name))
+  const byId = shown.find((skill) => skill.id === targetId)
+  if (byId) return byId
+  const prefix = `${AGENT_SKILL_PLUGIN_NAME}:`
+  const bare = targetId.toLowerCase().startsWith(prefix) ? targetId.slice(prefix.length) : targetId
+  const wanted = bare.toLowerCase()
+  const inSession = sessionSkills.find((skill) => skill.name.toLowerCase() === wanted)
+  if (inSession) return shown.find((skill) => skill.id === inSession.id)
+  if (bare !== targetId) return shown.find((skill) => skill.id === bare)
+  return shown
+    .filter((skill) => skill.name.toLowerCase() === wanted)
+    .sort((a, b) => priorityOf(a) - priorityOf(b))[0]
+}
+
 /**
  * The card a `propose_skill` call asks for, or why not (words for the model).
- * A change names a skill of the list; the project folder's skills are the
- * project's files and are not changed here.
+ * A change names a skill of the list, by its identifier or its name in the
+ * session; the project folder's skills are the project's files and are not
+ * changed here.
  */
 export function agentSkillProposalOf(
   input: AgentSkillProposalInput,
   list: readonly AgentSkillListEntry[],
   key: string,
+  sessionSkills: readonly AgentSessionSkillName[] = [],
 ): AgentSkillProposalResult {
   let target: SkillProposal['target']
   if (input.targetId) {
-    const entry = list.find((skill) => skill.id === input.targetId)
-    if (!entry || HIDDEN_SKILL_NAMES.has(entry.name.toLowerCase())) {
+    const entry = targetEntryOf(input.targetId, list, sessionSkills)
+    if (!entry) {
       return {
         ok: false,
-        message: `No skill with id ${input.targetId}. Leave targetId out to propose a new skill.`,
+        message: `No skill named ${input.targetId}. Give the skill's name as listed in this session, or its id, or leave targetId out to propose a new skill.`,
       }
     }
     if (entry.source === 'project') {
@@ -280,7 +319,14 @@ export async function agentTemplateCandidates(options: {
     if (match) selected = match.id
     else {
       const root = key(options.projectRoot)
-      const inside = isInsidePath(key(full), root, platform)
+      // inside the project folder as written and where it really is: a link leading out is refused
+      const realRoot = await realpath(options.projectRoot).catch(() => undefined)
+      const real = await realpath(full).catch(() => undefined)
+      const inside =
+        isInsidePath(key(full), root, platform) &&
+        !!realRoot &&
+        !!real &&
+        isInsidePath(key(real), key(realRoot), platform)
       const isFile = inside
         ? await stat(full).then(
             (s) => s.isFile(),
@@ -358,11 +404,42 @@ export async function templateRedactionOf(
   }
 }
 
-/** A candidate's file, read whole; undefined when it is gone or larger than a skill may be */
+/** Folders a candidate is never read from: the sessions' protected folders */
+export interface TemplateReadGuard {
+  homeDir: string
+  /** sign-in stores, the original app's folder, this app's folders (agentProtectedPaths) */
+  protectedPaths: readonly string[]
+}
+
+/** Whether a path, as written or where it really is, is in a protected folder or the Codex home */
+async function isProtectedPath(path: string, guard: TemplateReadGuard): Promise<boolean> {
+  const real = await realpath(path).catch(() => undefined)
+  if (!real) return true
+  for (const at of [path, real]) {
+    if (await isInsideCodexHome(at, guard.homeDir)) return true
+    for (const dir of guard.protectedPaths) {
+      if (!dir) continue
+      const root = await realpath(dir).catch(() => dir)
+      for (const base of new Set([dir, root])) {
+        if (isInsidePath(comparablePath(at, at), comparablePath(base, base))) return true
+      }
+    }
+  }
+  return false
+}
+
+/**
+ * A candidate's file, read whole in the main process; refused when it is gone,
+ * larger than a skill may be, or (as written or where it really is) inside a
+ * protected folder: `~/.claude`, `~/.codex`, `~/.genoffice`, `~/.ieumoffice`,
+ * the app's data.
+ */
 export async function readTemplateCandidate(
   path: string,
+  guard: TemplateReadGuard,
 ): Promise<{ ok: true; bytes: Uint8Array } | { ok: false; reason: 'unreadable' | 'too-large' }> {
   try {
+    if (await isProtectedPath(path, guard)) return { ok: false, reason: 'unreadable' }
     const info = await stat(path)
     if (!info.isFile()) return { ok: false, reason: 'unreadable' }
     if (info.size > MAX_USER_SKILL_BYTES) return { ok: false, reason: 'too-large' }

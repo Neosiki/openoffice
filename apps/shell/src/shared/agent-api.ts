@@ -1,5 +1,6 @@
 import type { Lang } from '@genoffice/i18n'
 import type { SkillProposal } from '@genoffice/agent-core'
+import type { AgentCodexWebSearch } from '@genoffice/ai-provider/agent-session'
 
 /**
  * The agent window (decision 0032): channels and the shapes the window and the
@@ -72,8 +73,8 @@ export const DEFAULT_AGENT_PREFS: AgentPrefs = {
 /** The connection of each program as the window needs it to offer a start */
 export type AgentConnection = 'ready' | 'metered-accepted' | 'unavailable' | 'checking' | 'blocked'
 
-/** Codex's own web search in an agent session: cached results, live, or off */
-export type AgentCodexWebSearch = 'cached' | 'live' | 'disabled'
+/** Codex's own web search in an agent session: cached results, live, or off (one type, the session's) */
+export type { AgentCodexWebSearch }
 
 export const AGENT_CODEX_WEB_SEARCH: readonly AgentCodexWebSearch[] = ['cached', 'live', 'disabled']
 

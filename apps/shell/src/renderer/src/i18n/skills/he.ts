@@ -131,6 +131,7 @@ export const he = {
   failNotAllowed: 'אי אפשר לעשות את זה מהחלון הזה',
   failNotInstallable: 'אי אפשר להתקין את המיומנות הזו',
   failNotGitHub: 'המיומנות הזו לא הותקנה מ-GitHub',
+  failTrash: 'לא ניתן היה להעביר את המיומנות הישנה לאשפה, ולכן היא נשמרה ושום דבר לא הוחלף',
   failHidden: 'כדי להפעיל מיומנות מובנית מוסתרת, צריך קודם להציג אותה מחדש',
   failEmptyTitle: 'נא להזין כותרת',
   failEmptyDescription: 'נא להזין תיאור',

@@ -132,6 +132,8 @@ export const it = {
   failNotAllowed: 'Non si può fare da questa finestra',
   failNotInstallable: 'Questa abilità non può essere installata',
   failNotGitHub: 'Questa abilità non è stata installata da GitHub',
+  failTrash:
+    'Non è stato possibile spostare l’abilità precedente nel cestino, quindi è stata mantenuta e non è stato sostituito nulla',
   failHidden: "Mostra di nuovo l'abilità integrata nascosta prima di attivarla",
   failEmptyTitle: 'Inserisci un titolo',
   failEmptyDescription: 'Inserisci una descrizione',

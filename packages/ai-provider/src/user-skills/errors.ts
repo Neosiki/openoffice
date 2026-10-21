@@ -29,6 +29,8 @@ export type SkillImportErrorKind =
   | 'invalid-source'
   /** the skill has no GitHub source record */
   | 'not-github'
+  /** a replaced skill could not be moved to the OS trash; it was put back and nothing replaced */
+  | 'trash-failed'
   /** writing the files failed; nothing was left half written */
   | 'failed'
 

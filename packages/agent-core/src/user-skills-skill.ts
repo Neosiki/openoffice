@@ -69,8 +69,13 @@ export const SKILL_TEXT_FILE_EXTENSIONS: ReadonlySet<string> = new Set([
   '.css',
 ])
 
-/** Names no window shows, from any source (case-insensitive, spec 3.6) */
-const HIDDEN_SKILL_NAMES = new Set(['genoffice', 'ieumoffice'])
+/**
+ * Skill names never read or shown from any source, compared without case
+ * (spec 3.6): the upstream program's skill (this app reads nothing the
+ * upstream registered) and this app's own command-line skill, which steers to
+ * the terminal command. The one list: `@genoffice/ai-provider` re-exports it.
+ */
+export const RESERVED_USER_SKILL_NAMES: ReadonlySet<string> = new Set(['genoffice', 'ieumoffice'])
 
 /** One skill of the list as this capability reads it */
 export interface UserSkillEntry {
@@ -133,6 +138,11 @@ export interface UserSkillLabels {
 export interface UserSkillsDeps {
   /** the skill list as of now (a synchronous snapshot) */
   list(): readonly UserSkillEntry[]
+  /**
+   * read the list again now; `use_skill` and `read_skill_file` call it once
+   * for an id the snapshot does not have before refusing (spec 9.2)
+   */
+  reload?: (() => Promise<void>) | undefined
   /** `use_skill`: the skill's text; the main process refuses again */
   read(id: string): Promise<UserSkillRead<{ skill: UserSkillText }>>
   /** `read_skill_file`: one text file in the skill's folder; the main process refuses again */
@@ -178,7 +188,7 @@ function isAutoSkill(skill: UserSkillEntry): boolean {
     !skill.agentOnly &&
     skill.invoke === 'auto' &&
     !skill.shadowedBy &&
-    !HIDDEN_SKILL_NAMES.has(skill.name.toLowerCase())
+    !RESERVED_USER_SKILL_NAMES.has(skill.name.toLowerCase())
   )
 }
 
@@ -366,7 +376,7 @@ function fileRefusalText(reason: string, id: string, path: string): string {
 
 /** Why a skill may not be used or read here; undefined when it may */
 function entryRefusal(entry: UserSkillEntry | undefined, id: string): string | undefined {
-  if (!entry || HIDDEN_SKILL_NAMES.has(entry.name.toLowerCase()))
+  if (!entry || RESERVED_USER_SKILL_NAMES.has(entry.name.toLowerCase()))
     return refusalText('not-found', id)
   if (entry.agentOnly) return refusalText('agent-only', id)
   if (entry.unreadable) return refusalText('unreadable', id)
@@ -403,13 +413,20 @@ export function createUserSkillsSkill(deps: UserSkillsDeps): AgentSkill {
   const labels = deps.labels ?? DEFAULT_LABELS
   const toolDefs = tools()
   const find = (id: string) => deps.list().find((s) => s.id === id)
+  /** the entry, reading the list again once when the snapshot does not have it yet */
+  const findFresh = async (id: string): Promise<UserSkillEntry | undefined> => {
+    const known = find(id)
+    if (known || !id || !deps.reload) return known
+    await deps.reload().catch(() => undefined)
+    return find(id)
+  }
   const titleOf = (skill: { id: string; source: string; name: string; title: string }) =>
     deps.displayTitle?.(skill) || skill.title || skill.name
   const attached = () => attachedSkillIdsOf(lastUserText(deps.messages?.() ?? []))
 
   const useSkill = async (call: AgentToolCall): Promise<ToolExecution> => {
     const id = str(call.input.id).trim()
-    const entry = find(id)
+    const entry = await findFresh(id)
     const refusal = entryRefusal(entry, id)
     if (refusal || !entry) return fail(refusal ?? refusalText('not-found', id), USE_SKILL_TOOL)
     const title = titleOf(entry)
@@ -445,7 +462,7 @@ export function createUserSkillsSkill(deps: UserSkillsDeps): AgentSkill {
   const readSkillFile = async (call: AgentToolCall): Promise<ToolExecution> => {
     const id = str(call.input.id).trim()
     const path = str(call.input.path).trim()
-    const entry = find(id)
+    const entry = await findFresh(id)
     const refusal = entryRefusal(entry, id)
     if (refusal || !entry)
       return fail(refusal ?? refusalText('not-found', id), READ_SKILL_FILE_TOOL)
@@ -471,7 +488,7 @@ export function createUserSkillsSkill(deps: UserSkillsDeps): AgentSkill {
     let target: SkillProposal['target']
     if (targetId) {
       const entry = find(targetId)
-      if (!entry || HIDDEN_SKILL_NAMES.has(entry.name.toLowerCase())) {
+      if (!entry || RESERVED_USER_SKILL_NAMES.has(entry.name.toLowerCase())) {
         return fail(refusalText('not-found', targetId), PROPOSE_SKILL_TOOL)
       }
       if (entry.agentOnly) return fail(refusalText('agent-only', targetId), PROPOSE_SKILL_TOOL)
@@ -540,7 +557,7 @@ export function userSkillEntriesOf(raw: unknown): UserSkillEntry[] {
     const id = str(view.id)
     const name = str(view.name)
     if (!id.includes(':') || !name) continue
-    if (HIDDEN_SKILL_NAMES.has(name.toLowerCase())) continue
+    if (RESERVED_USER_SKILL_NAMES.has(name.toLowerCase())) continue
     out.push({
       id,
       source: str(view.source) || id.split(':')[0]!,
@@ -631,20 +648,21 @@ export function createBridgedUserSkillsSkill(
 ): UserSkillsSkill {
   let entries: UserSkillEntry[] = []
   let seq = 0
-  const refresh = () => {
+  /** read the list; an older read that answers later does not overwrite a newer one */
+  const reload = async () => {
     const mine = ++seq
-    void bridge.list().then(
-      (raw) => {
-        if (mine === seq) entries = userSkillEntriesOf(raw)
-      },
-      () => undefined,
-    )
+    const raw = await bridge.list()
+    if (mine === seq) entries = userSkillEntriesOf(raw)
+  }
+  const refresh = () => {
+    void reload().catch(() => undefined)
   }
   refresh()
   const off = bridge.onChanged(refresh)
   const skill = createUserSkillsSkill({
     ...options,
     list: () => entries,
+    reload,
     read: async (id) => skillTextAnswerOf(await bridge.aiRead(id).catch(() => null)),
     readFile: async (id, path) =>
       skillFileAnswerOf(await bridge.aiReadFile(id, path).catch(() => null)),

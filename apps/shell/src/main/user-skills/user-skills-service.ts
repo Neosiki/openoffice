@@ -25,7 +25,6 @@ import {
   exportSkillZip,
   initialUserSkillState,
   installImportedSkills,
-  isInsideCodexHome,
   isInsideDir,
   listSkillFolderFiles,
   listUserSkills,
@@ -197,8 +196,9 @@ function viewOf(
   skill: ResolvedUserSkill,
   github: UserSkillView['github'],
   shadowedBy: string | undefined,
+  /** an own skill whose folder really is in the app's skills folder (not a link leading out) */
+  owned: boolean,
 ): UserSkillView {
-  const owned = skill.source === 'app'
   const other = skill.source === 'user' || skill.source === 'plugin' || skill.source === 'codex'
   return {
     id: skill.id,
@@ -314,13 +314,21 @@ export function createUserSkillsService(deps: UserSkillsServiceDeps) {
     return all.find((skill) => skill.id === id) ?? all.find((skill) => sameName(skill.id, id))
   }
 
-  /** An own skill's folder: a direct child of the app's skills folder */
-  function ownedDir(skill: ResolvedUserSkill): string | undefined {
+  /**
+   * An own skill's folder: a direct child of the app's skills folder whose
+   * real place is inside the app's skills folder too. A linked folder leading
+   * elsewhere is read, but never written, deleted or edited through.
+   */
+  async function ownedDir(skill: ResolvedUserSkill): Promise<string | undefined> {
     if (skill.source !== 'app') return undefined
     const root = appSkillsDir()
     const dir = resolve(skill.dir)
     const child = isInsideDir(dirname(dir), root) && isInsideDir(root, dirname(dir))
-    return child && !isInsideDir(root, dir) ? dir : undefined
+    if (!child || isInsideDir(root, dir)) return undefined
+    const realRoot = await realpath(root).catch(() => undefined)
+    const real = await realpath(dir).catch(() => undefined)
+    if (!realRoot || !real) return undefined
+    return isInsideDir(real, realRoot) && !isInsideDir(realRoot, real) ? dir : undefined
   }
 
   function changeSettings(change: (settings: UserSkillSettings) => void): void {
@@ -343,38 +351,14 @@ export function createUserSkillsService(deps: UserSkillsServiceDeps) {
     return others.length > 0 ? 'taken' : undefined
   }
 
-  /** The bytes of a card's template, or why it cannot be one */
-  async function templateOf(
+  /** A card's template, or why it cannot be one: its bytes under a document file name */
+  function templateOf(
     input: UserSkillTemplateInput,
-  ): Promise<{ bytes: Uint8Array; fileName: string } | UserSkillsFail> {
+  ): { bytes: Uint8Array; fileName: string } | UserSkillsFail {
     const fileName = templateFileNameOf(input.fileName)
-    if (!fileName) return fail('bad-template')
-    if (input.bytes) {
-      if (input.bytes.byteLength > SKILL_TEMPLATE_MAX_BYTES) return fail('too-large')
-      return { bytes: input.bytes, fileName }
-    }
-    const source = input.sourcePath
-    if (!source || !isAbsolute(source)) return fail('bad-template')
-    if (!TEMPLATE_EXTENSIONS.has(extname(source).toLowerCase())) return fail('bad-template')
-    // never Codex's or Claude's own folders (their sign-in lives there)
-    const home = deps.homeDir()
-    const real = await realpath(source).catch(() => undefined)
-    if (!real) return fail('bad-template')
-    for (const path of [source, real]) {
-      if (
-        (await isInsideCodexHome(path, home)) ||
-        isInsideDir(path, join(home, '.claude')) ||
-        isInsideDir(path, appSkillsDir())
-      ) {
-        return fail('bad-template')
-      }
-    }
-    const info = await stat(source).catch(() => undefined)
-    if (!info?.isFile()) return fail('bad-template')
-    if (info.size > SKILL_TEMPLATE_MAX_BYTES) return fail('too-large')
-    const bytes = await readFile(source).catch(() => undefined)
-    if (!bytes) return fail('bad-template')
-    return { bytes: new Uint8Array(bytes), fileName }
+    if (!fileName || !(input.bytes instanceof Uint8Array)) return fail('bad-template')
+    if (input.bytes.byteLength > SKILL_TEMPLATE_MAX_BYTES) return fail('too-large')
+    return { bytes: input.bytes, fileName }
   }
 
   /** A work folder inside the app's skills folder (hidden from the list) */
@@ -436,7 +420,7 @@ export function createUserSkillsService(deps: UserSkillsServiceDeps) {
 
     let template: { bytes: Uint8Array; fileName: string } | undefined
     if (request.template) {
-      const read = await templateOf(request.template)
+      const read = templateOf(request.template)
       if ('ok' in read) return read
       template = read
     }
@@ -447,7 +431,7 @@ export function createUserSkillsService(deps: UserSkillsServiceDeps) {
 
     // ---- an edit of an own skill: files rewritten in place, the folder renamed with the name
     if (target && target.source === 'app') {
-      const dir = ownedDir(target)
+      const dir = await ownedDir(target)
       if (!dir) return fail('not-owned')
       const name = request.name?.trim() || target.name
       if (name !== target.name) {
@@ -557,7 +541,8 @@ export function createUserSkillsService(deps: UserSkillsServiceDeps) {
             }
           }
         }
-        views.push(viewOf(skill, github, pushedBack.get(skill.id)))
+        const owned = skill.source === 'app' && (await ownedDir(skill)) !== undefined
+        views.push(viewOf(skill, github, pushedBack.get(skill.id), owned))
       }
       return views
     },
@@ -629,7 +614,7 @@ export function createUserSkillsService(deps: UserSkillsServiceDeps) {
     async remove(id: string): Promise<UserSkillsResult> {
       const skill = await find(id)
       if (!skill) return fail('not-found')
-      const dir = ownedDir(skill)
+      const dir = await ownedDir(skill)
       if (!dir) return fail('not-owned')
       try {
         await deps.trash(dir)
@@ -681,7 +666,7 @@ export function createUserSkillsService(deps: UserSkillsServiceDeps) {
       forId?: string,
     ): Promise<{ ok: true } | { ok: false; problem: UserSkillNameProblem | 'taken' }> {
       const skill = forId ? await find(forId) : undefined
-      const except = skill ? ownedDir(skill) : undefined
+      const except = skill ? await ownedDir(skill) : undefined
       const problem = await nameProblem(name, except)
       return problem ? { ok: false, problem } : { ok: true }
     },
@@ -779,7 +764,7 @@ export function createUserSkillsService(deps: UserSkillsServiceDeps) {
     ): Promise<{ ok: true; check: GitHubSkillUpdateCheck } | UserSkillsFail> {
       const skill = await find(id)
       if (!skill) return fail('not-found')
-      const dir = ownedDir(skill)
+      const dir = await ownedDir(skill)
       if (!dir) return fail('not-owned')
       if (!skill.github) return fail('not-github')
       try {
@@ -802,7 +787,7 @@ export function createUserSkillsService(deps: UserSkillsServiceDeps) {
       check: Extract<GitHubSkillUpdateCheck, { status: 'changed' }>,
     ): Promise<UserSkillsResult<{ id: string }>> {
       const skill = await find(id)
-      const dir = skill ? ownedDir(skill) : undefined
+      const dir = skill ? await ownedDir(skill) : undefined
       if (!skill || !dir) {
         await disposeSkillImport(check.update)
         return fail(skill ? 'not-owned' : 'not-found')
@@ -833,7 +818,7 @@ export function createUserSkillsService(deps: UserSkillsServiceDeps) {
     ): Promise<UserSkillsResult<{ fileName: string; includesTemplate: boolean }>> {
       const skill = await find(id)
       if (!skill) return fail('not-found')
-      const dir = ownedDir(skill)
+      const dir = await ownedDir(skill)
       if (!dir) return fail('not-owned')
       try {
         const info = await skillExportInfo(dir)
@@ -846,7 +831,7 @@ export function createUserSkillsService(deps: UserSkillsServiceDeps) {
     async exportTo(id: string, outPath: string): Promise<UserSkillsResult<{ path: string }>> {
       const skill = await find(id)
       if (!skill) return fail('not-found')
-      const dir = ownedDir(skill)
+      const dir = await ownedDir(skill)
       if (!dir) return fail('not-owned')
       try {
         await exportSkillZip(dir, outPath)

@@ -93,6 +93,8 @@ interface PreviewRecord {
   tabContentsId: number
   original: Uint8Array
   fileName: string
+  /** the original's editor reported it may withhold something: "save as is" is refused */
+  originalRedacted: boolean
   ended: boolean
 }
 
@@ -222,6 +224,7 @@ export function createTemplateTabs(deps: TemplateTabsDeps) {
         tabContentsId: opened.contents.id,
         original: input.bytes,
         fileName: input.fileName,
+        originalRedacted: input.originalRedacted !== false,
         ended: false,
       }
       previews.set(previewId, record)
@@ -257,13 +260,18 @@ export function createTemplateTabs(deps: TemplateTabsDeps) {
       return opened.ok ? { ok: true, tabId: opened.tabId } : opened
     },
 
-    /** The preview tab's "save the original as is": only that tab may ask */
+    /**
+     * The preview tab's "save the original as is": only that tab may ask, and
+     * never for an original that may withhold something (the tab's button is
+     * off for it too; this holds when a page asks anyway).
+     */
     previewOriginal(
       senderId: number,
       previewId: string,
     ): UserSkillsResult<{ bytes: Uint8Array; fileName: string }> {
       const record = previews.get(previewId)
       if (!record || record.tabContentsId !== senderId) return fail('not-found')
+      if (record.originalRedacted) return fail('redacted')
       return { ok: true, bytes: record.original, fileName: record.fileName }
     },
 

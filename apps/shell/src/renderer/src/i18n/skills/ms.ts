@@ -132,6 +132,8 @@ export const ms = {
   failNotAllowed: 'Ini tidak boleh dilakukan dari tetingkap ini',
   failNotInstallable: 'Kemahiran ini tidak boleh dipasang',
   failNotGitHub: 'Kemahiran ini tidak dipasang daripada GitHub',
+  failTrash:
+    'Kemahiran lama tidak dapat dialihkan ke tong sampah, jadi ia disimpan dan tiada apa-apa diganti',
   failHidden: 'Tunjukkan semula kemahiran terbina dalam yang disembunyikan sebelum menghidupkannya',
   failEmptyTitle: 'Masukkan tajuk',
   failEmptyDescription: 'Masukkan keterangan',

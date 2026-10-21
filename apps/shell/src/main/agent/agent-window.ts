@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto'
+import { homedir } from 'node:os'
 import { isAbsolute, join } from 'node:path'
 import { BrowserWindow, dialog, ipcMain, shell } from 'electron'
 import type { IpcMainInvokeEvent, WebContents } from 'electron'
@@ -37,6 +38,7 @@ import { readAgentProjectPref, writeAgentProjectPref } from '../app-settings'
 import { AGENT_HOME_OPEN_CHANNEL } from '../../shared/agent-home-channel'
 import { agentText } from '../../renderer/src/i18n/strings-agent'
 import {
+  agentProtectedPaths,
   createAgentManager,
   openableProjectFile,
   type AgentManagerDeps,
@@ -50,6 +52,7 @@ import {
   readTemplateCandidate,
   templateRedactionOf,
   type AgentOpenTab,
+  type AgentSessionSkillName,
   type AgentSkillListEntry,
   type AgentTemplateCandidate,
 } from './agent-skills'
@@ -189,6 +192,8 @@ export interface AgentSkillToolsDeps {
   /** the session's window, or null once it is closed */
   window(): AgentSkillWindow | null
   listSkills?: (() => Promise<AgentSkillListEntry[]>) | undefined
+  /** the skills of the session's copy, by the names the model knows them under */
+  sessionSkills?: (() => readonly AgentSessionSkillName[]) | undefined
   /** where the shown cards are kept for their template buttons */
   keep(shown: ShownProposal): void
   newKey(): string
@@ -208,7 +213,7 @@ export function agentSkillToolsFor(
     async proposeSkill(input, context) {
       if (!d.window()) throw new Error('The agent window is closed; the card cannot be shown.')
       const list = d.listSkills ? await d.listSkills().catch(() => []) : []
-      const made = agentSkillProposalOf(input, list, d.newKey())
+      const made = agentSkillProposalOf(input, list, d.newKey(), d.sessionSkills?.() ?? [])
       if (!made.ok) throw new Error(made.message)
       let tabs: AgentOpenTab[] = []
       try {
@@ -277,7 +282,11 @@ function openInTab(candidate: AgentTemplateCandidate): boolean {
 
 /** Read a candidate and tell whether it can hold a redaction mark */
 async function readCandidate(candidate: AgentTemplateCandidate) {
-  const read = await readTemplateCandidate(candidate.path)
+  const homeDir = deps?.homeDir ?? homedir()
+  const read = await readTemplateCandidate(candidate.path, {
+    homeDir,
+    protectedPaths: deps ? agentProtectedPaths(homeDir, deps.userData) : [],
+  })
   if (!read.ok) return read
   const redaction = await templateRedactionOf(candidate.fileName, read.bytes, openInTab(candidate))
   return { ok: true as const, bytes: read.bytes, redaction }
@@ -569,6 +578,7 @@ export function configureAgentWindow(next: AgentWindowDeps): void {
             skillTools: agentSkillToolsFor(session, projectRoot, {
               window: () => liveOwner(session.ownerId),
               listSkills: next.listSkills,
+              sessionSkills: () => manager?.skillsOf(session.ownerId, session.sessionId) ?? [],
               keep: keepProposal,
               newKey: () => randomUUID(),
             }),

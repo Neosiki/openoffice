@@ -5,7 +5,7 @@
  * the template candidates and their redaction check, the one-time notice and
  * the "next session" line. Nothing here starts a program or calls a model.
  */
-import { mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import JSZip from 'jszip'
@@ -26,6 +26,7 @@ import {
   agentSkillProposalOf,
   agentTemplateCandidates,
   projectTemplateFiles,
+  readTemplateCandidate,
   templateRedactionOf,
   userSkillsManageGate,
 } from '../../src/main/agent/agent-skills'
@@ -213,6 +214,33 @@ describe('propose_skill', () => {
     ).rejects.toThrow(/No skill/)
   })
 
+  it('finds the skill a change is for by the name the session sees it under', async () => {
+    const project = temp()
+    const sent: Array<[string, unknown]> = []
+    const hooks = agentSkillToolsFor({ ownerId: 7, sessionId: 's1' }, project, {
+      window: () => ({ send: (channel, payload) => sent.push([channel, payload]) }),
+      listSkills: async () => [
+        { id: 'app:minutes', source: 'app', name: 'minutes', title: 'Minutes', owned: true },
+        { id: 'builtin:minutes', source: 'builtin', name: 'minutes', title: 'M', owned: false },
+      ],
+      sessionSkills: () => [
+        { id: 'app:minutes', name: 'minutes' },
+        { id: 'builtin:minutes', name: 'minutes--builtin' },
+      ],
+      keep: () => undefined,
+      newKey: () => 'k1',
+    })
+    const propose = createAgentSkillTools(hooks)[0]!
+    for (const targetId of ['minutes--builtin', 'ieum-skills:minutes--builtin', 'minutes']) {
+      await propose.handler({ title: 'L', description: 'D', body: 'B', targetId })
+    }
+    expect(sent.map(([, p]) => (p as Record<string, any>).proposal.target.id)).toEqual([
+      'builtin:minutes',
+      'builtin:minutes',
+      'app:minutes',
+    ])
+  })
+
   it('refuses an empty card and a closed window', async () => {
     const project = temp()
     const sent: Array<[string, unknown]> = []
@@ -361,9 +389,22 @@ describe('the session’s skills for the window', () => {
       invoke: 'auto' as const,
       skillMd: join(dir, 'SKILL.md'),
     })
-    const skills = await agentSessionSkillsOf([entry('form', a), entry('plain', b)])
+    // a template outside `assets/` is not a template (the same rule as the skill list)
+    const c = join(bundle, 'skills', 'loose')
+    mkdirSync(c, { recursive: true })
+    writeFileSync(
+      join(c, 'SKILL.md'),
+      '---\nname: loose\ndescription: d\nmetadata:\n  ieum-template: form.docx\n---\nBody\n',
+    )
+    writeFileSync(join(c, 'form.docx'), 'x')
+    const skills = await agentSessionSkillsOf([
+      entry('form', a),
+      entry('plain', b),
+      entry('loose', c),
+    ])
     expect(skills[0]!.template).toBe(join(a, 'assets', 'form.docx'))
     expect(skills[1]!.template).toBeUndefined()
+    expect(skills[2]!.template).toBeUndefined()
   })
 })
 
@@ -395,6 +436,25 @@ describe('template candidates', () => {
     expect(selected).toBeUndefined()
   })
 
+  it('take a suggestion through a link leading out of the project folder as no choice', async () => {
+    const project = temp()
+    const outside = temp()
+    writeFileSync(join(outside, 'secret.docx'), 'x')
+    try {
+      symlinkSync(outside, join(project, 'linked'), 'junction')
+    } catch {
+      return
+    }
+    const { candidates, selected } = await agentTemplateCandidates({
+      projectRoot: project,
+      tabs: [],
+      suggested: join('linked', 'secret.docx'),
+      projectFiles: [],
+    })
+    expect(candidates).toEqual([])
+    expect(selected).toBeUndefined()
+  })
+
   it('refuse a change to a project skill', () => {
     const made = agentSkillProposalOf(
       {
@@ -410,6 +470,97 @@ describe('template candidates', () => {
       'k',
     )
     expect(made).toMatchObject({ ok: false, message: expect.stringMatching(/project folder/) })
+  })
+})
+
+describe('the skill a change is for', () => {
+  const input = (targetId: string) => ({
+    title: 'T',
+    name: '',
+    description: 'D',
+    body: 'B',
+    wantsTemplate: false,
+    targetId,
+    suggestedTemplatePath: '',
+  })
+  const list = [
+    { id: 'project:minutes', source: 'project', name: 'minutes', title: 'P', owned: false },
+    { id: 'app:minutes', source: 'app', name: 'minutes', title: 'A', owned: true },
+    { id: 'builtin:minutes', source: 'builtin', name: 'minutes', title: 'B', owned: false },
+    { id: 'plugin:tools:minutes', source: 'plugin', name: 'minutes', title: 'T', owned: false },
+    { id: 'user:letter', source: 'user', name: 'letter', title: 'L', owned: false },
+    { id: 'builtin:letter', source: 'builtin', name: 'letter', title: 'L', owned: false },
+    { id: 'app:ieumoffice', source: 'app', name: 'ieumoffice', title: 'I', owned: true },
+  ]
+  const session = [
+    { id: 'project:minutes', name: 'minutes' },
+    { id: 'app:minutes', name: 'minutes--app' },
+    { id: 'builtin:minutes', name: 'minutes--builtin' },
+    { id: 'plugin:tools:minutes', name: 'minutes--plugin-tools' },
+  ]
+  const targetOf = (targetId: string) => {
+    const made = agentSkillProposalOf(input(targetId), list, 'k', session)
+    return made.ok ? made.proposal.target?.id : made.message
+  }
+
+  it('is found by its identifier, as before', () => {
+    expect(targetOf('builtin:minutes')).toBe('builtin:minutes')
+  })
+
+  it('is found by its name in the session, renamed duplicates included', () => {
+    expect(targetOf('minutes--app')).toBe('app:minutes')
+    expect(targetOf('Minutes--Builtin')).toBe('builtin:minutes')
+    expect(targetOf('minutes--plugin-tools')).toBe('plugin:tools:minutes')
+    expect(targetOf('ieum-skills:minutes--app')).toBe('app:minutes')
+  })
+
+  it('takes a shared plain name as the skill that won it in the session', () => {
+    expect(targetOf('minutes')).toMatch(/project folder/)
+  })
+
+  it('takes a plain name of a skill not in the session by the same priority', () => {
+    expect(targetOf('letter')).toBe('builtin:letter')
+  })
+
+  it('refuses a name no skill has, and a hidden one', () => {
+    expect(targetOf('nope')).toMatch(/No skill/)
+    expect(targetOf('ieumoffice')).toMatch(/No skill/)
+    expect(targetOf('app:ieumoffice')).toMatch(/No skill/)
+  })
+})
+
+describe('reading a candidate in main', () => {
+  it('never reads the sign-in stores, the original app’s folder or the app’s own data', async () => {
+    const home = temp()
+    const userData = join(home, 'AppData', 'IeumOffice')
+    const guard = {
+      homeDir: home,
+      protectedPaths: ['.claude', '.codex', '.genoffice', '.ieumoffice'].map((n) => join(home, n)),
+    }
+    guard.protectedPaths.push(userData)
+    for (const dir of [...guard.protectedPaths]) {
+      mkdirSync(dir, { recursive: true })
+      writeFileSync(join(dir, 'form.docx'), 'secret')
+      expect(await readTemplateCandidate(join(dir, 'form.docx'), guard), dir).toEqual({
+        ok: false,
+        reason: 'unreadable',
+      })
+    }
+    const docs = join(home, 'Documents')
+    mkdirSync(docs)
+    writeFileSync(join(docs, 'form.docx'), 'mine')
+    const read = await readTemplateCandidate(join(docs, 'form.docx'), guard)
+    expect(read.ok && new TextDecoder().decode(read.bytes)).toBe('mine')
+    // a linked folder leading into one of them is judged by where it really is
+    try {
+      symlinkSync(join(home, '.genoffice'), join(docs, 'linked'), 'junction')
+    } catch {
+      return
+    }
+    expect(await readTemplateCandidate(join(docs, 'linked', 'form.docx'), guard)).toEqual({
+      ok: false,
+      reason: 'unreadable',
+    })
   })
 })
 
