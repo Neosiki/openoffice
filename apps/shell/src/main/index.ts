@@ -389,7 +389,6 @@ import { normalizeQuickLookSettings } from '../shared/quick-look-home'
 import { configureAgentWindow, stopAgentSessions } from './agent/agent-window'
 import { startAgentMcpServer } from './agent/agent-mcp'
 import {
-  agentSkillSources,
   buildAgentSkillBundle,
   startClaudeAgentSession,
   startCodexAgentSession,
@@ -7552,20 +7551,14 @@ app.whenReady().then(async () => {
       if (!mcp) throw new Error('the MCP runtime is not configured')
       return startAgentMcpServer(mcp, projectRoot)
     },
-    buildSkills: async (projectRoot) => {
-      const sources = await agentSkillSources({
-        homeDir: homedir(),
-        projectRoot,
-        appSkillsDir: join(homedir(), '.ieumoffice', 'skills'),
-      })
-      const bundle = await buildAgentSkillBundle(
-        sources,
+    // the enabled skills (settings → skills) and the project's, as they are at the start
+    buildSkills: async (projectRoot) =>
+      buildAgentSkillBundle(
+        await userSkills.enabledForAgent(projectRoot),
         // not under userData: that folder is protected from sessions, and the
         // copied skills' scripts must be readable to run
         join(process.env.LOCALAPPDATA ?? tmpdir(), 'IeumOffice', 'agent-skills'),
-      )
-      return bundle.dir
-    },
+      ),
   })
   void startMcpFromSettings(currentMcpSettings()).catch((error) => {
     console.error('[mcp] failed to start on boot:', error)

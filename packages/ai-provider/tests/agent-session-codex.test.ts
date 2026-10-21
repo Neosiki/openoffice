@@ -149,12 +149,12 @@ async function start(
 const tick = () => new Promise((resolve) => setImmediate(resolve))
 
 describe('the launch and the thread', () => {
-  it('keeps the brain-only overrides and turns skill instructions on', () => {
+  it('keeps the brain-only overrides, skill instructions included: the app lists the enabled skills', () => {
     const args = codexAgentLaunchArgs()
     expect(args).toContain('features.hooks=false')
     expect(args).toContain('features.plugins=false')
-    expect(args).toContain('skills.include_instructions=true')
-    expect(args).not.toContain('skills.include_instructions=false')
+    expect(args[args.indexOf('skills.include_instructions=false') - 1]).toBe('-c')
+    expect(args).not.toContain('skills.include_instructions=true')
     // web search follows the Codex app's default in an agent session, not the chat's "off"
     expect(args.some((arg) => arg.startsWith('web_search='))).toBe(false)
     expect(args.slice(-2)).toEqual(['--listen', 'stdio://'])
@@ -179,6 +179,15 @@ describe('the launch and the thread', () => {
       'C:\\Users\\me\\Project\\open.md': 'read',
       'C:\\Users\\me\\.codex': 'deny',
     })
+  })
+
+  it('lets the session read its skill copy', () => {
+    const bundle = 'C:\\Users\\me\\AppData\\Local\\IeumOffice\\agent-skills'
+    const filesystem = codexAgentFilesystem(options({ skillBundleDir: bundle }))
+    expect(filesystem[bundle]).toBe('read')
+    expect(filesystem['C:\\Users\\me\\.codex']).toBe('deny')
+    const params = codexAgentThreadParams(options({ skillBundleDir: bundle }), 'gpt-x', {})
+    expect((params.config as any).permissions['ieumoffice-agent'].filesystem[bundle]).toBe('read')
   })
 
   it('lets commands read the folders on PATH, but not a drive root, a protected folder or a missing one', () => {

@@ -9,6 +9,8 @@ import type {
   AgentSession,
   AgentSessionEvent,
   AgentSessionOptions,
+  AgentSkillBundle,
+  AgentSkillEntry,
 } from '@genoffice/ai-provider/agent-session'
 import { comparablePath, isInsidePath } from '@genoffice/ai-provider/agent-session'
 import type {
@@ -76,8 +78,11 @@ export interface AgentManagerDeps {
   startAppMcp?:
     | ((projectRoot: string) => Promise<{ url: string; token: string; stop(): Promise<void> }>)
     | undefined
-  /** refresh the skill copy for Claude and return its folder; absent to give no skills */
-  buildSkills?: ((projectRoot: string) => Promise<string | undefined>) | undefined
+  /**
+   * refresh the copy of the enabled skills (and the project's) as they are now, and return it;
+   * both programs get it. Absent, or undefined, to give no skills
+   */
+  buildSkills?: ((projectRoot: string) => Promise<AgentSkillBundle | undefined>) | undefined
   emit: (ownerId: number, sessionId: string, event: AgentSessionEvent) => void
   platform?: NodeJS.Platform | undefined
 }
@@ -123,6 +128,33 @@ export function projectFolderProblem(
 const PROJECT_NOTE_FILES = ['CLAUDE.md', 'AGENTS.md']
 const MAX_PROJECT_NOTES_CHARS = 32_000
 
+function oneLine(text: string): string {
+  return text.replace(/\s+/g, ' ').trim()
+}
+
+/**
+ * The skills of a Codex session, for its instructions: Codex lists no skills
+ * of its own here (its skill instructions are off), so the app names the ones
+ * in the session's copy, with where each SKILL.md is and whether the person
+ * must call it.
+ */
+export function codexSkillInstructions(skills: readonly AgentSkillEntry[]): string[] {
+  if (skills.length === 0) return []
+  const lines = [
+    '',
+    'Skills: each skill below is a folder with a SKILL.md of instructions. When a skill is relevant to the task, or the person asks for it, read its SKILL.md first and follow it; paths in it are relative to its folder. A skill marked "manual" is used only when the person asks for it by name.',
+  ]
+  for (const skill of skills) {
+    const title = oneLine(skill.title)
+    const named = title && title !== skill.name ? `${skill.name} (title: ${title})` : skill.name
+    const manual = skill.invoke === 'manual' ? '; manual: only when the person asks' : ''
+    lines.push(
+      `- ${named}: ${oneLine(skill.description) || 'no description'}; SKILL.md: ${skill.skillMd}${manual}`,
+    )
+  }
+  return lines
+}
+
 /**
  * What the app adds to the program's own instructions. English, as all model
  * prompts in this app; the reply language follows the screen.
@@ -132,6 +164,7 @@ export async function agentInstructions(
   projectRoot: string,
   language: string,
   withAppTools: boolean,
+  skills: readonly AgentSkillEntry[] = [],
 ): Promise<string> {
   const lines = [
     'You are working for the person inside an office app, in the project folder they chose.',
@@ -146,6 +179,8 @@ export async function agentInstructions(
       'read_hwp and read_pdf read Hangul and PDF files of the project folder.',
     )
   }
+  // Claude Code finds the skills in the plugin it is given; Codex is told about them
+  if (provider === 'codex') lines.push(...codexSkillInstructions(skills))
   // Claude Code runs with no project settings, so it does not read these files itself; Codex
   // reads AGENTS.md on its own, so only CLAUDE.md is added for it
   const files = provider === 'claude-code' ? PROJECT_NOTE_FILES : ['CLAUDE.md']
@@ -233,10 +268,8 @@ export function createAgentManager(deps: AgentManagerDeps): AgentManager {
       try {
         const appMcp = deps.startAppMcp ? await deps.startAppMcp(projectRoot) : undefined
         entry.appMcp = appMcp
-        const skillBundleDir =
-          request.provider === 'claude-code' && deps.buildSkills
-            ? await deps.buildSkills(projectRoot)
-            : undefined
+        // the skills as they are now: a change made during the session applies to the next one
+        const skills = deps.buildSkills ? await deps.buildSkills(projectRoot) : undefined
         const config = settings.providers[request.provider]
         const options: AgentSessionOptions = {
           projectRoot,
@@ -248,10 +281,11 @@ export function createAgentManager(deps: AgentManagerDeps): AgentManager {
             projectRoot,
             deps.language(),
             appMcp !== undefined,
+            skills?.skills,
           ),
           openDocuments: deps.openDocuments(),
           protectedPaths,
-          skillBundleDir,
+          skillBundleDir: skills?.dir,
           appMcp: appMcp ? { url: appMcp.url, token: appMcp.token } : undefined,
           sessionDir,
         }

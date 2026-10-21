@@ -115,7 +115,10 @@ export interface AgentSessionOptions {
   openDocuments: string[]
   /** absolute paths the program must not read or write (sign-in stores, app data, …) */
   protectedPaths: string[]
-  /** a folder of skill copies made for this session (`buildAgentSkillBundle`), if any */
+  /**
+   * a folder of skill copies made for this session (`buildAgentSkillBundle`), if any: Claude
+   * loads it as a plugin, Codex may read it (the skills are listed in `instructions`)
+   */
   skillBundleDir?: string | undefined
   /** the app's own MCP server for open documents, if the session may use it */
   appMcp?: { url: string; token: string } | undefined
