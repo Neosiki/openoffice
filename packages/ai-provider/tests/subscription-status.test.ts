@@ -318,6 +318,21 @@ describe('a CLI too old to answer (spec 7)', () => {
     expect(cli.calls).toEqual([['--version']])
   })
 
+  it('names the file it ran on a CLI too old, and on no other result', async () => {
+    const old = fakeCli({ version: ok('1.0.44 (Claude Code)\n'), status: ok(claudeStatus({})) })
+    const outdated = await detectSubscriptionLogin('claude-code', { locate: found, run: old.run })
+    expect(outdated.programPath).toBe('/fake/claude')
+    const unknownOption = await codex({
+      code: 2,
+      stdout: '',
+      stderr: "error: unrecognized subcommand 'status'\n",
+    })
+    expect(unknownOption.programPath).toBe('/fake/codex')
+    const current = fakeCli({ version: CLAUDE_VERSION, status: ok(claudeStatus({})) })
+    const ready = await detectSubscriptionLogin('claude-code', { locate: found, run: current.run })
+    expect(ready.programPath).toBeUndefined()
+  })
+
   it('Claude whose version cannot be read is not asked for its status either', async () => {
     const cli = fakeCli({
       version: ok('claude: development build\n'),

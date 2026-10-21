@@ -15,6 +15,9 @@ export const cs = {
     'Program {provider} v tomto počítači je příliš starý. Aktualizujte ho a zkontrolujte znovu.',
   cardErrNeedsUpdateVersion:
     'Program {provider} v tomto počítači ({version}) je příliš starý; je potřeba verze {minimum} nebo novější. Spusťte v terminálu {command} a zkontrolujte znovu.',
+  cardErrNeedsUpdatePath: 'Soubor, který tato aplikace spouští:',
+  cardErrNeedsUpdateWindows:
+    'Aktualizace programu {provider} ve WSL (Ubuntu) nebo v jiné složce tento soubor nezmění. Spusťte {command} ve Windows PowerShellu.',
   cardErrTimeout: 'Program {provider} neodpověděl včas. Zkontrolujte to za chvíli znovu.',
   cardErrFailed: 'Při kontrole {provider} došlo k potížím. Zkontrolujte to znovu.',
   actionInstall: 'Nainstalovat',

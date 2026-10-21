@@ -15,6 +15,9 @@ export const pl = {
     'Program {provider} na tym komputerze jest zbyt stary. Zaktualizuj go, a potem sprawdź ponownie.',
   cardErrNeedsUpdateVersion:
     'Program {provider} na tym komputerze ({version}) jest zbyt stary; potrzebna jest wersja {minimum} lub nowsza. Uruchom {command} w terminalu, a potem sprawdź ponownie.',
+  cardErrNeedsUpdatePath: 'Plik uruchamiany przez tę aplikację:',
+  cardErrNeedsUpdateWindows:
+    'Aktualizacja {provider} w WSL (Ubuntu) lub w innym folderze nie zmienia tego pliku. Uruchom {command} w Windows PowerShell.',
   cardErrTimeout: 'Program {provider} nie odpowiedział na czas. Sprawdź ponownie za chwilę.',
   cardErrFailed: 'Podczas sprawdzania {provider} wystąpił problem. Sprawdź ponownie.',
   actionInstall: 'Zainstaluj',

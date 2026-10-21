@@ -143,6 +143,20 @@ export function AiSubscriptionCard({
           {aiSubscriptionText(lang, view.detailKey, { ...params, ...view.detailParams })}
         </p>
       )}
+      {view.programPath && (
+        <div className="ai-sub-path">
+          <p className="ai-sub-path-label">{aiSubscriptionText(lang, 'cardErrNeedsUpdatePath')}</p>
+          {/* a path reads left to right in every language */}
+          <p className="ai-sub-path-value" dir="ltr">
+            <bdi>{view.programPath}</bdi>
+          </p>
+          {view.pathNoteKeys?.map((key) => (
+            <p key={key} className="ai-sub-path-label" data-note={key}>
+              {aiSubscriptionText(lang, key, { ...params, ...view.detailParams })}
+            </p>
+          ))}
+        </div>
+      )}
       {view.actions.length > 0 && (
         <div className="ai-sub-actions">
           {view.actions.map((action, index) =>

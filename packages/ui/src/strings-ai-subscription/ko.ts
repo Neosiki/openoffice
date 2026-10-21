@@ -14,6 +14,9 @@ export const ko = {
   cardErrNeedsUpdate: '이 PC의 {provider} 프로그램 버전이 낮습니다. 업데이트한 뒤 다시 확인하세요.',
   cardErrNeedsUpdateVersion:
     '이 PC의 {provider} 프로그램({version})이 오래되었습니다. {minimum} 이상이 필요합니다. 터미널에서 {command}를 실행한 뒤 다시 확인하세요.',
+  cardErrNeedsUpdatePath: '이 앱이 실행하는 파일:',
+  cardErrNeedsUpdateWindows:
+    'WSL(Ubuntu)이나 다른 폴더에 설치된 {provider}를 업데이트해도 이 파일은 바뀌지 않습니다. Windows PowerShell에서 {command}를 실행하세요.',
   cardErrTimeout: '{provider} 프로그램이 제때 응답하지 않았습니다. 잠시 뒤 다시 확인하세요.',
   cardErrFailed: '{provider} 연결을 확인하는 중에 문제가 생겼습니다. 다시 확인해 보세요.',
   actionInstall: '설치',

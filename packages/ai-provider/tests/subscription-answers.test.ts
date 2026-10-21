@@ -73,6 +73,26 @@ describe('subscriptionStatusMapOf', () => {
     expect(map.codex).toEqual(CHECKING.codex)
   })
 
+  it('passes the program path on a needs-update error alone, and only a full path on one line', () => {
+    const read = (fields: Record<string, unknown>): unknown =>
+      subscriptionStatusMapOf({
+        'claude-code': { provider: 'claude-code', meteredAccepted: false, ...fields },
+      })['claude-code'].programPath
+    const outdated = { state: 'error', error: 'needs-update: old', version: '2.1.114' }
+    const windows = 'C:\\Users\\me\\AppData\\Roaming\\npm\\node_modules\\claude.exe'
+    const share = '\\\\wsl$\\Ubuntu\\claude'
+    expect(read({ ...outdated, programPath: windows })).toBe(windows)
+    expect(read({ ...outdated, programPath: '/home/me/.local/bin/claude' })).toBe(
+      '/home/me/.local/bin/claude',
+    )
+    expect(read({ ...outdated, programPath: share })).toBe(share)
+    for (const programPath of ['claude.exe', 'bin\\claude', '', 3, null, `${windows}\nsecond`]) {
+      expect(read({ ...outdated, programPath }), String(programPath)).toBeUndefined()
+    }
+    expect(read({ state: 'error', error: 'failed: spawn', programPath: windows })).toBeUndefined()
+    expect(read({ state: 'ready', programPath: windows })).toBeUndefined()
+  })
+
   it('reads an entry with an unknown or missing state as checking', () => {
     const map = subscriptionStatusMapOf({
       'claude-code': { provider: 'claude-code', state: 'connected', meteredAccepted: true },

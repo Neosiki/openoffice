@@ -14,6 +14,9 @@ export const th = {
   cardErrNeedsUpdate: 'โปรแกรม {provider} บนพีซีเครื่องนี้เก่าเกินไป โปรดอัปเดตแล้วตรวจสอบอีกครั้ง',
   cardErrNeedsUpdateVersion:
     'โปรแกรม {provider} บนพีซีเครื่องนี้ ({version}) เก่าเกินไป ต้องใช้รุ่น {minimum} ขึ้นไป โปรดเรียกใช้ {command} ในเทอร์มินัลแล้วตรวจสอบอีกครั้ง',
+  cardErrNeedsUpdatePath: 'ไฟล์ที่แอปนี้เรียกใช้:',
+  cardErrNeedsUpdateWindows:
+    'การอัปเดต {provider} ใน WSL (Ubuntu) หรือในโฟลเดอร์อื่นจะไม่เปลี่ยนไฟล์นี้ โปรดเรียกใช้ {command} ใน Windows PowerShell',
   cardErrTimeout: 'โปรแกรม {provider} ไม่ตอบกลับภายในเวลาที่กำหนด โปรดตรวจสอบอีกครั้งในอีกสักครู่',
   cardErrFailed: 'เกิดปัญหาขณะตรวจสอบ {provider} โปรดตรวจสอบอีกครั้ง',
   actionInstall: 'ติดตั้ง',

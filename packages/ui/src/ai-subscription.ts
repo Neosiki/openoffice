@@ -133,6 +133,14 @@ export interface AiSubscriptionCardView {
    * update command. Facts the app derived, never CLI text.
    */
   readonly detailParams?: Readonly<Record<'version' | 'minimum' | 'command', string>> | undefined
+  /**
+   * on a CLI below the floor, the file the check ran, shown under the detail:
+   * a PC can hold another copy (under WSL, an old npm install) that the user
+   * may have updated instead
+   */
+  readonly programPath?: string | undefined
+  /** lines under `programPath`, in order */
+  readonly pathNoteKeys?: readonly AiSubscriptionStringKey[] | undefined
   /** buttons and links, in order; the first one is the primary action */
   readonly actions: readonly AiSubscriptionCardAction[]
 }
@@ -155,6 +163,10 @@ export function aiSubscriptionCardView(
   const terminalWindows = options.terminalWindows !== false
   if (status.signingIn) return signingInCardView(status, terminalWindows)
   const view = connectionCardView(status)
+  if (view.programPath && terminalWindows) {
+    // the copy a Linux terminal under WSL updates is not the one Windows runs
+    return { ...view, pathNoteKeys: ['cardErrNeedsUpdateWindows'] }
+  }
   if (status.state === 'not-installed' && !terminalWindows) {
     return { ...view, noteKeys: [], actions: ['install-help'] }
   }
@@ -242,6 +254,7 @@ function connectionCardView(status: AiSubscriptionStatus): AiSubscriptionCardVie
           }
     case 'error': {
       const outdated = subscriptionNeedsUpdate(status)
+      const programPath = outdated ? status.programPath?.trim() || undefined : undefined
       return {
         ...base,
         tone: 'error',
@@ -250,6 +263,7 @@ function connectionCardView(status: AiSubscriptionStatus): AiSubscriptionCardVie
         ...(outdated
           ? { detailKey: 'cardErrNeedsUpdateVersion', detailParams: outdated }
           : { detailKey: STATUS_ERROR_KEYS[subscriptionStatusErrorKind(status) ?? 'failed'] }),
+        ...(programPath ? { programPath } : {}),
         actions: ['recheck'],
       }
     }

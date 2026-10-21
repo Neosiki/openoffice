@@ -15,6 +15,9 @@ export const ms = {
     'Program {provider} pada PC ini terlalu lama. Kemas kini, kemudian semak semula.',
   cardErrNeedsUpdateVersion:
     'Program {provider} pada PC ini ({version}) terlalu lama; versi {minimum} atau lebih baharu diperlukan. Jalankan {command} dalam terminal, kemudian semak semula.',
+  cardErrNeedsUpdatePath: 'Fail yang dijalankan oleh aplikasi ini:',
+  cardErrNeedsUpdateWindows:
+    'Mengemas kini {provider} di dalam WSL (Ubuntu) atau dalam folder lain tidak mengubah fail ini. Jalankan {command} dalam Windows PowerShell.',
   cardErrTimeout:
     'Program {provider} tidak menjawab dalam masa yang ditetapkan. Semak semula sebentar lagi.',
   cardErrFailed: 'Masalah berlaku semasa menyemak {provider}. Semak semula.',

@@ -12,6 +12,9 @@ export const zh = {
   cardErrNeedsUpdate: '此电脑上的 {provider} 程序版本过低。请更新后重新检查。',
   cardErrNeedsUpdateVersion:
     '此电脑上的 {provider} 程序（{version}）版本过低，需要 {minimum} 或更高版本。请在终端中运行 {command}，然后重新检查。',
+  cardErrNeedsUpdatePath: '此应用运行的文件：',
+  cardErrNeedsUpdateWindows:
+    '在 WSL（Ubuntu）或其他文件夹中更新 {provider} 不会更改此文件。请在 Windows PowerShell 中运行 {command}。',
   cardErrTimeout: '{provider} 程序未及时响应。请稍后重新检查。',
   cardErrFailed: '检查 {provider} 时出现问题。请重新检查。',
   actionInstall: '安装',

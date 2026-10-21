@@ -15,6 +15,9 @@ export const vi = {
     'Chương trình {provider} trên máy tính này quá cũ. Hãy cập nhật rồi kiểm tra lại.',
   cardErrNeedsUpdateVersion:
     'Chương trình {provider} trên máy tính này ({version}) quá cũ; cần phiên bản {minimum} trở lên. Hãy chạy {command} trong terminal rồi kiểm tra lại.',
+  cardErrNeedsUpdatePath: 'Tệp mà ứng dụng này chạy:',
+  cardErrNeedsUpdateWindows:
+    'Cập nhật {provider} trong WSL (Ubuntu) hoặc ở thư mục khác không làm thay đổi tệp này. Hãy chạy {command} trong Windows PowerShell.',
   cardErrTimeout: 'Chương trình {provider} không trả lời kịp thời. Hãy kiểm tra lại sau giây lát.',
   cardErrFailed: 'Đã xảy ra sự cố khi kiểm tra {provider}. Hãy kiểm tra lại.',
   actionInstall: 'Cài đặt',
