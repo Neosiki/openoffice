@@ -35,6 +35,9 @@ import {
   SentSkillChips,
   skillChipRefsOf,
   useComposerSkills,
+  panelUserSkills,
+  SkillUsedNotes,
+  useSkillProposals,
   type AiScopeQuoteData,
   type AiTokenUsageView,
   type SkillChipRef,
@@ -126,6 +129,8 @@ interface ChatEntry {
   scope?: AiScopeQuoteData
   /** skill chips this user message carried */
   skills?: SkillChipRef[]
+  /** skill cards the model proposed in this turn (keys of useSkillProposals) */
+  skillProposals?: string[]
   /** tokens the provider billed for this reply, summed across its turns (absent when unreported) */
   usage?: AiTokenUsageView
 }
@@ -226,6 +231,15 @@ export function AiPanel({
   const skills = useComposerSkills({ lang })
   const skillsRef = useRef(skills)
   skillsRef.current = skills
+  /** the skill cards `propose_skill` shows; nothing is written before their Save */
+  const skillCards = useSkillProposals({
+    lang,
+    // the template flow decides when this document can go along as a template
+    canBeTemplate: false,
+    persistSaved: (record) => persistMessage('assistant', '', [record]),
+  })
+  const skillCardsRef = useRef(skillCards)
+  skillCardsRef.current = skillCards
   /** the skills of the last send: a retry sends the same skill text */
   const lastSkillUseRef = useRef<SkillUse>(NO_SKILL_USE)
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null)
@@ -513,6 +527,17 @@ export function AiPanel({
           }),
         ),
         createSearchSkill(),
+        // the person's skills: use_skill, read_skill_file, propose_skill (app-run tools)
+        ...panelUserSkills({
+          lang: () => langRef.current,
+          messages: () => loopRef.current?.messages ?? [],
+          onProposal: (proposal) => {
+            skillCardsRef.current.add(proposal)
+            patchLast((last) => ({
+              skillProposals: [...(last.skillProposals ?? []), proposal.key],
+            }))
+          },
+        }),
       ]),
       captureSnapshot: () => depsRef.current.getSnapshot(),
       systemSuffix: () => aiLangDirective(langRef.current),
@@ -645,8 +670,10 @@ export function AiPanel({
         }
         return api.loadChat({ projectId: ids.projectId, chatId: ids.chatId, limit: 200 })
       })
-      .then((msgs) => {
-        if (msgs.length === 0) return
+      .then((stored) => {
+        if (stored.length === 0) return
+        // skill cards come back closed; a saved card's record is not part of the conversation
+        const msgs = skillCardsRef.current.restore(stored)
         // the user may have sent a message while history was loading — never
         // replace a live transcript (and don't clobber the loop context)
         let applied = false
@@ -666,6 +693,7 @@ export function AiPanel({
             ...(m.role === 'user' && skillChipRefsOf(m.skills).length > 0
               ? { skills: skillChipRefsOf(m.skills) }
               : {}),
+            ...(m.skillProposals ? { skillProposals: m.skillProposals } : {}),
           }))
         })
         if (applied && !loopRef.current?.busy) {
@@ -1035,6 +1063,7 @@ export function AiPanel({
                 setBusy(false)
                 setChat([])
                 skills.resetConversation()
+                skillCards.reset()
               }}
               data-tip={t('aiNewChat')}
               aria-label={t('aiNewChat')}
@@ -1143,6 +1172,8 @@ export function AiPanel({
                 )
               )}
               {hasTools && <ToolChipList tools={entry.tools!} />}
+              <SkillUsedNotes tools={entry.tools} />
+              {entry.skillProposals?.map((key) => skillCards.render(key))}
               {entry.usage && (
                 <div className="ai-message-usage">
                   <AiUsageChip usage={entry.usage} lang={lang} />

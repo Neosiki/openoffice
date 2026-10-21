@@ -26,6 +26,9 @@ import {
   SentSkillChips,
   skillChipRefsOf,
   useComposerSkills,
+  panelUserSkills,
+  SkillUsedNotes,
+  useSkillProposals,
   type SkillChipRef,
   type SkillUse,
 } from '@genoffice/ui'
@@ -132,6 +135,8 @@ interface ChatEntry {
   scope?: AiScopeQuoteData
   /** skill chips this user message carried */
   skills?: SkillChipRef[]
+  /** skill cards the model proposed in this turn (keys of useSkillProposals) */
+  skillProposals?: string[]
 }
 
 const MODEL_BRIDGE: AiModelPickerBridge = {
@@ -245,6 +250,15 @@ export function AiPanel({
   const skills = useComposerSkills({ lang })
   const skillsRef = useRef(skills)
   skillsRef.current = skills
+  /** the skill cards `propose_skill` shows; nothing is written before their Save */
+  const skillCards = useSkillProposals({
+    lang,
+    // the template flow decides when this document can go along as a template
+    canBeTemplate: false,
+    persistSaved: (record) => persistMessage('assistant', '', [record]),
+  })
+  const skillCardsRef = useRef(skillCards)
+  skillCardsRef.current = skillCards
 
   // ---- attachments: files the user hands over as reference material ----
   const [attachments, setAttachments] = useState<AttachmentMeta[]>([])
@@ -541,6 +555,17 @@ export function AiPanel({
       skill: composeWithDrive('hwp+files', '', () => loopRef.current?.messages ?? [], [
         skillRef.current.skill,
         createFilesSkill(() => availableAttachmentsRef.current()),
+        // the person's skills: use_skill, read_skill_file, propose_skill (app-run tools)
+        ...panelUserSkills({
+          lang: () => langRef.current,
+          messages: () => loopRef.current?.messages ?? [],
+          onProposal: (proposal) => {
+            skillCardsRef.current.add(proposal)
+            patchLast((last) => ({
+              skillProposals: [...(last.skillProposals ?? []), proposal.key],
+            }))
+          },
+        }),
       ]),
       systemSuffix: () => aiLangDirective(langRef.current),
       events: {
@@ -871,11 +896,13 @@ export function AiPanel({
         }
         return api.loadChat({ projectId: ids.projectId, chatId: ids.chatId, limit: 200 })
       })
-      .then((messages) => {
-        if (!mountedRef.current || messages.length === 0) return
+      .then((stored) => {
+        if (!mountedRef.current || stored.length === 0) return
         // a message the user sent while the record loaded is not replaced. Decided here and
         // not in the state update, which React runs later: the model is to get the same
         if (chatNowRef.current.length > 0 || loopRef.current?.busy) return
+        // skill cards come back closed; a saved card's record is not part of the conversation
+        const messages = skillCardsRef.current.restore(stored)
         setChat(
           messages.map((message) => ({
             role: message.role,
@@ -894,6 +921,7 @@ export function AiPanel({
             ...(message.role === 'user' && skillChipRefsOf(message.skills).length > 0
               ? { skills: skillChipRefsOf(message.skills) }
               : {}),
+            ...(message.skillProposals ? { skillProposals: message.skillProposals } : {}),
           })),
         )
         // the next request re-reads the current text of the skills this conversation used
@@ -1026,6 +1054,7 @@ export function AiPanel({
                 setBusy(false)
                 setChat([])
                 skills.resetConversation()
+                skillCards.reset()
                 clearMarks()
               }}
               data-tip={t('aiNewChat')}
@@ -1134,6 +1163,8 @@ export function AiPanel({
                 )
               )}
               {hasTools && <ToolChipList tools={entry.tools!} />}
+              <SkillUsedNotes tools={entry.tools} />
+              {entry.skillProposals?.map((key) => skillCards.render(key))}
               {entry.changes && (
                 <RunChangesCard
                   changes={entry.changes}

@@ -7,6 +7,7 @@ import {
   type DriveAttachPicked,
   DocAttachButton,
   SentSkillChips,
+  SkillUsedNotes,
   useComposerSkills,
   type SkillChipRef,
   type SkillUse,
@@ -253,6 +254,8 @@ export interface AiChatMessage {
   readonly scope?: AiScopeQuoteData | undefined
   /** skill chips this user message carried */
   readonly skills?: readonly SkillChipRef[] | undefined
+  /** skill cards the model proposed in this turn (keys the app's useSkillProposals renders) */
+  readonly skillProposals?: readonly string[] | undefined
   /** tokens the provider billed for this reply, summed across its turns (absent when unreported) */
   readonly usage?: AiTokenUsageView | undefined
 }
@@ -302,6 +305,7 @@ export function AiChatPanel({
   hasContent,
   chat,
   historicChat = [],
+  renderSkillCard,
   attachments,
   attachNotice,
   onPickAttachments,
@@ -333,6 +337,8 @@ export function AiChatPanel({
   readonly hasContent: boolean
   readonly chat: readonly AiChatMessage[]
   readonly historicChat?: readonly AiChatMessage[]
+  /** the skill card for a key a chat message carries */
+  readonly renderSkillCard?: ((key: string) => React.ReactNode) | undefined
   /// Chat attachments (chips + 📎 button + drag onto the panel), same structure
   /// as the docs/slides AI panels.
   readonly attachments: readonly AttachmentMeta[]
@@ -728,6 +734,8 @@ export function AiChatPanel({
                   <SentAttachments atts={entry.attachments} previews={attachmentPreviews} />
                 )}
                 {entry.tools.length > 0 && <ToolChipList tools={entry.tools} />}
+                <SkillUsedNotes tools={entry.tools} />
+                {entry.skillProposals?.map((key) => renderSkillCard?.(key))}
                 {entry.text && (
                   <div dir="auto">
                     <Markdown text={entry.text} navs={[citationNav, fileNav]} />
@@ -778,6 +786,8 @@ export function AiChatPanel({
             ) : (
               <>
                 {entry.tools.length > 0 && <ToolChipList tools={entry.tools} />}
+                <SkillUsedNotes tools={entry.tools} />
+                {entry.skillProposals?.map((key) => renderSkillCard?.(key))}
                 {entry.usage && (
                   <div className="ai-message-usage">
                     <AiUsageChip usage={entry.usage} lang={lang} />

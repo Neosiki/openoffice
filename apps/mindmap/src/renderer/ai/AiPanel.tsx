@@ -40,6 +40,9 @@ import {
   SentSkillChips,
   skillChipRefsOf,
   useComposerSkills,
+  panelUserSkills,
+  SkillUsedNotes,
+  useSkillProposals,
   type SkillChipRef,
   type SkillUse,
 } from '@genoffice/ui'
@@ -190,6 +193,8 @@ interface ChatEntry {
   attachments?: AttachmentMeta[]
   /** skill chips this user message carried */
   skills?: SkillChipRef[]
+  /** skill cards the model proposed in this turn (keys of useSkillProposals) */
+  skillProposals?: string[]
   /** the skill text this message's request carried (live only): a retry resends it */
   skillText?: string
   tools?: ToolActivity[]
@@ -359,6 +364,15 @@ export function AiPanel({
   const skills = useComposerSkills({ lang })
   const skillsRef = useRef(skills)
   skillsRef.current = skills
+  /** the skill cards `propose_skill` shows; nothing is written before their Save */
+  const skillCards = useSkillProposals({
+    lang,
+    // the template flow decides when this map can go along as a template
+    canBeTemplate: false,
+    persistSaved: (record) => persistMessage('assistant', '', [record]),
+  })
+  const skillCardsRef = useRef(skillCards)
+  skillCardsRef.current = skillCards
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null)
   /** the turns that changed the map, oldest first: each one can be taken back */
   const [turns, setTurns] = useState<TurnPoint[]>([])
@@ -607,6 +621,17 @@ export function AiPanel({
         }),
         createSearchSkill(),
         createFilesSkill(availableAttachments),
+        // the person's skills: use_skill, read_skill_file, propose_skill (app-run tools)
+        ...panelUserSkills({
+          lang: () => langRef.current,
+          messages: () => loopRef.current?.messages ?? [],
+          onProposal: (proposal) => {
+            skillCardsRef.current.add(proposal)
+            patchLast((last) => ({
+              skillProposals: [...(last.skillProposals ?? []), proposal.key],
+            }))
+          },
+        }),
       ]),
       // the run's one undo point: the loop hands it back with the first tool that changed the map
       captureSnapshot: () => (turnRef.current ??= new MapTurn()),
@@ -729,8 +754,10 @@ export function AiPanel({
         }
         return api.loadChat({ projectId: ids.projectId, chatId: ids.chatId, limit: 200 })
       })
-      .then((msgs) => {
-        if (msgs.length === 0) return
+      .then((stored) => {
+        if (stored.length === 0) return
+        // skill cards come back closed; a saved card's record is not part of the conversation
+        const msgs = skillCardsRef.current.restore(stored)
         let applied = false
         const restoredAtts = (m: (typeof msgs)[number]): AttachmentMeta[] | undefined =>
           m.attachments
@@ -758,6 +785,7 @@ export function AiPanel({
             ...(m.role === 'user' && skillChipRefsOf(m.skills).length > 0
               ? { skills: skillChipRefsOf(m.skills) }
               : {}),
+            ...(m.skillProposals ? { skillProposals: m.skillProposals } : {}),
           }))
         })
         // the next request re-reads the current text of the skills this conversation used
@@ -1097,6 +1125,7 @@ export function AiPanel({
                 setBusy(false)
                 setChat([])
                 skills.resetConversation()
+                skillCards.reset()
                 attachmentsRef.current = []
                 setAttachments([])
                 setAttachNotice(null)
@@ -1207,6 +1236,8 @@ export function AiPanel({
                 )
               )}
               {hasTools && <ToolChipList tools={entry.tools!} />}
+              <SkillUsedNotes tools={entry.tools} />
+              {entry.skillProposals?.map((key) => skillCards.render(key))}
               {entry.usage && (
                 <div className="ai-message-usage">
                   <AiUsageChip usage={entry.usage} lang={lang} />

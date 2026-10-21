@@ -55,6 +55,46 @@ export {
   skillPickerText,
   type SkillPickerStringKey,
 } from './strings-skill-picker'
+export {
+  initialSkillCardDraft,
+  isSkillCardSavedMessage,
+  readStoredSkillCards,
+  skillCardBridge,
+  skillCardMode,
+  skillCardNameVerdict,
+  skillCardSaveBlock,
+  skillCardSaveFailureKey,
+  skillCardSaveInput,
+  skillCardSaveResultOf,
+  skillCardSavedRecord,
+  skillNameCheckOf,
+  type SkillCardBridge,
+  type SkillCardDraft,
+  type SkillCardMode,
+  type SkillCardSaveInput,
+  type SkillCardStatus,
+  type SavedSkillCardRecord,
+  type SkillCardTemplate,
+  type SkillNameCheck,
+  type StoredChatLike,
+  type StoredSkillProposal,
+  type StoredToolRecord,
+} from './skill-card-model'
+export {
+  SkillCardLine,
+  SkillProposalCard,
+  SkillUsedNotes,
+  type SkillCardTemplateContext,
+  type SkillProposalCardProps,
+} from './SkillProposalCard'
+export {
+  panelUserSkills,
+  useSkillProposals,
+  type PanelUserSkillsOptions,
+  type SkillProposals,
+  type SkillProposalsOptions,
+} from './use-skill-proposals'
+export { SKILL_CARD_STRINGS, skillCardText, type SkillCardStringKey } from './strings-skill-card'
 export { AiQueueStrip } from './AiQueueStrip'
 export { useChatRunQueue, type ChatRunQueue, type QueuedChatMessage } from './chat-run-queue'
 export { AI_QUEUE_LABELS, type AiQueueStripLabels } from './strings-ai-queue'

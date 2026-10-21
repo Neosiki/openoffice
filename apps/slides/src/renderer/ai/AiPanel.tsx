@@ -20,6 +20,9 @@ import {
   skillChipRefsOf,
   useComposerSkills,
   useSkillPickerInput,
+  panelUserSkills,
+  SkillUsedNotes,
+  useSkillProposals,
   type SkillChipRef,
   type SkillUse,
 } from '@genoffice/ui'
@@ -285,6 +288,8 @@ interface ChatEntry {
   scope?: AiScopeQuoteData
   /** skill chips this user message carried */
   skills?: SkillChipRef[]
+  /** skill cards the model proposed in this turn (keys of useSkillProposals) */
+  skillProposals?: string[]
   /** tokens the provider billed for this reply, summed across its turns (absent when unreported) */
   usage?: AiTokenUsageView
 }
@@ -473,6 +478,17 @@ export function AiPanel({
   const skills = useComposerSkills({ lang })
   const skillsRef = useRef(skills)
   skillsRef.current = skills
+  const langRef = useRef(lang)
+  langRef.current = lang
+  /** the skill cards `propose_skill` shows; nothing is written before their Save */
+  const skillCards = useSkillProposals({
+    lang,
+    // the template flow decides when this deck can go along as a template
+    canBeTemplate: false,
+    persistSaved: (record) => persistMessage('assistant', '', [record]),
+  })
+  const skillCardsRef = useRef(skillCards)
+  skillCardsRef.current = skillCards
   const [chat, setChat] = useState<ChatEntry[]>([])
   /** Past conversation restored from JSONL (read-only transcript, not fed to the model) */
   const [historicChat, setHistoricChat] = useState<ChatEntry[]>([])
@@ -721,8 +737,10 @@ export function AiPanel({
         chatRefIds.current = ids
         return api.loadChat({ projectId: ids.projectId, chatId: ids.chatId, limit: 200 })
       })
-      .then((msgs) => {
-        if (msgs.length === 0) return
+      .then((stored) => {
+        if (stored.length === 0) return
+        // skill cards come back closed; a saved card's record is not part of the conversation
+        const msgs = skillCardsRef.current.restore(stored)
         setHistoricChat(
           msgs.map((m) => ({
             role: m.role,
@@ -746,6 +764,7 @@ export function AiPanel({
             ...(m.role === 'user' && skillChipRefsOf(m.skills).length > 0
               ? { skills: skillChipRefsOf(m.skills) }
               : {}),
+            ...(m.skillProposals ? { skillProposals: m.skillProposals } : {}),
           })),
         )
         // the next request re-reads the current text of the skills this conversation used
@@ -1479,6 +1498,17 @@ export function AiPanel({
       skill: composeWithDrive('slides+files', '', () => loopRef.current?.messages ?? [], [
         createSlidesSkill(access),
         createFilesSkill(availableAttachments, (path) => readAttachmentPathsRef.current.add(path)),
+        // the person's skills: use_skill, read_skill_file, propose_skill (app-run tools)
+        ...panelUserSkills({
+          lang: () => langRef.current,
+          messages: () => loopRef.current?.messages ?? [],
+          onProposal: (proposal) => {
+            skillCardsRef.current.add(proposal)
+            patchLastAssistant((last) => ({
+              skillProposals: [...(last.skillProposals ?? []), proposal.key],
+            }))
+          },
+        }),
       ]),
       events: {
         onText: (text) => {
@@ -2165,6 +2195,7 @@ export function AiPanel({
     // turn, so it must clear too — otherwise the old conversation survives.
     setHistoricChat([])
     skills.resetConversation()
+    skillCards.reset()
     // Answered clarifications are transcript too: they render under their
     // original message index, so stale entries would re-attach to unrelated
     // new messages after an index collision.
@@ -2364,6 +2395,8 @@ export function AiPanel({
                   <SentAttachments atts={entry.attachments} previews={attachmentPreviews} />
                 )}
                 {entry.tools && entry.tools.length > 0 && <ToolChipList tools={entry.tools} />}
+                <SkillUsedNotes tools={entry.tools} />
+                {entry.skillProposals?.map((key) => skillCards.render(key))}
                 {entry.text && (
                   <div dir="auto">
                     <Markdown text={entry.text} />
@@ -2448,6 +2481,8 @@ export function AiPanel({
                 <span dir="auto">{entry.text}</span>
               )}
               {entry.tools && entry.tools.length > 0 && <ToolChipList tools={entry.tools} />}
+              <SkillUsedNotes tools={entry.tools} />
+              {entry.skillProposals?.map((key) => skillCards.render(key))}
               {entry.role === 'assistant' && entry.usage && (
                 <div className="ai-message-usage">
                   <AiUsageChip usage={entry.usage} lang={lang} />

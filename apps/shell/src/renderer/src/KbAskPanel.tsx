@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import {
   AgentLoop,
+  USE_SKILL_TOOL,
+  USER_SKILL_TOOL_NAMES,
+  composeSkills,
   createIpcTransport,
   createKnowledgeBaseSkill,
   type KbFileInfo,
@@ -18,7 +21,9 @@ import {
   Markdown,
   NO_SKILL_USE,
   SentSkillChips,
+  panelUserSkills,
   useComposerSkills,
+  useSkillProposals,
   type AiTokenUsageView,
   type SkillChipRef,
   type SkillUse,
@@ -64,7 +69,8 @@ import sendStop from './assets/send-stop.png'
 /** one tool a turn used, badge-shaped; the icon follows the call name */
 interface ToolNote {
   label: string
-  kind: 'search' | 'read'
+  /** 'skill': "<title> skill used" */
+  kind: 'search' | 'read' | 'skill'
 }
 
 interface AskMessage {
@@ -81,6 +87,8 @@ interface AskMessage {
   blockedReason?: string
   /** skill chips a question carried */
   skills?: SkillChipRef[]
+  /** skill cards the model proposed in this answer (keys of useSkillProposals) */
+  skillProposals?: string[]
 }
 
 export function KbAskPanel({
@@ -123,6 +131,11 @@ export function KbAskPanel({
   const heldRef = useRef<string | null>(null)
   /** the skills called with `/` or `$` in the composer, and the text a question gets for them */
   const skills = useComposerSkills({ lang })
+  /** the skill cards `propose_skill` shows; nothing is written before their Save. The
+   *  home panel has no document, so a card never offers a template here */
+  const skillCards = useSkillProposals({ lang })
+  const skillCardsRef = useRef(skillCards)
+  skillCardsRef.current = skillCards
   /** the skills of the held question, and of the last question asked (continue with ...) */
   const heldSkillUseRef = useRef<SkillUse>(NO_SKILL_USE)
   const lastSkillUseRef = useRef<SkillUse>(NO_SKILL_USE)
@@ -221,16 +234,31 @@ export function KbAskPanel({
           streamErrorRef.current = askBlockedRunOf(error)
         },
       }),
-      skill: createKnowledgeBaseSkill({
-        listFiles: () => corpusRef.current,
-        // a narrowed run's calls carry its scope; main keeps them to the group
-        search: (query, limit) =>
-          window.aiOffice.kbSearch({ q: query, limit }, runScopeRef.current),
-        read: (path, offset) => window.aiOffice.kbRead(path, offset, runScopeRef.current),
-      }),
+      skill: composeSkills('kb+skills', '', [
+        createKnowledgeBaseSkill({
+          listFiles: () => corpusRef.current,
+          // a narrowed run's calls carry its scope; main keeps them to the group
+          search: (query, limit) =>
+            window.aiOffice.kbSearch({ q: query, limit }, runScopeRef.current),
+          read: (path, offset) => window.aiOffice.kbRead(path, offset, runScopeRef.current),
+        }),
+        // the person's skills: use_skill, read_skill_file, propose_skill (app-run tools)
+        ...panelUserSkills({
+          lang: () => langRef.current,
+          messages: () => loopRef.current?.messages ?? [],
+          onProposal: (proposal) => {
+            skillCardsRef.current.add(proposal)
+            patchLast((last) => ({
+              skillProposals: [...(last.skillProposals ?? []), proposal.key],
+            }))
+          },
+        }),
+      ]),
       events: {
         onText: (text) => patchLast({ text }),
-        onToolStart: (call) =>
+        onToolStart: (call) => {
+          // the skill tools show their own line once they ran
+          if (USER_SKILL_TOOL_NAMES.has(call.name)) return
           patchLast((last) => ({
             toolNotes: [
               ...last.toolNotes,
@@ -238,7 +266,14 @@ export function KbAskPanel({
                 ? { label: t('askToolSearch'), kind: 'search' as const }
                 : { label: t('askToolRead'), kind: 'read' as const },
             ],
-          })),
+          }))
+        },
+        onToolExecuted: ({ call, execution }) => {
+          if (call.name !== USE_SKILL_TOOL || execution.isError) return
+          patchLast((last) => ({
+            toolNotes: [...last.toolNotes, { label: execution.summary, kind: 'skill' as const }],
+          }))
+        },
         onDone: () => {
           endRunScope()
           finishLast()
@@ -509,13 +544,18 @@ export function KbAskPanel({
               <div className="kb-ask-tools">
                 {m.toolNotes.map((note, j) => (
                   <span key={j} className="kb-ask-tool-note">
-                    {note.kind === 'search' ? <IconSearch /> : <IconFileText />}
+                    {note.kind === 'search' ? (
+                      <IconSearch />
+                    ) : note.kind === 'read' ? (
+                      <IconFileText />
+                    ) : null}
                     {note.label}
                     {m.streaming && j === m.toolNotes.length - 1 ? '…' : ''}
                   </span>
                 ))}
               </div>
             )}
+            {m.skillProposals?.map((key) => skillCards.render(key))}
             {m.text ? (
               m.role === 'assistant' ? (
                 <Markdown text={m.text} navs={[fileNav]} />

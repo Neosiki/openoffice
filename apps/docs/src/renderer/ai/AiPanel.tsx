@@ -24,6 +24,9 @@ import {
   SentSkillChips,
   skillChipRefsOf,
   useComposerSkills,
+  panelUserSkills,
+  SkillUsedNotes,
+  useSkillProposals,
   type SkillChipRef,
   type SkillUse,
 } from '@genoffice/ui'
@@ -158,6 +161,8 @@ interface ChatEntry {
   scope?: AiScopeQuoteData
   /** skill chips this user message carried */
   skills?: SkillChipRef[]
+  /** skill cards the model proposed in this turn (keys of useSkillProposals) */
+  skillProposals?: string[]
   /** tokens the provider billed for this reply, summed across its turns (absent when unreported) */
   usage?: AiTokenUsageView
 }
@@ -432,6 +437,17 @@ export function AiPanel({
   const skills = useComposerSkills({ lang })
   const skillsRef = useRef(skills)
   skillsRef.current = skills
+  const langRef = useRef(lang)
+  langRef.current = lang
+  /** the skill cards `propose_skill` shows; nothing is written before their Save */
+  const skillCards = useSkillProposals({
+    lang,
+    // the template flow decides when this document can go along as a template
+    canBeTemplate: false,
+    persistSaved: (record) => persistMessage('assistant', '', [record]),
+  })
+  const skillCardsRef = useRef(skillCards)
+  skillCardsRef.current = skillCards
   /** Wall-clock start of the current run, drives the elapsed badge */
   const runStartedAtRef = useRef(0)
   /** a send waiting on a phased open's tail; Stop / New chat abort it before it runs */
@@ -716,8 +732,10 @@ export function AiPanel({
         chatRefIds.current = ids
         return api.loadChat({ projectId: ids.projectId, chatId: ids.chatId, limit: 200 })
       })
-      .then((msgs) => {
-        if (msgs.length === 0) return
+      .then((stored) => {
+        if (stored.length === 0) return
+        // skill cards come back closed; a saved card's record is not part of the conversation
+        const msgs = skillCardsRef.current.restore(stored)
         setHistoricChat(
           msgs.map((m) => ({
             role: m.role,
@@ -741,6 +759,7 @@ export function AiPanel({
             ...(m.role === 'user' && skillChipRefsOf(m.skills).length > 0
               ? { skills: skillChipRefsOf(m.skills) }
               : {}),
+            ...(m.skillProposals ? { skillProposals: m.skillProposals } : {}),
           })),
         )
         // the next request re-reads the current text of the skills this conversation used
@@ -951,6 +970,17 @@ export function AiPanel({
             toolCapabilitiesRef.current?.videoAnalysis.available === true,
         ),
         createFilesSkill(availableAttachments),
+        // the person's skills: use_skill, read_skill_file, propose_skill (app-run tools)
+        ...panelUserSkills({
+          lang: () => langRef.current,
+          messages: () => loopRef.current?.messages ?? [],
+          onProposal: (proposal) => {
+            skillCardsRef.current.add(proposal)
+            patchLastAssistant((last) => ({
+              skillProposals: [...(last.skillProposals ?? []), proposal.key],
+            }))
+          },
+        }),
       ]),
       captureSnapshot: () => captureRollbackSnapshot(editorRef.current),
       events: {
@@ -1377,6 +1407,7 @@ export function AiPanel({
     // previous conversation survives "New chat" on screen (#195).
     setHistoricChat([])
     skills.resetConversation()
+    skillCards.reset()
     // Unsent composer attachments would otherwise ride into the next chat's
     // file context (availableAttachments merges sent + live). The typed
     // draft itself is kept — only staged files are dropped.
@@ -1595,6 +1626,8 @@ export function AiPanel({
                   <SentAttachments atts={entry.attachments} previews={attachmentPreviews} />
                 )}
                 {entry.tools && entry.tools.length > 0 && <ToolChipList tools={entry.tools} />}
+                <SkillUsedNotes tools={entry.tools} />
+                {entry.skillProposals?.map((key) => skillCards.render(key))}
                 {entry.text && (
                   <div dir="auto">
                     <Markdown text={entry.text} navs={chatNavs} />
@@ -1685,6 +1718,8 @@ export function AiPanel({
                 </div>
               )}
               {entry.tools && entry.tools.length > 0 && <ToolChipList tools={entry.tools} />}
+              <SkillUsedNotes tools={entry.tools} />
+              {entry.skillProposals?.map((key) => skillCards.render(key))}
               {entry.error && !blockedCause && (
                 <div className="ai-msg-error">{t('aiErrorPrefix', { error: entry.error })}</div>
               )}

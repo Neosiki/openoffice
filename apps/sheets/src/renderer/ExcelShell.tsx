@@ -1,5 +1,5 @@
 import type { IFunctionInfo } from '@univerjs/engine-formula'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { platformShortcuts } from '@genoffice/i18n'
 import {
   AiMark,
@@ -251,6 +251,8 @@ interface ExcelShellProps {
   readonly aiSubscription: AiPanelSubscription
   readonly chat: readonly AiChatMessage[]
   readonly historicChat?: readonly AiChatMessage[]
+  /** the skill card for a key a chat message carries */
+  readonly renderSkillCard?: ((key: string) => ReactNode) | undefined
   /// Chat attachments (chips + 📎 button + drag-and-drop), same structure as the
   /// docs/slides AI panels.
   readonly attachments: readonly AttachmentMeta[]
@@ -468,6 +470,7 @@ export function ExcelShell({
   aiSubscription,
   chat,
   historicChat,
+  renderSkillCard,
   attachments,
   attachNotice,
   onPickAttachments,
@@ -966,6 +969,7 @@ export function ExcelShell({
           hasContent={sheetHasContent}
           chat={chat}
           {...(historicChat !== undefined ? { historicChat } : {})}
+          renderSkillCard={renderSkillCard}
           attachments={attachments}
           attachNotice={attachNotice}
           onPickAttachments={onPickAttachments}

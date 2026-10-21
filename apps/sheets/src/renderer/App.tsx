@@ -71,6 +71,8 @@ import {
   useSplitPaneFocusPing,
   NO_SKILL_USE,
   skillChipRefsOf,
+  panelUserSkills,
+  useSkillProposals,
   type AiTokenUsageView,
   type AiScopeQuoteData,
   type DriveAttachPicked,
@@ -1144,6 +1146,15 @@ export function App({
   const [chat, setChat] = useState<readonly AiChatMessage[]>([])
   /** History loaded from project-store (read-only transcript, not fed to the model) */
   const [historicChat, setHistoricChat] = useState<readonly AiChatMessage[]>([])
+  /** the skill cards `propose_skill` shows; nothing is written before their Save */
+  const skillCards = useSkillProposals({
+    lang: getLang(),
+    // the template flow decides when this workbook can go along as a template
+    canBeTemplate: false,
+    persistSaved: (record) => void persistChatMessage('assistant', '', [record]),
+  })
+  const skillCardsRef = useRef(skillCards)
+  skillCardsRef.current = skillCards
   /** the skills of the last send: a retry of a message with chips sends the same skill text */
   const lastSkillUseRef = useRef<SkillUse>(NO_SKILL_USE)
   // ── Chat attachments (same structure as docs/slides: text types go through the
@@ -1311,12 +1322,14 @@ export function App({
         }
         if (stale()) return
         chatRefIdsRef.current = ids
-        const msgs = await api.loadChat({
+        const stored = await api.loadChat({
           projectId: ids.projectId,
           chatId: ids.chatId,
           limit: 200,
         })
-        if (stale() || msgs.length === 0) return
+        if (stale() || stored.length === 0) return
+        // skill cards come back closed; a saved card's record is not part of the conversation
+        const msgs = skillCardsRef.current.restore(stored)
         setHistoricChat(
           msgs.map((m) => ({
             role: m.role,
@@ -1345,6 +1358,7 @@ export function App({
             ...(m.role === 'user' && skillChipRefsOf(m.skills).length > 0
               ? { skills: skillChipRefsOf(m.skills) }
               : {}),
+            ...(m.skillProposals ? { skillProposals: m.skillProposals } : {}),
           })),
         )
         // Restore model context: follow-ups after reopening the file continue the
@@ -1460,6 +1474,18 @@ export function App({
         }),
         createSearchSkill(),
         createImageSkill(() => imageGenRef.current),
+        // the person's skills: use_skill, read_skill_file, propose_skill (app-run tools)
+        ...panelUserSkills({
+          lang: getLang,
+          messages: () => agentLoopRef.current?.messages ?? [],
+          onProposal: (proposal) => {
+            skillCardsRef.current.add(proposal)
+            patchLastAssistant((entry) => ({
+              ...entry,
+              skillProposals: [...(entry.skillProposals ?? []), proposal.key],
+            }))
+          },
+        }),
       ]),
       events: {
         onText: (text) => {
@@ -1738,6 +1764,7 @@ export function App({
     setAiBusy(false)
     setChat([])
     setHistoricChat([])
+    skillCards.reset()
     // Unsent composer attachments would otherwise ride into the next chat's
     // file context (availableAttachments merges sent + live) — same as docs
     // (#224) and slides. The typed draft itself is kept.
@@ -5212,6 +5239,7 @@ export function App({
         }}
         chat={chat}
         historicChat={historicChat}
+        renderSkillCard={skillCards.render}
         attachments={attachments}
         attachNotice={attachNotice}
         onPickAttachments={() => void handlePickAttachments()}
