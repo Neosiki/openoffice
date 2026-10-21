@@ -107,7 +107,7 @@ export const zhTW = {
   previewLicense: '授權檔案：{name}',
   previewRootLicense: '儲存庫授權檔案：{name}',
   previewWarning:
-    '只安裝來自可信來源的技能。技能會向 AI 下達指示，在代理程式視窗中還可以執行指令碼',
+    '只安裝來自可信來源的技能。技能會向 AI 下達指示，在代理程式視窗中還可以執行指令碼。',
   previewInstallLabel: '安裝 {title}',
   collision: '我的技能中有同名技能：',
   collisionReplace: '取代',

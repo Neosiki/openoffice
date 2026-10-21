@@ -109,7 +109,7 @@ export const pl = {
   previewLicense: 'Plik licencji: {name}',
   previewRootLicense: 'Plik licencji repozytorium: {name}',
   previewWarning:
-    'Instaluj umiejętności tylko z zaufanych źródeł. Umiejętność przekazuje AI instrukcje, a w oknie agenta może uruchamiać skrypty',
+    'Instaluj umiejętności tylko z zaufanych źródeł. Umiejętność przekazuje AI instrukcje, a w oknie agenta może uruchamiać skrypty.',
   previewInstallLabel: 'Zainstaluj {title}',
   collision: 'W moich umiejętnościach jest umiejętność o tej samej nazwie:',
   collisionReplace: 'Zastąp',

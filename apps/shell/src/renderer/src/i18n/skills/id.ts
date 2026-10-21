@@ -110,7 +110,7 @@ export const id = {
   previewLicense: 'File lisensi: {name}',
   previewRootLicense: 'File lisensi repositori: {name}',
   previewWarning:
-    'Pasang skill hanya dari sumber yang Anda percayai. Skill memberi AI instruksi, dan di jendela agen skill dapat menjalankan skrip',
+    'Pasang skill hanya dari sumber yang Anda percayai. Skill memberi AI instruksi, dan di jendela agen skill dapat menjalankan skrip.',
   previewInstallLabel: 'Pasang {title}',
   collision: 'Skill saya memiliki skill dengan nama yang sama:',
   collisionReplace: 'Ganti',

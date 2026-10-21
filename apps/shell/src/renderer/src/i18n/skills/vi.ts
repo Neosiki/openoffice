@@ -110,7 +110,7 @@ export const vi = {
   previewLicense: 'Tệp giấy phép: {name}',
   previewRootLicense: 'Tệp giấy phép của kho: {name}',
   previewWarning:
-    'Chỉ cài kỹ năng từ nguồn bạn tin cậy. Kỹ năng đưa chỉ dẫn cho AI và có thể chạy tập lệnh trong cửa sổ tác tử',
+    'Chỉ cài kỹ năng từ nguồn bạn tin cậy. Kỹ năng đưa chỉ dẫn cho AI và có thể chạy tập lệnh trong cửa sổ tác tử.',
   previewInstallLabel: 'Cài đặt {title}',
   collision: 'Kỹ năng của tôi đã có kỹ năng cùng tên:',
   collisionReplace: 'Thay thế',

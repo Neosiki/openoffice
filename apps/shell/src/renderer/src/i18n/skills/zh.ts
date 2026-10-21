@@ -104,7 +104,7 @@ export const zh = {
   previewUrls: '网址 {n} 个',
   previewLicense: '许可证文件：{name}',
   previewRootLicense: '仓库许可证文件：{name}',
-  previewWarning: '只安装来自可信来源的技能。技能会向 AI 下达指令，在智能体窗口中还可以运行脚本',
+  previewWarning: '只安装来自可信来源的技能。技能会向 AI 下达指令，在智能体窗口中还可以运行脚本。',
   previewInstallLabel: '安装 {title}',
   collision: '我的技能中有同名技能：',
   collisionReplace: '替换',

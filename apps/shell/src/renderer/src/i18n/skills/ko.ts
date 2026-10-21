@@ -108,7 +108,7 @@ export const ko = {
   previewLicense: '라이선스 파일: {name}',
   previewRootLicense: '저장소 라이선스 파일: {name}',
   previewWarning:
-    '믿을 수 있는 곳에서 받은 스킬만 설치하세요. 스킬은 AI에게 지시를 주고, 에이전트 창에서는 스크립트를 실행할 수 있습니다',
+    '믿을 수 있는 곳에서 받은 스킬만 설치하세요. 스킬은 AI에게 지시를 주고, 에이전트 창에서는 스크립트를 실행할 수 있습니다.',
   previewInstallLabel: '{title} 설치',
   collision: '같은 이름의 내 스킬이 있습니다:',
   collisionReplace: '바꾸기',

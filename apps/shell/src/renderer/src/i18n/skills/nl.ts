@@ -111,7 +111,7 @@ export const nl = {
   previewLicense: 'Licentiebestand: {name}',
   previewRootLicense: 'Licentiebestand van de opslagplaats: {name}',
   previewWarning:
-    'Installeer alleen vaardigheden uit bronnen die je vertrouwt. Een vaardigheid geeft de AI instructies en kan in het agentvenster scripts uitvoeren',
+    'Installeer alleen vaardigheden uit bronnen die je vertrouwt. Een vaardigheid geeft de AI instructies en kan in het agentvenster scripts uitvoeren.',
   previewInstallLabel: '{title} installeren',
   collision: 'Mijn vaardigheden bevat een vaardigheid met dezelfde naam:',
   collisionReplace: 'Vervangen',

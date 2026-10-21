@@ -110,7 +110,7 @@ export const ms = {
   previewLicense: 'Fail lesen: {name}',
   previewRootLicense: 'Fail lesen repositori: {name}',
   previewWarning:
-    'Pasang kemahiran hanya daripada sumber yang anda percayai. Kemahiran memberi arahan kepada AI, dan dalam tetingkap ejen ia boleh menjalankan skrip',
+    'Pasang kemahiran hanya daripada sumber yang anda percayai. Kemahiran memberi arahan kepada AI, dan dalam tetingkap ejen ia boleh menjalankan skrip.',
   previewInstallLabel: 'Pasang {title}',
   collision: 'Kemahiran saya ada kemahiran dengan nama yang sama:',
   collisionReplace: 'Gantikan',

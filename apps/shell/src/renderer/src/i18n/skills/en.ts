@@ -110,7 +110,7 @@ export const en = {
   previewLicense: 'License file: {name}',
   previewRootLicense: 'Repository license file: {name}',
   previewWarning:
-    'Install skills only from sources you trust. A skill gives the AI instructions, and in the agent window it can run scripts',
+    'Install skills only from sources you trust. A skill gives the AI instructions, and in the agent window it can run scripts.',
   previewInstallLabel: 'Install {title}',
   collision: 'My skills has a skill with the same name:',
   collisionReplace: 'Replace',

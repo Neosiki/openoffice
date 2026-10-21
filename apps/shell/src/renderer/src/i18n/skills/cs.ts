@@ -109,7 +109,7 @@ export const cs = {
   previewLicense: 'Licenční soubor: {name}',
   previewRootLicense: 'Licenční soubor repozitáře: {name}',
   previewWarning:
-    'Instalujte dovednosti jen ze zdrojů, kterým důvěřujete. Dovednost dává AI pokyny a v okně agenta může spouštět skripty',
+    'Instalujte dovednosti jen ze zdrojů, kterým důvěřujete. Dovednost dává AI pokyny a v okně agenta může spouštět skripty.',
   previewInstallLabel: 'Nainstalovat {title}',
   collision: 'V mých dovednostech je dovednost se stejným názvem:',
   collisionReplace: 'Nahradit',

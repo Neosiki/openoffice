@@ -112,7 +112,7 @@ export const fr = {
   previewLicense: 'Fichier de licence : {name}',
   previewRootLicense: 'Fichier de licence du dépôt : {name}',
   previewWarning:
-    'N’installez que des compétences provenant de sources de confiance. Une compétence donne des instructions à l’AI et, dans la fenêtre de l’agent, elle peut exécuter des scripts',
+    'N’installez que des compétences provenant de sources de confiance. Une compétence donne des instructions à l’AI et, dans la fenêtre de l’agent, elle peut exécuter des scripts.',
   previewInstallLabel: 'Installer {title}',
   collision: 'Mes compétences contient une compétence du même nom :',
   collisionReplace: 'Remplacer',

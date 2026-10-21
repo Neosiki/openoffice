@@ -110,7 +110,7 @@ export const it = {
   previewLicense: 'File di licenza: {name}',
   previewRootLicense: 'File di licenza del repository: {name}',
   previewWarning:
-    "Installa abilità solo da fonti affidabili. Un'abilità dà istruzioni all'IA e nella finestra dell'agente può eseguire script",
+    "Installa abilità solo da fonti affidabili. Un'abilità dà istruzioni all'IA e nella finestra dell'agente può eseguire script.",
   previewInstallLabel: 'Installa {title}',
   collision: "Tra le mie abilità ce n'è una con lo stesso nome:",
   collisionReplace: 'Sostituisci',

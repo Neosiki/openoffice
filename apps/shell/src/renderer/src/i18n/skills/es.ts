@@ -110,7 +110,7 @@ export const es = {
   previewLicense: 'Archivo de licencia: {name}',
   previewRootLicense: 'Archivo de licencia del repositorio: {name}',
   previewWarning:
-    'Instala habilidades solo de fuentes de confianza. Una habilidad da instrucciones a la AI y, en la ventana del agente, puede ejecutar scripts',
+    'Instala habilidades solo de fuentes de confianza. Una habilidad da instrucciones a la AI y, en la ventana del agente, puede ejecutar scripts.',
   previewInstallLabel: 'Instalar {title}',
   collision: 'Mis habilidades tiene una habilidad con el mismo nombre:',
   collisionReplace: 'Reemplazar',

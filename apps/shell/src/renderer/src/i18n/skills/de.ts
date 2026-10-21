@@ -111,7 +111,7 @@ export const de = {
   previewLicense: 'Lizenzdatei: {name}',
   previewRootLicense: 'Lizenzdatei des Repositorys: {name}',
   previewWarning:
-    'Installieren Sie Skills nur aus Quellen, denen Sie vertrauen. Ein Skill gibt der AI Anweisungen und kann im Agent-Fenster Skripte ausführen',
+    'Installieren Sie Skills nur aus Quellen, denen Sie vertrauen. Ein Skill gibt der AI Anweisungen und kann im Agent-Fenster Skripte ausführen.',
   previewInstallLabel: '{title} installieren',
   collision: 'In Meine Skills gibt es einen Skill mit demselben Namen:',
   collisionReplace: 'Ersetzen',

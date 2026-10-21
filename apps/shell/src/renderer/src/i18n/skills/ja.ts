@@ -109,7 +109,7 @@ export const ja = {
   previewLicense: 'ライセンスファイル: {name}',
   previewRootLicense: 'リポジトリのライセンスファイル: {name}',
   previewWarning:
-    '信頼できる提供元のスキルだけをインストールしてください。スキルは AI に指示を与え、エージェントウィンドウではスクリプトを実行できます',
+    '信頼できる提供元のスキルだけをインストールしてください。スキルは AI に指示を与え、エージェントウィンドウではスクリプトを実行できます。',
   previewInstallLabel: '{title} をインストール',
   collision: 'マイスキルに同じ名前のスキルがあります:',
   collisionReplace: '置き換える',
