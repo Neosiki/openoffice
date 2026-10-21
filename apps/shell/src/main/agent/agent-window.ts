@@ -50,6 +50,7 @@ import {
   readTemplateCandidate,
   templateRedactionOf,
   type AgentOpenTab,
+  type AgentSessionSkillName,
   type AgentSkillListEntry,
   type AgentTemplateCandidate,
 } from './agent-skills'
@@ -189,6 +190,8 @@ export interface AgentSkillToolsDeps {
   /** the session's window, or null once it is closed */
   window(): AgentSkillWindow | null
   listSkills?: (() => Promise<AgentSkillListEntry[]>) | undefined
+  /** the skills of the session's copy, by the names the model knows them under */
+  sessionSkills?: (() => readonly AgentSessionSkillName[]) | undefined
   /** where the shown cards are kept for their template buttons */
   keep(shown: ShownProposal): void
   newKey(): string
@@ -208,7 +211,7 @@ export function agentSkillToolsFor(
     async proposeSkill(input, context) {
       if (!d.window()) throw new Error('The agent window is closed; the card cannot be shown.')
       const list = d.listSkills ? await d.listSkills().catch(() => []) : []
-      const made = agentSkillProposalOf(input, list, d.newKey())
+      const made = agentSkillProposalOf(input, list, d.newKey(), d.sessionSkills?.() ?? [])
       if (!made.ok) throw new Error(made.message)
       let tabs: AgentOpenTab[] = []
       try {
@@ -569,6 +572,7 @@ export function configureAgentWindow(next: AgentWindowDeps): void {
             skillTools: agentSkillToolsFor(session, projectRoot, {
               window: () => liveOwner(session.ownerId),
               listSkills: next.listSkills,
+              sessionSkills: () => manager?.skillsOf(session.ownerId, session.sessionId) ?? [],
               keep: keepProposal,
               newKey: () => randomUUID(),
             }),

@@ -155,10 +155,10 @@ describe('instructions', () => {
     expect(codex).toContain('read its SKILL.md first and follow it')
     expect(codex).toContain('only when the person asks for it')
     expect(codex).toContain(
-      `- home-letter (title: 가정통신문): Writes a letter to families.; SKILL.md: ${skills[0]!.skillMd}`,
+      `- home-letter (id: app:home-letter; title: 가정통신문): Writes a letter to families.; SKILL.md: ${skills[0]!.skillMd}`,
     )
     expect(codex).toContain(
-      `- review--user (title: review): Reviews a draft.; SKILL.md: ${skills[1]!.skillMd}; manual: only when the person asks`,
+      `- review--user (id: user:review; title: review): Reviews a draft.; SKILL.md: ${skills[1]!.skillMd}; manual: only when the person asks`,
     )
     expect(codex).not.toMatch(/home-letter[^\n]*manual/)
     // Claude finds them in its plugin; no list for it, and none when there are no skills
@@ -301,7 +301,7 @@ describe('starting a session', () => {
       skillBundleDir: join(home, 'skills'),
     })
     expect(options.instructions).toContain(
-      `- deck (title: Deck): Makes a deck.; SKILL.md: ${join(home, 'skills', 'skills', 'deck', 'SKILL.md')}`,
+      `- deck (id: app:deck; title: Deck): Makes a deck.; SKILL.md: ${join(home, 'skills', 'skills', 'deck', 'SKILL.md')}`,
     )
   })
 
@@ -372,6 +372,20 @@ describe('driving a session', () => {
     await m.send(1, result.sessionId, 'hi')
     expect(session.sent).toEqual(['hi'])
     expect(session.setOpenDocuments).toHaveBeenCalled()
+  })
+
+  it('keeps the skills the session got, for its window only', async () => {
+    const { m, project } = manager()
+    const result = await m.start(1, {
+      provider: 'claude-code',
+      projectRoot: project,
+      mode: 'ask-commands',
+    })
+    if (!result.ok) throw new Error('did not start')
+    expect(m.skillsOf(1, result.sessionId).map((skill) => [skill.id, skill.name])).toEqual([
+      ['app:deck', 'deck'],
+    ])
+    expect(m.skillsOf(2, result.sessionId)).toEqual([])
   })
 
   it('forwards events to its window and cleans up when the session ends', async () => {

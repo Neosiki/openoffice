@@ -166,11 +166,14 @@ export function codexSkillInstructions(skills: readonly AgentSkillEntry[]): stri
   if (skills.length === 0) return []
   const lines = [
     '',
-    'Skills: each skill below is a folder with a SKILL.md of instructions. When a skill is relevant to the task, or the person asks for it, read its SKILL.md first and follow it; paths in it are relative to its folder. A skill marked "manual" is used only when the person asks for it by name.',
+    'Skills: each skill below is a folder with a SKILL.md of instructions. When a skill is relevant to the task, or the person asks for it, read its SKILL.md first and follow it; paths in it are relative to its folder. A skill marked "manual" is used only when the person asks for it by name. To change a skill with propose_skill, give its name or its id as targetId.',
   ]
   for (const skill of skills) {
     const title = oneLine(skill.title)
-    const named = title && title !== skill.name ? `${skill.name} (title: ${title})` : skill.name
+    const named =
+      title && title !== skill.name
+        ? `${skill.name} (id: ${skill.id}; title: ${title})`
+        : `${skill.name} (id: ${skill.id})`
     const manual = skill.invoke === 'manual' ? '; manual: only when the person asks' : ''
     lines.push(
       `- ${named}: ${oneLine(skill.description) || 'no description'}; SKILL.md: ${skill.skillMd}${manual}`,
@@ -231,6 +234,8 @@ interface LiveSession {
   sessionDir: string
   appMcp?: { stop(): Promise<void> } | undefined
   projectRoot: string
+  /** the skills of the session's copy, once built */
+  skills?: readonly AgentSkillEntry[] | undefined
 }
 
 export interface AgentManager {
@@ -244,6 +249,8 @@ export interface AgentManager {
   stopAll(): void
   /** the project folder of a live session, for opening its files in tabs */
   projectRootOf(ownerId: number, sessionId: string): string | undefined
+  /** the skills a live session got, by their names in its copy (empty before the copy is built) */
+  skillsOf(ownerId: number, sessionId: string): readonly AgentSkillEntry[]
 }
 
 export function createAgentManager(deps: AgentManagerDeps): AgentManager {
@@ -297,6 +304,7 @@ export function createAgentManager(deps: AgentManagerDeps): AgentManager {
         entry.appMcp = appMcp
         // the skills as they are now: a change made during the session applies to the next one
         const skills = deps.buildSkills ? await deps.buildSkills(projectRoot) : undefined
+        entry.skills = skills?.skills
         const config = settings.providers[request.provider]
         const options: AgentSessionOptions = {
           projectRoot,
@@ -385,6 +393,10 @@ export function createAgentManager(deps: AgentManagerDeps): AgentManager {
 
     projectRootOf(ownerId, sessionId) {
       return own(ownerId, sessionId)?.projectRoot
+    },
+
+    skillsOf(ownerId, sessionId) {
+      return own(ownerId, sessionId)?.skills ?? []
     },
   }
 }

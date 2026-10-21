@@ -14,8 +14,15 @@ import { basename, dirname, extname, isAbsolute, join, resolve } from 'node:path
 import JSZip from 'jszip'
 import type { SkillProposal } from '@genoffice/agent-core'
 import { REDACT_NS } from '@genoffice/agent-core/redact-range'
-import { IEUM_TEMPLATE_KEY, MAX_USER_SKILL_BYTES, parseSkillMd } from '@genoffice/ai-provider'
 import {
+  IEUM_TEMPLATE_KEY,
+  MAX_USER_SKILL_BYTES,
+  USER_SKILL_PRIORITY,
+  isReservedUserSkillName,
+  parseSkillMd,
+} from '@genoffice/ai-provider'
+import {
+  AGENT_SKILL_PLUGIN_NAME,
   comparablePath,
   isInsidePath,
   type AgentSkillEntry,
@@ -110,29 +117,63 @@ export interface AgentSkillListEntry {
   unreadable?: unknown
 }
 
-/** Names no window shows, from any source (spec 3.6) */
-const HIDDEN_SKILL_NAMES = new Set(['genoffice', 'ieumoffice'])
-
 export type AgentSkillProposalResult =
   { ok: true; proposal: SkillProposal } | { ok: false; message: string }
 
+/** A skill of the session's copy as a change's target needs it: its identifier and name there */
+export type AgentSessionSkillName = Pick<AgentSkillEntry, 'id' | 'name'>
+
+function priorityOf(entry: AgentSkillListEntry): number {
+  const at = USER_SKILL_PRIORITY.indexOf(entry.source as (typeof USER_SKILL_PRIORITY)[number])
+  return at === -1 ? USER_SKILL_PRIORITY.length : at
+}
+
+/**
+ * The skill a change names. The model knows a skill by its name in the
+ * session's copy (Claude may prefix the plugin's name, `ieum-skills:`), a
+ * renamed duplicate (`<name>--<source>`, `<name>--plugin-<plugin>`) included;
+ * Codex is also told the identifier. Either is taken. A plain name shared by
+ * several skills is the one that won the name in the copy; one not in the copy
+ * (turned off) goes by the same priority.
+ */
+function targetEntryOf(
+  targetId: string,
+  list: readonly AgentSkillListEntry[],
+  sessionSkills: readonly AgentSessionSkillName[],
+): AgentSkillListEntry | undefined {
+  const shown = list.filter((skill) => !isReservedUserSkillName(skill.name))
+  const byId = shown.find((skill) => skill.id === targetId)
+  if (byId) return byId
+  const prefix = `${AGENT_SKILL_PLUGIN_NAME}:`
+  const bare = targetId.toLowerCase().startsWith(prefix) ? targetId.slice(prefix.length) : targetId
+  const wanted = bare.toLowerCase()
+  const inSession = sessionSkills.find((skill) => skill.name.toLowerCase() === wanted)
+  if (inSession) return shown.find((skill) => skill.id === inSession.id)
+  if (bare !== targetId) return shown.find((skill) => skill.id === bare)
+  return shown
+    .filter((skill) => skill.name.toLowerCase() === wanted)
+    .sort((a, b) => priorityOf(a) - priorityOf(b))[0]
+}
+
 /**
  * The card a `propose_skill` call asks for, or why not (words for the model).
- * A change names a skill of the list; the project folder's skills are the
- * project's files and are not changed here.
+ * A change names a skill of the list, by its identifier or its name in the
+ * session; the project folder's skills are the project's files and are not
+ * changed here.
  */
 export function agentSkillProposalOf(
   input: AgentSkillProposalInput,
   list: readonly AgentSkillListEntry[],
   key: string,
+  sessionSkills: readonly AgentSessionSkillName[] = [],
 ): AgentSkillProposalResult {
   let target: SkillProposal['target']
   if (input.targetId) {
-    const entry = list.find((skill) => skill.id === input.targetId)
-    if (!entry || HIDDEN_SKILL_NAMES.has(entry.name.toLowerCase())) {
+    const entry = targetEntryOf(input.targetId, list, sessionSkills)
+    if (!entry) {
       return {
         ok: false,
-        message: `No skill with id ${input.targetId}. Leave targetId out to propose a new skill.`,
+        message: `No skill named ${input.targetId}. Give the skill's name as listed in this session, or its id, or leave targetId out to propose a new skill.`,
       }
     }
     if (entry.source === 'project') {

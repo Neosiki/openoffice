@@ -139,7 +139,9 @@ export function createAgentSkillTools(
         targetId: z
           .string()
           .optional()
-          .describe('id of the existing skill to change; leave out for a new skill'),
+          .describe(
+            'the existing skill to change: its name as listed in this session (e.g. meeting-minutes or meeting-minutes--builtin) or its id (e.g. app:meeting-minutes); leave out for a new skill',
+          ),
         suggestedTemplatePath: z
           .string()
           .optional()

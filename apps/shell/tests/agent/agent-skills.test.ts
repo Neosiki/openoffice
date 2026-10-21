@@ -213,6 +213,33 @@ describe('propose_skill', () => {
     ).rejects.toThrow(/No skill/)
   })
 
+  it('finds the skill a change is for by the name the session sees it under', async () => {
+    const project = temp()
+    const sent: Array<[string, unknown]> = []
+    const hooks = agentSkillToolsFor({ ownerId: 7, sessionId: 's1' }, project, {
+      window: () => ({ send: (channel, payload) => sent.push([channel, payload]) }),
+      listSkills: async () => [
+        { id: 'app:minutes', source: 'app', name: 'minutes', title: 'Minutes', owned: true },
+        { id: 'builtin:minutes', source: 'builtin', name: 'minutes', title: 'M', owned: false },
+      ],
+      sessionSkills: () => [
+        { id: 'app:minutes', name: 'minutes' },
+        { id: 'builtin:minutes', name: 'minutes--builtin' },
+      ],
+      keep: () => undefined,
+      newKey: () => 'k1',
+    })
+    const propose = createAgentSkillTools(hooks)[0]!
+    for (const targetId of ['minutes--builtin', 'ieum-skills:minutes--builtin', 'minutes']) {
+      await propose.handler({ title: 'L', description: 'D', body: 'B', targetId })
+    }
+    expect(sent.map(([, p]) => (p as Record<string, any>).proposal.target.id)).toEqual([
+      'builtin:minutes',
+      'builtin:minutes',
+      'app:minutes',
+    ])
+  })
+
   it('refuses an empty card and a closed window', async () => {
     const project = temp()
     const sent: Array<[string, unknown]> = []
@@ -410,6 +437,62 @@ describe('template candidates', () => {
       'k',
     )
     expect(made).toMatchObject({ ok: false, message: expect.stringMatching(/project folder/) })
+  })
+})
+
+describe('the skill a change is for', () => {
+  const input = (targetId: string) => ({
+    title: 'T',
+    name: '',
+    description: 'D',
+    body: 'B',
+    wantsTemplate: false,
+    targetId,
+    suggestedTemplatePath: '',
+  })
+  const list = [
+    { id: 'project:minutes', source: 'project', name: 'minutes', title: 'P', owned: false },
+    { id: 'app:minutes', source: 'app', name: 'minutes', title: 'A', owned: true },
+    { id: 'builtin:minutes', source: 'builtin', name: 'minutes', title: 'B', owned: false },
+    { id: 'plugin:tools:minutes', source: 'plugin', name: 'minutes', title: 'T', owned: false },
+    { id: 'user:letter', source: 'user', name: 'letter', title: 'L', owned: false },
+    { id: 'builtin:letter', source: 'builtin', name: 'letter', title: 'L', owned: false },
+    { id: 'app:ieumoffice', source: 'app', name: 'ieumoffice', title: 'I', owned: true },
+  ]
+  const session = [
+    { id: 'project:minutes', name: 'minutes' },
+    { id: 'app:minutes', name: 'minutes--app' },
+    { id: 'builtin:minutes', name: 'minutes--builtin' },
+    { id: 'plugin:tools:minutes', name: 'minutes--plugin-tools' },
+  ]
+  const targetOf = (targetId: string) => {
+    const made = agentSkillProposalOf(input(targetId), list, 'k', session)
+    return made.ok ? made.proposal.target?.id : made.message
+  }
+
+  it('is found by its identifier, as before', () => {
+    expect(targetOf('builtin:minutes')).toBe('builtin:minutes')
+  })
+
+  it('is found by its name in the session, renamed duplicates included', () => {
+    expect(targetOf('minutes--app')).toBe('app:minutes')
+    expect(targetOf('Minutes--Builtin')).toBe('builtin:minutes')
+    expect(targetOf('minutes--plugin-tools')).toBe('plugin:tools:minutes')
+    expect(targetOf('ieum-skills:minutes--app')).toBe('app:minutes')
+  })
+
+  it('takes a shared plain name as the skill that won it in the session', () => {
+    expect(targetOf('minutes')).toMatch(/project folder/)
+  })
+
+  it('takes a plain name of a skill not in the session by the same priority', () => {
+    expect(targetOf('letter')).toBe('builtin:letter')
+  })
+
+  it('refuses a name no skill has, and a hidden one', () => {
+    expect(targetOf('nope')).toMatch(/No skill/)
+    expect(targetOf('ieumoffice')).toMatch(/No skill/)
+    expect(targetOf('app:ieumoffice')).toMatch(/No skill/)
   })
 })
 
