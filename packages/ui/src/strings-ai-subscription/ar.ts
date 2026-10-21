@@ -84,4 +84,36 @@ export const ar = {
   pickerPaid: 'مدفوع',
   pickerPaidTitle: 'الرسوم حسب الاستخدام وغير مشمولة بالاشتراك',
   pickerNotConnected: 'ربط الذكاء الاصطناعي',
+  guideQuestion: 'ما الذكاء الاصطناعي الذي تستخدمه بالفعل؟',
+  guidePathClaudeTitle: 'لديّ اشتراك مدفوع في Claude',
+  guidePathClaudeBody: 'يلزم وجود خطة Pro أو Max. لا يمكن الاتصال بحساب Claude مجاني.',
+  guidePathCodexTitle: 'أستخدم ChatGPT',
+  guidePathCodexBody:
+    'سجّل الدخول إلى برنامج Codex من OpenAI بحسابك في ChatGPT. الخطة المجانية لا تتيح إلا استخدامًا قليلًا.',
+  guidePathFreeTitle: 'لا أملك أيًّا منهما بعد',
+  guidePathFreeBody:
+    'اربط ذكاءً اصطناعيًا مجانيًا في نحو دقيقة. أثناء استخدامه مجانًا، قد يُستخدم ما ترسله لتحسين الذكاء الاصطناعي لدى تلك الشركة.',
+  guideBack: 'اختيار طريقة أخرى',
+  guideBadgeReady: 'متصل',
+  guideBadgeInstalled: 'مثبَّت',
+  guideBadgeCheck: 'يحتاج إلى تحقق',
+  guideStepsLabel: 'خطوات الاتصال',
+  stepInstall: 'تثبيت البرنامج',
+  stepLogin: 'تسجيل الدخول',
+  stepReady: 'اكتمل الاتصال',
+  installReturnNote:
+    'عند انتهاء التثبيت في تلك النافذة، عد إلى هنا. سيتحقق التطبيق مرة أخرى تلقائيًا.',
+  loginHowNote:
+    'عند الضغط يُفتح المتصفح. سجّل الدخول بحسابك في {vendor} واضغط «سماح»، وسيكتمل الاتصال تلقائيًا.',
+  signingInStalledNote:
+    'لم يُفتح المتصفح، أو يعرض رمزًا؟ افتح نافذة تسجيل الدخول بالزر أدناه. الصق العنوان الظاهر فيها في المتصفح، أو الصق الرمز الظاهر في المتصفح في النافذة.',
+  actionLoginWindowOpen: 'فتح نافذة تسجيل الدخول',
+  actionCancelLogin: 'إلغاء تسجيل الدخول',
+  actionUpdate: 'تحديث',
+  updateNote:
+    'عند الضغط يُشغَّل التحديث الرسمي من {vendor} في نافذة جديدة. عند انتهائه هناك، عد إلى هنا.',
+  guideInfoHint:
+    'ألا يزال لا يعمل؟ انسخ معلومات الاتصال وأرسلها إلى من يساعدك. لا تتضمن حسابًا ولا مسارات ملفات.',
+  actionCopyInfo: 'نسخ المعلومات لطلب المساعدة',
+  copyInfoDone: 'تم النسخ',
 } satisfies Record<keyof typeof zh, string>

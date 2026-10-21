@@ -90,4 +90,36 @@ export const hi = {
   pickerPaid: 'सशुल्क',
   pickerPaidTitle: 'उपयोग के अनुसार शुल्क, सदस्यता में शामिल नहीं',
   pickerNotConnected: 'AI कनेक्ट करें',
+  guideQuestion: 'आप पहले से कौन-सा AI उपयोग करते हैं?',
+  guidePathClaudeTitle: 'मेरे पास Claude की पेड सदस्यता है',
+  guidePathClaudeBody: 'Pro या Max प्लान ज़रूरी है। मुफ़्त Claude खाते से कनेक्ट नहीं होता।',
+  guidePathCodexTitle: 'मेरे पास ChatGPT है',
+  guidePathCodexBody:
+    'अपने ChatGPT खाते से OpenAI के Codex प्रोग्राम में साइन इन करके इसका उपयोग करें। मुफ़्त प्लान में बहुत कम उपयोग मिलता है।',
+  guidePathFreeTitle: 'अभी कोई नहीं',
+  guidePathFreeBody:
+    'लगभग एक मिनट में मुफ़्त AI कनेक्ट करें। मुफ़्त में उपयोग करते समय आप जो भेजते हैं, उसका उपयोग उस कंपनी के AI को बेहतर बनाने में हो सकता है।',
+  guideBack: 'दूसरा तरीका चुनें',
+  guideBadgeReady: 'कनेक्ट है',
+  guideBadgeInstalled: 'इंस्टॉल है',
+  guideBadgeCheck: 'जाँच ज़रूरी',
+  guideStepsLabel: 'कनेक्ट करने के चरण',
+  stepInstall: 'प्रोग्राम इंस्टॉल करें',
+  stepLogin: 'साइन इन करें',
+  stepReady: 'कनेक्ट हो गया',
+  installReturnNote:
+    'उस विंडो में इंस्टॉल पूरा होने पर इस स्क्रीन पर लौट आएँ। ऐप अपने आप फिर से जाँच करेगा।',
+  loginHowNote:
+    'दबाने पर ब्राउज़र खुलेगा। अपने {vendor} खाते से साइन इन करें और अनुमति दें दबाएँ; कनेक्शन अपने आप पूरा हो जाएगा।',
+  signingInStalledNote:
+    'ब्राउज़र नहीं खुला, या कोई कोड दिखा रहा है? नीचे दिए बटन से साइन-इन विंडो खोलें। विंडो में दिखा पता ब्राउज़र में पेस्ट करें, या ब्राउज़र में दिखा कोड विंडो में पेस्ट करें।',
+  actionLoginWindowOpen: 'साइन-इन विंडो खोलें',
+  actionCancelLogin: 'साइन इन रद्द करें',
+  actionUpdate: 'अपडेट करें',
+  updateNote:
+    'दबाने पर {vendor} का आधिकारिक अपडेट एक नई विंडो में चलेगा। वहाँ अपडेट पूरा होने पर इस स्क्रीन पर लौट आएँ।',
+  guideInfoHint:
+    'फिर भी नहीं हो रहा? कनेक्शन की जानकारी कॉपी करके मदद करने वाले व्यक्ति को भेजें। इसमें खाता और फ़ाइल पथ शामिल नहीं होते।',
+  actionCopyInfo: 'मदद के लिए जानकारी कॉपी करें',
+  copyInfoDone: 'कॉपी हो गया',
 } satisfies Record<keyof typeof zh, string>

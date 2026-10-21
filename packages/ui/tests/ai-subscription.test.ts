@@ -76,6 +76,7 @@ describe('aiSubscriptionCardView', () => {
       statusKey: 'cardChecking',
       noteKeys: [],
       actions: [],
+      links: [],
     })
   })
 
@@ -85,15 +86,19 @@ describe('aiSubscriptionCardView', () => {
       state: 'not-installed',
       tone: 'neutral',
       statusKey: 'cardNotInstalled',
-      noteKeys: ['installNote'],
+      noteKeys: ['installNote', 'installReturnNote'],
       actions: ['install', 'install-help'],
+      links: ['install-help'],
     })
   })
 
   it('signed-out: login button', () => {
     const view = aiSubscriptionCardView(status('claude-code', 'signed-out'))
     expect(view.statusKey).toBe('cardSignedOut')
+    // what pressing it does comes first, whose page it opens after
+    expect(view.noteKeys).toEqual(['loginHowNote', 'loginNote'])
     expect(view.actions).toEqual(['login'])
+    expect(view.links).toEqual([])
   })
 
   it('ready: connected, with the plan name when the CLI gave one', () => {
@@ -105,6 +110,7 @@ describe('aiSubscriptionCardView', () => {
       planName: undefined,
       noteKeys: [],
       actions: [],
+      links: [],
     })
     const named = aiSubscriptionCardView(status('claude-code', 'ready', { planName: ' max ' }))
     expect(named.statusKey).toBe('cardReadyPlan')
@@ -119,6 +125,7 @@ describe('aiSubscriptionCardView', () => {
       statusKey: 'cardMetered',
       noteKeys: ['meteredWarning', 'meteredMeaning'],
       actions: ['accept-metered'],
+      links: [],
     })
   })
 
@@ -208,6 +215,7 @@ describe('aiSubscriptionCardView', () => {
       noteKeys: [],
       detailKey: 'cardErrNeedsUpdate',
       actions: ['recheck'],
+      links: [],
     })
     const keyOf = (error?: string) =>
       aiSubscriptionCardView(status('codex', 'error', error === undefined ? {} : { error }))
@@ -258,6 +266,7 @@ describe('aiSubscriptionCardView', () => {
       statusKey: 'cardSigningIn',
       noteKeys: ['signingInBrowserNote'],
       actions: ['login-window'],
+      links: ['login-window'],
     })
   })
 
@@ -269,7 +278,65 @@ describe('aiSubscriptionCardView', () => {
       statusKey: 'cardSigningIn',
       noteKeys: ['signingInWindowNote'],
       actions: [],
+      links: [],
     })
+  })
+
+  it('a browser sign-in that goes on too long lifts the window out of the links, and says why', () => {
+    const view = aiSubscriptionCardView(
+      status('claude-code', 'signed-out', { signingIn: 'browser' }),
+      {
+        signingInStalled: true,
+      },
+    )
+    expect(view.noteKeys).toEqual(['signingInBrowserNote', 'signingInStalledNote'])
+    expect(view.actions).toEqual(['login-window'])
+    expect(view.links).toEqual([])
+    // with no window to open there is nothing to lift, and nothing to explain
+    const elsewhere = aiSubscriptionCardView(
+      status('claude-code', 'signed-out', { signingIn: 'browser' }),
+      { signingInStalled: true, terminalWindows: false },
+    )
+    expect(elsewhere.noteKeys).toEqual(['signingInBrowserNote'])
+    expect(elsewhere.actions).toEqual([])
+  })
+
+  it('a sign-in under way can be called off, as a link, when the host can end it', () => {
+    const browser = aiSubscriptionCardView(
+      status('claude-code', 'signed-out', { signingIn: 'browser' }),
+      { cancelLogin: true },
+    )
+    expect(browser.actions).toEqual(['login-window', 'cancel-login'])
+    expect(browser.links).toEqual(['login-window', 'cancel-login'])
+    const window = aiSubscriptionCardView(status('codex', 'signed-out', { signingIn: 'window' }), {
+      cancelLogin: true,
+    })
+    expect(window.actions).toEqual(['cancel-login'])
+    expect(window.links).toEqual(['cancel-login'])
+    // nothing under way: nothing to call off
+    expect(
+      aiSubscriptionCardView(status('codex', 'signed-out'), { cancelLogin: true }).actions,
+    ).toEqual(['login'])
+  })
+
+  it('a program below the floor gets an update button first, where the host can run it', () => {
+    const outdated = status('codex', 'error', { version: '0.1.0', error: 'needs-update: too old' })
+    const view = aiSubscriptionCardView(outdated, { update: true })
+    expect(view.actions).toEqual(['update', 'recheck'])
+    expect(view.noteKeys).toEqual(['updateNote'])
+    expect(view.links).toEqual([])
+    expect(view.detailKey).toBe('cardErrNeedsUpdate')
+    // no host support, or no terminal window: the card stays as it was
+    expect(aiSubscriptionCardView(outdated).actions).toEqual(['recheck'])
+    expect(
+      aiSubscriptionCardView(outdated, { update: true, terminalWindows: false }).actions,
+    ).toEqual(['recheck'])
+    // another failure is not fixed by an update
+    expect(
+      aiSubscriptionCardView(status('codex', 'error', { error: 'timeout: no answer' }), {
+        update: true,
+      }).actions,
+    ).toEqual(['recheck'])
   })
 
   it('a sign-in with another account under way hides the account and its actions', () => {
@@ -293,6 +360,7 @@ describe('aiSubscriptionCardView', () => {
         statusKey: 'cardNotInstalled',
         noteKeys: [],
         actions: ['install-help'],
+        links: ['install-help'],
       })
     })
 

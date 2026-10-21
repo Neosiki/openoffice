@@ -89,4 +89,36 @@ export const cs = {
   pickerPaid: 'Placené',
   pickerPaidTitle: 'Účtováno podle spotřeby, nekryje to předplatné',
   pickerNotConnected: 'Připojit AI',
+  guideQuestion: 'Jakou AI už používáte?',
+  guidePathClaudeTitle: 'Mám placené předplatné Claude',
+  guidePathClaudeBody: 'Je potřeba tarif Pro nebo Max. Bezplatný účet Claude se připojit nedá.',
+  guidePathCodexTitle: 'Používám ChatGPT',
+  guidePathCodexBody:
+    'Přihlaste se účtem ChatGPT do programu Codex společnosti OpenAI. Bezplatný tarif umožňuje jen malé využití.',
+  guidePathFreeTitle: 'Zatím žádnou',
+  guidePathFreeBody:
+    'Bezplatnou AI připojíte zhruba za minutu. Dokud ji používáte zdarma, může společnost odeslaný obsah využít ke zlepšení své AI.',
+  guideBack: 'Zvolit jiný způsob',
+  guideBadgeReady: 'Připojeno',
+  guideBadgeInstalled: 'Nainstalováno',
+  guideBadgeCheck: 'Ke kontrole',
+  guideStepsLabel: 'Kroky připojení',
+  stepInstall: 'Instalace programu',
+  stepLogin: 'Přihlášení',
+  stepReady: 'Připojeno',
+  installReturnNote:
+    'Až instalace v tom okně skončí, vraťte se sem. Aplikace to sama zkontroluje znovu.',
+  loginHowNote:
+    'Po kliknutí se otevře prohlížeč. Přihlaste se účtem {vendor} a klikněte na Povolit; připojení se dokončí samo.',
+  signingInStalledNote:
+    'Prohlížeč se neotevřel, nebo zobrazuje kód? Otevřete přihlašovací okno tlačítkem níže. Vložte adresu zobrazenou v okně do prohlížeče, nebo vložte kód z prohlížeče do okna.',
+  actionLoginWindowOpen: 'Otevřít přihlašovací okno',
+  actionCancelLogin: 'Zrušit přihlášení',
+  actionUpdate: 'Aktualizovat',
+  updateNote:
+    'Po kliknutí se v novém okně spustí oficiální aktualizace společnosti {vendor}. Až tam skončí, vraťte se sem.',
+  guideInfoHint:
+    'Pořád to nejde? Zkopírujte informace o připojení a pošlete je tomu, kdo vám pomáhá. Neobsahují účet ani cesty k souborům.',
+  actionCopyInfo: 'Kopírovat informace pro pomoc',
+  copyInfoDone: 'Zkopírováno',
 } satisfies Record<keyof typeof zh, string>

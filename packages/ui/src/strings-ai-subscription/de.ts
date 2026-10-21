@@ -97,4 +97,37 @@ export const de = {
   pickerPaid: 'Kostenpflichtig',
   pickerPaidTitle: 'Abrechnung nach Verbrauch, nicht durch ein Abonnement gedeckt',
   pickerNotConnected: 'KI verbinden',
+  guideQuestion: 'Welche KI nutzen Sie bereits?',
+  guidePathClaudeTitle: 'Ich habe ein kostenpflichtiges Claude-Abonnement',
+  guidePathClaudeBody:
+    'Ein Pro- oder Max-Tarif ist nötig. Mit einem kostenlosen Claude-Konto ist keine Verbindung möglich.',
+  guidePathCodexTitle: 'Ich nutze ChatGPT',
+  guidePathCodexBody:
+    'Melden Sie sich mit Ihrem ChatGPT-Konto beim Codex-Programm von OpenAI an. Der kostenlose Tarif erlaubt nur wenig Nutzung.',
+  guidePathFreeTitle: 'Noch keins von beiden',
+  guidePathFreeBody:
+    'Verbinden Sie in etwa einer Minute eine kostenlose KI. Solange Sie sie kostenlos nutzen, kann das Gesendete zur Verbesserung der KI dieses Unternehmens verwendet werden.',
+  guideBack: 'Anderen Weg wählen',
+  guideBadgeReady: 'Verbunden',
+  guideBadgeInstalled: 'Installiert',
+  guideBadgeCheck: 'Prüfung nötig',
+  guideStepsLabel: 'Verbindungsschritte',
+  stepInstall: 'Programm installieren',
+  stepLogin: 'Anmelden',
+  stepReady: 'Verbunden',
+  installReturnNote:
+    'Wenn die Installation in diesem Fenster abgeschlossen ist, kehren Sie hierher zurück. Die App prüft dann von selbst erneut.',
+  loginHowNote:
+    'Beim Klicken öffnet sich ein Browser. Melden Sie sich mit Ihrem {vendor}-Konto an und klicken Sie auf Zulassen; die Verbindung wird dann von selbst hergestellt.',
+  signingInStalledNote:
+    'Hat sich der Browser nicht geöffnet, oder zeigt er einen Code? Öffnen Sie mit der Schaltfläche unten das Anmeldefenster. Fügen Sie die dort angezeigte Adresse in Ihren Browser ein, oder fügen Sie den Code aus dem Browser in das Fenster ein.',
+  actionLoginWindowOpen: 'Anmeldefenster öffnen',
+  actionCancelLogin: 'Anmeldung abbrechen',
+  actionUpdate: 'Aktualisieren',
+  updateNote:
+    'Beim Klicken wird das offizielle Update von {vendor} in einem neuen Fenster ausgeführt. Wenn es dort fertig ist, kehren Sie hierher zurück.',
+  guideInfoHint:
+    'Klappt es immer noch nicht? Kopieren Sie die Verbindungsdaten und senden Sie sie an die Person, die Ihnen hilft. Sie enthalten weder Konto noch Dateipfade.',
+  actionCopyInfo: 'Infos für Hilfe kopieren',
+  copyInfoDone: 'Kopiert',
 } satisfies Record<keyof typeof zh, string>
