@@ -12,7 +12,10 @@
  *   under looser rules;
  * - an approval policy under which an approved command stays in the sandbox;
  * - the same configuration overrides as the brain-only bridge (no user hooks,
- *   plugins, apps or memories), except that skill instructions are on;
+ *   plugins, apps or memories, and no list of Codex's own skills): the skills
+ *   are the app's copy of the enabled ones, readable in the sandbox and listed
+ *   in the instructions, so Codex follows the same on/off states as every
+ *   other AI window;
  * - every user MCP server switched off for the thread, the app's own server
  *   added, and the attached list checked afterwards;
  * - the login checked before the thread opens: a metered login runs only when
@@ -75,18 +78,15 @@ const DEFAULT_IDLE_MS = 30 * 60_000
 const MAX_MCP_STATUS_PAGES = 10
 
 /**
- * The brain-only overrides with skill instructions turned on. Web search is
- * left to Codex's own default here: the agent session follows the Codex app,
- * whose search is on (cached results) unless the person turns it off.
+ * The brain-only overrides. Skill instructions stay off
+ * (`skills.include_instructions=false`): Codex would list the skills of its
+ * own folders, whatever the person turned off; the app lists the enabled ones
+ * in the instructions instead. Web search is left to Codex's own default
+ * here: the agent session follows the Codex app, whose search is on (cached
+ * results) unless the person turns it off.
  */
 export function codexAgentLaunchArgs(): string[] {
-  const overrides = CODEX_CONFIG_OVERRIDES.filter(
-    (override) => !override.startsWith('web_search='),
-  ).map((override) =>
-    override.startsWith('skills.include_instructions=')
-      ? 'skills.include_instructions=true'
-      : override,
-  )
+  const overrides = CODEX_CONFIG_OVERRIDES.filter((override) => !override.startsWith('web_search='))
   return [
     'app-server',
     ...overrides.flatMap((override) => ['-c', override]),
@@ -121,9 +121,10 @@ export function codexAgentApprovalPolicy(mode: AgentPermissionMode): 'untrusted'
 
 /**
  * The session's file-system rules: the platform's minimal set and the folders a
- * command needs (the project, to write; the runtimes on PATH, to read), the
- * open documents read-only, and the protected folders denied. Everything else
- * of the person's disk is out of reach. Checked on this PC (MXC sandbox,
+ * command needs (the project, to write; the runtimes on PATH and the session's
+ * skill copy, to read), the open documents read-only, and the protected
+ * folders denied. Everything else of the person's disk is out of reach.
+ * Checked on this PC (MXC sandbox,
  * 2026-10-15): the Codex sign-in folder, Documents and the network were
  * refused, the project was writable, node and python ran.
  */
@@ -136,6 +137,7 @@ export function codexAgentFilesystem(
 ): Record<string, 'read' | 'write' | 'deny'> {
   const filesystem: Record<string, 'read' | 'write' | 'deny'> = { ':minimal': 'read' }
   for (const dir of readableDirs) filesystem[dir] = 'read'
+  if (options.skillBundleDir) filesystem[options.skillBundleDir] = 'read'
   filesystem[options.projectRoot] = 'write'
   for (const path of options.openDocuments) filesystem[path] = 'read'
   for (const path of options.protectedPaths) filesystem[path] = 'deny'
