@@ -49,6 +49,16 @@ const aiSubscription: SubscriptionApi = {
       await ipcRenderer.invoke(SUBSCRIPTION_IPC_CHANNELS.install, { provider }),
     )
   },
+  async update(provider) {
+    return subscriptionLaunchResultOf(
+      await ipcRenderer.invoke(SUBSCRIPTION_IPC_CHANNELS.update, { provider }),
+    )
+  },
+  async cancelLogin(provider) {
+    return subscriptionLaunchResultOf(
+      await ipcRenderer.invoke(SUBSCRIPTION_IPC_CHANNELS.cancelLogin, { provider }),
+    )
+  },
   async setMeteredAccepted(provider, accepted) {
     const result: unknown = await ipcRenderer.invoke(SUBSCRIPTION_IPC_CHANNELS.metered, {
       provider,

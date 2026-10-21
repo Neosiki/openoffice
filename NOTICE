@@ -163,3 +163,26 @@ each change. The modifications are licensed under the Apache License, Version
 IeumOffice is not affiliated with, sponsored by or endorsed by Mainfunc, Inc.
 The names GenOffice and Genspark and their logos belong to their owners and
 are used here only to identify the original work.
+
+Hangul (HWP) document format
+
+The HWP/HWPX editor is built on rhwp (https://github.com/edwardkim/rhwp,
+MIT License). As required by Hancom Inc. for software developed with its
+published HWP format document:
+
+본 제품은 한글과컴퓨터의 한글 문서 파일(.hwp) 공개 문서를 참고하여
+개발하였습니다.
+
+(This product was developed with reference to Hancom's published document on
+the Hangul document file format (.hwp).)
+
+Trademarks
+
+IeumOffice is not affiliated with, sponsored by or endorsed by Microsoft
+Corporation, Hancom Inc., XMind Ltd., Anthropic or OpenAI. "Microsoft",
+"Windows", "Word", "Excel" and "PowerPoint" are trademarks of Microsoft
+Corporation. "한글" (Hangul), "한컴" (Hancom), "HWP" and "HWPX" are registered
+trademarks of Hancom Inc. "XMind" is a trademark of XMind Ltd. "Claude" is a
+trademark of Anthropic; "Codex" and "ChatGPT" are trademarks of OpenAI. These
+and other product names are used only to say which files IeumOffice opens and
+what it works with.

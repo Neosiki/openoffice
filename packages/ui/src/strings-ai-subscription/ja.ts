@@ -15,6 +15,9 @@ export const ja = {
     'この PC の {provider} のプログラムが古すぎます。更新してから、もう一度確認してください。',
   cardErrNeedsUpdateVersion:
     'この PC の {provider} のプログラム（{version}）が古すぎます。{minimum} 以降が必要です。ターミナルで {command} を実行してから、もう一度確認してください。',
+  cardErrNeedsUpdatePath: 'このアプリが実行するファイル:',
+  cardErrNeedsUpdateWindows:
+    'WSL（Ubuntu）や別のフォルダーにある {provider} を更新しても、このファイルは変わりません。Windows PowerShell で {command} を実行してください。',
   cardErrTimeout:
     '{provider} のプログラムから時間内に応答がありませんでした。しばらくしてから、もう一度確認してください。',
   cardErrFailed: '{provider} の確認中に問題が発生しました。もう一度確認してください。',
@@ -92,4 +95,37 @@ export const ja = {
   pickerPaid: '有料',
   pickerPaidTitle: 'サブスクリプション対象外で、使った分だけ課金されます',
   pickerNotConnected: 'AI を接続',
+  guideQuestion: 'いま使っている AI はありますか？',
+  guidePathClaudeTitle: 'Claude の有料サブスクリプションがあります',
+  guidePathClaudeBody:
+    'Pro または Max プランが必要です。無料の Claude アカウントでは接続できません。',
+  guidePathCodexTitle: 'ChatGPT を使っています',
+  guidePathCodexBody:
+    'ChatGPT のアカウントで OpenAI の Codex プログラムにログインして使います。無料プランで使える量はわずかです。',
+  guidePathFreeTitle: 'まだありません',
+  guidePathFreeBody:
+    '無料の AI を 1 分ほどで接続できます。無料で使っている間に送った内容は、その会社の AI の改善に使われることがあります。',
+  guideBack: '別の方法を選ぶ',
+  guideBadgeReady: '接続済み',
+  guideBadgeInstalled: 'インストール済み',
+  guideBadgeCheck: '要確認',
+  guideStepsLabel: '接続の手順',
+  stepInstall: 'プログラムのインストール',
+  stepLogin: 'ログイン',
+  stepReady: '接続完了',
+  installReturnNote:
+    'そのウィンドウでインストールが終わったら、この画面に戻ってください。アプリが自動でもう一度確認します。',
+  loginHowNote:
+    '押すとブラウザーが開きます。{vendor} のアカウントでログインして「許可」を押すと、自動で接続されます。',
+  signingInStalledNote:
+    'ブラウザーが開かない、または画面にコードが表示されましたか？下のボタンでログインウィンドウを開いてください。ウィンドウに表示されたアドレスをブラウザーに貼り付けるか、ブラウザーに表示されたコードをウィンドウに貼り付けてください。',
+  actionLoginWindowOpen: 'ログインウィンドウを開く',
+  actionCancelLogin: 'ログインをキャンセル',
+  actionUpdate: '更新',
+  updateNote:
+    '押すと {vendor} の公式の更新が新しいウィンドウで実行されます。そのウィンドウで更新が終わったら、この画面に戻ってください。',
+  guideInfoHint:
+    'それでもうまくいきませんか？接続情報をコピーして、手伝ってくれる人に送ってください。アカウントとファイルのパスは含まれません。',
+  actionCopyInfo: 'サポート用の情報をコピー',
+  copyInfoDone: 'コピーしました',
 } satisfies Record<keyof typeof zh, string>

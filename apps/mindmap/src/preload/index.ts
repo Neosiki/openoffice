@@ -103,6 +103,14 @@ const subscription: MindmapSubscriptionApi = {
     subscriptionLaunchResultOf(
       await ipcRenderer.invoke(SUBSCRIPTION_IPC_CHANNELS.install, { provider }),
     ),
+  update: async (provider) =>
+    subscriptionLaunchResultOf(
+      await ipcRenderer.invoke(SUBSCRIPTION_IPC_CHANNELS.update, { provider }),
+    ),
+  cancelLogin: async (provider) =>
+    subscriptionLaunchResultOf(
+      await ipcRenderer.invoke(SUBSCRIPTION_IPC_CHANNELS.cancelLogin, { provider }),
+    ),
   setMeteredAccepted: async (provider, accepted) =>
     subscriptionMeteredResultOf(
       await ipcRenderer.invoke(SUBSCRIPTION_IPC_CHANNELS.metered, { provider, accepted }),

@@ -380,3 +380,137 @@ export async function launchSubscriptionInstall(
     return { ok: false, reason: 'failed', error: message(error), installUrl }
   }
 }
+
+/** Carry the program and its arguments to the update window as data, like the login's */
+export const SUBSCRIPTION_UPDATE_EXE_ENV = 'GENOFFICE_SUBSCRIPTION_UPDATE_EXE'
+export const SUBSCRIPTION_UPDATE_ARGS_ENV = 'GENOFFICE_SUBSCRIPTION_UPDATE_ARGS'
+
+/** The package manager commands that bring a Codex install up to date, by where it came from */
+export const SUBSCRIPTION_CODEX_UPDATE_COMMANDS = {
+  npm: 'npm install -g @openai/codex@latest',
+  winget: 'winget upgrade --id OpenAI.Codex -e',
+} as const
+
+/**
+ * How the CLI the app found is brought up to date: the program's own update
+ * command (`program`, run as the located file, never by name, since a PC can
+ * hold another copy the name finds first), or the fixed command of the package
+ * manager that installed it (`command`). Null when the app cannot tell how it
+ * was installed (the Codex desktop app's copy, a path the user set to some
+ * other place): the vendor's install page is the way then.
+ */
+export type SubscriptionUpdatePlan =
+  { kind: 'program'; args: string[] } | { kind: 'command'; command: string }
+
+const NPM_CODEX = /[\\/]node_modules[\\/]@openai[\\/]codex/i
+const WINGET_DIR = /[\\/]microsoft[\\/]winget[\\/]/i
+
+export function subscriptionUpdatePlan(
+  program: SubscriptionProgram,
+): SubscriptionUpdatePlan | null {
+  // `claude update` updates a native install and an npm one alike
+  if (program.provider === 'claude-code') return { kind: 'program', args: ['update'] }
+  const paths = [program.entry, program.command]
+  if (paths.some((path) => NPM_CODEX.test(path))) {
+    return { kind: 'command', command: SUBSCRIPTION_CODEX_UPDATE_COMMANDS.npm }
+  }
+  if (program.source === 'winget' || paths.some((path) => WINGET_DIR.test(path))) {
+    return { kind: 'command', command: SUBSCRIPTION_CODEX_UPDATE_COMMANDS.winget }
+  }
+  return null
+}
+
+/**
+ * Runs the located program with its update arguments and leaves the window
+ * open. A constant, like the login's: the path and the arguments arrive in two
+ * environment variables and are removed before the program starts. The
+ * arguments are split on a line feed written as `[char]10`, since a quote
+ * would end the command line `start` is given.
+ */
+const UPDATE_PROGRAM_SCRIPT = [
+  `$exe = $env:${SUBSCRIPTION_UPDATE_EXE_ENV}`,
+  `$arguments = $env:${SUBSCRIPTION_UPDATE_ARGS_ENV} -split [char]10`,
+  `Remove-Item Env:${SUBSCRIPTION_UPDATE_EXE_ENV}, Env:${SUBSCRIPTION_UPDATE_ARGS_ENV}`,
+  `& $exe @arguments`,
+].join('; ')
+
+/**
+ * The command line of the update window, like the install window's: `start`
+ * opens a new console whose PowerShell runs the update and stays open. Built
+ * only from constants and the full path of PowerShell in the system directory.
+ */
+export function subscriptionUpdateCommandLine(
+  plan: SubscriptionUpdatePlan,
+  env: NodeJS.ProcessEnv = process.env,
+): string {
+  const powershell = windowsSystemTool(env, 'WindowsPowerShell', 'v1.0', 'powershell.exe')
+  const command = plan.kind === 'program' ? UPDATE_PROGRAM_SCRIPT : plan.command
+  return `start "" "${powershell}" -NoLogo -NoExit -Command "${command}"`
+}
+
+export interface SubscriptionUpdateOptions extends SubscriptionInstallOptions {
+  /** the user's own path to the CLI (the Codex `cliPath` setting) */
+  configuredPath?: string | undefined
+  locate?: SubscriptionLocator | undefined
+}
+
+/**
+ * Bring the CLI the app runs up to date, in a new, visible terminal window
+ * that stays open so the user sees it work or fail. Like the install, the
+ * shell is given a constant line; the program's path travels as a value.
+ *
+ * The app does not wait: the next status check (the window regains focus, or
+ * "check again") shows the new version. Windows only, like the install.
+ */
+export async function launchSubscriptionUpdate(
+  provider: AiSubscriptionProviderId,
+  options: SubscriptionUpdateOptions = {},
+): Promise<SubscriptionLaunchResult> {
+  if (!isSubscriptionProvider(provider)) return { ok: false, reason: 'invalid' }
+  const installUrl = SUBSCRIPTION_INSTALL_URLS[provider]
+  const platform = options.platform ?? process.platform
+  if (platform !== 'win32') return { ok: false, reason: 'unsupported', installUrl }
+  let program
+  try {
+    program = await (options.locate ?? locateSubscriptionProgram)(provider, {
+      configuredPath: options.configuredPath,
+    })
+  } catch (error) {
+    return { ok: false, reason: 'failed', error: message(error), installUrl }
+  }
+  if (!program) return { ok: false, reason: 'not-installed', installUrl }
+  const plan = subscriptionUpdatePlan(program)
+  if (!plan) return { ok: false, reason: 'unsupported', installUrl }
+  const base = options.env ?? process.env
+  const env =
+    plan.kind === 'program'
+      ? subscriptionChildEnv({
+          base,
+          platform,
+          command: program.command,
+          extra: {
+            ...program.env,
+            [SUBSCRIPTION_UPDATE_EXE_ENV]: program.command,
+            [SUBSCRIPTION_UPDATE_ARGS_ENV]: [...program.prefixArgs, ...plan.args].join('\n'),
+          },
+        })
+      : base
+  try {
+    const spawn = options.spawn ?? nodeSpawn
+    const child = spawn(subscriptionUpdateCommandLine(plan, env), [], {
+      // the update starts in the system directory, not the folder the app was started in
+      cwd: windowsSystemDir(env),
+      env,
+      shell: windowsSystemTool(env, 'cmd.exe'),
+      stdio: 'ignore',
+      windowsHide: true,
+    })
+    const failure = await startFailure(child)
+    if (failure) return { ok: false, reason: 'failed', error: failure, installUrl }
+    // the update window is the user's, like the installer's
+    child.unref?.()
+    return { ok: true }
+  } catch (error) {
+    return { ok: false, reason: 'failed', error: message(error), installUrl }
+  }
+}

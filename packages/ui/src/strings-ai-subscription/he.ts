@@ -14,6 +14,9 @@ export const he = {
   cardErrNeedsUpdate: 'התוכנה {provider} במחשב הזה ישנה מדי. עדכנו אותה ואז בדקו שוב.',
   cardErrNeedsUpdateVersion:
     'התוכנה {provider} במחשב הזה ({version}) ישנה מדי; נדרשת גרסה {minimum} ומעלה. הריצו {command} בטרמינל ואז בדקו שוב.',
+  cardErrNeedsUpdatePath: 'הקובץ שהאפליקציה הזו מריצה:',
+  cardErrNeedsUpdateWindows:
+    'עדכון {provider} בתוך WSL (Ubuntu) או בתיקייה אחרת לא משנה את הקובץ הזה. הריצו {command} ב-Windows PowerShell.',
   cardErrTimeout: 'התוכנה {provider} לא ענתה בזמן. בדקו שוב בעוד רגע.',
   cardErrFailed: 'משהו השתבש במהלך הבדיקה של {provider}. בדקו שוב.',
   actionInstall: 'התקנה',
@@ -84,4 +87,34 @@ export const he = {
   pickerPaid: 'בתשלום',
   pickerPaidTitle: 'חיוב לפי שימוש, לא כלול במינוי',
   pickerNotConnected: 'חיבור בינה מלאכותית',
+  guideQuestion: 'באיזו בינה מלאכותית אתם כבר משתמשים?',
+  guidePathClaudeTitle: 'יש לי מינוי Claude בתשלום',
+  guidePathClaudeBody: 'נדרשת תוכנית Pro או Max. אי אפשר להתחבר עם חשבון Claude חינמי.',
+  guidePathCodexTitle: 'יש לי ChatGPT',
+  guidePathCodexBody:
+    'נכנסים לתוכנת Codex של OpenAI עם חשבון ChatGPT. בתוכנית החינמית אפשר להשתמש רק מעט.',
+  guidePathFreeTitle: 'עדיין אין לי',
+  guidePathFreeBody:
+    'אפשר לחבר בינה מלאכותית בחינם תוך כדקה. בזמן השימוש בחינם, התוכן שתשלחו עשוי לשמש לשיפור הבינה המלאכותית של אותה חברה.',
+  guideBack: 'בחירת דרך אחרת',
+  guideBadgeReady: 'מחובר',
+  guideBadgeInstalled: 'מותקן',
+  guideBadgeCheck: 'דורש בדיקה',
+  guideStepsLabel: 'שלבי החיבור',
+  stepInstall: 'התקנת התוכנה',
+  stepLogin: 'כניסה',
+  stepReady: 'החיבור הושלם',
+  installReturnNote: 'כשההתקנה בחלון ההוא תסתיים, חזרו לכאן. האפליקציה תבדוק שוב מעצמה.',
+  loginHowNote:
+    'בלחיצה ייפתח דפדפן. היכנסו עם חשבון {vendor} שלכם ולחצו על אישור, והחיבור יושלם מעצמו.',
+  signingInStalledNote:
+    'הדפדפן לא נפתח, או שהוא מציג קוד? פתחו את חלון הכניסה בכפתור שלמטה. הדביקו בדפדפן את הכתובת שמופיעה בחלון, או הדביקו בחלון את הקוד מהדפדפן.',
+  actionLoginWindowOpen: 'פתיחת חלון הכניסה',
+  actionCancelLogin: 'ביטול הכניסה',
+  actionUpdate: 'עדכון',
+  updateNote: 'בלחיצה, העדכון הרשמי של {vendor} יופעל בחלון חדש. כשהוא יסתיים שם, חזרו לכאן.',
+  guideInfoHint:
+    'עדיין לא עובד? העתיקו את פרטי החיבור ושלחו אותם למי שעוזר לכם. אין בהם חשבון ולא נתיבי קבצים.',
+  actionCopyInfo: 'העתקת פרטים לקבלת עזרה',
+  copyInfoDone: 'הועתק',
 } satisfies Record<keyof typeof zh, string>

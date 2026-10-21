@@ -80,6 +80,24 @@ describe('what a theme hands the stylesheet', () => {
     expect(branchVars(look, 6)).toEqual(branchVars(look, 2))
   })
 
+  it('the levels below the third get their own size and line height, each smaller and never under the floor', () => {
+    const look = themeLook(DEFAULT_THEME_ID)
+    const vars = containerVars(look)
+    expect(look.deepSizes).toEqual([13, 12.5, 12])
+    expect([
+      vars['--mm-level-4-size'],
+      vars['--mm-level-5-size'],
+      vars['--mm-level-6-size'],
+    ]).toEqual(['13px', '12.5px', '12px'])
+    expect([vars['--mm-level-4-lh'], vars['--mm-level-5-lh'], vars['--mm-level-6-lh']]).toEqual([
+      '18px',
+      '18px',
+      '17px',
+    ])
+    // the third level itself keeps the size of the theme
+    expect(vars['--mm-sub-size']).toBe('13.5px')
+  })
+
   it('the library theme carries the same properties, the ground and the two line functions', () => {
     for (const id of ['pill/paper/light', 'line/slate/dark', 'block/poppy/tint'] as ThemeId[]) {
       const look = themeLook(id)
@@ -300,6 +318,13 @@ describe('the colours of a map are document content', () => {
         /data-theme|prefers-color-scheme|matchMedia|getComputedStyle/,
       )
     }
+  })
+
+  it('steps exactly the levels the theme gives a size, one rule for each', () => {
+    const levels = [...mapCss.matchAll(/\[data-mm-level=["'](\d+)["']\]/g)].map((match) =>
+      Number(match[1]),
+    )
+    expect(levels).toEqual(themeLook(DEFAULT_THEME_ID).deepSizes.map((_size, at) => at + 4))
   })
 
   it('every property the map stylesheet reads is one the look sets', () => {

@@ -1841,6 +1841,8 @@ export function AiPanel({
               attention={sendGate.connectAttention}
               onOpenSettings={() => void window.htmlApi.openAiModelSettings().catch(() => {})}
               onInstall={subscription.install}
+              onUpdate={subscription.update}
+              onCancelLogin={subscription.cancelLogin}
               onLogin={subscription.login}
               onRecheck={subscription.recheck}
               onAcceptMetered={subscription.acceptMetered}

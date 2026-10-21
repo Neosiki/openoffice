@@ -70,6 +70,8 @@ export type AiSubscriptionCardAction =
   | 'install-help'
   | 'login'
   | 'login-window'
+  | 'cancel-login'
+  | 'update'
   | 'accept-metered'
   | 'recheck'
   | 'switch-account'
@@ -102,7 +104,25 @@ export interface AiSubscriptionCardOptions {
    * a browser sign-in has no window to open. Default true.
    */
   readonly terminalWindows?: boolean | undefined
+  /**
+   * the host can run the official update of a CLI below the app's floor (in a
+   * terminal window, so Windows alone): the outdated card offers "update"
+   */
+  readonly update?: boolean | undefined
+  /** the host can end a login the app started: the signing-in card offers "cancel" */
+  readonly cancelLogin?: boolean | undefined
+  /**
+   * a browser sign-in has gone on for `AI_SIGNING_IN_STALLED_MS` without an
+   * answer: the way to the CLI's window becomes a button, with why to press it
+   */
+  readonly signingInStalled?: boolean | undefined
 }
+
+/**
+ * A browser sign-in usually comes back within seconds of "allow". After this
+ * long the browser most likely did not open, or shows a code to paste.
+ */
+export const AI_SIGNING_IN_STALLED_MS = 25_000
 
 export type AiSubscriptionCardTone = 'neutral' | 'ok' | 'warning' | 'error'
 
@@ -133,8 +153,32 @@ export interface AiSubscriptionCardView {
    * update command. Facts the app derived, never CLI text.
    */
   readonly detailParams?: Readonly<Record<'version' | 'minimum' | 'command', string>> | undefined
+  /**
+   * on a CLI below the floor, the file the check ran, shown under the detail:
+   * a PC can hold another copy (under WSL, an old npm install) that the user
+   * may have updated instead
+   */
+  readonly programPath?: string | undefined
+  /** lines under `programPath`, in order */
+  readonly pathNoteKeys?: readonly AiSubscriptionStringKey[] | undefined
   /** buttons and links, in order; the first one is the primary action */
   readonly actions: readonly AiSubscriptionCardAction[]
+  /**
+   * the actions among `actions` drawn as a link: a way out of a step, not the
+   * step itself, so never the highlighted button
+   */
+  readonly links: readonly AiSubscriptionCardAction[]
+}
+
+/** The actions that are a way out of a step; a stalled sign-in lifts its window out of this */
+const LINK_ACTIONS: readonly AiSubscriptionCardAction[] = [
+  'install-help',
+  'login-window',
+  'cancel-login',
+]
+
+function linksOf(actions: readonly AiSubscriptionCardAction[]): AiSubscriptionCardAction[] {
+  return actions.filter((action) => LINK_ACTIONS.includes(action))
 }
 
 const STATUS_ERROR_KEYS: Record<SubscriptionStatusErrorKind, AiSubscriptionStringKey> = {
@@ -153,10 +197,24 @@ export function aiSubscriptionCardView(
   options: AiSubscriptionCardOptions = {},
 ): AiSubscriptionCardView {
   const terminalWindows = options.terminalWindows !== false
-  if (status.signingIn) return signingInCardView(status, terminalWindows)
+  if (status.signingIn) return signingInCardView(status, terminalWindows, options)
   const view = connectionCardView(status)
   if (status.state === 'not-installed' && !terminalWindows) {
-    return { ...view, noteKeys: [], actions: ['install-help'] }
+    return { ...view, noteKeys: [], actions: ['install-help'], links: ['install-help'] }
+  }
+  if (view.detailKey && subscriptionStatusErrorKind(status) === 'needs-update') {
+    // the copy a Linux terminal under WSL updates is not the one Windows runs
+    const pathed: AiSubscriptionCardView =
+      view.programPath && terminalWindows
+        ? { ...view, pathNoteKeys: ['cardErrNeedsUpdateWindows'] }
+        : view
+    // the update runs in a terminal window of its own, like the install
+    if (!options.update || !terminalWindows) return pathed
+    return {
+      ...pathed,
+      noteKeys: [...pathed.noteKeys, 'updateNote'],
+      actions: ['update', ...pathed.actions],
+    }
   }
   if (status.state !== 'ready' && status.state !== 'metered') return view
   const account = options.account ? status.account?.trim() || undefined : undefined
@@ -175,23 +233,40 @@ export function aiSubscriptionCardView(
  * A login the app started is under way, whatever was detected before it: the
  * card says where to sign in. In the browser first, with a way to open the
  * CLI's window for when the browser hands back a code; then, in that window.
+ * A browser sign-in that has gone on too long says why the window may be
+ * needed and offers it as a button. Either can be called off.
  */
 function signingInCardView(
   status: AiSubscriptionStatus,
   terminalWindows: boolean,
+  options: AiSubscriptionCardOptions,
 ): AiSubscriptionCardView {
   const browser = status.signingIn === 'browser'
+  const window = browser && terminalWindows
+  const stalled = window && options.signingInStalled === true
+  const actions: AiSubscriptionCardAction[] = [
+    ...(window ? (['login-window'] as const) : []),
+    ...(options.cancelLogin ? (['cancel-login'] as const) : []),
+  ]
   return {
     provider: status.provider,
     state: status.state,
     tone: 'neutral',
     statusKey: 'cardSigningIn',
-    noteKeys: [browser ? 'signingInBrowserNote' : 'signingInWindowNote'],
-    actions: browser && terminalWindows ? ['login-window'] : [],
+    noteKeys: browser
+      ? ['signingInBrowserNote', ...(stalled ? (['signingInStalledNote'] as const) : [])]
+      : ['signingInWindowNote'],
+    actions,
+    links: linksOf(actions).filter((action) => !(stalled && action === 'login-window')),
   }
 }
 
 function connectionCardView(status: AiSubscriptionStatus): AiSubscriptionCardView {
+  const view = connectionCardParts(status)
+  return { ...view, links: linksOf(view.actions) }
+}
+
+function connectionCardParts(status: AiSubscriptionStatus): Omit<AiSubscriptionCardView, 'links'> {
   const base = { provider: status.provider, state: status.state }
   switch (status.state) {
     case 'checking':
@@ -201,7 +276,7 @@ function connectionCardView(status: AiSubscriptionStatus): AiSubscriptionCardVie
         ...base,
         tone: 'neutral',
         statusKey: 'cardNotInstalled',
-        noteKeys: ['installNote'],
+        noteKeys: ['installNote', 'installReturnNote'],
         actions: ['install', 'install-help'],
       }
     case 'signed-out':
@@ -209,7 +284,7 @@ function connectionCardView(status: AiSubscriptionStatus): AiSubscriptionCardVie
         ...base,
         tone: 'neutral',
         statusKey: 'cardSignedOut',
-        noteKeys: ['loginNote'],
+        noteKeys: ['loginHowNote', 'loginNote'],
         actions: ['login'],
       }
     case 'ready': {
@@ -242,6 +317,7 @@ function connectionCardView(status: AiSubscriptionStatus): AiSubscriptionCardVie
           }
     case 'error': {
       const outdated = subscriptionNeedsUpdate(status)
+      const programPath = outdated ? status.programPath?.trim() || undefined : undefined
       return {
         ...base,
         tone: 'error',
@@ -250,6 +326,7 @@ function connectionCardView(status: AiSubscriptionStatus): AiSubscriptionCardVie
         ...(outdated
           ? { detailKey: 'cardErrNeedsUpdateVersion', detailParams: outdated }
           : { detailKey: STATUS_ERROR_KEYS[subscriptionStatusErrorKind(status) ?? 'failed'] }),
+        ...(programPath ? { programPath } : {}),
         actions: ['recheck'],
       }
     }

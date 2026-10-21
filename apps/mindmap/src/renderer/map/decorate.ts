@@ -80,6 +80,13 @@ function levelOf(topic: Topic): Level {
   return parent.parent ? 'sub' : 'main'
 }
 
+/** How deep a topic sits: 1 for the centre, 2 for a main branch, 3 for its children and so on. */
+function depthOf(topic: Topic): number {
+  let depth = 1
+  for (let node = topic.nodeObj?.parent; node; node = node.parent) depth++
+  return depth
+}
+
 export class TopicDecorator {
   readonly #mind: MindElixirInstance
   readonly #pictures: PictureStore
@@ -243,10 +250,29 @@ export class TopicDecorator {
 
   #decorate(topic: DecoratedTopic): void {
     if (!topic.nodeObj) return
+    this.#level(topic)
     const meta = metaOf(topic)
     this.#ownStyle(topic, meta)
     this.#markers(topic, meta)
     this.#picture(topic, meta)
+  }
+
+  // ---- the level ----
+
+  /**
+   * Marks a topic below the third level with how deep it sits, so `map.css`
+   * can step its text down (`THEME_DEEP_LEVELS`). The file has three levels
+   * only, so this is drawn and never written; deeper levels than the theme
+   * has sizes for keep the last size.
+   */
+  #level(topic: DecoratedTopic): void {
+    const depth = depthOf(topic)
+    const level = depth > 3 ? String(Math.min(depth, 3 + this.#look.deepSizes.length)) : ''
+    if (level === '') {
+      if (topic.dataset.mmLevel !== undefined) delete topic.dataset.mmLevel
+      return
+    }
+    if (topic.dataset.mmLevel !== level) topic.dataset.mmLevel = level
   }
 
   // ---- the topic's own style ----

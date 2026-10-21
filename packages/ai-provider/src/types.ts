@@ -93,6 +93,12 @@ export interface AiSubscriptionStatus {
   meteredAccepted: boolean
   /** what went wrong, on state `error` */
   error?: string | undefined
+  /**
+   * The file the check ran, on a CLI too old for the app. Display only: a PC
+   * can hold more than one copy (one under WSL, an old npm install), and
+   * updating another one leaves this one as it is.
+   */
+  programPath?: string | undefined
   /** a login the app started is under way; absent otherwise */
   signingIn?: AiSubscriptionSigningIn | undefined
 }

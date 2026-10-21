@@ -264,10 +264,20 @@ describe('ask panel without a connection', () => {
     })
     await click(host.querySelector('.kb-ask .ai-send-btn'))
 
+    // the guide knows each subscription's live state before one is picked
+    const badges = Array.from(
+      host.querySelectorAll<HTMLElement>('.kb-ask .ai-sub-prompt .ai-sub-guide-path'),
+    ).map((el) => [el.dataset.path, el.querySelector('.ai-sub-guide-badge')?.textContent ?? null])
+    expect(badges).toEqual([
+      ['claude-code', null],
+      ['codex', aiSubscriptionText('en', 'guideBadgeInstalled')],
+      ['free', null],
+    ])
+    await click(host.querySelector('.kb-ask .ai-sub-prompt [data-path="codex"]'))
     const cards = Array.from(
       host.querySelectorAll<HTMLElement>('.kb-ask .ai-sub-prompt .ai-sub-card'),
     )
-    expect(cards.map((card) => card.dataset.state)).toEqual(['not-installed', 'signed-out'])
+    expect(cards.map((card) => card.dataset.state)).toEqual(['signed-out'])
     expect(box.value).toBe('What changed?')
     expect(host.querySelectorAll('.kb-ask-msg')).toHaveLength(0)
   })

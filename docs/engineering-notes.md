@@ -55,6 +55,7 @@
 - **Codex 기능을 끄려고 `--disable <이름>`을 쓰면 안 된다.** 모르는 이름이 하나라도 있으면 Codex가 시작하지 않는다. → `-c features.<이름>=false`를 쓴다.
 - **Codex의 오류 알림은 실패가 아닐 수 있다.** 경고에도 같은 알림이 온다. 성공과 실패는 실행 결과로 판단한다.
 - **Codex 프로세스는 요청이 없어도 잠깐 떠 있다.** 상태 확인이 계정 종류를 읽으려고 `app-server`를 띄운다. Claude만 쓰는 사람의 PC에서도 Codex 프로세스가 보일 수 있다. 2분 동안 쓰지 않으면 끝나고, 앱을 끄면 함께 끝난다.
+- **사용자가 업데이트했다는데 카드는 계속 버전이 낮다고 한다.** 앱이 찾는 것은 Windows 쪽 사본뿐이다(PATH, `~\.local\bin`, `%APPDATA%\npm`, WinGet). WSL(Ubuntu) 터미널에서 `claude update`를 하면 리눅스 안의 사본만 바뀌고, 예전에 Windows에 깔아 둔 사본은 그대로다. 실제로 이런 신고가 있었다(WSL 2.1.305, Windows 2.1.114). → 카드에 보이는 경로의 사본을 Windows PowerShell에서 업데이트하게 안내한다. npm으로 깐 사본이면 `npm install -g @anthropic-ai/claude-code@latest`도 된다.
 - **껍데기 파일(`.cmd`)은 셸 없이 실행되지 않는다.** npm으로 설치한 프로그램은 `%APPDATA%\npm`의 `.cmd`다. 셸을 켜면 사용자 글이 명령으로 해석될 수 있다. → 껍데기 뒤의 실제 파일을 찾아 직접 실행한다. `%APPDATA%\npm`은 앱이 물려받은 PATH에 없을 수 있으므로 따로 찾아본다.
 - **표준 입력을 열어 둔 채 기다리게 하면 안 된다.** Claude는 3초를 버리고 Codex는 끝없이 기다린다.
 - **구독으로 받는 답은 몇 초 늦게 시작한다.** 프로그램이 먼저 켜져야 한다. 이 PC에서 Claude(가장 작은 모델)의 첫 글자까지 3.5초에서 4.5초 사이였다.
@@ -90,6 +91,15 @@
 | 필드 여는 글자 종류              | 결정 0026: rhwp가 여는 글자를 `%unk`로 다시 써서 메모가 메모로 읽히지 않는다                     | 고침(제어 기록의 종류로 되돌림)                     | `apps/hwp/tests/field-kinds.test.ts`          |
 | 수식 캡션                        | 결정 0028: 엔진이 수식 제어 기록 아래의 캡션 목록을 쓰지 않는다                                  | 고침(저장 때 다시 붙임)                             | `apps/hwp/tests/section-tails.test.ts`        |
 | 변경 추적 두 번째 본문           | 결정 0027: 두 번째 본문(ViewText)을 그대로 읽고 쓰면 한컴이 열지 못한다                          | 처리(지금의 내용으로 열고, 저장하면 추적 기록 없이) | `apps/hwp/tests/tracked-changes.test.ts`      |
+
+### 한글 엔진 빌드(`vendor/rhwp-core`, 결정 0050)
+
+- **한글 문서의 겹침이 한컴과 다르다.** 먼저 엔진만으로 그려 본다(`@rhwp/core`의 `renderPageSvg`, 또는 같은 태그의 rhwp 명령줄 `export-svg`·`dump-pages`). 엔진에서도 겹치면 편집기 문제가 아니라 조판이다. 한컴 쪽은 `HWPFrame.HwpObject`의 `CreatePageImage(경로, 쪽(0부터), 96, 24, "bmp")`로 그림을 받아 견준다. png를 달라고 해도 bmp로 쓴다.
+- **문서에 저장된 줄 위치가 한컴 화면과 다를 수 있다.** 예전 버전의 한글이나 다른 도구가 저장한 줄 정보가 남아 있으면, 한컴 한글 2024는 열 때 다시 나누고 rhwp는 저장된 것을 따른다. 저장된 줄 위치를 정답으로 삼기 전에 한컴으로 다시 저장해 줄 정보가 바뀌는지 본다.
+- **`wasm-opt`가 "액세스가 거부되었습니다"로 멈춘다.** wasm-pack이 받아 둔 wasm-opt 파일이 깨졌거나 잠긴 것으로 보인다. → `%LOCALAPPDATA%\.wasm-pack\.wasm-opt-*`를 지우고 다시 돌린다.
+- **패치가 적용되지 않는다.** Windows의 `core.autocrlf=true`로 받은 사본은 줄 끝이 CRLF라 패치와 맞지 않고 `cargo fmt` 검사도 깨진다. → 빌드 스크립트는 `-c core.autocrlf=false`로 받는다. 손으로 rhwp 사본을 만들 때도 같게 한다. Git Bash에서 sparse 패턴(`!/samples/`)을 넘길 때는 `MSYS_NO_PATHCONV=1`이 필요하다.
+- **WASM에 빌드한 PC의 사용자 폴더가 들어간다.** 크레이트의 panic 위치 문자열에 cargo 레지스트리 경로가 남는다. → 스크립트가 `--remap-path-prefix`로 `/cargo`, `/rhwp`로 바꾸고, 빌드 뒤 사용자 폴더 이름이 남았는지 검사한다.
+- **작업 사본에서 엔진이 npm 0.8.7로 풀린다.** 사본의 `node_modules/@rhwp/core`가 본 검사본의 npm 패키지를 가리키는 연결이면 시험과 빌드가 패치 전 엔진을 쓴다. → 사본의 `node_modules/@rhwp`를 실제 폴더로 두고 `core`만 사본의 `vendor/rhwp-core`로 연결한다. 사본을 지우기 전에는 이 연결부터 끊는다.
 
 ## 에이전트 모드
 

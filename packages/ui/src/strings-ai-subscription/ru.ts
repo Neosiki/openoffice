@@ -15,6 +15,9 @@ export const ru = {
     'Программа {provider} на этом компьютере слишком старая. Обновите её и проверьте снова.',
   cardErrNeedsUpdateVersion:
     'Программа {provider} на этом компьютере ({version}) слишком старая; нужна версия {minimum} или новее. Выполните {command} в терминале и проверьте снова.',
+  cardErrNeedsUpdatePath: 'Файл, который запускает это приложение:',
+  cardErrNeedsUpdateWindows:
+    'Обновление {provider} внутри WSL (Ubuntu) или в другой папке не меняет этот файл. Выполните {command} в Windows PowerShell.',
   cardErrTimeout: 'Программа {provider} не ответила вовремя. Проверьте снова чуть позже.',
   cardErrFailed: 'При проверке {provider} что-то пошло не так. Проверьте снова.',
   actionInstall: 'Установить',
@@ -91,4 +94,37 @@ export const ru = {
   pickerPaid: 'Платно',
   pickerPaidTitle: 'Оплата по расходу, не входит в подписку',
   pickerNotConnected: 'Подключить ИИ',
+  guideQuestion: 'Каким ИИ вы уже пользуетесь?',
+  guidePathClaudeTitle: 'У меня платная подписка Claude',
+  guidePathClaudeBody:
+    'Нужен тариф Pro или Max. С бесплатной учётной записью Claude подключиться нельзя.',
+  guidePathCodexTitle: 'Я пользуюсь ChatGPT',
+  guidePathCodexBody:
+    'Войдите в программу Codex от OpenAI с учётной записью ChatGPT. Бесплатный тариф даёт лишь небольшой объём использования.',
+  guidePathFreeTitle: 'Пока никаким',
+  guidePathFreeBody:
+    'Бесплатный ИИ можно подключить примерно за минуту. Пока вы пользуетесь им бесплатно, отправленное вами может использоваться для улучшения ИИ этой компании.',
+  guideBack: 'Выбрать другой способ',
+  guideBadgeReady: 'Подключено',
+  guideBadgeInstalled: 'Установлено',
+  guideBadgeCheck: 'Нужна проверка',
+  guideStepsLabel: 'Шаги подключения',
+  stepInstall: 'Установка программы',
+  stepLogin: 'Вход',
+  stepReady: 'Подключено',
+  installReturnNote:
+    'Когда установка в том окне завершится, вернитесь сюда. Приложение само проверит снова.',
+  loginHowNote:
+    'После нажатия откроется браузер. Войдите с учётной записью {vendor} и нажмите «Разрешить» — подключение завершится само.',
+  signingInStalledNote:
+    'Браузер не открылся или показывает код? Откройте окно входа кнопкой ниже. Вставьте адрес из этого окна в браузер или вставьте код из браузера в окно.',
+  actionLoginWindowOpen: 'Открыть окно входа',
+  actionCancelLogin: 'Отменить вход',
+  actionUpdate: 'Обновить',
+  updateNote:
+    'После нажатия официальное обновление от {vendor} запустится в новом окне. Когда оно там завершится, вернитесь сюда.',
+  guideInfoHint:
+    'Всё ещё не получается? Скопируйте сведения о подключении и отправьте тому, кто вам помогает. В них нет учётной записи и путей к файлам.',
+  actionCopyInfo: 'Скопировать сведения для помощи',
+  copyInfoDone: 'Скопировано',
 } satisfies Record<keyof typeof zh, string>

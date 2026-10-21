@@ -15,6 +15,9 @@ export const it = {
     'Il programma {provider} su questo PC è troppo vecchio. Aggiornalo, poi verifica di nuovo.',
   cardErrNeedsUpdateVersion:
     'Il programma {provider} su questo PC ({version}) è troppo vecchio; serve la {minimum} o successiva. Esegui {command} in un terminale, poi verifica di nuovo.',
+  cardErrNeedsUpdatePath: 'File eseguito da questa app:',
+  cardErrNeedsUpdateWindows:
+    'Aggiornare {provider} dentro WSL (Ubuntu) o in un’altra cartella non modifica questo file. Esegui {command} in Windows PowerShell.',
   cardErrTimeout:
     'Il programma {provider} non ha risposto in tempo. Verifica di nuovo tra un momento.',
   cardErrFailed:
@@ -95,4 +98,37 @@ export const it = {
   pickerPaid: 'A pagamento',
   pickerPaidTitle: 'Addebito a consumo, non coperto da un abbonamento',
   pickerNotConnected: 'Collega l’IA',
+  guideQuestion: 'Quale IA usi già?',
+  guidePathClaudeTitle: 'Ho un abbonamento Claude a pagamento',
+  guidePathClaudeBody:
+    'Serve un piano Pro o Max. Con un account Claude gratuito non è possibile collegarsi.',
+  guidePathCodexTitle: 'Uso ChatGPT',
+  guidePathCodexBody:
+    'Accedi al programma Codex di OpenAI con il tuo account ChatGPT. Il piano gratuito consente solo un uso limitato.',
+  guidePathFreeTitle: 'Nessuno dei due, per ora',
+  guidePathFreeBody:
+    'Collega un’IA gratuita in circa un minuto. Finché la usi gratis, ciò che invii può essere usato per migliorare l’IA di quell’azienda.',
+  guideBack: 'Scegli un altro modo',
+  guideBadgeReady: 'Connesso',
+  guideBadgeInstalled: 'Installato',
+  guideBadgeCheck: 'Da verificare',
+  guideStepsLabel: 'Passaggi di connessione',
+  stepInstall: 'Installa il programma',
+  stepLogin: 'Accedi',
+  stepReady: 'Connesso',
+  installReturnNote:
+    'Quando l’installazione in quella finestra è finita, torna qui. L’app verifica di nuovo da sola.',
+  loginHowNote:
+    'Premendo si apre un browser. Accedi con il tuo account {vendor} e premi Consenti: la connessione si completa da sola.',
+  signingInStalledNote:
+    'Il browser non si è aperto o mostra un codice? Apri la finestra di accesso con il pulsante qui sotto. Incolla nel browser l’indirizzo mostrato nella finestra, oppure incolla nella finestra il codice del browser.',
+  actionLoginWindowOpen: 'Apri la finestra di accesso',
+  actionCancelLogin: 'Annulla l’accesso',
+  actionUpdate: 'Aggiorna',
+  updateNote:
+    'Premendo, l’aggiornamento ufficiale di {vendor} viene eseguito in una nuova finestra. Quando lì è finito, torna qui.',
+  guideInfoHint:
+    'Ancora niente? Copia i dati di connessione e inviali a chi ti sta aiutando. Non contengono account né percorsi di file.',
+  actionCopyInfo: 'Copia i dati per l’assistenza',
+  copyInfoDone: 'Copiato',
 } satisfies Record<keyof typeof zh, string>

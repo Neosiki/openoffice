@@ -1,16 +1,11 @@
-import { Fragment, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
-  AiCodexNotice,
+  AiConnectGuide,
   AiMark,
-  AiSubscriptionCard,
   aiSubscriptionProviderName,
   aiSubscriptionText,
 } from '@genoffice/ui'
-import {
-  AI_SUBSCRIPTION_PROVIDERS,
-  FREE_AI_PROVIDERS,
-  freeAiConnected,
-} from '@genoffice/ai-provider/browser'
+import { FREE_AI_PROVIDERS, freeAiConnected } from '@genoffice/ai-provider/browser'
 import appIcon from './assets/app-icon.png'
 import { FirstConnectionDialog } from './FirstConnectionNotice'
 import { FreeAiCards, useAiSettings as useFreeAiSettings } from './FreeAiCards'
@@ -83,6 +78,9 @@ export function Onboarding({
   // the notice waits for the step that is about the connection
   const noticeOpen = noticeDue && index >= ONBOARDING_CONNECT_STEP
   const freeSettings = useFreeAiSettings()
+  const freeConnected = FREE_AI_PROVIDERS.some(
+    (provider) => freeSettings !== null && freeAiConnected(freeSettings, provider),
+  )
   const connected = [
     ...usableSubscriptionProviders(connection.statuses).map(aiSubscriptionProviderName),
     ...FREE_AI_PROVIDERS.filter(
@@ -188,20 +186,23 @@ export function Onboarding({
         <>
           <p className="onb-body onb-body-lead">{aiSubscriptionText(lang, 'connectBody')}</p>
           <div className="onb-connect">
-            {AI_SUBSCRIPTION_PROVIDERS.map((provider) => (
-              <Fragment key={provider}>
-                <AiSubscriptionCard
-                  status={connection.statuses[provider]}
-                  lang={lang}
-                  compact
-                  disabled={connection.busy}
-                  onInstall={connection.install}
-                  onLogin={connection.login}
-                  onRecheck={connection.recheck}
-                  onAcceptMetered={(id) => void connection.acceptMetered(id)}
-                  onOpenInstallHelp={connection.openInstallHelp}
-                />
-                {connection.failed[provider] && (
+            <AiConnectGuide
+              statuses={connection.statuses}
+              lang={lang}
+              disabled={connection.busy}
+              onInstall={connection.install}
+              onUpdate={connection.update}
+              onLogin={connection.login}
+              onCancelLogin={connection.cancelLogin}
+              onRecheck={connection.recheck}
+              onAcceptMetered={(id) => void connection.acceptMetered(id)}
+              onOpenInstallHelp={connection.openInstallHelp}
+              // no subscription: the free connections open right here
+              freeContent={<FreeAiCards t={t} compact />}
+              freeConnected={freeConnected}
+              codexNotice
+              renderAfterCard={(provider) =>
+                connection.failed[provider] && (
                   <p className="onb-connect-failed" role="alert" data-provider={provider}>
                     {t(
                       connection.failed[provider] === 'install'
@@ -209,14 +210,9 @@ export function Onboarding({
                         : 'setSubLoginFailed',
                     )}
                   </p>
-                )}
-              </Fragment>
-            ))}
-            <AiCodexNotice lang={lang} />
-          </div>
-          <div className="onb-free">
-            <p className="onb-free-title">{t('onbFreeTitle')}</p>
-            <FreeAiCards t={t} compact />
+                )
+              }
+            />
           </div>
           <p className="onb-note">{t('onbConnectSkipNote')}</p>
         </>
