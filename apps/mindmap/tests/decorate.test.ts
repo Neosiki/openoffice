@@ -229,6 +229,67 @@ describe('the theme of a sheet', () => {
   })
 })
 
+describe('the levels below the third', () => {
+  const DEEP = {
+    four: 'bbbbbbbb-0000-4000-8000-000000000004',
+    five: 'bbbbbbbb-0000-4000-8000-000000000005',
+    six: 'bbbbbbbb-0000-4000-8000-000000000006',
+    seven: 'bbbbbbbb-0000-4000-8000-000000000007',
+    eight: 'bbbbbbbb-0000-4000-8000-000000000008',
+  } as const
+  const chain = (): ReturnType<typeof topic> =>
+    topic(DEEP.four, 'Four', {}, [
+      topic(DEEP.five, 'Five', {}, [
+        topic(DEEP.six, 'Six', {}, [topic(DEEP.seven, 'Seven', {}, [topic(DEEP.eight, 'Eight')])]),
+      ]),
+    ])
+  // root > one > sub, and root > two > four > five > six > seven > eight:
+  // the last of those is deeper than the theme has sizes for
+  const deepSheet = () =>
+    sheetOf(topic(ID.one, 'One', {}, [topic(ID.sub, 'Sub')]), topic(ID.two, 'Two', {}, [chain()]))
+  const levelOf = (el: HTMLElement, id: string): string | undefined =>
+    topicEl(el, id).dataset.mmLevel
+
+  it('marks each level from the fourth down, and a deeper one keeps the last size', async () => {
+    const { el } = await mount(deepSheet())
+    expect(levelOf(el, ID.root)).toBeUndefined()
+    expect(levelOf(el, ID.one)).toBeUndefined()
+    expect(levelOf(el, ID.sub)).toBeUndefined()
+    expect(levelOf(el, DEEP.four)).toBeUndefined()
+    expect(levelOf(el, DEEP.five)).toBe('4')
+    expect(levelOf(el, DEEP.six)).toBe('5')
+    expect(levelOf(el, DEEP.seven)).toBe('6')
+    expect(levelOf(el, DEEP.eight)).toBe('6')
+  })
+
+  it('follows a topic that moves deeper or back up', async () => {
+    const { el, controller } = await mount(deepSheet())
+    controller.edit((root) => {
+      const [one, two] = root.children!
+      const third = one!.children![0]!
+      let deepest = two!.children![0]!
+      while (deepest.children?.length) deepest = deepest.children[0]!
+      // the third level goes under the deepest topic: deeper than any size
+      deepest.children = [...(deepest.children ?? []), third]
+      one!.children = one!.children!.filter((child) => child !== third)
+    })
+    await settle()
+    expect(levelOf(el, ID.sub)).toBe('6')
+    controller.undo()
+    await settle()
+    expect(levelOf(el, ID.sub)).toBeUndefined()
+  })
+
+  it('is drawn only: the file keeps its three levels and no mark of this one', async () => {
+    const { controller, doc, session } = await mount(deepSheet())
+    const original = await session.produceBytes()
+    controller.flush()
+    expect(doc.changed).toBe(false)
+    expect(await session.produceBytes()).toEqual(original)
+    expect(JSON.stringify(doc.sheets[0])).not.toContain('mmLevel')
+  })
+})
+
 describe('the colours of the map and the colours of the app', () => {
   it('each main branch takes one colour of the band by its place in the map, and starts over after the last', async () => {
     const sheet = sheetOf(

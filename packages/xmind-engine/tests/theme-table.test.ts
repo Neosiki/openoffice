@@ -67,7 +67,15 @@ const TOPIC_PROPERTIES = [
  *  - if they did, first copy the old table of every affected theme into
  *    `SHIPPED_THEME_TABLES` (src/theme-table.ts), then put the new digest here.
  */
-const WRITTEN_TABLES_DIGEST = '2418608d216f51cdf5cf45cd9f42eb184fc39832036a064b75d08d12b3ebf307'
+const WRITTEN_TABLES_DIGEST = '1871ad518bd5ca34e8e7726d73a738a08c898d44e7ac82588c02d0704e0e22be'
+
+/**
+ * The tables the 0.12 releases wrote, pinned the same way. They are worked
+ * out from today's tables and the sizes of 0.12, so a colour or a rule that
+ * moves would move them too: when this fails, write the tables out by hand
+ * instead of deriving them (see `SHIPPED_THEME_TABLES`).
+ */
+const SHIPPED_TABLES_DIGEST = '2418608d216f51cdf5cf45cd9f42eb184fc39832036a064b75d08d12b3ebf307'
 
 /** A theme from some other program: hand-written, every value invented here. */
 function foreignTheme(): Record<string, unknown> {
@@ -241,9 +249,9 @@ describe('writing a theme', () => {
 
   it('carries the three levels over as whole numbers that still shrink', () => {
     const { centralTopic, mainTopic, subTopic } = writtenThemeProperties('pill/paper/light')
-    expect(centralTopic).toMatchObject({ 'fo:font-size': '21pt', 'fo:font-weight': '700' })
-    expect(mainTopic).toMatchObject({ 'fo:font-size': '15pt', 'fo:font-weight': '600' })
-    expect(subTopic).toMatchObject({ 'fo:font-size': '14pt', 'fo:font-weight': '400' })
+    expect(centralTopic).toMatchObject({ 'fo:font-size': '18pt', 'fo:font-weight': '700' })
+    expect(mainTopic).toMatchObject({ 'fo:font-size': '14pt', 'fo:font-weight': '600' })
+    expect(subTopic).toMatchObject({ 'fo:font-size': '13pt', 'fo:font-weight': '400' })
     // the centre's branch lines, then the thinner ones below
     expect(centralTopic!['line-width']).toBe('2pt')
     expect(mainTopic!['line-width']).toBe('1pt')
@@ -298,6 +306,12 @@ describe('writing a theme', () => {
   it('pins what is written today (read the note on the digest when this fails)', () => {
     const digest = createHash('sha256').update(JSON.stringify(WRITTEN_THEME_TABLES)).digest('hex')
     expect(digest).toBe(WRITTEN_TABLES_DIGEST)
+  })
+
+  it('pins the tables older releases wrote (read the note on the digest when this fails)', () => {
+    const digest = createHash('sha256').update(JSON.stringify(SHIPPED_THEME_TABLES)).digest('hex')
+    expect(SHIPPED_THEME_TABLES).toHaveLength(THEME_IDS.length)
+    expect(digest).toBe(SHIPPED_TABLES_DIGEST)
   })
 })
 
@@ -374,13 +388,27 @@ describe('a theme whose values changed after a release', () => {
   ) as unknown as ThemeBandColors
   const earlier = themePropertiesOf(buildThemeLook(parseThemeId(id)!, earlierBand))
 
-  it('has nothing to remember yet: no release has shipped', () => {
-    expect(SHIPPED_THEME_TABLES).toEqual([])
-    expect(JSON.stringify(earlier)).not.toBe(JSON.stringify(writtenThemeProperties(id)))
-    expect(recogniseTheme(asFileHoldsIt(earlier))).toBeNull()
+  it('remembers the sizes of 0.12, so a file from it opens as the theme its user picked', async () => {
+    expect(SHIPPED_THEME_TABLES).toHaveLength(96)
+    const shipped = SHIPPED_THEME_TABLES.find((entry) => entry.themeId === id)!.properties
+    expect(shipped.centralTopic!['fo:font-size']).toBe('21pt')
+    expect(shipped.mainTopic!['fo:font-size']).toBe('15pt')
+    expect(shipped.subTopic!['fo:font-size']).toBe('14pt')
+    expect(JSON.stringify(shipped)).not.toBe(JSON.stringify(writtenThemeProperties(id)))
+    expect(recogniseTheme(asFileHoldsIt(shipped))).toBe(id)
+
+    // A file of 0.12 opens as that theme, draws with today's look and keeps its own table.
+    const theme = asFileHoldsIt(shipped)
+    const bytes = await buildMapFile({ content: [{ ...sheetWith(theme), id: 'sheet-1' }] })
+    const document = await openOk(bytes)
+    expect(recogniseSheetTheme(document.sheets[0]!)).toBe(id)
+    expect(document.changed).toBe(false)
+    expect(await document.save()).toEqual(bytes)
   })
 
   it('still recognises the earlier table as the same theme', () => {
+    expect(JSON.stringify(earlier)).not.toBe(JSON.stringify(writtenThemeProperties(id)))
+    expect(recogniseTheme(asFileHoldsIt(earlier))).toBeNull()
     const recognise = createThemeRecogniser(WRITTEN_THEME_TABLES, [
       { themeId: id, properties: earlier },
     ])

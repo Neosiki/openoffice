@@ -1,6 +1,6 @@
 /**
  * Rebuilds vendor/rhwp-core: the rhwp engine (`@rhwp/core`) at the pinned tag
- * with the layout patches in vendor/rhwp-core/patches (decision 0045).
+ * with the layout patches in vendor/rhwp-core/patches (decision 0050).
  *
  *   node tools/build-rhwp-core.mjs [--keep]
  *

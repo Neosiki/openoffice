@@ -28,7 +28,7 @@ const require = createRequire(join(APP, 'package.json'))
 const REPO = 'https://github.com/edwardkim/rhwp.git'
 /**
  * The studio is built from the tag the engine was built from. The engine is the
- * patched build in vendor/rhwp-core (decision 0045), which names its tag.
+ * patched build in vendor/rhwp-core (decision 0050), which names its tag.
  */
 const CORE_DIR = dirname(require.resolve('@rhwp/core'))
 const core = JSON.parse(readFileSync(join(CORE_DIR, 'package.json'), 'utf8'))

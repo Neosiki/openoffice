@@ -1,5 +1,5 @@
 /**
- * The patched rhwp engine in vendor/rhwp-core (decision 0045), run in node like
+ * The patched rhwp engine in vendor/rhwp-core (decision 0050), run in node like
  * the editor runs it. Each case is a public reproduction saved by Hangul 2024
  * (its text replaced by filler): the page layout must keep the relations Hangul
  * draws, not pixel positions. The title-table-then-inline-table case is the

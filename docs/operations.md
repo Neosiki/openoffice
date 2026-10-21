@@ -203,7 +203,7 @@ npm run typecheck
 
 ## 한글 엔진(rhwp) 다시 빌드하기
 
-한글 편집기와 한글 파일 읽기가 쓰는 엔진은 `vendor/rhwp-core`에 빌드해 둔 것이다(결정 0045). 앱을 빌드할 때는 Rust가 필요 없다. 패치를 바꾸거나 rhwp 태그를 올릴 때만 다시 빌드한다.
+한글 편집기와 한글 파일 읽기가 쓰는 엔진은 `vendor/rhwp-core`에 빌드해 둔 것이다(결정 0050). 앱을 빌드할 때는 Rust가 필요 없다. 패치를 바꾸거나 rhwp 태그를 올릴 때만 다시 빌드한다.
 
 ```bash
 export PATH="$HOME/.cargo/bin:$PATH"

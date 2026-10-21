@@ -11,6 +11,7 @@ import { contrastRatio, mixColors, raiseColor, stepToward } from './theme-color'
 import {
   parseThemeId,
   THEME_BANDS,
+  THEME_DEEP_LEVELS,
   THEME_LINES,
   THEME_RULES,
   THEME_SKELETONS,
@@ -58,6 +59,12 @@ export interface ThemeLook {
   strongText: string
   /** sizes, padding, corners and outline of the three levels (CSS pixels) */
   shapes: { central: ThemeTopicShape; main: ThemeTopicShape; sub: ThemeTopicShape }
+  /**
+   * The font sizes of the levels below the third, from the fourth level down
+   * (index 0 is the fourth), each a little smaller than the one above it and
+   * none below the floor. Drawn only: the file has three levels.
+   */
+  deepSizes: readonly number[]
   central: ThemeTopicColors
   /** one entry per accent; main branch `n` uses `branches[n % branches.length]` */
   branches: readonly ThemeBranchLook[]
@@ -177,6 +184,9 @@ export function buildThemeLook(
   })
 
   const centralFilled = skeleton.central.fill !== 'none'
+  const deepSizes = Array.from({ length: THEME_DEEP_LEVELS.last - 3 }, (_, at) =>
+    Math.max(THEME_DEEP_LEVELS.floor, skeleton.sub.fontSize - THEME_DEEP_LEVELS.step * (at + 1)),
+  )
   return {
     id: themeId(parts),
     ...parts,
@@ -185,6 +195,7 @@ export function buildThemeLook(
     text,
     strongText,
     shapes: { central: skeleton.central, main: skeleton.main, sub: skeleton.sub },
+    deepSizes,
     central: {
       fill: centralFilled ? strongText : null,
       text: centralFilled ? readableOn(strongText) : strongText,

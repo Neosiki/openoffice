@@ -145,10 +145,22 @@ export const THEME_LINES = { main: 2.25, sub: 1.5, subOpacity: 0.72, cornerRadiu
 /** Gaps between main branches and between the topics below them. */
 export const THEME_SPACING = { mainGapX: 56, mainGapY: 22, subGapX: 26, subGapY: 6 } as const
 
+/**
+ * The levels below the third: each one a little smaller than the one above
+ * it, down to a floor, so that a deep branch reads as deeper at a glance.
+ * `last` is the deepest level with a size of its own; everything below it
+ * keeps the floor.
+ *
+ * The file format has three levels only, so these sizes are drawn and never
+ * written. A file opened elsewhere draws every level below the second with
+ * its third level's size.
+ */
+export const THEME_DEEP_LEVELS = { step: 0.5, floor: 12, last: 6 } as const
+
 // Three levels, shrinking together: size, weight and padding.
-const CENTRAL = { fontSize: 21, fontWeight: 700, padding: [14, 26] } as const
-const MAIN = { fontSize: 15.5, fontWeight: 650, padding: [7, 16] } as const
-const SUB = { fontSize: 14, fontWeight: 400, padding: [5, 10] } as const
+const CENTRAL = { fontSize: 18, fontWeight: 700, padding: [14, 26] } as const
+const MAIN = { fontSize: 14.5, fontWeight: 650, padding: [7, 16] } as const
+const SUB = { fontSize: 13.5, fontWeight: 400, padding: [5, 10] } as const
 const TEXT_ONLY = { radius: 0, fill: 'none', border: 'none', borderWidth: 0 } as const
 const NO_BORDER = { border: 'none', borderWidth: 0 } as const
 
