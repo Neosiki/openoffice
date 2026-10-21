@@ -20,6 +20,7 @@ import {
   USER_SKILL_PRIORITY,
   isInsideCodexHome,
   isReservedUserSkillName,
+  normalizeSkillTemplatePath,
   parseSkillMd,
 } from '@genoffice/ai-provider'
 import {
@@ -62,13 +63,9 @@ export function userSkillsManageGate<S>(windows: {
 
 // ---- the session's skills -----------------------------------------------
 
-/** A template path as a skill names it: relative, `/` between parts, never leaving the folder */
+/** A template path as a skill names it: under `assets/`, the same rule as the skill list */
 function templateRelOf(value: string | undefined): string[] | undefined {
-  if (!value) return undefined
-  const parts = value.replace(/\\/g, '/').split('/')
-  if (value.startsWith('/') || /^[A-Za-z]:/.test(value)) return undefined
-  if (parts.some((part) => part === '' || part === '.' || part === '..')) return undefined
-  return parts
+  return normalizeSkillTemplatePath(value)?.split('/')
 }
 
 /**
@@ -322,7 +319,14 @@ export async function agentTemplateCandidates(options: {
     if (match) selected = match.id
     else {
       const root = key(options.projectRoot)
-      const inside = isInsidePath(key(full), root, platform)
+      // inside the project folder as written and where it really is: a link leading out is refused
+      const realRoot = await realpath(options.projectRoot).catch(() => undefined)
+      const real = await realpath(full).catch(() => undefined)
+      const inside =
+        isInsidePath(key(full), root, platform) &&
+        !!realRoot &&
+        !!real &&
+        isInsidePath(key(real), key(realRoot), platform)
       const isFile = inside
         ? await stat(full).then(
             (s) => s.isFile(),

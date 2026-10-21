@@ -389,9 +389,22 @@ describe('the session’s skills for the window', () => {
       invoke: 'auto' as const,
       skillMd: join(dir, 'SKILL.md'),
     })
-    const skills = await agentSessionSkillsOf([entry('form', a), entry('plain', b)])
+    // a template outside `assets/` is not a template (the same rule as the skill list)
+    const c = join(bundle, 'skills', 'loose')
+    mkdirSync(c, { recursive: true })
+    writeFileSync(
+      join(c, 'SKILL.md'),
+      '---\nname: loose\ndescription: d\nmetadata:\n  ieum-template: form.docx\n---\nBody\n',
+    )
+    writeFileSync(join(c, 'form.docx'), 'x')
+    const skills = await agentSessionSkillsOf([
+      entry('form', a),
+      entry('plain', b),
+      entry('loose', c),
+    ])
     expect(skills[0]!.template).toBe(join(a, 'assets', 'form.docx'))
     expect(skills[1]!.template).toBeUndefined()
+    expect(skills[2]!.template).toBeUndefined()
   })
 })
 
@@ -418,6 +431,25 @@ describe('template candidates', () => {
       projectRoot: project,
       tabs: [],
       suggested: join(outside, 'secret.docx'),
+    })
+    expect(candidates).toEqual([])
+    expect(selected).toBeUndefined()
+  })
+
+  it('take a suggestion through a link leading out of the project folder as no choice', async () => {
+    const project = temp()
+    const outside = temp()
+    writeFileSync(join(outside, 'secret.docx'), 'x')
+    try {
+      symlinkSync(outside, join(project, 'linked'), 'junction')
+    } catch {
+      return
+    }
+    const { candidates, selected } = await agentTemplateCandidates({
+      projectRoot: project,
+      tabs: [],
+      suggested: join('linked', 'secret.docx'),
+      projectFiles: [],
     })
     expect(candidates).toEqual([])
     expect(selected).toBeUndefined()
