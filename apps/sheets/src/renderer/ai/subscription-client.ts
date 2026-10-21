@@ -91,17 +91,17 @@ export function useSubscriptionConnection(): SubscriptionConnection {
   }, [apply, check])
 
   const launch = useCallback(
-    (kind: 'install' | 'login', provider: AiSubscriptionProviderId) => {
+    (kind: 'install' | 'login' | 'update', provider: AiSubscriptionProviderId) => {
       setBusy(true)
-      void attempt((api) => (kind === 'install' ? api.install(provider) : api.login(provider)))
+      void attempt((api) => api[kind](provider))
         .then((result) => {
           if (!alive.current) return
           if (result?.ok) {
             launched.current.set(provider, statusesRef.current[provider].state)
             return
           }
-          // the install command could not be started here: the vendor's own guide is the way on
-          if (kind === 'install') openInstallHelp(provider)
+          // the install or update could not be started here: the vendor's own guide is the way on
+          if (kind === 'install' || kind === 'update') openInstallHelp(provider)
           // a sign-in that found no program means the shown status is out of date
           else if (result?.reason === 'not-installed') void check([provider])
         })
@@ -120,6 +120,14 @@ export function useSubscriptionConnection(): SubscriptionConnection {
     (provider: AiSubscriptionProviderId) => launch('login', provider),
     [launch],
   )
+  const onUpdate = useCallback(
+    (provider: AiSubscriptionProviderId) => launch('update', provider),
+    [launch],
+  )
+  const onCancelLogin = useCallback((provider: AiSubscriptionProviderId) => {
+    // the main process ends the sign-in and looks again; the change event follows
+    void attempt((api) => api.cancelLogin(provider))
+  }, [])
   const onRecheck = useCallback(
     (provider: AiSubscriptionProviderId) => {
       setBusy(true)
@@ -144,6 +152,14 @@ export function useSubscriptionConnection(): SubscriptionConnection {
   return {
     statuses,
     busy,
-    actions: { onInstall, onLogin, onRecheck, onAcceptMetered, onOpenInstallHelp: openInstallHelp },
+    actions: {
+      onInstall,
+      onLogin,
+      onRecheck,
+      onAcceptMetered,
+      onOpenInstallHelp: openInstallHelp,
+      onUpdate,
+      onCancelLogin,
+    },
   }
 }

@@ -279,9 +279,9 @@ describe('AI panel: failed runs', () => {
     expect(container.querySelector('.ai-msg')).toBeNull()
     expect(container.querySelector('.ai-msg-error')).toBeNull()
     expect(harness.composerText()).toBe('summarize this')
-    expect(container.querySelectorAll('.ai-sub-card')).toHaveLength(2)
-    expect(container.querySelector('[data-action="install"]')).not.toBeNull()
-    expect(container.querySelector('[data-action="login"]')).not.toBeNull()
+    // which AI the user has comes first; each answer leads to its own card
+    expect(container.querySelector('.ai-sub-guide-question')).not.toBeNull()
+    expect(container.querySelectorAll('.ai-sub-guide-path')).toHaveLength(3)
     // the refused send points at the prompt
     expect(scrolled).toContain(container.querySelector('.ai-sub-prompt'))
   })

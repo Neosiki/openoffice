@@ -181,34 +181,52 @@ describe('Onboarding', () => {
     expect(onDone).toHaveBeenCalledTimes(2)
   })
 
-  it('offers both subscriptions on the connect step, with live status and the Codex line', async () => {
+  it('asks which AI the user has on the connect step, then walks that one path on the live status', async () => {
     const connection = connectionOf(statuses('not-installed', 'signed-out'))
     renderOnboarding({ connection })
     await click('.onb-next')
 
     const step = host.querySelector<HTMLElement>('.onb-slide[data-step="connect"]')!
-    const cards = Array.from(step.querySelectorAll<HTMLElement>('.ai-sub-card'))
-    expect(cards.map((card) => card.dataset.provider)).toEqual(['claude-code', 'codex'])
-    expect(cards.map((card) => card.dataset.state)).toEqual(['not-installed', 'signed-out'])
+    const cards = () =>
+      Array.from(step.querySelectorAll<HTMLElement>('.ai-sub-card')).map((card) => [
+        card.dataset.provider,
+        card.dataset.state,
+      ])
+    expect(step.querySelector('.ai-sub-guide-question')!.textContent).toBe(
+      aiSubscriptionText('en', 'guideQuestion'),
+    )
+    expect(
+      Array.from(step.querySelectorAll<HTMLElement>('.ai-sub-guide-path')).map(
+        (el) => el.dataset.path,
+      ),
+    ).toEqual(['claude-code', 'codex', 'free'])
+    expect(cards()).toEqual([])
     expect(step.querySelector('.ai-sub-codex')!.textContent).toBe(
       aiSubscriptionText('en', 'codexNotice'),
     )
 
+    await click('.onb-slide[data-step="connect"] [data-path="claude-code"]')
+    expect(cards()).toEqual([['claude-code', 'not-installed']])
     await click(
       '.onb-slide[data-step="connect"] [data-provider="claude-code"] [data-action="install"]',
     )
     expect(connection.install).toHaveBeenCalledWith('claude-code')
+    await click('.onb-slide[data-step="connect"] [data-action="guide-back"]')
+    await click('.onb-slide[data-step="connect"] [data-path="codex"]')
+    expect(cards()).toEqual([['codex', 'signed-out']])
     await click('.onb-slide[data-step="connect"] [data-provider="codex"] [data-action="login"]')
     expect(connection.login).toHaveBeenCalledWith('codex')
   })
 
-  it('says a launch could not start', async () => {
+  it('says a launch could not start, under the card of that path', async () => {
     renderOnboarding({
       connection: connectionOf(statuses('not-installed', 'signed-out'), {
         failed: { codex: 'login' },
       }),
     })
     await click('.onb-next')
+    expect(host.querySelector('.onb-connect-failed')).toBeNull()
+    await click('.onb-slide[data-step="connect"] [data-path="codex"]')
     const failed = host.querySelector<HTMLElement>('.onb-connect-failed')!
     expect(failed.dataset.provider).toBe('codex')
     expect(failed.textContent).toBe(strings.en.setSubLoginFailed)
@@ -243,7 +261,10 @@ describe('Onboarding', () => {
       renderOnboarding()
       await click('.onb-next')
       const step = host.querySelector('.onb-slide.active')!
-      expect(step.querySelector('.onb-free-title')!.textContent).toBe(strings.en.onbFreeTitle)
+      // a free connection already made opens the free path by itself
+      expect(step.querySelector('.ai-sub-guide-open')!.getAttribute('data-path')).toBe('free')
+      // the free cards say what free use means themselves: no line of the guide repeats it
+      expect(step.querySelector('.ai-sub-guide-need')).toBeNull()
       expect(
         [...step.querySelectorAll<HTMLElement>('.free-ai-card')].map((el) => [
           el.dataset.provider,

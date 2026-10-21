@@ -239,7 +239,8 @@ describe('AI panel: not connected', () => {
     expect(composerText(panel)).toBe(strings.en.aiQuickSummaryPrompt)
     const prompt = panel.querySelector('.ai-sub-prompt')
     expect(prompt?.getAttribute('data-reason')).toBe('no-subscription')
-    expect(prompt?.querySelectorAll('.ai-sub-card')).toHaveLength(2)
+    // which AI the user has comes first; each answer leads to its own card
+    expect(prompt?.querySelectorAll('.ai-sub-guide-path')).toHaveLength(3)
     // the refused send points at it
     expect(scrolled).toContain(prompt)
   })
@@ -261,8 +262,11 @@ describe('AI panel: not connected', () => {
     const panel = await renderPanel({ statuses: statusesOf('signed-out', 'not-installed') })
     await click(quickAction(panel))
 
+    await click(panel.querySelector('[data-path="claude-code"]'))
     await click(panel.querySelector('[data-provider="claude-code"] [data-action="login"]'))
     expect(bridge.subscription.login).toHaveBeenCalledWith('claude-code')
+    await click(panel.querySelector('[data-action="guide-back"]'))
+    await click(panel.querySelector('[data-path="codex"]'))
     await click(panel.querySelector('[data-provider="codex"] [data-action="install"]'))
     expect(bridge.subscription.install).toHaveBeenCalledWith('codex')
     await click(panel.querySelector('[data-provider="codex"] [data-action="install-help"]'))
@@ -559,6 +563,8 @@ describe('AI panel: blocked run', () => {
 
     expect(bridge.subscription.recheck).toHaveBeenCalledWith(['claude-code'])
     expect(panel.querySelector('.ai-sub-blocked')?.getAttribute('data-kind')).toBe('signed-out')
+    // the way back in: Claude's path, now on the sign-in step
+    await click(panel.querySelector('.ai-sub-prompt [data-path="claude-code"]'))
     expect(
       panel.querySelector('.ai-sub-prompt [data-provider="claude-code"] [data-action="login"]'),
     ).not.toBeNull()

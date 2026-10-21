@@ -1221,6 +1221,8 @@ export function AiPanel({
                   .catch(() => {})
               }
               onInstall={subscription.install}
+              onUpdate={subscription.update}
+              onCancelLogin={subscription.cancelLogin}
               onLogin={subscription.login}
               onRecheck={subscription.recheck}
               onAcceptMetered={subscription.acceptMetered}

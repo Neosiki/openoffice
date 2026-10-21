@@ -96,6 +96,18 @@ const aiSubscription: SubscriptionApi = {
       await ipcRenderer.invoke(SUBSCRIPTION_IPC_CHANNELS.install, { provider }),
     )
   },
+  async update(provider) {
+    if (!isSubscriptionProviderId(provider)) throw new Error('Invalid subscription provider.')
+    return subscriptionLaunchResultOf(
+      await ipcRenderer.invoke(SUBSCRIPTION_IPC_CHANNELS.update, { provider }),
+    )
+  },
+  async cancelLogin(provider) {
+    if (!isSubscriptionProviderId(provider)) throw new Error('Invalid subscription provider.')
+    return subscriptionLaunchResultOf(
+      await ipcRenderer.invoke(SUBSCRIPTION_IPC_CHANNELS.cancelLogin, { provider }),
+    )
+  },
   async setMeteredAccepted(provider, accepted) {
     if (!isSubscriptionProviderId(provider)) throw new Error('Invalid subscription provider.')
     const result: unknown = await ipcRenderer.invoke(SUBSCRIPTION_IPC_CHANNELS.metered, {
