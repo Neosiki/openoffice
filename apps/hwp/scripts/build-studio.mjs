@@ -24,12 +24,16 @@ import { AGENT_PLUGIN_MODULE, missingPluginHooks, rhwpPatches } from './rhwp-pat
 const SCRIPTS = dirname(fileURLToPath(import.meta.url))
 const APP = resolve(SCRIPTS, '..')
 const require = createRequire(join(APP, 'package.json'))
-const manifest = JSON.parse(readFileSync(join(APP, 'package.json'), 'utf8'))
 
 const REPO = 'https://github.com/edwardkim/rhwp.git'
-/** The studio is built against the engine it was released with. */
-const VERSION = manifest.devDependencies['@rhwp/core']
-const TAG = `v${VERSION}`
+/**
+ * The studio is built from the tag the engine was built from. The engine is the
+ * patched build in vendor/rhwp-core (decision 0050), which names its tag.
+ */
+const CORE_DIR = dirname(require.resolve('@rhwp/core'))
+const core = JSON.parse(readFileSync(join(CORE_DIR, 'package.json'), 'utf8'))
+const VERSION = core.version
+const TAG = core.rhwp.tag
 /** Commit each supported tag must resolve to; a moved tag stops the build. */
 const PINNED_COMMITS = {
   'v0.8.7': '1a76570e833917d15817415a53c09ad61ab3203f',
@@ -69,6 +73,8 @@ function stampValue() {
   }
   // the app's own plugin is compiled into the studio
   hash.update(readFileSync(AGENT_PLUGIN))
+  // and so is the engine: a rebuilt WASM must reach the studio
+  hash.update(readFileSync(join(CORE_DIR, 'rhwp_bg.wasm')))
   return hash.digest('hex')
 }
 
