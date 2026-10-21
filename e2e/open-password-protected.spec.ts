@@ -44,6 +44,21 @@ async function submit(page: Page, password: string): Promise<void> {
   await page.locator('#ok').click()
 }
 
+/**
+ * Cancels the password window, which closes that window itself. Playwright can
+ * see the close before the click returns and report it as an error; that one
+ * error is the success case here, so it is taken instead of failing the test.
+ * Anything else (the button missing, the app gone before the click) still fails.
+ */
+async function cancelPasswordWindow(page: Page): Promise<void> {
+  await page
+    .locator('#cancel')
+    .click()
+    .catch((error: unknown) => {
+      if (!(error instanceof Error) || !/has been closed/.test(error.message)) throw error
+    })
+}
+
 for (const { ext, url, channel, fixture, part } of KINDS) {
   test(`encrypted .${ext} asks for its password, opens and saves encrypted`, async () => {
     const dir = await mkdtemp(join(tmpdir(), 'genoffice-locked-'))
@@ -140,7 +155,7 @@ for (const { ext, url, channel, fixture, part } of KINDS) {
     })
     try {
       const prompt = await passwordWindow(launched.app)
-      await prompt.locator('#cancel').click()
+      await cancelPasswordWindow(prompt)
       const editor = await waitForPageWithUrl(launched.app, url)
       await editor.waitForTimeout(2_000)
       await editor.screenshot({ path: screenshotPath(`locked-${ext}-cancelled`) })
