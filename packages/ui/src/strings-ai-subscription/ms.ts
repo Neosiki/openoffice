@@ -96,4 +96,37 @@ export const ms = {
   pickerPaid: 'Berbayar',
   pickerPaidTitle: 'Dicaj mengikut penggunaan, tidak diliputi langganan',
   pickerNotConnected: 'Sambungkan AI',
+  guideQuestion: 'AI mana yang sudah anda gunakan?',
+  guidePathClaudeTitle: 'Saya ada langganan Claude berbayar',
+  guidePathClaudeBody:
+    'Memerlukan pelan Pro atau Max. Akaun Claude percuma tidak boleh disambungkan.',
+  guidePathCodexTitle: 'Saya guna ChatGPT',
+  guidePathCodexBody:
+    'Log masuk ke program Codex OpenAI dengan akaun ChatGPT anda. Pelan percuma hanya membenarkan sedikit penggunaan.',
+  guidePathFreeTitle: 'Belum ada kedua-duanya',
+  guidePathFreeBody:
+    'Sambungkan AI percuma dalam masa kira-kira seminit. Semasa anda menggunakannya secara percuma, kandungan yang anda hantar mungkin digunakan untuk menambah baik AI syarikat itu.',
+  guideBack: 'Pilih cara lain',
+  guideBadgeReady: 'Disambungkan',
+  guideBadgeInstalled: 'Dipasang',
+  guideBadgeCheck: 'Perlu disemak',
+  guideStepsLabel: 'Langkah sambungan',
+  stepInstall: 'Pasang program',
+  stepLogin: 'Log masuk',
+  stepReady: 'Disambungkan',
+  installReturnNote:
+    'Apabila pemasangan dalam tetingkap itu selesai, kembali ke sini. Aplikasi akan menyemak semula dengan sendiri.',
+  loginHowNote:
+    'Pelayar akan dibuka apabila anda menekannya. Log masuk dengan akaun {vendor} anda dan tekan Benarkan; sambungan akan selesai dengan sendiri.',
+  signingInStalledNote:
+    'Pelayar tidak dibuka, atau menunjukkan kod? Buka tetingkap log masuk dengan butang di bawah. Tampalkan alamat yang ditunjukkan dalam tetingkap itu ke pelayar, atau tampalkan kod daripada pelayar ke tetingkap.',
+  actionLoginWindowOpen: 'Buka tetingkap log masuk',
+  actionCancelLogin: 'Batalkan log masuk',
+  actionUpdate: 'Kemas kini',
+  updateNote:
+    'Apabila anda menekannya, kemas kini rasmi {vendor} dijalankan dalam tetingkap baharu. Apabila selesai di sana, kembali ke sini.',
+  guideInfoHint:
+    'Masih tidak berjaya? Salin maklumat sambungan dan hantar kepada orang yang membantu anda. Maklumat ini tidak mengandungi akaun atau laluan fail.',
+  actionCopyInfo: 'Salin maklumat untuk bantuan',
+  copyInfoDone: 'Disalin',
 } satisfies Record<keyof typeof zh, string>

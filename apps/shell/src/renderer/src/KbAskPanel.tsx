@@ -524,6 +524,8 @@ export function KbAskPanel({
               disabled={connection.busy}
               onOpenSettings={onOpenAiSettings}
               onInstall={connection.install}
+              onUpdate={connection.update}
+              onCancelLogin={connection.cancelLogin}
               onLogin={connection.login}
               onRecheck={connection.recheck}
               onAcceptMetered={(provider) => void connection.acceptMetered(provider)}

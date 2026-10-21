@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import type { Lang } from '@genoffice/i18n'
 import type {
   AiProviderChoice,
@@ -7,6 +7,7 @@ import type {
   AiSubscriptionStatuses,
 } from '@genoffice/ai-provider/browser'
 import {
+  AI_SIGNING_IN_STALLED_MS,
   aiConnectPromptView,
   aiSubscriptionCardView,
   aiSubscriptionProviderName,
@@ -15,6 +16,7 @@ import {
   isAiSubscriptionAccountAction,
   type AiSubscriptionCardAction,
 } from './ai-subscription'
+import { AiConnectGuide } from './AiConnectGuide'
 import { AiMark } from './AiMark'
 import { aiSubscriptionText, type AiSubscriptionStringKey } from './strings-ai-subscription'
 import './ai-subscription.css'
@@ -38,6 +40,13 @@ export interface AiSubscriptionCardActions {
   readonly onAcceptMetered: (provider: AiSubscriptionProviderId) => void
   /** open the vendor's install instructions (AI_SUBSCRIPTION_INSTALL_HELP_URLS) */
   readonly onOpenInstallHelp: (provider: AiSubscriptionProviderId) => void
+  /**
+   * run the official update of a CLI below the app's floor, in a visible
+   * terminal window; a host without it gets no update button
+   */
+  readonly onUpdate?: ((provider: AiSubscriptionProviderId) => void) | undefined
+  /** end a login the app started; a host without it gets no cancel link */
+  readonly onCancelLogin?: ((provider: AiSubscriptionProviderId) => void) | undefined
 }
 
 const ACTION_LABELS: Record<AiSubscriptionCardAction, AiSubscriptionStringKey> = {
@@ -45,6 +54,8 @@ const ACTION_LABELS: Record<AiSubscriptionCardAction, AiSubscriptionStringKey> =
   'install-help': 'actionInstallHelp',
   login: 'actionLogin',
   'login-window': 'actionLoginWindow',
+  'cancel-login': 'actionCancelLogin',
+  update: 'actionUpdate',
   'accept-metered': 'actionAcceptMetered',
   recheck: 'actionRecheck',
   'switch-account': 'actionSwitchAccount',
@@ -72,6 +83,8 @@ export function AiSubscriptionCard({
   onRecheck,
   onAcceptMetered,
   onOpenInstallHelp,
+  onUpdate,
+  onCancelLogin,
   showAccount = false,
   onSwitchAccount,
   onLogout,
@@ -89,10 +102,14 @@ export function AiSubscriptionCard({
   /** Settings only: the user asked to sign out (the CLI's own logout) */
   readonly onLogout?: ((provider: AiSubscriptionProviderId) => void) | undefined
 }): React.JSX.Element {
+  const stalled = useSigningInStalled(status.signingIn === 'browser')
   const view = aiSubscriptionCardView(status, {
     account: showAccount && !compact,
     accountActions: !compact && onSwitchAccount !== undefined && onLogout !== undefined,
     terminalWindows: TERMINAL_WINDOWS,
+    update: onUpdate !== undefined,
+    cancelLogin: onCancelLogin !== undefined,
+    signingInStalled: stalled,
   })
   const provider = view.provider
   const params = {
@@ -106,6 +123,8 @@ export function AiSubscriptionCard({
     login: onLogin,
     // pressing login again while the browser sign-in runs opens the CLI's window
     'login-window': onLogin,
+    'cancel-login': (id) => onCancelLogin?.(id),
+    update: (id) => onUpdate?.(id),
     'accept-metered': onAcceptMetered,
     recheck: onRecheck,
     'switch-account': (id) => onSwitchAccount?.(id),
@@ -133,11 +152,7 @@ export function AiSubscriptionCard({
           {view.planName ? ` · ${view.planName}` : ''}
         </p>
       )}
-      {view.noteKeys.map((key) => (
-        <p key={key} className="ai-sub-note" data-note={key}>
-          {aiSubscriptionText(lang, key, params)}
-        </p>
-      ))}
+      {/* what went wrong comes before what a button about it does */}
       {view.detailKey && (
         <p className="ai-sub-detail" data-detail={view.detailKey}>
           {aiSubscriptionText(lang, view.detailKey, { ...params, ...view.detailParams })}
@@ -157,11 +172,16 @@ export function AiSubscriptionCard({
           ))}
         </div>
       )}
+      {view.noteKeys.map((key) => (
+        <p key={key} className="ai-sub-note" data-note={key}>
+          {aiSubscriptionText(lang, key, params)}
+        </p>
+      ))}
       {view.actions.length > 0 && (
         <div className="ai-sub-actions">
           {view.actions.map((action, index) =>
             // the way out of a step, not the step itself: a link, never the highlighted button
-            action === 'install-help' || action === 'login-window' ? (
+            view.links.includes(action) ? (
               <button
                 key={action}
                 type="button"
@@ -184,7 +204,11 @@ export function AiSubscriptionCard({
                 disabled={disabled}
                 onClick={() => handlers[action](provider)}
               >
-                {aiSubscriptionText(lang, ACTION_LABELS[action])}
+                {aiSubscriptionText(
+                  lang,
+                  // lifted out of the links, the way to the window says what it opens
+                  action === 'login-window' ? 'actionLoginWindowOpen' : ACTION_LABELS[action],
+                )}
               </button>
             ),
           )}
@@ -192,6 +216,21 @@ export function AiSubscriptionCard({
       )}
     </div>
   )
+}
+
+/**
+ * Whether a browser sign-in has run for `AI_SIGNING_IN_STALLED_MS`, counted
+ * from when this card first saw it (a card opened later counts from then).
+ */
+function useSigningInStalled(signingIn: boolean): boolean {
+  const [stalled, setStalled] = useState(false)
+  useEffect(() => {
+    setStalled(false)
+    if (!signingIn) return
+    const timer = setTimeout(() => setStalled(true), AI_SIGNING_IN_STALLED_MS)
+    return () => clearTimeout(timer)
+  }, [signingIn])
+  return stalled
 }
 
 /**
@@ -245,33 +284,27 @@ export function AiConnectPrompt({
       {view.bodyKey && (
         <p className="ai-sub-prompt-body">{aiSubscriptionText(lang, view.bodyKey, params)}</p>
       )}
-      {view.providers.map((provider) => (
-        <AiSubscriptionCard
-          key={provider}
-          status={aiSubscriptionStatusOf(statuses, provider)}
+      {view.free && (
+        // nothing is connected: ask which AI the user has, then walk that one path
+        <AiConnectGuide
+          statuses={statuses}
           lang={lang}
-          compact
           disabled={disabled}
+          onChooseFree={onOpenSettings}
           {...actions}
         />
-      ))}
-      {view.free && onOpenSettings && (
-        <div className="ai-sub-free">
-          <p className="ai-sub-note" data-note="connectFreeHint">
-            {aiSubscriptionText(lang, 'connectFreeHint')}
-          </p>
-          <div className="ai-sub-actions">
-            <button
-              type="button"
-              className="ai-sub-btn"
-              data-action="connect-free"
-              onClick={onOpenSettings}
-            >
-              {aiSubscriptionText(lang, 'actionConnectFree')}
-            </button>
-          </div>
-        </div>
       )}
+      {!view.free &&
+        view.providers.map((provider) => (
+          <AiSubscriptionCard
+            key={provider}
+            status={aiSubscriptionStatusOf(statuses, provider)}
+            lang={lang}
+            compact
+            disabled={disabled}
+            {...actions}
+          />
+        ))}
       {view.settings && onOpenSettings && (
         <div className="ai-sub-actions">
           <button

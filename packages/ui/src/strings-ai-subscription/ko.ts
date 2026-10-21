@@ -85,4 +85,36 @@ export const ko = {
   pickerPaid: '유료',
   pickerPaidTitle: '구독이 아니라 쓴 만큼 요금이 나가는 연결입니다',
   pickerNotConnected: 'AI 연결',
+  guideQuestion: '지금 쓰고 있는 AI가 있나요?',
+  guidePathClaudeTitle: 'Claude 유료 구독이 있어요',
+  guidePathClaudeBody:
+    'Pro 또는 Max 요금제가 있어야 합니다. 무료 Claude 계정으로는 연결되지 않습니다.',
+  guidePathCodexTitle: 'ChatGPT를 써요',
+  guidePathCodexBody:
+    'ChatGPT 계정으로 OpenAI의 Codex 프로그램에 로그인해서 씁니다. 무료 요금제는 쓸 수 있는 양이 적습니다.',
+  guidePathFreeTitle: '아직 없어요',
+  guidePathFreeBody:
+    '무료 AI를 1분 안에 연결할 수 있습니다. 무료로 쓰는 동안 보낸 내용은 그 회사의 AI 개선에 쓰일 수 있습니다.',
+  guideBack: '다른 방법 고르기',
+  guideBadgeReady: '연결됨',
+  guideBadgeInstalled: '설치됨',
+  guideBadgeCheck: '확인 필요',
+  guideStepsLabel: '연결 단계',
+  stepInstall: '프로그램 설치',
+  stepLogin: '로그인',
+  stepReady: '연결 완료',
+  installReturnNote: '창에서 설치가 끝나면 이 화면으로 돌아오세요. 앱이 저절로 다시 확인합니다.',
+  loginHowNote:
+    '누르면 브라우저가 열립니다. {vendor} 계정으로 로그인하고 허용을 누르면 저절로 연결됩니다.',
+  signingInStalledNote:
+    '브라우저가 열리지 않았거나 화면에 코드가 보이나요? 아래 버튼으로 로그인 창을 여세요. 창에 나온 주소를 브라우저에 붙여 넣거나, 브라우저에 나온 코드를 창에 붙여 넣으면 됩니다.',
+  actionLoginWindowOpen: '로그인 창 열기',
+  actionCancelLogin: '로그인 취소',
+  actionUpdate: '업데이트',
+  updateNote:
+    '누르면 {vendor}의 공식 업데이트가 새 창에서 실행됩니다. 창에서 업데이트가 끝나면 이 화면으로 돌아오세요.',
+  guideInfoHint:
+    '그래도 안 되나요? 연결 정보를 복사해서 도와줄 사람에게 보내세요. 계정과 파일 경로는 들어가지 않습니다.',
+  actionCopyInfo: '도움 요청용 정보 복사',
+  copyInfoDone: '복사했습니다',
 } satisfies Record<keyof typeof zh, string>

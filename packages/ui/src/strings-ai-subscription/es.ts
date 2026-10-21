@@ -97,4 +97,37 @@ export const es = {
   pickerPaid: 'De pago',
   pickerPaidTitle: 'Se cobra por consumo, no lo cubre una suscripción',
   pickerNotConnected: 'Conectar IA',
+  guideQuestion: '¿Qué IA usas ya?',
+  guidePathClaudeTitle: 'Tengo una suscripción de pago a Claude',
+  guidePathClaudeBody:
+    'Necesitas un plan Pro o Max. Una cuenta gratuita de Claude no puede conectarse.',
+  guidePathCodexTitle: 'Uso ChatGPT',
+  guidePathCodexBody:
+    'Inicia sesión en el programa Codex de OpenAI con tu cuenta de ChatGPT. El plan gratuito solo permite un uso reducido.',
+  guidePathFreeTitle: 'Ninguna todavía',
+  guidePathFreeBody:
+    'Conecta una IA gratuita en un minuto aproximadamente. Mientras la uses gratis, lo que envíes puede usarse para mejorar la IA de esa empresa.',
+  guideBack: 'Elegir otra forma',
+  guideBadgeReady: 'Conectado',
+  guideBadgeInstalled: 'Instalado',
+  guideBadgeCheck: 'Revisar',
+  guideStepsLabel: 'Pasos de conexión',
+  stepInstall: 'Instalar el programa',
+  stepLogin: 'Iniciar sesión',
+  stepReady: 'Conectado',
+  installReturnNote:
+    'Cuando termine la instalación en esa ventana, vuelve aquí. La aplicación vuelve a comprobarlo sola.',
+  loginHowNote:
+    'Al pulsarlo se abre un navegador. Inicia sesión con tu cuenta de {vendor} y pulsa Permitir; la conexión se completa sola.',
+  signingInStalledNote:
+    '¿No se abrió el navegador o muestra un código? Abre la ventana de inicio de sesión con el botón de abajo. Pega en el navegador la dirección que aparece en ella, o pega en la ventana el código del navegador.',
+  actionLoginWindowOpen: 'Abrir la ventana de inicio de sesión',
+  actionCancelLogin: 'Cancelar inicio de sesión',
+  actionUpdate: 'Actualizar',
+  updateNote:
+    'Al pulsarlo, la actualización oficial de {vendor} se ejecuta en una ventana nueva. Cuando termine allí, vuelve aquí.',
+  guideInfoHint:
+    '¿Sigue sin funcionar? Copia los datos de conexión y envíalos a quien te esté ayudando. No incluyen ninguna cuenta ni rutas de archivos.',
+  actionCopyInfo: 'Copiar datos para pedir ayuda',
+  copyInfoDone: 'Copiado',
 } satisfies Record<keyof typeof zh, string>

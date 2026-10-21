@@ -92,4 +92,36 @@ export const id = {
   pickerPaid: 'Berbayar',
   pickerPaidTitle: 'Ditagih sesuai pemakaian, tidak termasuk dalam langganan',
   pickerNotConnected: 'Hubungkan AI',
+  guideQuestion: 'AI apa yang sudah Anda gunakan?',
+  guidePathClaudeTitle: 'Saya punya langganan Claude berbayar',
+  guidePathClaudeBody: 'Perlu paket Pro atau Max. Akun Claude gratis tidak bisa terhubung.',
+  guidePathCodexTitle: 'Saya memakai ChatGPT',
+  guidePathCodexBody:
+    'Masuk ke program Codex dari OpenAI dengan akun ChatGPT Anda. Paket gratis hanya memberi sedikit pemakaian.',
+  guidePathFreeTitle: 'Belum punya keduanya',
+  guidePathFreeBody:
+    'Hubungkan AI gratis dalam sekitar satu menit. Selama Anda memakainya secara gratis, konten yang Anda kirim dapat digunakan untuk meningkatkan AI perusahaan tersebut.',
+  guideBack: 'Pilih cara lain',
+  guideBadgeReady: 'Terhubung',
+  guideBadgeInstalled: 'Terpasang',
+  guideBadgeCheck: 'Perlu dicek',
+  guideStepsLabel: 'Langkah koneksi',
+  stepInstall: 'Pasang program',
+  stepLogin: 'Masuk',
+  stepReady: 'Terhubung',
+  installReturnNote:
+    'Setelah pemasangan di jendela itu selesai, kembali ke sini. Aplikasi akan memeriksa lagi dengan sendirinya.',
+  loginHowNote:
+    'Browser akan terbuka saat Anda menekannya. Masuk dengan akun {vendor} Anda dan tekan Izinkan; koneksi akan selesai dengan sendirinya.',
+  signingInStalledNote:
+    'Browser tidak terbuka, atau menampilkan kode? Buka jendela masuk dengan tombol di bawah. Tempelkan alamat yang tampil di jendela itu ke browser, atau tempelkan kode dari browser ke jendela.',
+  actionLoginWindowOpen: 'Buka jendela masuk',
+  actionCancelLogin: 'Batalkan masuk',
+  actionUpdate: 'Perbarui',
+  updateNote:
+    'Saat Anda menekannya, pembaruan resmi dari {vendor} berjalan di jendela baru. Setelah selesai di sana, kembali ke sini.',
+  guideInfoHint:
+    'Masih belum berhasil? Salin info koneksi dan kirim ke orang yang membantu Anda. Info ini tidak berisi akun maupun jalur file.',
+  actionCopyInfo: 'Salin info untuk bantuan',
+  copyInfoDone: 'Disalin',
 } satisfies Record<keyof typeof zh, string>

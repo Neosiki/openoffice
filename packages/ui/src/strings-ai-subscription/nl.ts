@@ -97,4 +97,37 @@ export const nl = {
   pickerPaid: 'Betaald',
   pickerPaidTitle: 'Betaald per verbruik, valt niet onder een abonnement',
   pickerNotConnected: 'AI koppelen',
+  guideQuestion: 'Welke AI gebruik je al?',
+  guidePathClaudeTitle: 'Ik heb een betaald Claude-abonnement',
+  guidePathClaudeBody:
+    'Je hebt een Pro- of Max-abonnement nodig. Met een gratis Claude-account lukt verbinden niet.',
+  guidePathCodexTitle: 'Ik gebruik ChatGPT',
+  guidePathCodexBody:
+    'Meld je met je ChatGPT-account aan bij het Codex-programma van OpenAI. Met het gratis abonnement kun je maar weinig gebruiken.',
+  guidePathFreeTitle: 'Nog geen van beide',
+  guidePathFreeBody:
+    'Koppel in ongeveer een minuut een gratis AI. Zolang je die gratis gebruikt, kan wat je verstuurt worden gebruikt om de AI van dat bedrijf te verbeteren.',
+  guideBack: 'Een andere manier kiezen',
+  guideBadgeReady: 'Verbonden',
+  guideBadgeInstalled: 'Geïnstalleerd',
+  guideBadgeCheck: 'Controleren',
+  guideStepsLabel: 'Verbindingsstappen',
+  stepInstall: 'Programma installeren',
+  stepLogin: 'Aanmelden',
+  stepReady: 'Verbonden',
+  installReturnNote:
+    'Kom hier terug als de installatie in dat venster klaar is. De app controleert dan vanzelf opnieuw.',
+  loginHowNote:
+    'Als je erop klikt, opent er een browser. Meld je aan met je {vendor}-account en klik op Toestaan; de verbinding komt vanzelf tot stand.',
+  signingInStalledNote:
+    'Browser niet geopend, of toont hij een code? Open het aanmeldvenster met de knop hieronder. Plak het adres uit dat venster in je browser, of plak de code uit de browser in het venster.',
+  actionLoginWindowOpen: 'Aanmeldvenster openen',
+  actionCancelLogin: 'Aanmelden annuleren',
+  actionUpdate: 'Bijwerken',
+  updateNote:
+    'Als je erop klikt, wordt de officiële update van {vendor} in een nieuw venster uitgevoerd. Kom hier terug als die daar klaar is.',
+  guideInfoHint:
+    'Lukt het nog steeds niet? Kopieer de verbindingsgegevens en stuur ze naar degene die je helpt. Er staan geen account en geen bestandspaden in.',
+  actionCopyInfo: 'Gegevens kopiëren voor hulp',
+  copyInfoDone: 'Gekopieerd',
 } satisfies Record<keyof typeof zh, string>

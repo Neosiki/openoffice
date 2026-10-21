@@ -218,6 +218,21 @@ export {
   AiSubscriptionCard,
   type AiSubscriptionCardActions,
 } from './AiSubscriptionCard'
+export { AiConnectGuide } from './AiConnectGuide'
+export {
+  AI_CONNECT_PATHS,
+  AI_CONNECT_STEPS,
+  aiConnectGuideView,
+  aiConnectInfoText,
+  aiConnectStepsView,
+  type AiConnectChoice,
+  type AiConnectGuideView,
+  type AiConnectInfoContext,
+  type AiConnectPath,
+  type AiConnectPathOption,
+  type AiConnectStepId,
+  type AiConnectStepsView,
+} from './connect-guide'
 export { AiBlockedNotice } from './AiBlockedNotice'
 export { AiSubscriptionUsageLine } from './AiSubscriptionUsageLine'
 export {

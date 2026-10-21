@@ -96,4 +96,37 @@ export const pl = {
   pickerPaid: 'Płatne',
   pickerPaidTitle: 'Opłata za zużycie, nieobjęte subskrypcją',
   pickerNotConnected: 'Połącz AI',
+  guideQuestion: 'Z jakiego AI już korzystasz?',
+  guidePathClaudeTitle: 'Mam płatną subskrypcję Claude',
+  guidePathClaudeBody:
+    'Potrzebny jest plan Pro lub Max. Darmowe konto Claude nie może się połączyć.',
+  guidePathCodexTitle: 'Korzystam z ChatGPT',
+  guidePathCodexBody:
+    'Zaloguj się do programu Codex firmy OpenAI kontem ChatGPT. Darmowy plan pozwala tylko na niewielkie użycie.',
+  guidePathFreeTitle: 'Jeszcze z żadnego',
+  guidePathFreeBody:
+    'Połącz darmowe AI w około minutę. Dopóki korzystasz z niego za darmo, wysyłane treści mogą posłużyć do ulepszania AI tej firmy.',
+  guideBack: 'Wybierz inny sposób',
+  guideBadgeReady: 'Połączono',
+  guideBadgeInstalled: 'Zainstalowano',
+  guideBadgeCheck: 'Do sprawdzenia',
+  guideStepsLabel: 'Kroki połączenia',
+  stepInstall: 'Instalacja programu',
+  stepLogin: 'Logowanie',
+  stepReady: 'Połączono',
+  installReturnNote:
+    'Gdy instalacja w tamtym oknie się zakończy, wróć tutaj. Aplikacja sama sprawdzi ponownie.',
+  loginHowNote:
+    'Po kliknięciu otworzy się przeglądarka. Zaloguj się na konto {vendor} i kliknij Zezwól, a połączenie nastąpi samo.',
+  signingInStalledNote:
+    'Przeglądarka się nie otworzyła albo pokazuje kod? Otwórz okno logowania przyciskiem poniżej. Wklej adres z tego okna do przeglądarki albo wklej kod z przeglądarki do okna.',
+  actionLoginWindowOpen: 'Otwórz okno logowania',
+  actionCancelLogin: 'Anuluj logowanie',
+  actionUpdate: 'Zaktualizuj',
+  updateNote:
+    'Po kliknięciu oficjalna aktualizacja firmy {vendor} uruchomi się w nowym oknie. Gdy się tam zakończy, wróć tutaj.',
+  guideInfoHint:
+    'Nadal nie działa? Skopiuj informacje o połączeniu i wyślij je osobie, która Ci pomaga. Nie zawierają konta ani ścieżek plików.',
+  actionCopyInfo: 'Kopiuj informacje dla pomocy',
+  copyInfoDone: 'Skopiowano',
 } satisfies Record<keyof typeof zh, string>

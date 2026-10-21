@@ -21,7 +21,7 @@ import {
   AiMeteredWarning,
 } from '../src/AiSubscriptionNotices'
 import { AiSubscriptionUsageLine } from '../src/AiSubscriptionUsageLine'
-import { formatAiResetTime } from '../src/ai-subscription'
+import { AI_SIGNING_IN_STALLED_MS, formatAiResetTime } from '../src/ai-subscription'
 import { AI_SUBSCRIPTION_STRINGS } from '../src/strings-ai-subscription'
 
 let host: HTMLDivElement
@@ -81,7 +81,10 @@ describe('AiSubscriptionCard', () => {
     const actions = render(status('codex', 'not-installed'))
     expect(host.querySelector('.ai-sub-card-name')!.textContent).toBe('Codex')
     expect(statusText()).toBe(en.cardNotInstalled)
-    expect(notes()).toEqual(["OpenAI's official install command runs in a new terminal window."])
+    expect(notes()).toEqual([
+      "OpenAI's official install command runs in a new terminal window.",
+      en.installReturnNote,
+    ])
     expect(actionsShown()).toEqual(['install', 'install-help'])
     click('[data-action="install"]')
     expect(actions.onInstall).toHaveBeenCalledExactlyOnceWith('codex')
@@ -92,7 +95,10 @@ describe('AiSubscriptionCard', () => {
   it('signed-out: login button', () => {
     const actions = render(status('claude-code', 'signed-out'))
     expect(statusText()).toBe(en.cardSignedOut)
-    expect(notes()).toEqual(["The sign-in page that opens is Anthropic's own."])
+    expect(notes()).toEqual([
+      'A browser opens when you press it. Sign in with your Anthropic account and press Allow; the connection finishes by itself.',
+      "The sign-in page that opens is Anthropic's own.",
+    ])
     expect(actionsShown()).toEqual(['login'])
     click('[data-action="login"]')
     expect(actions.onLogin).toHaveBeenCalledExactlyOnceWith('claude-code')
@@ -253,6 +259,54 @@ describe('AiSubscriptionCard', () => {
     expect(link.className).toBe('ai-sub-link')
     click('[data-action="login-window"]')
     expect(actions.onLogin).toHaveBeenCalledExactlyOnceWith('claude-code')
+  })
+
+  it('a browser sign-in that goes on too long offers the window as a button, and says why', () => {
+    vi.useFakeTimers()
+    try {
+      const actions = render(status('claude-code', 'signed-out', { signingIn: 'browser' }))
+      expect(host.querySelector('[data-action="login-window"]')!.className).toBe('ai-sub-link')
+      act(() => vi.advanceTimersByTime(AI_SIGNING_IN_STALLED_MS))
+      expect(notes()).toHaveLength(2)
+      expect(notes()[1]).toBe(en.signingInStalledNote)
+      const button = host.querySelector<HTMLButtonElement>('[data-action="login-window"]')!
+      expect(button.className).toBe('ai-sub-btn primary')
+      expect(button.textContent).toBe(en.actionLoginWindowOpen)
+      click('[data-action="login-window"]')
+      expect(actions.onLogin).toHaveBeenCalledExactlyOnceWith('claude-code')
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('a sign-in under way can be called off when the host can end it', () => {
+    const onCancelLogin = vi.fn()
+    render(status('codex', 'signed-out', { signingIn: 'window' }), {
+      ...cardActions(),
+      onCancelLogin,
+    })
+    expect(actionsShown()).toEqual(['cancel-login'])
+    expect(host.querySelector('[data-action="cancel-login"]')!.className).toBe('ai-sub-link')
+    click('[data-action="cancel-login"]')
+    expect(onCancelLogin).toHaveBeenCalledExactlyOnceWith('codex')
+  })
+
+  it('a program below the floor offers the official update first', () => {
+    const onUpdate = vi.fn()
+    const actions = render(
+      status('codex', 'error', { version: '0.1.0', error: 'needs-update: too old' }),
+      { ...cardActions(), onUpdate },
+    )
+    expect(actionsShown()).toEqual(['update', 'recheck'])
+    expect(notes()).toEqual([
+      "OpenAI's official update runs in a new window when you press it. When it has finished there, come back here.",
+    ])
+    const button = host.querySelector<HTMLButtonElement>('[data-action="update"]')!
+    expect(button.className).toBe('ai-sub-btn primary')
+    expect(button.textContent).toBe(en.actionUpdate)
+    click('[data-action="update"]')
+    expect(onUpdate).toHaveBeenCalledExactlyOnceWith('codex')
+    expect(actions.onRecheck).not.toHaveBeenCalled()
   })
 
   it('the window open for a code: says what to do there, nothing to press', () => {
@@ -453,24 +507,68 @@ describe('AiConnectPrompt', () => {
     expect(host.innerHTML).toBe('')
   })
 
-  it('asks for a subscription and offers both, each with its own action', () => {
-    const actions = render(defaultAiSettings(), {
+  const paths = () =>
+    [...host.querySelectorAll<HTMLElement>('.ai-sub-guide-path')].map((el) => [
+      el.dataset.path,
+      el.querySelector('.ai-sub-guide-badge')?.textContent ?? null,
+    ])
+  const steps = () =>
+    [...host.querySelectorAll<HTMLElement>('.ai-sub-guide-step')].map(
+      (el) =>
+        `${el.dataset.step}${el.dataset.done ? ':done' : ''}${el.getAttribute('aria-current') ? ':current' : ''}`,
+    )
+
+  it('asks which AI the user has before showing any card', () => {
+    render(defaultAiSettings(), {
       'claude-code': status('claude-code', 'signed-out'),
       codex: status('codex', 'not-installed'),
     })
     expect(host.querySelector('.ai-sub-prompt-title')!.textContent).toBe(en.connectTitle)
     expect(host.querySelector('.ai-sub-prompt-body')!.textContent).toBe(en.connectBody)
-    expect(cards()).toEqual([
-      ['claude-code', 'signed-out'],
-      ['codex', 'not-installed'],
+    expect(host.querySelector('.ai-sub-guide-question')!.textContent).toBe(en.guideQuestion)
+    // what is already there shows next to each answer
+    expect(paths()).toEqual([
+      ['claude-code', en.guideBadgeInstalled],
+      ['codex', null],
+      ['free', null],
     ])
+    expect(host.textContent).toContain(en.guidePathCodexTitle)
+    expect(cards()).toEqual([])
+  })
+
+  it('lays open the path picked: its need, its steps and its one card', () => {
+    const actions = render(defaultAiSettings(), {
+      'claude-code': status('claude-code', 'signed-out'),
+      codex: status('codex', 'not-installed'),
+    })
+    click('[data-path="claude-code"]')
+    expect(host.querySelector('.ai-sub-guide-need')!.textContent).toBe(en.guidePathClaudeBody)
+    expect(steps()).toEqual(['install:done', 'login:current', 'ready'])
+    expect(cards()).toEqual([['claude-code', 'signed-out']])
     click('[data-provider="claude-code"] [data-action="login"]')
     expect(actions.onLogin).toHaveBeenCalledExactlyOnceWith('claude-code')
+    // another way: back to the question, then the other subscription
+    click('[data-action="guide-back"]')
+    expect(cards()).toEqual([])
+    click('[data-path="codex"]')
+    expect(steps()).toEqual(['install:current', 'login', 'ready'])
     click('[data-provider="codex"] [data-action="install"]')
     expect(actions.onInstall).toHaveBeenCalledExactlyOnceWith('codex')
   })
 
-  it('points to the free connections when nothing is connected and settings can be opened', () => {
+  it('a sign-in under way opens its own path, and "another way" still asks again', () => {
+    render(defaultAiSettings(), {
+      'claude-code': status('claude-code', 'not-installed'),
+      codex: status('codex', 'signed-out', { signingIn: 'browser' }),
+    })
+    expect(cards()).toEqual([['codex', 'signed-out']])
+    expect(steps()).toEqual(['install:done', 'login:current', 'ready'])
+    click('[data-action="guide-back"]')
+    expect(host.querySelector('.ai-sub-guide-question')).not.toBeNull()
+    expect(paths()[1]).toEqual(['codex', en.cardSigningIn])
+  })
+
+  it('the free path points to the free connections in Settings', () => {
     const onOpenSettings = vi.fn()
     render(
       defaultAiSettings(),
@@ -480,11 +578,35 @@ describe('AiConnectPrompt', () => {
       },
       { onOpenSettings },
     )
-    expect(host.querySelector('[data-note="connectFreeHint"]')!.textContent).toBe(
-      en.connectFreeHint,
-    )
+    click('[data-path="free"]')
+    expect(host.querySelector('.ai-sub-guide-need')!.textContent).toBe(en.guidePathFreeBody)
+    expect(cards()).toEqual([])
     click('[data-action="connect-free"]')
     expect(onOpenSettings).toHaveBeenCalledOnce()
+  })
+
+  it('copies what a helper needs, and nothing personal', async () => {
+    const writeText = vi.fn(async (_text: string) => undefined)
+    vi.stubGlobal('navigator', { ...navigator, clipboard: { writeText } })
+    render(defaultAiSettings(), {
+      'claude-code': status('claude-code', 'error', {
+        version: '2.1.10',
+        error: 'needs-update: C:\\Users\\me\\claude.exe is too old',
+      }),
+      codex: status('codex', 'metered', { account: 'me@example.com', version: '0.30.0' }),
+    })
+    expect(host.querySelector('.ai-sub-guide-info .ai-sub-note')!.textContent).toBe(
+      en.guideInfoHint,
+    )
+    await act(async () =>
+      host.querySelector<HTMLButtonElement>('[data-action="copy-info"]')!.click(),
+    )
+    const text = writeText.mock.calls[0]![0]
+    expect(text).toContain('claude-code: state=error error=needs-update version=2.1.10')
+    expect(text).toContain('codex: state=metered version=0.30.0 accepted=false')
+    expect(text).not.toContain('me@example.com')
+    expect(text).not.toContain('Users')
+    expect(host.querySelector('[data-action="copy-info"]')!.textContent).toBe(en.copyInfoDone)
   })
 
   it('offers no free way in for a selected provider that cannot run, or without a settings page', () => {
@@ -500,10 +622,15 @@ describe('AiConnectPrompt', () => {
 
   it('shows a provider that has not reported yet as checking', () => {
     render(defaultAiSettings(), {})
-    expect(cards()).toEqual([
-      ['claude-code', 'checking'],
-      ['codex', 'checking'],
+    expect(paths()).toEqual([
+      ['claude-code', null],
+      ['codex', null],
+      ['free', null],
     ])
+    click('[data-path="codex"]')
+    expect(cards()).toEqual([['codex', 'checking']])
+    // no step is the current one until the state is known
+    expect(steps()).toEqual(['install', 'login', 'ready'])
   })
 
   it('shows only the selected subscription when that one cannot run', () => {

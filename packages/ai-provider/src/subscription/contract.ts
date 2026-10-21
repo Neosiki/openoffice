@@ -23,6 +23,10 @@ export const SUBSCRIPTION_IPC_CHANNELS = {
   logout: 'ai:subscription-logout',
   /** (SubscriptionProviderRequest) → SubscriptionLaunchResult: run the vendor install command */
   install: 'ai:subscription-install',
+  /** (SubscriptionProviderRequest) → SubscriptionLaunchResult: run the official update in a terminal window */
+  update: 'ai:subscription-update',
+  /** (SubscriptionProviderRequest) → SubscriptionLaunchResult: end a login the app started, then look again */
+  cancelLogin: 'ai:subscription-cancel-login',
   /** (SubscriptionMeteredRequest) → SubscriptionMeteredResult: "use anyway" for a metered login */
   metered: 'ai:subscription-metered',
   /** () → boolean: whether this build can generate images through the Codex subscription */
@@ -52,10 +56,10 @@ export interface SubscriptionMeteredRequest {
 }
 
 /**
- * Why a login, logout or install could not be started (a logout: or did not
- * succeed). `not-installed`: no program to sign in to. `unsupported`: no vendor
- * command for this system. `invalid`: the request did not name a subscription
- * provider.
+ * Why a login, logout, install or update could not be started (a logout: or
+ * did not succeed). `not-installed`: no program to sign in to. `unsupported`:
+ * no vendor command for this system, or no way the app knows to update the copy
+ * it found. `invalid`: the request did not name a subscription provider.
  */
 export type SubscriptionLaunchFailure = 'not-installed' | 'unsupported' | 'failed' | 'invalid'
 
@@ -93,6 +97,14 @@ export interface SubscriptionIpcContract {
     response: SubscriptionLaunchResult
   }
   [SUBSCRIPTION_IPC_CHANNELS.install]: {
+    request: SubscriptionProviderRequest
+    response: SubscriptionLaunchResult
+  }
+  [SUBSCRIPTION_IPC_CHANNELS.update]: {
+    request: SubscriptionProviderRequest
+    response: SubscriptionLaunchResult
+  }
+  [SUBSCRIPTION_IPC_CHANNELS.cancelLogin]: {
     request: SubscriptionProviderRequest
     response: SubscriptionLaunchResult
   }
