@@ -1,4 +1,5 @@
 import type { AgentMessage, AgentToolCall, AgentToolDef, ToolExecution } from './types'
+import { RESERVED_USER_SKILL_NAMES } from './user-skill-names'
 import type { AgentSkill } from './skill'
 
 /**
@@ -69,13 +70,7 @@ export const SKILL_TEXT_FILE_EXTENSIONS: ReadonlySet<string> = new Set([
   '.css',
 ])
 
-/**
- * Skill names never read or shown from any source, compared without case
- * (spec 3.6): the upstream program's skill (this app reads nothing the
- * upstream registered) and this app's own command-line skill, which steers to
- * the terminal command. The one list: `@genoffice/ai-provider` re-exports it.
- */
-export const RESERVED_USER_SKILL_NAMES: ReadonlySet<string> = new Set(['genoffice', 'ieumoffice'])
+export { RESERVED_USER_SKILL_NAMES } from './user-skill-names'
 
 /** One skill of the list as this capability reads it */
 export interface UserSkillEntry {
