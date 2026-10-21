@@ -1,6 +1,6 @@
 # Modalità agente
 
-L'agente prende come progetto una cartella che scegli tu ed esegue in quella cartella il Claude Code o il Codex di questo PC. L'IA legge da sola il materiale della cartella, crea nuovi file, usa skill e script e modifica i documenti aperti in GenOffice. Usalo per i lavori che attingono a molto materiale.
+L'agente prende come progetto una cartella che scegli tu ed esegue in quella cartella il Claude Code o il Codex di questo PC. L'IA legge da sola il materiale della cartella, crea nuovi file, usa abilità e script e modifica i documenti aperti in GenOffice. Usalo per i lavori che attingono a molto materiale.
 
 ## Prima di iniziare
 
@@ -53,9 +53,9 @@ Un documento che qualcuno ti ha inviato può contenere istruzioni nascoste che d
 
 - I risultati salvati provengono da contenuti web raccolti in anticipo; In tempo reale cerca sul web così com'è adesso.
 - Entrambe le impostazioni vengono ricordate per ogni cartella di progetto. Una cartella usata per la prima volta parte con i valori qui sopra.
-- Con l'accesso a internet per i comandi attivato, i comandi eseguiti da Codex possono raggiungere internet. Con **Fidati di questo progetto** lo raggiungono senza chiedere, e istruzioni nascoste in un documento ricevuto potrebbero far loro inviare all'esterno i tuoi dati. Questo avviso compare quando lo attivi. Attivalo solo quando ti serve. L'abilità integrata «Trova skill» funziona solo con questa impostazione attivata.
+- Con l'accesso a internet per i comandi attivato, i comandi eseguiti da Codex possono raggiungere internet. Con **Fidati di questo progetto** lo raggiungono senza chiedere, e istruzioni nascoste in un documento ricevuto potrebbero far loro inviare all'esterno i tuoi dati. Questo avviso compare quando lo attivi. Attivalo solo quando ti serve. L'abilità integrata «Trova abilità» funziona solo con questa impostazione attivata.
 
-## Note di progetto e skill
+## Note di progetto e abilità
 
 - Se la cartella contiene un `CLAUDE.md` o un `AGENTS.md`, il suo contenuto viene dato all'agente come istruzioni. Scrivici ciò che deve valere ogni volta: il tono, i termini, il formato dei documenti da creare.
 - La finestra dell'agente usa le abilità attivate in **Impostazioni ▸ Abilità**. Claude Code e Codex ricevono lo stesso elenco. Per saperne di più sulle abilità, vedi [Abilità](help://skills).
@@ -63,7 +63,7 @@ Un documento che qualcuno ti ha inviato può contenere istruzioni nascoste che d
 - Scegli un'abilità con `/` o `$` nella casella di input, e davanti alla tua richiesta viene messa l'istruzione di leggere e seguire quell'abilità.
 - L'elenco delle abilità viene fissato all'avvio della sessione. Se attivi o disattivi abilità durante una sessione, compare «Le abilità modificate valgono dalla prossima sessione».
 - Quando l'agente crea un'abilità, nella finestra compare una scheda dell'abilità; quando trova un'abilità che vale la pena installare, compare un'anteprima di installazione. Nulla viene salvato o installato finché non fai clic su **Salva** o **Installa**, e un'abilità installata è disponibile dalla sessione successiva.
-- I programmi usati dagli script di una skill (Python e così via) devono essere installati su questo PC.
+- I programmi usati dagli script di un'abilità (Python e così via) devono essere installati su questo PC.
 - Se hai usato l'agente in una versione precedente, la prima volta che apri la finestra dell'agente un avviso, mostrato una sola volta, dice: «Le abilità ora si attivano e disattivano in Impostazioni → Abilità. Le abilità delle cartelle di abilità di Claude e Codex partono disattivate.» **Apri impostazioni** ti porta direttamente lì.
 
 ## Nuovi file e documenti aperti

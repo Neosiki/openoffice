@@ -1,6 +1,6 @@
 # Agentmodus
 
-De agent neemt één map die je kiest als project en voert in die map Claude Code of Codex van deze pc uit. De AI leest zelf het materiaal in de map, maakt nieuwe bestanden, gebruikt skills en scripts en bewerkt de documenten die in GenOffice geopend zijn. Gebruik het voor werk waarvoor veel materiaal nodig is.
+De agent neemt één map die je kiest als project en voert in die map Claude Code of Codex van deze pc uit. De AI leest zelf het materiaal in de map, maakt nieuwe bestanden, gebruikt vaardigheden en scripts en bewerkt de documenten die in GenOffice geopend zijn. Gebruik het voor werk waarvoor veel materiaal nodig is.
 
 ## Voordat je begint
 
@@ -53,9 +53,9 @@ Een document dat iemand je heeft gestuurd, kan verborgen instructies bevatten di
 
 - Opgeslagen resultaten komen uit webinhoud die vooraf is verzameld; Live zoekt op het web zoals het nu is.
 - Beide instellingen worden per projectmap onthouden. Een map die je voor het eerst gebruikt, begint met de waarden hierboven.
-- Staat internettoegang voor opdrachten aan, dan kunnen de opdrachten die Codex uitvoert het internet bereiken. Bij **Dit project vertrouwen** doen ze dat zonder te vragen, en verborgen instructies in een document dat je hebt ontvangen kunnen ze je gegevens naar buiten laten sturen. Deze waarschuwing verschijnt als je de instelling aanzet. Zet hem alleen aan als je hem nodig hebt. De ingebouwde vaardigheid "Skills zoeken" werkt alleen als deze instelling aanstaat.
+- Staat internettoegang voor opdrachten aan, dan kunnen de opdrachten die Codex uitvoert het internet bereiken. Bij **Dit project vertrouwen** doen ze dat zonder te vragen, en verborgen instructies in een document dat je hebt ontvangen kunnen ze je gegevens naar buiten laten sturen. Deze waarschuwing verschijnt als je de instelling aanzet. Zet hem alleen aan als je hem nodig hebt. De ingebouwde vaardigheid "Vaardigheden zoeken" werkt alleen als deze instelling aanstaat.
 
-## Projectnotities en skills
+## Projectnotities en vaardigheden
 
 - Staat er in de map een `CLAUDE.md` of `AGENTS.md`, dan krijgt de agent de inhoud ervan als instructies. Schrijf daarin wat elke keer moet gelden: toon, termen, de vorm van de documenten die gemaakt moeten worden.
 - Het agentvenster gebruikt de vaardigheden die aanstaan in **Instellingen ▸ Vaardigheden**. Claude Code en Codex krijgen dezelfde lijst. Meer over vaardigheden staat in [Vaardigheden](help://skills).
@@ -63,7 +63,7 @@ Een document dat iemand je heeft gestuurd, kan verborgen instructies bevatten di
 - Kies een vaardigheid met `/` of `$` in het invoervak, en vóór je verzoek komt de instructie om die vaardigheid te lezen en te volgen.
 - De lijst met vaardigheden ligt vast zodra de sessie start. Zet je tijdens een sessie vaardigheden aan of uit, dan verschijnt "Gewijzigde vaardigheden gelden vanaf de volgende sessie".
 - Maakt de agent een vaardigheid, dan verschijnt er een vaardigheidskaart in het venster; vindt hij een vaardigheid die het installeren waard is, dan verschijnt een installatievoorbeeld. Er wordt niets opgeslagen of geïnstalleerd tot je op **Opslaan** of **Installeren** klikt, en een geïnstalleerde vaardigheid is beschikbaar vanaf de volgende sessie.
-- Programma's die de scripts van een skill gebruiken (Python en dergelijke) moeten op deze pc geïnstalleerd zijn.
+- Programma's die de scripts van een vaardigheid gebruiken (Python en dergelijke) moeten op deze pc geïnstalleerd zijn.
 - Heb je de agent in een eerdere versie gebruikt, dan zegt een eenmalige melding de eerste keer dat je het agentvenster opent: "Vaardigheden zet je nu aan en uit in Instellingen → Vaardigheden. Vaardigheden in de vaardighedenmappen van Claude en Codex staan eerst uit." **Instellingen openen** brengt je er meteen heen.
 
 ## Nieuwe bestanden en open documenten

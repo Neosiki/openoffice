@@ -52,9 +52,9 @@ Sotto l'anteprima compare sempre: «Installa abilità solo da fonti affidabili. 
 
 - Nel pannello IA di Excel, `$` apre l'elenco solo all'inizio della casella di input, così non intralcia gli indirizzi di cella come `$A$1`.
 - Puoi aggiungere più chip e toglierne uno con ×. Esc chiude solo l'elenco, non interrompe un'esecuzione dell'IA.
-- **Gestisci skill…** in fondo all'elenco apre **Impostazioni ▸ Abilità**.
+- **Gestisci abilità…** in fondo all'elenco apre **Impostazioni ▸ Abilità**.
 - I chip restano sul messaggio inviato e nella chat salvata. Se riapri una chat e invii di nuovo, il contenuto attuale dell'abilità viene riletto. Un'abilità rimossa o disattivata nel frattempo appare sul suo chip come «Non disponibile».
-- Se il testo delle abilità da allegare è troppo lungo, compare «Le skill sono troppo grandi per essere inviate insieme» e non viene inviato nulla.
+- Se il testo delle abilità da allegare è troppo lungo, compare «Le abilità sono troppo grandi per essere inviate insieme» e non viene inviato nulla.
 
 ## Abilità che l'IA usa da sola
 
@@ -90,7 +90,7 @@ Quando crei un'abilità nel pannello IA di un editor, il documento attuale può 
 ## Abilità con script
 
 - Nel pannello IA normale e in Ask AI in Home, gli script di un'abilità non vengono mai eseguiti. All'IA arriva solo il testo dell'abilità.
-- Un'abilità con script mostra **Con script · funziona del tutto nella finestra dell'agente**, e quando la aggiungi come chip compare «Gli script di questa skill non vengono eseguiti nel pannello IA normale». L'invio non viene bloccato.
+- Un'abilità con script mostra **Con script · funziona del tutto nella finestra dell'agente**, e quando la aggiungi come chip compare «Gli script di questa abilità non vengono eseguiti nel pannello IA normale». L'invio non viene bloccato.
 - Per usare anche gli script, richiama l'abilità nella finestra dell'agente. Vedi [Modalità agente](help://agent-mode).
 
 ## Abilità integrate
@@ -101,9 +101,9 @@ Quando crei un'abilità nel pannello IA di un editor, il documento attuale può 
 | **Avvisi, newsletter e FAQ** | Scrive avvisi, newsletter, aggiornamenti sull'avanzamento, FAQ e altri testi interni           |
 | **Togliere l’effetto IA**    | Trova nei testi in inglese le espressioni che sembrano scritte da un'IA e le rende naturali    |
 | **Rifinire il testo**        | Rilegge un testo in inglese già scritto e lo rende più chiaro e conciso                        |
-| **Trova skill**              | Trova nella finestra dell'agente le abilità che ti servono e ne propone l'installazione        |
+| **Trova abilità**            | Trova nella finestra dell'agente le abilità che ti servono e ne propone l'installazione        |
 
-Togliere l’effetto IA e Rifinire il testo sono pensate per testi in inglese. Trova skill funziona solo nella finestra dell'agente.
+Togliere l’effetto IA e Rifinire il testo sono pensate per testi in inglese. Trova abilità funziona solo nella finestra dell'agente.
 
 ## Nella finestra dell'agente
 

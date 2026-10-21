@@ -36,7 +36,7 @@ Seja qual for a opção, o agente nunca:
 
 ## Claude Code e Codex
 
-- O **Codex** executa os comandos no seu próprio espaço isolado, incluindo os que permitir. Só pode gravar na pasta do projeto, a internet fica bloqueada a menos que a ligue, e não consegue ler os seus ficheiros pessoais fora do projeto. Quando uma sessão começa, o GenOffice verifica primeiro se este isolamento funciona neste PC, e não inicia se não funcionar.
+- O **Codex** executa os comandos no seu próprio espaço isolado, incluindo os que permitir. Só pode gravar na pasta do projeto, a internet fica bloqueada a menos que a ative, e não consegue ler os seus ficheiros pessoais fora do projeto. Quando uma sessão começa, o GenOffice verifica primeiro se este isolamento funciona neste PC, e não inicia se não funcionar.
 - O **Claude Code** não consegue isolar comandos no Windows. Um comando que permitir pode chegar a todo o PC e à internet. É por isso que, em **Confiar neste projeto**, é o próprio revisor do Claude Code que verifica cada ação no seu lugar.
 
 Um documento que alguém lhe enviou pode trazer instruções escondidas que mandam a IA fazer outra coisa. Numa pasta com material que não conhece, use uma das opções que perguntam.
@@ -46,14 +46,14 @@ Um documento que alguém lhe enviou pode trazer instruções escondidas que mand
 - O **Claude Code** pode pesquisar na web e ler páginas web, mas pergunta antes. Pergunta na primeira vez que pesquisa e por cada site cujas páginas lê. Na pergunta, **Permitir pesquisas nesta sessão** ou **Permitir este site nesta sessão** faz com que deixe de perguntar durante o resto da sessão. Em **Confiar neste projeto**, quem decide é o próprio revisor do Claude Code.
 - Quando escolhe o **Codex**, o ecrã de início mostra mais duas definições.
 
-| Definição                          | Opções                                           | No início            |
-| ---------------------------------- | ------------------------------------------------ | -------------------- |
-| **Pesquisa na web**                | Resultados guardados / Em tempo real / Desligada | Resultados guardados |
-| **Acesso à internet dos comandos** | Desligado / Ligado                               | Desligado            |
+| Definição                          | Opções                                         | No início         |
+| ---------------------------------- | ---------------------------------------------- | ----------------- |
+| **Pesquisa na web**                | Resultados salvos / Em tempo real / Desativada | Resultados salvos |
+| **Acesso à internet dos comandos** | Desativado / Ativado                           | Desativado        |
 
-- Os resultados guardados vêm de conteúdo web recolhido previamente; Em tempo real pesquisa a web tal como está agora.
+- Resultados salvos vêm de conteúdo web recolhido previamente; Em tempo real pesquisa a web tal como está agora.
 - As duas definições são memorizadas para cada pasta de projeto. Uma pasta usada pela primeira vez começa com os valores acima.
-- Com o acesso à internet dos comandos ligado, os comandos que o Codex executa podem chegar à internet. Em **Confiar neste projeto** chegam lá sem perguntar, e instruções escondidas num documento recebido podem levá-los a enviar os seus dados para fora. Este aviso aparece quando o liga. Ligue-o só quando precisar. A habilidade integrada «Encontrar habilidades» só funciona com esta definição ligada.
+- Com o acesso à internet dos comandos ativado, os comandos que o Codex executa podem chegar à internet. Em **Confiar neste projeto** chegam lá sem perguntar, e instruções escondidas num documento recebido podem levá-los a enviar os seus dados para fora. Este aviso aparece quando o ativa. Ative-o só quando precisar. A habilidade integrada «Encontrar habilidades» só funciona com esta definição ativada.
 
 ## Notas do projeto e habilidades
 
@@ -75,7 +75,7 @@ Um documento que alguém lhe enviou pode trazer instruções escondidas que mand
 ## Privacidade e utilização
 
 - O que ocultou da IA só fica oculto quando a aplicação lê para o agente um documento aberto no GenOffice. Os ficheiros que o agente lê sozinho da pasta são enviados tal como estão.
-- Os termos pesquisados na web e os endereços das páginas lidas vão para a empresa do programa e para esses sites. Com o acesso à internet dos comandos do Codex ligado, os dados podem ir para onde quer que um comando se ligue.
+- Os termos pesquisados na web e os endereços das páginas lidas vão para a empresa do programa e para esses sites. Com o acesso à internet dos comandos do Codex ativado, os dados podem ir para onde quer que um comando se ligue.
 - O agente trabalha em muitos passos, por isso gasta mais do limite da sua assinatura do que o painel de IA. Quando o limite se esgota, o pedido falha; o agente nunca passa para outra IA nem para uma conexão paga.
 
 ## Se algo correr mal

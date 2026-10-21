@@ -133,7 +133,7 @@ export const SKILL_TEMPLATE_STRINGS = defineStrings({
     takenOver: 'กำลังทำงานกับแม่แบบในแท็บใหม่',
     goToTab: 'ไปที่แท็บ',
     firstTemplateOnly: 'ใช้แม่แบบของ {title}',
-    templateMissing: 'ไม่พบไฟล์แม่แบบของทักษะ {title}',
+    templateMissing: 'ไม่พบไฟล์แม่แบบของสกิล {title}',
     openWithTemplate: 'เปิดเอกสารใหม่จากแม่แบบนี้',
     openFailed: 'ไม่สามารถเปิดแม่แบบในแท็บใหม่ได้',
     previewTabTitle: 'ตัวอย่างแม่แบบ - {title}',
@@ -142,7 +142,7 @@ export const SKILL_TEMPLATE_STRINGS = defineStrings({
     asIsRedacted: 'เอกสารมีส่วนที่ซ่อนไว้ จึงบันทึกตามต้นฉบับไม่ได้',
     clearRequest:
       'ช่วยทำเอกสารนี้ให้เป็นแม่แบบที่ใช้ซ้ำได้ ล้างค่าที่กรอกไว้ (ชื่อ วันที่ ข้อมูลส่วนบุคคล เนื้อหาที่ใช้เฉพาะครั้งนี้) และคงรูปแบบของแม่แบบ (หัวข้อ ตาราง รายการ และการจัดรูปแบบ) ไว้ตามเดิม',
-    handoffNotSent: 'อ่านทักษะที่ส่งต่อมาไม่ได้ จึงไม่ได้ส่งคำขอ',
+    handoffNotSent: 'อ่านสกิลที่ส่งต่อมาไม่ได้ จึงไม่ได้ส่งคำขอ',
     documentUnreadable: 'อ่านเอกสารปัจจุบันไม่ได้',
     untitled: 'ไม่มีชื่อ',
   },
@@ -150,7 +150,7 @@ export const SKILL_TEMPLATE_STRINGS = defineStrings({
     takenOver: 'Bekerja dengan templat di tab baru',
     goToTab: 'Buka tab',
     firstTemplateOnly: 'Templat yang dipakai milik {title}',
-    templateMissing: 'Berkas templat keterampilan {title} tidak ada',
+    templateMissing: 'Berkas templat skill {title} tidak ada',
     openWithTemplate: 'Buka dokumen baru dari templat ini',
     openFailed: 'Templat tidak dapat dibuka di tab baru',
     previewTabTitle: 'Pratinjau templat - {title}',
@@ -160,8 +160,7 @@ export const SKILL_TEMPLATE_STRINGS = defineStrings({
       'Dokumen memiliki bagian yang disembunyikan, jadi tidak dapat disimpan apa adanya',
     clearRequest:
       'Jadikan dokumen ini templat yang bisa dipakai ulang. Kosongkan nilai yang sudah diisi (nama, tanggal, data pribadi, isi yang hanya dipakai kali ini) dan biarkan bentuk templat (judul, tabel, butir, dan format) tetap seperti adanya.',
-    handoffNotSent:
-      'Keterampilan yang diteruskan tidak dapat dibaca, jadi permintaan tidak dikirim',
+    handoffNotSent: 'Skill yang diteruskan tidak dapat dibaca, jadi permintaan tidak dikirim',
     documentUnreadable: 'Dokumen saat ini tidak dapat dibaca',
     untitled: 'Tanpa judul',
   },
@@ -221,7 +220,7 @@ export const SKILL_TEMPLATE_STRINGS = defineStrings({
     takenOver: 'Si lavora con il modello in una nuova scheda',
     goToTab: 'Vai alla scheda',
     firstTemplateOnly: 'Si usa il modello di {title}',
-    templateMissing: 'Il file modello della skill {title} non c’è',
+    templateMissing: 'Il file modello dell’abilità {title} non c’è',
     openWithTemplate: 'Apri un nuovo documento da questo modello',
     openFailed: 'Impossibile aprire il modello in una nuova scheda',
     previewTabTitle: 'Anteprima del modello - {title}',
@@ -231,7 +230,7 @@ export const SKILL_TEMPLATE_STRINGS = defineStrings({
     clearRequest:
       'Trasforma questo documento in un modello riutilizzabile. Svuota i valori compilati (nomi, date, dati personali, contenuti usati solo questa volta) e lascia la forma del modello (titoli, tabelle, voci e formattazione) così com’è.',
     handoffNotSent:
-      'Non è stato possibile leggere una skill ricevuta, quindi la richiesta non è stata inviata',
+      'Non è stato possibile leggere un’abilità ricevuta, quindi la richiesta non è stata inviata',
     documentUnreadable: 'Impossibile leggere il documento attuale',
     untitled: 'Senza titolo',
   },
@@ -327,7 +326,7 @@ export const SKILL_TEMPLATE_STRINGS = defineStrings({
     takenOver: 'टेम्पलेट के साथ काम नए टैब में हो रहा है',
     goToTab: 'टैब पर जाएँ',
     firstTemplateOnly: '{title} का टेम्पलेट इस्तेमाल हो रहा है',
-    templateMissing: '{title} स्किल की टेम्पलेट फ़ाइल नहीं मिली',
+    templateMissing: '{title} कौशल की टेम्पलेट फ़ाइल नहीं मिली',
     openWithTemplate: 'इस टेम्पलेट से नया दस्तावेज़ खोलें',
     openFailed: 'टेम्पलेट नए टैब में नहीं खुल सका',
     previewTabTitle: 'टेम्पलेट पूर्वावलोकन - {title}',
@@ -336,7 +335,7 @@ export const SKILL_TEMPLATE_STRINGS = defineStrings({
     asIsRedacted: 'दस्तावेज़ में छिपाए गए हिस्से हैं, इसलिए इसे जैसा है वैसा नहीं सहेजा जा सकता',
     clearRequest:
       'इस दस्तावेज़ को बार-बार इस्तेमाल होने वाला टेम्पलेट बनाइए। भरे हुए मान (नाम, तारीख़, निजी जानकारी, सिर्फ़ इस बार की सामग्री) खाली कर दीजिए और टेम्पलेट का रूप (शीर्षक, तालिकाएँ, बिंदु और फ़ॉर्मैटिंग) वैसा ही रहने दीजिए।',
-    handoffNotSent: 'सौंपी गई स्किल पढ़ी नहीं जा सकी, इसलिए अनुरोध नहीं भेजा गया',
+    handoffNotSent: 'सौंपा गया कौशल पढ़ा नहीं जा सका, इसलिए अनुरोध नहीं भेजा गया',
     documentUnreadable: 'मौजूदा दस्तावेज़ पढ़ा नहीं जा सका',
     untitled: 'शीर्षकहीन',
   },

@@ -233,9 +233,9 @@ export const BUILTIN_SKILL_STRINGS = defineStrings({
     'builtinSkillTitle.copy-editing': 'Rifinire il testo (testi in inglese)',
     'builtinSkillDesc.copy-editing':
       'Rilegge più volte un testo in inglese già scritto per renderlo più chiaro e conciso.',
-    'builtinSkillTitle.find-skills': 'Trova skill',
+    'builtinSkillTitle.find-skills': 'Trova abilità',
     'builtinSkillDesc.find-skills':
-      'Funziona solo nella finestra dell’agente e richiede internet per trovare skill e proporne l’installazione.',
+      'Funziona solo nella finestra dell’agente e richiede internet per trovare abilità e proporne l’installazione.',
   },
   pl: {
     'builtinSkillTitle.meeting-minutes': 'Protokół ze spotkania',
@@ -284,9 +284,9 @@ export const BUILTIN_SKILL_STRINGS = defineStrings({
     'builtinSkillTitle.copy-editing': 'Tekst redigeren (Engelse tekst)',
     'builtinSkillDesc.copy-editing':
       'Loopt een geschreven Engelse tekst een paar keer na en maakt hem duidelijker en bondiger.',
-    'builtinSkillTitle.find-skills': 'Skills zoeken',
+    'builtinSkillTitle.find-skills': 'Vaardigheden zoeken',
     'builtinSkillDesc.find-skills':
-      'Werkt alleen in het agentvenster en heeft internet nodig om skills te vinden en installatie voor te stellen.',
+      'Werkt alleen in het agentvenster en heeft internet nodig om vaardigheden te vinden en installatie voor te stellen.',
   },
   ms: {
     'builtinSkillTitle.meeting-minutes': 'Minit mesyuarat',
@@ -334,9 +334,9 @@ export const BUILTIN_SKILL_STRINGS = defineStrings({
     'builtinSkillTitle.copy-editing': 'पाठ सँवारें (अंग्रेज़ी पाठ)',
     'builtinSkillDesc.copy-editing':
       'पहले से लिखे अंग्रेज़ी पाठ को कई बार जाँचकर उसे ज़्यादा साफ़ और संक्षिप्त बनाता है।',
-    'builtinSkillTitle.find-skills': 'स्किल खोजें',
+    'builtinSkillTitle.find-skills': 'कौशल खोजें',
     'builtinSkillDesc.find-skills':
-      'केवल एजेंट विंडो में काम करता है और स्किल खोजने व उन्हें इंस्टॉल करने का सुझाव देने के लिए इंटरनेट चाहिए।',
+      'केवल एजेंट विंडो में काम करता है और कौशल खोजने व उन्हें इंस्टॉल करने का सुझाव देने के लिए इंटरनेट चाहिए।',
   },
   'zh-TW': {
     'builtinSkillTitle.meeting-minutes': '整理會議紀錄',

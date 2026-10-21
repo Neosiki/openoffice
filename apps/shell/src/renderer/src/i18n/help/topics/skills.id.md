@@ -59,18 +59,18 @@ Di bawah pratinjau selalu tertulis: "Pasang skill hanya dari sumber yang Anda pe
 ## Skill yang dipakai AI dengan sendirinya
 
 - Untuk skill yang aktif dan disetel ke AI yang menentukan, judul dan deskripsinya diberikan kepada AI dalam bentuk daftar. Jika salah satunya cocok dengan permintaan, AI mengambil isinya dan memakainya.
-- Saat AI memakai sebuah skill, percakapan menampilkan "Memakai keterampilan 〈judul〉".
+- Saat AI memakai sebuah skill, percakapan menampilkan "Memakai skill 〈judul〉".
 - AI memutuskan dari deskripsi apakah sebuah skill perlu dipakai. Deskripsi yang menyebutkan kapan skill itu dimaksudkan untuk dipakai membantu AI memilih dengan tepat.
 
 ## Membuat skill dengan meminta
 
 1. Di panel AI, ucapkan sesuatu seperti "Simpan yang barusan kita kerjakan sebagai skill" atau "Buat skill yang menulis laporan dengan gaya kantor kita".
-2. AI memilih langkah dan aturan yang layak diulang, lalu menampilkan kartu **Keterampilan baru**. Nilai yang hanya dipakai sekali ini, seperti nama dan tanggal, tidak dimasukkan ke petunjuk.
+2. AI memilih langkah dan aturan yang layak diulang, lalu menampilkan kartu **Skill baru**. Nilai yang hanya dipakai sekali ini, seperti nama dan tanggal, tidak dimasukkan ke petunjuk.
 3. Periksa dan edit judul, deskripsi, dan petunjuk di kartu. Buka **Lanjutan** untuk mengubah nama bahasa Inggrisnya.
 4. Klik **Simpan**. Skill baru ditambahkan ke skill saya dalam keadaan aktif, dan langsung muncul di daftar `/`.
 
-- Tidak ada file yang ditulis sebelum Anda mengeklik **Simpan**. Jika Anda mengeklik **Batal**, percakapan hanya menyimpannya sebagai "Usulan keterampilan yang tidak disimpan".
-- Anda juga bisa meminta agar skill yang sudah ada diubah, misalnya "Ubah skill notulen rapat sesuai cara kita bekerja". Kartunya lalu berjudul **Ubah keterampilan**. Skill saya ditimpa dengan **Ganti**; skill bawaan atau skill dari program lain disimpan sebagai salinan di skill saya dan skill aslinya dinonaktifkan.
+- Tidak ada file yang ditulis sebelum Anda mengeklik **Simpan**. Jika Anda mengeklik **Batal**, percakapan hanya menyimpannya sebagai "Usulan skill yang tidak disimpan".
+- Anda juga bisa meminta agar skill yang sudah ada diubah, misalnya "Ubah skill notulen rapat sesuai cara kita bekerja". Kartunya lalu berjudul **Ubah skill**. Skill saya ditimpa dengan **Ganti**; skill bawaan atau skill dari program lain disimpan sebagai salinan di skill saya dan skill aslinya dinonaktifkan.
 
 ## Menambahkan dokumen sebagai templat
 
