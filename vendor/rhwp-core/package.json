@@ -1,0 +1,29 @@
+{
+  "name": "@rhwp/core",
+  "version": "0.8.7-ieum.1",
+  "description": "rhwp v0.8.7 HWP/HWPX engine (WebAssembly) rebuilt with the layout patches in ./patches",
+  "private": true,
+  "type": "module",
+  "main": "rhwp.js",
+  "types": "rhwp.d.ts",
+  "license": "MIT",
+  "author": "Edward Kim",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/edwardkim/rhwp.git"
+  },
+  "sideEffects": [
+    "./snippets/*"
+  ],
+  "rhwp": {
+    "tag": "v0.8.7",
+    "commit": "1a76570e833917d15817415a53c09ad61ab3203f",
+    "patches": [
+      "0001-host-inline-table-clears-paper-square-table.patch",
+      "0002-paragraph-picture-after-stored-page-reset.patch",
+      "0003-footnote-area-below-body-flow.patch"
+    ],
+    "wasmPack": "0.15.0",
+    "wasmSha256": "c2b27689f21d279c5358c817498c31ce23fe8fa28faf2c264a78f87ccb1677ef"
+  }
+}

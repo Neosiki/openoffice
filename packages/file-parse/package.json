@@ -19,7 +19,7 @@
     "@genoffice/docx-engine": "*",
     "@genoffice/odt-engine": "*",
     "@genoffice/xmind-engine": "*",
-    "@rhwp/core": "0.8.7",
+    "@rhwp/core": "file:../../vendor/rhwp-core",
     "cfb": "^1.2.2",
     "fast-xml-parser": "^5.3.4",
     "jszip": "^3.10.1",
