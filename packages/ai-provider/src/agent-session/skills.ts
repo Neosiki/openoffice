@@ -14,7 +14,8 @@
  *   keeps it, the others go in as `<name>--<source>` (plugins
  *   `<name>--plugin-<plugin>`), so the person can still call them;
  * - a skill used "only when called" gets `disable-model-invocation: true` in
- *   the copy's front matter; the source folder is never changed.
+ *   the copy's front matter, and one set to "AI decides" whose own file says
+ *   true gets `false`; the source folder is never changed.
  *
  * The copy is kept between sessions and only changed skills are copied again:
  * a person's skills can run to hundreds of megabytes. It is also handed to
@@ -172,15 +173,24 @@ async function copyFiles(files: readonly SkillFolderFile[], to: string): Promise
 
 /**
  * Make the copy's SKILL.md say what the copy is: its name in the copy, and
- * `disable-model-invocation: true` for a skill used only when called. Other
- * keys stay as written.
+ * `disable-model-invocation: true` for a skill used only when called (`false`
+ * for one set to "AI decides" whose file says true). Other keys stay as written.
  */
 async function adjustSkillMd(to: string, name: string, invoke: UserSkillInvoke): Promise<boolean> {
   const path = join(to, 'SKILL.md')
   const text = await readFile(path, 'utf8')
   const parsed = parseSkillMd(text)
   if (!parsed) return false
-  if (parsed.name === name && invoke !== 'manual') return true
+  // a skill turned to "AI decides" says so even when its own file says only when called, so
+  // Claude (which reads this key) and Codex (which is told every skill) agree
+  const saysManual = /^(?:true|yes|on)$/i.test(parsed.fields['disable-model-invocation'] ?? '')
+  const fields =
+    invoke === 'manual'
+      ? { 'disable-model-invocation': true }
+      : saysManual
+        ? { 'disable-model-invocation': false }
+        : undefined
+  if (parsed.name === name && !fields) return true
   await writeFile(
     path,
     renderSkillMd(
@@ -190,7 +200,7 @@ async function adjustSkillMd(to: string, name: string, invoke: UserSkillInvoke):
         title: parsed.metadata[IEUM_TITLE_KEY],
         template: parsed.metadata[IEUM_TEMPLATE_KEY],
         body: parsed.body,
-        fields: invoke === 'manual' ? { 'disable-model-invocation': true } : undefined,
+        fields,
       },
       text,
     ),

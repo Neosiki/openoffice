@@ -218,6 +218,25 @@ describe('the bundle', () => {
     expect(readFileSync(join(dir, 'SKILL.md'), 'utf8')).toBe(source)
   })
 
+  it('writes "used on its own" into the copy when the skill itself says only when called', async () => {
+    // Codex is told every skill of the copy; Claude reads the front matter. Both must agree
+    // with the person's choice, so a skill turned to "AI decides" says so in its copy.
+    const dir = join(temp(), 'letter')
+    mkdirSync(dir, { recursive: true })
+    const source =
+      '---\nname: letter\ndescription: Write a letter.\ndisable-model-invocation: true\nlicense: MIT\n---\nBody stays.\n'
+    writeFileSync(join(dir, 'SKILL.md'), source)
+    const bundle = temp()
+    const result = await buildAgentSkillBundle([input('app', dir, 'letter')], bundle)
+    expect(result.skills[0]!.invoke).toBe('auto')
+    const copy = readFileSync(join(bundle, 'skills', 'letter', 'SKILL.md'), 'utf8')
+    expect(copy).toContain('disable-model-invocation: false')
+    expect(copy).not.toContain('disable-model-invocation: true')
+    expect(copy).toContain('license: MIT')
+    expect(copy.endsWith('---\nBody stays.\n')).toBe(true)
+    expect(readFileSync(join(dir, 'SKILL.md'), 'utf8')).toBe(source)
+  })
+
   it('copies again when "only when called" changes with the files unchanged', async () => {
     const dir = skillFolder(temp(), 'deck')
     const bundle = temp()
