@@ -28,6 +28,7 @@ openoffice/
 │   ├── slides-op-journal.md       ← 슬라이드 편집 기록 형식
 │   ├── plans/
 │   │   ├── ai-web-reading.md      ← AI 웹 읽기 계획(초안)
+│   │   ├── connect-guide.md       ← AI 연결 도우미 계획(진행 중)
 │   │   ├── pdf-reading-assist.md  ← PDF 읽기 도우미 계획
 │   │   ├── pdf-tools.md           ← PDF 도구 모음 계획(초안)
 │   │   └── update-details.md      ← 업데이트 상세 내역 표시 계획(확정)
