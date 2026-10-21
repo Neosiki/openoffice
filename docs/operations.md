@@ -200,3 +200,18 @@ npm run typecheck
 - 엔진 밖의 파일까지 고치는 커밋은 엔진 쪽 변경만 받는다. 화면 문구 파일, 껍데기 앱의 뒷단, AI 연결부에서 충돌이 나면 이 프로젝트의 것을 남긴다.
 - 원본이 화면 문구 키를 늘렸으면 21개 언어 모두에 들어왔는지 형 검사로 확인한다.
 - 옮긴 뒤 위의 검사 전체와, 건드린 엔진 패키지의 테스트를 돌린다.
+
+## 한글 엔진(rhwp) 다시 빌드하기
+
+한글 편집기와 한글 파일 읽기가 쓰는 엔진은 `vendor/rhwp-core`에 빌드해 둔 것이다(결정 0045). 앱을 빌드할 때는 Rust가 필요 없다. 패치를 바꾸거나 rhwp 태그를 올릴 때만 다시 빌드한다.
+
+```bash
+export PATH="$HOME/.cargo/bin:$PATH"
+cargo install wasm-pack --version 0.15.0 --locked   # 처음 한 번
+node tools/build-rhwp-core.mjs                      # 태그 받기 → 커밋 확인 → patches 적용 → wasm-pack → 파일과 해시 갱신
+npm run test -w @genoffice/hwp                      # 엔진 시험(engine-layout)과 편집기 시험
+```
+
+- 패치는 `vendor/rhwp-core/patches/`에 번호 순으로 두고 `package.json`의 `rhwp.patches`에 적는다. 만드는 방법은 같은 태그를 받은 rhwp 사본에서 커밋한 뒤 `git format-patch`로 뽑는 것이다.
+- 패치 묶음이 바뀌면 `package.json`의 버전(`0.8.7-ieum.N`)을 올리고 `package-lock.json`의 같은 항목도 고친다.
+- 빌드에는 10분 남짓 걸린다. 빌드 뒤 `rhwp.js`·`rhwp.d.ts`가 npm의 같은 버전과 같은지, WASM에 이 PC의 사용자 폴더 경로가 없는지 본다(스크립트가 경로를 검사한다).

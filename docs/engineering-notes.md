@@ -91,6 +91,15 @@
 | 수식 캡션                        | 결정 0028: 엔진이 수식 제어 기록 아래의 캡션 목록을 쓰지 않는다                                  | 고침(저장 때 다시 붙임)                             | `apps/hwp/tests/section-tails.test.ts`        |
 | 변경 추적 두 번째 본문           | 결정 0027: 두 번째 본문(ViewText)을 그대로 읽고 쓰면 한컴이 열지 못한다                          | 처리(지금의 내용으로 열고, 저장하면 추적 기록 없이) | `apps/hwp/tests/tracked-changes.test.ts`      |
 
+### 한글 엔진 빌드(`vendor/rhwp-core`, 결정 0045)
+
+- **한글 문서의 겹침이 한컴과 다르다.** 먼저 엔진만으로 그려 본다(`@rhwp/core`의 `renderPageSvg`, 또는 같은 태그의 rhwp 명령줄 `export-svg`·`dump-pages`). 엔진에서도 겹치면 편집기 문제가 아니라 조판이다. 한컴 쪽은 `HWPFrame.HwpObject`의 `CreatePageImage(경로, 쪽(0부터), 96, 24, "bmp")`로 그림을 받아 견준다. png를 달라고 해도 bmp로 쓴다.
+- **문서에 저장된 줄 위치가 한컴 화면과 다를 수 있다.** 예전 버전의 한글이나 다른 도구가 저장한 줄 정보가 남아 있으면, 한컴 한글 2024는 열 때 다시 나누고 rhwp는 저장된 것을 따른다. 저장된 줄 위치를 정답으로 삼기 전에 한컴으로 다시 저장해 줄 정보가 바뀌는지 본다.
+- **`wasm-opt`가 "액세스가 거부되었습니다"로 멈춘다.** wasm-pack이 받아 둔 wasm-opt 파일이 깨졌거나 잠긴 것으로 보인다. → `%LOCALAPPDATA%\.wasm-pack\.wasm-opt-*`를 지우고 다시 돌린다.
+- **패치가 적용되지 않는다.** Windows의 `core.autocrlf=true`로 받은 사본은 줄 끝이 CRLF라 패치와 맞지 않고 `cargo fmt` 검사도 깨진다. → 빌드 스크립트는 `-c core.autocrlf=false`로 받는다. 손으로 rhwp 사본을 만들 때도 같게 한다. Git Bash에서 sparse 패턴(`!/samples/`)을 넘길 때는 `MSYS_NO_PATHCONV=1`이 필요하다.
+- **WASM에 빌드한 PC의 사용자 폴더가 들어간다.** 크레이트의 panic 위치 문자열에 cargo 레지스트리 경로가 남는다. → 스크립트가 `--remap-path-prefix`로 `/cargo`, `/rhwp`로 바꾸고, 빌드 뒤 사용자 폴더 이름이 남았는지 검사한다.
+- **작업 사본에서 엔진이 npm 0.8.7로 풀린다.** 사본의 `node_modules/@rhwp/core`가 본 검사본의 npm 패키지를 가리키는 연결이면 시험과 빌드가 패치 전 엔진을 쓴다. → 사본의 `node_modules/@rhwp`를 실제 폴더로 두고 `core`만 사본의 `vendor/rhwp-core`로 연결한다. 사본을 지우기 전에는 이 연결부터 끊는다.
+
 ## 에이전트 모드
 
 - **Claude의 권한 요청이 앱에 오지 않고 "This command requires approval"로 끝난다.** `--permission-prompts host`만으로는 표준 출력으로 오지 않는다. → `--permission-prompt-tool stdio`를 함께 준다. 그러면 `control_request`(`can_use_tool`)로 오고, `{ behavior: 'allow', updatedInput }` 또는 `{ behavior: 'deny', message }`로 답한다.
