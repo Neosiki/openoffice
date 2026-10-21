@@ -28,25 +28,9 @@
  * copy of this module shares one (the same reason as unsaved-files.ts).
  */
 import { resolve } from 'node:path'
+import type { HandoffEditor } from './handoff-editors'
 
-/** every editor that can take a hand-off; each opens it in a new untitled tab */
-export type HandoffEditor =
-  'docs' | 'sheets' | 'slides' | 'pdf' | 'markdown' | 'html' | 'mindmap' | 'hwp'
-
-export const HANDOFF_EDITORS: readonly HandoffEditor[] = Object.freeze([
-  'docs',
-  'sheets',
-  'slides',
-  'pdf',
-  'markdown',
-  'html',
-  'mindmap',
-  'hwp',
-])
-
-export function isHandoffEditor(value: unknown): value is HandoffEditor {
-  return typeof value === 'string' && (HANDOFF_EDITORS as readonly string[]).includes(value)
-}
+export { HANDOFF_EDITORS, isHandoffEditor, type HandoffEditor } from './handoff-editors'
 
 /** the editor of each document extension a template may have (spec 5.7) */
 const EDITOR_BY_EXTENSION: Readonly<Record<string, HandoffEditor>> = {

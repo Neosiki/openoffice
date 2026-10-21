@@ -4,7 +4,8 @@
  * what they receive. The main process alone reads and writes skill folders;
  * the screens and the editors' AI only ask. No Electron here (plain data).
  */
-import { isHandoffEditor, type HandoffEditor, type HandoffSkillChip } from './generate-handoff'
+import type { HandoffSkillChip } from './generate-handoff'
+import { isHandoffEditor, type HandoffEditor } from './handoff-editors'
 
 /** The renderer-exposed bridge name every window shares */
 export const USER_SKILLS_BRIDGE_KEY = 'aiOfficeUserSkills'
