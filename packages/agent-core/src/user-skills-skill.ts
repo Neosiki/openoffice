@@ -69,8 +69,13 @@ export const SKILL_TEXT_FILE_EXTENSIONS: ReadonlySet<string> = new Set([
   '.css',
 ])
 
-/** Names no window shows, from any source (case-insensitive, spec 3.6) */
-const HIDDEN_SKILL_NAMES = new Set(['genoffice', 'ieumoffice'])
+/**
+ * Skill names never read or shown from any source, compared without case
+ * (spec 3.6): the upstream program's skill (this app reads nothing the
+ * upstream registered) and this app's own command-line skill, which steers to
+ * the terminal command. The one list: `@genoffice/ai-provider` re-exports it.
+ */
+export const RESERVED_USER_SKILL_NAMES: ReadonlySet<string> = new Set(['genoffice', 'ieumoffice'])
 
 /** One skill of the list as this capability reads it */
 export interface UserSkillEntry {
@@ -183,7 +188,7 @@ function isAutoSkill(skill: UserSkillEntry): boolean {
     !skill.agentOnly &&
     skill.invoke === 'auto' &&
     !skill.shadowedBy &&
-    !HIDDEN_SKILL_NAMES.has(skill.name.toLowerCase())
+    !RESERVED_USER_SKILL_NAMES.has(skill.name.toLowerCase())
   )
 }
 
@@ -371,7 +376,7 @@ function fileRefusalText(reason: string, id: string, path: string): string {
 
 /** Why a skill may not be used or read here; undefined when it may */
 function entryRefusal(entry: UserSkillEntry | undefined, id: string): string | undefined {
-  if (!entry || HIDDEN_SKILL_NAMES.has(entry.name.toLowerCase()))
+  if (!entry || RESERVED_USER_SKILL_NAMES.has(entry.name.toLowerCase()))
     return refusalText('not-found', id)
   if (entry.agentOnly) return refusalText('agent-only', id)
   if (entry.unreadable) return refusalText('unreadable', id)
@@ -483,7 +488,7 @@ export function createUserSkillsSkill(deps: UserSkillsDeps): AgentSkill {
     let target: SkillProposal['target']
     if (targetId) {
       const entry = find(targetId)
-      if (!entry || HIDDEN_SKILL_NAMES.has(entry.name.toLowerCase())) {
+      if (!entry || RESERVED_USER_SKILL_NAMES.has(entry.name.toLowerCase())) {
         return fail(refusalText('not-found', targetId), PROPOSE_SKILL_TOOL)
       }
       if (entry.agentOnly) return fail(refusalText('agent-only', targetId), PROPOSE_SKILL_TOOL)
@@ -552,7 +557,7 @@ export function userSkillEntriesOf(raw: unknown): UserSkillEntry[] {
     const id = str(view.id)
     const name = str(view.name)
     if (!id.includes(':') || !name) continue
-    if (HIDDEN_SKILL_NAMES.has(name.toLowerCase())) continue
+    if (RESERVED_USER_SKILL_NAMES.has(name.toLowerCase())) continue
     out.push({
       id,
       source: str(view.source) || id.split(':')[0]!,

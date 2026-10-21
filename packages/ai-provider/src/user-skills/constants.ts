@@ -28,10 +28,10 @@ export const MAX_USER_SKILL_FILES = 5_000
 
 /**
  * Names never read from any source, compared without case: the upstream
- * program's skill (this app reads nothing the upstream registered) and this
- * app's own command-line skill, which steers to the terminal command.
+ * program's skill and this app's own command-line skill. Defined once in
+ * agent-core (which this package builds on) for the windows' lists too.
  */
-export const RESERVED_USER_SKILL_NAMES: ReadonlySet<string> = new Set(['genoffice', 'ieumoffice'])
+export { RESERVED_USER_SKILL_NAMES } from '@genoffice/agent-core'
 
 /** A file with one of these extensions makes a skill "with scripts" */
 export const SKILL_SCRIPT_EXTENSIONS: ReadonlySet<string> = new Set([

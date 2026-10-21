@@ -6,6 +6,7 @@ import {
   type UserSkillSettings,
   type UserSkillStateSetting,
 } from '@genoffice/ai-provider'
+import { AGENT_CODEX_WEB_SEARCH, type AgentCodexWebSearch } from '../shared/agent-api'
 
 /**
  * Helpers for userData/app-settings.json — a flat JSON object holding
@@ -153,10 +154,8 @@ export function writeAgentPrefs(path: string, prefs: { warningAccepted: number }
   writeAppSettings(path, updates)
 }
 
-export type CodexWebSearchSetting = 'cached' | 'live' | 'disabled'
-
 export interface AgentProjectPref {
-  codexWebSearch: CodexWebSearchSetting
+  codexWebSearch: AgentCodexWebSearch
   codexNetwork: boolean
 }
 
@@ -168,8 +167,8 @@ export const DEFAULT_AGENT_PROJECT_PREF: AgentProjectPref = {
 
 type StoredAgentProjectPref = Partial<AgentProjectPref>
 
-function codexWebSearchOf(value: unknown): CodexWebSearchSetting | undefined {
-  return value === 'cached' || value === 'live' || value === 'disabled' ? value : undefined
+function codexWebSearchOf(value: unknown): AgentCodexWebSearch | undefined {
+  return AGENT_CODEX_WEB_SEARCH.find((choice) => choice === value)
 }
 
 /** The `agentProjectPrefs` value read back; unknown values are dropped */
