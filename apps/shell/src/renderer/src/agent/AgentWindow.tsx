@@ -1,5 +1,15 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { htmlDir, htmlLang, type Lang, type Params } from '@genoffice/i18n'
+import {
+  pickerSkillsOf,
+  skillChipOf,
+  skillPickerText,
+  useSkillPickerInput,
+  withSkillChip,
+  type AiComposerSkills,
+  type SkillChipView,
+  type SkillPickerItem,
+} from '@genoffice/ui'
 import './globals'
 import {
   AGENT_CODEX_WEB_SEARCH,
@@ -11,13 +21,24 @@ import {
   type AgentCodexWebSearch,
   type AgentConnection,
   type AgentInit,
+  type AgentInstallProposalPayload,
   type AgentMode,
   type AgentPrefs,
   type AgentProjectPrefs,
   type AgentProvider,
+  type AgentSessionSkill,
+  type AgentSkillProposalPayload,
 } from '../../../shared/agent-api'
 import { agentText, type AgentStringKey } from '../i18n/strings-agent'
 import { agentWebText, type AgentWebStringKey } from '../i18n/strings-agent-web'
+import { agentSkillsText } from '../i18n/strings-agent-skills'
+import { AgentSkillCard, agentSkillsBridge } from './AgentSkillCard'
+import { AgentInstallProposal } from './AgentInstallProposal'
+import {
+  agentPickerSkillsRaw,
+  agentSkillNoticeShown,
+  agentSkillRequest,
+} from './agent-skills-model'
 import {
   agentPermissionChoices,
   agentSessionAllowLabel,
@@ -28,7 +49,9 @@ import {
   EMPTY_AGENT_LOG,
   agentLogAfterAnswer,
   agentLogAfterSend,
+  agentLogAfterSkillsChanged,
   agentLogWith,
+  agentLogWithSkillItem,
   openablePath,
   type AgentLogEntry,
   type AgentLogState,
@@ -138,6 +161,18 @@ export function AgentWindow() {
   const folderRef = useRef('')
   const sessionRef = useRef<string | null>(null)
   const logEnd = useRef<HTMLDivElement | null>(null)
+  const inputRef = useRef<HTMLTextAreaElement | null>(null)
+  const skillsApi = useMemo(() => agentSkillsBridge(), [])
+  /** the session's skills: the `/` list and what each chip's instruction names (spec 6.2) */
+  const [sessionSkills, setSessionSkills] = useState<AgentSessionSkill[]>([])
+  const [chips, setChips] = useState<SkillChipView[]>([])
+  const [chipNotice, setChipNotice] = useState<string | null>(null)
+  /** the cards and install proposals the session asked for, by key */
+  const [cards, setCards] = useState<Record<string, AgentSkillProposalPayload>>({})
+  const [installs, setInstalls] = useState<Record<string, AgentInstallProposalPayload>>({})
+  /** the one-time notice of spec 6.5: due as the main process says, until closed */
+  const [noticeDue, setNoticeDue] = useState<boolean | null>(null)
+  const [noticeClosed, setNoticeClosed] = useState(false)
 
   useEffect(() => {
     void api.getInit().then((value) => {
@@ -145,11 +180,72 @@ export function AgentWindow() {
       setPrefs(value.prefs)
       setFolder(value.prefs.recentFolders[0] ?? '')
     })
-    return api.onEvent(({ sessionId: id, event }) => {
-      if (id !== sessionRef.current) return
-      setLog((current) => agentLogWith(current, event))
-    })
+    const offs = [
+      api.onEvent(({ sessionId: id, event }) => {
+        if (id !== sessionRef.current) return
+        setLog((current) => agentLogWith(current, event))
+      }),
+      api.onSkillProposal((payload) => {
+        if (payload.sessionId !== sessionRef.current) return
+        setCards((current) => ({ ...current, [payload.proposal.key]: payload }))
+        setLog((current) =>
+          agentLogWithSkillItem(current, { kind: 'skill-card', key: payload.proposal.key }),
+        )
+      }),
+      api.onInstallProposal((payload) => {
+        if (payload.sessionId !== sessionRef.current) return
+        setInstalls((current) => ({ ...current, [payload.key]: payload }))
+        setLog((current) =>
+          agentLogWithSkillItem(current, { kind: 'skill-install', key: payload.key }),
+        )
+      }),
+    ]
+    return () => {
+      for (const off of offs) off()
+    }
   }, [api])
+
+  // spec 9.4: a session keeps the skills it started with; a change shows one line
+  useEffect(() => {
+    if (!skillsApi) return
+    void skillsApi.agentNotice().then(setNoticeDue, () => setNoticeDue(false))
+    return skillsApi.onChanged(() => {
+      if (sessionRef.current) setLog((current) => agentLogAfterSkillsChanged(current))
+    })
+  }, [skillsApi])
+
+  const lang: Lang = init?.lang ?? 'en'
+  const pickerItems = useMemo(
+    () => pickerSkillsOf(agentPickerSkillsRaw(sessionSkills), lang, 'agent'),
+    [sessionSkills, lang],
+  )
+  const onPickSkill = useCallback((item: SkillPickerItem) => {
+    setChipNotice(null)
+    setChips((current) => withSkillChip(current, skillChipOf(item)))
+  }, [])
+  const composerSkills: AiComposerSkills | undefined =
+    sessionId && pickerItems.length > 0
+      ? {
+          lang,
+          items: pickerItems,
+          chips,
+          notice: chipNotice,
+          // the list is the session's own: it does not change while the session runs
+          onOpen: () => undefined,
+          onPick: onPickSkill,
+          onRemove: (id) => {
+            setChipNotice(null)
+            setChips((current) => current.filter((chip) => chip.id !== id))
+          },
+          onManage: () => void skillsApi?.openSettings(),
+        }
+      : undefined
+  const picker = useSkillPickerInput({
+    skills: composerSkills,
+    value: input,
+    onChange: setInput,
+    textareaRef: inputRef,
+  })
 
   // the connection check may still be running when the window opens; ask again until it settles
   const checking = init ? Object.values(init.connections).includes('checking') : false
@@ -180,7 +276,6 @@ export function AgentWindow() {
   }, [api, folder])
 
   if (!init || !prefs) return <div className="agent" />
-  const lang: Lang = init.lang
   const t = (key: AgentStringKey, params?: Params): string => agentText(lang, key, params)
   const tw = (key: AgentWebStringKey): string => agentWebText(lang, key)
   document.documentElement.lang = htmlLang(lang)
@@ -218,17 +313,54 @@ export function AgentWindow() {
     }
     sessionRef.current = result.sessionId
     setSessionId(result.sessionId)
+    setSessionSkills(result.skills ?? [])
+    setChips([])
+    setChipNotice(null)
+    setCards({})
+    setInstalls({})
     setLog(EMPTY_AGENT_LOG)
   }
 
   const send = async (): Promise<void> => {
     const text = input.trim()
     if (!sessionId || !text || log.busy) return
+    // each chip becomes "use this skill: read <its SKILL.md> and follow it" (spec 6.2)
+    const request = agentSkillRequest(text, chips, sessionSkills)
+    if (!request.ok) {
+      setChipNotice(skillPickerText(lang, 'missingNotice'))
+      return
+    }
     setInput('')
-    setLog((current) => agentLogAfterSend(current, text))
-    const ok = await api.send(sessionId, text)
+    setChips([])
+    setChipNotice(null)
+    setLog((current) => agentLogAfterSend(current, text, request.titles))
+    const ok = await api.send(sessionId, request.text)
     if (!ok) setLog((current) => agentLogWith(current, { type: 'turn-done', ok: false }))
   }
+
+  const closeNotice = (openSettings: boolean): void => {
+    setNoticeClosed(true)
+    void skillsApi?.markAgentNoticeSeen()
+    if (openSettings) void skillsApi?.openSettings()
+  }
+
+  const notice = agentSkillNoticeShown(noticeDue, noticeClosed) ? (
+    <div className="agent-notice" role="status">
+      <p>{agentSkillsText(lang, 'noticeText')}</p>
+      <div className="agent-perm-actions">
+        <button
+          className="agent-btn agent-btn-primary"
+          type="button"
+          onClick={() => closeNotice(true)}
+        >
+          {agentSkillsText(lang, 'noticeOpenSettings')}
+        </button>
+        <button className="agent-btn" type="button" onClick={() => closeNotice(false)}>
+          {agentSkillsText(lang, 'noticeClose')}
+        </button>
+      </div>
+    </div>
+  ) : null
 
   const answer = (id: string, allow: boolean, scope: AgentAllowScope = 'once'): void => {
     if (!sessionId) return
@@ -243,6 +375,9 @@ export function AgentWindow() {
   const reset = (): void => {
     sessionRef.current = null
     setSessionId(null)
+    setSessionSkills([])
+    setChips([])
+    setChipNotice(null)
     setLog(EMPTY_AGENT_LOG)
     void api.getInit().then((value) => setInit(value))
   }
@@ -254,9 +389,47 @@ export function AgentWindow() {
         return (
           <div key={index} className="agent-msg" data-who={entry.kind}>
             <span className="agent-msg-who">{t(entry.kind === 'you' ? 'you' : 'agent')}</span>
+            {entry.kind === 'you' && entry.skills && entry.skills.length > 0 ? (
+              <span className="agent-msg-skills">
+                {entry.skills.map((title, i) => (
+                  <span key={i} className="agent-msg-skill" dir="auto">
+                    {title}
+                  </span>
+                ))}
+              </span>
+            ) : null}
             <span className="agent-msg-text">{entry.text}</span>
           </div>
         )
+      case 'skills-changed':
+        return (
+          <div key={index} className="agent-system" role="status">
+            {agentSkillsText(lang, 'nextSession')}
+          </div>
+        )
+      case 'skill-card': {
+        const payload = cards[entry.key]
+        return payload ? (
+          <AgentSkillCard
+            key={`card-${entry.key}`}
+            lang={lang}
+            payload={payload}
+            api={api}
+            skills={skillsApi}
+          />
+        ) : null
+      }
+      case 'skill-install': {
+        const payload = installs[entry.key]
+        return payload && skillsApi ? (
+          <AgentInstallProposal
+            key={`install-${entry.key}`}
+            lang={lang}
+            address={payload.address}
+            skills={skillsApi}
+          />
+        ) : null
+      }
       case 'tool': {
         const path = openablePath(entry.action)
         return (
@@ -322,6 +495,7 @@ export function AgentWindow() {
           )}
         </div>
         <div className="agent-body">
+          {notice}
           <div className="agent-system">
             {t('startedLine', { program: t(PROVIDER_LABEL[prefs.provider]), folder })}
           </div>
@@ -383,19 +557,34 @@ export function AgentWindow() {
           <div ref={logEnd} />
         </div>
         <div className="agent-foot">
-          <textarea
-            className="agent-input"
-            value={input}
-            placeholder={t('inputPlaceholder')}
-            disabled={log.ended}
-            onChange={(event) => setInput(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
-                event.preventDefault()
-                void send()
-              }
-            }}
-          />
+          <div className="agent-input-wrap">
+            {picker.chipRow}
+            {picker.popup}
+            <textarea
+              ref={inputRef}
+              className="agent-input"
+              value={input}
+              placeholder={t('inputPlaceholder')}
+              disabled={log.ended}
+              {...picker.inputProps}
+              onChange={(event) => {
+                setInput(event.target.value)
+                picker.track(event.target)
+              }}
+              onSelect={(event) => picker.track(event.currentTarget)}
+              onCompositionStart={picker.onCompositionStart}
+              onCompositionEnd={picker.onCompositionEnd}
+              onBlur={picker.onBlur}
+              onKeyDown={(event) => {
+                // the open `/` list takes its keys first
+                if (picker.onKeyDown(event)) return
+                if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+                  event.preventDefault()
+                  void send()
+                }
+              }}
+            />
+          </div>
           <div className="agent-foot-actions">
             <button
               className="agent-btn agent-btn-primary"
@@ -417,6 +606,7 @@ export function AgentWindow() {
         <h1 className="agent-title">{t('windowTitle')}</h1>
       </div>
       <div className="agent-body">
+        {notice}
         <p className="agent-intro">{t('intro')}</p>
 
         <div className="agent-section">

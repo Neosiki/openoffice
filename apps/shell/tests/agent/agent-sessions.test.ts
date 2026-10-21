@@ -116,6 +116,17 @@ describe('instructions', () => {
     expect(codex).not.toContain('ieumoffice-editor')
   })
 
+  it('points to the two skill tools only when the app tools are there', async () => {
+    const project = temp()
+    for (const provider of ['claude-code', 'codex'] as const) {
+      const withTools = await agentInstructions(provider, project, 'ko', true)
+      expect(withTools).toMatch(/call propose_skill:/)
+      expect(withTools).toMatch(/propose_skill_install/)
+      expect(withTools).toMatch(/never install skills with a command/)
+      expect(await agentInstructions(provider, project, 'ko', false)).not.toMatch(/propose_skill/)
+    }
+  })
+
   it('lists the skills of the copy for Codex, with their SKILL.md and whether they wait to be called', async () => {
     const project = temp()
     const skills: AgentSkillEntry[] = [
@@ -193,6 +204,13 @@ function manager(
   }))
   const emitted: Array<[number, string, AgentSessionEvent]> = []
   const mcpStop = vi.fn(async () => undefined)
+  const startAppMcp = vi.fn(
+    async (_root: string, _session: { ownerId: number; sessionId: string }) => ({
+      url: 'http://127.0.0.1:5/mcp',
+      token: 't',
+      stop: mcpStop,
+    }),
+  )
   const m = createAgentManager({
     runners: { claude, codex },
     statuses: () =>
@@ -202,7 +220,7 @@ function manager(
     userData: join(home, 'AppData', 'IeumOffice'),
     homeDir: home,
     language: () => 'ko',
-    startAppMcp: async () => ({ url: 'http://127.0.0.1:5/mcp', token: 't', stop: mcpStop }),
+    startAppMcp,
     buildSkills: async () => ({
       dir: join(home, 'skills'),
       skills: [
@@ -222,7 +240,7 @@ function manager(
     emit: (owner, id, event) => emitted.push([owner, id, event]),
   })
   managers.push(m)
-  return { m, project, home, session, claude, codex, emitted, mcpStop }
+  return { m, project, home, session, claude, codex, emitted, mcpStop, startAppMcp }
 }
 
 describe('starting a session', () => {
@@ -244,6 +262,25 @@ describe('starting a session', () => {
     })
     expect(options.protectedPaths).toContain(join(home, '.codex'))
     expect(options.protectedPaths).toContain(join(home, 'AppData', 'IeumOffice'))
+  })
+
+  it('names the window and session the MCP server’s skill tools answer to, and gives the window the session’s skills', async () => {
+    const { m, project, home, startAppMcp } = manager()
+    const result = await m.start(4, {
+      provider: 'claude-code',
+      projectRoot: project,
+      mode: 'ask-commands',
+    })
+    if (!result.ok) throw new Error('not started')
+    expect(startAppMcp.mock.calls[0]![1]).toEqual({ ownerId: 4, sessionId: result.sessionId })
+    expect(result.skills).toEqual([
+      expect.objectContaining({
+        id: 'app:deck',
+        name: 'deck',
+        skillMd: join(home, 'skills', 'skills', 'deck', 'SKILL.md'),
+        template: undefined,
+      }),
+    ])
   })
 
   it('gives Codex the same skill copy, listed in its instructions, and passes on a metered login the person accepted', async () => {

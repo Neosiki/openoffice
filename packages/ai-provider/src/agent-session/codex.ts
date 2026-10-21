@@ -45,7 +45,7 @@ import {
   type SubscriptionSpawn,
 } from '../subscription/process'
 import { codexAccountInfo } from '../subscription/status'
-import { APP_MCP_SERVER_NAME } from './claude'
+import { APP_MCP_SERVER_NAME, isAgentAppMcpTool } from './claude'
 import { probeCodexSandbox, type CodexSandboxProbeResult } from './codex-sandbox-probe'
 import { agentPolicyVerdict, comparablePath, isInsidePath } from './policy'
 import type {
@@ -301,6 +301,24 @@ export function codexAgentAction(
 export function codexDeclineDecision(params: Record<string, unknown>): 'decline' | 'cancel' {
   const offered = params.availableDecisions
   return !Array.isArray(offered) || offered.includes('decline') ? 'decline' : 'cancel'
+}
+
+/**
+ * The tools Codex lists for the app's own server in one page of
+ * `mcpServerStatus/list` that the session was not meant to get (spec 6.6).
+ * Other servers are the attachment check's; a tool listed under a qualified
+ * name counts by its bare name.
+ */
+export function codexAppMcpExtraTools(statusList: unknown): string[] {
+  const data = isPlainObject(statusList) ? statusList.data : undefined
+  if (!Array.isArray(data)) return []
+  const extra: string[] = []
+  for (const entry of data) {
+    if (!isPlainObject(entry) || entry.name !== APP_MCP_SERVER_NAME) continue
+    const tools = isPlainObject(entry.tools) ? entry.tools : {}
+    for (const name of Object.keys(tools)) if (!isAgentAppMcpTool(name)) extra.push(name)
+  }
+  return extra
 }
 
 /**
@@ -761,6 +779,7 @@ export async function startCodexAgentSession(
 
     let cursor: string | null = null
     const attached: string[] = []
+    const extraTools: string[] = []
     for (let page = 0; page < MAX_MCP_STATUS_PAGES; page++) {
       const result = await request('mcpServerStatus/list', {
         threadId,
@@ -769,12 +788,19 @@ export async function startCodexAgentSession(
         limit: 100,
       })
       attached.push(...codexAttachedMcpServers(result))
+      extraTools.push(...codexAppMcpExtraTools(result))
       const next = isPlainObject(result) ? result.nextCursor : undefined
       cursor = typeof next === 'string' && next ? next : null
       if (!cursor) break
     }
     if (cursor !== null || attached.some((name) => name !== APP_MCP_SERVER_NAME)) {
       throw new AiRunError('unsafe-tools', 'Codex attached an MCP server the app did not give it')
+    }
+    if (extraTools.length > 0) {
+      throw new AiRunError(
+        'unsafe-tools',
+        `Codex listed tools of the app server the app did not give it: ${extraTools.length}`,
+      )
     }
     emit({ type: 'started', provider: PROVIDER, model, skills: [] })
   } catch (error) {

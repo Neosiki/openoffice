@@ -26,8 +26,11 @@ import { failureOf, importPreviewOf, type UserSkillsService } from './user-skill
 
 export interface UserSkillsIpcDeps {
   service: UserSkillsService
-  /** the window that may change, import, export and remove skills (the settings screen) */
-  canManage(sender: WebContents): boolean
+  /**
+   * whether a window may make this management call: the settings screen any of
+   * them, the agent window only its install preview (spec 6.4)
+   */
+  canManage(sender: WebContents, channel: string): boolean
   /** bring the main window forward with the settings open on the skills page */
   openSettings(): void
   /** the agent window's one-time notice is due (spec 6.5) */
@@ -95,7 +98,7 @@ export function registerUserSkillsIpc(deps: UserSkillsIpcDeps): UserSkillsIpc {
     run: (event: IpcMainInvokeEvent, ...args: unknown[]) => unknown,
   ) => {
     ipcMain.handle(channel, async (event, ...args: unknown[]) => {
-      if (!deps.canManage(event.sender)) return notAllowed
+      if (!deps.canManage(event.sender, channel)) return notAllowed
       try {
         return await run(event, ...args)
       } catch (error) {

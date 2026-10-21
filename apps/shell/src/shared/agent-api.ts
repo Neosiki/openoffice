@@ -1,4 +1,5 @@
 import type { Lang } from '@genoffice/i18n'
+import type { SkillProposal } from '@genoffice/agent-core'
 
 /**
  * The agent window (decision 0032): channels and the shapes the window and the
@@ -21,6 +22,16 @@ export const AGENT_CHANNELS = {
   setProjectPrefs: 'agent-window:set-project-prefs',
   /** main → window: one session event */
   event: 'agent-window:event',
+  /** main → window: `propose_skill` asks for a skill card (spec 6.3) */
+  skillProposal: 'agent-window:skill-proposal',
+  /** main → window: `propose_skill_install` proposes a GitHub skill (spec 6.4) */
+  installProposal: 'agent-window:install-proposal',
+  /** whether a template candidate can be saved as it is (its redaction marks) */
+  templateCheck: 'agent-window:template-check',
+  /** a template candidate's bytes for "save as it is"; refused while it may withhold */
+  templateAsIs: 'agent-window:template-as-is',
+  /** "make a blank template": the candidate's copy in a template preview tab */
+  templateBlank: 'agent-window:template-blank',
 } as const
 
 export type AgentProvider = 'claude-code' | 'codex'
@@ -102,8 +113,76 @@ export interface AgentInit {
   connections: Record<AgentProvider, AgentConnection>
 }
 
+/**
+ * A skill of a running session, as the window's `/` list and chips need it:
+ * the skill as copied into the session's bundle (spec 6.1), its name there,
+ * and the absolute paths the chip's instruction names (spec 6.2).
+ */
+export interface AgentSessionSkill {
+  id: string
+  /** the name in the bundle: the skill's own, or `<name>--<source>` */
+  name: string
+  source: string
+  plugin: string | undefined
+  title: string
+  description: string
+  invoke: 'auto' | 'manual'
+  /** the bundle copy's SKILL.md */
+  skillMd: string
+  /** the bundle copy's template document, when the skill names one that is there */
+  template: string | undefined
+}
+
+/** A document a skill card can keep as the template (spec 6.3) */
+export interface AgentTemplateCandidateView {
+  id: string
+  title: string
+  fileName: string
+  /** open in a tab, or a file of the project folder */
+  from: 'tab' | 'project'
+  /** open in a tab with changes not saved: the saved file is what goes along */
+  unsaved: boolean
+}
+
+/** A skill card the session's `propose_skill` asked for */
+export interface AgentSkillProposalPayload {
+  sessionId: string
+  proposal: SkillProposal
+  candidates: AgentTemplateCandidateView[]
+  /** the candidate the model suggested; none: "no template" */
+  selected: string | undefined
+}
+
+/** A GitHub skill the session's `propose_skill_install` proposed */
+export interface AgentInstallProposalPayload {
+  sessionId: string
+  /** a key for this proposal */
+  key: string
+  address: string
+}
+
+/**
+ * Whether a template candidate may be saved as it is: no redaction marks, or
+ * marks found, or no way to tell for its format (then it is not saved as is).
+ */
+export type AgentTemplateRedaction = 'none' | 'redacted' | 'unknown'
+
+export type AgentTemplateCheck =
+  | { ok: true; redaction: AgentTemplateRedaction }
+  | { ok: false; reason: 'not-found' | 'unreadable' | 'too-large' }
+
+export type AgentTemplateAsIs =
+  | { ok: true; bytes: Uint8Array; fileName: string }
+  | {
+      ok: false
+      reason: 'not-found' | 'unreadable' | 'too-large' | 'redacted' | 'unknown'
+    }
+
+export type AgentTemplateBlank =
+  { ok: true; tabId: string; previewId: string } | { ok: false; reason: string }
+
 export type AgentStartResponse =
-  | { ok: true; sessionId: string }
+  | { ok: true; sessionId: string; skills: AgentSessionSkill[] }
   | {
       ok: false
       reason: 'bad-folder' | 'not-connected' | 'start-failed' | 'not-accepted' | 'provider-blocked'
@@ -170,6 +249,18 @@ export interface AgentWindowApi {
   /** open a file of the session's project folder in a tab */
   openFile(sessionId: string, path: string): Promise<boolean>
   onEvent(handler: (payload: AgentEventPayload) => void): () => void
+  onSkillProposal(handler: (payload: AgentSkillProposalPayload) => void): () => void
+  onInstallProposal(handler: (payload: AgentInstallProposalPayload) => void): () => void
+  /** whether a candidate of a card can be saved as it is */
+  templateCheck(proposalKey: string, candidateId: string): Promise<AgentTemplateCheck>
+  /** a candidate's bytes for "save as it is"; refused while it may withhold something */
+  templateAsIs(proposalKey: string, candidateId: string): Promise<AgentTemplateAsIs>
+  /** open a candidate's copy in a template preview tab with the clearing request */
+  templateBlank(
+    proposalKey: string,
+    candidateId: string,
+    request: { tabTitle: string; text: string; draft: unknown },
+  ): Promise<AgentTemplateBlank>
 }
 
 export function normalizeAgentPrefs(raw: unknown): AgentPrefs {

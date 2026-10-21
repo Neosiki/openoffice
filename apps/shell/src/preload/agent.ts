@@ -4,12 +4,18 @@ import {
   AGENT_CHANNELS,
   type AgentEventPayload,
   type AgentInit,
+  type AgentInstallProposalPayload,
   type AgentPrefs,
   type AgentProjectPrefs,
+  type AgentSkillProposalPayload,
   type AgentStartResponse,
+  type AgentTemplateAsIs,
+  type AgentTemplateBlank,
+  type AgentTemplateCheck,
   type AgentWindowApi,
 } from '../shared/agent-api'
 import type { UserSkillsBridge } from '@genoffice/electron-utils/user-skills-bridge'
+import type { UserSkillPreviewEnded } from '@genoffice/electron-utils/user-skills-channels'
 
 type Theme = 'light' | 'dark' | 'system'
 
@@ -71,6 +77,36 @@ const api: AgentWindowApi = {
     ipcRenderer.on(AGENT_CHANNELS.event, listener)
     return () => ipcRenderer.removeListener(AGENT_CHANNELS.event, listener)
   },
+  onSkillProposal(handler) {
+    const listener = (_event: IpcRendererEvent, payload: AgentSkillProposalPayload) =>
+      handler(payload)
+    ipcRenderer.on(AGENT_CHANNELS.skillProposal, listener)
+    return () => ipcRenderer.removeListener(AGENT_CHANNELS.skillProposal, listener)
+  },
+  onInstallProposal(handler) {
+    const listener = (_event: IpcRendererEvent, payload: AgentInstallProposalPayload) =>
+      handler(payload)
+    ipcRenderer.on(AGENT_CHANNELS.installProposal, listener)
+    return () => ipcRenderer.removeListener(AGENT_CHANNELS.installProposal, listener)
+  },
+  async templateCheck(proposalKey, candidateId) {
+    const answer: unknown = await ipcRenderer
+      .invoke(AGENT_CHANNELS.templateCheck, proposalKey, candidateId)
+      .catch(() => null)
+    return resultOf<AgentTemplateCheck>(answer)
+  },
+  async templateAsIs(proposalKey, candidateId) {
+    const answer: unknown = await ipcRenderer
+      .invoke(AGENT_CHANNELS.templateAsIs, proposalKey, candidateId)
+      .catch(() => null)
+    return resultOf<AgentTemplateAsIs>(answer)
+  },
+  async templateBlank(proposalKey, candidateId, request) {
+    const answer: unknown = await ipcRenderer
+      .invoke(AGENT_CHANNELS.templateBlank, proposalKey, candidateId, request)
+      .catch(() => null)
+    return resultOf<AgentTemplateBlank>(answer)
+  },
 }
 
 contextBridge.exposeInMainWorld('aiOfficeAgentWindow', api)
@@ -91,6 +127,14 @@ const SKILLS_CHANNELS = {
   agentNotice: 'skills:agent-notice',
   agentNoticeSeen: 'skills:agent-notice-seen',
   changed: 'skills:changed',
+  // the GitHub preview of an install a session proposed (spec 6.4): the main
+  // process lets this window make these three management calls and no other
+  importGitHub: 'skills:import-github',
+  cancelImport: 'skills:cancel-import',
+  install: 'skills:install',
+  // a template preview tab a card opened (spec 6.3)
+  focusTab: 'skills:focus-tab',
+  previewEnded: 'skills:preview-ended',
 } as const
 
 type AgentSkillsApi = Pick<
@@ -104,7 +148,25 @@ type AgentSkillsApi = Pick<
   | 'agentNotice'
   | 'markAgentNoticeSeen'
   | 'onChanged'
+  | 'importGitHub'
+  | 'cancelImport'
+  | 'install'
+  | 'focusTab'
+  | 'onPreviewEnded'
 >
+
+/** A template preview's end as the main process sends it, checked here */
+function previewEndedOf(raw: unknown): UserSkillPreviewEnded | null {
+  const value = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>
+  if (typeof value.previewId !== 'string' || !value.previewId) return null
+  if (value.outcome !== 'saved' && value.outcome !== 'unsaved') return null
+  return {
+    previewId: value.previewId,
+    outcome: value.outcome,
+    ...(typeof value.skillId === 'string' ? { skillId: value.skillId } : {}),
+    ...(typeof value.title === 'string' ? { title: value.title } : {}),
+  }
+}
 
 function resultOf<T>(value: unknown): T {
   return (
@@ -160,6 +222,34 @@ const skillsApi: AgentSkillsApi = {
     const handler = () => listener()
     ipcRenderer.on(SKILLS_CHANNELS.changed, handler)
     return () => ipcRenderer.removeListener(SKILLS_CHANNELS.changed, handler)
+  },
+  async importGitHub(address) {
+    return resultOf(
+      await ipcRenderer.invoke(SKILLS_CHANNELS.importGitHub, String(address)).catch(() => null),
+    )
+  },
+  async cancelImport(token) {
+    await ipcRenderer.invoke(SKILLS_CHANNELS.cancelImport, token).catch(() => undefined)
+  },
+  async install(token, selected, onCollision) {
+    return resultOf(
+      await ipcRenderer
+        .invoke(SKILLS_CHANNELS.install, { token, selected, onCollision: onCollision ?? {} })
+        .catch(() => null),
+    )
+  },
+  async focusTab(tabId) {
+    return resultOf(
+      await ipcRenderer.invoke(SKILLS_CHANNELS.focusTab, String(tabId)).catch(() => null),
+    )
+  },
+  onPreviewEnded(listener) {
+    const handler = (_event: IpcRendererEvent, raw: unknown) => {
+      const ended = previewEndedOf(raw)
+      if (ended) listener(ended)
+    }
+    ipcRenderer.on(SKILLS_CHANNELS.previewEnded, handler)
+    return () => ipcRenderer.removeListener(SKILLS_CHANNELS.previewEnded, handler)
   },
 }
 

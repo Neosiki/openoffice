@@ -20,6 +20,8 @@ import type {
   AiSubscriptionStatus,
 } from '@genoffice/ai-provider'
 import { subscriptionConnection } from '@genoffice/ai-provider'
+import type { AgentSessionSkill } from '../../shared/agent-api'
+import { agentSessionSkillsOf } from './agent-skills'
 
 /**
  * Agent sessions of the shell (decision 0032): one per agent window, each the
@@ -50,7 +52,7 @@ export interface AgentStartRequest {
 }
 
 export type AgentStartResult =
-  | { ok: true; sessionId: string }
+  | { ok: true; sessionId: string; skills: AgentSessionSkill[] }
   | {
       ok: false
       reason: AgentStartFailure
@@ -84,9 +86,15 @@ export interface AgentManagerDeps {
   homeDir?: string | undefined
   /** the screen language, for the reply-language line of the instructions */
   language: () => string
-  /** start the session's own MCP server; absent when the app has no editors to offer */
+  /**
+   * start the session's own MCP server; absent when the app has no editors to
+   * offer. `session` names the window and session its skill tools answer to
+   */
   startAppMcp?:
-    | ((projectRoot: string) => Promise<{ url: string; token: string; stop(): Promise<void> }>)
+    | ((
+        projectRoot: string,
+        session: AgentMcpSession,
+      ) => Promise<{ url: string; token: string; stop(): Promise<void> }>)
     | undefined
   /**
    * refresh the copy of the enabled skills (and the project's) as they are now, and return it;
@@ -95,6 +103,12 @@ export interface AgentManagerDeps {
   buildSkills?: ((projectRoot: string) => Promise<AgentSkillBundle | undefined>) | undefined
   emit: (ownerId: number, sessionId: string, event: AgentSessionEvent) => void
   platform?: NodeJS.Platform | undefined
+}
+
+/** The session a session MCP server serves: its window and its identifier */
+export interface AgentMcpSession {
+  ownerId: number
+  sessionId: string
 }
 
 /** Folders no session may use or reach: sign-in stores, the original app, this app's data */
@@ -187,6 +201,7 @@ export async function agentInstructions(
       'To read or change a document that is open in the app, use the ieumoffice-editor tools: open_documents (action "list") shows what is open; pass a document\'s id or path as `document` to read_document / insert_content / replace_blocks / apply_ops (Word), read_sheet / apply_sheet_ops (Excel), read_deck / apply_slide_ops (PowerPoint). Changes made this way show in the editor and the person can undo them.',
       'Some words may read as {{label}}: the person withheld them from AI. Keep every such marker exactly as it is, never guess what it stands for, and never write a marker into a file.',
       'read_hwp and read_pdf read Hangul and PDF files of the project folder.',
+      'When the person asks to keep the work as a skill, or to make or change a skill, call propose_skill: the app shows them a card to check and save; never write skill files yourself. To install a skill from GitHub, call propose_skill_install with its address: the app shows the person a preview and they decide; never install skills with a command.',
     )
   }
   // Claude Code finds the skills in the plugin it is given; Codex is told about them
@@ -276,7 +291,9 @@ export function createAgentManager(deps: AgentManagerDeps): AgentManager {
       const entry: LiveSession = { id, ownerId, session: undefined, sessionDir, projectRoot }
       live.set(id, entry)
       try {
-        const appMcp = deps.startAppMcp ? await deps.startAppMcp(projectRoot) : undefined
+        const appMcp = deps.startAppMcp
+          ? await deps.startAppMcp(projectRoot, { ownerId, sessionId: id })
+          : undefined
         entry.appMcp = appMcp
         // the skills as they are now: a change made during the session applies to the next one
         const skills = deps.buildSkills ? await deps.buildSkills(projectRoot) : undefined
@@ -315,7 +332,12 @@ export function createAgentManager(deps: AgentManagerDeps): AgentManager {
                 },
                 onEvent,
               )
-        return { ok: true, sessionId: id }
+        return {
+          ok: true,
+          sessionId: id,
+          // the window's `/` list: what the session got, with the paths a chip names
+          skills: skills ? await agentSessionSkillsOf(skills.skills) : [],
+        }
       } catch (error) {
         cleanup(entry)
         return {

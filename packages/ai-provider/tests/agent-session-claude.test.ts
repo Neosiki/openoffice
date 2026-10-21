@@ -9,6 +9,7 @@ import { PassThrough, Writable } from 'node:stream'
 import type { SpawnOptions } from 'node:child_process'
 import { describe, expect, it, vi } from 'vitest'
 import {
+  AGENT_APP_MCP_TOOLS,
   CLAUDE_AGENT_TOOLS,
   claudeAgentAction,
   claudeAgentInitProblem,
@@ -281,6 +282,41 @@ describe('what the CLI reports at the start', () => {
       claudeAgentInitProblem({ ...INIT, mcp_servers: [{ name: 'github', status: 'connected' }] }),
     ).toMatch(/MCP server/)
     expect(claudeAgentInitProblem({ ...INIT, tools: undefined })).toMatch(/tool list/)
+  })
+
+  it('accepts each of the 13 app tools by name and nothing else of the app server', () => {
+    expect([...AGENT_APP_MCP_TOOLS]).toEqual([
+      'open_documents',
+      'read_document',
+      'insert_content',
+      'replace_blocks',
+      'apply_ops',
+      'read_sheet',
+      'apply_sheet_ops',
+      'read_deck',
+      'apply_slide_ops',
+      'read_hwp',
+      'read_pdf',
+      'propose_skill',
+      'propose_skill_install',
+    ])
+    const server = [{ name: 'ieumoffice-editor', status: 'connected' }]
+    expect(
+      claudeAgentInitProblem({
+        ...INIT,
+        tools: [...INIT.tools, ...AGENT_APP_MCP_TOOLS.map((t) => `mcp__ieumoffice-editor__${t}`)],
+        mcp_servers: server,
+      }),
+    ).toBeUndefined()
+    for (const outside of ['create_docx', 'close_document', 'use_skill', 'save_session']) {
+      expect(
+        claudeAgentInitProblem({
+          ...INIT,
+          tools: [...INIT.tools, `mcp__ieumoffice-editor__${outside}`],
+          mcp_servers: server,
+        }),
+      ).toMatch(/tools/)
+    }
   })
 
   it('reads what each tool call does', () => {

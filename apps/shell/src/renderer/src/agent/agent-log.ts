@@ -2,13 +2,19 @@ import type { AgentActionView, AgentEventView } from '../../../shared/agent-api'
 
 /** One line of the agent window's log */
 export type AgentLogEntry =
-  | { kind: 'you'; text: string }
+  /** `skills`: the titles of the skills the message called (its chips) */
+  | { kind: 'you'; text: string; skills?: string[] | undefined }
   | { kind: 'agent'; text: string }
   | { kind: 'tool'; action: AgentActionView; status: 'running' | 'done' | 'failed' | 'denied' }
   | { kind: 'started'; skills: number }
   | { kind: 'turn-failed' }
   | { kind: 'error'; errorKind?: string | undefined }
   | { kind: 'ended' }
+  /** skills were changed while the session runs: they apply to the next one (spec 9.4) */
+  | { kind: 'skills-changed' }
+  /** a skill card or an install proposal a session asked for, by its key */
+  | { kind: 'skill-card'; key: string }
+  | { kind: 'skill-install'; key: string }
 
 export interface AgentLogState {
   entries: AgentLogEntry[]
@@ -84,8 +90,20 @@ export function agentLogWith(state: AgentLogState, event: AgentEventView): Agent
   }
 }
 
-export function agentLogAfterSend(state: AgentLogState, text: string): AgentLogState {
-  return { ...state, busy: true, entries: [...state.entries, { kind: 'you', text }] }
+export function agentLogAfterSend(
+  state: AgentLogState,
+  text: string,
+  skills: readonly string[] = [],
+): AgentLogState {
+  const entry: AgentLogEntry =
+    skills.length > 0 ? { kind: 'you', text, skills: [...skills] } : { kind: 'you', text }
+  return { ...state, busy: true, entries: [...state.entries, entry] }
+}
+
+/** The "next session" line, once per session; none after the session ended */
+export function agentLogAfterSkillsChanged(state: AgentLogState): AgentLogState {
+  if (state.ended || state.entries.some((entry) => entry.kind === 'skills-changed')) return state
+  return { ...state, entries: [...state.entries, { kind: 'skills-changed' }] }
 }
 
 export function agentLogAfterAnswer(state: AgentLogState, id: string): AgentLogState {
@@ -95,4 +113,13 @@ export function agentLogAfterAnswer(state: AgentLogState, id: string): AgentLogS
 /** The file a tool line can open: the first path it names */
 export function openablePath(action: AgentActionView): string | undefined {
   return action.kind === 'write' || action.kind === 'read' ? action.paths[0] : undefined
+}
+
+/** A skill card or an install proposal joins the log where the session asked for it */
+export function agentLogWithSkillItem(
+  state: AgentLogState,
+  item: { kind: 'skill-card' | 'skill-install'; key: string },
+): AgentLogState {
+  if (state.entries.some((entry) => 'key' in entry && entry.key === item.key)) return state
+  return { ...state, entries: [...state.entries, { kind: item.kind, key: item.key }] }
 }
