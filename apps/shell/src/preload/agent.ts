@@ -5,6 +5,7 @@ import {
   type AgentEventPayload,
   type AgentInit,
   type AgentPrefs,
+  type AgentProjectPrefs,
   type AgentStartResponse,
   type AgentWindowApi,
 } from '../shared/agent-api'
@@ -43,8 +44,21 @@ const api: AgentWindowApi = {
   async send(sessionId, text) {
     return (await ipcRenderer.invoke(AGENT_CHANNELS.send, sessionId, text)) === true
   },
-  async answer(sessionId, requestId, allow) {
-    await ipcRenderer.invoke(AGENT_CHANNELS.answer, sessionId, requestId, allow)
+  async answer(sessionId, requestId, allow, scope) {
+    await ipcRenderer.invoke(AGENT_CHANNELS.answer, sessionId, requestId, allow, scope ?? 'once')
+  },
+  async getProjectPrefs(folder) {
+    return (await ipcRenderer.invoke(
+      AGENT_CHANNELS.getProjectPrefs,
+      folder,
+    )) as AgentProjectPrefs | null
+  },
+  async setProjectPrefs(folder, patch) {
+    return (await ipcRenderer.invoke(
+      AGENT_CHANNELS.setProjectPrefs,
+      folder,
+      patch,
+    )) as AgentProjectPrefs | null
   },
   async stop(sessionId) {
     await ipcRenderer.invoke(AGENT_CHANNELS.stop, sessionId)

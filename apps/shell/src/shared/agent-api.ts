@@ -16,6 +16,9 @@ export const AGENT_CHANNELS = {
   stop: 'agent-window:stop',
   openFile: 'agent-window:open-file',
   getTheme: 'agent-window:get-theme',
+  /** the Codex choices remembered for a project folder (spec 7.2) */
+  getProjectPrefs: 'agent-window:get-project-prefs',
+  setProjectPrefs: 'agent-window:set-project-prefs',
   /** main → window: one session event */
   event: 'agent-window:event',
 } as const
@@ -58,6 +61,41 @@ export const DEFAULT_AGENT_PREFS: AgentPrefs = {
 /** The connection of each program as the window needs it to offer a start */
 export type AgentConnection = 'ready' | 'metered-accepted' | 'unavailable' | 'checking' | 'blocked'
 
+/** Codex's own web search in an agent session: cached results, live, or off */
+export type AgentCodexWebSearch = 'cached' | 'live' | 'disabled'
+
+export const AGENT_CODEX_WEB_SEARCH: readonly AgentCodexWebSearch[] = ['cached', 'live', 'disabled']
+
+/**
+ * What a project folder remembers for Codex sessions (`agentProjectPrefs` of the
+ * app settings): a folder used for the first time starts from the defaults, the
+ * Codex app's own (cached search, no internet for commands).
+ */
+export interface AgentProjectPrefs {
+  codexWebSearch: AgentCodexWebSearch
+  /** commands may reach the internet */
+  codexNetwork: boolean
+}
+
+export const DEFAULT_AGENT_PROJECT_PREFS: AgentProjectPrefs = {
+  codexWebSearch: 'cached',
+  codexNetwork: false,
+}
+
+/** The known values of a change the window asks for; anything else is dropped */
+export function agentProjectPrefsPatch(raw: unknown): Partial<AgentProjectPrefs> {
+  const value = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>
+  const patch: Partial<AgentProjectPrefs> = {}
+  if (AGENT_CODEX_WEB_SEARCH.includes(value.codexWebSearch as AgentCodexWebSearch)) {
+    patch.codexWebSearch = value.codexWebSearch as AgentCodexWebSearch
+  }
+  if (typeof value.codexNetwork === 'boolean') patch.codexNetwork = value.codexNetwork
+  return patch
+}
+
+/** How long an "allow" holds: this request, or (web only) the rest of the session */
+export type AgentAllowScope = 'once' | 'session'
+
 export interface AgentInit {
   lang: Lang
   prefs: AgentPrefs
@@ -74,13 +112,17 @@ export type AgentStartResponse =
 
 /** What a tool line or a permission request shows; paths and commands are shown as they are */
 export interface AgentActionView {
-  kind: 'read' | 'write' | 'command' | 'app-tool' | 'skill' | 'other'
+  kind: 'read' | 'write' | 'command' | 'app-tool' | 'skill' | 'web-search' | 'web-fetch' | 'other'
   tool: string
   command?: string | undefined
   /** a shorter reading of the command for the progress line; the full one stays in `command` */
   summary?: string | undefined
   paths: string[]
   reason?: string | undefined
+  /** a web action's search words or page address */
+  target?: string | undefined
+  /** the site of a page address, when it has one */
+  host?: string | undefined
 }
 
 export type AgentEventView =
@@ -110,7 +152,20 @@ export interface AgentWindowApi {
     folder: string
   }): Promise<AgentStartResponse>
   send(sessionId: string, text: string): Promise<boolean>
-  answer(sessionId: string, requestId: string, allow: boolean): Promise<void>
+  /** `scope: 'session'` allows a web action of the same kind for the rest of the session */
+  answer(
+    sessionId: string,
+    requestId: string,
+    allow: boolean,
+    scope?: AgentAllowScope,
+  ): Promise<void>
+  /** the Codex choices of a project folder; the defaults for a folder used for the first time */
+  getProjectPrefs(folder: string): Promise<AgentProjectPrefs | null>
+  /** change the Codex choices of a project folder; returns them as stored */
+  setProjectPrefs(
+    folder: string,
+    patch: Partial<AgentProjectPrefs>,
+  ): Promise<AgentProjectPrefs | null>
   stop(sessionId: string): Promise<void>
   /** open a file of the session's project folder in a tab */
   openFile(sessionId: string, path: string): Promise<boolean>

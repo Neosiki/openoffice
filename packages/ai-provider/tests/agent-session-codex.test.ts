@@ -25,6 +25,7 @@ import {
   type CodexAgentSessionOptions,
 } from '../src/agent-session'
 import type { SubscriptionProgram } from '../src/subscription'
+import { CODEX_CONFIG_OVERRIDES, codexAppServerLaunchArgs } from '../src/codex-app-server'
 
 const PROGRAM: SubscriptionProgram = {
   provider: 'codex',
@@ -156,10 +157,56 @@ describe('the launch and the thread', () => {
     expect(args[args.indexOf('skills.include_instructions=false') - 1]).toBe('-c')
     expect(args).not.toContain('skills.include_instructions=true')
     // web search follows the Codex app's default in an agent session, not the chat's "off"
-    expect(args.some((arg) => arg.startsWith('web_search='))).toBe(false)
+    expect(args.filter((arg) => arg.startsWith('web_search='))).toEqual(['web_search="cached"'])
     expect(args.slice(-2)).toEqual(['--listen', 'stdio://'])
     // the MXC sandbox, explicitly: it fails rather than fall back to one that cannot deny the sign-in folder
     expect(args[args.indexOf('windows.sandbox="mxc"') - 1]).toBe('-c')
+  })
+
+  it('gives the chosen web search after every inherited override', () => {
+    for (const choice of ['cached', 'live', 'disabled'] as const) {
+      const args = codexAgentLaunchArgs(choice)
+      const overrides = args.filter((_, index) => args[index - 1] === '-c')
+      const inherited = CODEX_CONFIG_OVERRIDES.filter((o) => !o.startsWith('web_search='))
+      expect(overrides.slice(0, inherited.length)).toEqual(inherited)
+      expect(overrides[inherited.length]).toBe(`web_search="${choice}"`)
+      expect(overrides.filter((o) => o.startsWith('web_search='))).toHaveLength(1)
+    }
+    // an unknown value is the default, never a raw string on the command line
+    expect(codexAgentLaunchArgs('x"; evil' as never)).toContain('web_search="cached"')
+  })
+
+  it('leaves the chat window launch as it was: web search off, nothing added', () => {
+    expect([...CODEX_CONFIG_OVERRIDES]).toEqual([
+      'features.hooks=false',
+      'features.plugins=false',
+      'features.apps=false',
+      'features.memories=false',
+      'notify=[]',
+      'history.persistence="none"',
+      'model_provider="openai"',
+      'openai_base_url=""',
+      'skills.include_instructions=false',
+      'web_search="disabled"',
+    ])
+    expect(codexAppServerLaunchArgs()).toEqual([
+      'app-server',
+      ...CODEX_CONFIG_OVERRIDES.flatMap((override) => ['-c', override]),
+      '--listen',
+      'stdio://',
+    ])
+  })
+
+  it('opens the network of the profile only when commands may reach the internet', () => {
+    const closed = codexAgentThreadParams(options(), 'gpt-x', {})
+    expect((closed.config as any).permissions['ieumoffice-agent']).not.toHaveProperty('network')
+    const open = codexAgentThreadParams(options({ network: true }), 'gpt-x', {})
+    const profile = (open.config as any).permissions['ieumoffice-agent']
+    expect(profile.network).toEqual({ enabled: true })
+    // the file rules stay as they are, protected folders denied
+    expect(profile.filesystem).toEqual(codexAgentFilesystem(options()))
+    expect(profile.filesystem['C:\\Users\\me\\.codex']).toBe('deny')
+    expect(open.approvalPolicy).toBe('untrusted')
   })
 
   it('maps each choice to an approval policy, never one where an approval leaves the sandbox', () => {
@@ -270,6 +317,10 @@ describe('the launch and the thread', () => {
     expect(table).toContain(`${JSON.stringify(probeDir)} = "read"`)
     expect(table).toContain(`${JSON.stringify(join(probeDir, 'denied'))} = "deny"`)
     expect(args.slice(-3)).toEqual(['ieumoffice-sandbox-probe', readable, denied])
+    expect(args.some((arg) => arg.includes('network'))).toBe(false)
+    const open = codexSandboxProbeArgs({ ':minimal': 'read' }, probeDir, true).args
+    expect(open[open.indexOf('--') - 1]).toBe('permissions.ieumoffice-probe.network.enabled=true')
+    expect(open[open.indexOf('--') - 2]).toBe('-c')
     // a Korean user folder comes back in the console code page: the names still match
     expect(
       codexSandboxProbeVerdict(String.raw`C:\Users\??\ieumoffice-probe-readable.txt` + '\r\n'),
@@ -334,6 +385,49 @@ describe('starting a session', () => {
     expect(probeDir.startsWith(String.raw`C:\Temp\session-2`)).toBe(true)
     expect(spawnCalls).toHaveLength(1)
     session.stop()
+  })
+
+  it('starts Codex with the web search and the network chosen for the folder', async () => {
+    const { run, spawnCalls, probeSandbox, server } = await start(baseHandlers(), {
+      webSearch: 'live',
+      network: true,
+    })
+    const session = await run
+    expect(spawnCalls[0]!.args).toContain('web_search="live"')
+    expect((probeSandbox.mock.calls[0] as unknown as unknown[])[2]).toBe(true)
+    const thread = server().received.find((message) => message.method === 'thread/start')!
+    expect(thread.params.config.permissions['ieumoffice-agent'].network).toEqual({ enabled: true })
+    session.stop()
+  })
+
+  it('starts with cached search and no network for a folder with no choices', async () => {
+    const { run, spawnCalls, probeSandbox, server } = await start(baseHandlers())
+    const session = await run
+    expect(spawnCalls[0]!.args).toContain('web_search="cached"')
+    expect((probeSandbox.mock.calls[0] as unknown as unknown[])[2]).toBe(false)
+    const thread = server().received.find((message) => message.method === 'thread/start')!
+    expect(thread.params.config.permissions['ieumoffice-agent']).not.toHaveProperty('network')
+    session.stop()
+  })
+
+  it('does not start with the network off when the sandbox cannot open it', async () => {
+    const { run, spawnCalls } = await start(baseHandlers(), { network: true }, 'unavailable')
+    await expect(run).rejects.toMatchObject({ kind: 'sandbox-unavailable' })
+    expect(spawnCalls).toHaveLength(0)
+  })
+
+  it('refuses a thread that reports the network open when it was left off', async () => {
+    const { run } = await start(
+      baseHandlers({
+        'thread/start': (_server, params) => ({
+          thread: { id: 'th1' },
+          approvalPolicy: params.approvalPolicy,
+          activePermissionProfile: { id: 'ieumoffice-agent' },
+          sandbox: { type: 'workspaceWrite', networkAccess: true },
+        }),
+      }),
+    )
+    await expect(run).rejects.toMatchObject({ kind: 'unsafe-tools' })
   })
 
   it('does not start when the sandbox cannot start, and says so', async () => {
