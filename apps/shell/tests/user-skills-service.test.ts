@@ -448,3 +448,37 @@ describe('template file names', () => {
     expect(templateFileNameOf('run.exe')).toBeUndefined()
   })
 })
+
+describe('a skill’s template file for its copy (spec 5.7)', () => {
+  const withTemplate = (name: string, template: string) =>
+    skill(
+      join(appDir(), name),
+      name,
+      'Has a template',
+      `metadata:\n  ieum-template: ${template}\n`,
+      'Fill it.\n',
+    )
+
+  it('gives the template’s place inside the skill folder; nothing is read', async () => {
+    withTemplate('letter', 'assets/letter.hwpx')
+    mkdirSync(join(appDir(), 'letter', 'assets'), { recursive: true })
+    writeFileSync(join(appDir(), 'letter', 'assets', 'letter.hwpx'), 'HWPX')
+    const found = await service.templateFile('app:letter')
+    expect(found).toMatchObject({ ok: true, fileName: 'letter.hwpx', title: 'letter' })
+    if (found.ok) expect(readFileSync(found.path, 'utf8')).toBe('HWPX')
+  })
+
+  it('says the template file is missing when it is gone', async () => {
+    withTemplate('gone', 'assets/gone.docx')
+    expect(await service.templateFile('app:gone')).toEqual({ ok: false, reason: 'no-template' })
+  })
+
+  it('has no template for a skill that names none, and refuses an off or unknown skill', async () => {
+    expect(await service.templateFile('app:mine')).toEqual({ ok: false, reason: 'no-template' })
+    expect(await service.templateFile('user:claude-one')).toEqual({
+      ok: false,
+      reason: 'disabled',
+    })
+    expect(await service.templateFile('app:none')).toEqual({ ok: false, reason: 'not-found' })
+  })
+})

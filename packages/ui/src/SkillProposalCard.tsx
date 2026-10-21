@@ -51,6 +51,8 @@ export interface SkillProposalCardProps {
    * checked. Without it, the two buttons are shown and do nothing yet.
    */
   renderTemplateActions?: ((context: SkillCardTemplateContext) => React.ReactNode) | undefined
+  /** fields that start other than the proposal's (a card carried over to a preview tab) */
+  initialDraft?: Partial<SkillCardDraft> | undefined
   onSaved: (id: string, draft: SkillCardDraft) => void
   onCancel: () => void
 }
@@ -68,6 +70,7 @@ export function SkillProposalCard({
   bridge,
   canBeTemplate = false,
   renderTemplateActions,
+  initialDraft,
   onSaved,
   onCancel,
 }: SkillProposalCardProps): React.JSX.Element {
@@ -75,7 +78,10 @@ export function SkillProposalCard({
     skillCardText(lang, key, params)
   const ids = useId()
   const mode = skillCardMode(proposal)
-  const [draft, setDraft] = useState<SkillCardDraft>(() => initialSkillCardDraft(proposal))
+  const [draft, setDraft] = useState<SkillCardDraft>(() => ({
+    ...initialSkillCardDraft(proposal),
+    ...initialDraft,
+  }))
   const [nameState, setNameState] = useState<SkillCardNameState>('checking')
   const [advanced, setAdvanced] = useState(false)
   const [busy, setBusy] = useState(false)

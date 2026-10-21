@@ -5,6 +5,8 @@ import type { SubscriptionApi } from './subscription-api'
 
 export const HWP_CHANNELS = {
   consumePending: 'hwp:consume-pending',
+  /** invoke → `{ name, format } | null`: the pending path is an untitled copy (spec 5.7) */
+  untitledCopy: 'hwp:untitled-copy',
   readFile: 'hwp:read-file',
   beginSave: 'hwp:begin-save',
   commitSave: 'hwp:commit-save',
@@ -193,6 +195,8 @@ export type ReadUrlResult =
 export interface HwpApi {
   /** path queued for this view when its tab was created; null for a view opened without a file */
   consumePending(): Promise<string | null>
+  /** the pending path is an untitled copy (a skill template's): its name and format; null otherwise */
+  untitledCopy?(): Promise<{ name: string; format: 'hwp' | 'hwpx' } | null>
   readFile(path: string): Promise<Uint8Array>
   /**
    * the file `readFile` gave this view had tracked changes and was given without them: the

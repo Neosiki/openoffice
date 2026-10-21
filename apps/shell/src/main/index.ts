@@ -84,7 +84,15 @@ import {
   writeAppSettings,
   writeAppSettingThen,
 } from './app-settings'
-import { builtinSkillsDirFor, createUserSkillsService, registerUserSkillsIpc } from './user-skills'
+import {
+  builtinSkillsDirFor,
+  createTemplateTabs,
+  createUserSkillsService,
+  registerTemplateTabsIpc,
+  registerUserSkillsIpc,
+  type OpenedCopyTab,
+  type TemplateCopy,
+} from './user-skills'
 import { OPEN_DOCUMENTS_FILE, clearOpenDocuments, publishOpenDocuments } from './open-documents'
 import { startControlServer, type ControlServer } from './control-server'
 import { controlHandler } from './control-handlers'
@@ -7145,6 +7153,70 @@ registerUserSkillsIpc({
   agentNoticeDue: () => agentSkillNoticeDue(APP_SETTINGS_PATH()),
   markAgentNoticeSeen: () => markAgentSkillNoticeSeen(APP_SETTINGS_PATH()),
 })
+
+// Template copies in new tabs (spec 5.6, 5.7): a skill template's copy, or the
+// current document's for a template preview, opens as a new untitled document
+// of its editor; the request is handed to that tab's AI panel, which runs it
+// through its own send gate. The skill folder is only read here.
+const templateTabs = createTemplateTabs({
+  makeCopyDir: async () => {
+    const dir = join(app.getPath('temp'), 'ieumoffice-template-copies', randomUUID())
+    mkdirSync(dir, { recursive: true })
+    return dir
+  },
+  writeFile: (path, bytes) => atomicWriteFile(path, Buffer.from(bytes)),
+  readFile: async (path) => new Uint8Array(readFileSync(path)),
+  removeDir: async (dir) => rmSync(dir, { recursive: true, force: true }),
+  templateFileOf: (id) => userSkills.templateFile(id),
+  openCopy: (copy) => openTemplateCopyTab(copy),
+  focusTab: (tabId) => {
+    const manager = tabManager
+    if (!manager || !manager.list().some((tab) => tab.id === tabId)) return false
+    const win = shellWindow
+    if (win && !win.isDestroyed()) {
+      if (win.isMinimized()) win.restore()
+      win.focus()
+    }
+    manager.activateTab(tabId)
+    return true
+  },
+  newId: () => randomUUID(),
+  now: () => Date.now(),
+})
+registerTemplateTabsIpc(templateTabs)
+
+/** A template copy's new untitled tab: sheets here (its backing workbook), the others in the tab manager */
+async function openTemplateCopyTab(copy: TemplateCopy): Promise<OpenedCopyTab | null> {
+  const manager = tabManager
+  if (!manager) return null
+  if (copy.editor !== 'sheets') return manager.openTemplateCopy(copy)
+  // like "New spreadsheet": a backing workbook in its own temp folder, never a
+  // file of the person's until the first save asks where; a .csv/.tsv/.xls
+  // copy is converted there when the tab opens it
+  const extension = extname(copy.fileName).toLowerCase()
+  const saveExtension = extension === '.xlsm' ? '.xlsm' : '.xlsx'
+  const stem = copy.fileName.slice(0, copy.fileName.length - extension.length) || copy.title
+  const dir = newFileDir('sheet')
+  let suggestedPath = uniquePathIn(dir, `${stem}${saveExtension}`)
+  for (let i = 2; sheetsSuggestedPathTaken(suggestedPath); i++) {
+    suggestedPath = uniquePathIn(dir, `${stem} ${i}${saveExtension}`)
+  }
+  const tempDir = join(app.getPath('temp'), 'genoffice-imports', randomUUID())
+  mkdirSync(tempDir, { recursive: true })
+  const backingPath = join(tempDir, `${stem}${extension}`)
+  markSheetsUnsavedNew(backingPath, suggestedPath, tempDir)
+  try {
+    await atomicWriteFile(backingPath, Buffer.from(copy.bytes))
+  } catch (err) {
+    unmarkSheetsUnsavedNew(backingPath)
+    rmSync(tempDir, { recursive: true, force: true })
+    throw err
+  }
+  const tabId = manager.openSheetsTab(backingPath)
+  startQueuedWorkbookNudge()
+  const contents = manager.webContentsForTab(tabId)
+  return contents ? { tabId, contents } : null
+}
 
 // sheets' project:resolveChat goes through the handler registered by docs-main; the sessionId reverse lookup hooks in here
 setSessionPathResolver(resolveSheetsSessionPath)

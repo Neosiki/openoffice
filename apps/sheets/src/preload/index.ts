@@ -362,6 +362,16 @@ const desktopApi: DesktopApi = {
     )
     return { ok: (result as { ok?: unknown } | null)?.ok === true }
   },
+  async workbookTemplateBytes(request) {
+    const validatedRequest = parseSaveRequest(request)
+    const result = (await ipcRenderer.invoke(
+      IPC_CHANNELS.workbookTemplateBytes,
+      validatedRequest,
+    )) as { ok?: unknown; bytes?: unknown } | null
+    return result?.ok === true && result.bytes instanceof Uint8Array
+      ? { ok: true, bytes: result.bytes }
+      : { ok: false }
+  },
   async autoRenameWorkbook(sessionId, baseName) {
     if (!isUuid(sessionId)) throw new Error('Invalid workbook session.')
     if (typeof baseName !== 'string' || baseName.length === 0 || baseName.length > 100) {

@@ -16,3 +16,14 @@ export {
   type UserSkillsIpc,
   type UserSkillsIpcDeps,
 } from './user-skills-ipc'
+export {
+  copyFileNameOf,
+  createTemplateTabs,
+  type CopyTabContents,
+  type OpenedCopyTab,
+  type PreviewOwner,
+  type TemplateCopy,
+  type TemplateTabs,
+  type TemplateTabsDeps,
+} from './template-tabs'
+export { registerTemplateTabsIpc } from './template-tabs-ipc'

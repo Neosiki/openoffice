@@ -21,6 +21,8 @@ import {
   panelUserSkills,
   SkillUsedNotes,
   useSkillProposals,
+  useSkillTemplates,
+  type TemplateDocument,
   type SkillChipRef,
   type SkillUse,
 } from '@genoffice/ui'
@@ -338,6 +340,8 @@ export function AiPanel({
   onQueueConsume,
   onCollapse,
   onGenerateHandoff,
+  templateDocument,
+  onSkillHandoff,
 }: {
   deps: HtmlAiDeps
   filePath: string | null
@@ -352,6 +356,10 @@ export function AiPanel({
   onCollapse: () => void
   /** this new tab took a request handed over by "make" (8.5) */
   onGenerateHandoff?: () => void
+  /** the document while it can go along as a skill's template (spec 5.7) */
+  templateDocument?: TemplateDocument | null
+  /** this tab took a request handed over by the template flow: show the panel */
+  onSkillHandoff?: () => void
 }): ReactElement {
   const { lang, t } = useI18n()
   const [chat, setChat] = useState<ChatEntry[]>([])
@@ -428,18 +436,38 @@ export function AiPanel({
   const msgQueueRef = useRef(msgQueue)
   msgQueueRef.current = msgQueue
   /** the skills called with `/` or `$`: the list, the chips and the text a request gets */
-  const skills = useComposerSkills({ lang })
+  const skills = useComposerSkills({
+    lang,
+    // a chip whose skill has a template runs in a new tab (spec 5.7)
+    onTemplateSkill: (request) => skillTemplatesRef.current.onTemplateSkill(request),
+  })
   const skillsRef = useRef(skills)
   skillsRef.current = skills
   /** the skill cards `propose_skill` shows; nothing is written before their Save */
   const skillCards = useSkillProposals({
     lang,
-    // the template flow decides when this document can go along as a template
-    canBeTemplate: false,
+    // the document goes along as a template while it can be one (spec 5.7)
+    templateDocument: templateDocument ?? null,
     persistSaved: (record) => persistMessage('assistant', '', [record]),
   })
   const skillCardsRef = useRef(skillCards)
   skillCardsRef.current = skillCards
+  /**
+   * The template flow (spec 5.6, 5.7): a chip whose skill has a template runs
+   * in a new tab, a template the model used offers its new document, and the
+   * request a new tab was opened for runs here once through the send gate.
+   */
+  const skillTemplates = useSkillTemplates({
+    lang,
+    editor: 'html',
+    cards: skillCards,
+    busy,
+    send: (text, use) => send(text, undefined, false, undefined, undefined, use),
+    onTaken: onSkillHandoff,
+    setComposer: setPrompt,
+  })
+  const skillTemplatesRef = useRef(skillTemplates)
+  skillTemplatesRef.current = skillTemplates
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null)
   const [snapshots, setSnapshots] = useState<Snapshot[]>([])
   /** questionnaire / brief cards docked in the composer slot while a tool waits for the user */
@@ -884,6 +912,8 @@ export function AiPanel({
         ...panelUserSkills({
           lang: () => langRef.current,
           messages: () => loopRef.current?.messages ?? [],
+          // a template skill the model used offers its new document (spec 5.7)
+          onUsed: (skill) => skillTemplatesRef.current.onUsed(skill),
           onProposal: (proposal) => {
             skillCardsRef.current.add(proposal)
             patchLast((last) => ({
@@ -1207,6 +1237,7 @@ export function AiPanel({
     setPrompt('')
     skillsRef.current.consume(skillUse)
     lastSkillUseRef.current = skillUse
+    skillTemplatesRef.current.noteRequest(displayText ?? text)
     setBusy(true)
     // persist what the user saw — a restored transcript must not surface the
     // internal batch protocol text behind a queue submission
@@ -1495,6 +1526,7 @@ export function AiPanel({
                 setChat([])
                 skills.resetConversation()
                 skillCards.reset()
+                skillTemplates.reset()
                 setReceipts([])
                 setAttachments([])
                 setAttachNotice(null)
@@ -1716,6 +1748,7 @@ export function AiPanel({
             </div>
           )
         })}
+        {skillTemplates.notes}
       </div>
 
       {snapshots.length > 0 && (

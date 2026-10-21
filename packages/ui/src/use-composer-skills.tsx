@@ -44,9 +44,13 @@ export interface TemplateSkillRequest {
 
 /**
  * Hook for the template flow (spec 5.7). Return true when it took the request
- * over (the panel then sends nothing); false or no hook sends as usual.
+ * over (the panel then sends nothing and the chips leave the composer);
+ * 'stop' when nothing may be sent and the chips stay (the template file is
+ * missing); false or no hook sends as usual.
  */
-export type OnTemplateSkill = (request: TemplateSkillRequest) => boolean | Promise<boolean>
+export type OnTemplateSkill = (
+  request: TemplateSkillRequest,
+) => boolean | 'stop' | Promise<boolean | 'stop'>
 
 // ---- the composer's side ----------------------------------------------
 
@@ -211,7 +215,9 @@ export function useComposerSkills(options: ComposerSkillsOptions): ComposerSkill
       readingRef.current = true
       void (async () => {
         try {
-          const template = composerChips.find((c) => c.template)
+          // a chip naming a template whose file is gone still goes to the hook,
+          // which says so and sends nothing (spec 5.7)
+          const template = composerChips.find((c) => c.template || c.templateMissing)
           const onTemplate = templateRef.current
           if (template && onTemplate) {
             const taken = await onTemplate({
@@ -219,6 +225,7 @@ export function useComposerSkills(options: ComposerSkillsOptions): ComposerSkill
               chips: [...composerChips],
               text: userText,
             })
+            if (taken === 'stop') return
             if (taken) {
               setChips((prev) => prev.filter((c) => !composerChips.some((u) => u.id === c.id)))
               return

@@ -5,7 +5,10 @@ import type { Params } from '@genoffice/i18n'
 import {
   aiPanelInitiallyOpen,
   rememberAiPanelOpen,
+  skillTemplateText,
+  templateDocumentOf,
   useSplitPaneFocusPing,
+  type TemplateDocument,
 } from '@genoffice/ui'
 import { HwpAiDock } from './ai/AiDock'
 import { createAgentBridge } from './ai/agent-bridge'
@@ -77,7 +80,7 @@ function savePortOf(editor: RhwpEditor): SaveEditorPort {
 }
 
 export default function App() {
-  const { t } = useI18n()
+  const { t, lang } = useI18n()
   const hostRef = useRef<HTMLDivElement>(null)
   const editorRef = useRef<RhwpEditor | null>(null)
   const savingRef = useRef(false)
@@ -88,6 +91,8 @@ export default function App() {
   const [aiOpen, setAiOpen] = useState(() => aiPanelInitiallyOpen(AI_OPEN_KEY))
   /** the file the document is in: the AI conversation is kept with it */
   const [filePath, setFilePath] = useState<string | null>(null)
+  /** an untitled copy's name (a skill template's): the title it has until its first save */
+  const copyNameRef = useRef<string | null>(null)
   /** the AI panel's way into the document: the app's plugin inside the editor */
   const agentBridge = useMemo(() => createAgentBridge(() => editorRef.current), [])
 
@@ -134,9 +139,17 @@ export default function App() {
           return
         }
         formatRef.current = hwpFormatOfPath(path) ?? 'hwp'
-        setFilePath(path)
+        // an untitled copy (a skill template's, spec 5.7) is read from its temp file but
+        // has no file of its own: the AI conversation and the first save treat it as new
+        const copy = (await window.hwpApi.untitledCopy?.().catch(() => null)) ?? null
+        if (copy) {
+          formatRef.current = copy.format
+          copyNameRef.current = copy.name
+        } else setFilePath(path)
         const bytes = await window.hwpApi.readFile(path)
-        await editor.loadFile(bytes, fileNameOf(path), { skipUnsavedGuard: true })
+        await editor.loadFile(bytes, copy ? copy.name : fileNameOf(path), {
+          skipUnsavedGuard: true,
+        })
         if (disposed) return
         setPhase('ready')
         if (await window.hwpApi.trackingDropped().catch(() => false)) {
@@ -387,12 +400,42 @@ export default function App() {
     return () => clearTimeout(timer)
   }, [notice])
 
+  /**
+   * The document as a skill's template (spec 5.7): an .hwp or .hwpx file, or a
+   * new one, exported in its own format as it is now. The editor recognizes
+   * no redaction marks.
+   */
+  const templateDocument = useMemo<TemplateDocument | null>(
+    () =>
+      phase !== 'ready'
+        ? null
+        : templateDocumentOf({
+            filePath,
+            extensions: ['hwp', 'hwpx'],
+            defaultExtension: formatRef.current,
+            untitledTitle: () =>
+              copyNameRef.current?.replace(/\.[^.]+$/, '') || skillTemplateText(lang, 'untitled'),
+            bytes: async () => {
+              const editor = editorRef.current
+              if (!editor) return null
+              return formatRef.current === 'hwpx' ? editor.exportHwpx() : editor.exportHwp()
+            },
+          }),
+    [phase, filePath, lang],
+  )
+
   return (
     <div className="hwp-app" data-phase={phase}>
       <div className="app-main">
         {/* the assistant works on an open document, so it appears with one */}
         {phase === 'ready' && (
-          <HwpAiDock open={aiOpen} setOpen={setAiOpen} bridge={agentBridge} filePath={filePath} />
+          <HwpAiDock
+            open={aiOpen}
+            setOpen={setAiOpen}
+            bridge={agentBridge}
+            filePath={filePath}
+            templateDocument={templateDocument}
+          />
         )}
         <div className="hwp-stage">
           <div ref={hostRef} className="hwp-editor-host" />

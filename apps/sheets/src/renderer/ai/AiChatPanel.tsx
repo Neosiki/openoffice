@@ -9,6 +9,7 @@ import {
   SentSkillChips,
   SkillUsedNotes,
   useComposerSkills,
+  type OnTemplateSkill,
   type SkillChipRef,
   type SkillUse,
 } from '@genoffice/ui'
@@ -306,6 +307,8 @@ export function AiChatPanel({
   chat,
   historicChat = [],
   renderSkillCard,
+  skillNotes,
+  onTemplateSkill,
   attachments,
   attachNotice,
   onPickAttachments,
@@ -339,6 +342,10 @@ export function AiChatPanel({
   readonly historicChat?: readonly AiChatMessage[]
   /** the skill card for a key a chat message carries */
   readonly renderSkillCard?: ((key: string) => React.ReactNode) | undefined
+  /** the template flow's lines and its preview card, after the chat's messages */
+  readonly skillNotes?: React.ReactNode
+  /** a chip whose skill has a template runs in a new tab (spec 5.7) */
+  readonly onTemplateSkill?: OnTemplateSkill | undefined
   /// Chat attachments (chips + 📎 button + drag onto the panel), same structure
   /// as the docs/slides AI panels.
   readonly attachments: readonly AttachmentMeta[]
@@ -420,7 +427,7 @@ export function AiChatPanel({
   })
   msgQueueRef.current = msgQueue
   /** the skills called with `/` or `$` (sheets: `$` only at the start, so $A$1 stays typing) */
-  const skills = useComposerSkills({ lang, dollarAtStartOnly: true })
+  const skills = useComposerSkills({ lang, dollarAtStartOnly: true, onTemplateSkill })
   const skillsRef = useRef(skills)
   skillsRef.current = skills
   // the next request re-reads the current text of the skills the reopened conversation used
@@ -843,6 +850,7 @@ export function AiChatPanel({
             )}
           </div>
         ))}
+        {skillNotes}
 
         {preview && (
           <section className="preview ai-preview-card" aria-label={t('aiPreviewAria')}>

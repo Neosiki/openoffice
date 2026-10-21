@@ -151,6 +151,7 @@ import type {
   DocsTabInfo,
   MenuCommand,
   OpenDocxResult,
+  OpenFileResult,
   SpellLanguages,
 } from '../shared/ipc'
 import { ClickClaims } from '../shared/context-menu-claims'
@@ -3047,6 +3048,18 @@ export function queueDocsAiContent(wcId: number, content: AiDocContent): void {
   pendingAiDocContents.set(wcId, content)
 }
 
+/**
+ * Untitled copies waiting for their tab (a skill template's, spec 5.7), keyed
+ * by webContents id: the copy's temp file and the name it shows. The tab gets
+ * the bytes once and is never granted a write to that file.
+ */
+const pendingDocCopies = new Map<number, { path: string; name: string }>()
+
+/** queue an untitled copy for a fresh docs tab (called by the shell right after creating the view) */
+export function queueDocsCopy(wcId: number, copy: { path: string; name: string }): void {
+  pendingDocCopies.set(wcId, copy)
+}
+
 /** the single real BrowserWindow hosting the tab strip, used as dialog parent in tab mode */
 let docsShellWindow: BrowserWindow | null = null
 export function setDocsShellWindow(win: BrowserWindow | null): void {
@@ -4493,6 +4506,30 @@ export function registerDocsIpc(): void {
     const content = pendingAiDocContents.get(event.sender.id) ?? null
     pendingAiDocContents.delete(event.sender.id)
     return content
+  })
+
+  /**
+   * One-shot untitled copy queued for this tab: its bytes as an open result
+   * whose path is only the file name. No write grant, no recent entry, no
+   * archive: the document has no file until its first save asks where.
+   */
+  ipcMain.handle('docs:consume-copy', async (event): Promise<OpenFileResult | null> => {
+    const copy = pendingDocCopies.get(event.sender.id)
+    pendingDocCopies.delete(event.sender.id)
+    if (!copy || !docFormatOfPath(copy.name)) return null
+    try {
+      if ((await stat(copy.path)).size > MAX_OPEN_BYTES) return null
+      const bytes = await readFile(copy.path)
+      return {
+        path: copy.name,
+        name: copy.name,
+        dataUrl: handOffBytes(bytes),
+        hash: '',
+        untitledCopy: true,
+      }
+    } catch {
+      return null
+    }
   })
 
   // ---- headless export mode (--headless-export) ----

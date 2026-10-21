@@ -88,6 +88,7 @@ import { buildPreviewDocument } from './preview-document'
 import { confirmOdtReport, exportOdt, odtFilterName } from './odt-export'
 import { inlineImagesForSingleFile, singleFileExportBaseName } from './single-file-html'
 import { registerHtmlHandoffIpc } from './generate-handoff-ipc'
+import { registerHtmlSeedIpc } from './seed-main'
 import {
   assetBaseHref,
   previewUrlFor,
@@ -1345,6 +1346,7 @@ function registerHtmlIpc(): void {
 
   ipcMain.handle(HTML_CHANNELS.consumePending, (e) => openPathByWc.get(e.sender.id) ?? null)
   registerHtmlHandoffIpc(ipcMain, (wcId) => openPathByWc.has(wcId))
+  registerHtmlSeedIpc({ opensFile: (wcId) => openPathByWc.has(wcId) })
 
   // ---- headless export mode (--headless-export) ----
 

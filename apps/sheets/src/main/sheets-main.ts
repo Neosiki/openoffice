@@ -3631,6 +3631,29 @@ export function registerSheetsIpc(): void {
     }
   })
 
+  // The workbook as edited, for a skill's template (spec 5.6): written to a
+  // temp file of its own through the save writer and read back. No dialog, no
+  // session swap, the opened file and the recovery copy untouched.
+  ipcMain.handle(IPC_CHANNELS.workbookTemplateBytes, async (event, input: unknown) => {
+    const entry = sessionFor(event)
+    const request = resolveTransferredEdits(entry, workbookSaveRequestSchema.parse(input))
+    const session = entry.sessions.get(request.sessionId)
+    if (!session) return { ok: false }
+    const directory = join(app.getPath('temp'), 'genoffice-imports', randomUUID())
+    try {
+      await mkdir(directory, { recursive: true })
+      const target = join(directory, 'template.xlsx')
+      await writeWorkbookTo(entry.client, session, request, target)
+      const bytes = new Uint8Array(await readFile(target))
+      return { ok: true, bytes }
+    } catch (error) {
+      console.warn('[sheets] template copy failed:', error)
+      return { ok: false }
+    } finally {
+      await cleanupImportTempDirectory(app.getPath('temp'), directory).catch(() => undefined)
+    }
+  })
+
   ipcMain.handle(IPC_CHANNELS.closeWorkbook, async (event, sessionId: unknown) => {
     const entry = sessionFor(event)
     const validatedSessionId = z.string().uuid().parse(sessionId)
@@ -4727,6 +4750,33 @@ async function prepareWorkbookForOpen(
       suggestSaveAs: unsavedNew.suggestSaveAs,
       importTempDir: unsavedNew.tempDir,
       unsavedNew: true,
+    }
+    // An untitled copy of a .csv/.tsv/.xls (a skill template's, spec 5.7) is
+    // converted beside itself in its own temp folder: the session edits the
+    // .xlsx, the first save asks where, closing discards the folder.
+    const copyExtension = path.slice(path.lastIndexOf('.') + 1).toLowerCase()
+    if (copyExtension === 'csv' || copyExtension === 'tsv' || copyExtension === 'xls') {
+      const openPath = join(
+        unsavedNew.tempDir,
+        `${basename(path).replace(/\.[^.]+$/, '')}-${randomUUID().slice(0, 8)}.xlsx`,
+      )
+      if (copyExtension === 'xls') {
+        await client.convertWorkbook({ path, targetPath: openPath })
+      } else {
+        if ((await stat(path)).size > MAX_DELIMITED_IMPORT_BYTES) {
+          throw new Error(tm('errFileTooLarge'))
+        }
+        const converted = await csvToXlsxBufferForOpen(
+          decodeCsvBuffer(await readFile(path), legacyCsvCharset()),
+          'Sheet1',
+          copyExtension === 'tsv' ? '\t' : undefined,
+        )
+        await writeFile(openPath, converted.buffer)
+      }
+      // the mark follows the file the session edits
+      unsavedNewWorkbooks.delete(path)
+      unsavedNewWorkbooks.set(openPath, unsavedNew)
+      return { openPath, ...base }
     }
     // a crash left work under this would-be name: offer it like a file's
     // recovery copy, opening the copy itself as the (still unsaved) workbook

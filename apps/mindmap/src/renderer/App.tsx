@@ -9,14 +9,19 @@
  * controller's edit functions; this component only wires the screen to them.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useAutoSavePref, useSplitPaneFocusPing } from '@genoffice/ui'
+import {
+  templateDocumentOf,
+  useAutoSavePref,
+  useSplitPaneFocusPing,
+  type TemplateDocument,
+} from '@genoffice/ui'
 import type { ThemeId, ViewLayout } from '@genoffice/xmind-engine'
 import { t as translate, useI18n } from './i18n/locale'
 import { mapStrings } from './i18n/map-strings'
 import type { StringKey } from './i18n/locale'
 import { linkFromInput, linkInputKind } from './document/link-input'
 import { newMap, type OpenFailure, type OpenNotices, openMapBytes } from './document/open'
-import { seededMap } from './document/open'
+import { openCopiedMap, seededMap } from './document/open'
 import type { DocumentSession, SheetTab } from './document/session'
 import { deleteSheetAfterConfirm } from './document/sheet-actions'
 import { thumbnailForSave } from './document/thumbnail'
@@ -180,14 +185,27 @@ export default function App() {
           opened = result.session
           found = result.notices
         } else {
-          // a new map that starts with given content (a conversion's result, T17), taken once
+          // a new map that starts with given content (a conversion's result, T17,
+          // or a skill template's copy, spec 5.7), taken once
           const seed = (await window.mindmapApi.takeSeed?.()) ?? null
-          opened = seed
-            ? await seededMap(seed, translate('untitled'))
-            : await newMap({
-                sheetTitle: translate('sheetDefaultName', { n: 1 }),
-                rootTitle: translate('centralTopic'),
-              })
+          if (seed && 'bytes' in seed) {
+            const result = await openCopiedMap(seed)
+            if (cancelled) return
+            if (result.status !== 'ok') {
+              setFailure(result.status)
+              setStatus('failed')
+              return
+            }
+            opened = result.session
+            found = result.notices
+          } else {
+            opened = seed
+              ? await seededMap(seed, translate('untitled'))
+              : await newMap({
+                  sheetTitle: translate('sheetDefaultName', { n: 1 }),
+                  rootTitle: translate('centralTopic'),
+                })
+          }
           if (cancelled) return
         }
         sessionRef.current = opened
@@ -293,6 +311,29 @@ export default function App() {
       ai.setOpen(true)
     },
   })
+
+  /**
+   * The map as a skill's template (spec 5.7): an .xmind file, or a new map,
+   * as a save would write it now. The editor recognizes no redaction marks.
+   */
+  const templateDocument = useMemo<TemplateDocument | null>(
+    () =>
+      status !== 'ready'
+        ? null
+        : templateDocumentOf({
+            filePath: path,
+            extensions: ['xmind'],
+            defaultExtension: 'xmind',
+            untitledTitle: () => translate('untitled'),
+            bytes: async () => {
+              const current = sessionRef.current
+              if (!current) return null
+              flushAll()
+              return current.produceBytes()
+            },
+          }),
+    [status, path, flushAll],
+  )
 
   // ---- saving ----
 
@@ -706,6 +747,11 @@ export default function App() {
           filePath={path}
           request={handoff.request}
           onRunStart={handoff.onRunStart}
+          templateDocument={templateDocument}
+          onSkillHandoff={() => {
+            setThemeOpen(false)
+            ai.setOpen(true)
+          }}
         />
       </main>
 

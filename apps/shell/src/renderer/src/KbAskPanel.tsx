@@ -24,6 +24,7 @@ import {
   panelUserSkills,
   useComposerSkills,
   useSkillProposals,
+  useSkillTemplates,
   type AiTokenUsageView,
   type SkillChipRef,
   type SkillUse,
@@ -130,12 +131,24 @@ export function KbAskPanel({
   /** a question sent while the connection was still being checked: it waits for the answer */
   const heldRef = useRef<string | null>(null)
   /** the skills called with `/` or `$` in the composer, and the text a question gets for them */
-  const skills = useComposerSkills({ lang })
+  const skills = useComposerSkills({
+    lang,
+    // a chip whose skill has a template opens its copy in a new tab (spec 9.7)
+    onTemplateSkill: (request) => skillTemplatesRef.current.onTemplateSkill(request),
+  })
   /** the skill cards `propose_skill` shows; nothing is written before their Save. The
    *  home panel has no document, so a card never offers a template here */
   const skillCards = useSkillProposals({ lang })
   const skillCardsRef = useRef(skillCards)
   skillCardsRef.current = skillCards
+  /**
+   * The template flow without a document (spec 5.7, 9.7): a template skill
+   * runs in a new tab of its editor, and one the model used offers its new
+   * document. Nothing is ever handed to this panel.
+   */
+  const skillTemplates = useSkillTemplates({ lang, editor: null, setComposer: setDraft })
+  const skillTemplatesRef = useRef(skillTemplates)
+  skillTemplatesRef.current = skillTemplates
   /** the skills of the held question, and of the last question asked (continue with ...) */
   const heldSkillUseRef = useRef<SkillUse>(NO_SKILL_USE)
   const lastSkillUseRef = useRef<SkillUse>(NO_SKILL_USE)
@@ -246,6 +259,8 @@ export function KbAskPanel({
         ...panelUserSkills({
           lang: () => langRef.current,
           messages: () => loopRef.current?.messages ?? [],
+          // a template skill the model used offers its new document (spec 5.7)
+          onUsed: (skill) => skillTemplatesRef.current.onUsed(skill),
           onProposal: (proposal) => {
             skillCardsRef.current.add(proposal)
             patchLast((last) => ({
@@ -364,6 +379,7 @@ export function KbAskPanel({
     if (again === undefined || draft.trim() === instruction) setDraft('')
     skills.consume(skillUse)
     lastSkillUseRef.current = skillUse
+    skillTemplatesRef.current.noteRequest(instruction)
     const asked: AskMessage = {
       role: 'user',
       text: instruction,
@@ -585,6 +601,7 @@ export function KbAskPanel({
             )}
           </div>
         ))}
+        {skillTemplates.notes}
         {connectPromptOpen && (
           <>
             <AiConnectPrompt

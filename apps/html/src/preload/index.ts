@@ -60,6 +60,7 @@ const subscription: HtmlSubscriptionApi = {
 
 const api: HtmlApi = {
   consumePending: () => ipcRenderer.invoke(HTML_CHANNELS.consumePending),
+  takeSeed: () => ipcRenderer.invoke(HTML_CHANNELS.seedTake),
   openSourcePath: (path: string) => ipcRenderer.invoke('home:open-path', path),
   consumeHeadlessExport: () => ipcRenderer.invoke(HTML_CHANNELS.consumeHeadlessExport),
   headlessExportDone: (result: { ok: boolean; error?: string }) =>

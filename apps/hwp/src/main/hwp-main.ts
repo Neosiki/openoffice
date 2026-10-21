@@ -65,6 +65,12 @@ const openPathByWc = new Map<number, string>()
 const allowedByWc = new Map<number, Set<string>>()
 /** Current save target per view */
 const savePathByWc = new Map<number, string>()
+/**
+ * Views opened on an untitled copy (a skill template's, spec 5.7): the copy is
+ * read from its temp file like any open, but the view has no save target, so
+ * the first save asks where; the copy's name and format are what it offers.
+ */
+const untitledCopyByWc = new Map<number, { name: string; format: HwpFormat }>()
 /** Unsaved-changes flags mirrored from the renderer; drives the save prompt before closing a tab/window */
 const dirtyByWc = new Set<number>()
 const closeSaveWaiters = new Map<number, (ok: boolean) => void>()
@@ -296,6 +302,7 @@ function registerHwpIpc(): void {
   registerHwpAttachmentIpc()
 
   ipcMain.handle(HWP_CHANNELS.consumePending, (e) => openPathByWc.get(e.sender.id) ?? null)
+  ipcMain.handle(HWP_CHANNELS.untitledCopy, (e) => untitledCopyByWc.get(e.sender.id) ?? null)
 
   ipcMain.handle(HWP_CHANNELS.readFile, async (e, path: unknown) => {
     if (typeof path !== 'string' || !allowedByWc.get(e.sender.id)?.has(path)) {
@@ -389,14 +396,15 @@ function registerHwpIpc(): void {
       } else {
         const win =
           BrowserWindow.fromWebContents(e.sender) ?? BrowserWindow.getFocusedWindow() ?? undefined
-        const fallback: HwpFormat = currentFormat ?? 'hwp'
+        const copy = untitledCopyByWc.get(wcId)
+        const fallback: HwpFormat = currentFormat ?? copy?.format ?? 'hwp'
         const picked = await showSaveDialogWithMemory(dialog, win, {
           title: tm('dlgSaveTitle'),
           // a new document has no file yet: it is offered under the untitled name in the
           // default save folder, where the shell moves it into the folder it was made from
           defaultPath: current
             ? join(dirname(current), basename(current))
-            : join(configuredDefaultSaveDir(app), `${tm('untitledFile')}.hwp`),
+            : join(configuredDefaultSaveDir(app), copy?.name ?? `${tm('untitledFile')}.hwp`),
           // the document's own format first, so it is the dialog's default type
           filters: [
             {
@@ -502,6 +510,8 @@ function registerHwpIpc(): void {
         writtenByWc.set(wcId, written)
         const isNewPath = savePathByWc.get(wcId) !== target
         savePathByWc.set(wcId, target)
+        // an untitled copy is a document with a file from now on
+        untitledCopyByWc.delete(wcId)
         // keep the reload path in sync: a stale openPathByWc would make a
         // reloaded renderer load the OLD file and then save it over the new one
         openPathByWc.set(wcId, target)
@@ -573,12 +583,23 @@ function installSaveShortcut(wc: WebContents): void {
   })
 }
 
-function grantAndTrack(wc: WebContents, openPath?: string | null): void {
+function grantAndTrack(
+  wc: WebContents,
+  openPath?: string | null,
+  options: HwpViewOptions = {},
+): void {
   const wcId = wc.id
   if (openPath && existsSync(openPath)) {
     openPathByWc.set(wcId, openPath)
-    savePathByWc.set(wcId, openPath)
     allowedByWc.set(wcId, new Set([openPath]))
+    if (options.untitledCopy) {
+      untitledCopyByWc.set(wcId, {
+        name: basename(openPath),
+        format: hwpFormatOfPath(openPath) ?? 'hwp',
+      })
+    } else {
+      savePathByWc.set(wcId, openPath)
+    }
   }
   installSaveShortcut(wc)
   // the embedded editor vetoes unload while it holds unsaved edits; closing is decided by
@@ -593,6 +614,7 @@ function grantAndTrack(wc: WebContents, openPath?: string | null): void {
     openPathByWc.delete(wcId)
     allowedByWc.delete(wcId)
     savePathByWc.delete(wcId)
+    untitledCopyByWc.delete(wcId)
     dirtyByWc.delete(wcId)
     pendingSaveByWc.delete(wcId)
     writtenByWc.delete(wcId)
@@ -607,7 +629,18 @@ function grantAndTrack(wc: WebContents, openPath?: string | null): void {
   })
 }
 
-export function createHwpView(openPath?: string | null): WebContentsView {
+export interface HwpViewOptions {
+  /**
+   * `openPath` is a copy to open as a new, untitled document (a skill
+   * template's, spec 5.7): it is read like a file, saved like a new document.
+   */
+  untitledCopy?: boolean | undefined
+}
+
+export function createHwpView(
+  openPath?: string | null,
+  options: HwpViewOptions = {},
+): WebContentsView {
   registerHwpIpc()
   const view = new WebContentsView({
     webPreferences: {
@@ -617,7 +650,7 @@ export function createHwpView(openPath?: string | null): WebContentsView {
       sandbox: true,
     },
   })
-  grantAndTrack(view.webContents, openPath)
+  grantAndTrack(view.webContents, openPath, options)
   void view.webContents.loadURL(rendererUrl(runtime.rendererUrl, 'hwp'))
   return view
 }

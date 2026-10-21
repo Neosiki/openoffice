@@ -24,6 +24,8 @@ import {
   createZoomWheelClassifier,
   useAutoSavePref,
   useSplitPaneFocusPing,
+  templateDocumentOf,
+  type TemplateDocument,
 } from '@genoffice/ui'
 import { wordRangeAtCaret } from './editor/comments'
 import { setFieldInstr, toggleAllFieldCodes, type FieldRange } from './editor/field-codes'
@@ -90,7 +92,13 @@ import {
   type PictureWatermarkSpec,
   type WatermarkSpec,
 } from '@genoffice/docx-engine'
-import type { AiDocContent, AiSettings, MenuCommand, OpenDocxResult } from '../shared/ipc'
+import type {
+  AiDocContent,
+  AiSettings,
+  MenuCommand,
+  OpenDocxResult,
+  OpenFileResult,
+} from '../shared/ipc'
 import { AI_PROVIDERS } from '../shared/ipc'
 import { ZoteroDocumentController } from './zotero/controller'
 import { AiPanel, AI_REVISION_AUTHOR } from './ai/AiPanel'
@@ -390,6 +398,7 @@ import {
   newFile as newFileImpl,
   printDoc as printDocImpl,
   save as saveImpl,
+  templateDocBytes,
   writeRecoveryCopy as writeRecoveryCopyImpl,
   type FileActionContext,
   type PendingPdfExport,
@@ -766,9 +775,9 @@ export function App() {
   /** a phased open is still streaming the document tail: editor stays read-only */
   const [docLoading, setDocLoading] = useState(false)
   /** true until the pending-open / new-blank boot checks settle; the start screen stays hidden meanwhile */
-  const bootPendingRef = useRef<Promise<[OpenDocxResult, boolean, AiDocContent | null]> | null>(
-    null,
-  )
+  const bootPendingRef = useRef<Promise<
+    [OpenDocxResult, boolean, AiDocContent | null, OpenFileResult | null]
+  > | null>(null)
   const bootHandledRef = useRef(false)
   /** password prompt for an ECMA-376 encrypted docx; submit retries via openDocxDecrypt */
   const [docPwdPrompt, setDocPwdPrompt] = useState<{
@@ -2144,16 +2153,18 @@ export function App() {
       // Still consume the one-shot new-blank flag so it doesn't leak into the next open
       window.desktop.consumeNewBlankDoc(),
       window.desktop.consumeAiDocContent(),
+      // an untitled copy queued for this tab (a skill template's, spec 5.7)
+      window.desktop.consumeDocCopy?.().catch(() => null) ?? Promise.resolve(null),
     ])
     void bootPendingRef.current
-      .then(async ([pending, , aiContent]) => {
+      .then(async ([pending, , aiContent, copy]) => {
         if (bootHandledRef.current) return
         bootHandledRef.current = true
         // A failed open (corrupt file etc.) falls back to a blank document —
         // otherwise the tab shows "Opening…" forever with only a status-bar
         // line explaining why (genoffice#102).
         // 'password': the prompt is up; its cancel path lands on blank instead.
-        const outcome = pending ? await loadFile(pending) : 'canceled'
+        const outcome = pending ? await loadFile(pending) : copy ? await loadFile(copy) : 'canceled'
         if (outcome === 'canceled') await resetFile()
         if (aiContent && !pending) {
           // fileCtxRef refreshes per render: wait until resetFile's setDoc landed
@@ -7052,6 +7063,28 @@ export function App() {
     scrollPosRef.current = { left: container.scrollLeft, top: container.scrollTop }
   }, [zoom, multipage, mpCols, mpActiveSlotTop, editor])
 
+  /**
+   * The document as a skill's template (spec 5.7): a .docx or .odt file, or a
+   * new one, as a save would write it now. The Word editor recognizes no
+   * redaction marks (docs/security.md), so nothing blocks "save as is".
+   */
+  const templateFilePath = doc?.filePath ?? null
+  const hasTemplateDoc = !!doc
+  const templateDocument = useMemo<TemplateDocument | null>(
+    () =>
+      !hasTemplateDoc
+        ? null
+        : templateDocumentOf({
+            filePath: templateFilePath,
+            extensions: ['docx', 'odt'],
+            defaultExtension: fileCtxRef.current.doc?.format === 'odt' ? 'odt' : 'docx',
+            untitledTitle: () =>
+              (fileCtxRef.current.doc?.fileName ?? '').replace(/\.(docx|odt)$/i, ''),
+            bytes: () => templateDocBytes(fileCtxRef.current),
+          }),
+    [hasTemplateDoc, templateFilePath],
+  )
+
   if (!editor) return null
 
   // canvas geometry is anchored to the first section (stable across cursor moves);
@@ -7285,6 +7318,7 @@ export function App() {
               pageSetupAccess={aiPageSetupAccess}
               docExtras={aiDocExtras}
               notesAccess={aiNotesAccess}
+              templateDocument={templateDocument}
             />
           </div>
         )}

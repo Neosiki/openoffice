@@ -6,6 +6,8 @@ import type { HtmlSubscriptionApi } from './subscription-api'
 
 export const HTML_CHANNELS = {
   consumePending: 'html:consume-pending',
+  /** invoke → `string | null`: the text a new untitled tab starts with, once */
+  seedTake: 'html:seed-take',
   previewUpdate: 'html:preview-update',
   previewInfo: 'html:preview-info',
   presentFullScreen: 'html:present-fullscreen',
@@ -236,6 +238,8 @@ export interface ImageData {
 export interface HtmlApi {
   /** Take the md path pending for this view (queued at tab creation); null = new untitled document */
   consumePending(): Promise<string | null>
+  /** The text a new untitled tab starts with (a skill template's copy), once; null for none */
+  takeSeed?(): Promise<string | null>
   /** open any shell-routed document path (an AI answer's filenav citation) */
   openSourcePath(path: string): Promise<void>
   /** Headless export mode: the path and format this hidden renderer must export, null in normal use */

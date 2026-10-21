@@ -23,6 +23,8 @@ import {
   panelUserSkills,
   SkillUsedNotes,
   useSkillProposals,
+  useSkillTemplates,
+  type TemplateDocument,
   type SkillChipRef,
   type SkillUse,
 } from '@genoffice/ui'
@@ -301,6 +303,8 @@ const starterPrompts = (t: TFunc, deckEmpty: boolean): string[] =>
     : [t('aiStarterPolishTitle'), t('aiStarterTighten'), t('aiStarterProofread')]
 
 interface AiPanelProps {
+  /** the deck while it can go along as a skill's template (spec 5.7) */
+  templateDocument?: TemplateDocument | null
   slides: RenderSlide[]
   current: number
   selectedIds: string[]
@@ -446,6 +450,7 @@ export function AiPanel({
   onQueueClear,
   onQueueFocus,
   onQueueConsume,
+  templateDocument,
 }: AiPanelProps) {
   const { t, lang } = useI18n()
   // Panel chrome follows the UI language; message text follows its own content (dir=auto below)
@@ -475,7 +480,11 @@ export function AiPanel({
     },
   })
   /** the skills called with `/` or `$`: the list, the chips and the text a request gets */
-  const skills = useComposerSkills({ lang })
+  const skills = useComposerSkills({
+    lang,
+    // a chip whose skill has a template runs in a new tab (spec 5.7)
+    onTemplateSkill: (request) => skillTemplatesRef.current.onTemplateSkill(request),
+  })
   const skillsRef = useRef(skills)
   skillsRef.current = skills
   const langRef = useRef(lang)
@@ -483,12 +492,30 @@ export function AiPanel({
   /** the skill cards `propose_skill` shows; nothing is written before their Save */
   const skillCards = useSkillProposals({
     lang,
-    // the template flow decides when this deck can go along as a template
-    canBeTemplate: false,
+    // the document goes along as a template while it can be one (spec 5.7)
+    templateDocument: templateDocument ?? null,
     persistSaved: (record) => persistMessage('assistant', '', [record]),
   })
   const skillCardsRef = useRef(skillCards)
   skillCardsRef.current = skillCards
+  /**
+   * The template flow (spec 5.6, 5.7): a chip whose skill has a template runs
+   * in a new tab, a template the model used offers its new document, and the
+   * request a new tab was opened for runs here once through the send gate.
+   */
+  const skillTemplates = useSkillTemplates({
+    lang,
+    editor: 'slides',
+    cards: skillCards,
+    busy,
+    send: (text, use) => runWith(text, undefined, undefined, use),
+    onTaken: () => {
+      if (!open) onExpand?.()
+    },
+    setComposer: setInput,
+  })
+  const skillTemplatesRef = useRef(skillTemplates)
+  skillTemplatesRef.current = skillTemplates
   const [chat, setChat] = useState<ChatEntry[]>([])
   /** Past conversation restored from JSONL (read-only transcript, not fed to the model) */
   const [historicChat, setHistoricChat] = useState<ChatEntry[]>([])
@@ -1502,6 +1529,8 @@ export function AiPanel({
         ...panelUserSkills({
           lang: () => langRef.current,
           messages: () => loopRef.current?.messages ?? [],
+          // a template skill the model used offers its new document (spec 5.7)
+          onUsed: (skill) => skillTemplatesRef.current.onUsed(skill),
           onProposal: (proposal) => {
             skillCardsRef.current.add(proposal)
             patchLastAssistant((last) => ({
@@ -1848,6 +1877,7 @@ export function AiPanel({
     setInput('')
     skillsRef.current.consume(skillUse)
     lastSkillUseRef.current = skillUse
+    skillTemplatesRef.current.noteRequest(displayText ?? instruction)
     // The message consumes the composer attachments: they ride along (echoed on the
     // bubble, images multimodal, files via the files skill) and the composer clears.
     const sentAtts = opts?.attachments ?? attachmentsRef.current
@@ -2196,6 +2226,7 @@ export function AiPanel({
     setHistoricChat([])
     skills.resetConversation()
     skillCards.reset()
+    skillTemplates.reset()
     // Answered clarifications are transcript too: they render under their
     // original message index, so stale entries would re-attach to unrelated
     // new messages after an index collision.
@@ -2591,6 +2622,7 @@ export function AiPanel({
             </div>
           )
         })}
+        {skillTemplates.notes}
         {activeClarify && (
           <div className="ai-clarify-chip" role="status">
             <span className="ai-clarify-chip-eyebrow">{t('aiClarifyTitle')}</span>
