@@ -15,6 +15,7 @@ import {
 } from './contract'
 import {
   launchSubscriptionInstall,
+  launchSubscriptionUpdate,
   launchSubscriptionLogin,
   launchSubscriptionLogout,
   onSubscriptionLoginChange,
@@ -38,6 +39,10 @@ export interface SubscriptionIpcDeps {
   /** run the CLI's own logout to its end */
   launchLogout(provider: AiSubscriptionProviderId): Promise<SubscriptionLaunchResult>
   launchInstall(provider: AiSubscriptionProviderId): Promise<SubscriptionLaunchResult>
+  /** run the official update of the CLI the app found, in a terminal window */
+  launchUpdate(provider: AiSubscriptionProviderId): Promise<SubscriptionLaunchResult>
+  /** end a login the app started; nothing to end is not a failure */
+  cancelLogin(provider: AiSubscriptionProviderId): Promise<SubscriptionLaunchResult>
   /** send an event to every window; called with the `changed` channel when a status changes */
   broadcast?: ((channel: string, payload: SubscriptionStatusMap) => void) | undefined
 }
@@ -115,6 +120,10 @@ export function registerSubscriptionIpc(
       })(event, payload),
     [SUBSCRIPTION_IPC_CHANNELS.install]: (event, payload) =>
       launch((provider) => deps.launchInstall(provider))(event, payload),
+    [SUBSCRIPTION_IPC_CHANNELS.update]: (event, payload) =>
+      launch((provider) => deps.launchUpdate(provider))(event, payload),
+    [SUBSCRIPTION_IPC_CHANNELS.cancelLogin]: (event, payload) =>
+      launch((provider) => deps.cancelLogin(provider))(event, payload),
     [SUBSCRIPTION_IPC_CHANNELS.metered]: async (
       _event,
       payload,
@@ -247,6 +256,24 @@ export function createSubscriptionIpcDeps(setup: SubscriptionIpcSetup): Subscrip
         configuredPath: setup.getSettings().providers?.[provider]?.cliPath,
       }),
     launchInstall: (provider) => launchSubscriptionInstall(provider),
+    launchUpdate: (provider) =>
+      launchSubscriptionUpdate(provider, {
+        configuredPath: setup.getSettings().providers?.[provider]?.cliPath,
+        spawn: setup.spawn,
+        locate: setup.locate,
+        platform,
+      }),
+    cancelLogin: async (provider) => {
+      const login = logins.get(provider)
+      if (!login) return { ok: true }
+      clearTimeout(login.timer)
+      // gone from the list first: the exit that follows finds nothing left to end
+      logins.delete(provider)
+      service.setSigningIn(provider, undefined)
+      login.stop()
+      void service.check([provider], { fresh: true }).catch(() => undefined)
+      return { ok: true }
+    },
     broadcast: setup.broadcast,
   }
 }

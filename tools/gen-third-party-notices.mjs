@@ -388,6 +388,26 @@ https://www.unicode.org/Public/17.0.0/ucd/EquivalentUnifiedIdeograph.txt
 `
 out += readFileSync(join(ROOT, 'LICENSE-UNICODE.txt'), 'utf8').trim() + '\n'
 
+// Hancom's condition for using its published HWP format document; the wording is fixed
+out += hr('5. Hangul (HWP) document format and trademarks')
+out += `
+The HWP/HWPX editor is built on rhwp (https://github.com/edwardkim/rhwp,
+MIT License, listed above as @rhwp/core and @rhwp/editor).
+
+본 제품은 한글과컴퓨터의 한글 문서 파일(.hwp) 공개 문서를 참고하여
+개발하였습니다.
+
+(This product was developed with reference to Hancom's published document on
+the Hangul document file format (.hwp).)
+
+IeumOffice is not affiliated with, sponsored by or endorsed by Microsoft
+Corporation, Hancom Inc. or XMind Ltd. "Microsoft", "Windows", "Word", "Excel"
+and "PowerPoint" are trademarks of Microsoft Corporation. "한글" (Hangul),
+"한컴" (Hancom), "HWP" and "HWPX" are registered trademarks of Hancom Inc.
+"XMind" is a trademark of XMind Ltd. They are used only to say which files
+IeumOffice opens.
+`
+
 for (const term of ['@embedpdf/pdfium', 'Copyright 2014 PDFium Authors', 'Apache License']) {
   if (!out.includes(term)) {
     throw new Error(`generated third-party notice is missing PDFium term: ${term}`)

@@ -83,6 +83,28 @@
   word-break: break-word;
 }
 
+.ai-sub-path {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ai-sub-path-label {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.ai-sub-path-value {
+  margin: 0;
+  color: var(--text);
+  font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 11px;
+  text-align: start;
+  /* a path has no spaces to wrap at */
+  overflow-wrap: anywhere;
+}
+
 .ai-sub-actions {
   display: flex;
   flex-wrap: wrap;
@@ -269,4 +291,158 @@
 
 .ai-sub-first-list li + li {
   margin-top: 2px;
+}
+
+/* the connect guide: which AI the user has, then that one path's steps and card */
+.ai-sub-guide {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ai-sub-guide-question {
+  margin: 0;
+  font-weight: 600;
+}
+
+.ai-sub-guide-paths {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ai-sub-guide-path {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 2px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-8);
+  background: var(--surface);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.45;
+  text-align: start;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.ai-sub-guide-path:hover {
+  border-color: var(--border-strong);
+  background: var(--hover);
+}
+
+.ai-sub-guide-path:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.ai-sub-guide-path-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ai-sub-guide-path-title {
+  min-width: 0;
+  font-weight: 600;
+}
+
+.ai-sub-guide-badge {
+  flex-shrink: 0;
+  margin-inline-start: auto;
+  padding: 0 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-6);
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 18px;
+}
+
+.ai-sub-guide-badge[data-badge='guideBadgeReady'] {
+  border-color: var(--success);
+  color: var(--success);
+}
+
+.ai-sub-guide-badge[data-badge='guideBadgeCheck'] {
+  border-color: var(--danger-border);
+  color: var(--danger);
+}
+
+.ai-sub-guide-path-body,
+.ai-sub-guide-need {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.ai-sub-guide-open {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ai-sub-guide-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--text-dim);
+  font-size: 12px;
+}
+
+.ai-sub-guide-step {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ai-sub-guide-step-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  border: 1px solid var(--border-strong);
+  border-radius: 50%;
+  font-size: 11px;
+  line-height: 1;
+}
+
+.ai-sub-guide-step[data-done] {
+  color: var(--text-secondary);
+}
+
+.ai-sub-guide-step[data-done] .ai-sub-guide-step-mark {
+  border-color: var(--success);
+  color: var(--success);
+}
+
+.ai-sub-guide-step[aria-current='step'] {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.ai-sub-guide-step[aria-current='step'] .ai-sub-guide-step-mark {
+  border-color: var(--color-btn-primary);
+  background: var(--color-btn-primary);
+  color: var(--color-btn-primary-text);
+}
+
+.ai-sub-guide-back {
+  align-self: flex-start;
+}
+
+.ai-sub-guide-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
 }

@@ -115,6 +115,8 @@ describe('html preload', () => {
     expect(Object.keys(api.subscription).sort()).toEqual(
       [
         'install',
+        'update',
+        'cancelLogin',
         'login',
         'onChanged',
         'openInstallHelp',

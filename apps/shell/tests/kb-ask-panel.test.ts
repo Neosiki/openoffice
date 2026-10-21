@@ -175,13 +175,17 @@ describe('ask panel without a connection', () => {
     expect(host.querySelectorAll('.kb-ask-msg')).toHaveLength(0)
     const prompt = host.querySelector<HTMLElement>('.ai-sub-prompt')!
     expect(prompt.textContent).toContain(aiSubscriptionText('en', 'connectTitle'))
-    const cards = Array.from(prompt.querySelectorAll<HTMLElement>('.ai-sub-card'))
-    expect(cards.map((card) => card.dataset.provider)).toEqual(['claude-code', 'codex'])
+    // which AI the user has comes first; a card follows the answer
+    expect(prompt.querySelector('.ai-sub-guide-question')).not.toBeNull()
+    expect(prompt.querySelectorAll('.ai-sub-card')).toHaveLength(0)
     // the prompt replaces the one-line hint instead of repeating it
     expect(host.querySelector('.kb-ask-login')).toBeNull()
 
+    await click(prompt.querySelector('[data-path="claude-code"]'))
     await click(prompt.querySelector('[data-provider="claude-code"] [data-action="install"]'))
     expect(connection.install).toHaveBeenCalledWith('claude-code')
+    await click(prompt.querySelector('[data-action="guide-back"]'))
+    await click(prompt.querySelector('[data-path="codex"]'))
     await click(prompt.querySelector('[data-provider="codex"] [data-action="login"]'))
     expect(connection.login).toHaveBeenCalledWith('codex')
   })

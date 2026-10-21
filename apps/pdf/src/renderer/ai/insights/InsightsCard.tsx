@@ -582,6 +582,8 @@ export function InsightsCard(props: InsightsCardProps): ReactElement {
               attention={sendGate.connectAttention}
               onOpenSettings={() => void window.pdfApi.openAiModelSettings().catch(() => {})}
               onInstall={connection.install}
+              onUpdate={connection.update}
+              onCancelLogin={connection.cancelLogin}
               onLogin={connection.login}
               onRecheck={connection.recheck}
               onAcceptMetered={connection.acceptMetered}

@@ -160,6 +160,21 @@ describe('the versioned needs-update sentence', () => {
   })
 })
 
+describe('the lines under the program path', () => {
+  it('name the provider and the command on Windows, in every language', () => {
+    for (const lang of LANGS) {
+      const strings = AI_SUBSCRIPTION_STRINGS[lang]
+      expect(placeholders(strings.cardErrNeedsUpdatePath), lang).toEqual([])
+      expect(placeholders(strings.cardErrNeedsUpdateWindows).sort(), lang).toEqual([
+        'command',
+        'provider',
+      ])
+      expect(strings.cardErrNeedsUpdateWindows, lang).toMatch(/WSL/)
+      expect(strings.cardErrNeedsUpdateWindows, lang).toMatch(/PowerShell/)
+    }
+  })
+})
+
 describe('aiSubscriptionText', () => {
   it('fills the placeholders', () => {
     expect(aiSubscriptionText('en', 'continueWith', { provider: 'Codex' })).toBe(

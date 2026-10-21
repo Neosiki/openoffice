@@ -15,6 +15,9 @@ export const vi = {
     'Chương trình {provider} trên máy tính này quá cũ. Hãy cập nhật rồi kiểm tra lại.',
   cardErrNeedsUpdateVersion:
     'Chương trình {provider} trên máy tính này ({version}) quá cũ; cần phiên bản {minimum} trở lên. Hãy chạy {command} trong terminal rồi kiểm tra lại.',
+  cardErrNeedsUpdatePath: 'Tệp mà ứng dụng này chạy:',
+  cardErrNeedsUpdateWindows:
+    'Cập nhật {provider} trong WSL (Ubuntu) hoặc ở thư mục khác không làm thay đổi tệp này. Hãy chạy {command} trong Windows PowerShell.',
   cardErrTimeout: 'Chương trình {provider} không trả lời kịp thời. Hãy kiểm tra lại sau giây lát.',
   cardErrFailed: 'Đã xảy ra sự cố khi kiểm tra {provider}. Hãy kiểm tra lại.',
   actionInstall: 'Cài đặt',
@@ -91,4 +94,36 @@ export const vi = {
   pickerPaid: 'Trả phí',
   pickerPaidTitle: 'Tính phí theo mức sử dụng, không nằm trong gói đăng ký',
   pickerNotConnected: 'Kết nối AI',
+  guideQuestion: 'Bạn đang dùng AI nào?',
+  guidePathClaudeTitle: 'Tôi có gói đăng ký Claude trả phí',
+  guidePathClaudeBody: 'Cần có gói Pro hoặc Max. Tài khoản Claude miễn phí không kết nối được.',
+  guidePathCodexTitle: 'Tôi dùng ChatGPT',
+  guidePathCodexBody:
+    'Đăng nhập vào chương trình Codex của OpenAI bằng tài khoản ChatGPT của bạn. Gói miễn phí chỉ cho dùng một ít.',
+  guidePathFreeTitle: 'Tôi chưa có cái nào',
+  guidePathFreeBody:
+    'Kết nối AI miễn phí trong khoảng một phút. Trong thời gian dùng miễn phí, nội dung bạn gửi có thể được dùng để cải thiện AI của công ty đó.',
+  guideBack: 'Chọn cách khác',
+  guideBadgeReady: 'Đã kết nối',
+  guideBadgeInstalled: 'Đã cài đặt',
+  guideBadgeCheck: 'Cần kiểm tra',
+  guideStepsLabel: 'Các bước kết nối',
+  stepInstall: 'Cài đặt chương trình',
+  stepLogin: 'Đăng nhập',
+  stepReady: 'Đã kết nối',
+  installReturnNote:
+    'Khi cài đặt trong cửa sổ đó xong, hãy quay lại màn hình này. Ứng dụng sẽ tự kiểm tra lại.',
+  loginHowNote:
+    'Khi bạn nhấn, trình duyệt sẽ mở ra. Đăng nhập bằng tài khoản {vendor} của bạn rồi nhấn Cho phép, kết nối sẽ tự hoàn tất.',
+  signingInStalledNote:
+    'Trình duyệt không mở, hoặc hiện một mã? Hãy mở cửa sổ đăng nhập bằng nút bên dưới. Dán địa chỉ hiện trong cửa sổ vào trình duyệt, hoặc dán mã hiện trong trình duyệt vào cửa sổ.',
+  actionLoginWindowOpen: 'Mở cửa sổ đăng nhập',
+  actionCancelLogin: 'Hủy đăng nhập',
+  actionUpdate: 'Cập nhật',
+  updateNote:
+    'Khi bạn nhấn, bản cập nhật chính thức của {vendor} sẽ chạy trong một cửa sổ mới. Khi cập nhật xong ở đó, hãy quay lại màn hình này.',
+  guideInfoHint:
+    'Vẫn chưa được? Hãy sao chép thông tin kết nối và gửi cho người đang giúp bạn. Thông tin này không chứa tài khoản hay đường dẫn tệp.',
+  actionCopyInfo: 'Sao chép thông tin để nhờ hỗ trợ',
+  copyInfoDone: 'Đã sao chép',
 } satisfies Record<keyof typeof zh, string>

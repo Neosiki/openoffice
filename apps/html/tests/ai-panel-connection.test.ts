@@ -225,7 +225,8 @@ describe('AI panel without a connection', () => {
     await mountPanel(main)
     const prompt = host.querySelector('.ai-sub-prompt')
     expect(prompt).not.toBeNull()
-    expect(prompt!.querySelectorAll('.ai-sub-card')).toHaveLength(2)
+    // which AI the user has comes first; each answer leads to its own card
+    expect(prompt!.querySelectorAll('.ai-sub-guide-path')).toHaveLength(3)
     expect(scrolled).toEqual([])
 
     await sendMessage('make it blue')
@@ -255,11 +256,16 @@ describe('AI panel without a connection', () => {
     await mountPanel(main)
     const card = (provider: string) =>
       host.querySelector(`.ai-sub-card[data-provider="${provider}"]`)!
+    const pick = (selector: string) =>
+      act(() => host.querySelector<HTMLButtonElement>(selector)!.click())
+    pick('[data-path="claude-code"]')
     act(() =>
       card('claude-code').querySelector<HTMLButtonElement>('[data-action="login"]')!.click(),
     )
     await settle()
     expect(main.subscription.login).toHaveBeenCalledWith('claude-code')
+    pick('[data-action="guide-back"]')
+    pick('[data-path="codex"]')
     act(() => card('codex').querySelector<HTMLButtonElement>('[data-action="install"]')!.click())
     await settle()
     expect(main.subscription.install).toHaveBeenCalledWith('codex')
