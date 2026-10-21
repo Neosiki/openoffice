@@ -4073,6 +4073,8 @@ export function registerProjectIpc(): void {
         }>
         attachments?: Array<{ name: string; path?: string; ext?: string; sizeBytes?: number }>
         scope?: { label: string; text?: string }
+        /** skill chips of a user message; the store bounds and filters them */
+        skills?: unknown
       },
     ) => {
       if (args.role !== 'user' && args.role !== 'assistant') {
@@ -4092,6 +4094,7 @@ export function registerProjectIpc(): void {
       if (args.tools) msg.tools = args.tools
       if (args.attachments) msg.attachments = args.attachments
       if (args.scope) msg.scope = args.scope
+      if (Array.isArray(args.skills)) msg.skills = args.skills as NonNullable<typeof msg.skills>
 
       getSheetsProjectStore().appendChatMessage(args.projectId, args.chatId, msg)
     },
