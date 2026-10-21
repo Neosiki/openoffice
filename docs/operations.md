@@ -43,7 +43,9 @@ npm run check:skill-version
 npm run check:no-genspark
 ```
 
-테스트는 작업 공간별로 돌린다. `npm test`는 첫 실패에서 멈추는데, Windows에서는 원본 코드 그대로도 실패하는 테스트가 있기 때문이다.
+`npm test`(`tools/run-workspace-tests.mjs`)는 작업 공간 32개를 몇 개씩 동시에 돌린다. 한 작업 공간이 실패해도 나머지를 끝까지 돌리고, 작업 공간마다 걸린 시간과 성공 여부를 표로 보여 준 뒤 실패한 것이 있으면 1로 끝난다. 동시에 돌리는 수는 코어 수에서 정하고(2~4개), `TEST_JOBS=<n>`으로 바꾼다. 작업 공간마다 vitest 워커 수도 코어를 나눠 쓰도록 줄인다(`VITEST_MAX_WORKERS`로 바꿀 수 있다). `npm run test:serial`은 예전처럼 하나씩 돌린다. 출력이 섞여 원인을 찾기 어려울 때 쓴다.
+
+Windows에서는 원본 코드 그대로도 실패하는 테스트가 있으므로, 고칠 때는 작업 공간별로 돌린다.
 
 ```bash
 npm run test -w @genoffice/ai-provider      # 작업 공간 하나

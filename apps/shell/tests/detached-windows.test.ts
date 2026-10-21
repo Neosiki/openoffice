@@ -116,6 +116,11 @@ vi.mock('../../html/src/main/html-main', () => ({
   requestHtmlClose: vi.fn(() => Promise.resolve(true)),
 }))
 
+vi.mock('../../hwp/src/main/hwp-main', () => ({
+  hwpIsDirty: vi.fn(() => false),
+  requestHwpClose: vi.fn(() => Promise.resolve(true)),
+}))
+
 vi.mock('../../mindmap/src/main/mindmap-main', () => ({
   mindmapIsDirty: vi.fn(() => false),
   requestMindmapClose: vi.fn(() => Promise.resolve(true)),
