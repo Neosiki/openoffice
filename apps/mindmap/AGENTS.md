@@ -80,6 +80,7 @@
 - **밖에서 시작하는 실행**은 `MindmapAiDock`(`AiPanel`)의 `request`(`{ nonce, text, attachmentPaths }`)로 건넨다. 파일은 `mindmap:files-add`로 받아 첨부 칸에, 글은 입력 칸에 넣은 뒤 보내기 버튼과 같은 `send`를 지난다. 문지기가 붙잡거나 거절하면 글과 첨부는 창에 그대로 남는다. 실행이 실제로 시작될 때마다 `onRunStart({ text, attachments })`가 불린다(입력, 다시 시도, 대기열, 밖에서 시작 모두).
 - **넘겨받은 요청**: 껍데기의 "만들기"가 새 지도 탭에 맡겨 둔 요청을 그 탭이 한 번 가져간다. 메인은 `src/main/handoff-main.ts`가 `mindmap:handoff-take`(공용 `takeGenerateHandoff`, 파일로 연 뷰는 가져가지 않음)와 `mindmap:handoff-run-started`(공용 `reportGenerateRunStarted`, 받은 값을 검사)를 받는다. 화면은 `ai/use-handoff.ts`가 맡는다. 지도가 처음 준비될 때 제목 없는 새 지도일 때만 가져가고, AI 창을 연 뒤 요청을 `request`로 한 번의 렌더에만 건네고 버린다(창이 다시 붙어도, 탭을 다시 불러와도 다시 돌지 않는다). 실행이 시작될 때 넘겨받은 파일이 하나라도 붙어 있으면 그 경로를 알리고, 메인은 첫 번째만 기록한다. 넘겨받은 파일을 모두 뺀 실행은 알리지 않는다. 테스트는 `tests/handoff.test.ts`와 `tests/main.test.ts`.
 - **AI 없이 바꾸기로 여는 새 지도**: 껍데기가 마크다운 자료를 지도로 바꿀 때 새 지도 탭에 개요 글을 맡겨 둔다. 그 탭이 처음 준비될 때 `mindmap:seed-take`로 한 번 가져가, 엔진의 `createXmindDocumentFromOutline`으로 만든 지도를 저장하지 않은 새 지도로 연다. 파일로 연 뷰, 두 번째 가져가기, 다시 불러오기는 아무것도 받지 않는다. AI는 돌지 않는다. 테스트는 `tests/seed.test.ts`.
+- **스킬**(결정 0048)은 다른 편집기와 같은 공용 부품(`useComposerSkills`, `SkillPicker`, `panelUserSkills`, 양식 동작)으로 붙는다. `/`·`$` 칩, 스스로 쓰기, 스킬 카드, `.xmind` 양식이 모두 같은 규칙이다.
 - 이 편집기는 `ai:*`와 구독 창구를 등록하지 않는다. 제공자는 `selectAiProvider`(뒷단)가 정하고, 화면은 문지기와 막힘 안내만 그린다.
 
 ## 내보내기와 인쇄

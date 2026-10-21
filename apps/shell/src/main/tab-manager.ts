@@ -392,17 +392,22 @@ export class TabManager {
 
   /** The in-app user manual (issue #1520): a closable tab showing the shell
       renderer's help mode — the same bundle, branched on ?mode=help, so no
-      second renderer build is needed. */
-  openHelpTab(): string {
+      second renderer build is needed. `topic` opens the manual at that topic
+      (a help link next to a setting); without one the manual opens as F1 does. */
+  openHelpTab(topic?: string): string {
+    const wanted = helpTopicParam(topic)
     // F1 again, or the Help menu while the manual is already open, focuses it
     // instead of stacking a second copy: the tab is closable (only Home is
     // not), so "press F1 again" is an ordinary thing to do
     const existing = this.tabs.find((t) => t.kind === 'help')
     if (existing) {
+      // a link to one topic has to land on it even when the manual was open
+      // on another; reloading at the topic is the whole navigation
+      if (wanted && existing.view) void existing.view.webContents.loadURL(helpViewUrl(wanted))
       this.activateTab(existing.id)
       return existing.id
     }
-    const view = createHelpView()
+    const view = createHelpView(wanted)
     const id = `t${this.nextId++}`
     this.shellWindow.contentView.addChildView(view)
     view.setVisible(false)
@@ -1523,7 +1528,7 @@ export function canonicalPath(path: string | undefined): string | undefined {
 /** The manual shares the shell's renderer bundle and preload: the view is just
     the shell renderer at ?mode=help. Dev serves it from the dev server, the
     packaged app from the `help` scheme root registered in shell main. */
-function createHelpView(): WebContentsView {
+function createHelpView(topic?: string): WebContentsView {
   const view = new WebContentsView({
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
@@ -1538,8 +1543,19 @@ function createHelpView(): WebContentsView {
     if (target) void shell.openExternal(target)
     return { action: 'deny' }
   })
-  void view.webContents.loadURL(
-    rendererUrl(process.env.ELECTRON_RENDERER_URL, 'help', { mode: 'help' }),
-  )
+  void view.webContents.loadURL(helpViewUrl(topic))
   return view
+}
+
+/** A topic id the manual's URL may carry: the registry's id shape, nothing else */
+export function helpTopicParam(topic: unknown): string | undefined {
+  return typeof topic === 'string' && /^[a-z0-9-]{1,64}$/.test(topic) ? topic : undefined
+}
+
+/** The manual's URL, at one topic when given (the help screen reads `topic`) */
+export function helpViewUrl(topic?: string): string {
+  const query: Record<string, string> = { mode: 'help' }
+  const wanted = helpTopicParam(topic)
+  if (wanted) query.topic = wanted
+  return rendererUrl(process.env.ELECTRON_RENDERER_URL, 'help', query)
 }

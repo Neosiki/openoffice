@@ -73,7 +73,7 @@ export const es = {
   usageWindowSevenDay: 'Límite de 7 días',
   noticeTitle: 'Antes de usar la IA con tu suscripción',
   noticeSend:
-    'El contenido del documento y tu conversación se envían a Anthropic u OpenAI con tu propia cuenta.',
+    'El contenido del documento y tu conversación se envían a Anthropic u OpenAI con tu propia cuenta. También se envían las habilidades que se usan y los archivos de habilidad que lee la IA.',
   noticeTraining:
     'Que ese contenido se use para entrenar IA depende de los ajustes de tu propia cuenta en esa empresa.',
   noticeCodexHistory:

@@ -371,7 +371,7 @@ describe('Settings → Skills screen', () => {
     const help = host.querySelector('[data-help-topic="skills"]')
     expect(help).toBeTruthy()
     await click(help)
-    expect(window.aiOffice.openHelp).toHaveBeenCalled()
+    expect(window.aiOffice.openHelp).toHaveBeenCalledWith('skills')
   })
 
   it('shows groups in order with plain source labels and builtin titles in the UI language', async () => {

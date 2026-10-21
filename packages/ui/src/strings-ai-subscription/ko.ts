@@ -64,7 +64,8 @@ export const ko = {
   usageWindowFiveHour: '5시간 한도',
   usageWindowSevenDay: '7일 한도',
   noticeTitle: '구독으로 AI를 쓰기 전에',
-  noticeSend: '문서 내용과 대화는 사용자 본인 계정으로 Anthropic 또는 OpenAI에 전송됩니다.',
+  noticeSend:
+    '문서 내용과 대화는 사용자 본인 계정으로 Anthropic 또는 OpenAI에 전송됩니다. 쓰는 스킬의 글과 AI가 읽은 스킬 파일도 함께 전송됩니다.',
   noticeTraining: '그 내용이 AI 학습에 쓰이는지는 해당 회사의 사용자 계정 설정에 따라 정해집니다.',
   noticeCodexHistory:
     '이 앱은 Codex의 대화 기록 저장을 꺼 둡니다. 다만 Codex가 자체 진단 로그를 이 PC에 남길 수 있습니다.',

@@ -75,7 +75,11 @@ vi.mock('electron', () => ({
     webContents = {
       id: 900001,
       setWindowOpenHandler: () => ({ action: 'deny' as const }),
-      loadURL: () => Promise.resolve(),
+      // every URL the manual's view loads, for the help-topic tests
+      loadURL: (url: string) => {
+        ;(globalThis as { __helpLoads?: string[] }).__helpLoads?.push(url)
+        return Promise.resolve()
+      },
       focus: () => {},
       on: () => {},
       once: () => {},
@@ -194,7 +198,7 @@ vi.mock('../../hwp/src/main/hwp-main', () => ({
   requestHwpClose: (...args: unknown[]) => requestHwpClose(...(args as [])),
 }))
 
-import { TabManager } from '../src/main/tab-manager'
+import { helpTopicParam, helpViewUrl, TabManager } from '../src/main/tab-manager'
 import type { TabKind } from '../src/shared/tabs-api'
 
 const TAB_STRIP_HEIGHT = 40
@@ -282,6 +286,34 @@ describe('opening tabs', () => {
     manager.openHelpTab()
     expect(manager.list().find((t) => t.id === helpId)?.active).toBe(true)
     expect(manager.list().find((t) => t.id === docsId)?.active).toBe(false)
+  })
+
+  it('opens the manual at a topic, and moves an open manual to it', () => {
+    const loads: string[] = []
+    ;(globalThis as { __helpLoads?: string[] }).__helpLoads = loads
+    try {
+      const first = manager.openHelpTab('skills')
+      expect(new URL(loads[0]!).searchParams.get('topic')).toBe('skills')
+      expect(new URL(loads[0]!).searchParams.get('mode')).toBe('help')
+      // F1 on the open manual leaves it where the reader is
+      manager.openHelpTab()
+      expect(loads).toHaveLength(1)
+      // a link to another topic reloads the same tab there, not a second tab
+      expect(manager.openHelpTab('agent-mode')).toBe(first)
+      expect(new URL(loads[1]!).searchParams.get('topic')).toBe('agent-mode')
+      expect(manager.list().filter((t) => t.kind === 'help')).toHaveLength(1)
+    } finally {
+      delete (globalThis as { __helpLoads?: string[] }).__helpLoads
+    }
+  })
+
+  it('keeps only an id-shaped help topic in the manual URL', () => {
+    expect(helpTopicParam('skills')).toBe('skills')
+    expect(helpTopicParam('../x')).toBeUndefined()
+    expect(helpTopicParam('Skills')).toBeUndefined()
+    expect(helpTopicParam(42)).toBeUndefined()
+    expect(new URL(helpViewUrl('a&b=c')).searchParams.has('topic')).toBe(false)
+    expect(new URL(helpViewUrl()).searchParams.get('mode')).toBe('help')
   })
 
   it('opens a fresh help tab once the previous one was closed', () => {

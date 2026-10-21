@@ -57,7 +57,8 @@ export const zh = {
   usageWindowFiveHour: '5 小时额度',
   usageWindowSevenDay: '7 天额度',
   noticeTitle: '使用订阅运行 AI 之前',
-  noticeSend: '文档内容和对话会以你本人的账户发送给 Anthropic 或 OpenAI。',
+  noticeSend:
+    '文档内容和对话会以你本人的账户发送给 Anthropic 或 OpenAI。使用的技能内容和 AI 读取的技能文件也会一并发送。',
   noticeTraining: '这些内容是否用于 AI 训练，取决于你在该公司账户中的设置。',
   noticeCodexHistory:
     '本应用会关闭 Codex 的对话历史保存，但 Codex 仍可能在这台电脑上保留自己的诊断日志。',

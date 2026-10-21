@@ -4838,8 +4838,9 @@ function registerHomeIpc(): void {
     }
   })
 
-  ipcMain.handle(HOME_CHANNELS.openHelp, () => {
-    tabManager?.openHelpTab()
+  ipcMain.handle(HOME_CHANNELS.openHelp, (_event, topic: unknown) => {
+    // the tab manager keeps only an id-shaped topic; anything else opens as F1
+    tabManager?.openHelpTab(typeof topic === 'string' ? topic : undefined)
   })
   ipcMain.handle(HOME_CHANNELS.getLanguage, (): Lang => currentLang())
 

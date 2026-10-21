@@ -233,7 +233,7 @@ export function SkillsPane() {
   }
 
   const openHelp = () => {
-    void window.aiOffice?.openHelp?.()
+    void window.aiOffice?.openHelp?.(SKILLS_HELP_TOPIC)
   }
 
   const groups = views ? groupSkills(views, query, lang) : []
