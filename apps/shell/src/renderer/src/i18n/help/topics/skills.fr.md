@@ -15,7 +15,7 @@ Une compétence est un ensemble d’instructions de travail pour l’IA. Notez u
 | **Dossier des compétences Codex**  | Les compétences de `~/.agents/skills`                                     | Désactivées |
 
 - L’interrupteur active ou désactive une compétence. Le même réglage s’applique au panneau IA de chaque éditeur, à Ask AI dans l’accueil et à la fenêtre de l’agent.
-- Pour une compétence activée, choisissez **L’AI décide** ou **Seulement sur appel**. Au départ, c’est L’AI décide. Avec Seulement sur appel, la compétence n’est utilisée que lorsque vous l’appelez vous-même.
+- Pour une compétence activée, choisissez **L’IA décide** ou **Seulement sur appel**. Au départ, c’est L’IA décide. Avec Seulement sur appel, la compétence n’est utilisée que lorsque vous l’appelez vous-même.
 - Des compétences de provenances différentes peuvent porter le même nom. L’étiquette de provenance de chaque ligne permet de les distinguer.
 - Le menu d’options contient **Voir le contenu**, **Modifier** (mes compétences uniquement), **Exporter (zip)** (mes compétences uniquement) et **Ouvrir le dossier**.
 - **Mettre à la corbeille** déplace une de mes compétences dans la corbeille du système, d’où vous pouvez la restaurer.
@@ -30,7 +30,7 @@ Une compétence est un ensemble d’instructions de travail pour l’IA. Notez u
 3. Vérifiez les compétences trouvées dans l’aperçu. Il indique le nombre et la taille des fichiers, la présence éventuelle de scripts, les adresses web citées dans le texte et le fichier de licence.
 4. Cochez uniquement les compétences à installer et cliquez sur **Installer**. Les compétences installées sont activées d’emblée.
 
-Sous l’aperçu figure toujours ce message : « N’installez que des compétences provenant de sources de confiance. Une compétence donne des instructions à l’AI et, dans la fenêtre de l’agent, elle peut exécuter des scripts. » Lisez une compétence d’origine inconnue avant de l’installer.
+Sous l’aperçu figure toujours ce message : « N’installez que des compétences provenant de sources de confiance. Une compétence donne des instructions à l’IA et, dans la fenêtre de l’agent, elle peut exécuter des scripts. » Lisez une compétence d’origine inconnue avant de l’installer.
 
 - Si mes compétences en contient déjà une du même nom, choisissez **Remplacer** ou **Ignorer** sur cette ligne.
 - Pour télécharger depuis GitHub, GenOffice se connecte uniquement à `github.com`, `api.github.com` et `codeload.github.com`, et n’envoie aucune donnée de connexion. Si l’archive est trop volumineuse ou échoue aux contrôles de sécurité, rien n’est installé.
@@ -41,7 +41,7 @@ Sous l’aperçu figure toujours ce message : « N’installez que des compéten
 - Pour une compétence installée depuis GitHub, **Rechercher des mises à jour** dans le menu d’options vérifie s’il y a du nouveau contenu. GitHub n’est contacté que lorsque vous cliquez dessus.
 - Si rien n’a changé, le message « À jour » s’affiche. Sinon, examinez les fichiers modifiés et l’aperçu, puis cliquez sur **Mettre à jour**.
 - Si vous avez vous-même modifié la compétence après l’avoir installée, « Vos propres modifications seront perdues » s’affiche aussi.
-- La mise à jour conserve l’état activé ou désactivé de la compétence ainsi que le choix L’AI décide / Seulement sur appel.
+- La mise à jour conserve l’état activé ou désactivé de la compétence ainsi que le choix L’IA décide / Seulement sur appel.
 
 ## Appeler une compétence dans le panneau IA
 
@@ -58,7 +58,7 @@ Sous l’aperçu figure toujours ce message : « N’installez que des compéten
 
 ## Les compétences que l’IA utilise d’elle-même
 
-- Pour les compétences activées et réglées sur L’AI décide, les titres et les descriptions sont fournis à l’IA sous forme de liste. Quand l’une d’elles convient à la demande, l’IA en prend le contenu et l’utilise.
+- Pour les compétences activées et réglées sur L’IA décide, les titres et les descriptions sont fournis à l’IA sous forme de liste. Quand l’une d’elles convient à la demande, l’IA en prend le contenu et l’utilise.
 - Quand l’IA utilise une compétence, la conversation affiche « Compétence 〈titre〉 utilisée ».
 - L’IA décide d’après la description si elle utilise une compétence. Une description qui précise dans quels cas la compétence doit servir l’aide à bien choisir.
 

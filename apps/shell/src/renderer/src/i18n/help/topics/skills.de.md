@@ -15,7 +15,7 @@ Ein Skill ist eine Arbeitsanleitung für die KI. Schreiben Sie einmal auf, was S
 | **Codex-Skills-Ordner**  | Die Skills in `~/.agents/skills`                                         | Aus     |
 
 - Der Schalter schaltet einen Skill ein oder aus. Dieselbe Einstellung gilt für den KI-Bereich jedes Editors, für Ask AI auf der Startseite und für das Agentenfenster.
-- Wählen Sie für einen eingeschalteten Skill **AI entscheidet** oder **Nur auf Aufruf**. Anfangs ist AI entscheidet eingestellt. Bei Nur auf Aufruf wird der Skill nur verwendet, wenn Sie ihn selbst aufrufen.
+- Wählen Sie für einen eingeschalteten Skill **KI entscheidet** oder **Nur auf Aufruf**. Anfangs ist KI entscheidet eingestellt. Bei Nur auf Aufruf wird der Skill nur verwendet, wenn Sie ihn selbst aufrufen.
 - Skills aus verschiedenen Quellen können denselben Namen tragen. Die Herkunftsangabe in jeder Zeile unterscheidet sie.
 - Das Mehr-Menü enthält **Inhalt ansehen**, **Bearbeiten** (nur meine Skills), **Exportieren (zip)** (nur meine Skills) und **Ordner öffnen**.
 - **In den Papierkorb** verschiebt einen meiner Skills in den Papierkorb des Systems, wo Sie ihn wiederherstellen können.
@@ -30,7 +30,7 @@ Ein Skill ist eine Arbeitsanleitung für die KI. Schreiben Sie einmal auf, was S
 3. Prüfen Sie die gefundenen Skills in der Vorschau. Sie zeigt Anzahl und Größe der Dateien, ob Skripte enthalten sind, die Webadressen im Text und die Lizenzdatei.
 4. Haken Sie nur die Skills an, die installiert werden sollen, und klicken Sie auf **Installieren**. Installierte Skills sind sofort eingeschaltet.
 
-Unter der Vorschau steht immer: „Installieren Sie Skills nur aus Quellen, denen Sie vertrauen. Ein Skill gibt der AI Anweisungen und kann im Agent-Fenster Skripte ausführen.“ Lesen Sie einen Skill aus unbekannter Quelle, bevor Sie ihn installieren.
+Unter der Vorschau steht immer: „Installieren Sie Skills nur aus Quellen, denen Sie vertrauen. Ein Skill gibt der KI Anweisungen und kann im Agent-Fenster Skripte ausführen.“ Lesen Sie einen Skill aus unbekannter Quelle, bevor Sie ihn installieren.
 
 - Gibt es unter meinen Skills schon einen mit demselben Namen, wählen Sie in dieser Zeile **Ersetzen** oder **Überspringen**.
 - Beim Herunterladen von GitHub verbindet sich GenOffice nur mit `github.com`, `api.github.com` und `codeload.github.com` und sendet keine Anmeldedaten. Ist das Archiv zu groß oder besteht es die Sicherheitsprüfungen nicht, wird nichts installiert.
@@ -41,7 +41,7 @@ Unter der Vorschau steht immer: „Installieren Sie Skills nur aus Quellen, dene
 - Bei einem von GitHub installierten Skill sucht **Nach Updates suchen** im Mehr-Menü nach neuen Inhalten. GitHub wird nur kontaktiert, wenn Sie darauf klicken.
 - Hat sich nichts geändert, erscheint „Aktuell“. Hat sich etwas geändert, prüfen Sie die geänderten Dateien und die Vorschau und klicken dann auf **Aktualisieren**.
 - Haben Sie den Skill nach der Installation selbst bearbeitet, erscheint zusätzlich „Ihre eigenen Änderungen gehen verloren“.
-- Beim Aktualisieren bleiben der Ein/Aus-Zustand des Skills und die Wahl zwischen AI entscheidet und Nur auf Aufruf erhalten.
+- Beim Aktualisieren bleiben der Ein/Aus-Zustand des Skills und die Wahl zwischen KI entscheidet und Nur auf Aufruf erhalten.
 
 ## Einen Skill im KI-Bereich aufrufen
 
@@ -58,7 +58,7 @@ Unter der Vorschau steht immer: „Installieren Sie Skills nur aus Quellen, dene
 
 ## Skills, die die KI von selbst nutzt
 
-- Für eingeschaltete Skills mit AI entscheidet erhält die KI Titel und Beschreibungen als Liste. Passt einer zur Anfrage, holt sich die KI dessen Inhalt und nutzt ihn.
+- Für eingeschaltete Skills mit KI entscheidet erhält die KI Titel und Beschreibungen als Liste. Passt einer zur Anfrage, holt sich die KI dessen Inhalt und nutzt ihn.
 - Wenn die KI einen Skill nutzt, steht im Chat „Skill 〈Titel〉 verwendet“.
 - Ob sie einen Skill nutzt, entscheidet die KI anhand der Beschreibung. Eine Beschreibung, die sagt, wofür der Skill gedacht ist, hilft ihr bei der Wahl.
 

@@ -52,9 +52,9 @@ Onder het voorbeeld staat altijd: "Installeer alleen vaardigheden uit bronnen di
 
 - In het AI-paneel van Excel opent `$` de lijst alleen helemaal aan het begin van het invoervak, zodat het celadressen zoals `$A$1` niet in de weg zit.
 - Je kunt meerdere chips toevoegen en er een weghalen met ×. Esc sluit alleen de lijst; een lopende AI-taak stopt er niet door.
-- **Skills beheren…** onderaan de lijst opent **Instellingen ▸ Vaardigheden**.
+- **Vaardigheden beheren…** onderaan de lijst opent **Instellingen ▸ Vaardigheden**.
 - Chips blijven bij het verstuurde bericht en in het opgeslagen gesprek staan. Open je een gesprek opnieuw en verstuur je weer, dan wordt de huidige inhoud van de vaardigheid opnieuw gelezen. Een vaardigheid die intussen verwijderd of uitgezet is, staat op de chip als "Niet beschikbaar".
-- Is de tekst van de mee te sturen vaardigheden te lang, dan verschijnt "De skills zijn te groot om mee te sturen" en wordt er niets verstuurd.
+- Is de tekst van de mee te sturen vaardigheden te lang, dan verschijnt "De vaardigheden zijn te groot om mee te sturen" en wordt er niets verstuurd.
 
 ## Vaardigheden die de AI zelf gebruikt
 
@@ -90,7 +90,7 @@ Maak je een vaardigheid in het AI-paneel van een editor, dan kan het huidige doc
 ## Vaardigheden met scripts
 
 - In het gewone AI-paneel en in Ask AI op Start worden de scripts van een vaardigheid nooit uitgevoerd. Alleen de tekst van de vaardigheid bereikt de AI.
-- Een vaardigheid met scripts toont **Met scripts · werkt volledig in het agentvenster**, en als je hem als chip toevoegt verschijnt "De scripts van deze skill worden niet uitgevoerd in het gewone AI-paneel". Versturen wordt niet geblokkeerd.
+- Een vaardigheid met scripts toont **Met scripts · werkt volledig in het agentvenster**, en als je hem als chip toevoegt verschijnt "De scripts van deze vaardigheid worden niet uitgevoerd in het gewone AI-paneel". Versturen wordt niet geblokkeerd.
 - Wil je de scripts ook gebruiken, roep de vaardigheid dan aan in het agentvenster. Zie [Agentmodus](help://agent-mode).
 
 ## Ingebouwde vaardigheden
@@ -101,9 +101,9 @@ Maak je een vaardigheid in het AI-paneel van een editor, dan kan het huidige doc
 | **Mededelingen, nieuwsbrieven en veelgestelde vragen** | Schrijft mededelingen, nieuwsbrieven, voortgangsrapporten, veelgestelde vragen en andere interne berichten |
 | **AI-toon verwijderen**                                | Zoekt in Engelse tekst formuleringen die naar AI klinken en maakt ze natuurlijk                            |
 | **Tekst redigeren**                                    | Loopt een Engelse tekst die je hebt geschreven na en maakt hem duidelijker en bondiger                     |
-| **Skills zoeken**                                      | Zoekt in het agentvenster de vaardigheden die je nodig hebt en stelt voor ze te installeren                |
+| **Vaardigheden zoeken**                                | Zoekt in het agentvenster de vaardigheden die je nodig hebt en stelt voor ze te installeren                |
 
-AI-toon verwijderen en Tekst redigeren zijn gemaakt voor Engelse tekst. Skills zoeken werkt alleen in het agentvenster.
+AI-toon verwijderen en Tekst redigeren zijn gemaakt voor Engelse tekst. Vaardigheden zoeken werkt alleen in het agentvenster.
 
 ## In het agentvenster
 

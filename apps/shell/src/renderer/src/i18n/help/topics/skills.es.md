@@ -15,7 +15,7 @@ Una habilidad es un conjunto de instrucciones de trabajo para la IA. Anote una s
 | **Carpeta de habilidades de Codex**  | Las habilidades de `~/.agents/skills`                            | Desactivadas |
 
 - El interruptor activa o desactiva una habilidad. El mismo ajuste vale para el panel de IA de todos los editores, para Ask AI en Inicio y para la ventana del agente.
-- Para una habilidad activada, elija **Decide la AI** o **Solo cuando se llama**. Al principio está en Decide la AI. Con Solo cuando se llama, la habilidad solo se usa cuando usted mismo la llama.
+- Para una habilidad activada, elija **Decide la IA** o **Solo cuando se llama**. Al principio está en Decide la IA. Con Solo cuando se llama, la habilidad solo se usa cuando usted mismo la llama.
 - Habilidades de orígenes distintos pueden tener el mismo nombre. La etiqueta de origen de cada fila las distingue.
 - El menú de más opciones tiene **Ver contenido**, **Editar** (solo mis habilidades), **Exportar (zip)** (solo mis habilidades) y **Abrir carpeta**.
 - **Mover a la papelera** lleva una de mis habilidades a la papelera del sistema, desde donde puede restaurarla.
@@ -30,7 +30,7 @@ Una habilidad es un conjunto de instrucciones de trabajo para la IA. Anote una s
 3. Revise en la vista previa las habilidades encontradas. Muestra el número y el tamaño de los archivos, si hay scripts, las direcciones web que aparecen en el texto y el archivo de licencia.
 4. Marque solo las habilidades que quiera instalar y haga clic en **Instalar**. Las habilidades instaladas quedan activadas desde el principio.
 
-Debajo de la vista previa siempre se lee: «Instala habilidades solo de fuentes de confianza. Una habilidad da instrucciones a la AI y, en la ventana del agente, puede ejecutar scripts.» Lea una habilidad de origen desconocido antes de instalarla.
+Debajo de la vista previa siempre se lee: «Instala habilidades solo de fuentes de confianza. Una habilidad da instrucciones a la IA y, en la ventana del agente, puede ejecutar scripts.» Lea una habilidad de origen desconocido antes de instalarla.
 
 - Si mis habilidades ya tiene una con el mismo nombre, elija **Reemplazar** u **Omitir** en esa fila.
 - Al descargar desde GitHub, GenOffice solo se conecta a `github.com`, `api.github.com` y `codeload.github.com`, y no envía ningún dato de inicio de sesión. Si el archivo comprimido es demasiado grande o no supera las comprobaciones de seguridad, no se instala nada.
@@ -41,7 +41,7 @@ Debajo de la vista previa siempre se lee: «Instala habilidades solo de fuentes 
 - En una habilidad instalada desde GitHub, **Buscar actualizaciones** en el menú de más opciones comprueba si hay contenido nuevo. Solo se contacta con GitHub cuando usted hace clic.
 - Si no ha cambiado nada, aparece «Está al día». Si algo cambió, revise los archivos cambiados y la vista previa, y haga clic en **Actualizar**.
 - Si usted editó la habilidad después de instalarla, también aparece «Se perderán tus propios cambios».
-- Al actualizar se conservan el estado activado o desactivado de la habilidad y la elección entre Decide la AI y Solo cuando se llama.
+- Al actualizar se conservan el estado activado o desactivado de la habilidad y la elección entre Decide la IA y Solo cuando se llama.
 
 ## Llamar a una habilidad en el panel de IA
 
@@ -58,7 +58,7 @@ Debajo de la vista previa siempre se lee: «Instala habilidades solo de fuentes 
 
 ## Habilidades que la IA usa por su cuenta
 
-- De las habilidades activadas y configuradas con Decide la AI, la IA recibe los títulos y las descripciones en forma de lista. Cuando una encaja con la solicitud, la IA toma su contenido y la usa.
+- De las habilidades activadas y configuradas con Decide la IA, la IA recibe los títulos y las descripciones en forma de lista. Cuando una encaja con la solicitud, la IA toma su contenido y la usa.
 - Cuando la IA usa una habilidad, el chat dice «Se usó la habilidad 〈título〉».
 - La IA decide a partir de la descripción si usa una habilidad. Una descripción que diga en qué casos debe usarse la habilidad le ayuda a elegir bien.
 
