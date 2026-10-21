@@ -1,6 +1,6 @@
 {
   "name": "@rhwp/core",
-  "version": "0.8.7-ieum.1",
+  "version": "0.8.7-ieum.2",
   "description": "rhwp v0.8.7 HWP/HWPX engine (WebAssembly) rebuilt with the layout patches in ./patches",
   "private": true,
   "type": "module",
@@ -21,9 +21,14 @@
     "patches": [
       "0001-host-inline-table-clears-paper-square-table.patch",
       "0002-paragraph-picture-after-stored-page-reset.patch",
-      "0003-footnote-area-below-body-flow.patch"
+      "0003-footnote-area-below-body-flow.patch",
+      "0004-page-start-below-title-table.patch",
+      "0005-stored-restart-opens-next-page.patch",
+      "0006-footnote-height-for-unpaginated-ladder.patch",
+      "0007-merge-title-host-anchor-line.patch",
+      "0008-title-host-line-occupies-flow.patch"
     ],
     "wasmPack": "0.15.0",
-    "wasmSha256": "c2b27689f21d279c5358c817498c31ce23fe8fa28faf2c264a78f87ccb1677ef"
+    "wasmSha256": "b9952a82f745fc402a108ecada1a6b928af982078495ce367c0423cb1714a959"
   }
 }

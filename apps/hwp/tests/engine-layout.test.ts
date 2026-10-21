@@ -2,7 +2,8 @@
  * The patched rhwp engine in vendor/rhwp-core (decision 0045), run in node like
  * the editor runs it. Each case is a public reproduction saved by Hangul 2024
  * (its text replaced by filler): the page layout must keep the relations Hangul
- * draws, not pixel positions.
+ * draws, not pixel positions. The title-table-then-inline-table case is the
+ * first reproduction with its inline table moved into the next paragraph.
  */
 import { createHash } from 'node:crypto'
 import { readFileSync } from 'node:fs'
@@ -105,6 +106,29 @@ describe('vendored rhwp engine', () => {
     expect(separator).toBeDefined()
     expect(bottoms.length).toBeGreaterThan(0)
     for (const bottom of bottoms) expect(bottom).toBeLessThanOrEqual(separator! + 0.5)
+  })
+
+  it('starts a page below its title table when the first stored line says so', () => {
+    // The page opens with a paragraph that holds only the paper-anchored Square
+    // title table. Its stored line starts at the title's outer bottom and the
+    // next paragraph's treat-as-char table one line lower; Hangul draws both
+    // there instead of at the body top, where the table covered the title.
+    const doc = open('title-table-then-inline-table.hwpx')
+    expect(doc.pageCount()).toBe(1)
+    const page = boxes(doc, 0)
+    const square = page.find((b) => b.type === 'Table' && b.pi === 0)
+    const inline = page.find((b) => b.type === 'Table' && b.pi === 1)
+    expect(square).toBeDefined()
+    expect(inline).toBeDefined()
+    // the title's outer bottom margin (4251) plus the host's stored line (1600), in HWPUNIT
+    expect(inline!.top).toBeCloseTo(square!.bottom + ((4251 + 1600) * 96) / 7200, 0)
+
+    const after = page.filter((b) => b.pi > 1).sort((a, b) => a.top - b.top)
+    expect(after.length).toBeGreaterThan(0)
+    for (const box of after) expect(box.top).toBeGreaterThanOrEqual(inline!.bottom - 0.5)
+    for (let i = 1; i < after.length; i++) {
+      expect(after[i].top).toBeGreaterThanOrEqual(after[i - 1].bottom - 0.5)
+    }
   })
 
   it('moves a picture after a stored page reset to the next page with its lines', () => {
