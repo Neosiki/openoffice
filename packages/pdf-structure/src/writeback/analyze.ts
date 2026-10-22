@@ -48,6 +48,19 @@ const MAX_UPRIGHT_ANGLE = 0.15
 
 const normalizeAngle = (a: number): number => a - 2 * Math.PI * Math.round(a / (2 * Math.PI))
 
+/**
+ * Vertical scale of a char's matrix: FPDFText_GetFontSize reports the
+ * nominal `Tf` size, and the text and graphics matrices scale it into page
+ * space (`1 Tf` under a 12× text matrix is 12pt; browsers print 16 × 0.75).
+ * pdf2docx measures sizes the same way.
+ */
+function charScale(m: WritebackPdfium, textPage: number, index: number, mx: number): number {
+  if (!m._FPDFText_GetMatrix(textPage, index, mx)) return 1
+  const base = mx >> 2
+  const s = Math.hypot(m.HEAPF32[base + 2]!, m.HEAPF32[base + 3]!)
+  return s > 0 ? s : 1
+}
+
 /** text objects of a page with their text, geometry and paint */
 export function readTextObjects(
   m: WritebackPdfium,
@@ -73,7 +86,9 @@ export function readTextObjects(
   if (textPage) {
     try {
       const n = m._FPDFText_CountChars(textPage)
-      withAlloc(m, 16, (p) => {
+      // two doubles (char origin), then six floats (char matrix)
+      withAlloc(m, 40, (p) => {
+        const mx = p + 16
         for (let i = 0; i < n; i++) {
           const obj = m._FPDFText_GetTextObject(textPage, i)
           if (!obj) continue
@@ -92,7 +107,7 @@ export function readTextObjects(
           }
           a.chars.push(String.fromCodePoint(cp))
           if (cp > 0x20) {
-            a.sizes.push(m._FPDFText_GetFontSize(textPage, i))
+            a.sizes.push(m._FPDFText_GetFontSize(textPage, i) * charScale(m, textPage, i, mx))
             a.origins.push(origin)
             const angle = normalizeAngle(m._FPDFText_GetCharAngle(textPage, i) + frame.angleDelta)
             if (Math.abs(angle) > MAX_UPRIGHT_ANGLE) a.turned++

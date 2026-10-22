@@ -168,6 +168,32 @@ async function buildSource(): Promise<Uint8Array> {
   return doc.save()
 }
 
+/**
+ * PARA at an effective 12pt, written as `tf Tf` under a `scale` text matrix
+ * inside a `ctm` graphics matrix (1 Tf × 12, browser print 16 × 0.75, …)
+ */
+async function buildScaledSource(tf: number, scale: number, ctm: number): Promise<Uint8Array> {
+  const { PDFDocument, PDFNumber, PDFOperator, PDFString, StandardFonts } = await import('pdf-lib')
+  const doc = await PDFDocument.create()
+  const page = doc.addPage([612, 792])
+  const font = await doc.embedFont(StandardFonts.Helvetica)
+  const key = page.node.newFontDictionary('F1', font.ref)
+  const num = (n: number) => PDFNumber.of(n)
+  const op = (name: string, ...args: unknown[]) => PDFOperator.of(name as never, args as never)
+  page.pushOperators(op('q'), op('cm', num(ctm), num(0), num(0), num(ctm), num(0), num(0)))
+  PARA.forEach((t, i) => {
+    page.pushOperators(
+      op('BT'),
+      op('Tf', key, num(tf)),
+      op('Tm', num(scale), num(0), num(0), num(scale), num(72 / ctm), num((680 - i * 15) / ctm)),
+      op('Tj', PDFString.of(t)),
+      op('ET'),
+    )
+  })
+  page.pushOperators(op('Q'))
+  return doc.save()
+}
+
 /** a Korean source page drawn with the Korean face (for the Latin target) */
 function buildKoreanSource(pdfium: PdfiumModule, font: Buffer): Uint8Array {
   return buildCjkLines(pdfium, font, [
@@ -508,6 +534,25 @@ describe('writing a translation into the PDF', () => {
     expect(squash(res.text)).toContain(squash(KO.long))
     const written = res.sizes.filter((s) => s < 11.9)
     expect(Math.min(...written)).toBeCloseTo(12 * MIN_FONT_SCALE, 1)
+  })
+
+  it.each([
+    ['a plain 12 Tf', 12, 1, 1],
+    ['1 Tf under a 12× text matrix', 1, 12, 1],
+    ['16 Tf under a 0.75 text matrix (browser print)', 16, 0.75, 1],
+    ['6 Tf inside a 2× graphics matrix', 6, 1, 2],
+  ])('reads the source size through the matrices: %s', async (_, tf, scale, ctm) => {
+    const m = await loadPdfium()
+    const pdf = await buildScaledSource(tf, scale, ctm)
+    const { tree } = await extractDocumentTree(pdf, { pdfium: m })
+    const translated = translate(tree, 'en', { 'quick brown fox': 'A short translation.' })
+    const { pdf: out, report } = await run(pdf, tree, translated, { fontLocator: latinLocator })
+    expect(report.translated).toBe(1)
+    const res = census(m, out)
+    expect(flat(res.text)).toContain('A short translation.')
+    expect(res.text).not.toContain('quick brown')
+    // written at the size the reader sees, not the nominal Tf
+    for (const s of res.sizes) expect(s).toBeCloseTo(12, 1)
   })
 
   it('keeps a block in its source text when no installed font draws the translation', async () => {
