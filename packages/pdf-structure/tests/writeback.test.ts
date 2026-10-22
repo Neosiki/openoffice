@@ -112,7 +112,9 @@ function syntheticFont(chars: string): Buffer {
 const KO = {
   heading: '연례 보고서',
   body: '빠른 갈색 여우가 강둑 근처에서 게으른 개를 뛰어넘습니다.',
-  long: '이 문단은 원문보다 훨씬 길게 번역되어 상자 안에 다 들어가지 않습니다. '.repeat(12),
+  // overflows even at the floor size in the synthetic face, whose Latin
+  // stand-in glyphs run about half as wide as a real Korean face's
+  long: '이 문단은 원문보다 훨씬 길게 번역되어 상자 안에 다 들어가지 않습니다. '.repeat(40),
   scanHead: '스캔한 제목',
   scanBody: '스캔한 문단의 번역입니다',
   // drawn by the Korean-source and table tests; listed here so the test face covers them
