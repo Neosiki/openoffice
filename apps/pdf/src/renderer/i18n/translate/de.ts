@@ -13,7 +13,7 @@ export const de = {
   trFormatMd: 'Übersetztes Markdown',
   trFormatEpub: 'Übersetztes EPUB',
   trBilingual:
-    'Zweisprachig: auf jeden Absatz des Originals folgt seine Übersetzung (nur Markdown und EPUB)',
+    'Zweisprachig: in Markdown und EPUB folgt auf jeden Absatz des Originals seine Übersetzung, im PDF steht jede übersetzte Seite neben ihrer Originalseite',
   trPdfEncrypted:
     'Dieses Dokument ist verschlüsselt, daher kann kein übersetztes PDF hineingeschrieben werden. Markdown und EPUB sind weiterhin möglich.',
   trPdfScript:

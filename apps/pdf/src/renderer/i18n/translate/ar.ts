@@ -11,7 +11,8 @@ export const ar = {
   trFormatPdf: 'PDF مترجم',
   trFormatMd: 'Markdown مترجم',
   trFormatEpub: 'EPUB مترجم',
-  trBilingual: 'ثنائي اللغة: تأتي الترجمة بعد كل فقرة أصلية (Markdown وEPUB فقط)',
+  trBilingual:
+    'ثنائي اللغة: في Markdown وEPUB تأتي الترجمة بعد كل فقرة أصلية، وفي PDF توضع كل صفحة مترجمة بجانب صفحتها الأصلية',
   trPdfEncrypted:
     'هذا المستند مشفّر، لذلك لا يمكن كتابة ترجمة PDF فيه. ما زال Markdown وEPUB متاحين.',
   trPdfScript:

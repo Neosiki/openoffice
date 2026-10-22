@@ -11,7 +11,8 @@ export const hi = {
   trFormatPdf: 'अनूदित PDF',
   trFormatMd: 'अनूदित Markdown',
   trFormatEpub: 'अनूदित EPUB',
-  trBilingual: 'द्विभाषी: हर मूल अनुच्छेद के बाद उसका अनुवाद (केवल Markdown और EPUB)',
+  trBilingual:
+    'द्विभाषी: Markdown और EPUB में हर मूल अनुच्छेद के बाद उसका अनुवाद आता है, और PDF में हर अनूदित पृष्ठ अपने मूल पृष्ठ के बगल में रहता है',
   trPdfEncrypted:
     'यह दस्तावेज़ एन्क्रिप्टेड है, इसलिए इसमें अनूदित PDF नहीं लिखा जा सकता। Markdown और EPUB अब भी काम करते हैं।',
   trPdfScript:

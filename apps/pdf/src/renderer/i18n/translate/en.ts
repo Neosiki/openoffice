@@ -12,7 +12,7 @@ export const en = {
   trFormatMd: 'Translated Markdown',
   trFormatEpub: 'Translated EPUB',
   trBilingual:
-    'Bilingual: each source paragraph followed by its translation (Markdown and EPUB only)',
+    'Bilingual: Markdown and EPUB put each translation after its source paragraph; the PDF puts each translated page beside its source page',
   trPdfEncrypted:
     'This document is encrypted, so a translated PDF cannot be written into it. Markdown and EPUB still work.',
   trPdfScript:

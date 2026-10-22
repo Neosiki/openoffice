@@ -11,7 +11,8 @@ export const zhTW = {
   trFormatPdf: '翻譯後的 PDF',
   trFormatMd: '翻譯後的 Markdown',
   trFormatEpub: '翻譯後的 EPUB',
-  trBilingual: '雙語對照：每段原文之後接著譯文（僅限 Markdown 與 EPUB）',
+  trBilingual:
+    '雙語對照：Markdown 與 EPUB 在每段原文之後接著譯文，PDF 則把譯好的頁面放在原文頁面旁邊',
   trPdfEncrypted: '此文件已加密，無法寫入翻譯後的 PDF。Markdown 與 EPUB 仍可使用。',
   trPdfScript:
     '無法產生{language}的翻譯 PDF：PDF 寫入元件無法排版這種文字。Markdown 與 EPUB 仍可使用。',

@@ -866,6 +866,78 @@ describe('tables, page joins and rotated pages', () => {
   })
 })
 
+/** sheet size, and the x of the first char of `needle` on the first sheet */
+function sheetOf(m: PdfiumModule, pdf: Uint8Array, needles: string[]) {
+  return withPdfDocument(m, pdf, (d) => {
+    const pg = m._FPDF_LoadPage(d, 0)
+    const tp = m._FPDFText_LoadPage(pg)
+    const n = m._FPDFText_CountChars(tp)
+    let text = ''
+    for (let i = 0; i < n; i++) text += String.fromCodePoint(m._FPDFText_GetUnicode(tp, i))
+    const box = m._malloc(32)
+    const xOf = (needle: string): number => {
+      const at = text.indexOf(needle)
+      if (at < 0) return NaN
+      m._FPDFText_GetCharBox(tp, at, box, box + 8, box + 16, box + 24)
+      return m.HEAPF64[box >> 3]!
+    }
+    const xs = needles.map(xOf)
+    m._free(box)
+    m._FPDFText_ClosePage(tp)
+    const size = { width: m._FPDF_GetPageWidthF(pg), height: m._FPDF_GetPageHeightF(pg) }
+    m._FPDF_ClosePage(pg)
+    return { pages: m._FPDF_GetPageCount(d), size, xs }
+  })
+}
+
+describe('bilingual PDF', () => {
+  it('puts each source page beside its translated page', async () => {
+    const m = await loadPdfium()
+    const pdf = await buildSource()
+    const { tree } = await extractDocumentTree(pdf, { pdfium: m })
+    const translated = translate(tree, 'en', { 'quick brown fox': 'A short translation.' })
+    const { pdf: out, report } = await run(pdf, tree, translated, {
+      fontLocator: latinLocator,
+      bilingual: true,
+    })
+    expect(report.translated).toBe(1)
+    const sheet = sheetOf(m, out, ['quick brown fox', 'A short translation.'])
+    expect(sheet.pages).toBe(1)
+    expect(sheet.size).toEqual({ width: 1224, height: 792 })
+    // the source on the left half, the translation on the right
+    expect(sheet.xs[0]).toBeLessThan(612)
+    expect(sheet.xs[1]).toBeGreaterThan(612)
+  })
+
+  it('shows a turned page as a reader sees it', async () => {
+    const { PDFDocument, StandardFonts, degrees } = await import('pdf-lib')
+    const doc = await PDFDocument.create()
+    const page = doc.addPage([612, 792])
+    page.setRotation(degrees(90))
+    const font = await doc.embedFont(StandardFonts.Helvetica)
+    page.drawText('Rotated page heading text', {
+      x: 112,
+      y: 72,
+      size: 16,
+      font,
+      rotate: degrees(90),
+    })
+    const pdf = await doc.save()
+    const m = await loadPdfium()
+    const { tree } = await extractDocumentTree(pdf, { pdfium: m })
+    const translated = translate(tree, 'en', { 'Rotated page heading': 'Turned heading' })
+    const { pdf: out } = await run(pdf, tree, translated, {
+      fontLocator: latinLocator,
+      bilingual: true,
+    })
+    const sheet = sheetOf(m, out, ['Rotated page', 'Turned heading'])
+    // two landscape pages side by side
+    expect(sheet.size).toEqual({ width: 1584, height: 612 })
+    expect(sheet.xs[0]).toBeLessThan(792)
+    expect(sheet.xs[1]).toBeGreaterThan(792)
+  })
+})
+
 describe('pages the writer cannot edit', () => {
   async function turnedPdf(turned: string, x: number, y: number, size: number) {
     const { PDFDocument, StandardFonts, degrees } = await import('pdf-lib')

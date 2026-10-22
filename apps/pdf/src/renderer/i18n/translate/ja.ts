@@ -11,7 +11,8 @@ export const ja = {
   trFormatPdf: '翻訳 PDF',
   trFormatMd: '翻訳 Markdown',
   trFormatEpub: '翻訳 EPUB',
-  trBilingual: '対訳：原文の段落のあとに訳文を置きます（Markdown・EPUB のみ）',
+  trBilingual:
+    '対訳：Markdown・EPUB では原文の段落のあとに訳文を置き、PDF では原文のページの隣に訳したページを置きます',
   trPdfEncrypted:
     'この文書は暗号化されているため、翻訳 PDF を作成できません。Markdown・EPUB は使えます。',
   trPdfScript:

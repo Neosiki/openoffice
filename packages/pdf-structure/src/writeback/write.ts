@@ -43,6 +43,7 @@ import {
   type TextObjectInfo,
 } from './analyze'
 import { FaceMetrics, checkedFont, createSubsetter, defaultWritebackFontLocator } from './font'
+import { writeBilingualPdf } from './bilingual'
 import { placeBlocks, type PageSpace, type PlanBlock } from './place'
 import {
   FPDF_FILLMODE_ALTERNATE,
@@ -851,7 +852,9 @@ export async function writeTranslatedPdf(
     translated++
   }
 
-  const out = writePages(m, pdf, pages, ops, embedded, o)
+  const written = writePages(m, pdf, pages, ops, embedded, o)
+  checkAbort(o.signal)
+  const out = o.bilingual ? writeBilingualPdf(m, pdf, written) : written
   untranslated.sort((a, b) => a.page - b.page)
   return {
     pdf: out,

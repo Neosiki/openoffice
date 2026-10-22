@@ -12,7 +12,7 @@ export const nl = {
   trFormatMd: 'Vertaalde Markdown',
   trFormatEpub: 'Vertaalde EPUB',
   trBilingual:
-    'Tweetalig: na elke alinea van het origineel volgt de vertaling (alleen Markdown en EPUB)',
+    'Tweetalig: in Markdown en EPUB volgt na elke alinea van het origineel de vertaling; in de pdf staat elke vertaalde pagina naast de originele pagina',
   trPdfEncrypted:
     'Dit document is versleuteld, dus er kan geen vertaalde PDF in worden geschreven. Markdown en EPUB werken wel.',
   trPdfScript:

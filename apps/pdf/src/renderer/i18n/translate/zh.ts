@@ -10,7 +10,8 @@ export const zh = {
   trFormatPdf: '翻译后的 PDF',
   trFormatMd: '翻译后的 Markdown',
   trFormatEpub: '翻译后的 EPUB',
-  trBilingual: '双语对照：每段原文之后紧跟译文（仅限 Markdown 和 EPUB）',
+  trBilingual:
+    '双语对照：Markdown 和 EPUB 在每段原文之后紧跟译文，PDF 则把译好的页面放在原文页面旁边',
   trPdfEncrypted: '该文档已加密，无法写入翻译后的 PDF。Markdown 和 EPUB 仍可使用。',
   trPdfScript:
     '无法生成{language}的翻译 PDF：PDF 写入组件无法排版这种文字。Markdown 和 EPUB 仍可使用。',

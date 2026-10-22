@@ -11,7 +11,8 @@ export const ko = {
   trFormatPdf: '번역 PDF',
   trFormatMd: '번역 Markdown',
   trFormatEpub: '번역 EPUB',
-  trBilingual: '대역: 원문 문단 다음에 번역 문단을 둡니다(Markdown·EPUB만)',
+  trBilingual:
+    '대역: Markdown·EPUB은 원문 문단 다음에 번역 문단을 두고, PDF는 원문 쪽 옆에 번역한 쪽을 둡니다',
   trPdfEncrypted: '암호가 걸린 문서라 번역 PDF를 만들 수 없습니다. Markdown·EPUB은 됩니다.',
   trPdfScript:
     '{language}로는 번역 PDF를 만들 수 없습니다. PDF에 글을 쓰는 부품이 이 문자를 배치하지 못합니다. Markdown·EPUB은 됩니다.',

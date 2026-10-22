@@ -12,7 +12,7 @@ export const cs = {
   trFormatMd: 'Přeložený Markdown',
   trFormatEpub: 'Přeložený EPUB',
   trBilingual:
-    'Dvojjazyčně: za každým odstavcem originálu následuje jeho překlad (jen Markdown a EPUB)',
+    'Dvojjazyčně: v Markdownu a EPUB následuje za každým odstavcem originálu jeho překlad, v PDF stojí každá přeložená stránka vedle originální',
   trPdfEncrypted:
     'Dokument je zašifrovaný, proto do něj nelze zapsat přeložené PDF. Markdown a EPUB fungují dál.',
   trPdfScript:

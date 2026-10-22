@@ -12,7 +12,8 @@ export const id = {
   trFormatPdf: 'PDF terjemahan',
   trFormatMd: 'Markdown terjemahan',
   trFormatEpub: 'EPUB terjemahan',
-  trBilingual: 'Dwibahasa: setiap paragraf asli diikuti terjemahannya (hanya Markdown dan EPUB)',
+  trBilingual:
+    'Dwibahasa: di Markdown dan EPUB setiap paragraf asli diikuti terjemahannya; di PDF setiap halaman terjemahan diletakkan di samping halaman aslinya',
   trPdfEncrypted:
     'Dokumen ini terenkripsi, jadi PDF terjemahan tidak bisa ditulis ke dalamnya. Markdown dan EPUB tetap bisa.',
   trPdfScript:

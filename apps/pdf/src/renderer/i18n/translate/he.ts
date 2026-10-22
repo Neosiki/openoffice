@@ -11,7 +11,8 @@ export const he = {
   trFormatPdf: 'PDF מתורגם',
   trFormatMd: 'Markdown מתורגם',
   trFormatEpub: 'EPUB מתורגם',
-  trBilingual: 'דו-לשוני: אחרי כל פסקת מקור מופיע התרגום שלה (Markdown ו-EPUB בלבד)',
+  trBilingual:
+    'דו-לשוני: ב-Markdown וב-EPUB התרגום מופיע אחרי כל פסקת מקור, וב-PDF כל עמוד מתורגם עומד ליד עמוד המקור שלו',
   trPdfEncrypted: 'המסמך מוצפן, ולכן אי אפשר לכתוב לתוכו PDF מתורגם. Markdown ו-EPUB עדיין זמינים.',
   trPdfScript:
     'אי אפשר ליצור PDF מתורגם לשפה {language}: רכיב כתיבת ה-PDF אינו יודע לסדר את הכתב הזה. Markdown ו-EPUB עדיין זמינים.',

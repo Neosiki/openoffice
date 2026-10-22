@@ -60,6 +60,12 @@ export interface WritebackOptions {
   fontLocator?: WritebackFontLocator
   /** default MIN_FONT_SCALE */
   minFontScale?: number
+  /**
+   * a bilingual PDF (decision 0057): each source page with its translated
+   * page beside it on one sheet. Links, annotations and bookmarks are not
+   * carried over.
+   */
+  bilingual?: boolean
   signal?: AbortSignal
   /** called after each written page: pages done, pages total, the page (1-based) */
   onProgress?: (done: number, total: number, page: number) => void
