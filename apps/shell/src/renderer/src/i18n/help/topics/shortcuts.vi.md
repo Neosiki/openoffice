@@ -159,7 +159,7 @@ F1 mở **Hướng dẫn sử dụng**, không phải danh sách này. Bảng ph
 
 ## Sheets
 
-GenOffice Sheets là một lưới tương thích Excel. Hầu hết các phím tắt bên dưới chính là những phím Excel mà bạn đã quen.
+GenOffice Sheets mở và lưu sổ làm việc .xlsx. Hầu hết các phím tắt bên dưới là những phím thường dùng trong các chương trình bảng tính, nên nhiều phím có lẽ bạn đã quen.
 
 > **Khi đang soạn thảo thì thắng.** Hầu như mọi phím tắt trong Sheets bị bỏ qua khi bạn đang soạn một ô hoặc gõ trong **thanh công thức**, để việc gõ, di chuyển con trỏ và phím Backspace giữ nguyên nghĩa soạn văn bản. Nếu một phím tưởng như không làm gì, hãy kiểm tra xem bạn đang ở giữa chừng một lần soạn thảo: nhấn Esc hoặc Enter trước đã, rồi thử lại. Những lệnh tác động tới vùng chọn cũng không làm gì khi một hộp thoại đang mở. Ở những nơi một tổ hợp phím là ngoại lệ của quy tắc này, bảng sẽ ghi rõ.
 

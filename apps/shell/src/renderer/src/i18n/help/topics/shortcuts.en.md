@@ -159,7 +159,7 @@ F1 opens the **User Guide**, not this list. The shortcut sheet is ⌘/ or Ctrl+/
 
 ## Sheets
 
-GenOffice Sheets is an Excel-compatible grid. Most of the shortcuts below are the Excel ones you already know.
+GenOffice Sheets opens and saves .xlsx workbooks. Most of the shortcuts below are the ones spreadsheet programs commonly use, so many will already be familiar.
 
 > **Editing wins.** Almost every shortcut in Sheets is ignored while you are editing a cell or typing in the **formula bar**, so that typing, moving the caret and Backspace keep their normal text-editing meaning. If a key seems to do nothing, check whether you are mid-edit: press Esc or Enter first, then try again. Commands that act on the selection also do nothing while a dialog is open. Where a chord is an exception to this rule, the table says so.
 

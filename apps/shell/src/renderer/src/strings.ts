@@ -403,6 +403,18 @@ export const strings = {
     setAiSharedKeyHint: '同一服务商的 key 与 Base URL 在各项能力间共用，只需填一次。',
     setGithub: '开源项目',
     setBasedOn: '基于开源项目 {{GenOffice}} 构建（Apache License 2.0）。',
+    setLicenses: '开源许可',
+    setLicensesDesc: '查看本应用附带的软件和字体的许可证与版权声明。',
+    setLicensesOpen: '查看',
+    setRightsContact: '商标与版权联系',
+    setRightsContactDesc: '侵权举报和许可相关问题请发送到此地址。',
+    setRightsContactSend: '写邮件',
+    setTrademarks:
+      'GenOffice 与 Microsoft、Hancom、Adobe、XMind、Google、Anthropic、OpenAI 均无关联，也未获得其赞助或认可。Word、Excel、PowerPoint 是 Microsoft 的商标；Hangul（한글）、HWP、HWPX 是 Hancom 的商标；XMind 是 XMind Ltd. 的商标；Google 云端硬盘是 Google 的商标；Claude 是 Anthropic 的商标；ChatGPT 和 Codex 是 OpenAI 的商标。这些名称仅用于说明本应用能打开哪些文件以及与哪些服务配合使用。',
+    setHwpNotice:
+      'HWP/HWPX 编辑器基于开源项目 rhwp（MIT 许可）。本产品参考 Hancom 公开的韩文文档文件格式（.hwp）文档开发。',
+    setDisclaimer:
+      'GenOffice 依据 Apache License 2.0 按“原样”提供，不作任何保证。AI 生成的内容可能有误，请核实后再使用。确认自己有权使用这些内容是使用者的责任。',
     viewOnGitHub: '在 GitHub 上查看',
     setFeedback: '发送反馈',
     setFeedbackDesc:
@@ -888,6 +900,19 @@ export const strings = {
       "A vendor's key and base URL are shared across capabilities; enter them once.",
     setGithub: 'Open Source',
     setBasedOn: 'Based on the open-source project {{GenOffice}} (Apache License 2.0).',
+    setLicenses: 'Open-source licenses',
+    setLicensesDesc:
+      'License and copyright notices for the software and fonts that ship with this app.',
+    setLicensesOpen: 'View',
+    setRightsContact: 'Trademark and copyright contact',
+    setRightsContactDesc: 'Send infringement reports and licensing questions to this address.',
+    setRightsContactSend: 'Write an email',
+    setTrademarks:
+      'GenOffice is not affiliated with, sponsored by or endorsed by Microsoft, Hancom, Adobe, XMind, Google, Anthropic or OpenAI. Word, Excel and PowerPoint are trademarks of Microsoft; Hangul, HWP and HWPX of Hancom; XMind of XMind Ltd.; Google Drive of Google; Claude of Anthropic; ChatGPT and Codex of OpenAI. These names are used only to say which files the app opens and what it works with.',
+    setHwpNotice:
+      "The HWP/HWPX editor is built on the open-source project rhwp (MIT License). This product was developed with reference to Hancom's published document on the Hangul document file format (.hwp).",
+    setDisclaimer:
+      'GenOffice is provided as is, without warranties of any kind, under the Apache License 2.0. AI-generated content can be wrong: check it before you use it. Making sure you have the right to use it is up to you.',
     viewOnGitHub: 'View on GitHub',
     setFeedback: 'Send feedback',
     setFeedbackDesc:
@@ -1378,6 +1403,19 @@ export const strings = {
       'Khóa và URL cơ sở của nhà cung cấp được dùng chung cho các chức năng; chỉ cần nhập một lần.',
     setGithub: 'Mã nguồn mở',
     setBasedOn: 'Dựa trên dự án mã nguồn mở {{GenOffice}} (Apache License 2.0).',
+    setLicenses: 'Giấy phép mã nguồn mở',
+    setLicensesDesc:
+      'Xem thông báo giấy phép và bản quyền của phần mềm và phông chữ đi kèm ứng dụng này.',
+    setLicensesOpen: 'Xem',
+    setRightsContact: 'Liên hệ về nhãn hiệu và bản quyền',
+    setRightsContactDesc: 'Gửi báo cáo vi phạm và câu hỏi về giấy phép đến địa chỉ này.',
+    setRightsContactSend: 'Viết email',
+    setTrademarks:
+      'GenOffice không liên kết với, không được tài trợ hay xác nhận bởi Microsoft, Hancom, Adobe, XMind, Google, Anthropic hoặc OpenAI. Word, Excel và PowerPoint là nhãn hiệu của Microsoft; Hangul, HWP và HWPX của Hancom; XMind của XMind Ltd.; Google Drive của Google; Claude của Anthropic; ChatGPT và Codex của OpenAI. Các tên này chỉ được dùng để cho biết ứng dụng mở được tệp nào và hoạt động cùng với gì.',
+    setHwpNotice:
+      'Trình chỉnh sửa HWP/HWPX được xây dựng trên dự án mã nguồn mở rhwp (Giấy phép MIT). Sản phẩm này được phát triển có tham khảo tài liệu công khai của Hancom về định dạng tệp tài liệu Hangul (.hwp).',
+    setDisclaimer:
+      'GenOffice được cung cấp theo nguyên trạng, không có bất kỳ bảo đảm nào, theo Apache License 2.0. Nội dung do AI tạo có thể sai, hãy kiểm tra trước khi dùng. Việc xác nhận bạn có quyền sử dụng nội dung đó là trách nhiệm của bạn.',
     viewOnGitHub: 'Xem trên GitHub',
     setFeedback: 'Gửi phản hồi',
     setFeedbackDesc:
@@ -1878,6 +1916,20 @@ export const strings = {
     setGithub: 'オープンソース',
     setBasedOn:
       'オープンソースプロジェクト {{GenOffice}}（Apache License 2.0）をもとに開発されています。',
+    setLicenses: 'オープンソースライセンス',
+    setLicensesDesc:
+      'このアプリに同梱されているソフトウェアとフォントのライセンスおよび著作権表示を表示します。',
+    setLicensesOpen: '表示',
+    setRightsContact: '商標・著作権のお問い合わせ',
+    setRightsContactDesc:
+      '権利侵害の報告やライセンスに関するお問い合わせは、このアドレスへお送りください。',
+    setRightsContactSend: 'メールを書く',
+    setTrademarks:
+      'GenOffice は Microsoft、Hancom、Adobe、XMind、Google、Anthropic、OpenAI と提携しておらず、これらの企業による後援や保証も受けていません。Word、Excel、PowerPoint は Microsoft の商標、Hangul（한글）、HWP、HWPX は Hancom の商標、XMind は XMind Ltd. の商標、Google ドライブは Google の商標、Claude は Anthropic の商標、ChatGPT と Codex は OpenAI の商標です。これらの名称は、開けるファイルや連携するサービスを示すためにのみ使用しています。',
+    setHwpNotice:
+      'HWP/HWPX エディターはオープンソースプロジェクト rhwp（MIT ライセンス）を基にしています。本製品は、Hancom が公開しているハングル文書ファイル形式（.hwp）の資料を参考に開発しました。',
+    setDisclaimer:
+      'GenOffice は Apache License 2.0 に基づき「現状のまま」提供され、いかなる保証もありません。AI が作成した内容は誤っている場合があるため、確認してからご利用ください。その内容を使用する権利があるかどうかの確認は、利用者の責任です。',
     viewOnGitHub: 'GitHub で見る',
     setFeedback: 'フィードバックを送る',
     setFeedbackDesc:
@@ -2373,6 +2425,18 @@ export const strings = {
       '같은 제공자의 키와 Base URL은 모든 기능에서 공유되므로 한 번만 입력하면 됩니다.',
     setGithub: '오픈 소스',
     setBasedOn: '오픈 소스 프로젝트 {{GenOffice}}(Apache License 2.0)를 바탕으로 만들었습니다.',
+    setLicenses: '오픈소스 라이선스',
+    setLicensesDesc: '이 앱에 함께 들어 있는 프로그램과 글꼴의 라이선스, 저작권 고지를 봅니다.',
+    setLicensesOpen: '보기',
+    setRightsContact: '상표·저작권 문의',
+    setRightsContactDesc: '권리 침해 신고나 라이선스 문의는 이 주소로 보내 주세요.',
+    setRightsContactSend: '메일 쓰기',
+    setTrademarks:
+      'GenOffice는 Microsoft, 한글과컴퓨터, Adobe, XMind, Google, Anthropic, OpenAI와 제휴하지 않았고, 이들의 후원이나 보증을 받지 않습니다. Word·Excel·PowerPoint는 Microsoft의, 한글·HWP·HWPX는 한글과컴퓨터의, XMind는 XMind Ltd.의, Google 드라이브는 Google의, Claude는 Anthropic의, ChatGPT·Codex는 OpenAI의 상표입니다. 이 이름들은 어떤 파일을 열고 무엇과 함께 쓰는지 알리는 데만 씁니다.',
+    setHwpNotice:
+      '한글(HWP·HWPX) 편집기는 오픈소스 프로젝트 rhwp(MIT 라이선스)를 바탕으로 만들었습니다. 본 제품은 한글과컴퓨터의 한글 문서 파일(.hwp) 공개 문서를 참고하여 개발하였습니다.',
+    setDisclaimer:
+      'GenOffice는 Apache License 2.0에 따라 있는 그대로 제공되며, 어떤 보증도 하지 않습니다. AI가 만든 내용은 틀릴 수 있으니 확인한 뒤 쓰세요. 그 내용을 쓸 권리가 있는지 확인하는 일은 쓰는 사람의 몫입니다.',
     viewOnGitHub: 'GitHub에서 보기',
     setFeedback: '의견 보내기',
     setFeedbackDesc:
@@ -2880,6 +2944,20 @@ export const strings = {
       "La clé et l'URL de base d'un fournisseur sont partagées entre les capacités ; saisissez-les une seule fois.",
     setGithub: 'Open source',
     setBasedOn: 'Basé sur le projet open source {{GenOffice}} (Apache License 2.0).',
+    setLicenses: 'Licences open source',
+    setLicensesDesc:
+      'Afficher les licences et mentions de droits d’auteur des logiciels et polices fournis avec cette application.',
+    setLicensesOpen: 'Afficher',
+    setRightsContact: 'Contact marques et droits d’auteur',
+    setRightsContactDesc:
+      'Envoyez à cette adresse les signalements d’atteinte aux droits et les questions de licence.',
+    setRightsContactSend: 'Écrire un e-mail',
+    setTrademarks:
+      'GenOffice n’est ni affilié à Microsoft, Hancom, Adobe, XMind, Google, Anthropic ou OpenAI, ni parrainé ou approuvé par eux. Word, Excel et PowerPoint sont des marques de Microsoft ; Hangul, HWP et HWPX de Hancom ; XMind de XMind Ltd. ; Google Drive de Google ; Claude d’Anthropic ; ChatGPT et Codex d’OpenAI. Ces noms servent uniquement à indiquer quels fichiers l’application ouvre et avec quoi elle fonctionne.',
+    setHwpNotice:
+      'L’éditeur HWP/HWPX repose sur le projet open source rhwp (licence MIT). Ce produit a été développé en s’appuyant sur la documentation publiée par Hancom sur le format de fichier de document Hangul (.hwp).',
+    setDisclaimer:
+      'GenOffice est fourni « en l’état », sans aucune garantie, selon l’Apache License 2.0. Le contenu généré par l’IA peut être erroné : vérifiez-le avant de l’utiliser. Il vous appartient de vous assurer que vous avez le droit de l’utiliser.',
     viewOnGitHub: 'Voir sur GitHub',
     setFeedback: 'Envoyer un commentaire',
     setFeedbackDesc:
@@ -3393,6 +3471,20 @@ export const strings = {
       'Schlüssel und Base URL eines Anbieters gelten für alle Fähigkeiten; einmal eintragen genügt.',
     setGithub: 'Open Source',
     setBasedOn: 'Basiert auf dem Open-Source-Projekt {{GenOffice}} (Apache License 2.0).',
+    setLicenses: 'Open-Source-Lizenzen',
+    setLicensesDesc:
+      'Lizenz- und Urheberrechtshinweise der Software und Schriften anzeigen, die mit dieser App geliefert werden.',
+    setLicensesOpen: 'Anzeigen',
+    setRightsContact: 'Kontakt zu Marken und Urheberrecht',
+    setRightsContactDesc:
+      'Meldungen über Rechtsverletzungen und Fragen zur Lizenz bitte an diese Adresse senden.',
+    setRightsContactSend: 'E-Mail schreiben',
+    setTrademarks:
+      'GenOffice ist nicht mit Microsoft, Hancom, Adobe, XMind, Google, Anthropic oder OpenAI verbunden und wird von ihnen weder gesponsert noch unterstützt. Word, Excel und PowerPoint sind Marken von Microsoft; Hangul, HWP und HWPX von Hancom; XMind von XMind Ltd.; Google Drive von Google; Claude von Anthropic; ChatGPT und Codex von OpenAI. Diese Namen werden nur verwendet, um zu sagen, welche Dateien die App öffnet und womit sie zusammenarbeitet.',
+    setHwpNotice:
+      'Der HWP/HWPX-Editor basiert auf dem Open-Source-Projekt rhwp (MIT-Lizenz). Dieses Produkt wurde unter Bezugnahme auf die von Hancom veröffentlichte Dokumentation zum Hangul-Dokumentdateiformat (.hwp) entwickelt.',
+    setDisclaimer:
+      'GenOffice wird gemäß der Apache License 2.0 ohne Mängelgewähr und ohne jegliche Garantie bereitgestellt. Von KI erzeugte Inhalte können falsch sein: Prüfen Sie sie vor der Verwendung. Ob Sie die Rechte zur Nutzung besitzen, müssen Sie selbst klären.',
     viewOnGitHub: 'Auf GitHub ansehen',
     setFeedback: 'Feedback senden',
     setFeedbackDesc:
@@ -3905,6 +3997,20 @@ export const strings = {
       'La clave y la URL base de un proveedor se comparten entre capacidades; introdúcelas una sola vez.',
     setGithub: 'Código abierto',
     setBasedOn: 'Basado en el proyecto de código abierto {{GenOffice}} (Apache License 2.0).',
+    setLicenses: 'Licencias de código abierto',
+    setLicensesDesc:
+      'Ver los avisos de licencia y derechos de autor del software y las fuentes que se incluyen con esta aplicación.',
+    setLicensesOpen: 'Ver',
+    setRightsContact: 'Contacto sobre marcas y derechos de autor',
+    setRightsContactDesc:
+      'Envía a esta dirección los avisos de infracción y las consultas sobre licencias.',
+    setRightsContactSend: 'Escribir un correo',
+    setTrademarks:
+      'GenOffice no está afiliado a Microsoft, Hancom, Adobe, XMind, Google, Anthropic ni OpenAI, ni cuenta con su patrocinio o respaldo. Word, Excel y PowerPoint son marcas de Microsoft; Hangul, HWP y HWPX, de Hancom; XMind, de XMind Ltd.; Google Drive, de Google; Claude, de Anthropic; ChatGPT y Codex, de OpenAI. Estos nombres se usan solo para indicar qué archivos abre la aplicación y con qué funciona.',
+    setHwpNotice:
+      'El editor HWP/HWPX se basa en el proyecto de código abierto rhwp (licencia MIT). Este producto se desarrolló tomando como referencia la documentación publicada por Hancom sobre el formato de archivo de documentos Hangul (.hwp).',
+    setDisclaimer:
+      'GenOffice se ofrece tal cual, sin garantías de ningún tipo, bajo la Apache License 2.0. El contenido generado por IA puede contener errores: revísalo antes de usarlo. Comprobar que tienes derecho a usarlo es responsabilidad tuya.',
     viewOnGitHub: 'Ver en GitHub',
     setFeedback: 'Enviar comentarios',
     setFeedbackDesc:
@@ -4396,6 +4502,18 @@ export const strings = {
       'คีย์และ Base URL ของผู้ให้บริการเดียวกันใช้ร่วมกันทุกความสามารถ กรอกครั้งเดียวพอ',
     setGithub: 'โอเพนซอร์ส',
     setBasedOn: 'พัฒนาต่อยอดจากโครงการโอเพนซอร์ส {{GenOffice}} (Apache License 2.0)',
+    setLicenses: 'สัญญาอนุญาตโอเพนซอร์ส',
+    setLicensesDesc: 'ดูประกาศสัญญาอนุญาตและลิขสิทธิ์ของซอฟต์แวร์และฟอนต์ที่มาพร้อมกับแอปนี้',
+    setLicensesOpen: 'ดู',
+    setRightsContact: 'ติดต่อเรื่องเครื่องหมายการค้าและลิขสิทธิ์',
+    setRightsContactDesc: 'ส่งการแจ้งละเมิดสิทธิ์และคำถามเกี่ยวกับสัญญาอนุญาตมาที่อีเมลนี้',
+    setRightsContactSend: 'เขียนอีเมล',
+    setTrademarks:
+      'GenOffice ไม่มีความเกี่ยวข้องกับ Microsoft, Hancom, Adobe, XMind, Google, Anthropic หรือ OpenAI และไม่ได้รับการสนับสนุนหรือรับรองจากบริษัทเหล่านี้ Word, Excel และ PowerPoint เป็นเครื่องหมายการค้าของ Microsoft; Hangul, HWP และ HWPX ของ Hancom; XMind ของ XMind Ltd.; Google Drive ของ Google; Claude ของ Anthropic; ChatGPT และ Codex ของ OpenAI ชื่อเหล่านี้ใช้เพียงเพื่อบอกว่าแอปเปิดไฟล์ใดได้และทำงานร่วมกับอะไร',
+    setHwpNotice:
+      'ตัวแก้ไข HWP/HWPX สร้างขึ้นจากโครงการโอเพนซอร์ส rhwp (สัญญาอนุญาต MIT) ผลิตภัณฑ์นี้พัฒนาขึ้นโดยอ้างอิงเอกสารเผยแพร่ของ Hancom เกี่ยวกับรูปแบบไฟล์เอกสาร Hangul (.hwp)',
+    setDisclaimer:
+      'GenOffice ให้บริการตามสภาพที่เป็นอยู่ โดยไม่มีการรับประกันใด ๆ ภายใต้ Apache License 2.0 เนื้อหาที่ AI สร้างอาจผิดพลาดได้ โปรดตรวจสอบก่อนใช้ และการตรวจสอบว่าคุณมีสิทธิ์ใช้เนื้อหานั้นเป็นความรับผิดชอบของคุณ',
     viewOnGitHub: 'ดูบน GitHub',
     setFeedback: 'ส่งข้อเสนอแนะ',
     setFeedbackDesc:
@@ -4898,6 +5016,19 @@ export const strings = {
       'Kunci dan Base URL satu penyedia dipakai bersama oleh semua kemampuan; cukup isi sekali.',
     setGithub: 'Sumber Terbuka',
     setBasedOn: 'Dibuat berdasarkan proyek sumber terbuka {{GenOffice}} (Apache License 2.0).',
+    setLicenses: 'Lisensi sumber terbuka',
+    setLicensesDesc:
+      'Lihat pemberitahuan lisensi dan hak cipta untuk perangkat lunak dan font yang disertakan dengan aplikasi ini.',
+    setLicensesOpen: 'Lihat',
+    setRightsContact: 'Kontak merek dagang dan hak cipta',
+    setRightsContactDesc: 'Kirim laporan pelanggaran dan pertanyaan lisensi ke alamat ini.',
+    setRightsContactSend: 'Tulis email',
+    setTrademarks:
+      'GenOffice tidak berafiliasi dengan, disponsori, atau didukung oleh Microsoft, Hancom, Adobe, XMind, Google, Anthropic, atau OpenAI. Word, Excel, dan PowerPoint adalah merek dagang Microsoft; Hangul, HWP, dan HWPX milik Hancom; XMind milik XMind Ltd.; Google Drive milik Google; Claude milik Anthropic; ChatGPT dan Codex milik OpenAI. Nama-nama ini hanya digunakan untuk menyebutkan file apa yang dapat dibuka aplikasi dan dengan apa aplikasi bekerja.',
+    setHwpNotice:
+      'Editor HWP/HWPX dibuat berdasarkan proyek sumber terbuka rhwp (Lisensi MIT). Produk ini dikembangkan dengan mengacu pada dokumen terbitan Hancom tentang format file dokumen Hangul (.hwp).',
+    setDisclaimer:
+      'GenOffice disediakan apa adanya, tanpa jaminan apa pun, berdasarkan Apache License 2.0. Konten buatan AI bisa salah, jadi periksa sebelum digunakan. Memastikan Anda berhak menggunakannya adalah tanggung jawab Anda.',
     viewOnGitHub: 'Lihat di GitHub',
     setFeedback: 'Kirim masukan',
     setFeedbackDesc:
@@ -5402,6 +5533,20 @@ export const strings = {
     setGithub: 'Открытый код',
     setBasedOn:
       'Создано на основе проекта с открытым исходным кодом {{GenOffice}} (Apache License 2.0).',
+    setLicenses: 'Лицензии открытого ПО',
+    setLicensesDesc:
+      'Уведомления о лицензиях и авторских правах на программы и шрифты, входящие в приложение.',
+    setLicensesOpen: 'Открыть',
+    setRightsContact: 'Связь по вопросам товарных знаков и авторских прав',
+    setRightsContactDesc:
+      'Сообщения о нарушении прав и вопросы о лицензиях отправляйте на этот адрес.',
+    setRightsContactSend: 'Написать письмо',
+    setTrademarks:
+      'GenOffice не связан с Microsoft, Hancom, Adobe, XMind, Google, Anthropic или OpenAI и не спонсируется и не одобряется ими. Word, Excel и PowerPoint — товарные знаки Microsoft; Hangul, HWP и HWPX — Hancom; XMind — XMind Ltd.; Google Диск — Google; Claude — Anthropic; ChatGPT и Codex — OpenAI. Эти названия используются только для того, чтобы указать, какие файлы открывает приложение и с чем оно работает.',
+    setHwpNotice:
+      'Редактор HWP/HWPX основан на проекте с открытым исходным кодом rhwp (лицензия MIT). Этот продукт разработан с опорой на опубликованную Hancom документацию по формату файлов документов Hangul (.hwp).',
+    setDisclaimer:
+      'GenOffice предоставляется «как есть», без каких-либо гарантий, на условиях Apache License 2.0. Созданное ИИ содержимое может содержать ошибки — проверяйте его перед использованием. Убедиться, что у вас есть право его использовать, — ваша ответственность.',
     viewOnGitHub: 'Открыть на GitHub',
     setFeedback: 'Отправить отзыв',
     setFeedbackDesc:
@@ -5896,6 +6041,18 @@ export const strings = {
       'مفتاح المزوّد وعنوان Base URL مشتركان بين جميع القدرات؛ أدخلهما مرة واحدة فقط.',
     setGithub: 'مفتوح المصدر',
     setBasedOn: 'مبني على المشروع مفتوح المصدر {{GenOffice}} (Apache License 2.0).',
+    setLicenses: 'تراخيص المصادر المفتوحة',
+    setLicensesDesc: 'عرض إشعارات الترخيص وحقوق النشر للبرامج والخطوط المضمّنة في هذا التطبيق.',
+    setLicensesOpen: 'عرض',
+    setRightsContact: 'التواصل بشأن العلامات التجارية وحقوق النشر',
+    setRightsContactDesc: 'أرسل بلاغات انتهاك الحقوق والأسئلة المتعلقة بالترخيص إلى هذا العنوان.',
+    setRightsContactSend: 'كتابة رسالة',
+    setTrademarks:
+      'GenOffice غير تابع لشركات Microsoft أو Hancom أو Adobe أو XMind أو Google أو Anthropic أو OpenAI، ولا يحظى برعايتها أو تأييدها. Word وExcel وPowerPoint علامات تجارية لشركة Microsoft؛ وHangul وHWP وHWPX لشركة Hancom؛ وXMind لشركة XMind Ltd.؛ وGoogle Drive لشركة Google؛ وClaude لشركة Anthropic؛ وChatGPT وCodex لشركة OpenAI. تُستخدم هذه الأسماء فقط لبيان الملفات التي يفتحها التطبيق وما يعمل معه.',
+    setHwpNotice:
+      'محرر HWP/HWPX مبني على المشروع مفتوح المصدر rhwp (ترخيص MIT). طُوِّر هذا المنتج بالرجوع إلى المستند الذي نشرته Hancom حول تنسيق ملفات مستندات Hangul (.hwp).',
+    setDisclaimer:
+      'يُقدَّم GenOffice كما هو، دون أي ضمانات، بموجب Apache License 2.0. قد يحتوي المحتوى الذي ينشئه الذكاء الاصطناعي على أخطاء، فتحقق منه قبل استخدامه. والتأكد من أن لديك حق استخدامه مسؤوليتك.',
     viewOnGitHub: 'عرض على GitHub',
     setFeedback: 'إرسال ملاحظات',
     setFeedbackDesc:
@@ -6396,6 +6553,20 @@ export const strings = {
       'A chave e a URL base de um provedor são compartilhadas entre as capacidades; insira-as uma só vez.',
     setGithub: 'Código aberto',
     setBasedOn: 'Baseado no projeto de código aberto {{GenOffice}} (Apache License 2.0).',
+    setLicenses: 'Licenças de código aberto',
+    setLicensesDesc:
+      'Ver os avisos de licença e direitos autorais do software e das fontes incluídos neste aplicativo.',
+    setLicensesOpen: 'Ver',
+    setRightsContact: 'Contato sobre marcas e direitos autorais',
+    setRightsContactDesc:
+      'Envie denúncias de violação e dúvidas sobre licenças para este endereço.',
+    setRightsContactSend: 'Escrever e-mail',
+    setTrademarks:
+      'GenOffice não é afiliado à Microsoft, Hancom, Adobe, XMind, Google, Anthropic ou OpenAI, nem patrocinado ou endossado por elas. Word, Excel e PowerPoint são marcas da Microsoft; Hangul, HWP e HWPX, da Hancom; XMind, da XMind Ltd.; Google Drive, do Google; Claude, da Anthropic; ChatGPT e Codex, da OpenAI. Esses nomes são usados apenas para indicar quais arquivos o aplicativo abre e com o que ele funciona.',
+    setHwpNotice:
+      'O editor HWP/HWPX é baseado no projeto de código aberto rhwp (Licença MIT). Este produto foi desenvolvido com base na documentação publicada pela Hancom sobre o formato de arquivo de documentos Hangul (.hwp).',
+    setDisclaimer:
+      'GenOffice é fornecido no estado em que se encontra, sem garantias de qualquer tipo, sob a Apache License 2.0. O conteúdo gerado por IA pode estar errado: confira antes de usar. Verificar se você tem o direito de usá-lo é responsabilidade sua.',
     viewOnGitHub: 'Ver no GitHub',
     setFeedback: 'Enviar comentários',
     setFeedbackDesc:
@@ -6894,6 +7065,20 @@ export const strings = {
       "La chiave e l'URL base di un provider sono condivisi tra le capacità; inseriscili una volta sola.",
     setGithub: 'Open source',
     setBasedOn: 'Basato sul progetto open source {{GenOffice}} (Apache License 2.0).',
+    setLicenses: 'Licenze open source',
+    setLicensesDesc:
+      'Visualizza le note di licenza e copyright del software e dei font inclusi in questa app.',
+    setLicensesOpen: 'Visualizza',
+    setRightsContact: 'Contatti per marchi e copyright',
+    setRightsContactDesc:
+      'Invia a questo indirizzo segnalazioni di violazione e domande sulle licenze.',
+    setRightsContactSend: 'Scrivi un’email',
+    setTrademarks:
+      'GenOffice non è affiliato a Microsoft, Hancom, Adobe, XMind, Google, Anthropic od OpenAI, né sponsorizzato o approvato da loro. Word, Excel e PowerPoint sono marchi di Microsoft; Hangul, HWP e HWPX di Hancom; XMind di XMind Ltd.; Google Drive di Google; Claude di Anthropic; ChatGPT e Codex di OpenAI. Questi nomi sono usati solo per indicare quali file l’app apre e con cosa funziona.',
+    setHwpNotice:
+      'L’editor HWP/HWPX è basato sul progetto open source rhwp (licenza MIT). Questo prodotto è stato sviluppato facendo riferimento alla documentazione pubblicata da Hancom sul formato di file dei documenti Hangul (.hwp).',
+    setDisclaimer:
+      'GenOffice è fornito così com’è, senza garanzie di alcun tipo, ai sensi della Apache License 2.0. I contenuti generati dall’IA possono essere errati: verificali prima di usarli. Accertarti di avere il diritto di usarli spetta a te.',
     viewOnGitHub: 'Vedi su GitHub',
     setFeedback: 'Invia feedback',
     setFeedbackDesc:
@@ -7388,6 +7573,19 @@ export const strings = {
       'Klucz i bazowy URL dostawcy są wspólne dla wszystkich funkcji; wpisz je raz.',
     setGithub: 'Open source',
     setBasedOn: 'Oparte na projekcie open source {{GenOffice}} (Apache License 2.0).',
+    setLicenses: 'Licencje open source',
+    setLicensesDesc:
+      'Wyświetl informacje o licencjach i prawach autorskich do oprogramowania i czcionek dołączonych do tej aplikacji.',
+    setLicensesOpen: 'Wyświetl',
+    setRightsContact: 'Kontakt w sprawie znaków towarowych i praw autorskich',
+    setRightsContactDesc: 'Zgłoszenia naruszeń i pytania o licencje wysyłaj na ten adres.',
+    setRightsContactSend: 'Napisz e-mail',
+    setTrademarks:
+      'GenOffice nie jest powiązany z firmami Microsoft, Hancom, Adobe, XMind, Google, Anthropic ani OpenAI, ani przez nie sponsorowany czy popierany. Word, Excel i PowerPoint są znakami towarowymi Microsoft; Hangul, HWP i HWPX — Hancom; XMind — XMind Ltd.; Dysk Google — Google; Claude — Anthropic; ChatGPT i Codex — OpenAI. Nazwy te służą wyłącznie do wskazania, jakie pliki otwiera aplikacja i z czym współpracuje.',
+    setHwpNotice:
+      'Edytor HWP/HWPX powstał na bazie projektu open source rhwp (licencja MIT). Ten produkt opracowano w oparciu o opublikowaną przez Hancom dokumentację formatu plików dokumentów Hangul (.hwp).',
+    setDisclaimer:
+      'GenOffice jest udostępniany w stanie „tak jak jest”, bez jakichkolwiek gwarancji, na licencji Apache License 2.0. Treści wygenerowane przez AI mogą zawierać błędy — sprawdź je przed użyciem. Upewnienie się, że masz prawo z nich korzystać, należy do Ciebie.',
     viewOnGitHub: 'Zobacz na GitHubie',
     setFeedback: 'Wyślij opinię',
     setFeedbackDesc:
@@ -7841,6 +8039,19 @@ export const strings = {
       'Klíč a základní URL jednoho poskytovatele se sdílejí mezi funkcemi; zadejte je jen jednou.',
     setGithub: 'Open source',
     setBasedOn: 'Založeno na open source projektu {{GenOffice}} (Apache License 2.0).',
+    setLicenses: 'Licence open source',
+    setLicensesDesc:
+      'Zobrazit licenční a autorskoprávní upozornění k softwaru a písmům dodávaným s touto aplikací.',
+    setLicensesOpen: 'Zobrazit',
+    setRightsContact: 'Kontakt ve věci ochranných známek a autorských práv',
+    setRightsContactDesc: 'Oznámení o porušení práv a dotazy k licencím posílejte na tuto adresu.',
+    setRightsContactSend: 'Napsat e-mail',
+    setTrademarks:
+      'GenOffice není spojen se společnostmi Microsoft, Hancom, Adobe, XMind, Google, Anthropic ani OpenAI a není jimi sponzorován ani podporován. Word, Excel a PowerPoint jsou ochranné známky společnosti Microsoft; Hangul, HWP a HWPX společnosti Hancom; XMind společnosti XMind Ltd.; Disk Google společnosti Google; Claude společnosti Anthropic; ChatGPT a Codex společnosti OpenAI. Tyto názvy slouží jen k uvedení, které soubory aplikace otevírá a s čím spolupracuje.',
+    setHwpNotice:
+      'Editor HWP/HWPX vychází z open source projektu rhwp (licence MIT). Tento produkt byl vyvinut s využitím dokumentace, kterou společnost Hancom zveřejnila k formátu souborů dokumentů Hangul (.hwp).',
+    setDisclaimer:
+      'GenOffice se poskytuje tak, jak je, bez jakýchkoli záruk, podle licence Apache License 2.0. Obsah vytvořený AI může být chybný, proto jej před použitím zkontrolujte. Ověřit, že máte právo jej používat, je vaší odpovědností.',
     viewOnGitHub: 'Zobrazit na GitHubu',
     setFeedback: 'Odeslat zpětnou vazbu',
     setFeedbackDesc:
@@ -8374,6 +8585,19 @@ export const strings = {
       'De sleutel en basis-URL van een provider gelden voor alle functies; één keer invoeren volstaat.',
     setGithub: 'Open source',
     setBasedOn: 'Gebaseerd op het opensourceproject {{GenOffice}} (Apache License 2.0).',
+    setLicenses: 'Opensourcelicenties',
+    setLicensesDesc:
+      'Bekijk de licentie- en auteursrechtvermeldingen van de software en lettertypen die bij deze app worden geleverd.',
+    setLicensesOpen: 'Bekijken',
+    setRightsContact: 'Contact over merken en auteursrecht',
+    setRightsContactDesc: 'Stuur meldingen van inbreuk en vragen over licenties naar dit adres.',
+    setRightsContactSend: 'E-mail schrijven',
+    setTrademarks:
+      'GenOffice is niet verbonden aan Microsoft, Hancom, Adobe, XMind, Google, Anthropic of OpenAI en wordt niet door hen gesponsord of onderschreven. Word, Excel en PowerPoint zijn handelsmerken van Microsoft; Hangul, HWP en HWPX van Hancom; XMind van XMind Ltd.; Google Drive van Google; Claude van Anthropic; ChatGPT en Codex van OpenAI. Deze namen worden alleen gebruikt om aan te geven welke bestanden de app opent en waarmee hij samenwerkt.',
+    setHwpNotice:
+      'De HWP/HWPX-editor is gebaseerd op het opensourceproject rhwp (MIT-licentie). Dit product is ontwikkeld met gebruik van de door Hancom gepubliceerde documentatie over het Hangul-documentbestandsformaat (.hwp).',
+    setDisclaimer:
+      'GenOffice wordt geleverd zoals het is, zonder enige garantie, onder de Apache License 2.0. Door AI gemaakte inhoud kan fouten bevatten: controleer die voordat u hem gebruikt. Nagaan of u het recht hebt om hem te gebruiken, is uw eigen verantwoordelijkheid.',
     viewOnGitHub: 'Bekijken op GitHub',
     setFeedback: 'Feedback sturen',
     setFeedbackDesc:
@@ -8873,6 +9097,19 @@ export const strings = {
       'Kunci dan Base URL pembekal dikongsi oleh semua keupayaan; isi sekali sahaja.',
     setGithub: 'Sumber Terbuka',
     setBasedOn: 'Berasaskan projek sumber terbuka {{GenOffice}} (Apache License 2.0).',
+    setLicenses: 'Lesen sumber terbuka',
+    setLicensesDesc:
+      'Lihat notis lesen dan hak cipta bagi perisian dan fon yang disertakan dengan aplikasi ini.',
+    setLicensesOpen: 'Lihat',
+    setRightsContact: 'Hubungan tanda dagangan dan hak cipta',
+    setRightsContactDesc: 'Hantar laporan pelanggaran hak dan soalan lesen ke alamat ini.',
+    setRightsContactSend: 'Tulis e-mel',
+    setTrademarks:
+      'GenOffice tidak bergabung dengan, ditaja atau disokong oleh Microsoft, Hancom, Adobe, XMind, Google, Anthropic atau OpenAI. Word, Excel dan PowerPoint ialah tanda dagangan Microsoft; Hangul, HWP dan HWPX milik Hancom; XMind milik XMind Ltd.; Google Drive milik Google; Claude milik Anthropic; ChatGPT dan Codex milik OpenAI. Nama-nama ini hanya digunakan untuk menyatakan fail yang dibuka oleh aplikasi dan perkara yang digunakan bersamanya.',
+    setHwpNotice:
+      'Penyunting HWP/HWPX dibina berasaskan projek sumber terbuka rhwp (Lesen MIT). Produk ini dibangunkan dengan merujuk dokumen terbitan Hancom tentang format fail dokumen Hangul (.hwp).',
+    setDisclaimer:
+      'GenOffice disediakan sebagaimana adanya, tanpa sebarang jaminan, di bawah Apache License 2.0. Kandungan yang dijana AI mungkin salah, jadi semaklah sebelum digunakan. Memastikan anda berhak menggunakannya ialah tanggungjawab anda.',
     viewOnGitHub: 'Lihat di GitHub',
     setFeedback: 'Hantar maklum balas',
     setFeedbackDesc:
@@ -9352,6 +9589,18 @@ export const strings = {
       'המפתח וכתובת ה-Base URL של ספק משותפים לכל היכולות; יש להזין אותם פעם אחת בלבד.',
     setGithub: 'קוד פתוח',
     setBasedOn: 'מבוסס על פרויקט הקוד הפתוח {{GenOffice}} (Apache License 2.0).',
+    setLicenses: 'רישיונות קוד פתוח',
+    setLicensesDesc: 'הצגת הודעות הרישיון וזכויות היוצרים של התוכנות והגופנים שמצורפים לאפליקציה.',
+    setLicensesOpen: 'הצגה',
+    setRightsContact: 'פנייה בנושא סימני מסחר וזכויות יוצרים',
+    setRightsContactDesc: 'דיווחים על הפרת זכויות ושאלות בנושא רישוי יש לשלוח לכתובת זו.',
+    setRightsContactSend: 'כתיבת דוא״ל',
+    setTrademarks:
+      'GenOffice אינו קשור ל-Microsoft, Hancom, Adobe, XMind, Google, Anthropic או OpenAI, ואינו בחסותן או באישורן. Word, Excel ו-PowerPoint הם סימני מסחר של Microsoft; Hangul, HWP ו-HWPX של Hancom; XMind של XMind Ltd.; Google Drive של Google; Claude של Anthropic; ChatGPT ו-Codex של OpenAI. השמות האלה משמשים רק כדי לציין אילו קבצים האפליקציה פותחת ועם מה היא עובדת.',
+    setHwpNotice:
+      'עורך HWP/HWPX מבוסס על פרויקט הקוד הפתוח rhwp (רישיון MIT). מוצר זה פותח בהסתמך על המסמך שפרסמה Hancom על פורמט קובצי המסמכים Hangul (.hwp).',
+    setDisclaimer:
+      'GenOffice מסופק כפי שהוא, ללא אחריות מכל סוג, לפי Apache License 2.0. תוכן שנוצר בבינה מלאכותית עלול להיות שגוי, לכן יש לבדוק אותו לפני השימוש. הבדיקה שיש לך זכות להשתמש בו היא באחריותך.',
     viewOnGitHub: 'הצגה ב-GitHub',
     setFeedback: 'שליחת משוב',
     setFeedbackDesc:
@@ -9838,6 +10087,19 @@ export const strings = {
       'एक प्रदाता की कुंजी और Base URL सभी क्षमताओं में साझा होते हैं; एक बार ही दर्ज करें।',
     setGithub: 'ओपन सोर्स',
     setBasedOn: 'ओपन सोर्स प्रोजेक्ट {{GenOffice}} (Apache License 2.0) पर आधारित।',
+    setLicenses: 'ओपन सोर्स लाइसेंस',
+    setLicensesDesc:
+      'इस ऐप के साथ आने वाले सॉफ़्टवेयर और फ़ॉन्ट के लाइसेंस और कॉपीराइट नोटिस देखें।',
+    setLicensesOpen: 'देखें',
+    setRightsContact: 'ट्रेडमार्क और कॉपीराइट संपर्क',
+    setRightsContactDesc: 'अधिकार उल्लंघन की शिकायतें और लाइसेंस से जुड़े प्रश्न इस पते पर भेजें।',
+    setRightsContactSend: 'ईमेल लिखें',
+    setTrademarks:
+      'GenOffice का Microsoft, Hancom, Adobe, XMind, Google, Anthropic या OpenAI से कोई संबंध नहीं है, और न ही यह उनके द्वारा प्रायोजित या समर्थित है। Word, Excel और PowerPoint, Microsoft के ट्रेडमार्क हैं; Hangul, HWP और HWPX, Hancom के; XMind, XMind Ltd. का; Google Drive, Google का; Claude, Anthropic का; और ChatGPT व Codex, OpenAI के ट्रेडमार्क हैं। ये नाम केवल यह बताने के लिए उपयोग किए जाते हैं कि ऐप कौन-सी फ़ाइलें खोलता है और किसके साथ काम करता है।',
+    setHwpNotice:
+      'HWP/HWPX एडिटर ओपन सोर्स प्रोजेक्ट rhwp (MIT लाइसेंस) पर आधारित है। यह उत्पाद Hancom द्वारा प्रकाशित Hangul दस्तावेज़ फ़ाइल फ़ॉर्मैट (.hwp) के दस्तावेज़ के संदर्भ से विकसित किया गया है।',
+    setDisclaimer:
+      'GenOffice को Apache License 2.0 के तहत "जैसा है" के आधार पर, बिना किसी वारंटी के प्रदान किया जाता है। AI द्वारा बनाई गई सामग्री गलत हो सकती है, इसलिए उपयोग से पहले जाँच लें। उसे उपयोग करने का अधिकार आपके पास है या नहीं, यह सुनिश्चित करना आपकी ज़िम्मेदारी है।',
     viewOnGitHub: 'GitHub पर देखें',
     setFeedback: 'फ़ीडबैक भेजें',
     setFeedbackDesc:
@@ -10305,6 +10567,18 @@ export const strings = {
     setAiSharedKeyHint: '同一服務商的 key 與 Base URL 在各項能力間共用，只需填一次。',
     setGithub: '開源專案',
     setBasedOn: '以開源專案 {{GenOffice}} 為基礎打造（Apache License 2.0）。',
+    setLicenses: '開源授權',
+    setLicensesDesc: '檢視本應用程式隨附的軟體與字型之授權與著作權聲明。',
+    setLicensesOpen: '檢視',
+    setRightsContact: '商標與著作權聯絡',
+    setRightsContactDesc: '侵權檢舉與授權相關問題請寄到此地址。',
+    setRightsContactSend: '寫信',
+    setTrademarks:
+      'GenOffice 與 Microsoft、Hancom、Adobe、XMind、Google、Anthropic、OpenAI 皆無關聯，也未獲其贊助或認可。Word、Excel、PowerPoint 是 Microsoft 的商標；Hangul（한글）、HWP、HWPX 是 Hancom 的商標；XMind 是 XMind Ltd. 的商標；Google 雲端硬碟是 Google 的商標；Claude 是 Anthropic 的商標；ChatGPT 與 Codex 是 OpenAI 的商標。這些名稱僅用於說明本應用程式能開啟哪些檔案，以及能與哪些服務搭配使用。',
+    setHwpNotice:
+      'HWP/HWPX 編輯器以開源專案 rhwp（MIT 授權）為基礎。本產品參考 Hancom 公開的韓文文件檔案格式（.hwp）文件開發。',
+    setDisclaimer:
+      'GenOffice 依 Apache License 2.0 以「現狀」提供，不作任何保證。AI 產生的內容可能有誤，請確認後再使用。確認自己有權使用這些內容是使用者的責任。',
     viewOnGitHub: '在 GitHub 上查看',
     setFeedback: '傳送意見回饋',
     setFeedbackDesc:

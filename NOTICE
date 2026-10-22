@@ -6,8 +6,10 @@ This product includes software developed at Mainfunc, Inc.
 Bundled third-party components are listed in THIRD-PARTY-NOTICES.txt, which
 tools/gen-third-party-notices.mjs generates at packaging time. It is not
 checked into this repository; in a release build it ships inside the
-application bundle (Contents/Resources on macOS, resources/ on Windows).
-Run `node tools/gen-third-party-notices.mjs` to produce it from a source
+application bundle (Contents/Resources on macOS, resources/ on Windows),
+starting with the full text of this file, next to LICENSE.txt (the Apache
+License 2.0), NOTICE.txt (this file) and LICENSE-UNICODE.txt. Run
+`node tools/gen-third-party-notices.mjs` to produce it from a source
 checkout.
 
 Bundled fonts and their licenses are documented in
@@ -179,10 +181,19 @@ the Hangul document file format (.hwp).)
 Trademarks
 
 IeumOffice is not affiliated with, sponsored by or endorsed by Microsoft
-Corporation, Hancom Inc., XMind Ltd., Anthropic or OpenAI. "Microsoft",
-"Windows", "Word", "Excel" and "PowerPoint" are trademarks of Microsoft
-Corporation. "한글" (Hangul), "한컴" (Hancom), "HWP" and "HWPX" are registered
-trademarks of Hancom Inc. "XMind" is a trademark of XMind Ltd. "Claude" is a
+Corporation, Hancom Inc., Adobe Inc., XMind Ltd., Google LLC, Anthropic or
+OpenAI. "Microsoft", "Windows", "Word", "Excel" and "PowerPoint" are
+trademarks of Microsoft Corporation. "한글" (Hangul), "한컴" (Hancom), "HWP"
+and "HWPX" are registered trademarks of Hancom Inc. "XMind" is a trademark of
+XMind Ltd. "Google Drive" is a trademark of Google LLC. "Claude" is a
 trademark of Anthropic; "Codex" and "ChatGPT" are trademarks of OpenAI. These
 and other product names are used only to say which files IeumOffice opens and
-what it works with.
+what it works with. The file-type icons and the AI provider marks in the app
+are original drawings, not those companies' logos.
+
+The Apache License 2.0 grants no rights to the names or logos "IeumOffice",
+"이음오피스" or "GenOffice" (section 6).
+
+Contact
+
+Trademark and copyright reports and licensing questions: pblsketch@gmail.com

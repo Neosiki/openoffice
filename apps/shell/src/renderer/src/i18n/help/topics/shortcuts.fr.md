@@ -159,7 +159,7 @@ F1 ouvre le **guide de l’utilisateur**, pas cette liste. La feuille des raccou
 
 ## Sheets
 
-GenOffice Sheets est une grille compatible avec Excel. La plupart des raccourcis ci-dessous sont ceux d’Excel que vous connaissez déjà.
+GenOffice Sheets ouvre et enregistre des classeurs .xlsx. La plupart des raccourcis ci-dessous sont ceux qu’utilisent couramment les tableurs ; beaucoup vous seront donc familiers.
 
 > **L’édition l’emporte.** Presque tous les raccourcis de Sheets sont ignorés pendant que vous modifiez une cellule ou que vous tapez dans la **barre de formule**, afin que la saisie, le déplacement du curseur et la touche Retour arrière conservent leur sens habituel en édition de texte. Si une touche semble ne rien faire, vérifiez si vous êtes en cours d’édition : appuyez d’abord sur Esc ou Enter, puis réessayez. Les commandes qui agissent sur la sélection ne font rien non plus tant qu’une boîte de dialogue est ouverte. Lorsqu’une combinaison fait exception à cette règle, la table le précise.
 

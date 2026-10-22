@@ -58,6 +58,9 @@ const WIN_SIDECAR = `../sheets/native/xlsx-engine/target/${winSidecarTarget}/rel
 
 function assertExtraResourceSources() {
   for (const rel of [
+    '../../LICENSE',
+    '../../NOTICE',
+    '../../LICENSE-UNICODE.txt',
     '../../node_modules/electron/dist/LICENSES.chromium.html',
     '../../node_modules/@embedpdf/pdfium/dist/pdfium.wasm',
     '../pdf/node_modules/harfbuzzjs/hb-subset.wasm',
@@ -280,25 +283,49 @@ function ensureCliBundleCarriesAppVersion() {
 
 const NOTICE_PATH = join(__dirname, 'build/THIRD-PARTY-NOTICES.txt')
 const PDFIUM_NOTICE_TERMS = ['@embedpdf/pdfium', 'Copyright 2014 PDFium Authors', 'Apache License']
+// tools/gen-third-party-notices.mjs writes this header after the repo NOTICE,
+// and one crate-count line per Rust component (xlsx-sidecar, rhwp_bg.wasm)
+const NOTICE_HEADER = `${PRODUCT_NAME} — Third-Party Software Notices`
+const RUST_COMPONENTS = 2
+const CRATE_COUNT_LINE = /^[1-9]\d* crates, all under permissive terms:$/gm
 
-function hasValidThirdPartyNotice() {
-  if (!existsSync(NOTICE_PATH)) return false
+/**
+ * What keeps a generated notice from shipping, or [] when it may ship. A stale
+ * file (written before a NOTICE change, or by the upstream generator) or a
+ * partial one (cargo was missing, so a Rust section is only a pointer) is
+ * regenerated rather than packaged.
+ */
+function thirdPartyNoticeProblems() {
+  let text
   try {
-    const text = readFileSync(NOTICE_PATH, 'utf8')
-    return PDFIUM_NOTICE_TERMS.every((term) => text.includes(term))
+    text = readFileSync(NOTICE_PATH, 'utf8')
   } catch {
-    return false
+    return ['the file is missing']
   }
+  const problems = PDFIUM_NOTICE_TERMS.filter((term) => !text.includes(term)).map(
+    (term) => `PDFium redistribution term "${term}" is missing`,
+  )
+  const notice = readFileSync(join(__dirname, '../../NOTICE'), 'utf8').trim()
+  if (!text.startsWith(notice)) problems.push('it does not open with the current NOTICE')
+  if (!text.includes(NOTICE_HEADER)) problems.push(`the "${NOTICE_HEADER}" header is missing`)
+  const rustSections = text.match(CRATE_COUNT_LINE)?.length ?? 0
+  if (rustSections < RUST_COMPONENTS) {
+    problems.push(`${rustSections} of ${RUST_COMPONENTS} Rust crate sections are listed`)
+  }
+  return problems
 }
 
 function ensureThirdPartyNotices() {
-  if (!hasValidThirdPartyNotice()) {
+  if (thirdPartyNoticeProblems().length > 0) {
+    // IEUM_RELEASE makes the generator fail on a gap instead of degrading
     execFileSync(process.execPath, [join(__dirname, '../../tools/gen-third-party-notices.mjs')], {
       stdio: 'inherit',
+      env: { ...process.env, IEUM_RELEASE: '1' },
     })
   }
-  if (!hasValidThirdPartyNotice()) {
-    throw new Error('third-party notice missing PDFium redistribution terms')
+  const problems = thirdPartyNoticeProblems()
+  if (problems.length > 0) {
+    throw new Error(`third-party notice cannot ship: ${problems.join('; ')}`)
   }
 }
 
@@ -467,6 +494,20 @@ const config = {
   },
   files: ['out/**'],
   extraResources: [
+    // Apache-2.0 §4(a)/(d): every copy carries the license and the NOTICE of
+    // the work; NOTICE refers to LICENSE-UNICODE.txt for the Unicode data
+    {
+      from: '../../LICENSE',
+      to: 'LICENSE.txt',
+    },
+    {
+      from: '../../NOTICE',
+      to: 'NOTICE.txt',
+    },
+    {
+      from: '../../LICENSE-UNICODE.txt',
+      to: 'LICENSE-UNICODE.txt',
+    },
     {
       from: 'build/THIRD-PARTY-NOTICES.txt',
       to: 'THIRD-PARTY-NOTICES.txt',

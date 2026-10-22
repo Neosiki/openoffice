@@ -159,7 +159,7 @@ F1 öffnet das **Benutzerhandbuch**, nicht diese Liste. Die Kürzel-Tabelle ist 
 
 ## Sheets
 
-GenOffice Sheets ist ein Excel-kompatibles Raster. Die meisten Kürzel unten sind die Excel-Kürzel, die Sie bereits kennen.
+GenOffice Sheets öffnet und speichert .xlsx-Arbeitsmappen. Die meisten Kürzel unten sind die in Tabellenprogrammen üblichen, viele kennen Sie also schon.
 
 > **Bearbeiten hat Vorrang.** Fast jedes Kürzel in Sheets wird ignoriert, während Sie eine Zelle bearbeiten oder in der **Formelleiste** tippen, damit Tippen, Cursorbewegen und Rücktaste ihre gewohnte Bedeutung für die Textbearbeitung behalten. Wenn eine Taste scheinbar nichts bewirkt, prüfen Sie, ob Sie mitten in einer Bearbeitung sind: drücken Sie zuerst Esc oder Enter und versuchen Sie es erneut. Befehle, die auf die Auswahl wirken, bewirken ebenfalls nichts, solange ein Dialog offen ist. Wo eine Tastenkombination eine Ausnahme von dieser Regel ist, steht das in der Tabelle.
 

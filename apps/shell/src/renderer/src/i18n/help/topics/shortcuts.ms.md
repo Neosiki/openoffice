@@ -159,7 +159,7 @@ F1 membuka **Panduan Pengguna**, bukan senarai ini. Helaian pintasannya ialah `â
 
 ## Sheets
 
-GenOffice Sheets ialah grid serasi Excel. Kebanyakan pintasan di bawah ialah pintasan Excel yang anda sudah kenal.
+GenOffice Sheets membuka dan menyimpan buku kerja .xlsx. Kebanyakan pintasan di bawah ialah pintasan yang biasa digunakan dalam program hamparan, jadi banyak yang mungkin sudah anda kenal.
 
 > **Penyuntingan menang.** Hampir setiap pintasan dalam Sheets diabaikan semasa anda menyunting sel atau menaip dalam **bar formula**, supaya menaip, memindahkan caret dan kekunci Backspace mengekalkan maksud penyuntingan teks biasa. Jika sesuatu kekunci nampaknya tidak melakukan apa-apa, semaklah sama ada anda berada di tengah menyunting: tekan Esc atau Enter dahulu, kemudian cuba lagi. Arahan yang bertindak ke atas pilihan juga tidak melakukan apa-apa semasa dialog terbuka. Di mana satu pintasan menjadi pengecualian kepada peraturan ini, jadual akan menyatakannya.
 

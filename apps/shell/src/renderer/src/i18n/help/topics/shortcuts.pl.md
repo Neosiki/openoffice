@@ -159,7 +159,7 @@ F1 otwiera **Podręcznik użytkownika**, a nie tę listę. Arkusz skrótów to �
 
 ## Sheets
 
-GenOffice Sheets to siatka zgodna z Excelem. Większość poniższych skrótów to skróty Excela, które już znasz.
+GenOffice Sheets otwiera i zapisuje skoroszyty .xlsx. Większość poniższych skrótów to skróty typowe dla programów arkuszy kalkulacyjnych, więc wiele z nich pewnie już znasz.
 
 > **Edycja ma pierwszeństwo.** Prawie każdy skrót w Sheets jest ignorowany, gdy edytujesz komórkę lub piszesz w **pasku formuły**, aby wpisywanie, przesuwanie kursora i Backspace zachowały swoje zwykłe znaczenie przy edycji tekstu. Jeśli klawisz robi wrażenie, że nic nie robi, sprawdź, czy nie jesteś w trakcie edycji: najpierw naciśnij Esc albo Enter, a potem spróbuj ponownie. Polecenia działające na zaznaczeniu również nic nie robią, gdy otwarte jest okno dialogowe. Tam, gdzie skrót jest wyjątkiem od tej reguły, tabela to zaznacza.
 

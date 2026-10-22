@@ -11,7 +11,7 @@ import {
   clampAiCustomFontSize,
 } from '@genoffice/ui'
 import type { AiFontSize, AiPanelPrefs, AiPanelSide } from '@genoffice/ui'
-import { PRODUCT_REPO_SLUG } from '@genoffice/i18n'
+import { PRODUCT_CONTACT_EMAIL, PRODUCT_REPO_SLUG } from '@genoffice/i18n'
 import type { Lang } from '@genoffice/i18n'
 import type { DecisionEndpoint, DefaultAppStatus, FileSearchSettings } from '../../shared/home-api'
 import type { UpdateUiState } from '../../shared/update-api'
@@ -1929,7 +1929,35 @@ export function SettingsModal({
                 </div>
                 <div className="set-field">
                   <div className="set-field-text">
+                    <label className="set-field-label">{t('setLicenses')}</label>
+                    <div className="set-field-desc">{t('setLicensesDesc')}</div>
+                  </div>
+                  <button
+                    className="set-btn"
+                    onClick={() => void window.aiOffice.openLicenseNotices?.()}
+                  >
+                    {t('setLicensesOpen')}
+                  </button>
+                </div>
+                <div className="set-field">
+                  <div className="set-field-text">
+                    <label className="set-field-label">{t('setRightsContact')}</label>
+                    <div className="set-field-desc">{t('setRightsContactDesc')}</div>
+                    <div className="set-field-value">{PRODUCT_CONTACT_EMAIL}</div>
+                  </div>
+                  <button
+                    className="set-btn"
+                    onClick={() => void window.aiOffice.openRightsContact?.()}
+                  >
+                    {t('setRightsContactSend')}
+                  </button>
+                </div>
+                <div className="set-field">
+                  <div className="set-field-text">
                     <div className="set-field-desc">{t('setBasedOn')}</div>
+                    <div className="set-field-desc">{t('setHwpNotice')}</div>
+                    <div className="set-field-desc">{t('setTrademarks')}</div>
+                    <div className="set-field-desc">{t('setDisclaimer')}</div>
                   </div>
                 </div>
               </>

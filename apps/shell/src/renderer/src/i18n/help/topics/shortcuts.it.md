@@ -159,7 +159,7 @@ F1 apre la **guida utente**, non questo elenco. Il foglio delle scorciatoie è `
 
 ## Sheets
 
-GenOffice Sheets è una griglia compatibile con Excel. La maggior parte delle scorciatoie qui sotto sono quelle di Excel che già conosci.
+GenOffice Sheets apre e salva cartelle di lavoro .xlsx. La maggior parte delle scorciatoie qui sotto sono quelle comuni ai programmi di fogli di calcolo, quindi molte ti saranno già familiari.
 
 > **La modifica vince.** Quasi ogni scorciatoia di Sheets viene ignorata mentre modifichi una cella o scrivi nella **barra delle formule**, in modo che digitare, spostare il cursore e il tasto Backspace conservino il loro solito significato di modifica del testo. Se un tasto sembra non fare nulla, verifica se sei nel mezzo di una modifica: premi prima Esc o Enter, poi riprova. Anche i comandi che agiscono sulla selezione non fanno nulla mentre è aperta una finestra. Dove una combinazione fa eccezione a questa regola, la tabella lo dice.
 
