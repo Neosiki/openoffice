@@ -27,11 +27,13 @@ import {
 /** the colour of the mind map icon's spine, as drawn in file-mindmap.svg (the tab shows that SVG) */
 const TILE_FILL = '#B04E83'
 
-/** the SVG text behind a tab's icon image (a bundled file or an inlined data URL) */
-async function tabIconSvg(tab: Locator): Promise<string> {
-  return tab
-    .locator('.tab-icon img')
-    .evaluate(async (img: HTMLImageElement) => (await fetch(img.src)).text())
+/** the tab shows the same bundled icon as the Home card, and that icon is the mind map's */
+async function expectMindMapTabIcon(tab: Locator, cardIconSrc: string | null): Promise<void> {
+  expect(cardIconSrc).toBeTruthy()
+  // the renderer cannot fetch a packaged file:// asset, so compare where the two images point
+  expect(await tab.locator('.tab-icon img').getAttribute('src')).toBe(cardIconSrc)
+  const svg = await readFile(join(SHELL_DIR, 'src/renderer/src/assets/file-mindmap.svg'), 'utf8')
+  expect(svg).toContain(TILE_FILL)
 }
 
 interface TabSummaryOnWindow {
@@ -145,6 +147,7 @@ test.describe('mind map editor in the shell', () => {
       // the card is named for the editor, never after another product
       await expect(card.locator('.quick-title')).toHaveText('Mind Map')
       await expect(card.locator('img')).toBeVisible()
+      const cardIconSrc = await card.locator('img').getAttribute('src')
       await page.screenshot({ path: screenshotPath('mindmap-home-card') })
       await card.click()
 
@@ -153,7 +156,7 @@ test.describe('mind map editor in the shell', () => {
       await expect(tab).toHaveCount(1)
       await expect(tab).toHaveClass(/active/)
       await expect(tab.locator('.tab-title')).toHaveText('Untitled Mind Map')
-      expect(await tabIconSvg(tab)).toContain(TILE_FILL)
+      await expectMindMapTabIcon(tab, cardIconSrc)
       const map = await waitForPageWithUrl(app, '://mindmap/')
       await expect(map.locator('.mm-sheet-host:not([hidden]) me-root me-tpc')).toBeVisible()
       await page.screenshot({ path: screenshotPath('mindmap-tab-strip') })
@@ -358,7 +361,6 @@ test.describe('mind map editor in the shell', () => {
       const tab = page.locator('.tab-bar .tab-item:not(.tab-home)')
       await expect(tab).toHaveCount(1)
       await expect(tab.locator('.tab-title')).toHaveText('trip.xmind')
-      expect(await tabIconSvg(tab)).toContain(TILE_FILL)
       const map = await waitForPageWithUrl(app, '://mindmap/')
       await expect
         .poll(() => topicTitles(map))
@@ -374,6 +376,7 @@ test.describe('mind map editor in the shell', () => {
         .locator('img')
         .getAttribute('src')
       expect(await row.locator('.recent-icon img').getAttribute('src')).toBe(tile)
+      await expectMindMapTabIcon(tab, tile)
       await page.screenshot({ path: screenshotPath('mindmap-home-recent-row') })
 
       // ── the sidebar filter keeps it under "Mind Map" and hides it under "HTML"
