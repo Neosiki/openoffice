@@ -12,6 +12,11 @@ IeumOffice is a modified version of GenOffice (see
 problem is in code the two projects share (the document engines, for example),
 please consider reporting it to the upstream project as well.
 
+## Trademark and Copyright Reports
+
+Send trademark or copyright infringement reports and licensing questions to
+pblsketch@gmail.com. The same address is in the app under Settings → About.
+
 ## Process Security Posture
 
 All application windows run with the full Electron renderer lockdown:
@@ -22,8 +27,8 @@ All application windows run with the full Electron renderer lockdown:
   (payloads are schema-checked in the main process; sheets uses zod end to end).
 - Every `shell.openExternal` call goes through a single shared gate
   (`@genoffice/electron-utils` → `safeExternalUrl`) that parses the URL and
-  enforces a protocol allowlist (http/https; pdf link annotations additionally
-  allow mailto). `file:`, `javascript:`, and custom schemes are always rejected.
+  enforces a protocol allowlist (http/https; pdf link annotations and the
+  rights-contact button in Settings → About additionally allow mailto). `file:`, `javascript:`, and custom schemes are always rejected.
 - No API keys are hardcoded and the project runs no AI service of its own. By
   default AI requests run through the Claude Code or Codex program installed on
   the PC, under the login the user made there (see the next section).

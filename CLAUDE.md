@@ -101,6 +101,7 @@ openoffice/
 | 편집기 뒷단(`apps/*/src/main`)이나 preload를 고친다    | `docs/engineering-notes.md`의 "빌드와 실행". 껍데기 앱을 다시 빌드해야 반영된다                          |
 | 화면 문구나 도움말을 더하거나 고친다                   | `docs/standards.md`의 "글과 언어", "제품 이름". 21개 언어 모두 채운다                                    |
 | 화면 스타일을 고친다                                   | `docs/standards.md`의 "화면 색"                                                                          |
+| 아이콘·그림을 더하거나 다른 회사 이름을 화면에 적는다  | `docs/standards.md`의 "상표와 아이콘"(결정 0051)                                                         |
 | 터미널 명령어·MCP·스킬을 고친다                        | `docs/contracts.md`. 출력 구조와 이름은 밖에서 기대고 있다                                               |
 | 가리기나 다른 파일로 읽기를 고친다                     | `docs/security.md`의 "문서 내용", `packages/file-parse/AGENTS.md`                                        |
 | 마인드맵 파일의 열기·저장을 고친다                     | `packages/xmind-engine/AGENTS.md`. 바뀐 것이 없는 저장은 원본 바이트 그대로다                            |

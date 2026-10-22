@@ -42,8 +42,8 @@ IeumOffice is a modified version of the open-source project
 ## What works today
 
 - **Editors in one tabbed window**: Word (`.docx`), Excel (`.xlsx`),
-  PowerPoint (`.pptx`), PDF, Markdown, HTML and mind maps. Files are opened
-  and saved in their real formats on your own PC; edits are written back as narrow changes
+  PowerPoint (`.pptx`), PDF, Hangul (`.hwp`, `.hwpx`), Markdown, HTML and mind
+  maps. Files are opened and saved in their real formats on your own PC; edits are written back as narrow changes
   to the original file, so the parts you did not touch are kept as they were.
 - **An AI panel in every editor.** You ask in plain words, and the AI changes
   the document through the app's own editing tools. You see what was changed
@@ -400,6 +400,8 @@ anywhere. The full list is in [PRIVACY.md](PRIVACY.md).
   [SECURITY.md](SECURITY.md), not as a public issue.
 - Code: see [CONTRIBUTING.md](CONTRIBUTING.md) and the
   [Code of Conduct](CODE_OF_CONDUCT.md).
+- Trademark and copyright questions, infringement reports:
+  pblsketch@gmail.com.
 
 ## License and acknowledgement
 
@@ -430,11 +432,38 @@ software made with its published HWP format document, we state:
 > on the Hangul document file format (.hwp).)
 
 IeumOffice is an independent project. It is not affiliated with, sponsored by
-or endorsed by Genspark / Mainfunc, Inc., Anthropic, OpenAI, Microsoft, Hancom
-or XMind Ltd. "GenOffice" and "Genspark", and their logos, are trademarks of
+or endorsed by Genspark / Mainfunc, Inc., Anthropic, OpenAI, Microsoft, Hancom,
+Adobe, XMind Ltd. or Google. "GenOffice" and "Genspark", and their logos, are trademarks of
 their owners; so are "Claude", "Codex" and "ChatGPT". "Microsoft", "Windows",
 "Word", "Excel" and "PowerPoint" are trademarks of Microsoft Corporation;
 "한글" (Hangul), "한컴" (Hancom), "HWP" and "HWPX" are registered trademarks of
-Hancom Inc.; and "XMind" is a trademark of XMind Ltd. Other product names in
-this document belong to their owners. They are named here only to say what
-this software is based on, what it works with and which files it opens.
+Hancom Inc.; "XMind" is a trademark of XMind Ltd.; and "Google Drive" is a
+trademark of Google LLC. Other product names in this document belong to their
+owners. They are named here only to say what this software is based on, what
+it works with and which files it opens.
+
+### Official downloads and redistribution
+
+IeumOffice is free. Its only official downloads are the
+[GitHub releases](https://github.com/pblsketch/openoffice/releases) and
+[ieumoffice.com](https://ieumoffice.com); a copy sold for money is not an
+official release.
+
+The Apache License 2.0 lets anyone modify and redistribute the software. A
+redistribution must include [LICENSE](LICENSE) and [NOTICE](NOTICE) and state
+which files were changed. The license grants no trademark rights (sections 4
+and 6): the names and logos "IeumOffice", "이음오피스" and "GenOffice" may not
+be used as the name of another product. The projects IeumOffice builds on,
+GenOffice, rhwp and the others listed in [NOTICE](NOTICE) and in the installed
+`THIRD-PARTY-NOTICES.txt`, keep their own license terms.
+
+### No warranty
+
+IeumOffice is provided as is, without warranties of any kind, under sections 7
+and 8 of the Apache License 2.0. AI-generated content can be wrong: check it
+before you use it. Making sure you have the right to use it is up to you.
+
+### Trademark and copyright contact
+
+Send trademark or copyright infringement reports and licensing questions to
+pblsketch@gmail.com. The same address is in the app under Settings → About.

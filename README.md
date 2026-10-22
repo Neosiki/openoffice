@@ -42,7 +42,7 @@ Google Gemini)를 연결해 쓸 수 있습니다.
 ## 지금 되는 것
 
 - **탭으로 묶인 편집기**: 워드(`.docx`), 엑셀(`.xlsx`), 파워포인트(`.pptx`),
-  PDF, 마크다운, HTML, 마인드맵. 파일은 내 PC에서 원래 형식 그대로
+  PDF, 한글(`.hwp`, `.hwpx`), 마크다운, HTML, 마인드맵. 파일은 내 PC에서 원래 형식 그대로
   열고 저장합니다. 고친 부분만 원본 파일에 반영하므로, 손대지 않은 부분은
   그대로 남습니다.
 - **편집기마다 있는 AI 창.** 말로 부탁하면 AI가 앱의 편집 도구로 문서를
@@ -379,6 +379,7 @@ Parallel과 DuckDuckGo로, 업데이트 확인은 GitHub로 갑니다. 편집기
   비공개로 알려 주세요.
 - 코드 기여: [CONTRIBUTING.md](CONTRIBUTING.md)와
   [행동 강령](CODE_OF_CONDUCT.md)을 읽어 주세요.
+- 상표·저작권 문의와 권리 침해 신고: pblsketch@gmail.com
 
 ## 라이선스와 출처
 
@@ -406,12 +407,39 @@ License 1.1입니다. 고지와 글꼴 목록은 [NOTICE](NOTICE)에 있습니�
 > 개발하였습니다.
 
 이음오피스는 독립된 프로젝트입니다. Genspark / Mainfunc, Inc., Anthropic,
-OpenAI, Microsoft, 한글과컴퓨터, XMind와 제휴하거나 후원·보증을 받은 관계가
-아닙니다. "GenOffice"와 "Genspark"라는 이름과 로고는 각 소유자의 상표이고,
-"Claude", "Codex", "ChatGPT"도 그렇습니다. "Microsoft", "Windows", "Word",
-"Excel", "PowerPoint"는 Microsoft Corporation의 상표이고, "한글", "한컴",
-"HWP", "HWPX"는 주식회사 한글과컴퓨터의 등록 상표이며, "XMind"는 XMind
-Ltd.의 상표입니다. 그 밖에 이 글에 나오는 제품 이름도 각 소유자의
+OpenAI, Microsoft, 한글과컴퓨터, Adobe, XMind, Google과 제휴하거나
+후원·보증을 받은 관계가 아닙니다. "GenOffice"와 "Genspark"라는 이름과 로고는
+각 소유자의 상표이고, "Claude", "Codex", "ChatGPT"도 그렇습니다.
+"Microsoft", "Windows", "Word", "Excel", "PowerPoint"는 Microsoft
+Corporation의 상표이고, "한글", "한컴", "HWP", "HWPX"는 주식회사
+한글과컴퓨터의 등록 상표이며, "XMind"는 XMind Ltd.의, "Google 드라이브"는
+Google LLC의 상표입니다. 그 밖에 이 글에 나오는 제품 이름도 각 소유자의
 상표입니다. 여기서는 이 프로그램이 무엇을 바탕으로 만들어졌고, 무엇과 함께
 동작하며, 어떤 형식의 파일을 열 수 있는지 알리기 위해서만 그 이름을
 적었습니다.
+
+### 공식 배포처와 다시 배포할 때
+
+이음오피스는 무료입니다. 공식 배포처는
+[GitHub 릴리스](https://github.com/pblsketch/openoffice/releases)와
+[ieumoffice.com](https://ieumoffice.com) 두 곳뿐이고, 돈을 받고 파는 곳이
+있다면 공식 배포가 아닙니다.
+
+Apache License 2.0은 누구나 고쳐서 다시 배포하는 것을 허락합니다. 다만 다시
+배포할 때는 [LICENSE](LICENSE)와 [NOTICE](NOTICE)를 함께 넣고, 고친 파일에는
+고쳤다는 사실을 밝혀야 합니다. 이 라이선스는 상표를 쓸 권리를 주지 않으므로
+(4조, 6조), "이음오피스"·"IeumOffice"와 "GenOffice"의 이름과 로고를 자기
+제품 이름처럼 쓸 수 없습니다. 이음오피스가 바탕으로 삼은 GenOffice, rhwp와
+여러 오픈소스 프로젝트도 각자의 라이선스 조건을 지켜야 합니다. 목록은
+[NOTICE](NOTICE)와 설치 폴더의 `THIRD-PARTY-NOTICES.txt`에 있습니다.
+
+### 보증하지 않음
+
+이음오피스는 Apache License 2.0의 7조, 8조에 따라 있는 그대로 제공하며, 어떤
+보증도 하지 않습니다. AI가 만든 내용은 틀릴 수 있으니 확인한 뒤 쓰세요. 그
+내용을 쓸 권리가 있는지 확인하는 일은 쓰는 사람의 몫입니다.
+
+### 상표·저작권 문의
+
+상표나 저작권 침해 신고, 라이선스에 관한 문의는 pblsketch@gmail.com으로
+보내 주세요. 앱의 설정 → 정보에도 같은 주소가 있습니다.
