@@ -13,7 +13,7 @@
 import { PdfLoadError, withPdfDocument } from '../../../pdf2docx/src/extract'
 import { encodeRgbaPng } from '../../../pdf2docx/src/extract/png'
 import { translationUnits } from '../translate/result'
-import { textUnits, type TextUnit } from '../tree/derive'
+import { cellKey, textUnits, type TextUnit } from '../tree/derive'
 import { PageRangeError } from '../tree/extract'
 import type { BlockRegion, DocumentTree, InlineRun, PageInfo, Rect } from '../tree/types'
 import {
@@ -27,12 +27,14 @@ import {
   mostlyInside,
   normText,
   placeCells,
+  placeCellsByArea,
   readShapeBounds,
   readTextObjects,
   readingOrder,
   recognizeLines,
   similarity,
   union,
+  type CellPlacement,
   type CellText,
   type OcrLineBox,
   type Owner,
@@ -165,6 +167,25 @@ function indexTree(tree: DocumentTree): TreeIndex {
       roles.set(b.caption.id, 'caption')
     }
   }
+  // a table paragraph's area: its cell, split between paragraphs halfway across the gaps
+  const areas = new Map<string, Rect>()
+  for (const b of tree.blocks) {
+    if (b.kind !== 'table') continue
+    for (const c of b.table.cells) {
+      const boxes = c.paragraphBoxes
+      if (!c.region || !boxes || boxes.length !== c.paragraphs.length) continue
+      const cell = c.region.box
+      const cut = (k: number) => (boxes[k - 1]!.y0 + boxes[k]!.y1) / 2
+      boxes.forEach((_, k) => {
+        areas.set(cellKey(b.id, c.row, c.col, k), {
+          x0: cell.x0,
+          x1: cell.x1,
+          y1: k === 0 ? cell.y1 : cut(k),
+          y0: k === boxes.length - 1 ? cell.y0 : cut(k + 1),
+        })
+      })
+    }
+  }
   for (const f of tree.footnotes) {
     for (const p of f.blocks) {
       add(p.id, p.regions)
@@ -175,7 +196,8 @@ function indexTree(tree: DocumentTree): TreeIndex {
   for (const u of textUnits(tree)) {
     if (!u.key.includes('#')) continue
     const list = cells.get(u.blockId) ?? []
-    list.push({ key: u.key, text: plainText(u.runs) })
+    const area = areas.get(u.key)
+    list.push({ key: u.key, text: plainText(u.runs), ...(area ? { area } : {}) })
     cells.set(u.blockId, list)
   }
   return { owners, regionsOf, titleLike, roles, markers, cells }
@@ -208,6 +230,8 @@ interface Part {
   sizes: number[]
   /** display y of each source line, top first */
   lines: number[]
+  /** a table paragraph's whole area, for text needing more room than `box` */
+  area?: Rect
   color: Rgb
   scan: boolean
 }
@@ -248,6 +272,7 @@ function textPart(
   box: Rect,
   objects: readonly TextObjectInfo[],
   bitmap: () => PageBitmap | null,
+  area?: Rect,
 ): Part {
   const ordered = readingOrder(objects)
   const size = medianOf(objects.map((o) => o.size))
@@ -265,6 +290,7 @@ function textPart(
     ),
     color: objects.find((o) => !o.invisible)?.color ?? [0, 0, 0],
     scan: false,
+    ...(area ? { area } : {}),
   }
   if (scan) {
     // a searchable scan: the visible text is in the page image below
@@ -304,7 +330,7 @@ function readTextPage(
   const bitmap = () => (cached ??= renderPageBitmap(m, page, frame, SAMPLE_RENDER_SCALE))
   const parts = new Map<string, PartResult[]>()
   const touched: TextObjectInfo[] = []
-  const tables = new Map<string, Map<string, { objects: TextObjectInfo[]; box: Rect }>>()
+  const tables = new Map<string, Map<string, CellPlacement | 'shared'>>()
 
   for (const rec of onPage) {
     const results: PartResult[] = []
@@ -317,16 +343,18 @@ function readTextPage(
         const key = ownerKey(rec.ownerId, i)
         let placed = tables.get(key)
         if (!placed) {
-          placed = placeCells(objs, index.cells.get(rec.ownerId) ?? [], region.box)
+          const cells = index.cells.get(rec.ownerId) ?? []
+          // cells the analysis measured are found by place, AI tables by their text
+          placed = cells.every((c): c is CellText & { area: Rect } => c.area !== undefined)
+            ? placeCellsByArea(objs, cells as (CellText & { area: Rect })[])
+            : placeCells(objs, cells, region.box)
           tables.set(key, placed)
         }
         touched.push(...objs)
         const cell = placed.get(rec.unit.key)
-        if (!cell) {
-          results.push('text-not-found')
-          return
-        }
-        results.push(textPart(pageNo, cell.box, cell.objects, bitmap))
+        if (cell === 'shared') results.push('shared-text-object')
+        else if (!cell) results.push('text-not-found')
+        else results.push(textPart(pageNo, cell.box, cell.objects, bitmap, cell.area))
         return
       }
       touched.push(...objs)
@@ -722,6 +750,7 @@ export async function writeTranslatedPdf(
         font: metrics[face]!,
         group,
         expandable: w.parts.length === 1 && !w.parts[0]!.scan && !w.rec.isCell,
+        ...(w.parts.length === 1 && w.parts[0]!.area ? { alternatives: [[w.parts[0]!.area]] } : {}),
       },
     })
   }

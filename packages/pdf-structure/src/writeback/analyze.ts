@@ -268,11 +268,78 @@ export function readingOrder(objects: readonly TextObjectInfo[]): TextObjectInfo
 export interface CellText {
   key: string
   text: string
+  /**
+   * the paragraph's share of its cell (the whole cell for a one-paragraph
+   * cell), from the cell boxes the PDF analysis found; absent for AI tables
+   */
+  area?: Rect
 }
 
 export interface CellPlacement {
   objects: TextObjectInfo[]
   box: Rect
+  /** the paragraph's whole area, for text that needs more room than `box` */
+  area?: Rect
+}
+
+/** inset of the translation from the cell rules, points */
+const CELL_PAD_X = 2
+const CELL_PAD_Y = 1
+/** how far a text object may poke past its cell's rule into a neighbor, points */
+const CELL_REACH = 1.5
+
+const inset = (r: Rect): Rect => ({
+  x0: r.x0 + CELL_PAD_X,
+  y0: r.y0 + CELL_PAD_Y,
+  x1: Math.max(r.x0 + CELL_PAD_X, r.x1 - CELL_PAD_X),
+  y1: Math.max(r.y0 + CELL_PAD_Y, r.y1 - CELL_PAD_Y),
+})
+
+/**
+ * Split a table's objects among its cell paragraphs by place: an object
+ * belongs to the area holding most of it. An object reaching more than
+ * CELL_REACH into another area (a whole row drawn as one string) belongs
+ * to none, and the paragraphs it
+ * touches are not written ('shared'): removing it would take a neighbor's
+ * text. A paragraph starts at its source top (`box`); its whole `area` is
+ * the room it may take when that is not enough.
+ */
+export function placeCellsByArea(
+  objects: readonly TextObjectInfo[],
+  cells: readonly (CellText & { area: Rect })[],
+): Map<string, CellPlacement | 'shared'> {
+  const got = new Map<string, TextObjectInfo[]>()
+  const straddling: Rect[] = []
+  const overlap = (r: Rect, a: Rect) =>
+    Math.max(0, Math.min(r.x1, a.x1) - Math.max(r.x0, a.x0)) *
+    Math.max(0, Math.min(r.y1, a.y1) - Math.max(r.y0, a.y0))
+  for (const o of objects) {
+    if (!normText(o.text)) continue
+    const reached = cells.filter((c) => overlap(o.bounds, expand(c.area, -CELL_REACH)) > 0)
+    const home = cells.reduce<(typeof cells)[number] | null>(
+      (best, c) => (!best || overlap(o.bounds, c.area) > overlap(o.bounds, best.area) ? c : best),
+      null,
+    )
+    if (home && reached.every((c) => c.area === home.area)) {
+      got.set(home.key, [...(got.get(home.key) ?? []), o])
+    } else straddling.push(o.bounds)
+  }
+  const out = new Map<string, CellPlacement | 'shared'>()
+  for (const c of cells) {
+    const touched = straddling.some(
+      (r) => r.x0 < c.area.x1 && r.x1 > c.area.x0 && r.y0 < c.area.y1 && r.y1 > c.area.y0,
+    )
+    if (touched) {
+      out.set(c.key, 'shared')
+      continue
+    }
+    const objs = got.get(c.key)
+    if (!objs?.length) continue
+    const area = inset(c.area)
+    const top = Math.min(area.y1, union(objs.map((o) => o.bounds)).y1)
+    out.set(c.key, { objects: objs, box: { ...area, y1: Math.max(area.y0, top) }, area })
+  }
+  return out
 }
 
 /**

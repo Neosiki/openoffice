@@ -684,6 +684,69 @@ describe('tables, page joins and rotated pages', () => {
     expect(report.overflowed).toEqual([])
   })
 
+  it('gives a cell translation the height of its cell before shrinking it', async () => {
+    const m = await loadPdfium()
+    const pdf = await buildTablePdf()
+    const { tree } = await extractDocumentTree(pdf, { pdfium: m })
+    const table = tree.blocks.find((b) => b.kind === 'table')
+    if (table?.kind !== 'table') throw new Error('no table')
+    const name = table.table.cells.find((c) => flat(runsText(c.paragraphs[0]!)) === 'Name')!
+    // two lines in the 128pt cell: room only from the cell top, not the source line
+    const long = 'A considerably longer label for the name'
+    const tr = new Map<string, InlineRun[]>([
+      [`${table.id}#${name.row}.${name.col}.0`, [{ kind: 'text', text: long }]],
+    ])
+    const { pdf: out, report } = await run(pdf, tree, deriveTranslatedTree(tree, 'en', tr), {
+      fontLocator: latinLocator,
+    })
+    expect(report.translated).toBe(1)
+    expect(report.overflowed).toEqual([])
+    const res = census(m, out)
+    expect(flat(res.text)).toContain('considerably longer')
+    expect(res.text).not.toContain('Name')
+    // the cell's own size: the whole cell had room
+    const written = res.sizes.slice(-[...long.replace(/\s/g, '')].length)
+    for (const s of written) expect(s).toBeCloseTo(11, 1)
+  })
+
+  it('keeps cells whose source text is one string across both of them', async () => {
+    const { PDFDocument, StandardFonts } = await import('pdf-lib')
+    const doc = await PDFDocument.create()
+    const page = doc.addPage([612, 792])
+    const font = await doc.embedFont(StandardFonts.Helvetica)
+    const line = (x1: number, y1: number, x2: number, y2: number) =>
+      page.drawLine({ start: { x: x1, y: y1 }, end: { x: x2, y: y2 }, thickness: 1 })
+    for (const y of [700, 660, 620]) line(72, y, 456, y)
+    for (const x of [72, 200, 328, 456]) line(x, 620, x, 700)
+    page.drawText('Name', { x: 80, y: 674, size: 11, font })
+    // one text object running over the rule at x = 328
+    page.drawText('Quantity and the unit price per item', { x: 208, y: 674, size: 11, font })
+    page.drawText('Total', { x: 80, y: 634, size: 11, font })
+    page.drawText('Sum', { x: 208, y: 634, size: 11, font })
+    page.drawText('Rest', { x: 336, y: 634, size: 11, font })
+    const pdf = await doc.save()
+    const m = await loadPdfium()
+    const { tree } = await extractDocumentTree(pdf, { pdfium: m })
+    const table = tree.blocks.find((b) => b.kind === 'table')
+    if (table?.kind !== 'table') throw new Error('no table')
+    const tr = new Map<string, InlineRun[]>()
+    for (const c of table.table.cells) {
+      const source = flat(runsText(c.paragraphs[0] ?? [])).trim()
+      if (source) tr.set(`${table.id}#${c.row}.${c.col}.0`, [{ kind: 'text', text: `[${source}]` }])
+    }
+    const { pdf: out, report } = await run(pdf, tree, deriveTranslatedTree(tree, 'en', tr), {
+      fontLocator: latinLocator,
+    })
+    const res = census(m, out)
+    // the straddling string stays whole; its cells are reported, not half-written
+    expect(flat(res.text)).toContain('Quantity and the unit price per item')
+    expect(flat(res.text)).not.toContain('[Quantity')
+    expect(report.untranslated.some((u) => u.reason === 'shared-text-object')).toBe(true)
+    // the other cells are written
+    for (const done of ['[Name]', '[Total]', '[Sum]', '[Rest]'])
+      expect(flat(res.text)).toContain(done)
+  })
+
   it('flows a paragraph joined across a page break over both of its boxes', async () => {
     const m = await loadPdfium()
     const pdf = await buildPdf([

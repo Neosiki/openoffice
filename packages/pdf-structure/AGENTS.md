@@ -25,6 +25,7 @@ PDF를 다시 흐르는 글의 **문서 나무**로 바꾸고, 그 나무를 쓰
 - 나무 형식은 `types.ts`에 있다. 블록 목록 하나가 읽는 순서로 놓이고 페이지 경계 블록(`pageBreak`)이 원본 페이지 번호를 표시한다. 모든 블록이 원본 페이지 번호와 페이지 지문을 가진다.
 - 번역 나무와 대역 나무도 같은 형식이다(`derive.ts`). 번역된 블록은 `원래 id@언어` id와 `translationOf`를 가진다. 번역 단위의 열쇠는 `textUnits`가 정한다.
 - 표는 IR 표(`gridSpan`·`vMerge`)와 AI가 돌려준 HTML 표가 같은 모양(`TreeTable`)이다. HTML 쪽은 `tableFromSpans`로 만든다.
+- IR 표의 칸은 자리를 가진다. `region`은 괘선으로 둘러싼 칸 상자(병합 칸은 합친 범위)이고, `paragraphBoxes`는 칸 안 문단마다의 상자다. AI가 읽은 표의 칸에는 없다.
 
 ### 출력 (`src/markdown`, `src/epub`, `src/structured-text`, `src/images`)
 
@@ -67,6 +68,7 @@ PDF를 다시 흐르는 글의 **문서 나무**로 바꾸고, 그 나무를 쓰
 ### 번역 PDF (`src/writeback`)
 
 - 원본 바이트는 복사만 한다. 블록마다 원문 글자 객체만 지우고 같은 상자에 번역문을 쓴다. 벡터 그림, 이미지, 링크, 주석, 양식은 그대로 둔다. 글꼴은 목표 언어를 그릴 수 있는 설치 글꼴을 HarfBuzz wasm(`hbSubsetWasm`, 호출자가 준다)으로 부분 집합해 넣는다.
+- 표 칸의 글자 객체는 칸 자리로 나눈다(`placeCellsByArea`). 객체는 가장 많이 겹친 칸 문단의 것이다. 다른 칸으로 1.5pt(`CELL_REACH`)보다 더 들어간 객체(한 줄을 한 문자열로 그린 표)는 어느 칸의 것도 아니고, 그 객체가 닿은 칸은 `shared-text-object`로 원문을 둔다. 번역문은 원문의 첫 줄 높이에서 시작하고, 모자라면 칸(문단 몫) 전체를 쓴다. 자리가 없는 AI 표는 지금처럼 글 대조(`placeCells`)로 찾는다.
 - 원문 글자 크기는 `FPDFText_GetFontSize`에 글자 행렬의 세로 배율을 곱해 읽는다(pdf2docx와 같은 셈). `Tf` 값만 읽으면 `1 Tf`+12배 행렬 같은 글자를 1pt로 읽는다.
 - 자리 잡기(`place.ts`, 결정 0057)는 모든 블록을 한꺼번에 본다.
   1. 블록마다 원래 크기에서 4%씩(`SHRINK_STEP`) 60%(`MIN_FONT_SCALE`)까지 줄여 가며 들어가는 단계를 잰다.

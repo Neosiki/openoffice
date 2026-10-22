@@ -126,6 +126,13 @@ export interface TableCell {
   header?: true
   /** cell paragraphs; translation unit = one cell */
   paragraphs: InlineRun[][]
+  /**
+   * where the cell sits, merged extent included (tables the PDF analysis
+   * found; AI-read tables have none)
+   */
+  region?: BlockRegion
+  /** the box of each paragraph, in `paragraphs` order (with `region`) */
+  paragraphBoxes?: Rect[]
 }
 
 export interface TreeTable {

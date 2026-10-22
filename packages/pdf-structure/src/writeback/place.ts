@@ -36,6 +36,11 @@ export interface PlanBlock {
   group: string
   /** a single-box block that may grow into free space */
   expandable: boolean
+  /**
+   * other box sets to try at each size before a smaller one (a table
+   * paragraph's whole area, when its source top leaves too little room)
+   */
+  alternatives?: Rect[][]
 }
 
 export interface PageSpace {
@@ -184,6 +189,10 @@ function firstFit(
   for (let k = from; k < steps.length; k++) {
     const own = tryAt(a, block.boxes, steps[k]!)
     if (own) return { step: k, placement: { layout: own, boxes: block.boxes } }
+    for (const boxes of block.alternatives ?? []) {
+      const layout = tryAt(a, boxes, steps[k]!)
+      if (layout) return { step: k, placement: { layout, boxes } }
+    }
     if (!block.expandable || !content || steps[k]! >= EXPAND_BELOW) continue
     grown ??= grownBoxes(block.boxes[0]!, a.around[0]!, content, block.size).map((b) => [b])
     for (const boxes of grown) {

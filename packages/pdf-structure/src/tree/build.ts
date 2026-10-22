@@ -223,8 +223,8 @@ export function buildDocumentTree(input: BuildTreeInput): DocumentTree {
 
   const cellParagraphs = (pageIndex: number) => (cellBlocks: IrTextBlock[]) =>
     cellBlocks
-      .map((b) => linesToRuns(b.lines, runContext(pageIndex)))
-      .filter((runs) => runs.length > 0)
+      .map((b) => ({ runs: linesToRuns(b.lines, runContext(pageIndex)), box: b.box }))
+      .filter((p) => p.runs.length > 0)
 
   pages.forEach((drafts, pageIndex) => {
     if (tocPages[pageIndex]) return
@@ -272,7 +272,7 @@ export function buildDocumentTree(input: BuildTreeInput): DocumentTree {
         blocks.push({
           ...head,
           kind: 'table',
-          table: tableFromIr(d.ir, cellParagraphs(pageIndex)),
+          table: tableFromIr(d.ir, cellParagraphs(pageIndex), pageNumberOf(pageIndex)),
           ...(cap ? { caption: cap } : {}),
         })
       } else {
