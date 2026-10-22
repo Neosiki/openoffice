@@ -104,6 +104,7 @@ import { registerResultStoreIpc } from './result-store-ipc'
 import { FEEDBACK_SURVEY_URL, feedbackDetails, feedbackText, platformLabel } from './feedback'
 import { registerDriveIpc, type DriveService } from './drive/drive-ipc'
 import { registerOutboundIpc } from './outbound-confirm'
+import { projectSkillsAllowed, projectSkillsView, setProjectSkills } from './agent/project-skills'
 import {
   ATTACHABLE_EXTS,
   ATTACHABLE_IMAGE_EXTS,
@@ -7719,14 +7720,24 @@ app.whenReady().then(async () => {
     },
     listSkills: () => userSkills.list(),
     openTemplatePreview: (owner, input) => templateTabs.openPreview(owner, input),
-    // the enabled skills (settings → skills) and the project's, as they are at the start
-    buildSkills: async (projectRoot) =>
-      buildAgentSkillBundle(
-        await userSkills.enabledForAgent(projectRoot),
+    // the enabled skills (settings → skills), and the project's only while the person has
+    // turned them on as they are now (decision 0055), read again at the start
+    buildSkills: async (projectRoot) => {
+      const enabled = await userSkills.enabledForAgent(projectRoot)
+      const withProject = await projectSkillsAllowed(APP_SETTINGS_PATH(), projectRoot, enabled)
+      return buildAgentSkillBundle(
+        withProject ? enabled : enabled.filter((skill) => skill.source !== 'project'),
         // not under userData: that folder is protected from sessions, and the
         // copied skills' scripts must be readable to run
         join(process.env.LOCALAPPDATA ?? tmpdir(), 'IeumOffice', 'agent-skills'),
-      ),
+      )
+    },
+    projectSkills: {
+      view: async (folder) =>
+        projectSkillsView(APP_SETTINGS_PATH(), folder, await userSkills.enabledForAgent(folder)),
+      set: async (folder, on) =>
+        setProjectSkills(APP_SETTINGS_PATH(), folder, await userSkills.enabledForAgent(folder), on),
+    },
   })
   void startMcpFromSettings(currentMcpSettings()).catch((error) => {
     console.error('[mcp] failed to start on boot:', error)
