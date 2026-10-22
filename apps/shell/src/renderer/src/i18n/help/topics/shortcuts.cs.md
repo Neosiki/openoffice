@@ -159,7 +159,7 @@ F1 otevírá **uživatelskou příručku**, ne tento seznam. List zkratek je ⌘
 
 ## Sheets
 
-GenOffice Sheets je mřížka kompatibilní s Excelem. Většina zkratek níže jsou zkratky Excelu, které už znáte.
+GenOffice Sheets otevírá a ukládá sešity .xlsx. Většina zkratek níže je stejná jako v běžných tabulkových programech, takže mnohé už nejspíš znáte.
 
 > **Úpravy mají přednost.** Téměř každá zkratka v Sheets se během úpravy buňky nebo psaní do **řádku vzorců** ignoruje, aby psaní, pohyb kurzoru a Backspace si zachovaly svůj obvyklý význam při úpravě textu. Pokud klávesa jako by nic nedělala, zkontrolujte, jestli právě neupravujete: nejdřív stiskněte Esc nebo Enter a pak to zkuste znovu. Příkazy působící na výběr také nic nedělají, dokud je otevřené dialogové okno. Tam, kde je chord výjimkou z tohoto pravidla, uvádí to tabulka.
 

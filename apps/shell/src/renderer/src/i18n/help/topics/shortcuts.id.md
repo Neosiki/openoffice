@@ -159,7 +159,7 @@ F1 membuka **Panduan Pengguna**, bukan daftar ini. Lembar pintasannya adalah `âŒ
 
 ## Sheets
 
-GenOffice Sheets adalah kisi yang kompatibel dengan Excel. Sebagian besar pintasan di bawah ini adalah pintasan Excel yang sudah Anda kenal.
+GenOffice Sheets membuka dan menyimpan buku kerja .xlsx. Sebagian besar pintasan di bawah ini adalah pintasan yang umum dipakai program spreadsheet, jadi banyak yang mungkin sudah Anda kenal.
 
 > **Penyuntingan menang.** Hampir semua pintasan di Sheets diabaikan selama Anda menyunting sel atau mengetik di **Bilah Rumus**, supaya mengetik, memindahkan caret, dan Backspace tetap bermakna penyuntingan teks biasa. Kalau sebuah tombol tidak melakukan apa pun, periksa apakah Anda sedang di tengah menyunting: tekan Esc atau Enter dulu, lalu coba lagi. Perintah yang bekerja pada seleksi juga tidak melakukan apa pun selama dialog terbuka. Di mana sebuah pintasan menjadi pengecualian terhadap aturan ini, tabel menyatakannya.
 

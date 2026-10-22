@@ -159,7 +159,7 @@ O F1 abre o **guia do utilizador**, não esta lista. A folha de atalhos é `⌘/
 
 ## Sheets
 
-O GenOffice Sheets é uma grelha compatível com o Excel. A maioria dos atalhos abaixo são os do Excel que já conhece.
+O GenOffice Sheets abre e guarda livros .xlsx. A maioria dos atalhos abaixo são os habituais nos programas de folhas de cálculo, por isso muitos já lhe serão familiares.
 
 > **A edição ganha.** Quase todos os atalhos do Sheets são ignorados enquanto edita uma célula ou escreve na **barra de fórmulas**, para que escrever, mover o cursor e a tecla Retrocesso mantenham o seu significado habitual de edição de texto. Se uma tecla parecer não fazer nada, verifique se está a meio de uma edição: prima primeiro Esc ou Enter e tente de novo. Os comandos que atuam sobre a seleção também não fazem nada enquanto houver uma caixa de diálogo aberta. Onde uma combinação seja a exceção a esta regra, a tabela indica-o.
 

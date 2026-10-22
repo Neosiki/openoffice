@@ -159,7 +159,7 @@ F1 opent de **gebruikershandleiding**, niet deze lijst. Het sneltoetsenblad is â
 
 ## Sheets
 
-GenOffice Sheets is een Excel-compatibel raster. De meeste hieronder zijn de Excel-sneltoetsen die je al kent.
+GenOffice Sheets opent en bewaart .xlsx-werkmappen. De meeste sneltoetsen hieronder zijn de gangbare in spreadsheetprogramma's, dus veel ervan ken je waarschijnlijk al.
 
 > **Bewerken wint.** Vrijwel elke sneltoets in Sheets wordt genegeerd terwijl je een cel bewerkt of in de **formulebalk** typt, zodat typen, de caret verplaatsen en Backspace hun gewone tekstbewerkingsbetekenis houden. Doet een toets niets, kijk dan of je midden in het bewerken bent: druk eerst op Esc of Enter en probeer het opnieuw. Commando's die op de selectie werken doen eveneens niets zolang er een dialoogvenster openstaat. Waar een combinatie een uitzondering op deze regel is, staat dat in de tabel.
 

@@ -159,7 +159,7 @@ F1 abre la **guía del usuario**, no esta lista. La hoja de atajos es `⌘/` o C
 
 ## Sheets
 
-GenOffice Sheets es una cuadrícula compatible con Excel. La mayoría de los atajos de abajo son los de Excel que ya conoces.
+GenOffice Sheets abre y guarda libros .xlsx. La mayoría de los atajos de abajo son los habituales en los programas de hojas de cálculo, así que muchos ya le resultarán familiares.
 
 > **La edición manda.** Casi todos los atajos de Sheets se ignoran mientras editas una celda o escribes en la **barra de fórmulas**, para que escribir, mover el cursor y la tecla Retroceso conserven su significado habitual de edición de texto. Si una tecla parece no hacer nada, comprueba si estás a mitad de una edición: pulsa primero Esc o Enter y vuelve a intentarlo. Los comandos que actúan sobre la selección tampoco hacen nada mientras haya un cuadro de diálogo abierto. Donde una combinación sea la excepción a esta regla, la tabla lo indica.
 
