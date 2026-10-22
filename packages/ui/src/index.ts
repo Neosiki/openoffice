@@ -38,6 +38,11 @@ export {
   type DocMentionInput,
 } from './use-doc-mention'
 export {
+  docMentionActions,
+  type DocMentionActionsOptions,
+  type DocMentionAddResult,
+} from './doc-mention-actions'
+export {
   DOC_MENTION_STRINGS,
   docMentionText,
   type DocMentionStringKey,

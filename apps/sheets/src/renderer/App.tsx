@@ -81,6 +81,8 @@ import {
   type DriveAttachPicked,
   type SkillChipRef,
   type SkillUse,
+  docMentionActions,
+  type AiComposerDocs,
 } from '@genoffice/ui'
 
 import {
@@ -1781,6 +1783,17 @@ export function App({
       accepted: added?.accepted ?? [],
       rejected: [...(added?.rejected ?? []), ...notes],
     })
+  }
+
+  /** The `@` document list in the input attaches through the same route as the buttons */
+  const docMention: AiComposerDocs = {
+    lang: getLang(),
+    ...docMentionActions({
+      lang: getLang(),
+      add: (paths) => window.desktopApi.addAttachmentPaths([...paths]),
+      merge: mergeAttachments,
+    }),
+    attachments,
   }
 
   async function handleAddPastedImage(data: ArrayBuffer, ext: string): Promise<void> {
@@ -5296,6 +5309,7 @@ export function App({
         attachNotice={attachNotice}
         onPickAttachments={() => void handlePickAttachments()}
         onDrivePicked={handleDrivePicked}
+        docMention={docMention}
         onAddAttachmentPaths={(paths) => void handleAddAttachmentPaths(paths)}
         onAddPastedImage={(data, ext) => void handleAddPastedImage(data, ext)}
         onRemoveAttachment={handleRemoveAttachment}
