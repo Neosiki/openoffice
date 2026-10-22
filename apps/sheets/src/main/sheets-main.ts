@@ -95,6 +95,7 @@ import {
   streamForProvider,
   type AiSettings,
   type AiStreamChunk,
+  sealAiSecrets,
 } from '@genoffice/ai-provider'
 import { shutdownCodexAppServers } from '@genoffice/ai-provider/codex-app-server'
 import {
@@ -3942,7 +3943,7 @@ export function registerSheetsAiIpc(): void {
   ipcMain.handle(IPC_CHANNELS.aiSetSettings, async (event, input: unknown) => {
     sessionFor(event)
     const settings = aiSettingsInputSchema.parse(input)
-    writeJsonAtomic(SETTINGS_PATH(), settings)
+    writeJsonAtomic(SETTINGS_PATH(), sealAiSecrets(settings))
     broadcastAiSettingsChanged()
   })
 

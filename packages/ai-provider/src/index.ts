@@ -54,6 +54,16 @@ export {
   normalizeAiSettings,
 } from './legacy-settings'
 export {
+  SEALED_PREFIX,
+  isSealedSecret,
+  mapAiSecrets,
+  openAiSecrets,
+  sealAiSecrets,
+  sealedAiSecretsIn,
+  setAiSecretCodec,
+} from './settings-secrets'
+export type { AiSecretCodec } from './settings-secrets'
+export {
   codexImageGenerationAvailable,
   configuredImageKeyProviders,
   imageProviderSelection,

@@ -20,6 +20,7 @@ import {
   ipcMain,
   nativeImage,
   nativeTheme,
+  safeStorage,
   session,
   shell,
   webContents,
@@ -409,7 +410,14 @@ import {
   startCodexAgentSession,
 } from '@genoffice/ai-provider/agent-session'
 import { normalizeAgentPrefs } from '../shared/agent-api'
-import { normalizeAiSettings, type AiSettings } from '@genoffice/ai-provider'
+import { normalizeAiSettings, setAiSecretCodec, type AiSettings } from '@genoffice/ai-provider'
+import {
+  REVEAL_FLAG,
+  runRevealEntry,
+  safeStorageCodec,
+  sealStoredAiSettings,
+  sealingKeyOnDisk,
+} from './ai-secrets'
 import { homedir, tmpdir } from 'node:os'
 import {
   configureDocumentLinks,
@@ -485,6 +493,17 @@ if (!app.isPackaged) {
  */
 const headlessArgv = parseHeadlessExportArgv(process.argv)
 if (headlessArgv.kind !== 'none') {
+  setHeadlessMode(true)
+  app.dock?.hide()
+}
+
+/**
+ * `--reveal-ai-secrets`: the terminal command's way to open the keys this app
+ * sealed (decision 0054, ai-secrets.ts). Sealed values on stdin, one JSON line
+ * on stdout, exit. No window, no lock, nothing else.
+ */
+const revealSecretsRun = process.argv.includes(REVEAL_FLAG)
+if (revealSecretsRun) {
   setHeadlessMode(true)
   app.dock?.hide()
 }
@@ -7290,6 +7309,15 @@ async function runHeadlessExportEntry(
 }
 
 app.whenReady().then(async () => {
+  // safeStorage works only once the app is ready: keys read before this read as empty
+  const secretCodec = safeStorageCodec(safeStorage, process.platform, () =>
+    sealingKeyOnDisk(join(app.getPath('userData'), 'Local State')),
+  )
+  setAiSecretCodec(secretCodec)
+  if (revealSecretsRun) {
+    app.exit(await runRevealEntry(secretCodec))
+    return
+  }
   // first scan waits for the windows to come up; later ones follow folder changes
   setTimeout(() => ensureFileIndexer()?.refresh(), 4000)
   installRendererProtocol({
@@ -7343,6 +7371,17 @@ app.whenReady().then(async () => {
   // a subscription CLI a force-killed previous run left behind is ended, then
   // this run records the ones it starts (userData is final by now)
   void initSubscriptionChildTracking(app.getPath('userData')).catch(() => undefined)
+  // keys an earlier version (or a hand edit) left plain are sealed once this run holds the lock;
+  // on the very first run the key is not on disk yet, so this only makes Chromium create it and
+  // the keys are sealed on a later save or the next start
+  try {
+    if (process.platform === 'win32' && safeStorage.isEncryptionAvailable()) {
+      safeStorage.encryptString('')
+    }
+    sealStoredAiSettings(join(app.getPath('userData'), 'ai-settings.json'))
+  } catch {
+    // an unwritable data folder keeps the plain file; the next save tries again
+  }
   // a registry left by a crashed instance must not block genoffice writes
   ownsOpenDocumentsRegistry = true
   publishOpenDocuments(OPEN_DOCUMENTS_PATH(), [])

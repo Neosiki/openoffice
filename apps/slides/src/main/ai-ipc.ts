@@ -22,6 +22,7 @@ import {
   type AiSettings,
   type AiStreamChunk,
   type AiStreamRequest,
+  sealAiSecrets,
 } from '@genoffice/ai-provider'
 import { shutdownCodexAppServers } from '@genoffice/ai-provider/codex-app-server'
 import {
@@ -143,7 +144,10 @@ export function registerAiIpc(): void {
   ensureSubscriptionIpc(ipcMain, {
     getSettings: readAiSettings,
     setMeteredAccepted: (provider, accepted) => {
-      writeJsonAtomic(AI_SETTINGS_PATH(), withMeteredAccepted(readAiSettings(), provider, accepted))
+      writeJsonAtomic(
+        AI_SETTINGS_PATH(),
+        sealAiSecrets(withMeteredAccepted(readAiSettings(), provider, accepted)),
+      )
       broadcastToWindows('ai:settings-changed')
     },
     dataDir: app.getPath('userData'),
@@ -159,7 +163,7 @@ export function registerAiIpc(): void {
       console.warn('[ai] rejected invalid ai:set-settings payload')
       return
     }
-    writeJsonAtomic(AI_SETTINGS_PATH(), sanitized)
+    writeJsonAtomic(AI_SETTINGS_PATH(), sealAiSecrets(sanitized))
     broadcastToWindows('ai:settings-changed')
   })
 

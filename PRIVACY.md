@@ -244,10 +244,13 @@ Nothing in this list is uploaded by the app.
   and that holds no change still to be uploaded is deleted when the app
   starts.
 - **Settings, including any API keys you entered**
-  (`ai-settings.json` in the same folder). The keys are stored as plain text,
-  not encrypted, so anyone who can read your user profile can read them. The
-  read-only GitHub token used to read private GitHub files is stored the same
-  way and is sent only to `api.github.com`.
+  (`ai-settings.json` in the same folder). On Windows the keys are encrypted
+  with your Windows account (DPAPI), so a copy of the file on another PC or
+  another account does not show them; programs running under your own account
+  can still open them. On macOS and Linux they are stored as plain text, so
+  anyone who can read your user profile can read them. The read-only GitHub
+  token used to read private GitHub files is stored the same way and is sent
+  only to `api.github.com`.
 - **The record that you accepted a login billed by usage**, kept in the same
   folder. It is cleared when the kind of login changes or you sign out.
 - **The automatic-call ledger**: the times of subscription requests made by

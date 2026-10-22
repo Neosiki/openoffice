@@ -32,9 +32,12 @@ All application windows run with the full Electron renderer lockdown:
 - No API keys are hardcoded and the project runs no AI service of its own. By
   default AI requests run through the Claude Code or Codex program installed on
   the PC, under the login the user made there (see the next section).
-  User-supplied API keys are kept in the app's settings file
-  (`ai-settings.json` in the app's user-data folder) as plain JSON: they are
-  not encrypted and are protected only by the permissions of the user account.
+  User-supplied API keys and tokens are kept in the app's settings file
+  (`ai-settings.json` in the app's user-data folder). On Windows they are
+  sealed with the operating system's encryption (DPAPI, through Electron
+  safeStorage), which ties them to the user account; the `ieumoffice` command
+  asks the app, started hidden, to open them. On macOS and Linux they are
+  still plain JSON, protected only by the permissions of the user account.
 
 ## Subscription Programs (Claude Code, Codex)
 
