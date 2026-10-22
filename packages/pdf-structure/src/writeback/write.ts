@@ -17,6 +17,7 @@ import { cellKey, textUnits, type TextUnit } from '../tree/derive'
 import { PageRangeError } from '../tree/extract'
 import type { BlockRegion, DocumentTree, InlineRun, PageInfo, Rect } from '../tree/types'
 import {
+  adoptHyphens,
   assignObjects,
   expand,
   contains,
@@ -326,6 +327,7 @@ function readTextPage(
     })
   }
   const owned = assignObjects(objects, owners)
+  const adopted = adoptHyphens(objects, owners, owned)
   let cached: PageBitmap | null | undefined
   const bitmap = () => (cached ??= renderPageBitmap(m, page, frame, SAMPLE_RENDER_SCALE))
   const parts = new Map<string, PartResult[]>()
@@ -361,7 +363,7 @@ function readTextPage(
       if (objs.length === 0) results.push('text-not-found')
       else if (formChars.some((c) => contains(expand(region.box, 1), c)))
         results.push('text-in-form')
-      else if (!objs.every((o) => mostlyInside(o.bounds, expand(region.box, 2))))
+      else if (!objs.every((o) => adopted.has(o) || mostlyInside(o.bounds, expand(region.box, 2))))
         results.push('shared-text-object')
       else results.push(textPart(pageNo, region.box, objs, bitmap))
     })

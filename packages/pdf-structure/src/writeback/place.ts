@@ -107,12 +107,15 @@ interface Surroundings {
  * of the box, or below and right of it up to the page's text extent (where
  * it may grow). Anything overlapping the block's own box was there in the
  * source (its own text, an underline, a highlight). A shape holding the box
- * is its backdrop or frame; text and other blocks never hold it.
+ * is its backdrop or frame; text and other blocks never hold it. Ink already
+ * drawn for another block is clear of nothing: it is never drawn over, even
+ * where the two blocks' source boxes overlapped.
  */
 function surroundings(
   own: Rect,
   solid: readonly Rect[],
   shapes: readonly Rect[],
+  drawn: readonly Rect[],
   content: Rect | undefined,
   size: number,
 ): Surroundings {
@@ -125,6 +128,7 @@ function surroundings(
   const obstacles: Rect[] = []
   const containers: Rect[] = []
   for (const r of solid) if (!intersects(r, own) && intersects(r, reach)) obstacles.push(r)
+  for (const r of drawn) if (intersects(r, reach)) obstacles.push(r)
   for (const r of shapes) {
     if (contains(r, own)) containers.push(r)
     else if (!intersects(r, own) && intersects(r, reach)) obstacles.push(r)
@@ -244,12 +248,13 @@ export function placeBlocks(
     blocks.flatMap((b) => (b === except ? [] : b.boxes.filter((_, i) => b.pages[i] === page)))
 
   const contentOf = (page: number) => spaces.get(page)?.content
-  const near = (block: PlanBlock, i: number, extra: readonly Rect[]) => {
+  const near = (block: PlanBlock, i: number, drawn: readonly Rect[]) => {
     const page = block.pages[i]!
     return surroundings(
       block.boxes[i]!,
-      [...textOn(page), ...boxesOn(page, block), ...extra],
+      [...textOn(page), ...boxesOn(page, block)],
       shapesOn(page),
+      drawn,
       i === 0 && block.expandable ? contentOf(page) : undefined,
       block.size,
     )

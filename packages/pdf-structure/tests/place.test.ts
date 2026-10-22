@@ -132,6 +132,24 @@ describe('placing translated blocks', () => {
     for (const r of right) for (const l of left) expect(intersects(r, l)).toBe(false)
   })
 
+  it('never draws over a translation already placed, even where the source boxes overlapped', () => {
+    // two rows the analysis merged into overlapping paragraphs
+    const placed = placeBlocks(
+      [
+        block('first', 'x'.repeat(18), { x0: 0, y0: 84, x1: 100, y1: 100 }, { expandable: false }),
+        block('second', 'y'.repeat(18), { x0: 0, y0: 80, x1: 100, y1: 96 }, { expandable: false }),
+      ],
+      page(),
+      MIN_FONT_SCALE,
+    )
+    const first = inkOf(placed.get('first')!.layout, mono)
+    const second = placed.get('second')
+    if (second) {
+      for (const a of first)
+        for (const b of inkOf(second.layout, mono)) expect(intersects(a, b)).toBe(false)
+    }
+  })
+
   it('leaves a block unplaced when it has no room even at the floor size', () => {
     const placed = placeBlocks(
       [block('a', 'y'.repeat(200), lineBox(0, 100), { expandable: false })],

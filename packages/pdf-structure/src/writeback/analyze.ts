@@ -43,6 +43,9 @@ export interface PageTextObjects {
   formChars: [number, number][]
 }
 
+/** PDFium's code for a line-end hyphen it recognized (pdf2docx lines.ts) */
+const HYPHEN_MARKER = 0x02
+
 /** tolerated turn of a "horizontal" char, radians */
 const MAX_UPRIGHT_ANGLE = 0.15
 
@@ -93,11 +96,13 @@ export function readTextObjects(
           const obj = m._FPDFText_GetTextObject(textPage, i)
           if (!obj) continue
           const cp = m._FPDFText_GetUnicode(textPage, i)
+          // a recognized line-end hyphen is still ink on the page
+          const ink = cp > 0x20 || cp === HYPHEN_MARKER
           m._FPDFText_GetCharOrigin(textPage, i, p, p + 8)
           const origin = frame.toDisplay(m.HEAPF64[p >> 3]!, m.HEAPF64[(p >> 3) + 1]!)
           const index = indexOf.get(obj)
           if (index === undefined) {
-            if (cp > 0x20) formChars.push(origin)
+            if (ink) formChars.push(origin)
             continue
           }
           let a = acc.get(index)
@@ -105,8 +110,8 @@ export function readTextObjects(
             a = { handle: obj, chars: [], sizes: [], origins: [], turned: 0 }
             acc.set(index, a)
           }
-          a.chars.push(String.fromCodePoint(cp))
-          if (cp > 0x20) {
+          a.chars.push(cp === HYPHEN_MARKER ? '-' : String.fromCodePoint(cp))
+          if (ink) {
             a.sizes.push(m._FPDFText_GetFontSize(textPage, i) * charScale(m, textPage, i, mx))
             a.origins.push(origin)
             const angle = normalizeAngle(m._FPDFText_GetCharAngle(textPage, i) + frame.angleDelta)
@@ -254,6 +259,40 @@ export function assignObjects(
     out.set(best.id, list)
   }
   return out
+}
+
+const HYPHEN_ONLY = /^[-\u00ad\u2010-\u2013]+$/u
+
+/**
+ * A line-end hyphen drawn as its own object sits just past its paragraph's
+ * box (the analysis leaves it out of the line). Give each such object to
+ * the block whose box ends within an em to its left on that line, and
+ * return the objects given, which lie outside their owner's box by design.
+ */
+export function adoptHyphens(
+  objects: readonly TextObjectInfo[],
+  owners: readonly Owner[],
+  owned: Map<string, TextObjectInfo[]>,
+): Set<TextObjectInfo> {
+  const taken = new Set([...owned.values()].flat())
+  const adopted = new Set<TextObjectInfo>()
+  for (const o of objects) {
+    if (taken.has(o) || !HYPHEN_ONLY.test(normText(o.text))) continue
+    const [, cy] = center(o.bounds)
+    let best: Owner | null = null
+    let bestGap = Infinity
+    for (const w of owners) {
+      if (cy < w.box.y0 - 1 || cy > w.box.y1 + 1) continue
+      const gap = o.bounds.x0 - w.box.x1
+      if (gap < -1 || gap > o.size || gap >= bestGap) continue
+      best = w
+      bestGap = gap
+    }
+    if (!best) continue
+    owned.set(best.id, [...(owned.get(best.id) ?? []), o])
+    adopted.add(o)
+  }
+  return adopted
 }
 
 /** objects in reading order: top to bottom, then left to right */

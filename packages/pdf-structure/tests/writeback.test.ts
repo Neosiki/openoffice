@@ -599,6 +599,31 @@ describe('writing a translation into the PDF', () => {
     for (const s of res.sizes) expect(s).toBeCloseTo(12, 1)
   })
 
+  it('takes a line-end hyphen drawn as its own object away with its paragraph', async () => {
+    const { PDFDocument, StandardFonts } = await import('pdf-lib')
+    const doc = await PDFDocument.create()
+    const page = doc.addPage([612, 792])
+    const font = await doc.embedFont(StandardFonts.Helvetica)
+    const lines = [
+      'The share of the aggre',
+      'gate income held by the top',
+      'fifth fell in the year.',
+    ]
+    lines.forEach((t, i) => page.drawText(t, { x: 72, y: 700 - i * 14, size: 12, font }))
+    page.drawText('-', { x: 72 + font.widthOfTextAtSize(lines[0]!, 12), y: 700, size: 12, font })
+    const pdf = await doc.save()
+    const m = await loadPdfium()
+    const { tree } = await extractDocumentTree(pdf, { pdfium: m })
+    const translated = translate(tree, 'en', { 'share of the': 'A short translation.' })
+    const { pdf: out, report } = await run(pdf, tree, translated, { fontLocator: latinLocator })
+    expect(report.translated).toBe(1)
+    const res = census(m, out)
+    expect(flat(res.text)).toContain('A short translation.')
+    // PDFium reports a recognized line-end hyphen as code 2
+    expect(res.text).not.toContain('-')
+    expect(res.text).not.toContain(String.fromCharCode(2))
+  })
+
   it('keeps a block in its source text when no installed font draws the translation', async () => {
     const m = await loadPdfium()
     const pdf = await buildSource()
