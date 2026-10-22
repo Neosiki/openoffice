@@ -29,6 +29,15 @@ export {
   isOutboundCall,
   windowDriveBridge,
 } from './drive-skill'
+export {
+  ADDRESS_DECLINED,
+  INTERNET_TOOLS_OFF,
+  addressInConversation,
+  fetchedAddresses,
+  guardOutbound,
+  windowOutboundBridge,
+} from './outbound-guard'
+export type { OutboundBridgeLike } from './outbound-guard'
 export type {
   DriveBridgeLike,
   DriveCallResult,

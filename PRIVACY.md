@@ -162,6 +162,18 @@ app's own features:
   Settings → AI → Advanced. That switch has no hourly cap: an agent can use as
   much of your subscription as it asks for, including whole documents and
   page images.
+- It asks before the AI fetches a web address that has not appeared in the
+  conversation, and you can turn the AI's internet tools off altogether.
+  Text hidden in a document or a web page could otherwise steer the AI into
+  putting your content into an address it fetches. In an editor's AI window,
+  an address the AI wants to read or take a picture from is fetched without
+  asking only if it already stands, exactly, in your messages or in what a
+  tool returned (search results, a page or file it read). Any other address
+  is shown to you first, and nothing is fetched unless you press **Allow**.
+  Settings → AI Media & Search → **Let AI use internet tools** turns off web
+  and image search, image generation and analysis, and fetching by address
+  in the editors. Searches are not asked about: a search query goes only to
+  the search service.
 
 ## Google Drive
 

@@ -263,6 +263,7 @@ metadata:
 | `maxOutputTokens`                    | 모델 한 차례의 출력 상한                         | 코드의 기본값                                              |
 | `media`, `search`                    | 이미지·분석·검색 제공자 선택과 그 키             | 이미지 분석은 `chat`, 영상 분석은 `none`, 검색은 무료 경로 |
 | `readUrl`                            | `{ githubToken }`                                | 없음                                                       |
+| `internetTools`                      | `false`면 편집기 AI 창의 인터넷 도구를 끈다      | 켬(값 없음)                                                |
 
 - `readUrl.githubToken`은 비공개 GitHub 파일을 읽는 읽기 토큰이다. 설정 파일에 평문으로 저장되고(AI 키와 같다), `api.github.com` 요청에만 실린다. 다른 사이트나 리다이렉트 홉에는 보내지 않는다.
 - `headlessSubscriptionEnabled`가 참이어도 `headlessSubscriptionConsentVersion`이 지금 경고의 판(2)보다 작거나 없으면 꺼진 것으로 읽는다. 판 1은 시간당 한도가 있던 예전 경고이고, 그때는 판을 저장하지 않았다.

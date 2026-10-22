@@ -102,6 +102,7 @@ import { registerIntegrationsIpc } from './integrations-ipc'
 import { registerResultStoreIpc } from './result-store-ipc'
 import { FEEDBACK_SURVEY_URL, feedbackDetails, feedbackText, platformLabel } from './feedback'
 import { registerDriveIpc, type DriveService } from './drive/drive-ipc'
+import { registerOutboundIpc } from './outbound-confirm'
 import {
   ATTACHABLE_EXTS,
   ATTACHABLE_IMAGE_EXTS,
@@ -7365,6 +7366,11 @@ app.whenReady().then(async () => {
   // off the startup path: a symlink / registry write nobody is waiting for
   setTimeout(() => installCliLinkBestEffort(APP_SETTINGS_PATH()), 3000)
   startSheetsCaptureServer()
+  registerOutboundIpc({
+    internetToolsOn: () => readStoredAiSettings().internetTools !== false,
+    lang: () => currentLang(),
+    window: () => shellWindow,
+  })
   driveService = registerDriveIpc({
     userData: () => app.getPath('userData'),
     settingsPath: APP_SETTINGS_PATH,

@@ -608,6 +608,9 @@ export function resolveAiSettings(stored: unknown, defaults: AiSettings): AiSett
     ),
     subscriptionNoticeSeen:
       (settings.subscriptionNoticeSeen ?? defaults.subscriptionNoticeSeen) === true,
+    ...((settings.internetTools ?? defaults.internetTools) === false
+      ? { internetTools: false }
+      : {}),
     // clamped on read: a hand-edited settings file with an absurd cap must not be
     // forwarded to the endpoint verbatim
     ...(settings.maxOutputTokens !== undefined || defaults.maxOutputTokens !== undefined
