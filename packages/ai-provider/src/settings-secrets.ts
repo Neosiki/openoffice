@@ -83,26 +83,32 @@ export function sealedAiSecretsIn(settings: unknown): string[] {
   return [...found]
 }
 
+/** One stored value opened: plain stays plain, a sealed one that cannot be opened is empty */
+export function openSecretValue(value: string): string {
+  if (!isSealedSecret(value)) return value
+  try {
+    return codec?.open(value) ?? ''
+  } catch {
+    return ''
+  }
+}
+
+/** One value as it goes to disk: sealed when it is plain, non-empty and this PC can seal */
+export function sealSecretValue(value: string): string {
+  if (value === '' || isSealedSecret(value) || !codec) return value
+  try {
+    return codec.seal(value) ?? value
+  } catch {
+    return value
+  }
+}
+
 /** The settings as they were read, with sealed values opened (empty when they cannot be) */
 export function openAiSecrets<T>(stored: T): T {
-  return mapAiSecrets(stored, (v) => {
-    if (!isSealedSecret(v)) return v
-    try {
-      return codec?.open(v) ?? ''
-    } catch {
-      return ''
-    }
-  })
+  return mapAiSecrets(stored, openSecretValue)
 }
 
 /** The settings as they go to disk: plain non-empty values sealed when this PC can */
 export function sealAiSecrets<T>(settings: T): T {
-  return mapAiSecrets(settings, (v) => {
-    if (v === '' || isSealedSecret(v) || !codec) return v
-    try {
-      return codec.seal(v) ?? v
-    } catch {
-      return v
-    }
-  })
+  return mapAiSecrets(settings, sealSecretValue)
 }

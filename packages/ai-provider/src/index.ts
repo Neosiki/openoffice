@@ -58,7 +58,9 @@ export {
   isSealedSecret,
   mapAiSecrets,
   openAiSecrets,
+  openSecretValue,
   sealAiSecrets,
+  sealSecretValue,
   sealedAiSecretsIn,
   setAiSecretCodec,
 } from './settings-secrets'

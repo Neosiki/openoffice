@@ -413,7 +413,10 @@ import { normalizeAgentPrefs } from '../shared/agent-api'
 import { normalizeAiSettings, setAiSecretCodec, type AiSettings } from '@genoffice/ai-provider'
 import {
   REVEAL_FLAG,
+  fileSearchHoldsPlainKeys,
+  openFileSearchKeys,
   runRevealEntry,
+  sealFileSearchKeys,
   safeStorageCodec,
   sealStoredAiSettings,
   sealingKeyOnDisk,
@@ -3590,7 +3593,9 @@ let fileIndexer: FileIndexer | null = null
 let searchReranker: SearchReranker | null = null
 
 function readFileSearchSettings(): FileSearchSettings {
-  return normalizeFileSearchSettings(readAppSettings(APP_SETTINGS_PATH()).fileSearch)
+  return normalizeFileSearchSettings(
+    openFileSearchKeys(readAppSettings(APP_SETTINGS_PATH()).fileSearch),
+  )
 }
 
 /** the search index lives in userData and follows the save folder plus recents/starred */
@@ -4643,7 +4648,7 @@ function registerHomeIpc(): void {
         ...p,
         keys: { ...current.keys, ...(p.keys ?? {}) },
       })
-      writeAppSetting(APP_SETTINGS_PATH(), 'fileSearch', next)
+      writeAppSetting(APP_SETTINGS_PATH(), 'fileSearch', sealFileSearchKeys(next))
       return next
     },
   )
@@ -7379,6 +7384,12 @@ app.whenReady().then(async () => {
       safeStorage.encryptString('')
     }
     sealStoredAiSettings(join(app.getPath('userData'), 'ai-settings.json'))
+    const storedSearch = readAppSettings(APP_SETTINGS_PATH()).fileSearch
+    if (fileSearchHoldsPlainKeys(storedSearch)) {
+      const sealed = sealFileSearchKeys(readFileSearchSettings())
+      if (!fileSearchHoldsPlainKeys(sealed))
+        writeAppSetting(APP_SETTINGS_PATH(), 'fileSearch', sealed)
+    }
   } catch {
     // an unwritable data folder keeps the plain file; the next save tries again
   }

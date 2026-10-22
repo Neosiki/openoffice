@@ -3,7 +3,9 @@ import {
   SEALED_PREFIX,
   isSealedSecret,
   mapAiSecrets,
+  openSecretValue,
   sealAiSecrets,
+  sealSecretValue,
   type AiSecretCodec,
 } from '@genoffice/ai-provider'
 import { writeJsonAtomic } from '@genoffice/electron-utils/atomic-write'
@@ -93,6 +95,50 @@ export function sealStoredAiSettings(path: string): boolean {
   if (holdsPlainSecrets(sealed)) return false
   writeJsonAtomic(path, sealed)
   return true
+}
+
+/**
+ * The home search's reranking keys (`fileSearch.keys` in app-settings.json)
+ * under the same protection. Only the app reads that file, so no command needs
+ * them opened. Opened before the settings are normalized (which trims and
+ * cuts each key), sealed after.
+ */
+export function openFileSearchKeys(stored: unknown): unknown {
+  if (typeof stored !== 'object' || stored === null) return stored
+  const s = stored as Record<string, unknown>
+  const open = (keys: unknown) =>
+    typeof keys === 'object' && keys !== null
+      ? Object.fromEntries(
+          Object.entries(keys).map(([id, v]) => [
+            id,
+            typeof v === 'string' ? openSecretValue(v) : v,
+          ]),
+        )
+      : keys
+  return {
+    ...s,
+    ...('keys' in s ? { keys: open(s.keys) } : {}),
+    ...('jevKeys' in s ? { jevKeys: open(s.jevKeys) } : {}),
+  }
+}
+
+export function sealFileSearchKeys<T extends { keys: Record<string, string> }>(settings: T): T {
+  return {
+    ...settings,
+    keys: Object.fromEntries(
+      Object.entries(settings.keys).map(([id, v]) => [id, sealSecretValue(v)]),
+    ) as T['keys'],
+  }
+}
+
+/** Whether stored reranking settings still hold a plain, non-empty key */
+export function fileSearchHoldsPlainKeys(stored: unknown): boolean {
+  const keys = (stored as { keys?: unknown } | null)?.keys
+  return (
+    typeof keys === 'object' &&
+    keys !== null &&
+    Object.values(keys).some((v) => typeof v === 'string' && v !== '' && !isSealedSecret(v))
+  )
 }
 
 /** The hidden entry the terminal command starts to open sealed values */

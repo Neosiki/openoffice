@@ -4,8 +4,12 @@ import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterEach, describe, expect, it } from 'vitest'
 import { SEALED_PREFIX, setAiSecretCodec } from '@genoffice/ai-provider'
+import { normalizeFileSearchSettings } from '../src/main/file-index/rerank'
 import {
   MAX_REVEAL_VALUES,
+  fileSearchHoldsPlainKeys,
+  openFileSearchKeys,
+  sealFileSearchKeys,
   holdsPlainSecrets,
   revealAnswer,
   revealRequestOf,
@@ -133,5 +137,20 @@ describe('the reveal entry', () => {
     expect(reveal).toBeLessThan(index.indexOf('app.requestSingleInstanceLock('))
     expect(reveal).toBeLessThan(index.indexOf('installRendererProtocol({'))
     expect(index.indexOf('setAiSecretCodec(secretCodec)')).toBeLessThan(reveal)
+  })
+})
+
+describe('home search reranking keys', () => {
+  it('seal on write and open before the settings are normalized', () => {
+    setAiSecretCodec(safeStorageCodec(fakeStorage(), 'win32'))
+    const settings = normalizeFileSearchSettings({ rerank: true, keys: { openrouter: 'sk-or' } })
+    const disk = sealFileSearchKeys(settings)
+    expect(disk.keys.openrouter.startsWith(SEALED_PREFIX)).toBe(true)
+    expect(disk.keys.kev).toBe('')
+    expect(fileSearchHoldsPlainKeys(disk)).toBe(false)
+    expect(normalizeFileSearchSettings(openFileSearchKeys(disk))).toEqual(settings)
+    // a pre-decision-model file keeps its old field name
+    const old = openFileSearchKeys({ jevKeys: { openrouter: disk.keys.openrouter } })
+    expect(normalizeFileSearchSettings(old).keys.openrouter).toBe('sk-or')
   })
 })
