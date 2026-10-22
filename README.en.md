@@ -23,6 +23,7 @@ IeumOffice is a modified version of the open-source project
 
 ## Contents
 
+- [Why it was made](#why-it-was-made)
 - [What works today](#what-works-today)
 - [Connecting your subscription](#connecting-your-subscription)
 - [Using it for free, without a subscription](#using-it-for-free-without-a-subscription)
@@ -38,6 +39,27 @@ IeumOffice is a modified version of the open-source project
 - [Privacy](#privacy)
 - [Contributing and reporting problems](#contributing-and-reporting-problems)
 - [License and acknowledgement](#license-and-acknowledgement)
+
+## Why it was made
+
+IeumOffice began as a tool a Korean high-school teacher built for their own
+reading and writing. Sorting out ideas in a mind map, handing them to an AI,
+then moving what the AI produced into Hangul (HWP) or PowerPoint to fix it
+meant hopping between several programs. The starting point was to join those
+steps in one window and let people edit what the AI made with their own hands.
+
+- **It is not meant to replace Microsoft Office or Hancom Office.** The author
+  still uses both alongside IeumOffice, and owes a great deal of their work
+  over the years to them.
+- **It is shared for the public good.** It is free, open-source software that
+  anyone can use, and it is not sold.
+- **It was not built by reverse engineering commercial software.** It is based
+  on open-source projects such as GenOffice and rhwp, and on the HWP format
+  documentation Hancom has published (see
+  [License and acknowledgement](#license-and-acknowledgement)).
+
+The author's own account, in Korean, is at
+[이음오피스를 만든 이유](https://ieumoffice.com/story).
 
 ## What works today
 
