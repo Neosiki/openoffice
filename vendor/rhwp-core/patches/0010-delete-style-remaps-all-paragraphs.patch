@@ -3,31 +3,43 @@ From: pblsketch <239486537+pblsketch@users.noreply.github.com>
 Date: Thu, 22 Oct 2026 00:00:00 +0900
 Subject: [PATCH 10/10] =?UTF-8?q?fix(style):=20=EC=8A=A4=ED=83=80=EC=9D=BC?=
  =?UTF-8?q?=20=EC=82=AD=EC=A0=9C=EA=B0=80=20=ED=91=9C=20=EC=85=80=C2=B7?=
- =?UTF-8?q?=EB=A8=B8=EB=A6=AC=EB=A7=90=C2=B7=EA=B0=81=EC=A3=BC=C2=B7?=
- =?UTF-8?q?=EA=B8=80=EC=83=81=EC=9E=90=20=EC=95=88=20=EB=AC=B8=EB=8B=A8?=
- =?UTF-8?q?=EC=9D=98=20style=5Fid=20=EB=8F=84=20=EB=B3=B4=EC=A0=95?=
+ =?UTF-8?q?=EB=B0=94=ED=83=95=EC=AA=BD=C2=B7=EB=8D=A7=EB=A7=90=20=EB=93=B1?=
+ =?UTF-8?q?=20=EB=B3=B8=EB=AC=B8=20=EB=B0=96=EC=9D=98=20=EC=8A=A4=ED=83=80?=
+ =?UTF-8?q?=EC=9D=BC=20=EB=B2=88=ED=98=B8=EB=8F=84=20=EB=B3=B4=EC=A0=95?=
  =?UTF-8?q?=ED=95=9C=EB=8B=A4?=
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
 
 delete_style 은 구역 본문 문단만 돌며 지운 스타일을 바탕글로, 뒤 번호를 하나씩 당겼다.
-표 셀·캡션·글상자·머리말/꼬리말·각주/미주·숨은 설명·필드 메모·바탕쪽의 문단은 같은
+표 셀·캡션·글상자·머리말/꼬리말·각주/미주·숨은 설명·필드 메모·바탕쪽의 문단과 덧말은 같은
 스타일 표를 가리키는데 보정되지 않아, 지운 스타일보다 뒤 번호를 쓰던 셀 문단이 다음
 스타일(마지막 스타일이었으면 목록 밖 번호)을 가리킨 채 저장됐다. 한컴 한글 2024 는 그
 문단을 다른 스타일(목록 밖이면 바탕글)로 읽는다.
 
-모든 문단 그릇을 하나의 재귀로 방문해 같은 규칙으로 보정한다.
+상위 devel 이 #7882 에서 고친 delete_style 을 그대로 옮긴다. 모델 문단 전체(walk)와 구역의
+구역 정의 사본에 든 바탕쪽, .hwp 바탕쪽 원시 레코드의 PARA_HEADER 스타일 번호, 덧말의
+스타일 번호를 같은 규칙으로 보정한다.
 ---
- src/wasm_api.rs       | 88 +++++++++++++++++++++++++++++++++++++------
- src/wasm_api/tests.rs | 57 ++++++++++++++++++++++++++++
- 2 files changed, 133 insertions(+), 12 deletions(-)
+ src/wasm_api.rs       | 59 ++++++++++++++++++++++++++++++-------------
+ src/wasm_api/tests.rs | 57 +++++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 98 insertions(+), 18 deletions(-)
 
 diff --git a/src/wasm_api.rs b/src/wasm_api.rs
-index 2031085e3..2481a7b57 100644
+index 2031085e3..059f72c8e 100644
 --- a/src/wasm_api.rs
 +++ b/src/wasm_api.rs
-@@ -7567,23 +7567,20 @@ impl HwpDocument {
+@@ -7559,6 +7559,9 @@ impl HwpDocument {
+     /// 삭제된 스타일을 사용 중인 문단은 바탕글(ID 0)로 변경된다.
+     #[wasm_bindgen(js_name = deleteStyle)]
+     pub fn delete_style(&mut self, style_id: u32) -> bool {
++        use crate::model::document::RawRecord;
++        use crate::model::identity::walk::{walk, Node};
++
+         if style_id == 0 {
+             return false; // 바탕글은 삭제 불가
+         }
+@@ -7567,31 +7570,51 @@ impl HwpDocument {
              return false;
          }
          let sid = style_id as u8;
@@ -36,101 +48,67 @@ index 2031085e3..2481a7b57 100644
 -            for para in &mut section.paragraphs {
 -                if para.style_id == sid {
 -                    para.style_id = 0;
--                }
--            }
++        // 스타일 표는 인덱스 기반이다. 지운 스타일을 가리키던 번호는 바탕글(0)로, 그 뒤 번호는
++        // 한 칸씩 당긴다.
++        let remap = |id: u8| match id.cmp(&sid) {
++            std::cmp::Ordering::Less => id,
++            std::cmp::Ordering::Equal => 0,
++            std::cmp::Ordering::Greater => id - 1,
++        };
++        // HWP 원본 바탕쪽은 구역 정의의 원시 레코드로 그대로 저장된다. 그 안 문단 머리의
++        // 스타일 번호(PARA_HEADER 10번째 바이트)도 옮겨야 저장본이 모델과 같다.
++        let remap_raw = |records: &mut [RawRecord]| {
++            for record in records {
++                if record.tag_id == crate::parser::tags::HWPTAG_PARA_HEADER {
++                    if let Some(id) = record.data.get_mut(10) {
++                        *id = remap(*id);
++                    }
+                 }
+             }
 -        }
-         // 스타일 삭제 (인덱스 기반이므로 뒤의 ID가 변경됨에 주의)
+-        // 스타일 삭제 (인덱스 기반이므로 뒤의 ID가 변경됨에 주의)
++        };
          self.core.document.doc_info.styles.remove(style_id as usize);
 -        // 삭제된 ID보다 큰 style_id를 가진 문단들 보정
-+        // 해당 스타일을 사용 중인 문단은 바탕글(0)로, 삭제된 ID보다 큰 style_id 는 하나 당긴다.
-+        // 본문 문단만이 아니라 표 셀·캡션·글상자·머리말/꼬리말·각주/미주·숨은 설명·메모·
-+        // 바탕쪽의 문단도 같은 스타일 표를 가리킨다. 본문만 고치면 그 문단들이 다른
-+        // 스타일(또는 목록 밖 번호)을 가리킨 채 저장된다.
-         for section in &mut self.core.document.sections {
+-        for section in &mut self.core.document.sections {
 -            for para in &mut section.paragraphs {
 -                if para.style_id > sid {
-+            for_each_paragraph_mut(&mut section.paragraphs, &mut |para| {
-+                if para.style_id == sid {
-+                    para.style_id = 0;
-+                } else if para.style_id > sid {
-                     para.style_id -= 1;
+-                    para.style_id -= 1;
++        // 본문뿐 아니라 표 셀·글상자·머리말/꼬리말·각주/미주·캡션·메모·바탕쪽 문단과 덧말도
++        // 같은 스타일 표를 가리킨다. 하나라도 빠지면 그 문단이 다른 스타일을 가리킨 채 저장된다.
++        let mut visit = |node: &mut Node<'_>| -> Result<(), HwpError> {
++            match node {
++                Node::Paragraph(para) => para.style_id = remap(para.style_id),
++                Node::Control(Control::Ruby(ruby)) => {
++                    if let Ok(id) = u8::try_from(ruby.style_id_ref) {
++                        ruby.style_id_ref = remap(id).into();
++                    }
                  }
--            }
-+            });
-         }
-         // next_style_id 보정
-         for s in &mut self.core.document.doc_info.styles {
-@@ -9049,3 +9046,70 @@ fn base64_encode(data: &[u8]) -> String {
- 
- #[cfg(test)]
- mod tests;
-+
-+/// 문단 목록과 그 안의 개체가 담은 모든 문단(표 셀·캡션·글상자·묶음 개체·머리말/꼬리말·
-+/// 각주/미주·숨은 설명·필드 메모·바탕쪽)을 차례로 방문한다.
-+fn for_each_paragraph_mut(paragraphs: &mut [Paragraph], f: &mut dyn FnMut(&mut Paragraph)) {
-+    fn caption(c: &mut Option<crate::model::shape::Caption>, f: &mut dyn FnMut(&mut Paragraph)) {
-+        if let Some(c) = c.as_mut() {
-+            for_each_paragraph_mut(&mut c.paragraphs, f);
-+        }
-+    }
-+    fn drawing(d: &mut crate::model::shape::DrawingObjAttr, f: &mut dyn FnMut(&mut Paragraph)) {
-+        if let Some(text_box) = d.text_box.as_mut() {
-+            for_each_paragraph_mut(&mut text_box.paragraphs, f);
-+        }
-+        caption(&mut d.caption, f);
-+    }
-+    fn shape(s: &mut ShapeObject, f: &mut dyn FnMut(&mut Paragraph)) {
-+        match s {
-+            ShapeObject::Picture(pic) => caption(&mut pic.caption, f),
-+            ShapeObject::Group(group) => {
-+                for child in &mut group.children {
-+                    shape(child, f);
-+                }
-+                caption(&mut group.caption, f);
-+            }
-+            ShapeObject::Chart(chart) => {
-+                drawing(&mut chart.drawing, f);
-+                caption(&mut chart.caption, f);
-+            }
-+            ShapeObject::Ole(ole) => {
-+                drawing(&mut ole.drawing, f);
-+                caption(&mut ole.caption, f);
-+            }
-+            _ => {
-+                if let Some(d) = s.drawing_mut() {
-+                    drawing(d, f);
-+                }
-+            }
-+        }
-+    }
-+    for para in paragraphs {
-+        f(para);
-+        for control in &mut para.controls {
-+            match control {
-+                Control::Table(table) => {
-+                    for cell in &mut table.cells {
-+                        for_each_paragraph_mut(&mut cell.paragraphs, f);
-+                    }
-+                    caption(&mut table.caption, f);
-+                }
-+                Control::Picture(pic) => caption(&mut pic.caption, f),
-+                Control::Shape(s) => shape(s, f),
-+                Control::Header(h) => for_each_paragraph_mut(&mut h.paragraphs, f),
-+                Control::Footer(h) => for_each_paragraph_mut(&mut h.paragraphs, f),
-+                Control::Footnote(n) => for_each_paragraph_mut(&mut n.paragraphs, f),
-+                Control::Endnote(n) => for_each_paragraph_mut(&mut n.paragraphs, f),
-+                Control::HiddenComment(c) => for_each_paragraph_mut(&mut c.paragraphs, f),
-+                Control::Field(field) => for_each_paragraph_mut(&mut field.memo_paragraphs, f),
-+                Control::SectionDef(section_def) => {
-+                    for master_page in &mut section_def.master_pages {
-+                        for_each_paragraph_mut(&mut master_page.paragraphs, f);
-+                    }
-+                }
++                Node::Control(Control::SectionDef(def)) => remap_raw(&mut def.extra_child_records),
 +                _ => {}
 +            }
-+        }
-+    }
-+}
++            Ok(())
++        };
++        for section in &mut self.core.document.sections {
++            walk(&mut section.paragraphs, &mut visit).expect("스타일 번호 순회는 실패하지 않는다");
++            // 렌더와 HWPX 저장은 구역의 구역 정의 사본에서 바탕쪽을 읽는다.
++            for master in &mut section.section_def.master_pages {
++                walk(&mut master.paragraphs, &mut visit)
++                    .expect("스타일 번호 순회는 실패하지 않는다");
+             }
++            remap_raw(&mut section.section_def.extra_child_records);
+         }
+-        // next_style_id 보정
+         for s in &mut self.core.document.doc_info.styles {
+-            if s.next_style_id == sid {
+-                s.next_style_id = 0;
+-            } else if s.next_style_id > sid {
+-                s.next_style_id -= 1;
+-            }
++            s.next_style_id = remap(s.next_style_id);
+         }
+         // 스타일 캐시 갱신
+         self.core.rebuild_resolved_styles();
 diff --git a/src/wasm_api/tests.rs b/src/wasm_api/tests.rs
 index 72adaf63a..a1c0f32fe 100644
 --- a/src/wasm_api/tests.rs

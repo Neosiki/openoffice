@@ -31,6 +31,6 @@
       "0010-delete-style-remaps-all-paragraphs.patch"
     ],
     "wasmPack": "0.15.0",
-    "wasmSha256": "19cdda1ca1e68f50215885aabff5c7a8023a97fe682041fee5df5563db2c1219"
+    "wasmSha256": "f2f499293ab13117bf184a06ae42676e033f04d024ee0d3f66014d07098681b2"
   }
 }
