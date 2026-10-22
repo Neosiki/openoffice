@@ -58,6 +58,23 @@ export interface AiComposerDocs {
 
 // ---- the input's side ---------------------------------------------------
 
+/** The base `@` the list belongs to, and what it holds */
+interface Anchor {
+  /** the input text `start` refers to */
+  value: string
+  start: number | null
+  /** closed with Esc */
+  dismissed: boolean
+  /** the shell's list for this `@`; null until it is read */
+  items: DocMentionItem[] | null
+  /** the list still has to be read */
+  wanted: boolean
+  /** bumped whenever the `@` is replaced, so a late answer is dropped */
+  seq: number
+}
+
+const NO_ANCHOR = { start: null, dismissed: false, items: null, wanted: false } as const
+
 export type DocMentionInput = Omit<SkillPickerInput, 'chipRow'>
 
 const NO_INPUT_PROPS: SkillPickerInput['inputProps'] = {}
@@ -96,13 +113,11 @@ export function useDocMentionInput({
   const listId = useId()
   const [caret, setCaret] = useState<number | null>(null)
   const [composing, setComposing] = useState(false)
-  const [dismissed, setDismissed] = useState<number | null>(null)
   const [selection, setSelection] = useState({ key: '', index: 0 })
-  const [fetched, setFetched] = useState<{ start: number; items: DocMentionItem[] } | null>(null)
+  const [, setTick] = useState(0)
   const pendingCaretRef = useRef<number | null>(null)
   const pickingRef = useRef(false)
   const liveRef = useRef(true)
-  const seqRef = useRef(0)
   const valueRef = useRef(value)
   valueRef.current = value
   const docsRef = useRef(docs)
@@ -129,14 +144,35 @@ export function useDocMentionInput({
   const frozenRef = useRef<DocMentionTrigger | null>(null)
   if (!composing) frozenRef.current = live
   const trigger = composing ? frozenRef.current : live
-  const start = trigger ? trigger.start : null
 
-  const items = fetched && start !== null && fetched.start === start ? fetched.items : null
+  // The base `@` the list was read for. It follows earlier edits like a picked
+  // mention; leaving it (blur, caret elsewhere) and coming back is the same `@`.
+  // Its Esc dismissal and its list last until it is edited or removed, or a
+  // different base `@` is used.
+  const anchorRef = useRef<Anchor>({ value, ...NO_ANCHOR, seq: 0 })
+  const anchor = anchorRef.current
+  if (anchor.value !== value) {
+    if (anchor.start !== null) {
+      const kept = relocateDocMentions(anchor.value, value, [{ start: anchor.start, text: '@' }])
+      if (kept[0]) anchor.start = kept[0].start
+      else Object.assign(anchor, NO_ANCHOR, { seq: anchor.seq + 1 })
+    }
+    anchor.value = value
+  }
+  if (trigger && trigger.start !== anchor.start) {
+    Object.assign(anchor, NO_ANCHOR, { start: trigger.start, wanted: true, seq: anchor.seq + 1 })
+  }
+
+  const items = trigger && trigger.start === anchor.start ? anchor.items : null
   // the latest list, for the same-name rule when a pick resolves
   const fetchedRef = useRef<DocMentionItem[] | null>(null)
   if (items) fetchedRef.current = items
   const matches = trigger && items ? filterDocMentions(items, trigger.query) : []
-  const open = !!trigger && !suppressed && matches.length > 0 && dismissed !== trigger.start
+  const ready = !!trigger && !suppressed && matches.length > 0 && !anchor.dismissed
+  // a composition never opens the list: only one already open stays open
+  const wasOpenRef = useRef(false)
+  const open = composing ? wasOpenRef.current && ready : ready
+  if (!composing) wasOpenRef.current = open
   const key = trigger ? `${trigger.start}:${trigger.query}` : ''
   const first = docMentionFirstRow(matches)
   const chosen = selection.key === key ? selection.index : first
@@ -152,28 +188,22 @@ export function useDocMentionInput({
     }
   }, [])
 
-  // read the list once per new base `@`; an answer for an older one is dropped
+  // read the list once per new base `@`; an answer for an `@` since replaced is dropped
   useEffect(() => {
-    setFetched(null)
-    if (start === null || !listCall) return
-    const seq = ++seqRef.current
+    const a = anchorRef.current
+    if (!a.wanted || a.start === null || !listCall) return
+    a.wanted = false
+    const seq = a.seq
     const settle = (next: DocMentionItem[]) => {
-      if (liveRef.current && seq === seqRef.current) setFetched({ start, items: next })
+      const current = anchorRef.current
+      if (!liveRef.current || current.seq !== seq) return
+      current.items = next
+      setTick((t) => t + 1)
     }
     void listCall()
       .then((raw) => settle(docMentionListOf(raw) ?? []))
       .catch(() => settle([]))
-    return () => {
-      seqRef.current += 1
-    }
-    // listCall is read fresh each render; only a new `@` reads the list again
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [start, enabled])
-
-  // Esc keeps one `@` closed until the base `@` changes
-  useEffect(() => {
-    if (dismissed !== null && start !== dismissed) setDismissed(null)
-  }, [start, dismissed])
+  })
 
   // put the caret after the inserted mentions
   useLayoutEffect(() => {
@@ -262,8 +292,10 @@ export function useDocMentionInput({
     e.stopPropagation()
     if (action === 'next') setSelection({ key, index: docMentionStepRow(matches, active, 1) })
     else if (action === 'prev') setSelection({ key, index: docMentionStepRow(matches, active, -1) })
-    else if (action === 'close') setDismissed(trigger.start)
-    else pick(active)
+    else if (action === 'close') {
+      anchorRef.current.dismissed = true
+      setTick((t) => t + 1)
+    } else pick(active)
     return true
   }
 
