@@ -73,6 +73,7 @@ export {
   AgentLoop,
   COMPLETED_VIA_TOOLS_TEXT,
   DEFAULT_MAX_TURNS,
+  MATERIAL_NOT_INSTRUCTIONS,
   TOOL_ABORTED_OUTPUT,
   coerceArgumentFields,
   invalidArgumentFields,
