@@ -706,6 +706,38 @@ const PARA_LENGTHS = {
 /** Style kinds as the engine lists them: paragraph styles are 0, character styles 1. */
 const PARAGRAPH_STYLE = 0
 const CHARACTER_STYLE = 1
+/** The editor toolbar's style list: one option per style, its value the style's number. */
+const STYLE_LIST_SELECTOR = '#style-name'
+/** How long the document rests before the toolbar's style list is checked against it. */
+const STYLE_LIST_PAUSE_MS = 400
+/** The command this plugin registers to have the editor show the caret's style again. */
+const CARET_STATE_COMMAND = 'ext:ieum-caret-state'
+
+/**
+ * Fill the editor toolbar's style list (`select`) with the document's styles (as
+ * getStyleList gives them) when they differ from what it shows. The number shown stays
+ * shown when there still is a style by it: the editor sets the list by the number of the
+ * caret's style, which may already be the new one. Returns whether the list was refilled.
+ */
+export function syncStyleList(select, styles) {
+  const shown = Array.from(select.options, (option) => [Number(option.value), option.textContent])
+  if (JSON.stringify(shown) === JSON.stringify(styles.map((style) => [style.id, style.name]))) {
+    return false
+  }
+  const current = select.value
+  select.replaceChildren(
+    ...styles.map((style) => {
+      const option = select.ownerDocument.createElement('option')
+      option.value = String(style.id)
+      option.textContent = style.name
+      return option
+    }),
+  )
+  if (styles.some((style) => String(style.id) === current)) select.value = current
+  else select.selectedIndex = -1
+  return true
+}
+
 /** Longest style name taken, as the editor's style dialog has it. */
 const MAX_STYLE_NAME = 250
 /** Not in a style name, besides control characters: the engine reads names out of JSON without unescaping them. */
@@ -2059,6 +2091,35 @@ export const agentPlugin = {
       }
     })
 
+    // the toolbar's style list is filled once, when the document opens. Styles made, renamed
+    // or removed since (the style dialog, this plugin, an undo) are put in after a pause, so
+    // typing does not pay for it: a stale list names the old styles at the old numbers, and
+    // after a removal picking one there applied another style
+    let styleListTimer = null
+    const scheduleStyleList = () => {
+      if (styleListTimer) clearTimeout(styleListTimer)
+      styleListTimer = setTimeout(() => {
+        styleListTimer = null
+        const select = globalThis.document?.querySelector(STYLE_LIST_SELECTOR)
+        if (!select) return
+        try {
+          if (
+            syncStyleList(
+              select,
+              host.read((doc) => parse(doc.getStyleList())),
+            )
+          ) {
+            // the number shown may be a style that moved: the caret's style, as the editor
+            // reads it, is what the list is to show
+            host.automation.execute(CARET_STATE_COMMAND)
+          }
+        } catch {
+          // no document, or the editor is gone: the list stays as it is
+        }
+      }, STYLE_LIST_PAUSE_MS)
+    }
+    host.events.on('document-changed', scheduleStyleList)
+
     let layer = null
     let settle = null
     /** Draw the marks again (a command, for the editor's own services); later once more. */
@@ -2147,6 +2208,22 @@ export const agentPlugin = {
             drawMarks(services)
           } catch {
             // marks are a help; a page that cannot take them stays as it is
+          }
+        },
+      })
+    } catch {
+      // registered by an earlier activation of this plugin, or a host without commands
+    }
+
+    try {
+      host.automation.registerCommand({
+        id: CARET_STATE_COMMAND,
+        label: 'Show the caret state',
+        execute: (services) => {
+          try {
+            services.getInputHandler()?.emitCursorFormatState()
+          } catch {
+            // without a caret the toolbar keeps what it shows
           }
         },
       })

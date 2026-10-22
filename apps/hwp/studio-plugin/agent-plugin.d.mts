@@ -452,6 +452,26 @@ export type AgentFileCommand = 'save' | 'saveAs' | 'pdf' | 'print'
 /** The event those items fire on the editor's window; `detail` is the AgentFileCommand. */
 export declare const FILE_COMMAND_EVENT: 'ieum:file-command'
 
+/** The parts of the editor toolbar's style list (a select element) syncStyleList uses. */
+export interface StyleListElement {
+  readonly options: ArrayLike<{ value: string; textContent: string | null }>
+  selectedIndex: number
+  value: string
+  replaceChildren(...nodes: unknown[]): void
+  readonly ownerDocument: {
+    createElement(name: 'option'): { value: string; textContent: string | null }
+  }
+}
+
+/**
+ * Fill the editor toolbar's style list with the document's styles when they differ from what
+ * it shows, keeping the number shown where a style still has it. True when it was refilled.
+ */
+export declare function syncStyleList(
+  select: StyleListElement,
+  styles: { id: number; name: string }[],
+): boolean
+
 export type AgentNoteKind = 'footnote' | 'endnote'
 
 /** One footnote or endnote of the body, as listNotes lists it. */

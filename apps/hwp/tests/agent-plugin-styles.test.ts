@@ -8,9 +8,9 @@
 import { readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { dirname, join } from 'node:path'
-import { beforeAll, describe, expect, it } from 'vitest'
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import init, { HwpDocument } from '@rhwp/core'
-import { agentPlugin, type AgentPluginHost } from '../studio-plugin/agent-plugin.mjs'
+import { agentPlugin, syncStyleList, type AgentPluginHost } from '../studio-plugin/agent-plugin.mjs'
 
 const require = createRequire(import.meta.url)
 
@@ -366,5 +366,104 @@ describe('changing a style', () => {
       /character formatting only/,
     )
     expect(steps()).toBe(before)
+  })
+})
+
+/** A stand-in for the editor toolbar's style list: a select element's options and selection. */
+function fakeSelect(styles: { id: number; name: string }[], shown: number | null) {
+  const option = (value: string, textContent: string) => ({ value, textContent })
+  const select = {
+    options: styles.map((style) => option(String(style.id), style.name)),
+    selectedIndex: -1,
+    get value() {
+      return this.selectedIndex >= 0 ? this.options[this.selectedIndex]!.value : ''
+    },
+    set value(v: string) {
+      this.selectedIndex = this.options.findIndex((o) => o.value === v)
+    },
+    replaceChildren(...nodes: { value: string; textContent: string }[]) {
+      this.options = nodes
+      this.selectedIndex = nodes.length > 0 ? 0 : -1
+    },
+    ownerDocument: { createElement: () => option('', '') },
+  }
+  if (shown !== null) select.value = String(shown)
+  return select
+}
+
+const BEFORE = [
+  { id: 0, name: '바탕글' },
+  { id: 1, name: '개요 3' },
+  { id: 2, name: '개요 5' },
+]
+
+describe('the toolbar style list', () => {
+  it('is refilled when the styles changed, keeping the number the editor shows', () => {
+    // 개요 3 was removed; the editor already shows the caret's style by its new number, 1
+    const select = fakeSelect(BEFORE, 1)
+    const after = [BEFORE[0]!, { id: 1, name: '개요 5' }]
+    expect(syncStyleList(select, after)).toBe(true)
+    expect(select.options.map((o) => `${o.value}:${o.textContent}`)).toEqual([
+      '0:바탕글',
+      '1:개요 5',
+    ])
+    expect(select.value).toBe('1')
+  })
+
+  it('leaves a list that matches alone, and shows nothing for a number that is gone', () => {
+    const select = fakeSelect(BEFORE, 2)
+    const options = select.options
+    expect(syncStyleList(select, BEFORE)).toBe(false)
+    expect(select.options).toBe(options)
+    expect(syncStyleList(select, [BEFORE[0]!, { id: 1, name: '개요 5' }])).toBe(true)
+    expect(select.selectedIndex).toBe(-1)
+  })
+
+  describe('kept in step by the plugin', () => {
+    afterEach(() => {
+      vi.useRealTimers()
+      delete (globalThis as { document?: unknown }).document
+    })
+
+    it('after a change, once the document rests, and has the editor show the caret again', () => {
+      vi.useFakeTimers()
+      const doc = blank()
+      const handlers: (() => void)[] = []
+      const commands = new Map<string, (services: unknown) => void>()
+      const emitCursorFormatState = vi.fn()
+      const services = { getInputHandler: () => ({ emitCursorFormatState }) }
+      const host = {
+        read: (fn: (d: HwpDocument) => unknown) => fn(doc),
+        transaction: (_label: string, fn: (tx: never) => unknown) => {
+          const result = fn({ doc: () => doc, deferPagination: () => {} } as never)
+          for (const handler of handlers) handler()
+          return result
+        },
+        events: { on: (_name: string, handler: () => void) => handlers.push(handler) },
+        automation: {
+          registerCommand: (def: { id: string; execute: (s: unknown) => void }) =>
+            commands.set(def.id, def.execute),
+          execute: (id: string) => commands.get(id)?.(services) ?? null,
+        },
+      } as unknown as AgentPluginHost
+      const select = fakeSelect(stylesOf(doc), 0)
+      ;(globalThis as { document?: unknown }).document = {
+        querySelector: () => select,
+        addEventListener: () => {},
+        removeEventListener: () => {},
+      }
+      const plugin = agentPlugin.activate(host)
+      plugin.createStyle({ name: '보고서 제목' })
+      // not while typing goes on
+      expect(select.options.some((o) => o.textContent === '보고서 제목')).toBe(false)
+      vi.advanceTimersByTime(1000)
+      expect(select.options.map((o) => o.textContent)).toEqual(stylesOf(doc).map((s) => s.name))
+      expect(select.value).toBe('0')
+      expect(emitCursorFormatState).toHaveBeenCalledTimes(1)
+      // nothing changed in the styles: nothing to do
+      for (const handler of handlers) handler()
+      vi.advanceTimersByTime(1000)
+      expect(emitCursorFormatState).toHaveBeenCalledTimes(1)
+    })
   })
 })
