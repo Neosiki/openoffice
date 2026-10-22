@@ -22,6 +22,17 @@
  *   production build that list holds its own HwpCtrl plugin alone. The AI
  *   panel edits the document through this app's plugin
  *   (studio-plugin/agent-plugin.mjs), so the list gains that one name.
+ *
+ * studio-table-delete-at, studio-nested-table-delete, studio-nested-table-cut,
+ * studio-nested-table-command
+ *   The studio cannot delete a table that sits in another table's cell (a form
+ *   whose cells hold tables). With such a table selected, Delete and Cut drop
+ *   the selection and leave the table, and "Delete Table" from the cell's menu
+ *   reads the caret by the outer table alone and deletes the whole outer table.
+ *   The engine has the call for a table in a cell (`deleteCellTableControlByPath`,
+ *   which the AI's table deletion uses too). The bridge gains one method that
+ *   deletes the table a selection or a caret points at, in the body or in a
+ *   cell, and the three paths call it: the inner table goes, the outer stays.
  */
 
 /** Must equal RENDERER_SCHEME in packages/electron-utils/src/renderer-scheme.ts. */
@@ -58,6 +69,138 @@ const PATCHES = {
       '  }\n' +
       "  if (import.meta.env.DEV && id === 'dev-probe') {",
   },
+  'studio-table-delete-at': {
+    file: /[\\/]rhwp-studio[\\/]src[\\/]core[\\/]wasm-bridge\.ts$/,
+    find: [
+      '  deleteTableControl(sec: number, parentPara: number, controlIdx: number): { ok: boolean } {',
+      "    if (!this.doc) throw new Error('문서가 로드되지 않았습니다');",
+      '    return JSON.parse(this.doc.deleteTableControl(sec, parentPara, controlIdx));',
+      '  }',
+      '',
+    ].join('\n'),
+    replace: [
+      '  deleteTableControl(sec: number, parentPara: number, controlIdx: number): { ok: boolean } {',
+      "    if (!this.doc) throw new Error('문서가 로드되지 않았습니다');",
+      '    return JSON.parse(this.doc.deleteTableControl(sec, parentPara, controlIdx));',
+      '  }',
+      '',
+      '  /** The table a selection or a caret points at: in the body, or (a path of two or more) the innermost one in a cell. */',
+      '  deleteTableAt(ref: { sec: number; ppi: number; ci: number; cellPath?: CellPathEntry[] }): { ok: boolean } {',
+      '    const path = ref.cellPath ?? [];',
+      '    if (path.length < 2) return this.deleteTableControl(ref.sec, ref.ppi, ref.ci);',
+      "    if (!this.doc) throw new Error('문서가 로드되지 않았습니다');",
+      '    return JSON.parse(this.doc.deleteCellTableControlByPath(',
+      '      ref.sec, ref.ppi, JSON.stringify(path.slice(0, -1)), path[path.length - 1].controlIndex,',
+      '    ));',
+      '  }',
+      '',
+    ].join('\n'),
+  },
+  'studio-nested-table-delete': {
+    file: /[\\/]rhwp-studio[\\/]src[\\/]engine[\\/]input-handler\.ts$/,
+    find: [
+      '      if (ref.cellPath && ref.cellPath.length > 1) {',
+      '        this.cursor.moveOutOfSelectedTable();',
+      "        this.eventBus.emit('table-object-selection-changed', false);",
+      '        this.updateCaret();',
+      '        return;',
+      '      }',
+      '      this.cursor.moveOutOfSelectedTable();',
+      "      this.eventBus.emit('table-object-selection-changed', false);",
+      "      this.executeOperation({ kind: 'snapshot', operationType: 'deleteTable', operation: (wasm: WasmBridge) => {",
+      '        wasm.deleteTableControl(ref.sec, ref.ppi, ref.ci);',
+    ].join('\n'),
+    replace: [
+      '      this.cursor.moveOutOfSelectedTable();',
+      "      this.eventBus.emit('table-object-selection-changed', false);",
+      "      this.executeOperation({ kind: 'snapshot', operationType: 'deleteTable', operation: (wasm: WasmBridge) => {",
+      '        wasm.deleteTableAt(ref);',
+    ].join('\n'),
+  },
+  'studio-nested-table-cut': {
+    file: /[\\/]rhwp-studio[\\/]src[\\/]engine[\\/]input-handler\.ts$/,
+    find: [
+      '        // 중첩 표 잘라내기는 지원하지 않는다. keydown 경로도 같은 선택 상태를 유지한다.',
+      '        if (ref.cellPath && ref.cellPath.length > 1) return;',
+      '        this.performCopy();',
+      '        this.cursor.moveOutOfSelectedTable();',
+      "        this.eventBus.emit('table-object-selection-changed', false);",
+      "        this.executeOperation({ kind: 'snapshot', operationType: 'cutTable', operation: (wasm: WasmBridge) => {",
+      '          wasm.deleteTableControl(ref.sec, ref.ppi, ref.ci);',
+    ].join('\n'),
+    replace: [
+      '        this.performCopy();',
+      '        this.cursor.moveOutOfSelectedTable();',
+      "        this.eventBus.emit('table-object-selection-changed', false);",
+      "        this.executeOperation({ kind: 'snapshot', operationType: 'cutTable', operation: (wasm: WasmBridge) => {",
+      '          wasm.deleteTableAt(ref);',
+    ].join('\n'),
+  },
+  'studio-nested-table-command': {
+    file: /[\\/]rhwp-studio[\\/]src[\\/]command[\\/]commands[\\/]table\.ts$/,
+    find: [
+      '      const ref = ih.getSelectedTableRef();',
+      '      if (ref) {',
+      '        safeTableOp(() => ih.executeOperation({',
+      "          kind: 'snapshot',",
+      "          operationType: 'deleteTable',",
+    ].join('\n'),
+    replace: [
+      '      const ref = ih.getSelectedTableRef();',
+      '      // a table in a cell: a selected one goes the way Delete takes it, and from',
+      '      // the caret the table the caret is in goes, not the outer one',
+      '      if ((ref?.cellPath?.length ?? 0) > 1) {',
+      '        ih.performDelete();',
+      '        return;',
+      '      }',
+      '      const at = ih.getCursorPosition();',
+      '      if (!ref && at.parentParaIndex !== undefined && at.controlIndex !== undefined && (at.cellPath?.length ?? 0) > 1) {',
+      '        const outer = at.cellPath!.slice(0, -1);',
+      '        const cell = outer[outer.length - 1];',
+      '        safeTableOp(() => ih.executeOperation({',
+      "          kind: 'snapshot',",
+      "          operationType: 'deleteTable',",
+      '          operation: (wasm) => {',
+      '            wasm.deleteTableAt({ sec: at.sectionIndex, ppi: at.parentParaIndex!, ci: at.controlIndex!, cellPath: at.cellPath });',
+      '            return {',
+      '              sectionIndex: at.sectionIndex,',
+      '              paragraphIndex: cell.cellParaIndex,',
+      '              charOffset: 0,',
+      '              parentParaIndex: at.parentParaIndex,',
+      '              controlIndex: outer[0].controlIndex,',
+      '              cellIndex: cell.cellIndex,',
+      '              cellParaIndex: cell.cellParaIndex,',
+      '              cellPath: outer,',
+      '              isTextBox: at.isTextBox && outer.length === 1 ? true : undefined,',
+      '            };',
+      '          },',
+      "        }), '표 지우기');",
+      '        return;',
+      '      }',
+      '      if (ref) {',
+      '        safeTableOp(() => ih.executeOperation({',
+      "          kind: 'snapshot',",
+      "          operationType: 'deleteTable',",
+    ].join('\n'),
+  },
+}
+
+/** The patches the studio build applies, in order; the SDK's own is applied by the renderer builds. */
+export const STUDIO_PATCHES = /** @type {const} */ ([
+  'studio-scheme',
+  'studio-password-flag',
+  'studio-plugin-allow',
+  'studio-table-delete-at',
+  'studio-nested-table-delete',
+  'studio-nested-table-cut',
+  'studio-nested-table-command',
+])
+
+/** Whether a patch is written against this file. */
+export function patchTargets(name, file) {
+  const patch = PATCHES[name]
+  if (!patch) throw new Error(`rhwp patch: unknown patch "${name}"`)
+  return patch.file.test(file)
 }
 
 /**
@@ -134,14 +277,18 @@ export function missingPluginHooks(read) {
 export function applyPatch(name, code) {
   const patch = PATCHES[name]
   if (!patch) throw new Error(`rhwp patch: unknown patch "${name}"`)
-  const first = code.indexOf(patch.find)
-  if (first === -1 || code.indexOf(patch.find, first + 1) !== -1) {
+  // a checkout on Windows may carry CRLF; the patches are written with LF
+  const eol = code.includes('\r\n') ? '\r\n' : '\n'
+  const find = patch.find.replaceAll('\n', eol)
+  const first = code.indexOf(find)
+  if (first === -1 || code.indexOf(find, first + 1) !== -1) {
     throw new Error(
       `rhwp patch ${name}: expected exactly one occurrence of the text to replace; ` +
         'the upstream source changed, review apps/hwp/scripts/rhwp-patches.mjs',
     )
   }
-  return code.replace(patch.find, patch.replace)
+  const replace = patch.replace.replaceAll('\n', eol)
+  return code.replace(find, () => replace)
 }
 
 /**

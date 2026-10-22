@@ -398,6 +398,8 @@ function registerHwpIpc(): void {
           BrowserWindow.fromWebContents(e.sender) ?? BrowserWindow.getFocusedWindow() ?? undefined
         const copy = untitledCopyByWc.get(wcId)
         const fallback: HwpFormat = currentFormat ?? copy?.format ?? 'hwp'
+        const hwp = { name: tm('filterHwp'), extensions: ['hwp'] }
+        const hwpx = { name: tm('filterHwpx'), extensions: ['hwpx'] }
         const picked = await showSaveDialogWithMemory(dialog, win, {
           title: tm('dlgSaveTitle'),
           // a new document has no file yet: it is offered under the untitled name in the
@@ -405,13 +407,9 @@ function registerHwpIpc(): void {
           defaultPath: current
             ? join(dirname(current), basename(current))
             : join(configuredDefaultSaveDir(app), copy?.name ?? `${tm('untitledFile')}.hwp`),
-          // the document's own format first, so it is the dialog's default type
-          filters: [
-            {
-              name: tm('filterHwp'),
-              extensions: fallback === 'hwpx' ? ['hwpx', 'hwp'] : ['hwp', 'hwpx'],
-            },
-          ],
+          // one type per format, so the user can pick the other one; the document's
+          // own format comes first, so it is the dialog's default type
+          filters: fallback === 'hwpx' ? [hwpx, hwp] : [hwp, hwpx],
         })
         if (picked.canceled || !picked.filePath) {
           settleSave(wcId, false)

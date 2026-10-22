@@ -129,6 +129,7 @@ import {
 import { familyInfoFor } from '@genoffice/font-metrics'
 import type { CellEdit, SheetStructuralOps } from '@genoffice/xlsx-gateway/gateway/xlsx-gateway'
 import {
+  promoteFileAtomically,
   readArchiveEntryText,
   saveWorkbookViaSidecar,
 } from '@genoffice/xlsx-gateway/gateway/xlsx-package-io'
@@ -239,6 +240,8 @@ const tMain = createI18n({
     errEncryptedUnsupported:
       '此文件使用的加密方式本应用无法解开。请在 Excel 中取消密码后重新打开。',
     errDiskChanged: '工作簿在打开后被磁盘上的改动覆盖——请改用另存为。',
+    errSaveUnreadable:
+      '保存结果无法重新打开，因此没有覆盖原文件。原文件保持不变，编辑内容仍在屏幕上。',
     autosaveFoundTitle: '发现自动恢复版本',
     autosaveFoundBody:
       '上次会话有未保存的更改。要恢复自动保存的版本吗?恢复后,保存将直接覆盖原文件。',
@@ -298,6 +301,8 @@ const tMain = createI18n({
     errEncryptedUnsupported:
       'This file uses an encryption method this app cannot unlock. Remove the password in Excel, then open it again.',
     errDiskChanged: 'The workbook changed on disk after it was opened — use Save As instead.',
+    errSaveUnreadable:
+      'The saved result could not be opened again, so the original file was not overwritten. The original is unchanged and your edits are still on screen.',
     autosaveFoundTitle: 'Recovered version found',
     autosaveFoundBody:
       'There are unsaved changes from your last session. Restore the autosaved version? Saving after a restore overwrites the original file.',
@@ -360,6 +365,8 @@ const tMain = createI18n({
     errEncryptedUnsupported:
       'Tệp này dùng phương thức mã hóa mà ứng dụng không thể mở khóa. Hãy gỡ mật khẩu trong Excel rồi mở lại.',
     errDiskChanged: 'Sổ làm việc đã thay đổi trên đĩa sau khi mở — hãy sử dụng Lưu dưới dạng.',
+    errSaveUnreadable:
+      'Không thể mở lại kết quả đã lưu nên tệp gốc không bị ghi đè. Tệp gốc vẫn nguyên vẹn và các chỉnh sửa vẫn còn trên màn hình.',
     autosaveFoundTitle: 'Tìm thấy phiên bản khôi phục',
     autosaveFoundBody:
       'Có những thay đổi chưa được lưu từ phiên làm việc trước của bạn. Khôi phục phiên bản đã lưu tự động? Việc lưu sau khi khôi phục sẽ ghi đè lên tệp gốc.',
@@ -424,6 +431,8 @@ const tMain = createI18n({
       'このファイルの暗号化方式はこのアプリでは解除できません。Excel でパスワードを解除してから、もう一度開いてください。',
     errDiskChanged:
       'ブックを開いた後にディスク上で変更されています — 名前を付けて保存を使用してください。',
+    errSaveUnreadable:
+      '保存結果を開き直せなかったため、元のファイルは上書きしていません。元のファイルはそのままで、編集内容は画面に残っています。',
     autosaveFoundTitle: '自動回復バージョンがあります',
     autosaveFoundBody:
       '前回のセッションに未保存の変更があります。自動保存版を復元しますか?復元後に保存すると、元のファイルは上書きされます。',
@@ -488,6 +497,8 @@ const tMain = createI18n({
       '이 파일에 쓰인 암호 방식은 이 앱에서 풀 수 없습니다. Excel에서 암호를 해제한 뒤 다시 열어 주세요.',
     errDiskChanged:
       '통합 문서가 열린 후 디스크에서 변경되었습니다. 다른 이름으로 저장을 사용하세요.',
+    errSaveUnreadable:
+      '저장한 결과를 다시 열 수 없어 원래 파일을 덮어쓰지 않았습니다. 원래 파일은 그대로이고, 편집한 내용은 화면에 남아 있습니다.',
     autosaveFoundTitle: '자동 복구 버전 발견',
     autosaveFoundBody:
       '마지막 세션에 저장되지 않은 변경 내용이 있습니다. 자동 저장 버전을 복원할까요? 복원 후 저장하면 원본 파일을 덮어씁니다.',
@@ -552,6 +563,8 @@ const tMain = createI18n({
       'Ce fichier utilise une méthode de chiffrement que cette application ne peut pas déverrouiller. Supprimez le mot de passe dans Excel, puis rouvrez-le.',
     errDiskChanged:
       'Le classeur a été modifié sur le disque après son ouverture — utilisez Enregistrer sous.',
+    errSaveUnreadable:
+      "Le résultat enregistré n'a pas pu être rouvert ; le fichier d'origine n'a donc pas été écrasé. Il est intact et vos modifications sont toujours à l'écran.",
     autosaveFoundTitle: 'Version récupérée trouvée',
     autosaveFoundBody:
       "Des modifications non enregistrées existent. Restaurer la version auto-enregistrée ? Après restauration, l'enregistrement remplacera le fichier d'origine.",
@@ -617,6 +630,8 @@ const tMain = createI18n({
       'Diese Datei verwendet ein Verschlüsselungsverfahren, das diese App nicht entsperren kann. Entfernen Sie das Kennwort in Excel und öffnen Sie die Datei erneut.',
     errDiskChanged:
       'Die Arbeitsmappe wurde nach dem Öffnen auf dem Datenträger geändert — verwenden Sie stattdessen „Speichern unter“.',
+    errSaveUnreadable:
+      'Das gespeicherte Ergebnis ließ sich nicht wieder öffnen, daher wurde die Originaldatei nicht überschrieben. Sie ist unverändert, und Ihre Änderungen sind noch auf dem Bildschirm.',
     autosaveFoundTitle: 'Wiederhergestellte Version gefunden',
     autosaveFoundBody:
       'Es gibt ungespeicherte Änderungen. Automatisch gespeicherte Version wiederherstellen? Nach der Wiederherstellung überschreibt Speichern die Originaldatei.',
@@ -681,6 +696,8 @@ const tMain = createI18n({
     errEncryptedUnsupported:
       'Este archivo usa un método de cifrado que esta aplicación no puede desbloquear. Quita la contraseña en Excel y vuelve a abrirlo.',
     errDiskChanged: 'El libro cambió en el disco después de abrirse; usa Guardar como en su lugar.',
+    errSaveUnreadable:
+      'No se pudo volver a abrir el resultado guardado, así que no se sobrescribió el archivo original. El original no cambió y tus ediciones siguen en pantalla.',
     autosaveFoundTitle: 'Se encontró una versión recuperada',
     autosaveFoundBody:
       'Hay cambios sin guardar de la última sesión. ¿Restaurar la versión autoguardada? Tras restaurar, guardar sobrescribirá el archivo original.',
@@ -744,6 +761,8 @@ const tMain = createI18n({
     errEncryptedUnsupported:
       'ไฟล์นี้ใช้วิธีเข้ารหัสที่แอปนี้ปลดล็อกไม่ได้ โปรดเอารหัสผ่านออกใน Excel แล้วเปิดอีกครั้ง',
     errDiskChanged: 'เวิร์กบุ๊กถูกเปลี่ยนแปลงบนดิสก์หลังจากเปิด — โปรดใช้บันทึกเป็นแทน',
+    errSaveUnreadable:
+      'ไม่สามารถเปิดผลที่บันทึกได้อีกครั้ง จึงไม่ได้เขียนทับไฟล์ต้นฉบับ ไฟล์ต้นฉบับยังคงเดิมและการแก้ไขของคุณยังอยู่บนหน้าจอ',
     autosaveFoundTitle: 'พบเวอร์ชันกู้คืนอัตโนมัติ',
     autosaveFoundBody:
       'มีการเปลี่ยนแปลงที่ยังไม่ได้บันทึกจากครั้งก่อน ต้องการกู้คืนหรือไม่? หลังกู้คืน การบันทึกจะเขียนทับไฟล์ต้นฉบับ',
@@ -806,6 +825,8 @@ const tMain = createI18n({
     errEncryptedUnsupported:
       'File ini memakai metode enkripsi yang tidak dapat dibuka aplikasi ini. Hapus kata sandinya di Excel, lalu buka lagi.',
     errDiskChanged: 'Buku kerja berubah di disk setelah dibuka — gunakan Simpan Sebagai.',
+    errSaveUnreadable:
+      'Hasil simpanan tidak dapat dibuka kembali, jadi file asli tidak ditimpa. File asli tidak berubah dan suntingan Anda masih ada di layar.',
     autosaveFoundTitle: 'Versi pemulihan ditemukan',
     autosaveFoundBody:
       'Ada perubahan yang belum disimpan dari sesi terakhir. Pulihkan versi tersimpan otomatis? Setelah dipulihkan, menyimpan akan menimpa file asli.',
@@ -869,6 +890,8 @@ const tMain = createI18n({
     errEncryptedUnsupported:
       'Файл зашифрован способом, который это приложение не может снять. Удалите пароль в Excel и откройте файл снова.',
     errDiskChanged: 'Книга была изменена на диске после открытия — используйте «Сохранить как».',
+    errSaveUnreadable:
+      'Сохранённый результат не удалось открыть снова, поэтому исходный файл не перезаписан. Он не изменился, а ваши правки остаются на экране.',
     autosaveFoundTitle: 'Найдена восстановленная версия',
     autosaveFoundBody:
       'Есть несохранённые изменения из прошлого сеанса. Восстановить автосохранённую версию? После восстановления сохранение перезапишет исходный файл.',
@@ -931,6 +954,8 @@ const tMain = createI18n({
     errEncryptedUnsupported:
       'يستخدم هذا الملف طريقة تشفير لا يستطيع هذا التطبيق فكّها. أزل كلمة المرور في Excel ثم افتحه مرة أخرى.',
     errDiskChanged: 'تم تغيير المصنف على القرص بعد فتحه — استخدم «حفظ باسم» بدلاً من ذلك.',
+    errSaveUnreadable:
+      'تعذّر فتح النتيجة المحفوظة مرة أخرى، لذا لم تتم الكتابة فوق الملف الأصلي. الملف الأصلي لم يتغير وتعديلاتك ما زالت على الشاشة.',
     autosaveFoundTitle: 'تم العثور على نسخة مستردة',
     autosaveFoundBody:
       'توجد تغييرات غير محفوظة من الجلسة الأخيرة. هل تريد استعادة النسخة المحفوظة تلقائيًا؟ بعد الاستعادة، سيؤدي الحفظ إلى استبدال الملف الأصلي.',
@@ -992,6 +1017,8 @@ const tMain = createI18n({
     errEncryptedUnsupported:
       'Este arquivo usa um método de criptografia que este aplicativo não consegue desbloquear. Remova a senha no Excel e abra-o novamente.',
     errDiskChanged: 'A pasta de trabalho foi alterada no disco após ser aberta — use Salvar Como.',
+    errSaveUnreadable:
+      'Não foi possível reabrir o resultado salvo, então o arquivo original não foi substituído. O original está intacto e suas edições continuam na tela.',
     autosaveFoundTitle: 'Versão recuperada encontrada',
     autosaveFoundBody:
       'Há alterações não salvas da sua última sessão. Restaurar a versão salva automaticamente? Após restaurar, salvar sobrescreverá o arquivo original.',
@@ -1056,6 +1083,8 @@ const tMain = createI18n({
       'Questo file usa un metodo di crittografia che questa app non può sbloccare. Rimuovi la password in Excel, poi riaprilo.',
     errDiskChanged:
       "La cartella di lavoro è stata modificata sul disco dopo l'apertura — usa Salva con nome.",
+    errSaveUnreadable:
+      "Non è stato possibile riaprire il risultato salvato, quindi il file originale non è stato sovrascritto. L'originale è invariato e le modifiche sono ancora sullo schermo.",
     autosaveFoundTitle: 'Trovata versione recuperata',
     autosaveFoundBody:
       "Ci sono modifiche non salvate dall'ultima sessione. Ripristinare la versione salvata automaticamente? Dopo il ripristino, il salvataggio sovrascriverà il file originale.",
@@ -1119,6 +1148,8 @@ const tMain = createI18n({
     errEncryptedUnsupported:
       'Ten plik używa metody szyfrowania, której ta aplikacja nie potrafi odblokować. Usuń hasło w programie Excel i otwórz plik ponownie.',
     errDiskChanged: 'Skoroszyt został zmieniony na dysku po otwarciu — użyj polecenia Zapisz jako.',
+    errSaveUnreadable:
+      'Nie udało się ponownie otworzyć zapisanego wyniku, więc oryginalny plik nie został nadpisany. Oryginał jest bez zmian, a Twoje edycje nadal są na ekranie.',
     autosaveFoundTitle: 'Znaleziono odzyskaną wersję',
     autosaveFoundBody:
       'Istnieją niezapisane zmiany z ostatniej sesji. Przywrócić wersję zapisaną automatycznie? Po przywróceniu zapisanie nadpisze oryginalny plik.',
@@ -1182,6 +1213,8 @@ const tMain = createI18n({
     errEncryptedUnsupported:
       'Tento soubor používá způsob šifrování, který tato aplikace neumí odemknout. Odeberte heslo v Excelu a soubor otevřete znovu.',
     errDiskChanged: 'Sešit byl po otevření změněn na disku — použijte místo toho Uložit jako.',
+    errSaveUnreadable:
+      'Uložený výsledek nešlo znovu otevřít, proto původní soubor nebyl přepsán. Původní soubor je beze změny a vaše úpravy jsou stále na obrazovce.',
     autosaveFoundTitle: 'Nalezena obnovená verze',
     autosaveFoundBody:
       'Z poslední relace existují neuložené změny. Obnovit automaticky uloženou verzi? Uložení po obnovení přepíše původní soubor.',
@@ -1246,6 +1279,8 @@ const tMain = createI18n({
       'Dit bestand gebruikt een versleutelingsmethode die deze app niet kan ontgrendelen. Verwijder het wachtwoord in Excel en open het bestand opnieuw.',
     errDiskChanged:
       'De werkmap is op de schijf gewijzigd nadat deze was geopend — gebruik Opslaan als.',
+    errSaveUnreadable:
+      'Het opgeslagen resultaat kon niet opnieuw worden geopend, dus het oorspronkelijke bestand is niet overschreven. Het origineel is ongewijzigd en je bewerkingen staan nog op het scherm.',
     autosaveFoundTitle: 'Herstelde versie gevonden',
     autosaveFoundBody:
       'Er zijn niet-opgeslagen wijzigingen van uw laatste sessie. De automatisch opgeslagen versie herstellen? Na herstel overschrijft opslaan het originele bestand.',
@@ -1308,6 +1343,8 @@ const tMain = createI18n({
     errEncryptedUnsupported:
       'Fail ini menggunakan kaedah penyulitan yang tidak dapat dibuka oleh aplikasi ini. Buang kata laluan dalam Excel, kemudian buka semula.',
     errDiskChanged: 'Buku kerja telah diubah pada cakera selepas dibuka — gunakan Simpan Sebagai.',
+    errSaveUnreadable:
+      'Hasil yang disimpan tidak dapat dibuka semula, jadi fail asal tidak ditulis ganti. Fail asal tidak berubah dan suntingan anda masih pada skrin.',
     autosaveFoundTitle: 'Versi pulihan ditemui',
     autosaveFoundBody:
       'Terdapat perubahan yang belum disimpan daripada sesi terakhir anda. Pulihkan versi yang disimpan secara automatik? Selepas pemulihan, menyimpan akan menulis ganti fail asal.',
@@ -1371,6 +1408,8 @@ const tMain = createI18n({
     errEncryptedUnsupported:
       'הקובץ משתמש בשיטת הצפנה שהיישום אינו יכול לפתוח. הסירו את הסיסמה ב-Excel ופתחו אותו שוב.',
     errDiskChanged: 'חוברת העבודה השתנתה בדיסק לאחר פתיחתה — השתמש בשמירה בשם.',
+    errSaveUnreadable:
+      'לא ניתן היה לפתוח שוב את התוצאה שנשמרה, ולכן הקובץ המקורי לא נדרס. הקובץ המקורי לא השתנה והעריכות שלך עדיין על המסך.',
     autosaveFoundTitle: 'נמצאה גרסה משוחזרת',
     autosaveFoundBody:
       'קיימים שינויים שלא נשמרו מהפעלה הקודמת. לשחזר את הגרסה שנשמרה אוטומטית? לאחר השחזור, שמירה תדרוס את הקובץ המקורי.',
@@ -1432,6 +1471,8 @@ const tMain = createI18n({
       'यह फ़ाइल ऐसी एन्क्रिप्शन विधि का उपयोग करती है जिसे यह ऐप अनलॉक नहीं कर सकता। Excel में पासवर्ड हटाएँ, फिर इसे दोबारा खोलें।',
     errDiskChanged:
       'खोले जाने के बाद कार्यपुस्तिका डिस्क पर बदल गई — इसके बजाय इस रूप में सहेजें का उपयोग करें।',
+    errSaveUnreadable:
+      'सहेजा गया परिणाम फिर से नहीं खुल सका, इसलिए मूल फ़ाइल को अधिलेखित नहीं किया गया। मूल फ़ाइल अपरिवर्तित है और आपके संपादन अभी भी स्क्रीन पर हैं।',
     autosaveFoundTitle: 'पुनर्प्राप्त संस्करण मिला',
     autosaveFoundBody:
       'आपके पिछले सत्र से सहेजे नहीं गए परिवर्तन हैं। स्वतः सहेजा गया संस्करण पुनर्स्थापित करें? पुनर्स्थापना के बाद, सहेजने पर मूल फ़ाइल अधिलेखित हो जाएगी।',
@@ -1494,6 +1535,8 @@ const tMain = createI18n({
     errEncryptedUnsupported:
       '此檔案使用的加密方式本應用程式無法解開。請在 Excel 中移除密碼後重新開啟。',
     errDiskChanged: '活頁簿在開啟後被磁碟上的變更覆蓋——請改用另存新檔。',
+    errSaveUnreadable:
+      '無法重新開啟儲存結果，因此沒有覆寫原始檔案。原始檔案保持不變，編輯內容仍在畫面上。',
     autosaveFoundTitle: '發現自動復原版本',
     autosaveFoundBody:
       '上次工作階段有未儲存的變更。要復原自動儲存的版本嗎?復原後,儲存將直接覆寫原檔案。',
@@ -2302,6 +2345,7 @@ const sidecarOpenResultSchema = workbookFileSchema.omit({
   sha256: true,
   readOnly: true,
 })
+type SidecarOpenResult = z.infer<typeof sidecarOpenResultSchema>
 
 export async function createSheetsWindow(
   options: { includeAiHandlers?: boolean } = {},
@@ -3466,28 +3510,60 @@ export function registerSheetsIpc(): void {
     const plainSavePath =
       plainSaveDir === undefined ? undefined : join(plainSaveDir, basename(targetPath))
     if (plainSaveDir !== undefined) await mkdir(plainSaveDir, { recursive: true })
-    const mutation = await writeWorkbookTo(client, session, request, plainSavePath ?? targetPath)
-    if (plainSavePath !== undefined && session.password !== undefined) {
-      await atomicWriteFile(
-        targetPath,
-        encryptOoxml(await readFile(plainSavePath), session.password),
-      )
+    // The save lands on the next session's snapshot first, and the sidecar
+    // opens it there before any user-visible file is touched. Writing the
+    // target first and reopening it afterwards meant an output the engine
+    // could not read back had already replaced the original, while the old
+    // session was gone — every later Save then failed with "Unknown workbook
+    // session." and the edits could not be saved anywhere.
+    const stagedPath = await reserveSnapshotPath()
+    let mutation: Awaited<ReturnType<typeof writeWorkbookTo>>
+    try {
+      mutation = await writeWorkbookTo(client, session, request, stagedPath)
+    } catch (error) {
+      await rm(stagedPath, { force: true }).catch(() => undefined)
+      throw error
     }
-
-    if (csvInPlace && session.csvSourcePath !== undefined && request.csvContent !== undefined) {
-      // The temp copy already holds the saved bytes: refresh the session's
-      // guard digest first, so a failed CSV write-back below leaves a
-      // retryable session instead of stranding the next Save on
-      // errDiskChanged against its own write.
-      const savedSha = await sha256File(session.path).catch(() => undefined)
-      if (savedSha !== undefined && entry.sessions.has(request.sessionId)) {
-        entry.sessions.set(request.sessionId, { ...session, sha256: savedSha })
-      }
-      // UTF-8 BOM so Excel decodes the reopened file correctly.
-      await writeFile(
-        session.csvSourcePath,
-        Buffer.concat([Buffer.from([0xef, 0xbb, 0xbf]), Buffer.from(request.csvContent, 'utf8')]),
+    let stagedOpen: SidecarOpenResult
+    try {
+      stagedOpen = sidecarOpenResultSchema.parse(
+        await client.open(stagedPath, getUiLang(), systemShortDate()),
       )
+    } catch (error) {
+      await rm(stagedPath, { force: true }).catch(() => undefined)
+      console.warn('[sheets] the saved workbook did not reopen; the target was left as is:', error)
+      throw new Error(tm('errSaveUnreadable'), { cause: error })
+    }
+    try {
+      if (plainSavePath !== undefined && session.password !== undefined) {
+        await copyFile(stagedPath, plainSavePath)
+        await atomicWriteFile(
+          targetPath,
+          encryptOoxml(await readFile(stagedPath), session.password),
+        )
+      } else {
+        await placeStagedSave(stagedPath, targetPath)
+      }
+
+      if (csvInPlace && session.csvSourcePath !== undefined && request.csvContent !== undefined) {
+        // The temp copy already holds the saved bytes: refresh the session's
+        // guard digest first, so a failed CSV write-back below leaves a
+        // retryable session instead of stranding the next Save on
+        // errDiskChanged against its own write.
+        const savedSha = await sha256File(session.path).catch(() => undefined)
+        if (savedSha !== undefined && entry.sessions.has(request.sessionId)) {
+          entry.sessions.set(request.sessionId, { ...session, sha256: savedSha })
+        }
+        // UTF-8 BOM so Excel decodes the reopened file correctly.
+        await writeFile(
+          session.csvSourcePath,
+          Buffer.concat([Buffer.from([0xef, 0xbb, 0xbf]), Buffer.from(request.csvContent, 'utf8')]),
+        )
+      }
+    } catch (error) {
+      await client.close(stagedOpen.sessionId).catch(() => undefined)
+      await rm(stagedPath, { force: true }).catch(() => undefined)
+      throw error
     }
 
     // The sidecar session still streams the pre-save bytes; swap it for a
@@ -3508,6 +3584,7 @@ export function registerSheetsIpc(): void {
       closeSidecar: () => client.close(request.sessionId),
     })
     if (plainSavePath !== undefined) await rm(session.path, { force: true }).catch(() => undefined)
+    const staged = { snapshotPath: stagedPath, opened: stagedOpen }
     const file = await openWorkbookSession(
       client,
       plainSavePath ?? targetPath,
@@ -3517,20 +3594,23 @@ export function registerSheetsIpc(): void {
             importTempDir: session.importTempDir,
             restoreTarget: targetPath,
             password: session.password,
+            staged,
           }
         : csvInPlace
           ? {
               csvImport: true,
               csvSourcePath: session.csvSourcePath,
               importTempDir: session.importTempDir,
+              staged,
             }
           : quietUnsavedNew
             ? {
                 suggestSaveAs: session.suggestSaveAs,
                 importTempDir: session.importTempDir,
                 unsavedNew: true,
+                staged,
               }
-            : undefined,
+            : { staged },
     )
     if (quietUnsavedNew && session.suggestSaveAs !== undefined) {
       // the temp path must not reach the title or recents; the recovery copy
@@ -4458,11 +4538,29 @@ async function writeWorkbookTo(
 /** Copies the workbook into the temp snapshot dir; the copy is the session's
  * save base (see SessionInfo.snapshotPath). */
 async function snapshotWorkbook(path: string): Promise<string> {
-  const dir = join(app.getPath('temp'), 'genoffice-sheets-sessions')
-  await mkdir(dir, { recursive: true })
-  const snapshotPath = join(dir, `${randomUUID()}.xlsx`)
+  const snapshotPath = await reserveSnapshotPath()
   await copyFile(path, snapshotPath)
   return snapshotPath
+}
+
+/** a fresh snapshot path in the session temp dir; nothing is written there yet */
+async function reserveSnapshotPath(): Promise<string> {
+  const dir = join(app.getPath('temp'), 'genoffice-sheets-sessions')
+  await mkdir(dir, { recursive: true })
+  return join(dir, `${randomUUID()}.xlsx`)
+}
+
+/** Copies a verified staged save to its target: beside the target first, then
+ * promoted over it, so a failed copy never leaves the target half-written. */
+async function placeStagedSave(stagedPath: string, targetPath: string): Promise<void> {
+  const besideTarget = join(dirname(targetPath), `.${randomUUID()}.tmp.xlsx`)
+  try {
+    await copyFile(stagedPath, besideTarget)
+    await promoteFileAtomically(besideTarget, targetPath)
+  } catch (error) {
+    await rm(besideTarget, { force: true }).catch(() => undefined)
+    throw error
+  }
 }
 
 let cachedShortDate: string | undefined
@@ -4501,6 +4599,9 @@ async function openWorkbookSession(
     emptySource?: boolean | undefined
     unsavedNew?: boolean | undefined
     password?: string | undefined
+    /// A save's output already opened by the sidecar: it is this session's
+    /// snapshot as it stands, so neither the copy nor the open is repeated.
+    staged?: { snapshotPath: string; opened: SidecarOpenResult } | undefined
   },
 ): Promise<WorkbookFile> {
   const {
@@ -4513,21 +4614,23 @@ async function openWorkbookSession(
     emptySource,
     unsavedNew,
     password,
+    staged,
   } = options ?? {}
   // Snapshot first, then the sidecar opens the snapshot (not the live path):
   // everything the session serves — cell reads, media, recalc, saves — comes
   // from the same bytes, even if the file on disk changes right after the
   // copy. The digest also describes exactly those bytes.
-  const snapshotPath = await snapshotWorkbook(path)
+  const snapshotPath = staged?.snapshotPath ?? (await snapshotWorkbook(path))
   // The document path this copy is judged by (split-view save guard): the file
   // the user sees, not the converted temp copy (CSV) or recovery copy (restore).
   const diskStatePath = restoreTarget ?? csvSourcePath ?? path
   try {
     const [opened, digest, snapshotStat, restoreTargetSha, csvSourceSha, diskState] =
       await Promise.all([
-        client
-          .open(snapshotPath, getUiLang(), systemShortDate())
-          .then((result) => sidecarOpenResultSchema.parse(result)),
+        staged?.opened ??
+          client
+            .open(snapshotPath, getUiLang(), systemShortDate())
+            .then((result) => sidecarOpenResultSchema.parse(result)),
         sha256File(snapshotPath),
         stat(snapshotPath),
         // Missing original (deleted since the crash) is fine: the write-back recreates it.
@@ -4578,6 +4681,7 @@ async function openWorkbookSession(
       automaticRecoveryDisabled,
     })
   } catch (error) {
+    if (staged !== undefined) await client.close(staged.opened.sessionId).catch(() => undefined)
     await rm(snapshotPath, { force: true }).catch(() => undefined)
     unsavedNewWorkbooks.delete(path)
     if (importTempDir !== undefined) {

@@ -19,7 +19,12 @@ import { createRequire } from 'node:module'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { build } from 'vite'
-import { AGENT_PLUGIN_MODULE, missingPluginHooks, rhwpPatches } from './rhwp-patches.mjs'
+import {
+  AGENT_PLUGIN_MODULE,
+  STUDIO_PATCHES,
+  missingPluginHooks,
+  rhwpPatches,
+} from './rhwp-patches.mjs'
 
 const SCRIPTS = dirname(fileURLToPath(import.meta.url))
 const APP = resolve(SCRIPTS, '..')
@@ -154,7 +159,7 @@ async function buildStudio() {
     },
     // upstream registers a service worker for its website build; this build
     // leaves that plugin out, a custom scheme cannot register one
-    plugins: [rhwpPatches('studio-scheme', 'studio-password-flag', 'studio-plugin-allow')],
+    plugins: [rhwpPatches(...STUDIO_PATCHES)],
     build: { outDir: OUT, emptyOutDir: true, chunkSizeWarningLimit: 4096 },
   })
   // the licenses travel with the build: rhwp's own, and the list of what its WASM links in
