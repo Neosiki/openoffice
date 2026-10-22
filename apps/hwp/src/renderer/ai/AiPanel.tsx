@@ -33,6 +33,8 @@ import {
   type TemplateDocument,
   type SkillChipRef,
   type SkillUse,
+  docMentionActions,
+  type AiComposerDocs,
 } from '@genoffice/ui'
 import { useEffect, useRef, useState } from 'react'
 import type {
@@ -348,6 +350,17 @@ export function AiPanel({
       accepted: added?.accepted ?? [],
       rejected: [...(added?.rejected ?? []), ...notes],
     })
+  }
+
+  /** The `@` document list in the input attaches through the same route as the buttons */
+  const docMention: AiComposerDocs = {
+    lang,
+    ...docMentionActions({
+      lang,
+      add: async (paths) => (await window.hwpApi.addAttachmentPaths(paths)) ?? null,
+      merge: mergeAttachments,
+    }),
+    attachments,
   }
 
   const onDrop = async (e: ReactDragEvent): Promise<void> => {
@@ -1354,6 +1367,7 @@ export function AiPanel({
           onChange={setPrompt}
           onSend={sendPrompt}
           skills={skills.composer}
+          docs={docMention}
           onStop={stop}
         />
       </div>

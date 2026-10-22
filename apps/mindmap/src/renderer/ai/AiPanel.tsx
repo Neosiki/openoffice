@@ -47,6 +47,8 @@ import {
   type TemplateDocument,
   type SkillChipRef,
   type SkillUse,
+  docMentionActions,
+  type AiComposerDocs,
 } from '@genoffice/ui'
 import { useEffect, useRef, useState } from 'react'
 import type { PointerEvent as ReactPointerEvent, ReactElement, ReactNode } from 'react'
@@ -490,6 +492,17 @@ export function AiPanel({
       accepted: added?.accepted ?? [],
       rejected: [...(added?.rejected ?? []), ...notes],
     })
+  }
+
+  /** The `@` document list in the input attaches through the same route as the buttons */
+  const docMention: AiComposerDocs = {
+    lang,
+    ...docMentionActions({
+      lang,
+      add: async (paths) => (await aiApi().addAttachmentPaths?.(paths)) ?? null,
+      merge: mergeAttachments,
+    }),
+    attachments,
   }
 
   const onDrop = async (e: React.DragEvent) => {
@@ -1409,6 +1422,7 @@ export function AiPanel({
           onSend={sendDraft}
           onStop={stop}
           skills={skills.composer}
+          docs={docMention}
           onPasteFiles={(files) => void onPasteFiles(files)}
           footerStart={
             <>

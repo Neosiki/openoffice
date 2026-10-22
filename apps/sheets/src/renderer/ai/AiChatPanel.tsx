@@ -33,6 +33,7 @@ import {
   type ChatRunQueue,
   aiSubscriptionText,
   useChatRunQueue,
+  type AiComposerDocs,
 } from '@genoffice/ui'
 import type {
   AiProviderChoice,
@@ -313,6 +314,7 @@ export function AiChatPanel({
   attachNotice,
   onPickAttachments,
   onDrivePicked,
+  docMention,
   onAddAttachmentPaths,
   onAddPastedImage,
   onRemoveAttachment,
@@ -353,6 +355,8 @@ export function AiChatPanel({
   readonly onPickAttachments: () => void
   /** Drive files the person ticked in the attach-from-Drive window; absent: no Drive button */
   readonly onDrivePicked?: ((picked: DriveAttachPicked) => void | Promise<void>) | undefined
+  /** the `@` document list in the input; absent: no list */
+  readonly docMention?: AiComposerDocs | undefined
   readonly onAddAttachmentPaths: (paths: readonly string[]) => void
   /// Clipboard-pasted bitmaps (screenshots etc. without a local path): bytes +
   /// extension
@@ -1082,6 +1086,7 @@ export function AiChatPanel({
           onChange={onPromptChange}
           onSend={send}
           skills={skills.composer}
+          docs={docMention}
           onStop={() => {
             msgQueue.hold()
             onStop()
