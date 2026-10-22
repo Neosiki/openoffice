@@ -37,6 +37,11 @@ export interface PlanBlock {
   /** a single-box block that may grow into free space */
   expandable: boolean
   /**
+   * the area the block's ink stays in, a drawing for its labels: it grows
+   * inside it, sideways around its center first
+   */
+  container?: Rect
+  /**
    * other box sets to try at each size before a smaller one (a table
    * paragraph's whole area, when its source top leaves too little room)
    */
@@ -160,6 +165,34 @@ function grownBoxes(box: Rect, around: Surroundings, content: Rect, size: number
   return out
 }
 
+/** a label's box widened evenly to both sides (it stays centered on its spot), then also down */
+function grownAround(box: Rect, around: Surroundings, size: number): Rect[] {
+  const gap = Math.max(2, GAP_DOWN_EM * size)
+  let left = -Infinity
+  let right = Infinity
+  for (const ob of around.obstacles) {
+    if (ob.y0 >= box.y1 || ob.y1 <= box.y0) continue
+    if (ob.x1 <= box.x0 + 0.5) left = Math.max(left, ob.x1 + gap)
+    if (ob.x0 >= box.x1 - 0.5) right = Math.min(right, ob.x0 - gap)
+  }
+  for (const c of around.containers) {
+    left = Math.max(left, c.x0 + 1)
+    right = Math.min(right, c.x1 - 1)
+  }
+  const half = Math.max(0, Math.min(box.x0 - left, right - box.x1))
+  const wide: Rect = { ...box, x0: box.x0 - half, x1: box.x1 + half }
+  let y0 = -Infinity
+  for (const ob of around.obstacles) {
+    if (ob.x0 < wide.x1 && ob.x1 > wide.x0 && ob.y1 <= box.y0 + 0.5) y0 = Math.max(y0, ob.y1 + gap)
+  }
+  for (const c of around.containers) y0 = Math.max(y0, c.y0 + 1)
+  const tall: Rect = { ...wide, y0: Math.min(box.y0, y0) }
+  const out: Rect[] = []
+  if (half > 0.5) out.push(wide)
+  if (tall.y0 < box.y0 - 0.5) out.push(tall)
+  return out
+}
+
 interface Attempt {
   block: PlanBlock
   /** surroundings per box */
@@ -198,7 +231,11 @@ function firstFit(
       if (layout) return { step: k, placement: { layout, boxes } }
     }
     if (!block.expandable || !content || steps[k]! >= EXPAND_BELOW) continue
-    grown ??= grownBoxes(block.boxes[0]!, a.around[0]!, content, block.size).map((b) => [b])
+    grown ??= (
+      block.container
+        ? grownAround(block.boxes[0]!, a.around[0]!, block.size)
+        : grownBoxes(block.boxes[0]!, a.around[0]!, content, block.size)
+    ).map((b) => [b])
     for (const boxes of grown) {
       const layout = tryAt(a, boxes, steps[k]!)
       if (layout) return { step: k, placement: { layout, boxes } }
@@ -247,15 +284,17 @@ export function placeBlocks(
   const boxesOn = (page: number, except: PlanBlock): Rect[] =>
     blocks.flatMap((b) => (b === except ? [] : b.boxes.filter((_, i) => b.pages[i] === page)))
 
-  const contentOf = (page: number) => spaces.get(page)?.content
+  const pageContent = (page: number) => spaces.get(page)?.content
+  /** how far a block may reach: its container, else the page's text */
+  const reachOf = (block: PlanBlock) => block.container ?? pageContent(block.pages[0]!)
   const near = (block: PlanBlock, i: number, drawn: readonly Rect[]) => {
     const page = block.pages[i]!
     return surroundings(
       block.boxes[i]!,
       [...textOn(page), ...boxesOn(page, block)],
-      shapesOn(page),
+      block.container ? [...shapesOn(page), block.container] : shapesOn(page),
       drawn,
-      i === 0 && block.expandable ? contentOf(page) : undefined,
+      i === 0 && block.expandable ? reachOf(block) : undefined,
       block.size,
     )
   }
@@ -264,7 +303,7 @@ export function placeBlocks(
   const best = new Map<string, number>()
   for (const block of blocks) {
     const around = block.boxes.map((_, i) => near(block, i, []))
-    const fit = firstFit({ block, around }, steps, 0, contentOf(block.pages[0]!))
+    const fit = firstFit({ block, around }, steps, 0, reachOf(block))
     if (fit) best.set(block.key, fit.step)
   }
   const shared = groupSteps(blocks, best)
@@ -280,7 +319,7 @@ export function placeBlocks(
     }
     const from = Math.max(mine, shared.get(block.group) ?? mine)
     const around = block.boxes.map((_, i) => near(block, i, claims.get(block.pages[i]!) ?? []))
-    const fit = firstFit({ block, around }, steps, from, contentOf(block.pages[0]!))
+    const fit = firstFit({ block, around }, steps, from, reachOf(block))
     out.set(block.key, fit?.placement ?? null)
     if (!fit) continue
     const ink = inkOf(fit.placement.layout, block.font)

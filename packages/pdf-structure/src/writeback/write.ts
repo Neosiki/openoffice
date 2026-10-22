@@ -37,6 +37,7 @@ import {
   union,
   type CellPlacement,
   type CellText,
+  type FormChar,
   type OcrLineBox,
   type Owner,
   type TextObjectInfo,
@@ -91,7 +92,7 @@ const CJK = /[\u3040-\u30FF\u3400-\u9FFF\uAC00-\uD7AF\uF900-\uFAFF]/u
 // ── units ──
 
 /** what a unit is, for sizing it alike with its kind (decision 0057) */
-type Role = 'heading' | 'caption' | 'footnote' | 'text' | 'cell'
+type Role = 'heading' | 'caption' | 'footnote' | 'text' | 'cell' | 'label'
 
 interface UnitRec {
   unit: TextUnit
@@ -138,6 +139,8 @@ interface TreeIndex {
   regionsOf: Map<string, BlockRegion[] | undefined>
   titleLike: Set<string>
   roles: Map<string, Role>
+  /** a drawing's label → the drawing's place (its picture block's region) */
+  figureOf: Map<string, BlockRegion>
   markers: Map<string, string>
   cells: Map<string, CellText[]>
 }
@@ -147,6 +150,11 @@ function indexTree(tree: DocumentTree): TreeIndex {
   const regionsOf = new Map<string, BlockRegion[] | undefined>()
   const titleLike = new Set<string>()
   const roles = new Map<string, Role>()
+  const figureOf = new Map<string, BlockRegion>()
+  const pictures = new Map<string, BlockRegion>()
+  for (const b of tree.blocks) {
+    if (b.kind === 'image' && b.regions?.[0]) pictures.set(b.id, b.regions[0])
+  }
   const markers = new Map<string, string>()
   const add = (id: string, regions: BlockRegion[] | undefined) => {
     regionsOf.set(id, regions)
@@ -158,6 +166,11 @@ function indexTree(tree: DocumentTree): TreeIndex {
       if (b.kind === 'heading') {
         titleLike.add(b.id)
         roles.set(b.id, 'heading')
+      }
+      const figure = b.kind === 'paragraph' && b.figure ? pictures.get(b.figure) : undefined
+      if (figure) {
+        roles.set(b.id, 'label')
+        figureOf.set(b.id, figure)
       }
       if (b.kind === 'listItem' && b.marker) markers.set(b.id, b.marker)
     }
@@ -201,7 +214,7 @@ function indexTree(tree: DocumentTree): TreeIndex {
     list.push({ key: u.key, text: plainText(u.runs), ...(area ? { area } : {}) })
     cells.set(u.blockId, list)
   }
-  return { owners, regionsOf, titleLike, roles, markers, cells }
+  return { owners, regionsOf, titleLike, roles, figureOf, markers, cells }
 }
 
 /** original unit key → translated runs */
@@ -360,9 +373,13 @@ function readTextPage(
         return
       }
       touched.push(...objs)
-      if (objs.length === 0) results.push('text-not-found')
-      else if (formChars.some((c) => contains(expand(region.box, 1), c)))
-        results.push('text-in-form')
+      const inForm = formChars.filter((c) => contains(expand(region.box, 1), c.at))
+      // a drawing's label inside an embedded graphic: painted over, then written
+      if (objs.length === 0 && inForm.length > 0 && rec.role === 'label') {
+        const part = coverPart(pageNo, region.box, inForm, bitmap)
+        results.push(part ?? 'text-in-form')
+      } else if (objs.length === 0) results.push('text-not-found')
+      else if (inForm.length > 0) results.push('text-in-form')
       else if (!objs.every((o) => adopted.has(o) || mostlyInside(o.bounds, expand(region.box, 2))))
         results.push('shared-text-object')
       else results.push(textPart(pageNo, region.box, objs, bitmap))
@@ -378,6 +395,38 @@ function readTextPage(
       text.length > 0 ? union(text) : { x0: 0, y0: 0, x1: frame.widthPt, y1: frame.heightPt },
   }
   return { parts, space }
+}
+
+/**
+ * A label drawn inside a form XObject, which the writeback cannot edit: its
+ * box is painted with the background around it and the translation drawn
+ * over it, as on a scanned page.
+ */
+function coverPart(
+  pageNo: number,
+  box: Rect,
+  chars: readonly FormChar[],
+  bitmap: () => PageBitmap | null,
+): Part | null {
+  const b = bitmap()
+  if (!b) return null
+  const size = medianOf(chars.map((c) => c.size))
+  const rect = expand(box, Math.max(0.5, (box.y1 - box.y0) * 0.1))
+  const paint = { rect, color: sampleBackground(b, rect) }
+  return {
+    page: pageNo,
+    box,
+    remove: [],
+    sourceText: '',
+    paints: [paint],
+    sizes: chars.map((c) => c.size),
+    lines: distinctLines(
+      chars.map((c) => c.at[1]),
+      size,
+    ),
+    color: readableInk(sampleInk(b, box), paint.color),
+    scan: true,
+  }
 }
 
 function scanPart(
@@ -735,9 +784,13 @@ export async function writeTranslatedPdf(
       continue
     }
     const size = medianOf(w.parts.flatMap((p) => p.sizes)) || 10
+    const figure = index.figureOf.get(w.rec.unit.key)
+    // cells size alike per table, labels per drawing, the rest per role and source size
     const group = w.rec.isCell
       ? `cell:${w.rec.ownerId}`
-      : `${w.rec.role}:${Math.round(size * 2) / 2}`
+      : figure
+        ? `label:${figure.page}:${figure.box.x0},${figure.box.y1}`
+        : `${w.rec.role}:${Math.round(size * 2) / 2}`
     plans.push({
       w,
       face,
@@ -748,10 +801,11 @@ export async function writeTranslatedPdf(
         pages: w.parts.map((p) => p.page),
         size,
         lineHeight: lineHeightOf(w.parts, size),
-        align: alignOf(w.rec, w.parts, pageWidth),
+        align: figure ? 'center' : alignOf(w.rec, w.parts, pageWidth),
         font: metrics[face]!,
         group,
         expandable: w.parts.length === 1 && !w.parts[0]!.scan && !w.rec.isCell,
+        ...(figure && figure.page === w.parts[0]!.page ? { container: figure.box } : {}),
         ...(w.parts.length === 1 && w.parts[0]!.area ? { alternatives: [[w.parts[0]!.area]] } : {}),
       },
     })

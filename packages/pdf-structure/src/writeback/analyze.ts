@@ -37,10 +37,17 @@ export interface TextObjectInfo {
   vertical: boolean
 }
 
+/** a char drawn inside a form XObject: the writeback cannot remove it */
+export interface FormChar {
+  /** display-space origin */
+  at: [number, number]
+  /** points */
+  size: number
+}
+
 export interface PageTextObjects {
   objects: TextObjectInfo[]
-  /** display-space origins of chars drawn inside form XObjects */
-  formChars: [number, number][]
+  formChars: FormChar[]
 }
 
 /** PDFium's code for a line-end hyphen it recognized (pdf2docx lines.ts) */
@@ -84,7 +91,7 @@ export function readTextObjects(
     turned: number
   }
   const acc = new Map<number, Acc>()
-  const formChars: [number, number][] = []
+  const formChars: FormChar[] = []
   const textPage = m._FPDFText_LoadPage(page)
   if (textPage) {
     try {
@@ -102,7 +109,10 @@ export function readTextObjects(
           const origin = frame.toDisplay(m.HEAPF64[p >> 3]!, m.HEAPF64[(p >> 3) + 1]!)
           const index = indexOf.get(obj)
           if (index === undefined) {
-            if (ink) formChars.push(origin)
+            if (ink) {
+              const size = m._FPDFText_GetFontSize(textPage, i) * charScale(m, textPage, i, mx)
+              formChars.push({ at: origin, size })
+            }
             continue
           }
           let a = acc.get(index)

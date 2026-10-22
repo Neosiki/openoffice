@@ -92,6 +92,12 @@ export interface HeadingBlock extends BlockBase {
 export interface ParagraphBlock extends BlockBase {
   kind: 'paragraph'
   runs: InlineRun[]
+  /**
+   * a label of a drawing (decision 0057): the id of the image block that
+   * pictures the drawing. Translated in place in a translated PDF; left out
+   * of reflowed outputs, where the picture shows it.
+   */
+  figure?: string
 }
 
 export interface ListItemBlock extends BlockBase {
