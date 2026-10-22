@@ -3,6 +3,13 @@ export { DriveAttachButton, drivePickedOf } from './DriveAttachButton'
 export type { DriveAttachPicked } from './DriveAttachButton'
 export { DocAttachButton, docPickedOf } from './DocAttachButton'
 export type { DocAttachPicked } from './DocAttachButton'
+export type {
+  DocMentionGroup,
+  DocMentionItem,
+  DocMentionListResult,
+  DocMentionState,
+} from './doc-mention-types'
+export { attachmentFolderLabel } from './attachment-folder'
 export { AiComposer } from './AiComposer'
 export {
   SKILL_CHIPS_MAX,
