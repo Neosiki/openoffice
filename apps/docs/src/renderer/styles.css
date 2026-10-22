@@ -7678,6 +7678,13 @@ body.docs-crop-active
   line-height: 1.5;
 }
 
+.ai-chat-empty-note {
+  margin-top: 10px;
+  color: var(--color-text-tertiary);
+  font-size: var(--text-caption);
+  line-height: 1.5;
+}
+
 /* clickable starter prompts in the empty state — suggestion chips:
  * 30px-radius outline pills, 13px/400 */
 .ai-starter-list {

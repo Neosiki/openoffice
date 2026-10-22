@@ -1697,6 +1697,8 @@ export function AiPanel({
               <br />
               {t(docEmpty ? 'aiEmptyDraftBody2' : 'aiEmptyBody2')}
             </div>
+            {/* the other editors honour "hide from AI"; this one sends the text as written (docs/security.md) */}
+            <div className="ai-chat-empty-note">{t('aiNoHidingNote')}</div>
             <div className="ai-starter-list">
               {(docEmpty ? DRAFT_STARTER_PROMPTS : EDIT_STARTER_PROMPTS).map((p) => (
                 <button

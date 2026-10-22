@@ -80,7 +80,7 @@ It does **not** reach:
   `.docx` file read as material (attachment, Ask, search index, "Make") is
   read as written. A Word document whose parts were hidden in the program
   this app is based on sends those parts to the AI provider when you use AI
-  on it here.
+  on it here. The Word editor's AI panel says it cannot hide anything.
 - **The terminal command, its MCP server and the app's own MCP server.**
   `ieumoffice` commands and MCP tools read PowerPoint, Markdown and HTML files
   as written, hidden parts included. What an agent does with that text is
