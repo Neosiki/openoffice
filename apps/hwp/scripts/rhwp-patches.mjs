@@ -45,7 +45,7 @@
  *   the caret (the easy table formulas) to the module, on the IME path too.
  *
  * studio-hancom-page-number
- *   The bridge gains the two engine calls of vendor/rhwp-core patch 0010, setting and
+ *   The bridge gains the two engine calls of vendor/rhwp-core patch 0013, setting and
  *   reading a section's page number (Hangul's 쪽 번호 매기기).
  */
 
@@ -255,7 +255,7 @@ const PATCHES = {
   },
   'studio-hancom-page-number': {
     file: /[\\/]rhwp-studio[\\/]src[\\/]core[\\/]wasm-bridge\.ts$/,
-    // the engine calls of vendor/rhwp-core patch 0010, ahead of a neighbour the bridge has once
+    // the engine calls of vendor/rhwp-core patch 0013, ahead of a neighbour the bridge has once
     find: '  applyStyle(sec: number, para: number, styleId: number): { ok: boolean } {',
     replace: [
       '  /** The section page number (Hangul: 쪽 번호 매기기); replaces the one the section has. */',
