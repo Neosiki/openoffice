@@ -110,6 +110,8 @@ export type WritebackSkipReason =
   | 'text-in-form'
   /** an AI-read block whose place on the scan could not be found */
   | 'no-position'
+  /** its source text is vertical or turned: the writer draws upright lines only */
+  | 'vertical-text'
 
 export interface WritebackSkippedBlock {
   /** translation unit key (block id, or `${tableId}#row.col.k` for a table cell) */

@@ -269,6 +269,14 @@ interface ReadContext {
   pageInfo: Map<number, PageInfo>
 }
 
+/** `r` narrowed to `to` on every side (the block's own text, when stray objects widened it) */
+const clip = (r: Rect, to: Rect): Rect => ({
+  x0: Math.max(r.x0, to.x0),
+  y0: Math.max(r.y0, to.y0),
+  x1: Math.min(r.x1, to.x1),
+  y1: Math.min(r.y1, to.y1),
+})
+
 const ownerKey = (id: string, region: number) => `${id}\u0001${region}`
 
 const unitPages = (r: UnitRec): number[] =>
@@ -345,7 +353,6 @@ function readTextPage(
   let cached: PageBitmap | null | undefined
   const bitmap = () => (cached ??= renderPageBitmap(m, page, frame, SAMPLE_RENDER_SCALE))
   const parts = new Map<string, PartResult[]>()
-  const touched: TextObjectInfo[] = []
   const tables = new Map<string, Map<string, CellPlacement | 'shared'>>()
 
   for (const rec of onPage) {
@@ -354,7 +361,21 @@ function readTextPage(
     if (!rec.regions?.length) results.push('no-position')
     rec.regions?.forEach((region, i) => {
       if (region.page !== pageNo) return
-      const objs = owned.get(ownerKey(rec.ownerId, i)) ?? []
+      const owns = owned.get(ownerKey(rec.ownerId, i)) ?? []
+      // turned text keeps its block, not its page. A turned object inside an
+      // upright block (an arXiv margin stamp the analysis read into the first
+      // column) stays as drawn, and the block keeps to its upright text.
+      const upright = rec.isCell ? owns : owns.filter((o) => !o.vertical)
+      if (owns.length > 0 && upright.length === 0) {
+        results.push('vertical-text')
+        return
+      }
+      const objs = upright
+      // the analysis may widen a box with chars it read in from elsewhere: keep to the block's own ink
+      const box =
+        upright.length > 0
+          ? clip(region.box, expand(union(upright.map((o) => o.bounds)), 1))
+          : region.box
       if (rec.isCell) {
         const key = ownerKey(rec.ownerId, i)
         let placed = tables.get(key)
@@ -366,28 +387,26 @@ function readTextPage(
             : placeCells(objs, cells, region.box)
           tables.set(key, placed)
         }
-        touched.push(...objs)
         const cell = placed.get(rec.unit.key)
         if (cell === 'shared') results.push('shared-text-object')
         else if (!cell) results.push('text-not-found')
+        else if (cell.objects.some((o) => o.vertical)) results.push('vertical-text')
         else results.push(textPart(pageNo, cell.box, cell.objects, bitmap, cell.area))
         return
       }
-      touched.push(...objs)
-      const inForm = formChars.filter((c) => contains(expand(region.box, 1), c.at))
+      const inForm = formChars.filter((c) => contains(expand(box, 1), c.at))
       // a drawing's label inside an embedded graphic: painted over, then written
       if (objs.length === 0 && inForm.length > 0 && rec.role === 'label') {
-        const part = coverPart(pageNo, region.box, inForm, bitmap)
+        const part = coverPart(pageNo, box, inForm, bitmap)
         results.push(part ?? 'text-in-form')
       } else if (objs.length === 0) results.push('text-not-found')
       else if (inForm.length > 0) results.push('text-in-form')
-      else if (!objs.every((o) => adopted.has(o) || mostlyInside(o.bounds, expand(region.box, 2))))
+      else if (!objs.every((o) => adopted.has(o) || mostlyInside(o.bounds, expand(box, 2))))
         results.push('shared-text-object')
-      else results.push(textPart(pageNo, region.box, objs, bitmap))
+      else results.push(textPart(pageNo, box, objs, bitmap))
     })
     parts.set(rec.unit.key, results)
   }
-  if (touched.some((o) => o.vertical)) return { kept: { reason: 'vertical-text' }, parts }
   const text = objects.map((o) => o.bounds)
   const space: PageSpace = {
     text,

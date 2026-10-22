@@ -970,21 +970,23 @@ describe('pages the writer cannot edit', () => {
     expect(census(m, out).text).toContain('Upright heading of the page')
   })
 
-  it('keeps a page as it is when a translated block is made of turned text', async () => {
+  it('keeps a block of turned text as it is and writes the rest of the page', async () => {
     const m = await loadPdfium()
-    // a turned fragment the extraction keeps as blocks of its own
+    // a turned fragment the extraction keeps as blocks of its own (an arXiv margin stamp)
     const pdf = await turnedPdf('xy', 180, 600, 6)
     const { tree } = await extractDocumentTree(pdf, { pdfium: m })
     expect(tree.pages[0]!.status).toBe('text')
     const { pdf: out, report } = await run(pdf, tree, translateEvery(tree), {
       fontLocator: latinLocator,
     })
-    expect(report.originalPages).toEqual([{ page: 1, reason: 'vertical-text' }])
-    expect(report.translated).toBe(0)
-    expect(report.untranslated.every((u) => u.reason === 'page-kept')).toBe(true)
+    expect(report.originalPages).toEqual([])
+    expect(report.translated).toBeGreaterThanOrEqual(1)
+    expect(report.untranslated.length).toBeGreaterThanOrEqual(1)
+    expect(report.untranslated.every((u) => u.reason === 'vertical-text')).toBe(true)
     const res = census(m, out)
-    expect(res.text).toContain('Upright heading of the page')
-    expect(res.text).not.toContain('Translated')
+    expect(res.text).not.toContain('Upright heading of the page')
+    expect(res.text).toContain('Translated')
+    expect(res.text).toContain('xy')
   })
 })
 
