@@ -148,3 +148,86 @@ describe('the .hwp / .hwpx / .xmind "Open with" registration', () => {
     }
   })
 })
+
+/**
+ * Windows' Default apps page records the ProgId an app declares for a type
+ * when the app is in RegisteredApplications. Without the declaration it records
+ * Applications\IeumOffice.exe, whose icon is the app logo: .hwp chosen before
+ * the per-type ProgId existed still shows that logo while .hwpx shows hwp.ico.
+ * Capabilities only make IeumOffice a candidate; no default changes at install.
+ */
+describe('the IeumOffice Default-apps registration', () => {
+  const CAPABILITIES = 'Software\\IeumOffice\\Capabilities'
+
+  function declaredAssociations(): Map<string, string> {
+    const defines = new Map(
+      [...nsh.matchAll(/!define\s+(GENOFFICE_\w+_PROGID)\s+"([^"]+)"/g)].map((m) => [m[1], m[2]]),
+    )
+    const declared = new Map<string, string>()
+    for (const line of instructions('GenOfficeRegisterApplicationCapabilities')) {
+      const match = /FileAssociations" "\.([a-z0-9]+)" "([^"]+)"/.exec(line)
+      if (match) {
+        declared.set(
+          match[1],
+          match[2].replace(/\$\{(\w+)\}/g, (whole, name) => defines.get(name) ?? whole),
+        )
+      }
+    }
+    return declared
+  }
+
+  it('registers the product with its own capabilities key', () => {
+    const body = instructions('GenOfficeRegisterApplicationCapabilities')
+    expect(body).toContain(
+      `WriteRegStr SHELL_CONTEXT "Software\\RegisteredApplications" "\${PRODUCT_NAME}" "\${GENOFFICE_CAPABILITIES_KEY}"`,
+    )
+    expect(nsh).toContain(`!define GENOFFICE_CAPABILITIES_KEY "${CAPABILITIES}"`)
+    expect(body).toContain(
+      `WriteRegStr SHELL_CONTEXT "\${GENOFFICE_CAPABILITIES_KEY}" "ApplicationName" "\${PRODUCT_NAME}"`,
+    )
+    expect(body).toContain(
+      `WriteRegStr SHELL_CONTEXT "\${GENOFFICE_CAPABILITIES_KEY}" "ApplicationIcon" "$appExe,0"`,
+    )
+  })
+
+  it('maps every Windows association to the ProgId whose icon the user should see', () => {
+    const declared = declaredAssociations()
+    const win = loadBuilderConfig('win32')
+    for (const association of win.win.fileAssociations as Array<{ ext: string; name: string }>) {
+      expect(declared.get(association.ext), `.${association.ext}`).toBe(association.name)
+    }
+    for (const { ext, progId } of OPEN_WITH) expect(declared.get(ext), `.${ext}`).toBe(progId)
+    expect(declared.get('odt')).toBe('IeumOffice.OpenDocumentText')
+  })
+
+  it('never advertises a type whose ProgId Windows does not register', () => {
+    const declared = declaredAssociations()
+    // .txt/.json stay off win.fileAssociations, so no Windows ProgId exists
+    expect(declared.has('txt')).toBe(false)
+    expect(declared.has('json')).toBe(false)
+  })
+
+  it('never writes an extension default, only the capability entry', () => {
+    for (const line of instructions('GenOfficeRegisterApplicationCapabilities')) {
+      expect(line).not.toMatch(/"Software\\Classes\\\./)
+      expect(line).not.toContain('"Software\\Classes\\.hwp" ""')
+    }
+  })
+
+  it('removes only its registration and capabilities key on uninstall', () => {
+    expect(instructions('GenOfficeUnregisterApplicationCapabilities')).toEqual([
+      'DeleteRegValue SHELL_CONTEXT "Software\\RegisteredApplications" "${PRODUCT_NAME}"',
+      'DeleteRegKey SHELL_CONTEXT "${GENOFFICE_CAPABILITIES_KEY}"',
+      'DeleteRegKey /ifempty SHELL_CONTEXT "Software\\IeumOffice"',
+    ])
+  })
+
+  it('runs on install and uninstall with the other file registrations', () => {
+    expect(macroBody('customInstall')).toContain(
+      '!insertmacro GenOfficeRegisterApplicationCapabilities',
+    )
+    expect(macroBody('customUnInstall')).toContain(
+      '!insertmacro GenOfficeUnregisterApplicationCapabilities',
+    )
+  })
+})
