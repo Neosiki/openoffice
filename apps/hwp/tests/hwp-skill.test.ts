@@ -748,7 +748,7 @@ describe('styles', () => {
     })
     const result = await call('format_paragraph', { find: '제목', style: '개요 1' })
     expect(result.isError).toBeFalsy()
-    expect(result.output).toContain('kept its own paragraph formatting')
+    expect(result.output).toContain('kept the paragraph formatting it had set differently')
     expect(result.output).toContain('read_style')
     const plain = await setup().call('format_paragraph', { find: '제목', style: '개요 1' })
     expect(plain.output).not.toContain('kept')
@@ -827,7 +827,7 @@ describe('styles', () => {
       format: { marginLeft: 20 },
     })
     expect(result.output).toContain('Changed the paragraph style "본문 1"')
-    expect(result.output).toContain('table inside another table')
+    expect(result.output).toContain('Every paragraph that uses it changed with it')
     expect(changes[0]).toMatchObject({
       kind: 'format',
       from: 'aiFmtStyle 본문',
@@ -835,15 +835,15 @@ describe('styles', () => {
     })
     // a rename alone changes no look
     const renamed = await call('edit_style', { name: '본문', new_name: '본문 2' })
-    expect(renamed.output).not.toContain('table inside another table')
+    expect(renamed.output).not.toContain('Every paragraph')
   })
 
-  it('tells a character style edit that styled text keeps its former look', async () => {
+  it('tells a character style edit that the styled text changed with it', async () => {
     const { call } = setup({
       editStyle: async () => ({ ok: true, name: '강조', kind: 'character' }),
     })
     const result = await call('edit_style', { name: '강조', color: '#C00000' })
-    expect(result.output).toContain('applied to it again')
+    expect(result.output).toContain('Text this style was applied to changed with it')
   })
 
   it('refuses an edit that names nothing to change, and a style that is not there', async () => {

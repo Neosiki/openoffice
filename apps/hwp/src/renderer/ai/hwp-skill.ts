@@ -160,8 +160,8 @@ const SYSTEM_PROMPT = [
   '- Add or change a style only when the user asks for one, or asks for a look to use again across the document. Then make the style and apply it with format_paragraph or format_selection (style), or format_text (char_style).',
   '- A new style starts from the look of based_on (바탕글 when not given): pass only what should differ. Base it on the style of the paragraphs it is for. Give it the name the user uses; a paragraph style is followed by itself unless next_style says otherwise.',
   '- read_style shows what a style looks like before you change it, in the units the format tools take.',
-  '- Changing a style changes the paragraphs of the body and of its tables that use it, except where a paragraph has formatting of its own. Paragraphs in a table inside another table, in headers, footers, notes or text boxes keep their former look, and so does text a character style was applied to before: apply that style to it again for the new look. Tell the user when that matters.',
-  '- When a tool says a paragraph took a style but kept its own look, the editor gave it the style name and left its paragraph formatting: read the style with read_style and pass its properties in the same call if the user wants the look of the style.',
+  '- Changing a style changes every paragraph that uses it, in tables, text boxes, headers, footers and notes too. What a paragraph has set differently from its style (for example its alignment) stays, and the rest follows the style, as in Hangul. Changing a character style changes the text it was applied to; that text keeps its look when the style of its paragraph changes.',
+  '- When a tool says a paragraph kept formatting of its own under a style, the properties it had set differently from its former style stayed and the rest follows the new style. If the user wants the plain look of the style, read it with read_style and pass those properties in the same call.',
   '',
   '## Editing rules',
   '- Text you pass to find or anchor must match the document exactly: letters, spaces and punctuation. Copy it from what you read; never retype it from memory.',
@@ -1036,7 +1036,7 @@ function styleStrings<K extends string>(
 /** What a run of format calls says about paragraphs that kept their own look under a style. */
 const keptOwnLookNote = (count: number | undefined): string =>
   count
-    ? ` ${count === 1 ? 'The paragraph' : `${count} paragraphs`} took the style but kept ${count === 1 ? 'its' : 'their'} own paragraph formatting, which differed from ${count === 1 ? 'its' : 'their'} former style; the editor keeps that formatting. Read the style with read_style and pass its properties if the user wants its look.`
+    ? ` ${count === 1 ? 'The paragraph' : `${count} paragraphs`} took the style but kept the paragraph formatting ${count === 1 ? 'it' : 'they'} had set differently from ${count === 1 ? 'its' : 'their'} former style; the rest follows the style. Read the style with read_style and pass its properties if the user wants its plain look.`
     : ''
 const WHERE_HELP =
   'where must be "after", "before" or "end"; with "after" and "before" an anchor text is needed.'
@@ -1763,8 +1763,8 @@ export function createHwpSkill(deps: HwpSkillDeps): HwpSkill {
         })
         const reach =
           result.kind === 'character'
-            ? ' Text that had this style before keeps its former look until the style is applied to it again.'
-            : ' Paragraphs of the body and of its tables that use it changed with it where they had no formatting of their own; those in a table inside another table, in headers, footers, notes and text boxes kept their former look.'
+            ? ' Text this style was applied to changed with it.'
+            : ' Every paragraph that uses it changed with it, in tables, text boxes, headers, footers and notes too; what a paragraph had set differently from the style stayed.'
         return {
           output: `Changed the ${result.kind} style "${result.name}".${Object.keys(format).length > 0 ? reach : ''}`,
           mutated: true,

@@ -891,9 +891,10 @@ function missingStyle(doc, spec) {
 }
 
 /**
- * Whether the engine's applyStyle will leave the paragraph's own look: it keeps the
- * paragraph shape whole when that differs from the shape of the paragraph's style so far
- * (Hangul instead keeps only the properties that differ). Null where it cannot be asked.
+ * Whether the paragraph has formatting of its own that applyStyle will keep: its paragraph
+ * shape differs from the shape of its style so far. The engine, as Hangul does, keeps the
+ * properties that differ and takes the rest from the new style (engine patch 0011). Null
+ * where it cannot be asked.
  */
 function keepsOwnLook(doc, box, k) {
   if (!box.styleShape) return null

@@ -63,6 +63,7 @@ interface Chars {
   bold: boolean
   italic: boolean
   textColor: string
+  fontSize: number
   charShapeId: number
 }
 const charsAt = (doc: HwpDocument, para: number, offset: number) =>
@@ -92,6 +93,8 @@ const INNER_CELL = JSON.stringify([
   { controlIndex: 0, cellIndex: 9, cellParaIndex: 3 },
   { controlIndex: 0, cellIndex: 1, cellParaIndex: 0 },
 ])
+/** The paragraph style of that paragraph. */
+const INNER_STYLE = '바탕글'
 const innerCharsAt = (doc: HwpDocument, offset: number) =>
   JSON.parse(doc.getCellCharPropertiesAtByPath(0, 2, INNER_CELL, offset)) as Chars
 
@@ -173,7 +176,7 @@ describe('character styles', () => {
 })
 
 describe('a paragraph style on a paragraph with formatting of its own', () => {
-  it('says the paragraph kept its own look, which the editor leaves whole', () => {
+  it('says it kept what the paragraph set itself, and the rest follows the style', () => {
     const { plugin, doc } = open()
     plugin.formatParagraph('첫 문단', null, { marginLeft: 10 })
     const own = plugin.formatParagraph('첫 문단', null, { style: '개요 1' })
@@ -184,6 +187,18 @@ describe('a paragraph style on a paragraph with formatting of its own', () => {
     const clean = plugin.formatParagraph('둘째', null, { style: '개요 1' })
     expect(clean.ok && 'keptOwnLook' in clean).toBe(false)
     expect(paraAt(doc(), 1).paraShapeId).toBe(styleNamed(doc(), '개요 1')!.paraShapeId)
+    // as in Hangul, everything but the margin it set is the style's (engine patch 0013);
+    // whether the numbering starts anew depends on where the paragraph is, not on its look
+    const look = (k: number) => {
+      const {
+        marginLeft: _margin,
+        paraShapeId: _id,
+        numberingRestartMode: _restart,
+        ...rest
+      } = paraAt(doc(), k)
+      return rest
+    }
+    expect(look(0)).toEqual(look(1))
   })
 })
 
@@ -366,6 +381,44 @@ describe('changing a style', () => {
       /character formatting only/,
     )
     expect(steps()).toBe(before)
+  })
+})
+
+// As Hancom Hangul 2024 does, checked by editing a style in its F6 dialog (decision 0055).
+describe('changing a style reaches every paragraph that uses it', () => {
+  it('in a table inside a table too', () => {
+    const { plugin, doc } = open(new HwpDocument(new Uint8Array(NESTED_FORM)))
+    const before = innerCharsAt(doc(), 0).fontSize
+    expect(plugin.editStyle(INNER_STYLE, { format: { size: 17 } }).ok).toBe(true)
+    for (const d of [doc(), ...saved(doc())]) {
+      expect(innerCharsAt(d, 0).fontSize).toBe(1700)
+    }
+    expect(before).not.toBe(1700)
+  })
+
+  it('keeping what a paragraph set itself, and taking the rest', () => {
+    const { plugin, doc } = open()
+    plugin.formatParagraph('첫 문단', null, { align: 'center' })
+    expect(plugin.editStyle('바탕글', { format: { marginLeft: 20 } }).ok).toBe(true)
+    for (const d of [doc(), ...saved(doc())]) {
+      expect(paraAt(d, 0).alignment).toBe('center')
+      expect(paraAt(d, 0).marginLeft).toBeCloseTo(20 * PX_PER_PT, 0)
+      expect(paraAt(d, 1).marginLeft).toBeCloseTo(20 * PX_PER_PT, 0)
+    }
+  })
+
+  it('and a character style changes the text it is on, which keeps its look under the paragraph style', () => {
+    const { plugin, doc } = open()
+    expect(plugin.formatText('서식을', null, false, { charStyle: '쪽 번호' }).ok).toBe(true)
+    const styled = charsAt(doc(), 0, 6).fontSize
+    expect(plugin.editStyle('쪽 번호', { format: { color: '#0000FF' } }).ok).toBe(true)
+    expect(plugin.editStyle('바탕글', { format: { size: 17 } }).ok).toBe(true)
+    for (const d of [doc(), ...saved(doc())]) {
+      expect(charsAt(d, 0, 6).textColor.toLowerCase()).toBe('#0000ff')
+      expect(charsAt(d, 0, 6).fontSize).toBe(styled)
+      expect(charsAt(d, 0, 0).fontSize).toBe(1700)
+      expect(charsAt(d, 0, 0).textColor.toLowerCase()).not.toBe('#0000ff')
+    }
   })
 })
 
