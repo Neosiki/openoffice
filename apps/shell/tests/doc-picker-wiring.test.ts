@@ -53,7 +53,7 @@ describe('the document picker page', () => {
     expect(DOC_PICK_MAX).toBe(20)
   })
 
-  it('deals in ids only, never a path', () => {
+  it('never reads a path field on the page (the shell checks the ids it listed)', () => {
     expect(page).not.toMatch(/\.path\b|item\.path|d\.path/)
     expect(page).not.toMatch(/from 'electron'/)
   })

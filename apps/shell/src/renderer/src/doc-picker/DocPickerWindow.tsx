@@ -35,7 +35,8 @@ export function docPickReason(state: DocItemState): DocPickerStringKey | null {
 /**
  * Tick the documents the shell offers (the other split pane, open tabs, recent
  * files), then attach them to the AI panel that asked. The window deals in ids
- * only; it never sees a path.
+ * only (a saved document's id is its path; the shell accepts only ids it
+ * just listed, decision 0051).
  */
 export function DocPickerWindow({ lang, api }: { lang: Lang; api: DocPickerApi }) {
   const t = (key: DocPickerStringKey, params?: Record<string, string>) =>
