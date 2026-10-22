@@ -54,6 +54,6 @@
 | [0051](0051-mention-documents-in-ai-input.md)                 | AI 창 입력란에서 `@`로 열린 문서와 최근 문서를 붙이고, 1단계는 저장된 파일만 읽는다             | 2026-10-22 |
 | [0052](0052-trademark-and-license-notices.md)                 | 다른 회사의 로고와 닮은 그림을 쓰지 않고, 고지는 사용자가 실제로 보는 곳에 둔다                 | 2026-10-22 |
 | [0053](0053-outbound-tools-switch-and-address-check.md)       | AI의 인터넷 도구를 끌 수 있게 하고, 대화에 없던 주소는 가져오기 전에 묻는다                     | 2026-10-22 |
-| [0054](0054-sealed-api-keys.md)                               | 설정 파일의 키를 Windows에서 운영체제 암호화로 저장하고, 명령어는 앱에게 풀어 받는다            | 2026-10-22 |
+| [0054](0054-sealed-api-keys.md)                               | 설정 파일의 키를 Windows·Linux에서 OS 암호화로 저장하고, 명령어는 앱에게 풀어 받는다            | 2026-10-22 |
 | [0055](0055-project-skills-need-a-yes.md)                     | 에이전트 모드에서 프로젝트 폴더의 스킬은 사람이 그 폴더에서 켠 동안만 쓴다                      | 2026-10-22 |
 | [0056](0056-windows-build-on-actions.md)                      | Windows 설치 파일을 GitHub Actions에서 만들고 출처 증명을 붙인다. 서명은 하지 않는다            | 2026-10-22 |

@@ -35,7 +35,7 @@
 | 이미지·분석·검색용 키        | 사용자가 그 용도로 넣음                        | 그 용도 안에서만              |
 | GitHub 읽기 토큰(`read_url`) | 사용자가 그 용도로 넣음                        | 그 용도 안에서만              |
 
-- GitHub 읽기 토큰은 `ai-settings.json`에 AI 키와 같은 방식으로 저장되고(Windows는 봉인, 결정 0054), `api.github.com` 요청에만 실린다. 다른 사이트나 리다이렉트 홉에는 보내지 않는다.
+- GitHub 읽기 토큰은 `ai-settings.json`에 AI 키와 같은 방식으로 저장되고(Windows·Linux는 봉인, 결정 0054), `api.github.com` 요청에만 실린다. 다른 사이트나 리다이렉트 홉에는 보내지 않는다.
 - 실행 중 막혀도 요금이 나가는 연결로 넘어가는 버튼은 만들지 않는다.
 - 무료 연결로 만든 OpenRouter 설정은 `:free` 모델만 고를 수 있다. 그 계정에 충전된 돈이 있어도 무료 연결이 유료 모델로 가지 않게 하기 위해서다. Gemini 키는 무료와 유료를 구분할 수 없으므로 카드에 요금 가능성을 적는다.
 - 프로그램을 실행할 때 요금 경로를 바꾸는 환경변수를 넘기지 않는다. 대상: `ANTHROPIC_API_KEY`, `ANTHROPIC_AUTH_TOKEN`, `ANTHROPIC_BASE_URL`, `OPENAI_API_KEY`, `OPENAI_BASE_URL`, `CLAUDE_CODE_USE_BEDROCK`, `CLAUDE_CODE_USE_VERTEX`, `CLAUDE_CODE_USE_FOUNDRY`, `CLAUDE_CODE_USE_MANTLE`, `CLAUDE_CODE_USE_ANTHROPIC_AWS`, `CLAUDE_CODE_USE_ANTHROPIC_GOOGLE_CLOUD`, `ANTHROPIC_CUSTOM_HEADERS`, `ANTHROPIC_PROFILE`, `ANTHROPIC_FEDERATION_RULE_ID`, `CODEX_API_KEY`, `CODEX_ACCESS_TOKEN`. Windows에서는 대소문자를 가리지 않고 뺀다. 원래 환경은 바꾸지 않고 사본을 만든다.
@@ -243,7 +243,7 @@
 
 ## 키와 기록의 보관
 
-- 키 제공자의 키, 이미지·분석·검색 제공자의 키, 직접 운영하는 서버의 키, GitHub 읽기 토큰은 데이터 폴더의 `ai-settings.json`에, 홈 검색의 재정렬 키는 `app-settings.json`에 있다. Windows에서는 운영체제 암호화(`safeStorage`, DPAPI)로 봉인해 `sealed:v1:`로 쓴다(결정 0054). 같은 계정으로 도는 프로그램은 풀 수 있고, 파일을 다른 PC나 계정으로 옮기면 풀리지 않는다. 터미널 명령어는 앱을 창 없이 `--reveal-ai-secrets`로 띄워 풀고 메모리에만 둔다. macOS와 Linux는 평문이다. 사용자 프로필을 읽을 수 있는 사람은 읽을 수 있다.
+- 키 제공자의 키, 이미지·분석·검색 제공자의 키, 직접 운영하는 서버의 키, GitHub 읽기 토큰은 데이터 폴더의 `ai-settings.json`에, 홈 검색의 재정렬 키는 `app-settings.json`에 있다. Windows(DPAPI)와 Linux(GNOME 키링·KWallet이 있을 때)에서는 운영체제 암호화(`safeStorage`)로 봉인해 `sealed:v1:`로 쓴다(결정 0054). 같은 계정으로 도는 프로그램은 풀 수 있고, 파일을 다른 PC나 계정으로 옮기면 풀리지 않는다. 터미널 명령어는 앱을 창 없이 `--reveal-ai-secrets`로 띄워 풀고 메모리에만 둔다. macOS와 키링이 없는 Linux는 평문이다. 사용자 프로필을 읽을 수 있는 사람은 읽을 수 있다. macOS는 ad hoc 서명이라 봉인하면 업데이트마다 키체인 확인 창이 떠서, 개발자 서명 전에는 켜지 않는다.
 - Google 드라이브의 갱신 토큰은 예외로, 운영체제 암호화로만 저장한다(위 "Google 드라이브"). 드라이브에서 연 파일의 사본(`drive-cache`)은 문서 내용이고 평문이다.
 - 감사 기록은 하나다. 터미널 명령어 실행 기록(`~/.ieumoffice/cli-audit.jsonl`). 명령마다 시각, 인자, 결과, 출력 경로를 한 줄씩 남긴다. `GENOFFICE_AUDIT_LOG=off`로 끌 수 있다.
 - 자동 호출 장부에는 요청 시각만 남는다. 내용은 없다.

@@ -41,10 +41,26 @@ describe('safeStorageCodec', () => {
     expect(codec.open(sealed)).toBe('sk-키')
   })
 
-  it('does not seal on macOS or Linux, or without encryption, but still opens', () => {
+  it('seals on Linux only with a real keyring', () => {
+    const withBackend = (backend: string) => ({
+      ...fakeStorage(),
+      getSelectedStorageBackend: () => backend,
+    })
+    for (const backend of ['gnome_libsecret', 'kwallet', 'kwallet5', 'kwallet6']) {
+      const codec = safeStorageCodec(withBackend(backend), 'linux', () => false)
+      const sealed = codec.seal('sk')
+      expect(sealed, backend).not.toBeNull()
+      expect(codec.open(sealed!)).toBe('sk')
+    }
+    // no keyring: Chromium's built-in key protects nothing
+    expect(safeStorageCodec(withBackend('basic_text'), 'linux').seal('sk')).toBeNull()
+    expect(safeStorageCodec(withBackend('unknown'), 'linux').seal('sk')).toBeNull()
+    expect(safeStorageCodec(fakeStorage(), 'linux').seal('sk')).toBeNull()
+  })
+
+  it('does not seal on macOS, or without encryption, but still opens', () => {
     const sealed = safeStorageCodec(fakeStorage(), 'win32').seal('sk')!
     expect(safeStorageCodec(fakeStorage(), 'darwin').seal('sk')).toBeNull()
-    expect(safeStorageCodec(fakeStorage(), 'linux').seal('sk')).toBeNull()
     expect(safeStorageCodec(fakeStorage(false), 'win32').seal('sk')).toBeNull()
     expect(safeStorageCodec(fakeStorage(), 'darwin').open(sealed)).toBe('sk')
     expect(safeStorageCodec(fakeStorage(false), 'win32').open(sealed)).toBeNull()

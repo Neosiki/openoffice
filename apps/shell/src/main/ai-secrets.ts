@@ -13,8 +13,10 @@ import { writeJsonAtomic } from '@genoffice/electron-utils/atomic-write'
 /**
  * Keys and tokens in ai-settings.json under the operating system's protection
  * (decision 0054). The app seals them with Electron safeStorage on Windows
- * (DPAPI under the user's account); macOS and Linux keep them plain for now.
- * Any platform opens a sealed value it can.
+ * (DPAPI under the user's account) and on Linux when a real keyring holds the
+ * key (GNOME Keyring, KWallet). macOS keeps them plain: an ad hoc signed app
+ * (decision 0031) would meet a Keychain prompt after every update. Any
+ * platform opens a sealed value it can.
  *
  * The terminal command runs without Electron, so it starts this app hidden
  * with REVEAL_FLAG, hands it the sealed values on stdin and reads the plain
@@ -26,6 +28,28 @@ export interface SafeStorageLike {
   isEncryptionAvailable(): boolean
   encryptString(plain: string): Buffer
   decryptString(sealed: Buffer): string
+  /** Linux only: which password store holds the key */
+  getSelectedStorageBackend?(): string
+}
+
+/**
+ * Linux password stores that really protect the key. Without a keyring
+ * Chromium falls back to `basic_text`, a key built into the program: a value
+ * "sealed" that way only looks protected, so it stays plain.
+ */
+const LINUX_KEYRINGS: ReadonlySet<string> = new Set([
+  'gnome_libsecret',
+  'kwallet',
+  'kwallet5',
+  'kwallet6',
+])
+
+/** Whether this platform seals at all, apart from the key being ready */
+export function platformSeals(storage: SafeStorageLike, platform: NodeJS.Platform): boolean {
+  if (!storage.isEncryptionAvailable()) return false
+  if (platform === 'win32') return true
+  if (platform === 'linux') return LINUX_KEYRINGS.has(storage.getSelectedStorageBackend?.() ?? '')
+  return false
 }
 
 /**
@@ -48,12 +72,13 @@ export function sealingKeyOnDisk(localStatePath: string): boolean {
 export function safeStorageCodec(
   storage: SafeStorageLike,
   platform: NodeJS.Platform = process.platform,
-  /** values stay plain until this says the key would survive a crash */
+  /** Windows: values stay plain until this says the key would survive a crash */
   keyOnDisk: () => boolean = () => true,
 ): AiSecretCodec {
   return {
+    // Linux keeps the key in the keyring itself, so only Windows waits for Local State
     seal: (plain) =>
-      platform === 'win32' && storage.isEncryptionAvailable() && keyOnDisk()
+      platformSeals(storage, platform) && (platform !== 'win32' || keyOnDisk())
         ? SEALED_PREFIX + storage.encryptString(plain).toString('base64')
         : null,
     open: (sealed) => {
