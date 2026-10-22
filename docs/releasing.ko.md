@@ -56,6 +56,17 @@ Windows SDK는 스캔 문서 글자 인식 도우미(`win-ocr.exe`)를 만들 �
 
 ## 4. 설치 파일 만들기
 
+**GitHub Actions로 만들기 (권장, 결정 0056).** Mac·Linux처럼 GitHub의 Windows 빌드 기계가 만들고, 설치 파일과 `latest.yml`에 "이 저장소의 이 커밋에서 만들었다"는 출처 증명을 붙입니다. 사용자는 `gh attestation verify IeumOffice-Setup-<버전>.exe --repo pblsketch/openoffice`로 확인할 수 있습니다.
+
+1. 6번대로 릴리스를 **본문만으로, "Set as a pre-release"를 체크해** 먼저 공개합니다. 파일은 아직 올리지 않습니다.
+2. **Actions** 탭 → **Windows build** → **Run workflow**에서 가지는 `main`, **release_tag** 칸에 그 태그(예: `v0.12.4`)를 적고 실행합니다.
+3. 빌드, 검사(묶인 프로그램, `latest.yml`의 버전과 파일 이름, **서명이 없는지**), 창 없는 내보내기 시험이 모두 통과하면 설치 파일, `.blockmap`, `latest.yml`이 그 릴리스에 저절로 붙습니다. 빌드한 버전과 태그가 다르면 붙이지 않고 멈춥니다.
+4. 릴리스 페이지에서 세 파일이 붙었는지 보고, 8번의 베타 예행으로 넘어갑니다.
+
+release_tag를 비워 두면 결과물(`ieumoffice-windows-x64`)만 남습니다. **처음 한 번은 이렇게 돌려** 내려받은 설치 파일이 손으로 만든 것과 똑같이 설치되고 동작하는지 확인합니다. _(확인 필요: 이 워크플로는 아직 Actions에서 돌려 보지 않았습니다. 첫 실행에서 확인한 뒤 이 표시를 지워 주세요.)_
+
+Actions를 쓸 수 없을 때는 아래처럼 이 PC에서 만듭니다. 이렇게 올린 파일에는 출처 증명이 없습니다.
+
 저장소 맨 위 폴더에서, 2번의 Rust PATH 설정을 한 **같은 터미널**로 아래 세 가지를 순서대로 실행합니다.
 
 **(1) 엑셀 처리 프로그램을 먼저 만듭니다.**
@@ -280,16 +291,15 @@ Linux판(64비트 x64)도 베타로 냅니다. Windows·Mac 설치 파일과 **�
 ```text
 0. Anthropic 상업 약관 동의 확인
 1. apps/shell/package.json 과 package-lock.json 의 버전 올리기 → 커밋, push
-2. (Rust PATH 설정)
-3. npm run native:build -w @genoffice/sheets
-4. xlsx-sidecar.exe 를 target\x86_64-pc-windows-gnu\release 로 복사
-5. npm run dist:win -- -- --publish never
-6. apps/shell/release 의 IeumOffice-Setup-<버전>.exe 와 latest.yml 확인 (설치해서 .odt "연결 프로그램"도)
-7. GitHub 릴리스: 태그 v<버전>, 두 파일 올리기, pre-release 체크(먼저 혼자 확인) → Publish
-8. 옛 버전 앱에서 채널을 "베타 버전"으로 바꿔 업데이트 확인
-9. (Mac) Actions → macOS build → Run workflow → 결과의 dmg, zip, latest-mac.yml 을 같은 릴리스에 올리기
-10. (Linux) Actions → Linux build → Run workflow → 결과의 AppImage, deb, rpm, latest-linux.yml 을 같은 릴리스에 올리기
-11. 릴리스를 pre-release 해제 + latest 로 바꾸기
-12. 소개 사이트(ieumoffice-site): /updates 맨 위에 새 버전 항목 + 메인 한 줄 안내 고치기 → 확인 받고 push → 사이트에서 확인
-13. docs/tracking/status.md 에 기준 버전과 확인한 내용 기록
+2. (손 빌드일 때만) Rust PATH 설정
+3. GitHub 릴리스: 태그 v<버전>, 본문만, pre-release 체크 → Publish
+4. Actions → Windows build → Run workflow(main, release_tag) → 설치 파일·latest.yml 이 그 릴리스에 붙었는지 확인
+   (Actions 를 못 쓰면: native:build → xlsx-sidecar.exe 복사 → npm run dist:win -- -- --publish never → 두 파일 손으로 올리기)
+5. 설치해서 버전과 .odt "연결 프로그램" 확인
+6. 옛 버전 앱에서 채널을 "베타 버전"으로 바꿔 업데이트 확인
+7. (Mac) Actions → macOS build → Run workflow → 결과의 dmg, zip, latest-mac.yml 을 같은 릴리스에 올리기
+8. (Linux) Actions → Linux build → Run workflow → 결과의 AppImage, deb, rpm, latest-linux.yml 을 같은 릴리스에 올리기
+9. 릴리스를 pre-release 해제 + latest 로 바꾸기
+10. 소개 사이트(ieumoffice-site): /updates 맨 위에 새 버전 항목 + 메인 한 줄 안내 고치기 → 확인 받고 push → 사이트에서 확인
+11. docs/tracking/status.md 에 기준 버전과 확인한 내용 기록
 ```

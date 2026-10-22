@@ -12,6 +12,20 @@ IeumOffice is a modified version of GenOffice (see
 problem is in code the two projects share (the document engines, for example),
 please consider reporting it to the upstream project as well.
 
+## Verifying a Download
+
+The Windows installer, like the Mac and Linux packages, is built by GitHub
+Actions from this repository. A Windows installer built that way carries a
+build provenance attestation, so you can check that it was made from this
+repository's source by its own workflow:
+
+```
+gh attestation verify IeumOffice-Setup-<version>.exe --repo pblsketch/openoffice
+```
+
+The installer is not code-signed, so Windows shows an "unknown publisher"
+warning the first time you run it.
+
 ## Trademark and Copyright Reports
 
 Send trademark or copyright infringement reports and licensing questions to
