@@ -4,7 +4,7 @@ import { mkdtemp, readFile, writeFile } from 'node:fs/promises'
 import { createRequire } from 'node:module'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { test, expect, type ElectronApplication, type Page } from '@playwright/test'
+import { test, expect, type ElectronApplication, type Locator, type Page } from '@playwright/test'
 import { createXmindDocumentFromOutline, openXmind } from '@genoffice/xmind-engine'
 import {
   SHELL_DIR,
@@ -24,8 +24,15 @@ import {
  * Every map opened here is built in this file with the engine.
  */
 
-/** the colour of the mind map tile, as drawn in TabBar.tsx and file-mindmap.svg */
-const TILE_FILL = '#D6409F'
+/** the colour of the mind map icon's spine, as drawn in file-mindmap.svg (the tab shows that SVG) */
+const TILE_FILL = '#B83A7A'
+
+/** the SVG text behind a tab's icon image (a bundled file or an inlined data URL) */
+async function tabIconSvg(tab: Locator): Promise<string> {
+  return tab
+    .locator('.tab-icon img')
+    .evaluate(async (img: HTMLImageElement) => (await fetch(img.src)).text())
+}
 
 interface TabSummaryOnWindow {
   id: string
@@ -146,7 +153,7 @@ test.describe('mind map editor in the shell', () => {
       await expect(tab).toHaveCount(1)
       await expect(tab).toHaveClass(/active/)
       await expect(tab.locator('.tab-title')).toHaveText('Untitled Mind Map')
-      await expect(tab.locator(`.tab-icon svg rect[fill="${TILE_FILL}"]`)).toHaveCount(1)
+      expect(await tabIconSvg(tab)).toContain(TILE_FILL)
       const map = await waitForPageWithUrl(app, '://mindmap/')
       await expect(map.locator('.mm-sheet-host:not([hidden]) me-root me-tpc')).toBeVisible()
       await page.screenshot({ path: screenshotPath('mindmap-tab-strip') })
@@ -351,7 +358,7 @@ test.describe('mind map editor in the shell', () => {
       const tab = page.locator('.tab-bar .tab-item:not(.tab-home)')
       await expect(tab).toHaveCount(1)
       await expect(tab.locator('.tab-title')).toHaveText('trip.xmind')
-      await expect(tab.locator(`.tab-icon svg rect[fill="${TILE_FILL}"]`)).toHaveCount(1)
+      expect(await tabIconSvg(tab)).toContain(TILE_FILL)
       const map = await waitForPageWithUrl(app, '://mindmap/')
       await expect
         .poll(() => topicTitles(map))
