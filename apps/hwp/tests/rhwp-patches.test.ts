@@ -362,7 +362,7 @@ describe('rhwp Hangul-key patches', () => {
     expect(patched).toContain('installHancomMenuItems(document, getLocale());')
   })
 
-  it('give the bridge the page number calls of engine patch 0010', () => {
+  it('give the bridge the page number calls of engine patch 0013', () => {
     const source = [
       '  applyStyle(sec: number, para: number, styleId: number): { ok: boolean } {',
       '    return { ok: true };',
