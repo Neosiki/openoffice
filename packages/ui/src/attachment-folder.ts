@@ -17,7 +17,7 @@ const DRIVE_ROOT = /^[A-Za-z]:$/
 export function attachmentFolderLabel(path: string): string {
   const parts = path.split(/[\\/]/).filter((part) => part !== '')
   if (parts.length < 2) return ''
-  const folder = parts[parts.length - 2]
+  const folder = parts[parts.length - 2] ?? ''
   if (folder === '.' || folder === '..' || DRIVE_ROOT.test(folder)) return ''
   const parent = parts.length >= 3 ? parts[parts.length - 3] : undefined
   if (parent !== undefined && APP_MADE_PARENTS.has(parent)) return ''
