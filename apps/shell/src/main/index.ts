@@ -110,6 +110,7 @@ import {
   parseFileToText,
 } from '@genoffice/file-parse'
 import { createDocList } from './doc-picker/doc-list'
+import { resolveDocAsker } from './doc-picker/doc-asker'
 import { createDocPicker } from './doc-picker/doc-picker-window'
 import { handleDroppedFiles } from './dropped-files'
 import { collectLaunchPaths } from './launch-paths'
@@ -7366,8 +7367,20 @@ app.whenReady().then(async () => {
   })
   // The "Attach documents" window: an editor's AI panel asks the shell for the
   // documents it already knows, and the shell hands back the paths it ticked.
-  // One window at a time, over the window that asked.
+  // One window at a time, over the window that asked. The same list, built for
+  // the asking editor, answers the AI panel's `@` list.
   createDocPicker({
+    askerFor: (wcId) =>
+      resolveDocAsker(wcId, {
+        tabFor: (id) => {
+          const tabId = tabManager?.tabIdForWebContents(id)
+          if (!tabId) return undefined
+          const filePath = tabManager?.describeWebContents(id)?.filePath
+          return { id: tabId, ...(filePath ? { filePath } : {}) }
+        },
+        split: () => tabManager?.splitState() ?? null,
+        detachedFor: (id) => detachedDocumentFor(id),
+      }),
     list: createDocList({
       openDocuments: async () => {
         const tabs = tabManager ? await tabManager.openDocuments() : []

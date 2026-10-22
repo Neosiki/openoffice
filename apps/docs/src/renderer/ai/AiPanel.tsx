@@ -99,7 +99,14 @@ import {
 import { useSubscriptionConnection } from './subscription-client'
 import { useI18n, t as tModule, aiLangDirective, type StringKey } from '../i18n/locale'
 import { createFileNav, Markdown } from '@genoffice/ui'
-import { AiComposer, AiScopeQuote, AiTypingIndicator, type AiScopeQuoteData } from '@genoffice/ui'
+import {
+  AiComposer,
+  AiScopeQuote,
+  AiTypingIndicator,
+  docMentionActions,
+  type AiComposerDocs,
+  type AiScopeQuoteData,
+} from '@genoffice/ui'
 import sendEnterOn from '../assets/send-enter-on.png'
 import sendEnterOff from '../assets/send-enter-off.png'
 import sendStop from '../assets/send-stop.png'
@@ -1479,6 +1486,17 @@ export function AiPanel({
     })
   }
 
+  /** The `@` document list in the input attaches through the same route as the buttons */
+  const docMention: AiComposerDocs = {
+    lang,
+    ...docMentionActions({
+      lang,
+      add: (paths) => window.desktop.addAttachmentPaths(paths),
+      merge: mergeAttachments,
+    }),
+    attachments,
+  }
+
   const onDrop = async (e: React.DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
@@ -2045,6 +2063,7 @@ export function AiPanel({
           onSend={run}
           onStop={cancel}
           skills={skills.composer}
+          docs={docMention}
           onPasteFiles={(files) => void onPasteFiles(files)}
           footerStart={
             <>
