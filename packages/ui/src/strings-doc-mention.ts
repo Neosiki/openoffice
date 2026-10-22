@@ -21,7 +21,7 @@ export const DOC_MENTION_STRINGS = defineStrings({
     groupPane: 'Other pane',
     groupOpen: 'Open documents',
     groupRecent: 'Recent documents',
-    reasonModified: 'Save it to attach it',
+    reasonModified: 'Save it to attach',
     reasonUnsaved: 'New document, not saved yet',
     more: 'Find more…',
   },
