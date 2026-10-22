@@ -26,6 +26,16 @@ Każdy edytor może przywołać panel AI: zaznacz coś, wydaj polecenie i obserw
 - **Markdown / HTML**: przepisywanie, rozbudowa, tłumaczenie.
 - **Strona główna ▸ Ask AI** odpowiada z plików oznaczonych gwiazdką i je cytuje — panel bazy wiedzy ma własną sekcję w rozdziale o stronie głównej, a panel AI w Docs ma tę samą umiejętność.
 
+## Załączanie otwartych dokumentów
+
+W panelu AI edytorów Docs, Sheets, Slides, Hangul, HTML i map myśli możesz załączyć jako materiał inne dokumenty otwarte w GenOffice albo otwierane niedawno. Załączony dokument jest traktowany dokładnie tak samo jak plik wybrany z komputera.
+
+- **`@` w polu wpisywania**: wpisz `@` na początku pola albo po spacji, aby otworzyć listę dokumentów. Jeśli okno jest podzielone, najpierw pojawia się dokument z sąsiedniego panelu, potem pozostałe otwarte dokumenty i ostatnie; dokumentu, w którym pracujesz, na liście nie ma. Zawęź ją kilkoma literami nazwy (spacje są dozwolone) i wybierz klawiszem Enter lub kliknięciem: w polu pojawi się `@nazwa dokumentu`, a dokument zostanie załączony. **Znajdź więcej…** na samym dole otwiera opisane niżej okno wyboru dokumentów.
+- **Załącz z dokumentów GenOffice**: ten przycisk obok przycisku załączania otwiera tę samą listę w oknie, w którym możesz zaznaczyć kilka dokumentów i załączyć je naraz.
+- Dokumenty z niezapisanymi zmianami i nowe dokumenty, których nigdy nie zapisano, są wyszarzone i nie można ich wybrać. Zapisz je i wybierz ponownie — AI czyta zapisany plik.
+- Gdy dwa dokumenty mają tę samą nazwę, ale leżą w różnych folderach, dodawana jest nazwa folderu bezpośrednio nadrzędnego, np. `@plan.docx(II semestr)`, i tę nazwę folderu dostaje też AI.
+- Edytory PDF i Markdown nie mają jeszcze załączników, więc żaden z tych sposobów nie jest tam dostępny.
+
 ## Cofanie i bezpieczeństwo
 
 - Panel w Docs prowadzi **listę wersji**: jedna migawka na turę, możesz cofnąć się do dowolnej, a samo cofnięcie da się jeszcze cofnąć przez Ctrl+Z. Miganek przetrwa ponowne otwarcie dokumentu.
