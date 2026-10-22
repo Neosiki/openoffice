@@ -92,6 +92,8 @@ function isParagraphBreak(
   // the indent/short-line rules below would shred a stanza into fragments
   // whose inter-block spacing no longer matches the line pitch
   if (cur.hardBreakBefore) return false
+  // a word split across the boundary never ends its paragraph (P21 B)
+  if (prev.endsWithHyphen) return false
 
   // 2. first-line indent: prev sits on the body's left edge, cur is indented
   //    AND runs (nearly) full width — centered stacks fail that guard
@@ -145,6 +147,7 @@ function splitRunOnItems(group: Line[], wrap: { left: number; right: number }): 
   if (!group.every((l) => approxEq(l.box.x0, left, tol))) return [group]
   const groupRight = maxOf(group.map((l) => l.box.x1))
   const isItemEnd = (l: Line, next: Line): boolean =>
+    !l.endsWithHyphen &&
     l.box.x1 - l.box.x0 < ITEM_MAX_WIDTH_RATIO * (wrap.right - wrap.left) &&
     groupRight - l.box.x1 >= firstWordWidthPt(next) + HARD_BREAK_WORD_SLACK_EMS * fontSize
   const evidence = group.some((l, i) => i < group.length - 1 && isItemEnd(l, group[i + 1]!))
