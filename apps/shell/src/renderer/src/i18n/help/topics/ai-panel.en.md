@@ -28,7 +28,7 @@ Every editor can summon the AI panel: select something, give an instruction, wat
 
 ## Attaching open documents
 
-In the AI panel of the Docs, Sheets, Slides, HWP, HTML and mind map editors you can attach other documents you have open in GenOffice, or opened recently, as material. An attached document is handled exactly like a file picked from your PC.
+In the AI panel of the Docs, Sheets, Slides, Hangul, HTML and mind map editors you can attach other documents you have open in GenOffice, or opened recently, as material. An attached document is handled exactly like a file picked from your PC.
 
 - **`@` in the input**: type `@` at the start of the input or after a space to open a list of documents. If the window is split, the document in the other pane comes first, then other open documents and recent ones; the document you are in is left out. Narrow it with a few letters of the name (spaces are fine) and pick with Enter or a click: `@document name` goes into the input and the document is attached. **Find more…** at the bottom opens the document picker below.
 - **Attach from GenOffice documents**: this button beside the attach button opens the same list in a window, where you can tick several documents and attach them at once.
