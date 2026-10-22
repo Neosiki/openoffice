@@ -28,9 +28,11 @@
       "0007-merge-title-host-anchor-line.patch",
       "0008-title-host-line-occupies-flow.patch",
       "0009-cellzone-fill-spans-merged-end-cell.patch",
-      "0010-delete-style-remaps-all-paragraphs.patch"
+      "0010-header-footer-frame-origin.patch",
+      "0011-inherit-master-page-from-previous-section.patch",
+      "0012-delete-style-remaps-all-paragraphs.patch"
     ],
     "wasmPack": "0.15.0",
-    "wasmSha256": "f2f499293ab13117bf184a06ae42676e033f04d024ee0d3f66014d07098681b2"
+    "wasmSha256": "9c948870df8f8a92decf259d56cd957763f1a24459e37449d25212b46fa923b5"
   }
 }
