@@ -1,58 +1,36 @@
 /**
- * Run every workspace's `npm run test`, several workspaces at a time.
+ * `npm run test:parallel`: every workspace's `npm run test`, a few at a time.
  *
- * The root `npm test` used to chain 32 `npm run test -w …` calls, so a
- * workspace that mostly waits (a Chromium page load, a jsdom start-up) kept
- * every core idle until it finished. Running a few workspaces side by side
- * overlaps those waits. Each workspace's output is held back and printed in
- * one piece when it ends, so logs do not interleave; a summary table follows.
+ * `npm test` chains the workspaces one after another, so a workspace that
+ * mostly waits (a Chromium page load, a jsdom start-up) leaves the other cores
+ * idle until it finishes. This runner overlaps those waits. It is opt-in:
+ * `npm test` stays the serial gate, because on a busy machine some suites
+ * time out only when others share the CPU. Each workspace's output is held
+ * back and printed in one piece when it ends, so logs do not interleave; a
+ * summary table follows. Exits 1 when any workspace failed.
  *
- * TEST_JOBS=<n> sets how many workspaces run at once (TEST_JOBS=1 is the old
- * serial run, for debugging). Exits 1 when any workspace failed.
- *
- * Each vitest starts a worker per core by default, so a few suites at once
- * would put several times the core count of CPU-bound workers on the machine:
- * a test that takes 2 s alone then ran past its 20 s timeout. Unless
- * VITEST_MAX_WORKERS is set, each workspace gets about twice its share of
- * the cores instead.
+ * The workspace list is read from the root `test` script, so the two runs
+ * always cover the same workspaces. TEST_JOBS=<n> sets how many run at once
+ * (default 2). Each vitest starts a worker per core by default; unless
+ * VITEST_MAX_WORKERS is set, each workspace gets its share of the cores
+ * instead, so the concurrent suites do not oversubscribe the CPU.
  */
 import { spawn } from 'node:child_process'
+import { readFileSync } from 'node:fs'
 import { availableParallelism } from 'node:os'
 
-const WORKSPACES = [
-  '@genoffice/i18n',
-  '@genoffice/electron-utils',
-  '@genoffice/font-metrics',
-  '@genoffice/zip-gate',
-  '@genoffice/google-drive',
-  '@genoffice/xmind-engine',
-  '@genoffice/docx-engine',
-  '@genoffice/odt-engine',
-  '@genoffice/pdf2docx',
-  '@genoffice/pdf-structure',
-  '@genoffice/html2docx',
-  '@genoffice/file-parse',
-  '@genoffice/pptx-engine',
-  '@genoffice/xlsx-gateway',
-  '@genoffice/pptx-ops',
-  '@genoffice/pptx-render',
-  '@genoffice/pipelines',
-  '@genoffice/ai-search',
-  '@genoffice/agent-core',
-  '@genoffice/ai-provider',
-  '@genoffice/project-store',
-  '@genoffice/cli',
-  '@genoffice/ui',
-  '@genoffice/docs',
-  '@genoffice/sheets',
-  '@genoffice/shell',
-  '@genoffice/slides',
-  '@genoffice/pdf',
-  '@genoffice/markdown',
-  '@genoffice/html',
-  '@genoffice/mindmap',
-  '@genoffice/hwp',
-]
+/** The workspaces the root `test` script runs, in its order */
+function testWorkspaces() {
+  const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'))
+  const names = [...String(pkg.scripts?.test ?? '').matchAll(/npm run test -w (\S+)/g)].map(
+    (match) => match[1],
+  )
+  if (names.length === 0)
+    throw new Error('no "npm run test -w <workspace>" in the root test script')
+  return names
+}
+
+const WORKSPACES = testWorkspaces()
 
 /**
  * Workspaces that must wait for another one to finish. The sheets test script
@@ -73,14 +51,14 @@ const FIRST = [
 function jobCount() {
   const fromEnv = Number.parseInt(process.env.TEST_JOBS ?? '', 10)
   if (Number.isInteger(fromEnv) && fromEnv > 0) return fromEnv
-  // most suites already use every core on their own; a few at once is enough
-  // to fill the gaps without thrashing
-  return Math.max(2, Math.min(4, Math.floor(availableParallelism() / 4)))
+  // most suites already use every core on their own; two at once fills the
+  // gaps one leaves without starving either (four timed suites out on Windows)
+  return 2
 }
 
 function workerEnv(jobs) {
   if (process.env.VITEST_MAX_WORKERS || jobs === 1) return process.env
-  const workers = Math.max(2, Math.floor((availableParallelism() * 2) / jobs))
+  const workers = Math.max(2, Math.floor(availableParallelism() / jobs))
   return { ...process.env, VITEST_MAX_WORKERS: String(workers) }
 }
 
@@ -109,7 +87,8 @@ function runWorkspace(name, env) {
 async function main() {
   const jobs = jobCount()
   const env = workerEnv(jobs)
-  const queue = [...FIRST, ...WORKSPACES.filter((name) => !FIRST.includes(name))]
+  const first = FIRST.filter((name) => WORKSPACES.includes(name))
+  const queue = [...first, ...WORKSPACES.filter((name) => !first.includes(name))]
   const done = new Set()
   const results = []
   const started = Date.now()
