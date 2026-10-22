@@ -15,26 +15,24 @@
  *   src/renderer/ai/assets copy)
  *       the AI panel's attachment-card icons, one identical set per editor
  *
- * The icons form one family, a notebook page: a colored binding spine on the
- * left, joined to the page by link loops (the "ieum", the join, of the
- * product name), and a pictogram of the content in the same color on the
- * page. From 40 px up the page also carries the format's file extension.
- * Formats are told apart by spine color, pictogram and extension, never by a
- * vendor's logo, monogram or signature glyph. The attachment kinds that are
- * not one format (image, video, audio, plain document, unknown file) use the
- * same page with their own pictogram and no extension.
+ * The icons form one family, a notebook page kept to one idea: a white page
+ * with rounded corners, a solid colored spine on the left, and one bold
+ * pictogram of the content in the same color. Formats are told apart by that
+ * color and pictogram, never by a vendor's logo, monogram or signature glyph.
+ * The attachment kinds that are not one format (image, video, audio, plain
+ * document, unknown file) use the same page with their own pictogram.
  *
  * Each SVG holds three drawings an embedded media query picks from by the
  * size the image is drawn at (media queries inside an SVG evaluate against
- * its own viewport): below SMALL_MAX_PX a 16 px drawing on whole pixels
- * (spine and pictogram only), up to LABEL_MIN_PX a mid-size drawing with the
- * link loops, and from LABEL_MIN_PX the full drawing with the extension. One
- * file therefore serves the 16 px tab and the 256 px Explorer view alike.
+ * its own viewport): up to SMALL_MAX_PX a 16 px drawing on whole pixels with
+ * a narrower spine and heavier pictogram, up to LARGE_MIN_PX a mid-size
+ * drawing, and the full drawing from there. One file therefore serves the
+ * 16 px tab and the 256 px Explorer view alike.
  *
- * The extension text and the Hangul syllable on the HWP icon are converted to
- * outlines from Pretendard Bold (SIL OFL 1.1, packages/ui/template-fonts,
- * listed in NOTICE), so the icons do not depend on the fonts installed where
- * they are shown.
+ * The Hangul syllable on the HWP icon is converted to outlines from
+ * Pretendard Bold (SIL OFL 1.1, packages/ui/template-fonts, listed in
+ * NOTICE), so the icons do not depend on the fonts installed where they are
+ * shown.
  *
  * Edit the FORMATS / GENERIC tables or the drawing below, never the generated
  * files, then run:
@@ -58,48 +56,49 @@ import { chromium } from 'playwright-core'
 import { PNG } from 'pngjs'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
-const LABEL_FONT = join(root, 'packages/ui/template-fonts/Pretendard-Bold.otf')
+const GLYPH_FONT = join(root, 'packages/ui/template-fonts/Pretendard-Bold.otf')
 
 // ── the family ──────────────────────────────────────────────────────────────
 
 /**
- * One entry per format icon: the extension shown on the page, the spine and
- * pictogram color, and the pictogram. Formats that share an icon
- * (xlsm/xls/csv/tsv on xlsx, hwpx on hwp, htm on html, markdown on md, odt
- * on docx) are mapped in Home.tsx, DriveBrowser.tsx and electron-builder.cjs.
- * Colors are our own palette, deliberately away from any vendor's brand
+ * One entry per format icon: the spine and pictogram color, and the
+ * pictogram. Formats that share an icon (xlsm/xls/csv/tsv on xlsx, hwpx on
+ * hwp, htm on html, markdown on md, odt on docx) are mapped in Home.tsx,
+ * DriveBrowser.tsx and electron-builder.cjs. The colors are one palette of
+ * similar lightness and chroma, our own and away from any vendor's brand
  * color.
  */
 const FORMATS = {
-  docx: { label: 'DOCX', color: '#4757C9', picto: 'paragraphs' }, // indigo
-  xlsx: { label: 'XLSX', color: '#11806F', picto: 'grid' }, // teal green
-  pptx: { label: 'PPTX', color: '#C26A12', picto: 'screen' }, // amber
-  pdf: { label: 'PDF', color: '#B3263E', picto: 'seal' }, // crimson
-  hwp: { label: 'HWP', color: '#1179A6', picto: 'syllable' }, // cyan blue
-  md: { label: 'MD', color: '#323D4D', picto: 'hash' }, // slate
-  html: { label: 'HTML', color: '#8A40BD', picto: 'tag' }, // violet
-  mindmap: { label: 'XMIND', color: '#B83A7A', picto: 'branches' }, // berry
-  txt: { label: 'TXT', color: '#7A8392', picto: 'lines' }, // gray
-  json: { label: 'JSON', color: '#8A6A0C', picto: 'braces' }, // ochre
+  docx: { color: '#5160BE', picto: 'paragraphs' }, // indigo
+  xlsx: { color: '#2A8572', picto: 'cells' }, // teal green
+  pptx: { color: '#C27630', picto: 'slide' }, // amber
+  pdf: { color: '#B84A5C', picto: 'stamp' }, // crimson
+  hwp: { color: '#2E7FAA', picto: 'syllable' }, // cyan blue
+  md: { color: '#4A5568', picto: 'hash' }, // slate
+  html: { color: '#8257B6', picto: 'tag' }, // violet
+  mindmap: { color: '#B04E83', picto: 'nodes' }, // berry
+  txt: { color: '#858D9B', picto: 'lines' }, // gray
+  json: { color: '#977A2E', picto: 'braces' }, // ochre
 }
 
-/** Attachment kinds that are not a single format: same page, no extension. */
+/** Attachment kinds that are not a single format. */
 const GENERIC = {
-  image: { color: '#2E8A57', picto: 'picture' },
-  video: { color: '#6A4FC4', picto: 'play' },
-  voice: { color: '#C0702A', picto: 'wave' },
-  document: { color: '#6B7280', picto: 'lines' },
-  general: { color: '#8A93A2', picto: 'none' },
+  image: { color: '#4A8A3E', picto: 'picture' }, // leaf green
+  video: { color: '#6E5AAE', picto: 'play' }, // blue violet
+  voice: { color: '#C25A3C', picto: 'wave' }, // terracotta
+  document: { color: '#858D9B', picto: 'lines' }, // gray
+  general: { color: '#A0A7B2', picto: 'none' }, // light gray
 }
 
-// Rendered sizes (CSS px) up to SMALL_MAX_PX draw the 16 px drawing; from
-// LABEL_MIN_PX the full drawing with the extension; the mid-size one between.
+// Rendered sizes (CSS px) up to SMALL_MAX_PX draw the 16 px drawing, from
+// LARGE_MIN_PX the full drawing, the mid-size one between.
 const SMALL_MAX_PX = 23.98
-const LABEL_MIN_PX = 40
+const LARGE_MIN_PX = 40
 
 const PAGE_FILL = '#FFFFFF'
-const PAGE_STROKE = '#9AA3AF'
-const LINK_FILL = '#FFFFFF'
+// a hairline and a soft shadow set the white page off a light background
+const EDGE_COLOR = '#0F172A'
+const SHADOW_COLOR = '#0F172A'
 
 // ── outputs ─────────────────────────────────────────────────────────────────
 
@@ -157,21 +156,10 @@ const ICNS_ENTRIES = [
 ]
 
 // ── drawing ─────────────────────────────────────────────────────────────────
-// 256-unit canvas. The 16 px drawing sits on a 16-unit grid (one pixel at
-// 16 px) with the page outline centered half a pixel inside, so the 16 px
-// menu and tab icons land on whole pixels.
+// 256-unit canvas. The 16 px drawing keeps the page and spine edges on the
+// 16-unit grid (one pixel at 16 px) so the menu and tab icons stay crisp.
 
 const num = (value) => Number(value.toFixed(2))
-
-/** Mix a #RRGGBB color toward `target` (0 black, 255 white) by `amount` (0..1). */
-function mix(hex, target, amount) {
-  const channels = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16))
-  const mixed = channels.map((c) => Math.round(c + (target - c) * amount))
-  return `#${mixed
-    .map((c) => c.toString(16).padStart(2, '0'))
-    .join('')
-    .toUpperCase()}`
-}
 
 function roundedRectPath({ left, top, right, bottom, radius: r }) {
   return [
@@ -188,8 +176,8 @@ function roundedRectPath({ left, top, right, bottom, radius: r }) {
   ].join('')
 }
 
-/** The binding spine: the page's left part, following its rounded left corners. */
-function spinePath({ left, top, bottom, radius: r, spine }) {
+/** The spine: the page's left part up to x = `spine`, following its rounded left corners. */
+function spinePath({ left, top, bottom, radius: r }, spine) {
   return [
     `M${left + r} ${top}`,
     `H${spine}`,
@@ -202,210 +190,161 @@ function spinePath({ left, top, bottom, radius: r, spine }) {
   ].join('')
 }
 
-const font = opentype.parse(readFileSync(LABEL_FONT).buffer)
-const LABEL_TRACKING = 0.03
+const glyphFont = opentype.parse(readFileSync(GLYPH_FONT).buffer)
 
-/**
- * The text as one outline path, centered on (cx, cy) by its cap height and
- * scaled down when it would be wider than maxWidth.
- */
-function labelPath(text, { cx, cy, capHeight, maxWidth }) {
-  const capUnits = font.tables.os2.sCapHeight || font.unitsPerEm * 0.7
-  let size = (capHeight * font.unitsPerEm) / capUnits
-  const widthAt = (s) =>
-    font.getAdvanceWidth(text, s, { kerning: true }) + LABEL_TRACKING * s * (text.length - 1)
-  if (widthAt(size) > maxWidth) size *= maxWidth / widthAt(size)
-  const cap = (capUnits * size) / font.unitsPerEm
-  const glyphs = font.stringToGlyphs(text)
-  let x = cx - widthAt(size) / 2
-  const baseline = cy + cap / 2
-  const parts = []
-  glyphs.forEach((glyph, i) => {
-    parts.push(glyph.getPath(x, baseline, size).toPathData(2))
-    x += (glyph.advanceWidth * size) / font.unitsPerEm + LABEL_TRACKING * size
-    if (i < glyphs.length - 1) {
-      x += (font.getKerningValue(glyph, glyphs[i + 1]) * size) / font.unitsPerEm
-    }
-  })
-  return parts.join('')
-}
-
-/** One character's outline, scaled to fit and centered in a box. */
-function fittedGlyphPath(char, { x, y, w, h }) {
-  const path = font.getPath(char, 0, 0, 100)
+/** One character's outline as a path element, scaled to fit and centered in a box. */
+function fittedGlyph(char, { x, y, w, h }, fill) {
+  const path = glyphFont.getPath(char, 0, 0, 100)
   const box = path.getBoundingBox()
   const scale = Math.min(w / (box.x2 - box.x1), h / (box.y2 - box.y1))
   const left = x + (w - (box.x2 - box.x1) * scale) / 2 - box.x1 * scale
   const top = y + (h - (box.y2 - box.y1) * scale) / 2 - box.y1 * scale
-  return {
-    d: path.toPathData(2),
-    transform: `translate(${num(left)} ${num(top)}) scale(${num(scale)})`,
-  }
+  return `<path transform="translate(${num(left)} ${num(top)}) scale(${num(scale)})" d="${path.toPathData(2)}" fill="${fill}"/>`
 }
 
 /**
- * The pictogram vocabulary, drawn in box `b` with color `fg` and stroke `sw`;
- * `bg` is the page color under it (for cut-outs). `small` drops detail that
- * cannot survive 16 px.
+ * The pictogram vocabulary, drawn in box `b` with color `fg` and stroke
+ * width `sw`; `bg` is the page color (for cut-outs). `small` is the 16 px
+ * drawing, which drops detail that cannot survive at that size.
  */
 function pictogram(kind, b, fg, bg, sw, small) {
   const X = (u) => num(b.x + b.w * u)
   const Y = (u) => num(b.y + b.h * u)
-  const line = (x1, y1, x2, y2, width = sw) =>
-    `<path d="M${X(x1)} ${Y(y1)}L${X(x2)} ${Y(y2)}" stroke="${fg}" stroke-width="${num(width)}" stroke-linecap="round"/>`
-  const stroke = (d, width = sw) =>
-    `<path d="${d}" stroke="${fg}" stroke-width="${num(width)}" stroke-linecap="round" stroke-linejoin="round"/>`
+  const stroke = (d, width = sw, color = fg) =>
+    `<path d="${d}" stroke="${color}" stroke-width="${num(width)}" stroke-linecap="round" stroke-linejoin="round"/>`
+  const line = (x1, y1, x2, y2, width = sw) => stroke(`M${X(x1)} ${Y(y1)}L${X(x2)} ${Y(y2)}`, width)
   const rect = (x, y, w, h, r, fill = fg) =>
     `<rect x="${num(x)}" y="${num(y)}" width="${num(w)}" height="${num(h)}" rx="${num(r)}" fill="${fill}"/>`
   switch (kind) {
     case 'paragraphs':
-      // a heading and body text
-      if (small)
-        return line(0, 0.1, 0.6, 0.1, sw * 1.4) + line(0, 0.5, 1, 0.5) + line(0, 0.88, 0.78, 0.88)
+      // a heading over body text
       return (
-        line(0, 0.06, 0.58, 0.06, sw * 1.6) +
-        line(0, 0.36, 1, 0.36) +
-        line(0, 0.6, 1, 0.6) +
-        line(0, 0.84, 0.7, 0.84)
+        line(0.06, 0.16, 0.62, 0.16, sw * 1.25) +
+        line(0.06, 0.5, 0.94, 0.5) +
+        line(0.06, 0.84, 0.78, 0.84)
       )
     case 'lines':
-      if (small) return line(0, 0.1, 1, 0.1) + line(0, 0.5, 0.66, 0.5) + line(0, 0.9, 1, 0.9)
       return (
-        line(0, 0.06, 1, 0.06) +
-        line(0, 0.34, 0.8, 0.34) +
-        line(0, 0.62, 1, 0.62) +
-        line(0, 0.9, 0.48, 0.9)
+        line(0.06, 0.2, 0.94, 0.2, sw * 0.8) +
+        line(0.06, 0.5, 0.94, 0.5, sw * 0.8) +
+        line(0.06, 0.8, 0.6, 0.8, sw * 0.8)
       )
-    case 'grid': {
-      // a block of cells
-      const cols = small ? [0.5] : [0.36, 0.68]
-      const rows = small ? [0.5] : [0.34, 0.67]
-      const gap = small ? Math.max(sw * 0.7, 16) : Math.max(sw * 0.55, 7)
-      let out = rect(X(0), Y(0), b.w, b.h, sw * 0.6)
-      for (const c of cols) out += rect(X(c) - gap / 2, Y(0), gap, b.h, 0, bg)
-      for (const r of rows) out += rect(X(0), Y(r) - gap / 2, b.w, gap, 0, bg)
+    case 'cells': {
+      // four cells
+      const gap = small ? 16 : Math.max(sw * 0.5, 8)
+      const r = small ? 6 : sw * 0.5
+      const cw = (b.w - gap) / 2
+      const ch = (b.h - gap) / 2
+      let out = ''
+      for (const i of [0, 1]) {
+        for (const j of [0, 1]) out += rect(b.x + i * (cw + gap), b.y + j * (ch + gap), cw, ch, r)
+      }
       return out
     }
-    case 'screen': {
-      // a presentation screen on a stand, with a rising bar chart
-      const fh = small ? 0.8 : 0.74
-      let out = `<rect x="${num(X(0) + sw / 2)}" y="${num(Y(0) + sw / 2)}" width="${num(b.w - sw)}" height="${num(b.h * fh - sw)}" rx="${num(sw * 0.8)}" stroke="${fg}" stroke-width="${num(sw)}"/>`
-      const bars = small
-        ? [
-            [0.36, 0.5],
-            [0.64, 0.3],
-          ]
-        : [
-            [0.3, 0.52],
-            [0.5, 0.36],
-            [0.7, 0.2],
-          ]
-      const bw = b.w * (small ? 0.16 : 0.12)
-      for (const [cx, top] of bars) {
-        const y0 = Y(top * fh) + sw * 0.1
-        const y1 = Y(fh) - sw * 1.6
-        out += rect(X(cx) - bw / 2, y0, bw, Math.max(y1 - y0, 4), Math.min(bw / 3, 4))
+    case 'slide':
+      // a slide with a rising line; at 16 px a screen on a stand
+      if (small) {
+        return rect(X(0), Y(0.16), b.w, b.h * 0.6, sw * 0.6) + line(0.5, 0.76, 0.5, 0.94, sw * 0.9)
       }
       return (
-        out +
-        line(0.5, fh, 0.5, 0.98, sw * 0.9) +
-        (small ? '' : line(0.34, 0.98, 0.66, 0.98, sw * 0.9))
+        rect(X(0), Y(0.1), b.w, b.h * 0.8, sw * 0.9) +
+        stroke(
+          `M${X(0.26)} ${Y(0.66)}L${X(0.44)} ${Y(0.46)}L${X(0.58)} ${Y(0.56)}L${X(0.76)} ${Y(0.34)}`,
+          sw * 0.7,
+          bg,
+        )
       )
-    }
-    case 'seal': {
-      // a finished page: text lines and a round seal
-      const r = small ? 0.32 : 0.26
-      const R = b.w * r
-      const cx = X(1) - R
-      const cy = Y(1) - R
-      const text = small
-        ? line(0, 0.1, 1, 0.1) + line(0, 0.42, 0.4, 0.42)
-        : line(0, 0.06, 1, 0.06) + line(0, 0.3, 0.84, 0.3) + line(0, 0.54, 0.34, 0.54)
+    case 'stamp': {
+      // a finished page: text lines and a stamp
+      const radius = b.w * (small ? 0.2 : 0.17)
       return (
-        text +
-        `<circle cx="${num(cx)}" cy="${num(cy)}" r="${num(R - sw / 2)}" stroke="${fg}" stroke-width="${num(sw)}"/>` +
-        `<circle cx="${num(cx)}" cy="${num(cy)}" r="${num(Math.max(R * 0.36, 5))}" fill="${fg}"/>`
+        line(0.06, 0.14, 0.94, 0.14) +
+        line(0.06, 0.46, 0.7, 0.46) +
+        (small ? '' : line(0.06, 0.78, 0.4, 0.78)) +
+        `<circle cx="${num(X(1) - radius)}" cy="${num(Y(1) - radius)}" r="${num(radius)}" fill="${fg}"/>`
       )
     }
-    case 'syllable': {
-      // a plain Hangul syllable: Korean text, nothing more. At 16 px the font
-      // outline turns to a blot, so the two letters are drawn as strokes there.
+    case 'syllable':
+      // a plain Hangul syllable, Korean text and nothing more; at 16 px the
+      // outline turns to a blot, so its two letters are drawn as strokes there
       if (small) {
         return stroke(
-          `M${X(0)} ${Y(0.2)}H${X(0.46)}Q${X(0.46)} ${Y(0.7)} ${X(0.02)} ${Y(0.94)}` +
-            `M${X(0.8)} ${Y(0.02)}V${Y(0.98)}M${X(0.8)} ${Y(0.5)}H${X(1)}`,
-          sw * 0.85,
+          `M${X(0.06)} ${Y(0.16)}H${X(0.46)}Q${X(0.46)} ${Y(0.68)} ${X(0.08)} ${Y(0.92)}` +
+            `M${X(0.78)} ${Y(0.04)}V${Y(0.96)}M${X(0.78)} ${Y(0.5)}H${X(0.98)}`,
+          sw * 0.9,
         )
       }
-      const glyph = fittedGlyphPath('가', b)
-      return `<path transform="${glyph.transform}" d="${glyph.d}" fill="${fg}"/>`
-    }
+      return fittedGlyph('가', { x: b.x, y: b.y - b.h * 0.04, w: b.w, h: b.h * 1.08 }, fg)
     case 'hash':
       return stroke(
-        `M${X(0.38)} ${Y(0.02)}L${X(0.28)} ${Y(0.98)}M${X(0.76)} ${Y(0.02)}L${X(0.66)} ${Y(0.98)}` +
-          `M${X(0.06)} ${Y(0.32)}H${X(0.98)}M${X(0.02)} ${Y(0.68)}H${X(0.94)}`,
+        `M${X(0.4)} ${Y(0.04)}L${X(0.3)} ${Y(0.96)}M${X(0.76)} ${Y(0.04)}L${X(0.66)} ${Y(0.96)}` +
+          `M${X(0.08)} ${Y(0.33)}H${X(0.96)}M${X(0.04)} ${Y(0.67)}H${X(0.92)}`,
       )
     case 'tag':
       return stroke(
-        `M${X(0.28)} ${Y(0.16)}L${X(0.02)} ${Y(0.5)}L${X(0.28)} ${Y(0.84)}M${X(0.72)} ${Y(0.16)}L${X(0.98)} ${Y(0.5)}L${X(0.72)} ${Y(0.84)}` +
-          (small ? '' : `M${X(0.58)} ${Y(0.06)}L${X(0.42)} ${Y(0.94)}`),
+        `M${X(0.3)} ${Y(0.2)}L${X(0.04)} ${Y(0.5)}L${X(0.3)} ${Y(0.8)}M${X(0.7)} ${Y(0.2)}L${X(0.96)} ${Y(0.5)}L${X(0.7)} ${Y(0.8)}` +
+          (small ? '' : `M${X(0.58)} ${Y(0.12)}L${X(0.42)} ${Y(0.88)}`),
       )
     case 'braces': {
       const brace = (side) => {
         const bx = (u) => (side < 0 ? X(u) : X(1 - u))
         return (
-          `M${bx(0.38)} ${Y(0.04)}C${bx(0.22)} ${Y(0.04)} ${bx(0.22)} ${Y(0.1)} ${bx(0.22)} ${Y(0.2)}V${Y(0.36)}` +
-          `C${bx(0.22)} ${Y(0.44)} ${bx(0.16)} ${Y(0.5)} ${bx(0.04)} ${Y(0.5)}C${bx(0.16)} ${Y(0.5)} ${bx(0.22)} ${Y(0.56)} ${bx(0.22)} ${Y(0.64)}` +
-          `V${Y(0.8)}C${bx(0.22)} ${Y(0.9)} ${bx(0.22)} ${Y(0.96)} ${bx(0.38)} ${Y(0.96)}`
+          `M${bx(0.36)} ${Y(0.06)}C${bx(0.22)} ${Y(0.06)} ${bx(0.22)} ${Y(0.12)} ${bx(0.22)} ${Y(0.22)}V${Y(0.38)}` +
+          `C${bx(0.22)} ${Y(0.45)} ${bx(0.16)} ${Y(0.5)} ${bx(0.06)} ${Y(0.5)}C${bx(0.16)} ${Y(0.5)} ${bx(0.22)} ${Y(0.55)} ${bx(0.22)} ${Y(0.62)}` +
+          `V${Y(0.78)}C${bx(0.22)} ${Y(0.88)} ${bx(0.22)} ${Y(0.94)} ${bx(0.36)} ${Y(0.94)}`
         )
       }
+      return stroke(brace(-1) + brace(1))
+    }
+    case 'nodes': {
+      // three nodes: a root and two children
+      const rootRadius = b.w * (small ? 0.2 : 0.17)
+      const childRadius = b.w * (small ? 0.16 : 0.13)
+      const [rx, ry] = [X(0.2), Y(0.5)]
+      const children = [
+        [X(0.8), Y(0.18)],
+        [X(0.8), Y(0.82)],
+      ]
       return (
-        stroke(brace(-1) + brace(1)) +
-        (small ? '' : `<circle cx="${X(0.5)}" cy="${Y(0.5)}" r="${num(sw * 0.75)}" fill="${fg}"/>`)
+        stroke(
+          children
+            .map(([x, y]) => `M${rx} ${ry}C${X(0.5)} ${ry} ${X(0.5)} ${y} ${x} ${y}`)
+            .join(''),
+          sw * 0.8,
+        ) +
+        `<circle cx="${rx}" cy="${ry}" r="${num(rootRadius)}" fill="${fg}"/>` +
+        children
+          .map(([x, y]) => `<circle cx="${x}" cy="${y}" r="${num(childRadius)}" fill="${fg}"/>`)
+          .join('')
       )
     }
-    case 'branches': {
-      // a central topic with three branches
-      let out = stroke(
-        `M${X(0.25)} ${Y(0.5)}C${X(0.5)} ${Y(0.5)} ${X(0.5)} ${Y(0.14)} ${X(0.78)} ${Y(0.14)}` +
-          `M${X(0.25)} ${Y(0.5)}H${X(0.78)}M${X(0.25)} ${Y(0.5)}C${X(0.5)} ${Y(0.5)} ${X(0.5)} ${Y(0.86)} ${X(0.78)} ${Y(0.86)}`,
-        sw * 0.8,
-      )
-      out += `<circle cx="${X(0.2)}" cy="${Y(0.5)}" r="${num(b.w * 0.2)}" fill="${fg}"/>`
-      for (const y of [0.14, 0.5, 0.86]) {
-        out += `<circle cx="${X(0.86)}" cy="${Y(y)}" r="${num(b.w * (small ? 0.13 : 0.105))}" fill="${fg}"/>`
-      }
-      return out
-    }
-    case 'picture': {
-      // a framed picture: a sun over two hills
-      const inset = sw / 2
+    case 'picture':
+      // a picture: a hill and a sun cut out of a filled frame
       return (
-        `<rect x="${num(X(0) + inset)}" y="${num(Y(0) + inset)}" width="${num(b.w - sw)}" height="${num(b.h - sw)}" rx="${num(sw * 0.8)}" stroke="${fg}" stroke-width="${num(sw)}"/>` +
+        rect(X(0), Y(0.1), b.w, b.h * 0.8, sw * 0.9) +
+        `<path d="M${X(0.12)} ${Y(0.78)}L${X(0.42)} ${Y(0.44)}L${X(0.62)} ${Y(0.64)}L${X(0.74)} ${Y(0.54)}L${X(0.88)} ${Y(0.78)}Z" fill="${bg}"/>` +
         (small
           ? ''
-          : `<circle cx="${X(0.32)}" cy="${Y(0.32)}" r="${num(b.h * 0.1)}" fill="${fg}"/>`) +
-        `<path d="M${X(0)} ${Y(1)}L${X(0.4)} ${Y(0.5)}L${X(0.62)} ${Y(0.74)}L${X(0.76)} ${Y(0.6)}L${X(1)} ${Y(0.9)}V${Y(1)}Z" fill="${fg}"/>`
+          : `<circle cx="${X(0.72)}" cy="${Y(0.3)}" r="${num(b.w * 0.08)}" fill="${bg}"/>`)
       )
-    }
     case 'play': {
-      // a play triangle in a rounded frame
-      const t = Math.min(b.w, b.h) * 0.24
+      // a play mark cut out of a filled frame
+      const t = Math.min(b.w, b.h) * 0.2
       const cx = X(0.53)
       const cy = Y(0.5)
       return (
-        rect(X(0), Y(0.1), b.w, b.h * 0.8, sw * 1.2) +
-        `<path d="M${num(cx - t * 0.8)} ${num(cy - t)}L${num(cx + t)} ${num(cy)}L${num(cx - t * 0.8)} ${num(cy + t)}Z" fill="${bg}" stroke="${bg}" stroke-width="${num(sw * 0.5)}" stroke-linejoin="round"/>`
+        rect(X(0), Y(0.1), b.w, b.h * 0.8, sw * 0.9) +
+        `<path d="M${num(cx - t * 0.8)} ${num(cy - t)}L${num(cx + t)} ${num(cy)}L${num(cx - t * 0.8)} ${num(cy + t)}Z" fill="${bg}" stroke="${bg}" stroke-width="${num(sw * 0.4)}" stroke-linejoin="round"/>`
       )
     }
     case 'wave': {
       // a sound wave: rounded bars
-      const heights = small ? [0.5, 1, 0.6] : [0.35, 0.75, 1, 0.6, 0.3]
+      const heights = small ? [0.5, 1, 0.6] : [0.4, 0.8, 1, 0.6, 0.34]
       const step = b.w / heights.length
-      const bw = Math.min(step * 0.62, sw * 1.3)
+      const bw = Math.min(step * 0.6, sw * 1.2)
       return heights
         .map((h, i) => {
-          const bh = Math.max(bw, b.h * h)
+          const bh = Math.max(bw, b.h * h * 0.9)
           return rect(X(0) + step * i + (step - bw) / 2, Y(0.5) - bh / 2, bw, bh, bw / 2)
         })
         .join('')
@@ -417,55 +356,61 @@ function pictogram(kind, b, fg, bg, sw, small) {
 
 /** Geometry of the three drawings. */
 const SIZES = {
-  // 16 px: the outline covers whole pixels (1..2 and 14..15), the spine
-  // ends on a pixel edge; no loops, no text
+  // up to SMALL_MAX_PX: page 1..15 px wide with its 1 px edge inside, a
+  // 4 px spine, a heavier pictogram
   small: {
-    page: { left: 24, top: 8, right: 232, bottom: 248, radius: 28, spine: 96 },
-    stroke: 16,
-    picto: { x: 120, y: 56, w: 92, h: 144 },
-    generic: { x: 120, y: 72, w: 92, h: 112 },
-    pictoStroke: 22,
-    links: [],
+    page: { left: 16, top: 0, right: 240, bottom: 256, radius: 40 },
+    spine: 80,
+    box: { x: 106, y: 64, w: 104, h: 128 },
+    stroke: 22,
+    edgeOpacity: 0.26,
+    edgeWidth: 16,
+    shadow: null,
   },
-  // 24-39 px: two link loops join spine and page
+  // 24-39 px
   mid: {
-    page: { left: 26, top: 12, right: 230, bottom: 244, radius: 24, spine: 82 },
-    stroke: 10,
-    picto: { x: 116, y: 60, w: 92, h: 136 },
-    generic: { x: 116, y: 74, w: 92, h: 108 },
-    pictoStroke: 18,
-    links: [72, 184],
-    linkStroke: 8,
+    page: { left: 36, top: 12, right: 220, bottom: 244, radius: 36 },
+    spine: 84,
+    box: { x: 112, y: 80, w: 84, h: 96 },
+    stroke: 18,
+    edgeOpacity: 0.18,
+    edgeWidth: 8,
+    shadow: { dy: 3, blur: 4 },
   },
-  // 40 px and up: the full drawing with the extension
+  // 40 px and up
   large: {
-    page: { left: 26, top: 12, right: 230, bottom: 244, radius: 24, spine: 82 },
-    stroke: 7,
-    picto: { x: 120, y: 48, w: 86, h: 90 },
-    generic: { x: 118, y: 72, w: 90, h: 112 },
-    pictoStroke: 12,
-    links: [80, 176],
-    linkStroke: 6,
-    label: { cx: 163, cy: 198, capHeight: 28, maxWidth: 86 },
+    page: { left: 40, top: 16, right: 216, bottom: 240, radius: 34 },
+    spine: 82,
+    box: { x: 112, y: 86, w: 80, h: 84 },
+    stroke: 13,
+    edgeOpacity: 0.12,
+    edgeWidth: 4,
+    shadow: { dy: 5, blur: 7 },
   },
 }
 
 function drawing(key, size) {
-  const spec = FORMATS[key] ?? GENERIC[key]
+  const { color, picto } = FORMATS[key] ?? GENERIC[key]
   const geometry = SIZES[size]
-  const { page } = geometry
-  const outline = roundedRectPath(page)
-  const box = FORMATS[key] ? geometry.picto : geometry.generic
-  let out = `<path d="${outline}" fill="${PAGE_FILL}"/>`
-  out += pictogram(spec.picto, box, spec.color, PAGE_FILL, geometry.pictoStroke, size === 'small')
-  if (FORMATS[key] && geometry.label) {
-    out += `<path d="${labelPath(spec.label, geometry.label)}" fill="${spec.color}"/>`
+  const outline = roundedRectPath(geometry.page)
+  const shadowId = `shadow-${size}`
+  let out = ''
+  if (geometry.shadow) {
+    out += `<defs><filter id="${shadowId}" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="${geometry.shadow.dy}" stdDeviation="${geometry.shadow.blur}" flood-color="${SHADOW_COLOR}" flood-opacity="0.14"/></filter></defs>`
   }
-  out += `<path d="${spinePath(page)}" fill="${spec.color}"/>`
-  out += `<path d="${outline}" stroke="${PAGE_STROKE}" stroke-width="${geometry.stroke}" stroke-linejoin="round"/>`
-  for (const y of geometry.links) {
-    out += `<rect x="${page.spine - 20}" y="${y - 10}" width="40" height="20" rx="10" fill="${LINK_FILL}" stroke="${mix(spec.color, 0, 0.35)}" stroke-width="${geometry.linkStroke}"/>`
-  }
+  out += `<path d="${outline}" fill="${PAGE_FILL}"${geometry.shadow ? ` filter="url(#${shadowId})"` : ''}/>`
+  out += `<path d="${spinePath(geometry.page, geometry.spine)}" fill="${color}"/>`
+  out += pictogram(picto, geometry.box, color, PAGE_FILL, geometry.stroke, size === 'small')
+  // the edge runs just inside the page, so at 16 px it covers whole pixels
+  const inset = geometry.edgeWidth / 2
+  const edge = roundedRectPath({
+    left: geometry.page.left + inset,
+    top: geometry.page.top + inset,
+    right: geometry.page.right - inset,
+    bottom: geometry.page.bottom - inset,
+    radius: geometry.page.radius - inset,
+  })
+  out += `<path d="${edge}" stroke="${EDGE_COLOR}" stroke-opacity="${geometry.edgeOpacity}" stroke-width="${geometry.edgeWidth}"/>`
   return out
 }
 
@@ -475,7 +420,7 @@ function svgFor(key) {
     '<!-- generated by tools/gen-file-association-icons.mjs: edit the script, not this file -->',
     '<style>.s,.m{display:none}' +
       `@media (max-width:${SMALL_MAX_PX}px){.l{display:none}.s{display:inline}}` +
-      `@media (min-width:${SMALL_MAX_PX + 0.01}px) and (max-width:${LABEL_MIN_PX - 0.02}px){.l{display:none}.m{display:inline}}</style>`,
+      `@media (min-width:${SMALL_MAX_PX + 0.01}px) and (max-width:${LARGE_MIN_PX - 0.02}px){.l{display:none}.m{display:inline}}</style>`,
     `<g class="l">${drawing(key, 'large')}</g>`,
     `<g class="m">${drawing(key, 'mid')}</g>`,
     `<g class="s">${drawing(key, 'small')}</g>`,

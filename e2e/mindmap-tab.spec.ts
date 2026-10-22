@@ -25,7 +25,7 @@ import {
  */
 
 /** the colour of the mind map icon's spine, as drawn in file-mindmap.svg (the tab shows that SVG) */
-const TILE_FILL = '#B83A7A'
+const TILE_FILL = '#B04E83'
 
 /** the SVG text behind a tab's icon image (a bundled file or an inlined data URL) */
 async function tabIconSvg(tab: Locator): Promise<string> {
