@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import type { Lang } from '@genoffice/i18n'
 import { isDocMentionPickable } from './doc-mention-model'
 import type { DocMentionGroup, DocMentionItem } from './doc-mention-types'
@@ -56,6 +56,12 @@ export function DocMentionPicker({
   onHover: (index: number) => void
 }): React.JSX.Element {
   const moreIndex = items.length
+  // keep the highlighted row in view as ↑/↓ move past the visible rows
+  useEffect(() => {
+    document
+      .getElementById(docMentionOptionId(listId, active))
+      ?.scrollIntoView?.({ block: 'nearest' })
+  }, [listId, active])
   return (
     <div
       className="ai-doc-mention-picker"

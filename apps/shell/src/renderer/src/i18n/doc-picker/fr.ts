@@ -8,7 +8,7 @@ export const fr = {
   docPickEmpty: 'Aucun document à joindre.',
   docPickMissing: 'Fichier introuvable.',
   docPickUnsaved: 'Enregistrez-le d’abord.',
-  docPickModified: 'Enregistrez-le pour le joindre',
+  docPickModified: 'Enregistrez-le pour le joindre.',
   docPickUnavailable: 'Impossible de lire la liste des documents.',
   docPickLimit: 'Vous pouvez choisir jusqu’à 20 documents.',
   docPickSelected: '{n} sélectionné(s)',

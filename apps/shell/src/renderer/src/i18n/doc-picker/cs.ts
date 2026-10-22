@@ -8,7 +8,7 @@ export const cs = {
   docPickEmpty: 'Nejsou žádné dokumenty k připojení.',
   docPickMissing: 'Soubor nebyl nalezen.',
   docPickUnsaved: 'Nejprve jej uložte.',
-  docPickModified: 'Po uložení jej lze připojit',
+  docPickModified: 'Po uložení jej lze připojit.',
   docPickUnavailable: 'Seznam dokumentů se nepodařilo načíst.',
   docPickLimit: 'Vybrat lze nejvýše 20 dokumentů.',
   docPickSelected: 'Vybráno: {n}',

@@ -8,7 +8,7 @@ export const he = {
   docPickEmpty: 'אין מסמכים לצירוף.',
   docPickMissing: 'הקובץ לא נמצא.',
   docPickUnsaved: 'יש לשמור אותו תחילה.',
-  docPickModified: 'יש לשמור כדי לצרף',
+  docPickModified: 'יש לשמור כדי לצרף.',
   docPickUnavailable: 'לא ניתן לקרוא את רשימת המסמכים.',
   docPickLimit: 'אפשר לבחור עד 20 מסמכים.',
   docPickSelected: '{n} נבחרו',

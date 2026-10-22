@@ -8,7 +8,7 @@ export const ru = {
   docPickEmpty: 'Нет документов для прикрепления.',
   docPickMissing: 'Файл не найден.',
   docPickUnsaved: 'Сначала сохраните его.',
-  docPickModified: 'Сохраните, чтобы прикрепить',
+  docPickModified: 'Сохраните, чтобы прикрепить.',
   docPickUnavailable: 'Не удалось прочитать список документов.',
   docPickLimit: 'Можно выбрать не более 20 документов.',
   docPickSelected: 'Выбрано: {n}',

@@ -8,7 +8,7 @@ export const ms = {
   docPickEmpty: 'Tiada dokumen untuk dilampirkan.',
   docPickMissing: 'Fail tidak ditemui.',
   docPickUnsaved: 'Simpan dahulu.',
-  docPickModified: 'Simpan untuk melampirkannya',
+  docPickModified: 'Simpan untuk melampirkannya.',
   docPickUnavailable: 'Senarai dokumen tidak dapat dibaca.',
   docPickLimit: 'Anda boleh memilih sehingga 20 dokumen sahaja.',
   docPickSelected: '{n} dipilih',

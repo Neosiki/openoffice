@@ -612,7 +612,6 @@ export function AiPanel({
   >([])
   const logRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
-  /** the `/`·`$` list and the chips row on this panel's own input */
   /**
    * The `@` document list in the input attaches through the same route as the
    * buttons (merge is read when a pick lands, after it is declared below)
@@ -626,6 +625,7 @@ export function AiPanel({
     }),
     attachments,
   }
+  /** the `/`·`$` and `@` lists and the chips row on this panel's own input */
   const picker = useComposerPickers({
     skills: skills.composer,
     docs: docMention,

@@ -8,7 +8,7 @@ export const nl = {
   docPickEmpty: 'Er zijn geen documenten om bij te voegen.',
   docPickMissing: 'Het bestand is niet gevonden.',
   docPickUnsaved: 'Sla het eerst op.',
-  docPickModified: 'Sla het op om het bij te voegen',
+  docPickModified: 'Sla het op om het bij te voegen.',
   docPickUnavailable: 'De documentenlijst kon niet worden gelezen.',
   docPickLimit: 'Je kunt maximaal 20 documenten kiezen.',
   docPickSelected: '{n} geselecteerd',

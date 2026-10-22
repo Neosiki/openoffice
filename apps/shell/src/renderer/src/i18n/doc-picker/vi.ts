@@ -8,7 +8,7 @@ export const vi = {
   docPickEmpty: 'Không có tài liệu để đính kèm.',
   docPickMissing: 'Không tìm thấy tệp.',
   docPickUnsaved: 'Hãy lưu tệp trước.',
-  docPickModified: 'Hãy lưu để đính kèm',
+  docPickModified: 'Hãy lưu để đính kèm.',
   docPickUnavailable: 'Không thể đọc danh sách tài liệu.',
   docPickLimit: 'Chỉ có thể chọn tối đa 20 tài liệu.',
   docPickSelected: 'Đã chọn {n}',

@@ -72,7 +72,7 @@ describe('the document picker page', () => {
     expect(docPickReason('missing')).toBe('docPickMissing')
     expect(docPickReason('unsaved')).toBe('docPickUnsaved')
     expect(docPickReason('modified')).toBe('docPickModified')
-    expect(docPickerText('ko', 'docPickModified')).toBe('저장하면 붙일 수 있어요')
+    expect(docPickerText('ko', 'docPickModified')).toBe('저장하면 붙일 수 있어요.')
     expect(docPickerText('ko', 'docPickPane')).toBe('옆 칸')
   })
 

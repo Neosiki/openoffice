@@ -8,7 +8,7 @@ export const id = {
   docPickEmpty: 'Tidak ada dokumen untuk dilampirkan.',
   docPickMissing: 'File tidak ditemukan.',
   docPickUnsaved: 'Simpan dulu.',
-  docPickModified: 'Simpan agar bisa dilampirkan',
+  docPickModified: 'Simpan agar bisa dilampirkan.',
   docPickUnavailable: 'Daftar dokumen tidak dapat dibaca.',
   docPickLimit: 'Anda hanya dapat memilih hingga 20 dokumen.',
   docPickSelected: '{n} dipilih',

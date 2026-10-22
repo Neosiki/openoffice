@@ -8,7 +8,7 @@ export const zhTW = {
   docPickEmpty: '沒有可附加的文件。',
   docPickMissing: '找不到檔案。',
   docPickUnsaved: '請先儲存。',
-  docPickModified: '儲存後即可附加',
+  docPickModified: '儲存後即可附加。',
   docPickUnavailable: '無法讀取文件清單。',
   docPickLimit: '最多只能選擇 20 份文件。',
   docPickSelected: '已選取 {n} 份',

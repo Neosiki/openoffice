@@ -8,7 +8,7 @@ export const de = {
   docPickEmpty: 'Es gibt keine Dokumente zum Anhängen.',
   docPickMissing: 'Die Datei wurde nicht gefunden.',
   docPickUnsaved: 'Bitte zuerst speichern.',
-  docPickModified: 'Zum Anhängen zuerst speichern',
+  docPickModified: 'Zum Anhängen zuerst speichern.',
   docPickUnavailable: 'Die Dokumentliste konnte nicht gelesen werden.',
   docPickLimit: 'Es lassen sich höchstens 20 Dokumente auswählen.',
   docPickSelected: '{n} ausgewählt',

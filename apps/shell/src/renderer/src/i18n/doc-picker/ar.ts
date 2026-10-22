@@ -8,7 +8,7 @@ export const ar = {
   docPickEmpty: 'لا توجد مستندات لإرفاقها.',
   docPickMissing: 'لم يُعثر على الملف.',
   docPickUnsaved: 'احفظه أولًا.',
-  docPickModified: 'احفظه لإرفاقه',
+  docPickModified: 'احفظه لإرفاقه.',
   docPickUnavailable: 'تعذّرت قراءة قائمة المستندات.',
   docPickLimit: 'يمكنك تحديد 20 مستندًا كحد أقصى.',
   docPickSelected: 'تم تحديد {n}',

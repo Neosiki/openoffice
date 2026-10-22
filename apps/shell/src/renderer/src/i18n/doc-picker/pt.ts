@@ -8,7 +8,7 @@ export const pt = {
   docPickEmpty: 'Não há documentos para anexar.',
   docPickMissing: 'O arquivo não foi encontrado.',
   docPickUnsaved: 'Salve o arquivo primeiro.',
-  docPickModified: 'Salve para anexar',
+  docPickModified: 'Salve para anexar.',
   docPickUnavailable: 'Não foi possível ler a lista de documentos.',
   docPickLimit: 'Você pode escolher até 20 documentos.',
   docPickSelected: '{n} selecionado(s)',

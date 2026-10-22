@@ -35,11 +35,11 @@ function formatSize(bytes: number): string {
 function attachmentListLines(list: readonly AttachmentMeta[]): string[] {
   const nameCounts = new Map<string, number>()
   for (const a of list) {
-    const key = a.name.toLowerCase()
+    const key = a.name.normalize('NFC').toLocaleLowerCase()
     nameCounts.set(key, (nameCounts.get(key) ?? 0) + 1)
   }
   return list.map((a, i) => {
-    const shared = (nameCounts.get(a.name.toLowerCase()) ?? 0) > 1
+    const shared = (nameCounts.get(a.name.normalize('NFC').toLocaleLowerCase()) ?? 0) > 1
     const folder = shared ? attachmentFolderLabel(a.path) : ''
     const name = folder ? `${a.name} (folder: ${folder})` : a.name
     return `${i} | ${name} | .${a.ext} | ${formatSize(a.sizeBytes)}`
