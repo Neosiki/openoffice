@@ -55,7 +55,7 @@ export const he = {
   trReportPending: 'בלוקים שעדיין לא תורגמו ונשארו בשפת המקור: {count}.',
   trReportNone: 'כל הבלוקים תורגמו.',
   trReportUntranslated: 'בלוקים שנשארו בשפת המקור',
-  trReportOverflowed: 'בלוקים שחורגים מהמסגרת שלהם: {count} (עמודים {pages})',
+  trReportOverflowed: 'בלוקים שנשארו בשפת המקור מחוסר מקום: {count} (עמודים {pages})',
   trReportOriginalPages: 'עמודים שנשארו כפי שהיו',
   trReportFiles: 'קבצים שנשמרו',
   trReasonLine: '{reason}: עמודים {pages} ({count} בלוקים)',

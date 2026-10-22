@@ -60,7 +60,8 @@ export const id = {
   trReportPending: '{count} blok belum diterjemahkan dan tetap dalam bahasa asli.',
   trReportNone: 'Semua blok sudah diterjemahkan.',
   trReportUntranslated: 'Blok yang tetap dalam bahasa asli',
-  trReportOverflowed: 'Blok yang melewati kotaknya: {count} (halaman {pages})',
+  trReportOverflowed:
+    'Blok yang dibiarkan dalam bahasa asli karena tidak cukup ruang: {count} (halaman {pages})',
   trReportOriginalPages: 'Halaman yang dibiarkan seperti semula',
   trReportFiles: 'Berkas yang disimpan',
   trReasonLine: '{reason}: halaman {pages} ({count} blok)',

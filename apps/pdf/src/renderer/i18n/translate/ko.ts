@@ -56,7 +56,7 @@ export const ko = {
   trReportPending: '아직 번역하지 않은 {count}개 블록은 원문으로 두었습니다.',
   trReportNone: '모든 블록을 번역했습니다.',
   trReportUntranslated: '원문으로 둔 블록',
-  trReportOverflowed: '상자를 넘친 블록: {count}개({pages}쪽)',
+  trReportOverflowed: '자리가 모자라 원문으로 둔 블록: {count}개({pages}쪽)',
   trReportOriginalPages: '원본 그대로 둔 페이지',
   trReportFiles: '저장한 파일',
   trReasonLine: '{reason}: {pages}쪽({count}개 블록)',

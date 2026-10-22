@@ -27,6 +27,7 @@ import {
   mostlyInside,
   normText,
   placeCells,
+  readShapeBounds,
   readTextObjects,
   readingOrder,
   recognizeLines,
@@ -38,7 +39,7 @@ import {
   type TextObjectInfo,
 } from './analyze'
 import { FaceMetrics, checkedFont, createSubsetter, defaultWritebackFontLocator } from './font'
-import { fitText } from './layout'
+import { placeBlocks, type PageSpace, type PlanBlock } from './place'
 import {
   FPDF_FILLMODE_ALTERNATE,
   FPDF_FONT_TRUETYPE,
@@ -86,6 +87,9 @@ const CJK = /[\u3040-\u30FF\u3400-\u9FFF\uAC00-\uD7AF\uF900-\uFAFF]/u
 
 // ── units ──
 
+/** what a unit is, for sizing it alike with its kind (decision 0057) */
+type Role = 'heading' | 'caption' | 'footnote' | 'text' | 'cell'
+
 interface UnitRec {
   unit: TextUnit
   /** the block owning its source objects (the table for a cell) */
@@ -94,6 +98,7 @@ interface UnitRec {
   regions: BlockRegion[] | undefined
   /** heading or caption: may be centered */
   titleLike: boolean
+  role: Role
   marker: string | undefined
   original: string
   /** null: not translated */
@@ -129,6 +134,7 @@ interface TreeIndex {
   owners: OwnerBlock[]
   regionsOf: Map<string, BlockRegion[] | undefined>
   titleLike: Set<string>
+  roles: Map<string, Role>
   markers: Map<string, string>
   cells: Map<string, CellText[]>
 }
@@ -137,6 +143,7 @@ function indexTree(tree: DocumentTree): TreeIndex {
   const owners: OwnerBlock[] = []
   const regionsOf = new Map<string, BlockRegion[] | undefined>()
   const titleLike = new Set<string>()
+  const roles = new Map<string, Role>()
   const markers = new Map<string, string>()
   const add = (id: string, regions: BlockRegion[] | undefined) => {
     regionsOf.set(id, regions)
@@ -145,16 +152,25 @@ function indexTree(tree: DocumentTree): TreeIndex {
   for (const b of tree.blocks) {
     if (b.kind === 'heading' || b.kind === 'paragraph' || b.kind === 'listItem') {
       add(b.id, b.regions)
-      if (b.kind === 'heading') titleLike.add(b.id)
+      if (b.kind === 'heading') {
+        titleLike.add(b.id)
+        roles.set(b.id, 'heading')
+      }
       if (b.kind === 'listItem' && b.marker) markers.set(b.id, b.marker)
     }
     if (b.kind === 'table') add(b.id, b.regions)
     if ((b.kind === 'image' || b.kind === 'table') && b.caption) {
       add(b.caption.id, b.caption.regions)
       titleLike.add(b.caption.id)
+      roles.set(b.caption.id, 'caption')
     }
   }
-  for (const f of tree.footnotes) for (const p of f.blocks) add(p.id, p.regions)
+  for (const f of tree.footnotes) {
+    for (const p of f.blocks) {
+      add(p.id, p.regions)
+      roles.set(p.id, 'footnote')
+    }
+  }
   const cells = new Map<string, CellText[]>()
   for (const u of textUnits(tree)) {
     if (!u.key.includes('#')) continue
@@ -162,7 +178,7 @@ function indexTree(tree: DocumentTree): TreeIndex {
     list.push({ key: u.key, text: plainText(u.runs) })
     cells.set(u.blockId, list)
   }
-  return { owners, regionsOf, titleLike, markers, cells }
+  return { owners, regionsOf, titleLike, roles, markers, cells }
 }
 
 /** original unit key → translated runs */
@@ -200,6 +216,8 @@ type PartResult = Part | WritebackSkipReason
 
 interface PageReading {
   kept?: { reason: OriginalPageReason; detail?: string }
+  /** what is drawn where, for growing blocks and keeping their ink clear */
+  space?: PageSpace
   /** unit key → its parts on this page, in region order */
   parts: Map<string, PartResult[]>
 }
@@ -322,7 +340,14 @@ function readTextPage(
     parts.set(rec.unit.key, results)
   }
   if (touched.some((o) => o.vertical)) return { kept: { reason: 'vertical-text' }, parts }
-  return { parts }
+  const text = objects.map((o) => o.bounds)
+  const space: PageSpace = {
+    text,
+    shapes: readShapeBounds(m, page, frame),
+    content:
+      text.length > 0 ? union(text) : { x0: 0, y0: 0, x1: frame.widthPt, y1: frame.heightPt },
+  }
+  return { parts, space }
 }
 
 function scanPart(
@@ -391,7 +416,8 @@ function readScannedPage(
         : ['no-position'],
     )
   }
-  return { parts }
+  // the scan's ink is in the page image: blocks keep to their own lines
+  return { parts, space: { text: [], shapes: [], content: { x0: 0, y0: 0, x1: 0, y1: 0 } } }
 }
 
 function readPages(ctx: ReadContext, pdf: Uint8Array, pages: number[]): Map<number, PageReading> {
@@ -553,6 +579,7 @@ export async function writeTranslatedPdf(
       isCell,
       regions: index.regionsOf.get(ownerId),
       titleLike: index.titleLike.has(unit.key),
+      role: isCell ? 'cell' : (index.roles.get(unit.key) ?? 'text'),
       marker: index.markers.get(unit.key),
       original,
       translation,
@@ -661,7 +688,7 @@ export async function writeTranslatedPdf(
   })
   const metrics = faces.map((f) => new FaceMetrics(f))
 
-  // layout
+  // placement: every block at once, so sizes match and ink stays clear
   const minScale = o.minFontScale ?? MIN_FONT_SCALE
   const ops = new Map<number, PageOps>()
   const opsOf = (page: number): PageOps => {
@@ -670,8 +697,7 @@ export async function writeTranslatedPdf(
     return p
   }
   const pageWidth = (page: number) => pageInfo.get(page)?.widthPt ?? 612
-  const overflowed: WritebackOverflow[] = []
-  let translated = 0
+  const plans: { w: Writable; face: number; plan: PlanBlock }[] = []
   for (const w of writable) {
     const face = faceOf.get(w)
     if (face === undefined || !embedded[face]) {
@@ -679,40 +705,62 @@ export async function writeTranslatedPdf(
       continue
     }
     const size = medianOf(w.parts.flatMap((p) => p.sizes)) || 10
-    const layout = fitText(
-      w.text,
-      w.parts.map((p) => p.box),
-      metrics[face]!,
-      {
+    const group = w.rec.isCell
+      ? `cell:${w.rec.ownerId}`
+      : `${w.rec.role}:${Math.round(size * 2) / 2}`
+    plans.push({
+      w,
+      face,
+      plan: {
+        key: w.rec.unit.key,
+        text: w.text,
+        boxes: w.parts.map((p) => p.box),
+        pages: w.parts.map((p) => p.page),
         size,
-        minSize: size * minScale,
         lineHeight: lineHeightOf(w.parts, size),
         align: alignOf(w.rec, w.parts, pageWidth),
+        font: metrics[face]!,
+        group,
+        expandable: w.parts.length === 1 && !w.parts[0]!.scan && !w.rec.isCell,
       },
-    )
+    })
+  }
+  const spaces = new Map<number, PageSpace>()
+  for (const [page, r] of readings) if (r.space) spaces.set(page, r.space)
+  const placed = placeBlocks(
+    plans.map((p) => p.plan),
+    spaces,
+    minScale,
+  )
+  const overflowed: WritebackOverflow[] = []
+  let translated = 0
+  for (const { w, face, plan } of plans) {
+    const at = placed.get(plan.key)
+    if (!at) {
+      // no room even at the floor size: the source text stays (decision 0057)
+      overflowed.push({
+        unitKey: w.rec.unit.key,
+        blockId: w.rec.unit.blockId,
+        page: w.rec.unit.page,
+      })
+      continue
+    }
     for (const p of w.parts) {
       const po = opsOf(p.page)
       for (const i of p.remove) po.remove.add(i)
       po.paints.push(...p.paints)
     }
-    for (const line of layout.lines) {
+    for (const line of at.layout.lines) {
       if (!line.text) continue
       const part = w.parts[line.box]!
       opsOf(part.page).lines.push({
         text: line.text,
         x: line.x,
         y: line.y,
-        size: layout.size,
+        size: at.layout.size,
         color: part.color,
         bold: w.rec.bold,
         face,
-      })
-    }
-    if (layout.overflowed) {
-      overflowed.push({
-        unitKey: w.rec.unit.key,
-        blockId: w.rec.unit.blockId,
-        page: w.parts[layout.overflowBox]!.page,
       })
     }
     translated++

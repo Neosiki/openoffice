@@ -58,7 +58,7 @@ export const vi = {
   trReportPending: '{count} khối chưa được dịch và giữ nguyên ngôn ngữ gốc.',
   trReportNone: 'Đã dịch tất cả các khối.',
   trReportUntranslated: 'Các khối giữ nguyên ngôn ngữ gốc',
-  trReportOverflowed: 'Khối tràn ra ngoài khung: {count} (trang {pages})',
+  trReportOverflowed: 'Khối giữ nguyên ngôn ngữ gốc vì không đủ chỗ: {count} (trang {pages})',
   trReportOriginalPages: 'Các trang giữ nguyên như cũ',
   trReportFiles: 'Các tệp đã lưu',
   trReasonLine: '{reason}: trang {pages} ({count} khối)',

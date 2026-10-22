@@ -510,7 +510,7 @@ describe('writing a translation into the PDF', () => {
     expect(report.untranslated).toEqual([])
   })
 
-  it('shrinks a long translation, and reports it when even the floor size overflows', async () => {
+  it('shrinks a long translation, and keeps the source text when even the floor size has no room', async () => {
     const m = await loadPdfium()
     const pdf = await buildSource()
     const { tree } = await extractDocumentTree(pdf, { pdfium: m })
@@ -525,15 +525,59 @@ describe('writing a translation into the PDF', () => {
     expect(Math.min(...fitSizes)).toBeLessThan(12 - 0.01)
     expect(Math.min(...fitSizes)).toBeGreaterThanOrEqual(12 * MIN_FONT_SCALE - 0.01)
 
-    // far longer: floor size, still overflowing, reported with its page
+    // far longer: no room even at the floor size, so the source text stays (decision 0057)
     const long = translate(tree, 'ko', { 'quick brown fox': KO.long })
     const over = await run(pdf, tree, long, { fontLocator: koreanLocator })
-    expect(over.report.translated).toBe(1)
+    expect(over.report.translated).toBe(0)
     expect(over.report.overflowed).toEqual([expect.objectContaining({ page: 1 })])
     const res = census(m, over.pdf)
-    expect(squash(res.text)).toContain(squash(KO.long))
-    const written = res.sizes.filter((s) => s < 11.9)
-    expect(Math.min(...written)).toBeCloseTo(12 * MIN_FONT_SCALE, 1)
+    expect(squash(res.text)).not.toContain(squash(KO.long).slice(0, 20))
+    expect(flat(res.text)).toContain('quick brown fox')
+    expect(flat(res.text)).toContain('wooden fence')
+  })
+
+  it('sizes paragraphs of one kind alike', async () => {
+    const m = await loadPdfium()
+    const pdf = await buildPdf([
+      [
+        ...para(PARA, 72, 700, { size: 12, leading: 15 }),
+        ...para(KEEP, 72, 600, { size: 12, leading: 15 }),
+      ],
+    ])
+    const { tree } = await extractDocumentTree(pdf, { pdfium: m })
+    const translated = translate(tree, 'en', {
+      // longer than its source: shrinks
+      'quick brown fox': `${PARA.join(' ')} Then it runs across the meadow and the hill.`,
+      // as long as its source: would fit at the source size
+      'closing paragraph': KEEP.join(' '),
+    })
+    const { pdf: out, report } = await run(pdf, tree, translated, { fontLocator: latinLocator })
+    expect(report.translated).toBe(2)
+    expect(report.overflowed).toEqual([])
+    const sizes = [...new Set(census(m, out).sizes.map((s) => s.toFixed(2)))]
+    expect(sizes).toHaveLength(1)
+    expect(Number(sizes[0])).toBeLessThan(12 - 0.01)
+  })
+
+  it('grows a block into the free space below it', async () => {
+    const m = await loadPdfium()
+    const line = 'A single line caption sits alone here.'
+    const pdf = await buildPdf([
+      [...para([line], 72, 700, { size: 12 }), ...para(KEEP, 72, 300, { size: 12, leading: 15 })],
+    ])
+    const { tree } = await extractDocumentTree(pdf, { pdfium: m })
+    const translated = translate(tree, 'en', {
+      'single line caption': `${line} It now needs a second and a third line to say it all, at least.`,
+    })
+    const { pdf: out, report } = await run(pdf, tree, translated, { fontLocator: latinLocator })
+    expect(report.translated).toBe(1)
+    expect(report.overflowed).toEqual([])
+    const res = census(m, out)
+    expect(flat(res.text)).toContain('second and a third line')
+    // grown rather than shrunk to the floor
+    expect(Math.min(...res.sizes)).toBeGreaterThan(12 * 0.85)
+    // the paragraph below is untouched
+    expect(flat(res.text)).toContain('closing paragraph keeps its source')
   })
 
   it.each([

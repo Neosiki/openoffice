@@ -60,7 +60,8 @@ export const ru = {
   trReportPending: 'Блоков, ещё не переведённых и оставшихся на исходном языке: {count}.',
   trReportNone: 'Все блоки переведены.',
   trReportUntranslated: 'Блоки, оставленные на исходном языке',
-  trReportOverflowed: 'Блоки, не поместившиеся в свою рамку: {count} (страницы {pages})',
+  trReportOverflowed:
+    'Блоки, оставленные на исходном языке из-за нехватки места: {count} (страницы {pages})',
   trReportOriginalPages: 'Страницы, оставленные без изменений',
   trReportFiles: 'Сохранённые файлы',
   trReasonLine: '{reason}: страницы {pages} (блоков: {count})',

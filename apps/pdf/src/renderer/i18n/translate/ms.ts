@@ -59,7 +59,8 @@ export const ms = {
   trReportPending: '{count} blok belum diterjemah dan kekal dalam bahasa asal.',
   trReportNone: 'Semua blok telah diterjemah.',
   trReportUntranslated: 'Blok yang kekal dalam bahasa asal',
-  trReportOverflowed: 'Blok yang melimpah keluar kotaknya: {count} (halaman {pages})',
+  trReportOverflowed:
+    'Blok yang dibiarkan dalam bahasa asal kerana ruang tidak cukup: {count} (halaman {pages})',
   trReportOriginalPages: 'Halaman yang dibiarkan seperti asal',
   trReportFiles: 'Fail yang disimpan',
   trReasonLine: '{reason}: halaman {pages} ({count} blok)',

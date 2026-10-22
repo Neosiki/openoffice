@@ -60,7 +60,8 @@ export const cs = {
   trReportPending: 'Dosud nepřeložené bloky, ponechané ve zdrojovém jazyce: {count}.',
   trReportNone: 'Všechny bloky byly přeloženy.',
   trReportUntranslated: 'Bloky ponechané ve zdrojovém jazyce',
-  trReportOverflowed: 'Bloky přesahující svůj rámeček: {count} (stránky {pages})',
+  trReportOverflowed:
+    'Bloky ponechané v původním jazyce kvůli nedostatku místa: {count} (stránky {pages})',
   trReportOriginalPages: 'Stránky ponechané beze změny',
   trReportFiles: 'Uložené soubory',
   trReasonLine: '{reason}: stránky {pages} (bloky: {count})',

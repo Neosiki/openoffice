@@ -61,7 +61,8 @@ export const fr = {
   trReportPending: '{count} blocs ne sont pas encore traduits et restent dans la langue source.',
   trReportNone: 'Tous les blocs ont été traduits.',
   trReportUntranslated: 'Blocs laissés dans la langue source',
-  trReportOverflowed: 'Blocs qui débordent de leur cadre : {count} (pages {pages})',
+  trReportOverflowed:
+    'Blocs laissés dans la langue d’origine faute de place : {count} (pages {pages})',
   trReportOriginalPages: 'Pages laissées telles quelles',
   trReportFiles: 'Fichiers enregistrés',
   trReasonLine: '{reason} : pages {pages} ({count} blocs)',

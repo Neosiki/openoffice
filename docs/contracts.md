@@ -67,6 +67,7 @@
 | `pdf status`    | `{ ai_read: { pages: number[], job }, translations: { lang, provider, model, done_blocks, total_blocks, complete, job }[] }`                                                  |
 
 - `model`이 빈 글이면 구독 프로그램의 기본 모델이다.
+- `pdf translate`의 `overflowed_blocks`는 번역 PDF에 자리가 모자라 원문 글자를 그대로 둔 블록이다(결정 0057). 번역 자체는 끝난 블록이라 `translated_blocks`에 세고, 그 번역문은 Markdown·EPUB에 들어간다.
 - `pdf status`의 `done_blocks`·`total_blocks`는 그 번역 작업이 마지막으로 기록한 진행이다(작업의 페이지 범위 기준). 작업 기록이 없으면 보관소에 있는 블록 수다. `complete`는 `job.state`가 `complete`일 때 참이다.
 - **`job` 모양**: `{ state, last_error?, resetsAt?, outputs, progress? }`.
   - `state`는 `idle | running | stopped | complete` 넷 중 하나다. `idle`은 기록이 없다는 뜻이다.

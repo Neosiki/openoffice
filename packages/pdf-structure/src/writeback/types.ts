@@ -114,10 +114,11 @@ export interface WritebackSkippedBlock {
   reason: WritebackSkipReason
 }
 
+/** a block that kept its source text: no room for the translation even at the floor size */
 export interface WritebackOverflow {
   unitKey: string
   blockId: string
-  /** page where the block's text runs past its box */
+  /** page where the block starts */
   page: number
 }
 
@@ -128,7 +129,10 @@ export interface WritebackReport {
   total: number
   /** units whose translation was written into the PDF */
   translated: number
-  /** written units that did not fit their box even at the smallest size */
+  /**
+   * units that kept their source text because the translation found no room
+   * even at the smallest size, grown into free space (decision 0057)
+   */
   overflowed: WritebackOverflow[]
   /** pages kept exactly as they were */
   originalPages: OriginalPage[]

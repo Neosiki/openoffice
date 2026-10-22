@@ -59,7 +59,7 @@ export const ja = {
   trReportPending: 'まだ翻訳していない {count} 個のブロックは原文のままです。',
   trReportNone: 'すべてのブロックを翻訳しました。',
   trReportUntranslated: '原文のままのブロック',
-  trReportOverflowed: '枠からはみ出したブロック：{count} 個（{pages} ページ）',
+  trReportOverflowed: 'スペースが足りず原文のままにしたブロック：{count} 個（{pages} ページ）',
   trReportOriginalPages: '元のままにしたページ',
   trReportFiles: '保存したファイル',
   trReasonLine: '{reason}：{pages} ページ（{count} ブロック）',

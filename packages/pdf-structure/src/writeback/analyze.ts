@@ -143,6 +143,19 @@ export function readTextObjects(
   return { objects, formChars }
 }
 
+/** display-space bounds of the page's top-level objects other than text (paths, images, forms) */
+export function readShapeBounds(m: WritebackPdfium, page: number, frame: PageFrame): Rect[] {
+  const out: Rect[] = []
+  const count = m._FPDFPage_CountObjects(page)
+  for (let i = 0; i < count; i++) {
+    const obj = m._FPDFPage_GetObject(page, i)
+    if (!obj || m._FPDFPageObj_GetType(obj) === FPDF_PAGEOBJ_TEXT) continue
+    const b = objectBounds(m, obj)
+    if (b) out.push(frame.rectToDisplay(b))
+  }
+  return out
+}
+
 export function medianOf(values: readonly number[]): number {
   if (values.length === 0) return 0
   const s = [...values].sort((a, b) => a - b)

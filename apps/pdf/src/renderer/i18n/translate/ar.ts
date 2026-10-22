@@ -58,7 +58,7 @@ export const ar = {
   trReportPending: 'الكتل التي لم تُترجم بعد وبقيت بلغتها الأصلية: {count}.',
   trReportNone: 'تُرجمت كل الكتل.',
   trReportUntranslated: 'كتل بقيت بلغتها الأصلية',
-  trReportOverflowed: 'كتل تجاوزت إطارها: {count} (الصفحات {pages})',
+  trReportOverflowed: 'كتل بقيت بلغتها الأصلية لعدم وجود مساحة كافية: {count} (الصفحات {pages})',
   trReportOriginalPages: 'صفحات بقيت كما هي',
   trReportFiles: 'الملفات المحفوظة',
   trReasonLine: '{reason}: الصفحات {pages} (الكتل: {count})',

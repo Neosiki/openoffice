@@ -54,7 +54,7 @@ export const zh = {
   trReportPending: '尚未翻译的 {count} 个文字块保留为原文。',
   trReportNone: '所有文字块均已翻译。',
   trReportUntranslated: '保留为原文的文字块',
-  trReportOverflowed: '超出文本框的文字块：{count} 个（第 {pages} 页）',
+  trReportOverflowed: '因空间不足而保留原文的文字块：{count} 个（第 {pages} 页）',
   trReportOriginalPages: '保持原样的页面',
   trReportFiles: '已保存的文件',
   trReasonLine: '{reason}：第 {pages} 页（{count} 个文字块）',

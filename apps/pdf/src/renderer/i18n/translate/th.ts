@@ -56,7 +56,7 @@ export const th = {
   trReportPending: '{count} บล็อกที่ยังไม่ได้แปลคงเป็นภาษาต้นฉบับไว้',
   trReportNone: 'แปลครบทุกบล็อกแล้ว',
   trReportUntranslated: 'บล็อกที่คงเป็นภาษาต้นฉบับ',
-  trReportOverflowed: 'บล็อกที่ล้นกรอบ: {count} บล็อก (หน้า {pages})',
+  trReportOverflowed: 'บล็อกที่คงเป็นภาษาต้นฉบับเพราะพื้นที่ไม่พอ: {count} บล็อก (หน้า {pages})',
   trReportOriginalPages: 'หน้าที่คงไว้ตามเดิม',
   trReportFiles: 'ไฟล์ที่บันทึก',
   trReasonLine: '{reason}: หน้า {pages} ({count} บล็อก)',
