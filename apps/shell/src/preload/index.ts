@@ -497,6 +497,12 @@ const homeApi: HomeApi = {
   async openFeedbackSurvey() {
     await ipcRenderer.invoke(HOME_CHANNELS.openFeedbackSurvey)
   },
+  async openLicenseNotices() {
+    await ipcRenderer.invoke(HOME_CHANNELS.openLicenseNotices)
+  },
+  async openRightsContact() {
+    await ipcRenderer.invoke(HOME_CHANNELS.openRightsContact)
+  },
   // AI settings channels are registered once by the shell's aggregated docs handlers
   onAiSettingsChanged(handler) {
     const listener = () => handler()

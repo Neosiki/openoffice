@@ -360,6 +360,10 @@ export interface HomeApi {
    * and open the feedback survey in the browser. The app sends nothing itself.
    */
   openFeedbackSurvey(): Promise<void>
+  /** open the bundled license and copyright notices (THIRD-PARTY-NOTICES.txt) */
+  openLicenseNotices(): Promise<void>
+  /** start an e-mail to the trademark and copyright contact address */
+  openRightsContact(): Promise<void>
   /** AI settings (userData/ai-settings.json, shared by every editor) */
   getAiSettings(): Promise<AiSettings>
   /** persist AI settings; every renderer gets ai:settings-changed and re-reads */
@@ -546,4 +550,6 @@ export const HOME_CHANNELS = {
   pickDefaultSaveDir: 'home:pick-default-save-dir',
   openGitHubRepo: 'home:open-github-repo',
   openFeedbackSurvey: 'home:open-feedback-survey',
+  openLicenseNotices: 'home:open-license-notices',
+  openRightsContact: 'home:open-rights-contact',
 } as const
