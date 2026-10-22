@@ -19,8 +19,11 @@ import {
   effectiveAiPanelOpen,
   onAiRailClick,
   rememberAiPanelOpen,
+  skillTemplateText,
+  templateDocumentOf,
   useSplitPaneFocusPing,
   useSplitPaneRole,
+  type TemplateDocument,
 } from '@genoffice/ui'
 import {
   pollUntilReady,
@@ -341,7 +344,9 @@ export default function App() {
           window.htmlApi.consumePending(),
           window.htmlApi.getPreviewInfo(),
         ])
-        const raw = pending ? await window.htmlApi.readFile(pending) : ''
+        // a new untitled tab may start with given text (a skill template's copy), taken once
+        const seed = pending ? null : ((await window.htmlApi.takeSeed?.()) ?? null)
+        const raw = pending ? await window.htmlApi.readFile(pending) : (seed ?? '')
         if (cancelled) return
         const doc = parseDocText(raw)
         envelopeRef.current = doc.envelope
@@ -357,7 +362,8 @@ export default function App() {
         setServedVersion(map0.version)
         setPath(pending)
         setText(doc.text)
-        setSavedText(doc.text)
+        // a seeded page is new and unsaved: nothing of it is on disk yet
+        setSavedText(seed !== null ? '' : doc.text)
         setPreviewUrl(info.url)
         setStatus('ready')
       } catch (err) {
@@ -1744,6 +1750,31 @@ export default function App() {
     return ''
   }, [saveState, dirty, t])
 
+  /**
+   * The page as a skill's template (spec 5.7): an .html or .htm file, or a new
+   * one, as a save would write it now. Any redaction mark in the source (the
+   * same test the redactor starts with) blocks "save as is".
+   */
+  const templateDocument = useMemo<TemplateDocument | null>(
+    () =>
+      status !== 'ready'
+        ? null
+        : templateDocumentOf({
+            filePath: path,
+            extensions: ['html', 'htm'],
+            defaultExtension: 'html',
+            untitledTitle: () => provisionalNameRef.current || skillTemplateText(lang, 'untitled'),
+            bytes: async () => {
+              flushPending()
+              return new TextEncoder().encode(
+                serializeDocText({ text: textRef.current, envelope: envelopeRef.current }),
+              )
+            },
+            redacted: () => /data-gx-redact|gx:redact:/i.test(textRef.current),
+          }),
+    [status, path, flushPending, lang],
+  )
+
   if (status === 'error') return <div className="center-note">{t('loadFailed')}</div>
   if (status === 'loading') return <div className="center-note">{t('loading')}</div>
 
@@ -1851,6 +1882,8 @@ export default function App() {
             filePath={path}
             preset={aiPreset}
             onGenerateHandoff={() => setAiOpen(true)}
+            templateDocument={templateDocument}
+            onSkillHandoff={() => setAiOpen(true)}
             editQueue={editQueue}
             onQueueEditInstruction={queueUpdate}
             onQueueRemove={queueRemove}

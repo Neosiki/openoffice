@@ -315,10 +315,17 @@ export interface HandoffRunStarted {
 // ---- a new tab that starts with given content (T17) ----
 
 /** Content for a new, unsaved map: outline text in the form the engine reads. */
-export interface MindmapSeed {
+export interface MindmapOutlineSeed {
   /** the sheet titles come from its `# ` headings */
   outline: string
 }
+
+/** A byte copy of a map file (a skill's template, spec 5.7), opened as a new, unsaved map */
+export interface MindmapCopySeed {
+  bytes: Uint8Array
+}
+
+export type MindmapSeed = MindmapOutlineSeed | MindmapCopySeed
 
 // ---- preload API (window.mindmapApi) ----
 

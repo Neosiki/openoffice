@@ -72,6 +72,10 @@ export interface Session {
   aiSnapshots?: Map<number, HistorySnapshot>
   /** Edits that only touch archive entries (notes/comments; element-level dirty cannot detect them), reset after save */
   metaDirty?: boolean
+  /** An untitled copy (a skill template's, spec 5.7): its first save asks where instead of using the drafts folder */
+  askPathOnFirstSave?: boolean
+  /** the file name that first save suggests */
+  firstSaveName?: string | undefined
   /** Monotonic count of metaDirty transitions, so a save can tell a notes/comments
       edit committed while its write was streaming from one the write carried. */
   metaRev?: number

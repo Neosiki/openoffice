@@ -76,11 +76,23 @@ import {
 } from '@genoffice/electron-utils'
 import { SPLIT_PANE_CHANNELS } from '@genoffice/electron-utils/split-pane-bridge'
 import {
+  agentSkillNoticeDue,
+  markAgentSkillNoticeSeen,
   readAppSettings,
+  writeAgentPrefs,
   writeAppSetting,
   writeAppSettings,
   writeAppSettingThen,
 } from './app-settings'
+import {
+  builtinSkillsDirFor,
+  createTemplateTabs,
+  createUserSkillsService,
+  registerTemplateTabsIpc,
+  registerUserSkillsIpc,
+  type OpenedCopyTab,
+  type TemplateCopy,
+} from './user-skills'
 import { OPEN_DOCUMENTS_FILE, clearOpenDocuments, publishOpenDocuments } from './open-documents'
 import { startControlServer, type ControlServer } from './control-server'
 import { controlHandler } from './control-handlers'
@@ -382,10 +394,14 @@ import {
   stopQuickLookRuntime,
 } from './quick-look/quick-look-window'
 import { normalizeQuickLookSettings } from '../shared/quick-look-home'
-import { configureAgentWindow, stopAgentSessions } from './agent/agent-window'
-import { startAgentMcpServer } from './agent/agent-mcp'
 import {
-  agentSkillSources,
+  configureAgentWindow,
+  isAgentWindowContents,
+  stopAgentSessions,
+} from './agent/agent-window'
+import { startAgentMcpServer } from './agent/agent-mcp'
+import { userSkillsManageGate } from './agent/agent-skills'
+import {
   buildAgentSkillBundle,
   startClaudeAgentSession,
   startCodexAgentSession,
@@ -4822,8 +4838,9 @@ function registerHomeIpc(): void {
     }
   })
 
-  ipcMain.handle(HOME_CHANNELS.openHelp, () => {
-    tabManager?.openHelpTab()
+  ipcMain.handle(HOME_CHANNELS.openHelp, (_event, topic: unknown) => {
+    // the tab manager keeps only an id-shaped topic; anything else opens as F1
+    tabManager?.openHelpTab(typeof topic === 'string' ? topic : undefined)
   })
   ipcMain.handle(HOME_CHANNELS.getLanguage, (): Lang => currentLang())
 
@@ -7108,6 +7125,109 @@ registerPdfConvertUiIpc({
   openDocument: (path) => openDocumentPath(path),
 })
 
+// The person's skills (settings → skills, the AI windows' `/` list and skill
+// reads, skill cards, the agent session's skills). Writes go only to
+// ~/.ieumoffice/skills; removing is the OS trash; GitHub only on request.
+const builtinSkillsDir = (): string =>
+  builtinSkillsDirFor({
+    isPackaged: app.isPackaged,
+    resourcesPath: process.resourcesPath,
+    appPath: app.getAppPath(),
+  })
+const userSkills = createUserSkillsService({
+  homeDir: () => homedir(),
+  builtinDir: builtinSkillsDir,
+  settingsPath: APP_SETTINGS_PATH,
+  tempDir: () => join(tmpdir(), 'ieumoffice-skills'),
+  trash: (path) => shell.trashItem(path),
+  // Node's fetch: no browser cookies; the core sets no-redirect and no-credentials per request
+  fetch: (url, init) => fetch(url, init),
+})
+registerUserSkillsIpc({
+  service: userSkills,
+  // the settings screen; the agent window only for the install preview a session proposed
+  canManage: userSkillsManageGate({
+    isMainWindow: (sender) =>
+      !!shellWindow && !shellWindow.isDestroyed() && sender === shellWindow.webContents,
+    isAgentWindow: (sender) => isAgentWindowContents(sender),
+  }),
+  openSettings: () => {
+    const win = shellWindow
+    if (!win || win.isDestroyed()) return
+    if (win.isMinimized()) win.restore()
+    win.show()
+    win.focus()
+    tabManager?.openHomeTab()
+    win.webContents.send(HOME_CHANNELS.openSettings, { section: 'skills' })
+  },
+  agentNoticeDue: () => agentSkillNoticeDue(APP_SETTINGS_PATH()),
+  markAgentNoticeSeen: () => markAgentSkillNoticeSeen(APP_SETTINGS_PATH()),
+})
+
+// Template copies in new tabs (spec 5.6, 5.7): a skill template's copy, or the
+// current document's for a template preview, opens as a new untitled document
+// of its editor; the request is handed to that tab's AI panel, which runs it
+// through its own send gate. The skill folder is only read here.
+const templateTabs = createTemplateTabs({
+  makeCopyDir: async () => {
+    const dir = join(app.getPath('temp'), 'ieumoffice-template-copies', randomUUID())
+    mkdirSync(dir, { recursive: true })
+    return dir
+  },
+  writeFile: (path, bytes) => atomicWriteFile(path, Buffer.from(bytes)),
+  readFile: async (path) => new Uint8Array(readFileSync(path)),
+  removeDir: async (dir) => rmSync(dir, { recursive: true, force: true }),
+  templateFileOf: (id) => userSkills.templateFile(id),
+  openCopy: (copy) => openTemplateCopyTab(copy),
+  focusTab: (tabId) => {
+    const manager = tabManager
+    if (!manager || !manager.list().some((tab) => tab.id === tabId)) return false
+    const win = shellWindow
+    if (win && !win.isDestroyed()) {
+      if (win.isMinimized()) win.restore()
+      win.focus()
+    }
+    manager.activateTab(tabId)
+    return true
+  },
+  newId: () => randomUUID(),
+  now: () => Date.now(),
+})
+registerTemplateTabsIpc(templateTabs)
+
+/** A template copy's new untitled tab: sheets here (its backing workbook), the others in the tab manager */
+async function openTemplateCopyTab(copy: TemplateCopy): Promise<OpenedCopyTab | null> {
+  const manager = tabManager
+  if (!manager) return null
+  if (copy.editor !== 'sheets') return manager.openTemplateCopy(copy)
+  // like "New spreadsheet": a backing workbook in its own temp folder, never a
+  // file of the person's until the first save asks where; a .csv/.tsv/.xls
+  // copy is converted there when the tab opens it
+  const extension = extname(copy.fileName).toLowerCase()
+  const saveExtension = extension === '.xlsm' ? '.xlsm' : '.xlsx'
+  const stem = copy.fileName.slice(0, copy.fileName.length - extension.length) || copy.title
+  const dir = newFileDir('sheet')
+  let suggestedPath = uniquePathIn(dir, `${stem}${saveExtension}`)
+  for (let i = 2; sheetsSuggestedPathTaken(suggestedPath); i++) {
+    suggestedPath = uniquePathIn(dir, `${stem} ${i}${saveExtension}`)
+  }
+  const tempDir = join(app.getPath('temp'), 'genoffice-imports', randomUUID())
+  mkdirSync(tempDir, { recursive: true })
+  const backingPath = join(tempDir, `${stem}${extension}`)
+  markSheetsUnsavedNew(backingPath, suggestedPath, tempDir)
+  try {
+    await atomicWriteFile(backingPath, Buffer.from(copy.bytes))
+  } catch (err) {
+    unmarkSheetsUnsavedNew(backingPath)
+    rmSync(tempDir, { recursive: true, force: true })
+    throw err
+  }
+  const tabId = manager.openSheetsTab(backingPath)
+  startQueuedWorkbookNudge()
+  const contents = manager.webContentsForTab(tabId)
+  return contents ? { tabId, contents } : null
+}
+
 // sheets' project:resolveChat goes through the handler registered by docs-main; the sessionId reverse lookup hooks in here
 setSessionPathResolver(resolveSheetsSessionPath)
 
@@ -7500,7 +7620,7 @@ app.whenReady().then(async () => {
     statuses: () => sharedSubscriptionStatuses(),
     aiSettings: () => readStoredAiSettings(),
     readPrefs: () => normalizeAgentPrefs(readAppSettings(APP_SETTINGS_PATH()).agent),
-    writePrefs: (prefs) => writeAppSetting(APP_SETTINGS_PATH(), 'agent', prefs),
+    writePrefs: (prefs) => writeAgentPrefs(APP_SETTINGS_PATH(), prefs),
     openPath: (path) => routeDocumentPath(path),
     openDocuments: () => [...(tabManager?.openFilePaths() ?? []), ...detachedFilePaths()],
     userData: app.getPath('userData'),
@@ -7508,25 +7628,22 @@ app.whenReady().then(async () => {
       claude: (options, onEvent) => startClaudeAgentSession(options, onEvent),
       codex: (options, onEvent) => startCodexAgentSession(options, onEvent),
     },
-    startAppMcp: (projectRoot) => {
+    // the session's skill tools only show a card or an install proposal in the agent window
+    startAppMcp: (projectRoot, { skillTools }) => {
       const mcp = currentMcpRuntimeDeps()
       if (!mcp) throw new Error('the MCP runtime is not configured')
-      return startAgentMcpServer(mcp, projectRoot)
+      return startAgentMcpServer({ ...mcp, skillTools }, projectRoot)
     },
-    buildSkills: async (projectRoot) => {
-      const sources = await agentSkillSources({
-        homeDir: homedir(),
-        projectRoot,
-        appSkillsDir: join(homedir(), '.ieumoffice', 'skills'),
-      })
-      const bundle = await buildAgentSkillBundle(
-        sources,
+    listSkills: () => userSkills.list(),
+    openTemplatePreview: (owner, input) => templateTabs.openPreview(owner, input),
+    // the enabled skills (settings → skills) and the project's, as they are at the start
+    buildSkills: async (projectRoot) =>
+      buildAgentSkillBundle(
+        await userSkills.enabledForAgent(projectRoot),
         // not under userData: that folder is protected from sessions, and the
         // copied skills' scripts must be readable to run
         join(process.env.LOCALAPPDATA ?? tmpdir(), 'IeumOffice', 'agent-skills'),
-      )
-      return bundle.dir
-    },
+      ),
   })
   void startMcpFromSettings(currentMcpSettings()).catch((error) => {
     console.error('[mcp] failed to start on boot:', error)

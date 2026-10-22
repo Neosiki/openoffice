@@ -256,6 +256,26 @@ export const HELP_TOPICS: HelpTopicMeta[] = [
     ],
   },
   {
+    id: 'skills',
+    group: 'ai',
+    order: 2.5,
+    keywords: [
+      '스킬',
+      'skill',
+      'skills',
+      '技能',
+      'スキル',
+      '/',
+      '$',
+      '양식',
+      'template',
+      '模板',
+      'github',
+      '깃허브',
+      'SKILL.md',
+    ],
+  },
+  {
     id: 'agent-mode',
     group: 'ai',
     order: 3,
@@ -375,6 +395,15 @@ export const HELP_TOPICS: HelpTopicMeta[] = [
     ],
   },
 ]
+
+/**
+ * The topic the manual opens at: the `topic` of its URL when that names a
+ * registered topic (a help link next to a setting), otherwise the first one.
+ */
+export function initialHelpTopic(search: string): string {
+  const wanted = new URLSearchParams(search).get('topic')
+  return HELP_TOPICS.find((t) => t.id === wanted)?.id ?? HELP_TOPICS[0]!.id
+}
 
 /**
  * Topic bodies per language, keyed `<id>.<lang>`; missing pairs fall back to en.

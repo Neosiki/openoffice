@@ -69,9 +69,18 @@ import {
   addTokenUsage,
   useAiSendGate,
   useSplitPaneFocusPing,
+  NO_SKILL_USE,
+  skillChipRefsOf,
+  panelUserSkills,
+  useSkillProposals,
+  useSkillTemplates,
+  templateDocumentOf,
+  type TemplateDocument,
   type AiTokenUsageView,
   type AiScopeQuoteData,
   type DriveAttachPicked,
+  type SkillChipRef,
+  type SkillUse,
 } from '@genoffice/ui'
 
 import {
@@ -857,7 +866,7 @@ export function App({
   /// menuActionRef, so the interval closure never goes stale).
   const handleSaveRef = useRef<
     (
-      mode: 'save' | 'save-as' | 'recovery',
+      mode: 'save' | 'save-as' | 'recovery' | 'template',
       quiet?: boolean,
       explicitTarget?: { path: string; overwrite: boolean },
     ) => Promise<SaveOutcome>
@@ -1087,11 +1096,20 @@ export function App({
     instruction: string | undefined
     attachments: readonly AttachmentMeta[] | undefined
     retryIndex: number | undefined
+    skillUse: SkillUse
+    onAdmitted: (() => void) | undefined
   }>({
     settings: aiSettings,
     statuses: subscription.statuses,
     store: AI_SETTINGS_STORE,
-    start: (held) => handleSend(held.instruction, held.attachments, held.retryIndex),
+    start: (held) =>
+      handleSend(
+        held.instruction,
+        held.attachments,
+        held.retryIndex,
+        held.skillUse,
+        held.onAdmitted,
+      ),
     onSettingsSaved: (next) => {
       // the ref is updated at once for a run started right after
       aiSettingsRef.current = next
@@ -1131,6 +1149,59 @@ export function App({
   const [chat, setChat] = useState<readonly AiChatMessage[]>([])
   /** History loaded from project-store (read-only transcript, not fed to the model) */
   const [historicChat, setHistoricChat] = useState<readonly AiChatMessage[]>([])
+  /**
+   * The workbook as a skill's template (spec 5.7): an .xlsx, .xlsm, .xls,
+   * .csv or .tsv file, or a new workbook, as a save would write it now (an
+   * .xlsx, or .xlsm for one). Sheets recognizes no redaction marks.
+   */
+  const templateFilePath = workbookFile ? (workbookFile.csvPath ?? workbookFile.path) : null
+  const templateDocument = useMemo<TemplateDocument | null>(
+    () =>
+      !templateFilePath
+        ? null
+        : templateDocumentOf({
+            filePath: templateFilePath,
+            extensions: ['xlsx', 'xlsm', 'xls', 'csv', 'tsv'],
+            defaultExtension: 'xlsx',
+            savedExtension: (ext) => (ext === 'xlsm' ? 'xlsm' : 'xlsx'),
+            untitledTitle: () => 'workbook',
+            bytes: async () => (await handleSaveRef.current('template')).bytes ?? null,
+          }),
+    [templateFilePath],
+  )
+  /** the skill cards `propose_skill` shows; nothing is written before their Save */
+  const skillCards = useSkillProposals({
+    lang: getLang(),
+    // the workbook goes along as a template while it can be one (spec 5.7)
+    templateDocument,
+    persistSaved: (record) => void persistChatMessage('assistant', '', [record]),
+  })
+  const skillCardsRef = useRef(skillCards)
+  skillCardsRef.current = skillCards
+  /** a request handed over by the template flow opens the AI panel */
+  const [openAiRequest, setOpenAiRequest] = useState(0)
+  /**
+   * The template flow (spec 5.6, 5.7): a chip whose skill has a template runs
+   * in a new tab, a template the model used offers its new document, and the
+   * request a new tab was opened for runs here once (after the workbook is
+   * open) through the send gate.
+   */
+  const skillTemplates = useSkillTemplates({
+    lang: getLang(),
+    editor: 'sheets',
+    cards: skillCards,
+    busy: aiBusy,
+    ready: !!workbookFile,
+    send: (text, use) => {
+      handleSend(text, undefined, undefined, use)
+    },
+    onTaken: () => setOpenAiRequest((n) => n + 1),
+    setComposer: setPrompt,
+  })
+  const skillTemplatesRef = useRef(skillTemplates)
+  skillTemplatesRef.current = skillTemplates
+  /** the skills of the last send: a retry of a message with chips sends the same skill text */
+  const lastSkillUseRef = useRef<SkillUse>(NO_SKILL_USE)
   // ── Chat attachments (same structure as docs/slides: text types go through the
   // read_attachment tool, images go multimodal) ──
   const [attachments, setAttachments] = useState<readonly AttachmentMeta[]>([])
@@ -1296,12 +1367,14 @@ export function App({
         }
         if (stale()) return
         chatRefIdsRef.current = ids
-        const msgs = await api.loadChat({
+        const stored = await api.loadChat({
           projectId: ids.projectId,
           chatId: ids.chatId,
           limit: 200,
         })
-        if (stale() || msgs.length === 0) return
+        if (stale() || stored.length === 0) return
+        // skill cards come back closed; a saved card's record is not part of the conversation
+        const msgs = skillCardsRef.current.restore(stored)
         setHistoricChat(
           msgs.map((m) => ({
             role: m.role,
@@ -1327,6 +1400,10 @@ export function App({
                 }
               : {}),
             ...(m.scope ? { scope: m.scope } : {}),
+            ...(m.role === 'user' && skillChipRefsOf(m.skills).length > 0
+              ? { skills: skillChipRefsOf(m.skills) }
+              : {}),
+            ...(m.skillProposals ? { skillProposals: m.skillProposals } : {}),
           })),
         )
         // Restore model context: follow-ups after reopening the file continue the
@@ -1350,6 +1427,7 @@ export function App({
     }>,
     attachments?: readonly AttachmentMeta[],
     scope?: AiScopeQuoteData,
+    skillChips?: readonly SkillChipRef[],
   ): boolean => {
     // Reports whether a write was issued: right after a workbook opens the
     // chat refs resolve asynchronously, and a send in that window is dropped.
@@ -1376,6 +1454,7 @@ export function App({
             }
           : {}),
         ...(scope ? { scope } : {}),
+        ...(skillChips && skillChips.length > 0 ? { skills: [...skillChips] } : {}),
       })
       .catch(() => {
         /* silent */
@@ -1440,6 +1519,20 @@ export function App({
         }),
         createSearchSkill(),
         createImageSkill(() => imageGenRef.current),
+        // the person's skills: use_skill, read_skill_file, propose_skill (app-run tools)
+        ...panelUserSkills({
+          lang: getLang,
+          messages: () => agentLoopRef.current?.messages ?? [],
+          // a template skill the model used offers its new document (spec 5.7)
+          onUsed: (skill) => skillTemplatesRef.current.onUsed(skill),
+          onProposal: (proposal) => {
+            skillCardsRef.current.add(proposal)
+            patchLastAssistant((entry) => ({
+              ...entry,
+              skillProposals: [...(entry.skillProposals ?? []), proposal.key],
+            }))
+          },
+        }),
       ]),
       events: {
         onText: (text) => {
@@ -1718,6 +1811,8 @@ export function App({
     setAiBusy(false)
     setChat([])
     setHistoricChat([])
+    skillCards.reset()
+    skillTemplates.reset()
     // Unsent composer attachments would otherwise ride into the next chat's
     // file context (availableAttachments merges sent + live) — same as docs
     // (#224) and slides. The typed draft itself is kept.
@@ -3446,9 +3541,20 @@ export function App({
     overrideInstruction?: string,
     overrideAttachments?: readonly AttachmentMeta[],
     retryIndex?: number,
+    /** the chosen skills: their text goes to the model, their chips onto the bubble */
+    givenSkillUse: SkillUse = NO_SKILL_USE,
+    /** the request was admitted (now, or later when a held request starts) */
+    onAdmitted?: () => void,
   ): void {
     const instruction = (overrideInstruction ?? prompt).trim()
     if (!instruction || aiBusy) return
+    // a retried message that carried skills sends the same skill text again
+    const skillUse =
+      retryIndex !== undefined &&
+      givenSkillUse === NO_SKILL_USE &&
+      (chat[retryIndex]?.skills?.length ?? 0) > 0
+        ? lastSkillUseRef.current
+        : givenSkillUse
     // No provider can run, or the first-use notice of a subscription is pending:
     // the panel shows what to do about it and nothing is sent (the draft is kept).
     // A request made during a status check or in front of the notice is held and
@@ -3458,10 +3564,15 @@ export function App({
         instruction: overrideInstruction,
         attachments: overrideAttachments,
         retryIndex,
+        skillUse,
+        onAdmitted,
       })
     ) {
       return
     }
+    onAdmitted?.()
+    lastSkillUseRef.current = skillUse
+    skillTemplatesRef.current.noteRequest(instruction)
     runToolsRef.current = []
     runUsageRef.current = undefined
     // The message consumes the composer attachments: they ride along (echoed on the
@@ -3486,7 +3597,8 @@ export function App({
           ? { label: scopeLabel(aiScope.a1, aiScope.columns ?? null, t) }
           : undefined
     const persisted =
-      alreadyPersisted || persistChatMessage('user', instruction, undefined, sentAtts, scope)
+      alreadyPersisted ||
+      persistChatMessage('user', instruction, undefined, sentAtts, scope, skillUse.chips)
     appendChat({
       role: 'user',
       text: instruction,
@@ -3494,6 +3606,7 @@ export function App({
       persisted,
       ...(sentAtts.length > 0 ? { attachments: sentAtts } : {}),
       ...(scope ? { scope } : {}),
+      ...(skillUse.chips.length > 0 ? { skills: skillUse.chips } : {}),
     })
     if (!overrideInstruction) setPrompt('')
     // the deterministic path consumes the composer too — the bubble already echoes the set
@@ -3509,7 +3622,8 @@ export function App({
     // otherwise fall back to the local, deterministic regex planner
     // (kept for offline use and for the fixed micro-DSL it still supports).
     if (agentConfigured) {
-      runAgent(instruction, sentAtts)
+      // the skill text rides with this request only; the bubble and the record keep the chips
+      runAgent(instruction + skillUse.text, sentAtts)
       return
     }
     const outcome = runDeterministicPlan(instruction)
@@ -4682,7 +4796,7 @@ export function App({
   }
 
   async function handleSave(
-    mode: 'save' | 'save-as' | 'recovery',
+    mode: 'save' | 'save-as' | 'recovery' | 'template',
     quiet = false,
     explicitTarget?: { path: string; overwrite: boolean },
   ): Promise<SaveOutcome> {
@@ -5174,6 +5288,10 @@ export function App({
         }}
         chat={chat}
         historicChat={historicChat}
+        renderSkillCard={skillCards.render}
+        skillNotes={skillTemplates.notes}
+        onTemplateSkill={(request) => skillTemplatesRef.current.onTemplateSkill(request)}
+        openAiRequest={openAiRequest}
         attachments={attachments}
         attachNotice={attachNotice}
         onPickAttachments={() => void handlePickAttachments()}

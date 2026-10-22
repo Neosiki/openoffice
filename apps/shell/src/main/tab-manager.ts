@@ -9,6 +9,7 @@ import {
   docsQueryDirty,
   markDocsNewBlank,
   queueDocsAiContent,
+  queueDocsCopy,
   requestDocsClose,
   setActiveDocsResolver,
   teardownDocsRenderer,
@@ -25,6 +26,10 @@ import {
   htmlIsDirty,
   requestHtmlClose,
 } from '../../../html/src/main/html-main'
+import { queueHtmlSeedFor } from '../../../html/src/main/seed-main'
+import { queueMarkdownSeedFor } from '../../../markdown/src/main/seed-main'
+import { queueMindmapSeedFor } from '../../../mindmap/src/main/seed-main'
+import { queueSlidesSeedFor } from '../../../slides/src/main/seed-queue'
 import { createHwpView, hwpIsDirty, requestHwpClose } from '../../../hwp/src/main/hwp-main'
 import {
   createMindmapView,
@@ -34,6 +39,7 @@ import {
 import {
   createPdfView,
   clearPdfDirty,
+  markPdfUntitledCopy,
   pdfIsDirty,
   requestPdfClose,
 } from '../../../pdf/src/main/pdf-main'
@@ -386,17 +392,22 @@ export class TabManager {
 
   /** The in-app user manual (issue #1520): a closable tab showing the shell
       renderer's help mode — the same bundle, branched on ?mode=help, so no
-      second renderer build is needed. */
-  openHelpTab(): string {
+      second renderer build is needed. `topic` opens the manual at that topic
+      (a help link next to a setting); without one the manual opens as F1 does. */
+  openHelpTab(topic?: string): string {
+    const wanted = helpTopicParam(topic)
     // F1 again, or the Help menu while the manual is already open, focuses it
     // instead of stacking a second copy: the tab is closable (only Home is
     // not), so "press F1 again" is an ordinary thing to do
     const existing = this.tabs.find((t) => t.kind === 'help')
     if (existing) {
+      // a link to one topic has to land on it even when the manual was open
+      // on another; reloading at the topic is the whole navigation
+      if (wanted && existing.view) void existing.view.webContents.loadURL(helpViewUrl(wanted))
       this.activateTab(existing.id)
       return existing.id
     }
-    const view = createHelpView()
+    const view = createHelpView(wanted)
     const id = `t${this.nextId++}`
     this.shellWindow.contentView.addChildView(view)
     view.setVisible(false)
@@ -591,8 +602,9 @@ export class TabManager {
   }
 
   /** Opens an HWP/HWPX file, or with no path a new blank document that has no file until it is saved */
-  openHwpTab(openPath?: string): string {
-    const view = createHwpView(openPath)
+  openHwpTab(openPath?: string, options?: { untitledCopy?: { title: string } }): string {
+    const copy = options?.untitledCopy
+    const view = createHwpView(openPath, { untitledCopy: !!copy })
     const id = `t${this.nextId++}`
     this.shellWindow.contentView.addChildView(view)
     view.setVisible(false)
@@ -602,11 +614,72 @@ export class TabManager {
       id,
       kind: 'hwp',
       view,
-      title: openPath ? basename(openPath) : this.untitled('hwp', 'HWP'),
-      filePath: openPath,
+      // an untitled copy reads a temp file but is not that file
+      title: copy ? copy.title : openPath ? basename(openPath) : this.untitled('hwp', 'HWP'),
+      filePath: copy ? undefined : openPath,
     })
     this.activateTab(id)
     return id
+  }
+
+  /**
+   * A skill template's copy (spec 5.7) as a NEW, UNTITLED document of its
+   * editor, in a new tab: the copy's bytes go to the editor in the same tick
+   * as the view is made, the tab shows `title`, and the first save asks where.
+   * Sheets is opened by the shell itself (its backing workbook needs the new
+   * file folder); null for it here and when the tab could not be made.
+   */
+  openTemplateCopy(copy: {
+    editor: 'docs' | 'sheets' | 'slides' | 'pdf' | 'markdown' | 'html' | 'mindmap' | 'hwp'
+    path: string
+    bytes: Uint8Array
+    fileName: string
+    title: string
+  }): { tabId: string; contents: WebContents } | null {
+    let id: string
+    switch (copy.editor) {
+      case 'docs':
+        id = this.openDocsTab()
+        break
+      case 'markdown':
+        id = this.openMarkdownTab()
+        break
+      case 'html':
+        id = this.openHtmlTab()
+        break
+      case 'mindmap':
+        id = this.openMindmapTab()
+        break
+      case 'slides':
+        id = this.openSlidesTab()
+        break
+      case 'hwp':
+        id = this.openHwpTab(copy.path, { untitledCopy: { title: copy.title } })
+        break
+      case 'pdf':
+        markPdfUntitledCopy(copy.path)
+        id = this.openPdfTab(copy.path)
+        break
+      default:
+        return null
+    }
+    const contents = this.webContentsForTab(id)
+    if (!contents) return null
+    // the decoder drops a leading byte order mark
+    const text = () => new TextDecoder('utf-8').decode(copy.bytes)
+    if (copy.editor === 'docs') queueDocsCopy(contents.id, { path: copy.path, name: copy.fileName })
+    else if (copy.editor === 'markdown') queueMarkdownSeedFor(contents, text())
+    else if (copy.editor === 'html') queueHtmlSeedFor(contents, text())
+    else if (copy.editor === 'mindmap') queueMindmapSeedFor(contents, { bytes: copy.bytes })
+    else if (copy.editor === 'slides') {
+      queueSlidesSeedFor(contents, copy.bytes, {
+        askPathOnFirstSave: true,
+        suggestedName: copy.fileName,
+      })
+    }
+    // a tab without a file takes the copy's title (one with the copy's path shows its name)
+    this.setTabTitleFor(contents.id, copy.title)
+    return { tabId: id, contents }
   }
 
   /** Present → New tab: a chrome-free html tab showing the owner tab's live preview */
@@ -1455,7 +1528,7 @@ export function canonicalPath(path: string | undefined): string | undefined {
 /** The manual shares the shell's renderer bundle and preload: the view is just
     the shell renderer at ?mode=help. Dev serves it from the dev server, the
     packaged app from the `help` scheme root registered in shell main. */
-function createHelpView(): WebContentsView {
+function createHelpView(topic?: string): WebContentsView {
   const view = new WebContentsView({
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
@@ -1470,8 +1543,19 @@ function createHelpView(): WebContentsView {
     if (target) void shell.openExternal(target)
     return { action: 'deny' }
   })
-  void view.webContents.loadURL(
-    rendererUrl(process.env.ELECTRON_RENDERER_URL, 'help', { mode: 'help' }),
-  )
+  void view.webContents.loadURL(helpViewUrl(topic))
   return view
+}
+
+/** A topic id the manual's URL may carry: the registry's id shape, nothing else */
+export function helpTopicParam(topic: unknown): string | undefined {
+  return typeof topic === 'string' && /^[a-z0-9-]{1,64}$/.test(topic) ? topic : undefined
+}
+
+/** The manual's URL, at one topic when given (the help screen reads `topic`) */
+export function helpViewUrl(topic?: string): string {
+  const query: Record<string, string> = { mode: 'help' }
+  const wanted = helpTopicParam(topic)
+  if (wanted) query.topic = wanted
+  return rendererUrl(process.env.ELECTRON_RENDERER_URL, 'help', query)
 }

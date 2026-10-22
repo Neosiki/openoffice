@@ -461,12 +461,14 @@ export async function loadFile(
     noteDocumentSwapped()
     ctx.setDoc({
       parsed,
-      filePath: result.path,
+      // an untitled copy has no file: `path` only names it
+      filePath: result.untitledCopy ? null : result.path,
       fileName: result.name,
       hash: result.hash,
       encrypted: result.encrypted,
       format,
       ...(odt ? { odt } : {}),
+      ...(result.untitledCopy ? { askPathOnFirstSave: true } : {}),
     })
     ctx.onRevisionsLoaded(blocksHaveRevisions(parsed.blocks))
     // this tab's document was replaced: a password parked for the previous
@@ -731,6 +733,26 @@ function deriveAutoFileName(editor: Editor): string | null {
  * serialization half of save(); no dialogs, no state changes. Also used for
  * crash-recovery copies.
  */
+/**
+ * The document as a skill's template (spec 5.6): the file a save would write
+ * now, whole (lazily served pictures put back), in its own format (an ODT
+ * document's ODT). Nothing is written and nothing in the tab changes.
+ */
+export async function templateDocBytes(ctx: FileActionContext): Promise<Uint8Array | null> {
+  const { doc } = ctx
+  if (!doc || !ctx.editor) return null
+  const generation = docGeneration
+  await waitForFullContent()
+  if (docGeneration !== generation) return null
+  window.dispatchEvent(new Event('ai-docs-commit-tables'))
+  const docx = await buildDocBytes(ctx)
+  if (!docx) return null
+  if (isOdtDoc(doc)) return odtBytesFor(doc.odt, docx)
+  if (doc.parsed.extras.lazyMediaHashes.length === 0) return docx
+  const full = await window.desktop.materializeDocx(toArrayBuffer(docx))
+  return full ? fetchDocBytes(full.dataUrl) : null
+}
+
 export async function buildDocBytes(ctx: FileActionContext): Promise<Uint8Array | null> {
   const generation = docGeneration
   if (ctx.settleFontSettings) ctx = await ctx.settleFontSettings()
@@ -1121,6 +1143,9 @@ async function saveOnce(
     // a pathless snapshot may belong to a document that an earlier queued pass
     // already landed on disk — overwrite that file instead of creating another
     let savedPath = doc.filePath ?? pathlessDocSavedPath
+    // an untitled copy's first save asks where; an automatic one waits for it
+    const askPath = !explicitTarget && !savedPath && doc.askPathOnFirstSave === true
+    if (askPath && auto) return false
     let passwordIntentPending = false
     let fullBytes: Uint8Array | undefined
     if (explicitTarget) {
@@ -1155,7 +1180,7 @@ async function saveOnce(
       // Save As keeps the dialog; a new document's first save lands silently in the default
       // folder. The source path identifies the desired password state to snapshot.
       let result: Awaited<ReturnType<typeof window.desktop.saveDocxAs>>
-      if (saveAs) {
+      if (saveAs || askPath) {
         // the dialog offers both formats; the picked extension is the format written
         const pick = await window.desktop.pickSaveAsPath(
           autoName ?? doc.fileName,

@@ -119,6 +119,38 @@ exact source of every file. All files were downloaded on 2026-10-14.
 - Archivo Black 1.006, SIL OFL 1.1,
   https://github.com/google/fonts/tree/main/ofl/archivoblack
 
+Built-in skills
+
+apps/shell/resources/builtin-skills holds the five skills shipped with the
+app. It ships in the installer as resources/builtin-skills. Each folder is the
+upstream skill as read at the commit below, with its license file beside it;
+builtin-skills.json in the same folder records the same source, path, commit
+and license. Only the files listed for each skill were taken.
+
+- meeting-minutes: https://github.com/github/awesome-copilot, path
+  skills/meeting-minutes (SKILL.md), read at commit
+  613efc8c21d9b3ce642dff361d17006cd9967e28. MIT License, Copyright GitHub,
+  Inc.; the repository's LICENSE is copied as meeting-minutes/LICENSE.
+  Unmodified.
+- internal-comms: https://github.com/anthropics/skills, path
+  skills/internal-comms (SKILL.md, LICENSE.txt, examples/), read at commit
+  dbd4588f9e1033efb41dad4bef2f7947c8993d44. Apache License, Version 2.0,
+  Copyright 2026 Anthropic, PBC; the full text is internal-comms/LICENSE.txt.
+  Unmodified.
+- humanizer: https://github.com/blader/humanizer, repository root (SKILL.md,
+  LICENSE), read at commit 8c307f367c91bd974002f10f2be2965d642c13df. MIT
+  License, Copyright (c) 2025 Siqi Chen. Unmodified.
+- copy-editing: https://github.com/coreyhaines31/marketingskills, path
+  skills/copy-editing (SKILL.md, references/), read at commit
+  e85f3cbc2e4a79bf33b2a12e9bdd9087d414735b. MIT License, Copyright (c) 2025
+  Corey Haines; the repository's LICENSE is copied as copy-editing/LICENSE.
+  Unmodified.
+- find-skills: https://github.com/vercel-labs/skills, path skills/find-skills
+  (SKILL.md), read at commit a80e4c9d12d607631249d4d7d059f835d4b2f13a. MIT
+  License, Copyright (c) 2026 Vercel, Inc.; the repository's LICENSE is copied
+  as find-skills/LICENSE. Modified: appended a section for IeumOffice
+  ("In IeumOffice") at the end of SKILL.md.
+
 IeumOffice modifications
 
 IeumOffice (https://github.com/pblsketch/openoffice) is a modified version of

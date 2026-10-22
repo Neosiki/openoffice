@@ -1,5 +1,5 @@
 import type { IFunctionInfo } from '@univerjs/engine-formula'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { platformShortcuts } from '@genoffice/i18n'
 import {
   AiMark,
@@ -16,6 +16,8 @@ import {
   rememberAiPanelOpen,
   type AiTokenUsageView,
   type DriveAttachPicked,
+  type OnTemplateSkill,
+  type SkillUse,
 } from '@genoffice/ui'
 
 import {
@@ -250,6 +252,14 @@ interface ExcelShellProps {
   readonly aiSubscription: AiPanelSubscription
   readonly chat: readonly AiChatMessage[]
   readonly historicChat?: readonly AiChatMessage[]
+  /** the skill card for a key a chat message carries */
+  readonly renderSkillCard?: ((key: string) => ReactNode) | undefined
+  /** the template flow's lines and its preview card, after the chat's messages */
+  readonly skillNotes?: ReactNode
+  /** a chip whose skill has a template runs in a new tab (spec 5.7) */
+  readonly onTemplateSkill?: OnTemplateSkill | undefined
+  /** bumped when a request was handed over to this tab: the AI panel opens */
+  readonly openAiRequest?: number | undefined
   /// Chat attachments (chips + 📎 button + drag-and-drop), same structure as the
   /// docs/slides AI panels.
   readonly attachments: readonly AttachmentMeta[]
@@ -268,6 +278,8 @@ interface ExcelShellProps {
     instruction?: string,
     attachments?: readonly AttachmentMeta[],
     retryIndex?: number,
+    skillUse?: SkillUse,
+    onAdmitted?: () => void,
   ) => void
   readonly onStop: () => void
   readonly onNewChat: () => void
@@ -465,6 +477,10 @@ export function ExcelShell({
   aiSubscription,
   chat,
   historicChat,
+  renderSkillCard,
+  skillNotes,
+  onTemplateSkill,
+  openAiRequest,
   attachments,
   attachNotice,
   onPickAttachments,
@@ -568,6 +584,9 @@ export function ExcelShell({
   // Split panes (decision 0036): as the secondary pane the dock is forced to
   // the rail, and the rail's click asks the shell to focus this pane first.
   const aiDock = useAiDock(isCopilotOpen, setIsCopilotOpen)
+  useEffect(() => {
+    if (openAiRequest) setIsCopilotOpen(true)
+  }, [openAiRequest])
   const [showFormatCells, setShowFormatCells] = useState(false)
   const [axisSizeTarget, setAxisSizeTarget] = useState<'row' | 'col' | null>(null)
   const [showLinkDialog, setShowLinkDialog] = useState(false)
@@ -963,6 +982,9 @@ export function ExcelShell({
           hasContent={sheetHasContent}
           chat={chat}
           {...(historicChat !== undefined ? { historicChat } : {})}
+          renderSkillCard={renderSkillCard}
+          skillNotes={skillNotes}
+          onTemplateSkill={onTemplateSkill}
           attachments={attachments}
           attachNotice={attachNotice}
           onPickAttachments={onPickAttachments}
@@ -977,11 +999,11 @@ export function ExcelShell({
           subscription={aiSubscription}
           onPromptChange={onPromptChange}
           onSend={onSend}
-          onSendQueued={(text, atts) => {
+          onSendQueued={(text, atts, skillUse) => {
             // the panel asks the send gate first: a message stays queued while it asks to
             // connect or shows the first-use notice
             if (aiBusy) return false
-            onSend(text, atts)
+            onSend(text, atts, undefined, skillUse)
             return true
           }}
           onStop={onStop}

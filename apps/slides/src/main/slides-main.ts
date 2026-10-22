@@ -309,6 +309,7 @@ const issuedCloudPages = new Set<string>()
 import { registerPresenterIpc } from './presenter-show'
 import { registerAttachmentIpc } from './attachments-ipc'
 import { registerGenerateHandoffIpc } from './generate-handoff-ipc'
+import { registerSlidesTemplateBytesIpc } from './template-bytes'
 import { openSlidesSeed } from './seed-deck'
 
 export {
@@ -4493,6 +4494,27 @@ export function registerSlidesIpc(): void {
   ipcMain.handle('slides:save', async (e, auto?: unknown) => {
     const session = sessions.get(e.sender.id)
     if (!session) return { ok: false, error: 'no file open' }
+    // An untitled copy of a skill's template asks where its first save goes;
+    // the AutoSave pass leaves it alone until then (spec 5.7)
+    if (!session.path && session.askPathOnFirstSave) {
+      if (auto === true) return { ok: false, reason: 'external-modified' }
+      const picked = await showSaveDialogWithMemory(
+        dialog,
+        dialogParent(),
+        {
+          defaultPath: session.firstSaveName || `${tm('untitledDeck')}.pptx`,
+          filters: [{ name: 'PowerPoint', extensions: ['pptx'] }],
+        },
+        getDraftsDir(),
+      )
+      // nothing written: the deck stays unsaved and no failure is shown
+      if (picked.canceled || !picked.filePath) return { ok: false, reason: 'external-modified' }
+      session.path = picked.filePath
+      session.askPathOnFirstSave = false
+      followTemplateSelection(session, '', session.path)
+      await pushRecent(session.path)
+      slidesOpenedHook?.(e.sender, session.path)
+    }
     // Untitled (new blank file): the first save lands silently in the drafts folder (Save As keeps its dialog)
     if (!session.path) {
       const draftsDir = getDraftsDir()
@@ -4762,6 +4784,7 @@ export function registerSlidesIpc(): void {
 
   // ── Generate hand-off from the shell's "make" window (slides:handoff-*) ──
   registerGenerateHandoffIpc()
+  registerSlidesTemplateBytesIpc(ipcMain, (wcId) => sessions.get(wcId)?.opened)
 
   // ── Presenter-view multi-screen show (registered inside registerSlidesIpc: shell
   // aggregate mode only calls this function) ──
@@ -4816,6 +4839,8 @@ export function registerProjectIpc(): void {
         }>
         attachments?: Array<{ name: string; path?: string; ext?: string; sizeBytes?: number }>
         scope?: { label: string; text?: string }
+        /** skill chips of a user message; the store bounds and filters them */
+        skills?: unknown
       },
     ) => {
       if (args.role !== 'user' && args.role !== 'assistant') {
@@ -4835,6 +4860,7 @@ export function registerProjectIpc(): void {
       if (args.tools) msg.tools = args.tools
       if (args.attachments) msg.attachments = args.attachments
       if (args.scope) msg.scope = args.scope
+      if (Array.isArray(args.skills)) msg.skills = args.skills as NonNullable<typeof msg.skills>
 
       getSlidesProjectStore().appendChatMessage(args.projectId, args.chatId, msg)
     },

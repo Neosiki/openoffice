@@ -13,8 +13,11 @@ import {
   onAiRailClick,
   rememberAiPanelOpen,
   useAutoSavePref,
+  skillTemplateText,
+  templateDocumentOf,
   useSplitPaneFocusPing,
   useSplitPaneRole,
+  type TemplateDocument,
 } from '@genoffice/ui'
 import {
   pollUntilReady,
@@ -67,6 +70,7 @@ import { diagramSvgToPng, renderDiagram } from './editor/diagrams'
 import type { DiagramLanguage } from './editor/diagrams'
 import type { ExportFormat, SaveMode } from '../shared/ipc'
 import { uiOp } from './editor/ops'
+import { hasRedactionIn } from './editor/Redaction'
 import { appendMarkdownAtEnd, joinNoteAppends } from './note-append'
 
 type LoadStatus = 'loading' | 'ready' | 'error'
@@ -1114,6 +1118,39 @@ export default function App() {
   }
 
   const fileName = filePath ? filePath.replace(/^.*[/\\]/, '') : null
+  /**
+   * The document as a skill's template (spec 5.7): a .md, .markdown or .txt
+   * file, or a new one, as a save would write it now. A redaction mark the
+   * editor holds, or any mark attribute in the text, blocks "save as is".
+   */
+  const templateDocument = useMemo<TemplateDocument | null>(
+    () =>
+      status !== 'ready'
+        ? null
+        : templateDocumentOf({
+            filePath,
+            extensions: ['md', 'markdown', 'txt'],
+            defaultExtension: 'md',
+            untitledTitle: () =>
+              (editorRef.current ? deriveAutoFileName(editorRef.current) : '') ||
+              skillTemplateText(lang, 'untitled'),
+            bytes: async () => {
+              const text = sourceMode
+                ? writeSourceText(sourceTextRef.current, sourceFormatRef.current)
+                : currentFileText()
+              return text === null ? null : new TextEncoder().encode(text)
+            },
+            redacted: () => {
+              const current = editorRef.current
+              if (!sourceMode && current) {
+                if (hasRedactionIn(current, 0, current.state.doc.content.size)) return true
+              }
+              const text = sourceMode ? sourceTextRef.current : (currentFileText() ?? '')
+              return /data-redaction/i.test(text)
+            },
+          }),
+    [status, filePath, sourceMode, currentFileText, lang],
+  )
   const statusText =
     saveState === 'saving'
       ? t('saving')
@@ -1209,6 +1246,8 @@ export default function App() {
               onQueueClear={queueClear}
               onQueueFocus={queueFocus}
               onQueueConsume={queueConsume}
+              templateDocument={templateDocument}
+              onSkillHandoff={() => setAiOpen(true)}
             />
           )}
         </div>

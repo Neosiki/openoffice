@@ -231,8 +231,9 @@ export interface HomeApi {
   aiStreamCancel(requestId: string): Promise<void>
   /** subscribe to stream chunks; returns unsubscribe */
   onAiStream(handler: (chunk: AiStreamChunk) => void): () => void
+  /** open the in-app manual, at `topic` (a help topic id) when given */
+  openHelp(topic?: string): Promise<void>
   /** open an existing file, routing to the right module by extension */
-  openHelp(): Promise<void>
   openPath(path: string): Promise<void>
   /** file picker accepting every supported extension, then routes */
   browse(): Promise<void>

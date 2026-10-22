@@ -10,7 +10,7 @@ import {
   writeFileSync,
 } from 'node:fs'
 import { randomUUID } from 'node:crypto'
-import { readFile, stat, writeFile } from 'node:fs/promises'
+import { copyFile, readFile, stat, writeFile } from 'node:fs/promises'
 import { userInfo } from 'node:os'
 import { basename, dirname, join, resolve } from 'node:path'
 import { BrowserWindow, WebContentsView, app, dialog, ipcMain, shell, webContents } from 'electron'
@@ -89,6 +89,7 @@ import {
   mergePdfBytes,
   readStaticFormFills,
   replacePagesBytes,
+  pdfBytesWithEdits,
   savePdfToPath,
   setPageSizeBytes,
   splitPagesBytes,
@@ -914,6 +915,18 @@ export function markPdfUntitledPath(path: string): void {
 }
 
 /**
+ * Untitled copies (a skill template's, spec 5.7): a temp file the tab edits
+ * like any PDF, whose first explicit save asks where the document goes; the
+ * tab then shows the chosen file. Automatic saves stay in the temp copy.
+ */
+const untitledCopyPdfPaths = new Set<string>()
+
+/** Called by the shell right before it opens an untitled copy's tab */
+export function markPdfUntitledCopy(path: string): void {
+  untitledCopyPdfPaths.add(path)
+}
+
+/**
  * The shell renamed or moved the file this view shows (home Folders / Files
  * pane): re-key every per-view record and tell the renderer, so the next save
  * writes to the new location instead of recreating the old one.
@@ -1417,6 +1430,68 @@ function registerPdfIpc(): void {
       setPdfSaveAsInFlight(e.sender, false)
     }
   })
+
+  // the document with its pending edits, for a skill's template (spec 5.6): nothing is written
+  ipcMain.handle(
+    PDF_CHANNELS.templateBytes,
+    async (e, request: SavePdfRequest): Promise<Uint8Array | null> => {
+      const path = request?.path
+      if (typeof path !== 'string' || !allowedByWc.get(e.sender.id)?.has(path)) return null
+      try {
+        return await pdfBytesWithEdits(path, request)
+      } catch (err) {
+        console.warn('[pdf] template copy failed:', err)
+        return null
+      }
+    },
+  )
+
+  ipcMain.handle(PDF_CHANNELS.isUntitledCopy, (e, path: unknown): boolean => {
+    return (
+      typeof path === 'string' &&
+      !!allowedByWc.get(e.sender.id)?.has(path) &&
+      untitledCopyPdfPaths.has(path)
+    )
+  })
+
+  /**
+   * The first explicit save of an untitled copy: the renderer has saved its
+   * edits into the temp copy; ask where the document goes, copy it there and
+   * make that file this tab's document. Null when the dialog was cancelled.
+   */
+  ipcMain.handle(
+    PDF_CHANNELS.adoptUntitledCopy,
+    async (e, path: unknown, defaultName: unknown): Promise<string | null> => {
+      if (typeof path !== 'string' || !allowedByWc.get(e.sender.id)?.has(path)) return null
+      if (!untitledCopyPdfPaths.has(path)) return null
+      const name =
+        typeof defaultName === 'string' && /\.pdf$/i.test(defaultName) && defaultName.length < 256
+          ? defaultName
+          : basename(path)
+      const parent = BrowserWindow.fromWebContents(e.sender)
+      const options = {
+        defaultPath: join(configuredDefaultSaveDir(app), name),
+        filters: [{ name: 'PDF', extensions: ['pdf'] }],
+      }
+      const picked = parent
+        ? await dialog.showSaveDialog(parent, options)
+        : await dialog.showSaveDialog(options)
+      if (picked.canceled || !picked.filePath) return null
+      const target = /\.pdf$/i.test(picked.filePath) ? picked.filePath : `${picked.filePath}.pdf`
+      await copyFile(path, target)
+      untitledCopyPdfPaths.delete(path)
+      allowedByWc.set(e.sender.id, new Set([target]))
+      openPathByWc.set(e.sender.id, target)
+      forgetDiskState(e.sender.id, path)
+      await rememberDiskState(e.sender.id, target)
+      try {
+        pdfRedactionSavedHook?.(e.sender, target)
+      } catch (err) {
+        console.warn('[pdf] untitled copy saved hook failed:', err)
+      }
+      return target
+    },
+  )
 
   ipcMain.handle(PDF_CHANNELS.isUntitled, (e, path: unknown): boolean => {
     return (

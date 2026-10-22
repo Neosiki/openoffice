@@ -80,7 +80,7 @@ export const de = {
   usageWindowSevenDay: '7-Tage-Limit',
   noticeTitle: 'Bevor Sie die KI mit Ihrem Abonnement nutzen',
   noticeSend:
-    'Dokumentinhalte und Ihre Unterhaltung werden über Ihr eigenes Konto an Anthropic oder OpenAI gesendet.',
+    'Dokumentinhalte und Ihre Unterhaltung werden über Ihr eigenes Konto an Anthropic oder OpenAI gesendet. Jede Anfrage enthält außerdem Name, Titel und Beschreibung jedes Skills mit der Einstellung „KI entscheidet“; verwendete Skills und Skill-Dateien, die die KI liest, werden mitgesendet.',
   noticeTraining:
     'Ob diese Inhalte zum Training von KI verwendet werden, bestimmen die Einstellungen Ihres eigenen Kontos bei dem jeweiligen Unternehmen.',
   noticeCodexHistory:

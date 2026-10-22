@@ -4,6 +4,129 @@ export type { DriveAttachPicked } from './DriveAttachButton'
 export { DocAttachButton, docPickedOf } from './DocAttachButton'
 export type { DocAttachPicked } from './DocAttachButton'
 export { AiComposer } from './AiComposer'
+export {
+  SKILL_CHIPS_MAX,
+  aiSkillsBridge,
+  chipsAfterListChange,
+  filterPickerSkills,
+  pickerSkillsOf,
+  removeSkillTrigger,
+  skillChipOf,
+  skillChipRef,
+  skillChipRefsOf,
+  skillPickerKeyAction,
+  skillSourceLabel,
+  skillTriggerAt,
+  withSkillChip,
+  type AiSkillsBridge,
+  type SkillChipRef,
+  type SkillChipView,
+  type SkillPickerItem,
+  type SkillPickerKeyAction,
+  type SkillPickerSurface,
+  type SkillTrigger,
+  type SkillTriggerChar,
+  type SkillTriggerOptions,
+} from './skill-picker-model'
+export {
+  SKILL_SEND_MAX_CHARS,
+  buildSkillRequest,
+  readSkillsForRequest,
+  skillForRequestOf,
+  skillRequestText,
+  type SkillForRequest,
+  type SkillRequestBuild,
+} from './skill-send'
+export { SentSkillChips, SkillChip, SkillChipRow, SkillPicker } from './SkillPicker'
+export {
+  NO_SKILL_USE,
+  useComposerSkills,
+  useSkillPickerInput,
+  type AiComposerSkills,
+  type ComposerSkills,
+  type ComposerSkillsOptions,
+  type OnTemplateSkill,
+  type SkillPickerInput,
+  type SkillUse,
+  type TemplateSkillRequest,
+} from './use-composer-skills'
+export {
+  SKILL_PICKER_STRINGS,
+  skillPickerText,
+  type SkillPickerStringKey,
+} from './strings-skill-picker'
+export {
+  initialSkillCardDraft,
+  isSkillCardSavedMessage,
+  readStoredSkillCards,
+  skillCardBridge,
+  skillCardMode,
+  skillCardNameVerdict,
+  skillCardSaveBlock,
+  skillCardSaveFailureKey,
+  skillCardSaveInput,
+  skillCardSaveResultOf,
+  skillCardSavedRecord,
+  skillNameCheckOf,
+  type SkillCardBridge,
+  type SkillCardDraft,
+  type SkillCardMode,
+  type SkillCardSaveInput,
+  type SkillCardStatus,
+  type SavedSkillCardRecord,
+  type SkillCardTemplate,
+  type SkillNameCheck,
+  type StoredChatLike,
+  type StoredSkillProposal,
+  type StoredToolRecord,
+} from './skill-card-model'
+export {
+  SkillCardLine,
+  SkillProposalCard,
+  SkillUsedNotes,
+  type SkillCardTemplateContext,
+  type SkillProposalCardProps,
+} from './SkillProposalCard'
+export {
+  panelUserSkills,
+  useSkillProposals,
+  type PanelUserSkillsOptions,
+  type SkillProposals,
+  type SkillProposalsOptions,
+} from './use-skill-proposals'
+export { SKILL_CARD_STRINGS, skillCardText, type SkillCardStringKey } from './strings-skill-card'
+export {
+  TEMPLATE_EDITORS,
+  chipRefForSkill,
+  handedRequestOf,
+  isTemplateMissing,
+  skillTemplateBridge,
+  templateChoice,
+  templateDocumentOf,
+  templateFileNameFor,
+  type HandedPreview,
+  type HandedRequest,
+  type SkillTemplateBridge,
+  type TemplateDocument,
+  type TemplateDocumentInput,
+  type TemplateEditor,
+} from './skill-template-model'
+export {
+  OriginalTemplateActions,
+  PreviewTemplateActions,
+  SkillCardPreviewLine,
+} from './SkillTemplateActions'
+export {
+  useSkillTemplates,
+  type SkillTemplateNote,
+  type SkillTemplates,
+  type SkillTemplatesOptions,
+} from './use-skill-templates'
+export {
+  SKILL_TEMPLATE_STRINGS,
+  skillTemplateText,
+  type SkillTemplateStringKey,
+} from './strings-skill-template'
 export { AiQueueStrip } from './AiQueueStrip'
 export { useChatRunQueue, type ChatRunQueue, type QueuedChatMessage } from './chat-run-queue'
 export { AI_QUEUE_LABELS, type AiQueueStripLabels } from './strings-ai-queue'
@@ -213,6 +336,16 @@ export {
   aiSubscriptionText,
   type AiSubscriptionStringKey,
 } from './strings-ai-subscription'
+export {
+  BUILTIN_SKILL_NAMES,
+  BUILTIN_SKILL_STRINGS,
+  builtinSkillDesc,
+  builtinSkillText,
+  builtinSkillTitle,
+  isBuiltinSkillName,
+  type BuiltinSkillName,
+  type BuiltinSkillStringKey,
+} from './strings-builtin-skills'
 export {
   AiConnectPrompt,
   AiSubscriptionCard,
