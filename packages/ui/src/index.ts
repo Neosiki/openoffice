@@ -10,6 +10,38 @@ export type {
   DocMentionState,
 } from './doc-mention-types'
 export { attachmentFolderLabel } from './attachment-folder'
+export {
+  DOC_MENTION_QUERY_MAX,
+  docFileName,
+  docMentionFirstRow,
+  docMentionLabel,
+  docMentionListCall,
+  docMentionListOf,
+  docMentionStepRow,
+  docMentionTriggerAt,
+  filterDocMentions,
+  insertDocMentions,
+  isDocMentionPickable,
+  relocateDocMentions,
+  sameDocPath,
+  type DocMentionDoc,
+  type DocMentionSpan,
+  type DocMentionTrigger,
+  type DocMentionTriggerOptions,
+} from './doc-mention-model'
+export { DocMentionPicker, docMentionOptionId } from './DocMentionPicker'
+export {
+  useComposerPickers,
+  useDocMentionInput,
+  type AiComposerDocs,
+  type DocMentionAttachment,
+  type DocMentionInput,
+} from './use-doc-mention'
+export {
+  DOC_MENTION_STRINGS,
+  docMentionText,
+  type DocMentionStringKey,
+} from './strings-doc-mention'
 export { AiComposer } from './AiComposer'
 export {
   SKILL_CHIPS_MAX,
