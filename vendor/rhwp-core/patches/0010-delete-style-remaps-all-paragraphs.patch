@@ -1,0 +1,201 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: pblsketch <239486537+pblsketch@users.noreply.github.com>
+Date: Thu, 22 Oct 2026 00:00:00 +0900
+Subject: [PATCH 10/10] =?UTF-8?q?fix(style):=20=EC=8A=A4=ED=83=80=EC=9D=BC?=
+ =?UTF-8?q?=20=EC=82=AD=EC=A0=9C=EA=B0=80=20=ED=91=9C=20=EC=85=80=C2=B7?=
+ =?UTF-8?q?=EB=A8=B8=EB=A6=AC=EB=A7=90=C2=B7=EA=B0=81=EC=A3=BC=C2=B7?=
+ =?UTF-8?q?=EA=B8=80=EC=83=81=EC=9E=90=20=EC=95=88=20=EB=AC=B8=EB=8B=A8?=
+ =?UTF-8?q?=EC=9D=98=20style=5Fid=20=EB=8F=84=20=EB=B3=B4=EC=A0=95?=
+ =?UTF-8?q?=ED=95=9C=EB=8B=A4?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+delete_style 은 구역 본문 문단만 돌며 지운 스타일을 바탕글로, 뒤 번호를 하나씩 당겼다.
+표 셀·캡션·글상자·머리말/꼬리말·각주/미주·숨은 설명·필드 메모·바탕쪽의 문단은 같은
+스타일 표를 가리키는데 보정되지 않아, 지운 스타일보다 뒤 번호를 쓰던 셀 문단이 다음
+스타일(마지막 스타일이었으면 목록 밖 번호)을 가리킨 채 저장됐다. 한컴 한글 2024 는 그
+문단을 다른 스타일(목록 밖이면 바탕글)로 읽는다.
+
+모든 문단 그릇을 하나의 재귀로 방문해 같은 규칙으로 보정한다.
+---
+ src/wasm_api.rs       | 88 +++++++++++++++++++++++++++++++++++++------
+ src/wasm_api/tests.rs | 57 ++++++++++++++++++++++++++++
+ 2 files changed, 133 insertions(+), 12 deletions(-)
+
+diff --git a/src/wasm_api.rs b/src/wasm_api.rs
+index 2031085e3..2481a7b57 100644
+--- a/src/wasm_api.rs
++++ b/src/wasm_api.rs
+@@ -7567,23 +7567,20 @@ impl HwpDocument {
+             return false;
+         }
+         let sid = style_id as u8;
+-        // 해당 스타일을 사용 중인 문단을 바탕글(0)로 변경
+-        for section in &mut self.core.document.sections {
+-            for para in &mut section.paragraphs {
+-                if para.style_id == sid {
+-                    para.style_id = 0;
+-                }
+-            }
+-        }
+         // 스타일 삭제 (인덱스 기반이므로 뒤의 ID가 변경됨에 주의)
+         self.core.document.doc_info.styles.remove(style_id as usize);
+-        // 삭제된 ID보다 큰 style_id를 가진 문단들 보정
++        // 해당 스타일을 사용 중인 문단은 바탕글(0)로, 삭제된 ID보다 큰 style_id 는 하나 당긴다.
++        // 본문 문단만이 아니라 표 셀·캡션·글상자·머리말/꼬리말·각주/미주·숨은 설명·메모·
++        // 바탕쪽의 문단도 같은 스타일 표를 가리킨다. 본문만 고치면 그 문단들이 다른
++        // 스타일(또는 목록 밖 번호)을 가리킨 채 저장된다.
+         for section in &mut self.core.document.sections {
+-            for para in &mut section.paragraphs {
+-                if para.style_id > sid {
++            for_each_paragraph_mut(&mut section.paragraphs, &mut |para| {
++                if para.style_id == sid {
++                    para.style_id = 0;
++                } else if para.style_id > sid {
+                     para.style_id -= 1;
+                 }
+-            }
++            });
+         }
+         // next_style_id 보정
+         for s in &mut self.core.document.doc_info.styles {
+@@ -9049,3 +9046,70 @@ fn base64_encode(data: &[u8]) -> String {
+ 
+ #[cfg(test)]
+ mod tests;
++
++/// 문단 목록과 그 안의 개체가 담은 모든 문단(표 셀·캡션·글상자·묶음 개체·머리말/꼬리말·
++/// 각주/미주·숨은 설명·필드 메모·바탕쪽)을 차례로 방문한다.
++fn for_each_paragraph_mut(paragraphs: &mut [Paragraph], f: &mut dyn FnMut(&mut Paragraph)) {
++    fn caption(c: &mut Option<crate::model::shape::Caption>, f: &mut dyn FnMut(&mut Paragraph)) {
++        if let Some(c) = c.as_mut() {
++            for_each_paragraph_mut(&mut c.paragraphs, f);
++        }
++    }
++    fn drawing(d: &mut crate::model::shape::DrawingObjAttr, f: &mut dyn FnMut(&mut Paragraph)) {
++        if let Some(text_box) = d.text_box.as_mut() {
++            for_each_paragraph_mut(&mut text_box.paragraphs, f);
++        }
++        caption(&mut d.caption, f);
++    }
++    fn shape(s: &mut ShapeObject, f: &mut dyn FnMut(&mut Paragraph)) {
++        match s {
++            ShapeObject::Picture(pic) => caption(&mut pic.caption, f),
++            ShapeObject::Group(group) => {
++                for child in &mut group.children {
++                    shape(child, f);
++                }
++                caption(&mut group.caption, f);
++            }
++            ShapeObject::Chart(chart) => {
++                drawing(&mut chart.drawing, f);
++                caption(&mut chart.caption, f);
++            }
++            ShapeObject::Ole(ole) => {
++                drawing(&mut ole.drawing, f);
++                caption(&mut ole.caption, f);
++            }
++            _ => {
++                if let Some(d) = s.drawing_mut() {
++                    drawing(d, f);
++                }
++            }
++        }
++    }
++    for para in paragraphs {
++        f(para);
++        for control in &mut para.controls {
++            match control {
++                Control::Table(table) => {
++                    for cell in &mut table.cells {
++                        for_each_paragraph_mut(&mut cell.paragraphs, f);
++                    }
++                    caption(&mut table.caption, f);
++                }
++                Control::Picture(pic) => caption(&mut pic.caption, f),
++                Control::Shape(s) => shape(s, f),
++                Control::Header(h) => for_each_paragraph_mut(&mut h.paragraphs, f),
++                Control::Footer(h) => for_each_paragraph_mut(&mut h.paragraphs, f),
++                Control::Footnote(n) => for_each_paragraph_mut(&mut n.paragraphs, f),
++                Control::Endnote(n) => for_each_paragraph_mut(&mut n.paragraphs, f),
++                Control::HiddenComment(c) => for_each_paragraph_mut(&mut c.paragraphs, f),
++                Control::Field(field) => for_each_paragraph_mut(&mut field.memo_paragraphs, f),
++                Control::SectionDef(section_def) => {
++                    for master_page in &mut section_def.master_pages {
++                        for_each_paragraph_mut(&mut master_page.paragraphs, f);
++                    }
++                }
++                _ => {}
++            }
++        }
++    }
++}
+diff --git a/src/wasm_api/tests.rs b/src/wasm_api/tests.rs
+index 72adaf63a..a1c0f32fe 100644
+--- a/src/wasm_api/tests.rs
++++ b/src/wasm_api/tests.rs
+@@ -26538,6 +26538,63 @@ fn delete_style_invalidates_docinfo_and_sections() {
+     );
+ }
+ 
++/// 스타일을 지우면 표 셀 안 문단의 style_id 도 본문과 같이 보정돼야 한다.
++///
++/// 종전엔 구역 본문 문단만 보정해, 지운 스타일보다 뒤 번호를 쓰던 셀 문단이 다음
++/// 스타일(마지막 스타일이었으면 목록 밖 번호)을 가리킨 채 저장됐다. 한컴 한글 2024 는
++/// 그 문단을 다른 스타일(목록 밖이면 바탕글)로 읽는다.
++#[test]
++fn delete_style_remaps_paragraphs_inside_controls() {
++    let mut doc = HwpDocument::create_empty();
++    doc.create_blank_document_native().unwrap();
++    doc.create_table_native(0, 0, 0, 2, 2).expect("표 삽입");
++    let styles = doc.document.doc_info.styles.len();
++    assert!(styles >= 4, "기본 스타일 목록");
++    let (gone, kept, last) = (2u8, 3u8, (styles - 1) as u8);
++    let table_para = doc.document.sections[0]
++        .paragraphs
++        .iter()
++        .position(|p| p.controls.iter().any(|c| matches!(c, Control::Table(_))))
++        .expect("표 문단");
++    fn cell_para(doc: &mut HwpDocument, table_para: usize, cell: usize) -> &mut Paragraph {
++        let table = doc.document.sections[0].paragraphs[table_para]
++            .controls
++            .iter_mut()
++            .find_map(|c| match c {
++                Control::Table(table) => Some(table),
++                _ => None,
++            })
++            .unwrap();
++        &mut table.cells[cell].paragraphs[0]
++    }
++    cell_para(&mut doc, table_para, 0).style_id = gone;
++    cell_para(&mut doc, table_para, 1).style_id = kept;
++    cell_para(&mut doc, table_para, 2).style_id = last;
++    doc.document.sections[0].paragraphs[table_para].style_id = kept;
++
++    assert!(doc.delete_style(gone as u32));
++
++    assert_eq!(
++        cell_para(&mut doc, table_para, 0).style_id,
++        0,
++        "지운 스타일을 쓰던 셀 문단은 바탕글"
++    );
++    assert_eq!(
++        cell_para(&mut doc, table_para, 1).style_id,
++        kept - 1,
++        "뒤 번호 셀 문단은 하나 당긴다"
++    );
++    assert_eq!(
++        cell_para(&mut doc, table_para, 2).style_id,
++        last - 1,
++        "마지막 스타일도 목록 안에 남는다"
++    );
++    assert_eq!(
++        doc.document.sections[0].paragraphs[table_para].style_id,
++        kept - 1
++    );
++}
++
+ /// [#2557] 스타일 이름에 역슬래시/개행/탭이 있어도 방출 JSON 이 파싱 가능해야 한다.
+ ///
+ /// 종전엔 큰따옴표만 이스케이프해 깨진 JSON 이 나왔고, TS 측은 가드 없이
