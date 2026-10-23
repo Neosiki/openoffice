@@ -7,6 +7,19 @@ import { createRoot, type Root } from 'react-dom/client'
 import { hashProtectionPassword, verifyProtectionPassword } from '@genoffice/docx-engine'
 import { ProtectDialog, type ProtectDialogResult } from '../src/renderer/components/ProtectDialog'
 
+// The dialog hashes with Word's default 100000 SHA-512 rounds, which can take
+// seconds of CPU per submit when other suites run at the same time. The
+// dialog's wiring is what is tested here (docx-engine tests the hash), so the
+// real hash runs with fewer rounds.
+vi.mock('@genoffice/docx-engine', async (importOriginal) => {
+  const real = await importOriginal<typeof import('@genoffice/docx-engine')>()
+  return {
+    ...real,
+    hashProtectionPassword: (password: string, spinCount?: number) =>
+      real.hashProtectionPassword(password, Math.min(spinCount ?? 1000, 1000)),
+  }
+})
+
 type Props = Parameters<typeof ProtectDialog>[0]
 
 const DEFAULTS: Omit<Props, 'onApply' | 'onCancel'> = {
