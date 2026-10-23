@@ -77,7 +77,8 @@ import {
   showSaveDialogWithMemory,
   windowMenuTemplate,
   aboutMenuItem,
-  checkUpdatesMenuItem,
+  appMenuPopupTemplate,
+  helpCheckUpdatesItems,
   setUpdateCheckInvoker,
   installRendererProtocol,
   AUTHOR_NAME_KEY,
@@ -6508,9 +6509,20 @@ function registerTabsIpc(): void {
   })
   // "all tabs" overflow menu — native popup because the editors' WebContentsView
   // would cover any DOM dropdown the shell renderer draws below the tab strip
+  // the ☰ button is the Windows/Linux menu: the window's menus, then the update
+  // check as an item of its own (Help keeps it only on macOS)
   ipcMain.handle(TABS_CHANNELS.showAppMenu, (_event, x: unknown, y: unknown) => {
     if (!shellWindow) return
-    Menu.getApplicationMenu()?.popup({
+    const appMenu = Menu.getApplicationMenu()
+    if (!appMenu) return
+    const menus: MenuItemConstructorOptions[] = appMenu.items.map((item) =>
+      item.submenu
+        ? { label: item.label, submenu: item.submenu }
+        : item.type === 'separator'
+          ? { type: 'separator' }
+          : { label: item.label, enabled: item.enabled, click: () => item.click() },
+    )
+    Menu.buildFromTemplate(appMenuPopupTemplate(menus, appMenuLabels(currentLang()))).popup({
       window: shellWindow,
       ...(typeof x === 'number' && typeof y === 'number'
         ? { x: Math.round(x), y: Math.round(y) }
@@ -6742,7 +6754,7 @@ function buildHomeMenu(): void {
         { type: 'separator' },
         { label: tm('thirdPartyNotices'), click: () => void openThirdPartyNotices() },
         { type: 'separator' },
-        checkUpdatesMenuItem(appMenuLabels(currentLang())),
+        ...helpCheckUpdatesItems(appMenuLabels(currentLang())),
         aboutMenuItem(appMenuLabels(currentLang())),
       ],
     },
@@ -6835,7 +6847,7 @@ function buildPdfMenu(): void {
       submenu: [
         { label: tm('thirdPartyNotices'), click: () => void openThirdPartyNotices() },
         { type: 'separator' },
-        checkUpdatesMenuItem(appMenuLabels(currentLang())),
+        ...helpCheckUpdatesItems(appMenuLabels(currentLang())),
         aboutMenuItem(appMenuLabels(currentLang())),
       ],
     },
@@ -6942,7 +6954,7 @@ function buildMarkdownMenu(): void {
       submenu: [
         { label: tm('thirdPartyNotices'), click: () => void openThirdPartyNotices() },
         { type: 'separator' },
-        checkUpdatesMenuItem(appMenuLabels(currentLang())),
+        ...helpCheckUpdatesItems(appMenuLabels(currentLang())),
         aboutMenuItem(appMenuLabels(currentLang())),
       ],
     },
@@ -7020,7 +7032,7 @@ function buildHwpMenu(): void {
       submenu: [
         { label: tm('thirdPartyNotices'), click: () => void openThirdPartyNotices() },
         { type: 'separator' },
-        checkUpdatesMenuItem(appMenuLabels(currentLang())),
+        ...helpCheckUpdatesItems(appMenuLabels(currentLang())),
         aboutMenuItem(appMenuLabels(currentLang())),
       ],
     },
@@ -7120,7 +7132,7 @@ function buildHtmlMenu(): void {
       submenu: [
         { label: tm('thirdPartyNotices'), click: () => void openThirdPartyNotices() },
         { type: 'separator' },
-        checkUpdatesMenuItem(appMenuLabels(currentLang())),
+        ...helpCheckUpdatesItems(appMenuLabels(currentLang())),
         aboutMenuItem(appMenuLabels(currentLang())),
       ],
     },
@@ -7252,7 +7264,7 @@ function buildMindmapMenu(): void {
       submenu: [
         { label: tm('thirdPartyNotices'), click: () => void openThirdPartyNotices() },
         { type: 'separator' },
-        checkUpdatesMenuItem(appMenuLabels(currentLang())),
+        ...helpCheckUpdatesItems(appMenuLabels(currentLang())),
         aboutMenuItem(appMenuLabels(currentLang())),
       ],
     },
