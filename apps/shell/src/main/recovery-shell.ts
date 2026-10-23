@@ -285,6 +285,12 @@ export interface LaunchRecoveryDeps {
   afterSheetsOpen(): void
   /** the launch has settled (files that arrived meanwhile can open now) */
   settled(): void
+  /**
+   * The open tabs changed in a way the tab manager did not announce: the
+   * session record is written again (restored untitled tabs know their copy
+   * only after the strip was rebuilt).
+   */
+  sessionChanged(): void
 }
 
 /**
@@ -330,6 +336,12 @@ export function runLaunchRecovery(deps: LaunchRecoveryDeps): void {
         .hydrateSession({ tabs: tabs.map((t) => tabSpec(t, openerDeps)) })
       ids = new Map(tabs.map((t, index) => [t.key, tabIds[index]]))
       tabs.forEach((t, index) => notePlanned(tabIds[index], t))
+      // the strip's change notice went out before the untitled copies were noted
+      try {
+        deps.sessionChanged()
+      } catch (error) {
+        console.warn('[recovery] the session record could not be updated:', error)
+      }
     }
   } catch (error) {
     console.warn('[recovery] the launch could not restore the previous session:', error)
@@ -343,7 +355,7 @@ export function runLaunchRecovery(deps: LaunchRecoveryDeps): void {
   }
   const launchPlan = plan
 
-  const finish = (outcome: LaunchOutcome): void => {
+  const layOut = (outcome: LaunchOutcome): void => {
     const manager = deps.manager()
     for (const key of outcome.remove) {
       const id = ids.get(key)
@@ -376,7 +388,30 @@ export function runLaunchRecovery(deps: LaunchRecoveryDeps): void {
     if (outcome.launchPaths.length > 0) deps.openLaunchPaths(outcome.launchPaths)
     else if (outcome.splitMemoryOrHome) deps.restoreSplitMemoryOrHome()
     else if (!front && !manager.splitState()) manager.openHomeTab()
-    deps.settled()
+  }
+
+  /**
+   * Carry out the outcome. A failure while laying out the tabs never escapes:
+   * the rest of the app start (and the launch list's answer) must go on, so
+   * Home comes to the front and the launch settles anyway. Decisions already
+   * recorded in the store stay recorded; the list is not asked again.
+   */
+  const finish = (outcome: LaunchOutcome): void => {
+    try {
+      layOut(outcome)
+    } catch (error) {
+      console.warn('[recovery] the restored session could not be laid out:', error)
+      try {
+        deps.manager().openHomeTab()
+      } catch (homeError) {
+        console.warn('[recovery] Home could not be shown:', homeError)
+      }
+    }
+    try {
+      deps.settled()
+    } catch (error) {
+      console.warn('[recovery] the files that arrived during the launch could not open:', error)
+    }
   }
 
   if (launchPlan.items.length === 0) {

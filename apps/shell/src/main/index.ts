@@ -684,7 +684,7 @@ function noteLiveSession(): void {
 
 /**
  * The live webContents of an open document for MCP / AI callers: a restored
- * tab is loaded (and its document waited for) first; one waiting on the
+ * tab is loaded (and its editor page waited for) first; one waiting on the
  * user's recovery answer fails with a message the agent can relay.
  */
 function liveDocumentContents(tabId: string): Promise<WebContents | undefined> {
@@ -7911,6 +7911,7 @@ app.whenReady().then(async () => {
     openLaunchPaths,
     restoreSplitMemoryOrHome,
     afterSheetsOpen: restoredTabDeps.afterSheetsOpen,
+    sessionChanged: noteLiveSession,
     settled: () => {
       const paths = deferredLaunchPaths
       deferredLaunchPaths = []
