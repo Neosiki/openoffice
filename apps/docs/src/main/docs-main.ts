@@ -3439,6 +3439,14 @@ export function discardDocsRecovery(contents: WebContents): void {
   docsRecovery.discard(contents.id, openDocByWc.get(contents.id) ?? null)
 }
 
+/**
+ * The untitled document copy this tab writes, if any (the shell's session
+ * record, and reopening an untitled tab whose renderer crashed).
+ */
+export function docsRecoveryIdentity(webContentsId: number): RecoveryIdentity | null {
+  return docsRecovery.untitledOf(webContentsId)
+}
+
 /** docs renderers that have asked for their first document (they listen for docs:opened) */
 const bootedDocsRenderers = new Set<number>()
 

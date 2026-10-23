@@ -437,6 +437,11 @@ export function createPdfRecovery(deps: PdfRecoveryDeps) {
       return views.get(id)?.unprotectable ?? false
     },
 
+    /** the untitled document's copy identity this view shows, if it shows one */
+    untitledIdentity(id: number): RecoveryIdentity | null {
+      return views.get(id)?.untitled?.identity ?? null
+    },
+
     markCrashed(id: number): void {
       view(id).crashed = true
     },
