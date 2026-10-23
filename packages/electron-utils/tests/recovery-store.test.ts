@@ -552,6 +552,98 @@ describe('adopting an old untitled copy', () => {
     expect(store.adoptUntitledCopy('sheets', outside, { title: 'Book2', ext: '.xlsx' })).toBeNull()
     expect(readFileSync(outside, 'utf8')).toBe('user file')
   })
+
+  it('keeps the original path it is given', () => {
+    mkdirSync(join(root, 'sheets-autosave'), { recursive: true })
+    const legacy = join(root, 'sheets-autosave', `${sha16('C:\\tmp\\Book3.xlsx')}.xlsx`)
+    writeFileSync(legacy, 'workbook')
+    const original = join(userFolder, 'Book3.csv')
+    const identity = store.adoptUntitledCopy('sheets', legacy, {
+      title: 'Book3.csv',
+      ext: '.xlsx',
+      originalPath: original,
+    })
+    expect(store.copyInfo(identity!)!.originalPath).toBe(original)
+  })
+})
+
+describe('an untitled copy of a file the editor cannot write back to', () => {
+  const untitled = () => ({
+    kind: 'sheets' as const,
+    untitledId: newUntitledRecoveryId(),
+    ext: '.xlsx',
+  })
+
+  it('carries the original path through every state change, and lists it', async () => {
+    const original = userDoc('data.csv', 'a,b')
+    const identity = untitled()
+    await store.writeCopy(identity, Buffer.from('xlsx'), {
+      title: 'data.csv',
+      originalPath: original,
+    })
+    expect(store.copyInfo(identity)!.originalPath).toBe(original)
+    store.applyLaunchDecision(identity, 'restore')
+    expect(store.copyInfo(identity)!.originalPath).toBe(original)
+    store.markCopyLoaded(identity)
+    expect(store.copyInfo(identity)!.originalPath).toBe(original)
+    store.applyLaunchDecision(identity, 'later')
+    const [listed] = store.listCopies({ untitled: true })
+    expect(listed!.originalPath).toBe(original)
+    // still an untitled copy: never missing or changed, and the file is untouched
+    expect(listed!.filePath).toBeNull()
+    expect(listed!.originalMissing).toBe(false)
+    expect(listed!.fileChangedAfterCopy).toBe(false)
+    expect(readFileSync(original, 'utf8')).toBe('a,b')
+  })
+
+  it('a later write without the path drops it', async () => {
+    const identity = untitled()
+    await store.writeCopy(identity, Buffer.from('1'), { originalPath: userDoc('x.tsv') })
+    await store.writeCopy(identity, Buffer.from('2'))
+    expect(store.copyInfo(identity)!.originalPath).toBeNull()
+  })
+
+  it('is null for copies written without it, and earlier metadata still reads', async () => {
+    const identity = untitled()
+    await store.writeCopy(identity, Buffer.from('x'), { title: 'Book' })
+    const info = store.copyInfo(identity)!
+    expect(info.originalPath).toBeNull()
+    expect(info.legacy).toBe(false)
+    // metadata written before the field existed
+    const meta = `${store.copyPath(identity)}.meta.json`
+    const raw = JSON.parse(readFileSync(meta, 'utf8')) as Record<string, unknown>
+    expect('originalPath' in raw).toBe(false)
+    expect(store.listCopies({ untitled: true })).toHaveLength(1)
+  })
+
+  it('a file copy never records one', async () => {
+    const doc = userDoc('kept.xlsx')
+    const identity = { kind: 'sheets' as const, filePath: doc }
+    await store.writeCopy(identity, Buffer.from('x'), { originalPath: userDoc('other.csv') })
+    expect(store.copyInfo(identity)!.originalPath).toBeNull()
+    const raw = JSON.parse(readFileSync(`${store.copyPath(identity)}.meta.json`, 'utf8'))
+    expect('originalPath' in raw).toBe(false)
+  })
+
+  it('ignores a damaged original path in the metadata', async () => {
+    const identity = untitled()
+    await store.writeCopy(identity, Buffer.from('x'), { originalPath: userDoc('y.csv') })
+    const meta = `${store.copyPath(identity)}.meta.json`
+    const raw = JSON.parse(readFileSync(meta, 'utf8')) as Record<string, unknown>
+    writeFileSync(meta, JSON.stringify({ ...raw, originalPath: 42 }))
+    const info = store.copyInfo(identity)!
+    expect(info.legacy).toBe(false)
+    expect(info.originalPath).toBeNull()
+  })
+
+  it('streams with the original path too', async () => {
+    const original = userDoc('z.xls')
+    const identity = untitled()
+    await store.writeCopyStreamed(identity, async (temp) => writeFileSync(temp, 'x'), {
+      originalPath: original,
+    })
+    expect(store.copyInfo(identity)!.originalPath).toBe(original)
+  })
 })
 
 describe('damaged metadata', () => {
