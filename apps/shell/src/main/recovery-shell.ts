@@ -16,6 +16,7 @@ import {
   sheetsRecoveryIdentity,
 } from '../../../sheets/src/main/sheets-main'
 import { createPdfView, pdfRecoveryIdentity } from '../../../pdf/src/main/pdf-main'
+import { slidesRecoveryIdentity } from '../../../slides/src/main/slides-main'
 import {
   markdownRecoveryIdentity,
   setMarkdownRecoveryTitleSource,
@@ -85,8 +86,9 @@ export function editorRecoveryIdentity(
         return mindmapRecoveryIdentity(contents.id)
       case 'hwp':
         return hwpRecoveryIdentity(contents)
+      case 'slides':
+        return slidesRecoveryIdentity(contents.id)
       default:
-        // slides keeps its deck in the main process and offers no per-view lookup
         return null
     }
   } catch {

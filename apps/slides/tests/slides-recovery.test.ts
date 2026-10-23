@@ -122,6 +122,7 @@ import {
   requestSlidesClose,
   runSlidesRecoveryPass,
   slidesIsDirty,
+  slidesRecoveryIdentity,
 } from '../src/main/slides-main'
 import { markMetaDirty, sessions } from '../src/main/session-state'
 
@@ -243,6 +244,24 @@ describe('writing copies', () => {
     expect(copies[0]!.untitledId).not.toBeNull()
     expect(copies[0]!.copyPath.startsWith(join(hoisted.userDataDir, 'slides-autosave'))).toBe(true)
     expect(copies[0]!.title.length).toBeGreaterThan(0)
+  })
+
+  it("tells the shell an untitled deck's copy slot, and nothing for a deck with a file", async () => {
+    const tab = new FakeContents(13)
+    await newUntitledDeck(tab)
+    markMetaDirty(sessions.get(tab.id)!)
+    await runSlidesRecoveryPass()
+    const [copy] = store().listCopies({ kinds: ['slides'], untitled: true })
+    expect(slidesRecoveryIdentity(tab.id)).toEqual({
+      kind: 'slides',
+      untitledId: copy!.untitledId,
+      ext: '.pptx',
+    })
+
+    const fileTab = new FakeContents(14)
+    await call<Promise<unknown>>(fileTab, 'slides:open-path', makeDeckFile(), FIT)
+    expect(slidesRecoveryIdentity(fileTab.id)).toBeNull()
+    expect(slidesRecoveryIdentity(9999)).toBeNull()
   })
 
   it('writes a file deck under the legacy name and never touches the original', async () => {

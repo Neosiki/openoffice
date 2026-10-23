@@ -608,6 +608,16 @@ function recoveryIdentityOf(session: Session): RecoveryIdentity {
   })
 }
 
+/**
+ * The untitled deck copy this view writes, if any (the shell's session record,
+ * and reopening an untitled tab whose renderer crashed). Null for a deck with a file.
+ */
+export function slidesRecoveryIdentity(webContentsId: number): RecoveryIdentity | null {
+  const session = sessions.get(webContentsId)
+  if (!session || session.path) return null
+  return recoveryIdentityOf(session)
+}
+
 /** the launch list's name for an untitled deck: its suggested first-save name, else the untitled label */
 function untitledRecoveryTitle(session: Session): string {
   const named = session.firstSaveName ? basename(session.firstSaveName).replace(/\.pptx$/i, '') : ''
