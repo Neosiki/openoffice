@@ -12,6 +12,7 @@ import { AI_CHANNELS, PDF_CHANNELS } from '../shared/ipc'
 import type {
   PdfApi,
   PdfNoteResult,
+  PdfRecoveryCopyResult,
   PdfStoreApi,
   PdfStructureApi,
   PdfStructureFailure,
@@ -254,6 +255,27 @@ const api: PdfApi = {
     ipcRenderer.on(PDF_CHANNELS.fileRenamed, listener)
     return () => ipcRenderer.removeListener(PDF_CHANNELS.fileRenamed, listener)
   },
+  // crash recovery; the standalone app may lack the store: a failed call is "nothing"
+  recoveryState: (path) =>
+    (ipcRenderer.invoke(PDF_CHANNELS.recoveryState, path) as Promise<{ unsaved: boolean }>).catch(
+      () => ({ unsaved: false }),
+    ),
+  writeRecoveryCopy: (request) =>
+    (
+      ipcRenderer.invoke(PDF_CHANNELS.recoveryWriteCopy, request) as Promise<PdfRecoveryCopyResult>
+    ).catch((): PdfRecoveryCopyResult => 'failed'),
+  reportUnprotectable: (unprotectable) =>
+    (
+      ipcRenderer.invoke(PDF_CHANNELS.recoveryUnprotectable, unprotectable) as Promise<
+        string | null
+      >
+    ).catch(() => null),
+  onRecoveryFlushRequest: (handler) => {
+    const listener = () => handler()
+    ipcRenderer.on(PDF_CHANNELS.recoveryFlushRequest, listener)
+    return () => ipcRenderer.removeListener(PDF_CHANNELS.recoveryFlushRequest, listener)
+  },
+  sendRecoveryFlushDone: () => ipcRenderer.send(PDF_CHANNELS.recoveryFlushDone),
   getLanguage: () => ipcRenderer.invoke(PDF_CHANNELS.getLanguage),
   onLanguageChanged: (handler) => {
     const listener = (_e: Electron.IpcRendererEvent, lang: Lang) => handler(lang)

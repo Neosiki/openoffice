@@ -1225,6 +1225,70 @@ export async function pdfBytesWithEdits(
   return bytes
 }
 
+/**
+ * Whether a save request changes anything. The renderer always sends the
+ * complete static-fill record set, which only image edits change, so that
+ * set alone does not count.
+ */
+export function saveRequestHasEdits(request: SavePdfRequest): boolean {
+  const some = (list: readonly unknown[] | undefined) => (list?.length ?? 0) > 0
+  return (
+    some(request.markups) ||
+    some(request.annotDeletes) ||
+    some(request.drawings) ||
+    some(request.noteEdits) ||
+    some(request.formValues) ||
+    some(request.stamps) ||
+    some(request.textEdits) ||
+    some(request.textInserts) ||
+    some(request.imageEdits) ||
+    some(request.redactions) ||
+    some(request.formWidgetEdits) ||
+    some(request.formFields) ||
+    some(request.blankPages) ||
+    some(request.rotations) ||
+    some(request.deletedPages) ||
+    some(request.pageOrder) ||
+    request.metadata !== undefined
+  )
+}
+
+/**
+ * `savePdfToPath` over source bytes already in memory: a tab restored from a
+ * recovery copy shows the copy, and the file on disk is only where the save
+ * goes. A request without edits writes the source bytes unchanged, so saving
+ * a restored copy writes exactly the bytes the copy holds.
+ */
+export async function savePdfBytesToPath(
+  source: Uint8Array,
+  targetPath: string,
+  request: SavePdfRequest,
+): Promise<SavePdfSkips> {
+  if (!saveRequestHasEdits(request)) {
+    await writePdfAtomically(targetPath, source)
+    return { skippedTextEdits: [], skippedTextInserts: [], skippedImageEdits: [] }
+  }
+  const { bytes, ...skips } = await applySaveRequest(source, request)
+  await verifyContentEdits(bytes, request, skips)
+  await writePdfAtomically(targetPath, bytes)
+  return skips
+}
+
+/**
+ * `pdfBytesWithEdits` over source bytes in memory (the recovery copy of a
+ * restored tab); a request without edits answers the source itself.
+ */
+export async function pdfBytesWithEditsFrom(
+  source: Uint8Array,
+  request: SavePdfRequest,
+): Promise<Uint8Array> {
+  const { redactions: _redactions, ...ordinary } = request
+  if (!saveRequestHasEdits(ordinary)) return source
+  const { bytes, ...skips } = await applySaveRequest(source, ordinary)
+  await verifyContentEdits(bytes, ordinary, skips)
+  return bytes
+}
+
 export interface AppliedSaveRequest {
   bytes: Uint8Array
   /** Text edits that could not be matched to the document; the rest of the request is in `bytes` */
