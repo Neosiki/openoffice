@@ -3804,6 +3804,11 @@ function indentSame(a: ParaFormat | undefined, b: ParaFormat | undefined): boole
 
 function normalizedFormat(format: ParaFormat | undefined): unknown {
   if (!format) return null
+  const fields = normalizedFormatFields(format)
+  return JSON.stringify(fields) === EMPTY_FORMAT_SIGNATURE ? null : fields
+}
+
+function normalizedFormatFields(format: ParaFormat): unknown[] {
   return [
     format.align ?? null,
     format.lineSpacing ?? null,
@@ -3839,6 +3844,8 @@ function normalizedFormat(format: ParaFormat | undefined): unknown {
     format.emptyRunSizeHalfPoints ?? null,
   ]
 }
+
+const EMPTY_FORMAT_SIGNATURE = JSON.stringify(normalizedFormatFields({}))
 
 export function signatureOfBlock(block: Block): string {
   return JSON.stringify({

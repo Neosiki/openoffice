@@ -7954,7 +7954,7 @@ export default function App() {
           <span className="rb-big-icon">
             <IconNote />
           </span>
-          {t('apPanel')}
+          <span>{t('apPanel')}</span>
         </button>
         <NoteOpenRibbonButton actions={noteActions} t={t} />
         {searchBtn}
@@ -7983,7 +7983,7 @@ export default function App() {
           <span className="rb-big-icon">
             <IconAiTranslate />
           </span>
-          {t('blToggle')}
+          <span>{t('blToggle')}</span>
         </button>
         <button
           className={`rb-big${nightMode ? ' active' : ''}`}
@@ -8004,7 +8004,7 @@ export default function App() {
           <span className="rb-big-icon">
             <IconPassageMarks />
           </span>
-          {t('rdUnderlines')}
+          <span>{t('rdUnderlines')}</span>
         </button>
         <button
           className={`rb-big${highlightPreview ? ' active' : ''}`}
@@ -8016,7 +8016,7 @@ export default function App() {
           <span className="rb-big-icon">
             <IconHighlightPreview />
           </span>
-          {t('hlPreview')}
+          <span>{t('hlPreview')}</span>
         </button>
       </div>
     </div>
@@ -8867,9 +8867,11 @@ export default function App() {
                     <span className="rb-big-icon">
                       <IconDeletePage />
                     </span>
-                    {ribbonPages.length > 1
-                      ? t('pageSelDelete', { n: ribbonPages.length })
-                      : t('deletePage')}
+                    <span>
+                      {ribbonPages.length > 1
+                        ? t('pageSelDelete', { n: ribbonPages.length })
+                        : t('deletePage')}
+                      </span>
                   </button>
                   <button
                     className="rb-big"
