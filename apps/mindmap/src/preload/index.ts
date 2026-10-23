@@ -23,6 +23,7 @@ import type {
   MindmapMakeFromApi,
   MindmapMenuCommand,
   MindmapQueryApi,
+  MindmapRecoveryApi,
   MindmapSeedApi,
   SaveMode,
   UiTheme,
@@ -181,6 +182,14 @@ const makeFrom: MindmapMakeFromApi = {
   makeFromDocument: () => ipcRenderer.send(MINDMAP_CHANNELS.makeFromDocument),
 }
 
+// ---- crash-recovery copies ----
+
+const recovery: MindmapRecoveryApi = {
+  writeRecoveryCopy: (request) => ipcRenderer.invoke(MINDMAP_CHANNELS.recoveryCopy, request),
+  onRecoveryCopyNow: (handler) => listen<[]>(MINDMAP_CHANNELS.recoveryCopyNow, handler),
+  sendRecoveryCopyNowDone: () => ipcRenderer.send(MINDMAP_CHANNELS.recoveryCopyNowDone),
+}
+
 const api: MindmapApi = {
   ...core,
   ...exporting,
@@ -189,6 +198,7 @@ const api: MindmapApi = {
   ...handoff,
   ...seed,
   ...makeFrom,
+  ...recovery,
 }
 
 /** Chat persistence: the shared project:* handlers are registered once by the shell (docs-main registerProjectIpc) */
