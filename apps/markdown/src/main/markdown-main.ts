@@ -31,10 +31,11 @@ import {
   showOpenDialogWithMemory,
   showSaveDialogWithMemory,
   installRendererProtocol,
+  registerRecoveryEditor,
   registerRendererScheme,
   rendererUrl,
 } from '@genoffice/electron-utils'
-import type { SaveDiskState } from '@genoffice/electron-utils'
+import type { RecoveryIdentity, SaveDiskState } from '@genoffice/electron-utils'
 import { createI18n, getUiLang } from '@genoffice/i18n'
 import { sharedSubscriptionStatuses } from '@genoffice/ai-provider/subscription'
 import { generateImageTool, documentMediaRoots, withMediaCallSignal } from '@genoffice/ai-search'
@@ -59,6 +60,7 @@ import { createMarkdownConversionSession, writeMarkdownConversion } from './conv
 import { confirmOdtReport, exportOdt, odtFilterName } from './odt-export'
 import { registerMarkdownSeedIpc } from './seed-main'
 import { registerMarkdownNoteAppendIpc } from './note-append'
+import { createTextRecovery } from './recovery'
 import { MARKDOWN_CHANNELS, MAX_PASTED_IMAGE_BYTES } from '../shared/ipc'
 import type { ImageHostConfig } from '../shared/ipc'
 import { isImageHostUsable, normalizeImageHostConfig, uploadImageToHost } from './image-host'
@@ -435,6 +437,55 @@ function forgetDiskState(wcId: number, path: string): void {
   if (states.size === 0) docDiskStates.delete(wcId)
 }
 
+// ── Crash-recovery copies (spec "work is not lost"): the renderer pushes the
+// text a save would write; the copy lives in <userData>/markdown-autosave.
+const recovery = createTextRecovery({
+  kind: 'markdown',
+  untitledExt: '.md',
+  userDataDir: () => app.getPath('userData'),
+  dialog,
+  parentOf: (contents) => BrowserWindow.fromWebContents(contents),
+  lang: () => getUiLang(),
+  savePath: (wcId) => savePathByWc.get(wcId),
+  openPath: (wcId) => openPathByWc.get(wcId),
+  isDirty: (wcId) => dirtyByWc.has(wcId),
+  adoptFile: (contents, filePath) => {
+    openPathByWc.set(contents.id, filePath)
+    savePathByWc.set(contents.id, filePath)
+    const allowed = allowedByWc.get(contents.id) ?? new Set<string>()
+    allowed.add(filePath)
+    allowedByWc.set(contents.id, allowed)
+  },
+  restoredFile: (wcId, filePath) => {
+    // the save guard compares with the file as it was when the tab opened
+    void rememberDiskState(wcId, filePath)
+  },
+  untitledFallbackTitle: () => tm('untitledFile'),
+  flushChannel: MARKDOWN_CHANNELS.recoveryFlushRequest,
+})
+
+/** The Markdown editor's crash-recovery contract (registered with the first view) */
+export const markdownRecoveryEditor = recovery.contract
+
+/**
+ * The shell's tab title for an untitled document, used as its recovery copy's
+ * title in the launch list (falls back to "Untitled").
+ */
+export function setMarkdownRecoveryTitleSource(
+  source: ((contents: WebContents) => string | undefined) | null,
+): void {
+  recovery.setTitleSource(source)
+}
+
+/**
+ * The recovery copy identity of a view's document: its path, or the untitled
+ * copy id (session record, reopening a crashed untitled tab). Null when the
+ * view is not a Markdown document view.
+ */
+export function markdownRecoveryIdentity(webContentsId: number): RecoveryIdentity | null {
+  return recovery.identityOf(webContentsId)
+}
+
 /** True when this save must stop instead of writing: the sibling copy changed
  *  the disk since this view's last read or write, and either the automatic
  *  save defers or the user chose to keep the disk copy. */
@@ -513,6 +564,7 @@ export function markdownFileRenamed(contents: WebContents, oldPath: string, newP
   void renameOwnedAssetDocument(oldPath, newPath).catch((error) => {
     console.warn('[markdown] asset manifest rename sync failed:', error)
   })
+  if (savePathByWc.get(wcId) === newPath) recovery.renamed(wcId, oldPath)
   if (!contents.isDestroyed()) contents.send(MARKDOWN_CHANNELS.fileRenamed, newPath)
 }
 
@@ -541,6 +593,7 @@ export async function requestMarkdownClose(
       : await dialog.showMessageBox(options)
   if (response === 2) return false
   if (response === 1) {
+    recovery.dontSave(contents.id)
     const documentPath = savePathByWc.get(contents.id)
     if (documentPath) {
       const discarded = await discardPendingOwnedAssets(documentPath)
@@ -569,6 +622,8 @@ export async function requestMarkdownClose(
  * runs when the user picks "Don't Save".
  */
 export async function markdownDiscardPendingAssets(contents: WebContents): Promise<void> {
+  // closing without saving: the recovery copy goes as with "Don't Save"
+  recovery.dontSave(contents.id)
   const documentPath = savePathByWc.get(contents.id)
   if (!documentPath) return
   const discarded = await discardPendingOwnedAssets(documentPath)
@@ -661,6 +716,9 @@ export function markdownSaveToPath(contents: WebContents, filePath: string): Pro
   const wcId = contents.id
   const previousPath = savePathByWc.get(wcId)
   const previousOpenPath = openPathByWc.get(wcId)
+  // the copy belongs to the document as it was (an untitled one included),
+  // not to the path the save is pointed at
+  const recoveryBefore = recovery.identityOf(wcId)
   savePathByWc.set(wcId, filePath)
   const allowed = allowedByWc.get(wcId) ?? new Set<string>()
   allowed.add(filePath)
@@ -679,8 +737,10 @@ export function markdownSaveToPath(contents: WebContents, filePath: string): Pro
     }, 120_000)
     saveWaiters.set(wcId, (ok) => {
       clearTimeout(timer)
-      if (ok) resolve()
-      else {
+      if (ok) {
+        recovery.saved(wcId, recoveryBefore)
+        resolve()
+      } else {
         restore()
         reject(new Error('could not save the document'))
       }
@@ -717,7 +777,8 @@ async function resolveSaveTarget(
     BrowserWindow.fromWebContents(e.sender) ?? BrowserWindow.getFocusedWindow() ?? undefined
   const defaultPath = current
     ? join(dirname(current), basename(current))
-    : join(configuredDefaultSaveDir(app), `${tm('untitledFile')}.md`)
+    : (recovery.saveAsDefaultPath(e.sender.id) ??
+      join(configuredDefaultSaveDir(app), `${tm('untitledFile')}.md`))
   const picked = await showSaveDialogWithMemory(dialog, win, {
     title: tm('dlgSaveTitle'),
     defaultPath,
@@ -825,6 +886,12 @@ function registerMarkdownIpc(): void {
     return text
   })
 
+  ipcMain.handle(MARKDOWN_CHANNELS.recoveryOpen, (e) => recovery.resolveOpen(e.sender))
+
+  ipcMain.handle(MARKDOWN_CHANNELS.recoveryWrite, (e, text: unknown) =>
+    recovery.writeCopy(e.sender, typeof text === 'string' ? text : null),
+  )
+
   ipcMain.handle(
     MARKDOWN_CHANNELS.save,
     async (e, request: SaveMarkdownRequest): Promise<SaveMarkdownResult> => {
@@ -848,6 +915,7 @@ function registerMarkdownIpc(): void {
       // Request input is untrusted: only an explicit automatic-save flag counts
       const auto = (request as { auto?: unknown } | null)?.auto === true
       const pathAtRequest = savePathByWc.get(e.sender.id)
+      const recoveryAtRequest = recovery.identityOf(e.sender.id)
       // A copy pair saving onto the document's own path settles the conflict
       // before anything is prepared or written
       if (
@@ -895,6 +963,8 @@ function registerMarkdownIpc(): void {
         allowed.add(target)
         allowedByWc.set(e.sender.id, allowed)
         dirtyByWc.delete(e.sender.id)
+        // the document is saved: its recovery copy goes ('saved' passes even while quitting)
+        recovery.saved(e.sender.id, recoveryAtRequest)
         // Refresh the record for the written bytes; the view no longer edits a moved-away path
         await rememberDiskState(e.sender.id, target)
         if (currentPath && currentPath !== target) forgetDiskState(e.sender.id, currentPath)
@@ -1279,6 +1349,8 @@ function registerMarkdownIpc(): void {
   // Language channel shared with other modules; removeHandler tolerates duplicate registration
   ipcMain.removeHandler(MARKDOWN_CHANNELS.getLanguage)
   ipcMain.handle(MARKDOWN_CHANNELS.getLanguage, () => getUiLang())
+
+  registerRecoveryEditor(recovery.contract)
 }
 
 function grantAndTrack(wc: WebContents, openPath?: string | null): void {
@@ -1293,10 +1365,13 @@ function grantAndTrack(wc: WebContents, openPath?: string | null): void {
     if (target) void shell.openExternal(target)
     return { action: 'deny' }
   })
+  recovery.track(wc)
   wc.once('destroyed', () => {
     void imageExports
       .dispose(wcId)
       .catch((err) => console.warn('[markdown] image export cleanup:', err))
+    // before the dirty flag goes: a clean close drops the copy, an unsaved or crashed one keeps it
+    recovery.forget(wcId)
     openPathByWc.delete(wcId)
     allowedByWc.delete(wcId)
     savePathByWc.delete(wcId)

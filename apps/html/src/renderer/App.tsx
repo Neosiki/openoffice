@@ -100,6 +100,7 @@ import { applyPatches } from './document/patch'
 import { adoptImageRewrites } from './document/image-rewrites'
 import { deriveAutoFileName, deriveNameFromPrompt, derivePageTitleName } from './document/auto-name'
 import { runGuardedPrint } from './print-guard'
+import { startRecoveryCopies } from './recovery-copy'
 import type { ExportFormat, SaveMode } from '../shared/ipc'
 
 type LoadStatus = 'loading' | 'ready' | 'error'
@@ -344,9 +345,16 @@ export default function App() {
           window.htmlApi.consumePending(),
           window.htmlApi.getPreviewInfo(),
         ])
+        // a crash-recovery copy to open instead: asked (per-file prompt) before
+        // any content loads; the original path stays the save target
+        const recovered = (await window.htmlApi.recoveryOpen?.()) ?? null
         // a new untitled tab may start with given text (a skill template's copy), taken once
-        const seed = pending ? null : ((await window.htmlApi.takeSeed?.()) ?? null)
-        const raw = pending ? await window.htmlApi.readFile(pending) : (seed ?? '')
+        const seed = pending || recovered ? null : ((await window.htmlApi.takeSeed?.()) ?? null)
+        const raw = recovered
+          ? recovered.text
+          : pending
+            ? await window.htmlApi.readFile(pending)
+            : (seed ?? '')
         if (cancelled) return
         const doc = parseDocText(raw)
         envelopeRef.current = doc.envelope
@@ -362,8 +370,9 @@ export default function App() {
         setServedVersion(map0.version)
         setPath(pending)
         setText(doc.text)
-        // a seeded page is new and unsaved: nothing of it is on disk yet
-        setSavedText(seed !== null ? '' : doc.text)
+        // a seeded page is new and unsaved: nothing of it is on disk yet; a
+        // restored copy is unsaved work (the file on disk is untouched)
+        setSavedText(seed !== null || recovered ? '' : doc.text)
         setPreviewUrl(info.url)
         setStatus('ready')
       } catch (err) {
@@ -1675,6 +1684,23 @@ export default function App() {
       window.removeEventListener('blur', tick)
     }
   }, [autoSave, path, doSave, flushPending])
+
+  // crash-recovery copies: independent of AutoSave, the text a save would write
+  // now goes to the app data folder while there are unsaved changes
+  useEffect(() => {
+    const api = window.htmlApi
+    const write = api.writeRecoveryCopy?.bind(api)
+    if (!write) return
+    return startRecoveryCopies({
+      read: () => {
+        if (statusRef.current !== 'ready' || savingRef.current) return null
+        if (textRef.current === savedTextRef.current) return null
+        return serializeDocText({ text: textRef.current, envelope: envelopeRef.current })
+      },
+      write,
+      onFlushRequest: api.onRecoveryFlushRequest?.bind(api),
+    })
+  }, [])
 
   const aiDeps: HtmlAiDeps = {
     access: {
