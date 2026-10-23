@@ -203,7 +203,7 @@ import {
 import { isExternallyModified, type DiskFileState } from './external-change'
 import {
   docFormatOfPath,
-  isOdtPackage,
+  prepareRecoveryBytes,
   prepareSaveBytes,
   recoveryExtFor,
   withDocExtension,
@@ -3436,7 +3436,18 @@ function takeOpenDecision(wcId: number, filePath: string): 'restore' | 'original
  * does not offer the dropped edits back. Called before the tab is removed.
  */
 export function discardDocsRecovery(contents: WebContents): void {
-  docsRecovery.discard(contents.id, openDocByWc.get(contents.id) ?? null)
+  discardTabCopies(contents, openDocByWc.get(contents.id) ?? null)
+}
+
+/**
+ * Drop a tab's copies for "Don't Save" (or a discarding close), and tell its
+ * renderer: when the close does not go through after all (a quit cancelled
+ * at another tab) the document is still dirty, and its next tick must write a
+ * copy again even though nothing changed since the dropped one.
+ */
+function discardTabCopies(contents: WebContents, filePath: string | null): void {
+  docsRecovery.discard(contents.id, filePath)
+  if (!contents.isDestroyed()) contents.send('docs:recovery-copy-dropped')
 }
 
 /**
@@ -3450,8 +3461,14 @@ export function docsRecoveryIdentity(webContentsId: number): RecoveryIdentity | 
 /** docs renderers that have asked for their first document (they listen for docs:opened) */
 const bootedDocsRenderers = new Set<number>()
 
-/** restored untitled copies waiting for their tab's first document request */
-const pendingUntitledRecoveries = new Map<number, OpenFileResult & { bytes: Buffer }>()
+type UntitledRecoveryOpen = OpenFileResult & { bytes: Buffer }
+
+/**
+ * Restored untitled copies for tabs that have not asked for their first
+ * document yet. Registered before the copy is read, so a renderer that boots
+ * meanwhile waits for it (docs:consume-copy) instead of starting blank.
+ */
+const pendingUntitledRecoveries = new Map<number, Promise<UntitledRecoveryOpen | null>>()
 
 const recoveryNowWaiters = new Map<string, () => void>()
 
@@ -3483,6 +3500,9 @@ function writeDocsCopiesNow(): Promise<void> {
             recoveryNowWaiters.delete(token)
             resolve()
           })
+          // still open: a "Don't Save" answered before a cancelled quit must
+          // not let this tab's teardown drop the copy it writes now
+          docsRecovery.noteStillOpen(wc.id)
           try {
             wc.send('docs:write-recovery-now', token)
           } catch {
@@ -3526,6 +3546,24 @@ async function openDocsUntitledCopy(
   request: { copy: RecoveryIdentity; title: string; saveAsDefaultPath?: string },
 ): Promise<void> {
   if (contents.isDestroyed() || request.copy.kind !== 'docs') return
+  const loading = takeDocsUntitledCopy(contents, request)
+  if (!bootedDocsRenderers.has(contents.id)) {
+    // the renderer's first-document request takes it (whenever it comes)
+    pendingUntitledRecoveries.set(contents.id, loading)
+    await loading
+    return
+  }
+  const pending = await loading
+  if (!pending || contents.isDestroyed()) return
+  const { bytes, ...result } = pending
+  openResultFor(contents, { ...result, dataUrl: handOffBytes(bytes) })
+}
+
+/** read a copy into this tab's untitled slot: its open result, or null when it cannot be loaded */
+async function takeDocsUntitledCopy(
+  contents: WebContents,
+  request: { copy: RecoveryIdentity; title: string; saveAsDefaultPath?: string },
+): Promise<UntitledRecoveryOpen | null> {
   const ext: '.docx' | '.odt' =
     'filePath' in request.copy
       ? recoveryExtFor(request.copy.filePath)
@@ -3539,7 +3577,7 @@ async function openDocsUntitledCopy(
     ext,
     accept: (bytes) => !isEncryptedDocx(bytes),
   })
-  if (!taken || contents.isDestroyed()) return
+  if (!taken || contents.isDestroyed()) return null
   const suggested = request.saveAsDefaultPath ? basename(request.saveAsDefaultPath) : ''
   // the tab title the shell kept, else the one the copy was written under
   const title =
@@ -3548,7 +3586,7 @@ async function openDocsUntitledCopy(
     taken.identity.untitledId.slice(0, 8)
   const titled = docFormatOfPath(title) ? title : `${title}${ext}`
   const name = suggested && docFormatOfPath(suggested) ? suggested : titled
-  const pending = {
+  return {
     path: name,
     name,
     dataUrl: '',
@@ -3558,12 +3596,6 @@ async function openDocsUntitledCopy(
     ...(request.saveAsDefaultPath ? { saveAsDefaultPath: request.saveAsDefaultPath } : {}),
     bytes: taken.bytes,
   }
-  if (!bootedDocsRenderers.has(contents.id)) {
-    pendingUntitledRecoveries.set(contents.id, pending)
-    return
-  }
-  const { bytes, ...result } = pending
-  openResultFor(contents, { ...result, dataUrl: handOffBytes(bytes) })
 }
 
 /** what the shell calls for Word tabs when it restores, answers the launch list, or the OS ends */
@@ -3636,13 +3668,16 @@ async function loadDocx(
   let bytes = recovery.action === 'restore' ? recovery.bytes : plainBytes
   let recovered = recovery.action === 'restore'
   // recovery copies of a protected document are themselves encrypted (see
-  // docs:write-recovery); an unreadable copy falls back to the original
+  // docs:write-recovery); an unreadable copy falls back to the original. No
+  // tab holds that copy then: it waits as "later" for the next open of the
+  // file instead of staying undecided (which would judge every quit abnormal).
   if (encrypted && isEncryptedDocx(bytes)) {
     try {
       bytes = await decryptRecoveryCopy(wcId, filePath, bytes)
     } catch {
       bytes = plainBytes
       recovered = false
+      docsRecovery.restoreFailed(filePath)
     }
   }
   if (recovered && format === 'docx') await adoptLazyMediaHashes(bytes, filePath, wcId)
@@ -4539,12 +4574,16 @@ export function registerDocsIpc(): void {
     // the renderer asks this one last of its first-document queues: from now
     // on a document for it goes out as docs:opened
     bootedDocsRenderers.add(event.sender.id)
-    // a restored untitled recovery copy (crash recovery) comes first
-    const restored = pendingUntitledRecoveries.get(event.sender.id)
-    if (restored) {
+    // a restored untitled recovery copy (crash recovery) comes first, even
+    // while it is still being read
+    const restoring = pendingUntitledRecoveries.get(event.sender.id)
+    if (restoring) {
       pendingUntitledRecoveries.delete(event.sender.id)
-      const { bytes, ...result } = restored
-      return { ...result, dataUrl: handOffBytes(bytes) }
+      const restored = await restoring.catch(() => null)
+      if (restored && !event.sender.isDestroyed()) {
+        const { bytes, ...result } = restored
+        return { ...result, dataUrl: handOffBytes(bytes) }
+      }
     }
     const copy = pendingDocCopies.get(event.sender.id)
     pendingDocCopies.delete(event.sender.id)
@@ -4639,7 +4678,9 @@ export function registerDocsIpc(): void {
         // Commit immediately after the final await: intents received during
         // post-write bookkeeping are included, with no later async race.
         const passwordIntentPending = commitSavePassword(event.sender.id, passwordState, filePath)
-        docsRecovery.noteSaved(event.sender.id, [filePath], false)
+        // the saved path's copy, and the tab's untitled slot (an untitled
+        // write that crossed the document's first save) are stale now
+        docsRecovery.noteSaved(event.sender.id, [filePath])
         pushRecent(filePath)
         return {
           ok: true,
@@ -4680,20 +4721,28 @@ export function registerDocsIpc(): void {
         const result = await docsRecovery.writeCopy(
           wcId,
           untitled ? { untitledExt: format === 'odt' ? '.odt' : '.docx' } : { filePath },
-          () => {
-            // Recovery follows the current disk state, never the desired
-            // next-save password. Missing state for an encrypted disk file
-            // skips the tick so plaintext can never be written as its copy;
-            // so does a never-saved document with a password waiting for its
-            // first save (there is no file whose password reopening could ask).
-            // An ODT tab's copy is the ODT itself (the renderer patched it like
-            // a save), so restoring and saving it keeps the format; docx bytes
-            // are never accepted for an ODT document.
-            const plain = Buffer.from(data)
-            if (format === 'odt') return isOdtPackage(plain) ? plain : null
-            if (untitled) return snapshotDocPassword(wcId, null).password === null ? plain : null
-            return prepareRecoveryDocx(wcId, filePath, plain)
-          },
+          // Runs after the write ticket is taken: a save landing while the
+          // pictures are inlined still wins. The copy is what a save would
+          // write (lazily served pictures inlined), so it stands on its own
+          // when the opened file is gone. Recovery follows the current disk
+          // state, read after that wait, never the desired next-save
+          // password. Missing state for an encrypted disk file skips the tick
+          // so plaintext can never be written as its copy; so does a
+          // never-saved document with a password waiting for its first save
+          // (there is no file whose password reopening could ask). An ODT
+          // tab's copy is the ODT itself (the renderer patched it like a
+          // save), so restoring and saving it keeps the format; docx bytes
+          // are never accepted for an ODT document.
+          () =>
+            prepareRecoveryBytes(format, Buffer.from(data), {
+              materialize: materializeLazyDocx,
+              protect: (plain) =>
+                untitled
+                  ? snapshotDocPassword(wcId, null).password === null
+                    ? plain
+                    : null
+                  : prepareRecoveryDocx(wcId, filePath, plain),
+            }),
           untitled ? title : basename(filePath),
         )
         return { ok: result === 'written' }
@@ -4888,11 +4937,7 @@ export function registerDocsIpc(): void {
         // the edits now live in the picked file: the source document's copy (or
         // its untitled copy when it had no file) and any copy of the target go
         const source = typeof sourcePath === 'string' && sourcePath ? sourcePath : null
-        docsRecovery.noteSaved(
-          event.sender.id,
-          source ? [filePath, source] : [filePath],
-          source === null,
-        )
+        docsRecovery.noteSaved(event.sender.id, source ? [filePath, source] : [filePath])
         pushRecent(filePath)
         // the renderer has no path yet to match a rename notification against,
         // so the reply must carry the path it may save to next
@@ -4972,7 +5017,7 @@ export function registerDocsIpc(): void {
       }
       const passwordIntentPending = commitSavePassword(event.sender.id, passwordState, filePath)
       // the first save of a never-saved document: its untitled copy is stale
-      docsRecovery.noteSaved(event.sender.id, [filePath], true)
+      docsRecovery.noteSaved(event.sender.id, [filePath])
       pushRecent(filePath)
       const savedPath = notifyFileSaved(event.sender, filePath)
       return {
@@ -5038,9 +5083,13 @@ export function registerDocsIpc(): void {
         pointLazyMediaAt(hashes, filePath, event.sender.id, encrypted ? plain : undefined)
         if (tornDownWcIds.has(event.sender.id)) return rollback()
         const passwordIntentPending = commitSavePassword(event.sender.id, passwordState, filePath)
-        // an MCP save of this tab: the saved path's copy, and the untitled one
-        // when the tab's document had no file yet, are stale now
-        docsRecovery.noteSaved(event.sender.id, [filePath], true)
+        // an MCP save of this tab: the saved path's copy, the copy of the path
+        // the tab leaves for it (like Save As), and its untitled one are stale
+        const previous = openDocByWc.get(event.sender.id) ?? null
+        docsRecovery.noteSaved(
+          event.sender.id,
+          previous && previous !== filePath ? [filePath, previous] : [filePath],
+        )
         pushRecent(filePath)
         rememberOpenDoc(event.sender.id, filePath)
         notifyFileSaved(event.sender, filePath)
@@ -6258,8 +6307,9 @@ async function performDocsClose(
         ? await dialog.showMessageBox(parent, options)
         : await dialog.showMessageBox(options)
     if (response !== 0) return false
-    // closing anyway drops whatever the renderer still held, like Don't Save
-    docsRecovery.discard(contents.id, null)
+    // A hung renderer cannot save, and its last copy is the only record of
+    // its edits: keep it (set aside for later), as for a crashed tab
+    docsRecovery.abandon(contents.id, openDocByWc.get(contents.id) ?? null)
     return true
   }
   // autosave on (and has a path, already checked when the renderer reported): save silently and proceed; only prompt on failure
@@ -6284,7 +6334,7 @@ async function performDocsClose(
   if (response === 1) {
     // Explicitly discarded: also drop the recovery copies (the file's, or the
     // untitled document's) so nothing offers the dropped edits back
-    docsRecovery.discard(contents.id, state.filePath ?? null)
+    discardTabCopies(contents, state.filePath ?? null)
     return true
   }
   const saved = await requestRendererSave(contents)

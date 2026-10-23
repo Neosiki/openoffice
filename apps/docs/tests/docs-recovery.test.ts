@@ -217,7 +217,7 @@ describe('never-saved documents', () => {
   it('the first save drops the untitled copy', async () => {
     await recovery.writeCopy(TAB, { untitledExt: '.docx' }, () => Buffer.from('d'), 'U.docx')
     const untitled = recovery.untitledOf(TAB)!
-    recovery.noteSaved(TAB, [join(userFolder, 'saved.docx')], true)
+    recovery.noteSaved(TAB, [join(userFolder, 'saved.docx')])
     expect(recovery.store.copyInfo(untitled)).toBeNull()
     expect(recovery.untitledOf(TAB)).toBeNull()
   })
@@ -261,14 +261,14 @@ describe('deleting copies', () => {
   it("a save drops the saved path's copy, and a write that started before it never lands", async () => {
     const doc = userDoc('saving.docx')
     await write(TAB, doc, 'v1')
-    recovery.noteSaved(TAB, [doc], false)
+    recovery.noteSaved(TAB, [doc])
     expect(recovery.store.copyInfo(recovery.fileIdentity(doc))).toBeNull()
     // serialization was under way when the save landed
     const late = await recovery.writeCopy(
       TAB,
       { filePath: doc },
       () => {
-        recovery.noteSaved(TAB, [doc], false)
+        recovery.noteSaved(TAB, [doc])
         return Buffer.from('stale')
       },
       'saving.docx',
@@ -341,5 +341,96 @@ describe('deleting copies', () => {
     recovery.settleClosedDocument(OTHER_TAB, false)
     expect(recovery.store.copyInfo(recovery.fileIdentity(crashed))).not.toBeNull()
     expect(recovery.store.copyInfo(recovery.fileIdentity(unchecked))).not.toBeNull()
+  })
+
+  it('a save that lands while an async prepare runs (pictures inlined) wins', async () => {
+    const doc = userDoc('materializing.docx')
+    let release!: () => void
+    const gate = new Promise<void>((resolve) => (release = resolve))
+    const pending = recovery.writeCopy(
+      TAB,
+      { filePath: doc },
+      async () => {
+        await gate
+        return Buffer.from('full copy')
+      },
+      'materializing.docx',
+    )
+    recovery.noteSaved(TAB, [doc])
+    release()
+    expect(await pending).toBe('skipped')
+    expect(recovery.store.copyInfo(recovery.fileIdentity(doc))).toBeNull()
+    // without a save in between, the awaited bytes land
+    const written = await recovery.writeCopy(
+      TAB,
+      { filePath: doc },
+      async () => Buffer.from('full copy'),
+      'materializing.docx',
+    )
+    expect(written).toBe('written')
+    expect((await recovery.store.readCopy(recovery.fileIdentity(doc)))?.toString()).toBe(
+      'full copy',
+    )
+  })
+
+  it("any save drops the tab's untitled slot (a late untitled write after the first save)", async () => {
+    const doc = userDoc('first-saved.docx')
+    // a write the renderer sent before it learned of its first save's path
+    await recovery.writeCopy(TAB, { untitledExt: '.docx' }, () => Buffer.from('late'), 'U.docx')
+    const orphan = recovery.untitledOf(TAB)!
+    recovery.noteSaved(TAB, [doc])
+    expect(recovery.store.copyInfo(orphan)).toBeNull()
+    expect(recovery.untitledOf(TAB)).toBeNull()
+  })
+
+  it('"Close Anyway" on a hung tab keeps its copies, set aside for later', async () => {
+    const doc = userDoc('hung.docx')
+    const restored = userDoc('restored-hung.docx')
+    await write(TAB, doc, 'hung edits')
+    await recovery.writeCopy(TAB, { untitledExt: '.docx' }, () => Buffer.from('u'), 'U.docx')
+    const untitled = recovery.untitledOf(TAB)!
+    // a copy this tab loaded but never rewrote (restored, then it hung)
+    await write(OTHER_TAB, restored, 'restored copy')
+    recovery.store.markCopyLoaded(recovery.fileIdentity(restored))
+    recovery.abandon(TAB, restored)
+    recovery.settleClosedDocument(TAB, false)
+    expect(recovery.store.copyInfo(recovery.fileIdentity(doc))?.state).toBe('later')
+    expect(recovery.store.copyInfo(untitled)?.state).toBe('later')
+    expect(recovery.store.copyInfo(recovery.fileIdentity(restored))?.state).toBe('later')
+    // nothing undecided is left behind for the next quit's judgment
+    expect(recovery.store.hasUnresolvedCopies()).toBe(false)
+  })
+
+  it('a hung tab whose earlier answer was clean still keeps its copies', async () => {
+    const doc = userDoc('hung-clean.docx')
+    await write(TAB, doc, 'edits')
+    recovery.noteCloseCheck(TAB, false)
+    recovery.abandon(TAB, doc)
+    recovery.settleClosedDocument(TAB, false)
+    expect(recovery.store.copyInfo(recovery.fileIdentity(doc))).not.toBeNull()
+  })
+
+  it('a copy that could not be loaded (fell back to the file) is set aside for later', async () => {
+    const doc = userDoc('unreadable.docx')
+    await write(TAB, doc, 'encrypted under another password')
+    const restored = await open(doc, 'restore')
+    expect(restored.action).toBe('restore')
+    expect(recovery.store.copyInfo(recovery.fileIdentity(doc))?.state).toBe('undecided')
+    recovery.restoreFailed(doc)
+    expect(recovery.store.copyInfo(recovery.fileIdentity(doc))?.state).toBe('later')
+    expect(recovery.store.hasUnresolvedCopies()).toBe(false)
+  })
+
+  it('a tab still open after "Don\'t Save" (the quit was cancelled) keeps its new copy at shutdown', async () => {
+    const doc = userDoc('quit-cancelled.docx')
+    await write(TAB, doc, 'dropped')
+    recovery.discard(TAB, doc)
+    // the quit was cancelled at another tab: this one stays open and copies again
+    await write(TAB, doc, 'still unsaved')
+    // the OS ends the session: the live tab writes its copy, then is torn down
+    markAppShuttingDown()
+    recovery.noteStillOpen(TAB)
+    recovery.settleClosedDocument(TAB, false)
+    expect(recovery.store.copyInfo(recovery.fileIdentity(doc))).not.toBeNull()
   })
 })
