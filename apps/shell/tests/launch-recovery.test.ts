@@ -44,6 +44,7 @@ function copy(overrides: Partial<LaunchCopy> & { identity: RecoveryIdentity }): 
     state: 'undecided',
     fileChangedAfterCopy: false,
     originalMissing: false,
+    originalPath: null,
     ...overrides,
   }
 }
@@ -250,6 +251,19 @@ describe('planLaunch: the launch decision matrix', () => {
     expect(p.restoreRun).toBe(true)
   })
 
+  it("shows the original's folder for an untitled copy that names its file (a CSV's)", () => {
+    const csv = { kind: 'sheets' as const, untitledId: 'u-csv-1', ext: '.xlsx' }
+    const p = plan({
+      copies: [copy({ identity: csv, title: 'data.csv', originalPath: file('data.csv') })],
+    })
+    expect(p.items[0]).toMatchObject({
+      name: 'data.csv',
+      folder: DIR,
+      untitled: true,
+      originalMissing: false,
+    })
+  })
+
   it('marks a missing original on its row', () => {
     const p = plan({ copies: [copy({ identity: docA, originalMissing: true })] })
     expect(p.items[0]).toMatchObject({ originalMissing: true, untitled: false })
@@ -370,6 +384,34 @@ describe('resolveLaunchDecisions: applying the list', () => {
     // nothing was in front: the first restored document comes forward
     expect(out.front).toBe(out.append[0].key)
     expect(out.splitMemoryOrHome).toBe(false)
+  })
+
+  it("a restored untitled copy of a CSV offers the original's path as its first Save As", () => {
+    const csv = { kind: 'sheets' as const, untitledId: 'u-csv-2', ext: '.xlsx' }
+    const kept = { kind: 'sheets' as const, untitledId: 'u-csv-3', ext: '.xlsx' }
+    const csvCopy = copy({ identity: csv, title: 'data.csv', originalPath: file('data.csv') })
+    const keptCopy = copy({ identity: kept, title: 'old.tsv', originalPath: file('old.tsv') })
+    // one was a tab when the app ended (an untitled tab of its own), one was not
+    const p = plan({
+      previous: record({
+        tabs: [
+          { kind: 'sheets', title: 'old.tsv', untitled: { untitledId: 'u-csv-3', ext: '.xlsx' } },
+        ],
+      }),
+      copies: [csvCopy, keptCopy],
+    })
+    const inStrip = p.tabs[0]
+    expect(inStrip.open).toEqual({
+      type: 'untitledCopy',
+      copy: kept,
+      saveAsDefaultPath: file('old.tsv'),
+    })
+    const out = resolveLaunchDecisions(p, {
+      decisions: { [idOf(p, csv)]: 'restore', [idOf(p, kept)]: 'restore' },
+    })
+    expect(out.append.map((t) => [t.title, t.open])).toEqual([
+      ['data.csv', { type: 'untitledCopy', copy: csv, saveAsDefaultPath: file('data.csv') }],
+    ])
   })
 
   it('after a normal exit with the list, an untouched launch falls back to today flow', () => {

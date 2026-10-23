@@ -43,6 +43,7 @@ export type LaunchCopy = Pick<
   | 'state'
   | 'fileChangedAfterCopy'
   | 'originalMissing'
+  | 'originalPath'
 >
 
 export interface LaunchCopySource {
@@ -106,6 +107,25 @@ export function recoveryIdentityKey(identity: RecoveryIdentity): string {
   return 'filePath' in identity
     ? `${identity.kind}\u0000file\u0000${identity.filePath}`
     : `${identity.kind}\u0000untitled\u0000${identity.untitledId}`
+}
+
+/**
+ * The path an untitled copy opens with as its first Save As: the old path of
+ * a copy whose original is gone, or the file an untitled copy came from (a
+ * CSV or converted workbook). Undefined for a plain untitled document.
+ */
+function saveAsDefaultOf(copy: LaunchCopy): string | undefined {
+  return copy.filePath ?? copy.originalPath ?? undefined
+}
+
+/** an untitled copy opened from `copy`, with its first Save As when it has one */
+function untitledOpen(copy: LaunchCopy): PlannedOpen {
+  const saveAsDefaultPath = saveAsDefaultOf(copy)
+  return {
+    type: 'untitledCopy',
+    copy: copy.identity,
+    ...(saveAsDefaultPath ? { saveAsDefaultPath } : {}),
+  }
 }
 
 function rowName(copy: LaunchCopy, fallback: string | undefined): string {
@@ -174,12 +194,7 @@ export function planLaunch(input: PlanLaunchInput): LaunchPlan {
       // an untitled document without its copy has nothing to come back with
       if (!copy) return
       untitledTitles.set(recoveryIdentityKey(identity), tab.title)
-      tabs.push({
-        key,
-        kind: tab.kind,
-        title: tab.title,
-        open: { type: 'untitledCopy', copy: copy.identity },
-      })
+      tabs.push({ key, kind: tab.kind, title: tab.title, open: untitledOpen(copy) })
       keyByIndex.set(index, key)
     })
     if (launchPaths.length === 0) {
@@ -199,7 +214,12 @@ export function planLaunch(input: PlanLaunchInput): LaunchPlan {
       id,
       editorKind: copy.kind,
       name: rowName(copy, untitledTitles.get(recoveryIdentityKey(copy.identity))),
-      folder: copy.filePath ? dirname(copy.filePath) : null,
+      // an untitled copy of a CSV or converted workbook shows where that file is
+      folder: copy.filePath
+        ? dirname(copy.filePath)
+        : copy.originalPath
+          ? dirname(copy.originalPath)
+          : null,
       lastCopyTime: copy.writtenAt,
       untitled: copy.filePath === null,
       fileChangedAfterCopy: copy.fileChangedAfterCopy,
@@ -238,16 +258,9 @@ export interface LaunchOutcome {
 }
 
 function untitledTabFor(key: string, copy: LaunchCopy, title: string): PlannedTab {
-  if (copy.filePath !== null) {
-    // the original is gone: the copy opens untitled, its old path is the first Save As
-    return {
-      key,
-      kind: copy.kind,
-      title: basename(copy.filePath),
-      open: { type: 'untitledCopy', copy: copy.identity, saveAsDefaultPath: copy.filePath },
-    }
-  }
-  return { key, kind: copy.kind, title, open: { type: 'untitledCopy', copy: copy.identity } }
+  // a file copy here has lost its original: it opens untitled under the old file name
+  const name = copy.filePath !== null ? basename(copy.filePath) : title
+  return { key, kind: copy.kind, title: name, open: untitledOpen(copy) }
 }
 
 /**
@@ -255,7 +268,8 @@ function untitledTabFor(key: string, copy: LaunchCopy, title: string): PlannedTa
  *
  * - restore: the copy is "restore-chosen" (its tab opens it without asking);
  *   an untitled copy gets its tab; a copy whose original is gone opens as an
- *   untitled document with the old path as the first Save As.
+ *   untitled document with the old path as the first Save As, and so does an
+ *   untitled copy that names the file it came from (a CSV's, in Excel).
  * - discard: the copy goes; a file tab opens the saved file; an untitled
  *   copy gets no tab.
  * - a dismissed list, or a row without a choice: "later" for that row;

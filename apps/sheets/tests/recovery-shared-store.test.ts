@@ -7,7 +7,15 @@
  * spreadsheet engine and the archive writer are stubs; the files are real.
  */
 import { createHash } from 'node:crypto'
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs'
 import { readFile, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { basename, join } from 'node:path'
@@ -17,6 +25,7 @@ import {
   isAppShuttingDown,
   recoveryEditor,
   resetAppShuttingDown,
+  type RecoveryCopyInfo,
   type RecoveryStore,
 } from '@genoffice/electron-utils'
 import { encryptOoxml } from '@genoffice/electron-utils/office-encryption'
@@ -80,6 +89,9 @@ function fakeContents(): FakeContents {
 /** the answer the fake message box gives (0 = restore, 1 = discard) */
 const dialogAnswer = { value: 0 }
 const messageBoxes: { message?: string; detail?: string; cancelId?: number }[] = []
+/** where the fake Save As dialog saves, and the suggestions it was shown */
+const saveDialogAnswer = { value: '' }
+const saveDialogs: { defaultPath?: string }[] = []
 
 vi.mock('electron', () => ({
   app: {
@@ -114,6 +126,10 @@ vi.mock('electron', () => ({
       const options = args.at(-1) as { message?: string; detail?: string; cancelId?: number }
       messageBoxes.push(options)
       return { response: dialogAnswer.value }
+    },
+    showSaveDialog: async (...args: unknown[]) => {
+      saveDialogs.push(args.at(-1) as { defaultPath?: string })
+      return { canceled: false, filePath: saveDialogAnswer.value }
     },
   },
   net: {},
@@ -291,6 +307,8 @@ beforeEach(() => {
   store = createRecoveryStore({ userDataDir: userDataDirRef.value })
   dialogAnswer.value = 0
   messageBoxes.length = 0
+  saveDialogs.length = 0
+  saveDialogAnswer.value = ''
   openedBytes.length = 0
   resetSheetsShuttingDown()
   resetAppShuttingDown()
@@ -523,6 +541,119 @@ describe('untitled workbooks', () => {
     expect(listSheetsUntitledCopies().map((c) => c.untitledId)).toEqual([copy!.untitledId])
     expect(readFileSync(copy!.copyPath).toString()).toBe('blank-saved-saved')
   })
+})
+
+describe('CSV and converted workbooks', () => {
+  const CSV_TEXT = 'a,b\n1,2\n'
+  const TSV_TEXT = 'a\tb\n'
+
+  function writeDelimited(name = 'data.csv', text = CSV_TEXT): string {
+    const path = join(dir, name)
+    writeFileSync(path, text)
+    return path
+  }
+
+  it('a CSV edit keeps an untitled .xlsx copy named like the file; the CSV is untouched', async () => {
+    const path = writeDelimited()
+    const tab = newTab()
+    const opened = await openWorkbook(tab, path)
+
+    expect(await writeRecovery(tab, opened.sessionId)).toBe(true)
+
+    const copies = listSheetsUntitledCopies()
+    expect(copies).toHaveLength(1)
+    expect(copies[0]?.title).toBe('data.csv')
+    expect(copies[0]?.originalPath).toBe(path)
+    expect(copies[0]?.identity).toMatchObject({ kind: 'sheets', ext: '.xlsx' })
+    expect(copies[0]?.copyPath.startsWith(recoveryDir())).toBe(true)
+    // no copy keyed by the CSV's path, and nothing new beside it
+    expect(existsSync(fileCopyPath(path))).toBe(false)
+    expect(readFileSync(path, 'utf8')).toBe(CSV_TEXT)
+    expect(readdirSync(dir)).toEqual(['data.csv'])
+
+    // the next tick replaces the same copy
+    expect(await writeRecovery(tab, opened.sessionId)).toBe(true)
+    expect(listSheetsUntitledCopies().map((c) => c.untitledId)).toEqual([copies[0]?.untitledId])
+  })
+
+  it('a converted .tsv gets the same kind of copy', async () => {
+    const path = writeDelimited('table.tsv', TSV_TEXT)
+    const tab = newTab()
+    const opened = await openWorkbook(tab, path)
+
+    expect(await writeRecovery(tab, opened.sessionId)).toBe(true)
+
+    const [copy] = listSheetsUntitledCopies()
+    expect(copy?.title).toBe('table.tsv')
+    expect(copy?.originalPath).toBe(path)
+    expect(readFileSync(path, 'utf8')).toBe(TSV_TEXT)
+  })
+
+  it('saving the CSV in place removes the copy', async () => {
+    const path = writeDelimited()
+    const tab = newTab()
+    const opened = await openWorkbook(tab, path)
+    await writeRecovery(tab, opened.sessionId)
+    expect(listSheetsUntitledCopies()).toHaveLength(1)
+
+    const saved = (await call(tab, IPC_CHANNELS.saveWorkbook, {
+      ...(saveRequest(opened.sessionId) as object),
+      csvContent: 'edited,b\n1,2\n',
+    })) as { canceled: boolean }
+
+    expect(saved.canceled).toBe(false)
+    expect(listSheetsUntitledCopies()).toEqual([])
+  })
+
+  async function leaveCsvCopy(): Promise<{ path: string; copy: RecoveryCopyInfo }> {
+    const path = writeDelimited()
+    const tab = newTab()
+    const opened = await openWorkbook(tab, path)
+    await writeRecovery(tab, opened.sessionId)
+    const [copy] = listSheetsUntitledCopies()
+    return { path, copy: copy! }
+  }
+
+  for (const route of ['launch list', 'crashed tab'] as const) {
+    it(`restoring (${route}) opens it untitled; the first save suggests the original's folder and name`, async () => {
+      const { path, copy } = await leaveCsvCopy()
+      const tab = newTab()
+      await recoveryEditor('sheets')!.openUntitledCopy(tab as never, {
+        copy: copy.identity,
+        title: copy.title,
+        // the launch list passes the original path; a crashed tab's reopen does not
+        ...(route === 'launch list' ? { saveAsDefaultPath: path } : {}),
+      })
+      const reopened = await openQueued(tab)
+
+      expect(messageBoxes).toHaveLength(0)
+      expect(reopened.unsavedNew).toBe(true)
+      expect(sheetsPendingEditCount(tab.id)).toBeGreaterThan(0)
+      // its copy keeps the file's name and path while it is unsaved
+      await writeRecovery(tab, reopened.sessionId)
+      const [again] = listSheetsUntitledCopies()
+      expect(again?.untitledId).toBe(copy.untitledId)
+      expect(again?.title).toBe('data.csv')
+      expect(again?.originalPath).toBe(path)
+
+      const target = join(dir, 'data.xlsx')
+      saveDialogAnswer.value = target
+      const saved = (await call(
+        tab,
+        IPC_CHANNELS.saveWorkbook,
+        saveRequest(reopened.sessionId),
+      )) as {
+        canceled: boolean
+      }
+
+      expect(saved.canceled).toBe(false)
+      // the suggestion the CSV session itself would have made
+      expect(saveDialogs.at(-1)?.defaultPath).toBe(target)
+      expect(existsSync(target)).toBe(true)
+      expect(listSheetsUntitledCopies()).toEqual([])
+      expect(readFileSync(path, 'utf8')).toBe(CSV_TEXT)
+    })
+  }
 })
 
 describe('password workbooks', () => {

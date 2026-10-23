@@ -711,9 +711,9 @@ export function App({
   useEffect(() => {
     const writeCopy = async (): Promise<void> => {
       const state = lazyWorkbookRef.current
-      // The in-cell editor's pending text is not in the journal yet, and a
-      // converted import has no original file to recover into. Which copy a
-      // session writes (if any) is the main process's call.
+      // The in-cell editor's pending text is not in the journal yet. Which copy
+      // a session writes (if any) is the main process's call: a CSV or
+      // converted import writes an untitled one.
       if (
         !state ||
         !shouldRunSaveTick({
