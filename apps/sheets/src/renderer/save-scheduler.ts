@@ -43,15 +43,13 @@ export interface SaveTickState {
   /** CSV sessions: AutoSave would silently flatten the user's file */
   isCsv: boolean
   kind: 'save' | 'recovery'
-  /** recovery-only: the session is backed by the recovery copy itself */
-  restoredFromRecovery: boolean
-  /** recovery-only: the user declined recovery for this workbook */
+  /** recovery-only: this workbook writes no recovery copy (password, oversized sheets) */
   automaticRecoveryDisabled: boolean
 }
 
 export function shouldRunSaveTick(s: SaveTickState): boolean {
   if (s.saveInFlight || !s.hasWorkbook || s.journalEmpty) return false
   if (s.editingCell || s.needsSaveAsNotUnsavedNew || s.isCsv) return false
-  if (s.kind === 'recovery' && (s.restoredFromRecovery || s.automaticRecoveryDisabled)) return false
+  if (s.kind === 'recovery' && s.automaticRecoveryDisabled) return false
   return true
 }
