@@ -137,6 +137,54 @@ export {
   type TemplateFontsHost,
 } from './template-fonts-dir'
 export {
+  RECOVERY_COPY_MAX_AGE_MS,
+  RECOVERY_EDITOR_KINDS,
+  createRecoveryStore,
+  isAppShuttingDown,
+  isUntitledIdentity,
+  markAppShuttingDown,
+  newUntitledRecoveryId,
+  recoveryFolderName,
+  recoveryRunId,
+  resetAppShuttingDown,
+  type RecoveryCopyFilter,
+  type RecoveryCopyInfo,
+  type RecoveryCopyState,
+  type RecoveryDeleteReason,
+  type RecoveryEditorKind,
+  type RecoveryFileIdentity,
+  type RecoveryIdentity,
+  type RecoveryLaunchDecision,
+  type RecoveryOpenPlan,
+  type RecoveryStore,
+  type RecoveryStoreOptions,
+  type RecoveryUntitledIdentity,
+  type RecoveryWriteResult,
+  type RecoveryWriteTicket,
+} from './recovery-store'
+export {
+  promptRecoveryForFile,
+  resolveRecoveryOnOpen,
+  type RecoveryMessageBox,
+  type RecoveryOpenResult,
+  type RecoveryPromptOptions,
+  type ResolveRecoveryOnOpenOptions,
+} from './recovery-prompt'
+export {
+  RECOVERY_PROMPT_STRINGS,
+  recoveryPromptLabels,
+  unprotectableNoticeText,
+  type RecoveryPromptLabels,
+} from './recovery-labels'
+export {
+  recoveryEditor,
+  recoveryEditors,
+  registerRecoveryEditor,
+  type RecoveryEditorContract,
+  type RecoveryOpenFileRequest,
+  type RecoveryOpenUntitledRequest,
+} from './recovery-contract'
+export {
   confirmOverwriteIfConflicted,
   isModifiedSince,
   isPathOpenElsewhere,
