@@ -604,4 +604,7 @@ export const ja = {
   appOdtLabelObject: 'オブジェクト（Hancom で表示）',
   appOdtLabelNotice:
     'ラベル付きの枠で描かれたオブジェクトは、Hancom Office での表示と異なる場合があります。',
+  appMergeSourceLoaded: '{name}（{n} 件）を読み込みました',
+  appMergeWritten: '{n} 個のドキュメントを書き出しました',
+  appMergeNothingToWrite: '書き出すものがありません',
 } satisfies Record<keyof typeof zh, string>

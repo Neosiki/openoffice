@@ -60,6 +60,7 @@ export default defineConfig({
         '../../packages/ui/src/ai-subscription-login-window.ts',
       ),
       '@genoffice/ui': local('../../packages/ui/src/index.ts'),
+      '@genoffice/xlsx-gateway/*': local('../../packages/xlsx-gateway/src/*'),
     },
   },
   test: {

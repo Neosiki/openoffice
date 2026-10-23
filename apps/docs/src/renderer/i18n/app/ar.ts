@@ -572,4 +572,7 @@ export const ar = {
   appOdtLabelObject: 'كائن (يظهر في Hancom)',
   appOdtLabelNotice:
     'قد تبدو الكائنات المرسومة كمربعات معنونة مختلفة عن طريقة عرضها في Hancom Office.',
+  appMergeSourceLoaded: 'تم تحميل {name} ({n} سجلًا)',
+  appMergeWritten: 'تمت كتابة {n} مستندًا',
+  appMergeNothingToWrite: 'لا يوجد ما يكتب',
 } satisfies Record<keyof typeof zh, string>

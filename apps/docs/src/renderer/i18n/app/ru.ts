@@ -585,4 +585,7 @@ export const ru = {
   appOdtLabelObject: 'Объект (виден в Hancom)',
   appOdtLabelNotice:
     'Объекты, нарисованные как подписанные рамки, могут выглядеть иначе, чем в Hancom Office.',
+  appMergeSourceLoaded: 'Загружено {name} (записей: {n})',
+  appMergeWritten: 'Записано документов: {n}',
+  appMergeNothingToWrite: 'Нечего записывать',
 } satisfies Record<keyof typeof zh, string>

@@ -581,4 +581,7 @@ export const id = {
   appOdtLabelObject: 'Objek (tampil di Hancom)',
   appOdtLabelNotice:
     'Objek yang digambar sebagai kotak berlabel mungkin terlihat berbeda dari tampilannya di Hancom Office.',
+  appMergeSourceLoaded: '{name} dimuat ({n} record)',
+  appMergeWritten: '{n} dokumen ditulis',
+  appMergeNothingToWrite: 'Tidak ada yang ditulis',
 } satisfies Record<keyof typeof zh, string>
