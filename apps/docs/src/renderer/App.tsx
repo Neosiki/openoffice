@@ -317,6 +317,7 @@ import {
   type ContextMenuState,
 } from './components/ContextMenu'
 import { RedactDialog } from './editor/RedactDialog'
+import type { FontDialogTab } from './components/FontDialog'
 import {
   CellMarginsDialog,
   DeleteCellsDialog,
@@ -1154,6 +1155,11 @@ export function App() {
   useEffect(() => window.desktop.onViewImage?.((src) => setViewImage(src)), [])
   const saveImageAs = useCallback((src: string) => void window.desktop.saveImageAs(src), [])
   const [showFontDialog, setShowFontDialog] = useState(false)
+  const [fontDialogTab, setFontDialogTab] = useState<FontDialogTab>('font')
+  const openFontDialog = useCallback((tab: FontDialogTab) => {
+    setFontDialogTab(tab)
+    setShowFontDialog(true)
+  }, [])
   const [showParaDialog, setShowParaDialog] = useState(false)
   /** label the reader gives a span they are withholding from the model */
   const [redactTarget, setRedactTarget] = useState<{
@@ -5504,7 +5510,7 @@ export function App() {
       // Word dialog shortcuts: Font ⌘D / Paragraph ⌥⌘M / Hyperlink ⌘K
       if ((e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey && e.key === 'd' && doc && canEdit) {
         e.preventDefault()
-        setShowFontDialog(true)
+        openFontDialog('font')
       }
       if ((e.metaKey || e.ctrlKey) && e.altKey && e.code === 'KeyM' && doc && canEdit) {
         e.preventDefault()
@@ -5800,7 +5806,7 @@ export function App() {
           }
           break
         case 'font-dialog':
-          if (doc) setShowFontDialog(true)
+          if (doc) openFontDialog('font')
           break
         case 'paragraph-dialog':
           if (doc) setShowParaDialog(true)
@@ -6763,6 +6769,7 @@ export function App() {
     },
     onListDialog: (kind: ListDialogKind) => setListDialog(kind),
     onParagraphDialog: () => setShowParaDialog(true),
+    onFontDialog: () => openFontDialog('advanced'),
     onPasteDefaults: () => setShowAutoCorrect(true),
     onTableDialog: (kind: TableDialogKind) => {
       if (
@@ -8001,7 +8008,7 @@ export function App() {
           editor={editor}
           menu={ctxMenu}
           onClose={() => setCtxMenu(null)}
-          onFontDialog={() => setShowFontDialog(true)}
+          onFontDialog={() => openFontDialog('font')}
           onParagraphDialog={() => setShowParaDialog(true)}
           onLink={() => setShowLinkModal(true)}
           onNewComment={startNewComment}
@@ -8043,7 +8050,11 @@ export function App() {
         />
       )}
       {doc && showFontDialog && (
-        <FontDialog editor={editor} onClose={() => setShowFontDialog(false)} />
+        <FontDialog
+          editor={editor}
+          initialTab={fontDialogTab}
+          onClose={() => setShowFontDialog(false)}
+        />
       )}
       {doc && showParaDialog && (
         <ParagraphDialog
