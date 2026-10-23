@@ -472,6 +472,9 @@ export declare function syncStyleList(
   styles: { id: number; name: string }[],
 ): boolean
 
+/** The event the plugin fires on the editor's window when the unsaved state changes; `detail` is the new state. */
+export declare const DIRTY_EVENT: 'ieum:dirty-changed'
+
 export type AgentNoteKind = 'footnote' | 'endnote'
 
 /** One footnote or endnote of the body, as listNotes lists it. */

@@ -32,7 +32,8 @@
       "0011-inherit-master-page-from-previous-section.patch",
       "0012-delete-style-remaps-all-paragraphs.patch",
       "0013-restyle-per-attribute-everywhere.patch",
-      "0013-page-number-pos-insert.patch"
+      "0013-page-number-pos-insert.patch",
+      "0012-canvas-metric-requests-without-advances.patch"
     ],
     "wasmPack": "0.15.0",
     "wasmSha256": "2b890012fc1d11fada9c646114575677b9d961a8256d4b0ecc624accde74ff65"
