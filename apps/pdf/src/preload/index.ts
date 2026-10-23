@@ -276,6 +276,13 @@ const api: PdfApi = {
     return () => ipcRenderer.removeListener(PDF_CHANNELS.recoveryFlushRequest, listener)
   },
   sendRecoveryFlushDone: () => ipcRenderer.send(PDF_CHANNELS.recoveryFlushDone),
+  onRecoveryDropped: (handler) => {
+    const listener = (_e: Electron.IpcRendererEvent, dropped: boolean) => handler(dropped === true)
+    ipcRenderer.on(PDF_CHANNELS.recoveryDropped, listener)
+    return () => ipcRenderer.removeListener(PDF_CHANNELS.recoveryDropped, listener)
+  },
+  resumeRecoveryCopies: () =>
+    (ipcRenderer.invoke(PDF_CHANNELS.recoveryResume) as Promise<void>).catch(() => undefined),
   getLanguage: () => ipcRenderer.invoke(PDF_CHANNELS.getLanguage),
   onLanguageChanged: (handler) => {
     const listener = (_e: Electron.IpcRendererEvent, lang: Lang) => handler(lang)

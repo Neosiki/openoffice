@@ -1216,11 +1216,19 @@ export async function pdfBytesWithEdits(
   sourcePath: string,
   request: SavePdfRequest,
 ): Promise<Uint8Array> {
+  return pdfBytesWithEditsOf(new Uint8Array(await readFile(sourcePath)), request)
+}
+
+/**
+ * `pdfBytesWithEdits` over the file's bytes already read (a recovery copy
+ * checks them before the edits are applied): the same result, edits or not.
+ */
+export async function pdfBytesWithEditsOf(
+  fileBytes: Uint8Array,
+  request: SavePdfRequest,
+): Promise<Uint8Array> {
   const { redactions: _redactions, ...ordinary } = request
-  const { bytes, ...skips } = await applySaveRequest(
-    new Uint8Array(await readFile(sourcePath)),
-    ordinary,
-  )
+  const { bytes, ...skips } = await applySaveRequest(fileBytes, ordinary)
   await verifyContentEdits(bytes, ordinary, skips)
   return bytes
 }

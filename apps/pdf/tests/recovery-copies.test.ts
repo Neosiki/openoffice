@@ -6,7 +6,15 @@
  * file again asks before anything is read, and a restored tab shows the copy,
  * keeps the original path and leaves the original alone until it is saved.
  */
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  utimesSync,
+  writeFileSync,
+} from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -21,6 +29,8 @@ interface FakeWebContents {
   id: number
   listeners: Map<string, () => void>
   sent: string[]
+  sentArgs: [string, ...unknown[]][]
+  onSend: ((channel: string, ...args: unknown[]) => void) | null
   reloads: number
   destroyed: boolean
   once: (event: string, handler: () => void) => void
@@ -29,7 +39,7 @@ interface FakeWebContents {
   loadURL: () => void
   isDestroyed: () => boolean
   reload: () => void
-  send: (channel: string) => void
+  send: (channel: string, ...args: unknown[]) => void
 }
 
 let nextWcId = 1
@@ -40,6 +50,8 @@ function makeFakeWebContents(): FakeWebContents {
     id: nextWcId++,
     listeners,
     sent: [],
+    sentArgs: [],
+    onSend: null,
     reloads: 0,
     destroyed: false,
     once: (event, handler) => void listeners.set(event, handler),
@@ -50,8 +62,10 @@ function makeFakeWebContents(): FakeWebContents {
     reload: () => {
       wc.reloads += 1
     },
-    send: (channel) => {
+    send: (channel, ...args) => {
       wc.sent.push(channel)
+      wc.sentArgs.push([channel, ...args])
+      wc.onSend?.(channel, ...args)
     },
   }
   return wc
@@ -96,9 +110,11 @@ import {
   configurePdfRuntime,
   createPdfView,
   markPdfUntitledCopy,
+  pdfCloseCancelled,
   requestPdfClose,
   setPdfRecoveryStore,
 } from '../src/main/pdf-main'
+import { createPdfRecovery } from '../src/main/pdf-recovery'
 import { pdfBytesWithEdits, savePdfToPath } from '../src/main/save-pdf'
 import { PDF_CHANNELS } from '../src/shared/ipc'
 import type { SavePdfRequest, SavePdfResult } from '../src/shared/ipc'
@@ -411,5 +427,190 @@ describe('untitled documents', () => {
     expect(await writeCopy(view, editedRequest(working))).toBe('written')
     expect(store.copyInfo(fileIdentity(working))).toBeNull()
     expect(store.listCopies({ untitled: true })).toHaveLength(1)
+  })
+})
+
+describe('"Don\'t Save" while the window is still closing', () => {
+  /** a dirty tab with a copy whose close prompt was answered "Don't Save" */
+  async function droppedView(path: string): Promise<FakeWebContents> {
+    const wc = await openedView(path)
+    expect(await writeCopy(wc, editedRequest(path))).toBe('written')
+    setDirty(wc, true)
+    showMessageBox.mockResolvedValueOnce({ response: 1 })
+    expect(await requestPdfClose(wc as never)).toBe(true)
+    expect(store.copyInfo(fileIdentity(path))).toBeNull()
+    return wc
+  }
+
+  it('writes no new copy and drops a late one when the tab goes', async () => {
+    const path = await makePdfFile()
+    const wc = await droppedView(path)
+    expect(wc.sentArgs).toContainEqual([PDF_CHANNELS.recoveryDropped, true])
+
+    // the renderer's round lands while prompts for other tabs are still open
+    expect(await writeCopy(wc, editedRequest(path))).toBe('superseded')
+    expect(store.copyInfo(fileIdentity(path))).toBeNull()
+
+    // a copy that slipped in anyway is deleted when the dirty tab goes
+    await store.writeCopy(fileIdentity(path), await pdfBytes(), { title: 'document.pdf' })
+    wc.listeners.get('destroyed')!()
+    expect(store.copyInfo(fileIdentity(path))).toBeNull()
+  })
+
+  it('drops the late copy even while the app is ending', async () => {
+    const path = await makePdfFile()
+    const wc = await droppedView(path)
+    await store.writeCopy(fileIdentity(path), await pdfBytes(), { title: 'document.pdf' })
+    markAppShuttingDown()
+    wc.listeners.get('destroyed')!()
+    expect(store.copyInfo(fileIdentity(path))).toBeNull()
+  })
+
+  it('writes copies again once the user edits after a cancelled close', async () => {
+    const path = await makePdfFile()
+    const wc = await droppedView(path)
+    await invoke(PDF_CHANNELS.recoveryResume, wc)
+    expect(await writeCopy(wc, editedRequest(path))).toBe('written')
+    wc.listeners.get('destroyed')!()
+    expect(store.copyInfo(fileIdentity(path))).not.toBeNull()
+  })
+
+  it('writes copies again when the shell reports the close was cancelled', async () => {
+    const path = await makePdfFile()
+    const wc = await droppedView(path)
+    pdfCloseCancelled(wc as never)
+    expect(wc.sentArgs).toContainEqual([PDF_CHANNELS.recoveryDropped, false])
+    expect(await writeCopy(wc, editedRequest(path))).toBe('written')
+    wc.listeners.get('destroyed')!()
+    expect(store.copyInfo(fileIdentity(path))).not.toBeNull()
+  })
+})
+
+describe('saving into a new file (redaction, signature)', () => {
+  it('leaves no copy of the unredacted edits for the redacted file', async () => {
+    const path = await makePdfFile()
+    const wc = await openedView(path)
+    // edits are copied, then undone: the view is clean again, the copy is stale
+    expect(await writeCopy(wc, editedRequest(path))).toBe('written')
+    setDirty(wc, false)
+
+    const target = join(makeDir('pdf-recovery-redacted-'), 'document-redacted.pdf')
+    showSaveDialog.mockResolvedValueOnce({ canceled: false, filePath: target })
+    wc.onSend = (channel, targetPath) => {
+      if (channel !== PDF_CHANNELS.saveAsRequest) return
+      void save(wc, {
+        ...emptyRequest(path),
+        targetPath: targetPath as string,
+        redactions: [{ pageIndex: 0, rect: [10, 10, 120, 60] }],
+      }).then((result) => handlers.get(PDF_CHANNELS.saveAsResult)!(event(wc), result.ok))
+    }
+    expect(await invoke(PDF_CHANNELS.requestRedactionCopy, wc, path)).toBe(true)
+    expect(existsSync(target)).toBe(true)
+
+    expect(store.copyInfo(fileIdentity(target))).toBeNull()
+    expect(store.copyInfo(fileIdentity(path))).toBeNull()
+    expect(store.listCopies()).toHaveLength(0)
+    // a crash now keeps nothing that could undo the redaction on restore
+    wc.listeners.get('render-process-gone')!()
+    wc.listeners.get('destroyed')!()
+    expect(store.copyInfo(fileIdentity(target))).toBeNull()
+  })
+
+  it('moving to a new file deletes the old copy instead of carrying it', async () => {
+    const path = await makePdfFile()
+    const target = join(makeDir('pdf-recovery-signed-'), 'document-signed.pdf')
+    const recovery = createPdfRecovery({
+      store: () => store,
+      dialog: { showMessageBox } as never,
+      parentOf: () => null,
+      lang: () => 'en',
+      isUntitledCopyPath: () => false,
+      workDir: () => makeDir('pdf-recovery-work-'),
+    })
+    const view = { id: 9001 }
+    await recovery.resolveOnOpen(view, path)
+    expect(await recovery.writeCopy(view.id, path, async () => pdfBytes())).toBe('written')
+
+    recovery.movedToNewFile(view.id, path, target)
+    expect(store.copyInfo(fileIdentity(path))).toBeNull()
+    expect(store.copyInfo(fileIdentity(target))).toBeNull()
+    // the view's copies now follow the new file
+    expect(await recovery.writeCopy(view.id, target, async () => pdfBytes())).toBe('written')
+    expect(store.copyInfo(fileIdentity(target))).not.toBeNull()
+  })
+})
+
+describe('password and encrypted PDFs, checked in the main process', () => {
+  it('get no copy even before the renderer reports them', async () => {
+    const plain = (await pdfBytes()).toString('latin1')
+    const trailer = plain.lastIndexOf('trailer')
+    const root = plain.indexOf('/Root', trailer)
+    const encrypted = `${plain.slice(0, root)}/Encrypt 99 0 R\n${plain.slice(root)}`
+    const path = join(makeDir('pdf-recovery-encrypted-'), 'locked.pdf')
+    writeFileSync(path, Buffer.from(encrypted, 'latin1'))
+    const wc = await openedView(path)
+
+    expect(await writeCopy(wc, editedRequest(path))).toBe('skipped')
+    expect(store.copyInfo(fileIdentity(path))).toBeNull()
+    configurePdfRuntime({ preloadPath: '' })
+    expect(recoveryEditor('pdf')?.isUnprotectable(wc as never)).toBe(true)
+  })
+})
+
+describe('working files of restored untitled copies', () => {
+  async function restoredUntitled(): Promise<{ view: FakeWebContents; working: string }> {
+    const copy = { kind: 'pdf' as const, untitledId: newUntitledRecoveryId(), ext: '.pdf' }
+    await store.writeCopy(copy, await pdfBytes(), { title: 'Draft' })
+    configurePdfRuntime({ preloadPath: '' })
+    const view = createPdfView(null).webContents as unknown as FakeWebContents
+    await consumePending(view)
+    await recoveryEditor('pdf')!.openUntitledCopy(view as never, {
+      copy,
+      title: 'Draft',
+      saveAsDefaultPath: join(makeDir('pdf-recovery-default-'), 'Draft.pdf'),
+    })
+    const working = (await consumePending(view))!
+    expect(existsSync(working)).toBe(true)
+    return { view, working }
+  }
+
+  it('are removed when the tab closes', async () => {
+    const { view, working } = await restoredUntitled()
+    setDirty(view, true)
+    view.listeners.get('destroyed')!()
+    await vi.waitFor(() => expect(existsSync(working)).toBe(false))
+  })
+
+  it('are removed once the document is saved to a file the user picked', async () => {
+    const { view, working } = await restoredUntitled()
+    const target = join(makeDir('pdf-recovery-adopt-'), 'picked.pdf')
+    showSaveDialog.mockResolvedValueOnce({ canceled: false, filePath: target })
+    expect(await invoke(PDF_CHANNELS.adoptUntitledCopy, view, working, 'Draft.pdf')).toBe(target)
+    expect(existsSync(target)).toBe(true)
+    await vi.waitFor(() => expect(existsSync(working)).toBe(false))
+  })
+
+  it('left over from an earlier run are swept after a day, and only in their folder', async () => {
+    const dir = join(makeDir('pdf-recovery-sweep-'), 'work')
+    mkdirSync(dir)
+    const stale = join(dir, 'stale.pdf')
+    const fresh = join(dir, 'fresh.pdf')
+    const outside = join(dirname(dir), 'outside.pdf')
+    for (const file of [stale, fresh, outside]) writeFileSync(file, 'x')
+    const twoDaysAgo = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000)
+    utimesSync(stale, twoDaysAgo, twoDaysAgo)
+    utimesSync(outside, twoDaysAgo, twoDaysAgo)
+    const recovery = createPdfRecovery({
+      store: () => store,
+      dialog: { showMessageBox } as never,
+      parentOf: () => null,
+      lang: () => 'en',
+      isUntitledCopyPath: () => false,
+      workDir: () => dir,
+    })
+    await recovery.sweepWorkFiles()
+    expect(existsSync(stale)).toBe(false)
+    expect(existsSync(fresh)).toBe(true)
+    expect(existsSync(outside)).toBe(true)
   })
 })

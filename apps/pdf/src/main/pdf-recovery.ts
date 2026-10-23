@@ -14,10 +14,12 @@
  *
  * Untitled documents (a skill template's copy, a restored untitled copy) are
  * temp files the tab edits; their copies live under an untitled identity
- * until the first save picks a file.
+ * until the first save picks a file. The working files this module creates
+ * for restored untitled copies go away with their tab, once the document is
+ * saved to a file, and (left over by a crash) after a day.
  */
 import { randomUUID } from 'node:crypto'
-import { mkdir, writeFile } from 'node:fs/promises'
+import { lstat, mkdir, readdir, rm, writeFile } from 'node:fs/promises'
 import { basename, join } from 'node:path'
 import type { BrowserWindow } from 'electron'
 import {
@@ -31,6 +33,37 @@ import {
 } from '@genoffice/electron-utils'
 
 export type PdfRecoveryWriteResult = 'written' | 'superseded' | 'skipped' | 'failed'
+
+/** a working file older than this, in the working folder, belongs to no open tab */
+export const PDF_RECOVERY_WORK_FILE_MAX_AGE_MS = 24 * 60 * 60 * 1000
+
+/** bytes a PDF name token can end with: whitespace and the delimiters */
+const NAME_END = new Set([
+  0x00, 0x09, 0x0a, 0x0c, 0x0d, 0x20, 0x28, 0x29, 0x2f, 0x3c, 0x3e, 0x5b, 0x5d,
+])
+const ENCRYPT_KEY = Buffer.from('/Encrypt', 'latin1')
+
+/** a Buffer over the same memory: large PDFs are not copied to hand them on */
+function asBuffer(bytes: Uint8Array): Buffer {
+  return Buffer.isBuffer(bytes)
+    ? bytes
+    : Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength)
+}
+
+/**
+ * Whether the PDF carries an /Encrypt entry (a password or encrypted PDF):
+ * its copy would sit unprotected in the app data folder, so it gets none.
+ * A plain scan, since trailers and cross-reference stream dictionaries are
+ * never compressed; a stray match only costs that document its copy.
+ */
+export function pdfLooksEncrypted(bytes: Uint8Array): boolean {
+  const buf = asBuffer(bytes)
+  for (let at = buf.indexOf(ENCRYPT_KEY); at !== -1; at = buf.indexOf(ENCRYPT_KEY, at + 1)) {
+    const after = at + ENCRYPT_KEY.length
+    if (after >= buf.length || NAME_END.has(buf[after]!)) return true
+  }
+  return false
+}
 
 /** the sender of an IPC call or the view's contents; only the id is required */
 export interface PdfRecoveryContents {
@@ -69,7 +102,17 @@ interface ViewRecovery {
   } | null
   /** the copy this view wrote or loaded ('closedClean' only deletes that one) */
   ownedCopy: RecoveryIdentity | null
+  /**
+   * "Don't Save" was chosen and the close has not been cancelled: no copy is
+   * written, and the one of `droppedCopy` goes with the view even if dirty
+   */
+  dropped: boolean
+  droppedCopy: RecoveryIdentity | null
+  /** the working file this module made for a restored untitled copy */
+  workFile: string | null
   unprotectable: boolean
+  /** the main process found the document encrypted (whatever the renderer says) */
+  sourceEncrypted: boolean
   noticeShown: boolean
   /** the renderer asked for its open path at least once */
   consumed: boolean
@@ -97,7 +140,11 @@ export function createPdfRecovery(deps: PdfRecoveryDeps) {
         unsavedFromCopy: false,
         untitled: null,
         ownedCopy: null,
+        dropped: false,
+        droppedCopy: null,
+        workFile: null,
         unprotectable: false,
+        sourceEncrypted: false,
         noticeShown: false,
         consumed: false,
         crashed: false,
@@ -129,6 +176,30 @@ export function createPdfRecovery(deps: PdfRecoveryDeps) {
       return state.untitled.identity
     }
     return { kind: 'pdf', filePath: path }
+  }
+
+  function deleteCopy(identity: RecoveryIdentity, reason: 'saved' | 'dontSave' | 'closedClean') {
+    try {
+      store()?.deleteCopy(identity, reason)
+    } catch {
+      // a copy left behind is offered again, never lost
+    }
+  }
+
+  /** remove the view's working file once nothing reads it any more */
+  function dropWorkFile(state: ViewRecovery, path?: string): void {
+    const file = state.workFile
+    if (!file || (path !== undefined && file !== path)) return
+    state.workFile = null
+    void rm(file, { force: true }).catch((err: unknown) => {
+      console.warn('[pdf] recovery working file not removed:', err)
+    })
+  }
+
+  /** the view now shows another document: stop dropping the old one's copies */
+  function clearDropped(state: ViewRecovery): void {
+    state.dropped = false
+    state.droppedCopy = null
   }
 
   async function resolve(contents: PdfRecoveryContents, path: string): Promise<void> {
@@ -168,7 +239,8 @@ export function createPdfRecovery(deps: PdfRecoveryDeps) {
       bytes = null
     }
     if (bytes) {
-      state.restored = { path, bytes: new Uint8Array(bytes) }
+      // a plain view over the copy's memory: held, not copied again
+      state.restored = { path, bytes: new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.length) }
       state.unsavedFromCopy = true
       state.ownedCopy = identity
     }
@@ -230,6 +302,8 @@ export function createPdfRecovery(deps: PdfRecoveryDeps) {
     /** the shell decided for `path` (launch list) before the view reads it */
     setDecision(id: number, path: string, decision: 'restore' | 'original'): void {
       const state = view(id)
+      clearDropped(state)
+      state.sourceEncrypted = false
       state.decision = { path, decision }
       if (state.resolvedPath === path) state.resolvedPath = null
       state.restored = null
@@ -251,24 +325,33 @@ export function createPdfRecovery(deps: PdfRecoveryDeps) {
 
     /**
      * Write the copy of `path` for this view. `serialize` produces the bytes a
-     * save would write; the write ticket is taken before it runs, so a save
-     * (which deletes the copy) landing meanwhile wins.
+     * save would write, or null when the document turns out to be encrypted
+     * (no copy then, and none later); the write ticket is taken before it
+     * runs, so a save (which deletes the copy) landing meanwhile wins. After
+     * "Don't Save" nothing is written until the close is cancelled.
      */
     async writeCopy(
       id: number,
       path: string,
-      serialize: () => Promise<Uint8Array>,
+      serialize: () => Promise<Uint8Array | null>,
     ): Promise<PdfRecoveryWriteResult> {
       const state = view(id)
-      if (state.unprotectable || state.resolvedPath !== path || state.resolving) return 'skipped'
+      if (state.dropped) return 'superseded'
+      if (state.unprotectable || state.sourceEncrypted) return 'skipped'
+      if (state.resolvedPath !== path || state.resolving) return 'skipped'
       const recoveryStore = store()
       if (!recoveryStore) return 'skipped'
       try {
         const identity = identityFor(id, path)
         const ticket = recoveryStore.beginWrite(identity)
         const bytes = await serialize()
+        if (!bytes) {
+          state.sourceEncrypted = true
+          return 'skipped'
+        }
+        if (state.dropped) return 'superseded'
         const title = state.untitled?.path === path ? state.untitled.title : basename(path)
-        const result = await recoveryStore.writeCopy(identity, Buffer.from(bytes), {
+        const result = await recoveryStore.writeCopy(identity, asBuffer(bytes), {
           title,
           ticket,
         })
@@ -302,7 +385,7 @@ export function createPdfRecovery(deps: PdfRecoveryDeps) {
         try {
           const identity = state.untitled.identity
           const ticket = recoveryStore.beginWrite(identity)
-          const result = await recoveryStore.writeCopy(identity, Buffer.from(await written()), {
+          const result = await recoveryStore.writeCopy(identity, asBuffer(await written()), {
             title: state.untitled.title,
             ticket,
           })
@@ -326,18 +409,43 @@ export function createPdfRecovery(deps: PdfRecoveryDeps) {
       const state = view(id)
       const untitled = state.untitled?.path === oldPath ? state.untitled : null
       if (untitled) {
-        try {
-          store()?.deleteCopy(untitled.identity, 'saved')
-        } catch {
-          // a copy left behind is offered again, never lost
-        }
+        deleteCopy(untitled.identity, 'saved')
         if (state.ownedCopy && sameIdentity(state.ownedCopy, untitled.identity)) {
           state.ownedCopy = null
         }
         state.untitled = null
       }
+      // the document lives in `target` now: its working file has done its job
+      dropWorkFile(state, oldPath)
       state.unsavedFromCopy = false
       state.restored = null
+      state.resolvedPath = target
+    },
+
+    /**
+     * A clean view wrote its document into a new file (a redaction or signed
+     * copy) and now shows that file. The old document's copy is never moved
+     * onto the new file, where restoring it would undo the redaction: it is
+     * deleted (an untitled document's as saved, a file's like a clean close).
+     */
+    movedToNewFile(id: number, oldPath: string, target: string): void {
+      const state = views.get(id)
+      if (!state) return
+      const owned = state.ownedCopy
+      const untitled = state.untitled?.path === oldPath ? state.untitled : null
+      if (owned) {
+        if (untitled && sameIdentity(owned, untitled.identity)) {
+          deleteCopy(owned, 'saved')
+          state.ownedCopy = null
+        } else if (!isUntitledIdentity(owned) && owned.filePath === oldPath) {
+          deleteCopy(owned, 'closedClean')
+          state.ownedCopy = null
+        }
+      }
+      if (untitled) state.untitled = null
+      dropWorkFile(state, oldPath)
+      if (state.restored?.path === oldPath) state.restored = null
+      state.unsavedFromCopy = false
       state.resolvedPath = target
     },
 
@@ -347,16 +455,27 @@ export function createPdfRecovery(deps: PdfRecoveryDeps) {
       return untitled?.path === path ? untitled.saveAsDefaultPath : undefined
     },
 
-    /** the user chose "Don't Save" for the view's document */
+    /**
+     * The user chose "Don't Save" for the view's document. Its copy goes now,
+     * and until the close is cancelled (`closeCancelled`) no copy is written
+     * and the view deletes a late one when it goes, dirty or not: other tabs'
+     * prompts may keep this one open for a while.
+     */
     dontSave(id: number, path: string | undefined): void {
-      if (!path) return
-      try {
-        store()?.deleteCopy(identityFor(id, path), 'dontSave')
-      } catch {
-        // nothing to undo: the tab closes without saving either way
-      }
       const state = view(id)
+      const identity = path ? identityFor(id, path) : null
+      state.dropped = true
+      state.droppedCopy = identity ?? state.ownedCopy
+      if (state.droppedCopy) deleteCopy(state.droppedCopy, 'dontSave')
       state.ownedCopy = null
+    },
+
+    /** the close after "Don't Save" was cancelled: copies resume; true when it had been dropped */
+    closeCancelled(id: number): boolean {
+      const state = views.get(id)
+      if (!state?.dropped) return false
+      clearDropped(state)
+      return true
     },
 
     /**
@@ -407,6 +526,11 @@ export function createPdfRecovery(deps: PdfRecoveryDeps) {
       await writeFile(path, bytes)
       recoveryStore.markCopyLoaded(request.copy)
       const state = view(id)
+      clearDropped(state)
+      state.sourceEncrypted = false
+      // a working file this view made earlier is replaced by this one
+      dropWorkFile(state)
+      state.workFile = path
       state.untitled = {
         path,
         identity: request.copy,
@@ -428,13 +552,14 @@ export function createPdfRecovery(deps: PdfRecoveryDeps) {
     reportUnprotectable(id: number, unprotectable: boolean): string | null {
       const state = view(id)
       state.unprotectable = unprotectable
-      if (!unprotectable || state.noticeShown) return null
+      if (!(unprotectable || state.sourceEncrypted) || state.noticeShown) return null
       state.noticeShown = true
       return unprotectableNoticeText(deps.lang())
     },
 
     isUnprotectable(id: number): boolean {
-      return views.get(id)?.unprotectable ?? false
+      const state = views.get(id)
+      return !!state && (state.unprotectable || state.sourceEncrypted)
     },
 
     /** the untitled document's copy identity this view shows, if it shows one */
@@ -447,18 +572,51 @@ export function createPdfRecovery(deps: PdfRecoveryDeps) {
     },
 
     /**
-     * The view is gone. A tab that closed with no unsaved changes deletes the
-     * copy it wrote; a crashed or still-dirty view keeps it, and the store
-     * refuses this delete while the app is ending.
+     * The view is gone. After "Don't Save" its copy is deleted whatever it
+     * wrote since (allowed while the app is ending too). Otherwise a tab
+     * that closed with no unsaved changes deletes the copy it wrote; a
+     * crashed or still-dirty view keeps it, and the store refuses this delete
+     * while the app is ending. A working file goes either way: the copy in
+     * the store is what a reopened tab reads.
      */
     destroyed(id: number, dirty: boolean): void {
       const state = views.get(id)
       views.delete(id)
-      if (!state?.ownedCopy || dirty || state.crashed) return
+      if (!state) return
+      dropWorkFile(state)
+      if (state.dropped) {
+        if (state.droppedCopy) deleteCopy(state.droppedCopy, 'dontSave')
+        return
+      }
+      if (!state.ownedCopy || dirty || state.crashed) return
+      deleteCopy(state.ownedCopy, 'closedClean')
+    },
+
+    /**
+     * Remove working files a crash left behind: only files in the working
+     * folder, only older than `maxAgeMs`, never one an open view uses.
+     */
+    async sweepWorkFiles(maxAgeMs = PDF_RECOVERY_WORK_FILE_MAX_AGE_MS): Promise<void> {
+      const dir = deps.workDir()
+      let names: string[]
       try {
-        store()?.deleteCopy(state.ownedCopy, 'closedClean')
+        names = await readdir(dir)
       } catch {
-        // kept: offered again at the next launch
+        return
+      }
+      const inUse = new Set<string>()
+      for (const state of views.values()) if (state.workFile) inUse.add(state.workFile)
+      const cutoff = Date.now() - maxAgeMs
+      for (const name of names) {
+        const file = join(dir, name)
+        if (inUse.has(file)) continue
+        try {
+          const info = await lstat(file)
+          if (!info.isFile() || info.mtimeMs > cutoff) continue
+          await rm(file, { force: true })
+        } catch {
+          // still in use or already gone: the next start looks again
+        }
       }
     },
   }
