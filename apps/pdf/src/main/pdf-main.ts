@@ -36,6 +36,7 @@ import {
 } from '@genoffice/electron-utils'
 import type {
   RecoveryEditorContract,
+  RecoveryIdentity,
   RecoveryStore,
   SaveDiskState,
 } from '@genoffice/electron-utils'
@@ -966,6 +967,15 @@ const recovery = createPdfRecovery({
   // a restored untitled copy's working file, like a template copy's: never a user folder
   workDir: () => join(tmpdir(), 'genoffice-pdf-recovery'),
 })
+
+/**
+ * The untitled document copy this view writes, if it shows one (a restored
+ * untitled copy, a template copy): the shell's session record records the tab
+ * by it instead of its working file, and reopens it after a renderer crash.
+ */
+export function pdfRecoveryIdentity(webContentsId: number): RecoveryIdentity | null {
+  return recovery.untitledIdentity(webContentsId)
+}
 
 /** The view's own document: a restored recovery copy until it is saved, else the file */
 async function viewDocumentBytes(wcId: number, path: string): Promise<Uint8Array> {

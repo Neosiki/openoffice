@@ -2094,6 +2094,20 @@ export function listSheetsUntitledCopies(
   })
 }
 
+/**
+ * The untitled workbook copy this tab writes, if its workbook is a new one
+ * (the shell's session record keeps the tab by it rather than by its temp
+ * backing file, and reopens it after a renderer crash). Null otherwise.
+ */
+export function sheetsRecoveryIdentity(webContentsId: number): RecoveryIdentity | null {
+  let identity: RecoveryIdentity | null = null
+  for (const session of sheetsTabs.get(webContentsId)?.sessions.values() ?? []) {
+    const candidate = sessionRecoveryIdentity(session)
+    if (candidate && isUntitledIdentity(candidate)) identity = candidate
+  }
+  return identity
+}
+
 /** Per-tab recovery bookkeeping, keyed by webContents id. */
 interface TabRecoveryState {
   /** copies this tab wrote, by copy path: a clean close removes only these */
