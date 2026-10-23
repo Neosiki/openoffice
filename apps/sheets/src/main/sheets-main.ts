@@ -8,7 +8,7 @@ import {
   statSync,
   writeFileSync,
 } from 'node:fs'
-import { copyFile, mkdir, open, readFile, rm, stat, writeFile } from 'node:fs/promises'
+import { copyFile, mkdir, open, readFile, rename, rm, stat, writeFile } from 'node:fs/promises'
 import { refreshCsvDigest } from './csv-digest'
 import { createServer } from 'node:http'
 import { userInfo } from 'node:os'
@@ -2123,7 +2123,16 @@ interface TabRecoveryState {
   readonly written: Map<string, RecoveryIdentity>
   /** copies whose session closed while still unsaved: a clean close keeps them */
   readonly keep: Set<string>
-  /** "Don't Save" was answered: late copy writes from this tab are dropped */
+  /**
+   * copies this tab must neither write nor delete, by copy path: another
+   * tab's (a second view of the same file), or one whose question could not
+   * be answered when the file opened (left for later)
+   */
+  readonly held: Set<string>
+  /**
+   * "Don't Save" was answered: late copy writes from this tab are dropped
+   * until the close is vetoed (resetSheetsShuttingDown)
+   */
   discarded: boolean
   /** the renderer died: its copies are what the shell reopens from */
   crashed: boolean
@@ -2139,6 +2148,7 @@ function tabRecoveryFor(contentsId: number): TabRecoveryState {
     state = {
       written: new Map(),
       keep: new Set(),
+      held: new Set(),
       discarded: false,
       crashed: false,
       noticeShown: false,
@@ -2179,7 +2189,23 @@ function unsavedCopySessions(contentsId: number): number {
   return count
 }
 
-/** Write one session's copy through the store; false when it has none or was superseded. */
+/** Move a finished file into place, copying when it lives on another volume. */
+async function moveFileInto(source: string, target: string): Promise<void> {
+  try {
+    await rename(source, target)
+  } catch {
+    await copyFile(source, target)
+  }
+}
+
+/**
+ * Write one session's copy through the store; false when it has none, this
+ * tab holds it, or it was superseded. The workbook is written to disk and
+ * handed over by path (writeCopyStreamed), never read into memory. It is
+ * produced in a temp folder of its own first: the archive writer leaves its
+ * scratch file beside its target, and that must not end up in the recovery
+ * folder if the app dies mid-write.
+ */
 async function writeSessionCopy(
   contentsId: number,
   session: SessionInfo,
@@ -2189,28 +2215,35 @@ async function writeSessionCopy(
   const identity = sessionRecoveryIdentity(session)
   if (identity === null) return false
   if (session.automaticRecoveryDisabled && !options.ignoreSizeLimit) return false
-  if (tabRecovery.get(contentsId)?.discarded) return false
+  const state = tabRecovery.get(contentsId)
+  if (state?.discarded || state?.held.has(recoveryStore.copyPath(identity))) return false
   // taken before serializing: a save or "Don't Save" that lands meanwhile wins
   const ticket = recoveryStore.beginWrite(identity)
-  const directory = join(app.getPath('temp'), 'genoffice-imports', randomUUID())
-  try {
-    await mkdir(directory, { recursive: true })
-    const target = join(directory, `recovery${untitledWorkbookExt(session.path)}`)
-    await produce(target)
-    const title = recoveryTitleFor(session)
-    const result = await recoveryStore.writeCopy(identity, await readFile(target), {
+  const title = recoveryTitleFor(session)
+  const result = await recoveryStore.writeCopyStreamed(
+    identity,
+    async (storeTemp) => {
+      const directory = join(app.getPath('temp'), 'genoffice-imports', randomUUID())
+      try {
+        await mkdir(directory, { recursive: true })
+        const target = join(directory, `recovery${untitledWorkbookExt(session.path)}`)
+        await produce(target)
+        await moveFileInto(target, storeTemp)
+      } finally {
+        await cleanupImportTempDirectory(app.getPath('temp'), directory).catch(() => undefined)
+      }
+    },
+    {
       ticket,
       ...(title === undefined ? {} : { title }),
       ...(session.recoveryOriginalPath === undefined
         ? {}
         : { originalPath: session.recoveryOriginalPath }),
-    })
-    if (result !== 'written') return false
-    tabRecoveryFor(contentsId).written.set(recoveryStore.copyPath(identity), identity)
-    return true
-  } finally {
-    await cleanupImportTempDirectory(app.getPath('temp'), directory).catch(() => undefined)
-  }
+    },
+  )
+  if (result !== 'written') return false
+  tabRecoveryFor(contentsId).written.set(recoveryStore.copyPath(identity), identity)
+  return true
 }
 
 /** a successful save: the document's copies are no longer needed */
@@ -2218,6 +2251,8 @@ function deleteCopiesAfterSave(contentsId: number, identities: (RecoveryIdentity
   const state = tabRecovery.get(contentsId)
   for (const identity of identities) {
     if (identity === null) continue
+    // another tab's copy, or one still waiting for its question: not this save's
+    if (state?.held.has(recoveryStore.copyPath(identity))) continue
     recoveryStore.deleteCopy(identity, 'saved')
     state?.written.delete(recoveryStore.copyPath(identity))
     state?.keep.delete(recoveryStore.copyPath(identity))
@@ -2233,9 +2268,30 @@ function discardTabCopies(contentsId: number): void {
     const identity = sessionRecoveryIdentity(session)
     if (identity !== null) identities.set(recoveryStore.copyPath(identity), identity)
   }
-  for (const identity of identities.values()) recoveryStore.deleteCopy(identity, 'dontSave')
+  for (const [key, identity] of identities) {
+    if (!state.held.has(key)) recoveryStore.deleteCopy(identity, 'dontSave')
+  }
   state.written.clear()
   state.keep.clear()
+}
+
+/**
+ * MCP / AI closes this tab without saving (the shell then closes it with no
+ * prompt): the same as answering "Don't Save" — the tab's copies go, and a
+ * late copy write from the closing renderer is dropped.
+ */
+export function discardSheetsRecovery(contents: WebContents): void {
+  if (contents.isDestroyed()) return
+  discardTabCopies(contents.id)
+}
+
+/**
+ * A close that was answered "Don't Save" was vetoed afterwards (another
+ * tab's prompt cancelled the window close or the quit): the tab stays open
+ * with its unsaved work, so its copies are written again.
+ */
+function resumeDiscardedTabCopies(): void {
+  for (const state of tabRecovery.values()) state.discarded = false
 }
 
 /** a workbook session closes: remember a copy that still holds unsaved work */
@@ -2311,26 +2367,71 @@ async function recoveredOpenFor(
   parent: BrowserWindow | undefined,
 ): Promise<PreparedWorkbookOpen | null> {
   const identity = fileRecoveryIdentity(path)
+  const key = recoveryStore.copyPath(identity)
   const decided = contents ? decidedOpens.get(contents.id) : undefined
-  let bytes: Buffer | null = null
-  if (decided !== undefined && contents !== undefined && decided.filePath === path) {
-    decidedOpens.delete(contents.id)
-    if (decided.decision === 'original') return null
-    bytes = await recoveryStore.readCopy(identity)
-    if (bytes) recoveryStore.markCopyLoaded(identity)
-  } else {
-    const resolved = await resolveRecoveryOnOpen({
-      store: recoveryStore,
-      identity,
-      dialog,
-      parent: parent ?? null,
-      lang: getUiLang(),
-    })
-    if (resolved.action === 'restore') bytes = resolved.bytes
+  const isDecided = decided !== undefined && contents !== undefined && decided.filePath === path
+  if (isDecided) decidedOpens.delete(contents.id)
+  const held = contents ? tabRecoveryFor(contents.id).held : undefined
+  held?.delete(key)
+  // a second view (split) of a file another tab keeps a copy for: that copy
+  // is the other tab's unsaved work, so nothing is asked and nothing in this
+  // tab writes or deletes it
+  if (contents !== undefined && copyOwnedByAnotherView(contents.id, identity)) {
+    held?.add(key)
+    return null
   }
-  if (!bytes) return null
-  const staged = await stageRecoveredCopy(bytes, basename(path))
-  return { ...staged, restoreTarget: path, unsavedRestore: true }
+  if (isDecided && decided.decision === 'original') return null
+  try {
+    let bytes: Buffer | null = null
+    if (isDecided) {
+      bytes = await recoveryStore.readCopy(identity)
+      if (bytes) recoveryStore.markCopyLoaded(identity)
+    } else {
+      const resolved = await resolveRecoveryOnOpen({
+        store: recoveryStore,
+        identity,
+        dialog,
+        parent: parent ?? null,
+        lang: getUiLang(),
+      })
+      if (resolved.action === 'restore') bytes = resolved.bytes
+    }
+    if (!bytes) return null
+    const staged = await stageRecoveredCopy(bytes, basename(path))
+    return { ...staged, restoreTarget: path, unsavedRestore: true }
+  } catch (error) {
+    // The copy could not be prepared: the file opens as saved and the copy
+    // waits for the next open or launch, untouched by this tab meanwhile.
+    console.warn('[sheets] recovery copy could not be opened:', error)
+    try {
+      recoveryStore.setCopyState(identity, 'later')
+    } catch (stateError) {
+      console.warn('[sheets] recovery copy state could not be kept:', stateError)
+    }
+    held?.add(key)
+    return null
+  }
+}
+
+/**
+ * Another live sheets tab keeps the document's copy: the copy exists, and
+ * that tab has the document open restored from it or has written it (not
+ * merely opened the file beside it).
+ */
+function copyOwnedByAnotherView(contentsId: number, identity: RecoveryIdentity): boolean {
+  if (recoveryStore.openPlan(identity).action === 'none') return false
+  const key = recoveryStore.copyPath(identity)
+  for (const [id, entry] of sheetsTabs) {
+    if (id === contentsId || entry.webContents.isDestroyed()) continue
+    const state = tabRecovery.get(id)
+    if (state?.held.has(key)) continue
+    for (const session of entry.sessions.values()) {
+      const own = sessionRecoveryIdentity(session)
+      if (own === null || recoveryStore.copyPath(own) !== key) continue
+      if (session.unsavedRestore || state?.written.has(key)) return true
+    }
+  }
+  return false
 }
 
 /**
@@ -2844,6 +2945,7 @@ export function markSheetsShuttingDown(): void {
 export function resetSheetsShuttingDown(): void {
   shutdownLatch.reset()
   resetAppShuttingDown()
+  resumeDiscardedTabCopies()
 }
 
 app.on('before-quit', markSheetsShuttingDown)

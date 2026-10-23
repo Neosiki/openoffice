@@ -86,8 +86,8 @@ function fakeContents(): FakeContents {
   return contents
 }
 
-/** the answer the fake message box gives (0 = restore, 1 = discard) */
-const dialogAnswer = { value: 0 }
+/** the answer the fake message box gives (0 = restore, 1 = discard; 'throw' fails the box) */
+const dialogAnswer: { value: number | 'throw' } = { value: 0 }
 const messageBoxes: { message?: string; detail?: string; cancelId?: number }[] = []
 /** where the fake Save As dialog saves, and the suggestions it was shown */
 const saveDialogAnswer = { value: '' }
@@ -125,6 +125,7 @@ vi.mock('electron', () => ({
     showMessageBox: async (...args: unknown[]) => {
       const options = args.at(-1) as { message?: string; detail?: string; cancelId?: number }
       messageBoxes.push(options)
+      if (dialogAnswer.value === 'throw') throw new Error('message box failed')
       return { response: dialogAnswer.value }
     },
     showSaveDialog: async (...args: unknown[]) => {
@@ -139,6 +140,30 @@ vi.mock('electron', () => ({
   systemPreferences: {},
   webContents: { getAllWebContents: () => [], fromId: () => null },
 }))
+
+/** how each copy reached the store: as bytes in memory or streamed to its temp path */
+const storeWrites = vi.hoisted(() => [] as ('bytes' | 'streamed')[])
+
+vi.mock('@genoffice/electron-utils', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@genoffice/electron-utils')>()
+  return {
+    ...actual,
+    createRecoveryStore: (options: Parameters<typeof actual.createRecoveryStore>[0]) => {
+      const real = actual.createRecoveryStore(options)
+      return {
+        ...real,
+        writeCopy: (...args: Parameters<typeof real.writeCopy>) => {
+          storeWrites.push('bytes')
+          return real.writeCopy(...args)
+        },
+        writeCopyStreamed: (...args: Parameters<typeof real.writeCopyStreamed>) => {
+          storeWrites.push('streamed')
+          return real.writeCopyStreamed(...args)
+        },
+      }
+    },
+  }
+})
 
 /** the per-test userData folder the mocked app reads through getPath */
 const userDataDirRef = { value: '' }
@@ -204,6 +229,7 @@ vi.mock('@genoffice/ai-provider/subscription', async (importOriginal) => ({
 
 import {
   createSheetsView,
+  discardSheetsRecovery,
   listSheetsUntitledCopies,
   markSheetsShuttingDown,
   markSheetsUnsavedNew,
@@ -359,6 +385,16 @@ describe('legacy unsaved-new index', () => {
     expect(existsSync(fileCopyPath(wouldBe))).toBe(true)
   })
 
+  it('keeps an index it cannot read (an older version wrote it non-atomically)', () => {
+    mkdirSync(recoveryDir(), { recursive: true })
+    const index = join(recoveryDir(), LEGACY_UNSAVED_NEW_INDEX)
+    writeFileSync(index, '["C:\\half-writ')
+
+    expect(migrateLegacyUnsavedNew(store, recoveryDir())).toEqual([])
+
+    expect(readFileSync(index, 'utf8')).toBe('["C:\\half-writ')
+  })
+
   it('migrates at launch instead of reopening the workbooks in new tabs', () => {
     const wouldBe = join(dir, 'New Spreadsheet.xlsx')
     legacyIndex([wouldBe], { [wouldBe]: 'unsaved-work' })
@@ -489,6 +525,52 @@ describe('opening a workbook that has a recovery copy', () => {
     expect(reopened.path).toBe(path)
     expect(openedBytes.at(-1)).toBe('unsaved-work')
     expect(messageBoxes).toHaveLength(0)
+  })
+})
+
+describe('opening a workbook whose copy cannot be prepared or is owned elsewhere', () => {
+  async function leaveCopy(path: string, bytes = 'unsaved-work'): Promise<void> {
+    await store.writeCopy({ kind: 'sheets', filePath: path }, Buffer.from(bytes))
+  }
+
+  it('opens the original, keeps the copy for later and does not overwrite it', async () => {
+    const path = writeWorkbook()
+    await leaveCopy(path)
+    dialogAnswer.value = 'throw'
+    const tab = newTab()
+
+    const opened = await openWorkbook(tab, path)
+
+    expect(opened.path).toBe(path)
+    expect(opened.restoredFromRecovery).toBeFalsy()
+    expect(openedBytes.at(-1)).toBe('original-bytes')
+    const identity = { kind: 'sheets' as const, filePath: path }
+    expect(store.copyInfo(identity)?.state).toBe('later')
+    // the unanswered copy is neither replaced by this tab's ticks nor removed by its save
+    expect(await writeRecovery(tab, opened.sessionId)).toBe(false)
+    await call(tab, IPC_CHANNELS.saveWorkbook, saveRequest(opened.sessionId))
+    expect(readFileSync(store.copyPath(identity)).toString()).toBe('unsaved-work')
+  })
+
+  it('a second view of a file another tab keeps a copy for opens it without asking', async () => {
+    const path = writeWorkbook()
+    await leaveCopy(path)
+    const owner = newTab()
+    const restored = await openWorkbook(owner, path)
+    expect(await writeRecovery(owner, restored.sessionId)).toBe(true)
+    messageBoxes.length = 0
+    dialogAnswer.value = 1
+
+    const second = newTab()
+    const opened = await openWorkbook(second, path)
+
+    expect(messageBoxes).toHaveLength(0)
+    expect(openedBytes.at(-1)).toBe('original-bytes')
+    expect(opened.restoredFromRecovery).toBeFalsy()
+    // the owner's copy is untouched by the second view's ticks
+    const identity = { kind: 'sheets' as const, filePath: path }
+    expect(await writeRecovery(second, opened.sessionId)).toBe(false)
+    expect(readFileSync(store.copyPath(identity)).toString()).toBe('unsaved-work-saved')
   })
 })
 
@@ -748,6 +830,53 @@ describe('deleting copies outside shutdown', () => {
     // a late tick from the closing tab does not bring it back
     expect(await writeRecovery(tab, opened.sessionId)).toBe(false)
     expect(store.copyInfo({ kind: 'sheets', filePath: path })).toBeNull()
+  })
+
+  it("a close vetoed after Don't Save writes copies again", async () => {
+    const path = writeWorkbook()
+    const tab = newTab()
+    const opened = await openWorkbook(tab, path)
+    await writeRecovery(tab, opened.sessionId)
+    emit(tab, IPC_CHANNELS.pendingEditsChanged, 1)
+    dialogAnswer.value = 1
+    expect(await requestSheetsClose(tab as never)).toBe(true)
+
+    // another tab's prompt was cancelled: the window (and this tab) stays open
+    resetSheetsShuttingDown()
+
+    expect(await writeRecovery(tab, opened.sessionId)).toBe(true)
+    expect(store.copyInfo({ kind: 'sheets', filePath: path })).not.toBeNull()
+  })
+
+  it('an MCP close without saving deletes the copy, and a late tick does not bring it back', async () => {
+    const path = writeWorkbook()
+    const tab = newTab()
+    const opened = await openWorkbook(tab, path)
+    await writeRecovery(tab, opened.sessionId)
+    emit(tab, IPC_CHANNELS.pendingEditsChanged, 1)
+
+    discardSheetsRecovery(tab as never)
+
+    expect(store.copyInfo({ kind: 'sheets', filePath: path })).toBeNull()
+    expect(await writeRecovery(tab, opened.sessionId)).toBe(false)
+    destroy(tab)
+    expect(store.copyInfo({ kind: 'sheets', filePath: path })).toBeNull()
+  })
+
+  it('streams the copy to the store instead of reading the workbook into memory', async () => {
+    const path = writeWorkbook()
+    const tab = newTab()
+    const opened = await openWorkbook(tab, path)
+    storeWrites.length = 0
+
+    expect(await writeRecovery(tab, opened.sessionId)).toBe(true)
+
+    expect(storeWrites).toEqual(['streamed'])
+    expect(readFileSync(store.copyPath({ kind: 'sheets', filePath: path })).toString()).toBe(
+      'original-bytes-saved',
+    )
+    // nothing but the copy and its metadata is left in the recovery folder
+    expect(readdirSync(recoveryDir()).filter((name) => name.startsWith('.'))).toEqual([])
   })
 
   it('a saved workbook has no copy left', async () => {
