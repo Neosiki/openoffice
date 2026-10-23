@@ -608,9 +608,11 @@ export interface LiveTabContentsDeps<C> {
 
 /**
  * The live webContents of an open document for a caller that cannot wait on
- * a person: an unloaded tab is loaded first and its document waited for; a
- * document whose recovery question is still open fails with a message the
- * agent can relay (spec 5.3). Undefined when no such document is open.
+ * a person: an unloaded tab is loaded first and its editor page waited for
+ * (not the document inside it); a document that must first ask the user (the
+ * launch list unanswered, or its file's copy still to be settled, while the
+ * page is not up yet) fails with a message the agent can relay (spec 5.3).
+ * Undefined when no such document is open.
  */
 export async function liveTabContents<C>(
   tabId: string,
