@@ -98,6 +98,7 @@ import {
   replacePagesBytes,
   pdfBytesWithEdits,
   pdfBytesWithEditsFrom,
+  pdfBytesWithEditsOf,
   savePdfBytesToPath,
   savePdfToPath,
   setPageSizeBytes,
@@ -128,7 +129,7 @@ import {
   parseNoteOpenRequest,
 } from './note-link'
 import type { PdfNoteResult, PdfRecoveryCopyResult } from '../shared/ipc'
-import { createPdfRecovery } from './pdf-recovery'
+import { createPdfRecovery, pdfLooksEncrypted } from './pdf-recovery'
 import { ResultStore, documentHashOfFile } from '../../../../packages/pdf-structure/src/store'
 
 const tDlg = createI18n({
@@ -1061,6 +1062,8 @@ function registerPdfRecoveryEditor(): void {
   if (pdfRecoveryEditorRegistered) return
   pdfRecoveryEditorRegistered = true
   registerRecoveryEditor(pdfRecoveryEditor)
+  // restored untitled copies' working files a crash left behind (only that temp folder)
+  void recovery.sweepWorkFiles()
 }
 
 /**
@@ -1241,11 +1244,23 @@ export async function requestPdfClose(
       : await dialog.showMessageBox(options)
   if (response === 2) return false
   if (response === 1) {
-    // "Don't Save" drops the unsaved edits, and with them their recovery copy
+    // "Don't Save" drops the unsaved edits, and with them their recovery copy: no new
+    // one is written while other tabs' prompts keep this view open
     recovery.dontSave(contents.id, openPathByWc.get(contents.id))
+    if (!contents.isDestroyed()) contents.send(PDF_CHANNELS.recoveryDropped, true)
     return true
   }
   return await requestRendererSave(contents, true)
+}
+
+/**
+ * The close this view answered "Don't Save" for was cancelled (a later
+ * prompt of the same window close): its recovery copies resume at once.
+ * Without this call they resume when the user edits in the view again.
+ */
+export function pdfCloseCancelled(contents: WebContents): void {
+  if (!recovery.closeCancelled(contents.id) || contents.isDestroyed()) return
+  contents.send(PDF_CHANNELS.recoveryDropped, false)
 }
 
 function requestRendererSave(contents: WebContents, flushAll: boolean): Promise<boolean> {
@@ -1427,11 +1442,13 @@ function registerPdfIpc(): void {
       throw new Error('pdf: path not granted to this view')
     }
     // a view restored from a recovery copy shows the copy until it is saved
-    const restored = recovery.viewBytes(e.sender.id, path)
-    const buf = restored ? Buffer.from(restored) : await readFile(path)
+    const buf = recovery.viewBytes(e.sender.id, path) ?? (await readFile(path))
     // The reader's copy: this view's save guard compares against this state
     await rememberDiskState(e.sender.id, path)
-    return buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength)
+    // IPC copies what it sends: a buffer that is all document goes as is, not copied first
+    return buf.byteOffset === 0 && buf.byteLength === buf.buffer.byteLength
+      ? buf.buffer
+      : buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength)
   })
 
   ipcMain.handle(
@@ -1548,7 +1565,8 @@ function registerPdfIpc(): void {
         redactionPathByWc.set(e.sender.id, target)
         // The view's document moved to the redacted copy: the old path's record is dead
         forgetDiskState(e.sender.id, path)
-        void recovery.renamed(e.sender.id, path, target)
+        // never carry the old copy over: restoring it would undo the redaction
+        recovery.movedToNewFile(e.sender.id, path, target)
         try {
           pdfRedactionSavedHook?.(e.sender, target)
         } catch (err) {
@@ -2340,7 +2358,8 @@ function registerPdfIpc(): void {
         await writePdfAtomically(target, signed)
         allowedByWc.set(e.sender.id, new Set([target]))
         openPathByWc.set(e.sender.id, target)
-        void recovery.renamed(e.sender.id, path, target)
+        // the signed file starts clean: no copy of the unsigned document follows it
+        recovery.movedToNewFile(e.sender.id, path, target)
         try {
           pdfRedactionSavedHook?.(e.sender, target)
         } catch (err) {
@@ -2395,11 +2414,24 @@ function registerPdfIpc(): void {
       const path = request?.path
       if (!pdfPathGranted(e.sender.id, path) || request.targetPath !== undefined) return 'skipped'
       const restored = recovery.viewBytes(e.sender.id, path)
-      return recovery.writeCopy(e.sender.id, path, () =>
-        restored ? pdfBytesWithEditsFrom(restored, request) : pdfBytesWithEdits(path, request),
-      )
+      return recovery.writeCopy(e.sender.id, path, async () => {
+        // read once; a password or encrypted PDF gets no copy whatever the renderer reported
+        const source = restored ?? (await readFile(path))
+        if (pdfLooksEncrypted(source)) return null
+        return restored
+          ? pdfBytesWithEditsFrom(restored, request)
+          : pdfBytesWithEditsOf(
+              new Uint8Array(source.buffer, source.byteOffset, source.byteLength),
+              request,
+            )
+      })
     },
   )
+
+  // the user edits again after "Don't Save": that close was cancelled
+  ipcMain.handle(PDF_CHANNELS.recoveryResume, (e) => {
+    recovery.closeCancelled(e.sender.id)
+  })
 
   ipcMain.handle(PDF_CHANNELS.recoveryUnprotectable, (e, unprotectable: unknown) =>
     recovery.reportUnprotectable(e.sender.id, unprotectable === true),

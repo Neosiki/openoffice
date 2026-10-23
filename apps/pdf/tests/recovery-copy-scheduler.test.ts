@@ -213,4 +213,55 @@ describe('useRecoveryCopies', () => {
     expect(writeRecoveryCopy).toHaveBeenCalledTimes(1)
     expect(sendRecoveryFlushDone).toHaveBeenCalledTimes(1)
   })
+
+  /** a mounted hook whose copy was written, then dropped by "Don't Save" */
+  async function droppedAfterCopy() {
+    let dropped: ((value: boolean) => void) | null = null
+    const writeRecoveryCopy = vi.fn(async () => 'written' as const)
+    const resumeRecoveryCopies = vi.fn(async () => {})
+    const scheduler = mount(
+      { wanted: () => true, busy: () => false, request },
+      {
+        writeRecoveryCopy,
+        resumeRecoveryCopies,
+        onRecoveryDropped: (handler) => {
+          dropped = handler
+          return () => {
+            dropped = null
+          }
+        },
+      },
+    )
+    scheduler().bump()
+    await vi.advanceTimersByTimeAsync(RECOVERY_COPY_INTERVAL_MS + RECOVERY_COPY_IDLE_MS)
+    expect(writeRecoveryCopy).toHaveBeenCalledTimes(1)
+    dropped!(true)
+    return { drop: (value: boolean) => dropped!(value), writeRecoveryCopy, resumeRecoveryCopies }
+  }
+
+  it('after a cancelled close, the next edit input resumes copies and rewrites the copy', async () => {
+    const { writeRecoveryCopy, resumeRecoveryCopies } = await droppedAfterCopy()
+    // no input: nothing to resume, and the dropped copy is not rewritten
+    await vi.advanceTimersByTimeAsync(RECOVERY_COPY_INTERVAL_MS * 2)
+    expect(resumeRecoveryCopies).not.toHaveBeenCalled()
+    expect(writeRecoveryCopy).toHaveBeenCalledTimes(1)
+
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'a' }))
+    await vi.advanceTimersByTimeAsync(0)
+    expect(resumeRecoveryCopies).toHaveBeenCalledTimes(1)
+    // the same edits are copied again although nothing changed since the dropped copy
+    await vi.advanceTimersByTimeAsync(RECOVERY_COPY_INTERVAL_MS + RECOVERY_COPY_IDLE_MS)
+    expect(writeRecoveryCopy).toHaveBeenCalledTimes(2)
+  })
+
+  it('the shell reporting the cancelled close resumes copies without input', async () => {
+    const { drop, writeRecoveryCopy, resumeRecoveryCopies } = await droppedAfterCopy()
+    drop(false)
+    await vi.advanceTimersByTimeAsync(RECOVERY_COPY_INTERVAL_MS + RECOVERY_COPY_IDLE_MS)
+    expect(writeRecoveryCopy).toHaveBeenCalledTimes(2)
+    // main already resumed: a later keystroke asks nothing more
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'a' }))
+    await vi.advanceTimersByTimeAsync(0)
+    expect(resumeRecoveryCopies).not.toHaveBeenCalled()
+  })
 })

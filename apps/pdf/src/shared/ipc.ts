@@ -106,6 +106,9 @@ export const PDF_CHANNELS = {
   recoveryUnprotectable: 'pdf:recovery-unprotectable',
   recoveryFlushRequest: 'pdf:recovery-flush-request',
   recoveryFlushDone: 'pdf:recovery-flush-done',
+  // "Don't Save" answered (true) or the close cancelled (false); the renderer resumes on input
+  recoveryDropped: 'pdf:recovery-dropped',
+  recoveryResume: 'pdf:recovery-resume',
   getLanguage: 'app:get-language',
   languageChanged: 'app:language-changed',
   getTheme: 'app:get-theme',
@@ -1593,6 +1596,10 @@ export interface PdfApi {
   /** The OS is ending the session: write the copy now and answer with sendRecoveryFlushDone */
   onRecoveryFlushRequest?(handler: () => void): () => void
   sendRecoveryFlushDone?(): void
+  /** "Don't Save" was answered (true) or the shell reports the close was cancelled (false) */
+  onRecoveryDropped?(handler: (dropped: boolean) => void): () => void
+  /** The user edits again after "Don't Save": the close was cancelled, copies resume */
+  resumeRecoveryCopies?(): Promise<void>
   getLanguage(): Promise<Lang>
   onLanguageChanged(handler: (lang: Lang) => void): () => void
   getTheme(): Promise<UiTheme>
