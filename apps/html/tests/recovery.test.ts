@@ -118,6 +118,7 @@ import {
   htmlDiscardPendingAssets,
   htmlRecoveryEditor,
   htmlRecoveryIdentity,
+  htmlSaveToPath,
   requestHtmlClose,
   setHtmlRecoveryTitleSource,
   htmlFileRenamed,
@@ -154,6 +155,7 @@ const writeCopy = (contents: FakeWebContents, text: string | null) =>
 const recoveryOpen = (contents: FakeWebContents) =>
   handlers.get(HTML_CHANNELS.recoveryOpen)!({ sender: contents }) as Promise<{
     text: string
+    originalPath?: string
   } | null>
 
 const save = (contents: FakeWebContents, request: unknown) =>
@@ -464,7 +466,12 @@ describe('untitled copies', () => {
       title: 'gone.html',
       saveAsDefaultPath: missing,
     })
-    await expect(recoveryOpen(contents)).resolves.toEqual({ text: 'lost file' })
+    // the editor learns the original's name (its format) but the document stays untitled
+    await expect(recoveryOpen(contents)).resolves.toEqual({
+      text: 'lost file',
+      originalPath: missing,
+    })
+    expect(await handlers.get(HTML_CHANNELS.consumePending)!({ sender: contents })).toBeNull()
     setDirty(contents, true)
 
     showSaveDialogWithMemory.mockResolvedValueOnce({ canceled: true })
@@ -491,6 +498,70 @@ describe('the title of an untitled copy', () => {
     await writeCopy(contents, '<h1>Flyer</h1>')
     const identity = htmlRecoveryIdentity(contents.id)!
     expect(store().copyInfo(identity)).toMatchObject({ title: 'Spring concert flyer' })
+  })
+})
+
+describe('two panes on the same file', () => {
+  it("lets the other pane write its copy again after one pane saves or picks Don't Save", async () => {
+    const path = createDocument()
+    const first = openView(path)
+    const second = openView(path)
+    setDirty(first, true)
+    setDirty(second, true)
+    await writeCopy(first, 'first pane')
+    await writeCopy(second, 'second pane')
+
+    expect(await save(first, { text: 'first pane', mode: 'save' })).toMatchObject({
+      ok: true,
+      path,
+    })
+    expect(store().copyInfo(fileId(path))).toBeNull()
+    // the other pane still has unsaved work: its next tick writes the copy again
+    await expect(writeCopy(second, 'second pane')).resolves.toBe('written')
+    expect(readFileSync(store().copyPath(fileId(path)), 'utf8')).toBe('second pane')
+
+    setDirty(first, true)
+    await writeCopy(first, 'first again')
+    showMessageBox.mockResolvedValueOnce({ response: 1 })
+    await expect(requestHtmlClose(first as never)).resolves.toBe(true)
+    expect(store().copyInfo(fileId(path))).toBeNull()
+    await expect(writeCopy(second, 'second pane')).resolves.toBe('written')
+    expect(readFileSync(store().copyPath(fileId(path)), 'utf8')).toBe('second pane')
+  })
+})
+
+describe('a failed save to a given path (MCP)', () => {
+  it("leaves no copy under the target and keeps writing the document's own copy", async () => {
+    const contents = openView()
+    setDirty(contents, true)
+    await writeCopy(contents, 'draft')
+    const own = htmlRecoveryIdentity(contents.id)!
+    const target = join(tempDir('html-recovery-mcp-'), 'out.html')
+
+    const saving = htmlSaveToPath(contents as never, target)
+    // a copy tick lands while the save is pointed at the target
+    await expect(writeCopy(contents, 'draft 2')).resolves.toBe('written')
+    expect(store().copyInfo(fileId(target))).not.toBeNull()
+    // the renderer's save fails
+    await save(contents, { text: 42 })
+    await expect(saving).rejects.toThrow()
+
+    expect(store().copyInfo(fileId(target))).toBeNull()
+    expect(existsSync(target)).toBe(false)
+    expect(htmlRecoveryIdentity(contents.id)).toEqual(own)
+    await expect(writeCopy(contents, 'draft 2')).resolves.toBe('written')
+    expect(readFileSync(store().copyPath(own), 'utf8')).toBe('draft 2')
+  })
+
+  it("keeps the copy when the failed save pointed at the document's own path", async () => {
+    const path = createDocument()
+    const contents = openView(path)
+    setDirty(contents, true)
+    const saving = htmlSaveToPath(contents as never, path)
+    await writeCopy(contents, 'typed')
+    await save(contents, { text: 42 })
+    await expect(saving).rejects.toThrow()
+    expect(readFileSync(store().copyPath(fileId(path)), 'utf8')).toBe('typed')
   })
 })
 

@@ -115,6 +115,7 @@ import {
   markdownDiscardPendingAssets,
   markdownRecoveryEditor,
   markdownRecoveryIdentity,
+  markdownSaveToPath,
   requestMarkdownClose,
   setMarkdownRecoveryTitleSource,
   markdownFileRenamed,
@@ -151,6 +152,7 @@ const writeCopy = (contents: FakeWebContents, text: string | null) =>
 const recoveryOpen = (contents: FakeWebContents) =>
   handlers.get(MARKDOWN_CHANNELS.recoveryOpen)!({ sender: contents }) as Promise<{
     text: string
+    originalPath?: string
   } | null>
 
 const save = (contents: FakeWebContents, request: unknown) =>
@@ -464,7 +466,12 @@ describe('untitled copies', () => {
       title: 'gone.md',
       saveAsDefaultPath: missing,
     })
-    await expect(recoveryOpen(contents)).resolves.toEqual({ text: 'lost file' })
+    // the editor learns the original's name (its format) but the document stays untitled
+    await expect(recoveryOpen(contents)).resolves.toEqual({
+      text: 'lost file',
+      originalPath: missing,
+    })
+    expect(await handlers.get(MARKDOWN_CHANNELS.consumePending)!({ sender: contents })).toBeNull()
     setDirty(contents, true)
 
     showSaveDialogWithMemory.mockResolvedValueOnce({ canceled: true })
@@ -474,12 +481,98 @@ describe('untitled copies', () => {
     expect(existsSync(missing)).toBe(false)
   })
 
+  it('names the original of a restored plain-text copy so its format survives', async () => {
+    const missing = join(tempDir('markdown-recovery-gone-'), 'notes.txt')
+    const identity = fileId(missing)
+    await store().writeCopy(identity, Buffer.from('*not* markdown\n', 'utf8'))
+    const contents = openView()
+    await markdownRecoveryEditor.openUntitledCopy(contents as never, {
+      copy: identity,
+      title: 'notes.txt',
+    })
+    await expect(recoveryOpen(contents)).resolves.toEqual({
+      text: '*not* markdown\n',
+      originalPath: missing,
+    })
+    expect(markdownRecoveryIdentity(contents.id)).toEqual(identity)
+    // the first Save As suggests that file, so the text goes back to a .txt
+    setDirty(contents, true)
+    showSaveDialogWithMemory.mockResolvedValueOnce({ canceled: true })
+    await save(contents, { text: '*not* markdown\n', mode: 'save' })
+    const options = showSaveDialogWithMemory.mock.calls[0]![2] as { defaultPath: string }
+    expect(options.defaultPath).toBe(missing)
+  })
+
   it('creates nothing outside the app data folder for an untitled document', async () => {
     const contents = openView()
     setDirty(contents, true)
     await writeCopy(contents, 'draft')
     const { readdirSync } = await import('node:fs')
     expect(readdirSync(defaultSaveDir)).toEqual([])
+  })
+})
+
+describe('two panes on the same file', () => {
+  it("lets the other pane write its copy again after one pane saves or picks Don't Save", async () => {
+    const path = createDocument()
+    const first = openView(path)
+    const second = openView(path)
+    setDirty(first, true)
+    setDirty(second, true)
+    await writeCopy(first, 'first pane')
+    await writeCopy(second, 'second pane')
+
+    expect(await save(first, { text: 'first pane', mode: 'save' })).toMatchObject({
+      ok: true,
+      path,
+    })
+    expect(store().copyInfo(fileId(path))).toBeNull()
+    // the other pane still has unsaved work: its next tick writes the copy again
+    await expect(writeCopy(second, 'second pane')).resolves.toBe('written')
+    expect(readFileSync(store().copyPath(fileId(path)), 'utf8')).toBe('second pane')
+
+    setDirty(first, true)
+    await writeCopy(first, 'first again')
+    showMessageBox.mockResolvedValueOnce({ response: 1 })
+    await expect(requestMarkdownClose(first as never)).resolves.toBe(true)
+    expect(store().copyInfo(fileId(path))).toBeNull()
+    await expect(writeCopy(second, 'second pane')).resolves.toBe('written')
+    expect(readFileSync(store().copyPath(fileId(path)), 'utf8')).toBe('second pane')
+  })
+})
+
+describe('a failed save to a given path (MCP)', () => {
+  it("leaves no copy under the target and keeps writing the document's own copy", async () => {
+    const contents = openView()
+    setDirty(contents, true)
+    await writeCopy(contents, 'draft')
+    const own = markdownRecoveryIdentity(contents.id)!
+    const target = join(tempDir('markdown-recovery-mcp-'), 'out.md')
+
+    const saving = markdownSaveToPath(contents as never, target)
+    // a copy tick lands while the save is pointed at the target
+    await expect(writeCopy(contents, 'draft 2')).resolves.toBe('written')
+    expect(store().copyInfo(fileId(target))).not.toBeNull()
+    // the renderer's save fails
+    await save(contents, { text: 42 })
+    await expect(saving).rejects.toThrow()
+
+    expect(store().copyInfo(fileId(target))).toBeNull()
+    expect(existsSync(target)).toBe(false)
+    expect(markdownRecoveryIdentity(contents.id)).toEqual(own)
+    await expect(writeCopy(contents, 'draft 2')).resolves.toBe('written')
+    expect(readFileSync(store().copyPath(own), 'utf8')).toBe('draft 2')
+  })
+
+  it("keeps the copy when the failed save pointed at the document's own path", async () => {
+    const path = createDocument()
+    const contents = openView(path)
+    setDirty(contents, true)
+    const saving = markdownSaveToPath(contents as never, path)
+    await writeCopy(contents, 'typed')
+    await save(contents, { text: 42 })
+    await expect(saving).rejects.toThrow()
+    expect(readFileSync(store().copyPath(fileId(path)), 'utf8')).toBe('typed')
   })
 })
 

@@ -16,9 +16,15 @@
  *   ('dontSave'); a loaded tab that closes with no unsaved changes deletes the
  *   copy it wrote ('closedClean'). A crashed renderer keeps its copy, and the
  *   store refuses the clean-close deletion while the app is shutting down.
+ * - Panes showing the same file share its copy: when one deletes it, every
+ *   pane on that file forgets its last copy, so one still unsaved writes again.
+ * - A save to a given path (MCP) that fails deletes a copy this tab wrote under
+ *   that path in the meantime ('dontSave'); the document keeps its own copy.
  * - Opening a file with a copy asks the shared per-file prompt before the
  *   content is loaded (or follows the launch list's decision); a restored copy
- *   opens with the original path as the save target, unsaved.
+ *   opens with the original path as the save target, unsaved. A copy restored
+ *   as untitled (its original is missing) names that original so the editor
+ *   can keep the file's format, but the document stays untitled.
  * - Password documents do not exist in these editors: every copy is plain
  *   text the user could have saved, so `isUnprotectable` is always false.
  */
@@ -92,7 +98,15 @@ interface ViewState {
   saveAsDefaultPath?: string
   /** a copy left under the path the file had before a rename; dropped after the next write */
   renamedFrom?: RecoveryIdentity
+  /** the identity this tab's last copy was written under */
+  writtenAs?: RecoveryIdentity
   flushWaiters: (() => void)[]
+}
+
+/** a restored copy's text (see `TextRecovery.resolveOpen`) */
+export interface RecoveredText {
+  text: string
+  originalPath?: string
 }
 
 export interface TextRecovery {
@@ -113,8 +127,14 @@ export interface TextRecovery {
   dontSave(wcId: number): void
   /** the file was renamed on disk while open */
   renamed(wcId: number, oldPath: string): void
-  /** the renderer's open question: the text to load instead of the file, or null */
-  resolveOpen(contents: WebContents): Promise<{ text: string } | null>
+  /** a save to `filePath` given from outside (MCP) failed and the old target is back */
+  saveToPathFailed(wcId: number, filePath: string): void
+  /**
+   * The renderer's open question: the text to load instead of the file, or
+   * null. `originalPath` names the file an untitled restored copy came from
+   * (its original is missing): it tells the editor the format, not the save target.
+   */
+  resolveOpen(contents: WebContents): Promise<RecoveredText | null>
   /** the default Save As path for an untitled view, when recovery has one */
   saveAsDefaultPath(wcId: number): string | undefined
   /** remember an untitled document's own title (the editor's provisional name) */
@@ -193,6 +213,19 @@ export function createTextRecovery(host: TextRecoveryHost): TextRecovery {
     state.contents.reload()
   }
 
+  const sameIdentity = (a: RecoveryIdentity, b: RecoveryIdentity): boolean =>
+    isUntitledIdentity(a)
+      ? isUntitledIdentity(b) && a.kind === b.kind && a.untitledId === b.untitledId
+      : !isUntitledIdentity(b) && a.kind === b.kind && a.filePath === b.filePath
+
+  /** the copy `identity` is (or was) this view's: its save or open path, or what it last wrote */
+  const showsCopy = (wcId: number, state: ViewState, identity: RecoveryIdentity): boolean => {
+    if (state.writtenAs && sameIdentity(state.writtenAs, identity)) return true
+    if (state.untitled && sameIdentity(state.untitled, identity)) return true
+    if (isUntitledIdentity(identity)) return false
+    return host.savePath(wcId) === identity.filePath || host.openPath(wcId) === identity.filePath
+  }
+
   const deleteFor = (
     state: ViewState,
     identity: RecoveryIdentity,
@@ -203,6 +236,14 @@ export function createTextRecovery(host: TextRecoveryHost): TextRecovery {
     })
     state.lastText = null
     state.owns = false
+    state.writtenAs = undefined
+    // panes on the same file share the copy: one still unsaved must write it again
+    for (const [id, other] of views) {
+      if (other === state || !showsCopy(id, other, identity)) continue
+      other.lastText = null
+      other.owns = false
+      other.writtenAs = undefined
+    }
   }
 
   async function readText(identity: RecoveryIdentity): Promise<string | null> {
@@ -257,6 +298,7 @@ export function createTextRecovery(host: TextRecoveryHost): TextRecovery {
         if (result === 'written') {
           state.lastText = text
           state.owns = true
+          state.writtenAs = identity
           const old = state.renamedFrom
           state.renamedFrom = undefined
           // the copy under the pre-rename path is replaced by this one
@@ -294,6 +336,16 @@ export function createTextRecovery(host: TextRecoveryHost): TextRecovery {
       deleteFor(state, identityFor(wcId, state), 'dontSave')
     },
 
+    saveToPathFailed(wcId, filePath) {
+      const state = views.get(wcId)
+      if (!state) return
+      const target: RecoveryIdentity = { kind: host.kind, filePath }
+      // the failed save pointed at the document's own path: that copy is its own
+      if (sameIdentity(identityFor(wcId, state), target)) return
+      if (!state.writtenAs || !sameIdentity(state.writtenAs, target)) return
+      deleteFor(state, target, 'dontSave')
+    },
+
     renamed(wcId, oldPath) {
       const state = views.get(wcId)
       if (!state || !state.owns) return
@@ -316,7 +368,11 @@ export function createTextRecovery(host: TextRecoveryHost): TextRecovery {
         if (text === null) return null
         quietly('mark loaded', () => getStore().markCopyLoaded(seed))
         state.owns = true
-        return { text }
+        // the file this copy was of: the old path of a missing original, or
+        // the original an untitled copy names; the document stays untitled
+        const originalPath =
+          state.saveAsDefaultPath ?? (isUntitledIdentity(seed) ? undefined : seed.filePath)
+        return originalPath ? { text, originalPath } : { text }
       }
       const filePath = host.openPath(contents.id)
       if (!filePath) return null
@@ -355,7 +411,13 @@ export function createTextRecovery(host: TextRecoveryHost): TextRecovery {
     },
 
     saveAsDefaultPath(wcId) {
-      return views.get(wcId)?.saveAsDefaultPath
+      const state = views.get(wcId)
+      if (!state) return undefined
+      if (state.saveAsDefaultPath) return state.saveAsDefaultPath
+      // a copy of a missing original reopened without a suggestion: its old path
+      return state.untitled && !isUntitledIdentity(state.untitled)
+        ? state.untitled.filePath
+        : undefined
     },
 
     setTitle(wcId, title) {

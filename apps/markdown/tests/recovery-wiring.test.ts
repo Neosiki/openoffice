@@ -24,8 +24,14 @@ describe('recovery wiring', () => {
     const read = app.indexOf('recovered ? recovered.text : await window.markdownApi.readFile(path)')
     expect(ask).toBeGreaterThan(-1)
     expect(read).toBeGreaterThan(ask)
-    expect(app).toContain('loadFromPath(null, recovered.text)')
     expect(app).toContain('if (seed !== null || recovered) markDirty()')
+  })
+
+  it('opens an untitled restored copy in the format of the file it was of, still untitled', () => {
+    const app = source('src/renderer/App.tsx')
+    // no save target, but a .txt / .json original keeps its source mode
+    expect(app).toContain('loadFromPath(null, recovered.text, recovered.originalPath)')
+    expect(app).toContain('const mode = textModeForPath(modePath)')
   })
 
   it('runs the copy loop outside the AutoSave effect', () => {
