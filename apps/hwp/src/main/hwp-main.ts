@@ -29,6 +29,7 @@ import type { FieldKinds } from './field-kinds'
 import {
   hwpRecoveryBeforeSave,
   hwpRecoveryDontSave,
+  hwpRecoveryFileRenamed,
   hwpRecoveryOnRead,
   hwpRecoverySaveAsDefault,
   hwpRecoverySaved,
@@ -180,6 +181,8 @@ export function hwpFileRenamed(contents: WebContents, oldPath: string, newPath: 
     states.delete(oldPath)
     states.set(newPath, recorded)
   }
+  // the recovery copy follows the file
+  void hwpRecoveryFileRenamed(contents, oldPath, newPath)
 }
 
 /**
