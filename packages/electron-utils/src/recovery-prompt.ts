@@ -25,7 +25,7 @@ export type RecoveryMessageBox = Pick<Dialog, 'showMessageBox'>
 export interface RecoveryPromptOptions {
   dialog: RecoveryMessageBox
   /** the window the box sits over; null/undefined or destroyed shows it unparented */
-  parent?: BrowserWindow | null
+  parent?: BrowserWindow | null | undefined
   /** shown in the message (normally the file name) */
   documentName: string
   /** the file on disk is newer than the copy */
@@ -65,7 +65,7 @@ export interface ResolveRecoveryOnOpenOptions {
   store: RecoveryStore
   identity: RecoveryIdentity
   dialog: RecoveryMessageBox
-  parent?: BrowserWindow | null
+  parent?: BrowserWindow | null | undefined
   lang: string
   /** defaults to the file name (or the copy's title for an untitled copy) */
   documentName?: string
