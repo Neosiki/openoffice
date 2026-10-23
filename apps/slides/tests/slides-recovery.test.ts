@@ -20,7 +20,8 @@ import {
   writeFileSync,
 } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { basename, dirname, join } from 'node:path'
+import JSZip from 'jszip'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const hoisted = vi.hoisted(() => ({
@@ -95,7 +96,17 @@ vi.mock('../src/main/shaped-metrics', () => ({
   shapedMeasure: () => ({ width: 0 }),
 }))
 
-import { createBlankPptx, openPptx, savePptx } from '@genoffice/pptx-engine'
+// pass-through spies: which serializer a recovery copy goes through
+vi.mock('@genoffice/pptx-engine', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@genoffice/pptx-engine')>()
+  return {
+    ...actual,
+    savePptx: vi.fn(actual.savePptx),
+    savePptxToFile: vi.fn(actual.savePptxToFile),
+  }
+})
+
+import { createBlankPptx, openPptx, savePptx, savePptxToFile } from '@genoffice/pptx-engine'
 import {
   createRecoveryStore,
   markAppShuttingDown,
@@ -260,13 +271,51 @@ describe('writing copies', () => {
     expect(statSync(copy).mtimeMs).toBeGreaterThan(mtime)
   })
 
+  it('streams a plain deck copy through a temp file in the copy folder, never one big buffer', async () => {
+    const path = makeDeckFile()
+    const tab = new FakeContents(16)
+    await call<Promise<unknown>>(tab, 'slides:open-path', path, FIT)
+    call(tab, 'slides:add-blank-slide', { sourceIndex: 0, before: false, fitWidthPx: FIT })
+    vi.mocked(savePptx).mockClear()
+    vi.mocked(savePptxToFile).mockClear()
+    await runSlidesRecoveryPass()
+
+    expect(savePptx).not.toHaveBeenCalled()
+    expect(savePptxToFile).toHaveBeenCalledTimes(1)
+    const target = vi.mocked(savePptxToFile).mock.calls[0]![1]
+    const copy = legacyCopyPath(path)
+    expect(dirname(target)).toBe(dirname(copy))
+    expect(basename(target)).toMatch(/^\.[0-9a-f]{16}\.pptx\.[0-9a-f]{12}\.tmp$/)
+    expect(existsSync(target)).toBe(false)
+    expect(store().copyInfo({ kind: 'slides', filePath: path })?.state).toBe('undecided')
+    // the copy holds what the buffered copy held before: savePptx's package, part for part
+    const buffered = await savePptx(sessions.get(tab.id)!.opened)
+    expect(await zipParts(readFileSync(copy))).toEqual(await zipParts(buffered))
+  })
+
+  it('streams an untitled deck copy too', async () => {
+    const tab = new FakeContents(17)
+    await newUntitledDeck(tab)
+    markMetaDirty(sessions.get(tab.id)!)
+    vi.mocked(savePptx).mockClear()
+    await runSlidesRecoveryPass()
+    expect(savePptx).not.toHaveBeenCalled()
+    const copies = store().listCopies({ kinds: ['slides'], untitled: true })
+    expect(copies).toHaveLength(1)
+    const reopened = await openPptx(new Uint8Array(readFileSync(copies[0]!.copyPath)))
+    expect(reopened.deck.slides.length).toBeGreaterThan(0)
+  })
+
   it('keeps a password deck encrypted in its copy', async () => {
     const path = makeDeckFile()
     const tab = new FakeContents(13)
     await call<Promise<unknown>>(tab, 'slides:open-path', path, FIT)
     sessions.get(tab.id)!.password = 'secret'
     call(tab, 'slides:add-blank-slide', { sourceIndex: 0, before: false, fitWidthPx: FIT })
+    vi.mocked(savePptxToFile).mockClear()
     await runSlidesRecoveryPass()
+    // its plaintext never touches the disk: assembled in memory and encrypted
+    expect(savePptxToFile).not.toHaveBeenCalled()
     const bytes = readFileSync(legacyCopyPath(path))
     expect(isEncryptedOoxml(bytes)).toBe(true)
     const plain = await decryptOfficeFile(bytes, 'secret')
@@ -473,6 +522,16 @@ describe('deleting copies', () => {
     expect(filesIn(hoisted.documentsDir)).toEqual([])
   })
 })
+
+/** every part of a zip package with its bytes, by name */
+async function zipParts(bytes: Uint8Array): Promise<Record<string, string>> {
+  const zip = await JSZip.loadAsync(bytes)
+  const parts: Record<string, string> = {}
+  for (const entry of Object.values(zip.files)) {
+    if (!entry.dir) parts[entry.name] = Buffer.from(await entry.async('uint8array')).toString('hex')
+  }
+  return parts
+}
 
 function basenameOf(path: string): string {
   return path.split(/[\\/]/).pop()!

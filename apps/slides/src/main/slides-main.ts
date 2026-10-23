@@ -660,12 +660,26 @@ async function writeSessionCopy(session: Session, ignoreBackoff: boolean): Promi
   // the ticket comes before serializing: a save or Don't Save that lands
   // meanwhile wins, and this copy is dropped instead of reviving the slot
   const ticket = recoveryStore.beginWrite(identity)
+  const options = {
+    ticket,
+    ...('untitledId' in identity ? { title: untitledRecoveryTitle(session) } : {}),
+  }
   try {
-    const bytes = deckFileBytes(session, await savePptx(session.opened))
-    const result = await recoveryStore.writeCopy(identity, bytes, {
-      ticket,
-      ...('untitledId' in identity ? { title: untitledRecoveryTitle(session) } : {}),
-    })
+    // a plain deck streams to a temp file in the copy folder, as a save does,
+    // instead of assembling the whole package in memory every 30s; a password
+    // deck has to be encrypted as one buffer (its plaintext never hits the disk)
+    const result =
+      session.password === undefined
+        ? await recoveryStore.writeCopyStreamed(
+            identity,
+            (tempPath) => writeDeckFile(session, tempPath),
+            options,
+          )
+        : await recoveryStore.writeCopy(
+            identity,
+            deckFileBytes(session, await savePptx(session.opened)),
+            options,
+          )
     autosaveBackoff.delete(key)
     if (result === 'written') copyMarks.set(session, mark)
   } catch (error) {

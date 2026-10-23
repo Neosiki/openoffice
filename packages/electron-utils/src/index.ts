@@ -148,6 +148,7 @@ export {
   recoveryRunId,
   resetAppShuttingDown,
   type RecoveryCopyFilter,
+  type RecoveryCopyWriter,
   type RecoveryCopyInfo,
   type RecoveryCopyState,
   type RecoveryDeleteReason,

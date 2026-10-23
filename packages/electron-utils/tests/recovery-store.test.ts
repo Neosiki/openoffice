@@ -10,7 +10,7 @@ import {
   writeFileSync,
 } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { basename, dirname, join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   RECOVERY_COPY_MAX_AGE_MS,
@@ -564,5 +564,190 @@ describe('damaged metadata', () => {
       expect(store.listCopies()).toEqual([])
       expect(store.copyInfo(identity)!.state).toBe('later')
     }
+  })
+})
+
+describe('streaming a copy to disk', () => {
+  const tempsIn = (dir: string) => allFiles(dir).filter((p) => p.endsWith('.tmp'))
+
+  /** a writer that holds its temp file half written until `release` is called */
+  function heldWriter(content: string) {
+    let release!: () => void
+    const gate = new Promise<void>((resolve) => (release = resolve))
+    let started!: (tempPath: string) => void
+    const begun = new Promise<string>((resolve) => (started = resolve))
+    const write = vi.fn(async (tempPath: string) => {
+      writeFileSync(tempPath, content.slice(0, 1))
+      started(tempPath)
+      await gate
+      writeFileSync(tempPath, content)
+    })
+    return { write, begun, release }
+  }
+
+  it('moves what the writer put in its temp file into place and leaves no temp behind', async () => {
+    const identity = { kind: 'slides' as const, filePath: userDoc('deck.pptx') }
+    const write = vi.fn(async (tempPath: string) => writeFileSync(tempPath, 'streamed'))
+    expect(await store.writeCopyStreamed(identity, write)).toBe('written')
+    expect(write).toHaveBeenCalledTimes(1)
+    expect(readFileSync(store.copyPath(identity), 'utf8')).toBe('streamed')
+    expect(tempsIn(join(root, 'slides-autosave'))).toEqual([])
+  })
+
+  it('hands the writer a temp file beside the copy, of the kind the prune removes', async () => {
+    const identity = { kind: 'slides' as const, untitledId: 'u-1', ext: '.pptx' }
+    let seen = ''
+    await store.writeCopyStreamed(
+      identity,
+      async (tempPath) => {
+        seen = tempPath
+        writeFileSync(tempPath, 'x')
+      },
+      { title: 'Deck' },
+    )
+    expect(dirname(seen)).toBe(dirname(store.copyPath(identity)))
+    expect(basename(seen)).toMatch(/^\.u-1\.pptx\.[0-9a-f]{12}\.tmp$/)
+  })
+
+  it('writes the same metadata as a buffered copy: undecided, title, run, no content', async () => {
+    const doc = userDoc('plan.pptx')
+    const identity = { kind: 'slides' as const, filePath: doc }
+    const before = Date.now()
+    await store.writeCopyStreamed(identity, async (p) => writeFileSync(p, 'SECRET-MARKER'))
+    const info = store.copyInfo(identity)!
+    expect(info.state).toBe('undecided')
+    expect(info.title).toBe('plan.pptx')
+    expect(info.filePath).toBe(doc)
+    expect(info.runId).toBe(recoveryRunId())
+    expect(info.writtenAt).toBeGreaterThanOrEqual(before)
+    expect(readFileSync(`${store.copyPath(identity)}.meta.json`, 'utf8')).not.toContain('SECRET')
+
+    const untitled = { kind: 'slides' as const, untitledId: 'u-2', ext: '.pptx' }
+    await store.writeCopyStreamed(untitled, async (p) => writeFileSync(p, 'u'), { title: 'Draft' })
+    expect(store.listCopies({ untitled: true }).map((c) => c.title)).toEqual(['Draft'])
+  })
+
+  it('marks a replaced copy undecided again', async () => {
+    const identity = { kind: 'slides' as const, filePath: userDoc('again.pptx') }
+    await store.writeCopy(identity, Buffer.from('v1'))
+    store.applyLaunchDecision(identity, 'later')
+    await store.writeCopyStreamed(identity, async (p) => writeFileSync(p, 'v2'))
+    expect(store.copyInfo(identity)!.state).toBe('undecided')
+    expect(readFileSync(store.copyPath(identity), 'utf8')).toBe('v2')
+  })
+
+  it('rejects when the writer fails, removing its temp file and keeping the last copy', async () => {
+    const identity = { kind: 'slides' as const, filePath: userDoc('fail.pptx') }
+    await store.writeCopy(identity, Buffer.from('previous'))
+    const failing = store.writeCopyStreamed(identity, async (p) => {
+      writeFileSync(p, 'half')
+      throw new Error('disk full')
+    })
+    await expect(failing).rejects.toThrow('disk full')
+    expect(readFileSync(store.copyPath(identity), 'utf8')).toBe('previous')
+    expect(tempsIn(join(root, 'slides-autosave'))).toEqual([])
+  })
+
+  it('rejects when the copy folder cannot be made', async () => {
+    writeFileSync(join(root, 'slides-autosave'), 'not a folder')
+    const identity = { kind: 'slides' as const, filePath: userDoc('blocked.pptx') }
+    const write = vi.fn(async (p: string) => writeFileSync(p, 'x'))
+    await expect(store.writeCopyStreamed(identity, write)).rejects.toThrow()
+  })
+
+  it('does not call the writer when a delete came after the ticket', async () => {
+    const identity = { kind: 'slides' as const, filePath: userDoc('stale.pptx') }
+    const ticket = store.beginWrite(identity)
+    store.deleteCopy(identity, 'saved')
+    const write = vi.fn(async (p: string) => writeFileSync(p, 'stale'))
+    expect(await store.writeCopyStreamed(identity, write, { ticket })).toBe('superseded')
+    expect(write).not.toHaveBeenCalled()
+    expect(existsSync(store.copyPath(identity))).toBe(false)
+  })
+
+  it('a delete while the writer runs wins: no copy, no metadata, temp removed', async () => {
+    const identity = { kind: 'slides' as const, filePath: userDoc('race.pptx') }
+    const held = heldWriter('late bytes')
+    const write = store.writeCopyStreamed(identity, held.write)
+    const tempPath = await held.begun
+    expect(store.deleteCopy(identity, 'dontSave')).toBe('deleted')
+    held.release()
+    expect(await write).toBe('superseded')
+    expect(existsSync(tempPath)).toBe(false)
+    expect(existsSync(store.copyPath(identity))).toBe(false)
+    expect(existsSync(`${store.copyPath(identity)}.meta.json`)).toBe(false)
+    expect(tempsIn(join(root, 'slides-autosave'))).toEqual([])
+  })
+
+  it('a delete while the writer runs also removes the copy an earlier write left', async () => {
+    const identity = { kind: 'slides' as const, filePath: userDoc('older.pptx') }
+    await store.writeCopy(identity, Buffer.from('older'))
+    const held = heldWriter('late bytes')
+    const write = store.writeCopyStreamed(identity, held.write)
+    await held.begun
+    store.deleteCopy(identity, 'saved')
+    held.release()
+    expect(await write).toBe('superseded')
+    expect(store.copyInfo(identity)).toBeNull()
+  })
+
+  it('a refused deletion while the app is ending does not cancel the write', async () => {
+    const identity = { kind: 'slides' as const, filePath: userDoc('flight.pptx') }
+    markAppShuttingDown()
+    const held = heldWriter('last words')
+    const write = store.writeCopyStreamed(identity, held.write)
+    await held.begun
+    expect(store.deleteCopy(identity, 'closedClean')).toBe('refused')
+    held.release()
+    expect(await write).toBe('written')
+    expect(readFileSync(store.copyPath(identity), 'utf8')).toBe('last words')
+  })
+
+  it('a save while the app is ending still drops the write', async () => {
+    const identity = { kind: 'slides' as const, filePath: userDoc('late.pptx') }
+    markAppShuttingDown()
+    const held = heldWriter('late')
+    const write = store.writeCopyStreamed(identity, held.write)
+    const tempPath = await held.begun
+    expect(store.deleteCopy(identity, 'saved')).toBe('deleted')
+    held.release()
+    expect(await write).toBe('superseded')
+    expect(existsSync(tempPath)).toBe(false)
+    expect(existsSync(store.copyPath(identity))).toBe(false)
+  })
+
+  it('a write started after the delete still lands', async () => {
+    const identity = { kind: 'slides' as const, filePath: userDoc('after.pptx') }
+    const held = heldWriter('old')
+    const first = store.writeCopyStreamed(identity, held.write)
+    await held.begun
+    store.deleteCopy(identity, 'saved')
+    const second = store.writeCopyStreamed(identity, async (p) => writeFileSync(p, 'new'))
+    held.release()
+    expect(await first).toBe('superseded')
+    expect(await second).toBe('written')
+    expect(readFileSync(store.copyPath(identity), 'utf8')).toBe('new')
+    expect(store.copyInfo(identity)!.state).toBe('undecided')
+  })
+
+  it('is queued with buffered writes of the same document, in call order', async () => {
+    const identity = { kind: 'slides' as const, filePath: userDoc('order.pptx') }
+    const held = heldWriter('streamed')
+    const streamed = store.writeCopyStreamed(identity, held.write)
+    await held.begun
+    const buffered = store.writeCopy(identity, Buffer.from('buffered'))
+    held.release()
+    expect(await streamed).toBe('written')
+    expect(await buffered).toBe('written')
+    expect(readFileSync(store.copyPath(identity), 'utf8')).toBe('buffered')
+  })
+
+  it('refuses a ticket taken for another document without calling the writer', async () => {
+    const a = { kind: 'slides' as const, filePath: userDoc('a.pptx') }
+    const b = { kind: 'slides' as const, filePath: userDoc('b.pptx') }
+    const ticket = store.beginWrite(a)
+    const write = vi.fn(async (p: string) => writeFileSync(p, 'x'))
+    await expect(store.writeCopyStreamed(b, write, { ticket })).rejects.toThrow()
+    expect(write).not.toHaveBeenCalled()
   })
 })

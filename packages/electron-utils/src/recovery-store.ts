@@ -47,7 +47,7 @@ import {
 } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import { basename, dirname, extname, join, relative, resolve, isAbsolute } from 'node:path'
-import { atomicWriteFile, writeJsonAtomic } from './atomic-write'
+import { atomicMoveFile, atomicWriteFile, tempPathBeside, writeJsonAtomic } from './atomic-write'
 
 /** the editors that keep recovery copies, in folder order */
 export const RECOVERY_EDITOR_KINDS = [
@@ -157,6 +157,9 @@ export interface RecoveryWriteTicket {
 
 export type RecoveryWriteResult = 'written' | 'superseded'
 
+/** streams a copy to the temp path the store hands it (see writeCopyStreamed) */
+export type RecoveryCopyWriter = (tempPath: string) => Promise<void>
+
 export interface RecoveryCopyFilter {
   states?: readonly RecoveryCopyState[]
   kinds?: readonly RecoveryEditorKind[]
@@ -183,6 +186,21 @@ export interface RecoveryStore {
   writeCopy(
     identity: RecoveryIdentity,
     bytes: Buffer,
+    options?: { title?: string; ticket?: RecoveryWriteTicket },
+  ): Promise<RecoveryWriteResult>
+  /**
+   * writeCopy for content too large to hold in memory: `write` streams the
+   * copy to the temp path it is given (a dotted `.tmp` file beside the copy,
+   * which the stale-copy prune also clears), and the store moves it into place.
+   * Same guarantees as writeCopy: queued with every other write of the
+   * document, atomic rename, metadata marked undecided, 'superseded' (with the
+   * temp file and any copy removed) when a delete came after the ticket —
+   * before `write` runs it is not called at all — and a rejection, with the
+   * temp file removed, when `write` or the disk fails.
+   */
+  writeCopyStreamed(
+    identity: RecoveryIdentity,
+    write: RecoveryCopyWriter,
     options?: { title?: string; ticket?: RecoveryWriteTicket },
   ): Promise<RecoveryWriteResult>
   /**
@@ -481,23 +499,26 @@ export function createRecoveryStore(options: RecoveryStoreOptions): RecoveryStor
     removeQuietly(metaPathOf(copy))
   }
 
-  async function writeCopy(
+  /**
+   * The common shape of writeCopy and writeCopyStreamed: check the ticket,
+   * run `land` inside the document's queue, and undo the result when a delete
+   * got in meanwhile. `land` gets the metadata to record and writes it.
+   */
+  function queueCopyWrite(
     identity: RecoveryIdentity,
-    bytes: Buffer,
-    writeOptions: { title?: string; ticket?: RecoveryWriteTicket } = {},
+    writeOptions: { title?: string; ticket?: RecoveryWriteTicket },
+    land: (copy: string, writeMeta: () => void, superseded: () => boolean) => Promise<boolean>,
   ): Promise<RecoveryWriteResult> {
     const copy = copyPath(identity)
     const key = queueKey(copy)
     const ticket = writeOptions.ticket ?? { key, epoch: epochOf(key) }
-    if (ticket.key !== key) throw new Error('recovery write ticket belongs to another document')
+    if (ticket.key !== key)
+      return Promise.reject(new Error('recovery write ticket belongs to another document'))
     const untitled = isUntitledIdentity(identity)
     const title =
       writeOptions.title ?? (untitled ? '' : basename((identity as RecoveryFileIdentity).filePath))
-    return enqueue(key, async () => {
-      if (epochOf(key) !== ticket.epoch) return 'superseded'
-      mkdirSync(dirname(copy), { recursive: true })
-      // metadata first: a crash between the two leaves an orphan metadata file
-      // (ignored), never an untitled copy without its title
+    const superseded = () => epochOf(key) !== ticket.epoch
+    const writeMeta = () => {
       const meta: RecoveryCopyMeta = {
         version: 1,
         kind: identity.kind,
@@ -509,15 +530,58 @@ export function createRecoveryStore(options: RecoveryStoreOptions): RecoveryStor
         state: 'undecided',
       }
       writeJsonAtomic(metaPathOf(copy), meta)
-      await atomicWriteFile(copy, bytes)
+    }
+    return enqueue(key, async () => {
+      if (superseded()) return 'superseded'
+      mkdirSync(dirname(copy), { recursive: true })
+      if (!(await land(copy, writeMeta, superseded))) return 'superseded'
       // a delete that ran while the bytes were landing (it unlinked before the
       // rename) must still win: undo this write. Later writes wait in the queue,
       // so this never removes a newer copy.
-      if (epochOf(key) !== ticket.epoch) {
+      if (superseded()) {
         removeCopyFiles(copy)
         return 'superseded'
       }
       return 'written'
+    })
+  }
+
+  function writeCopy(
+    identity: RecoveryIdentity,
+    bytes: Buffer,
+    writeOptions: { title?: string; ticket?: RecoveryWriteTicket } = {},
+  ): Promise<RecoveryWriteResult> {
+    return queueCopyWrite(identity, writeOptions, async (copy, writeMeta) => {
+      // metadata first: a crash between the two leaves an orphan metadata file
+      // (ignored), never an untitled copy without its title
+      writeMeta()
+      await atomicWriteFile(copy, bytes)
+      return true
+    })
+  }
+
+  function writeCopyStreamed(
+    identity: RecoveryIdentity,
+    write: RecoveryCopyWriter,
+    writeOptions: { title?: string; ticket?: RecoveryWriteTicket } = {},
+  ): Promise<RecoveryWriteResult> {
+    return queueCopyWrite(identity, writeOptions, async (copy, writeMeta, superseded) => {
+      const temp = tempPathBeside(copy)
+      try {
+        await write(temp)
+        // a delete during the (long) serialization: the temp never becomes the copy
+        if (superseded()) {
+          removeQuietly(temp)
+          return false
+        }
+        // metadata first, as in writeCopy
+        writeMeta()
+        await atomicMoveFile(temp, copy)
+        return true
+      } catch (error) {
+        removeQuietly(temp)
+        throw error
+      }
     })
   }
 
@@ -700,6 +764,7 @@ export function createRecoveryStore(options: RecoveryStoreOptions): RecoveryStor
     copyPath,
     beginWrite,
     writeCopy,
+    writeCopyStreamed,
     deleteCopy,
     copyInfo,
     async readCopy(identity) {
