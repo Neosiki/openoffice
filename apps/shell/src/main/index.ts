@@ -638,6 +638,7 @@ configureHwpRuntime({
   openGeneratedPath: (path) => openGeneratedDocument(path),
   openFileDialog: () => void openFileViaDialog(),
   goHome: () => tabManager?.openHomeTab(),
+  newDocument: () => newHwpTab(),
 })
 // privileged-scheme registration is only legal before app ready
 registerPrivilegedSchemes()
