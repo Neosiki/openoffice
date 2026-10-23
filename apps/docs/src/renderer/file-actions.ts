@@ -469,6 +469,9 @@ export async function loadFile(
       format,
       ...(odt ? { odt } : {}),
       ...(result.untitledCopy ? { askPathOnFirstSave: true } : {}),
+      ...(result.untitledCopy && result.saveAsDefaultPath
+        ? { saveAsDefaultPath: result.saveAsDefaultPath }
+        : {}),
     })
     ctx.onRevisionsLoaded(blocksHaveRevisions(parsed.blocks))
     // this tab's document was replaced: a password parked for the previous
@@ -864,40 +867,84 @@ export async function buildDocBytes(ctx: FileActionContext): Promise<Uint8Array 
   return bytes
 }
 
+/** bumps whenever a save lands: a copy serialized before it would be stale */
+let savesLanded = 0
+
+/** the last copy this renderer handed over, to skip an unchanged one */
+let lastRecoveryCopy: {
+  generation: number
+  saves: number
+  path: string | null
+  bytes: Uint8Array
+} | null = null
+
+function sameBytes(a: Uint8Array, b: Uint8Array): boolean {
+  if (a.byteLength !== b.byteLength) return false
+  for (let i = 0; i < a.byteLength; i++) if (a[i] !== b[i]) return false
+  return true
+}
+
+/** 'failed': the copy could not be written (the caller backs off for a while) */
+export type RecoveryCopyOutcome = 'written' | 'skipped' | 'failed'
+
 /**
- * Crash-recovery copy: serialize the dirty document and hand the
- * bytes to the main process, which stores them under userData. Best-effort —
- * a failure only means this tick's copy is skipped.
+ * Crash-recovery copy: serialize the dirty document exactly as a save would
+ * write it now (the engine's narrow patch over the opened original; an ODT
+ * document's ODT) and hand the bytes to the main process, which keeps them in
+ * app data. A never-saved document's copy goes there too, under the tab's
+ * untitled slot: nothing is ever written to a user folder for it, and its
+ * first save still asks or lands like any first save.
  *
- * A dirty document that never got a path can't have a recovery copy (the main
- * process only accepts allowlisted paths), so it is silently persisted into the
- * default folder first (same save-new path as the first manual save); every
- * later tick then covers it like any opened file.
+ * Skipped when nothing changed since the last copy, and dropped when a save
+ * or another document came in while it was being built (that copy would be
+ * stale). `force` writes even an unchanged copy (the OS is ending the session).
  */
-export async function writeRecoveryCopy(ctx: FileActionContext): Promise<void> {
+export async function writeRecoveryCopy(
+  ctx: FileActionContext,
+  options: { force?: boolean } = {},
+): Promise<RecoveryCopyOutcome> {
   const { doc, editor } = ctx
-  if (!doc || !editor || ctx.saveInFlightRef.current || !isDocDirty(ctx)) return
+  if (!doc || !editor || ctx.saveInFlightRef.current || !isDocDirty(ctx)) return 'skipped'
   // an edit during a phased open marks the document dirty while the tail is
   // still streaming: a snapshot now would persist a truncated document. The
   // next tick covers it.
-  if (isPhasedContentPending()) return
-  if (!doc.filePath) {
-    if (isBlankDocument(editor)) return
-    if (editor.view.composing) return
-    const active = document.activeElement as HTMLElement | null
-    if (active?.closest('td[contenteditable], .doc-textbox')) return
-    await save(ctx, false, true)
-    return
-  }
+  if (isPhasedContentPending()) return 'skipped'
+  // an untouched blank new document holds nothing worth keeping
+  if (!doc.filePath && isBlankDocument(editor)) return 'skipped'
+  const generation = docGeneration
+  const saves = savesLanded
   try {
     const docx = await buildDocBytes(ctx)
-    if (!docx) return
+    if (!docx) return 'skipped'
     // an ODT tab's copy is the ODT a save would write now: restoring it opens
     // an ODT document again, and its save writes ODT
     const bytes = isOdtDoc(doc) ? await odtBytesFor(doc.odt, docx) : docx
-    await window.desktop.writeRecoveryCopy(doc.filePath, toArrayBuffer(bytes))
+    if (generation !== docGeneration || saves !== savesLanded || ctx.saveInFlightRef.current) {
+      return 'skipped'
+    }
+    const last = lastRecoveryCopy
+    if (
+      !options.force &&
+      last &&
+      last.generation === generation &&
+      last.saves === saves &&
+      last.path === doc.filePath &&
+      sameBytes(last.bytes, bytes)
+    ) {
+      return 'skipped'
+    }
+    const result = await window.desktop.writeRecoveryCopy(
+      doc.filePath,
+      toArrayBuffer(bytes),
+      doc.filePath ? undefined : { title: doc.fileName, format: isOdtDoc(doc) ? 'odt' : 'docx' },
+    )
+    if (result.ok) {
+      lastRecoveryCopy = { generation, saves, path: doc.filePath, bytes }
+      return 'written'
+    }
+    return result.failed ? 'failed' : 'skipped'
   } catch {
-    /* best-effort */
+    return 'failed'
   }
 }
 
@@ -905,9 +952,9 @@ const runSerializedSave = createSaveSerializer()
 
 /**
  * Drop unsaved password intents left by a replaced document — queued behind any
- * in-flight save: writeRecoveryCopy silently save-new's a dirty pathless
- * draft, and that save must still consume the draft's desired password (the
- * draft stays protected on disk) before the swap-triggered clear lands.
+ * in-flight save: a first save of a pathless draft may still be landing, and
+ * that save must still consume the draft's desired password (the draft stays
+ * protected on disk) before the swap-triggered clear lands.
  */
 function discardStalePasswordIntents(): void {
   // Start the IPC now, before the replacement document can record a password.
@@ -1182,9 +1229,10 @@ async function saveOnce(
       let result: Awaited<ReturnType<typeof window.desktop.saveDocxAs>>
       if (saveAs || askPath) {
         // the dialog offers both formats; the picked extension is the format written
+        // a restored copy whose file went missing suggests that file's place
         const pick = await window.desktop.pickSaveAsPath(
           autoName ?? doc.fileName,
-          doc.filePath,
+          doc.filePath ?? doc.saveAsDefaultPath ?? null,
           format,
         )
         if (!pick) return false
@@ -1225,6 +1273,8 @@ async function saveOnce(
       passwordIntentPending = result.passwordIntentPending === true
       if (result.dataUrl) fullBytes = await fetchDocBytes(result.dataUrl)
     }
+    // the file now holds these bytes: a recovery copy built before them is stale
+    savesLanded++
     // parse before the identity check: a document opened during this await must not be rewritten.
     // An ODT document takes the docx it just saved as its reference, exactly
     // like a docx document; its save baseline stays the ODT it was opened from

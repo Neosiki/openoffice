@@ -427,6 +427,8 @@ const FOLLOW_UP_PASS_DELAY_MS = 100
 const WORD_COUNT_THROTTLE_MS = 400
 /** consecutive follow-up passes a pass may schedule for itself */
 const MAX_FOLLOW_UP_PASSES = 6
+/** 30s recovery ticks skipped after a failed copy write (as the slides editor does) */
+const RECOVERY_BACKOFF_TICKS = 10
 import { runHeadlessDocumentExport } from './headless-export'
 import { installMcpBridge } from './mcp-bridge'
 import { odtOffProps, refuseInOdt, useOdtSession } from './odt-gate'
@@ -1888,15 +1890,38 @@ export function App() {
     window.desktop.reportViewMenuState?.({ aiSidebar: showAi, darkCanvas: darkPage, odt: odtDoc })
   }, [showAi, darkPage, odtDoc])
 
-  // Crash-recovery copy: while the document is dirty, push a serialized
-  // copy to the main process every 30s; a normal save (or discarding on close) removes
-  // it, and reopening the file offers Restore/Discard when a newer copy exists.
+  // Crash-recovery copy: while the document is dirty, push a serialized copy
+  // to the main process about every 30s (a never-saved document's too, into
+  // app data); a save, "Don't Save" or a clean close removes it, and opening
+  // the file asks first with the document's name. A failed write skips the
+  // next ticks instead of stopping copies for good. When the OS ends the
+  // session the main process asks for a copy right away.
   useEffect(() => {
     if (tornDown) return
+    let skip = 0
+    let running = false
     const timer = window.setInterval(() => {
+      if (running) return
+      if (skip > 0) {
+        skip--
+        return
+      }
+      running = true
       void writeRecoveryCopyImpl(fileCtxRef.current)
+        .then((outcome) => {
+          if (outcome === 'failed') skip = RECOVERY_BACKOFF_TICKS
+        })
+        .finally(() => {
+          running = false
+        })
     }, 30_000)
-    return () => window.clearInterval(timer)
+    const offNow = window.desktop.onWriteRecoveryNow?.((done) => {
+      void writeRecoveryCopyImpl(fileCtxRef.current, { force: true }).finally(done)
+    })
+    return () => {
+      window.clearInterval(timer)
+      offNow?.()
+    }
   }, [tornDown])
 
   // MCP bridge: let an external agent drive this visible editor. Commands arrive
