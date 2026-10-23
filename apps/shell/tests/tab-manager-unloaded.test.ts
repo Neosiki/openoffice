@@ -848,3 +848,35 @@ describe('createPlainEditorView (the plain-open building block for openers)', ()
     expect(manager.list()).toHaveLength(1)
   })
 })
+
+describe('sessionTabs (what the session record keeps of the strip)', () => {
+  it('lists document tabs in strip order, loaded or not, without Home, the manual or Present tabs', () => {
+    manager.openHwpTab('/docs/a.hwp')
+    manager.openHelpTab()
+    manager.openHtmlPresentTab(makeFakeView().webContents as never, 'Deck')
+    const { opener } = makeOpener()
+    const unloaded = manager.addUnloadedTab(spec('markdown', undefined, opener, 'Notes'))
+    const docs = manager.openDocsTab()
+
+    const state = manager.sessionTabs()
+    expect(state.tabs.map(({ id: _id, ...rest }) => rest)).toEqual([
+      { kind: 'hwp', title: 'a.hwp', filePath: '/docs/a.hwp' },
+      { kind: 'markdown', title: 'Notes' },
+      expect.objectContaining({ kind: 'docs' }),
+    ])
+    expect(state.tabs[1]!.id).toBe(unloaded)
+    expect(state.activeId).toBe(docs)
+    expect(state.split).toBeNull()
+    expect(manager.isTabUnloaded(unloaded)).toBe(true)
+  })
+
+  it('reports the live split by tab id', () => {
+    const openers = [makeOpener(), makeOpener()]
+    const ids = manager.hydrateSession({
+      tabs: openers.map((o, i) => spec('docs', `/${i}.docx`, o.opener)),
+      active: 0,
+      split: { a: 0, b: 1, orientation: 'side', ratio: 0.5, focus: 'a' },
+    })
+    expect(manager.sessionTabs().split).toMatchObject({ aTabId: ids[0], bTabId: ids[1] })
+  })
+})
