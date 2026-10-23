@@ -83,7 +83,7 @@
 - **나눔 기억은 망가진 값을 무시하고, 나눔을 풀면 지운다.** 기억을 읽어 복원할 때 값이 어긋나 있으면 그 값으로 나누지 않는다. 나눔을 풀면 그 기억을 지운다.
 - **세션 기록에는 문서 내용을 넣지 않는다.** 탭 종류, 경로 또는 제목 없는 사본의 식별자와 제목, 순서, 앞 탭, 나눔, 정상 표시, 시작 시각, 되살리기 실행인지만 둔다. 크래시 기록과 섞지 않는다. 망가진 기록은 무시한다.
 - **세션 기록은 `initSessionRecord`를 부른 실행만 건드린다.** 단일 실행 잠금을 얻고 창 없는 내보내기가 아닌 것을 안 뒤에만 부른다. 두 번째 실행과 `--headless-export`는 읽지도 쓰지도 않는다(그래서 다음 실행이 비정상으로 잘못 판정되지 않는다).
-- **종료가 시작되면 먼저 래치를 세운다.** `before-quit`와 PC 끄기에서 `markAppShuttingDown`이 탭을 내리기 전에 서야 편집기의 닫기 정리가 사본을 지우지 못한다. 닫기가 취소되면(`installShellCloseGuard`의 `onVetoed`) `resetAppShuttingDown`으로 내린다. PC 끄기(`createOsSessionEnd`)는 질문 없이 편집기마다 `writeCopiesNow`를 기다린 뒤 `app.exit(0)`으로 끝나고 정상 표시를 남기지 않는다.
+- **종료가 시작되면 먼저 래치를 세운다.** `before-quit`와 PC 끄기에서 `markAppShuttingDown`이 탭을 내리기 전에 서야 편집기의 닫기 정리가 사본을 지우지 못한다. 닫기가 취소되면(`installShellCloseGuard`의 `onVetoed`, 떼어 낸 창의 닫기 거절) `resetAppShuttingDown`으로 내리고, `resumeDiscardedCopies`로 "저장 안 함"에 답했던 탭의 사본 쓰기를 다시 연다. PC 끄기(`createOsSessionEnd`)는 질문 없이 편집기마다 `writeCopiesNow`를 기다린 뒤 `app.exit(0)`으로 끝나고 정상 표시를 남기지 않는다.
 - **시작 목록이 떠 있는 동안 어떤 탭도 불러오지 않는다.** 홈을 앞에 두고, 답(또는 닫기 = 나중에)을 받은 뒤에 앞 탭과 나눔을 불러온다. 편집기 화면은 홈의 겹침 화면 위에 그려지고, 무엇을 불러올지가 답에 달렸다. 되살리기 반복(`crashLoop`)이면 아무 탭도 미리 불러오지 않는다.
 - **불러오지 않은 탭은 깨끗한 탭이다.** 저장 안 됨 계산, 닫기 확인, 저장 메뉴 대상에서 빠지고, 닫으면 편집기 정리 없이 사라져 사본이 남는다. 열린 문서의 화면이 필요한 MCP 길은 `webContentsForTab`이 아니라 `liveDocumentContents`(`ensureTabLoaded`)를 쓴다.
 

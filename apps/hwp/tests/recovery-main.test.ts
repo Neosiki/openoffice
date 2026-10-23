@@ -116,6 +116,7 @@ import {
   markAppShuttingDown,
   recoveryEditor,
   resetAppShuttingDown,
+  resumeDiscardedCopies,
 } from '@genoffice/electron-utils'
 import type { RecoveryIdentity } from '@genoffice/electron-utils'
 import {
@@ -276,6 +277,7 @@ beforeEach(() => {
 afterEach(() => {
   for (const contents of opened.splice(0)) if (!contents.destroyed) contents.emit('destroyed')
   resetAppShuttingDown()
+  resumeDiscardedCopies()
   rmSync(dir, { recursive: true, force: true })
 })
 
@@ -387,6 +389,30 @@ describe('a recovery copy of a file', () => {
     expect(await writeCopy(contents, edited(original, '또 '))).toBe('refused')
     contents.emit('destroyed')
     expect(store().copyInfo(fileIdentity(path))).toBeNull()
+  })
+
+  it('stays away after "Don\'t Save" while the window close asks other tabs, and comes back once it is cancelled', async () => {
+    const path = join(dir, 'waiting.hwp')
+    const original = fileWithTails('본문')
+    writeFileSync(path, original)
+    const contents = view(path)
+    await call(HWP_CHANNELS.readFile, contents, path)
+    call(HWP_CHANNELS.dirtyChanged, contents, true)
+    await writeCopy(contents, edited(original, '고친 '))
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    try {
+      showMessageBox.mockResolvedValueOnce({ response: 1 })
+      expect(await requestHwpClose(contents as never)).toBe(true)
+      // the user lingers on a later tab's prompt, well past the tab's own hold
+      vi.advanceTimersByTime(60_000)
+    } finally {
+      vi.useRealTimers()
+    }
+    expect(await writeCopy(contents, edited(original, '고친 '))).toBe('superseded')
+    expect(store().copyInfo(fileIdentity(path))).toBeNull()
+    // that tab cancelled the window's close: this one stays open and copies again
+    resumeDiscardedCopies()
+    expect(await writeCopy(contents, edited(original, '고친 '))).toBe('written')
   })
 
   it('is removed when its tab closes with nothing unsaved, and kept otherwise', async () => {
@@ -533,6 +559,20 @@ describe('a file open in both panes of a split', () => {
     first.emit('destroyed')
     expect(store().copyInfo(fileIdentity(path))).toBeNull()
     expect(resets(second)).toBe(1)
+  })
+
+  it('lets the other pane copy again when one pane answers "Don\'t Save"', async () => {
+    const { path, original, first, second } = await split('dropped.hwp')
+    call(HWP_CHANNELS.dirtyChanged, first, true)
+    call(HWP_CHANNELS.dirtyChanged, second, true)
+    await writeCopy(first, edited(original, '첫째 '))
+    showMessageBox.mockResolvedValueOnce({ response: 1 })
+    expect(await requestHwpClose(first as never)).toBe(true)
+    first.emit('destroyed')
+    expect(resets(second)).toBeGreaterThan(0)
+    // the other pane's edits were not thrown away
+    expect(await writeCopy(second, edited(original, '둘째 '))).toBe('written')
+    expect(store().copyInfo(fileIdentity(path))).not.toBeNull()
   })
 })
 

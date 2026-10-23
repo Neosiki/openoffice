@@ -22,6 +22,7 @@ import {
   recoveryFolderName,
   recoveryRunId,
   resetAppShuttingDown,
+  resumeDiscardedCopies,
   type RecoveryIdentity,
   type RecoveryStore,
 } from '../src/recovery-store'
@@ -42,6 +43,7 @@ beforeEach(() => {
 
 afterEach(() => {
   resetAppShuttingDown()
+  resumeDiscardedCopies()
   rmSync(root, { recursive: true, force: true })
   rmSync(userFolder, { recursive: true, force: true })
 })
@@ -841,5 +843,100 @@ describe('streaming a copy to disk', () => {
     const write = vi.fn(async (p: string) => writeFileSync(p, 'x'))
     await expect(store.writeCopyStreamed(b, write, { ticket })).rejects.toThrow()
     expect(write).not.toHaveBeenCalled()
+  })
+})
+
+describe('a document discarded with "Don\'t Save"', () => {
+  const tempsIn = (dir: string) => allFiles(dir).filter((p) => p.endsWith('.tmp'))
+
+  it('takes no new copy while its close is still in progress', async () => {
+    const identity = { kind: 'docs' as const, filePath: userDoc('gone.docx') }
+    await store.writeCopy(identity, Buffer.from('edits'))
+    expect(store.deleteCopy(identity, 'dontSave')).toBe('deleted')
+    expect(await store.writeCopy(identity, Buffer.from('edits again'))).toBe('superseded')
+    expect(existsSync(store.copyPath(identity))).toBe(false)
+    expect(existsSync(`${store.copyPath(identity)}.meta.json`)).toBe(false)
+    expect(store.isDiscarded(identity)).toBe(true)
+  })
+
+  it('does not call a streamed writer and leaves no temp file', async () => {
+    const identity: RecoveryIdentity = {
+      kind: 'slides',
+      untitledId: newUntitledRecoveryId(),
+      ext: '.pptx',
+    }
+    store.deleteCopy(identity, 'dontSave')
+    const write = vi.fn(async (p: string) => writeFileSync(p, 'deck'))
+    expect(await store.writeCopyStreamed(identity, write)).toBe('superseded')
+    expect(write).not.toHaveBeenCalled()
+    expect(existsSync(store.copyPath(identity))).toBe(false)
+    expect(tempsIn(root)).toEqual([])
+  })
+
+  it('other reasons do not block later copies', async () => {
+    const identity = { kind: 'hwp' as const, filePath: userDoc('kept.hwp') }
+    for (const reason of ['saved', 'discarded', 'closedClean'] as const) {
+      store.deleteCopy(identity, reason)
+      expect(store.isDiscarded(identity)).toBe(false)
+      expect(await store.writeCopy(identity, Buffer.from(reason))).toBe('written')
+    }
+  })
+
+  it('copies resume once the close is cancelled', async () => {
+    const a = { kind: 'markdown' as const, filePath: userDoc('a.md') }
+    const b = { kind: 'mindmap' as const, filePath: userDoc('b.xmind') }
+    store.deleteCopy(a, 'dontSave')
+    store.deleteCopy(b, 'dontSave')
+    resumeDiscardedCopies()
+    expect(store.isDiscarded(a)).toBe(false)
+    expect(await store.writeCopy(a, Buffer.from('a'))).toBe('written')
+    expect(await store.writeCopy(b, Buffer.from('b'))).toBe('written')
+    expect(store.copyInfo(a)!.state).toBe('undecided')
+  })
+
+  it('opening the document again lifts the block for that document only', async () => {
+    const reopened = { kind: 'html' as const, filePath: userDoc('again.html') }
+    const other = { kind: 'html' as const, filePath: userDoc('other.html') }
+    store.deleteCopy(reopened, 'dontSave')
+    store.deleteCopy(other, 'dontSave')
+    expect(store.openPlan(reopened)).toEqual({ action: 'none' })
+    expect(await store.writeCopy(reopened, Buffer.from('new edits'))).toBe('written')
+    expect(await store.writeCopy(other, Buffer.from('discarded'))).toBe('superseded')
+  })
+
+  it('an explicit clear, and loading a copy, lift it too', async () => {
+    const cleared = { kind: 'pdf' as const, filePath: userDoc('c.pdf') }
+    const loaded = { kind: 'pdf' as const, filePath: userDoc('l.pdf') }
+    store.deleteCopy(cleared, 'dontSave')
+    store.clearDiscarded(cleared)
+    expect(await store.writeCopy(cleared, Buffer.from('c'))).toBe('written')
+    store.deleteCopy(loaded, 'dontSave')
+    store.markCopyLoaded(loaded)
+    expect(await store.writeCopy(loaded, Buffer.from('l'))).toBe('written')
+  })
+
+  it('is shared by every bundled copy of the module', async () => {
+    const identity = { kind: 'docs' as const, filePath: userDoc('shared.docx') }
+    vi.resetModules()
+    const other = await import('../src/recovery-store')
+    const otherStore = other.createRecoveryStore({ userDataDir: root })
+    otherStore.deleteCopy(identity, 'dontSave')
+    expect(await store.writeCopy(identity, Buffer.from('x'))).toBe('superseded')
+    other.resumeDiscardedCopies()
+    expect(await store.writeCopy(identity, Buffer.from('x'))).toBe('written')
+  })
+
+  it('leaves the shutdown latch alone: "Don\'t Save" still deletes, others are refused', async () => {
+    const dropped = { kind: 'docs' as const, filePath: userDoc('d.docx') }
+    const kept = { kind: 'docs' as const, filePath: userDoc('k.docx') }
+    await store.writeCopy(dropped, Buffer.from('x'))
+    await store.writeCopy(kept, Buffer.from('y'))
+    markAppShuttingDown()
+    expect(store.deleteCopy(dropped, 'dontSave')).toBe('deleted')
+    expect(store.deleteCopy(kept, 'closedClean')).toBe('refused')
+    expect(await store.writeCopy(dropped, Buffer.from('late'))).toBe('superseded')
+    expect(await store.writeCopy(kept, Buffer.from('last'))).toBe('written')
+    resumeDiscardedCopies()
+    expect(isAppShuttingDown()).toBe(true)
   })
 })

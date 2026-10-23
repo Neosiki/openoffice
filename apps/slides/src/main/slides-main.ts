@@ -661,17 +661,6 @@ const copyMarks = new WeakMap<Session, CopyMark>()
 const autosaveBackoff = new Map<string, number>()
 const AUTOSAVE_BACKOFF_TICKS = 10
 
-/**
- * Decks whose changes the user threw away (Don't Save, an MCP close without
- * saving), with what they held then. A pass snapshots the open decks and
- * writes them one by one, so a deck discarded while an earlier one was still
- * serializing would otherwise get a fresh copy after its delete — and the
- * discarded edits would be offered on the next launch. Such a deck is copied
- * again only once it changes (its close did not go through and the user kept
- * working).
- */
-const discardedMarks = new WeakMap<Session, CopyMark>()
-
 /** the session still belongs to an open view */
 function sessionIsOpen(session: Session): boolean {
   for (const open of sessions.values()) if (open === session) return true
@@ -681,15 +670,16 @@ function sessionIsOpen(session: Session): boolean {
 async function writeSessionCopy(session: Session, ignoreBackoff: boolean): Promise<void> {
   const mark = contentMark(session)
   // checked right before the ticket, with no await in between: a deck whose
-  // view went away or whose changes were discarded since the pass began is
-  // not written
+  // view went away since the pass began is not written, nor one whose changes
+  // were thrown away (Don't Save, an MCP close without saving). A pass
+  // snapshots the open decks and writes them one by one, so a deck discarded
+  // while an earlier one was still serializing would otherwise get a fresh
+  // copy after its delete. The store keeps such a deck blocked until the
+  // window close is cancelled (the tab stays open: copies resume at the next
+  // pass) or the deck is opened again; asking it first spares the serializing.
   if (!sessionIsOpen(session)) return
-  const discarded = discardedMarks.get(session)
-  if (discarded) {
-    if (sameMark(discarded, mark)) return
-    discardedMarks.delete(session)
-  }
   const identity = recoveryIdentityOf(session)
+  if (recoveryStore.isDiscarded(identity)) return
   const key = recoveryStore.copyPath(identity)
   const skip = autosaveBackoff.get(key) ?? 0
   if (skip > 0 && !ignoreBackoff) {
@@ -763,8 +753,7 @@ setInterval(() => {
 
 /** delete every copy the session's document has (its file slot and its untitled slot) */
 function deleteSessionCopies(session: Session, reason: RecoveryDeleteReason): void {
-  // a pass already under way must not write these discarded changes again
-  if (reason === 'dontSave') discardedMarks.set(session, contentMark(session))
+  // 'dontSave' also blocks the deck's copies in the store (see writeSessionCopy)
   let refused = false
   if (session.path) {
     const identity = fileRecoveryId(session.path)
