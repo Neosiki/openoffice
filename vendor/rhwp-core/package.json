@@ -1,7 +1,7 @@
 {
   "name": "@rhwp/core",
   "version": "0.8.7-ieum.5",
-  "description": "rhwp v0.8.7 HWP/HWPX engine (WebAssembly) rebuilt with the layout patches in ./patches",
+  "description": "rhwp v0.8.7 HWP/HWPX engine (WebAssembly) rebuilt with the patches in ./patches",
   "private": true,
   "type": "module",
   "main": "rhwp.js",
@@ -30,6 +30,8 @@
       "0009-cellzone-fill-spans-merged-end-cell.patch",
       "0010-header-footer-frame-origin.patch",
       "0011-inherit-master-page-from-previous-section.patch",
+      "0012-delete-style-remaps-all-paragraphs.patch",
+      "0013-restyle-per-attribute-everywhere.patch",
       "0013-page-number-pos-insert.patch"
     ],
     "wasmPack": "0.15.0",
