@@ -263,7 +263,7 @@ Linux판(64비트 x64)도 베타로 냅니다. Windows·Mac 설치 파일과 **�
 
 ## 13. 소개 사이트에 업데이트 소식 올리기 (정식 공개 뒤, 매번)
 
-소개 사이트 https://ieumoffice.vercel.app 의 내려받기 버튼은 GitHub의 최신 릴리스를 스스로 찾으므로 손댈 것이 없습니다. 그러나 **업데이트 소식은 손으로 더해야** 합니다. 더하지 않으면 사이트의 "새 버전" 안내가 지난 버전에 머뭅니다.
+소개 사이트 https://ieumoffice.com 의 내려받기 버튼은 GitHub의 최신 릴리스를 스스로 찾으므로 손댈 것이 없습니다. 그러나 **업데이트 소식은 손으로 더해야** 합니다. 더하지 않으면 사이트의 "새 버전" 안내가 지난 버전에 머뭅니다.
 
 1. 사이트 저장소는 앱 저장소 밖의 `E:\github\ieumoffice-site`(GitHub `pblsketch/ieumoffice-site`)입니다. 그 저장소 `README.md`의 **"새 버전을 낸 뒤"** 를 처음부터 따라 합니다.
 2. 고칠 것은 두 곳입니다. **업데이트 페이지**(`/updates`) 맨 위에 새 버전 항목을 하나 더하고(앞 버전 항목은 그대로 둡니다), **메인의 한 줄 안내**의 버전 번호와 기능 이름을 바꿉니다. 바뀐 기능과 어긋나는 다른 칸의 문장도 고칩니다.
@@ -272,6 +272,7 @@ Linux판(64비트 x64)도 베타로 냅니다. Windows·Mac 설치 파일과 **�
 5. 캡처는 이번 버전으로 빌드한 앱(`apps/*/out`이 이번 빌드인 작업 사본)으로 찍습니다. 개인 계정·최근 파일이 찍히지 않도록 사이트의 캡처 스크립트가 빈 임시 프로필로 띄웁니다.
 6. 사이트 저장소의 `main`에 push하는 순간 공개됩니다. **push 전에 저장소 주인이 바뀐 글과 화면을 확인합니다.**
 7. 배포 뒤 `/updates`의 새 항목, 메인의 한 줄 안내, Windows·Mac 내려받기 버튼이 새 버전을 가리키는지 봅니다.
+8. **사이트의 질문 도우미("궁금한 점 묻기")가 새 버전을 따라갔는지 봅니다.** 도우미는 이 저장소 최신 릴리스 태그의 한국어 도움말·README·PRIVACY.md와 사이트 페이지로 답합니다. 사이트 저장소의 GitHub Actions "Question helper knowledge base"가 6번의 push 때와 매일 새벽에 지식베이스를 다시 만들어 커밋합니다. 그 실행이 초록인지, 사이트 저장소 `lib/kb-data.js` 첫 줄의 버전이 새 태그인지 확인합니다. 빨간 실행이면 실행 기록의 ✗ 줄이 무엇이 빠졌는지 알려 줍니다. 도움말이 크게 바뀐 버전이면 사이트 저장소 README "질문 도우미"대로 답까지 시험합니다.
 
 ---
 
@@ -290,6 +291,6 @@ Linux판(64비트 x64)도 베타로 냅니다. Windows·Mac 설치 파일과 **�
 9. (Mac) Actions → macOS build → Run workflow → 결과의 dmg, zip, latest-mac.yml 을 같은 릴리스에 올리기
 10. (Linux) Actions → Linux build → Run workflow → 결과의 AppImage, deb, rpm, latest-linux.yml 을 같은 릴리스에 올리기
 11. 릴리스를 pre-release 해제 + latest 로 바꾸기
-12. 소개 사이트(ieumoffice-site): /updates 맨 위에 새 버전 항목 + 메인 한 줄 안내 고치기 → 확인 받고 push → 사이트에서 확인
+12. 소개 사이트(ieumoffice-site): /updates 맨 위에 새 버전 항목 + 메인 한 줄 안내 고치기 → 확인 받고 push → 사이트에서 확인 → 질문 도우미 지식베이스 자동 갱신(Actions) 초록·새 태그 확인
 13. docs/tracking/status.md 에 기준 버전과 확인한 내용 기록
 ```
