@@ -878,6 +878,15 @@ let lastRecoveryCopy: {
   bytes: Uint8Array
 } | null = null
 
+/**
+ * The main process dropped this tab's copy ("Don't Save", a discarding close)
+ * while the document may stay open and dirty (the close did not go through):
+ * the next tick copies again even if nothing changed since the dropped copy.
+ */
+export function forgetRecoveryCopy(): void {
+  lastRecoveryCopy = null
+}
+
 function sameBytes(a: Uint8Array, b: Uint8Array): boolean {
   if (a.byteLength !== b.byteLength) return false
   for (let i = 0; i < a.byteLength; i++) if (a[i] !== b[i]) return false

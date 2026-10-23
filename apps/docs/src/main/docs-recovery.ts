@@ -47,22 +47,25 @@ export interface DocsRecovery {
   /**
    * Write the tab's copy. The write ticket is taken before `prepare` runs, so a
    * save (or "Don't Save") that lands meanwhile wins and nothing is left on
-   * disk. `prepare` answering null skips this tick. Resolves 'written',
+   * disk. `prepare` may be async (a docx gets its lazily served pictures back
+   * first, like a save); answering null skips this tick. Resolves 'written',
    * 'skipped' (prepare said no, or a delete superseded the write) or rejects
    * on a disk error (the caller backs off).
    */
   writeCopy(
     tabId: number,
     target: DocsCopyTarget,
-    prepare: () => Buffer | null,
+    prepare: () => Buffer | null | Promise<Buffer | null>,
     title: string,
   ): Promise<'written' | 'skipped'>
   /**
    * A save of this tab landed. `paths`: the file copies it makes stale (the
-   * saved path, and the source path of a Save As). `untitled`: the tab's
-   * document had no file before this save, its untitled copy goes too.
+   * saved path, and the path the tab's document had before, when the save
+   * moved it). The tab's untitled copy always goes too: after any save the
+   * document has a file, and an untitled write that crossed the first save
+   * would otherwise stay behind as an orphan.
    */
-  noteSaved(tabId: number, paths: readonly string[], untitled: boolean): void
+  noteSaved(tabId: number, paths: readonly string[]): void
   /** the close check answered: a clean tab may drop its own copies when it closes */
   noteCloseCheck(tabId: number, dirty: boolean): void
   /**
@@ -73,6 +76,27 @@ export interface DocsRecovery {
   discard(tabId: number, filePath: string | null): void
   /** the close prompt's Save went through */
   noteClosedSaved(tabId: number): void
+  /**
+   * The tab closes without its renderer's answer ("Close Anyway" on a hung
+   * tab): its copies are the only record of its edits, so they stay, set
+   * aside as "later" (asked about when the file opens; an untitled one is in
+   * the next launch list) instead of being dropped like "Don't Save".
+   * `filePath`: the tab's file, whose copy it may have loaded without
+   * rewriting it.
+   */
+  abandon(tabId: number, filePath: string | null): void
+  /**
+   * The tab is still open (the OS is ending the session and asked it for a
+   * copy): a "Don't Save" answered before a cancelled quit no longer holds,
+   * so its teardown keeps the copies.
+   */
+  noteStillOpen(tabId: number): void
+  /**
+   * The restored copy of `filePath` could not be loaded and the file opened
+   * instead: no tab holds the copy, so it waits as "later" for the next open
+   * of the file rather than staying undecided.
+   */
+  restoreFailed(filePath: string): void
   /**
    * The tab's document is closed (the tab torn down, or another document
    * replaced it after the close prompt): settle the copies the tab wrote by
@@ -155,7 +179,7 @@ export function createDocsRecovery(store: RecoveryStore): DocsRecovery {
           ? fileIdentity(target.filePath)
           : untitledFor(tabId, target.untitledExt)
       const ticket = store.beginWrite(identity)
-      const bytes = prepare()
+      const bytes = await prepare()
       if (!bytes) return 'skipped'
       const result = await store.writeCopy(identity, bytes, { title, ticket })
       if (result !== 'written') return 'skipped'
@@ -169,9 +193,9 @@ export function createDocsRecovery(store: RecoveryStore): DocsRecovery {
       return 'written'
     },
 
-    noteSaved(tabId, paths, untitled) {
+    noteSaved(tabId, paths) {
       for (const filePath of paths) store.deleteCopy(fileIdentity(filePath), 'saved')
-      if (untitled) dropUntitled(tabId, 'saved')
+      dropUntitled(tabId, 'saved')
     },
 
     noteCloseCheck(tabId, dirty) {
@@ -187,6 +211,24 @@ export function createDocsRecovery(store: RecoveryStore): DocsRecovery {
 
     noteClosedSaved(tabId) {
       outcomes.set(tabId, 'saved')
+    },
+
+    abandon(tabId, filePath) {
+      // no outcome: the teardown keeps every copy, like a crashed tab's
+      outcomes.delete(tabId)
+      const paths = new Set(pathsByTab.get(tabId))
+      if (filePath) paths.add(filePath)
+      for (const path of paths) store.setCopyState(fileIdentity(path), 'later')
+      const untitled = untitledByTab.get(tabId)
+      if (untitled) store.setCopyState(untitled, 'later')
+    },
+
+    noteStillOpen(tabId) {
+      if (outcomes.get(tabId) === 'dontSave') outcomes.delete(tabId)
+    },
+
+    restoreFailed(filePath) {
+      store.setCopyState(fileIdentity(filePath), 'later')
     },
 
     settleClosedDocument(tabId, crashed) {

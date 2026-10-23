@@ -419,6 +419,8 @@ export interface DesktopApi {
   ): Promise<{ ok: boolean; failed?: boolean }>
   /** the OS is ending the session: write the recovery copy now, then call `done` */
   onWriteRecoveryNow?(handler: (done: () => void) => void): () => void
+  /** the main process dropped this tab's recovery copy ("Don't Save", a discarding close) */
+  onRecoveryCopyDropped?(handler: () => void): () => void
   /** tab closed but webContents kept alive (shell freeze workaround) — stop background timers */
   onTeardown(handler: () => void): () => void
   /** one trusted space keystroke into this webContents — the only thing that

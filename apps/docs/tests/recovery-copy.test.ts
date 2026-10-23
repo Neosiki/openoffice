@@ -29,7 +29,8 @@ vi.mock('../src/renderer/components/toast-bus', () => ({
   setToastEmitter: () => {},
 }))
 
-const { loadFile, newFile, save, writeRecoveryCopy } = await import('../src/renderer/file-actions')
+const { forgetRecoveryCopy, loadFile, newFile, save, writeRecoveryCopy } =
+  await import('../src/renderer/file-actions')
 type Ctx = Parameters<typeof loadFile>[0]
 
 let urlSeq = 0
@@ -246,6 +247,19 @@ describe('copy ticks', () => {
     ctx.dirtyRef.current = true
     expect(await writeRecoveryCopy(ctx)).toBe('written')
     expect(calls.filter((c) => c.channel === 'recovery')).toHaveLength(3)
+  })
+
+  it('copy an unchanged document again once the main process dropped its copy', async () => {
+    const ctx = makeCtx()
+    await loadFile(ctx, openResult('/docs/kept-dirty.docx', await buildBlankDocx({})))
+    typeParagraph(ctx.editor as Editor, 'still unsaved')
+    ctx.dirtyRef.current = true
+    expect(await writeRecoveryCopy(ctx)).toBe('written')
+    expect(await writeRecoveryCopy(ctx)).toBe('skipped')
+    // "Don't Save" dropped the copy, then the quit was cancelled: still dirty
+    forgetRecoveryCopy()
+    expect(await writeRecoveryCopy(ctx)).toBe('written')
+    expect(calls.filter((c) => c.channel === 'recovery')).toHaveLength(2)
   })
 
   it('report a failed write so the timer backs off', async () => {

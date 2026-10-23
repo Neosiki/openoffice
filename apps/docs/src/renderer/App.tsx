@@ -400,6 +400,7 @@ import {
   save as saveImpl,
   templateDocBytes,
   writeRecoveryCopy as writeRecoveryCopyImpl,
+  forgetRecoveryCopy,
   type FileActionContext,
   type PendingPdfExport,
 } from './file-actions'
@@ -1918,9 +1919,12 @@ export function App() {
     const offNow = window.desktop.onWriteRecoveryNow?.((done) => {
       void writeRecoveryCopyImpl(fileCtxRef.current, { force: true }).finally(done)
     })
+    // a dropped copy whose close did not go through: the next tick copies again
+    const offDropped = window.desktop.onRecoveryCopyDropped?.(forgetRecoveryCopy)
     return () => {
       window.clearInterval(timer)
       offNow?.()
+      offDropped?.()
     }
   }, [tornDown])
 

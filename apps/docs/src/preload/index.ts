@@ -130,6 +130,13 @@ const api: DesktopApi = {
       ipcRenderer.removeListener('docs:write-recovery-now', listener)
     }
   },
+  onRecoveryCopyDropped: (handler) => {
+    const listener = () => handler()
+    ipcRenderer.on('docs:recovery-copy-dropped', listener)
+    return () => {
+      ipcRenderer.removeListener('docs:recovery-copy-dropped', listener)
+    }
+  },
   onTeardown: (handler) => {
     const listener = () => handler()
     ipcRenderer.on('docs:teardown', listener)
