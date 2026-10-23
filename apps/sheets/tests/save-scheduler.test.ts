@@ -66,13 +66,26 @@ describe('shouldRunSaveTick', () => {
     expect(shouldRunSaveTick(dirtyWorkbookState({ hasWorkbook: false }))).toBe(false)
     expect(shouldRunSaveTick(dirtyWorkbookState({ journalEmpty: true }))).toBe(false)
     expect(shouldRunSaveTick(dirtyWorkbookState({ editingCell: true }))).toBe(false)
-    expect(shouldRunSaveTick(dirtyWorkbookState({ needsSaveAsNotUnsavedNew: true }))).toBe(false)
-    expect(shouldRunSaveTick(dirtyWorkbookState({ isCsv: true }))).toBe(false)
+    expect(
+      shouldRunSaveTick(dirtyWorkbookState({ kind: 'save', needsSaveAsNotUnsavedNew: true })),
+    ).toBe(false)
+    expect(shouldRunSaveTick(dirtyWorkbookState({ kind: 'save', isCsv: true }))).toBe(false)
     // the recovery-only guard does not block the real save kind
     expect(shouldRunSaveTick(dirtyWorkbookState({ automaticRecoveryDisabled: true }))).toBe(false)
     expect(
       shouldRunSaveTick(dirtyWorkbookState({ kind: 'save', automaticRecoveryDisabled: true })),
     ).toBe(true)
+  })
+
+  it('a CSV or converted workbook writes its (untitled) copy, though AutoSave skips it', () => {
+    expect(shouldRunSaveTick(dirtyWorkbookState({ kind: 'recovery', isCsv: true }))).toBe(true)
+    expect(
+      shouldRunSaveTick(dirtyWorkbookState({ kind: 'recovery', needsSaveAsNotUnsavedNew: true })),
+    ).toBe(true)
+    // the in-cell editor still holds both back
+    expect(
+      shouldRunSaveTick(dirtyWorkbookState({ kind: 'recovery', isCsv: true, editingCell: true })),
+    ).toBe(false)
   })
 
   it('a restored workbook keeps writing its copy (it runs on a temp file, not on the copy)', () => {

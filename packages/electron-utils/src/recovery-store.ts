@@ -22,7 +22,10 @@
  *
  * Metadata never holds document content: kind, original path (null when
  * untitled), untitled id, tab title, last write time, the writing run's id and
- * the copy's state. A copy without readable metadata — what earlier versions
+ * the copy's state. An untitled copy may also name the file it was opened
+ * from when the editor cannot write back to that file (Excel's CSV and
+ * converted workbooks): the launch list shows its folder and the first Save
+ * As offers it. A copy without readable metadata — what earlier versions
  * wrote — reads as state "later": it is offered when its file is opened.
  *
  * The store keeps whatever bytes it is given. Callers must not pass decrypted
@@ -127,6 +130,12 @@ export interface RecoveryCopyInfo {
   fileChangedAfterCopy: boolean
   /** a path is known but no file is there (deleted, moved, drive removed) */
   originalMissing: boolean
+  /**
+   * For an untitled copy only: the file the document was opened from when the
+   * editor cannot write the copy back to it (a CSV or a converted workbook).
+   * Shown as the copy's folder and offered as the first Save As. Null otherwise.
+   */
+  originalPath: string | null
 }
 
 /**
@@ -160,6 +169,16 @@ export type RecoveryWriteResult = 'written' | 'superseded'
 /** streams a copy to the temp path the store hands it (see writeCopyStreamed) */
 export type RecoveryCopyWriter = (tempPath: string) => Promise<void>
 
+export interface RecoveryWriteOptions {
+  title?: string
+  ticket?: RecoveryWriteTicket
+  /**
+   * An untitled copy's original file (see RecoveryCopyInfo.originalPath).
+   * Recorded with every write that gives it; ignored for a file copy.
+   */
+  originalPath?: string
+}
+
 export interface RecoveryCopyFilter {
   states?: readonly RecoveryCopyState[]
   kinds?: readonly RecoveryEditorKind[]
@@ -186,7 +205,7 @@ export interface RecoveryStore {
   writeCopy(
     identity: RecoveryIdentity,
     bytes: Buffer,
-    options?: { title?: string; ticket?: RecoveryWriteTicket },
+    options?: RecoveryWriteOptions,
   ): Promise<RecoveryWriteResult>
   /**
    * writeCopy for content too large to hold in memory: `write` streams the
@@ -201,7 +220,7 @@ export interface RecoveryStore {
   writeCopyStreamed(
     identity: RecoveryIdentity,
     write: RecoveryCopyWriter,
-    options?: { title?: string; ticket?: RecoveryWriteTicket },
+    options?: RecoveryWriteOptions,
   ): Promise<RecoveryWriteResult>
   /**
    * Delete the copy and its metadata now. Any write already started for the
@@ -245,7 +264,7 @@ export interface RecoveryStore {
   adoptUntitledCopy(
     kind: RecoveryEditorKind,
     sourcePath: string,
-    options: { title: string; ext: string; state?: RecoveryCopyState },
+    options: { title: string; ext: string; state?: RecoveryCopyState; originalPath?: string },
   ): RecoveryUntitledIdentity | null
 }
 
@@ -384,6 +403,8 @@ interface RecoveryCopyMeta {
   writtenAt: number
   runId: string
   state: RecoveryCopyState
+  /** untitled copies only, and only when known (absent in older metadata) */
+  originalPath?: string
 }
 
 const STATES: readonly RecoveryCopyState[] = ['undecided', 'later', 'restoreChosen']
@@ -416,7 +437,17 @@ function readMeta(metaPath: string, identity: RecoveryIdentity): RecoveryCopyMet
     writtenAt: meta.writtenAt,
     runId: meta.runId,
     state: meta.state as RecoveryCopyState,
+    ...originalPathField(identity, meta.originalPath),
   }
+}
+
+/** the metadata field for an untitled copy's original path (nothing otherwise) */
+function originalPathField(
+  identity: RecoveryIdentity,
+  originalPath: unknown,
+): { originalPath?: string } {
+  if (!isUntitledIdentity(identity)) return {}
+  return typeof originalPath === 'string' && originalPath.length > 0 ? { originalPath } : {}
 }
 
 /** the identity a metadata file next to `copyName` describes, or null */
@@ -506,7 +537,7 @@ export function createRecoveryStore(options: RecoveryStoreOptions): RecoveryStor
    */
   function queueCopyWrite(
     identity: RecoveryIdentity,
-    writeOptions: { title?: string; ticket?: RecoveryWriteTicket },
+    writeOptions: RecoveryWriteOptions,
     land: (copy: string, writeMeta: () => void, superseded: () => boolean) => Promise<boolean>,
   ): Promise<RecoveryWriteResult> {
     const copy = copyPath(identity)
@@ -528,6 +559,7 @@ export function createRecoveryStore(options: RecoveryStoreOptions): RecoveryStor
         writtenAt: Date.now(),
         runId: recoveryRunId(),
         state: 'undecided',
+        ...originalPathField(identity, writeOptions.originalPath),
       }
       writeJsonAtomic(metaPathOf(copy), meta)
     }
@@ -549,7 +581,7 @@ export function createRecoveryStore(options: RecoveryStoreOptions): RecoveryStor
   function writeCopy(
     identity: RecoveryIdentity,
     bytes: Buffer,
-    writeOptions: { title?: string; ticket?: RecoveryWriteTicket } = {},
+    writeOptions: RecoveryWriteOptions = {},
   ): Promise<RecoveryWriteResult> {
     return queueCopyWrite(identity, writeOptions, async (copy, writeMeta) => {
       // metadata first: a crash between the two leaves an orphan metadata file
@@ -563,7 +595,7 @@ export function createRecoveryStore(options: RecoveryStoreOptions): RecoveryStor
   function writeCopyStreamed(
     identity: RecoveryIdentity,
     write: RecoveryCopyWriter,
-    writeOptions: { title?: string; ticket?: RecoveryWriteTicket } = {},
+    writeOptions: RecoveryWriteOptions = {},
   ): Promise<RecoveryWriteResult> {
     return queueCopyWrite(identity, writeOptions, async (copy, writeMeta, superseded) => {
       const temp = tempPathBeside(copy)
@@ -624,6 +656,7 @@ export function createRecoveryStore(options: RecoveryStoreOptions): RecoveryStor
       copyMtimeMs,
       fileChangedAfterCopy,
       originalMissing,
+      originalPath: meta?.originalPath ?? null,
     }
   }
 
@@ -645,6 +678,7 @@ export function createRecoveryStore(options: RecoveryStoreOptions): RecoveryStor
       writtenAt: info.writtenAt,
       runId: info.runId,
       state,
+      ...originalPathField(identity, info.originalPath),
     }
     try {
       writeJsonAtomic(metaPathOf(copy), meta)
@@ -725,7 +759,7 @@ export function createRecoveryStore(options: RecoveryStoreOptions): RecoveryStor
   function adoptUntitledCopy(
     kind: RecoveryEditorKind,
     sourcePath: string,
-    adoptOptions: { title: string; ext: string; state?: RecoveryCopyState },
+    adoptOptions: { title: string; ext: string; state?: RecoveryCopyState; originalPath?: string },
   ): RecoveryUntitledIdentity | null {
     assertKind(kind)
     const folder = resolve(kindDir(kind))
@@ -748,6 +782,7 @@ export function createRecoveryStore(options: RecoveryStoreOptions): RecoveryStor
       writtenAt: statMtime(source) ?? Date.now(),
       runId: '',
       state: adoptOptions.state ?? 'later',
+      ...originalPathField(identity, adoptOptions.originalPath),
     }
     try {
       mkdirSync(dirname(target), { recursive: true })

@@ -2,10 +2,11 @@ import { createHash } from 'node:crypto'
 import { existsSync, readFileSync, unlinkSync } from 'node:fs'
 import { basename, extname, join } from 'node:path'
 import { writeJsonAtomic } from '@genoffice/electron-utils/atomic-write'
-import type {
-  RecoveryIdentity,
-  RecoveryStore,
-  RecoveryUntitledIdentity,
+import {
+  newUntitledRecoveryId,
+  type RecoveryIdentity,
+  type RecoveryStore,
+  type RecoveryUntitledIdentity,
 } from '@genoffice/electron-utils'
 
 /**
@@ -34,7 +35,10 @@ export interface RecoverySessionShape {
   readonly csvSourcePath?: string | undefined
   readonly restoreTarget?: string | undefined
   readonly password?: string | undefined
-  /** set for an untitled workbook, and for a copy restored as untitled (original missing) */
+  /**
+   * set for an untitled workbook, a CSV or converted session (see
+   * convertedSessionRecovery), and a copy restored as untitled
+   */
   readonly recoveryIdentity?: RecoveryIdentity | undefined
 }
 
@@ -44,8 +48,9 @@ export interface RecoverySessionShape {
  * - a password workbook never gets a copy (it would be plaintext, decision 0041);
  * - a new workbook (a temp backing file the user never saved) is untitled and
  *   carries its own identity;
- * - a converted .xls/.tsv import and a CSV session have no original that could
- *   hold the workbook bytes;
+ * - a CSV or converted .xls/.tsv session has no original that could hold the
+ *   workbook bytes: it writes the untitled copy it was given when it opened
+ *   (convertedSessionRecovery), and none without one (a merge source);
  * - a restored copy or an empty original runs on a temp file and belongs to
  *   the user's file (`restoreTarget`); anything else to the opened path.
  */
@@ -55,6 +60,46 @@ export function sessionRecoveryIdentity(session: RecoverySessionShape): Recovery
   if (session.unsavedNew) return null
   if (session.csvSourcePath !== undefined || session.suggestSaveAs !== undefined) return null
   return { kind: 'sheets', filePath: session.restoreTarget ?? session.path }
+}
+
+/** what decides whether an opened file is a CSV or converted session */
+export interface ConvertedOpenShape {
+  readonly csvSourcePath?: string | undefined
+  readonly suggestSaveAs?: string | undefined
+  readonly unsavedNew?: boolean | undefined
+  readonly password?: string | undefined
+  readonly recoveryIdentity?: RecoveryIdentity | undefined
+}
+
+/**
+ * The recovery copy a CSV or converted (.xls/.tsv) session keeps: an untitled
+ * .xlsx copy that remembers the file it came from (shown in the launch list,
+ * offered by the first Save As of the restored workbook). The original file
+ * cannot hold the workbook bytes, so the copy never belongs to its path. Null
+ * for every other open, a password workbook included (no plaintext copy).
+ */
+export function convertedSessionRecovery(
+  prepared: ConvertedOpenShape,
+  openedPath: string,
+): { recoveryIdentity: RecoveryUntitledIdentity; recoveryOriginalPath: string } | null {
+  if (prepared.password !== undefined || prepared.unsavedNew) return null
+  if (prepared.recoveryIdentity !== undefined) return null
+  if (prepared.csvSourcePath === undefined && prepared.suggestSaveAs === undefined) return null
+  return {
+    recoveryIdentity: { kind: 'sheets', untitledId: newUntitledRecoveryId(), ext: '.xlsx' },
+    recoveryOriginalPath: prepared.csvSourcePath ?? openedPath,
+  }
+}
+
+/**
+ * The first Save As a workbook opened from `originalPath` suggests: the file
+ * itself when it is a workbook, else its .xlsx sibling — what a CSV or
+ * converted session offers before any crash.
+ */
+export function saveAsDefaultFor(originalPath: string): string {
+  if (/.xls[xm]$/i.test(originalPath)) return originalPath
+  const ext = extname(originalPath)
+  return `${ext ? originalPath.slice(0, -ext.length) : originalPath}.xlsx`
 }
 
 /** the extension an untitled workbook's copy is written in (its first save's format) */

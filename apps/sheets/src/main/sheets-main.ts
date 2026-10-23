@@ -207,7 +207,9 @@ import { exportPdf, printWorkbook } from './pdf-export'
 import { installStandaloneTemplateFontProtocol } from './template-fonts'
 import {
   allowsAutomaticWorkbookRecovery,
+  convertedSessionRecovery,
   migrateLegacyUnsavedNew,
+  saveAsDefaultFor,
   sessionRecoveryIdentity,
   untitledWorkbookExt,
 } from './recovery-policy'
@@ -1537,8 +1539,13 @@ interface SessionInfo {
   /// recovery copy is off so no plaintext lands under userData.
   readonly password?: string
   /// The copy an untitled workbook writes (its own slot in the recovery store),
-  /// or the copy a tab restored as untitled because its original was missing.
+  /// the untitled copy of a CSV or converted session, or the copy a tab
+  /// restored as untitled because its original was missing.
   readonly recoveryIdentity?: RecoveryIdentity
+  /// The file a CSV or converted session (or the untitled workbook restored
+  /// from its copy) came from: its copy is titled with this file's name and
+  /// records the path, which the first Save As offers again after a restore.
+  readonly recoveryOriginalPath?: string
   /// Opened from a recovery copy and not saved since: the work exists only in
   /// the copy (the journal is empty), so the tab counts as unsaved.
   readonly unsavedRestore?: boolean
@@ -1935,6 +1942,8 @@ interface UnsavedNewWorkbook {
   recovery: RecoveryIdentity
   /** the backing file holds a recovery copy's content: the tab opens unsaved */
   restored?: boolean
+  /** a CSV or converted workbook's copy: the file it came from (see SessionInfo) */
+  originalPath?: string
 }
 const unsavedNewWorkbooks = new Map<string, UnsavedNewWorkbook>()
 
@@ -2139,8 +2148,12 @@ function tabRecoveryFor(contentsId: number): TabRecoveryState {
   return state
 }
 
-/** the copy title: an untitled workbook shows its tab title, a file its name */
+/**
+ * the copy title: a CSV or converted workbook shows the file it came from, an
+ * untitled workbook its tab title, a file its name
+ */
 function recoveryTitleFor(session: SessionInfo): string | undefined {
+  if (session.recoveryOriginalPath !== undefined) return basename(session.recoveryOriginalPath)
   return session.unsavedNew && session.suggestSaveAs !== undefined
     ? basename(session.suggestSaveAs)
     : undefined
@@ -2188,6 +2201,9 @@ async function writeSessionCopy(
     const result = await recoveryStore.writeCopy(identity, await readFile(target), {
       ticket,
       ...(title === undefined ? {} : { title }),
+      ...(session.recoveryOriginalPath === undefined
+        ? {}
+        : { originalPath: session.recoveryOriginalPath }),
     })
     if (result !== 'written') return false
     tabRecoveryFor(contentsId).written.set(recoveryStore.copyPath(identity), identity)
@@ -2335,8 +2351,11 @@ export function openSheetsFileWithDecision(
  * Editor contract: load a copy into a tab the shell created as an untitled
  * workbook (an untitled copy, or a file copy whose original is missing). Like
  * "New spreadsheet" it runs on a backing file in its own temp folder, the
- * first save asks where (offering `saveAsDefaultPath` when given), and it
- * keeps writing the same copy until saved.
+ * first save asks where, and it keeps writing the same copy until saved.
+ * The first save offers what the document offered before: for the copy of a
+ * CSV or converted workbook (the original path in `saveAsDefaultPath` or in
+ * the copy's metadata) the original's folder and name as .xlsx; for a missing
+ * original that path itself; else the default folder.
  */
 export async function openSheetsUntitledCopy(
   contents: WebContents,
@@ -2344,21 +2363,29 @@ export async function openSheetsUntitledCopy(
 ): Promise<void> {
   const bytes = await recoveryStore.readCopy(request.copy)
   if (!bytes) throw new Error('Recovery copy not found.')
-  const ext = isUntitledIdentity(request.copy)
-    ? request.copy.ext
-    : untitledWorkbookExt(request.copy.filePath)
+  const copy = request.copy
+  const ext = isUntitledIdentity(copy) ? copy.ext : untitledWorkbookExt(copy.filePath)
+  // an untitled copy that names its original file came from a CSV or converted workbook
+  const originalPath = isUntitledIdentity(copy)
+    ? (request.saveAsDefaultPath ?? recoveryStore.copyInfo(copy)?.originalPath ?? undefined)
+    : undefined
+  const offered =
+    originalPath !== undefined ? saveAsDefaultFor(originalPath) : request.saveAsDefaultPath
   const stem =
+    (offered === undefined
+      ? undefined
+      : sanitizeAutoRenameBase(basename(offered).replace(/\.[^.]+$/, ''))) ??
     sanitizeAutoRenameBase(basename(request.title).replace(/\.xls[xm]$/i, '')) ??
-    sanitizeAutoRenameBase(basename(request.saveAsDefaultPath ?? '').replace(/\.[^.]+$/, '')) ??
     'Workbook'
   const name = `${stem}${ext}`
-  const suggestSaveAs = request.saveAsDefaultPath ?? join(configuredDefaultSaveDir(app), name)
+  const suggestSaveAs = offered ?? join(configuredDefaultSaveDir(app), name)
   const staged = await stageRecoveredCopy(bytes, name)
   unsavedNewWorkbooks.set(staged.openPath, {
     suggestSaveAs,
     tempDir: staged.importTempDir,
     recovery: request.copy,
     restored: true,
+    ...(originalPath === undefined ? {} : { originalPath }),
   })
   queueWorkbookForView(contents, staged.openPath)
   nudgeQueuedWorkbook(contents)
@@ -3038,6 +3065,8 @@ export function registerSheetsIpc(): void {
       await discardPreparedOpen(prepared)
       return null
     }
+    // a CSV or converted workbook keeps its unsaved work in an untitled copy
+    const converted = convertedSessionRecovery(prepared, path)
     const result = await openWorkbookSession(entry.client, prepared.openPath, entry.sessions, {
       suggestSaveAs: prepared.suggestSaveAs,
       csvImport: prepared.csvImport,
@@ -3048,7 +3077,8 @@ export function registerSheetsIpc(): void {
       emptySource: prepared.emptySource,
       unsavedNew: prepared.unsavedNew,
       password: prepared.password,
-      recoveryIdentity: prepared.recoveryIdentity,
+      recoveryIdentity: converted?.recoveryIdentity ?? prepared.recoveryIdentity,
+      recoveryOriginalPath: converted?.recoveryOriginalPath ?? prepared.recoveryOriginalPath,
       unsavedRestore: prepared.unsavedRestore,
     })
     // The sidecar open itself can also outlive the tab after the pre-open
@@ -3789,6 +3819,9 @@ export function registerSheetsIpc(): void {
               csvImport: true,
               csvSourcePath: session.csvSourcePath,
               importTempDir: session.importTempDir,
+              // the CSV stays open: later edits keep writing the same copy slot
+              recoveryIdentity: session.recoveryIdentity,
+              recoveryOriginalPath: session.recoveryOriginalPath,
               staged,
             }
           : quietUnsavedNew
@@ -3797,6 +3830,7 @@ export function registerSheetsIpc(): void {
                 importTempDir: session.importTempDir,
                 unsavedNew: true,
                 recoveryIdentity: session.recoveryIdentity,
+                recoveryOriginalPath: session.recoveryOriginalPath,
                 unsavedRestore: session.unsavedRestore,
                 staged,
               }
@@ -3872,8 +3906,8 @@ export function registerSheetsIpc(): void {
     const request = resolveTransferredEdits(entry, workbookSaveRequestSchema.parse(input))
     const session = entry.sessions.get(request.sessionId)
     // Which copy (if any) is decided by sessionRecoveryIdentity: none for a
-    // converted import, a CSV session or a password workbook; the untitled
-    // slot for a new workbook; the user's file for a restored copy or an empty
+    // password workbook; an untitled slot for a new workbook and for a CSV or
+    // converted session; the user's file for a restored copy or an empty
     // original (both run on a temp file the session was snapshotted from).
     if (!session) return { ok: false }
     try {
@@ -4775,6 +4809,7 @@ async function openWorkbookSession(
     unsavedNew?: boolean | undefined
     password?: string | undefined
     recoveryIdentity?: RecoveryIdentity | undefined
+    recoveryOriginalPath?: string | undefined
     unsavedRestore?: boolean | undefined
     /// A save's output already opened by the sidecar: it is this session's
     /// snapshot as it stands, so neither the copy nor the open is repeated.
@@ -4792,6 +4827,7 @@ async function openWorkbookSession(
     unsavedNew,
     password,
     recoveryIdentity,
+    recoveryOriginalPath,
     unsavedRestore,
     staged,
   } = options ?? {}
@@ -4841,6 +4877,7 @@ async function openWorkbookSession(
       ...(unsavedNew ? { unsavedNew } : {}),
       ...(password === undefined ? {} : { password }),
       ...(recoveryIdentity === undefined ? {} : { recoveryIdentity }),
+      ...(recoveryOriginalPath === undefined ? {} : { recoveryOriginalPath }),
       ...(unsavedRestore ? { unsavedRestore } : {}),
       ...(diskState === null ? {} : { diskState: { path: diskStatePath, state: diskState } }),
     })
@@ -5012,6 +5049,7 @@ interface PreparedWorkbookOpen {
   unsavedNew?: boolean
   password?: string
   recoveryIdentity?: RecoveryIdentity
+  recoveryOriginalPath?: string
   unsavedRestore?: boolean
 }
 
@@ -5039,6 +5077,9 @@ async function prepareWorkbookForOpen(
       unsavedNew: true,
       recoveryIdentity: unsavedNew.recovery,
       ...(unsavedNew.restored ? { unsavedRestore: true } : {}),
+      ...(unsavedNew.originalPath === undefined
+        ? {}
+        : { recoveryOriginalPath: unsavedNew.originalPath }),
     }
     // An untitled copy of a .csv/.tsv/.xls (a skill template's, spec 5.7) is
     // converted beside itself in its own temp folder: the session edits the

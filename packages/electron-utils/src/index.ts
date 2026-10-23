@@ -160,6 +160,7 @@ export {
   type RecoveryStore,
   type RecoveryStoreOptions,
   type RecoveryUntitledIdentity,
+  type RecoveryWriteOptions,
   type RecoveryWriteResult,
   type RecoveryWriteTicket,
 } from './recovery-store'
