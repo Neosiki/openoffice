@@ -170,6 +170,17 @@ describe('recovery copies', () => {
     expect(await r.copier.tick()).toBe('written')
   })
 
+  it('after a reset copy the map again though nothing changed', async () => {
+    const r = rig()
+    r.copier.noteChange()
+    expect(await r.copier.tick()).toBe('written')
+    expect(await r.copier.tick()).toBe('unchanged')
+    // the main process dropped the copy ("Don't Save") and the tab stayed open
+    r.copier.reset()
+    expect(await r.copier.tick()).toBe('written')
+    expect(r.writes).toHaveLength(2)
+  })
+
   it('asked for at once (the OS ends the session) take the title being typed', async () => {
     const r = rig()
     r.copier.noteChange()

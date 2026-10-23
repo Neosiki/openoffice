@@ -30,6 +30,7 @@ interface Fake {
   dirty: boolean[]
   copyNowDone: number
   emitCopyNow(): void
+  emitReset(): void
 }
 
 function fakeApi(pending: string | null, file: OpenFileResult | null): Fake {
@@ -48,6 +49,7 @@ function fakeApi(pending: string | null, file: OpenFileResult | null): Fake {
     dirty: [],
     copyNowDone: 0,
     emitCopyNow: () => handlers.copyNow?.(),
+    emitReset: () => handlers.reset?.(),
     api: {
       consumePending: async () => pending,
       openFile: async () => file ?? { status: 'unreadable' },
@@ -81,6 +83,7 @@ function fakeApi(pending: string | null, file: OpenFileResult | null): Fake {
         return 'written'
       },
       onRecoveryCopyNow: on('copyNow'),
+      onRecoveryReset: on('reset'),
       sendRecoveryCopyNowDone: () => {
         fake.copyNowDone++
       },
@@ -204,6 +207,20 @@ describe('copies while the map has unsaved changes', () => {
     // a copy is not a save: the map is still unsaved
     expect(container.textContent).toContain('Unsaved')
     expect(fake.saves).toHaveLength(0)
+  })
+
+  it('another after the main process dropped the last one, without a new edit', async () => {
+    const fake = fakeApi('C:/maps/plan.xmind', { status: 'ok', bytes: await bytesOf(plainSheet()) })
+    await mountApp(fake)
+    await typeTitle(FIRST_BRANCH, 'Typed')
+    await act(async () => {
+      container.querySelector('#input-box')!.dispatchEvent(new FocusEvent('blur'))
+    })
+    await until(() => fake.copies.length > 0, 'a copy')
+    await wait(150)
+    const before = fake.copies.length
+    await act(async () => fake.emitReset())
+    await until(() => fake.copies.length > before, 'a copy after the reset')
   })
 
   it('one at once when the OS ends the session, with the title being typed', async () => {

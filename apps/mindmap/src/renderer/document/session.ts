@@ -103,8 +103,9 @@ export class DocumentSession {
   constructor(document: XmindDocument, baseline?: Uint8Array) {
     this.#document = document
     this.#entries = document.sheets.map(() => newEntry())
+    // kept as passed, not copied: a map's bytes are held once
     this.#baseline = baseline
-      ? Promise.resolve(new Uint8Array(baseline))
+      ? Promise.resolve(baseline)
       : document.changed
         ? Promise.resolve(null)
         : document.save()
@@ -374,8 +375,9 @@ export class DocumentSession {
     const changed = this.#document.changed
     const bytes = await this.#document.save({ thumbnail: options.thumbnail })
     if (changed) this.#unwritten = true
-    // a save makes its result the document's new baseline
-    this.#baseline = Promise.resolve(new Uint8Array(bytes))
+    // a save makes its result the document's new baseline; the engine hands
+    // back a fresh array, so it is kept as it is rather than copied again
+    this.#baseline = Promise.resolve(bytes)
     return bytes
   }
 

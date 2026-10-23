@@ -13,6 +13,10 @@
  * ('saved'), dropped with "Don't Save" ('dontSave') or closed without unsaved
  * changes ('closedClean'). A view whose renderer crashed, or one closed while
  * the app is ending, deletes nothing (the store refuses during shutdown).
+ *
+ * After "Don't Save" the view takes no copy while its tab closes, and the
+ * closing tab takes any copy that landed meanwhile. A tab that stays open (a
+ * later tab cancelled the window's close) copies again after a short hold.
  */
 import { readFileSync } from 'node:fs'
 import { app, dialog } from 'electron'
@@ -34,6 +38,11 @@ import { getUiLang } from '@genoffice/i18n'
 
 const KIND = 'mindmap' as const
 const MAP_EXTENSION = '.xmind'
+/**
+ * After "Don't Save" the tab normally closes at once. When it stays open (a
+ * later tab cancelled the window's close), copies resume after this long.
+ */
+export const DONT_SAVE_HOLD_MS = 5_000
 
 let store: RecoveryStore | null = null
 
@@ -44,8 +53,12 @@ export function mindmapRecoveryStore(): RecoveryStore {
 }
 
 interface ViewRecovery {
-  /** the id of this view's untitled copy, made at the first copy of an untitled map */
-  untitledId?: string
+  /**
+   * The copy an untitled view writes: its own untitled id's, made at its first
+   * copy, or the copy it was restored from (an untitled copy, or the copy of a
+   * file that is gone), so a restored map keeps one copy.
+   */
+  untitledCopy?: RecoveryIdentity
   /** this view's copies, by copy path */
   owned: Map<string, RecoveryIdentity>
   /** the first Save As suggestion of a restored map whose file is gone */
@@ -56,6 +69,10 @@ interface ViewRecovery {
   decision?: 'restore' | 'original'
   /** the renderer crashed: its copies outlive the view */
   crashed?: boolean
+  /** "Don't Save" dropped the copies: none is taken until this hold ends */
+  dropped?: ReturnType<typeof setTimeout>
+  /** the copy left for the file could not be settled: no copy may replace it */
+  blocked?: boolean
 }
 
 const views = new Map<number, ViewRecovery>()
@@ -77,8 +94,14 @@ export function fileRecoveryIdentity(filePath: string): RecoveryIdentity {
 export function viewRecoveryIdentity(wcId: number, savePath: string | undefined): RecoveryIdentity {
   if (savePath) return fileRecoveryIdentity(savePath)
   const state = stateOf(wcId)
-  state.untitledId ??= newUntitledRecoveryId()
-  return { kind: KIND, untitledId: state.untitledId, ext: MAP_EXTENSION }
+  state.untitledCopy ??= { kind: KIND, untitledId: newUntitledRecoveryId(), ext: MAP_EXTENSION }
+  return state.untitledCopy
+}
+
+/** An untitled view keeps writing to the copy it was restored from. */
+function adoptUntitledCopy(wcId: number, identity: RecoveryIdentity): void {
+  stateOf(wcId).untitledCopy = identity
+  own(wcId, identity)
 }
 
 function own(wcId: number, identity: RecoveryIdentity): void {
@@ -97,7 +120,9 @@ function ownedElsewhere(wcId: number, identity: RecoveryIdentity): boolean {
 /**
  * Keep `bytes` as the view's copy. The copy counts as the view's own before
  * it is written, so a save arriving meanwhile cancels the write instead of
- * being outlived by it. Rejects on a disk error (the renderer backs off).
+ * being outlived by it. 'superseded' while "Don't Save" holds, or when the
+ * copy left for the file could not be settled. Rejects on a disk error (the
+ * renderer backs off).
  */
 export function writeViewCopy(
   wcId: number,
@@ -105,6 +130,8 @@ export function writeViewCopy(
   bytes: Uint8Array,
   untitledTitle: () => string,
 ): Promise<RecoveryWriteResult> {
+  const barred = views.get(wcId)
+  if (barred?.dropped !== undefined || barred?.blocked) return Promise.resolve('superseded')
   const identity = viewRecoveryIdentity(wcId, savePath)
   own(wcId, identity)
   const title = isUntitledIdentity(identity) ? (stateOf(wcId).title ?? untitledTitle()) : undefined
@@ -115,12 +142,16 @@ export function writeViewCopy(
   )
 }
 
-function deleteOwned(wcId: number, reason: RecoveryDeleteReason): void {
+/**
+ * Delete the view's copies. `forget` false keeps them listed as the view's
+ * own, so a copy landing at the same place later is still taken along.
+ */
+function deleteOwned(wcId: number, reason: RecoveryDeleteReason, forget = true): void {
   const state = views.get(wcId)
   if (!state) return
   const recovery = mindmapRecoveryStore()
   for (const [key, identity] of state.owned) {
-    if (recovery.deleteCopy(identity, reason) === 'deleted') state.owned.delete(key)
+    if (recovery.deleteCopy(identity, reason) === 'deleted' && forget) state.owned.delete(key)
   }
 }
 
@@ -129,14 +160,25 @@ export function viewSaved(wcId: number): void {
   deleteOwned(wcId, 'saved')
   const state = views.get(wcId)
   if (!state) return
-  state.untitledId = undefined
+  state.untitledCopy = undefined
   state.saveAsDefault = undefined
   state.title = undefined
 }
 
-/** "Don't Save" (close prompt, or a tool closing the map without saving): the copies go. */
-export function viewDropped(wcId: number): void {
-  deleteOwned(wcId, 'dontSave')
+/**
+ * "Don't Save" (close prompt, or a tool closing the map without saving): the
+ * copies go, and no new one is taken while the tab closes. When the tab is
+ * still there after the hold, `resume` asks its renderer for a fresh copy.
+ */
+export function viewDropped(wcId: number, resume: () => void): void {
+  deleteOwned(wcId, 'dontSave', false)
+  const state = stateOf(wcId)
+  clearTimeout(state.dropped)
+  state.dropped = setTimeout(() => {
+    state.dropped = undefined
+    // the tab stayed open: its unsaved changes need a copy again
+    if (views.get(wcId) === state) resume()
+  }, DONT_SAVE_HOLD_MS)
 }
 
 export function viewCrashed(wcId: number): void {
@@ -144,12 +186,18 @@ export function viewCrashed(wcId: number): void {
 }
 
 /**
- * The view is gone. Closed without unsaved changes, it takes its copies with
+ * The view is gone. Closed after "Don't Save", it takes along any copy that
+ * landed meanwhile; closed without unsaved changes, it takes its copies with
  * it; with unsaved changes, after a crash or while the app is ending, they stay.
  */
 export function viewGone(wcId: number, dirty: boolean): void {
   const state = views.get(wcId)
-  if (state && !state.crashed && !dirty) deleteOwned(wcId, 'closedClean')
+  if (state?.dropped !== undefined) {
+    clearTimeout(state.dropped)
+    deleteOwned(wcId, 'dontSave')
+  } else if (state && !state.crashed && !dirty) {
+    deleteOwned(wcId, 'closedClean')
+  }
   views.delete(wcId)
 }
 
@@ -167,10 +215,6 @@ export function viewSaveAsDefault(wcId: number): string | undefined {
   return views.get(wcId)?.saveAsDefault
 }
 
-export function setViewSaveAsDefault(wcId: number, path: string): void {
-  stateOf(wcId).saveAsDefault = path
-}
-
 /** The shell decided the recovery question for the file this view opens next. */
 export function setViewOpenDecision(wcId: number, decision: 'restore' | 'original'): void {
   stateOf(wcId).decision = decision
@@ -182,7 +226,9 @@ export function setViewOpenDecision(wcId: number, decision: 'restore' | 'origina
  * it is; otherwise "restore" chosen in the launch list restores without
  * asking, and an undecided or "later" copy asks first, naming the file (Esc
  * and closing the box restore). A copy another pane is working on is not
- * asked about: that pane holds the work.
+ * asked about: that pane holds the work. When the copy cannot be settled (the
+ * question or the store failed), the file opens as saved and the view writes
+ * no copy over the old one.
  */
 export async function resolveViewOpen(
   wcId: number,
@@ -192,30 +238,49 @@ export async function resolveViewOpen(
   const state = stateOf(wcId)
   const decision = state.decision
   state.decision = undefined
+  state.blocked = false
   if (decision === 'original') return null
   const identity = fileRecoveryIdentity(filePath)
   if (ownedElsewhere(wcId, identity)) return null
-  const recovery = mindmapRecoveryStore()
-  if (decision === 'restore' && recovery.copyInfo(identity)) {
-    recovery.setCopyState(identity, 'restoreChosen')
+  try {
+    const recovery = mindmapRecoveryStore()
+    if (decision === 'restore' && recovery.copyInfo(identity)) {
+      recovery.setCopyState(identity, 'restoreChosen')
+    }
+    const result = await resolveRecoveryOnOpen({
+      store: recovery,
+      identity,
+      dialog,
+      parent,
+      lang: getUiLang(),
+    })
+    if (result.action !== 'restore') return null
+    own(wcId, identity)
+    return new Uint8Array(result.bytes)
+  } catch (err) {
+    // the old copy stays as it is; this view writes none over it
+    state.blocked = true
+    console.warn('[mindmap] could not settle the recovery copy; the file opens as saved:', err)
+    return null
   }
-  const result = await resolveRecoveryOnOpen({
-    store: recovery,
-    identity,
-    dialog,
-    parent,
-    lang: getUiLang(),
-  })
-  if (result.action !== 'restore') return null
-  own(wcId, identity)
-  return new Uint8Array(result.bytes)
+}
+
+/**
+ * A copy of `filePath` was restored, but the file is gone or no longer opens:
+ * the map is untitled now, its first Save As offers the old place, and its
+ * later copies replace the restored one instead of starting a second.
+ */
+export function viewRestoredUntitled(wcId: number, filePath: string): void {
+  adoptUntitledCopy(wcId, fileRecoveryIdentity(filePath))
+  stateOf(wcId).saveAsDefault = filePath
 }
 
 /**
  * A copy to open in this (untitled) view: its bytes, read now so they can be
- * queued before the renderer asks. Later copies of the view go to the same
- * untitled slot; a copy of a file whose file is gone is kept until the map is
- * saved, dropped or closed clean, and its path is offered by the first Save As.
+ * queued before the renderer asks. Later copies of the view replace this one
+ * (an untitled copy, or the copy of a file that is gone) until the map is
+ * saved, dropped or closed clean; a gone file's path is offered by the first
+ * Save As.
  */
 export function takeUntitledCopy(
   wcId: number,
@@ -230,10 +295,7 @@ export function takeUntitledCopy(
   }
   recovery.markCopyLoaded(request.copy)
   const state = stateOf(wcId)
-  own(wcId, request.copy)
-  if (isUntitledIdentity(request.copy) && request.copy.ext === MAP_EXTENSION) {
-    state.untitledId = request.copy.untitledId
-  }
+  adoptUntitledCopy(wcId, request.copy)
   state.title = request.title
   if (request.saveAsDefaultPath) state.saveAsDefault = request.saveAsDefaultPath
   return new Uint8Array(bytes)
