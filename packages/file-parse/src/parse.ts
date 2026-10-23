@@ -146,6 +146,7 @@ async function parseOdt(bytes: Buffer): Promise<ParsedFile> {
 
 /** Character budget for extractors that can stop early (xlsx today). */
 export interface ParseFileOptions {
+  /// Character budget for extractors that can stop early (xlsx and docx today).
   maxChars?: number
 }
 
@@ -238,10 +239,10 @@ export async function parseFileToText(
         return {
           ok: true,
           kind: 'text',
-          text: sniffed === 'zip' ? await docxToText(bytes) : await docToText(bytes),
+          text: sniffed === 'zip' ? await docxToText(bytes, opts) : await docToText(bytes),
         }
       case 'docx':
-        return { ok: true, kind: 'text', text: await docxToText(bytes) }
+        return { ok: true, kind: 'text', text: await docxToText(bytes, opts) }
       case 'odt':
         return await parseOdt(bytes)
       case 'ppt':

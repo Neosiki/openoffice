@@ -13,6 +13,7 @@ export { sdtCheckboxGlyphs, sdtCheckboxIsChecked } from './checkbox-control'
 export {
   parseDocx,
   reconcileGridColumns,
+  paraCsFormat,
   styleRunFormat,
   type ParseExtras,
   type ParseOptions,
@@ -42,6 +43,24 @@ export { LAZY_MEDIA_SCHEME, isLazyMediaPart, lazyMediaUrl, parseLazyMediaUrl } f
 export { setAltChunkHtmlConverter, type AltChunkHtmlConverter } from './alt-chunk'
 export { tocLevelOf } from './parse-fields'
 export { mergeStyleBorders } from './parse-props'
+export {
+  APP_PROPERTIES_PATH,
+  APP_PROPERTY_KEYS,
+  CORE_PROPERTIES_PATH,
+  CORE_PROPERTY_KEYS,
+  applyPropertyChanges,
+  emptyDocumentProperties,
+  parseAppPropertiesXml,
+  parseCorePropertiesXml,
+  parseCustomPropertiesXml,
+  parsePropertyChanges,
+  patchAppPropertiesXml,
+  patchCorePropertiesXml,
+  patchCustomPropertiesXml,
+  readDocumentProperties,
+  type DocumentProperties,
+  type PropertyChanges,
+} from './doc-properties'
 export {
   saveDocx,
   findChartWorkbookPath,
@@ -97,6 +116,7 @@ export {
   type TextboxParaPatch,
   type TextboxParasPatchSet,
   inlinePictureDrawingXml,
+  resizeInlinePictureXml,
   NEW_PICTURE_TOKEN_PREFIX,
   type InlinePictureXmlOptions,
   type TableGenOptions,
@@ -220,3 +240,17 @@ export {
   type RevisionXmlResult,
   type RevisionXmlType,
 } from './revision-xml'
+export {
+  resolveParagraphProps,
+  resolveCtxOf,
+  resolveParagraphPropsXml,
+  resolveRunProps,
+  shadowCompare,
+  type EffectivePPr,
+  type EffectiveRPr,
+  type PropSource,
+  type ResolveCompat,
+  type ResolveCtx,
+  type ResolveDiff,
+  type TableCond,
+} from './resolve-props'
