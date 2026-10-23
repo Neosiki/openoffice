@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { DragEvent as ReactDragEvent, ReactElement } from 'react'
 import logoLockup from './assets/genoffice-logo.svg'
 import { KbAskPanel } from './KbAskPanel'
@@ -11,6 +11,7 @@ import iconHtml from './assets/file-html.svg'
 import iconMindmap from './assets/file-mindmap.svg'
 import iconHwp from './assets/file-hwp.svg'
 import iconEpub from './assets/file-epub.svg'
+import { placeFolderMenu } from './folder-menu-position'
 import type {
   FolderEntry,
   FolderListing,
@@ -1138,12 +1139,15 @@ export function Home({
   const [folderMenu, setFolderMenu] = useState<{
     path: string
     where: 'tree' | 'table'
-    top: number
-    right: number
+    x: number
+    y: number
+    above: number
+    align: 'start' | 'end'
   } | null>(null)
   const menuOpenAt = (where: 'tree' | 'table', path: string) =>
     folderMenu?.where === where && folderMenu.path === path
   const folderMenuWrapRef = useRef<HTMLDivElement>(null)
+  const folderMenuPopRef = useRef<HTMLDivElement>(null)
   const [folderRenaming, setFolderRenaming] = useState<{
     path: string
     where: 'tree' | 'table'
@@ -1408,6 +1412,18 @@ export function Home({
     const close = () => setFolderMenu(null)
     window.addEventListener('scroll', close, true)
     return () => window.removeEventListener('scroll', close, true)
+  }, [folderMenu])
+  // open to the right of the anchor, flipped above when short of room below, clamped to the viewport
+  useLayoutEffect(() => {
+    const el = folderMenuPopRef.current
+    if (!folderMenu || !el) return
+    const { left, top } = placeFolderMenu(
+      folderMenu,
+      { width: el.offsetWidth, height: el.offsetHeight },
+      { width: fixedViewportWidth(), height: document.documentElement.clientHeight },
+    )
+    el.style.left = `${left}px`
+    el.style.top = `${top}px`
   }, [folderMenu])
 
   // Escape closes the row menu and the confirm dialogs
@@ -1972,19 +1988,17 @@ export function Home({
           setFolderMenu({
             path: entry.path,
             where: 'tree',
-            top: rect.bottom + 4,
-            right: fixedViewportWidth() - rect.right,
+            x: rect.right,
+            y: rect.bottom + 4,
+            above: rect.top - 4,
+            align: 'end',
           })
         }}
       >
         <MoreDots />
       </button>
       {folderMenu && menuOpenAt('tree', entry.path) && (
-        <div
-          className="folder-menu"
-          role="menu"
-          style={{ top: folderMenu.top, right: folderMenu.right }}
-        >
+        <div className="folder-menu" role="menu" ref={folderMenuPopRef}>
           {editableAt(entry.path) && (
             <button role="menuitem" onClick={() => startCreateFolder(entry.path)}>
               {t('newSubfolder')}
@@ -2102,8 +2116,10 @@ export function Home({
             setFolderMenu({
               path: entry.path,
               where: 'tree',
-              top: e.clientY + 2,
-              right: fixedViewportWidth() - e.clientX,
+              x: e.clientX + 2,
+              y: e.clientY + 2,
+              above: e.clientY + 2,
+              align: 'start',
             })
           }}
           draggable={!isRoot && !isRenaming}
@@ -2488,8 +2504,10 @@ export function Home({
             setFolderMenu({
               path: entry.path,
               where: 'table',
-              top: e.clientY + 2,
-              right: fixedViewportWidth() - e.clientX,
+              x: e.clientX + 2,
+              y: e.clientY + 2,
+              above: e.clientY + 2,
+              align: 'start',
             })
           }}
         >
@@ -2540,19 +2558,17 @@ export function Home({
                 setFolderMenu({
                   path: entry.path,
                   where: 'table',
-                  top: rect.bottom + 4,
-                  right: fixedViewportWidth() - rect.right,
+                  x: rect.right,
+                  y: rect.bottom + 4,
+                  above: rect.top - 4,
+                  align: 'end',
                 })
               }}
             >
               <MoreDots />
             </button>
             {folderMenu && menuOpenAt('table', entry.path) && (
-              <div
-                className="folder-menu"
-                role="menu"
-                style={{ top: folderMenu.top, right: folderMenu.right }}
-              >
+              <div className="folder-menu" role="menu" ref={folderMenuPopRef}>
                 <button
                   role="menuitem"
                   onClick={() => {
