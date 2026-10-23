@@ -5,7 +5,15 @@
  * copy left over opens again. The renderer's side is played by the test with the
  * real engine; the Electron surface is faked.
  */
-import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
+import {
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs'
 import { createRequire } from 'node:module'
 import { tmpdir } from 'node:os'
 import { basename, dirname, join } from 'node:path'
@@ -113,6 +121,7 @@ import type { RecoveryIdentity } from '@genoffice/electron-utils'
 import {
   configureHwpRuntime,
   createHwpView,
+  hwpFileRenamed,
   hwpRecoveryIdentity,
   requestHwpClose,
 } from '../src/main/hwp-main'
@@ -412,6 +421,118 @@ describe('a recovery copy of a file', () => {
     markAppShuttingDown()
     ending.contents.emit('destroyed')
     expect(store().copyInfo(fileIdentity(ending.path))).not.toBeNull()
+  })
+})
+
+describe('a renamed file', () => {
+  it('takes its copy along: the old name’s copy goes, and the new one goes with the save', async () => {
+    const path = join(dir, 'report.hwp')
+    const moved = join(dir, 'renamed.hwp')
+    const original = fileWithTails('본문')
+    writeFileSync(path, original)
+    const contents = view(path)
+    await call(HWP_CHANNELS.readFile, contents, path)
+    call(HWP_CHANNELS.dirtyChanged, contents, true)
+    const exported = edited(original, '고친 ')
+    expect(await writeCopy(contents, exported)).toBe('written')
+    const before = readFileSync(store().copyPath(fileIdentity(path)))
+
+    renameSync(path, moved)
+    hwpFileRenamed(contents as never, path, moved)
+    await vi.waitFor(() => expect(store().copyInfo(fileIdentity(path))).toBeNull())
+    const copy = store().copyInfo(fileIdentity(moved))
+    expect(copy).toMatchObject({ title: 'renamed.hwp' })
+    expect(readFileSync(copy!.copyPath)).toEqual(before)
+
+    await call(HWP_CHANNELS.beginSave, contents, 'save')
+    await call(HWP_CHANNELS.commitSave, contents, exported, [])
+    expect(existsSync(moved)).toBe(true)
+    expect(store().listCopies()).toHaveLength(0)
+  })
+
+  it('leaves no copy behind when its tab closes clean after the rename', async () => {
+    const path = join(dir, 'report.hwp')
+    const moved = join(dir, 'renamed.hwp')
+    const original = fileWithTails('본문')
+    writeFileSync(path, original)
+    const contents = view(path)
+    await call(HWP_CHANNELS.readFile, contents, path)
+    call(HWP_CHANNELS.dirtyChanged, contents, true)
+    await writeCopy(contents, edited(original, '고친 '))
+    renameSync(path, moved)
+    hwpFileRenamed(contents as never, path, moved)
+    await vi.waitFor(() => expect(store().copyInfo(fileIdentity(moved))).not.toBeNull())
+    call(HWP_CHANNELS.dirtyChanged, contents, false)
+    contents.emit('destroyed')
+    expect(store().listCopies()).toHaveLength(0)
+  })
+
+  it('does not take a copy it never wrote', async () => {
+    const path = join(dir, 'report.hwp')
+    const moved = join(dir, 'renamed.hwp')
+    writeFileSync(path, fileWithTails('본문'))
+    // a copy left by another run
+    await store().writeCopy(fileIdentity(path), Buffer.from(fileWithTails('남은')), {
+      title: 'report.hwp',
+    })
+    const contents = view(path)
+    // the launch list said to open the file as it is: the copy is not this tab's
+    await recoveryEditor('hwp')!.openFileWithDecision(contents as never, {
+      filePath: path,
+      decision: 'original',
+    })
+    await call(HWP_CHANNELS.readFile, contents, path)
+    renameSync(path, moved)
+    hwpFileRenamed(contents as never, path, moved)
+    await new Promise((resolve) => setTimeout(resolve, 20))
+    expect(store().copyInfo(fileIdentity(path))).not.toBeNull()
+    expect(store().copyInfo(fileIdentity(moved))).toBeNull()
+  })
+})
+
+describe('a file open in both panes of a split', () => {
+  const resets = (contents: FakeContents) =>
+    contents.sent.filter((message) => message.channel === HWP_CHANNELS.recoveryReset).length
+
+  async function split(name: string) {
+    const path = join(dir, name)
+    const original = fileWithTails('본문')
+    writeFileSync(path, original)
+    const first = view(path)
+    await call(HWP_CHANNELS.readFile, first, path)
+    const second = view(path)
+    await call(HWP_CHANNELS.readFile, second, path)
+    return { path, original, first, second }
+  }
+
+  it('asks the other pane for a new copy when a save removes the shared one', async () => {
+    const { path, original, first, second } = await split('report.hwp')
+    call(HWP_CHANNELS.dirtyChanged, first, true)
+    call(HWP_CHANNELS.dirtyChanged, second, true)
+    expect(await writeCopy(second, edited(original, '둘째 '))).toBe('written')
+
+    await call(HWP_CHANNELS.beginSave, first, 'save')
+    await call(HWP_CHANNELS.commitSave, first, edited(original, '첫째 '), [])
+    expect(store().copyInfo(fileIdentity(path))).toBeNull()
+    expect(resets(second)).toBe(1)
+    expect(resets(first)).toBe(0)
+
+    // the other pane's next turn writes it again; the saved pane closing clean leaves it
+    expect(await writeCopy(second, edited(original, '둘째 '))).toBe('written')
+    first.emit('destroyed')
+    expect(store().copyInfo(fileIdentity(path))).not.toBeNull()
+  })
+
+  it('asks the other pane for a new copy when a pane closes clean and removes the shared one', async () => {
+    const { path, original, first, second } = await split('closing.hwp')
+    call(HWP_CHANNELS.dirtyChanged, first, true)
+    call(HWP_CHANNELS.dirtyChanged, second, true)
+    await writeCopy(first, edited(original, '첫째 '))
+    // undone back to clean, then closed
+    call(HWP_CHANNELS.dirtyChanged, first, false)
+    first.emit('destroyed')
+    expect(store().copyInfo(fileIdentity(path))).toBeNull()
+    expect(resets(second)).toBe(1)
   })
 })
 

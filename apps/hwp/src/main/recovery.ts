@@ -246,6 +246,63 @@ export async function hwpRecoveryOnRead(
   }
 }
 
+/**
+ * The copy of `identity` was removed: other views on the same file (the other pane of
+ * a split) may hold unsaved changes it was keeping, so their next turn writes it again.
+ */
+function resetOthersOn(identity: RecoveryIdentity, wcId: number): void {
+  if (isUntitledIdentity(identity)) return
+  const slot = recoveryStore().copyPath(identity)
+  for (const [otherId, contents] of contentsByWc) {
+    if (otherId === wcId || contents.isDestroyed()) continue
+    const other = savedIdentity(otherId)
+    if (other && recoveryStore().copyPath(other) === slot) {
+      contents.send(HWP_CHANNELS.recoveryReset)
+    }
+  }
+}
+
+/** delete the copy of `identity` for this view, and tell the views that shared it */
+function dropCopy(
+  wcId: number,
+  identity: RecoveryIdentity,
+  reason: 'saved' | 'dontSave' | 'closedClean',
+): void {
+  if (recoveryStore().deleteCopy(identity, reason) === 'deleted') resetOthersOn(identity, wcId)
+}
+
+/**
+ * The view's file was renamed on disk (hwp-main has moved its save path already): the
+ * copy it wrote or loaded moves to the new name's slot, so a save or a clean close
+ * removes it and the old name's copy does not come back at the next launch.
+ */
+export async function hwpRecoveryFileRenamed(
+  contents: WebContents,
+  oldPath: string,
+  newPath: string,
+): Promise<void> {
+  const wcId = contents.id
+  if (loadedPathByWc.get(wcId) === oldPath) loadedPathByWc.set(wcId, newPath)
+  const decision = decisionByWc.get(wcId)
+  if (decision?.path === oldPath) decisionByWc.set(wcId, { ...decision, path: newPath })
+  if (!ownsCopyByWc.has(wcId) || host?.savePathOf(wcId) !== newPath) return
+  const from: RecoveryIdentity = { kind: 'hwp', filePath: oldPath }
+  const to: RecoveryIdentity = { kind: 'hwp', filePath: newPath }
+  const target = recoveryStore()
+  try {
+    const bytes = await target.readCopy(from)
+    if (bytes) await target.writeCopy(to, bytes, { title: basename(newPath) })
+  } catch (err) {
+    console.warn('[hwp] the recovery copy could not follow the renamed file:', err)
+    return
+  }
+  // the content lives under the new name now; the old entry would only offer it twice
+  target.deleteCopy(from, 'discarded')
+  // a turn that landed under the new name while the copy moved is older than what the
+  // editor holds: the next turn writes the copy again
+  if (!contents.isDestroyed()) contents.send(HWP_CHANNELS.recoveryReset)
+}
+
 /** the identity a save starts from: its copy is removed once the save has landed */
 export function hwpRecoveryBeforeSave(wcId: number): RecoveryIdentity | null {
   return hwpRecoveryIdentityOf(wcId)
@@ -257,9 +314,11 @@ export function hwpRecoverySaved(wcId: number, before: RecoveryIdentity | null):
   restoredByWc.delete(wcId)
   untitledRestoreByWc.delete(wcId)
   saveAsDefaultByWc.delete(wcId)
+  // the copy is gone with the save: a clean close of this view has nothing of its own to remove
+  ownsCopyByWc.delete(wcId)
   if (before) {
     try {
-      recoveryStore().deleteCopy(before, 'saved')
+      dropCopy(wcId, before, 'saved')
     } catch (err) {
       console.warn('[hwp] could not remove the recovery copy:', err)
     }
@@ -278,7 +337,7 @@ export function hwpRecoveryDontSave(contents: WebContents): void {
   turnByWc.delete(wcId)
   if (identity) {
     try {
-      recoveryStore().deleteCopy(identity, 'dontSave')
+      dropCopy(wcId, identity, 'dontSave')
     } catch (err) {
       console.warn('[hwp] could not remove the recovery copy:', err)
     }
@@ -304,7 +363,7 @@ export function trackHwpRecovery(wc: WebContents): void {
       const identity = savedIdentity(wcId) ?? untitledIdentityByWc.get(wcId)
       if (identity && dontSaveByWc.has(wcId)) {
         // a copy that landed while the tab was closing goes too
-        recoveryStore().deleteCopy(identity, 'dontSave')
+        dropCopy(wcId, identity, 'dontSave')
       } else if (
         identity &&
         ownsCopyByWc.has(wcId) &&
@@ -312,7 +371,7 @@ export function trackHwpRecovery(wc: WebContents): void {
         !host?.isDirty(wcId)
       ) {
         // closed with nothing unsaved; the store keeps it while the app is ending
-        recoveryStore().deleteCopy(identity, 'closedClean')
+        dropCopy(wcId, identity, 'closedClean')
       }
     } catch (err) {
       console.warn('[hwp] could not settle the recovery copy on close:', err)
