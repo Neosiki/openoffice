@@ -20,7 +20,6 @@ function dirtyWorkbookState(overrides: Partial<Parameters<typeof shouldRunSaveTi
     needsSaveAsNotUnsavedNew: false,
     isCsv: false,
     kind: 'recovery' as const,
-    restoredFromRecovery: false,
     automaticRecoveryDisabled: false,
     ...overrides,
   }
@@ -69,12 +68,15 @@ describe('shouldRunSaveTick', () => {
     expect(shouldRunSaveTick(dirtyWorkbookState({ editingCell: true }))).toBe(false)
     expect(shouldRunSaveTick(dirtyWorkbookState({ needsSaveAsNotUnsavedNew: true }))).toBe(false)
     expect(shouldRunSaveTick(dirtyWorkbookState({ isCsv: true }))).toBe(false)
-    // recovery-only guards do not block the real save kind
-    expect(shouldRunSaveTick(dirtyWorkbookState({ restoredFromRecovery: true }))).toBe(false)
+    // the recovery-only guard does not block the real save kind
     expect(shouldRunSaveTick(dirtyWorkbookState({ automaticRecoveryDisabled: true }))).toBe(false)
     expect(
-      shouldRunSaveTick(dirtyWorkbookState({ kind: 'save', restoredFromRecovery: true })),
+      shouldRunSaveTick(dirtyWorkbookState({ kind: 'save', automaticRecoveryDisabled: true })),
     ).toBe(true)
+  })
+
+  it('a restored workbook keeps writing its copy (it runs on a temp file, not on the copy)', () => {
+    expect(shouldRunSaveTick(dirtyWorkbookState({ kind: 'recovery' }))).toBe(true)
   })
 })
 
