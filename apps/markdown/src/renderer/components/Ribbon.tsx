@@ -59,7 +59,6 @@ interface Props {
   onToggleSource: () => void
   outlineOpen: boolean
   onToggleOutline: () => void
-  hasOutline: boolean
   backlinksOpen: boolean
   onToggleBacklinks: () => void
   onOpenGraph: () => void
@@ -273,7 +272,6 @@ export function Ribbon({
   onToggleSource,
   outlineOpen,
   onToggleOutline,
-  hasOutline,
   backlinksOpen,
   onToggleBacklinks,
   onOpenGraph,
@@ -664,7 +662,7 @@ export function Ribbon({
               <IconBtn
                 title={t('outline')}
                 active={outlineOpen}
-                disabled={disabled || (!hasOutline && !outlineOpen)}
+                disabled={disabled}
                 onClick={onToggleOutline}
               >
                 <IconOutlineView size={ICON} />
