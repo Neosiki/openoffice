@@ -286,7 +286,8 @@ Nothing in this list is uploaded by the app.
   places the restored copy as a working file in the operating system's
   temporary folder (`genoffice-pdf-recovery`). That file is your document
   content as well, kept as a plain file; it is removed when the tab closes or
-  the document is saved.
+  the document is saved, and leftovers older than a day are removed when the
+  app starts.
 - **The session record** (`session-record.json` in the data folder): the
   kind, file path and title of each open document tab, their order, which tab
   was in front, the split view, and whether the app was closed normally, so

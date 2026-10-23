@@ -858,8 +858,9 @@ export class TabManager {
 
   /**
    * For callers that need a live document (MCP tools, `@` mentions): load the
-   * tab if it is unloaded — without activating it — and resolve once its
-   * editor reports the document ready. A tab whose document must first ask
+   * tab if it is unloaded — without activating it — and resolve once the
+   * opener's `ready` settles, else once the editor page has loaded (not the
+   * document: the editor may still be reading it). A tab whose document must first ask
    * the user the per-file recovery question resolves `needs-user` without
    * loading (or, already loaded by a click, without waiting on the person).
    * A normally opened tab is ready at once. Rejects when the opener fails or

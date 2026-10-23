@@ -223,6 +223,7 @@ import {
   flushPdfSave,
   markPdfUntitledPath,
   pdfFileRenamed,
+  pdfCloseCancelled,
   pdfIsDirty,
   requestPdfSaveAs,
   sendPdfPrintRequest,
@@ -4162,6 +4163,9 @@ function createShellWindow(): void {
     onVetoed: () => {
       appQuitting = false
       resetAppShuttingDown()
+      // a PDF tab answered "Don't Save" before another tab cancelled: it stays
+      // open with its edits, so its recovery copies resume now
+      for (const tab of manager.dirtyPdfTabs()) pdfCloseCancelled(tab.webContents)
     },
   })
 

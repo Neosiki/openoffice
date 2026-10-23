@@ -19,7 +19,7 @@ import {
   setActiveSlidesWebContents,
   slidesIsDirty,
 } from '../../../slides/src/main/slides-main'
-import { pdfIsDirty, requestPdfClose } from '../../../pdf/src/main/pdf-main'
+import { pdfCloseCancelled, pdfIsDirty, requestPdfClose } from '../../../pdf/src/main/pdf-main'
 import { markdownIsDirty, requestMarkdownClose } from '../../../markdown/src/main/markdown-main'
 import { hwpIsDirty, requestHwpClose } from '../../../hwp/src/main/hwp-main'
 import { htmlIsDirty, requestHtmlClose } from '../../../html/src/main/html-main'
@@ -572,7 +572,10 @@ export function createDetachedEditorWindow(options: {
         // a denied close vetoes any quit that was in flight: the sheets close
         // guard must prompt again on later closes instead of silently proceeding
         if (await confirmDetachedClose(rec)) tearDown()
-        else resetSheetsShuttingDown()
+        else {
+          resetSheetsShuttingDown()
+          if (rec.kind === 'pdf') pdfCloseCancelled(rec.view.webContents)
+        }
       } catch (err) {
         console.error('[shell] detached window close prompt failed:', err)
         resetSheetsShuttingDown()
