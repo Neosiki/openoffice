@@ -71,7 +71,8 @@ While a document has unsaved changes, GenOffice keeps a recovery copy of it abou
 - **Decide later**: closing the list deletes nothing. When you first open one of those documents, a box with its name asks again; pressing Esc or closing the box restores it. If you do not need the restored content, close the document with **Don't Save**.
 - **Tabs load when you open them**: restored tabs show their titles at once, but each document loads only when you first click its tab. Opening everything at once could make a PC that is short of memory shut off again.
 - **When the PC shuts down**: if documents are unsaved, GenOffice does not ask whether to save. It keeps the copies, closes, and offers them at the next start.
-- **Documents without a copy**: password-protected Excel, HWP and PDF files get no recovery copy, so their unsaved changes cannot be restored; a notice says so once when such a document opens. Save these often. CSV files and older .xls workbooks opened in the spreadsheet editor do get a copy, kept as an untitled workbook: restoring it opens it untitled, and its first save suggests the original file's folder and name as .xlsx. Password-protected Word and PowerPoint documents get a copy locked with the same password.
+- **Documents without a copy**: password-protected Excel, HWP and PDF files get no recovery copy, so their unsaved changes cannot be restored; a notice says so once when such a document opens. Save these often. Password-protected Word and PowerPoint documents get a copy locked with the same password.
+- **CSV, older .xls and .tsv files**: the spreadsheet editor keeps their copy as an untitled workbook. Restoring it opens an untitled workbook, and its first save suggests the original file's folder and name as .xlsx.
 
 A copy is deleted when you save the document, close it with **Don't Save** or choose **Discard**, and also after 30 days without changes. After a normal close, GenOffice starts as before and brings no tabs back.
 
