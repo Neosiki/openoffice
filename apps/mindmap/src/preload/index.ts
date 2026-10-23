@@ -188,6 +188,7 @@ const recovery: MindmapRecoveryApi = {
   writeRecoveryCopy: (request) => ipcRenderer.invoke(MINDMAP_CHANNELS.recoveryCopy, request),
   onRecoveryCopyNow: (handler) => listen<[]>(MINDMAP_CHANNELS.recoveryCopyNow, handler),
   sendRecoveryCopyNowDone: () => ipcRenderer.send(MINDMAP_CHANNELS.recoveryCopyNowDone),
+  onRecoveryReset: (handler) => listen<[]>(MINDMAP_CHANNELS.recoveryReset, handler),
 }
 
 const api: MindmapApi = {

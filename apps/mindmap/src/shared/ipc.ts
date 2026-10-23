@@ -100,6 +100,8 @@ export const MINDMAP_CHANNELS = {
   recoveryCopyNow: 'mindmap:recovery-copy-now',
   /** renderer → main: the copy asked for by `recoveryCopyNow` is written, or there was none to write */
   recoveryCopyNowDone: 'mindmap:recovery-copy-now-done',
+  /** main → renderer: the last copy was dropped ("Don't Save") and the tab stayed open; copy again */
+  recoveryReset: 'mindmap:recovery-reset',
 } as const
 
 /** Channels the shell registers for every editor. Called here, never registered (except the language getter, see the main module). */
@@ -464,6 +466,8 @@ export interface MindmapRecoveryApi {
   /** the OS is ending the session: write a copy now, then call `sendRecoveryCopyNowDone` */
   onRecoveryCopyNow(handler: () => void): () => void
   sendRecoveryCopyNowDone(): void
+  /** the last copy was dropped and the tab stayed open: the next tick copies the map again */
+  onRecoveryReset(handler: () => void): () => void
 }
 
 /** API exposed by preload to the renderer (window.mindmapApi) */

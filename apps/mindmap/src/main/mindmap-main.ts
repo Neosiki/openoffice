@@ -65,13 +65,13 @@ import { tm } from './i18n-main'
 import {
   resolveViewOpen,
   setViewOpenDecision,
-  setViewSaveAsDefault,
   takeUntitledCopy,
   viewCrashed,
   viewDropped,
   viewFileRenamed,
   viewGone,
   viewRecoveryIdentity,
+  viewRestoredUntitled,
   viewSaveAsDefault,
   viewSaved,
   writeViewCopy,
@@ -88,6 +88,8 @@ import type {
 } from '../shared/ipc'
 
 export { setMindmapProvisionalTitleHook } from './ai-attachments'
+/** How long a tab that stays open after "Don't Save" takes no copy. */
+export { DONT_SAVE_HOLD_MS as MINDMAP_DONT_SAVE_HOLD_MS } from './recovery-main'
 
 /** The one extension a map is saved with. */
 const MAP_EXTENSION = '.xmind'
@@ -200,6 +202,13 @@ export function setMindmapRecoveryTitleHook(
   recoveryTitleHook = hook
 }
 
+/** The copy of this view was dropped and its tab is still open: ask the renderer for a fresh one. */
+function copyAgain(contents: WebContents): () => void {
+  return () => {
+    if (!contents.isDestroyed()) contents.send(MINDMAP_CHANNELS.recoveryReset)
+  }
+}
+
 export function mindmapIsDirty(webContentsId: number): boolean {
   return dirtyByWc.has(webContentsId)
 }
@@ -254,7 +263,7 @@ export async function requestMindmapClose(
   if (response === 2) return false
   if (response === 1) {
     // "Don't Save": the unsaved work is dropped, its recovery copy with it
-    viewDropped(contents.id)
+    viewDropped(contents.id, copyAgain(contents))
     return true
   }
   return new Promise<boolean>((resolve) => {
@@ -336,7 +345,7 @@ export function mindmapSaveToPath(contents: WebContents, filePath: string): Prom
  * unsaved work is dropped, and its recovery copy with it, as with "Don't Save".
  */
 export function discardMindmapRecovery(contents: WebContents): void {
-  viewDropped(contents.id)
+  viewDropped(contents.id, copyAgain(contents))
 }
 
 /**
@@ -536,9 +545,10 @@ function registerMindmapIpc(): void {
           return { status: 'ok', bytes: restored, restored: 'file' }
         }
         // The file is gone or no longer opens, so it is not written over: the
-        // map is untitled, and its first save offers the old place.
+        // map is untitled, its first save offers the old place, and its copies
+        // keep replacing the restored one.
         savePathByWc.delete(wcId)
-        setViewSaveAsDefault(wcId, path)
+        viewRestoredUntitled(wcId, path)
         return { status: 'ok', bytes: restored, restored: 'untitled' }
       }
       console.warn(`[mindmap] the recovery copy does not open (${copy.status}); the file opens`)

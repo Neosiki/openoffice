@@ -123,6 +123,11 @@ export class RecoveryCopier {
     return this.#attempt(true)
   }
 
+  /** the main process dropped the last copy and the tab stayed open: the next tick copies again */
+  reset(): void {
+    this.#copied = -1
+  }
+
   stop(): void {
     this.#stopped = true
     if (this.#retry) clearTimeout(this.#retry)
@@ -243,9 +248,11 @@ export function useRecoveryCopies(options: RecoveryCopiesOptions): RecoveryCopie
     const off = window.mindmapApi.onRecoveryCopyNow?.(() => {
       void current.writeNow().finally(() => window.mindmapApi.sendRecoveryCopyNowDone())
     })
+    const offReset = window.mindmapApi.onRecoveryReset?.(() => current.reset())
     return () => {
       window.clearInterval(id)
       off?.()
+      offReset?.()
     }
   }, [ready, current])
 

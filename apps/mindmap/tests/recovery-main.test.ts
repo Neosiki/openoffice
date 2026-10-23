@@ -95,6 +95,7 @@ import {
   type RecoveryIdentity,
 } from '@genoffice/electron-utils'
 import {
+  MINDMAP_DONT_SAVE_HOLD_MS,
   createMindmapView,
   discardMindmapRecovery,
   mindmapFilePath,
@@ -300,6 +301,54 @@ describe('deleting copies', () => {
     expect(store().copyInfo(fileId(path))).toBeNull()
   })
 
+  it('after "Don\'t Save" a late copy is not kept, and the closing tab takes any that landed', async () => {
+    const { path, contents } = await editedFileView()
+    await copy(contents, await mapBytes('Edited'))
+    showMessageBox.mockResolvedValueOnce({ response: 1 })
+    expect(await requestMindmapClose(contents as never)).toBe(true)
+    // a big map's copy was still being made when the user answered
+    expect(await copy(contents, await mapBytes('Late'))).toBe('superseded')
+    expect(store().copyInfo(fileId(path))).toBeNull()
+    // one that got onto the disk anyway goes with the tab, unsaved mark or not
+    await store().writeCopy(fileId(path), Buffer.from(await mapBytes('Landed')))
+    destroy(contents)
+    expect(store().copyInfo(fileId(path))).toBeNull()
+  })
+
+  it('after a tool discarded the map a late copy is not kept either', async () => {
+    const contents = view(null)
+    setDirty(contents, true)
+    await copy(contents, await mapBytes('New'))
+    const identity = mindmapRecoveryIdentity(contents.id)!
+    discardMindmapRecovery(contents as never)
+    expect(await copy(contents, await mapBytes('Late'))).toBe('superseded')
+    expect(store().copyInfo(identity)).toBeNull()
+    destroy(contents)
+    expect(store().listCopies({ kinds: ['mindmap'] })).toHaveLength(0)
+  })
+
+  it('a tab that stays open after "Don\'t Save" copies again a little later, without a new edit', async () => {
+    const { path, contents } = await editedFileView()
+    await copy(contents, await mapBytes('Edited'))
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    try {
+      showMessageBox.mockResolvedValueOnce({ response: 1 })
+      expect(await requestMindmapClose(contents as never)).toBe(true)
+      // another tab cancelled the window's close: this one is still there, unsaved
+      expect(await copy(contents, await mapBytes('Late'))).toBe('superseded')
+      expect(contents.sent.map(([channel]) => channel)).not.toContain(
+        MINDMAP_CHANNELS.recoveryReset,
+      )
+      vi.advanceTimersByTime(MINDMAP_DONT_SAVE_HOLD_MS)
+      // the renderer is told to copy the map again even though nothing changed
+      expect(contents.sent.map(([channel]) => channel)).toContain(MINDMAP_CHANNELS.recoveryReset)
+    } finally {
+      vi.useRealTimers()
+    }
+    expect(await copy(contents, await mapBytes('Again'))).toBe('written')
+    expect(store().copyInfo(fileId(path))).not.toBeNull()
+  })
+
   it('a clean close deletes the copy this tab wrote; a close with unsaved changes keeps it', async () => {
     const first = await editedFileView('first.xmind')
     await copy(first.contents, await mapBytes('Edited'))
@@ -485,6 +534,44 @@ describe('opening a file with a copy left over', () => {
     expect(readFileSync(path, 'utf8')).toBe('not a map any more')
     expect(store().copyInfo(fileId(path))).toBeNull()
   })
+
+  it('keeps one copy for a map restored as untitled: later copies replace the restored one', async () => {
+    const path = join(dir, 'plan.xmind')
+    writeFileSync(path, await mapBytes('On disk'))
+    const contents = view(path)
+    await leftOverCopy(path)
+    writeFileSync(path, 'not a map any more')
+    showMessageBox.mockResolvedValueOnce({ response: 0 })
+    expect((await open(contents, path)).status).toBe('ok')
+    setDirty(contents, true)
+    expect(await copy(contents, await mapBytes('More work'))).toBe('written')
+    // a crash now leaves one row in the launch list, not two
+    const copies = store().listCopies({ kinds: ['mindmap'] })
+    expect(copies).toHaveLength(1)
+    expect(await rootTitleOf(readFileSync(copies[0]!.copyPath))).toBe('More work')
+  })
+
+  it('opens the file when its copy cannot be settled, and writes no copy over the old one', async () => {
+    const path = join(dir, 'plan.xmind')
+    const original = await mapBytes('On disk')
+    writeFileSync(path, original)
+    const left = await leftOverCopy(path)
+    const contents = view(path)
+    showMessageBox.mockRejectedValueOnce(new Error('no window to ask over'))
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const result = await open(contents, path)
+    warn.mockRestore()
+    expect(result.status).toBe('ok')
+    expect(result.status === 'ok' && result.restored).toBeFalsy()
+    expect(result.status === 'ok' && Buffer.from(result.bytes).equals(Buffer.from(original))).toBe(
+      true,
+    )
+    expect(mindmapFilePath(contents.id)).toBe(path)
+    setDirty(contents, true)
+    expect(await copy(contents, await mapBytes('Edited'))).toBe('superseded')
+    const info = store().copyInfo(fileId(path))
+    expect(Buffer.from(readFileSync(info!.copyPath)).equals(Buffer.from(left))).toBe(true)
+  })
 })
 
 describe('opening an untitled copy', () => {
@@ -516,6 +603,29 @@ describe('opening an untitled copy', () => {
     expect((showSaveDialog.mock.calls[0]![0] as { defaultPath: string }).defaultPath).toBe(gone)
     expect(store().copyInfo(identity)).toBeNull()
     expect(existsSync(gone)).toBe(false)
+  })
+
+  it('keeps writing to the copy of a file that is gone, so a crash leaves one copy', async () => {
+    const gone = join(dir, 'gone', 'old.xmind')
+    const identity = fileId(gone)
+    await store().writeCopy(identity, Buffer.from(await mapBytes('Old work')))
+    const contents = view(null)
+    openMindmapUntitledCopy(contents as never, {
+      copy: identity,
+      title: 'old',
+      saveAsDefaultPath: gone,
+    })
+    expect(mindmapRecoveryIdentity(contents.id)).toEqual(identity)
+    setDirty(contents, true)
+    expect(await copy(contents, await mapBytes('More work'))).toBe('written')
+    const copies = store().listCopies({ kinds: ['mindmap'] })
+    expect(copies).toHaveLength(1)
+    expect(await rootTitleOf(readFileSync(store().copyInfo(identity)!.copyPath))).toBe('More work')
+
+    const target = join(dir, 'kept.xmind')
+    showSaveDialog.mockResolvedValue({ canceled: false, filePath: target })
+    expect(await save(contents, await mapBytes('More work'))).toEqual({ ok: true, path: target })
+    expect(store().listCopies({ kinds: ['mindmap'] })).toHaveLength(0)
   })
 })
 

@@ -89,6 +89,18 @@ describe('a recovery copy', () => {
     expect(JSON.parse(await contentText(copy))[1].title).toBe('After the save')
   })
 
+  it('is made from the bytes the map holds already, not from a second copy of them', async () => {
+    const original = await originalFile()
+    const session = await opened(original)
+    // the bytes the map opened from are the baseline itself
+    expect(await session.recoveryBytes()).toBe(original)
+    rename(session, 'Saved name')
+    const written = await session.produceBytes()
+    session.markWritten()
+    // and so are the bytes a save produced
+    expect(await session.recoveryBytes()).toBe(written)
+  })
+
   it('of a new map that was never saved can be made', async () => {
     const session = await newMap({ sheetTitle: 'Sheet 1', rootTitle: 'Central Topic' })
     session.addSheet({ title: 'Sheet 2', rootTitle: 'Central Topic' })
