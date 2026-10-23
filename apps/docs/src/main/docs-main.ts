@@ -3443,7 +3443,9 @@ export function discardDocsRecovery(contents: WebContents): void {
  * Drop a tab's copies for "Don't Save" (or a discarding close), and tell its
  * renderer: when the close does not go through after all (a quit cancelled
  * at another tab) the document is still dirty, and its next tick must write a
- * copy again even though nothing changed since the dropped one.
+ * copy again even though nothing changed since the dropped one. Until then
+ * the shared store turns those ticks away (see resumeDiscardedCopies), so a
+ * tab waiting for the other tabs' prompts leaves nothing behind at the quit.
  */
 function discardTabCopies(contents: WebContents, filePath: string | null): void {
   docsRecovery.discard(contents.id, filePath)

@@ -474,6 +474,16 @@ export function createPdfRecovery(deps: PdfRecoveryDeps) {
     closeCancelled(id: number): boolean {
       const state = views.get(id)
       if (!state?.dropped) return false
+      // the view is still open with its edits: the store's "Don't Save"
+      // block on its copy lifts too (an edit can tell before the shell does)
+      const dropped = state.droppedCopy
+      if (dropped) {
+        try {
+          store()?.clearDiscarded(dropped)
+        } catch {
+          // no readable store: nothing is written either
+        }
+      }
       clearDropped(state)
       return true
     },

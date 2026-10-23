@@ -1,6 +1,7 @@
 /**
- * A PDF tab that answered "Don't Save" stops writing recovery copies; when
- * another tab then cancels the window close, the PDF tab stays open with its
+ * A tab that answered "Don't Save" stops writing recovery copies (the shared
+ * store blocks the document; the PDF editor also keeps its own flag); when
+ * another tab then cancels the window close, the tab stays open with its
  * edits and must resume them (main window and detached windows alike).
  */
 import { readFileSync } from 'node:fs'
@@ -16,6 +17,7 @@ describe('PDF recovery resumes after a vetoed close', () => {
     expect(veto).toBeGreaterThan(-1)
     const body = index.slice(veto, index.indexOf('},', veto))
     expect(body).toContain('resetAppShuttingDown()')
+    expect(body).toContain('resumeDiscardedCopies()')
     expect(body).toContain('pdfCloseCancelled(tab.webContents)')
   })
 
@@ -24,6 +26,15 @@ describe('PDF recovery resumes after a vetoed close', () => {
     const denied = detached.indexOf('if (await confirmDetachedClose(rec)) tearDown()')
     expect(denied).toBeGreaterThan(-1)
     const branch = detached.slice(denied, detached.indexOf('} catch', denied))
+    expect(branch).toContain('resumeDiscardedCopies()')
     expect(branch).toContain("if (rec.kind === 'pdf') pdfCloseCancelled(rec.view.webContents)")
+  })
+
+  it('a detached window whose close prompt failed resumes too', () => {
+    const detached = source('src/main/detached-windows.ts')
+    const failed = detached.indexOf("console.error('[shell] detached window close prompt failed:'")
+    expect(failed).toBeGreaterThan(-1)
+    const branch = detached.slice(failed, detached.indexOf('} finally', failed))
+    expect(branch).toContain('resumeDiscardedCopies()')
   })
 })

@@ -147,6 +147,7 @@ export {
   recoveryFolderName,
   recoveryRunId,
   resetAppShuttingDown,
+  resumeDiscardedCopies,
   type RecoveryCopyFilter,
   type RecoveryCopyWriter,
   type RecoveryCopyInfo,

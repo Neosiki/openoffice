@@ -27,6 +27,7 @@ import {
   createRecoveryStore,
   markAppShuttingDown,
   resetAppShuttingDown,
+  resumeDiscardedCopies,
   type RecoveryMessageBox,
 } from '@genoffice/electron-utils'
 import { createDocsRecovery, type DocsRecovery } from '../src/main/docs-recovery'
@@ -59,6 +60,7 @@ beforeEach(() => {
 
 afterEach(() => {
   resetAppShuttingDown()
+  resumeDiscardedCopies()
   rmSync(root, { recursive: true, force: true })
   rmSync(userFolder, { recursive: true, force: true })
 })
@@ -287,6 +289,40 @@ describe('deleting copies', () => {
     expect(recovery.store.copyInfo(untitled)).toBeNull()
   })
 
+  it('while the window close asks the other tabs, a tab answered "Don\'t Save" writes no copy, without any teardown', async () => {
+    const doc = userDoc('lingering.docx')
+    await write(TAB, doc, 'dropped')
+    await recovery.writeCopy(TAB, { untitledExt: '.docx' }, () => Buffer.from('u'), 'U.docx')
+    const untitled = recovery.untitledOf(TAB)!
+    recovery.discard(TAB, doc)
+    // the renderer's next ticks (it was told its copy was dropped)
+    expect(await write(TAB, doc, 'dropped, again')).toBe('skipped')
+    expect(
+      await recovery.writeCopy(TAB, { untitledExt: '.docx' }, () => Buffer.from('u2'), 'U.docx'),
+    ).toBe('skipped')
+    // the untitled document keeps its slot: a fresh one would let the edits back in
+    expect(recovery.untitledOf(TAB)).toEqual(untitled)
+    // the window closes and the app quits: nothing of the tab is left to offer
+    markAppShuttingDown()
+    expect(filesUnder(autosaveDir())).toEqual([])
+    // the close is cancelled instead: the same slots take copies again
+    resumeDiscardedCopies()
+    expect(await write(TAB, doc, 'kept working')).toBe('written')
+    expect(
+      await recovery.writeCopy(TAB, { untitledExt: '.docx' }, () => Buffer.from('u3'), 'U.docx'),
+    ).toBe('written')
+    expect(recovery.store.copyInfo(untitled)).not.toBeNull()
+  })
+
+  it('opening the file again after "Don\'t Save" takes copies again, whatever the shell decided', async () => {
+    const doc = userDoc('reopened.docx')
+    await write(TAB, doc, 'dropped')
+    recovery.discard(TAB, doc)
+    recovery.settleClosedDocument(TAB, false)
+    expect((await open(doc, 'original')).action).toBe('original')
+    expect(await write(OTHER_TAB, doc, 'new edits')).toBe('written')
+  })
+
   it('a clean close drops only the copies that tab wrote', async () => {
     const mine = userDoc('mine.docx')
     const theirs = userDoc('theirs.docx')
@@ -426,6 +462,7 @@ describe('deleting copies', () => {
     await write(TAB, doc, 'dropped')
     recovery.discard(TAB, doc)
     // the quit was cancelled at another tab: this one stays open and copies again
+    resumeDiscardedCopies()
     await write(TAB, doc, 'still unsaved')
     // the OS ends the session: the live tab writes its copy, then is torn down
     markAppShuttingDown()

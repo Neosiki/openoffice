@@ -73,6 +73,7 @@ import {
   registerRecoveryEditor,
   resetAppShuttingDown,
   resolveRecoveryOnOpen,
+  resumeDiscardedCopies,
   unprotectableNoticeText,
   type RecoveryCopyInfo,
   type RecoveryCopyState,
@@ -2946,6 +2947,8 @@ export function resetSheetsShuttingDown(): void {
   shutdownLatch.reset()
   resetAppShuttingDown()
   resumeDiscardedTabCopies()
+  // every editor's "Don't Save" block in the shared store, not just this one's
+  resumeDiscardedCopies()
 }
 
 app.on('before-quit', markSheetsShuttingDown)

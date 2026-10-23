@@ -18,6 +18,9 @@
  *   store refuses the clean-close deletion while the app is shutting down.
  * - Panes showing the same file share its copy: when one deletes it, every
  *   pane on that file forgets its last copy, so one still unsaved writes again.
+ * - After "Don't Save" the shared store takes no copy of the document until
+ *   the window close is cancelled or the file is opened again, so a tab left
+ *   waiting for another tab's prompt writes nothing back.
  * - A save to a given path (MCP) that fails deletes a copy this tab wrote under
  *   that path in the meantime ('dontSave'); the document keeps its own copy.
  * - Opening a file with a copy asks the shared per-file prompt before the
@@ -238,11 +241,18 @@ export function createTextRecovery(host: TextRecoveryHost): TextRecovery {
     state.owns = false
     state.writtenAs = undefined
     // panes on the same file share the copy: one still unsaved must write it again
+    let shared = false
     for (const [id, other] of views) {
       if (other === state || !showsCopy(id, other, identity)) continue
       other.lastText = null
       other.owns = false
       other.writtenAs = undefined
+      shared = true
+    }
+    // "Don't Save" blocks the copy until the close is cancelled; another pane's
+    // edits were not thrown away, so its copies go on
+    if (reason === 'dontSave' && shared) {
+      quietly('resume', () => getStore().clearDiscarded(identity))
     }
   }
 
@@ -344,6 +354,8 @@ export function createTextRecovery(host: TextRecoveryHost): TextRecovery {
       if (sameIdentity(identityFor(wcId, state), target)) return
       if (!state.writtenAs || !sameIdentity(state.writtenAs, target)) return
       deleteFor(state, target, 'dontSave')
+      // a cleanup, not the user's "Don't Save": that path takes copies as usual
+      quietly('resume', () => getStore().clearDiscarded(target))
     },
 
     renamed(wcId, oldPath) {

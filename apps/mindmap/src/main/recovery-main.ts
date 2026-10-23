@@ -15,8 +15,11 @@
  * the app is ending, deletes nothing (the store refuses during shutdown).
  *
  * After "Don't Save" the view takes no copy while its tab closes, and the
- * closing tab takes any copy that landed meanwhile. A tab that stays open (a
- * later tab cancelled the window's close) copies again after a short hold.
+ * closing tab takes any copy that landed meanwhile. After a short hold the
+ * renderer is asked for a copy again; the shared store turns it away until
+ * the window's close is cancelled (a later tab's Cancel), so a tab left
+ * waiting for another tab's prompt writes nothing back, and one that stays
+ * open copies again.
  */
 import { readFileSync } from 'node:fs'
 import { app, dialog } from 'electron'
@@ -39,8 +42,9 @@ import { getUiLang } from '@genoffice/i18n'
 const KIND = 'mindmap' as const
 const MAP_EXTENSION = '.xmind'
 /**
- * After "Don't Save" the tab normally closes at once. When it stays open (a
- * later tab cancelled the window's close), copies resume after this long.
+ * After "Don't Save" the tab normally closes at once. After this long the
+ * renderer is asked for a copy again, which the store takes once the window's
+ * close is cancelled (see resumeDiscardedCopies).
  */
 export const DONT_SAVE_HOLD_MS = 5_000
 

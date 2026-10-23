@@ -1,6 +1,7 @@
 import { basename } from 'node:path'
 import { BrowserWindow, screen } from 'electron'
 import type { Rectangle, WebContents, WebContentsView } from 'electron'
+import { resumeDiscardedCopies } from '@genoffice/electron-utils'
 
 import {
   docsQueryDirty,
@@ -574,11 +575,15 @@ export function createDetachedEditorWindow(options: {
         if (await confirmDetachedClose(rec)) tearDown()
         else {
           resetSheetsShuttingDown()
+          // a "Don't Save" answered before the denial no longer holds: the
+          // window stays open with its edits, so its copies resume
+          resumeDiscardedCopies()
           if (rec.kind === 'pdf') pdfCloseCancelled(rec.view.webContents)
         }
       } catch (err) {
         console.error('[shell] detached window close prompt failed:', err)
         resetSheetsShuttingDown()
+        resumeDiscardedCopies()
       } finally {
         promptInFlight = false
       }

@@ -158,7 +158,11 @@ export function createDocsRecovery(store: RecoveryStore): DocsRecovery {
   function dropUntitled(tabId: number, reason: RecoveryDeleteReason): void {
     const untitled = untitledByTab.get(tabId)
     if (!untitled) return
-    if (store.deleteCopy(untitled, reason) === 'deleted') untitledByTab.delete(tabId)
+    // "Don't Save" keeps the slot: the store blocks it until the close is
+    // cancelled, and a fresh slot would let the dropped edits back in
+    if (store.deleteCopy(untitled, reason) === 'deleted' && reason !== 'dontSave') {
+      untitledByTab.delete(tabId)
+    }
   }
 
   function dropTabCopies(tabId: number, reason: RecoveryDeleteReason): void {
@@ -245,6 +249,9 @@ export function createDocsRecovery(store: RecoveryStore): DocsRecovery {
 
     async resolveOpen({ filePath, decision, dialog, parent, lang }) {
       const identity = fileIdentity(filePath)
+      // the file is being opened: what it shows from now on was not thrown
+      // away by an earlier "Don't Save", so its copies are written again
+      store.clearDiscarded(identity)
       if (decision === 'original') return { action: 'original' }
       if (decision === 'restore') {
         const bytes = await store.readCopy(identity)

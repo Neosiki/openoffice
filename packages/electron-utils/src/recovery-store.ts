@@ -33,10 +33,16 @@
  * HWP, password PDF): such a document gets no copy at all. Word and
  * PowerPoint pass their copy already re-encrypted with the document password.
  *
+ * After "Don't Save" the document takes no new copy until its close is
+ * cancelled (`resumeDiscardedCopies`) or it is opened again: the close prompt
+ * walks the dirty tabs one at a time, and a tab already answered keeps its
+ * edits (and its copy timer) while the user still answers a later one.
+ *
  * Process-wide state (the shutdown latch, delete epochs, write queues, the run
- * id, the editor registry) sits behind `Symbol.for(...)` keys: every editor
- * bundles its own copy of this package and the shell runs them all in one
- * process, so the copy the shell marks must be the one an editor reads.
+ * id, the "Don't Save" block, the editor registry) sits behind `Symbol.for(...)`
+ * keys: every editor bundles its own copy of this package and the shell runs
+ * them all in one process, so the copy the shell marks must be the one an
+ * editor reads.
  */
 import { createHash, randomBytes, randomUUID } from 'node:crypto'
 import {
@@ -226,12 +232,23 @@ export interface RecoveryStore {
    * Delete the copy and its metadata now. Any write already started for the
    * document is cancelled. While the app is ending, only `saved` and
    * `dontSave` are carried out; everything else answers 'refused' and leaves
-   * the copy (and in-flight writes) alone.
+   * the copy (and in-flight writes) alone. `dontSave` also blocks the
+   * document's later writes ('superseded', nothing written) until the close
+   * is cancelled (`resumeDiscardedCopies`) or the document is opened again
+   * (`openPlan`, `markCopyLoaded`, `clearDiscarded`).
    */
   deleteCopy(identity: RecoveryIdentity, reason: RecoveryDeleteReason): 'deleted' | 'refused'
+  /** the document was discarded with "Don't Save" and takes no copy for now */
+  isDiscarded(identity: RecoveryIdentity): boolean
+  /**
+   * The document is open (again) with edits that are not the discarded ones:
+   * its copies are written again. `openPlan` and `markCopyLoaded` do this too.
+   */
+  clearDiscarded(identity: RecoveryIdentity): void
   /** the copy's description, or null when there is none */
   copyInfo(identity: RecoveryIdentity): RecoveryCopyInfo | null
   readCopy(identity: RecoveryIdentity): Promise<Buffer | null>
+  /** what opening the document does; the document is being opened, so a "Don't Save" block lifts */
   openPlan(identity: RecoveryIdentity): RecoveryOpenPlan
   /** false when there is no copy */
   setCopyState(identity: RecoveryIdentity, state: RecoveryCopyState): boolean
@@ -241,7 +258,10 @@ export interface RecoveryStore {
    * refused while the app is ending).
    */
   applyLaunchDecision(identity: RecoveryIdentity, decision: RecoveryLaunchDecision): boolean
-  /** the editor loaded the copy's content into a tab: the copy is undecided again */
+  /**
+   * The editor loaded the copy's content into a tab: the copy is undecided
+   * again (and a "Don't Save" block lifts).
+   */
   markCopyLoaded(identity: RecoveryIdentity): boolean
   /**
    * Copies with metadata, oldest first. Legacy file copies have no path to
@@ -275,6 +295,8 @@ interface SharedRecoveryState {
   epochs: Map<string, number>
   queues: Map<string, Promise<unknown>>
   runId: string
+  /** documents (by write queue key) discarded with "Don't Save", see deleteCopy */
+  discarded: Set<string>
 }
 
 const SHARED = Symbol.for('genoffice.recovery-store.shared')
@@ -288,6 +310,7 @@ function shared(): SharedRecoveryState {
       epochs: new Map(),
       queues: new Map(),
       runId: randomBytes(8).toString('hex'),
+      discarded: new Set(),
     }
     holder[SHARED] = state
   }
@@ -315,6 +338,14 @@ export function resetAppShuttingDown(): void {
 
 export function isAppShuttingDown(): boolean {
   return shared().shuttingDown
+}
+
+/**
+ * A close was cancelled: every document discarded with "Don't Save" while
+ * it was being answered is still open with its edits, so its copies resume.
+ */
+export function resumeDiscardedCopies(): void {
+  shared().discarded.clear()
 }
 
 // ---- addressing ----
@@ -564,7 +595,8 @@ export function createRecoveryStore(options: RecoveryStoreOptions): RecoveryStor
       writeJsonAtomic(metaPathOf(copy), meta)
     }
     return enqueue(key, async () => {
-      if (superseded()) return 'superseded'
+      // "Don't Save" holds until the close is cancelled or the document reopens
+      if (superseded() || shared().discarded.has(key)) return 'superseded'
       mkdirSync(dirname(copy), { recursive: true })
       if (!(await land(copy, writeMeta, superseded))) return 'superseded'
       // a delete that ran while the bytes were landing (it unlinked before the
@@ -625,8 +657,16 @@ export function createRecoveryStore(options: RecoveryStoreOptions): RecoveryStor
     const copy = copyPath(identity)
     const key = queueKey(copy)
     shared().epochs.set(key, epochOf(key) + 1)
+    if (reason === 'dontSave') shared().discarded.add(key)
     removeCopyFiles(copy)
     return 'deleted'
+  }
+
+  const isDiscarded = (identity: RecoveryIdentity): boolean =>
+    shared().discarded.has(queueKey(copyPath(identity)))
+
+  function clearDiscarded(identity: RecoveryIdentity): void {
+    shared().discarded.delete(queueKey(copyPath(identity)))
   }
 
   function infoFor(identity: RecoveryIdentity, copy: string): RecoveryCopyInfo | null {
@@ -801,6 +841,8 @@ export function createRecoveryStore(options: RecoveryStoreOptions): RecoveryStor
     writeCopy,
     writeCopyStreamed,
     deleteCopy,
+    isDiscarded,
+    clearDiscarded,
     copyInfo,
     async readCopy(identity) {
       try {
@@ -810,6 +852,9 @@ export function createRecoveryStore(options: RecoveryStoreOptions): RecoveryStor
       }
     },
     openPlan(identity) {
+      // asked only when the document is being opened: what it shows from now
+      // on is not what an earlier "Don't Save" threw away
+      clearDiscarded(identity)
       const copy = copyInfo(identity)
       if (!copy) return { action: 'none' }
       return copy.state === 'restoreChosen' ? { action: 'restore', copy } : { action: 'ask', copy }
@@ -823,6 +868,7 @@ export function createRecoveryStore(options: RecoveryStoreOptions): RecoveryStor
       return setCopyState(identity, decision === 'restore' ? 'restoreChosen' : 'later')
     },
     markCopyLoaded(identity) {
+      clearDiscarded(identity)
       return setCopyState(identity, 'undecided')
     },
     listCopies: scan,

@@ -77,6 +77,7 @@ import {
   markAppShuttingDown,
   recoveryEditors,
   resetAppShuttingDown,
+  resumeDiscardedCopies,
   type RecoveryUntitledIdentity,
 } from '@genoffice/electron-utils'
 import { SPLIT_PANE_CHANNELS } from '@genoffice/electron-utils/split-pane-bridge'
@@ -4163,8 +4164,10 @@ function createShellWindow(): void {
     onVetoed: () => {
       appQuitting = false
       resetAppShuttingDown()
-      // a PDF tab answered "Don't Save" before another tab cancelled: it stays
-      // open with its edits, so its recovery copies resume now
+      // tabs that answered "Don't Save" before another tab cancelled stay open
+      // with their edits, so their recovery copies resume now (the PDF editor
+      // also keeps a flag of its own)
+      resumeDiscardedCopies()
       for (const tab of manager.dirtyPdfTabs()) pdfCloseCancelled(tab.webContents)
     },
   })

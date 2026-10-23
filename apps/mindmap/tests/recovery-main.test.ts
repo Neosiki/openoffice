@@ -92,6 +92,7 @@ import {
   markAppShuttingDown,
   recoveryEditor,
   resetAppShuttingDown,
+  resumeDiscardedCopies,
   type RecoveryIdentity,
 } from '@genoffice/electron-utils'
 import {
@@ -125,6 +126,7 @@ beforeEach(() => {
 })
 afterEach(() => {
   resetAppShuttingDown()
+  resumeDiscardedCopies()
   // every view of a test goes with it, so later tests see only their own
   for (const contents of made.splice(0)) if (!contents.destroyed) destroy(contents)
   rmSync(dir, { recursive: true, force: true })
@@ -327,14 +329,14 @@ describe('deleting copies', () => {
     expect(store().listCopies({ kinds: ['mindmap'] })).toHaveLength(0)
   })
 
-  it('a tab that stays open after "Don\'t Save" copies again a little later, without a new edit', async () => {
+  it('a tab that stays open after "Don\'t Save" copies again once the close is cancelled, without a new edit', async () => {
     const { path, contents } = await editedFileView()
     await copy(contents, await mapBytes('Edited'))
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
     try {
       showMessageBox.mockResolvedValueOnce({ response: 1 })
       expect(await requestMindmapClose(contents as never)).toBe(true)
-      // another tab cancelled the window's close: this one is still there, unsaved
+      // the window's close goes on to another tab: this one is still there, unsaved
       expect(await copy(contents, await mapBytes('Late'))).toBe('superseded')
       expect(contents.sent.map(([channel]) => channel)).not.toContain(
         MINDMAP_CHANNELS.recoveryReset,
@@ -345,6 +347,11 @@ describe('deleting copies', () => {
     } finally {
       vi.useRealTimers()
     }
+    // the user still lingers on that other tab's prompt: the store takes no copy
+    expect(await copy(contents, await mapBytes('Lingering'))).toBe('superseded')
+    expect(store().copyInfo(fileId(path))).toBeNull()
+    // that tab cancelled the window's close
+    resumeDiscardedCopies()
     expect(await copy(contents, await mapBytes('Again'))).toBe('written')
     expect(store().copyInfo(fileId(path))).not.toBeNull()
   })

@@ -129,6 +129,7 @@ import {
   markAppShuttingDown,
   recoveryEditor,
   resetAppShuttingDown,
+  resumeDiscardedCopies,
   type RecoveryIdentity,
 } from '@genoffice/electron-utils'
 import {
@@ -212,6 +213,7 @@ beforeEach(() => {
 afterEach(() => {
   hoisted.beforeRecentRead = null
   resetAppShuttingDown()
+  resumeDiscardedCopies()
   rmSync(dir, { recursive: true, force: true })
   rmSync(hoisted.userDataDir, { recursive: true, force: true })
   rmSync(hoisted.documentsDir, { recursive: true, force: true })
@@ -688,17 +690,21 @@ describe('deleting copies', () => {
     expect(copies[0]!.identity).toEqual(slidesRecoveryIdentity(heavy.id))
   })
 
-  it("copies a deck again once it changes after a Don't Save whose close did not go through", async () => {
+  it("copies a deck again, without a new edit, once the close after its Don't Save is cancelled", async () => {
     const path = makeDeckFile()
     const tab = new FakeContents(45)
     await call<Promise<unknown>>(tab, 'slides:open-path', path, FIT)
     call(tab, 'slides:add-blank-slide', { sourceIndex: 0, before: false, fitWidthPx: FIT })
     await runSlidesRecoveryPass()
-    discardSlidesRecovery(tab as never)
+    showMessageBox.mockResolvedValue({ response: 1 })
+    expect(await requestSlidesClose(tab as never)).toBe(true)
+    // the window close still asks the other tabs: this deck is not serialized again
+    vi.mocked(savePptxToFile).mockClear()
     await runSlidesRecoveryPass()
+    expect(savePptxToFile).not.toHaveBeenCalled()
     expect(existsSync(legacyCopyPath(path))).toBe(false)
-    // the tab stayed open and the user kept working: the safety net is back
-    call(tab, 'slides:add-blank-slide', { sourceIndex: 0, before: false, fitWidthPx: FIT })
+    // another tab cancelled the close: the tab stays open and the safety net is back
+    resumeDiscardedCopies()
     await runSlidesRecoveryPass()
     expect(existsSync(legacyCopyPath(path))).toBe(true)
   })

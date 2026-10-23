@@ -73,8 +73,10 @@ export interface HwpRecoveryHost {
 /** How long the OS-shutdown flush waits for one tab's copy. */
 const FLUSH_TIMEOUT_MS = 10_000
 /**
- * After "Don't Save" the tab normally closes at once. When it stays open (a later
- * tab cancelled the window's close), copies resume after this long.
+ * After "Don't Save" the tab normally closes at once. After this long its renderer is
+ * asked for a copy again; the shared store takes it only once the window's close is
+ * cancelled (resumeDiscardedCopies), so a tab waiting for a later tab's prompt writes
+ * nothing back.
  */
 const DONT_SAVE_HOLD_MS = 5_000
 
@@ -249,17 +251,21 @@ export async function hwpRecoveryOnRead(
 /**
  * The copy of `identity` was removed: other views on the same file (the other pane of
  * a split) may hold unsaved changes it was keeping, so their next turn writes it again.
+ * True when there was such a view.
  */
-function resetOthersOn(identity: RecoveryIdentity, wcId: number): void {
-  if (isUntitledIdentity(identity)) return
+function resetOthersOn(identity: RecoveryIdentity, wcId: number): boolean {
+  if (isUntitledIdentity(identity)) return false
   const slot = recoveryStore().copyPath(identity)
+  let shared = false
   for (const [otherId, contents] of contentsByWc) {
     if (otherId === wcId || contents.isDestroyed()) continue
     const other = savedIdentity(otherId)
     if (other && recoveryStore().copyPath(other) === slot) {
       contents.send(HWP_CHANNELS.recoveryReset)
+      shared = true
     }
   }
+  return shared
 }
 
 /** delete the copy of `identity` for this view, and tell the views that shared it */
@@ -268,7 +274,11 @@ function dropCopy(
   identity: RecoveryIdentity,
   reason: 'saved' | 'dontSave' | 'closedClean',
 ): void {
-  if (recoveryStore().deleteCopy(identity, reason) === 'deleted') resetOthersOn(identity, wcId)
+  const target = recoveryStore()
+  if (target.deleteCopy(identity, reason) !== 'deleted') return
+  // "Don't Save" blocks the copy until the window's close is cancelled; the other
+  // pane's edits were not thrown away, so its copies go on
+  if (resetOthersOn(identity, wcId) && reason === 'dontSave') target.clearDiscarded(identity)
 }
 
 /**
@@ -347,7 +357,8 @@ export function hwpRecoveryDontSave(contents: WebContents): void {
     wcId,
     setTimeout(() => {
       dontSaveByWc.delete(wcId)
-      // the tab stayed open: its unsaved changes need a copy again
+      // the tab may stay open: its unsaved changes need a copy again once the store
+      // takes it (the window's close was cancelled)
       if (!contents.isDestroyed()) contents.send(HWP_CHANNELS.recoveryReset)
     }, DONT_SAVE_HOLD_MS),
   )

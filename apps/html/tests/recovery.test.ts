@@ -111,6 +111,7 @@ import {
   newUntitledRecoveryId,
   recoveryEditor,
   resetAppShuttingDown,
+  resumeDiscardedCopies,
   type RecoveryIdentity,
 } from '@genoffice/electron-utils'
 import {
@@ -176,6 +177,7 @@ beforeEach(() => {
 
 afterEach(() => {
   resetAppShuttingDown()
+  resumeDiscardedCopies()
   setHtmlRecoveryTitleSource(null)
   showMessageBox.mockReset()
   showSaveDialogWithMemory.mockReset()
@@ -273,6 +275,22 @@ describe('deleting copies', () => {
     await expect(requestHtmlClose(contents as never)).resolves.toBe(true)
     expect(store().copyInfo(fileId(path))).toBeNull()
     expect(readFileSync(path, 'utf8')).toBe('# Saved')
+  })
+
+  it("writes no copy after Don't Save while the window still asks other tabs, until the close is cancelled", async () => {
+    const path = createDocument()
+    const contents = openView(path)
+    setDirty(contents, true)
+    await writeCopy(contents, 'unsaved')
+    showMessageBox.mockResolvedValueOnce({ response: 1 })
+    await expect(requestHtmlClose(contents as never)).resolves.toBe(true)
+    // the window close walks on to the next tab: this one is still open and dirty
+    await expect(writeCopy(contents, 'unsaved')).resolves.toBe('superseded')
+    expect(store().copyInfo(fileId(path))).toBeNull()
+    // a later tab cancels the close: this tab copies again at its next tick
+    resumeDiscardedCopies()
+    await expect(writeCopy(contents, 'unsaved')).resolves.toBe('written')
+    expect(readFileSync(store().copyPath(fileId(path)), 'utf8')).toBe('unsaved')
   })
 
   it('deletes the copy when an MCP tool closes the document without saving', async () => {
@@ -547,6 +565,8 @@ describe('a failed save to a given path (MCP)', () => {
     await expect(saving).rejects.toThrow()
 
     expect(store().copyInfo(fileId(target))).toBeNull()
+    // nothing was discarded by the user: a later document at that path copies as usual
+    expect(store().isDiscarded(fileId(target))).toBe(false)
     expect(existsSync(target)).toBe(false)
     expect(htmlRecoveryIdentity(contents.id)).toEqual(own)
     await expect(writeCopy(contents, 'draft 2')).resolves.toBe('written')
