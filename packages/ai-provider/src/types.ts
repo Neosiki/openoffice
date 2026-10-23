@@ -24,6 +24,7 @@ export type AiProviderId =
   | 'minimax'
   | 'xai'
   | 'mistral'
+  | 'upstage'
   | 'openrouter'
   | 'requesty'
   | 'opper'

@@ -229,6 +229,15 @@ export const AI_PROVIDERS: AiProviderMeta[] = [
     keyPlaceholder: 'API Key',
   },
   {
+    id: 'upstage',
+    label: 'Solar',
+    // GET api.upstage.ai/v1/models (2026-10-21); every id here answered a
+    // tool call. Pro4 is the flagship, Mini4 the fast, cheap tier.
+    models: ['solar-pro4', 'solar-pro3', 'solar-mini4'],
+    defaultModel: 'solar-pro4',
+    keyPlaceholder: 'up_...',
+  },
+  {
     id: 'openrouter',
     label: 'OpenRouter',
     // vendor-prefixed slugs exactly as openrouter.ai/api/v1/models lists them —
