@@ -80,6 +80,7 @@ import { dropGenerateHandoff, queueGenerateHandoffFor } from './generate/handoff
 import type { ConvertedDocument } from './generate/convert'
 import { queueConvertedContent } from './generate/converted-tab'
 import { releaseClosedRenderer } from './renderer-disposal'
+import type { SessionStripState } from './session-record'
 
 /** a tab lifted out of the strip with its live view: what "Open in New Window",
  *  tear-off and dock hand back and forth between the shell and a detached window */
@@ -1021,6 +1022,26 @@ export class TabManager {
   /** the live split (copy) or null */
   splitState(): SplitViewState | null {
     return this.split ? { ...this.split } : null
+  }
+
+  /**
+   * The strip as the session record keeps it (crash recovery spec 5.2): the
+   * document tabs in strip order, loaded or not. Home, the manual and
+   * chrome-free Present tabs are never restored, so they are left out.
+   */
+  sessionTabs(): SessionStripState {
+    return {
+      tabs: this.tabs
+        .filter((t) => t.kind !== 'home' && t.kind !== 'help' && !t.present)
+        .map((t) => ({
+          id: t.id,
+          kind: t.kind as DocumentTabKind,
+          title: t.title,
+          ...(t.filePath ? { filePath: t.filePath } : {}),
+        })),
+      activeId: this.activeId,
+      split: this.splitState(),
+    }
   }
 
   /** which pane role the given view plays right now (null = not a pane view) */

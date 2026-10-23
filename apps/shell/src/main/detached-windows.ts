@@ -27,6 +27,7 @@ import { mindmapIsDirty, requestMindmapClose } from '../../../mindmap/src/main/m
 import { canonicalPath } from './tab-manager'
 import { releaseClosedRenderer } from './renderer-disposal'
 import type { DetachedTab } from './tab-manager'
+import type { SessionDetachedTab } from './session-record'
 import type { OpenDocumentTab, TabKind } from '../shared/tabs-api'
 import { DOCK_DWELL_MS, dockBand, pointInRect } from '../shared/tab-drag-geometry'
 
@@ -332,6 +333,21 @@ export function detachedRenameFile(
     }
   }
   return undefined
+}
+
+/** the detached documents for the session record: no dirty query, so synchronous */
+export function detachedSessionTabs(): SessionDetachedTab[] {
+  const out: SessionDetachedTab[] = []
+  for (const [wcId, rec] of detached) {
+    if (rec.window.isDestroyed() || rec.kind === 'home' || rec.kind === 'help') continue
+    out.push({
+      id: ID_PREFIX + wcId,
+      kind: rec.kind,
+      title: rec.window.getTitle(),
+      ...(rec.filePath ? { filePath: rec.filePath } : {}),
+    })
+  }
+  return out
 }
 
 /** every detached window's open file (agent/MCP open-documents publishing) */
