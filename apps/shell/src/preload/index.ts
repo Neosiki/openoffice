@@ -735,6 +735,9 @@ const subscriptionApi: SubscriptionApi = {
   async openInstallHelp(provider) {
     await ipcRenderer.invoke(SHELL_SUBSCRIPTION_CHANNELS.openInstallHelp, provider)
   },
+  async openConnectHelp(path) {
+    await ipcRenderer.invoke(SHELL_SUBSCRIPTION_CHANNELS.openConnectHelp, path)
+  },
 }
 contextBridge.exposeInMainWorld('aiOfficeSubscription', subscriptionApi)
 

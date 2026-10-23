@@ -758,6 +758,7 @@ function TranslateConfirm({
           onRecheck={connection.recheck}
           onAcceptMetered={connection.acceptMetered}
           onOpenInstallHelp={connection.openInstallHelp}
+          onOpenConnectHelp={connection.openConnectHelp}
         />
       )}
       {!nothingToSend && sendGate.noticeDue && (
