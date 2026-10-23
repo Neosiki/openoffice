@@ -28,8 +28,25 @@ const hoisted = vi.hoisted(() => ({
   userDataDir: '',
   documentsDir: '',
   handlers: new Map<string, (...args: never[]) => unknown>(),
+  /** runs once when the recent-files list is next read (a save's last steps) */
+  beforeRecentRead: null as (() => Promise<void>) | null,
 }))
 const handlers = hoisted.handlers
+
+// a seam inside a save: the recent-files update runs between writing the deck
+// and the save's bookkeeping, so a recovery pass can be started right there
+vi.mock('node:fs/promises', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('node:fs/promises')>()
+  const readFile = (async (...args: Parameters<typeof actual.readFile>) => {
+    const hook = hoisted.beforeRecentRead
+    if (hook && String(args[0]).endsWith('slides-recent.json')) {
+      hoisted.beforeRecentRead = null
+      await hook()
+    }
+    return actual.readFile(...args)
+  }) as typeof actual.readFile
+  return { ...actual, readFile, default: { ...actual, readFile } }
+})
 
 const showMessageBox = vi.fn(async (..._args: unknown[]) => ({ response: 0 }))
 const showSaveDialog = vi.fn(async (..._args: unknown[]) => ({
@@ -114,13 +131,18 @@ import {
   resetAppShuttingDown,
   type RecoveryIdentity,
 } from '@genoffice/electron-utils'
-import { decryptOfficeFile, isEncryptedOoxml } from '@genoffice/electron-utils/office-encryption'
+import {
+  decryptOfficeFile,
+  encryptOoxml,
+  isEncryptedOoxml,
+} from '@genoffice/electron-utils/office-encryption'
 import {
   discardSlidesRecovery,
   registerSlidesIpc,
   releaseSlidesRecovery,
   requestSlidesClose,
   runSlidesRecoveryPass,
+  saveSessionDeckTo,
   slidesIsDirty,
   slidesRecoveryIdentity,
 } from '../src/main/slides-main'
@@ -188,6 +210,7 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+  hoisted.beforeRecentRead = null
   resetAppShuttingDown()
   rmSync(dir, { recursive: true, force: true })
   rmSync(hoisted.userDataDir, { recursive: true, force: true })
@@ -262,6 +285,23 @@ describe('writing copies', () => {
     await call<Promise<unknown>>(fileTab, 'slides:open-path', makeDeckFile(), FIT)
     expect(slidesRecoveryIdentity(fileTab.id)).toBeNull()
     expect(slidesRecoveryIdentity(9999)).toBeNull()
+  })
+
+  it('only reports an untitled copy slot, and asking does not make one', async () => {
+    const tab = new FakeContents(18)
+    await newUntitledDeck(tab)
+    markMetaDirty(sessions.get(tab.id)!)
+    // no copy written yet: nothing to report, and nothing is reserved by asking
+    expect(slidesRecoveryIdentity(tab.id)).toBeNull()
+    expect(slidesRecoveryIdentity(tab.id)).toBeNull()
+    expect(sessions.get(tab.id)!.recoveryId).toBeUndefined()
+    await runSlidesRecoveryPass()
+    const [copy] = store().listCopies({ kinds: ['slides'], untitled: true })
+    expect(slidesRecoveryIdentity(tab.id)).toEqual({
+      kind: 'slides',
+      untitledId: copy!.untitledId,
+      ext: '.pptx',
+    })
   })
 
   it('writes a file deck under the legacy name and never touches the original', async () => {
@@ -396,6 +436,52 @@ describe('opening a deck with a copy', () => {
     expect(slidesIsDirty(tab.id)).toBe(true)
   })
 
+  it('leaves the copy for later when a chosen copy cannot be opened and the saved file opens', async () => {
+    // a copy locked with a password the plain original does not have
+    const path = makeDeckFile()
+    const identity: RecoveryIdentity = { kind: 'slides', filePath: path }
+    const locked = encryptOoxml(Buffer.from(twoSlideBytes), 'secret')
+    await store().writeCopy(identity, locked)
+    store().applyLaunchDecision(identity, 'restore')
+    const tab = new FakeContents(28)
+    const result = await call<Promise<OpenResult>>(tab, 'slides:open-path', path, FIT)
+    expect(result.slides).toHaveLength(1)
+    expect(slidesIsDirty(tab.id)).toBe(false)
+    // nobody holds the copy: it is not left undecided (that would make every
+    // later quit look abnormal), and it stays on disk for the launch list
+    expect(store().copyInfo(identity)?.state).toBe('later')
+    expect(store().hasUnresolvedCopies()).toBe(false)
+    expect(isEncryptedOoxml(readFileSync(store().copyPath(identity)))).toBe(true)
+
+    // the same through the per-file prompt and through the shell's decision
+    sessions.clear()
+    store().setCopyState(identity, 'undecided')
+    const asked = new FakeContents(29)
+    const r2 = await call<Promise<OpenResult>>(asked, 'slides:open-path', path, FIT)
+    expect(r2.slides).toHaveLength(1)
+    expect(store().copyInfo(identity)?.state).toBe('later')
+
+    sessions.clear()
+    const decided = new FakeContents(30)
+    await recoveryEditor('slides')!.openFileWithDecision(decided as never, {
+      filePath: path,
+      decision: 'restore',
+    })
+    const r3 = await call<Promise<OpenResult>>(decided, 'slides:consume-pending-open', FIT)
+    expect(r3.slides).toHaveLength(1)
+    expect(store().copyInfo(identity)?.state).toBe('later')
+  })
+
+  it('leaves an unreadable chosen copy for later when its open fails', async () => {
+    const path = makeDeckFile()
+    const identity: RecoveryIdentity = { kind: 'slides', filePath: path }
+    await store().writeCopy(identity, Buffer.from('not a deck'))
+    store().applyLaunchDecision(identity, 'restore')
+    const tab = new FakeContents(39)
+    await expect(call<Promise<OpenResult>>(tab, 'slides:open-path', path, FIT)).rejects.toThrow()
+    expect(store().copyInfo(identity)?.state).toBe('later')
+  })
+
   it('opens the saved file and deletes the copy when the prompt is answered Discard', async () => {
     const path = await fileWithCopy()
     showMessageBox.mockResolvedValue({ response: 1 })
@@ -470,6 +556,26 @@ describe('opening a deck with a copy', () => {
     const result = await call<Promise<OpenResult>>(tab, 'slides:consume-pending-open', FIT)
     expect(result.path).toBe('')
     expect(sessions.get(tab.id)!.firstSaveName).toBe(missing)
+    // the copy now belongs to this untitled deck: the shell sees an untitled
+    // slot, and the copy keeps the original path for a later crash
+    expect(store().copyInfo(identity)).toBeNull()
+    const own = slidesRecoveryIdentity(tab.id)
+    expect(own).toMatchObject({ kind: 'slides', ext: '.pptx' })
+    expect(own && 'untitledId' in own).toBe(true)
+    const untitled = store().listCopies({ kinds: ['slides'], untitled: true })
+    expect(untitled).toHaveLength(1)
+    expect(untitled[0]!.untitledId).toBe((own as { untitledId: string }).untitledId)
+    expect(untitled[0]!.originalPath).toBe(missing)
+    expect(untitled[0]!.state).toBe('undecided')
+    // later copies go to that slot
+    call(tab, 'slides:add-blank-slide', { sourceIndex: 0, before: false, fitWidthPx: FIT })
+    await runSlidesRecoveryPass()
+    expect(store().copyInfo(identity)).toBeNull()
+    expect(
+      store()
+        .listCopies({ kinds: ['slides'] })
+        .map((c) => c.untitledId),
+    ).toEqual([untitled[0]!.untitledId])
     const target = join(dir, 'Report.pptx')
     showSaveDialog.mockResolvedValue({ canceled: false, filePath: target })
     await call<Promise<unknown>>(tab, 'slides:save', false)
@@ -531,6 +637,109 @@ describe('deleting copies', () => {
     expect(store().listCopies({ kinds: ['slides'] })).toHaveLength(0)
   })
 
+  it("writes no copy for a deck discarded with Don't Save while another deck's copy is being written", async () => {
+    const heavyPath = makeDeckFile('heavy.pptx')
+    const laterPath = makeDeckFile('later.pptx')
+    const heavy = new FakeContents(41)
+    const later = new FakeContents(42)
+    for (const tab of [heavy, later]) {
+      await call<Promise<unknown>>(
+        tab,
+        'slides:open-path',
+        tab === heavy ? heavyPath : laterPath,
+        FIT,
+      )
+      call(tab, 'slides:add-blank-slide', { sourceIndex: 0, before: false, fitWidthPx: FIT })
+    }
+    const release = holdNextDeckWrite()
+    const pass = runSlidesRecoveryPass()
+    await vi.waitFor(() => expect(savePptxToFile).toHaveBeenCalled())
+    // the heavy deck is still being written: the later one is closed, Don't Save
+    showMessageBox.mockResolvedValue({ response: 1 })
+    expect(await requestSlidesClose(later as never)).toBe(true)
+    release()
+    await pass
+    expect(existsSync(legacyCopyPath(heavyPath))).toBe(true)
+    expect(existsSync(legacyCopyPath(laterPath))).toBe(false)
+    // its view is gone: the clean-close cleanup does not bring it back either
+    releaseSlidesRecovery(later.id)
+    sessions.delete(later.id)
+    await runSlidesRecoveryPass()
+    expect(existsSync(legacyCopyPath(laterPath))).toBe(false)
+  })
+
+  it('writes no copy for a deck an MCP close discarded and whose view went away mid-pass', async () => {
+    const heavy = new FakeContents(43)
+    const later = new FakeContents(44)
+    await newUntitledDeck(heavy)
+    await newUntitledDeck(later)
+    markMetaDirty(sessions.get(heavy.id)!)
+    markMetaDirty(sessions.get(later.id)!)
+    const release = holdNextDeckWrite()
+    const pass = runSlidesRecoveryPass()
+    await vi.waitFor(() => expect(savePptxToFile).toHaveBeenCalled())
+    discardSlidesRecovery(later as never)
+    releaseSlidesRecovery(later.id)
+    sessions.delete(later.id)
+    release()
+    await pass
+    const copies = store().listCopies({ kinds: ['slides'] })
+    expect(copies).toHaveLength(1)
+    expect(copies[0]!.identity).toEqual(slidesRecoveryIdentity(heavy.id))
+  })
+
+  it("copies a deck again once it changes after a Don't Save whose close did not go through", async () => {
+    const path = makeDeckFile()
+    const tab = new FakeContents(45)
+    await call<Promise<unknown>>(tab, 'slides:open-path', path, FIT)
+    call(tab, 'slides:add-blank-slide', { sourceIndex: 0, before: false, fitWidthPx: FIT })
+    await runSlidesRecoveryPass()
+    discardSlidesRecovery(tab as never)
+    await runSlidesRecoveryPass()
+    expect(existsSync(legacyCopyPath(path))).toBe(false)
+    // the tab stayed open and the user kept working: the safety net is back
+    call(tab, 'slides:add-blank-slide', { sourceIndex: 0, before: false, fitWidthPx: FIT })
+    await runSlidesRecoveryPass()
+    expect(existsSync(legacyCopyPath(path))).toBe(true)
+  })
+
+  it('leaves no copy of a deck just saved with Save As when a pass runs during the save', async () => {
+    const path = makeDeckFile()
+    const tab = new FakeContents(46)
+    await call<Promise<unknown>>(tab, 'slides:open-path', path, FIT)
+    call(tab, 'slides:add-blank-slide', { sourceIndex: 0, before: false, fitWidthPx: FIT })
+    const target = join(dir, 'Copy.pptx')
+    showSaveDialog.mockResolvedValue({ canceled: false, filePath: target })
+    hoisted.beforeRecentRead = () => runSlidesRecoveryPass()
+    markAppShuttingDown()
+    const saved = await call<Promise<{ ok: boolean }>>(tab, 'slides:save-as', 'Copy.pptx')
+    expect(saved.ok).toBe(true)
+    expect(hoisted.beforeRecentRead).toBeNull()
+    expect(slidesIsDirty(tab.id)).toBe(false)
+    expect(store().copyInfo({ kind: 'slides', filePath: target })).toBeNull()
+    expect(store().copyInfo({ kind: 'slides', filePath: path })).toBeNull()
+    expect(store().hasUnresolvedCopies()).toBe(false)
+  })
+
+  it('leaves no copy of a deck an MCP save wrote when a pass runs during the save', async () => {
+    const tab = new FakeContents(47)
+    await newUntitledDeck(tab)
+    const session = sessions.get(tab.id)!
+    markMetaDirty(session)
+    await runSlidesRecoveryPass()
+    expect(store().listCopies({ kinds: ['slides'] })).toHaveLength(1)
+    const target = join(dir, 'mcp', 'Saved.pptx')
+    hoisted.beforeRecentRead = () => runSlidesRecoveryPass()
+    markAppShuttingDown()
+    await saveSessionDeckTo(session, target)
+    expect(hoisted.beforeRecentRead).toBeNull()
+    expect(existsSync(target)).toBe(true)
+    expect(slidesIsDirty(tab.id)).toBe(false)
+    expect(store().listCopies({ kinds: ['slides'] })).toHaveLength(0)
+    expect(store().copyInfo({ kind: 'slides', filePath: target })).toBeNull()
+    expect(store().hasUnresolvedCopies()).toBe(false)
+  })
+
   it('keeps the copy of a deck that closes with unsaved changes', async () => {
     const tab = new FakeContents(35)
     await newUntitledDeck(tab)
@@ -541,6 +750,23 @@ describe('deleting copies', () => {
     expect(filesIn(hoisted.documentsDir)).toEqual([])
   })
 })
+
+/**
+ * Hold the next deck serialization (a heavy deck's copy taking its time)
+ * until the returned function is called.
+ */
+function holdNextDeckWrite(): () => void {
+  const write = vi.mocked(savePptxToFile)
+  const real = write.getMockImplementation()!
+  write.mockClear()
+  let release!: () => void
+  const gate = new Promise<void>((resolve) => (release = resolve))
+  write.mockImplementationOnce(async (...args) => {
+    await gate
+    return real(...args)
+  })
+  return release
+}
 
 /** every part of a zip package with its bytes, by name */
 async function zipParts(bytes: Uint8Array): Promise<Record<string, string>> {
