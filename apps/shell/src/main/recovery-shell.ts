@@ -12,6 +12,7 @@ import {
 import { discardDocsRecovery, docsRecoveryIdentity } from '../../../docs/src/main/docs-main'
 import {
   createSheetsView,
+  discardSheetsRecovery,
   migrateSheetsLegacyRecovery,
   sheetsRecoveryIdentity,
 } from '../../../sheets/src/main/sheets-main'
@@ -251,6 +252,7 @@ export function reopenUntitledCopy(
 export function discardEditorRecovery(kind: TabKind, contents: WebContents): void {
   if (contents.isDestroyed()) return
   if (kind === 'docs') discardDocsRecovery(contents)
+  else if (kind === 'sheets') discardSheetsRecovery(contents)
   else if (kind === 'mindmap') discardMindmapRecovery(contents)
   else if (kind === 'hwp') hwpDiscardRecoveryCopy(contents)
 }

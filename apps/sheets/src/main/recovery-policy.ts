@@ -122,8 +122,9 @@ export function legacyCopyName(filePath: string): string {
  * would-be path's copy (named by the hash of that path, like a file copy) is
  * adopted under the path's file name as its title. Entries whose copy is gone
  * are dropped; an entry whose move failed stays listed and is retried at the
- * next call. The index file goes away once it is empty. Nothing outside the
- * recovery folder is read or written.
+ * next call. The index file goes away once it is empty; an index that cannot
+ * be read is left in place. Nothing outside the recovery folder is read or
+ * written.
  */
 export function migrateLegacyUnsavedNew(
   store: Pick<RecoveryStore, 'adoptUntitledCopy'>,
@@ -135,12 +136,12 @@ export function migrateLegacyUnsavedNew(
   try {
     listed = JSON.parse(readFileSync(indexPath, 'utf8'))
   } catch {
-    // unreadable: nothing in it can be matched to a copy any more
-    listed = []
+    listed = undefined
   }
-  const paths = Array.isArray(listed)
-    ? listed.filter((path): path is string => typeof path === 'string' && path.length > 0)
-    : []
+  // Unreadable (earlier versions did not write it atomically): keep it as it
+  // is rather than lose the only record of those workbooks, and go on.
+  if (!Array.isArray(listed)) return []
+  const paths = listed.filter((path): path is string => typeof path === 'string' && path.length > 0)
   const adopted: RecoveryUntitledIdentity[] = []
   const remaining: string[] = []
   for (const path of [...new Set(paths)]) {
