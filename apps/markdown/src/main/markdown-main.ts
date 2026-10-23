@@ -464,8 +464,13 @@ const recovery = createTextRecovery({
   flushChannel: MARKDOWN_CHANNELS.recoveryFlushRequest,
 })
 
-/** The Markdown editor's crash-recovery contract (registered with the first view) */
+/**
+ * The Markdown editor's crash-recovery contract. Registered when this module loads,
+ * not with the first view: the shell restores untitled tabs and asks for copies at
+ * OS shutdown before any view of this editor may exist.
+ */
 export const markdownRecoveryEditor = recovery.contract
+registerRecoveryEditor(recovery.contract)
 
 /**
  * The shell's tab title for an untitled document, used as its recovery copy's
@@ -1349,8 +1354,6 @@ function registerMarkdownIpc(): void {
   // Language channel shared with other modules; removeHandler tolerates duplicate registration
   ipcMain.removeHandler(MARKDOWN_CHANNELS.getLanguage)
   ipcMain.handle(MARKDOWN_CHANNELS.getLanguage, () => getUiLang())
-
-  registerRecoveryEditor(recovery.contract)
 }
 
 function grantAndTrack(wc: WebContents, openPath?: string | null): void {

@@ -34,4 +34,13 @@ describe('recovery wiring', () => {
     const effect = app.lastIndexOf('useEffect(', loop)
     expect(app.slice(effect, loop)).not.toContain('autoSave')
   })
+
+  it('registers the recovery contract when the module loads, not with the first view', () => {
+    const main = source('src/main/html-main.ts')
+    const top = main.search(/^registerRecoveryEditor\(recovery\.contract\)$/m)
+    expect(top).toBeGreaterThan(-1)
+    const ipc = main.indexOf('function registerHtmlIpc(')
+    const ipcEnd = main.slice(ipc).search(/^\}$/m) + ipc
+    expect(main.slice(ipc, ipcEnd)).not.toContain('registerRecoveryEditor(')
+  })
 })

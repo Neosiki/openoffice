@@ -875,8 +875,13 @@ const recovery = createTextRecovery({
   flushChannel: HTML_CHANNELS.recoveryFlushRequest,
 })
 
-/** The HTML editor's crash-recovery contract (registered with the first view) */
+/**
+ * The HTML editor's crash-recovery contract. Registered when this module loads,
+ * not with the first view: the shell restores untitled tabs and asks for copies at
+ * OS shutdown before any view of this editor may exist.
+ */
 export const htmlRecoveryEditor = recovery.contract
+registerRecoveryEditor(recovery.contract)
 
 /**
  * The shell's tab title for an untitled document, used as its recovery copy's
@@ -2030,8 +2035,6 @@ function registerHtmlIpc(): void {
   // Language channel shared with other modules; removeHandler tolerates duplicate registration
   ipcMain.removeHandler(HTML_CHANNELS.getLanguage)
   ipcMain.handle(HTML_CHANNELS.getLanguage, () => getUiLang())
-
-  registerRecoveryEditor(recovery.contract)
 }
 
 function grantAndTrack(wc: WebContents, openPath?: string | null): void {
