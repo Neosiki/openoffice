@@ -53,6 +53,7 @@ import {
   registerRendererScheme,
   rendererUrl,
   MAX_REMOTE_IMAGE_BYTES,
+  isUntitledIdentity,
   newUntitledRecoveryId,
   readBodyCapped,
   registerRecoveryEditor,
@@ -502,12 +503,14 @@ export async function saveSessionDeckTo(session: Session, filePath: string): Pro
   followTemplateSelection(session, session.path, filePath)
   session.path = filePath
   session.diskState = (await recordDiskState(filePath)) ?? undefined
-  // mirror slides:save-as: the saved deck's recovery copies are gone
-  recoveryCopiesSaved(session, previousPath)
   await pushRecent(filePath)
   syncAttachedPaths(session, filePath)
   commitSaved(session.opened)
   if ((session.metaRev ?? 0) === metaRevAtSave) session.metaDirty = false
+  // mirror slides:save-as: the saved deck's recovery copies are gone — only
+  // now that the deck reads as saved, so a copy written during the steps
+  // above (it still looked unsaved) goes too
+  recoveryCopiesSaved(session, previousPath)
 }
 
 const RECENT_PATH = () => join(app.getPath('userData'), 'slides-recent.json')
@@ -610,12 +613,14 @@ function recoveryIdentityOf(session: Session): RecoveryIdentity {
 
 /**
  * The untitled deck copy this view writes, if any (the shell's session record,
- * and reopening an untitled tab whose renderer crashed). Null for a deck with a file.
+ * and reopening an untitled tab whose renderer crashed). Null for a deck with
+ * a file, and for an untitled deck that has no copy slot yet — asking never
+ * makes one.
  */
 export function slidesRecoveryIdentity(webContentsId: number): RecoveryIdentity | null {
   const session = sessions.get(webContentsId)
-  if (!session || session.path) return null
-  return recoveryIdentityOf(session)
+  if (!session || session.path || !session.recoveryId) return null
+  return isUntitledIdentity(session.recoveryId) ? session.recoveryId : null
 }
 
 /** the launch list's name for an untitled deck: its suggested first-save name, else the untitled label */
@@ -656,7 +661,34 @@ const copyMarks = new WeakMap<Session, CopyMark>()
 const autosaveBackoff = new Map<string, number>()
 const AUTOSAVE_BACKOFF_TICKS = 10
 
+/**
+ * Decks whose changes the user threw away (Don't Save, an MCP close without
+ * saving), with what they held then. A pass snapshots the open decks and
+ * writes them one by one, so a deck discarded while an earlier one was still
+ * serializing would otherwise get a fresh copy after its delete — and the
+ * discarded edits would be offered on the next launch. Such a deck is copied
+ * again only once it changes (its close did not go through and the user kept
+ * working).
+ */
+const discardedMarks = new WeakMap<Session, CopyMark>()
+
+/** the session still belongs to an open view */
+function sessionIsOpen(session: Session): boolean {
+  for (const open of sessions.values()) if (open === session) return true
+  return false
+}
+
 async function writeSessionCopy(session: Session, ignoreBackoff: boolean): Promise<void> {
+  const mark = contentMark(session)
+  // checked right before the ticket, with no await in between: a deck whose
+  // view went away or whose changes were discarded since the pass began is
+  // not written
+  if (!sessionIsOpen(session)) return
+  const discarded = discardedMarks.get(session)
+  if (discarded) {
+    if (sameMark(discarded, mark)) return
+    discardedMarks.delete(session)
+  }
   const identity = recoveryIdentityOf(session)
   const key = recoveryStore.copyPath(identity)
   const skip = autosaveBackoff.get(key) ?? 0
@@ -664,7 +696,6 @@ async function writeSessionCopy(session: Session, ignoreBackoff: boolean): Promi
     autosaveBackoff.set(key, skip - 1)
     return
   }
-  const mark = contentMark(session)
   const last = copyMarks.get(session)
   if (last && sameMark(last, mark) && recoveryStore.copyInfo(identity)) return
   // the ticket comes before serializing: a save or Don't Save that lands
@@ -732,6 +763,8 @@ setInterval(() => {
 
 /** delete every copy the session's document has (its file slot and its untitled slot) */
 function deleteSessionCopies(session: Session, reason: RecoveryDeleteReason): void {
+  // a pass already under way must not write these discarded changes again
+  if (reason === 'dontSave') discardedMarks.set(session, contentMark(session))
   let refused = false
   if (session.path) {
     const identity = fileRecoveryId(session.path)
@@ -911,14 +944,25 @@ async function recoveredOpenBytes(
   // an encrypted deck's copy is encrypted with the same password (a copy the
   // current password cannot open is left alone, not opened)
   if (isEncryptedOoxml(copy)) {
-    if (password === undefined) return keep
+    if (password === undefined) return copyNotOpened(identity, keep)
     try {
       return { bytes: new Uint8Array(await decryptOfficeFile(copy, password)), recovered: true }
     } catch {
-      return keep
+      return copyNotOpened(identity, keep)
     }
   }
   return { bytes: new Uint8Array(copy), recovered: true }
+}
+
+/**
+ * A copy chosen for restoring could not be opened and the deck opens from
+ * its file instead. Choosing it marked the copy loaded (undecided), yet no
+ * tab holds it: undecided it would make every later quit look abnormal. It
+ * waits for the next launch list or open as "later" instead.
+ */
+function copyNotOpened<T>(identity: RecoveryIdentity, result: T): T {
+  recoveryStore.setCopyState(identity, 'later')
+  return result
 }
 
 /**
@@ -953,11 +997,26 @@ async function queueUntitledCopy(
       prompt?.close()
     }
   }
+  if (contents.isDestroyed()) return
   const title = request.title.replace(/\.pptx$/i, '')
+  // a file copy whose original is missing becomes this untitled deck's own:
+  // the shell sees an untitled slot for the tab, later copies go there, and
+  // the copy keeps the original path for the first Save As after a new crash
+  let recoveryId = request.copy
+  if (!isUntitledIdentity(recoveryId)) {
+    const adopted = recoveryStore.adoptUntitledCopy('slides', recoveryStore.copyPath(recoveryId), {
+      title: title || tm('untitledDeck'),
+      ext: '.pptx',
+      state: 'undecided',
+      originalPath: request.saveAsDefaultPath ?? recoveryId.filePath,
+    })
+    if (!adopted) return
+    recoveryId = adopted
+  }
   queueSlidesSeedFor(contents, deck, {
     askPathOnFirstSave: true,
     suggestedName: request.saveAsDefaultPath ?? `${title || tm('untitledDeck')}.pptx`,
-    recoveryId: request.copy,
+    recoveryId,
     password,
   })
 }
@@ -1159,7 +1218,14 @@ async function openAndBuild(
     unlocked?.password,
   )
   await shapedMetricsReady() // Lay out only after complex-script shaped metrics are ready, avoiding an init race falling back to estimation
-  const opened = await openPptx(bytes)
+  let opened: OpenedPptx
+  try {
+    opened = await openPptx(bytes)
+  } catch (error) {
+    // an unreadable copy: the open fails as before, and the copy is no tab's
+    if (recovered) copyNotOpened(fileRecoveryId(path), undefined)
+    throw error
+  }
   adoptEmbeddedFonts(opened)
   const diskState = await diskStatePromise
   sessions.set(wc.id, {
@@ -4823,11 +4889,13 @@ export function registerSlidesIpc(): void {
       followTemplateSelection(session, session.path, r.filePath)
       session.path = r.filePath
       session.diskState = (await recordDiskState(r.filePath)) ?? undefined
-      recoveryCopiesSaved(session, previousPath)
       await pushRecent(r.filePath)
       syncAttachedPaths(session, r.filePath)
       commitSaved(session.opened)
       if ((session.metaRev ?? 0) === metaRevAtSave) session.metaDirty = false
+      // after the deck reads as saved: a copy a pass wrote while the steps
+      // above awaited (the deck still looked unsaved) is removed too
+      recoveryCopiesSaved(session, previousPath)
       return {
         ok: true,
         path: r.filePath,
