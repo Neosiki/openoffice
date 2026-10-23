@@ -734,6 +734,8 @@ export function markdownSaveToPath(contents: WebContents, filePath: string): Pro
       else savePathByWc.set(wcId, previousPath)
       if (previousOpenPath === undefined) openPathByWc.delete(wcId)
       else openPathByWc.set(wcId, previousOpenPath)
+      // a copy written under the target while the save ran must not outlive it
+      recovery.saveToPathFailed(wcId, filePath)
     }
     const timer = setTimeout(() => {
       saveWaiters.delete(wcId)

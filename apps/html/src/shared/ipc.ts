@@ -259,8 +259,10 @@ export interface HtmlApi {
    * crash-recovery copy to open instead (the per-file prompt runs first), with
    * the original path kept as the save target, or the copy an untitled tab was
    * opened from. Null: open the file (or the empty document) as usual.
+   * `originalPath`: the file an untitled restored copy was of (its original is
+   * missing); it gives the document's format, never its save target.
    */
-  recoveryOpen?(): Promise<{ text: string } | null>
+  recoveryOpen?(): Promise<{ text: string; originalPath?: string } | null>
   /**
    * Keep `text` (exactly what a save would write now) as this document's
    * crash-recovery copy; null only answers a flush request. Rejects on a disk

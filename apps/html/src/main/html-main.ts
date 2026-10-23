@@ -845,9 +845,6 @@ function forgetDiskState(wcId: number, path: string): void {
   if (states.size === 0) docDiskStates.delete(wcId)
 }
 
-/** True when this save must stop instead of writing: the sibling copy changed
- *  the disk since this view's last read or write, and either the automatic
- *  save defers or the user chose to keep the disk copy. */
 // ── Crash-recovery copies (spec "work is not lost"): the renderer pushes the
 // text a save would write; the copy lives in <userData>/html-autosave.
 const recovery = createTextRecovery({
@@ -902,6 +899,9 @@ export function htmlRecoveryIdentity(webContentsId: number): RecoveryIdentity | 
   return recovery.identityOf(webContentsId)
 }
 
+/** True when this save must stop instead of writing: the sibling copy changed
+ *  the disk since this view's last read or write, and either the automatic
+ *  save defers or the user chose to keep the disk copy. */
 async function conflictStopsSave(
   contents: WebContents,
   path: string,
@@ -1282,6 +1282,8 @@ export function htmlSaveToPath(contents: WebContents, filePath: string): Promise
       else savePathByWc.set(wcId, previousPath)
       if (previousOpenPath === undefined) openPathByWc.delete(wcId)
       else openPathByWc.set(wcId, previousOpenPath)
+      // a copy written under the target while the save ran must not outlive it
+      recovery.saveToPathFailed(wcId, filePath)
     }
     const timer = setTimeout(() => {
       saveWaiters.delete(wcId)

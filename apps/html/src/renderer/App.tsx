@@ -85,7 +85,7 @@ import { isDocEmpty } from './document/blank'
 import { documentSkeleton } from './document/skeleton'
 import { pageAtScroll, readPageSetup, sheetPeriod } from './document/page-setup'
 import { moveTarget } from './document/move-target'
-import { StylePanel } from './components/StylePanel'
+import { StylePanel, type PanelDrafts } from './components/StylePanel'
 import { floatPosition, parseDeclarations } from './document/float-position'
 import {
   buildParseMap,
@@ -97,6 +97,7 @@ import {
 import { compileOps, type HtmlOp, type OpError } from './document/ops'
 import { injectBrief, parseBrief, type Brief } from './document/brief'
 import { applyPatches } from './document/patch'
+import { withPendingEdits } from './document/pending-edits'
 import { adoptImageRewrites } from './document/image-rewrites'
 import { deriveAutoFileName, deriveNameFromPrompt, derivePageTitleName } from './document/auto-name'
 import { runGuardedPrint } from './print-guard'
@@ -563,6 +564,10 @@ export default function App() {
 
   const flushStylesRef = useRef<(() => void) | null>(null)
   const flushDraftsRef = useRef<(() => void) | null>(null)
+  /** the panel's open drafts, read without committing them */
+  const peekDraftsRef = useRef<(() => PanelDrafts) | null>(null)
+  /** what a save would write now, pending edits included, nothing committed (set each render) */
+  const sourceWithPendingRef = useRef<() => string>(() => textRef.current)
   /** land live style pokes and open panel drafts in the source before anything reads, saves or edits it */
   const flushPending = useCallback(() => {
     flushDraftsRef.current?.()
@@ -1395,6 +1400,30 @@ export default function App() {
     runManual([{ op: 'set_text_node', sid: selectedEntry.sid, index: selText.index, text }])
   }
 
+  // the batches flushPending would run (styles, then the panel's alt text and
+  // text run), applied to a scratch copy of the source for crash-recovery copies
+  sourceWithPendingRef.current = () => {
+    const drafts = peekDraftsRef.current?.() ?? {}
+    const map = getMap()
+    const styles = {
+      ...pendingStylesRef.current,
+      ...(drafts.css ? parseDeclarations(drafts.css) : {}),
+    }
+    const styleOps: HtmlOp[] = Object.keys(styles).length
+      ? selectionSids().map((sid) => ({ op: 'set_style', sid, styles }))
+      : []
+    const sid = selectedEntry && map.bySid.has(selectedEntry.sid) ? selectedEntry.sid : null
+    const altOps: HtmlOp[] =
+      sid !== null && drafts.alt !== undefined
+        ? [{ op: 'set_attr', sid, name: 'alt', value: drafts.alt }]
+        : []
+    const textOps: HtmlOp[] =
+      sid !== null && drafts.text !== undefined && selText.index >= 0
+        ? [{ op: 'set_text_node', sid, index: selText.index, text: drafts.text }]
+        : []
+    return withPendingEdits(textRef.current, map, [styleOps, altOps, textOps])
+  }
+
   const doSave = useCallback(
     async (mode: SaveMode, suggestedName?: string, auto = false): Promise<boolean> => {
       if (statusRef.current !== 'ready') return false
@@ -1694,8 +1723,11 @@ export default function App() {
     return startRecoveryCopies({
       read: () => {
         if (statusRef.current !== 'ready' || savingRef.current) return null
-        if (textRef.current === savedTextRef.current) return null
-        return serializeDocText({ text: textRef.current, envelope: envelopeRef.current })
+        // live style pokes and open panel drafts are part of what a save writes;
+        // they are applied to the copy only, so the user's panel input is left alone
+        const text = sourceWithPendingRef.current()
+        if (text === savedTextRef.current) return null
+        return serializeDocText({ text, envelope: envelopeRef.current })
       },
       write,
       onFlushRequest: api.onRecoveryFlushRequest?.bind(api),
@@ -2053,6 +2085,7 @@ export default function App() {
                       onText={setRunText}
                       onAttr={setAttr}
                       draftRef={flushDraftsRef}
+                      peekRef={peekDraftsRef}
                       onCustomCss={(css) => {
                         const decls = parseDeclarations(css)
                         if (Object.keys(decls).length) previewStyle(decls)

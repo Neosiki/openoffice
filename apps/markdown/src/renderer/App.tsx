@@ -310,11 +310,13 @@ export default function App() {
    * Read `path` and put it on the surface its extension calls for. Shared by
    * the initial load and by a rename that crossed surfaces, so a file cannot
    * end up on one surface because of the path it happened to be renamed to.
-   * A null path is an untitled document (a restored recovery copy).
+   * A null path is an untitled document (a restored recovery copy);
+   * `modePath` then names the file the copy was of, so a .txt or .json copy
+   * whose original is missing keeps its own surface (and is saved as such).
    */
   const loadFromPath = useCallback(
-    (path: string | null, raw: string) => {
-      const mode = textModeForPath(path)
+    (path: string | null, raw: string, modePath: string | null = path) => {
+      const mode = textModeForPath(modePath)
       setTextMode(mode)
       if (sourceApplyTimerRef.current) clearTimeout(sourceApplyTimerRef.current)
       sourceApplyTimerRef.current = null
@@ -373,7 +375,7 @@ export default function App() {
           if (cancelled) return
           loadFromPath(path, raw)
         } else if (recovered) {
-          loadFromPath(null, recovered.text)
+          loadFromPath(null, recovered.text, recovered.originalPath)
         } else {
           envelopeRef.current = { ...EMPTY_ENVELOPE }
         }

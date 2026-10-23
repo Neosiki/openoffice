@@ -35,6 +35,16 @@ describe('recovery wiring', () => {
     expect(app.slice(effect, loop)).not.toContain('autoSave')
   })
 
+  it('copies pending styles and panel drafts without committing them', () => {
+    const app = source('src/renderer/App.tsx')
+    const loop = app.indexOf('startRecoveryCopies({')
+    const read = app.slice(loop, app.indexOf('write,', loop))
+    expect(read).toContain('sourceWithPendingRef.current()')
+    // committing would cut into the user's typing in the panel
+    expect(read).not.toContain('flushPending')
+    expect(app).toContain('peekRef={peekDraftsRef}')
+  })
+
   it('registers the recovery contract when the module loads, not with the first view', () => {
     const main = source('src/main/html-main.ts')
     const top = main.search(/^registerRecoveryEditor\(recovery\.contract\)$/m)
