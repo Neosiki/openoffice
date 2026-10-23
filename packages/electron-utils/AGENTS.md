@@ -14,6 +14,7 @@ shell과 에디터들의 메인 프로세스(일부는 preload)가 함께 쓰는
 - 생성 넘겨주기(`src/generate-handoff.ts`): 만들기 창의 요청을 새 탭의 webContents 앞으로 맡겨 두고(`queueGenerateHandoff`), 그 탭의 에디터가 한 번 가져가며(`takeGenerateHandoff`), 실행 시작(`reportGenerateRunStarted`)과 AI 없이 바꾼 사실(`recordGenerateConverted`)을 메모리에 남긴다. shell의 출처 기록이 이 사건들을 읽는다.
 - 문서 첨부 다리(`src/doc-attach-bridge.ts`, `src/doc-attach-channels.ts`, 하위 경로 `/doc-attach-bridge`·`/doc-attach-channels`, 결정 0035): 편집기 preload가 `window.aiOfficeDocs`(`DOC_ATTACH_BRIDGE_KEY`)로 내주는 다리다. `available()`(껍데기 앱이 문서 고르기를 내주는지)과 `pick()`(문서 고르기 창을 열어 고른 파일 경로를 받음)을 준다. `drive-ai-bridge`처럼 껍데기 앱이 없으면 `available`이 거짓, `pick`이 `{ ok: false, reason: 'unavailable' }`로 닫힌 쪽 실패를 한다. 채널은 `doc:attach-available`, `doc:pick-attachments`.
 - 사용자 스킬 다리(`src/user-skills-bridge.ts`, `src/user-skills-channels.ts`, 하위 경로 `/user-skills-bridge`·`/user-skills-channels`, 결정 0048): 편집기 preload가 `window.aiOfficeUserSkills`(`USER_SKILLS_BRIDGE_KEY`)로 내주는 다리와 `skills:*` 채널 이름·주고받는 모양·입력 검사(`skillIdOf`, `statePatchOf`). 양식 스킬의 새 탭으로 요청과 칩을 맡기는 일(스킬 넘겨주기)은 `generate-handoff.ts`의 같은 한 번 가져가기 규칙을 쓴다.
+- 복구 사본(결정 0061): 여덟 편집기와 shell이 함께 쓰는 저장소 `createRecoveryStore`(`src/recovery-store.ts`), 편집기 약속 `RecoveryEditorContract`와 그 등록표(`src/recovery-contract.ts`의 `registerRecoveryEditor`·`recoveryEditor`·`recoveryEditors`), 파일을 열 때의 문서별 물음 `promptRecoveryForFile`·`resolveRecoveryOnOpen`(`src/recovery-prompt.ts`), 그 물음과 암호 문서 알림(`unprotectableNoticeText`)의 21개 언어 문구(`src/recovery-labels.ts`). 저장소는 사본 경로(`<userData>/<종류>-autosave/<sha1(경로) 앞 16글자><확장자>`, 제목 없는 문서는 `untitled/<식별자><확장자>`), 내용 없는 곁 정보(`.meta.json`: 종류, 원본 경로, 제목 없는 식별자, 탭 제목, 쓴 시각, 실행 식별자, 상태 `undecided`·`later`·`restoreChosen`), 원자적 쓰기(`writeCopy`, 큰 문서는 흘려 쓰는 `writeCopyStreamed`), 지우는 이유(`saved`·`dontSave`·`discarded`·`closedClean`), 목록 조회와 "파일이 그 뒤에 바뀜"·"원본 없음" 판정, 시작 목록의 결정(`applyLaunchDecision`), 30일 정리(`pruneStaleCopies`), 정상 종료 판정에 쓰는 `hasUnresolvedCopies`, 종료 래치(`markAppShuttingDown`·`resetAppShuttingDown`·`isAppShuttingDown`)를 맡는다.
 
 ## 맡지 않는 것 (경계)
 
@@ -37,6 +38,12 @@ shell과 에디터들의 메인 프로세스(일부는 preload)가 함께 쓰는
 - 저장하지 않은 파일 확인과 생성 넘겨주기의 상태는 `Symbol.for(...)` 키에 둔다. shell이 건 목록과 맡겨 둔 요청을, 번들에 따로 들어간 에디터의 사본이 같은 것으로 읽어야 한다. 열린 문서 목록이 없는 실행(에디터 단독 실행)에서는 아무것도 막지 않는다.
 - 넘겨주기는 실행을 시작하지 않는다. 요청은 맡겨진 webContents와 종류에서만, 한 번만 가져갈 수 있고, 가져가기 전에 탭이 닫히면 버린다. 디스크에 아무것도 쓰지 않는다.
 - 저장소 URL을 문자열로 다시 적지 않는다. `GITHUB_REPO_URL`·`GITHUB_ISSUES_URL`·`GITHUB_LATEST_RELEASE_URL`·`githubReleaseTagUrl`을 쓴다.
+- **복구 사본의 이름 규칙을 바꾸지 않는다.** 워드(`docs-autosave`, `.docx`·ODT는 `.odt`)·엑셀(`sheets-autosave`, `.xlsx`)·파워포인트(`slides-autosave`, `.pptx`)의 폴더와 "편집기가 쥔 경로 문자열의 sha1 앞 16글자 + 확장자"는 이전 버전이 남긴 사본을 찾는 열쇠다. 경로를 정규화하거나 이름을 바꾸면 업데이트 전의 사본을 잃는다. 곁 정보가 없는 사본은 `later`로 읽는다.
+- **곁 정보에 문서 내용을 넣지 않는다.** 저장소는 받은 바이트를 그대로 쓴다. 지킬 수 없는 문서(암호 엑셀·한글·PDF)의 평문을 넘기지 않는 것은 부르는 쪽의 책임이고, 워드·파워포인트는 같은 암호로 잠근 바이트를 넘긴다.
+- **종료 래치가 서 있으면 `saved`·`dontSave` 말고는 지우지 않는다.** `deleteCopy`는 `'refused'`를 돌려주고, `pruneStaleCopies`와 `applyLaunchDecision`의 버리기도 아무것도 하지 않는다. 편집기의 닫기 정리가 방금 쓴 사본을 지우지 못하게 하는 장치다. 예외를 넓히지 않는다.
+- **지우기 뒤에 끝나는 쓰기는 사본을 되살리지 않는다.** 지우기는 그 문서의 순번을 올리고, 그 전에 받은 표(`beginWrite`)로 쓰는 일은 `'superseded'`로 끝나 디스크에 아무것도 남기지 않는다. 메인 프로세스에서 오래 직렬화하는 호출자는 직렬화를 시작하기 전에 표를 받는다.
+- 종료 래치, 지우기 순번, 문서별 쓰기 줄, 실행 식별자, 편집기 약속 등록표는 `Symbol.for(...)` 키에 둔다. 편집기마다 이 패키지의 사본이 번들에 들어가므로, shell이 세운 래치와 등록표를 편집기의 사본이 같은 것으로 읽어야 한다.
+- 문서별 물음은 문서 이름을 보이고, 단추는 "되살리기"·"버리기" 둘이며, Esc와 창 닫기는 되살리기다. 파일이 사본보다 새로우면 그 줄을 더하고 사본을 조용히 지우지 않는다. 이 기본값을 바꾸지 않는다.
 
 ## 이 모듈의 방식
 
@@ -52,6 +59,7 @@ shell과 에디터들의 메인 프로세스(일부는 preload)가 함께 쓰는
 
 - 실행: `npm run test -w @genoffice/electron-utils`(또는 이 폴더에서 `npx vitest run`), `npm run typecheck -w @genoffice/electron-utils`.
 - 바꾸면 반드시 테스트하는 것: `safeExternalUrl`의 거절 목록(앞뒤 공백, 대소문자가 섞인 스킴), 차단 주소 판정(IPv4로 매핑된 IPv6, 정규화된 표기), 리다이렉트가 내부 주소로 향하는 경우, 본문이 상한을 넘는 응답과 `Content-Length`가 거짓인 응답, `readGeneratedImage`에 준 저장소 밖 경로, rename이 계속 실패할 때의 제자리 쓰기.
+- 바꾸면 반드시 테스트하는 것(복구 사본): 이전 세 편집기와 같은 경로 규칙, 원자적 쓰기와 흘려 쓰기, 지우기와 늦은 쓰기의 경쟁, 곁 정보에 내용이 없음, 종료 래치 동안의 거절, 30일 정리, 상태 셋의 바뀜, 문서별 물음의 Esc(`tests/recovery-store.test.ts`, `tests/recovery-prompt.test.ts`, `tests/recovery-contract.test.ts`).
 - 네트워크를 쓰는 함수는 `fetchImpl` 옵션으로 `fetch`를 주입받는다. 테스트는 가짜를 넘겨 요청이 실제로 나가지 않게 한다. 주소 검사는 호스트 이름을 실제로 조회하므로 `tests/remote-image.test.ts`처럼 이름을 쓰는 테스트는 DNS가 되는 환경이어야 한다.
 - Windows에서 변경과 무관하게 실패하는 테스트가 세 건 있다. `tests/dialog-memory.test.ts` 두 건은 기대값이 `/work`인데 Windows에서는 `\work`가 나오고, `tests/default-save-dir.test.ts`의 "쓰기 불가 폴더" 한 건은 `chmod`로 만든 읽기 전용 폴더가 Windows에서는 쓰기 가능으로 판정된다.
 - 실제 Electron이 있어야 하는 부분(프로토콜 등록, 실제 인쇄 대화 상자, 실제 끌어다 놓기)은 단위 테스트로 돌릴 수 없다. 앱을 띄워 확인한다.
