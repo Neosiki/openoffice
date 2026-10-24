@@ -130,6 +130,28 @@ describe('openEpub: EPUB 3', () => {
     expect(copy).not.toEqual(bytes)
   })
 
+  it('reads from the caller bytes without a copy when it is handed them', async () => {
+    const bytes = await buildEpub(epub3Files())
+    const opened = await openEpub(bytes, { takeOwnership: true })
+    if (!opened.ok) throw new Error(opened.reason)
+    expect(new TextDecoder().decode((await opened.book.read('mimetype'))!)).toBe(
+      'application/epub+zip',
+    )
+    // the stored mimetype entry is read straight from the handed-over buffer
+    bytes.fill(0)
+    expect(await opened.book.read('mimetype')).toEqual(new Uint8Array(20))
+  })
+
+  it('takes over a view of a larger buffer without reading past it', async () => {
+    const book = await buildEpub(epub3Files())
+    const big = new Uint8Array(book.length + 16)
+    big.set(book, 8)
+    const opened = await openEpub(big.subarray(8, 8 + book.length), { takeOwnership: true })
+    expect(opened.ok && (await text(opened.book, 'OEBPS/text/c2.xhtml'))).toContain(
+      'Second chapter.',
+    )
+  })
+
   it('keeps a BOM and reports the encoding of a text entry', async () => {
     const files = epub3Files()
     const utf16 = (s: string): Uint8Array => {

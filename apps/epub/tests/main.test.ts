@@ -441,6 +441,23 @@ describe('reading position and view settings', () => {
     expect(prefs).toMatchObject({ dark: true })
     expect(b.contents.sent.at(-1)).toEqual([EPUB_CHANNELS.viewPrefsChanged, prefs])
   })
+
+  it('takes view settings from EPUB views only', async () => {
+    const a = await openBook({}, 'a.epub')
+    const stranger = fakeContents()
+    const sent = a.contents.sent.length
+    const before = await call<Promise<{ viewPrefs: { dark: boolean } }>>(
+      EPUB_CHANNELS.getReadingState,
+      a.contents,
+    )
+    await expect(
+      Promise.resolve().then(() =>
+        call(EPUB_CHANNELS.setViewPrefs, stranger, { dark: !before.viewPrefs.dark }),
+      ),
+    ).rejects.toThrow()
+    expect(a.contents.sent).toHaveLength(sent)
+    expect(await call(EPUB_CHANNELS.getReadingState, a.contents)).toEqual(before)
+  })
 })
 
 describe('links', () => {
@@ -450,5 +467,12 @@ describe('links', () => {
     expect(await call(EPUB_CHANNELS.openLink, contents, 'file:///C:/Windows')).toBe(false)
     expect(await call(EPUB_CHANNELS.openLink, contents, 'javascript:alert(1)')).toBe(false)
     expect(openExternal).toHaveBeenCalledTimes(1)
+  })
+
+  it('answers only EPUB views', async () => {
+    await openBook()
+    const stranger = fakeContents()
+    expect(await call(EPUB_CHANNELS.openLink, stranger, 'https://example.com/')).toBe(false)
+    expect(openExternal).not.toHaveBeenCalled()
   })
 })

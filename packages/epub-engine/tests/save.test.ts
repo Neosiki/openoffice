@@ -160,6 +160,54 @@ describe('saveEpub: one block edited', () => {
   })
 })
 
+describe('saveEpub: from an opened book', () => {
+  const files = epub3Files()
+  const edit = replace(files[C2]!, 'Second chapter.', 'Edited <em>second</em> chapter.')
+
+  it('writes the same bytes as from the raw bytes, without changing the book', async () => {
+    const original = await buildEpub(files)
+    const fromBytes = await saved(original, { [C2]: [edit] })
+    const opened = await openEpub(original, { takeOwnership: true })
+    if (!opened.ok) throw new Error(opened.reason)
+    const fromBook = await saveEpub(opened.book, { [C2]: [edit] }, { now: clock })
+    expect(fromBook.ok && fromBook.changed && fromBook.bytes).toEqual(fromBytes)
+    // the book still reads the original, and saves the same way again
+    expect((await opened.book.readText(C2))!.text).toBe(files[C2])
+    const again = await saveEpub(opened.book, { [C2]: [edit] }, { now: clock })
+    expect(again.ok && again.changed && again.bytes).toEqual(fromBytes)
+    expect(await saveEpub(opened.book, {}, { now: clock })).toEqual({ ok: true, changed: false })
+  })
+
+  it('writes an EPUB 2 book and a late mimetype the same way as from the raw bytes', async () => {
+    const files2 = epub2Files()
+    const path = 'ch1.html'
+    const text = files2[path]!
+    const at = text.indexOf('</p>')
+    const edits = { [path]: [{ start: at, end: at, text: ' more' }] }
+    const original = await zipEntries([
+      { name: 'META-INF/container.xml', data: CONTAINER_XML('content.opf') },
+      ...Object.entries(files2).map(([name, data]) => ({ name, data })),
+      { name: 'mimetype', data: 'application/epub+zip' },
+    ])
+    const opened = await openEpub(original)
+    if (!opened.ok) throw new Error(opened.reason)
+    expect(await saveEpub(opened.book, edits, { now: clock })).toEqual(
+      await saveEpub(original, edits, { now: clock }),
+    )
+  })
+
+  it('refuses a book this engine did not open', async () => {
+    const opened = await openEpub(await buildEpub(files))
+    if (!opened.ok) throw new Error(opened.reason)
+    const copy = { ...opened.book }
+    expect(await saveEpub(copy, { [C2]: [edit] }, { now: clock })).toMatchObject({
+      ok: false,
+      reason: 'not-opened',
+      path: null,
+    })
+  })
+})
+
 describe('saveEpub: the mimetype entry', () => {
   const files = epub3Files()
   const edit = { [C2]: [replace(files[C2]!, 'Second', 'Other')] }

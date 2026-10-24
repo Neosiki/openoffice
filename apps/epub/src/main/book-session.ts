@@ -11,9 +11,16 @@
  *
  * Refused here, whatever the renderer asks: any edit while the tab's book
  * translation runs (spec §5), any edit of a fixed-layout book or chapter or of
- * a broken chapter (spec §3), and replacements against a version of the
- * chapter that is no longer current.
+ * a broken chapter (spec §3), replacements against a version of the chapter
+ * that is no longer current, and replacements that reach outside the blocks'
+ * inner ranges without taking the chapter back to a text it already had in
+ * this session (what undo, redo and rollback send).
+ *
+ * The book reads from the session's bytes themselves (the engine is handed
+ * them, not given a copy), and a save writes from the opened book, so the
+ * main process holds one copy of each book.
  */
+import { createHash } from 'node:crypto'
 import {
   applyBlockEdits,
   applyReplacements,
@@ -52,6 +59,8 @@ interface ChapterState {
   /** false when the entry is not valid in its encoding: read only, like a broken chapter */
   valid: boolean
   version: number
+  /** digests of every text the chapter has had in this session: where range replacements may take it back */
+  seen: Set<string>
 }
 
 /** What a save would write, and the chapter texts it was made from. */
@@ -161,6 +170,18 @@ export function diffReplacement(from: string, to: string): RangeReplacement {
   return { start: head, end: from.length - tail, text: to.slice(head, to.length - tail) }
 }
 
+/** The digest a chapter text is remembered by in `ChapterState.seen`. */
+function textDigest(text: string): string {
+  return createHash('sha256').update(text, 'utf8').digest('base64')
+}
+
+/** Whether every replacement lies inside the inner range of one of the chapter's blocks. */
+function insideBlocks(map: OpenChapter, replacements: readonly RangeReplacement[]): boolean {
+  return replacements.every((r) =>
+    map.blocks.some((b) => b.inner.start <= r.start && r.end <= b.inner.end),
+  )
+}
+
 function blockInfo(map: OpenChapter): EpubBlockInfo[] {
   return map.blocks.map((b) => ({
     id: b.id,
@@ -212,9 +233,12 @@ export class EpubBookSession {
     private currentDocHash: string,
   ) {}
 
-  /** Opens `bytes` through the engine (and so the zip gate). */
+  /**
+   * Opens `bytes` through the engine (and so the zip gate). The session takes
+   * the bytes over: the caller must not change them afterwards.
+   */
   static async open(bytes: Uint8Array): Promise<OpenSessionResult> {
-    const opened = await openEpub(bytes)
+    const opened = await openEpub(bytes, { takeOwnership: true })
     if (!opened.ok) return { ok: false, reason: opened.reason }
     return {
       ok: true,
@@ -266,6 +290,7 @@ export class EpubBookSession {
       replacements: [],
       valid,
       version: 0,
+      seen: new Set([textDigest(stored)]),
     }
     // a second read may have finished first: keep the one already there
     const raced = this.chapters.get(path)
@@ -354,6 +379,7 @@ export class EpubBookSession {
       state.replacements = composeReplacements(state.stored, state.replacements, replacements)
       state.map = next
       state.version++
+      state.seen.add(textDigest(next.source))
     }
     return {
       ok: true,
@@ -424,6 +450,15 @@ export class EpubBookSession {
     if (text === source) {
       return this.commitEdit(state, index, state.map, [], [])
     }
+    // The page edits text inside blocks only; anything else must be a way back
+    // (undo, redo, rollback) to a text this chapter has had.
+    if (!insideBlocks(state.map, replacements) && !state.seen.has(textDigest(text))) {
+      return {
+        ok: false,
+        error: 'invalid-request',
+        message: 'the replacements reach outside the blocks',
+      }
+    }
     const next = remapChapter(state.map, text, replacements)
     if (next.broken) {
       return {
@@ -467,12 +502,13 @@ export class EpubBookSession {
   async prepareSave(options: { now?: () => Date } = {}): Promise<PreparedSave> {
     const snapshot = new Map<string, string>()
     for (const state of this.chapters.values()) snapshot.set(state.path, state.map.source)
-    const result = await saveEpub(this.currentBytes, this.editsForSave(), options)
+    const result = await saveEpub(this.currentBook, this.editsForSave(), options)
     return { result, snapshot }
   }
 
   /**
-   * The saved bytes are now the book's: the book is opened from them, every
+   * The saved bytes are now the book's (handed over, like the bytes a session
+   * opens): the book is opened from them, every
    * chapter's text as `prepareSave` saw it becomes its stored text (block ids
    * stay; an edit that arrived while the save ran stays unsaved), and the new
    * document hash is returned.
@@ -481,7 +517,7 @@ export class EpubBookSession {
     saved: Uint8Array,
     snapshot: ReadonlyMap<string, string>,
   ): Promise<{ oldDocHash: string; newDocHash: string }> {
-    const opened = await openEpub(saved)
+    const opened = await openEpub(saved, { takeOwnership: true })
     if (!opened.ok) throw new Error(`the saved book does not open (${opened.reason})`)
     const oldDocHash = this.currentDocHash
     const newDocHash = await epubDocumentHash(saved)
