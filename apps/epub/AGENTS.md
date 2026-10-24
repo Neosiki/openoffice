@@ -6,7 +6,7 @@
 
 - 메인 프로세스(`src/main/`). 셸이 상대 경로로 가져와 셸 번들 안에서 돈다.
   - `epub-main.ts`: 보기 만들기(`createEpubView`), 열기와 거절, 저장·다른 이름으로 저장·닫기 확인, 이름 바뀜 따라가기, 메뉴 명령 전달, 링크 열기, `epub-asset://` 등록, 번역 결과 경로 고르기와 결과 책 쓰기, 단독 실행(`startEpubStandalone`). 셸에 내보내는 함수는 `configureEpubRuntime`, `requestEpubSave`, `requestEpubClose`, `epubSaveToPath`, `epubReadText`, `sendEpubMenuCommand`, `epubFileRenamed`, `setEpubFileSavedHook`, `epubIsDirty`, `epubIsTranslationLocked` 등이다.
-  - `book-session.ts`: 보기 하나의 책. 바이트 한 벌, 엔진이 연 책, 읽은 장마다 저장된 글·지금 글·그 사이의 범위 바꾸기. 편집 거절(번역 잠금, 고정 배치, 깨진 장, 지금 판이 아닌 장)도 여기서 한다. Electron 없이 돈다.
+  - `book-session.ts`: 보기 하나의 책. 바이트 한 벌, 엔진이 연 책, 읽은 장마다 저장된 글·지금 글·그 사이의 범위 바꾸기. 편집 거절(번역 잠금, 고정 배치, 깨진 장, 지금 판이 아닌 장)도 여기서 한다. 화면이 보낸 범위 바꾸기(`epub:replace-ranges`)는 모든 범위가 블록 안쪽이거나, 결과 글이 그 장이 이번 세션에 가졌던 글(되돌리기·다시 하기)일 때만 받는다. 바이트는 엔진에 넘겨(`takeOwnership`) 한 벌만 두고, 저장은 이미 연 책으로 한다(다시 열지 않는다). 읽던 자리 파일은 한 번만 읽고 바꾸기를 차례로 쓴다(`reading-state.ts`). Electron 없이 돈다.
   - `asset-protocol.ts`: `epub-asset://<보기 토큰>/<항목 경로>`. 그 보기의 책 zip 항목만, GET·HEAD만, 정해 둔 내용 형식과 `nosniff`, 스크립트와 바깥 연결을 막는 CSP로 내준다. 감춘 글꼴은 풀어서 내준다. 스크립트 항목은 내주지 않는다.
   - `save-pipeline.ts`: 저장과 보관된 번역 옮기기(`ResultStore.migrateDocument` → 셸의 `migrateJobRecords`). `atomic-write.ts`: 원자적 쓰기.
   - `store-handlers.ts`: `epub:store-*` 창구. 번역 작업이 읽고 쓰는 것(번역, `translate` 작업 기록)만, 그 보기가 연(또는 저장한) 책의 해시로만 받는다.

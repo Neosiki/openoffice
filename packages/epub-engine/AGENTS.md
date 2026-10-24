@@ -13,7 +13,8 @@ EPUB 책 엔진이다(결정 0062). 원본 프로그램에서 온 것이 아니�
 - 블록 지도(`blocks.ts`): 인라인 내용만 가진 `p`, `h1`~`h6`, `li`, 글만 든 `blockquote`·`div`(흐르는 글 블록)와 `td`, `th`, `figcaption`, `dt`, `dd`(구조 블록). 블록마다 내용 범위와 장 안에서만 유일한 id가 있다. 깨진 장은 `broken: true`다.
 - 블록 글 표기(`notation.ts`, `marks.ts`): 굵게 `<b>`, 기울임 `<i>`, 줄바꿈 `<br/>`, 그 밖의 인라인 요소는 `<xN>…</xN>`·`<xN/>`. 되돌릴 때 자리 표시는 원래 요소를 글자 그대로 돌려놓는다. `checkNotation`이 되받은 글의 자리 표시를 검사한다.
 - 범위 바꾸기와 편집(`ranges.ts`, `edits.ts`): 모든 편집은 장 원본 글의 범위 바꾸기 목록으로 바뀐다. 글 바꾸기, 나누기, 합치기, 뒤에 넣기, 지우기, 굵게·기울임. 합치거나 지운 블록의 `id`는 이웃 블록 안 빈 `span`으로 남긴다.
-- 저장(`save.ts`): `saveEpub`. 아래 "항상 지켜야 하는 것"의 원본 보존 규칙대로 zip을 새로 쓴다. 바뀐 것이 없으면 그렇다고만 답한다.
+- 저장(`save.ts`): `saveEpub`. 아래 "항상 지켜야 하는 것"의 원본 보존 규칙대로 zip을 새로 쓴다. 바뀐 것이 없으면 그렇다고만 답한다. 원본 바이트 대신 `openEpub`이 연 책을 받으면 그 zip을 그대로 써서 다시 열거나 관문을 다시 지나지 않는다. 결과 바이트는 어느 쪽이든 같다. `openEpub`의 `takeOwnership`은 넘긴 버퍼를 복사하지 않고 그대로 읽는다(호출자는 그 버퍼를 바꾸지 않는다). 8GB PC에서 책을 한 벌만 두려는 것이다.
+- 저장 뒤 옮기기(`translate/migrate.ts`): `epubMigrationInfo`가 저장된 책의 번역 단위 열쇠를 `keepBlockKeys`로 넘긴다. 장 경로와 글이 그대로인 블록의 번역만 옮긴다.
 - 글 뽑기(`text.ts`): `extractChapterText`. 읽는 순서대로, 제목은 `#`, 블록 사이 빈 줄, 표 칸은 탭. 깨진 장은 HTML 파서로 읽는다.
 - 세로쓰기 판정(`writing-mode.ts`): OPF의 `primary-writing-mode`나 CSS의 `writing-mode: vertical-*`.
 - 책 번역(`translate/`):

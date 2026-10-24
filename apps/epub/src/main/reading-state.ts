@@ -92,17 +92,15 @@ function fileOf(v: unknown): ReadingFile {
 export function createReadingState(deps: ReadingStateDeps) {
   const now = deps.now ?? Date.now
   const filePath = (): string => join(deps.dir(), READING_STATE_FILE)
-  let cache: ReadingFile | null = null
+  let loading: Promise<ReadingFile> | null = null
   let queue: Promise<unknown> = Promise.resolve()
 
-  async function load(): Promise<ReadingFile> {
-    if (cache) return cache
-    try {
-      cache = fileOf(JSON.parse(await readFile(filePath(), 'utf8')))
-    } catch {
-      cache = emptyFile()
-    }
-    return cache
+  /** the file, read once: concurrent first readers share one object, so no change is lost */
+  function load(): Promise<ReadingFile> {
+    loading ??= readFile(filePath(), 'utf8')
+      .then((text) => fileOf(JSON.parse(text)))
+      .catch(() => emptyFile())
+    return loading
   }
 
   /** runs `change` on the file, then writes it; one change at a time */
@@ -120,6 +118,8 @@ export function createReadingState(deps: ReadingStateDeps) {
 
   return {
     async get(bookPath: string | null): Promise<EpubReadingState> {
+      // answer after the changes already asked for
+      await queue
       const file = await load()
       const stored = bookPath ? file.positions[pathKey(bookPath)] : undefined
       return {

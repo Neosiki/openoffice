@@ -30,6 +30,18 @@ beforeEach(() => {
 afterEach(() => rmSync(dir, { recursive: true, force: true }))
 
 describe('reading state', () => {
+  it('keeps a position set while the first read of the file is still under way', async () => {
+    const book = join(dir, 'a.epub')
+    const state = make()
+    const [, , after] = await Promise.all([
+      state.get(book),
+      state.setPosition(book, { spineIndex: 2, blockId: 'b4' }),
+      state.get(book),
+    ])
+    expect(after).toMatchObject({ position: { spineIndex: 2, blockId: 'b4' } })
+    expect(await make().get(book)).toMatchObject({ position: { spineIndex: 2, blockId: 'b4' } })
+  })
+
   it('remembers a position per file and survives a restart', async () => {
     const book = join(dir, 'a.epub')
     await make().setPosition(book, { spineIndex: 3, blockId: 'b7' })
