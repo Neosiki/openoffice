@@ -56,6 +56,9 @@ export default defineConfig({
       '@genoffice/ai-provider': local('../../packages/ai-provider/src/index.ts'),
       '@genoffice/i18n': local('../../packages/i18n/src/index.ts'),
       '@genoffice/ui/template-fonts': local('../../packages/ui/src/template-fonts.ts'),
+      '@genoffice/ui/ai-subscription-login-window': local(
+        '../../packages/ui/src/ai-subscription-login-window.ts',
+      ),
       '@genoffice/ui': local('../../packages/ui/src/index.ts'),
     },
   },
