@@ -90,6 +90,7 @@ const translate: EpubTranslateApi = {
   documentHash: () => ipcRenderer.invoke(EPUB_CHANNELS.documentHash),
   translationUnits: (request) => ipcRenderer.invoke(EPUB_CHANNELS.translationUnits, request),
   pickResultPath: (request) => ipcRenderer.invoke(EPUB_CHANNELS.pickResultPath, request),
+  pickResultTarget: (request) => ipcRenderer.invoke(EPUB_CHANNELS.pickResultTarget, request),
   checkResultPath: (path) => ipcRenderer.invoke(EPUB_CHANNELS.checkResultPath, path),
   writeTranslated: (request) => ipcRenderer.invoke(EPUB_CHANNELS.writeTranslated, request),
   store,
@@ -159,6 +160,9 @@ const ai: EpubAiApi = {
   subscription,
   aiStream: (request) => ipcRenderer.invoke(AI_CHANNELS.stream, request),
   aiStreamCancel: (requestId) => ipcRenderer.invoke(AI_CHANNELS.streamCancel, requestId),
+  // the shared handler's 'request' scope ends this stream only (a document job's call)
+  aiStreamCancelRequest: (requestId) =>
+    ipcRenderer.invoke(AI_CHANNELS.streamCancel, requestId, 'request'),
   onAiStream: (handler) => listen<[AiStreamChunk]>(AI_CHANNELS.streamChunk, handler),
   webSearch: (query, maxResults) => ipcRenderer.invoke(AI_CHANNELS.webSearch, query, maxResults),
   readUrl: (url, offset) => ipcRenderer.invoke(AI_CHANNELS.readUrl, url, offset),

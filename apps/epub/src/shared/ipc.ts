@@ -96,6 +96,8 @@ export const EPUB_CHANNELS = {
   translationUnits: 'epub:translation-units',
   /** invoke(`EpubPickResultPathRequest`) → `string | null`: the save dialog for a result book */
   pickResultPath: 'epub:pick-result-path',
+  /** invoke(`EpubPickResultPathRequest`) → `EpubPickResultTarget`: the same dialog, saying why a pick was refused */
+  pickResultTarget: 'epub:pick-result-target',
   /** invoke(path) → `EpubResultPathCheck`: whether a result may be written there */
   checkResultPath: 'epub:check-result-path',
   /** invoke(`EpubWriteTranslatedRequest`) → `EpubOutcome<EpubWriteTranslatedResult>` */
@@ -443,6 +445,14 @@ export type EpubResultPathRefusal = 'source' | 'open-in-tab' | 'not-epub' | 'inv
 
 export type EpubResultPathCheck = { ok: true } | { ok: false; reason: EpubResultPathRefusal }
 
+/**
+ * What the result book's save dialog ended with: a path granted to this view
+ * (as `pickResultPath` gives), a picked path that may not take a result (with
+ * why; nothing is granted), or null when the dialog was cancelled.
+ */
+export type EpubPickResultTarget =
+  { ok: true; path: string } | { ok: false; path: string; reason: EpubResultPathRefusal } | null
+
 export interface EpubWriteTranslatedRequest {
   kind: EpubTranslationOutputKind
   lang: string
@@ -599,6 +609,8 @@ export interface EpubTranslateApi {
     request: EpubTranslationUnitsRequest,
   ): Promise<EpubOutcome<EpubTranslationUnitsResult>>
   pickResultPath(request: EpubPickResultPathRequest): Promise<string | null>
+  /** the result book's save dialog, saying why a picked path is refused */
+  pickResultTarget(request: EpubPickResultPathRequest): Promise<EpubPickResultTarget>
   checkResultPath(path: string): Promise<EpubResultPathCheck>
   writeTranslated(
     request: EpubWriteTranslatedRequest,
@@ -638,6 +650,8 @@ export interface EpubAiApi {
   subscription: EpubSubscriptionApi
   aiStream(request: AiStreamRequest): Promise<void>
   aiStreamCancel(requestId: string): Promise<void>
+  /** cancel one stream only, leaving the tab's other AI calls alone (a book translation's request) */
+  aiStreamCancelRequest(requestId: string): Promise<void>
   onAiStream(handler: (chunk: AiStreamChunk) => void): () => void
   webSearch(query: string, maxResults?: number): Promise<WebSearchResult>
   /** Read one web page as text (the shared ai:read-url handler), paged by character offset */
