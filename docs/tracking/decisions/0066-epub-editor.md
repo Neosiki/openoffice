@@ -46,6 +46,7 @@ EPUB은 zip 안에 장마다 XHTML 문서가 하나씩 든 형식이다. 책마�
 ## 결과
 
 - 셸에 새 문서 종류 `epub`이 생겼다. 탭 종류, 앱 안 MCP의 열린 문서 목록(`kind: "epub"`, `type: "e-book"`)과 `get_app_info`의 `families`, 첨부 형식 목록에 들어갔다(`docs/contracts.md`).
+- EPUB 탭은 갑자기 꺼진 뒤 다른 문서 탭과 함께 되살아난다(결정 0061). 복구 사본은 만들지 않는다. 자동 저장이 책 파일에 바로 쓰기 때문이다.
 - `file-parse`가 EPUB 글을 뽑는다. 첨부, `@문서`, 파일 색인이 EPUB을 읽는다. DRM 책과 글자가 깨진 책은 읽지 않는다.
 - 터미널 명령어에 `epub translate`·`epub status`, MCP에 `epub_translate`·`epub_status`가 생겼다. 밖으로 보내는 명령이 일곱이 되었다(`docs/contracts.md`, `PRIVACY.md`, `skills/ieumoffice/SKILL.md`).
 - 결과 보관소(`pdf-store`)가 PDF와 EPUB 번역을 함께 담는다. 폴더 이름은 그대로이고, 설정의 이름만 21개 언어 모두 "AI 결과 보관소"로 바뀌었다.
