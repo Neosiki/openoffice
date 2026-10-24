@@ -903,6 +903,8 @@ function AiMediaPane({
   if (!settings?.media || !settings.search) return null
   const media: AiMediaSettings = settings.media
   const search: AiSearchSettings = settings.search
+  /** decision 0053: only an explicit false turns the editors' outbound tools off */
+  const internetToolsOn = settings.internetTools !== false
 
   const touch = () => {
     setDirty(true)
@@ -1300,6 +1302,26 @@ function AiMediaPane({
         </div>
       </div>
       <div className="set-field-desc set-ai-note">{t('setAiSharedKeyHint')}</div>
+      <section>
+        <div className="set-field">
+          <div className="set-field-text">
+            <div className="set-field-stack">
+              <div className="set-field-label">{t('setAiInternetTools')}</div>
+              <div className="set-field-desc">{t('setAiInternetToolsDesc')}</div>
+            </div>
+          </div>
+          <button
+            className="set-switch"
+            role="switch"
+            aria-checked={internetToolsOn}
+            aria-label={t('setAiInternetTools')}
+            onClick={() => {
+              setSettings({ ...settings, internetTools: !internetToolsOn })
+              touch()
+            }}
+          />
+        </div>
+      </section>
       <section>
         {subhead('search', t('setAiCapSearch'))}
         {providerRow(t('setAiCapSearch'), search.provider, searchCatalog, (v) =>

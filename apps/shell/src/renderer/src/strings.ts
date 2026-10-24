@@ -187,6 +187,9 @@ export const strings = {
     setSearchRerank: 'Jev 搜索重排',
     setSearchRerankDesc:
       '把本机搜索的前 20 条命中片段发给 TypeSafe 的 Jev 模型，按相关性重新排序。默认关闭；开启后命中片段会离开本机。',
+    setAiInternetTools: '允许 AI 使用互联网工具',
+    setAiInternetToolsDesc:
+      '网页搜索、读取网页、按地址获取图片，以及生成和分析图片。关闭后，编辑器中的 AI 不再使用这些工具。开启时，对话中没出现过的地址会在获取前先询问你。AI 对话本身不受影响。',
     setSearchRerankEndpoint: 'Jev 端点',
     searchRerankedBy: '已由 Jev 按相关性重排',
     searchJevSettings: 'Jev 语义排序',
@@ -680,6 +683,9 @@ export const strings = {
     setSearchRerank: 'Jev search reranking',
     setSearchRerankDesc:
       "Sends the top 20 local hits' excerpts to TypeSafe's Jev model and reorders them by relevance. Off by default; when on, excerpts leave this device.",
+    setAiInternetTools: 'Let AI use internet tools',
+    setAiInternetToolsDesc:
+      'Web search, reading web pages, fetching pictures by address, and making and analyzing images. Off: the editors’ AI works without them. On: an address that has not appeared in the conversation is asked about before it is fetched. The AI conversation itself is not affected.',
     setSearchRerankEndpoint: 'Jev endpoint',
     searchRerankedBy: 'Reordered by relevance with Jev',
     searchJevSettings: 'Jev semantic reranking',
@@ -1193,6 +1199,9 @@ export const strings = {
     setSearchRerank: 'Sắp xếp lại kết quả tìm kiếm Jev',
     setSearchRerankDesc:
       'Gửi đoạn trích của 20 kết quả hàng đầu cục bộ tới mô hình Jev của TypeSafe và sắp xếp lại theo mức độ liên quan. Tắt theo mặc định; khi bật, các đoạn trích sẽ được gửi ra ngoài thiết bị này.',
+    setAiInternetTools: 'Cho phép AI dùng công cụ internet',
+    setAiInternetToolsDesc:
+      'Tìm kiếm web, đọc trang web, lấy hình theo địa chỉ, tạo và phân tích hình ảnh. Khi tắt, AI trong trình soạn thảo làm việc mà không có chúng. Khi bật, địa chỉ chưa xuất hiện trong cuộc trò chuyện sẽ được hỏi trước khi tải. Bản thân cuộc trò chuyện với AI không bị ảnh hưởng.',
     setSearchRerankEndpoint: 'Điểm cuối Jev',
     searchRerankedBy: 'Được sắp xếp lại theo mức độ liên quan với Jev',
     searchJevSettings: 'Sắp xếp lại ngữ nghĩa Jev',
@@ -1715,6 +1724,9 @@ export const strings = {
     setSearchRerank: 'Jev 検索リランク',
     setSearchRerankDesc:
       'ローカル検索の上位 20 件の抜粋を TypeSafe の Jev モデルに送り、関連度で並べ替えます。既定ではオフ。オンにすると抜粋が端末外に送信されます。',
+    setAiInternetTools: 'AI にインターネットツールを使わせる',
+    setAiInternetToolsDesc:
+      'Web 検索、Web ページの読み取り、アドレスからの画像取得、画像の生成と分析です。オフにすると、エディターの AI はこれらを使いません。オンのときも、会話に出てこなかったアドレスは取得前に確認します。AI との会話そのものには影響しません。',
     setSearchRerankEndpoint: 'Jev エンドポイント',
     searchRerankedBy: 'Jev が関連度で並べ替えました',
     searchJevSettings: 'Jev セマンティック並べ替え',
@@ -2242,6 +2254,9 @@ export const strings = {
     setSearchRerank: 'Jev 검색 재정렬',
     setSearchRerankDesc:
       '로컬 검색 상위 20개 결과의 발췌문을 TypeSafe의 Jev 모델로 보내 관련도 순으로 재정렬합니다. 기본은 꺼짐이며, 켜면 발췌문이 기기 밖으로 전송됩니다.',
+    setAiInternetTools: 'AI가 인터넷 도구 쓰기',
+    setAiInternetToolsDesc:
+      '웹 검색, 웹 페이지 읽기, 주소로 그림 가져오기, 이미지 만들기와 분석입니다. 끄면 편집기의 AI가 이 도구 없이 일합니다. 켜 두어도 대화에 없던 주소는 가져오기 전에 묻습니다. AI 대화 자체는 그대로입니다.',
     setSearchRerankEndpoint: 'Jev 엔드포인트',
     searchRerankedBy: 'Jev가 관련도 순으로 재정렬함',
     searchJevSettings: 'Jev 시맨틱 재정렬',
@@ -2762,6 +2777,9 @@ export const strings = {
     setSearchRerank: 'Reclassement Jev',
     setSearchRerankDesc:
       'Envoie les extraits des 20 premiers résultats locaux au modèle Jev de TypeSafe et les réordonne par pertinence. Désactivé par défaut ; une fois activé, les extraits quittent cet appareil.',
+    setAiInternetTools: 'Autoriser l’IA à utiliser les outils internet',
+    setAiInternetToolsDesc:
+      'Recherche web, lecture de pages web, récupération d’images par adresse, création et analyse d’images. Désactivé : l’IA des éditeurs s’en passe. Activé : une adresse jamais apparue dans la conversation vous est soumise avant d’être récupérée. La conversation avec l’IA elle-même n’est pas concernée.',
     setSearchRerankEndpoint: 'Point de terminaison Jev',
     searchRerankedBy: 'Réordonné par pertinence avec Jev',
     searchJevSettings: 'Reclassement sémantique Jev',
@@ -3300,6 +3318,9 @@ export const strings = {
     setSearchRerank: 'Jev-Neusortierung',
     setSearchRerankDesc:
       'Sendet die Auszüge der 20 besten lokalen Treffer an das Jev-Modell von TypeSafe und sortiert sie nach Relevanz. Standardmäßig aus; wenn aktiv, verlassen Auszüge dieses Gerät.',
+    setAiInternetTools: 'KI darf Internet-Tools nutzen',
+    setAiInternetToolsDesc:
+      'Websuche, Webseiten lesen, Bilder über eine Adresse abrufen sowie Bilder erstellen und analysieren. Aus: Die KI der Editoren arbeitet ohne sie. An: Eine Adresse, die im Gespräch noch nicht vorkam, wird vor dem Abrufen bei Ihnen erfragt. Das KI-Gespräch selbst ist nicht betroffen.',
     setSearchRerankEndpoint: 'Jev-Endpunkt',
     searchRerankedBy: 'Mit Jev nach Relevanz sortiert',
     searchJevSettings: 'Semantische Neuordnung mit Jev',
@@ -3840,6 +3861,9 @@ export const strings = {
     setSearchRerank: 'Reordenación con Jev',
     setSearchRerankDesc:
       'Envía los extractos de los 20 mejores resultados locales al modelo Jev de TypeSafe y los reordena por relevancia. Desactivado por defecto; al activarlo, los extractos salen de este dispositivo.',
+    setAiInternetTools: 'Permitir que la IA use herramientas de internet',
+    setAiInternetToolsDesc:
+      'Búsqueda web, lectura de páginas web, obtención de imágenes por dirección, y creación y análisis de imágenes. Desactivado: la IA de los editores trabaja sin ellas. Activado: una dirección que no ha aparecido en la conversación se le consulta antes de obtenerla. La conversación con la IA en sí no se ve afectada.',
     setSearchRerankEndpoint: 'Punto de conexión de Jev',
     searchRerankedBy: 'Reordenado por relevancia con Jev',
     searchJevSettings: 'Reordenación semántica con Jev',
@@ -4365,6 +4389,9 @@ export const strings = {
     setSearchRerank: 'จัดอันดับใหม่ด้วย Jev',
     setSearchRerankDesc:
       'ส่งข้อความตัดตอนของผลลัพธ์ 20 อันดับแรกไปยังโมเดล Jev ของ TypeSafe เพื่อจัดอันดับใหม่ตามความเกี่ยวข้อง ปิดเป็นค่าเริ่มต้น เมื่อเปิด ข้อความตัดตอนจะถูกส่งออกจากอุปกรณ์นี้',
+    setAiInternetTools: 'ให้ AI ใช้เครื่องมืออินเทอร์เน็ต',
+    setAiInternetToolsDesc:
+      'การค้นหาเว็บ การอ่านหน้าเว็บ การดึงรูปภาพจากที่อยู่ รวมถึงการสร้างและวิเคราะห์ภาพ เมื่อปิด AI ในตัวแก้ไขจะทำงานโดยไม่ใช้เครื่องมือเหล่านี้ เมื่อเปิด ที่อยู่ที่ไม่เคยปรากฏในบทสนทนาจะถูกถามก่อนดึงข้อมูล บทสนทนากับ AI เองไม่ได้รับผลกระทบ',
     setSearchRerankEndpoint: 'ปลายทาง Jev',
     searchRerankedBy: 'จัดอันดับใหม่ตามความเกี่ยวข้องโดย Jev',
     searchJevSettings: 'จัดอันดับเชิงความหมายด้วย Jev',
@@ -4884,6 +4911,9 @@ export const strings = {
     setSearchRerank: 'Peringkat ulang Jev',
     setSearchRerankDesc:
       'Mengirim kutipan 20 hasil lokal teratas ke model Jev dari TypeSafe dan mengurutkannya ulang berdasarkan relevansi. Nonaktif secara bawaan; saat aktif, kutipan keluar dari perangkat ini.',
+    setAiInternetTools: 'Izinkan AI memakai alat internet',
+    setAiInternetToolsDesc:
+      'Pencarian web, membaca halaman web, mengambil gambar dari alamat, serta membuat dan menganalisis gambar. Mati: AI di editor bekerja tanpanya. Hidup: alamat yang belum muncul dalam percakapan ditanyakan dulu sebelum diambil. Percakapan AI itu sendiri tidak terpengaruh.',
     setSearchRerankEndpoint: 'Endpoint Jev',
     searchRerankedBy: 'Diurutkan ulang berdasarkan relevansi oleh Jev',
     searchJevSettings: 'Pengurutan semantik Jev',
@@ -5410,6 +5440,9 @@ export const strings = {
     setSearchRerank: 'Переранжирование Jev',
     setSearchRerankDesc:
       'Отправляет фрагменты 20 лучших локальных результатов модели Jev от TypeSafe и переупорядочивает их по релевантности. По умолчанию выключено; при включении фрагменты покидают это устройство.',
+    setAiInternetTools: 'Разрешить ИИ инструменты интернета',
+    setAiInternetToolsDesc:
+      'Веб-поиск, чтение веб-страниц, загрузка изображений по адресу, создание и анализ изображений. Выключено: ИИ в редакторах работает без них. Включено: о адресе, которого ещё не было в разговоре, вас спросят перед загрузкой. Сам разговор с ИИ это не затрагивает.',
     setSearchRerankEndpoint: 'Конечная точка Jev',
     searchRerankedBy: 'Переупорядочено по релевантности с помощью Jev',
     searchJevSettings: 'Семантическая сортировка Jev',
@@ -5937,6 +5970,9 @@ export const strings = {
     setSearchRerank: 'إعادة ترتيب Jev',
     setSearchRerankDesc:
       'يرسل مقتطفات أفضل 20 نتيجة محلية إلى نموذج Jev من TypeSafe ويعيد ترتيبها حسب الصلة. معطّل افتراضيًا؛ عند التفعيل تخرج المقتطفات من هذا الجهاز.',
+    setAiInternetTools: 'السماح للذكاء الاصطناعي باستخدام أدوات الإنترنت',
+    setAiInternetToolsDesc:
+      'البحث على الويب، وقراءة صفحات الويب، وجلب الصور من عنوان، وإنشاء الصور وتحليلها. عند الإيقاف يعمل الذكاء الاصطناعي في المحررات من دونها. عند التشغيل يُسأل عن أي عنوان لم يظهر في المحادثة قبل جلبه. لا تتأثر محادثة الذكاء الاصطناعي نفسها.',
     setSearchRerankEndpoint: 'نقطة نهاية Jev',
     searchRerankedBy: 'أُعيد ترتيبها حسب الصلة بواسطة Jev',
     searchJevSettings: 'إعادة الترتيب الدلالي بواسطة Jev',
@@ -6450,6 +6486,9 @@ export const strings = {
     setSearchRerank: 'Reordenação com Jev',
     setSearchRerankDesc:
       'Envia os trechos dos 20 melhores resultados locais ao modelo Jev da TypeSafe e os reordena por relevância. Desativado por padrão; quando ativo, os trechos saem deste dispositivo.',
+    setAiInternetTools: 'Permitir que a IA use ferramentas da internet',
+    setAiInternetToolsDesc:
+      'Pesquisa na web, leitura de páginas, busca de imagens por endereço e criação e análise de imagens. Desligado: a IA dos editores trabalha sem elas. Ligado: um endereço que não apareceu na conversa é perguntado antes de ser buscado. A conversa com a IA em si não é afetada.',
     setSearchRerankEndpoint: 'Endpoint do Jev',
     searchRerankedBy: 'Reordenado por relevância com Jev',
     searchJevSettings: 'Reordenação semântica com Jev',
@@ -6974,6 +7013,9 @@ export const strings = {
     setSearchRerank: 'Riordino con Jev',
     setSearchRerankDesc:
       'Invia gli estratti dei 20 migliori risultati locali al modello Jev di TypeSafe e li riordina per pertinenza. Disattivato per impostazione predefinita; se attivo, gli estratti lasciano questo dispositivo.',
+    setAiInternetTools: 'Consenti all’IA di usare gli strumenti internet',
+    setAiInternetToolsDesc:
+      'Ricerca web, lettura di pagine web, recupero di immagini da un indirizzo, creazione e analisi di immagini. Disattivato: l’IA degli editor lavora senza. Attivato: un indirizzo mai comparso nella conversazione ti viene chiesto prima di recuperarlo. La conversazione con l’IA in sé non cambia.',
     setSearchRerankEndpoint: 'Endpoint Jev',
     searchRerankedBy: 'Riordinato per pertinenza con Jev',
     searchJevSettings: 'Riordino semantico con Jev',
@@ -7495,6 +7537,9 @@ export const strings = {
     setSearchRerank: 'Ponowne sortowanie Jev',
     setSearchRerankDesc:
       'Wysyła fragmenty 20 najlepszych lokalnych wyników do modelu Jev firmy TypeSafe i sortuje je według trafności. Domyślnie wyłączone; po włączeniu fragmenty opuszczają to urządzenie.',
+    setAiInternetTools: 'Pozwól AI używać narzędzi internetowych',
+    setAiInternetToolsDesc:
+      'Wyszukiwanie w sieci, czytanie stron, pobieranie obrazów z adresu oraz tworzenie i analiza obrazów. Wyłączone: AI w edytorach działa bez nich. Włączone: o adres, który nie pojawił się w rozmowie, zostaniesz zapytany przed pobraniem. Sama rozmowa z AI się nie zmienia.',
     setSearchRerankEndpoint: 'Punkt końcowy Jev',
     searchRerankedBy: 'Posortowano według trafności przez Jev',
     searchJevSettings: 'Semantyczne sortowanie Jev',
@@ -8299,6 +8344,9 @@ export const strings = {
     setSearchRerank: 'Přeřazení Jev',
     setSearchRerankDesc:
       'Odešle výňatky 20 nejlepších místních výsledků modelu Jev od TypeSafe a seřadí je podle relevance. Ve výchozím stavu vypnuto; po zapnutí výňatky opouštějí toto zařízení.',
+    setAiInternetTools: 'Povolit AI internetové nástroje',
+    setAiInternetToolsDesc:
+      'Vyhledávání na webu, čtení webových stránek, načítání obrázků z adresy a tvorba a analýza obrázků. Vypnuto: AI v editorech pracuje bez nich. Zapnuto: na adresu, která se v rozhovoru dosud neobjevila, se vás zeptá před načtením. Samotného rozhovoru s AI se to netýká.',
     setSearchRerankEndpoint: 'Koncový bod Jev',
     searchRerankedBy: 'Seřazeno podle relevance pomocí Jev',
     searchJevSettings: 'Sémantické řazení Jev',
@@ -8528,6 +8576,9 @@ export const strings = {
     setSearchRerank: 'Jev-herordening',
     setSearchRerankDesc:
       'Stuurt de fragmenten van de 20 beste lokale resultaten naar het Jev-model van TypeSafe en sorteert ze op relevantie. Standaard uit; indien aan verlaten fragmenten dit apparaat.',
+    setAiInternetTools: 'AI internettools laten gebruiken',
+    setAiInternetToolsDesc:
+      'Zoeken op het web, webpagina’s lezen, afbeeldingen ophalen via een adres en afbeeldingen maken en analyseren. Uit: de AI in de editors werkt zonder. Aan: een adres dat nog niet in het gesprek voorkwam, wordt eerst aan je voorgelegd. Het AI-gesprek zelf verandert niet.',
     setSearchRerankEndpoint: 'Jev-eindpunt',
     searchRerankedBy: 'Op relevantie geordend met Jev',
     searchJevSettings: 'Semantisch herordenen met Jev',
@@ -9048,6 +9099,9 @@ export const strings = {
     setSearchRerank: 'Susunan semula Jev',
     setSearchRerankDesc:
       'Menghantar petikan 20 hasil tempatan teratas ke model Jev TypeSafe dan menyusunnya semula mengikut kaitan. Dimatikan secara lalai; apabila dihidupkan, petikan keluar dari peranti ini.',
+    setAiInternetTools: 'Benarkan AI menggunakan alat internet',
+    setAiInternetToolsDesc:
+      'Carian web, membaca halaman web, mengambil gambar melalui alamat, serta mencipta dan menganalisis imej. Mati: AI dalam editor bekerja tanpanya. Hidup: alamat yang belum muncul dalam perbualan akan ditanya dahulu sebelum diambil. Perbualan AI itu sendiri tidak terjejas.',
     setSearchRerankEndpoint: 'Titik akhir Jev',
     searchRerankedBy: 'Disusun semula mengikut kaitan oleh Jev',
     searchJevSettings: 'Susunan semantik Jev',
@@ -9564,6 +9618,9 @@ export const strings = {
     setSearchRerank: 'סידור מחדש עם Jev',
     setSearchRerankDesc:
       'שולח את הקטעים של 20 התוצאות המקומיות המובילות למודל Jev של TypeSafe ומסדר אותן מחדש לפי רלוונטיות. כבוי כברירת מחדל; כשמופעל, הקטעים יוצאים מהמכשיר הזה.',
+    setAiInternetTools: 'לאפשר ל-AI להשתמש בכלי אינטרנט',
+    setAiInternetToolsDesc:
+      'חיפוש באינטרנט, קריאת דפי אינטרנט, הבאת תמונות לפי כתובת, ויצירה וניתוח של תמונות. כבוי: ה-AI בעורכים עובד בלעדיהם. מופעל: על כתובת שלא הופיעה בשיחה תישאלו לפני שהיא תובא. השיחה עם ה-AI עצמה לא מושפעת.',
     setSearchRerankEndpoint: 'נקודת קצה של Jev',
     searchRerankedBy: 'סודר מחדש לפי רלוונטיות על ידי Jev',
     searchJevSettings: 'סידור סמנטי עם Jev',
@@ -10066,6 +10123,9 @@ export const strings = {
     setSearchRerank: 'Jev खोज पुनर्क्रमण',
     setSearchRerankDesc:
       'स्थानीय खोज के शीर्ष 20 परिणामों के अंश TypeSafe के Jev मॉडल को भेजता है और उन्हें प्रासंगिकता के अनुसार पुनः क्रमित करता है। डिफ़ॉल्ट रूप से बंद; चालू होने पर अंश इस डिवाइस से बाहर जाते हैं।',
+    setAiInternetTools: 'AI को इंटरनेट टूल इस्तेमाल करने दें',
+    setAiInternetToolsDesc:
+      'वेब खोज, वेब पेज पढ़ना, पते से चित्र लाना, और चित्र बनाना व उनका विश्लेषण करना। बंद होने पर संपादकों का AI इनके बिना काम करता है। चालू होने पर, जो पता बातचीत में पहले नहीं आया, उसे लाने से पहले आपसे पूछा जाता है। AI बातचीत पर इसका असर नहीं पड़ता।',
     setSearchRerankEndpoint: 'Jev एंडपॉइंट',
     searchRerankedBy: 'Jev द्वारा प्रासंगिकता के अनुसार पुनः क्रमित',
     searchJevSettings: 'Jev सिमैंटिक पुनर्क्रमण',
@@ -10571,6 +10631,9 @@ export const strings = {
     setSearchRerank: 'Jev 搜尋重排',
     setSearchRerankDesc:
       '將本機搜尋前 20 筆命中片段傳給 TypeSafe 的 Jev 模型，依相關性重新排序。預設關閉；開啟後命中片段會離開本機。',
+    setAiInternetTools: '允許 AI 使用網際網路工具',
+    setAiInternetToolsDesc:
+      '網頁搜尋、讀取網頁、依位址取得圖片，以及產生和分析圖片。關閉後，編輯器中的 AI 不再使用這些工具。開啟時，對話中沒出現過的位址會在取得前先詢問你。AI 對話本身不受影響。',
     setSearchRerankEndpoint: 'Jev 端點',
     searchRerankedBy: '已由 Jev 依相關性重排',
     searchJevSettings: 'Jev 語意排序',

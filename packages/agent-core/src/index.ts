@@ -30,6 +30,15 @@ export {
   isOutboundCall,
   windowDriveBridge,
 } from './drive-skill'
+export {
+  ADDRESS_DECLINED,
+  INTERNET_TOOLS_OFF,
+  addressInConversation,
+  fetchedAddresses,
+  guardOutbound,
+  windowOutboundBridge,
+} from './outbound-guard'
+export type { OutboundBridgeLike } from './outbound-guard'
 export type {
   DriveBridgeLike,
   DriveCallResult,
@@ -85,6 +94,7 @@ export {
   AgentLoop,
   COMPLETED_VIA_TOOLS_TEXT,
   DEFAULT_MAX_TURNS,
+  MATERIAL_NOT_INSTRUCTIONS,
   TOOL_ABORTED_OUTPUT,
   coerceArgumentFields,
   invalidArgumentFields,

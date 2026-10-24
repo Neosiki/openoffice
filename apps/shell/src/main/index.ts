@@ -21,6 +21,7 @@ import {
   nativeImage,
   nativeTheme,
   screen,
+  safeStorage,
   session,
   shell,
   webContents,
@@ -115,6 +116,8 @@ import { registerIntegrationsIpc } from './integrations-ipc'
 import { registerResultStoreIpc } from './result-store-ipc'
 import { FEEDBACK_SURVEY_URL, feedbackDetails, feedbackText, platformLabel } from './feedback'
 import { registerDriveIpc, type DriveService } from './drive/drive-ipc'
+import { registerOutboundIpc } from './outbound-confirm'
+import { projectSkillsAllowed, projectSkillsView, setProjectSkills } from './agent/project-skills'
 import {
   ATTACHABLE_EXTS,
   ATTACHABLE_IMAGE_EXTS,
@@ -431,7 +434,17 @@ import {
   startCodexAgentSession,
 } from '@genoffice/ai-provider/agent-session'
 import { normalizeAgentPrefs } from '../shared/agent-api'
-import { normalizeAiSettings, type AiSettings } from '@genoffice/ai-provider'
+import { normalizeAiSettings, setAiSecretCodec, type AiSettings } from '@genoffice/ai-provider'
+import {
+  REVEAL_FLAG,
+  fileSearchHoldsPlainKeys,
+  openFileSearchKeys,
+  runRevealEntry,
+  sealFileSearchKeys,
+  safeStorageCodec,
+  sealStoredAiSettings,
+  sealingKeyOnDisk,
+} from './ai-secrets'
 import { homedir, tmpdir } from 'node:os'
 import {
   configureDocumentLinks,
@@ -515,6 +528,17 @@ if (!app.isPackaged) {
  */
 const headlessArgv = parseHeadlessExportArgv(process.argv)
 if (headlessArgv.kind !== 'none') {
+  setHeadlessMode(true)
+  app.dock?.hide()
+}
+
+/**
+ * `--reveal-ai-secrets`: the terminal command's way to open the keys this app
+ * sealed (decision 0054, ai-secrets.ts). Sealed values on stdin, one JSON line
+ * on stdout, exit. No window, no lock, nothing else.
+ */
+const revealSecretsRun = process.argv.includes(REVEAL_FLAG)
+if (revealSecretsRun) {
   setHeadlessMode(true)
   app.dock?.hide()
 }
@@ -4037,7 +4061,9 @@ let fileIndexer: FileIndexer | null = null
 let searchReranker: SearchReranker | null = null
 
 function readFileSearchSettings(): FileSearchSettings {
-  return normalizeFileSearchSettings(readAppSettings(APP_SETTINGS_PATH()).fileSearch)
+  return normalizeFileSearchSettings(
+    openFileSearchKeys(readAppSettings(APP_SETTINGS_PATH()).fileSearch),
+  )
 }
 
 /** the search index lives in userData and follows the save folder plus recents/starred */
@@ -5248,7 +5274,7 @@ function registerHomeIpc(): void {
         ...p,
         keys: { ...current.keys, ...(p.keys ?? {}) },
       })
-      writeAppSetting(APP_SETTINGS_PATH(), 'fileSearch', next)
+      writeAppSetting(APP_SETTINGS_PATH(), 'fileSearch', sealFileSearchKeys(next))
       return next
     },
   )
@@ -8027,6 +8053,15 @@ async function runHeadlessExportEntry(
 }
 
 app.whenReady().then(async () => {
+  // safeStorage works only once the app is ready: keys read before this read as empty
+  const secretCodec = safeStorageCodec(safeStorage, process.platform, () =>
+    sealingKeyOnDisk(join(app.getPath('userData'), 'Local State')),
+  )
+  setAiSecretCodec(secretCodec)
+  if (revealSecretsRun) {
+    app.exit(await runRevealEntry(secretCodec))
+    return
+  }
   // first scan waits for the windows to come up; later ones follow folder changes
   setTimeout(() => ensureFileIndexer()?.refresh(), 4000)
   installRendererProtocol({
@@ -8080,6 +8115,23 @@ app.whenReady().then(async () => {
   // a subscription CLI a force-killed previous run left behind is ended, then
   // this run records the ones it starts (userData is final by now)
   void initSubscriptionChildTracking(app.getPath('userData')).catch(() => undefined)
+  // keys an earlier version (or a hand edit) left plain are sealed once this run holds the lock;
+  // on the very first run the key is not on disk yet, so this only makes Chromium create it and
+  // the keys are sealed on a later save or the next start
+  try {
+    if (process.platform === 'win32' && safeStorage.isEncryptionAvailable()) {
+      safeStorage.encryptString('')
+    }
+    sealStoredAiSettings(join(app.getPath('userData'), 'ai-settings.json'))
+    const storedSearch = readAppSettings(APP_SETTINGS_PATH()).fileSearch
+    if (fileSearchHoldsPlainKeys(storedSearch)) {
+      const sealed = sealFileSearchKeys(readFileSearchSettings())
+      if (!fileSearchHoldsPlainKeys(sealed))
+        writeAppSetting(APP_SETTINGS_PATH(), 'fileSearch', sealed)
+    }
+  } catch {
+    // an unwritable data folder keeps the plain file; the next save tries again
+  }
   // a registry left by a crashed instance must not block genoffice writes
   ownsOpenDocumentsRegistry = true
   publishOpenDocuments(OPEN_DOCUMENTS_PATH(), [])
@@ -8103,6 +8155,11 @@ app.whenReady().then(async () => {
   // off the startup path: a symlink / registry write nobody is waiting for
   setTimeout(() => installCliLinkBestEffort(APP_SETTINGS_PATH()), 3000)
   startSheetsCaptureServer()
+  registerOutboundIpc({
+    internetToolsOn: () => readStoredAiSettings().internetTools !== false,
+    lang: () => currentLang(),
+    window: () => shellWindow,
+  })
   driveService = registerDriveIpc({
     userData: () => app.getPath('userData'),
     settingsPath: APP_SETTINGS_PATH,
@@ -8396,14 +8453,24 @@ app.whenReady().then(async () => {
     },
     listSkills: () => userSkills.list(),
     openTemplatePreview: (owner, input) => templateTabs.openPreview(owner, input),
-    // the enabled skills (settings → skills) and the project's, as they are at the start
-    buildSkills: async (projectRoot) =>
-      buildAgentSkillBundle(
-        await userSkills.enabledForAgent(projectRoot),
+    // the enabled skills (settings → skills), and the project's only while the person has
+    // turned them on as they are now (decision 0055), read again at the start
+    buildSkills: async (projectRoot) => {
+      const enabled = await userSkills.enabledForAgent(projectRoot)
+      const withProject = await projectSkillsAllowed(APP_SETTINGS_PATH(), projectRoot, enabled)
+      return buildAgentSkillBundle(
+        withProject ? enabled : enabled.filter((skill) => skill.source !== 'project'),
         // not under userData: that folder is protected from sessions, and the
         // copied skills' scripts must be readable to run
         join(process.env.LOCALAPPDATA ?? tmpdir(), 'IeumOffice', 'agent-skills'),
-      ),
+      )
+    },
+    projectSkills: {
+      view: async (folder) =>
+        projectSkillsView(APP_SETTINGS_PATH(), folder, await userSkills.enabledForAgent(folder)),
+      set: async (folder, on) =>
+        setProjectSkills(APP_SETTINGS_PATH(), folder, await userSkills.enabledForAgent(folder), on),
+    },
   })
   void startMcpFromSettings(currentMcpSettings()).catch((error) => {
     console.error('[mcp] failed to start on boot:', error)

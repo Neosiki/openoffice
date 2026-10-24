@@ -116,6 +116,7 @@ import {
   type AiStreamChunk,
   type AiStreamRequest,
   type AiSubscriptionProviderId,
+  sealAiSecrets,
 } from '@genoffice/ai-provider'
 import { listCodexModels, shutdownCodexAppServers } from '@genoffice/ai-provider/codex-app-server'
 import { listCustomModelsForIpc } from '@genoffice/ai-provider/custom-models'
@@ -3892,7 +3893,7 @@ export function registerAiIpc(): void {
       console.warn('[ai] rejected invalid ai:set-settings payload')
       return
     }
-    writeJsonAtomic(SETTINGS_PATH(), sanitized)
+    writeJsonAtomic(SETTINGS_PATH(), sealAiSecrets(sanitized))
     broadcastAiSettingsChanged()
   })
 
@@ -3901,7 +3902,7 @@ export function registerAiIpc(): void {
     writeSettings: (settings) => {
       const sanitized = sanitizeAiSettings(settings)
       if (!sanitized) return false
-      writeJsonAtomic(SETTINGS_PATH(), sanitized)
+      writeJsonAtomic(SETTINGS_PATH(), sealAiSecrets(sanitized))
       broadcastAiSettingsChanged()
       return true
     },
