@@ -52,7 +52,7 @@ EPUB 책 엔진이다(결정 0062). 원본 프로그램에서 온 것이 아니�
 
 - 장 하나 = 원본 글 + 블록 지도. 편집은 지도를 바꾸지 않고 범위 바꾸기를 돌려주며, 호출자가 바뀐 글로 지도를 다시 만든다(`remapChapter`). 오프셋은 장 글의 UTF-16 오프셋이고 범위는 반열림 `[start, end)`다.
 - 굵게·기울임·줄바꿈은 개수가 그대로면 원래 표시를 글자 그대로 되쓴다. 개수가 바뀌면 그 블록의 표시를 `strong`·`em`·`br`로 다시 쓴다(`notation.ts`).
-- 패키지 진입점은 결과 책 만들기까지 내보내고, 그 길이 `pdf-structure` 진입점을 거쳐 Node 전용 모듈에 닿는다. 화면은 필요한 모듈을 상대 경로로 가져온다(`apps/epub`의 `edit/engine.ts`, `translate/engine.ts`).
+- 진입점은 둘이다. `@genoffice/epub-engine/core`(`src/core.ts`)는 열기·블록 지도·표기·편집·글 뽑기·저장만 내보내고 번역을 싣지 않는다. 책을 읽기만 하는 쪽(`file-parse`)은 이것을 쓴다. 패키지 진입점(`.`)은 거기에 번역(`./translate`)을 더한 것이고, 그 길이 `pdf-structure` 진입점을 거쳐 `pdf2docx`와 Node 전용 모듈에 닿는다. 루트를 가져오면 그 쪽의 형 검사가 `pdf2docx` 소스까지 읽어 자기 `bidi-js` 형 선언과 부딪힐 수 있다(워드 편집기에서 실제로 났다). 화면은 필요한 모듈을 상대 경로로 가져온다(`apps/epub`의 `edit/engine.ts`, `translate/engine.ts`).
 - `translate/index.ts`의 `/// <reference>`는 `pdf-structure` 진입점이 끌어오는 `pdf2docx`의 `bidi-js` 형 선언을 이 패키지를 컴파일하는 쪽에 알리려는 것이다.
 
 ## 테스트

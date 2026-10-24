@@ -22,7 +22,7 @@
 - 첨부 개수와 크기 제한, 모델 입력 길이에 맞춘 자르기는 호출자가 한다. 이 패키지에는 파일 크기 상한이 없다.
 - 스캔한 PDF의 글자 인식은 하지 않는다. PDF를 문서로 되살리는 일은 `packages/pdf2docx`다.
 - 지도 파일의 해석과 개요 글은 `packages/xmind-engine`이 한다. 여기는 `openXmind`와 `sheetsToOutline`을 부를 뿐이다(`xmind.ts`).
-- EPUB 책의 해석(zip 관문, DRM 판정, 장 글 뽑기)은 `packages/epub-engine`이 한다. 여기는 `openEpub`과 `extractChapterText`를 부를 뿐이다(`epub.ts`). 출력 모양을 고치려면 엔진 쪽을 고친다.
+- EPUB 책의 해석(zip 관문, DRM 판정, 장 글 뽑기)은 `packages/epub-engine`이 한다. 여기는 번역을 싣지 않는 진입점 `@genoffice/epub-engine/core`에서 `openEpub`과 `extractChapterText`를 가져와 부를 뿐이다(`epub.ts`). 패키지 루트를 가져오면 이 패키지를 쓰는 모든 편집기가 `pdf2docx` 소스까지 형 검사하게 된다. 출력 모양을 고치려면 엔진 쪽을 고친다.
 - 워드(`.docx`)의 가리기 표시는 처리하지 않는다. 이 저장소에도 원본의 공개 저장소에도 그 표시를 쓰거나 읽는 코드가 없어 모양을 확인하지 못했고, 확인되기 전에 짐작으로 만들지 않는다.
 - 파일을 읽기 전에 "저장하지 않은 변경이 있는 파일인가"를 묻는 일은 호출자가 한다(`packages/electron-utils`의 `assertFileSaved`·`withoutUnsavedFiles`).
 - 터미널 명령어(`packages/cli`)의 읽기는 이 패키지를 지나지 않고, 가리기를 적용하지 않는다.

@@ -13,8 +13,9 @@
  *   book; ruby readings are not in the translation), or a copy of the block
  *   inserted right after it with no `id` anywhere in it, marked with the
  *   target language and `EPUB_TRANSLATION_CLASS` (bilingual book). A
- *   structural text block (td, th, figcaption, dt, dd) keeps its place in the
- *   table, figure or list instead: the bilingual book appends a line break
+ *   structural text block (td, th, figcaption, dt, dd) and a list item keep
+ *   their place in the table, figure or list instead (a copied li would
+ *   renumber an ordered list): the bilingual book appends a line break
  *   and a marked span with the translation inside it;
  * - a translated chapter of the translated book: `lang` and `xml:lang` of its
  *   `html` set to the target, `dir="rtl"` for Arabic and Hebrew;
@@ -620,8 +621,8 @@ function copyStartTag(source: string, block: ChapterBlock, o: ChapterInput, rtlC
 }
 
 /**
- * The translation of a structural text block (td, th, figcaption, dt, dd) in a
- * bilingual book: a line break and a marked span appended inside the block,
+ * The translation of a structural text block (td, th, figcaption, dt, dd) or a
+ * list item in a bilingual book: a line break and a marked span appended inside the block,
  * so the table, figure or list keeps its structure.
  */
 function inlineTranslation(
