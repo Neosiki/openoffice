@@ -2294,7 +2294,7 @@ function grantAndTrack(wc: WebContents, openPath?: string | null): void {
     saveAsTargetByWc.delete(wcId)
     closeSaveWaiters.get(wcId)?.(false)
     closeSaveWaiters.delete(wcId)
-    saveAsWaiters.get(wcId)?.(false)
+    saveAsWaiters.get(wcId)?.('failed')
     saveAsWaiters.delete(wcId)
   })
   // reload() remounts the renderer without destroying webContents, so the
