@@ -230,7 +230,7 @@
 - 에이전트 모드(결정 0032)의 세션 MCP 서버는 이것과 별개다. 앱이 띄운 프로그램만 쓰고, 세션마다 운영체제가 고른 포트와 새 토큰(`Authorization: Bearer`)을 요구하며, 도구는 `open_documents`(`list`·`read`만), `read_document`, `insert_content`, `replace_blocks`, `apply_ops`, `read_sheet`, `apply_sheet_ops`, `read_deck`, `apply_slide_ops`, `read_hwp`, `read_pdf`다. 읽기는 가린 자리를 `{{이름}}`으로 내보내고, `read_hwp`·`read_pdf`는 프로젝트 폴더 안만 읽는다. 결정 0048·0049로 `propose_skill`(에이전트 창에 스킬 카드를 띄움)과 `propose_skill_install`(깃허브 설치 미리보기를 띄움)이 더해져 13개다. 둘 다 파일을 쓰지 않는다. 바깥 호출자에게 약속하는 출력이 아니다. 위 서버의 출력은 바뀌지 않는다.
 - `open_documents`의 목록에 마인드맵 탭이 `kind: "mindmap"`, `type: "mind map"`으로 나온다(떼어 낸 창도 같다). `read`의 `content`는 지금 지도의 개요 글 문자열이고 저장하지 않은 편집이 들어 있다. 마크다운·HTML 탭의 읽기와 같은 모양이다. `close`의 저장은 편집기의 저장과 같은 길을 지나고, 한 번도 저장하지 않은 지도는 기본 저장 폴더에 겹치지 않는 이름의 `.xmind`로 저장된다. `ok`로 열리지 않은 지도는 어떤 경우에도 쓰지 않는다. 지도를 만들거나 고치는 도구는 없다.
 - `get_app_info`의 `families`에 `{ family: "xmind", label: "mind map", editor: { open: ["xmind"], save: ["xmind"], export: ["png", "pdf", "md"] } }`가 있다. `mcp` 항목은 없다.
-- `open_documents`의 목록에 EPUB 탭이 `kind: "epub"`, `type: "e-book"`으로 나온다(떼어 낸 창도 같다). `read`의 `content`는 spine 순서로 이은 책 글이고(제목은 `#`), 저장하지 않은 편집이 들어 있다. `save`는 그 탭을 편집기의 저장과 같은 규칙으로 저장한다. 바꾼 것이 없으면 파일을 쓰지 않는다.
+- `open_documents`의 목록에 EPUB 탭이 `kind: "epub"`, `type: "e-book"`으로 나온다(떼어 낸 창도 같다). `read`의 `content`는 spine 순서로 이은 책 글이고(제목은 `#`), 저장하지 않은 편집이 들어 있다. `close`의 저장은 편집기의 저장과 같은 규칙을 지나고, 바꾼 것이 없으면 파일을 쓰지 않는다. 책을 만들거나 고치는 도구는 없다.
 - `get_app_info`의 `families`에 `{ family: "epub", label: "e-book", editor: { open: ["epub"], save: ["epub"], export: [] } }`가 있다.
 
 ## 에이전트 스킬

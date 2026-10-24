@@ -20,7 +20,7 @@
   - `reader/`: 그리는 사본(`chapter-html.ts`: 블록에 `data-epub-block`, 스크립트·`on…`·`javascript:`·틀·`<base>` 지우기, CSP와 `epub-asset:` 기준 주소), 장 틀 안의 일(`frame-dom.ts`), 장 넘기기(`navigation.ts`), 책 안 링크(`links.ts`), 책 안에서 찾기(`book-search.ts`, 500곳까지), 보기 설정(`view-prefs.ts`).
   - `components/`: 리본, 장 틀(`ChapterFrame.tsx`: `sandbox="allow-same-origin"`, `allow-scripts` 없음), 목차·찾기 창, 편집 도구, 그림.
   - `edit/`: 편집 컨트롤러(`controller.ts`), 블록 표기와 화면 요소의 짝(`inline-roles.ts`), 블록 안 찾아 바꾸기(`block-text.ts`), 단축키(`shortcuts.ts`), 화면이 쓰는 엔진 모듈(`engine.ts`).
-  - `ai/`: AI 창(`AiPanel.tsx`, `AiDock.tsx`), 책 skill과 지시문(`epub-skill.ts`), 다섯 도구가 하는 일(`book-tools.ts`), 첨부·검색 skill, 전송과 연결 상태.
+  - `ai/`: AI 창(`AiPanel.tsx`, `AiDock.tsx`), 책 스킬과 지시문(`epub-skill.ts`), 다섯 도구가 하는 일(`book-tools.ts`), 첨부·검색 스킬, 전송과 연결 상태.
   - `translate/`: 책 번역 창과 확인(`BookTranslateDialog.tsx`), 작업·진행·멈춤·이어하기·결과 쓰기(`BookTranslation.tsx`, `job-session.ts`), 보고(`BookTranslateReport.tsx`), 리본 단추, 제공자 고정(`route.ts`), 모델 호출(`model-call.ts`), 보관소 창구(`ipc-store.ts`), 화면에서 쓰는 번역 엔진 부분(`engine.ts`, `pdf-structure-browser.ts`), 순수 함수(`translate-model.ts`).
   - `i18n/`: 21개 언어 조각(`app/`, `edit/`, `ai/`, `translate/`의 `<언어>.ts`, `zh.ts`가 키 집합을 정한다)과 그것을 모으는 `strings-*.ts`.
 

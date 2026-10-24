@@ -63,7 +63,7 @@
 - **목차**: EPUB 3 `nav`의 `toc`, 없으면 EPUB 2 `toc.ncx`, 둘 다 없으면 spine 순서와 각 장의 첫 제목(없으면 파일 이름). 누르면 그 장의 그 위치로 간다.
 - **흐름**: 장마다 위아래로 스크롤한다. 장 끝에서 더 내리면 다음 장의 처음으로, 장 처음에서 더 올리면 이전 장의 끝으로 간다. `linear="no"` 항목은 이 흐름에서 건너뛰고 목차·링크로만 간다.
 - **그리기**: 장은 `sandbox="allow-same-origin"`(스크립트 없음) 틀에 책의 스타일로 그린다. 그리는 사본에서 스크립트, `on…` 속성, `javascript:` 주소, 틀, 플러그인, `<base>`, `http-equiv` 메타를 지우고, 스크립트를 막고 `epub-asset:`에서만 그림·스타일·글꼴을 받는 CSP를 붙인다. 세로쓰기·오른쪽에서 왼쪽 책은 책의 CSS대로 보인다. 소리·영상은 재생하지 않는다.
-- **보기 설정**: 글자 크기(50%~~300%, 13단계), 줄 간격(책 설정대로, 1.2~~2.5), 어두운 보기. 화면에만 쓰고, 모든 책에 공통으로 앱 데이터 폴더(`epub-reading.json`)에 기억한다.
+- **보기 설정**: 글자 크기(50%–300%, 13단계), 줄 간격(책 설정대로, 1.2–2.5), 어두운 보기. 화면에만 쓰고, 모든 책에 공통으로 앱 데이터 폴더(`epub-reading.json`)에 기억한다.
 - **읽던 자리**: 파일 경로마다 장과 블록을 같은 파일에 기억한다(최근 1,000권). 책 파일에는 쓰지 않는다.
 - **책 안에서 찾기**: 모든 장(읽기 전용 장 포함)에서 대소문자를 가리지 않고 찾는다. 결과 목록(처음 500곳)에서 누르면 그 자리로 가서 강조한다.
 - **링크**: 책 안의 링크는 그 장·위치로 간다. 바깥 주소는 마인드맵 편집기와 같은 규칙으로 `http:`·`https:`·`mailto:`만 기본 브라우저에서 연다.
@@ -164,7 +164,7 @@ ieumoffice epub status <file.epub>
 - `pdf translate`·`pdf status`를 본뜬다. 예상만 답하기, 요금 경로, 자동 호출 스위치, 한 문서에 작업 하나, 앞에서 돌기와 stderr 진행, Ctrl+C의 `interrupted`, `--partial`, 다시 실행하면 이어 가기, `--restart`, `output-write-failed`가 같다.
 - 번역하지 않는 책은 종료 코드 1, `unsupported`, `detail.reason`(`drm`, `fixed-layout`, `not-epub`, `damaged`, `too-large`, `no-text`)이다.
 - MCP 도구는 `epub_translate`(`yes`·`allow_paid`), `epub_status`다. `yes`가 있으면 MCP 서버 프로세스 안에서 작업을 띄우고 바로 답한다.
-- 앱 안 MCP: `open_documents`에 EPUB 탭이 `kind: "epub"`, `type: "e-book"`으로 나온다. `read`는 spine 순서의 책 글(제목은 `#`)이고 뒷단이 가진 저장하지 않은 편집이 들어 있다. `save`는 편집기의 저장과 같은 규칙이다. `get_app_info`의 `families`에 `epub`이 있다.
+- 앱 안 MCP: `open_documents`에 EPUB 탭이 `kind: "epub"`, `type: "e-book"`으로 나온다. `read`는 spine 순서의 책 글(제목은 `#`)이고 뒷단이 가진 저장하지 않은 편집이 들어 있다. `close`의 저장은 편집기의 저장과 같은 규칙이다. `get_app_info`의 `families`에 `epub`이 있다.
 - 명령어는 저장된 파일을 읽는다. 앱의 편집 잠금은 앱 안에서 시작한 번역에만 걸린다.
 
 정확한 입출력은 `docs/contracts.md`의 "EPUB 명령"과 "MCP", `packages/cli/README.md`에 있다.
