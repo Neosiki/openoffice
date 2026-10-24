@@ -423,7 +423,7 @@ describe('rhwp Hangul-key patches', () => {
     expect(patched).toContain('installHancomMainKeys(window, () => inputHandler, dispatcher);')
   })
 
-  it('give the bridge the page number calls of engine patch 0013', () => {
+  it('give the bridge the page number calls of engine patch 0014', () => {
     const source = [
       '  applyStyle(sec: number, para: number, styleId: number): { ok: boolean } {',
       '    return { ok: true };',

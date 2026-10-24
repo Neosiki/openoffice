@@ -180,7 +180,7 @@ function withEditorFrame(answer: unknown): FakeContents {
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0))
 
 describe.skipIf(process.platform === 'darwin')(
-  "Hangul's file keys (Alt+N/O/S/V/P, decision 0053)",
+  "Hangul's file keys (Alt+N/O/S/V/P, decision 0060)",
   () => {
     const alt = { alt: true, control: false, meta: false }
 

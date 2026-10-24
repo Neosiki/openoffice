@@ -616,7 +616,7 @@ function installFileShortcuts(wc: WebContents): void {
 }
 
 /**
- * Hangul's file keys, Alt+N/O/S/V/P: new, open, save, save as, print (decision 0053). Not on a
+ * Hangul's file keys, Alt+N/O/S/V/P: new, open, save, save as, print (decision 0060). Not on a
  * Mac, where Option with a letter types a character. True when the key was one of them.
  */
 export function hancomFileKey(

@@ -1,5 +1,5 @@
 /**
- * Hangul's 쪽 번호 매기기 through the engine (vendor/rhwp-core patch 0013): the page number position
+ * Hangul's 쪽 번호 매기기 through the engine (vendor/rhwp-core patch 0014): the page number position
  * control is set in the section's first paragraph, replaced when the section has one, written to
  * HWP and HWPX the way Hancom Hangul 2024 writes it, and read back.
  */

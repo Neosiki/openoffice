@@ -1,5 +1,5 @@
 /**
- * Hancom Hangul's default keys in the rhwp-studio editor (decision 0053).
+ * Hancom Hangul's default keys in the rhwp-studio editor (decision 0060).
  *
  * rhwp moved some of Hangul's keys away from ones a web browser keeps for itself (the Ctrl+N
  * sequences to Ctrl+M, the Ctrl+Shift+C/R/T alignments to Alt+Shift+C/H/D) and left others
@@ -202,7 +202,7 @@ export function withHancomLabel(def, mac = onMac()) {
 
 /**
  * The keys the main process takes before the editor and hands back when the caret says they are
- * Hangul's table keys (decision 0053): Ctrl+Shift+S in a cell block is the block sum (elsewhere
+ * Hangul's table keys (decision 0060): Ctrl+Shift+S in a cell block is the block sum (elsewhere
  * "save as"), Ctrl+Shift+H in a table cell is the horizontal sum (elsewhere "home"). The main
  * process calls `window.__ieumHancomKey(name)` in the editor frame; true means it was done here.
  */

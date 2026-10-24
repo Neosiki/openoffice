@@ -36,7 +36,7 @@
  *
  * studio-hancom-shortcuts, studio-hancom-labels, studio-hancom-commands,
  * studio-hancom-chords
- *   A Hangul tab takes Hancom Hangul's keys (decision 0053). The table of them and
+ *   A Hangul tab takes Hancom Hangul's keys (decision 0060). The table of them and
  *   the commands rhwp lacks live in studio-plugin/hancom-keys.mjs; these patches
  *   only hook it in. The studio's shortcut table is adapted in place, its command
  *   registry shows the new keys next to the menu items, the new commands are
@@ -45,7 +45,7 @@
  *   the caret (the easy table formulas) to the module, on the IME path too.
  *
  * studio-hancom-page-number
- *   The bridge gains the two engine calls of vendor/rhwp-core patch 0013, setting and
+ *   The bridge gains the two engine calls of vendor/rhwp-core patch 0014, setting and
  *   reading a section's page number (Hangul's 쪽 번호 매기기).
  *
  * studio-font-memo-state, studio-font-memo-use
@@ -258,14 +258,14 @@ const PATCHES = {
           '  InsertTextCommand, ModalDialog, FindDialog, navigateToSearchHit,\n' +
           '}));\n' +
           'installHancomMenuItems(document, getLocale());\n' +
-          '// the keys the main process takes first and hands back for the table (decision 0053)\n' +
+          '// the keys the main process takes first and hands back for the table (decision 0060)\n' +
           'installHancomMainKeys(window, () => inputHandler, dispatcher);',
       },
     ],
   },
   'studio-hancom-page-number': {
     file: /[\\/]rhwp-studio[\\/]src[\\/]core[\\/]wasm-bridge\.ts$/,
-    // the engine calls of vendor/rhwp-core patch 0013, ahead of a neighbour the bridge has once
+    // the engine calls of vendor/rhwp-core patch 0014, ahead of a neighbour the bridge has once
     find: '  applyStyle(sec: number, para: number, styleId: number): { ok: boolean } {',
     replace: [
       '  /** The section page number (Hangul: 쪽 번호 매기기); replaces the one the section has. */',
