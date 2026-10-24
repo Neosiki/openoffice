@@ -9,6 +9,7 @@
  * the in-book search on the left, and the status line. Editing inside the
  * frame, the history and find and replace are the edit controller's
  * (`edit/controller.ts`); this component wires keys, menus and buttons to it.
+ * The AI panel docks at the right (`ai/AiDock.tsx`, spec §7).
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { EpubTocEntry } from '@genoffice/epub-engine'
@@ -17,6 +18,7 @@ import { useAutoSavePref } from '@genoffice/ui'
 import { epubAssetUrl } from '../shared/asset-url'
 import { EPUB_VIEW_PREFS_DEFAULT } from '../shared/ipc'
 import type {
+  EpubApi,
   EpubBookSummary,
   EpubChapterResult,
   EpubMenuCommand,
@@ -26,6 +28,7 @@ import type {
   SaveMode,
 } from '../shared/ipc'
 import { openableLink } from '../shared/links'
+import { EpubAiDock, useEpubAi } from './ai/AiDock'
 import { ChapterFrame, type FrameWheel } from './components/ChapterFrame'
 import { EditHomeTools, EditQuickTools, ReplaceRow } from './components/EditTools'
 import { Ribbon } from './components/Ribbon'
@@ -184,6 +187,8 @@ export default function App(): React.JSX.Element {
   const [replacement, setReplacement] = useState('')
   const [replacing, setReplacing] = useState(false)
   const [autoSave, setAutoSave] = useAutoSavePref('epubapp.autoSave', api)
+  /** the book's file: the AI panel keeps its conversation per file */
+  const [filePath, setFilePath] = useState<string | null>(null)
 
   const phaseRef = useRef(phase)
   phaseRef.current = phase
@@ -243,6 +248,17 @@ export default function App(): React.JSX.Element {
   const [editState, setEditState] = useState<EditState>(() => editor.state())
 
   const book = phase.kind === 'open' ? phase.book : null
+
+  const readChapterForAi = useCallback((spineIndex: number) => api.readChapter(spineIndex), [api])
+  const ai = useEpubAi({
+    book,
+    readChapter: readChapterForAi,
+    editor,
+    shownChapter: shownRef,
+    frameDoc: frameDocRef,
+    // the translating screen hands its opener in here (start_book_translation); until then the tool says it is not available
+    startBookTranslation: null,
+  })
 
   const flash = useCallback((next: Notice | null) => {
     if (noticeTimerRef.current !== null) window.clearTimeout(noticeTimerRef.current)
@@ -365,6 +381,7 @@ export default function App(): React.JSX.Element {
         setPhase({ kind: 'no-book' })
         return
       }
+      setFilePath(path)
       const opened = await api
         .openFile(path)
         .catch((): EpubOpenFileResult => ({ status: 'refused', reason: 'unreadable' }))
@@ -570,6 +587,7 @@ export default function App(): React.JSX.Element {
           return false
         }
         editor.saved(mark)
+        setFilePath(result.path)
         if (!auto) flash({ key: result.written ? 'saved' : 'savedUnchanged' })
         return true
       } catch {
@@ -702,6 +720,9 @@ export default function App(): React.JSX.Element {
   useEffect(() => api.onMenuCommand((command) => menuCommandRef.current(command)), [api])
 
   useEffect(() => api.onChromePressed(() => setCloseMenus((n) => n + 1)), [api])
+
+  // the AI panel's conversation follows the file (an older preload may lack the event)
+  useEffect(() => (api as Partial<EpubApi>).onFileRenamed?.(setFilePath), [api])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -999,6 +1020,7 @@ export default function App(): React.JSX.Element {
             </button>
           </div>
         </section>
+        <EpubAiDock ai={ai} filePath={filePath} />
       </div>
       <footer className="epub-status" aria-live="polite">
         <span className="epub-status-chapter">
