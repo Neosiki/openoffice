@@ -34,6 +34,8 @@ export interface SubscriptionConnection {
   readonly openInstallHelp: (provider: AiSubscriptionProviderId) => void
   /** open the website's step-by-step connect help at the guide's path */
   readonly openConnectHelp: (path: SubscriptionConnectHelpPath | null) => void
+  /** look again without a card asking for it (both providers when none is named) */
+  readonly refresh: (providers?: AiSubscriptionProviderId[]) => void
 }
 
 /** a preload from an older build exposes no subscription API */
@@ -170,6 +172,12 @@ export function useSubscriptionConnection(): SubscriptionConnection {
   const openConnectHelp = useCallback((path: SubscriptionConnectHelpPath | null) => {
     void attemptSubscription((api) => api.openConnectHelp(path))
   }, [])
+  const refresh = useCallback(
+    (providers?: AiSubscriptionProviderId[]) => {
+      void check(providers)
+    },
+    [check],
+  )
 
   return {
     statuses,
@@ -182,5 +190,6 @@ export function useSubscriptionConnection(): SubscriptionConnection {
     acceptMetered,
     openInstallHelp,
     openConnectHelp,
+    refresh,
   }
 }

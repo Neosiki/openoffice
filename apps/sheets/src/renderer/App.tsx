@@ -5377,6 +5377,7 @@ export function App({
           busy: subscription.busy,
           actions: subscription.actions,
           openConnectHelp: subscription.openConnectHelp,
+          refresh: subscription.refresh,
           usage: subscriptionUsage,
           inputTruncated,
           onDismissTruncated: () => setInputTruncated(false),

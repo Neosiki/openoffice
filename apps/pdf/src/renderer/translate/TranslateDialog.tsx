@@ -720,6 +720,7 @@ function TranslateConfirm({
                 lang={lang}
                 subscriptionStatuses={connection.statuses}
                 showLabel
+                onRefreshSubscriptions={connection.refresh}
               />
             </li>
             <li>{t('trConfirmSends')}</li>

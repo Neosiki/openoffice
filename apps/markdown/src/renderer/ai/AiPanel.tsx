@@ -1456,6 +1456,7 @@ export function AiPanel({
                 bridge={MODEL_BRIDGE}
                 lang={lang}
                 subscriptionStatuses={statuses ?? {}}
+                onRefreshSubscriptions={subscription.refresh}
               />
               {sessionUsage && <AiUsageChip usage={sessionUsage} session lang={lang} />}
               <AiSubscriptionUsageLine usage={subscriptionUsage} lang={lang} />
