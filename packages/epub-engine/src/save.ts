@@ -99,10 +99,10 @@ export function formatModifiedTimestamp(date: Date): string {
 const XML_ENTITY_NAMES = new Set(['amp', 'lt', 'gt', 'quot', 'apos'])
 
 /**
- * Hides named references XML does not define (`&nbsp;` in a title) behind
- * filler of the same length, so the package can be read for positions only.
+ * @internal Hides named references XML does not define (`&nbsp;` in a title)
+ * behind filler of the same length, so the package can be read for positions only.
  */
-function maskUndefinedEntities(text: string): string {
+export function maskUndefinedEntities(text: string): string {
   return text.replace(/&([A-Za-z_][\w.-]*);/g, (match, name: string) =>
     XML_ENTITY_NAMES.has(name) ? match : 'x'.repeat(match.length),
   )
@@ -150,13 +150,27 @@ export function modifiedReplacements(
 
   const meta = `${prefixOf(metadata.name)}meta`
   const line = `<${meta} property="${MODIFIED_PROPERTY}">${timestamp}</${meta}>`
+  return [metadataLineInsertion(opfText, metadata, line)]
+}
+
+/**
+ * @internal The replacement that adds `line` as the last child of a package
+ * document's `metadata`: on a line of its own, with the document's
+ * indentation and line end, when the end tag starts its own line; else right
+ * before the end tag (a self-closing `metadata` gets a start and end tag).
+ */
+export function metadataLineInsertion(
+  opfText: string,
+  metadata: XmlElement,
+  line: string,
+): RangeReplacement {
   if (metadata.selfClosing) {
-    return [{ start: metadata.end - 2, end: metadata.end, text: `>${line}</${metadata.name}>` }]
+    return { start: metadata.end - 2, end: metadata.end, text: `>${line}</${metadata.name}>` }
   }
   const at = metadata.endTagStart
   const lineStart = opfText.lastIndexOf('\n', at - 1) + 1
   if (lineStart === 0 || /\S/.test(opfText.slice(lineStart, at))) {
-    return [{ start: at, end: at, text: line }]
+    return { start: at, end: at, text: line }
   }
   const newline = opfText[lineStart - 2] === '\r' ? '\r\n' : '\n'
   const last = elementChildren(metadata).at(-1)
@@ -166,7 +180,7 @@ export function modifiedReplacements(
     const before = opfText.slice(lastLineStart, last.start)
     if (!/\S/.test(before)) indent = before
   }
-  return [{ start: lineStart, end: lineStart, text: `${indent}${line}${newline}` }]
+  return { start: lineStart, end: lineStart, text: `${indent}${line}${newline}` }
 }
 
 const refusal = (
@@ -255,6 +269,26 @@ export async function saveEpub(
     })
   }
 
+  const replaced = new Map<string, Uint8Array>()
+  for (const [name, { text, encoding }] of texts) {
+    replaced.set(name, encodeEntryText(text, encoding))
+  }
+  const bytes = await writeEpubArchive(zip, replaced, now)
+  return { ok: true, changed: true, bytes, changedChapters }
+}
+
+/**
+ * @internal Writes the archive `zip` was loaded from again: `mimetype` first,
+ * stored, with no extra field (added, dated `now`, when missing), then every
+ * other entry in archive order with its date, attributes and compression
+ * method. An entry named in `replaced` (by its archive name) gets those bytes;
+ * every other file keeps its original compressed data.
+ */
+export async function writeEpubArchive(
+  zip: JSZip,
+  replaced: ReadonlyMap<string, Uint8Array>,
+  now: Date,
+): Promise<Uint8Array> {
   const out = new JSZip()
   const mimetype = zip.files[MIMETYPE]
   if (mimetype && !mimetype.dir) {
@@ -279,10 +313,8 @@ export async function saveEpub(
       out.file(file.name, null, { ...common, dir: true })
       continue
     }
-    const edited = texts.get(file.name)
-    const data = edited ? encodeEntryText(edited.text, edited.encoding) : await unchangedData(file)
+    const data = replaced.get(file.name) ?? (await unchangedData(file))
     out.file(file.name, data, { ...common, compression: compressionOf(file), binary: true })
   }
-  const bytes = await out.generateAsync({ type: 'uint8array', compression: 'DEFLATE' })
-  return { ok: true, changed: true, bytes, changedChapters }
+  return out.generateAsync({ type: 'uint8array', compression: 'DEFLATE' })
 }

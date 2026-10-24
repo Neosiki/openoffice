@@ -52,3 +52,16 @@ export {
 } from './job'
 export { defaultEpubTargetLanguage, epubBookLanguage, epubSampleText } from './language'
 export { epubMigrationInfo, type EpubMigrationInfo } from './migrate'
+export {
+  EPUB_TRANSLATION_CLASS,
+  buildTranslatedEpub,
+  type BuildTranslatedEpubOptions,
+  type BuildTranslatedEpubRefusal,
+  type BuildTranslatedEpubResult,
+  type EpubOriginalChapter,
+  type EpubTranslationOutcome,
+  type EpubTranslationOutputKind,
+  type EpubTranslationReport,
+  type EpubUntranslatedBlock,
+  type EpubUntranslatedReason,
+} from './output'
