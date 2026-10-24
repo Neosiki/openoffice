@@ -60,7 +60,7 @@ ODT 전용 화면은 없다. 워드 편집기가 ODT를 "다리 docx"로 바꿔 
 
 ## EPUB 책이 지나는 길
 
-결정 0062. 책은 셸 뒷단에 있고, 화면은 장 하나씩과 그 자원만 받는다.
+결정 0066. 책은 셸 뒷단에 있고, 화면은 장 하나씩과 그 자원만 받는다.
 
 ```
 EPUB 편집기 화면 ── epub:read-chapter·apply-edits·save 등 ──→ 셸 메인(apps/epub의 book-session, 보기마다 책 한 벌) ── epub-engine

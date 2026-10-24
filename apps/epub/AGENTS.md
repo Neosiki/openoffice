@@ -1,6 +1,6 @@
 # apps/epub (`@genoffice/epub`)
 
-전자책 편집기다. EPUB 책(`.epub`)을 탭에서 열어 읽고, 보이는 책 화면에서 본문 글을 고치고, AI 창으로 읽고 고치고, 책을 번역해 새 EPUB으로 낸다(결정 0062). 파일을 다루는 일은 `packages/epub-engine`이 하고, 이 모듈은 책 한 벌을 쥔 뒷단과 화면을 잇는다. 사람이 읽는 계획은 `docs/plans/epub-editor.md`에 있다.
+전자책 편집기다. EPUB 책(`.epub`)을 탭에서 열어 읽고, 보이는 책 화면에서 본문 글을 고치고, AI 창으로 읽고 고치고, 책을 번역해 새 EPUB으로 낸다(결정 0066). 파일을 다루는 일은 `packages/epub-engine`이 하고, 이 모듈은 책 한 벌을 쥔 뒷단과 화면을 잇는다. 사람이 읽는 계획은 `docs/plans/epub-editor.md`에 있다.
 
 ## 맡은 범위
 

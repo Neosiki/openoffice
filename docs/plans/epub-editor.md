@@ -1,6 +1,6 @@
 # EPUB 편집기 계획
 
-상태: **구현됨, 사람 확인 남음**(2026-10-24). 범위와 고치는 방식은 저장소 주인이 정했다. 정한 것과 그 이유는 결정 기록 [0062](../tracking/decisions/0062-epub-editor.md)에 있다. 사람이 확인할 것은 13절과 `docs/tracking/status.md`에, 알려진 한계는 14절과 `docs/tracking/findings.md`에 있다.
+상태: **구현됨, 사람 확인 남음**(2026-10-24). 범위와 고치는 방식은 저장소 주인이 정했다. 정한 것과 그 이유는 결정 기록 [0066](../tracking/decisions/0066-epub-editor.md)에 있다. 사람이 확인할 것은 13절과 `docs/tracking/status.md`에, 알려진 한계는 14절과 `docs/tracking/findings.md`에 있다.
 
 ## 1. 무엇을 했나
 

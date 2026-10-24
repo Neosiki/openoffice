@@ -10,7 +10,7 @@
 - 웹 페이지 읽기 명령 `read-url`(`src/commands/read-url.ts`, MCP `read_url`): 주소 하나를 그 사이트에서 받아 글자 offset과 함께 돌려준다. 제공자·구독·자동 호출 장부를 쓰지 않는다.
 - PDF 구조 명령: `convert --to md|epub`, `pdf read --structured`, `pdf images`(`src/commands/convert.ts`, `pdf.ts`, `src/formats/pdf-structure.ts`, `pdf-outputs.ts`). 문서 나무와 출력은 `packages/pdf-structure`를 명령 프로세스 안에서 부른다.
 - PDF 문서 작업 명령: `pdf ai-read`, `pdf translate`, `pdf status`(`src/commands/pdf-ai-read.ts`, `pdf-translate.ts`, `pdf-status.ts`, 공통 준비 `pdf-job.ts`), 이 작업들의 AI 연결(`src/pdf-ai.ts`), MCP 도구로 띄운 작업의 추적(`src/pdf-jobs.ts`).
-- EPUB 책 번역 명령: `epub translate`, `epub status`(`src/commands/epub.ts`, `epub-translate.ts`, `epub-status.ts`, MCP `epub_translate`·`epub_status`, 결정 0062). 단위·작업·결과 책은 `packages/epub-engine`을, 작업 엔진과 보관소는 `pdf-structure`를 명령 프로세스 안에서 부른다. AI 연결과 공통 준비는 PDF 작업 명령의 것(`src/pdf-ai.ts`, `pdf-job.ts`)을 함께 쓴다.
+- EPUB 책 번역 명령: `epub translate`, `epub status`(`src/commands/epub.ts`, `epub-translate.ts`, `epub-status.ts`, MCP `epub_translate`·`epub_status`, 결정 0066). 단위·작업·결과 책은 `packages/epub-engine`을, 작업 엔진과 보관소는 `pdf-structure`를 명령 프로세스 안에서 부른다. AI 연결과 공통 준비는 PDF 작업 명령의 것(`src/pdf-ai.ts`, `pdf-job.ts`)을 함께 쓴다.
 - PC에 등록하는 이름(`src/names.ts`)과 등록 작업: PATH 연결(`src/install.ts`), 에이전트 MCP 설정에 항목 쓰기(`src/agent-mcp.ts`), 스킬 설치(`src/agent-skills.ts`), MCP 클라이언트가 실행할 명령 조립(`src/mcp-launch.ts`).
 - 실행 중인 앱과의 연결: 제어 채널(`src/control.ts`, `src/control-protocol.ts`), 열려 있는 문서 확인(`src/gui.ts`), 앱 실행 파일과 번들 자원 찾기(`src/resources.ts`).
 - 경로 정책과 감사 기록(`src/fs.ts`, `src/audit.ts`), 번들 빌드(`build.mjs`, `collect-deps.mjs`), 실행기(`bin/ieumoffice`, `bin/ieumoffice.cmd`).

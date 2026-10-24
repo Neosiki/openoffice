@@ -1,6 +1,6 @@
 # packages/epub-engine (`@genoffice/epub-engine`)
 
-EPUB 책 엔진이다(결정 0062). 원본 프로그램에서 온 것이 아니라 이 프로젝트가 만든 패키지다. Electron에 묶이지 않고 화면과 Node 양쪽에서 돈다. 편집기(`apps/epub`의 뒷단과 화면), `packages/file-parse`, `packages/cli`가 같은 코드를 쓴다.
+EPUB 책 엔진이다(결정 0066). 원본 프로그램에서 온 것이 아니라 이 프로젝트가 만든 패키지다. Electron에 묶이지 않고 화면과 Node 양쪽에서 돈다. 편집기(`apps/epub`의 뒷단과 화면), `packages/file-parse`, `packages/cli`가 같은 코드를 쓴다.
 
 ## 맡은 범위
 
