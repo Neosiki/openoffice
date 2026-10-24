@@ -28,7 +28,7 @@ import {
   webContents,
 } from 'electron'
 import type { MenuItemConstructorOptions, NativeImage, WebContents } from 'electron'
-import { atomicCopyFile, atomicWriteFile } from './atomic-write'
+import { atomicWriteFile } from './atomic-write'
 import { tabStripOverlay } from './title-bar-overlay'
 import {
   applyUiScaleTo,
