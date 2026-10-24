@@ -12,7 +12,10 @@
  * - a translated block: its content replaced by the translation (translated
  *   book; ruby readings are not in the translation), or a copy of the block
  *   inserted right after it with no `id` anywhere in it, marked with the
- *   target language and `EPUB_TRANSLATION_CLASS` (bilingual book);
+ *   target language and `EPUB_TRANSLATION_CLASS` (bilingual book). A
+ *   structural text block (td, th, figcaption, dt, dd) keeps its place in the
+ *   table, figure or list instead: the bilingual book appends a line break
+ *   and a marked span with the translation inside it;
  * - a translated chapter of the translated book: `lang` and `xml:lang` of its
  *   `html` set to the target, `dir="rtl"` for Arabic and Hebrew;
  * - the package document: titles, `dc:language`, a new `urn:uuid` unique
@@ -616,6 +619,30 @@ function copyStartTag(source: string, block: ChapterBlock, o: ChapterInput, rtlC
   return writeStartTag(tag)
 }
 
+/**
+ * The translation of a structural text block (td, th, figcaption, dt, dd) in a
+ * bilingual book: a line break and a marked span appended inside the block,
+ * so the table, figure or list keeps its structure.
+ */
+function inlineTranslation(
+  block: ChapterBlock,
+  o: ChapterInput,
+  rtlChapter: boolean,
+  xhtml: string,
+): string {
+  const prefix = prefixOf(block.element.name)
+  const lang = escapeAttribute(o.lang)
+  const dir = o.rtl
+    ? ' dir="rtl"'
+    : attributeOf(block.element, 'dir') !== undefined || rtlChapter
+      ? ' dir="ltr"'
+      : ''
+  return (
+    `<${prefix}br/><${prefix}span class="${EPUB_TRANSLATION_CLASS}" lang="${lang}" ` +
+    `xml:lang="${lang}"${dir}>${removeIds(xhtml)}</${prefix}span>`
+  )
+}
+
 /** The style element that forces horizontal writing, at the end of the chapter's head. */
 function horizontalStyle(source: string, root: XmlElement): RangeReplacement | null {
   const head = childElements(root).find((el) => el.local === 'head')
@@ -677,6 +704,16 @@ function chapterEdits(
         end: block.inner.end,
         text: outcome.xhtml,
       })
+    } else if (!block.flowing) {
+      // td, th, figcaption, dt, dd: a sibling copy would change the table, figure or
+      // list structure, so the translation goes inside, after the original content
+      const el = block.element
+      const inline = inlineTranslation(block, o, rtlChapter, outcome.xhtml)
+      entry.replacements.push(
+        el.selfClosing
+          ? { start: el.end - 2, end: el.end, text: `>${inline}</${el.name}>` }
+          : { start: block.inner.end, end: block.inner.end, text: inline },
+      )
     } else {
       const el = block.element
       const indent = source.slice(whitespaceStart(source, el.start), el.start)
