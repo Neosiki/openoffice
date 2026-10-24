@@ -222,6 +222,38 @@ describe('a never-saved document', () => {
     expect(docOf(ctx).filePath).toBeNull()
   })
 
+  it('its first save asks where, offering the first heading as the name; an automatic save writes nothing', async () => {
+    const ctx = makeCtx()
+    expect(await newFile(ctx)).toBe(true)
+    const editor = ctx.editor as Editor
+    editor.commands.setContent('<h1>Field trip plan</h1><p>Bring water</p>')
+    ctx.dirtyRef.current = true
+    // AutoSave or any other automatic pass never picks a place for it
+    expect(await save(ctx, false, true)).toBe(false)
+    for (const save of ['saveDocxNew', 'saveDocxAs', 'pickSaveAsPath'])
+      expect(desktop[save]).not.toHaveBeenCalled()
+    // the user's own first save shows the dialog instead of landing in the default folder
+    pickedPath = '/docs/field-trip.docx'
+    expect(await save(ctx, false)).toBe(true)
+    expect(desktop.pickSaveAsPath).toHaveBeenCalledTimes(1)
+    expect(desktop.pickSaveAsPath.mock.calls[0][0]).toContain('Field trip plan')
+    expect(desktop.saveDocxNew).not.toHaveBeenCalled()
+    expect(docOf(ctx).filePath).toBe('/docs/field-trip.docx')
+  })
+
+  it('a cancelled first save writes nothing and keeps the document unsaved', async () => {
+    const ctx = makeCtx()
+    expect(await newFile(ctx)).toBe(true)
+    typeParagraph(ctx.editor as Editor, 'Not yet')
+    ctx.dirtyRef.current = true
+    pickedPath = ''
+    expect(await save(ctx, false)).toBe(false)
+    for (const save of ['saveDocxNew', 'saveDocxAs', 'saveDocx'])
+      expect(desktop[save]).not.toHaveBeenCalled()
+    expect(docOf(ctx).filePath).toBeNull()
+    expect(ctx.dirtyRef.current).toBe(true)
+  })
+
   it('an untouched blank document is not copied', async () => {
     const ctx = makeCtx()
     await newFile(ctx)

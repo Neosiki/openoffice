@@ -1252,18 +1252,9 @@ async function openAndBuild(
   }
 }
 
-/** Directory where AI-generated drafts are saved: the configurable default save folder (falls back to <Documents>/GenOffice) */
+/** Where a new deck's first-save dialog starts: the configurable default save folder (falls back to <Documents>/<product name>) */
 function getDraftsDir(): string {
   return configuredDefaultSaveDir(app)
-}
-
-/** Fallback draft filename: <untitled label>-YYYYMMDD-HHmmss.pptx */
-function newDraftFilename(): string {
-  const d = new Date()
-  const pad = (n: number, w = 2) => String(n).padStart(w, '0')
-  const date = `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}`
-  const time = `${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`
-  return `${tm('untitledDraft')}-${date}-${time}.pptx`
 }
 
 /** Sanitize an AI-provided topic/title into a safe filename base: strip illegal path chars, collapse whitespace, cap length; null if invalid. */
@@ -1281,60 +1272,18 @@ function sanitizeDraftBaseName(raw: string | undefined): string | null {
   return cleaned.length > 40 ? cleaned.slice(0, 40).trim() : cleaned
 }
 
-/** Pick a draft path from deckName: append -2/-3… if a same-named file exists; fall back to timestamp naming without a valid deckName. */
-function pickDraftPath(draftsDir: string, deckName?: string): string {
-  const base = sanitizeDraftBaseName(deckName)
-  if (base) {
-    let candidate = join(draftsDir, `${base}.pptx`)
-    for (let i = 2; existsSync(candidate) && i < 100; i++) {
-      candidate = join(draftsDir, `${base}-${i}.pptx`)
-    }
-    if (!existsSync(candidate)) return candidate
-  }
-  return join(draftsDir, newDraftFilename())
-}
-
 /**
- * Auto-save the draft to <Documents>/GenOffice/<name>.pptx after AI generation completes.
- * Append mode reuses the session's existing draft path (overwrite); replace mode generates a
- * new filename. On successful write, update session.path, pushRecent, slidesOpenedHook.
- * On write failure, degrade silently (console.warn) without blocking the in-memory session.
+ * An AI-generated deck is not written anywhere on its own (decision 0061: no
+ * file appears in the user's folders unless they save). An untitled deck stays
+ * unsaved, covered by its recovery copy; its generated name is what the first
+ * save offers, and that save asks where. A deck with a file stays on its file.
  */
-async function saveDraftAfterGenerate(
-  wc: WebContents,
-  session: Session,
-  bytes: Uint8Array,
-  mode: 'replace' | 'append',
-  deckName?: string,
-): Promise<void> {
-  try {
-    const draftsDir = getDraftsDir()
-    // Ensure the directory exists
-    if (!existsSync(draftsDir)) mkdirSync(draftsDir, { recursive: true })
-
-    // Append mode: overwrite if the session already has a draft path; otherwise create a new file too
-    let draftPath: string
-    if (mode === 'append' && session.path && session.path.startsWith(draftsDir)) {
-      draftPath = session.path
-    } else {
-      draftPath = pickDraftPath(draftsDir, deckName)
-    }
-
-    await writeFile(draftPath, deckFileBytes(session, bytes))
-    const previousPath = session.path
-    followTemplateSelection(session, session.path, draftPath)
-    session.path = draftPath
-    session.diskState = (await recordDiskState(draftPath)) ?? undefined
-    // written to a path: the deck's recovery copies are gone
-    recoveryCopiesSaved(session, previousPath)
-    await pushRecent(draftPath)
-    slidesOpenedHook?.(wc, draftPath)
-  } catch (err) {
-    console.warn(
-      '[slides] Failed to persist AI-generated draft to disk; the in-memory session still works:',
-      err,
-    )
-  }
+function nameGeneratedDeck(session: Session, deckName?: string): void {
+  markMetaDirty(session)
+  if (session.path) return
+  const base = sanitizeDraftBaseName(deckName)
+  if (base && !session.firstSaveName) session.firstSaveName = `${base}.pptx`
+  session.askPathOnFirstSave = true
 }
 
 /** Theme body (minor) Latin font: fallback shown in the ribbon font box when the selection has no text element. */
@@ -2316,16 +2265,7 @@ export function registerSlidesIpc(): void {
             return { error: tm('errAppendFailed', { reason: lastErr ?? tm('errUnknown') }) }
           }
           existing.fitWidthPx = fitWidthPx
-          // Save the draft: persist the current complete deck
-          const bytes = await savePptx(opened)
-          await saveDraftAfterGenerate(e.sender, existing, bytes, 'append', deckName)
-          // Draft now matches memory: reopen from the output bytes to clear dirty (same as
-          // slides:save) — otherwise pure AI generation (per-page append merges mark
-          // structureDirty) would trigger the close confirmation even without edits
-          if (existing.path) {
-            existing.opened = await openPptx(bytes)
-            existing.metaDirty = false
-          }
+          nameGeneratedDeck(existing, deckName)
           return {
             path: existing.path,
             slides: buildAllRenderSlides(existing.opened, fitWidthPx),
@@ -2369,12 +2309,7 @@ export function registerSlidesIpc(): void {
             return { error: r.failures?.[0]?.error ?? tm('errReplaceFailed') }
           }
           existing.fitWidthPx = fitWidthPx
-          const bytes = await savePptx(opened)
-          await saveDraftAfterGenerate(e.sender, existing, bytes, 'append', deckName)
-          if (existing.path) {
-            existing.opened = await openPptx(bytes)
-            existing.metaDirty = false
-          }
+          nameGeneratedDeck(existing, deckName)
           return {
             path: existing.path,
             slides: buildAllRenderSlides(existing.opened, fitWidthPx),
@@ -2415,12 +2350,7 @@ export function registerSlidesIpc(): void {
             return { error: r.failures?.[0]?.error ?? tm('errInsertFailed') }
           }
           existing.fitWidthPx = fitWidthPx
-          const bytes = await savePptx(opened)
-          await saveDraftAfterGenerate(e.sender, existing, bytes, 'append', deckName)
-          if (existing.path) {
-            existing.opened = await openPptx(bytes)
-            existing.metaDirty = false
-          }
+          nameGeneratedDeck(existing, deckName)
           return {
             path: existing.path,
             slides: buildAllRenderSlides(existing.opened, fitWidthPx),
@@ -2448,8 +2378,7 @@ export function registerSlidesIpc(): void {
         sessions.set(e.sender.id, replaceSession)
         // Re-point windows that shared the old session, or they diverge onto a dead deck
         if (old) for (const id of attachedIds(old)) sessions.set(id, replaceSession)
-        // Save the draft: await completion so the real path is returned; on failure degrade silently (session.path stays '')
-        await saveDraftAfterGenerate(e.sender, replaceSession, bytes, 'replace', deckName)
+        nameGeneratedDeck(replaceSession, deckName)
         scheduleDeckBroadcast(replaceSession)
         return {
           path: replaceSession.path,
@@ -4786,9 +4715,10 @@ export function registerSlidesIpc(): void {
     const session = sessions.get(e.sender.id)
     if (!session) return { ok: false, error: 'no file open' }
     const previousPath = session.path
-    // An untitled copy of a skill's template asks where its first save goes;
-    // the AutoSave pass leaves it alone until then (spec 5.7)
-    if (!session.path && session.askPathOnFirstSave) {
+    // An untitled deck asks where its first save goes (decision 0061: nothing
+    // lands in the user's folders unasked — template copies, AI-generated decks
+    // and new blank decks alike); the AutoSave pass leaves it alone until then
+    if (!session.path) {
       if (auto === true) return { ok: false, reason: 'external-modified' }
       const picked = await showSaveDialogWithMemory(
         dialog,
@@ -4803,15 +4733,6 @@ export function registerSlidesIpc(): void {
       if (picked.canceled || !picked.filePath) return { ok: false, reason: 'external-modified' }
       session.path = picked.filePath
       session.askPathOnFirstSave = false
-      followTemplateSelection(session, '', session.path)
-      await pushRecent(session.path)
-      slidesOpenedHook?.(e.sender, session.path)
-    }
-    // Untitled (new blank file): the first save lands silently in the drafts folder (Save As keeps its dialog)
-    if (!session.path) {
-      const draftsDir = getDraftsDir()
-      if (!existsSync(draftsDir)) mkdirSync(draftsDir, { recursive: true })
-      session.path = pickDraftPath(draftsDir, tm('untitledDeck'))
       followTemplateSelection(session, '', session.path)
       await pushRecent(session.path)
       slidesOpenedHook?.(e.sender, session.path)

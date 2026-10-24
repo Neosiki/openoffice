@@ -5269,9 +5269,10 @@ export function App() {
     const offSave = window.desktop.onCloseSaveRequest?.(() => {
       // Closing must not report success while edits are still unpersisted, so a
       // save that raced with typing is retried until the file catches up.
-      // save(false) never prompts — a pathless first save lands silently in the
-      // default folder — so retrying is always safe; reporting "persisted" just
-      // because the snapshot had no path yet would close over mid-save edits.
+      // A pathless document's first save asks where: cancelling resolves false and
+      // keeps the tab open; once picked, later passes have the path and never ask
+      // again. Reporting "persisted" just because the snapshot had no path yet
+      // would close over mid-save edits.
       void saveUntilPersisted({
         save: () => save(false),
         wasIncomplete: () => saveIncompleteRef.current,
@@ -5304,21 +5305,6 @@ export function App() {
       window.removeEventListener('blur', tick)
     }
   }, [tornDown, autoSave, doc, editor, save])
-
-  // After an AI run finishes on a never-saved document, silently save it once: the
-  // first save derives the file name from the first heading (see deriveAutoFileName
-  // in file-actions), which also renames the shell tab — mirrors slides, where AI
-  // generation names and persists the draft deck.
-  useEffect(() => {
-    const handler = () => {
-      const cur = fileCtxRef.current
-      if (!cur.doc || cur.doc.filePath || !anyDirtyRef.current) return
-      if (editor?.view.composing) return
-      void save(false, true)
-    }
-    window.addEventListener('ai-docs-run-done', handler)
-    return () => window.removeEventListener('ai-docs-run-done', handler)
-  }, [editor, save])
 
   useEffect(() => {
     // editing shortcuts only fire when focus is in an editor surface (main
