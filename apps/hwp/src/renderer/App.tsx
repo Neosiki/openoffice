@@ -18,6 +18,12 @@ import blankHwpUrl from './assets/blank.hwp?url'
 import { useI18n, type StringKey } from './i18n/locale'
 import { openDocumentsDroppedOn } from './editor-drop'
 import { gatherPrintJob } from './print-flow'
+import {
+  RECOVERY_TICK_MS,
+  createRecoveryCopier,
+  withChangeNotes,
+  type RecoveryCopier,
+} from './recovery-flow'
 import { runSave, type SaveEditorPort } from './save-flow'
 import { PASSWORD_FLAG } from '../../scripts/rhwp-patches.mjs'
 import { STUDIO_SETTINGS_KEY, seededStudioSettings, studioUrl } from './studio-settings'
@@ -33,7 +39,9 @@ type Phase = 'booting' | 'loading' | 'ready' | 'failed'
 
 interface Notice {
   tone: 'info' | 'error'
-  key: StringKey
+  key?: StringKey
+  /** a message already localized elsewhere (the main process), shown instead of `key` */
+  text?: string
   params?: Params
   /** untranslated cause from the engine or the file system, shown under the message */
   detail?: string
@@ -101,8 +109,19 @@ export default function App() {
   const [filePath, setFilePath] = useState<string | null>(null)
   /** an untitled copy's name (a skill template's): the title it has until its first save */
   const copyNameRef = useRef<string | null>(null)
+  /** crash-recovery copies of the document (recovery-flow.ts), once it is in the editor */
+  const copierRef = useRef<RecoveryCopier | null>(null)
+  /** the editor holds a restored recovery copy that has not been saved since */
+  const restoredRef = useRef(false)
   /** the AI panel's way into the document: the app's plugin inside the editor */
-  const agentBridge = useMemo(() => createAgentBridge(() => editorRef.current), [])
+  const agentBridge = useMemo(
+    () =>
+      withChangeNotes(
+        createAgentBridge(() => editorRef.current),
+        () => copierRef.current?.noteChange(),
+      ),
+    [],
+  )
 
   // the shell's split panes: tell it whenever this pane gains focus
   useSplitPaneFocusPing()
@@ -220,7 +239,8 @@ export default function App() {
       asking = true
       const seen = changes
       try {
-        const dirty = (await editor.commands.context()).isDirty === true
+        // a restored recovery copy stays unsaved until it is saved, whatever the editor says
+        const dirty = (await editor.commands.context()).isDirty === true || restoredRef.current
         if (seen === changes) report(dirty)
       } catch {
         // the editor is going away; the next tick or the unmount settles it
@@ -231,7 +251,7 @@ export default function App() {
     const frame = editor.element.contentWindow
     const onChange = (event: Event) => {
       changes += 1
-      report((event as CustomEvent<unknown>).detail === true)
+      report((event as CustomEvent<unknown>).detail === true || restoredRef.current)
     }
     frame?.addEventListener(DIRTY_EVENT, onChange)
     // an edit before the plugin is up has no event: ask once it is
@@ -254,6 +274,8 @@ export default function App() {
       try {
         const outcome = await runSave(savePortOf(editor), window.hwpApi, mode)
         if (outcome.kind === 'saved') {
+          restoredRef.current = false
+          copierRef.current?.saved()
           setFilePath(outcome.path)
           const backup = outcome.backupPath ? { name: fileNameOf(outcome.backupPath) } : null
           if (outcome.tailsLost) {
@@ -314,6 +336,66 @@ export default function App() {
     return () => frame.removeEventListener(FILE_COMMAND_EVENT, onCommand)
   }, [phase, agentBridge, t])
 
+  // crash-recovery copies while the document has unsaved changes; typing never waits on one
+  useEffect(() => {
+    if (phase !== 'ready') return
+    const editor = editorRef.current
+    if (!editor) return
+    const port = savePortOf(editor)
+    const copier = createRecoveryCopier({
+      editor: {
+        ...port,
+        isDirty: async () => (await editor.commands.context()).isDirty === true,
+      },
+      api: window.hwpApi,
+      isBusy: () => savingRef.current,
+      restoredUnsaved: () => restoredRef.current,
+    })
+    copierRef.current = copier
+    let disposed = false
+    void (async () => {
+      const isProtected = await port.isPasswordProtected().catch(() => false)
+      const opened = await window.hwpApi.recoveryOpened(isProtected).catch(() => null)
+      if (disposed || !opened) return
+      if (opened.restored) restoredRef.current = true
+      // a document whose password a copy cannot keep: said once, when the tab opens
+      if (opened.notice) setNotice({ tone: 'info', text: opened.notice, sticky: true })
+    })()
+    const frame = editor.element.contentWindow
+    const inEditor = () => copier.noteInput()
+    const elsewhere = () => copier.noteInput(false)
+    const editorEvents = [
+      'keydown',
+      'input',
+      'compositionend',
+      'pointerdown',
+      'paste',
+      'cut',
+      'drop',
+    ]
+    const pageEvents = ['keydown', 'pointerdown', 'wheel']
+    for (const name of editorEvents) frame?.addEventListener(name, inEditor, true)
+    frame?.addEventListener('wheel', elsewhere, { capture: true, passive: true })
+    for (const name of pageEvents) {
+      window.addEventListener(name, elsewhere, { capture: true, passive: true })
+    }
+    const timer = setInterval(() => void copier.tick(), RECOVERY_TICK_MS)
+    const offFlush = window.hwpApi.onRecoveryFlush((token) => {
+      void copier.flush().finally(() => window.hwpApi.sendRecoveryFlushed(token))
+    })
+    const offReset = window.hwpApi.onRecoveryReset(() => copier.reset())
+    return () => {
+      disposed = true
+      clearInterval(timer)
+      offFlush()
+      offReset()
+      for (const name of editorEvents) frame?.removeEventListener(name, inEditor, true)
+      frame?.removeEventListener('wheel', elsewhere, { capture: true })
+      for (const name of pageEvents) window.removeEventListener(name, elsewhere, { capture: true })
+      if (copierRef.current === copier) copierRef.current = null
+    }
+  }, [phase])
+
   // saves asked for by the menu, the shortcut and the close prompt
   useEffect(() => {
     const canSave = () => phase === 'ready' && !savingRef.current
@@ -330,7 +412,7 @@ export default function App() {
           mode === 'saveAs' ||
           (await editorRef.current?.commands
             .context()
-            .then((context) => context.isDirty !== false)
+            .then((context) => context.isDirty !== false || restoredRef.current)
             .catch(() => true))
         if (dirty) await save(mode)
         else window.hwpApi.abortSave()
@@ -534,7 +616,7 @@ export default function App() {
               role={notice.tone === 'error' ? 'alert' : 'status'}
             >
               <div className="hwp-notice-text">
-                <span>{t(notice.key, notice.params)}</span>
+                <span>{notice.text ?? (notice.key ? t(notice.key, notice.params) : '')}</span>
                 {notice.detail && <span className="hwp-notice-detail">{notice.detail}</span>}
               </div>
               <button

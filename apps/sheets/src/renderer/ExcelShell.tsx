@@ -313,6 +313,9 @@ interface ExcelShellProps {
   readonly emptyCsvNotice: boolean
   readonly onOpenWorkbook: () => void
   readonly onDismissEmptyCsvNotice: () => void
+  /// The open workbook keeps no recovery copy (password protected): shown once per tab.
+  readonly recoveryNotice?: string | null
+  readonly onDismissRecoveryNotice?: () => void
   /// Zoom of the active sheet in percent, echoed by the status-bar slider.
   readonly zoomPercent: number
   /// Aggregates ticked in the status bar's right-click menu (Excel parity).
@@ -553,6 +556,8 @@ export function ExcelShell({
   emptyCsvNotice,
   onOpenWorkbook,
   onDismissEmptyCsvNotice,
+  recoveryNotice,
+  onDismissRecoveryNotice,
   zoomPercent,
   statusBarFuncs,
   onToggleStatusBarFunc,
@@ -1051,6 +1056,19 @@ export function ExcelShell({
                   className="csv-empty-notice-close"
                   aria-label={t('appClose')}
                   onClick={onDismissEmptyCsvNotice}
+                >
+                  ×
+                </button>
+              </div>
+            )}
+            {recoveryNotice && (
+              <div className="csv-empty-notice" role="status">
+                <span>{recoveryNotice}</span>
+                <button
+                  type="button"
+                  className="csv-empty-notice-close"
+                  aria-label={t('appClose')}
+                  onClick={onDismissRecoveryNotice}
                 >
                   ×
                 </button>
