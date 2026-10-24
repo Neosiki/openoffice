@@ -1833,7 +1833,9 @@ export function SettingsModal({
                 <div className="set-field">
                   <div className="set-field-text">
                     <div className="set-field-stack">
-                      <div className="set-field-label">{t('setAuthorName')}</div>
+                      <label className="set-field-label" htmlFor="set-author-name">
+                        {t('setAuthorName')}
+                      </label>
                       <div className="set-field-desc">{t('setAuthorNameDesc')}</div>
                     </div>
                   </div>
