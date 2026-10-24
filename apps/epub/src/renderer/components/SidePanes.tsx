@@ -3,6 +3,7 @@
  * of results.
  */
 import { useEffect, useRef, useState } from 'react'
+import type { ReactNode } from 'react'
 import type { EpubTocEntry } from '@genoffice/epub-engine'
 import { useI18n } from '../i18n/locale'
 import type { BookSearchHit } from '../reader/book-search'
@@ -85,6 +86,10 @@ export function SearchPane(p: {
   onSearch(query: string): void
   onPick(index: number): void
   onClose(): void
+  /** the text in the find field changed */
+  onQueryChange?(query: string): void
+  /** shown under the find field (the editing screen's replace row) */
+  children?: ReactNode
 }) {
   const { t } = useI18n()
   const [query, setQuery] = useState('')
@@ -122,7 +127,10 @@ export function SearchPane(p: {
           value={query}
           placeholder={t('findPlaceholder')}
           aria-label={t('findPlaceholder')}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={(e) => {
+            setQuery(e.target.value)
+            p.onQueryChange?.(e.target.value)
+          }}
           onKeyDown={(e) => {
             if (e.key === 'Escape') p.onClose()
           }}
@@ -131,6 +139,7 @@ export function SearchPane(p: {
           <IconSearch />
         </button>
       </form>
+      {p.children}
       <div className="epub-search-summary" aria-live="polite">
         {view.running
           ? t('findSearching', { done: view.done, total: view.total })

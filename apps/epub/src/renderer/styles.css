@@ -622,3 +622,121 @@ html.genoffice-popover-open .ribbon-tabs {
   font-size: 14px;
   line-height: 1.55;
 }
+
+/* ---- editing ---- */
+
+.ribbon-tabs .autosave-toggle {
+  -webkit-app-region: no-drag;
+}
+
+.autosave-toggle {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin: 0 4px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.autosave-toggle.disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.autosave-toggle input {
+  display: none;
+}
+
+.autosave-knob {
+  position: relative;
+  width: 26px;
+  height: 14px;
+  border-radius: 7px;
+  background: var(--border-strong);
+  transition: background 0.15s;
+}
+
+.autosave-knob::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  inset-inline-start: 2px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--surface);
+  transition: inset-inline-start 0.15s;
+}
+
+.autosave-toggle.on .autosave-knob {
+  background: var(--accent);
+}
+
+.autosave-toggle.on .autosave-knob::after {
+  inset-inline-start: 14px;
+}
+
+.autosave-text {
+  font-size: 11px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.epub-replace-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0 10px 8px;
+}
+
+.epub-replace-input {
+  flex: none;
+}
+
+.epub-replace-buttons {
+  display: flex;
+  gap: 4px;
+}
+
+.epub-replace-btn {
+  flex: 1;
+  height: 26px;
+  padding: 0 8px;
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 12.5px;
+  cursor: pointer;
+}
+
+.epub-replace-btn:hover:not(:disabled) {
+  background: var(--hover);
+}
+
+.epub-replace-btn:disabled {
+  color: var(--text-tertiary);
+  cursor: default;
+}
+
+.epub-status-locked {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--danger);
+}
+
+.epub-status-dirty {
+  flex: none;
+  color: var(--text-primary);
+}
+
+.epub-status-dirty::before {
+  content: '';
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-inline-end: 5px;
+  border-radius: 50%;
+  background: var(--accent);
+  vertical-align: middle;
+}

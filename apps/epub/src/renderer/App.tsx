@@ -1,15 +1,19 @@
 /**
- * The EPUB editor: reading (spec §3 refusals and notices, §4 reading).
+ * The EPUB editor: reading (spec §3 refusals and notices, §4 reading) and
+ * editing (§5 editing, §6 saving).
  *
  * The book stays in the main process. This screen opens it, reads one
  * chapter at a time over IPC and draws it in a sandboxed frame
  * (`ChapterFrame`) as a cleaned copy whose blocks carry their engine ids
  * (`reader/chapter-html.ts`). Around it: the ribbon, the table of contents or
- * the in-book search on the left, and the status line.
+ * the in-book search on the left, and the status line. Editing inside the
+ * frame, the history and find and replace are the edit controller's
+ * (`edit/controller.ts`); this component wires keys, menus and buttons to it.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { EpubTocEntry } from '@genoffice/epub-engine'
 import type { Params } from '@genoffice/i18n'
+import { useAutoSavePref } from '@genoffice/ui'
 import { epubAssetUrl } from '../shared/asset-url'
 import { EPUB_VIEW_PREFS_DEFAULT } from '../shared/ipc'
 import type {
@@ -23,11 +27,20 @@ import type {
 } from '../shared/ipc'
 import { openableLink } from '../shared/links'
 import { ChapterFrame, type FrameWheel } from './components/ChapterFrame'
+import { EditHomeTools, EditQuickTools, ReplaceRow } from './components/EditTools'
 import { Ribbon } from './components/Ribbon'
 import { IconBlockedBook, IconNext, IconPrev } from './components/icons'
 import { SearchPane, TocPane, type SearchView } from './components/SidePanes'
 import { useI18n, type StringKey } from './i18n/locale'
-import { buildTextIndex, rangeOf, searchBook } from './reader/book-search'
+import { EpubEditController, type EditState, type ReplaceAllOutcome } from './edit/controller'
+import { belongsToField, shortcutOf, type EditCommand } from './edit/shortcuts'
+import {
+  buildTextIndex,
+  normalizeQuery,
+  rangeOf,
+  searchBook,
+  type BookSearchHit,
+} from './reader/book-search'
 import { buildChapterHtml } from './reader/chapter-html'
 import {
   applyViewCss,
@@ -74,12 +87,16 @@ interface ShownChapter {
 interface Notice {
   key: StringKey
   params?: Params
+  /** further sentences shown after it */
+  more?: Notice[]
 }
 
 /** How long the reader rests before the reading position is remembered. */
 const POSITION_DELAY_MS = 700
 /** How long a passing notice stays in the status line. */
 const NOTICE_MS = 6000
+/** Auto save: every 30 seconds and when the window loses focus (the other editors' rhythm). */
+const AUTO_SAVE_INTERVAL_MS = 30_000
 
 const REFUSAL_TEXT: Record<Extract<Phase, { kind: 'refused' }>['reason'], StringKey> = {
   damaged: 'refusedDamaged',
@@ -93,6 +110,24 @@ const READ_ONLY_TEXT: Record<EpubReadOnlyReason, StringKey> = {
   'fixed-layout-book': 'readOnlyFixedBook',
   'fixed-layout-chapter': 'readOnlyFixedChapter',
   'broken-chapter': 'readOnlyBroken',
+}
+
+/** The status line sentence of a replace all. */
+function replaceAllNotice(outcome: ReplaceAllOutcome): Notice {
+  const parts: Notice[] = []
+  if (outcome.replaced > 0)
+    parts.push({ key: 'editReplaceDone', params: { count: outcome.replaced } })
+  if (outcome.skipped > 0)
+    parts.push({ key: 'editReplaceSkipped', params: { count: outcome.skipped } })
+  if (outcome.failed > 0)
+    parts.push({ key: 'editReplaceFailed', params: { count: outcome.failed } })
+  const [first, ...more] = parts
+  return first ? { ...first, more } : { key: 'editReplaceNone' }
+}
+
+/** The focus left the app (moving into the chapter frame blurs the page's window but stays in it). */
+function focusLeftApp(): boolean {
+  return !document.hasFocus()
 }
 
 const SEARCH_IDLE: SearchView = {
@@ -145,6 +180,10 @@ export default function App(): React.JSX.Element {
   const [search, setSearch] = useState<SearchView>(SEARCH_IDLE)
   const [activeHit, setActiveHit] = useState(-1)
   const [searchFocus, setSearchFocus] = useState(0)
+  const [replaceOpen, setReplaceOpen] = useState(false)
+  const [replacement, setReplacement] = useState('')
+  const [replacing, setReplacing] = useState(false)
+  const [autoSave, setAutoSave] = useAutoSavePref('epubapp.autoSave', api)
 
   const phaseRef = useRef(phase)
   phaseRef.current = phase
@@ -160,6 +199,48 @@ export default function App(): React.JSX.Element {
   const overscrollRef = useRef(OVERSCROLL_IDLE)
   const searchTokenRef = useRef(0)
   const searchTextCache = useRef(new Map<number, { path: string; version: number; text: string }>())
+  const hitsRef = useRef<BookSearchHit[]>([])
+  hitsRef.current = search.hits
+  const activeHitRef = useRef(activeHit)
+  activeHitRef.current = activeHit
+  /** the find field's text as it is now; the last query searched */
+  const queryRef = useRef('')
+  const searchedRef = useRef('')
+  const savingRef = useRef(false)
+  const frameBlurRef = useRef<(() => void) | null>(null)
+  const goToRef = useRef<(spineIndex: number, target: ChapterTarget) => Promise<void>>(
+    async () => {},
+  )
+  const flashRef = useRef<(next: Notice | null) => void>(() => {})
+  const editRef = useRef<EpubEditController | null>(null)
+  if (!editRef.current) {
+    editRef.current = new EpubEditController({
+      api,
+      chapterHtml: (chapter) => {
+        const open = phaseRef.current
+        return buildChapterHtml({
+          source: chapter.source,
+          broken: false,
+          blocks: chapter.blocks,
+          baseUrl: open.kind === 'open' ? epubAssetUrl(open.assetBase, chapter.path) : '',
+          viewCss: viewPrefsCss(prefsRef.current, frameColors()),
+        })
+      },
+      readingText: (chapter) => {
+        const open = phaseRef.current
+        return open.kind === 'open' ? chapterReadingText(chapter, open.assetBase) : ''
+      },
+      showChapter: (spineIndex, blockId) =>
+        void goToRef.current(
+          spineIndex,
+          blockId ? { kind: 'block', id: blockId } : { kind: 'start' },
+        ),
+      notify: (notice) => flashRef.current(notice),
+      changed: () => setEditState(editRef.current!.state()),
+    })
+  }
+  const editor = editRef.current
+  const [editState, setEditState] = useState<EditState>(() => editor.state())
 
   const book = phase.kind === 'open' ? phase.book : null
 
@@ -173,6 +254,7 @@ export default function App(): React.JSX.Element {
         }, NOTICE_MS)
       : null
   }, [])
+  flashRef.current = flash
 
   // ---- reading position ----
 
@@ -259,6 +341,8 @@ export default function App(): React.JSX.Element {
     [api, applyTarget, schedulePosition],
   )
 
+  goToRef.current = goTo
+
   const turn = useCallback(
     (dir: 1 | -1) => {
       const open = phaseRef.current
@@ -300,6 +384,7 @@ export default function App(): React.JSX.Element {
       }
       phaseRef.current = next
       setPhase(next)
+      editor.setBookReadOnly(opened.readOnly !== null)
       const spine = opened.book.spine
       const remembered = state?.position
       if (remembered && remembered.spineIndex < spine.length) {
@@ -314,7 +399,7 @@ export default function App(): React.JSX.Element {
     return () => {
       alive = false
     }
-  }, [api, goTo])
+  }, [api, goTo, editor])
 
   // ---- view settings ----
 
@@ -345,9 +430,12 @@ export default function App(): React.JSX.Element {
   }, [])
 
   const runSearch = useCallback(
-    async (query: string) => {
+    async (query: string): Promise<BookSearchHit[] | null> => {
       const open = phaseRef.current
-      if (open.kind !== 'open') return
+      if (open.kind !== 'open') return null
+      // what is typed in the chapter counts
+      await editor.flush()
+      searchedRef.current = query
       const token = ++searchTokenRef.current
       const total = open.book.spine.length
       setActiveHit(-1)
@@ -373,7 +461,7 @@ export default function App(): React.JSX.Element {
           return text
         },
       })
-      if (token !== searchTokenRef.current || result.cancelled) return
+      if (token !== searchTokenRef.current || result.cancelled) return null
       setSearch({
         running: false,
         done: total,
@@ -383,44 +471,115 @@ export default function App(): React.JSX.Element {
         unreadable: result.unreadable.length,
         finished: query.trim() !== '',
       })
+      return result.hits
     },
-    [api],
+    [api, editor],
   )
 
-  const pickHit = useCallback(
-    (index: number) => {
-      const hit = search.hits[index]
+  const focusHit = useCallback(
+    (hits: readonly BookSearchHit[], index: number) => {
+      const hit = hits[index]
       if (!hit) return
       setActiveHit(index)
+      activeHitRef.current = index
       void goTo(hit.spineIndex, { kind: 'hit', start: hit.start, length: hit.length })
     },
-    [search.hits, goTo],
+    [goTo],
   )
+
+  const pickHit = useCallback((index: number) => focusHit(hitsRef.current, index), [focusHit])
+
+  // the find field starts empty whenever the pane opens again
+  useEffect(() => {
+    if (side !== 'search') queryRef.current = ''
+  }, [side])
+
+  // ---- replace (spec §5): one match on screen, or every match in the book ----
+
+  const openReplace = useCallback(() => {
+    if (phaseRef.current.kind !== 'open') return
+    setReplaceOpen(true)
+    setSide('search')
+    setSearchFocus((n) => n + 1)
+  }, [])
+
+  const replaceOne = useCallback(async () => {
+    const hits = hitsRef.current
+    if (hits.length === 0) return
+    const index = activeHitRef.current
+    const hit = hits[index]
+    const current = shownRef.current
+    const doc = frameDocRef.current
+    // the first press shows the match; the next one replaces it
+    if (!hit || !current || current.spineIndex !== hit.spineIndex || !doc) {
+      focusHit(hits, Math.max(0, index))
+      return
+    }
+    const range = rangeOf(doc, buildTextIndex(doc.body), hit.start, hit.length)
+    setReplacing(true)
+    try {
+      const done = range ? await editor.replaceRange(range, replacement) : false
+      if (!done) {
+        flash({ key: 'editReplaceNotHere' })
+        focusHit(hits, index + 1)
+        return
+      }
+      const next = await runSearch(searchedRef.current)
+      if (next && next.length > 0) focusHit(next, Math.min(index, next.length - 1))
+    } finally {
+      setReplacing(false)
+    }
+  }, [editor, flash, replacement, runSearch, focusHit])
+
+  const replaceAll = useCallback(async () => {
+    const open = phaseRef.current
+    const query = queryRef.current
+    if (open.kind !== 'open' || !normalizeQuery(query)) return
+    setReplacing(true)
+    try {
+      const outcome = await editor.replaceAll(query, replacement, open.book.spine.length)
+      if (!outcome) return
+      flash(replaceAllNotice(outcome))
+      await runSearch(query)
+    } finally {
+      setReplacing(false)
+    }
+  }, [editor, flash, replacement, runSearch])
 
   // ---- saving (the editing screen sends its pending edits before these) ----
 
   const save = useCallback(
-    async (mode: SaveMode): Promise<boolean> => {
+    async (mode: SaveMode, auto = false): Promise<boolean> => {
       if (phaseRef.current.kind !== 'open') return false
-      flash({ key: 'saving' })
+      savingRef.current = true
+      if (!auto) flash({ key: 'saving' })
       try {
-        const result = await api.save({ mode })
+        // what was typed goes into the book before it is written
+        await editor.flush()
+        const mark = editor.saveMark()
+        const result = await api.save(auto ? { mode, auto } : { mode })
         if (!result.ok) {
-          flash({ key: result.error === 'external-modified' ? 'saveConflict' : 'saveFailed' })
+          // an automatic save that defers to another pane of the same book says nothing
+          if (!(auto && result.error === 'external-modified')) {
+            flash({ key: result.error === 'external-modified' ? 'saveConflict' : 'saveFailed' })
+          }
           return false
         }
         if ('canceled' in result) {
           flash(null)
           return false
         }
-        flash({ key: result.written ? 'saved' : 'savedUnchanged' })
+        editor.saved(mark)
+        if (!auto) flash({ key: result.written ? 'saved' : 'savedUnchanged' })
         return true
       } catch {
         flash({ key: 'saveFailed' })
         return false
+      } finally {
+        savingRef.current = false
       }
     },
-    [api, flash],
+    [api, editor, flash],
   )
 
   useEffect(
@@ -430,10 +589,43 @@ export default function App(): React.JSX.Element {
           api.sendSaveRequestAck(false)
           return
         }
-        void save(mode)
+        void save(mode).then((saved) => {
+          // a save that ended before reaching the main process still has someone waiting
+          if (!saved) api.sendSaveRequestAck(false)
+        })
       }),
     [api, save],
   )
+
+  // auto save: every 30 seconds and when the app loses focus, with the shell-wide setting
+  const bookWritable = phase.kind === 'open' && phase.readOnly === null
+  useEffect(() => {
+    if (!autoSave || !bookWritable) {
+      frameBlurRef.current = null
+      return
+    }
+    const tick = (): void => {
+      // an input method is composing: this save waits for the next occasion
+      if (savingRef.current || editor.composing) return
+      void editor.flush().then(() => {
+        if (editor.dirty && !savingRef.current) void save('save', true)
+      })
+    }
+    // leaving the page for the chapter frame is not leaving the app
+    const onBlur = (): void => {
+      window.setTimeout(() => {
+        if (focusLeftApp()) tick()
+      }, 0)
+    }
+    const id = window.setInterval(tick, AUTO_SAVE_INTERVAL_MS)
+    window.addEventListener('blur', onBlur)
+    frameBlurRef.current = onBlur
+    return () => {
+      window.clearInterval(id)
+      window.removeEventListener('blur', onBlur)
+      frameBlurRef.current = null
+    }
+  }, [autoSave, bookWritable, editor, save])
 
   useEffect(
     () =>
@@ -445,11 +637,49 @@ export default function App(): React.JSX.Element {
 
   // ---- commands from the menu, keys, the shell ----
 
+  /** Keys, menus and buttons: one way in. */
+  const runCommand = useCallback(
+    (command: EditCommand) => {
+      switch (command) {
+        case 'undo':
+          void editor.undo()
+          break
+        case 'redo':
+          void editor.redo()
+          break
+        case 'find':
+          openSearch()
+          break
+        case 'replace':
+          openReplace()
+          break
+        case 'save':
+          void save('save')
+          break
+        case 'saveAs':
+          void save('saveAs')
+          break
+        case 'bold':
+          void editor.toggleMark('bold')
+          break
+        case 'italic':
+          void editor.toggleMark('italic')
+          break
+      }
+    },
+    [editor, openReplace, openSearch, save],
+  )
+  const commandRef = useRef(runCommand)
+  commandRef.current = runCommand
+
   const onMenuCommand = useCallback(
     (command: EpubMenuCommand) => {
       switch (command) {
+        case 'undo':
+        case 'redo':
         case 'find':
-          openSearch()
+        case 'replace':
+          runCommand(command)
           break
         case 'zoom-in':
           updatePrefs({ fontScale: stepFontScale(prefsRef.current.fontScale, 1) })
@@ -460,12 +690,12 @@ export default function App(): React.JSX.Element {
         case 'zoom-reset':
           updatePrefs({ fontScale: 1 })
           break
-        // undo, redo, replace and translate-book belong to the editing and translating screens
+        // translate-book belongs to the translating screen
         default:
           break
       }
     },
-    [openSearch, updatePrefs],
+    [runCommand, updatePrefs],
   )
   const menuCommandRef = useRef(onMenuCommand)
   menuCommandRef.current = onMenuCommand
@@ -475,14 +705,14 @@ export default function App(): React.JSX.Element {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && !e.altKey && e.key.toLowerCase() === 'f') {
-        e.preventDefault()
-        openSearch()
-      }
+      const command = shortcutOf(e)
+      if (!command || belongsToField(command, e.target)) return
+      e.preventDefault()
+      commandRef.current(command)
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [openSearch])
+  }, [])
 
   useEffect(
     () => () => {
@@ -491,8 +721,9 @@ export default function App(): React.JSX.Element {
         rememberPosition()
       }
       if (noticeTimerRef.current !== null) window.clearTimeout(noticeTimerRef.current)
+      editor.detach()
     },
-    [rememberPosition],
+    [rememberPosition, editor],
   )
 
   // ---- the frame ----
@@ -501,10 +732,14 @@ export default function App(): React.JSX.Element {
     (doc: Document) => {
       frameDocRef.current = doc
       applyViewCss(doc, viewPrefsCss(prefsRef.current, frameColors()))
+      const current = shownRef.current
+      if (current) editor.attach(doc, current.chapter)
+      // the app losing focus while the chapter holds it (auto save)
+      doc.defaultView?.addEventListener('blur', () => frameBlurRef.current?.())
       applyTarget(doc, pendingTargetRef.current)
       schedulePosition()
     },
-    [applyTarget, schedulePosition],
+    [applyTarget, schedulePosition, editor],
   )
 
   const onFrameLink = useCallback(
@@ -550,14 +785,18 @@ export default function App(): React.JSX.Element {
 
   const onFrameKey = useCallback(
     (e: KeyboardEvent, edges: { atStart: boolean; atEnd: boolean }) => {
-      if ((e.ctrlKey || e.metaKey) && !e.altKey && e.key.toLowerCase() === 'f') {
+      const command = shortcutOf(e)
+      if (command) {
         e.preventDefault()
-        openSearch()
+        commandRef.current(command)
         return
       }
       if (e.ctrlKey || e.metaKey || e.altKey) return
-      const forward = e.key === 'PageDown' || (e.key === ' ' && !e.shiftKey)
-      const backward = e.key === 'PageUp' || (e.key === ' ' && e.shiftKey)
+      // a space typed into a block is text, not a page turn
+      const typing = (e.target as Element | null)?.closest?.('[contenteditable="true"]')
+      const space = e.key === ' ' && !typing
+      const forward = e.key === 'PageDown' || (space && !e.shiftKey)
+      const backward = e.key === 'PageUp' || (space && e.shiftKey)
       if (forward && edges.atEnd) {
         e.preventDefault()
         turn(1)
@@ -566,7 +805,7 @@ export default function App(): React.JSX.Element {
         turn(-1)
       }
     },
-    [openSearch, turn],
+    [turn],
   )
 
   const onFramePress = useCallback(() => setCloseMenus((n) => n + 1), [])
@@ -626,6 +865,10 @@ export default function App(): React.JSX.Element {
 
   const spine = phase.book.spine
   const readOnly: EpubReadOnlyReason | null = phase.readOnly ?? shown?.chapter.readOnly ?? null
+  const canReplace = phase.readOnly === null && !editState.locked
+  const noticeText = notice
+    ? [notice, ...(notice.more ?? [])].map((n) => t(n.key, n.params)).join(' · ')
+    : ''
   const prevIndex = shown ? nextReadingIndex(spine, shown.spineIndex, -1) : null
   const nextIndex = shown ? nextReadingIndex(spine, shown.spineIndex, 1) : null
 
@@ -637,6 +880,29 @@ export default function App(): React.JSX.Element {
         searchOpen={side === 'search'}
         tocOpen={side === 'toc'}
         closeMenusSignal={closeMenus}
+        quickTools={
+          <EditQuickTools
+            canUndo={editState.canUndo && !editState.locked}
+            canRedo={editState.canRedo && !editState.locked}
+            autoSave={autoSave}
+            enabled={phase.readOnly === null}
+            onUndo={() => runCommand('undo')}
+            onRedo={() => runCommand('redo')}
+            onToggleAutoSave={setAutoSave}
+          />
+        }
+        homeEditTools={
+          <EditHomeTools
+            editable={editState.editable}
+            canReplace={canReplace}
+            replaceOpen={side === 'search' && replaceOpen}
+            onBold={() => runCommand('bold')}
+            onItalic={() => runCommand('italic')}
+            onReplace={() =>
+              side === 'search' && replaceOpen ? setReplaceOpen(false) : openReplace()
+            }
+          />
+        }
         onSave={() => void save('save')}
         onSaveAs={() => void save('saveAs')}
         onFind={() => (side === 'search' ? setSide(null) : openSearch())}
@@ -663,11 +929,27 @@ export default function App(): React.JSX.Element {
             chapterName={(i) => chapterNames.get(i) ?? t('chapterLabel', { n: i + 1 })}
             onSearch={(query) => void runSearch(query)}
             onPick={pickHit}
+            onQueryChange={(query) => {
+              queryRef.current = query
+            }}
             onClose={() => {
               searchTokenRef.current++
               setSide(null)
+              setReplaceOpen(false)
             }}
-          />
+          >
+            {replaceOpen && (
+              <ReplaceRow
+                value={replacement}
+                disabled={!canReplace}
+                hasHits={search.hits.length > 0}
+                busy={replacing}
+                onChange={setReplacement}
+                onReplace={() => void replaceOne()}
+                onReplaceAll={() => void replaceAll()}
+              />
+            )}
+          </SearchPane>
         )}
         <section className="epub-reader">
           {readOnly && shown && (
@@ -727,8 +1009,14 @@ export default function App(): React.JSX.Element {
             {t(READ_ONLY_TEXT[readOnly])}
           </span>
         )}
+        {editState.locked && <span className="epub-status-locked">{t('editLocked')}</span>}
         <span className="epub-status-spacer" />
-        {notice && <span className="epub-status-notice">{t(notice.key, notice.params)}</span>}
+        {notice && <span className="epub-status-notice">{noticeText}</span>}
+        {editState.dirty && (
+          <span className="epub-status-dirty" data-dirty="true">
+            {t('editUnsaved')}
+          </span>
+        )}
       </footer>
     </div>
   )
