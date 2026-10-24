@@ -53,3 +53,4 @@ export {
 } from './notation'
 export * from './edits'
 export * from './text'
+export * from './translate'
