@@ -59,6 +59,10 @@ export const ja = {
   btRestartYes: '削除して翻訳し直す',
   btRestartSaveYes: '保存し、削除して翻訳し直す',
   btRouteChanged: 'AI の接続が変わりました。内容を確認してからもう一度開始してください。',
+  btBookChanged:
+    'このウィンドウを開いた後に本が保存され、翻訳する内容が変わりました。新しい内容を確認してからもう一度開始してください。',
+  btNoticeSends:
+    '書籍の翻訳では、選んだ章のテキスト（書式のプレースホルダーを含む段落）、書名、目次の項目名が AI に送信されます。',
   btBusy: 'この本はすでに翻訳中です（{done}/{total}）。',
   btRunning: '{language}に翻訳中：ブロック {done}/{total}',
   btRunningChapter: '現在：{chapter}',

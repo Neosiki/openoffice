@@ -56,6 +56,8 @@ export const zh = {
   btRestartYes: '删除并重新翻译',
   btRestartSaveYes: '保存、删除并重新翻译',
   btRouteChanged: 'AI 连接已更改。请检查详情后重新开始。',
+  btBookChanged: '打开此窗口后书已被保存，要翻译的内容发生了变化。请检查新的详情后重新开始。',
+  btNoticeSends: '书籍翻译会把所选章节的文字（带格式占位符的段落）、书名和目录条目发送给 AI。',
   btBusy: '本书已在翻译中（{done}/{total}）。',
   btRunning: '正在翻译为{language}：{done}/{total} 个文本块',
   btRunningChapter: '当前：{chapter}',

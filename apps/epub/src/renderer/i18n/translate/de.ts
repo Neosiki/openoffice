@@ -64,6 +64,10 @@ export const de = {
   btRestartSaveYes: 'Speichern, löschen und neu übersetzen',
   btRouteChanged:
     'Die KI-Verbindung hat sich geändert. Prüfen Sie die Angaben und starten Sie erneut.',
+  btBookChanged:
+    'Das Buch wurde gespeichert, nachdem dieses Fenster geöffnet wurde, und der zu übersetzende Inhalt hat sich geändert. Prüfen Sie die neuen Angaben und starten Sie erneut.',
+  btNoticeSends:
+    'Die Buchübersetzung sendet der KI den Text der gewählten Kapitel (Absätze mit Platzhaltern für die Formatierung), den Buchtitel und die Einträge des Inhaltsverzeichnisses.',
   btBusy: 'Dieses Buch wird bereits übersetzt ({done}/{total}).',
   btRunning: 'Übersetzung ({language}): {done}/{total} Blöcke',
   btRunningChapter: 'Gerade: {chapter}',

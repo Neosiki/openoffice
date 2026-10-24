@@ -134,9 +134,10 @@ export const PAID_SETTINGS = {
 export interface FakeBackend {
   api: BookTranslationApi
   summary: EpubBookSummary
-  book: EpubBook
-  bytes: Uint8Array
-  docHash: string
+  /** the saved book (changes with `resave`) */
+  readonly book: EpubBook
+  readonly bytes: Uint8Array
+  readonly docHash: string
   store: ResultStore
   /** every model call's blocks, in order */
   calls: Array<Array<{ id: string; text: string }>>
@@ -154,6 +155,8 @@ export interface FakeBackend {
   dir: string
   settings: { current: AiSettings }
   answer: { current: FakeAnswer }
+  /** a save wrote other bytes (an automatic save, Ctrl+S): the saved book and its hash change */
+  resave(bytes: Uint8Array): Promise<void>
   dispose(): void
 }
 
@@ -161,10 +164,12 @@ export async function createFakeBackend(
   bytes: Uint8Array,
   o: { answer?: FakeAnswer; settings?: AiSettings } = {},
 ): Promise<FakeBackend> {
-  const opened = await openEpub(bytes)
-  if (!opened.ok) throw new Error(`test book did not open: ${opened.detail}`)
-  const book = opened.book
-  const docHash = await epubDocumentHash(bytes)
+  const load = async (next: Uint8Array) => {
+    const opened = await openEpub(next)
+    if (!opened.ok) throw new Error(`test book did not open: ${opened.detail}`)
+    return { book: opened.book, bytes: next, docHash: await epubDocumentHash(next) }
+  }
+  const saved = await load(bytes)
   const dir = mkdtempSync(join(tmpdir(), 'genoffice-epub-translate-'))
   const store = new ResultStore(join(dir, 'user-data'))
   const handlers = createEpubStoreHandlers({ store: () => store, knows: () => true })
@@ -202,9 +207,9 @@ export async function createFakeBackend(
 
   const writeTranslated = vi.fn(async (request: EpubWriteTranslatedRequest) => {
     events.push('write')
-    if (request.docHash !== docHash) return { ok: false as const, error: 'stale' as const }
+    if (request.docHash !== saved.docHash) return { ok: false as const, error: 'stale' as const }
     const stored = await store.readTranslation(request.docHash, request.lang)
-    const built = await buildTranslatedEpub(bytes, {
+    const built = await buildTranslatedEpub(saved.bytes, {
       kind: request.kind,
       lang: request.lang,
       ...(request.chapters ? { chapters: request.chapters } : {}),
@@ -227,8 +232,9 @@ export async function createFakeBackend(
   const openSourcePath = vi.fn(async () => {})
 
   const api = {
-    documentHash: async () => ({ ok: true as const, docHash }),
+    documentHash: async () => ({ ok: true as const, docHash: saved.docHash }),
     translationUnits: async (request: { chapters?: number[] }) => {
+      const { book, docHash } = saved
       const { units, skipped } = await epubTranslationUnits(
         book,
         request.chapters ? { chapters: request.chapters } : {},
@@ -258,10 +264,16 @@ export async function createFakeBackend(
 
   return {
     api,
-    summary: bookSummary(book),
-    book,
-    bytes,
-    docHash,
+    summary: bookSummary(saved.book),
+    get book() {
+      return saved.book
+    },
+    get bytes() {
+      return saved.bytes
+    },
+    get docHash() {
+      return saved.docHash
+    },
     store,
     calls,
     events,
@@ -275,6 +287,9 @@ export async function createFakeBackend(
     dir,
     settings,
     answer,
+    resave: async (next) => {
+      Object.assign(saved, await load(next))
+    },
     dispose: () => rmSync(dir, { recursive: true, force: true }),
   }
 }

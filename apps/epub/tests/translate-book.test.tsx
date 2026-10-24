@@ -6,14 +6,18 @@
  *
  * Covered: the window's defaults and checks, the confirmation (calls, AI,
  * charge wording, same-language warning, "Save and translate" and a failed
- * save), the run (lock on and off around it, progress, result books, report
- * with "Open"), Stop with the partial export or "later", the resume offer,
- * translating again from the start, one job per book, and what the AI
- * panel's tool hears.
+ * save, what book translation sends before a subscription's first use), the
+ * run (lock on and off around it, progress, result books, report with
+ * "Open"), a save while the window is open (the start uses the saved book,
+ * or shows the confirmation again when the calls changed), the tab unlocked
+ * when a job cannot be launched, Stop with the partial export or "later",
+ * the resume offer, translating again from the start, one job per book, and
+ * what the AI panel's tool hears.
  */
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { act, createRef, type RefObject } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
+import type { AiSettings } from '@genoffice/ai-provider'
 import type { Lang } from '@genoffice/i18n'
 import type { EpubApi } from '../src/shared/ipc'
 import { LocaleProvider, useI18n } from '../src/renderer/i18n/locale'
@@ -31,6 +35,20 @@ import {
   type FakeBackend,
 } from './helpers/translate-backend'
 
+/** a launch failure of the job engine, for the unlock test; null = the real engine */
+const engineFault = vi.hoisted(() => ({ launch: null as Error | null }))
+
+vi.mock('../src/renderer/translate/engine', async (importOriginal) => {
+  const real = await importOriginal<typeof import('../src/renderer/translate/engine')>()
+  return {
+    ...real,
+    startEpubTranslationJob: (...args: Parameters<typeof real.startEpubTranslationJob>) => {
+      if (engineFault.launch) throw engineFault.launch
+      return real.startEpubTranslationJob(...args)
+    },
+  }
+})
+
 let root: Root | null = null
 let container: HTMLElement | null = null
 const backends: FakeBackend[] = []
@@ -42,6 +60,7 @@ afterEach(async () => {
   container = null
   for (const b of backends.splice(0)) b.dispose()
   window.localStorage.clear()
+  engineFault.launch = null
 })
 
 const SMALL_BOOK: ChapterSource[] = [
@@ -72,6 +91,7 @@ interface Mounted {
   ref: RefObject<BookTranslationHandle | null>
   lock: ReturnType<typeof vi.fn>
   save: ReturnType<typeof vi.fn>
+  windowOpen: ReturnType<typeof vi.fn>
   order: string[]
 }
 
@@ -100,6 +120,7 @@ async function mount(
     dirty = false
     return true
   })
+  const windowOpen = vi.fn()
   const ref = createRef<BookTranslationHandle>()
   const summary = b ? { ...b.summary, fixedLayout: o.fixedLayout ?? false } : null
   function Harness() {
@@ -115,6 +136,7 @@ async function mount(
         isDirty={() => dirty}
         save={save}
         lock={lock}
+        onWindowOpen={windowOpen}
       />
     )
   }
@@ -129,7 +151,7 @@ async function mount(
     )
   })
   await settle()
-  return { el: container, ref, lock, save, order }
+  return { el: container, ref, lock, save, windowOpen, order }
 }
 
 async function settle(times = 4): Promise<void> {
@@ -201,6 +223,16 @@ describe('the book translation window', () => {
     expect(m.lock).not.toHaveBeenCalled()
   })
 
+  it('tells the page while it is open, so automatic saves wait', async () => {
+    const b = await backend()
+    const m = await mount(b)
+    expect(m.windowOpen).not.toHaveBeenCalled()
+    await openWindow(m)
+    expect(m.windowOpen.mock.calls).toEqual([[true]])
+    await click(q(m.el, '[data-action="cancel"]'))
+    expect(m.windowOpen.mock.calls).toEqual([[true], [false]])
+  })
+
   it('defaults to English when the book is in the UI language', async () => {
     const b = await backend(SMALL_BOOK, { language: 'ko' })
     const m = await mount(b, { lang: 'ko' })
@@ -262,6 +294,22 @@ describe('the confirmation', () => {
     expect(q(m.el, '[data-same-language]')).not.toBeNull()
     expect(q(m.el, '[data-paid]')).toBeNull()
     expect(q(m.el, '[data-action="start"]')!.textContent).toBe('Start')
+    expect(b.aiStream).not.toHaveBeenCalled()
+  })
+
+  it('says what book translation sends before a subscription is used the first time', async () => {
+    const b = await backend(SMALL_BOOK, {
+      settings: { provider: 'claude-code' } as unknown as AiSettings,
+    })
+    const m = await mount(b, { lang: 'en' })
+    await openWindow(m, 'ko')
+    await toConfirm(m)
+    await until(() => !!q(m.el, '[data-notice="book"]'), 'the notice')
+    expect(q(m.el, '[data-notice="book"]')!.textContent).toBe(
+      'Book translation sends the AI the text of the chosen chapters (paragraphs with placeholders for their formatting), the book title and the table of contents entries.',
+    )
+    // the PDF editor's sentence is not this editor's
+    expect(m.el.textContent).not.toContain('PDF editor')
     expect(b.aiStream).not.toHaveBeenCalled()
   })
 
@@ -409,10 +457,85 @@ describe('a run', () => {
     await openWindow(m, 'ko')
     await toConfirm(m)
     await click(q(m.el, '[data-action="start"]'))
-    await settle()
+    await until(() => !!q(m.el, '[data-error="start"]'), 'the refusal')
     expect(q(m.el, '[data-error="start"]')?.textContent).toContain('already being translated (2/9)')
     expect(b.aiStream).not.toHaveBeenCalled()
     expect(m.lock).not.toHaveBeenCalled()
+  })
+})
+
+/** SMALL_BOOK with the second paragraph changed: the same calls */
+const EDITED_BOOK: ChapterSource[] = [
+  SMALL_BOOK[0]!,
+  { title: 'Chapter Two', body: '<h1>Chapter Two</h1>\n<p>Second paragraph, edited.</p>' },
+]
+
+describe('a save while the window is open', () => {
+  it('starts on the saved book: its hash, its units and its result books', async () => {
+    const b = await backend()
+    const m = await mount(b)
+    await openWindow(m, 'ko')
+    await toConfirm(m)
+    const opened = b.docHash
+    // an automatic save or Ctrl+S wrote the book meanwhile
+    await b.resave(await buildTranslateBook(EDITED_BOOK))
+    expect(b.docHash).not.toBe(opened)
+    await startAndFinish(m)
+    expect(q(m.el, '[data-error="start"]')).toBeNull()
+    expect(m.save).not.toHaveBeenCalled()
+    const sent = b.calls.flat().map((block) => block.text)
+    expect(sent.join('\n')).toContain('Second paragraph, edited.')
+    expect(sent.join('\n')).not.toContain('Second paragraph.')
+    // stored and written under the saved book's hash: nothing comes out untranslated
+    expect(b.writeTranslated.mock.calls.map((c) => c[0].docHash)).toEqual([b.docHash])
+    expect(q(m.el, '[data-report="untranslated"]')).toBeNull()
+    expect(Number(q(m.el, '[data-translated]')!.dataset.translated)).toBeGreaterThan(0)
+    expect((await b.store.readTranslation(b.docHash, 'ko'))?.blocks.size).toBe(sent.length)
+    expect(await b.store.readTranslation(opened, 'ko')).toBeNull()
+    expect(m.lock.mock.calls.map((c) => c[0])).toEqual([true, false])
+  })
+
+  it('shows the confirmation again when the save changed the calls, and starts nothing', async () => {
+    const b = await backend()
+    const m = await mount(b)
+    await openWindow(m, 'ko')
+    await toConfirm(m)
+    const shown = Number(q(m.el, '[data-calls]')!.dataset.calls)
+    await b.resave(await buildTranslateBook(LONG_BOOK.slice(0, 2)))
+    await click(q(m.el, '[data-action="start"]'))
+    await until(() => !!q(m.el, '[data-error="start"]'), 'the message')
+    expect(q(m.el, '[data-error="start"]')!.textContent).toContain(
+      'The book was saved after this window opened',
+    )
+    expect(b.aiStream).not.toHaveBeenCalled()
+    expect(m.lock).not.toHaveBeenCalled()
+    // the new numbers, counted from the saved book
+    await until(() => Number(q(m.el, '[data-calls]')?.dataset.calls) > shown, 'the new estimate')
+    const counted = Number(q(m.el, '[data-calls]')!.dataset.calls)
+    await startAndFinish(m)
+    expect(b.calls.length).toBe(counted)
+    expect(b.writeTranslated.mock.calls.map((c) => c[0].docHash)).toEqual([b.docHash])
+    expect(q(m.el, '[data-report="untranslated"]')).toBeNull()
+  })
+})
+
+describe('a job that cannot be launched', () => {
+  it('unlocks the tab and says why', async () => {
+    const b = await backend()
+    const m = await mount(b)
+    await openWindow(m, 'ko')
+    await toConfirm(m)
+    engineFault.launch = new Error('the engine broke')
+    await click(q(m.el, '[data-action="start"]'))
+    await until(() => !!q(m.el, '[data-error="start"]'), 'the message')
+    expect(q(m.el, '[data-error="start"]')!.textContent).toContain('the engine broke')
+    expect(m.lock.mock.calls.map((c) => c[0])).toEqual([true, false])
+    expect(b.aiStream).not.toHaveBeenCalled()
+    // the window stays: the user can try again
+    expect(q(m.el, '[data-confirm]')).not.toBeNull()
+    engineFault.launch = null
+    await startAndFinish(m)
+    expect(m.lock.mock.calls.map((c) => c[0])).toEqual([true, false, true, false])
   })
 })
 

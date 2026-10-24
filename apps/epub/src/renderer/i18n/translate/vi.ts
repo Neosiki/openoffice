@@ -58,6 +58,10 @@ export const vi = {
   btRestartYes: 'Xóa và dịch lại',
   btRestartSaveYes: 'Lưu, xóa và dịch lại',
   btRouteChanged: 'Kết nối AI đã thay đổi. Hãy kiểm tra chi tiết rồi bắt đầu lại.',
+  btBookChanged:
+    'Sách đã được lưu sau khi cửa sổ này mở và nội dung sẽ dịch đã thay đổi. Hãy kiểm tra thông tin mới rồi bắt đầu lại.',
+  btNoticeSends:
+    'Khi dịch sách, văn bản của các chương đã chọn (các đoạn có ký hiệu giữ chỗ cho định dạng), tên sách và các mục của mục lục sẽ được gửi tới AI.',
   btBusy: 'Cuốn sách này đang được dịch ({done}/{total}).',
   btRunning: 'Đang dịch sang {language}: {done}/{total} khối',
   btRunningChapter: 'Hiện tại: {chapter}',

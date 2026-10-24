@@ -61,6 +61,10 @@ export const it = {
   btRestartYes: 'Elimina e traduci di nuovo',
   btRestartSaveYes: 'Salva, elimina e traduci di nuovo',
   btRouteChanged: 'La connessione all’IA è cambiata. Controlla i dettagli e avvia di nuovo.',
+  btBookChanged:
+    'Il libro è stato salvato dopo l’apertura di questa finestra e ciò che verrebbe tradotto è cambiato. Controlla i nuovi dettagli e ricomincia.',
+  btNoticeSends:
+    'La traduzione del libro invia all’IA il testo dei capitoli scelti (paragrafi con segnaposto per la formattazione), il titolo del libro e le voci dell’indice.',
   btBusy: 'Questo libro è già in traduzione ({done}/{total}).',
   btRunning: 'Traduzione in {language}: {done}/{total} blocchi',
   btRunningChapter: 'Ora: {chapter}',

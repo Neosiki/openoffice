@@ -61,6 +61,10 @@ export const id = {
   btRestartYes: 'Hapus dan terjemahkan ulang',
   btRestartSaveYes: 'Simpan, hapus, dan terjemahkan ulang',
   btRouteChanged: 'Koneksi AI berubah. Periksa detailnya lalu mulai lagi.',
+  btBookChanged:
+    'Buku disimpan setelah jendela ini dibuka, dan isi yang akan diterjemahkan berubah. Periksa rincian baru lalu mulai lagi.',
+  btNoticeSends:
+    'Terjemahan buku mengirim ke AI teks bab yang dipilih (paragraf dengan penanda untuk formatnya), judul buku, dan entri daftar isi.',
   btBusy: 'Buku ini sedang diterjemahkan ({done}/{total}).',
   btRunning: 'Menerjemahkan ke {language}: {done}/{total} blok',
   btRunningChapter: 'Sekarang: {chapter}',

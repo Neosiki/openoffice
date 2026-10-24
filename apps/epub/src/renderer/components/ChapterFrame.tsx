@@ -5,8 +5,9 @@
  * runs (its copy has no script left either, and its policy forbids one), and
  * the editor page, sharing the origin, reaches into the frame's document to
  * scroll, find blocks, mark search hits and, for editing, make blocks
- * editable. Every listener below is the page's own. A link never navigates
- * the frame: a press on it is stopped here and handed to `onLink`.
+ * editable. Every listener below is the page's own. A link (`<a>`, or an
+ * image map's `<area>`) never navigates the frame: a press on it is stopped
+ * here and handed to `onLink`.
  */
 import { useEffect, useRef } from 'react'
 import { VIEW_STYLE_ID } from '../reader/chapter-html'
@@ -43,7 +44,8 @@ export function linkHref(anchor: Element): string | null {
 export function wireChapterDocument(doc: Document, handlers: () => ChapterFrameProps): void {
   const onClick = (e: MouseEvent) => {
     const target = e.target as Element | null
-    const anchor = target?.closest?.('a')
+    // an image map's area links like an anchor
+    const anchor = target?.closest?.('a, area')
     if (!anchor) return
     e.preventDefault()
     if (e.type === 'click') handlers().onLink(linkHref(anchor))

@@ -57,6 +57,8 @@ export const zhTW = {
   btRestartYes: '刪除並重新翻譯',
   btRestartSaveYes: '儲存、刪除並重新翻譯',
   btRouteChanged: 'AI 連線已變更。請檢查詳情後重新開始。',
+  btBookChanged: '開啟此視窗後書已被儲存，要翻譯的內容有了變化。請檢查新的內容後重新開始。',
+  btNoticeSends: '書籍翻譯會把所選章節的文字（帶格式預留位置的段落）、書名和目錄項目傳送給 AI。',
   btBusy: '本書已在翻譯中（{done}/{total}）。',
   btRunning: '正在翻譯為{language}：{done}/{total} 個文字區塊',
   btRunningChapter: '目前：{chapter}',

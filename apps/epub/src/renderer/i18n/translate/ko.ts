@@ -57,6 +57,10 @@ export const ko = {
   btRestartYes: '지우고 다시 번역',
   btRestartSaveYes: '저장하고, 지운 뒤 다시 번역',
   btRouteChanged: 'AI 연결이 바뀌었습니다. 내용을 확인하고 다시 시작하세요.',
+  btBookChanged:
+    '창을 연 뒤 책이 저장되어 번역할 내용이 바뀌었습니다. 바뀐 내용을 확인하고 다시 시작하세요.',
+  btNoticeSends:
+    '책 번역 때는 고른 장의 글(서식 표시가 든 문단)과 책 제목, 목차 항목의 이름이 AI로 보내집니다.',
   btBusy: '이 책은 이미 번역 중입니다({done}/{total}).',
   btRunning: '{language} 번역 중: 블록 {done}/{total}',
   btRunningChapter: '지금: {chapter}',

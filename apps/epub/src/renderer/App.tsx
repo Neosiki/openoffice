@@ -217,6 +217,8 @@ export default function App(): React.JSX.Element {
   const queryRef = useRef('')
   const searchedRef = useRef('')
   const savingRef = useRef(false)
+  /** the book translation window is open: automatic saves wait */
+  const translationWindowRef = useRef(false)
   const frameBlurRef = useRef<(() => void) | null>(null)
   const goToRef = useRef<(spineIndex: number, target: ChapterTarget) => Promise<void>>(
     async () => {},
@@ -636,8 +638,9 @@ export default function App(): React.JSX.Element {
       return
     }
     const tick = (): void => {
-      // an input method is composing: this save waits for the next occasion
-      if (savingRef.current || editor.composing) return
+      // an input method is composing: this save waits for the next occasion. The book
+      // translation window counts the saved book: its start saves what is unsaved itself
+      if (savingRef.current || editor.composing || translationWindowRef.current) return
       void editor.flush().then(() => {
         if (editor.dirty && !savingRef.current) void save('save', true)
       })
@@ -685,6 +688,9 @@ export default function App(): React.JSX.Element {
   )
   const isDirtyForTranslation = useCallback(() => editor.dirty, [editor])
   const saveForTranslation = useCallback(() => save('save'), [save])
+  const translationWindowChanged = useCallback((open: boolean) => {
+    translationWindowRef.current = open
+  }, [])
 
   // ---- commands from the menu, keys, the shell ----
 
@@ -1026,6 +1032,7 @@ export default function App(): React.JSX.Element {
             isDirty={isDirtyForTranslation}
             save={saveForTranslation}
             lock={lockForTranslation}
+            onWindowOpen={translationWindowChanged}
           />
           {readOnly && shown && (
             <div className="epub-chapter-notice" role="note" data-reason={readOnly}>
