@@ -65,6 +65,7 @@ import type {
   EpubMenuCommand,
   EpubOpenFileResult,
   EpubOutcome,
+  EpubPickResultTarget,
   EpubResultPathCheck,
   EpubSaveResult,
   EpubTranslationUnitsResult,
@@ -474,6 +475,15 @@ function resultPathCheck(wcId: number, path: unknown): EpubResultPathCheck {
 }
 
 async function pickResultPath(contents: WebContents, request: unknown): Promise<string | null> {
+  const picked = await pickResultTarget(contents, request)
+  return picked?.ok ? picked.path : null
+}
+
+/** The result book's save dialog; a refused pick says why and is not granted. */
+async function pickResultTarget(
+  contents: WebContents,
+  request: unknown,
+): Promise<EpubPickResultTarget> {
   const wcId = contents.id
   const source = savePathByWc.get(wcId)
   if (!source || !sessionByWc.has(wcId)) return null
@@ -492,11 +502,12 @@ async function pickResultPath(contents: WebContents, request: unknown): Promise<
   })
   if (picked.canceled || !picked.filePath) return null
   const target = withBookExtension(picked.filePath)
-  if (!resultPathCheck(wcId, target).ok) return null
+  const check = resultPathCheck(wcId, target)
+  if (!check.ok) return { ok: false, path: target, reason: check.reason }
   const targets = resultTargetsByWc.get(wcId) ?? new Set<string>()
   targets.add(pathKey(target))
   resultTargetsByWc.set(wcId, targets)
-  return target
+  return { ok: true, path: target }
 }
 
 async function writeTranslated(
@@ -741,6 +752,10 @@ function registerEpubIpc(): void {
 
   ipcMain.handle(EPUB_CHANNELS.pickResultPath, (e, request: unknown) =>
     pickResultPath(e.sender, request),
+  )
+
+  ipcMain.handle(EPUB_CHANNELS.pickResultTarget, (e, request: unknown) =>
+    pickResultTarget(e.sender, request),
   )
 
   ipcMain.handle(EPUB_CHANNELS.checkResultPath, (e, path: unknown) =>

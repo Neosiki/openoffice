@@ -9,7 +9,9 @@
  * the in-book search on the left, and the status line. Editing inside the
  * frame, the history and find and replace are the edit controller's
  * (`edit/controller.ts`); this component wires keys, menus and buttons to it.
- * The AI panel docks at the right (`ai/AiDock.tsx`, spec §7).
+ * The AI panel docks at the right (`ai/AiDock.tsx`, spec §7). Book
+ * translation (spec §8, `translate/BookTranslation.tsx`) opens from the
+ * ribbon, the menu and the AI panel, and locks editing while it runs.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { EpubTocEntry } from '@genoffice/epub-engine'
@@ -29,6 +31,7 @@ import type {
 } from '../shared/ipc'
 import { openableLink } from '../shared/links'
 import { EpubAiDock, useEpubAi } from './ai/AiDock'
+import type { StartBookTranslation } from './ai/book-tools'
 import { ChapterFrame, type FrameWheel } from './components/ChapterFrame'
 import { EditHomeTools, EditQuickTools, ReplaceRow } from './components/EditTools'
 import { Ribbon } from './components/Ribbon'
@@ -65,6 +68,8 @@ import {
   overscroll,
 } from './reader/navigation'
 import { stepFontScale, viewPrefsCss, type FrameColors } from './reader/view-prefs'
+import { BookTranslation, type BookTranslationHandle } from './translate/BookTranslation'
+import { TranslateButton } from './translate/TranslateButton'
 
 type Phase =
   | { kind: 'loading' }
@@ -171,7 +176,7 @@ function chapterReadingText(chapter: OkChapter, assetBase: string): string {
 }
 
 export default function App(): React.JSX.Element {
-  const { t } = useI18n()
+  const { lang, t } = useI18n()
   const api = window.epubApi
   const [phase, setPhase] = useState<Phase>({ kind: 'loading' })
   const [prefs, setPrefs] = useState<EpubViewPrefs>(EPUB_VIEW_PREFS_DEFAULT)
@@ -248,16 +253,24 @@ export default function App(): React.JSX.Element {
   const [editState, setEditState] = useState<EditState>(() => editor.state())
 
   const book = phase.kind === 'open' ? phase.book : null
+  const translateRef = useRef<BookTranslationHandle>(null)
 
   const readChapterForAi = useCallback((spineIndex: number) => api.readChapter(spineIndex), [api])
+  // the AI panel's start_book_translation only opens the translation window
+  const startBookTranslation = useCallback<StartBookTranslation>(
+    (request) =>
+      translateRef.current?.requestOpen({ lang: request.lang, chapters: request.chapters }) ?? {
+        unavailable: true,
+      },
+    [],
+  )
   const ai = useEpubAi({
     book,
     readChapter: readChapterForAi,
     editor,
     shownChapter: shownRef,
     frameDoc: frameDocRef,
-    // the translating screen hands its opener in here (start_book_translation); until then the tool says it is not available
-    startBookTranslation: null,
+    startBookTranslation,
   })
 
   const flash = useCallback((next: Notice | null) => {
@@ -653,6 +666,26 @@ export default function App(): React.JSX.Element {
     [api, save],
   )
 
+  // ---- book translation (spec §8) ----
+
+  /** the ribbon's button and the menu: open the window, or say why not */
+  const openTranslation = useCallback(() => {
+    const answer = translateRef.current?.requestOpen({ lang: null, chapters: null })
+    if (!answer) return
+    if ('running' in answer) flash({ key: 'btBusy', params: answer.running })
+    else if ('unavailable' in answer) {
+      const open = phaseRef.current
+      if (open.kind === 'open' && open.book.fixedLayout) flash({ key: 'btFixedLayout' })
+    }
+  }, [flash])
+
+  const lockForTranslation = useCallback(
+    (locked: boolean) => editor.setTranslationLock(locked),
+    [editor],
+  )
+  const isDirtyForTranslation = useCallback(() => editor.dirty, [editor])
+  const saveForTranslation = useCallback(() => save('save'), [save])
+
   // ---- commands from the menu, keys, the shell ----
 
   /** Keys, menus and buttons: one way in. */
@@ -708,12 +741,14 @@ export default function App(): React.JSX.Element {
         case 'zoom-reset':
           updatePrefs({ fontScale: 1 })
           break
-        // translate-book belongs to the translating screen
+        case 'translate-book':
+          openTranslation()
+          break
         default:
           break
       }
     },
-    [runCommand, updatePrefs],
+    [runCommand, updatePrefs, openTranslation],
   )
   const menuCommandRef = useRef(onMenuCommand)
   menuCommandRef.current = onMenuCommand
@@ -924,6 +959,14 @@ export default function App(): React.JSX.Element {
             }
           />
         }
+        translateTools={
+          <TranslateButton
+            t={t}
+            hasBook
+            fixedLayout={phase.book.fixedLayout}
+            onClick={openTranslation}
+          />
+        }
         onSave={() => void save('save')}
         onSaveAs={() => void save('saveAs')}
         onFind={() => (side === 'search' ? setSide(null) : openSearch())}
@@ -973,6 +1016,17 @@ export default function App(): React.JSX.Element {
           </SearchPane>
         )}
         <section className="epub-reader">
+          <BookTranslation
+            ref={translateRef}
+            book={phase.book}
+            filePath={filePath}
+            lang={lang}
+            t={t}
+            api={api}
+            isDirty={isDirtyForTranslation}
+            save={saveForTranslation}
+            lock={lockForTranslation}
+          />
           {readOnly && shown && (
             <div className="epub-chapter-notice" role="note" data-reason={readOnly}>
               {t(READ_ONLY_TEXT[readOnly])}

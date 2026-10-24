@@ -3,7 +3,8 @@
  * View (text size, line spacing, dark view, table of contents).
  *
  * The editing tools of Home are not part of reading; the editing screen puts
- * them in through `homeEditTools`, in front of find.
+ * them in through `homeEditTools`, in front of find. Book translation puts its
+ * button in through `translateTools`, after find.
  */
 import { useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
@@ -31,6 +32,8 @@ export interface RibbonProps {
   tocOpen: boolean
   /** the editing tools of the Home tab (the editing screen's) */
   homeEditTools?: ReactNode
+  /** the book translation button of the Home tab, after find */
+  translateTools?: ReactNode
   /** quick access buttons after save (the editing screen's undo, redo, auto save) */
   quickTools?: ReactNode
   /** bumped when the file menu must close (a press elsewhere, the shell chrome) */
@@ -204,6 +207,12 @@ export function Ribbon(p: RibbonProps) {
                 </ToolButton>
               </div>
             </div>
+            {p.translateTools && (
+              <>
+                <span className="rb-sep" />
+                {p.translateTools}
+              </>
+            )}
           </>
         ) : (
           <>
