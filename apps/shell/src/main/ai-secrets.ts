@@ -12,7 +12,7 @@ import { writeJsonAtomic } from '@genoffice/electron-utils/atomic-write'
 
 /**
  * Keys and tokens in ai-settings.json under the operating system's protection
- * (decision 0054). The app seals them with Electron safeStorage on Windows
+ * (decision 0063). The app seals them with Electron safeStorage on Windows
  * (DPAPI under the user's account) and on Linux when a real keyring holds the
  * key (GNOME Keyring, KWallet). macOS keeps them plain: an ad hoc signed app
  * (decision 0031) would meet a Keychain prompt after every update. Any

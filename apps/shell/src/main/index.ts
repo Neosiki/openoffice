@@ -534,7 +534,7 @@ if (headlessArgv.kind !== 'none') {
 
 /**
  * `--reveal-ai-secrets`: the terminal command's way to open the keys this app
- * sealed (decision 0054, ai-secrets.ts). Sealed values on stdin, one JSON line
+ * sealed (decision 0063, ai-secrets.ts). Sealed values on stdin, one JSON line
  * on stdout, exit. No window, no lock, nothing else.
  */
 const revealSecretsRun = process.argv.includes(REVEAL_FLAG)
@@ -8454,7 +8454,7 @@ app.whenReady().then(async () => {
     listSkills: () => userSkills.list(),
     openTemplatePreview: (owner, input) => templateTabs.openPreview(owner, input),
     // the enabled skills (settings → skills), and the project's only while the person has
-    // turned them on as they are now (decision 0055), read again at the start
+    // turned them on as they are now (decision 0064), read again at the start
     buildSkills: async (projectRoot) => {
       const enabled = await userSkills.enabledForAgent(projectRoot)
       const withProject = await projectSkillsAllowed(APP_SETTINGS_PATH(), projectRoot, enabled)

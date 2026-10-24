@@ -48,7 +48,7 @@ function setup() {
   return { folder, skillDir, settings, skills }
 }
 
-describe('project skills (decision 0055)', () => {
+describe('project skills (decision 0064)', () => {
   it('are off until the person turns them on, and listed for the start screen', async () => {
     const { folder, settings, skills } = setup()
     expect(await projectSkillsAllowed(settings, folder, skills)).toBe(false)

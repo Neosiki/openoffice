@@ -903,7 +903,7 @@ function AiMediaPane({
   if (!settings?.media || !settings.search) return null
   const media: AiMediaSettings = settings.media
   const search: AiSearchSettings = settings.search
-  /** decision 0053: only an explicit false turns the editors' outbound tools off */
+  /** decision 0062: only an explicit false turns the editors' outbound tools off */
   const internetToolsOn = settings.internetTools !== false
 
   const touch = () => {

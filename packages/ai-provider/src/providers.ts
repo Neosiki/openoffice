@@ -581,7 +581,7 @@ function migrateRetiredModels(providers: AiSettings['providers']): AiSettings['p
  * settings file (already JSON-parsed); this function does no file I/O.
  */
 export function resolveAiSettings(stored: unknown, defaults: AiSettings): AiSettings {
-  // sealed keys open here, so every reader of the file gets them plain (decision 0054)
+  // sealed keys open here, so every reader of the file gets them plain (decision 0063)
   const settings = (isRecord(stored) ? openAiSecrets(stored) : {}) as Partial<AiSettings> &
     LegacyAiSettings
   const readUrl = readUrlSettingsOf(settings.readUrl ?? defaults.readUrl)

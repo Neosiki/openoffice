@@ -2,7 +2,7 @@ import { createI18n, defineStrings, type Lang, type Params } from '@genoffice/i1
 
 /**
  * The agent window's start screen: a project folder's own skills and the
- * person's choice for them (decision 0055). Kept apart from the window's other
+ * person's choice for them (decision 0064). Kept apart from the window's other
  * strings; `zh` defines the key set.
  */
 const zh = {

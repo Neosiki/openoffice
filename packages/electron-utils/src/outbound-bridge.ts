@@ -1,4 +1,4 @@
-/// The editors' preloads expose the same outbound calls (decision 0053). The
+/// The editors' preloads expose the same outbound calls (decision 0062). The
 /// AI skill in the renderer (`guardOutbound` in @genoffice/agent-core) uses
 /// them; answers cross contextBridge as plain booleans.
 import { ipcRenderer } from 'electron'

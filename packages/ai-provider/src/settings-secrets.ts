@@ -1,6 +1,6 @@
 /**
  * Keys and tokens in ai-settings.json, sealed by the operating system
- * (decision 0054).
+ * (decision 0063).
  *
  * A sealed value is a string `sealed:v1:<base64>` in the same field the plain
  * value would take, so the file keeps its shape and a hand-written plain key

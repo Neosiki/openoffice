@@ -3,7 +3,7 @@ import { createI18n, defineStrings, type Lang } from '@genoffice/i18n'
 import { OUTBOUND_CHANNELS, confirmRequestOf } from '@genoffice/electron-utils/outbound-channels'
 
 /**
- * The main-process side of the editors' outbound guard (decision 0053):
+ * The main-process side of the editors' outbound guard (decision 0062):
  * whether "Let AI use internet tools" is on, and the question put to the
  * person before the AI fetches an address that has not appeared in the
  * conversation. Only the person's click allows; a closed dialog, a bad

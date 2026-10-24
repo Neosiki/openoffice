@@ -3,7 +3,7 @@ import type { AgentSkill } from './skill'
 import type { AgentMessage, AgentToolCall, ToolExecution } from './types'
 
 /**
- * The person's say over what leaves the PC through the AI's tools (decision 0053).
+ * The person's say over what leaves the PC through the AI's tools (decision 0062).
  *
  * Two rules on top of every editor's composed skill:
  * - "Let AI use internet tools" off: the outbound tools leave the tool list

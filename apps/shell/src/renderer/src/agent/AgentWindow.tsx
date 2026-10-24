@@ -169,7 +169,7 @@ export function AgentWindow() {
   const [input, setInput] = useState('')
   /** the Codex choices of the chosen folder, as remembered for it */
   const [projectPrefs, setProjectPrefs] = useState<AgentProjectPrefs | null>(null)
-  /** the chosen folder's own skills and whether they are on (decision 0055) */
+  /** the chosen folder's own skills and whether they are on (decision 0064) */
   const [projectSkills, setProjectSkills] = useState<AgentProjectSkillsView | null>(null)
   const folderRef = useRef('')
   const sessionRef = useRef<string | null>(null)

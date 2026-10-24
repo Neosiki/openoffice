@@ -171,7 +171,7 @@ export async function runCli(argv: readonly string[], opts: RunOptions = {}): Pr
     warn: (w) => warnings.push(w),
     ...(opts.background ? { background: true } : {}),
   }
-  // keys the app sealed open through it, for this command's settings file (decision 0054)
+  // keys the app sealed open through it, for this command's settings file (decision 0063)
   setAiSecretCodec(cliSecretCodecFor(ctx.env))
   const started = Date.now()
   const audit = (status: 'ok' | 'error', code: ExitCode, outputPath?: string) =>

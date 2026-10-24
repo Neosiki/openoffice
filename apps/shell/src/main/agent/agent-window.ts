@@ -107,7 +107,7 @@ export interface AgentWindowDeps extends Omit<
   readProjectPrefs?: ((folder: string) => AgentProjectPrefs) | undefined
   writeProjectPrefs?:
     ((folder: string, patch: Partial<AgentProjectPrefs>) => AgentProjectPrefs) | undefined
-  /** a project folder's own skills and the person's choice for them (decision 0055) */
+  /** a project folder's own skills and the person's choice for them (decision 0064) */
   projectSkills?:
     | {
         view(folder: string): Promise<AgentProjectSkillsView>

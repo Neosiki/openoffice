@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { sanitizeAiSettings } from '../src/ai-settings-guard'
 import { normalizeAiSettings } from '../src/legacy-settings'
 
-/** Decision 0053: "Let AI use internet tools" is on unless the file says false. */
+/** Decision 0062: "Let AI use internet tools" is on unless the file says false. */
 describe('internetTools setting', () => {
   const base = { provider: 'auto', providers: {} }
 

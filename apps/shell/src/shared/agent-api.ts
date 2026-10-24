@@ -21,7 +21,7 @@ export const AGENT_CHANNELS = {
   /** the Codex choices remembered for a project folder (spec 7.2) */
   getProjectPrefs: 'agent-window:get-project-prefs',
   setProjectPrefs: 'agent-window:set-project-prefs',
-  /** a project folder's own skills and whether the person turned them on (decision 0055) */
+  /** a project folder's own skills and whether the person turned them on (decision 0064) */
   getProjectSkills: 'agent-window:get-project-skills',
   setProjectSkills: 'agent-window:set-project-skills',
   /** main → window: one session event */
@@ -110,7 +110,7 @@ export function agentProjectPrefsPatch(raw: unknown): Partial<AgentProjectPrefs>
 
 /**
  * A project folder's own skills (`.claude/skills`, `.agents/skills`) as the
- * start screen lists them (decision 0055). They join a session only while
+ * start screen lists them (decision 0064). They join a session only while
  * `allowed`; `changed` says they were turned on before and have changed since.
  */
 export interface AgentProjectSkillsView {

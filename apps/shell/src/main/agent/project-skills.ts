@@ -5,7 +5,7 @@ import type { AgentProjectSkillsView } from '../../shared/agent-api'
 import { readAppSettings, writeAppSetting } from '../app-settings'
 
 /**
- * A project folder's own skills in the agent window (decision 0055). A folder
+ * A project folder's own skills in the agent window (decision 0064). A folder
  * someone else made can carry `.claude/skills` or `.agents/skills`; the agent
  * reads and follows them without asking. So they stay out of a session until
  * the person has seen the list for that folder and turned them on, and they

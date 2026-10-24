@@ -6,7 +6,7 @@ import { aiSettingsPath } from './cloud'
 import { appLaunch } from './resources'
 
 /**
- * Opening the keys the app sealed in ai-settings.json (decision 0054).
+ * Opening the keys the app sealed in ai-settings.json (decision 0063).
  *
  * The command line has no Electron and so no safeStorage. When it meets a
  * sealed value it starts the app hidden with `--reveal-ai-secrets`, passes

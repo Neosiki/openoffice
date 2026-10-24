@@ -312,7 +312,7 @@ export function windowDriveBridge(): DriveBridgeLike | null {
  * Drive calls, the Drive skill joins the editor's skills and the result is
  * guarded so outbound tools stop once Drive content is in the conversation.
  * Outside that, the person's internet-tools switch and address confirmation
- * apply (guardOutbound, decision 0053).
+ * apply (guardOutbound, decision 0062).
  * `messages` reads the loop's history (the loop is built after its skill).
  */
 export function composeWithDrive(

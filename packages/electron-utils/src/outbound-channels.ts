@@ -1,6 +1,6 @@
 /**
  * The two channels an editor's AI uses before it reaches off the PC
- * (decision 0053). The shell's main process answers both.
+ * (decision 0062). The shell's main process answers both.
  */
 export const OUTBOUND_CHANNELS = {
   /** whether "Let AI use internet tools" is on (absent in ai-settings.json = on) */

@@ -286,7 +286,7 @@ export interface AiSettings {
   /** the first-connection notice has been shown; absent = false */
   subscriptionNoticeSeen?: boolean | undefined
   /**
-   * "Let AI use internet tools" (decision 0053): only false turns the editors'
+   * "Let AI use internet tools" (decision 0062): only false turns the editors'
    * outbound tools off; absent = on. The terminal command and MCP do not read it.
    */
   internetTools?: boolean | undefined
