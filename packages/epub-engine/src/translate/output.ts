@@ -704,9 +704,10 @@ function chapterEdits(
         end: block.inner.end,
         text: outcome.xhtml,
       })
-    } else if (!block.flowing) {
+    } else if (!block.flowing || block.kind === 'li') {
       // td, th, figcaption, dt, dd: a sibling copy would change the table, figure or
-      // list structure, so the translation goes inside, after the original content
+      // list structure, so the translation goes inside, after the original content.
+      // A list item likewise: a copied li would renumber an ordered list
       const el = block.element
       const inline = inlineTranslation(block, o, rtlChapter, outcome.xhtml)
       entry.replacements.push(

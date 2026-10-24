@@ -144,3 +144,15 @@ describe('bilingual book: structural text blocks', () => {
     expect(c1).not.toContain(EPUB_TRANSLATION_CLASS)
   })
 })
+
+describe('bilingual book: list items', () => {
+  it('keeps the item count of an ordered list and puts the translation inside each item', async () => {
+    const list = '<ol id="l"><li id="i1">First</li><li>Second <em>one</em></li></ol>'
+    const { c1 } = await translate(await buildEpub(files(list)), 'bilingual')
+    const out = body(c1)
+    expect(count(out, /<li[\s>]/g)).toBe(2)
+    expect(out).toContain(`<li id="i1">First${span()}FIRST</span></li>`)
+    expect(new Set(ids(out)).size).toBe(ids(out).length)
+    expect(checkWellFormed(c1).ok).toBe(true)
+  })
+})
