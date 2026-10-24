@@ -34,3 +34,22 @@ export type { FontObfuscationAlgorithm } from './fonts'
 export { decodeEntryText, encodeEntryText } from './encoding'
 export type { DecodedText, EpubTextEncoding } from './encoding'
 export { cssDeclaresVerticalWriting, isVerticalWritingMode } from './writing-mode'
+export * from './xml-positions'
+export * from './ranges'
+export * from './blocks'
+export {
+  blockNotation,
+  blockPlainText,
+  checkNotation,
+  escapeNotationText,
+  newBlockNotationToXhtml,
+  notationToXhtml,
+  type BlockNotation,
+  type MarkSource,
+  type NotationContext,
+  type NotationOptions,
+  type NotationResult,
+  type PlaceholderSource,
+} from './notation'
+export * from './edits'
+export * from './text'
