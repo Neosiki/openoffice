@@ -1576,7 +1576,8 @@ export interface PdfApi {
   sendCloseSaveResult(ok: boolean): void
   /** Shell menu Save As → renderer writes pending edits to targetPath only (original untouched) and replies via sendSaveAsResult */
   onSaveAsRequest(handler: (targetPath: string) => void): () => void
-  sendSaveAsResult(ok: boolean): void
+  /** true = written, false = failed, 'cancelled' = the person closed the annotation choice */
+  sendSaveAsResult(ok: boolean | 'cancelled'): void
   /** True while the shell's Save As flow (dialog included) is open — the renderer pauses autosave, since the dialog's window blur would otherwise trigger a save into the original */
   onSaveAsFlow(handler: (inFlight: boolean) => void): () => void
   /** Shell menu Print → renderer runs its print flow (save, rasterize, system dialog) */

@@ -725,7 +725,7 @@ const allowedByWc = new Map<number, Set<string>>()
 /** Unsaved-changes flags mirrored from the renderer; drives the save prompt before closing a tab/window */
 const dirtyByWc = new Set<number>()
 const closeSaveWaiters = new Map<number, (ok: boolean) => void>()
-const saveAsWaiters = new Map<number, (ok: boolean) => void>()
+const saveAsWaiters = new Map<number, (outcome: PdfSaveAsOutcome) => void>()
 /** Save As destination granted per view (main-process dialog pick); the save handler refuses any other non-source target */
 const saveAsTargetByWc = new Map<number, string>()
 /** Only a copy produced by this view may receive subsequent in-place redactions. */
@@ -1149,21 +1149,32 @@ export function setPdfSaveAsInFlight(contents: WebContents, inFlight: boolean): 
  * The original file is never written (non-destructive Save As).
  */
 export function requestPdfSaveAs(contents: WebContents, targetPath: string): Promise<boolean> {
-  if (contents.isDestroyed()) return Promise.resolve(false)
+  return requestPdfSaveAsOutcome(contents, targetPath).then((outcome) => outcome === 'saved')
+}
+
+/** How a menu Save As ended: the person cancelling the annotation choice is not a failure */
+export type PdfSaveAsOutcome = 'saved' | 'cancelled' | 'failed'
+
+/** {@link requestPdfSaveAs}, telling a cancelled copy apart from a failed one */
+export function requestPdfSaveAsOutcome(
+  contents: WebContents,
+  targetPath: string,
+): Promise<PdfSaveAsOutcome> {
+  if (contents.isDestroyed()) return Promise.resolve('failed')
   const wcId = contents.id
   saveAsTargetByWc.set(wcId, targetPath)
-  return new Promise<boolean>((resolve) => {
-    const done = (ok: boolean) => {
+  return new Promise<PdfSaveAsOutcome>((resolve) => {
+    const done = (outcome: PdfSaveAsOutcome) => {
       saveAsTargetByWc.delete(wcId)
-      resolve(ok)
+      resolve(outcome)
     }
     const timer = setTimeout(() => {
       saveAsWaiters.delete(wcId)
-      done(false)
+      done('failed')
     }, 120_000)
-    saveAsWaiters.set(wcId, (ok) => {
+    saveAsWaiters.set(wcId, (outcome) => {
       clearTimeout(timer)
-      done(ok)
+      done(outcome)
     })
     contents.send(PDF_CHANNELS.saveAsRequest, targetPath)
   })
@@ -2250,7 +2261,7 @@ function registerPdfIpc(): void {
   ipcMain.on(PDF_CHANNELS.saveAsResult, (e, ok: unknown) => {
     const waiter = saveAsWaiters.get(e.sender.id)
     saveAsWaiters.delete(e.sender.id)
-    waiter?.(ok === true)
+    waiter?.(ok === true ? 'saved' : ok === 'cancelled' ? 'cancelled' : 'failed')
   })
 
   // Language channel shared with other modules; removeHandler tolerates duplicate registration

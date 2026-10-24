@@ -234,7 +234,7 @@ import {
   flushPdfSave,
   markPdfUntitledPath,
   pdfFileRenamed,
-  requestPdfSaveAs,
+  requestPdfSaveAsOutcome,
   sendPdfPrintRequest,
   setPdfRenamedHook,
   setPdfRedactionSavedHook,
@@ -7311,7 +7311,18 @@ async function savePdfAs(tab = activePdfTarget()): Promise<void> {
     // Always ask the renderer: it shows the annotation choices for the copy and,
     // with no pending edits and annotations kept, asks the pdf main process for a
     // byte-identical copy instead of rewriting the file here.
-    if (!(await requestPdfSaveAs(tab.webContents, target))) return
+    const outcome = await requestPdfSaveAsOutcome(tab.webContents, target)
+    if (outcome === 'cancelled') return
+    if (outcome === 'failed') {
+      // The renderer's toast carries the detailed reason; this makes a failed
+      // copy visible even when the PDF tab is not the focused pane.
+      console.error('[shell] pdf save as failed: renderer did not complete the save')
+      await dialog.showMessageBox(host, {
+        type: 'error',
+        message: tm('errPdfSaveAsFailed'),
+      })
+      return
+    }
     openDocumentPath(target)
   } catch (err) {
     console.error('[shell] pdf save as failed:', err)
