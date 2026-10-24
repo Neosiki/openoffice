@@ -53,3 +53,10 @@ export {
 } from './notation'
 export * from './edits'
 export * from './text'
+export { formatModifiedTimestamp, modifiedReplacements, saveEpub } from './save'
+export type {
+  EpubChapterEdits,
+  EpubSaveOptions,
+  EpubSaveRefusalReason,
+  EpubSaveResult,
+} from './save'
