@@ -488,7 +488,7 @@ export type EpubStoreWriteRequest =
   /** "translate again from the start" keeping a person's edits; answers `removed` */
   | { kind: 'deleteTranslationExceptEdited'; docHash: string; lang: string }
   /** a `translate` job record (found by its language) */
-  | { kind: 'job'; docHash: string; job: JobRecordInput }
+  | { kind: 'job'; docHash: string; lang: string; job: JobRecordInput }
   | { kind: 'heartbeat'; docHash: string; job: JobKind; lang: string }
 
 export interface EpubStoreWriteResult {

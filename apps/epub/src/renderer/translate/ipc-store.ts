@@ -72,7 +72,6 @@ export function createBookJobStore(api: BookStoreApi): BookJobStore {
       return out.removed ?? 0
     },
     // the main process files a record under the request's language as well as the record's own
-    writeJob: (docHash, job) =>
-      write(api, { kind: 'job', docHash, job, lang: job.lang ?? '' } as EpubStoreWriteRequest),
+    writeJob: (docHash, job) => write(api, { kind: 'job', docHash, job, lang: job.lang ?? '' }),
   }
 }

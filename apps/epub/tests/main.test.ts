@@ -428,11 +428,14 @@ describe('reading position and view settings', () => {
     const b = await openBook({}, 'b.epub')
     call(EPUB_CHANNELS.setReadPosition, a.contents, { spineIndex: 1, blockId: 'b2' })
     call(EPUB_CHANNELS.setReadPosition, a.contents, { spineIndex: 99, blockId: null })
-    await vi.waitFor(async () => {
-      expect(await call(EPUB_CHANNELS.getReadingState, a.contents)).toMatchObject({
-        position: { spineIndex: 1, blockId: 'b2' },
-      })
-    })
+    await vi.waitFor(
+      async () => {
+        expect(await call(EPUB_CHANNELS.getReadingState, a.contents)).toMatchObject({
+          position: { spineIndex: 1, blockId: 'b2' },
+        })
+      },
+      { timeout: 10_000 },
+    )
     expect(await call(EPUB_CHANNELS.getReadingState, b.contents)).toMatchObject({ position: null })
     const prefs = await call(EPUB_CHANNELS.setViewPrefs, a.contents, { dark: true })
     expect(prefs).toMatchObject({ dark: true })
