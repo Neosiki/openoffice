@@ -65,3 +65,4 @@
 | [0062](0062-outbound-tools-switch-and-address-check.md)       | AI의 인터넷 도구를 끌 수 있게 하고, 대화에 없던 주소는 가져오기 전에 묻는다                     | 2026-10-22 |
 | [0063](0063-sealed-api-keys.md)                               | 설정 파일의 키를 Windows·Linux에서 OS 암호화로 저장하고, 명령어는 앱에게 풀어 받는다            | 2026-10-22 |
 | [0064](0064-project-skills-need-a-yes.md)                     | 에이전트 모드에서 프로젝트 폴더의 스킬은 사람이 그 폴더에서 켠 동안만 쓴다                      | 2026-10-22 |
+| [0065](0065-intel-mac-beta.md)                                | Intel Mac용도 Apple Silicon과 같은 서명 없는 베타로 함께 낸다                                   | 2026-10-24 |
