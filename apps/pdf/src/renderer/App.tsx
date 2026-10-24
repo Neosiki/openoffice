@@ -7526,8 +7526,6 @@ export default function App() {
   // the new markups, so the ref points at the save that writes them.
   const saveRef = useRef(save)
   saveRef.current = save
-  const showNoticeRef = useRef(showNotice)
-  showNoticeRef.current = showNotice
   const acceptAndSave = () => {
     if (readOnly) return
     const views = highlightPending.filter((v) => v.found)
