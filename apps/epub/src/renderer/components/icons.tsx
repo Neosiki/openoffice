@@ -97,3 +97,39 @@ export const IconBlockedBook = () => (
     <path d="M9 8l5 4M14 8l-5 4" />
   </Icon>
 )
+
+export const IconUndo = () => (
+  <Icon size={16}>
+    <path d="M9 5L4.5 9.5 9 14" />
+    <path d="M4.5 9.5H15a5 5 0 0 1 0 10h-4" />
+  </Icon>
+)
+
+export const IconRedo = () => (
+  <Icon size={16}>
+    <path d="M15 5l4.5 4.5L15 14" />
+    <path d="M19.5 9.5H9a5 5 0 0 0 0 10h4" />
+  </Icon>
+)
+
+export const IconBold = () => (
+  <Icon>
+    <path d="M7 5h6a3.5 3.5 0 0 1 0 7H7z" />
+    <path d="M7 12h7a3.5 3.5 0 0 1 0 7H7z" />
+  </Icon>
+)
+
+export const IconItalic = () => (
+  <Icon>
+    <path d="M11 5h7M6 19h7M14.5 5l-5 14" />
+  </Icon>
+)
+
+/** find and replace: a search glass and a turning arrow */
+export const IconReplace = () => (
+  <Icon>
+    <circle cx="9" cy="9" r="4.5" />
+    <path d="M12.3 12.3L15 15" />
+    <path d="M13 19.5h7M17.5 17l2.5 2.5-2.5 2.5" />
+  </Icon>
+)

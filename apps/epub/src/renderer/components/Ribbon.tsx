@@ -31,6 +31,8 @@ export interface RibbonProps {
   tocOpen: boolean
   /** the editing tools of the Home tab (the editing screen's) */
   homeEditTools?: ReactNode
+  /** quick access buttons after save (the editing screen's undo, redo, auto save) */
+  quickTools?: ReactNode
   /** bumped when the file menu must close (a press elsewhere, the shell chrome) */
   closeMenusSignal: number
   onSave(): void
@@ -158,6 +160,7 @@ export function Ribbon(p: RibbonProps) {
         >
           <IconSave />
         </button>
+        {p.quickTools}
         <span className="qa-sep" />
         {(['home', 'view'] as const).map((name) => (
           <button
