@@ -153,6 +153,7 @@ export {
   RECOVERY_EDITOR_KINDS,
   createRecoveryStore,
   isAppShuttingDown,
+  isRecoveryEditorKind,
   isUntitledIdentity,
   markAppShuttingDown,
   newUntitledRecoveryId,

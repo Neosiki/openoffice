@@ -384,7 +384,8 @@ export function isUntitledIdentity(
   return 'untitledId' in identity
 }
 
-const isKind = (value: unknown): value is RecoveryEditorKind =>
+/** whether a kind is one of the editors that keep recovery copies */
+export const isRecoveryEditorKind = (value: unknown): value is RecoveryEditorKind =>
   typeof value === 'string' && (RECOVERY_EDITOR_KINDS as readonly string[]).includes(value)
 
 const pathHash = (filePath: string) =>
@@ -400,7 +401,7 @@ function fileCopyExt(kind: RecoveryEditorKind, filePath: string): string {
 }
 
 function assertKind(kind: RecoveryEditorKind): void {
-  if (!isKind(kind)) throw new Error(`unknown recovery editor kind: ${String(kind)}`)
+  if (!isRecoveryEditorKind(kind)) throw new Error(`unknown recovery editor kind: ${String(kind)}`)
 }
 
 function assertUntitled(untitledId: string, ext: string): void {

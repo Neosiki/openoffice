@@ -74,6 +74,15 @@ export interface OpenDocumentsBridgeDeps {
   hwp?: {
     read: (contents: WebContents) => Promise<string>
   }
+  /**
+   * book: its text in reading order with the unsaved edits, and the editor's
+   * own save to a given path (which refuses a book whose file did not open).
+   * Nothing is staged beside a book, so a discard has nothing to clean up.
+   */
+  epub?: {
+    read: (contents: WebContents) => Promise<string>
+    save: (contents: WebContents, filePath: string) => Promise<void>
+  }
 }
 
 type MaybePromise<T> = T | Promise<T>
@@ -179,6 +188,11 @@ export function createOpenDocumentsControl(deps: OpenDocumentsBridgeDeps): OpenD
         await deps.mindmap.save(await requireContents(tab, deps), filePath)
         return
       }
+      case 'epub': {
+        if (!deps.epub) throw new Error('the e-book editor is unavailable in this build')
+        await deps.epub.save(await requireContents(tab, deps), filePath)
+        return
+      }
       case 'pdf':
         throw new Error('a PDF cannot be saved through this tool: the pdf app is a viewer')
       case 'hwp':
@@ -217,6 +231,9 @@ export function createOpenDocumentsControl(deps: OpenDocumentsBridgeDeps): OpenD
       case 'hwp':
         if (!deps.hwp) throw new Error('the HWP editor is unavailable in this build')
         return deps.hwp.read(await requireContents(tab, deps))
+      case 'epub':
+        if (!deps.epub) throw new Error('the e-book editor is unavailable in this build')
+        return deps.epub.read(await requireContents(tab, deps))
       default:
         throw new Error(`cannot read a ${tab.kind} tab`)
     }

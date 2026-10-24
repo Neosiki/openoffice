@@ -3,6 +3,7 @@ import { extname } from 'node:path'
 import { OdtNotTextError, isOdtOpenError } from '@genoffice/odt-engine'
 import { docToText } from './doc'
 import { docxToText } from './docx'
+import { epubToText } from './epub'
 import { hwpToText } from './hwp'
 import { odtToText } from './odt'
 import { pdfToText } from './pdf'
@@ -201,11 +202,11 @@ export async function parseFileToText(
         error: `Content mismatch: .${ext} file has ${sniffed} magic bytes`,
       }
     }
-    if (ext === 'xmind' && sniffed !== 'zip') {
+    if ((ext === 'xmind' || ext === 'epub') && sniffed !== 'zip') {
       return {
         ok: false,
         kind: 'text',
-        error: `Content mismatch: .xmind file has ${sniffed} magic bytes`,
+        error: `Content mismatch: .${ext} file has ${sniffed} magic bytes`,
       }
     }
     // a DOCX saved under a .doc name is common enough that it parses as OOXML
@@ -256,6 +257,8 @@ export async function parseFileToText(
         return { ok: true, kind: 'text', text: await pdfToText(bytes) }
       case 'xmind':
         return { ok: true, kind: 'text', text: await xmindToText(bytes) }
+      case 'epub':
+        return { ok: true, kind: 'text', text: await epubToText(bytes) }
     }
   } catch (e) {
     return { ok: false, kind: 'text', error: e instanceof Error ? e.message : String(e) }

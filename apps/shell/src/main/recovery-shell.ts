@@ -2,6 +2,7 @@ import { app } from 'electron'
 import type { WebContents, WebContentsView } from 'electron'
 import {
   createRecoveryStore,
+  isRecoveryEditorKind,
   isUntitledIdentity,
   recoveryEditor,
   type RecoveryIdentity,
@@ -156,7 +157,7 @@ function openUntitledCopyView(
   kind: DocumentTabKind,
   request: RecoveryOpenUntitledRequest,
 ): WebContentsView {
-  const contract = recoveryEditor(kind)
+  const contract = isRecoveryEditorKind(kind) ? recoveryEditor(kind) : null
   if (!contract) throw new Error(`the ${kind} editor cannot open a recovery copy`)
   const view = createUntitledEditorView(kind)
   try {
@@ -206,7 +207,7 @@ export function restoredTabOpener(
     // an unsettled copy of the file asks the user first (5.4): nobody else may wait on it
     needsUser: ({ kind, filePath }) => {
       if (deps.blocked()) return true
-      if (!filePath) return false
+      if (!filePath || !isRecoveryEditorKind(kind)) return false
       try {
         return shellRecoveryStore().openPlan({ kind, filePath }).action === 'ask'
       } catch {

@@ -1,9 +1,10 @@
 import { basename, dirname } from 'node:path'
-import type {
-  RecoveryCopyFilter,
-  RecoveryCopyInfo,
-  RecoveryIdentity,
-  RecoveryLaunchDecision,
+import {
+  isRecoveryEditorKind,
+  type RecoveryCopyFilter,
+  type RecoveryCopyInfo,
+  type RecoveryIdentity,
+  type RecoveryLaunchDecision,
 } from '@genoffice/electron-utils'
 import type { DocumentTabKind } from '../shared/tabs-api'
 import type { SplitOrientation } from '../shared/split-view-api'
@@ -184,7 +185,7 @@ export function planLaunch(input: PlanLaunchInput): LaunchPlan {
         keyByIndex.set(index, key)
         return
       }
-      if (!tab.untitled) return
+      if (!tab.untitled || !isRecoveryEditorKind(tab.kind)) return
       const identity: RecoveryIdentity = {
         kind: tab.kind,
         untitledId: tab.untitled.untitledId,
@@ -310,7 +311,7 @@ export function resolveLaunchDecisions(
       if (result && decisionByKey.get(key) !== 'restore') remove.push(tab.key)
       continue
     }
-    if (!tab.filePath) continue
+    if (!tab.filePath || !isRecoveryEditorKind(tab.kind)) continue
     const key = recoveryIdentityKey({ kind: tab.kind, filePath: tab.filePath })
     inStrip.add(key)
     const copy = [...plan.copies.values()].find((c) => recoveryIdentityKey(c.identity) === key)
