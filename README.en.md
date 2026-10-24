@@ -90,8 +90,8 @@ The author's own account, in Korean, is at
 - **21 interface languages.** Korean and English were written by hand; the
   other 19 are machine translations.
 
-Released for **Windows**, with separate **betas for Apple Silicon Macs (M1 and
-later) and 64-bit Linux (x64)**. The developer has not been able to check the
+Released for **Windows**, with separate **betas for Macs (Apple Silicon and
+Intel) and 64-bit Linux (x64)**. The developer has not been able to check the
 Mac or Linux builds on those machines; please report problems as
 [issues](https://github.com/pblsketch/openoffice/issues).
 
@@ -250,9 +250,13 @@ repository.
 
 ### Mac (beta)
 
-The same Releases page carries `IeumOffice-<version>-arm64.dmg`, for Apple
-Silicon Macs (M1 and later) on macOS 12 or newer; it does not run on Intel
-Macs.
+The same Releases page carries two disk images, both for macOS 12 or newer:
+
+- Apple Silicon Macs (M1 and later): `IeumOffice-<version>-arm64.dmg`
+- Intel Macs: `IeumOffice-<version>-x64.dmg`
+
+**About This Mac** in the Apple menu shows which one yours is: a "Chip" line
+(Apple M…) or a "Processor" line (Intel …).
 
 The Mac build has no Apple Developer signature, so macOS warns that it cannot
 verify the app the first time you open it. Allow it once:
@@ -350,9 +354,9 @@ project easy to take.
 
 ## Known limitations
 
-- **Windows, Apple Silicon Macs (beta) and 64-bit Linux (beta) only.** The
-  developer cannot check the Mac or Linux builds directly; they are checked
-  through user reports. Intel Macs are not built or released.
+- **Windows, Macs (beta, Apple Silicon and Intel) and 64-bit Linux (beta)
+  only.** The developer cannot check the Mac or Linux builds directly; they are
+  checked through user reports.
 - **Unsigned installers**, as described above. That is also why the Mac build
   cannot update itself.
 - **A subscription answers a little later than an API key.** Each request
