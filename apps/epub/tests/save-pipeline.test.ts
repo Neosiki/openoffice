@@ -4,8 +4,12 @@
  * ranges (and the EPUB 3 `dcterms:modified`), then moves the stored
  * translations to the new bytes, results first and job records second.
  */
+import { mkdtempSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
-import { epubDocumentHash } from '@genoffice/epub-engine'
+import { epubDocumentHash, epubTranslationUnits } from '@genoffice/epub-engine'
+import { blockKeyString, ResultStore } from '@genoffice/pdf-structure/store'
 import { EpubBookSession } from '../src/main/book-session'
 import { saveBook, type MigrationStore, type SaveDeps } from '../src/main/save-pipeline'
 import { buildBook, entryBytes, entryText } from './helpers/book'
@@ -121,6 +125,40 @@ describe('saveBook', () => {
     // title-and-contents fingerprint + two chapters
     expect(input.pageFingerprints).toHaveLength(3)
     expect(input.blockKeys.length).toBeGreaterThan(0)
+    const units = (await epubTranslationUnits(s.book)).units
+    expect(vi.mocked(store.migrateDocument).mock.calls[0]![0].keepBlockKeys).toEqual(
+      units.map((u) => u.key),
+    )
+  })
+
+  it('moves the stored translation of unchanged blocks only, not of the edited one', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'genoffice-epub-save-'))
+    try {
+      const realStore = new ResultStore(root)
+      const { s } = await session()
+      const oldHash = s.docHash
+      const units = (await epubTranslationUnits(s.book)).units
+      await realStore.writeTranslationMeta(oldHash, 'ko', { provider: 'codex', model: 'm' })
+      await realStore.writeTranslationBlocks(
+        oldHash,
+        'ko',
+        units.map((u) => ({ key: u.key, status: 'translated' as const, text: `ko:${u.text}` })),
+      )
+      await editFirstParagraph(s, 'Changed.')
+      const { deps } = fakeDeps()
+      const outcome = await saveBook(s, '/books/a.epub', true, { ...deps, store: () => realStore })
+      if (!outcome.ok) throw new Error(outcome.error)
+
+      const edited = units.find((u) => u.text === 'First paragraph.')!
+      const kept = units.find((u) => u.text === 'Second paragraph.')!
+      const moved = await realStore.readTranslation(outcome.docHash, 'ko')
+      expect(moved!.blocks.has(blockKeyString(edited.key))).toBe(false)
+      expect(moved!.blocks.get(blockKeyString(kept.key))?.text).toBe('ko:Second paragraph.')
+      expect(moved!.blocks.size).toBe(units.length - 1)
+      expect(outcome.migration?.results.translationBlocks).toBe(units.length - 1)
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
   })
 
   it('does not touch the session when the write fails', async () => {

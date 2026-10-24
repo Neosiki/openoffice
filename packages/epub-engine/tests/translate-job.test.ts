@@ -5,7 +5,7 @@ import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { DocumentJobRegistry, type TranslationModelRequest } from '@genoffice/pdf-structure'
-import { ResultStore } from '@genoffice/pdf-structure/store'
+import { blockKeyString, ResultStore } from '@genoffice/pdf-structure/store'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { openEpub } from '../src/open'
 import {
@@ -346,6 +346,7 @@ describe('epubMigrationInfo', () => {
     ])
     const units = (await epubTranslationUnits(opened.book)).units
     expect(info.blockKeys).toEqual(units.map((u) => u.key))
+    expect(info.keepBlockKeys).toEqual(units.map((u) => u.key))
   })
 
   it('carries the translation to the saved book through the store', async () => {
@@ -386,5 +387,10 @@ describe('epubMigrationInfo', () => {
     // only the changed paragraph is new
     expect(estimate.pending).toBe(1)
     expect(estimate.done).toBe(unitsAfter.length - 1)
+    // and the old paragraph's translation did not move: only keys the saved book has
+    const moved = await store.readTranslation(info.newDocHash, 'ko')
+    const keysAfter = new Set(unitsAfter.map((u) => blockKeyString(u.key)))
+    expect(moved!.blocks.size).toBe(unitsAfter.length - 1)
+    for (const key of moved!.blocks.keys()) expect(keysAfter.has(key), key).toBe(true)
   })
 })

@@ -30,6 +30,32 @@ async function firstParagraph(s: EpubBookSession) {
 }
 
 describe('opening', () => {
+  it('holds one copy of the book: the opened book reads from the session bytes', async () => {
+    const bytes = await buildBook()
+    const opened = await EpubBookSession.open(bytes)
+    if (!opened.ok) throw new Error(opened.reason)
+    const s = opened.session
+    expect(s.bytes).toBe(bytes)
+    expect(new TextDecoder().decode((await s.book.read('mimetype'))!)).toBe('application/epub+zip')
+    // a change to the bytes shows through the book: there is no second copy
+    bytes.fill(0)
+    expect(await s.book.read('mimetype')).toEqual(new Uint8Array(20))
+  })
+
+  it('stands on the saved bytes alone after a save', async () => {
+    const s = await session()
+    const { block } = await firstParagraph(s)
+    await s.applyEdits(0, [{ op: 'replace', blockId: block.id, text: 'Changed.' }])
+    const prepared = await s.prepareSave({ now: () => new Date('2026-10-24T00:00:00Z') })
+    if (!prepared.result.ok || !prepared.result.changed) throw new Error('nothing to save')
+    const saved = prepared.result.bytes
+    await s.rebase(saved, prepared.snapshot)
+    expect(s.bytes).toBe(saved)
+    expect((await s.book.readText('OEBPS/text/one.xhtml'))!.text).toContain('<p>Changed.</p>')
+    saved.fill(0)
+    expect(await s.book.read('mimetype')).toEqual(new Uint8Array(20))
+  })
+
   it('refuses bytes that are not a book, with the engine reason', async () => {
     const opened = await EpubBookSession.open(new TextEncoder().encode('not a zip'))
     expect(opened).toEqual({ ok: false, reason: 'damaged' })
@@ -99,6 +125,71 @@ describe('editing', () => {
     expect(undo.ok && undo.source).toBe(chapter.source)
     expect(s.isDirty()).toBe(false)
     expect(s.editsForSave().size).toBe(0)
+  })
+
+  it('takes back merges, deletes and insertions, and redoes them, through range replacements', async () => {
+    const s = await session()
+    const steps: Array<(ids: string[]) => Record<string, unknown>> = [
+      (ids) => ({ op: 'merge', blockId: ids[1], with: 'previous' }),
+      (ids) => ({ op: 'delete', blockId: ids[1] }),
+      (ids) => ({ op: 'insert_after', blockId: ids[0], text: 'New one.' }),
+    ]
+    for (const step of steps) {
+      const before = await s.readChapter(0)
+      if (!before.ok || before.broken) throw new Error('chapter did not read')
+      const ids = before.blocks.filter((b) => b.kind === 'p').map((b) => b.id)
+      const edit = await s.applyEdits(0, [step(ids)])
+      if (!edit.ok) throw new Error(`edit refused: ${edit.message}`)
+      const undo = await s.replaceRanges(0, edit.version, edit.inverse)
+      if (!undo.ok) throw new Error(`undo refused: ${undo.message}`)
+      expect(undo.source).toBe(before.source)
+      const redo = await s.replaceRanges(0, undo.version, undo.inverse)
+      if (!redo.ok) throw new Error(`redo refused: ${redo.message}`)
+      expect(redo.source).toBe(edit.source)
+      const back = await s.replaceRanges(0, redo.version, redo.inverse)
+      expect(back.ok && back.source).toBe(before.source)
+    }
+  })
+
+  it('refuses replacements outside the blocks that do not take the chapter back to an earlier text', async () => {
+    const s = await session()
+    const { chapter, block } = await firstParagraph(s)
+    const head = chapter.source.indexOf('</head>')
+    // right after the paragraph, between it and the next block
+    const between = block.outer.end
+    const bad = [
+      [{ start: head, end: head, text: '<script>alert(1)</script>' }],
+      [{ start: between, end: between, text: '<p>Smuggled.</p>' }],
+      // starts inside the block, ends past it
+      [{ start: block.inner.start, end: block.outer.end, text: 'x</p>' }],
+      // the whole block, tags and all
+      [{ start: block.outer.start, end: block.outer.end, text: '<div>x</div>' }],
+    ]
+    for (const replacements of bad) {
+      expect(await s.replaceRanges(0, 0, replacements)).toMatchObject({
+        ok: false,
+        error: 'invalid-request',
+      })
+    }
+    expect(s.isDirty()).toBe(false)
+    // inside a block's inner range is taken
+    const inside = await s.replaceRanges(0, 0, [
+      { start: block.inner.start, end: block.inner.start + 5, text: 'Very first' },
+    ])
+    expect(inside.ok && inside.source).toContain('<p>Very first paragraph.</p>')
+  })
+
+  it('still takes the chapter back to its text from before a save', async () => {
+    const s = await session()
+    const { block } = await firstParagraph(s)
+    const edit = await s.applyEdits(0, [{ op: 'delete', blockId: block.id }])
+    if (!edit.ok) throw new Error('delete refused')
+    const prepared = await s.prepareSave()
+    if (!prepared.result.ok || !prepared.result.changed) throw new Error('nothing to save')
+    await s.rebase(prepared.result.bytes, prepared.snapshot)
+    expect(s.isDirty()).toBe(false)
+    const undo = await s.replaceRanges(0, edit.version, edit.inverse)
+    expect(undo.ok && undo.source).toContain('<p>First paragraph.</p>')
   })
 
   it('refuses every edit while the translation lock is on, and takes them again after', async () => {

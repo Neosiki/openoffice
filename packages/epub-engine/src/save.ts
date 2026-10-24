@@ -16,9 +16,10 @@
  */
 import JSZip from 'jszip'
 import { decodeEntryText, encodeEntryText, type EpubTextEncoding } from './encoding'
-import { openEpub, type EpubOpenOptions } from './open'
+import { openedArchive, openEpub, type EpubOpenOptions } from './open'
 import { normalizeZipPath } from './paths'
 import { applyReplacements, validateReplacements, type RangeReplacement } from './ranges'
+import type { EpubBook } from './types'
 import { checkWellFormed, parseXml, type XmlElement } from './xml-positions'
 
 /** Range replacements per entry path, each against that entry's decoded text. */
@@ -33,7 +34,8 @@ export interface EpubSaveOptions extends EpubOpenOptions {
 
 /**
  * Why a save was refused. Nothing is written in any of these cases.
- * - `not-opened`: the original bytes do not open as a book
+ * - `not-opened`: the original bytes do not open as a book, or the book given
+ *   was not opened by `openEpub`
  * - `unknown-entry`: an edit names a path the archive does not have
  * - `broken`: the entry was not well-formed (or not valid in its encoding) to
  *   begin with; such an entry is never edited
@@ -209,17 +211,26 @@ function entryName(zip: JSZip, path: string): string | null {
 
 /**
  * Writes `original` again with the edits applied (see the module comment).
- * The original passes the zip gate again here; it is never changed.
+ * `original` is the book's bytes, which pass the zip gate again here, or a
+ * book `openEpub` opened (and so gated) already, which is saved from the
+ * archive it reads without opening it again. Neither is ever changed, and
+ * both give the same bytes.
  */
 export async function saveEpub(
-  original: Uint8Array,
+  original: Uint8Array | EpubBook,
   edits: EpubChapterEdits,
   options: EpubSaveOptions = {},
 ): Promise<EpubSaveResult> {
-  const opened = await openEpub(original, options)
-  if (!opened.ok) return refusal('not-opened', null, `${opened.reason}: ${opened.detail}`)
-  const book = opened.book
-  const zip = await JSZip.loadAsync(new Uint8Array(original))
+  let book: EpubBook
+  if (ArrayBuffer.isView(original)) {
+    const opened = await openEpub(original, options)
+    if (!opened.ok) return refusal('not-opened', null, `${opened.reason}: ${opened.detail}`)
+    book = opened.book
+  } else {
+    book = original
+  }
+  const zip = openedArchive(book)
+  if (zip === null) return refusal('not-opened', null, 'the book was not opened by openEpub')
 
   // Merge the edits per archive entry.
   const wanted = new Map<string, RangeReplacement[]>()

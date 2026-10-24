@@ -55,6 +55,23 @@ export const EPUB_ZIP_LIMITS: ZipLimits = DEFAULT_ZIP_LIMITS
 export interface EpubOpenOptions {
   /** zip limits to open with; `EPUB_ZIP_LIMITS` when left out */
   limits?: ZipLimits
+  /**
+   * The caller hands the bytes over: the book reads from them as they are,
+   * with no copy of its own, and the caller must not change them afterwards.
+   * Left out, the book works on its own copy.
+   */
+  takeOwnership?: boolean
+}
+
+/** The archive each book this engine opened reads from, for saving it without a reopen. */
+const bookArchives = new WeakMap<EpubBook, JSZip>()
+
+/**
+ * @internal The loaded archive of a book `openEpub` gave out (it passed the
+ * zip gate then); null for any other object.
+ */
+export function openedArchive(book: EpubBook): JSZip | null {
+  return bookArchives.get(book) ?? null
 }
 
 class Refusal extends Error {
@@ -147,8 +164,8 @@ function keyFor(
 
 type FontKeys = Map<string, { algorithm: FontObfuscationAlgorithm; key: Uint8Array }>
 
-function bookFrom(info: EpubBookInfo, archive: Archive, fontKeys: FontKeys): EpubBook {
-  return {
+function bookFrom(info: EpubBookInfo, zip: JSZip, archive: Archive, fontKeys: FontKeys): EpubBook {
+  const book: EpubBook = {
     ...info,
     has: (path) => archive.find(path) !== null,
     read: (path) => archive.read(path),
@@ -161,11 +178,14 @@ function bookFrom(info: EpubBookInfo, archive: Archive, fontKeys: FontKeys): Epu
       return bytes && font ? obfuscateFontWithKey(bytes, font.algorithm, font.key) : bytes
     },
   }
+  bookArchives.set(book, zip)
+  return book
 }
 
 /**
  * Opens a book held in memory. Never throws for anything in the file and
- * never changes the bytes it is given; the book works on its own copy.
+ * never changes the bytes it is given; the book works on its own copy unless
+ * the caller hands the bytes over (`takeOwnership`).
  */
 export async function openEpub(
   input: Uint8Array,
@@ -183,8 +203,12 @@ export async function openEpub(
 }
 
 async function openOrRefuse(input: Uint8Array, options: EpubOpenOptions): Promise<EpubBook> {
-  // A real copy: `slice` on a Node byte buffer would only be another view.
-  const bytes = new Uint8Array(input)
+  // Handed over: a plain view of the same memory (a Node byte buffer is read
+  // as one, as a copy would be). Otherwise a real copy: `slice` on a Node byte
+  // buffer would only be another view.
+  const bytes = options.takeOwnership
+    ? new Uint8Array(input.buffer, input.byteOffset, input.byteLength)
+    : new Uint8Array(input)
   const limits = options.limits ?? EPUB_ZIP_LIMITS
 
   // 1. zip gate
@@ -284,7 +308,7 @@ async function openOrRefuse(input: Uint8Array, options: EpubOpenOptions): Promis
     obfuscatedFonts,
     entryNames: [...archive.names],
   }
-  return bookFrom(info, archive, fontKeys)
+  return bookFrom(info, zip, archive, fontKeys)
 }
 
 function parseOrNotEpub(decoded: DecodedText, path: string) {

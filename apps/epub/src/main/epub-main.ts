@@ -586,7 +586,9 @@ function registerEpubIpc(): void {
     } else {
       let bytes: Uint8Array
       try {
-        bytes = new Uint8Array(await readFile(path))
+        // the file's own buffer, handed to the session as the one copy of the book
+        const file = await readFile(path)
+        bytes = new Uint8Array(file.buffer, file.byteOffset, file.byteLength)
       } catch {
         refuseWrites(wcId)
         return { status: 'refused', reason: 'unreadable' }
@@ -661,7 +663,8 @@ function registerEpubIpc(): void {
     return result
   })
 
-  ipcMain.handle(EPUB_CHANNELS.openLink, async (_e, url: unknown): Promise<boolean> => {
+  ipcMain.handle(EPUB_CHANNELS.openLink, async (e, url: unknown): Promise<boolean> => {
+    if (!contentsByWc.has(e.sender.id)) return false
     const target = openableLink(url)
     if (!target) return false
     try {
@@ -709,6 +712,7 @@ function registerEpubIpc(): void {
   })
 
   ipcMain.handle(EPUB_CHANNELS.setViewPrefs, async (e, patch: unknown): Promise<EpubViewPrefs> => {
+    if (!contentsByWc.has(e.sender.id)) throw new Error('epub: not an EPUB view')
     const prefs = await reading().setViewPrefs(patch)
     for (const [wcId, contents] of contentsByWc) {
       if (wcId !== e.sender.id && !contents.isDestroyed()) {

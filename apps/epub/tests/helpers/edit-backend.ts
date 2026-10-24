@@ -1,8 +1,9 @@
 /**
  * An in-memory stand-in for the main process's book, for the editing tests:
  * the same engine calls and the same answers as the book session (block
- * edits all or nothing, range replacements against a version, the
- * translation lock, read-only chapters), without a zip.
+ * edits all or nothing, range replacements against a version and only
+ * inside blocks or back to an earlier text, the translation lock, read-only
+ * chapters), without a zip.
  */
 import {
   applyBlockEdits,
@@ -36,6 +37,8 @@ interface Chapter {
   map: ChapterMap
   version: number
   readOnly: EpubReadOnlyReason | null
+  /** every text the chapter has had */
+  seen: Set<string>
 }
 
 function blockInfo(map: OpenChapter): EpubBlockInfo[] {
@@ -64,6 +67,7 @@ export class FakeBook {
         map: openChapter(stored),
         version: 0,
         readOnly: spec.readOnly ?? null,
+        seen: new Set([stored]),
       }
     })
   }
@@ -119,6 +123,7 @@ export class FakeBook {
     if (replacements.length > 0) {
       c.map = next
       c.version++
+      c.seen.add(next.source)
     }
     return {
       ok: true,
@@ -167,6 +172,12 @@ export class FakeBook {
     const problem = validateReplacements(request.replacements, map.source.length)
     if (problem) return { ok: false, error: 'invalid-request', message: problem }
     const text = applyReplacements(map.source, request.replacements)
+    const inside = request.replacements.every((r) =>
+      map.blocks.some((b) => b.inner.start <= r.start && r.end <= b.inner.end),
+    )
+    if (text !== map.source && !inside && !target.seen.has(text)) {
+      return { ok: false, error: 'invalid-request', message: 'outside the blocks' }
+    }
     const next = remapChapter(map, text, request.replacements)
     if (next.broken) return { ok: false, error: 'refused', message: next.error }
     const before = new Set(map.blocks.map((b) => b.id))
