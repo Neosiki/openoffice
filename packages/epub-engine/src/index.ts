@@ -60,3 +60,4 @@ export type {
   EpubSaveRefusalReason,
   EpubSaveResult,
 } from './save'
+export * from './translate'
