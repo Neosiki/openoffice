@@ -254,7 +254,7 @@ Nothing in this list is uploaded by the app.
   folder. Translations of EPUB books (the translated text of their chapters,
   title and contents labels, with the provider and model) are kept in the same
   folder, keyed by a fingerprint of the book file. Delete it all under
-  Settings → General → **Saved PDF AI results** → **Delete all**, or one
+  Settings → General → **Saved AI results** → **Delete all**, or one
   document's share with **Delete this document's stored AI results** in the
   PDF editor.
 - **The links between PDFs and their notes** (`note-links.json` in the

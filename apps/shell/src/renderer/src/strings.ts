@@ -78,6 +78,7 @@ export const strings = {
     filterHtml: 'HTML',
     filterMindmap: '思维导图',
     filterHwp: 'HWP',
+    filterEpub: 'EPUB',
     filterAria: '按类型筛选',
     // List / bulk actions
     fileCount: '{n} 个文件',
@@ -174,7 +175,7 @@ export const strings = {
     saveLocation: '默认保存位置',
     setAutoSave: '所有文档自动保存',
     setAutoSaveDesc: '在每个编辑器中默认开启自动保存，仍可在单个窗口中关闭。',
-    setResultStore: '已保存的 PDF AI 结果',
+    setResultStore: '已保存的 AI 结果',
     setResultStoreDesc: 'AI 读取的页面和译文会保存在本机，直到你删除。已占用：{size}',
     setResultStoreDeleteAll: '全部删除',
     setResultStoreConfirm: '要删除所有已保存的 AI 读取结果和译文吗？重新生成需要再次使用 AI。',
@@ -560,6 +561,7 @@ export const strings = {
     filterHtml: 'HTML',
     filterMindmap: 'Mind Map',
     filterHwp: 'HWP',
+    filterEpub: 'EPUB',
     filterAria: 'Filter by type',
     fileCount: '{n} files',
     fileCountOne: '{n} file',
@@ -655,7 +657,7 @@ export const strings = {
     setAutoSave: 'Auto-save all documents',
     setAutoSaveDesc:
       'Turn on AutoSave by default in every editor. You can still switch it off for a single window.',
-    setResultStore: 'Saved PDF AI results',
+    setResultStore: 'Saved AI results',
     setResultStoreDesc:
       'Pages read by AI and translations stay on this PC until you delete them. In use: {size}',
     setResultStoreDeleteAll: 'Delete all',
@@ -1062,6 +1064,7 @@ export const strings = {
     filterHtml: 'HTML',
     filterMindmap: 'Sơ đồ tư duy',
     filterHwp: 'HWP',
+    filterEpub: 'EPUB',
     filterAria: 'Lọc theo loại',
     fileCount: '{n} tệp',
     fileCountOne: '{n} tệp',
@@ -1157,7 +1160,7 @@ export const strings = {
     setAutoSave: 'Tự động lưu tất cả tài liệu',
     setAutoSaveDesc:
       'Bật Tự động lưu theo mặc định trong mọi trình soạn thảo. Bạn vẫn có thể tắt tính năng này cho từng cửa sổ riêng lẻ.',
-    setResultStore: 'Kết quả AI của PDF đã lưu',
+    setResultStore: 'Kết quả AI đã lưu',
     setResultStoreDesc:
       'Các trang do AI đọc và bản dịch được lưu trên máy tính này cho đến khi bạn xóa. Đang dùng: {size}',
     setResultStoreDeleteAll: 'Xóa tất cả',
@@ -1569,6 +1572,7 @@ export const strings = {
     filterHtml: 'HTML',
     filterMindmap: 'マインドマップ',
     filterHwp: 'HWP',
+    filterEpub: 'EPUB',
     filterAria: '種類で絞り込み',
     // List / bulk actions
     fileCount: '{n} 個のファイル',
@@ -1668,7 +1672,7 @@ export const strings = {
     setAutoSave: 'すべてのドキュメントを自動保存',
     setAutoSaveDesc:
       'すべてのエディターで自動保存をデフォルトでオンにします。個々のウィンドウでオフにすることもできます。',
-    setResultStore: '保存済みの PDF AI 結果',
+    setResultStore: '保存済みの AI 結果',
     setResultStoreDesc:
       'AI で読み取ったページと翻訳は、削除するまでこの PC に保存されます。使用量：{size}',
     setResultStoreDeleteAll: 'すべて削除',
@@ -2088,6 +2092,7 @@ export const strings = {
     filterHtml: 'HTML',
     filterMindmap: '마인드맵',
     filterHwp: '한글',
+    filterEpub: 'EPUB',
     filterAria: '유형별 필터',
     // List / bulk actions
     fileCount: '파일 {n}개',
@@ -2184,7 +2189,7 @@ export const strings = {
     saveLocation: '저장 위치',
     setAutoSave: '모든 문서 자동 저장',
     setAutoSaveDesc: '모든 편집기에서 자동 저장을 기본으로 켭니다. 개별 창에서는 끌 수 있습니다.',
-    setResultStore: 'PDF AI 결과 보관소',
+    setResultStore: 'AI 결과 보관소',
     setResultStoreDesc:
       'AI로 읽은 페이지와 번역본은 지울 때까지 이 PC에 보관됩니다. 사용 중: {size}',
     setResultStoreDeleteAll: '모두 지우기',
@@ -2593,6 +2598,7 @@ export const strings = {
     filterHtml: 'HTML',
     filterMindmap: 'Carte mentale',
     filterHwp: 'HWP',
+    filterEpub: 'EPUB',
     filterAria: 'Filtrer par type',
     // List / bulk actions
     fileCount: '{n} fichiers',
@@ -2693,7 +2699,7 @@ export const strings = {
     setAutoSave: 'Enregistrer automatiquement tous les documents',
     setAutoSaveDesc:
       "Active l'enregistrement automatique par défaut dans chaque éditeur. Vous pouvez toujours le désactiver pour une fenêtre.",
-    setResultStore: 'Résultats IA des PDF enregistrés',
+    setResultStore: 'Résultats IA enregistrés',
     setResultStoreDesc:
       "Les pages lues par l'IA et les traductions restent sur ce PC jusqu'à ce que vous les supprimiez. Espace utilisé : {size}",
     setResultStoreDeleteAll: 'Tout supprimer',
@@ -3117,6 +3123,7 @@ export const strings = {
     filterHtml: 'HTML',
     filterMindmap: 'Mindmap',
     filterHwp: 'HWP',
+    filterEpub: 'EPUB',
     filterAria: 'Nach Typ filtern',
     // List / bulk actions
     fileCount: '{n} Dateien',
@@ -3220,7 +3227,7 @@ export const strings = {
     setAutoSave: 'Alle Dokumente automatisch speichern',
     setAutoSaveDesc:
       'Aktiviert AutoSave standardmäßig in jedem Editor. Für ein einzelnes Fenster kann es weiterhin ausgeschaltet werden.',
-    setResultStore: 'Gespeicherte KI-Ergebnisse für PDFs',
+    setResultStore: 'Gespeicherte KI-Ergebnisse',
     setResultStoreDesc:
       'Von der KI gelesene Seiten und Übersetzungen bleiben auf diesem PC, bis Sie sie löschen. Belegt: {size}',
     setResultStoreDeleteAll: 'Alle löschen',
@@ -3648,6 +3655,7 @@ export const strings = {
     filterHtml: 'HTML',
     filterMindmap: 'Mapa mental',
     filterHwp: 'HWP',
+    filterEpub: 'EPUB',
     filterAria: 'Filtrar por tipo',
     // List / bulk actions
     fileCount: '{n} archivos',
@@ -3749,7 +3757,7 @@ export const strings = {
     setAutoSave: 'Guardar automáticamente todos los documentos',
     setAutoSaveDesc:
       'Activa el autoguardado de forma predeterminada en todos los editores. Aún puedes desactivarlo en una ventana concreta.',
-    setResultStore: 'Resultados de IA de PDF guardados',
+    setResultStore: 'Resultados de IA guardados',
     setResultStoreDesc:
       'Las páginas leídas por la IA y las traducciones se guardan en este PC hasta que las elimines. En uso: {size}',
     setResultStoreDeleteAll: 'Eliminar todo',
@@ -4167,6 +4175,7 @@ export const strings = {
     filterHtml: 'HTML',
     filterMindmap: 'แผนที่ความคิด',
     filterHwp: 'HWP',
+    filterEpub: 'EPUB',
     filterAria: 'กรองตามชนิด',
     // List / bulk actions
     fileCount: '{n} ไฟล์',
@@ -4263,7 +4272,7 @@ export const strings = {
     saveLocation: 'ตำแหน่งบันทึก',
     setAutoSave: 'บันทึกอัตโนมัติทุกเอกสาร',
     setAutoSaveDesc: 'เปิดบันทึกอัตโนมัติเป็นค่าเริ่มต้นในทุกตัวแก้ไข คุณยังปิดได้ในแต่ละหน้าต่าง',
-    setResultStore: 'ผลลัพธ์ AI ของ PDF ที่บันทึกไว้',
+    setResultStore: 'ผลลัพธ์ AI ที่บันทึกไว้',
     setResultStoreDesc:
       'หน้าที่ AI อ่านและคำแปลจะเก็บไว้ในพีซีเครื่องนี้จนกว่าคุณจะลบ ใช้พื้นที่: {size}',
     setResultStoreDeleteAll: 'ลบทั้งหมด',
@@ -4671,6 +4680,7 @@ export const strings = {
     filterHtml: 'HTML',
     filterMindmap: 'Peta pikiran',
     filterHwp: 'HWP',
+    filterEpub: 'EPUB',
     filterAria: 'Filter menurut jenis',
     // List / bulk actions
     fileCount: '{n} file',
@@ -4771,7 +4781,7 @@ export const strings = {
     setAutoSave: 'Simpan otomatis semua dokumen',
     setAutoSaveDesc:
       'Aktifkan Simpan Otomatis secara default di setiap editor. Anda masih dapat menonaktifkannya untuk satu jendela.',
-    setResultStore: 'Hasil AI PDF tersimpan',
+    setResultStore: 'Hasil AI tersimpan',
     setResultStoreDesc:
       'Halaman yang dibaca AI dan terjemahan disimpan di PC ini sampai Anda menghapusnya. Terpakai: {size}',
     setResultStoreDeleteAll: 'Hapus semua',
@@ -5187,6 +5197,7 @@ export const strings = {
     filterHtml: 'HTML',
     filterMindmap: 'Интеллект-карта',
     filterHwp: 'HWP',
+    filterEpub: 'EPUB',
     filterAria: 'Фильтр по типу',
     // List / bulk actions
     fileCount: 'Файлов: {n}',
@@ -5286,7 +5297,7 @@ export const strings = {
     setAutoSave: 'Автосохранение всех документов',
     setAutoSaveDesc:
       'Включает автосохранение по умолчанию во всех редакторах. Его по-прежнему можно выключить для отдельного окна.',
-    setResultStore: 'Сохранённые результаты ИИ для PDF',
+    setResultStore: 'Сохранённые результаты ИИ',
     setResultStoreDesc:
       'Страницы, прочитанные ИИ, и переводы хранятся на этом компьютере, пока вы их не удалите. Занято: {size}',
     setResultStoreDeleteAll: 'Удалить всё',
@@ -5705,6 +5716,7 @@ export const strings = {
     filterHtml: 'HTML',
     filterMindmap: 'خريطة ذهنية',
     filterHwp: 'HWP',
+    filterEpub: 'EPUB',
     filterAria: 'تصفية حسب النوع',
     // List / bulk actions
     fileCount: '{n} ملفات',
@@ -5802,7 +5814,7 @@ export const strings = {
     setAutoSave: 'حفظ جميع المستندات تلقائيًا',
     setAutoSaveDesc:
       'تشغيل الحفظ التلقائي افتراضيًا في كل محرر. لا يزال بإمكانك إيقافه لنافذة واحدة.',
-    setResultStore: 'نتائج الذكاء الاصطناعي المحفوظة لملفات PDF',
+    setResultStore: 'نتائج الذكاء الاصطناعي المحفوظة',
     setResultStoreDesc:
       'تبقى الصفحات التي قرأها الذكاء الاصطناعي والترجمات على هذا الكمبيوتر حتى تحذفها. المساحة المستخدمة: {size}',
     setResultStoreDeleteAll: 'حذف الكل',
@@ -6207,6 +6219,7 @@ export const strings = {
     filterHtml: 'HTML',
     filterMindmap: 'Mapa mental',
     filterHwp: 'HWP',
+    filterEpub: 'EPUB',
     filterAria: 'Filtrar por tipo',
     fileCount: '{n} arquivos',
     fileCountOne: '{n} arquivo',
@@ -6304,7 +6317,7 @@ export const strings = {
     setAutoSave: 'Salvar automaticamente todos os documentos',
     setAutoSaveDesc:
       'Ativa o salvamento automático por padrão em todos os editores. Você ainda pode desativá-lo em uma janela específica.',
-    setResultStore: 'Resultados de IA de PDF salvos',
+    setResultStore: 'Resultados de IA salvos',
     setResultStoreDesc:
       'Páginas lidas pela IA e traduções ficam neste PC até você excluí-las. Em uso: {size}',
     setResultStoreDeleteAll: 'Excluir tudo',
@@ -6720,6 +6733,7 @@ export const strings = {
     filterHtml: 'HTML',
     filterMindmap: 'Mappa mentale',
     filterHwp: 'HWP',
+    filterEpub: 'EPUB',
     filterAria: 'Filtra per tipo',
     fileCount: '{n} file',
     fileCountOne: '{n} file',
@@ -6817,7 +6831,7 @@ export const strings = {
     setAutoSave: 'Salva automaticamente tutti i documenti',
     setAutoSaveDesc:
       'Attiva il salvataggio automatico per impostazione predefinita in ogni editor. Puoi comunque disattivarlo per una singola finestra.',
-    setResultStore: 'Risultati IA dei PDF salvati',
+    setResultStore: 'Risultati IA salvati',
     setResultStoreDesc:
       "Le pagine lette dall'IA e le traduzioni restano su questo PC finché non le elimini. Spazio usato: {size}",
     setResultStoreDeleteAll: 'Elimina tutto',
@@ -7230,6 +7244,7 @@ export const strings = {
     filterHtml: 'HTML',
     filterMindmap: 'Mapa myśli',
     filterHwp: 'HWP',
+    filterEpub: 'EPUB',
     filterAria: 'Filtruj według typu',
     fileCount: 'Pliki: {n}',
     fileCountOne: '{n} plik',
@@ -7327,7 +7342,7 @@ export const strings = {
     setAutoSave: 'Automatycznie zapisuj wszystkie dokumenty',
     setAutoSaveDesc:
       'Włącza autozapis domyślnie w każdym edytorze. Nadal możesz go wyłączyć dla pojedynczego okna.',
-    setResultStore: 'Zapisane wyniki AI dla PDF',
+    setResultStore: 'Zapisane wyniki AI',
     setResultStoreDesc:
       'Strony odczytane przez AI i tłumaczenia pozostają na tym komputerze, dopóki ich nie usuniesz. Zajęte: {size}',
     setResultStoreDeleteAll: 'Usuń wszystko',
@@ -7738,6 +7753,7 @@ export const strings = {
     filterHtml: 'HTML',
     filterMindmap: 'Myšlenková mapa',
     filterHwp: 'HWP',
+    filterEpub: 'EPUB',
     filterAria: 'Filtrovat podle typu',
     fileCount: '{n} souborů',
     fileCountOne: '{n} soubor',
@@ -8120,7 +8136,7 @@ export const strings = {
     setAutoSave: 'Automaticky ukládat všechny dokumenty',
     setAutoSaveDesc:
       'Zapne automatické ukládání ve všech editorech jako výchozí. Pro jednotlivé okno ho lze stále vypnout.',
-    setResultStore: 'Uložené výsledky AI pro PDF',
+    setResultStore: 'Uložené výsledky AI',
     setResultStoreDesc:
       'Stránky přečtené AI a překlady zůstávají v tomto počítači, dokud je nesmažete. Využito: {size}',
     setResultStoreDeleteAll: 'Smazat vše',
@@ -8242,6 +8258,7 @@ export const strings = {
     filterHtml: 'HTML',
     filterMindmap: 'Mindmap',
     filterHwp: 'HWP',
+    filterEpub: 'EPUB',
     filterAria: 'Filteren op type',
     fileCount: '{n} bestanden',
     fileCountOne: '{n} bestand',
@@ -8338,7 +8355,7 @@ export const strings = {
     setAutoSave: 'Alle documenten automatisch opslaan',
     setAutoSaveDesc:
       'Zet automatisch opslaan standaard aan in elke editor. Je kunt het nog steeds uitschakelen voor één venster.',
-    setResultStore: "Opgeslagen AI-resultaten van pdf's",
+    setResultStore: 'Opgeslagen AI-resultaten',
     setResultStoreDesc:
       "Door AI gelezen pagina's en vertalingen blijven op deze pc staan tot je ze verwijdert. In gebruik: {size}",
     setResultStoreDeleteAll: 'Alles verwijderen',
@@ -8751,6 +8768,7 @@ export const strings = {
     filterHtml: 'HTML',
     filterMindmap: 'Peta minda',
     filterHwp: 'HWP',
+    filterEpub: 'EPUB',
     filterAria: 'Tapis mengikut jenis',
     fileCount: '{n} fail',
     fileCountOne: '{n} fail',
@@ -8847,7 +8865,7 @@ export const strings = {
     setAutoSave: 'Simpan automatik semua dokumen',
     setAutoSaveDesc:
       'Hidupkan Simpan Automatik secara lalai dalam setiap editor. Anda masih boleh mematikannya untuk satu tetingkap.',
-    setResultStore: 'Hasil AI PDF yang disimpan',
+    setResultStore: 'Hasil AI yang disimpan',
     setResultStoreDesc:
       'Halaman yang dibaca AI dan terjemahan disimpan dalam PC ini sehingga anda memadamkannya. Digunakan: {size}',
     setResultStoreDeleteAll: 'Padam semua',
@@ -9260,6 +9278,7 @@ export const strings = {
     filterHtml: 'HTML',
     filterMindmap: 'מפת חשיבה',
     filterHwp: 'HWP',
+    filterEpub: 'EPUB',
     filterAria: 'סינון לפי סוג',
     fileCount: '{n} קבצים',
     fileCountOne: 'קובץ אחד',
@@ -9353,7 +9372,7 @@ export const strings = {
     saveLocation: 'מיקום שמירה',
     setAutoSave: 'שמירה אוטומטית של כל המסמכים',
     setAutoSaveDesc: 'מפעיל שמירה אוטומטית כברירת מחדל בכל עורך. עדיין אפשר לכבות אותה בחלון בודד.',
-    setResultStore: 'תוצאות AI שמורות של PDF',
+    setResultStore: 'תוצאות AI שמורות',
     setResultStoreDesc: 'דפים שה-AI קרא ותרגומים נשמרים במחשב הזה עד שתמחק אותם. בשימוש: {size}',
     setResultStoreDeleteAll: 'מחק הכול',
     setResultStoreConfirm:
@@ -9746,6 +9765,7 @@ export const strings = {
     filterHtml: 'HTML',
     filterMindmap: 'माइंड मैप',
     filterHwp: 'HWP',
+    filterEpub: 'EPUB',
     filterAria: 'प्रकार के अनुसार फ़िल्टर करें',
     fileCount: '{n} फ़ाइलें',
     fileCountOne: '{n} फ़ाइल',
@@ -9843,7 +9863,7 @@ export const strings = {
     setAutoSave: 'सभी दस्तावेज़ स्वतः सहेजें',
     setAutoSaveDesc:
       'हर संपादक में स्वतः सहेजना डिफ़ॉल्ट रूप से चालू करता है। आप इसे किसी एक विंडो के लिए अब भी बंद कर सकते हैं।',
-    setResultStore: 'सहेजे गए PDF AI परिणाम',
+    setResultStore: 'सहेजे गए AI परिणाम',
     setResultStoreDesc:
       'AI द्वारा पढ़े गए पेज और अनुवाद इस PC पर तब तक रहते हैं जब तक आप उन्हें हटा नहीं देते। उपयोग में: {size}',
     setResultStoreDeleteAll: 'सभी हटाएँ',
@@ -10246,6 +10266,7 @@ export const strings = {
     filterHtml: 'HTML',
     filterMindmap: '心智圖',
     filterHwp: 'HWP',
+    filterEpub: 'EPUB',
     filterAria: '依類型篩選',
     fileCount: '{n} 個檔案',
     fileCountOne: '{n} 個檔案',
@@ -10339,7 +10360,7 @@ export const strings = {
     saveLocation: '預設儲存位置',
     setAutoSave: '所有文件自動儲存',
     setAutoSaveDesc: '在每個編輯器中預設開啟自動儲存，仍可在單一視窗中關閉。',
-    setResultStore: '已儲存的 PDF AI 結果',
+    setResultStore: '已儲存的 AI 結果',
     setResultStoreDesc: 'AI 讀取的頁面和譯文會保存在這台電腦上，直到你刪除。已使用：{size}',
     setResultStoreDeleteAll: '全部刪除',
     setResultStoreConfirm: '要刪除所有已儲存的 AI 讀取結果和譯文嗎？重新產生需要再次使用 AI。',
