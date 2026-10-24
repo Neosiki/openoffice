@@ -60,6 +60,10 @@ export const en = {
   btRestartYes: 'Delete and translate again',
   btRestartSaveYes: 'Save, delete and translate again',
   btRouteChanged: 'The AI connection changed. Check the details and start again.',
+  btBookChanged:
+    'The book was saved after this window opened, and what would be translated changed. Check the new details and start again.',
+  btNoticeSends:
+    'Book translation sends the AI the text of the chosen chapters (paragraphs with placeholders for their formatting), the book title and the table of contents entries.',
   btBusy: 'This book is already being translated ({done}/{total}).',
   btRunning: 'Translating into {language}: {done}/{total} blocks',
   btRunningChapter: 'Now: {chapter}',

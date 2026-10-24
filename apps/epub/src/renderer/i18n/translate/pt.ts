@@ -60,6 +60,10 @@ export const pt = {
   btRestartYes: 'Excluir e traduzir de novo',
   btRestartSaveYes: 'Salvar, excluir e traduzir de novo',
   btRouteChanged: 'A conexão com a IA mudou. Confira os detalhes e comece de novo.',
+  btBookChanged:
+    'O livro foi salvo depois que esta janela foi aberta, e o que seria traduzido mudou. Confira os novos detalhes e comece de novo.',
+  btNoticeSends:
+    'A tradução do livro envia à IA o texto dos capítulos escolhidos (parágrafos com marcadores para a formatação), o título do livro e as entradas do sumário.',
   btBusy: 'Este livro já está sendo traduzido ({done}/{total}).',
   btRunning: 'Traduzindo para {language}: {done}/{total} blocos',
   btRunningChapter: 'Agora: {chapter}',

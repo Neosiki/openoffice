@@ -60,6 +60,10 @@ export const pl = {
   btRestartYes: 'Usuń i przetłumacz od nowa',
   btRestartSaveYes: 'Zapisz, usuń i przetłumacz od nowa',
   btRouteChanged: 'Połączenie z AI się zmieniło. Sprawdź szczegóły i zacznij ponownie.',
+  btBookChanged:
+    'Książka została zapisana po otwarciu tego okna i zmieniło się to, co zostałoby przetłumaczone. Sprawdź nowe dane i zacznij ponownie.',
+  btNoticeSends:
+    'Tłumaczenie książki wysyła do AI tekst wybranych rozdziałów (akapity ze znacznikami formatowania), tytuł książki i pozycje spisu treści.',
   btBusy: 'Ta książka jest już tłumaczona ({done}/{total}).',
   btRunning: 'Tłumaczenie ({language}): bloki {done}/{total}',
   btRunningChapter: 'Teraz: {chapter}',

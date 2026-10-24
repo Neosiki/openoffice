@@ -61,6 +61,10 @@ export const ms = {
   btRestartYes: 'Padam dan terjemah semula',
   btRestartSaveYes: 'Simpan, padam dan terjemah semula',
   btRouteChanged: 'Sambungan AI telah berubah. Semak butirannya dan mulakan semula.',
+  btBookChanged:
+    'Buku telah disimpan selepas tetingkap ini dibuka, dan kandungan yang akan diterjemahkan telah berubah. Semak butiran baharu dan mulakan semula.',
+  btNoticeSends:
+    'Terjemahan buku menghantar kepada AI teks bab yang dipilih (perenggan dengan penanda untuk formatnya), tajuk buku dan entri jadual kandungan.',
   btBusy: 'Buku ini sedang diterjemah ({done}/{total}).',
   btRunning: 'Menterjemah ke {language}: {done}/{total} blok',
   btRunningChapter: 'Sekarang: {chapter}',

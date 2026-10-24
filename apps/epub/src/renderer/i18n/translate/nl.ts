@@ -60,6 +60,10 @@ export const nl = {
   btRestartYes: 'Verwijderen en opnieuw vertalen',
   btRestartSaveYes: 'Opslaan, verwijderen en opnieuw vertalen',
   btRouteChanged: 'De AI-verbinding is gewijzigd. Controleer de gegevens en begin opnieuw.',
+  btBookChanged:
+    'Het boek is opgeslagen nadat dit venster werd geopend, en wat vertaald zou worden is veranderd. Controleer de nieuwe gegevens en begin opnieuw.',
+  btNoticeSends:
+    'Bij het vertalen van een boek gaan de tekst van de gekozen hoofdstukken (alinea’s met plaatshouders voor de opmaak), de boektitel en de items van de inhoudsopgave naar de AI.',
   btBusy: 'Dit boek wordt al vertaald ({done}/{total}).',
   btRunning: 'Vertalen naar het {language}: {done}/{total} blokken',
   btRunningChapter: 'Nu: {chapter}',

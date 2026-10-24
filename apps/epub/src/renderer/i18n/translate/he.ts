@@ -57,6 +57,10 @@ export const he = {
   btRestartYes: 'מחיקה ותרגום מחדש',
   btRestartSaveYes: 'שמירה, מחיקה ותרגום מחדש',
   btRouteChanged: 'החיבור ל-AI השתנה. יש לבדוק את הפרטים ולהתחיל שוב.',
+  btBookChanged:
+    'הספר נשמר אחרי שהחלון הזה נפתח, ומה שיתורגם השתנה. בדקו את הפרטים החדשים והתחילו שוב.',
+  btNoticeSends:
+    'תרגום הספר שולח ל-AI את הטקסט של הפרקים שנבחרו (פסקאות עם סימני מקום לעיצוב), את שם הספר ואת פריטי תוכן העניינים.',
   btBusy: 'הספר הזה כבר מתורגם ({done}/{total}).',
   btRunning: 'מתרגם ({language}): {done}/{total} גושים',
   btRunningChapter: 'עכשיו: {chapter}',

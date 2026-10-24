@@ -1121,7 +1121,9 @@ export class EpubEditController {
   /**
    * Replaces every match in the book, chapter by chapter (each chapter all
    * or nothing), as one history entry. Chapters that cannot be edited are
-   * skipped and their matches counted.
+   * skipped and their matches counted: the matches inside a block, the only
+   * ones replacing reaches (a match never spans two blocks). A chapter without
+   * blocks (a damaged one) counts what the search lists for it.
    */
   async replaceAll(
     query: string,
@@ -1143,7 +1145,7 @@ export class EpubEditController {
         if (!chapter?.ok || seen.has(chapter.path)) continue
         seen.add(chapter.path)
         if (chapter.broken || chapter.readOnly !== null || this.bookReadOnly) {
-          outcome.skipped += countMatches(this.host.readingText(chapter), query)
+          outcome.skipped += this.skippedMatches(chapter, query)
           continue
         }
         if (!this.versions.has(chapter.path)) this.versions.set(chapter.path, chapter.version)
@@ -1185,6 +1187,25 @@ export class EpubEditController {
       this.host.changed()
       return outcome
     })
+  }
+
+  /**
+   * The matches replace all leaves in a chapter that cannot be edited: those
+   * inside its blocks, as in an editable chapter. A damaged chapter has no
+   * blocks: what the search lists for it.
+   */
+  private skippedMatches(chapter: OkChapter, query: string): number {
+    const map = chapter.broken ? null : openChapter(chapter.source)
+    if (chapter.broken || !map || map.broken) {
+      return countMatches(this.host.readingText(chapter), query)
+    }
+    const byStart = new Map(map.blocks.map((b) => [b.outer.start, b]))
+    let count = 0
+    for (const info of chapter.blocks) {
+      const xml = byStart.get(info.outer.start)
+      if (xml) count += blockMatches(xml, query).length
+    }
+    return count
   }
 
   // ---- lock and saving ----

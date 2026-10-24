@@ -62,6 +62,10 @@ export const fr = {
   btRestartYes: 'Supprimer et retraduire',
   btRestartSaveYes: 'Enregistrer, supprimer et retraduire',
   btRouteChanged: 'La connexion à l’IA a changé. Vérifiez les détails et recommencez.',
+  btBookChanged:
+    'Le livre a été enregistré après l’ouverture de cette fenêtre et ce qui serait traduit a changé. Vérifiez les nouveaux détails et recommencez.',
+  btNoticeSends:
+    'La traduction du livre envoie à l’IA le texte des chapitres choisis (des paragraphes avec des marqueurs pour leur mise en forme), le titre du livre et les entrées de la table des matières.',
   btBusy: 'Ce livre est déjà en cours de traduction ({done}/{total}).',
   btRunning: 'Traduction en {language} : {done}/{total} blocs',
   btRunningChapter: 'En cours : {chapter}',

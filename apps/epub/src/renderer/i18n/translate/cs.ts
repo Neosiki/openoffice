@@ -57,6 +57,10 @@ export const cs = {
   btRestartYes: 'Smazat a přeložit znovu',
   btRestartSaveYes: 'Uložit, smazat a přeložit znovu',
   btRouteChanged: 'Připojení k AI se změnilo. Zkontrolujte podrobnosti a začněte znovu.',
+  btBookChanged:
+    'Kniha byla uložena po otevření tohoto okna a změnilo se, co by se překládalo. Zkontrolujte nové údaje a začněte znovu.',
+  btNoticeSends:
+    'Překlad knihy odešle AI text vybraných kapitol (odstavce se zástupnými značkami formátování), název knihy a položky obsahu.',
   btBusy: 'Tato kniha se už překládá ({done}/{total}).',
   btRunning: 'Překlad ({language}): bloky {done}/{total}',
   btRunningChapter: 'Nyní: {chapter}',

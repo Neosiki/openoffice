@@ -359,6 +359,25 @@ describe('replace all', () => {
     expect([0, 1, 2].map((i) => t.book.source(i))).toEqual(before)
   })
 
+  it('counts in a read-only chapter only the matches inside a block, as replacing would', async () => {
+    const t = setup([
+      { body: '<p>The whale.</p>\n<p>The end.</p>' },
+      { body: '<p>A fixed whale.</p>\n<p>The whale.</p>', readOnly: 'fixed-layout-chapter' },
+    ])
+    await t.open(0)
+    // "whale. The" runs across two blocks in both chapters: never replaced, never skipped
+    expect(await t.controller.replaceAll('whale. The', 'x', 2)).toEqual({
+      replaced: 0,
+      skipped: 0,
+      failed: 0,
+    })
+    expect(await t.controller.replaceAll('whale', 'shark', 2)).toEqual({
+      replaced: 1,
+      skipped: 2,
+      failed: 0,
+    })
+  })
+
   it('replaces one match on screen', async () => {
     const t = setup([{ body: P3 }])
     const doc = await t.open(0)

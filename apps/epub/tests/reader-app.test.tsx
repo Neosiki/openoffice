@@ -426,4 +426,30 @@ describe('presses inside a chapter', () => {
     expect(event.defaultPrevented).toBe(true)
     expect(onLink).toHaveBeenCalledWith('three.xhtml#end')
   })
+
+  it("routes an image map's area like a link", () => {
+    const doc = chapterDoc()
+    const onLink = vi.fn()
+    const handlers = {
+      html: '',
+      title: '',
+      onReady: () => {},
+      onLink,
+      onWheel: () => {},
+      onScroll: () => {},
+      onKeyDown: () => {},
+      onPress: () => {},
+    } satisfies ChapterFrameProps
+    wireChapterDocument(doc, () => handlers)
+    const map = doc.createElement('map')
+    map.name = 'm'
+    const area = doc.createElement('area')
+    area.setAttribute('href', 'two.xhtml#top')
+    map.appendChild(area)
+    doc.body.appendChild(map)
+    const event = new MouseEvent('click', { bubbles: true, cancelable: true })
+    area.dispatchEvent(event)
+    expect(event.defaultPrevented).toBe(true)
+    expect(onLink).toHaveBeenCalledWith('two.xhtml#top')
+  })
 })

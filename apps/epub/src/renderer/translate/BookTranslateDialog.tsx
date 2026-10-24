@@ -18,7 +18,10 @@
  *   is saved first and nothing starts when the save fails. "Translate again
  *   from the start" asks once more before it deletes the stored translation
  *   of the language. When everything chosen is already stored, the results
- *   are written without a call.
+ *   are written without a call. When a save changed the book while the window
+ *   was open (an automatic save, Ctrl+S) and with it the calls the job would
+ *   make, the confirmation is shown again with the new numbers instead of
+ *   starting.
  *
  * The units are read here from the saved book (the main process; no AI), so
  * the estimate counts what the job would send. Nothing is sent from here:
@@ -106,6 +109,8 @@ export interface BookTranslateStartRequest {
   units: EpubTranslationUnit[]
   /** the result books, in kind order */
   targets: BookResultTarget[]
+  /** the calls the confirmation showed; a different count on the saved book asks again */
+  calls?: number
   mode: BookTranslateMode
   /** the confirmed AI (absent for 'export') */
   route?: ReadyRoute
@@ -113,7 +118,11 @@ export interface BookTranslateStartRequest {
 
 /** what the caller answers to Start */
 export type BookTranslateStartAnswer =
-  { ok: true } | { ok: false; busy: { done: number; total: number } } | { ok: false; error: string }
+  | { ok: true }
+  | { ok: false; busy: { done: number; total: number } }
+  | { ok: false; error: string }
+  /** a save changed the book and the calls since the confirmation was shown: nothing started */
+  | { ok: false; changed: true }
 
 export interface BookTranslateDialogProps {
   book: EpubBookSummary
@@ -178,42 +187,52 @@ export function BookTranslateDialog(props: BookTranslateDialogProps): ReactEleme
   const dismiss = useCallback(() => propsRef.current.onClose(), [])
   const modal = useModalKeys(dismiss, { restoreFocus: true })
 
-  // the units of the saved book, once (the main process reads them; no AI)
-  useEffect(() => {
-    let alive = true
-    void (async () => {
-      try {
-        const out = await api.translationUnits({})
-        if (!alive) return
-        if (!out.ok) {
-          setLoad({ kind: 'failed' })
-          return
-        }
-        const p = propsRef.current
-        const rows = chapterRows(p.book, out.units, out.skipped, p.t)
-        const sample = epubSampleText(out.units)
-        const fallback = defaultEpubTargetLanguage(p.lang, p.book.metadata.languages, sample)
-        setTarget((asked) => asked ?? fallback)
-        setChosen(initialChapters(rows, p.initialChapters))
-        setLoad({
-          kind: 'ready',
-          analysis: {
-            docHash: out.docHash,
-            units: out.units,
-            skipped: out.skipped,
-            rows,
-            bookLanguage: epubBookLanguage(p.book.metadata.languages, sample),
-          },
-        })
-      } catch {
-        if (alive) setLoad({ kind: 'failed' })
+  const aliveRef = useRef(true)
+  const chosenRef = useRef(chosen)
+  chosenRef.current = chosen
+
+  /**
+   * Read the units of the saved book (the main process reads them; no AI).
+   * Again after a save changed the book: the chapters chosen stay chosen.
+   */
+  const readUnits = useCallback(async (again: boolean): Promise<void> => {
+    try {
+      const out = await propsRef.current.api.translationUnits({})
+      if (!aliveRef.current) return
+      if (!out.ok) {
+        // read again: the confirmation stays, without numbers, so nothing can start from it
+        if (!again) setLoad({ kind: 'failed' })
+        return
       }
-    })()
-    return () => {
-      alive = false
+      const p = propsRef.current
+      const rows = chapterRows(p.book, out.units, out.skipped, p.t)
+      const sample = epubSampleText(out.units)
+      const fallback = defaultEpubTargetLanguage(p.lang, p.book.metadata.languages, sample)
+      setTarget((asked) => asked ?? fallback)
+      setChosen(initialChapters(rows, again ? [...chosenRef.current] : p.initialChapters))
+      setLoad({
+        kind: 'ready',
+        analysis: {
+          docHash: out.docHash,
+          units: out.units,
+          skipped: out.skipped,
+          rows,
+          bookLanguage: epubBookLanguage(p.book.metadata.languages, sample),
+        },
+      })
+    } catch {
+      if (aliveRef.current && !again) setLoad({ kind: 'failed' })
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- once per opened window
   }, [])
+
+  // the units of the saved book, once per opened window
+  useEffect(() => {
+    aliveRef.current = true
+    void readUnits(false)
+    return () => {
+      aliveRef.current = false
+    }
+  }, [readUnits])
 
   const analysis = load.kind === 'ready' ? load.analysis : null
   const lang0 = target ?? 'en'
@@ -241,6 +260,9 @@ export function BookTranslateDialog(props: BookTranslateDialogProps): ReactEleme
         : null
   const noUnits = !!analysis && !chapterError && units.length === 0
   const canNext = !!analysis && !chapterError && !kindError && !locationError && !noUnits
+
+  /** a save changed the book since the window read it: read it again, keep the step */
+  const bookChanged = () => void readUnits(true)
 
   const changeLanguage = (next: string) => {
     setTarget(next)
@@ -478,6 +500,7 @@ export function BookTranslateDialog(props: BookTranslateDialogProps): ReactEleme
               onBack={() => setStep('choose')}
               onCancel={props.onClose}
               onStart={props.onStart}
+              onBookChanged={bookChanged}
             />
           )
         )}
@@ -501,6 +524,7 @@ function BookTranslateConfirm({
   onBack,
   onCancel,
   onStart,
+  onBookChanged,
 }: {
   lang: Lang
   t: TFunc
@@ -515,6 +539,8 @@ function BookTranslateConfirm({
   onBack: () => void
   onCancel: () => void
   onStart: (request: BookTranslateStartRequest) => Promise<BookTranslateStartAnswer>
+  /** the saved book changed: the window reads it again (new units, a new estimate follows) */
+  onBookChanged: () => void
 }): ReactElement {
   const connection = useSubscriptionConnection()
   const [settings, setSettings] = useState<AiSettings | null>(null)
@@ -584,8 +610,8 @@ function BookTranslateConfirm({
     return () => {
       alive = false
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- per confirmation and route
-  }, [routeKey])
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- per confirmation, route and read of the book
+  }, [routeKey, docHash, units])
 
   const send = async (o: { mode: BookTranslateMode; route?: ReadyRoute }): Promise<void> => {
     setStarting(true)
@@ -596,10 +622,17 @@ function BookTranslateConfirm({
         chapters,
         units,
         targets,
+        ...(estimate ? { calls: estimate.calls } : {}),
         mode: o.mode,
         ...(o.route ? { route: o.route } : {}),
       })
-      if (!answer.ok) {
+      if (answer.ok) return
+      if ('changed' in answer) {
+        // the numbers shown no longer hold: they are counted again before anything starts
+        setEstimate(null)
+        setMessage(t('btBookChanged'))
+        onBookChanged()
+      } else {
         setMessage('busy' in answer ? t('btBusy', answer.busy) : answer.error)
       }
     } finally {
@@ -734,12 +767,16 @@ function BookTranslateConfirm({
         />
       )}
       {sending && sendGate.noticeDue && (
-        <AiFirstConnectionNotice
-          lang={lang}
-          codexKeepsHistory
-          sendsWholeDocument
-          onAcknowledge={sendGate.acknowledgeNotice}
-        />
+        <>
+          <p className="bt-hint" role="note" data-notice="book">
+            {t('btNoticeSends')}
+          </p>
+          <AiFirstConnectionNotice
+            lang={lang}
+            codexKeepsHistory
+            onAcknowledge={sendGate.acknowledgeNotice}
+          />
+        </>
       )}
       {askRestart && estimate && (
         <div className="bt-restart" role="alertdialog" data-restart-confirm>

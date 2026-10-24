@@ -10,8 +10,13 @@
  *   window (`requestOpen` answers at once), and the resume offer's "Continue"
  *   only opens it too;
  * - unsaved changes are saved before the start ("Save and translate"); when
- *   the save fails nothing starts. The units are then read again from the
- *   saved book, so the job translates what the result books are built from;
+ *   the save fails nothing starts. The saved book's hash is asked again at
+ *   every start: when a save changed it (this one, an automatic save, Ctrl+S)
+ *   the units are read again from the saved book, so the job translates, and
+ *   stores under, what the result books are built from. When a save the user
+ *   did not ask for here changed the calls the confirmation showed, nothing
+ *   starts and the confirmation is shown again. Automatic saves wait while
+ *   the window is open (`onWindowOpen`);
  * - one job per book: in this tab, in this page (the job engine's lock) and
  *   against a job another process runs (a 'running' record in the store);
  * - the job sends to the provider the user confirmed and never switches; the
@@ -19,7 +24,8 @@
  *   failures in a row and at once on a used-up limit or an ended sign-in;
  * - the tab is locked for editing (here and in the main process) from the
  *   start until the job ended and its result books are written, so the books
- *   are built from the saved book the job started from;
+ *   are built from the saved book the job started from. Every way a start
+ *   fails after the lock unlocks it;
  * - the job belongs to the tab: closing it (or quitting) stops the job as
  *   'interrupted'. The AI panel keeps working meanwhile: the job's calls are
  *   its own streams, and Stop cancels only those.
@@ -62,7 +68,7 @@ import {
   type BookTranslateStartRequest,
 } from './BookTranslateDialog'
 import { BookTranslateReport } from './BookTranslateReport'
-import { EPUB_METADATA_PAGE, startEpubTranslationJob } from './engine'
+import { EPUB_METADATA_PAGE, estimateEpubTranslationJob, startEpubTranslationJob } from './engine'
 import { createBookJobStore } from './ipc-store'
 import { BookJobSession, type BookJobView } from './job-session'
 import { createModelCall, type ModelStreamApi } from './model-call'
@@ -101,6 +107,8 @@ export interface BookTranslationProps {
   save: () => Promise<boolean>
   /** lock (true) or unlock (false) editing in this tab, here and in the main process */
   lock: (locked: boolean) => Promise<boolean>
+  /** the window opened (true) or closed (false); automatic saves wait meanwhile */
+  onWindowOpen?: (open: boolean) => void
 }
 
 export interface BookTranslationHandle {
@@ -161,6 +169,14 @@ export const BookTranslation = forwardRef<BookTranslationHandle, BookTranslation
     const dialogSeq = useRef(0)
     const runRef = useRef<TranslationRun | null>(null)
     const offeredRef = useRef(false)
+    const windowOpen = dialog !== null
+
+    // automatic saves wait while the window is open: what it shows is the saved book
+    useEffect(() => {
+      if (!windowOpen) return
+      propsRef.current.onWindowOpen?.(true)
+      return () => propsRef.current.onWindowOpen?.(false)
+    }, [windowOpen])
 
     // the job goes with the tab: closing it, or quitting, stops the job
     useEffect(() => {
@@ -283,7 +299,16 @@ export const BookTranslation = forwardRef<BookTranslationHandle, BookTranslation
       }
     }
 
+    /** Start from the confirmation; never rejects (a failure is the answer). */
     const start = async (request: BookTranslateStartRequest): Promise<BookTranslateStartAnswer> => {
+      try {
+        return await begin(request)
+      } catch (err) {
+        return { ok: false, error: propsRef.current.t('btFailed', { reason: errorText(err) }) }
+      }
+    }
+
+    const begin = async (request: BookTranslateStartRequest): Promise<BookTranslateStartAnswer> => {
       const p = propsRef.current
       if (!p.api) return { ok: false, error: p.t('btUnavailable') }
       const tabBusy = tabJob()
@@ -310,8 +335,14 @@ export const BookTranslation = forwardRef<BookTranslationHandle, BookTranslation
 
       let { docHash, units } = request
       // "Save and translate": the book is saved first; a failed save starts nothing
-      if (p.isDirty()) {
-        if (!(await p.save())) return { ok: false, error: p.t('btSaveFailed') }
+      const saving = p.isDirty()
+      if (saving && !(await p.save())) return { ok: false, error: p.t('btSaveFailed') }
+      // the saved book now: a save since the window read it (this one, an automatic
+      // save, Ctrl+S) moved its stored results to a new hash, and the result books
+      // are written from that one
+      const now = await attempt(() => p.api!.documentHash())
+      if (!now?.ok) return { ok: false, error: p.t('btLoadFailed') }
+      if (now.docHash !== docHash) {
         const fresh = await p.api
           .translationUnits(request.chapters ? { chapters: request.chapters } : {})
           .catch(() => null)
@@ -320,6 +351,18 @@ export const BookTranslation = forwardRef<BookTranslationHandle, BookTranslation
         units = fresh.units
         const again = await busy(docHash)
         if (again) return again
+        // a save the user did not ask for here changed what the confirmation counted
+        if (!saving && request.calls !== undefined) {
+          const estimate = await estimateEpubTranslationJob({
+            docHash,
+            lang: request.lang,
+            units,
+            model: { provider: request.route?.provider ?? '', model: request.route?.model ?? '' },
+            store: createBookJobStore(p.api.store),
+          }).catch(() => null)
+          if (!estimate) return { ok: false, error: p.t('btLoadFailed') }
+          if (estimate.calls !== request.calls) return { ok: false, changed: true }
+        }
       }
 
       const run: TranslationRun = {
@@ -343,51 +386,58 @@ export const BookTranslation = forwardRef<BookTranslationHandle, BookTranslation
         return { ok: true }
       }
 
-      if (!(await p.lock(true).catch(() => false))) {
-        await unlock()
-        return { ok: false, error: p.t('btUnavailable') }
-      }
-      rememberChapters(docHash, request.lang, request.chapters)
-      const ask = createModelCall({
-        api: p.api,
-        settings: () => route.settings,
-        lang: () => propsRef.current.lang,
-        guard: async () => {
-          const statuses = await attemptSubscription((s) => s.statuses())
-          const current = await propsRef.current.api?.getAiSettings?.().catch(() => null)
-          return jobRouteRefusal(route, current ?? null, statuses)
-        },
-      })
-      // the translation request is a system prompt and one user turn of book text; no tools
-      const send: TranslationSend = (req, signal) =>
-        ask(
-          { system: req.system, messages: [{ role: 'user', text: req.prompt }], tools: [] },
-          signal,
-        )
-      const store = createBookJobStore(p.api.store)
-      const outcome = session.start<JobItems>({
-        docHash,
-        lang: request.lang,
-        provider: route.provider,
-        launch: ({ signal, registry, onProgress }) =>
-          startEpubTranslationJob({
-            docHash,
-            lang: request.lang,
-            units,
-            model: { provider: route.provider, model: route.model },
-            store,
-            send,
-            ...(request.mode === 'restart' ? { restart: true } : {}),
+      // from here every way out but a started job unlocks the tab
+      let started = false
+      try {
+        if (!(await p.lock(true).catch(() => false))) {
+          return { ok: false, error: p.t('btUnavailable') }
+        }
+        rememberChapters(docHash, request.lang, request.chapters)
+        const api = p.api
+        const ask = createModelCall({
+          api,
+          settings: () => route.settings,
+          lang: () => propsRef.current.lang,
+          guard: async () => {
+            const statuses = await attemptSubscription((s) => s.statuses())
+            const current = await propsRef.current.api?.getAiSettings?.().catch(() => null)
+            return jobRouteRefusal(route, current ?? null, statuses)
+          },
+        })
+        // the translation request is a system prompt and one user turn of book text; no tools
+        const send: TranslationSend = (req, signal) =>
+          ask(
+            { system: req.system, messages: [{ role: 'user', text: req.prompt }], tools: [] },
             signal,
-            registry,
-            onProgress,
-          }),
-        pageOf: (batch) => batch[0]?.block.page ?? null,
-        onEnd: (last) => void ended(last, run),
-      })
-      if (!outcome.ok) {
-        await unlock()
-        return { ok: false, busy: outcome.running.progress }
+          )
+        const store = createBookJobStore(api.store)
+        const outcome = session.start<JobItems>({
+          docHash,
+          lang: request.lang,
+          provider: route.provider,
+          launch: ({ signal, registry, onProgress }) =>
+            startEpubTranslationJob({
+              docHash,
+              lang: request.lang,
+              units,
+              model: { provider: route.provider, model: route.model },
+              store,
+              send,
+              ...(request.mode === 'restart' ? { restart: true } : {}),
+              signal,
+              registry,
+              onProgress,
+            }),
+          pageOf: (batch) => batch[0]?.block.page ?? null,
+          onEnd: (last) => void ended(last, run),
+        })
+        if (!outcome.ok) return { ok: false, busy: outcome.running.progress }
+        started = true
+      } catch (err) {
+        return { ok: false, error: p.t('btFailed', { reason: errorText(err) }) }
+      } finally {
+        // a job that started unlocks when it ended and its result books are written
+        if (!started) await unlock()
       }
       setDialog(null)
       return { ok: true }
@@ -514,6 +564,11 @@ async function attempt<T>(call: () => Promise<T>): Promise<T | null> {
   } catch {
     return null
   }
+}
+
+/** the reason of a failure, for the message */
+function errorText(err: unknown): string {
+  return err instanceof Error ? err.message : String(err)
 }
 
 function writeFailureText(out: EpubFailure, t: TFunc): string {
