@@ -9277,7 +9277,7 @@ export default function App() {
                       {ribbonPages.length > 1
                         ? t('pageSelDelete', { n: ribbonPages.length })
                         : t('deletePage')}
-                      </span>
+                    </span>
                   </button>
                   <button
                     className="rb-big"
