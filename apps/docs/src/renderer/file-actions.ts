@@ -1199,8 +1199,10 @@ async function saveOnce(
     // a pathless snapshot may belong to a document that an earlier queued pass
     // already landed on disk — overwrite that file instead of creating another
     let savedPath = doc.filePath ?? pathlessDocSavedPath
-    // an untitled copy's first save asks where; an automatic one waits for it
-    const askPath = !explicitTarget && !savedPath && doc.askPathOnFirstSave === true
+    // a never-saved document's first save asks where (decision 0061: nothing lands in
+    // the user's folders unasked); an automatic one waits for it. An MCP save names its
+    // target explicitly and never asks.
+    const askPath = !explicitTarget && !savedPath
     if (askPath && auto) return false
     let passwordIntentPending = false
     let fullBytes: Uint8Array | undefined
@@ -1233,8 +1235,8 @@ async function saveOnce(
       // A never-saved document still called "Untitled" gets a name derived from its first heading
       const autoName =
         !doc.filePath && doc.fileName === t('appUntitledDocx') ? deriveAutoFileName(editor) : null
-      // Save As keeps the dialog; a new document's first save lands silently in the default
-      // folder. The source path identifies the desired password state to snapshot.
+      // Save As and a new document's first save show the dialog. The source path
+      // identifies the desired password state to snapshot.
       let result: Awaited<ReturnType<typeof window.desktop.saveDocxAs>>
       if (saveAs || askPath) {
         // the dialog offers both formats; the picked extension is the format written
