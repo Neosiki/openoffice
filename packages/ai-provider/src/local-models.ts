@@ -291,18 +291,25 @@ export async function listLocalModels(
 }
 
 /**
- * Only a well-formed tags answer identifies an Ollama server. A missing route
- * on an OpenAI-compatible server, an HTML page, or silence all mean the generic
- * kind, whose inspection needs no call at all.
+ * The server kind, decided by one `/api/tags` probe: a well-formed answer means
+ * Ollama; a 404/405 is how an OpenAI-compatible server says it has no Ollama
+ * route; anything else (silence, a timeout, a refusal or an HTML page) leaves
+ * the kind unknown and is returned as the failure it is, rather than guessed
+ * away as the generic kind.
  */
 async function resolveServerKind(
   base: string,
   headers: Record<string, string>,
-): Promise<AiLocalServerKind> {
+): Promise<{ ok: true; server: AiLocalServerKind } | AiLocalFailure> {
   const tags = await requestText(endpointUrl(ollamaRootOf(base), 'api/tags'), { headers })
-  if (!tags.ok) return 'openai-compatible'
+  if (!tags.ok) {
+    const noOllamaRoute = tags.errorCode === 'http' && (tags.status === 404 || tags.status === 405)
+    return noOllamaRoute ? { ok: true, server: 'openai-compatible' } : tags
+  }
   const body = parseJson(tags.text)
-  return isRecord(body) && Array.isArray(body.models) ? 'ollama' : 'openai-compatible'
+  return isRecord(body) && Array.isArray(body.models)
+    ? { ok: true, server: 'ollama' }
+    : failureOf('shape')
 }
 
 /** The first `*.context_length` key in `model_info`, when it carries a usable number. */
@@ -379,8 +386,9 @@ async function inspectOllamaModel(
  *
  * A generic OpenAI-compatible server has no inspection route, so the profile is
  * empty: the app treats an unknown capability as unknown rather than guessing.
- * When the kind was not discovered earlier, `/api/tags` is probed once; a server
- * that cannot answer it is treated as the generic kind.
+ * When the kind was not discovered earlier, `/api/tags` is probed once. A 404 or
+ * 405 there means the generic kind (the server legitimately has no Ollama
+ * route); any other failure is reported instead of being read as "generic".
  *
  * Never throws and never rejects.
  */
@@ -395,9 +403,12 @@ export async function inspectLocalModel(
 
     const given =
       input?.server === 'ollama' || input?.server === 'openai-compatible' ? input.server : undefined
-    const server = given ?? (await resolveServerKind(base, headers))
-    if (server === 'openai-compatible') return { ok: true, profile: {} }
+    if (given === 'openai-compatible') return { ok: true, profile: {} }
+    if (given === 'ollama') return await inspectOllamaModel(base, headers, model)
 
+    const resolved = await resolveServerKind(base, headers)
+    if (!resolved.ok) return resolved
+    if (resolved.server === 'openai-compatible') return { ok: true, profile: {} }
     return await inspectOllamaModel(base, headers, model)
   } catch {
     return failureOf('unreachable')

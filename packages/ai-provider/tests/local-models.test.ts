@@ -526,12 +526,72 @@ describe('inspectLocalModel and the server kind', () => {
     expect(requestedUrl(mock, 1)).toBe('http://127.0.0.1:11434/api/show')
   })
 
-  it('treats a failed /api/tags probe as a generic server', async () => {
+  it('treats a 404 /api/tags response as a generic server', async () => {
     const mock = stubFetch(() => textBody('not found', 404))
 
     expect(
       await inspectLocalModel({ baseUrl: 'http://127.0.0.1:1234/v1', model: 'qwen3:8b' }),
     ).toEqual({ ok: true, profile: {} })
+    expect(mock).toHaveBeenCalledTimes(1) // no /api/show: the generic profile needs no call
+  })
+
+  it('treats a 405 /api/tags response as a generic server too', async () => {
+    const mock = stubFetch(() => textBody('method not allowed', 405))
+
+    expect(
+      await inspectLocalModel({ baseUrl: 'http://127.0.0.1:1234/v1', model: 'qwen3:8b' }),
+    ).toEqual({ ok: true, profile: {} })
     expect(mock).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not claim success when the kind probe cannot reach the server', async () => {
+    stubFetch(() => Promise.reject(new Error('fetch failed')))
+
+    expect(await inspectLocalModel({ baseUrl: OLLAMA_BASE, model: 'qwen3:8b' })).toEqual({
+      ok: false,
+      errorCode: 'unreachable',
+    })
+  })
+
+  it('does not claim success when the kind probe times out', async () => {
+    vi.useFakeTimers()
+    let aborted = false
+    const mock = vi.fn(
+      (_url: string, init: RequestInit) =>
+        new Promise<Response>((_resolve, reject) => {
+          init.signal?.addEventListener('abort', () => {
+            aborted = true
+            reject(new DOMException('The operation was aborted.', 'AbortError'))
+          })
+        }),
+    )
+    vi.stubGlobal('fetch', mock)
+
+    const pending = inspectLocalModel({ baseUrl: OLLAMA_BASE, model: 'qwen3:8b' })
+    await vi.advanceTimersByTimeAsync(5000)
+
+    expect(await pending).toEqual({ ok: false, errorCode: 'timeout' })
+    expect(aborted).toBe(true)
+    expect(mock).toHaveBeenCalledTimes(1)
+  })
+
+  it('reports an http failure of the kind probe instead of a generic profile', async () => {
+    const mock = stubFetch(() => textBody('boom', 500))
+
+    expect(await inspectLocalModel({ baseUrl: OLLAMA_BASE, model: 'qwen3:8b' })).toEqual({
+      ok: false,
+      errorCode: 'http',
+      status: 500,
+    })
+    expect(mock).toHaveBeenCalledTimes(1)
+  })
+
+  it('reports shape when the kind probe answers with something that is not this API', async () => {
+    stubFetch(() => textBody('<html>hello</html>', 200))
+
+    expect(await inspectLocalModel({ baseUrl: OLLAMA_BASE, model: 'qwen3:8b' })).toEqual({
+      ok: false,
+      errorCode: 'shape',
+    })
   })
 })
