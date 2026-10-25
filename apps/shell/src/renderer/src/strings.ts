@@ -214,11 +214,12 @@ export const strings = {
     setDefaultAppOpenSettings: '打开系统设置',
     setDefaultAppFailed: '设置失败，请在系统设置中手动更改。',
     setAiSpellcheckDesc: '在 AI 对话输入框中输入时标出拼写错误的单词。',
-    setAiShowSidebar: '显示 AI 侧栏',
-    setAiShowSidebarDesc:
-      '关闭后，编辑器会隐藏 AI 侧栏和侧边按钮；功能区或菜单里的 AI 操作仍会打开面板，新文档也不会自动打开。',
-    setAiOpenInNewDocs: '新文档中打开 AI 面板',
-    setAiOpenInNewDocsDesc: '关闭后，新打开的文档默认收起 AI 面板；需要时点一下即可展开。',
+    setAiPanelStart: 'AI 面板',
+    setAiPanelStartDesc:
+      '选择启动应用或打开文档时 AI 面板如何开始。选择“关闭”会隐藏面板和侧边按钮；功能区或菜单中的 AI 操作仍可将其打开。',
+    aiPanelStartOff: '关闭',
+    aiPanelStartCollapsed: '收起',
+    aiPanelStartLast: '上次状态',
     setAuthorName: '用户名',
     setAuthorNameDesc: '作为批注和修订的作者显示在 Docs、Sheets、Slides 中。留空则使用电脑账户名。',
     settings: '设置',
@@ -711,12 +712,12 @@ export const strings = {
     setDefaultAppOpenSettings: 'Open system settings',
     setDefaultAppFailed: 'Could not change it. Please set it in the system settings.',
     setAiSpellcheckDesc: 'Underline misspelled words while typing in the AI chat input.',
-    setAiShowSidebar: 'Show the AI sidebar',
-    setAiShowSidebarDesc:
-      'When off, the editors hide the AI sidebar and its side button; an AI action in the ribbon or a menu still opens the panel, and new documents never open it.',
-    setAiOpenInNewDocs: 'Open the AI panel in new documents',
-    setAiOpenInNewDocsDesc:
-      'When off, newly opened documents start with the AI panel collapsed; it is one click away when needed.',
+    setAiPanelStart: 'AI panel',
+    setAiPanelStartDesc:
+      'Choose how the AI panel starts when you open the app or a document. Off hides the panel and its side button; an AI action in the ribbon or a menu can still open it.',
+    aiPanelStartOff: 'Off',
+    aiPanelStartCollapsed: 'Collapsed',
+    aiPanelStartLast: 'Last state',
     setAuthorName: 'User name',
     setAuthorNameDesc:
       'Shown as the author of comments and tracked changes in Docs, Sheets and Slides. Leave blank to use your computer account name.',
@@ -1228,12 +1229,12 @@ export const strings = {
     setDefaultAppOpenSettings: 'Mở cài đặt hệ thống',
     setDefaultAppFailed: 'Không thể thay đổi. Vui lòng đặt trong cài đặt hệ thống.',
     setAiSpellcheckDesc: 'Gạch chân các từ sai chính tả khi nhập vào ô trò chuyện AI.',
-    setAiShowSidebar: 'Hiện thanh bên AI',
-    setAiShowSidebarDesc:
-      'Khi tắt, trình soạn thảo ẩn thanh bên AI và nút bên; thao tác AI trong dải công cụ hoặc trình đơn vẫn mở bảng AI, và tài liệu mới sẽ không mở nó.',
-    setAiOpenInNewDocs: 'Mở bảng AI trong tài liệu mới',
-    setAiOpenInNewDocsDesc:
-      'Khi tắt, tài liệu mới mở sẽ thu gọn bảng AI; chỉ cần một lần bấm để mở lại khi cần.',
+    setAiPanelStart: 'Bảng AI',
+    setAiPanelStartDesc:
+      'Chọn cách bảng AI bắt đầu khi bạn mở ứng dụng hoặc tài liệu. "Tắt" sẽ ẩn bảng và nút bên cạnh; thao tác AI trên dải băng hoặc trình đơn vẫn có thể mở bảng.',
+    aiPanelStartOff: 'Tắt',
+    aiPanelStartCollapsed: 'Thu gọn',
+    aiPanelStartLast: 'Trạng thái gần nhất',
     setAuthorName: 'Tên người dùng',
     setAuthorNameDesc:
       'Hiển thị là tác giả của nhận xét và thay đổi được theo dõi trong Docs, Sheets và Slides. Để trống để dùng tên tài khoản máy tính.',
@@ -1755,12 +1756,12 @@ export const strings = {
     setDefaultAppOpenSettings: 'システム設定を開く',
     setDefaultAppFailed: '変更できませんでした。システム設定で設定してください。',
     setAiSpellcheckDesc: 'AI チャットの入力欄で入力中にスペルミスの単語に下線を表示します。',
-    setAiShowSidebar: 'AI サイドバーを表示',
-    setAiShowSidebarDesc:
-      'オフにすると、エディターは AI サイドバーとサイドボタンを非表示にします。リボンやメニューの AI 操作ならパネルを開けますが、新規ドキュメントでは自動的に開きません。',
-    setAiOpenInNewDocs: '新しいドキュメントで AI パネルを開く',
-    setAiOpenInNewDocsDesc:
-      'オフにすると、新しく開いたドキュメントは AI パネルを折りたたんだ状態で始まります。必要なときはワンクリックで開けます。',
+    setAiPanelStart: 'AI パネル',
+    setAiPanelStartDesc:
+      'アプリの起動時やドキュメントを開くときに、AI パネルをどの状態で始めるかを選びます。「オフ」はパネルとサイドボタンを隠しますが、リボンやメニューの AI 操作からは開けます。',
+    aiPanelStartOff: 'オフ',
+    aiPanelStartCollapsed: '折りたたみ',
+    aiPanelStartLast: '前回の状態',
     setAuthorName: 'ユーザー名',
     setAuthorNameDesc:
       'Docs、Sheets、Slides でコメントと変更履歴の作成者として表示されます。空欄の場合はパソコンのアカウント名を使います。',
@@ -2285,12 +2286,12 @@ export const strings = {
     setDefaultAppOpenSettings: '시스템 설정 열기',
     setDefaultAppFailed: '변경할 수 없습니다. 시스템 설정에서 직접 설정해 주세요.',
     setAiSpellcheckDesc: 'AI 채팅 입력란에 입력할 때 잘못된 단어에 밑줄을 표시합니다.',
-    setAiShowSidebar: 'AI 사이드바 표시',
-    setAiShowSidebarDesc:
-      '끄면 편집기가 AI 사이드바와 측면 버튼을 숨깁니다. 리본이나 메뉴의 AI 작업으로는 패널을 열 수 있지만, 새 문서에서는 자동으로 열리지 않습니다.',
-    setAiOpenInNewDocs: '새 문서에서 AI 패널 열기',
-    setAiOpenInNewDocsDesc:
-      '끄면 새로 여는 문서는 AI 패널이 접힌 상태로 시작합니다. 필요할 때 한 번 클릭하면 열립니다.',
+    setAiPanelStart: 'AI 패널',
+    setAiPanelStartDesc:
+      '이음오피스를 켜거나 문서를 열 때 AI 패널을 어떻게 시작할지 정합니다. "사용 안 함"은 패널과 측면 단추를 숨기지만, 리본이나 메뉴의 AI 작업으로는 열 수 있습니다.',
+    aiPanelStartOff: '사용 안 함',
+    aiPanelStartCollapsed: '접힌 채로',
+    aiPanelStartLast: '마지막 상태',
     setAuthorName: '사용자 이름',
     setAuthorNameDesc:
       'Docs, Sheets, Slides에서 메모와 변경 내용 추적의 작성자로 표시됩니다. 비워 두면 컴퓨터 계정 이름을 사용합니다.',
@@ -2809,12 +2810,12 @@ export const strings = {
     setDefaultAppOpenSettings: 'Ouvrir les réglages système',
     setDefaultAppFailed: 'Modification impossible. Définissez-la dans les réglages système.',
     setAiSpellcheckDesc: 'Souligne les mots mal orthographiés pendant la saisie dans le chat IA.',
-    setAiShowSidebar: 'Afficher le panneau IA',
-    setAiShowSidebarDesc:
-      'Désactivé, les éditeurs masquent le panneau IA et son bouton latéral ; une action IA dans le ruban ou un menu l’ouvre toujours, et les nouveaux documents ne l’ouvrent jamais.',
-    setAiOpenInNewDocs: 'Ouvrir le panneau IA dans les nouveaux documents',
-    setAiOpenInNewDocsDesc:
-      "Désactivé : les documents nouvellement ouverts démarrent avec le panneau IA replié ; un clic suffit pour l'afficher.",
+    setAiPanelStart: 'Panneau IA',
+    setAiPanelStartDesc:
+      "Choisit comment le panneau IA démarre à l'ouverture de l'application ou d'un document. « Désactivé » masque le panneau et son bouton latéral ; une action IA du ruban ou d'un menu peut toujours l'ouvrir.",
+    aiPanelStartOff: 'Désactivé',
+    aiPanelStartCollapsed: 'Replié',
+    aiPanelStartLast: 'Dernier état',
     setAuthorName: 'Nom d’utilisateur',
     setAuthorNameDesc:
       'Affiché comme auteur des commentaires et des modifications suivies dans Docs, Sheets et Slides. Laissez vide pour utiliser le nom de votre compte.',
@@ -3352,12 +3353,12 @@ export const strings = {
     setDefaultAppFailed: 'Änderung nicht möglich. Bitte in den Systemeinstellungen festlegen.',
     setAiSpellcheckDesc:
       'Unterstreicht falsch geschriebene Wörter beim Tippen im KI-Chat-Eingabefeld.',
-    setAiShowSidebar: 'KI-Seitenleiste anzeigen',
-    setAiShowSidebarDesc:
-      'Wenn aus, blenden die Editoren die KI-Seitenleiste und ihre Seitenschaltfläche aus; eine KI-Aktion im Menüband oder im Menü öffnet das Panel weiterhin, und neue Dokumente öffnen es nie.',
-    setAiOpenInNewDocs: 'KI-Panel in neuen Dokumenten öffnen',
-    setAiOpenInNewDocsDesc:
-      'Wenn aus, starten neu geöffnete Dokumente mit eingeklapptem KI-Panel; ein Klick genügt, um es zu öffnen.',
+    setAiPanelStart: 'KI-Panel',
+    setAiPanelStartDesc:
+      'Legt fest, wie das KI-Panel beim Start der App oder beim Öffnen eines Dokuments beginnt. „Aus“ blendet das Panel und seine Seitenschaltfläche aus; eine KI-Aktion im Menüband oder in einem Menü kann es weiterhin öffnen.',
+    aiPanelStartOff: 'Aus',
+    aiPanelStartCollapsed: 'Eingeklappt',
+    aiPanelStartLast: 'Letzter Zustand',
     setAuthorName: 'Benutzername',
     setAuthorNameDesc:
       'Wird in Docs, Sheets und Slides als Autor von Kommentaren und nachverfolgten Änderungen angezeigt. Leer lassen, um den Kontonamen des Computers zu verwenden.',
@@ -3896,12 +3897,12 @@ export const strings = {
     setDefaultAppFailed: 'No se pudo cambiar. Configúralo en los ajustes del sistema.',
     setAiSpellcheckDesc:
       'Subraya las palabras mal escritas al escribir en el cuadro del chat de IA.',
-    setAiShowSidebar: 'Mostrar el panel de IA',
-    setAiShowSidebarDesc:
-      'Desactivado, los editores ocultan el panel de IA y su botón lateral; una acción de IA en la cinta o en un menú sigue abriendo el panel, y los documentos nuevos no lo abren.',
-    setAiOpenInNewDocs: 'Abrir el panel de IA en documentos nuevos',
-    setAiOpenInNewDocsDesc:
-      'Si está desactivado, los documentos recién abiertos empiezan con el panel de IA plegado; se abre con un clic cuando lo necesites.',
+    setAiPanelStart: 'Panel de IA',
+    setAiPanelStartDesc:
+      'Elige cómo empieza el panel de IA al abrir la aplicación o un documento. «Desactivado» oculta el panel y su botón lateral; una acción de IA en la cinta o en un menú aún puede abrirlo.',
+    aiPanelStartOff: 'Desactivado',
+    aiPanelStartCollapsed: 'Contraído',
+    aiPanelStartLast: 'Último estado',
     setAuthorName: 'Nombre de usuario',
     setAuthorNameDesc:
       'Se muestra como autor de los comentarios y los cambios con seguimiento en Docs, Sheets y Slides. Déjalo vacío para usar el nombre de tu cuenta.',
@@ -4424,12 +4425,12 @@ export const strings = {
     setDefaultAppOpenSettings: 'เปิดการตั้งค่าระบบ',
     setDefaultAppFailed: 'เปลี่ยนไม่สำเร็จ โปรดตั้งค่าในการตั้งค่าระบบ',
     setAiSpellcheckDesc: 'ขีดเส้นใต้คำที่สะกดผิดขณะพิมพ์ในช่องแชท AI',
-    setAiShowSidebar: 'แสดงแถบข้าง AI',
-    setAiShowSidebarDesc:
-      'เมื่อปิด ตัวแก้ไขจะซ่อนแถบข้าง AI และปุ่มด้านข้าง; คำสั่ง AI ในริบบิ้นหรือเมนูยังเปิดแผง AI ได้ และเอกสารใหม่จะไม่เปิดให้',
-    setAiOpenInNewDocs: 'เปิดแผง AI ในเอกสารใหม่',
-    setAiOpenInNewDocsDesc:
-      'เมื่อปิด เอกสารที่เปิดใหม่จะเริ่มโดยพับแผง AI ไว้ คลิกครั้งเดียวเพื่อเปิดเมื่อต้องการ',
+    setAiPanelStart: 'แผง AI',
+    setAiPanelStartDesc:
+      'เลือกว่าแผง AI จะเริ่มอย่างไรเมื่อเปิดแอปหรือเอกสาร "ปิด" จะซ่อนแผงและปุ่มด้านข้าง แต่การทำงานของ AI บนริบบิ้นหรือเมนูยังเปิดแผงได้',
+    aiPanelStartOff: 'ปิด',
+    aiPanelStartCollapsed: 'ย่อ',
+    aiPanelStartLast: 'สถานะล่าสุด',
     setAuthorName: 'ชื่อผู้ใช้',
     setAuthorNameDesc:
       'แสดงเป็นผู้เขียนความคิดเห็นและการติดตามการเปลี่ยนแปลงใน Docs, Sheets และ Slides เว้นว่างไว้เพื่อใช้ชื่อบัญชีคอมพิวเตอร์',
@@ -4947,12 +4948,12 @@ export const strings = {
     setDefaultAppOpenSettings: 'Buka pengaturan sistem',
     setDefaultAppFailed: 'Tidak dapat mengubahnya. Atur di pengaturan sistem.',
     setAiSpellcheckDesc: 'Garis bawahi kata yang salah eja saat mengetik di kotak obrolan AI.',
-    setAiShowSidebar: 'Tampilkan bilah sisi AI',
-    setAiShowSidebarDesc:
-      'Saat nonaktif, editor menyembunyikan bilah sisi AI dan tombol sisinya; tindakan AI di pita atau menu tetap membuka panel, dan dokumen baru tidak membukanya.',
-    setAiOpenInNewDocs: 'Buka panel AI di dokumen baru',
-    setAiOpenInNewDocsDesc:
-      'Jika nonaktif, dokumen yang baru dibuka dimulai dengan panel AI terlipat; cukup satu klik saat dibutuhkan.',
+    setAiPanelStart: 'Panel AI',
+    setAiPanelStartDesc:
+      'Pilih cara panel AI dimulai saat Anda membuka aplikasi atau dokumen. "Nonaktif" menyembunyikan panel dan tombol sampingnya; tindakan AI di pita atau menu tetap dapat membukanya.',
+    aiPanelStartOff: 'Nonaktif',
+    aiPanelStartCollapsed: 'Diciutkan',
+    aiPanelStartLast: 'Status terakhir',
     setAuthorName: 'Nama pengguna',
     setAuthorNameDesc:
       'Ditampilkan sebagai penulis komentar dan perubahan terlacak di Docs, Sheets, dan Slides. Kosongkan untuk memakai nama akun komputer.',
@@ -5477,12 +5478,12 @@ export const strings = {
     setDefaultAppOpenSettings: 'Открыть системные настройки',
     setDefaultAppFailed: 'Не удалось изменить. Задайте в системных настройках.',
     setAiSpellcheckDesc: 'Подчёркивать слова с ошибками при вводе в поле чата ИИ.',
-    setAiShowSidebar: 'Показывать панель ИИ',
-    setAiShowSidebarDesc:
-      'Когда выключено, редакторы скрывают панель ИИ и боковую кнопку; команда ИИ на ленте или в меню по-прежнему открывает панель, а новые документы не открывают её.',
-    setAiOpenInNewDocs: 'Открывать панель ИИ в новых документах',
-    setAiOpenInNewDocsDesc:
-      'Если выключено, новые документы открываются со свёрнутой панелью ИИ; она доступна в один клик.',
+    setAiPanelStart: 'Панель ИИ',
+    setAiPanelStartDesc:
+      'Выберите, как панель ИИ начинается при запуске приложения или открытии документа. «Выкл.» скрывает панель и боковую кнопку; действие ИИ на ленте или в меню всё равно может её открыть.',
+    aiPanelStartOff: 'Выкл.',
+    aiPanelStartCollapsed: 'Свёрнута',
+    aiPanelStartLast: 'Последнее состояние',
     setAuthorName: 'Имя пользователя',
     setAuthorNameDesc:
       'Отображается как автор примечаний и исправлений в Docs, Sheets и Slides. Оставьте пустым, чтобы использовать имя учётной записи компьютера.',
@@ -6009,12 +6010,12 @@ export const strings = {
     setDefaultAppFailed: 'تعذّر التغيير. يرجى تعيينه من إعدادات النظام.',
     setAiSpellcheckDesc:
       'وضع خط تحت الكلمات الخاطئة إملائيًا أثناء الكتابة في حقل محادثة الذكاء الاصطناعي.',
-    setAiShowSidebar: 'إظهار الشريط الجانبي للذكاء الاصطناعي',
-    setAiShowSidebarDesc:
-      'عند الإيقاف، تخفي المحررات الشريط الجانبي للذكاء الاصطناعي وزره الجانبي؛ ويظل إجراء الذكاء الاصطناعي في الشريط أو في القائمة يفتح اللوحة، ولا تفتح المستندات الجديدة اللوحة.',
-    setAiOpenInNewDocs: 'فتح لوحة الذكاء الاصطناعي في المستندات الجديدة',
-    setAiOpenInNewDocsDesc:
-      'عند الإيقاف، تبدأ المستندات المفتوحة حديثًا بلوحة الذكاء الاصطناعي مطوية؛ تكفي نقرة واحدة لفتحها عند الحاجة.',
+    setAiPanelStart: 'لوحة الذكاء الاصطناعي',
+    setAiPanelStartDesc:
+      'اختر كيف تبدأ لوحة الذكاء الاصطناعي عند فتح التطبيق أو مستند. "إيقاف" يخفي اللوحة وزرها الجانبي، لكن إجراءات الذكاء الاصطناعي في الشريط أو القائمة يمكنها فتحها.',
+    aiPanelStartOff: 'إيقاف',
+    aiPanelStartCollapsed: 'مطوية',
+    aiPanelStartLast: 'الحالة الأخيرة',
     setAuthorName: 'اسم المستخدم',
     setAuthorNameDesc:
       'يظهر كمؤلف التعليقات والتغييرات المتعقبة في Docs وSheets وSlides. اتركه فارغًا لاستخدام اسم حساب الكمبيوتر.',
@@ -6526,12 +6527,12 @@ export const strings = {
     setDefaultAppFailed: 'Não foi possível alterar. Defina nas configurações do sistema.',
     setAiSpellcheckDesc:
       'Sublinha palavras com erros ortográficos ao digitar na caixa do chat de IA.',
-    setAiShowSidebar: 'Mostrar a barra lateral de IA',
-    setAiShowSidebarDesc:
-      'Desligada, os editores ocultam a barra lateral de IA e o botão lateral; uma ação de IA na faixa ou em um menu ainda abre o painel, e novos documentos não o abrem.',
-    setAiOpenInNewDocs: 'Abrir o painel de IA em novos documentos',
-    setAiOpenInNewDocsDesc:
-      'Quando desativado, os documentos recém-abertos começam com o painel de IA recolhido; basta um clique quando precisar.',
+    setAiPanelStart: 'Painel de IA',
+    setAiPanelStartDesc:
+      'Escolhe como o painel de IA começa ao abrir a aplicação ou um documento. «Desativado» oculta o painel e o botão lateral; uma ação de IA no friso ou num menu ainda o pode abrir.',
+    aiPanelStartOff: 'Desativado',
+    aiPanelStartCollapsed: 'Recolhido',
+    aiPanelStartLast: 'Último estado',
     setAuthorName: 'Nome de usuário',
     setAuthorNameDesc:
       'Exibido como autor dos comentários e das alterações controladas no Docs, Sheets e Slides. Deixe em branco para usar o nome da conta do computador.',
@@ -7053,12 +7054,12 @@ export const strings = {
     setDefaultAppOpenSettings: 'Apri impostazioni di sistema',
     setDefaultAppFailed: 'Impossibile modificare. Impostala nelle impostazioni di sistema.',
     setAiSpellcheckDesc: 'Sottolinea le parole errate durante la digitazione nella chat IA.',
-    setAiShowSidebar: 'Mostra il pannello IA',
-    setAiShowSidebarDesc:
-      'Quando è spento, gli editor nascondono il pannello IA e il pulsante laterale; un’azione IA nella scheda o in un menu apre comunque il pannello, e i nuovi documenti non lo aprono.',
-    setAiOpenInNewDocs: 'Apri il pannello IA nei nuovi documenti',
-    setAiOpenInNewDocsDesc:
-      'Se disattivato, i documenti appena aperti iniziano con il pannello IA ridotto; basta un clic quando serve.',
+    setAiPanelStart: 'Pannello IA',
+    setAiPanelStartDesc:
+      "Sceglie come si avvia il pannello IA all'apertura dell'app o di un documento. «Disattivato» nasconde il pannello e il pulsante laterale; un'azione IA nella barra multifunzione o in un menu può comunque aprirlo.",
+    aiPanelStartOff: 'Disattivato',
+    aiPanelStartCollapsed: 'Compresso',
+    aiPanelStartLast: 'Ultimo stato',
     setAuthorName: 'Nome utente',
     setAuthorNameDesc:
       'Mostrato come autore di commenti e revisioni in Docs, Sheets e Slides. Lascia vuoto per usare il nome dell’account del computer.',
@@ -7578,12 +7579,12 @@ export const strings = {
     setDefaultAppOpenSettings: 'Otwórz ustawienia systemu',
     setDefaultAppFailed: 'Nie udało się zmienić. Ustaw w ustawieniach systemu.',
     setAiSpellcheckDesc: 'Podkreśla błędnie napisane słowa podczas pisania w polu czatu AI.',
-    setAiShowSidebar: 'Pokaż panel AI',
-    setAiShowSidebarDesc:
-      'Gdy wyłączone, edytory ukrywają panel AI i przycisk boczny; działanie AI na wstążce lub w menu nadal otwiera panel, a nowe dokumenty go nie otwierają.',
-    setAiOpenInNewDocs: 'Otwieraj panel AI w nowych dokumentach',
-    setAiOpenInNewDocsDesc:
-      'Gdy wyłączone, nowo otwarte dokumenty zaczynają ze zwiniętym panelem AI; wystarczy jedno kliknięcie, gdy jest potrzebny.',
+    setAiPanelStart: 'Panel AI',
+    setAiPanelStartDesc:
+      'Wybierz, jak panel AI ma się zaczynać po uruchomieniu aplikacji lub otwarciu dokumentu. „Wyłączony” ukrywa panel i jego boczny przycisk; działanie AI na wstążce lub w menu nadal może go otworzyć.',
+    aiPanelStartOff: 'Wyłączony',
+    aiPanelStartCollapsed: 'Zwinięty',
+    aiPanelStartLast: 'Ostatni stan',
     setAuthorName: 'Nazwa użytkownika',
     setAuthorNameDesc:
       'Wyświetlana jako autor komentarzy i śledzonych zmian w Docs, Sheets i Slides. Pozostaw puste, aby użyć nazwy konta komputera.',
@@ -8386,12 +8387,12 @@ export const strings = {
     setDefaultAppOpenSettings: 'Otevřít nastavení systému',
     setDefaultAppFailed: 'Změna se nezdařila. Nastavte ji v nastavení systému.',
     setAiSpellcheckDesc: 'Podtrhávat překlepy při psaní do vstupního pole chatu AI.',
-    setAiShowSidebar: 'Zobrazit AI panel',
-    setAiShowSidebarDesc:
-      'Při vypnutí editory skryjí AI panel a boční tlačítko; akce AI na pásu karet nebo v nabídce panel stále otevře a nové dokumenty ho neotevřou.',
-    setAiOpenInNewDocs: 'Otevírat panel AI v nových dokumentech',
-    setAiOpenInNewDocsDesc:
-      'Když je vypnuto, nově otevřené dokumenty začínají se sbaleným panelem AI; v případě potřeby stačí jedno kliknutí.',
+    setAiPanelStart: 'Panel AI',
+    setAiPanelStartDesc:
+      'Zvolte, jak se má panel AI spouštět při otevření aplikace nebo dokumentu. „Vypnuto“ skryje panel a jeho boční tlačítko; akce AI na pásu karet nebo v nabídce jej mohou stále otevřít.',
+    aiPanelStartOff: 'Vypnuto',
+    aiPanelStartCollapsed: 'Sbaleno',
+    aiPanelStartLast: 'Poslední stav',
     setAuthorName: 'Uživatelské jméno',
     setAuthorNameDesc:
       'Zobrazuje se jako autor komentářů a sledovaných změn v Docs, Sheets a Slides. Ponechte prázdné pro použití názvu účtu počítače.',
@@ -8620,12 +8621,12 @@ export const strings = {
     setDefaultAppFailed: 'Wijzigen is niet gelukt. Stel dit in via de systeeminstellingen.',
     setAiSpellcheckDesc:
       'Onderstreept verkeerd gespelde woorden tijdens het typen in het AI-chatveld.',
-    setAiShowSidebar: 'AI-zijbalk weergeven',
-    setAiShowSidebarDesc:
-      'Uitgeschakeld verbergen de editors de AI-zijbalk en de zijknop; een AI-actie in het lint of een menu opent het paneel wel, en nieuwe documenten openen het niet.',
-    setAiOpenInNewDocs: 'AI-paneel openen in nieuwe documenten',
-    setAiOpenInNewDocsDesc:
-      'Indien uit, starten nieuw geopende documenten met een ingeklapt AI-paneel; één klik volstaat wanneer je het nodig hebt.',
+    setAiPanelStart: 'AI-paneel',
+    setAiPanelStartDesc:
+      'Kies hoe het AI-paneel begint wanneer je de app of een document opent. ‘Uit’ verbergt het paneel en de zijknop; een AI-actie in het lint of een menu kan het nog steeds openen.',
+    aiPanelStartOff: 'Uit',
+    aiPanelStartCollapsed: 'Ingeklapt',
+    aiPanelStartLast: 'Laatste status',
     setAuthorName: 'Gebruikersnaam',
     setAuthorNameDesc:
       'Wordt weergegeven als auteur van opmerkingen en bijgehouden wijzigingen in Docs, Sheets en Slides. Laat leeg om de accountnaam van je computer te gebruiken.',
@@ -9144,12 +9145,12 @@ export const strings = {
     setDefaultAppFailed: 'Tidak dapat mengubahnya. Tetapkan dalam tetapan sistem.',
     setAiSpellcheckDesc:
       'Gariskan perkataan yang salah ejaan semasa menaip dalam kotak sembang AI.',
-    setAiShowSidebar: 'Tunjuk bar sisi AI',
-    setAiShowSidebarDesc:
-      'Bila dimatikan, editor menyembunyikan bar sisi AI dan butang sisi; tindakan AI pada riben atau menu masih membuka panel, dan dokumen baru tidak membukanya.',
-    setAiOpenInNewDocs: 'Buka panel AI dalam dokumen baharu',
-    setAiOpenInNewDocsDesc:
-      'Jika dimatikan, dokumen yang baru dibuka bermula dengan panel AI dilipat; cukup satu klik apabila diperlukan.',
+    setAiPanelStart: 'Panel AI',
+    setAiPanelStartDesc:
+      'Pilih cara panel AI bermula apabila anda membuka aplikasi atau dokumen. "Mati" menyembunyikan panel dan butang sisinya; tindakan AI pada riben atau menu masih boleh membukanya.',
+    aiPanelStartOff: 'Mati',
+    aiPanelStartCollapsed: 'Dikuncupkan',
+    aiPanelStartLast: 'Keadaan terakhir',
     setAuthorName: 'Nama pengguna',
     setAuthorNameDesc:
       'Dipaparkan sebagai pengarang komen dan perubahan dijejak dalam Docs, Sheets dan Slides. Biarkan kosong untuk menggunakan nama akaun komputer.',
@@ -9663,12 +9664,12 @@ export const strings = {
     setDefaultAppOpenSettings: 'פתיחת הגדרות המערכת',
     setDefaultAppFailed: 'לא ניתן לשנות. יש להגדיר בהגדרות המערכת.',
     setAiSpellcheckDesc: 'סימון מילים עם שגיאות כתיב בעת הקלדה בתיבת הצ׳אט של ה-AI.',
-    setAiShowSidebar: 'הצג את סרגל ה-AI',
-    setAiShowSidebarDesc:
-      'כשכבוי, העורכים מסתירים את סרגל ה-AI ואת כפתור הצד; פעולת AI בסרגל הכלים או בתפריט עדיין פותחת את הלוח, ומסמכים חדשים אינם פותחים אותו.',
-    setAiOpenInNewDocs: 'פתיחת לוח ה-AI במסמכים חדשים',
-    setAiOpenInNewDocsDesc:
-      'כאשר כבוי, מסמכים שנפתחו זה עתה מתחילים עם לוח ה-AI מקופל; לחיצה אחת מספיקה כשצריך.',
+    setAiPanelStart: 'חלונית AI',
+    setAiPanelStartDesc:
+      'בחרו כיצד חלונית ה-AI תתחיל בעת הפעלת האפליקציה או פתיחת מסמך. "כבוי" מסתיר את החלונית ואת הכפתור הצדי; פעולת AI ברצועה או בתפריט עדיין יכולה לפתוח אותה.',
+    aiPanelStartOff: 'כבוי',
+    aiPanelStartCollapsed: 'מכווץ',
+    aiPanelStartLast: 'מצב אחרון',
     setAuthorName: 'שם משתמש',
     setAuthorNameDesc:
       'מוצג כמחבר ההערות והשינויים במעקב ב‑Docs, Sheets ו‑Slides. השאירו ריק כדי להשתמש בשם חשבון המחשב.',
@@ -10169,12 +10170,12 @@ export const strings = {
     setDefaultAppOpenSettings: 'सिस्टम सेटिंग खोलें',
     setDefaultAppFailed: 'बदला नहीं जा सका। कृपया सिस्टम सेटिंग में सेट करें।',
     setAiSpellcheckDesc: 'AI चैट इनपुट में टाइप करते समय गलत वर्तनी वाले शब्दों को रेखांकित करें।',
-    setAiShowSidebar: 'AI साइडबार दिखाएँ',
-    setAiShowSidebarDesc:
-      'बंद होने पर संपादक AI साइडबार और उसका साइड बटन छिपा देते हैं; रिबन या मेन्यू में AI क्रिया से पैनल फिर भी खुलता है, और नए दस्तावेज़ इसे नहीं खोलते।',
-    setAiOpenInNewDocs: 'नए दस्तावेज़ों में AI पैनल खोलें',
-    setAiOpenInNewDocsDesc:
-      'बंद होने पर, नए खोले गए दस्तावेज़ AI पैनल संक्षिप्त अवस्था में शुरू होते हैं; ज़रूरत पड़ने पर एक क्लिक में खुल जाता है।',
+    setAiPanelStart: 'AI पैनल',
+    setAiPanelStartDesc:
+      'चुनें कि ऐप खोलने या दस्तावेज़ खोलने पर AI पैनल कैसे शुरू हो। "बंद" पैनल और उसका साइड बटन छिपा देता है; रिबन या मेन्यू की AI क्रिया से इसे अभी भी खोला जा सकता है।',
+    aiPanelStartOff: 'बंद',
+    aiPanelStartCollapsed: 'संकुचित',
+    aiPanelStartLast: 'पिछली स्थिति',
     setAuthorName: 'उपयोगकर्ता नाम',
     setAuthorNameDesc:
       'Docs, Sheets और Slides में टिप्पणियों और ट्रैक किए गए परिवर्तनों के लेखक के रूप में दिखाया जाता है। कंप्यूटर खाता नाम उपयोग करने के लिए खाली छोड़ें।',
@@ -10678,11 +10679,12 @@ export const strings = {
     setDefaultAppOpenSettings: '開啟系統設定',
     setDefaultAppFailed: '設定失敗，請在系統設定中手動更改。',
     setAiSpellcheckDesc: '在 AI 對話輸入框中輸入時標示拼錯的單字。',
-    setAiShowSidebar: '顯示 AI 側欄',
-    setAiShowSidebarDesc:
-      '關閉後，編輯器會隱藏 AI 側欄和側邊按鈕；功能區或選單中的 AI 操作仍可開啟面板，新文件也不會自動開啟。',
-    setAiOpenInNewDocs: '在新文件中開啟 AI 面板',
-    setAiOpenInNewDocsDesc: '關閉後，新開啟的文件預設收合 AI 面板；需要時點一下即可展開。',
+    setAiPanelStart: 'AI 面板',
+    setAiPanelStartDesc:
+      '選擇啟動應用程式或開啟文件時 AI 面板如何開始。選擇「關閉」會隱藏面板和側邊按鈕；功能區或功能表中的 AI 操作仍可將其開啟。',
+    aiPanelStartOff: '關閉',
+    aiPanelStartCollapsed: '收合',
+    aiPanelStartLast: '上次狀態',
     setAuthorName: '使用者名稱',
     setAuthorNameDesc:
       '作為註解和追蹤修訂的作者顯示在 Docs、Sheets、Slides 中。留空則使用電腦帳戶名稱。',

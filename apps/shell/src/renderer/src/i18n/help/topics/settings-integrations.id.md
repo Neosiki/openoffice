@@ -18,7 +18,7 @@ Terang / Gelap / Ikuti Sistem. Mode Ikuti Sistem mengikuti tampilan sistem opera
 ## Umum
 
 - **Posisi bilah samping AI** (kiri atau kanan), **Ukuran teks panel AI** dan **Pemeriksaan ejaan di obrolan AI**.
-- **Buka panel AI di dokumen baru** — nonaktif, dokumen baru dimulai dengan panel tertutup, sekali klik lagi.
+- **Panel AI** — Nonaktif, Diciutkan, atau Status terakhir.
 - **Simpan otomatis semua dokumen** menyalakan AutoSave secara default di setiap editor; Anda tetap bisa mematikannya untuk satu jendela.
 - **Lokasi penyimpanan** dengan tombol **Ubah**, dan **Aplikasi default untuk dokumen Office** untuk mengambil alih .docx / .xlsx / .pptx bagi GenOffice.
 

@@ -183,14 +183,18 @@ export {
   AI_CUSTOM_FONT_MIN_PX,
   AI_FONT_BASE_PX,
   AI_FONT_SIZES,
+  AI_PANEL_STARTS,
   DEFAULT_AI_PANEL_PREFS,
   aiPanelFontPx,
+  aiPanelStartOf,
+  aiPanelStartPatch,
   clampAiCustomFontSize,
   isAiFontSize,
   normalizeAiPanelPrefs,
   type AiFontSize,
   type AiPanelPrefs,
   type AiPanelSide,
+  type AiPanelStart,
 } from './ai-panel-prefs'
 export {
   applyAiPanelPrefs,

@@ -18,7 +18,7 @@ Jasny / Ciemny / Zgodnie z systemem. Opcja Zgodnie z systemem podąża za wyglą
 ## Ogólne
 
 - **Położenie panelu bocznego AI** (po lewej lub po prawej), **Rozmiar tekstu panelu AI** i **Sprawdzanie pisowni w czacie AI**.
-- **Otwieraj panel AI w nowych dokumentach** — wyłączone, nowy dokument zaczyna się ze zwiniętym panelem, jedno kliknięcie stąd.
+- **Panel AI** — Wyłączony, Zwinięty lub Ostatni stan.
 - **Automatycznie zapisuj wszystkie dokumenty** włącza AutoSave domyślnie w każdym edytorze; nadal można je wyłączyć dla jednego okna.
 - **Lokalizacja zapisu** z przyciskiem **Zmień** oraz **Domyślna aplikacja dla dokumentów Office**, aby przejąć .docx / .xlsx / .pptx dla GenOffice.
 

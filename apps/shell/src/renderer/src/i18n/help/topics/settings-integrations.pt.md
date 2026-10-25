@@ -18,7 +18,7 @@ Claro / Escuro / Seguir o Sistema. O modo Seguir o Sistema acompanha o aspeto do
 ## Geral
 
 - **Posição da barra lateral de IA** (esquerda ou direita), **Tamanho do texto do painel de IA** e **Verificação ortográfica no chat de IA**.
-- **Abrir o painel de IA em novos documentos** — desativado, um novo documento começa com o painel recolhido, a um clique de distância.
+- **Painel de IA** — Desativado, Recolhido ou Último estado.
 - **Salvar automaticamente todos os documentos** ativa a gravação automática por predefinição em todos os editores; continua a poder desativá-la para uma janela.
 - **Local de salvamento** com o botão **Alterar** e **App padrão para documentos do Office** para reservar .docx / .xlsx / .pptx ao GenOffice.
 

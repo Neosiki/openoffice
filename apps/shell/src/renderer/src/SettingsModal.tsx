@@ -8,9 +8,11 @@ import {
   DEFAULT_AI_PANEL_PREFS,
   Dropdown,
   aiPanelFontPx,
+  aiPanelStartOf,
+  aiPanelStartPatch,
   clampAiCustomFontSize,
 } from '@genoffice/ui'
-import type { AiFontSize, AiPanelPrefs, AiPanelSide } from '@genoffice/ui'
+import type { AiFontSize, AiPanelPrefs, AiPanelSide, AiPanelStart } from '@genoffice/ui'
 import { PRODUCT_CONTACT_EMAIL, PRODUCT_REPO_SLUG } from '@genoffice/i18n'
 import type { Lang } from '@genoffice/i18n'
 import type {
@@ -118,6 +120,14 @@ const AI_FONT_SIZE_OPTIONS = [
   { value: 'xlarge', labelKey: 'aiFontSizeXLarge' },
   { value: 'custom', labelKey: 'aiFontSizeCustom' },
 ] as const satisfies readonly { value: AiFontSize; labelKey: StringKey }[]
+
+// One choice for the three states the two stored switches can express
+// (off, always collapsed, remember the last state).
+const AI_PANEL_START_OPTIONS = [
+  { value: 'off', labelKey: 'aiPanelStartOff' },
+  { value: 'collapsed', labelKey: 'aiPanelStartCollapsed' },
+  { value: 'last', labelKey: 'aiPanelStartLast' },
+] as const satisfies readonly { value: AiPanelStart; labelKey: StringKey }[]
 
 const CHANNEL_OPTIONS = [
   { value: 'stable', labelKey: 'channelStable' },
@@ -1818,16 +1828,19 @@ export function SettingsModal({
                 <div className="set-field">
                   <div className="set-field-text">
                     <div className="set-field-stack">
-                      <div className="set-field-label">{t('setAiShowSidebar')}</div>
-                      <div className="set-field-desc">{t('setAiShowSidebarDesc')}</div>
+                      <div className="set-field-label">{t('setAiPanelStart')}</div>
+                      <div className="set-field-desc">{t('setAiPanelStartDesc')}</div>
                     </div>
                   </div>
-                  <button
-                    className="set-switch"
-                    role="switch"
-                    aria-checked={aiPrefs.showAiSidebar}
-                    aria-label={t('setAiShowSidebar')}
-                    onClick={() => updateAiPrefs({ showAiSidebar: !aiPrefs.showAiSidebar })}
+                  <Dropdown
+                    className="set-dd"
+                    value={aiPanelStartOf(aiPrefs)}
+                    ariaLabel={t('setAiPanelStart')}
+                    options={AI_PANEL_START_OPTIONS.map((opt) => ({
+                      value: opt.value,
+                      label: t(opt.labelKey),
+                    }))}
+                    onPick={(start) => updateAiPrefs(aiPanelStartPatch(start))}
                   />
                 </div>
                 <div className="set-field">
@@ -1853,21 +1866,6 @@ export function SettingsModal({
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') e.currentTarget.blur()
                     }}
-                  />
-                </div>
-                <div className="set-field">
-                  <div className="set-field-text">
-                    <div className="set-field-stack">
-                      <div className="set-field-label">{t('setAiOpenInNewDocs')}</div>
-                      <div className="set-field-desc">{t('setAiOpenInNewDocsDesc')}</div>
-                    </div>
-                  </div>
-                  <button
-                    className="set-switch"
-                    role="switch"
-                    aria-checked={aiPrefs.openInNewDocs}
-                    aria-label={t('setAiOpenInNewDocs')}
-                    onClick={() => updateAiPrefs({ openInNewDocs: !aiPrefs.openInNewDocs })}
                   />
                 </div>
                 {defaultApp && defaultApp.state !== 'unsupported' && (
