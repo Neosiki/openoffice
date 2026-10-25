@@ -158,6 +158,37 @@ describe('AgentLoop tools off', () => {
     expect(loop.messages.some((message) => message.role === 'tool')).toBe(true)
   })
 
+  it('does not replay a turn whose only delivery was an ignored tool call', async () => {
+    vi.useFakeTimers()
+    try {
+      const transport = recordingTransport([
+        (cb) => {
+          cb.onToolCall({ id: 'c1', name: 'edit_text', input: {} })
+          cb.onError('upstream closed (empty stream)')
+        },
+        (cb) => {
+          cb.onDelta('retried')
+          cb.onDone()
+        },
+      ])
+      const execute = vi.fn(() => ({ output: 'ok', summary: 'edited', mutated: true }))
+      const errors: string[] = []
+      const loop = new AgentLoop({
+        transport,
+        skill: makeSkill(execute),
+        toolsAllowed: () => false,
+        events: { onError: (error) => errors.push(error) },
+      })
+      loop.run('q')
+      await vi.advanceTimersByTimeAsync(10_000)
+      expect(transport.requests).toHaveLength(1)
+      expect(execute).not.toHaveBeenCalled()
+      expect(errors).toEqual(['upstream closed (empty stream)'])
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('keeps tools off on a corrective turn', async () => {
     const transport = recordingTransport([
       (cb) => {

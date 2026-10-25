@@ -975,6 +975,9 @@ export class AgentLoop<TSnapshot = unknown> {
     this.turnUsage = null
     // Some transports emit an extra onDone after cancel — this turn may finalize only once
     let settled = false
+    // A call this model emitted with tools off is delivered but never executed;
+    // the retry guards below must not replay the turn as if nothing arrived.
+    let ignoredToolCall = false
     try {
       // A model that cannot call tools gets none, plus a paragraph saying so;
       // true or absent keeps the skill's tools exactly as before.
@@ -1023,7 +1026,10 @@ export class AgentLoop<TSnapshot = unknown> {
             if (generation !== this.generation || settled) return
             // Tools are off for this model: a call it emits anyway must not run,
             // and no tool result goes back, so the turn stays a text answer.
-            if (!toolsAllowed) return
+            if (!toolsAllowed) {
+              ignoredToolCall = true
+              return
+            }
             this.toolCalls.push(call)
           },
           onStopReason: (reason) => {
@@ -1052,16 +1058,20 @@ export class AgentLoop<TSnapshot = unknown> {
             // empty stream never emits deltas, but a mislabeled error must not replay
             // a turn whose text/tool calls the UI already saw). A dropped tool-argument
             // stream may have shown text first; that text is simply re-rendered.
+            // An ignored call (tools off) still arrived, so it counts as delivered:
+            // replaying would ask the same model again for nothing.
             const emptyDelay = EMPTY_STREAM_RETRY_DELAYS_MS[retriesUsed]
             const retryEmpty =
               emptyDelay !== undefined &&
               error.includes('(empty stream)') &&
               !this.turnText &&
-              this.toolCalls.length === 0
+              this.toolCalls.length === 0 &&
+              !ignoredToolCall
             const retryDrop =
               retriesUsed < TOOL_ARGS_DROP_RETRIES &&
               error.includes(TOOL_ARGS_DROP_MARK) &&
-              this.toolCalls.length === 0
+              this.toolCalls.length === 0 &&
+              !ignoredToolCall
             const delay = retryEmpty ? emptyDelay : EMPTY_STREAM_RETRY_DELAYS_MS[0]
             if ((retryEmpty || retryDrop) && !this.cancelled) {
               this.retryTimer = setTimeout(() => {
