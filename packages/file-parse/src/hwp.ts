@@ -136,6 +136,36 @@ function rowText(cells: string[]): string {
   return cells.slice(0, end).join(' | ')
 }
 
+/** A memo as the engine lists it; `page` is 1-based and 0 when it has no page. */
+interface Memo {
+  author?: string
+  text?: string
+  page?: number
+}
+
+/**
+ * The document's memos as a `### Comments` block, in the document order the engine
+ * already sorts them in. A document without memos gets no block, so its text is
+ * exactly what it was before memos were read.
+ */
+function commentLines(doc: HwpDocument): string[] {
+  const memos = JSON.parse(doc.getMemoList()) as Memo[]
+  if (memos.length === 0) return []
+  const lines = ['### Comments']
+  for (const memo of memos) {
+    const author = memo.author?.trim() || 'unknown'
+    const page = typeof memo.page === 'number' && memo.page > 0 ? ` (p.${memo.page})` : ''
+    const [first = '', ...rest] = String(memo.text ?? '')
+      .replace(/\r\n/g, '\n')
+      .split('\n')
+    // a memo saved with a closing newline should not leave a blank line after the block
+    while (rest.length > 0 && rest[rest.length - 1] === '') rest.pop()
+    lines.push(`- ${author}${page}:${first ? ` ${first}` : ''}`)
+    for (const line of rest) lines.push(line ? `  ${line}` : '')
+  }
+  return lines
+}
+
 /** The body of the document, paragraph by paragraph, each followed by the tables it holds. */
 function bodyEntries(doc: HwpDocument): Entry[] {
   const entries: Entry[] = []
@@ -227,7 +257,8 @@ export async function hwpToText(bytes: Uint8Array): Promise<string> {
   }
   try {
     const flat = JSON.parse(doc.getTextFileText()) as string
-    return withMissingText(bodyEntries(doc), flat).join('\n')
+    const lines = withMissingText(bodyEntries(doc), flat)
+    return [...lines, ...commentLines(doc)].join('\n')
   } catch (thrown) {
     throw engineError(thrown)
   } finally {
