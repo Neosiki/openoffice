@@ -12,7 +12,6 @@
     "./custom-models": "./src/custom-models.ts",
     "./local-models": "./src/local-models.ts",
     "./local-test": "./src/local-test.ts",
-    "./context-budget": "./src/context-budget.ts",
     "./free-connect": "./src/free-connect.ts",
     "./subscription": "./src/subscription.ts",
     "./claude-code-cli": "./src/claude-code-cli.ts",
