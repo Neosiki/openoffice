@@ -401,6 +401,10 @@ export interface LocalTestResult {
  * that can say `tools: true`, and it cannot replace a user's value. A missing
  * tool call is not a failure of the model's tools support, so it changes
  * nothing; no check ever writes `tools: false`.
+ *
+ * `checkedAt` means "the last check that got an answer": only a passed server
+ * check (the model list was read) records it. A failed attempt leaves the old
+ * value, so the card does not present an unreachable server as just checked.
  */
 export function applyTestResult(
   profile: AiLocalModelProfile,
@@ -408,7 +412,9 @@ export function applyTestResult(
 ): AiLocalModelProfile {
   const next: AiLocalModelProfile = { ...profile }
   if (result.inputError === 'shape') return next
-  if (isCheckTime(result.checkedAt)) next.checkedAt = result.checkedAt
+  if (result.server.status === 'pass' && isCheckTime(result.checkedAt)) {
+    next.checkedAt = result.checkedAt
+  }
   if (result.tools.status === 'pass' && profile.toolsSource !== 'user') {
     next.tools = true
     next.toolsSource = 'test'

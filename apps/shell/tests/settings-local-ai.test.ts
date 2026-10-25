@@ -601,6 +601,34 @@ describe('applyTestResult', () => {
     expect(next.contextLength).toBe(8_192)
   })
 
+  it('records the check time only when the server check passed', () => {
+    const next = applyTestResult({ checkedAt: 42 }, testResult({ status: 'skip' }, 999))
+    expect(next.checkedAt).toBe(999)
+  })
+
+  it('records the check time when the server passed but chat or tools failed', () => {
+    const next = applyTestResult(
+      { checkedAt: 42 },
+      {
+        ...testResult({ status: 'fail', code: 'no-tool-call' }, 999),
+        chat: { status: 'fail', code: 'no-chat' },
+      },
+    )
+    expect(next.checkedAt).toBe(999)
+    expect(next.tools).toBeUndefined()
+    expect(next.toolsSource).toBeUndefined()
+  })
+
+  it('keeps the last check time when the server check failed', () => {
+    for (const code of ['unreachable', 'timeout'] as const) {
+      const next = applyTestResult(
+        { checkedAt: 42 },
+        testResult({ status: 'skip' }, 999, { server: { status: 'fail', code } }),
+      )
+      expect(next.checkedAt).toBe(42)
+    }
+  })
+
   it('never turns a missing tool call into "tools: false"', () => {
     const kept = applyTestResult(
       { tools: true, toolsSource: 'server' },
