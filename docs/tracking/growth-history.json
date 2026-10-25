@@ -733,21 +733,21 @@
   },
   {
     "date": "2026-10-25",
-    "totalDownloads": 14727,
+    "totalDownloads": 14825,
     "installs": {
-      "windows": 10568,
-      "macos": 3554,
-      "linux": 605
+      "windows": 10621,
+      "macos": 3571,
+      "linux": 633
     },
-    "updateChecks": 18437,
+    "updateChecks": 18873,
     "releaseCount": 5,
     "stars": 382,
-    "forks": 75,
+    "forks": 76,
     "releases": [
       {
         "tag": "v0.12.4",
         "publishedAt": "2026-10-24T15:53:00Z",
-        "downloads": 2358
+        "downloads": 2456
       },
       {
         "tag": "v0.12.3",
@@ -774,57 +774,57 @@
       {
         "release": "v0.12.4",
         "asset": "IeumOffice-0.12.4-arm64-mac.zip",
-        "downloads": 56
+        "downloads": 57
       },
       {
         "release": "v0.12.4",
         "asset": "IeumOffice-0.12.4-arm64.dmg",
-        "downloads": 551
+        "downloads": 564
       },
       {
         "release": "v0.12.4",
         "asset": "IeumOffice-0.12.4-mac.zip",
-        "downloads": 10
+        "downloads": 11
       },
       {
         "release": "v0.12.4",
         "asset": "IeumOffice-0.12.4-x64.dmg",
-        "downloads": 41
+        "downloads": 43
       },
       {
         "release": "v0.12.4",
         "asset": "IeumOffice-0.12.4.AppImage",
-        "downloads": 70
+        "downloads": 75
       },
       {
         "release": "v0.12.4",
         "asset": "ieumoffice-0.12.4.x86_64.rpm",
-        "downloads": 5
+        "downloads": 6
       },
       {
         "release": "v0.12.4",
         "asset": "IeumOffice-Setup-0.12.4.exe",
-        "downloads": 1490
+        "downloads": 1543
       },
       {
         "release": "v0.12.4",
         "asset": "ieumoffice_0.12.4_amd64.deb",
-        "downloads": 135
+        "downloads": 157
       },
       {
         "release": "v0.12.4",
         "asset": "latest-linux.yml",
-        "downloads": 72
+        "downloads": 76
       },
       {
         "release": "v0.12.4",
         "asset": "latest-mac.yml",
-        "downloads": 1991
+        "downloads": 2254
       },
       {
         "release": "v0.12.4",
         "asset": "latest.yml",
-        "downloads": 1835
+        "downloads": 2004
       },
       {
         "release": "v0.12.3",
