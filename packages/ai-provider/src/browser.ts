@@ -133,6 +133,13 @@ export type {
   AiLocalModelSummary,
   AiLocalServerKind,
 } from './local-models'
+export type {
+  AiLocalCheck,
+  AiLocalCheckCode,
+  AiLocalCheckStatus,
+  AiLocalTestInput,
+  AiLocalTestResult,
+} from './local-test'
 export { getProviderAdapter, modelLacksVision } from './registry'
 export {
   FREE_AI_IPC_CHANNELS,

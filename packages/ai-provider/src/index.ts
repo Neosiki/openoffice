@@ -164,6 +164,14 @@ export type {
   AiLocalModelSummary,
   AiLocalServerKind,
 } from './local-models'
+export { testLocalModel } from './local-test'
+export type {
+  AiLocalCheck,
+  AiLocalCheckCode,
+  AiLocalCheckStatus,
+  AiLocalTestInput,
+  AiLocalTestResult,
+} from './local-test'
 export {
   AI_MEDIA_PROVIDERS,
   GEMINI_MEDIA_BASE_URL,
