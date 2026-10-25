@@ -2155,7 +2155,7 @@ index 823dba631..8f23b070c 100644
  
  impl Paragraph {
 diff --git a/src/parser/body_text.rs b/src/parser/body_text.rs
-index 036e8bf54..fe596c63c 100644
+index 036e8bf54..05460aabb 100644
 --- a/src/parser/body_text.rs
 +++ b/src/parser/body_text.rs
 @@ -111,42 +111,197 @@ pub fn parse_body_text_section(data: &[u8]) -> Result<Section, BodyTextError> {
@@ -2395,7 +2395,7 @@ index 036e8bf54..fe596c63c 100644
      link_orphan_field_ends_with(paragraphs, &mut open_fields);
  }
  
-@@ -168,16 +323,28 @@ fn link_orphan_field_ends(paragraphs: &mut [Paragraph]) {
+@@ -168,17 +323,28 @@ fn link_orphan_field_ends(paragraphs: &mut [Paragraph]) {
  /// **짝을 이미 채운 종료 마커에서도 스택을 pop 한다.** HWP5 종료 마커에는 짝 id 가 없어
  /// 순서만이 짝이므로, 이미 이은 마커를 건너뛰면 그 짝이 스택에 남아 뒤에 오는 마커가
  /// **엉뚱한 필드를 닫는다**. 채우기만 조건부로 한다.
@@ -2413,21 +2413,20 @@ index 036e8bf54..fe596c63c 100644
              };
              if ofe.begin_id_ref == 0 {
                  ofe.begin_id_ref = id;
--                ofe.begin_ctrl_id = ctrl_id;
 +            }
-+            if memo_index != 0 {
-+                // HWPX already carries beginIDRef, so the old guard skipped this
-+                // case and the HWP5 closing marker got memo number 0.
-+                if ofe.begin_ctrl_id == 0 {
-+                    ofe.begin_ctrl_id = ctrl_id;
-+                }
-+                if ofe.memo_index == 0 {
-+                    ofe.memo_index = memo_index;
-+                }
++            // Non-memo multi-paragraph fields need this to write their closing
++            // marker at all; HWPX already carries beginIDRef, so it must be set
++            // even when the id was present.
++            if ofe.begin_ctrl_id == 0 {
+                 ofe.begin_ctrl_id = ctrl_id;
              }
++            if memo_index != 0 && ofe.memo_index == 0 {
++                ofe.memo_index = memo_index;
++            }
          }
  
-@@ -188,7 +355,19 @@ fn link_orphan_field_ends_with(paragraphs: &mut [Paragraph], open_fields: &mut V
+         // 이 문단에서 열리고 여기서 닫히지 않은 필드를 쌓는다.
+@@ -188,7 +354,19 @@ fn link_orphan_field_ends_with(paragraphs: &mut [Paragraph], open_fields: &mut V
              };
              let closed_here = para.field_ranges.iter().any(|fr| fr.control_idx == i);
              if !closed_here && field.field_id != 0 {
@@ -2448,7 +2447,7 @@ index 036e8bf54..fe596c63c 100644
              }
          }
      }
-@@ -209,7 +388,7 @@ fn link_orphan_field_ends_with(paragraphs: &mut [Paragraph], open_fields: &mut V
+@@ -209,7 +387,7 @@ fn link_orphan_field_ends_with(paragraphs: &mut [Paragraph], open_fields: &mut V
  /// 진짜로 짝이 없는 종료 마커는 여전히 `begin_id_ref == 0` 으로 남아 `#5252` 가드가
  /// 그대로 버린다 — 07276·02899 의 본문 폐기 방지는 유지된다.
  pub fn link_orphan_field_ends_across_sections(sections: &mut [crate::model::document::Section]) {
@@ -2457,7 +2456,7 @@ index 036e8bf54..fe596c63c 100644
      for section in sections.iter_mut() {
          link_orphan_field_ends_with(&mut section.paragraphs, &mut open_fields);
      }
-@@ -552,6 +731,7 @@ fn parse_para_text(data: &[u8]) -> ParaTextParts {
+@@ -552,6 +730,7 @@ fn parse_para_text(data: &[u8]) -> ParaTextParts {
                          begin_id_ref: 0,
                          field_id: 0,
                          begin_ctrl_id: 0,
@@ -2533,6 +2532,27 @@ index d983b5f7d..46302a293 100644
  
      Control::Field(Field {
          field_type,
+diff --git a/src/parser/hwpx/mod.rs b/src/parser/hwpx/mod.rs
+index 704550771..ea871e99c 100644
+--- a/src/parser/hwpx/mod.rs
++++ b/src/parser/hwpx/mod.rs
+@@ -725,7 +725,15 @@ pub fn parse_hwpx(data: &[u8]) -> Result<Document, HwpxError> {
+ /// 다시 쓰지 않고 종전 파서 결과를 그대로 반환한다.
+ pub fn parse_hwpx_with_password(data: &[u8], password: &[u8]) -> Result<Document, HwpxError> {
+     match crypto::decrypt_hwpx_package(data, password)? {
+-        Some(decrypted) => parse_hwpx(&decrypted),
++        Some(decrypted) => {
++            let mut document = parse_hwpx(&decrypted)?;
++            // The decrypted package is HWPX, but the fact that it needed a
++            // password must survive so editors keep it read-only. The HWP5
++            // writer clears this flag when it writes a plain document.
++            document.header.encrypted = true;
++            document.header.flags |= 0x02;
++            Ok(document)
++        }
+         None => parse_hwpx(data),
+     }
+ }
 diff --git a/src/parser/hwpx/section.rs b/src/parser/hwpx/section.rs
 index c5eca3cc4..2fa1a447b 100644
 --- a/src/parser/hwpx/section.rs

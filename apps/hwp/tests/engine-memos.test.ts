@@ -479,6 +479,37 @@ describe('editing memos', () => {
     expect(memos(new HwpDocument(doc.exportHwpx()))).toEqual([])
   })
 
+  it('keeps a non-memo multi-paragraph field end after editing', () => {
+    const doc = blank('first')
+    doc.splitParagraph(0, 0, doc.getParagraphLength(0, 0))
+    doc.insertText(0, 1, 0, 'second')
+    const hwpx = doc.exportHwpx()
+    let xml = zipEntry(hwpx, 'Contents/section0.xml')
+
+    const firstStart = xml.indexOf('<hp:p ')
+    const firstEnd = xml.indexOf('</hp:p>', firstStart)
+    const secondStart = xml.indexOf('<hp:p ', firstEnd)
+    const secondRunEnd = xml.indexOf('</hp:run>', secondStart)
+    expect(secondRunEnd).toBeGreaterThan(secondStart)
+    xml =
+      xml.slice(0, secondRunEnd) +
+      '<hp:ctrl><hp:fieldEnd beginIDRef="777"/></hp:ctrl>' +
+      xml.slice(secondRunEnd)
+    const firstRunEnd = xml.indexOf('</hp:run>', firstStart)
+    expect(firstRunEnd).toBeGreaterThan(firstStart)
+    xml =
+      xml.slice(0, firstRunEnd) +
+      '<hp:ctrl><hp:fieldBegin id="777" type="CLICK_HERE" name="" editable="0" dirty="0"/></hp:ctrl>' +
+      xml.slice(firstRunEnd)
+
+    const opened = new HwpDocument(replaceZipEntry(hwpx, 'Contents/section0.xml', xml))
+    // A change forces the section to be written from the model.
+    opened.insertText(0, 1, 0, 'X')
+    const section = sectionOf(opened.exportHwp())
+    // Generic HWP5 closing marker for `%clk`.
+    expect(section.includes(Buffer.from([0x04, 0x00, 0x6b, 0x6c, 0x63, 0x25]))).toBe(true)
+  })
+
   it('keeps HWPX header, footer and note memo bodies through HWP', () => {
     const places = HwpDocument.createEmpty()
     places.createBlankDocument()
@@ -748,21 +779,31 @@ describe('the engine writes Hancom memo identity', () => {
 })
 
 describe('memo errors', () => {
-  it('treats password-protected documents as read-only', () => {
-    const doc = blank('protected')
-    const created = insert(doc, 0, 0, 'tester', 'memo body')
-    const encrypted = doc.exportHwpWithPassword('secret')
-    const reopened = HwpDocument.openWithPassword(encrypted, 'secret')
-    const memo = memos(reopened)[0]!
+  const expectProtected = (doc: HwpDocument, id: number) => {
+    const memo = memos(doc)[0]!
     expect(memo).toMatchObject({
-      id: created.id,
+      id,
       editable: false,
       readOnlyReason: 'protected',
       text: 'memo body',
     })
-    expect(errorOf(() => reopened.insertMemo(0, 0, 0, 0, '{}')).code).toBe('memo_read_only')
-    expect(errorOf(() => reopened.setMemoText(memo.id, 'new')).code).toBe('memo_read_only')
-    expect(errorOf(() => reopened.removeMemo(memo.id)).code).toBe('memo_read_only')
+    expect(errorOf(() => doc.insertMemo(0, 0, 0, 0, '{}')).code).toBe('memo_read_only')
+    expect(errorOf(() => doc.setMemoText(memo.id, 'new')).code).toBe('memo_read_only')
+    expect(errorOf(() => doc.removeMemo(memo.id)).code).toBe('memo_read_only')
+  }
+
+  it('treats password-protected HWP documents as read-only', () => {
+    const doc = blank('protected')
+    const created = insert(doc, 0, 0, 'tester', 'memo body')
+    const encrypted = doc.exportHwpWithPassword('secret')
+    expectProtected(HwpDocument.openWithPassword(encrypted, 'secret'), created.id)
+  })
+
+  it('treats password-protected HWPX documents as read-only', () => {
+    const doc = blank('protected')
+    const created = insert(doc, 0, 0, 'tester', 'memo body')
+    const encrypted = doc.exportHwpxWithPassword('secret')
+    expectProtected(HwpDocument.openWithPassword(encrypted, 'secret'), created.id)
   })
 
   it('rejects missing paragraphs and paths as invalid ranges', () => {
