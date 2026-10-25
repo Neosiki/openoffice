@@ -501,6 +501,7 @@ export const strings = {
     setLocalAddress: '地址',
     setLocalApiKey: 'API 密钥（可选）',
     setLocalContext: '上下文',
+    setLocalContextMayDiffer: '服务器未报告已加载的上下文，此值可能与实际值不同。',
     setLocalDelete: '删除',
     setLocalDeleteActiveConfirm:
       '此服务器正在使用中。删除后，所使用的 AI 将没有服务器，也不会自动选择其他服务器。',
@@ -1083,6 +1084,8 @@ export const strings = {
     setLocalAddress: 'Address',
     setLocalApiKey: 'API key (optional)',
     setLocalContext: 'Context',
+    setLocalContextMayDiffer:
+      'The server did not report the loaded context; this value may differ from the actual one.',
     setLocalDelete: 'Delete',
     setLocalDeleteActiveConfirm:
       'This server is in use. Deleting it leaves the AI selection without a server; no other server is selected automatically.',
@@ -1669,6 +1672,8 @@ export const strings = {
     setLocalAddress: 'Địa chỉ',
     setLocalApiKey: 'Khóa API (tùy chọn)',
     setLocalContext: 'Ngữ cảnh',
+    setLocalContextMayDiffer:
+      'Máy chủ không báo cáo ngữ cảnh đã tải; giá trị này có thể khác với giá trị thực tế.',
     setLocalDelete: 'Xóa',
     setLocalDeleteActiveConfirm:
       'Máy chủ này đang được dùng. Xóa nó sẽ khiến AI đang dùng không còn máy chủ nào; không máy chủ khác được tự động chọn.',
@@ -2271,6 +2276,8 @@ export const strings = {
     setLocalAddress: 'アドレス',
     setLocalApiKey: 'API キー（任意）',
     setLocalContext: 'コンテキスト',
+    setLocalContextMayDiffer:
+      'サーバーが読み込み済みのコンテキストを報告していないため、実際の値と異なる場合があります。',
     setLocalDelete: '削除',
     setLocalDeleteActiveConfirm:
       'このサーバーは使用中です。削除すると使用する AI にサーバーがなくなり、別のサーバーが自動で選ばれることはありません。',
@@ -2857,6 +2864,7 @@ export const strings = {
     setLocalAddress: '주소',
     setLocalApiKey: 'API 키(선택)',
     setLocalContext: '컨텍스트',
+    setLocalContextMayDiffer: '서버가 모델을 실행 중이지 않아 실제 문맥과 다를 수 있습니다.',
     setLocalDelete: '삭제',
     setLocalDeleteActiveConfirm:
       '사용 중인 서버입니다. 삭제하면 사용할 AI에 서버가 없게 되며, 다른 서버가 자동으로 선택되지 않습니다.',
@@ -3464,6 +3472,8 @@ export const strings = {
     setLocalAddress: 'Adresse',
     setLocalApiKey: 'Clé API (facultative)',
     setLocalContext: 'Contexte',
+    setLocalContextMayDiffer:
+      "Le serveur n'a pas indiqué le contexte chargé ; cette valeur peut différer de la valeur réelle.",
     setLocalDelete: 'Supprimer',
     setLocalDeleteActiveConfirm:
       'Ce serveur est utilisé. Le supprimer laisse l’IA sélectionnée sans serveur ; aucun autre serveur n’est choisi automatiquement.',
@@ -4079,6 +4089,8 @@ export const strings = {
     setLocalAddress: 'Adresse',
     setLocalApiKey: 'API-Schlüssel (optional)',
     setLocalContext: 'Kontext',
+    setLocalContextMayDiffer:
+      'Der Server hat den geladenen Kontext nicht gemeldet; dieser Wert kann vom tatsächlichen abweichen.',
     setLocalDelete: 'Löschen',
     setLocalDeleteActiveConfirm:
       'Dieser Server wird verwendet. Beim Löschen bleibt die KI-Auswahl ohne Server; ein anderer Server wird nicht automatisch gewählt.',
@@ -4686,6 +4698,8 @@ export const strings = {
     setLocalAddress: 'Dirección',
     setLocalApiKey: 'Clave de API (opcional)',
     setLocalContext: 'Contexto',
+    setLocalContextMayDiffer:
+      'El servidor no indicó el contexto cargado; este valor puede diferir del real.',
     setLocalDelete: 'Eliminar',
     setLocalDeleteActiveConfirm:
       'Este servidor está en uso. Si lo eliminas, la IA seleccionada se queda sin servidor; no se elige otro automáticamente.',
@@ -5270,6 +5284,7 @@ export const strings = {
     setLocalAddress: 'ที่อยู่',
     setLocalApiKey: 'คีย์ API (ไม่บังคับ)',
     setLocalContext: 'บริบท',
+    setLocalContextMayDiffer: 'เซิร์ฟเวอร์ไม่ได้รายงานบริบทที่โหลดไว้ ค่านี้อาจแตกต่างจากค่าจริง',
     setLocalDelete: 'ลบ',
     setLocalDeleteActiveConfirm:
       'เซิร์ฟเวอร์นี้กำลังใช้งานอยู่ หากลบ AI ที่เลือกไว้จะไม่มีเซิร์ฟเวอร์ และจะไม่เลือกเซิร์ฟเวอร์อื่นโดยอัตโนมัติ',
@@ -5870,6 +5885,8 @@ export const strings = {
     setLocalAddress: 'Alamat',
     setLocalApiKey: 'Kunci API (opsional)',
     setLocalContext: 'Konteks',
+    setLocalContextMayDiffer:
+      'Server tidak melaporkan konteks yang dimuat; nilai ini mungkin berbeda dari yang sebenarnya.',
     setLocalDelete: 'Hapus',
     setLocalDeleteActiveConfirm:
       'Server ini sedang dipakai. Menghapusnya membuat AI yang dipilih tidak punya server; server lain tidak dipilih otomatis.',
@@ -6473,6 +6490,8 @@ export const strings = {
     setLocalAddress: 'Адрес',
     setLocalApiKey: 'Ключ API (необязательно)',
     setLocalContext: 'Контекст',
+    setLocalContextMayDiffer:
+      'Сервер не сообщил загруженный контекст; это значение может отличаться от фактического.',
     setLocalDelete: 'Удалить',
     setLocalDeleteActiveConfirm:
       'Этот сервер используется. После удаления у выбранного ИИ не останется сервера; другой сервер не будет выбран автоматически.',
@@ -7059,6 +7078,8 @@ export const strings = {
     setLocalAddress: 'العنوان',
     setLocalApiKey: 'مفتاح API (اختياري)',
     setLocalContext: 'السياق',
+    setLocalContextMayDiffer:
+      'لم يبلغ الخادم عن السياق المحمّل؛ قد تختلف هذه القيمة عن القيمة الفعلية.',
     setLocalDelete: 'حذف',
     setLocalDeleteActiveConfirm:
       'هذا الخادم قيد الاستخدام. حذفه يترك الذكاء الاصطناعي المحدد بلا خادم، ولن يُختار خادم آخر تلقائيًا.',
@@ -7655,6 +7676,8 @@ export const strings = {
     setLocalAddress: 'Endereço',
     setLocalApiKey: 'Chave de API (opcional)',
     setLocalContext: 'Contexto',
+    setLocalContextMayDiffer:
+      'O servidor não informou o contexto carregado; este valor pode ser diferente do real.',
     setLocalDelete: 'Excluir',
     setLocalDeleteActiveConfirm:
       'Este servidor está em uso. Excluí-lo deixa a IA selecionada sem servidor; nenhum outro servidor é escolhido automaticamente.',
@@ -8250,6 +8273,8 @@ export const strings = {
     setLocalAddress: 'Indirizzo',
     setLocalApiKey: 'Chiave API (facoltativa)',
     setLocalContext: 'Contesto',
+    setLocalContextMayDiffer:
+      'Il server non ha indicato il contesto caricato; questo valore potrebbe differire da quello reale.',
     setLocalDelete: 'Elimina',
     setLocalDeleteActiveConfirm:
       'Questo server è in uso. Eliminandolo l’IA selezionata resta senza server; nessun altro server viene scelto automaticamente.',
@@ -8842,6 +8867,8 @@ export const strings = {
     setLocalAddress: 'Adres',
     setLocalApiKey: 'Klucz API (opcjonalny)',
     setLocalContext: 'Kontekst',
+    setLocalContextMayDiffer:
+      'Serwer nie zgłosił załadowanego kontekstu; ta wartość może różnić się od rzeczywistej.',
     setLocalDelete: 'Usuń',
     setLocalDeleteActiveConfirm:
       'Ten serwer jest używany. Usunięcie pozostawi wybraną AI bez serwera; inny serwer nie zostanie wybrany automatycznie.',
@@ -9429,6 +9456,8 @@ export const strings = {
     setLocalAddress: 'Adresa',
     setLocalApiKey: 'Klíč API (volitelný)',
     setLocalContext: 'Kontext',
+    setLocalContextMayDiffer:
+      'Server nenahlásil načtený kontext; tato hodnota se může lišit od skutečné.',
     setLocalDelete: 'Smazat',
     setLocalDeleteActiveConfirm:
       'Tento server se používá. Po smazání zůstane vybraná AI bez serveru; jiný server se nevybere automaticky.',
@@ -10020,6 +10049,8 @@ export const strings = {
     setLocalAddress: 'Adres',
     setLocalApiKey: 'API-sleutel (optioneel)',
     setLocalContext: 'Context',
+    setLocalContextMayDiffer:
+      'De server heeft de geladen context niet gemeld; deze waarde kan afwijken van de werkelijke waarde.',
     setLocalDelete: 'Verwijderen',
     setLocalDeleteActiveConfirm:
       'Deze server is in gebruik. Verwijderen laat de gekozen AI zonder server achter; een andere server wordt niet automatisch gekozen.',
@@ -10614,6 +10645,8 @@ export const strings = {
     setLocalAddress: 'Alamat',
     setLocalApiKey: 'Kunci API (pilihan)',
     setLocalContext: 'Konteks',
+    setLocalContextMayDiffer:
+      'Pelayan tidak melaporkan konteks yang dimuat; nilai ini mungkin berbeza daripada nilai sebenar.',
     setLocalDelete: 'Padam',
     setLocalDeleteActiveConfirm:
       'Pelayan ini sedang digunakan. Memadamnya meninggalkan AI yang dipilih tanpa pelayan; pelayan lain tidak dipilih secara automatik.',
@@ -11183,6 +11216,7 @@ export const strings = {
     setLocalAddress: 'כתובת',
     setLocalApiKey: 'מפתח API (אופציונלי)',
     setLocalContext: 'הקשר',
+    setLocalContextMayDiffer: 'השרת לא דיווח על ההקשר שנטען; ייתכן שערך זה שונה מהערך בפועל.',
     setLocalDelete: 'מחק',
     setLocalDeleteActiveConfirm:
       'השרת הזה בשימוש. מחיקתו משאירה את ה־AI הנבחר בלי שרת; שרת אחר לא ייבחר אוטומטית.',
@@ -11769,6 +11803,8 @@ export const strings = {
     setLocalAddress: 'पता',
     setLocalApiKey: 'API कुंजी (वैकल्पिक)',
     setLocalContext: 'संदर्भ',
+    setLocalContextMayDiffer:
+      'सर्वर ने लोड किया गया संदर्भ नहीं बताया; यह मान वास्तविक मान से भिन्न हो सकता है।',
     setLocalDelete: 'हटाएँ',
     setLocalDeleteActiveConfirm:
       'यह सर्वर उपयोग में है। इसे हटाने पर चुना गया AI बिना सर्वर रह जाएगा; कोई दूसरा सर्वर अपने आप नहीं चुना जाएगा।',
@@ -12327,6 +12363,7 @@ export const strings = {
     setLocalAddress: '位址',
     setLocalApiKey: 'API 金鑰（選用）',
     setLocalContext: '上下文',
+    setLocalContextMayDiffer: '伺服器未回報已載入的上下文，此值可能與實際值不同。',
     setLocalDelete: '刪除',
     setLocalDeleteActiveConfirm:
       '此伺服器正在使用中。刪除後，所選 AI 將沒有伺服器，也不會自動選擇其他伺服器。',

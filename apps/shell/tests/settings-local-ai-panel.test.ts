@@ -350,6 +350,28 @@ describe('the local AI card', () => {
     expect(host.querySelector('[data-local-source-context]')?.textContent).toBe('User')
   })
 
+  it('says the context may differ when the server did not report the loaded context', async () => {
+    install(settingsWith({ customEndpoints: [LOCAL_A], customEndpoint: 'local-a' }))
+    inspectLocalModel.mockResolvedValue({ ok: true, profile: { contextLength: 8192 } })
+    await openAi()
+    await openServer()
+    await pickModel()
+    await click(button('Check on server again'))
+    await settle()
+
+    expect(host.querySelector('[data-local-context-may-differ]')?.textContent).toContain(
+      'The server did not report the loaded context',
+    )
+
+    inspectLocalModel.mockResolvedValue({
+      ok: true,
+      profile: { contextLength: 4096, runningContextLength: 4096 },
+    })
+    await click(button('Check on server again'))
+    await settle()
+    expect(host.querySelector('[data-local-context-may-differ]')).toBeNull()
+  })
+
   it('shows the four test rows, treats no tool call as unconfirmed, and saves nothing', async () => {
     install(settingsWith({ customEndpoints: [LOCAL_A], customEndpoint: 'local-a' }))
     testLocalModel.mockResolvedValue({

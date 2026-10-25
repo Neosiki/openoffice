@@ -178,7 +178,7 @@ import {
   type AiRunTexts,
 } from './ai-run'
 import { createChunkCoalescer } from './stream-coalesce'
-import { startAiKeepalive } from './ai-keepalive'
+import { startFirstChunkKeepalive } from './ai-keepalive'
 import { atomicWriteFile } from './atomic-write'
 import { createDocsRecovery } from './docs-recovery'
 import {
@@ -4022,7 +4022,13 @@ export function registerAiIpc(): void {
       lastPing = now
       out.push({ requestId, type: 'ping' })
     }
-    const stopKeepalive = localTimeoutMs === undefined ? undefined : startAiKeepalive(ping)
+    const keepalive = localTimeoutMs === undefined ? undefined : startFirstChunkKeepalive(ping)
+    let answerSeen = false
+    const answerStarted = () => {
+      if (answerSeen) return
+      answerSeen = true
+      keepalive?.firstChunk()
+    }
     try {
       let stopReason: string | undefined
       await streamForProvider(
@@ -4035,13 +4041,22 @@ export function registerAiIpc(): void {
         {
           ...(request.sessionId ? { sessionId: request.sessionId } : {}),
           signal: controller.signal,
-          onDelta: (text) => out.push({ requestId, type: 'delta', text }),
-          onReasoningDelta: (text) => out.push({ requestId, type: 'reasoning', text }),
-          onToolCall: (toolCall) => out.push({ requestId, type: 'tool-call', toolCall }),
+          onDelta: (text) => {
+            answerStarted()
+            out.push({ requestId, type: 'delta', text })
+          },
+          onReasoningDelta: (text) => {
+            answerStarted()
+            out.push({ requestId, type: 'reasoning', text })
+          },
+          onToolCall: (toolCall) => {
+            answerStarted()
+            out.push({ requestId, type: 'tool-call', toolCall })
+          },
           onActivity: () => {
-            // the model has started answering: the waiting timer has done its job
-            stopKeepalive?.()
-            ping()
+            // Headers are not an answer: a local server may send them while it is
+            // still loading the model. Keep pinging until the first real chunk.
+            if (!answerSeen) ping()
           },
           onStopReason: (reason) => {
             stopReason = reason
@@ -4060,7 +4075,7 @@ export function registerAiIpc(): void {
       }
     } finally {
       // success, error and cancel all leave through here: the timer never survives the turn
-      stopKeepalive?.()
+      keepalive?.stop()
       out.flush()
       unwatchSender()
       activeAiStreams.delete(requestId)

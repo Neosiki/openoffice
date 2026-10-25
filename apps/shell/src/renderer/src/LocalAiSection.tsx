@@ -25,7 +25,7 @@ import {
   mergeLoadedModel,
   newLocalDraft,
   normalizeLocalBaseUrl,
-  normalizeTimeoutMs,
+  normalizeTimeoutMinutes,
   removeLocalEndpoint,
   saveLocalDraft,
 } from './local-ai'
@@ -200,9 +200,9 @@ export function LocalAiSection({ t, settings, onApply }: LocalAiSectionProps) {
   const [saved, setSaved] = useState(false)
   const [deleteAsked, setDeleteAsked] = useState<string | null>(null)
   const [loadedModel, setLoadedModel] = useState('')
+  const [contextMayDiffer, setContextMayDiffer] = useState<Record<string, boolean>>({})
 
   const servers = localEndpoints(settings)
-  const selectedCustomId = settings.customEndpoint
   const activeId = settings.provider === 'custom' ? settings.customEndpoint : undefined
   const active = servers.find((endpoint) => endpoint.id === activeId)
   const draftKey = draft?.id || 'draft'
@@ -264,6 +264,13 @@ export function LocalAiSection({ t, settings, onApply }: LocalAiSectionProps) {
       delete next[draftKey]
       return next
     })
+    setKinds((current) => {
+      if (!(draftKey in current)) return current
+      const next = { ...current }
+      delete next[draftKey]
+      return next
+    })
+    setContextMayDiffer({})
     setTestResult(null)
   }
 
@@ -344,7 +351,7 @@ export function LocalAiSection({ t, settings, onApply }: LocalAiSectionProps) {
     }
     const model = draft.model.trim()
     if (!model) return
-    const timeout = normalizeTimeoutMs(Number(timeoutText) * 60_000)
+    const timeout = normalizeTimeoutMinutes(timeoutText)
     if (!timeout.ok) {
       setFormError('range')
       return
@@ -360,6 +367,7 @@ export function LocalAiSection({ t, settings, onApply }: LocalAiSectionProps) {
         baseUrl: address.value,
         ...(draft.apiKey.trim() ? { apiKey: draft.apiKey.trim() } : {}),
         model,
+        typed: !summaries[model],
         timeoutMs: timeout.value,
       })
       if (!isTestResult(result)) {
@@ -431,6 +439,12 @@ export function LocalAiSection({ t, settings, onApply }: LocalAiSectionProps) {
             },
           }
         })
+        // `/api/show` reports the model's maximum; only `/api/ps` says what is
+        // actually loaded now. Without it the number may be the maximum.
+        setContextMayDiffer((current) => ({
+          ...current,
+          [model]: result.profile.runningContextLength === undefined,
+        }))
         setSaved(false)
       }
     } catch {
@@ -447,7 +461,7 @@ export function LocalAiSection({ t, settings, onApply }: LocalAiSectionProps) {
       setFormError(address.code)
       return
     }
-    const timeout = normalizeTimeoutMs(Number(timeoutText) * 60_000)
+    const timeout = normalizeTimeoutMinutes(timeoutText)
     if (!timeout.ok) {
       setFormError('range')
       return
@@ -503,7 +517,7 @@ export function LocalAiSection({ t, settings, onApply }: LocalAiSectionProps) {
   const askDelete = (id: string) => {
     const endpoint = servers.find((entry) => entry.id === id)
     if (!endpoint) return
-    if (endpoint.id === selectedCustomId) {
+    if (endpoint.id === activeId) {
       setDeleteAsked(id)
       return
     }
@@ -823,6 +837,11 @@ export function LocalAiSection({ t, settings, onApply }: LocalAiSectionProps) {
                   onChange={(event) => setContext('maxContextLength', event.target.value)}
                 />
               </div>
+              {contextMayDiffer[model] && (
+                <div className="set-field-desc" data-local-context-may-differ="">
+                  {t('setLocalContextMayDiffer')}
+                </div>
+              )}
               <div className="set-field">
                 <div className="set-field-text">
                   <div className="set-field-stack">

@@ -27,3 +27,25 @@ export function startAiKeepalive(
     clearInterval(timer)
   }
 }
+
+/**
+ * A keepalive that lasts until the first answer chunk, not merely until the
+ * response headers. A local server can send headers while it is still loading
+ * the model; stopping at that point lets the renderer's silence watchdog cancel
+ * a request the main process is still waiting for.
+ */
+export function startFirstChunkKeepalive(
+  send: () => void,
+  intervalMs: number = AI_KEEPALIVE_INTERVAL_MS,
+): { firstChunk: () => void; stop: () => void } {
+  const stop = startAiKeepalive(send, intervalMs)
+  let done = false
+  return {
+    firstChunk: () => {
+      if (done) return
+      done = true
+      stop()
+    },
+    stop,
+  }
+}

@@ -77,7 +77,7 @@
 ## 로컬 AI (결정 0067)
 
 - `src/local-models.ts`는 Ollama `/api/tags`·`/api/show`·`/api/ps`와 OpenAI 호환 `/v1/models`를 읽는다. 서버가 없거나 모양이 다르면 구조화된 오류를 돌려주고 던지지 않는다. 5초, 2MB, 2,000개 상한.
-- `src/local-test.ts`는 서버·모델·대화·도구 호출 네 가지를 확인한다. 도구 확인은 가짜 도구 하나만 보내고 앱 도구는 실행하지 않는다. 문서 내용을 싣지 않는다.
+- `src/local-test.ts`는 서버·모델·대화·도구 호출 네 가지를 확인한다. 목록이 비면 모델 확인은 건너뛰고, 직접 입력한 id(`typed`)가 목록에 없어도 건너뛴다. 도구 확인은 가짜 도구 하나만 보내고 앱 도구는 실행하지 않는다. 문서 내용을 싣지 않는다.
 - `src/local-profile.ts`는 모델별 문맥·도구·이미지와 출처(`server`/`user`/`test`)를 합친다. 사용자 값이 가장 세고, 모르는 값은 `false`가 아니다. `localContextLimit`은 활성 `custom`+`kind:'local'`일 때만 값을 준다.
 - `src/local-ipc.ts`의 파서가 `ai:local-models`·`ai:local-inspect`·`ai:local-test` 입력을 검사한다. `customEndpoint: ''`는 "없음"이고 `providers.custom`도 비운다.
 - 새 export는 `./local-models`, `./local-test`; `context-budget`은 `@genoffice/agent-core`의 것이다.

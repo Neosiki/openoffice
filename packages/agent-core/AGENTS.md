@@ -31,7 +31,7 @@
 - 실패한 실행은 그 사용자 메시지부터 이력에서 걷어 낸다(`rollbackFailedRun`). 남겨 두면 실패한 지시가 다음 실행에서 사용자 모르게 다시 수행된다. 도구만 실행하고 글이 없는 턴은 `COMPLETED_VIA_TOOLS_TEXT`로 채운다(빈 assistant 내용은 다음 턴을 깨뜨린다).
 - `ToolExecution.display`는 화면 전용이다. 모델에게 가는 메시지에 섞지 않는다.
 - 전송은 모르는 조각 종류를 받아도 실행을 죽이지 않는다(이 빌드보다 새 메인 프로세스와 함께 돌 수 있다). 조각이 오면 침묵 감시만 다시 건다.
-- `IPC_STREAM_SILENCE_TIMEOUT_MS`(240초)는 메인 프로세스의 유휴 제한(180초)보다 길어야 한다. 메인 쪽의 번역된 시간 초과 문장이 먼저 도착하게 하기 위해서다.
+- `IPC_STREAM_SILENCE_TIMEOUT_MS`(240초)는 메인 프로세스의 유휴 제한(180초)보다 길어야 한다. 메인 쪽의 번역된 시간 초과 문장이 먼저 도착하게 하기 위해서다. 로컬 서버는 300~600초를 기다릴 수 있으므로, 첫 조각이 오기 전까지 5초마다 `ping`을 보내 침묵 감시를 다시 건다. 응답 헤더만 온 때에 ping을 멈추면 안 된다.
 - `REDACT_NS`, `REDACT_PREFIX`, `REDACT_EL`의 값을 바꾸지 않는다. 저장된 docx·pptx 안에 쓰이는 XML 네임스페이스와 접두사라서, 바꾸면 이미 가려 둔 범위(원본 GenOffice로 만든 것 포함)를 읽지 못해 그 내용이 다시 모델에게 보인다. 값에 다른 회사 주소가 들어 있어도 문서 데이터이므로 그대로 둔다.
 - `redact-range.ts`의 함수는 throw하지 않는다. 모르는 노드는 그대로 통과시킨다. 여기서 예외가 나면 호출자의 예비 경로가 가려지지 않은 원문을 보내게 된다.
 - 사용자 메시지는 이력에 들어가기 전에 `sanitizeAgentPayload`를 거친다(실수로 붙여 넣은 키·비밀번호를 가린다). 이 호출을 우회해 이력에 직접 넣지 않는다.
@@ -52,7 +52,7 @@
 
 - `AgentLoop`는 `run()`마다 새 `runId`를 만들고 `transport.stream`에 싣는다. `toolsAllowed() === false`면 `tools: []`와 글만 쓰는 지시문을 보내고, 모델이 그래도 낸 도구 호출은 실행하지 않는다. 버린 호출은 "전달됨"으로 세어 같은 턴을 다시 보내지 않는다.
 - `createIpcTransport`는 `contextLimit`·`confirmContext`·`contextGate`를 받는다. 80%를 넘고 `runId`가 아직 확인되지 않았으면 한 번 묻고, 거절하면 `start`를 부르지 않고 `context-limit`으로 끝낸다. `skipContextGate`는 압축 요약 요청에만 쓴다.
-- PDF·EPUB 문서 작업은 `createModelCall` 하나가 `contextGate` 하나를 쥐고 `runId`를 자체 생성한다. 호출자는 `runId`만 넘긴다.
+- PDF·EPUB 문서 작업은 `createModelCall` 하나가 `contextGate` 하나를 쥔다. 호출자가 넘긴 `runId`를 쓰고 없으면 하나 만든다.
 
 ## 테스트
 

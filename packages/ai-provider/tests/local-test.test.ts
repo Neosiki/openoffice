@@ -203,6 +203,38 @@ describe('testLocalModel', () => {
     expect(mock).toHaveBeenCalledTimes(3)
   })
 
+  it('skips the model check when the server returns an empty list', async () => {
+    const mock = stubFetch((url, init) => {
+      if (url === TAGS_URL) return jsonBody({ models: [] })
+      const body = JSON.parse(String((init as RequestInit).body)) as Record<string, unknown>
+      return toolBodyOf(body) ? toolCallStream() : textChat()
+    })
+
+    const result = await testLocalModel({ baseUrl: BASE, model: MODEL })
+
+    expect(result.server).toEqual({ status: 'pass' })
+    expect(result.models).toEqual([])
+    expect(result.model).toEqual({ status: 'skip' })
+    expect(result.chat).toEqual({ status: 'pass' })
+    expect(result.tools).toEqual({ status: 'pass' })
+    expect(mock).toHaveBeenCalledTimes(3)
+  })
+
+  it('skips a typed model that the list does not name', async () => {
+    stubFetch((url, init) => {
+      if (url === TAGS_URL) return jsonBody({ models: [{ name: 'other-model' }] })
+      const body = JSON.parse(String((init as RequestInit).body)) as Record<string, unknown>
+      return toolBodyOf(body) ? toolCallStream() : textChat()
+    })
+
+    const result = await testLocalModel({ baseUrl: BASE, model: MODEL, typed: true })
+
+    expect(result.server).toEqual({ status: 'pass' })
+    expect(result.model).toEqual({ status: 'skip' })
+    expect(result.chat).toEqual({ status: 'pass' })
+    expect(result.tools).toEqual({ status: 'pass' })
+  })
+
   it('skips the model check when the model list cannot be read, and keeps checking chat and tools', async () => {
     stubFetch((url, init) => {
       if (url === TAGS_URL || url === MODELS_URL) return new Response('no', { status: 404 })

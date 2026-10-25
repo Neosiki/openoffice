@@ -413,6 +413,8 @@ export interface HomeApi {
     baseUrl: string
     apiKey?: string
     model: string
+    /** true when the user typed the id instead of picking a listed model */
+    typed?: boolean
     timeoutMs?: number
   }): Promise<AiLocalTestResult>
   /** one-shot round trip against the given (possibly unsaved) settings — the settings-UI connection test */

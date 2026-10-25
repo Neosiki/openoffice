@@ -133,6 +133,16 @@ describe('parseLocalTestInput', () => {
     expect(parseLocalTestInput({ baseUrl: 'javascript:alert(1)', model: 'm' })).toBeUndefined()
     expect(parseLocalTestInput({ baseUrl: BASE, model: 'm'.repeat(257) })).toBeUndefined()
   })
+
+  it('carries the typed-model flag only when it is true', () => {
+    expect(parseLocalTestInput({ baseUrl: BASE, model: 'm', typed: true })).toMatchObject({
+      typed: true,
+    })
+    expect(parseLocalTestInput({ baseUrl: BASE, model: 'm', typed: false })).not.toHaveProperty(
+      'typed',
+    )
+    expect(parseLocalTestInput({ baseUrl: BASE, model: 'm', typed: 'yes' })).toBeUndefined()
+  })
 })
 
 describe('IPC handlers', () => {

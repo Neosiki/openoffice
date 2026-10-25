@@ -121,10 +121,11 @@ export function parseLocalTestInput(raw: unknown): AiLocalTestIpcInput | undefin
   if (!fields) return undefined
   const model = modelIdOf(raw.model)
   if (!model) return undefined
+  if (raw.typed !== undefined && typeof raw.typed !== 'boolean') return undefined
   const timeoutMs =
     raw.timeoutMs === undefined ? DEFAULT_LOCAL_TIMEOUT_MS : localTimeoutMsOf(raw.timeoutMs)
   if (timeoutMs === undefined) return undefined
-  return { ...fields, model, timeoutMs }
+  return { ...fields, model, ...(raw.typed === true ? { typed: true } : {}), timeoutMs }
 }
 
 /** The connection test's answer for a payload it cannot run: nothing was sent. */

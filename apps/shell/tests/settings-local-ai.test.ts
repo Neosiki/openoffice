@@ -18,6 +18,7 @@ import {
   mergeLoadedModel,
   newLocalDraft,
   normalizeLocalBaseUrl,
+  normalizeTimeoutMinutes,
   normalizeTimeoutMs,
   removeLocalEndpoint,
   saveLocalDraft,
@@ -298,6 +299,26 @@ describe('normalizeTimeoutMs', () => {
     expect(normalizeTimeoutMs(60_000.5)).toEqual({ ok: false, code: 'range' })
     expect(normalizeTimeoutMs('abc')).toEqual({ ok: false, code: 'range' })
     expect(normalizeTimeoutMs(Number.NaN)).toEqual({ ok: false, code: 'range' })
+  })
+})
+
+describe('normalizeTimeoutMinutes', () => {
+  it('accepts whole minutes inside 1..10 and converts to milliseconds', () => {
+    expect(normalizeTimeoutMinutes('1')).toEqual({ ok: true, value: 60_000 })
+    expect(normalizeTimeoutMinutes('10')).toEqual({ ok: true, value: 600_000 })
+    expect(normalizeTimeoutMinutes('5')).toEqual({ ok: true, value: 300_000 })
+  })
+
+  it('uses the default for a blank field', () => {
+    expect(normalizeTimeoutMinutes('')).toEqual({ ok: true, value: 300_000 })
+    expect(normalizeTimeoutMinutes('  ')).toEqual({ ok: true, value: 300_000 })
+  })
+
+  it('rejects decimals, zero, and values over ten', () => {
+    expect(normalizeTimeoutMinutes('1.5')).toEqual({ ok: false, code: 'range' })
+    expect(normalizeTimeoutMinutes('0')).toEqual({ ok: false, code: 'range' })
+    expect(normalizeTimeoutMinutes('11')).toEqual({ ok: false, code: 'range' })
+    expect(normalizeTimeoutMinutes('abc')).toEqual({ ok: false, code: 'range' })
   })
 })
 

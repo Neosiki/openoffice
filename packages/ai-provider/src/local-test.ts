@@ -59,6 +59,12 @@ export interface AiLocalTestInput {
   apiKey?: string | undefined
   /** the model the card picked */
   model: string
+  /**
+   * true when the user typed the model id instead of picking one from the
+   * server's list. A typed id that the list does not contain is unknown, not
+   * missing: skip that check and let chat/tools decide.
+   */
+  typed?: boolean | undefined
   /** the total budget for all four checks (clamped to 60s–600s) */
   timeoutMs?: number | undefined
 }
@@ -100,6 +106,7 @@ interface ResolvedTestInput {
   baseUrl: string
   apiKey: string
   model: string
+  typed: boolean
   timeoutMs: number
 }
 
@@ -139,7 +146,7 @@ function resolveInput(raw: unknown): ResolvedTestInput | undefined {
   if (rawKey !== undefined && typeof rawKey !== 'string') return undefined
   const apiKey = typeof rawKey === 'string' ? rawKey.trim() : ''
   if (apiKey.length > MAX_API_KEY_LENGTH) return undefined
-  return { baseUrl, apiKey, model, timeoutMs: timeoutOf(raw.timeoutMs) }
+  return { baseUrl, apiKey, model, typed: raw.typed === true, timeoutMs: timeoutOf(raw.timeoutMs) }
 }
 
 function skippedResult(): AiLocalTestResult {
@@ -290,9 +297,18 @@ export async function testLocalModel(input: AiLocalTestInput): Promise<AiLocalTe
         result.server = { status: 'pass' }
         result.models = listed.models
         result.serverKind = listed.server
-        result.model = listed.models.some((entry) => entry.id === resolved.model)
-          ? { status: 'pass' }
-          : { status: 'fail', code: 'model-missing' }
+        if (listed.models.length === 0) {
+          // an empty list cannot judge the model at all
+          result.model = { status: 'skip' }
+        } else if (listed.models.some((entry) => entry.id === resolved.model)) {
+          result.model = { status: 'pass' }
+        } else if (resolved.typed) {
+          // the user typed this id; the server's list not naming it is not proof
+          // that it is missing (the list may be partial or stale)
+          result.model = { status: 'skip' }
+        } else {
+          result.model = { status: 'fail', code: 'model-missing' }
+        }
       } else {
         // no list means this model cannot be judged; chat and tools still try
         result.server = { status: 'fail', code: listed.errorCode }

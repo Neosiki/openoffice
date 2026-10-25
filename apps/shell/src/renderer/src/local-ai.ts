@@ -230,6 +230,23 @@ export function normalizeTimeoutMs(raw: unknown): LocalValidation<number> {
   return { ok: true, value }
 }
 
+/**
+ * The card's minutes field: a whole number of minutes inside 1..10. Blank
+ * means the default; a decimal or anything else is a range error.
+ */
+export function normalizeTimeoutMinutes(raw: unknown): LocalValidation<number> {
+  if (raw === undefined || raw === null || (typeof raw === 'string' && raw.trim() === '')) {
+    return { ok: true, value: DEFAULT_LOCAL_TIMEOUT_MS }
+  }
+  const text = typeof raw === 'number' ? String(raw) : typeof raw === 'string' ? raw.trim() : ''
+  if (!/^\d+$/.test(text)) return { ok: false, code: 'range' }
+  const minutes = Number(text)
+  if (!Number.isInteger(minutes) || minutes < 1 || minutes > 10) {
+    return { ok: false, code: 'range' }
+  }
+  return { ok: true, value: minutes * 60_000 }
+}
+
 // ── saving and deleting ───────────────────────────────────
 
 function normalizedModels(raw: readonly string[] | undefined): string[] | undefined {
