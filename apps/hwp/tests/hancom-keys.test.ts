@@ -10,10 +10,18 @@ import {
   TEXT_COLORS,
   adaptToHancom,
   deleteLine,
+  equalizeTableCells,
+  hancomCellBlockKey,
+  hancomCellKey,
   hancomChordKey,
   hancomChordStart,
   hancomCommands,
+  hancomContextKey,
+  hancomTableObjectKey,
   letterOf,
+  MAIN_PROCESS_KEYS,
+  resizeRowColumnBlock,
+  resizeSelectedCell,
   studioCommandIds,
   withHancomLabel,
 } from '../studio-plugin/hancom-keys.mjs'
@@ -38,9 +46,81 @@ const imeKey = (code: string, init: Partial<KeyboardEvent> = {}) =>
   key({ key: 'Process', code, keyCode: 229, ...init })
 
 function handler(enabled: string[] = []) {
+  let phase = 1
+  let focus = { row: 0, col: 0 }
+  const cursor = {
+    isInCell: () => false,
+    isInTextBox: () => false,
+    isInCellSelectionMode: () => false,
+    isInTableObjectSelection: () => false,
+    isInHeaderFooter: () => false,
+    isInFootnote: () => false,
+    getCellTableContext: (): { sec: number; ppi: number; ci: number } | null => null,
+    getSelectedCellRange: () =>
+      null as { startRow: number; startCol: number; endRow: number; endCol: number } | null,
+    exitTableObjectSelection: vi.fn(),
+    enterCellSelectionMode: vi.fn(() => true),
+    advanceCellSelectionPhase: vi.fn(() => {
+      phase = Math.min(3, phase + 1)
+    }),
+    getCellSelectionPhase: () => phase,
+    getCellSelectionFocus: () => ({ ...focus }),
+    setCellSelectionAnchor: vi.fn((row: number, col: number) => {
+      focus = { row, col }
+    }),
+    setCellSelectionFocus: vi.fn((row: number, col: number) => {
+      focus = { row, col }
+    }),
+    exitCellSelectionMode: vi.fn(),
+    moveToCellByIndex: vi.fn(),
+    moveTo: vi.fn(),
+    clearSelection: vi.fn(),
+  }
   return {
     _hancomChord: null as string | null,
     _cellBlockLetterImeGuard: { arm: vi.fn() },
+    cursor,
+    caret: { hide: vi.fn() },
+    eventBus: { emit: vi.fn() },
+    getCursorPosition: () => ({
+      sectionIndex: 0,
+      paragraphIndex: 0,
+      charOffset: 0,
+      parentParaIndex: 1,
+      controlIndex: 0,
+      cellIndex: 0,
+      cellParaIndex: 0,
+    }),
+    getSelectedTableRef: (): {
+      sec: number
+      ppi: number
+      ci: number
+      cellPath?: unknown[]
+    } | null => null,
+    isFormMode: () => false,
+    wasm: {
+      getTableDimensions: () => ({ rowCount: 3, colCount: 3, cellCount: 9 }),
+      getCellInfo: (_s: number, _p: number, _c: number, i: number) => ({
+        row: Math.floor(i / 3),
+        col: i % 3,
+        rowSpan: 1,
+        colSpan: 1,
+      }),
+      getParagraphCount: () => 2,
+      getParagraphLength: () => 0,
+      getCellParagraphCount: () => 1,
+      getCellParagraphLength: () => 0,
+      getTextInCell: () => '',
+      setTableProperties: vi.fn(() => ({ ok: true })),
+      changeShapeZOrder: vi.fn(() => ({
+        ok: true,
+        moves: [{ ppi: 1, ci: 0, before: 0, after: 1 }],
+      })),
+    },
+    executeOperation: vi.fn(),
+    updateCellSelection: vi.fn(),
+    clearSelectedCellBlock: vi.fn(() => true),
+    updateCaret: vi.fn(),
     dispatcher: {
       dispatch: vi.fn(() => true),
       isEnabled: vi.fn((id: string) => enabled.includes(id)),
@@ -293,6 +373,21 @@ describe('the new commands', () => {
     }
     expect(studioCommandIds().some((id) => id.startsWith('ieum:'))).toBe(false)
   })
+
+  it('register the table commands the keys use', () => {
+    const ids = new Set(hancomCommands('en').map((command) => command.id))
+    for (const id of [
+      'ieum:table-insert-row-below',
+      'ieum:table-resize',
+      'ieum:table-order',
+      'ieum:table-wrap',
+      'ieum:table-block-resize',
+      'ieum:table-row-column-resize',
+      'ieum:table-cell-resize',
+    ]) {
+      expect(ids, id).toContain(id)
+    }
+  })
 })
 
 /**
@@ -413,6 +508,835 @@ describe("Ctrl+Y, Hangul's line deletion (as Hancom Hangul 2024 does it)", () =>
       expect(deleteLine(doc.ih), mode).toBe(false)
       expect(doc.paras).toEqual(['가나다', '라마바'])
     }
+  })
+})
+
+describe("Hangul's table row keys inside a cell", () => {
+  const inCell = (enabled = ['ieum:table-insert-row-below', 'table:delete-row']) => {
+    const ih = handler(enabled)
+    ih.cursor.isInCell = () => true
+    return ih
+  }
+
+  it('adds a row below for Ctrl+Enter, not a page break', () => {
+    const ih = inCell()
+    const e = key({ key: 'Enter', code: 'Enter', ctrlKey: true })
+    expect(hancomContextKey(ih, e)).toBe(true)
+    expect(e.preventDefault).toHaveBeenCalled()
+    expect(ih.dispatcher.dispatch).toHaveBeenCalledWith('ieum:table-insert-row-below')
+  })
+
+  it('puts the new row after a merged cell, reading its span live', () => {
+    const ih = inCell()
+    ih.wasm.getCellInfo = vi.fn(() => ({ row: 2, col: 0, rowSpan: 4, colSpan: 2 }))
+    ih.wasm.insertTableRow = vi.fn(() => ({ ok: true, rowCount: 7, colCount: 3 }))
+    ih.wasm.mergeTableCells = vi.fn(() => ({ ok: true }))
+    ih.executeOperation = vi.fn((desc: { operation: (w: typeof ih.wasm) => unknown }) =>
+      desc.operation(ih.wasm),
+    )
+    const command = hancomCommands('ko').find((c) => c.id === 'ieum:table-insert-row-below')!
+    command.execute({ getInputHandler: () => ih, wasm: ih.wasm })
+    expect(ih.wasm.insertTableRow).toHaveBeenCalledWith(0, 1, 0, 5, true)
+    expect(ih.wasm.mergeTableCells).toHaveBeenCalledWith(0, 1, 0, 6, 0, 6, 1)
+  })
+
+  it('deletes the row for Ctrl+Backspace, not the word before', () => {
+    const ih = inCell()
+    const e = key({ key: 'Backspace', code: 'Backspace', ctrlKey: true })
+    expect(hancomContextKey(ih, e)).toBe(true)
+    expect(e.preventDefault).toHaveBeenCalled()
+    expect(ih.dispatcher.dispatch).toHaveBeenCalledWith('table:delete-row')
+  })
+
+  it('keeps the last row of a table', () => {
+    const ih = inCell()
+    ih.wasm.getTableDimensions = () => ({ rowCount: 1, colCount: 1, cellCount: 1 })
+    const e = key({ key: 'Backspace', code: 'Backspace', ctrlKey: true })
+    expect(hancomContextKey(ih, e)).toBe(true)
+    expect(e.preventDefault).toHaveBeenCalled()
+    expect(ih.dispatcher.dispatch).not.toHaveBeenCalled()
+  })
+
+  it('leaves both keys alone outside a table', () => {
+    const ih = handler(['ieum:table-insert-row-below', 'table:delete-row'])
+    for (const e of [
+      key({ key: 'Enter', code: 'Enter', ctrlKey: true }),
+      key({ key: 'Backspace', code: 'Backspace', ctrlKey: true }),
+    ]) {
+      expect(hancomContextKey(ih, e)).toBe(false)
+      expect(e.preventDefault).not.toHaveBeenCalled()
+    }
+    expect(ih.dispatcher.dispatch).not.toHaveBeenCalled()
+  })
+
+  it('leaves Cmd+Backspace on a Mac to deleting the line', () => {
+    const ih = inCell()
+    const e = key({ key: 'Backspace', code: 'Backspace', metaKey: true })
+    expect(hancomContextKey(ih, e)).toBe(false)
+    expect(e.preventDefault).not.toHaveBeenCalled()
+  })
+
+  it('does not page-break in a table that sits in a cell (Phase 2)', () => {
+    const ih = inCell()
+    ih.getCursorPosition = () => ({
+      sectionIndex: 0,
+      paragraphIndex: 0,
+      charOffset: 0,
+      parentParaIndex: 1,
+      controlIndex: 0,
+      cellIndex: 0,
+      cellParaIndex: 0,
+      cellPath: [
+        { controlIndex: 0, cellIndex: 0, cellParaIndex: 0 },
+        { controlIndex: 1, cellIndex: 0, cellParaIndex: 0 },
+      ],
+    })
+    const e = key({ key: 'Enter', code: 'Enter', ctrlKey: true })
+    expect(hancomContextKey(ih, e)).toBe(true)
+    expect(e.preventDefault).toHaveBeenCalled()
+    expect(ih.dispatcher.dispatch).not.toHaveBeenCalled()
+  })
+})
+
+describe('the table-object keys (표를 선택한 상태에서)', () => {
+  const inObject = (enabled: string[]) => {
+    const ih = handler(enabled)
+    ih.cursor.isInTableObjectSelection = () => true
+    return ih
+  }
+
+  it('run the command of the letter, and keep the letter out', () => {
+    const keys = [
+      ['p', 'table:cell-props'],
+      ['t', 'ieum:table-transpose'],
+      ['l', 'ieum:table-border-each'],
+      ['c', 'ieum:table-border-background'],
+    ] as const
+    for (const [letter, id] of keys) {
+      const ih = inObject([id])
+      const e = key({ key: letter, code: `Key${letter.toUpperCase()}` })
+      expect(hancomTableObjectKey(ih, e), letter).toBe(true)
+      expect(e.preventDefault).toHaveBeenCalled()
+      expect(ih.dispatcher.dispatch).toHaveBeenCalledWith(id)
+      expect(ih._cellBlockLetterImeGuard.arm).toHaveBeenCalledWith(e)
+    }
+  })
+
+  it('deletes the table with Ctrl+E', () => {
+    const ih = inObject(['table:delete'])
+    const e = key({ key: 'e', code: 'KeyE', ctrlKey: true })
+    expect(hancomTableObjectKey(ih, e)).toBe(true)
+    expect(e.preventDefault).toHaveBeenCalled()
+    expect(ih.dispatcher.dispatch).toHaveBeenCalledWith('table:delete')
+    expect(ih.cursor.exitTableObjectSelection).toHaveBeenCalled()
+    expect(ih.eventBus.emit).toHaveBeenCalledWith('table-object-selection-changed', false)
+  })
+
+  it('takes nothing outside a table-object selection', () => {
+    const ih = handler(['table:delete', 'table:cell-props'])
+    const e = key({ key: 'p', code: 'KeyP' })
+    expect(hancomTableObjectKey(ih, e)).toBe(false)
+    expect(e.preventDefault).not.toHaveBeenCalled()
+  })
+
+  it('keeps Ctrl+E meaning elsewhere', () => {
+    const ih = handler(['table:delete'])
+    ih.cursor.isInCell = () => true
+    const e = key({ key: 'e', code: 'KeyE', ctrlKey: true })
+    expect(hancomTableObjectKey(ih, e)).toBe(false)
+    expect(e.preventDefault).not.toHaveBeenCalled()
+  })
+})
+
+describe('H/W in a cell block', () => {
+  it('runs the equal-size command of the key and keeps the letter out', () => {
+    const ih = handler(['table:cell-height-equal', 'table:cell-width-equal'])
+    ih.cursor.isInCellSelectionMode = () => true
+    for (const [letter, id] of [
+      ['h', 'table:cell-height-equal'],
+      ['w', 'table:cell-width-equal'],
+    ] as const) {
+      const e = key({ key: letter, code: `Key${letter.toUpperCase()}` })
+      expect(hancomCellBlockKey(ih, e), letter).toBe(true)
+      expect(e.preventDefault).toHaveBeenCalled()
+      expect(ih.dispatcher.dispatch).toHaveBeenCalledWith(id)
+    }
+  })
+
+  it('leaves H/W as letters outside a cell block', () => {
+    const ih = handler(['table:cell-height-equal'])
+    const e = key({ key: 'h', code: 'KeyH' })
+    expect(hancomCellBlockKey(ih, e)).toBe(false)
+    expect(e.preventDefault).not.toHaveBeenCalled()
+  })
+
+  it('does not take Ctrl/Alt/Shift combinations', () => {
+    const ih = handler(['table:cell-height-equal', 'table:cell-width-equal'])
+    ih.cursor.isInCellSelectionMode = () => true
+    for (const init of [
+      { ctrlKey: true },
+      { metaKey: true },
+      { altKey: true },
+      { shiftKey: true },
+    ]) {
+      expect(hancomCellBlockKey(ih, key({ key: 'h', code: 'KeyH', ...init }))).toBe(false)
+    }
+  })
+})
+
+describe('Phase 1B cell keys', () => {
+  const inCell = (enabled: string[] = []) => {
+    const ih = handler(enabled)
+    ih.cursor.isInCell = () => true
+    return ih
+  }
+
+  it('selects the whole column for F7 and the whole row for F8', () => {
+    for (const [keyName, expected] of [
+      ['F7', { anchor: [0, 2], focus: [2, 2] }],
+      ['F8', { anchor: [1, 0], focus: [1, 2] }],
+    ] as const) {
+      const ih = inCell()
+      ih.getCursorPosition = () => ({
+        sectionIndex: 0,
+        paragraphIndex: 0,
+        charOffset: 0,
+        parentParaIndex: 1,
+        controlIndex: 0,
+        cellIndex: 5,
+        cellParaIndex: 0,
+      })
+      ih.cursor.getCellSelectionFocus = () => ({ row: 1, col: 2 })
+      ih.cursor.getCellTableContext = () => ({ sec: 0, ppi: 1, ci: 0, rowCount: 3, colCount: 3 })
+      const e = key({ key: keyName, code: keyName })
+      expect(hancomCellKey(ih, e), keyName).toBe(true)
+      expect(e.preventDefault).toHaveBeenCalled()
+      expect(ih.cursor.setCellSelectionAnchor).toHaveBeenCalledWith(...expected.anchor)
+      expect(ih.cursor.setCellSelectionFocus).toHaveBeenCalledWith(...expected.focus)
+      expect(ih.updateCellSelection).toHaveBeenCalled()
+    }
+  })
+
+  it('opens an expanding block for Shift+F5', () => {
+    const ih = inCell()
+    ih.cursor.isInCellSelectionMode = () => false
+    const e = key({ key: 'F5', code: 'F5', shiftKey: true })
+    expect(hancomCellKey(ih, e)).toBe(true)
+    expect(ih.cursor.enterCellSelectionMode).toHaveBeenCalled()
+    expect(ih.cursor.advanceCellSelectionPhase).toHaveBeenCalled()
+  })
+
+  it('moves one cell for Alt+arrow', () => {
+    const ih = inCell()
+    ih.getCursorPosition = () => ({
+      sectionIndex: 0,
+      paragraphIndex: 0,
+      charOffset: 0,
+      parentParaIndex: 1,
+      controlIndex: 0,
+      cellIndex: 1,
+      cellParaIndex: 0,
+    })
+    const e = key({ key: 'ArrowDown', code: 'ArrowDown', altKey: true })
+    expect(hancomCellKey(ih, e)).toBe(true)
+    expect(ih.cursor.moveToCellByIndex).toHaveBeenCalledWith(0, 1, 0, undefined, 4, 'start')
+    expect(ih.updateCaret).toHaveBeenCalled()
+  })
+
+  it('leaves the table for Shift+Esc', () => {
+    const ih = inCell()
+    ih.cursor.isInCellSelectionMode = () => true
+    ih.getCursorPosition = () => ({
+      sectionIndex: 0,
+      paragraphIndex: 0,
+      charOffset: 0,
+      parentParaIndex: 0,
+      controlIndex: 0,
+      cellIndex: 0,
+      cellParaIndex: 0,
+    })
+    const e = key({ key: 'Escape', code: 'Escape', shiftKey: true })
+    expect(hancomCellKey(ih, e)).toBe(true)
+    expect(ih.cursor.exitCellSelectionMode).toHaveBeenCalled()
+    expect(ih.cursor.moveTo).toHaveBeenCalledWith({
+      sectionIndex: 0,
+      paragraphIndex: 1,
+      charOffset: 0,
+    })
+  })
+
+  it('takes nothing outside a table cell', () => {
+    const ih = handler()
+    const e = key({ key: 'F7', code: 'F7' })
+    expect(hancomCellKey(ih, e)).toBe(false)
+    expect(e.preventDefault).not.toHaveBeenCalled()
+  })
+})
+
+describe('Phase 1B cell block keys', () => {
+  const inBlock = (enabled: string[] = []) => {
+    const ih = handler(enabled)
+    ih.cursor.isInCellSelectionMode = () => true
+    ih.cursor.getCellTableContext = () => ({ sec: 0, ppi: 1, ci: 0 })
+    ih.cursor.getSelectedCellRange = () => ({ startRow: 0, startCol: 0, endRow: 0, endCol: 0 })
+    return ih
+  }
+
+  it('empties the selected cells for Ctrl+E', () => {
+    const ih = inBlock()
+    const e = key({ key: 'e', code: 'KeyE', ctrlKey: true })
+    expect(hancomCellBlockKey(ih, e)).toBe(true)
+    expect(e.preventDefault).toHaveBeenCalled()
+    expect(ih.clearSelectedCellBlock).toHaveBeenCalled()
+    expect(ih.updateCellSelection).toHaveBeenCalled()
+  })
+
+  it('copies the cells for Ctrl+C and cuts them for Ctrl+X', () => {
+    const area = {
+      value: '',
+      style: {},
+      setAttribute: vi.fn(),
+      select: vi.fn(),
+      remove: vi.fn(),
+    }
+    vi.stubGlobal('document', {
+      createElement: () => area,
+      body: { appendChild: vi.fn() },
+      execCommand: () => true,
+    })
+    try {
+      for (const [keyName, cut] of [
+        ['c', false],
+        ['x', true],
+      ] as const) {
+        const ih = inBlock()
+        ih.wasm.getTableDimensions = () => ({ rowCount: 1, colCount: 1, cellCount: 1 })
+        ih.wasm.getCellParagraphLength = () => 2
+        ih.wasm.getTextInCell = () => 'X1'
+        const e = key({ key: keyName, code: `Key${keyName.toUpperCase()}`, ctrlKey: true })
+        expect(hancomCellBlockKey(ih, e), keyName).toBe(true)
+        expect(area.value).toBe('X1')
+        if (cut) expect(ih.clearSelectedCellBlock).toHaveBeenCalled()
+        else expect(ih.clearSelectedCellBlock).not.toHaveBeenCalled()
+      }
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it('resizes the block for Alt+arrow', () => {
+    const ih = inBlock(['ieum:table-block-resize'])
+    const e = key({ key: 'ArrowRight', code: 'ArrowRight', altKey: true })
+    expect(hancomCellBlockKey(ih, e)).toBe(true)
+    expect(ih.dispatcher.dispatch).toHaveBeenCalledWith('ieum:table-block-resize', {
+      direction: 'right',
+    })
+  })
+
+  it('resizes whole rows/columns for Ctrl+arrow', () => {
+    const ih = inBlock(['ieum:table-row-column-resize'])
+    const e = key({ key: 'ArrowDown', code: 'ArrowDown', ctrlKey: true })
+    expect(hancomCellBlockKey(ih, e)).toBe(true)
+    expect(ih.dispatcher.dispatch).toHaveBeenCalledWith('ieum:table-row-column-resize', {
+      direction: 'down',
+    })
+  })
+
+  it('resizes one cell for Shift+arrow', () => {
+    const ih = inBlock(['ieum:table-cell-resize'])
+    const e = key({ key: 'ArrowRight', code: 'ArrowRight', shiftKey: true })
+    expect(hancomCellBlockKey(ih, e)).toBe(true)
+    expect(ih.dispatcher.dispatch).toHaveBeenCalledWith('ieum:table-cell-resize', {
+      direction: 'right',
+    })
+  })
+})
+
+describe('Phase 1B table-object keys', () => {
+  const inObject = (enabled: string[] = []) => {
+    const ih = handler(enabled)
+    ih.cursor.isInTableObjectSelection = () => true
+    ih.getSelectedTableRef = () => ({ sec: 0, ppi: 1, ci: 0 })
+    return ih
+  }
+
+  it('selects the first cell for F5', () => {
+    const ih = inObject()
+    const e = key({ key: 'F5', code: 'F5' })
+    expect(hancomTableObjectKey(ih, e)).toBe(true)
+    expect(ih.cursor.exitTableObjectSelection).toHaveBeenCalled()
+    expect(ih.cursor.moveToCellByIndex).toHaveBeenCalledWith(0, 1, 0, undefined, 0, 'start')
+    expect(ih.cursor.enterCellSelectionMode).toHaveBeenCalled()
+    expect(ih.updateCellSelection).toHaveBeenCalled()
+  })
+
+  it('sends Shift+arrow and Shift+Page/Home/End to their commands', () => {
+    const cases = [
+      [
+        { key: 'ArrowRight', code: 'ArrowRight', shiftKey: true },
+        'ieum:table-resize',
+        { direction: 'right' },
+      ],
+      [
+        { key: 'ArrowUp', code: 'ArrowUp', shiftKey: true },
+        'ieum:table-resize',
+        { direction: 'up' },
+      ],
+      [{ key: 'PageUp', code: 'PageUp', shiftKey: true }, 'ieum:table-order', { mode: 'front' }],
+      [{ key: 'PageDown', code: 'PageDown', shiftKey: true }, 'ieum:table-order', { mode: 'back' }],
+      [{ key: 'Home', code: 'Home', shiftKey: true }, 'ieum:table-wrap', { mode: 'front' }],
+      [{ key: 'End', code: 'End', shiftKey: true }, 'ieum:table-wrap', { mode: 'back' }],
+    ] as const
+    for (const [init, id, params] of cases) {
+      const ih = inObject([id])
+      const e = key(init)
+      expect(hancomTableObjectKey(ih, e), `${init.key}`).toBe(true)
+      expect(e.preventDefault).toHaveBeenCalled()
+      expect(ih.dispatcher.dispatch).toHaveBeenCalledWith(id, params)
+    }
+  })
+})
+
+describe('Ctrl+Tab in a table cell', () => {
+  it('inserts a tab command instead of switching tabs', () => {
+    class FakeTabCommand {
+      constructor(readonly position: unknown) {}
+    }
+    hancomCommands('ko', { InsertTabCommand: FakeTabCommand })
+    const ih = handler()
+    ih.cursor.isInCell = () => true
+    expect(MAIN_PROCESS_KEYS['ctrl-tab'](ih, ih.dispatcher)).toBe(true)
+    expect(ih.executeOperation).toHaveBeenCalledTimes(1)
+    const desc = ih.executeOperation.mock.calls[0][0] as {
+      kind: string
+      command: FakeTabCommand
+    }
+    expect(desc.kind).toBe('command')
+    expect(desc.command).toBeInstanceOf(FakeTabCommand)
+  })
+
+  it('leaves the tab key to the shell outside a cell', () => {
+    hancomCommands('ko', { InsertTabCommand: class {} })
+    const ih = handler()
+    expect(MAIN_PROCESS_KEYS['ctrl-tab'](ih, ih.dispatcher)).toBe(false)
+  })
+})
+
+describe('equal cell sizes (H/W)', () => {
+  function table(
+    widths: number[][],
+    heights: number[][],
+    options: { spans?: boolean; nested?: boolean; range?: Record<string, number> } = {},
+  ) {
+    const rows = widths.length
+    const cols = widths[0].length
+    const cells = []
+    for (let row = 0; row < rows; row += 1) {
+      for (let col = 0; col < cols; col += 1) {
+        cells.push({
+          cellIdx: row * cols + col,
+          row,
+          col,
+          rowSpan: options.spans && row === 0 && col === 1 ? 2 : 1,
+          colSpan: 1,
+          width: widths[row][col],
+          height: heights[row][col],
+        })
+      }
+    }
+    const wasm = {
+      getTableDimensions: () => ({ rowCount: rows, colCount: cols, cellCount: cells.length }),
+      getCellInfo: (_s: number, _p: number, _c: number, i: number) => cells[i],
+      getCellProperties: (_s: number, _p: number, _c: number, i: number) => cells[i],
+      getTableCellBboxes: () =>
+        cells.map((cell) => ({
+          cellIdx: cell.cellIdx,
+          row: cell.row,
+          col: cell.col,
+          w: cell.width / 75,
+          h: cell.height / 75,
+        })),
+      resizeTableCells: vi.fn(() => ({ ok: true })),
+      resizeTableCell: vi.fn(() => ({ ok: true, moved: true })),
+    }
+    const ih = {
+      cursor: {
+        isInCellSelectionMode: () => true,
+        getCellTableContext: () => ({
+          sec: 0,
+          ppi: 1,
+          ci: 0,
+          ...(options.nested
+            ? {
+                cellPath: [
+                  { controlIndex: 0, cellIndex: 0, cellParaIndex: 0 },
+                  { controlIndex: 1, cellIndex: 0, cellParaIndex: 0 },
+                ],
+              }
+            : {}),
+        }),
+        getSelectedCellRange: () =>
+          options.range ?? { startRow: 0, startCol: 0, endRow: rows - 1, endCol: cols - 1 },
+      },
+      getCursorPosition: () => ({
+        sectionIndex: 0,
+        paragraphIndex: 0,
+        charOffset: 0,
+        parentParaIndex: 1,
+        controlIndex: 0,
+        cellIndex: 0,
+        cellParaIndex: 0,
+      }),
+      executeOperation: vi.fn((desc: { operation: (w: typeof wasm) => unknown }) =>
+        desc.operation(wasm),
+      ),
+      updateCellSelection: vi.fn(),
+    }
+    return { services: { getInputHandler: () => ih, wasm }, wasm, ih }
+  }
+
+  it('gives every cell of the selected columns the same width, as one snapshot', () => {
+    const { services, wasm, ih } = table(
+      [
+        [1500, 3000],
+        [1500, 3000],
+      ],
+      [
+        [1500, 1500],
+        [1500, 1500],
+      ],
+    )
+    expect(equalizeTableCells(services, 'width')).toBe(true)
+    expect(ih.executeOperation).toHaveBeenCalledTimes(1)
+    expect(ih.executeOperation.mock.calls[0][0]).toMatchObject({
+      kind: 'snapshot',
+      operationType: 'equalizeColumnWidths',
+    })
+    // the engine moves the next boundary, so each column is one call inside the snapshot
+    expect(wasm.resizeTableCells).toHaveBeenCalledTimes(2)
+    expect(wasm.resizeTableCells.mock.calls[0][3]).toEqual([
+      { cellIdx: 0, widthDelta: 750 },
+      { cellIdx: 2, widthDelta: 750 },
+    ])
+    expect(wasm.resizeTableCells.mock.calls[1][3]).toEqual([
+      { cellIdx: 1, widthDelta: -750 },
+      { cellIdx: 3, widthDelta: -750 },
+    ])
+    expect(ih.updateCellSelection).toHaveBeenCalled()
+  })
+
+  it('gives every cell of the selected rows the same height, as one snapshot', () => {
+    const { services, wasm } = table(
+      [
+        [1500, 1500],
+        [1500, 1500],
+      ],
+      [
+        [1500, 1500],
+        [3000, 3000],
+      ],
+    )
+    expect(equalizeTableCells(services, 'height')).toBe(true)
+    expect(wasm.resizeTableCells.mock.calls[0][3]).toEqual([
+      { cellIdx: 0, heightDelta: 1500 },
+      { cellIdx: 1, heightDelta: 1500 },
+    ])
+  })
+
+  it('leaves a table with merged cells alone and says why', () => {
+    const { services, wasm } = table(
+      [
+        [1000, 3000],
+        [1000, 3000],
+      ],
+      [
+        [1000, 1000],
+        [1000, 1000],
+      ],
+      { spans: true },
+    )
+    const showToast = vi.fn()
+    hancomCommands('ko', { showToast })
+    expect(equalizeTableCells(services, 'width')).toBe(false)
+    expect(wasm.resizeTableCells).not.toHaveBeenCalled()
+    expect(showToast).toHaveBeenCalled()
+  })
+
+  it('leaves a partial row block alone and says why', () => {
+    const { services, wasm } = table(
+      [
+        [1500, 1500],
+        [1500, 1500],
+      ],
+      [
+        [1500, 1500],
+        [3000, 3000],
+      ],
+      { range: { startRow: 1, startCol: 0, endRow: 1, endCol: 1 } },
+    )
+    const showToast = vi.fn()
+    hancomCommands('ko', { showToast })
+    expect(equalizeTableCells(services, 'height')).toBe(false)
+    expect(wasm.resizeTableCells).not.toHaveBeenCalled()
+    expect(showToast).toHaveBeenCalled()
+  })
+
+  it('leaves a table inside a cell to Phase 2', () => {
+    const { services, wasm } = table([[1000, 3000]], [[1000, 1000]], { nested: true })
+    expect(equalizeTableCells(services, 'width')).toBe(false)
+    expect(wasm.resizeTableCells).not.toHaveBeenCalled()
+  })
+
+  it('writes nothing when the sizes are already equal', () => {
+    const { services, ih } = table(
+      [
+        [1500, 1500],
+        [1500, 1500],
+      ],
+      [
+        [1500, 1500],
+        [1500, 1500],
+      ],
+    )
+    expect(equalizeTableCells(services, 'width')).toBe(false)
+    expect(equalizeTableCells(services, 'height')).toBe(false)
+    expect(ih.executeOperation).not.toHaveBeenCalled()
+  })
+
+  it('Ctrl+Right widens every cell of the selected column as one snapshot', () => {
+    const { services, wasm, ih } = table(
+      [
+        [1500, 1500],
+        [1500, 1500],
+        [1500, 1500],
+      ],
+      [
+        [1500, 1500],
+        [1500, 1500],
+        [1500, 1500],
+      ],
+      { range: { startRow: 0, startCol: 1, endRow: 2, endCol: 1 } },
+    )
+    expect(resizeRowColumnBlock(services, 'right')).toBe(true)
+    expect(ih.executeOperation).toHaveBeenCalledTimes(1)
+    expect(ih.executeOperation.mock.calls[0][0]).toMatchObject({
+      kind: 'snapshot',
+      operationType: 'resizeRowColumnBlock',
+    })
+    expect(wasm.resizeTableCells.mock.calls[0][3]).toEqual([
+      { cellIdx: 1, widthDelta: 300 },
+      { cellIdx: 3, widthDelta: 300 },
+      { cellIdx: 5, widthDelta: 300 },
+    ])
+    expect(ih.updateCellSelection).toHaveBeenCalled()
+  })
+
+  it('Ctrl+Down changes every cell of the selected row and the table height', () => {
+    const { services, wasm } = table(
+      [
+        [1500, 1500],
+        [1500, 1500],
+        [1500, 1500],
+      ],
+      [
+        [1500, 1500],
+        [1500, 1500],
+        [1500, 1500],
+      ],
+      { range: { startRow: 1, startCol: 0, endRow: 1, endCol: 1 } },
+    )
+    expect(resizeRowColumnBlock(services, 'down')).toBe(true)
+    expect(wasm.resizeTableCells.mock.calls[0][3]).toEqual([
+      { cellIdx: 2, heightDelta: 300 },
+      { cellIdx: 3, heightDelta: 300 },
+    ])
+  })
+
+  it('Ctrl+Left shrinks the selected column', () => {
+    const { services, wasm } = table(
+      [
+        [1500, 1500],
+        [1500, 1500],
+      ],
+      [
+        [1500, 1500],
+        [1500, 1500],
+      ],
+      { range: { startRow: 0, startCol: 0, endRow: 1, endCol: 0 } },
+    )
+    expect(resizeRowColumnBlock(services, 'left')).toBe(true)
+    expect(wasm.resizeTableCells.mock.calls[0][3]).toEqual([
+      { cellIdx: 0, widthDelta: -300 },
+      { cellIdx: 2, widthDelta: -300 },
+    ])
+  })
+
+  it('leaves merged cells and tables inside a cell alone', () => {
+    const merged = table(
+      [
+        [1500, 1500],
+        [1500, 1500],
+      ],
+      [
+        [1500, 1500],
+        [1500, 1500],
+      ],
+      { spans: true },
+    )
+    const showToast = vi.fn()
+    hancomCommands('ko', { showToast })
+    expect(resizeRowColumnBlock(merged.services, 'right')).toBe(false)
+    expect(merged.wasm.resizeTableCells).not.toHaveBeenCalled()
+    expect(showToast).toHaveBeenCalled()
+
+    const nested = table(
+      [
+        [1500, 1500],
+        [1500, 1500],
+      ],
+      [
+        [1500, 1500],
+        [1500, 1500],
+      ],
+      { nested: true },
+    )
+    expect(resizeRowColumnBlock(nested.services, 'right')).toBe(false)
+    expect(nested.wasm.resizeTableCells).not.toHaveBeenCalled()
+  })
+
+  it('Shift+Right moves one cell and its next cell as one snapshot', () => {
+    const { services, wasm, ih } = table(
+      [
+        [1500, 1500],
+        [1500, 1500],
+      ],
+      [
+        [1500, 1500],
+        [1500, 1500],
+      ],
+    )
+    expect(resizeSelectedCell(services, 'right')).toBe(true)
+    expect(ih.executeOperation).toHaveBeenCalledTimes(1)
+    expect(ih.executeOperation.mock.calls[0][0]).toMatchObject({
+      kind: 'snapshot',
+      operationType: 'resizeTableCell',
+    })
+    expect(wasm.resizeTableCell).toHaveBeenCalledWith(0, 1, 0, 0, 0, false, true)
+    expect(ih.updateCellSelection).toHaveBeenCalled()
+  })
+
+  it('Shift+Down moves the current cell height and the next cell height back', () => {
+    const { services, wasm } = table(
+      [
+        [1500, 1500],
+        [1500, 1500],
+      ],
+      [
+        [1500, 1500],
+        [1500, 1500],
+      ],
+    )
+    expect(resizeSelectedCell(services, 'down')).toBe(true)
+    expect(wasm.resizeTableCell).toHaveBeenCalledWith(0, 1, 0, 0, 0, true, true)
+  })
+
+  it('keeps a Shift+arrow at the last cell as no change', () => {
+    const { services, wasm, ih } = table(
+      [
+        [1500, 1500],
+        [1500, 1500],
+      ],
+      [
+        [1500, 1500],
+        [1500, 1500],
+      ],
+    )
+    wasm.resizeTableCell = vi.fn(() => ({ ok: true, moved: false }))
+    expect(resizeSelectedCell(services, 'right')).toBe(false)
+    expect(ih.updateCellSelection).not.toHaveBeenCalled()
+  })
+
+  it('leaves a table inside a cell alone for Shift+arrow', () => {
+    const { services, wasm } = table(
+      [
+        [1500, 1500],
+        [1500, 1500],
+      ],
+      [
+        [1500, 1500],
+        [1500, 1500],
+      ],
+      { nested: true },
+    )
+    expect(resizeSelectedCell(services, 'right')).toBe(false)
+    expect(wasm.resizeTableCell).not.toHaveBeenCalled()
+  })
+
+  it('leaves a table with actual merged cells alone for Shift+arrow', () => {
+    const { services, wasm } = table(
+      [
+        [1500, 1500],
+        [1500, 1500],
+      ],
+      [
+        [1500, 1500],
+        [1500, 1500],
+      ],
+      { spans: true },
+    )
+    const showToast = vi.fn()
+    hancomCommands('ko', { showToast })
+    expect(resizeSelectedCell(services, 'right')).toBe(false)
+    expect(wasm.resizeTableCell).not.toHaveBeenCalled()
+    expect(showToast).toHaveBeenCalled()
+  })
+
+  it('continues a grid this editor made with Shift+arrow', () => {
+    const { services, wasm } = table(
+      [
+        [1500, 1500],
+        [1500, 1500],
+      ],
+      [
+        [1500, 1500],
+        [1500, 1500],
+      ],
+    )
+    expect(resizeSelectedCell(services, 'right')).toBe(true)
+    const original = wasm.getCellInfo
+    wasm.getCellInfo = vi.fn((...args: [number, number, number, number]) => {
+      const info = original(...args)
+      return args[3] === 0 ? { ...info, colSpan: 2 } : info
+    })
+    expect(resizeSelectedCell(services, 'right')).toBe(true)
+    expect(wasm.resizeTableCell).toHaveBeenCalledTimes(2)
+  })
+
+  it('does not trust the mark in another editor', () => {
+    const first = table(
+      [
+        [1500, 1500],
+        [1500, 1500],
+      ],
+      [
+        [1500, 1500],
+        [1500, 1500],
+      ],
+    )
+    expect(resizeSelectedCell(first.services, 'right')).toBe(true)
+    const second = table(
+      [
+        [1500, 1500],
+        [1500, 1500],
+      ],
+      [
+        [1500, 1500],
+        [1500, 1500],
+      ],
+      { spans: true },
+    )
+    expect(resizeSelectedCell(second.services, 'right')).toBe(false)
+    expect(second.wasm.resizeTableCell).not.toHaveBeenCalled()
   })
 })
 
