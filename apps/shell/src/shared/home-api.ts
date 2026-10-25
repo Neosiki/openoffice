@@ -1,5 +1,8 @@
 import type {
   AiChatResponse,
+  AiLocalDiscoveryResult,
+  AiLocalInspectionResult,
+  AiLocalTestResult,
   AiMediaProviderConfig,
   AiMediaProviderId,
   AiMediaProviderMeta,
@@ -396,6 +399,22 @@ export interface HomeApi {
   getCodexModels(cliPath?: string): Promise<CodexModelCatalog>
   /** live model list advertised by a user-hosted OpenAI-compatible endpoint; empty when it cannot answer */
   getCustomModels(baseUrl: string, apiKey?: string): Promise<CodexModelCatalog>
+  /** models a local AI server advertises (Ollama's own API or OpenAI-compatible `/models`) */
+  getLocalModels(input: { baseUrl: string; apiKey?: string }): Promise<AiLocalDiscoveryResult>
+  /** what one model on a local server reports about itself (context window, tools, vision) */
+  inspectLocalModel(input: {
+    baseUrl: string
+    apiKey?: string
+    model: string
+    server?: 'ollama' | 'openai-compatible'
+  }): Promise<AiLocalInspectionResult>
+  /** the four-step connection test of one model on a local server */
+  testLocalModel(input: {
+    baseUrl: string
+    apiKey?: string
+    model: string
+    timeoutMs?: number
+  }): Promise<AiLocalTestResult>
   /** one-shot round trip against the given (possibly unsaved) settings — the settings-UI connection test */
   testAiSettings(settings: AiSettings): Promise<AiChatResponse>
   /** image generation / media analysis provider catalog */

@@ -1,0 +1,186 @@
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import {
+  inspectLocalModelForIpc,
+  listLocalModelsForIpc,
+  parseLocalDiscoveryInput,
+  parseLocalInspectionInput,
+  parseLocalTestInput,
+  testLocalModelForIpc,
+} from '../src/local-ipc'
+import { DEFAULT_LOCAL_TIMEOUT_MS } from '../src/local-profile'
+
+/**
+ * The three `ai:local-*` payloads. A renderer (or anything else in the process
+ * that can reach `ipcRenderer`) hands over whatever it likes, so every field is
+ * checked here, before a request leaves the app. Invalid input is an ordinary
+ * answer: `shape` for discovery and inspection, a fully skipped test result for
+ * the connection test. Nothing is fetched.
+ */
+
+const BASE = 'http://127.0.0.1:11434/v1'
+
+function stubFetch(
+  handler: (url: string, init: RequestInit) => Response,
+): ReturnType<typeof vi.fn> {
+  const mock = vi.fn(handler)
+  vi.stubGlobal('fetch', mock)
+  return mock
+}
+
+afterEach(() => {
+  vi.unstubAllGlobals()
+})
+
+describe('parseLocalDiscoveryInput', () => {
+  it('accepts a bounded http(s) base URL and trims the key', () => {
+    expect(parseLocalDiscoveryInput({ baseUrl: ` ${BASE} `, apiKey: ' secret ' })).toEqual({
+      baseUrl: BASE,
+      apiKey: 'secret',
+    })
+    expect(parseLocalDiscoveryInput({ baseUrl: 'https://box.local:1234/v1' })).toEqual({
+      baseUrl: 'https://box.local:1234/v1',
+    })
+  })
+
+  it('keeps an empty key out of the request shape', () => {
+    expect(parseLocalDiscoveryInput({ baseUrl: BASE, apiKey: '   ' })).toEqual({ baseUrl: BASE })
+  })
+
+  it.each([
+    ['missing object', undefined],
+    ['missing url', {}],
+    ['blank url', { baseUrl: '   ' }],
+    ['non-string url', { baseUrl: 11434 }],
+    ['non-http scheme', { baseUrl: 'file:///etc/passwd' }],
+    ['not a url', { baseUrl: 'localhost:11434' }],
+    ['too long', { baseUrl: `http://127.0.0.1/${'x'.repeat(2049)}` }],
+    ['non-string key', { baseUrl: BASE, apiKey: 42 }],
+    ['too long key', { baseUrl: BASE, apiKey: 'k'.repeat(8193) }],
+  ])('rejects %s', (_name, input) => {
+    expect(parseLocalDiscoveryInput(input)).toBeUndefined()
+  })
+
+  it('accepts the string limits exactly (2048 / 8192)', () => {
+    const prefix = 'http://127.0.0.1/'
+    const baseUrl = `${prefix}${'x'.repeat(2048 - prefix.length)}`
+    expect(parseLocalDiscoveryInput({ baseUrl })).toEqual({ baseUrl })
+    expect(parseLocalDiscoveryInput({ baseUrl: BASE, apiKey: 'k'.repeat(8192) })).toEqual({
+      baseUrl: BASE,
+      apiKey: 'k'.repeat(8192),
+    })
+  })
+})
+
+describe('parseLocalInspectionInput', () => {
+  it('requires a bounded model id and accepts both server kinds', () => {
+    expect(
+      parseLocalInspectionInput({ baseUrl: BASE, model: ' qwen3:8b ', server: 'ollama' }),
+    ).toEqual({ baseUrl: BASE, model: 'qwen3:8b', server: 'ollama' })
+    expect(
+      parseLocalInspectionInput({ baseUrl: BASE, model: 'm', server: 'openai-compatible' }),
+    ).toEqual({ baseUrl: BASE, model: 'm', server: 'openai-compatible' })
+    expect(parseLocalInspectionInput({ baseUrl: BASE, model: 'm' })).toEqual({
+      baseUrl: BASE,
+      model: 'm',
+    })
+  })
+
+  it.each([
+    ['missing model', { baseUrl: BASE }],
+    ['blank model', { baseUrl: BASE, model: '   ' }],
+    ['non-string model', { baseUrl: BASE, model: 7 }],
+    ['too long model', { baseUrl: BASE, model: 'm'.repeat(257) }],
+    ['unknown server kind', { baseUrl: BASE, model: 'm', server: 'vllm' }],
+    ['non-string server kind', { baseUrl: BASE, model: 'm', server: 1 }],
+    ['bad url', { baseUrl: 'ftp://box/v1', model: 'm' }],
+  ])('rejects %s', (_name, input) => {
+    expect(parseLocalInspectionInput(input)).toBeUndefined()
+  })
+
+  it('accepts a model id of exactly 256 characters', () => {
+    const model = 'm'.repeat(256)
+    expect(parseLocalInspectionInput({ baseUrl: BASE, model })).toEqual({ baseUrl: BASE, model })
+  })
+})
+
+describe('parseLocalTestInput', () => {
+  it('defaults the budget when the field is absent', () => {
+    expect(parseLocalTestInput({ baseUrl: BASE, model: 'm' })).toEqual({
+      baseUrl: BASE,
+      model: 'm',
+      timeoutMs: DEFAULT_LOCAL_TIMEOUT_MS,
+    })
+  })
+
+  it('accepts whole milliseconds inside 60,000..600,000', () => {
+    expect(parseLocalTestInput({ baseUrl: BASE, model: 'm', timeoutMs: 60_000 })).toMatchObject({
+      timeoutMs: 60_000,
+    })
+    expect(parseLocalTestInput({ baseUrl: BASE, model: 'm', timeoutMs: 600_000 })).toMatchObject({
+      timeoutMs: 600_000,
+    })
+  })
+
+  it.each([59_999, 600_001, 60_000.5, NaN, Infinity, '60000', null])(
+    'rejects a timeout of %s',
+    (timeoutMs) => {
+      expect(parseLocalTestInput({ baseUrl: BASE, model: 'm', timeoutMs })).toBeUndefined()
+    },
+  )
+
+  it('rejects the same base URL and model problems as inspection', () => {
+    expect(parseLocalTestInput({ baseUrl: BASE })).toBeUndefined()
+    expect(parseLocalTestInput({ baseUrl: 'javascript:alert(1)', model: 'm' })).toBeUndefined()
+    expect(parseLocalTestInput({ baseUrl: BASE, model: 'm'.repeat(257) })).toBeUndefined()
+  })
+})
+
+describe('IPC handlers', () => {
+  it('answers discovery with shape and sends nothing for a bad payload', async () => {
+    const fetchMock = stubFetch(() => new Response('{}'))
+    await expect(listLocalModelsForIpc({ baseUrl: 'ftp://box/v1' })).resolves.toEqual({
+      ok: false,
+      errorCode: 'shape',
+    })
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('answers inspection with shape and sends nothing for a bad payload', async () => {
+    const fetchMock = stubFetch(() => new Response('{}'))
+    await expect(
+      inspectLocalModelForIpc({ baseUrl: BASE, model: 'm', server: 'vllm' }),
+    ).resolves.toEqual({ ok: false, errorCode: 'shape' })
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('answers the connection test with every check skipped and no request', async () => {
+    const fetchMock = stubFetch(() => new Response('{}'))
+    const result = await testLocalModelForIpc({ baseUrl: BASE, model: 'm', timeoutMs: 10 })
+    expect(result).toMatchObject({
+      server: { status: 'skip' },
+      model: { status: 'skip' },
+      chat: { status: 'skip' },
+      tools: { status: 'skip' },
+      elapsedMs: 0,
+      inputError: 'shape',
+    })
+    expect(typeof result.checkedAt).toBe('number')
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('passes a valid discovery payload to the probe', async () => {
+    const fetchMock = stubFetch(
+      () =>
+        new Response(JSON.stringify({ models: [{ name: 'qwen3:8b' }] }), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        }),
+    )
+    await expect(listLocalModelsForIpc({ baseUrl: BASE })).resolves.toEqual({
+      ok: true,
+      server: 'ollama',
+      models: [{ id: 'qwen3:8b' }],
+    })
+    expect(fetchMock).toHaveBeenCalled()
+  })
+})
