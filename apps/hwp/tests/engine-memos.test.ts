@@ -228,6 +228,33 @@ function sectionOf(bytes: Uint8Array): Buffer {
   return section!
 }
 
+const MEMO_END = Buffer.from([0x04, 0x00, 0x65, 0x6d, 0x25, 0x00])
+
+/** Memo numbers carried by the HWP5 closing markers of a section. */
+function memoEndNumbers(section: Buffer): number[] {
+  const numbers: number[] = []
+  let at = section.indexOf(MEMO_END)
+  while (at >= 0) {
+    numbers.push(section.readUInt16LE(at + 10))
+    at = section.indexOf(MEMO_END, at + 2)
+  }
+  return numbers
+}
+
+/** The body paragraph that holds the memo's closing marker in the sample. */
+function paragraphOfMemoEnd(section: Buffer): number {
+  const records = recordsOf(section)
+  expect(records).not.toBeNull()
+  let paragraph = -1
+  for (const record of records!) {
+    if (record.tag === 66 && record.level === 0) paragraph += 1
+    if (record.tag === 67 && section.subarray(record.body, record.end).includes(MEMO_END)) {
+      return paragraph
+    }
+  }
+  throw new Error('memo end paragraph not found')
+}
+
 /** A one-cell table in body paragraph 1. */
 function tableDocument(): { doc: HwpDocument; path: string } {
   const doc = HwpDocument.createEmpty()
@@ -316,6 +343,24 @@ describe('reading memos', () => {
     expect(memos(back)[0]).toMatchObject({ author: 'CDC', text: '수정', index: 1 })
     expect(body.text).toBe('수정')
   })
+
+  it('writes the memo number into the HWP5 closing marker after HWPX', () => {
+    const doc = open('memo-source.hwp')
+    const throughHwpx = new HwpDocument(doc.exportHwpx()).exportHwp()
+    const numbers = memoEndNumbers(sectionOf(throughHwpx))
+    expect(numbers).toContain(1)
+    expect(numbers).not.toContain(0)
+  })
+
+  it('orders a range-less memo before a ranged memo in the same paragraph', () => {
+    const doc = open('memo-source.hwp')
+    const multi = memos(doc)[0]!
+    JSON.parse(doc.insertMemo(0, multi.paraIndex!, 3, 5, JSON.stringify({ text: 'ranged' })))
+    const list = memos(doc)
+    expect(list).toHaveLength(2)
+    expect(list[0]).toMatchObject({ text: '수정', startCharIdx: 0, endCharIdx: 0 })
+    expect(list[1]).toMatchObject({ text: 'ranged', startCharIdx: 3, endCharIdx: 5 })
+  })
 })
 
 describe('editing memos', () => {
@@ -340,6 +385,7 @@ describe('editing memos', () => {
     })
 
     expect(JSON.parse(doc.setMemoText(created.id, '바뀐 글\n\n끝\n'))).toEqual({ ok: true })
+    expect(doc.pageCount()).toBe(1)
     list = memos(doc)
     expect(list[0]).toMatchObject({
       author: 'tester',
@@ -388,6 +434,7 @@ describe('editing memos', () => {
       editable: true,
     })
     expect(JSON.parse(doc.setMemoText(created.id, '칸 메모\n둘째 줄'))).toEqual({ ok: true })
+    expect(doc.pageCount()).toBe(1)
     for (const bytes of [doc.exportHwp(), doc.exportHwpx()]) {
       expect(memos(new HwpDocument(bytes))[0]).toMatchObject({
         author: 'cell author',
@@ -419,6 +466,7 @@ describe('editing memos', () => {
       { type: 'textbox', controlIndex: JSON.parse(path)[0].controlIndex, paraIndex: 0 },
     ])
     expect(JSON.parse(doc.setMemoText(created.id, '상자 메모'))).toEqual({ ok: true })
+    expect(doc.pageCount()).toBe(1)
     for (const bytes of [doc.exportHwp(), doc.exportHwpx()]) {
       expect(memos(new HwpDocument(bytes))[0]).toMatchObject({
         author: 'box author',
@@ -429,6 +477,84 @@ describe('editing memos', () => {
     expect(JSON.parse(doc.removeMemo(created.id))).toEqual({ ok: true })
     expect(memos(doc)).toEqual([])
     expect(memos(new HwpDocument(doc.exportHwpx()))).toEqual([])
+  })
+
+  it('keeps HWPX header, footer and note memo bodies through HWP', () => {
+    const places = HwpDocument.createEmpty()
+    places.createBlankDocument()
+    places.insertText(0, 0, 0, 'body')
+    places.createHeaderFooter(0, true, 0)
+    places.createHeaderFooter(0, false, 0)
+    places.insertTextInHeaderFooter(0, true, 0, 0, 0, 'header text')
+    places.insertTextInHeaderFooter(0, false, 0, 0, 0, 'footer text')
+    const footnote = JSON.parse(places.insertFootnote(0, 0, 0)) as { controlIdx: number }
+    places.insertTextInFootnote(0, 0, footnote.controlIdx, 0, 0, 'footnote text')
+    const endnote = JSON.parse(places.insertEndnote(0, 0, 0)) as { controlIdx: number }
+    places.insertTextInFootnote(0, 0, endnote.controlIdx, 0, 0, 'endnote text')
+
+    const hwpx = places.exportHwpx()
+    let xml = zipEntry(hwpx, 'Contents/section0.xml')
+
+    const memoDoc = blank('anchor')
+    insert(memoDoc, 0, 6, 'ctx', 'header memo body')
+    const memoXml = zipEntry(memoDoc.exportHwpx(), 'Contents/section0.xml')
+    const beginStart = memoXml.indexOf('<hp:fieldBegin')
+    const beginEnd = memoXml.indexOf('</hp:fieldBegin>', beginStart) + '</hp:fieldBegin>'.length
+    expect(beginStart).toBeGreaterThanOrEqual(0)
+    const beginTemplate = memoXml.slice(beginStart, beginEnd)
+
+    let fieldId = 900_000
+    const inject = (source: string, tag: string, marker: string): string => {
+      const start = source.indexOf(`<hp:${tag} `)
+      const end = source.indexOf(`</hp:${tag}>`, start)
+      expect(start).toBeGreaterThanOrEqual(0)
+      expect(end).toBeGreaterThan(start)
+      const block = source.slice(start, end)
+      const markerAt = block.indexOf(`<hp:t>${marker}</hp:t>`)
+      expect(markerAt).toBeGreaterThanOrEqual(0)
+      const runEnd = block.indexOf('</hp:run>', markerAt)
+      expect(runEnd).toBeGreaterThanOrEqual(0)
+      const at = start + runEnd + '</hp:run>'.length
+      const id = fieldId++
+      const begin = beginTemplate.replace(/ id="\d+"/, ` id="${id}"`)
+      return (
+        source.slice(0, at) +
+        `<hp:ctrl>${begin}</hp:ctrl>` +
+        '<hp:run charPrIDRef="0"><hp:t> anchor</hp:t></hp:run>' +
+        `<hp:ctrl><hp:fieldEnd beginIDRef="${id}"/></hp:ctrl>` +
+        source.slice(at)
+      )
+    }
+
+    xml = inject(xml, 'header', 'header text')
+    xml = inject(xml, 'footer', 'footer text')
+    xml = inject(xml, 'footNote', 'footnote text')
+    xml = inject(xml, 'endNote', 'endnote text')
+
+    const doc = new HwpDocument(replaceZipEntry(hwpx, 'Contents/section0.xml', xml))
+    const placesSeen = ['header', 'footer', 'footnote', 'endnote'].sort()
+    const before = memos(doc)
+    expect(before).toHaveLength(4)
+    expect(before.map((memo) => memo.place).sort()).toEqual(placesSeen)
+    for (const memo of before) {
+      expect(memo).toMatchObject({
+        text: 'header memo body',
+        editable: false,
+        readOnlyReason: 'unsupported_place',
+      })
+    }
+
+    const reopened = new HwpDocument(doc.exportHwp())
+    const after = memos(reopened)
+    expect(after).toHaveLength(4)
+    expect(after.map((memo) => memo.place).sort()).toEqual(placesSeen)
+    for (const memo of after) {
+      expect(memo).toMatchObject({
+        text: 'header memo body',
+        editable: false,
+        readOnlyReason: 'unsupported_place',
+      })
+    }
   })
 
   it('removes a memo that spans paragraphs and keeps its anchor text', () => {
@@ -444,6 +570,51 @@ describe('editing memos', () => {
       expect(memos(reopened)).toEqual([])
       expect(JSON.parse(reopened.getTextFileUnicode())).toContain('4. 코로나19')
     }
+  })
+
+  it('drops a copied multi-paragraph memo anchor when its closing paragraph is outside the selection', () => {
+    const doc = open('memo-source.hwp')
+    const memo = memos(doc)[0]!
+    const last = doc.getParagraphCount(0) - 1
+    doc.splitParagraph(0, last, doc.getParagraphLength(0, last))
+    const target = doc.getParagraphCount(0) - 1
+    doc.insertText(0, target, 0, 'target ')
+    doc.copySelection(0, memo.paraIndex!, 0, memo.paraIndex!, 1_000_000)
+    const pasted = JSON.parse(doc.pasteInternal(0, target, 7)) as { containsField: boolean }
+    expect(pasted.containsField).toBe(false)
+    expect(memos(doc)).toHaveLength(1)
+    const reopened = new HwpDocument(doc.exportHwp())
+    expect(memos(reopened)).toHaveLength(1)
+  })
+
+  it('copies and pastes a complete multi-paragraph memo with a new number and end marker', () => {
+    const doc = open('memo-source.hwp')
+    const memo = memos(doc)[0]!
+    const endPara = paragraphOfMemoEnd(sectionOf(readFileSync(join(FIXTURES, 'memo-source.hwp'))))
+    const last = doc.getParagraphCount(0) - 1
+    doc.splitParagraph(0, last, doc.getParagraphLength(0, last))
+    const target = doc.getParagraphCount(0) - 1
+    doc.insertText(0, target, 0, 'target ')
+    doc.copySelection(0, memo.paraIndex!, 0, endPara, 1_000_000)
+    const pasted = JSON.parse(doc.pasteInternal(0, target, 7)) as { containsField: boolean }
+    expect(pasted.containsField).toBe(true)
+    const list = memos(doc)
+    expect(list).toHaveLength(2)
+    const copied = list.find((entry) => entry.paraIndex === target)!
+    expect(copied).toMatchObject({
+      author: 'CDC',
+      text: '수정',
+      place: 'body',
+      editable: true,
+    })
+    expect(copied.index).toBe(2)
+    expect(copied.id).not.toBe(memo.id)
+    const numbers = memoEndNumbers(sectionOf(doc.exportHwp()))
+    expect(numbers.filter((number) => number === 1)).toHaveLength(1)
+    expect(numbers.filter((number) => number === 2)).toHaveLength(1)
+    const reopened = new HwpDocument(doc.exportHwp())
+    expect(memos(reopened)).toHaveLength(2)
+    expect(memos(reopened).map((entry) => entry.index).sort()).toEqual([1, 2])
   })
 
   it('marks a memo with mixed formatting read-only but still removes it', () => {
@@ -577,6 +748,47 @@ describe('the engine writes Hancom memo identity', () => {
 })
 
 describe('memo errors', () => {
+  it('treats password-protected documents as read-only', () => {
+    const doc = blank('protected')
+    const created = insert(doc, 0, 0, 'tester', 'memo body')
+    const encrypted = doc.exportHwpWithPassword('secret')
+    const reopened = HwpDocument.openWithPassword(encrypted, 'secret')
+    const memo = memos(reopened)[0]!
+    expect(memo).toMatchObject({
+      id: created.id,
+      editable: false,
+      readOnlyReason: 'protected',
+      text: 'memo body',
+    })
+    expect(errorOf(() => reopened.insertMemo(0, 0, 0, 0, '{}')).code).toBe('memo_read_only')
+    expect(errorOf(() => reopened.setMemoText(memo.id, 'new')).code).toBe('memo_read_only')
+    expect(errorOf(() => reopened.removeMemo(memo.id)).code).toBe('memo_read_only')
+  })
+
+  it('rejects missing paragraphs and paths as invalid ranges', () => {
+    const doc = blank('abcdef')
+    expect(errorOf(() => doc.insertMemo(99, 0, 0, 1, '{}')).code).toBe('memo_invalid_range')
+    expect(errorOf(() => doc.insertMemo(0, 99, 0, 1, '{}')).code).toBe('memo_invalid_range')
+    expect(errorOf(() => doc.insertMemoByPath(0, 0, 'not json', 0, 1, '{}')).code).toBe(
+      'memo_invalid_range',
+    )
+    expect(errorOf(() => doc.insertMemoByPath(0, 0, '[]', 0, 1, '{}')).code).toBe(
+      'memo_invalid_range',
+    )
+    expect(
+      errorOf(() =>
+        doc.insertMemoByPath(
+          0,
+          0,
+          JSON.stringify([{ controlIndex: 0, cellIndex: 0, cellParaIndex: 0 }]),
+          0,
+          1,
+          '{}',
+        ),
+      ).code,
+    ).toBe('memo_invalid_range')
+  })
+
   it('rejects overlapping ranges, bad ranges, long text and unknown ids', () => {
     const doc = blank('abcdef')
     expect(insert(doc, 1, 3, '', 'first').index).toBe(1)

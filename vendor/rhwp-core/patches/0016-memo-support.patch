@@ -1,8 +1,68 @@
+diff --git a/src/document_core/commands/clipboard.rs b/src/document_core/commands/clipboard.rs
+index 4a0ede6af..09bc64162 100644
+--- a/src/document_core/commands/clipboard.rs
++++ b/src/document_core/commands/clipboard.rs
+@@ -86,7 +86,13 @@ fn bin_data_over_limit_error(bin_data_id: u16) -> HwpError {
+ }
+ 
+ fn clipboard_paragraphs_contain_field(paragraphs: &[Paragraph]) -> bool {
+-    paragraphs.iter().any(|para| !para.field_ranges.is_empty())
++    paragraphs.iter().any(|para| {
++        !para.field_ranges.is_empty()
++            || para
++                .controls
++                .iter()
++                .any(|ctrl| matches!(ctrl, Control::Field(field) if crate::document_core::queries::memo_query::is_memo_field(field)))
++    })
+ }
+ 
+ fn clipboard_control_char_code(ctrl: &Control) -> u16 {
+@@ -731,8 +737,6 @@ impl DocumentCore {
+             Some(c) if !c.paragraphs.is_empty() => c.paragraphs.clone(),
+             _ => return Ok("{\"ok\":false,\"error\":\"clipboard empty\"}".to_string()),
+         };
+-        let contains_field = clipboard_paragraphs_contain_field(&clip_paras);
+-
+         // 인덱스 검증
+         if section_idx >= self.document.sections.len() {
+             return Err(HwpError::RenderError(format!(
+@@ -748,6 +752,8 @@ impl DocumentCore {
+         }
+ 
+         super::clone_identity::reidentify_clipboard(&self.document, &mut clip_paras)?;
++        // Reidentify prunes memo fragments; report what actually remains.
++        let contains_field = clipboard_paragraphs_contain_field(&clip_paras);
+         self.document.sections[section_idx].raw_stream = None;
+ 
+         let clip_count = clip_paras.len();
+@@ -938,8 +944,8 @@ impl DocumentCore {
+             Some(c) if !c.paragraphs.is_empty() => c.paragraphs.clone(),
+             _ => return Ok("{\"ok\":false,\"error\":\"clipboard empty\"}".to_string()),
+         };
+-        let contains_field = clipboard_paragraphs_contain_field(&clip_paras);
+         super::clone_identity::reidentify_clipboard(&self.document, &mut clip_paras)?;
++        let contains_field = clipboard_paragraphs_contain_field(&clip_paras);
+ 
+         let (last_para_idx, merge_point) = {
+             let section =
+@@ -1012,11 +1018,11 @@ impl DocumentCore {
+             Some(c) if !c.paragraphs.is_empty() => c.paragraphs.clone(),
+             _ => return Ok("{\"ok\":false,\"error\":\"clipboard empty\"}".to_string()),
+         };
+-        let contains_field = clipboard_paragraphs_contain_field(&clip_paras);
+         if path.is_empty() {
+             return Err(HwpError::RenderError("경로가 비어있습니다".to_string()));
+         }
+         super::clone_identity::reidentify_clipboard(&self.document, &mut clip_paras)?;
++        let contains_field = clipboard_paragraphs_contain_field(&clip_paras);
+ 
+         let cell_para_idx = path[path.len() - 1].2;
+         let (last_para_idx, merge_point) = {
 diff --git a/src/document_core/commands/clone_identity/remap.rs b/src/document_core/commands/clone_identity/remap.rs
-index 0da7e7f99..1b965bba7 100644
+index 0da7e7f99..6231fab2a 100644
 --- a/src/document_core/commands/clone_identity/remap.rs
 +++ b/src/document_core/commands/clone_identity/remap.rs
-@@ -55,7 +55,14 @@ pub(crate) fn reidentify_clipboard(
+@@ -55,7 +55,16 @@ pub(crate) fn reidentify_clipboard(
      let mut used = used_instance_ids(doc);
      used.extend(paragraph_ids(paras)); // clipboard can outlive cut/source deletion
      let mut allocator = Allocator { used, next: 1 };
@@ -14,6 +74,8 @@ index 0da7e7f99..1b965bba7 100644
 +        .saturating_add(1)
 +        .max(1);
 +    crate::document_core::queries::memo_query::renumber_memos(paras, next_memo);
++    crate::document_core::queries::memo_query::prune_incomplete_memos(paras)
++        .map_err(|error| HwpError::RenderError(error.message))?;
 +    Ok(())
  }
  
@@ -56,10 +118,10 @@ index e76e10cff..96c5486c7 100644
          || para.text.contains('\u{fffc}')
 diff --git a/src/document_core/queries/memo_query.rs b/src/document_core/queries/memo_query.rs
 new file mode 100644
-index 000000000..cf5425dd8
+index 000000000..01786b0c4
 --- /dev/null
 +++ b/src/document_core/queries/memo_query.rs
-@@ -0,0 +1,1666 @@
+@@ -0,0 +1,2005 @@
 +//! Memo (HWP `MEMO/` field) reading and editing.
 +//!
 +//! A memo is a field control whose command starts with `MEMO/` and whose body
@@ -72,6 +134,8 @@ index 000000000..cf5425dd8
 +//! `MEMO/<memoShapeIDRef>/<Number>/<id1>/<id2>/<Author>/\;;`.
 +//! Hancom writes the control record with `%unk` and the opening field character
 +//! with `%%me`; the serializer keeps that split for every memo field.
++
++use std::collections::{HashMap, HashSet};
 +
 +use crate::document_core::helpers::json_escape;
 +use crate::document_core::queries::field_query::{shape_lists, FieldLocation, NestedEntry};
@@ -302,7 +366,9 @@ index 000000000..cf5425dd8
 +/// Give every memo in a detached copy a fresh document-wide number. Used after
 +/// clipboard identities are remapped; the body travels with the field.
 +pub(crate) fn renumber_memos(paragraphs: &mut [Paragraph], mut next: u32) -> u32 {
-+    fn walk(paragraphs: &mut [Paragraph], next: &mut u32) {
++    let mut numbers = HashMap::new();
++
++    fn walk(paragraphs: &mut [Paragraph], next: &mut u32, numbers: &mut HashMap<u32, u32>) {
 +        for para in paragraphs {
 +            for ctrl in &mut para.controls {
 +                match ctrl {
@@ -310,47 +376,302 @@ index 000000000..cf5425dd8
 +                        *next = (*next).max(1);
 +                        field.memo_index = *next;
 +                        field.command = rewritten_memo_command(field, *next);
++                        numbers.insert(field.field_id, *next);
 +                        *next = next.saturating_add(1).max(1);
-+                        walk(&mut field.memo_paragraphs, next);
++                        walk(&mut field.memo_paragraphs, next, numbers);
 +                    }
 +                    Control::Table(table) => {
 +                        for cell in &mut table.cells {
-+                            walk(&mut cell.paragraphs, next);
++                            walk(&mut cell.paragraphs, next, numbers);
 +                        }
 +                    }
-+                    Control::Shape(shape) => walk_shape(shape, next),
-+                    Control::Header(header) => walk(&mut header.paragraphs, next),
-+                    Control::Footer(footer) => walk(&mut footer.paragraphs, next),
-+                    Control::Footnote(note) => walk(&mut note.paragraphs, next),
-+                    Control::Endnote(note) => walk(&mut note.paragraphs, next),
++                    Control::Shape(shape) => walk_shape(shape, next, numbers),
++                    Control::Header(header) => walk(&mut header.paragraphs, next, numbers),
++                    Control::Footer(footer) => walk(&mut footer.paragraphs, next, numbers),
++                    Control::Footnote(note) => walk(&mut note.paragraphs, next, numbers),
++                    Control::Endnote(note) => walk(&mut note.paragraphs, next, numbers),
 +                    _ => {}
 +                }
 +            }
 +        }
 +    }
 +
-+    fn walk_shape(shape: &mut crate::model::shape::ShapeObject, next: &mut u32) {
++    fn walk_shape(
++        shape: &mut crate::model::shape::ShapeObject,
++        next: &mut u32,
++        numbers: &mut HashMap<u32, u32>,
++    ) {
 +        use crate::model::shape::ShapeObject;
 +        if let Some(drawing) = shape.drawing_mut() {
 +            if let Some(text_box) = &mut drawing.text_box {
-+                walk(&mut text_box.paragraphs, next);
++                walk(&mut text_box.paragraphs, next, numbers);
 +            }
 +            if let Some(caption) = &mut drawing.caption {
-+                walk(&mut caption.paragraphs, next);
++                walk(&mut caption.paragraphs, next, numbers);
 +            }
 +        }
 +        if let ShapeObject::Group(group) = shape {
 +            for child in &mut group.children {
-+                walk_shape(child, next);
++                walk_shape(child, next, numbers);
 +            }
 +            if let Some(caption) = &mut group.caption {
-+                walk(&mut caption.paragraphs, next);
++                walk(&mut caption.paragraphs, next, numbers);
 +            }
 +        }
 +    }
 +
-+    walk(paragraphs, &mut next);
++    fn update_ends(paragraphs: &mut [Paragraph], numbers: &HashMap<u32, u32>) {
++        for para in paragraphs {
++            for end in &mut para.orphan_field_ends {
++                if let Some(number) = numbers.get(&end.begin_id_ref) {
++                    end.memo_index = *number;
++                    if end.begin_ctrl_id == 0 {
++                        end.begin_ctrl_id = tags::FIELD_MEMO;
++                    }
++                }
++            }
++            for ctrl in &mut para.controls {
++                match ctrl {
++                    Control::Field(field) => update_ends(&mut field.memo_paragraphs, numbers),
++                    Control::Table(table) => {
++                        for cell in &mut table.cells {
++                            update_ends(&mut cell.paragraphs, numbers);
++                        }
++                    }
++                    Control::Shape(shape) => update_shape(shape, numbers),
++                    Control::Header(header) => update_ends(&mut header.paragraphs, numbers),
++                    Control::Footer(footer) => update_ends(&mut footer.paragraphs, numbers),
++                    Control::Footnote(note) => update_ends(&mut note.paragraphs, numbers),
++                    Control::Endnote(note) => update_ends(&mut note.paragraphs, numbers),
++                    _ => {}
++                }
++            }
++        }
++    }
++
++    fn update_shape(shape: &mut crate::model::shape::ShapeObject, numbers: &HashMap<u32, u32>) {
++        use crate::model::shape::ShapeObject;
++        if let Some(drawing) = shape.drawing_mut() {
++            if let Some(text_box) = &mut drawing.text_box {
++                update_ends(&mut text_box.paragraphs, numbers);
++            }
++            if let Some(caption) = &mut drawing.caption {
++                update_ends(&mut caption.paragraphs, numbers);
++            }
++        }
++        if let ShapeObject::Group(group) = shape {
++            for child in &mut group.children {
++                update_shape(child, numbers);
++            }
++            if let Some(caption) = &mut group.caption {
++                update_ends(&mut caption.paragraphs, numbers);
++            }
++        }
++    }
++
++    walk(paragraphs, &mut next, &mut numbers);
++    update_ends(paragraphs, &numbers);
 +    next
++}
++
++/// A clipboard can hold a memo's opening paragraph without the paragraph that
++/// closes it (or the closing paragraph alone). Such a fragment would paste a
++/// dangling field; drop the field and keep the visible text instead.
++pub(crate) fn prune_incomplete_memos(paragraphs: &mut [Paragraph]) -> Result<(), MemoError> {
++    let mut memo_ids = HashSet::new();
++    let mut closed = HashSet::new();
++
++    fn scan(paragraphs: &[Paragraph], memo_ids: &mut HashSet<u32>, closed: &mut HashSet<u32>) {
++        for para in paragraphs {
++            for range in &para.field_ranges {
++                if let Some(Control::Field(field)) = para.controls.get(range.control_idx) {
++                    if is_memo_field(field) {
++                        memo_ids.insert(field.field_id);
++                        closed.insert(field.field_id);
++                    }
++                }
++            }
++            for ctrl in &para.controls {
++                match ctrl {
++                    Control::Field(field) if is_memo_field(field) => {
++                        memo_ids.insert(field.field_id);
++                    }
++                    Control::Field(field) => scan(&field.memo_paragraphs, memo_ids, closed),
++                    Control::Table(table) => {
++                        for cell in &table.cells {
++                            scan(&cell.paragraphs, memo_ids, closed);
++                        }
++                    }
++                    Control::Shape(shape) => scan_shape(shape, memo_ids, closed),
++                    Control::Header(header) => scan(&header.paragraphs, memo_ids, closed),
++                    Control::Footer(footer) => scan(&footer.paragraphs, memo_ids, closed),
++                    Control::Footnote(note) => scan(&note.paragraphs, memo_ids, closed),
++                    Control::Endnote(note) => scan(&note.paragraphs, memo_ids, closed),
++                    _ => {}
++                }
++            }
++            for end in &para.orphan_field_ends {
++                if end.begin_ctrl_id == tags::FIELD_MEMO || end.memo_index != 0 {
++                    closed.insert(end.begin_id_ref);
++                }
++            }
++        }
++    }
++
++    fn scan_shape(
++        shape: &crate::model::shape::ShapeObject,
++        memo_ids: &mut HashSet<u32>,
++        closed: &mut HashSet<u32>,
++    ) {
++        use crate::model::shape::ShapeObject;
++        if let Some(drawing) = shape.drawing() {
++            if let Some(text_box) = &drawing.text_box {
++                scan(&text_box.paragraphs, memo_ids, closed);
++            }
++            if let Some(caption) = &drawing.caption {
++                scan(&caption.paragraphs, memo_ids, closed);
++            }
++        }
++        if let ShapeObject::Group(group) = shape {
++            for child in &group.children {
++                scan_shape(child, memo_ids, closed);
++            }
++            if let Some(caption) = &group.caption {
++                scan(&caption.paragraphs, memo_ids, closed);
++            }
++        }
++    }
++
++    fn drop_fields(paragraphs: &mut [Paragraph], closed: &HashSet<u32>) -> Result<(), MemoError> {
++        for para in paragraphs {
++            let drop: Vec<usize> = para
++                .controls
++                .iter()
++                .enumerate()
++                .filter_map(|(index, ctrl)| match ctrl {
++                    Control::Field(field)
++                        if is_memo_field(field) && !closed.contains(&field.field_id) =>
++                    {
++                        Some(index)
++                    }
++                    _ => None,
++                })
++                .collect();
++            for index in drop.into_iter().rev() {
++                remove_begin_slot(para, index)?;
++            }
++            for ctrl in &mut para.controls {
++                match ctrl {
++                    Control::Field(field) => drop_fields(&mut field.memo_paragraphs, closed)?,
++                    Control::Table(table) => {
++                        for cell in &mut table.cells {
++                            drop_fields(&mut cell.paragraphs, closed)?;
++                        }
++                    }
++                    Control::Shape(shape) => drop_shape_fields(shape, closed)?,
++                    Control::Header(header) => drop_fields(&mut header.paragraphs, closed)?,
++                    Control::Footer(footer) => drop_fields(&mut footer.paragraphs, closed)?,
++                    Control::Footnote(note) => drop_fields(&mut note.paragraphs, closed)?,
++                    Control::Endnote(note) => drop_fields(&mut note.paragraphs, closed)?,
++                    _ => {}
++                }
++            }
++        }
++        Ok(())
++    }
++
++    fn drop_shape_fields(
++        shape: &mut crate::model::shape::ShapeObject,
++        closed: &HashSet<u32>,
++    ) -> Result<(), MemoError> {
++        use crate::model::shape::ShapeObject;
++        if let Some(drawing) = shape.drawing_mut() {
++            if let Some(text_box) = &mut drawing.text_box {
++                drop_fields(&mut text_box.paragraphs, closed)?;
++            }
++            if let Some(caption) = &mut drawing.caption {
++                drop_fields(&mut caption.paragraphs, closed)?;
++            }
++        }
++        if let ShapeObject::Group(group) = shape {
++            for child in &mut group.children {
++                drop_shape_fields(child, closed)?;
++            }
++            if let Some(caption) = &mut group.caption {
++                drop_fields(&mut caption.paragraphs, closed)?;
++            }
++        }
++        Ok(())
++    }
++
++    fn drop_ends(paragraphs: &mut [Paragraph], memo_ids: &HashSet<u32>) -> Result<(), MemoError> {
++        for para in paragraphs {
++            let drop: Vec<usize> = para
++                .orphan_field_ends
++                .iter()
++                .enumerate()
++                .filter_map(|(index, end)| {
++                    let memo_end = end.begin_ctrl_id == tags::FIELD_MEMO || end.memo_index != 0;
++                    (memo_end && !memo_ids.contains(&end.begin_id_ref)).then_some(index)
++                })
++                .collect();
++            for index in drop.into_iter().rev() {
++                remove_orphan_end_slot(para, index)?;
++            }
++            for ctrl in &mut para.controls {
++                match ctrl {
++                    Control::Field(field) => drop_ends(&mut field.memo_paragraphs, memo_ids)?,
++                    Control::Table(table) => {
++                        for cell in &mut table.cells {
++                            drop_ends(&mut cell.paragraphs, memo_ids)?;
++                        }
++                    }
++                    Control::Shape(shape) => drop_shape_ends(shape, memo_ids)?,
++                    Control::Header(header) => drop_ends(&mut header.paragraphs, memo_ids)?,
++                    Control::Footer(footer) => drop_ends(&mut footer.paragraphs, memo_ids)?,
++                    Control::Footnote(note) => drop_ends(&mut note.paragraphs, memo_ids)?,
++                    Control::Endnote(note) => drop_ends(&mut note.paragraphs, memo_ids)?,
++                    _ => {}
++                }
++            }
++        }
++        Ok(())
++    }
++
++    fn drop_shape_ends(
++        shape: &mut crate::model::shape::ShapeObject,
++        memo_ids: &HashSet<u32>,
++    ) -> Result<(), MemoError> {
++        use crate::model::shape::ShapeObject;
++        if let Some(drawing) = shape.drawing_mut() {
++            if let Some(text_box) = &mut drawing.text_box {
++                drop_ends(&mut text_box.paragraphs, memo_ids)?;
++            }
++            if let Some(caption) = &mut drawing.caption {
++                drop_ends(&mut caption.paragraphs, memo_ids)?;
++            }
++        }
++        if let ShapeObject::Group(group) = shape {
++            for child in &mut group.children {
++                drop_shape_ends(child, memo_ids)?;
++            }
++            if let Some(caption) = &mut group.caption {
++                drop_ends(&mut caption.paragraphs, memo_ids)?;
++            }
++        }
++        Ok(())
++    }
++
++    scan(paragraphs, &mut memo_ids, &mut closed);
++    drop_fields(paragraphs, &closed)?;
++    // The dropped fields are no longer present; an end that pointed at one is
++    // now dangling too.
++    let dangling: Vec<u32> = memo_ids.difference(&closed).copied().collect();
++    for id in dangling {
++        memo_ids.remove(&id);
++    }
++    drop_ends(paragraphs, &memo_ids)?;
++    Ok(())
 +}
 +
 +/// Drop memo fields that arrived through foreign/HTML paste: their HWPX body is
@@ -698,6 +1019,10 @@ index 000000000..cf5425dd8
 +}
 +
 +impl DocumentCore {
++    fn document_protected(&self) -> bool {
++        self.document.header.encrypted || self.document.header.distribution
++    }
++
 +    fn memo_hits(&self) -> Vec<MemoHit> {
 +        let mut hits = Vec::new();
 +        for (section_index, section) in self.document.sections.iter().enumerate() {
@@ -727,12 +1052,27 @@ index 000000000..cf5425dd8
 +                }
 +            }
 +        }
++        // A paragraph can hold a range-less multi-paragraph memo at its opening
++        // character and a ranged memo later in the text. The walker sees controls
++        // before ranges in that case, so sort by the document position itself.
++        hits.sort_by(|a, b| {
++            a.section_index
++                .cmp(&b.section_index)
++                .then_with(|| {
++                    a.para_index
++                        .unwrap_or(usize::MAX)
++                        .cmp(&b.para_index.unwrap_or(usize::MAX))
++                })
++                .then_with(|| a.anchor_start.cmp(&b.anchor_start))
++                .then_with(|| memo_number(&a.field).cmp(&memo_number(&b.field)))
++                .then_with(|| a.id.cmp(&b.id))
++        });
 +        hits
 +    }
 +
 +    /// `getMemoList`: JSON array in document order.
 +    pub fn get_memo_list_json(&self) -> String {
-+        let protected = self.document.header.distribution;
++        let protected = self.document_protected();
 +        let entries: Vec<String> = self
 +            .memo_hits()
 +            .iter()
@@ -885,7 +1225,7 @@ index 000000000..cf5425dd8
 +        author: &str,
 +        text: &str,
 +    ) -> Result<String, MemoError> {
-+        if self.document.header.distribution {
++        if self.document_protected() {
 +            return Err(MemoError::read_only("protected"));
 +        }
 +        let author = sanitize_author(author)?;
@@ -896,17 +1236,16 @@ index 000000000..cf5425dd8
 +            .document
 +            .sections
 +            .get(section_idx)
-+            .ok_or_else(|| MemoError::insert_failed("구역 위치를 찾을 수 없음"))?;
++            .ok_or_else(|| MemoError::invalid_range("구역 위치를 찾을 수 없음"))?;
 +        let shape_ref = if section.section_def.memo_shape_id != 0 {
 +            section.section_def.memo_shape_id as u32
 +        } else {
 +            65535
 +        };
-+        let field_id = field_id;
 +        let template = section
 +            .paragraphs
 +            .get(para_idx)
-+            .ok_or_else(|| MemoError::insert_failed("문단 위치를 찾을 수 없음"))?
++            .ok_or_else(|| MemoError::invalid_range("문단 위치를 찾을 수 없음"))?
 +            .clone();
 +
 +        let mut field = new_memo_field(field_id, number, shape_ref, &author, text, &template)?;
@@ -918,19 +1257,19 @@ index 000000000..cf5425dd8
 +                .sections
 +                .get(section_idx)
 +                .and_then(|section| section.paragraphs.get(para_idx))
-+                .ok_or_else(|| MemoError::insert_failed("문단 위치를 찾을 수 없음"))?,
++                .ok_or_else(|| MemoError::invalid_range("문단 위치를 찾을 수 없음"))?,
 +        );
 +        {
 +            let section = self
 +                .document
 +                .sections
 +                .get_mut(section_idx)
-+                .ok_or_else(|| MemoError::insert_failed("구역 위치를 찾을 수 없음"))?;
++                .ok_or_else(|| MemoError::invalid_range("구역 위치를 찾을 수 없음"))?;
 +            section.raw_stream = None;
 +            let para = section
 +                .paragraphs
 +                .get_mut(para_idx)
-+                .ok_or_else(|| MemoError::insert_failed("문단 위치를 찾을 수 없음"))?;
++                .ok_or_else(|| MemoError::invalid_range("문단 위치를 찾을 수 없음"))?;
 +            insert_memo_field_in_para(para, start_char_idx, end_char_idx, field)?;
 +        }
 +
@@ -967,9 +1306,9 @@ index 000000000..cf5425dd8
 +        text: &str,
 +    ) -> Result<String, MemoError> {
 +        if path.is_empty() {
-+            return Err(MemoError::insert_failed("cellPath가 비어 있음"));
++            return Err(MemoError::invalid_range("cellPath가 비어 있음"));
 +        }
-+        if self.document.header.distribution {
++        if self.document_protected() {
 +            return Err(MemoError::read_only("protected"));
 +        }
 +        let author = sanitize_author(author)?;
@@ -989,14 +1328,14 @@ index 000000000..cf5425dd8
 +        let template = self
 +            .get_cell_paragraph_mut_by_path(section_idx, para_idx, path)
 +            .map(|para| para.clone())
-+            .map_err(|_| MemoError::insert_failed("문단 위치를 찾을 수 없음"))?;
++            .map_err(|_| MemoError::invalid_range("문단 위치를 찾을 수 없음"))?;
 +        let mut field = new_memo_field(field_id, number, shape_ref, &author, text, &template)?;
 +        field.properties |= 0x8001;
 +
 +        {
 +            let para = self
 +                .get_cell_paragraph_mut_by_path(section_idx, para_idx, path)
-+                .map_err(|_| MemoError::insert_failed("문단 위치를 찾을 수 없음"))?;
++                .map_err(|_| MemoError::invalid_range("문단 위치를 찾을 수 없음"))?;
 +            insert_memo_field_in_para(para, start_char_idx, end_char_idx, field)?;
 +        }
 +        let inner_para = path.last().map(|entry| entry.2).unwrap_or(0);
@@ -1021,7 +1360,7 @@ index 000000000..cf5425dd8
 +    pub fn set_memo_text(&mut self, id: u32, text: &str) -> Result<String, MemoError> {
 +        check_text_size(text)?;
 +        let hit = self.memo_hit(id)?;
-+        if self.document.header.distribution {
++        if self.document_protected() {
 +            return Err(MemoError::read_only("protected"));
 +        }
 +        let location = hit
@@ -1044,6 +1383,13 @@ index 000000000..cf5425dd8
 +            });
 +
 +        let paragraphs = memo_paragraphs_from_text(text, &template)?;
++        let stored_end_for_reset = self
++            .document
++            .sections
++            .get(location.section_index)
++            .and_then(|section| section.paragraphs.get(location.para_index))
++            .map(crate::renderer::composer::paragraph_flow_end)
++            .ok_or_else(|| MemoError::not_found(id))?;
 +        {
 +            let para = self.memo_paragraph_mut(&location)?;
 +            let field = match para.controls.get_mut(hit.control_idx) {
@@ -1056,10 +1402,43 @@ index 000000000..cf5425dd8
 +                field.field_id = id;
 +            }
 +        }
++        if location.nested_path.is_empty() {
++            self.reflow_paragraph(location.section_index, location.para_index);
++            let hwp3_layout = self.document.layout_profile().hwp3_layout();
++            crate::renderer::composer::recalculate_section_vpos(
++                &mut self.document.sections[location.section_index].paragraphs,
++                location.para_index,
++                None,
++                stored_end_for_reset,
++                &self.styles,
++                self.dpi,
++                hwp3_layout,
++            );
++            self.recompose_paragraph(location.section_index, location.para_index);
++        } else {
++            let path = Self::flat_path(&location);
++            let inner_para = path.last().map(|entry| entry.2).unwrap_or(0);
++            self.reflow_cell_paragraph_by_path(
++                location.section_index,
++                location.para_index,
++                &path,
++                inner_para,
++            );
++            self.recalculate_cell_paragraph_vpos_by_path(
++                location.section_index,
++                location.para_index,
++                &path,
++                inner_para,
++                None,
++            );
++            self.mark_cell_control_dirty(location.section_index, location.para_index, path[0].0);
++            self.recompose_section(location.section_index);
++        }
 +        if let Some(section) = self.document.sections.get_mut(location.section_index) {
 +            section.raw_stream = None;
 +        }
 +        self.mark_section_dirty(location.section_index);
++        self.paginate_if_needed();
 +        self.invalidate_page_tree_cache();
 +        Ok(r#"{"ok":true}"#.to_string())
 +    }
@@ -1067,7 +1446,7 @@ index 000000000..cf5425dd8
 +    /// Remove a memo's field and body, keeping the anchor text.
 +    pub fn remove_memo(&mut self, id: u32) -> Result<String, MemoError> {
 +        let hit = self.memo_hit(id)?;
-+        if self.document.header.distribution {
++        if self.document_protected() {
 +            return Err(MemoError::read_only("protected"));
 +        }
 +        let location = hit
@@ -1699,6 +2078,28 @@ index 000000000..cf5425dd8
 +    }
 +
 +    #[test]
++    fn set_memo_text_marks_the_section_dirty() {
++        let mut core = DocumentCore::new_empty();
++        core.create_blank_document_native().unwrap();
++        core.insert_text_native(0, 0, 0, "anchor").unwrap();
++        core.insert_memo_at(0, 0, 0, 0, "tester", "body").unwrap();
++        let id = core.document.sections[0].paragraphs[0]
++            .controls
++            .iter()
++            .find_map(|ctrl| match ctrl {
++                Control::Field(field) if is_memo_field(field) => Some(field.field_id),
++                _ => None,
++            })
++            .unwrap();
++        core.batch_mode = true;
++        core.set_memo_text(id, "new body").unwrap();
++        assert!(
++            core.dirty_sections[0],
++            "setMemoText must mark the section dirty"
++        );
++    }
++
++    #[test]
 +    fn formatted_memo_is_read_only_but_removable() {
 +        let mut core = DocumentCore::new_empty();
 +        core.create_blank_document_native().unwrap();
@@ -1754,10 +2155,10 @@ index 823dba631..8f23b070c 100644
  
  impl Paragraph {
 diff --git a/src/parser/body_text.rs b/src/parser/body_text.rs
-index 036e8bf54..e2573cbe6 100644
+index 036e8bf54..fe596c63c 100644
 --- a/src/parser/body_text.rs
 +++ b/src/parser/body_text.rs
-@@ -111,42 +111,177 @@ pub fn parse_body_text_section(data: &[u8]) -> Result<Section, BodyTextError> {
+@@ -111,42 +111,197 @@ pub fn parse_body_text_section(data: &[u8]) -> Result<Section, BodyTextError> {
  
      link_orphan_field_ends(&mut section.paragraphs);
  
@@ -1916,6 +2317,26 @@ index 036e8bf54..e2573cbe6 100644
 +                        return true;
 +                    }
 +                }
++                Control::Header(header) => {
++                    if assign_memo_paragraphs(&mut header.paragraphs, number, body) {
++                        return true;
++                    }
++                }
++                Control::Footer(footer) => {
++                    if assign_memo_paragraphs(&mut footer.paragraphs, number, body) {
++                        return true;
++                    }
++                }
++                Control::Footnote(note) => {
++                    if assign_memo_paragraphs(&mut note.paragraphs, number, body) {
++                        return true;
++                    }
++                }
++                Control::Endnote(note) => {
++                    if assign_memo_paragraphs(&mut note.paragraphs, number, body) {
++                        return true;
++                    }
++                }
 +                _ => {}
 +            }
 +        }
@@ -1923,11 +2344,11 @@ index 036e8bf54..e2573cbe6 100644
 +    false
 +}
 +
-+fn field_is_memo(field: &crate::model::control::Field) -> bool {
++pub(crate) fn field_is_memo(field: &crate::model::control::Field) -> bool {
 +    field.field_type == crate::model::control::FieldType::Memo || field.command.starts_with("MEMO/")
 +}
 +
-+fn memo_field_number(field: &crate::model::control::Field) -> u32 {
++pub(crate) fn memo_field_number(field: &crate::model::control::Field) -> u32 {
 +    if field.memo_index != 0 {
 +        return field.memo_index;
 +    }
@@ -1963,7 +2384,7 @@ index 036e8bf54..e2573cbe6 100644
  }
  
  /// 다단락 필드의 종료 마커에 짝 `fieldBegin` 의 id 를 채운다.
-@@ -158,8 +293,8 @@ pub fn parse_body_text_section(data: &[u8]) -> Result<Section, BodyTextError> {
+@@ -158,8 +313,8 @@ pub fn parse_body_text_section(data: &[u8]) -> Result<Section, BodyTextError> {
  /// 매달린 참조(`beginIDRef="0"`)를 그대로 내보내면 **한글이 파일을 열지 못한다**
  /// (01752 실측). 짝을 못 찾은 종료 마커는 8유닛 슬롯만 지키고 id 는 0 으로 남긴다.
  fn link_orphan_field_ends(paragraphs: &mut [Paragraph]) {
@@ -1974,7 +2395,7 @@ index 036e8bf54..e2573cbe6 100644
      link_orphan_field_ends_with(paragraphs, &mut open_fields);
  }
  
-@@ -168,16 +303,20 @@ fn link_orphan_field_ends(paragraphs: &mut [Paragraph]) {
+@@ -168,16 +323,28 @@ fn link_orphan_field_ends(paragraphs: &mut [Paragraph]) {
  /// **짝을 이미 채운 종료 마커에서도 스택을 pop 한다.** HWP5 종료 마커에는 짝 id 가 없어
  /// 순서만이 짝이므로, 이미 이은 마커를 건너뛰면 그 짝이 스택에 남아 뒤에 오는 마커가
  /// **엉뚱한 필드를 닫는다**. 채우기만 조건부로 한다.
@@ -1992,12 +2413,21 @@ index 036e8bf54..e2573cbe6 100644
              };
              if ofe.begin_id_ref == 0 {
                  ofe.begin_id_ref = id;
-                 ofe.begin_ctrl_id = ctrl_id;
-+                ofe.memo_index = memo_index;
+-                ofe.begin_ctrl_id = ctrl_id;
++            }
++            if memo_index != 0 {
++                // HWPX already carries beginIDRef, so the old guard skipped this
++                // case and the HWP5 closing marker got memo number 0.
++                if ofe.begin_ctrl_id == 0 {
++                    ofe.begin_ctrl_id = ctrl_id;
++                }
++                if ofe.memo_index == 0 {
++                    ofe.memo_index = memo_index;
++                }
              }
          }
  
-@@ -188,7 +327,19 @@ fn link_orphan_field_ends_with(paragraphs: &mut [Paragraph], open_fields: &mut V
+@@ -188,7 +355,19 @@ fn link_orphan_field_ends_with(paragraphs: &mut [Paragraph], open_fields: &mut V
              };
              let closed_here = para.field_ranges.iter().any(|fr| fr.control_idx == i);
              if !closed_here && field.field_id != 0 {
@@ -2018,7 +2448,7 @@ index 036e8bf54..e2573cbe6 100644
              }
          }
      }
-@@ -209,7 +360,7 @@ fn link_orphan_field_ends_with(paragraphs: &mut [Paragraph], open_fields: &mut V
+@@ -209,7 +388,7 @@ fn link_orphan_field_ends_with(paragraphs: &mut [Paragraph], open_fields: &mut V
  /// 진짜로 짝이 없는 종료 마커는 여전히 `begin_id_ref == 0` 으로 남아 `#5252` 가드가
  /// 그대로 버린다 — 07276·02899 의 본문 폐기 방지는 유지된다.
  pub fn link_orphan_field_ends_across_sections(sections: &mut [crate::model::document::Section]) {
@@ -2027,7 +2457,7 @@ index 036e8bf54..e2573cbe6 100644
      for section in sections.iter_mut() {
          link_orphan_field_ends_with(&mut section.paragraphs, &mut open_fields);
      }
-@@ -552,6 +703,7 @@ fn parse_para_text(data: &[u8]) -> ParaTextParts {
+@@ -552,6 +731,7 @@ fn parse_para_text(data: &[u8]) -> ParaTextParts {
                          begin_id_ref: 0,
                          field_id: 0,
                          begin_ctrl_id: 0,
@@ -2104,10 +2534,56 @@ index d983b5f7d..46302a293 100644
      Control::Field(Field {
          field_type,
 diff --git a/src/parser/hwpx/section.rs b/src/parser/hwpx/section.rs
-index c5eca3cc4..9d580fffb 100644
+index c5eca3cc4..2fa1a447b 100644
 --- a/src/parser/hwpx/section.rs
 +++ b/src/parser/hwpx/section.rs
-@@ -992,6 +992,7 @@ fn parse_paragraph_body(
+@@ -147,10 +147,10 @@ fn link_orphan_field_ends_in_control(control: &mut Control) {
+ /// HWPX fieldEnd는 beginIDRef와 fieldid만 보관하므로, HWP5 PARA_TEXT로 다시 쓸 때 필요한
+ /// field control fourcc는 앞 문단의 fieldBegin에서 찾아야 한다. 짝을 찾지 못한 종료 마커는
+ /// 그대로 남긴다. 임의의 필드 종류를 만들어 내는 것보다 보존 실패를 명시하는 편이 안전하다.
+-fn link_orphan_field_ends(paragraphs: &mut [Paragraph], open_fields: &mut Vec<(u32, u32)>) {
++fn link_orphan_field_ends(paragraphs: &mut [Paragraph], open_fields: &mut Vec<(u32, u32, u32)>) {
+     for para in paragraphs.iter_mut() {
+         for orphan in &mut para.orphan_field_ends {
+-            let Some((field_id, ctrl_id)) = open_fields.last().copied() else {
++            let Some((field_id, ctrl_id, memo_index)) = open_fields.last().copied() else {
+                 continue;
+             };
+ 
+@@ -165,6 +165,9 @@ fn link_orphan_field_ends(paragraphs: &mut [Paragraph], open_fields: &mut Vec<(u
+                 orphan.begin_id_ref = field_id;
+             }
+             orphan.begin_ctrl_id = ctrl_id;
++            if memo_index != 0 {
++                orphan.memo_index = memo_index;
++            }
+         }
+ 
+         for (control_idx, control) in para.controls.iter().enumerate() {
+@@ -176,7 +179,12 @@ fn link_orphan_field_ends(paragraphs: &mut [Paragraph], open_fields: &mut Vec<(u
+                 .iter()
+                 .any(|range| range.control_idx == control_idx);
+             if !closes_in_this_paragraph && field.field_id != 0 {
+-                open_fields.push((field.field_id, field.ctrl_id));
++                let memo_index = if crate::parser::body_text::field_is_memo(field) {
++                    crate::parser::body_text::memo_field_number(field)
++                } else {
++                    0
++                };
++                open_fields.push((field.field_id, field.ctrl_id, memo_index));
+             }
+         }
+     }
+@@ -199,7 +207,7 @@ fn link_orphan_field_ends(paragraphs: &mut [Paragraph], open_fields: &mut Vec<(u
+ /// 컨테이너(표 칸·글상자·각주…) 목록은 건드리지 않는다 — 필드는 컨테이너 경계를 넘지
+ /// 못하고, 그 목록들은 이미 자기 스택으로 짝을 지었다.
+ pub fn link_orphan_field_ends_across_sections(sections: &mut [Section]) {
+-    let mut open_fields: Vec<(u32, u32)> = Vec::new();
++    let mut open_fields: Vec<(u32, u32, u32)> = Vec::new();
+     for section in sections.iter_mut() {
+         link_orphan_field_ends(&mut section.paragraphs, &mut open_fields);
+     }
+@@ -992,6 +1000,7 @@ fn parse_paragraph_body(
                          // HWPX `<hp:fieldEnd>` 는 필드 종류를 싣지 않는다 — 짝
                          // `fieldBegin` 은 다른 문단에 있어 여기서는 알 수 없다.
                          begin_ctrl_id: 0,
@@ -2116,10 +2592,10 @@ index c5eca3cc4..9d580fffb 100644
                  }
              }
 diff --git a/src/serializer/body_text.rs b/src/serializer/body_text.rs
-index 0e94a0864..a932426a6 100644
+index 0e94a0864..9a5759b70 100644
 --- a/src/serializer/body_text.rs
 +++ b/src/serializer/body_text.rs
-@@ -168,18 +168,59 @@ fn serialize_master_page_tail(section: &Section, records: &mut Vec<Record>) {
+@@ -168,18 +168,63 @@ fn serialize_master_page_tail(section: &Section, records: &mut Vec<Record>) {
  }
  
  fn collect_memo_lists(section: &Section) -> Vec<(u32, Vec<Paragraph>)> {
@@ -2160,6 +2636,10 @@ index 0e94a0864..a932426a6 100644
 +                        }
 +                    }
 +                    Control::Shape(shape) => collect_shape_memos(shape, lists),
++                    Control::Header(header) => collect(&header.paragraphs, lists),
++                    Control::Footer(footer) => collect(&footer.paragraphs, lists),
++                    Control::Footnote(note) => collect(&note.paragraphs, lists),
++                    Control::Endnote(note) => collect(&note.paragraphs, lists),
 +                    _ => {}
                  }
              }
@@ -2187,7 +2667,7 @@ index 0e94a0864..a932426a6 100644
      memo_lists
  }
  
-@@ -815,7 +856,13 @@ fn serialize_para_text(para: &Paragraph) -> ParaTextResult {
+@@ -815,7 +860,13 @@ fn serialize_para_text(para: &Paragraph) -> ParaTextResult {
              .iter()
              .filter(|o| o.char_idx == i && o.begin_ctrl_id != 0)
          {
@@ -2202,7 +2682,7 @@ index 0e94a0864..a932426a6 100644
              prev_end += 8;
          }
  
-@@ -1068,7 +1115,13 @@ fn serialize_para_text(para: &Paragraph) -> ParaTextResult {
+@@ -1068,7 +1119,13 @@ fn serialize_para_text(para: &Paragraph) -> ParaTextResult {
          .iter()
          .filter(|o| o.char_idx >= text_chars.len() && o.begin_ctrl_id != 0)
      {
@@ -2217,7 +2697,7 @@ index 0e94a0864..a932426a6 100644
          prev_end += 8;
      }
  
-@@ -1479,6 +1532,11 @@ fn control_char_code_and_id(ctrl: &Control) -> (u16, u32) {
+@@ -1479,6 +1536,11 @@ fn control_char_code_and_id(ctrl: &Control) -> (u16, u32) {
          // 통째로 버린다(0자·1쪽). `CTRL_CHAR_OVERLAP` 상수는 이름과 달리 'tdut'(덧말)이다.
          Control::Ruby(_) => (0x0017, tags::CTRL_CHAR_OVERLAP),
          Control::CharOverlap(_) => (0x0017, tags::CTRL_TCPS),
@@ -2308,7 +2788,7 @@ index c62fb5376..420e00f39 100644
  
          let runs = runs_of(&para);
 diff --git a/src/wasm_api.rs b/src/wasm_api.rs
-index c5e15c48b..a4b6ee890 100644
+index c5e15c48b..5545da0bd 100644
 --- a/src/wasm_api.rs
 +++ b/src/wasm_api.rs
 @@ -5403,6 +5403,90 @@ impl HwpDocument {
@@ -2368,7 +2848,7 @@ index c5e15c48b..a4b6ee890 100644
 +        use crate::document_core::helpers::json_str;
 +        use crate::document_core::queries::memo_query::{MemoError, MemoErrorCode};
 +        let path = crate::document_core::DocumentCore::parse_cell_path(path_json).map_err(|e| {
-+            JsValue::from_str(&MemoError::new(MemoErrorCode::InsertFailed, e.to_string()).to_json())
++            JsValue::from_str(&MemoError::new(MemoErrorCode::InvalidRange, e.to_string()).to_json())
 +        })?;
 +        self.core
 +            .insert_memo_by_path(
