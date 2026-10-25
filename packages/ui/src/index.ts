@@ -392,6 +392,14 @@ export {
   type AiSubscriptionStringKey,
 } from './strings-ai-subscription'
 export {
+  AI_CONTEXT_STRINGS,
+  aiContextConfirmText,
+  aiContextText,
+  type AiContextStringKey,
+  type AiContextWarning,
+} from './strings-ai-context'
+export { AiToolsUnsupportedNotice } from './AiToolsUnsupportedNotice'
+export {
   BUILTIN_SKILL_NAMES,
   BUILTIN_SKILL_STRINGS,
   builtinSkillDesc,
