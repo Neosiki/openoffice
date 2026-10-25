@@ -1,6 +1,9 @@
 export type {
+  AiCustomEndpoint,
   AiChatRequest,
   AiChatResponse,
+  AiLocalModelProfile,
+  AiLocalValueSource,
   AiMediaProviderConfig,
   AiMediaProviderId,
   AiMediaProviderMeta,
@@ -124,6 +127,32 @@ export {
   selectCustomEndpoint,
   upsertCustomEndpoint,
 } from './custom-endpoints'
+export type { RemoveCustomEndpointOptions } from './custom-endpoints'
+export {
+  DEFAULT_LOCAL_CONTEXT_TOKENS,
+  DEFAULT_LOCAL_TIMEOUT_MS,
+  MAX_LOCAL_CONTEXT_TOKENS,
+  MAX_LOCAL_MODEL_ID_LENGTH,
+  MAX_LOCAL_MODEL_PROFILES,
+  MAX_LOCAL_NOTES_LENGTH,
+  MAX_LOCAL_TIMEOUT_MS,
+  MIN_LOCAL_TIMEOUT_MS,
+  localContextLimit,
+  localContextTokensOf,
+  localEndpointFieldsOf,
+  localEndpointTimeoutMs,
+  localModelCapabilities,
+  localModelProfileOf,
+  localModelProfilesOf,
+  localTimeoutMsOf,
+  localValueSourceOf,
+  mergeLocalModelProfile,
+} from './local-profile'
+export type {
+  AiLocalContextLimit,
+  AiLocalEndpointFields,
+  AiLocalModelCapabilities,
+} from './local-profile'
 export {
   AI_MEDIA_PROVIDERS,
   GEMINI_MEDIA_BASE_URL,

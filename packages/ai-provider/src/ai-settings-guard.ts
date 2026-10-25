@@ -15,6 +15,7 @@ import { statSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 
+import { localEndpointFieldsOf } from './local-profile'
 import { AI_SUBSCRIPTION_PROVIDERS, readUrlSettingsOf } from './providers'
 import { AI_PROVIDER_ADAPTERS, normalizeBaseUrl } from './registry'
 import type {
@@ -150,6 +151,8 @@ function sanitizeCustomEndpoints(raw: unknown): AiCustomEndpoint[] {
       apiKey: config.apiKey,
       model: config.model,
       ...(models && models.length > 0 ? { models } : {}),
+      // local-only fields: bounded, and dropped rather than rejecting the endpoint
+      ...localEndpointFieldsOf(e),
     })
   }
   return out

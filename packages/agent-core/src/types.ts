@@ -118,6 +118,10 @@ export interface AgentStreamRequest {
   system: string
   messages: AgentMessage[]
   tools: AgentToolDef[]
+  /** One id per run: the context gate asks at most once for a whole tool loop */
+  runId?: string | undefined
+  /** Internal follow-up turns (summaries) skip the context gate */
+  skipContextGate?: boolean | undefined
 }
 
 export interface AgentStreamCallbacks {
