@@ -15,6 +15,8 @@ export const nl = {
   printFailed: 'Het document kon niet worden afgedrukt.',
   saveVerifyFailed:
     'Er is niets opgeslagen: de kopie die zou worden weggeschreven kwam bij het teruglezen niet overeen met het document op het scherm. Probeer "Opslaan als" om een nieuw bestand te schrijven.',
+  saveVerifyHint:
+    'Het origineel is ongewijzigd. Kies in Opslaan als voor HWPX of gebruik Exporteren als PDF.',
   saveProtected:
     'Niet opgeslagen: dit document is met een wachtwoord beveiligd, en hier opslaan zou het zonder wachtwoord wegschrijven.',
   backupKept: 'Opgeslagen. De vorige versie is bewaard als {name}.',

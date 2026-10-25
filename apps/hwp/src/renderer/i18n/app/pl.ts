@@ -15,6 +15,8 @@ export const pl = {
   printFailed: 'Nie udało się wydrukować dokumentu.',
   saveVerifyFailed:
     'Niczego nie zapisano: kopia przygotowana do zapisu po ponownym odczytaniu różniła się od dokumentu na ekranie. Spróbuj „Zapisz jako”, aby zapisać nowy plik.',
+  saveVerifyHint:
+    'Oryginał jest niezmieniony. W oknie Zapisz jako wybierz HWPX lub użyj Eksportuj jako PDF.',
   saveProtected:
     'Nie zapisano: ten dokument jest chroniony hasłem, a zapisanie go tutaj zapisałoby go bez hasła.',
   backupKept: 'Zapisano. Poprzednia wersja została zachowana jako {name}.',

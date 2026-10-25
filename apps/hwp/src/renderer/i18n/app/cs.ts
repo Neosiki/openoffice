@@ -15,6 +15,8 @@ export const cs = {
   printFailed: 'Dokument se nepodařilo vytisknout.',
   saveVerifyFailed:
     'Nic se neuložilo: kopie připravená k zápisu se po zpětném načtení neshodovala s dokumentem na obrazovce. Zkuste „Uložit jako“ a zapište nový soubor.',
+  saveVerifyHint:
+    'Původní soubor je beze změny. V dialogu Uložit jako zvolte HWPX nebo použijte Exportovat jako PDF.',
   saveProtected:
     'Neuloženo: tento dokument je chráněn heslem a uložením zde by se zapsal bez hesla.',
   backupKept: 'Uloženo. Předchozí verze byla zachována jako {name}.',
