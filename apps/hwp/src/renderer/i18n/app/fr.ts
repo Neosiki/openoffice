@@ -15,6 +15,8 @@ export const fr = {
   printFailed: "Le document n'a pas pu être imprimé.",
   saveVerifyFailed:
     'Rien n’a été enregistré : la copie à écrire ne correspondait pas, à la relecture, au document affiché. Essayez « Enregistrer sous » pour écrire un nouveau fichier.',
+  saveVerifyHint:
+    "Le fichier d'origine est intact. Dans Enregistrer sous, choisissez HWPX, ou utilisez Exporter au format PDF.",
   saveProtected:
     'Non enregistré : ce document est protégé par mot de passe, et l’enregistrer ici l’écrirait sans mot de passe.',
   backupKept: 'Enregistré. La version précédente a été conservée sous le nom {name}.',

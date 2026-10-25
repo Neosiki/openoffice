@@ -15,6 +15,7 @@ export const vi = {
   printFailed: 'Không thể in tài liệu.',
   saveVerifyFailed:
     'Chưa lưu gì: bản sao sắp ghi, khi đọc lại, không khớp với tài liệu trên màn hình. Hãy thử "Lưu thành" để ghi vào tệp mới.',
+  saveVerifyHint: 'Tệp gốc không thay đổi. Trong Lưu thành, chọn HWPX hoặc dùng Xuất thành PDF.',
   saveProtected:
     'Chưa lưu: tài liệu này được bảo vệ bằng mật khẩu, và lưu ở đây sẽ ghi tệp không có mật khẩu.',
   backupKept: 'Đã lưu. Phiên bản trước được giữ lại dưới tên {name}.',

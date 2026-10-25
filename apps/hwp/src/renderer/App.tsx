@@ -301,7 +301,11 @@ export default function App() {
                   : outcome.reason === 'verify'
                     ? 'saveVerifyFailed'
                     : 'saveFailed',
-            ...(outcome.detail ? { detail: outcome.detail } : {}),
+            ...(outcome.reason === 'verify'
+              ? { detail: t('saveVerifyHint') }
+              : outcome.detail
+                ? { detail: outcome.detail }
+                : {}),
           })
         }
         return false

@@ -15,6 +15,7 @@ export const zhTW = {
   printFailed: '無法列印。',
   saveVerifyFailed:
     '未儲存：即將寫入的內容讀回後與畫面上的文件不一致。請嘗試「另存新檔」儲存為新檔案。',
+  saveVerifyHint: '原檔案未變動。請在「另存新檔」中選擇 HWPX，或使用「匯出為 PDF」。',
   saveProtected: '未儲存：此文件有密碼保護，在這裡儲存會寫出不含密碼的檔案。',
   backupKept: '已儲存。先前的版本保留為 {name}。',
   openedTracked:

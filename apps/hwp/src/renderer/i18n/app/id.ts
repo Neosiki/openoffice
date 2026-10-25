@@ -15,6 +15,8 @@ export const id = {
   printFailed: 'Dokumen tidak dapat dicetak.',
   saveVerifyFailed:
     'Tidak ada yang disimpan: salinan yang akan ditulis, saat dibaca kembali, tidak sama dengan dokumen di layar. Coba "Simpan Sebagai" untuk menulis file baru.',
+  saveVerifyHint:
+    'File asli tidak berubah. Di Simpan sebagai, pilih HWPX atau gunakan Ekspor sebagai PDF.',
   saveProtected:
     'Tidak disimpan: dokumen ini dilindungi kata sandi, dan menyimpannya di sini akan menulisnya tanpa kata sandi.',
   backupKept: 'Tersimpan. Versi sebelumnya disimpan sebagai {name}.',
