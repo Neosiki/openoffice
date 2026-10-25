@@ -2864,7 +2864,7 @@ export const strings = {
     setLocalAddress: '주소',
     setLocalApiKey: 'API 키(선택)',
     setLocalContext: '컨텍스트',
-    setLocalContextMayDiffer: '서버가 모델을 실행 중이지 않아 실제 문맥과 다를 수 있습니다.',
+    setLocalContextMayDiffer: '서버가 불러온 문맥을 알려 주지 않아 실제 문맥과 다를 수 있습니다.',
     setLocalDelete: '삭제',
     setLocalDeleteActiveConfirm:
       '사용 중인 서버입니다. 삭제하면 사용할 AI에 서버가 없게 되며, 다른 서버가 자동으로 선택되지 않습니다.',

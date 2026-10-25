@@ -231,6 +231,7 @@ export function LocalAiSection({ t, settings, onApply }: LocalAiSectionProps) {
     setFormError(null)
     setSaved(false)
     setDeleteAsked(null)
+    setContextMayDiffer({})
   }
 
   const editEndpoint = (endpoint: AiCustomEndpoint) => {
@@ -367,7 +368,7 @@ export function LocalAiSection({ t, settings, onApply }: LocalAiSectionProps) {
         baseUrl: address.value,
         ...(draft.apiKey.trim() ? { apiKey: draft.apiKey.trim() } : {}),
         model,
-        typed: !summaries[model],
+        typed: !summaries[model] && !(draft.models ?? []).includes(model),
         timeoutMs: timeout.value,
       })
       if (!isTestResult(result)) {
@@ -443,7 +444,9 @@ export function LocalAiSection({ t, settings, onApply }: LocalAiSectionProps) {
         // actually loaded now. Without it the number may be the maximum.
         setContextMayDiffer((current) => ({
           ...current,
-          [model]: result.profile.runningContextLength === undefined,
+          [`${draftKey}:${model}`]:
+            result.profile.contextLength !== undefined &&
+            result.profile.runningContextLength === undefined,
         }))
         setSaved(false)
       }
@@ -837,7 +840,7 @@ export function LocalAiSection({ t, settings, onApply }: LocalAiSectionProps) {
                   onChange={(event) => setContext('maxContextLength', event.target.value)}
                 />
               </div>
-              {contextMayDiffer[model] && (
+              {contextMayDiffer[`${draftKey}:${model}`] && profile.contextSource !== 'user' && (
                 <div className="set-field-desc" data-local-context-may-differ="">
                   {t('setLocalContextMayDiffer')}
                 </div>
