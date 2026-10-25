@@ -9,6 +9,8 @@ export const zhTW = {
   fileSaveAs: '另存新檔…',
   fileExportPdf: '匯出為 PDF…',
   filePrint: '列印…',
+  autoSave: '自動儲存',
+  autoSaveTip: '每 30 秒及視窗失焦時自動儲存',
   printPreparing: '正在準備列印頁面… ({done}/{total})',
   printSending: '正在傳送頁面…',
   pdfFailed: '無法匯出為 PDF。',

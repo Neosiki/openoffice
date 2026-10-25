@@ -9,6 +9,8 @@ export const hi = {
   fileSaveAs: 'इस रूप में सहेजें…',
   fileExportPdf: 'PDF के रूप में निर्यात…',
   filePrint: 'प्रिंट करें…',
+  autoSave: 'स्वतः सहेजें',
+  autoSaveTip: 'हर 30 सेकंड और विंडो का फ़ोकस हटने पर सहेजता है',
   printPreparing: 'पृष्ठ तैयार हो रहे हैं… ({done}/{total})',
   printSending: 'पृष्ठ भेजे जा रहे हैं…',
   pdfFailed: 'दस्तावेज़ को PDF के रूप में निर्यात नहीं किया जा सका।',

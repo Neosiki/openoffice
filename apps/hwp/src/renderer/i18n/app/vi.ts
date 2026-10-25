@@ -9,6 +9,8 @@ export const vi = {
   fileSaveAs: 'Lưu dưới dạng…',
   fileExportPdf: 'Xuất dưới dạng PDF…',
   filePrint: 'In…',
+  autoSave: 'Tự động lưu',
+  autoSaveTip: 'Tự động lưu mỗi 30 giây và khi cửa sổ mất tiêu điểm',
   printPreparing: 'Đang chuẩn bị trang… ({done}/{total})',
   printSending: 'Đang gửi các trang…',
   pdfFailed: 'Không thể xuất tài liệu dưới dạng PDF.',

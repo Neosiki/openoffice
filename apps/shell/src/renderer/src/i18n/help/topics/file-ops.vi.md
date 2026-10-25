@@ -28,7 +28,7 @@ Quy tắc: phần mở rộng được giữ tự động; ký tự không hợp
 - **⌘S / ctrl+S** lưu tập tin hiện tại; một tập tin chưa có tiêu đề sẽ hỏi vị trí và tên trước.
 - **Lưu dưới dạng** ghi một tập tin mới và để nguyên tệp gốc; các lần sửa sau đó nhắm vào tập tin mới.
 - Mỗi lần lưu đều là nguyên tử (tập tin tạm + đổi tên); thoát giữa chừng lúc đang ghi không làm hỏng tệp.
-- Tự động lưu chỉ bắt đầu sau lần lưu thủ công đầu tiên (xem [Bắt đầu nhanh](help://getting-started)).
+- Tự động lưu tuân theo công tắc của từng trình soạn thảo; tài liệu mới chưa có tệp riêng chỉ bắt đầu sau lần lưu đầu tiên (xem [Bắt đầu nhanh](help://getting-started)).
 
 ## Xuất dưới dạng PDF
 

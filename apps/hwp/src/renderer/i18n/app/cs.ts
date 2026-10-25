@@ -9,6 +9,8 @@ export const cs = {
   fileSaveAs: 'Uložit jako…',
   fileExportPdf: 'Exportovat jako PDF…',
   filePrint: 'Tisk…',
+  autoSave: 'Automatické ukládání',
+  autoSaveTip: 'Ukládá každých 30 sekund a při ztrátě fokusu okna',
   printPreparing: 'Příprava stránek… ({done}/{total})',
   printSending: 'Odesílání stránek…',
   pdfFailed: 'Dokument se nepodařilo exportovat do PDF.',

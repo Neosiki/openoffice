@@ -28,7 +28,7 @@ Zasady: rozszerzenie jest zachowywane automatycznie; niedozwolone znaki, kropki 
 - **⌘S / ctrl+S** zapisuje bieżący plik; plik bez tytułu najpierw pyta o lokalizację i nazwę.
 - **Zapisz jako…** zapisuje nowy plik i pozostawia oryginał nietknięty; późniejsze edycje dotyczą nowego pliku.
 - Każdy zapis jest atomowy (plik tymczasowy + zmiana nazwy); zamknięcie w trakcie zapisu nie może uszkodzić pliku.
-- Autozapis włącza się dopiero po pierwszym zapisaniu ręcznym (patrz [Szybki start](help://getting-started)).
+- Autozapis działa zgodnie z przełącznikiem w każdym edytorze; nowy dokument bez własnego pliku zaczyna działać po pierwszym zapisie (patrz [Szybki start](help://getting-started)).
 
 ## Eksport do PDF
 

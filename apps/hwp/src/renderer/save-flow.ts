@@ -75,6 +75,8 @@ export async function runSave(
   editor: SaveEditorPort,
   api: Pick<HwpApi, 'beginSave' | 'newTabs' | 'commitSave' | 'abortSave'>,
   mode: SaveMode,
+  /** the app's own 30-second save: a copy-pair conflict stands down instead of asking */
+  automatic = false,
 ): Promise<SaveOutcome> {
   // before any dialog: a protected document is not saved under any name
   try {
@@ -112,7 +114,11 @@ export async function runSave(
     return { kind: 'failed', reason: 'export', detail: detailOf(error) }
   }
 
-  const commit = await api.commitSave(bytes, await measuredTabs(editor, api, bytes, begin.format))
+  const commit = await api.commitSave(
+    bytes,
+    await measuredTabs(editor, api, bytes, begin.format),
+    automatic,
+  )
   if (!commit.ok) {
     // a same-document copy holds the disk version: the main process refused
     // the write (a deferred autosave or a declined overwrite prompt) — that is

@@ -38,7 +38,7 @@ I file .odt (testo OpenDocument, il formato salvato da Hancom Office, LibreOffic
 ## Il modello di salvataggio
 
 - **Salvataggio manuale**: ⌘S/ctrl+S, oppure File ▸ Salva / Salva con nome…. Al primo salvataggio ti verranno richiesti percorso e nome.
-- **Il salvataggio automatico** si attiva solo dopo che hai salvato il file manualmente almeno una volta — un PDF che hai soltanto letto non viene mai riscritto di nascosto. Il salvataggio automatico interviene poco dopo che il contenuto è cambiato.
+- **Il salvataggio automatico** segue l’interruttore di ogni editor (e il valore predefinito dell’app). Un PDF che hai soltanto letto non viene mai riscritto di nascosto, e un nuovo documento senza file proprio inizia a salvarsi automaticamente dopo il primo salvataggio.
 - Se chiudi una scheda con modifiche non salvate, ti viene prima chiesto di scegliere tra Salva / Scarta / Annulla.
 - Ogni scrittura è atomica (file temporaneo + rinomina), così un'interruzione di corrente non può lasciare metà file.
 

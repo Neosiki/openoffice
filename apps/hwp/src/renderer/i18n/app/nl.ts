@@ -9,6 +9,8 @@ export const nl = {
   fileSaveAs: 'Opslaan als…',
   fileExportPdf: 'Exporteren als PDF…',
   filePrint: 'Afdrukken…',
+  autoSave: 'Automatisch opslaan',
+  autoSaveTip: 'Slaat elke 30 seconden op en wanneer het venster de focus verliest',
   printPreparing: "Pagina's voorbereiden… ({done}/{total})",
   printSending: "Pagina's verzenden…",
   pdfFailed: 'Het document kon niet als PDF worden geëxporteerd.',

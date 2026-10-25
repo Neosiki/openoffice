@@ -9,6 +9,8 @@ export const th = {
   fileSaveAs: 'บันทึกเป็น…',
   fileExportPdf: 'ส่งออกเป็น PDF…',
   filePrint: 'พิมพ์…',
+  autoSave: 'บันทึกอัตโนมัติ',
+  autoSaveTip: 'บันทึกทุก 30 วินาทีและเมื่อหน้าต่างไม่ได้โฟกัส',
   printPreparing: 'กำลังเตรียมหน้า… ({done}/{total})',
   printSending: 'กำลังส่งหน้า…',
   pdfFailed: 'ไม่สามารถส่งออกเอกสารเป็น PDF ได้',

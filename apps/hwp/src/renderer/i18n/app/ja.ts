@@ -9,6 +9,8 @@ export const ja = {
   fileSaveAs: '名前を付けて保存…',
   fileExportPdf: 'PDF として書き出す…',
   filePrint: '印刷…',
+  autoSave: '自動保存',
+  autoSaveTip: '30 秒ごととウィンドウのフォーカスが外れたときに自動保存',
   printPreparing: 'ページを準備しています… ({done}/{total})',
   printSending: 'ページを送っています…',
   pdfFailed: 'PDF として書き出せませんでした。',

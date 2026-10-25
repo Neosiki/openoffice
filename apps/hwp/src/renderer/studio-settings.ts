@@ -23,7 +23,9 @@ function parseStored(stored: string | null): Json {
  * - theme: follows the app, so the editor chrome matches the tab around it.
  * - autosave: off. The studio keeps recovery drafts of the document in
  *   IndexedDB, and in embed mode it never offers them back, so a draft would
- *   only be a second copy of the user's document left in the app profile.
+ *   only be a second copy of the user's document left in the app profile. The
+ *   app's own autosave writes the user's file (renderer/autosave-flow.ts) and
+ *   is separate from this draft autosave.
  */
 export function seededStudioSettings(stored: string | null, theme: UiTheme): string {
   const settings = parseStored(stored)

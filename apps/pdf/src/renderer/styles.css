@@ -21,6 +21,7 @@
   --pdf-statusbar-hover: rgb(0 0 0 / 8%);
   --pdf-swatch-ring: rgb(0 0 0 / 15%);
   --pdf-scroll-thumb: rgb(0 0 0 / 25%);
+  --pdf-knob-dot: #fff;
 
   /* content-side constants: pages are paper, page overlays sit on paper —
    * these never follow the theme */
@@ -266,6 +267,57 @@ button {
   margin: 0 6px;
   background: var(--border-strong);
   flex-shrink: 0;
+}
+
+/* ---- autosave toggle (pill in the title bar) ---- */
+
+.autosave-toggle {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  margin-left: 4px;
+  margin-right: 4px;
+  user-select: none;
+}
+
+.autosave-toggle input {
+  display: none;
+}
+
+.autosave-knob {
+  width: 26px;
+  height: 14px;
+  border-radius: 7px;
+  background: var(--border-strong);
+  position: relative;
+  transition: background 0.15s;
+}
+
+.autosave-knob::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--pdf-knob-dot);
+  transition: left 0.15s;
+}
+
+.autosave-toggle.on .autosave-knob {
+  background: var(--accent);
+}
+
+.autosave-toggle.on .autosave-knob::after {
+  left: 14px;
+}
+
+.autosave-text {
+  font-size: 11px;
+  color: var(--text-secondary);
+  white-space: nowrap;
 }
 
 /* ── ribbon tab strip (docs/Word-style: semibold labels, accent underline on the active tab) ── */

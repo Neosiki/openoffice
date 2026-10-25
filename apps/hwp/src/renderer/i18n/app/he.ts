@@ -9,6 +9,8 @@ export const he = {
   fileSaveAs: 'שמירה בשם…',
   fileExportPdf: 'ייצוא כ-PDF…',
   filePrint: 'הדפסה…',
+  autoSave: 'שמירה אוטומטית',
+  autoSaveTip: 'שומר כל 30 שניות וכאשר החלון מאבד פוקוס',
   printPreparing: 'מכין עמודים… ({done}/{total})',
   printSending: 'שולח את העמודים…',
   pdfFailed: 'לא ניתן היה לייצא את המסמך כ-PDF.',

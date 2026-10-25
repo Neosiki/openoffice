@@ -28,7 +28,7 @@ Règles : l’extension est conservée automatiquement ; les caractères interdi
 - **⌘S / ctrl+S** enregistre le fichier courant ; un fichier sans titre demande d’abord l’emplacement et le nom.
 - **Enregistrer sous** écrit un nouveau fichier et laisse l’original intact ; les modifications suivantes ciblent le nouveau fichier.
 - Chaque enregistrement est atomique (fichier temporaire puis renommage) ; quitter en cours d’écriture ne peut pas corrompre le fichier.
-- L’enregistrement automatique n’intervient qu’après la première sauvegarde manuelle (voir [Démarrage rapide](help://getting-started)).
+- L’enregistrement automatique suit le commutateur de chaque éditeur ; un nouveau document sans fichier ne commence qu’après sa première sauvegarde (voir [Démarrage rapide](help://getting-started)).
 
 ## Export en PDF
 

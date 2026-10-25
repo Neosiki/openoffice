@@ -1,6 +1,6 @@
 import type { AiSettings, AiStreamChunk, AiStreamRequest } from '@genoffice/ai-provider'
 import type { Lang } from '@genoffice/i18n'
-import type { AiPanelPrefs } from '@genoffice/ui'
+import type { AiPanelPrefs, AutoSaveDefault } from '@genoffice/ui'
 import type { SubscriptionApi } from './subscription-api'
 
 export const HWP_CHANNELS = {
@@ -46,6 +46,8 @@ export const HWP_CHANNELS = {
   languageChanged: 'app:language-changed',
   getTheme: 'app:get-theme',
   themeChanged: 'app:theme-changed',
+  getAutoSaveDefault: 'app:get-auto-save-default',
+  autoSaveDefaultChanged: 'app:auto-save-default-changed',
   getAiPanelPrefs: 'app:get-ai-panel-prefs',
   setAiPanelPrefs: 'app:set-ai-panel-prefs',
   aiPanelPrefsChanged: 'app:ai-panel-prefs-changed',
@@ -241,7 +243,11 @@ export interface HwpApi {
    * write the exported bytes to the target `beginSave` resolved, with the widths the editor
    * measured for the tabs `newTabs` found
    */
-  commitSave(bytes: Uint8Array, tabs?: MeasuredTab[]): Promise<CommitSaveResult>
+  commitSave(
+    bytes: Uint8Array,
+    tabs?: MeasuredTab[],
+    automatic?: boolean,
+  ): Promise<CommitSaveResult>
   /** the renderer could not produce bytes for a save it began */
   abortSave(): void
   setDirty(dirty: boolean): void
@@ -299,6 +305,9 @@ export interface HwpApi {
   onLanguageChanged(handler: (lang: Lang) => void): () => void
   getTheme(): Promise<UiTheme>
   onThemeChanged(handler: (theme: UiTheme) => void): () => void
+  /** The shell-wide AutoSave default; a per-window override is kept in localStorage */
+  getAutoSaveDefault(): Promise<AutoSaveDefault>
+  onAutoSaveDefaultChanged(handler: (value: AutoSaveDefault) => void): () => void
   /** AI panel side and text size (Settings › General in the shell) */
   getAiPanelPrefs(): Promise<AiPanelPrefs>
   setAiPanelPrefs(patch: Partial<AiPanelPrefs>): Promise<AiPanelPrefs>

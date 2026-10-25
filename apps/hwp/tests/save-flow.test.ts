@@ -49,9 +49,18 @@ describe('runSave', () => {
     expect(host.newTabs).toHaveBeenCalledWith(HWPX, 'hwpx')
     expect(ed.measureTabs).toHaveBeenCalledWith(SPOTS)
     // a tab the editor could not measure is left out
-    expect(host.commitSave).toHaveBeenCalledWith(HWPX, [
-      { ...SPOTS[0], width: 4000, type: 0, fill: 0 },
-    ])
+    expect(host.commitSave).toHaveBeenCalledWith(
+      HWPX,
+      [{ ...SPOTS[0], width: 4000, type: 0, fill: 0 }],
+      false,
+    )
+  })
+
+  it('marks an automatic save so a copy-pair conflict stands down quietly', async () => {
+    const ed = editor()
+    const host = api({ ok: true, path: 'C:/d/a.hwp', format: 'hwp' })
+    await runSave(ed, host, 'save', true)
+    expect(host.commitSave).toHaveBeenCalledWith(HWP, [], true)
   })
 
   it('treats the copy-pair deferral as a cancel, not a failure', async () => {
@@ -79,7 +88,7 @@ describe('runSave', () => {
     const host = api({ ok: true, path: 'C:/d/a.hwp', format: 'hwp' }, undefined, SPOTS)
     const outcome = await runSave(ed, host, 'save')
     expect(outcome).toEqual({ kind: 'saved', path: 'C:/d/a.hwp' })
-    expect(host.commitSave).toHaveBeenCalledWith(HWP, [])
+    expect(host.commitSave).toHaveBeenCalledWith(HWP, [], false)
   })
 
   it('does not ask the editor when no tab lacks a width', async () => {
@@ -126,7 +135,7 @@ describe('runSave', () => {
     const outcome = await runSave(ed, host, 'save')
     expect(outcome).toEqual({ kind: 'saved', path: 'C:/d/a.hwp' })
     expect(ed.exportHwpVerify).toHaveBeenCalledOnce()
-    expect(host.commitSave).toHaveBeenCalledWith(HWP, [])
+    expect(host.commitSave).toHaveBeenCalledWith(HWP, [], false)
     expect(ed.notifySaved).toHaveBeenCalledWith('a.hwp')
     expect(host.abortSave).not.toHaveBeenCalled()
   })

@@ -9,6 +9,8 @@ export const ru = {
   fileSaveAs: 'Сохранить как…',
   fileExportPdf: 'Экспортировать в PDF…',
   filePrint: 'Печать…',
+  autoSave: 'Автосохранение',
+  autoSaveTip: 'Сохраняет каждые 30 секунд и при потере фокуса окном',
   printPreparing: 'Подготовка страниц… ({done}/{total})',
   printSending: 'Отправка страниц…',
   pdfFailed: 'Не удалось экспортировать документ в PDF.',

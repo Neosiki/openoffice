@@ -250,6 +250,7 @@ import {
   onAiRailClick,
   rememberAiPanelOpen,
   presentationKeyOf,
+  useAutoSavePref,
   useDismissablePopover,
   useRibbonCollapse,
   useAiSidebarEnabled,
@@ -1172,8 +1173,7 @@ export default function App() {
   /** Transient message toast (save failures, skipped/rejected text edits) */
   const [notice, setNotice] = useState<string | null>(null)
   const noticeTimerRef = useRef<number | null>(null)
-  /** Autosave gate: this file was saved explicitly at least once */
-  const savedOnceRef = useRef(false)
+  const [autoSave, setAutoSave] = useAutoSavePref('pdfapp.autoSave', window.pdfApi)
   const [searchOpen, setSearchOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [searchMatches, setSearchMatches] = useState<SearchMatch[]>([])
@@ -1720,8 +1720,6 @@ export default function App() {
     async (path: string) => {
       try {
         setFilePath(path)
-        // A newly opened file starts outside the autosave gate
-        savedOnceRef.current = false
         await loadDoc(path, null)
         // a restored recovery copy opens with unsaved changes (the file is untouched until Save)
         const recovered = await window.pdfApi.recoveryState?.(path).catch(() => null)
@@ -4995,8 +4993,6 @@ export default function App() {
       noteFlush.drawings !== drawings ||
       noteFlush.noteEdits !== noteEdits
     if (!anythingToSave || !filePath) return Promise.resolve(!anythingToSave)
-    // An explicit save opts this file into autosave
-    if (!autosave) savedOnceRef.current = true
     // What this save writes — the post-save reload subtracts exactly this, keeping
     // any edits the user makes while the write is in flight
     const snapshot: SavedSnapshot = {
@@ -5375,17 +5371,20 @@ export default function App() {
   useEffect(() => window.pdfApi.onSaveAsFlow((inFlight) => (saveAsFlowRef.current = inFlight)), [])
 
   // Autosave (same strategy as Docs): every 30s and on window blur, silently persist pending
-  // edits via the regular save() path; skipped while a save is in flight or without a file path.
-  // Gated on one explicit save first: a PDF opened only to read must never be
-  // overwritten because a thumbnail got dragged or a markup tool tapped — Save (⌘S / the
-  // toolbar button / File ▸ Save) is what opts this file into unattended writes.
+  // edits via the regular save() path while the ribbon toggle (or the shell-wide default) is
+  // on; skipped while a save is in flight, without a file path, in a read-only document,
+  // during presentation, or in an untitled copy whose first explicit save must ask where
+  // it goes.
+  // A PDF that was only read has no pending edits, so it is never written.
   useAutosave(
     () =>
-      savedOnceRef.current &&
+      autoSave &&
       ordinaryDirty &&
       saveInFlightRef.current === null &&
       filePath !== '' &&
+      !untitledCopyRef.current &&
       !readOnly &&
+      !presenting &&
       !saveAsFlowRef.current &&
       !redactionRequestInFlightRef.current,
     () => void save(true),
@@ -7434,20 +7433,19 @@ export default function App() {
 
   /**
    * After an AI run that mutated a shell-created blank still carrying its untitled
-   * name, silently save once: the save's auto-rename then derives the file name from
-   * the inserted text — mirrors docs/sheets, where AI generation names the draft.
-   * PDFs the user merely opened keep the pending-until-⌘S contract (isUntitled is
-   * false for them, and the main process would refuse the rename anyway).
+   * name, silently save once when autosave is on: the save's auto-rename then derives
+   * the file name from the inserted text — mirrors docs/sheets, where AI generation
+   * names the draft. PDFs the user merely opened are not touched by this path
+   * (isUntitled is false for them, and the main process would refuse the rename
+   * anyway); their normal autosave still follows the toggle.
    */
   const autoSaveAfterAiRun = async () => {
-    if (!filePath || readOnly) return
+    if (!autoSave || !filePath || readOnly) return
     try {
       if (!(await window.pdfApi.isUntitled(filePath))) return
     } catch {
       return
     }
-    // A file we created ourselves is safe to keep autosaving from here on
-    savedOnceRef.current = true
     void save(true)
   }
 
@@ -8460,6 +8458,16 @@ export default function App() {
             <IconRedo />
           </button>
           <span className="qa-sep" />
+          <label className={`autosave-toggle${autoSave ? ' on' : ''}`} data-tip={t('autoSaveTip')}>
+            <span className="autosave-knob" />
+            <span className="autosave-text">{t('autoSave')}</span>
+            <input
+              type="checkbox"
+              checked={autoSave}
+              onChange={(e) => setAutoSave(e.target.checked)}
+            />
+          </label>
+          <span className="qa-sep" />
           {RIBBON_TABS.map(({ id, labelKey }) => (
             <button
               key={id}
@@ -8499,7 +8507,7 @@ export default function App() {
           )}
           <span className="ribbon-tabs-spacer" />
           {readOnly && <span className="tb-readonly">{t('roEncrypted')}</span>}
-          {/* The file on disk is only touched by an explicit save until then. */}
+          {/* Pending edits wait for an explicit save or an enabled autosave. */}
           {saveState === 'saving' ? (
             <span className="tb-save-pending">{t('saving')}</span>
           ) : (
