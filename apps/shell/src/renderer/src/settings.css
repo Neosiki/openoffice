@@ -1209,6 +1209,11 @@
   background: var(--surface-subtle);
 }
 
+/* a context length can reach 10,000,000; the generic 64px field clips it */
+.set-local-profile .set-num-input {
+  width: 112px;
+}
+
 .set-local-source {
   font-size: 11px;
   color: var(--text-tertiary);
