@@ -244,6 +244,8 @@ const NEXT_STEP: Record<NonNullable<MediaToolFailure['errorCode']>, string> = {
   network: 'check the network connection (HTTPS_PROXY is honoured), then retry once',
   overloaded: 'the provider is busy: retry once in a minute',
   timeout: 'retry once; if it times out again, continue without it',
+  'context-limit':
+    'do not retry the same request: the prompt is larger than the model context; ask the user to choose a model with more context or shorten the request',
 }
 
 /** The next step for a run error code, when it is one the cloud commands know. */
