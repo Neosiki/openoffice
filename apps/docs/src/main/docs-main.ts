@@ -102,9 +102,14 @@ import { ElectronBrowserDriver } from '../../../../packages/html2docx/src/driver
 import {
   AI_MEDIA_PROVIDERS,
   AI_SEARCH_PROVIDERS,
+  activeCustomEndpoint,
+  inspectLocalModelForIpc,
   isAiOverloadedError,
   chatForProvider,
+  listLocalModelsForIpc,
+  localEndpointTimeoutMs,
   normalizeAiSettings,
+  testLocalModelForIpc,
   testMediaProvider,
   type AiMediaProviderConfig,
   type AiMediaProviderId,
@@ -173,6 +178,7 @@ import {
   type AiRunTexts,
 } from './ai-run'
 import { createChunkCoalescer } from './stream-coalesce'
+import { startAiKeepalive } from './ai-keepalive'
 import { atomicWriteFile } from './atomic-write'
 import { createDocsRecovery } from './docs-recovery'
 import {
@@ -3970,6 +3976,13 @@ export function registerAiIpc(): void {
 
   ipcMain.handle('ai:custom-models', (_event, input: unknown) => listCustomModelsForIpc(input))
 
+  // local AI card: discovery, one model's server-reported profile, and the
+  // four-step connection test. Payload validation lives in @genoffice/ai-provider
+  // (local-ipc.ts), so a malformed payload answers shape and sends nothing.
+  ipcMain.handle('ai:local-models', (_event, input: unknown) => listLocalModelsForIpc(input))
+  ipcMain.handle('ai:local-inspect', (_event, input: unknown) => inspectLocalModelForIpc(input))
+  ipcMain.handle('ai:local-test', (_event, input: unknown) => testLocalModelForIpc(input))
+
   ipcMain.handle('ai:stream', async (event, request: AiStreamRequest) => {
     // per-request settings get the same schema check as the persisted ones: a
     // compromised renderer could otherwise hand cliPath/baseUrl straight to
@@ -3988,6 +4001,14 @@ export function registerAiIpc(): void {
     const { settings, provider, config } = target
     const tools = request.tools ?? []
     const maxTokens = request.maxTokens ?? maxOutputTokensOf(settings)
+    // A local server loads the model on its first request, so this endpoint's
+    // own first-response limit (default 300s) replaces the protocol default,
+    // and a timer keeps the renderer informed while nothing has arrived yet.
+    // Other providers get neither: their watchdog and silence budget stay as
+    // they were.
+    const localEndpoint = provider === 'custom' ? activeCustomEndpoint(settings) : undefined
+    const localTimeoutMs =
+      localEndpoint?.kind === 'local' ? localEndpointTimeoutMs(localEndpoint) : undefined
     const controller = new AbortController()
     activeAiStreams.set(requestId, controller)
     const unwatchSender = abortOnDestroyed(event.sender, controller)
@@ -4001,21 +4022,35 @@ export function registerAiIpc(): void {
       lastPing = now
       out.push({ requestId, type: 'ping' })
     }
+    const stopKeepalive = localTimeoutMs === undefined ? undefined : startAiKeepalive(ping)
     try {
       let stopReason: string | undefined
-      await streamForProvider(provider, config, system, messages, tools, maxTokens, {
-        ...(request.sessionId ? { sessionId: request.sessionId } : {}),
-        signal: controller.signal,
-        onDelta: (text) => out.push({ requestId, type: 'delta', text }),
-        onReasoningDelta: (text) => out.push({ requestId, type: 'reasoning', text }),
-        onToolCall: (toolCall) => out.push({ requestId, type: 'tool-call', toolCall }),
-        onActivity: ping,
-        onStopReason: (reason) => {
-          stopReason = reason
+      await streamForProvider(
+        provider,
+        config,
+        system,
+        messages,
+        tools,
+        maxTokens,
+        {
+          ...(request.sessionId ? { sessionId: request.sessionId } : {}),
+          signal: controller.signal,
+          onDelta: (text) => out.push({ requestId, type: 'delta', text }),
+          onReasoningDelta: (text) => out.push({ requestId, type: 'reasoning', text }),
+          onToolCall: (toolCall) => out.push({ requestId, type: 'tool-call', toolCall }),
+          onActivity: () => {
+            // the model has started answering: the waiting timer has done its job
+            stopKeepalive?.()
+            ping()
+          },
+          onStopReason: (reason) => {
+            stopReason = reason
+          },
+          onUsage: (usage) => out.push({ requestId, type: 'usage', usage }),
+          ...subscriptionStreamCallbacks(requestId, out.push),
         },
-        onUsage: (usage) => out.push({ requestId, type: 'usage', usage }),
-        ...subscriptionStreamCallbacks(requestId, out.push),
-      })
+        localTimeoutMs === undefined ? undefined : { timeoutMs: localTimeoutMs },
+      )
       out.push({ requestId, type: 'done', stopReason })
     } catch (err) {
       if (controller.signal.aborted) {
@@ -4024,6 +4059,8 @@ export function registerAiIpc(): void {
         out.push(aiStreamErrorChunk(requestId, err))
       }
     } finally {
+      // success, error and cancel all leave through here: the timer never survives the turn
+      stopKeepalive?.()
       out.flush()
       unwatchSender()
       activeAiStreams.delete(requestId)

@@ -173,6 +173,19 @@ export type {
   AiLocalTestResult,
 } from './local-test'
 export {
+  inspectLocalModelForIpc,
+  listLocalModelsForIpc,
+  parseLocalDiscoveryInput,
+  parseLocalInspectionInput,
+  parseLocalTestInput,
+  testLocalModelForIpc,
+} from './local-ipc'
+export type {
+  AiLocalDiscoveryIpcInput,
+  AiLocalInspectionIpcInput,
+  AiLocalTestIpcInput,
+} from './local-ipc'
+export {
   AI_MEDIA_PROVIDERS,
   GEMINI_MEDIA_BASE_URL,
   OPENAI_IMAGES_BASE_URL,
@@ -224,7 +237,7 @@ export { freeLimitOf } from './free-ai'
 export type { FreeAiConnectResult, FreeAiProviderId, FreeAiQuota } from './free-ai'
 export { parseOutputCapRejection } from './output-cap'
 export { AiCreditsError, sseLines, streamForProvider } from './stream'
-export type { StreamCallbacks } from './stream'
+export type { StreamCallbacks, StreamForProviderOptions } from './stream'
 export {
   AI_CHAT_RESPONSE_TIMEOUT_MS,
   AI_CONNECT_TIMEOUT_MS,
