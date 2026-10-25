@@ -18,7 +18,7 @@ Chiaro / Scuro / Segui il sistema. L'opzione Segui il sistema segue l'aspetto de
 ## Generale
 
 - **Posizione della barra laterale IA** (sinistra o destra), **Dimensione del testo del pannello IA** e **Controllo ortografico nella chat IA**.
-- **Apri il pannello IA nei nuovi documenti** — disattivato, un nuovo documento si apre con il pannello richiuso, a un clic di distanza.
+- **Pannello IA** — Disattivato, Compresso o Ultimo stato.
 - **Salva automaticamente tutti i documenti** attiva il salvataggio automatico per impostazione predefinita in ogni editor; puoi comunque disattivarlo per una singola finestra.
 - **Posizione di salvataggio** con il pulsante **Cambia** e **App predefinita per i documenti Office** per far gestire a GenOffice .docx / .xlsx / .pptx.
 

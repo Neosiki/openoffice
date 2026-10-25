@@ -18,7 +18,7 @@ Claro / Oscuro / Seguir el sistema. «Seguir el sistema» sigue la apariencia de
 ## General
 
 - **Posición de la barra lateral de IA** (izquierda o derecha), **Tamaño del texto del panel de IA** y **Corrección ortográfica en el chat de IA**.
-- **Abrir el panel de IA en documentos nuevos** — desactivado, un documento nuevo empieza con el panel plegado, a un clic de distancia.
+- **Panel de IA** — Desactivado, Contraído o Último estado.
 - **Guardar automáticamente todos los documentos** activa el guardado automático de forma predeterminada en todos los editores; todavía puedes desactivarlo para una ventana.
 - **Ubicación de guardado** con un botón **Cambiar** y **App predeterminada para documentos de Office** para reclamar .docx / .xlsx / .pptx para GenOffice.
 

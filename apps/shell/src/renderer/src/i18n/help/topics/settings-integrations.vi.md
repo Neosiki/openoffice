@@ -18,7 +18,7 @@ Sáng / Tối / Theo hệ thống. Khi chọn Theo hệ thống, giao diện bá
 ## Chung
 
 - **Vị trí thanh bên AI** (trái hoặc phải), **Cỡ chữ bảng điều khiển AI** và **Kiểm tra chính tả trong trò chuyện AI**.
-- **Mở bảng AI trong tài liệu mới** — tắt, tài liệu mới sẽ bắt đầu với bảng AI đã thu gọn, chỉ một cú nhấp là mở ra.
+- **Bảng AI** — Tắt, Thu gọn hoặc Trạng thái gần nhất.
 - **Tự động lưu tất cả tài liệu** bật AutoSave theo mặc định trong mọi trình soạn thảo; bạn vẫn có thể tắt nó cho một cửa sổ.
 - **Vị trí lưu** kèm nút **Thay đổi**, và **Ứng dụng mặc định cho tài liệu Office** để nhận .docx / .xlsx / .pptx về cho GenOffice.
 
