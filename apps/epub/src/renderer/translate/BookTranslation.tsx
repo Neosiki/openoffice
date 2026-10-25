@@ -398,6 +398,8 @@ export const BookTranslation = forwardRef<BookTranslationHandle, BookTranslation
           api,
           settings: () => route.settings,
           lang: () => propsRef.current.lang,
+          // one id for the whole book translation: a large book is confirmed once, not per batch
+          runId: crypto.randomUUID(),
           guard: async () => {
             const statuses = await attemptSubscription((s) => s.statuses())
             const current = await propsRef.current.api?.getAiSettings?.().catch(() => null)

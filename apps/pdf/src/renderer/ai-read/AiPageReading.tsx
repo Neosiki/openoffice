@@ -241,6 +241,8 @@ export const AiPageReading = forwardRef<AiPageReadingHandle, AiPageReadingProps>
       const ask = createModelCall({
         settings: () => route.settings,
         lang: () => propsRef.current.lang,
+        // one id for this job's calls: a large page is confirmed once, not per call
+        runId: crypto.randomUUID(),
         guard: async () => {
           const statuses = await attemptSubscription((s) => s.statuses())
           const current = await window.pdfApi?.getAiSettings().catch(() => null)

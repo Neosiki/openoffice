@@ -18,6 +18,7 @@ import {
   AiInputTruncatedNotice,
   AiMark,
   AiModelPicker,
+  AiToolsUnsupportedNotice,
   type AiModelPickerBridge,
   AiQueueStrip,
   AI_QUEUE_LABELS,
@@ -55,6 +56,7 @@ import type {
   AiSubscriptionProviderId,
   AiSubscriptionUsage,
 } from '@genoffice/ai-provider'
+import { localModelCapabilities } from '@genoffice/ai-provider/browser'
 import { ATTACHMENT_IMAGE_EXTS } from '../../shared/ipc'
 import type { AttachmentAddResult, AttachmentMeta, EpubAiApi } from '../../shared/ipc'
 import { t as tGlobal, useI18n } from '../i18n/locale'
@@ -575,6 +577,9 @@ export function AiPanel({ host, filePath, onCollapse }: AiPanelProps): ReactElem
   if (!loopRef.current) {
     loopRef.current = new AgentLoop({
       transport: transportRef.current,
+      // a local model that reported no tool support answers in text only
+      toolsAllowed: () =>
+        settingsRef.current ? localModelCapabilities(settingsRef.current).tools !== false : true,
       skill: composeWithDrive('epub+search', '', () => loopRef.current?.messages ?? [], [
         createEpubSkill({ host: () => hostRef.current }),
         createSearchSkill(),
@@ -1212,6 +1217,9 @@ export function AiPanel({ host, filePath, onCollapse }: AiPanelProps): ReactElem
         {attachNotice && <div className="ai-attach-notice">{attachNotice}</div>}
         {inputTruncated && (
           <AiInputTruncatedNotice lang={lang} onDismiss={() => setInputTruncated(false)} />
+        )}
+        {aiSettings !== null && localModelCapabilities(aiSettings).tools === false && (
+          <AiToolsUnsupportedNotice lang={lang} />
         )}
         <AiComposer
           queueStrip={

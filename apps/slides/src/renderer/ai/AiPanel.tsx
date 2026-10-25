@@ -8,6 +8,7 @@ import {
   AiFirstConnectionNotice,
   AiInputTruncatedNotice,
   AiMark,
+  AiToolsUnsupportedNotice,
   AiSubscriptionUsageLine,
   aiRunErrorText,
   aiSubscriptionText,
@@ -41,6 +42,7 @@ import {
 } from '@genoffice/agent-core'
 import type { RenderSlide } from '@genoffice/pptx-render'
 import type { AiSubscriptionProviderId, AiSubscriptionUsage } from '@genoffice/ai-provider/browser'
+import { localModelCapabilities } from '@genoffice/ai-provider/browser'
 import type {
   AiSettings,
   AiToolCapabilities,
@@ -1538,6 +1540,8 @@ export function AiPanel({
     loopRef.current = new AgentLoop({
       transport: createElectronTransport(() => settingsRef.current, transportHooksRef.current),
       systemSuffix: aiLangDirective,
+      // a local model that reported no tool support answers in text only
+      toolsAllowed: () => localModelCapabilities(settingsRef.current).tools !== false,
       skill: composeWithDrive('slides+files', '', () => loopRef.current?.messages ?? [], [
         createSlidesSkill(access),
         createFilesSkill(availableAttachments, (path) => readAttachmentPathsRef.current.add(path)),
@@ -2134,6 +2138,7 @@ export function AiPanel({
         let result = await qcSlidePage({
           access,
           transport,
+          settings: () => settingsRef.current,
           pageIndex: page,
           screenshot: shot,
           systemSuffix: aiLangDirective,
@@ -2144,6 +2149,7 @@ export function AiPanel({
           result = await qcSlidePage({
             access,
             transport,
+            settings: () => settingsRef.current,
             pageIndex: page,
             screenshot: null,
             systemSuffix: aiLangDirective,
@@ -2703,6 +2709,9 @@ export function AiPanel({
           )}
           {inputTruncated && (
             <AiInputTruncatedNotice lang={lang} onDismiss={() => setInputTruncated(false)} />
+          )}
+          {localModelCapabilities(liveSettings).tools === false && (
+            <AiToolsUnsupportedNotice lang={lang} />
           )}
           <AiSubscriptionUsageLine usage={subscriptionUsage} lang={lang} />
           <TemplatePicker

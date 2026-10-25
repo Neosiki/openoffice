@@ -42,6 +42,11 @@ const LocaleContext = createContext<Lang>('zh')
 /** Module-level current language: for code outliving render closures (AgentLoop events etc.), kept in sync with the Provider */
 let moduleLang: Lang = 'zh'
 
+/** the language as of the last Provider render, for non-React modules (the AI transport's dialog) */
+export function getLang(): Lang {
+  return moduleLang
+}
+
 export function t(key: StringKey, params?: Params): string {
   return translate(moduleLang, key, params)
 }
