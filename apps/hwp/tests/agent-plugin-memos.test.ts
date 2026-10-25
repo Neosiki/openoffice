@@ -340,6 +340,23 @@ describe('listing memos', () => {
     expect(caret.rects[0]).toMatchObject({ pageIndex: 0, width: 0 })
     expect(caret.rects[0]!.height).toBeGreaterThan(0)
   })
+
+  it('numbers a table-cell field as listFields does when a memo comes first', () => {
+    const doc = blank(['memo text', ''])
+    insertBodyMemo(doc, 0, 0, 4, 'body', 'memo')
+    doc.pasteHtml(0, 1, 0, '<table><tr><td>name: </td></tr></table>')
+    const path = JSON.stringify([{ controlIndex: 0, cellIndex: 0, cellParaIndex: 0 }])
+    doc.insertClickHereFieldByPath(0, 1, path, 6, 'guide', '', 'field', true)
+    const { plugin } = openEditor(doc)
+
+    const fields = plugin.listFields()
+    expect(fields).toHaveLength(1)
+    expect(fields[0]!.field).toBe(1)
+    const table = plugin.readTable(1)
+    expect(table.ok).toBe(true)
+    if (!table.ok) return
+    expect(table.cells[0]!.fields).toEqual([1])
+  })
 })
 
 describe('the selection a memo may be put on', () => {

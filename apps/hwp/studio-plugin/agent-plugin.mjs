@@ -123,6 +123,14 @@ const MEMO_SELECTED_LINE = 'rgba(18, 72, 176, 0.95)'
 const MEMO_CARET_WIDTH = 2
 /** How long after an unannounced user change the memo list is looked at for pasted memos. */
 const MEMO_PROBE_MS = 250
+/**
+ * The channel a copy of memo-bearing text is told on, so another editor instance (a split
+ * pane or another document tab) can tell the app a paste brought the text without the memo.
+ * It carries a marker only, not the clipboard content; a paste from the system clipboard
+ * gives no way to know what it held, so this is best effort.
+ */
+const MEMO_COPY_CHANNEL = 'ieum:hwp-memo-copied'
+const MEMO_COPY_WINDOW_MS = 15_000
 
 /** The most runs and characters of one selection: a sanity limit, far above real use. */
 const MAX_SELECTED_RUNS = 5000
@@ -298,6 +306,13 @@ function memoEntriesOf(doc) {
   const entries = parse(doc.getMemoList())
   return Array.isArray(entries) ? entries : []
 }
+
+/**
+ * Whether the document is password protected. The engine's document info has the password
+ * flag only, not a distribution flag: a distribution-only document gets as far as the
+ * mutation, where the engine refuses with memo_read_only and the panel shows that.
+ */
+const memoProtected = (doc) => parse(doc.getDocumentInfo()).encrypted === true
 
 /** What the panel and an approval question need to know about a memo that is going away. */
 const memoSummaryOf = (entry) => ({
@@ -1928,28 +1943,31 @@ const clip = (text, max) => (text.length > max ? `${text.slice(0, max)}…` : te
  */
 function fieldsByCell(doc) {
   const byCell = new Map()
-  parse(doc.getFieldList()).forEach((field, index) => {
-    // a memo is a field to the file, but the panel writes it, not the form tools
-    if (field.cellField === true || field.fieldType === 'memo') return
-    const where = field.location
-    const path = where && Array.isArray(where.path) ? where.path : []
-    if (path.length === 0 || path.some((entry) => entry.type !== 'cell')) return
-    const cells = path.map((entry) => ({
-      controlIndex: entry.controlIndex,
-      cellIndex: entry.cellIndex,
-      cellParaIndex: entry.paraIndex,
-    }))
-    const key = `${tableKey(where.sectionIndex, where.paraIndex, cells)}:${cells[cells.length - 1].cellIndex}`
-    const entry = {
-      number: index + 1,
-      fieldId: field.fieldId,
-      value: field.value ?? '',
-      guide: field.guide ?? '',
-    }
-    const list = byCell.get(key)
-    if (list) list.push(entry)
-    else byCell.set(key, [entry])
-  })
+  // the number a field is named by is its place among the fields listFields shows: memos
+  // are not form fields and must not shift it
+  parse(doc.getFieldList())
+    .filter((field) => field.fieldType !== 'memo')
+    .forEach((field, index) => {
+      if (field.cellField === true) return
+      const where = field.location
+      const path = where && Array.isArray(where.path) ? where.path : []
+      if (path.length === 0 || path.some((entry) => entry.type !== 'cell')) return
+      const cells = path.map((entry) => ({
+        controlIndex: entry.controlIndex,
+        cellIndex: entry.cellIndex,
+        cellParaIndex: entry.paraIndex,
+      }))
+      const key = `${tableKey(where.sectionIndex, where.paraIndex, cells)}:${cells[cells.length - 1].cellIndex}`
+      const entry = {
+        number: index + 1,
+        fieldId: field.fieldId,
+        value: field.value ?? '',
+        guide: field.guide ?? '',
+      }
+      const list = byCell.get(key)
+      if (list) list.push(entry)
+      else byCell.set(key, [entry])
+    })
   return byCell
 }
 
@@ -2443,6 +2461,8 @@ let stopMemoLayer = null
 let stopMemoLock = null
 /** Takes the copy/paste listeners that advise about memos off the editor again. */
 let stopMemoClipboard = null
+/** Closes the channel a copy of memo-bearing text is told on. */
+let stopMemoChannel = null
 /** A redraw of the memo anchors after a change settles, and the probe for pasted memos. */
 let memoSettleTimer = null
 let memoProbeTimer = null
@@ -2477,6 +2497,8 @@ export const agentPlugin = {
     stopMemoLock = null
     if (stopMemoClipboard) stopMemoClipboard()
     stopMemoClipboard = null
+    if (stopMemoChannel) stopMemoChannel()
+    stopMemoChannel = null
     if (memoSettleTimer) clearTimeout(memoSettleTimer)
     memoSettleTimer = null
     if (memoProbeTimer) clearTimeout(memoProbeTimer)
@@ -2507,6 +2529,11 @@ export const agentPlugin = {
     let memoLayer = null
     let memoCopied = 0
     let memoLocked = false
+    // a copy of memo-bearing text made in this instance, and one told on the channel by
+    // another instance: a paste that brings neither still needs the app's notice
+    const memoInstance = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`
+    let memoChannel = null
+    let memoCrossCopy = null
 
     /** Read the memo list again; with `notify`, tell the app about memos the user's edit took. */
     const syncMemos = ({ notify = false } = {}) => {
@@ -2685,7 +2712,7 @@ export const agentPlugin = {
       }
       return host.read((doc) => {
         try {
-          if (parse(doc.getDocumentInfo()).encrypted === true) {
+          if (memoProtected(doc)) {
             return { ok: false, reason: 'protected' }
           }
           const place = start.path ? (start.textBox ? 'textBox' : 'tableCell') : 'body'
@@ -2771,6 +2798,38 @@ export const agentPlugin = {
       return { ok: true, locked: memoLocked }
     }
 
+    /** Tell the other editor instances that this one copied memo-bearing text. */
+    const startMemoChannel = () => {
+      if (stopMemoChannel) stopMemoChannel()
+      const Channel = globalThis.BroadcastChannel
+      if (!Channel) return
+      try {
+        const channel = new Channel(MEMO_COPY_CHANNEL)
+        channel.onmessage = (event) => {
+          const detail = event?.data
+          if (!detail || detail.kind !== 'memo-copied') return
+          if (detail.source === memoInstance) return
+          if (!Number.isInteger(detail.count) || detail.count < 1) return
+          if (typeof detail.at !== 'number' || !Number.isFinite(detail.at)) return
+          if (Date.now() - detail.at > MEMO_COPY_WINDOW_MS) return
+          if (!memoCrossCopy || detail.at >= memoCrossCopy.at) {
+            memoCrossCopy = { count: detail.count, at: detail.at, source: detail.source }
+          }
+        }
+        memoChannel = channel
+        stopMemoChannel = () => {
+          try {
+            channel.close()
+          } catch {
+            // already closed
+          }
+          if (memoChannel === channel) memoChannel = null
+        }
+      } catch {
+        // an editor window without BroadcastChannel: the same-editor path still works
+      }
+    }
+
     /** Remember how many memos a copy in this editor would bring, for the paste that follows. */
     const noteMemoCopy = () => {
       try {
@@ -2779,24 +2838,50 @@ export const agentPlugin = {
         const seen = picked
         if (!seen) {
           memoCopied = 0
+          memoCrossCopy = null
           return
         }
         const start = endOf(seen.start)
         const end = endOf(seen.end)
         memoCopied = start && end ? host.read((doc) => memosWithin(doc, start, end)) : 0
+        if (memoCopied === 0) {
+          // a local copy without memos is not the cross-instance one the channel told about
+          memoCrossCopy = null
+          return
+        }
+        if (memoChannel) {
+          try {
+            memoChannel.postMessage({
+              kind: 'memo-copied',
+              count: memoCopied,
+              at: Date.now(),
+              source: memoInstance,
+            })
+          } catch {
+            // the channel is closed: the other instance cannot be told
+          }
+        }
       } catch {
         memoCopied = 0
       }
     }
 
     /**
-     * A paste that did not bring the memos copied with the text (a paste from another
-     * editing surface, or an anchor whose end was not copied) is told to the app once.
+     * A paste that did not bring the memos copied with the text is told to the app once.
+     * The copy may have been made in this editor (the engine then duplicates the memos, or
+     * drops an anchor-only one) or in another instance, which only told this one on the
+     * channel that memo-bearing text was copied: a system-clipboard paste carries text only.
      */
     const noteMemoPaste = () => {
-      if (memoCopied < 1) return
-      const count = memoCopied
+      const local = memoCopied
       memoCopied = 0
+      const cross =
+        local < 1 && memoCrossCopy && Date.now() - memoCrossCopy.at <= MEMO_COPY_WINDOW_MS
+          ? memoCrossCopy
+          : null
+      memoCrossCopy = null
+      const count = local > 0 ? local : cross ? cross.count : 0
+      if (count < 1) return
       let before = 0
       try {
         before = host.read((doc) => memoEntriesOf(doc).length)
@@ -2806,7 +2891,10 @@ export const agentPlugin = {
       setTimeout(() => {
         try {
           const after = host.read((doc) => memoEntriesOf(doc).length)
-          if (after <= before) announce(MEMO_NOT_COPIED_EVENT, { kind: 'memo-not-copied', count })
+          // fewer memos came than were copied: the rest were lost to the text-only paste
+          if (after - before < count) {
+            announce(MEMO_NOT_COPIED_EVENT, { kind: 'memo-not-copied', count })
+          }
           syncMemos({ notify: false })
           refreshMemoAnchors()
         } catch {
@@ -2826,6 +2914,7 @@ export const agentPlugin = {
           for (const name of ['copy', 'cut']) page.removeEventListener(name, onCopy, true)
           page.removeEventListener('paste', noteMemoPaste, true)
         }
+        startMemoChannel()
       }
     }
 
@@ -5322,7 +5411,7 @@ export const agentPlugin = {
         if (typeof text !== 'string') throw fail('BAD_ARGUMENT', 'text must be a string')
         if (text.length > MAX_MEMO_TEXT) return { ok: false, reason: 'memo_text_too_long' }
         const refusal = host.read((doc) => {
-          if (parse(doc.getDocumentInfo()).encrypted === true) {
+          if (memoProtected(doc)) {
             return { ok: false, reason: 'protected' }
           }
           const box = containerOf(doc, {
@@ -5373,7 +5462,7 @@ export const agentPlugin = {
         if (typeof text !== 'string') throw fail('BAD_ARGUMENT', 'text must be a string')
         if (text.length > MAX_MEMO_TEXT) return { ok: false, reason: 'memo_text_too_long' }
         const refusal = host.read((doc) => {
-          if (parse(doc.getDocumentInfo()).encrypted === true) {
+          if (memoProtected(doc)) {
             return { ok: false, reason: 'memo_read_only', why: 'protected' }
           }
           const memo = memoEntriesOf(doc).find((entry) => entry.id === id)
@@ -5394,7 +5483,7 @@ export const agentPlugin = {
       removeMemo: guarded((id, options) => {
         if (!Number.isInteger(id)) return { ok: false, reason: 'memo_not_found' }
         const refusal = host.read((doc) => {
-          if (parse(doc.getDocumentInfo()).encrypted === true) {
+          if (memoProtected(doc)) {
             return { ok: false, reason: 'memo_read_only', why: 'protected' }
           }
           const memo = memoEntriesOf(doc).find((entry) => entry.id === id)

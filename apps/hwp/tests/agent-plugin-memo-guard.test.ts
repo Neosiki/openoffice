@@ -71,6 +71,26 @@ function tableWithMemo() {
   return { doc, made, path }
 }
 
+/** A text box after the text of paragraph 0, holding `box text`. */
+function withTextBox(doc: HwpDocument): string {
+  const made = JSON.parse(
+    doc.createShapeControl(
+      JSON.stringify({
+        sectionIdx: 0,
+        paraIdx: 0,
+        charOffset: doc.getParagraphLength(0, 0),
+        width: 8000,
+        height: 3000,
+        shapeType: 'textbox',
+        textWrap: 'Square',
+      }),
+    ),
+  ) as { controlIdx: number }
+  const path = JSON.stringify([{ controlIndex: made.controlIdx, cellIndex: 0, cellParaIndex: 0 }])
+  doc.insertTextInCellByPath(0, 0, path, 0, 'box text')
+  return path
+}
+
 function openEditor(doc: HwpDocument) {
   document.body.innerHTML = '<div id="scroll-container"><div id="scroll-content"></div></div>'
   let current = doc
@@ -152,6 +172,30 @@ function watch(name: string) {
   return { seen, stop: () => globalThis.removeEventListener(name, handler) }
 }
 
+/** A small BroadcastChannel: each message reaches the other channels of the same name. */
+class FakeChannel {
+  static groups = new Map<string, Set<FakeChannel>>()
+  onmessage: ((event: { data: unknown }) => void) | null = null
+  readonly name: string
+
+  constructor(name: string) {
+    this.name = name
+    const group = FakeChannel.groups.get(name) ?? new Set<FakeChannel>()
+    group.add(this)
+    FakeChannel.groups.set(name, group)
+  }
+
+  postMessage(data: unknown) {
+    for (const other of FakeChannel.groups.get(this.name) ?? []) {
+      if (other !== this) other.onmessage?.({ data })
+    }
+  }
+
+  close() {
+    FakeChannel.groups.get(this.name)?.delete(this)
+  }
+}
+
 afterEach(() => {
   agentPlugin.deactivate?.()
   document.body.innerHTML = ''
@@ -190,18 +234,51 @@ describe('an AI edit that would take a memo with it', () => {
     expect(editor.plugin.listMemos().count).toBe(0)
   })
 
-  it('keeps a memo whose text an edit took as a caret anchor, without asking', () => {
-    // The engine keeps the memo field when its text goes: the anchor becomes empty, so
-    // nothing is lost and the panel still lists it.
+  it('asks before a replace that deletes the whole anchor text', () => {
+    const doc = blank(['hello world'])
+    const made = insertBodyMemo(doc, 0, 0, 5, 'tester', 'memo body')
+    const editor = openEditor(doc)
+
+    const result = editor.plugin.replaceText('hello', '')
+    expect(result).toMatchObject({
+      ok: false,
+      reason: 'memo_removal_requires_approval',
+      count: 1,
+    })
+    expect(result.ok === false && result.memos[0]).toMatchObject({
+      id: made.id,
+      author: 'tester',
+      text: 'memo body',
+    })
+    // the engine deleted the memo inside the transaction; the rollback brought it back
+    expect(editor.doc().getTextRange(0, 0, 0, 11)).toBe('hello world')
+    expect(editor.plugin.listMemos().count).toBe(1)
+    expect(editor.steps()).toBe(0)
+
+    const retry = editor.plugin.replaceText('hello', '', null, { allowMemoRemoval: true })
+    expect(retry).toMatchObject({ ok: true })
+    expect(editor.doc().getTextRange(0, 0, 0, 11)).toBe(' world')
+    expect(editor.plugin.listMemos().count).toBe(0)
+  })
+
+  it('asks before a paragraph edit that deletes the whole anchor text', () => {
     const doc = blank(['first', 'memo paragraph', 'third'])
     insertBodyMemo(doc, 1, 0, 4, 'body', 'body memo')
     const editor = openEditor(doc)
 
     const result = editor.plugin.deleteParagraph('memo paragraph', null)
-    expect(result).toMatchObject({ ok: true })
-    const memo = editor.plugin.listMemos().memos[0]!
-    expect(memo.startCharIdx).toBe(memo.endCharIdx)
+    expect(result).toMatchObject({
+      ok: false,
+      reason: 'memo_removal_requires_approval',
+      count: 1,
+    })
     expect(editor.plugin.listMemos().count).toBe(1)
+
+    const retry = editor.plugin.deleteParagraph('memo paragraph', null, {
+      allowMemoRemoval: true,
+    })
+    expect(retry).toMatchObject({ ok: true })
+    expect(editor.plugin.listMemos().count).toBe(0)
   })
 
   it('does not ask when the edit only changes the text inside the anchor', () => {
@@ -260,6 +337,66 @@ describe('a memo the user’s own edit takes away', () => {
 
     // another change that takes nothing away is not announced
     editor.userEdit((current) => current.insertText(0, 0, 0, 'x'))
+    expect(watched.seen).toHaveLength(1)
+    watched.stop()
+  })
+
+  it('is announced when a body memo’s whole anchor text is deleted', () => {
+    const doc = blank(['hello world'])
+    insertBodyMemo(doc, 0, 0, 5, 'body', 'body memo')
+    const editor = openEditor(doc)
+    const watched = watch('ieum:memo-removed')
+
+    editor.userEdit((current) => current.deleteText(0, 0, 0, 5))
+    expect(watched.seen).toHaveLength(1)
+    expect(watched.seen[0]).toMatchObject({ kind: 'memo-removed', count: 1 })
+    expect(editor.plugin.listMemos().count).toBe(0)
+    expect(editor.doc().getTextRange(0, 0, 0, 6)).toBe(' world')
+
+    expect(editor.plugin.undo(1, editor.plugin.foreignChanges())).toMatchObject({ ok: true })
+    expect(editor.plugin.listMemos().count).toBe(1)
+    expect(editor.doc().getTextRange(0, 0, 0, 11)).toBe('hello world')
+    expect(watched.seen).toHaveLength(1)
+    watched.stop()
+  })
+
+  it('is announced when a table-cell memo’s whole anchor text is deleted', () => {
+    const doc = blank(['title', ''])
+    const path = JSON.stringify([{ controlIndex: 0, cellIndex: 0, cellParaIndex: 0 }])
+    doc.pasteHtml(0, 1, 0, '<table><tr><td>cell text</td></tr></table>')
+    JSON.parse(
+      doc.insertMemoByPath(0, 1, path, 0, 4, JSON.stringify({ author: 'cell', text: 'cell memo' })),
+    )
+    const editor = openEditor(doc)
+    const watched = watch('ieum:memo-removed')
+
+    editor.userEdit((current) => current.deleteTextInCellByPath(0, 1, path, 0, 4))
+    expect(watched.seen).toHaveLength(1)
+    expect(watched.seen[0]).toMatchObject({ kind: 'memo-removed', count: 1 })
+    expect(editor.plugin.listMemos().count).toBe(0)
+
+    expect(editor.plugin.undo(1, editor.plugin.foreignChanges())).toMatchObject({ ok: true })
+    expect(editor.plugin.listMemos().count).toBe(1)
+    expect(watched.seen).toHaveLength(1)
+    watched.stop()
+  })
+
+  it('is announced when a text-box memo’s whole anchor text is deleted', () => {
+    const doc = blank(['anchor'])
+    const path = withTextBox(doc)
+    JSON.parse(
+      doc.insertMemoByPath(0, 0, path, 0, 3, JSON.stringify({ author: 'box', text: 'box memo' })),
+    )
+    const editor = openEditor(doc)
+    const watched = watch('ieum:memo-removed')
+
+    editor.userEdit((current) => current.deleteTextInCellByPath(0, 0, path, 0, 3))
+    expect(watched.seen).toHaveLength(1)
+    expect(watched.seen[0]).toMatchObject({ kind: 'memo-removed', count: 1 })
+    expect(editor.plugin.listMemos().count).toBe(0)
+
+    expect(editor.plugin.undo(1, editor.plugin.foreignChanges())).toMatchObject({ ok: true })
+    expect(editor.plugin.listMemos().count).toBe(1)
     expect(watched.seen).toHaveLength(1)
     watched.stop()
   })
@@ -328,5 +465,53 @@ describe('copy and paste', () => {
     expect(watched.seen).toHaveLength(1)
     expect(watched.seen[0]).toMatchObject({ kind: 'memo-not-copied', count: 1 })
     watched.stop()
+  })
+
+  it('does not report a same-editor paste that brought the memo', async () => {
+    const doc = blank(['source text', 'target '])
+    insertBodyMemo(doc, 0, 0, 6, 'copier', 'copy body')
+    const editor = openEditor(doc)
+    editor.cursor.selection = {
+      start: { sectionIndex: 0, paragraphIndex: 0, charOffset: 0 },
+      end: { sectionIndex: 0, paragraphIndex: 0, charOffset: 11 },
+    }
+    const watched = watch('ieum:memo-not-copied')
+
+    document.body.dispatchEvent(new Event('copy', { bubbles: true, cancelable: true }))
+    document.body.dispatchEvent(new Event('paste', { bubbles: true, cancelable: true }))
+    // the same editor's internal paste: the engine copies the memo with a new id
+    doc.copySelection(0, 0, 0, 0, doc.getParagraphLength(0, 0))
+    doc.pasteInternal(0, 1, 7)
+    await new Promise((resolve) => setTimeout(resolve, 10))
+
+    expect(editor.plugin.listMemos().count).toBe(2)
+    expect(watched.seen).toHaveLength(0)
+    watched.stop()
+  })
+
+  it('tells the app when another editor’s memo copy is pasted as text', async () => {
+    const globals = globalThis as unknown as { BroadcastChannel?: unknown }
+    const previous = globals.BroadcastChannel
+    globals.BroadcastChannel = FakeChannel
+    try {
+      const doc = blank(['hello world'])
+      openEditor(doc)
+      const watched = watch('ieum:memo-not-copied')
+
+      // the other editor instance copied two memos and told the channel so
+      const source = new FakeChannel('ieum:hwp-memo-copied')
+      source.postMessage({ kind: 'memo-copied', count: 2, at: Date.now(), source: 'another' })
+      document.body.dispatchEvent(new Event('paste', { bubbles: true, cancelable: true }))
+      // the system-clipboard paste lands as text only
+      doc.insertText(0, 0, 11, ' hello')
+      await new Promise((resolve) => setTimeout(resolve, 10))
+
+      expect(watched.seen).toHaveLength(1)
+      expect(watched.seen[0]).toMatchObject({ kind: 'memo-not-copied', count: 2 })
+      source.close()
+      watched.stop()
+    } finally {
+      globals.BroadcastChannel = previous
+    }
   })
 })
