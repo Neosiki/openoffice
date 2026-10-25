@@ -4678,6 +4678,25 @@ export class HwpDocument {
         return ret[0] >>> 0;
     }
     /**
+     * 문서의 메모를 문서 순서대로 반환한다.
+     *
+     * 반환: `[{id,index,author,date,text,place,sectionIndex,paraIndex,
+     * startCharIdx,endCharIdx,path,page,editable,readOnlyReason}]`
+     * @returns {string}
+     */
+    getMemoList() {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.hwpdocument_getMemoList(this.__wbg_ptr);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
+    }
+    /**
      * 각주/미주 편집 모드 진입 대상 조회
      * @param {number} section_idx
      * @param {number} para_idx
@@ -7073,6 +7092,71 @@ export class HwpDocument {
         return ret[0] >>> 0;
     }
     /**
+     * 한 문단의 범위에 메모를 넣는다. `json` = `{author,text}`.
+     *
+     * 반환: `{"ok":true,"id":N,"index":N}`. 실패는 `{ok:false,code,message}`.
+     * @param {number} section_idx
+     * @param {number} para_idx
+     * @param {number} start_char_idx
+     * @param {number} end_char_idx
+     * @param {string} json
+     * @returns {string}
+     */
+    insertMemo(section_idx, para_idx, start_char_idx, end_char_idx, json) {
+        let deferred3_0;
+        let deferred3_1;
+        try {
+            const ptr0 = passStringToWasm0(json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len0 = WASM_VECTOR_LEN;
+            const ret = wasm.hwpdocument_insertMemo(this.__wbg_ptr, section_idx, para_idx, start_char_idx, end_char_idx, ptr0, len0);
+            var ptr2 = ret[0];
+            var len2 = ret[1];
+            if (ret[3]) {
+                ptr2 = 0; len2 = 0;
+                throw takeFromExternrefTable0(ret[2]);
+            }
+            deferred3_0 = ptr2;
+            deferred3_1 = len2;
+            return getStringFromWasm0(ptr2, len2);
+        } finally {
+            wasm.__wbindgen_free(deferred3_0, deferred3_1, 1);
+        }
+    }
+    /**
+     * 표 칸·글상자 안의 범위에 메모를 넣는다.
+     *
+     * `path_json` = `[{"controlIndex":N,"cellIndex":N,"cellParaIndex":N}, …]`.
+     * @param {number} section_idx
+     * @param {number} para_idx
+     * @param {string} path_json
+     * @param {number} start_char_idx
+     * @param {number} end_char_idx
+     * @param {string} json
+     * @returns {string}
+     */
+    insertMemoByPath(section_idx, para_idx, path_json, start_char_idx, end_char_idx, json) {
+        let deferred4_0;
+        let deferred4_1;
+        try {
+            const ptr0 = passStringToWasm0(path_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len0 = WASM_VECTOR_LEN;
+            const ptr1 = passStringToWasm0(json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len1 = WASM_VECTOR_LEN;
+            const ret = wasm.hwpdocument_insertMemoByPath(this.__wbg_ptr, section_idx, para_idx, ptr0, len0, start_char_idx, end_char_idx, ptr1, len1);
+            var ptr3 = ret[0];
+            var len3 = ret[1];
+            if (ret[3]) {
+                ptr3 = 0; len3 = 0;
+                throw takeFromExternrefTable0(ret[2]);
+            }
+            deferred4_0 = ptr3;
+            deferred4_1 = len3;
+            return getStringFromWasm0(ptr3, len3);
+        } finally {
+            wasm.__wbindgen_free(deferred4_0, deferred4_1, 1);
+        }
+    }
+    /**
      * 새 번호 지정 컨트롤 삽입 (쪽 > 새 번호로 시작)
      * @param {number} section_idx
      * @param {number} para_idx
@@ -8701,6 +8785,29 @@ export class HwpDocument {
         }
     }
     /**
+     * 메모를 지운다. 기준 글자는 남긴다.
+     * @param {number} id
+     * @returns {string}
+     */
+    removeMemo(id) {
+        let deferred2_0;
+        let deferred2_1;
+        try {
+            const ret = wasm.hwpdocument_removeMemo(this.__wbg_ptr, id);
+            var ptr1 = ret[0];
+            var len1 = ret[1];
+            if (ret[3]) {
+                ptr1 = 0; len1 = 0;
+                throw takeFromExternrefTable0(ret[2]);
+            }
+            deferred2_0 = ptr1;
+            deferred2_1 = len1;
+            return getStringFromWasm0(ptr1, len1);
+        } finally {
+            wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+        }
+    }
+    /**
      * 책갈피 이름 변경
      * @param {number} sec
      * @param {number} para
@@ -10279,6 +10386,32 @@ export class HwpDocument {
             const ptr0 = passStringToWasm0(props_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
             const len0 = WASM_VECTOR_LEN;
             const ret = wasm.hwpdocument_setHeaderFooterPictureProperties(this.__wbg_ptr, section_idx, outer_para_idx, outer_control_idx, inner_para_idx, inner_control_idx, ptr0, len0);
+            var ptr2 = ret[0];
+            var len2 = ret[1];
+            if (ret[3]) {
+                ptr2 = 0; len2 = 0;
+                throw takeFromExternrefTable0(ret[2]);
+            }
+            deferred3_0 = ptr2;
+            deferred3_1 = len2;
+            return getStringFromWasm0(ptr2, len2);
+        } finally {
+            wasm.__wbindgen_free(deferred3_0, deferred3_1, 1);
+        }
+    }
+    /**
+     * 메모 본문을 바꾼다. 작성자·날짜·서식은 그대로다.
+     * @param {number} id
+     * @param {string} text
+     * @returns {string}
+     */
+    setMemoText(id, text) {
+        let deferred3_0;
+        let deferred3_1;
+        try {
+            const ptr0 = passStringToWasm0(text, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len0 = WASM_VECTOR_LEN;
+            const ret = wasm.hwpdocument_setMemoText(this.__wbg_ptr, id, ptr0, len0);
             var ptr2 = ret[0];
             var len2 = ret[1];
             if (ret[3]) {
