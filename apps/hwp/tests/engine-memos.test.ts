@@ -417,6 +417,66 @@ describe('editing memos', () => {
     }
   })
 
+  it('deletes a body memo when its whole anchor text is deleted', () => {
+    const doc = blank('hello world')
+    insert(doc, 0, 5, 'tester', 'memo body')
+    expect(JSON.parse(doc.deleteText(0, 0, 0, 5))).toMatchObject({ ok: true })
+    expect(memos(doc)).toEqual([])
+    expect(JSON.parse(doc.getTextFileUnicode())).toContain(' world')
+    for (const bytes of [doc.exportHwp(), doc.exportHwpx()]) {
+      expect(memos(new HwpDocument(bytes))).toEqual([])
+    }
+  })
+
+  it('deletes a body memo through deleteRange', () => {
+    const doc = blank('hello world')
+    insert(doc, 0, 5, 'tester', 'memo body')
+    expect(JSON.parse(doc.deleteRange(0, 0, 0, 0, 5))).toMatchObject({ ok: true })
+    expect(memos(doc)).toEqual([])
+  })
+
+  it('keeps a memo whose anchor text is only partly deleted', () => {
+    const doc = blank('hello world')
+    const created = insert(doc, 0, 5, 'tester', 'memo body')
+    doc.deleteText(0, 0, 1, 2)
+    const list = memos(doc)
+    expect(list).toHaveLength(1)
+    expect(list[0]).toMatchObject({
+      id: created.id,
+      text: 'memo body',
+      startCharIdx: 0,
+      endCharIdx: 3,
+    })
+  })
+
+  it('deletes a table-cell memo when its whole anchor text is deleted', () => {
+    const { doc, path } = tableDocument()
+    insertAtPath(doc, 0, 1, path, 0, 4, 'cell author', 'cell memo')
+    expect(JSON.parse(doc.deleteTextInCell(0, 1, 0, 0, 0, 0, 4))).toMatchObject({ ok: true })
+    expect(memos(doc)).toEqual([])
+    for (const bytes of [doc.exportHwp(), doc.exportHwpx()]) {
+      expect(memos(new HwpDocument(bytes))).toEqual([])
+    }
+  })
+
+  it('deletes a text-box memo when its whole anchor text is deleted', () => {
+    const { doc, path } = textBoxDocument()
+    insertAtPath(doc, 0, 0, path, 0, 3, 'box author', 'box memo')
+    expect(JSON.parse(doc.deleteTextInCellByPath(0, 0, path, 0, 3))).toMatchObject({ ok: true })
+    expect(memos(doc)).toEqual([])
+    for (const bytes of [doc.exportHwp(), doc.exportHwpx()]) {
+      expect(memos(new HwpDocument(bytes))).toEqual([])
+    }
+  })
+
+  it('does not delete a non-memo field when its text is deleted', () => {
+    const doc = blank('hello')
+    doc.insertClickHereField(0, 0, 0, 'guide', '', 'name', false)
+    expect(JSON.parse(doc.getFieldList())).toHaveLength(1)
+    doc.deleteText(0, 0, 0, 5)
+    expect(JSON.parse(doc.getFieldList())).toHaveLength(1)
+  })
+
   it('inserts, edits and removes a memo in a table cell', () => {
     const { doc, path } = tableDocument()
     const created = insertAtPath(doc, 0, 1, path, 0, 4, 'cell author', 'cell memo')
