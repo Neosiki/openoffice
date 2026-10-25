@@ -522,8 +522,8 @@ function registerHwpIpc(): void {
         // (decision 0036). This runs before the backup and the write, so neither
         // happens when the save is declined.
         const recorded = recordedDiskState(wcId, target)
-        // today only tests pass auto: HWP has no autosave yet, so every real
-        // save is manual; a future autosave must send the flag through commit-save
+        // the app's 30-second autosave sends auto: true, so a copy-pair conflict
+        // stands down quietly instead of asking
         if (auto === true) {
           if (await shouldDeferAutoSave(target, recorded)) {
             return done({ ok: false, error: EXTERNAL_MODIFIED })

@@ -28,7 +28,7 @@ Aturannya: ekstensi dipertahankan otomatis; karakter terlarang, titik di akhir, 
 - **⌘S / ctrl+S** menyimpan file saat ini; file tanpa nama akan lebih dulu meminta lokasi dan nama.
 - **Simpan Sebagai…** menulis berkas baru dan membiarkan aslinya tidak tersentuh; penyuntingan setelahnya menyasar berkas baru.
 - Setiap penyimpanan bersifat atomik (berkas sementara + ganti nama); berhenti di tengah penulisan tidak akan merusak file.
-- Simpan Otomatis baru aktif setelah penyimpanan manual pertama (lihat [Mulai cepat](help://getting-started)).
+- Simpan Otomatis mengikuti tombol di setiap editor; dokumen baru tanpa berkas sendiri mulai setelah penyimpanan pertamanya (lihat [Mulai cepat](help://getting-started)).
 
 ## Ekspor ke PDF
 

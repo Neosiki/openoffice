@@ -9,6 +9,8 @@ export const en = {
   fileSaveAs: 'Save As…',
   fileExportPdf: 'Export as PDF…',
   filePrint: 'Print…',
+  autoSave: 'Auto save',
+  autoSaveTip: 'Saves every 30 seconds and when the window loses focus',
   printPreparing: 'Preparing pages… ({done}/{total})',
   printSending: 'Sending the pages…',
   pdfFailed: 'The document could not be exported as PDF.',

@@ -38,7 +38,7 @@ Les fichiers .odt (texte OpenDocument, le format qu'enregistrent Hancom Office, 
 ## Le modèle d’enregistrement
 
 - **Enregistrement manuel** : ⌘S/ctrl+S, ou Fichier ▸ Enregistrer / Enregistrer sous. Le premier enregistrement demande l’emplacement et le nom.
-- **L’enregistrement automatique** ne s’active qu’après avoir enregistré le fichier manuellement au moins une fois — un PDF que vous ne faites que lire n’est jamais réécrit en silence. Il se déclenche peu après une modification du contenu.
+- **L’enregistrement automatique** suit le commutateur de chaque éditeur (et la valeur par défaut de l’application). Un PDF que vous ne faites que lire n’est jamais réécrit en silence, et un nouveau document sans fichier ne s’enregistre automatiquement qu’après sa première sauvegarde.
 - Fermer un onglet avec des modifications non enregistrées demande d’abord Enregistrer / Supprimer / Annuler.
 - Chaque écriture est atomique (fichier temporaire puis renommage) : une coupure de courant ne peut pas laisser un fichier à moitié écrit.
 

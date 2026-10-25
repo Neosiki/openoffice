@@ -8,6 +8,8 @@ export const zh = {
   fileSaveAs: '另存为…',
   fileExportPdf: '导出为 PDF…',
   filePrint: '打印…',
+  autoSave: '自动保存',
+  autoSaveTip: '每 30 秒及窗口失焦时自动保存',
   printPreparing: '正在准备打印页面… ({done}/{total})',
   printSending: '正在发送页面…',
   pdfFailed: '无法导出为 PDF。',

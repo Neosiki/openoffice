@@ -9,6 +9,8 @@ export const ko = {
   fileSaveAs: '다른 이름으로 저장…',
   fileExportPdf: 'PDF로 내보내기…',
   filePrint: '인쇄…',
+  autoSave: '자동 저장',
+  autoSaveTip: '30초마다 및 창이 포커스를 잃을 때 자동 저장',
   printPreparing: '쪽을 준비하는 중… ({done}/{total})',
   printSending: '쪽을 보내는 중…',
   pdfFailed: 'PDF로 내보내지 못했습니다.',

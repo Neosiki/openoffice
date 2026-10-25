@@ -9,6 +9,8 @@ export const ar = {
   fileSaveAs: 'حفظ باسم…',
   fileExportPdf: 'تصدير بتنسيق PDF…',
   filePrint: 'طباعة…',
+  autoSave: 'حفظ تلقائي',
+  autoSaveTip: 'يحفظ كل 30 ثانية وعند فقدان النافذة للتركيز',
   printPreparing: 'جارٍ تجهيز الصفحات… ({done}/{total})',
   printSending: 'جارٍ إرسال الصفحات…',
   pdfFailed: 'تعذّر تصدير المستند بتنسيق PDF.',

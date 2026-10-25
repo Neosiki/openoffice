@@ -8,6 +8,7 @@ import {
   presentationKeyOf,
   skillTemplateText,
   templateDocumentOf,
+  useAutoSavePref,
   useSplitPaneFocusPing,
   type TemplateDocument,
 } from '@genoffice/ui'
@@ -25,6 +26,7 @@ import {
   type RecoveryCopier,
 } from './recovery-flow'
 import { runSave, type SaveEditorPort } from './save-flow'
+import { AUTOSAVE_IDLE_MS, startAutosave } from './autosave-flow'
 import { PASSWORD_FLAG } from '../../scripts/rhwp-patches.mjs'
 import { STUDIO_SETTINGS_KEY, seededStudioSettings, studioUrl } from './studio-settings'
 import { hwpFormatOfPath } from '../shared/ipc'
@@ -96,6 +98,10 @@ export default function App() {
   const hostRef = useRef<HTMLDivElement>(null)
   const editorRef = useRef<RhwpEditor | null>(null)
   const savingRef = useRef(false)
+  /** resolved when the save in flight finishes, so a manual save can queue behind an autosave */
+  const savingDoneRef = useRef<Promise<void> | null>(null)
+  /** last key, click or paste in the editor (autosave waits for a pause) */
+  const lastInputAtRef = useRef(0)
   /** the format the document was opened in: what it is exported as when it is read */
   const formatRef = useRef<HwpFormat>('hwp')
   const [phase, setPhase] = useState<Phase>('booting')
@@ -105,6 +111,7 @@ export default function App() {
   const prePresentChromeRef = useRef<ChromeVisibility | null>(null)
   const [notice, setNotice] = useState<Notice | null>(null)
   const [aiOpen, setAiOpen] = useState(() => aiPanelInitiallyOpen(AI_OPEN_KEY))
+  const [autoSave, setAutoSave] = useAutoSavePref('hwpapp.autoSave', window.hwpApi)
   /** the file the document is in: the AI conversation is kept with it */
   const [filePath, setFilePath] = useState<string | null>(null)
   /** an untitled copy's name (a skill template's): the title it has until its first save */
@@ -267,12 +274,24 @@ export default function App() {
   }, [phase, agentBridge])
 
   const save = useCallback(
-    async (mode: SaveMode): Promise<boolean> => {
+    async (mode: SaveMode, automatic = false): Promise<boolean> => {
       const editor = editorRef.current
-      if (!editor || savingRef.current) return false
+      if (!editor) return false
+      // a manual save waits for an autosave already running; an automatic one lets the
+      // save in flight stand for it (no second export, and no backoff)
+      while (savingRef.current) {
+        if (automatic) return true
+        const done = savingDoneRef.current
+        if (!done) break
+        await done
+      }
+      if (savingRef.current || editorRef.current !== editor) return false
       savingRef.current = true
+      let release!: () => void
+      const done = new Promise<void>((resolve) => (release = resolve))
+      savingDoneRef.current = done
       try {
-        const outcome = await runSave(savePortOf(editor), window.hwpApi, mode)
+        const outcome = await runSave(savePortOf(editor), window.hwpApi, mode, automatic)
         if (outcome.kind === 'saved') {
           restoredRef.current = false
           copierRef.current?.saved()
@@ -285,32 +304,39 @@ export default function App() {
               key: 'savedTailsLost',
               ...(backup ? { detail: t('backupKept', backup) } : {}),
             })
-          } else {
+          } else if (!automatic) {
             setNotice(backup ? { tone: 'info', key: 'backupKept', params: backup } : null)
           }
           return true
         }
         if (outcome.kind === 'failed') {
-          setNotice({
-            tone: 'error',
-            key:
-              outcome.reason === 'protected'
-                ? 'saveProtected'
-                : outcome.reason === 'tracked'
-                  ? 'saveTracked'
-                  : outcome.reason === 'verify'
-                    ? 'saveVerifyFailed'
-                    : 'saveFailed',
-            ...(outcome.reason === 'verify'
-              ? { detail: t('saveVerifyHint') }
-              : outcome.detail
-                ? { detail: outcome.detail }
-                : {}),
-          })
+          // a protected or tracked document cannot be saved by this path at all;
+          // the manual save explains that once instead of every autosave backoff
+          const propertyFailure = outcome.reason === 'protected' || outcome.reason === 'tracked'
+          if (!automatic || !propertyFailure) {
+            setNotice({
+              tone: 'error',
+              key:
+                outcome.reason === 'protected'
+                  ? 'saveProtected'
+                  : outcome.reason === 'tracked'
+                    ? 'saveTracked'
+                    : outcome.reason === 'verify'
+                      ? 'saveVerifyFailed'
+                      : 'saveFailed',
+              ...(outcome.reason === 'verify'
+                ? { detail: t('saveVerifyHint') }
+                : outcome.detail
+                  ? { detail: outcome.detail }
+                  : {}),
+            })
+          }
         }
         return false
       } finally {
         savingRef.current = false
+        release()
+        if (savingDoneRef.current === done) savingDoneRef.current = null
       }
     },
     [t],
@@ -366,8 +392,14 @@ export default function App() {
       if (opened.notice) setNotice({ tone: 'info', text: opened.notice, sticky: true })
     })()
     const frame = editor.element.contentWindow
-    const inEditor = () => copier.noteInput()
-    const elsewhere = () => copier.noteInput(false)
+    const inEditor = () => {
+      lastInputAtRef.current = Date.now()
+      copier.noteInput()
+    }
+    const elsewhere = () => {
+      lastInputAtRef.current = Date.now()
+      copier.noteInput(false)
+    }
     const editorEvents = [
       'keydown',
       'input',
@@ -402,10 +434,10 @@ export default function App() {
 
   // saves asked for by the menu, the shortcut and the close prompt
   useEffect(() => {
-    const canSave = () => phase === 'ready' && !savingRef.current
+    const ready = () => phase === 'ready'
     const offSave = window.hwpApi.onSaveRequest((mode) => {
       // the main process is waiting on this request; decline it rather than leave it hanging
-      if (!canSave()) {
+      if (!ready()) {
         window.hwpApi.abortSave()
         return
       }
@@ -418,13 +450,27 @@ export default function App() {
             .context()
             .then((context) => context.isDirty !== false || restoredRef.current)
             .catch(() => true))
+        // save() queues behind an autosave already running; the main process is answered
+        // when that one (and this save) finish
         if (dirty) await save(mode)
         else window.hwpApi.abortSave()
       })()
     })
     const offClose = window.hwpApi.onCloseSaveRequest(() => {
-      if (!canSave()) window.hwpApi.sendCloseSaveResult(false)
-      else void save('save').then((ok) => window.hwpApi.sendCloseSaveResult(ok))
+      if (!ready()) {
+        window.hwpApi.sendCloseSaveResult(false)
+        return
+      }
+      void (async () => {
+        // an autosave already running may be exactly what the close prompt is about
+        const running = savingDoneRef.current
+        if (savingRef.current && running) await running
+        const dirty = await editorRef.current?.commands
+          .context()
+          .then((context) => context.isDirty !== false || restoredRef.current)
+          .catch(() => true)
+        window.hwpApi.sendCloseSaveResult(dirty ? await save('save') : true)
+      })()
     })
     return () => {
       offSave()
@@ -463,6 +509,32 @@ export default function App() {
       }),
     [phase, agentBridge],
   )
+
+  // autosave to the document's own file: 30 s and window blur, after the user has
+  // paused (exporting a whole HWP document costs more than the other editors' saves)
+  useEffect(() => {
+    if (!autoSave || phase !== 'ready' || !filePath) return
+    const editor = editorRef.current
+    if (!editor) return
+    const handle = startAutosave({
+      shouldSave: async () => {
+        if (
+          savingRef.current ||
+          printingRef.current ||
+          presentingRef.current ||
+          copierRef.current?.busy()
+        )
+          return false
+        if (Date.now() - lastInputAtRef.current < AUTOSAVE_IDLE_MS) return false
+        return editor.commands
+          .context()
+          .then((context) => context.isDirty === true || restoredRef.current)
+          .catch(() => false)
+      },
+      save: () => save('save', true),
+    })
+    return () => handle.stop()
+  }, [autoSave, phase, filePath, save])
 
   // the document as it is now, for a reader outside the editor (the MCP tool that reads
   // open documents): exported in its own format, never written anywhere
@@ -600,6 +672,19 @@ export default function App() {
 
   return (
     <div className={`hwp-app${presenting ? ' hwp-presenting' : ''}`} data-phase={phase}>
+      {phase === 'ready' && (
+        <div className="hwp-topbar">
+          <label className={`autosave-toggle${autoSave ? ' on' : ''}`} data-tip={t('autoSaveTip')}>
+            <span className="autosave-knob" />
+            <span className="autosave-text">{t('autoSave')}</span>
+            <input
+              type="checkbox"
+              checked={autoSave}
+              onChange={(e) => setAutoSave(e.target.checked)}
+            />
+          </label>
+        </div>
+      )}
       <div className="app-main">
         {/* the assistant works on an open document, so it appears with one */}
         {phase === 'ready' && (

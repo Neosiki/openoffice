@@ -9,6 +9,8 @@ export const id = {
   fileSaveAs: 'Simpan Sebagai…',
   fileExportPdf: 'Ekspor sebagai PDF…',
   filePrint: 'Cetak…',
+  autoSave: 'Simpan otomatis',
+  autoSaveTip: 'Menyimpan setiap 30 detik dan saat jendela kehilangan fokus',
   printPreparing: 'Menyiapkan halaman… ({done}/{total})',
   printSending: 'Mengirim halaman…',
   pdfFailed: 'Dokumen tidak dapat diekspor sebagai PDF.',

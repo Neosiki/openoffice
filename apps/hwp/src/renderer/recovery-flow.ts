@@ -83,6 +83,8 @@ export interface RecoveryCopier {
   reset(): void
   /** a save landed: what was unsaved is in the file now */
   saved(): void
+  /** a copy is being exported or written */
+  busy(): boolean
   /** the copy in progress, if any, has ended */
   settled(): Promise<void>
 }
@@ -172,6 +174,9 @@ export function createRecoveryCopier(options: RecoveryCopierOptions): RecoveryCo
     },
     saved() {
       changed = false
+    },
+    busy() {
+      return inFlight !== null
     },
     async settled() {
       if (inFlight) await inFlight

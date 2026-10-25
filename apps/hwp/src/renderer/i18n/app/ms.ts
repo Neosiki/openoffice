@@ -9,6 +9,8 @@ export const ms = {
   fileSaveAs: 'Simpan Sebagai…',
   fileExportPdf: 'Eksport sebagai PDF…',
   filePrint: 'Cetak…',
+  autoSave: 'Simpan automatik',
+  autoSaveTip: 'Menyimpan setiap 30 saat dan apabila tetingkap hilang fokus',
   printPreparing: 'Menyediakan halaman… ({done}/{total})',
   printSending: 'Menghantar halaman…',
   pdfFailed: 'Dokumen tidak dapat dieksport sebagai PDF.',

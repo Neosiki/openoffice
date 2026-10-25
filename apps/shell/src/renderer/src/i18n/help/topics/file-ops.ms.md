@@ -28,7 +28,7 @@ Peraturannya ialah seperti berikut. Sambungan dikekalkan secara automatik. Aksar
 - **⌘S atau ctrl+S** menyimpan fail semasa. Fail tanpa tajuk akan meminta lokasi dan nama terlebih dahulu.
 - **Simpan Sebagai** menulis fail baharu dan membiarkan fail asal tidak berubah. Suntingan selepas itu akan disimpan ke fail baharu itu.
 - Setiap simpanan bersifat atomik, iaitu melalui fail sementara dan penamaan semula. Menutup aplikasi di tengah-tengah penulisan tidak akan merosakkan fail.
-- Autosimpan hanya bermula selepas simpanan manual yang pertama. Lihat [Mula pantas](help://getting-started).
+- Simpan automatik mengikut suis setiap editor; dokumen baharu tanpa fail sendiri bermula selepas simpanan pertamanya (lihat [Mula pantas](help://getting-started)).
 
 ## Eksport ke PDF
 
