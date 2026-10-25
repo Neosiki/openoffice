@@ -94,6 +94,193 @@ index 5d8475153..1ace6fcbd 100755
  
          let imported_bin = pool.imported();
          pool.restore(&mut self.document);
+diff --git a/src/document_core/commands/text_editing.rs b/src/document_core/commands/text_editing.rs
+index 9f6f809d7..e19eda25e 100644
+--- a/src/document_core/commands/text_editing.rs
++++ b/src/document_core/commands/text_editing.rs
+@@ -1244,8 +1244,12 @@ impl DocumentCore {
+         self.document.sections[section_idx].raw_stream = None;
+ 
+         let deleted_count = if delete_count > 0 {
+-            self.document.sections[section_idx].paragraphs[para_idx]
+-                .delete_text_at(char_offset, delete_count)
++            let para = &mut self.document.sections[section_idx].paragraphs[para_idx];
++            crate::document_core::queries::memo_query::delete_text_at_keeping_memos(
++                para,
++                char_offset,
++                delete_count,
++            )
+         } else {
+             0
+         };
+@@ -1608,7 +1612,11 @@ impl DocumentCore {
+ 
+         // 텍스트 삭제
+         let apply_delete = |para: &mut Paragraph| {
+-            para.delete_text_at(char_offset, count);
++            crate::document_core::queries::memo_query::delete_text_at_keeping_memos(
++                para,
++                char_offset,
++                count,
++            );
+         };
+         let picture_band_applied =
+             self.apply_body_edit_through_picture_band(section_idx, para_idx, &apply_delete)?;
+@@ -1898,7 +1906,11 @@ impl DocumentCore {
+         let units_fp_before =
+             crate::renderer::layout::LayoutEngine::cell_paragraph_units_fingerprint(cell_para);
+         let deleted_count = if delete_count > 0 {
+-            cell_para.delete_text_at(char_offset, delete_count)
++            crate::document_core::queries::memo_query::delete_text_at_keeping_memos(
++                cell_para,
++                char_offset,
++                delete_count,
++            )
+         } else {
+             0
+         };
+@@ -2258,7 +2270,11 @@ impl DocumentCore {
+             );
+         let units_fp_before =
+             crate::renderer::layout::LayoutEngine::cell_paragraph_units_fingerprint(cell_para);
+-        let deleted_count = cell_para.delete_text_at(char_offset, count);
++        let deleted_count = crate::document_core::queries::memo_query::delete_text_at_keeping_memos(
++            cell_para,
++            char_offset,
++            count,
++        );
+ 
+         // 부모 컨트롤 dirty 마킹 (표 또는 글상자)
+         self.mark_cell_control_dirty(section_idx, parent_para_idx, control_idx);
+@@ -3320,7 +3336,11 @@ impl DocumentCore {
+                 if count > 0 {
+                     let cell_para =
+                         self.get_cell_paragraph_mut(section_idx, ppi, ci, cei, start_para)?;
+-                    cell_para.delete_text_at(start_offset, count);
++                    crate::document_core::queries::memo_query::delete_text_at_keeping_memos(
++                        cell_para,
++                        start_offset,
++                        count,
++                    );
+                     self.reflow_cell_paragraph(section_idx, ppi, ci, cei, start_para);
+                 }
+             } else {
+@@ -3329,7 +3349,9 @@ impl DocumentCore {
+                 if end_offset > 0 {
+                     let cell_para =
+                         self.get_cell_paragraph_mut(section_idx, ppi, ci, cei, end_para)?;
+-                    cell_para.delete_text_at(0, end_offset);
++                    crate::document_core::queries::memo_query::delete_text_at_keeping_memos(
++                        cell_para, 0, end_offset,
++                    );
+                 }
+                 // 2) 중간 문단 역순 제거 — 셀 내 문단은 cell.paragraphs에서 직접 제거
+                 for mid_para in (start_para + 1..end_para).rev() {
+@@ -3344,7 +3366,11 @@ impl DocumentCore {
+                         self.get_cell_paragraph_mut(section_idx, ppi, ci, cei, start_para)?;
+                     let para_len = cell_para.text.chars().count();
+                     if start_offset < para_len {
+-                        cell_para.delete_text_at(start_offset, para_len - start_offset);
++                        crate::document_core::queries::memo_query::delete_text_at_keeping_memos(
++                            cell_para,
++                            start_offset,
++                            para_len - start_offset,
++                        );
+                     }
+                 }
+                 // 4) 첫-마지막 문단 병합 (마지막 문단이 이제 start_para+1에 위치)
+@@ -3376,8 +3402,12 @@ impl DocumentCore {
+                 // 같은 문단 내 삭제
+                 let count = end_offset - start_offset;
+                 if count > 0 {
+-                    self.document.sections[section_idx].paragraphs[start_para]
+-                        .delete_text_at(start_offset, count);
++                    let para = &mut self.document.sections[section_idx].paragraphs[start_para];
++                    crate::document_core::queries::memo_query::delete_text_at_keeping_memos(
++                        para,
++                        start_offset,
++                        count,
++                    );
+                     // [Task #2299] 리셋 판별용 — reflow 이전 저장 흐름 end 캡처.
+                     let stored_end_for_reset = crate::renderer::composer::paragraph_flow_end(
+                         &self.document.sections[section_idx].paragraphs[start_para],
+@@ -3399,8 +3429,10 @@ impl DocumentCore {
+             } else {
+                 // 1) 마지막 문단 앞부분 삭제
+                 if end_offset > 0 {
+-                    self.document.sections[section_idx].paragraphs[end_para]
+-                        .delete_text_at(0, end_offset);
++                    let para = &mut self.document.sections[section_idx].paragraphs[end_para];
++                    crate::document_core::queries::memo_query::delete_text_at_keeping_memos(
++                        para, 0, end_offset,
++                    );
+                 }
+                 // 2) 중간 문단 역순 제거 (composed도 동기)
+                 for mid_para in (start_para + 1..end_para).rev() {
+@@ -3417,8 +3449,12 @@ impl DocumentCore {
+                         .chars()
+                         .count();
+                     if start_offset < para_len {
+-                        self.document.sections[section_idx].paragraphs[start_para]
+-                            .delete_text_at(start_offset, para_len - start_offset);
++                        let para = &mut self.document.sections[section_idx].paragraphs[start_para];
++                        crate::document_core::queries::memo_query::delete_text_at_keeping_memos(
++                            para,
++                            start_offset,
++                            para_len - start_offset,
++                        );
+                     }
+                 }
+                 // 4) 첫-마지막 문단 병합 (마지막 문단이 이제 start_para+1에 위치)
+@@ -5908,7 +5944,11 @@ impl DocumentCore {
+         }
+ 
+         let cell_para = self.get_cell_paragraph_mut_by_path(section_idx, parent_para_idx, path)?;
+-        cell_para.delete_text_at(char_offset, count);
++        crate::document_core::queries::memo_query::delete_text_at_keeping_memos(
++            cell_para,
++            char_offset,
++            count,
++        );
+ 
+         // [#2755] 깊이 ≥ 2 중첩 셀도 flat `delete_text_in_cell_native` 처럼 최내곽 셀 폭으로
+         // 재래핑하고 vpos 를 재계산한다(깊이 1 은 위 위임 가드가 flat 경로로 처리).
+@@ -5962,14 +6002,20 @@ impl DocumentCore {
+                 let count = end_offset.saturating_sub(start_offset);
+                 if count > 0 {
+                     if let Some(p) = paras.get_mut(start_para) {
+-                        p.delete_text_at(start_offset, count);
++                        crate::document_core::queries::memo_query::delete_text_at_keeping_memos(
++                            p,
++                            start_offset,
++                            count,
++                        );
+                     }
+                 }
+             } else {
+                 // 1) 마지막 문단 앞부분 삭제
+                 if end_offset > 0 {
+                     if let Some(p) = paras.get_mut(end_para) {
+-                        p.delete_text_at(0, end_offset);
++                        crate::document_core::queries::memo_query::delete_text_at_keeping_memos(
++                            p, 0, end_offset,
++                        );
+                     }
+                 }
+                 // 2) 중간 문단 역순 제거
+@@ -5982,7 +6028,11 @@ impl DocumentCore {
+                 if let Some(p) = paras.get_mut(start_para) {
+                     let para_len = p.text.chars().count();
+                     if start_offset < para_len {
+-                        p.delete_text_at(start_offset, para_len - start_offset);
++                        crate::document_core::queries::memo_query::delete_text_at_keeping_memos(
++                            p,
++                            start_offset,
++                            para_len - start_offset,
++                        );
+                     }
+                 }
+                 // 4) 첫-마지막 문단 병합 (마지막이 이제 start_para+1)
 diff --git a/src/document_core/queries/field_query.rs b/src/document_core/queries/field_query.rs
 index e76e10cff..96c5486c7 100644
 --- a/src/document_core/queries/field_query.rs
@@ -118,10 +305,10 @@ index e76e10cff..96c5486c7 100644
          || para.text.contains('\u{fffc}')
 diff --git a/src/document_core/queries/memo_query.rs b/src/document_core/queries/memo_query.rs
 new file mode 100644
-index 000000000..01786b0c4
+index 000000000..8f5801991
 --- /dev/null
 +++ b/src/document_core/queries/memo_query.rs
-@@ -0,0 +1,2005 @@
+@@ -0,0 +1,2080 @@
 +//! Memo (HWP `MEMO/` field) reading and editing.
 +//!
 +//! A memo is a field control whose command starts with `MEMO/` and whose body
@@ -672,6 +859,81 @@ index 000000000..01786b0c4
 +    }
 +    drop_ends(paragraphs, &memo_ids)?;
 +    Ok(())
++}
++
++/// Delete text, but drop a memo whose whole non-empty anchor disappears in this
++/// edit. A memo whose anchor is only shortened stays. Memos that were already
++/// zero-length anchors are untouched.
++pub(crate) fn delete_text_at_keeping_memos(
++    para: &mut Paragraph,
++    char_offset: usize,
++    count: usize,
++) -> usize {
++    if count == 0 {
++        return 0;
++    }
++    let mut anchored_memos: Vec<(usize, u32)> = Vec::new();
++    for range in &para.field_ranges {
++        if range.start_char_idx >= range.end_char_idx {
++            continue;
++        }
++        if let Some(Control::Field(field)) = para.controls.get(range.control_idx) {
++            if is_memo_field(field) {
++                anchored_memos.push((range.control_idx, field.field_id));
++            }
++        }
++    }
++    let deleted = para.delete_text_at(char_offset, count);
++    if deleted == 0 {
++        return 0;
++    }
++
++    // Later controls first: removing one shifts the indices after it.
++    anchored_memos.sort_by(|a, b| b.0.cmp(&a.0));
++    for (control_idx, field_id) in anchored_memos {
++        let Some(range_idx) = memo_field_range_index(para, control_idx) else {
++            continue;
++        };
++        let collapsed = {
++            let range = &para.field_ranges[range_idx];
++            range.start_char_idx == range.end_char_idx
++        };
++        if !collapsed {
++            continue;
++        }
++        let still_memo = matches!(
++            para.controls.get(control_idx),
++            Some(Control::Field(field))
++                if is_memo_field(field) && (field_id == 0 || field.field_id == field_id)
++        );
++        if !still_memo {
++            continue;
++        }
++        if remove_memo_field_in_para(para, control_idx, range_idx).is_err() {
++            // The raw slot layout was already unusual; rebuild the paragraph
++            // without the field rather than leave a zero-length memo behind.
++            drop_memo_control_fallback(para, control_idx);
++        }
++    }
++    deleted
++}
++
++fn drop_memo_control_fallback(para: &mut Paragraph, control_idx: usize) {
++    para.field_ranges
++        .retain(|range| range.control_idx != control_idx);
++    for range in &mut para.field_ranges {
++        if range.control_idx > control_idx {
++            range.control_idx -= 1;
++        }
++    }
++    if control_idx < para.controls.len() {
++        para.controls.remove(control_idx);
++    }
++    if control_idx < para.ctrl_data_records.len() {
++        para.ctrl_data_records.remove(control_idx);
++    }
++    crate::document_core::queries::field_query::rebuild_char_offsets(para);
++    para.invalidate_layout_inputs();
 +}
 +
 +/// Drop memo fields that arrived through foreign/HTML paste: their HWPX body is
