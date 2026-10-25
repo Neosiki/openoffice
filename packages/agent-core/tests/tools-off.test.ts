@@ -6,6 +6,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import {
   AgentLoop,
+  COMPLETED_VIA_TOOLS_TEXT,
   TOOLS_UNAVAILABLE_NOTE,
   type AgentStreamCallbacks,
   type AgentStreamRequest,
@@ -80,7 +81,63 @@ describe('AgentLoop tools off', () => {
     expect(transport.requests[0]!.system).not.toContain(TOOLS_UNAVAILABLE_NOTE)
   })
 
-  it('keeps tools off for every turn of a multi-turn run', async () => {
+  it('never executes a tool call the model emits while tools are off', async () => {
+    const transport = recordingTransport([
+      (cb) => {
+        cb.onDelta('Suggested title: A better name.')
+        cb.onToolCall({ id: 'c1', name: 'edit_text', input: {} })
+        cb.onDone()
+      },
+    ])
+    const execute = vi.fn(() => ({ output: 'ok', summary: 'edited', mutated: true }))
+    const done = vi.fn()
+    const loop = new AgentLoop({
+      transport,
+      skill: makeSkill(execute),
+      toolsAllowed: () => false,
+      events: { onDone: done },
+    })
+    loop.run('q')
+    await flush()
+    await flush()
+    expect(execute).not.toHaveBeenCalled()
+    // no follow-up request: nothing went back to the model as a tool result
+    expect(transport.requests).toHaveLength(1)
+    expect(loop.messages.some((message) => message.role === 'tool')).toBe(false)
+    expect(done).toHaveBeenCalledTimes(1)
+    expect(done.mock.calls[0]![0]).toMatchObject({
+      text: 'Suggested title: A better name.',
+      cancelled: false,
+    })
+  })
+
+  it('handles an empty tools-off turn that only carried a tool call', async () => {
+    const transport = recordingTransport([
+      (cb) => {
+        cb.onToolCall({ id: 'c1', name: 'edit_text', input: {} })
+        cb.onDone()
+      },
+    ])
+    const execute = vi.fn(() => ({ output: 'ok', summary: 'edited', mutated: true }))
+    const done = vi.fn()
+    const loop = new AgentLoop({
+      transport,
+      skill: makeSkill(execute),
+      toolsAllowed: () => false,
+      events: { onDone: done },
+    })
+    loop.run('q')
+    await flush()
+    expect(execute).not.toHaveBeenCalled()
+    expect(transport.requests).toHaveLength(1)
+    expect(done).toHaveBeenCalledWith(expect.objectContaining({ text: '', cancelled: false }))
+    expect(loop.messages.at(-1)).toEqual({
+      role: 'assistant',
+      text: COMPLETED_VIA_TOOLS_TEXT,
+    })
+  })
+
+  it('still executes a tool call when toolsAllowed is true', async () => {
     const transport = recordingTransport([
       (cb) => {
         cb.onToolCall({ id: 'c1', name: 'edit_text', input: {} })
@@ -92,11 +149,31 @@ describe('AgentLoop tools off', () => {
       },
     ])
     const execute = vi.fn(() => ({ output: 'ok', summary: 'edited', mutated: true }))
-    const loop = new AgentLoop({
-      transport,
-      skill: makeSkill(execute),
-      toolsAllowed: () => false,
-    })
+    const loop = new AgentLoop({ transport, skill: makeSkill(execute), toolsAllowed: () => true })
+    loop.run('q')
+    await flush()
+    await flush()
+    expect(execute).toHaveBeenCalledTimes(1)
+    expect(transport.requests).toHaveLength(2)
+    expect(loop.messages.some((message) => message.role === 'tool')).toBe(true)
+  })
+
+  it('keeps tools off on a corrective turn', async () => {
+    const transport = recordingTransport([
+      (cb) => {
+        cb.onDelta('I edited the title.')
+        cb.onDone()
+      },
+      (cb) => {
+        cb.onDelta('I cannot edit the document; here is suggested text.')
+        cb.onDone()
+      },
+    ])
+    const skill: AgentSkill = {
+      ...makeSkill(),
+      verifyResponse: () => 'You cannot edit the document. Answer in text only.',
+    }
+    const loop = new AgentLoop({ transport, skill, toolsAllowed: () => false })
     loop.run('q')
     await flush()
     await flush()

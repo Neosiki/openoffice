@@ -75,7 +75,8 @@ export interface AgentLoopOptions<TSnapshot = unknown> {
   systemSuffix?(): string
   /**
    * Whether the selected model can call tools. False sends no tool definitions
-   * and tells the model to answer in text only; true or absent keeps the
+   * and tells the model to answer in text only; a tool call it emits anyway is
+   * ignored (never executed, no result sent back). True or absent keeps the
    * skill's tools. The app reads its model profile here, so the answer may
    * change between turns of one run.
    */
@@ -1020,6 +1021,9 @@ export class AgentLoop<TSnapshot = unknown> {
           },
           onToolCall: (call) => {
             if (generation !== this.generation || settled) return
+            // Tools are off for this model: a call it emits anyway must not run,
+            // and no tool result goes back, so the turn stays a text answer.
+            if (!toolsAllowed) return
             this.toolCalls.push(call)
           },
           onStopReason: (reason) => {
