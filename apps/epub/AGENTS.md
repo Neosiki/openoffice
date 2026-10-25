@@ -65,6 +65,11 @@
 - 장 틀 안의 입력·포커스 이벤트, 블록 사이 커서 이동, 초점을 잃을 때의 자동 저장은 jsdom 시험으로만 확인했다. 빌드한 앱의 Chromium에서 사람이 확인한다(`docs/tracking/status.md`).
 - 자세한 것은 `docs/tracking/findings.md`의 "EPUB:"로 시작하는 항목들.
 
+## 로컬 AI (결정 0067)
+
+- 책 번역 `translate/model-call.ts`는 `createModelCall` 하나마다 `contextGate` 하나를 쥐고 `runId`를 요청에 싣는다. `BookTranslation`은 책 번역 하나에 `runId` 하나를 넘긴다.
+- 문맥 확인을 거절하면 그 번역 작업은 `context-limit`으로 멈추고 모델을 부르지 않는다.
+
 ## 테스트
 
 - 실행: `npm run test -w @genoffice/epub`, `npm run typecheck -w @genoffice/epub`. 환경은 jsdom(`tests/setup.ts`)이다. 시험용 책은 `tests/helpers/book.ts`가 그때그때 만든다. 뒷단을 흉내 내는 것은 `tests/helpers/edit-backend.ts`, `translate-backend.ts`다.

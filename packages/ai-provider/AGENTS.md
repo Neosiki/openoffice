@@ -74,6 +74,14 @@
 - 키 제공자를 추가하려면 `AiProviderId`(`src/types.ts`)에 id, `AI_PROVIDERS`에 메타, `AI_PROVIDER_ADAPTERS`에 어댑터를 넣는다. 표가 `Record<AiProviderId, …>`라 하나라도 빠지면 타입 오류다. 이미지 입력을 못 받는 모델 id는 `modelLacksVision`에 함께 넣는다.
 - 진입점을 가려 쓴다. 렌더러와 preload가 값으로 import하는 것은 `/browser`뿐이고, 대표 진입점에서는 타입만 import한다(`contract.ts`가 타입만 import하는 이유다). `/subscription`, `/claude-code-cli`, `/codex-app-server`는 Node 전용이다. `/codex-image`는 비어 있고 `codexImageGenerationAvailable()`은 어느 프로세스에서도 `false`다. 이미지 생성은 지금 키 기반뿐이다.
 
+## 로컬 AI (결정 0067)
+
+- `src/local-models.ts`는 Ollama `/api/tags`·`/api/show`·`/api/ps`와 OpenAI 호환 `/v1/models`를 읽는다. 서버가 없거나 모양이 다르면 구조화된 오류를 돌려주고 던지지 않는다. 5초, 2MB, 2,000개 상한.
+- `src/local-test.ts`는 서버·모델·대화·도구 호출 네 가지를 확인한다. 도구 확인은 가짜 도구 하나만 보내고 앱 도구는 실행하지 않는다. 문서 내용을 싣지 않는다.
+- `src/local-profile.ts`는 모델별 문맥·도구·이미지와 출처(`server`/`user`/`test`)를 합친다. 사용자 값이 가장 세고, 모르는 값은 `false`가 아니다. `localContextLimit`은 활성 `custom`+`kind:'local'`일 때만 값을 준다.
+- `src/local-ipc.ts`의 파서가 `ai:local-models`·`ai:local-inspect`·`ai:local-test` 입력을 검사한다. `customEndpoint: ''`는 "없음"이고 `providers.custom`도 비운다.
+- 새 export는 `./local-models`, `./local-test`; `context-budget`은 `@genoffice/agent-core`의 것이다.
+
 ## 테스트
 
 - 실행: `npm run test -w @genoffice/ai-provider`(또는 이 폴더에서 `npx vitest run`), `npm run typecheck -w @genoffice/ai-provider`.

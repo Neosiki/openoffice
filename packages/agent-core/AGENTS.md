@@ -48,6 +48,12 @@
 - `streamText`는 큰 결과물(페이지 전체 등)을 도구 인자가 아닌 글로 받는다. 도구 인자는 JSON이 끝날 때까지 서버가 붙잡고 있어 중간 게이트웨이의 유휴 제한에 걸리기 때문이다.
 - `streamText`의 진행 알림(`onProgress`)은 첫 조각에 바로, 그 뒤로는 `progressIntervalMs`(기본 120ms)에 한 번 이하로 간다. 추출 함수가 받은 글 전체를 돌기 때문에 조각마다 부르면 글 길이의 제곱이 된다. 결과를 돌려주기 직전에 남은 알림을 먼저 보내므로, 받는 쪽은 지금처럼 마지막 상태까지 본다. 상한을 넘긴 조각은 알리지 않는다.
 
+## 로컬 AI (결정 0067)
+
+- `AgentLoop`는 `run()`마다 새 `runId`를 만들고 `transport.stream`에 싣는다. `toolsAllowed() === false`면 `tools: []`와 글만 쓰는 지시문을 보내고, 모델이 그래도 낸 도구 호출은 실행하지 않는다. 버린 호출은 "전달됨"으로 세어 같은 턴을 다시 보내지 않는다.
+- `createIpcTransport`는 `contextLimit`·`confirmContext`·`contextGate`를 받는다. 80%를 넘고 `runId`가 아직 확인되지 않았으면 한 번 묻고, 거절하면 `start`를 부르지 않고 `context-limit`으로 끝낸다. `skipContextGate`는 압축 요약 요청에만 쓴다.
+- PDF·EPUB 문서 작업은 `createModelCall` 하나가 `contextGate` 하나를 쥐고 `runId`를 자체 생성한다. 호출자는 `runId`만 넘긴다.
+
 ## 테스트
 
 - 실행: `npm run test -w @genoffice/agent-core`(또는 이 폴더에서 `npx vitest run`), `npm run typecheck -w @genoffice/agent-core`. Windows에서 전부 통과한다.

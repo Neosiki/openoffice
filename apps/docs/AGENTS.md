@@ -60,6 +60,11 @@ Word 문서(.docx)와 ODT(.odt) 에디터다. 그리고 배포되는 앱 전체�
 - 문서 바이트는 IPC 응답이 아니라 미디어 프로토콜의 일회용 주소로 렌더러에 건넨다(`byte-handoff.ts`). IPC 직렬화가 버퍼를 통째로 복사해 1GB 파일에서 메인 프로세스가 죽었기 때문이다.
 - 디자인 템플릿 글꼴은 설치 파일에 한 번만 들어 있고(`resources/template-fonts`) 렌더러 빌드 자산으로 import하지 않는다. 같은 미디어 프로토콜의 `template-fonts` 호스트가 목록에 있는 파일만 내주고(`main/lazy-media.ts`가 `@genoffice/electron-utils/template-font-response`로 답한다. 면 목록과 주소는 `@genoffice/ui/template-fonts`에 있다), 렌더러가 시작할 때 실제 패밀리 이름으로 등록한다(`renderer/template-fonts.ts`). 인쇄와 PDF 내보내기(창 없는 내보내기 포함)는 같은 렌더러에서 돌므로 따로 등록하지 않는다.
 
+## 로컬 AI (결정 0067)
+
+- `registerAiIpc`가 `ai:local-models`·`ai:local-inspect`·`ai:local-test`를 등록한다. 입력은 `local-ipc.ts` 파서로 검사하고, 실패는 `shape`로 답한다.
+- `ai:stream`은 활성 `custom`+`kind:'local'`일 때 그 서버의 `timeoutMs`를 `streamForProvider`에 넘기고, 기다리는 동안 `ai-keepalive.ts`의 `ping`을 보낸다. 다른 제공자에는 적용하지 않는다.
+
 ## 테스트
 
 - 실행: `npm run test -w @genoffice/docs`(또는 이 폴더에서 `npx vitest run`), `npm run typecheck -w @genoffice/docs`. 환경은 `jsdom`이다. docx 픽스처가 필요한 테스트가 있으므로 처음 한 번, 그리고 `packages/docx-engine`을 바꾼 뒤에는 저장소 루트에서 `npm run fixtures`를 돌린다.
