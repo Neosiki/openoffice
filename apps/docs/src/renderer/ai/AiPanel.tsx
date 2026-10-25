@@ -7,6 +7,7 @@ import {
   AiMark,
   AiPanelSideButton,
   AiModelPicker,
+  AiToolsUnsupportedNotice,
   type AiModelPickerBridge,
   AiQueueStrip,
   AI_QUEUE_LABELS,
@@ -46,6 +47,7 @@ import {
   type MindMapTreeNode,
 } from '@genoffice/agent-core'
 import type { AiSubscriptionProviderId, AiSubscriptionUsage } from '@genoffice/ai-provider/browser'
+import { localModelCapabilities } from '@genoffice/ai-provider/browser'
 import type {
   AiSettings,
   AiToolCapabilities,
@@ -982,6 +984,8 @@ export function AiPanel({
     loopRef.current = new AgentLoop<ProseMirrorNode>({
       transport: transportRef.current,
       systemSuffix: aiLangDirective,
+      // a local model that reported no tool support answers in text only
+      toolsAllowed: () => localModelCapabilities(settingsRef.current).tools !== false,
       skill: composeWithDrive('docs+files', '', () => loopRef.current?.messages ?? [], [
         // the reader's starred files; empty while the user stars nothing —
         // buildContext then returns '' and the skill stays out of the way.
@@ -1932,6 +1936,9 @@ export function AiPanel({
         )}
         {inputTruncated && (
           <AiInputTruncatedNotice lang={lang} onDismiss={() => setInputTruncated(false)} />
+        )}
+        {localModelCapabilities(liveSettings).tools === false && (
+          <AiToolsUnsupportedNotice lang={lang} />
         )}
         {attachNotice && <div className="ai-attach-notice">{attachNotice}</div>}
         {activePartial && (

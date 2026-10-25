@@ -457,6 +457,8 @@ export class BilingualActionsController {
       const ask = createModelCall({
         settings: () => route.settings,
         lang: () => this.deps.lang,
+        // one id for this page translation's calls: a large page is confirmed once
+        runId: crypto.randomUUID(),
         guard: async () => {
           const statuses = await attemptSubscription((s) => s.statuses())
           const current = await window.pdfApi?.getAiSettings().catch(() => null)
@@ -587,7 +589,12 @@ export class BilingualActionsController {
         return
       }
       if (abort.signal.aborted) return
-      const ask = createModelCall({ settings: () => route.settings, lang: () => this.deps.lang })
+      const ask = createModelCall({
+        settings: () => route.settings,
+        lang: () => this.deps.lang,
+        // this block's one call is its own run
+        runId: crypto.randomUUID(),
+      })
       const send: TranslationSend = (req, signal) =>
         ask(
           { system: req.system, messages: [{ role: 'user', text: req.prompt }], tools: [] },

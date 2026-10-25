@@ -206,6 +206,8 @@ export const PassageReading = forwardRef<PassageReadingHandle, PassageReadingPro
       const call = createModelCall({
         settings: () => route.settings,
         lang: () => propsRef.current.lang,
+        // this card's one call is its own run
+        runId: crypto.randomUUID(),
       })
       const text = await call(request, signal)
       return { text, provider: route.provider, model: route.model }

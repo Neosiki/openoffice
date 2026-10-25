@@ -163,6 +163,7 @@ import type {
   AiSubscriptionProviderId,
   AiSubscriptionUsage,
 } from '@genoffice/ai-provider/browser'
+import { localModelCapabilities } from '@genoffice/ai-provider/browser'
 import { type WorkbookOperation } from '@genoffice/xlsx-gateway/domain/workbook-dsl'
 import {
   columnLabel,
@@ -1562,6 +1563,11 @@ export function App({
         onInputTruncated: () => setInputTruncated(true),
       }),
       systemSuffix: aiLangDirective,
+      // a local model that reported no tool support answers in text only
+      toolsAllowed: () =>
+        aiSettingsRef.current
+          ? localModelCapabilities(aiSettingsRef.current).tools !== false
+          : true,
       skill: composeWithDrive('sheets+files', '', () => agentLoopRef.current?.messages ?? [], [
         createWorkbookSkill(sheetsSkillDeps()),
         createFilesSkill(availableAttachments),

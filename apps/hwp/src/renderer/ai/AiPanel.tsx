@@ -13,6 +13,7 @@ import {
   AiScopeQuote,
   type AiScopeQuoteData,
   AiSubscriptionUsageLine,
+  AiToolsUnsupportedNotice,
   AiTypingIndicator,
   Markdown,
   aiPanelWidthAtPointer,
@@ -53,6 +54,7 @@ import type {
   AiSubscriptionProviderId,
   AiSubscriptionUsage,
 } from '@genoffice/ai-provider/browser'
+import { localModelCapabilities } from '@genoffice/ai-provider/browser'
 import { aiLangDirective, t as tGlobal, useI18n } from '../i18n/locale'
 import sendEnterOn from '../assets/send-enter-on.png'
 import sendEnterOff from '../assets/send-enter-off.png'
@@ -593,6 +595,9 @@ export function AiPanel({
   if (!loopRef.current) {
     loopRef.current = new AgentLoop({
       transport: transportRef.current,
+      // a local model that reported no tool support answers in text only
+      toolsAllowed: () =>
+        settingsRef.current ? localModelCapabilities(settingsRef.current).tools !== false : true,
       skill: composeWithDrive('hwp+files', '', () => loopRef.current?.messages ?? [], [
         skillRef.current.skill,
         createFilesSkill(() => availableAttachmentsRef.current()),
@@ -1262,6 +1267,9 @@ export function AiPanel({
         )}
         {inputTruncated && (
           <AiInputTruncatedNotice lang={lang} onDismiss={() => setInputTruncated(false)} />
+        )}
+        {aiSettings !== null && localModelCapabilities(aiSettings).tools === false && (
+          <AiToolsUnsupportedNotice lang={lang} />
         )}
       </div>
 

@@ -8,6 +8,7 @@ import {
   AiFirstConnectionNotice,
   AiInputTruncatedNotice,
   AiMark,
+  AiToolsUnsupportedNotice,
   AiSubscriptionUsageLine,
   aiSubscriptionText,
   useAiSendGate,
@@ -37,6 +38,7 @@ import type {
   AiSubscriptionProviderId,
   AiSubscriptionUsage,
 } from '@genoffice/ai-provider'
+import { localModelCapabilities } from '@genoffice/ai-provider/browser'
 import { ATTACHMENT_IMAGE_EXTS } from '../../shared/ipc'
 import type { AttachmentAddResult, AttachmentMeta } from '../../shared/ipc'
 import {
@@ -888,6 +890,9 @@ export function AiPanel({
   if (!loopRef.current) {
     loopRef.current = new AgentLoop<DocSnapshot>({
       transport: transportRef.current,
+      // a local model that reported no tool support answers in text only
+      toolsAllowed: () =>
+        settingsRef.current ? localModelCapabilities(settingsRef.current).tools !== false : true,
       skill: composeWithDrive('html+search', '', () => loopRef.current?.messages ?? [], [
         createDocumentSkill({
           getText: () => depsRef.current.access.getText(),
@@ -1948,6 +1953,9 @@ export function AiPanel({
         {attachNotice && <div className="ai-attach-notice">{attachNotice}</div>}
         {inputTruncated && (
           <AiInputTruncatedNotice lang={lang} onDismiss={() => setInputTruncated(false)} />
+        )}
+        {aiSettings !== null && localModelCapabilities(aiSettings).tools === false && (
+          <AiToolsUnsupportedNotice lang={lang} />
         )}
         <AiComposer
           queueStrip={
