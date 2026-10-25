@@ -123,6 +123,16 @@ export type {
   AiLocalEndpointFields,
   AiLocalModelCapabilities,
 } from './local-profile'
+export type {
+  AiLocalDiscoveryErrorCode,
+  AiLocalDiscoveryRequest,
+  AiLocalDiscoveryResult,
+  AiLocalInspection,
+  AiLocalInspectionRequest,
+  AiLocalInspectionResult,
+  AiLocalModelSummary,
+  AiLocalServerKind,
+} from './local-models'
 export { getProviderAdapter, modelLacksVision } from './registry'
 export {
   FREE_AI_IPC_CHANNELS,

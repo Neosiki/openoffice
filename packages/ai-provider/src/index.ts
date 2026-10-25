@@ -153,6 +153,17 @@ export type {
   AiLocalEndpointFields,
   AiLocalModelCapabilities,
 } from './local-profile'
+export { inspectLocalModel, listLocalModels } from './local-models'
+export type {
+  AiLocalDiscoveryErrorCode,
+  AiLocalDiscoveryRequest,
+  AiLocalDiscoveryResult,
+  AiLocalInspection,
+  AiLocalInspectionRequest,
+  AiLocalInspectionResult,
+  AiLocalModelSummary,
+  AiLocalServerKind,
+} from './local-models'
 export {
   AI_MEDIA_PROVIDERS,
   GEMINI_MEDIA_BASE_URL,
