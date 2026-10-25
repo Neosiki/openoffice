@@ -1933,6 +1933,20 @@ button.check-item:hover {
   grid-template-columns: 34px minmax(0, 1fr);
 }
 
+/* "show the AI sidebar" off and the panel closed: AiChatPanel renders nothing,
+ * so the body must not keep the panel's track either. Left in place, the
+ * workbook is laid out in the collapsed 34px track and the rest of the body
+ * stays blank (docs/slides drop their dock's width for the same state). */
+.app-shell .sheet-body.ai-dock-off {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+/* Presentation hides the panel with `display: none`; its track has to go too,
+ * or the grid the show is meant to fill starts 360px in. */
+.app-shell.sheet-presenting .sheet-body {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .sheet-main {
   position: relative;
 }

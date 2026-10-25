@@ -999,7 +999,7 @@ export function ExcelShell({
       </header>
 
       {/* AI panel docks on the left, full height under the ribbon (unified with docs) */}
-      <div className="sheet-body">
+      <div className={`sheet-body${!aiSidebarEnabled && !aiDock.open ? ' ai-dock-off' : ''}`}>
         <AiChatPanel
           isOpen={aiDock.open}
           hideRail={!aiSidebarEnabled}
