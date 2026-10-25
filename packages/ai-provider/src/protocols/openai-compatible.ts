@@ -151,6 +151,16 @@ export interface OpenAiRequestOptions {
   useMaxCompletionTokens?: boolean | undefined
   /** vendor-specific fields merged into the request body (e.g. DeepSeek's `thinking`) */
   bodyExtras?: Record<string, unknown> | undefined
+  /**
+   * Both the connect timeout and the idle timeout of this request. Turns on a
+   * watchdog of its own, so a caller that only holds a whole-run signal can give
+   * one request a smaller budget. Absent keeps the caller's watchdog as it is.
+   */
+  timeoutMs?: number | undefined
+  /** output cap for one-shot chat; on a streamed turn it overrides the positional cap */
+  maxTokens?: number | undefined
+  /** sampling temperature; 0.3 when not given */
+  temperature?: number | undefined
 }
 
 const usageRejectedGateways = new Set<string>()
@@ -170,7 +180,7 @@ export async function streamOpenAiCompatible(
   cb: StreamCallbacks,
   options: OpenAiRequestOptions = {},
 ): Promise<void> {
-  const wd = createStreamWatchdog(cb.signal)
+  const wd = createStreamWatchdog(cb.signal, options.timeoutMs, options.timeoutMs)
   return wd.guard(() =>
     openAiCompatibleTurn(baseUrl, config, system, messages, tools, maxTokens, cb, wd, {
       ...options,
@@ -205,6 +215,9 @@ async function openAiCompatibleTurn(
     wd.touch()
     cb.onActivity?.()
   }
+  // A caller that shapes one request (the local connection test) can cap the
+  // output through the options; otherwise the turn's positional cap stands.
+  const maxOutputTokens = options.maxTokens ?? maxTokens
   const response = await aiFetch(endpointUrl(baseUrl, 'chat/completions'), {
     method: 'POST',
     signal: wd.signal,
@@ -216,8 +229,8 @@ async function openAiCompatibleTurn(
     body: JSON.stringify({
       model: config.model,
       ...(options.useMaxCompletionTokens
-        ? { max_completion_tokens: maxTokens }
-        : { max_tokens: maxTokens }),
+        ? { max_completion_tokens: maxOutputTokens }
+        : { max_tokens: maxOutputTokens }),
       messages: openAiMessages(system, messages, modelEchoesReasoning(config.model)),
       ...(tools.length > 0
         ? {
@@ -227,7 +240,7 @@ async function openAiCompatibleTurn(
             })),
           }
         : {}),
-      ...(options.omitTemperature ? {} : { temperature: 0.3 }),
+      ...(options.omitTemperature ? {} : { temperature: options.temperature ?? 0.3 }),
       ...options.bodyExtras,
       stream: true,
       // OpenAI-class providers only report usage in a stream when asked (a final
@@ -401,6 +414,26 @@ export async function chatOpenAiCompatible(
   user: string,
   options: OpenAiRequestOptions = {},
 ): Promise<AiChatResponse> {
+  const timeoutMs = options.timeoutMs
+  // A one-shot check (the local connection test) owns one budget for its whole
+  // request, so it can hand over the time it has left instead of sharing the
+  // run-wide watchdog. The inner watchdog is linked to the caller's signal, so
+  // a run cancel still stops the request.
+  if (timeoutMs === undefined) {
+    return chatOpenAiCompatibleTurn(wd, baseUrl, config, system, user, options)
+  }
+  const timed = createStreamWatchdog(wd.signal, timeoutMs, timeoutMs)
+  return timed.guard(() => chatOpenAiCompatibleTurn(timed, baseUrl, config, system, user, options))
+}
+
+async function chatOpenAiCompatibleTurn(
+  wd: StreamWatchdog,
+  baseUrl: string,
+  config: AiProviderConfig,
+  system: string,
+  user: string,
+  options: OpenAiRequestOptions,
+): Promise<AiChatResponse> {
   const response = await aiFetch(endpointUrl(baseUrl, 'chat/completions'), {
     method: 'POST',
     signal: wd.signal,
@@ -415,7 +448,8 @@ export async function chatOpenAiCompatible(
         { role: 'system', content: system },
         { role: 'user', content: user },
       ],
-      ...(options.omitTemperature ? {} : { temperature: 0.3 }),
+      ...(options.maxTokens !== undefined ? { max_tokens: options.maxTokens } : {}),
+      ...(options.omitTemperature ? {} : { temperature: options.temperature ?? 0.3 }),
       ...options.bodyExtras,
     }),
   })
