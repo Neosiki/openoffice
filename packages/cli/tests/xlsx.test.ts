@@ -177,6 +177,34 @@ describe('genoffice create --type xlsx / sheet', () => {
     },
   )
 
+  it.skipIf(!sidecar)(
+    'sheet apply refreshes the cached result of a formula that reads an edited cell',
+    async () => {
+      const dir = tempDir()
+      const table = join(dir, 't.json')
+      writeFileSync(
+        table,
+        JSON.stringify([
+          [2, '=A1*10', '=IF(A1>0,"plus","minus")', '=A1/0', '=SUM(A1:A2)'],
+          [3, '', '', '', ''],
+        ]),
+      )
+      const out = join(dir, 't.xlsx')
+      await run(['create', '--type', 'xlsx', '--from', table, '--out', out])
+      const ops = join(dir, 'ops.json')
+      // the edit writes a plain value: none of the formulas is in the batch
+      writeFileSync(ops, JSON.stringify([{ op: 'set_cell', address: 'A1', value: -4 }]))
+      const applied = await run(['sheet', 'apply', out, '--ops', ops, '--json'])
+      expect(applied.code).toBe(0)
+      const read = await run(['sheet', 'read', out, '--json'])
+      expect(read.json().detail.rows[0]).toEqual([-4, -40, 'minus', '#DIV/0!', -1])
+      // the file itself carries the new results, for readers that trust <v>
+      const sheet = await part(out, 'xl/worksheets/sheet1.xml')
+      expect(sheet).toContain('<f>A1*10</f><v>-40</v>')
+      expect(sheet).toContain('<v>-1</v>')
+    },
+  )
+
   it.skipIf(!sidecar)('writes theme colors and pattern fills and reads them back', async () => {
     const dir = tempDir()
     const table = join(dir, 't.json')
