@@ -39,6 +39,7 @@ import { boundOrderedList, boundTable, boundTaskList } from './boundedTokenizers
 import { WikiLink, WikiLinkResolve } from './wikilink'
 import type { WikiLinkOptions } from './wikilink'
 import type { SlashController, SlashItem } from './slashCommand'
+import { FootnoteDefinition, FootnoteNav, FootnoteReference } from './footnote'
 import { t } from '../i18n/locale'
 
 export interface BuildExtensionsOptions {
@@ -136,6 +137,10 @@ export function buildExtensions(options: BuildExtensionsOptions): AnyExtension[]
     ImageAwareLink.configure({ openOnClick: false }),
     MarkdownLinkOpen,
     WikiLink,
+    // GFM footnotes: `[^1]` references and `[^1]: text` definitions (see footnote.ts)
+    FootnoteDefinition,
+    FootnoteReference,
+    FootnoteNav,
     WikiLinkResolve.configure(options.wikiLink ?? {}),
     BlockDragHandle,
     BlockKeymap,
