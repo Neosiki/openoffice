@@ -30,6 +30,7 @@ beforeAll(async () => {
 
 interface Node {
   type: string
+  text?: string
   pi?: number
   ci?: number
   row?: number
@@ -196,6 +197,26 @@ describe('vendored rhwp engine', () => {
     expect(picture).toHaveLength(1)
     const lastLine = Math.max(...lines(second).map((b) => b.bottom))
     expect(picture[0].top).toBeGreaterThanOrEqual(lastLine - 0.5)
+  })
+
+  it('lays out header text that shares a paragraph with a floating picture', () => {
+    // Public anonymous reproduction: the importer keeps HEADER01 in the header
+    // model, but the floating-picture branch used to emit only the image.
+    const doc = open('header-picture-and-text.hwpx')
+    const root = JSON.parse(doc.getPageRenderTree(0)) as Node
+    const header = area(root, 'Header')!
+    expect(first(header, 'Image')).toBeDefined()
+    const runs: string[] = []
+    const walk = (node: Node) => {
+      if (node.type === 'TextRun') runs.push(node.text ?? '')
+      for (const child of node.children ?? []) walk(child)
+    }
+    walk(header)
+    expect(runs.join('')).toContain('HEADER01')
+    const svgText = [...doc.renderPageSvg(0).matchAll(/<text[^>]*>([\s\S]*?)<\/text>/g)]
+      .map((match) => match[1])
+      .join('')
+    expect(svgText).toContain('HEADER01')
   })
 
   it('measures paper-anchored header and footer tables from their own frames', () => {
