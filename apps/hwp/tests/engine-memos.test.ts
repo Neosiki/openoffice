@@ -5,7 +5,10 @@
  *
  * `memo-source.hwp` is rhwp's public reproduction `samples/issue5866/memo_field_hwp5.hwp`
  * saved by Hancom Hangul: one memo ("수정", author CDC) whose field spans many
- * paragraphs. The other documents are built with the engine itself.
+ * paragraphs. `memo-short-header-tail.hwp` is rhwp's public sample
+ * `samples/basic/NewYear_s_Day.hwp` (HWP 5.0.3.0, nine memos), whose memo body
+ * paragraphs carry Hancom's 10-byte header tail, one with an instance id. The
+ * other documents are built with the engine itself.
  */
 import { createHash } from 'node:crypto'
 import { readFileSync } from 'node:fs'
@@ -1038,6 +1041,21 @@ describe('the engine writes Hancom memo identity', () => {
   )
 })
 
+/** The PARA_HEADER tail (bytes 12..) of every memo body paragraph, by memo number. */
+function memoBodyHeaderTails(section: Buffer): string[] {
+  const records = recordsOf(section)
+  expect(records).not.toBeNull()
+  const tails: string[] = []
+  let memo = 0
+  for (const record of records!) {
+    if (record.tag === 93) memo = section.readUInt32LE(record.body)
+    else if (memo !== 0 && record.tag === 66 && record.level === 1) {
+      tails.push(`${memo}:${section.subarray(record.body + 12, record.end).toString('hex')}`)
+    }
+  }
+  return tails
+}
+
 describe('saving a memo document again', () => {
   const edit = (doc: HwpDocument) => {
     doc.insertText(0, 0, 0, 'x')
@@ -1063,6 +1081,22 @@ describe('saving a memo document again', () => {
       // once the engine has written the file, writing it again changes nothing
       expect(Buffer.compare(saves[1]!, saves[2]!), name).toBe(0)
     }
+  })
+
+  it("keeps Hancom's 10-byte memo body header tails and their instance ids", () => {
+    const original = sectionOf(readFileSync(join(FIXTURES, 'memo-short-header-tail.hwp')))
+    const before = memoBodyHeaderTails(original)
+    expect(before).toHaveLength(9)
+    // ten bytes each: three counts and the instance id, no change-tracking word
+    expect(before.every((tail) => tail.split(':')[1]!.length === 20)).toBe(true)
+    expect(before).toContain('5:0100000000004f8209aa')
+
+    const doc = open('memo-short-header-tail.hwp')
+    const texts = memos(doc).map((memo) => memo.text)
+    edit(doc)
+    const saved = doc.exportHwp()
+    expect(memoBodyHeaderTails(sectionOf(saved))).toEqual(before)
+    expect(memos(new HwpDocument(saved)).map((memo) => memo.text)).toEqual(texts)
   })
 
   it('puts the memo lists right under the last body paragraph, as Hancom does', () => {

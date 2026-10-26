@@ -386,10 +386,10 @@ index e76e10cff..96c5486c7 100644
          || para.text.contains('\u{fffc}')
 diff --git a/src/document_core/queries/memo_query.rs b/src/document_core/queries/memo_query.rs
 new file mode 100644
-index 000000000..5c3cadb50
+index 000000000..7ae889022
 --- /dev/null
 +++ b/src/document_core/queries/memo_query.rs
-@@ -0,0 +1,2526 @@
+@@ -0,0 +1,2584 @@
 +//! Memo (HWP `MEMO/` field) reading and editing.
 +//!
 +//! A memo is a field control whose command starts with `MEMO/` and whose body
@@ -2915,6 +2915,64 @@ index 000000000..5c3cadb50
 +            (2, 2)
 +        );
 +    }
++
++    fn memo_body_tails(core: &DocumentCore) -> Vec<Vec<u8>> {
++        core.memo_hits()
++            .iter()
++            .flat_map(|hit| hit.field.memo_paragraphs.iter())
++            .map(|para| para.raw_header_extra.clone())
++            .collect()
++    }
++
++    /// Hancom writes a 10-byte PARA_HEADER tail (instance id, no change-tracking
++    /// word) for memo bodies in older files. Writing the section from the model
++    /// keeps it as it is; only a body without a tail gets the zero one.
++    #[test]
++    fn memo_body_header_tails_survive_a_rebuilt_section() {
++        let mut core = core_with_text("anchor text");
++        core.insert_memo_at(0, 0, 0, 6, "tester", "one\ntwo")
++            .unwrap();
++        let hancom_tail = vec![0, 0, 0, 0, 0, 0, 0x4f, 0x82, 0x09, 0xaa];
++        for ctrl in &mut core.document.sections[0].paragraphs[0].controls {
++            if let Control::Field(field) = ctrl {
++                if is_memo_field(field) {
++                    field.memo_paragraphs[0].raw_header_extra = hancom_tail.clone();
++                }
++            }
++        }
++        let bytes = crate::serializer::body_text::serialize_section(&core.document.sections[0]);
++        let parsed = crate::parser::body_text::parse_body_text_section(&bytes).unwrap();
++        let tails: Vec<(usize, Vec<u8>)> = parsed.paragraphs[0]
++            .controls
++            .iter()
++            .filter_map(|ctrl| match ctrl {
++                Control::Field(field) if is_memo_field(field) => Some(field),
++                _ => None,
++            })
++            .flat_map(|field| field.memo_paragraphs.iter())
++            // the first six bytes are counts the writer recomputes
++            .map(|para| {
++                (
++                    para.raw_header_extra.len(),
++                    para.raw_header_extra[6..].to_vec(),
++                )
++            })
++            .collect();
++        assert_eq!(
++            tails,
++            [(10, hancom_tail[6..].to_vec()), (12, vec![0; 6])],
++            "the Hancom tail keeps its length and instance id"
++        );
++
++        // Through a whole HWP save (this blank document is a 5.0.3.2+ file, so
++        // the writer adds the change-tracking word): the instance id stays.
++        let reopened =
++            DocumentCore::from_bytes(&core.export_hwp_with_adapter_snapshot().unwrap()).unwrap();
++        let tails = memo_body_tails(&reopened);
++        assert_eq!(tails.len(), 2);
++        assert_eq!(&tails[0][6..10], &hancom_tail[6..10]);
++        assert!(tails[1][6..].iter().all(|byte| *byte == 0));
++    }
 +}
 diff --git a/src/document_core/queries/mod.rs b/src/document_core/queries/mod.rs
 index 3a1f8c122..848dfec23 100644
@@ -3674,7 +3732,7 @@ index e4467db3e..bbbd91034 100644
      // BinData 로드 시도
      let bin_data_content = load_bin_data_content_lenient(
 diff --git a/src/serializer/body_text.rs b/src/serializer/body_text.rs
-index 0e94a0864..b479e467c 100644
+index 0e94a0864..e025e1047 100644
 --- a/src/serializer/body_text.rs
 +++ b/src/serializer/body_text.rs
 @@ -24,23 +24,70 @@ use crate::parser::tags;
@@ -3914,7 +3972,20 @@ index 0e94a0864..b479e467c 100644
      for (memo_index, paragraphs) in memo_lists {
          records.push(Record {
              tag_id: tags::HWPTAG_MEMO_LIST,
-@@ -815,7 +869,13 @@ fn serialize_para_text(para: &Paragraph) -> ParaTextResult {
+@@ -248,7 +302,11 @@ fn serialize_memo_tail(
+ 
+         let mut memo_paragraphs = paragraphs.clone();
+         for para in &mut memo_paragraphs {
+-            if para.raw_header_extra.len() < 12 {
++            // A body read from an HWP5 memo list keeps its own header tail
++            // (instance id and, from 5.0.3.2, the change-tracking word); Hancom
++            // writes a 10-byte tail in older files. Only a paragraph without
++            // one (HWPX subList, a new memo) gets the zero tail.
++            if para.raw_header_extra.len() < 10 {
+                 para.raw_header_extra = vec![0; 12];
+             }
+             // Hancom writes memo body paragraphs under MEMO_LIST without
+@@ -815,7 +873,13 @@ fn serialize_para_text(para: &Paragraph) -> ParaTextResult {
              .iter()
              .filter(|o| o.char_idx == i && o.begin_ctrl_id != 0)
          {
@@ -3929,7 +4000,7 @@ index 0e94a0864..b479e467c 100644
              prev_end += 8;
          }
  
-@@ -1068,7 +1128,13 @@ fn serialize_para_text(para: &Paragraph) -> ParaTextResult {
+@@ -1068,7 +1132,13 @@ fn serialize_para_text(para: &Paragraph) -> ParaTextResult {
          .iter()
          .filter(|o| o.char_idx >= text_chars.len() && o.begin_ctrl_id != 0)
      {
@@ -3944,7 +4015,7 @@ index 0e94a0864..b479e467c 100644
          prev_end += 8;
      }
  
-@@ -1479,6 +1545,11 @@ fn control_char_code_and_id(ctrl: &Control) -> (u16, u32) {
+@@ -1479,6 +1549,11 @@ fn control_char_code_and_id(ctrl: &Control) -> (u16, u32) {
          // 통째로 버린다(0자·1쪽). `CTRL_CHAR_OVERLAP` 상수는 이름과 달리 'tdut'(덧말)이다.
          Control::Ruby(_) => (0x0017, tags::CTRL_CHAR_OVERLAP),
          Control::CharOverlap(_) => (0x0017, tags::CTRL_TCPS),
@@ -3956,7 +4027,7 @@ index 0e94a0864..b479e467c 100644
          Control::Field(f) => (0x0003, f.ctrl_id),
          Control::Equation(_) => (0x000B, tags::CTRL_EQUATION),
          Control::Form(_) => (0x000B, tags::CTRL_FORM),
-@@ -2190,38 +2261,22 @@ mod tests {
+@@ -2190,38 +2265,22 @@ mod tests {
              "조판 전용 보강 줄은 레코드에서 제외된다"
          );
  
