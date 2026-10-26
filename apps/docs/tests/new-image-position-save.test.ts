@@ -15,7 +15,6 @@ import JSZip from 'jszip'
 import { buildBlankDocx, parseDocx, saveDocx } from '@genoffice/docx-engine'
 import { buildDocx } from '../../../packages/docx-engine/tests/helpers/build-docx'
 import { pictureNode } from '../src/renderer/ai/floating-ops'
-import { insertPictureAtSelection } from '../src/renderer/editor/insert-picture'
 import { blocksToPmDoc, pmDocToSavePlan, type PmNode } from '../src/renderer/editor/convert'
 import { editorExtensions } from '../src/renderer/editor/extensions'
 
@@ -59,6 +58,45 @@ async function openBlank() {
   return { editor, parsed }
 }
 
+/**
+ * The ribbon's Insert ▸ Picture in the body: a protected image block carrying
+ * the insert-time genImage payload (this fork inserts it inline in the ribbon;
+ * upstream moved the same node into an insert-picture module).
+ */
+function insertPictureAtSelection(
+  editor: Editor,
+  picture: {
+    dataUrl: string
+    base64: string
+    mime: string
+    widthPx: number
+    heightPx: number
+    label: string
+  },
+): boolean {
+  return editor
+    .chain()
+    .focus()
+    .insertContent({
+      type: 'docProtected',
+      attrs: {
+        docxIndex: null,
+        blockType: 'image',
+        label: picture.label,
+        imageDataUrl: picture.dataUrl,
+        imageWidthPx: picture.widthPx,
+        imageHeightPx: picture.heightPx,
+        genImage: {
+          base64: picture.base64,
+          mime: picture.mime,
+          widthPx: picture.widthPx,
+          heightPx: picture.heightPx,
+        },
+      },
+    })
+    .run()
+}
+
 function selectPicture(editor: Editor) {
   let target = -1
   editor.state.doc.descendants((node, pos) => {
@@ -75,7 +113,7 @@ function selectPicture(editor: Editor) {
 
 async function save(editor: Editor, parsed: Awaited<ReturnType<typeof parseDocx>>) {
   const plan = pmDocToSavePlan(editor.getJSON() as PmNode, parsed.blocks)
-  const bytes = await saveDocx(parsed, plan.saveBlocks, { newPictures: plan.newPictures })
+  const bytes = await saveDocx(parsed, plan.saveBlocks)
   const zip = await JSZip.loadAsync(bytes)
   return { plan, zip, xml: await zip.file('word/document.xml')!.async('string') }
 }
