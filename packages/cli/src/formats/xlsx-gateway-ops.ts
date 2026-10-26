@@ -55,6 +55,7 @@ import type { WorkbookChartEdit } from '@genoffice/xlsx-gateway/shared/edit-sche
 import { PRODUCT_NAME } from '@genoffice/i18n'
 import { assertAllowed, type PathContext } from '../fs'
 import { classifyOpError } from '../op-errors'
+import { cutIndex } from '../preview'
 import { CliError, EXIT } from '../result'
 import { imageSize } from './image-size'
 
@@ -859,7 +860,7 @@ function linkTarget(target: string): string {
 function copyName(source: string, taken: Set<string>): string {
   for (let n = 2; ; n++) {
     const suffix = ` (${n})`
-    const candidate = `${source.slice(0, 31 - suffix.length)}${suffix}`
+    const candidate = `${source.slice(0, cutIndex(source, 0, 31 - suffix.length))}${suffix}`
     if (!taken.has(candidate)) return candidate
   }
 }
