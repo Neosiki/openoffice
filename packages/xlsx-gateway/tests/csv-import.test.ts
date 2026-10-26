@@ -228,12 +228,12 @@ describe('decodeCsvBuffer: Korean code page 949 detected from the bytes', () => 
   const CP949 = new Uint8Array([
     199, 176, 184, 241, 44, 177, 221, 190, 215, 10, 182, 243, 182, 188, 44, 53, 48, 48, 48, 10,
   ])
-  // "品名,価格\nコーヒー,500\n" in Shift_JIS
+  // a Japanese header row and a katakana row (name, price 500) saved as Shift_JIS
   const SJIS = new Uint8Array([
     149, 105, 150, 188, 44, 137, 191, 138, 105, 10, 131, 82, 129, 91, 131, 113, 129, 91, 44, 53, 48,
     48, 10,
   ])
-  // "品名,价格\n咖啡,500\n" in GBK
+  // a Simplified Chinese header row and a data row (name, price 500) saved as GBK
   const GBK = new Uint8Array([
     198, 183, 195, 251, 44, 188, 219, 184, 241, 10, 191, 167, 183, 200, 44, 53, 48, 48, 10,
   ])
