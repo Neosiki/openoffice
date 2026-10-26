@@ -130,7 +130,9 @@ element id, or sheet and cell). `reason: no_key` is a placeholder the data
 does not cover; `split_placeholder` is one Word or PowerPoint stored across
 runs with different formatting, which run-level replace cannot match (retype
 it in one run); `unreachable_nested` sits inside a nested pptx group or a
-table in a group, which deck-level `findReplace` does not reach (ungroup it). Unresolved placeholders stay in place and the result carries an
+table in a group, which deck-level `findReplace` does not reach (ungroup it);
+`formula_cell` is a placeholder inside an xlsx formula's text, which merge never
+rewrites (put it in a plain text cell). Unresolved placeholders stay in place and the result carries an
 `unresolved_placeholder` warning; `--strict` turns them into an error of the
 same name and writes nothing. The output is written atomically, an existing
 file needs `--force`, and the GUI-open check and `GENOFFICE_ALLOWED_ROOTS`
