@@ -108,7 +108,8 @@ const RENAME_RETRIES = 4
  * Same-directory temp file + rename. Mirrors the app's atomic-write:
  * the target's mode is kept, a locked target is retried with backoff and,
  * failing that, overwritten in place. If that fallback fails, keep the
- * completed temp as a rescue copy because the target may already be truncated.
+ * completed temp as a rescue copy because the target may already be truncated,
+ * and name it in the error (`detail.rescue_path`).
  */
 export function writeOutput(abs: string, bytes: Uint8Array | string): void {
   const tmp = tempPathBeside(abs)
@@ -135,6 +136,13 @@ export function writeOutput(abs: string, bytes: Uint8Array | string): void {
     }
   } catch (err) {
     if (!keepTempOnError) rmSync(tmp, { force: true })
+    else if (existsSync(tmp)) {
+      // the caller must learn where the finished edit went, or the rescue copy is lost too
+      const why = err instanceof Error ? err.message : String(err)
+      throw new CliError(EXIT.conversion, `${why}; the finished edit is kept in ${tmp}`, {
+        rescue_path: tmp,
+      })
+    }
     throw err
   }
 }
