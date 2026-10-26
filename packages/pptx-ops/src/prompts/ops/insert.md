@@ -206,7 +206,7 @@ Inserts a native, PowerPoint-editable chart.
 Common mistakes
 
 - Inventing numbers: every value needs a source (user, deck, or a search in this conversation); with none, use illustrative values and say so to the user.
-- `values` shorter or longer than `categories`.
+- `values` shorter or longer than `categories`, a text value (`"135"`) or a category that is not text (`2024`): all rejected. Use `null` for a gap.
 - Editing an existing chart with `addChart`: use the `edit_chart` tool, which keeps position and z-order.
 
 ### addSmartArt
