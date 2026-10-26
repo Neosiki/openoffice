@@ -161,7 +161,8 @@ function readData(
         : [readFileSync(resolveInput(spec, ctx), 'utf-8'), spec]
   let parsed: unknown
   try {
-    parsed = JSON.parse(text)
+    // UTF-8 data files may start with a BOM; preserve U+FEFF inside values.
+    parsed = JSON.parse(text.replace(/^\uFEFF/, ''))
   } catch (err) {
     throw new CliError(
       EXIT.usage,
