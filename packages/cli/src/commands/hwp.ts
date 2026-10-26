@@ -2,7 +2,7 @@ import { basename } from 'node:path'
 import { flagString } from '../args'
 import { HWP_PREVIEW_CHARS, hwpText } from '../formats/hwp'
 import { extension, readInput, resolveInput } from '../fs'
-import { previewChars } from '../preview'
+import { cutIndex, previewChars } from '../preview'
 import type { CommandContext, CommandDef } from '../registry'
 import { CliError, EXIT, type CommandResult } from '../result'
 
@@ -70,7 +70,7 @@ async function read(
       { reason: 'out_of_range' },
     )
   }
-  const end = Math.min(text.length, offset + max)
+  const end = Math.min(text.length, cutIndex(text, offset, offset + max))
   const detail: Record<string, unknown> = {
     format: ext,
     chars: text.length,
