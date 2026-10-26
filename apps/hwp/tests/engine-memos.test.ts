@@ -417,6 +417,123 @@ describe('editing memos', () => {
     }
   })
 
+  it('keeps a memo when its whole anchor is replaced with text', () => {
+    for (const [replacement, endCharIdx] of [
+      ['HELLO', 5],
+      ['hi', 2],
+      ['HELLOOOO', 8],
+    ] as const) {
+      const doc = blank('hello')
+      const created = insert(doc, 0, 5, 'tester', 'memo body')
+      expect(JSON.parse(doc.replaceText(0, 0, 0, 5, replacement))).toMatchObject({ ok: true })
+      const list = memos(doc)
+      expect(list).toHaveLength(1)
+      expect(list[0]).toMatchObject({
+        id: created.id,
+        author: 'tester',
+        text: 'memo body',
+        startCharIdx: 0,
+        endCharIdx,
+      })
+      for (const bytes of [doc.exportHwp(), doc.exportHwpx()]) {
+        expect(memos(new HwpDocument(bytes))[0]).toMatchObject({
+          id: created.id,
+          author: 'tester',
+          text: 'memo body',
+          startCharIdx: 0,
+          endCharIdx,
+        })
+      }
+    }
+  })
+
+  it('removes a memo when its whole anchor is replaced with empty text', () => {
+    const doc = blank('hello')
+    insert(doc, 0, 5, 'tester', 'memo body')
+    expect(JSON.parse(doc.replaceText(0, 0, 0, 5, ''))).toMatchObject({ ok: true })
+    expect(memos(doc)).toEqual([])
+  })
+
+  it('keeps a memo when text inside its anchor is replaced', () => {
+    const doc = blank('hello')
+    const created = insert(doc, 0, 5, 'tester', 'memo body')
+    expect(JSON.parse(doc.replaceText(0, 0, 1, 3, 'ipp'))).toMatchObject({ ok: true })
+    expect(JSON.parse(doc.getTextFileUnicode())).toContain('hippo')
+    expect(memos(doc)[0]).toMatchObject({
+      id: created.id,
+      author: 'tester',
+      text: 'memo body',
+      startCharIdx: 0,
+      endCharIdx: 5,
+    })
+  })
+
+  it('keeps a memo through replaceAll', () => {
+    const doc = blank('hello')
+    const created = insert(doc, 0, 5, 'tester', 'memo body')
+    expect(JSON.parse(doc.replaceAll('hello', 'HELLO', true))).toMatchObject({ ok: true })
+    expect(memos(doc)[0]).toMatchObject({
+      id: created.id,
+      author: 'tester',
+      text: 'memo body',
+      startCharIdx: 0,
+      endCharIdx: 5,
+    })
+  })
+
+  it('removes a memo through replaceAll with empty text', () => {
+    const doc = blank('hello')
+    insert(doc, 0, 5, 'tester', 'memo body')
+    expect(JSON.parse(doc.replaceAll('hello', '', true))).toMatchObject({ ok: true })
+    expect(memos(doc)).toEqual([])
+  })
+
+  it('replaces a cell memo anchor without removing the memo', () => {
+    const { doc, path } = tableDocument()
+    const created = insertAtPath(doc, 0, 1, path, 0, 4, 'cell author', 'cell memo')
+    expect(
+      JSON.parse(doc.replaceTextInCellDeferredPagination(0, 1, 0, 0, 0, 0, 4, 'CELL')),
+    ).toMatchObject({ ok: true })
+    expect(memos(doc)[0]).toMatchObject({
+      id: created.id,
+      author: 'cell author',
+      text: 'cell memo',
+      place: 'tableCell',
+      startCharIdx: 0,
+      endCharIdx: 4,
+    })
+  })
+
+  it('replaces a text-box memo anchor without removing the memo', () => {
+    const { doc, path } = textBoxDocument()
+    const controlIndex = (JSON.parse(path) as { controlIndex: number }[])[0]!.controlIndex
+    const created = insertAtPath(doc, 0, 0, path, 0, 3, 'box author', 'box memo')
+    expect(
+      JSON.parse(
+        doc.replaceTextInCellDeferredPagination(0, 0, controlIndex, 0, 0, 0, 3, 'BOXX'),
+      ),
+    ).toMatchObject({ ok: true })
+    expect(memos(doc)[0]).toMatchObject({
+      id: created.id,
+      author: 'box author',
+      text: 'box memo',
+      place: 'textBox',
+      startCharIdx: 0,
+      endCharIdx: 4,
+    })
+  })
+
+  it('does not remove a non-memo field when its whole text is replaced', () => {
+    const doc = blank('hello')
+    doc.insertClickHereField(0, 0, 0, 'guide', '', 'name', false)
+    const before = JSON.parse(doc.getFieldList()) as { fieldId: number }[]
+    expect(before).toHaveLength(1)
+    doc.replaceText(0, 0, 0, 5, 'HELLO')
+    const after = JSON.parse(doc.getFieldList()) as { fieldId: number }[]
+    expect(after).toHaveLength(1)
+    expect(after[0]!.fieldId).toBe(before[0]!.fieldId)
+  })
+
   it('deletes a body memo when its whole anchor text is deleted', () => {
     const doc = blank('hello world')
     insert(doc, 0, 5, 'tester', 'memo body')

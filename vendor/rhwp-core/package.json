@@ -37,6 +37,6 @@
       "0016-memo-support.patch"
     ],
     "wasmPack": "0.15.0",
-    "wasmSha256": "12ba5d343e3f6433a1bd010eb08d83b8dd2d0a3fbe9fc2a9e3c33e918c7da27d"
+    "wasmSha256": "5440c810c5c7419181c231147894929b871d3ff56352f569c5bd84fef22f5d0c"
   }
 }
