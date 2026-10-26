@@ -205,6 +205,35 @@ describe('genoffice create --type xlsx / sheet', () => {
     },
   )
 
+  it.skipIf(!sidecar)(
+    'sheet apply refreshes a formula on another sheet that reads an edited cell',
+    async () => {
+      const dir = tempDir()
+      const table = join(dir, 't.json')
+      writeFileSync(
+        table,
+        JSON.stringify({
+          sheets: [
+            { name: 'Data', rows: [[2], [3], ['=SUM(A1:A2)']] },
+            { name: 'Summary', rows: [['=Data!A3', '=Data!A3*2']] },
+          ],
+        }),
+      )
+      const out = join(dir, 't.xlsx')
+      await run(['create', '--type', 'xlsx', '--from', table, '--out', out])
+      const ops = join(dir, 'ops.json')
+      writeFileSync(
+        ops,
+        JSON.stringify([{ op: 'set_cell', sheet: 'Data', address: 'A1', value: 10 }]),
+      )
+      expect((await run(['sheet', 'apply', out, '--ops', ops, '--json'])).code).toBe(0)
+      const data = await run(['sheet', 'read', out, '--sheet', 'Data', '--json'])
+      expect(data.json().detail.rows[2]).toEqual([13])
+      const summary = await run(['sheet', 'read', out, '--sheet', 'Summary', '--json'])
+      expect(summary.json().detail.rows[0]).toEqual([13, 26])
+    },
+  )
+
   it.skipIf(!sidecar)('writes theme colors and pattern fills and reads them back', async () => {
     const dir = tempDir()
     const table = join(dir, 't.json')
