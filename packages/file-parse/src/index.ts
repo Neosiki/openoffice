@@ -13,7 +13,7 @@ export {
 } from './attachable'
 export { docToText } from './doc'
 export { docxToText } from './docx'
-export { hwpToText } from './hwp'
+export { hwpMemosOf, hwpToText, type HwpMemo } from './hwp'
 export { odtToText } from './odt'
 export { pptToText } from './ppt'
 export { pptxToText } from './pptx'

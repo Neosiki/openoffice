@@ -45,7 +45,7 @@ interface FakeContents {
   send(channel: string, ...args: unknown[]): void
   on(event: string, listener: (...args: unknown[]) => void): void
   once(event: string, listener: (...args: unknown[]) => void): void
-  emit(event: string): void
+  emit(event: string, ...args: unknown[]): void
 }
 
 let nextId = 1
@@ -67,9 +67,9 @@ function fakeContents(): FakeContents {
     send: (channel, ...args) => contents.sent.push({ channel, args }),
     on: add,
     once: add,
-    emit: (event) => {
+    emit: (event, ...args) => {
       if (event === 'destroyed') contents.destroyed = true
-      for (const listener of listeners.get(event) ?? []) listener()
+      for (const listener of listeners.get(event) ?? []) listener(...args)
     },
   }
   return contents
@@ -123,6 +123,7 @@ import {
   configureHwpRuntime,
   createHwpView,
   hwpFileRenamed,
+  hwpMemoModalOpen,
   hwpRecoveryIdentity,
   requestHwpClose,
 } from '../src/main/hwp-main'
@@ -850,5 +851,48 @@ describe('the OS ending the session', () => {
     expect(clean.sent.some((message) => message.channel === HWP_CHANNELS.recoveryFlush)).toBe(false)
     call(HWP_CHANNELS.recoveryFlushed, dirty, flush!.args[0])
     await expect(done).resolves.toBeUndefined()
+  })
+})
+
+describe('an open memo editor at close', () => {
+  const memoOpen = (contents: FakeContents, open: boolean) =>
+    call<void>(HWP_CHANNELS.memoModalOpen, contents, open)
+
+  it('asks in main, so a page that hangs with the memo editor open can still be closed', async () => {
+    const contents = view(null)
+    memoOpen(contents, true)
+    expect(hwpMemoModalOpen(contents.id)).toBe(true)
+    // keep it: the tab stays, nothing is sent to a page that may not answer
+    showMessageBox.mockResolvedValueOnce({ response: 1 })
+    expect(await requestHwpClose(contents as never)).toBe(false)
+    const prompt = showMessageBox.mock.calls.at(-1)!.at(-1) as {
+      buttons: string[]
+      cancelId: number
+    }
+    // two answers, and Esc keeps the memo editor
+    expect(prompt.buttons).toHaveLength(2)
+    expect(prompt.cancelId).toBe(1)
+    // discard: the tab closes without a second prompt
+    showMessageBox.mockResolvedValueOnce({ response: 0 })
+    const asked = showMessageBox.mock.calls.length
+    expect(await requestHwpClose(contents as never)).toBe(true)
+    expect(showMessageBox.mock.calls.length).toBe(asked + 1)
+  })
+
+  it('takes the lock only from an HWP view', () => {
+    const stranger = fakeContents()
+    memoOpen(stranger, true)
+    expect(hwpMemoModalOpen(stranger.id)).toBe(false)
+  })
+
+  it('drops the lock when the page reloads, but not on an in-page navigation', () => {
+    const contents = view(null)
+    memoOpen(contents, true)
+    contents.emit('did-start-navigation', { isMainFrame: true, isSameDocument: true })
+    expect(hwpMemoModalOpen(contents.id)).toBe(true)
+    contents.emit('did-start-navigation', { isMainFrame: false, isSameDocument: false })
+    expect(hwpMemoModalOpen(contents.id)).toBe(true)
+    contents.emit('did-start-navigation', { isMainFrame: true, isSameDocument: false })
+    expect(hwpMemoModalOpen(contents.id)).toBe(false)
   })
 })

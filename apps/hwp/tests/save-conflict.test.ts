@@ -127,7 +127,10 @@ async function saveThrough(
 ): Promise<CommitSaveResult> {
   const begin = await call<Promise<BeginSaveResult>>(HWP_CHANNELS.beginSave, contents, 'save')
   if (!begin.ok || 'canceled' in begin) throw new Error('the save did not begin')
-  return call<Promise<CommitSaveResult>>(HWP_CHANNELS.commitSave, contents, bytes, [], auto)
+  // the preload sends the automatic flag in the options object (with a HWPX save's memo list)
+  return call<Promise<CommitSaveResult>>(HWP_CHANNELS.commitSave, contents, bytes, [], {
+    auto: auto === true,
+  })
 }
 
 describe('same-document save guard', () => {

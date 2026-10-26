@@ -17,9 +17,11 @@ describe('HWP autosave wiring', () => {
     const preload = source('src/preload/index.ts')
     expect(preload).toContain('HWP_CHANNELS.getAutoSaveDefault')
     expect(preload).toContain('HWP_CHANNELS.autoSaveDefaultChanged')
-    expect(preload).toContain('HWP_CHANNELS.commitSave, bytes, tabs, automatic')
+    // the flag travels in the options object, next to the memo list of a HWPX save
+    expect(preload).toContain('HWP_CHANNELS.commitSave, bytes, tabs, options')
     const flow = source('src/renderer/save-flow.ts')
     expect(flow).toContain('automatic = false')
-    expect(flow).toContain('automatic,')
+    expect(flow).toContain('auto: automatic')
+    expect(source('src/main/hwp-main.ts')).toContain('if (saveOptions.auto) {')
   })
 })

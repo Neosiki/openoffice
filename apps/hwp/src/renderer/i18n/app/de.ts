@@ -146,4 +146,58 @@ export const de = {
   aiReverted: 'Änderungen zurückgenommen',
   aiRevertRefused:
     'Diese Änderungen konnten nicht zusammen zurückgenommen werden. Wurde das Dokument danach bearbeitet, verwenden Sie „Rückgängig“ im Editor (Ctrl+Z).',
+  memoTitle: 'Kommentare',
+  memoOpen: 'Kommentare',
+  memoAdd: 'Kommentar hinzufügen',
+  memoEmpty: 'Keine Kommentare.',
+  memoNoBody: 'Kein Text',
+  memoPage: 'S. {page}',
+  memoUnknownAuthor: 'Unbekannt',
+  memoReadOnly: 'Schreibgeschützt',
+  memoReadOnlyFormatted:
+    'Dieser Kommentar mischt Formatierungen; sein Text kann hier nicht geändert werden.',
+  memoReadOnlyObject:
+    'Dieser Kommentar enthält eine Tabelle, ein Bild oder ein anderes Objekt; sein Text kann hier nicht geändert werden.',
+  memoReadOnlyPlace:
+    'Kommentare in Kopf-/Fußzeilen oder Fußnoten können hier nicht geändert werden.',
+  memoReadOnlyProtected:
+    'Kommentare in einem kennwortgeschützten Dokument können hier nicht geändert werden.',
+  memoEdit: 'Bearbeiten',
+  memoDelete: 'Löschen',
+  memoNewTitle: 'Kommentar hinzufügen',
+  memoEditTitle: 'Kommentar bearbeiten',
+  memoAuthor: 'Autor',
+  memoBody: 'Kommentar',
+  memoBodyPlaceholder: 'Kommentar schreiben…',
+  memoSelectionLabel: 'Ausgewählter Text: {text}',
+  memoCaretLabel: 'Der Kommentar wird an der Cursorposition eingefügt.',
+  memoSaveHint: 'Zum Speichern Ctrl+Enter',
+  memoCancel: 'Abbrechen',
+  memoErrNone:
+    'Es gibt keine Stelle für einen Kommentar. Wählen Sie Text aus oder setzen Sie den Cursor.',
+  memoErrMultiParagraph: 'Ein Kommentar kann nur innerhalb eines Absatzes eingefügt werden.',
+  memoErrUnsupported: 'In Kopf-/Fußzeilen oder Fußnoten können keine Kommentare eingefügt werden.',
+  memoErrOverlap: 'Dieser Bereich hat bereits einen Kommentar.',
+  memoErrProtected:
+    'In einem kennwortgeschützten Dokument können keine Kommentare eingefügt werden.',
+  memoErrEmpty: 'Schreiben Sie etwas in den Kommentar.',
+  memoErrSave: 'Der Kommentar konnte nicht gespeichert werden.',
+  memoErrDelete: 'Der Kommentar konnte nicht gelöscht werden.',
+  memoErrTooLong: 'Der Kommentar ist zu lang. Er kann bis zu 100.000 Zeichen enthalten.',
+  memoErrLoad: 'Die Kommentarliste konnte nicht gelesen werden.',
+  memoSaveBlocked: 'Speichern oder verwerfen Sie zuerst den Kommentar, den Sie schreiben.',
+  memoRemoved: 'Kommentare mit dem Text gelöscht: {count}. Mit Ctrl+Z rückgängig machen.',
+  memoNotCopied: 'Der Kommentar wurde nicht kopiert.',
+  memoLockedElsewhere:
+    'In einem anderen Tab wird ein Kommentar geschrieben. Warten Sie, bis er gespeichert oder verworfen ist.',
+  memoContended:
+    'Auch in einem anderen Tab wurde ein Kommentarfenster geöffnet. Speichern oder verwerfen Sie zuerst in einem davon.',
+  memoUnsupportedBuild: 'Diese Version unterstützt keine Kommentare.',
+  memoHwpxLost:
+    'Nicht in die HWPX-Datei übernommene Kommentare: {count}. Speichern Sie als HWP oder prüfen Sie die Datei in Hancom Hangul.',
+  aiToolMemos: 'Kommentare geprüft: {count}',
+  aiMemoContext: 'Kommentare: {count}',
+  aiMemoApprovalTitle: 'Diese Änderung löscht {count} Kommentar(e). Fortfahren?',
+  aiMemoApprovalKeep: 'Kommentare behalten',
+  aiMemoApprovalRemove: 'Fortfahren und löschen',
 } satisfies Record<keyof typeof zh, string>

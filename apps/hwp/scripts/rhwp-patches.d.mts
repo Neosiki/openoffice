@@ -12,6 +12,9 @@ export type RhwpPatchName =
   | 'studio-format-copy-safety'
   | 'studio-format-copy'
   | 'studio-format-copy-state'
+  | 'studio-memo-command'
+  | 'studio-memo-label-ko'
+  | 'studio-memo-label-en'
 
 export declare const APP_SCHEME: string
 export declare const PASSWORD_FLAG: 'passwordProtected'

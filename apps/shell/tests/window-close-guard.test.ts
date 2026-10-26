@@ -116,6 +116,7 @@ function fakeManager(dirty: Partial<Record<DirtyKinds, TabStub[]>> = {}) {
     dirtyHtmlTabs: () => dirty.html ?? [],
     dirtyMindmapTabs: () => dirty.mindmap ?? [],
     dirtyHwpTabs: () => dirty.hwp ?? [],
+    dirtyOrMemoHwpTabs: () => dirty.hwp ?? [],
     dirtyEpubTabs: () => dirty.epub ?? [],
     dirtySlidesTabs: () => dirty.slides ?? [],
     docsTabs: () => dirty.docs ?? [],
