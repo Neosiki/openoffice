@@ -23,13 +23,14 @@ describe('deck saves in the Slides main module', () => {
   })
 
   it("never hand savePptxToFile the deck's own path", () => {
-    // the helper's call, writing to the temp, is the only one allowed
+    // the helper's call writes to its temp; the recovery copy streams into the
+    // temp the copy store hands it (the store moves it into place)
     expect(source.match(/savePptxToFile\([^)]*\)/g)).toEqual([
+      'savePptxToFile(session.opened, tempPath)',
       'savePptxToFile(session.opened, tmp)',
     ])
-    // Ctrl+S, Save As, MCP save (this fork's autosave is the recovery copy, which
-    // streams into the copy store's own temp through the same helper)
+    expect(source).toContain('(tempPath) => savePptxToFile(session.opened, tempPath)')
+    // Ctrl+S, Save As, MCP save
     expect(source.match(/await writeDeckFile\(session, /g)).toHaveLength(3)
-    expect(source).toContain('(tempPath) => writeDeckFile(session, tempPath)')
   })
 })

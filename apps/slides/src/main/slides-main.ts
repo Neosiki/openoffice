@@ -701,7 +701,7 @@ async function writeSessionCopy(session: Session, ignoreBackoff: boolean): Promi
       session.password === undefined
         ? await recoveryStore.writeCopyStreamed(
             identity,
-            (tempPath) => writeDeckFile(session, tempPath),
+            (tempPath) => savePptxToFile(session.opened, tempPath),
             options,
           )
         : await recoveryStore.writeCopy(
@@ -1129,10 +1129,10 @@ function deckFileBytes(session: Session, bytes: Uint8Array): Buffer {
 }
 
 /**
- * Write the session's deck to `filePath`. A plain deck streams straight to
- * disk (savePptxToFile); an encrypted one has to be encrypted as one buffer,
- * so it is assembled in memory, encrypted, then written atomically — its
- * plaintext never touches the disk.
+ * Write the session's deck to `filePath`. A plain deck streams to disk
+ * (savePptxToFile) through a sibling temp; an encrypted one has to be
+ * encrypted as one buffer, so it is assembled in memory, encrypted, then
+ * written atomically — its plaintext never touches the disk.
  */
 async function writeDeckFile(session: Session, filePath: string): Promise<void> {
   if (session.password === undefined) {
