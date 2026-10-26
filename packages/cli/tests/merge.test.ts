@@ -55,6 +55,27 @@ async function templateDocx(dir: string): Promise<string> {
 }
 
 describe('genoffice merge', () => {
+  it('fills Korean placeholder keys and reports a Korean key it has no value for', async () => {
+    const dir = tempDir()
+    const md = join(dir, 'quote.md')
+    writeFileSync(md, '# 견적서\n\n{{ 고객명 }} 님, 총액 {{금액}}원\n\n담당 {{담당자}}\n')
+    const template = join(dir, 'quote.docx')
+    expect((await run(['create', '--type', 'docx', '--from', md, '--out', template])).code).toBe(0)
+    const out = join(dir, 'filled.docx')
+    const data = dataFile(dir, { 고객명: '김철수', 금액: '12,000' })
+    const r = await run(['merge', template, '--data', data, '--out', out, '--json'])
+    expect(r.code).toBe(0)
+    expect(r.json().detail).toMatchObject({
+      filled: 2,
+      used_keys: ['고객명', '금액'],
+      unresolved_placeholders: [{ key: '담당자', placeholder: '{{담당자}}', reason: 'no_key' }],
+      unused_keys: [],
+    })
+    const xml = await documentXml(out)
+    expect(xml).toContain('김철수 님, 총액 12,000원')
+    expect(xml).not.toContain('{{고객명')
+  })
+
   it('fills a docx template, keeps table cells and reports split and unknown placeholders', async () => {
     const dir = tempDir()
     const template = await templateDocx(dir)
