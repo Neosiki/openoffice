@@ -9,9 +9,14 @@ import {
 } from 'node:fs'
 import { open, rename, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { basename, join } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { atomicCopyFile, atomicWriteFile, writeJsonAtomic } from '../src/atomic-write'
+import {
+  atomicCopyFile,
+  atomicWriteFile,
+  tempPathBeside,
+  writeJsonAtomic,
+} from '../src/atomic-write'
 
 vi.mock('node:fs/promises', async (importOriginal) => {
   const actual = await importOriginal<typeof import('node:fs/promises')>()
@@ -260,5 +265,38 @@ describe('writeJsonAtomic', () => {
     })
     writeJsonAtomic(target, { ok: true })
     expect(JSON.parse(readFileSync(target, 'utf8'))).toEqual({ ok: true })
+  })
+})
+
+describe('tempPathBeside', () => {
+  it('keeps a short name whole and a long Hangul name within the 255-byte file-name limit', () => {
+    expect(basename(tempPathBeside(join('dir', 'a.docx')))).toMatch(
+      /^\.a\.docx\.[0-9a-f]{12}\.tmp$/,
+    )
+    const name = `${'가'.repeat(100)}😀.docx`
+    const temp = basename(tempPathBeside(join('dir', name)))
+    expect(Buffer.byteLength(temp)).toBeLessThanOrEqual(255)
+    expect(temp).toMatch(/^\..+\.[0-9a-f]{12}\.tmp$/)
+    // a lone surrogate would not survive the trip through UTF-8
+    expect(Buffer.from(temp).toString('utf-8')).toBe(temp)
+  })
+
+  it('does not cut an emoji in half when the name is shortened', () => {
+    // 66 Hangul letters take 198 bytes, so the 4-byte emoji straddles the 200-byte cut
+    const temp = basename(
+      tempPathBeside(join('dir', `${'가'.repeat(66)}😀${'나'.repeat(20)}.docx`)),
+    )
+    // a lone surrogate would not survive the trip through UTF-8
+    expect(Buffer.from(temp).toString('utf-8')).toBe(temp)
+    expect(temp).not.toContain('😀')
+  })
+
+  it('writes a file whose name leaves no room for the temp name', async () => {
+    dir = mkdtempSync(join(tmpdir(), 'eu-aw-'))
+    const target = join(dir, `${'가'.repeat(78)}.docx`)
+    writeFileSync(target, 'old')
+    await atomicWriteFile(target, Buffer.from('new'))
+    expect(readFileSync(target, 'utf-8')).toBe('new')
+    expect(readdirSync(dir)).toEqual([basename(target)])
   })
 })
