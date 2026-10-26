@@ -318,7 +318,7 @@ export function describeDocument(
   const [start, end] = range ?? [0, root.childCount - 1]
   for (let i = start; i <= Math.min(end, root.childCount - 1); i++) {
     const node = root.child(i)
-    const { text, truncated } = clipText(node.textContent, maxChars)
+    const { text, truncated } = clipText(blockText(node), maxChars)
     out.push({
       index: i,
       type: node.type.name.replace(/^doc/, '').toLowerCase(),
@@ -330,6 +330,22 @@ export function describeDocument(
     })
   }
   return out
+}
+
+/**
+ * A block's plain text. A table's textContent runs every cell together, so "1" | "200" and
+ * "12" | "00" both read "1200"; cells are joined with " | " and rows with a line break,
+ * the layout `hwp read` already uses.
+ */
+function blockText(node: OpenDocument['editor']['state']['doc']): string {
+  if (node.type.name !== 'docTable') return node.textContent
+  const rows: string[] = []
+  node.forEach((row) => {
+    const cells: string[] = []
+    row.forEach((cell) => cells.push(cell.textBetween(0, cell.content.size, ' ', ' ')))
+    rows.push(cells.join(' | '))
+  })
+  return rows.join('\n')
 }
 
 /** table styles defined in styles.xml (setTableStyle accepts the id or the name) */
