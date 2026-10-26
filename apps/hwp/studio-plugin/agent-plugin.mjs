@@ -102,8 +102,12 @@ const UNMARKED_CHANGES = new Set(['delete-paragraph', 'remove-table-lines', 'del
 /** The most runs and characters of one selection: a sanity limit, far above real use. */
 const MAX_SELECTED_RUNS = 5000
 const MAX_SELECTED_CHARS = 400000
-/** Lookups one walk over the document spends on finding tables inside table cells. */
-const MAX_NESTED_LOOKUPS = 20000
+/**
+ * Lookups one walk over the document spends on finding tables inside table cells: three per
+ * cell paragraph. A government notice with a 429-row list (about 8,000 cells) needs about
+ * 25,000, and 100,000 lookups take well under a second.
+ */
+const MAX_NESTED_LOOKUPS = 100000
 /** Objects tried in one cell paragraph when looking for a table inside it. */
 const NESTED_CONTROLS_TRIED = 3
 /** How deep tables inside tables are followed. */
