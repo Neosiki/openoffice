@@ -57,12 +57,15 @@ import { useSubscriptionConnection } from './subscription-client'
 import { SkillsPane } from './skills/SkillsPane'
 import { skillsText } from './i18n/strings-skills'
 import {
+  advancedPaneUseChoice,
   advancedProviderIds,
+  changeAiSettings,
   initialAdvancedProvider,
   mediaKeyProviders,
   mediaSelection,
   mediaSpecialChoices,
   readAiSettings,
+  withAiSelection,
   withLiveSelectionFields,
   writeAiSettings,
 } from './settings-ai'
@@ -567,6 +570,13 @@ function AiModelPane({ t }: { t: TFunc }) {
         window.alert(error instanceof Error ? error.message : String(error))
       })
   }
+  // a saved key provider that is not the AI in use: one press selects it, as
+  // "AI to use" would; an unsaved draft offers nothing until it is written
+  const useChoice = dirty ? undefined : advancedPaneUseChoice(settings, provider, endpoint?.id)
+  const useThis = () => {
+    if (!useChoice) return
+    void changeAiSettings((current) => withAiSelection(current, useChoice))
+  }
   const test = () => {
     const seq = ++testSeqRef.current
     setTesting(true)
@@ -608,6 +618,11 @@ function AiModelPane({ t }: { t: TFunc }) {
                     : null
             }
           />
+          {useChoice && (
+            <button className="set-btn" onClick={useThis}>
+              {t('freeUse')}
+            </button>
+          )}
           <button className="set-btn" disabled={testing} onClick={test}>
             {t('setAiTest')}
           </button>

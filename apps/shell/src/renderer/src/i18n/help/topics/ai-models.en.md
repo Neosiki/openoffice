@@ -17,7 +17,7 @@ Everything that takes a key is under **Advanced**, at the bottom of the same pag
 For people who would rather pay a provider directly, or run a model of their own.
 
 - Choose a **Provider**, enter its **API Key** (and a **Base URL** where the provider needs one), pick a **Model**, then press **Save**. The list covers OpenAI-compatible servers, Anthropic, Gemini, DeepSeek, DashScope (qwen), Atlas Cloud and more.
-- The **Provider** list here only decides whose fields are on screen. It does not change which AI is in use; that is always **AI to use**.
+- The **Provider** list here only decides whose fields are on screen. It does not change which AI is in use; that is always **AI to use**. When a provider you saved is not the AI in use, **Use this AI** appears at the top; pressing it makes that provider the **AI to use**.
 - Chats on a key provider use your own key, and that provider charges you for them.
 - Keys are stored in the app's settings file on this machine and sent only in request headers.
 - **Test connection**: verify endpoint reachability and model visibility before saving.
