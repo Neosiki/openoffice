@@ -539,7 +539,6 @@ import { SlicerFieldPicker, SlicerPanels, type SlicerUiState } from './SlicerPan
 import { WatchWindowPanel, watchKey, type WatchCell, type WatchRowValue } from './WatchWindowPanel'
 import { TimelineFieldPicker, TimelinePanels, type TimelineUiState } from './TimelinePanel'
 import type { DefinedNameAction, DefinedNameRow } from './NameManagerDialog'
-import { workbookMediaDataUrl } from './workbook-media'
 import {
   clearVisualSelection,
   convertibleType,
