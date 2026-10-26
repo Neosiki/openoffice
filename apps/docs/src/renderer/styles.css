@@ -2836,6 +2836,17 @@ th.cell-rev-del {
   display: none !important;
 }
 
+/* phantom table rows (gap rows, repeated header clones) must keep their grid
+   slot while hidden: syncPhantomRowspans grew the vMerge rowspans crossing
+   them, so a display:none row makes those spans overrun by one row and shifts
+   every later row a column right (cells collapse to 0 width, text wraps per
+   character, the ballooned heights get stamped as split-row fills). Collapse
+   removes the height but keeps the row in the grid. */
+.editor-scroll .doc-page.measuring-natural tr.page-gap-inline {
+  display: table-row !important;
+  visibility: collapse;
+}
+
 /* page border (w:pgBorders): per-page overlay boxes (see syncPageBorders);
    border color/width are document data and come inline from the sectPr */
 .page-border-overlays {
