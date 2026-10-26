@@ -28,6 +28,42 @@ function decode(bytes: Uint8Array, charset: string, fatal = false): string | nul
   }
 }
 
+// The 700 most frequent Hangul syllables in general Korean prose (Korean Wikipedia
+// articles); they cover over 99% of syllables in real text. GBK or Shift_JIS bytes read
+// as EUC-KR also give Hangul, but mostly rare syllables outside this set.
+const COMMON_HANGUL = new Set(
+  '이다는의에한로을하가서기은대지고사어으국를인도시년과적수자정구제있부리학교전나일주되해스장역경라었화들원아중만공상계와며성관문동등여그보개선' +
+    '유식용세비영민위조명회했게터산분치연소면방반거통된울미발음생업재행법월단진육체간드러운우포피종요것였양르할차무당강모신데실작커후오마심프현료' +
+    '물내트따병표설특남외초야점같른력각타축건권함본또술형출안천립많때준려두류별더래바예록카급입호평금매태근능임크향불추최레목환결약파독루및군노까' +
+    '합말북속않광배석론열격니직히처았언품판컴퓨달험증키받악활령규곳철디련접질편알존람높메족든확집청복습량늘없감변헌승저졌필던율총토난새항채택럽져' +
+    '골쓰버팀름측순페코란쟁네박송림탄올날범번린칙참션볼베줄퍼브온창책투견백맞뒤균쳐황패글겨절색쪽농랑담티플효누억객칭넘픽왔득너뜻워께징률왕써갈찰' +
+    '얻협밀낮탐츠획례앙암벌돌탈테랜념램충큰났검논망혁취응착친밖삼층융잡될완곡궁즈김락갖휘폐킥극널걸넓컵애살럼블침클못맥훈탕꾸케머앞움길찾먹링센떤' +
+    '므막롯텔잔맹빈잠폭닌런털엔혼봉빌옮손슬잘찬허륙팅몇숙압킨템좌뿐염좋떻풍즉렸빠겼핵촉갔놓느잉웨넷끝희켰덕첫틴볶익윤욱켜먼녹턴잇춘씨팔째퇴긴흐둘' +
+    '낸홍힘괄둔흔흥몰맛풋휴척릴맡톤렵슈헤렇괴섭쇄혹씩끼콩뉴캐넣섰릉웃뀌렌븐쳤몽밍벨즘벽떨엄섬냉콘돈옥액읍혈떠묘옛헐눈텍숫덜킹렀붙략귀뉘쿠겪촌녀쓴' +
+    '읽푸틀밝앗랐웠싸값롭뉜갑왜졸랫콜셈킬잎혀룬혜곤슷텐욕랍컨릭큼홈칼얼듬헬셀끌엑님델폴놀십몸칠짓짧춰셔빛좁촬낱삶땅붕맺엇힌빼낙됨썼멘궐죄핑즐돕핸' +
+    '윈뢰짐룹멸탁겸답뤄싱봄켓굴춤롤곽죽흑쇼냈닥낳핀혔섞샤멀꽃흡듣쉬폰뜨쿨굽뛰옐곧맨됐벗돼빚섯늦컬꼽풀칸밤꺼멈팬앤즌튜낼짜깔렬낀눌깊뚜싼찍빨젠뽑톨',
+)
+
+/**
+ * Whether decoded text is clearly Korean: most non-ASCII characters are Hangul
+ * syllables, and most of those are everyday syllables. Chinese or Japanese bytes
+ * read as EUC-KR land on hanja, symbols, or rare syllables instead.
+ */
+export function looksKorean(text: string): boolean {
+  let nonAscii = 0
+  let hangul = 0
+  let common = 0
+  for (const character of text) {
+    const code = character.codePointAt(0) ?? 0
+    if (code < 0x80) continue
+    nonAscii += 1
+    if (code < 0xac00 || code > 0xd7a3) continue
+    hangul += 1
+    if (COMMON_HANGUL.has(character)) common += 1
+  }
+  return hangul >= 6 && hangul / nonAscii >= 0.8 && common / hangul >= 0.75
+}
+
 /** how plausible a decoding is: CJK/ASCII good, replacement chars and control bytes bad */
 function score(text: string): number {
   let value = 0
@@ -90,6 +126,15 @@ export function decodeCsvBuffer(bytes: Uint8Array, preferred?: string): string {
 
   const utf8 = decode(bytes, 'utf-8', true)
   if (utf8 !== null) return utf8
+
+  // Korean Excel CSVs (code page 949) decode as plausible GBK too, so without a
+  // Korean locale they came out as Chinese. Pick Korean from the bytes alone, but
+  // only when the machine's language does not already claim another charset that
+  // reads the bytes cleanly, and the text is overwhelmingly Hangul.
+  if (!preferred || preferred === 'euc-kr' || decode(bytes, preferred, true) === null) {
+    const korean = decode(bytes, 'euc-kr', true)
+    if (korean !== null && looksKorean(korean)) return korean
+  }
 
   let best = decode(bytes, 'utf-8') ?? ''
   let bestScore = score(best)
