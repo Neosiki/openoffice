@@ -268,6 +268,73 @@ describe('rhwp nested-table patches', () => {
   })
 })
 
+describe('rhwp memo menu patches', () => {
+  // the studio's text around the command, as the pinned release has it
+  const insert = [
+    "  stub('insert:para-band', t('command.insert.paraBand.label')),",
+    "  stub('insert:comment', t('command.insert.comment.label'), 'icon-comment'),",
+    '  {',
+    "    id: 'insert:footnote',",
+  ].join('\n')
+
+  it('turn the comment stub into a command that asks the app for a memo', () => {
+    const patched = applyPatch('studio-memo-command', insert)
+    expect(patched).not.toContain("stub('insert:comment'")
+    expect(patched).toContain("    id: 'insert:comment',")
+    expect(patched).toContain("    icon: 'icon-comment',")
+    expect(patched).toContain('canExecute: (ctx) => ctx.hasDocument && !ctx.isFormMode')
+    expect(patched).toContain("globalThis.dispatchEvent(new CustomEvent('ieum:memo-insert'))")
+    // no shortcut: the menu shows none for the memo
+    const command = patched.slice(
+      patched.indexOf("    id: 'insert:comment',"),
+      patched.indexOf("    id: 'insert:footnote',"),
+    )
+    expect(command).not.toContain('shortcutLabel')
+  })
+
+  it('name the menu 메모 in Korean and Memo in English', () => {
+    const ko = '  "command.insert.comment.label": "주석",'
+    expect(applyPatch('studio-memo-label-ko', ko)).toBe('  "command.insert.comment.label": "메모",')
+    const en = '  "command.insert.comment.label": "Comments",'
+    expect(applyPatch('studio-memo-label-en', en)).toBe('  "command.insert.comment.label": "Memo",')
+  })
+
+  it('fail when the stub or a label is gone', () => {
+    expect(() => applyPatch('studio-memo-command', 'export const insertCommands = []')).toThrow(
+      /rhwp patch/,
+    )
+    expect(() => applyPatch('studio-memo-label-ko', 'const catalog = {}')).toThrow(/rhwp patch/)
+    expect(() => applyPatch('studio-memo-label-en', 'const catalog = {}')).toThrow(/rhwp patch/)
+  })
+
+  it('refuse to guess between two matches', () => {
+    const twice = [
+      "  stub('insert:comment', t('command.insert.comment.label'), 'icon-comment'),",
+      "  stub('insert:comment', t('command.insert.comment.label'), 'icon-comment'),",
+    ].join('\n')
+    expect(() => applyPatch('studio-memo-command', twice)).toThrow(/exactly one/)
+    expect(() =>
+      applyPatch('studio-memo-label-ko', '  "command.insert.comment.label": "주석",\n'.repeat(2)),
+    ).toThrow(/exactly one/)
+    expect(() =>
+      applyPatch(
+        'studio-memo-label-en',
+        '  "command.insert.comment.label": "Comments",\n'.repeat(2),
+      ),
+    ).toThrow(/exactly one/)
+  })
+
+  it('are all in the studio build', () => {
+    for (const name of [
+      'studio-memo-command',
+      'studio-memo-label-ko',
+      'studio-memo-label-en',
+    ] as const) {
+      expect(STUDIO_PATCHES).toContain(name)
+    }
+  })
+})
+
 describe('rhwp font memo patches', () => {
   // the studio's text around the patches, as the pinned release has it
   const bridge = [
@@ -347,9 +414,12 @@ describe('the studio source the build fetched', () => {
     'src/engine/input-handler.ts',
     'src/engine/input-handler-keyboard.ts',
     'src/command/commands/edit.ts',
+    'src/command/commands/insert.ts',
     'src/command/commands/table.ts',
     'src/command/shortcut-map.ts',
     'src/command/registry.ts',
+    'src/i18n/locales/ko.ts',
+    'src/i18n/locales/en.ts',
   ].map((file) => join(studio, file))
 
   // only where a build has fetched it; a fresh checkout has nothing to look at

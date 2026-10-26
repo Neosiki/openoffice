@@ -57,6 +57,11 @@
  *   one apply, and a copied format that lasts until it is overwritten — and make
  *   the editor's "has copied format" answer come from that module.
  *
+ * studio-memo-command, studio-memo-label-ko, studio-memo-label-en
+ *   The studio's Insert > Comment item is a stub. It becomes the app's memo: with a
+ *   document open outside form mode it sends `ieum:memo-insert` to the window the app
+ *   listens on, and the menu names it 메모 (Memo) in the studio's two languages.
+ *
  * studio-font-memo-state, studio-font-memo-use
  *   The studio replaces the Canvas2D `font` setter so that every font string
  *   the engine sets passes its font substitution, which builds the family
@@ -448,6 +453,32 @@ const PATCHES = {
       },
     ],
   },
+  'studio-memo-command': {
+    file: /[\\/]rhwp-studio[\\/]src[\\/]command[\\/]commands[\\/]insert\.ts$/,
+    find: "  stub('insert:comment', t('command.insert.comment.label'), 'icon-comment'),",
+    replace: [
+      '  {',
+      "    id: 'insert:comment',",
+      "    label: t('command.insert.comment.label'),",
+      "    icon: 'icon-comment',",
+      '    canExecute: (ctx) => ctx.hasDocument && !ctx.isFormMode,',
+      '    execute() {',
+      '      // the app listens on this window and opens its memo editor',
+      "      globalThis.dispatchEvent(new CustomEvent('ieum:memo-insert'));",
+      '    },',
+      '  },',
+    ].join('\n'),
+  },
+  'studio-memo-label-ko': {
+    file: /[\\/]rhwp-studio[\\/]src[\\/]i18n[\\/]locales[\\/]ko\.ts$/,
+    find: '  "command.insert.comment.label": "주석",',
+    replace: '  "command.insert.comment.label": "메모",',
+  },
+  'studio-memo-label-en': {
+    file: /[\\/]rhwp-studio[\\/]src[\\/]i18n[\\/]locales[\\/]en\.ts$/,
+    find: '  "command.insert.comment.label": "Comments",',
+    replace: '  "command.insert.comment.label": "Memo",',
+  },
   'studio-font-memo-state': {
     file: /[\\/]rhwp-studio[\\/]src[\\/]core[\\/]wasm-bridge\.ts$/,
     find: 'let canvasFontSubstitutionInstalled = false;',
@@ -496,6 +527,9 @@ export const STUDIO_PATCHES = /** @type {const} */ ([
   'studio-format-copy-safety',
   'studio-format-copy',
   'studio-format-copy-state',
+  'studio-memo-command',
+  'studio-memo-label-ko',
+  'studio-memo-label-en',
   'studio-font-memo-state',
   'studio-font-memo-use',
 ])
