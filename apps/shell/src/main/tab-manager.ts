@@ -1619,8 +1619,7 @@ export class TabManager {
             : tab.kind === 'html' && htmlIsDirty(tab.view.webContents.id)
               ? requestHtmlClose
               : tab.kind === 'hwp' &&
-                  (hwpIsDirty(tab.view.webContents.id) ||
-                    hwpMemoModalOpen(tab.view.webContents.id))
+                  (hwpIsDirty(tab.view.webContents.id) || hwpMemoModalOpen(tab.view.webContents.id))
                 ? requestHwpClose
                 : tab.kind === 'slides' && slidesIsDirty(tab.view.webContents.id)
                   ? requestSlidesClose
