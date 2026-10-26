@@ -47,6 +47,25 @@ export function mimeOf(path: string): string {
 /** Max safe file name chars (preserves extension when truncating). */
 export const MAX_SAFE_NAME_CHARS = 128
 
+/**
+ * Max safe file name bytes (UTF-8). Linux and macOS refuse a name over 255
+ * bytes, and a Hangul letter takes 3, so 128 of them would not fit; the margin
+ * leaves room for the temp name an edit of the file adds beside it.
+ */
+export const MAX_SAFE_NAME_BYTES = 200
+
+/** The leading characters of `text` that fit both limits, never cutting inside a surrogate pair. */
+function headWithin(text: string, maxUnits: number, maxBytes: number): string {
+  let head = ''
+  let bytes = 0
+  for (const char of text) {
+    bytes += Buffer.byteLength(char)
+    if (head.length + char.length > maxUnits || bytes > maxBytes) break
+    head += char
+  }
+  return head
+}
+
 /** A client-supplied file name reduced to one safe path segment. */
 export function safeName(raw: string | undefined, fallback = 'file'): string {
   const base = basename((raw ?? '').trim().replace(/\\/g, '/'))
@@ -58,9 +77,13 @@ export function safeName(raw: string | undefined, fallback = 'file'): string {
   // `re_sume_.pdf`.
   let clean = base.replace(/[^\p{L}\p{N}\p{M}._\- ()]/gu, '_').replace(/^\.+/, '')
   if (clean === '') return fallback
-  if (clean.length > MAX_SAFE_NAME_CHARS) {
-    const ext = extname(clean).slice(0, 16)
-    const stem = clean.slice(0, MAX_SAFE_NAME_CHARS - ext.length)
+  if (clean.length > MAX_SAFE_NAME_CHARS || Buffer.byteLength(clean) > MAX_SAFE_NAME_BYTES) {
+    const ext = headWithin(extname(clean), 16, 16 * 4)
+    const stem = headWithin(
+      clean,
+      MAX_SAFE_NAME_CHARS - ext.length,
+      MAX_SAFE_NAME_BYTES - Buffer.byteLength(ext),
+    )
     clean = stem + ext
   }
   return clean

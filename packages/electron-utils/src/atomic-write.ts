@@ -27,9 +27,33 @@ const isRetryableRename = (error: unknown) => RETRYABLE_RENAME_CODES.has(errorCo
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 const sleepSync = (ms: number) => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms)
 
-/** a fresh `.<name>.<12 hex>.tmp` path in the target's folder */
+/**
+ * Most bytes of the target's name a temp name carries. The temp name adds
+ * `.` + `.` + 12 hex + `.tmp` (18 bytes) and Linux and macOS cap a file name
+ * at 255 bytes, so a long Hangul name (3 bytes a letter) must be shortened
+ * or the temp file cannot be created even though the target itself exists.
+ */
+const TEMP_NAME_MAX_BYTES = 200
+
+/** `name` cut to at most `maxBytes` of UTF-8, never inside a character */
+function nameHead(name: string, maxBytes: number): string {
+  if (Buffer.byteLength(name) <= maxBytes) return name
+  let head = ''
+  let bytes = 0
+  for (const char of name) {
+    bytes += Buffer.byteLength(char)
+    if (bytes > maxBytes) break
+    head += char
+  }
+  return head
+}
+
+/** a fresh `.<name>.<12 hex>.tmp` path in the target's folder (a long name is cut short) */
 export const tempPathBeside = (filePath: string) =>
-  join(dirname(filePath), `.${basename(filePath)}.${randomBytes(6).toString('hex')}.tmp`)
+  join(
+    dirname(filePath),
+    `.${nameHead(basename(filePath), TEMP_NAME_MAX_BYTES)}.${randomBytes(6).toString('hex')}.tmp`,
+  )
 
 async function syncFileBestEffort(path: string): Promise<void> {
   let handle

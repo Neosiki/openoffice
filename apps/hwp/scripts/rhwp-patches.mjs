@@ -70,6 +70,18 @@
  *   below the merge instead of growing it. A caret in a plain cell inside another merge
  *   keeps that cell's row, because Hangul grows the merge there.
  *
+ * studio-memo-command, studio-memo-label-ko, studio-memo-label-en
+ *   The studio's Insert > Comment item is a stub. It becomes the app's memo: with a
+ *   document open outside form mode it sends `ieum:memo-insert` to the window the app
+ *   listens on, and the menu names it 메모 (Memo) in the studio's two languages.
+ *
+ * studio-memo-anchors, studio-memo-delete-undo
+ *   The engine drops a memo when Backspace or Delete removes the last character of its
+ *   anchor (vendor/rhwp-core patch 0018, decision 0072). The studio's undo of a typed
+ *   deletion only puts the text back, so the memo stayed gone. The bridge gains a call
+ *   for the memo anchors, and a deletion that touches one captures its paragraph first,
+ *   as the studio already does for a link, so undo restores the paragraph with the memo.
+ *
  * studio-font-memo-state, studio-font-memo-use
  *   The studio replaces the Canvas2D `font` setter so that every font string
  *   the engine sets passes its font substitution, which builds the family
@@ -616,6 +628,95 @@ const PATCHES = {
       },
     ],
   },
+  'studio-memo-command': {
+    file: /[\\/]rhwp-studio[\\/]src[\\/]command[\\/]commands[\\/]insert\.ts$/,
+    find: "  stub('insert:comment', t('command.insert.comment.label'), 'icon-comment'),",
+    replace: [
+      '  {',
+      "    id: 'insert:comment',",
+      "    label: t('command.insert.comment.label'),",
+      "    icon: 'icon-comment',",
+      '    canExecute: (ctx) => ctx.hasDocument && !ctx.isFormMode,',
+      '    execute() {',
+      '      // the app listens on this window and opens its memo editor',
+      "      globalThis.dispatchEvent(new CustomEvent('ieum:memo-insert'));",
+      '    },',
+      '  },',
+    ].join('\n'),
+  },
+  'studio-memo-label-ko': {
+    file: /[\\/]rhwp-studio[\\/]src[\\/]i18n[\\/]locales[\\/]ko\.ts$/,
+    find: '  "command.insert.comment.label": "주석",',
+    replace: '  "command.insert.comment.label": "메모",',
+  },
+  'studio-memo-label-en': {
+    file: /[\\/]rhwp-studio[\\/]src[\\/]i18n[\\/]locales[\\/]en\.ts$/,
+    find: '  "command.insert.comment.label": "Comments",',
+    replace: '  "command.insert.comment.label": "Memo",',
+  },
+  'studio-memo-anchors': {
+    file: /[\\/]rhwp-studio[\\/]src[\\/]core[\\/]wasm-bridge\.ts$/,
+    // the memo list of vendor/rhwp-core patch 0018, ahead of a neighbour the bridge has once
+    find: '  getHyperlinkContext(target: HyperlinkTarget): HyperlinkContext {',
+    replace: [
+      '  /** The memo anchors of the document; none from an engine without memos. */',
+      '  getMemoAnchors(): {',
+      '    sectionIndex: number;',
+      '    paraIndex: number | null;',
+      '    startCharIdx: number | null;',
+      '    endCharIdx: number | null;',
+      '    path: { controlIndex: number; cellIndex?: number; paraIndex: number }[] | null;',
+      '  }[] {',
+      '    const doc = this.doc as any;',
+      "    if (!doc || typeof doc.getMemoList !== 'function') return [];",
+      '    return JSON.parse(doc.getMemoList());',
+      '  }',
+      '',
+      '  getHyperlinkContext(target: HyperlinkTarget): HyperlinkContext {',
+    ].join('\n'),
+  },
+  'studio-memo-delete-undo': {
+    file: /[\\/]rhwp-studio[\\/]src[\\/]engine[\\/]command\.ts$/,
+    edits: [
+      // whether a deletion touches a memo's anchor, next to the command that asks
+      {
+        find: 'export class DeleteTextCommand implements EditCommand {',
+        replace: [
+          "/** Whether deleting `count` characters at `offset` in `target` touches a memo's anchor. */",
+          'export function memoAnchorOverlaps(',
+          '  wasm: WasmBridge,',
+          '  target: ReturnType<typeof hyperlinkTarget>,',
+          '  offset: number,',
+          '  count: number,',
+          '): boolean {',
+          '  const path = JSON.stringify(target.cellPath);',
+          '  return wasm.getMemoAnchors().some(memo =>',
+          '    memo.sectionIndex === target.section',
+          '    && memo.paraIndex === target.para',
+          '    && JSON.stringify((memo.path ?? []).map(entry =>',
+          '      [entry.controlIndex, entry.cellIndex ?? 0, entry.paraIndex])) === path',
+          '    && memo.startCharIdx !== null && memo.endCharIdx !== null',
+          '    && memo.startCharIdx < memo.endCharIdx',
+          '    && offset < memo.endCharIdx && memo.startCharIdx < offset + count);',
+          '}',
+          '',
+          'export class DeleteTextCommand implements EditCommand {',
+        ].join('\n'),
+      },
+      // the engine drops a memo whose whole anchor goes; capture the paragraph as for a link
+      {
+        find: [
+          '      if (context.links.some(link => this.position.charOffset < link.end',
+          '        && link.start < this.position.charOffset + this.count)) {',
+        ].join('\n'),
+        replace: [
+          '      if (context.links.some(link => this.position.charOffset < link.end',
+          '        && link.start < this.position.charOffset + this.count)',
+          '        || memoAnchorOverlaps(wasm, target, this.position.charOffset, this.count)) {',
+        ].join('\n'),
+      },
+    ],
+  },
   'studio-font-memo-state': {
     file: /[\\/]rhwp-studio[\\/]src[\\/]core[\\/]wasm-bridge\.ts$/,
     find: 'let canvasFontSubstitutionInstalled = false;',
@@ -667,6 +768,11 @@ export const STUDIO_PATCHES = /** @type {const} */ ([
   'studio-format-copy-state',
   'studio-single-cell-resize',
   'studio-merged-row-below',
+  'studio-memo-command',
+  'studio-memo-label-ko',
+  'studio-memo-label-en',
+  'studio-memo-anchors',
+  'studio-memo-delete-undo',
   'studio-font-memo-state',
   'studio-font-memo-use',
 ])

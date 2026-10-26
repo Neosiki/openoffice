@@ -509,6 +509,42 @@ export class OdtEditGuard {
     return null
   }
 
+  /** Follow protected cells only after an op was accepted; rejected ops keep the old coordinates. */
+  accept(before: Snapshot, doc: PmNode): void {
+    const top = topTables(doc)
+    for (const [table, snap] of before.tables) {
+      if (this.lockedCells.get(table) === null) continue
+      const found = top.get(table)
+      if (!found) continue
+      const grid = tableGrid(found.node)
+      if (shapeOf(grid) === snap.shape) continue
+      const now = printed(grid)
+      const size = gridSize(grid)
+      const sameRows = snap.size.rows === size.rows
+      const sameCols = snap.size.cols === size.cols
+      if (sameRows && sameCols) continue
+      if (sameRows || sameCols) {
+        const by = sameCols ? 'row' : 'col'
+        const map = alignLines(lineSignatures(snap.cells, by), lineSignatures(now, by))
+        this.lockedCells.set(
+          table,
+          snap.locked.map((cell) => ({
+            row: by === 'row' ? map.get(cell.row)! : cell.row,
+            col: by === 'col' ? map.get(cell.col)! : cell.col,
+          })),
+        )
+      } else {
+        // A rebuild that changes both axes was checked by print counts. Keep every
+        // matching position protected rather than guessing between identical cells.
+        const keep = new Set(snap.locked.map((cell) => cell.print))
+        this.lockedCells.set(
+          table,
+          now.filter((cell) => keep.has(cell.print)).map(({ row, col }) => ({ row, col })),
+        )
+      }
+    }
+  }
+
   private objectPrints(doc: PmNode): Map<string, string> {
     const out = new Map<string, string>()
     if (this.blockObjects.length) {

@@ -59,7 +59,6 @@ const MAX_BOX_CHOICE_CHARS = 40
 const FLOATING_KINDS = new Set(['image', 'picture', 'shape', 'group', 'ole', 'textbox'])
 /** The command this plugin registers with the editor to move its caret to a place. */
 const REVEAL_COMMAND = 'ext:ieum-reveal'
-
 /**
  * The event the File menu items this plugin adds fire on the editor's window, with the
  * command as its detail: the app hears it and saves or prints the way Ctrl+S and Ctrl+P do.
@@ -99,13 +98,65 @@ const MARK_LAYER_Z = 4
 const MARK_SETTLE_MS = 350
 /** Changes that leave nothing to mark: what they removed is gone. */
 const UNMARKED_CHANGES = new Set(['delete-paragraph', 'remove-table-lines', 'delete-note'])
+
+/**
+ * The events the memo panel and the app use: a user's own edit took memos away, or a paste
+ * brought text without the memo that was copied with it (a paste from another editor).
+ */
+export const MEMO_REMOVED_EVENT = 'ieum:memo-removed'
+export const MEMO_NOT_COPIED_EVENT = 'ieum:memo-not-copied'
+/** The commands this plugin registers with the editor for the memo panel. */
+const MEMO_LIST_COMMAND = 'ext:ieum-memo-list'
+const MEMO_SELECTION_COMMAND = 'ext:ieum-memo-selection'
+const MEMO_INSERT_COMMAND = 'ext:ieum-memo-insert'
+const MEMO_SET_COMMAND = 'ext:ieum-memo-set'
+const MEMO_REMOVE_COMMAND = 'ext:ieum-memo-remove'
+const MEMO_MARK_COMMAND = 'ext:ieum-memo-anchors'
+const MEMO_LOCK_COMMAND = 'ext:ieum-memo-lock'
+const MEMO_UNLOCK_COMMAND = 'ext:ieum-memo-unlock'
+/** Where a memo anchor may be put. */
+const MEMO_PLACES = new Set(['body', 'tableCell', 'textBox'])
+/** Changes the plugin makes for the memo panel: removing the memo is what was asked. */
+const MEMO_CHANGES = new Set(['memo-insert', 'memo-set', 'memo-remove'])
+/** The longest memo text the engine takes, in UTF-16 units. */
+const MAX_MEMO_TEXT = 100_000
+const MAX_MEMO_AUTHOR = 64
+/** How much of a memo a card and an approval question show. */
+const MEMO_PREVIEW_CHARS = 80
+/** How far around a caret the anchor preview looks. */
+const MEMO_CARET_CHARS = 15
+/** Under the AI change marks, above the pages: a memo anchor is a quiet band, not a selection. */
+const MEMO_LAYER_Z = 3
+const MEMO_FILL = 'rgba(64, 132, 240, 0.16)'
+const MEMO_LINE = 'rgba(28, 96, 214, 0.7)'
+const MEMO_SELECTED_FILL = 'rgba(64, 132, 240, 0.32)'
+const MEMO_SELECTED_LINE = 'rgba(18, 72, 176, 0.95)'
+/** The bar a memo with no text range gets at its caret. */
+const MEMO_CARET_WIDTH = 2
+/** How long after an unannounced user change the memo list is looked at for pasted memos. */
+const MEMO_PROBE_MS = 250
+/**
+ * The channel a copy of memo-bearing text is told on, so another editor instance (a split
+ * pane or another document tab) can tell the app a paste brought the text without the memo.
+ * It carries a marker only, not the clipboard content; a paste from the system clipboard
+ * gives no way to know what it held, so this is best effort.
+ */
+const MEMO_COPY_CHANNEL = 'ieum:hwp-memo-copied'
+const MEMO_COPY_WINDOW_MS = 15_000
+
 /** The most runs and characters of one selection: a sanity limit, far above real use. */
 const MAX_SELECTED_RUNS = 5000
 const MAX_SELECTED_CHARS = 400000
-/** Lookups one walk over the document spends on finding tables inside table cells. */
-const MAX_NESTED_LOOKUPS = 20000
+/**
+ * Lookups one walk over the document spends on finding tables inside table cells: three per
+ * cell paragraph. A government notice with a 429-row list (about 8,000 cells) needs about
+ * 25,000, and 100,000 lookups take well under a second.
+ */
+const MAX_NESTED_LOOKUPS = 100000
 /** Objects tried in one cell paragraph when looking for a table inside it. */
 const NESTED_CONTROLS_TRIED = 3
+/** How many controls of one cell paragraph the object check asks about. */
+const MAX_CELL_CONTROLS = 32
 /** How deep tables inside tables are followed. */
 const MAX_TABLE_DEPTH = 3
 /** Cells and characters of a table shown in the list of tables. */
@@ -193,6 +244,302 @@ function fieldPlace(field) {
       : {}),
     offset: field.startCharIdx ?? 0,
     length: 0,
+  }
+}
+
+/** The engine's memo path (a type per step) in the form the editor's calls take. */
+function memoPathOf(entry) {
+  if (!Array.isArray(entry.path) || entry.path.length === 0) return null
+  return entry.path.map((step) => ({
+    controlIndex: step.controlIndex,
+    // a text box is addressed like a table of one cell
+    cellIndex: Number.isInteger(step.cellIndex) ? step.cellIndex : 0,
+    cellParaIndex: Number.isInteger(step.cellParaIndex)
+      ? step.cellParaIndex
+      : Number.isInteger(step.paraIndex)
+        ? step.paraIndex
+        : 0,
+  }))
+}
+
+/** A memo anchor as the editor's place calls take it; null where this plugin has no address. */
+function memoAnchorOf(entry) {
+  if (!MEMO_PLACES.has(entry.place)) return null
+  if (!Number.isInteger(entry.sectionIndex) || !Number.isInteger(entry.paraIndex)) return null
+  const path = memoPathOf(entry)
+  if (entry.place !== 'body' && !path) return null
+  const offset = Number.isInteger(entry.startCharIdx) ? entry.startCharIdx : 0
+  const end = Number.isInteger(entry.endCharIdx) ? entry.endCharIdx : offset
+  return {
+    sec: entry.sectionIndex,
+    para: entry.paraIndex,
+    ...(path ? { path } : {}),
+    offset,
+    length: Math.max(0, end - offset),
+  }
+}
+
+/** The rectangle(s) a memo anchor covers, or the caret bar of one with no text range. */
+function memoRectsOf(doc, entry) {
+  const anchor = memoAnchorOf(entry)
+  if (!anchor) return []
+  const path = anchor.path
+  if (anchor.length > 0) {
+    const rects = path
+      ? parse(
+          doc.getSelectionRectsInCellByPath(
+            anchor.sec,
+            anchor.para,
+            JSON.stringify(path),
+            path[path.length - 1].cellParaIndex,
+            anchor.offset,
+            path[path.length - 1].cellParaIndex,
+            anchor.offset + anchor.length,
+          ),
+        )
+      : parse(
+          doc.getSelectionRects(
+            anchor.sec,
+            anchor.para,
+            anchor.offset,
+            anchor.para,
+            anchor.offset + anchor.length,
+          ),
+        )
+    return Array.isArray(rects) ? rects : []
+  }
+  const at = path
+    ? parse(doc.getCursorRectByPath(anchor.sec, anchor.para, JSON.stringify(path), anchor.offset))
+    : parse(doc.getCursorRect(anchor.sec, anchor.para, anchor.offset))
+  if (!at || !Number.isFinite(at.pageIndex)) return []
+  // a caret has no width: the panel's drawing gives it the small bar it shows instead
+  return [{ pageIndex: at.pageIndex, x: at.x, y: at.y, width: 0, height: at.height ?? 0 }]
+}
+
+/** The engine's memo list as plain data; an engine without memos answers nothing. */
+function memoEntriesOf(doc) {
+  if (typeof doc.getMemoList !== 'function') return []
+  const entries = parse(doc.getMemoList())
+  return Array.isArray(entries) ? entries : []
+}
+
+/**
+ * Whether the document is password protected. The engine's document info has the password
+ * flag only, not a distribution flag: a distribution-only document gets as far as the
+ * mutation, where the engine refuses with memo_read_only and the panel shows that.
+ */
+const memoProtected = (doc) => parse(doc.getDocumentInfo()).encrypted === true
+
+/** What the panel and an approval question need to know about a memo that is going away. */
+const memoSummaryOf = (entry) => ({
+  id: entry.id,
+  index: entry.index,
+  author: typeof entry.author === 'string' ? entry.author : '',
+  text: clip(
+    String(entry.text ?? '')
+      .replace(/\s+/g, ' ')
+      .trim(),
+    MAX_REPORTED_CHARS,
+  ),
+  place: entry.place,
+  page: Number.isInteger(entry.page) ? entry.page : 0,
+})
+
+/** The memo list with where each anchor is on the pages: what the panel shows. */
+function memoListOf(doc) {
+  return memoEntriesOf(doc).map((entry) => {
+    let rects
+    try {
+      rects = memoRectsOf(doc, entry)
+    } catch {
+      // an anchor the page layout does not know: the panel still lists the memo
+      rects = []
+    }
+    const page =
+      Number.isInteger(entry.page) && entry.page > 0
+        ? entry.page
+        : rects.length > 0
+          ? rects[0].pageIndex + 1
+          : 0
+    return {
+      id: entry.id,
+      index: entry.index,
+      author: typeof entry.author === 'string' ? entry.author : '',
+      date: entry.date ?? null,
+      text: typeof entry.text === 'string' ? entry.text : '',
+      place: typeof entry.place === 'string' ? entry.place : 'unknown',
+      sectionIndex: Number.isInteger(entry.sectionIndex) ? entry.sectionIndex : null,
+      paraIndex: Number.isInteger(entry.paraIndex) ? entry.paraIndex : null,
+      startCharIdx: Number.isInteger(entry.startCharIdx) ? entry.startCharIdx : null,
+      endCharIdx: Number.isInteger(entry.endCharIdx) ? entry.endCharIdx : null,
+      path: Array.isArray(entry.path) ? entry.path : null,
+      page,
+      editable: entry.editable === true,
+      readOnlyReason: typeof entry.readOnlyReason === 'string' ? entry.readOnlyReason : null,
+      anchor: memoAnchorOf(entry),
+      rects,
+      preview: clip(
+        String(entry.text ?? '')
+          .replace(/\s+/g, ' ')
+          .trim(),
+        MEMO_PREVIEW_CHARS,
+      ),
+    }
+  })
+}
+
+/** A memo box (its body paragraph, or the cell or text box it sits in) as a string key. */
+const memoPathKey = (path) =>
+  Array.isArray(path) && path.length > 0
+    ? JSON.stringify(
+        path.map((step) => [
+          step.controlIndex,
+          Number.isInteger(step.cellIndex) ? step.cellIndex : 0,
+          Number.isInteger(step.cellParaIndex)
+            ? step.cellParaIndex
+            : Number.isInteger(step.paraIndex)
+              ? step.paraIndex
+              : 0,
+        ]),
+      )
+    : 'body'
+
+const memoBoxKey = (entry) => `${entry.sectionIndex}:${entry.paraIndex}:${memoPathKey(entry.path)}`
+
+/**
+ * Whether a memo range and a new anchor would share one area. An empty anchor at the edge
+ * of a memo does not overlap it; an empty anchor inside one, or at its exact place, does.
+ */
+function memoOverlaps(entries, key, start, end) {
+  return entries.some((entry) => {
+    if (!MEMO_PLACES.has(entry.place) || memoBoxKey(entry) !== key) return false
+    const from = entry.startCharIdx
+    const to = entry.endCharIdx
+    if (!Number.isInteger(from) || !Number.isInteger(to)) return false
+    if (start === end) return (from < start && start < to) || (from === start && to === end)
+    return from < end && start < to
+  })
+}
+
+/** The paragraph of a memo box an anchor's character offsets count from. */
+const memoAnchorK = (anchor) =>
+  anchor.path
+    ? anchor.path[anchor.path.length - 1].cellParaIndex
+    : Number.isInteger(anchor.paraIndex)
+      ? anchor.paraIndex
+      : anchor.para
+
+/** A memo author as the file may hold it: no separators, 64 units, never empty. */
+function memoAuthorOf(author) {
+  const clean = String(author ?? '')
+    // eslint-disable-next-line no-control-regex
+    .replace(/[\u0000-\u001f\u007f/\\;]/g, '')
+    .trim()
+    .slice(0, MAX_MEMO_AUTHOR)
+  // the product's name (PRODUCT_NAME of @genoffice/i18n, which this plugin cannot import):
+  // Hangul shows it as the author
+  return clean || 'IeumOffice'
+}
+
+/** An anchor the panel hands back, checked before it reaches the engine. */
+function checkMemoAnchor(anchor) {
+  if (!anchor || typeof anchor !== 'object') throw fail('BAD_ARGUMENT', 'anchor must be an object')
+  if (!MEMO_PLACES.has(anchor.place)) {
+    throw fail('BAD_ARGUMENT', 'anchor.place must be body, tableCell or textBox')
+  }
+  const { sectionIndex, paraIndex, startCharIdx, endCharIdx } = anchor
+  if (!Number.isInteger(sectionIndex) || !Number.isInteger(paraIndex)) {
+    throw fail('BAD_ARGUMENT', 'the anchor paragraph must be a pair of integers')
+  }
+  if (
+    !Number.isInteger(startCharIdx) ||
+    !Number.isInteger(endCharIdx) ||
+    startCharIdx < 0 ||
+    endCharIdx < startCharIdx
+  ) {
+    throw fail('BAD_ARGUMENT', 'the anchor range must be a pair of character offsets')
+  }
+  let path = null
+  if (anchor.place === 'body') {
+    if (anchor.path !== null && anchor.path !== undefined) {
+      throw fail('BAD_ARGUMENT', 'a body memo takes no path')
+    }
+  } else {
+    if (!Array.isArray(anchor.path) || anchor.path.length === 0) {
+      throw fail('BAD_ARGUMENT', 'a cell or text box memo needs a path')
+    }
+    path = anchor.path.map((step) => {
+      if (
+        !step ||
+        !Number.isInteger(step.controlIndex) ||
+        !Number.isInteger(step.cellIndex) ||
+        !Number.isInteger(step.cellParaIndex)
+      ) {
+        throw fail('BAD_ARGUMENT', 'the anchor path steps must be integers')
+      }
+      return {
+        controlIndex: step.controlIndex,
+        cellIndex: step.cellIndex,
+        cellParaIndex: step.cellParaIndex,
+      }
+    })
+  }
+  return { place: anchor.place, sectionIndex, paraIndex, startCharIdx, endCharIdx, path }
+}
+
+/** The engine's memo error envelope, when the call threw one. */
+function memoErrorOf(thrown) {
+  const text = thrown instanceof Error ? thrown.message : String(thrown)
+  try {
+    const parsed = JSON.parse(text)
+    if (parsed && parsed.ok === false && typeof parsed.code === 'string') return parsed
+  } catch {
+    // an engine error that is not a memo refusal
+  }
+  return null
+}
+
+/** Whether a selection as this plugin addresses it comes at or after another place. */
+function placeAtOrAfter(one, other) {
+  if (!one || !other) return false
+  if (one.sec !== other.sec) return one.sec > other.sec
+  if (one.para !== other.para) return one.para > other.para
+  const a = one.path ?? []
+  const b = other.path ?? []
+  for (let index = 0; index < Math.max(a.length, b.length); index++) {
+    const stepA = a[index]
+    const stepB = b[index]
+    if (!stepA || !stepB) return Boolean(stepA)
+    if (stepA.controlIndex !== stepB.controlIndex) return stepA.controlIndex > stepB.controlIndex
+    if ((stepA.cellIndex ?? 0) !== (stepB.cellIndex ?? 0)) {
+      return (stepA.cellIndex ?? 0) > (stepB.cellIndex ?? 0)
+    }
+    if ((stepA.cellParaIndex ?? 0) !== (stepB.cellParaIndex ?? 0)) {
+      return (stepA.cellParaIndex ?? 0) > (stepB.cellParaIndex ?? 0)
+    }
+  }
+  const oneK = Number.isInteger(one.k) ? one.k : memoAnchorK(one)
+  const otherK = Number.isInteger(other.k) ? other.k : memoAnchorK(other)
+  if (oneK !== otherK) return oneK > otherK
+  return one.offset >= other.offset
+}
+
+/** How many memos start inside a copied selection: what a paste from it would bring. */
+function memosWithin(doc, start, end) {
+  return memoEntriesOf(doc).filter((entry) => {
+    const anchor = memoAnchorOf(entry)
+    if (!anchor) return false
+    const at = { ...anchor, k: memoAnchorK(anchor) }
+    return placeAtOrAfter(at, start) && placeAtOrAfter(end, at)
+  }).length
+}
+
+/** Tell the app about something the document did, in one event on the editor's window. */
+function announce(name, detail) {
+  try {
+    globalThis.dispatchEvent?.(new CustomEvent(name, { detail }))
+  } catch {
+    // an editor window without events: the panel keeps what it has
   }
 }
 
@@ -303,6 +650,7 @@ function endOf(position) {
     path,
     k: path[path.length - 1].cellParaIndex,
     offset: position.charOffset,
+    textBox: position.isTextBox === true,
   }
 }
 
@@ -561,25 +909,75 @@ function expectOk(json, what) {
   if (result && result.ok === false) throw fail('ENGINE_REFUSED', `the editor refused to ${what}`)
 }
 
+/** How many engine characters (code points) the one-call cell replace takes at a time. */
+const MAX_CELL_REPLACE_CHARS = 8
+
+/** The first part of a cell replacement the engine takes at once, whole code points only. */
+function cellReplaceHead(text) {
+  return Array.from(text).slice(0, MAX_CELL_REPLACE_CHARS).join('')
+}
+
 function replaceHit(doc, hit, replacement) {
   const path = cellPathOf(hit)
   if (!path) {
     expectOk(doc.replaceText(hit.sec, hit.para, hit.charOffset, hit.length, replacement), 'replace')
     return
   }
-  // the engine's one-call cell replace only takes very short text (it serves typing), so a
-  // cell is rewritten as delete + insert; inside one transaction that is still one undo step
   const json = JSON.stringify(path)
+  if (replacement.length === 0) {
+    // an empty replacement is a deletion: a memo whose whole anchor goes with it is the
+    // engine's removal, which the memo guard asks the user about
+    expectOk(
+      doc.deleteTextInCellByPath(hit.sec, hit.para, json, hit.charOffset, hit.length),
+      'delete',
+    )
+    return
+  }
+  const last = path[path.length - 1]
+  if (path.length === 1 && typeof doc.replaceTextInCellDeferredPagination === 'function') {
+    // one engine call keeps a memo on the replaced text. It takes up to eight characters
+    // (code points), so a longer replacement is the head in that call and the rest typed
+    // right after it; the engine counts its offsets in characters, not UTF-16 units.
+    const head = cellReplaceHead(replacement)
+    const headLength = Array.from(head).length
+    const total = Array.from(replacement).length
+    expectOk(
+      doc.replaceTextInCellDeferredPagination(
+        hit.sec,
+        hit.para,
+        last.controlIndex,
+        last.cellIndex,
+        last.cellParaIndex,
+        hit.charOffset,
+        hit.length,
+        head,
+      ),
+      'replace',
+    )
+    if (headLength < total) {
+      expectOk(
+        doc.insertTextInCellByPath(
+          hit.sec,
+          hit.para,
+          json,
+          hit.charOffset + headLength,
+          replacement.slice(head.length),
+        ),
+        'insert',
+      )
+    }
+    return
+  }
+  // a table inside a table cell has no path-taking one-call replace; an engine without it
+  // (an older build) is written as delete + insert too
   expectOk(
     doc.deleteTextInCellByPath(hit.sec, hit.para, json, hit.charOffset, hit.length),
     'delete',
   )
-  if (replacement.length > 0) {
-    expectOk(
-      doc.insertTextInCellByPath(hit.sec, hit.para, json, hit.charOffset, replacement),
-      'insert',
-    )
-  }
+  expectOk(
+    doc.insertTextInCellByPath(hit.sec, hit.para, json, hit.charOffset, replacement),
+    'insert',
+  )
 }
 
 /**
@@ -599,8 +997,9 @@ function containerOf(doc, hit) {
       text: (k, count) => (count > 0 ? doc.getTextRange(sec, k, 0, count) : ''),
       // tables, pictures and the like sit in a paragraph without being its text; each one
       // has a place among the characters (the first paragraph of a document always holds
-      // some: its section and column definitions)
-      objectPositions: (k) => parse(doc.getControlTextPositions(sec, k)),
+      // some: its section and column definitions). A memo is left out: it is a field the
+      // memo guard watches, and a paragraph may be changed around it.
+      objectPositions: (k) => memoFreeObjectPositions(doc, sec, k),
       split: (k, offset) => expectOk(doc.splitParagraph(sec, k, offset), 'split the paragraph'),
       font: (k) => fontOf(() => doc.getCharPropertiesAt(sec, k, 0)),
       // an empty paragraph after k without splitting k: it takes k's paragraph formatting
@@ -692,14 +1091,49 @@ function containerOf(doc, hit) {
  * named cell is its text, so those are not watched then either.
  */
 function objectsOf(doc, ignore = null) {
-  const fields = parse(doc.getFieldList())
+  // memos are fields of their own but are watched by the memo guard: their text is the
+  // anchor text, which changes whenever that text is edited. The engine also lists each
+  // memo among the paragraph's controls, so those controls are left out of the count.
+  const all = parse(doc.getFieldList())
+  const fields = all.filter((field) => field.fieldType !== 'memo')
   const watched = ignore
     ? fields.filter((field) => field.cellField !== true && !ignore.has(field.fieldId))
     : fields
+  const controls = parse(doc.getControls())
+  const unnamed = controls.filter((control) => control.ctrlId === '' && control.ctrlCh === 0)
+  const used = new Set()
+  let memoControls = 0
+  for (const memo of all.filter((field) => field.fieldType === 'memo')) {
+    const index = unnamed.findIndex(
+      (control, at) =>
+        !used.has(at) &&
+        Number.isInteger(memo.listId) &&
+        control.list === memo.listId &&
+        control.para === memo.paraInList,
+    )
+    if (index < 0) continue
+    used.add(index)
+    memoControls += 1
+  }
   return {
-    controls: parse(doc.getControls()).length,
+    controls: controls.length - memoControls,
     fields: JSON.stringify(watched.map((field) => field.value ?? '')),
   }
+}
+
+/**
+ * The places of the controls of a body paragraph, without the memos: a memo is a field
+ * that the memo guard watches, not an object that a paragraph edit must step around.
+ */
+function memoFreeObjectPositions(doc, sec, para) {
+  const positions = parse(doc.getControlTextPositions(sec, para))
+  const starts = memoEntriesOf(doc)
+    .filter(
+      (entry) => entry.place === 'body' && entry.sectionIndex === sec && entry.paraIndex === para,
+    )
+    .map((entry) => entry.startCharIdx)
+    .filter((offset) => Number.isInteger(offset))
+  return positions.filter((position) => !starts.includes(position))
 }
 
 const HEX_COLOR = /^#[0-9a-fA-F]{6}$/
@@ -962,15 +1396,89 @@ function plainAnswerInCell(doc, table, cell, k, length) {
   )
 }
 
+/** What tells one field from another: fields copied and pasted share their id, not their place. */
+const fieldKey = (field) =>
+  `${field.fieldId}|${JSON.stringify(field.location ?? null)}|${field.startCharIdx ?? ''}`
+
+/**
+ * Set the value of the field with this key (fieldKey: id, place and start). The
+ * engine sets a value by field id, and a form whose fields were copied and pasted carries
+ * the same id on several fields: setting by id then always writes the first of them. Such a
+ * field is written where it stands instead, its text replaced in place, and the result is
+ * checked: this field holds the value and its namesakes kept theirs (text typed at the start
+ * of an empty field lands in it). When that cannot be done the call fails and the change is
+ * rolled back, rather than write another field.
+ */
+function setFieldAt(doc, key, value) {
+  const before = parse(doc.getFieldList())
+  const index = before.findIndex((other) => fieldKey(other) === key)
+  const field = before[index]
+  if (!field) throw fail('CHANGED', 'the document changed mid-call')
+  const twins = before.filter((other) => other.fieldId === field.fieldId).length
+  if (twins < 2) {
+    expectOk(doc.setFieldValue(field.fieldId, value), 'fill the field')
+    return
+  }
+  const ambiguous = () =>
+    fail(
+      'AMBIGUOUS_FIELD',
+      `field ${index + 1} shares its id with ${twins - 1} other field(s) and could not be filled on its own`,
+    )
+  const at = field.location
+  const start = field.startCharIdx
+  const end = field.endCharIdx
+  const path = at && Array.isArray(at.path) ? at.path : []
+  if (!at || !Number.isInteger(start) || !Number.isInteger(end) || end < start) {
+    throw ambiguous()
+  }
+  if (path.length > 0) {
+    if (!path.every((entry) => entry.type === 'cell')) throw ambiguous()
+    const json = JSON.stringify(
+      path.map((entry) => ({
+        controlIndex: entry.controlIndex,
+        cellIndex: entry.cellIndex,
+        cellParaIndex: entry.paraIndex,
+      })),
+    )
+    if (end > start) {
+      expectOk(
+        doc.deleteTextInCellByPath(at.sectionIndex, at.paraIndex, json, start, end - start),
+        'fill the field',
+      )
+    }
+    if (value) {
+      expectOk(
+        doc.insertTextInCellByPath(at.sectionIndex, at.paraIndex, json, start, value),
+        'fill the field',
+      )
+    }
+  } else {
+    if (end > start) {
+      expectOk(doc.deleteText(at.sectionIndex, at.paraIndex, start, end - start), 'fill the field')
+    }
+    if (value)
+      expectOk(doc.insertText(at.sectionIndex, at.paraIndex, start, value), 'fill the field')
+  }
+  const after = parse(doc.getFieldList())
+  const kept =
+    after.length === before.length &&
+    after[index]?.value === value &&
+    before.every(
+      (other, k) =>
+        k === index || other.fieldId !== field.fieldId || after[k]?.value === other.value,
+    )
+  if (!kept) throw ambiguous()
+}
+
 /**
  * Make the value of each of these fields look like an answer. A field's guide text is
  * often blue italics, and the engine writes the value with the look of the text it
  * replaces; Hangul shows a filled field's value black and upright.
  */
-function plainAnswerFields(doc, ids) {
-  if (!ids || ids.size === 0) return
+function plainAnswerFields(doc, ids, keys = null) {
+  if (keys ? keys.size === 0 : !ids || ids.size === 0) return
   for (const field of parse(doc.getFieldList())) {
-    if (!ids.has(field.fieldId)) continue
+    if (keys ? !keys.has(fieldKey(field)) : !ids.has(field.fieldId)) continue
     const start = field.startCharIdx
     const end = field.endCharIdx
     if (!Number.isInteger(start) || !Number.isInteger(end) || end <= start) continue
@@ -1651,8 +2159,49 @@ function paragraphsOf(box) {
  * top of the picture. The engine does not list the objects of a cell paragraph, but asked
  * for a table there it answers "out of range" only when the paragraph holds no object at
  * all. Should that wording change, every cell reads as holding one and nothing is written:
- * the safe side, and the engine tests fail.
+ * the safe side, and the engine tests fail. A memo is a field of the file, seen here like a
+ * control that is not a table; it is counted apart so that a memo alone is not an object.
  */
+function memosInCellParagraph(doc, table, cell, k) {
+  const wanted = cellAt(table.path, cell, k)
+  return memoEntriesOf(doc).filter((entry) => {
+    if (entry.place !== 'tableCell') return false
+    const path = memoPathOf(entry)
+    return Boolean(
+      path &&
+      path.length === wanted.length &&
+      path.every(
+        (step, index) =>
+          step.controlIndex === wanted[index].controlIndex &&
+          step.cellIndex === wanted[index].cellIndex &&
+          step.cellParaIndex === wanted[index].cellParaIndex,
+      ),
+    )
+  }).length
+}
+
+/** How many controls a cell paragraph has, and how many of them are tables. */
+function cellControlsOf(doc, table, cell, k, memos) {
+  let controls = 0
+  let tables = 0
+  const limit = Math.min(MAX_CELL_CONTROLS, memos + NESTED_CONTROLS_TRIED)
+  for (let index = 0; index < limit; index++) {
+    const path = [
+      ...cellAt(table.path, cell, k),
+      { controlIndex: index, cellIndex: 0, cellParaIndex: 0 },
+    ]
+    try {
+      doc.getTableDimensionsByPath(table.sec, table.para, JSON.stringify(path))
+      controls += 1
+      tables += 1
+    } catch (thrown) {
+      if (String(thrown).includes(NO_OBJECT_THERE)) break
+      controls += 1
+    }
+  }
+  return { controls, tables }
+}
+
 function cellHoldsObject(doc, table, cell) {
   const paragraphs = doc.getCellParagraphCountByPath(
     table.sec,
@@ -1660,16 +2209,9 @@ function cellHoldsObject(doc, table, cell) {
     JSON.stringify(cellAt(table.path, cell, 0)),
   )
   for (let k = 0; k < paragraphs; k++) {
-    const first = [
-      ...cellAt(table.path, cell, k),
-      { controlIndex: 0, cellIndex: 0, cellParaIndex: 0 },
-    ]
-    try {
-      doc.getTableDimensionsByPath(table.sec, table.para, JSON.stringify(first))
-      return true
-    } catch (thrown) {
-      if (!String(thrown).includes(NO_OBJECT_THERE)) return true
-    }
+    const memos = memosInCellParagraph(doc, table, cell, k)
+    const { controls } = cellControlsOf(doc, table, cell, k, memos)
+    if (controls > memos) return true
   }
   return false
 }
@@ -1688,18 +2230,9 @@ function cellHoldsOtherObject(doc, table, cell) {
     JSON.stringify(cellAt(table.path, cell, 0)),
   )
   for (let k = 0; k < paragraphs; k++) {
-    for (let inner = 0; inner < NESTED_CONTROLS_TRIED; inner++) {
-      const path = [
-        ...cellAt(table.path, cell, k),
-        { controlIndex: inner, cellIndex: 0, cellParaIndex: 0 },
-      ]
-      try {
-        doc.getTableDimensionsByPath(table.sec, table.para, JSON.stringify(path))
-      } catch (thrown) {
-        if (String(thrown).includes(NO_OBJECT_THERE)) break
-        return true
-      }
-    }
+    const memos = memosInCellParagraph(doc, table, cell, k)
+    const { controls, tables } = cellControlsOf(doc, table, cell, k, memos)
+    if (controls - tables - memos > 0) return true
   }
   return false
 }
@@ -1759,13 +2292,27 @@ function coveredCells(doc, table) {
 const clip = (text, max) => (text.length > max ? `${text.slice(0, max)}…` : text)
 
 /**
+ * The fields a form asks to be filled in: click-here fields and named table cells, in
+ * document order. The engine lists every field, also a formula (a table's =SUM total) and
+ * a hyperlink, which are not answers: filling one would overwrite the computed value or
+ * the link text. listFields numbers these, and fillField and readTable use the numbers.
+ */
+function formFieldsOf(doc) {
+  // a memo is neither: it never takes an answer and never shifts the numbers
+  return parse(doc.getFieldList()).filter(
+    (field) =>
+      field.fieldType !== 'memo' && (field.cellField === true || field.fieldType === 'clickhere'),
+  )
+}
+
+/**
  * The click-here fields that sit directly in a table cell, by table and cell. A cell that
  * holds one is filled through the field: text typed beside an empty field would leave its
  * guide text standing next to the answer.
  */
 function fieldsByCell(doc) {
   const byCell = new Map()
-  parse(doc.getFieldList()).forEach((field, index) => {
+  formFieldsOf(doc).forEach((field, index) => {
     if (field.cellField === true) return
     const where = field.location
     const path = where && Array.isArray(where.path) ? where.path : []
@@ -1778,6 +2325,7 @@ function fieldsByCell(doc) {
     const key = `${tableKey(where.sectionIndex, where.paraIndex, cells)}:${cells[cells.length - 1].cellIndex}`
     const entry = {
       number: index + 1,
+      key: fieldKey(field),
       fieldId: field.fieldId,
       value: field.value ?? '',
       guide: field.guide ?? '',
@@ -2292,6 +2840,17 @@ function shiftMarks(marks, before, after, at) {
 let stopListening = null
 /** Takes the marks off the page again, with what keeps them in place. */
 let stopMarking = null
+/** Takes the memo anchors off the page again, with what keeps them in place. */
+let stopMemoLayer = null
+/** Takes the input lock of an open memo modal off the editor again. */
+let stopMemoLock = null
+/** Takes the copy/paste listeners that advise about memos off the editor again. */
+let stopMemoClipboard = null
+/** Closes the channel a copy of memo-bearing text is told on. */
+let stopMemoChannel = null
+/** A redraw of the memo anchors after a change settles, and the probe for pasted memos. */
+let memoSettleTimer = null
+let memoProbeTimer = null
 
 /**
  * Run `fn` with the text widths every PC lays out the same (the editor's print and export
@@ -2317,6 +2876,18 @@ export const agentPlugin = {
     stopListening = null
     if (stopMarking) stopMarking()
     stopMarking = null
+    if (stopMemoLayer) stopMemoLayer()
+    stopMemoLayer = null
+    if (stopMemoLock) stopMemoLock()
+    stopMemoLock = null
+    if (stopMemoClipboard) stopMemoClipboard()
+    stopMemoClipboard = null
+    if (stopMemoChannel) stopMemoChannel()
+    stopMemoChannel = null
+    if (memoSettleTimer) clearTimeout(memoSettleTimer)
+    memoSettleTimer = null
+    if (memoProbeTimer) clearTimeout(memoProbeTimer)
+    memoProbeTimer = null
   },
 
   activate(host) {
@@ -2335,6 +2906,405 @@ export const agentPlugin = {
     let text = null
     // the places this plugin changed since the panel last cleared them, as they are now
     let marks = []
+    // the memo panel: the memos as last read, whether its anchors are shown, which one is
+    // picked, and how many memos the last copy in this editor would bring with it
+    let memoKnown = null
+    let memoShown = false
+    let memoSelected = null
+    let memoLayer = null
+    let memoCopied = 0
+    let memoLocked = false
+    // a copy of memo-bearing text made in this instance, and one told on the channel by
+    // another instance: a paste that brings neither still needs the app's notice
+    const memoInstance = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`
+    let memoChannel = null
+    let memoCrossCopy = null
+
+    /** Read the memo list again; with `notify`, tell the app about memos the user's edit took. */
+    const syncMemos = ({ notify = false } = {}) => {
+      let entries
+      try {
+        entries = host.read(memoEntriesOf)
+      } catch {
+        return null
+      }
+      // no document yet (or a host that cannot read one): nothing to compare
+      if (!Array.isArray(entries)) return null
+      const before = memoKnown
+      memoKnown = entries.map(memoSummaryOf)
+      if (notify && before && before.length > 0) {
+        const left = new Set(entries.map((entry) => entry.id))
+        const gone = before.filter((memo) => !left.has(memo.id))
+        if (gone.length > 0) {
+          announce(MEMO_REMOVED_EVENT, {
+            kind: 'memo-removed',
+            count: gone.length,
+            memos: gone,
+          })
+        }
+      }
+      return entries
+    }
+
+    /** Draw the memo anchors again now, and once more after the editor re-lays the pages. */
+    const refreshMemoAnchors = () => {
+      try {
+        host.automation.execute(MEMO_MARK_COMMAND)
+      } catch {
+        // an editor without commands: the panel still lists the memos
+      }
+      if (memoSettleTimer) clearTimeout(memoSettleTimer)
+      memoSettleTimer = setTimeout(() => {
+        memoSettleTimer = null
+        try {
+          host.automation.execute(MEMO_MARK_COMMAND)
+        } catch {
+          // as above
+        }
+      }, MARK_SETTLE_MS)
+    }
+
+    /** Put the memo anchors where the editor lays their places out, as it draws its selection. */
+    const drawMemoAnchors = (services) => {
+      const page = globalThis.document
+      const content = page ? page.querySelector('#scroll-content') : null
+      if (!content) return
+      if (!memoShown) {
+        if (stopMemoLayer) stopMemoLayer()
+        stopMemoLayer = null
+        return
+      }
+      if (!memoLayer || memoLayer.parentElement !== content) {
+        if (stopMemoLayer) stopMemoLayer()
+        memoLayer = page.createElement('div')
+        memoLayer.className = 'ieum-memo-anchors'
+        memoLayer.style.cssText = `position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:${MEMO_LAYER_Z};`
+        content.appendChild(memoLayer)
+        // the content is resized when the zoom changes: the anchors are placed again
+        const Observer = globalThis.ResizeObserver
+        const observer = Observer ? new Observer(() => refreshMemoAnchors()) : null
+        if (observer) observer.observe(content)
+        // the pages are re-laid out after a change; a scroll only asks for a fresh look
+        const scrolling = page.querySelector('#scroll-container')
+        let scrollTimer = null
+        const onScroll = () => {
+          if (scrollTimer) return
+          scrollTimer = setTimeout(() => {
+            scrollTimer = null
+            refreshMemoAnchors()
+          }, 100)
+        }
+        if (scrolling) scrolling.addEventListener('scroll', onScroll, { passive: true })
+        const own = memoLayer
+        stopMemoLayer = () => {
+          if (observer) observer.disconnect()
+          if (scrolling) scrolling.removeEventListener('scroll', onScroll)
+          if (scrollTimer) clearTimeout(scrollTimer)
+          own.remove()
+          if (memoLayer === own) memoLayer = null
+        }
+      }
+      memoLayer.replaceChildren()
+      const input = services && services.getInputHandler ? services.getInputHandler() : null
+      const scroll = input ? input.virtualScroll : null
+      const viewport =
+        services && services.getViewportManager ? services.getViewportManager() : null
+      if (!scroll || !viewport) return
+      let memos
+      try {
+        memos = host.read(memoListOf)
+      } catch {
+        return
+      }
+      const zoom = viewport.getZoom()
+      const width = content.clientWidth
+      for (const memo of memos) {
+        const selected = memoSelected !== null && memo.id === memoSelected
+        for (const rect of memo.rects) {
+          const box = page.createElement('div')
+          const caret = rect.width === 0
+          const left = scroll.getPageLeftResolved(rect.pageIndex, width) + rect.x * zoom
+          const top = scroll.getPageOffset(rect.pageIndex) + rect.y * zoom
+          // one property at a time: a style string is dropped whole where one part is not understood
+          Object.assign(box.style, {
+            position: 'absolute',
+            left: `${left.toFixed(2)}px`,
+            top: `${top.toFixed(2)}px`,
+            width: `${Math.max(caret ? MEMO_CARET_WIDTH : rect.width * zoom, 1).toFixed(2)}px`,
+            height: `${Math.max(rect.height * zoom, 2).toFixed(2)}px`,
+            background: selected ? MEMO_SELECTED_FILL : MEMO_FILL,
+            boxShadow: `inset 0 -${selected ? 2 : 1}px 0 ${selected ? MEMO_SELECTED_LINE : MEMO_LINE}`,
+            borderRadius: '2px',
+          })
+          box.className = `ieum-memo-anchor${selected ? ' selected' : ''}${caret ? ' caret' : ''}`
+          memoLayer.appendChild(box)
+        }
+      }
+    }
+
+    /** A change the user made: memos may have gone, and their anchors moved. */
+    const memosAfterUserEdit = () => {
+      if (memoKnown && memoKnown.length > 0) {
+        syncMemos({ notify: true })
+      } else if (!memoProbeTimer) {
+        // nothing was known to watch: look again after the typing stops, for memos pasted in
+        memoProbeTimer = setTimeout(() => {
+          memoProbeTimer = null
+          syncMemos({ notify: false })
+          refreshMemoAnchors()
+        }, MEMO_PROBE_MS)
+      }
+      refreshMemoAnchors()
+    }
+
+    /** The list command's answer: a command returns nothing itself. */
+    let listedMemos = null
+    /** The selection command's answer for the memo panel. */
+    let memoAnchorAnswer = null
+
+    /** Whether the current selection (or caret) may carry a memo anchor, and what is there. */
+    const memoAnchorSelection = (services) => {
+      const input = services && services.getInputHandler ? services.getInputHandler() : null
+      const cursor = input ? input.cursor : null
+      if (!cursor) return { ok: false, reason: 'none' }
+      try {
+        if (cursor.isInHeaderFooter?.() || cursor.isInFootnote?.()) {
+          return { ok: false, reason: 'unsupported_place' }
+        }
+        if (cursor.isInPictureObjectSelection?.() || cursor.isInTableObjectSelection?.()) {
+          return { ok: false, reason: 'unsupported_place' }
+        }
+        if (cursor.isInCellSelectionMode?.()) return { ok: false, reason: 'unsupported_place' }
+      } catch {
+        return { ok: false, reason: 'unsupported_place' }
+      }
+      let seen
+      try {
+        seen = cursorSelection(services)
+      } catch {
+        return { ok: false, reason: 'unsupported_place' }
+      }
+      const first = seen ? seen.start : cursor.getPosition ? cursor.getPosition() : null
+      const last = seen ? seen.end : first
+      const start = endOf(first)
+      const end = endOf(last)
+      if (!start || !end) return { ok: false, reason: 'unsupported_place' }
+      if (start.sec !== end.sec) return { ok: false, reason: 'multi_paragraph' }
+      if (start.path || end.path) {
+        if (!start.path || !end.path || !sameTable(start, end, true) || start.k !== end.k) {
+          return { ok: false, reason: 'multi_paragraph' }
+        }
+      } else if (start.para !== end.para) {
+        return { ok: false, reason: 'multi_paragraph' }
+      }
+      return host.read((doc) => {
+        try {
+          if (memoProtected(doc)) {
+            return { ok: false, reason: 'protected' }
+          }
+          const place = start.path ? (start.textBox ? 'textBox' : 'tableCell') : 'body'
+          const box = containerOf(doc, { sec: start.sec, para: start.para, cellPath: start.path })
+          const length = box.length(start.k)
+          const from = Math.max(0, Math.min(start.offset, length))
+          const to = Math.max(from, Math.min(end.offset, length))
+          const path = start.path ?? null
+          const key = `${start.sec}:${start.para}:${memoPathKey(path)}`
+          if (memoOverlaps(memoEntriesOf(doc), key, from, to)) {
+            return { ok: false, reason: 'overlap' }
+          }
+          const text = box.text(start.k, length)
+          const shown =
+            from < to
+              ? text.slice(from, to)
+              : text.slice(
+                  Math.max(0, from - MEMO_CARET_CHARS),
+                  Math.min(length, from + MEMO_CARET_CHARS),
+                )
+          const anchor = {
+            place,
+            sectionIndex: start.sec,
+            paraIndex: start.para,
+            startCharIdx: from,
+            endCharIdx: to,
+            path,
+          }
+          return {
+            ok: true,
+            ...anchor,
+            preview: clip(shown.replace(/\s+/g, ' ').trim(), MEMO_PREVIEW_CHARS),
+            anchor,
+          }
+        } catch {
+          return { ok: false, reason: 'unsupported_place' }
+        }
+      })
+    }
+
+    /** The engine's refusal of a memo call as the panel's answer. */
+    const memoRefusal = (thrown) => {
+      const error = memoErrorOf(thrown)
+      if (!error) throw thrown
+      return { ok: false, reason: error.code }
+    }
+
+    /** The paragraph of a memo box a checked anchor's offsets count from. */
+    const checkedK = (anchor) =>
+      anchor.path ? anchor.path[anchor.path.length - 1].cellParaIndex : anchor.paraIndex
+
+    /** The memo insert/edit/remove calls the panel makes; each is one undo step. */
+    const memoCommand = (label, options, run) => {
+      try {
+        return change(label, run, options)
+      } catch (thrown) {
+        return memoRefusal(thrown)
+      }
+    }
+
+    /** Block the editor's input while a memo modal is open in the app. */
+    const setMemoLock = (locked) => {
+      memoLocked = locked === true
+      if (memoLocked) {
+        const target = globalThis.document
+        if (target && !stopMemoLock) {
+          const block = (event) => {
+            if (!memoLocked) return
+            event.preventDefault()
+            event.stopPropagation()
+            event.stopImmediatePropagation?.()
+          }
+          const names = ['keydown', 'beforeinput', 'paste', 'drop', 'pointerdown']
+          for (const name of names) target.addEventListener(name, block, true)
+          stopMemoLock = () => {
+            for (const name of names) target.removeEventListener(name, block, true)
+          }
+        }
+      } else if (stopMemoLock) {
+        stopMemoLock()
+        stopMemoLock = null
+      }
+      return { ok: true, locked: memoLocked }
+    }
+
+    /** Tell the other editor instances that this one copied memo-bearing text. */
+    const startMemoChannel = () => {
+      if (stopMemoChannel) stopMemoChannel()
+      const Channel = globalThis.BroadcastChannel
+      if (!Channel) return
+      try {
+        const channel = new Channel(MEMO_COPY_CHANNEL)
+        channel.onmessage = (event) => {
+          const detail = event?.data
+          if (!detail || detail.kind !== 'memo-copied') return
+          if (detail.source === memoInstance) return
+          if (!Number.isInteger(detail.count) || detail.count < 1) return
+          if (typeof detail.at !== 'number' || !Number.isFinite(detail.at)) return
+          if (Date.now() - detail.at > MEMO_COPY_WINDOW_MS) return
+          if (!memoCrossCopy || detail.at >= memoCrossCopy.at) {
+            memoCrossCopy = { count: detail.count, at: detail.at, source: detail.source }
+          }
+        }
+        memoChannel = channel
+        stopMemoChannel = () => {
+          try {
+            channel.close()
+          } catch {
+            // already closed
+          }
+          if (memoChannel === channel) memoChannel = null
+        }
+      } catch {
+        // an editor window without BroadcastChannel: the same-editor path still works
+      }
+    }
+
+    /** Remember how many memos a copy in this editor would bring, for the paste that follows. */
+    const noteMemoCopy = () => {
+      try {
+        picked = null
+        host.automation.execute(SELECTION_COMMAND)
+        const seen = picked
+        if (!seen) {
+          memoCopied = 0
+          memoCrossCopy = null
+          return
+        }
+        const start = endOf(seen.start)
+        const end = endOf(seen.end)
+        memoCopied = start && end ? host.read((doc) => memosWithin(doc, start, end)) : 0
+        if (memoCopied === 0) {
+          // a local copy without memos is not the cross-instance one the channel told about
+          memoCrossCopy = null
+          return
+        }
+        if (memoChannel) {
+          try {
+            memoChannel.postMessage({
+              kind: 'memo-copied',
+              count: memoCopied,
+              at: Date.now(),
+              source: memoInstance,
+            })
+          } catch {
+            // the channel is closed: the other instance cannot be told
+          }
+        }
+      } catch {
+        memoCopied = 0
+      }
+    }
+
+    /**
+     * A paste that did not bring the memos copied with the text is told to the app once.
+     * The copy may have been made in this editor (the engine then duplicates the memos, or
+     * drops an anchor-only one) or in another instance, which only told this one on the
+     * channel that memo-bearing text was copied: a system-clipboard paste carries text only.
+     */
+    const noteMemoPaste = () => {
+      const local = memoCopied
+      memoCopied = 0
+      const cross =
+        local < 1 && memoCrossCopy && Date.now() - memoCrossCopy.at <= MEMO_COPY_WINDOW_MS
+          ? memoCrossCopy
+          : null
+      memoCrossCopy = null
+      const count = local > 0 ? local : cross ? cross.count : 0
+      if (count < 1) return
+      let before = 0
+      try {
+        before = host.read((doc) => memoEntriesOf(doc).length)
+      } catch {
+        return
+      }
+      setTimeout(() => {
+        try {
+          const after = host.read((doc) => memoEntriesOf(doc).length)
+          // fewer memos came than were copied: the rest were lost to the text-only paste
+          if (after - before < count) {
+            announce(MEMO_NOT_COPIED_EVENT, { kind: 'memo-not-copied', count })
+          }
+          syncMemos({ notify: false })
+          refreshMemoAnchors()
+        } catch {
+          // the editor is gone: nothing to tell
+        }
+      }, 0)
+    }
+
+    {
+      const page = globalThis.document
+      if (page) {
+        if (stopMemoClipboard) stopMemoClipboard()
+        const onCopy = () => noteMemoCopy()
+        for (const name of ['copy', 'cut']) page.addEventListener(name, onCopy, true)
+        page.addEventListener('paste', noteMemoPaste, true)
+        stopMemoClipboard = () => {
+          for (const name of ['copy', 'cut']) page.removeEventListener(name, onCopy, true)
+          page.removeEventListener('paste', noteMemoPaste, true)
+        }
+        startMemoChannel()
+      }
+    }
+
     host.events.on('document-changed', () => {
       text = null
       if (!own) {
@@ -2344,6 +3314,8 @@ export const agentPlugin = {
           marks = []
           refreshMarks()
         }
+        // the user's own edit can take a memo away and moves the memo anchors
+        memosAfterUserEdit()
       }
     })
 
@@ -2493,6 +3465,9 @@ export const agentPlugin = {
       const places = Array.isArray(result.marks) ? result.marks : result.place ? [result.place] : []
       marks = shiftMarks(marks, before, after, result.shiftAt ?? places[0] ?? result.place ?? null)
       if (!UNMARKED_CHANGES.has(label)) marks = [...marks, ...places].slice(0, MAX_MARKS)
+      // the memos may have changed with the text, and their anchors may have moved
+      syncMemos({ notify: false })
+      refreshMemoAnchors()
       refreshMarks()
     }
 
@@ -2555,6 +3530,69 @@ export const agentPlugin = {
     } catch {
       // as above
     }
+
+    // the memo panel's commands: the list with its page rectangles, the selection an anchor
+    // may be put on, the drawing of the anchors, and the input lock of an open modal
+    try {
+      host.automation.registerCommand({
+        id: MEMO_LIST_COMMAND,
+        label: 'List the memos',
+        execute: () => {
+          listedMemos = host.read(memoListOf)
+        },
+      })
+    } catch {
+      // registered by an earlier activation of this plugin, or a host without commands
+    }
+
+    try {
+      host.automation.registerCommand({
+        id: MEMO_SELECTION_COMMAND,
+        label: 'Read the memo selection',
+        execute: (services) => {
+          memoAnchorAnswer = memoAnchorSelection(services)
+        },
+      })
+    } catch {
+      // as above
+    }
+
+    try {
+      host.automation.registerCommand({
+        id: MEMO_MARK_COMMAND,
+        label: 'Draw the memo anchors',
+        execute: (services) => {
+          try {
+            drawMemoAnchors(services)
+          } catch {
+            // the anchors are a help; a page that cannot take them stays as it is
+          }
+        },
+      })
+    } catch {
+      // as above
+    }
+
+    try {
+      host.automation.registerCommand({
+        id: MEMO_LOCK_COMMAND,
+        label: 'Lock the editor for a memo',
+        execute: () => setMemoLock(true),
+      })
+    } catch {
+      // as above
+    }
+
+    try {
+      host.automation.registerCommand({
+        id: MEMO_UNLOCK_COMMAND,
+        label: 'Unlock the editor after a memo',
+        execute: () => setMemoLock(false),
+      })
+    } catch {
+      // as above
+    }
+
     const page = globalThis.document
     if (page) {
       const onDoubleClick = (event) => {
@@ -2583,21 +3621,67 @@ export const agentPlugin = {
         }
       }
 
-    /** One change of this plugin: one undo step, not counted as foreign. */
-    const change = (label, fn) => {
+    /**
+     * One change of this plugin: one undo step, not counted as foreign (the memo panel's
+     * changes are: they are the user's). An AI change that
+     * would take a memo away is rolled back and answered as needing approval; the memo
+     * panel's own calls (`MEMO_CHANGES`) remove what they were asked to, and a call given
+     * `allowMemoRemoval` goes through after the user said yes to that one change. A call
+     * given `approvedMemoIds` may take only those memos: when the document changed while the
+     * user was asked and the change would now take another one, it is refused again.
+     */
+    const change = (label, fn, options) => {
+      const allowMemoRemoval = options?.allowMemoRemoval === true || options?.memoPolicy === 'allow'
+      const approvedMemos = Array.isArray(options?.approvedMemoIds)
+        ? new Set(options.approvedMemoIds)
+        : null
       own = true
       // not left to the editor's event alone: a stale text would send the model after
       // words that are no longer there
       text = null
       try {
-        const done = host.transaction(label, (tx) => {
-          tx.deferPagination()
-          const doc = tx.doc()
-          const before = paragraphCounts(doc)
-          const result = fn(doc)
-          return { result, before, after: paragraphCounts(doc) }
-        })
+        let done
+        try {
+          done = host.transaction(label, (tx) => {
+            tx.deferPagination()
+            const doc = tx.doc()
+            const before = paragraphCounts(doc)
+            const watched = MEMO_CHANGES.has(label) || allowMemoRemoval ? null : memoEntriesOf(doc)
+            const result = fn(doc)
+            if (watched && watched.length > 0) {
+              const left = new Set(memoEntriesOf(doc).map((entry) => entry.id))
+              const gone = watched.filter(
+                (entry) => !left.has(entry.id) && !(approvedMemos && approvedMemos.has(entry.id)),
+              )
+              if (gone.length > 0) {
+                const failure = fail(
+                  'MEMO_REMOVAL_REQUIRES_APPROVAL',
+                  'the change would remove memos of the document',
+                )
+                failure.memos = gone
+                throw failure
+              }
+            }
+            return { result, before, after: paragraphCounts(doc) }
+          })
+        } catch (thrown) {
+          if (thrown && thrown.code === 'MEMO_REMOVAL_REQUIRES_APPROVAL') {
+            // the editor rolled the change back; the list is what it was
+            syncMemos({ notify: false })
+            refreshMemoAnchors()
+            return {
+              ok: false,
+              reason: 'memo_removal_requires_approval',
+              count: thrown.memos.length,
+              memos: thrown.memos.map(memoSummaryOf),
+            }
+          }
+          throw thrown
+        }
         noteChange(label, done.result, done.before, done.after)
+        // a memo the user added, changed or removed in the panel is the user's own edit: an
+        // AI run's undo must not take it back in place of the run's changes
+        if (MEMO_CHANGES.has(label)) foreign += 1
         if (
           done.result &&
           typeof done.result === 'object' &&
@@ -2693,7 +3777,15 @@ export const agentPlugin = {
       }
     }
 
-    return {
+    // the list the panel starts from: a change is watched against it, so a user's edit that
+    // takes a memo away can be told apart from the memos that were there
+    try {
+      syncMemos({ notify: false })
+    } catch {
+      // no document yet: the first read fills it
+    }
+
+    const api = {
       foreignChanges: () => foreign,
 
       /** The whole document as plain text, table cells included, in reading order. */
@@ -2715,7 +3807,7 @@ export const agentPlugin = {
        * once; with it (1-based) that occurrence is replaced. Formatting around the replaced
        * span stays as it was.
        */
-      replaceText: guarded((find, replacement, occurrence) => {
+      replaceText: guarded((find, replacement, occurrence, options) => {
         checkReplacement(replacement)
         // decided on a read first: a transaction is only opened for a change that will happen
         const refusal = host.read((doc) => {
@@ -2731,45 +3823,53 @@ export const agentPlugin = {
           }
         })
         if (refusal) return refusal
-        return change('replace', (doc) => {
-          const hits = searchAll(doc, find)
-          const { hit } = pickHit(hits, occurrence)
-          if (!hit || !isReplaceable(hit)) throw fail('CHANGED', 'the document changed mid-call')
-          replaceHit(doc, hit, replacement)
-          return {
-            ok: true,
-            count: hits.length,
-            inTable: Boolean(hit.cellContext),
-            place: placeOf(hit, replacement.length),
-          }
-        })
+        return change(
+          'replace',
+          (doc) => {
+            const hits = searchAll(doc, find)
+            const { hit } = pickHit(hits, occurrence)
+            if (!hit || !isReplaceable(hit)) throw fail('CHANGED', 'the document changed mid-call')
+            replaceHit(doc, hit, replacement)
+            return {
+              ok: true,
+              count: hits.length,
+              inTable: Boolean(hit.cellContext),
+              place: placeOf(hit, replacement.length),
+            }
+          },
+          options,
+        )
       }),
 
       /** Replace every occurrence of `find` outside equations, last match first. */
-      replaceAllText: guarded((find, replacement) => {
+      replaceAllText: guarded((find, replacement, options) => {
         checkReplacement(replacement)
         const total = host.read((doc) => searchAll(doc, find).filter(isReplaceable).length)
         if (total === 0) return { ok: false, reason: 'not_found', count: 0 }
-        return change('replace-all', (doc) => {
-          // back to front, so replacing one match never moves the offset of one still to do
-          const hits = searchAll(doc, find).filter(isReplaceable).reverse()
-          for (const hit of hits) replaceHit(doc, hit, replacement)
-          // the first in reading order is the last one done; nothing in front of it moved.
-          // A later match in the same paragraph moved by what the earlier ones changed.
-          const shifted = new Map()
-          const marks = [...hits].reverse().map((hit) => {
-            const key = JSON.stringify([hit.sec, hit.para, cellPathOf(hit)])
-            const moved = shifted.get(key) ?? 0
-            shifted.set(key, moved + replacement.length - hit.length)
-            return placeOf({ ...hit, charOffset: hit.charOffset + moved }, replacement.length)
-          })
-          return {
-            ok: true,
-            count: hits.length,
-            place: placeOf(hits[hits.length - 1], replacement.length),
-            marks,
-          }
-        })
+        return change(
+          'replace-all',
+          (doc) => {
+            // back to front, so replacing one match never moves the offset of one still to do
+            const hits = searchAll(doc, find).filter(isReplaceable).reverse()
+            for (const hit of hits) replaceHit(doc, hit, replacement)
+            // the first in reading order is the last one done; nothing in front of it moved.
+            // A later match in the same paragraph moved by what the earlier ones changed.
+            const shifted = new Map()
+            const marks = [...hits].reverse().map((hit) => {
+              const key = JSON.stringify([hit.sec, hit.para, cellPathOf(hit)])
+              const moved = shifted.get(key) ?? 0
+              shifted.set(key, moved + replacement.length - hit.length)
+              return placeOf({ ...hit, charOffset: hit.charOffset + moved }, replacement.length)
+            })
+            return {
+              ok: true,
+              count: hits.length,
+              place: placeOf(hits[hits.length - 1], replacement.length),
+              marks,
+            }
+          },
+          options,
+        )
       }),
 
       /**
@@ -2777,40 +3877,44 @@ export const agentPlugin = {
        * "before"), or after the last paragraph of the document ("end"). They are made the way
        * Enter makes one, so they take the paragraph and character formatting of that paragraph.
        */
-      insertParagraphs: guarded((anchor, occurrence, where, paragraphs) => {
+      insertParagraphs: guarded((anchor, occurrence, where, paragraphs, options) => {
         checkWhere(where)
         checkParagraphs(paragraphs)
         const refusal = host.read((doc) => locate(doc, anchor, occurrence, where).refusal ?? null)
         if (refusal) return refusal
         return keepingObjects((mustKeep) =>
-          change('insert-paragraphs', (doc) => {
-            const { box, plain } = locate(doc, anchor, occurrence, where)
-            if (!box) throw fail('CHANGED', 'the document changed mid-call')
-            const before = objectsOf(doc)
-            const texts = [...paragraphs]
-            let at = box.index
-            if (where === 'before') {
-              // splitting at the start leaves an empty paragraph in front, formatted like this one
-              box.split(at, 0)
-              const first = texts.shift()
-              if (first) box.insert(at, first)
-            }
-            for (const text of texts) {
-              // only the anchor can hold an object; the paragraphs made here are plain text
-              openAfter(box, at, plain && at === box.index)
-              at += 1
-              if (text) box.insert(at, text)
-            }
-            mustKeep(before, objectsOf(doc))
-            const first = where === 'before' ? box.index : box.index + 1
-            return {
-              ok: true,
-              count: paragraphs.length,
-              inTable: box.inTable,
-              place: box.place(first, paragraphs[0].length),
-              marks: paragraphs.map((text, k) => box.place(first + k, text.length)),
-            }
-          }),
+          change(
+            'insert-paragraphs',
+            (doc) => {
+              const { box, plain } = locate(doc, anchor, occurrence, where)
+              if (!box) throw fail('CHANGED', 'the document changed mid-call')
+              const before = objectsOf(doc)
+              const texts = [...paragraphs]
+              let at = box.index
+              if (where === 'before') {
+                // splitting at the start leaves an empty paragraph in front, formatted like this one
+                box.split(at, 0)
+                const first = texts.shift()
+                if (first) box.insert(at, first)
+              }
+              for (const text of texts) {
+                // only the anchor can hold an object; the paragraphs made here are plain text
+                openAfter(box, at, plain && at === box.index)
+                at += 1
+                if (text) box.insert(at, text)
+              }
+              mustKeep(before, objectsOf(doc))
+              const first = where === 'before' ? box.index : box.index + 1
+              return {
+                ok: true,
+                count: paragraphs.length,
+                inTable: box.inTable,
+                place: box.place(first, paragraphs[0].length),
+                marks: paragraphs.map((text, k) => box.place(first + k, text.length)),
+              }
+            },
+            options,
+          ),
         )
       }),
 
@@ -2818,7 +3922,7 @@ export const agentPlugin = {
        * Remove the paragraph `find` occurs in. A paragraph that holds a table, a picture or
        * a form field is left alone: removing it would take the object with it.
        */
-      deleteParagraph: guarded((find, occurrence) => {
+      deleteParagraph: guarded((find, occurrence, options) => {
         const refusal = host.read((doc) => {
           const { box, refusal: why } = locate(doc, find, occurrence, 'after')
           if (!box) return why
@@ -2830,32 +3934,36 @@ export const agentPlugin = {
         })
         if (refusal) return refusal
         return keepingObjects((mustKeep) =>
-          change('delete-paragraph', (doc) => {
-            const { box } = locate(doc, find, occurrence, 'after')
-            if (!box) throw fail('CHANGED', 'the document changed mid-call')
-            const before = objectsOf(doc)
-            const k = box.index
-            const length = box.length(k)
-            const text = box.text(k, Math.min(length, MAX_REPORTED_CHARS))
-            // the first paragraph of a cell or section has nothing in front to close up
-            // against, and joining it with the next one would hand that one its formatting:
-            // it keeps its place as an empty line
-            const emptied = k === 0 || box.count() === 1
-            if (emptied) box.deleteText(k, length)
-            // from the end of the paragraph in front to the end of this one: the paragraph
-            // goes, and the ones around it keep their own formatting
-            else box.deleteRange(k - 1, box.length(k - 1), k, length)
-            mustKeep(before, objectsOf(doc))
-            return {
-              ok: true,
-              text,
-              emptied,
-              inTable: box.inTable,
-              place: box.place(emptied ? k : k - 1, 0),
-              // the marks below move up from the paragraph that went
-              shiftAt: box.place(k, 0),
-            }
-          }),
+          change(
+            'delete-paragraph',
+            (doc) => {
+              const { box } = locate(doc, find, occurrence, 'after')
+              if (!box) throw fail('CHANGED', 'the document changed mid-call')
+              const before = objectsOf(doc)
+              const k = box.index
+              const length = box.length(k)
+              const text = box.text(k, Math.min(length, MAX_REPORTED_CHARS))
+              // the first paragraph of a cell or section has nothing in front to close up
+              // against, and joining it with the next one would hand that one its formatting:
+              // it keeps its place as an empty line
+              const emptied = k === 0 || box.count() === 1
+              if (emptied) box.deleteText(k, length)
+              // from the end of the paragraph in front to the end of this one: the paragraph
+              // goes, and the ones around it keep their own formatting
+              else box.deleteRange(k - 1, box.length(k - 1), k, length)
+              mustKeep(before, objectsOf(doc))
+              return {
+                ok: true,
+                text,
+                emptied,
+                inTable: box.inTable,
+                place: box.place(emptied ? k : k - 1, 0),
+                // the marks below move up from the paragraph that went
+                shiftAt: box.place(k, 0),
+              }
+            },
+            options,
+          ),
         )
       }),
 
@@ -2864,7 +3972,7 @@ export const agentPlugin = {
        * in the body text only: the engine does not lay out a table made inside the cell of
        * another one (its cells come out in one row, without lines).
        */
-      insertTable: guarded((anchor, occurrence, where, rows, header) => {
+      insertTable: guarded((anchor, occurrence, where, rows, header, options) => {
         checkWhere(where)
         const table = tableOf(rows)
         const refusal = host.read((doc) => {
@@ -2874,33 +3982,37 @@ export const agentPlugin = {
         })
         if (refusal) return refusal
         return keepingObjects((mustKeep) =>
-          change('insert-table', (doc) => {
-            const { box, plain } = locate(doc, anchor, occurrence, where)
-            if (!box) throw fail('CHANGED', 'the document changed mid-call')
-            const before = objectsOf(doc)
-            let at = box.index
-            // read before the paragraph is split: the table is to look like the text beside it
-            const font = box.font(at)
-            if (where === 'before') box.split(at, 0)
-            else {
-              openAfter(box, at, plain)
-              at += 1
-            }
-            // in the body the header's grey goes on after the paste, cell by cell (shadeHeaderCells)
-            box.pasteHtml(at, tableHtml(table, font, header === true, box.inTable))
-            if (header === true && !box.inTable)
-              shadeHeaderCells(doc, box.place(at, 0), table[0].length)
-            const after = objectsOf(doc)
-            // the new table is an object of its own; nothing that was there may be gone
-            mustKeep(before, { ...after, controls: Math.min(after.controls, before.controls) })
-            return {
-              ok: true,
-              rows: table.length,
-              cols: table[0].length,
-              inTable: box.inTable,
-              place: box.place(at, 0),
-            }
-          }),
+          change(
+            'insert-table',
+            (doc) => {
+              const { box, plain } = locate(doc, anchor, occurrence, where)
+              if (!box) throw fail('CHANGED', 'the document changed mid-call')
+              const before = objectsOf(doc)
+              let at = box.index
+              // read before the paragraph is split: the table is to look like the text beside it
+              const font = box.font(at)
+              if (where === 'before') box.split(at, 0)
+              else {
+                openAfter(box, at, plain)
+                at += 1
+              }
+              // in the body the header's grey goes on after the paste, cell by cell (shadeHeaderCells)
+              box.pasteHtml(at, tableHtml(table, font, header === true, box.inTable))
+              if (header === true && !box.inTable)
+                shadeHeaderCells(doc, box.place(at, 0), table[0].length)
+              const after = objectsOf(doc)
+              // the new table is an object of its own; nothing that was there may be gone
+              mustKeep(before, { ...after, controls: Math.min(after.controls, before.controls) })
+              return {
+                ok: true,
+                rows: table.length,
+                cols: table[0].length,
+                inTable: box.inTable,
+                place: box.place(at, 0),
+              }
+            },
+            options,
+          ),
         )
       }),
 
@@ -2908,7 +4020,7 @@ export const agentPlugin = {
        * Change the character formatting of one occurrence of `find`, or with `all` of every
        * occurrence. Only the named properties change; the text itself is not touched.
        */
-      formatText: guarded((find, occurrence, all, format) => {
+      formatText: guarded((find, occurrence, all, format, options) => {
         const spec = formatOf(format, false)
         const targets = (doc) => {
           const hits = searchAll(doc, find)
@@ -2933,21 +4045,25 @@ export const agentPlugin = {
         const refusal = host.read((doc) => targets(doc).refusal ?? missingStyle(doc, spec))
         if (refusal) return refusal
         return keepingObjects((mustKeep) =>
-          change('format-text', (doc) => {
-            const { hits } = targets(doc)
-            if (!hits) throw fail('CHANGED', 'the document changed mid-call')
-            const before = objectsOf(doc)
-            const { chars, charShape } = resolveFormat(doc, spec)
-            for (const hit of hits) {
-              const box = containerOf(doc, hit)
-              const end = hit.charOffset + hit.length
-              // the style first: what was asked for besides goes over it
-              if (charShape !== null) box.setCharShape(box.index, hit.charOffset, end, charShape)
-              if (chars) box.formatChars(box.index, hit.charOffset, end, chars)
-            }
-            mustKeep(before, objectsOf(doc))
-            return { ok: true, count: hits.length, place: placeOf(hits[0], hits[0].length) }
-          }),
+          change(
+            'format-text',
+            (doc) => {
+              const { hits } = targets(doc)
+              if (!hits) throw fail('CHANGED', 'the document changed mid-call')
+              const before = objectsOf(doc)
+              const { chars, charShape } = resolveFormat(doc, spec)
+              for (const hit of hits) {
+                const box = containerOf(doc, hit)
+                const end = hit.charOffset + hit.length
+                // the style first: what was asked for besides goes over it
+                if (charShape !== null) box.setCharShape(box.index, hit.charOffset, end, charShape)
+                if (chars) box.formatChars(box.index, hit.charOffset, end, chars)
+              }
+              mustKeep(before, objectsOf(doc))
+              return { ok: true, count: hits.length, place: placeOf(hits[0], hits[0].length) }
+            },
+            options,
+          ),
         )
       }),
 
@@ -2955,7 +4071,7 @@ export const agentPlugin = {
        * Change the formatting of the whole paragraph `find` occurs in: its alignment and
        * line spacing, and the character formatting of all its text.
        */
-      formatParagraph: guarded((find, occurrence, format) => {
+      formatParagraph: guarded((find, occurrence, format, options) => {
         const spec = formatOf(format, true)
         const plan = (doc) => {
           const hits = searchAll(doc, find)
@@ -2980,26 +4096,31 @@ export const agentPlugin = {
         const refusal = host.read((doc) => plan(doc).refusal ?? null)
         if (refusal) return refusal
         return keepingObjects((mustKeep) =>
-          change('format-paragraph', (doc) => {
-            const { box } = plan(doc)
-            if (!box) throw fail('CHANGED', 'the document changed mid-call')
-            const before = objectsOf(doc)
-            const length = box.length(box.index)
-            const { chars, paragraph, style, charShape } = resolveFormat(doc, spec)
-            // the styles first: what was asked for besides goes over them
-            const keptOwnLook = style !== null && keepsOwnLook(doc, box, box.index) === true
-            if (style !== null) box.applyStyle(box.index, style)
-            if (charShape !== null && length > 0) box.setCharShape(box.index, 0, length, charShape)
-            if (paragraph) box.formatParagraph(box.index, paragraph)
-            if (chars && length > 0) box.formatChars(box.index, 0, length, chars)
-            mustKeep(before, objectsOf(doc))
-            return {
-              ok: true,
-              inTable: box.inTable,
-              place: box.place(box.index, length),
-              ...(keptOwnLook ? { keptOwnLook: 1 } : {}),
-            }
-          }),
+          change(
+            'format-paragraph',
+            (doc) => {
+              const { box } = plan(doc)
+              if (!box) throw fail('CHANGED', 'the document changed mid-call')
+              const before = objectsOf(doc)
+              const length = box.length(box.index)
+              const { chars, paragraph, style, charShape } = resolveFormat(doc, spec)
+              // the styles first: what was asked for besides goes over them
+              const keptOwnLook = style !== null && keepsOwnLook(doc, box, box.index) === true
+              if (style !== null) box.applyStyle(box.index, style)
+              if (charShape !== null && length > 0)
+                box.setCharShape(box.index, 0, length, charShape)
+              if (paragraph) box.formatParagraph(box.index, paragraph)
+              if (chars && length > 0) box.formatChars(box.index, 0, length, chars)
+              mustKeep(before, objectsOf(doc))
+              return {
+                ok: true,
+                inTable: box.inTable,
+                place: box.place(box.index, length),
+                ...(keptOwnLook ? { keptOwnLook: 1 } : {}),
+              }
+            },
+            options,
+          ),
         )
       }),
 
@@ -3179,7 +4300,7 @@ export const agentPlugin = {
        * itself unless `nextStyle` names another paragraph style, as Hangul makes them. One
        * undo step.
        */
-      createStyle: guarded((spec) => {
+      createStyle: guarded((spec, options) => {
         if (!spec || typeof spec !== 'object') throw fail('BAD_ARGUMENT', 'spec must be an object')
         const name = styleNameOf(spec.name, 'name')
         const englishName =
@@ -3207,29 +4328,33 @@ export const agentPlugin = {
         }
         const refusal = host.read((doc) => plan(doc).refusal ?? null)
         if (refusal) return refusal
-        return change('create-style', (doc) => {
-          const { base, next } = plan(doc)
-          if (!base) throw fail('CHANGED', 'the document changed mid-call')
-          const id = doc.createStyle(
-            JSON.stringify({
-              name,
-              englishName,
-              type,
-              nextStyleId: 0,
-              baseParaShapeId: base.paraShapeId,
-              baseCharShapeId: base.charShapeId,
-            }),
-          )
-          if (!Number.isInteger(id) || id < 0) throw fail('ENGINE', 'the style could not be made')
-          if (
-            type === PARAGRAPH_STYLE &&
-            !doc.updateStyle(id, JSON.stringify({ nextStyleId: next ? next.id : id }))
-          ) {
-            throw fail('ENGINE_REFUSED', 'the editor refused to set the next style')
-          }
-          setStyleLook(doc, id, look)
-          return { ok: true, name, kind }
-        })
+        return change(
+          'create-style',
+          (doc) => {
+            const { base, next } = plan(doc)
+            if (!base) throw fail('CHANGED', 'the document changed mid-call')
+            const id = doc.createStyle(
+              JSON.stringify({
+                name,
+                englishName,
+                type,
+                nextStyleId: 0,
+                baseParaShapeId: base.paraShapeId,
+                baseCharShapeId: base.charShapeId,
+              }),
+            )
+            if (!Number.isInteger(id) || id < 0) throw fail('ENGINE', 'the style could not be made')
+            if (
+              type === PARAGRAPH_STYLE &&
+              !doc.updateStyle(id, JSON.stringify({ nextStyleId: next ? next.id : id }))
+            ) {
+              throw fail('ENGINE_REFUSED', 'the editor refused to set the next style')
+            }
+            setStyleLook(doc, id, look)
+            return { ok: true, name, kind }
+          },
+          options,
+        )
       }),
 
       /**
@@ -3238,7 +4363,7 @@ export const agentPlugin = {
        * take the new look where they had none of their own; text that already has a
        * character style keeps its former look. One undo step.
        */
-      editStyle: guarded((name, spec) => {
+      editStyle: guarded((name, spec, options) => {
         const wanted = styleNameOf(name, 'name')
         if (!spec || typeof spec !== 'object') throw fail('BAD_ARGUMENT', 'spec must be an object')
         const rename = spec.name == null ? null : styleNameOf(spec.name, 'the new name')
@@ -3271,20 +4396,27 @@ export const agentPlugin = {
         }
         const refusal = host.read((doc) => plan(doc).refusal ?? null)
         if (refusal) return refusal
-        return change('edit-style', (doc) => {
-          const { style, next, look } = plan(doc)
-          if (!style) throw fail('CHANGED', 'the document changed mid-call')
-          const names = {
-            ...(rename ? { name: rename } : {}),
-            ...(englishName !== null ? { englishName } : {}),
-            ...(next ? { nextStyleId: next.id } : {}),
-          }
-          if (Object.keys(names).length > 0 && !doc.updateStyle(style.id, JSON.stringify(names))) {
-            throw fail('ENGINE_REFUSED', 'the editor refused to change the style')
-          }
-          setStyleLook(doc, style.id, look)
-          return { ok: true, name: rename ?? style.name, kind: kindOf(style) }
-        })
+        return change(
+          'edit-style',
+          (doc) => {
+            const { style, next, look } = plan(doc)
+            if (!style) throw fail('CHANGED', 'the document changed mid-call')
+            const names = {
+              ...(rename ? { name: rename } : {}),
+              ...(englishName !== null ? { englishName } : {}),
+              ...(next ? { nextStyleId: next.id } : {}),
+            }
+            if (
+              Object.keys(names).length > 0 &&
+              !doc.updateStyle(style.id, JSON.stringify(names))
+            ) {
+              throw fail('ENGINE_REFUSED', 'the editor refused to change the style')
+            }
+            setStyleLook(doc, style.id, look)
+            return { ok: true, name: rename ?? style.name, kind: kindOf(style) }
+          },
+          options,
+        )
       }),
 
       /**
@@ -3293,7 +4425,7 @@ export const agentPlugin = {
        * cell by any of the places it covers. A table inside another table's cell cannot be
        * coloured: the engine sets cell properties by table and cell number only.
        */
-      formatCells: guarded((number, cells, background) => {
+      formatCells: guarded((number, cells, background, options) => {
         if (!Array.isArray(cells) || cells.length === 0 || cells.length > MAX_FORMATTED_CELLS) {
           throw fail('BAD_ARGUMENT', `cells must be 1 to ${MAX_FORMATTED_CELLS} places`)
         }
@@ -3351,24 +4483,28 @@ export const agentPlugin = {
         const refusal = host.read((doc) => plan(doc).refusal ?? null)
         if (refusal) return refusal
         return keepingObjects((mustKeep) =>
-          change('format-cells', (doc) => {
-            const { table, targets } = plan(doc)
-            if (!targets) throw fail('CHANGED', 'the document changed mid-call')
-            const before = objectsOf(doc)
-            const control = table.path[0].controlIndex
-            for (const cell of targets) {
-              expectOk(
-                doc.setCellProperties(table.sec, table.para, control, cell, fill),
-                'colour the cell',
-              )
-            }
-            mustKeep(before, objectsOf(doc))
-            return {
-              ok: true,
-              count: targets.length,
-              place: { sec: table.sec, para: table.para, offset: 0, length: 0 },
-            }
-          }),
+          change(
+            'format-cells',
+            (doc) => {
+              const { table, targets } = plan(doc)
+              if (!targets) throw fail('CHANGED', 'the document changed mid-call')
+              const before = objectsOf(doc)
+              const control = table.path[0].controlIndex
+              for (const cell of targets) {
+                expectOk(
+                  doc.setCellProperties(table.sec, table.para, control, cell, fill),
+                  'colour the cell',
+                )
+              }
+              mustKeep(before, objectsOf(doc))
+              return {
+                ok: true,
+                count: targets.length,
+                place: { sec: table.sec, para: table.para, offset: 0, length: 0 },
+              }
+            },
+            options,
+          ),
         )
       }),
 
@@ -3378,7 +4514,7 @@ export const agentPlugin = {
        * another, as Hangul merges. A merged cell must lie wholly inside the range or wholly
        * outside it. Cells of a table inside another table's cell cannot be merged here.
        */
-      mergeCells: guarded((number, from, to) => {
+      mergeCells: guarded((number, from, to, options) => {
         const corner = (at) =>
           at && Number.isInteger(at.row) && Number.isInteger(at.col) && at.row >= 1 && at.col >= 1
         if (!corner(from) || !corner(to)) {
@@ -3432,21 +4568,25 @@ export const agentPlugin = {
         const refusal = host.read((doc) => plan(doc).refusal ?? null)
         if (refusal) return refusal
         return keepingObjects((mustKeep) =>
-          change('merge-cells', (doc) => {
-            const { table, control, merged } = plan(doc)
-            if (!table) throw fail('CHANGED', 'the document changed mid-call')
-            const before = objectsOf(doc)
-            expectOk(
-              doc.mergeTableCells(table.sec, table.para, control, top, left, bottom, right),
-              'merge the cells',
-            )
-            mustKeep(before, objectsOf(doc))
-            return {
-              ok: true,
-              merged,
-              place: { sec: table.sec, para: table.para, offset: 0, length: 0 },
-            }
-          }),
+          change(
+            'merge-cells',
+            (doc) => {
+              const { table, control, merged } = plan(doc)
+              if (!table) throw fail('CHANGED', 'the document changed mid-call')
+              const before = objectsOf(doc)
+              expectOk(
+                doc.mergeTableCells(table.sec, table.para, control, top, left, bottom, right),
+                'merge the cells',
+              )
+              mustKeep(before, objectsOf(doc))
+              return {
+                ok: true,
+                merged,
+                place: { sec: table.sec, para: table.para, offset: 0, length: 0 },
+              }
+            },
+            options,
+          ),
         )
       }),
 
@@ -3455,7 +4595,7 @@ export const agentPlugin = {
        * `cols` cells, or, with neither, a merged cell back into the cells it covers. The
        * text stays in the first of them.
        */
-      splitCell: guarded((number, row, col, rows, cols) => {
+      splitCell: guarded((number, row, col, rows, cols, options) => {
         if (!Number.isInteger(row) || !Number.isInteger(col) || row < 1 || col < 1) {
           throw fail('BAD_ARGUMENT', 'row and col count from 1')
         }
@@ -3497,36 +4637,40 @@ export const agentPlugin = {
         const refusal = host.read((doc) => plan(doc).refusal ?? null)
         if (refusal) return refusal
         return keepingObjects((mustKeep) =>
-          change('split-cell', (doc) => {
-            const { table, cell, unmerge } = plan(doc)
-            if (!table) throw fail('CHANGED', 'the document changed mid-call')
-            const before = objectsOf(doc)
-            const control = table.path[0].controlIndex
-            const result = unmerge
-              ? doc.splitTableCell(table.sec, table.para, control, cell.row, cell.col)
-              : doc.splitTableCellInto(
-                  table.sec,
-                  table.para,
-                  control,
-                  cell.row,
-                  cell.col,
-                  down,
-                  across,
-                  true,
-                  false,
-                )
-            expectOk(result, 'split the cell')
-            mustKeep(before, objectsOf(doc))
-            return {
-              ok: true,
-              unmerged: unmerge,
-              place: { sec: table.sec, para: table.para, offset: 0, length: 0 },
-            }
-          }),
+          change(
+            'split-cell',
+            (doc) => {
+              const { table, cell, unmerge } = plan(doc)
+              if (!table) throw fail('CHANGED', 'the document changed mid-call')
+              const before = objectsOf(doc)
+              const control = table.path[0].controlIndex
+              const result = unmerge
+                ? doc.splitTableCell(table.sec, table.para, control, cell.row, cell.col)
+                : doc.splitTableCellInto(
+                    table.sec,
+                    table.para,
+                    control,
+                    cell.row,
+                    cell.col,
+                    down,
+                    across,
+                    true,
+                    false,
+                  )
+              expectOk(result, 'split the cell')
+              mustKeep(before, objectsOf(doc))
+              return {
+                ok: true,
+                unmerged: unmerge,
+                place: { sec: table.sec, para: table.para, offset: 0, length: 0 },
+              }
+            },
+            options,
+          ),
         )
       }),
 
-      fillCells: guarded((number, cells, overwrite) => {
+      fillCells: guarded((number, cells, overwrite, options) => {
         const wanted = checkCells(cells)
         const plan = (doc) => {
           const { tables } = tablesOf(doc)
@@ -3596,49 +4740,54 @@ export const agentPlugin = {
         const refusal = host.read((doc) => plan(doc).refusal ?? null)
         if (refusal) return refusal
         return keepingObjects((mustKeep) =>
-          change('fill-cells', (doc) => {
-            const { table, targets } = plan(doc)
-            if (!targets) throw fail('CHANGED', 'the document changed mid-call')
-            const own = new Set(targets.filter((t) => t.field).map((t) => t.field.fieldId))
-            const before = objectsOf(doc, own)
-            for (const target of targets) {
-              if (target.field) {
-                // a field holds one line
-                expectOk(
-                  doc.setFieldValue(target.field.fieldId, target.lines.join(' ')),
-                  'fill the field',
-                )
-                continue
+          change(
+            'fill-cells',
+            (doc) => {
+              const { table, targets } = plan(doc)
+              if (!targets) throw fail('CHANGED', 'the document changed mid-call')
+              const own = new Set(targets.filter((t) => t.field).map((t) => t.field.fieldId))
+              const before = objectsOf(doc, own)
+              for (const target of targets) {
+                if (target.field) {
+                  // a field holds one line
+                  setFieldAt(doc, target.field.key, target.lines.join(' '))
+                  continue
+                }
+                const box = cellBox(doc, table, target.cell)
+                if (target.clear) {
+                  const last = box.count() - 1
+                  if (last > 0) box.deleteRange(0, 0, last, box.length(last))
+                  else box.deleteText(0, box.length(0))
+                }
+                target.lines.forEach((line, k) => {
+                  // a further line is a further paragraph, made like Enter makes one
+                  if (k > 0 && k >= box.count()) box.split(k - 1, box.length(k - 1))
+                  if (line) box.insert(k, line)
+                })
+                target.lines.forEach((line, k) => {
+                  // the look of a guide does not become the look of the answer
+                  if (line) plainAnswerInCell(doc, table, target.cell, k, [...line].length)
+                })
               }
-              const box = cellBox(doc, table, target.cell)
-              if (target.clear) {
-                const last = box.count() - 1
-                if (last > 0) box.deleteRange(0, 0, last, box.length(last))
-                else box.deleteText(0, box.length(0))
+              plainAnswerFields(
+                doc,
+                null,
+                new Set(targets.filter((t) => t.field).map((t) => t.field.key)),
+              )
+              mustKeep(before, objectsOf(doc, own))
+              const first = targets[0]
+              return {
+                ok: true,
+                table: number,
+                count: targets.length,
+                place: cellBox(doc, table, first.cell).place(
+                  0,
+                  first.field ? 0 : first.lines[0].length,
+                ),
               }
-              target.lines.forEach((line, k) => {
-                // a further line is a further paragraph, made like Enter makes one
-                if (k > 0 && k >= box.count()) box.split(k - 1, box.length(k - 1))
-                if (line) box.insert(k, line)
-              })
-              target.lines.forEach((line, k) => {
-                // the look of a guide does not become the look of the answer
-                if (line) plainAnswerInCell(doc, table, target.cell, k, [...line].length)
-              })
-            }
-            plainAnswerFields(doc, own)
-            mustKeep(before, objectsOf(doc, own))
-            const first = targets[0]
-            return {
-              ok: true,
-              table: number,
-              count: targets.length,
-              place: cellBox(doc, table, first.cell).place(
-                0,
-                first.field ? 0 : first.lines[0].length,
-              ),
-            }
-          }),
+            },
+            options,
+          ),
         )
       }),
 
@@ -3649,7 +4798,7 @@ export const agentPlugin = {
        * the cell's text and cannot be replaced) or a □ typed into the text. `choice` names
        * the words beside the box when the cell has more than one.
        */
-      checkBoxes: guarded((number, cells) => {
+      checkBoxes: guarded((number, cells, options) => {
         const wanted = checkBoxCells(cells)
         const plan = (doc) => {
           const { tables } = tablesOf(doc)
@@ -3697,57 +4846,61 @@ export const agentPlugin = {
         const refusal = host.read((doc) => plan(doc).refusal ?? null)
         if (refusal) return refusal
         return keepingObjects((mustKeep) =>
-          change('check-boxes', (doc) => {
-            const { table, targets } = plan(doc)
-            if (!targets) throw fail('CHANGED', 'the document changed mid-call')
-            const before = objectsOf(doc)
-            let checkedId = null
-            for (const target of targets) {
-              if (target.checked) continue
-              if (target.kind === 'bullet') {
-                if (checkedId === null) checkedId = doc.ensureDefaultBullet(CHECKED_BOX)
-                if (!Number.isInteger(checkedId) || checkedId < 1) {
-                  throw fail('ENGINE', 'the tick box could not be made')
+          change(
+            'check-boxes',
+            (doc) => {
+              const { table, targets } = plan(doc)
+              if (!targets) throw fail('CHANGED', 'the document changed mid-call')
+              const before = objectsOf(doc)
+              let checkedId = null
+              for (const target of targets) {
+                if (target.checked) continue
+                if (target.kind === 'bullet') {
+                  if (checkedId === null) checkedId = doc.ensureDefaultBullet(CHECKED_BOX)
+                  if (!Number.isInteger(checkedId) || checkedId < 1) {
+                    throw fail('ENGINE', 'the tick box could not be made')
+                  }
+                  expectOk(
+                    doc.applyParaFormatInCell(
+                      table.sec,
+                      table.para,
+                      table.path[0].controlIndex,
+                      target.cell,
+                      target.k,
+                      JSON.stringify({ headType: 'Bullet', numberingId: checkedId }),
+                    ),
+                    'tick the box',
+                  )
+                } else {
+                  const path = JSON.stringify(cellAt(table.path, target.cell, target.k))
+                  expectOk(
+                    doc.deleteTextInCellByPath(table.sec, table.para, path, target.offset, 1),
+                    'tick the box',
+                  )
+                  expectOk(
+                    doc.insertTextInCellByPath(
+                      table.sec,
+                      table.para,
+                      path,
+                      target.offset,
+                      CHECKED_BOX,
+                    ),
+                    'tick the box',
+                  )
                 }
-                expectOk(
-                  doc.applyParaFormatInCell(
-                    table.sec,
-                    table.para,
-                    table.path[0].controlIndex,
-                    target.cell,
-                    target.k,
-                    JSON.stringify({ headType: 'Bullet', numberingId: checkedId }),
-                  ),
-                  'tick the box',
-                )
-              } else {
-                const path = JSON.stringify(cellAt(table.path, target.cell, target.k))
-                expectOk(
-                  doc.deleteTextInCellByPath(table.sec, table.para, path, target.offset, 1),
-                  'tick the box',
-                )
-                expectOk(
-                  doc.insertTextInCellByPath(
-                    table.sec,
-                    table.para,
-                    path,
-                    target.offset,
-                    CHECKED_BOX,
-                  ),
-                  'tick the box',
-                )
               }
-            }
-            mustKeep(before, objectsOf(doc))
-            const first = targets[0]
-            const marked = cellBox(doc, table, first.cell)
-            return {
-              ok: true,
-              table: number,
-              count: targets.length,
-              place: marked.place(first.k, Math.min(1, marked.length(first.k))),
-            }
-          }),
+              mustKeep(before, objectsOf(doc))
+              const first = targets[0]
+              const marked = cellBox(doc, table, first.cell)
+              return {
+                ok: true,
+                table: number,
+                count: targets.length,
+                place: marked.place(first.k, Math.min(1, marked.length(first.k))),
+              }
+            },
+            options,
+          ),
         )
       }),
 
@@ -3757,7 +4910,7 @@ export const agentPlugin = {
        * engine copies its cells, and the alignment of each new cell is set to match. Only
        * for a table of the body: the engine has no such call for a table inside a cell.
        */
-      addTableLines: guarded((number, what, at, where, count) => {
+      addTableLines: guarded((number, what, at, where, count, options) => {
         const rows = checkLines(what, at, count)
         if (where !== 'after' && where !== 'before') {
           throw fail('BAD_ARGUMENT', 'where must be "after" or "before"')
@@ -3777,66 +4930,70 @@ export const agentPlugin = {
         const refusal = host.read((doc) => plan(doc).refusal ?? null)
         if (refusal) return refusal
         return keepingObjects((mustKeep) =>
-          change('add-table-lines', (doc) => {
-            const { table } = plan(doc)
-            if (!table) throw fail('CHANGED', 'the document changed mid-call')
-            const before = objectsOf(doc)
-            const { sec, para } = table
-            const ctrl = table.path[0].controlIndex
-            const after = where === 'after'
-            for (let n = 0; n < count; n++) {
-              // "before" pushes the line it copies down by one each time
-              const beside = after ? at - 1 : at - 1 + n
-              expectOk(
-                rows
-                  ? doc.insertTableRow(sec, para, ctrl, beside, after)
-                  : doc.insertTableColumn(sec, para, ctrl, beside, after),
-                rows ? 'add a row' : 'add a column',
-              )
-            }
-            const first = after ? at : at - 1
-            const model = after ? at - 1 : at - 1 + count
-            const grown = {
-              ...table,
-              cells: parse(doc.getTableDimensions(sec, para, ctrl)).cellCount,
-            }
-            const grid = gridOf(doc, grown)
-            const line = (cell) => (rows ? cell.row : cell.col)
-            const across = (cell) => (rows ? cell.col : cell.row)
-            const alignment = (cell) =>
-              parse(doc.getCellParaPropertiesAt(sec, para, ctrl, cell.cell, 0)).alignment
-            for (const cell of grid) {
-              if (line(cell) < first || line(cell) >= first + count) continue
-              const like = grid.find((c) => line(c) === model && across(c) === across(cell))
-              if (!like) continue
-              const wanted = alignment(like)
-              if (wanted && wanted !== alignment(cell)) {
+          change(
+            'add-table-lines',
+            (doc) => {
+              const { table } = plan(doc)
+              if (!table) throw fail('CHANGED', 'the document changed mid-call')
+              const before = objectsOf(doc)
+              const { sec, para } = table
+              const ctrl = table.path[0].controlIndex
+              const after = where === 'after'
+              for (let n = 0; n < count; n++) {
+                // "before" pushes the line it copies down by one each time
+                const beside = after ? at - 1 : at - 1 + n
                 expectOk(
-                  doc.applyParaFormatInCell(
-                    sec,
-                    para,
-                    ctrl,
-                    cell.cell,
-                    0,
-                    JSON.stringify({ alignment: wanted }),
-                  ),
-                  'format the new cell',
+                  rows
+                    ? doc.insertTableRow(sec, para, ctrl, beside, after)
+                    : doc.insertTableColumn(sec, para, ctrl, beside, after),
+                  rows ? 'add a row' : 'add a column',
                 )
               }
-            }
-            mustKeep(before, objectsOf(doc))
-            const dims = parse(doc.getTableDimensions(sec, para, ctrl))
-            const shown = grid.find((cell) => line(cell) === first)
-            return {
-              ok: true,
-              table: number,
-              rows: dims.rowCount,
-              cols: dims.colCount,
-              first: first + 1,
-              count,
-              ...(shown ? { place: cellBox(doc, grown, shown.cell).place(0, 0) } : {}),
-            }
-          }),
+              const first = after ? at : at - 1
+              const model = after ? at - 1 : at - 1 + count
+              const grown = {
+                ...table,
+                cells: parse(doc.getTableDimensions(sec, para, ctrl)).cellCount,
+              }
+              const grid = gridOf(doc, grown)
+              const line = (cell) => (rows ? cell.row : cell.col)
+              const across = (cell) => (rows ? cell.col : cell.row)
+              const alignment = (cell) =>
+                parse(doc.getCellParaPropertiesAt(sec, para, ctrl, cell.cell, 0)).alignment
+              for (const cell of grid) {
+                if (line(cell) < first || line(cell) >= first + count) continue
+                const like = grid.find((c) => line(c) === model && across(c) === across(cell))
+                if (!like) continue
+                const wanted = alignment(like)
+                if (wanted && wanted !== alignment(cell)) {
+                  expectOk(
+                    doc.applyParaFormatInCell(
+                      sec,
+                      para,
+                      ctrl,
+                      cell.cell,
+                      0,
+                      JSON.stringify({ alignment: wanted }),
+                    ),
+                    'format the new cell',
+                  )
+                }
+              }
+              mustKeep(before, objectsOf(doc))
+              const dims = parse(doc.getTableDimensions(sec, para, ctrl))
+              const shown = grid.find((cell) => line(cell) === first)
+              return {
+                ok: true,
+                table: number,
+                rows: dims.rowCount,
+                cols: dims.colCount,
+                first: first + 1,
+                count,
+                ...(shown ? { place: cellBox(doc, grown, shown.cell).place(0, 0) } : {}),
+              }
+            },
+            options,
+          ),
         )
       }),
 
@@ -3846,7 +5003,7 @@ export const agentPlugin = {
        * column. A row or column with a cell that holds a picture or another object is left
        * alone, and so is the whole call.
        */
-      removeTableLines: guarded((number, what, at, count) => {
+      removeTableLines: guarded((number, what, at, count, options) => {
         const rows = checkLines(what, at, count)
         const plan = (doc) => {
           const { tables } = tablesOf(doc)
@@ -3875,46 +5032,50 @@ export const agentPlugin = {
         const refusal = host.read((doc) => plan(doc).refusal ?? null)
         if (refusal) return refusal
         return keepingObjects((mustKeep) =>
-          change('remove-table-lines', (doc) => {
-            const { table, going } = plan(doc)
-            if (!table) throw fail('CHANGED', 'the document changed mid-call')
-            const before = objectsOf(doc, new Set())
-            const { sec, para } = table
-            const ctrl = table.path[0].controlIndex
-            const text = clip(
-              going
-                .map((cell) =>
-                  paragraphsOf(cellBox(doc, table, cell.cell))
-                    .join(' ')
-                    .trim(),
-                )
-                .filter(Boolean)
-                .join(' | '),
-              MAX_REPORTED_CHARS,
-            )
-            for (let n = 0; n < count; n++) {
-              // the next one moves up into the place of the one just removed
-              expectOk(
-                rows
-                  ? doc.deleteTableRow(sec, para, ctrl, at - 1)
-                  : doc.deleteTableColumn(sec, para, ctrl, at - 1),
-                rows ? 'remove the row' : 'remove the column',
+          change(
+            'remove-table-lines',
+            (doc) => {
+              const { table, going } = plan(doc)
+              if (!table) throw fail('CHANGED', 'the document changed mid-call')
+              const before = objectsOf(doc, new Set())
+              const { sec, para } = table
+              const ctrl = table.path[0].controlIndex
+              const text = clip(
+                going
+                  .map((cell) =>
+                    paragraphsOf(cellBox(doc, table, cell.cell))
+                      .join(' ')
+                      .trim(),
+                  )
+                  .filter(Boolean)
+                  .join(' | '),
+                MAX_REPORTED_CHARS,
               )
-            }
-            // the value of a named cell goes with its cell; nothing else may be lost
-            mustKeep(before, objectsOf(doc, new Set()))
-            const dims = parse(doc.getTableDimensions(sec, para, ctrl))
-            const shrunk = { ...table, cells: dims.cellCount }
-            return {
-              ok: true,
-              table: number,
-              rows: dims.rowCount,
-              cols: dims.colCount,
-              count,
-              text,
-              place: cellBox(doc, shrunk, 0).place(0, 0),
-            }
-          }),
+              for (let n = 0; n < count; n++) {
+                // the next one moves up into the place of the one just removed
+                expectOk(
+                  rows
+                    ? doc.deleteTableRow(sec, para, ctrl, at - 1)
+                    : doc.deleteTableColumn(sec, para, ctrl, at - 1),
+                  rows ? 'remove the row' : 'remove the column',
+                )
+              }
+              // the value of a named cell goes with its cell; nothing else may be lost
+              mustKeep(before, objectsOf(doc, new Set()))
+              const dims = parse(doc.getTableDimensions(sec, para, ctrl))
+              const shrunk = { ...table, cells: dims.cellCount }
+              return {
+                ok: true,
+                table: number,
+                rows: dims.rowCount,
+                cols: dims.colCount,
+                count,
+                text,
+                place: cellBox(doc, shrunk, 0).place(0, 0),
+              }
+            },
+            options,
+          ),
         )
       }),
 
@@ -3925,7 +5086,7 @@ export const agentPlugin = {
        * nothing is left in it and a paragraph before it takes its place, so that removing a
        * table does not leave an empty line no tool can reach.
        */
-      deleteTable: guarded((number) => {
+      deleteTable: guarded((number, options) => {
         const plan = (doc) => {
           const { tables } = tablesOf(doc)
           const table = Number.isInteger(number) ? tables[number - 1] : undefined
@@ -3965,58 +5126,62 @@ export const agentPlugin = {
         const refusal = host.read((doc) => plan(doc).refusal ?? null)
         if (refusal) return refusal
         return keepingObjects((mustKeep) =>
-          change('delete-table', (doc) => {
-            const { table, top, inner, going } = plan(doc)
-            if (!table) throw fail('CHANGED', 'the document changed mid-call')
-            const before = objectsOf(doc, going)
-            const text = clip(
-              top
-                .map((cell) =>
-                  paragraphsOf(cellBox(doc, table, cell.cell))
-                    .join(' ')
-                    .trim(),
-                )
-                .filter(Boolean)
-                .join(' | '),
-              MAX_REPORTED_CHARS,
-            )
-            const { sec, para, path } = table
-            const last = path[path.length - 1]
-            const cellPath = path.slice(0, -1)
-            expectOk(
-              cellPath.length === 0
-                ? doc.deleteTableControl(sec, para, last.controlIndex)
-                : doc.deleteCellTableControlByPath(
-                    sec,
-                    para,
-                    JSON.stringify(cellPath),
-                    last.controlIndex,
-                  ),
-              'remove the table',
-            )
-            const box = containerOf(
-              doc,
-              cellPath.length === 0 ? { sec, para } : { sec, para, cellPath },
-            )
-            const k = box.index
-            const bare =
-              box.length(k) === 0 &&
-              (cellPath.length === 0
-                ? box.objectPositions(k).length === 0
-                : !paragraphHoldsObject(doc, sec, para, cellPath))
-            if (k > 0 && bare) box.deleteRange(k - 1, box.length(k - 1), k, 0)
-            // only this table and the tables inside it may be gone
-            mustKeep({ ...before, controls: before.controls - 1 - inner }, objectsOf(doc, going))
-            return {
-              ok: true,
-              table: number,
-              rows: table.rows,
-              cols: table.cols,
-              inner,
-              text,
-              place: box.place(k > 0 && bare ? k - 1 : k, 0),
-            }
-          }),
+          change(
+            'delete-table',
+            (doc) => {
+              const { table, top, inner, going } = plan(doc)
+              if (!table) throw fail('CHANGED', 'the document changed mid-call')
+              const before = objectsOf(doc, going)
+              const text = clip(
+                top
+                  .map((cell) =>
+                    paragraphsOf(cellBox(doc, table, cell.cell))
+                      .join(' ')
+                      .trim(),
+                  )
+                  .filter(Boolean)
+                  .join(' | '),
+                MAX_REPORTED_CHARS,
+              )
+              const { sec, para, path } = table
+              const last = path[path.length - 1]
+              const cellPath = path.slice(0, -1)
+              expectOk(
+                cellPath.length === 0
+                  ? doc.deleteTableControl(sec, para, last.controlIndex)
+                  : doc.deleteCellTableControlByPath(
+                      sec,
+                      para,
+                      JSON.stringify(cellPath),
+                      last.controlIndex,
+                    ),
+                'remove the table',
+              )
+              const box = containerOf(
+                doc,
+                cellPath.length === 0 ? { sec, para } : { sec, para, cellPath },
+              )
+              const k = box.index
+              const bare =
+                box.length(k) === 0 &&
+                (cellPath.length === 0
+                  ? box.objectPositions(k).length === 0
+                  : !paragraphHoldsObject(doc, sec, para, cellPath))
+              if (k > 0 && bare) box.deleteRange(k - 1, box.length(k - 1), k, 0)
+              // only this table and the tables inside it may be gone
+              mustKeep({ ...before, controls: before.controls - 1 - inner }, objectsOf(doc, going))
+              return {
+                ok: true,
+                table: number,
+                rows: table.rows,
+                cols: table.cols,
+                inner,
+                text,
+                place: box.place(k > 0 && bare ? k - 1 : k, 0),
+              }
+            },
+            options,
+          ),
         )
       }),
 
@@ -4193,7 +5358,7 @@ export const agentPlugin = {
        * place moved) nothing changes. The runs come back as they are now, for a further
        * change of the same selection.
        */
-      replaceSelection: guarded((segments, texts) => {
+      replaceSelection: guarded((segments, texts, options) => {
         checkSegments(segments)
         if (!Array.isArray(texts) || texts.length === 0 || texts.length > MAX_SELECTED_RUNS) {
           throw fail('BAD_ARGUMENT', 'texts must be a list of one or more strings')
@@ -4206,56 +5371,60 @@ export const agentPlugin = {
           return { ok: false, reason: 'changed' }
         }
         return keepingObjects((mustKeep) =>
-          change('replace-selection', (doc) => {
-            if (!segmentsStand(doc, segments))
-              throw fail('CHANGED', 'the document changed mid-call')
-            const before = objectsOf(doc)
-            const asHit = (segment) => ({
-              sec: segment.sec,
-              para: segment.para,
-              cellPath: segment.path,
-              charOffset: segment.offset,
-              length: segment.length,
-            })
-            const kept = Math.min(segments.length, texts.length)
-            // runs left without a text go first, from the end, so that the paragraphs in
-            // front of them keep their numbers
-            for (let index = segments.length - 1; index >= kept; index--) {
-              const segment = segments[index]
-              const { box, k } = segmentBox(doc, segment)
-              const whole = segment.offset === 0 && segment.length === box.length(k)
-              if (whole && k > 0 && box.objectPositions(k).length === 0) {
-                box.deleteRange(k - 1, box.length(k - 1), k, box.length(k))
-              } else replaceHit(doc, asHit(segment), '')
-            }
-            // each run is in a paragraph of its own, so one does not move another
-            for (let index = 0; index < kept; index++) {
-              replaceHit(doc, asHit(segments[index]), texts[index])
-            }
-            const now = segments.slice(0, kept).map((segment, index) => ({
-              ...segment,
-              length: texts[index].length,
-              text: texts[index],
-            }))
-            if (texts.length > segments.length) {
-              // what stood behind the selection in its last paragraph ends up behind the
-              // last new paragraph, as when text of several paragraphs is typed there
-              const last = segments[segments.length - 1]
-              const { box, k } = segmentBox(doc, last)
-              let at = k
-              let offset = last.offset + texts[kept - 1].length
-              for (let index = kept; index < texts.length; index++) {
-                box.split(at, offset)
-                at += 1
-                if (texts[index]) box.insert(at, texts[index])
-                offset = texts[index].length
-                now.push({ ...box.place(at, texts[index].length), text: texts[index] })
+          change(
+            'replace-selection',
+            (doc) => {
+              if (!segmentsStand(doc, segments))
+                throw fail('CHANGED', 'the document changed mid-call')
+              const before = objectsOf(doc)
+              const asHit = (segment) => ({
+                sec: segment.sec,
+                para: segment.para,
+                cellPath: segment.path,
+                charOffset: segment.offset,
+                length: segment.length,
+              })
+              const kept = Math.min(segments.length, texts.length)
+              // runs left without a text go first, from the end, so that the paragraphs in
+              // front of them keep their numbers
+              for (let index = segments.length - 1; index >= kept; index--) {
+                const segment = segments[index]
+                const { box, k } = segmentBox(doc, segment)
+                const whole = segment.offset === 0 && segment.length === box.length(k)
+                if (whole && k > 0 && box.objectPositions(k).length === 0) {
+                  box.deleteRange(k - 1, box.length(k - 1), k, box.length(k))
+                } else replaceHit(doc, asHit(segment), '')
               }
-            }
-            mustKeep(before, objectsOf(doc))
-            const { text: _text, ...place } = now[0]
-            return { ok: true, segments: now, place }
-          }),
+              // each run is in a paragraph of its own, so one does not move another
+              for (let index = 0; index < kept; index++) {
+                replaceHit(doc, asHit(segments[index]), texts[index])
+              }
+              const now = segments.slice(0, kept).map((segment, index) => ({
+                ...segment,
+                length: texts[index].length,
+                text: texts[index],
+              }))
+              if (texts.length > segments.length) {
+                // what stood behind the selection in its last paragraph ends up behind the
+                // last new paragraph, as when text of several paragraphs is typed there
+                const last = segments[segments.length - 1]
+                const { box, k } = segmentBox(doc, last)
+                let at = k
+                let offset = last.offset + texts[kept - 1].length
+                for (let index = kept; index < texts.length; index++) {
+                  box.split(at, offset)
+                  at += 1
+                  if (texts[index]) box.insert(at, texts[index])
+                  offset = texts[index].length
+                  now.push({ ...box.place(at, texts[index].length), text: texts[index] })
+                }
+              }
+              mustKeep(before, objectsOf(doc))
+              const { text: _text, ...place } = now[0]
+              return { ok: true, segments: now, place }
+            },
+            options,
+          ),
         )
       }),
 
@@ -4263,7 +5432,7 @@ export const agentPlugin = {
        * Change the formatting of the selected runs: character formatting for the runs, and
        * with align or lineSpacing the paragraphs they are in.
        */
-      formatSelection: guarded((segments, format) => {
+      formatSelection: guarded((segments, format, options) => {
         checkSegments(segments)
         const spec = formatOf(format, true)
         const plan = (doc) => {
@@ -4284,34 +5453,38 @@ export const agentPlugin = {
         const refusal = host.read((doc) => plan(doc).refusal ?? null)
         if (refusal) return refusal
         return keepingObjects((mustKeep) =>
-          change('format-selection', (doc) => {
-            const { boxes } = plan(doc)
-            if (!boxes) throw fail('CHANGED', 'the document changed mid-call')
-            const before = objectsOf(doc)
-            const { chars, paragraph, style, charShape } = resolveFormat(doc, spec)
-            let keptOwnLook = 0
-            segments.forEach((segment, index) => {
-              const { box, k } = boxes[index]
-              const end = segment.offset + segment.length
-              if (style !== null) {
-                if (keepsOwnLook(doc, box, k) === true) keptOwnLook += 1
-                box.applyStyle(k, style)
+          change(
+            'format-selection',
+            (doc) => {
+              const { boxes } = plan(doc)
+              if (!boxes) throw fail('CHANGED', 'the document changed mid-call')
+              const before = objectsOf(doc)
+              const { chars, paragraph, style, charShape } = resolveFormat(doc, spec)
+              let keptOwnLook = 0
+              segments.forEach((segment, index) => {
+                const { box, k } = boxes[index]
+                const end = segment.offset + segment.length
+                if (style !== null) {
+                  if (keepsOwnLook(doc, box, k) === true) keptOwnLook += 1
+                  box.applyStyle(k, style)
+                }
+                if (charShape !== null && segment.length > 0) {
+                  box.setCharShape(k, segment.offset, end, charShape)
+                }
+                if (paragraph) box.formatParagraph(k, paragraph)
+                if (chars && segment.length > 0) box.formatChars(k, segment.offset, end, chars)
+              })
+              mustKeep(before, objectsOf(doc))
+              const { text: _text, ...place } = segments[0]
+              return {
+                ok: true,
+                count: segments.length,
+                place,
+                ...(keptOwnLook > 0 ? { keptOwnLook } : {}),
               }
-              if (charShape !== null && segment.length > 0) {
-                box.setCharShape(k, segment.offset, end, charShape)
-              }
-              if (paragraph) box.formatParagraph(k, paragraph)
-              if (chars && segment.length > 0) box.formatChars(k, segment.offset, end, chars)
-            })
-            mustKeep(before, objectsOf(doc))
-            const { text: _text, ...place } = segments[0]
-            return {
-              ok: true,
-              count: segments.length,
-              place,
-              ...(keptOwnLook > 0 ? { keptOwnLook } : {}),
-            }
-          }),
+            },
+            options,
+          ),
         )
       }),
 
@@ -4321,7 +5494,7 @@ export const agentPlugin = {
        */
       listFields: guarded(() =>
         host.read((doc) =>
-          parse(doc.getFieldList()).map((field, index) => ({
+          formFieldsOf(doc).map((field, index) => ({
             field: index + 1,
             name: field.name ?? '',
             guide: field.guide ?? '',
@@ -4333,20 +5506,24 @@ export const agentPlugin = {
       ),
 
       /** Set the value of the field with this number (1-based, as listed by listFields). */
-      fillField: guarded((number, value) => {
+      fillField: guarded((number, value, options) => {
         checkReplacement(value)
-        const count = host.read((doc) => parse(doc.getFieldList()).length)
+        const count = host.read((doc) => formFieldsOf(doc).length)
         if (!Number.isInteger(number) || number < 1 || number > count) {
           return { ok: false, reason: 'no_such_field', count }
         }
-        return change('fill-field', (doc) => {
-          const field = parse(doc.getFieldList())[number - 1]
-          if (!field) throw fail('CHANGED', 'the document changed mid-call')
-          expectOk(doc.setFieldValue(field.fieldId, value), 'fill the field')
-          plainAnswerFields(doc, new Set([field.fieldId]))
-          const place = fieldPlace(field)
-          return { ok: true, name: field.name ?? '', ...(place ? { place } : {}) }
-        })
+        return change(
+          'fill-field',
+          (doc) => {
+            const field = formFieldsOf(doc)[number - 1]
+            if (!field) throw fail('CHANGED', 'the document changed mid-call')
+            setFieldAt(doc, fieldKey(field), value)
+            plainAnswerFields(doc, null, new Set([fieldKey(field)]))
+            const place = fieldPlace(field)
+            return { ok: true, name: field.name ?? '', ...(place ? { place } : {}) }
+          },
+          options,
+        )
       }),
 
       /**
@@ -4356,7 +5533,7 @@ export const agentPlugin = {
        * that text occurs more than once) and shown as its whole paragraph; headings are body
        * paragraphs. The page numbers are those with the table of contents in place.
        */
-      insertToc: guarded((anchor, occurrence, where, title, entries) => {
+      insertToc: guarded((anchor, occurrence, where, title, entries, options) => {
         checkWhere(where)
         checkTocEntries(entries)
         if (title !== null && title !== undefined) checkReplacement(title)
@@ -4389,73 +5566,77 @@ export const agentPlugin = {
         })
         if (refusal) return refusal
         return keepingObjects((mustKeep) =>
-          change('insert-toc', (doc) => {
-            const { box, plain } = locate(doc, anchor, occurrence, where)
-            if (!box || box.inTable) throw fail('CHANGED', 'the document changed mid-call')
-            const before = objectsOf(doc)
-            const { sec } = box.place(box.index, 0)
-            const headings = headingsOf(doc)
-            if (headings.some((heading) => !heading.hit)) {
-              throw fail('CHANGED', 'the document changed mid-call')
-            }
-            // read before a paragraph is split: the contents are to look like the text there
-            const font = box.font(box.index)
-            const width = textWidthPt(doc, sec)
-            const rows = headings.map(({ entry, hit }) => ({
-              text: oneLine(
-                clip(bodyText(doc, hit.sec, hit.para).replace(/\s+/g, ' ').trim(), MAX_TOC_TEXT),
-                entry.level,
-                font,
-                width,
-              ),
-              level: entry.level,
-              page: 0,
-            }))
-            let first = box.index
-            if (where === 'before') box.split(first, 0)
-            else {
-              openAfter(box, first, plain)
-              first += 1
-            }
-            let holder = first
-            if (titled) {
-              box.insert(first, title.trim())
-              openAfter(box, first, false)
-              holder = first + 1
-            }
-            box.pasteHtml(holder, tocHtml(rows, font, width))
-            const table = tablesOf(doc).tables.find(
-              (candidate) =>
-                candidate.sec === sec && candidate.para === holder && candidate.path.length === 1,
-            )
-            if (!table) throw fail('ENGINE', 'the table of contents could not be made')
-            // the pages as they are now: every paragraph from the first new one moved down
-            const added = holder - first + 1
-            const grid = gridOf(doc, table)
-            const pages = headings.map(({ hit }, index) => {
-              const para = hit.sec === sec && hit.para >= first ? hit.para + added : hit.para
-              const page = pageNumberOf(doc, hit.sec, para)
-              const cell = cellOf(grid, index, 1)
-              if (!cell) throw fail('ENGINE', 'the table of contents came out in another shape')
-              setCellText(doc, table, cell.cell, String(page))
-              return page
-            })
-            if (titled) {
-              expectOk(
-                doc.applyParaFormat(sec, first, JSON.stringify({ alignment: 'center' })),
-                'center the title',
+          change(
+            'insert-toc',
+            (doc) => {
+              const { box, plain } = locate(doc, anchor, occurrence, where)
+              if (!box || box.inTable) throw fail('CHANGED', 'the document changed mid-call')
+              const before = objectsOf(doc)
+              const { sec } = box.place(box.index, 0)
+              const headings = headingsOf(doc)
+              if (headings.some((heading) => !heading.hit)) {
+                throw fail('CHANGED', 'the document changed mid-call')
+              }
+              // read before a paragraph is split: the contents are to look like the text there
+              const font = box.font(box.index)
+              const width = textWidthPt(doc, sec)
+              const rows = headings.map(({ entry, hit }) => ({
+                text: oneLine(
+                  clip(bodyText(doc, hit.sec, hit.para).replace(/\s+/g, ' ').trim(), MAX_TOC_TEXT),
+                  entry.level,
+                  font,
+                  width,
+                ),
+                level: entry.level,
+                page: 0,
+              }))
+              let first = box.index
+              if (where === 'before') box.split(first, 0)
+              else {
+                openAfter(box, first, plain)
+                first += 1
+              }
+              let holder = first
+              if (titled) {
+                box.insert(first, title.trim())
+                openAfter(box, first, false)
+                holder = first + 1
+              }
+              box.pasteHtml(holder, tocHtml(rows, font, width))
+              const table = tablesOf(doc).tables.find(
+                (candidate) =>
+                  candidate.sec === sec && candidate.para === holder && candidate.path.length === 1,
               )
-            }
-            const after = objectsOf(doc)
-            // the table is an object of its own; nothing that was there may be gone
-            mustKeep(before, { ...after, controls: Math.min(after.controls, before.controls) })
-            return {
-              ok: true,
-              count: entries.length,
-              pages,
-              place: { sec, para: first, offset: 0, length: titled ? title.trim().length : 0 },
-            }
-          }),
+              if (!table) throw fail('ENGINE', 'the table of contents could not be made')
+              // the pages as they are now: every paragraph from the first new one moved down
+              const added = holder - first + 1
+              const grid = gridOf(doc, table)
+              const pages = headings.map(({ hit }, index) => {
+                const para = hit.sec === sec && hit.para >= first ? hit.para + added : hit.para
+                const page = pageNumberOf(doc, hit.sec, para)
+                const cell = cellOf(grid, index, 1)
+                if (!cell) throw fail('ENGINE', 'the table of contents came out in another shape')
+                setCellText(doc, table, cell.cell, String(page))
+                return page
+              })
+              if (titled) {
+                expectOk(
+                  doc.applyParaFormat(sec, first, JSON.stringify({ alignment: 'center' })),
+                  'center the title',
+                )
+              }
+              const after = objectsOf(doc)
+              // the table is an object of its own; nothing that was there may be gone
+              mustKeep(before, { ...after, controls: Math.min(after.controls, before.controls) })
+              return {
+                ok: true,
+                count: entries.length,
+                pages,
+                place: { sec, para: first, offset: 0, length: titled ? title.trim().length : 0 },
+              }
+            },
+            options,
+          ),
         )
       }),
 
@@ -4465,7 +5646,7 @@ export const agentPlugin = {
        * text in the body; a row whose heading is gone, or whose second cell is not a page
        * number, is left alone.
        */
-      refreshToc: guarded((title, occurrence) => {
+      refreshToc: guarded((title, occurrence, options) => {
         const find = (doc) => {
           const located = locate(doc, title, occurrence, 'after')
           if (located.refusal) return { refusal: located.refusal }
@@ -4483,54 +5664,58 @@ export const agentPlugin = {
         const refusal = host.read((doc) => find(doc).refusal ?? null)
         if (refusal) return refusal
         return keepingObjects((mustKeep) =>
-          change('refresh-toc', (doc) => {
-            const { table } = find(doc)
-            if (!table) throw fail('CHANGED', 'the document changed mid-call')
-            const before = objectsOf(doc)
-            const grid = gridOf(doc, table)
-            let rows = 0
-            let changed = 0
-            const missing = []
-            for (let row = 0; row < table.rows; row++) {
-              const headingCell = cellOf(grid, row, 0)
-              const pageCell = cellOf(grid, row, 1)
-              if (!headingCell || !pageCell) continue
-              const shown = PAGE_NUMBER.exec(
-                paragraphsOf(cellBox(doc, table, pageCell.cell)).join(''),
-              )
-              if (!shown) continue
-              rows += 1
-              const heading = paragraphsOf(cellBox(doc, table, headingCell.cell))
-                .join(' ')
-                .trim()
-              // looked up by the start of its text (a long one was cut short in the table); a
-              // body paragraph that starts with it is preferred to a mention elsewhere
-              const key = heading.replace(/…$/, '').slice(0, TOC_KEY_CHARS)
-              const body = key
-                ? searchAll(doc, key).filter((hit) => !cellPathOf(hit) && isReplaceable(hit))
-                : []
-              const hit =
-                body.find((candidate) =>
-                  bodyText(doc, candidate.sec, candidate.para).trim().startsWith(key),
-                ) ?? body[0]
-              if (!hit) {
-                missing.push(heading)
-                continue
+          change(
+            'refresh-toc',
+            (doc) => {
+              const { table } = find(doc)
+              if (!table) throw fail('CHANGED', 'the document changed mid-call')
+              const before = objectsOf(doc)
+              const grid = gridOf(doc, table)
+              let rows = 0
+              let changed = 0
+              const missing = []
+              for (let row = 0; row < table.rows; row++) {
+                const headingCell = cellOf(grid, row, 0)
+                const pageCell = cellOf(grid, row, 1)
+                if (!headingCell || !pageCell) continue
+                const shown = PAGE_NUMBER.exec(
+                  paragraphsOf(cellBox(doc, table, pageCell.cell)).join(''),
+                )
+                if (!shown) continue
+                rows += 1
+                const heading = paragraphsOf(cellBox(doc, table, headingCell.cell))
+                  .join(' ')
+                  .trim()
+                // looked up by the start of its text (a long one was cut short in the table); a
+                // body paragraph that starts with it is preferred to a mention elsewhere
+                const key = heading.replace(/…$/, '').slice(0, TOC_KEY_CHARS)
+                const body = key
+                  ? searchAll(doc, key).filter((hit) => !cellPathOf(hit) && isReplaceable(hit))
+                  : []
+                const hit =
+                  body.find((candidate) =>
+                    bodyText(doc, candidate.sec, candidate.para).trim().startsWith(key),
+                  ) ?? body[0]
+                if (!hit) {
+                  missing.push(heading)
+                  continue
+                }
+                const page = pageNumberOf(doc, hit.sec, hit.para)
+                if (page === Number(shown[1])) continue
+                setCellText(doc, table, pageCell.cell, String(page))
+                changed += 1
               }
-              const page = pageNumberOf(doc, hit.sec, hit.para)
-              if (page === Number(shown[1])) continue
-              setCellText(doc, table, pageCell.cell, String(page))
-              changed += 1
-            }
-            mustKeep(before, objectsOf(doc))
-            return {
-              ok: true,
-              lines: rows,
-              changed,
-              ...(missing.length > 0 ? { missing } : {}),
-              place: { sec: table.sec, para: table.para, offset: 0, length: 0 },
-            }
-          }),
+              mustKeep(before, objectsOf(doc))
+              return {
+                ok: true,
+                lines: rows,
+                changed,
+                ...(missing.length > 0 ? { missing } : {}),
+                place: { sec: table.sec, para: table.para, offset: 0, length: 0 },
+              }
+            },
+            options,
+          ),
         )
       }),
 
@@ -4561,7 +5746,7 @@ export const agentPlugin = {
        * occur once, or `occurrence` picks one), with `text` as its content; a line break
        * starts a new paragraph of the note. Notes go in the body text only.
        */
-      insertNote: guarded((kind, anchor, occurrence, text) => {
+      insertNote: guarded((kind, anchor, occurrence, text, options) => {
         if (!NOTE_KINDS.includes(kind))
           throw fail('BAD_ARGUMENT', 'kind must be footnote or endnote')
         const lines = checkNoteText(text)
@@ -4587,37 +5772,41 @@ export const agentPlugin = {
         })
         if (refusal) return refusal
         return keepingObjects((mustKeep) =>
-          change('insert-note', (doc) => {
-            const { hit } = pick(doc)
-            if (!hit) throw fail('CHANGED', 'the document changed mid-call')
-            const before = objectsOf(doc)
-            const offset = hit.charOffset + hit.length
-            const made = parse(
-              kind === 'endnote'
-                ? doc.insertEndnote(hit.sec, hit.para, offset)
-                : doc.insertFootnote(hit.sec, hit.para, offset),
-            )
-            if (!made.ok || !Number.isInteger(made.controlIdx)) {
-              throw fail('ENGINE', `could not add the ${kind}`)
-            }
-            const at = { sec: hit.sec, para: made.paraIdx ?? hit.para, control: made.controlIdx }
-            // a new note holds its number only: everything in it is the number
-            const prefix = parse(doc.getFootnoteInfo(at.sec, at.para, at.control)).totalTextLen
-            writeNote(doc, at, prefix, lines)
-            // the one control more is the note itself
-            mustKeep({ ...before, controls: before.controls + 1 }, objectsOf(doc))
-            return {
-              ok: true,
-              kind,
-              number: made.footnoteNumber ?? made.endnoteNumber ?? null,
-              place: placeOf(hit, hit.length),
-            }
-          }),
+          change(
+            'insert-note',
+            (doc) => {
+              const { hit } = pick(doc)
+              if (!hit) throw fail('CHANGED', 'the document changed mid-call')
+              const before = objectsOf(doc)
+              const offset = hit.charOffset + hit.length
+              const made = parse(
+                kind === 'endnote'
+                  ? doc.insertEndnote(hit.sec, hit.para, offset)
+                  : doc.insertFootnote(hit.sec, hit.para, offset),
+              )
+              if (!made.ok || !Number.isInteger(made.controlIdx)) {
+                throw fail('ENGINE', `could not add the ${kind}`)
+              }
+              const at = { sec: hit.sec, para: made.paraIdx ?? hit.para, control: made.controlIdx }
+              // a new note holds its number only: everything in it is the number
+              const prefix = parse(doc.getFootnoteInfo(at.sec, at.para, at.control)).totalTextLen
+              writeNote(doc, at, prefix, lines)
+              // the one control more is the note itself
+              mustKeep({ ...before, controls: before.controls + 1 }, objectsOf(doc))
+              return {
+                ok: true,
+                kind,
+                number: made.footnoteNumber ?? made.endnoteNumber ?? null,
+                place: placeOf(hit, hit.length),
+              }
+            },
+            options,
+          ),
         )
       }),
 
       /** Replace the whole text of a note (its number from listNotes); a line break starts a paragraph. */
-      editNote: guarded((number, text) => {
+      editNote: guarded((number, text, options) => {
         const lines = checkNoteText(text)
         const refusal = host.read((doc) => {
           const { notes } = notesOf(doc)
@@ -4629,45 +5818,51 @@ export const agentPlugin = {
         })
         if (refusal) return refusal
         return keepingObjects((mustKeep) =>
-          change('edit-note', (doc) => {
-            const note = notesOf(doc).notes[number - 1]
-            if (!note || !note.plain) throw fail('CHANGED', 'the document changed mid-call')
-            const before = objectsOf(doc)
-            // one paragraph holding the number only, then the new text
-            for (let k = note.lines.length - 1; k > 0; k--) {
-              expectOk(
-                doc.mergeParagraphInFootnote(note.sec, note.para, note.control, k),
-                'merge the note',
-              )
-            }
-            const first = parse(doc.getFootnoteInfo(note.sec, note.para, note.control)).totalTextLen
-            if (first > note.prefix) {
-              expectOk(
-                doc.deleteTextInFootnote(
-                  note.sec,
-                  note.para,
-                  note.control,
-                  0,
-                  note.prefix,
-                  first - note.prefix,
-                ),
-                'clear the note',
-              )
-            }
-            writeNote(doc, note, note.prefix, lines)
-            mustKeep(before, objectsOf(doc))
-            return {
-              ok: true,
-              ...noteSummary(note),
-              was: clip(note.lines.join('\n'), MAX_REPORTED_CHARS),
-              place: { sec: note.sec, para: note.para, offset: note.offset, length: 0 },
-            }
-          }),
+          change(
+            'edit-note',
+            (doc) => {
+              const note = notesOf(doc).notes[number - 1]
+              if (!note || !note.plain) throw fail('CHANGED', 'the document changed mid-call')
+              const before = objectsOf(doc)
+              // one paragraph holding the number only, then the new text
+              for (let k = note.lines.length - 1; k > 0; k--) {
+                expectOk(
+                  doc.mergeParagraphInFootnote(note.sec, note.para, note.control, k),
+                  'merge the note',
+                )
+              }
+              const first = parse(
+                doc.getFootnoteInfo(note.sec, note.para, note.control),
+              ).totalTextLen
+              if (first > note.prefix) {
+                expectOk(
+                  doc.deleteTextInFootnote(
+                    note.sec,
+                    note.para,
+                    note.control,
+                    0,
+                    note.prefix,
+                    first - note.prefix,
+                  ),
+                  'clear the note',
+                )
+              }
+              writeNote(doc, note, note.prefix, lines)
+              mustKeep(before, objectsOf(doc))
+              return {
+                ok: true,
+                ...noteSummary(note),
+                was: clip(note.lines.join('\n'), MAX_REPORTED_CHARS),
+                place: { sec: note.sec, para: note.para, offset: note.offset, length: 0 },
+              }
+            },
+            options,
+          ),
         )
       }),
 
       /** Remove a note (its number from listNotes), mark and text. */
-      deleteNote: guarded((number) => {
+      deleteNote: guarded((number, options) => {
         const refusal = host.read((doc) => {
           const { notes } = notesOf(doc)
           return Number.isInteger(number) && notes[number - 1]
@@ -4676,21 +5871,180 @@ export const agentPlugin = {
         })
         if (refusal) return refusal
         return keepingObjects((mustKeep) =>
-          change('delete-note', (doc) => {
-            const note = notesOf(doc).notes[number - 1]
-            if (!note) throw fail('CHANGED', 'the document changed mid-call')
-            const before = objectsOf(doc)
-            expectOk(doc.deleteFootnote(note.sec, note.para, note.control), 'remove the note')
-            mustKeep({ ...before, controls: before.controls - 1 }, objectsOf(doc))
-            return {
-              ok: true,
-              ...noteSummary(note),
-              text: clip(note.lines.join('\n'), MAX_REPORTED_CHARS),
-              place: { sec: note.sec, para: note.para, offset: note.offset, length: 0 },
-            }
-          }),
+          change(
+            'delete-note',
+            (doc) => {
+              const note = notesOf(doc).notes[number - 1]
+              if (!note) throw fail('CHANGED', 'the document changed mid-call')
+              const before = objectsOf(doc)
+              expectOk(doc.deleteFootnote(note.sec, note.para, note.control), 'remove the note')
+              mustKeep({ ...before, controls: before.controls - 1 }, objectsOf(doc))
+              return {
+                ok: true,
+                ...noteSummary(note),
+                text: clip(note.lines.join('\n'), MAX_REPORTED_CHARS),
+                place: { sec: note.sec, para: note.para, offset: note.offset, length: 0 },
+              }
+            },
+            options,
+          ),
         )
       }),
+
+      /**
+       * The memos of the document in document order, each with the page its anchor starts
+       * on and the rectangles it covers, or the caret bar of one with no text range.
+       */
+      listMemos: guarded(() => {
+        listedMemos = null
+        // An older engine has no memo API. Say so instead of pretending the
+        // document has no memos: the panel then keeps its screen closed.
+        let supported = true
+        try {
+          supported = host.read((doc) => typeof doc.getMemoList === 'function') !== false
+        } catch {
+          // no document yet: let the list read answer
+        }
+        try {
+          host.automation.execute(MEMO_LIST_COMMAND)
+        } catch {
+          // an editor without commands: the list is read here
+        }
+        const memos = listedMemos ?? host.read(memoListOf)
+        memoKnown = memos.map(memoSummaryOf)
+        return { count: memos.length, memos, supported }
+      }),
+
+      /**
+       * Whether the selection (or the caret, when nothing is selected) may carry a memo
+       * anchor: one paragraph, a place this app edits, no existing memo there, and an
+       * unprotected document. What it holds is the preview the panel shows.
+       */
+      memoSelection: guarded(() => {
+        memoAnchorAnswer = null
+        try {
+          host.automation.execute(MEMO_SELECTION_COMMAND)
+        } catch {
+          return { ok: false, reason: 'none' }
+        }
+        return memoAnchorAnswer ?? { ok: false, reason: 'none' }
+      }),
+
+      /** Add a memo at an anchor the selection gave, in one undo step. */
+      insertMemo: guarded((anchor, author, text, options) => {
+        const checked = checkMemoAnchor(anchor)
+        if (typeof text !== 'string') throw fail('BAD_ARGUMENT', 'text must be a string')
+        if (text.length > MAX_MEMO_TEXT) return { ok: false, reason: 'memo_text_too_long' }
+        const refusal = host.read((doc) => {
+          if (memoProtected(doc)) {
+            return { ok: false, reason: 'protected' }
+          }
+          const box = containerOf(doc, {
+            sec: checked.sectionIndex,
+            para: checked.paraIndex,
+            cellPath: checked.path,
+          })
+          if (box.length(checkedK(checked)) < checked.endCharIdx) {
+            return { ok: false, reason: 'memo_invalid_range' }
+          }
+          const key = `${checked.sectionIndex}:${checked.paraIndex}:${memoPathKey(checked.path)}`
+          if (memoOverlaps(memoEntriesOf(doc), key, checked.startCharIdx, checked.endCharIdx)) {
+            return { ok: false, reason: 'memo_overlap' }
+          }
+          return null
+        })
+        if (refusal) return refusal
+        return memoCommand('memo-insert', options, (doc) => {
+          const json = JSON.stringify({ author: memoAuthorOf(author), text })
+          const made = parse(
+            checked.path
+              ? doc.insertMemoByPath(
+                  checked.sectionIndex,
+                  checked.paraIndex,
+                  JSON.stringify(checked.path),
+                  checked.startCharIdx,
+                  checked.endCharIdx,
+                  json,
+                )
+              : doc.insertMemo(
+                  checked.sectionIndex,
+                  checked.paraIndex,
+                  checked.startCharIdx,
+                  checked.endCharIdx,
+                  json,
+                ),
+          )
+          if (!made || made.ok !== true) {
+            throw fail('ENGINE_REFUSED', 'the editor refused to add the memo')
+          }
+          return { ok: true, id: made.id, index: made.index }
+        })
+      }),
+
+      /** Replace the whole text of a memo, keeping its author and date, in one undo step. */
+      setMemo: guarded((id, text, options) => {
+        if (!Number.isInteger(id)) return { ok: false, reason: 'memo_not_found' }
+        if (typeof text !== 'string') throw fail('BAD_ARGUMENT', 'text must be a string')
+        if (text.length > MAX_MEMO_TEXT) return { ok: false, reason: 'memo_text_too_long' }
+        const refusal = host.read((doc) => {
+          if (memoProtected(doc)) {
+            return { ok: false, reason: 'memo_read_only', why: 'protected' }
+          }
+          const memo = memoEntriesOf(doc).find((entry) => entry.id === id)
+          if (!memo) return { ok: false, reason: 'memo_not_found' }
+          if (memo.editable !== true) {
+            return { ok: false, reason: 'memo_read_only', why: memo.readOnlyReason ?? null }
+          }
+          return null
+        })
+        if (refusal) return refusal
+        return memoCommand('memo-set', options, (doc) => {
+          expectOk(doc.setMemoText(id, text), 'change the memo')
+          return { ok: true }
+        })
+      }),
+
+      /** Remove a memo and its text, keeping the text it was put on, in one undo step. */
+      removeMemo: guarded((id, options) => {
+        if (!Number.isInteger(id)) return { ok: false, reason: 'memo_not_found' }
+        const refusal = host.read((doc) => {
+          if (memoProtected(doc)) {
+            return { ok: false, reason: 'memo_read_only', why: 'protected' }
+          }
+          const memo = memoEntriesOf(doc).find((entry) => entry.id === id)
+          if (!memo) return { ok: false, reason: 'memo_not_found' }
+          if (memo.readOnlyReason === 'protected' || memo.readOnlyReason === 'unsupported_place') {
+            return { ok: false, reason: 'memo_read_only', why: memo.readOnlyReason }
+          }
+          return null
+        })
+        if (refusal) return refusal
+        return memoCommand('memo-remove', options, (doc) => {
+          expectOk(doc.removeMemo(id), 'remove the memo')
+          return { ok: true }
+        })
+      }),
+
+      /** Show the memo anchors on the pages while the panel is open, or take them off. */
+      showMemoAnchors: guarded((shown) => {
+        memoShown = shown === true
+        if (!memoShown && stopMemoLayer) {
+          stopMemoLayer()
+          stopMemoLayer = null
+        }
+        refreshMemoAnchors()
+        return { ok: true, shown: memoShown }
+      }),
+
+      /** Make one memo's anchor stronger on the pages, or none. */
+      selectMemo: guarded((id) => {
+        memoSelected = Number.isInteger(id) ? id : null
+        refreshMemoAnchors()
+        return { ok: true, id: memoSelected }
+      }),
+
+      /** Take the editor's input away while the app's memo modal is open. */
+      setMemoLock: guarded((locked) => setMemoLock(locked === true)),
 
       /** Take the marks of the changes made so far off the pages. */
       clearMarks: guarded(() => {
@@ -4741,9 +6095,51 @@ export const agentPlugin = {
         } finally {
           own = false
         }
+        // an undo can bring memos back, and moves their anchors
+        syncMemos({ notify: false })
+        refreshMemoAnchors()
         return { ok: undone === steps, undone }
       }),
     }
+
+    // The three changes the panel makes are editor commands too: a caller that has only the
+    // command line of the editor passes the same arguments as the method. A command returns
+    // nothing itself, so the panel calls the methods when it needs the answer.
+    for (const [id, label, call] of [
+      [
+        MEMO_INSERT_COMMAND,
+        'Add a memo',
+        (params) => api.insertMemo(params?.anchor, params?.author, params?.text, params?.options),
+      ],
+      [
+        MEMO_SET_COMMAND,
+        'Change the memo',
+        (params) => api.setMemo(params?.id, params?.text, params?.options),
+      ],
+      [
+        MEMO_REMOVE_COMMAND,
+        'Remove the memo',
+        (params) => api.removeMemo(params?.id, params?.options),
+      ],
+    ]) {
+      try {
+        host.automation.registerCommand({
+          id,
+          label,
+          execute: (_services, params) => {
+            try {
+              call(params)
+            } catch {
+              // a failed call leaves the document as it was; the panel reads the list again
+            }
+          },
+        })
+      } catch {
+        // registered by an earlier activation of this plugin, or a host without commands
+      }
+    }
+
+    return api
   },
 }
 

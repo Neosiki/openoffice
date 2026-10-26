@@ -92,8 +92,8 @@ const api: HwpApi = {
   trackingDropped: () => ipcRenderer.invoke(HWP_CHANNELS.trackingDropped),
   beginSave: (mode) => ipcRenderer.invoke(HWP_CHANNELS.beginSave, mode),
   newTabs: (bytes, format) => ipcRenderer.invoke(HWP_CHANNELS.newTabs, bytes, format),
-  commitSave: (bytes, tabs, automatic) =>
-    ipcRenderer.invoke(HWP_CHANNELS.commitSave, bytes, tabs, automatic),
+  commitSave: (bytes, tabs, options) =>
+    ipcRenderer.invoke(HWP_CHANNELS.commitSave, bytes, tabs, options),
   abortSave: () => ipcRenderer.send(HWP_CHANNELS.abortSave),
   requestFileCommand: (command) => ipcRenderer.send(HWP_CHANNELS.fileCommand, command),
   setDirty: (dirty) => ipcRenderer.send(HWP_CHANNELS.dirtyChanged, dirty),
@@ -114,6 +114,23 @@ const api: HwpApi = {
     return () => ipcRenderer.removeListener(HWP_CHANNELS.closeSaveRequest, listener)
   },
   sendCloseSaveResult: (ok) => ipcRenderer.send(HWP_CHANNELS.closeSaveResult, ok),
+  setMemoModalOpen: (open) => ipcRenderer.send(HWP_CHANNELS.memoModalOpen, open),
+  getMemoModalOpen: async () => (await ipcRenderer.invoke(HWP_CHANNELS.memoModalState)) === true,
+  onMemoBlocked: (handler) => {
+    const listener = () => handler()
+    ipcRenderer.on(HWP_CHANNELS.memoBlocked, listener)
+    return () => ipcRenderer.removeListener(HWP_CHANNELS.memoBlocked, listener)
+  },
+  getAuthorName: async () => {
+    const raw = (await ipcRenderer.invoke(HWP_CHANNELS.getAuthorName)) as {
+      value?: unknown
+      fallback?: unknown
+    } | null
+    return {
+      value: typeof raw?.value === 'string' ? raw.value : '',
+      fallback: typeof raw?.fallback === 'string' ? raw.fallback : '',
+    }
+  },
   onReadBytesRequest: (handler) => {
     const listener = () => handler()
     ipcRenderer.on(HWP_CHANNELS.readBytesRequest, listener)

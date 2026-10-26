@@ -540,6 +540,139 @@ export type AgentDeleteNoteResult =
   | { ok: false; reason: 'no_such_note'; count: number }
   | { ok: false; reason: 'has_objects'; count: number }
 
+/** Where a memo anchor sits, as the engine reports it. */
+export type AgentMemoPlace =
+  'body' | 'tableCell' | 'textBox' | 'header' | 'footer' | 'footnote' | 'endnote' | 'unknown'
+
+/** One step of the engine's memo path; a text box has no cell index. */
+export interface AgentMemoPathStep {
+  type: 'cell' | 'textbox'
+  controlIndex: number
+  cellIndex?: number
+  paraIndex: number
+}
+
+/** A memo anchor in the editor's place terms, before it is put in the document. */
+export interface AgentMemoAnchor {
+  place: 'body' | 'tableCell' | 'textBox'
+  sectionIndex: number
+  paraIndex: number
+  startCharIdx: number
+  endCharIdx: number
+  /** null for the body; the editor's cell path for a cell or a text box */
+  path: { controlIndex: number; cellIndex: number; cellParaIndex: number }[] | null
+}
+
+/** A rectangle a memo anchor covers on a page; a caret anchor has width 0. */
+export interface AgentMemoRect {
+  pageIndex: number
+  x: number
+  y: number
+  width: number
+  height: number
+}
+
+/** One memo of the document, as the panel lists it. */
+export interface AgentMemo {
+  id: number
+  /** the number the file gives it; it can repeat, unlike id */
+  index: number
+  author: string
+  date: string | null
+  text: string
+  place: AgentMemoPlace
+  sectionIndex: number | null
+  paraIndex: number | null
+  startCharIdx: number | null
+  endCharIdx: number | null
+  path: AgentMemoPathStep[] | null
+  /** the page the anchor starts on (1-based); 0 when it cannot be told */
+  page: number
+  editable: boolean
+  readOnlyReason: 'formatted' | 'object' | 'unsupported_place' | 'protected' | null
+  /** the anchor in the terms reveal() and the editor use; null for a memo without an address */
+  anchor: AgentPlace | null
+  rects: AgentMemoRect[]
+  /** the first words of the text, for a card */
+  preview: string
+}
+
+export interface AgentMemoList {
+  count: number
+  memos: AgentMemo[]
+  /** false when this engine build has no memo API; the panel stays closed then */
+  supported?: boolean
+}
+
+export type AgentMemoSelectionResult =
+  | {
+      ok: true
+      place: 'body' | 'tableCell' | 'textBox'
+      sectionIndex: number
+      paraIndex: number
+      startCharIdx: number
+      endCharIdx: number
+      path: AgentMemoAnchor['path']
+      /** the text the memo would be put on, or words around the caret */
+      preview: string
+      /** the same anchor, as insertMemo takes it */
+      anchor: AgentMemoAnchor
+    }
+  | {
+      ok: false
+      /**
+       * none: no caret. multi_paragraph: the selection runs over more than one paragraph.
+       * unsupported_place: a note, a header, a block of cells. overlap: a memo is there
+       * already. protected: the document cannot be saved.
+       */
+      reason: 'none' | 'multi_paragraph' | 'unsupported_place' | 'overlap' | 'protected'
+    }
+
+/** What an AI change may be told about memos: the default asks before taking one away. */
+export interface AgentChangeOptions {
+  /** the user approved the memos this change takes: only for the one retried change */
+  allowMemoRemoval?: boolean
+  /** "ask" (the default) refuses and asks; "allow" is the same as allowMemoRemoval */
+  memoPolicy?: 'ask' | 'allow'
+  /** the memos the user approved taking (ids of the refusal): any other one is refused again */
+  approvedMemoIds?: number[]
+}
+
+/**
+ * An AI change that would take memos with it was rolled back. The panel shows these memos
+ * and retries the same change with `allowMemoRemoval` when the user says yes. A mutating
+ * call answers this in place of its usual result; a caller that expects it widens the
+ * call's answer with this type.
+ */
+export interface AgentMemoRemovalRefusal {
+  ok: false
+  reason: 'memo_removal_requires_approval'
+  count: number
+  memos: {
+    id: number
+    index: number
+    author: string
+    /** the first words of the text, cut short */
+    text: string
+    place: AgentMemoPlace
+    page: number
+  }[]
+}
+
+export type AgentInsertMemoResult =
+  { ok: true; id: number; index: number } | { ok: false; reason: string }
+
+export type AgentSetMemoResult = { ok: true } | { ok: false; reason: string; why?: string | null }
+
+export type AgentRemoveMemoResult =
+  { ok: true } | { ok: false; reason: string; why?: string | null }
+
+/** The event the plugin fires when a user's own edit took memos away. */
+export declare const MEMO_REMOVED_EVENT: 'ieum:memo-removed'
+
+/** The event the plugin fires when a paste brought text without the memos copied with it. */
+export declare const MEMO_NOT_COPIED_EVENT: 'ieum:memo-not-copied'
+
 /** One heading of a table of contents: text it contains, and its level (1 to 3). */
 export interface AgentTocEntry {
   find: string
@@ -600,101 +733,172 @@ export interface AgentPluginSurface {
   foreignChanges(): number
   readText(): string
   findText(find: string): AgentFindResult
-  replaceText(find: string, replacement: string, occurrence?: number | null): AgentReplaceResult
-  replaceAllText(find: string, replacement: string): AgentReplaceAllResult
+  replaceText(
+    find: string,
+    replacement: string,
+    occurrence?: number | null,
+    options?: AgentChangeOptions,
+  ): AgentReplaceResult
+  replaceAllText(
+    find: string,
+    replacement: string,
+    options?: AgentChangeOptions,
+  ): AgentReplaceAllResult
   insertParagraphs(
     anchor: string,
     occurrence: number | null,
     where: AgentWhere,
     paragraphs: string[],
+    options?: AgentChangeOptions,
   ): AgentInsertResult
-  deleteParagraph(find: string, occurrence: number | null): AgentDeleteResult
+  deleteParagraph(
+    find: string,
+    occurrence: number | null,
+    options?: AgentChangeOptions,
+  ): AgentDeleteResult
   insertTable(
     anchor: string,
     occurrence: number | null,
     where: AgentWhere,
     rows: string[][],
     header?: boolean,
+    options?: AgentChangeOptions,
   ): AgentTableResult
   formatText(
     find: string,
     occurrence: number | null,
     all: boolean,
     format: AgentTextFormat,
+    options?: AgentChangeOptions,
   ): AgentFormatTextResult
   formatParagraph(
     find: string,
     occurrence: number | null,
     format: AgentParagraphFormat,
+    options?: AgentChangeOptions,
   ): AgentFormatParagraphResult
   listTables(): AgentTableList
   readTable(table: number, fromRow?: number | null): AgentReadTableResult
-  fillCells(table: number, cells: AgentCellText[], overwrite: boolean): AgentFillCellsResult
-  checkBoxes(table: number, cells: AgentCheckBox[]): AgentCheckBoxesResult
+  fillCells(
+    table: number,
+    cells: AgentCellText[],
+    overwrite: boolean,
+    options?: AgentChangeOptions,
+  ): AgentFillCellsResult
+  checkBoxes(
+    table: number,
+    cells: AgentCheckBox[],
+    options?: AgentChangeOptions,
+  ): AgentCheckBoxesResult
   addTableLines(
     table: number,
     what: AgentTableLines,
     at: number,
     where: 'after' | 'before',
     count: number,
+    options?: AgentChangeOptions,
   ): AgentAddLinesResult
   removeTableLines(
     table: number,
     what: AgentTableLines,
     at: number,
     count: number,
+    options?: AgentChangeOptions,
   ): AgentRemoveLinesResult
-  deleteTable(table: number): AgentDeleteTableResult
+  deleteTable(table: number, options?: AgentChangeOptions): AgentDeleteTableResult
   installFileMenu(labels: Record<AgentFileCommand, string>): { ok: boolean }
   reveal(place: AgentPlace): { ok: boolean }
   selection(): AgentSelectionResult
-  replaceSelection(segments: AgentSegment[], texts: string[]): AgentReplaceSelectionResult
+  replaceSelection(
+    segments: AgentSegment[],
+    texts: string[],
+    options?: AgentChangeOptions,
+  ): AgentReplaceSelectionResult
   formatSelection(
     segments: AgentSegment[],
     format: AgentParagraphFormat,
+    options?: AgentChangeOptions,
   ): AgentFormatSelectionResult
   listFields(): AgentField[]
-  fillField(field: number, value: string): AgentFillResult
+  fillField(field: number, value: string, options?: AgentChangeOptions): AgentFillResult
   insertToc(
     anchor: string,
     occurrence: number | null,
     where: AgentWhere,
     title: string | null,
     entries: AgentTocEntry[],
+    options?: AgentChangeOptions,
   ): AgentInsertTocResult
-  refreshToc(title: string, occurrence: number | null): AgentRefreshTocResult
+  refreshToc(
+    title: string,
+    occurrence: number | null,
+    options?: AgentChangeOptions,
+  ): AgentRefreshTocResult
   listNotes(): AgentNoteList
   insertNote(
     kind: AgentNoteKind,
     anchor: string,
     occurrence: number | null,
     text: string,
+    options?: AgentChangeOptions,
   ): AgentInsertNoteResult
-  editNote(note: number, text: string): AgentEditNoteResult
-  deleteNote(note: number): AgentDeleteNoteResult
+  editNote(note: number, text: string, options?: AgentChangeOptions): AgentEditNoteResult
+  deleteNote(note: number, options?: AgentChangeOptions): AgentDeleteNoteResult
   measureTabs(spots: AgentTabSpot[]): { tabs: (AgentTabMeasure | null)[] }
   listStyles(): AgentStyleNames
   readStyle(name: string): AgentReadStyleResult
-  createStyle(spec: AgentNewStyle): AgentStyleResult
-  editStyle(name: string, changes: AgentStyleChanges): AgentStyleResult
+  createStyle(spec: AgentNewStyle, options?: AgentChangeOptions): AgentStyleResult
+  editStyle(
+    name: string,
+    changes: AgentStyleChanges,
+    options?: AgentChangeOptions,
+  ): AgentStyleResult
   /** pages for printing from `from`, as many as are drawn in about two seconds */
   printPages(from: number): AgentPrintPages
-  mergeCells(table: number, from: AgentCellPlace, to: AgentCellPlace): AgentMergeCellsResult
+  mergeCells(
+    table: number,
+    from: AgentCellPlace,
+    to: AgentCellPlace,
+    options?: AgentChangeOptions,
+  ): AgentMergeCellsResult
   splitCell(
     table: number,
     row: number,
     col: number,
     rows?: number | null,
     cols?: number | null,
+    options?: AgentChangeOptions,
   ): AgentSplitCellResult
   formatCells(
     table: number,
     cells: { row: number; col: number }[],
     background: string,
+    options?: AgentChangeOptions,
   ): AgentFormatCellsResult
   /** take the marks of the changes made so far off the pages */
   clearMarks(): { ok: true }
   undo(steps: number, expectedForeign: number): AgentUndoResult
+  /** the memos of the document in document order, with their pages and anchor rectangles */
+  listMemos(): AgentMemoList
+  /** whether the selection (or the caret) may carry a memo anchor */
+  memoSelection(): AgentMemoSelectionResult
+  /** add a memo at an anchor memoSelection gave; one undo step */
+  insertMemo(
+    anchor: AgentMemoAnchor,
+    author: string,
+    text: string,
+    options?: AgentChangeOptions,
+  ): AgentInsertMemoResult
+  /** replace the text of a memo, keeping its author and date; one undo step */
+  setMemo(id: number, text: string, options?: AgentChangeOptions): AgentSetMemoResult
+  /** remove a memo and keep the text it was put on; one undo step */
+  removeMemo(id: number, options?: AgentChangeOptions): AgentRemoveMemoResult
+  /** show the memo anchors on the pages while the panel is open, or take them off */
+  showMemoAnchors(shown: boolean): { ok: true; shown: boolean }
+  /** make one memo's anchor stronger on the pages, or none */
+  selectMemo(id: number | null): { ok: true; id: number | null }
+  /** take the editor's input away while the app's memo modal is open */
+  setMemoLock(locked: boolean): { ok: true; locked: boolean }
 }
 
 /** Pages drawn for printing: SVG, and each page's size in CSS pixels. */

@@ -169,6 +169,8 @@ body {
 
 .hwp-notice {
   position: absolute;
+  /* above the memo editor's backdrop: a save or close held back says why there */
+  z-index: 1300;
   /* clear of the editor's menus above and its status bar below */
   bottom: 44px;
   left: 50%;
