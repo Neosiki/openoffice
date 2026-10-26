@@ -13,6 +13,8 @@ when the request is ambiguous.
 Changes the page size of the whole deck. Element positions are not rescaled;
 follow up with `execute_slide_script` when content must be re-laid out.
 Common sizes: 16:9 is 12192000 x 6858000, 4:3 is 9144000 x 6858000.
+Each edge is a whole number of EMU from 914400 (1 inch) to 51206400 (56 inches),
+the range PowerPoint accepts; anything else is rejected.
 
 ```json
 { "op": "setSlideSize", "cx": 12192000, "cy": 6858000 }
@@ -86,6 +88,7 @@ Replaces the whole section list. Each section lists the 0-based indices of its
 slides in order; every slide should belong to exactly one section. Ids are
 GUIDs in braces; reuse existing ids to keep a section's identity, mint a new
 GUID for a new one.
+A slide listed more than once, or an index the deck does not have, is rejected.
 
 ```json
 {
