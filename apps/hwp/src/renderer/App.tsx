@@ -97,6 +97,21 @@ function savePortOf(editor: RhwpEditor): SaveEditorPort {
     exportHwp: () => editor.exportHwp(),
     exportHwpx: () => editor.exportHwpx(),
     exportHwpVerify: () => editor.exportHwpVerify(),
+    listMemos: async () => {
+      const listed = await agent.listMemos()
+      return listed.memos.map((memo) => ({
+        author: memo.author,
+        date: memo.date,
+        text: memo.text,
+        place: memo.place,
+        sectionIndex: memo.sectionIndex,
+        paraIndex: memo.paraIndex,
+        startCharIdx: memo.startCharIdx,
+        endCharIdx: memo.endCharIdx,
+        path: memo.path,
+      }))
+    },
+    setMemoLock: (locked) => agent.setMemoLock(locked),
     measureTabs: async (spots) => (await agent.measureTabs(spots)).tabs,
     notifySaved: (fileName) => editor.notifySaved(fileName),
   }
@@ -316,6 +331,9 @@ export default function App() {
     setNotice({ tone: 'error', key: 'memoSaveBlocked' })
   }, [])
 
+  // main refuses a save, close or quit while a memo editor is open; say why, do not discard
+  useEffect(() => window.hwpApi.onMemoBlocked(showMemoBlocked), [showMemoBlocked])
+
   const showMemoNotice = useCallback((notice: MemoNotice) => {
     setNotice({ tone: notice.tone ?? 'info', key: notice.key, params: notice.params })
   }, [])
@@ -336,7 +354,15 @@ export default function App() {
           copierRef.current?.saved()
           setFilePath(outcome.path)
           const backup = outcome.backupPath ? { name: fileNameOf(outcome.backupPath) } : null
-          if (outcome.tailsLost) {
+          if (outcome.memosLost) {
+            // stays until dismissed: the file is written, but some memos are not in it
+            setNotice({
+              tone: 'error',
+              key: 'memoHwpxLost',
+              params: { count: outcome.memosLost },
+              ...(backup ? { detail: t('backupKept', backup) } : {}),
+            })
+          } else if (outcome.tailsLost) {
             // stays until dismissed: the file is written, but may not open in Hangul
             setNotice({
               tone: 'error',

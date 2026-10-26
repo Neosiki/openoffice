@@ -24,6 +24,8 @@ export const HWP_CHANNELS = {
   memoModalOpen: 'hwp:memo-modal-open',
   /** invoke → boolean: whether a memo editor is open anywhere (a new tab locks itself) */
   memoModalState: 'hwp:memo-modal-state',
+  /** main → renderer: a save, close or quit was asked for while a memo editor is open */
+  memoBlocked: 'hwp:memo-blocked',
   readBytesRequest: 'hwp:read-bytes-request',
   readBytesResult: 'hwp:read-bytes-result',
   /** invoke → RecoveryBeginResult: a recovery copy is about to be exported */
@@ -123,16 +125,52 @@ export const MAX_HWP_SAVE_BYTES = 512 * 1024 * 1024
 export type BeginSaveResult =
   | { ok: true; path: string; format: HwpFormat }
   | { ok: true; canceled: true }
-  /** `reason` 'tracked': the document has tracked changes, which a save here would lose */
-  | { ok: false; error: string; reason?: 'tracked' }
+  /**
+   * `reason` 'tracked': the document has tracked changes, which a save here would lose.
+   * `reason` 'memo': a memo editor is open and its text has not been committed yet.
+   */
+  | { ok: false; error: string; reason?: 'tracked' | 'memo' }
+
+/** One step of a memo anchor's path into a table cell or text box, as the engine lists it. */
+export interface MemoPathStep {
+  type: 'cell' | 'textbox'
+  controlIndex: number
+  cellIndex?: number
+  paraIndex: number
+}
+
+/**
+ * A memo as the editor lists it just before a save. The written HWPX is compared with this
+ * by content, date, author and place; the anchor may legitimately move.
+ */
+export interface MemoSnapshot {
+  author: string
+  date: string | null
+  text: string
+  place: string
+  sectionIndex: number | null
+  paraIndex: number | null
+  startCharIdx: number | null
+  endCharIdx: number | null
+  path: MemoPathStep[] | null
+}
+
+/** Extra arguments of one save; the second argument stays the measured tabs. */
+export interface CommitSaveOptions {
+  /** an automatic save stands down rather than asking about a sibling's change */
+  auto?: boolean
+  /** the editor's memo list, or null when it could not be listed */
+  memos?: MemoSnapshot[] | null
+}
 
 export type CommitSaveResult =
   /**
    * `backupPath` is set when this save was the first to overwrite the file and the previous
    * bytes were kept. `tailsLost` is set when master pages or memos of the opened file could
-   * not be carried into the written one.
+   * not be carried into the written one (`memosLost` is the HWPX count).
    */
-  { ok: true; path: string; backupPath?: string; tailsLost?: true } | { ok: false; error: string }
+  | { ok: true; path: string; backupPath?: string; tailsLost?: true; memosLost?: number }
+  | { ok: false; error: string }
 
 /**
  * A tab the engine saved without a width, as the editor can find it again: the body
@@ -247,7 +285,11 @@ export interface HwpApi {
    * write the exported bytes to the target `beginSave` resolved, with the widths the editor
    * measured for the tabs `newTabs` found
    */
-  commitSave(bytes: Uint8Array, tabs?: MeasuredTab[]): Promise<CommitSaveResult>
+  commitSave(
+    bytes: Uint8Array,
+    tabs?: MeasuredTab[],
+    options?: CommitSaveOptions,
+  ): Promise<CommitSaveResult>
   /** the renderer could not produce bytes for a save it began */
   abortSave(): void
   setDirty(dirty: boolean): void
@@ -267,6 +309,8 @@ export interface HwpApi {
   setMemoModalOpen(open: boolean): void
   /** whether a memo editor is open in any tab (a tab opened meanwhile locks itself) */
   getMemoModalOpen(): Promise<boolean>
+  /** the main process refused a save, close or quit because a memo editor is open */
+  onMemoBlocked(handler: () => void): () => void
   /** the author a new memo takes: the settings name, else the PC account */
   getAuthorName(): Promise<{ value: string; fallback: string }>
   /** the main process wants the document as it is now, unsaved edits included */
