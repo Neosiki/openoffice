@@ -71,7 +71,8 @@ async function loadLocalImage(src: string, images?: MarkdownImageSource) {
   const local = src.startsWith('file:') ? fileURLToPath(src) : src
   const candidates = [local]
   try {
-    const decoded = decodeURI(local)
+    // fileURLToPath already decodes file URLs; authored paths need one decoding pass.
+    const decoded = src.startsWith('file:') ? local : decodeURIComponent(local)
     if (decoded !== local) candidates.push(decoded)
   } catch {
     // a literal % in the file name is not an escape; the raw spelling is tried
