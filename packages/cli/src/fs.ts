@@ -105,14 +105,15 @@ const RETRYABLE_RENAME = new Set(['EPERM', 'EACCES', 'EBUSY'])
 const RENAME_RETRIES = 4
 
 /**
- * Same-directory temp file + rename: an interrupted `apply` leaves the old
- * file or the new one, never a truncated one. Mirrors the app's atomic-write:
+ * Same-directory temp file + rename. Mirrors the app's atomic-write:
  * the target's mode is kept, a locked target is retried with backoff and,
- * failing that, overwritten in place so a finished edit is never dropped.
+ * failing that, overwritten in place. If that fallback fails, keep the
+ * completed temp as a rescue copy because the target may already be truncated.
  */
 export function writeOutput(abs: string, bytes: Uint8Array | string): void {
   const tmp = tempPathBeside(abs)
   const mode = existsSync(abs) ? statSync(abs).mode & 0o7777 : undefined
+  let keepTempOnError = false
   try {
     writeFileSync(tmp, bytes, mode === undefined ? {} : { mode })
     if (mode !== undefined) chmodSync(tmp, mode)
@@ -124,6 +125,7 @@ export function writeOutput(abs: string, bytes: Uint8Array | string): void {
         const code = (err as NodeJS.ErrnoException).code ?? ''
         if (!RETRYABLE_RENAME.has(code)) throw err
         if (attempt >= RENAME_RETRIES) {
+          keepTempOnError = true
           writeFileSync(abs, bytes)
           rmSync(tmp, { force: true })
           return
@@ -132,7 +134,7 @@ export function writeOutput(abs: string, bytes: Uint8Array | string): void {
       }
     }
   } catch (err) {
-    rmSync(tmp, { force: true })
+    if (!keepTempOnError) rmSync(tmp, { force: true })
     throw err
   }
 }
