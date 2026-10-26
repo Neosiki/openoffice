@@ -1481,10 +1481,20 @@
   white-space: nowrap;
 }
 
-.memo-card-page {
+.memo-card-page,
+.memo-card-date {
   flex: none;
   color: var(--color-text-secondary);
   font-size: 11px;
+}
+
+.memo-rail-label {
+  color: var(--color-text-secondary);
+  font-size: 11px;
+  line-height: 1.15;
+  letter-spacing: 0.02em;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
 }
 
 .memo-readonly-badge {

@@ -113,6 +113,22 @@ export function memoPageParams(page: number): Params | null {
   return Number.isInteger(page) && page > 0 ? { page } : null
 }
 
+/**
+ * The date the panel shows, when the file carries one. A date the browser can
+ * parse is localized; an unfamiliar string is shown as the file wrote it.
+ */
+export function memoDateText(date: string | null, lang: string): string | null {
+  const raw = (date ?? '').trim()
+  if (!raw) return null
+  const parsed = new Date(raw)
+  if (Number.isNaN(parsed.getTime())) return raw
+  try {
+    return new Intl.DateTimeFormat(lang, { dateStyle: 'medium', timeStyle: 'short' }).format(parsed)
+  } catch {
+    return raw
+  }
+}
+
 /** What the editor would put the memo on, from what the plugin answered. */
 export function memoSelectionPreview(selection: {
   preview?: string | null
@@ -301,26 +317,6 @@ export interface MemoPanelProps {
 
 const closeIcon = '×'
 const detailOf = (error: unknown) => (error instanceof Error ? error.message : String(error))
-
-/** A comment glyph in the editor's existing icon style: a speech box with two lines. */
-export function MemoGlyph({ size = 20 }: { size?: number }): ReactElement {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 16 16"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={size >= 20 ? 1.2 : 1.35}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
-      <path d="M 2.99 3.91 h 10.01 v 6.83 h -5.46 L 4.81 13.46 v -2.73 h -1.82 z" />
-      <path d="M 5.27 6.18 h 5.46 M 5.27 8.46 h 3.64" />
-    </svg>
-  )
-}
 
 function newTabId(): string {
   try {
@@ -753,6 +749,7 @@ export function MemoPanel({
 
   const pageOf = (memo: AgentMemo): Params | null => memoPageParams(memo.page)
   const authorOf = (memo: AgentMemo): string => memo.author.trim() || t('memoUnknownAuthor')
+  const dateOf = (memo: AgentMemo): string | null => memoDateText(memo.date, lang)
 
   const modal = editor ? (
     <div className="memo-modal-backdrop" onKeyDown={onDialogKeyDown}>
@@ -886,13 +883,13 @@ export function MemoPanel({
         )}
         {memos.length === 0 && !loadFailed ? (
           <div className="memo-empty">
-            <MemoGlyph size={28} />
             <p>{t('memoEmpty')}</p>
           </div>
         ) : (
           memos.map((memo) => {
             const reason = memoReadOnlyKey(memo.readOnlyReason)
             const page = pageOf(memo)
+            const date = dateOf(memo)
             const selected = memo.id === selectedId
             return (
               <div key={memo.id} className={`memo-card${selected ? ' selected' : ''}`}>
@@ -905,6 +902,7 @@ export function MemoPanel({
                   <span className="memo-card-head">
                     <span className="memo-card-author">{authorOf(memo)}</span>
                     {page && <span className="memo-card-page">{t('memoPage', page)}</span>}
+                    {date && <span className="memo-card-date">{date}</span>}
                     {!canEditMemo(memo) && (
                       <span className="memo-readonly-badge">{t('memoReadOnly')}</span>
                     )}

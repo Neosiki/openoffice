@@ -24,6 +24,7 @@ import {
   canEditMemo,
   isEmptyMemoText,
   memoBodyProblem,
+  memoDateText,
   memoIsLocked,
   memoLockMessageOf,
   memoMutationErrorKey,
@@ -128,6 +129,15 @@ describe('card text', () => {
     expect(memoPageParams(0)).toBeNull()
     expect(memoPageParams(-1)).toBeNull()
     expect(memoPageParams(1.5)).toBeNull()
+  })
+
+  it('shows a date only when the file carries one', () => {
+    expect(memoDateText(null, 'ko')).toBeNull()
+    expect(memoDateText('   ', 'ko')).toBeNull()
+    expect(memoDateText('not a date', 'ko')).toBe('not a date')
+    const shown = memoDateText('2024-01-02T03:04:00Z', 'en')
+    expect(shown).toBeTruthy()
+    expect(shown).not.toBe('2024-01-02T03:04:00Z')
   })
 })
 

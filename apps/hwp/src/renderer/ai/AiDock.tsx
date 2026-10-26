@@ -24,7 +24,7 @@ import type { TemplateDocument } from '@genoffice/ui'
 import { useI18n } from '../i18n/locale'
 import type { AgentBridge } from './agent-bridge'
 import { AiPanel } from './AiPanel'
-import { MemoGlyph, MemoPanel, type MemoNotice } from '../MemoPanel'
+import { MemoPanel, type MemoNotice } from '../MemoPanel'
 
 /** Which of the two panels the shared dock shows. */
 export type HwpDockMode = 'ai' | 'memo'
@@ -105,7 +105,7 @@ export function HwpAiDock({
                 } else setOpen(!open)
               }}
             >
-              <MemoGlyph size={20} />
+              <span className="memo-rail-label">{t('memoOpen')}</span>
             </button>
           </div>
         ) : (
