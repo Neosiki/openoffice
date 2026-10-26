@@ -28,7 +28,8 @@ import type { OpenedPptx } from '@genoffice/pptx-engine'
 import type { CommandContext, CommandDef } from '../registry'
 import { CliError, EXIT, type CommandResult } from '../result'
 
-const PLACEHOLDER = /\{\{\s*([\w.-]+)\s*\}\}/g
+// keys may be in any script (Korean, Japanese, ...); ASCII-only \w left them unfilled and unreported
+const PLACEHOLDER = /\{\{\s*([\p{L}\p{M}\p{N}_.-]+)\s*\}\}/gu
 const FORMATS = ['docx', 'pptx', 'xlsx'] as const
 type Format = (typeof FORMATS)[number]
 

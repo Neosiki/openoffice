@@ -318,7 +318,7 @@ export function describeDocument(
   const [start, end] = range ?? [0, root.childCount - 1]
   for (let i = start; i <= Math.min(end, root.childCount - 1); i++) {
     const node = root.child(i)
-    const { text, truncated } = clipText(node.textContent, maxChars)
+    const { text, truncated } = clipText(blockText(node), maxChars)
     out.push({
       index: i,
       type: node.type.name.replace(/^doc/, '').toLowerCase(),
@@ -331,6 +331,27 @@ export function describeDocument(
   }
   return out
 }
+
+/**
+ * A block's plain text. textContent drops line breaks (`w:br`), gluing the lines of a
+ * paragraph together, and runs every table cell together, so "1" | "200" and "12" | "00"
+ * both read "1200". A break becomes a line break (a space inside a cell); cells are joined
+ * with " | " and rows with a line break, the layout `hwp read` already uses.
+ */
+function blockText(node: PmNode): string {
+  const breakAs = (sep: string) => (leaf: PmNode) => (leaf.type.name === 'hardBreak' ? sep : '')
+  if (node.type.name !== 'docTable')
+    return node.textBetween(0, node.content.size, '', breakAs('\n'))
+  const rows: string[] = []
+  node.forEach((row) => {
+    const cells: string[] = []
+    row.forEach((cell) => cells.push(cell.textBetween(0, cell.content.size, ' ', breakAs(' '))))
+    rows.push(cells.join(' | '))
+  })
+  return rows.join('\n')
+}
+
+type PmNode = OpenDocument['editor']['state']['doc']
 
 /** table styles defined in styles.xml (setTableStyle accepts the id or the name) */
 export function listTableStyles(doc: OpenDocument): Array<{ id: string; name: string }> {
@@ -505,7 +526,7 @@ export async function applyDocOps(
   // a received ODT: protected cells and locked object stand-ins must come out of every op unchanged
   const guard = doc.odt ? new OdtEditGuard(doc.odt.bridge, doc.editor.state.doc) : null
   for (const [index, op] of ops.entries()) {
-    const name = typeof op.op === 'string' ? op.op : ''
+    const name = typeof op?.op === 'string' ? op.op : ''
     // a rejected op left the document as it was: the executor applies each call whole or not at all
     const rejected = (output: string, reason?: OpFailure['reason']): boolean => {
       const failure = { ...classifyOpError(index, name, output), ...(reason ? { reason } : {}) }
@@ -519,6 +540,13 @@ export async function applyDocOps(
       }
       failures.push(failure)
       return true
+    }
+    if (!op || typeof op !== 'object' || Array.isArray(op)) {
+      rejected('expected an op object', 'invalid_argument')
+      if (mode === 'stop_on_error') {
+        return { results, failures, skipped: ops.length - index - 1 }
+      }
+      continue
     }
     let failed = false
     const odtOff = doc.odt ? odtDisabledFeature(op) : null
@@ -573,7 +601,10 @@ export async function applyDocOps(
         Object.assign(doc.side, before.side)
         doc.mods.tools.markDocSeen(doc.editor)
         failed = rejected(`not applied: ${broke}`, 'op_rejected')
-      } else results.push({ index, op: name, output: outcome.output! })
+      } else {
+        if (before) guard!.accept(before.print, doc.editor.state.doc)
+        results.push({ index, op: name, output: outcome.output! })
+      }
     }
     if (failed && mode === 'stop_on_error') {
       return { results, failures, skipped: ops.length - index - 1 }

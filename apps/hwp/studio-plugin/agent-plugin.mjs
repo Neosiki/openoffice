@@ -147,8 +147,12 @@ const MEMO_COPY_WINDOW_MS = 15_000
 /** The most runs and characters of one selection: a sanity limit, far above real use. */
 const MAX_SELECTED_RUNS = 5000
 const MAX_SELECTED_CHARS = 400000
-/** Lookups one walk over the document spends on finding tables inside table cells. */
-const MAX_NESTED_LOOKUPS = 20000
+/**
+ * Lookups one walk over the document spends on finding tables inside table cells: three per
+ * cell paragraph. A government notice with a 429-row list (about 8,000 cells) needs about
+ * 25,000, and 100,000 lookups take well under a second.
+ */
+const MAX_NESTED_LOOKUPS = 100000
 /** Objects tried in one cell paragraph when looking for a table inside it. */
 const NESTED_CONTROLS_TRIED = 3
 /** How many controls of one cell paragraph the object check asks about. */
@@ -2214,37 +2218,47 @@ function coveredCells(doc, table) {
 const clip = (text, max) => (text.length > max ? `${text.slice(0, max)}…` : text)
 
 /**
+ * The fields a form asks to be filled in: click-here fields and named table cells, in
+ * document order. The engine lists every field, also a formula (a table's =SUM total) and
+ * a hyperlink, which are not answers: filling one would overwrite the computed value or
+ * the link text. listFields numbers these, and fillField and readTable use the numbers.
+ */
+function formFieldsOf(doc) {
+  // a memo is neither: it never takes an answer and never shifts the numbers
+  return parse(doc.getFieldList()).filter(
+    (field) =>
+      field.fieldType !== 'memo' && (field.cellField === true || field.fieldType === 'clickhere'),
+  )
+}
+
+/**
  * The click-here fields that sit directly in a table cell, by table and cell. A cell that
  * holds one is filled through the field: text typed beside an empty field would leave its
  * guide text standing next to the answer.
  */
 function fieldsByCell(doc) {
   const byCell = new Map()
-  // the number a field is named by is its place among the fields listFields shows: memos
-  // are not form fields and must not shift it
-  parse(doc.getFieldList())
-    .filter((field) => field.fieldType !== 'memo')
-    .forEach((field, index) => {
-      if (field.cellField === true) return
-      const where = field.location
-      const path = where && Array.isArray(where.path) ? where.path : []
-      if (path.length === 0 || path.some((entry) => entry.type !== 'cell')) return
-      const cells = path.map((entry) => ({
-        controlIndex: entry.controlIndex,
-        cellIndex: entry.cellIndex,
-        cellParaIndex: entry.paraIndex,
-      }))
-      const key = `${tableKey(where.sectionIndex, where.paraIndex, cells)}:${cells[cells.length - 1].cellIndex}`
-      const entry = {
-        number: index + 1,
-        fieldId: field.fieldId,
-        value: field.value ?? '',
-        guide: field.guide ?? '',
-      }
-      const list = byCell.get(key)
-      if (list) list.push(entry)
-      else byCell.set(key, [entry])
-    })
+  formFieldsOf(doc).forEach((field, index) => {
+    if (field.cellField === true) return
+    const where = field.location
+    const path = where && Array.isArray(where.path) ? where.path : []
+    if (path.length === 0 || path.some((entry) => entry.type !== 'cell')) return
+    const cells = path.map((entry) => ({
+      controlIndex: entry.controlIndex,
+      cellIndex: entry.cellIndex,
+      cellParaIndex: entry.paraIndex,
+    }))
+    const key = `${tableKey(where.sectionIndex, where.paraIndex, cells)}:${cells[cells.length - 1].cellIndex}`
+    const entry = {
+      number: index + 1,
+      fieldId: field.fieldId,
+      value: field.value ?? '',
+      guide: field.guide ?? '',
+    }
+    const list = byCell.get(key)
+    if (list) list.push(entry)
+    else byCell.set(key, [entry])
+  })
   return byCell
 }
 
@@ -5404,34 +5418,28 @@ export const agentPlugin = {
        */
       listFields: guarded(() =>
         host.read((doc) =>
-          parse(doc.getFieldList())
-            .filter((field) => field.fieldType !== 'memo')
-            .map((field, index) => ({
-              field: index + 1,
-              name: field.name ?? '',
-              guide: field.guide ?? '',
-              value: field.value ?? '',
-              // a named table cell is filled like a field but is not one the user clicks into
-              inCell: field.cellField === true,
-            })),
+          formFieldsOf(doc).map((field, index) => ({
+            field: index + 1,
+            name: field.name ?? '',
+            guide: field.guide ?? '',
+            value: field.value ?? '',
+            // a named table cell is filled like a field but is not one the user clicks into
+            inCell: field.cellField === true,
+          })),
         ),
       ),
 
       /** Set the value of the field with this number (1-based, as listed by listFields). */
       fillField: guarded((number, value, options) => {
         checkReplacement(value)
-        const count = host.read(
-          (doc) => parse(doc.getFieldList()).filter((field) => field.fieldType !== 'memo').length,
-        )
+        const count = host.read((doc) => formFieldsOf(doc).length)
         if (!Number.isInteger(number) || number < 1 || number > count) {
           return { ok: false, reason: 'no_such_field', count }
         }
         return change(
           'fill-field',
           (doc) => {
-            const field = parse(doc.getFieldList()).filter((entry) => entry.fieldType !== 'memo')[
-              number - 1
-            ]
+            const field = formFieldsOf(doc)[number - 1]
             if (!field) throw fail('CHANGED', 'the document changed mid-call')
             expectOk(doc.setFieldValue(field.fieldId, value), 'fill the field')
             plainAnswerFields(doc, new Set([field.fieldId]))
