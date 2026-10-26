@@ -2,6 +2,7 @@ import { chmodSync, readFileSync, readdirSync, renameSync, writeFileSync } from 
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { writeOutput } from '../src/fs'
+import { CliError } from '../src/result'
 import { run, tempDir } from './helpers'
 
 vi.mock('node:fs', async (importOriginal) => {
@@ -122,10 +123,20 @@ describe('CLI output save failure recovery', () => {
           }
           actual.writeFileSync(path, bytes, options)
         })
-        expect(() => writeOutput(target, newBytes)).toThrow(error)
+        let thrown: unknown
+        try {
+          writeOutput(target, newBytes)
+        } catch (err) {
+          thrown = err
+        }
         const rescue = readdirSync(dir).filter((name) => name !== 'document.docx')
         expect(rescue).toHaveLength(1)
         expect(rescue[0]).toMatch(/^\.document\.docx\.[a-f0-9]{12}\.tmp$/)
+        // the error names the rescue copy, so the caller can find the finished edit
+        expect(thrown).toBeInstanceOf(CliError)
+        expect((thrown as CliError).message).toContain(error.message)
+        expect((thrown as CliError).message).toContain(join(dir, rescue[0]!))
+        expect((thrown as CliError).detail).toEqual({ rescue_path: join(dir, rescue[0]!) })
         expect(readFileSync(join(dir, rescue[0]!))).toEqual(newBytes)
         expect(readFileSync(target)).toEqual(partial ? newBytes.subarray(0, 7) : oldBytes)
         expect(renameSync).toHaveBeenCalledTimes(5)
@@ -162,6 +173,7 @@ describe('CLI output save failure recovery', () => {
       /^\.source\.docx\.[a-f0-9]{12}\.tmp$/.test(name),
     )
     expect(rescue).toHaveLength(1)
+    expect(failed.json().detail).toEqual({ rescue_path: join(dir, rescue[0]!) })
     const recovered = join(dir, 'recovered.docx')
     actual.writeFileSync(recovered, readFileSync(join(dir, rescue[0]!)))
     const read = await run(['docs', 'read', recovered, '--full', '--json'])

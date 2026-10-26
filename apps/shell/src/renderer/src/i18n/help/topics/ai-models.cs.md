@@ -17,7 +17,7 @@ Vše, k čemu je potřeba klíč, je v části **Pokročilé** dole na téže st
 Pro ty, kdo chtějí platit poskytovateli přímo nebo provozují vlastní model.
 
 - Zvolte položku v poli **Poskytovatel**, zadejte **Klíč API** (a **Základní URL**, pokud ji poskytovatel vyžaduje), vyberte **Model** a stiskněte **Uložit**. Seznam zahrnuje servery kompatibilní s OpenAI, Anthropic, Gemini, DeepSeek, DashScope (qwen), Atlas Cloud a další.
-- Seznam **Poskytovatel** zde určuje jen to, čí pole jsou na obrazovce. Nemění, která AI se používá; o tom vždy rozhoduje **Používaná AI**.
+- Seznam **Poskytovatel** zde určuje jen to, čí pole jsou na obrazovce. Nemění, která AI se používá; o tom vždy rozhoduje **Používaná AI**. Pokud uložený poskytovatel není právě používaná AI, nahoře se objeví **Použít tuto AI**; kliknutím ho vyberete v poli **Používaná AI**.
 - Konverzace přes poskytovatele s klíčem používají váš vlastní klíč a účtuje vám je tento poskytovatel.
 - Klíče se ukládají do souboru nastavení aplikace na tomto počítači a odesílají pouze v hlavičkách požadavků.
 - **Otestovat připojení**: ověří dosažitelnost koncového bodu a viditelnost modelu před uložením.

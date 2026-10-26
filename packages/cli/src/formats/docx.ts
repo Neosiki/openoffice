@@ -28,6 +28,8 @@ import {
   type WatermarkSpec,
   isContentControlLock,
   type ContentControlSpec,
+  type TableCell,
+  type TableModel,
 } from '@genoffice/docx-engine'
 import type { FloatSpec } from '../../../../apps/docs/src/renderer/ai/floating-ops'
 import type { AiNotesAccess, NoteKind } from '../../../../apps/docs/src/renderer/ai/note-ops'
@@ -494,6 +496,37 @@ export interface ExportHtml {
   skipped: { images: number; fields: number }
   /** formulas whose LaTeX was not recoverable; emitted as their token text */
   formulasAsText: number
+  nestedTablesAsText: number
+}
+
+/** GFM cannot nest tables: retain their rows as text at each cell's paragraph anchor. */
+function tableWithNestedText(model: TableModel): { html: string; count: number } {
+  let count = 0
+  const linesOf = (cell: TableCell): string[] => {
+    const nested = (cell.nestedTables ?? []).map((table, i) => {
+      count++
+      return {
+        at: Math.max(
+          0,
+          Math.min(cell.nestedTableAnchors?.[i] ?? cell.paras.length, cell.paras.length),
+        ),
+        lines: table.rows.map((row) => row.map((c) => linesOf(c).join(' / ')).join(' | ')),
+      }
+    })
+    const lines: string[] = []
+    for (let i = 0; i <= cell.paras.length; i++) {
+      for (const entry of nested) if (entry.at === i) lines.push(...entry.lines)
+      if (i < cell.paras.length) lines.push(cell.paras[i]!)
+    }
+    return lines
+  }
+  const header =
+    model.rows.length > 1 && model.rows[0]!.every((c) => c.bold || c.fill !== undefined)
+  const rows = model.rows.map((row, i) => {
+    const tag = header && i === 0 ? 'th' : 'td'
+    return `<tr>${row.map((cell) => `<${tag}>${linesOf(cell).map(escapeHtml).join('<br>')}</${tag}>`).join('')}</tr>`
+  })
+  return { html: `<table>${rows.join('')}</table>`, count }
 }
 
 /**
@@ -508,12 +541,27 @@ export function documentHtml(doc: OpenDocument): ExportHtml {
   const parts: string[] = []
   const skipped = { images: 0, fields: 0 }
   let formulasAsText = 0
+  let nestedTablesAsText = 0
   let runStart = -1
   const flush = (end: number) => {
     if (runStart >= 0) parts.push(blockRangeHtml(doc, runStart, end))
     runStart = -1
   }
   top.forEach((node, _offset, index) => {
+    if (node.type.name === 'docTable') {
+      let nested = false
+      node.descendants((child) => {
+        if (child.type.name === 'docNestedTable') nested = true
+      })
+      if (nested) {
+        flush(index - 1)
+        if (doc.mods.protocol.isTrackedDeleted(node)) return
+        const exported = tableWithNestedText(doc.mods.convert.pmTableToModel(node.toJSON()))
+        parts.push(exported.html)
+        nestedTablesAsText += exported.count
+        return
+      }
+    }
     if (node.type.name !== 'docProtected') {
       if (runStart < 0) runStart = index
       return
@@ -546,7 +594,7 @@ export function documentHtml(doc: OpenDocument): ExportHtml {
       (_m, latex: string) =>
         `<span data-type="inline-math" data-latex="${latex.replace(/"/g, '&quot;')}"></span>`,
     )
-  return { html, skipped, formulasAsText }
+  return { html, skipped, formulasAsText, nestedTablesAsText }
 }
 
 function escapeHtml(s: string): string {

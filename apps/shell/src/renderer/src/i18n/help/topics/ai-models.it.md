@@ -17,7 +17,7 @@ Tutto ciò che richiede una chiave si trova sotto **Avanzate**, in fondo alla st
 Per chi preferisce pagare direttamente un provider o far girare un proprio modello.
 
 - Scegli un **Provider**, inserisci la sua **Chiave API** (e un **Base URL** se il provider lo richiede), scegli un **Modello**, poi premi **Salva**. L'elenco comprende server compatibili con OpenAI, Anthropic, Gemini, DeepSeek, DashScope (qwen), Atlas Cloud e altri.
-- Qui l'elenco **Provider** decide soltanto di chi sono i campi mostrati. Non cambia l'IA in uso; quella è sempre **IA da usare**.
+- Qui l'elenco **Provider** decide soltanto di chi sono i campi mostrati. Non cambia l'IA in uso; quella è sempre **IA da usare**. Se un provider salvato non è l'IA in uso, in alto compare **Usa questa IA**; premendolo, quel provider diventa l'**IA da usare**.
 - Le chat con un provider con chiave usano la tua chiave, ed è quel provider ad addebitartele.
 - Le chiavi sono memorizzate nel file delle impostazioni dell'app su questa macchina e inviate solo nelle intestazioni delle richieste.
 - **Prova connessione**: verifica che l'endpoint sia raggiungibile e che il modello sia visibile prima di salvare.
