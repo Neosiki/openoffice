@@ -113,6 +113,17 @@ const api: HwpApi = {
     return () => ipcRenderer.removeListener(HWP_CHANNELS.closeSaveRequest, listener)
   },
   sendCloseSaveResult: (ok) => ipcRenderer.send(HWP_CHANNELS.closeSaveResult, ok),
+  setMemoModalOpen: (open) => ipcRenderer.send(HWP_CHANNELS.memoModalOpen, open),
+  getMemoModalOpen: async () => (await ipcRenderer.invoke(HWP_CHANNELS.memoModalState)) === true,
+  getAuthorName: async () => {
+    const raw = (await ipcRenderer.invoke(HWP_CHANNELS.getAuthorName)) as
+      | { value?: unknown; fallback?: unknown }
+      | null
+    return {
+      value: typeof raw?.value === 'string' ? raw.value : '',
+      fallback: typeof raw?.fallback === 'string' ? raw.fallback : '',
+    }
+  },
   onReadBytesRequest: (handler) => {
     const listener = () => handler()
     ipcRenderer.on(HWP_CHANNELS.readBytesRequest, listener)
