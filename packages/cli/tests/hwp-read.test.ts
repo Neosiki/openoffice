@@ -72,6 +72,20 @@ describe('ieumoffice hwp read', () => {
     expect(first.detail.text + rest.detail.text).toHaveLength(first.detail.chars)
   })
 
+  it('does not split an emoji between two parts of a paged read', async () => {
+    const doc = HwpDocument.createEmpty()
+    doc.createBlankDocument()
+    doc.insertText(0, 0, 0, '가나😀다라마')
+    const path = write('emoji.hwp', doc.exportHwp())
+    const first = (await run(['hwp', 'read', path, '--max-chars', '3', '--json'])).json().detail
+    expect(first.text.isWellFormed()).toBe(true)
+    const rest = (
+      await run(['hwp', 'read', path, '--offset', String(first.next_offset), '--full', '--json'])
+    ).json().detail
+    expect(rest.text.isWellFormed()).toBe(true)
+    expect(first.text + rest.text).toBe('가나😀다라마')
+  })
+
   it('refuses an offset past the end and a file of another kind', async () => {
     const path = write('report.hwp', report().exportHwp())
     const past = await run(['hwp', 'read', path, '--offset', '99999', '--json'])

@@ -1396,15 +1396,89 @@ function plainAnswerInCell(doc, table, cell, k, length) {
   )
 }
 
+/** What tells one field from another: fields copied and pasted share their id, not their place. */
+const fieldKey = (field) =>
+  `${field.fieldId}|${JSON.stringify(field.location ?? null)}|${field.startCharIdx ?? ''}`
+
+/**
+ * Set the value of the field with this key (fieldKey: id, place and start). The
+ * engine sets a value by field id, and a form whose fields were copied and pasted carries
+ * the same id on several fields: setting by id then always writes the first of them. Such a
+ * field is written where it stands instead, its text replaced in place, and the result is
+ * checked: this field holds the value and its namesakes kept theirs (text typed at the start
+ * of an empty field lands in it). When that cannot be done the call fails and the change is
+ * rolled back, rather than write another field.
+ */
+function setFieldAt(doc, key, value) {
+  const before = parse(doc.getFieldList())
+  const index = before.findIndex((other) => fieldKey(other) === key)
+  const field = before[index]
+  if (!field) throw fail('CHANGED', 'the document changed mid-call')
+  const twins = before.filter((other) => other.fieldId === field.fieldId).length
+  if (twins < 2) {
+    expectOk(doc.setFieldValue(field.fieldId, value), 'fill the field')
+    return
+  }
+  const ambiguous = () =>
+    fail(
+      'AMBIGUOUS_FIELD',
+      `field ${index + 1} shares its id with ${twins - 1} other field(s) and could not be filled on its own`,
+    )
+  const at = field.location
+  const start = field.startCharIdx
+  const end = field.endCharIdx
+  const path = at && Array.isArray(at.path) ? at.path : []
+  if (!at || !Number.isInteger(start) || !Number.isInteger(end) || end < start) {
+    throw ambiguous()
+  }
+  if (path.length > 0) {
+    if (!path.every((entry) => entry.type === 'cell')) throw ambiguous()
+    const json = JSON.stringify(
+      path.map((entry) => ({
+        controlIndex: entry.controlIndex,
+        cellIndex: entry.cellIndex,
+        cellParaIndex: entry.paraIndex,
+      })),
+    )
+    if (end > start) {
+      expectOk(
+        doc.deleteTextInCellByPath(at.sectionIndex, at.paraIndex, json, start, end - start),
+        'fill the field',
+      )
+    }
+    if (value) {
+      expectOk(
+        doc.insertTextInCellByPath(at.sectionIndex, at.paraIndex, json, start, value),
+        'fill the field',
+      )
+    }
+  } else {
+    if (end > start) {
+      expectOk(doc.deleteText(at.sectionIndex, at.paraIndex, start, end - start), 'fill the field')
+    }
+    if (value)
+      expectOk(doc.insertText(at.sectionIndex, at.paraIndex, start, value), 'fill the field')
+  }
+  const after = parse(doc.getFieldList())
+  const kept =
+    after.length === before.length &&
+    after[index]?.value === value &&
+    before.every(
+      (other, k) =>
+        k === index || other.fieldId !== field.fieldId || after[k]?.value === other.value,
+    )
+  if (!kept) throw ambiguous()
+}
+
 /**
  * Make the value of each of these fields look like an answer. A field's guide text is
  * often blue italics, and the engine writes the value with the look of the text it
  * replaces; Hangul shows a filled field's value black and upright.
  */
-function plainAnswerFields(doc, ids) {
-  if (!ids || ids.size === 0) return
+function plainAnswerFields(doc, ids, keys = null) {
+  if (keys ? keys.size === 0 : !ids || ids.size === 0) return
   for (const field of parse(doc.getFieldList())) {
-    if (!ids.has(field.fieldId)) continue
+    if (keys ? !keys.has(fieldKey(field)) : !ids.has(field.fieldId)) continue
     const start = field.startCharIdx
     const end = field.endCharIdx
     if (!Number.isInteger(start) || !Number.isInteger(end) || end <= start) continue
@@ -2251,6 +2325,7 @@ function fieldsByCell(doc) {
     const key = `${tableKey(where.sectionIndex, where.paraIndex, cells)}:${cells[cells.length - 1].cellIndex}`
     const entry = {
       number: index + 1,
+      key: fieldKey(field),
       fieldId: field.fieldId,
       value: field.value ?? '',
       guide: field.guide ?? '',
@@ -4675,10 +4750,7 @@ export const agentPlugin = {
               for (const target of targets) {
                 if (target.field) {
                   // a field holds one line
-                  expectOk(
-                    doc.setFieldValue(target.field.fieldId, target.lines.join(' ')),
-                    'fill the field',
-                  )
+                  setFieldAt(doc, target.field.key, target.lines.join(' '))
                   continue
                 }
                 const box = cellBox(doc, table, target.cell)
@@ -4697,7 +4769,11 @@ export const agentPlugin = {
                   if (line) plainAnswerInCell(doc, table, target.cell, k, [...line].length)
                 })
               }
-              plainAnswerFields(doc, own)
+              plainAnswerFields(
+                doc,
+                null,
+                new Set(targets.filter((t) => t.field).map((t) => t.field.key)),
+              )
               mustKeep(before, objectsOf(doc, own))
               const first = targets[0]
               return {
@@ -5441,8 +5517,8 @@ export const agentPlugin = {
           (doc) => {
             const field = formFieldsOf(doc)[number - 1]
             if (!field) throw fail('CHANGED', 'the document changed mid-call')
-            expectOk(doc.setFieldValue(field.fieldId, value), 'fill the field')
-            plainAnswerFields(doc, new Set([field.fieldId]))
+            setFieldAt(doc, fieldKey(field), value)
+            plainAnswerFields(doc, null, new Set([fieldKey(field)]))
             const place = fieldPlace(field)
             return { ok: true, name: field.name ?? '', ...(place ? { place } : {}) }
           },
