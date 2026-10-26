@@ -318,7 +318,7 @@ export function describeDocument(
   const [start, end] = range ?? [0, root.childCount - 1]
   for (let i = start; i <= Math.min(end, root.childCount - 1); i++) {
     const node = root.child(i)
-    const { text, truncated } = clipText(node.textContent, maxChars)
+    const { text, truncated } = clipText(blockText(node), maxChars)
     out.push({
       index: i,
       type: node.type.name.replace(/^doc/, '').toLowerCase(),
@@ -331,6 +331,27 @@ export function describeDocument(
   }
   return out
 }
+
+/**
+ * A block's plain text. textContent drops line breaks (`w:br`), gluing the lines of a
+ * paragraph together, and runs every table cell together, so "1" | "200" and "12" | "00"
+ * both read "1200". A break becomes a line break (a space inside a cell); cells are joined
+ * with " | " and rows with a line break, the layout `hwp read` already uses.
+ */
+function blockText(node: PmNode): string {
+  const breakAs = (sep: string) => (leaf: PmNode) => (leaf.type.name === 'hardBreak' ? sep : '')
+  if (node.type.name !== 'docTable')
+    return node.textBetween(0, node.content.size, '', breakAs('\n'))
+  const rows: string[] = []
+  node.forEach((row) => {
+    const cells: string[] = []
+    row.forEach((cell) => cells.push(cell.textBetween(0, cell.content.size, ' ', breakAs(' '))))
+    rows.push(cells.join(' | '))
+  })
+  return rows.join('\n')
+}
+
+type PmNode = OpenDocument['editor']['state']['doc']
 
 /** table styles defined in styles.xml (setTableStyle accepts the id or the name) */
 export function listTableStyles(doc: OpenDocument): Array<{ id: string; name: string }> {
